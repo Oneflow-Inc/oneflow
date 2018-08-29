@@ -2,8 +2,6 @@
 
 namespace oneflow {
 
-namespace {
-
 void ParseDeviceNameConf(const std::string& device_name, std::string* mchn_name,
                          std::string* device_tag, std::string* device_id_str) {
   size_t second_delimiter_pos = device_name.rfind(":");
@@ -15,8 +13,6 @@ void ParseDeviceNameConf(const std::string& device_name, std::string* mchn_name,
       device_name.substr(first_delimiter_pos + 1, second_delimiter_pos - first_delimiter_pos - 1);
   *device_id_str = device_name.substr(second_delimiter_pos + 1);
 }
-
-}  // namespace
 
 ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
   policy_ = user_conf.policy();

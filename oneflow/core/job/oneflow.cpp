@@ -77,6 +77,12 @@ void FixCpuDeviceNum() {
   Global<JobDesc>::Get()->SetCpuDeviceNum(cpu_device_num);
 }
 
+std::string cluster_thrd_ids_key(const std::string& plan_name) {
+  return plan_name + "_cluster_thrd_ids";
+}
+
+std::string net_topo_key(const std::string& plan_name) { return plan_name + "_net_topo"; }
+
 std::string sub_plan_key(const std::string& plan_name, int64_t machine_id, int64_t thrd_id) {
   return plan_name + "_" + std::to_string(machine_id) + "_" + std::to_string(thrd_id);
 }
@@ -100,7 +106,7 @@ void PushPlan(const std::string& plan_name, const Plan& plan) {
 
   ClusterThrdIds cluster_thrd_ids;
   *(cluster_thrd_ids.mutable_machine_id2thrd_ids()) = HashMap2PbMap(machine_id2thrd_ids);
-  Global<CtrlClient>::Get()->PushKV(plan_name + "_cluster_thrd_ids", cluster_thrd_ids);
+  Global<CtrlClient>::Get()->PushKV(cluster_thrd_ids_key(plan_name), cluster_thrd_ids);
 
   for (const auto& pair : mchn_thrd_id2task_protos) {
     SubPlan sub_plan;
@@ -110,26 +116,58 @@ void PushPlan(const std::string& plan_name, const Plan& plan) {
   }
   Global<CtrlClient>::Get()->PushKV(total_mbn_num_key(plan_name),
                                     std::to_string(plan.total_mbn_num()));
+
+  Global<CtrlClient>::Get()->PushKV(net_topo_key(plan_name), plan.net_topo());
 }
 
 void PullPlan(const std::string& plan_name, Plan* plan) {
   ClusterThrdIds cluster_thrd_ids;
-  Global<CtrlClient>::Get()->PullKV(plan_name + "_cluster_thrd_ids", &cluster_thrd_ids);
-  PrintProtoToTextFile(cluster_thrd_ids, JoinPath(LogDir(), plan_name + "_cluster_thrd_ids"));
+  Global<CtrlClient>::Get()->PullKV(cluster_thrd_ids_key(plan_name), &cluster_thrd_ids);
+  PrintProtoToTextFile(cluster_thrd_ids, JoinPath(LogDir(), cluster_thrd_ids_key(plan_name)));
   HashMap<int64_t, ThrdIds> machine_id2thrd_ids;
   machine_id2thrd_ids = PbMap2HashMap(cluster_thrd_ids.machine_id2thrd_ids());
-  for (const auto& pair : machine_id2thrd_ids) {
-    int64_t machine_id = pair.first;
-    std::vector<int64_t> thrd_id_vec = PbRf2StdVec(pair.second.thrd_id());
-    for (auto thrd_id : thrd_id_vec) {
-      SubPlan sub_plan;
-      Global<CtrlClient>::Get()->PullKV(sub_plan_key(plan_name, machine_id, thrd_id), &sub_plan);
-      plan->mutable_task()->MergeFrom(sub_plan.task());
-    }
+  int64_t machine_id = Global<MachineCtx>::Get()->this_machine_id();
+  auto thrd_ids_it = machine_id2thrd_ids.find(machine_id);
+  CHECK(thrd_ids_it != machine_id2thrd_ids.end());
+  std::vector<int64_t> thrd_id_vec = PbRf2StdVec(thrd_ids_it->second.thrd_id());
+  for (auto thrd_id : thrd_id_vec) {
+    SubPlan sub_plan;
+    Global<CtrlClient>::Get()->PullKV(sub_plan_key(plan_name, machine_id, thrd_id), &sub_plan);
+    plan->mutable_task()->MergeFrom(sub_plan.task());
   }
+  NetTopo net_topo;
   std::string total_mbn_num;
   Global<CtrlClient>::Get()->PullKV(total_mbn_num_key(plan_name), &total_mbn_num);
   plan->set_total_mbn_num(oneflow_cast<int64_t>(total_mbn_num));
+  Global<CtrlClient>::Get()->PullKV(net_topo_key(plan_name), &net_topo);
+  *(plan->mutable_net_topo()) = net_topo;
+}
+
+bool HasRelayPlacement() {
+  PbMd message_diff;
+  const ParallelConf* last_gpu_conf_ptr = nullptr;
+  const Placement& placement = Global<JobDesc>::Get()->placement();
+  for (const PlacementGroup& p_group : placement.placement_group()) {
+    const ParallelConf& p_conf = p_group.parallel_conf();
+    for (const std::string& device_name : p_conf.device_name()) {
+      std::string mchn_name;
+      std::string device_tag;
+      std::string device_id_str;
+      ParseDeviceNameConf(device_name, &mchn_name, &device_tag, &device_id_str);
+      if (device_tag == "cpu") {
+        break;
+      } else if (device_tag == "gpu") {
+        if (last_gpu_conf_ptr && !message_diff.Equivalent(*last_gpu_conf_ptr, p_conf)) {
+          return true;
+        }
+        last_gpu_conf_ptr = &p_conf;
+        break;
+      } else {
+        UNIMPLEMENTED();
+      }
+    }
+  }
+  return false;
 }
 
 }  // namespace
@@ -150,7 +188,9 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
   Global<JobDesc>::New(job_conf_filepath);
   Global<MachineCtx>::New(this_mchn_name);
   const MachineCtx* machine_ctx = Global<MachineCtx>::Get();
-  if (machine_ctx->IsThisMachineMaster()) { Global<Profiler>::New(); }
+  bool DoProfile =
+      machine_ctx->IsThisMachineMaster() && Global<JobDesc>::Get()->collect_act_event();
+  if (DoProfile) { Global<Profiler>::New(); }
   ctrl_server_.reset(new CtrlServer(machine_ctx->GetThisCtrlAddr()));
   Global<CtrlClient>::New();
   FixCpuDeviceNum();
@@ -161,9 +201,12 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
   Plan improved_plan;
   PushAvailableMemDescOfThisMachine();
   AvailableMemDesc amd;
+  double start = GetCurTime();
 
   if (machine_ctx->IsThisMachineMaster()) {
+    double start = GetCurTime();
     naive_plan = Compiler().Compile();
+    LOG(INFO) << "compile time: " << GetCurTime() - start;
     amd = PullAvailableMemDesc();
     mem_shared_plan = Improver().ImproveMemSharedIdOnly(amd, naive_plan);
     PushPlan("naive_plan", naive_plan);
@@ -175,31 +218,32 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
   OF_BARRIER();
   PrintProtoToTextFile(naive_plan, JoinPath(LogDir(), "naive_plan"));
   PrintProtoToTextFile(mem_shared_plan, JoinPath(LogDir(), "mem_shared_plan"));
-  // Experiment Runtime
-  { Runtime experiment_run(mem_shared_plan, true); }
-  // Improve
-  if (machine_ctx->IsThisMachineMaster()) {
-    PrintProtoToTextFile(amd, JoinPath(LogDir(), "available_mem_desc"));
-    CHECK_GT(amd.machine_amd_size(), 0);
-    improved_plan =
-        Improver().Improve(amd, naive_plan,
-                           JoinPath(LogDir(), ActEventLogger::experiment_prefix_
-                                                  + ActEventLogger::act_event_bin_filename_));
-    PushPlan("improved_plan", improved_plan);
+  LOG(INFO) << "push_pull_plan:" << GetCurTime() - start;
+  if (HasRelayPlacement()) {
+    // Experiment Runtime
+    { Runtime experiment_run(mem_shared_plan, true); }
+    // Improve
+    if (machine_ctx->IsThisMachineMaster()) {
+      PrintProtoToTextFile(amd, JoinPath(LogDir(), "available_mem_desc"));
+      CHECK_GT(amd.machine_amd_size(), 0);
+      improved_plan = Improver().Improve(
+          amd, naive_plan, JoinPath(LogDir(), ActEventLogger::experiment_act_event_bin_filename()));
+      PushPlan("improved_plan", improved_plan);
+    } else {
+      PullPlan("improved_plan", &improved_plan);
+    }
+    OF_BARRIER();
+    PrintProtoToTextFile(improved_plan, JoinPath(LogDir(), "improved_plan"));
+    Global<CtrlClient>::Get()->Clear();
+    OF_BARRIER();
   } else {
-    PullPlan("improved_plan", &improved_plan);
+    improved_plan = mem_shared_plan;
   }
-  OF_BARRIER();
-  PrintProtoToTextFile(improved_plan, JoinPath(LogDir(), "improved_plan"));
-  Global<CtrlClient>::Get()->Clear();
-  OF_BARRIER();
   // Runtime
   { Runtime run(improved_plan, false); }
-  if (machine_ctx->IsThisMachineMaster()) {
-    if (Global<JobDesc>::Get()->collect_act_event()) {
-      Global<Profiler>::Get()->Profile(improved_plan,
-                                       JoinPath(LogDir(), ActEventLogger::act_event_bin_filename_));
-    }
+  if (DoProfile) {
+    Global<Profiler>::Get()->Profile(improved_plan,
+                                     JoinPath(LogDir(), ActEventLogger::act_event_bin_filename()));
   }
   // Delete All Global
   Global<CtrlClient>::Delete();
