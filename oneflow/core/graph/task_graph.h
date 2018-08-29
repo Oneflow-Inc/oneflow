@@ -87,7 +87,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   template<typename TaskNodeType>
   bool IsEndingTaskType(TaskType type);
 
-  void EnableMemSharingInReduceConcatSplitIfNeed(const ReduceTaskNodes&, int64_t mem_shared_id);
+  void EnableMemSharingInReduceConcatSplitIfNeed(
+      const ReduceTaskNodes&, std::function<void(RegstDesc*, int64_t)> SetMemSharedField4Regst);
 
   void GeneratePersistenceThrdId(
       const std::vector<std::pair<int64_t, CompTaskNode*>>& persistence_nodes);

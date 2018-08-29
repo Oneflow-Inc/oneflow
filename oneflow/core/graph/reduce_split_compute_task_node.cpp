@@ -44,8 +44,7 @@ void ReduceSplitCompTaskNode::BuildExecGphAndRegst() {
   node->BindBnWithRegst(reduce_split_op->SoleIbn(), GetSoleConsumedRegst("in"));
 
   CompTaskNode* reduce_concat_node = FindPeerReduceConcatTaskNode();
-  const auto& reduce_concat_consumed_regsts = reduce_concat_node->consumed_regsts();
-  CHECK_EQ(reduce_concat_consumed_regsts.size(), produced_regsts().size());
+  CHECK_EQ(reduce_concat_node->consumed_regsts().size(), produced_regsts().size());
 
   FOR_RANGE(size_t, i, 0, reduce_split_op->output_bns().size()) {
     std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out_" + std::to_string(i));
@@ -57,21 +56,23 @@ void ReduceSplitCompTaskNode::BuildExecGphAndRegst() {
 }
 
 CompTaskNode* ReduceSplitCompTaskNode::FindPeerReduceConcatTaskNode() {
-  TaskNode* src_node = this;
-  while (true) {
+  CompTaskNode* src_node = this;
+  bool found_direct_node = true;
+
+  while (src_node->GetTaskType() != TaskType::kReduceConcat && found_direct_node) {
+    found_direct_node = false;
     for (TaskEdge* edge : src_node->in_edges()) {
       CompTaskNode* comp_task_node = dynamic_cast<CompTaskNode*>(edge->src_node());
-      if (comp_task_node == nullptr) { continue; }
-      if (comp_task_node->GetTaskType() == TaskType::kReduceConcat) {
-        return comp_task_node;
-      } else if (comp_task_node->GetTaskType() == TaskType::kNormalBackward) {
-        LOG(FATAL) << "No peer ReduceConcat";
-      } else {
-        src_node = edge->src_node();
+      if (comp_task_node != nullptr) {
+        src_node = comp_task_node;
+        CHECK(src_node->GetTaskType() != TaskType::kNormalBackward);
+        found_direct_node = true;
+        break;
       }
     }
+    if (found_direct_node == false) { break; }
   }
-  return nullptr;
+  return src_node;
 }
 
 void ReduceSplitCompTaskNode::FixPackedBlobDescOfProducedRegst() {

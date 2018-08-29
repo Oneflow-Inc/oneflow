@@ -7,7 +7,7 @@ void ReduceSplitCompActor::VirtualCompActorInit(const TaskProto& proto) {
 }
 
 void ReduceSplitCompActor::SetKernelCtxOther(void** other) {
-  other_val_ = EnableInplace() ? true : false;
+  other_val_ = EnableInplace();
   *other = static_cast<void*>(&other_val_);
 }
 

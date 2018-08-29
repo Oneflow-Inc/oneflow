@@ -30,7 +30,7 @@ void LogicalGraph::GroupNodesForReduceStruct() {
       [&](ChainLogicalNode* node) { fw_node_groups.emplace_back(node->logical_nodes()); });
   for (auto& fw_node_group : fw_node_groups) {
     if (fw_node_group.size() < Global<JobDesc>::Get()->reduce_group_size()) {
-      fw_node_groups_.emplace_back(fw_node_group);
+      fw_node_groups_.emplace_back(std::move(fw_node_group));
     } else {
       int64_t fw_node_group_size = fw_node_group.size();
       int64_t seg_num = fw_node_group_size / Global<JobDesc>::Get()->reduce_group_size() + 1;
@@ -41,7 +41,7 @@ void LogicalGraph::GroupNodesForReduceStruct() {
         FOR_RANGE(int64_t, nid, range.begin(), range.end()) {
           sub_fw_node_group.emplace_back(fw_node_group[nid]);
         }
-        fw_node_groups_.emplace_back(sub_fw_node_group);
+        fw_node_groups_.emplace_back(std::move(sub_fw_node_group));
       }
     }
   }
@@ -443,10 +443,10 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
       auto reduce_ctx_it = fw_node2reduce_ctx.find(fw_node);
       if (reduce_ctx_it != fw_node2reduce_ctx.end()) {
         auto& reduce_ctx = reduce_ctx_it->second;
-        group_reduce_ctx.fw_logicals.emplace_back(reduce_ctx.fw_logicals[0]);
-        group_reduce_ctx.bw_logicals.emplace_back(reduce_ctx.bw_logicals[0]);
-        group_reduce_ctx.md_diff_acc_logicals.emplace_back(reduce_ctx.md_diff_acc_logicals[0]);
-        group_reduce_ctx.md_updt_logicals.emplace_back(reduce_ctx.md_updt_logicals[0]);
+        group_reduce_ctx.fw_logicals.emplace_back(reduce_ctx.fw_logicals.at(0));
+        group_reduce_ctx.bw_logicals.emplace_back(reduce_ctx.bw_logicals.at(0));
+        group_reduce_ctx.md_diff_acc_logicals.emplace_back(reduce_ctx.md_diff_acc_logicals.at(0));
+        group_reduce_ctx.md_updt_logicals.emplace_back(reduce_ctx.md_updt_logicals.at(0));
       }
     }
     BuildReduceStruct(group_reduce_ctx);
@@ -482,8 +482,8 @@ void LogicalGraph::BuildReduceStruct(const ReduceCtx& reduce_ctx) {
     }
     AddReduceScatterAddGatherNodes(reduce_concat_node, reduce_split_node);
   } else if (reduce_ctx.fw_logicals.size() == 1) {
-    AddReduceScatterAddGatherNodes(reduce_ctx.md_diff_acc_logicals[0],
-                                   reduce_ctx.md_updt_logicals[0]);
+    AddReduceScatterAddGatherNodes(reduce_ctx.md_diff_acc_logicals.at(0),
+                                   reduce_ctx.md_updt_logicals.at(0));
   }
 }
 
