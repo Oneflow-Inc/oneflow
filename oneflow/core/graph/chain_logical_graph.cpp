@@ -12,8 +12,6 @@ struct ChainLogicalGraph::Chain {
   HashSet<const LogicalNode*> descendants_and_this;
   bool is_mergeable;
 
-  bool IsMergeable() const { return is_mergeable; };
-
   bool IsParallelDescEqual(const Chain& rhs) const {
     CHECK_GT(nodes.size(), 0);
     CHECK_GT(rhs.nodes.size(), 0);
@@ -82,10 +80,10 @@ bool ChainLogicalGraph::TryMergeOneChain(
     std::list<Chain>* chain_list,
     HashMap<const LogicalNode*, std::list<Chain>::iterator>* logical2chain_it) {
   for (auto lhs = chain_list->begin(); lhs != chain_list->end(); ++lhs) {
-    if (!lhs->IsMergeable()) { continue; }
+    if (!lhs->is_mergeable) { continue; }
     for (auto rhs = lhs; rhs != chain_list->end(); ++rhs) {
       if (lhs == rhs) { continue; }
-      if (!rhs->IsMergeable()) { continue; }
+      if (!rhs->is_mergeable) { continue; }
       if (!lhs->IsParallelDescEqual(*rhs)) { continue; }
       if (lhs->ancestors != rhs->ancestors || lhs->descendants != rhs->descendants) { continue; }
       for (const LogicalNode* node : rhs->nodes) {
@@ -101,12 +99,12 @@ bool ChainLogicalGraph::TryMergeOneChain(
 
   for (auto succ_chain_it = chain_list->begin(); succ_chain_it != chain_list->end();
        ++succ_chain_it) {
-    if (!succ_chain_it->IsMergeable()) { continue; }
+    if (!succ_chain_it->is_mergeable) { continue; }
     for (const LogicalNode* node_in_succ : succ_chain_it->nodes) {
       for (const LogicalEdge* in_edge : node_in_succ->in_edges()) {
         auto pred_chain_it = logical2chain_it->at(in_edge->src_node());
         if (pred_chain_it == succ_chain_it) { continue; }
-        if (!pred_chain_it->IsMergeable()) { continue; }
+        if (!pred_chain_it->is_mergeable) { continue; }
         if (!pred_chain_it->IsParallelDescEqual(*succ_chain_it)) { continue; }
         if (pred_chain_it->ancestors_and_this != succ_chain_it->ancestors
             || pred_chain_it->descendants != succ_chain_it->descendants_and_this) {
