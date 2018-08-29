@@ -134,20 +134,12 @@ void TaskGraph::BuildCtrlRegstDescInSameChain() {
 }
 
 struct ReduceTaskNodes {
-  CompTaskNode* concat;
-  CompTaskNode* scatter;
-  CompTaskNode* local_add;
-  CompTaskNode* global_add;
-  CompTaskNode* gather;
-  CompTaskNode* split;
-
-  ReduceTaskNodes()
-      : concat(nullptr),
-        scatter(nullptr),
-        local_add(nullptr),
-        global_add(nullptr),
-        gather(nullptr),
-        split(nullptr) {}
+  CompTaskNode* concat = nullptr;
+  CompTaskNode* scatter = nullptr;
+  CompTaskNode* local_add = nullptr;
+  CompTaskNode* global_add = nullptr;
+  CompTaskNode* gather = nullptr;
+  CompTaskNode* split = nullptr;
 };
 
 void TaskGraph::EnableMemSharingInReduceStruct() {
