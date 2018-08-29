@@ -132,7 +132,7 @@ message OpAttribute {
   repeated string model_bns = 10;
   repeated string model_diff_bns = 11;
   repeated string const_model_bns = 12;
-  
+
   repeated string forward_model_bns = 13;
   repeated string const_buf_bns = 14;
   repeated string pb_input_bns = 15;
@@ -140,7 +140,7 @@ message OpAttribute {
 }
 
 message KernelConf {
-  required OpAttribute op_attribute = 1; 
+  required OpAttribute op_attribute = 1;
   optional bool need_do_data_id = 2 [default = false];
   optional bool need_do_col_num = 3 [default = false];
   optional bool need_do_opaque_header = 4 [default = false];

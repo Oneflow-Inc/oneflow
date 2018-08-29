@@ -5,8 +5,8 @@
 
 namespace oneflow {
 
-const std::string& JobDesc::MdLoadSnapshotPath() const {
-  CHECK(job_conf_.other().has_train_conf());
+std::string JobDesc::MdLoadSnapshotPath() const {
+  if (!job_conf_.other().has_train_conf()) { return ""; }
   return job_conf_.other().train_conf().model_load_snapshot_path();
 }
 
