@@ -20,6 +20,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph);
 
   const char* TypeName() const override { return "TaskGraph"; }
+  void RemoveEmptyRegsts();
   void AddOrderingCtrlEdgeInSameChain();
 
   void EnableMemSharingInReduceStruct();
@@ -59,10 +60,12 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   TaskNode* AddCopyH2DTaskTo(TaskNode*);
   TaskNode* AddCopyD2HTaskFrom(TaskNode*);
   TaskNode* AddCopyCommNetTaskBetween(TaskNode* src, TaskNode* dst);
-  void BuildOutBoxing(const LogicalNode* logical,
-                      const std::vector<CompTaskNode*>& sorted_comp_tasks,
-                      std::vector<TaskNode*>* sorted_out_box,
-                      std::function<int64_t(const TaskNode*)> AllocateCpuThrdId);
+  void BuildOutBoxing(
+      const LogicalNode* logical, const std::vector<CompTaskNode*>& sorted_comp_tasks,
+      std::vector<TaskNode*>* sorted_out_box,
+      std::function<TaskNode**(CompTaskNode* src, int64_t machine_id, int32_t mem_zone_id)>
+          MutBufTask,
+      std::function<int64_t(const TaskNode*)> AllocateCpuThrdId);
   void BuildInBoxing(const LogicalNode* logical,
                      const std::vector<CompTaskNode*>& sorted_comp_tasks,
                      std::vector<TaskNode*>* sorted_in_box,
@@ -70,8 +73,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void ConnectWithCopyCommNetIfNeed(TaskNode* src, TaskNode* dst);
 
   void SetAreaIdForNewNodes(const LogicalNode* src_logical, const LogicalNode* dst_logical);
-  void CollectAncestorsForEachNode();
-  void FindChainsInSameStream();
+  void MergeChainAndSetOrderInGraphForEachNode();
+  void BuildCtrlRegstDescInSameChain();
 
   template<typename LogicalNodeType, typename TaskNodeType>
   void AddCtrlEdgeForReduceTaskNode(int64_t total_machine_num);
@@ -83,6 +86,9 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
   template<typename TaskNodeType>
   bool IsEndingTaskType(TaskType type);
+
+  void EnableMemSharingInReduceConcatSplitIfNeed(
+      const ReduceTaskNodes&, std::function<void(RegstDesc*, int64_t)> SetMemSharedField4Regst);
 
   void GeneratePersistenceThrdId(
       const std::vector<std::pair<int64_t, CompTaskNode*>>& persistence_nodes);

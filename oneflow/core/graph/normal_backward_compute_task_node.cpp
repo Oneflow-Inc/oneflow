@@ -5,16 +5,17 @@
 namespace oneflow {
 
 void NormalBackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  ProduceB121Regst("in_diff");
+  ProduceRegst("in_diff", true);
   ProduceRegst("activation_diff", true, 1, 1);
   ProduceRegst("bw_buf", true, 1, 1);
   for (TaskEdge* edge : out_edges()) {
     const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
     if (succ_logical->TypeName() == "MdDiffAcc" || succ_logical->TypeName() == "NormalMdUpdt"
-        || succ_logical->TypeName() == "ReduceScatter") {
+        || succ_logical->TypeName() == "ReduceScatter"
+        || succ_logical->TypeName() == "ReduceConcat") {
       edge->AddRegst("model_diff", ProduceRegst("model_diff", true));
     } else {
-      BindEdgeWithProducedB121Regst(edge, "in_diff");
+      BindEdgeWithProducedRegst(edge, "in_diff");
     }
   }
 }
@@ -26,8 +27,7 @@ void NormalBackwardCompTaskNode::ConsumeAllRegsts() {
     if (IsForwardTaskType(src_task_type)) {
       ConsumeRegst("activation", edge->GetRegst("activation"));
       ConsumeRegst("data_tmp", edge->GetRegst("data_tmp"));
-      ConsumeRegst("boxing_out", edge->GetRegst("boxing_out"));
-      ConsumeRegst("121_out", edge->GetRegst("121_out"));
+      ConsumeRegst("out", edge->GetRegst("out"));
       ConsumeRegst("const_buf", edge->GetRegst("const_buf"));
     } else if (src_task_type == TaskType::kNormalMdUpdt) {
       ConsumeRegst("model", edge->GetRegst("model"));
@@ -38,8 +38,8 @@ void NormalBackwardCompTaskNode::ConsumeAllRegsts() {
   }
   CompTaskNode* fw_task = GetRelatedFwTaskNode();
   if (fw_task) {
-    const std::list<std::weak_ptr<RegstDesc>>& in_regst = fw_task->GetConsumedRegst("in");
-    for (std::weak_ptr<RegstDesc> regst : in_regst) { ConsumeRegst("in", regst.lock()); }
+    const std::list<std::shared_ptr<RegstDesc>>& in_regst = fw_task->GetConsumedRegst("in");
+    for (std::shared_ptr<RegstDesc> regst : in_regst) { ConsumeRegst("in", regst); }
   }
 }
 
@@ -79,10 +79,7 @@ void NormalBackwardCompTaskNode::BuildExecGphAndBindOutDiffRegst() {
   });
   CompTaskNode* fw_task = GetRelatedFwTaskNode();
   if (fw_task) {
-    const HashSet<LogicalBlobId>& lbi_boxing = fw_task->logical_node()->lbi_boxing();
-    const HashSet<LogicalBlobId>& lbi_121 = fw_task->logical_node()->lbi_121();
-    std::shared_ptr<RegstDesc> out_regst_boxing = GetSoleConsumedRegst("boxing_out");
-    std::shared_ptr<RegstDesc> out_regst_121 = GetSoleConsumedRegst("121_out");
+    std::shared_ptr<RegstDesc> out_regst = GetSoleConsumedRegst("out");
     mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
       for (const std::string& odbn : cur_node->op()->output_diff_bns()) {
         const LogicalBlobId& lbi = cur_node->op()->BnInOp2Lbi(odbn);
@@ -90,13 +87,8 @@ void NormalBackwardCompTaskNode::BuildExecGphAndBindOutDiffRegst() {
           std::string obn =
               GenUnDiffBn(odbn);  // the lbis of obn and odbn may be different, use obn directly
           LogicalBlobId obn_lbi = cur_node->op()->BnInOp2Lbi(obn);
-          if (lbi_boxing.find(obn_lbi) != lbi_boxing.end()) {
-            cur_node->BindBnWithRegst(GenUnDiffBn(odbn), out_regst_boxing);
-          } else if (lbi_121.find(obn_lbi) != lbi_121.end()) {
-            cur_node->BindBnWithRegst(GenUnDiffBn(odbn), out_regst_121);
-          } else {
-            UNIMPLEMENTED();
-          }
+          CHECK(fw_task->logical_node()->IsDataLbiOnOutEdge(obn_lbi) == true);
+          cur_node->BindBnWithRegst(GenUnDiffBn(odbn), out_regst);
         }
       }
     });
@@ -129,6 +121,7 @@ void NormalBackwardCompTaskNode::BuildActivationDiffRegst() {
 }
 
 void NormalBackwardCompTaskNode::BuildInDiffRegst() {
+  std::shared_ptr<RegstDesc> in_diff_regst = GetProducedRegst("in_diff");
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
     HashSet<LogicalBlobId> found_lbis;
     for (ExecEdge* out_edge : cur_node->out_edges()) {
@@ -140,7 +133,10 @@ void NormalBackwardCompTaskNode::BuildInDiffRegst() {
       if (fw_task) {
         cur_node->BindBnWithOneOfTheRegsts(GenUnDiffBn(idbn), GetConsumedRegst("in"));
       }
-      if (TryAddLbiToB121RegstAndBindIt(cur_node, idbn, "in_diff") == false) {
+      if (logical_node()->IsDataLbiOnOutEdge(lbi)) {
+        in_diff_regst->AddLbi(lbi);
+        cur_node->BindBnWithRegst(idbn, in_diff_regst);
+      } else {
         CHECK(found_lbis.empty() || found_lbis.find(lbi) != found_lbis.end());
       }
     }
@@ -166,14 +162,9 @@ void NormalBackwardCompTaskNode::BindModelDiffRegst() {
 
 void NormalBackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
   if (GetRelatedFwTaskNode()) {
-    std::shared_ptr<RegstDesc> in_diff_regst_boxing = GetProducedRegst("boxing_in_diff");
-    for (std::weak_ptr<RegstDesc> regst : GetConsumedRegst("in")) {
-      in_diff_regst_boxing->CopyBlobDescWithoutAddLbi(regst.lock().get());
-    }
-
-    std::shared_ptr<RegstDesc> in_diff_regst_121 = GetProducedRegst("121_in_diff");
-    for (std::weak_ptr<RegstDesc> regst : GetConsumedRegst("in")) {
-      in_diff_regst_121->CopyBlobDescWithoutAddLbi(regst.lock().get());
+    std::shared_ptr<RegstDesc> in_diff_regst = GetProducedRegst("in_diff");
+    for (std::shared_ptr<RegstDesc> regst : GetConsumedRegst("in")) {
+      in_diff_regst->CopyBlobDescWithoutAddLbi(regst.get());
     }
 
     std::shared_ptr<RegstDesc> md_diff_regst = GetProducedRegst("model_diff");
@@ -181,13 +172,14 @@ void NormalBackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
 
     std::shared_ptr<RegstDesc> activation_diff_regst = GetProducedRegst("activation_diff");
     activation_diff_regst->CopyBlobDescWithoutAddLbi(GetSoleConsumedRegst("activation").get());
-    activation_diff_regst->CopyBlobDescWithoutAddLbi(GetSoleConsumedRegst("boxing_out").get());
-    activation_diff_regst->CopyBlobDescWithoutAddLbi(GetSoleConsumedRegst("121_out").get());
+    activation_diff_regst->CopyBlobDescWithoutAddLbi(GetSoleConsumedRegst("out").get());
   } else {
     mut_exec_gph().SoleNode()->InferDiffBlobDescsWithoutFwNode(parallel_ctx());
   }
-  mut_exec_gph().TopoForEachNode(
-      [this](ExecNode* node) { node->InferBwBufBlobDescs(parallel_ctx()); });
+  mut_exec_gph().TopoForEachNode([this](ExecNode* node) {
+    node->FixInDiffBlobDescs(parallel_ctx());
+    node->InferBwBufBlobDescs(parallel_ctx());
+  });
 }
 
 CompTaskNode* NormalBackwardCompTaskNode::GetRelatedFwTaskNode() {
@@ -218,10 +210,7 @@ void NormalBackwardCompTaskNode::RmUselessConsumeRelationshipToFw() {
     }
   });
   if (need_in_blob == false) { EraseConsumedRegstsByName("in"); }
-  if (need_out_blob == false) {
-    EraseConsumedRegstsByName("boxing_out");
-    EraseConsumedRegstsByName("121_out");
-  }
+  if (need_out_blob == false) { EraseConsumedRegstsByName("out"); }
 }
 
 }  // namespace oneflow

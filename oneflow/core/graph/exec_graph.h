@@ -42,14 +42,15 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
 
   std::shared_ptr<const Operator> op() const { return op_; }
   std::shared_ptr<const Operator>& mut_op() { return op_; }
-  RegstDesc* RegstDesc4BnInOp(const std::string& bn) { return bn_in_op2regst_.at(bn).lock().get(); }
+  RegstDesc* RegstDesc4BnInOp(const std::string& bn) { return bn_in_op2regst_.at(bn).get(); }
 
-  void BindBnWithRegst(const std::string& bn, std::weak_ptr<RegstDesc>);
+  void BindBnWithRegst(const std::string& bn, std::shared_ptr<RegstDesc>);
   void BindBnsWithRegst(const PbRpf<std::string>& (Operator::*bns_getter)() const,
-                        std::weak_ptr<RegstDesc>);
+                        std::shared_ptr<RegstDesc>);
   void AddBnToRegstAndBindIt(const PbRpf<std::string>& (Operator::*bns_getter)() const,
                              std::shared_ptr<RegstDesc>);
-  void BindBnWithOneOfTheRegsts(const std::string&, const std::list<std::weak_ptr<RegstDesc>>&);
+  void BindBnWithOneOfTheRegsts(const std::string&, const std::list<std::shared_ptr<RegstDesc>>&);
+  void UnbindBnWithEmptyRegst();
 
   void set_fw_node(ExecNode* val) { fw_node_ = val; }
   ExecNode* fw_node() { return fw_node_; }
@@ -60,13 +61,14 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   void InferBlobDescs(const ParallelContext* parallel_ctx);
   void InferBwBufBlobDescs(const ParallelContext* parallel_ctx);
   void InferDiffBlobDescsWithoutFwNode(const ParallelContext* parallel_ctx);
+  void FixInDiffBlobDescs(const ParallelContext* parallel_ctx);
 
  private:
   const OpContext* op_context() const { return fw_node_ ? fw_node_->op_ctx_.get() : op_ctx_.get(); }
   std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOpFunc() const;
 
   std::shared_ptr<const Operator> op_;
-  HashMap<std::string, std::weak_ptr<RegstDesc>> bn_in_op2regst_;
+  HashMap<std::string, std::shared_ptr<RegstDesc>> bn_in_op2regst_;
   ExecNode* fw_node_;
 
   std::unique_ptr<OpContext> op_ctx_;

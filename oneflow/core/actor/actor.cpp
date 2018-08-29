@@ -58,7 +58,7 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
       writeable_produced_ctrl_regst_[regst->regst_desc_id()].push_back(regst.get());
       produced_ctrl_regst2reading_cnt_[regst.get()] = 0;
     }
-    produced_ctrl_regst2max_act_id_[pair.first] = act_id_;
+    produced_ctrl_regst2expected_act_id_[pair.first] = act_id_;
   }
 
   // non ctrl regst
@@ -82,7 +82,7 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
       writeable_produced_data_regst_[regst->regst_desc_id()].push_back(regst.get());
       produced_data_regst2reading_cnt_[regst.get()] = 0;
     }
-    produced_data_regst2max_act_id_[pair.first] = act_id_;
+    produced_data_regst2expected_act_id_[pair.first] = act_id_;
   }
   actual_writeable_produced_data_regst_desc_num_ = writeable_produced_data_regst_.size();
   writeable_produced_data_regst_desc_cnt_ = actual_writeable_produced_data_regst_desc_num_;
@@ -417,6 +417,11 @@ Regst* Actor::GetSoleProducedRegst(int64_t regst_desc_id) {
   return it->second.front().get();
 }
 
+int64_t Actor::GetSoleProducedDataRegstDescId() const {
+  CHECK_EQ(produced_data_regsts_.size(), 1);
+  return produced_data_regsts_.begin()->first;
+}
+
 bool Actor::IsReadReady() {
   return naive_readable_data_regst_.size() == naive_readable_data_regst_cnt_
          && IsCustomizedReadReady();
@@ -439,13 +444,11 @@ int Actor::ProcessWriteableCtrlRegstMsg(const ActorMsg& msg) {
   auto writeable_it = writeable_produced_ctrl_regst_.find(regst->regst_desc_id());
   CHECK(writeable_it != writeable_produced_ctrl_regst_.end());
   if (writeable_it->second.empty()) { writeable_ctrl_regst_desc_cnt_ += 1; }
-  int64_t& max_act_id = produced_ctrl_regst2max_act_id_[regst->regst_desc_id()];
-  if (max_act_id >= 0) {
-    CHECK_GT(regst->act_id(), max_act_id);
-    max_act_id = regst->act_id();
-  } else if (regst->act_id() >= 0) {
-    max_act_id = regst->act_id();
+  int64_t& expected_act_id = produced_ctrl_regst2expected_act_id_[regst->regst_desc_id()];
+  if (expected_act_id >= 0 && CheckOutputActId(regst->regst_desc_id())) {
+    CHECK_EQ(regst->act_id(), expected_act_id);
   }
+  expected_act_id = regst->act_id() + ActNumForEachOutput(regst->regst_desc_id());
   writeable_it->second.push_back(regst);
   return 0;
 }
@@ -522,13 +525,11 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
   auto writeable_it = writeable_produced_data_regst_.find(regst->regst_desc_id());
   CHECK(writeable_it != writeable_produced_data_regst_.end());
   if (writeable_it->second.empty()) { writeable_produced_data_regst_desc_cnt_ += 1; }
-  int64_t& max_act_id = produced_data_regst2max_act_id_[regst->regst_desc_id()];
-  if (max_act_id >= 0) {
-    CHECK_GT(regst->act_id(), max_act_id);
-    max_act_id = regst->act_id();
-  } else if (regst->act_id() >= 0) {
-    max_act_id = regst->act_id();
+  int64_t& expected_act_id = produced_data_regst2expected_act_id_[regst->regst_desc_id()];
+  if (expected_act_id >= 0 && CheckOutputActId(regst->regst_desc_id())) {
+    CHECK_EQ(regst->act_id(), expected_act_id);
   }
+  expected_act_id = regst->act_id() + ActNumForEachOutput(regst->regst_desc_id());
   writeable_it->second.push_back(regst);
   return 0;
 }

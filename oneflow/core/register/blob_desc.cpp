@@ -13,9 +13,11 @@ BlobDesc::BlobDesc(const Shape& shape, DataType data_type, bool has_data_id, boo
       has_data_id_(has_data_id),
       has_col_num_(has_col_num),
       max_col_num_(max_col_num),
+      blob_mem_id_(-1),
       body_field_(shape, data_type) {}
 BlobDesc::BlobDesc(const BlobDescProto& proto) : body_field_(proto.body()) {
   max_col_num_ = proto.header().max_col_num();
+  blob_mem_id_ = proto.header().blob_mem_id();
   if (proto.header().has_opaque_header()) {
     header_is_opaque_ = true;
     has_data_id_ = false;
@@ -34,6 +36,7 @@ BlobDesc::BlobDesc(int64_t header_byte_size, const Shape& shape, DataType data_t
     : has_data_id_(false),
       has_col_num_(false),
       max_col_num_(max_col_num),
+      blob_mem_id_(-1),
       body_field_(shape, data_type) {
   if (header_byte_size > 0) {
     header_is_opaque_ = true;
@@ -65,6 +68,7 @@ void BlobDesc::ColNumFieldToProto(FieldHeaderDesc* proto) const {
 
 void BlobDesc::HeaderToProto(BlobDescProto* proto) const {
   proto->mutable_header()->set_max_col_num(max_col_num_);
+  proto->mutable_header()->set_blob_mem_id(blob_mem_id_);
   if (!header_is_opaque_) {
     FieldHeaderDesc* field_header = proto->mutable_header()->mutable_field_header();
     if (has_data_id_field()) { DataIdFieldToProto(field_header); }
@@ -82,10 +86,23 @@ void BlobDesc::ToProto(BlobDescProto* proto) const {
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
   return header_is_opaque_ == rhs.header_is_opaque_ && opaque_header_ == rhs.opaque_header_
          && has_data_id_ == rhs.has_data_id_ && has_col_num_ == rhs.has_col_num_
-         && max_col_num_ == rhs.max_col_num_ && body_field_ == rhs.body_field_;
+         && max_col_num_ == rhs.max_col_num_ && blob_mem_id_ == rhs.blob_mem_id_
+         && body_field_ == rhs.body_field_;
 }
 
-std::unique_ptr<BlobDesc> ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc) {
+BlobDesc& BlobDesc::operator=(const BlobDesc& blob_desc) {
+  header_is_opaque_ = blob_desc.header_is_opaque_;
+  opaque_header_ = blob_desc.opaque_header_;
+  has_data_id_ = blob_desc.has_data_id_;
+  has_col_num_ = blob_desc.has_col_num_;
+  max_col_num_ = blob_desc.max_col_num_;
+  body_field_ = blob_desc.body_field_;
+  blob_mem_id_ = -1;
+  return *this;
+}
+
+std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
+    const HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>& lbi2blob_desc) {
   int64_t header_byte_size = 0;
   int64_t body_byte_size = 0;
   HashSet<int> data_type_set;
@@ -93,10 +110,24 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(std::function<const BlobDesc*()>
   int32_t blob_desc_cnt = 0;
   std::unique_ptr<BlobDesc> ret(new BlobDesc());
   const BlobDesc* last_blob_desc = nullptr;
-  while (const BlobDesc* blob_desc = NextBlobDesc()) {
+  HashMap<int32_t, size_t> blob_mem_id2size;
+
+  for (auto& pair : lbi2blob_desc) {
+    BlobDesc* blob_desc = pair.second.get();
     RtBlobDesc rt_blob_desc(*blob_desc);
     header_byte_size += rt_blob_desc.ByteSizeOfBlobHeader();
-    body_byte_size += rt_blob_desc.ByteSizeOfBlobBody();
+    int64_t cur_body_byte_size = rt_blob_desc.ByteSizeOfBlobBody();
+    int32_t blob_mem_id = blob_desc->blob_mem_id();
+    if (blob_mem_id == -1) {
+      body_byte_size += cur_body_byte_size;
+    } else {
+      auto size_it = blob_mem_id2size.find(blob_mem_id);
+      if (size_it == blob_mem_id2size.end()) {
+        CHECK(blob_mem_id2size.emplace(blob_mem_id, cur_body_byte_size).second);
+      } else {
+        CHECK_EQ(size_it->second, cur_body_byte_size);
+      }
+    }
     data_type_set.insert(static_cast<int>(blob_desc->data_type()));
     if (max_col_num == -1) {
       max_col_num = blob_desc->max_col_num();
@@ -106,6 +137,7 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(std::function<const BlobDesc*()>
     blob_desc_cnt += 1;
     last_blob_desc = blob_desc;
   }
+  for (auto& pair : blob_mem_id2size) { body_byte_size += pair.second; }
   if (blob_desc_cnt == 0) {
     // do nothing
   } else if (blob_desc_cnt == 1) {
