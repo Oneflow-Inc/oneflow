@@ -18,14 +18,16 @@ __device__ T BilinearInterpolate(const T* channel_dptr, const int32_t height, co
   int32_t x_high = 0;
 
   if (y_low >= height - 1) {
-    y_high = y_low = height - 1;
+    y_low = height - 1;
+    y_high = y_low;
     y = static_cast<T>(y_low);
   } else {
     y_high = y_low + 1;
   }
 
   if (x_low >= width - 1) {
-    x_high = x_low = width - 1;
+    x_low = width - 1;
+    x_high = x_low;
     x = static_cast<T>(x_low);
   } else {
     x_high = x_low + 1;
@@ -57,14 +59,16 @@ __device__ bool BilinearInterpolateDiff(const T bin_diff_avg, const int64_t heig
   if (x > 0) { x_low = x; }
 
   if (y_low >= height - 1) {
-    y_high = y_low = height - 1;
+    y_low = height - 1;
+    y_high = y_low;
     y = static_cast<T>(y_low);
   } else {
     y_high = y_low + 1;
   }
 
   if (x_low >= width - 1) {
-    x_high = x_low = width - 1;
+    x_low = width - 1;
+    x_high = x_low;
     x = static_cast<T>(x_low);
   } else {
     x_high = x_low + 1;
