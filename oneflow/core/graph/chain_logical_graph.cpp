@@ -28,6 +28,7 @@ ChainLogicalGraph::ChainLogicalGraph(const LogicalGraph& logical_graph) {
   MergeChains(&chain_list, &logical2chain_it);
   SortNodesInChains(&chain_list, logical2order_in_topo);
   BuildGraph(logical_graph, &chain_list);
+  ToDotWithAutoFilePath();
 }
 
 void ChainLogicalGraph::InitChains(
@@ -104,7 +105,7 @@ bool ChainLogicalGraph::TryMergeTwoParallelChains(
     }
   }
   return false;
-};
+}
 
 bool ChainLogicalGraph::TryMergeTwoConnectedChains(
     std::list<Chain>* chain_list,
@@ -134,7 +135,7 @@ bool ChainLogicalGraph::TryMergeTwoConnectedChains(
     }
   }
   return false;
-};
+}
 
 void ChainLogicalGraph::SortNodesInChains(
     std::list<Chain>* chain_list,
