@@ -133,26 +133,17 @@ void TaskGraph::BuildCtrlRegstDescInSameChain() {
   }
 }
 
-struct ReduceTaskNodes {
-  CompTaskNode* concat = nullptr;
-  CompTaskNode* scatter = nullptr;
-  CompTaskNode* local_add = nullptr;
-  CompTaskNode* global_add = nullptr;
-  CompTaskNode* gather = nullptr;
-  CompTaskNode* split = nullptr;
-};
-
 void TaskGraph::EnableMemSharingInReduceStruct() {
-  HashMap<CompTaskNode*, ReduceTaskNodes> bw2reduce_tasks;
-  CollectReduceTaskNodes(&bw2reduce_tasks);
-  for (auto& pair : bw2reduce_tasks) {
-    EnableMemSharingInOneReduce(pair.second);
-    AddCtrlEdge4MemSharingInOneReduce(pair.second);
+  std::unordered_set<ReduceTaskNodes, ReduceTaskNodesHasher> reduce_tasks;
+  CollectReduceTaskNodes(&reduce_tasks);
+  for (auto& reduce_task : reduce_tasks) {
+    EnableMemSharingInOneReduce(reduce_task);
+    AddCtrlEdge4MemSharingInOneReduce(reduce_task);
   }
 }
 
 void TaskGraph::CollectReduceTaskNodes(
-    HashMap<CompTaskNode*, ReduceTaskNodes>* bw2reduce_tasks) const {
+    std::unordered_set<ReduceTaskNodes, ReduceTaskNodesHasher>* reduce_tasks) const {
   auto FindSuccReduceTaskNode = [](CompTaskNode* task_node, TaskType type) -> CompTaskNode* {
     for (TaskEdge* out_edge : task_node->out_edges()) {
       TaskNode* dst_node = out_edge->dst_node();
@@ -186,7 +177,7 @@ void TaskGraph::CollectReduceTaskNodes(
       return;
     }
 
-    ReduceTaskNodes& reduce_task_nodes = (*bw2reduce_tasks)[bw_task_node];
+    ReduceTaskNodes reduce_task_nodes;
     CompTaskNode* diff_acc_task_node = FindSuccReduceTaskNode(bw_task_node, TaskType::kMdDiffAcc);
     if (diff_acc_task_node != nullptr) {
       FindConcatAndScatter(diff_acc_task_node, &reduce_task_nodes);
@@ -212,6 +203,7 @@ void TaskGraph::CollectReduceTaskNodes(
     CHECK(reduce_task_nodes.scatter != nullptr);
     CHECK(reduce_task_nodes.global_add != nullptr);
     CHECK(reduce_task_nodes.gather != nullptr);
+    reduce_tasks->insert(reduce_task_nodes);
   });
 }
 
