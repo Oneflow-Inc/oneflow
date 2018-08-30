@@ -22,12 +22,12 @@ void ComputeBoxesDelta(const BBox<T2>* box, const BBox<T3>* target_box,
 }
 
 template<typename T>
-void SetBoxesAndBoxesTarget(int32_t index, int32_t gt_index, const BoxesSlice<T>& boxes_slice,
-                            const GtBoxes<FloatList16>& gt_boxes,
+void SetBoxesAndBoxesTarget(int32_t index, int32_t gt_index, const BoxesIndex<T>& boxes,
+                            const GtBoxesPbSlice<FloatList16>& gt_boxes,
                             const BBoxRegressionWeights& bbox_reg_ws, BBox<T>* roi_boxes,
                             BBoxDelta<T>* roi_boxes_target) {
   if (index >= 0) {
-    const BBox<T>* box = boxes_slice.bbox(index);
+    const BBox<T>* box = boxes.bbox(index);
     CopyBoxes(box, roi_boxes);
     if (gt_index >= 0) {
       const BBox<float>* gt_box = gt_boxes.GetBBox<float>(gt_index);
@@ -49,77 +49,89 @@ template<typename T>
 void ProposalTargetKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   FOR_RANGE(int64_t, i, 0, BnInOp2Blob("rpn_rois")->shape().At(0)) {
-    auto gt_boxes = GetImageGtBoxesWithLabels(i, BnInOp2Blob);
-    auto roi_boxes = GetRoiBoxesSlice(i, BnInOp2Blob);
-    auto boxes_max_overlap = ComputeRoiBoxesAndGtBoxesOverlaps(roi_boxes, gt_boxes, BnInOp2Blob);
-    ConcatGtBoxesToRoiBoxes(gt_boxes, boxes_max_overlap);
-    SubsampleForegroundAndBackground(boxes_max_overlap);
-    ComputeAndWriteOutput(i, boxes_max_overlap, gt_boxes, BnInOp2Blob);
+    auto gt_boxes = GetImageGtBoxesSlice(i, BnInOp2Blob);
+    auto all_boxes = GetImageRoiBoxesSlice(i, BnInOp2Blob);
+    ComputeRoiBoxesAndGtBoxesOverlaps(gt_boxes, all_boxes);
+    ConcatGtBoxesToRoiBoxes(gt_boxes, all_boxes);
+    SubsampleForegroundAndBackground(all_boxes);
+    ComputeAndWriteOutput(i, gt_boxes, all_boxes, BnInOp2Blob);
   }
 }
 
 template<typename T>
-typename ProposalTargetKernel<T>::GtBoxesWithLabelsType
-ProposalTargetKernel<T>::GetImageGtBoxesWithLabels(
+typename ProposalTargetKernel<T>::GtBoxesAndLabels ProposalTargetKernel<T>::GetImageGtBoxesSlice(
     size_t im_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const ProposalTargetOpConf& conf = op_conf().proposal_target_conf();
   const FloatList16* gt_boxes = BnInOp2Blob("gt_boxes")->dptr<FloatList16>(im_index);
   const Int32List16* gt_labels = BnInOp2Blob("gt_labels")->dptr<Int32List16>(im_index);
-  GtBoxesWithLabelsType gt_boxes_with_labels(*gt_boxes, *gt_labels);
-  gt_boxes_with_labels.ConvertNormalToAbsCoord<float>(conf.image_height(), conf.image_width());
-  CHECK_LE(gt_boxes_with_labels.size(), conf.max_gt_boxes_num());
-  return gt_boxes_with_labels;
+  GtBoxesAndLabels gt_boxes_and_labels(*gt_boxes, *gt_labels);
+
+  Int32List invalid_indices;
+  gt_boxes_and_labels.ForEachBox<float>([&invalid_indices](int32_t index, const BBox<float>* box) {
+    if (box->Area() <= 0) { invalid_indices.add_value(index); }
+  });
+  gt_boxes_and_labels.Filter(invalid_indices);
+
+  invalid_indices.Clear();
+  gt_boxes_and_labels.ForEachLabel([&](int32_t index, int32_t label) {
+    if (label > conf.num_classes()) { invalid_indices.add_value(index); }
+  });
+  gt_boxes_and_labels.Filter(invalid_indices);
+
+  gt_boxes_and_labels.ConvertFromNormalToAbsCoord<float>(conf.image_height(), conf.image_width());
+  CHECK_LE(gt_boxes_and_labels.size(), conf.max_gt_boxes_num());
+  return gt_boxes_and_labels;
 }
 
 template<typename T>
-BoxesSlice<T> ProposalTargetKernel<T>::GetRoiBoxesSlice(
+typename ProposalTargetKernel<T>::BoxesWithMaxOverlap
+ProposalTargetKernel<T>::GetImageRoiBoxesSlice(
     size_t im_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+  Blob* rpn_rois_blob = BnInOp2Blob("rpn_rois");
   Blob* boxes_index_blob = BnInOp2Blob("boxes_index");
-  BoxesSlice<T> roi_boxes_slice(boxes_index_blob->shape().elem_cnt(),
-                                boxes_index_blob->mut_dptr<int32_t>(),
-                                BnInOp2Blob("rpn_rois")->dptr<T>(im_index));
-  roi_boxes_slice.Truncate(BnInOp2Blob("rpn_rois")->shape().At(1));
-  return roi_boxes_slice;
-}
+  auto boxes_slice =
+      GenBoxesIndex(boxes_index_blob->shape().elem_cnt(), boxes_index_blob->mut_dptr<int32_t>(),
+                    rpn_rois_blob->dptr<T>(im_index));
+  boxes_slice.Truncate(rpn_rois_blob->shape().At(1));
 
-template<typename T>
-typename ProposalTargetKernel<T>::BoxesWithMaxOverlapSlice
-ProposalTargetKernel<T>::ComputeRoiBoxesAndGtBoxesOverlaps(
-    const BoxesSlice<T>& roi_boxes, const GtBoxesType& gt_boxes,
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   Blob* max_overlaps_blob = BnInOp2Blob("max_overlaps");
   std::memset(max_overlaps_blob->mut_dptr(), 0,
               max_overlaps_blob->shape().elem_cnt() * sizeof(float));
-  BoxesWithMaxOverlapSlice boxes_overlap_slice(
-      roi_boxes, max_overlaps_blob->mut_dptr<float>(),
+  BoxesWithMaxOverlap boxes_with_max_overlap_slice(
+      boxes_slice, max_overlaps_blob->mut_dptr<float>(),
       BnInOp2Blob("max_overlaps_gt_boxes_index")->mut_dptr<int32_t>());
+
+  return boxes_with_max_overlap_slice;
+}
+
+template<typename T>
+void ProposalTargetKernel<T>::ComputeRoiBoxesAndGtBoxesOverlaps(
+    const GtBoxesAndLabels& gt_boxes, BoxesWithMaxOverlap& roi_boxes) const {
   FasterRcnnUtil<T>::ForEachOverlapBetweenBoxesAndGtBoxes(
       roi_boxes, gt_boxes, [&](int32_t index, int32_t gt_index, float overlap) {
-        boxes_overlap_slice.UpdateMaxOverlapGtBox(index, gt_index, overlap);
+        roi_boxes.UpdateMaxOverlap(index, gt_index, overlap);
       });
-  return boxes_overlap_slice;
 }
 
 template<typename T>
-void ProposalTargetKernel<T>::ConcatGtBoxesToRoiBoxes(const GtBoxesType& gt_boxes,
-                                                      BoxesSlice<T>& roi_boxes) const {
-  FOR_RANGE(size_t, i, 0, gt_boxes.size()) { roi_boxes.PushBack(-(i + 1)); }
+void ProposalTargetKernel<T>::ConcatGtBoxesToRoiBoxes(const GtBoxesAndLabels& gt_boxes,
+                                                      BoxesWithMaxOverlap& all_boxes) const {
+  FOR_RANGE(size_t, i, 0, gt_boxes.size()) { all_boxes.PushBack(-(i + 1)); }
 }
 
 template<typename T>
-void ProposalTargetKernel<T>::SubsampleForegroundAndBackground(
-    BoxesWithMaxOverlapSlice& boxes_max_overlap) const {
+void ProposalTargetKernel<T>::SubsampleForegroundAndBackground(BoxesWithMaxOverlap& boxes) const {
   const ProposalTargetOpConf& conf = op_conf().proposal_target_conf();
   int32_t fg_end = -1;
   int32_t bg_begin = -1;
   int32_t bg_end = -1;
-  boxes_max_overlap.SortByOverlap(
+  boxes.SortByOverlap(
       [](float lhs_overlap, float rhs_overlap) { return lhs_overlap > rhs_overlap; });
-  boxes_max_overlap.ForEachOverlap([&](float overlap, size_t n, int32_t index) {
+  boxes.ForEachOverlap([&](float overlap, size_t n, int32_t index) {
     if (overlap < conf.foreground_threshold() && fg_end == -1) { fg_end = n; }
     if (overlap < conf.background_threshold_high()) {
       if (bg_begin == -1) { bg_begin = n; }
-      boxes_max_overlap.set_max_overlap_gt_box_index(index, -1);
+      boxes.set_max_overlap_gt_box(index, -1);
     }
     if (overlap < conf.background_threshold_low()) {
       bg_end = n;
@@ -128,38 +140,36 @@ void ProposalTargetKernel<T>::SubsampleForegroundAndBackground(
     return true;
   });
   if (fg_end <= 0) {
-    boxes_max_overlap.Truncate(0);
+    boxes.Truncate(0);
     return;
   }
-  if (bg_end == -1) { bg_end = boxes_max_overlap.size(); }
+  if (bg_end == -1) { bg_end = boxes.size(); }
   CHECK_GE(bg_begin, fg_end);
   CHECK_GT(bg_end, bg_begin);
 
   size_t total_sample_cnt = conf.num_rois_per_image();
   size_t fg_cnt = total_sample_cnt * conf.foreground_fraction();
   size_t bg_cnt = 0;
-  Slice sampled_slice(total_sample_cnt, boxes_max_overlap.mut_index_ptr(), false);
-  sampled_slice.Truncate(0);
+  Indexes sampled_inds(total_sample_cnt, 0, boxes.mut_index_ptr(), false);
   if (fg_cnt < fg_end) {
-    boxes_max_overlap.Shuffle(0, fg_end);
+    boxes.Shuffle(0, fg_end);
   } else {
     fg_cnt = fg_end;
   }
-  sampled_slice.Concat(boxes_max_overlap.Sub(0, fg_cnt));
+  sampled_inds.Concat(boxes.Slice(0, fg_cnt));
   bg_cnt = total_sample_cnt - fg_cnt;
   if (bg_cnt < bg_end - bg_begin) {
-    boxes_max_overlap.Shuffle(bg_begin, bg_end);
+    boxes.Shuffle(bg_begin, bg_end);
   } else {
     bg_cnt = bg_end - bg_begin;
   }
-  sampled_slice.Concat(boxes_max_overlap.Sub(bg_begin, bg_begin + bg_cnt));
-  boxes_max_overlap.Fill(sampled_slice);
+  sampled_inds.Concat(boxes.Slice(bg_begin, bg_begin + bg_cnt));
+  boxes.Assign(sampled_inds);
 }
 
 template<typename T>
 void ProposalTargetKernel<T>::ComputeAndWriteOutput(
-    size_t im_index, const BoxesWithMaxOverlapSlice& boxes_slice,
-    const GtBoxesWithLabelsType& gt_boxes,
+    size_t im_index, const GtBoxesAndLabels& gt_boxes, const BoxesWithMaxOverlap& boxes,
     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const ProposalTargetOpConf& conf = op_conf().proposal_target_conf();
   const BBoxRegressionWeights& bbox_reg_ws = conf.bbox_reg_weights();
@@ -179,14 +189,14 @@ void ProposalTargetKernel<T>::ComputeAndWriteOutput(
               bbox_outside_weights_blob->shape().elem_cnt() * sizeof(T));
 
   BBox<T>* rois_bbox = BBox<T>::MutCast(rois_blob->mut_dptr<T>(im_index));
-  FOR_RANGE(size_t, i, 0, boxes_slice.size()) {
-    int32_t index = boxes_slice.GetIndex(i);
-    int32_t gt_index = boxes_slice.GetMaxOverlapGtBoxIndex(i);
+  FOR_RANGE(size_t, i, 0, boxes.size()) {
+    int32_t index = boxes.GetIndex(i);
+    int32_t gt_index = boxes.GetMaxOverlapGtBox(i);
     int32_t label = gt_boxes.GetLabel(gt_index);
     labels_blob->mut_dptr<int32_t>(im_index)[i] = label;
     int64_t bbox_offset = im_index * output_num + i;
     BBoxDelta<T>* bbox_targets = BBoxDelta<T>::MutCast(bbox_targets_blob->mut_dptr<T>(bbox_offset));
-    SetBoxesAndBoxesTarget(index, gt_index, boxes_slice, gt_boxes, bbox_reg_ws, &rois_bbox[i],
+    SetBoxesAndBoxesTarget(index, gt_index, boxes, gt_boxes, bbox_reg_ws, &rois_bbox[i],
                            &bbox_targets[label]);
     BBoxWeights<T>* inside_weights =
         BBoxWeights<T>::MutCast(bbox_inside_weights_blob->mut_dptr<T>(bbox_offset));

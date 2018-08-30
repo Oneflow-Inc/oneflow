@@ -15,7 +15,7 @@ class ScoringMethodIf {
   void Init(const BboxVoteConf& vote_conf) { vote_conf_ = vote_conf; }
   const BboxVoteConf& conf() const { return vote_conf_; }
   virtual T scoring(
-      const ScoredBBoxSlice<T>&, const T default_score,
+      const ScoredBoxesIndex<T>&, const T default_score,
       const std::function<void(const std::function<void(int32_t, float)>&)>&) const = 0;
 
  private:
@@ -38,17 +38,17 @@ class BboxNmsAndLimitKernel final : public KernelIf<DeviceType::kCPU> {
   void BroadcastBboxTransform(const int64_t im_index,
                               const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   void ClipBox(Blob* bbox_blob) const;
-  ScoredBBoxSlice<T> NmsAndTryVote(
+  ScoredBoxesIndex<T> NmsAndTryVote(
       const int64_t im_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  void VoteBboxAndScore(const ScoredBBoxSlice<T>& pre_nms_slice,
-                        const ScoredBBoxSlice<T>& post_nms_slice, Blob* voting_score_blob,
+  void VoteBboxAndScore(const ScoredBoxesIndex<T>& pre_nms_slice,
+                        const ScoredBoxesIndex<T>& post_nms_slice, Blob* voting_score_blob,
                         Blob* bbox_blob) const;
-  void VoteBbox(const ScoredBBoxSlice<T>& pre_nms_slice,
+  void VoteBbox(const ScoredBoxesIndex<T>& pre_nms_slice,
                 const std::function<void(const std::function<void(int32_t, float)>&)>&,
                 BBox<T>* ret_votee_bbox) const;
-  void Limit(const int32_t limit_num, const float thresh, ScoredBBoxSlice<T>& slice) const;
+  void Limit(const int32_t limit_num, const float thresh, ScoredBoxesIndex<T>& slice) const;
   void WriteOutputToRecordBlob(const int64_t im_index, const int64_t boxes_num,
-                               const ScoredBBoxSlice<T>& slice, Blob* labeled_bbox_blob,
+                               const ScoredBoxesIndex<T>& slice, Blob* labeled_bbox_blob,
                                Blob* bbox_score_blob) const;
 
   std::unique_ptr<ScoringMethodIf<T>> scoring_method_;

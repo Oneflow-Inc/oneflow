@@ -19,7 +19,7 @@ class ProposalKernel final : public KernelIf<DeviceType::kCPU> {
                           std::function<Blob*(const std::string&)>) const override;
   void InitConstBufBlobs(DeviceCtx*,
                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void CopyRoI(const int64_t im_index, const ScoredBBoxSlice<T>& slice, Blob* rois_blob) const;
+  void CopyRoI(const int64_t im_index, const ScoredBoxesIndex<T>& boxes, Blob* rois_blob) const;
 };
 
 }  // namespace oneflow
