@@ -11,7 +11,7 @@ namespace oneflow {
 template<typename T>
 class AnchorTargetKernel final : public KernelIf<DeviceType::kCPU> {
  public:
-  using BoxesWithMaxOverlap = MaxOverlapSlice<BoxesIndex<T>>;
+  using BoxesWithMaxOverlap = MaxOverlapIndex<BoxesIndex<T>>;
   using BoxesLabelAndMaxOverlap = LabelIndex<BoxesWithMaxOverlap>;
   using GtBoxesAndMaxOverlaps = GtMaxOverlapsPbSlice<FloatList16>;
 

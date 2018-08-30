@@ -125,13 +125,13 @@ void ProposalTargetKernel<T>::SubsampleForegroundAndBackground(BoxesWithMaxOverl
   int32_t fg_end = -1;
   int32_t bg_begin = -1;
   int32_t bg_end = -1;
-  boxes.SortByOverlap(
+  boxes.SortByMaxOverlap(
       [](float lhs_overlap, float rhs_overlap) { return lhs_overlap > rhs_overlap; });
-  boxes.ForEachOverlap([&](float overlap, size_t n, int32_t index) {
+  boxes.ForEachMaxOverlap([&](float overlap, size_t n, int32_t index) {
     if (overlap < conf.foreground_threshold() && fg_end == -1) { fg_end = n; }
     if (overlap < conf.background_threshold_high()) {
       if (bg_begin == -1) { bg_begin = n; }
-      boxes.set_max_overlap_gt_box(index, -1);
+      boxes.set_max_overlap_gt_index(index, -1);
     }
     if (overlap < conf.background_threshold_low()) {
       bg_end = n;
@@ -191,7 +191,7 @@ void ProposalTargetKernel<T>::ComputeAndWriteOutput(
   BBox<T>* rois_bbox = BBox<T>::MutCast(rois_blob->mut_dptr<T>(im_index));
   FOR_RANGE(size_t, i, 0, boxes.size()) {
     int32_t index = boxes.GetIndex(i);
-    int32_t gt_index = boxes.GetMaxOverlapGtBox(i);
+    int32_t gt_index = boxes.GetMaxOverlapGtIndex(i);
     int32_t label = gt_boxes.GetLabel(gt_index);
     labels_blob->mut_dptr<int32_t>(im_index)[i] = label;
     int64_t bbox_offset = im_index * output_num + i;

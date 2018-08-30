@@ -9,7 +9,7 @@ template<typename T>
 class ProposalTargetKernel final : public KernelIf<DeviceType::kCPU> {
  public:
   using GtBoxesAndLabels = GtLabelsPbSlice<Int32List16, FloatList16>;
-  using BoxesWithMaxOverlap = MaxOverlapSlice<BoxesIndex<T>>;
+  using BoxesWithMaxOverlap = MaxOverlapIndex<BoxesIndex<T>>;
 
   OF_DISALLOW_COPY_AND_MOVE(ProposalTargetKernel);
   ProposalTargetKernel() = default;

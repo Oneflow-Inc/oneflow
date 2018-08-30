@@ -215,6 +215,12 @@ class Indexes {
 
   void Shuffle() { Shuffle(0, size_); }
 
+  void ForEach(const std::function<bool(size_t, int32_t)>& DoNext) {
+    FOR_RANGE(size_t, i, 0, size_) {
+      if (!DoNext(i, GetIndex(i))) { break; }
+    }
+  }
+
   int32_t GetIndex(size_t n) const {
     CHECK_LT(n, size_);
     return index_ptr_[n];
@@ -350,50 +356,44 @@ class ScoreIndex : public IndexType {
 };
 
 template<typename IndexType>
-class MaxOverlapSlice : public IndexType {
+class MaxOverlapIndex : public IndexType {
  public:
-  MaxOverlapSlice(const IndexType& slice, float* max_overlap_ptr, int32_t* max_overlap_gt_box_ptr)
+  MaxOverlapIndex(const IndexType& slice, float* max_overlap_ptr, int32_t* max_overlap_gt_index_ptr)
       : IndexType(slice),
         max_overlap_ptr_(max_overlap_ptr),
-        max_overlap_gt_box_ptr_(max_overlap_gt_box_ptr) {}
+        max_overlap_gt_index_ptr_(max_overlap_gt_index_ptr) {}
 
   void UpdateMaxOverlap(int32_t index, int32_t gt_index, float overlap,
                         const std::function<void()>& DoUpdateHandle = []() {}) {
     CHECK_GE(index, 0);
     if (overlap > max_overlap(index)) {
       set_max_overlap(index, overlap);
-      set_max_overlap_gt_box(index, gt_index);
+      set_max_overlap_gt_index(index, gt_index);
       DoUpdateHandle();
     }
   }
 
-  void SortByOverlap(const std::function<bool(float, float)>& Compare) {
-    std::sort(this->mut_index_ptr(), this->mut_index_ptr() + this->size(),
-              [&](int32_t lhs_index, int32_t rhs_index) {
-                return Compare(max_overlap(lhs_index), max_overlap(rhs_index));
-              });
+  void SortByMaxOverlap(const std::function<bool(float, float)>& Compare) {
+    this->Sort([&](int32_t lhs_index, int32_t rhs_index) {
+      return Compare(max_overlap(lhs_index), max_overlap(rhs_index));
+    });
   }
 
-  size_t FindByOverlap(const std::function<bool(float)>& Condition) {
-    FOR_RANGE(size_t, i, 0, this->size()) {
-      if (Condition(GetMaxOverlap(i))) { return i; }
-    }
-    return this->size();
+  size_t FindByMaxOverlap(const std::function<bool(float)>& Condition) {
+    return this->Find([&](int32_t index) { return Condition(max_overlap(index)); });
   }
 
-  void ForEachOverlap(const std::function<bool(float, int32_t, size_t)>& Hanlder) {
-    FOR_RANGE(size_t, i, 0, this->size()) {
-      if (!Hanlder(GetMaxOverlap(i), this->GetIndex(i), i)) { break; }
-    }
+  void ForEachMaxOverlap(const std::function<bool(size_t, int32_t, float)>& DoNext) {
+    this->ForEach([&](size_t n, int32_t index) { return DoNext(n, index, max_overlap(index)); });
   }
 
   float GetMaxOverlap(size_t n) const {
     CHECK_LT(n, this->size());
-    return this->max_overlap(this->GetIndex(n));
+    return max_overlap(this->GetIndex(n));
   }
-  int32_t GetMaxOverlapGtBox(size_t n) const {
+  int32_t GetMaxOverlapGtIndex(size_t n) const {
     CHECK_LT(n, this->size());
-    return this->max_overlap_gt_box(this->GetIndex(n));
+    return max_overlap_gt_index(this->GetIndex(n));
   }
   float max_overlap(int32_t index) const {
     if (index < 0) { return 1; }
@@ -403,18 +403,18 @@ class MaxOverlapSlice : public IndexType {
     CHECK_GE(index, 0);
     max_overlap_ptr_[index] = overlap;
   }
-  int32_t max_overlap_gt_box(int32_t index) const {
+  int32_t max_overlap_gt_index(int32_t index) const {
     if (index < 0) { return -index - 1; }
-    return max_overlap_gt_box_ptr_[index];
+    return max_overlap_gt_index_ptr_[index];
   }
-  void set_max_overlap_gt_box(int32_t index, int32_t gt_index) {
+  void set_max_overlap_gt_index(int32_t index, int32_t gt_index) {
     CHECK_GE(index, 0);
-    max_overlap_gt_box_ptr_[index] = gt_index;
+    max_overlap_gt_index_ptr_[index] = gt_index;
   }
 
  private:
   float* max_overlap_ptr_;
-  int32_t* max_overlap_gt_box_ptr_;
+  int32_t* max_overlap_gt_index_ptr_;
 };
 
 template<typename T>

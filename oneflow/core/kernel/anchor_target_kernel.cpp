@@ -119,9 +119,9 @@ size_t AnchorTargetKernel<T>::SubsampleBackground(size_t fg_cnt,
                                                   BoxesLabelAndMaxOverlap& boxes) const {
   const AnchorTargetOpConf& conf = op_conf().anchor_target_conf();
   size_t bg_cnt = conf.batch_size_per_image() - fg_cnt;
-  boxes.SortByOverlap(
+  boxes.SortByMaxOverlap(
       [](float lhs_overlap, float rhs_overlap) { return lhs_overlap < rhs_overlap; });
-  size_t bg_end = boxes.FindByOverlap(
+  size_t bg_end = boxes.FindByMaxOverlap(
       [&](float overlap) { return overlap >= conf.negative_overlap_threshold(); });
   if (bg_end > bg_cnt) {
     boxes.Shuffle(0, bg_end);
@@ -149,7 +149,7 @@ void AnchorTargetKernel<T>::ComputeTargetsAndWriteOutput(
 
   FOR_RANGE(size_t, i, 0, anchor_boxes.capacity()) {
     const BBox<T>* anchor_box = anchor_boxes.bbox(i);
-    const BBox<float>* gt_box = gt_boxes.GetBBox<float>(anchor_boxes.max_overlap_gt_box(i));
+    const BBox<float>* gt_box = gt_boxes.GetBBox<float>(anchor_boxes.max_overlap_gt_index(i));
     int32_t label = anchor_boxes.label_ptr()[i];
     if (label == 1) {
       bbox_target[i].TransformInverse(anchor_box, gt_box, bbox_reg_ws);
