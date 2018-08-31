@@ -35,9 +35,8 @@ TEST(Channel, 30sender40receiver) {
     receivers.push_back(std::thread(CallFromReceiverThread, &visits[i], &channel));
   }
   for (std::thread& this_thread : senders) { this_thread.join(); }
-  channel.CloseSendEnd();
+  channel.Close();
   for (std::thread& this_thread : receivers) { this_thread.join(); }
-  channel.CloseReceiveEnd();
   for (int i = 0; i < range_num; ++i) {
     int visit_count = 0;
     for (int j = 0; j < receiver_num; j++) { visit_count += visits[j][i]; }
