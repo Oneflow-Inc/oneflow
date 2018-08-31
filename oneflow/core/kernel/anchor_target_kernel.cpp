@@ -27,7 +27,7 @@ template<typename T>
 void AnchorTargetKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   FOR_RANGE(size_t, im_index, 0, BnInOp2Blob("gt_boxes")->shape().At(0)) {
-    auto gt_boxes = GetImageGtBoxesSlice(im_index, BnInOp2Blob);
+    auto gt_boxes = GetImageGtBoxes(im_index, BnInOp2Blob);
     auto anchor_boxes = GetImageAnchorBoxes(ctx, im_index, BnInOp2Blob);
     ComputeOverlapsAndSetLabels(gt_boxes, anchor_boxes);
     size_t fg_cnt = SubsampleForeground(anchor_boxes);
@@ -65,9 +65,9 @@ typename AnchorTargetKernel<T>::BoxesLabelAndMaxOverlap AnchorTargetKernel<T>::G
 }
 
 template<typename T>
-typename AnchorTargetKernel<T>::GtBoxesAndMaxOverlaps AnchorTargetKernel<T>::GetImageGtBoxesSlice(
+GtBoxesWithMaxOverlap AnchorTargetKernel<T>::GetImageGtBoxes(
     size_t im_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  GtBoxesAndMaxOverlaps gt_boxes_slice(*(BnInOp2Blob("gt_boxes")->dptr<FloatList16>(im_index)));
+  GtBoxesWithMaxOverlap gt_boxes_slice(*(BnInOp2Blob("gt_boxes")->dptr<FloatList16>(im_index)));
   Int32List invalid_gt_boxes;
   gt_boxes_slice.ForEachBox<float>([&](int32_t index, const BBox<float>* box) {
     if (box->Area() <= 0) { invalid_gt_boxes.add_value(index); }
@@ -84,7 +84,7 @@ typename AnchorTargetKernel<T>::GtBoxesAndMaxOverlaps AnchorTargetKernel<T>::Get
 
 template<typename T>
 void AnchorTargetKernel<T>::ComputeOverlapsAndSetLabels(
-    GtBoxesAndMaxOverlaps& gt_boxes, BoxesLabelAndMaxOverlap& anchor_boxes) const {
+    GtBoxesWithMaxOverlap& gt_boxes, BoxesLabelAndMaxOverlap& anchor_boxes) const {
   float positive_overlap_threshold = op_conf().anchor_target_conf().positive_overlap_threshold();
 
   FasterRcnnUtil<T>::ForEachOverlapBetweenBoxesAndGtBoxes(
@@ -134,7 +134,7 @@ size_t AnchorTargetKernel<T>::SubsampleBackground(size_t fg_cnt,
 
 template<typename T>
 void AnchorTargetKernel<T>::ComputeTargetsAndWriteOutput(
-    size_t im_index, size_t total_sample_count, const GtBoxesAndMaxOverlaps& gt_boxes,
+    size_t im_index, size_t total_sample_count, const GtBoxesWithMaxOverlap& gt_boxes,
     const BoxesLabelAndMaxOverlap& anchor_boxes,
     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   CHECK_GT(total_sample_count, 0);

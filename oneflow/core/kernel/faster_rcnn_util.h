@@ -436,10 +436,10 @@ ScoredBoxesIndex<T> GenScoredBoxesIndex(size_t capacity, int32_t* index_ptr, con
                              score_ptr);
 }
 
-template<typename Pb>
-class GtBoxesPbSlice {
+template<typename PbValueList>
+class GtBoxesPbValueList {
  public:
-  GtBoxesPbSlice(const Pb& box_pb) : box_pb_(box_pb) {
+  GtBoxesPbValueList(const PbValueList& box_pb) : box_pb_(box_pb) {
     CHECK_EQ(box_pb.value().value_size() % 4, 0);
   }
 
@@ -456,8 +456,8 @@ class GtBoxesPbSlice {
         box_pb_.value().value().begin() + (index + 1) * 4);
   }
 
-  void Filter(const Int32List& filter_indices) {
-    for (auto it = filter_indices.value().begin(); it != filter_indices.value().end(); ++it) {
+  void Filter(const Int32List& fitler_inds) {
+    for (auto it = fitler_inds.value().begin(); it != fitler_inds.value().end(); ++it) {
       this->Erase(*it);
     }
   }
@@ -488,17 +488,17 @@ class GtBoxesPbSlice {
   }
 
   size_t size() const { return box_pb_.value().value_size() / 4; }
-  const Pb& box_pb() const { return box_pb_; }
+  const PbValueList& box_pb() const { return box_pb_; }
 
  private:
-  Pb box_pb_;
+  PbValueList box_pb_;
 };  // namespace oneflow
 
 template<typename LabelPb, typename BoxPb>
-class GtLabelsPbSlice : public GtBoxesPbSlice<BoxPb> {
+class GtBoxesAndLabelsPbValueList : public GtBoxesPbValueList<BoxPb> {
  public:
-  GtLabelsPbSlice(const BoxPb& box_pb, const LabelPb& label_pb)
-      : GtBoxesPbSlice<BoxPb>(box_pb), label_pb_(label_pb) {
+  GtBoxesAndLabelsPbValueList(const BoxPb& box_pb, const LabelPb& label_pb)
+      : GtBoxesPbValueList<BoxPb>(box_pb), label_pb_(label_pb) {
     // CHECK_EQ(this->size(), box_pb.value().value_size() / 4);
     CHECK_EQ(this->size(), label_pb.value().value_size());
   }
@@ -511,7 +511,7 @@ class GtLabelsPbSlice : public GtBoxesPbSlice<BoxPb> {
   virtual void Erase(int32_t index) override {
     CHECK_GE(index, 0);
     label_pb_.mutable_value()->mutable_value()->erase(label_pb_.value().value().begin() + index);
-    GtBoxesPbSlice<BoxPb>::Erase(index);
+    GtBoxesPbValueList<BoxPb>::Erase(index);
   }
 
   void ForEachLabel(const std::function<void(int32_t, int32_t)>& Handler) const {
@@ -528,10 +528,10 @@ class GtLabelsPbSlice : public GtBoxesPbSlice<BoxPb> {
 };
 
 template<typename BoxPb>
-class GtMaxOverlapsPbSlice : public GtBoxesPbSlice<BoxPb> {
+class GtBoxesWithMaxOverlapPbValueList : public GtBoxesPbValueList<BoxPb> {
  public:
-  GtMaxOverlapsPbSlice(const BoxPb& box_pb)
-      : GtBoxesPbSlice<BoxPb>(box_pb), last_gt_index_(-1), last_gt_max_overlap_with_end_(0) {
+  GtBoxesWithMaxOverlapPbValueList(const BoxPb& box_pb)
+      : GtBoxesPbValueList<BoxPb>(box_pb), last_gt_index_(-1), last_gt_max_overlap_with_end_(0) {
     max_overlap_pb_.mutable_value()->Reserve(this->size());
     std::fill(max_overlap_pb_.mutable_value()->begin(), max_overlap_pb_.mutable_value()->end(),
               0.f);
@@ -576,6 +576,10 @@ class GtMaxOverlapsPbSlice : public GtBoxesPbSlice<BoxPb> {
   int32_t last_gt_max_overlap_with_end_;
 };
 
+using GtBoxes = GtBoxesPbValueList<FloatList16>;
+using GtBoxesAndLabels = GtBoxesAndLabelsPbValueList<Int32List16, FloatList16>;
+using GtBoxesWithMaxOverlap = GtBoxesWithMaxOverlapPbValueList<FloatList16>;
+
 template<typename T>
 struct FasterRcnnUtil final {
   static void GenerateAnchors(const AnchorGeneratorConf& conf, Blob* anchors_blob);
@@ -588,7 +592,7 @@ struct FasterRcnnUtil final {
   static void Nms(float threshold, const ScoredBoxesIndex<T>& pre_nms_boxes,
                   ScoredBoxesIndex<T>& post_nms_boxes);
   static void ForEachOverlapBetweenBoxesAndGtBoxes(
-      const BoxesIndex<T>& boxes, const GtBoxesPbSlice<FloatList16>& gt_boxes,
+      const BoxesIndex<T>& boxes, const GtBoxes& gt_boxes,
       const std::function<void(int32_t, int32_t, float)>& Handler);
 };
 

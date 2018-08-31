@@ -13,7 +13,6 @@ class AnchorTargetKernel final : public KernelIf<DeviceType::kCPU> {
  public:
   using BoxesWithMaxOverlap = MaxOverlapIndex<BoxesIndex<T>>;
   using BoxesLabelAndMaxOverlap = LabelIndex<BoxesWithMaxOverlap>;
-  using GtBoxesAndMaxOverlaps = GtMaxOverlapsPbSlice<FloatList16>;
 
   OF_DISALLOW_COPY_AND_MOVE(AnchorTargetKernel);
   AnchorTargetKernel() = default;
@@ -28,14 +27,14 @@ class AnchorTargetKernel final : public KernelIf<DeviceType::kCPU> {
   BoxesLabelAndMaxOverlap GetImageAnchorBoxes(
       const KernelCtx& ctx, size_t im_index,
       const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  GtBoxesAndMaxOverlaps GetImageGtBoxesSlice(
+  GtBoxesWithMaxOverlap GetImageGtBoxes(
       size_t im_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  void ComputeOverlapsAndSetLabels(GtBoxesAndMaxOverlaps& gt_boxes,
+  void ComputeOverlapsAndSetLabels(GtBoxesWithMaxOverlap& gt_boxes,
                                    BoxesLabelAndMaxOverlap& anchor_boxes) const;
   size_t SubsampleForeground(BoxesLabelAndMaxOverlap& boxes) const;
   size_t SubsampleBackground(size_t fg_cnt, BoxesLabelAndMaxOverlap& boxes) const;
   void ComputeTargetsAndWriteOutput(
-      size_t im_index, size_t total_sample_count, const GtBoxesAndMaxOverlaps& gt_boxes,
+      size_t im_index, size_t total_sample_count, const GtBoxesWithMaxOverlap& gt_boxes,
       const BoxesLabelAndMaxOverlap& anchor_boxes,
       const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 };

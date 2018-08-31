@@ -23,9 +23,8 @@ void ComputeBoxesDelta(const BBox<T2>* box, const BBox<T3>* target_box,
 
 template<typename T>
 void SetBoxesAndBoxesTarget(int32_t index, int32_t gt_index, const BoxesIndex<T>& boxes,
-                            const GtBoxesPbSlice<FloatList16>& gt_boxes,
-                            const BBoxRegressionWeights& bbox_reg_ws, BBox<T>* roi_boxes,
-                            BBoxDelta<T>* roi_boxes_target) {
+                            const GtBoxes& gt_boxes, const BBoxRegressionWeights& bbox_reg_ws,
+                            BBox<T>* roi_boxes, BBoxDelta<T>* roi_boxes_target) {
   if (index >= 0) {
     const BBox<T>* box = boxes.bbox(index);
     CopyBoxes(box, roi_boxes);
@@ -49,8 +48,8 @@ template<typename T>
 void ProposalTargetKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   FOR_RANGE(int64_t, i, 0, BnInOp2Blob("rpn_rois")->shape().At(0)) {
-    auto gt_boxes = GetImageGtBoxesSlice(i, BnInOp2Blob);
-    auto all_boxes = GetImageRoiBoxesSlice(i, BnInOp2Blob);
+    auto gt_boxes = GetImageGtBoxes(i, BnInOp2Blob);
+    auto all_boxes = GetImageRoiBoxes(i, BnInOp2Blob);
     ComputeRoiBoxesAndGtBoxesOverlaps(gt_boxes, all_boxes);
     ConcatGtBoxesToRoiBoxes(gt_boxes, all_boxes);
     SubsampleForegroundAndBackground(all_boxes);
@@ -59,7 +58,7 @@ void ProposalTargetKernel<T>::ForwardDataContent(
 }
 
 template<typename T>
-typename ProposalTargetKernel<T>::GtBoxesAndLabels ProposalTargetKernel<T>::GetImageGtBoxesSlice(
+GtBoxesAndLabels ProposalTargetKernel<T>::GetImageGtBoxes(
     size_t im_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const ProposalTargetOpConf& conf = op_conf().proposal_target_conf();
   const FloatList16* gt_boxes = BnInOp2Blob("gt_boxes")->dptr<FloatList16>(im_index);
@@ -84,8 +83,7 @@ typename ProposalTargetKernel<T>::GtBoxesAndLabels ProposalTargetKernel<T>::GetI
 }
 
 template<typename T>
-typename ProposalTargetKernel<T>::BoxesWithMaxOverlap
-ProposalTargetKernel<T>::GetImageRoiBoxesSlice(
+typename ProposalTargetKernel<T>::BoxesWithMaxOverlap ProposalTargetKernel<T>::GetImageRoiBoxes(
     size_t im_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   Blob* rpn_rois_blob = BnInOp2Blob("rpn_rois");
   Blob* boxes_index_blob = BnInOp2Blob("boxes_index");

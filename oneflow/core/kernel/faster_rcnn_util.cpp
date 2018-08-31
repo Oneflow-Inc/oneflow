@@ -99,7 +99,7 @@ void FasterRcnnUtil<T>::Nms(float nms_threshold, const ScoredBoxesIndex<T>& pre_
 
 template<typename T>
 void FasterRcnnUtil<T>::ForEachOverlapBetweenBoxesAndGtBoxes(
-    const BoxesIndex<T>& boxes_slice, const GtBoxesPbSlice<FloatList16>& gt_boxes_slice,
+    const BoxesIndex<T>& boxes_slice, const GtBoxes& gt_boxes_slice,
     const std::function<void(int32_t, int32_t, float)>& Handler) {
   FOR_RANGE(int32_t, i, 0, gt_boxes_slice.size()) {
     FOR_RANGE(int32_t, j, 0, boxes_slice.size()) {

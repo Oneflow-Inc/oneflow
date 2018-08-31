@@ -8,7 +8,6 @@ namespace oneflow {
 template<typename T>
 class ProposalTargetKernel final : public KernelIf<DeviceType::kCPU> {
  public:
-  using GtBoxesAndLabels = GtLabelsPbSlice<Int32List16, FloatList16>;
   using BoxesWithMaxOverlap = MaxOverlapIndex<BoxesIndex<T>>;
 
   OF_DISALLOW_COPY_AND_MOVE(ProposalTargetKernel);
@@ -21,9 +20,9 @@ class ProposalTargetKernel final : public KernelIf<DeviceType::kCPU> {
   void ForwardDataId(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
-  GtBoxesAndLabels GetImageGtBoxesSlice(
+  GtBoxesAndLabels GetImageGtBoxes(
       size_t im_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  BoxesWithMaxOverlap GetImageRoiBoxesSlice(
+  BoxesWithMaxOverlap GetImageRoiBoxes(
       size_t im_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   void ComputeRoiBoxesAndGtBoxesOverlaps(const GtBoxesAndLabels& gt_boxes,
                                          BoxesWithMaxOverlap& roi_boxes) const;
