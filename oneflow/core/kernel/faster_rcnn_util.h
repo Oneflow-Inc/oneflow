@@ -172,7 +172,7 @@ class Slice {
   }
 
   Slice Sub(size_t begin, size_t end) const {
-    CHECK_GT(end, begin);
+    CHECK_GE(end, begin);
     CHECK_GE(begin, 0);
     CHECK_LE(end, size_);
     return Slice(end - begin, index_ptr_ + begin, false);
