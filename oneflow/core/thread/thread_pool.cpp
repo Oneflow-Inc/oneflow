@@ -8,7 +8,7 @@ ThreadPool::ThreadPool(int32_t thread_num)
     Channel<std::function<void()>>* chan = &(work_chans_.at(i));
     threads_[i] = std::thread([chan]() {
       std::function<void()> work;
-      while (chan->Receive(&work) == 0) { work(); }
+      while (chan->Receive(&work) == kChannelStatusSuccess) { work(); }
     });
   }
 }

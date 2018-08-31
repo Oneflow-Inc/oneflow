@@ -79,7 +79,7 @@ CommNet::CommNet(const Plan& plan) {
 
   ready_cb_poller_ = std::thread([this]() {
     std::function<void()> cb;
-    while (ready_cbs_.Receive(&cb) == 0) { cb(); }
+    while (ready_cbs_.Receive(&cb) == kChannelStatusSuccess) { cb(); }
   });
 }
 
