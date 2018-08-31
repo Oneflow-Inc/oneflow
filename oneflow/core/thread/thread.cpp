@@ -5,8 +5,7 @@ namespace oneflow {
 Thread::~Thread() {
   actor_thread_.join();
   CHECK(id2task_.empty());
-  msg_channel_.CloseSendEnd();
-  msg_channel_.CloseReceiveEnd();
+  msg_channel_.Close();
 }
 
 void Thread::AddTask(const TaskProto& task) {

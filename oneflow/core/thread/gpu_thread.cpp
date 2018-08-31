@@ -25,8 +25,7 @@ GpuThread::GpuThread(int64_t thrd_id, int64_t dev_id) {
 }
 
 GpuThread::~GpuThread() {
-  cb_event_chan_.CloseSendEnd();
-  cb_event_chan_.CloseReceiveEnd();
+  cb_event_chan_.Close();
   cb_event_poller_.join();
 }
 

@@ -15,8 +15,7 @@ ThreadPool::ThreadPool(int32_t thread_num)
 
 ThreadPool::~ThreadPool() {
   FOR_RANGE(int32_t, i, 0, work_chans_.size()) {
-    work_chans_.at(i).CloseSendEnd();
-    work_chans_.at(i).CloseReceiveEnd();
+    work_chans_.at(i).Close();
     threads_.at(i).join();
   }
 }

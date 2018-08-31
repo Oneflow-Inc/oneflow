@@ -3,7 +3,7 @@
 namespace oneflow {
 
 CommNet::~CommNet() {
-  ready_cbs_.CloseSendEnd();
+  ready_cbs_.Close();
   ready_cb_poller_.join();
 }
 

@@ -11,27 +11,25 @@ template<typename T>
 class Channel final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Channel);
-  Channel() : is_send_closed_(false), is_receive_closed_(false) {}
+  Channel() : is_closed_(false) {}
   ~Channel() = default;
 
   ChannelStatus Send(const T& item);
-  ChannelStatus Receive(T *item);
-  void CloseSendEnd();
-  void CloseReceiveEnd();
+  ChannelStatus Receive(T* item);
+  void Close();
 
  private:
-  std::queue<T> val_;
+  std::queue<T> queue_;
   mutable std::mutex mutex_;
-  bool is_send_closed_;
-  bool is_receive_closed_;
+  bool is_closed_;
   std::condition_variable cond_;
 };
 
 template<typename T>
 ChannelStatus Channel<T>::Send(const T& item) {
   std::unique_lock<std::mutex> lock(mutex_);
-  if (is_send_closed_) { return kChannelStatusErrorClosed; }
-  val_.push(item);
+  if (is_closed_) { return kChannelStatusErrorClosed; }
+  queue_.push(item);
   cond_.notify_one();
   return kChannelStatusSuccess;
 }
@@ -39,24 +37,17 @@ ChannelStatus Channel<T>::Send(const T& item) {
 template<typename T>
 ChannelStatus Channel<T>::Receive(T* item) {
   std::unique_lock<std::mutex> lock(mutex_);
-  cond_.wait(lock, [this]() { return !val_.empty() || is_receive_closed_ || is_send_closed_; });
-  if (val_.empty() || is_receive_closed_) { return kChannelStatusErrorClosed; }
-  *item = val_.front();
-  val_.pop();
+  cond_.wait(lock, [this]() { return (!queue_.empty()) || is_closed_; });
+  if (queue_.empty()) { return kChannelStatusErrorClosed; }
+  *item = queue_.front();
+  queue_.pop();
   return kChannelStatusSuccess;
 }
 
 template<typename T>
-void Channel<T>::CloseSendEnd() {
+void Channel<T>::Close() {
   std::unique_lock<std::mutex> lock(mutex_);
-  is_send_closed_ = true;
-  cond_.notify_all();
-}
-
-template<typename T>
-void Channel<T>::CloseReceiveEnd() {
-  std::unique_lock<std::mutex> lock(mutex_);
-  is_receive_closed_ = true;
+  is_closed_ = true;
   cond_.notify_all();
 }
 
