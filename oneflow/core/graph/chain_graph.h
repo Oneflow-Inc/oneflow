@@ -72,9 +72,11 @@ class ChainGraph final : public Graph<ChainNode, ChainEdge> {
     return task_node2chain_node_.at(task_node);
   }
 
-  void GroupTaskNodesByMachine(const TaskGraph& task_gph,
-                               HashMap<int64_t, std::vector<TaskNode*>>* machine2tasks) const;
+  void GroupTaskNodesByMachineAndCollectAncestors(
+      const TaskGraph& task_gph, HashMap<int64_t, std::vector<TaskNode*>>* machine2tasks,
+      HashMap<TaskNode*, HashSet<TaskNode*>>* node2ancestors) const;
   void MergeTaskNodes(const HashMap<int64_t, std::vector<TaskNode*>>& machine2tasks,
+                      const HashMap<TaskNode*, HashSet<TaskNode*>>& node2ancestors,
                       std::vector<std::vector<TaskNode*>>* chains) const;
   void InitChainNode(const std::vector<std::vector<TaskNode*>>& chains);
   void InitChainEdge(const std::vector<std::vector<TaskNode*>>& chains);

@@ -577,6 +577,14 @@ message TransposeOpConf {
   repeated int32 perm = 3;
 }
 
+message ReduceConcatOpConf {
+  required int32 in_num = 1;
+}
+
+message ReduceSplitOpConf {
+  required int32 out_num = 1;
+}
+
 message ReduceScatterOpConf {
   required int32 out_num = 1;
 };
@@ -652,9 +660,11 @@ message OperatorConf {
     ReduceLocalAddOpConf reduce_local_add_conf = 401;
     ReduceGlobalAddOpConf reduce_global_add_conf = 402;
     ReduceGatherOpConf reduce_gather_conf = 403;
-    RecordLoadOpConf record_load_conf = 404;
-    AccuracyOpConf accuracy_conf=405;
-    AccuracyPrintOpConf accuracy_print_conf = 406;
+    ReduceConcatOpConf reduce_concat_conf = 404;
+    ReduceSplitOpConf reduce_split_conf = 405;
+    RecordLoadOpConf record_load_conf = 406;
+    AccuracyOpConf accuracy_conf=407;
+    AccuracyPrintOpConf accuracy_print_conf = 408;
   }
 }
 

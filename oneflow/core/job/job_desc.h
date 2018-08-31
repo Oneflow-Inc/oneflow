@@ -54,6 +54,7 @@ class JobDesc final {
   }
   bool write_snapshot_to_master() const { return snapshot_fs_conf().has_localfs_conf(); }
   bool enable_blob_mem_sharing() const { return job_conf_.other().enable_blob_mem_sharing(); }
+  int64_t reduce_group_size() const { return job_conf_.other().reduce_group_size(); }
 
   // Train conf
   const std::string& MdSaveSnapshotsPath() const;
