@@ -9,7 +9,7 @@ SnapshotMgr::SnapshotMgr(const Plan& plan) {
     model_save_snapshots_path_ = Global<JobDesc>::Get()->MdSaveSnapshotsPath();
     OfCallOnce(model_save_snapshots_path_, GlobalFS(), &fs::FileSystem::MakeEmptyDir);
   }
-  const std::string& load_path = Global<JobDesc>::Get()->MdLoadSnapshotPath();
+  std::string load_path = Global<JobDesc>::Get()->MdLoadSnapshotPath();
   if (load_path != "") { readable_snapshot_.reset(new Snapshot(load_path)); }
   total_mbn_num_ = plan.total_mbn_num();
 }

@@ -45,8 +45,8 @@ void ProposalKernel<T>::ForwardDataContent(
     FasterRcnnUtil<T>::ClipBoxes(num_proposals, anchor_generator_conf.image_height(),
                                  anchor_generator_conf.image_width(), proposals_ptr);
 
-    auto pre_nms_slice =
-        GenScoredBoxesIndex(num_proposals, pre_nms_slice_ptr, const_proposals_ptr, class_prob_ptr);
+    auto pre_nms_slice = GenScoredBoxesIndex(num_proposals, pre_nms_slice_ptr, const_proposals_ptr,
+                                             class_prob_ptr, true);
     pre_nms_slice.SortByScore([](T lhs_score, T rhs_score) { return lhs_score > rhs_score; });
     pre_nms_slice.FilterByBBox([&](size_t n, int32_t index, const BBox<T>* bbox) {
       return (bbox->width() < conf.min_size()) || (bbox->height() < conf.min_size());
@@ -54,7 +54,7 @@ void ProposalKernel<T>::ForwardDataContent(
     pre_nms_slice.Truncate(conf.pre_nms_top_n());
 
     auto post_nms_slice = GenScoredBoxesIndex(conf.post_nms_top_n(), post_nms_slice_ptr,
-                                              const_proposals_ptr, class_prob_ptr);
+                                              const_proposals_ptr, class_prob_ptr, true);
     FasterRcnnUtil<T>::Nms(conf.nms_threshold(), pre_nms_slice, post_nms_slice);
 
     CopyRoI(i, post_nms_slice, rois_blob);
