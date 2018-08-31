@@ -7,11 +7,6 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void SumOfSquareGpu(int64_t n, const T* x, T* result) {
-  CUDA_1D_KERNEL_LOOP(i, n) { *result += x[i] * x[i]; }
-}
-
-template<typename T>
 __global__ void GetLocalLearningRateGpu(int64_t n, int64_t batch_size, T learning_rate, T l2,
                                         T epsilon, T lars_coefficient, int64_t next_model_vid,
                                         T* data_tmp) {
@@ -49,10 +44,8 @@ class LARSMdUpdateKernelUtil<DeviceType::kGPU, T> final {
                           T l2, T momentum_beta, T epsilon, T lars_coefficient,
                           int64_t next_model_vid, const T* pre_model, const T* model_diff,
                           T* momentum, T* model, T* data_tmp) {
-    SumOfSquareGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-        n, pre_model, &data_tmp[0]);
-    SumOfSquareGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-        n, model_diff, &data_tmp[1]);
+    KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, pre_model, 1, pre_model, 1, &data_tmp[0]);
+    KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, model_diff, 1, model_diff, 1, &data_tmp[1]);
     GetLocalLearningRateGpu<T><<<1, 1, 0, ctx->cuda_stream()>>>(
         n, batch_size, learning_rate, l2, epsilon, lars_coefficient, next_model_vid, data_tmp);
     UpdateModelGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
