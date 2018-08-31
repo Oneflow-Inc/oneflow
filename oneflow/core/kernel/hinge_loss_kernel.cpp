@@ -50,10 +50,6 @@ struct HingeLossKernelUtil<DeviceType::kCPU, PredType, LabelType> {
     switch (op_conf.hinge_loss_conf().norm()) {
       case L1:
         KernelUtil<DeviceType::kCPU, PredType>::RowSum(ctx, data_num, pre_dim, tmp_diff, loss);
-        /*for (int64_t i = 0; i < data_num; ++i) {
-          KernelUtil<DeviceType::kCPU, PredType>::Sum(ctx, pre_dim, tmp_diff + i * pre_dim,
-                                                      loss + i);
-        }*/
         break;
       case L2:
         for (int64_t i = 0; i < data_num; ++i) {

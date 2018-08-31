@@ -54,12 +54,6 @@ struct HingeLossKernelUtil<DeviceType::kGPU, PredType, LabelType> {
         KernelUtil<DeviceType::kGPU, PredType>::RowSum(ctx, data_num, pre_dim, tmp_diff, loss,
                                                        tmp_storage,
                                                        sizeof(PredType) * data_num * pre_dim);
-        /*for (int64_t i = 0; i < data_num; ++i) {
-          PredType tmp_storage[pre_dim];
-          KernelUtil<DeviceType::kGPU, PredType>::Sum(ctx, pre_dim, tmp_diff + i * pre_dim,
-                                                      loss + i, tmp_storage,
-                                                      pre_dim * sizeof(PredType));
-        }*/
         break;
       case L2:
         for (int64_t i = 0; i < data_num; ++i) {
