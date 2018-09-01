@@ -78,6 +78,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
       bool use_buf_task_node);
   TaskNode* AddCopyH2DTaskTo(TaskNode*);
   TaskNode* AddCopyD2HTaskFrom(TaskNode*);
+  TaskNode* AddCopyD2DTaskTo(TaskNode*);
   TaskNode* AddCopyCommNetTaskBetween(TaskNode* src, TaskNode* dst);
   void BuildOutBoxing(
       const LogicalNode* logical, const std::vector<CompTaskNode*>& sorted_comp_tasks,

@@ -47,13 +47,15 @@ void CopyLocalTaskNode::Init(CopyLocalOpConf::Type copy_type, int64_t machine_id
     set_thrd_id(Global<IDMgr>::Get()->GetGpuH2DThrdId(dev_phy_id));
   } else if (copy_type == CopyLocalOpConf::D2H) {
     set_thrd_id(Global<IDMgr>::Get()->GetGpuD2HThrdId(dev_phy_id));
+  } else if (copy_type == CopyLocalOpConf::D2D) {
+    set_thrd_id(Global<IDMgr>::Get()->GetGpuD2DThrdId(dev_phy_id));
   } else {
     UNIMPLEMENTED();
   }
 }
 
 void CopyLocalTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
-  if (copy_type_ == CopyLocalOpConf::H2D) {
+  if (copy_type_ == CopyLocalOpConf::H2D || copy_type_ == CopyLocalOpConf::D2D) {
     TaskNode::InitProducedRegstMemCase(mem_case);
   } else if (copy_type_ == CopyLocalOpConf::D2H) {
     mem_case->mutable_host_mem()->set_used_by_device(true);
