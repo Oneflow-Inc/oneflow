@@ -7,17 +7,17 @@ namespace oneflow {
 void CopyTaskNode::ProduceAllRegstsAndBindEdges() {
   std::string name("copy_out");
   std::shared_ptr<RegstDesc> out_regst(nullptr);
-  CopyHdTaskNode* copy_hd = dynamic_cast<CopyHdTaskNode*>(this);
-  if (copy_hd != nullptr) {
+  CopyLocalTaskNode* copy_local = dynamic_cast<CopyLocalTaskNode*>(this);
+  if (copy_local != nullptr) {
     TaskType dst_node_type = (*out_edges().begin())->dst_node()->GetTaskType();
-    if (copy_hd->copy_type() == CopyOpConf::H2D
+    if (copy_local->copy_type() == CopyOpConf::H2D
         && (dst_node_type == TaskType::kReduceLocalAdd
             || dst_node_type == TaskType::kReduceGlobalAdd
             || dst_node_type == TaskType::kReduceGather)) {
       out_regst = ProduceRegst(name, false, 1, 1);
     }
     TaskType src_node_type = SoleInEdge()->src_node()->GetTaskType();
-    if (copy_hd->copy_type() == CopyOpConf::D2H
+    if (copy_local->copy_type() == CopyOpConf::D2H
         && (src_node_type == TaskType::kReduceScatter || src_node_type == TaskType::kReduceLocalAdd
             || src_node_type == TaskType::kReduceGlobalAdd)) {
       out_regst = ProduceRegst(name, false, 1, 1);
@@ -39,7 +39,7 @@ void CopyTaskNode::BuildExecGphAndRegst() {
   node->BindBnWithRegst(node->op()->SoleObn(), out_regst);
 }
 
-void CopyHdTaskNode::Init(CopyOpConf::Type copy_type, int64_t machine_id, int64_t dev_phy_id) {
+void CopyLocalTaskNode::Init(CopyOpConf::Type copy_type, int64_t machine_id, int64_t dev_phy_id) {
   copy_type_ = copy_type;
   set_machine_id(machine_id);
   if (copy_type == CopyOpConf::H2D) {
@@ -51,7 +51,7 @@ void CopyHdTaskNode::Init(CopyOpConf::Type copy_type, int64_t machine_id, int64_
   }
 }
 
-void CopyHdTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
+void CopyLocalTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
   if (copy_type_ == CopyOpConf::H2D) {
     TaskNode::InitProducedRegstMemCase(mem_case);
   } else if (copy_type_ == CopyOpConf::D2H) {
@@ -61,11 +61,11 @@ void CopyHdTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
   }
 }
 
-OperatorConf CopyHdTaskNode::NewCopyOpConf() {
+OperatorConf CopyLocalTaskNode::NewCopyOpConf() {
   OperatorConf conf;
-  conf.set_name("copy_hd_" + NewUniqueId());
+  conf.set_name("copy_local_" + NewUniqueId());
   conf.set_device_type(device_type());
-  conf.mutable_copy_hd_conf()->set_type(copy_type_);
+  conf.mutable_copy_conf()->set_type(copy_type_);
   return conf;
 }
 

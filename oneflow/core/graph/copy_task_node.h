@@ -21,13 +21,13 @@ class CopyTaskNode : public TaskNode {
  private:
 };
 
-class CopyHdTaskNode final : public CopyTaskNode {
+class CopyLocalTaskNode final : public CopyTaskNode {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CopyHdTaskNode);
-  CopyHdTaskNode() = default;
-  ~CopyHdTaskNode() = default;
+  OF_DISALLOW_COPY_AND_MOVE(CopyLocalTaskNode);
+  CopyLocalTaskNode() = default;
+  ~CopyLocalTaskNode() = default;
 
-  TaskType GetTaskType() const override { return TaskType::kCopyHd; }
+  TaskType GetTaskType() const override { return TaskType::kCopyLocal; }
 
   void Init(CopyOpConf::Type, int64_t machine_id, int64_t dev_phy_id);
 
