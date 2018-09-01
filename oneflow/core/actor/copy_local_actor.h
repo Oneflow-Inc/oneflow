@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_ACTOR_COPY_HD_ACTOR_H_
-#define ONEFLOW_CORE_ACTOR_COPY_HD_ACTOR_H_
+#ifndef ONEFLOW_CORE_ACTOR_COPY_LOCAL_ACTOR_H_
+#define ONEFLOW_CORE_ACTOR_COPY_LOCAL_ACTOR_H_
 
 #include "oneflow/core/actor/actor.h"
 
@@ -25,4 +25,4 @@ class CopyLocalActor final : public Actor {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_COPY_HD_ACTOR_H_
+#endif  // ONEFLOW_CORE_ACTOR_COPY_LOCAL_ACTOR_H_

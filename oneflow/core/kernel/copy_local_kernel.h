@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_KERNEL_COPY_HD_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_COPY_HD_KERNEL_H_
+#ifndef ONEFLOW_CORE_KERNEL_COPY_LOCAL_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_COPY_LOCAL_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
 
@@ -22,4 +22,4 @@ class CopyLocalKernel final : public KernelIf<DeviceType::kGPU> {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_COPY_HD_KERNEL_H_
+#endif  // ONEFLOW_CORE_KERNEL_COPY_LOCAL_KERNEL_H_

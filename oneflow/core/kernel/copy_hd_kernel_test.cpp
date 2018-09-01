@@ -6,7 +6,7 @@ namespace test {
 
 template<DeviceType device_type, typename T>
 void CopyLocalTestCase(OpKernelTestCase* test_case, const std::string& job_type,
-                    const std::string& h2d) {
+                       const std::string& h2d) {
   test_case->set_default_device_type(DeviceType::kGPU);
   test_case->set_is_train(job_type == "train");
   test_case->set_is_forward(true);
