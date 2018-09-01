@@ -42,7 +42,7 @@ DEFINE_OPKT_DEV_SWITCHER(void, SyncStream);
 DEFINE_OPKT_DEV_SWITCHER(Blob*, CreateBlob);
 
 bool NeedInferBlobDescs(Operator* op) {
-  static const HashSet<int> no_need_infer_op{OperatorConf::kCopyHdConf};
+  static const HashSet<int> no_need_infer_op{OperatorConf::kCopyLocalConf};
   return no_need_infer_op.find(op->op_conf().op_type_case()) == no_need_infer_op.end();
 }
 

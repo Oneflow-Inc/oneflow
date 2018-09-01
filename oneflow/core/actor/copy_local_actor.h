@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_ACTOR_COPY_HD_ACTOR_H_
-#define ONEFLOW_CORE_ACTOR_COPY_HD_ACTOR_H_
+#ifndef ONEFLOW_CORE_ACTOR_COPY_LOCAL_ACTOR_H_
+#define ONEFLOW_CORE_ACTOR_COPY_LOCAL_ACTOR_H_
 
 #include "oneflow/core/actor/actor.h"
 
@@ -7,11 +7,11 @@ namespace oneflow {
 
 #ifdef WITH_CUDA
 
-class CopyHdActor final : public Actor {
+class CopyLocalActor final : public Actor {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CopyHdActor);
-  CopyHdActor() = default;
-  ~CopyHdActor() = default;
+  OF_DISALLOW_COPY_AND_MOVE(CopyLocalActor);
+  CopyLocalActor() = default;
+  ~CopyLocalActor() = default;
 
  private:
   void VirtualActorInit(const TaskProto&) override;
@@ -25,4 +25,4 @@ class CopyHdActor final : public Actor {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_COPY_HD_ACTOR_H_
+#endif  // ONEFLOW_CORE_ACTOR_COPY_LOCAL_ACTOR_H_
