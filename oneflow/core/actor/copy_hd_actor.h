@@ -7,11 +7,11 @@ namespace oneflow {
 
 #ifdef WITH_CUDA
 
-class CopyHdActor final : public Actor {
+class CopyLocalActor final : public Actor {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CopyHdActor);
-  CopyHdActor() = default;
-  ~CopyHdActor() = default;
+  OF_DISALLOW_COPY_AND_MOVE(CopyLocalActor);
+  CopyLocalActor() = default;
+  ~CopyLocalActor() = default;
 
  private:
   void VirtualActorInit(const TaskProto&) override;

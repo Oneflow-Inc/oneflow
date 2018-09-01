@@ -328,7 +328,7 @@ void FixReliantCtrlRegstNum(const Plan& plan, const std::function<uint64_t(int64
       if (regst_type.has_ctrl_regst_desc()
           && regst_type.ctrl_regst_desc().has_reliant_regst_desc_id()) {
         // set ctrl regst num between copyHd and MdUpdt
-        CHECK(task_proto.task_type() == kCopyHd);
+        CHECK(task_proto.task_type() == kCopyLocal);
         uint64_t regst_num = GetRegstNum(regst_type.ctrl_regst_desc().reliant_regst_desc_id())
                              + Global<JobDesc>::Get()->NumOfPiecesInBatch() - 1;
         SetRegstNum(regst.regst_desc_id(), regst_num);

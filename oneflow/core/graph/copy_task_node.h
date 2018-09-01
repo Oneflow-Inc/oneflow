@@ -21,21 +21,21 @@ class CopyTaskNode : public TaskNode {
  private:
 };
 
-class CopyHdTaskNode final : public CopyTaskNode {
+class CopyLocalTaskNode final : public CopyTaskNode {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CopyHdTaskNode);
-  CopyHdTaskNode() = default;
-  ~CopyHdTaskNode() = default;
+  OF_DISALLOW_COPY_AND_MOVE(CopyLocalTaskNode);
+  CopyLocalTaskNode() = default;
+  ~CopyLocalTaskNode() = default;
 
-  TaskType GetTaskType() const override { return TaskType::kCopyHd; }
+  TaskType GetTaskType() const override { return TaskType::kCopyLocal; }
 
-  void Init(CopyHdOpConf::Type, int64_t machine_id, int64_t dev_phy_id);
+  void Init(CopyLocalOpConf::Type, int64_t machine_id, int64_t dev_phy_id);
 
-  CopyHdOpConf::Type copy_type() const { return copy_type_; }
+  CopyLocalOpConf::Type copy_type() const { return copy_type_; }
   int64_t MemZoneId121() const override {
-    if (copy_type_ == CopyHdOpConf::H2D) {
+    if (copy_type_ == CopyLocalOpConf::H2D) {
       return TaskNode::MemZoneId121();
-    } else if (copy_type_ == CopyHdOpConf::D2H) {
+    } else if (copy_type_ == CopyLocalOpConf::D2H) {
       return Global<IDMgr>::Get()->CpuMemZoneId();
     } else {
       UNIMPLEMENTED();
@@ -46,7 +46,7 @@ class CopyHdTaskNode final : public CopyTaskNode {
   void InitProducedRegstMemCase(MemoryCase*) override;
   OperatorConf NewCopyOpConf() override;
 
-  CopyHdOpConf::Type copy_type_;
+  CopyLocalOpConf::Type copy_type_;
 };
 
 class CopyCommNetTaskNode final : public CopyTaskNode {

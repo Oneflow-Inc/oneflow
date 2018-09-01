@@ -1,14 +1,14 @@
-#include "oneflow/core/operator/copy_hd_op.h"
+#include "oneflow/core/operator/copy_local_op.h"
 
 namespace oneflow {
 
-void CopyHdOp::InitFromOpConf() {
+void CopyLocalOp::InitFromOpConf() {
   EnrollInputBn("in", false);
   EnrollOutputBn("out", false);
 }
 
-const PbMessage& CopyHdOp::GetCustomizedConf() const { return op_conf().copy_hd_conf(); }
+const PbMessage& CopyLocalOp::GetCustomizedConf() const { return op_conf().copy_local_conf(); }
 
-REGISTER_OP(OperatorConf::kCopyHdConf, CopyHdOp);
+REGISTER_OP(OperatorConf::kCopyLocalConf, CopyLocalOp);
 
 }  // namespace oneflow

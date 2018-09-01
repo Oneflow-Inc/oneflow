@@ -7,11 +7,11 @@ namespace oneflow {
 
 #ifdef WITH_CUDA
 
-class CopyHdKernel final : public KernelIf<DeviceType::kGPU> {
+class CopyLocalKernel final : public KernelIf<DeviceType::kGPU> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CopyHdKernel);
-  CopyHdKernel() = default;
-  ~CopyHdKernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(CopyLocalKernel);
+  CopyLocalKernel() = default;
+  ~CopyLocalKernel() = default;
 
  private:
   void ForwardDataContent(const KernelCtx&,

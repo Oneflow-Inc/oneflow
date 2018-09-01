@@ -5,11 +5,11 @@
 
 namespace oneflow {
 
-class CopyHdOp final : public Operator {
+class CopyLocalOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CopyHdOp);
-  CopyHdOp() = default;
-  ~CopyHdOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(CopyLocalOp);
+  CopyLocalOp() = default;
+  ~CopyLocalOp() = default;
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;

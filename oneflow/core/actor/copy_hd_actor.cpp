@@ -1,14 +1,14 @@
-#include "oneflow/core/actor/copy_hd_actor.h"
+#include "oneflow/core/actor/copy_local_actor.h"
 
 namespace oneflow {
 
 #ifdef WITH_CUDA
 
-void CopyHdActor::VirtualActorInit(const TaskProto& task_proto) {
-  OF_SET_MSG_HANDLER(&CopyHdActor::HandlerNormal);
+void CopyLocalActor::VirtualActorInit(const TaskProto& task_proto) {
+  OF_SET_MSG_HANDLER(&CopyLocalActor::HandlerNormal);
 }
 
-void CopyHdActor::Act() {
+void CopyLocalActor::Act() {
   Regst* in_regst = GetNaiveSoleCurReadable();
   AsyncLaunchKernel(GenDefaultKernelCtx());
   AsyncSendRegstMsgToConsumer([&](Regst* out_regst) {
@@ -18,7 +18,7 @@ void CopyHdActor::Act() {
   });
 }
 
-REGISTER_ACTOR(TaskType::kCopyHd, CopyHdActor);
+REGISTER_ACTOR(TaskType::kCopyLocal, CopyLocalActor);
 
 #endif
 
