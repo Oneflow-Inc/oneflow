@@ -9,7 +9,26 @@
 
 namespace oneflow {
 
-class ReduceTaskNodes;
+struct ReduceTaskNodes {
+  CompTaskNode* concat = nullptr;
+  CompTaskNode* scatter = nullptr;
+  CompTaskNode* local_add = nullptr;
+  CompTaskNode* global_add = nullptr;
+  CompTaskNode* gather = nullptr;
+  CompTaskNode* split = nullptr;
+  bool operator==(const ReduceTaskNodes& rhs) const {
+    return this->concat == rhs.concat && this->scatter == rhs.scatter
+           && this->local_add == rhs.local_add && this->global_add == rhs.global_add
+           && this->gather == rhs.gather && this->split == rhs.split;
+  }
+};
+
+struct ReduceTaskNodesHasher {
+  std::size_t operator()(const ReduceTaskNodes& key) const {
+    return (size_t)(key.concat) ^ (size_t)(key.scatter) ^ (size_t)(key.local_add)
+           ^ (size_t)(key.global_add) ^ (size_t)(key.gather) ^ (size_t)(key.split);
+  }
+};
 
 class TaskGraph final : public Graph<TaskNode, TaskEdge> {
  public:
@@ -24,7 +43,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void AddOrderingCtrlEdgeInSameChain();
 
   void EnableMemSharingInReduceStruct();
-  void CollectReduceTaskNodes(HashMap<CompTaskNode*, ReduceTaskNodes>*) const;
+  void CollectReduceTaskNodes(std::unordered_set<ReduceTaskNodes, ReduceTaskNodesHasher>*) const;
   void EnableMemSharingInOneReduce(const ReduceTaskNodes&);
   void AddCtrlEdge4MemSharingInOneReduce(const ReduceTaskNodes&);
   void BuildCtrlRegstBetweenReduceCopyNodes(const CompTaskNode* src_reduce,
