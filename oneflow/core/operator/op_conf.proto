@@ -236,6 +236,7 @@ message CopyLocalOpConf {
   enum Type {
     H2D = 0;
     D2H = 1;
+    D2D = 2;
   }
   required Type type = 1;
 }
