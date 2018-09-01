@@ -26,14 +26,12 @@ std::function<bool(const LogicalNode*)> MakePredicatorHasActualOutDiff(const Log
   };
   auto ForEachOutNode = [&](LogicalNode* node, const std::function<void(LogicalNode*)>& Handler) {
     node->ForEachNodeOnInEdge([&](LogicalNode* in_node) {
-      if (!HasBwConnection(in_node, node)) return;
-      Handler(in_node);
+      if (HasBwConnection(in_node, node)) { Handler(in_node); }
     });
   };
   auto ForEachInNode = [&](LogicalNode* node, const std::function<void(LogicalNode*)>& Handler) {
     node->ForEachNodeOnOutEdge([&](LogicalNode* out_node) {
-      if (!HasBwConnection(node, out_node)) return;
-      Handler(out_node);
+      if (HasBwConnection(node, out_node)) { Handler(out_node); }
     });
   };
   graph->TopoForEachNode(loss_nodes, ForEachInNode, ForEachOutNode,
