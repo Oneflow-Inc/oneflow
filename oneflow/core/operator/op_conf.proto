@@ -615,8 +615,6 @@ message MatmulOpConf {
   optional string bias = 3;
   required int32 units = 4;
   required string out = 5;
-  optional ActivationType activation = 6 [default = kNone];
-  optional InitializerConf bias_initializer = 7;
 }
 
 message DotOpConf {

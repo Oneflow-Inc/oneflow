@@ -25,9 +25,9 @@ void MatmulKernel<device_type, T>::ForwardDataContent(
 template<DeviceType device_type, typename T>
 void MatmulKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* in_diff_blob = BnInOp2Blob("in_diff");
-  const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   const Blob* weight_blob = BnInOp2Blob("weight");
   Blob* weight_diff_blob = BnInOp2Blob("weight_diff");
   // weight_diff = out_diff * in'
