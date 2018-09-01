@@ -13,9 +13,9 @@ void EmbeddingLookupMdDiffAccKernel<device_type, T>::ForwardDataContent(
   int32_t one_val_size = one_val_blob->shape().elem_cnt();
   int32_t offset = *reinterpret_cast<int32_t*>(ctx.other);
   Memcpy<device_type>(ctx.device_ctx, acc_ids_blob->mut_dptr<T>() + offset * one_ids_size,
-                      one_ids_blob->dptr<T>(), one_ids_size);
+                      one_ids_blob->dptr<T>(), sizeof(T) * one_ids_size);
   Memcpy<device_type>(ctx.device_ctx, acc_val_blob->mut_dptr<T>() + offset * one_val_size,
-                      one_val_blob->dptr<T>(), one_val_size);
+                      one_val_blob->dptr<T>(), sizeof(T) * one_val_size);
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kEmbeddingLookupAccumulateConf,
