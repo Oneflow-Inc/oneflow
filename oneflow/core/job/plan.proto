@@ -3,7 +3,16 @@ package oneflow;
 
 import "oneflow/core/job/task.proto";
 
+message MachineIds {
+  repeated int64 machine_id = 1;
+}
+
+message NetTopo {
+  map<int64, MachineIds> peer_machine_ids = 1;
+}
+
 message Plan {
   repeated TaskProto task = 1;
   required int64 total_mbn_num = 2;
+  required NetTopo net_topo = 3;
 }

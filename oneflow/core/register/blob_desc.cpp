@@ -110,20 +110,23 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
   int32_t blob_desc_cnt = 0;
   std::unique_ptr<BlobDesc> ret(new BlobDesc());
   const BlobDesc* last_blob_desc = nullptr;
+  HashMap<int32_t, size_t> blob_mem_id2size;
 
-  int32_t last_blob_mem_id = -1;
-  int64_t last_body_byte_size = 0;
   for (auto& pair : lbi2blob_desc) {
     BlobDesc* blob_desc = pair.second.get();
     RtBlobDesc rt_blob_desc(*blob_desc);
     header_byte_size += rt_blob_desc.ByteSizeOfBlobHeader();
     int64_t cur_body_byte_size = rt_blob_desc.ByteSizeOfBlobBody();
     int32_t blob_mem_id = blob_desc->blob_mem_id();
-    if (blob_mem_id == -1 || blob_mem_id != last_blob_mem_id) {
+    if (blob_mem_id == -1) {
       body_byte_size += cur_body_byte_size;
-    }
-    if (blob_mem_id != -1 && blob_mem_id == last_blob_mem_id) {
-      CHECK_EQ(cur_body_byte_size, last_body_byte_size);
+    } else {
+      auto size_it = blob_mem_id2size.find(blob_mem_id);
+      if (size_it == blob_mem_id2size.end()) {
+        CHECK(blob_mem_id2size.emplace(blob_mem_id, cur_body_byte_size).second);
+      } else {
+        CHECK_EQ(size_it->second, cur_body_byte_size);
+      }
     }
     data_type_set.insert(static_cast<int>(blob_desc->data_type()));
     if (max_col_num == -1) {
@@ -133,9 +136,8 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     }
     blob_desc_cnt += 1;
     last_blob_desc = blob_desc;
-    last_blob_mem_id = blob_mem_id;
-    last_body_byte_size = cur_body_byte_size;
   }
+  for (auto& pair : blob_mem_id2size) { body_byte_size += pair.second; }
   if (blob_desc_cnt == 0) {
     // do nothing
   } else if (blob_desc_cnt == 1) {

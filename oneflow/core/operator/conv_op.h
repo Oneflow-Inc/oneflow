@@ -4,19 +4,11 @@
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/operator_util.h"
 #include "oneflow/core/device/cudnn_util.h"
+#include "oneflow/core/device/cudnn_conv_ctx_cache.h"
 
 namespace oneflow {
 
 #ifdef WITH_CUDA
-struct CudnnConvAlgoCtx final {
-  cudnnConvolutionFwdAlgo_t fwd_algo;
-  cudnnConvolutionBwdFilterAlgo_t bwd_filter_algo;
-  cudnnConvolutionBwdDataAlgo_t bwd_data_algo;
-  size_t fwd_ws_size;
-  size_t bwd_filter_ws_size;
-  size_t bwd_data_ws_size;
-};
-
 class CudnnConvDesc final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudnnConvDesc);
