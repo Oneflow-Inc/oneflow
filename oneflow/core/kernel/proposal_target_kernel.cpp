@@ -58,11 +58,11 @@ void ProposalTargetKernel<T>::ForwardDataContent(
   ClearOutputBlob(ctx, BnInOp2Blob);
   FOR_RANGE(int64_t, i, 0, BnInOp2Blob("rpn_rois")->shape().At(0)) {
     auto gt_boxes = GetImageGtBoxes(i, BnInOp2Blob);
-    auto all_boxes = GetImageRoiBoxes(i, BnInOp2Blob);
-    ComputeRoiBoxesAndGtBoxesOverlaps(gt_boxes, all_boxes);
-    ConcatGtBoxesToRoiBoxes(gt_boxes, all_boxes);
-    SubsampleForegroundAndBackground(all_boxes);
-    ComputeAndWriteOutput(i, gt_boxes, all_boxes, BnInOp2Blob);
+    auto boxes = GetImageRoiBoxes(i, BnInOp2Blob);
+    ComputeRoiBoxesAndGtBoxesOverlaps(gt_boxes, boxes);
+    ConcatGtBoxesToRoiBoxes(gt_boxes, boxes);
+    SubsampleForegroundAndBackground(boxes);
+    ComputeAndWriteOutput(i, gt_boxes, boxes, BnInOp2Blob);
   }
 }
 
@@ -93,17 +93,17 @@ GtBoxesAndLabels ProposalTargetKernel<T>::GetImageGtBoxes(
   const Int32List16* gt_labels = BnInOp2Blob("gt_labels")->dptr<Int32List16>(im_index);
   GtBoxesAndLabels gt_boxes_and_labels(*gt_boxes, *gt_labels);
 
-  Int32List invalid_indices;
-  gt_boxes_and_labels.ForEachBox<float>([&invalid_indices](int32_t index, const BBox<float>* box) {
-    if (box->Area() <= 0) { invalid_indices.add_value(index); }
+  Int32List invalid_inds;
+  gt_boxes_and_labels.ForEachBox<float>([&invalid_inds](int32_t index, const BBox<float>* box) {
+    if (box->Area() <= 0) { invalid_inds.add_value(index); }
   });
-  gt_boxes_and_labels.Filter(invalid_indices);
+  gt_boxes_and_labels.Filter(invalid_inds);
 
-  invalid_indices.Clear();
+  invalid_inds.Clear();
   gt_boxes_and_labels.ForEachLabel([&](int32_t index, int32_t label) {
-    if (label > conf.num_classes()) { invalid_indices.add_value(index); }
+    if (label > conf.num_classes()) { invalid_inds.add_value(index); }
   });
-  gt_boxes_and_labels.Filter(invalid_indices);
+  gt_boxes_and_labels.Filter(invalid_inds);
 
   gt_boxes_and_labels.ConvertFromNormalToAbsCoord<float>(conf.image_height(), conf.image_width());
   CHECK_LE(gt_boxes_and_labels.size(), conf.max_gt_boxes_num());
@@ -115,19 +115,19 @@ typename ProposalTargetKernel<T>::BoxesWithMaxOverlap ProposalTargetKernel<T>::G
     size_t im_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   Blob* rpn_rois_blob = BnInOp2Blob("rpn_rois");
   Blob* boxes_index_blob = BnInOp2Blob("boxes_index");
-  auto boxes_slice =
+  auto boxes =
       GenBoxesIndex(boxes_index_blob->shape().elem_cnt(), boxes_index_blob->mut_dptr<int32_t>(),
                     rpn_rois_blob->dptr<T>(im_index));
-  boxes_slice.Truncate(rpn_rois_blob->shape().At(1));
+  boxes.Truncate(rpn_rois_blob->shape().At(1));
 
   Blob* max_overlaps_blob = BnInOp2Blob("max_overlaps");
   std::memset(max_overlaps_blob->mut_dptr(), 0,
               max_overlaps_blob->shape().elem_cnt() * sizeof(float));
-  BoxesWithMaxOverlap boxes_with_max_overlap_slice(
-      boxes_slice, max_overlaps_blob->mut_dptr<float>(),
+  BoxesWithMaxOverlap boxes_with_max_overlap(
+      boxes, max_overlaps_blob->mut_dptr<float>(),
       BnInOp2Blob("max_overlaps_gt_boxes_index")->mut_dptr<int32_t>());
 
-  return boxes_with_max_overlap_slice;
+  return boxes_with_max_overlap;
 }
 
 template<typename T>
@@ -141,35 +141,30 @@ void ProposalTargetKernel<T>::ComputeRoiBoxesAndGtBoxesOverlaps(
 
 template<typename T>
 void ProposalTargetKernel<T>::ConcatGtBoxesToRoiBoxes(const GtBoxesAndLabels& gt_boxes,
-                                                      BoxesWithMaxOverlap& all_boxes) const {
-  FOR_RANGE(size_t, i, 0, gt_boxes.size()) { all_boxes.PushBack(-(i + 1)); }
+                                                      BoxesWithMaxOverlap& boxes) const {
+  FOR_RANGE(size_t, i, 0, gt_boxes.size()) { boxes.PushBack(-(i + 1)); }
 }
 
 template<typename T>
 void ProposalTargetKernel<T>::SubsampleForegroundAndBackground(BoxesWithMaxOverlap& boxes) const {
   const ProposalTargetOpConf& conf = op_conf().proposal_target_conf();
-  int32_t fg_end = -1;
-  int32_t bg_begin = -1;
-  int32_t bg_end = -1;
+  size_t fg_end = boxes.size();
+  size_t bg_begin = boxes.size();
+  size_t bg_end = boxes.size();
   boxes.SortByMaxOverlap(
       [](float lhs_overlap, float rhs_overlap) { return lhs_overlap > rhs_overlap; });
   boxes.ForEachMaxOverlap([&](float overlap, size_t n, int32_t index) {
-    if (overlap < conf.foreground_threshold() && fg_end == -1) { fg_end = n; }
+    if (overlap < conf.foreground_threshold()) { fg_end = std::min(fg_end, n); }
     if (overlap < conf.background_threshold_high()) {
-      if (bg_begin == -1) { bg_begin = n; }
+      bg_begin = std::min(bg_begin, n);
       boxes.set_max_overlap_gt_index(index, -1);
     }
     if (overlap < conf.background_threshold_low()) {
-      bg_end = n;
+      bg_end = std::min(bg_end, n);
       return false;
     }
     return true;
   });
-  if (fg_end <= 0) {
-    boxes.Truncate(0);
-    return;
-  }
-  if (bg_end == -1) { bg_end = boxes.size(); }
   CHECK_GE(bg_begin, fg_end);
   CHECK_GE(bg_end, bg_begin);
 
