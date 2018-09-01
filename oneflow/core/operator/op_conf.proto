@@ -627,8 +627,8 @@ message DotOpConf {
 }
 
 message MultiplyOpConf {
-  required string in = 1;
-  required string weight = 2;
+  required string in_0 = 1;
+  required string in_1 = 2;
   required string out = 4;
 }
 
