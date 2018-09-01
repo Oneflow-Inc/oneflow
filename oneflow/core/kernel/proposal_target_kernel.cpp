@@ -55,6 +55,7 @@ void ComputeBBoxTargets(int32_t index, int32_t gt_index, const BoxesSlice<T>& bo
 template<typename T>
 void ProposalTargetKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  ClearOutputBlob(ctx, BnInOp2Blob);
   FOR_RANGE(int64_t, i, 0, BnInOp2Blob("rpn_rois")->shape().At(0)) {
     auto gt_boxes = GetImageGtBoxesWithLabels(i, BnInOp2Blob);
     auto roi_boxes = GetRoiBoxesSlice(i, BnInOp2Blob);
@@ -63,6 +64,25 @@ void ProposalTargetKernel<T>::ForwardDataContent(
     SubsampleForegroundAndBackground(boxes_max_overlap);
     ComputeAndWriteOutput(i, boxes_max_overlap, gt_boxes, BnInOp2Blob);
   }
+}
+
+template<typename T>
+void ProposalTargetKernel<T>::ClearOutputBlob(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  Blob* rois_blob = BnInOp2Blob("rois");
+  Blob* labels_blob = BnInOp2Blob("labels");
+  Blob* bbox_targets_blob = BnInOp2Blob("bbox_targets");
+  Blob* bbox_inside_weights_blob = BnInOp2Blob("bbox_inside_weights");
+  Blob* bbox_outside_weights_blob = BnInOp2Blob("bbox_outside_weights");
+  std::memset(rois_blob->mut_dptr<T>(), 0, rois_blob->shape().elem_cnt() * sizeof(T));
+  std::memset(labels_blob->mut_dptr<int32_t>(), 0,
+              labels_blob->shape().elem_cnt() * sizeof(int32_t));
+  std::memset(bbox_targets_blob->mut_dptr<T>(), 0,
+              bbox_targets_blob->shape().elem_cnt() * sizeof(T));
+  std::memset(bbox_inside_weights_blob->mut_dptr<T>(), 0,
+              bbox_inside_weights_blob->shape().elem_cnt() * sizeof(T));
+  std::memset(bbox_outside_weights_blob->mut_dptr<T>(), 0,
+              bbox_outside_weights_blob->shape().elem_cnt() * sizeof(T));
 }
 
 template<typename T>
@@ -172,16 +192,6 @@ void ProposalTargetKernel<T>::ComputeAndWriteOutput(
   Blob* bbox_targets_blob = BnInOp2Blob("bbox_targets");
   Blob* bbox_inside_weights_blob = BnInOp2Blob("bbox_inside_weights");
   Blob* bbox_outside_weights_blob = BnInOp2Blob("bbox_outside_weights");
-
-  std::memset(rois_blob->mut_dptr<T>(im_index), 0, rois_blob->shape().Count(1) * sizeof(T));
-  std::memset(labels_blob->mut_dptr<int32_t>(im_index), 0,
-              labels_blob->shape().Count(1) * sizeof(int32_t));
-  std::memset(bbox_targets_blob->mut_dptr<T>(im_index), 0,
-              bbox_targets_blob->shape().Count(1) * sizeof(T));
-  std::memset(bbox_inside_weights_blob->mut_dptr<T>(im_index), 0,
-              bbox_inside_weights_blob->shape().Count(1) * sizeof(T));
-  std::memset(bbox_outside_weights_blob->mut_dptr<T>(im_index), 0,
-              bbox_outside_weights_blob->shape().Count(1) * sizeof(T));
 
   BBox<T>* rois_bbox = BBox<T>::MutCast(rois_blob->mut_dptr<T>(im_index));
   FOR_RANGE(size_t, i, 0, boxes.size()) {
