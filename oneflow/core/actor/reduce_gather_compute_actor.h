@@ -15,7 +15,7 @@ class ReduceGatherCompActor final : public InputWiseCompActor {
   void VirtualCompActorInit(const TaskProto& proto) override { InputWiseCompActor::Init(proto); }
   void SetKernelCtxOther(void** other) override;
 
-  int64_t other_val_;
+  std::pair<int64_t, bool> other_val_;
 };
 
 }  // namespace oneflow
