@@ -144,7 +144,10 @@ void ProposalTargetKernel<T>::SubsampleForegroundAndBackground(
       [](float lhs_overlap, float rhs_overlap) { return lhs_overlap > rhs_overlap; });
   boxes_max_overlap.ForEachOverlap([&](float overlap, size_t n, int32_t index) {
     if (overlap < conf.foreground_threshold() && fg_end == -1) { fg_end = n; }
-    if (overlap < conf.background_threshold_high() && bg_begin == -1) { bg_begin = n; }
+    if (overlap < conf.background_threshold_high()) {
+      if (bg_begin == -1) { bg_begin = n; }
+      boxes_max_overlap.set_max_overlap_gt_box_index(index, -1);
+    }
     if (overlap < conf.background_threshold_low()) {
       bg_end = n;
       return false;
