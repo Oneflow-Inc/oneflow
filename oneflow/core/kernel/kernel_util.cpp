@@ -157,7 +157,7 @@ void Memcpy<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const void* src, size_t
 #endif
 
 ) {
-  if (dst == src) { return; }
+  CHECK_NE(dst, src);
   memcpy(dst, src, sz);
 }
 
