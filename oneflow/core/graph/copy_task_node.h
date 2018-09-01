@@ -29,13 +29,13 @@ class CopyLocalTaskNode final : public CopyTaskNode {
 
   TaskType GetTaskType() const override { return TaskType::kCopyLocal; }
 
-  void Init(CopyOpConf::Type, int64_t machine_id, int64_t dev_phy_id);
+  void Init(CopyLocalOpConf::Type, int64_t machine_id, int64_t dev_phy_id);
 
-  CopyOpConf::Type copy_type() const { return copy_type_; }
+  CopyLocalOpConf::Type copy_local_type() const { return copy_local_type_; }
   int64_t MemZoneId121() const override {
-    if (copy_type_ == CopyOpConf::H2D) {
+    if (copy_local_type_ == CopyLocalOpConf::H2D) {
       return TaskNode::MemZoneId121();
-    } else if (copy_type_ == CopyOpConf::D2H) {
+    } else if (copy_local_type_ == CopyLocalOpConf::D2H) {
       return Global<IDMgr>::Get()->CpuMemZoneId();
     } else {
       UNIMPLEMENTED();
@@ -46,7 +46,7 @@ class CopyLocalTaskNode final : public CopyTaskNode {
   void InitProducedRegstMemCase(MemoryCase*) override;
   OperatorConf NewCopyOpConf() override;
 
-  CopyOpConf::Type copy_type_;
+  CopyLocalOpConf::Type copy_local_type_;
 };
 
 class CopyCommNetTaskNode final : public CopyTaskNode {
