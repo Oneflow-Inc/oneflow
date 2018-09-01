@@ -20,12 +20,12 @@ class HingeLossKernel final : public LossKernel<device_type, PredType, LabelType
 
 template<DeviceType device_type, typename PredType, typename LabelType>
 struct HingeLossKernelUtil {
-  static void Forward(DeviceCtx* ctx, const int64_t data_num, const int64_t pre_dim,
+  static void Forward(DeviceCtx* ctx, const int64_t piece_size, const int64_t pre_dim,
                       const PredType* pred, const LabelType* label, const OperatorConf& op_conf,
-                      PredType* tmp_diff, PredType* tmp_storage, PredType* loss);
-  static void Backward(DeviceCtx* ctx, const int64_t data_num, const int64_t pre_dim,
-                       const PredType* tmp_diff, const LabelType* label, const OperatorConf op_conf,
-                       PredType* pred_diff);
+                      PredType* tmp_diff, PredType* tmp, PredType* tmp_storage, PredType* loss);
+  static void Backward(DeviceCtx* ctx, const int64_t piece_size, const int64_t pre_dim,
+                       const PredType* tmp_diff, const LabelType* label,
+                       const OperatorConf& op_conf, PredType* pred_diff);
 };
 
 }  // namespace oneflow

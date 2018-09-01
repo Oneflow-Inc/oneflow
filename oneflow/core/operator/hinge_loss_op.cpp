@@ -3,6 +3,7 @@
 namespace oneflow {
 
 void HingeLossOp::VirtualInitFromOpConf() {
+  EnrollDataTmpBn("tmp");
   EnrollDataTmpBn("tmp_diff");
   EnrollDataTmpBn("tmp_storage");  // used by GPU
 }
@@ -17,14 +18,14 @@ void HingeLossOp::VirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
-  // tmp_diff_blob_desc
-  BlobDesc* tmp_diff_blob_desc = GetBlobDesc4BnInOp("tmp_diff");
-  tmp_diff_blob_desc->mut_shape() = Shape(pred_blob_desc->shape());
-  tmp_diff_blob_desc->set_data_type(pred_blob_desc->data_type());
-  // tmp_storage_blob_desc
-  BlobDesc* tmp_storage_blob_desc = GetBlobDesc4BnInOp("tmp_storage");
-  tmp_storage_blob_desc->mut_shape() = Shape(pred_blob_desc->shape());
-  tmp_storage_blob_desc->set_data_type(pred_blob_desc->data_type());
+#define OF_HINGE_LOSS_INFER_TMP_BLOB_DESC(blobname)                   \
+  BlobDesc* blobname##_blob_desc = GetBlobDesc4BnInOp(#blobname);     \
+  blobname##_blob_desc->mut_shape() = Shape(pred_blob_desc->shape()); \
+  blobname##_blob_desc->set_data_type(pred_blob_desc->data_type())
+  OF_HINGE_LOSS_INFER_TMP_BLOB_DESC(tmp);
+  OF_HINGE_LOSS_INFER_TMP_BLOB_DESC(tmp_diff);
+  OF_HINGE_LOSS_INFER_TMP_BLOB_DESC(tmp_storage);
+#undef OF_HINGE_LOSS_INFER_TMP_BLOB_DESC
 }
 
 REGISTER_OP(OperatorConf::kHingeLossConf, HingeLossOp);
