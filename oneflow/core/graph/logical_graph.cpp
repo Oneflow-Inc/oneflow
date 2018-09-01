@@ -5,6 +5,46 @@
 
 namespace oneflow {
 
+namespace {
+
+std::function<bool(const LogicalNode*)> MakePredicatorHasActualOutDiff(const LogicalGraph* graph) {
+  std::list<LogicalNode*> loss_nodes;
+  graph->ForEachNode([&](LogicalNode* node) {
+    if (dynamic_cast<LossLogicalNode*>(node)) { loss_nodes.push_back(node); }
+  });
+  auto nodes_have_actual_out_diff_ptr = std::make_shared<HashSet<const LogicalNode*>>();
+  auto HasBwConnection = [](const LogicalNode* prev, const LogicalNode* next) {
+    HashSet<LogicalBlobId> idbn_lbis;
+    for (const auto& idbn : next->SoleOp()->input_diff_bns()) {
+      idbn_lbis.insert(next->SoleOp()->BnInOp2Lbi(idbn));
+    }
+    for (const auto& odbn : prev->SoleOp()->output_diff_bns()) {
+      LogicalBlobId lbi = prev->SoleOp()->BnInOp2Lbi(odbn);
+      if (idbn_lbis.find(lbi) != idbn_lbis.end()) { return true; }
+    }
+    return false;
+  };
+  auto ForEachOutNode = [&](LogicalNode* node, const std::function<void(LogicalNode*)>& Handler) {
+    node->ForEachNodeOnInEdge([&](LogicalNode* in_node) {
+      if (HasBwConnection(in_node, node)) { Handler(in_node); }
+    });
+  };
+  auto ForEachInNode = [&](LogicalNode* node, const std::function<void(LogicalNode*)>& Handler) {
+    node->ForEachNodeOnOutEdge([&](LogicalNode* out_node) {
+      if (HasBwConnection(node, out_node)) { Handler(out_node); }
+    });
+  };
+  graph->TopoForEachNode(loss_nodes, ForEachInNode, ForEachOutNode,
+                         [nodes_have_actual_out_diff_ptr](LogicalNode* node) {
+                           nodes_have_actual_out_diff_ptr->insert(node);
+                         });
+  return [nodes_have_actual_out_diff_ptr](const LogicalNode* node) {
+    return nodes_have_actual_out_diff_ptr->find(node) != nodes_have_actual_out_diff_ptr->end();
+  };
+}
+
+}  // namespace
+
 LogicalGraph::LogicalGraph(bool is_train) {
   BuildFwStruct();
   SetMainModelParallel();
@@ -144,6 +184,7 @@ void LogicalGraph::BuildBwStruct() {
 }
 
 void LogicalGraph::NaiveBuildBwStruct() {
+  auto HasActualOutDiff = MakePredicatorHasActualOutDiff(this);
   HashSet<LogicalNode*> nodes_need_bw;
   TopoForEachNode([&](LogicalNode* logical_node) {
     auto fw_node = dynamic_cast<ForwardLogicalNode*>(logical_node);
@@ -154,7 +195,7 @@ void LogicalGraph::NaiveBuildBwStruct() {
     }
     for (LogicalEdge* edge : fw_node->in_edges()) {
       if (nodes_need_bw.find(edge->src_node()) != nodes_need_bw.end()
-          && fw_node->SoleOp()->output_diff_bns().size() > 0) {
+          && HasActualOutDiff(fw_node)) {
         CHECK(nodes_need_bw.insert(fw_node).second);
         return;
       }
@@ -354,8 +395,8 @@ void LogicalGraph::BuildAccuracyPrintStruct() {
 void LogicalGraph::BuildModelStruct(bool is_train) {
   HashMap<const LogicalNode*, NormalMdUpdtLogicalNode*> first_shared2mdupdt;
   ForEachLogicalNode<ForwardLogicalNode>([&](ForwardLogicalNode* fw_logical) {
-    if (Global<JobDesc>::Get()->enable_write_snapshot()
-        && fw_logical->HasOpWithForwardModelBlob()) {
+    if (Global<JobDesc>::Get()->enable_write_snapshot() && fw_logical->HasOpWithForwardModelBlob()
+        && fw_logical->SoleOp()->op_conf().trainable()) {
       BuildMdSaveStruct(fw_logical, fw_logical);
     }
     if (fw_logical->HasOpWithModelOrConstModelBlob()) {

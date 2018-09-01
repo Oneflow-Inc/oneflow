@@ -20,6 +20,8 @@ class ProposalTargetKernel final : public KernelIf<DeviceType::kCPU> {
   void ForwardDataId(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
+  void ClearOutputBlob(const KernelCtx& ctx,
+                       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   GtBoxesAndLabels GetImageGtBoxes(
       size_t im_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   BoxesWithMaxOverlap GetImageRoiBoxes(
