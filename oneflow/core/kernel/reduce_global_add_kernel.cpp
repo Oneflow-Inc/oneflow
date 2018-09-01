@@ -10,8 +10,6 @@ void ReduceGlobalAddKernel<device_type, T>::ForwardDataContent(
   bool is_out_blob_inited = std::get<1>(*other_val);
   bool is_inplace_in_blob = std::get<2>(*other_val);
 
-  if (is_inplace_in_blob) { return; }
-
   Blob* out_blob = BnInOp2Blob("out");
   Blob* in_blob = BnInOp2Blob(ibn);
   if (is_out_blob_inited) {
@@ -19,6 +17,7 @@ void ReduceGlobalAddKernel<device_type, T>::ForwardDataContent(
     KernelUtil<device_type, T>::Axpy(ctx.device_ctx, elem_cnt, 1.0, in_blob->dptr<T>(), 1,
                                      out_blob->mut_dptr<T>(), 1);
   } else {
+    if (is_inplace_in_blob) { CHECK_EQ(out_blob->mut_dptr<char>(), in_blob->dptr<char>()); }
     Memcpy<device_type>(ctx.device_ctx, out_blob->mut_dptr<char>(), in_blob->dptr<char>(),
                         out_blob->ByteSizeOfDataContentField());
   }
