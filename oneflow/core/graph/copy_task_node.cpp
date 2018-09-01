@@ -10,7 +10,8 @@ void CopyTaskNode::ProduceAllRegstsAndBindEdges() {
   CopyLocalTaskNode* copy_local = dynamic_cast<CopyLocalTaskNode*>(this);
   if (copy_local != nullptr) {
     TaskType dst_node_type = (*out_edges().begin())->dst_node()->GetTaskType();
-    if (copy_local->copy_type() == CopyLocalOpConf::H2D
+    if ((copy_local->copy_type() == CopyLocalOpConf::H2D
+         || copy_local->copy_type() == CopyLocalOpConf::D2D)
         && (dst_node_type == TaskType::kReduceLocalAdd
             || dst_node_type == TaskType::kReduceGlobalAdd
             || dst_node_type == TaskType::kReduceGather)) {
