@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_OPERATOR_NCCL_ALLREDUCE_OP_H_
-#define ONEFLOW_CORE_OPERATOR_NCCL_ALLREDUCE_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_NCCL_ALL_REDUCE_OP_H_
+#define ONEFLOW_CORE_OPERATOR_NCCL_ALL_REDUCE_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 
@@ -24,4 +24,4 @@ class NcclAllReduceOp final : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_NCCL_ALLREDUCE_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_NCCL_ALL_REDUCE_OP_H_

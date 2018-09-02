@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_KERNEL_NCCL_ALLREDUCE_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_NCCL_ALLREDUCE_KERNEL_H_
+#ifndef ONEFLOW_CORE_KERNEL_NCCL_ALL_REDUCE_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_NCCL_ALL_REDUCE_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
 
@@ -19,4 +19,4 @@ class NcclAllReduceKernel final : public KernelIf<device_type> {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_NCCL_ALLREDUCE_KERNEL_H_
+#endif  // ONEFLOW_CORE_KERNEL_NCCL_ALL_REDUCE_KERNEL_H_
