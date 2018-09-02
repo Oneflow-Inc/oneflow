@@ -17,12 +17,14 @@ class CudaStreamHandle final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaStreamHandle);
   CudaStreamHandle() = delete;
-  CudaStreamHandle(Channel<CudaCBEvent>* cb_event_chan) : cb_event_chan_(cb_event_chan) {}
+  CudaStreamHandle(Channel<CudaCBEvent>* cb_event_chan, int64_t dev_id)
+      : cb_event_chan_(cb_event_chan), dev_id_(dev_id) {}
 
   const cudaStream_t* cuda_stream();
   const cublasHandle_t* cublas_pmh_handle();
   const cublasHandle_t* cublas_pmd_handle();
   const cudnnHandle_t* cudnn_handle();
+  const ncclComm_t* nccl_handle();
 
   void AddCallBack(std::function<void()> callback);
 
@@ -34,6 +36,8 @@ class CudaStreamHandle final {
   std::unique_ptr<cublasHandle_t> cublas_pmh_handle_;
   std::unique_ptr<cublasHandle_t> cublas_pmd_handle_;
   std::unique_ptr<cudnnHandle_t> cudnn_handle_;
+  std::unique_ptr<ncclComm_t> nccl_handle_;
+  int64_t dev_id_;
 };
 
 #endif  // WITH_CUDA

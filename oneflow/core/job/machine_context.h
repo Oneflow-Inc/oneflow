@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_JOB_MACHINE_CONTEXT_H_
 
 #include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 
@@ -16,10 +17,16 @@ class MachineCtx final {
   std::string GetThisCtrlAddr() const { return GetCtrlAddr(this_machine_id_); }
   std::string GetMasterCtrlAddr() const { return GetCtrlAddr(0); }
   std::string GetCtrlAddr(int64_t machine_id) const;
+#ifdef WITH_CUDA
+  ncclUniqueId GetNcclUniqueId() const { return nccl_unique_id_; }
+#endif
 
  private:
   friend class Global<MachineCtx>;
   MachineCtx(const std::string& this_mchn_name);
+#ifdef WITH_CUDA
+  ncclUniqueId nccl_unique_id_;
+#endif
 
   int64_t this_machine_id_;
 };
