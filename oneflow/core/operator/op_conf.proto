@@ -623,6 +623,14 @@ message TransposeOpConf {
   repeated int32 perm = 3;
 }
 
+message ReduceConcatOpConf {
+  required int32 in_num = 1;
+}
+
+message ReduceSplitOpConf {
+  required int32 out_num = 1;
+}
+
 message ReduceScatterOpConf {
   required int32 out_num = 1;
 };
@@ -819,17 +827,19 @@ message OperatorConf {
     ReduceLocalAddOpConf reduce_local_add_conf = 401;
     ReduceGlobalAddOpConf reduce_global_add_conf = 402;
     ReduceGatherOpConf reduce_gather_conf = 403;
-    RecordLoadOpConf record_load_conf = 404;
-    AccuracyOpConf accuracy_conf = 405;
-    AccuracyPrintOpConf accuracy_print_conf = 406;
-    RoIPoolingOpConf roi_pooling_conf = 407;
-    SmoothL1LossOpConf smooth_l1_loss_conf = 408;
-    ProposalOpConf proposal_conf = 409;
-    RoIAlignOpConf roi_align_conf = 410;
-    ProposalTargetOpConf proposal_target_conf = 411;
-    BboxNmsAndLimitOpConf bbox_nms_and_limit_conf = 412;
-    AnchorTargetOpConf anchor_target_conf = 413;
-    SigmoidCrossEntropyLossOpConf sigmoid_cross_entropy_loss_conf = 414;
+    ReduceConcatOpConf reduce_concat_conf = 404;
+    ReduceSplitOpConf reduce_split_conf = 405;
+    RecordLoadOpConf record_load_conf = 406;
+    AccuracyOpConf accuracy_conf=407;
+    AccuracyPrintOpConf accuracy_print_conf = 408;
+    RoIPoolingOpConf roi_pooling_conf = 1000;
+    SmoothL1LossOpConf smooth_l1_loss_conf = 1001;
+    ProposalOpConf proposal_conf = 1002;
+    RoIAlignOpConf roi_align_conf = 1003;
+    ProposalTargetOpConf proposal_target_conf = 1004;
+    BboxNmsAndLimitOpConf bbox_nms_and_limit_conf = 1005;
+    AnchorTargetOpConf anchor_target_conf = 1006;
+    SigmoidCrossEntropyLossOpConf sigmoid_cross_entropy_loss_conf = 1007;
   }
 }
 

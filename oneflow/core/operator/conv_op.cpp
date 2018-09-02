@@ -313,14 +313,17 @@ void ConvOp<NDims>::InferCudnnAlgo(
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   const BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   const BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");
+  std::string format = GetValFromCustomizedConf<std::string>("data_format");
+
+  if (Global<CudnnConvCtxCache>::Get()->FindCudnnConvAlgoCtxWithConfig(
+          *in_blob_desc, *out_blob_desc, *weight_blob_desc, format, conv_ctx)) {
+    return;
+  }
 
   DataType data_type = in_blob_desc->data_type();
-  CudnnTensorDesc in_desc(data_type, in_blob_desc->shape(),
-                          GetValFromCustomizedConf<std::string>("data_format"));
-  CudnnTensorDesc out_desc(data_type, out_blob_desc->shape(),
-                           GetValFromCustomizedConf<std::string>("data_format"));
-  CudnnFilterDesc filter_desc(data_type, weight_blob_desc->shape(),
-                              GetValFromCustomizedConf<std::string>("data_format"));
+  CudnnTensorDesc in_desc(data_type, in_blob_desc->shape(), format);
+  CudnnTensorDesc out_desc(data_type, out_blob_desc->shape(), format);
+  CudnnFilterDesc filter_desc(data_type, weight_blob_desc->shape(), format);
   CudnnConvDesc conv_desc(in_blob_desc->data_type(), in_blob_desc->shape(), GetCustomizedConf());
 
   size_t avail_ws_sz = cudnn_buf_limit_byte();
@@ -391,6 +394,9 @@ void ConvOp<NDims>::InferCudnnAlgo(
   CudaCheck(cudnnGetConvolutionBackwardDataWorkspaceSize(
       *cuda_handle.cudnn_handle(), filter_desc.Get(), out_desc.Get(), conv_desc.Get(),
       in_desc.Get(), conv_ctx->bwd_data_algo, &conv_ctx->bwd_data_ws_size));
+
+  Global<CudnnConvCtxCache>::Get()->AddCudnnConvAlgoCtxWithConfig(
+      *in_blob_desc, *out_blob_desc, *weight_blob_desc, format, *conv_ctx);
 }
 #endif  // WITH_CUDA
 

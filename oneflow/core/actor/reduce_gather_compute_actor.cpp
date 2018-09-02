@@ -3,7 +3,8 @@
 namespace oneflow {
 
 void ReduceGatherCompActor::SetKernelCtxOther(void** other) {
-  other_val_ = InBnId4RegstDescId(cur_processed_regst_desc_id());
+  int64_t in_bn_id = InBnId4RegstDescId(cur_processed_regst_desc_id());
+  other_val_ = std::make_pair(in_bn_id, EnableInplace());
   *other = static_cast<void*>(&other_val_);
 }
 
