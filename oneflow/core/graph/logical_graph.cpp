@@ -496,15 +496,15 @@ void LogicalGraph::AddAllReduce(LogicalNode* src, LogicalNode* dst) {
 
 void LogicalGraph::AddNcclAllReduce(LogicalNode* src, LogicalNode* dst) {
   std::shared_ptr<const ParallelDesc> src_pd = src->parallel_desc();
-  OperatorConf nccl_allreduce_op_conf;
-  nccl_allreduce_op_conf.set_name("nccl_allreduce_" + NewUniqueId());
-  nccl_allreduce_op_conf.set_device_type(src_pd->device_type());
-  nccl_allreduce_op_conf.mutable_nccl_allreduce_conf();
-  LogicalNode* nccl_allreduce_node = NewNode<NcclAllreduceLogicalNode>();
-  nccl_allreduce_node->mut_op_vec() = {ConstructOp(nccl_allreduce_op_conf)};
-  nccl_allreduce_node->mut_parallel_desc() = src_pd;
-  Connect(src, NewEdge(), nccl_allreduce_node);
-  Connect(nccl_allreduce_node, NewEdge(), dst);
+  OperatorConf nccl_all_reduce_op_conf;
+  nccl_all_reduce_op_conf.set_name("nccl_all_reduce_" + NewUniqueId());
+  nccl_all_reduce_op_conf.set_device_type(src_pd->device_type());
+  nccl_all_reduce_op_conf.mutable_nccl_all_reduce_conf();
+  LogicalNode* nccl_all_reduce_node = NewNode<NcclAllReduceLogicalNode>();
+  nccl_all_reduce_node->mut_op_vec() = {ConstructOp(nccl_all_reduce_op_conf)};
+  nccl_all_reduce_node->mut_parallel_desc() = src_pd;
+  Connect(src, NewEdge(), nccl_all_reduce_node);
+  Connect(nccl_all_reduce_node, NewEdge(), dst);
 }
 
 void LogicalGraph::AddReduceScatterAddGatherNodes(LogicalNode* src, LogicalNode* dst) {

@@ -29,7 +29,7 @@ enum TaskType {
   kReduceScatter = 20;
   kReduceConcat = 21;
   kReduceSplit = 22;
-  kNcclAllreduce = 23;
+  kNcclAllReduce = 23;
   kAccuracy = 24;
   kAccuracyAcc = 25;
   kAccuracyPrint = 26;

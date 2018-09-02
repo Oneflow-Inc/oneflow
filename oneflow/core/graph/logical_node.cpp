@@ -16,7 +16,7 @@
 #include "oneflow/core/graph/reduce_gather_compute_task_node.h"
 #include "oneflow/core/graph/reduce_concat_compute_task_node.h"
 #include "oneflow/core/graph/reduce_split_compute_task_node.h"
-#include "oneflow/core/graph/nccl_allreduce_compute_task_node.h"
+#include "oneflow/core/graph/nccl_all_reduce_compute_task_node.h"
 #include "oneflow/core/graph/accuracy_compute_task_node.h"
 #include "oneflow/core/graph/accuracy_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/accuracy_print_compute_task_node.h"
@@ -354,18 +354,18 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("MdDiffAcc"
                               "ReduceScatter",
                               &TaskGraph::BldSubTskGphByOneToOne);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalBackward"
-                              "NcclAllreduce",
+                              "NcclAllReduce",
                               &TaskGraph::BldSubTskGphByOneToOne);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("MdDiffAcc"
-                              "NcclAllreduce",
+                              "NcclAllReduce",
                               &TaskGraph::BldSubTskGphByOneToOne);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceConcat"
-                              "NcclAllreduce",
+                              "NcclAllReduce",
                               &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclAllreduce"
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclAllReduce"
                               "NormalMdUpdt",
                               &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclAllreduce"
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclAllReduce"
                               "ReduceSplit",
                               &TaskGraph::BldSubTskGphByOneToOne);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceScatter"
@@ -437,7 +437,7 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
   OF_PP_MAKE_TUPLE_SEQ(ReduceGlobalAdd, kMdUpdtArea)      \
   OF_PP_MAKE_TUPLE_SEQ(ReduceGather, kMdUpdtArea)         \
   OF_PP_MAKE_TUPLE_SEQ(ReduceSplit, kMdUpdtArea)          \
-  OF_PP_MAKE_TUPLE_SEQ(NcclAllreduce, kMdUpdtArea)        \
+  OF_PP_MAKE_TUPLE_SEQ(NcclAllReduce, kMdUpdtArea)        \
   OF_PP_MAKE_TUPLE_SEQ(Accuracy, kDataForwardArea)        \
   OF_PP_MAKE_TUPLE_SEQ(AccuracyAcc, kDataForwardArea)     \
   OF_PP_MAKE_TUPLE_SEQ(AccuracyPrint, kPrintArea)
