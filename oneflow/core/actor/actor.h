@@ -35,6 +35,7 @@ class Actor {
   int64_t machine_id() const { return Global<IDMgr>::Get()->MachineId4ActorId(actor_id_); }
   int64_t thrd_id() const { return Global<IDMgr>::Get()->ThrdId4ActorId(actor_id_); }
   int64_t actor_id() const { return actor_id_; }
+  int64_t act_id() const { return act_id_; }
 
  protected:
   struct ExecKernel {

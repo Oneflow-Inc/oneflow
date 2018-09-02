@@ -274,7 +274,6 @@ void MatrixRowReduce(DeviceCtx* ctx, const size_t row_num, const size_t col_num,
 template<>
 void Memcpy<DeviceType::kGPU>(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
                               cudaMemcpyKind kind) {
-  if (kind == cudaMemcpyKind::cudaMemcpyDeviceToDevice) { CHECK_NE(dst, src); }
   CudaCheck(cudaMemcpyAsync(dst, src, sz, kind, ctx->cuda_stream()));
 }
 
