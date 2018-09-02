@@ -61,11 +61,11 @@ OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_INTEGRAL, INT_DATA_TYPE_SEQ);
 #undef SPECIALIZE_TRUE_INTEGRAL
 
 template<typename T>
-struct IsRecordType : std::integral_constant<bool, false> {};
+struct IsPbType : std::integral_constant<bool, false> {};
 
 #define SPECIALIZE_TRUE_PB(type_cpp, type_proto) \
   template<>                                     \
-  struct IsRecordType<type_cpp> : std::integral_constant<bool, true> {};
+  struct IsPbType<type_cpp> : std::integral_constant<bool, true> {};
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_PB, PB_DATA_TYPE_SEQ);
 #undef SPECIALIZE_TRUE_INTEGRAL
 

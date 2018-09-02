@@ -57,14 +57,14 @@ void DoScalePreprocess(const ScalePreprocessConf& conf, T* dptr, int64_t n) {
 }
 
 template<typename T>
-typename std::enable_if<IsRecordType<T>::value>::type DoPreprocess(const PreprocessConf& conf,
-                                                                   T* dptr, const Shape& shape) {
+typename std::enable_if<IsPbType<T>::value>::type DoPreprocess(const PreprocessConf& conf, T* dptr,
+                                                               const Shape& shape) {
   UNIMPLEMENTED();
 }
 
 template<typename T>
-typename std::enable_if<!IsRecordType<T>::value>::type DoPreprocess(const PreprocessConf& conf,
-                                                                    T* dptr, const Shape& shape) {
+typename std::enable_if<!IsPbType<T>::value>::type DoPreprocess(const PreprocessConf& conf, T* dptr,
+                                                                const Shape& shape) {
   int64_t n = shape.Count(1);
   if (conf.has_subtract_conf()) {
     DoSubtractPreprocess<T>(conf.subtract_conf(), dptr, n);
