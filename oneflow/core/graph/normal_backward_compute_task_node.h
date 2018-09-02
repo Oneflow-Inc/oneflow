@@ -26,6 +26,7 @@ class NormalBackwardCompTaskNode final : public CompTaskNode {
   void FixPackedBlobDescOfProducedRegst() override;
   void LinkFwExecNode();
   void BindModelDiffRegst();
+  void BindInRegst();
   void InferBlobDescsInProducedRegsts();
   CompTaskNode* GetRelatedFwTaskNode();
 };
