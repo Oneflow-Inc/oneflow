@@ -14,7 +14,7 @@ void ClearPbBlob(Blob* blob) {
   switch (blob->data_type()) {
 #define CLEAR_PB_BLOB_CASE(type_cpp, type_proto) \
   case type_proto: return ClearPbBlob<type_cpp>(blob);
-    OF_PP_FOR_EACH_TUPLE(CLEAR_PB_BLOB_CASE, RECORD_DATA_TYPE_SEQ);
+    OF_PP_FOR_EACH_TUPLE(CLEAR_PB_BLOB_CASE, PB_DATA_TYPE_SEQ);
     default: CHECK_NE(blob->data_type(), DataType::kInvalidDataType);
   }
 }
@@ -89,7 +89,7 @@ void Kernel::ClearPbBlobs(const KernelCtx& ctx,
   for (const auto& out_bn : op_attribute().pb_output_bns()) {
     Blob* out_blob = BnInOp2Blob(out_bn);
     CHECK_NOTNULL(out_blob);
-    CHECK(IsRecordDataType(out_blob->data_type()));
+    CHECK(IsPbDataType(out_blob->data_type()));
     ClearPbBlob(out_blob);
   }
 }

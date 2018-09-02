@@ -111,7 +111,7 @@ void RegstMgr::InitPbBlobIfNeed(Blob* blob_ptr) const {
   switch (blob_ptr->blob_desc().data_type()) {
 #define INIT_PB_BLOB_CASE(type_cpp, type_proto) \
   case type_proto: return InitPbBlob<type_cpp>(blob_ptr);
-    OF_PP_FOR_EACH_TUPLE(INIT_PB_BLOB_CASE, RECORD_DATA_TYPE_SEQ);
+    OF_PP_FOR_EACH_TUPLE(INIT_PB_BLOB_CASE, PB_DATA_TYPE_SEQ);
 
     default: CHECK_NE(blob_ptr->blob_desc().data_type(), DataType::kInvalidDataType);
   }

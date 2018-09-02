@@ -32,6 +32,6 @@ void PbBoxingKernel<T>::ForwardDataContent(
   }
 }
 
-ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kPbBoxingConf, PbBoxingKernel, FEATURE_DATA_TYPE_SEQ);
+ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kPbBoxingConf, PbBoxingKernel, PB_LIST_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

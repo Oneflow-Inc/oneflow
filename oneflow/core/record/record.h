@@ -11,24 +11,24 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ(EncodeCase::kJpeg)
 #define ENCODE_CASE_DATA_TYPE_SEQ_PRODUCT                      \
   OF_PP_SEQ_PRODUCT(ENCODE_CASE_SEQ, ARITHMETIC_DATA_TYPE_SEQ) \
-  OF_PP_SEQ_PRODUCT((EncodeCase::kProtobuf), FEATURE_DATA_TYPE_SEQ)
+  OF_PP_SEQ_PRODUCT((EncodeCase::kProtobuf), PB_LIST_DATA_TYPE_SEQ)
 
-#define FEATURE_SIZE_SHIFT_SEQ (8)(16)(24)
+#define PB_LIST_SIZE_SHIFT_SEQ (8)(16)(24)
 
-#define FEATURE_TYPE_FEATURE_FIELD_SEQ          \
+#define PB_LIST_TYPE_PB_LIST_FIELD_SEQ          \
   OF_PP_MAKE_TUPLE_SEQ(BytesList, bytes_list)   \
   OF_PP_MAKE_TUPLE_SEQ(FloatList, float_list)   \
   OF_PP_MAKE_TUPLE_SEQ(DoubleList, double_list) \
   OF_PP_MAKE_TUPLE_SEQ(Int32List, int32_list)
 
-#define MAKE_RECORD_DATA_TYPE_FEATURE_FIELD_SEQ(pair, shift)                             \
+#define MAKE_RECORD_DATA_TYPE_PB_LIST_FIELD_SEQ(pair, shift)                             \
   OF_PP_MAKE_TUPLE_SEQ(OF_PP_CAT(OF_PP_PAIR_FIRST(pair), shift),                         \
                        OF_PP_CAT(DataType::k, OF_PP_CAT(OF_PP_PAIR_FIRST(pair), shift)), \
                        OF_PP_PAIR_SECOND(pair))
 
-#define FEATURE_DATA_TYPE_FEATURE_FIELD_SEQ                                 \
-  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_RECORD_DATA_TYPE_FEATURE_FIELD_SEQ, \
-                                   FEATURE_TYPE_FEATURE_FIELD_SEQ, FEATURE_SIZE_SHIFT_SEQ)
+#define PB_LIST_DATA_TYPE_PB_LIST_FIELD_SEQ                                 \
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_RECORD_DATA_TYPE_PB_LIST_FIELD_SEQ, \
+                                   PB_LIST_TYPE_PB_LIST_FIELD_SEQ, PB_LIST_SIZE_SHIFT_SEQ)
 
 template<typename T>
 inline void CheckRecordValue(const T& data) {
@@ -42,7 +42,7 @@ inline void CheckRecordValue(const T& data) {
     CHECK_LE(data.value().value(0).size(), static_cast<int32_t>(1) << shift);        \
   }
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(SPECIALIZE_CHECK_RECORD_VALUE, (BytesList),
-                                 FEATURE_SIZE_SHIFT_SEQ);
+                                 PB_LIST_SIZE_SHIFT_SEQ);
 #undef SPECIALIZE_CHECK_RECORD_VALUE
 
 #define SPECIALIZE_CHECK_RECORD_VALUE(type_prefix, shift)                            \
@@ -51,7 +51,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(SPECIALIZE_CHECK_RECORD_VALUE, (BytesList),
     CHECK_LE(data.value().value_size(), static_cast<int32_t>(1) << shift);           \
   }
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(SPECIALIZE_CHECK_RECORD_VALUE, (FloatList)(DoubleList)(Int32List),
-                                 FEATURE_SIZE_SHIFT_SEQ);
+                                 PB_LIST_SIZE_SHIFT_SEQ);
 #undef SPECIALIZE_CHECK_RECORD_VALUE
 }
 

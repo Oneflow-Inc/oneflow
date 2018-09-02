@@ -8,12 +8,12 @@ namespace {
 template<typename T>
 decltype(std::declval<T>().mutable_value()) GetMutFeatureDataList(Feature& feature);
 
-#define SPECIALIZE_GET_MUT_FEATURE_DATA_LIST(T, type_proto, data_list)                      \
+#define SPECIALIZE_GET_MUT_PB_LIST_DATA_LIST(T, type_proto, data_list)                      \
   template<>                                                                                \
   decltype(std::declval<T>().mutable_value()) GetMutFeatureDataList<T>(Feature & feature) { \
     return feature.mutable_##data_list();                                                   \
   }
-OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_MUT_FEATURE_DATA_LIST, FEATURE_DATA_TYPE_FEATURE_FIELD_SEQ);
+OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_MUT_PB_LIST_DATA_LIST, PB_LIST_DATA_TYPE_PB_LIST_FIELD_SEQ);
 
 }  // namespace
 
@@ -28,6 +28,6 @@ void OFRecordEncoderImpl<EncodeCase::kProtobuf, T>::EncodeOneCol(
 
 #define INSTANTIATE_OFRECORD_PROTOBUF_ENCODER(type_cpp, type_proto) \
   template class OFRecordEncoderImpl<EncodeCase::kProtobuf, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_OFRECORD_PROTOBUF_ENCODER, FEATURE_DATA_TYPE_SEQ);
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_OFRECORD_PROTOBUF_ENCODER, PB_LIST_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
