@@ -48,6 +48,7 @@ void NormalBackwardCompTaskNode::BuildExecGphAndRegst() {
   LinkFwExecNode();
   BuildActivationDiffRegst();
   BuildInDiffRegst();
+  BindInRegst();
   BindModelDiffRegst();
   InferBlobDescsInProducedRegsts();
 }
@@ -129,15 +130,21 @@ void NormalBackwardCompTaskNode::BuildInDiffRegst() {
     }
     for (const std::string& idbn : cur_node->op()->input_diff_bns()) {
       const LogicalBlobId& lbi = cur_node->op()->BnInOp2Lbi(idbn);
-      CompTaskNode* fw_task = GetRelatedFwTaskNode();
-      if (fw_task) {
-        cur_node->BindBnWithOneOfTheRegsts(GenUnDiffBn(idbn), GetConsumedRegst("in"));
-      }
       if (logical_node()->IsDataLbiOnOutEdge(lbi)) {
         in_diff_regst->AddLbi(lbi);
         cur_node->BindBnWithRegst(idbn, in_diff_regst);
       } else {
         CHECK(found_lbis.empty() || found_lbis.find(lbi) != found_lbis.end());
+      }
+    }
+  });
+}
+
+void NormalBackwardCompTaskNode::BindInRegst() {
+  mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
+    for (const std::string& ibn : cur_node->op()->input_bns()) {
+      if (GetRelatedFwTaskNode()) {
+        cur_node->BindBnWithOneOfTheRegsts(ibn, GetConsumedRegst("in"));
       }
     }
   });
