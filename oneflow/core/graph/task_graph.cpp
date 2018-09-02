@@ -76,7 +76,7 @@ void TaskGraph::GeneratePersistenceThrdId(
 void TaskGraph::AcyclicTopoForEachNode(std::function<void(TaskNode* node)> handler) const {
   std::list<TaskNode*> starts;
   ForEachNode([&](TaskNode* node) {
-    if (node->consumed_regsts().empty() && !node->IsMeaningLess()) { starts.push_back(node); }
+    if (node->in_edges().empty()) { starts.push_back(node); }
   });
   auto ForEachInNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& handler) {
     node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
