@@ -475,18 +475,40 @@ void LogicalGraph::BuildReduceStruct(const ReduceCtx& reduce_ctx) {
     for (auto& md_updt_node : reduce_ctx.md_updt_logicals) {
       Connect(reduce_split_node, NewEdge(), md_updt_node);
     }
-    AddReduceScatterAddGatherNodes(reduce_concat_node, reduce_split_node);
+    AddAllReduce(reduce_concat_node, reduce_split_node);
   } else if (reduce_ctx.fw_logicals.size() == 1) {
-    AddReduceScatterAddGatherNodes(reduce_ctx.md_diff_acc_logicals.at(0),
-                                   reduce_ctx.md_updt_logicals.at(0));
+    AddAllReduce(reduce_ctx.md_diff_acc_logicals.at(0), reduce_ctx.md_updt_logicals.at(0));
   }
 }
 
-void LogicalGraph::AddReduceScatterAddGatherNodes(LogicalNode* src, LogicalNode* dst) {
+void LogicalGraph::AddAllReduce(LogicalNode* src, LogicalNode* dst) {
   std::shared_ptr<const ParallelDesc> src_pd = src->parallel_desc();
   std::shared_ptr<const ParallelDesc> dst_pd = dst->parallel_desc();
   CHECK_EQ(src_pd->parallel_num(), dst_pd->parallel_num());
   CHECK_EQ(src_pd->device_type(), dst_pd->device_type());
+  if (Global<JobDesc>::Get()->enable_nccl() && src_pd->device_type() == DeviceType::kGPU
+      && src_pd->sorted_machine_ids().size() == 1) {
+    AddNcclAllReduce(src, dst);
+  } else {
+    AddReduceScatterAddGatherNodes(src, dst);
+  }
+}
+
+void LogicalGraph::AddNcclAllReduce(LogicalNode* src, LogicalNode* dst) {
+  std::shared_ptr<const ParallelDesc> src_pd = src->parallel_desc();
+  OperatorConf nccl_allreduce_op_conf;
+  nccl_allreduce_op_conf.set_name("nccl_allreduce_" + NewUniqueId());
+  nccl_allreduce_op_conf.set_device_type(src_pd->device_type());
+  nccl_allreduce_op_conf.mutable_nccl_allreduce_conf();
+  LogicalNode* nccl_allreduce_node = NewNode<NcclAllreduceLogicalNode>();
+  nccl_allreduce_node->mut_op_vec() = {ConstructOp(nccl_allreduce_op_conf)};
+  nccl_allreduce_node->mut_parallel_desc() = src_pd;
+  Connect(src, NewEdge(), nccl_allreduce_node);
+  Connect(nccl_allreduce_node, NewEdge(), dst);
+}
+
+void LogicalGraph::AddReduceScatterAddGatherNodes(LogicalNode* src, LogicalNode* dst) {
+  std::shared_ptr<const ParallelDesc> src_pd = src->parallel_desc();
   // Reduce Scatter
   LogicalNode* reduce_scatter_node = NewNode<ReduceScatterLogicalNode>();
   reduce_scatter_node->mut_parallel_desc() = src_pd;

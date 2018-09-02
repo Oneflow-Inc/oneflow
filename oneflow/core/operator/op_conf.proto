@@ -581,6 +581,9 @@ message ReduceConcatOpConf {
   required int32 in_num = 1;
 }
 
+message NcclAllreduceOpConf {
+}
+
 message ReduceSplitOpConf {
   required int32 out_num = 1;
 }
@@ -662,9 +665,10 @@ message OperatorConf {
     ReduceGatherOpConf reduce_gather_conf = 403;
     ReduceConcatOpConf reduce_concat_conf = 404;
     ReduceSplitOpConf reduce_split_conf = 405;
-    RecordLoadOpConf record_load_conf = 406;
-    AccuracyOpConf accuracy_conf=407;
-    AccuracyPrintOpConf accuracy_print_conf = 408;
+    NcclAllreduceOpConf nccl_allreduce_conf = 406;
+    RecordLoadOpConf record_load_conf = 407;
+    AccuracyOpConf accuracy_conf=408;
+    AccuracyPrintOpConf accuracy_print_conf = 409;
   }
 }
 
