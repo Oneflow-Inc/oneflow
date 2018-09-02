@@ -14,12 +14,14 @@ class ActEventLogger final {
   ~ActEventLogger() = default;
 
   void PrintActEventToLogDir(const ActEvent&);
+  static std::string experiment_act_event_bin_filename();
+  static std::string act_event_bin_filename();
 
+ private:
   static const std::string experiment_prefix_;
   static const std::string act_event_bin_filename_;
   static const std::string act_event_txt_filename_;
 
- private:
   friend class Global<ActEventLogger>;
   ActEventLogger(bool is_experiment_phase);
 

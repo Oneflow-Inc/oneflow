@@ -43,7 +43,10 @@ void NormalMdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
 void NormalMdUpdtCompTaskNode::ConsumeAllRegsts() {
   if (!IsTrainable()) { return; }
   for (TaskEdge* edge : in_edges()) {
-    ConsumeRegst("model_diff_acc_" + NewUniqueId(), edge->GetSoleRegst());
+    auto regst_descs = edge->GetRegsts();
+    for (auto& regst_desc : regst_descs) {
+      ConsumeRegst("model_diff_acc_" + NewUniqueId(), regst_desc);
+    }
   }
 }
 
@@ -57,7 +60,7 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
   node->mut_op() = logical_node()->SoleOp();
   size_t ibn_idx = 0;
   for (const auto& pair : consumed_regsts()) {
-    node->BindBnWithRegst(node->op()->input_bns().Get(ibn_idx++), pair.second.front().lock());
+    node->BindBnWithRegst(node->op()->input_bns().Get(ibn_idx++), pair.second.front());
   }
   node->BindBnWithRegst(node->op()->SoleObn(), GetProducedRegst("model"));
   node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, GetProducedRegst("data_tmp"));

@@ -45,8 +45,8 @@ void NormalForwardCompTaskNode::ConsumeAllRegsts() {
 }
 
 bool NormalForwardCompTaskNode::IsReadyForBuild() {
-  for (std::weak_ptr<RegstDesc> regst_desc : GetConsumedRegst("in")) {
-    if (regst_desc.lock()->IsLocked() == false) { return false; }
+  for (std::shared_ptr<RegstDesc> regst_desc : GetConsumedRegst("in")) {
+    if (regst_desc->IsLocked() == false) { return false; }
   }
   return true;
 }
@@ -80,7 +80,7 @@ void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
       CHECK(lbi2producer.insert({lbi, {cur_node, obn}}).second);
     });
   }
-  const std::list<std::weak_ptr<RegstDesc>>& in_regsts = GetConsumedRegst("in");
+  const std::list<std::shared_ptr<RegstDesc>>& in_regsts = GetConsumedRegst("in");
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
     cur_node->op()->ForEachInputBn([&](const std::string& ibn) {
       const LogicalBlobId& lbi = cur_node->op()->BnInOp2Lbi(ibn);

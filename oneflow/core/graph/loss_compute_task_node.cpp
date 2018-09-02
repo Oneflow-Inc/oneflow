@@ -60,8 +60,8 @@ void LossCompTaskNode::BuildRegstWhenTraining() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   std::shared_ptr<RegstDesc> data_tmp_regst = GetProducedRegst("data_tmp");
   loss_node->AddBnToRegstAndBindIt(&Operator::input_diff_bns, out_regst);
-  for (std::weak_ptr<RegstDesc> regst : GetConsumedRegst("in")) {
-    out_regst->CopyBlobDescWithoutAddLbi(regst.lock().get());
+  for (std::shared_ptr<RegstDesc> regst : GetConsumedRegst("in")) {
+    out_regst->CopyBlobDescWithoutAddLbi(regst.get());
   }
   data_tmp_regst->AddLbi(loss_op->BnInOp2Lbi("loss"));
   loss_node->BindBnWithRegst("loss", data_tmp_regst);
