@@ -12,15 +12,15 @@ void AnchorTargetKernel<T>::InitConstBufBlobs(
   const AnchorGeneratorConf& anchor_generator_conf = anchor_target_conf.anchor_generator_conf();
   float straddle_thresh = anchor_target_conf.straddle_thresh();
   FasterRcnnUtil<T>::GenerateAnchors(anchor_generator_conf, anchors_blob);
-  auto anchors_slice = GenBoxesIndex(anchors_blob->shape().Count(0, 3),
-                                     BnInOp2Blob("inside_anchors_index")->mut_dptr<int32_t>(),
-                                     anchors_blob->dptr<T>(), true);
-  anchors_slice.FilterByBBox([&](size_t n, int32_t index, const BBox<T>* anchor_box) {
+  auto anchor_boxes = GenBoxesIndex(anchors_blob->shape().Count(0, 3),
+                                    BnInOp2Blob("inside_anchors_index")->mut_dptr<int32_t>(),
+                                    anchors_blob->dptr<T>(), true);
+  anchor_boxes.FilterByBBox([&](size_t n, int32_t index, const BBox<T>* anchor_box) {
     return anchor_box->x1() < -straddle_thresh || anchor_box->y1() < -straddle_thresh
            || anchor_box->x2() >= anchor_generator_conf.image_width() + straddle_thresh
            || anchor_box->y2() >= anchor_generator_conf.image_height() + straddle_thresh;
   });
-  *(BnInOp2Blob("inside_anchors_num")->mut_dptr<int32_t>()) = anchors_slice.size();
+  *(BnInOp2Blob("inside_anchors_num")->mut_dptr<int32_t>()) = anchor_boxes.size();
 }
 
 template<typename T>
@@ -90,13 +90,12 @@ void AnchorTargetKernel<T>::ComputeOverlapsAndSetLabels(
   FasterRcnnUtil<T>::ForEachOverlapBetweenBoxesAndGtBoxes(
       anchor_boxes, gt_boxes, [&](int32_t index, int32_t gt_index, float overlap) {
         anchor_boxes.UpdateMaxOverlap(index, gt_index, overlap, [&]() {
-          if (overlap >= positive_overlap_threshold) { anchor_boxes.mut_label_ptr()[index] = 1; }
+          if (overlap >= positive_overlap_threshold) { anchor_boxes.set_label(index, 1); }
         });
         gt_boxes.UpdateMaxOverlap(gt_index, index, overlap);
       });
 
-  gt_boxes.ForEachMaxOverlapWithIndex(
-      [&](int32_t index) { anchor_boxes.mut_label_ptr()[index] = 1; });
+  gt_boxes.ForEachMaxOverlapWithIndex([&](int32_t index) { anchor_boxes.set_label(index, 1); });
 }
 
 template<typename T>
@@ -150,7 +149,7 @@ void AnchorTargetKernel<T>::ComputeTargetsAndWriteOutput(
   FOR_RANGE(size_t, i, 0, anchor_boxes.capacity()) {
     const BBox<T>* anchor_box = anchor_boxes.bbox(i);
     const BBox<float>* gt_box = gt_boxes.GetBBox<float>(anchor_boxes.max_overlap_gt_index(i));
-    int32_t label = anchor_boxes.label_ptr()[i];
+    int32_t label = anchor_boxes.label(i);
     if (label == 1) {
       bbox_target[i].TransformInverse(anchor_box, gt_box, bbox_reg_ws);
       inside_weights[i].set_weight_x(1.0);

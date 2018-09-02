@@ -239,9 +239,15 @@ void Graph<NodeType, EdgeType>::TopoForEachNode(
     queue.pop();
     Handler(cur_node);
     ForEachOutNode(cur_node, [&](NodeType* out) {
+      LOG(INFO) << cur_node->node_id();
       bool is_ready = true;
       ForEachInNode(out, [&](NodeType* in) {
-        if (is_ready && !has_queued[in]) { is_ready = false; }
+        LOG(INFO) << out->node_id() << " " << cur_node->node_id();
+        if (is_ready && !has_queued[in]) {
+          LOG(INFO) << "";
+          is_ready = false;
+        }
+        LOG(INFO) << "is_ready? " << is_ready;
       });
       if (is_ready && !has_queued[out]) {
         queue.push(out);
