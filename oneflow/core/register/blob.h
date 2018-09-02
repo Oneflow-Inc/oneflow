@@ -75,7 +75,6 @@ class Blob final {
   void set_max_col_id(int32_t val);
   bool IsColValid() const { return col_id() <= max_col_id(); }
   const MemoryCase& mem_case() const;
-  const Regst* regst() const { return regst_; }
 
  private:
   template<typename T>
