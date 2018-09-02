@@ -11,6 +11,7 @@
 #include <cuda_runtime.h>
 #include <cudnn.h>
 #include <curand.h>
+#include <nccl.h>
 
 namespace oneflow {
 

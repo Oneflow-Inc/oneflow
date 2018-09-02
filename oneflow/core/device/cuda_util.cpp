@@ -67,6 +67,11 @@ void CudaCheck(curandStatus_t error) {
   CHECK_EQ(error, CURAND_STATUS_SUCCESS) << CurandGetErrorString(error);
 }
 
+template<>
+void CudaCheck(ncclResult_t error) {
+  CHECK_EQ(error, ncclSuccess) << ncclGetErrorString(error);
+}
+
 size_t GetAvailableGpuMemSize(int dev_id) {
   cudaDeviceProp prop;
   cudaGetDeviceProperties(&prop, dev_id);
