@@ -13,6 +13,8 @@ MachineCtx::MachineCtx(const std::string& this_mchn_name) {
   LOG(INFO) << "this machine id: " << this_machine_id_;
 #ifdef WITH_CUDA
   ncclGetUniqueId(&nccl_unique_id_);
+  ncclGetUniqueId(&nccl_scatter_unique_id_);
+  ncclGetUniqueId(&nccl_gather_unique_id_);
 #endif
 }
 

@@ -25,6 +25,10 @@ class CudaStreamHandle final {
   const cublasHandle_t* cublas_pmd_handle();
   const cudnnHandle_t* cudnn_handle();
   const ncclComm_t* nccl_handle();
+  const ncclComm_t* nccl_scatter_handle();
+  const ncclComm_t* nccl_gather_handle();
+  const cudaStream_t* nccl_scatter_stream();
+  const cudaStream_t* nccl_gather_stream();
 
   void AddCallBack(std::function<void()> callback);
 
@@ -37,6 +41,10 @@ class CudaStreamHandle final {
   std::unique_ptr<cublasHandle_t> cublas_pmd_handle_;
   std::unique_ptr<cudnnHandle_t> cudnn_handle_;
   std::unique_ptr<ncclComm_t> nccl_handle_;
+  std::unique_ptr<ncclComm_t> nccl_scatter_handle_;
+  std::unique_ptr<ncclComm_t> nccl_gather_handle_;
+  std::unique_ptr<cudaStream_t> nccl_scatter_stream_;
+  std::unique_ptr<cudaStream_t> nccl_gather_stream_;
   int64_t dev_id_;
 };
 

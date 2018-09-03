@@ -19,6 +19,8 @@ class MachineCtx final {
   std::string GetCtrlAddr(int64_t machine_id) const;
 #ifdef WITH_CUDA
   ncclUniqueId GetNcclUniqueId() const { return nccl_unique_id_; }
+  ncclUniqueId GetNcclScatterUniqueId() const { return nccl_scatter_unique_id_; }
+  ncclUniqueId GetNcclGatherUniqueId() const { return nccl_gather_unique_id_; }
 #endif
 
  private:
@@ -26,6 +28,8 @@ class MachineCtx final {
   MachineCtx(const std::string& this_mchn_name);
 #ifdef WITH_CUDA
   ncclUniqueId nccl_unique_id_;
+  ncclUniqueId nccl_scatter_unique_id_;
+  ncclUniqueId nccl_gather_unique_id_;
 #endif
 
   int64_t this_machine_id_;

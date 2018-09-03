@@ -54,6 +54,46 @@ const ncclComm_t* CudaStreamHandle::nccl_handle() {
   return nccl_handle_.get();
 }
 
+const ncclComm_t* CudaStreamHandle::nccl_scatter_handle() {
+  if (!nccl_scatter_handle_) {
+    int32_t rank_num = Global<JobDesc>::Get()->GpuDeviceNum();
+    int32_t my_rank = dev_id_;
+    ncclUniqueId nccl_scatter_unique_id = Global<MachineCtx>::Get()->GetNcclScatterUniqueId();
+    nccl_scatter_handle_.reset(new ncclComm_t);
+    CudaCheck(
+        ncclCommInitRank(nccl_scatter_handle_.get(), rank_num, nccl_scatter_unique_id, my_rank));
+  }
+  return nccl_scatter_handle_.get();
+}
+
+const ncclComm_t* CudaStreamHandle::nccl_gather_handle() {
+  if (!nccl_gather_handle_) {
+    int32_t rank_num = Global<JobDesc>::Get()->GpuDeviceNum();
+    int32_t my_rank = dev_id_;
+    ncclUniqueId nccl_gather_unique_id = Global<MachineCtx>::Get()->GetNcclGatherUniqueId();
+    nccl_gather_handle_.reset(new ncclComm_t);
+    CudaCheck(
+        ncclCommInitRank(nccl_gather_handle_.get(), rank_num, nccl_gather_unique_id, my_rank));
+  }
+  return nccl_gather_handle_.get();
+}
+
+const cudaStream_t* CudaStreamHandle::nccl_scatter_stream() {
+  if (!nccl_scatter_stream_) {
+    nccl_scatter_stream_.reset(new cudaStream_t);
+    CudaCheck(cudaStreamCreate(nccl_scatter_stream_.get()));
+  }
+  return nccl_scatter_stream_.get();
+}
+
+const cudaStream_t* CudaStreamHandle::nccl_gather_stream() {
+  if (!nccl_gather_stream_) {
+    nccl_gather_stream_.reset(new cudaStream_t);
+    CudaCheck(cudaStreamCreate(nccl_gather_stream_.get()));
+  }
+  return nccl_gather_stream_.get();
+}
+
 void CudaStreamHandle::AddCallBack(std::function<void()> callback) {
   CudaCBEvent cb_event;
   cb_event.callback = callback;
@@ -68,7 +108,11 @@ CudaStreamHandle::~CudaStreamHandle() {
   if (cublas_pmh_handle_) { CudaCheck(cublasDestroy(*cublas_pmh_handle_)); }
   if (cublas_pmd_handle_) { CudaCheck(cublasDestroy(*cublas_pmd_handle_)); }
   if (cuda_stream_) { CudaCheck(cudaStreamDestroy(*cuda_stream_)); }
-  if (nccl_handle_) { CudaCheck(ncclCommDestroy(*nccl_handle_)); }
+  if (nccl_handle_) { ncclCommDestroy(*nccl_handle_); }
+  if (nccl_scatter_handle_) { ncclCommDestroy(*nccl_scatter_handle_); }
+  if (nccl_gather_handle_) { ncclCommDestroy(*nccl_gather_handle_); }
+  if (nccl_scatter_stream_) { CudaCheck(cudaStreamDestroy(*nccl_scatter_stream_)); }
+  if (nccl_gather_stream_) { CudaCheck(cudaStreamDestroy(*nccl_gather_stream_)); }
 }
 
 #endif  // WITH_CUDA

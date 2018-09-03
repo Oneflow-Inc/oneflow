@@ -15,7 +15,7 @@ class NcclReduceScatterCompTaskNode final : public CompTaskNode {
   void ConsumeAllRegsts() override;
 
   TaskType GetTaskType() const override { return TaskType::kNcclReduceScatter; }
-  CudaWorkType GetCudaWorkType() const override { return CudaWorkType::kMix; }
+  CudaWorkType GetCudaWorkType() const override { return CudaWorkType::kCopyD2H; }
 
  private:
   void BuildExecGphAndRegst() override;

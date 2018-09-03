@@ -25,6 +25,12 @@ class CudaDeviceCtx final : public DeviceCtx {
   const cublasHandle_t& cublas_pmd_handle() const { return *(cuda_handler_->cublas_pmd_handle()); }
   const cudnnHandle_t& cudnn_handle() const { return *(cuda_handler_->cudnn_handle()); }
   const ncclComm_t& nccl_handle() const { return *(cuda_handler_->nccl_handle()); }
+  const ncclComm_t& nccl_scatter_handle() const { return *(cuda_handler_->nccl_scatter_handle()); }
+  const ncclComm_t& nccl_gather_handle() const { return *(cuda_handler_->nccl_gather_handle()); }
+  const cudaStream_t& nccl_scatter_stream() const {
+    return *(cuda_handler_->nccl_scatter_stream());
+  }
+  const cudaStream_t& nccl_gather_stream() const { return *(cuda_handler_->nccl_gather_stream()); }
 
   void AddCallBack(std::function<void()> callback) const override {
     cuda_handler_->AddCallBack(callback);
