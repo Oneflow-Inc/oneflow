@@ -81,7 +81,7 @@ void TaskNode::PinConsumedRegst() {
 }
 
 void TaskNode::Build() {
-  CHECK(IsReadyForBuild());
+  if (consumed_regsts_.size()) { CHECK(IsReadyForBuild()); }
   BuildExecGphAndRegst();
   LockRegsts();
   FixRegisterNumRange();
@@ -98,7 +98,7 @@ void TaskNode::EraseZeroSizeConsumedRegst() {
       auto regst_ptr = *it;
       CHECK(regst_ptr);
       if (regst_ptr->regst_desc_type().has_data_regst_desc() && regst_ptr->NumOfLbi() == 0) {
-        pair.second.erase(it++);
+        it = pair.second.erase(it);
       } else {
         ++it;
       }
