@@ -1,0 +1,36 @@
+#ifndef ONEFLOW_CORE_ACTOR_REGISTER_SLOT_H_
+#define ONEFLOW_CORE_ACTOR_REGISTER_SLOT_H_
+
+#include "oneflow/core/register/register_manager.h"
+
+namespace oneflow {
+
+class RegstSlot final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(RegstSlot);
+  RegstSlot() : regst_desc_id2regsts_(), available_regst_desc_cnt_(0), is_inited_(false) {}
+  ~RegstSlot() = default;
+
+  bool is_inited() const { return is_inited_; }
+  size_t total_regst_desc_cnt() const { return regst_desc_id2regsts_.size(); }
+  size_t available_regst_desc_cnt() const { return available_regst_desc_cnt_; }
+  bool FindTheRegstDescId(int64_t regst_desc_id) const;
+  bool IsCurSlotReady() const { return available_regst_desc_cnt() == total_regst_desc_cnt(); }
+
+  Regst* Front(int64_t regst_desc_id) const;
+  Regst* SoleFront(int64_t regst_desc_id) const;
+
+  void LockCurSlot();
+  void PushBackRegst(int64_t regst_desc_id, Regst* regst);
+  void PopFrontRegst(int64_t regst_desc_id);
+  void InsertOrPushBackRegst(int64_t regst_desc_id, Regst* regst);
+
+ private:
+  HashMap<int64_t, std::deque<Regst*>> regst_desc_id2regsts_;
+  size_t available_regst_desc_cnt_;
+  bool is_inited_;
+};
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_ACTOR_REGISTER_SLOT_H_
