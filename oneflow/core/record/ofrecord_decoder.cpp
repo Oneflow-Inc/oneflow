@@ -57,14 +57,14 @@ void DoScalePreprocess(const ScalePreprocessConf& conf, T* dptr, int64_t n) {
 }
 
 template<typename T>
-typename std::enable_if<IsRecordType<T>::value>::type DoPreprocess(const PreprocessConf& conf,
-                                                                   T* dptr, const Shape& shape) {
+typename std::enable_if<IsPbType<T>::value>::type DoPreprocess(const PreprocessConf& conf, T* dptr,
+                                                               const Shape& shape) {
   UNIMPLEMENTED();
 }
 
 template<typename T>
-typename std::enable_if<!IsRecordType<T>::value>::type DoPreprocess(const PreprocessConf& conf,
-                                                                    T* dptr, const Shape& shape) {
+typename std::enable_if<!IsPbType<T>::value>::type DoPreprocess(const PreprocessConf& conf, T* dptr,
+                                                                const Shape& shape) {
   int64_t n = shape.Count(1);
   if (conf.has_subtract_conf()) {
     DoSubtractPreprocess<T>(conf.subtract_conf(), dptr, n);
@@ -81,14 +81,14 @@ typename std::enable_if<!IsRecordType<T>::value>::type DoPreprocess(const Prepro
 
 template<EncodeCase encode_case, typename T>
 int32_t OFRecordDecoder<encode_case, T>::DecodeOneCol(
-    DeviceCtx* ctx, int32_t max_part_num, Blob* in_blob, const BlobConf& blob_conf, int32_t col_id,
-    Blob* out_blob, std::function<int32_t(void)> NextRandomInt) const {
+    DeviceCtx* ctx, Blob* in_blob, const BlobConf& blob_conf, int32_t col_id, Blob* out_blob,
+    std::function<int32_t(void)> NextRandomInt) const {
   int32_t max_col_id = 0;
   if (out_blob->has_col_num_field()) {
     max_col_id = ReadColNum(ctx, in_blob, blob_conf.name(), out_blob) - 1;
   }
   if (out_blob->has_data_id_field()) { ReadDataId(ctx, in_blob, out_blob); }
-  ReadDataContent(ctx, max_part_num, in_blob, blob_conf, col_id, out_blob, NextRandomInt);
+  ReadDataContent(ctx, in_blob, blob_conf, col_id, out_blob, NextRandomInt);
   return max_col_id;
 }
 
@@ -136,22 +136,23 @@ void OFRecordDecoder<encode_case, T>::ReadDataId(DeviceCtx* ctx, Blob* in_blob,
 
 template<EncodeCase encode_case, typename T>
 void OFRecordDecoder<encode_case, T>::ReadDataContent(
-    DeviceCtx* ctx, int32_t max_part_num, Blob* in_blob, const BlobConf& blob_conf, int32_t col_id,
-    Blob* out_blob, std::function<int32_t(void)> NextRandomInt) const {
+    DeviceCtx* ctx, Blob* in_blob, const BlobConf& blob_conf, int32_t col_id, Blob* out_blob,
+    std::function<int32_t(void)> NextRandomInt) const {
   RecordBlob<OFRecord> record_blob(in_blob);
   int64_t one_col_elem_num = out_blob->shape().Count(1);
   int32_t random_seed = NextRandomInt();
-  int32_t part_num = std::min(record_blob.record_num(), max_part_num);
+  int32_t thread_num = std::thread::hardware_concurrency() / 4;
+  ThreadPool thread_pool(thread_num);
+  int32_t part_num = std::min(record_blob.record_num(), thread_num);
   if (part_num >= 2) {
     BlockingCounter bc(part_num);
     FOR_RANGE(int32_t, part_id, 0, part_num) {
-      Global<ThreadMgr>::Get()->compute_thread_pool()->AddWork(
-          [&ctx, &in_blob, &blob_conf, &col_id, &out_blob, &bc, part_id, &part_num,
-           &one_col_elem_num, &random_seed, this]() {
-            ReadPartDataContent(ctx, in_blob, blob_conf, col_id, out_blob, part_id, part_num,
-                                one_col_elem_num, random_seed);
-            bc.Decrease();
-          });
+      thread_pool.AddWork([&ctx, &in_blob, &blob_conf, &col_id, &out_blob, &bc, part_id, &part_num,
+                           &one_col_elem_num, &random_seed, this]() {
+        ReadPartDataContent(ctx, in_blob, blob_conf, col_id, out_blob, part_id, part_num,
+                            one_col_elem_num, random_seed);
+        bc.Decrease();
+      });
     }
     bc.WaitUntilCntEqualZero();
   } else {

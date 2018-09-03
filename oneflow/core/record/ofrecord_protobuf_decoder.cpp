@@ -8,12 +8,12 @@ namespace {
 template<typename T>
 decltype(std::declval<T>().value()) GetFeatureDataList(const Feature& feature);
 
-#define SPECIALIZE_GET_FEATURE_DATA_LIST(T, type_proto, data_list)                    \
+#define SPECIALIZE_GET_PB_LIST_DATA_LIST(T, type_proto, data_list)                    \
   template<>                                                                          \
   decltype(std::declval<T>().value()) GetFeatureDataList<T>(const Feature& feature) { \
     return feature.data_list();                                                       \
   }
-OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_FEATURE_DATA_LIST, FEATURE_DATA_TYPE_FEATURE_FIELD_SEQ);
+OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_PB_LIST_DATA_LIST, PB_LIST_DATA_TYPE_PB_LIST_FIELD_SEQ);
 
 }  // namespace
 
@@ -33,6 +33,6 @@ void OFRecordDecoderImpl<EncodeCase::kProtobuf, T>::ReadOneCol(
 
 #define INSTANTIATE_OFRECORD_PROTOBUF_DECODER(type_cpp, type_proto) \
   template class OFRecordDecoderImpl<EncodeCase::kProtobuf, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_OFRECORD_PROTOBUF_DECODER, FEATURE_DATA_TYPE_SEQ);
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_OFRECORD_PROTOBUF_DECODER, PB_LIST_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

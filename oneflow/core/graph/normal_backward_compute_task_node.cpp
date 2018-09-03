@@ -11,7 +11,8 @@ void NormalBackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   for (TaskEdge* edge : out_edges()) {
     const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
     if (succ_logical->TypeName() == "MdDiffAcc" || succ_logical->TypeName() == "NormalMdUpdt"
-        || succ_logical->TypeName() == "ReduceScatter") {
+        || succ_logical->TypeName() == "ReduceScatter"
+        || succ_logical->TypeName() == "ReduceConcat") {
       edge->AddRegst("model_diff", ProduceRegst("model_diff", true));
     } else {
       BindEdgeWithProducedRegst(edge, "in_diff");
@@ -37,8 +38,8 @@ void NormalBackwardCompTaskNode::ConsumeAllRegsts() {
   }
   CompTaskNode* fw_task = GetRelatedFwTaskNode();
   if (fw_task) {
-    const std::list<std::weak_ptr<RegstDesc>>& in_regst = fw_task->GetConsumedRegst("in");
-    for (std::weak_ptr<RegstDesc> regst : in_regst) { ConsumeRegst("in", regst.lock()); }
+    const std::list<std::shared_ptr<RegstDesc>>& in_regst = fw_task->GetConsumedRegst("in");
+    for (std::shared_ptr<RegstDesc> regst : in_regst) { ConsumeRegst("in", regst); }
   }
 }
 
@@ -169,8 +170,8 @@ void NormalBackwardCompTaskNode::BindModelDiffRegst() {
 void NormalBackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
   if (GetRelatedFwTaskNode()) {
     std::shared_ptr<RegstDesc> in_diff_regst = GetProducedRegst("in_diff");
-    for (std::weak_ptr<RegstDesc> regst : GetConsumedRegst("in")) {
-      in_diff_regst->CopyBlobDescWithoutAddLbi(regst.lock().get());
+    for (std::shared_ptr<RegstDesc> regst : GetConsumedRegst("in")) {
+      in_diff_regst->CopyBlobDescWithoutAddLbi(regst.get());
     }
 
     std::shared_ptr<RegstDesc> md_diff_regst = GetProducedRegst("model_diff");

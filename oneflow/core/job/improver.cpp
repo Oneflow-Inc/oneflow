@@ -283,7 +283,7 @@ void CollectTailRegstConsumerTaskIds(const std::vector<const RegstDescProto*>& s
 void CollectSinkTaskIds(const HashSet<int64_t>& task_ids,
                         const std::function<bool(int64_t, int64_t)>& IsReachable,
                         std::list<int64_t>* sink_task_ids) {
-  auto IsReachableToAnyOherTask = [&](int64_t src_task_id) -> bool {
+  auto IsReachableToAnyOtherTask = [&](int64_t src_task_id) -> bool {
     for (int64_t dst_task_id : task_ids) {
       if (src_task_id == dst_task_id) { continue; }
       if (IsReachable(src_task_id, dst_task_id)) { return true; }
@@ -292,7 +292,7 @@ void CollectSinkTaskIds(const HashSet<int64_t>& task_ids,
   };
   sink_task_ids->clear();
   for (int64_t src_task_id : task_ids) {
-    if (!IsReachableToAnyOherTask(src_task_id)) { sink_task_ids->push_back(src_task_id); }
+    if (!IsReachableToAnyOtherTask(src_task_id)) { sink_task_ids->push_back(src_task_id); }
   }
 }
 
