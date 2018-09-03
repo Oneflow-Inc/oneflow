@@ -11,8 +11,7 @@ namespace oneflow {
 template<typename T>
 class AnchorTargetKernel final : public KernelIf<DeviceType::kCPU> {
  public:
-  using BoxesLabelsAndNearestGtBoxes =
-      LabeledBoxesSlice<BoxesToNearestGtBoxesSlice<BoxesSlice<T>>, 3>;
+  using BoxesLabelsAndNearestGtBoxes = LabelSlice<BoxesToNearestGtBoxesSlice<BoxesSlice<T>>>;
 
   OF_DISALLOW_COPY_AND_MOVE(AnchorTargetKernel);
   AnchorTargetKernel() = default;

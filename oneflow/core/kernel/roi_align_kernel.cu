@@ -9,20 +9,34 @@ namespace {
 
 template<typename T>
 __device__ T BilinearInterpolate(const T* channel_dptr, const int32_t height, const int32_t width,
-                                 const T y, const T x) {
+                                 T y, T x) {
   if (y < -1.0 || y > height || x < -1.0 || x > width) { return 0; }
 
-  const int32_t y_low = (y <= 0) ? 0 : y;
-  const int32_t x_low = (x <= 0) ? 0 : x;
+  int32_t y_low = (y <= 0) ? 0 : y;
+  int32_t x_low = (x <= 0) ? 0 : x;
+  int32_t y_high = 0;
+  int32_t x_high = 0;
 
-  if (y_low >= height - 1 || x_low >= width - 1) { return 0; }
-  const int32_t y_high = y_low + 1;
-  const int32_t x_high = x_low + 1;
+  if (y_low >= height - 1) {
+    y_low = height - 1;
+    y_high = y_low;
+    y = static_cast<T>(y_low);
+  } else {
+    y_high = y_low + 1;
+  }
+
+  if (x_low >= width - 1) {
+    x_low = width - 1;
+    x_high = x_low;
+    x = static_cast<T>(x_low);
+  } else {
+    x_high = x_low + 1;
+  }
 
   const T ly = y - y_low;
   const T lx = x - x_low;
-  const T hy = y_high - y;
-  const T hx = x_high - x;
+  const T hy = 1.f - ly;
+  const T hx = 1.f - lx;
 
   // https://en.wikipedia.org/wiki/Bilinear_interpolation
   const int64_t q11 = y_low * width + x_low;
@@ -36,22 +50,34 @@ __device__ T BilinearInterpolate(const T* channel_dptr, const int32_t height, co
 
 template<typename T>
 __device__ bool BilinearInterpolateDiff(const T bin_diff_avg, const int64_t height,
-                                        const int64_t width, const T y, const T x, T& diff11,
-                                        T& diff21, T& diff12, T& diff22, int32_t& x_low,
-                                        int32_t& x_high, int32_t& y_low, int32_t& y_high) {
+                                        const int64_t width, T y, T x, T& diff11, T& diff21,
+                                        T& diff12, T& diff22, int32_t& x_low, int32_t& x_high,
+                                        int32_t& y_low, int32_t& y_high) {
   if (y < -1.0 || y > height || x < -1.0 || x > width) { return false; }
 
   if (y > 0) { y_low = y; }
   if (x > 0) { x_low = x; }
 
-  if (y_low >= height - 1 || x_low >= width - 1) { return false; }
-  y_high = y_low + 1;
-  x_high = x_low + 1;
+  if (y_low >= height - 1) {
+    y_low = height - 1;
+    y_high = y_low;
+    y = static_cast<T>(y_low);
+  } else {
+    y_high = y_low + 1;
+  }
+
+  if (x_low >= width - 1) {
+    x_low = width - 1;
+    x_high = x_low;
+    x = static_cast<T>(x_low);
+  } else {
+    x_high = x_low + 1;
+  }
 
   const T ly = y - y_low;
   const T lx = x - x_low;
-  const T hy = y_high - y;
-  const T hx = x_high - x;
+  const T hy = 1.f - ly;
+  const T hx = 1.f - lx;
 
   diff11 = bin_diff_avg * hy * hx;
   diff21 = bin_diff_avg * hy * lx;
@@ -94,14 +120,12 @@ __global__ void RoIAlignForward(const int64_t nthreads, const T* in_dptr, const 
     T out_val = 0.0;
     FOR_RANGE(int64_t, grid_i, 0, bin_grid_height) {
       // + .5f for center position
-      const T y = roi_start_h + h * bin_height + static_cast<T>(grid_i + 0.5f) * bin_grid_density_h;
+      T y = roi_start_h + h * bin_height + static_cast<T>(grid_i + 0.5f) * bin_grid_density_h;
       FOR_RANGE(int64_t, grid_j, 0, bin_grid_width) {
-        const T x =
-            roi_start_w + w * bin_width + static_cast<T>(grid_j + 0.5f) * bin_grid_density_w;
+        T x = roi_start_w + w * bin_width + static_cast<T>(grid_j + 0.5f) * bin_grid_density_w;
         out_val += BilinearInterpolate(channel_dptr, height, width, y, x);
       }
     }
-    // average pooling
     out_dptr[index] = out_val / (bin_grid_height * bin_grid_width);
   }
 }
@@ -138,14 +162,12 @@ __global__ void RoIAlignBackward(const int64_t nthreads, const T* out_diff_dptr,
     const T bin_grid_density_w = bin_width / static_cast<T>(bin_grid_width);
 
     T* in_diff_channel_dptr = in_diff_dptr + (n * channel_num + c) * height * width;
-    const T* out_diff_channel_dptr = out_diff_dptr + (n * channel_num + c) * pooled_area;
-    const T bin_diff = out_diff_channel_dptr[h * pooled_width + w];
+    const T bin_diff_avg = out_diff_dptr[index] / (bin_grid_height * bin_grid_width);
     FOR_RANGE(int64_t, grid_i, 0, bin_grid_height) {
       // + .5f for center position
-      const T y = roi_start_h + h * bin_height + static_cast<T>(grid_i + 0.5f) * bin_grid_density_h;
+      T y = roi_start_h + h * bin_height + static_cast<T>(grid_i + 0.5f) * bin_grid_density_h;
       FOR_RANGE(int64_t, grid_j, 0, bin_grid_width) {
-        const T x =
-            roi_start_w + w * bin_width + static_cast<T>(grid_j + 0.5f) * bin_grid_density_w;
+        T x = roi_start_w + w * bin_width + static_cast<T>(grid_j + 0.5f) * bin_grid_density_w;
         T diff11 = 0;
         T diff21 = 0;
         T diff12 = 0;
@@ -154,9 +176,8 @@ __global__ void RoIAlignBackward(const int64_t nthreads, const T* out_diff_dptr,
         int32_t x_high = 0;
         int32_t y_low = 0;
         int32_t y_high = 0;
-        bool has_diff = BilinearInterpolateDiff(bin_diff / (bin_grid_height * bin_grid_width),
-                                                height, width, y, x, diff11, diff21, diff12, diff22,
-                                                x_low, x_high, y_low, y_high);
+        bool has_diff = BilinearInterpolateDiff(bin_diff_avg, height, width, y, x, diff11, diff21,
+                                                diff12, diff22, x_low, x_high, y_low, y_high);
         if (has_diff) {
           const int64_t q11 = y_low * width + x_low;
           const int64_t q21 = y_low * width + x_high;

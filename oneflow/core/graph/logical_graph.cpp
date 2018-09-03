@@ -2,11 +2,54 @@
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/graph/chain_logical_graph.h"
+#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 
+namespace {
+
+std::function<bool(const LogicalNode*)> MakePredicatorHasActualOutDiff(const LogicalGraph* graph) {
+  std::list<LogicalNode*> loss_nodes;
+  graph->ForEachNode([&](LogicalNode* node) {
+    if (dynamic_cast<LossLogicalNode*>(node)) { loss_nodes.push_back(node); }
+  });
+  auto nodes_have_actual_out_diff_ptr = std::make_shared<HashSet<const LogicalNode*>>();
+  auto HasBwConnection = [](const LogicalNode* prev, const LogicalNode* next) {
+    HashSet<LogicalBlobId> idbn_lbis;
+    for (const auto& idbn : next->SoleOp()->input_diff_bns()) {
+      idbn_lbis.insert(next->SoleOp()->BnInOp2Lbi(idbn));
+    }
+    for (const auto& odbn : prev->SoleOp()->output_diff_bns()) {
+      LogicalBlobId lbi = prev->SoleOp()->BnInOp2Lbi(odbn);
+      if (idbn_lbis.find(lbi) != idbn_lbis.end()) { return true; }
+    }
+    return false;
+  };
+  auto ForEachOutNode = [&](LogicalNode* node, const std::function<void(LogicalNode*)>& Handler) {
+    node->ForEachNodeOnInEdge([&](LogicalNode* in_node) {
+      if (HasBwConnection(in_node, node)) { Handler(in_node); }
+    });
+  };
+  auto ForEachInNode = [&](LogicalNode* node, const std::function<void(LogicalNode*)>& Handler) {
+    node->ForEachNodeOnOutEdge([&](LogicalNode* out_node) {
+      if (HasBwConnection(node, out_node)) { Handler(out_node); }
+    });
+  };
+  graph->TopoForEachNode(loss_nodes, ForEachInNode, ForEachOutNode,
+                         [nodes_have_actual_out_diff_ptr](LogicalNode* node) {
+                           nodes_have_actual_out_diff_ptr->insert(node);
+                         });
+  return [nodes_have_actual_out_diff_ptr](const LogicalNode* node) {
+    return nodes_have_actual_out_diff_ptr->find(node) != nodes_have_actual_out_diff_ptr->end();
+  };
+}
+
+}  // namespace
+
 LogicalGraph::LogicalGraph(bool is_train) {
   BuildFwStruct();
+  if (is_train) { GroupNodesForReduceStruct(); }
   SetMainModelParallel();
   if (is_train) { BuildBwStruct(); }
   MergeEdge();
@@ -18,6 +61,30 @@ LogicalGraph::LogicalGraph(bool is_train) {
   BuildModelStruct(is_train);
   if (is_train) { ConnectFwToBw(); }
   ToDotWithAutoFilePath();
+}
+
+void LogicalGraph::GroupNodesForReduceStruct() {
+  ChainLogicalGraph chain_logical_graph(*this);
+  std::vector<std::vector<const LogicalNode*>> fw_node_groups;
+  chain_logical_graph.ForEachNode(
+      [&](ChainLogicalNode* node) { fw_node_groups.emplace_back(node->logical_nodes()); });
+  for (auto& fw_node_group : fw_node_groups) {
+    if (fw_node_group.size() < Global<JobDesc>::Get()->reduce_group_size()) {
+      fw_node_groups_.emplace_back(std::move(fw_node_group));
+    } else {
+      int64_t fw_node_group_size = fw_node_group.size();
+      int64_t seg_num = fw_node_group_size / Global<JobDesc>::Get()->reduce_group_size() + 1;
+      BalancedSplitter bs(fw_node_group_size, seg_num);
+      FOR_RANGE(int64_t, idx, 0, seg_num) {
+        std::vector<const LogicalNode*> sub_fw_node_group;
+        Range range = bs.At(idx);
+        FOR_RANGE(int64_t, nid, range.begin(), range.end()) {
+          sub_fw_node_group.emplace_back(fw_node_group[nid]);
+        }
+        fw_node_groups_.emplace_back(std::move(sub_fw_node_group));
+      }
+    }
+  }
 }
 
 template<typename LogicalNodeType>
@@ -90,38 +157,33 @@ void LogicalGraph::NaiveBuildFwStruct(
 
 void LogicalGraph::FixSharedModelNodes(
     const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes) {
+  HashSet<std::string> all_shared_model_op_names;
   const DLNetConf& dlnet_conf = Global<JobDesc>::Get()->dlnet_conf();
   for (const OpNameSet& op_name_set : dlnet_conf.shared_model_group()) {
+    std::vector<std::string> shared_model_op_names(op_name_set.op_name().begin(),
+                                                   op_name_set.op_name().end());
+    SortAndRemoveDuplication(&shared_model_op_names);
+    CHECK_GE(shared_model_op_names.size(), 2);
+
     auto shared_model_nodes = std::make_shared<std::vector<LogicalNode*>>();
-    for (const std::string& op_name : op_name_set.op_name()) {
+    shared_model_nodes->reserve(shared_model_op_names.size());
+    for (const std::string& op_name : shared_model_op_names) {
+      CHECK(all_shared_model_op_names.insert(op_name).second);
       CHECK_EQ(op_name2nodes.at(op_name).size(), 1);
       shared_model_nodes->push_back(op_name2nodes.at(op_name).front());
     }
-    SortAndRemoveDuplication(shared_model_nodes.get());
+
     for (LogicalNode* cur_node : *shared_model_nodes) {
       cur_node->mut_shared_model_nodes() = shared_model_nodes;
     }
+
     const std::string& shared_op_name = shared_model_nodes->front()->SoleOp()->op_name();
+    const ParallelDesc* shared_parallel_desc = shared_model_nodes->front()->parallel_desc().get();
     FOR_RANGE(size_t, i, 1, shared_model_nodes->size()) {
       shared_model_nodes->at(i)->SoleOp()->FixLbiWhenShareModel(shared_op_name);
+      CHECK(shared_model_nodes->at(i)->parallel_desc()->Equal(shared_parallel_desc));
     }
   }
-  ForEachNode([&](LogicalNode* cur_node) {
-    if (cur_node->shared_model_nodes()) {
-      for (LogicalNode* shared_node : *(cur_node->shared_model_nodes())) {
-        if (shared_node->parallel_desc() == nullptr) { continue; }
-        if (cur_node->parallel_desc()) {
-          CHECK(cur_node->parallel_desc()->Equal(shared_node->parallel_desc().get()));
-        } else {
-          cur_node->mut_parallel_desc() = shared_node->parallel_desc();
-        }
-      }
-    } else {
-      // do nothing
-    }
-    CHECK(cur_node->parallel_desc())
-        << "Please set the placement of " << cur_node->SoleOp()->op_name();
-  });
 }
 
 void LogicalGraph::SetMainModelParallel() {
@@ -144,6 +206,7 @@ void LogicalGraph::BuildBwStruct() {
 }
 
 void LogicalGraph::NaiveBuildBwStruct() {
+  auto HasActualOutDiff = MakePredicatorHasActualOutDiff(this);
   HashSet<LogicalNode*> nodes_need_bw;
   TopoForEachNode([&](LogicalNode* logical_node) {
     auto fw_node = dynamic_cast<ForwardLogicalNode*>(logical_node);
@@ -153,7 +216,8 @@ void LogicalGraph::NaiveBuildBwStruct() {
       return;
     }
     for (LogicalEdge* edge : fw_node->in_edges()) {
-      if (nodes_need_bw.find(edge->src_node()) != nodes_need_bw.end()) {
+      if (nodes_need_bw.find(edge->src_node()) != nodes_need_bw.end()
+          && HasActualOutDiff(fw_node)) {
         CHECK(nodes_need_bw.insert(fw_node).second);
         return;
       }
@@ -352,9 +416,10 @@ void LogicalGraph::BuildAccuracyPrintStruct() {
 
 void LogicalGraph::BuildModelStruct(bool is_train) {
   HashMap<const LogicalNode*, NormalMdUpdtLogicalNode*> first_shared2mdupdt;
+  HashMap<const LogicalNode*, ReduceCtx> fw_node2reduce_ctx;
   ForEachLogicalNode<ForwardLogicalNode>([&](ForwardLogicalNode* fw_logical) {
-    if (Global<JobDesc>::Get()->enable_write_snapshot()
-        && fw_logical->HasOpWithForwardModelBlob()) {
+    if (Global<JobDesc>::Get()->enable_write_snapshot() && fw_logical->HasOpWithForwardModelBlob()
+        && fw_logical->SoleOp()->op_conf().trainable()) {
       BuildMdSaveStruct(fw_logical, fw_logical);
     }
     if (fw_logical->HasOpWithModelOrConstModelBlob()) {
@@ -397,17 +462,69 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
         }
         if (md_diff_acc_logical->parallel_desc()->parallel_num() > 1
             && md_diff_acc_logical->parallel_desc()->policy() == kDataParallel) {
-          BuildReduceStruct(md_diff_acc_logical, md_updt_logical);
+          ReduceCtx reduce_ctx;
+          reduce_ctx.fw_logicals.emplace_back(fw_logical);
+          reduce_ctx.bw_logicals.emplace_back(bw_logical);
+          reduce_ctx.md_diff_acc_logicals.emplace_back(md_diff_acc_logical);
+          reduce_ctx.md_updt_logicals.emplace_back(md_updt_logical);
+          CHECK(fw_node2reduce_ctx.emplace(fw_logical, reduce_ctx).second);
         } else {
           Connect<LogicalNode>(md_diff_acc_logical, NewEdge(), md_updt_logical);
         }
       }
     }
   });
+  for (auto& fw_node_group : fw_node_groups_) {
+    ReduceCtx group_reduce_ctx;
+    for (auto& fw_node : fw_node_group) {
+      auto reduce_ctx_it = fw_node2reduce_ctx.find(fw_node);
+      if (reduce_ctx_it != fw_node2reduce_ctx.end()) {
+        auto& reduce_ctx = reduce_ctx_it->second;
+        group_reduce_ctx.fw_logicals.emplace_back(reduce_ctx.fw_logicals.at(0));
+        group_reduce_ctx.bw_logicals.emplace_back(reduce_ctx.bw_logicals.at(0));
+        group_reduce_ctx.md_diff_acc_logicals.emplace_back(reduce_ctx.md_diff_acc_logicals.at(0));
+        group_reduce_ctx.md_updt_logicals.emplace_back(reduce_ctx.md_updt_logicals.at(0));
+      }
+    }
+    BuildReduceStruct(group_reduce_ctx);
+  }
   SetupNormalMdUpdtOp();
 }
 
-void LogicalGraph::BuildReduceStruct(LogicalNode* src, LogicalNode* dst) {
+void LogicalGraph::BuildReduceStruct(const ReduceCtx& reduce_ctx) {
+  if (reduce_ctx.fw_logicals.size() > 1) {
+    std::shared_ptr<const ParallelDesc> src_pd = reduce_ctx.fw_logicals[0]->parallel_desc();
+
+    OperatorConf reduce_concat_op_conf;
+    reduce_concat_op_conf.set_name("reduce_concat_" + NewUniqueId());
+    reduce_concat_op_conf.set_device_type(src_pd->device_type());
+    reduce_concat_op_conf.mutable_reduce_concat_conf()->set_in_num(reduce_ctx.fw_logicals.size());
+    LogicalNode* reduce_concat_node = NewNode<ReduceConcatLogicalNode>();
+    reduce_concat_node->mut_op_vec() = {ConstructOp(reduce_concat_op_conf)};
+    reduce_concat_node->mut_parallel_desc() = src_pd;
+
+    OperatorConf reduce_split_op_conf;
+    reduce_split_op_conf.set_name("reduce_split_" + NewUniqueId());
+    reduce_split_op_conf.set_device_type(src_pd->device_type());
+    reduce_split_op_conf.mutable_reduce_split_conf()->set_out_num(reduce_ctx.fw_logicals.size());
+    LogicalNode* reduce_split_node = NewNode<ReduceSplitLogicalNode>();
+    reduce_split_node->mut_op_vec() = {ConstructOp(reduce_split_op_conf)};
+    reduce_split_node->mut_parallel_desc() = src_pd;
+
+    for (auto& md_diff_acc_node : reduce_ctx.md_diff_acc_logicals) {
+      Connect(md_diff_acc_node, NewEdge(), reduce_concat_node);
+    }
+    for (auto& md_updt_node : reduce_ctx.md_updt_logicals) {
+      Connect(reduce_split_node, NewEdge(), md_updt_node);
+    }
+    AddReduceScatterAddGatherNodes(reduce_concat_node, reduce_split_node);
+  } else if (reduce_ctx.fw_logicals.size() == 1) {
+    AddReduceScatterAddGatherNodes(reduce_ctx.md_diff_acc_logicals.at(0),
+                                   reduce_ctx.md_updt_logicals.at(0));
+  }
+}
+
+void LogicalGraph::AddReduceScatterAddGatherNodes(LogicalNode* src, LogicalNode* dst) {
   std::shared_ptr<const ParallelDesc> src_pd = src->parallel_desc();
   std::shared_ptr<const ParallelDesc> dst_pd = dst->parallel_desc();
   CHECK_EQ(src_pd->parallel_num(), dst_pd->parallel_num());

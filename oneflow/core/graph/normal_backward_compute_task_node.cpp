@@ -11,7 +11,8 @@ void NormalBackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   for (TaskEdge* edge : out_edges()) {
     const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
     if (succ_logical->TypeName() == "MdDiffAcc" || succ_logical->TypeName() == "NormalMdUpdt"
-        || succ_logical->TypeName() == "ReduceScatter") {
+        || succ_logical->TypeName() == "ReduceScatter"
+        || succ_logical->TypeName() == "ReduceConcat") {
       edge->AddRegst("model_diff", ProduceRegst("model_diff", true));
     } else {
       BindEdgeWithProducedRegst(edge, "in_diff");
@@ -37,8 +38,8 @@ void NormalBackwardCompTaskNode::ConsumeAllRegsts() {
   }
   CompTaskNode* fw_task = GetRelatedFwTaskNode();
   if (fw_task) {
-    const std::list<std::weak_ptr<RegstDesc>>& in_regst = fw_task->GetConsumedRegst("in");
-    for (std::weak_ptr<RegstDesc> regst : in_regst) { ConsumeRegst("in", regst.lock()); }
+    const std::list<std::shared_ptr<RegstDesc>>& in_regst = fw_task->GetConsumedRegst("in");
+    for (std::shared_ptr<RegstDesc> regst : in_regst) { ConsumeRegst("in", regst); }
   }
 }
 
@@ -47,6 +48,7 @@ void NormalBackwardCompTaskNode::BuildExecGphAndRegst() {
   LinkFwExecNode();
   BuildActivationDiffRegst();
   BuildInDiffRegst();
+  BindInRegst();
   BindModelDiffRegst();
   InferBlobDescsInProducedRegsts();
 }
@@ -128,15 +130,21 @@ void NormalBackwardCompTaskNode::BuildInDiffRegst() {
     }
     for (const std::string& idbn : cur_node->op()->input_diff_bns()) {
       const LogicalBlobId& lbi = cur_node->op()->BnInOp2Lbi(idbn);
-      CompTaskNode* fw_task = GetRelatedFwTaskNode();
-      if (fw_task) {
-        cur_node->BindBnWithOneOfTheRegsts(GenUnDiffBn(idbn), GetConsumedRegst("in"));
-      }
       if (logical_node()->IsDataLbiOnOutEdge(lbi)) {
         in_diff_regst->AddLbi(lbi);
         cur_node->BindBnWithRegst(idbn, in_diff_regst);
       } else {
         CHECK(found_lbis.empty() || found_lbis.find(lbi) != found_lbis.end());
+      }
+    }
+  });
+}
+
+void NormalBackwardCompTaskNode::BindInRegst() {
+  mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
+    for (const std::string& ibn : cur_node->op()->input_bns()) {
+      if (GetRelatedFwTaskNode()) {
+        cur_node->BindBnWithOneOfTheRegsts(ibn, GetConsumedRegst("in"));
       }
     }
   });
@@ -162,8 +170,8 @@ void NormalBackwardCompTaskNode::BindModelDiffRegst() {
 void NormalBackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
   if (GetRelatedFwTaskNode()) {
     std::shared_ptr<RegstDesc> in_diff_regst = GetProducedRegst("in_diff");
-    for (std::weak_ptr<RegstDesc> regst : GetConsumedRegst("in")) {
-      in_diff_regst->CopyBlobDescWithoutAddLbi(regst.lock().get());
+    for (std::shared_ptr<RegstDesc> regst : GetConsumedRegst("in")) {
+      in_diff_regst->CopyBlobDescWithoutAddLbi(regst.get());
     }
 
     std::shared_ptr<RegstDesc> md_diff_regst = GetProducedRegst("model_diff");

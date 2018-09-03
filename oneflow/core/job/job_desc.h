@@ -21,7 +21,7 @@ class JobDesc final {
   const Resource& resource() const { return job_conf_.resource(); }
   const Placement& placement() const { return job_conf_.placement(); }
   const OtherConf& other_conf() const { return job_conf_.other(); }
-  const std::string& MdLoadSnapshotPath() const;
+  std::string MdLoadSnapshotPath() const;
   const std::string& ModelLoadPath() const { return job_conf_.other().model_load_path(); }
   DataType DefaultDataType() const { return job_conf_.other().default_data_type(); }
   size_t SizeOfOneDataId() const { return job_conf_.other().max_data_id_length() * sizeof(char); }
@@ -52,6 +52,7 @@ class JobDesc final {
     return IsTrain() && job_conf_.other().enable_write_snapshot();
   }
   bool enable_blob_mem_sharing() const { return job_conf_.other().enable_blob_mem_sharing(); }
+  int64_t reduce_group_size() const { return job_conf_.other().reduce_group_size(); }
 
   // machine_name <-> machine_id
   int64_t MachineID4MachineName(const std::string& machine_name) const;

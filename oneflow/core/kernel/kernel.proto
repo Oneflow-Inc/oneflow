@@ -112,7 +112,15 @@ message ReduceGatherKernelConf {
   repeated int64 data_offset = 1;
 }
 
-message AccuracyKernelConf {
+message ReduceConcatKernelConf {
+  repeated int64 data_offset = 1;
+}
+
+message ReduceSplitKernelConf {
+  repeated int64 data_offset = 1;
+}
+
+message AccuracyKernelConf { 
   required DataType prediction_type = 1;
   required DataType label_type = 2;
 }
@@ -132,7 +140,7 @@ message OpAttribute {
   repeated string model_bns = 10;
   repeated string model_diff_bns = 11;
   repeated string const_model_bns = 12;
-  
+
   repeated string forward_model_bns = 13;
   repeated string const_buf_bns = 14;
   repeated string pb_input_bns = 15;
@@ -140,7 +148,7 @@ message OpAttribute {
 }
 
 message KernelConf {
-  required OpAttribute op_attribute = 1; 
+  required OpAttribute op_attribute = 1;
   optional bool need_do_data_id = 2 [default = false];
   optional bool need_do_col_num = 3 [default = false];
   optional bool need_do_opaque_header = 4 [default = false];
@@ -164,6 +172,8 @@ message KernelConf {
     NormalizationKernelConf normalization_conf = 250;
     LocalResponseNormalizationKernelConf local_response_normalization_conf = 300;
     ReduceGatherKernelConf reduce_gather_conf = 350;
+    ReduceConcatKernelConf reduce_concat_conf = 351;
+    ReduceSplitKernelConf reduce_split_conf = 352;
     AccuracyKernelConf accuracy_conf = 401;
     SmoothL1LossKernelConf smooth_l1_loss_conf = 402;
     SigmoidCrossEntropyLossKernelConf sigmoid_cross_entropy_loss_conf = 403;

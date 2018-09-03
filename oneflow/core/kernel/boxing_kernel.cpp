@@ -166,6 +166,6 @@ void BoxingKernel<T>::SetMaxColId(const KernelCtx& ctx,
 }
 
 #define INIT_BOXING_KERNEL(type_cpp, type_proto) template class BoxingKernel<type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INIT_BOXING_KERNEL, ARITHMETIC_DATA_TYPE_SEQ FEATURE_DATA_TYPE_SEQ);
+OF_PP_FOR_EACH_TUPLE(INIT_BOXING_KERNEL, ARITHMETIC_DATA_TYPE_SEQ PB_LIST_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

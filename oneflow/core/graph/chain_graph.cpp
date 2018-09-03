@@ -10,7 +10,9 @@ namespace {
 
 class ChainMerger final {
  public:
-  ChainMerger(const std::vector<TaskNode*>& task_nodes) : task_nodes_(task_nodes) {
+  ChainMerger(const std::vector<TaskNode*>& task_nodes,
+              const HashMap<TaskNode*, HashSet<TaskNode*>>& node2ancestors)
+      : task_nodes_(task_nodes), node2ancestors_(node2ancestors) {
     InitTaskNode2UId();
     InitChains();
     MergeChains();
@@ -32,6 +34,7 @@ class ChainMerger final {
   const std::vector<TaskNode*>& task_nodes_;
   std::list<Chain> chain_list_;
   HashMap<TaskNode*, int64_t> task_node2uid_;
+  const HashMap<TaskNode*, HashSet<TaskNode*>>& node2ancestors_;
 };
 
 int64_t ChainMerger::GetTaskUid(TaskNode* task_node) const {
@@ -51,7 +54,7 @@ void ChainMerger::UpdateTaskUid(TaskNode* task_node) {
 void ChainMerger::InitTaskNode2UId() {
   for (auto& task_node : task_nodes_) {
     UpdateTaskUid(task_node);
-    for (auto& ancestor : task_node->ancestors()) { UpdateTaskUid(ancestor); }
+    for (auto& ancestor : node2ancestors_.at(task_node)) { UpdateTaskUid(ancestor); }
   }
 }
 
@@ -64,13 +67,10 @@ void ChainMerger::InitChains() {
     cur_chain.nodes = {task_node};
     cur_chain.stream_area_id =
         std::make_pair(task_node->area_id(), task_node->GlobalWorkStreamId());
-    for (int64_t i = 0; i < bitset_num; ++i) {
-      std::bitset<BITSET_SIZE> b;
-      cur_chain.ancestors.push_back(b);
-      cur_chain.ancestors_and_this.push_back(b);
-    }
+    cur_chain.ancestors.resize(bitset_num);
+    cur_chain.ancestors_and_this.resize(bitset_num);
     CarefullySetBitset(&(cur_chain.ancestors_and_this), GetTaskUid(task_node));
-    for (auto& ancestor : task_node->ancestors()) {
+    for (auto& ancestor : node2ancestors_.at(task_node)) {
       int64_t ancestor_uid = GetTaskUid(ancestor);
       CarefullySetBitset(&(cur_chain.ancestors), ancestor_uid);
       CarefullySetBitset(&(cur_chain.ancestors_and_this), ancestor_uid);
@@ -118,7 +118,8 @@ void ChainMerger::CarefullySetBitset(std::vector<std::bitset<BITSET_SIZE>>* bits
 }
 
 bool ChainMerger::IsSubset(const ChainIt& lhs, const ChainIt& rhs) const {
-  int64_t bitset_num = std::ceil(static_cast<double>(task_node2uid_.size()) / BITSET_SIZE);
+  CHECK_EQ(lhs->ancestors_and_this.size(), rhs->ancestors_and_this.size());
+  int64_t bitset_num = lhs->ancestors_and_this.size();
   for (int64_t i = 0; i < bitset_num; ++i) {
     if (lhs->ancestors_and_this.at(i) != (lhs->ancestors_and_this.at(i) | rhs->ancestors.at(i))) {
       return false;
@@ -140,22 +141,35 @@ std::string ChainNode::VisualStr() const {
 
 ChainGraph::ChainGraph(const TaskGraph& task_gph) : task_gph_(task_gph) {
   HashMap<int64_t, std::vector<TaskNode*>> machine2tasks;
+  HashMap<TaskNode*, HashSet<TaskNode*>> node2ancestors;
   std::vector<std::vector<TaskNode*>> chains;
-  GroupTaskNodesByMachine(task_gph, &machine2tasks);
-  MergeTaskNodes(machine2tasks, &chains);
+  GroupTaskNodesByMachineAndCollectAncestors(task_gph, &machine2tasks, &node2ancestors);
+  MergeTaskNodes(machine2tasks, node2ancestors, &chains);
   InitChainNode(chains);
   InitChainEdge(chains);
   SetChainId4ChainNode();
   ToDotWithAutoFilePath();
 }
 
-void ChainGraph::GroupTaskNodesByMachine(
-    const TaskGraph& task_gph, HashMap<int64_t, std::vector<TaskNode*>>* machine2tasks) const {
-  task_gph.AcyclicTopoForEachNode(
-      [&](TaskNode* node) { (*machine2tasks)[node->machine_id()].emplace_back(node); });
+void ChainGraph::GroupTaskNodesByMachineAndCollectAncestors(
+    const TaskGraph& task_gph, HashMap<int64_t, std::vector<TaskNode*>>* machine2tasks,
+    HashMap<TaskNode*, HashSet<TaskNode*>>* node2ancestors) const {
+  task_gph.AcyclicTopoForEachNode([&](TaskNode* node) {
+    (*machine2tasks)[node->machine_id()].emplace_back(node);
+    CHECK(node2ancestors->emplace(node, HashSet<TaskNode*>()).second);
+    // to reduce memory consumption
+    if (node->area_id() == kMdUpdtArea) { return; }
+    node->ForEachNodeOnInEdge([&](TaskNode* in_node) {
+      if (IsBackEdge(in_node, node)) { return; }
+      (*node2ancestors)[node].insert(in_node);
+      (*node2ancestors)[node].insert((*node2ancestors)[in_node].begin(),
+                                     (*node2ancestors)[in_node].end());
+    });
+  });
 }
 
 void ChainGraph::MergeTaskNodes(const HashMap<int64_t, std::vector<TaskNode*>>& machine2tasks,
+                                const HashMap<TaskNode*, HashSet<TaskNode*>>& node2ancestors,
                                 std::vector<std::vector<TaskNode*>>* chains) const {
   int64_t machine_num = machine2tasks.size();
   int64_t cpu_num = std::thread::hardware_concurrency();
@@ -165,7 +179,7 @@ void ChainGraph::MergeTaskNodes(const HashMap<int64_t, std::vector<TaskNode*>>& 
   ThreadPool thread_pool(thread_pool_size);
   for (auto& pair : machine2tasks) {
     thread_pool.AddWork([&]() {
-      ChainMerger merger(pair.second);
+      ChainMerger merger(pair.second, node2ancestors);
       auto& cur_chain_list = merger.GetChains();
       {
         std::unique_lock<std::mutex> guard(chain_list_mtx);

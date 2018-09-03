@@ -100,6 +100,18 @@ void FasterRcnnUtil<T>::ForEachOverlapBetweenBoxesAndGtBoxes(
   }
 }
 
+template<typename T>
+void FasterRcnnUtil<T>::ForEachOverlapBetweenBoxesAndGtBoxes(
+    const BoxesSlice<T>& boxes_slice, const GtBoxes<FloatList16>& gt_boxes_slice,
+    const std::function<void(int32_t, int32_t, float)>& Handler) {
+  FOR_RANGE(int32_t, i, 0, gt_boxes_slice.size()) {
+    FOR_RANGE(int32_t, j, 0, boxes_slice.size()) {
+      float overlap = boxes_slice.GetBBox(j)->InterOverUnion(gt_boxes_slice.GetBBox<float>(i));
+      Handler(boxes_slice.GetIndex(j), i, overlap);
+    }
+  }
+}
+
 #define INITIATE_FASTER_RCNN_UTIL(T, type_cpp) template struct FasterRcnnUtil<T>;
 OF_PP_FOR_EACH_TUPLE(INITIATE_FASTER_RCNN_UTIL, FLOATING_DATA_TYPE_SEQ);
 

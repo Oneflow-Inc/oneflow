@@ -63,6 +63,7 @@ BoxesSlice<T> AnchorTargetKernel<T>::GetImageGtBoxesSlice(
                                BnInOp2Blob("gt_boxes_index")->mut_dptr<int32_t>(),
                                gt_boxes_absolute_blob->dptr<T>());
   gt_boxes_slice.Truncate(boxes_num);
+  gt_boxes_slice.FilterByBox([](const BBox<T>* gt_box) { return !(gt_box->Area() > 0); });
   return gt_boxes_slice;
 }
 
@@ -87,8 +88,8 @@ AnchorTargetKernel<T>::ComputeOverlapsAndSetLabels(
   auto gt_boxes_to_nearest_boxes = GenGtBoxesToNearestBoxesSlice(
       gt_boxes_slice, gt_max_overlaps_blob->mut_dptr<float>(),
       BnInOp2Blob("gt_box_nearest_anchor_index")->mut_dptr<int32_t>());
-  auto boxes_labels = GenLabeledBoxesSlice<3>(
-      boxes_to_nearest_gt_boxes, BnInOp2Blob("rpn_labels")->mut_dptr<int32_t>(image_index));
+  auto boxes_labels = GenLabelSlice(boxes_to_nearest_gt_boxes,
+                                    BnInOp2Blob("rpn_labels")->mut_dptr<int32_t>(image_index));
 
   FasterRcnnUtil<T>::ForEachOverlapBetweenBoxesAndGtBoxes(
       anchor_boxes_slice, gt_boxes_slice,
@@ -106,16 +107,19 @@ AnchorTargetKernel<T>::ComputeOverlapsAndSetLabels(
 }
 
 template<typename T>
-size_t AnchorTargetKernel<T>::SubsampleForeground(
-    BoxesLabelsAndNearestGtBoxes& boxes_labels_and_nearest_gt_boxes) const {
+size_t AnchorTargetKernel<T>::SubsampleForeground(BoxesLabelsAndNearestGtBoxes& label_slice) const {
   const AnchorTargetOpConf& conf = op_conf().anchor_target_conf();
   size_t fg_cnt = conf.batch_size_per_image() * conf.foreground_fraction();
-  boxes_labels_and_nearest_gt_boxes.GroupByLabel();
-  return boxes_labels_and_nearest_gt_boxes.Subsample(1, fg_cnt, [](int32_t) {},
-                                                     [&](int32_t disable_box_index) {
-                                                       boxes_labels_and_nearest_gt_boxes.set_label(
-                                                           disable_box_index, -1);
-                                                     });
+  label_slice.SortByLabel(
+      [](int32_t lhs_label, int32_t rhs_label) { return lhs_label > rhs_label; });
+  size_t fg_end = label_slice.FindByLabel([](int32_t label) { return label != 1; });
+  if (fg_end > fg_cnt) {
+    label_slice.Shuffle(0, fg_end);
+    FOR_RANGE(size_t, i, fg_cnt, fg_end) { label_slice.SetLabel(i, -1); }
+  } else {
+    fg_cnt = fg_end;
+  }
+  return fg_cnt;
 }
 
 template<typename T>

@@ -1,0 +1,16 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/job/task.proto";
+
+message ThrdIds {
+  repeated int64 thrd_id = 1;
+}
+
+message ClusterThrdIds {
+  map<int64, ThrdIds> machine_id2thrd_ids = 1;
+}
+
+message SubPlan {
+  repeated TaskProto task = 1;
+}

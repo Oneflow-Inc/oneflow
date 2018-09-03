@@ -587,6 +587,12 @@ message DecodeRandomOpConf {
   required InitializerConf initializer = 7;
 }
 
+message DefineTestBlobConf {
+  required string name = 1;
+  required ShapeProto shape = 2;
+  required DataType data_type = 3;
+}
+
 message NormalizationOpConf {
   required string in = 1;
   required string out = 2;
@@ -617,6 +623,14 @@ message TransposeOpConf {
   repeated int32 perm = 3;
 }
 
+message ReduceConcatOpConf {
+  required int32 in_num = 1;
+}
+
+message ReduceSplitOpConf {
+  required int32 out_num = 1;
+}
+
 message ReduceScatterOpConf {
   required int32 out_num = 1;
 };
@@ -641,50 +655,25 @@ message AccuracyOpConf {
   required string accuracy = 4;
 }
 
-message BboxWeightConf
-{
-  optional float weight_x=1 [default = 1.0];
-  optional float weight_y=2 [default = 1.0];
-  optional float weight_w=3 [default = 1.0];
-  optional float weight_h=4 [default = 1.0];
-}
-
-message BboxNormalizeMeansConf
-{
-  optional float means_x = 1[default = 0.0];
-  optional float means_y = 2[default = 0.0];
-  optional float means_w = 3[default = 0.0];
-  optional float means_h = 4[default = 0.0];
-}
-
-message BboxNormalizeStdsConf
-{
-  optional float stds_x = 1[default = 1.0];
-  optional float stds_y = 2[default = 1.0];
-  optional float stds_w = 3[default = 1.0];
-  optional float stds_h = 4[default = 1.0];
-}
-
-message ProposalTargetOpConf
-{
+message ProposalTargetOpConf {
   required string rpn_rois = 1;
   required string gt_boxes = 2;
-  required string gt_num=3;
+  required string gt_labels = 3;
   required string rois = 4;
   required string labels = 5;
   required string bbox_targets = 6;
   required string bbox_inside_weights = 7;
   required string bbox_outside_weights = 8;
-  required int32 num_roi_per_image = 9 [default = 256];
-  required float fg_fraction = 10 [default = 0.5];
-  required BboxWeightConf bbox_inside_weight_conf=11;
-  required int32 fg_thresh = 12;
-  required int32 bg_thresh_lo = 13;
-  required int32 bg_thresh_hi = 14;
-  required bool bbox_normalize_targets_precomputed = 15;
-  optional BboxNormalizeMeansConf bbox_normalize_means = 16;
-  optional BboxNormalizeStdsConf bbox_normalize_stds = 17;
-  required int32 class_num = 18;
+  required float foreground_threshold = 9;
+  required float background_threshold_low = 10;
+  required float background_threshold_high = 11;
+  required float foreground_fraction = 12 [default = 0.5];
+  required BBoxRegressionWeights bbox_reg_weights = 13;
+  required int32 num_classes = 14;
+  required int32 num_rois_per_image = 15 [default = 256];
+  required int32 max_gt_boxes_num = 16 [default = 256];
+  required int32 image_height = 17;
+  required int32 image_width = 18;
 }
 
 enum ScoringMethod {
@@ -821,6 +810,7 @@ message OperatorConf {
     PodBoxingOpConf pod_boxing_conf = 129;
     PbBoxingOpConf pb_boxing_conf = 130;
     DropoutOpConf dropout_conf = 140;
+    DefineTestBlobConf define_test_blob_conf = 141;
     AveragePooling1DOpConf average_pooling_1d_conf = 200;
     MaxPooling1DOpConf max_pooling_1d_conf = 201;
     AveragePooling2DOpConf average_pooling_2d_conf = 202;
@@ -837,17 +827,19 @@ message OperatorConf {
     ReduceLocalAddOpConf reduce_local_add_conf = 401;
     ReduceGlobalAddOpConf reduce_global_add_conf = 402;
     ReduceGatherOpConf reduce_gather_conf = 403;
-    RecordLoadOpConf record_load_conf = 404;
-    AccuracyOpConf accuracy_conf = 405;
-    AccuracyPrintOpConf accuracy_print_conf = 406;
-    RoIPoolingOpConf roi_pooling_conf = 407;
-    SmoothL1LossOpConf smooth_l1_loss_conf = 408;
-    ProposalOpConf proposal_conf = 409;
-    RoIAlignOpConf roi_align_conf = 410;
-    ProposalTargetOpConf proposal_target_conf = 411;
-    BboxNmsAndLimitOpConf bbox_nms_and_limit_conf = 412;
-    AnchorTargetOpConf anchor_target_conf = 413;
-    SigmoidCrossEntropyLossOpConf sigmoid_cross_entropy_loss_conf = 414;
+    ReduceConcatOpConf reduce_concat_conf = 404;
+    ReduceSplitOpConf reduce_split_conf = 405;
+    RecordLoadOpConf record_load_conf = 406;
+    AccuracyOpConf accuracy_conf=407;
+    AccuracyPrintOpConf accuracy_print_conf = 408;
+    RoIPoolingOpConf roi_pooling_conf = 1000;
+    SmoothL1LossOpConf smooth_l1_loss_conf = 1001;
+    ProposalOpConf proposal_conf = 1002;
+    RoIAlignOpConf roi_align_conf = 1003;
+    ProposalTargetOpConf proposal_target_conf = 1004;
+    BboxNmsAndLimitOpConf bbox_nms_and_limit_conf = 1005;
+    AnchorTargetOpConf anchor_target_conf = 1006;
+    SigmoidCrossEntropyLossOpConf sigmoid_cross_entropy_loss_conf = 1007;
   }
 }
 
