@@ -12,8 +12,8 @@ class OFRecordDecoderIf {
   OF_DISALLOW_COPY_AND_MOVE(OFRecordDecoderIf);
   virtual ~OFRecordDecoderIf() = default;
 
-  virtual int32_t DecodeOneCol(DeviceCtx*, int32_t max_part_num, Blob* in_blob, const BlobConf&,
-                               int32_t cur_col_id, Blob* out_blob,
+  virtual int32_t DecodeOneCol(DeviceCtx*, Blob* in_blob, const BlobConf&, int32_t cur_col_id,
+                               Blob* out_blob,
                                std::function<int32_t(void)> NextRandomInt) const = 0;
 
  protected:
@@ -28,9 +28,8 @@ class OFRecordDecoder : public OFRecordDecoderIf {
   OF_DISALLOW_COPY_AND_MOVE(OFRecordDecoder);
   virtual ~OFRecordDecoder() = default;
 
-  int32_t DecodeOneCol(DeviceCtx*, int32_t max_part_num, Blob* in_blob, const BlobConf&,
-                       int32_t cur_col_id, Blob* out_blob,
-                       std::function<int32_t(void)> NextRandomInt) const override;
+  int32_t DecodeOneCol(DeviceCtx*, Blob* in_blob, const BlobConf&, int32_t cur_col_id,
+                       Blob* out_blob, std::function<int32_t(void)> NextRandomInt) const override;
 
  protected:
   OFRecordDecoder() = default;
@@ -43,8 +42,7 @@ class OFRecordDecoder : public OFRecordDecoderIf {
   // return: max_col_num
   int32_t ReadColNum(DeviceCtx*, Blob*, const std::string& name, Blob* out_blob) const;
   void ReadDataId(DeviceCtx*, Blob* in_blob, Blob* out_blob) const;
-  void ReadDataContent(DeviceCtx*, int32_t max_part_num, Blob* in_blob, const BlobConf&,
-                       int32_t col_id, Blob* out_blob,
+  void ReadDataContent(DeviceCtx*, Blob* in_blob, const BlobConf&, int32_t col_id, Blob* out_blob,
                        std::function<int32_t(void)> NextRandomInt) const;
   void ReadPartDataContent(DeviceCtx*, Blob* in_blob, const BlobConf&, int32_t col_id,
                            Blob* out_blob, int32_t part_id, int32_t part_num,

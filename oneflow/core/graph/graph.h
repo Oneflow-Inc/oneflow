@@ -17,8 +17,6 @@ class Graph {
 
   // For Each
   void ForEachNode(std::function<void(NodeType*)> NodeHandler) const;
-  void ForEachNode(std::function<void(NodeType*)> NodeHandler,
-                   std::function<bool(NodeType*)> IsNodeReady) const;
   void TopoForEachNode(std::function<void(NodeType*)> NodeHandler) const;
   void ReverseTopoForEachNode(std::function<void(NodeType*)> NodeHandler) const;
   void ForEachEdge(std::function<void(EdgeType*)> EdgeHandler) const;
@@ -78,30 +76,6 @@ class Graph {
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::ForEachNode(std::function<void(NodeType*)> NodeHandler) const {
   for (auto& x : nodes_) { NodeHandler(x.get()); }
-}
-
-template<typename NodeType, typename EdgeType>
-void Graph<NodeType, EdgeType>::ForEachNode(std::function<void(NodeType*)> NodeHandler,
-                                            std::function<bool(NodeType*)> IsNodeReady) const {
-  std::queue<NodeType*> node_queue;
-  HashSet<NodeType*> nodes_pushed;
-  for (auto& x : nodes_) {
-    if (IsNodeReady(x.get())) {
-      node_queue.push(x.get());
-      CHECK(nodes_pushed.insert(x.get()).second);
-    }
-  }
-  while (node_queue.empty() == false) {
-    NodeType* cur_node = node_queue.front();
-    node_queue.pop();
-    NodeHandler(cur_node);
-    cur_node->ForEachNodeOnInOutEdge([&](NodeType* candidate) {
-      if (nodes_pushed.find(candidate) == nodes_pushed.end() && IsNodeReady(candidate)) {
-        node_queue.push(candidate);
-        CHECK(nodes_pushed.insert(candidate).second);
-      }
-    });
-  }
 }
 
 template<typename NodeType, typename EdgeType>
@@ -174,10 +148,12 @@ template<typename NodeType, typename EdgeType>
 template<typename StreamT>
 void Graph<NodeType, EdgeType>::ToDotWithStream(StreamT& out_stream) {
   out_stream << "digraph {\n";
-  this->ForEachNode([&](NodeType* node) { out_stream << "\"" << node->VisualStr() << "\"\n"; });
+  this->ForEachNode([&](NodeType* node) {
+    out_stream << "\"" << node->node_id_str() << "\" [label=\"" << node->VisualStr() << "\"]\n";
+  });
   this->ForEachEdge([&](const EdgeType* edge) {
-    out_stream << "\"" << edge->src_node()->VisualStr() << "\" -> "
-               << "\"" << edge->dst_node()->VisualStr() << "\""
+    out_stream << "\"" << edge->src_node()->node_id_str() << "\" -> "
+               << "\"" << edge->dst_node()->node_id_str() << "\""
                << "[label=\"" << edge->VisualStr() << "\"];\n";
   });
   out_stream << "}\n";
