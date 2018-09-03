@@ -4,7 +4,7 @@
 namespace oneflow {
 
 void NcclReduceScatterOp::InitFromOpConf() {
-  CHECK(op_conf().has_nccl_all_reduce_conf());
+  CHECK(op_conf().has_nccl_reduce_scatter_conf());
   EnrollInputBn("in", false);
   EnrollOutputBn("out", false);
 }
@@ -19,7 +19,10 @@ void NcclReduceScatterOp::InferBlobDescs(
   BlobDesc* in_blob = GetBlobDesc4BnInOp(SoleIbn());
   BlobDesc* out_blob = GetBlobDesc4BnInOp(SoleObn());
   *out_blob = *in_blob;
-  // FIXME(jiyuan)
+  int64_t total_elem_cnt = in_blob->shape().elem_cnt();
+  int64_t rank_num = Global<JobDesc>::Get()->GpuDeviceNum();
+  CHECK_EQ(total_elem_cnt % rank_num, 0);
+  out_blob->mut_shape() = Shape({total_elem_cnt / rank_num});
 }
 
 LogicalBlobId NcclReduceScatterOp::obn2lbi(const std::string& output_bn) const {

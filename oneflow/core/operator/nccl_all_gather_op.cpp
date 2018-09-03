@@ -4,13 +4,13 @@
 namespace oneflow {
 
 void NcclAllGatherOp::InitFromOpConf() {
-  CHECK(op_conf().has_nccl_all_reduce_conf());
+  CHECK(op_conf().has_nccl_all_gather_conf());
   EnrollInputBn("in", false);
   EnrollOutputBn("out", false);
 }
 
 const PbMessage& NcclAllGatherOp::GetCustomizedConf() const {
-  return op_conf().nccl_all_reduce_conf();
+  return op_conf().nccl_all_gather_conf();
 }
 
 void NcclAllGatherOp::InferBlobDescs(
@@ -19,7 +19,9 @@ void NcclAllGatherOp::InferBlobDescs(
   BlobDesc* in_blob = GetBlobDesc4BnInOp(SoleIbn());
   BlobDesc* out_blob = GetBlobDesc4BnInOp(SoleObn());
   *out_blob = *in_blob;
-  // FIXME(jiyuan)
+  int64_t elem_cnt = in_blob->shape().elem_cnt();
+  int64_t rank_num = Global<JobDesc>::Get()->GpuDeviceNum();
+  out_blob->mut_shape() = Shape({elem_cnt * rank_num});
 }
 
 LogicalBlobId NcclAllGatherOp::obn2lbi(const std::string& output_bn) const {

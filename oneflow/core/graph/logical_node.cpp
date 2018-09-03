@@ -17,6 +17,8 @@
 #include "oneflow/core/graph/reduce_concat_compute_task_node.h"
 #include "oneflow/core/graph/reduce_split_compute_task_node.h"
 #include "oneflow/core/graph/nccl_all_reduce_compute_task_node.h"
+#include "oneflow/core/graph/nccl_reduce_scatter_compute_task_node.h"
+#include "oneflow/core/graph/nccl_all_gather_compute_task_node.h"
 #include "oneflow/core/graph/accuracy_compute_task_node.h"
 #include "oneflow/core/graph/accuracy_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/accuracy_print_compute_task_node.h"
@@ -353,6 +355,15 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalBackward"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("MdDiffAcc"
                               "ReduceScatter",
                               &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceConcat"
+                              "NcclReduceScatter",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalBackward"
+                              "NcclReduceScatter",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("MdDiffAcc"
+                              "NcclReduceScatter",
+                              &TaskGraph::BldSubTskGphByOneToOne);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalBackward"
                               "NcclAllReduce",
                               &TaskGraph::BldSubTskGphByOneToOne);
@@ -383,11 +394,17 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGlobalAdd"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
                               "NormalMdUpdt",
                               &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceSplit"
-                              "NormalMdUpdt",
-                              &TaskGraph::BldSubTskGphByOneToOne);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
                               "ReduceSplit",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclAllGather"
+                              "NormalMdUpdt",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclAllGather"
+                              "ReduceSplit",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceSplit"
+                              "NormalMdUpdt",
                               &TaskGraph::BldSubTskGphByOneToOne);
 
 BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src, const LogicalNode* dst) {
@@ -438,6 +455,8 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
   OF_PP_MAKE_TUPLE_SEQ(ReduceGather, kMdUpdtArea)         \
   OF_PP_MAKE_TUPLE_SEQ(ReduceSplit, kMdUpdtArea)          \
   OF_PP_MAKE_TUPLE_SEQ(NcclAllReduce, kMdUpdtArea)        \
+  OF_PP_MAKE_TUPLE_SEQ(NcclReduceScatter, kMdUpdtArea)    \
+  OF_PP_MAKE_TUPLE_SEQ(NcclAllGather, kMdUpdtArea)        \
   OF_PP_MAKE_TUPLE_SEQ(Accuracy, kDataForwardArea)        \
   OF_PP_MAKE_TUPLE_SEQ(AccuracyAcc, kDataForwardArea)     \
   OF_PP_MAKE_TUPLE_SEQ(AccuracyPrint, kPrintArea)

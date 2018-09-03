@@ -488,10 +488,38 @@ void LogicalGraph::AddAllReduce(LogicalNode* src, LogicalNode* dst) {
   CHECK_EQ(src_pd->device_type(), dst_pd->device_type());
   if (Global<JobDesc>::Get()->enable_nccl() && src_pd->device_type() == DeviceType::kGPU
       && src_pd->sorted_machine_ids().size() == 1) {
-    AddNcclAllReduce(src, dst);
+    if (Global<JobDesc>::Get()->use_nccl_allreduce()) {
+      AddNcclAllReduce(src, dst);
+    } else {
+      AddNcclReduceScatterAndAllGather(src, dst);
+    }
   } else {
     AddReduceScatterAddGatherNodes(src, dst);
   }
+}
+
+void LogicalGraph::AddNcclReduceScatterAndAllGather(LogicalNode* src, LogicalNode* dst) {
+  std::shared_ptr<const ParallelDesc> src_pd = src->parallel_desc();
+
+  OperatorConf nccl_reduce_scatter_op_conf;
+  nccl_reduce_scatter_op_conf.set_name("nccl_reduce_scatter_" + NewUniqueId());
+  nccl_reduce_scatter_op_conf.set_device_type(src_pd->device_type());
+  nccl_reduce_scatter_op_conf.mutable_nccl_reduce_scatter_conf();
+  LogicalNode* nccl_reduce_scatter_node = NewNode<NcclReduceScatterLogicalNode>();
+  nccl_reduce_scatter_node->mut_op_vec() = {ConstructOp(nccl_reduce_scatter_op_conf)};
+  nccl_reduce_scatter_node->mut_parallel_desc() = src_pd;
+
+  OperatorConf nccl_all_gather_op_conf;
+  nccl_all_gather_op_conf.set_name("nccl_all_gather_" + NewUniqueId());
+  nccl_all_gather_op_conf.set_device_type(src_pd->device_type());
+  nccl_all_gather_op_conf.mutable_nccl_all_gather_conf();
+  LogicalNode* nccl_all_gather_node = NewNode<NcclAllGatherLogicalNode>();
+  nccl_all_gather_node->mut_op_vec() = {ConstructOp(nccl_all_gather_op_conf)};
+  nccl_all_gather_node->mut_parallel_desc() = src_pd;
+
+  Connect(src, NewEdge(), nccl_reduce_scatter_node);
+  Connect(nccl_reduce_scatter_node, NewEdge(), nccl_all_gather_node);
+  Connect(nccl_all_gather_node, NewEdge(), dst);
 }
 
 void LogicalGraph::AddNcclAllReduce(LogicalNode* src, LogicalNode* dst) {

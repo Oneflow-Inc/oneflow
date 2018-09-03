@@ -206,6 +206,8 @@ DECLARE_NAIVE_LOGICAL_NODE(ReduceGatherLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(ReduceConcatLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(ReduceSplitLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(NcclAllReduceLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(NcclReduceScatterLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(NcclAllGatherLogicalNode);
 
 }  // namespace oneflow
 
