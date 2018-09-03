@@ -78,22 +78,6 @@ const ncclComm_t* CudaStreamHandle::nccl_gather_handle() {
   return nccl_gather_handle_.get();
 }
 
-const cudaStream_t* CudaStreamHandle::nccl_scatter_stream() {
-  if (!nccl_scatter_stream_) {
-    nccl_scatter_stream_.reset(new cudaStream_t);
-    CudaCheck(cudaStreamCreate(nccl_scatter_stream_.get()));
-  }
-  return nccl_scatter_stream_.get();
-}
-
-const cudaStream_t* CudaStreamHandle::nccl_gather_stream() {
-  if (!nccl_gather_stream_) {
-    nccl_gather_stream_.reset(new cudaStream_t);
-    CudaCheck(cudaStreamCreate(nccl_gather_stream_.get()));
-  }
-  return nccl_gather_stream_.get();
-}
-
 void CudaStreamHandle::AddCallBack(std::function<void()> callback) {
   CudaCBEvent cb_event;
   cb_event.callback = callback;
@@ -111,8 +95,6 @@ CudaStreamHandle::~CudaStreamHandle() {
   if (nccl_handle_) { ncclCommDestroy(*nccl_handle_); }
   if (nccl_scatter_handle_) { ncclCommDestroy(*nccl_scatter_handle_); }
   if (nccl_gather_handle_) { ncclCommDestroy(*nccl_gather_handle_); }
-  if (nccl_scatter_stream_) { CudaCheck(cudaStreamDestroy(*nccl_scatter_stream_)); }
-  if (nccl_gather_stream_) { CudaCheck(cudaStreamDestroy(*nccl_gather_stream_)); }
 }
 
 #endif  // WITH_CUDA

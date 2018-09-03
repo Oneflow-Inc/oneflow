@@ -15,7 +15,7 @@ class NcclAllGatherCompTaskNode final : public CompTaskNode {
   void ConsumeAllRegsts() override;
 
   TaskType GetTaskType() const override { return TaskType::kNcclAllGather; }
-  CudaWorkType GetCudaWorkType() const override { return CudaWorkType::kCopyH2D; }
+  CudaWorkType GetCudaWorkType() const override { return CudaWorkType::kNcclGather; }
 
  private:
   void BuildExecGphAndRegst() override;
