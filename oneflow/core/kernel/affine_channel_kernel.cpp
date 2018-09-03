@@ -39,31 +39,30 @@ const cudnnTensorDescriptor_t& AffineChannelCtx::cudnn_param_tensor_desc() const
 #endif  // WITH_CUDA
 
 template<DeviceType device_type, typename T>
-void AffineChannelKernel<device_type, T>::NormalizationCudnnForward(
+void AffineChannelKernel<device_type, T>::AffineChannelCudnnForward(
     const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   UNIMPLEMENTED();
 }
 
 template<DeviceType device_type, typename T>
-void AffineChannelKernel<device_type, T>::NormalizationCudnnBackward(
+void AffineChannelKernel<device_type, T>::AffineChannelCudnnBackward(
     const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   UNIMPLEMENTED();
 }
 
 template<>
-void AffineChannelKernel<DeviceType::kGPU, float>::NormalizationCudnnForward(
+void AffineChannelKernel<DeviceType::kGPU, float>::AffineChannelCudnnForward(
     const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const float* in = BnInOp2Blob("in")->dptr<float>();
   const float* gamma = BnInOp2Blob("gamma")->dptr<float>();
   const float* beta = BnInOp2Blob("beta")->dptr<float>();
+  const float* zero_buf = BnInOp2Blob("zero_buf")->dptr<float>();
   float* out = BnInOp2Blob("out")->mut_dptr<float>();
-  const float* moving_mean = BnInOp2Blob("moving_mean")->dptr<float>();
-  const float* moving_variance = BnInOp2Blob("moving_variance")->dptr<float>();
   CudaCheck(cudnnBatchNormalizationForwardInference(
       ctx.device_ctx->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL, OnePtr<float>::value,
       ZeroPtr<float>::value, affine_channel_ctx_->cudnn_in_tensor_desc(), in,
       affine_channel_ctx_->cudnn_in_tensor_desc(), out,
-      affine_channel_ctx_->cudnn_param_tensor_desc(), gamma, beta, moving_mean, moving_variance,
+      affine_channel_ctx_->cudnn_param_tensor_desc(), gamma, beta, zero_buf, zero_buf,
       OneVal<double>::value));
 }
 
@@ -110,11 +109,9 @@ void AffineChannelKernel<device_type, T>::InitModelBlobsWithDir(
 template<DeviceType device_type, typename T>
 void AffineChannelKernel<device_type, T>::InitConstBufBlobs(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* mean_blob = BnInOp2Blob("moving_mean");
-  Blob* variance_blob = BnInOp2Blob("moving_variance");
-  Memset<device_type>(ctx, mean_blob->mut_dptr<T>(), 0, mean_blob->ByteSizeOfDataContentField());
-  Memset<device_type>(ctx, variance_blob->mut_dptr<T>(), 0,
-                      variance_blob->ByteSizeOfDataContentField());
+  Blob* zero_buf_blob = BnInOp2Blob("zero_buf");
+  Memset<device_type>(ctx, zero_buf_blob->mut_dptr<T>(), 0,
+                      zero_buf_blob->ByteSizeOfDataContentField());
 }
 
 template<DeviceType device_type, typename T>
@@ -123,17 +120,17 @@ void AffineChannelKernel<device_type, T>::ForwardDataContent(
   const auto& conf = this->kernel_conf().affine_channel_conf();
 #ifdef WITH_CUDA
   if (conf.use_cudnn()) {
-    NormalizationCudnnForward(ctx, BnInOp2Blob);
+    AffineChannelCudnnForward(ctx, BnInOp2Blob);
     return;
   }
 #endif
-  UNIMPLEMENTED();
+  TODO();
 }
 
 template<DeviceType device_type, typename T>
 void AffineChannelKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNIMPLEMENTED();
+  TODO();
 }
 
 template<DeviceType device_type, typename T>

@@ -55,9 +55,9 @@ class AffineChannelKernel final : public KernelIfWithModel<device_type, T>,
                            std::function<Blob*(const std::string&)>) const override;
   const PbMessage& GetCustomizedOpConf() const override;
 
-  void NormalizationCudnnForward(const KernelCtx&,
+  void AffineChannelCudnnForward(const KernelCtx&,
                                  const std::function<Blob*(const std::string&)>&) const;
-  void NormalizationCudnnBackward(const KernelCtx&,
+  void AffineChannelCudnnBackward(const KernelCtx&,
                                   const std::function<Blob*(const std::string&)>&) const;
 };
 

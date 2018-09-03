@@ -7,6 +7,11 @@
 
 namespace oneflow {
 
+struct AffineChannelOpCtx : public OpContext {
+  int32_t axis;
+  int32_t dims;
+};
+
 class AffineChannelOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AffineChannelOp);
@@ -35,7 +40,7 @@ class AffineChannelOp final : public Operator {
       KernelConf*) const;
 #endif
   void VirtualFixParallelDesc(ParallelDesc* pr_desc) const override;
-  NormalizationOpCtx* NewNormalizationOpCtx(const Shape& in_shape) const;
+  AffineChannelOpCtx* NewAffineChannelOpCtx(const Shape& in_shape) const;
 };
 
 }  // namespace oneflow

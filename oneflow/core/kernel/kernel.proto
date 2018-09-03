@@ -102,11 +102,6 @@ message NormalizationKernelConf {
 
 message AffineChannelKernelConf {
   optional int32 axis = 1;
-  optional int64 transpose_rows = 2;
-  optional int64 transpose_cols = 3;
-  optional bool need_transpose = 4;
-  repeated int32 perm = 5;
-
   required bool use_cudnn = 6;
   optional ShapeProto in = 7;
   optional int32 cudnn_bn_mode = 8;
