@@ -46,7 +46,7 @@ struct SmoothL1LossKernelUtil<DeviceType::kCPU, T> {
       } else {
         loss[i] = abs_x - 0.5 * beta;
       }
-      loss[i] *= scale * outside_weights[i];
+      loss[i] *= scale / instance_num * outside_weights[i];
     }
   }
   static void Backward(DeviceCtx* ctx, const int64_t instance_num, const int64_t instance_dim,
@@ -61,7 +61,7 @@ struct SmoothL1LossKernelUtil<DeviceType::kCPU, T> {
       } else {
         in_diff[i] = (x > ZeroVal<T>::value) - (x < ZeroVal<T>::value);
       }
-      in_diff[i] *= scale * inside_weights[i] * outside_weights[i];
+      in_diff[i] *= scale / instance_num * inside_weights[i] * outside_weights[i];
     }
   }
 };
