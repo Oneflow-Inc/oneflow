@@ -19,21 +19,33 @@ NcclCommMgr::NcclCommMgr(const Plan& plan) {
   }
 
   for (const auto& pair : parallel_set2nccl_task_ids) {
-    std::vector<ncclComm_t> comms(pair.second.size());
-    std::vector<int> devices(pair.second.size());
+    std::vector<std::pair<int64_t, int>> task_id_device_id(pair.second.size());
     for (size_t i = 0; i < pair.second.size(); ++i) {
-      int64_t thrd_id = Global<IDMgr>::Get()->ThrdId4ActorId(pair.second.at(i));
-      devices[i] = (int)Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id);
+      int64_t task_id = pair.second.at(i);
+      int64_t thrd_id = Global<IDMgr>::Get()->ThrdId4ActorId(task_id);
+      int device_id = (int)Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id);
+      task_id_device_id[i] = {task_id, device_id};
+    }
+
+    std::sort(task_id_device_id.begin(), task_id_device_id.end(),
+              [](const std::pair<int64_t, int>& a, const std::pair<int64_t, int>& b) {
+                return a.first < b.first;
+              });
+
+    std::vector<ncclComm_t> comms(task_id_device_id.size());
+    std::vector<int> devices(task_id_device_id.size());
+    for (size_t i = 0; i < task_id_device_id.size(); ++i) {
+      devices[i] = task_id_device_id.at(i).second;
     }
     CudaCheck(ncclCommInitAll(comms.data(), (int)devices.size(), devices.data()));
-    for (size_t i = 0; i < pair.second.size(); ++i) {
-      CHECK(actor_id2comm_.emplace(pair.second.at(i), comms.at(i)).second);
+    for (size_t i = 0; i < task_id_device_id.size(); ++i) {
+      CHECK(actor_id2comm_.emplace(task_id_device_id.at(i).first, comms.at(i)).second);
       int device;
       int rank;
       ncclCommCuDevice(comms.at(i), &device);
       ncclCommUserRank(comms.at(i), &rank);
-      LOG(INFO) << "Created nccl communicator for task " << pair.second.at(i) << " with rank "
-                << rank << " on device " << device;
+      LOG(INFO) << "Created nccl communicator for task " << task_id_device_id.at(i).first
+                << " with rank " << rank << " on device " << device;
     }
   }
 }
