@@ -629,6 +629,20 @@ message MultiplyOpConf {
   required string in_1 = 2;
   required string out = 4;
 }
+enum Norm {
+  L1 = 1;
+  L2 = 2;
+}
+
+message HingeLossOpConf {
+  required string prediction = 1;
+  required string label = 2;
+  required string loss = 3;
+  optional LossReductionType reduction = 4 [default = kSumOverN];
+  optional float weight_scalar = 5 [default = 1.0];
+  optional string weight = 6;
+  optional Norm norm = 7[default = L1];
+}
 
 message OperatorConf {
   required string name = 1;
@@ -667,6 +681,7 @@ message OperatorConf {
     MatmulOpConf matmul_conf = 129;
     DotOpConf dot_conf = 130;
     MultiplyOpConf multiply_conf = 131;
+    HingeLossOpConf hinge_loss_conf = 132;
     DropoutOpConf dropout_conf = 140;
     AveragePooling1DOpConf average_pooling_1d_conf = 200;
     MaxPooling1DOpConf max_pooling_1d_conf = 201;
