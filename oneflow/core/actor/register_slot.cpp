@@ -63,7 +63,6 @@ Regst* RegstSlot::FirstFront() const {
 void RegstSlot::InitedDone() {
   CHECK(is_inited_ == false);
   is_inited_ = true;
-  available_regst_desc_cnt_ = total_regst_desc_cnt();
 }
 
 void RegstSlot::ForEachCurFrontRegst(std::function<void(const Regst*)> handler) const {
