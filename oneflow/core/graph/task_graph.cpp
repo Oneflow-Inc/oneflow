@@ -73,25 +73,30 @@ void TaskGraph::GeneratePersistenceThrdId(
   }
 }
 
-void TaskGraph::AcyclicTopoForEachNode(std::function<void(TaskNode* node)> handler) const {
+void TaskGraph::AcyclicTopoForEachNode(std::function<bool(TaskNode* node)> IsAllowedStartNode,
+                                       std::function<void(TaskNode* node)> Handler) const {
   std::list<TaskNode*> starts;
   ForEachNode([&](TaskNode* node) {
-    if (node->consumed_regsts().empty() && !node->IsMeaningLess()) { starts.push_back(node); }
+    if (node->in_edges().empty() && IsAllowedStartNode(node)) { starts.push_back(node); }
   });
-  auto ForEachInNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& handler) {
+  auto ForEachInNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& Handler) {
     node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
       if (IsBackEdge(node_on_in_edge, node)) return;
-      handler(const_cast<TaskNode*>(node_on_in_edge));
+      Handler(const_cast<TaskNode*>(node_on_in_edge));
     });
   };
-  auto ForEachOutNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& handler) {
+  auto ForEachOutNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& Handler) {
     node->ForEachNodeOnOutEdge([&](TaskNode* node_on_out_edge) {
       if (IsBackEdge(node, node_on_out_edge)) return;
-      handler(const_cast<TaskNode*>(node_on_out_edge));
+      Handler(const_cast<TaskNode*>(node_on_out_edge));
     });
   };
   // DfsTopo will cause inappropriate chain graph
-  TopoForEachNode(starts, ForEachInNode, ForEachOutNode, handler);
+  TopoForEachNode(starts, ForEachInNode, ForEachOutNode, Handler);
+}
+
+void TaskGraph::AcyclicTopoForEachNode(std::function<void(TaskNode* node)> Handler) const {
+  return AcyclicTopoForEachNode([](TaskNode*) { return true; }, Handler);
 }
 
 void TaskGraph::RemoveEmptyRegsts() {
