@@ -50,8 +50,6 @@ message MsraInitializerConf {
   required VarianceNorm variance_norm = 1;
 }
 
-message NoneInitializerConf {}
-
 message InitializerConf {
   oneof type {
     ConstantInitializerConf constant_conf = 1;
@@ -61,7 +59,6 @@ message InitializerConf {
     RandomNormalInitializerConf random_normal_conf = 5;
     XavierInitializerConf xavier_conf = 6;
     MsraInitializerConf msra_conf = 7;
-    NoneInitializerConf none_conf = 8;
   }
 }
 

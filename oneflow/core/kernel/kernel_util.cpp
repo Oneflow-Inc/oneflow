@@ -414,8 +414,6 @@ KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& ini
     XavierInitializer<T>(initializer_conf.xavier_conf(), random_seed, blob, data_format);
   } else if (initializer_conf.has_msra_conf()) {
     MsraInitializer<T>(initializer_conf.msra_conf(), random_seed, blob, data_format);
-  } else if (initializer_conf.has_none_conf()) {
-    // do nothing
   } else {
     UNIMPLEMENTED();
   }
@@ -439,8 +437,6 @@ KU_INTEGRAL_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& ini
     ConstantInitializer<T>(static_cast<T>(initializer_conf.constant_int_conf().value()), blob);
   } else if (initializer_conf.has_random_uniform_int_conf()) {
     RandomIntUniformInitializer<T>(initializer_conf.random_uniform_int_conf(), random_seed, blob);
-  } else if (initializer_conf.has_none_conf()) {
-    // do nothing
   } else {
     UNIMPLEMENTED();
   }
