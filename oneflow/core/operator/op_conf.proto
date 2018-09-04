@@ -609,6 +609,21 @@ message AccuracyOpConf {
   required string accuracy = 4;
 }
 
+enum Norm {
+  L1 = 1;
+  L2 = 2;
+}
+
+message HingeLossOpConf {
+  required string prediction = 1;
+  required string label = 2;
+  required string loss = 3;
+  optional LossReductionType reduction = 4 [default = kSumOverN];
+  optional float weight_scalar = 5 [default = 1.0];
+  optional string weight = 6;
+  optional Norm norm = 7[default = L1];
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -643,6 +658,7 @@ message OperatorConf {
     Conv2DOpConf conv_2d_conf = 126;
     Conv3DOpConf conv_3d_conf = 127;
     TransposeOpConf transpose_conf = 128;
+    HingeLossOpConf hinge_loss_conf = 129;
     DropoutOpConf dropout_conf = 140;
     AveragePooling1DOpConf average_pooling_1d_conf = 200;
     MaxPooling1DOpConf max_pooling_1d_conf = 201;
