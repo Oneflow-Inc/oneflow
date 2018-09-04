@@ -71,39 +71,30 @@ void AffineChannelKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937* random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const auto& affine_channel_conf = this->op_conf().affine_channel_conf();
-  if (affine_channel_conf.scale()) {
-    InitializerConf gamma_init_conf;
-    float gamma_init = affine_channel_conf.gamma_init();
-    gamma_init_conf.mutable_constant_conf()->set_value(gamma_init);
-    KernelUtil<device_type, T>::InitializeWithProperConf(ctx, &gamma_init_conf, 0,
-                                                         BnInOp2Blob("gamma"));
-  }
-  if (affine_channel_conf.center()) {
-    InitializerConf beta_init_conf;
-    float beta_init = affine_channel_conf.beta_init();
-    beta_init_conf.mutable_constant_conf()->set_value(beta_init);
-    KernelUtil<device_type, T>::InitializeWithProperConf(ctx, &beta_init_conf, 0,
-                                                         BnInOp2Blob("beta"));
-  }
+  InitializerConf gamma_init_conf;
+  float gamma_init = affine_channel_conf.gamma_init();
+  gamma_init_conf.mutable_constant_conf()->set_value(gamma_init);
+  KernelUtil<device_type, T>::InitializeWithProperConf(ctx, &gamma_init_conf, 0,
+                                                       BnInOp2Blob("gamma"));
+  InitializerConf beta_init_conf;
+  float beta_init = affine_channel_conf.beta_init();
+  beta_init_conf.mutable_constant_conf()->set_value(beta_init);
+  KernelUtil<device_type, T>::InitializeWithProperConf(ctx, &beta_init_conf, 0,
+                                                       BnInOp2Blob("beta"));
 }
 
 template<DeviceType device_type, typename T>
 void AffineChannelKernel<device_type, T>::InitModelBlobsWithDir(
     DeviceCtx* ctx, int32_t part_id, int32_t part_num, const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const auto& conf = this->op_conf().affine_channel_conf();
-  if (conf.scale()) {
-    Blob* gamma_blob = BnInOp2Blob("gamma");
-    KernelUtil<device_type, T>::InitializeWithDir(ctx, 0, part_num, model_load_dir, gamma_blob,
-                                                  "gamma", gamma_blob->shape().At(0),
-                                                  gamma_blob->shape().Count(1));
-  }
-  if (conf.center()) {
-    Blob* beta_blob = BnInOp2Blob("beta");
-    KernelUtil<device_type, T>::InitializeWithDir(ctx, 0, part_num, model_load_dir, beta_blob,
-                                                  "beta", beta_blob->shape().At(0),
-                                                  beta_blob->shape().Count(1));
-  }
+  Blob* gamma_blob = BnInOp2Blob("gamma");
+  KernelUtil<device_type, T>::InitializeWithDir(ctx, 0, part_num, model_load_dir, gamma_blob,
+                                                "gamma", gamma_blob->shape().At(0),
+                                                gamma_blob->shape().Count(1));
+  Blob* beta_blob = BnInOp2Blob("beta");
+  KernelUtil<device_type, T>::InitializeWithDir(ctx, 0, part_num, model_load_dir, beta_blob, "beta",
+                                                beta_blob->shape().At(0),
+                                                beta_blob->shape().Count(1));
 }
 
 template<DeviceType device_type, typename T>

@@ -4,22 +4,11 @@
 namespace oneflow {
 
 void AffineChannelOp::InitFromOpConf() {
-  const auto& conf = op_conf().affine_channel_conf();
-  CHECK_GE(conf.momentum(), 0);
-  CHECK_LE(conf.momentum(), 1);
   EnrollInputBn("in");
   EnrollOutputBn("out");
   EnrollConstBufBn("zero_buf");
-  if (conf.center()) {
-    EnrollModelBn("beta");
-  } else {
-    EnrollDataTmpBn("beta_diff");
-  }
-  if (conf.scale()) {
-    EnrollModelBn("gamma");
-  } else {
-    EnrollDataTmpBn("gamma_diff");
-  }
+  EnrollModelBn("beta");
+  EnrollModelBn("gamma");
 }
 
 const PbMessage& AffineChannelOp::GetCustomizedConf() const {
@@ -53,17 +42,7 @@ void AffineChannelOp::InferParamBlobDescs(
     const AffineChannelOpConf& conf, int64_t norm_part_num, DataType in_data_type,
     bool use_cudnn) const {
   BlobDesc blob_desc(Shape({norm_part_num}), in_data_type, false, false, 1);
-  std::list<std::string> blob_names = {"zero_buf"};
-  if (conf.center()) {
-    blob_names.push_back("beta");
-  } else {
-    blob_names.push_back("beta_diff");
-  }
-  if (conf.scale()) {
-    blob_names.push_back("gamma");
-  } else {
-    blob_names.push_back("gamma_diff");
-  }
+  std::list<std::string> blob_names = {"zero_buf", "beta", "gamma"};
   for (const auto& bn_in_op : blob_names) { *GetBlobDesc4BnInOp(bn_in_op) = blob_desc; }
 }
 
@@ -88,7 +67,6 @@ void AffineChannelOp::InferBlobDescsForCudnn(
   const auto& conf = op_conf().affine_channel_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   const DataType in_data_type = in_blob_desc->data_type();
-  CHECK(conf.scale() && conf.center()) << "Cudnn batch norm must use scale and center";
   InferParamBlobDescs(GetBlobDesc4BnInOp, conf, in_blob_desc->shape().At(conf.axis()), in_data_type,
                       true);
 }
