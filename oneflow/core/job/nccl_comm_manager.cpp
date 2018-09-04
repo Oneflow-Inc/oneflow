@@ -1,6 +1,7 @@
 #include "oneflow/core/job/nccl_comm_manager.h"
 #include "oneflow/core/job/machine_context.h"
-#include "nccl_comm_manager.h"
+#include "oneflow/core/job/nccl_comm_manager.h"
+#include "oneflow/core/device/nccl_util.h"
 
 namespace oneflow {
 
@@ -37,7 +38,7 @@ NcclCommMgr::NcclCommMgr(const Plan& plan) {
     for (size_t i = 0; i < task_id_device_id.size(); ++i) {
       devices[i] = task_id_device_id.at(i).second;
     }
-    CudaCheck(ncclCommInitAll(comms.data(), (int)devices.size(), devices.data()));
+    NcclCheck(ncclCommInitAll(comms.data(), (int)devices.size(), devices.data()));
     for (size_t i = 0; i < task_id_device_id.size(); ++i) {
       CHECK(actor_id2comm_.emplace(task_id_device_id.at(i).first, comms.at(i)).second);
       int device;

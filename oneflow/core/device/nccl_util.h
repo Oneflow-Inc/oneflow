@@ -18,6 +18,8 @@ inline ncclDataType_t GetNcclDataType(const DataType &dt) {
   }
 }
 
+void NcclCheck(ncclResult_t error);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_DEVICE_NCCL_UTIL_H_

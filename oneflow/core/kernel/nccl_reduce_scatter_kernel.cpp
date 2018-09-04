@@ -11,7 +11,7 @@ void NcclReduceScatterKernel<device_type>::ForwardDataContent(
   Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
   auto elem_cnt = (size_t)out_blob->shape().elem_cnt();
-  CudaCheck(ncclReduceScatter(in_blob->dptr<>(), out_blob->mut_dptr<>(), elem_cnt,
+  NcclCheck(ncclReduceScatter(in_blob->dptr<>(), out_blob->mut_dptr<>(), elem_cnt,
                               GetNcclDataType(in_blob->data_type()), ncclSum,
                               ctx.device_ctx->nccl_handle(), ctx.device_ctx->cuda_stream()));
 }
