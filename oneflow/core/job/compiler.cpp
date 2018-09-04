@@ -102,7 +102,9 @@ Plan Compiler::DoCompile() {
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::PinConsumedRegst, _1));
   task_gph->AcyclicTopoForEachNode(
-      [](TaskNode* node) { node->Build(); });  // kMdUpdt task will not be built in Prediction mode
+      [](TaskNode* node) { return node->GetTaskType() != kNormalMdUpdt; }, &TaskNode::Build);
+  task_gph->AcyclicTopoForEachNode(
+      [](TaskNode* node) { return node->GetTaskType() == kNormalMdUpdt; }, &TaskNode::Build);
   task_gph->RemoveEmptyRegsts();
   task_gph->AddOrderingCtrlEdgeInSameChain();
   if (job_desc->IsTrain() && job_desc->enable_mem_sharing()) {

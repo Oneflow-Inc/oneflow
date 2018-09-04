@@ -57,10 +57,6 @@ struct HingeLossKernelUtil<DeviceType::kCPU, PredType, LabelType> {
         KernelUtil<DeviceType::kCPU, PredType>::Mul(ctx, piece_size * pre_dim, tmp_diff, tmp_diff,
                                                     tmp);
         KernelUtil<DeviceType::kCPU, PredType>::RowSum(ctx, piece_size, pre_dim, tmp, loss);
-        /*for (int64_t i = 0; i < piece_size; ++i) {
-          KernelUtil<DeviceType::kCPU, PredType>::Dot(ctx, pre_dim, tmp_diff + i * pre_dim, 1,
-                                                      tmp_diff + i * pre_dim, 1, loss + i);
-        }*/
         break;
       default: LOG(FATAL) << "Invalid norm method in " << op_conf.name();
     }
