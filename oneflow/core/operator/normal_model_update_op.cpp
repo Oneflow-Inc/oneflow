@@ -5,6 +5,7 @@
 namespace oneflow {
 
 void NormalModelUpdtOp::InitFromOpConf() {
+  // TODO(jiyuan): single in for mdupdt op
   FOR_RANGE(int32_t, i, 0, op_conf().normal_mdupdt_conf().in_num()) {
     EnrollInputBn("in_" + std::to_string(i), false);
   }
