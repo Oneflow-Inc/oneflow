@@ -358,10 +358,16 @@ class ScoreIndex : public IndexType {
 template<typename IndexType>
 class MaxOverlapIndex : public IndexType {
  public:
-  MaxOverlapIndex(const IndexType& slice, float* max_overlap_ptr, int32_t* max_overlap_gt_index_ptr)
+  MaxOverlapIndex(const IndexType& slice, float* max_overlap_ptr, int32_t* max_overlap_gt_index_ptr,
+                  bool init_max_overlap)
       : IndexType(slice),
         max_overlap_ptr_(max_overlap_ptr),
-        max_overlap_gt_index_ptr_(max_overlap_gt_index_ptr) {}
+        max_overlap_gt_index_ptr_(max_overlap_gt_index_ptr) {
+    if (init_max_overlap) {
+      memset(max_overlap_ptr_, 0, this->capacity() * sizeof(float));
+      std::fill(max_overlap_gt_index_ptr_, max_overlap_gt_index_ptr_ + this->capacity(), -1);
+    }
+  }
 
   void UpdateMaxOverlap(int32_t index, int32_t gt_index, float overlap,
                         const std::function<void()>& DoUpdateHandle = []() {}) {
@@ -446,11 +452,13 @@ class GtBoxesPbValueList {
   template<typename T>
   const BBox<T>* GetBBox(int32_t index) const {
     CHECK_GE(index, 0);
+    CHECK_LT(index, this->size());
     return BBox<T>::Cast(box_pb_.value().value().data()) + index;
   }
 
   virtual void Erase(int32_t index) {
     CHECK_GE(index, 0);
+    CHECK_LT(index, this->size());
     box_pb_.mutable_value()->mutable_value()->erase(
         box_pb_.value().value().begin() + index * 4,
         box_pb_.value().value().begin() + (index + 1) * 4);
@@ -505,11 +513,13 @@ class GtBoxesAndLabelsPbValueList : public GtBoxesPbValueList<BoxPb> {
 
   int32_t GetLabel(int32_t index) const {
     if (index < 0) { return 0; }
+    CHECK_LT(index, label_pb_.value().value_size());
     return label_pb_.value().value(index);
   }
 
   virtual void Erase(int32_t index) override {
     CHECK_GE(index, 0);
+    CHECK_LT(index, label_pb_.value().value_size());
     label_pb_.mutable_value()->mutable_value()->erase(label_pb_.value().value().begin() + index);
     GtBoxesPbValueList<BoxPb>::Erase(index);
   }
@@ -532,18 +542,18 @@ class GtBoxesWithMaxOverlapPbValueList : public GtBoxesPbValueList<BoxPb> {
  public:
   GtBoxesWithMaxOverlapPbValueList(const BoxPb& box_pb)
       : GtBoxesPbValueList<BoxPb>(box_pb), last_gt_index_(-1), last_gt_max_overlap_with_end_(0) {
-    max_overlap_pb_.mutable_value()->Reserve(this->size());
-    std::fill(max_overlap_pb_.mutable_value()->begin(), max_overlap_pb_.mutable_value()->end(),
-              0.f);
+    max_overlap_pb_.mutable_value()->Resize(this->size(), 0.f);
   }
 
   float GetMaxOverlap(int32_t index) const {
     CHECK_GE(index, 0);
+    CHECK_LT(index, max_overlap_pb_.value_size());
     return max_overlap_pb_.value(index);
   }
 
   void SetMaxOverlap(int32_t index, float overlap) {
     CHECK_GE(index, 0);
+    CHECK_LT(index, max_overlap_pb_.value_size());
     max_overlap_pb_.set_value(index, overlap);
   }
 

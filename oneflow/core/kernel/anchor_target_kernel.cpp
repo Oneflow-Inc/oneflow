@@ -50,12 +50,9 @@ typename AnchorTargetKernel<T>::BoxesLabelAndMaxOverlap AnchorTargetKernel<T>::G
                     anchors_blob->dptr<T>(), true);
   anchor_boxes.Truncate(*(BnInOp2Blob("inside_anchors_num")->dptr<int32_t>()));
 
-  Blob* max_overlaps_blob = BnInOp2Blob("max_overlaps");
-  std::memset(max_overlaps_blob->mut_dptr(), 0,
-              max_overlaps_blob->shape().elem_cnt() * sizeof(float));
   BoxesWithMaxOverlap boxes_with_max_overlap(
-      anchor_boxes, max_overlaps_blob->mut_dptr<float>(),
-      BnInOp2Blob("anchor_nearest_gt_box_index")->mut_dptr<int32_t>());
+      anchor_boxes, BnInOp2Blob("max_overlaps")->mut_dptr<float>(),
+      BnInOp2Blob("anchor_nearest_gt_box_index")->mut_dptr<int32_t>(), true);
 
   BoxesLabelAndMaxOverlap labeled_boxes_with_max_overlap(
       boxes_with_max_overlap, rpn_labels_blob->mut_dptr<int32_t>(im_index));
@@ -147,10 +144,10 @@ void AnchorTargetKernel<T>::ComputeTargetsAndWriteOutput(
   const BBoxRegressionWeights& bbox_reg_ws = op_conf().anchor_target_conf().bbox_reg_weights();
 
   FOR_RANGE(size_t, i, 0, anchor_boxes.capacity()) {
-    const BBox<T>* anchor_box = anchor_boxes.bbox(i);
-    const BBox<float>* gt_box = gt_boxes.GetBBox<float>(anchor_boxes.max_overlap_gt_index(i));
     int32_t label = anchor_boxes.label(i);
     if (label == 1) {
+      const BBox<T>* anchor_box = anchor_boxes.bbox(i);
+      const BBox<float>* gt_box = gt_boxes.GetBBox<float>(anchor_boxes.max_overlap_gt_index(i));
       bbox_target[i].TransformInverse(anchor_box, gt_box, bbox_reg_ws);
       inside_weights[i].set_weight_x(1.0);
       inside_weights[i].set_weight_y(1.0);

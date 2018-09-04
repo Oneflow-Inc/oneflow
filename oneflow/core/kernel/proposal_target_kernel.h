@@ -28,9 +28,12 @@ class ProposalTargetKernel final : public KernelIf<DeviceType::kCPU> {
       size_t im_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   void ComputeRoiBoxesAndGtBoxesOverlaps(const GtBoxesAndLabels& gt_boxes,
                                          BoxesWithMaxOverlap& roi_boxes) const;
-  void ConcatGtBoxesToRoiBoxes(const GtBoxesAndLabels& gt_boxes,
-                               BoxesWithMaxOverlap& roi_boxes) const;
-  void SubsampleForegroundAndBackground(BoxesWithMaxOverlap& boxes) const;
+  void ConcatGtBoxesToRoiBoxesHead(const GtBoxesAndLabels& gt_boxes,
+                                   BoxesWithMaxOverlap& roi_boxes) const;
+  void ConcatGtBoxesToRoiBoxesTail(const GtBoxesAndLabels& gt_boxes,
+                                   BoxesWithMaxOverlap& roi_boxes) const;
+  void SubsampleForegroundAndBackground(const GtBoxesAndLabels& gt_boxes,
+                                        BoxesWithMaxOverlap& boxes) const;
   void ComputeAndWriteOutput(size_t im_index, const GtBoxesAndLabels& gt_boxes,
                              const BoxesWithMaxOverlap& boxes,
                              const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
