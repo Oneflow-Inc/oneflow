@@ -63,10 +63,6 @@ struct HingeLossKernelUtil<DeviceType::kGPU, PredType, LabelType> {
         KernelUtil<DeviceType::kGPU, PredType>::RowSum(ctx, piece_size, pre_dim, tmp, loss,
                                                        tmp_storage,
                                                        sizeof(PredType) * piece_size * pre_dim);
-        /*for (int64_t i = 0; i < piece_size; ++i) {
-          KernelUtil<DeviceType::kGPU, PredType>::Dot(ctx, pre_dim, tmp_diff + i * pre_dim, 1,
-                                                      tmp_diff + i * pre_dim, 1, loss + i);
-        }*/
         break;
       default: LOG(FATAL) << "Invalid norm method in " << op_conf.name();
     }
