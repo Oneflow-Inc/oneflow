@@ -287,7 +287,7 @@ void TaskNode::FixRegisterNumRange() {
       }
     }
     if (in_same_stream == false && area_id_ != static_cast<int64_t>(kMdUpdtArea)
-        && GetTaskType() == TaskType::kCopyHd) {  // TODO: delete this hack
+        && GetTaskType() == TaskType::kCopyLocal) {  // TODO: delete this hack
       if (produced_regst->max_register_num() >= 2) { produced_regst->UpdtMinRegstNumIfNeed(2); }
     }
   }
@@ -364,7 +364,7 @@ RegstDescIdSet* FindOrCreateConsumedCtrlRegstDescIdSet(TaskProto* task_proto,
 std::map<TaskType, std::string> task_type2color = {
     {kInvalid, "0"},       {kNormalForward, "2"},  {kNormalBackward, "3"},  {kRecordLoad, "1"},
     {kDecode, "1"},        {kLoss, "4"},           {kLossAcc, "5"},         {kLossPrint, "1"},
-    {kNormalMdUpdt, "6"},  {kMdSave, "1"},         {kMdDiffAcc, "7"},       {kCopyHd, "8"},
+    {kNormalMdUpdt, "6"},  {kMdSave, "1"},         {kMdDiffAcc, "7"},       {kCopyLocal, "8"},
     {kCopyCommNet, "9"},   {kBoxing, "10"},        {kPrint, "1"},           {kReduceConcat, "2"},
     {kReduceScatter, "2"}, {kReduceLocalAdd, "2"}, {kReduceGlobalAdd, "2"}, {kReduceGather, "2"},
     {kReduceSplit, "2"},   {kAccuracy, "4"},       {kAccuracyPrint, "1"},   {kAccuracyAcc, "5"}};

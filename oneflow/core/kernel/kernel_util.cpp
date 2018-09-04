@@ -157,6 +157,7 @@ void Memcpy<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const void* src, size_t
 #endif
 
 ) {
+  CHECK_NE(dst, src);
   memcpy(dst, src, sz);
 }
 
@@ -167,6 +168,12 @@ void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
   if (src_mem_case.has_host_mem() && dst_mem_case.has_host_mem()) {
     func = &Memcpy<DeviceType::kCPU>;
     kind = cudaMemcpyKind::cudaMemcpyHostToHost;
+  } else if (src_mem_case.has_device_cuda_mem() && dst_mem_case.has_device_cuda_mem()
+             && src_mem_case.device_cuda_mem().device_id()
+                    != dst_mem_case.device_cuda_mem().device_id()) {
+    CudaCheck(cudaMemcpyPeerAsync(dst, dst_mem_case.device_cuda_mem().device_id(), src,
+                                  src_mem_case.device_cuda_mem().device_id(), sz,
+                                  ctx->cuda_stream()));
   } else {
     func = &Memcpy<DeviceType::kGPU>;
     if (src_mem_case.has_host_mem() && dst_mem_case.has_device_cuda_mem()) {
@@ -178,8 +185,8 @@ void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
     } else {
       UNIMPLEMENTED();
     }
+    func(ctx, dst, src, sz, kind);
   }
-  func(ctx, dst, src, sz, kind);
 }
 
 template<>

@@ -365,13 +365,13 @@ void TaskGraph::AddCtrlEdge4MemSharingInOneReduce(const ReduceTaskNodes& reduce_
   CHECK_EQ(2, reduce_task_nodes.global_add->out_edges().size());
   TaskNode* global_add_copy_d2h = nullptr;
   for (TaskEdge* out_edge : reduce_task_nodes.global_add->out_edges()) {
-    if (out_edge->dst_node()->GetTaskType() == TaskType::kCopyHd) {
+    if (out_edge->dst_node()->GetTaskType() == TaskType::kCopyLocal) {
       global_add_copy_d2h = out_edge->dst_node();
     }
   }
 
   for (TaskEdge* in_edge : reduce_task_nodes.gather->in_edges()) {
-    if (in_edge->src_node()->GetTaskType() == TaskType::kCopyHd) {
+    if (in_edge->src_node()->GetTaskType() == TaskType::kCopyLocal) {
       global_add_copy_d2h->BuildCtrlRegstDesc(in_edge->src_node());
     }
   }
@@ -388,7 +388,7 @@ void TaskGraph::BuildCtrlRegstBetweenReduceCopyNodes(const CompTaskNode* src_red
   HashMap<int64_t, ReduceCopyNodePair> mem_shared_offset2copy_nodes;
 
   for (TaskEdge* out_edge : src_reduce->out_edges()) {
-    if (out_edge->dst_node()->GetTaskType() == TaskType::kCopyHd) {
+    if (out_edge->dst_node()->GetTaskType() == TaskType::kCopyLocal) {
       int64_t offset = out_edge->GetSoleRegst()->mem_shared_offset();
       mem_shared_offset2copy_nodes[offset].copy_d2h = out_edge->dst_node();
     }
@@ -396,7 +396,7 @@ void TaskGraph::BuildCtrlRegstBetweenReduceCopyNodes(const CompTaskNode* src_red
   CHECK_EQ(copy_node_num, mem_shared_offset2copy_nodes.size());
 
   for (TaskEdge* in_edge : dst_reduce->in_edges()) {
-    if (in_edge->src_node()->GetTaskType() == TaskType::kCopyHd) {
+    if (in_edge->src_node()->GetTaskType() == TaskType::kCopyLocal) {
       int64_t offset = in_edge->GetSoleRegst()->mem_shared_offset();
       CHECK(mem_shared_offset2copy_nodes.find(offset) != mem_shared_offset2copy_nodes.end());
       mem_shared_offset2copy_nodes.at(offset).copy_h2d = in_edge->src_node();
@@ -512,11 +512,11 @@ void TaskGraph::RmUselessConsumeRelationshipBetweenFwBw() {
 
 void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {
   for (TaskNode* task_node : ordered_task_nodes_) {
-    auto copy_hd_task_node = dynamic_cast<CopyHdTaskNode*>(task_node);
-    if (copy_hd_task_node == nullptr) { continue; }
-    if (copy_hd_task_node->copy_type() != CopyHdOpConf::H2D) { continue; }
-    if (copy_hd_task_node->area_id() != static_cast<int64_t>(kDataForwardArea)
-        && copy_hd_task_node->area_id() != static_cast<int64_t>(kBoundaryArea)) {
+    auto copy_local_task_node = dynamic_cast<CopyLocalTaskNode*>(task_node);
+    if (copy_local_task_node == nullptr) { continue; }
+    if (copy_local_task_node->copy_type() != CopyLocalOpConf::H2D) { continue; }
+    if (copy_local_task_node->area_id() != static_cast<int64_t>(kDataForwardArea)
+        && copy_local_task_node->area_id() != static_cast<int64_t>(kBoundaryArea)) {
       continue;
     }
     std::vector<TaskNode*> candidate_nodes;
@@ -550,7 +550,7 @@ void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {
         candidate_node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
           if (IsMdUpdtTaskType(node_on_in_edge->GetTaskType())) {
             RegstDesc* ctrl_regst = task_node->BuildCtrlRegstDesc(node_on_in_edge);
-            RegstDesc* copy_out_regst = copy_hd_task_node->GetProducedRegst("copy_out").get();
+            RegstDesc* copy_out_regst = copy_local_task_node->GetProducedRegst("copy_out").get();
             int64_t piece_num_in_batch = Global<JobDesc>::Get()->NumOfPiecesInBatch();
             ctrl_regst->UpdtMinRegstNumIfNeed(copy_out_regst->min_register_num()
                                               + piece_num_in_batch - 1);
@@ -747,15 +747,15 @@ TaskNode* TaskGraph::BuildTaskStep(
 
 TaskNode* TaskGraph::AddCopyH2DTaskTo(TaskNode* task) {
   CHECK_EQ(task->device_type(), DeviceType::kGPU);
-  CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
-  copy_task->Init(CopyHdOpConf::H2D, task->machine_id(), task->GpuPhyId());
+  CopyLocalTaskNode* copy_task = NewNode<CopyLocalTaskNode>();
+  copy_task->Init(CopyLocalOpConf::H2D, task->machine_id(), task->GpuPhyId());
   return copy_task;
 }
 
 TaskNode* TaskGraph::AddCopyD2HTaskFrom(TaskNode* task) {
   CHECK_EQ(task->device_type(), DeviceType::kGPU);
-  CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
-  copy_task->Init(CopyHdOpConf::D2H, task->machine_id(), task->GpuPhyId());
+  CopyLocalTaskNode* copy_task = NewNode<CopyLocalTaskNode>();
+  copy_task->Init(CopyLocalOpConf::D2H, task->machine_id(), task->GpuPhyId());
   return copy_task;
 }
 

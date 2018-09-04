@@ -232,10 +232,11 @@ message ConcatOpConf {
 message CopyCommNetOpConf {
 }
 
-message CopyHdOpConf {
+message CopyLocalOpConf {
   enum Type {
     H2D = 0;
     D2H = 1;
+    D2D = 2;
   }
   required Type type = 1;
 }
@@ -659,7 +660,7 @@ message OperatorConf {
     ReluOpConf relu_conf = 104;
     SoftmaxOpConf softmax_conf = 105;
     SparseCrossEntropyLossOpConf sparse_cross_entropy_loss_conf = 106;
-    CopyHdOpConf copy_hd_conf = 107;
+    CopyLocalOpConf copy_local_conf = 107;
     CloneOpConf clone_conf = 108;
     BoxingOpConf boxing_conf = 109;
     NormalModelUpdateOpConf normal_mdupdt_conf = 110;
