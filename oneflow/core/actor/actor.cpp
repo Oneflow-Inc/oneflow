@@ -267,7 +267,8 @@ void Actor::TryLogActEvent(const std::function<void()>& DoAct) const {
 }
 
 void Actor::ActUntilFail() {
-  while (IsReadReady() && IsWriteReady() && IsCtrlReady()) {
+  while (IsWriteReady() && IsReadReady() && IsCtrlReady()) {
+    // while (IsReadReady() && IsWriteReady() && IsCtrlReady()) {
     act_id_ += 1;
     std::function<bool(Regst*)> IsNaiveAllowedReturnToProducer = [](Regst*) { return true; };
     TryLogActEvent([&] { Act(&IsNaiveAllowedReturnToProducer); });

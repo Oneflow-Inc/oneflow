@@ -15,6 +15,10 @@ void ReduceGlobalAddCompActor::SetKernelCtxOther(void** other) {
   bool is_inplace_in_blob =
       EnableInplace() ? oneflow_cast<int64_t>(ibn.substr(3)) == parallel_ctx()->parallel_id()
                       : false;
+  int64_t gpu_id = thrd_id() % 4;
+  int64_t local_act_id = act_id() % 4;
+  // LOG(INFO) << "actor_id: " << actor_id() << ",gpu_id: " << gpu_id
+  //          << ",local_act_id: " << local_act_id << ",in: " << cur_processed_regst_desc_id();
 
   other_val_ = std::make_tuple(ibn, is_inited, is_inplace_in_blob);
   *other = static_cast<void*>(&other_val_);

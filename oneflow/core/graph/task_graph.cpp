@@ -362,7 +362,6 @@ void TaskGraph::AddCtrlEdge4MemSharingInOneReduce(const ReduceTaskNodes& reduce_
   }
 
   // global_add -> gather
-  CHECK_EQ(2, reduce_task_nodes.global_add->out_edges().size());
   TaskNode* global_add_copy_d2h = nullptr;
   for (TaskEdge* out_edge : reduce_task_nodes.global_add->out_edges()) {
     if (out_edge->dst_node()->GetTaskType() == TaskType::kCopyLocal) {
@@ -721,10 +720,21 @@ TaskNode* TaskGraph::BuildTaskStep(
   int32_t next_mem_zone_id = -1;
   TaskNode* next_node = nullptr;
   if (cur_node->MemZoneId121() != cpu_mem_zone_id) {
-    next_mem_zone_id = cpu_mem_zone_id;
-    if (!use_buf_task_node || !(next_node = GetBufTask(cur_node->machine_id(), next_mem_zone_id))) {
-      next_node = AddCopyD2HTaskFrom(cur_node);
-      Connect<TaskNode>(cur_node, NewEdge(), next_node);
+    if (Global<JobDesc>::Get()->enable_device_p2p() && cur_node->machine_id() == dst->machine_id()
+        && dst->MemZoneId121() != cpu_mem_zone_id) {
+      next_mem_zone_id = dst->MemZoneId121();
+      if (!use_buf_task_node
+          || !(next_node = GetBufTask(cur_node->machine_id(), next_mem_zone_id))) {
+        next_node = AddCopyD2DTaskTo(dst);
+        Connect<TaskNode>(cur_node, NewEdge(), next_node);
+      }
+    } else {
+      next_mem_zone_id = cpu_mem_zone_id;
+      if (!use_buf_task_node
+          || !(next_node = GetBufTask(cur_node->machine_id(), next_mem_zone_id))) {
+        next_node = AddCopyD2HTaskFrom(cur_node);
+        Connect<TaskNode>(cur_node, NewEdge(), next_node);
+      }
     }
   } else if (cur_node->machine_id() == dst->machine_id()) {
     next_mem_zone_id = dst->MemZoneId121();
@@ -756,6 +766,13 @@ TaskNode* TaskGraph::AddCopyD2HTaskFrom(TaskNode* task) {
   CHECK_EQ(task->device_type(), DeviceType::kGPU);
   CopyLocalTaskNode* copy_task = NewNode<CopyLocalTaskNode>();
   copy_task->Init(CopyLocalOpConf::D2H, task->machine_id(), task->GpuPhyId());
+  return copy_task;
+}
+
+TaskNode* TaskGraph::AddCopyD2DTaskTo(TaskNode* task) {
+  CHECK_EQ(task->device_type(), DeviceType::kGPU);
+  CopyLocalTaskNode* copy_task = NewNode<CopyLocalTaskNode>();
+  copy_task->Init(CopyLocalOpConf::D2D, task->machine_id(), task->GpuPhyId());
   return copy_task;
 }
 
