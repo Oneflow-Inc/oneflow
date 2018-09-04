@@ -4,9 +4,7 @@
 
 namespace oneflow {
 
-// TODO(jiyuan): valid only in GPU device
-template<DeviceType device_type>
-void NcclReduceScatterKernel<device_type>::ForwardDataContent(
+void NcclReduceScatterKernel::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
@@ -16,6 +14,6 @@ void NcclReduceScatterKernel<device_type>::ForwardDataContent(
                               ctx.device_ctx->nccl_handle(), ctx.device_ctx->cuda_stream()));
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kNcclReduceScatterConf, NcclReduceScatterKernel);
+REGISTER_KERNEL(OperatorConf::kNcclReduceScatterConf, NcclReduceScatterKernel);
 
 }  // namespace oneflow
