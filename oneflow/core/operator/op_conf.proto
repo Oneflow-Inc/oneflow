@@ -629,6 +629,7 @@ message MultiplyOpConf {
   required string in_1 = 2;
   required string out = 4;
 }
+
 enum Norm {
   L1 = 1;
   L2 = 2;
