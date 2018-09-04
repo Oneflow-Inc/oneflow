@@ -13,6 +13,7 @@ message ParallelContext {
   required int64 parallel_id = 1;
   required int64 parallel_num = 2;
   required ParallelPolicy policy = 3;
+  optional int64 parallel_set_id = 4;
 }
 
 message ParallelConf {
