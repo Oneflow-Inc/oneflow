@@ -108,6 +108,7 @@ void EpollCommNet::InitSockets() {
     int bind_result =
         bind(listen_sockfd, reinterpret_cast<sockaddr*>(&this_sockaddr), sizeof(this_sockaddr));
     if (bind_result == 0) {
+      machine_id2sockfd_[this_machine_id] = listen_sockfd;
       PCHECK(listen(listen_sockfd, total_machine_num) == 0);
       PushPort(this_machine_id, this_listen_port);
       break;
