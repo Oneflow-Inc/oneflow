@@ -1,3 +1,4 @@
+#include <oneflow/core/job/nccl_comm_manager.h>
 #include "oneflow/core/actor/actor.h"
 #include "oneflow/core/thread/thread_manager.h"
 
@@ -126,7 +127,8 @@ void Actor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
       CudaStreamHandle* cuda_handle = nullptr;
       CHECK_EQ(GetLocalWorkStreamId(), 0);
       cuda_handle = thread_ctx.g_cuda_stream.get();
-      device_ctx_.reset(new CudaDeviceCtx(cuda_handle));
+      device_ctx_.reset(
+          new CudaDeviceCtx(cuda_handle, Global<NcclCommMgr>::Get()->NcclComm4ActorId(act_id_)));
       break;
     }
     default: { UNIMPLEMENTED(); }

@@ -20,7 +20,7 @@ NcclCommMgr::NcclCommMgr(const Plan& plan) {
   for (const auto& pair : parallel_set2nccl_task_ids) {
     std::vector<ncclComm_t> comms(pair.second.size());
     std::vector<int> devices(pair.second.size());
-    for (int i = 0; i < pair.second.size(); ++i) {
+    for (size_t i = 0; i < pair.second.size(); ++i) {
       int64_t thrd_id = Global<IDMgr>::Get()->ThrdId4ActorId(pair.second.at(i));
       devices[i] = (int)Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id);
     }

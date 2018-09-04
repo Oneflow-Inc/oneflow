@@ -8,6 +8,7 @@
 namespace oneflow {
 
 class NcclCommMgr final {
+ public:
   ~NcclCommMgr();
 
   ncclComm_t NcclComm4ActorId(int64_t actor_id) const;
