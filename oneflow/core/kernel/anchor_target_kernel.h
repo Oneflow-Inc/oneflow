@@ -33,6 +33,8 @@ class AnchorTargetKernel final : public KernelIf<DeviceType::kCPU> {
                                    BoxesLabelAndMaxOverlap& anchor_boxes) const;
   size_t SubsampleForeground(BoxesLabelAndMaxOverlap& boxes) const;
   size_t SubsampleBackground(size_t fg_cnt, BoxesLabelAndMaxOverlap& boxes) const;
+  size_t ChoiceForeground(BoxesLabelAndMaxOverlap& boxes) const;
+  size_t ChoiceBackground(size_t fg_cnt, BoxesLabelAndMaxOverlap& boxes) const;
   void ComputeTargetsAndWriteOutput(
       size_t im_index, size_t total_sample_count, const GtBoxesWithMaxOverlap& gt_boxes,
       const BoxesLabelAndMaxOverlap& anchor_boxes,

@@ -155,7 +155,8 @@ class Indexes {
       : Indexes(capacity, capacity, index_ptr, init_index) {}
 
   void Truncate(size_t size) {
-    if (size < capacity_) { size_ = size; }
+    CHECK_LE(size, capacity_);
+    size_ = size;
   }
 
   void Assign(const Indexes& other) {
@@ -284,7 +285,7 @@ class LabelIndex : public IndexType {
     std::fill(label_ptr_ + begin, label_ptr_ + end, label);
   }
 
-  void FillLabel(int32_t label) { Fill(0, this->capacity(), label); }
+  void FillLabel(int32_t label) { FillLabel(0, this->capacity(), label); }
 
   void SortByLabel(const std::function<bool(int32_t, int32_t)>& Compare) {
     this->Sort([&](int32_t lhs_index, int32_t rhs_index) {
