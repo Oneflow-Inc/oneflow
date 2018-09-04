@@ -128,7 +128,7 @@ void Actor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
       CHECK_EQ(GetLocalWorkStreamId(), 0);
       cuda_handle = thread_ctx.g_cuda_stream.get();
       device_ctx_.reset(
-          new CudaDeviceCtx(cuda_handle, Global<NcclCommMgr>::Get()->NcclComm4ActorId(act_id_)));
+          new CudaDeviceCtx(cuda_handle, Global<NcclCommMgr>::Get()->NcclComm4ActorId(actor_id_)));
       break;
     }
     default: { UNIMPLEMENTED(); }
