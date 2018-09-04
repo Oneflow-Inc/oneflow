@@ -27,6 +27,7 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
                                      in_i->dptr<T>(), 1, in_0->mut_dptr<T>(), 1);
   }
 
+  // TODO(jiyuan): get 'batch_num' from the blob header of the input blob
   int64_t batch_size = Global<JobDesc>::Get()->BatchSize();
   float l1 = Global<JobDesc>::Get()->L1();
   float l2 = Global<JobDesc>::Get()->L2();

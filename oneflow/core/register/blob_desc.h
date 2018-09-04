@@ -52,6 +52,7 @@ class BlobDesc {
   bool header_is_opaque_;
   FieldDesc opaque_header_;
 
+  // TODO(jiyuan): add instance_num
   bool has_data_id_;
   bool has_col_num_;
   int64_t max_col_num_;

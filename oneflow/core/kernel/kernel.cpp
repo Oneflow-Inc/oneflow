@@ -55,6 +55,7 @@ void Kernel::Forward(const KernelCtx& ctx,
     Blob* out_blob = BnInOp2Blob(obns[0]);
     ForwardActivation(ctx, out_blob);
   }
+  // TODO(jiyuan): copy instance_num to downstream kernel
   if (kernel_conf_.need_do_opaque_header()) {
     ForwardPackedHeader(ctx, BnInOp2Blob);
   } else {
@@ -87,6 +88,7 @@ void Kernel::Backward(const KernelCtx& ctx,
   } else {
     BackwardDataContent(ctx, BnInOp2Blob);
   }
+  // TODO(jiyuan): for kernel which needs do instance num, compute and set the instance num in the blob header
   if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
   if (kernel_conf_.need_do_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
 }
