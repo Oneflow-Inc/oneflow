@@ -25,8 +25,14 @@ NcclCommMgr::NcclCommMgr(const Plan& plan) {
       devices[i] = (int)Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id);
     }
     CudaCheck(ncclCommInitAll(comms.data(), (int)devices.size(), devices.data()));
-    for (int i = 0; i < pair.second.size(); ++i) {
+    for (size_t i = 0; i < pair.second.size(); ++i) {
       CHECK(actor_id2comm_.emplace(pair.second.at(i), comms.at(i)).second);
+      int device;
+      int rank;
+      ncclCommCuDevice(comms.at(i), &device);
+      ncclCommUserRank(comms.at(i), &rank);
+      LOG(INFO) << "Created nccl communicator for task " << pair.second.at(i) << " with rank "
+                << rank << " on device " << device;
     }
   }
 }
