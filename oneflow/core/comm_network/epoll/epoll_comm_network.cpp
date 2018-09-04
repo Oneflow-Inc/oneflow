@@ -8,16 +8,6 @@ namespace oneflow {
 
 namespace {
 
-sockaddr_in GetSockAddr(int64_t machine_id, uint16_t port) {
-  const Machine& machine = Global<JobDesc>::Get()->resource().machine(machine_id);
-  const std::string& addr = machine.addr();
-  sockaddr_in sa;
-  sa.sin_family = AF_INET;
-  sa.sin_port = htons(port);
-  PCHECK(inet_pton(AF_INET, addr.c_str(), &(sa.sin_addr)) == 1);
-  return sa;
-}
-
 int64_t GetMachineId(const sockaddr_in& sa) {
   char addr[INET_ADDRSTRLEN];
   memset(addr, '\0', sizeof(addr));
@@ -85,6 +75,23 @@ void EpollCommNet::InitSockets() {
   int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
   int64_t total_machine_num = Global<JobDesc>::Get()->TotalMachineNum();
   machine_id2sockfd_.assign(total_machine_num, -1);
+  for (size_t i = 0; i < total_machine_num; ++i) {
+    const Machine& machine = Global<JobDesc>::Get()->resource().machine(i);
+    const std::string& addr = machine.addr();
+    sockaddr_in sa;
+    sa.sin_family = AF_INET;
+    machine_addr2sockfd_.emplace(addr, &sa);
+  }
+
+  auto GetSockAddr = [=](int64_t machine_id, uint16_t port) {
+    const Machine& machine = Global<JobDesc>::Get()->resource().machine(machine_id);
+    const std::string& addr = machine.addr();
+    sockaddr_in sa = *this->machine_addr2sockfd_[addr];
+    sa.sin_port = htons(port);
+    PCHECK(inet_pton(AF_INET, "0.0.0.0", &(sa.sin_addr)) == 1);
+    return sa;
+  };
+
   sockfd2helper_.clear();
   size_t poller_idx = 0;
   auto NewSocketHelper = [&](int sockfd) {
