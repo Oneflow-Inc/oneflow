@@ -31,8 +31,6 @@ class CudaDeviceCtx final : public DeviceCtx {
     CHECK(nccl_handler_);
     return nccl_handler_;
   }
-  const ncclComm_t& nccl_scatter_handle() const { return nccl_handle(); }
-  const ncclComm_t& nccl_gather_handle() const { return nccl_handle(); }
 
   void AddCallBack(std::function<void()> callback) const override {
     cuda_handler_->AddCallBack(callback);
