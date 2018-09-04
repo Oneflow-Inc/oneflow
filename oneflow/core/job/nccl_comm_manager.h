@@ -9,6 +9,7 @@ namespace oneflow {
 
 class NcclCommMgr final {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(NcclCommMgr);
   ~NcclCommMgr();
 
   ncclComm_t NcclComm4ActorId(int64_t actor_id) const;
@@ -18,8 +19,10 @@ class NcclCommMgr final {
   NcclCommMgr(const Plan& plan);
 
   bool IsNcclTaskType(const TaskType& tt) const;
+
   HashMap<int64_t, ncclComm_t> actor_id2comm_;
 };
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_JOB_NCCL_COMM_MANAGER_H_

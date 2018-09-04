@@ -3,6 +3,7 @@
 #include "nccl_comm_manager.h"
 
 namespace oneflow {
+
 NcclCommMgr::NcclCommMgr(const Plan& plan) {
   HashMap<int64_t, std::vector<int64_t>> parallel_set2nccl_task_ids;
 
