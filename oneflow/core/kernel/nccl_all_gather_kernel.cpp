@@ -9,7 +9,7 @@ void NcclAllGatherKernel::ForwardDataContent(
   Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
   auto elem_cnt = (size_t)in_blob->shape().elem_cnt();
-  NcclCheck(ncclAllGather(in_blob->dptr<>(), out_blob->mut_dptr<>(), elem_cnt,
+  NcclCheck(ncclAllGather(in_blob->dptr(), out_blob->mut_dptr(), elem_cnt,
                           GetNcclDataType(in_blob->data_type()), ctx.device_ctx->nccl_handle(),
                           ctx.device_ctx->cuda_stream()));
 }

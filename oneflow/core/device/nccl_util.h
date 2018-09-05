@@ -9,11 +9,13 @@ namespace oneflow {
 
 inline ncclDataType_t GetNcclDataType(const DataType &dt) {
   switch (dt) {
-    case DataType::kChar: return ncclDataType_t::ncclChar;
-    case DataType::kFloat: return ncclDataType_t::ncclFloat;
-    case DataType::kDouble: return ncclDataType_t::ncclDouble;
-    case DataType::kInt8: return ncclDataType_t::ncclInt8;
-    case DataType::kInt32: return ncclDataType_t::ncclInt32;
+#define NCCL_DATA_TYPE_CASE(dtype) \
+  case DataType::k##dtype: return ncclDataType_t::nccl##dtype
+    NCCL_DATA_TYPE_CASE(Char);
+    NCCL_DATA_TYPE_CASE(Float);
+    NCCL_DATA_TYPE_CASE(Double);
+    NCCL_DATA_TYPE_CASE(Int8);
+    NCCL_DATA_TYPE_CASE(Int32);
     default: UNIMPLEMENTED();
   }
 }
