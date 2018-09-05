@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-bool RegstSlot::FindTheRegstDescId(int64_t regst_desc_id) const {
+bool RegstSlot::HasRegstDescId(int64_t regst_desc_id) const {
   CHECK(is_inited_);
   return regst_desc_id2regsts_.find(regst_desc_id) != regst_desc_id2regsts_.end();
 }
@@ -12,7 +12,7 @@ const std::deque<Regst*>& RegstSlot::RegstDeq4RegstDescId(int64_t regst_desc_id)
   return regst_desc_id2regsts_.at(regst_desc_id);
 }
 
-int RegstSlot::PushBackRegst(Regst* regst) {
+int RegstSlot::TryPushBackRegst(Regst* regst) {
   CHECK(is_inited_);
   auto it = regst_desc_id2regsts_.find(regst->regst_desc_id());
   if (it == regst_desc_id2regsts_.end()) { return -1; }
@@ -21,7 +21,7 @@ int RegstSlot::PushBackRegst(Regst* regst) {
   return 0;
 }
 
-int RegstSlot::PopFrontRegst(int64_t regst_desc_id) {
+int RegstSlot::TryPopFrontRegst(int64_t regst_desc_id) {
   CHECK(is_inited_);
   auto it = regst_desc_id2regsts_.find(regst_desc_id);
   if (it == regst_desc_id2regsts_.end()) { return -1; }

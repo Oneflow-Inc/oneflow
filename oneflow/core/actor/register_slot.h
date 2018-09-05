@@ -16,7 +16,7 @@ class RegstSlot final {
   size_t available_regst_desc_cnt() const { return available_regst_desc_cnt_; }
 
   bool IsCurSlotReady() const { return available_regst_desc_cnt() == total_regst_desc_cnt(); }
-  bool FindTheRegstDescId(int64_t regst_desc_id) const;
+  bool HasRegstDescId(int64_t regst_desc_id) const;
   const std::deque<Regst*>& RegstDeq4RegstDescId(int64_t regst_desc_id) const;
   void ForEachCurFrontRegst(std::function<void(const Regst*)>) const;
   void ForEachCurRegstDeq(std::function<void(const std::deque<Regst*>&)>) const;
@@ -26,8 +26,8 @@ class RegstSlot final {
   Regst* FirstFront() const;
 
   // 0: success, -1: cannot find regst_desc_id
-  int PushBackRegst(Regst* regst);
-  int PopFrontRegst(int64_t regst_desc_id);
+  int TryPushBackRegst(Regst* regst);
+  int TryPopFrontRegst(int64_t regst_desc_id);
 
   void InitedDone();
   void InsertRegstDescId(int64_t regst_desc_id);
