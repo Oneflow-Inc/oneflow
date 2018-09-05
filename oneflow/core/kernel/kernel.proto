@@ -104,6 +104,10 @@ message ReduceGatherKernelConf {
   repeated int64 data_offset = 1;
 }
 
+message ReduceGather2KernelConf {
+  repeated int64 data_offset = 1;
+}
+
 message ReduceConcatKernelConf {
   repeated int64 data_offset = 1;
 }
@@ -167,8 +171,9 @@ message KernelConf {
     NormalizationKernelConf normalization_conf = 250;
     LocalResponseNormalizationKernelConf local_response_normalization_conf = 300;
     ReduceGatherKernelConf reduce_gather_conf = 350;
-    ReduceConcatKernelConf reduce_concat_conf = 351;
-    ReduceSplitKernelConf reduce_split_conf = 352;
+    ReduceGather2KernelConf reduce_gather2_conf = 351;
+    ReduceConcatKernelConf reduce_concat_conf = 352;
+    ReduceSplitKernelConf reduce_split_conf = 353;
     AccuracyKernelConf accuracy_conf = 401;
   }
 }

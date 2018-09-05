@@ -602,6 +602,19 @@ message ReduceGatherOpConf {
   required int32 in_num = 1;
 };
 
+message ReduceScatter2OpConf {
+  required int32 out_num = 1;
+}
+
+message ReduceAdd2OpConf {
+  required int32 in_num = 1;
+  required int32 out_num = 2;
+}
+
+message ReduceGather2OpConf {
+  required int32 in_num = 1;
+}
+
 message AccuracyOpConf {
   required string prediction = 1;
   required string label = 2;
@@ -703,8 +716,11 @@ message OperatorConf {
     ReduceConcatOpConf reduce_concat_conf = 404;
     ReduceSplitOpConf reduce_split_conf = 405;
     RecordLoadOpConf record_load_conf = 406;
-    AccuracyOpConf accuracy_conf=407;
+    AccuracyOpConf accuracy_conf = 407;
     AccuracyPrintOpConf accuracy_print_conf = 408;
+    ReduceScatter2OpConf reduce_scatter2_conf = 409;
+    ReduceAdd2OpConf reduce_add2_conf = 410;
+    ReduceGather2OpConf reduce_gather2_conf = 411;
   }
 }
 
