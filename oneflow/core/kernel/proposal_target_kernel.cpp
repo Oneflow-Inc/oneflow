@@ -93,8 +93,12 @@ GtBoxesAndLabels ProposalTargetKernel<T>::GetImageGtBoxes(
   GtBoxesAndLabels gt_boxes_and_labels(*gt_boxes, *gt_labels);
 
   Int32List invalid_inds;
-  gt_boxes_and_labels.ForEachBox<float>([&invalid_inds](int32_t index, const BBox<float>* box) {
-    if (box->Area() <= 0) { invalid_inds.add_value(index); }
+  gt_boxes_and_labels.ForEachBox<float>([&](int32_t index, BBox<float>* box) {
+    if (box->Area() <= 0) {
+      invalid_inds.add_value(index);
+    } else {
+      FasterRcnnUtil<T>::CorrectGtBoxCoord(conf.image_height(), conf.image_width(), box);
+    }
   });
   gt_boxes_and_labels.Filter(invalid_inds);
 
@@ -104,7 +108,6 @@ GtBoxesAndLabels ProposalTargetKernel<T>::GetImageGtBoxes(
   });
   gt_boxes_and_labels.Filter(invalid_inds);
 
-  gt_boxes_and_labels.ConvertFromNormalToAbsCoord<float>(conf.image_height(), conf.image_width());
   CHECK_LE(gt_boxes_and_labels.size(), conf.max_gt_boxes_num());
   return gt_boxes_and_labels;
 }

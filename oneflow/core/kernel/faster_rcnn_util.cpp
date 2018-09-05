@@ -109,6 +109,26 @@ void FasterRcnnUtil<T>::ForEachOverlapBetweenBoxesAndGtBoxes(
   }
 }
 
+template<typename T>
+void FasterRcnnUtil<T>::CorrectGtBoxCoord(int32_t im_h, int32_t im_w, BBox<float>* bbox) {
+  if (bbox->x1() >= ZeroVal<float>::value && bbox->x1() <= OneVal<float>::value) {
+    CHECK_GE(bbox->y1(), ZeroVal<T>::value);
+    CHECK_LE(bbox->y1(), OneVal<T>::value);
+    CHECK_GE(bbox->x2(), ZeroVal<T>::value);
+    CHECK_LE(bbox->x2(), OneVal<T>::value);
+    CHECK_GE(bbox->y2(), ZeroVal<T>::value);
+    CHECK_LE(bbox->y2(), OneVal<T>::value);
+    bbox->set_x1(bbox->x1() * im_w);
+    bbox->set_y1(bbox->y1() * im_h);
+    bbox->set_x2(bbox->x2() * im_w - 1);
+    bbox->set_y2(bbox->y2() * im_h - 1);
+    LOG(INFO) << "Gt boxes's coordinate was converted from normalized to origin.";
+  } else {
+    bbox->set_x2(bbox->x2() - 1);
+    bbox->set_y2(bbox->y2() - 1);
+  }
+}
+
 #define INITIATE_FASTER_RCNN_UTIL(T, type_cpp) template struct FasterRcnnUtil<T>;
 OF_PP_FOR_EACH_TUPLE(INITIATE_FASTER_RCNN_UTIL, FLOATING_DATA_TYPE_SEQ);
 

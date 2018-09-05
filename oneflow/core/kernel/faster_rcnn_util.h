@@ -297,6 +297,10 @@ class LabelIndex : public IndexType {
     return this->Find([&](int32_t index) { return Condition(label(index)); });
   }
 
+  void ForEachLabel(const std::function<bool(size_t, int32_t, int32_t)>& DoNext) {
+    this->ForEach([&](size_t n, int32_t index) { return DoNext(n, index, label(index)); });
+  }
+
   int32_t GetLabel(size_t n) const {
     CHECK_LT(n, this->size());
     return label(this->GetIndex(n));
@@ -478,22 +482,9 @@ class GtBoxesPbValueList {
   }
 
   template<typename T>
-  void ConvertFromNormalToAbsCoord(int32_t im_h, int32_t im_w) {
+  void ForEachBox(const std::function<void(int32_t, BBox<T>*)>& Handler) {
     BBox<T>* bbox = BBox<T>::MutCast(box_pb_.mutable_value()->mutable_value()->mutable_data());
-    FOR_RANGE(size_t, i, 0, size()) {
-      CHECK_GE(bbox[i].x1(), ZeroVal<T>::value);
-      CHECK_LE(bbox[i].x1(), OneVal<T>::value);
-      CHECK_GE(bbox[i].y1(), ZeroVal<T>::value);
-      CHECK_LE(bbox[i].y1(), OneVal<T>::value);
-      CHECK_GE(bbox[i].x2(), ZeroVal<T>::value);
-      CHECK_LE(bbox[i].x2(), OneVal<T>::value);
-      CHECK_GE(bbox[i].y2(), ZeroVal<T>::value);
-      CHECK_LE(bbox[i].y2(), OneVal<T>::value);
-      bbox[i].set_x1(bbox[i].x1() * im_w);
-      bbox[i].set_y1(bbox[i].y1() * im_h);
-      bbox[i].set_x2(bbox[i].x2() * im_w - 1);
-      bbox[i].set_y2(bbox[i].y2() * im_h - 1);
-    }
+    FOR_RANGE(size_t, i, 0, this->size()) { Handler(i, bbox + i); }
   }
 
   size_t size() const { return box_pb_.value().value_size() / 4; }
@@ -605,6 +596,7 @@ struct FasterRcnnUtil final {
   static void ForEachOverlapBetweenBoxesAndGtBoxes(
       const BoxesIndex<T>& boxes, const GtBoxes& gt_boxes,
       const std::function<void(int32_t, int32_t, float)>& Handler);
+  static void CorrectGtBoxCoord(int32_t image_height, int32_t image_weight, BBox<float>* bbox);
 };
 
 }  // namespace oneflow

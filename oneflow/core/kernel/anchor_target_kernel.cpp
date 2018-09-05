@@ -65,19 +65,21 @@ typename AnchorTargetKernel<T>::BoxesLabelAndMaxOverlap AnchorTargetKernel<T>::G
 template<typename T>
 GtBoxesWithMaxOverlap AnchorTargetKernel<T>::GetImageGtBoxes(
     size_t im_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  GtBoxesWithMaxOverlap gt_boxes_slice(*(BnInOp2Blob("gt_boxes")->dptr<FloatList16>(im_index)));
-  Int32List invalid_gt_boxes;
-  gt_boxes_slice.ForEachBox<float>([&](int32_t index, const BBox<float>* box) {
-    if (box->Area() <= 0) { invalid_gt_boxes.add_value(index); }
-  });
-  gt_boxes_slice.Filter(invalid_gt_boxes);
-
   const AnchorGeneratorConf& anchor_generator_conf =
       op_conf().anchor_target_conf().anchor_generator_conf();
-  gt_boxes_slice.ConvertFromNormalToAbsCoord<float>(anchor_generator_conf.image_height(),
-                                                    anchor_generator_conf.image_width());
+  GtBoxesWithMaxOverlap gt_boxes(*(BnInOp2Blob("gt_boxes")->dptr<FloatList16>(im_index)));
+  Int32List invalid_gt_inds;
+  gt_boxes.ForEachBox<float>([&](int32_t index, BBox<float>* box) {
+    if (box->Area() <= 0) {
+      invalid_gt_inds.add_value(index);
+    } else {
+      FasterRcnnUtil<T>::CorrectGtBoxCoord(anchor_generator_conf.image_height(),
+                                           anchor_generator_conf.image_width(), box);
+    }
+  });
+  gt_boxes.Filter(invalid_gt_inds);
 
-  return gt_boxes_slice;
+  return gt_boxes;
 }
 
 template<typename T>
