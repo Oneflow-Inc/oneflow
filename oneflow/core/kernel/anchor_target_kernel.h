@@ -11,7 +11,8 @@ namespace oneflow {
 template<typename T>
 class AnchorTargetKernel final : public KernelIf<DeviceType::kCPU> {
  public:
-  using BoxesLabelsAndNearestGtBoxes = LabelSlice<BoxesToNearestGtBoxesSlice<BoxesSlice<T>>>;
+  using BoxesWithMaxOverlap = MaxOverlapIndex<BoxesIndex<T>>;
+  using BoxesLabelAndMaxOverlap = LabelIndex<BoxesWithMaxOverlap>;
 
   OF_DISALLOW_COPY_AND_MOVE(AnchorTargetKernel);
   AnchorTargetKernel() = default;
@@ -23,20 +24,21 @@ class AnchorTargetKernel final : public KernelIf<DeviceType::kCPU> {
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
 
-  BoxesSlice<T> GetAnchorBoxesSlice(
-      const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  BoxesSlice<T> GetImageGtBoxesSlice(
-      size_t image_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  BoxesLabelsAndNearestGtBoxes ComputeOverlapsAndSetLabels(
-      size_t image_index, const BoxesSlice<T>& gt_boxes_slice,
-      const BoxesSlice<T>& anchor_boxes_slice,
+  BoxesLabelAndMaxOverlap GetImageAnchorBoxes(
+      const KernelCtx& ctx, size_t im_index,
       const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  size_t SubsampleForeground(BoxesLabelsAndNearestGtBoxes& boxes_labels_and_nearest_gt_boxes) const;
-  size_t SubsampleBackground(size_t fg_cnt,
-                             BoxesLabelsAndNearestGtBoxes& boxes_labels_and_nearest_gt_boxes) const;
-  void WriteOutput(size_t image_index, size_t total_sample_count,
-                   const BoxesLabelsAndNearestGtBoxes& boxes_labels_and_nearest_gt_boxes,
-                   const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  GtBoxesWithMaxOverlap GetImageGtBoxes(
+      size_t im_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  void ComputeOverlapsAndSetLabels(GtBoxesWithMaxOverlap& gt_boxes,
+                                   BoxesLabelAndMaxOverlap& anchor_boxes) const;
+  size_t SubsampleForeground(BoxesLabelAndMaxOverlap& boxes) const;
+  size_t SubsampleBackground(size_t fg_cnt, BoxesLabelAndMaxOverlap& boxes) const;
+  size_t ChoiceForeground(BoxesLabelAndMaxOverlap& boxes) const;
+  size_t ChoiceBackground(size_t fg_cnt, BoxesLabelAndMaxOverlap& boxes) const;
+  void ComputeTargetsAndWriteOutput(
+      size_t im_index, size_t total_sample_count, const GtBoxesWithMaxOverlap& gt_boxes,
+      const BoxesLabelAndMaxOverlap& anchor_boxes,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 };
 
 }  // namespace oneflow
