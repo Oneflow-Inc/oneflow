@@ -5,6 +5,7 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 void ReduceAdd2Kernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  /*
   const auto* other_val = static_cast<std::tuple<int64_t, int64_t, bool, bool>*>(ctx.other);
   int32_t in_bn_id = std::get<0>(*other_val);
   int32_t out_bn_id = std::get<1>(*other_val);
@@ -22,6 +23,8 @@ void ReduceAdd2Kernel<device_type, T>::ForwardDataContent(
     Memcpy<DeviceType::kCPU>(ctx.device_ctx, out_blob->mut_dptr<char>(), in_blob->dptr<char>(),
                              out_blob->ByteSizeOfDataContentField());
   }
+  */
+  // TODO(jiyuan): support multiple output
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReduceAdd2Conf, ReduceAdd2Kernel, FLOATING_DATA_TYPE_SEQ);
