@@ -685,13 +685,67 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGlobalAdd2ReduceGather) {
   }
 }
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceAdd2) { UNIMPLEMENTED(); }
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceAdd2) {
+  const auto& pd = sorted_src_comp_tasks.front()->logical_node()->parallel_desc();
+  bool do_local_reduce_scatter =
+      pd->sorted_machine_ids().size() > 1 && pd->device_num_of_each_machine() > 1;
+  for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
+    for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
+      if (do_local_reduce_scatter) {
+        if (src_comp_task->machine_id() == dst_comp_task->machine_id()) {
+          BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, false);
+        }
+      } else {
+        BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, false);
+      }
+    }
+  }
+}
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceAdd2ReduceAdd2) { UNIMPLEMENTED(); }
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceAdd2ReduceAdd2) {
+  const auto& pd = sorted_src_comp_tasks.front()->logical_node()->parallel_desc();
+  CHECK_GT(pd->device_num_of_each_machine(), 1);
+  CHECK_GT(pd->sorted_machine_ids().size(), 1);
+  for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
+    for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
+      if (src_comp_task->parallel_id() % pd->device_num_of_each_machine()
+          == dst_comp_task->parallel_id() % pd->device_num_of_each_machine()) {
+        BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, false);
+      }
+    }
+  }
+}
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceAdd2ReduceGather2) { UNIMPLEMENTED(); }
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceAdd2ReduceGather2) {
+  const auto& pd = sorted_src_comp_tasks.front()->logical_node()->parallel_desc();
+  bool do_local_reduce_scatter =
+      pd->sorted_machine_ids().size() > 1 && pd->device_num_of_each_machine() > 1;
+  for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
+    for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
+      if (do_local_reduce_scatter) {
+        if (src_comp_task->parallel_id() % pd->device_num_of_each_machine()
+            == dst_comp_task->parallel_id() % pd->device_num_of_each_machine()) {
+          BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, false);
+        }
+      } else {
+        BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, false);
+      }
+    }
+  }
+}
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGather2ReduceGather2) { UNIMPLEMENTED(); }
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGather2ReduceGather2) {
+  const auto& pd = sorted_src_comp_tasks.front()->logical_node()->parallel_desc();
+  CHECK_GT(pd->device_num_of_each_machine(), 1);
+  CHECK_GT(pd->sorted_machine_ids().size(), 1);
+  for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
+    for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
+      if (src_comp_task->machine_id() == dst_comp_task->machine_id()) {
+        BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, false);
+      }
+    }
+  }
+}
 
 void TaskGraph::BuildTaskPath(
     CompTaskNode* src, CompTaskNode* dst,
