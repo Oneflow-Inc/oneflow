@@ -16,6 +16,9 @@
 #include "oneflow/core/graph/reduce_gather_compute_task_node.h"
 #include "oneflow/core/graph/reduce_concat_compute_task_node.h"
 #include "oneflow/core/graph/reduce_split_compute_task_node.h"
+#include "oneflow/core/graph/reduce_scatter2_compute_task_node.h"
+#include "oneflow/core/graph/reduce_add2_compute_task_node.h"
+#include "oneflow/core/graph/reduce_gather2_compute_task_node.h"
 #include "oneflow/core/graph/accuracy_compute_task_node.h"
 #include "oneflow/core/graph/accuracy_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/accuracy_print_compute_task_node.h"
@@ -371,6 +374,34 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceSplit"
                               "NormalMdUpdt",
                               &TaskGraph::BldSubTskGphByOneToOne);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
+                              "ReduceSplit",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceConcat"
+                              "ReduceScatter2",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalBackward"
+                              "ReduceScatter2",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("MdDiffAcc"
+                              "ReduceScatter2",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceScatter2"
+                              "ReduceAdd2",
+                              &TaskGraph::BldSubTskGphByReduceScatter2ReduceAdd2);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceAdd2"
+                              "ReduceAdd2",
+                              &TaskGraph::BldSubTskGphByReduceAdd2ReduceAdd2);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceAdd2"
+                              "ReduceGather2",
+                              &TaskGraph::BldSubTskGphByReduceAdd2ReduceGather2);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather2"
+                              "ReduceGather2",
+                              &TaskGraph::BldSubTskGphByReduceGather2ReduceGather2);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather2"
+                              "NormalMdUpdt",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather2"
                               "ReduceSplit",
                               &TaskGraph::BldSubTskGphByOneToOne);
 
