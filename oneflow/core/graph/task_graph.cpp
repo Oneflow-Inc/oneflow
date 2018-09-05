@@ -147,6 +147,8 @@ void TaskGraph::EnableMemSharingInReduceStruct() {
   }
 }
 
+void TaskGraph::EnableMemSharingInReduceStruct2() { UNIMPLEMENTED(); }
+
 void TaskGraph::CollectReduceTaskNodes(
     std::unordered_set<ReduceTaskNodes, ReduceTaskNodesHasher>* reduce_tasks) const {
   auto FindSuccReduceTaskNode = [](CompTaskNode* task_node, TaskType type) -> CompTaskNode* {

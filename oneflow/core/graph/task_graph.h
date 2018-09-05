@@ -49,6 +49,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void BuildCtrlRegstBetweenReduceCopyNodes(const CompTaskNode* src_reduce,
                                             const CompTaskNode* dst_reduce, int64_t copy_node_num);
 
+  void EnableMemSharingInReduceStruct2();
+
   void AddCtrlEdgeInReduceStruct();
   void AddMutexCtrlEdgeInSameChain();
   void AddOrderCtrlEdgeBetweenCopyAndMdUpdt();
