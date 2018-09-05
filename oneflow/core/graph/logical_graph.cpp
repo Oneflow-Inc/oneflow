@@ -475,10 +475,17 @@ void LogicalGraph::BuildReduceStruct(const ReduceCtx& reduce_ctx) {
     for (auto& md_updt_node : reduce_ctx.md_updt_logicals) {
       Connect(reduce_split_node, NewEdge(), md_updt_node);
     }
-    AddReduceScatterAddGatherNodes(reduce_concat_node, reduce_split_node);
+    AddReduceSwitch(reduce_concat_node, reduce_split_node);
   } else if (reduce_ctx.fw_logicals.size() == 1) {
-    AddReduceScatterAddGatherNodes(reduce_ctx.md_diff_acc_logicals.at(0),
-                                   reduce_ctx.md_updt_logicals.at(0));
+    AddReduceSwitch(reduce_ctx.md_diff_acc_logicals.at(0), reduce_ctx.md_updt_logicals.at(0));
+  }
+}
+
+void LogicalGraph::AddReduceSwitch(LogicalNode* src, LogicalNode* dst) {
+  if (Global<JobDesc>::Get()->use_allreduce2()) {
+    AddReduceScatterAddGatherNodes2(src, dst);
+  } else {
+    AddReduceScatterAddGatherNodes(src, dst);
   }
 }
 
@@ -514,6 +521,43 @@ void LogicalGraph::AddReduceScatterAddGatherNodes(LogicalNode* src, LogicalNode*
   Connect(pred_reduce_global_node, NewEdge(), reduce_global_add_node);
   Connect(reduce_global_add_node, NewEdge(), reduce_gather_node);
   Connect(reduce_gather_node, NewEdge(), dst);
+}
+
+void LogicalGraph::AddReduceScatterAddGatherNodes2(LogicalNode* src, LogicalNode* dst) {
+  std::shared_ptr<const ParallelDesc> src_pd = src->parallel_desc();
+  std::shared_ptr<const ParallelDesc> dst_pd = dst->parallel_desc();
+  CHECK_EQ(src_pd->parallel_num(), dst_pd->parallel_num());
+  CHECK_EQ(src_pd->device_type(), dst_pd->device_type());
+
+  // Reduce Scatter2
+  LogicalNode* reduce_scatter2_node = NewNode<ReduceScatter2LogicalNode>();
+  reduce_scatter2_node->mut_parallel_desc() = src_pd;
+  Connect(src, NewEdge(), reduce_scatter2_node);
+  LogicalNode* pred_reduce_global_add2_node = reduce_scatter2_node;
+  if (src_pd->sorted_machine_ids().size() > 1 && src_pd->device_num_of_each_machine() > 1) {
+    // Reduce Local Add
+    LogicalNode* reduce_local_add2_node = NewNode<ReduceAdd2LogicalNode>();
+    reduce_local_add2_node->mut_parallel_desc() = src_pd;
+    Connect(reduce_scatter2_node, NewEdge(), reduce_local_add2_node);
+    pred_reduce_global_add2_node = reduce_local_add2_node;
+  }
+  // Reduce Global Add
+  LogicalNode* reduce_global_add2_node = NewNode<ReduceAdd2LogicalNode>();
+  reduce_global_add2_node->mut_parallel_desc() = src_pd;
+  Connect(pred_reduce_global_add2_node, NewEdge(), reduce_global_add2_node);
+  // Reduce Global Gather
+  LogicalNode* reduce_gather2_node = NewNode<ReduceGather2LogicalNode>();
+  reduce_gather2_node->mut_parallel_desc() = src_pd;
+  Connect(reduce_global_add2_node, NewEdge(), reduce_gather2_node);
+  LogicalNode* pred_dst_node = reduce_gather2_node;
+  if (src_pd->sorted_machine_ids().size() > 1 && src_pd->device_num_of_each_machine() > 1) {
+    // Reduce Local Gather
+    LogicalNode* reduce_local_gather2_node = NewNode<ReduceGather2LogicalNode>();
+    reduce_local_gather2_node->mut_parallel_desc() = src_pd;
+    Connect(reduce_scatter2_node, NewEdge(), reduce_local_gather2_node);
+    pred_dst_node = reduce_local_gather2_node;
+  }
+  Connect(pred_dst_node, NewEdge(), dst);
 }
 
 void LogicalGraph::SetupNormalMdUpdtOp() {

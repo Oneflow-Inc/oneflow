@@ -53,6 +53,8 @@ class JobDesc final {
   bool enable_blob_mem_sharing() const { return job_conf_.other().enable_blob_mem_sharing(); }
   int64_t reduce_group_size() const { return job_conf_.other().reduce_group_size(); }
 
+  bool use_allreduce2() const { return job_conf_.other().use_allreduce2(); }
+
   // machine_name <-> machine_id
   int64_t MachineID4MachineName(const std::string& machine_name) const;
   const std::string& MachineName4MachineId(int64_t machine_id) const;

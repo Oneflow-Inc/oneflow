@@ -452,6 +452,9 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
   OF_PP_MAKE_TUPLE_SEQ(ReduceGlobalAdd, kMdUpdtArea)      \
   OF_PP_MAKE_TUPLE_SEQ(ReduceGather, kMdUpdtArea)         \
   OF_PP_MAKE_TUPLE_SEQ(ReduceSplit, kMdUpdtArea)          \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceScatter2, kMdUpdtArea)       \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceAdd2, kMdUpdtArea)           \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceGather2, kMdUpdtArea)        \
   OF_PP_MAKE_TUPLE_SEQ(Accuracy, kDataForwardArea)        \
   OF_PP_MAKE_TUPLE_SEQ(AccuracyAcc, kDataForwardArea)     \
   OF_PP_MAKE_TUPLE_SEQ(AccuracyPrint, kPrintArea)
