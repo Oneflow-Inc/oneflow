@@ -5,12 +5,11 @@
 
 namespace oneflow {
 
-template<DeviceType device_type>
-class NcclAllGatherKernel final : public KernelIf<device_type> {
+class NcclAllGatherKernel final : public KernelIf<DeviceType::kGPU> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(NcclAllGatherKernel);
   NcclAllGatherKernel() = default;
-  ~NcclAllGatherKernel() = default;
+  ~NcclAllGatherKernel() override = default;
 
  private:
   void ForwardDataContent(const KernelCtx&,
