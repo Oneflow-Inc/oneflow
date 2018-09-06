@@ -1,3 +1,4 @@
+#include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/graph/reduce_split_compute_task_node.h"
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/register/register_desc.h"
@@ -83,6 +84,17 @@ void ReduceSplitCompTaskNode::FixPackedBlobDescOfProducedRegst() {
     Shape& shape = out_regst->MutBlobDesc(GenPackedLbi())->mut_shape();
     shape =
         Shape({static_cast<int64_t>(RoundUp(shape.elem_cnt(), parallel_ctx()->parallel_num()))});
+  }
+}
+
+void ReduceSplitCompTaskNode::EnableMemSharingInReduce(
+    std::function<void(RegstDesc* regst, int64_t offset)> EnableMemSharing4Regst) {
+  size_t split_num = produced_regsts().size();
+  int64_t offset = 0;
+  FOR_RANGE(int32_t, idx, 0, split_num) {
+    RegstDesc* split_out_regst = GetProducedRegst("out_" + std::to_string(idx)).get();
+    EnableMemSharing4Regst(split_out_regst, offset);
+    offset += InferRegstSize(*split_out_regst);
   }
 }
 

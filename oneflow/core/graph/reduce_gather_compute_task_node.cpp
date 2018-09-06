@@ -33,4 +33,37 @@ void ReduceGatherCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(parallel_ctx());
 }
 
+void ReduceGatherCompTaskNode::EnableMemSharingInReduce(
+    std::function<void(RegstDesc* regst, int64_t offset)> EnableMemSharing4Regst) {
+  EnableMemSharing4Regst(GetProducedRegst("out").get(), 0);
+  for (const auto& kv : consumed_regsts()) {
+    auto in_parallel_id = oneflow_cast<int64_t>(kv.first.substr(3));
+    CHECK_EQ(1, kv.second.size());
+    if (in_parallel_id == parallel_id()) { continue; }
+    RegstDesc* regst = kv.second.front().get();
+    EnableMemSharing4Regst(regst, InferRegstSize(*regst) * in_parallel_id);
+  }
+
+  std::vector<TaskNode*> global_add_on_in_edge;
+
+  ForEachNodeOnInEdge([&](TaskNode* node) {
+    if (node->GetTaskType() == kReduceGlobalAdd) { global_add_on_in_edge.push_back(node); }
+  });
+
+  CHECK_EQ(global_add_on_in_edge.size(), 1);
+
+  TaskNode* global_add_copy_d2h = nullptr;
+  for (TaskEdge* out_edge : global_add_on_in_edge.front()->out_edges()) {
+    if (out_edge->dst_node()->GetTaskType() == TaskType::kCopyHd) {
+      global_add_copy_d2h = out_edge->dst_node();
+    }
+  }
+
+  for (TaskEdge* in_edge : this->in_edges()) {
+    if (in_edge->src_node()->GetTaskType() == TaskType::kCopyHd) {
+      global_add_copy_d2h->BuildCtrlRegstDesc(in_edge->src_node());
+    }
+  }
+}
+
 }  // namespace oneflow

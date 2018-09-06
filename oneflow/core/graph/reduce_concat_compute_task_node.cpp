@@ -44,4 +44,17 @@ void ReduceConcatCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(parallel_ctx());
 }
 
+void ReduceConcatCompTaskNode::EnableMemSharingInReduce(
+    std::function<void(RegstDesc* regst, int64_t offset)> EnableMemSharing4Regst) {
+  EnableMemSharing4Regst(GetProducedRegst("out").get(), 0);
+
+  size_t concat_num = consumed_regsts().size();
+  int64_t offset = 0;
+  FOR_RANGE(int32_t, idx, 0, concat_num) {
+    RegstDesc* concat_in_regst = GetSoleConsumedRegst("in_" + std::to_string(idx)).get();
+    EnableMemSharing4Regst(concat_in_regst, offset);
+    offset += InferRegstSize(*concat_in_regst);
+  }
+}
+
 }  // namespace oneflow
