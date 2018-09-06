@@ -564,14 +564,13 @@ void TaskGraph::EnableMemSharingInOneReduce2(const ReduceTaskNodes& reduce_task_
     for (int64_t i = 0; i < dev_num_of_each_machine; ++i) {
       RegstDesc* consumed_regst =
           reduce_task_nodes.local_add->GetSoleConsumedRegst("in_" + std::to_string(i)).get();
-      SetOrCheck4ConsumedRegst(consumed_regst, parallel_num % dev_num_of_each_machine == i,
-                               local_blob_index2offset.at(i));
+      SetOrCheck4ConsumedRegst(consumed_regst, device_id == i, local_blob_index2offset.at(i));
     }
 
     for (int64_t i = 0; i < machine_num; ++i) {
       SetMemSharedField4Regst(
           reduce_task_nodes.local_add->GetProducedRegst("out_" + std::to_string(i)).get(),
-          blob_index2offset.at(parallel_num % dev_num_of_each_machine * machine_num + i));
+          blob_index2offset.at(device_id * machine_num + i));
     }
   }
   // TODO(jiyuan): simplify the rule
@@ -628,8 +627,7 @@ void TaskGraph::EnableMemSharingInOneReduce2(const ReduceTaskNodes& reduce_task_
     for (int64_t i = 0; i < dev_num_of_each_machine; ++i) {
       RegstDesc* consumed_regst =
           reduce_task_nodes.local_gather->GetSoleConsumedRegst("in_" + std::to_string(i)).get();
-      SetOrCheck4ConsumedRegst(consumed_regst, parallel_num % dev_num_of_each_machine == i,
-                               local_blob_index2offset.at(i));
+      SetOrCheck4ConsumedRegst(consumed_regst, device_id == i, local_blob_index2offset.at(i));
     }
     SetMemSharedField4Regst(reduce_task_nodes.local_gather->GetProducedRegst("out").get(),
                             blob_index2offset.at(0));
