@@ -237,13 +237,9 @@ void TaskGraph::AddCtrlEdge4MemSharingInOneReduce(const ReduceTaskNodes& reduce_
   int64_t machine_num = parallel_desc->sorted_machine_ids().size();
 
   if (reduce_task_nodes.local_add == nullptr) {
-    BuildCtrlRegstBetweenReduceCopyNodes(reduce_task_nodes.scatter, reduce_task_nodes.global_add,
-                                         parallel_num - 1);
   } else {
     BuildCtrlRegstBetweenReduceCopyNodes(reduce_task_nodes.scatter, reduce_task_nodes.local_add,
                                          parallel_num - machine_num);
-    BuildCtrlRegstBetweenReduceCopyNodes(reduce_task_nodes.local_add, reduce_task_nodes.global_add,
-                                         machine_num - 1);
   }
 }
 

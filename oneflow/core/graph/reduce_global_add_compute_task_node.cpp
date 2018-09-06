@@ -48,6 +48,33 @@ void ReduceGlobalAddCompTaskNode::EnableMemSharingInReduce(
     RegstDesc* regst = kv.second.front().get();
     EnableMemSharing4Regst(regst, InferRegstSize(*regst) * in_parallel_id);
   }
+
+  std::vector<CompTaskNode*> local_add_on_in_edge;
+  std::vector<CompTaskNode*> scatter_on_in_edge;
+
+  ForEachNodeOnInEdge([&](TaskNode* node) {
+    if (node->GetTaskType() == kReduceLocalAdd) {
+      local_add_on_in_edge.push_back(dynamic_cast<CompTaskNode*>(node));
+      return;
+    }
+    if (node->GetTaskType() == kReduceScatter) {
+      scatter_on_in_edge.push_back(dynamic_cast<CompTaskNode*>(node));
+      return;
+    }
+  });
+
+  CHECK_EQ(local_add_on_in_edge.size() + scatter_on_in_edge.size(), 1);
+
+  if (!local_add_on_in_edge.empty()) {
+    BuildCtrlRegstBetweenReduceCopyNodes(
+        local_add_on_in_edge.front(), this,
+        this->logical_node()->parallel_desc()->sorted_machine_ids().size() - 1);
+  }
+
+  if (!scatter_on_in_edge.empty()) {
+    BuildCtrlRegstBetweenReduceCopyNodes(scatter_on_in_edge.front(), this,
+                                         this->parallel_ctx()->parallel_num() - 1);
+  }
 }
 
 }  // namespace oneflow

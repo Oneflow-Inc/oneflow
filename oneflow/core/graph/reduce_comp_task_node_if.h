@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_GRAPH_REDUCE_COMP_TASK_NODE_IF_H_
 
 #include "oneflow/core/register/register_desc.h"
+#include "oneflow/core/graph/compute_task_node.h"
 
 namespace oneflow {
 
@@ -13,6 +14,8 @@ class ReduceCompTaskNodeIf {
 };
 
 int64_t InferRegstSize(const RegstDesc& regst);
+void BuildCtrlRegstBetweenReduceCopyNodes(const CompTaskNode* src_reduce,
+                                          const CompTaskNode* dst_reduce, int64_t copy_node_num);
 
 }  // namespace oneflow
 
