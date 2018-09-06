@@ -210,33 +210,23 @@ void TaskGraph::CollectReduceTaskNodes(
 void TaskGraph::EnableMemSharingInReduceConcatSplitIfNeed(
     const ReduceTaskNodes& reduce_task_nodes,
     std::function<void(RegstDesc*, int64_t)> SetMemSharedField4Regst) {
+  EnableMemSharingInReduceTaskNodeIfNeed(reduce_task_nodes.split, SetMemSharedField4Regst);
+  EnableMemSharingInReduceTaskNodeIfNeed(reduce_task_nodes.concat, SetMemSharedField4Regst);
+
   if (reduce_task_nodes.concat == nullptr) { return; }
   int32_t reduce_num = reduce_task_nodes.split->produced_regsts().size();
 
   std::shared_ptr<RegstDesc> concat_out_regst = reduce_task_nodes.concat->GetProducedRegst("out");
-  std::shared_ptr<RegstDesc> split_in_regst = reduce_task_nodes.split->GetSoleConsumedRegst("in");
-  const BlobDesc* concat_out_packed = concat_out_regst->GetBlobDesc(GenPackedLbi());
-  const BlobDesc* split_in_packed = split_in_regst->GetBlobDesc(GenPackedLbi());
-  size_t concat_out_byte_size = RtBlobDesc(*concat_out_packed).ByteSizeOfBlobBody();
-  size_t split_in_byte_size = RtBlobDesc(*split_in_packed).ByteSizeOfBlobBody();
-  CHECK_EQ(concat_out_byte_size, split_in_byte_size);
-  SetMemSharedField4Regst(concat_out_regst.get(), 0);
-  SetMemSharedField4Regst(split_in_regst.get(), 0);
 
   int64_t offset = 0;
   FOR_RANGE(int32_t, idx, 0, reduce_num) {
     auto concat_in_regst =
         reduce_task_nodes.concat->GetSoleConsumedRegst("in_" + std::to_string(idx));
-    auto split_out_regst = reduce_task_nodes.split->GetProducedRegst("out_" + std::to_string(idx));
     SetMemSharedField4Regst(concat_in_regst.get(), offset);
-    SetMemSharedField4Regst(split_out_regst.get(), offset);
 
     // Check shape invariant
     const BlobDesc* concat_in_packed = concat_in_regst->GetBlobDesc(GenPackedLbi());
-    const BlobDesc* split_out_packed = split_out_regst->GetBlobDesc(GenPackedLbi());
     size_t concat_in_byte_size = RtBlobDesc(*concat_in_packed).ByteSizeOfBlobBody();
-    size_t split_out_byte_size = RtBlobDesc(*split_out_packed).ByteSizeOfBlobBody();
-    CHECK_EQ(concat_in_byte_size, split_out_byte_size);
 
     offset += concat_in_byte_size;
   }

@@ -44,4 +44,9 @@ void ReduceConcatCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(parallel_ctx());
 }
 
+void ReduceConcatCompTaskNode::EnableMemSharingInReduce(
+    std::function<void(RegstDesc* regst, int64_t offset)> EnableMemSharing4Regst) {
+  EnableMemSharing4Regst(GetProducedRegst("out").get(), 0);
+}
+
 }  // namespace oneflow
