@@ -69,7 +69,7 @@ void RegstSlot::ForChosenFrontRegst(std::function<bool(int64_t)> IsChosenRegstDe
                                     std::function<void(const Regst*)> Handler) const {
   for (const auto& kv : regst_desc_id2regsts_) {
     if (IsChosenRegstDescId(kv.first)) {
-      CHECK(kv.second.empty());
+      CHECK(kv.second.empty() == false);
       Handler(kv.second.front());
     }
   }
