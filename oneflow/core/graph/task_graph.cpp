@@ -337,54 +337,36 @@ void TaskGraph::EnableMemSharingInOneReduce(const ReduceTaskNodes& reduce_task_n
           blob_index2offset.at(device_id * machine_num + i));
     }
   }
-  // TODO(jiyuan): simplify the rule
-  if (has_local_reduce) {
-    auto HandleMemSharedFieldOfConsumedRegsts = [&](CompTaskNode* task_node,
-                                                    int64_t consumed_regst_num) {
-      auto& consumed_regsts = task_node->consumed_regsts();
-      CHECK_EQ(consumed_regst_num, consumed_regsts.size());
-      for (const auto& kv : consumed_regsts) {
-        int64_t in_regst_id = oneflow_cast<int64_t>(kv.first.substr(3));
-        CHECK_EQ(1, kv.second.size());
-        SetOrCheck4ConsumedRegst(kv.second.front().get(), machine_id == in_regst_id,
-                                 blob_index2offset.at(device_id * machine_num + in_regst_id));
-      }
-    };
 
-    // global add
-    int consumed_regst_num = machine_num;
-    HandleMemSharedFieldOfConsumedRegsts(reduce_task_nodes.global_add, consumed_regst_num);
-    SetMemSharedField4Regst(reduce_task_nodes.global_add->GetProducedRegst("out").get(),
-                            blob_index2offset.at(device_id * machine_num + machine_id));
+  int64_t reduce_num = has_local_reduce ? machine_num : parallel_num;
+  int64_t reduce_id = has_local_reduce ? machine_id : parallel_id;
+  auto regst_offset = [&](int64_t blob_id) {
+    if (has_local_reduce) {
+      return blob_index2offset.at(device_id * machine_num + blob_id);
+    } else {
+      return local_blob_index2offset.at(blob_id);
+    }
+  };
+  auto HandleMemSharedFieldOfConsumedRegsts = [&](CompTaskNode* task_node,
+                                                  int64_t consumed_regst_num) {
+    auto& consumed_regsts = task_node->consumed_regsts();
+    CHECK_EQ(consumed_regst_num, consumed_regsts.size());
+    for (const auto& kv : consumed_regsts) {
+      int64_t in_regst_id = oneflow_cast<int64_t>(kv.first.substr(3));
+      CHECK_EQ(1, kv.second.size());
+      SetOrCheck4ConsumedRegst(kv.second.front().get(), reduce_id == in_regst_id,
+                               regst_offset(in_regst_id));
+    }
+  };
 
-    // gather
-    HandleMemSharedFieldOfConsumedRegsts(reduce_task_nodes.gather, consumed_regst_num);
-    SetMemSharedField4Regst(reduce_task_nodes.gather->GetProducedRegst("out").get(),
-                            blob_index2offset.at(device_id * machine_num));
-  } else {
-    auto HandleMemSharedFieldOfConsumedRegsts = [&](CompTaskNode* task_node,
-                                                    int64_t consumed_regst_num) {
-      auto& consumed_regsts = task_node->consumed_regsts();
-      CHECK_EQ(consumed_regst_num, consumed_regsts.size());
-      for (const auto& kv : consumed_regsts) {
-        int64_t in_regst_id = oneflow_cast<int64_t>(kv.first.substr(3));
-        CHECK_EQ(1, kv.second.size());
-        SetOrCheck4ConsumedRegst(kv.second.front().get(), parallel_id == in_regst_id,
-                                 local_blob_index2offset.at(in_regst_id));
-      }
-    };
+  // global add
+  HandleMemSharedFieldOfConsumedRegsts(reduce_task_nodes.global_add, reduce_num);
+  SetMemSharedField4Regst(reduce_task_nodes.global_add->GetProducedRegst("out").get(),
+                          regst_offset(reduce_id));
 
-    // global add
-    int consumed_regst_num = parallel_num;
-    HandleMemSharedFieldOfConsumedRegsts(reduce_task_nodes.global_add, consumed_regst_num);
-    SetMemSharedField4Regst(reduce_task_nodes.global_add->GetProducedRegst("out").get(),
-                            local_blob_index2offset.at(parallel_id));
-
-    // gather
-    HandleMemSharedFieldOfConsumedRegsts(reduce_task_nodes.gather, consumed_regst_num);
-    SetMemSharedField4Regst(reduce_task_nodes.gather->GetProducedRegst("out").get(),
-                            blob_index2offset.at(0));
-  }
+  // gather
+  HandleMemSharedFieldOfConsumedRegsts(reduce_task_nodes.gather, reduce_num);
+  SetMemSharedField4Regst(reduce_task_nodes.gather->GetProducedRegst("out").get(), regst_offset(0));
 
   // local gather
   if (reduce_task_nodes.local_gather) {
