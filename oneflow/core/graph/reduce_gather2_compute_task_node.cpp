@@ -32,15 +32,20 @@ void ReduceGather2CompTaskNode::ConsumeAllRegsts() {
 
 void ReduceGather2CompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
-  std::shared_ptr<Operator> reduce_gather_op = this->logical_node()->SoleOp();
-  node->mut_op() = reduce_gather_op;
-  FOR_RANGE(size_t, i, 0, reduce_gather_op->input_bns().size()) {
-    node->BindBnWithRegst(reduce_gather_op->input_bns().Get(i),
+  OperatorConf reduce_gather2_op_conf;
+  reduce_gather2_op_conf.set_name("reduce_gather2_" + NewUniqueId());
+  reduce_gather2_op_conf.set_device_type(this->device_type());
+  reduce_gather2_op_conf.mutable_reduce_gather2_conf()->set_in_num(in_edges().size());
+  std::shared_ptr<Operator> reduce_gather2_op = ConstructOp(reduce_gather2_op_conf);
+  node->mut_op() = reduce_gather2_op;
+
+  FOR_RANGE(size_t, i, 0, reduce_gather2_op->input_bns().size()) {
+    node->BindBnWithRegst(reduce_gather2_op->input_bns().Get(i),
                           GetSoleConsumedRegst("in_" + std::to_string(i)));
   }
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
-  out_regst->AddLbi(reduce_gather_op->BnInOp2Lbi(reduce_gather_op->SoleObn()));
-  node->BindBnWithRegst(reduce_gather_op->SoleObn(), out_regst);
+  out_regst->AddLbi(reduce_gather2_op->BnInOp2Lbi(reduce_gather2_op->SoleObn()));
+  node->BindBnWithRegst(reduce_gather2_op->SoleObn(), out_regst);
   node->InferBlobDescs(parallel_ctx());
 }
 

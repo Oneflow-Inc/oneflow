@@ -4,8 +4,8 @@
 namespace oneflow {
 
 void ReduceGather2Op::InitFromOpConf() {
-  CHECK(op_conf().has_reduce_gather_conf());
-  for (int32_t i = 0; i < op_conf().reduce_gather_conf().in_num(); ++i) {
+  CHECK(op_conf().has_reduce_gather2_conf());
+  for (int32_t i = 0; i < op_conf().reduce_gather2_conf().in_num(); ++i) {
     EnrollInputBn("in_" + std::to_string(i), false);
   }
   EnrollOutputBn("out", false);

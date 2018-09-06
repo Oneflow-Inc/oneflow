@@ -4,9 +4,9 @@
 namespace oneflow {
 
 void ReduceScatter2Op::InitFromOpConf() {
-  CHECK(op_conf().has_reduce_scatter_conf());
+  CHECK(op_conf().has_reduce_scatter2_conf());
   EnrollInputBn("in", false);
-  for (int32_t i = 0; i < op_conf().reduce_scatter_conf().out_num(); ++i) {
+  for (int32_t i = 0; i < op_conf().reduce_scatter2_conf().out_num(); ++i) {
     EnrollOutputBn("out_" + std::to_string(i), false);
   }
 }
@@ -25,7 +25,7 @@ LogicalBlobId ReduceScatter2Op::obn2lbi(const std::string& output_bn) const {
 void ReduceScatter2Op::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  int32_t out_num = op_conf().reduce_scatter_conf().out_num();
+  int32_t out_num = op_conf().reduce_scatter2_conf().out_num();
   CHECK_GE(out_num, 2);
 
   const BlobDesc* in_blob = GetBlobDesc4BnInOp(SoleIbn());
