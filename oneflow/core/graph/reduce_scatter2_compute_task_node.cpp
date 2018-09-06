@@ -8,12 +8,12 @@ void ReduceScatter2CompTaskNode::ProduceAllRegstsAndBindEdges() {
   int64_t dev_num_of_each_machine = logical_node()->parallel_desc()->device_num_of_each_machine();
   CHECK_EQ(machine_num * dev_num_of_each_machine, parallel_ctx()->parallel_num());
   bool do_local_reduce_scatter = machine_num > 1 && dev_num_of_each_machine > 1;
-
   if (do_local_reduce_scatter) {
     CHECK_EQ(out_edges().size(), dev_num_of_each_machine);
   } else {
     CHECK_EQ(out_edges().size(), parallel_ctx()->parallel_num());
   }
+
   for (TaskEdge* edge : out_edges()) {
     std::vector<CompTaskNode*> comp_task_nodes = GetSuccCompTaskNodesOnEdge(edge);
     CHECK_EQ(comp_task_nodes.size(), 1);

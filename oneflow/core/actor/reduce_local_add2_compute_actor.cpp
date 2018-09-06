@@ -12,7 +12,6 @@ void ReduceLocalAdd2CompActor::VirtualCompActorInit(const TaskProto& proto) {
 void ReduceLocalAdd2CompActor::SetKernelCtxOther(void** other) {
   const std::string& ibn = regst_desc_id2bn_in_op_.at(cur_processed_regst_desc_id());
   bool is_inited = EnableInplace() ? true : processed_regst_desc_id_cnt() != 0;
-  // TODO: decide whether it is local add or global add
   bool is_inplace_in_blob =
       EnableInplace() ? oneflow_cast<int64_t>(ibn.substr(3)) == parallel_ctx()->parallel_id()
                       : false;

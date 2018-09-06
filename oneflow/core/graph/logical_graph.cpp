@@ -533,6 +533,7 @@ void LogicalGraph::AddReduceScatterAddGatherNodes2(LogicalNode* src, LogicalNode
   LogicalNode* reduce_scatter2_node = NewNode<ReduceScatter2LogicalNode>();
   reduce_scatter2_node->mut_parallel_desc() = src_pd;
   Connect(src, NewEdge(), reduce_scatter2_node);
+
   LogicalNode* pred_reduce_global_add2_node = reduce_scatter2_node;
   if (src_pd->sorted_machine_ids().size() > 1 && src_pd->device_num_of_each_machine() > 1) {
     // Reduce Local Add
@@ -545,10 +546,12 @@ void LogicalGraph::AddReduceScatterAddGatherNodes2(LogicalNode* src, LogicalNode
   LogicalNode* reduce_global_add2_node = NewNode<ReduceGlobalAdd2LogicalNode>();
   reduce_global_add2_node->mut_parallel_desc() = src_pd;
   Connect(pred_reduce_global_add2_node, NewEdge(), reduce_global_add2_node);
+
   // Reduce Global Gather
   LogicalNode* reduce_gather2_node = NewNode<ReduceGather2LogicalNode>();
   reduce_gather2_node->mut_parallel_desc() = src_pd;
   Connect(reduce_global_add2_node, NewEdge(), reduce_gather2_node);
+
   LogicalNode* pred_dst_node = reduce_gather2_node;
   if (src_pd->sorted_machine_ids().size() > 1 && src_pd->device_num_of_each_machine() > 1) {
     // Reduce Local Gather

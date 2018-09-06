@@ -22,7 +22,6 @@ void ReduceLocalAdd2CompTaskNode::ConsumeAllRegsts() {
   int64_t machine_num = logical_node()->parallel_desc()->sorted_machine_ids().size();
   int64_t dev_num_of_each_machine = logical_node()->parallel_desc()->device_num_of_each_machine();
   CHECK_EQ(machine_num * dev_num_of_each_machine, parallel_ctx()->parallel_num());
-  bool do_local_reduce_scatter = machine_num > 1 && dev_num_of_each_machine > 1;
 
   for (TaskEdge* edge : in_edges()) {
     TaskNode* src_node = edge->src_node();
