@@ -19,10 +19,7 @@ void ReduceLocalAddCompTaskNode::ProduceAllRegstsAndBindEdges() {
 }
 
 void ReduceLocalAddCompTaskNode::ConsumeAllRegsts() {
-  int64_t machine_num = logical_node()->parallel_desc()->sorted_machine_ids().size();
   int64_t dev_num_of_each_machine = logical_node()->parallel_desc()->device_num_of_each_machine();
-  CHECK_EQ(machine_num * dev_num_of_each_machine, parallel_ctx()->parallel_num());
-
   for (TaskEdge* edge : in_edges()) {
     TaskNode* src_node = edge->src_node();
     while (src_node->GetTaskType() != TaskType::kReduceScatter) {
@@ -35,10 +32,6 @@ void ReduceLocalAddCompTaskNode::ConsumeAllRegsts() {
 }
 
 void ReduceLocalAddCompTaskNode::BuildExecGphAndRegst() {
-  int64_t machine_num = logical_node()->parallel_desc()->sorted_machine_ids().size();
-  int64_t dev_num_of_each_machine = logical_node()->parallel_desc()->device_num_of_each_machine();
-  CHECK_EQ(machine_num * dev_num_of_each_machine, parallel_ctx()->parallel_num());
-
   ExecNode* node = mut_exec_gph().NewNode();
   OperatorConf reduce_local_add_conf;
   reduce_local_add_conf.set_name("reduce_local_add_" + NewUniqueId());
