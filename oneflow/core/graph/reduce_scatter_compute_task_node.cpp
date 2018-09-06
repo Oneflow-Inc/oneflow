@@ -63,6 +63,10 @@ void ReduceScatterCompTaskNode::EnableMemSharingInReduce(
     RegstDesc* out = GetProducedRegst("out_" + std::to_string(i)).get();
     EnableMemSharing4Regst(out, i * InferRegstSize(*out));
   }
+
+  if (this->SoleInEdge()->src_node()->GetTaskType() == TaskType::kReduceConcat) { return; }
+
+  EnableMemSharing4Regst(GetSoleConsumedRegst("in").get(), 0);
 }
 
 }  // namespace oneflow

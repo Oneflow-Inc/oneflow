@@ -92,10 +92,9 @@ void ReduceSplitCompTaskNode::EnableMemSharingInReduce(
   size_t split_num = produced_regsts().size();
   int64_t offset = 0;
   FOR_RANGE(int32_t, idx, 0, split_num) {
-    auto split_out_regst = GetProducedRegst("out_" + std::to_string(idx));
-    EnableMemSharing4Regst(split_out_regst.get(), offset);
-    const BlobDesc* split_out_packed = split_out_regst->GetBlobDesc(GenPackedLbi());
-    offset += RtBlobDesc(*split_out_packed).ByteSizeOfBlobBody();
+    RegstDesc* split_out_regst = GetProducedRegst("out_" + std::to_string(idx)).get();
+    EnableMemSharing4Regst(split_out_regst, offset);
+    offset += InferRegstSize(*split_out_regst);
   }
 }
 
