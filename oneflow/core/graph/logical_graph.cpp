@@ -557,7 +557,7 @@ void LogicalGraph::AddReduceScatterAddGatherNodes2(LogicalNode* src, LogicalNode
     // Reduce Local Gather
     LogicalNode* reduce_local_gather2_node = NewNode<ReduceGather2LogicalNode>();
     reduce_local_gather2_node->mut_parallel_desc() = src_pd;
-    Connect(reduce_scatter2_node, NewEdge(), reduce_local_gather2_node);
+    Connect(reduce_gather2_node, NewEdge(), reduce_local_gather2_node);
     pred_dst_node = reduce_local_gather2_node;
   }
   Connect(pred_dst_node, NewEdge(), dst);

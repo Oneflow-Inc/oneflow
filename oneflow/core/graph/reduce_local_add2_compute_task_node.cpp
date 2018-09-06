@@ -25,7 +25,7 @@ void ReduceLocalAdd2CompTaskNode::ConsumeAllRegsts() {
 
   for (TaskEdge* edge : in_edges()) {
     TaskNode* src_node = edge->src_node();
-    while (src_node->GetTaskType() != TaskType::kReduceGather2) {
+    while (src_node->GetTaskType() != TaskType::kReduceScatter2) {
       src_node = src_node->SoleInEdge()->src_node();
     }
     int64_t parallel_id = src_node->parallel_ctx()->parallel_id();

@@ -4,7 +4,8 @@
 namespace oneflow {
 
 void ReduceGather2CompTaskNode::ProduceAllRegstsAndBindEdges() {
-  this->SoleOutEdge()->AddRegst("out", ProduceRegst("out", false, 1, 1));
+  std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", false, 1, 1);
+  for (TaskEdge* edge : out_edges()) { edge->AddRegst("out", out_regst); }
 }
 
 void ReduceGather2CompTaskNode::ConsumeAllRegsts() {

@@ -15,8 +15,7 @@ class ReduceLocalAdd2CompActor final : public InputWiseCompActor {
   void VirtualCompActorInit(const TaskProto& proto) override;
   void SetKernelCtxOther(void** other) override;
 
-  HashMap<int64_t, std::string> regst_desc_id2bn_in_op_;
-  std::tuple<std::string, bool, bool> other_val_;
+  std::tuple<int64_t, bool, bool, bool> other_val_;
 };
 
 }  // namespace oneflow
