@@ -6,19 +6,12 @@ namespace oneflow {
 void ReduceLocalAdd2CompTaskNode::ProduceAllRegstsAndBindEdges() {
   int64_t machine_num = logical_node()->parallel_desc()->sorted_machine_ids().size();
   int64_t dev_num_of_each_machine = logical_node()->parallel_desc()->device_num_of_each_machine();
-  CHECK_EQ(machine_num * dev_num_of_each_machine, parallel_ctx()->parallel_num());
-  bool do_local_reduce_scatter = machine_num > 1 && dev_num_of_each_machine > 1;
-  if (do_local_reduce_scatter) {
-    CHECK_EQ(out_edges().size(), machine_num);
-  } else {
-    CHECK_EQ(out_edges().size(), parallel_ctx()->parallel_num());
-  }
+  CHECK_EQ(out_edges().size(), machine_num);
   for (TaskEdge* edge : out_edges()) {
     std::vector<CompTaskNode*> succ_comp_task_nodes = GetSuccCompTaskNodesOnEdge(edge);
     CHECK_EQ(succ_comp_task_nodes.size(), 1);
     int64_t parallel_id = succ_comp_task_nodes.front()->parallel_id();
-    int64_t out_edge_index =
-        do_local_reduce_scatter ? parallel_id / dev_num_of_each_machine : parallel_id;
+    int64_t out_edge_index = parallel_id / dev_num_of_each_machine;
     std::string regst_name = "out_" + std::to_string(out_edge_index);
     std::shared_ptr<RegstDesc> out_regst = ProduceRegst(regst_name, false, 1, 1);
     edge->AddRegst(regst_name, out_regst);
@@ -33,15 +26,11 @@ void ReduceLocalAdd2CompTaskNode::ConsumeAllRegsts() {
 
   for (TaskEdge* edge : in_edges()) {
     TaskNode* src_node = edge->src_node();
-    while (dynamic_cast<CompTaskNode*>(src_node) == nullptr) {
+    while (src_node->GetTaskType() != TaskType::kReduceGather2) {
       src_node = src_node->SoleInEdge()->src_node();
     }
-    bool is_local_add = src_node->GetTaskType() == TaskType::kReduceScatter2;
     int64_t parallel_id = src_node->parallel_ctx()->parallel_id();
-    int64_t in_edge_index = do_local_reduce_scatter
-                                ? (is_local_add ? parallel_id % dev_num_of_each_machine
-                                                : parallel_id / dev_num_of_each_machine)
-                                : parallel_id;
+    int64_t in_edge_index = parallel_id % dev_num_of_each_machine;
     ConsumeRegst("in_" + std::to_string(in_edge_index), edge->GetSoleRegst());
   }
 }
