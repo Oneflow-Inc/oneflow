@@ -2,10 +2,11 @@
 #define ONEFLOW_CORE_GRAPH_NCCL_ALL_GATHER_COMPUTE_TASK_NODE_H_
 
 #include "oneflow/core/graph/poor_compute_task_node.h"
+#include "oneflow/core/graph/reduce_comp_task_node_if.h"
 
 namespace oneflow {
 
-class NcclAllGatherCompTaskNode final : public PoorCompTaskNode {
+class NcclAllGatherCompTaskNode final : public PoorCompTaskNode, public ReduceCompTaskNodeIf {
  public:
   OF_DISALLOW_COPY_AND_MOVE(NcclAllGatherCompTaskNode);
   NcclAllGatherCompTaskNode() = default;
@@ -13,6 +14,9 @@ class NcclAllGatherCompTaskNode final : public PoorCompTaskNode {
 
   TaskType GetTaskType() const override { return TaskType::kNcclAllGather; }
   CudaWorkType GetCudaWorkType() const override { return CudaWorkType::kNcclGather; }
+
+  void EnableMemSharingInReduce(
+      std::function<void(RegstDesc* regst, int64_t offset)> EnableMemSharing4Regst) override;
 };
 
 }  // namespace oneflow

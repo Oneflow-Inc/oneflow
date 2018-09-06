@@ -146,4 +146,21 @@ std::tuple<int32_t, int32_t> GetPartIdAndPartNumFromParallelCtx(
   }
 }
 
+int64_t ParallelDesc::DevicePhyId4ParallelId(int64_t parallel_id) const {
+  return machine_id2sorted_dev_phy_ids_.at(MachineId4ParallelId(parallel_id))
+      .at(DeviceRank4ParallelId(parallel_id));
+}
+
+int64_t ParallelDesc::MachineId4ParallelId(int64_t parallel_id) const {
+  return sorted_machine_ids_.at((size_t)MachineRank4ParallelId(parallel_id));
+}
+
+int64_t ParallelDesc::MachineRank4ParallelId(int64_t parallel_id) const {
+  return parallel_id / device_num_of_each_machine_;
+}
+
+int64_t ParallelDesc::DeviceRank4ParallelId(int64_t parallel_id) const {
+  return parallel_id % device_num_of_each_machine_;
+}
+
 }  // namespace oneflow

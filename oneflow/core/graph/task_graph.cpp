@@ -333,11 +333,8 @@ void TaskGraph::EnableMemSharingInOneReduce(const ReduceTaskNodes& reduce_task_n
   HandleMemSharedFieldOfConsumedRegsts(reduce_task_nodes.global_add, consumed_regst_num);
   SetMemSharedField4Regst(reduce_task_nodes.global_add->GetProducedRegst("out").get(),
                           blob_index2offset.at(parallel_id));
-
-  // gather
-  HandleMemSharedFieldOfConsumedRegsts(reduce_task_nodes.gather, parallel_num);
-  SetMemSharedField4Regst(reduce_task_nodes.gather->GetProducedRegst("out").get(),
-                          blob_index2offset.at(0));
+  
+  dynamic_cast<ReduceGatherCompTaskNode*>(reduce_task_nodes.gather)->EnableMemSharingInReduce(SetMemSharedField4Regst);
 }
 
 void TaskGraph::AddCtrlEdge4MemSharingInOneReduce(const ReduceTaskNodes& reduce_task_nodes) {
