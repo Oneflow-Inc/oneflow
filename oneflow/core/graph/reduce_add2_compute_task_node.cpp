@@ -26,8 +26,24 @@ void ReduceAdd2CompTaskNode::ProduceAllRegstsAndBindEdges() {
 }
 
 void ReduceAdd2CompTaskNode::ConsumeAllRegsts() {
-  // TODO(jiyuan): use regst name: in_0, in_1, ...
-  for (TaskEdge* edge : in_edges()) { ConsumeRegst("in", edge->GetSoleRegst()); }
+  int64_t machine_num = logical_node()->parallel_desc()->sorted_machine_ids().size();
+  int64_t dev_num_of_each_machine = logical_node()->parallel_desc()->device_num_of_each_machine();
+  CHECK_EQ(machine_num * dev_num_of_each_machine, parallel_ctx()->parallel_num());
+  bool do_local_reduce_scatter = machine_num > 1 && dev_num_of_each_machine > 1;
+
+  for (TaskEdge* edge : in_edges()) {
+    TaskNode* src_node = edge->src_node();
+    while (dynamic_cast<CompTaskNode*>(src_node) == nullptr) {
+      src_node = src_node->SoleInEdge()->src_node();
+    }
+    bool is_local_add = src_node->GetTaskType() == TaskType::kReduceScatter2;
+    int64_t parallel_id = src_node->parallel_ctx()->parallel_id();
+    int64_t in_edge_index = do_local_reduce_scatter
+                                ? (is_local_add ? parallel_id % dev_num_of_each_machine
+                                                : parallel_id / dev_num_of_each_machine)
+                                : parallel_id;
+    ConsumeRegst("in_" + std::to_string(in_edge_index), edge->GetSoleRegst());
+  }
 }
 
 void ReduceAdd2CompTaskNode::BuildExecGphAndRegst() {
@@ -45,7 +61,11 @@ void ReduceAdd2CompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<Operator> reduce_add2_op = ConstructOp(reduce_add2_conf);
   node->mut_op() = reduce_add2_op;
 
-  BindIbnWithInRegst();
+  FOR_RANGE(size_t, i, 0, reduce_add2_op->input_bns().size()) {
+    std::string in_name = reduce_add2_op->input_bns().Get(i);
+    std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst(in_name);
+    node->BindBnWithRegst(in_name, in_regst);
+  }
   FOR_RANGE(size_t, i, 0, reduce_add2_op->output_bns().size()) {
     std::string out_name = reduce_add2_op->output_bns().Get(i);
     std::shared_ptr<RegstDesc> out_regst = GetProducedRegst(out_name);
@@ -53,31 +73,6 @@ void ReduceAdd2CompTaskNode::BuildExecGphAndRegst() {
     node->BindBnWithRegst(out_name, out_regst);
   }
   node->InferBlobDescs(parallel_ctx());
-}
-
-void ReduceAdd2CompTaskNode::BindIbnWithInRegst() {
-  int64_t machine_num = logical_node()->parallel_desc()->sorted_machine_ids().size();
-  int64_t dev_num_of_each_machine = logical_node()->parallel_desc()->device_num_of_each_machine();
-  CHECK_EQ(machine_num * dev_num_of_each_machine, parallel_ctx()->parallel_num());
-  bool do_local_reduce_scatter = machine_num > 1 && dev_num_of_each_machine > 1;
-
-  ExecNode* node = mut_exec_gph().SoleNode();
-  for (TaskEdge* edge : in_edges()) {
-    TaskNode* src_node = edge->src_node();
-    while (dynamic_cast<CompTaskNode*>(src_node) == nullptr) {
-      src_node = src_node->SoleInEdge()->src_node();
-    }
-    bool is_local_add = src_node->GetTaskType() == TaskType::kReduceScatter2;
-    int64_t parallel_id = src_node->parallel_ctx()->parallel_id();
-    int64_t in_edge_index = do_local_reduce_scatter
-                                ? (is_local_add ? parallel_id % dev_num_of_each_machine
-                                                : parallel_id / dev_num_of_each_machine)
-                                : parallel_id;
-
-    std::shared_ptr<RegstDesc> in_regst = edge->GetSoleRegst();
-    CHECK_EQ(1, in_regst->NumOfLbi());
-    node->BindBnWithRegst(node->op()->input_bns().Get(in_edge_index), in_regst);
-  }
 }
 
 }  // namespace oneflow

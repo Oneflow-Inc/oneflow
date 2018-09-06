@@ -41,11 +41,12 @@ void ReduceScatter2CompTaskNode::BuildExecGphAndRegst() {
   node->BindBnWithRegst(reduce_scatter2_op->SoleIbn(), GetSoleConsumedRegst("in"));
 
   FOR_RANGE(size_t, i, 0, reduce_scatter2_op->output_bns().size()) {
-    std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out_" + std::to_string(i));
+    std::string out_name = "out_" + std::to_string(i);
+    CHECK_EQ(out_name, reduce_scatter2_op->output_bns().Get(i));
+    std::shared_ptr<RegstDesc> out_regst = GetProducedRegst(out_name);
     CHECK(out_regst.get() != nullptr);
-    const std::string& obn = reduce_scatter2_op->output_bns().Get(i);
-    out_regst->AddLbi(reduce_scatter2_op->BnInOp2Lbi(obn));
-    node->BindBnWithRegst(obn, out_regst);
+    out_regst->AddLbi(reduce_scatter2_op->BnInOp2Lbi(out_name));
+    node->BindBnWithRegst(out_name, out_regst);
   }
   node->InferBlobDescs(parallel_ctx());
 }
