@@ -92,6 +92,7 @@ class Blob final {
   }
   void Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr);
 
+  // TODO(jiyuan): add and set instance_num ptr
   bool is_contiguous_;
   void* header_ptr_;
   char* data_id_ptr_;
