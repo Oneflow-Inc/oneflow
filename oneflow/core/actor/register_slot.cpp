@@ -65,14 +65,29 @@ void RegstSlot::InitedDone() {
   is_inited_ = true;
 }
 
-void RegstSlot::ForEachFrontRegst(std::function<void(const Regst*)> handler) const {
+void RegstSlot::ForChosenFrontRegst(std::function<bool(int64_t)> IsChosenRegstDescId,
+                                    std::function<void(const Regst*)> Handler) const {
   for (const auto& kv : regst_desc_id2regsts_) {
-    if (kv.second.empty() == false) { handler(kv.second.front()); }
+    if (IsChosenRegstDescId(kv.first)) {
+      CHECK(kv.second.empty());
+      Handler(kv.second.front());
+    }
   }
 }
 
-void RegstSlot::ForEachRegstDeq(std::function<void(const std::deque<Regst*>&)> handler) const {
-  for (const auto& kv : regst_desc_id2regsts_) { handler(kv.second); }
+void RegstSlot::ForChosenRegstDeq(std::function<bool(int64_t)> IsChosenRegstDescId,
+                                  std::function<void(const std::deque<Regst*>&)> Handler) const {
+  for (const auto& kv : regst_desc_id2regsts_) {
+    if (IsChosenRegstDescId(kv.first)) { Handler(kv.second); }
+  }
+}
+
+void RegstSlot::ForEachFrontRegst(std::function<void(const Regst*)> Handler) const {
+  ForChosenFrontRegst([](int64_t) { return true; }, Handler);
+}
+
+void RegstSlot::ForEachRegstDeq(std::function<void(const std::deque<Regst*>&)> Handler) const {
+  ForChosenRegstDeq([](int64_t) { return true; }, Handler);
 }
 
 }  // namespace oneflow

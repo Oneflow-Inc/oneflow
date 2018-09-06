@@ -20,6 +20,9 @@ class RegstSlot final {
   const std::deque<Regst*>& RegstDeq4RegstDescId(int64_t regst_desc_id) const;
   void ForEachFrontRegst(std::function<void(const Regst*)>) const;
   void ForEachRegstDeq(std::function<void(const std::deque<Regst*>&)>) const;
+  void ForChosenFrontRegst(std::function<bool(int64_t)>, std::function<void(const Regst*)>) const;
+  void ForChosenRegstDeq(std::function<bool(int64_t)>,
+                         std::function<void(const std::deque<Regst*>&)>) const;
 
   Regst* Front(int64_t regst_desc_id) const;
   Regst* SoleFront() const;
