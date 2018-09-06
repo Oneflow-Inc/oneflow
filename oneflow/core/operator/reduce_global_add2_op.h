@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_OPERATOR_REDUCE_ADD2_OP_H_
-#define ONEFLOW_CORE_OPERATOR_REDUCE_ADD2_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_REDUCE_GLOBAL_ADD2_OP_H_
+#define ONEFLOW_CORE_OPERATOR_REDUCE_GLOBAL_ADD2_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-class ReduceAdd2Op final : public Operator {
+class ReduceGlobalAdd2Op final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ReduceAdd2Op);
-  ReduceAdd2Op() = default;
-  ~ReduceAdd2Op() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ReduceGlobalAdd2Op);
+  ReduceGlobalAdd2Op() = default;
+  ~ReduceGlobalAdd2Op() = default;
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
@@ -24,4 +24,4 @@ class ReduceAdd2Op final : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_REDUCE_ADD2_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_REDUCE_GLOBAL_ADD2_OP_H_

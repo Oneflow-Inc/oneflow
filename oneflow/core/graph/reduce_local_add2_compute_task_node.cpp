@@ -1,9 +1,9 @@
-#include "oneflow/core/graph/reduce_add2_compute_task_node.h"
+#include "oneflow/core/graph/reduce_local_add2_compute_task_node.h"
 #include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
-void ReduceAdd2CompTaskNode::ProduceAllRegstsAndBindEdges() {
+void ReduceLocalAdd2CompTaskNode::ProduceAllRegstsAndBindEdges() {
   int64_t machine_num = logical_node()->parallel_desc()->sorted_machine_ids().size();
   int64_t dev_num_of_each_machine = logical_node()->parallel_desc()->device_num_of_each_machine();
   CHECK_EQ(machine_num * dev_num_of_each_machine, parallel_ctx()->parallel_num());
@@ -25,7 +25,7 @@ void ReduceAdd2CompTaskNode::ProduceAllRegstsAndBindEdges() {
   }
 }
 
-void ReduceAdd2CompTaskNode::ConsumeAllRegsts() {
+void ReduceLocalAdd2CompTaskNode::ConsumeAllRegsts() {
   int64_t machine_num = logical_node()->parallel_desc()->sorted_machine_ids().size();
   int64_t dev_num_of_each_machine = logical_node()->parallel_desc()->device_num_of_each_machine();
   CHECK_EQ(machine_num * dev_num_of_each_machine, parallel_ctx()->parallel_num());
@@ -46,30 +46,31 @@ void ReduceAdd2CompTaskNode::ConsumeAllRegsts() {
   }
 }
 
-void ReduceAdd2CompTaskNode::BuildExecGphAndRegst() {
+void ReduceLocalAdd2CompTaskNode::BuildExecGphAndRegst() {
   int64_t machine_num = logical_node()->parallel_desc()->sorted_machine_ids().size();
   int64_t dev_num_of_each_machine = logical_node()->parallel_desc()->device_num_of_each_machine();
   CHECK_EQ(machine_num * dev_num_of_each_machine, parallel_ctx()->parallel_num());
 
   ExecNode* node = mut_exec_gph().NewNode();
-  OperatorConf reduce_add2_conf;
-  reduce_add2_conf.set_name("reduce_add2_" + NewUniqueId());
-  reduce_add2_conf.set_device_type(this->device_type());
-  ReduceAdd2OpConf* mut_local_add_conf = reduce_add2_conf.mutable_reduce_add2_conf();
+  OperatorConf reduce_local_add2_conf;
+  reduce_local_add2_conf.set_name("reduce_local_add2_" + NewUniqueId());
+  reduce_local_add2_conf.set_device_type(this->device_type());
+  ReduceLocalAdd2OpConf* mut_local_add_conf =
+      reduce_local_add2_conf.mutable_reduce_local_add2_conf();
   mut_local_add_conf->set_in_num(in_edges().size());
   mut_local_add_conf->set_out_num(out_edges().size());
-  std::shared_ptr<Operator> reduce_add2_op = ConstructOp(reduce_add2_conf);
-  node->mut_op() = reduce_add2_op;
+  std::shared_ptr<Operator> reduce_local_add2_op = ConstructOp(reduce_local_add2_conf);
+  node->mut_op() = reduce_local_add2_op;
 
-  FOR_RANGE(size_t, i, 0, reduce_add2_op->input_bns().size()) {
-    std::string in_name = reduce_add2_op->input_bns().Get(i);
+  FOR_RANGE(size_t, i, 0, reduce_local_add2_op->input_bns().size()) {
+    std::string in_name = reduce_local_add2_op->input_bns().Get(i);
     std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst(in_name);
     node->BindBnWithRegst(in_name, in_regst);
   }
-  FOR_RANGE(size_t, i, 0, reduce_add2_op->output_bns().size()) {
-    std::string out_name = reduce_add2_op->output_bns().Get(i);
+  FOR_RANGE(size_t, i, 0, reduce_local_add2_op->output_bns().size()) {
+    std::string out_name = reduce_local_add2_op->output_bns().Get(i);
     std::shared_ptr<RegstDesc> out_regst = GetProducedRegst(out_name);
-    out_regst->AddLbi(reduce_add2_op->BnInOp2Lbi(out_name));
+    out_regst->AddLbi(reduce_local_add2_op->BnInOp2Lbi(out_name));
     node->BindBnWithRegst(out_name, out_regst);
   }
   node->InferBlobDescs(parallel_ctx());

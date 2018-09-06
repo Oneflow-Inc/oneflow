@@ -1,15 +1,15 @@
-#include "oneflow/core/actor/reduce_add2_compute_actor.h"
+#include "oneflow/core/actor/reduce_local_add2_compute_actor.h"
 
 namespace oneflow {
 
-void ReduceAdd2CompActor::VirtualCompActorInit(const TaskProto& proto) {
+void ReduceLocalAdd2CompActor::VirtualCompActorInit(const TaskProto& proto) {
   InputWiseCompActor::Init(proto);
   for (const auto& pair : exec_kernel_vec().at(0).bn_in_op2regst_desc_id) {
     CHECK(regst_desc_id2bn_in_op_.emplace(pair.second, pair.first).second);
   }
 }
 
-void ReduceAdd2CompActor::SetKernelCtxOther(void** other) {
+void ReduceLocalAdd2CompActor::SetKernelCtxOther(void** other) {
   const std::string& ibn = regst_desc_id2bn_in_op_.at(cur_processed_regst_desc_id());
   bool is_inited = EnableInplace() ? true : processed_regst_desc_id_cnt() != 0;
   // TODO: decide whether it is local add or global add
@@ -21,6 +21,6 @@ void ReduceAdd2CompActor::SetKernelCtxOther(void** other) {
   *other = static_cast<void*>(&other_val_);
 }
 
-REGISTER_ACTOR(TaskType::kReduceAdd2, ReduceAdd2CompActor);
+REGISTER_ACTOR(TaskType::kReduceLocalAdd2, ReduceLocalAdd2CompActor);
 
 }  // namespace oneflow

@@ -606,9 +606,13 @@ message ReduceScatter2OpConf {
   required int32 out_num = 1;
 }
 
-message ReduceAdd2OpConf {
+message ReduceLocalAdd2OpConf {
   required int32 in_num = 1;
   required int32 out_num = 2;
+}
+
+message ReduceGlobalAdd2OpConf {
+  required int32 in_num = 1;
 }
 
 message ReduceGather2OpConf {
@@ -719,8 +723,9 @@ message OperatorConf {
     AccuracyOpConf accuracy_conf = 407;
     AccuracyPrintOpConf accuracy_print_conf = 408;
     ReduceScatter2OpConf reduce_scatter2_conf = 409;
-    ReduceAdd2OpConf reduce_add2_conf = 410;
-    ReduceGather2OpConf reduce_gather2_conf = 411;
+    ReduceLocalAdd2OpConf reduce_local_add2_conf = 410;
+    ReduceGlobalAdd2OpConf reduce_global_add2_conf = 411;
+    ReduceGather2OpConf reduce_gather2_conf = 412;
   }
 }
 

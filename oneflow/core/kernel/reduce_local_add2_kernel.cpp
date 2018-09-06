@@ -1,9 +1,9 @@
-#include "oneflow/core/kernel/reduce_add2_kernel.h"
+#include "oneflow/core/kernel/reduce_local_add2_kernel.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-void ReduceAdd2Kernel<device_type, T>::ForwardDataContent(
+void ReduceLocalAdd2Kernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   /*
   const auto* other_val = static_cast<std::tuple<int64_t, int64_t, bool, bool>*>(ctx.other);
@@ -27,6 +27,7 @@ void ReduceAdd2Kernel<device_type, T>::ForwardDataContent(
   // TODO(jiyuan): support multiple output
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReduceAdd2Conf, ReduceAdd2Kernel, FLOATING_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReduceLocalAdd2Conf, ReduceLocalAdd2Kernel,
+                           FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

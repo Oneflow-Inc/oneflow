@@ -17,7 +17,8 @@
 #include "oneflow/core/graph/reduce_concat_compute_task_node.h"
 #include "oneflow/core/graph/reduce_split_compute_task_node.h"
 #include "oneflow/core/graph/reduce_scatter2_compute_task_node.h"
-#include "oneflow/core/graph/reduce_add2_compute_task_node.h"
+#include "oneflow/core/graph/reduce_local_add2_compute_task_node.h"
+#include "oneflow/core/graph/reduce_global_add2_compute_task_node.h"
 #include "oneflow/core/graph/reduce_gather2_compute_task_node.h"
 #include "oneflow/core/graph/accuracy_compute_task_node.h"
 #include "oneflow/core/graph/accuracy_accumulate_compute_task_node.h"
@@ -387,14 +388,17 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("MdDiffAcc"
                               "ReduceScatter2",
                               &TaskGraph::BldSubTskGphByOneToOne);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceScatter2"
-                              "ReduceAdd2",
-                              &TaskGraph::BldSubTskGphByReduceScatter2ReduceAdd2);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceAdd2"
-                              "ReduceAdd2",
-                              &TaskGraph::BldSubTskGphByReduceAdd2ReduceAdd2);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceAdd2"
+                              "ReduceLocalAdd2",
+                              &TaskGraph::BldSubTskGphByReduceScatter2ReduceLocalAdd2);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceScatter2"
+                              "ReduceGlobalAdd2",
+                              &TaskGraph::BldSubTskGphByReduceScatter2ReduceGlobalAdd2);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceLocalAdd2"
+                              "ReduceGlobalAdd2",
+                              &TaskGraph::BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd2);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGlobalAdd2"
                               "ReduceGather2",
-                              &TaskGraph::BldSubTskGphByReduceAdd2ReduceGather2);
+                              &TaskGraph::BldSubTskGphByReduceGlobalAdd2ReduceGather2);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather2"
                               "ReduceGather2",
                               &TaskGraph::BldSubTskGphByReduceGather2ReduceGather2);
@@ -453,7 +457,8 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
   OF_PP_MAKE_TUPLE_SEQ(ReduceGather, kMdUpdtArea)         \
   OF_PP_MAKE_TUPLE_SEQ(ReduceSplit, kMdUpdtArea)          \
   OF_PP_MAKE_TUPLE_SEQ(ReduceScatter2, kMdUpdtArea)       \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceAdd2, kMdUpdtArea)           \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceLocalAdd2, kMdUpdtArea)      \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceGlobalAdd2, kMdUpdtArea)     \
   OF_PP_MAKE_TUPLE_SEQ(ReduceGather2, kMdUpdtArea)        \
   OF_PP_MAKE_TUPLE_SEQ(Accuracy, kDataForwardArea)        \
   OF_PP_MAKE_TUPLE_SEQ(AccuracyAcc, kDataForwardArea)     \
