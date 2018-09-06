@@ -727,10 +727,10 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceAdd2ReduceGather2) {
       if (do_local_reduce_scatter) {
         if (src_comp_task->parallel_id() % pd->device_num_of_each_machine()
             == dst_comp_task->parallel_id() % pd->device_num_of_each_machine()) {
-          BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, false);
+          BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, true);
         }
       } else {
-        BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, false);
+        BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, true);
       }
     }
   }
