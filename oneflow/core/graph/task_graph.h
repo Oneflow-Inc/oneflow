@@ -65,11 +65,11 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceLocalAdd2);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceGlobalAdd2);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd2);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGlobalAdd2ReduceGather2);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGather2ReduceGather2);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatterReduceLocalAdd);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatterReduceGlobalAdd);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceLocalAddReduceGlobalAdd);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGlobalAddReduceGather);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGatherReduceGather);
 
  private:
   void BuildTaskPath(

@@ -1,9 +1,9 @@
-#include "oneflow/core/graph/reduce_scatter2_compute_task_node.h"
+#include "oneflow/core/graph/reduce_scatter_compute_task_node.h"
 #include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
-void ReduceScatter2CompTaskNode::ProduceAllRegstsAndBindEdges() {
+void ReduceScatterCompTaskNode::ProduceAllRegstsAndBindEdges() {
   int64_t machine_num = logical_node()->parallel_desc()->sorted_machine_ids().size();
   int64_t dev_num_of_each_machine = logical_node()->parallel_desc()->device_num_of_each_machine();
   CHECK_EQ(machine_num * dev_num_of_each_machine, parallel_ctx()->parallel_num());
@@ -26,27 +26,27 @@ void ReduceScatter2CompTaskNode::ProduceAllRegstsAndBindEdges() {
   }
 }
 
-void ReduceScatter2CompTaskNode::ConsumeAllRegsts() {
+void ReduceScatterCompTaskNode::ConsumeAllRegsts() {
   ConsumeRegst("in", this->SoleInEdge()->GetSoleRegst());
 }
 
-void ReduceScatter2CompTaskNode::BuildExecGphAndRegst() {
+void ReduceScatterCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
-  OperatorConf reduce_scatter2_op_conf;
-  reduce_scatter2_op_conf.set_name("reduce_scatter2_" + NewUniqueId());
-  reduce_scatter2_op_conf.set_device_type(this->device_type());
-  reduce_scatter2_op_conf.mutable_reduce_scatter2_conf()->set_out_num(out_edges().size());
+  OperatorConf reduce_scatter_op_conf;
+  reduce_scatter_op_conf.set_name("reduce_scatter_" + NewUniqueId());
+  reduce_scatter_op_conf.set_device_type(this->device_type());
+  reduce_scatter_op_conf.mutable_reduce_scatter_conf()->set_out_num(out_edges().size());
 
-  std::shared_ptr<Operator> reduce_scatter2_op = ConstructOp(reduce_scatter2_op_conf);
-  node->mut_op() = reduce_scatter2_op;
-  node->BindBnWithRegst(reduce_scatter2_op->SoleIbn(), GetSoleConsumedRegst("in"));
+  std::shared_ptr<Operator> reduce_scatter_op = ConstructOp(reduce_scatter_op_conf);
+  node->mut_op() = reduce_scatter_op;
+  node->BindBnWithRegst(reduce_scatter_op->SoleIbn(), GetSoleConsumedRegst("in"));
 
-  FOR_RANGE(size_t, i, 0, reduce_scatter2_op->output_bns().size()) {
+  FOR_RANGE(size_t, i, 0, reduce_scatter_op->output_bns().size()) {
     std::string out_name = "out_" + std::to_string(i);
-    CHECK_EQ(out_name, reduce_scatter2_op->output_bns().Get(i));
+    CHECK_EQ(out_name, reduce_scatter_op->output_bns().Get(i));
     std::shared_ptr<RegstDesc> out_regst = GetProducedRegst(out_name);
     CHECK(out_regst.get() != nullptr);
-    out_regst->AddLbi(reduce_scatter2_op->BnInOp2Lbi(out_name));
+    out_regst->AddLbi(reduce_scatter_op->BnInOp2Lbi(out_name));
     node->BindBnWithRegst(out_name, out_regst);
   }
   node->InferBlobDescs(parallel_ctx());

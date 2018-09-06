@@ -1,31 +1,31 @@
-#include "oneflow/core/operator/reduce_scatter2_op.h"
+#include "oneflow/core/operator/reduce_scatter_op.h"
 #include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 
-void ReduceScatter2Op::InitFromOpConf() {
-  CHECK(op_conf().has_reduce_scatter2_conf());
+void ReduceScatterOp::InitFromOpConf() {
+  CHECK(op_conf().has_reduce_scatter_conf());
   EnrollInputBn("in", false);
-  for (int32_t i = 0; i < op_conf().reduce_scatter2_conf().out_num(); ++i) {
+  for (int32_t i = 0; i < op_conf().reduce_scatter_conf().out_num(); ++i) {
     EnrollOutputBn("out_" + std::to_string(i), false);
   }
 }
 
-const PbMessage& ReduceScatter2Op::GetCustomizedConf() const {
-  return op_conf().reduce_scatter2_conf();
+const PbMessage& ReduceScatterOp::GetCustomizedConf() const {
+  return op_conf().reduce_scatter_conf();
 }
 
-LogicalBlobId ReduceScatter2Op::obn2lbi(const std::string& output_bn) const {
+LogicalBlobId ReduceScatterOp::obn2lbi(const std::string& output_bn) const {
   LogicalBlobId ret;
   ret.set_op_name(op_name());
   ret.set_blob_name(output_bn);
   return ret;
 }
 
-void ReduceScatter2Op::InferBlobDescs(
+void ReduceScatterOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  int32_t out_num = op_conf().reduce_scatter2_conf().out_num();
+  int32_t out_num = op_conf().reduce_scatter_conf().out_num();
   CHECK_GE(out_num, 2);
 
   const BlobDesc* in_blob = GetBlobDesc4BnInOp(SoleIbn());
@@ -39,6 +39,6 @@ void ReduceScatter2Op::InferBlobDescs(
   }
 }
 
-REGISTER_OP(OperatorConf::kReduceScatter2Conf, ReduceScatter2Op);
+REGISTER_OP(OperatorConf::kReduceScatterConf, ReduceScatterOp);
 
 }  // namespace oneflow

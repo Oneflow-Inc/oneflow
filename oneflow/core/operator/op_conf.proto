@@ -585,20 +585,20 @@ message ReduceSplitOpConf {
   required int32 out_num = 1;
 }
 
-message ReduceScatter2OpConf {
+message ReduceScatterOpConf {
   required int32 out_num = 1;
 }
 
-message ReduceLocalAdd2OpConf {
+message ReduceLocalAddOpConf {
   required int32 in_num = 1;
   required int32 out_num = 2;
 }
 
-message ReduceGlobalAdd2OpConf {
+message ReduceGlobalAddOpConf {
   required int32 in_num = 1;
 }
 
-message ReduceGather2OpConf {
+message ReduceGatherOpConf {
   required int32 in_num = 1;
 }
 
@@ -701,10 +701,10 @@ message OperatorConf {
     RecordLoadOpConf record_load_conf = 406;
     AccuracyOpConf accuracy_conf = 407;
     AccuracyPrintOpConf accuracy_print_conf = 408;
-    ReduceScatter2OpConf reduce_scatter2_conf = 409;
-    ReduceLocalAdd2OpConf reduce_local_add2_conf = 410;
-    ReduceGlobalAdd2OpConf reduce_global_add2_conf = 411;
-    ReduceGather2OpConf reduce_gather2_conf = 412;
+    ReduceScatterOpConf reduce_scatter_conf = 409;
+    ReduceLocalAddOpConf reduce_local_add_conf = 410;
+    ReduceGlobalAddOpConf reduce_global_add_conf = 411;
+    ReduceGatherOpConf reduce_gather_conf = 412;
   }
 }
 

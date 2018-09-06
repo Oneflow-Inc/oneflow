@@ -1,30 +1,30 @@
-#include "oneflow/core/operator/reduce_global_add2_op.h"
+#include "oneflow/core/operator/reduce_global_add_op.h"
 
 namespace oneflow {
 
-void ReduceGlobalAdd2Op::InitFromOpConf() {
-  CHECK(op_conf().has_reduce_global_add2_conf());
-  FOR_RANGE(int32_t, i, 0, op_conf().reduce_global_add2_conf().in_num()) {
+void ReduceGlobalAddOp::InitFromOpConf() {
+  CHECK(op_conf().has_reduce_global_add_conf());
+  FOR_RANGE(int32_t, i, 0, op_conf().reduce_global_add_conf().in_num()) {
     EnrollInputBn("in_" + std::to_string(i), false);
   }
   EnrollOutputBn("out", false);
 }
 
-const PbMessage& ReduceGlobalAdd2Op::GetCustomizedConf() const {
-  return op_conf().reduce_global_add2_conf();
+const PbMessage& ReduceGlobalAddOp::GetCustomizedConf() const {
+  return op_conf().reduce_global_add_conf();
 }
 
-LogicalBlobId ReduceGlobalAdd2Op::obn2lbi(const std::string& output_bn) const {
+LogicalBlobId ReduceGlobalAddOp::obn2lbi(const std::string& output_bn) const {
   LogicalBlobId ret;
   ret.set_op_name(op_name());
   ret.set_blob_name(output_bn);
   return ret;
 }
 
-void ReduceGlobalAdd2Op::InferBlobDescs(
+void ReduceGlobalAddOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  int32_t in_num = op_conf().reduce_global_add2_conf().in_num();
+  int32_t in_num = op_conf().reduce_global_add_conf().in_num();
   CHECK_GE(in_num, 2);
   BlobDesc* first_in_blob = GetBlobDesc4BnInOp(input_bns().Get(0));
   *GetBlobDesc4BnInOp(SoleObn()) = *first_in_blob;
@@ -33,6 +33,6 @@ void ReduceGlobalAdd2Op::InferBlobDescs(
   }
 }
 
-REGISTER_OP(OperatorConf::kReduceGlobalAdd2Conf, ReduceGlobalAdd2Op);
+REGISTER_OP(OperatorConf::kReduceGlobalAddConf, ReduceGlobalAddOp);
 
 }  // namespace oneflow

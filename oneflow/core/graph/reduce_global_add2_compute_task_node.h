@@ -1,20 +1,20 @@
-#ifndef ONEFLOW_CORE_GRAPH_REDUCE_GLOBAL_ADD2_COMPUTE_TASK_NODE_H_
-#define ONEFLOW_CORE_GRAPH_REDUCE_GLOBAL_ADD2_COMPUTE_TASK_NODE_H_
+#ifndef ONEFLOW_CORE_GRAPH_REDUCE_GLOBAL_ADD_COMPUTE_TASK_NODE_H_
+#define ONEFLOW_CORE_GRAPH_REDUCE_GLOBAL_ADD_COMPUTE_TASK_NODE_H_
 
 #include "oneflow/core/graph/compute_task_node.h"
 
 namespace oneflow {
 
-class ReduceGlobalAdd2CompTaskNode final : public CompTaskNode {
+class ReduceGlobalAddCompTaskNode final : public CompTaskNode {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ReduceGlobalAdd2CompTaskNode);
-  ReduceGlobalAdd2CompTaskNode() = default;
-  ~ReduceGlobalAdd2CompTaskNode() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ReduceGlobalAddCompTaskNode);
+  ReduceGlobalAddCompTaskNode() = default;
+  ~ReduceGlobalAddCompTaskNode() = default;
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
 
-  TaskType GetTaskType() const override { return TaskType::kReduceGlobalAdd2; }
+  TaskType GetTaskType() const override { return TaskType::kReduceGlobalAdd; }
   CudaWorkType GetCudaWorkType() const override { return CudaWorkType::kMix; }
 
  private:
@@ -25,4 +25,4 @@ class ReduceGlobalAdd2CompTaskNode final : public CompTaskNode {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_REDUCE_GLOBAL_ADD2_COMPUTE_TASK_NODE_H_
+#endif  // ONEFLOW_CORE_GRAPH_REDUCE_GLOBAL_ADD_COMPUTE_TASK_NODE_H_

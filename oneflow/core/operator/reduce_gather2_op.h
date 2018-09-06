@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_OPERATOR_REDUCE_GATHER2_OP_H_
-#define ONEFLOW_CORE_OPERATOR_REDUCE_GATHER2_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_REDUCE_GATHER_OP_H_
+#define ONEFLOW_CORE_OPERATOR_REDUCE_GATHER_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-class ReduceGather2Op final : public Operator {
+class ReduceGatherOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ReduceGather2Op);
-  ReduceGather2Op() = default;
-  ~ReduceGather2Op() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ReduceGatherOp);
+  ReduceGatherOp() = default;
+  ~ReduceGatherOp() = default;
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
@@ -26,4 +26,4 @@ class ReduceGather2Op final : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_REDUCE_GATHER2_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_REDUCE_GATHER_OP_H_

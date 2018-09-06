@@ -1,12 +1,12 @@
-#include "oneflow/core/actor/reduce_local_add2_compute_actor.h"
+#include "oneflow/core/actor/reduce_local_add_compute_actor.h"
 
 namespace oneflow {
 
-void ReduceLocalAdd2CompActor::VirtualCompActorInit(const TaskProto& proto) {
+void ReduceLocalAddCompActor::VirtualCompActorInit(const TaskProto& proto) {
   InputWiseCompActor::Init(proto);
 }
 
-void ReduceLocalAdd2CompActor::SetKernelCtxOther(void** other) {
+void ReduceLocalAddCompActor::SetKernelCtxOther(void** other) {
   int64_t in_bn_id = InBnId4RegstDescId(cur_processed_regst_desc_id());
   bool is_inited = EnableInplace() ? true : processed_regst_desc_id_cnt() != 0;
   bool is_inplace_in_blob =
@@ -19,6 +19,6 @@ void ReduceLocalAdd2CompActor::SetKernelCtxOther(void** other) {
   *other = static_cast<void*>(&other_val_);
 }
 
-REGISTER_ACTOR(TaskType::kReduceLocalAdd2, ReduceLocalAdd2CompActor);
+REGISTER_ACTOR(TaskType::kReduceLocalAdd, ReduceLocalAddCompActor);
 
 }  // namespace oneflow

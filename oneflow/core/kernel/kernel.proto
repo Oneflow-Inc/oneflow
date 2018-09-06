@@ -100,7 +100,7 @@ message DecodeOFRecordKernelConf {
   required uint32 random_seed = 1;
 }
 
-message ReduceGather2KernelConf {
+message ReduceGatherKernelConf {
   repeated int64 data_offset = 1;
 }
 
@@ -166,7 +166,7 @@ message KernelConf {
     MaxPoolingKernelConf max_pooling_conf = 205;
     NormalizationKernelConf normalization_conf = 250;
     LocalResponseNormalizationKernelConf local_response_normalization_conf = 300;
-    ReduceGather2KernelConf reduce_gather2_conf = 351;
+    ReduceGatherKernelConf reduce_gather_conf = 351;
     ReduceConcatKernelConf reduce_concat_conf = 352;
     ReduceSplitKernelConf reduce_split_conf = 353;
     AccuracyKernelConf accuracy_conf = 401;

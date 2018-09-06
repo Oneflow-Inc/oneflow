@@ -6,11 +6,11 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class ReduceGlobalAdd2Kernel final : public KernelIf<device_type> {
+class ReduceGlobalAddKernel final : public KernelIf<device_type> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ReduceGlobalAdd2Kernel);
-  ReduceGlobalAdd2Kernel() = default;
-  ~ReduceGlobalAdd2Kernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ReduceGlobalAddKernel);
+  ReduceGlobalAddKernel() = default;
+  ~ReduceGlobalAddKernel() = default;
 
  private:
   void ForwardDataContent(const KernelCtx&,

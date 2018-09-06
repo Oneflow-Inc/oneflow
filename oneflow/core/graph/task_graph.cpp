@@ -4,8 +4,8 @@
 #include "oneflow/core/graph/normal_model_update_compute_task_node.h"
 #include "oneflow/core/graph/chain_graph.h"
 #include "oneflow/core/graph/boxing_task_node.h"
-#include "oneflow/core/graph/reduce_global_add2_compute_task_node.h"
-#include "oneflow/core/graph/reduce_gather2_compute_task_node.h"
+#include "oneflow/core/graph/reduce_global_add_compute_task_node.h"
+#include "oneflow/core/graph/reduce_gather_compute_task_node.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
@@ -199,10 +199,10 @@ void TaskGraph::CollectReduceTaskNodes2(
     if (concat_task_node != nullptr) {
       reduce_task_nodes->concat = concat_task_node;
       reduce_task_nodes->scatter =
-          FindSuccReduceTaskNode(reduce_task_nodes->concat, TaskType::kReduceScatter2);
+          FindSuccReduceTaskNode(reduce_task_nodes->concat, TaskType::kReduceScatter);
     } else {
       reduce_task_nodes->scatter =
-          FindSuccReduceTaskNode(bw_or_md_diff_acc, TaskType::kReduceScatter2);
+          FindSuccReduceTaskNode(bw_or_md_diff_acc, TaskType::kReduceScatter);
     }
   };
 
@@ -225,20 +225,20 @@ void TaskGraph::CollectReduceTaskNodes2(
       FindConcatAndScatter(bw_task_node, &reduce_task_nodes);
     }
     CompTaskNode* local_add_task_node =
-        FindSuccReduceTaskNode(reduce_task_nodes.scatter, TaskType::kReduceLocalAdd2);
+        FindSuccReduceTaskNode(reduce_task_nodes.scatter, TaskType::kReduceLocalAdd);
     if (local_add_task_node != nullptr) {
       reduce_task_nodes.local_add = local_add_task_node;
       reduce_task_nodes.global_add =
-          FindSuccReduceTaskNode(reduce_task_nodes.local_add, TaskType::kReduceGlobalAdd2);
+          FindSuccReduceTaskNode(reduce_task_nodes.local_add, TaskType::kReduceGlobalAdd);
     } else {
       reduce_task_nodes.global_add =
-          FindSuccReduceTaskNode(reduce_task_nodes.scatter, TaskType::kReduceGlobalAdd2);
+          FindSuccReduceTaskNode(reduce_task_nodes.scatter, TaskType::kReduceGlobalAdd);
     }
     reduce_task_nodes.gather =
-        FindSuccReduceTaskNode(reduce_task_nodes.global_add, TaskType::kReduceGather2);
+        FindSuccReduceTaskNode(reduce_task_nodes.global_add, TaskType::kReduceGather);
 
     CompTaskNode* local_gather_node =
-        FindSuccReduceTaskNode(reduce_task_nodes.gather, TaskType::kReduceGather2);
+        FindSuccReduceTaskNode(reduce_task_nodes.gather, TaskType::kReduceGather);
     if (local_gather_node != nullptr) {
       reduce_task_nodes.local_gather = local_gather_node;
       reduce_task_nodes.split =
@@ -474,9 +474,9 @@ void TaskGraph::AddCtrlEdgeInReduceStruct() {
   int64_t total_machine_num = Global<JobDesc>::Get()->resource().machine().size();
   if (total_machine_num == 1) { return; }
 
-  AddCtrlEdgeForReduceTaskNode<ReduceGlobalAdd2LogicalNode, ReduceGlobalAdd2CompTaskNode>(
+  AddCtrlEdgeForReduceTaskNode<ReduceGlobalAddLogicalNode, ReduceGlobalAddCompTaskNode>(
       total_machine_num);
-  AddCtrlEdgeForReduceTaskNode<ReduceGather2LogicalNode, ReduceGather2CompTaskNode>(
+  AddCtrlEdgeForReduceTaskNode<ReduceGatherLogicalNode, ReduceGatherCompTaskNode>(
       total_machine_num);
 }
 
@@ -553,13 +553,13 @@ void TaskGraph::CollectCopyCommNetForReduceTaskNodes(
 }
 
 template<>
-bool TaskGraph::IsEndingTaskType<ReduceGlobalAdd2CompTaskNode>(TaskType type) {
-  return type == TaskType::kReduceLocalAdd2;
+bool TaskGraph::IsEndingTaskType<ReduceGlobalAddCompTaskNode>(TaskType type) {
+  return type == TaskType::kReduceLocalAdd;
 }
 
 template<>
-bool TaskGraph::IsEndingTaskType<ReduceGather2CompTaskNode>(TaskType type) {
-  return type == TaskType::kReduceGlobalAdd2;
+bool TaskGraph::IsEndingTaskType<ReduceGatherCompTaskNode>(TaskType type) {
+  return type == TaskType::kReduceGlobalAdd;
 }
 
 void TaskGraph::AddMutexCtrlEdgeInSameChain() { UNIMPLEMENTED(); }
@@ -702,7 +702,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink) {
                          nullptr, MutBufTask, AllocateCpuThrdIdEvenly);
 }
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceLocalAdd2) {
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatterReduceLocalAdd) {
   for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
     for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
       if (src_comp_task->machine_id() == dst_comp_task->machine_id()) {
@@ -712,7 +712,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceLocalAdd2) {
   }
 }
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceGlobalAdd2) {
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatterReduceGlobalAdd) {
   for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
     for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
       BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, false);
@@ -720,7 +720,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceGlobalAdd2) {
   }
 }
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd2) {
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceLocalAddReduceGlobalAdd) {
   const auto& pd = sorted_src_comp_tasks.front()->logical_node()->parallel_desc();
   CHECK_GT(pd->device_num_of_each_machine(), 1);
   CHECK_GT(pd->sorted_machine_ids().size(), 1);
@@ -734,7 +734,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd2) 
   }
 }
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGlobalAdd2ReduceGather2) {
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGlobalAddReduceGather) {
   const auto& pd = sorted_src_comp_tasks.front()->logical_node()->parallel_desc();
   bool do_local_reduce_scatter =
       pd->sorted_machine_ids().size() > 1 && pd->device_num_of_each_machine() > 1;
@@ -752,7 +752,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGlobalAdd2ReduceGather2) {
   }
 }
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGather2ReduceGather2) {
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGatherReduceGather) {
   const auto& pd = sorted_src_comp_tasks.front()->logical_node()->parallel_desc();
   CHECK_GT(pd->device_num_of_each_machine(), 1);
   CHECK_GT(pd->sorted_machine_ids().size(), 1);

@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_OPERATOR_REDUCE_SCATTER2_OP_H_
-#define ONEFLOW_CORE_OPERATOR_REDUCE_SCATTER2_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_REDUCE_SCATTER_OP_H_
+#define ONEFLOW_CORE_OPERATOR_REDUCE_SCATTER_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-class ReduceScatter2Op final : public Operator {
+class ReduceScatterOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ReduceScatter2Op);
-  ReduceScatter2Op() = default;
-  ~ReduceScatter2Op() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ReduceScatterOp);
+  ReduceScatterOp() = default;
+  ~ReduceScatterOp() = default;
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
@@ -24,4 +24,4 @@ class ReduceScatter2Op final : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_REDUCE_SCATTER2_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_REDUCE_SCATTER_OP_H_

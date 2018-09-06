@@ -25,10 +25,10 @@ enum TaskType {
   kRecordLoad = 16;
   kReduceConcat = 21;
   kReduceSplit = 22;
-  kReduceScatter2 = 23;
-  kReduceLocalAdd2 = 24;
-  kReduceGlobalAdd2 = 25;
-  kReduceGather2 = 26;
+  kReduceScatter = 23;
+  kReduceLocalAdd = 24;
+  kReduceGlobalAdd = 25;
+  kReduceGather = 26;
   kAccuracy = 27;
   kAccuracyAcc = 28;
   kAccuracyPrint = 29;

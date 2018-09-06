@@ -1,12 +1,12 @@
-#include "oneflow/core/actor/reduce_global_add2_compute_actor.h"
+#include "oneflow/core/actor/reduce_global_add_compute_actor.h"
 
 namespace oneflow {
 
-void ReduceGlobalAdd2CompActor::VirtualCompActorInit(const TaskProto& proto) {
+void ReduceGlobalAddCompActor::VirtualCompActorInit(const TaskProto& proto) {
   InputWiseCompActor::Init(proto);
 }
 
-void ReduceGlobalAdd2CompActor::SetKernelCtxOther(void** other) {
+void ReduceGlobalAddCompActor::SetKernelCtxOther(void** other) {
   int64_t in_bn_id = InBnId4RegstDescId(cur_processed_regst_desc_id());
   bool do_local_reduce_scatter =
       parallel_ctx()->parallel_num() / parallel_ctx()->device_num_of_each_machine() > 1
@@ -22,6 +22,6 @@ void ReduceGlobalAdd2CompActor::SetKernelCtxOther(void** other) {
   *other = static_cast<void*>(&other_val_);
 }
 
-REGISTER_ACTOR(TaskType::kReduceGlobalAdd2, ReduceGlobalAdd2CompActor);
+REGISTER_ACTOR(TaskType::kReduceGlobalAdd, ReduceGlobalAddCompActor);
 
 }  // namespace oneflow

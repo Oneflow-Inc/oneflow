@@ -201,10 +201,10 @@ DECLARE_NAIVE_LOGICAL_NODE(MdSaveLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(MdDiffAccLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(ReduceConcatLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(ReduceSplitLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(ReduceScatter2LogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(ReduceLocalAdd2LogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(ReduceGlobalAdd2LogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(ReduceGather2LogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(ReduceScatterLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(ReduceLocalAddLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(ReduceGlobalAddLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(ReduceGatherLogicalNode);
 
 }  // namespace oneflow
 

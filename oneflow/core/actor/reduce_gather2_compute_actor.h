@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_ACTOR_REDUCE_GATHER2_COMPUTE_ACTOR_H_
-#define ONEFLOW_CORE_ACTOR_REDUCE_GATHER2_COMPUTE_ACTOR_H_
+#ifndef ONEFLOW_CORE_ACTOR_REDUCE_GATHER_COMPUTE_ACTOR_H_
+#define ONEFLOW_CORE_ACTOR_REDUCE_GATHER_COMPUTE_ACTOR_H_
 
 #include "oneflow/core/actor/input_wise_compute_actor.h"
 
 namespace oneflow {
 
-class ReduceGather2CompActor final : public InputWiseCompActor {
+class ReduceGatherCompActor final : public InputWiseCompActor {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ReduceGather2CompActor);
-  ReduceGather2CompActor() = default;
-  ~ReduceGather2CompActor() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ReduceGatherCompActor);
+  ReduceGatherCompActor() = default;
+  ~ReduceGatherCompActor() = default;
 
  private:
   void VirtualCompActorInit(const TaskProto& proto) override { InputWiseCompActor::Init(proto); }
@@ -20,4 +20,4 @@ class ReduceGather2CompActor final : public InputWiseCompActor {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_REDUCE_GATHER2_COMPUTE_ACTOR_H_
+#endif  // ONEFLOW_CORE_ACTOR_REDUCE_GATHER_COMPUTE_ACTOR_H_

@@ -1,16 +1,16 @@
-#ifndef ONEFLOW_CORE_KERNEL_REDUCE_LOCAL_ADD2_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_REDUCE_LOCAL_ADD2_KERNEL_H_
+#ifndef ONEFLOW_CORE_KERNEL_REDUCE_LOCAL_ADD_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_REDUCE_LOCAL_ADD_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class ReduceLocalAdd2Kernel final : public KernelIf<device_type> {
+class ReduceLocalAddKernel final : public KernelIf<device_type> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ReduceLocalAdd2Kernel);
-  ReduceLocalAdd2Kernel() = default;
-  ~ReduceLocalAdd2Kernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ReduceLocalAddKernel);
+  ReduceLocalAddKernel() = default;
+  ~ReduceLocalAddKernel() = default;
 
  private:
   void ForwardDataContent(const KernelCtx&,
@@ -19,4 +19,4 @@ class ReduceLocalAdd2Kernel final : public KernelIf<device_type> {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_REDUCE_LOCAL_ADD2_KERNEL_H_
+#endif  // ONEFLOW_CORE_KERNEL_REDUCE_LOCAL_ADD_KERNEL_H_

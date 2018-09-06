@@ -1,16 +1,16 @@
-#ifndef ONEFLOW_CORE_KERNEL_REDUCE_SCATTER2_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_REDUCE_SCATTER2_KERNEL_H_
+#ifndef ONEFLOW_CORE_KERNEL_REDUCE_SCATTER_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_REDUCE_SCATTER_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
 template<DeviceType device_type>
-class ReduceScatter2Kernel final : public KernelIf<device_type> {
+class ReduceScatterKernel final : public KernelIf<device_type> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ReduceScatter2Kernel);
-  ReduceScatter2Kernel() = default;
-  ~ReduceScatter2Kernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ReduceScatterKernel);
+  ReduceScatterKernel() = default;
+  ~ReduceScatterKernel() = default;
 
  private:
   void ForwardDataContent(const KernelCtx&,
@@ -19,4 +19,4 @@ class ReduceScatter2Kernel final : public KernelIf<device_type> {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_REDUCE_SCATTER2_KERNEL_H_
+#endif  // ONEFLOW_CORE_KERNEL_REDUCE_SCATTER_KERNEL_H_

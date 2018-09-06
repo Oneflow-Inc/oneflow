@@ -1,16 +1,16 @@
-#ifndef ONEFLOW_CORE_KERNEL_REDUCE_GATHER2_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_REDUCE_GATHER2_KERNEL_H_
+#ifndef ONEFLOW_CORE_KERNEL_REDUCE_GATHER_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_REDUCE_GATHER_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
 template<DeviceType device_type>
-class ReduceGather2Kernel final : public KernelIf<device_type> {
+class ReduceGatherKernel final : public KernelIf<device_type> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ReduceGather2Kernel);
-  ReduceGather2Kernel() = default;
-  ~ReduceGather2Kernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ReduceGatherKernel);
+  ReduceGatherKernel() = default;
+  ~ReduceGatherKernel() = default;
 
  private:
   void ForwardDataContent(const KernelCtx&,
@@ -19,4 +19,4 @@ class ReduceGather2Kernel final : public KernelIf<device_type> {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_REDUCE_GATHER2_KERNEL_H_
+#endif  // ONEFLOW_CORE_KERNEL_REDUCE_GATHER_KERNEL_H_

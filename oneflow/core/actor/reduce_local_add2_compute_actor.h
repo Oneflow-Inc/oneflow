@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_ACTOR_REDUCE_LOCAL_ADD2_COMPUTE_ACTOR_H_
-#define ONEFLOW_CORE_ACTOR_REDUCE_LOCAL_ADD2_COMPUTE_ACTOR_H_
+#ifndef ONEFLOW_CORE_ACTOR_REDUCE_LOCAL_ADD_COMPUTE_ACTOR_H_
+#define ONEFLOW_CORE_ACTOR_REDUCE_LOCAL_ADD_COMPUTE_ACTOR_H_
 
 #include "oneflow/core/actor/input_wise_compute_actor.h"
 
 namespace oneflow {
 
-class ReduceLocalAdd2CompActor final : public InputWiseCompActor {
+class ReduceLocalAddCompActor final : public InputWiseCompActor {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ReduceLocalAdd2CompActor);
-  ReduceLocalAdd2CompActor() = default;
-  ~ReduceLocalAdd2CompActor() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ReduceLocalAddCompActor);
+  ReduceLocalAddCompActor() = default;
+  ~ReduceLocalAddCompActor() = default;
 
  private:
   void VirtualCompActorInit(const TaskProto& proto) override;
@@ -20,4 +20,4 @@ class ReduceLocalAdd2CompActor final : public InputWiseCompActor {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_REDUCE_LOCAL_ADD2_COMPUTE_ACTOR_H_
+#endif  // ONEFLOW_CORE_ACTOR_REDUCE_LOCAL_ADD_COMPUTE_ACTOR_H_
