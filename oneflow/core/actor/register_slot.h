@@ -18,8 +18,8 @@ class RegstSlot final {
   bool IsCurSlotReady() const { return available_regst_desc_cnt() == total_regst_desc_cnt(); }
   bool HasRegstDescId(int64_t regst_desc_id) const;
   const std::deque<Regst*>& RegstDeq4RegstDescId(int64_t regst_desc_id) const;
-  void ForEachCurFrontRegst(std::function<void(const Regst*)>) const;
-  void ForEachCurRegstDeq(std::function<void(const std::deque<Regst*>&)>) const;
+  void ForEachFrontRegst(std::function<void(const Regst*)>) const;
+  void ForEachRegstDeq(std::function<void(const std::deque<Regst*>&)>) const;
 
   Regst* Front(int64_t regst_desc_id) const;
   Regst* SoleFront() const;

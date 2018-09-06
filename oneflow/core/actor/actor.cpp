@@ -151,11 +151,11 @@ void Actor::SetReadableRegstInfo(const Regst* regst, ReadableRegstInfo* info) co
 }
 
 void Actor::ForEachCurNaiveReadableRegst(std::function<void(const Regst*)> func) const {
-  naive_consumed_data_rs_.ForEachCurFrontRegst(func);
+  naive_consumed_data_rs_.ForEachFrontRegst(func);
 }
 
 void Actor::ForEachCurConsumedCtrlRegst(std::function<void(const Regst*)> func) const {
-  consumed_ctrl_rs_.ForEachCurFrontRegst(func);
+  consumed_ctrl_rs_.ForEachFrontRegst(func);
 }
 
 int Actor::HandlerNormal(const ActorMsg& msg) {
@@ -280,7 +280,7 @@ void Actor::ActUntilFail() {
     AsyncSendCtrlRegstMsg();
 
     std::vector<int64_t> regst_desc_ids;
-    naive_consumed_data_rs_.ForEachCurRegstDeq([&](const std::deque<Regst*>& reg_deq) {
+    naive_consumed_data_rs_.ForEachRegstDeq([&](const std::deque<Regst*>& reg_deq) {
       CHECK(reg_deq.empty() == false);
       if (IsNaiveAllowedReturnToProducer(reg_deq.front()) == false) { return; }
       AsyncSendRegstMsgToProducer(reg_deq.front());
@@ -322,7 +322,7 @@ void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx) {
 void Actor::AsyncSendRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProcess,
                                         std::function<bool(int64_t)> IsAllowedActor) {
   std::vector<int64_t> regst_desc_ids;
-  writeable_produced_data_rs_.ForEachCurRegstDeq([&](const std::deque<Regst*>& reg_deq) {
+  writeable_produced_data_rs_.ForEachRegstDeq([&](const std::deque<Regst*>& reg_deq) {
     if (reg_deq.empty()) { return; }
     Regst* regst = reg_deq.front();
     if (RegstPreProcess(regst) == false) { return; }
@@ -436,7 +436,7 @@ int Actor::ProcessReadableCtrlRegstMsg(const ActorMsg& msg) {
 
 void Actor::AsyncSendCtrlRegstMsg() {
   std::vector<int64_t> regst_desc_ids;
-  consumed_ctrl_rs_.ForEachCurRegstDeq([&](const std::deque<Regst*>& reg_deq) {
+  consumed_ctrl_rs_.ForEachRegstDeq([&](const std::deque<Regst*>& reg_deq) {
     CHECK(reg_deq.empty() == false);
     int32_t returned_regst_num =
         reg_deq.front()->regst_desc()->regst_desc_type().ctrl_regst_desc().returned_regst_num();
@@ -454,7 +454,7 @@ void Actor::AsyncSendCtrlRegstMsg() {
   }
 
   regst_desc_ids.clear();
-  writeable_produced_ctrl_rs_.ForEachCurRegstDeq([&](const std::deque<Regst*>& reg_deq) {
+  writeable_produced_ctrl_rs_.ForEachRegstDeq([&](const std::deque<Regst*>& reg_deq) {
     CHECK(reg_deq.empty() == false);
     Regst* regst = reg_deq.front();
     regst->set_act_id(act_id_);

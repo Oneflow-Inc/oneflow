@@ -65,13 +65,13 @@ void RegstSlot::InitedDone() {
   is_inited_ = true;
 }
 
-void RegstSlot::ForEachCurFrontRegst(std::function<void(const Regst*)> handler) const {
+void RegstSlot::ForEachFrontRegst(std::function<void(const Regst*)> handler) const {
   for (const auto& kv : regst_desc_id2regsts_) {
     if (kv.second.empty() == false) { handler(kv.second.front()); }
   }
 }
 
-void RegstSlot::ForEachCurRegstDeq(std::function<void(const std::deque<Regst*>&)> handler) const {
+void RegstSlot::ForEachRegstDeq(std::function<void(const std::deque<Regst*>&)> handler) const {
   for (const auto& kv : regst_desc_id2regsts_) { handler(kv.second); }
 }
 
