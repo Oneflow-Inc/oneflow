@@ -199,12 +199,12 @@ class NormalMdUpdtLogicalNode final : public LogicalNode {
 
 DECLARE_NAIVE_LOGICAL_NODE(MdSaveLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(MdDiffAccLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(ReduceConcatLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(ReduceSplitLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(ReduceScatterLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(ReduceLocalAddLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(ReduceGlobalAddLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(ReduceGatherLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(ReduceConcatLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(ReduceSplitLogicalNode);
 
 }  // namespace oneflow
 

@@ -696,15 +696,15 @@ message OperatorConf {
     MaximumOpConf maximum_conf = 302;
     LocalResponseNormalizationOpConf local_response_normalization_conf = 300;
     NormalizationOpConf normalization_conf = 350;
+    ReduceScatterOpConf reduce_scatter_conf = 400;
+    ReduceLocalAddOpConf reduce_local_add_conf = 401;
+    ReduceGlobalAddOpConf reduce_global_add_conf = 402;
+    ReduceGatherOpConf reduce_gather_conf = 403;
     ReduceConcatOpConf reduce_concat_conf = 404;
     ReduceSplitOpConf reduce_split_conf = 405;
     RecordLoadOpConf record_load_conf = 406;
     AccuracyOpConf accuracy_conf = 407;
     AccuracyPrintOpConf accuracy_print_conf = 408;
-    ReduceScatterOpConf reduce_scatter_conf = 409;
-    ReduceLocalAddOpConf reduce_local_add_conf = 410;
-    ReduceGlobalAddOpConf reduce_global_add_conf = 411;
-    ReduceGatherOpConf reduce_gather_conf = 412;
   }
 }
 

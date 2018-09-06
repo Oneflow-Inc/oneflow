@@ -488,7 +488,7 @@ void LogicalGraph::AddReduceScatterAddGatherNodes(LogicalNode* src, LogicalNode*
   CHECK_EQ(src_pd->parallel_num(), dst_pd->parallel_num());
   CHECK_EQ(src_pd->device_type(), dst_pd->device_type());
 
-  // Reduce Scatter2
+  // Reduce Scatter
   LogicalNode* reduce_scatter_node = NewNode<ReduceScatterLogicalNode>();
   reduce_scatter_node->mut_parallel_desc() = src_pd;
   Connect(src, NewEdge(), reduce_scatter_node);

@@ -166,9 +166,9 @@ message KernelConf {
     MaxPoolingKernelConf max_pooling_conf = 205;
     NormalizationKernelConf normalization_conf = 250;
     LocalResponseNormalizationKernelConf local_response_normalization_conf = 300;
-    ReduceGatherKernelConf reduce_gather_conf = 351;
-    ReduceConcatKernelConf reduce_concat_conf = 352;
-    ReduceSplitKernelConf reduce_split_conf = 353;
+    ReduceGatherKernelConf reduce_gather_conf = 350;
+    ReduceConcatKernelConf reduce_concat_conf = 351;
+    ReduceSplitKernelConf reduce_split_conf = 352;
     AccuracyKernelConf accuracy_conf = 401;
   }
 }
