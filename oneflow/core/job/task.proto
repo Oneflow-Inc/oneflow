@@ -23,15 +23,15 @@ enum TaskType {
   kBoxing = 14;
   kPrint = 15;
   kRecordLoad = 16;
+  kReduceLocalAdd = 17;
+  kReduceGlobalAdd = 18;
+  kReduceGather = 19;
+  kReduceScatter = 20;
   kReduceConcat = 21;
   kReduceSplit = 22;
-  kReduceScatter = 23;
-  kReduceLocalAdd = 24;
-  kReduceGlobalAdd = 25;
-  kReduceGather = 26;
-  kAccuracy = 27;
-  kAccuracyAcc = 28;
-  kAccuracyPrint = 29;
+  kAccuracy = 23;
+  kAccuracyAcc = 24;
+  kAccuracyPrint = 25;
 };
 
 enum AreaType {

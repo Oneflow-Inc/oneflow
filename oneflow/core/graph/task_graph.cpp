@@ -4,10 +4,10 @@
 #include "oneflow/core/graph/normal_model_update_compute_task_node.h"
 #include "oneflow/core/graph/chain_graph.h"
 #include "oneflow/core/graph/boxing_task_node.h"
-#include "oneflow/core/graph/reduce_global_add_compute_task_node.h"
-#include "oneflow/core/graph/reduce_gather_compute_task_node.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/graph/reduce_global_add_compute_task_node.h"
+#include "oneflow/core/graph/reduce_gather_compute_task_node.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/job/thrd_id_generator.h"
 
@@ -138,41 +138,6 @@ void TaskGraph::BuildCtrlRegstDescInSameChain() {
   }
 }
 
-void TaskGraph::EnableMemSharingInReduceConcatSplitIfNeed(
-    const ReduceTaskNodes& reduce_task_nodes,
-    std::function<void(RegstDesc*, int64_t)> SetMemSharedField4Regst) {
-  if (reduce_task_nodes.concat == nullptr) { return; }
-  int32_t reduce_num = reduce_task_nodes.split->produced_regsts().size();
-
-  std::shared_ptr<RegstDesc> concat_out_regst = reduce_task_nodes.concat->GetProducedRegst("out");
-  std::shared_ptr<RegstDesc> split_in_regst = reduce_task_nodes.split->GetSoleConsumedRegst("in");
-  const BlobDesc* concat_out_packed = concat_out_regst->GetBlobDesc(GenPackedLbi());
-  const BlobDesc* split_in_packed = split_in_regst->GetBlobDesc(GenPackedLbi());
-  size_t concat_out_byte_size = RtBlobDesc(*concat_out_packed).ByteSizeOfBlobBody();
-  size_t split_in_byte_size = RtBlobDesc(*split_in_packed).ByteSizeOfBlobBody();
-  CHECK_EQ(concat_out_byte_size, split_in_byte_size);
-  SetMemSharedField4Regst(concat_out_regst.get(), 0);
-  SetMemSharedField4Regst(split_in_regst.get(), 0);
-
-  int64_t offset = 0;
-  FOR_RANGE(int32_t, idx, 0, reduce_num) {
-    auto concat_in_regst =
-        reduce_task_nodes.concat->GetSoleConsumedRegst("in_" + std::to_string(idx));
-    auto split_out_regst = reduce_task_nodes.split->GetProducedRegst("out_" + std::to_string(idx));
-    SetMemSharedField4Regst(concat_in_regst.get(), offset);
-    SetMemSharedField4Regst(split_out_regst.get(), offset);
-
-    // Check shape invariant
-    const BlobDesc* concat_in_packed = concat_in_regst->GetBlobDesc(GenPackedLbi());
-    const BlobDesc* split_out_packed = split_out_regst->GetBlobDesc(GenPackedLbi());
-    size_t concat_in_byte_size = RtBlobDesc(*concat_in_packed).ByteSizeOfBlobBody();
-    size_t split_out_byte_size = RtBlobDesc(*split_out_packed).ByteSizeOfBlobBody();
-    CHECK_EQ(concat_in_byte_size, split_out_byte_size);
-
-    offset += concat_in_byte_size;
-  }
-}
-
 void TaskGraph::EnableMemSharingInReduceStruct() {
   std::unordered_set<ReduceTaskNodes, ReduceTaskNodesHasher> reduce_tasks;
   CollectReduceTaskNodes(&reduce_tasks);
@@ -258,6 +223,41 @@ void TaskGraph::CollectReduceTaskNodes(
     CHECK(reduce_task_nodes.gather != nullptr);
     reduce_tasks->insert(reduce_task_nodes);
   });
+}
+
+void TaskGraph::EnableMemSharingInReduceConcatSplitIfNeed(
+    const ReduceTaskNodes& reduce_task_nodes,
+    std::function<void(RegstDesc*, int64_t)> SetMemSharedField4Regst) {
+  if (reduce_task_nodes.concat == nullptr) { return; }
+  int32_t reduce_num = reduce_task_nodes.split->produced_regsts().size();
+
+  std::shared_ptr<RegstDesc> concat_out_regst = reduce_task_nodes.concat->GetProducedRegst("out");
+  std::shared_ptr<RegstDesc> split_in_regst = reduce_task_nodes.split->GetSoleConsumedRegst("in");
+  const BlobDesc* concat_out_packed = concat_out_regst->GetBlobDesc(GenPackedLbi());
+  const BlobDesc* split_in_packed = split_in_regst->GetBlobDesc(GenPackedLbi());
+  size_t concat_out_byte_size = RtBlobDesc(*concat_out_packed).ByteSizeOfBlobBody();
+  size_t split_in_byte_size = RtBlobDesc(*split_in_packed).ByteSizeOfBlobBody();
+  CHECK_EQ(concat_out_byte_size, split_in_byte_size);
+  SetMemSharedField4Regst(concat_out_regst.get(), 0);
+  SetMemSharedField4Regst(split_in_regst.get(), 0);
+
+  int64_t offset = 0;
+  FOR_RANGE(int32_t, idx, 0, reduce_num) {
+    auto concat_in_regst =
+        reduce_task_nodes.concat->GetSoleConsumedRegst("in_" + std::to_string(idx));
+    auto split_out_regst = reduce_task_nodes.split->GetProducedRegst("out_" + std::to_string(idx));
+    SetMemSharedField4Regst(concat_in_regst.get(), offset);
+    SetMemSharedField4Regst(split_out_regst.get(), offset);
+
+    // Check shape invariant
+    const BlobDesc* concat_in_packed = concat_in_regst->GetBlobDesc(GenPackedLbi());
+    const BlobDesc* split_out_packed = split_out_regst->GetBlobDesc(GenPackedLbi());
+    size_t concat_in_byte_size = RtBlobDesc(*concat_in_packed).ByteSizeOfBlobBody();
+    size_t split_out_byte_size = RtBlobDesc(*split_out_packed).ByteSizeOfBlobBody();
+    CHECK_EQ(concat_in_byte_size, split_out_byte_size);
+
+    offset += concat_in_byte_size;
+  }
 }
 
 void TaskGraph::EnableMemSharingInOneReduce(const ReduceTaskNodes& reduce_task_nodes) {
