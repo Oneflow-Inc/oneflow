@@ -145,11 +145,12 @@ message KernelConf {
   required OpAttribute op_attribute = 1; 
   optional bool need_do_data_id = 2 [default = false];
   optional bool need_do_col_num = 3 [default = false];
-  optional bool need_do_opaque_header = 4 [default = false];
-  required bool is_forward = 5;
-  required DataType data_type = 6;
-  optional ActivationType forward_activation = 7 [default = kNone];
-  optional ActivationType backward_activation = 8 [default = kNone];
+  optional bool need_do_instance_num = 4 [default = false];
+  optional bool need_do_opaque_header = 5 [default = false];
+  required bool is_forward = 6;
+  required DataType data_type = 7;
+  optional ActivationType forward_activation = 8 [default = kNone];
+  optional ActivationType backward_activation = 9 [default = kNone];
 
   oneof kernel_type {
     SparseSoftmaxCrossEntropyLossKernelConf sparse_softmax_cross_entropy_loss_conf = 101;

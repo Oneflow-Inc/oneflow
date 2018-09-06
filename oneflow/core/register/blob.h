@@ -34,6 +34,9 @@ class Blob final {
   const int32_t* col_num() const { return col_num_ptr_; }
   int32_t* mut_col_num() { return col_num_ptr_; }
 
+  const int32_t* instance_num() const { return instance_num_ptr_; }
+  int32_t* mut_instance_num() { return instance_num_ptr_; }
+
   const void* header_ptr() const { return header_ptr_; }
   void* mut_header_ptr() { return header_ptr_; }
 
@@ -59,6 +62,7 @@ class Blob final {
   size_t ByteSizeOfBlobHeader() const { return blob_desc_->ByteSizeOfBlobHeader(); }
   size_t ByteSizeOfDataIdField() const { return blob_desc_->ByteSizeOfDataIdField(); }
   size_t ByteSizeOfColNumField() const { return blob_desc_->ByteSizeOfColNumField(); }
+  size_t ByteSizeOfInstanceNumField() const { return blob_desc_->ByteSizeOfInstanceNumField(); }
   size_t ByteSizeOfDataContentField() const { return blob_desc_->ByteSizeOfDataContentField(); }
   size_t TotalByteSize() const { return blob_desc_->TotalByteSize(); }
 
@@ -67,6 +71,8 @@ class Blob final {
   void CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  void CopyInstanceNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  void AccumulateInstanceNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
 
   int32_t col_id() const;
@@ -90,6 +96,7 @@ class Blob final {
   void* header_ptr_;
   char* data_id_ptr_;
   int32_t* col_num_ptr_;
+  int32_t* instance_num_ptr_;
   void* dptr_;
   const RtBlobDesc* blob_desc_;
   Regst* regst_;

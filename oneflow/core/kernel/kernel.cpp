@@ -61,6 +61,7 @@ void Kernel::Forward(const KernelCtx& ctx,
   } else {
     if (kernel_conf_.need_do_data_id()) { ForwardDataId(ctx, BnInOp2Blob); }
     if (kernel_conf_.need_do_col_num()) { ForwardColNum(ctx, BnInOp2Blob); }
+    if (kernel_conf_.need_do_instance_num()) { ForwardInstanceNum(ctx, BnInOp2Blob); }
   }
 }
 
@@ -88,9 +89,11 @@ void Kernel::Backward(const KernelCtx& ctx,
   } else {
     BackwardDataContent(ctx, BnInOp2Blob);
   }
-  // TODO(jiyuan): for kernel which needs do instance num, compute and set the instance num in the blob header
+  // TODO(jiyuan): for kernel which needs do instance num, compute and set the instance num in the
+  // blob header
   if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
   if (kernel_conf_.need_do_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
+  if (kernel_conf_.need_do_instance_num()) { BackwardInstanceNum(ctx, BnInOp2Blob); }
 }
 
 bool Kernel::HasModelBns() const { return op_attribute().model_bns().size() > 0; }
@@ -107,6 +110,13 @@ void KernelIf<device_type>::ForwardColNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
             &Blob::CopyColNumFrom);
+}
+
+template<DeviceType device_type>
+void KernelIf<device_type>::ForwardInstanceNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
+            &Blob::CopyInstanceNumFrom);
 }
 
 template<DeviceType device_type>
@@ -127,6 +137,12 @@ void KernelIf<device_type>::BackwardColNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().output_diff_bns(),
             op_attribute().input_diff_bns(), &Blob::CopyColNumFrom);
+}
+
+template<DeviceType device_type>
+void KernelIf<device_type>::BackwardInstanceNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  // do nothing
 }
 
 template<DeviceType device_type>
@@ -156,6 +172,35 @@ void KernelIf<device_type>::CopyField(DeviceCtx* ctx,
       Blob* in_blob = BnInOp2Blob(from_bns[i]);
       Blob* out_blob = BnInOp2Blob(to_bns[i]);
       (out_blob->*Copy)(ctx, in_blob);
+    }
+  }
+}
+
+template<DeviceType device_type>
+void KernelIf<device_type>::AccumulateField(
+    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob, const Blob* from_blob,
+    const PbRpf<std::string>& to_bns, void (Blob::*Accumulate)(DeviceCtx*, const Blob*)) const {
+  for (const std::string& to_bn : to_bns) { (BnInOp2Blob(to_bn)->*Accumulate)(ctx, from_blob); }
+}
+
+template<DeviceType device_type>
+void KernelIf<device_type>::AccumulateField(
+    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
+    const PbRpf<std::string>& from_bns, const PbRpf<std::string>& to_bns,
+    void (Blob::*Accumulate)(DeviceCtx*, const Blob*)) const {
+  if (from_bns.size() == 1) {
+    const Blob* in_blob = BnInOp2Blob(from_bns[0]);
+    AccumulateField(ctx, BnInOp2Blob, in_blob, to_bns, Accumulate);
+  } else if (to_bns.size() == 1) {
+    Blob* in_blob = BnInOp2Blob(from_bns[0]);
+    Blob* out_blob = BnInOp2Blob(to_bns[0]);
+    (out_blob->*Accumulate)(ctx, in_blob);
+  } else {
+    CHECK_EQ(from_bns.size(), to_bns.size());
+    FOR_RANGE(size_t, i, 0, from_bns.size()) {
+      Blob* in_blob = BnInOp2Blob(from_bns[i]);
+      Blob* out_blob = BnInOp2Blob(to_bns[i]);
+      (out_blob->*Accumulate)(ctx, in_blob);
     }
   }
 }

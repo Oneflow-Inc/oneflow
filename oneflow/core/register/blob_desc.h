@@ -34,6 +34,9 @@ class BlobDesc {
   bool has_col_num_field() const { return has_col_num_; }
   void set_has_col_num_field(bool val);
 
+  bool has_instance_num_field() const { return has_instance_num_; }
+  void set_has_instance_num_field(bool val);
+
   int32_t max_col_num() const { return max_col_num_; }
   void set_max_col_num(int32_t val) { max_col_num_ = val; }
 
@@ -48,6 +51,7 @@ class BlobDesc {
   void HeaderToProto(BlobDescProto* proto) const;
   void DataIdFieldToProto(FieldHeaderDesc* proto) const;
   void ColNumFieldToProto(FieldHeaderDesc* proto) const;
+  void InstanceNumFieldToProto(FieldHeaderDesc* proto) const;
 
   bool header_is_opaque_;
   FieldDesc opaque_header_;
@@ -55,6 +59,7 @@ class BlobDesc {
   // TODO(jiyuan): add instance_num
   bool has_data_id_;
   bool has_col_num_;
+  bool has_instance_num_;
   int64_t max_col_num_;
   int32_t blob_mem_id_;
 

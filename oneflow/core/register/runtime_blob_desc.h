@@ -25,6 +25,7 @@ class RtBlobDesc {
 
   bool has_data_id_field() const;
   bool has_col_num_field() const;
+  bool has_instance_num_field() const;
 
   int32_t max_col_num() const { return blob_desc_proto_.header().max_col_num(); }
 
@@ -34,6 +35,7 @@ class RtBlobDesc {
 
   size_t ByteSizeOfDataIdField() const;
   size_t ByteSizeOfColNumField() const;
+  size_t ByteSizeOfInstanceNumField() const;
   size_t ByteSizeOfDataContentField() const;
 
   bool operator==(const RtBlobDesc& rhs) const;

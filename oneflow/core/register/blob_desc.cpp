@@ -15,6 +15,7 @@ BlobDesc::BlobDesc(const Shape& shape, DataType data_type, bool has_data_id, boo
       max_col_num_(max_col_num),
       blob_mem_id_(-1),
       body_field_(shape, data_type) {}
+
 BlobDesc::BlobDesc(const BlobDescProto& proto) : body_field_(proto.body()) {
   max_col_num_ = proto.header().max_col_num();
   blob_mem_id_ = proto.header().blob_mem_id();
@@ -45,6 +46,7 @@ BlobDesc::BlobDesc(int64_t header_byte_size, const Shape& shape, DataType data_t
     header_is_opaque_ = false;
   }
 }
+
 void BlobDesc::set_has_data_id_field(bool val) {
   CHECK(!header_is_opaque_);
   has_data_id_ = val;
@@ -54,6 +56,12 @@ void BlobDesc::set_has_col_num_field(bool val) {
   CHECK(!header_is_opaque_);
   has_col_num_ = val;
 }
+
+void BlobDesc::set_has_instance_num_field(bool val) {
+  CHECK(!header_is_opaque_);
+  has_instance_num_ = val;
+}
+
 void BlobDesc::DataIdFieldToProto(FieldHeaderDesc* proto) const {
   FieldDesc data_id_field(Shape({body_field_.shape().At(0),
                                  static_cast<int64_t>(Global<JobDesc>::Get()->SizeOfOneDataId())}),
@@ -66,6 +74,11 @@ void BlobDesc::ColNumFieldToProto(FieldHeaderDesc* proto) const {
   col_num_field.ToProto(proto->mutable_col_num());
 }
 
+void BlobDesc::InstanceNumFieldToProto(FieldHeaderDesc* proto) const {
+  FieldDesc instance_num_field((Shape({1})), DataType::kInt32);
+  instance_num_field.ToProto(proto->mutable_instance_num());
+}
+
 void BlobDesc::HeaderToProto(BlobDescProto* proto) const {
   proto->mutable_header()->set_max_col_num(max_col_num_);
   proto->mutable_header()->set_blob_mem_id(blob_mem_id_);
@@ -73,6 +86,7 @@ void BlobDesc::HeaderToProto(BlobDescProto* proto) const {
     FieldHeaderDesc* field_header = proto->mutable_header()->mutable_field_header();
     if (has_data_id_field()) { DataIdFieldToProto(field_header); }
     if (has_col_num_field()) { ColNumFieldToProto(field_header); }
+    if (has_instance_num_field()) { InstanceNumFieldToProto(field_header); }
   } else {
     opaque_header_.ToProto(proto->mutable_header()->mutable_opaque_header());
   }

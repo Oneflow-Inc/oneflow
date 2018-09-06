@@ -49,6 +49,8 @@ bool RtBlobDesc::has_data_id_field() const { return HasField("data_id"); }
 
 bool RtBlobDesc::has_col_num_field() const { return HasField("col_num"); }
 
+bool RtBlobDesc::has_instance_num_field() const { return HasField("instance_num"); }
+
 size_t RtBlobDesc::ByteSizeOfBlobHeader() const {
   size_t header_size = 0;
   for (auto& pair : header_desc_) { header_size += ByteSizeOfField(pair.first); }
@@ -63,6 +65,10 @@ size_t RtBlobDesc::ByteSizeOfDataIdField() const {
 
 size_t RtBlobDesc::ByteSizeOfColNumField() const {
   return HasField("col_num") ? ByteSizeOfField("col_num") : 0;
+}
+
+size_t RtBlobDesc::ByteSizeOfInstanceNumField() const {
+  return HasField("instance_num") ? ByteSizeOfField("instance_num") : 0;
 }
 
 size_t RtBlobDesc::ByteSizeOfDataContentField() const { return body_desc_.ByteSize(); }

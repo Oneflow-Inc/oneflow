@@ -174,9 +174,14 @@ void NormalBackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
       in_diff_regst->CopyBlobDescWithoutAddLbi(regst.get());
     }
 
-    // TODO(jiyuan): set blob_descs in md_diff_regst to have instance number field
     std::shared_ptr<RegstDesc> md_diff_regst = GetProducedRegst("model_diff");
-    if (md_diff_regst) { md_diff_regst->CopyBlobDescFrom(GetSoleConsumedRegst("model").get()); }
+    if (md_diff_regst) {
+      md_diff_regst->CopyBlobDescFrom(GetSoleConsumedRegst("model").get());
+      // TODO: fix it
+      md_diff_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
+        md_diff_regst->MutBlobDesc(lbi)->set_has_instance_num_field(true);
+      });
+    }
 
     std::shared_ptr<RegstDesc> activation_diff_regst = GetProducedRegst("activation_diff");
     activation_diff_regst->CopyBlobDescWithoutAddLbi(GetSoleConsumedRegst("activation").get());

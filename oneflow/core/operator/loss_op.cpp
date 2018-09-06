@@ -30,6 +30,7 @@ void LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
   const BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");
   CHECK_EQ(pred_blob_desc->has_data_id_field(), label_blob_desc->has_data_id_field());
+  CHECK_EQ(pred_blob_desc->has_instance_num_field(), label_blob_desc->has_instance_num_field());
   CHECK(IsIntegralDataType(label_blob_desc->data_type()));
   CHECK_GE(pred_blob_desc->shape().NumAxes(), 2);
   CHECK_EQ(label_blob_desc->shape(), Shape({pred_blob_desc->shape().At(0)}));
@@ -38,6 +39,7 @@ void LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   loss_blob_desc->mut_shape() = Shape({pred_blob_desc->shape().At(0)});
   loss_blob_desc->set_data_type(pred_blob_desc->data_type());
   loss_blob_desc->set_has_data_id_field(pred_blob_desc->has_data_id_field());
+  loss_blob_desc->set_has_instance_num_field(pred_blob_desc->has_instance_num_field());
 
   if (!GetValFromCustomizedConf<std::string>("weight").empty()) {
     // reduction_coefficient

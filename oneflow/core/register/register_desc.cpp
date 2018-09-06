@@ -96,7 +96,7 @@ BlobDesc* RegstDesc::MutBlobDesc(const LogicalBlobId& lbi) {
 }
 
 void RegstDesc::ForEachLbi(std::function<void(const LogicalBlobId&)> func) const {
-  for (const auto& p : lbi2blob_desc_) { func(p.first); }
+  for (const auto& pair : lbi2blob_desc_) { func(pair.first); }
 }
 
 void RegstDesc::EraseZeroSizeBlob() {

@@ -86,6 +86,20 @@ void Blob::CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   Memcpy<DeviceType::kCPU>(device_ctx, mut_col_num(), rhs->col_num(), ByteSizeOfColNumField());
 }
 
+void Blob::CopyInstanceNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
+  if (this == rhs || ByteSizeOfInstanceNumField() == 0) { return; }
+  CHECK_EQ(ByteSizeOfInstanceNumField(), rhs->ByteSizeOfInstanceNumField());
+  Memcpy<DeviceType::kCPU>(device_ctx, mut_instance_num(), rhs->instance_num(),
+                           ByteSizeOfInstanceNumField());
+}
+
+void Blob::AccumulateInstanceNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
+  if (this == rhs || ByteSizeOfInstanceNumField() == 0) { return; }
+  CHECK_EQ(ByteSizeOfInstanceNumField(), rhs->ByteSizeOfInstanceNumField());
+  KernelUtil<DeviceType::kCPU, int32_t>::Axpy(device_ctx, 1, 1, rhs->instance_num(), 1,
+                                              mut_instance_num(), 1);
+}
+
 void Blob::CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs) { return; }
   if (is_contiguous_) {

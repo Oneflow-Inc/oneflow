@@ -53,13 +53,17 @@ class Kernel {
                        std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void ForwardDataContent(const KernelCtx& ctx,
                                   std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
-  // TODO(jiyuan): add virtual function ForwardInstanceNum, let acc kernel override the function                                
+  // TODO(jiyuan): add virtual function ForwardInstanceNum, let acc kernel override the function
   virtual void ForwardDataId(const KernelCtx& ctx,
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
   virtual void ForwardColNum(const KernelCtx& ctx,
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    UNIMPLEMENTED();
+  }
+  virtual void ForwardInstanceNum(const KernelCtx& ctx,
+                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
   virtual void ForwardPackedHeader(const KernelCtx& ctx,
@@ -78,6 +82,10 @@ class Kernel {
   }
   virtual void BackwardColNum(const KernelCtx& ctx,
                               std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    UNIMPLEMENTED();
+  }
+  virtual void BackwardInstanceNum(const KernelCtx& ctx,
+                                   std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
   virtual void BackwardActivation(const KernelCtx& ctx, const Blob* out_blob,
@@ -123,12 +131,16 @@ class KernelIf : public Kernel {
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   virtual void ForwardColNum(const KernelCtx& ctx,
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  virtual void ForwardInstanceNum(
+      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   virtual void ForwardPackedHeader(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   virtual void BackwardDataId(const KernelCtx& ctx,
                               std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   virtual void BackwardColNum(const KernelCtx& ctx,
                               std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  virtual void BackwardInstanceNum(
+      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
   void CopyField(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
                  const Blob* from_blob, const PbRpf<std::string>& to_bns,
@@ -136,11 +148,17 @@ class KernelIf : public Kernel {
   void CopyField(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
                  const PbRpf<std::string>& from_bns, const PbRpf<std::string>& to_bns,
                  void (Blob::*Copy)(DeviceCtx*, const Blob*)) const;
-
+  void AccumulateField(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
+                       const Blob* from_blob, const PbRpf<std::string>& to_bns,
+                       void (Blob::*Copy)(DeviceCtx*, const Blob*)) const;
+  void AccumulateField(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
+                       const PbRpf<std::string>& from_bns, const PbRpf<std::string>& to_bns,
+                       void (Blob::*Copy)(DeviceCtx*, const Blob*)) const;
   bool EnableCudnn() const { return op_conf().enable_cudnn(); }
 };
 
-// TODO(jiyuan): For any sub-class of KernelIfWithModel, remember to set instance num in the blob header
+// TODO(jiyuan): For any sub-class of KernelIfWithModel, remember to set instance num in the blob
+// header
 template<DeviceType device_type, typename ModelType>
 class KernelIfWithModel : virtual public KernelIf<device_type> {
  public:

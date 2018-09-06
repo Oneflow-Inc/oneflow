@@ -14,6 +14,11 @@ class AccumulateKernel final : public KernelIf<device_type> {
 
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
+  void ForwardInstanceNum(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  // void BackwardwardInstanceNum(const KernelCtx& ctx,
+  //                              std::function<Blob*(const std::string&)> BnInOp2Blob) const
+  //                              override;
 
  private:
 };

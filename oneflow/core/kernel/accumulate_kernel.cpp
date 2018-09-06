@@ -11,6 +11,13 @@ void AccumulateKernel<device_type, T>::ForwardDataContent(
                                    in_blob->dptr<T>(), 1, out_blob->mut_dptr<T>(), 1);
 }
 
+template<DeviceType device_type, typename T>
+void AccumulateKernel<device_type, T>::ForwardInstanceNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  this->AccumulateField(ctx.device_ctx, BnInOp2Blob, this->op_attribute().input_bns(),
+                        this->op_attribute().output_bns(), &Blob::AccumulateInstanceNumFrom);
+}
+
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAccumulateConf, AccumulateKernel, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
