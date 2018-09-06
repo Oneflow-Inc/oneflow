@@ -45,12 +45,12 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void RemoveEmptyRegsts();
   void AddOrderingCtrlEdgeInSameChain();
 
-  void EnableMemSharingInReduceStruct2();
-  void CollectReduceTaskNodes2(std::unordered_set<ReduceTaskNodes, ReduceTaskNodesHasher>*) const;
-  void EnableMemSharingInOneReduce2(const ReduceTaskNodes&);
-  void AddCtrlEdge4MemSharingInOneReduce2(const ReduceTaskNodes&);
-  void BuildCtrlRegstBetweenReduceCopyNodes2(const CompTaskNode* src_reduce,
-                                             const CompTaskNode* dst_reduce, int64_t copy_node_num);
+  void EnableMemSharingInReduceStruct();
+  void CollectReduceTaskNodes(std::unordered_set<ReduceTaskNodes, ReduceTaskNodesHasher>*) const;
+  void EnableMemSharingInOneReduce(const ReduceTaskNodes&);
+  void AddCtrlEdge4MemSharingInOneReduce(const ReduceTaskNodes&);
+  void BuildCtrlRegstBetweenReduceCopyNodes(const CompTaskNode* src_reduce,
+                                            const CompTaskNode* dst_reduce, int64_t copy_node_num);
 
   void AddCtrlEdgeInReduceStruct();
   void AddMutexCtrlEdgeInSameChain();
@@ -65,11 +65,11 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatterReduceLocalAdd);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatterReduceGlobalAdd);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceLocalAddReduceGlobalAdd);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGlobalAddReduceGather);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGatherReduceGather);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceLocalAdd);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceGlobalAdd);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGlobalAdd2ReduceGather);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGather2ReduceGather);
 
  private:
   void BuildTaskPath(

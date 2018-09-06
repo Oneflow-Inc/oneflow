@@ -43,8 +43,7 @@ void ReduceLocalAddCompTaskNode::BuildExecGphAndRegst() {
   OperatorConf reduce_local_add_conf;
   reduce_local_add_conf.set_name("reduce_local_add_" + NewUniqueId());
   reduce_local_add_conf.set_device_type(this->device_type());
-  ReduceLocalAddOpConf* mut_local_add_conf =
-      reduce_local_add_conf.mutable_reduce_local_add_conf();
+  ReduceLocalAddOpConf* mut_local_add_conf = reduce_local_add_conf.mutable_reduce_local_add_conf();
   mut_local_add_conf->set_in_num(in_edges().size());
   mut_local_add_conf->set_out_num(out_edges().size());
   std::shared_ptr<Operator> reduce_local_add_op = ConstructOp(reduce_local_add_conf);

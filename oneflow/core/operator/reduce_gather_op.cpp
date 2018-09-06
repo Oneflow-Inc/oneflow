@@ -15,9 +15,8 @@ const PbMessage& ReduceGatherOp::GetCustomizedConf() const {
   return op_conf().reduce_gather_conf();
 }
 
-void ReduceGatherOp::InferBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+void ReduceGatherOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                    const ParallelContext* parallel_ctx) const {
   int32_t in_num = op_conf().reduce_gather_conf().in_num();
   CHECK_GE(in_num, 2);
   BlobDesc* first_in_blob = GetBlobDesc4BnInOp(input_bns().Get(0));

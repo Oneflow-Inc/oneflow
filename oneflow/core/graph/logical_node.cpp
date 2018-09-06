@@ -361,19 +361,19 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("MdDiffAcc"
                               &TaskGraph::BldSubTskGphByOneToOne);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceScatter"
                               "ReduceLocalAdd",
-                              &TaskGraph::BldSubTskGphByReduceScatterReduceLocalAdd);
+                              &TaskGraph::BldSubTskGphByReduceScatter2ReduceLocalAdd);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceScatter"
                               "ReduceGlobalAdd",
-                              &TaskGraph::BldSubTskGphByReduceScatterReduceGlobalAdd);
+                              &TaskGraph::BldSubTskGphByReduceScatter2ReduceGlobalAdd);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceLocalAdd"
                               "ReduceGlobalAdd",
-                              &TaskGraph::BldSubTskGphByReduceLocalAddReduceGlobalAdd);
+                              &TaskGraph::BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGlobalAdd"
                               "ReduceGather",
-                              &TaskGraph::BldSubTskGphByReduceGlobalAddReduceGather);
+                              &TaskGraph::BldSubTskGphByReduceGlobalAdd2ReduceGather);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
                               "ReduceGather",
-                              &TaskGraph::BldSubTskGphByReduceGatherReduceGather);
+                              &TaskGraph::BldSubTskGphByReduceGather2ReduceGather);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
                               "NormalMdUpdt",
                               &TaskGraph::BldSubTskGphByOneToOne);
@@ -424,10 +424,10 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
   OF_PP_MAKE_TUPLE_SEQ(Print, kPrintArea)                 \
   OF_PP_MAKE_TUPLE_SEQ(ReduceConcat, kMdUpdtArea)         \
   OF_PP_MAKE_TUPLE_SEQ(ReduceSplit, kMdUpdtArea)          \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceScatter, kMdUpdtArea)       \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceLocalAdd, kMdUpdtArea)      \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceGlobalAdd, kMdUpdtArea)     \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceGather, kMdUpdtArea)        \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceScatter, kMdUpdtArea)        \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceLocalAdd, kMdUpdtArea)       \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceGlobalAdd, kMdUpdtArea)      \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceGather, kMdUpdtArea)         \
   OF_PP_MAKE_TUPLE_SEQ(Accuracy, kDataForwardArea)        \
   OF_PP_MAKE_TUPLE_SEQ(AccuracyAcc, kDataForwardArea)     \
   OF_PP_MAKE_TUPLE_SEQ(AccuracyPrint, kPrintArea)

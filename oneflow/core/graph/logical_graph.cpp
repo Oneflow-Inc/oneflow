@@ -475,21 +475,14 @@ void LogicalGraph::BuildReduceStruct(const ReduceCtx& reduce_ctx) {
     for (auto& md_updt_node : reduce_ctx.md_updt_logicals) {
       Connect(reduce_split_node, NewEdge(), md_updt_node);
     }
-    AddReduceSwitch(reduce_concat_node, reduce_split_node);
+    AddReduceScatterAddGatherNodes(reduce_concat_node, reduce_split_node);
   } else if (reduce_ctx.fw_logicals.size() == 1) {
-    AddReduceSwitch(reduce_ctx.md_diff_acc_logicals.at(0), reduce_ctx.md_updt_logicals.at(0));
+    AddReduceScatterAddGatherNodes(reduce_ctx.md_diff_acc_logicals.at(0),
+                                   reduce_ctx.md_updt_logicals.at(0));
   }
 }
 
-void LogicalGraph::AddReduceSwitch(LogicalNode* src, LogicalNode* dst) {
-  if (Global<JobDesc>::Get()->use_allreduce2()) {
-    AddReduceScatterAddGatherNodes2(src, dst);
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-void LogicalGraph::AddReduceScatterAddGatherNodes2(LogicalNode* src, LogicalNode* dst) {
+void LogicalGraph::AddReduceScatterAddGatherNodes(LogicalNode* src, LogicalNode* dst) {
   std::shared_ptr<const ParallelDesc> src_pd = src->parallel_desc();
   std::shared_ptr<const ParallelDesc> dst_pd = dst->parallel_desc();
   CHECK_EQ(src_pd->parallel_num(), dst_pd->parallel_num());

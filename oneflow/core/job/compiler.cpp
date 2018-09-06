@@ -108,11 +108,7 @@ Plan Compiler::DoCompile() {
   task_gph->RemoveEmptyRegsts();
   task_gph->AddOrderingCtrlEdgeInSameChain();
   if (job_desc->IsTrain() && job_desc->enable_mem_sharing()) {
-    if (job_desc->use_allreduce2()) {
-      task_gph->EnableMemSharingInReduceStruct2();
-    } else {
-      UNIMPLEMENTED();
-    }
+    task_gph->EnableMemSharingInReduceStruct();
   }
   if (job_desc->IsTrain() && job_desc->other_conf().use_ordered_allreduce_in_mdupdt()) {
     task_gph->AddCtrlEdgeInReduceStruct();
