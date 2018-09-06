@@ -70,13 +70,13 @@ void EpollCommNet::InitSockets() {
     const std::string& addr = machine.addr();
     sockaddr_in sa;
     sa.sin_family = AF_INET;
-    machine_addr2sockfd_.emplace(addr, &sa);
+    machine_addr2sockfd_.emplace(addr, sa);
   }
 
-  auto GetSockAddr = [=](int64_t machine_id, uint16_t port) {
+  auto GetSockAddr = [&](int64_t machine_id, uint16_t port) {
     const Machine& machine = Global<JobDesc>::Get()->resource().machine(machine_id);
     const std::string& addr = machine.addr();
-    sockaddr_in sa = *this->machine_addr2sockfd_[addr];
+    sockaddr_in sa = machine_addr2sockfd_[addr];
     sa.sin_port = htons(port);
     PCHECK(inet_pton(AF_INET, "0.0.0.0", &(sa.sin_addr)) == 1);
     return sa;
@@ -140,10 +140,13 @@ void EpollCommNet::InitSockets() {
   }
   // accept
   FOR_RANGE(int32_t, idx, 0, src_machine_count) {
-    auto GetMachineId = [=](sockaddr_in sockaddr) {
+    auto GetMachineId = [&](sockaddr_in sockaddr) {
       std::string addr = "";
-      for (const auto& one : this->machine_addr2sockfd_) {
-        if (one.second == &sockaddr) {
+      inline bool operator==(const sockaddr_in& left, const sockaddr_in& right) {
+        return (left.sin_port == right.sin_port);
+      }
+      for (const auto& one : machine_addr2sockfd_) {
+        if (one.second == sockaddr) {
           addr = one.first;
           break;
         }
