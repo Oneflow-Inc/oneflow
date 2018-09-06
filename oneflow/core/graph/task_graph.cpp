@@ -242,6 +242,12 @@ void TaskGraph::EnableMemSharingInReduceConcatSplitIfNeed(
   }
 }
 
+void TaskGraph::EnableMemSharingInReduceTaskNodeIfNeed(
+    TaskNode* node, std::function<void(RegstDesc*, int64_t)> fun) {
+  if (node == nullptr) { return; }
+  dynamic_cast<ReduceCompTaskNodeIf*>(node)->EnableMemSharingInReduce(std::move(fun));
+}
+
 void TaskGraph::EnableMemSharingInOneReduce(const ReduceTaskNodes& reduce_task_nodes) {
   int64_t mem_shared_id = Global<IDMgr>::Get()->NewMemSharedId();
 
@@ -262,14 +268,10 @@ void TaskGraph::EnableMemSharingInOneReduce(const ReduceTaskNodes& reduce_task_n
     consumed_regst->set_mem_shared_offset(0);
   }
 
-  dynamic_cast<ReduceCompTaskNodeIf*>(reduce_task_nodes.scatter)
-      ->EnableMemSharingInReduce(SetMemSharedField4Regst);
-  dynamic_cast<ReduceCompTaskNodeIf*>(reduce_task_nodes.local_add)
-      ->EnableMemSharingInReduce(SetMemSharedField4Regst);
-  dynamic_cast<ReduceCompTaskNodeIf*>(reduce_task_nodes.global_add)
-      ->EnableMemSharingInReduce(SetMemSharedField4Regst);
-  dynamic_cast<ReduceCompTaskNodeIf*>(reduce_task_nodes.gather)
-      ->EnableMemSharingInReduce(SetMemSharedField4Regst);
+  EnableMemSharingInReduceTaskNodeIfNeed(reduce_task_nodes.scatter, SetMemSharedField4Regst);
+  EnableMemSharingInReduceTaskNodeIfNeed(reduce_task_nodes.local_add, SetMemSharedField4Regst);
+  EnableMemSharingInReduceTaskNodeIfNeed(reduce_task_nodes.global_add, SetMemSharedField4Regst);
+  EnableMemSharingInReduceTaskNodeIfNeed(reduce_task_nodes.gather, SetMemSharedField4Regst);
 }
 
 void TaskGraph::AddCtrlEdge4MemSharingInOneReduce(const ReduceTaskNodes& reduce_task_nodes) {
