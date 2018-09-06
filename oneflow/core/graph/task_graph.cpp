@@ -134,98 +134,54 @@ void TaskGraph::BuildCtrlRegstDescInSameChain() {
 }
 
 void TaskGraph::EnableMemSharingInReduceStruct() {
-  
-  std::unordered_set<ReduceTaskNodes, ReduceTaskNodesHasher> reduce_tasks;
-  CollectReduceTaskNodes(&reduce_tasks);
-  for (auto& reduce_task : reduce_tasks) { EnableMemSharingInOneReduce(reduce_task); }
-}
-
-void TaskGraph::CollectReduceTaskNodes(
-    std::unordered_set<ReduceTaskNodes, ReduceTaskNodesHasher>* reduce_tasks) const {
-  auto FindSuccReduceTaskNode = [](CompTaskNode* task_node, TaskType type) -> CompTaskNode* {
-    for (TaskEdge* out_edge : task_node->out_edges()) {
-      TaskNode* dst_node = out_edge->dst_node();
-      if (dst_node->GetTaskType() == type) { return dynamic_cast<CompTaskNode*>(dst_node); }
-    }
-    return nullptr;
+  auto GetPredReduceTaskNode = [](TaskNode* succ) {
+    std::vector<TaskNode*> nodes;
+    succ->ForEachNodeOnInEdge([&](TaskNode* pred) {
+      if (dynamic_cast<ReduceCompTaskNodeIf*>(pred)) { nodes.push_back(pred); }
+    });
+    return nodes;
   };
 
-  auto FindConcatAndScatter = [&](CompTaskNode* bw_or_md_diff_acc,
-                                  ReduceTaskNodes* reduce_task_nodes) {
-    CompTaskNode* concat_task_node =
-        FindSuccReduceTaskNode(bw_or_md_diff_acc, TaskType::kReduceConcat);
-    if (concat_task_node != nullptr) {
-      reduce_task_nodes->concat = concat_task_node;
-      reduce_task_nodes->scatter =
-          FindSuccReduceTaskNode(reduce_task_nodes->concat, TaskType::kReduceScatter);
-    } else {
-      reduce_task_nodes->scatter =
-          FindSuccReduceTaskNode(bw_or_md_diff_acc, TaskType::kReduceScatter);
+  HashSet<TaskNode*> has_enabled_nodes;
+
+  auto CollectReduceTaskNode = [&](TaskNode* from) {
+    std::list<TaskNode*> nodes;
+    TaskNode* succ = from;
+    while (true) {
+      std::vector<TaskNode*> pred_reduce_nodes = GetPredReduceTaskNode(succ);
+      if (pred_reduce_nodes.size() != 1) { break; }
+      TaskNode* pred_reduce_node = pred_reduce_nodes.front();
+      if (has_enabled_nodes.find(pred_reduce_node) != has_enabled_nodes.end()) { break; }
+      nodes.push_back(pred_reduce_node);
+      succ = pred_reduce_node;
     }
+    return nodes;
   };
 
-  ForEachNode([&](TaskNode* task_node) {
-    if (IsBackwardTaskType(task_node->GetTaskType()) == false) { return; }
-    if (task_node->device_type() != DeviceType::kGPU) { return; }
-    CompTaskNode* bw_task_node = dynamic_cast<CompTaskNode*>(task_node);
-    CHECK(bw_task_node != nullptr);
-    if (bw_task_node->logical_node()->HasOpWithModelBlob() == false) { return; }
-    if (bw_task_node->parallel_ctx()->policy() != kDataParallel
-        || bw_task_node->parallel_ctx()->parallel_num() < 2) {
-      return;
-    }
+  ForEachNode([&](TaskNode* node) {
+    auto* updt = dynamic_cast<NormalMdUpdtCompTaskNode*>(node);
+    if (!updt) { return; }
+    if (updt->parallel_ctx()->policy() != ParallelPolicy::kDataParallel) { return; }
+    if (updt->device_type() != DeviceType::kGPU) { return; }
+    if (updt->parallel_ctx()->parallel_num() < 2) { return; }
 
-    ReduceTaskNodes reduce_task_nodes;
-    CompTaskNode* diff_acc_task_node = FindSuccReduceTaskNode(bw_task_node, TaskType::kMdDiffAcc);
-    if (diff_acc_task_node != nullptr) {
-      FindConcatAndScatter(diff_acc_task_node, &reduce_task_nodes);
-    } else {
-      FindConcatAndScatter(bw_task_node, &reduce_task_nodes);
-    }
-    CompTaskNode* local_add_task_node =
-        FindSuccReduceTaskNode(reduce_task_nodes.scatter, TaskType::kReduceLocalAdd);
-    if (local_add_task_node != nullptr) {
-      reduce_task_nodes.local_add = local_add_task_node;
-      reduce_task_nodes.global_add =
-          FindSuccReduceTaskNode(reduce_task_nodes.local_add, TaskType::kReduceGlobalAdd);
-    } else {
-      reduce_task_nodes.global_add =
-          FindSuccReduceTaskNode(reduce_task_nodes.scatter, TaskType::kReduceGlobalAdd);
-    }
-    reduce_task_nodes.gather =
-        FindSuccReduceTaskNode(reduce_task_nodes.global_add, TaskType::kReduceGather);
-    reduce_task_nodes.split =
-        FindSuccReduceTaskNode(reduce_task_nodes.gather, TaskType::kReduceSplit);
-    if (reduce_task_nodes.split == nullptr) { CHECK(reduce_task_nodes.concat == nullptr); }
+    std::list<TaskNode*> reduce_task_nodes = CollectReduceTaskNode(updt);
 
-    CHECK(reduce_task_nodes.scatter != nullptr);
-    CHECK(reduce_task_nodes.global_add != nullptr);
-    CHECK(reduce_task_nodes.gather != nullptr);
-    reduce_tasks->insert(reduce_task_nodes);
+    int64_t mem_shared_id = Global<IDMgr>::Get()->NewMemSharedId();
+
+    auto SetMemSharedField4Regst = [&](RegstDesc* regst, int64_t offset) {
+      regst->set_enable_mem_sharing(true);
+      regst->set_mem_shared_id(mem_shared_id);
+      regst->set_mem_shared_offset(offset);
+    };
+
+    for (TaskNode* reduce_node : reduce_task_nodes) {
+      auto reduce_task_node_if = dynamic_cast<ReduceCompTaskNodeIf*>(reduce_node);
+      CHECK(reduce_task_node_if);
+      reduce_task_node_if->EnableMemSharingInReduce(SetMemSharedField4Regst);
+      has_enabled_nodes.insert(reduce_node);
+    }
   });
-}
-
-void TaskGraph::EnableMemSharingInReduceTaskNodeIfNeed(
-    TaskNode* node, std::function<void(RegstDesc*, int64_t)> fun) {
-  if (node == nullptr) { return; }
-  dynamic_cast<ReduceCompTaskNodeIf*>(node)->EnableMemSharingInReduce(std::move(fun));
-}
-
-void TaskGraph::EnableMemSharingInOneReduce(const ReduceTaskNodes& reduce_task_nodes) {
-  int64_t mem_shared_id = Global<IDMgr>::Get()->NewMemSharedId();
-
-  auto SetMemSharedField4Regst = [&](RegstDesc* regst, int64_t offset) {
-    regst->set_enable_mem_sharing(true);
-    regst->set_mem_shared_id(mem_shared_id);
-    regst->set_mem_shared_offset(offset);
-  };
-
-  EnableMemSharingInReduceTaskNodeIfNeed(reduce_task_nodes.concat, SetMemSharedField4Regst);
-  EnableMemSharingInReduceTaskNodeIfNeed(reduce_task_nodes.scatter, SetMemSharedField4Regst);
-  EnableMemSharingInReduceTaskNodeIfNeed(reduce_task_nodes.local_add, SetMemSharedField4Regst);
-  EnableMemSharingInReduceTaskNodeIfNeed(reduce_task_nodes.global_add, SetMemSharedField4Regst);
-  EnableMemSharingInReduceTaskNodeIfNeed(reduce_task_nodes.gather, SetMemSharedField4Regst);
-  EnableMemSharingInReduceTaskNodeIfNeed(reduce_task_nodes.split, SetMemSharedField4Regst);
 }
 
 void TaskGraph::AddCtrlEdgeInReduceStruct() {
