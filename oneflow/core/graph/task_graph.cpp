@@ -245,21 +245,6 @@ void TaskGraph::AddCtrlEdge4MemSharingInOneReduce(const ReduceTaskNodes& reduce_
     BuildCtrlRegstBetweenReduceCopyNodes(reduce_task_nodes.local_add, reduce_task_nodes.global_add,
                                          machine_num - 1);
   }
-
-  // global_add -> gather
-  CHECK_EQ(2, reduce_task_nodes.global_add->out_edges().size());
-  TaskNode* global_add_copy_d2h = nullptr;
-  for (TaskEdge* out_edge : reduce_task_nodes.global_add->out_edges()) {
-    if (out_edge->dst_node()->GetTaskType() == TaskType::kCopyHd) {
-      global_add_copy_d2h = out_edge->dst_node();
-    }
-  }
-
-  for (TaskEdge* in_edge : reduce_task_nodes.gather->in_edges()) {
-    if (in_edge->src_node()->GetTaskType() == TaskType::kCopyHd) {
-      global_add_copy_d2h->BuildCtrlRegstDesc(in_edge->src_node());
-    }
-  }
 }
 
 void TaskGraph::BuildCtrlRegstBetweenReduceCopyNodes(const CompTaskNode* src_reduce,
