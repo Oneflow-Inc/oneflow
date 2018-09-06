@@ -62,4 +62,28 @@ void ReduceLocalAddCompTaskNode::BindIbnWithInRegst() {
   }
 }
 
+void ReduceLocalAddCompTaskNode::EnableMemSharingInReduce(
+    std::function<void(RegstDesc* regst, int64_t offset)> EnableMemSharing4Regst) {
+  FOR_RANGE(int, i, 0, logical_node()->parallel_desc()->sorted_machine_ids().size()) {
+    RegstDesc* out = GetProducedRegst("out_" + std::to_string(i)).get();
+    EnableMemSharing4Regst(out,
+                           (i * logical_node()->parallel_desc()->device_num_of_each_machine()
+                            + logical_node()->parallel_desc()->DeviceRank4ParallelId(parallel_id()))
+                               * InferRegstSize(*out));
+  }
+
+  ExecNode* local_add_exec_node = exec_gph().SoleNode();
+
+  FOR_RANGE(int64_t, i, 0, parallel_ctx()->parallel_num()) {
+    if (logical_node()->parallel_desc()->DeviceRank4ParallelId(i)
+        == logical_node()->parallel_desc()->DeviceRank4ParallelId(parallel_id())) {
+      continue;
+    }
+
+    RegstDesc* consumed_regst =
+        local_add_exec_node->RegstDesc4BnInOp(local_add_exec_node->op()->input_bns().Get(i));
+    EnableMemSharing4Regst(consumed_regst, InferRegstSize(*consumed_regst) * i);
+  }
+}
+
 }  // namespace oneflow

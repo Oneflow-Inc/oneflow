@@ -7,9 +7,9 @@ namespace oneflow {
 
 class ReduceCompTaskNodeIf {
  public:
+  virtual ~ReduceCompTaskNodeIf() = default;
   virtual void EnableMemSharingInReduce(
       std::function<void(RegstDesc* regst, int64_t offset)> EnableMemSharing4Regst) = 0;
-  virtual ~ReduceCompTaskNodeIf() = default;
 };
 
 int64_t InferRegstSize(const RegstDesc& regst);

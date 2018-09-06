@@ -243,16 +243,7 @@ void TaskGraph::EnableMemSharingInReduceConcatSplitIfNeed(
 }
 
 void TaskGraph::EnableMemSharingInOneReduce(const ReduceTaskNodes& reduce_task_nodes) {
-  std::shared_ptr<const ParallelDesc> parallel_desc =
-      reduce_task_nodes.scatter->logical_node()->parallel_desc();
-  int64_t parallel_num = parallel_desc->parallel_num();
-  int64_t dev_num_of_each_machine = parallel_desc->device_num_of_each_machine();
-  int64_t machine_num = parallel_desc->sorted_machine_ids().size();
-  CHECK_EQ(parallel_num, machine_num * dev_num_of_each_machine);
-  int64_t parallel_id = reduce_task_nodes.scatter->parallel_ctx()->parallel_id();
-
   int64_t mem_shared_id = Global<IDMgr>::Get()->NewMemSharedId();
-  std::vector<int64_t> blob_index2offset(parallel_num, 0);
 
   auto SetMemSharedField4Regst = [&](RegstDesc* regst, int64_t offset) {
     regst->set_enable_mem_sharing(true);
@@ -269,57 +260,15 @@ void TaskGraph::EnableMemSharingInOneReduce(const ReduceTaskNodes& reduce_task_n
     consumed_regst->set_enable_mem_sharing(true);
     consumed_regst->set_mem_shared_id(mem_shared_id);
     consumed_regst->set_mem_shared_offset(0);
-    int64_t total_model_byte_size =
-        RtBlobDesc(*(consumed_regst->GetBlobDesc(GenPackedLbi()))).ByteSizeOfDataContentField();
-    CHECK_EQ(0, total_model_byte_size % parallel_num);
-    for (int64_t i = 0; i < parallel_num; ++i) {
-      blob_index2offset.at(i) = total_model_byte_size / parallel_num * i;
-    }
-
-    for (int64_t i = 0; i < parallel_num; ++i) {
-      SetMemSharedField4Regst(
-          reduce_task_nodes.scatter->GetProducedRegst("out_" + std::to_string(i)).get(),
-          blob_index2offset.at(i));
-    }
   }
 
-  auto SetOrCheck4ConsumedRegst = [&](RegstDesc* consumed_regst, bool is_inplace_regst,
-                                      int64_t blob_id) {
-    if (is_inplace_regst) {
-      CHECK_EQ(mem_shared_id, consumed_regst->mem_shared_id());
-      CHECK_EQ(blob_index2offset.at(blob_id), consumed_regst->mem_shared_offset());
-    } else {
-      SetMemSharedField4Regst(consumed_regst, blob_index2offset.at(blob_id));
-    }
-  };
-
-  // local_add
-  if (reduce_task_nodes.local_add) {
-    HashSet<int64_t> inplace_blob_ids;
-    int64_t dev_index_of_this_machine = parallel_id % dev_num_of_each_machine;
-    for (int64_t i = dev_index_of_this_machine; i < parallel_num; i += dev_num_of_each_machine) {
-      inplace_blob_ids.emplace(i);
-    }
-
-    ExecNode* local_add_exec_node = reduce_task_nodes.local_add->exec_gph().SoleNode();
-    CHECK_EQ(parallel_num, local_add_exec_node->op()->input_bns().size());
-    for (int64_t i = 0; i < parallel_num; ++i) {
-      RegstDesc* consumed_regst =
-          local_add_exec_node->RegstDesc4BnInOp(local_add_exec_node->op()->input_bns().Get(i));
-      SetOrCheck4ConsumedRegst(consumed_regst, inplace_blob_ids.find(i) != inplace_blob_ids.end(),
-                               i);
-    }
-
-    for (int64_t i = 0; i < machine_num; ++i) {
-      SetMemSharedField4Regst(
-          reduce_task_nodes.local_add->GetProducedRegst("out_" + std::to_string(i)).get(),
-          blob_index2offset.at(i * dev_num_of_each_machine + dev_index_of_this_machine));
-    }
-  }
-
-  dynamic_cast<ReduceGlobalAddCompTaskNode*>(reduce_task_nodes.global_add)
+  dynamic_cast<ReduceCompTaskNodeIf*>(reduce_task_nodes.scatter)
       ->EnableMemSharingInReduce(SetMemSharedField4Regst);
-  dynamic_cast<ReduceGatherCompTaskNode*>(reduce_task_nodes.gather)
+  dynamic_cast<ReduceCompTaskNodeIf*>(reduce_task_nodes.local_add)
+      ->EnableMemSharingInReduce(SetMemSharedField4Regst);
+  dynamic_cast<ReduceCompTaskNodeIf*>(reduce_task_nodes.global_add)
+      ->EnableMemSharingInReduce(SetMemSharedField4Regst);
+  dynamic_cast<ReduceCompTaskNodeIf*>(reduce_task_nodes.gather)
       ->EnableMemSharingInReduce(SetMemSharedField4Regst);
 }
 
