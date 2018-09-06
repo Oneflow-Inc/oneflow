@@ -155,6 +155,7 @@ void TaskGraph::EnableMemSharingInReduceStruct() {
       nodes.push_back(pred_reduce_node);
       succ = pred_reduce_node;
     }
+    nodes.reverse();
     return nodes;
   };
 
