@@ -37,4 +37,17 @@ void ReduceGlobalAddCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(parallel_ctx());
 }
 
+void ReduceGlobalAddCompTaskNode::EnableMemSharingInReduce(
+    std::function<void(RegstDesc* regst, int64_t offset)> EnableMemSharing4Regst) {
+  EnableMemSharing4Regst(GetProducedRegst("out").get(),
+                         parallel_id() * InferRegstSize(*GetProducedRegst("out")));
+  for (const auto& kv : consumed_regsts()) {
+    auto in_parallel_id = oneflow_cast<int64_t>(kv.first.substr(3));
+    CHECK_EQ(1, kv.second.size());
+    if (in_parallel_id == parallel_id()) { continue; }
+    RegstDesc* regst = kv.second.front().get();
+    EnableMemSharing4Regst(regst, InferRegstSize(*regst) * in_parallel_id);
+  }
+}
+
 }  // namespace oneflow

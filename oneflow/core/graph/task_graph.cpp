@@ -317,24 +317,10 @@ void TaskGraph::EnableMemSharingInOneReduce(const ReduceTaskNodes& reduce_task_n
     }
   }
 
-  auto HandleMemSharedFieldOfConsumedRegsts = [&](CompTaskNode* task_node,
-                                                  int64_t consumed_regst_num) {
-    auto& consumed_regsts = task_node->consumed_regsts();
-    CHECK_EQ(consumed_regst_num, consumed_regsts.size());
-    for (const auto& kv : consumed_regsts) {
-      int64_t in_parallel_id = oneflow_cast<int64_t>(kv.first.substr(3));
-      CHECK_EQ(1, kv.second.size());
-      SetOrCheck4ConsumedRegst(kv.second.front().get(), in_parallel_id == parallel_id,
-                               in_parallel_id);
-    }
-  };
-  // global add
-  int consumed_regst_num = reduce_task_nodes.local_add ? machine_num : parallel_num;
-  HandleMemSharedFieldOfConsumedRegsts(reduce_task_nodes.global_add, consumed_regst_num);
-  SetMemSharedField4Regst(reduce_task_nodes.global_add->GetProducedRegst("out").get(),
-                          blob_index2offset.at(parallel_id));
-  
-  dynamic_cast<ReduceGatherCompTaskNode*>(reduce_task_nodes.gather)->EnableMemSharingInReduce(SetMemSharedField4Regst);
+  dynamic_cast<ReduceGlobalAddCompTaskNode*>(reduce_task_nodes.global_add)
+      ->EnableMemSharingInReduce(SetMemSharedField4Regst);
+  dynamic_cast<ReduceGatherCompTaskNode*>(reduce_task_nodes.gather)
+      ->EnableMemSharingInReduce(SetMemSharedField4Regst);
 }
 
 void TaskGraph::AddCtrlEdge4MemSharingInOneReduce(const ReduceTaskNodes& reduce_task_nodes) {
