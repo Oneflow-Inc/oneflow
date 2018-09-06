@@ -585,23 +585,6 @@ message ReduceSplitOpConf {
   required int32 out_num = 1;
 }
 
-message ReduceScatterOpConf {
-  required int32 out_num = 1;
-};
-
-message ReduceLocalAddOpConf {
-  required int32 in_num = 1;
-  required int32 out_num = 2;
-};
-
-message ReduceGlobalAddOpConf {
-  repeated int64 in_parallel_ids = 1;
-};
-
-message ReduceGatherOpConf {
-  required int32 in_num = 1;
-};
-
 message ReduceScatter2OpConf {
   required int32 out_num = 1;
 }
@@ -713,10 +696,6 @@ message OperatorConf {
     MaximumOpConf maximum_conf = 302;
     LocalResponseNormalizationOpConf local_response_normalization_conf = 300;
     NormalizationOpConf normalization_conf = 350;
-    ReduceScatterOpConf reduce_scatter_conf = 400;
-    ReduceLocalAddOpConf reduce_local_add_conf = 401;
-    ReduceGlobalAddOpConf reduce_global_add_conf = 402;
-    ReduceGatherOpConf reduce_gather_conf = 403;
     ReduceConcatOpConf reduce_concat_conf = 404;
     ReduceSplitOpConf reduce_split_conf = 405;
     RecordLoadOpConf record_load_conf = 406;

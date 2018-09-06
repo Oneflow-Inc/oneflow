@@ -11,15 +11,16 @@ void CopyTaskNode::ProduceAllRegstsAndBindEdges() {
   if (copy_hd != nullptr) {
     TaskType dst_node_type = (*out_edges().begin())->dst_node()->GetTaskType();
     if (copy_hd->copy_type() == CopyHdOpConf::H2D
-        && (dst_node_type == TaskType::kReduceLocalAdd
-            || dst_node_type == TaskType::kReduceGlobalAdd
-            || dst_node_type == TaskType::kReduceGather)) {
+        && (dst_node_type == TaskType::kReduceLocalAdd2
+            || dst_node_type == TaskType::kReduceGlobalAdd2
+            || dst_node_type == TaskType::kReduceGather2)) {
       out_regst = ProduceRegst(name, false, 1, 1);
     }
     TaskType src_node_type = SoleInEdge()->src_node()->GetTaskType();
     if (copy_hd->copy_type() == CopyHdOpConf::D2H
-        && (src_node_type == TaskType::kReduceScatter || src_node_type == TaskType::kReduceLocalAdd
-            || src_node_type == TaskType::kReduceGlobalAdd)) {
+        && (src_node_type == TaskType::kReduceScatter2
+            || src_node_type == TaskType::kReduceLocalAdd2
+            || src_node_type == TaskType::kReduceGlobalAdd2)) {
       out_regst = ProduceRegst(name, false, 1, 1);
     }
   }
