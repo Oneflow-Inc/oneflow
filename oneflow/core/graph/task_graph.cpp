@@ -134,12 +134,10 @@ void TaskGraph::BuildCtrlRegstDescInSameChain() {
 }
 
 void TaskGraph::EnableMemSharingInReduceStruct() {
+  
   std::unordered_set<ReduceTaskNodes, ReduceTaskNodesHasher> reduce_tasks;
   CollectReduceTaskNodes(&reduce_tasks);
-  for (auto& reduce_task : reduce_tasks) {
-    EnableMemSharingInOneReduce(reduce_task);
-    AddCtrlEdge4MemSharingInOneReduce(reduce_task);
-  }
+  for (auto& reduce_task : reduce_tasks) { EnableMemSharingInOneReduce(reduce_task); }
 }
 
 void TaskGraph::CollectReduceTaskNodes(
@@ -228,50 +226,6 @@ void TaskGraph::EnableMemSharingInOneReduce(const ReduceTaskNodes& reduce_task_n
   EnableMemSharingInReduceTaskNodeIfNeed(reduce_task_nodes.global_add, SetMemSharedField4Regst);
   EnableMemSharingInReduceTaskNodeIfNeed(reduce_task_nodes.gather, SetMemSharedField4Regst);
   EnableMemSharingInReduceTaskNodeIfNeed(reduce_task_nodes.split, SetMemSharedField4Regst);
-}
-
-void TaskGraph::AddCtrlEdge4MemSharingInOneReduce(const ReduceTaskNodes& reduce_task_nodes) {
-  std::shared_ptr<const ParallelDesc> parallel_desc =
-      reduce_task_nodes.scatter->logical_node()->parallel_desc();
-  int64_t parallel_num = parallel_desc->parallel_num();
-  int64_t machine_num = parallel_desc->sorted_machine_ids().size();
-
-  if (reduce_task_nodes.local_add == nullptr) {
-  } else {
-    BuildCtrlRegstBetweenReduceCopyNodes(reduce_task_nodes.scatter, reduce_task_nodes.local_add,
-                                         parallel_num - machine_num);
-  }
-}
-
-void TaskGraph::BuildCtrlRegstBetweenReduceCopyNodes(const CompTaskNode* src_reduce,
-                                                     const CompTaskNode* dst_reduce,
-                                                     int64_t copy_node_num) {
-  struct ReduceCopyNodePair {
-    TaskNode* copy_h2d;
-    TaskNode* copy_d2h;
-    ReduceCopyNodePair() : copy_h2d(nullptr), copy_d2h(nullptr) {}
-  };
-  HashMap<int64_t, ReduceCopyNodePair> mem_shared_offset2copy_nodes;
-
-  for (TaskEdge* out_edge : src_reduce->out_edges()) {
-    if (out_edge->dst_node()->GetTaskType() == TaskType::kCopyHd) {
-      int64_t offset = out_edge->GetSoleRegst()->mem_shared_offset();
-      mem_shared_offset2copy_nodes[offset].copy_d2h = out_edge->dst_node();
-    }
-  }
-  CHECK_EQ(copy_node_num, mem_shared_offset2copy_nodes.size());
-
-  for (TaskEdge* in_edge : dst_reduce->in_edges()) {
-    if (in_edge->src_node()->GetTaskType() == TaskType::kCopyHd) {
-      int64_t offset = in_edge->GetSoleRegst()->mem_shared_offset();
-      CHECK(mem_shared_offset2copy_nodes.find(offset) != mem_shared_offset2copy_nodes.end());
-      mem_shared_offset2copy_nodes.at(offset).copy_h2d = in_edge->src_node();
-    }
-  }
-
-  for (const auto& kv : mem_shared_offset2copy_nodes) {
-    kv.second.copy_d2h->BuildCtrlRegstDesc(kv.second.copy_h2d);
-  }
 }
 
 void TaskGraph::AddCtrlEdgeInReduceStruct() {
