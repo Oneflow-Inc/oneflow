@@ -2,20 +2,23 @@
 #define ONEFLOW_CORE_GRAPH_REDUCE_LOCAL_ADD_COMPUTE_TASK_NODE_H_
 
 #include "oneflow/core/graph/compute_task_node.h"
+#include "oneflow/core/graph/reduce_comp_task_node_if.h"
 
 namespace oneflow {
 
-class ReduceLocalAddCompTaskNode final : public CompTaskNode {
+class ReduceLocalAddCompTaskNode final : public CompTaskNode, public ReduceCompTaskNodeIf {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ReduceLocalAddCompTaskNode);
   ReduceLocalAddCompTaskNode() = default;
-  ~ReduceLocalAddCompTaskNode() = default;
+  ~ReduceLocalAddCompTaskNode() override = default;
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
 
   TaskType GetTaskType() const override { return TaskType::kReduceLocalAdd; }
   CudaWorkType GetCudaWorkType() const override { return CudaWorkType::kMix; }
+  void EnableMemSharingInReduce(
+      std::function<void(RegstDesc* regst, int64_t offset)> EnableMemSharing4Regst) override;
 
  private:
   void BuildExecGphAndRegst() override;

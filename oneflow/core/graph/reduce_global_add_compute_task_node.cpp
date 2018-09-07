@@ -42,4 +42,44 @@ void ReduceGlobalAddCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(parallel_ctx());
 }
 
+void ReduceGlobalAddCompTaskNode::EnableMemSharingInReduce(
+    std::function<void(RegstDesc* regst, int64_t offset)> EnableMemSharing4Regst) {
+  EnableMemSharing4Regst(GetProducedRegst("out").get(),
+                         parallel_id() * InferRegstSize(*GetProducedRegst("out")));
+  for (const auto& kv : consumed_regsts()) {
+    auto in_parallel_id = oneflow_cast<int64_t>(kv.first.substr(3));
+    CHECK_EQ(1, kv.second.size());
+    if (in_parallel_id == parallel_id()) { continue; }
+    RegstDesc* regst = kv.second.front().get();
+    EnableMemSharing4Regst(regst, InferRegstSize(*regst) * in_parallel_id);
+  }
+
+  std::vector<CompTaskNode*> local_add_on_in_edge;
+  std::vector<CompTaskNode*> scatter_on_in_edge;
+
+  ForEachNodeOnInEdge([&](TaskNode* node) {
+    if (node->GetTaskType() == kReduceLocalAdd) {
+      local_add_on_in_edge.push_back(dynamic_cast<CompTaskNode*>(node));
+      return;
+    }
+    if (node->GetTaskType() == kReduceScatter) {
+      scatter_on_in_edge.push_back(dynamic_cast<CompTaskNode*>(node));
+      return;
+    }
+  });
+
+  CHECK_EQ(local_add_on_in_edge.size() + scatter_on_in_edge.size(), 1);
+
+  if (!local_add_on_in_edge.empty()) {
+    BuildCtrlRegstBetweenReduceCopyNodes(
+        local_add_on_in_edge.front(), this,
+        this->logical_node()->parallel_desc()->sorted_machine_ids().size() - 1);
+  }
+
+  if (!scatter_on_in_edge.empty()) {
+    BuildCtrlRegstBetweenReduceCopyNodes(scatter_on_in_edge.front(), this,
+                                         this->parallel_ctx()->parallel_num() - 1);
+  }
+}
+
 }  // namespace oneflow

@@ -52,4 +52,16 @@ void ReduceScatterCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(parallel_ctx());
 }
 
+void ReduceScatterCompTaskNode::EnableMemSharingInReduce(
+    std::function<void(RegstDesc* regst, int64_t offset)> EnableMemSharing4Regst) {
+  FOR_RANGE(int64_t, i, 0, parallel_ctx()->parallel_num()) {
+    RegstDesc* out = GetProducedRegst("out_" + std::to_string(i)).get();
+    EnableMemSharing4Regst(out, i * InferRegstSize(*out));
+  }
+
+  if (this->SoleInEdge()->src_node()->GetTaskType() == TaskType::kReduceConcat) { return; }
+
+  EnableMemSharing4Regst(GetSoleConsumedRegst("in").get(), 0);
+}
+
 }  // namespace oneflow
