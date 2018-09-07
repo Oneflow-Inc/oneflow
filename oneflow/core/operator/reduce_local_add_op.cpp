@@ -11,6 +11,7 @@ void ReduceLocalAddOp::InitFromOpConf() {
   FOR_RANGE(int32_t, i, 0, op_conf().reduce_local_add_conf().out_num()) {
     EnrollOutputBn("out_" + std::to_string(i), false);
   }
+  CHECK_GT(op_conf().reduce_local_add_conf().out_num(), 1);
 }
 
 const PbMessage& ReduceLocalAddOp::GetCustomizedConf() const {
