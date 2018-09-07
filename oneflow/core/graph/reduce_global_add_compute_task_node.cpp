@@ -44,14 +44,32 @@ void ReduceGlobalAddCompTaskNode::BuildExecGphAndRegst() {
 
 void ReduceGlobalAddCompTaskNode::EnableMemSharingInReduce(
     std::function<void(RegstDesc* regst, int64_t offset)> EnableMemSharing4Regst) {
+  RegstDesc* out_regst = GetProducedRegst("out").get();
+  int64_t out_size = InferRegstSize(*out_regst);
+  int64_t device_rank = logical_node()->parallel_desc()->DeviceRank4ParallelId(parallel_id());
+  int64_t machine_rank = logical_node()->parallel_desc()->MachineRank4ParallelId(parallel_id());
+  int64_t machine_num = logical_node()->parallel_desc()->sorted_machine_ids().size();
+  int64_t device_num = parallel_ctx()->device_num_of_each_machine();
+
   EnableMemSharing4Regst(GetProducedRegst("out").get(),
-                         parallel_id() * InferRegstSize(*GetProducedRegst("out")));
-  for (const auto& kv : consumed_regsts()) {
-    auto in_parallel_id = oneflow_cast<int64_t>(kv.first.substr(3));
-    CHECK_EQ(1, kv.second.size());
-    if (in_parallel_id == parallel_id()) { continue; }
-    RegstDesc* regst = kv.second.front().get();
-    EnableMemSharing4Regst(regst, InferRegstSize(*regst) * in_parallel_id);
+                         (device_rank * machine_num + machine_rank) * out_size);
+
+  if (device_num >= 1 && machine_num >= 1) {
+    for (const auto& kv : consumed_regsts()) {
+      auto in_parallel_id = oneflow_cast<int64_t>(kv.first.substr(3));
+      CHECK_EQ(1, kv.second.size());
+      if (in_parallel_id == machine_rank) { continue; }
+      RegstDesc* regst = kv.second.front().get();
+      EnableMemSharing4Regst(regst, out_size * (device_rank * machine_num + in_parallel_id));
+    }
+  } else {
+    for (const auto& kv : consumed_regsts()) {
+      auto in_parallel_id = oneflow_cast<int64_t>(kv.first.substr(3));
+      CHECK_EQ(1, kv.second.size());
+      if (in_parallel_id == parallel_id()) { continue; }
+      RegstDesc* regst = kv.second.front().get();
+      EnableMemSharing4Regst(regst, out_size * in_parallel_id);
+    }
   }
 
   std::vector<CompTaskNode*> local_add_on_in_edge;
