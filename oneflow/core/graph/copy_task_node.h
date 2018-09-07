@@ -42,6 +42,8 @@ class CopyHdTaskNode final : public CopyTaskNode {
     }
   }
 
+  void EnableSyntheticData();
+
  private:
   void InitProducedRegstMemCase(MemoryCase*) override;
   OperatorConf NewCopyOpConf() override;

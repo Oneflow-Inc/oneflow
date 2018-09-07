@@ -588,6 +588,9 @@ void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {
                 ctrl_regst->mut_regst_desc_type()->mutable_ctrl_regst_desc();
             ctrl_regst_desc->set_reliant_regst_desc_id(copy_out_regst->regst_desc_id());
             ctrl_regst_desc->set_returned_regst_num(piece_num_in_batch);
+            if (Global<JobDesc>::Get()->synthetic_data_level() == SyntheticDataLevel::kDevice) {
+              copy_hd_task_node->EnableSyntheticData();
+            }
           }
         });
       }

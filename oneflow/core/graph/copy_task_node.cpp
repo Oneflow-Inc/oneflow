@@ -1,5 +1,6 @@
 #include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/operator/copy_hd_op.h"
 #include "oneflow/core/job/thrd_id_generator.h"
 
 namespace oneflow {
@@ -67,6 +68,15 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
   conf.set_device_type(device_type());
   conf.mutable_copy_hd_conf()->set_type(copy_type_);
   return conf;
+}
+
+void CopyHdTaskNode::EnableSyntheticData() {
+  ExecNode* node = mut_exec_gph().SoleNode();
+  const Operator* op = node->mut_op().get();
+  Operator* mut_op = const_cast<Operator*>(op);
+  CopyHdOp* copy_hd_op = dynamic_cast<CopyHdOp*>(mut_op);
+  CHECK(copy_hd_op != nullptr);
+  copy_hd_op->set_enable_synthetic_data(true);
 }
 
 void CopyCommNetTaskNode::Init(int64_t machine_id, int64_t src_machine_id) {
