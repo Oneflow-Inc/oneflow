@@ -19,8 +19,8 @@ void ReduceLocalAddKernel<device_type, T>::ForwardDataContent(
     KernelUtil<device_type, T>::Axpy(ctx.device_ctx, out_blob->shape().elem_cnt(), 1.0,
                                      in_blob->dptr<T>(), 1, out_blob->mut_dptr<T>(), 1);
   } else {
-    Memcpy<DeviceType::kCPU>(ctx.device_ctx, out_blob->mut_dptr<char>(), in_blob->dptr<char>(),
-                             out_blob->ByteSizeOfDataContentField());
+    Memcpy<device_type>(ctx.device_ctx, out_blob->mut_dptr<char>(), in_blob->dptr<char>(),
+                        out_blob->ByteSizeOfDataContentField());
   }
 }
 
