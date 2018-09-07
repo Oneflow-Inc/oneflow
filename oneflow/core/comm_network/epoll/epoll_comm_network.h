@@ -31,7 +31,6 @@ class EpollCommNet final : public CommNetIf<SocketMemDesc> {
 
   std::vector<IOEventPoller*> pollers_;
   std::vector<int> machine_id2sockfd_;
-  HashMap<std::string, sockaddr_in> machine_addr2sockfd_;
   HashMap<int, SocketHelper*> sockfd2helper_;
 };
 
