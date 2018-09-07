@@ -70,3 +70,4 @@ bool NcclCommMgr::IsNcclTaskType(const TaskType& tt) const {
 }
 
 }  // namespace oneflow
+
