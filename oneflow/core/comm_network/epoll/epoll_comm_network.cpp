@@ -142,11 +142,8 @@ void EpollCommNet::InitSockets() {
   FOR_RANGE(int32_t, idx, 0, src_machine_count) {
     auto GetMachineId = [&](sockaddr_in sockaddr) {
       std::string addr = "";
-      inline bool operator==(const sockaddr_in& left, const sockaddr_in& right) {
-        return (left.sin_port == right.sin_port);
-      }
       for (const auto& one : machine_addr2sockfd_) {
-        if (one.second == sockaddr) {
+        if (one.second.sin_port == sockaddr.sin_port) {
           addr = one.first;
           break;
         }
