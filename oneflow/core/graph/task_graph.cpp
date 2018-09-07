@@ -332,7 +332,7 @@ void TaskGraph::EnableMemSharingInOneReduce(const ReduceTaskNodes& reduce_task_n
 
   int64_t reduce_num = has_local_reduce ? machine_num : parallel_num;
   int64_t reduce_rank = has_local_reduce ? machine_rank : parallel_id;
-  auto regst_offset = [&](int64_t blob_id) {
+  auto blob_offset = [&](int64_t blob_id) {
     if (has_local_reduce) {
       return global_blob_index2offset.at(device_rank * machine_num + blob_id);
     } else {
@@ -344,21 +344,21 @@ void TaskGraph::EnableMemSharingInOneReduce(const ReduceTaskNodes& reduce_task_n
     auto& consumed_regsts = task_node->consumed_regsts();
     CHECK_EQ(consumed_regst_num, consumed_regsts.size());
     for (const auto& kv : consumed_regsts) {
-      int64_t in_regst_id = oneflow_cast<int64_t>(kv.first.substr(3));
+      int64_t in_blob_id = oneflow_cast<int64_t>(kv.first.substr(3));
       CHECK_EQ(1, kv.second.size());
-      SetOrCheck4ConsumedRegst(kv.second.front().get(), reduce_rank == in_regst_id,
-                               regst_offset(in_regst_id));
+      SetOrCheck4ConsumedRegst(kv.second.front().get(), reduce_rank == in_blob_id,
+                               blob_offset(in_blob_id));
     }
   };
 
   // global add
   HandleMemSharedFieldOfConsumedRegsts(reduce_task_nodes.global_add, reduce_num);
   SetMemSharedField4Regst(reduce_task_nodes.global_add->GetProducedRegst("out").get(),
-                          regst_offset(reduce_rank));
+                          blob_offset(reduce_rank));
 
   // gather
   HandleMemSharedFieldOfConsumedRegsts(reduce_task_nodes.gather, reduce_num);
-  SetMemSharedField4Regst(reduce_task_nodes.gather->GetProducedRegst("out").get(), regst_offset(0));
+  SetMemSharedField4Regst(reduce_task_nodes.gather->GetProducedRegst("out").get(), blob_offset(0));
 
   // local gather
   if (reduce_task_nodes.local_gather) {
@@ -389,7 +389,6 @@ void TaskGraph::AddCtrlEdge4MemSharingInOneReduce(const ReduceTaskNodes& reduce_
                                          machine_num - 1);
   }
 
-  // TODO(jiyuan): can be optimized
   // global_add -> gather
   CHECK_EQ(2, reduce_task_nodes.global_add->out_edges().size());
   TaskNode* global_add_copy_d2h = nullptr;
@@ -405,8 +404,7 @@ void TaskGraph::AddCtrlEdge4MemSharingInOneReduce(const ReduceTaskNodes& reduce_
     }
   }
 
-  // gather -> local_gather
-  // Do nothing
+  // gather -> local_gather, do nothing
 }
 
 void TaskGraph::BuildCtrlRegstBetweenReduceCopyNodes(const CompTaskNode* src_reduce,
