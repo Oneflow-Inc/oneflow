@@ -30,14 +30,12 @@ void ReduceScatterOp::InferBlobDescs(
 
   const BlobDesc* in_blob = GetBlobDesc4BnInOp(SoleIbn());
   int64_t model_elem_cnt = in_blob->shape().elem_cnt();
-  int64_t parallel_num = parallel_ctx->parallel_num();
-  CHECK_EQ(0, model_elem_cnt % parallel_num);
-  CHECK_EQ(out_num, parallel_num);
+  CHECK_EQ(0, model_elem_cnt % out_num);
 
   for (int32_t i = 0; i < out_num; ++i) {
     BlobDesc* out_blob = GetBlobDesc4BnInOp(output_bns().Get(i));
     *out_blob = *in_blob;
-    out_blob->mut_shape() = Shape({model_elem_cnt / parallel_num});
+    out_blob->mut_shape() = Shape({model_elem_cnt / out_num});
   }
 }
 
