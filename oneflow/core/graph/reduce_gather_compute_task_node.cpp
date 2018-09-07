@@ -20,13 +20,12 @@ void ReduceGatherCompTaskNode::ConsumeAllRegsts() {
       src_node = src_node->SoleInEdge()->src_node();
     }
     bool is_local_gather = src_node->GetTaskType() == TaskType::kReduceGather;
-    int64_t parallel_id = src_node->parallel_ctx()->parallel_id();
-
+    int64_t in_parallel_id = src_node->parallel_ctx()->parallel_id();
+    int64_t in_device_rank = in_parallel_id % dev_num_of_each_machine;
+    int64_t in_machine_rank = in_parallel_id / dev_num_of_each_machine;
     int64_t in_edge_index = do_local_reduce_scatter
-                                ? (is_local_gather ? parallel_id % dev_num_of_each_machine
-                                                   : parallel_id / dev_num_of_each_machine)
-                                : parallel_id;
-
+                                ? (is_local_gather ? in_device_rank : in_machine_rank)
+                                : in_parallel_id;
     ConsumeRegst("in_" + std::to_string(in_edge_index), edge->GetSoleRegst());
   }
 }

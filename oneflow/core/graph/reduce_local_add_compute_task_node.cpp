@@ -10,9 +10,9 @@ void ReduceLocalAddCompTaskNode::ProduceAllRegstsAndBindEdges() {
   for (TaskEdge* edge : out_edges()) {
     std::vector<CompTaskNode*> succ_comp_task_nodes = GetSuccCompTaskNodesOnEdge(edge);
     CHECK_EQ(succ_comp_task_nodes.size(), 1);
-    int64_t parallel_id = succ_comp_task_nodes.front()->parallel_id();
-    int64_t out_edge_index = parallel_id / dev_num_of_each_machine;
-    std::string regst_name = "out_" + std::to_string(out_edge_index);
+    int64_t out_parallel_id = succ_comp_task_nodes.front()->parallel_id();
+    int64_t out_machine_rank = out_parallel_id / dev_num_of_each_machine;
+    std::string regst_name = "out_" + std::to_string(out_machine_rank);
     std::shared_ptr<RegstDesc> out_regst = ProduceRegst(regst_name, false, 1, 1);
     edge->AddRegst(regst_name, out_regst);
   }
@@ -25,9 +25,9 @@ void ReduceLocalAddCompTaskNode::ConsumeAllRegsts() {
     while (src_node->GetTaskType() != TaskType::kReduceScatter) {
       src_node = src_node->SoleInEdge()->src_node();
     }
-    int64_t parallel_id = src_node->parallel_ctx()->parallel_id();
-    int64_t in_edge_index = parallel_id % dev_num_of_each_machine;
-    ConsumeRegst("in_" + std::to_string(in_edge_index), edge->GetSoleRegst());
+    int64_t in_parallel_id = src_node->parallel_ctx()->parallel_id();
+    int64_t in_device_rank = in_parallel_id % dev_num_of_each_machine;
+    ConsumeRegst("in_" + std::to_string(in_device_rank), edge->GetSoleRegst());
   }
 }
 

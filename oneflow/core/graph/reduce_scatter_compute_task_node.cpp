@@ -17,9 +17,9 @@ void ReduceScatterCompTaskNode::ProduceAllRegstsAndBindEdges() {
   for (TaskEdge* edge : out_edges()) {
     std::vector<CompTaskNode*> comp_task_nodes = GetSuccCompTaskNodesOnEdge(edge);
     CHECK_EQ(comp_task_nodes.size(), 1);
-    int64_t parallel_id = comp_task_nodes.front()->parallel_ctx()->parallel_id();
-    int64_t out_edge_index =
-        do_local_reduce_scatter ? parallel_id % dev_num_of_each_machine : parallel_id;
+    int64_t out_parallel_id = comp_task_nodes.front()->parallel_ctx()->parallel_id();
+    int64_t out_device_rank = out_parallel_id % dev_num_of_each_machine;
+    int64_t out_edge_index = do_local_reduce_scatter ? out_device_rank : out_parallel_id;
     std::string out_regst_name = "out_" + std::to_string(out_edge_index);
     std::shared_ptr<RegstDesc> out_regst = ProduceRegst(out_regst_name, false, 1, 1);
     edge->AddRegst(out_regst_name, out_regst);

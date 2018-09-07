@@ -17,9 +17,9 @@ void ReduceGlobalAddCompTaskNode::ConsumeAllRegsts() {
   for (TaskEdge* edge : in_edges()) {
     std::vector<CompTaskNode*> pred_comp_task_nodes = GetPredCompTaskNodesOnEdge(edge);
     CHECK_EQ(pred_comp_task_nodes.size(), 1);
-    int64_t parallel_id = pred_comp_task_nodes.front()->parallel_id();
-    int64_t in_edge_index =
-        do_local_reduce_scatter ? parallel_id / dev_num_of_each_machine : parallel_id;
+    int64_t in_parallel_id = pred_comp_task_nodes.front()->parallel_id();
+    int64_t in_machine_rank = in_parallel_id / dev_num_of_each_machine;
+    int64_t in_edge_index = do_local_reduce_scatter ? in_machine_rank : in_parallel_id;
     ConsumeRegst("in_" + std::to_string(in_edge_index), edge->GetSoleRegst());
   }
 }
