@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_KERNEL_REDUCE_ADD_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_REDUCE_ADD_KERNEL_H_
+#ifndef ONEFLOW_CORE_KERNEL_REDUCE_LOCAL_ADD_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_REDUCE_LOCAL_ADD_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
 
@@ -19,4 +19,4 @@ class ReduceLocalAddKernel final : public KernelIf<device_type> {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_REDUCE_ADD_KERNEL_H_
+#endif  // ONEFLOW_CORE_KERNEL_REDUCE_LOCAL_ADD_KERNEL_H_
