@@ -26,12 +26,15 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
     KernelUtil<device_type, T>::Axpy(ctx.device_ctx, in_0->shape().elem_cnt(), static_cast<T>(1.0),
                                      in_i->dptr<T>(), 1, in_0->mut_dptr<T>(), 1);
   }
-
-  // TODO(jiyuan): get 'batch_num' from the blob header of the input blob
-  int64_t batch_size = Global<JobDesc>::Get()->BatchSize();
+  int64_t total_instance_num = 0;
+  if (in_0->instance_num() != nullptr) {
+    total_instance_num = *in_0->instance_num();
+  } else {
+    total_instance_num = Global<JobDesc>::Get()->BatchSize();
+  }
   float l1 = Global<JobDesc>::Get()->L1();
   float l2 = Global<JobDesc>::Get()->L2();
-  UpdateModel(ctx.device_ctx, batch_size, static_cast<T>(learning_rate), static_cast<T>(l1),
+  UpdateModel(ctx.device_ctx, total_instance_num, static_cast<T>(learning_rate), static_cast<T>(l1),
               static_cast<T>(l2), std::get<1>(*tpl), in_0, next_model_vid, BnInOp2Blob);
 }
 

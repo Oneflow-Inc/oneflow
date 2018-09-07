@@ -58,6 +58,7 @@ class Blob final {
   DataType data_type() const { return blob_desc_->data_type(); }
   bool has_data_id_field() const { return blob_desc_->has_data_id_field(); }
   bool has_col_num_field() const { return blob_desc_->has_col_num_field(); }
+  bool has_instance_num_field() const { return blob_desc_->has_instance_num_field(); }
   int32_t max_col_num() const { return blob_desc_->max_col_num(); }
   size_t ByteSizeOfBlobHeader() const { return blob_desc_->ByteSizeOfBlobHeader(); }
   size_t ByteSizeOfDataIdField() const { return blob_desc_->ByteSizeOfDataIdField(); }
