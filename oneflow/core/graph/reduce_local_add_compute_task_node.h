@@ -19,7 +19,6 @@ class ReduceLocalAddCompTaskNode final : public CompTaskNode {
 
  private:
   void BuildExecGphAndRegst() override;
-  void BindIbnWithInRegst();
 };
 
 }  // namespace oneflow
