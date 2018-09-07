@@ -716,11 +716,11 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd) {
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGlobalAdd2ReduceGather) {
   const auto& pd = sorted_src_comp_tasks.front()->logical_node()->parallel_desc();
-  bool do_local_reduce_scatter =
+  bool has_local_reduce =
       pd->sorted_machine_ids().size() > 1 && pd->device_num_of_each_machine() > 1;
   for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
     for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
-      if (do_local_reduce_scatter) {
+      if (has_local_reduce) {
         if (src_comp_task->parallel_id() % pd->device_num_of_each_machine()
             == dst_comp_task->parallel_id() % pd->device_num_of_each_machine()) {
           BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, true);

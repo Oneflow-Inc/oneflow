@@ -7,8 +7,8 @@ void ReduceScatterCompTaskNode::ProduceAllRegstsAndBindEdges() {
   int64_t machine_num = logical_node()->parallel_desc()->sorted_machine_ids().size();
   int64_t dev_num_of_each_machine = logical_node()->parallel_desc()->device_num_of_each_machine();
   CHECK_EQ(machine_num * dev_num_of_each_machine, parallel_ctx()->parallel_num());
-  bool do_local_reduce_scatter = machine_num > 1 && dev_num_of_each_machine > 1;
-  if (do_local_reduce_scatter) {
+  bool has_local_reduce = machine_num > 1 && dev_num_of_each_machine > 1;
+  if (has_local_reduce) {
     CHECK_EQ(out_edges().size(), dev_num_of_each_machine);
   } else {
     CHECK_EQ(out_edges().size(), parallel_ctx()->parallel_num());
@@ -19,7 +19,7 @@ void ReduceScatterCompTaskNode::ProduceAllRegstsAndBindEdges() {
     CHECK_EQ(comp_task_nodes.size(), 1);
     int64_t out_parallel_id = comp_task_nodes.front()->parallel_ctx()->parallel_id();
     int64_t out_device_rank = out_parallel_id % dev_num_of_each_machine;
-    int64_t out_edge_index = do_local_reduce_scatter ? out_device_rank : out_parallel_id;
+    int64_t out_edge_index = has_local_reduce ? out_device_rank : out_parallel_id;
     std::string out_regst_name = "out_" + std::to_string(out_edge_index);
     std::shared_ptr<RegstDesc> out_regst = ProduceRegst(out_regst_name, false, 1, 1);
     edge->AddRegst(out_regst_name, out_regst);

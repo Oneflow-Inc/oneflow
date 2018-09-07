@@ -10,10 +10,9 @@ void ReduceGlobalAddCompActor::SetKernelCtxOther(void** other) {
   int64_t in_bn_id = InBnId4RegstDescId(cur_processed_regst_desc_id());
   int64_t machine_num =
       parallel_ctx()->parallel_num() / parallel_ctx()->device_num_of_each_machine();
-  bool do_local_reduce_scatter =
-      machine_num > 1 && parallel_ctx()->device_num_of_each_machine() > 1;
+  bool has_local_reduce = machine_num > 1 && parallel_ctx()->device_num_of_each_machine() > 1;
   int64_t reduce_rank =
-      do_local_reduce_scatter
+      has_local_reduce
           ? (parallel_ctx()->parallel_id() / parallel_ctx()->device_num_of_each_machine())
           : parallel_ctx()->parallel_id();
   bool is_inited = EnableInplace() ? true : processed_regst_desc_id_cnt() != 0;
