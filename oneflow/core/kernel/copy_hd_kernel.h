@@ -10,12 +10,13 @@ namespace oneflow {
 class CopyHdKernel final : public KernelIf<DeviceType::kGPU> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CopyHdKernel);
-  CopyHdKernel() = default;
+  CopyHdKernel() : act_cnt_(0) {}
   ~CopyHdKernel() = default;
 
  private:
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
+  mutable int64_t act_cnt_;
 };
 
 #endif

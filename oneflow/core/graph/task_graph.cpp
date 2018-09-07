@@ -106,8 +106,6 @@ void TaskGraph::RemoveEmptyRegsts() {
   ForEachNode([&](TaskNode* node) { node->UnbindBnWithEmptyRegst(); });
 }
 
-void TaskGraph::AddOrderingCtrlEdgeInSameChain() { BuildCtrlRegstDescInSameChain(); }
-
 void TaskGraph::MergeChainAndSetOrderInGraphForEachNode() {
   ChainGraph chain_graph(*this);
   const auto& ordered_chain_nodes = chain_graph.OrderdedChainNodes();
