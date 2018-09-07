@@ -30,7 +30,6 @@ void LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
   const BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");
   CHECK_EQ(pred_blob_desc->has_data_id_field(), label_blob_desc->has_data_id_field());
-  CHECK_EQ(pred_blob_desc->has_instance_num_field(), label_blob_desc->has_instance_num_field());
   CHECK(IsIntegralDataType(label_blob_desc->data_type()));
   CHECK_GE(pred_blob_desc->shape().NumAxes(), 2);
   CHECK_EQ(label_blob_desc->shape(), Shape({pred_blob_desc->shape().At(0)}));

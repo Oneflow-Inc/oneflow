@@ -176,7 +176,6 @@ void NormalBackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
 
     std::shared_ptr<RegstDesc> md_diff_regst = GetProducedRegst("model_diff");
     if (md_diff_regst) { md_diff_regst->CopyBlobDescFrom(GetSoleConsumedRegst("model").get()); }
-    // set has_instance_num in in_diff and model_diff
     bool has_instance_num = false;
     for (std::shared_ptr<RegstDesc> regst : GetConsumedRegst("out_diff")) {
       regst->ForEachLbi([&](const LogicalBlobId& lbi) {
@@ -187,9 +186,11 @@ void NormalBackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
       in_diff_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
         in_diff_regst->MutBlobDesc(lbi)->set_has_instance_num_field(true);
       });
-      md_diff_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
-        md_diff_regst->MutBlobDesc(lbi)->set_has_instance_num_field(true);
-      });
+      if (md_diff_regst) {
+        md_diff_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
+          md_diff_regst->MutBlobDesc(lbi)->set_has_instance_num_field(true);
+        });
+      }
     }
 
     std::shared_ptr<RegstDesc> activation_diff_regst = GetProducedRegst("activation_diff");

@@ -53,7 +53,6 @@ class Kernel {
                        std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void ForwardDataContent(const KernelCtx& ctx,
                                   std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
-  // TODO(jiyuan): add virtual function ForwardInstanceNum, let acc kernel override the function
   virtual void ForwardDataId(const KernelCtx& ctx,
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
@@ -157,8 +156,6 @@ class KernelIf : public Kernel {
   bool EnableCudnn() const { return op_conf().enable_cudnn(); }
 };
 
-// TODO(jiyuan): For any sub-class of KernelIfWithModel, remember to set instance num in the blob
-// header
 template<DeviceType device_type, typename ModelType>
 class KernelIfWithModel : virtual public KernelIf<device_type> {
  public:

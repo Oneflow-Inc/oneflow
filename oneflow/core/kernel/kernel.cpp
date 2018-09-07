@@ -55,7 +55,6 @@ void Kernel::Forward(const KernelCtx& ctx,
     Blob* out_blob = BnInOp2Blob(obns[0]);
     ForwardActivation(ctx, out_blob);
   }
-  // TODO(jiyuan): copy instance_num to downstream kernel
   if (kernel_conf_.need_do_opaque_header()) {
     ForwardPackedHeader(ctx, BnInOp2Blob);
   } else {
@@ -89,8 +88,6 @@ void Kernel::Backward(const KernelCtx& ctx,
   } else {
     BackwardDataContent(ctx, BnInOp2Blob);
   }
-  // TODO(jiyuan): for kernel which needs do instance num, compute and set the instance num in the
-  // blob header
   if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
   if (kernel_conf_.need_do_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
   if (kernel_conf_.need_do_instance_num()) { BackwardInstanceNum(ctx, BnInOp2Blob); }
@@ -142,7 +139,8 @@ void KernelIf<device_type>::BackwardColNum(
 template<DeviceType device_type>
 void KernelIf<device_type>::BackwardInstanceNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  // do nothing
+  CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
+            &Blob::CopyInstanceNumFrom);
 }
 
 template<DeviceType device_type>
@@ -176,6 +174,7 @@ void KernelIf<device_type>::CopyField(DeviceCtx* ctx,
   }
 }
 
+// TODO: merge CopyField and AccumulateField to ManimulateField
 template<DeviceType device_type>
 void KernelIf<device_type>::AccumulateField(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob, const Blob* from_blob,
