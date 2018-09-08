@@ -57,10 +57,6 @@ void LossKernel<device_type, PredType, LabelType>::ForwardInstanceNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   BnInOp2Blob(GenDiffBn("prediction"))->CopyInstanceNumFrom(ctx.device_ctx, BnInOp2Blob("label"));
   BnInOp2Blob("loss")->CopyInstanceNumFrom(ctx.device_ctx, BnInOp2Blob("label"));
-  Blob* reduction_blob = BnInOp2Blob("reduction_coefficient");
-  if (reduction_blob != nullptr) {
-    BnInOp2Blob("reduction_coefficient")->CopyInstanceNumFrom(ctx.device_ctx, BnInOp2Blob("label"));
-  }
 }
 
 template<typename T>

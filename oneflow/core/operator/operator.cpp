@@ -155,10 +155,14 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
     if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), &BlobDesc::has_data_id_field)) {
       kernel_conf->set_need_do_data_id(true);
     }
-    const PbRpf<std::string>* bns = &output_bns();
-    if (IsLossOp()) { bns = &input_bns(); }
-    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_col_num_field)) {
-      kernel_conf->set_need_do_col_num(true);
+    // cause runtime bugs, to be fixed
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), &BlobDesc::has_instance_num_field)) {
+      kernel_conf->set_need_do_instance_num(true);
+    }
+    if (IsLossOp()) {
+      if (HasBlobDescWithField(GetBlobDesc4BnInOp, input_bns(), &BlobDesc::has_col_num_field)) {
+        kernel_conf->set_need_do_col_num(true);
+      }
     }
   }
 

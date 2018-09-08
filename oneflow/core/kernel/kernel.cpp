@@ -139,8 +139,8 @@ void KernelIf<device_type>::BackwardColNum(
 template<DeviceType device_type>
 void KernelIf<device_type>::BackwardInstanceNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
-            &Blob::CopyInstanceNumFrom);
+  CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().output_diff_bns(),
+            op_attribute().input_diff_bns(), &Blob::CopyInstanceNumFrom);
 }
 
 template<DeviceType device_type>

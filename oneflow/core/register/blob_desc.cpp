@@ -5,13 +5,14 @@
 namespace oneflow {
 
 BlobDesc::BlobDesc()
-    : BlobDesc(Shape(), Global<JobDesc>::Get()->DefaultDataType(), false, false, 1) {}
+    : BlobDesc(Shape(), Global<JobDesc>::Get()->DefaultDataType(), false, false, false, 1) {}
 
 BlobDesc::BlobDesc(const Shape& shape, DataType data_type, bool has_data_id, bool has_col_num,
-                   int32_t max_col_num)
+                   bool has_instance_num, int32_t max_col_num)
     : header_is_opaque_(false),
       has_data_id_(has_data_id),
       has_col_num_(has_col_num),
+      has_instance_num_(has_instance_num),
       max_col_num_(max_col_num),
       blob_mem_id_(-1),
       body_field_(shape, data_type) {}
@@ -23,12 +24,14 @@ BlobDesc::BlobDesc(const BlobDescProto& proto) : body_field_(proto.body()) {
     header_is_opaque_ = true;
     has_data_id_ = false;
     has_col_num_ = false;
+    has_instance_num_ = false;
     opaque_header_ = FieldDesc(proto.header().opaque_header());
   } else {
     CHECK(proto.header().has_field_header());
     header_is_opaque_ = false;
     has_data_id_ = proto.header().field_header().has_data_id();
     has_col_num_ = proto.header().field_header().has_col_num();
+    has_instance_num_ = proto.header().field_header().has_instance_num();
   }
 }
 
@@ -36,6 +39,7 @@ BlobDesc::BlobDesc(int64_t header_byte_size, const Shape& shape, DataType data_t
                    int32_t max_col_num)
     : has_data_id_(false),
       has_col_num_(false),
+      has_instance_num_(false),
       max_col_num_(max_col_num),
       blob_mem_id_(-1),
       body_field_(shape, data_type) {
@@ -162,7 +166,8 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     CHECK_EQ(body_byte_size % size_of_one_elem, 0);
     int64_t total_elem_cnt = body_byte_size / size_of_one_elem;
     if (header_byte_size == 0) {
-      ret.reset(new BlobDesc(Shape({total_elem_cnt}), sole_data_type, false, false, max_col_num));
+      ret.reset(
+          new BlobDesc(Shape({total_elem_cnt}), sole_data_type, false, false, false, max_col_num));
     } else {
       ret.reset(
           new BlobDesc(header_byte_size, Shape({total_elem_cnt}), sole_data_type, max_col_num));
