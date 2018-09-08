@@ -173,7 +173,6 @@ void NormalBackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
     for (std::shared_ptr<RegstDesc> regst : GetConsumedRegst("in")) {
       in_diff_regst->CopyBlobDescWithoutAddLbi(regst.get());
     }
-
     std::shared_ptr<RegstDesc> md_diff_regst = GetProducedRegst("model_diff");
     if (md_diff_regst) { md_diff_regst->CopyBlobDescFrom(GetSoleConsumedRegst("model").get()); }
     bool has_instance_num = false;
