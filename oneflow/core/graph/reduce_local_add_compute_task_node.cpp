@@ -56,23 +56,23 @@ void ReduceLocalAddCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(parallel_ctx());
 }
 
-void ReduceLocalAddCompTaskNode::EnableMemSharingInReduce(
-    std::function<void(RegstDesc* regst, int64_t offset)> EnableMemSharing4Regst) {
-  int64_t machine_num = logical_node()->parallel_desc()->sorted_machine_ids().size();
-  int64_t device_rank = logical_node()->parallel_desc()->DeviceRank4ParallelId(parallel_id());
-  int64_t out_size = InferRegstSize(*GetProducedRegst("out_0"));
-  int64_t in_size = machine_num * out_size;
-  int64_t out_regst_offset_base = device_rank * in_size;
+void ReduceLocalAddCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx* ctx) {
+  int64_t offset = ctx->Offset4ParallelId(parallel_id());
+  int64_t scatter_count = produced_regsts().size();
 
-  FOR_RANGE(int, i, 0, machine_num) {
+  int64_t out_size = ctx->CtxIfScatter(scatter_count).ReduceSize();
+  int64_t rank = ctx->Rank4ParallelId(parallel_id());
+  int64_t offset_base = ctx->CtxIfGatherLast().Offset4ParallelId(parallel_id());
+
+  FOR_RANGE(int, i, 0, scatter_count) {
     RegstDesc* out = GetProducedRegst("out_" + std::to_string(i)).get();
-    EnableMemSharing4Regst(out, out_regst_offset_base + i * out_size);
+    ctx->EnableMemSharing4Regst(out, offset + i * out_size);
   }
 
-  FOR_RANGE(int64_t, i, 0, parallel_ctx()->device_num_of_each_machine()) {
-    if (i == device_rank) { continue; }
+  FOR_RANGE(int64_t, i, 0, ctx->LastCount()) {
+    if (i == rank) { continue; }
     RegstDesc* consumed_regst = GetSoleConsumedRegst("in_" + std::to_string(i)).get();
-    EnableMemSharing4Regst(consumed_regst, in_size * i);
+    ctx->EnableMemSharing4Regst(consumed_regst, offset_base + i * ctx->ReduceSize());
   }
 
   std::vector<CompTaskNode*> scatter_on_in_edge;
@@ -87,8 +87,7 @@ void ReduceLocalAddCompTaskNode::EnableMemSharingInReduce(
 
   CHECK_EQ(scatter_on_in_edge.size(), 1);
 
-  BuildCtrlRegstBetweenReduceCopyNodes(scatter_on_in_edge.front(), this,
-                                       parallel_ctx()->device_num_of_each_machine() - 1);
+  BuildCtrlRegstBetweenReduceCopyNodes(scatter_on_in_edge.front(), this, ctx->LastCount() - 1);
 }
 
 }  // namespace oneflow

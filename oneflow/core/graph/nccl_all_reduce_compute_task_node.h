@@ -15,8 +15,7 @@ class NcclAllReduceCompTaskNode final : public PoorCompTaskNode, public ReduceCo
   TaskType GetTaskType() const override { return TaskType::kNcclAllReduce; }
   CudaWorkType GetCudaWorkType() const override { return CudaWorkType::kMix; }
 
-  void EnableMemSharingInReduce(
-      std::function<void(RegstDesc* regst, int64_t offset)> EnableMemSharing4Regst) override;
+  void EnableMemSharingInReduce(ReduceMemSharingCtx *ctx) override;
 };
 
 }  // namespace oneflow

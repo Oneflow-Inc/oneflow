@@ -52,16 +52,22 @@ void ReduceScatterCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(parallel_ctx());
 }
 
-void ReduceScatterCompTaskNode::EnableMemSharingInReduce(
-    std::function<void(RegstDesc* regst, int64_t offset)> EnableMemSharing4Regst) {
-  FOR_RANGE(int64_t, i, 0, parallel_ctx()->parallel_num()) {
+void ReduceScatterCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx* ctx) {
+  int64_t offset = ctx->Offset4ParallelId(parallel_id());
+  int64_t reduce_size = ctx->ReduceSize();
+  int64_t scatter_count = produced_regsts().size();
+  CHECK_EQ(reduce_size % scatter_count, 0);
+  int64_t out_size = reduce_size / scatter_count;
+  FOR_RANGE(int64_t, i, 0, scatter_count) {
     RegstDesc* out = GetProducedRegst("out_" + std::to_string(i)).get();
-    EnableMemSharing4Regst(out, i * InferRegstSize(*out));
+    ctx->EnableMemSharing4Regst(out, offset + i * out_size);
   }
+
+  ctx->Scatter(scatter_count);
 
   if (this->SoleInEdge()->src_node()->GetTaskType() == TaskType::kReduceConcat) { return; }
 
-  EnableMemSharing4Regst(GetSoleConsumedRegst("in").get(), 0);
+  ctx->EnableMemSharing4Regst(GetSoleConsumedRegst("in").get(), offset);
 }
 
 }  // namespace oneflow

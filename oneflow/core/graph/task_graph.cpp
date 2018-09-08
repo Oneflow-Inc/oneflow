@@ -8,6 +8,7 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/reduce_global_add_compute_task_node.h"
 #include "oneflow/core/graph/reduce_gather_compute_task_node.h"
+#include "oneflow/core/graph/reduce_split_compute_task_node.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/job/thrd_id_generator.h"
 
@@ -164,6 +165,12 @@ void TaskGraph::EnableMemSharingInReduceStruct() {
     return nodes;
   };
 
+  auto CalcModelSize = [](NormalMdUpdtCompTaskNode* node) {
+    auto* pred = dynamic_cast<ReduceSplitCompTaskNode*>(node->SoleInEdge()->src_node());
+    if (pred) { return InferRegstSize(*pred->GetSoleConsumedRegst("in")); }
+    return InferRegstSize(*(node->consumed_regsts().begin()->second.front()));
+  };
+
   ForEachNode([&](TaskNode* node) {
     auto* updt = dynamic_cast<NormalMdUpdtCompTaskNode*>(node);
     if (!updt) { return; }
@@ -175,18 +182,18 @@ void TaskGraph::EnableMemSharingInReduceStruct() {
 
     int64_t mem_shared_id = Global<IDMgr>::Get()->NewMemSharedId();
 
-    auto SetMemSharedField4Regst = [&](RegstDesc* regst, int64_t offset) {
-      regst->set_enable_mem_sharing(true);
-      regst->set_mem_shared_id(mem_shared_id);
-      regst->set_mem_shared_offset(offset);
-    };
+    int64_t mem_size = CalcModelSize(updt);
+
+    ReduceMemSharingCtx ctx(mem_size, mem_shared_id);
 
     for (TaskNode* reduce_node : reduce_task_nodes) {
       auto reduce_task_node_if = dynamic_cast<ReduceCompTaskNodeIf*>(reduce_node);
       CHECK(reduce_task_node_if);
-      reduce_task_node_if->EnableMemSharingInReduce(SetMemSharedField4Regst);
+      reduce_task_node_if->EnableMemSharingInReduce(&ctx);
       has_enabled_nodes.insert(reduce_node);
     }
+
+    CHECK_EQ(ctx.ReduceCount(), 1);
   });
 }
 

@@ -17,8 +17,7 @@ class ReduceGlobalAddCompTaskNode final : public CompTaskNode, public ReduceComp
 
   TaskType GetTaskType() const override { return TaskType::kReduceGlobalAdd; }
   CudaWorkType GetCudaWorkType() const override { return CudaWorkType::kMix; }
-  void EnableMemSharingInReduce(
-      std::function<void(RegstDesc* regst, int64_t offset)> EnableMemSharing4Regst) override;
+  void EnableMemSharingInReduce(ReduceMemSharingCtx *ctx) override;
 
  private:
   void BuildExecGphAndRegst() override;

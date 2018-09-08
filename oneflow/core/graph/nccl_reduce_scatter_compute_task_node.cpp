@@ -3,15 +3,17 @@
 
 namespace oneflow {
 
-void NcclReduceScatterCompTaskNode::EnableMemSharingInReduce(
-    std::function<void(RegstDesc* regst, int64_t offset)> EnableMemSharing4Regst) {
-  int64_t rank = logical_node()->parallel_desc()->DeviceRank4ParallelId(parallel_id());
+void NcclReduceScatterCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx* ctx) {
+  int64_t offset = ctx->Offset4ParallelId(parallel_id());
+  int64_t rank = ctx->Rank4ParallelId(parallel_id());
   RegstDesc* out_regst = GetProducedRegst("out").get();
-  EnableMemSharing4Regst(out_regst, InferRegstSize(*out_regst) * rank);
-
+  int64_t out_size = InferRegstSize(*out_regst);
+  CHECK_EQ(ctx->ReduceSize() % out_size, 0);
+  ctx->EnableMemSharing4Regst(out_regst, offset + InferRegstSize(*out_regst) * rank);
+  ctx->Scatter(ctx->ReduceSize() / out_size);
   if (this->SoleInEdge()->src_node()->GetTaskType() == TaskType::kReduceConcat) { return; }
 
-  EnableMemSharing4Regst(GetSoleConsumedRegst("in").get(), 0);
+  ctx->EnableMemSharing4Regst(GetSoleConsumedRegst("in").get(), offset);
 }
 
 }  // namespace oneflow

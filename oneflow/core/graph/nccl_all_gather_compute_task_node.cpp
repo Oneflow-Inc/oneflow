@@ -2,9 +2,9 @@
 
 namespace oneflow {
 
-void NcclAllGatherCompTaskNode::EnableMemSharingInReduce(
-    std::function<void(RegstDesc* regst, int64_t offset)> EnableMemSharing4Regst) {
-  EnableMemSharing4Regst(GetProducedRegst("out").get(), 0);
+void NcclAllGatherCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx *ctx) {
+  ctx->Gather(consumed_regsts().size());
+  ctx->EnableMemSharing4Regst(GetProducedRegst("out").get(), ctx->Offset4ParallelId(parallel_id()));
 }
 
 }  // namespace oneflow
