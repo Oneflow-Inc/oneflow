@@ -469,6 +469,11 @@ message MaximumOpConf {
   required string out = 2;
 }
 
+message SharedModelDiffAddOpConf {
+  repeated string in = 1;
+  required string out = 2;
+}
+
 message LocalResponseNormalizationOpConf {
   required string in = 1;
   required string out = 2;
@@ -654,6 +659,7 @@ message OperatorConf {
     EmbeddingLookupAccumulateOpConf embedding_lookup_accumulate_conf = 251;
     AddOpConf add_conf = 301;
     MaximumOpConf maximum_conf = 302;
+    SharedModelDiffAddOpConf shared_model_diff_add_conf = 303;
     LocalResponseNormalizationOpConf local_response_normalization_conf = 300;
     NormalizationOpConf normalization_conf = 350;
     ReduceScatterOpConf reduce_scatter_conf = 400;

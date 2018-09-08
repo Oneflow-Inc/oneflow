@@ -19,19 +19,11 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
     learning_rate =
         GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, cur_batch_num);
   }
-  const OpAttribute& op_attribute = this->kernel_conf().op_attribute();
-  Blob* in_0 = BnInOp2Blob(op_attribute.input_bns(0));
-  FOR_RANGE(size_t, i, 1, op_attribute.input_bns().size()) {
-    Blob* in_i = BnInOp2Blob(op_attribute.input_bns(i));
-    KernelUtil<device_type, T>::Axpy(ctx.device_ctx, in_0->shape().elem_cnt(), static_cast<T>(1.0),
-                                     in_i->dptr<T>(), 1, in_0->mut_dptr<T>(), 1);
-  }
-
   int64_t batch_size = Global<JobDesc>::Get()->BatchSize();
   float l1 = Global<JobDesc>::Get()->L1();
   float l2 = Global<JobDesc>::Get()->L2();
   UpdateModel(ctx.device_ctx, batch_size, static_cast<T>(learning_rate), static_cast<T>(l1),
-              static_cast<T>(l2), std::get<1>(*tpl), in_0, next_model_vid, BnInOp2Blob);
+              static_cast<T>(l2), std::get<1>(*tpl), next_model_vid, BnInOp2Blob);
 }
 
 #define INSTANTIATE_KERNEL(device_type, data_type_pair) \

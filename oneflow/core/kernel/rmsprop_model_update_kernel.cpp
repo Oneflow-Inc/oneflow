@@ -6,8 +6,8 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 void RMSPropMdUpdateKernel<device_type, T>::UpdateModel(
     DeviceCtx* ctx, int64_t batch_size, T learning_rate, T l1, T l2, const Blob* pre_model_blob,
-    const Blob* model_diff_blob, int64_t next_model_vid,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    int64_t next_model_vid, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* model_diff_blob = BnInOp2Blob("model_diff");
   Blob* model_blob = BnInOp2Blob("model");
   Blob* mean_square_blob = BnInOp2Blob("mean_square");
   const RMSPropModelUpdateConf& conf =

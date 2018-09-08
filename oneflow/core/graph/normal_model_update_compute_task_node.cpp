@@ -22,6 +22,7 @@ void NormalMdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
   int32_t max_model_regst = 1;
   auto model_regst = ProduceRegst("model", false, 1, max_model_regst);
   auto const_model_regst = ProduceRegst("const_model", false, 1, 1);
+  ProduceRegst("out", false, 1, 1);
   ProduceRegst("data_tmp", false, 1, 1);
   related_init_model_task_id_ = -1;
   for (TaskEdge* out_edge : out_edges()) {
@@ -51,23 +52,57 @@ void NormalMdUpdtCompTaskNode::ConsumeAllRegsts() {
 }
 
 bool NormalMdUpdtCompTaskNode::IsReadyForBuild() {
-  return GetProducedRegst("model")->IsLocked() && GetProducedRegst("const_model")->IsLocked();
+  return GetProducedRegst("out")->IsLocked() && GetProducedRegst("model")->IsLocked()
+         && GetProducedRegst("const_model")->IsLocked();
 }
 
 void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
   if (!IsTrainable()) { return; }
-  ExecNode* node = mut_exec_gph().NewNode();
-  node->mut_op() = logical_node()->SoleOp();
+  const auto& op_vec = logical_node()->op_vec();
+  CHECK_EQ(op_vec.size(), 1);  // only shared_model_diff_add_op in op_vec now
+  std::shared_ptr<const Operator> shared_model_diff_add_op = op_vec[0];
+  ExecNode* shared_model_diff_add_node = mut_exec_gph().NewNode();
+  shared_model_diff_add_node->mut_op() = shared_model_diff_add_op;
   size_t ibn_idx = 0;
   for (const auto& pair : consumed_regsts()) {
-    node->BindBnWithRegst(node->op()->input_bns().Get(ibn_idx++), pair.second.front());
+    shared_model_diff_add_node->BindBnWithRegst(
+        shared_model_diff_add_op->input_bns().Get(ibn_idx++), pair.second.front());
   }
-  node->BindBnWithRegst(node->op()->SoleObn(), GetProducedRegst("model"));
-  node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, GetProducedRegst("data_tmp"));
-  node->InferBlobDescs(nullptr);
+  std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
+  const std::string& add_op_obn = shared_model_diff_add_op->SoleObn();
+  shared_model_diff_add_node->BindBnWithRegst(add_op_obn, out_regst);
+  out_regst->CopyBlobDescFrom(consumed_regsts().begin()->second.front().get());
+
+  ExecNode* model_update_node = nullptr;
+  ExecEdge* exec_edge = nullptr;
+  out_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
+    OperatorConf op_conf;
+    op_conf.set_name("md_update_" + NewUniqueId());
+    op_conf.set_device_type(logical_node()->parallel_desc()->device_type());
+    *(op_conf.mutable_normal_mdupdt_conf()->mutable_user_conf()) =
+        Global<JobDesc>::Get()->other_conf().train_conf().model_update_conf();
+    std::shared_ptr<Operator> model_update_op = ConstructOp(op_conf);
+    mut_logical_node()->mut_op_vec().push_back(model_update_op);
+
+    model_update_node = mut_exec_gph().NewNode();
+    model_update_node->mut_op() = model_update_op;
+    exec_edge = mut_exec_gph().NewEdge();
+    exec_edge->set_lbi(lbi);
+    // TODO(shiyuan)  exec_edge->mut_src_bn
+    exec_edge->mut_dst_bn() = model_update_op->SoleIbn();
+    Connect(shared_model_diff_add_node, exec_edge, model_update_node);
+
+    model_update_node->BindBnWithRegst(model_update_op->SoleIbn(), out_regst);
+    model_update_node->BindBnWithRegst(model_update_op->SoleObn(), GetProducedRegst("model"));
+    model_update_node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, GetProducedRegst("data_tmp"));
+  });
+  mut_exec_gph().TopoForEachNode([this](ExecNode* node) { node->InferBlobDescs(parallel_ctx()); });
 }
 
-void NormalMdUpdtCompTaskNode::LockRegsts() { GetProducedRegst("data_tmp")->Lock(); }
+void NormalMdUpdtCompTaskNode::LockRegsts() {
+  GetProducedRegst("out")->Lock();
+  GetProducedRegst("data_tmp")->Lock();
+}
 
 void NormalMdUpdtCompTaskNode::ToProto(TaskProto* task_proto) {
   CompTaskNode::ToProto(task_proto);
@@ -82,6 +117,13 @@ void NormalMdUpdtCompTaskNode::ToProto(TaskProto* task_proto) {
     }
   });
   task_proto->set_related_init_model_task_id(related_init_model_task_id_);
+}
+
+void NormalMdUpdtCompTaskNode::FixPackedBlobDescOfProducedRegst() {
+  std::shared_ptr<RegstDesc> model_regst = GetProducedRegst("model");
+  if (model_regst == nullptr) { return; }
+  Shape& shape = model_regst->MutBlobDesc(GenPackedLbi())->mut_shape();
+  shape = Shape({static_cast<int64_t>(RoundUp(shape.elem_cnt(), parallel_ctx()->parallel_num()))});
 }
 
 }  // namespace oneflow
