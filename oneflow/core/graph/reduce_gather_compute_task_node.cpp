@@ -60,6 +60,7 @@ void ReduceGatherCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx* ctx
     ctx->EnableMemSharing4Regst(regst, base_offset + in_parallel_id * ctx->ReduceSize());
   }
 
+  ctx->Gather(ctx->LastCount());
   std::vector<TaskNode*> global_add_on_in_edge;
 
   ForEachNodeOnInEdge([&](TaskNode* node) {

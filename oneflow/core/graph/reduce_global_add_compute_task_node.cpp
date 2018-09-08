@@ -75,11 +75,11 @@ void ReduceGlobalAddCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx* 
   CHECK_EQ(local_add_on_in_edge.size() + scatter_on_in_edge.size(), 1);
 
   if (!local_add_on_in_edge.empty()) {
-    BuildCtrlRegstBetweenReduceCopyNodes(local_add_on_in_edge.front(), this, ctx->LastCount());
+    BuildCtrlRegstBetweenReduceCopyNodes(local_add_on_in_edge.front(), this, ctx->LastCount() - 1);
   }
 
   if (!scatter_on_in_edge.empty()) {
-    BuildCtrlRegstBetweenReduceCopyNodes(scatter_on_in_edge.front(), this, ctx->LastCount());
+    BuildCtrlRegstBetweenReduceCopyNodes(scatter_on_in_edge.front(), this, ctx->LastCount() - 1);
   }
 }
 

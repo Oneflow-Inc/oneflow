@@ -45,14 +45,13 @@ class ReduceMemSharingCtx final {
   }
 
   ReduceMemSharingCtx CtxIfGatherLast() {
-    CHECK_GT(dims_.size(), 1);
-    ReduceMemSharingCtx ctx(mem_size_, mem_shared_id_);
+    ReduceMemSharingCtx ctx = *this;
     ctx.Gather(dims_.back());
     return ctx;
   }
 
   ReduceMemSharingCtx CtxIfScatter(int64_t size) {
-    ReduceMemSharingCtx ctx(mem_size_, mem_shared_id_);
+    ReduceMemSharingCtx ctx = *this;
     ctx.Scatter(size);
     return ctx;
   }
