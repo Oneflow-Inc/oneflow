@@ -21,6 +21,7 @@ void ProposalKernel<T>::ForwardDataContent(
   Blob* rois_blob = BnInOp2Blob("rois");
   Blob* roi_probs_blob = BnInOp2Blob("roi_probs");
   Blob* proposals_blob = BnInOp2Blob("proposals");
+  std::memset(rois_blob->mut_dptr<T>(), 0, rois_blob->shape().elem_cnt() * sizeof(T));
   const ProposalOpConf& conf = op_conf().proposal_conf();
   const AnchorGeneratorConf& anchor_generator_conf = conf.anchors_generator_conf();
   const BBoxRegressionWeights& bbox_reg_ws = conf.bbox_reg_weights();
