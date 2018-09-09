@@ -84,6 +84,8 @@ void ReduceLocalAddCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx* c
   });
   CHECK_EQ(scatter_on_in_edge.size(), 1);
   BuildCtrlRegstBetweenReduceCopyNodes(scatter_on_in_edge.front(), this, ctx->LastCount() - 1);
+
+  ctx->Scatter(scatter_count);
 }
 
 }  // namespace oneflow
