@@ -598,11 +598,6 @@ message ReduceScatterOpConf {
   required int32 out_num = 1;
 }
 
-message ReduceLocalAddOpConf {
-  required int32 in_num = 1;
-  required int32 out_num = 2;
-}
-
 message ReduceAddOpConf {
   required int32 in_num = 1;
 }
@@ -706,7 +701,6 @@ message OperatorConf {
     LocalResponseNormalizationOpConf local_response_normalization_conf = 300;
     NormalizationOpConf normalization_conf = 350;
     ReduceScatterOpConf reduce_scatter_conf = 400;
-    ReduceLocalAddOpConf reduce_local_add_conf = 401;
     ReduceAddOpConf reduce_add_conf = 402;
     ReduceGatherOpConf reduce_gather_conf = 403;
     ReduceConcatOpConf reduce_concat_conf = 404;

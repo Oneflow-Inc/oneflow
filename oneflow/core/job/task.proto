@@ -23,7 +23,6 @@ enum TaskType {
   kBoxing = 14;
   kPrint = 15;
   kRecordLoad = 16;
-  kReduceLocalAdd = 17;
   kReduceAdd = 18;
   kReduceGather = 19;
   kReduceScatter = 20;

@@ -193,6 +193,7 @@ void TaskGraph::EnableMemSharingInReduceStruct() {
   });
 }
 
+/*
 void TaskGraph::AddCtrlEdgeInReduceStruct() {
   int64_t total_machine_num = Global<JobDesc>::Get()->resource().machine().size();
   if (total_machine_num == 1) { return; }
@@ -285,6 +286,7 @@ bool TaskGraph::IsEndingTaskType<ReduceGatherCompTaskNode>(TaskType type) {
 }
 
 void TaskGraph::AddMutexCtrlEdgeInSameChain() { UNIMPLEMENTED(); }
+*/
 
 void TaskGraph::RmUselessConsumeRelationshipBetweenFwBw() {
   for (TaskNode* task_node : ordered_task_nodes_) {
@@ -424,6 +426,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink) {
                          nullptr, MutBufTask, AllocateCpuThrdIdEvenly);
 }
 
+/*
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceLocalAdd) {
   for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
     for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
@@ -433,6 +436,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceLocalAdd) {
     }
   }
 }
+*/
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceAdd) {
   for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
@@ -442,7 +446,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceAdd) {
   }
 }
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceLocalAdd2ReduceAdd) {
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceAdd2ReduceAdd) {
   const auto& pd = sorted_src_comp_tasks.front()->logical_node()->parallel_desc();
   CHECK_GT(pd->device_num_of_each_machine(), 1);
   CHECK_GT(pd->sorted_machine_ids().size(), 1);
