@@ -395,6 +395,9 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceScatter"
                               "ReduceAdd",
                               &TaskGraph::BldSubTskGphByReduceScatter2ReduceAdd);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceAdd"
+                              "ReduceScatter",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceAdd"
                               "ReduceGather",
                               &TaskGraph::BldSubTskGphByReduceAdd2ReduceGather);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
@@ -405,6 +408,15 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
                               &TaskGraph::BldSubTskGphByOneToOne);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
                               "ReduceSplit",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclReduceScatter"
+                              "ReduceScatter",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
+                              "NcclAllGather",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclReduceScatter"
+                              "NcclAllGather",
                               &TaskGraph::BldSubTskGphByOneToOne);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclAllGather"
                               "NormalMdUpdt",
