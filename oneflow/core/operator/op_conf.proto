@@ -377,7 +377,7 @@ message NormalModelUpdateOpUserConf {
 
 message NormalModelUpdateOpConf {
   required NormalModelUpdateOpUserConf user_conf = 1;
-  required int32 in_num = 2;
+  required string model_diff = 2;
 }
 
 message AccumulateOpConf {
@@ -470,7 +470,7 @@ message MaximumOpConf {
 }
 
 message SharedModelDiffAddOpConf {
-  repeated string in = 1;
+  required int32 in_num = 1;
   required string out = 2;
 }
 

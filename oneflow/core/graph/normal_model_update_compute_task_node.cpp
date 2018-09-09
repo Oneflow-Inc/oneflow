@@ -52,33 +52,33 @@ void NormalMdUpdtCompTaskNode::ConsumeAllRegsts() {
 }
 
 bool NormalMdUpdtCompTaskNode::IsReadyForBuild() {
-  return GetProducedRegst("out")->IsLocked() && GetProducedRegst("model")->IsLocked()
-         && GetProducedRegst("const_model")->IsLocked();
+  return GetProducedRegst("model")->IsLocked() && GetProducedRegst("const_model")->IsLocked();
 }
 
 void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
   if (!IsTrainable()) { return; }
   const auto& op_vec = logical_node()->op_vec();
   CHECK_EQ(op_vec.size(), 1);  // only shared_model_diff_add_op in op_vec now
-  std::shared_ptr<const Operator> shared_model_diff_add_op = op_vec[0];
   ExecNode* shared_model_diff_add_node = mut_exec_gph().NewNode();
-  shared_model_diff_add_node->mut_op() = shared_model_diff_add_op;
+  shared_model_diff_add_node->mut_op() = op_vec[0];
   size_t ibn_idx = 0;
   for (const auto& pair : consumed_regsts()) {
     shared_model_diff_add_node->BindBnWithRegst(
-        shared_model_diff_add_op->input_bns().Get(ibn_idx++), pair.second.front());
+        shared_model_diff_add_node->op()->input_bns().Get(ibn_idx++), pair.second.front());
   }
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
-  const std::string& add_op_obn = shared_model_diff_add_op->SoleObn();
-  shared_model_diff_add_node->BindBnWithRegst(add_op_obn, out_regst);
+  shared_model_diff_add_node->BindBnWithRegst(op_vec[0]->SoleObn(), out_regst);
   out_regst->CopyBlobDescFrom(consumed_regsts().begin()->second.front().get());
 
   ExecNode* model_update_node = nullptr;
   ExecEdge* exec_edge = nullptr;
+  GetProducedRegst("model")->CopyBlobDescFrom(out_regst.get());
   out_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
     OperatorConf op_conf;
     op_conf.set_name("md_update_" + NewUniqueId());
     op_conf.set_device_type(logical_node()->parallel_desc()->device_type());
+    op_conf.mutable_normal_mdupdt_conf()->set_model_diff(lbi.op_name() + '/' + lbi.blob_name());
+    // TODO(shiyuan)
     *(op_conf.mutable_normal_mdupdt_conf()->mutable_user_conf()) =
         Global<JobDesc>::Get()->other_conf().train_conf().model_update_conf();
     std::shared_ptr<Operator> model_update_op = ConstructOp(op_conf);
@@ -88,11 +88,12 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
     model_update_node->mut_op() = model_update_op;
     exec_edge = mut_exec_gph().NewEdge();
     exec_edge->set_lbi(lbi);
-    // TODO(shiyuan)  exec_edge->mut_src_bn
+    exec_edge->mut_src_bn() = lbi.blob_name();
     exec_edge->mut_dst_bn() = model_update_op->SoleIbn();
     Connect(shared_model_diff_add_node, exec_edge, model_update_node);
 
     model_update_node->BindBnWithRegst(model_update_op->SoleIbn(), out_regst);
+    // TODO(shiyuan)
     model_update_node->BindBnWithRegst(model_update_op->SoleObn(), GetProducedRegst("model"));
     model_update_node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, GetProducedRegst("data_tmp"));
   });

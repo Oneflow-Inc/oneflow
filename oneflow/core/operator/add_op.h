@@ -5,11 +5,11 @@
 
 namespace oneflow {
 
-class AddOp : public CWiseOp {
+class AddOp final : public CWiseOp {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AddOp);
   AddOp() = default;
-  virtual ~AddOp() = default;
+  ~AddOp() = default;
 
   void VirtualInitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;

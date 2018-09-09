@@ -523,7 +523,7 @@ void LogicalGraph::SetupNormalMdUpdtOp() {
     OperatorConf op_conf;
     op_conf.set_name("md_diff_add_" + NewUniqueId());
     op_conf.set_device_type(node->parallel_desc()->device_type());
-    op_conf.mutable_shared_model_diff_add_conf();
+    op_conf.mutable_shared_model_diff_add_conf()->set_in_num(node->in_edges().size());
     node->mut_op_vec() = {ConstructOp(op_conf)};
     // model_update_op for each lbi in packed blob will be added in task node
   });
