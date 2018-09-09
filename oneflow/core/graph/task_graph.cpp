@@ -348,14 +348,18 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceAdd) {
           if (src_comp_task->machine_id() == dst_comp_task->machine_id()) {
             BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, false);
           }
+          dst_comp_task->mut_parallel_ctx()->set_rank_num(pd->device_num_of_each_machine());
         } else {
           if (src_comp_task->parallel_id() % pd->device_num_of_each_machine()
               == dst_comp_task->parallel_id() % pd->device_num_of_each_machine()) {
             BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, false);
           }
+          dst_comp_task->mut_parallel_ctx()->set_rank_num(pd->sorted_machine_ids().size());
         }
       } else {
         BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, false);
+        dst_comp_task->mut_parallel_ctx()->set_rank_num(
+            dst_comp_task->parallel_ctx()->parallel_num());
       }
     }
   }

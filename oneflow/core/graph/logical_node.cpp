@@ -252,6 +252,7 @@ void LogicalNode::GenSortedCompTaskNodes(
       comp_task_node->mut_parallel_ctx()->set_parallel_id(parallel_idx++);
       comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);
       comp_task_node->mut_parallel_ctx()->set_parallel_set_id(node_id());
+      comp_task_node->mut_parallel_ctx()->set_rank_num(parallel_num);
       comp_task_node->mut_parallel_ctx()->set_device_num_of_each_machine(
           device_num_of_each_machine);
       comp_task_node->mut_parallel_ctx()->set_policy(parallel_desc_->policy());
@@ -390,15 +391,9 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclAllReduce"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclAllReduce"
                               "ReduceSplit",
                               &TaskGraph::BldSubTskGphByOneToOne);
-// REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceScatter"
-//                               "ReduceLocalAdd",
-//                              &TaskGraph::BldSubTskGphByReduceScatter2ReduceLocalAdd);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceScatter"
                               "ReduceAdd",
                               &TaskGraph::BldSubTskGphByReduceScatter2ReduceAdd);
-// REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceLocalAdd"
-//                              "ReduceAdd",
-//                               &TaskGraph::BldSubTskGphByReduceLocalAdd2ReduceAdd);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceAdd"
                               "ReduceGather",
                               &TaskGraph::BldSubTskGphByReduceAdd2ReduceGather);
