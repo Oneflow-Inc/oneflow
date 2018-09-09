@@ -6,7 +6,7 @@
 #include "oneflow/core/graph/boxing_task_node.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/graph/reduce_global_add_compute_task_node.h"
+#include "oneflow/core/graph/reduce_add_compute_task_node.h"
 #include "oneflow/core/graph/reduce_gather_compute_task_node.h"
 #include "oneflow/core/graph/reduce_split_compute_task_node.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
@@ -193,100 +193,6 @@ void TaskGraph::EnableMemSharingInReduceStruct() {
   });
 }
 
-void TaskGraph::AddCtrlEdgeInReduceStruct() {
-  int64_t total_machine_num = Global<JobDesc>::Get()->resource().machine().size();
-  if (total_machine_num == 1) { return; }
-
-  AddCtrlEdgeForReduceTaskNode<ReduceGlobalAddLogicalNode, ReduceGlobalAddCompTaskNode>(
-      total_machine_num);
-  AddCtrlEdgeForReduceTaskNode<ReduceGatherLogicalNode, ReduceGatherCompTaskNode>(
-      total_machine_num);
-}
-
-template<typename LogicalNodeType, typename TaskNodeType>
-void TaskGraph::AddCtrlEdgeForReduceTaskNode(int64_t total_machine_num) {
-  HashMap<const LogicalNodeType*, HashMap<int64_t, std::vector<TaskNodeType*>>>
-      machine_id2reduce_task_nodes4same_logical_node;
-  ForEachNode([&](TaskNode* task_node) {
-    TaskNodeType* reduce_task_node = dynamic_cast<TaskNodeType*>(task_node);
-    if (reduce_task_node != nullptr) {
-      const LogicalNodeType* logical_node =
-          dynamic_cast<const LogicalNodeType*>(reduce_task_node->logical_node());
-      CHECK(logical_node != nullptr);
-      machine_id2reduce_task_nodes4same_logical_node[logical_node][reduce_task_node->machine_id()]
-          .push_back(reduce_task_node);
-    }
-  });
-
-  for (const auto& kv : machine_id2reduce_task_nodes4same_logical_node) {
-    const auto& machine_id2reduce_task_nodes = kv.second;
-    if (machine_id2reduce_task_nodes.size() == 1) { continue; }
-    for (int64_t machine_id = 0; machine_id < machine_id2reduce_task_nodes.size(); ++machine_id) {
-      std::vector<std::pair<CopyCommNetTaskNode*, int64_t>> commnet_nodes_with_sort_val;
-      CollectCopyCommNetForReduceTaskNodes(machine_id2reduce_task_nodes.at(machine_id),
-                                           &commnet_nodes_with_sort_val);
-
-      std::vector<int64_t> machine_id2sort_order(total_machine_num);
-      for (size_t i = 0; i < total_machine_num; ++i) {
-        machine_id2sort_order.at(i) = (i + total_machine_num - machine_id - 1) % total_machine_num;
-      }
-      std::sort(commnet_nodes_with_sort_val.begin(), commnet_nodes_with_sort_val.end(),
-                [&](const std::pair<CopyCommNetTaskNode*, int64_t>& lhs,
-                    const std::pair<CopyCommNetTaskNode*, int64_t>& rhs) {
-                  if (lhs.first->peer_machine_id() == rhs.first->peer_machine_id()) {
-                    return lhs.second < rhs.second;
-                  }
-                  return machine_id2sort_order.at(lhs.first->peer_machine_id())
-                         < machine_id2sort_order.at(rhs.first->peer_machine_id());
-                });
-
-      for (size_t i = 0; i < commnet_nodes_with_sort_val.size() - 1; ++i) {
-        commnet_nodes_with_sort_val.at(i).first->BuildCtrlRegstDescIfNeed(
-            commnet_nodes_with_sort_val.at(i + 1).first);
-      }
-    }
-  }
-}
-
-template<typename TaskNodeType>
-void TaskGraph::CollectCopyCommNetForReduceTaskNodes(
-    const std::vector<TaskNodeType*>& reduce_task_nodes,
-    std::vector<std::pair<CopyCommNetTaskNode*, int64_t>>* commnet_nodes_with_sort_val) {
-  HashSet<CopyCommNetTaskNode*> inserted_commnet_nodes;
-  for (TaskNodeType* reduce_task_node : reduce_task_nodes) {
-    for (TaskEdge* in_edge : reduce_task_node->in_edges()) {
-      TaskNode* pre_node = in_edge->src_node();
-
-      while (IsEndingTaskType<TaskNodeType>(pre_node->GetTaskType()) == false) {
-        if (pre_node->GetTaskType() == TaskType::kCopyCommNet) {
-          CopyCommNetTaskNode* commnet_node = dynamic_cast<CopyCommNetTaskNode*>(pre_node);
-          CHECK(commnet_node != nullptr);
-
-          if (inserted_commnet_nodes.find(commnet_node) == inserted_commnet_nodes.end()) {
-            commnet_nodes_with_sort_val->emplace_back(
-                commnet_node, reduce_task_node->parallel_ctx()->parallel_id());
-            inserted_commnet_nodes.insert(commnet_node);
-          }
-          break;
-        }
-        pre_node = pre_node->SoleInEdge()->src_node();
-      }
-    }
-  }
-}
-
-template<>
-bool TaskGraph::IsEndingTaskType<ReduceGlobalAddCompTaskNode>(TaskType type) {
-  return type == TaskType::kReduceLocalAdd;
-}
-
-template<>
-bool TaskGraph::IsEndingTaskType<ReduceGatherCompTaskNode>(TaskType type) {
-  return type == TaskType::kReduceGlobalAdd;
-}
-
-void TaskGraph::AddMutexCtrlEdgeInSameChain() { UNIMPLEMENTED(); }
-
 void TaskGraph::RmUselessConsumeRelationshipBetweenFwBw() {
   for (TaskNode* task_node : ordered_task_nodes_) {
     auto bw_node = dynamic_cast<NormalBackwardCompTaskNode*>(task_node);
@@ -425,39 +331,42 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink) {
                          nullptr, MutBufTask, AllocateCpuThrdIdEvenly);
 }
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceLocalAdd) {
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceAdd) {
+  const LogicalNode* src_logical_node = sorted_src_comp_tasks.front()->logical_node();
+  const auto& pd = src_logical_node->parallel_desc();
+  bool has_local_reduce =
+      pd->sorted_machine_ids().size() > 1 && pd->device_num_of_each_machine() > 1;
+  const LogicalNode* pred_src_logical_node = src_logical_node->SoleInEdge()->src_node();
+  bool is_local_reduce =
+      has_local_reduce
+          ? !(dynamic_cast<const ReduceAddLogicalNode*>(pred_src_logical_node)
+              || dynamic_cast<const NcclReduceScatterLogicalNode*>(pred_src_logical_node))
+          : false;
   for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
     for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
-      if (src_comp_task->machine_id() == dst_comp_task->machine_id()) {
+      if (has_local_reduce) {
+        if (is_local_reduce) {
+          if (src_comp_task->machine_id() == dst_comp_task->machine_id()) {
+            BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, false);
+          }
+          dst_comp_task->mut_parallel_ctx()->set_rank_num(pd->device_num_of_each_machine());
+        } else {
+          if (src_comp_task->parallel_id() % pd->device_num_of_each_machine()
+              == dst_comp_task->parallel_id() % pd->device_num_of_each_machine()) {
+            BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, false);
+          }
+          dst_comp_task->mut_parallel_ctx()->set_rank_num(pd->sorted_machine_ids().size());
+        }
+      } else {
         BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, false);
+        dst_comp_task->mut_parallel_ctx()->set_rank_num(
+            dst_comp_task->parallel_ctx()->parallel_num());
       }
     }
   }
 }
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceGlobalAdd) {
-  for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
-    for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
-      BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, false);
-    }
-  }
-}
-
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd) {
-  const auto& pd = sorted_src_comp_tasks.front()->logical_node()->parallel_desc();
-  CHECK_GT(pd->device_num_of_each_machine(), 1);
-  CHECK_GT(pd->sorted_machine_ids().size(), 1);
-  for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
-    for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
-      if (src_comp_task->parallel_id() % pd->device_num_of_each_machine()
-          == dst_comp_task->parallel_id() % pd->device_num_of_each_machine()) {
-        BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, false);
-      }
-    }
-  }
-}
-
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGlobalAdd2ReduceGather) {
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceAdd2ReduceGather) {
   const auto& pd = sorted_src_comp_tasks.front()->logical_node()->parallel_desc();
   bool has_local_reduce =
       pd->sorted_machine_ids().size() > 1 && pd->device_num_of_each_machine() > 1;
