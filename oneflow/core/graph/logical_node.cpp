@@ -12,7 +12,7 @@
 #include "oneflow/core/graph/record_load_compute_task_node.h"
 #include "oneflow/core/graph/reduce_scatter_compute_task_node.h"
 #include "oneflow/core/graph/reduce_local_add_compute_task_node.h"
-#include "oneflow/core/graph/reduce_global_add_compute_task_node.h"
+#include "oneflow/core/graph/reduce_add_compute_task_node.h"
 #include "oneflow/core/graph/reduce_gather_compute_task_node.h"
 #include "oneflow/core/graph/reduce_concat_compute_task_node.h"
 #include "oneflow/core/graph/reduce_split_compute_task_node.h"
@@ -395,14 +395,14 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceScatter"
                               "ReduceLocalAdd",
                               &TaskGraph::BldSubTskGphByReduceScatter2ReduceLocalAdd);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceScatter"
-                              "ReduceGlobalAdd",
-                              &TaskGraph::BldSubTskGphByReduceScatter2ReduceGlobalAdd);
+                              "ReduceAdd",
+                              &TaskGraph::BldSubTskGphByReduceScatter2ReduceAdd);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceLocalAdd"
-                              "ReduceGlobalAdd",
-                              &TaskGraph::BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGlobalAdd"
+                              "ReduceAdd",
+                              &TaskGraph::BldSubTskGphByReduceLocalAdd2ReduceAdd);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceAdd"
                               "ReduceGather",
-                              &TaskGraph::BldSubTskGphByReduceGlobalAdd2ReduceGather);
+                              &TaskGraph::BldSubTskGphByReduceAdd2ReduceGather);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
                               "ReduceGather",
                               &TaskGraph::BldSubTskGphByReduceGather2ReduceGather);
@@ -466,7 +466,7 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
   OF_PP_MAKE_TUPLE_SEQ(ReduceConcat, kMdUpdtArea)         \
   OF_PP_MAKE_TUPLE_SEQ(ReduceScatter, kMdUpdtArea)        \
   OF_PP_MAKE_TUPLE_SEQ(ReduceLocalAdd, kMdUpdtArea)       \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceGlobalAdd, kMdUpdtArea)      \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceAdd, kMdUpdtArea)            \
   OF_PP_MAKE_TUPLE_SEQ(ReduceGather, kMdUpdtArea)         \
   OF_PP_MAKE_TUPLE_SEQ(ReduceSplit, kMdUpdtArea)          \
   OF_PP_MAKE_TUPLE_SEQ(NcclAllReduce, kMdUpdtArea)        \

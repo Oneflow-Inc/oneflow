@@ -551,7 +551,7 @@ void LogicalGraph::AddReduceScatterAddGatherNodes(LogicalNode* src, LogicalNode*
     pred_reduce_global_add_node = reduce_local_add_node;
   }
   // Reduce Global Add
-  LogicalNode* reduce_global_add_node = NewNode<ReduceGlobalAddLogicalNode>();
+  LogicalNode* reduce_global_add_node = NewNode<ReduceAddLogicalNode>();
   reduce_global_add_node->mut_parallel_desc() = src_pd;
   Connect(pred_reduce_global_add_node, NewEdge(), reduce_global_add_node);
 

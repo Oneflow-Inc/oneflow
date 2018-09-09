@@ -6,7 +6,7 @@
 #include "oneflow/core/graph/boxing_task_node.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/graph/reduce_global_add_compute_task_node.h"
+#include "oneflow/core/graph/reduce_add_compute_task_node.h"
 #include "oneflow/core/graph/reduce_gather_compute_task_node.h"
 #include "oneflow/core/graph/reduce_split_compute_task_node.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
@@ -197,8 +197,7 @@ void TaskGraph::AddCtrlEdgeInReduceStruct() {
   int64_t total_machine_num = Global<JobDesc>::Get()->resource().machine().size();
   if (total_machine_num == 1) { return; }
 
-  AddCtrlEdgeForReduceTaskNode<ReduceGlobalAddLogicalNode, ReduceGlobalAddCompTaskNode>(
-      total_machine_num);
+  AddCtrlEdgeForReduceTaskNode<ReduceAddLogicalNode, ReduceAddCompTaskNode>(total_machine_num);
   AddCtrlEdgeForReduceTaskNode<ReduceGatherLogicalNode, ReduceGatherCompTaskNode>(
       total_machine_num);
 }
@@ -276,13 +275,13 @@ void TaskGraph::CollectCopyCommNetForReduceTaskNodes(
 }
 
 template<>
-bool TaskGraph::IsEndingTaskType<ReduceGlobalAddCompTaskNode>(TaskType type) {
+bool TaskGraph::IsEndingTaskType<ReduceAddCompTaskNode>(TaskType type) {
   return type == TaskType::kReduceLocalAdd;
 }
 
 template<>
 bool TaskGraph::IsEndingTaskType<ReduceGatherCompTaskNode>(TaskType type) {
-  return type == TaskType::kReduceGlobalAdd;
+  return type == TaskType::kReduceAdd;
 }
 
 void TaskGraph::AddMutexCtrlEdgeInSameChain() { UNIMPLEMENTED(); }
@@ -435,7 +434,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceLocalAdd) {
   }
 }
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceGlobalAdd) {
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceAdd) {
   for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
     for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
       BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, false);
@@ -443,7 +442,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceGlobalAdd) {
   }
 }
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd) {
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceLocalAdd2ReduceAdd) {
   const auto& pd = sorted_src_comp_tasks.front()->logical_node()->parallel_desc();
   CHECK_GT(pd->device_num_of_each_machine(), 1);
   CHECK_GT(pd->sorted_machine_ids().size(), 1);
@@ -457,7 +456,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd) {
   }
 }
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGlobalAdd2ReduceGather) {
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceAdd2ReduceGather) {
   const auto& pd = sorted_src_comp_tasks.front()->logical_node()->parallel_desc();
   bool has_local_reduce =
       pd->sorted_machine_ids().size() > 1 && pd->device_num_of_each_machine() > 1;

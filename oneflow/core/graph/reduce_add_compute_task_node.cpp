@@ -1,14 +1,14 @@
-#include "oneflow/core/graph/reduce_global_add_compute_task_node.h"
+#include "oneflow/core/graph/reduce_add_compute_task_node.h"
 #include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
-void ReduceGlobalAddCompTaskNode::ProduceAllRegstsAndBindEdges() {
+void ReduceAddCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("out", false, 1, 1);
   for (TaskEdge* edge : out_edges()) { BindEdgeWithProducedRegst(edge, "out"); }
 }
 
-void ReduceGlobalAddCompTaskNode::ConsumeAllRegsts() {
+void ReduceAddCompTaskNode::ConsumeAllRegsts() {
   int64_t machine_num = logical_node()->parallel_desc()->sorted_machine_ids().size();
   int64_t dev_num_of_each_machine = logical_node()->parallel_desc()->device_num_of_each_machine();
   CHECK_EQ(machine_num * dev_num_of_each_machine, parallel_ctx()->parallel_num());
@@ -24,25 +24,25 @@ void ReduceGlobalAddCompTaskNode::ConsumeAllRegsts() {
   }
 }
 
-void ReduceGlobalAddCompTaskNode::BuildExecGphAndRegst() {
+void ReduceAddCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
-  OperatorConf reduce_global_add_op_conf;
-  reduce_global_add_op_conf.set_name("reduce_global_add_" + NewUniqueId());
-  reduce_global_add_op_conf.set_device_type(this->device_type());
-  reduce_global_add_op_conf.mutable_reduce_global_add_conf()->set_in_num(in_edges().size());
-  std::shared_ptr<Operator> reduce_global_add_op = ConstructOp(reduce_global_add_op_conf);
-  node->mut_op() = reduce_global_add_op;
-  for (const std::string& input_bn : reduce_global_add_op->input_bns()) {
+  OperatorConf reduce_add_op_conf;
+  reduce_add_op_conf.set_name("reduce_add_" + NewUniqueId());
+  reduce_add_op_conf.set_device_type(this->device_type());
+  reduce_add_op_conf.mutable_reduce_add_conf()->set_in_num(in_edges().size());
+  std::shared_ptr<Operator> reduce_add_op = ConstructOp(reduce_add_op_conf);
+  node->mut_op() = reduce_add_op;
+  for (const std::string& input_bn : reduce_add_op->input_bns()) {
     std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst(input_bn);
     node->BindBnWithRegst(input_bn, in_regst);
   }
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
-  out_regst->AddLbi(reduce_global_add_op->BnInOp2Lbi(reduce_global_add_op->SoleObn()));
-  node->BindBnWithRegst(reduce_global_add_op->SoleObn(), out_regst);
+  out_regst->AddLbi(reduce_add_op->BnInOp2Lbi(reduce_add_op->SoleObn()));
+  node->BindBnWithRegst(reduce_add_op->SoleObn(), out_regst);
   node->InferBlobDescs(parallel_ctx());
 }
 
-void ReduceGlobalAddCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx* ctx) {
+void ReduceAddCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx* ctx) {
   ReduceMemSharingCtx ctx_if_gather = ctx->CtxIfGatherLast();
   int64_t offset = ctx_if_gather.Offset4ParallelId(parallel_id());
   int64_t rank = ctx->Rank4ParallelId(parallel_id());

@@ -63,7 +63,7 @@ void ReduceGatherCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx* ctx
   ctx->Gather(ctx->LastCount());
   std::vector<TaskNode*> global_add_on_in_edge;
   ForEachNodeOnInEdge([&](TaskNode* node) {
-    if (node->GetTaskType() == kReduceGlobalAdd) { global_add_on_in_edge.push_back(node); }
+    if (node->GetTaskType() == kReduceAdd) { global_add_on_in_edge.push_back(node); }
   });
 
   // If not local gather
