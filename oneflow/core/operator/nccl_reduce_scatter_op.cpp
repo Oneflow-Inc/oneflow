@@ -21,7 +21,7 @@ void NcclReduceScatterOp::InferBlobDescs(
   *out_blob = *in_blob;
   int64_t total_elem_cnt = in_blob->shape().elem_cnt();
   CHECK_EQ(parallel_ctx->parallel_num() % Global<JobDesc>::Get()->TotalMachineNum(), 0);
-  int64_t rank_num = parallel_ctx->parallel_num() / Global<JobDesc>::Get()->TotalMachineNum();
+  int64_t rank_num = parallel_ctx->device_num_of_each_machine();
   CHECK_EQ(total_elem_cnt % rank_num, 0);
   out_blob->mut_shape() = Shape({total_elem_cnt / rank_num});
 }

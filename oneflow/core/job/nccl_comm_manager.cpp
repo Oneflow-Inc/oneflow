@@ -24,7 +24,7 @@ NcclCommMgr::NcclCommMgr(const Plan& plan) {
     for (size_t i = 0; i < pair.second.size(); ++i) {
       int64_t task_id = pair.second.at(i);
       int64_t thrd_id = Global<IDMgr>::Get()->ThrdId4ActorId(task_id);
-      int device_id = (int)Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id);
+      int32_t device_id = (int)Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id);
       task_id_device_id[i] = {task_id, device_id};
     }
 
@@ -41,8 +41,8 @@ NcclCommMgr::NcclCommMgr(const Plan& plan) {
     NcclCheck(ncclCommInitAll(comms.data(), (int)devices.size(), devices.data()));
     for (size_t i = 0; i < task_id_device_id.size(); ++i) {
       CHECK(actor_id2comm_.emplace(task_id_device_id.at(i).first, comms.at(i)).second);
-      int device;
-      int rank;
+      int32_t device;
+      int32_t rank;
       ncclCommCuDevice(comms.at(i), &device);
       ncclCommUserRank(comms.at(i), &rank);
       LOG(INFO) << "Created nccl communicator for task " << task_id_device_id.at(i).first
@@ -70,4 +70,3 @@ bool NcclCommMgr::IsNcclTaskType(const TaskType& tt) const {
 }
 
 }  // namespace oneflow
-
