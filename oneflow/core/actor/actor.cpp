@@ -431,7 +431,12 @@ int Actor::ProcessWriteableCtrlRegstMsg(const ActorMsg& msg) {
 }
 
 int Actor::ProcessReadableCtrlRegstMsg(const ActorMsg& msg) {
-  return consumed_ctrl_rs_.TryPushBackRegst(msg.regst());
+  if (consumed_ctrl_rs_.HasRegstDescId(msg.regst_desc_id())) {
+    CHECK_EQ(0, consumed_ctrl_rs_.TryPushBackRegst(msg.regst()));
+    return 0;
+  } else {
+    return -1;
+  }
 }
 
 void Actor::AsyncSendCtrlRegstMsg() {
