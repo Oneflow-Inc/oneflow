@@ -49,7 +49,6 @@ void ReduceGlobalAddCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx* 
   int64_t reduce_size = ctx->ReduceSize();
 
   ctx->EnableMemSharing4Regst(GetProducedRegst("out").get(), ctx->Offset4ParallelId(parallel_id()));
-
   for (const auto& kv : consumed_regsts()) {
     auto in_parallel_id = oneflow_cast<int64_t>(kv.first.substr(3));
     CHECK_EQ(1, kv.second.size());
@@ -60,7 +59,6 @@ void ReduceGlobalAddCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx* 
 
   std::vector<CompTaskNode*> local_add_on_in_edge;
   std::vector<CompTaskNode*> scatter_on_in_edge;
-
   ForEachNodeOnInEdge([&](TaskNode* node) {
     if (node->GetTaskType() == kReduceLocalAdd) {
       local_add_on_in_edge.push_back(dynamic_cast<CompTaskNode*>(node));
@@ -71,13 +69,10 @@ void ReduceGlobalAddCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx* 
       return;
     }
   });
-
   CHECK_EQ(local_add_on_in_edge.size() + scatter_on_in_edge.size(), 1);
-
   if (!local_add_on_in_edge.empty()) {
     BuildCtrlRegstBetweenReduceCopyNodes(local_add_on_in_edge.front(), this, ctx->LastCount() - 1);
   }
-
   if (!scatter_on_in_edge.empty()) {
     BuildCtrlRegstBetweenReduceCopyNodes(scatter_on_in_edge.front(), this, ctx->LastCount() - 1);
   }

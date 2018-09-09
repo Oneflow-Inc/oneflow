@@ -177,15 +177,11 @@ void TaskGraph::EnableMemSharingInReduceStruct() {
     if (updt->parallel_ctx()->policy() != ParallelPolicy::kDataParallel) { return; }
     if (updt->device_type() != DeviceType::kGPU) { return; }
     if (updt->parallel_ctx()->parallel_num() < 2) { return; }
-
     std::list<TaskNode*> reduce_task_nodes = CollectReduceTaskNode(updt);
 
     int64_t mem_shared_id = Global<IDMgr>::Get()->NewMemSharedId();
-
     int64_t mem_size = CalcModelSize(updt);
-
     ReduceMemSharingCtx ctx(mem_size, mem_shared_id);
-
     for (TaskNode* reduce_node : reduce_task_nodes) {
       auto reduce_task_node_if = dynamic_cast<ReduceCompTaskNodeIf*>(reduce_node);
       CHECK(reduce_task_node_if);

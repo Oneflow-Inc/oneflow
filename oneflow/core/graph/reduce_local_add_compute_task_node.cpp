@@ -76,17 +76,13 @@ void ReduceLocalAddCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx* c
   }
 
   std::vector<CompTaskNode*> scatter_on_in_edge;
-
   ForEachNodeOnInEdge([&](TaskNode* node) {
-
     if (node->GetTaskType() == kReduceScatter) {
       scatter_on_in_edge.push_back(dynamic_cast<CompTaskNode*>(node));
       return;
     }
   });
-
   CHECK_EQ(scatter_on_in_edge.size(), 1);
-
   BuildCtrlRegstBetweenReduceCopyNodes(scatter_on_in_edge.front(), this, ctx->LastCount() - 1);
 }
 

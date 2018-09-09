@@ -62,13 +62,11 @@ void ReduceGatherCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx* ctx
 
   ctx->Gather(ctx->LastCount());
   std::vector<TaskNode*> global_add_on_in_edge;
-
   ForEachNodeOnInEdge([&](TaskNode* node) {
     if (node->GetTaskType() == kReduceGlobalAdd) { global_add_on_in_edge.push_back(node); }
   });
 
   CHECK_EQ(global_add_on_in_edge.size(), 1);
-
   TaskNode* global_add_copy_d2h = nullptr;
   for (TaskEdge* out_edge : global_add_on_in_edge.front()->out_edges()) {
     if (out_edge->dst_node()->GetTaskType() == TaskType::kCopyHd) {

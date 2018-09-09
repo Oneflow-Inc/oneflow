@@ -62,11 +62,8 @@ void ReduceScatterCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx* ct
     RegstDesc* out = GetProducedRegst("out_" + std::to_string(i)).get();
     ctx->EnableMemSharing4Regst(out, offset + i * out_size);
   }
-
   ctx->Scatter(scatter_count);
-
   if (this->SoleInEdge()->src_node()->GetTaskType() == TaskType::kReduceConcat) { return; }
-
   ctx->EnableMemSharing4Regst(GetSoleConsumedRegst("in").get(), offset);
 }
 
