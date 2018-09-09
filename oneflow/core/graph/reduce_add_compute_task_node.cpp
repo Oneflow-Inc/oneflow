@@ -9,18 +9,25 @@ void ReduceAddCompTaskNode::ProduceAllRegstsAndBindEdges() {
 }
 
 void ReduceAddCompTaskNode::ConsumeAllRegsts() {
-  int64_t machine_num = logical_node()->parallel_desc()->sorted_machine_ids().size();
-  int64_t dev_num_of_each_machine = logical_node()->parallel_desc()->device_num_of_each_machine();
-  CHECK_EQ(machine_num * dev_num_of_each_machine, parallel_ctx()->parallel_num());
-  bool has_local_reduce = machine_num > 1 && dev_num_of_each_machine > 1;
+  struct EdgeInfo {
+    TaskEdge* edge;
+    int64_t parallel_id;
+  };
 
+  std::vector<EdgeInfo> edge_infos;
   for (TaskEdge* edge : in_edges()) {
     std::vector<CompTaskNode*> pred_comp_task_nodes = GetPredCompTaskNodesOnEdge(edge);
     CHECK_EQ(pred_comp_task_nodes.size(), 1);
     int64_t in_parallel_id = pred_comp_task_nodes.front()->parallel_id();
-    int64_t in_machine_rank = in_parallel_id / dev_num_of_each_machine;
-    int64_t in_edge_index = has_local_reduce ? in_machine_rank : in_parallel_id;
-    ConsumeRegst("in_" + std::to_string(in_edge_index), edge->GetSoleRegst());
+    EdgeInfo edge_info = {edge, in_parallel_id};
+    edge_infos.push_back(edge_info);
+  }
+  std::sort(edge_infos.begin(), edge_infos.end(), [](const EdgeInfo& lhs, const EdgeInfo& rhs) {
+    return lhs.parallel_id < rhs.parallel_id;
+  });
+  FOR_RANGE(int64_t, in_edge_index, 0, edge_infos.size()) {
+    ConsumeRegst("in_" + std::to_string(in_edge_index),
+                 edge_infos[in_edge_index].edge->GetSoleRegst());
   }
 }
 

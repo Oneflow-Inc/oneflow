@@ -23,8 +23,6 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
   void EnableMemSharingInReduceStruct();
 
-  // void AddCtrlEdgeInReduceStruct();
-  // void AddMutexCtrlEdgeInSameChain();
   void AddOrderCtrlEdgeBetweenCopyAndMdUpdt();
   void RmUselessConsumeRelationshipBetweenFwBw();
   void AcyclicTopoForEachNode(std::function<void(TaskNode* node)> Handler) const;
@@ -36,9 +34,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink);
-  //  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceLocalAdd);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceAdd);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceAdd2ReduceAdd);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceAdd2ReduceScatter);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceAdd2ReduceGather);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGather2ReduceGather);
 
@@ -71,19 +68,6 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void SetAreaIdForNewNodes(const LogicalNode* src_logical, const LogicalNode* dst_logical);
   void MergeChainAndSetOrderInGraphForEachNode();
   void BuildCtrlRegstDescInSameChain();
-
-  /*
-    template<typename LogicalNodeType, typename TaskNodeType>
-    void AddCtrlEdgeForReduceTaskNode(int64_t total_machine_num);
-
-    template<typename TaskNodeType>
-    void CollectCopyCommNetForReduceTaskNodes(
-        const std::vector<TaskNodeType*>& reduce_task_nodes,
-        std::vector<std::pair<CopyCommNetTaskNode*, int64_t>>* commnet_nodes_with_sort_val);
-
-    template<typename TaskNodeType>
-    bool IsEndingTaskType(TaskType type);
-  */
 
   void GeneratePersistenceThrdId(
       const std::vector<std::pair<int64_t, CompTaskNode*>>& persistence_nodes);
