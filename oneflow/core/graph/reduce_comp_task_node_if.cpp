@@ -40,4 +40,3 @@ void BuildCtrlRegstBetweenReduceCopyNodes(const CompTaskNode* src_reduce,
 }
 
 }  // namespace oneflow
-

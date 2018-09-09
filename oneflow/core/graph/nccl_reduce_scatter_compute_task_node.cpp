@@ -17,4 +17,3 @@ void NcclReduceScatterCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx
 }
 
 }  // namespace oneflow
-
