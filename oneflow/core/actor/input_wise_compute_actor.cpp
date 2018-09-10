@@ -72,7 +72,7 @@ void InputWiseCompActor::Act() {
 
   UpdateMemberStatusAfterAct();
   if (NeedSendRegstMsgToConsumer()) {
-    AsyncSendRegstMsgToConsumer([&](Regst* regst) {
+    AsyncSendNaiveProducedRegstMsgToConsumer([&](Regst* regst) {
       regst->set_piece_id(cur_regst->piece_id());
       return true;
     });

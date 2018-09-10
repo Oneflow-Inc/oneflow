@@ -62,7 +62,7 @@ void NormalBackwardCompActor::Act() {
       return nullptr;
     }
   });
-  AsyncSendRegstMsgToConsumer([&](Regst* regst) {
+  AsyncSendNaiveProducedRegstMsgToConsumer([&](Regst* regst) {
     regst->set_piece_id(piece_id);
     return true;
   });

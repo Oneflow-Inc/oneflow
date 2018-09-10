@@ -15,7 +15,7 @@ void DecodeCompActor::Act(std::function<bool(Regst*)>* IsNaiveAllowedReturnToPro
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
   kernel_ctx.other = &decode_status_;
   AsyncLaunchKernel(kernel_ctx);
-  AsyncSendRegstMsgToConsumer([this, in_regst](Regst* regst) {
+  AsyncSendNaiveProducedRegstMsgToConsumer([this, in_regst](Regst* regst) {
     regst->set_piece_id(in_regst->piece_id());
     regst->set_col_id(decode_status_.cur_col_id_);
     regst->set_max_col_id(decode_status_.max_col_id_);

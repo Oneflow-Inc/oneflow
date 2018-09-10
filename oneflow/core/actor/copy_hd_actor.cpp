@@ -11,7 +11,7 @@ void CopyHdActor::VirtualActorInit(const TaskProto& task_proto) {
 void CopyHdActor::Act() {
   Regst* in_regst = GetNaiveSoleCurReadable();
   AsyncLaunchKernel(GenDefaultKernelCtx());
-  AsyncSendRegstMsgToConsumer([&](Regst* out_regst) {
+  AsyncSendNaiveProducedRegstMsgToConsumer([&](Regst* out_regst) {
     out_regst->set_piece_id(in_regst->piece_id());
     out_regst->set_model_version_id(in_regst->model_version_id());
     return true;

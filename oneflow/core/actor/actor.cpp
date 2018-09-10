@@ -74,15 +74,10 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
     });
     int64_t regst_desc_id = pair.second.regst_desc_id();
     CHECK(name2regst_desc_id_.insert({pair.first, {regst_desc_id}}).second);
-    writeable_produced_data_rs_.InsertRegstDescId(regst_desc_id);
     produced_data_regst2expected_act_id_[regst_desc_id] = act_id_;
   }
-  writeable_produced_data_rs_.InitedDone();
   for (const auto& pair : produced_data_regsts_) {
-    for (const auto& regst : pair.second) {
-      CHECK_EQ(0, writeable_produced_data_rs_.TryPushBackRegst(regst.get()));
-      produced_data_regst2reading_cnt_[regst.get()] = 0;
-    }
+    for (const auto& regst : pair.second) { produced_data_regst2reading_cnt_[regst.get()] = 0; }
   }
 
   for (const auto& pair : non_ctrl_task_proto.consumed_regst_desc_id()) {
@@ -94,14 +89,55 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
     remaining_eord_cnt_ += pair.second.regst_desc_id_size();
   }
 
-  actual_writeable_produced_data_regst_desc_num_ =
-      writeable_produced_data_rs_.total_regst_desc_cnt();
   total_reading_data_cnt_ = 0;
   total_reading_ctrl_cnt_ = 0;
   is_naive_consumed_data_eord_ = false;
   is_consumed_ctrl_eord_ = false;
   TakeOverNaiveConsumed(non_ctrl_task_proto.consumed_regst_desc_id());
+  TakeOverNaiveProduced(non_ctrl_task_proto.produced_regst_desc());
   VirtualActorInit(non_ctrl_task_proto);
+}
+
+void Actor::TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids) {
+  std::pair<bool, std::vector<std::string>> isall_or_names = GetNaiveConsumedRegstDescName();
+  if (isall_or_names.first) {
+    for (const auto& pair : consumed_ids) { AddNaiveConsumed(pair.second); }
+  } else {
+    for (const std::string& name : isall_or_names.second) {
+      auto it = consumed_ids.find(name);
+      if (it != consumed_ids.end()) { AddNaiveConsumed(it->second); }
+    }
+  }
+  naive_consumed_data_rs_.InitedDone();
+}
+
+void Actor::AddNaiveConsumed(const RegstDescIdSet& regst_desc_ids) {
+  for (int64_t regst_desc_id : regst_desc_ids.regst_desc_id()) {
+    naive_consumed_data_rs_.InsertRegstDescId(regst_desc_id);
+  }
+}
+
+void Actor::TakeOverNaiveProduced(const PbMap<std::string, RegstDescProto>& produced_ids) {
+  std::pair<bool, std::vector<std::string>> isall_or_names = GetNaiveProducedRegstDescName();
+  if (isall_or_names.first) {
+    for (const auto& pair : produced_ids) {
+      naive_produced_data_rs_.InsertRegstDescId(pair.second.regst_desc_id());
+    }
+  } else {
+    for (const std::string& name : isall_or_names.second) {
+      auto it = produced_ids.find(name);
+      if (it == produced_ids.end()) { continue; }
+      naive_produced_data_rs_.InsertRegstDescId(it->second.regst_desc_id());
+    }
+  }
+  naive_produced_data_rs_.InitedDone();
+
+  for (const auto& pair : produced_data_regsts_) {
+    if (naive_produced_data_rs_.HasRegstDescId(pair.first) == false) { continue; }
+    for (const auto& regst : pair.second) {
+      CHECK_EQ(0, naive_produced_data_rs_.TryPushBackRegst(regst.get()));
+    }
+  }
 }
 
 DeviceType Actor::GetDeviceType() const {
@@ -119,6 +155,14 @@ int64_t Actor::Name2SoleRegstDescId(const std::string& name) const {
 
 const std::vector<int64_t>& Actor::Name2RegstDescId(const std::string& name) const {
   return name2regst_desc_id_.at(name);
+}
+
+int64_t Actor::ReadingCnt4ProducedRegst(Regst* regst) const {
+  return produced_data_regst2reading_cnt_.at(regst);
+}
+
+void Actor::IncreaseReadingCnt4ProducedRegst(Regst* regst, int64_t val) {
+  produced_data_regst2reading_cnt_.at(regst) += val;
 }
 
 void Actor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
@@ -292,9 +336,16 @@ void Actor::ActUntilFail() {
   }
 }
 
+bool Actor::IsReadReady() {
+  return naive_consumed_data_rs_.IsCurSlotReady() && IsCustomizedReadReady();
+}
+
 bool Actor::IsWriteReady() {
-  return writeable_produced_data_rs_.available_regst_desc_cnt()
-         == actual_writeable_produced_data_regst_desc_num_;
+  return naive_produced_data_rs_.IsCurSlotReady() && IsCustomizedWriteReady();
+}
+
+bool Actor::IsCtrlReady() {
+  return writeable_produced_ctrl_rs_.IsCurSlotReady() && consumed_ctrl_rs_.IsCurSlotReady();
 }
 
 void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx,
@@ -303,7 +354,7 @@ void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx,
     ek.kernel->Launch(kernel_ctx, [&](const std::string& bn_in_op) -> Blob* {
       auto regst_desc_id_it = ek.bn_in_op2regst_desc_id.find(bn_in_op);
       if (regst_desc_id_it == ek.bn_in_op2regst_desc_id.end()) { return nullptr; }
-      Regst* regst = GetCurWriteableRegst(regst_desc_id_it->second);
+      Regst* regst = GetNaiveCurWriteable(regst_desc_id_it->second);
       if (regst == nullptr) { regst = GetNaiveCurReadable(regst_desc_id_it->second); }
       if (regst == nullptr) { regst = Regst4RegstDescId(regst_desc_id_it->second); }
       const LogicalBlobId& lbi = ek.kernel->BnInOp2Lbi(bn_in_op);
@@ -319,10 +370,10 @@ void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx) {
   });
 }
 
-void Actor::AsyncSendRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProcess,
-                                        std::function<bool(int64_t)> IsAllowedActor) {
+void Actor::AsyncSendNaiveProducedRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProcess,
+                                                     std::function<bool(int64_t)> IsAllowedActor) {
   std::vector<int64_t> regst_desc_ids;
-  writeable_produced_data_rs_.ForEachRegstDeq([&](const std::deque<Regst*>& reg_deq) {
+  naive_produced_data_rs_.ForEachRegstDeq([&](const std::deque<Regst*>& reg_deq) {
     if (reg_deq.empty()) { return; }
     Regst* regst = reg_deq.front();
     if (RegstPreProcess(regst) == false) { return; }
@@ -342,20 +393,20 @@ void Actor::AsyncSendRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProc
   });
 
   for (int64_t regst_desc_id : regst_desc_ids) {
-    CHECK_EQ(0, writeable_produced_data_rs_.TryPopFrontRegst(regst_desc_id));
+    CHECK_EQ(0, naive_produced_data_rs_.TryPopFrontRegst(regst_desc_id));
   }
 }
 
-void Actor::AsyncSendRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProcess) {
-  AsyncSendRegstMsgToConsumer(RegstPreProcess, [](int64_t) { return true; });
+void Actor::AsyncSendNaiveProducedRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProcess) {
+  AsyncSendNaiveProducedRegstMsgToConsumer(RegstPreProcess, [](int64_t) { return true; });
 }
 
-void Actor::AsyncSendRegstMsgToConsumer(std::function<bool(int64_t)> IsAllowedActor) {
-  AsyncSendRegstMsgToConsumer([](Regst*) { return true; }, IsAllowedActor);
+void Actor::AsyncSendNaiveProducedRegstMsgToConsumer(std::function<bool(int64_t)> IsAllowedActor) {
+  AsyncSendNaiveProducedRegstMsgToConsumer([](Regst*) { return true; }, IsAllowedActor);
 }
 
-void Actor::AsyncSendRegstMsgToConsumer() {
-  AsyncSendRegstMsgToConsumer([](Regst*) { return true; });
+void Actor::AsyncSendNaiveProducedRegstMsgToConsumer() {
+  AsyncSendNaiveProducedRegstMsgToConsumer([](Regst*) { return true; });
 }
 
 void Actor::AsyncSendEORDMsgToConsumers(int64_t regst_desc_id) {
@@ -380,16 +431,6 @@ void Actor::AsyncSendRegstMsgToProducer(Regst* regst, int64_t producer) {
   AsyncSendMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, producer, regst));
 }
 
-Regst* Actor::GetCurWriteableRegst(int64_t regst_desc_id) {
-  return writeable_produced_data_rs_.Front(regst_desc_id);
-}
-
-Regst* Actor::GetCurWriteableRegst(const std::string& name) {
-  return GetCurWriteableRegst(Name2SoleRegstDescId(name));
-}
-
-Regst* Actor::GetCurSoleWriteableRegst() { return writeable_produced_data_rs_.SoleFront(); }
-
 Regst* Actor::GetSoleProducedRegst(int64_t regst_desc_id) {
   auto it = produced_data_regsts_.find(regst_desc_id);
   CHECK(it != produced_data_regsts_.end());
@@ -400,14 +441,6 @@ Regst* Actor::GetSoleProducedRegst(int64_t regst_desc_id) {
 int64_t Actor::GetSoleProducedDataRegstDescId() const {
   CHECK_EQ(produced_data_regsts_.size(), 1);
   return produced_data_regsts_.begin()->first;
-}
-
-bool Actor::IsReadReady() {
-  return naive_consumed_data_rs_.IsCurSlotReady() && IsCustomizedReadReady();
-}
-
-bool Actor::IsCtrlReady() {
-  return writeable_produced_ctrl_rs_.IsCurSlotReady() && consumed_ctrl_rs_.IsCurSlotReady();
 }
 
 int Actor::ProcessWriteableCtrlRegstMsg(const ActorMsg& msg) {
@@ -494,7 +527,9 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
   total_reading_data_cnt_ -= 1;
   if (reading_cnt_it->second != 0) { return 0; }
 
-  CHECK_EQ(0, writeable_produced_data_rs_.TryPushBackRegst(regst));
+  if (naive_produced_data_rs_.TryPushBackRegst(regst) != 0) {
+    UpdtStateAsCustomizedProducedRegst(regst);
+  }
 
   int64_t& expected_act_id = produced_data_regst2expected_act_id_[regst->regst_desc_id()];
   if (expected_act_id >= 0 && CheckOutputActId(regst->regst_desc_id())) {
@@ -502,25 +537,6 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
   }
   expected_act_id = regst->act_id() + ActNumForEachOutput(regst->regst_desc_id());
   return 0;
-}
-
-void Actor::TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids) {
-  std::pair<bool, std::vector<std::string>> isall_or_names = GetNaiveConsumedRegstDescName();
-  if (isall_or_names.first) {
-    for (const auto& pair : consumed_ids) { AddNaiveConsumed(pair.second); }
-  } else {
-    for (const std::string& name : isall_or_names.second) {
-      auto it = consumed_ids.find(name);
-      if (it != consumed_ids.end()) { AddNaiveConsumed(it->second); }
-    }
-  }
-  naive_consumed_data_rs_.InitedDone();
-}
-
-void Actor::AddNaiveConsumed(const RegstDescIdSet& regst_desc_ids) {
-  for (int64_t regst_desc_id : regst_desc_ids.regst_desc_id()) {
-    naive_consumed_data_rs_.InsertRegstDescId(regst_desc_id);
-  }
 }
 
 void Actor::AsyncSendMsg(const ActorMsg& msg) {

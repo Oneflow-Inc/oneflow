@@ -13,7 +13,7 @@ void RecordLoadActor::VirtualCompActorInit(const TaskProto& task_proto) {
 }
 
 void RecordLoadActor::Act() {
-  Regst* regst = GetCurSoleWriteableRegst();
+  Regst* regst = GetNaiveSoleCurWriteable();
   regst->set_piece_id(piece_id_++);
 
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
@@ -21,7 +21,7 @@ void RecordLoadActor::Act() {
   AsyncLaunchKernel(kernel_ctx);
 
   if (record_load_status_.is_eof) { is_eof_ = true; }
-  if (record_load_status_.record_num > 0) { AsyncSendRegstMsgToConsumer(); }
+  if (record_load_status_.record_num > 0) { AsyncSendNaiveProducedRegstMsgToConsumer(); }
 }
 
 bool RecordLoadActor::IsCustomizedReadReady() {

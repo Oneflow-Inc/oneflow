@@ -8,23 +8,49 @@ void NormalMdUpdtCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   const_model_regst_desc_id_ = Name2SoleRegstDescId("const_model");
   init_remaining_cnt_ = 0;
   if (model_regst_desc_id_ != -1) { init_remaining_cnt_ += 1; }
-  if (const_model_regst_desc_id_ != -1) {
-    init_remaining_cnt_ += 1;
-    DecreaseActualWriteableProducedDataRegstDescNum(1);
-  }
+  if (const_model_regst_desc_id_ != -1) { init_remaining_cnt_ += 1; }
   next_model_version_id_ = 0;
   related_save_model_actor_id_ = task_proto.related_save_model_task_id();
   related_init_model_actor_id_ = task_proto.related_init_model_task_id();
   pre_model_regst_ = nullptr;
+  const_model_regst_ = nullptr;
+  if (const_model_regst_desc_id_ != -1) {
+    const_model_regst_ = GetSoleProducedRegst(const_model_regst_desc_id_);
+  }
+  send_const_model_regst_ = false;
   OF_SET_MSG_HANDLER(&NormalMdUpdtCompActor::HandlerInitModelAndConstModel);
+}
+
+bool NormalMdUpdtCompActor::IsCustomizedWriteReady() {
+  if (const_model_regst_desc_id_ != -1) { CHECK(send_const_model_regst_); }
+  return true;
+}
+
+void NormalMdUpdtCompActor::UpdtStateAsCustomizedProducedRegst(Regst* regst) {
+  CHECK_EQ(const_model_regst_, regst);
+  send_const_model_regst_ = false;
 }
 
 bool NormalMdUpdtCompActor::CheckOutputActId(int64_t regst_desc_id) const {
   return regst_desc_id != model_regst_desc_id_ && regst_desc_id != const_model_regst_desc_id_;
 }
 
+void NormalMdUpdtCompActor::AsyncSendCustomizedProducedRegstMsgToConsumer() {
+  if (const_model_regst_desc_id_ == -1) { return; }
+  const_model_regst_->set_model_version_id(next_model_version_id_);
+  CHECK_EQ(0, ReadingCnt4ProducedRegst(const_model_regst_));
+  const_model_regst_->set_act_id(act_id());
+  for (int64_t consumer : const_model_regst_->consumers_actor_id()) {
+    AsyncSendMsg(ActorMsg::BuildRegstMsgToConsumer(actor_id(), consumer, const_model_regst_));
+  }
+  IncreaseReadingCnt4ProducedRegst(const_model_regst_,
+                                   const_model_regst_->consumers_actor_id().size());
+  IncreaseTotalReadingCnt(const_model_regst_->consumers_actor_id().size());
+  send_const_model_regst_ = true;
+}
+
 void NormalMdUpdtCompActor::Act() {
-  Regst* cur_model_regst = GetCurWriteableRegst(model_regst_desc_id_);
+  Regst* cur_model_regst = GetNaiveCurWriteable(model_regst_desc_id_);
   cur_model_regst->set_model_version_id(next_model_version_id_);
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
   std::tuple<int64_t, const Blob*> other_val(next_model_version_id_,
@@ -36,16 +62,14 @@ void NormalMdUpdtCompActor::Act() {
   auto RegstPreProcess = [&](Regst* regst) { return regst == cur_model_regst; };
   bool need_save_model = NeedModelSave(next_model_version_id_ - 1);
   bool need_send_model = next_model_version_id_ < job_desc->TotalBatchNum();
-  AsyncSendRegstMsgToConsumer(RegstPreProcess, [&](int64_t actor_id) {
+  AsyncSendNaiveProducedRegstMsgToConsumer(RegstPreProcess, [&](int64_t actor_id) {
     return (need_save_model && actor_id == related_save_model_actor_id_)
            || (need_send_model && actor_id != related_save_model_actor_id_);
   });
   next_model_version_id_ += 1;
 }
 
-void NormalMdUpdtCompActor::InitRegstBySendToFw(int64_t regst_desc_id) {
-  if (regst_desc_id == -1) { return; }
-  Regst* regst = GetCurWriteableRegst(regst_desc_id);
+void NormalMdUpdtCompActor::InitRegstBySendToFw(Regst* regst) {
   ActorMsg msg = ActorMsg::BuildRegstMsgToConsumer(actor_id(), related_init_model_actor_id_, regst);
   Global<ActorMsgBus>::Get()->SendMsg(msg);
 }
@@ -53,8 +77,10 @@ void NormalMdUpdtCompActor::InitRegstBySendToFw(int64_t regst_desc_id) {
 int NormalMdUpdtCompActor::HandlerInitModelAndConstModel(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kInitModel);
-    InitRegstBySendToFw(model_regst_desc_id_);
-    InitRegstBySendToFw(const_model_regst_desc_id_);
+    if (model_regst_desc_id_ != -1) {
+      InitRegstBySendToFw(GetNaiveCurWriteable(model_regst_desc_id_));
+    }
+    if (const_model_regst_desc_id_ != -1) { InitRegstBySendToFw(const_model_regst_); }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     init_remaining_cnt_ -= 1;
   } else {
@@ -69,8 +95,8 @@ int NormalMdUpdtCompActor::HandlerInitModelAndConstModel(const ActorMsg& msg) {
 
 int NormalMdUpdtCompActor::HandlerSendInitialModel(const ActorMsg& actor_msg) {
   CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kSendInitialModel);
-  pre_model_regst_ = GetCurWriteableRegst(model_regst_desc_id_);
-  AsyncSendRegstMsgToConsumer([&](Regst* regst) {
+  pre_model_regst_ = GetNaiveCurWriteable(model_regst_desc_id_);
+  AsyncSendNaiveProducedRegstMsgToConsumer([&](Regst* regst) {
     regst->set_model_version_id(next_model_version_id_);
     return true;
   });
