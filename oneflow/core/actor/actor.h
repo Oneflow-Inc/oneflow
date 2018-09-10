@@ -94,6 +94,9 @@ class Actor {
                   // area
   }
 
+  virtual bool ConsumedCtrlRegstValid(int64_t regst_desc_id) const { return true; }
+  virtual bool ProducedCtrlRegstValid(int64_t regst_desc_id) const { return true; }
+
   // Async Do on device_ctx_
   void AsyncLaunchKernel(const KernelCtx&, std::function<Regst*(int64_t)> Regst4RegstDescId);
   void AsyncLaunchKernel(const KernelCtx&);
@@ -138,7 +141,8 @@ class Actor {
   int ProcessWriteableCtrlRegstMsg(const ActorMsg& msg);
   int ProcessReadableCtrlRegstMsg(const ActorMsg& msg);
   void AsyncSendEORDMsgForAllProducedCtrlRegstDesc();
-  void AsyncSendCtrlRegstMsg();
+  void AsyncSendCtrlRegstMsgToProducer();
+  void AsyncSendCtrlRegstMsgToConsumer();
   int TryUpdtStateAsProducedRegst(Regst* regst);
   virtual void UpdtStateAsCustomizedProducedRegst(Regst* regst) { UNIMPLEMENTED(); }
   int64_t GetGlobalWorkStreamId() const;
