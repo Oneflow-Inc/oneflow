@@ -20,8 +20,7 @@ void ReduceSplitCompTaskNode::ProduceAllRegstsAndBindEdges() {
       }
     }
   }
-  std::sort(edge_infos.begin(), edge_infos.end(),
-            [](const EdgeInfo& lhs, const EdgeInfo& rhs) { return lhs.order < rhs.order; });
+  SortEdges(&edge_infos);
   FOR_RANGE(size_t, idx, 0, edge_infos.size()) {
     std::string out_regst_name = "out_" + std::to_string(idx);
     std::shared_ptr<RegstDesc> out_regst = ProduceRegst(out_regst_name, false, 1, 1);

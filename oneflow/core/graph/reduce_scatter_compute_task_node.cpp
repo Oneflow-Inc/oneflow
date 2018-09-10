@@ -11,8 +11,7 @@ void ReduceScatterCompTaskNode::ProduceAllRegstsAndBindEdges() {
     EdgeInfo edge_info = {edge, comp_task_nodes.front()->task_id()};
     edge_infos.push_back(edge_info);
   }
-  std::sort(edge_infos.begin(), edge_infos.end(),
-            [](const EdgeInfo& lhs, const EdgeInfo& rhs) { return lhs.order < rhs.order; });
+  SortEdges(&edge_infos);
   FOR_RANGE(int64_t, out_edge_index, 0, edge_infos.size()) {
     std::string out_regst_name = "out_" + std::to_string(out_edge_index);
     std::shared_ptr<RegstDesc> out_regst = ProduceRegst(out_regst_name, false, 1, 1);

@@ -16,8 +16,7 @@ void ReduceAddCompTaskNode::ConsumeAllRegsts() {
     EdgeInfo edge_info = {edge, pred_comp_task_nodes.front()->task_id()};
     edge_infos.push_back(edge_info);
   }
-  std::sort(edge_infos.begin(), edge_infos.end(),
-            [](const EdgeInfo& lhs, const EdgeInfo& rhs) { return lhs.order < rhs.order; });
+  SortEdges(&edge_infos);
   FOR_RANGE(int64_t, in_edge_index, 0, edge_infos.size()) {
     ConsumeRegst("in_" + std::to_string(in_edge_index),
                  edge_infos[in_edge_index].edge->GetSoleRegst());

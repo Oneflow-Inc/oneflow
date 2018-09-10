@@ -80,6 +80,10 @@ class ReduceCompTaskNodeIf {
     TaskEdge* edge;
     int64_t order;
   };
+  void SortEdges(std::vector<EdgeInfo>* edge_infos) {
+    std::sort((*edge_infos).begin(), (*edge_infos).end(),
+              [](const EdgeInfo& lhs, const EdgeInfo& rhs) { return lhs.order < rhs.order; });
+  }
 };
 
 int64_t InferRegstSize(const RegstDesc& regst);
