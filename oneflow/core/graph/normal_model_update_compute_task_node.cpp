@@ -43,7 +43,10 @@ void NormalMdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
 void NormalMdUpdtCompTaskNode::ConsumeAllRegsts() {
   if (!IsTrainable()) { return; }
   for (TaskEdge* edge : in_edges()) {
-    ConsumeRegst("model_diff_acc_" + NewUniqueId(), edge->GetSoleRegst());
+    auto regst_descs = edge->GetRegsts();
+    for (auto& regst_desc : regst_descs) {
+      ConsumeRegst("model_diff_acc_" + NewUniqueId(), regst_desc);
+    }
   }
 }
 

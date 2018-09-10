@@ -56,6 +56,7 @@ message OtherConf {
   optional uint64 rdma_mem_block_mbyte = 110 [default = 8];
   optional uint64 rdma_recv_msg_buf_mbyte = 111 [default = 6];
 
+  optional int64 reduce_group_size = 112 [default = 20];
   optional bool collect_act_event = 113 [default = false];
   optional bool enable_mem_sharing = 114 [default = true];
   optional bool use_ordered_allreduce_in_mdupdt = 115 [default = false];

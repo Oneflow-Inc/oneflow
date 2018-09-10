@@ -577,28 +577,72 @@ message TransposeOpConf {
   repeated int32 perm = 3;
 }
 
+message ReduceConcatOpConf {
+  required int32 in_num = 1;
+}
+
+message ReduceSplitOpConf {
+  required int32 out_num = 1;
+}
+
 message ReduceScatterOpConf {
   required int32 out_num = 1;
-};
+}
 
 message ReduceLocalAddOpConf {
   required int32 in_num = 1;
   required int32 out_num = 2;
-};
+}
 
 message ReduceGlobalAddOpConf {
-  repeated int64 in_parallel_ids = 1;
-};
+  required int32 in_num = 1;
+}
 
 message ReduceGatherOpConf {
   required int32 in_num = 1;
-};
+}
 
 message AccuracyOpConf {
   required string prediction = 1;
   required string label = 2;
   optional int32 top_k = 3 [default = 1];
   required string accuracy = 4;
+}
+
+message MatmulOpConf {
+  required string in = 1;
+  required string weight = 2;
+  optional string bias = 3;
+  required int32 units = 4;
+  required string out = 5;
+}
+
+message DotOpConf {
+  required string in = 1;
+  required string weight = 2;
+  optional string bias = 3;
+  required string out = 4;
+}
+
+message MultiplyOpConf {
+  required string in_0 = 1;
+  required string in_1 = 2;
+  required string out = 4;
+}
+
+enum Norm {
+  L1 = 1;
+  L2 = 2;
+}
+
+message HingeLossOpConf {
+  required string prediction = 1;
+  required string label = 2;
+  required string loss = 3;
+  optional LossReductionType reduction = 4 [default = kSumOverN];
+  optional float weight_scalar = 5 [default = 1.0];
+  optional string weight = 6;
+  optional Norm norm = 7[default = L1];
 }
 
 message OperatorConf {
@@ -635,6 +679,10 @@ message OperatorConf {
     Conv2DOpConf conv_2d_conf = 126;
     Conv3DOpConf conv_3d_conf = 127;
     TransposeOpConf transpose_conf = 128;
+    MatmulOpConf matmul_conf = 129;
+    DotOpConf dot_conf = 130;
+    MultiplyOpConf multiply_conf = 131;
+    HingeLossOpConf hinge_loss_conf = 132;
     DropoutOpConf dropout_conf = 140;
     AveragePooling1DOpConf average_pooling_1d_conf = 200;
     MaxPooling1DOpConf max_pooling_1d_conf = 201;
@@ -652,9 +700,11 @@ message OperatorConf {
     ReduceLocalAddOpConf reduce_local_add_conf = 401;
     ReduceGlobalAddOpConf reduce_global_add_conf = 402;
     ReduceGatherOpConf reduce_gather_conf = 403;
-    RecordLoadOpConf record_load_conf = 404;
-    AccuracyOpConf accuracy_conf=405;
-    AccuracyPrintOpConf accuracy_print_conf = 406;
+    ReduceConcatOpConf reduce_concat_conf = 404;
+    ReduceSplitOpConf reduce_split_conf = 405;
+    RecordLoadOpConf record_load_conf = 406;
+    AccuracyOpConf accuracy_conf = 407;
+    AccuracyPrintOpConf accuracy_print_conf = 408;
   }
 }
 
