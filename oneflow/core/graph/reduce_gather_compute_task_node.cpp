@@ -63,18 +63,10 @@ void ReduceGatherCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx* ctx
   // If not local gather
   if (global_add_on_in_edge.size()) {
     CHECK_EQ(global_add_on_in_edge.size(), 1);
-    TaskNode* global_add_copy_d2h = nullptr;
-    for (TaskEdge* out_edge : global_add_on_in_edge.front()->out_edges()) {
-      if (out_edge->dst_node()->GetTaskType() == TaskType::kCopyHd) {
-        global_add_copy_d2h = out_edge->dst_node();
-      }
-    }
-
-    for (TaskEdge* in_edge : this->in_edges()) {
-      if (in_edge->src_node()->GetTaskType() == TaskType::kCopyHd) {
-        global_add_copy_d2h->BuildCtrlRegstDesc(in_edge->src_node());
-      }
-    }
+    int64_t copy_node_num = consumed_regsts().size() - 1;
+    CompTaskNode* reduce_add_node = dynamic_cast<CompTaskNode*>(global_add_on_in_edge.front());
+    CHECK(reduce_add_node != nullptr);
+    BuildCtrlRegstBetweenReduceAddAndGather(reduce_add_node, this, copy_node_num);
   }
 }
 

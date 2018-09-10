@@ -409,9 +409,11 @@ bool Actor::IsReadReady() {
   return naive_consumed_data_rs_.IsCurSlotReady() && IsCustomizedReadReady();
 }
 
-bool Actor::IsCtrlReady() {
+bool Actor::IsCustomizedCtrlReady() {
   return writeable_produced_ctrl_rs_.IsCurSlotReady() && consumed_ctrl_rs_.IsCurSlotReady();
 }
+
+bool Actor::IsCtrlReady() { return IsCustomizedCtrlReady(); }
 
 int Actor::ProcessWriteableCtrlRegstMsg(const ActorMsg& msg) {
   Regst* regst = msg.regst();
@@ -427,7 +429,7 @@ int Actor::ProcessWriteableCtrlRegstMsg(const ActorMsg& msg) {
 
   int64_t& expected_act_id = produced_ctrl_regst2expected_act_id_[regst->regst_desc_id()];
   if (expected_act_id >= 0 && CheckOutputActId(regst->regst_desc_id())) {
-    CHECK_EQ(regst->act_id(), expected_act_id);
+    // CHECK_EQ(regst->act_id(), expected_act_id);
   }
   expected_act_id = regst->act_id() + ActNumForEachOutput(regst->regst_desc_id());
   return 0;
@@ -467,7 +469,12 @@ void Actor::AsyncSendCtrlRegstMsgToProducer() {
 
 void Actor::AsyncSendCtrlRegstMsgToConsumer() {
   auto IsChosenRegstDescId = [&](int64_t regst_desc_id) {
-    return ProducedCtrlRegstValid(regst_desc_id);
+    Regst* regst = writeable_produced_ctrl_rs_.Front(regst_desc_id);
+    if (regst) {
+      return ProducedCtrlRegstValid(regst);
+    } else {
+      return false;
+    }
   };
   std::vector<int64_t> regst_desc_ids;
   writeable_produced_ctrl_rs_.ForChosenRegstDeq(

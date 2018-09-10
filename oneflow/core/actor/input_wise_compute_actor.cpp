@@ -87,6 +87,7 @@ void InputWiseCompActor::UpdateMemberStatusAfterAct() {
   if (regst_q.empty()) { readable_regst_desc_cnt_ -= 1; }
   regst_desc_id2is_processed_.at(cur_processed_regst_desc_id_) = true;
   processed_regst_desc_id_cnt_ += 1;
+  just_processed_regst_desc_id_ = cur_processed_regst_desc_id_;
   cur_processed_regst_desc_id_ = -1;
   VirtualUpdateMemberStatusAfterAct();
 }
@@ -110,6 +111,20 @@ void InputWiseCompActor::AsyncReturnAllCustomizedReadableRegst() {
   CHECK_EQ(0, readable_regst_desc_cnt_);
 }
 
-bool InputWiseCompActor::ProducedCtrlRegstValid(int64_t regst_desc_id) const { return true; }
+bool InputWiseCompActor::ProducedCtrlRegstValid(const Regst* regst) const {
+  const RtRegstDesc* rt_regst_desc = regst->regst_desc();
+  const RegstDescTypeProto& regst_desc_type_proto = rt_regst_desc->regst_desc_type();
+  CHECK(regst_desc_type_proto.has_ctrl_regst_desc());
+  const CtrlRegstDesc& ctrl_regst_desc = regst_desc_type_proto.ctrl_regst_desc();
+  if (ctrl_regst_desc.has_reliant_regst_desc_id()) {
+    if (ctrl_regst_desc.reliant_regst_desc_id() == just_processed_regst_desc_id_) {
+      return true;
+    } else {
+      return false;
+    }
+  } else {
+    return true;
+  }
+}
 
 }  // namespace oneflow
