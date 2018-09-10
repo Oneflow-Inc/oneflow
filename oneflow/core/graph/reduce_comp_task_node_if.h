@@ -12,7 +12,7 @@ class ReduceMemSharingCtx final {
       : mem_size_(mem_size), mem_shared_id_(mem_shared_id), dims_({1}) {}
   ~ReduceMemSharingCtx() = default;
 
-  void EnableMemSharing4Regst(RegstDesc* regst, int64_t offset) {
+  void EnableMemSharing4Regst(RegstDesc* regst, int64_t offset) const {
     regst->set_enable_mem_sharing(true);
     regst->set_mem_shared_id(static_cast<int32_t>(mem_shared_id_));
     regst->set_mem_shared_offset(offset);
@@ -23,13 +23,13 @@ class ReduceMemSharingCtx final {
     dims_.push_back(size);
   }
 
-  int64_t Rank4ParallelId(int64_t parallel_id) {
+  int64_t Rank4ParallelId(int64_t parallel_id) const {
     int64_t rank = parallel_id;
     FOR_RANGE(size_t, i, 0, dims_.size() - 1) { rank /= dims_.at(i); }
     return rank % dims_.back();
   }
 
-  int64_t Offset4ParallelId(int64_t parallel_id) {
+  int64_t Offset4ParallelId(int64_t parallel_id) const {
     if (ReduceCount() == 1) {
       return 0;
     } else {
@@ -44,27 +44,27 @@ class ReduceMemSharingCtx final {
     dims_.pop_back();
   }
 
-  ReduceMemSharingCtx CtxIfGatherLast() {
+  ReduceMemSharingCtx CtxIfGatherLast() const {
     ReduceMemSharingCtx ctx = *this;
     ctx.Gather(dims_.back());
     return ctx;
   }
 
-  ReduceMemSharingCtx CtxIfScatter(int64_t size) {
+  ReduceMemSharingCtx CtxIfScatter(int64_t size) const {
     ReduceMemSharingCtx ctx = *this;
     ctx.Scatter(size);
     return ctx;
   }
 
-  int64_t ReduceCount() {
+  int64_t ReduceCount() const {
     int64_t cnt = 1;
     for (const int64_t dim : dims_) { cnt *= dim; }
     return cnt;
   }
 
-  int64_t LastCount() { return dims_.back(); }
+  int64_t LastCount() const { return dims_.back(); }
 
-  int64_t ReduceSize() { return mem_size_ / ReduceCount(); }
+  int64_t ReduceSize() const { return mem_size_ / ReduceCount(); }
 
  private:
   int64_t mem_size_;
