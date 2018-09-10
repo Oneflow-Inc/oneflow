@@ -4,6 +4,57 @@
 
 namespace oneflow {
 
+namespace {
+
+template<typename T>
+void SetBBoxTargets(int32_t index, int32_t label, const MaxOverlapIndex<BoxesIndex<T>>& boxes,
+                    const GtBoxes& gt_boxes, const BBoxRegressionWeights& bbox_reg_ws,
+                    BBoxDelta<T>* bbox_targets) {
+  if (label == 1) {
+    const BBox<T>* box = boxes.bbox(index);
+    const BBox<float>* gt_box = gt_boxes.GetBBox<float>(boxes.max_overlap_gt_index(index));
+    bbox_targets[index].TransformInverse(box, gt_box, bbox_reg_ws);
+  } else {
+    bbox_targets[index].set_dx(0.f);
+    bbox_targets[index].set_dy(0.f);
+    bbox_targets[index].set_dw(0.f);
+    bbox_targets[index].set_dh(0.f);
+  }
+}
+
+template<typename T>
+void SetBBoxInsideWeights(int32_t index, int32_t label, BBoxWeights<T>* inside_weights) {
+  if (label == 1) {
+    inside_weights[index].set_weight_x(1.f);
+    inside_weights[index].set_weight_y(1.f);
+    inside_weights[index].set_weight_w(1.f);
+    inside_weights[index].set_weight_h(1.f);
+  } else {
+    inside_weights[index].set_weight_x(0.f);
+    inside_weights[index].set_weight_y(0.f);
+    inside_weights[index].set_weight_w(0.f);
+    inside_weights[index].set_weight_h(0.f);
+  }
+}
+
+template<typename T>
+void SetBBoxOutsideWeights(int32_t index, int32_t label, float reduction_coefficient,
+                           BBoxWeights<T>* outside_weights) {
+  if (label == 1 || label == 0) {
+    outside_weights[index].set_weight_x(reduction_coefficient);
+    outside_weights[index].set_weight_y(reduction_coefficient);
+    outside_weights[index].set_weight_w(reduction_coefficient);
+    outside_weights[index].set_weight_h(reduction_coefficient);
+  } else {
+    outside_weights[index].set_weight_x(0.f);
+    outside_weights[index].set_weight_y(0.f);
+    outside_weights[index].set_weight_w(0.f);
+    outside_weights[index].set_weight_h(0.f);
+  }
+}
+
+}  // namespace
+
 template<typename T>
 void AnchorTargetKernel<T>::InitConstBufBlobs(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
@@ -147,24 +198,9 @@ void AnchorTargetKernel<T>::ComputeTargetsAndWriteOutput(
 
   FOR_RANGE(int32_t, i, 0, anchor_boxes.capacity()) {
     int32_t label = anchor_boxes.label(i);
-    if (label == 1) {
-      const BBox<T>* anchor_box = anchor_boxes.bbox(i);
-      const BBox<float>* gt_box = gt_boxes.GetBBox<float>(anchor_boxes.max_overlap_gt_index(i));
-      bbox_target[i].TransformInverse(anchor_box, gt_box, bbox_reg_ws);
-      inside_weights[i].set_weight_x(1.0);
-      inside_weights[i].set_weight_y(1.0);
-      inside_weights[i].set_weight_w(1.0);
-      inside_weights[i].set_weight_h(1.0);
-      outside_weights[i].set_weight_x(reduction_coefficient);
-      outside_weights[i].set_weight_y(reduction_coefficient);
-      outside_weights[i].set_weight_w(reduction_coefficient);
-      outside_weights[i].set_weight_h(reduction_coefficient);
-    } else {
-      inside_weights[i].set_weight_x(0.0);
-      inside_weights[i].set_weight_y(0.0);
-      inside_weights[i].set_weight_w(0.0);
-      inside_weights[i].set_weight_h(0.0);
-    }
+    SetBBoxTargets(i, label, anchor_boxes, gt_boxes, bbox_reg_ws, bbox_target);
+    SetBBoxInsideWeights(i, label, inside_weights);
+    SetBBoxOutsideWeights(i, label, reduction_coefficient, outside_weights);
   }
 }
 
