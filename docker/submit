@@ -12,6 +12,8 @@ machine{
     addr: "$addr"
     port: $port
     port_map: $port_map
+    epoll_port: $epoll_port
+    epoll_port_map: $epoll_port_map
     name: "$name"
 }
 """)
@@ -90,6 +92,8 @@ def generate():
                     "addr": machine_info[0],
                     "port": 10001,
                     "port_map": machine_info[1],
+                    "epoll_port": 10002,
+                    "epoll_port_map": machine_info[2]
                     "name": x
                 })
             )

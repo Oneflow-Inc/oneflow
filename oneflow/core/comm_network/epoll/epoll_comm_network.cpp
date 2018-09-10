@@ -9,11 +9,17 @@ namespace oneflow {
 namespace {
 
 sockaddr_in GetSockAddr(int64_t machine_id, uint16_t port) {
-  const std::string& br_addr = "0.0.0.0";
+  int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
+  std::string addr;
+  if (machine_id == this_machine_id) {
+    addr = "0.0.0.0";
+  } else {
+    addr = Global<JobDesc>::Get()->resource().machine(machine_id).addr();
+  }
   sockaddr_in sa;
   sa.sin_family = AF_INET;
   sa.sin_port = htons(port);
-  PCHECK(inet_pton(AF_INET, br_addr.c_str(), &(sa.sin_addr)) == 1);
+  PCHECK(inet_pton(AF_INET, addr.c_str(), &(sa.sin_addr)) == 1);
   return sa;
 }
 
@@ -97,8 +103,6 @@ void EpollCommNet::InitSockets() {
   const Machine& this_machine = Global<JobDesc>::Get()->resource().machine(this_machine_id);
   if (this_machine.epoll_port() != 0) {
     // xxx
-    LOG(INFO) << "DDDDDD ====>"
-              << " in epoll port map";
     uint16_t this_listen_port = this_machine.epoll_port();
     sockaddr_in this_sockaddr = GetSockAddr(this_machine_id, this_listen_port);
     int bind_result =
@@ -135,7 +139,13 @@ void EpollCommNet::InitSockets() {
       ++src_machine_count;
       continue;
     }
-    uint16_t peer_port = PullPort(peer_id);
+    uint16_t peer_port;
+    const Machine& peer_machine = Global<JobDesc>::Get()->resource().machine(peer_id);
+    if (peer_machine.epoll_port_map() && peer_machine.epoll_port_map() == PullPort(peer_id)) {
+      peer_port = peer_machine.epoll_port_map();
+    } else {
+      peer_port = PullPort(peer_id);
+    }
     sockaddr_in peer_sockaddr = GetSockAddr(peer_id, peer_port);
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     PCHECK(connect(sockfd, reinterpret_cast<sockaddr*>(&peer_sockaddr), sizeof(peer_sockaddr))
