@@ -110,4 +110,6 @@ void InputWiseCompActor::AsyncReturnAllCustomizedReadableRegst() {
   CHECK_EQ(0, readable_regst_desc_cnt_);
 }
 
+bool InputWiseCompActor::ProducedCtrlRegstValid(int64_t regst_desc_id) const { return true; }
+
 }  // namespace oneflow
