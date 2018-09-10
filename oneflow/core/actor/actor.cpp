@@ -452,8 +452,8 @@ void Actor::AsyncSendCtrlRegstMsgToProducer() {
     CHECK_GE(returned_regst_num, 1);
     CHECK_GE(reg_deq.size(), returned_regst_num);
 
-    while (returned_regst_num--) {
-      Regst* regst = reg_deq.front();
+    for (size_t i = 0; i < returned_regst_num; ++i) {
+      Regst* regst = reg_deq.at(i);
       AsyncSendMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, regst->producer_actor_id(), regst));
       regst_desc_ids.push_back(regst->regst_desc_id());
     }
