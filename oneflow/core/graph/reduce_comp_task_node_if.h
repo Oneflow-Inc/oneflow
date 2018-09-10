@@ -76,6 +76,8 @@ class ReduceCompTaskNodeIf {
  public:
   virtual ~ReduceCompTaskNodeIf() = default;
   virtual void EnableMemSharingInReduce(ReduceMemSharingCtx*) = 0;
+
+ protected:
   struct EdgeInfo {
     TaskEdge* edge;
     int64_t order;
