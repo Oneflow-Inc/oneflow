@@ -49,7 +49,6 @@ ExternalProject_Add(grpc
         -DPROTOBUF_INCLUDE_DIRS:STRING=${PROTOBUF_SRC_DIR}
         -DPROTOBUF_LIBRARIES:STRING=${protobuf_STATIC_LIBRARIES}
         -DZLIB_INCLUDE_DIRS:STRING=${ZLIB_INCLUDE_DIR}
-:-41
 )
 
 add_custom_target(grpc_create_header_dir
