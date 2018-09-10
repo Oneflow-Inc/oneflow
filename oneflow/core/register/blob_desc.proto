@@ -13,8 +13,8 @@ message BlobHeaderDescProto {
   required int32 max_col_num = 1;
   required int32 blob_mem_id = 2;
   oneof header_type {
-    FieldDescProto opaque_header = 5;
-    FieldHeaderDesc field_header = 6;
+    FieldDescProto opaque_header = 3;
+    FieldHeaderDesc field_header = 4;
   }
 }
 

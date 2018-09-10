@@ -104,8 +104,8 @@ void BlobDesc::ToProto(BlobDescProto* proto) const {
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
   return header_is_opaque_ == rhs.header_is_opaque_ && opaque_header_ == rhs.opaque_header_
          && has_data_id_ == rhs.has_data_id_ && has_col_num_ == rhs.has_col_num_
-         && max_col_num_ == rhs.max_col_num_ && blob_mem_id_ == rhs.blob_mem_id_
-         && body_field_ == rhs.body_field_;
+         && has_instance_num_ == rhs.has_instance_num_ && max_col_num_ == rhs.max_col_num_
+         && blob_mem_id_ == rhs.blob_mem_id_ && body_field_ == rhs.body_field_;
 }
 
 BlobDesc& BlobDesc::operator=(const BlobDesc& blob_desc) {
@@ -113,6 +113,7 @@ BlobDesc& BlobDesc::operator=(const BlobDesc& blob_desc) {
   opaque_header_ = blob_desc.opaque_header_;
   has_data_id_ = blob_desc.has_data_id_;
   has_col_num_ = blob_desc.has_col_num_;
+  has_instance_num_ = blob_desc.has_instance_num_;
   max_col_num_ = blob_desc.max_col_num_;
   body_field_ = blob_desc.body_field_;
   blob_mem_id_ = -1;
@@ -123,6 +124,9 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     const HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>& lbi2blob_desc) {
   int64_t header_byte_size = 0;
   int64_t body_byte_size = 0;
+  // bool has_data_id = false;
+  // bool has_col_num = false;
+  // bool has_instance_num = false;
   HashSet<int> data_type_set;
   int32_t max_col_num = -1;
   int32_t blob_desc_cnt = 0;
@@ -135,6 +139,9 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     RtBlobDesc rt_blob_desc(*blob_desc);
     header_byte_size += rt_blob_desc.ByteSizeOfBlobHeader();
     int64_t cur_body_byte_size = rt_blob_desc.ByteSizeOfBlobBody();
+    // if (blob_desc->has_data_id_field()) { has_data_id = true; }
+    // if (blob_desc->has_col_num_field()) { has_col_num = true; }
+    // if (blob_desc->has_instance_num_field()) { has_col_num = true; }
     int32_t blob_mem_id = blob_desc->blob_mem_id();
     if (blob_mem_id == -1) {
       body_byte_size += cur_body_byte_size;
@@ -171,6 +178,8 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     } else {
       ret.reset(
           new BlobDesc(header_byte_size, Shape({total_elem_cnt}), sole_data_type, max_col_num));
+      // ret.reset(new BlobDesc(Shape({total_elem_cnt}), sole_data_type, has_data_id, has_col_num,
+      //                        has_instance_num, max_col_num));
     }
   } else {
     ret.reset(

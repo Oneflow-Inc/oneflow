@@ -61,15 +61,15 @@ void LossCompTaskNode::BuildRegstWhenTraining() {
   loss_node->BindBnWithRegst("loss", data_tmp_regst);
   loss_node->InferBlobDescs(parallel_ctx());
   // copy prediction_blob_desc to prediction_diff_blob_desc and set instance_num if necessary
+  bool has_instance_num = false;
   for (std::shared_ptr<RegstDesc> regst : GetConsumedRegst("in")) {
     out_regst->CopyBlobDescWithoutAddLbi(regst.get());
     const BlobDesc* label_blob_desc = regst->GetBlobDesc(loss_op->BnInOp2Lbi("label"));
-    if (label_blob_desc && label_blob_desc->has_instance_num_field()) {
-      BlobDesc* prediction_diff_blob_desc =
-          out_regst->MutBlobDesc(loss_op->BnInOp2Lbi(GenDiffBn("prediction")));
-      prediction_diff_blob_desc->set_has_instance_num_field(true);
-    }
+    if (label_blob_desc && label_blob_desc->has_instance_num_field()) { has_instance_num = true; }
   }
+  BlobDesc* prediction_diff_blob_desc =
+      out_regst->MutBlobDesc(loss_op->BnInOp2Lbi(GenDiffBn("prediction")));
+  prediction_diff_blob_desc->set_has_instance_num_field(has_instance_num);
 
   std::shared_ptr<const Operator> sum_op = op_vec[1];
   ExecNode* sum_node = mut_exec_gph().NewNode();
