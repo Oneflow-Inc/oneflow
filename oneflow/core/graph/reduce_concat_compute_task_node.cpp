@@ -8,10 +8,6 @@ void ReduceConcatCompTaskNode::ProduceAllRegstsAndBindEdges() {
 }
 
 void ReduceConcatCompTaskNode::ConsumeAllRegsts() {
-  struct EdgeInfo {
-    int64_t bw_node_order;
-    TaskEdge* edge;
-  };
   std::vector<EdgeInfo> edge_infos;
   for (TaskEdge* edge : in_edges()) {
     TaskNode* src_node = edge->src_node();
@@ -19,12 +15,11 @@ void ReduceConcatCompTaskNode::ConsumeAllRegsts() {
       src_node = src_node->SoleInEdge()->src_node();
     }
     CompTaskNode* bw_node = dynamic_cast<CompTaskNode*>(src_node);
-    EdgeInfo edge_info{bw_node->order_in_graph(), edge};
+    EdgeInfo edge_info{edge, bw_node->order_in_graph()};
     edge_infos.emplace_back(edge_info);
   }
-  std::sort(edge_infos.begin(), edge_infos.end(), [](const EdgeInfo& lhs, const EdgeInfo& rhs) {
-    return lhs.bw_node_order < rhs.bw_node_order;
-  });
+  std::sort(edge_infos.begin(), edge_infos.end(),
+            [](const EdgeInfo& lhs, const EdgeInfo& rhs) { return lhs.order < rhs.order; });
   FOR_RANGE(size_t, idx, 0, edge_infos.size()) {
     ConsumeRegst("in_" + std::to_string(idx), edge_infos[idx].edge->GetSoleRegst());
   }

@@ -4,22 +4,15 @@
 namespace oneflow {
 
 void ReduceScatterCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  struct EdgeInfo {
-    TaskEdge* edge;
-    int64_t parallel_id;
-  };
-
   std::vector<EdgeInfo> edge_infos;
   for (TaskEdge* edge : out_edges()) {
     std::vector<CompTaskNode*> comp_task_nodes = GetSuccCompTaskNodesOnEdge(edge);
     CHECK_EQ(comp_task_nodes.size(), 1);
-    int64_t out_parallel_id = comp_task_nodes.front()->parallel_ctx()->parallel_id();
-    EdgeInfo edge_info = {edge, out_parallel_id};
+    EdgeInfo edge_info = {edge, comp_task_nodes.front()->task_id()};
     edge_infos.push_back(edge_info);
   }
-  std::sort(edge_infos.begin(), edge_infos.end(), [](const EdgeInfo& lhs, const EdgeInfo& rhs) {
-    return lhs.parallel_id < rhs.parallel_id;
-  });
+  std::sort(edge_infos.begin(), edge_infos.end(),
+            [](const EdgeInfo& lhs, const EdgeInfo& rhs) { return lhs.order < rhs.order; });
   FOR_RANGE(int64_t, out_edge_index, 0, edge_infos.size()) {
     std::string out_regst_name = "out_" + std::to_string(out_edge_index);
     std::shared_ptr<RegstDesc> out_regst = ProduceRegst(out_regst_name, false, 1, 1);

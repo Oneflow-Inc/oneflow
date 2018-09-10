@@ -6,10 +6,6 @@
 namespace oneflow {
 
 void ReduceSplitCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  struct EdgeInfo {
-    int64_t bw_node_order;
-    TaskEdge* edge;
-  };
   std::vector<EdgeInfo> edge_infos;
   for (TaskEdge* edge : out_edges()) {
     TaskNode* dst_node = edge->dst_node();
@@ -19,14 +15,13 @@ void ReduceSplitCompTaskNode::ProduceAllRegstsAndBindEdges() {
       if (IsBackwardTaskType(mdupdt_edge->dst_node()->GetTaskType())) {
         CompTaskNode* bw_node = dynamic_cast<CompTaskNode*>(mdupdt_edge->dst_node());
         // There may be multiple out_regsts on the same edge for shared_model app
-        EdgeInfo edge_info{bw_node->order_in_graph(), edge};
+        EdgeInfo edge_info{edge, bw_node->order_in_graph()};
         edge_infos.emplace_back(edge_info);
       }
     }
   }
-  std::sort(edge_infos.begin(), edge_infos.end(), [](const EdgeInfo& lhs, const EdgeInfo& rhs) {
-    return lhs.bw_node_order < rhs.bw_node_order;
-  });
+  std::sort(edge_infos.begin(), edge_infos.end(),
+            [](const EdgeInfo& lhs, const EdgeInfo& rhs) { return lhs.order < rhs.order; });
   FOR_RANGE(size_t, idx, 0, edge_infos.size()) {
     std::string out_regst_name = "out_" + std::to_string(idx);
     std::shared_ptr<RegstDesc> out_regst = ProduceRegst(out_regst_name, false, 1, 1);

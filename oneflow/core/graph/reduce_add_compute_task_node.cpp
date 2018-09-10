@@ -9,22 +9,15 @@ void ReduceAddCompTaskNode::ProduceAllRegstsAndBindEdges() {
 }
 
 void ReduceAddCompTaskNode::ConsumeAllRegsts() {
-  struct EdgeInfo {
-    TaskEdge* edge;
-    int64_t parallel_id;
-  };
-
   std::vector<EdgeInfo> edge_infos;
   for (TaskEdge* edge : in_edges()) {
     std::vector<CompTaskNode*> pred_comp_task_nodes = GetPredCompTaskNodesOnEdge(edge);
     CHECK_EQ(pred_comp_task_nodes.size(), 1);
-    int64_t in_parallel_id = pred_comp_task_nodes.front()->parallel_id();
-    EdgeInfo edge_info = {edge, in_parallel_id};
+    EdgeInfo edge_info = {edge, pred_comp_task_nodes.front()->task_id()};
     edge_infos.push_back(edge_info);
   }
-  std::sort(edge_infos.begin(), edge_infos.end(), [](const EdgeInfo& lhs, const EdgeInfo& rhs) {
-    return lhs.parallel_id < rhs.parallel_id;
-  });
+  std::sort(edge_infos.begin(), edge_infos.end(),
+            [](const EdgeInfo& lhs, const EdgeInfo& rhs) { return lhs.order < rhs.order; });
   FOR_RANGE(int64_t, in_edge_index, 0, edge_infos.size()) {
     ConsumeRegst("in_" + std::to_string(in_edge_index),
                  edge_infos[in_edge_index].edge->GetSoleRegst());

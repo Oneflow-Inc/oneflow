@@ -76,6 +76,10 @@ class ReduceCompTaskNodeIf {
  public:
   virtual ~ReduceCompTaskNodeIf() = default;
   virtual void EnableMemSharingInReduce(ReduceMemSharingCtx*) = 0;
+  struct EdgeInfo {
+    TaskEdge* edge;
+    int64_t order;
+  };
 };
 
 int64_t InferRegstSize(const RegstDesc& regst);
