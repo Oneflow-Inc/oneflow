@@ -73,14 +73,12 @@ void ProposalTargetKernel<T>::ClearOutputBlob(
   Blob* bbox_targets_blob = BnInOp2Blob("bbox_targets");
   Blob* bbox_inside_weights_blob = BnInOp2Blob("bbox_inside_weights");
   Blob* bbox_outside_weights_blob = BnInOp2Blob("bbox_outside_weights");
-  std::memset(rois_blob->mut_dptr<T>(), 0, rois_blob->shape().elem_cnt() * sizeof(T));
-  std::memset(labels_blob->mut_dptr<int32_t>(), 0,
-              labels_blob->shape().elem_cnt() * sizeof(int32_t));
-  std::memset(bbox_targets_blob->mut_dptr<T>(), 0,
-              bbox_targets_blob->shape().elem_cnt() * sizeof(T));
-  std::memset(bbox_inside_weights_blob->mut_dptr<T>(), 0,
+  std::memset(rois_blob->mut_dptr(), 0, rois_blob->shape().elem_cnt() * sizeof(T));
+  std::memset(labels_blob->mut_dptr(), 0, labels_blob->shape().elem_cnt() * sizeof(int32_t));
+  std::memset(bbox_targets_blob->mut_dptr(), 0, bbox_targets_blob->shape().elem_cnt() * sizeof(T));
+  std::memset(bbox_inside_weights_blob->mut_dptr(), 0,
               bbox_inside_weights_blob->shape().elem_cnt() * sizeof(T));
-  std::memset(bbox_outside_weights_blob->mut_dptr<T>(), 0,
+  std::memset(bbox_outside_weights_blob->mut_dptr(), 0,
               bbox_outside_weights_blob->shape().elem_cnt() * sizeof(T));
 }
 
