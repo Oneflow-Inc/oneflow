@@ -100,6 +100,7 @@ int NormalMdUpdtCompActor::HandlerSendInitialModel(const ActorMsg& actor_msg) {
     regst->set_model_version_id(next_model_version_id_);
     return true;
   });
+  AsyncSendCustomizedProducedRegstMsgToConsumer();
   next_model_version_id_ += 1;
   if (model_regst_desc_id_ != -1) {
     OF_SET_MSG_HANDLER(&NormalMdUpdtCompActor::HandlerNormal);
