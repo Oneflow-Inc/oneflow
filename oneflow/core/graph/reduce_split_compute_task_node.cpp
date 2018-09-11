@@ -82,7 +82,7 @@ void ReduceSplitCompTaskNode::FixPackedBlobDescOfProducedRegst() {
 }
 
 void ReduceSplitCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx* ctx) {
-  CHECK_EQ(ctx->ReduceCount(), 1);
+  CHECK_EQ(ctx->TotalSegmentCount(), 1);
   size_t split_num = produced_regsts().size();
   int64_t offset = 0;
   FOR_RANGE(int32_t, idx, 0, split_num) {

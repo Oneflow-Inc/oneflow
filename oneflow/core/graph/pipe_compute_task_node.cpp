@@ -1,15 +1,15 @@
-#include "oneflow/core/graph/poor_compute_task_node.h"
+#include "oneflow/core/graph/pipe_compute_task_node.h"
 #include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
-void PoorCompTaskNode::ProduceAllRegstsAndBindEdges() {
+void PipeCompTaskNode::ProduceAllRegstsAndBindEdges() {
   this->SoleOutEdge()->AddRegst("out", ProduceRegst("out", false, 1, 1));
 }
 
-void PoorCompTaskNode::ConsumeAllRegsts() { ConsumeRegst("in", SoleInEdge()->GetSoleRegst()); }
+void PipeCompTaskNode::ConsumeAllRegsts() { ConsumeRegst("in", SoleInEdge()->GetSoleRegst()); }
 
-void PoorCompTaskNode::BuildExecGphAndRegst() {
+void PipeCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   std::shared_ptr<Operator> sole_op = this->logical_node()->SoleOp();
   node->mut_op() = sole_op;

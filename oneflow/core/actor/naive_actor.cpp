@@ -11,8 +11,4 @@ void NaiveActor::Act() {
   });
 }
 
-REGISTER_ACTOR(TaskType::kNcclAllReduce, NaiveActor);
-REGISTER_ACTOR(TaskType::kNcclReduceScatter, NaiveActor);
-REGISTER_ACTOR(TaskType::kNcclAllGather, NaiveActor);
-
 }  // namespace oneflow

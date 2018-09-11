@@ -20,25 +20,25 @@ NcclCommMgr::NcclCommMgr(const Plan& plan) {
   }
 
   for (const auto& pair : parallel_set2nccl_task_ids) {
-    std::vector<std::pair<int64_t, int>> task_id_device_id(pair.second.size());
+    std::vector<std::pair<int64_t, int32_t>> task_id_device_id(pair.second.size());
     for (size_t i = 0; i < pair.second.size(); ++i) {
       int64_t task_id = pair.second.at(i);
       int64_t thrd_id = Global<IDMgr>::Get()->ThrdId4ActorId(task_id);
-      int32_t device_id = (int)Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id);
+      int32_t device_id = (int32_t)Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id);
       task_id_device_id[i] = {task_id, device_id};
     }
 
     std::sort(task_id_device_id.begin(), task_id_device_id.end(),
-              [](const std::pair<int64_t, int>& a, const std::pair<int64_t, int>& b) {
+              [](const std::pair<int64_t, int32_t>& a, const std::pair<int64_t, int32_t>& b) {
                 return a.first < b.first;
               });
 
     std::vector<ncclComm_t> comms(task_id_device_id.size());
-    std::vector<int> devices(task_id_device_id.size());
+    std::vector<int32_t> devices(task_id_device_id.size());
     for (size_t i = 0; i < task_id_device_id.size(); ++i) {
       devices[i] = task_id_device_id.at(i).second;
     }
-    NcclCheck(ncclCommInitAll(comms.data(), (int)devices.size(), devices.data()));
+    NcclCheck(ncclCommInitAll(comms.data(), (int32_t)devices.size(), devices.data()));
     for (size_t i = 0; i < task_id_device_id.size(); ++i) {
       CHECK(actor_id2comm_.emplace(task_id_device_id.at(i).first, comms.at(i)).second);
       int32_t device;

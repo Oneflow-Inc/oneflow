@@ -9,67 +9,70 @@ namespace oneflow {
 class ReduceMemSharingCtx final {
  public:
   ReduceMemSharingCtx(int64_t mem_size, int64_t mem_shared_id)
-      : mem_size_(mem_size), mem_shared_id_(mem_shared_id), dims_({1}) {}
+      : mem_size_(mem_size), mem_shared_id_(mem_shared_id), scatter_segment_counts_({1}) {}
   ~ReduceMemSharingCtx() = default;
 
-  void EnableMemSharing4Regst(RegstDesc* regst, int64_t offset) {
+  void EnableMemSharing4Regst(RegstDesc* regst, int64_t offset) const {
     regst->set_enable_mem_sharing(true);
     regst->set_mem_shared_id(static_cast<int32_t>(mem_shared_id_));
     regst->set_mem_shared_offset(offset);
   }
 
-  void Scatter(int64_t size) {
-    CHECK_EQ(ReduceSize() % size, 0);
-    dims_.push_back(size);
+  void DoScatter(int64_t size) {
+    CHECK_EQ(StageSegmentSize() % size, 0);
+    scatter_segment_counts_.push_back(size);
   }
 
-  int64_t Rank4ParallelId(int64_t parallel_id) {
+  int64_t StageRank4ParallelId(int64_t parallel_id) const {
     int64_t rank = parallel_id;
-    FOR_RANGE(size_t, i, 0, dims_.size() - 1) { rank /= dims_.at(i); }
-    return rank % dims_.back();
+    FOR_RANGE(size_t, i, 0, scatter_segment_counts_.size() - 1) {
+      rank /= scatter_segment_counts_.at(i);
+    }
+    return rank % scatter_segment_counts_.back();
   }
 
-  int64_t Offset4ParallelId(int64_t parallel_id) {
-    if (ReduceCount() == 1) {
+  int64_t Offset4ParallelId(int64_t parallel_id) const {
+    if (TotalSegmentCount() == 1) {
       return 0;
     } else {
-      ReduceMemSharingCtx if_gather = CtxIfGatherLast();
-      return if_gather.Offset4ParallelId(parallel_id) + Rank4ParallelId(parallel_id) * ReduceSize();
+      ReduceMemSharingCtx if_gather = CtxWithGather();
+      return if_gather.Offset4ParallelId(parallel_id)
+             + StageRank4ParallelId(parallel_id) * StageSegmentSize();
     }
   }
 
-  void Gather(int64_t size) {
-    CHECK_EQ(dims_.back(), size);
-    CHECK_GT(dims_.size(), 1);
-    dims_.pop_back();
+  void DoGather(int64_t size) {
+    CHECK_EQ(scatter_segment_counts_.back(), size);
+    CHECK_GT(scatter_segment_counts_.size(), 1);
+    scatter_segment_counts_.pop_back();
   }
 
-  ReduceMemSharingCtx CtxIfGatherLast() {
+  ReduceMemSharingCtx CtxWithGather() const {
     ReduceMemSharingCtx ctx = *this;
-    ctx.Gather(dims_.back());
+    ctx.DoGather(scatter_segment_counts_.back());
     return ctx;
   }
 
-  ReduceMemSharingCtx CtxIfScatter(int64_t size) {
+  ReduceMemSharingCtx CtxWithScatter(int64_t size) const {
     ReduceMemSharingCtx ctx = *this;
-    ctx.Scatter(size);
+    ctx.DoScatter(size);
     return ctx;
   }
 
-  int64_t ReduceCount() {
+  int64_t TotalSegmentCount() const {
     int64_t cnt = 1;
-    for (const int64_t dim : dims_) { cnt *= dim; }
+    for (const int64_t dim : scatter_segment_counts_) { cnt *= dim; }
     return cnt;
   }
 
-  int64_t LastCount() { return dims_.back(); }
+  int64_t StageSegmentCount() const { return scatter_segment_counts_.back(); }
 
-  int64_t ReduceSize() { return mem_size_ / ReduceCount(); }
+  int64_t StageSegmentSize() const { return mem_size_ / TotalSegmentCount(); }
 
  private:
   int64_t mem_size_;
   int64_t mem_shared_id_;
-  std::vector<int64_t> dims_;
+  std::vector<int64_t> scatter_segment_counts_;
 };
 
 class ReduceCompTaskNodeIf {

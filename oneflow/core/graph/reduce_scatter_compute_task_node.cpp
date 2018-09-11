@@ -47,7 +47,7 @@ void ReduceScatterCompTaskNode::BuildExecGphAndRegst() {
 
 void ReduceScatterCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx* ctx) {
   int64_t offset = ctx->Offset4ParallelId(parallel_id());
-  int64_t reduce_size = ctx->ReduceSize();
+  int64_t reduce_size = ctx->StageSegmentSize();
   int64_t scatter_count = produced_regsts().size();
   CHECK_EQ(reduce_size % scatter_count, 0);
   int64_t out_size = reduce_size / scatter_count;
@@ -55,7 +55,7 @@ void ReduceScatterCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx* ct
     RegstDesc* out = GetProducedRegst("out_" + std::to_string(i)).get();
     ctx->EnableMemSharing4Regst(out, offset + i * out_size);
   }
-  ctx->Scatter(scatter_count);
+  ctx->DoScatter(scatter_count);
   if (this->SoleInEdge()->src_node()->GetTaskType() == TaskType::kReduceConcat) { return; }
   ctx->EnableMemSharing4Regst(GetSoleConsumedRegst("in").get(), offset);
 }

@@ -43,18 +43,18 @@ void ReduceGatherCompTaskNode::BuildExecGphAndRegst() {
 }
 
 void ReduceGatherCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx* ctx) {
-  int64_t base_offset = ctx->CtxIfGatherLast().Offset4ParallelId(parallel_id());
-  int64_t rank = ctx->Rank4ParallelId(parallel_id());
+  int64_t base_offset = ctx->CtxWithGather().Offset4ParallelId(parallel_id());
+  int64_t rank = ctx->StageRank4ParallelId(parallel_id());
   ctx->EnableMemSharing4Regst(GetProducedRegst("out").get(), base_offset);
   for (const auto& kv : consumed_regsts()) {
     auto in_parallel_id = oneflow_cast<int64_t>(kv.first.substr(3));
     CHECK_EQ(1, kv.second.size());
     if (in_parallel_id == rank) { continue; }
     RegstDesc* regst = kv.second.front().get();
-    ctx->EnableMemSharing4Regst(regst, base_offset + in_parallel_id * ctx->ReduceSize());
+    ctx->EnableMemSharing4Regst(regst, base_offset + in_parallel_id * ctx->StageSegmentSize());
   }
 
-  ctx->Gather(ctx->LastCount());
+  ctx->DoGather(ctx->StageSegmentCount());
   std::vector<TaskNode*> global_add_on_in_edge;
   ForEachNodeOnInEdge([&](TaskNode* node) {
     if (node->GetTaskType() == kReduceAdd) { global_add_on_in_edge.push_back(node); }
