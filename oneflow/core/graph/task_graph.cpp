@@ -189,7 +189,7 @@ void TaskGraph::EnableMemSharingInReduceStruct() {
       has_enabled_nodes.insert(reduce_node);
     }
 
-    CHECK_EQ(ctx.ReduceCount(), 1);
+    CHECK_EQ(ctx.TotalSegmentCount(), 1);
   });
 }
 

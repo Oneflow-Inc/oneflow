@@ -3,7 +3,7 @@
 namespace oneflow {
 
 void NcclAllGatherCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx *ctx) {
-  ctx->Gather(ctx->LastCount());
+  ctx->DoGather(ctx->StageSegmentCount());
   ctx->EnableMemSharing4Regst(GetProducedRegst("out").get(), ctx->Offset4ParallelId(parallel_id()));
 }
 
