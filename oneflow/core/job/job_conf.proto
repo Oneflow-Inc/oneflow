@@ -38,6 +38,12 @@ message GlobalFSConf {
   }
 }
 
+enum SyntheticDataLevel {
+  kZero = 0;
+  kHost = 1;
+  kDevice = 2;
+}
+
 message OtherConf {
   required GlobalFSConf globalfs_conf = 1;
   required int64 piece_size = 2;
@@ -60,7 +66,8 @@ message OtherConf {
   optional bool collect_act_event = 113 [default = false];
   optional bool enable_mem_sharing = 114 [default = true];
   optional bool use_ordered_allreduce_in_mdupdt = 115 [default = false];
-  optional bool use_synthetic_data =  116 [default = false];
+  optional SyntheticDataLevel synthetic_data_level = 116 [default = kZero];
+  optional bool use_device_synthetic_data = 117 [default = false];
   optional bool enable_write_snapshot = 130 [default = true];
   optional bool enable_blob_mem_sharing = 140 [default = true];
 

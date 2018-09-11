@@ -106,7 +106,7 @@ Plan Compiler::DoCompile() {
   task_gph->AcyclicTopoForEachNode(
       [](TaskNode* node) { return node->GetTaskType() == kNormalMdUpdt; }, &TaskNode::Build);
   task_gph->RemoveEmptyRegsts();
-  task_gph->AddOrderingCtrlEdgeInSameChain();
+  task_gph->BuildCtrlRegstDescInSameChain();
   if (job_desc->IsTrain() && job_desc->enable_mem_sharing()) {
     task_gph->EnableMemSharingInReduceStruct();
   }

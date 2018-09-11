@@ -43,7 +43,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
   const char* TypeName() const override { return "TaskGraph"; }
   void RemoveEmptyRegsts();
-  void AddOrderingCtrlEdgeInSameChain();
+  void BuildCtrlRegstDescInSameChain();
 
   void EnableMemSharingInReduceStruct();
   void CollectReduceTaskNodes(std::unordered_set<ReduceTaskNodes, ReduceTaskNodesHasher>*) const;
@@ -99,7 +99,6 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
   void SetAreaIdForNewNodes(const LogicalNode* src_logical, const LogicalNode* dst_logical);
   void MergeChainAndSetOrderInGraphForEachNode();
-  void BuildCtrlRegstDescInSameChain();
 
   template<typename LogicalNodeType, typename TaskNodeType>
   void AddCtrlEdgeForReduceTaskNode(int64_t total_machine_num);

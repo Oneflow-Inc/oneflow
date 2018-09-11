@@ -41,7 +41,8 @@ void RecordLoadKernel::Forward(const KernelCtx& ctx,
   auto status = static_cast<RecordLoadStatus*>(ctx.other);
   Blob* out_blob = BnInOp2Blob("out");
   RecordBlob<OFRecord> record_blob(out_blob);
-  if (!Global<JobDesc>::Get()->use_synthetic_data() || loaded_cnt_ < 2) {
+  if (Global<JobDesc>::Get()->synthetic_data_level() == SyntheticDataLevel::kZero
+      || loaded_cnt_ < 2) {
     record_blob.ReadFrom(in_stream_.get());
     ++loaded_cnt_;
   }
