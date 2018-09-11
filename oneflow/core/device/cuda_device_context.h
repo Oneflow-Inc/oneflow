@@ -9,7 +9,7 @@ namespace oneflow {
 
 #ifdef WITH_CUDA
 
-class CudaDeviceCtx final : public DeviceCtx {
+class CudaDeviceCtx : public DeviceCtx {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaDeviceCtx);
   CudaDeviceCtx() = delete;
@@ -34,7 +34,7 @@ class CudaDeviceCtx final : public DeviceCtx {
     cuda_handler_->AddCallBack(callback);
   }
 
- private:
+ protected:
   CudaStreamHandle* cuda_handler_;
 };
 
