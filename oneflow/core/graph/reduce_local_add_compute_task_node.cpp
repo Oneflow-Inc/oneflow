@@ -4,17 +4,31 @@
 namespace oneflow {
 
 void ReduceLocalAddCompTaskNode::ProduceAllRegstsAndBindEdges() {
+  int64_t machine_num = logical_node()->parallel_desc()->sorted_machine_ids().size();
+  int64_t dev_num_of_each_machine = logical_node()->parallel_desc()->device_num_of_each_machine();
+  CHECK_EQ(out_edges().size(), machine_num);
   for (TaskEdge* edge : out_edges()) {
     std::vector<CompTaskNode*> succ_comp_task_nodes = GetSuccCompTaskNodesOnEdge(edge);
     CHECK_EQ(succ_comp_task_nodes.size(), 1);
-    std::string regst_name = "out_" + std::to_string(succ_comp_task_nodes.front()->machine_id());
+    int64_t out_parallel_id = succ_comp_task_nodes.front()->parallel_id();
+    int64_t out_machine_rank = out_parallel_id / dev_num_of_each_machine;
+    std::string regst_name = "out_" + std::to_string(out_machine_rank);
     std::shared_ptr<RegstDesc> out_regst = ProduceRegst(regst_name, false, 1, 1);
     edge->AddRegst(regst_name, out_regst);
   }
 }
 
 void ReduceLocalAddCompTaskNode::ConsumeAllRegsts() {
-  for (TaskEdge* edge : in_edges()) { ConsumeRegst("in", edge->GetSoleRegst()); }
+  int64_t dev_num_of_each_machine = logical_node()->parallel_desc()->device_num_of_each_machine();
+  for (TaskEdge* edge : in_edges()) {
+    TaskNode* src_node = edge->src_node();
+    while (src_node->GetTaskType() != TaskType::kReduceScatter) {
+      src_node = src_node->SoleInEdge()->src_node();
+    }
+    int64_t in_parallel_id = src_node->parallel_ctx()->parallel_id();
+    int64_t in_device_rank = in_parallel_id % dev_num_of_each_machine;
+    ConsumeRegst("in_" + std::to_string(in_device_rank), edge->GetSoleRegst());
+  }
 }
 
 void ReduceLocalAddCompTaskNode::BuildExecGphAndRegst() {
@@ -28,38 +42,18 @@ void ReduceLocalAddCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<Operator> reduce_local_add_op = ConstructOp(reduce_local_add_conf);
   node->mut_op() = reduce_local_add_op;
 
-  BindIbnWithInRegst();
+  FOR_RANGE(size_t, i, 0, reduce_local_add_op->input_bns().size()) {
+    std::string in_name = reduce_local_add_op->input_bns().Get(i);
+    std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst(in_name);
+    node->BindBnWithRegst(in_name, in_regst);
+  }
   FOR_RANGE(size_t, i, 0, reduce_local_add_op->output_bns().size()) {
-    std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out_" + std::to_string(i));
-    out_regst->AddLbi(reduce_local_add_op->BnInOp2Lbi(reduce_local_add_op->output_bns().Get(i)));
-    node->BindBnWithRegst(reduce_local_add_op->output_bns().Get(i), out_regst);
+    std::string out_name = reduce_local_add_op->output_bns().Get(i);
+    std::shared_ptr<RegstDesc> out_regst = GetProducedRegst(out_name);
+    out_regst->AddLbi(reduce_local_add_op->BnInOp2Lbi(out_name));
+    node->BindBnWithRegst(out_name, out_regst);
   }
   node->InferBlobDescs(parallel_ctx());
-}
-
-void ReduceLocalAddCompTaskNode::BindIbnWithInRegst() {
-  int64_t dev_num_of_each_machine = logical_node()->parallel_desc()->device_num_of_each_machine();
-  ExecNode* node = mut_exec_gph().SoleNode();
-  for (TaskEdge* edge : in_edges()) {
-    TaskNode* src_node = edge->src_node();
-    while (src_node->GetTaskType() != TaskType::kReduceScatter) {
-      src_node = src_node->SoleInEdge()->src_node();
-    }
-    int64_t parallel_id = src_node->parallel_ctx()->parallel_id();
-    int64_t src_dev_index_of_this_machine = parallel_id % dev_num_of_each_machine;
-
-    std::shared_ptr<RegstDesc> in_regst = edge->GetSoleRegst();
-    CHECK_EQ(1, in_regst->NumOfLbi());
-    int64_t index_of_lbi_in_scatter = -1;
-    in_regst->ForEachLbi([&index_of_lbi_in_scatter](const LogicalBlobId& lbi) {
-      index_of_lbi_in_scatter = oneflow_cast<int64_t>(lbi.blob_name().substr(4));
-    });
-    int64_t index_of_lbi_from_the_dev = index_of_lbi_in_scatter / dev_num_of_each_machine;
-
-    int64_t ibn_index =
-        index_of_lbi_from_the_dev * dev_num_of_each_machine + src_dev_index_of_this_machine;
-    node->BindBnWithRegst(node->op()->input_bns().Get(ibn_index), in_regst);
-  }
 }
 
 }  // namespace oneflow
