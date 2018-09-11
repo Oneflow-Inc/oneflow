@@ -31,6 +31,15 @@ void NormalForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   }
 }
 
+std::pair<bool, std::vector<std::string>> NormalForwardCompActor::GetNaiveProducedRegstDescName() {
+  HashSet<std::string> naive_names{
+      /*kNormalForward*/ "out", "activation", "data_tmp", "fw_buf",
+      "forward_model",
+      /*kLoss*/ "loss",         "out",        "data_tmp",
+      /*kAccuracy*/ "accuracy"};
+  return {false, std::vector<std::string>(naive_names.begin(), naive_names.end())};
+}
+
 bool NormalForwardCompActor::IsCustomizedWriteReady() {
   if (const_buf_regst_desc_id_ != -1) { CHECK(send_const_buf_regst_); }
   return true;

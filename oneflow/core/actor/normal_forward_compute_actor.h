@@ -21,9 +21,7 @@ class NormalForwardCompActor final : public CompActor {
   std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
     return {false, {"in"}};
   }
-  std::pair<bool, std::vector<std::string>> GetNaiveProducedRegstDescName() override {
-    return {false, {"out", "activation", "data_tmp", "fw_buf", "forward_model"}};
-  }
+  std::pair<bool, std::vector<std::string>> GetNaiveProducedRegstDescName() override;
   bool IsCustomizedWriteReady() override;
   void UpdtStateAsCustomizedProducedRegst(Regst* regst) override;
   void AsyncSendCustomizedProducedRegstMsgToConsumer() override;
