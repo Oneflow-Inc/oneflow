@@ -47,6 +47,7 @@ bool NormalForwardCompActor::IsCustomizedWriteReady() {
 
 void NormalForwardCompActor::UpdtStateAsCustomizedProducedRegst(Regst* regst) {
   CHECK_EQ(const_buf_regst_, regst);
+  const_buf_regst_ = nullptr;
   send_const_buf_regst_ = false;
 }
 
