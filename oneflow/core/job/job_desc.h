@@ -73,6 +73,8 @@ class JobDesc final {
  private:
   friend class Global<JobDesc>;
   JobDesc(const std::string& job_conf_filepath);
+  JobDesc(const JobConf1& job_conf);
+  void Init();
   void SplitDecodeOps();
   void AddRecordLoadOps();
 
