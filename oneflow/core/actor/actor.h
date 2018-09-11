@@ -106,7 +106,7 @@ class Actor {
   void AsyncSendNaiveProducedRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProcess);
   void AsyncSendNaiveProducedRegstMsgToConsumer(std::function<bool(int64_t)> IsAllowedActor);
   void AsyncSendNaiveProducedRegstMsgToConsumer();
-  virtual void AsyncSendCustomizedProducedRegstMsgToConsumer() {}
+  virtual void AsyncSendCustomizedProducedRegstMsgToConsumer() { UNIMPLEMENTED(); }
 
   void AsyncSendMsg(const ActorMsg&);
   void AsyncSendEORDMsgToConsumers(int64_t regst_desc_id);
