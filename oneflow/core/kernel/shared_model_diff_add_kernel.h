@@ -6,7 +6,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class SharedModelDiffAddKernel : public AddKernel {
+class SharedModelDiffAddKernel : public AddKernel<device_type, T> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SharedModelDiffAddKernel);
   SharedModelDiffAddKernel() = default;
@@ -14,13 +14,10 @@ class SharedModelDiffAddKernel : public AddKernel {
 
  private:
   const PbMessage& GetCustomizedOpConf() const override {
-    return this->op_conf().shared_model_diff_add_conf()
+    return this->op_conf().shared_model_diff_add_conf();
   }
 };
 
 }  // namespace oneflow
-
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSharedModelDiffAddConf, SharedModelDiffAddKernel,
-                           ARITHMETIC_DATA_TYPE_SEQ);
 
 #endif  // ONEFLOW_CORE_KERNEL_SHARED_MODEL_DIFF_ADD_KERNEL_H_
