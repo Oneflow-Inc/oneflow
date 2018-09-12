@@ -160,10 +160,8 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
                                 &BlobDesc::has_instance_num_field)) {
       kernel_conf->set_need_do_instance_num(true);
     }
-    if (IsLossOp()) {
-      if (HasBlobDescWithField(GetBlobDesc4BnInOp, input_bns(), &BlobDesc::has_col_num_field)) {
-        kernel_conf->set_need_do_col_num(true);
-      }
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, input_bns(), &BlobDesc::has_col_num_field)) {
+      kernel_conf->set_need_do_col_num(true);
     }
   }
 

@@ -47,7 +47,6 @@ void LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
     BlobDesc* reduction_blob_desc = GetBlobDesc4BnInOp("reduction_coefficient");
     reduction_blob_desc->mut_shape() = Shape({1});
     reduction_blob_desc->set_data_type(pred_blob_desc->data_type());
-    reduction_blob_desc->set_has_instance_num_field(label_blob_desc->has_instance_num_field());
   }
   VirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
