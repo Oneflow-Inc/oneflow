@@ -11,6 +11,7 @@ void ReduceLocalAddOp::InitFromOpConf() {
   FOR_RANGE(int32_t, i, 0, op_conf().reduce_local_add_conf().out_num()) {
     EnrollOutputBn("out_" + std::to_string(i), false);
   }
+  CHECK_GT(op_conf().reduce_local_add_conf().out_num(), 1);
 }
 
 const PbMessage& ReduceLocalAddOp::GetCustomizedConf() const {
@@ -34,9 +35,13 @@ void ReduceLocalAddOp::InferBlobDescs(
     CHECK(*first_in_blob == *GetBlobDesc4BnInOp(input_bns().Get(i)));
   }
 
-  FOR_RANGE(int32_t, i, 0, op_conf().reduce_local_add_conf().out_num()) {
+  int64_t model_elem_cnt = first_in_blob->shape().elem_cnt();
+  int32_t out_num = op_conf().reduce_local_add_conf().out_num();
+  CHECK_EQ(0, model_elem_cnt % out_num);
+  FOR_RANGE(int32_t, i, 0, out_num) {
     BlobDesc* out_blob_i = GetBlobDesc4BnInOp("out_" + std::to_string(i));
     *out_blob_i = *first_in_blob;
+    out_blob_i->mut_shape() = Shape({model_elem_cnt / out_num});
   }
 }
 
