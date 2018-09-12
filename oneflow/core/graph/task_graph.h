@@ -15,18 +15,21 @@ struct ReduceTaskNodes {
   CompTaskNode* local_add = nullptr;
   CompTaskNode* global_add = nullptr;
   CompTaskNode* gather = nullptr;
+  CompTaskNode* local_gather = nullptr;
   CompTaskNode* split = nullptr;
   bool operator==(const ReduceTaskNodes& rhs) const {
     return this->concat == rhs.concat && this->scatter == rhs.scatter
            && this->local_add == rhs.local_add && this->global_add == rhs.global_add
-           && this->gather == rhs.gather && this->split == rhs.split;
+           && this->gather == rhs.gather && this->local_gather == rhs.local_gather
+           && this->split == rhs.split;
   }
 };
 
 struct ReduceTaskNodesHasher {
   std::size_t operator()(const ReduceTaskNodes& key) const {
     return (size_t)(key.concat) ^ (size_t)(key.scatter) ^ (size_t)(key.local_add)
-           ^ (size_t)(key.global_add) ^ (size_t)(key.gather) ^ (size_t)(key.split);
+           ^ (size_t)(key.global_add) ^ (size_t)(key.gather) ^ (size_t)(key.local_gather)
+           ^ (size_t)(key.split);
   }
 };
 
@@ -66,6 +69,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceGlobalAdd);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGlobalAdd2ReduceGather);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGather2ReduceGather);
 
  private:
   void BuildTaskPath(
