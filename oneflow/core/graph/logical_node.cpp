@@ -200,6 +200,7 @@ void LogicalNode::GenSortedCompTaskNodes(
     std::function<void(CompTaskNode*)> Handler) const {
   int64_t parallel_idx = 0;
   int64_t parallel_num = parallel_desc_->parallel_num();
+  int64_t device_num_of_each_machine = parallel_desc_->device_num_of_each_machine();
   for (int64_t machine_id : parallel_desc_->sorted_machine_ids()) {
     for (int64_t dev_phy_id : parallel_desc_->sorted_dev_phy_ids(machine_id)) {
       CompTaskNode* comp_task_node = NewCompTaskNode();
@@ -241,6 +242,8 @@ void LogicalNode::GenSortedCompTaskNodes(
       comp_task_node->set_logical_node(this);
       comp_task_node->mut_parallel_ctx()->set_parallel_id(parallel_idx++);
       comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);
+      comp_task_node->mut_parallel_ctx()->set_device_num_of_each_machine(
+          device_num_of_each_machine);
       comp_task_node->mut_parallel_ctx()->set_policy(parallel_desc_->policy());
       FixCompTaskNode(comp_task_node);
       Handler(comp_task_node);
@@ -365,6 +368,9 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceLocalAdd"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGlobalAdd"
                               "ReduceGather",
                               &TaskGraph::BldSubTskGphByReduceGlobalAdd2ReduceGather);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
+                              "ReduceGather",
+                              &TaskGraph::BldSubTskGphByReduceGather2ReduceGather);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
                               "NormalMdUpdt",
                               &TaskGraph::BldSubTskGphByOneToOne);
