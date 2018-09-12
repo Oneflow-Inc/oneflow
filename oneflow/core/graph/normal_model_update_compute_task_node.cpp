@@ -58,7 +58,8 @@ bool NormalMdUpdtCompTaskNode::IsReadyForBuild() {
 void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
   if (!IsTrainable()) { return; }
   const auto& op_vec = logical_node()->op_vec();
-  CHECK_EQ(op_vec.size(), 1);  // only shared_model_diff_add_op in op_vec now
+  for (auto& op : op_vec) { std::cout << op->op_name() << std::endl; }
+  // TODO(shiyuan) CHECK_EQ(op_vec.size(), 1);  // only shared_model_diff_add_op in op_vec now
   ExecNode* shared_model_diff_add_node = mut_exec_gph().NewNode();
   shared_model_diff_add_node->mut_op() = op_vec[0];
   size_t ibn_idx = 0;
@@ -68,16 +69,24 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
   }
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   shared_model_diff_add_node->BindBnWithRegst(op_vec[0]->SoleObn(), out_regst);
-  out_regst->CopyBlobDescFrom(consumed_regsts().begin()->second.front().get());
+  out_regst->CopyBlobDescFrom(GetProducedRegst("model").get());
 
   ExecNode* model_update_node = nullptr;
   ExecEdge* exec_edge = nullptr;
-  GetProducedRegst("model")->CopyBlobDescFrom(out_regst.get());
+  // GetProducedRegst("model")->CopyBlobDescFrom(out_regst.get());
+  /*   */
+  out_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
+    std::cout << lbi.op_name() << " " << lbi.blob_name() << std::endl;
+  });
+  GetProducedRegst("model")->ForEachLbi([&](const LogicalBlobId& lbi) {
+    std::cout << lbi.op_name() << " " << lbi.blob_name() << std::endl;
+  });
   out_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
     OperatorConf op_conf;
     op_conf.set_name("md_update_" + NewUniqueId());
     op_conf.set_device_type(logical_node()->parallel_desc()->device_type());
     op_conf.mutable_normal_mdupdt_conf()->set_model_diff(lbi.op_name() + '/' + lbi.blob_name());
+    op_conf.mutable_normal_mdupdt_conf()->set_model(lbi.op_name() + '/' + lbi.blob_name());
     // TODO(shiyuan)
     *(op_conf.mutable_normal_mdupdt_conf()->mutable_user_conf()) =
         Global<JobDesc>::Get()->other_conf().train_conf().model_update_conf();
