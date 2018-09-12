@@ -17,11 +17,11 @@ if(WIN32)
     set(PROTOBUF_ADDITIONAL_CMAKE_OPTIONS -Dprotobuf_MSVC_STATIC_RUNTIME:BOOL=ON -A x64)
 elseif(APPLE AND ("${CMAKE_GENERATOR}" STREQUAL "Xcode"))
     set(PROTOBUF_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf)
-    set(PROTOBUF_LIBRARY_NAMES libprotobuf.a)
+    set(PROTOBUF_LIBRARY_NAMES libprotobuf.a libprotobuf.so)
     set(PROTOC_EXECUTABLE_NAME protoc)
 else()
     set(PROTOBUF_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf)
-    set(PROTOBUF_LIBRARY_NAMES libprotobuf.a)
+    set(PROTOBUF_LIBRARY_NAMES libprotobuf.a libprotobuf.so)
     set(PROTOC_EXECUTABLE_NAME protoc)
 endif()
 
@@ -46,6 +46,7 @@ ExternalProject_Add(protobuf
     SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf
     CONFIGURE_COMMAND ${CMAKE_COMMAND} cmake/
         -Dprotobuf_BUILD_TESTS=OFF
+        -Dprotobuf_BUILD_SHARED_LIBS=ON
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON
         -DZLIB_ROOT=${ZLIB_INSTALL}
         -DCMAKE_CXX_FLAGS_DEBUG=${CMAKE_CXX_FLAGS_DEBUG}
