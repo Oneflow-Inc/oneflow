@@ -49,48 +49,54 @@ class Blob final {
     return static_cast<T*>(dptr_);
   }
 
-  template<typename T = void>
-  const T* dptr(int64_t dim0) const {
+  template<typename T>
+  typename std::enable_if<!std::is_same<T, void>::value, const T*>::type dptr(int64_t dim0) const {
     CHECK_GE(shape().NumAxes(), 1);
     CHECK_GE(dim0, 0);
     CHECK_LT(dim0, shape().At(0));
     return dptr<T>() + dim0 * shape().Count(1);
   }
 
-  template<typename T = void>
-  const T* dptr(int64_t dim0, int64_t dim1) const {
+  template<typename T>
+  typename std::enable_if<!std::is_same<T, void>::value, const T*>::type dptr(int64_t dim0,
+                                                                              int64_t dim1) const {
     CHECK_GE(shape().NumAxes(), 2);
     CHECK_GE(dim1, 0);
     CHECK_LT(dim1, shape().At(1));
     return dptr<T>(dim0) + dim1 * shape().Count(2);
   }
 
-  template<typename T = void>
-  const T* dptr(int64_t dim0, int64_t dim1, int64_t dim2) const {
+  template<typename T>
+  typename std::enable_if<!std::is_same<T, void>::value, const T*>::type dptr(int64_t dim0,
+                                                                              int64_t dim1,
+                                                                              int64_t dim2) const {
     CHECK_GE(shape().NumAxes(), 3);
     CHECK_GE(dim2, 0);
     CHECK_LT(dim2, shape().At(2));
     return dptr<T>(dim0, dim1) + dim2 * shape().Count(3);
   }
 
-  template<typename T = void>
-  T* mut_dptr(int64_t dim0) {
+  template<typename T>
+  typename std::enable_if<!std::is_same<T, void>::value, T*>::type mut_dptr(int64_t dim0) {
     CHECK_GE(shape().NumAxes(), 1);
     CHECK_GE(dim0, 0);
     CHECK_LT(dim0, shape().At(0));
     return mut_dptr<T>() + dim0 * shape().Count(1);
   }
 
-  template<typename T = void>
-  T* mut_dptr(int64_t dim0, int64_t dim1) {
+  template<typename T>
+  typename std::enable_if<!std::is_same<T, void>::value, T*>::type mut_dptr(int64_t dim0,
+                                                                            int64_t dim1) {
     CHECK_GE(shape().NumAxes(), 2);
     CHECK_GE(dim1, 0);
     CHECK_LT(dim1, shape().At(1));
     return mut_dptr<T>(dim0) + dim1 * shape().Count(2);
   }
 
-  template<typename T = void>
-  T* mut_dptr(int64_t dim0, int64_t dim1, int64_t dim2) {
+  template<typename T>
+  typename std::enable_if<!std::is_same<T, void>::value, T*>::type mut_dptr(int64_t dim0,
+                                                                            int64_t dim1,
+                                                                            int64_t dim2) {
     CHECK_GE(shape().NumAxes(), 3);
     CHECK_GE(dim2, 0);
     CHECK_LT(dim2, shape().At(2));
