@@ -1,4 +1,6 @@
 #include "oneflow/core/graph/normal_model_update_compute_task_node.h"
+#include "oneflow/core/graph/reduce_split_compute_task_node.h"
+#include "oneflow/core/graph/normal_backward_compute_task_node.h"
 #include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
@@ -54,6 +56,26 @@ bool NormalMdUpdtCompTaskNode::IsReadyForBuild() {
   return GetProducedRegst("model")->IsLocked() && GetProducedRegst("const_model")->IsLocked();
 }
 
+CompTaskNode* NormalMdUpdtCompTaskNode::FindReduceSplitCompTaskNode() {
+  for (TaskEdge* edge : this->in_edges()) {
+    CompTaskNode* comp_task_node = dynamic_cast<CompTaskNode*>(edge->src_node());
+    CHECK(comp_task_node != nullptr);
+    if (comp_task_node->GetTaskType() == TaskType::kReduceSplit) { return comp_task_node; }
+  }
+  return nullptr;
+}
+
+CompTaskNode* NormalMdUpdtCompTaskNode::FindCorrespondingBackwardCompTaskNode() {
+  CompTaskNode* cur_node = this;
+  while (cur_node->GetTaskType() != TaskType::kNormalBackward) {
+    for (TaskEdge* edge : cur_node->in_edges()) {
+      CompTaskNode* comp_task_node = dynamic_cast<CompTaskNode*>(edge->src_node());
+      if (comp_task_node != nullptr) { cur_node = comp_task_node; }
+    }
+  }
+  return cur_node;
+}
+
 void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
   if (!IsTrainable()) { return; }
   ExecNode* node = mut_exec_gph().NewNode();
@@ -65,6 +87,28 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
   node->BindBnWithRegst(node->op()->SoleObn(), GetProducedRegst("model"));
   node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, GetProducedRegst("data_tmp"));
   node->InferBlobDescs(nullptr);
+
+  // set instance num
+  bool has_instance_num = false;
+  CompTaskNode* split_node = FindReduceSplitCompTaskNode();
+  if (split_node) {
+    std::shared_ptr<RegstDesc> out_regst = split_node->GetProducedRegst("out_0");
+    out_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
+      if (out_regst->GetBlobDesc(lbi)->has_instance_num_field()) { has_instance_num = true; }
+    });
+  } else {
+    CompTaskNode* bw_node = FindCorrespondingBackwardCompTaskNode();
+    std::shared_ptr<RegstDesc> in_diff_regst = bw_node->GetProducedRegst("in_diff");
+    in_diff_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
+      if (in_diff_regst->GetBlobDesc(lbi)->has_instance_num_field()) { has_instance_num = true; }
+    });
+  }
+  if (has_instance_num) {
+    std::shared_ptr<RegstDesc> model_regst = GetProducedRegst("model");
+    model_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
+      model_regst->MutBlobDesc(lbi)->set_has_instance_num_field(true);
+    });
+  }
 }
 
 void NormalMdUpdtCompTaskNode::LockRegsts() { GetProducedRegst("data_tmp")->Lock(); }

@@ -28,6 +28,12 @@ void RtBlobDesc::InitFromProto(const BlobDescProto& blob_desc_proto) {
                 .emplace("col_num", FieldDesc(blob_desc_proto.header().field_header().col_num()))
                 .second);
     }
+    if (blob_desc_proto.header().field_header().has_instance_num()) {
+      CHECK(header_desc_
+                .emplace("instance_num",
+                         FieldDesc(blob_desc_proto.header().field_header().instance_num()))
+                .second);
+    }
   }
 }
 

@@ -35,6 +35,12 @@ void Blob::Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, cha
   } else {
     col_num_ptr_ = nullptr;
   }
+  offset = header_ptr + blob_desc->ByteSizeOfDataIdField() + blob_desc->ByteSizeOfColNumField();
+  if (blob_desc->has_instance_num_field()) {
+    instance_num_ptr_ = reinterpret_cast<int32_t*>(offset);
+  } else {
+    instance_num_ptr_ = nullptr;
+  }
   dptr_ = body_ptr;
 }
 
