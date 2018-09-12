@@ -152,11 +152,11 @@ class Actor {
   }
   void TryLogActEvent(const std::function<void()>& Callback) const;
 
-  virtual std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() {
+  virtual std::pair<bool, std::vector<std::string>> GetNaiveOrCustomizedConsumedRegstDescName() {
     return {false, {}};
   }
-  virtual std::pair<bool, std::vector<std::string>> GetNaiveProducedRegstDescName() {
-    return {true, {}};
+  virtual std::pair<bool, std::vector<std::string>> GetNaiveOrCustomizedProducedRegstDescName() {
+    return {false, {}};
   }
   void TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids);
   void AddNaiveConsumed(const RegstDescIdSet&);

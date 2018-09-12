@@ -19,9 +19,6 @@ class SinkCompActor : public CompActor {
  private:
   void VirtualCompActorInit(const TaskProto&) override;
   void Act() override;
-  std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
-    return {true, {}};
-  }
 };
 
 }  // namespace oneflow

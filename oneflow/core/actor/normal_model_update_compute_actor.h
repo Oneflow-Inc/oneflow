@@ -14,11 +14,8 @@ class NormalMdUpdtCompActor final : public CompActor {
  private:
   void VirtualCompActorInit(const TaskProto&) override;
   void Act() override;
-  std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
-    return {true, {}};
-  }
-  std::pair<bool, std::vector<std::string>> GetNaiveProducedRegstDescName() override {
-    return {false, {"model", "data_tmp"}};
+  std::pair<bool, std::vector<std::string>> GetNaiveOrCustomizedProducedRegstDescName() override {
+    return {false, {"const_model"}};
   }
   bool IsCustomizedWriteReady() override;
   void UpdtStateAsCustomizedProducedRegst(Regst* regst) override;

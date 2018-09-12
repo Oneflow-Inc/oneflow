@@ -99,13 +99,20 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
 }
 
 void Actor::TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids) {
-  std::pair<bool, std::vector<std::string>> isall_or_names = GetNaiveConsumedRegstDescName();
-  if (isall_or_names.first) {
-    for (const auto& pair : consumed_ids) { AddNaiveConsumed(pair.second); }
-  } else {
-    for (const std::string& name : isall_or_names.second) {
+  auto res = GetNaiveOrCustomizedConsumedRegstDescName();
+  bool is_naive_names = res.first;
+  const std::vector<std::string>& names = res.second;
+
+  if (is_naive_names) {
+    for (const std::string& name : names) {
       auto it = consumed_ids.find(name);
       if (it != consumed_ids.end()) { AddNaiveConsumed(it->second); }
+    }
+  } else {
+    HashSet<std::string> customized_names(names.begin(), names.end());
+    for (const auto& pair : consumed_ids) {
+      if (customized_names.find(pair.first) != customized_names.end()) { continue; }
+      AddNaiveConsumed(pair.second);
     }
   }
   naive_consumed_data_rs_.InitedDone();
@@ -118,16 +125,21 @@ void Actor::AddNaiveConsumed(const RegstDescIdSet& regst_desc_ids) {
 }
 
 void Actor::TakeOverNaiveProduced(const PbMap<std::string, RegstDescProto>& produced_ids) {
-  std::pair<bool, std::vector<std::string>> isall_or_names = GetNaiveProducedRegstDescName();
-  if (isall_or_names.first) {
-    for (const auto& pair : produced_ids) {
-      naive_produced_data_rs_.InsertRegstDescId(pair.second.regst_desc_id());
-    }
-  } else {
-    for (const std::string& name : isall_or_names.second) {
+  auto res = GetNaiveOrCustomizedProducedRegstDescName();
+  bool is_naive_names = res.first;
+  const std::vector<std::string>& names = res.second;
+
+  if (is_naive_names) {
+    for (const std::string& name : names) {
       auto it = produced_ids.find(name);
       if (it == produced_ids.end()) { continue; }
       naive_produced_data_rs_.InsertRegstDescId(it->second.regst_desc_id());
+    }
+  } else {
+    HashSet<std::string> customized_names(names.begin(), names.end());
+    for (const auto& pair : produced_ids) {
+      if (customized_names.find(pair.first) != customized_names.end()) { continue; }
+      naive_produced_data_rs_.InsertRegstDescId(pair.second.regst_desc_id());
     }
   }
   naive_produced_data_rs_.InitedDone();
