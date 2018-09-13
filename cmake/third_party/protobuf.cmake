@@ -5,6 +5,7 @@ set(PROTOBUF_LIBRARY_DIR ${THIRD_PARTY_DIR}/protobuf/lib)
 set(PROTOBUF_BINARY_DIR ${THIRD_PARTY_DIR}/protobuf/bin)
 
 set(PROTOBUF_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf/src)
+set(PROTOBUF_PATCH_DIR ${CMAKE_CURRENT_SOURCE_DIR}/cmake/patches/protobuf)
 # set(PROTOBUF_URL https://github.com/mrry/protobuf.git)  # Includes MSVC fix.
 # set(PROTOBUF_TAG 1d2c7b6c7376f396c8c7dd9b6afd2d4f83f3cb05)
 
@@ -41,6 +42,7 @@ ExternalProject_Add(protobuf
     # GIT_REPOSITORY ${PROTOBUF_URL}
     # GIT_TAG ${PROTOBUF_TAG}
     URL ${PROTOBUF_URL}
+    PATCH_COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROTOBUF_PATCH_DIR}/libprotobuf.cmake ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf/cmake/libprotobuf.cmake
     UPDATE_COMMAND ""
     BUILD_IN_SOURCE 1
     SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf
