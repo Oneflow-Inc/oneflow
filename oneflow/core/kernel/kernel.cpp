@@ -139,8 +139,16 @@ void KernelIf<device_type>::BackwardColNum(
 template<DeviceType device_type>
 void KernelIf<device_type>::BackwardInstanceNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().output_diff_bns(),
-            op_attribute().input_diff_bns(), &Blob::CopyInstanceNumFrom);
+  CHECK_EQ(op_attribute().output_diff_bns_size(), 1);
+  const Blob* from_blob = BnInOp2Blob(op_attribute().output_diff_bns(0));
+  if (op_attribute().input_diff_bns_size() > 0) {
+    CopyField(ctx.device_ctx, BnInOp2Blob, from_blob, op_attribute().input_diff_bns(),
+              &Blob::CopyInstanceNumFrom);
+  }
+  if (op_attribute().model_diff_bns_size() > 0) {
+    CopyField(ctx.device_ctx, BnInOp2Blob, from_blob, op_attribute().model_diff_bns(),
+              &Blob::CopyInstanceNumFrom);
+  }
 }
 
 template<DeviceType device_type>

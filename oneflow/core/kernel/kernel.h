@@ -149,10 +149,10 @@ class KernelIf : public Kernel {
                  void (Blob::*Copy)(DeviceCtx*, const Blob*)) const;
   void AccumulateField(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
                        const Blob* from_blob, const PbRpf<std::string>& to_bns,
-                       void (Blob::*Copy)(DeviceCtx*, const Blob*)) const;
+                       void (Blob::*Accumulate)(DeviceCtx*, const Blob*)) const;
   void AccumulateField(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
                        const PbRpf<std::string>& from_bns, const PbRpf<std::string>& to_bns,
-                       void (Blob::*Copy)(DeviceCtx*, const Blob*)) const;
+                       void (Blob::*Accumulate)(DeviceCtx*, const Blob*)) const;
   bool EnableCudnn() const { return op_conf().enable_cudnn(); }
 };
 
