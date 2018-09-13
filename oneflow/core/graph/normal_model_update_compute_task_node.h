@@ -24,7 +24,6 @@ class NormalMdUpdtCompTaskNode final : public CompTaskNode {
   CudaWorkType GetCudaWorkType() const override { return CudaWorkType::kMdUpdt; }
 
  private:
-  void FixPackedBlobDescOfProducedRegst() override;
   const NormalForwardCompTaskNode* GetForwardTaskNode() const;
   bool IsTrainable() const;
   uint32_t random_seed_;

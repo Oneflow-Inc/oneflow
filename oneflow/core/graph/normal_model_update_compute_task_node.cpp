@@ -57,30 +57,19 @@ bool NormalMdUpdtCompTaskNode::IsReadyForBuild() {
 
 void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
   if (!IsTrainable()) { return; }
-  const auto& op_vec = logical_node()->op_vec();
-  for (auto& op : op_vec) { std::cout << op->op_name() << std::endl; }
-  // TODO(shiyuan) CHECK_EQ(op_vec.size(), 1);  // only shared_model_diff_add_op in op_vec now
   ExecNode* shared_model_diff_add_node = mut_exec_gph().NewNode();
-  shared_model_diff_add_node->mut_op() = op_vec[0];
+  shared_model_diff_add_node->mut_op() = logical_node()->SoleOp();
   size_t ibn_idx = 0;
   for (const auto& pair : consumed_regsts()) {
     shared_model_diff_add_node->BindBnWithRegst(
         shared_model_diff_add_node->op()->input_bns().Get(ibn_idx++), pair.second.front());
   }
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
-  shared_model_diff_add_node->BindBnWithRegst(op_vec[0]->SoleObn(), out_regst);
+  shared_model_diff_add_node->BindBnWithRegst(logical_node()->SoleOp()->SoleObn(), out_regst);
   out_regst->CopyBlobDescFrom(GetProducedRegst("model").get());
 
   ExecNode* model_update_node = nullptr;
   ExecEdge* exec_edge = nullptr;
-  // GetProducedRegst("model")->CopyBlobDescFrom(out_regst.get());
-  /*   */
-  out_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
-    std::cout << lbi.op_name() << " " << lbi.blob_name() << std::endl;
-  });
-  GetProducedRegst("model")->ForEachLbi([&](const LogicalBlobId& lbi) {
-    std::cout << lbi.op_name() << " " << lbi.blob_name() << std::endl;
-  });
   out_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
     OperatorConf op_conf;
     op_conf.set_name("md_update_" + NewUniqueId());
@@ -91,8 +80,6 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
     *(op_conf.mutable_normal_mdupdt_conf()->mutable_user_conf()) =
         Global<JobDesc>::Get()->other_conf().train_conf().model_update_conf();
     std::shared_ptr<Operator> model_update_op = ConstructOp(op_conf);
-    mut_logical_node()->mut_op_vec().push_back(model_update_op);
-
     model_update_node = mut_exec_gph().NewNode();
     model_update_node->mut_op() = model_update_op;
     exec_edge = mut_exec_gph().NewEdge();
@@ -127,13 +114,6 @@ void NormalMdUpdtCompTaskNode::ToProto(TaskProto* task_proto) {
     }
   });
   task_proto->set_related_init_model_task_id(related_init_model_task_id_);
-}
-
-void NormalMdUpdtCompTaskNode::FixPackedBlobDescOfProducedRegst() {
-  std::shared_ptr<RegstDesc> model_regst = GetProducedRegst("model");
-  if (model_regst == nullptr) { return; }
-  Shape& shape = model_regst->MutBlobDesc(GenPackedLbi())->mut_shape();
-  shape = Shape({static_cast<int64_t>(RoundUp(shape.elem_cnt(), parallel_ctx()->parallel_num()))});
 }
 
 }  // namespace oneflow
