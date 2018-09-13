@@ -7,41 +7,62 @@
 
 namespace oneflow {
 
+template<typename T, size_t N>
+class Serial;
+
+template<template<typename> class Wrapper, typename ElemType, size_t N>
+class Serial<Wrapper<ElemType>, N> {
+ public:
+  using ElemArray = std::array<ElemType, N>;
+  using WrapperType = Wrapper<ElemType>;
+
+  OF_DISALLOW_COPY_AND_MOVE(Serial);
+  Serial() = delete;
+  ~Serial() = delete;
+
+  static const WrapperType* Cast(const ElemType* ptr) {
+    return reinterpret_cast<const WrapperType*>(ptr);
+  }
+  static WrapperType* MutCast(ElemType* ptr) { return reinterpret_cast<WrapperType*>(ptr); }
+
+  const ElemArray& elem() const { return elem_; }
+  ElemArray& mut_elem() { return elem_; }
+
+ private:
+  ElemArray elem_;
+};
+
 template<typename T>
 class BBoxDelta;
 
 template<typename T>
-class BBox final {
+class BBox final : public Serial<BBox<T>, 4> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BBox);
-  BBox() = delete;
-  ~BBox() = delete;
+  using BBoxArray = typename Serial<BBox<T>, 4>::ElemArray;
 
-  static const BBox* Cast(const T* ptr) { return reinterpret_cast<const BBox*>(ptr); }
-  static BBox* MutCast(T* ptr) { return reinterpret_cast<BBox*>(ptr); }
+  inline T x1() const { return this->elem()[0]; }
+  inline T y1() const { return this->elem()[1]; }
+  inline T x2() const { return this->elem()[2]; }
+  inline T y2() const { return this->elem()[3]; }
 
-  const std::array<T, 4>& bbox() const { return bbox_; }
-  std::array<T, 4>& mut_bbox() { return bbox_; }
+  inline void set_x1(T x1) { this->mut_elem()[0] = x1; }
+  inline void set_y1(T y1) { this->mut_elem()[1] = y1; }
+  inline void set_x2(T x2) { this->mut_elem()[2] = x2; }
+  inline void set_y2(T y2) { this->mut_elem()[3] = y2; }
 
-  inline T x1() const { return bbox_[0]; }
-  inline T y1() const { return bbox_[1]; }
-  inline T x2() const { return bbox_[2]; }
-  inline T y2() const { return bbox_[3]; }
-  inline void set_x1(T x1) { bbox_[0] = x1; }
-  inline void set_y1(T y1) { bbox_[1] = y1; }
-  inline void set_x2(T x2) { bbox_[2] = x2; }
-  inline void set_y2(T y2) { bbox_[3] = y2; }
+  const BBoxArray& bbox() const { return this->elem(); }
+  BBoxArray& mut_bbox() { return this->mut_elem(); }
 
-  inline T width() const { return x2() - x1() + static_cast<T>(1); }
-  inline T height() const { return y2() - y1() + static_cast<T>(1); }
+  inline T width() const { return x2() - x1() + OneVal<T>::value; }
+  inline T height() const { return y2() - y1() + OneVal<T>::value; }
   inline T Area() const { return width() * height(); }
 
   template<typename U>
   inline float InterOverUnion(const BBox<U>* other) const {
     const float iw = std::min<float>(x2(), other->x2()) - std::max<float>(x1(), other->x1()) + 1.f;
-    if (iw <= 0) { return 0; }
+    if (iw <= 0) { return 0.f; }
     const float ih = std::min<float>(y2(), other->y2()) - std::max<float>(y1(), other->y1()) + 1.f;
-    if (ih <= 0) { return 0; }
+    if (ih <= 0) { return 0.f; }
     const float inter = iw * ih;
     return inter / (Area() + other->Area() - inter);
   }
@@ -75,41 +96,31 @@ class BBox final {
     set_x2(std::max<T>(std::min<T>(x2(), width - 1), 0));
     set_y2(std::max<T>(std::min<T>(y2(), height - 1), 0));
   }
-
- private:
-  std::array<T, 4> bbox_;
 };
 
 template<typename T>
-class BBoxDelta final {
+class BBoxDelta final : public Serial<BBoxDelta<T>, 4> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BBoxDelta);
-  BBoxDelta() = delete;
-  ~BBoxDelta() = delete;
+  inline T dx() const { return this->elem()[0]; }
+  inline T dy() const { return this->elem()[1]; }
+  inline T dw() const { return this->elem()[2]; }
+  inline T dh() const { return this->elem()[3]; }
 
-  static const BBoxDelta* Cast(const T* ptr) { return reinterpret_cast<const BBoxDelta*>(ptr); }
-  static BBoxDelta* MutCast(T* ptr) { return reinterpret_cast<BBoxDelta*>(ptr); }
-
-  inline T dx() const { return delta_[0]; }
-  inline T dy() const { return delta_[1]; }
-  inline T dw() const { return delta_[2]; }
-  inline T dh() const { return delta_[3]; }
-
-  inline void set_dx(T dx) { delta_[0] = dx; }
-  inline void set_dy(T dy) { delta_[1] = dy; }
-  inline void set_dw(T dw) { delta_[2] = dw; }
-  inline void set_dh(T dh) { delta_[3] = dh; }
+  inline void set_dx(T dx) { this->mut_elem()[0] = dx; }
+  inline void set_dy(T dy) { this->mut_elem()[1] = dy; }
+  inline void set_dw(T dw) { this->mut_elem()[2] = dw; }
+  inline void set_dh(T dh) { this->mut_elem()[3] = dh; }
 
   template<typename U, typename K>
   void TransformInverse(const BBox<U>* bbox, const BBox<K>* target_bbox,
                         const BBoxRegressionWeights& bbox_reg_ws) {
-    float w = bbox->x2() - bbox->x1() + 1.0f;
-    float h = bbox->y2() - bbox->y1() + 1.0f;
+    float w = bbox->x2() - bbox->x1() + 1.f;
+    float h = bbox->y2() - bbox->y1() + 1.f;
     float ctr_x = bbox->x1() + 0.5f * w;
     float ctr_y = bbox->y1() + 0.5f * h;
 
-    float t_w = target_bbox->x2() - target_bbox->x1() + 1.0f;
-    float t_h = target_bbox->y2() - target_bbox->y1() + 1.0f;
+    float t_w = target_bbox->x2() - target_bbox->x1() + 1.f;
+    float t_h = target_bbox->y2() - target_bbox->y1() + 1.f;
     float t_ctr_x = target_bbox->x1() + 0.5f * t_w;
     float t_ctr_y = target_bbox->y1() + 0.5f * t_h;
 
@@ -118,70 +129,76 @@ class BBoxDelta final {
     set_dw(bbox_reg_ws.weight_w() * std::log(t_w / w));
     set_dh(bbox_reg_ws.weight_h() * std::log(t_h / h));
   }
-
- private:
-  std::array<T, 4> delta_;
 };
 
 template<typename T>
-class BBoxWeights final {
+class BBoxWeights final : public Serial<BBoxWeights<T>, 4> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BBoxWeights);
-  BBoxWeights() = delete;
-  ~BBoxWeights() = delete;
+  inline T weight_x() const { return this->elem()[0]; }
+  inline T weight_y() const { return this->elem()[1]; }
+  inline T weight_w() const { return this->elem()[2]; }
+  inline T weight_h() const { return this->elem()[3]; }
 
-  static const BBoxWeights* Cast(const T* ptr) { return reinterpret_cast<const BBoxWeights*>(ptr); }
-  static BBoxWeights* MutCast(T* ptr) { return reinterpret_cast<BBoxWeights*>(ptr); }
-
-  inline T weight_x() const { return weights_[0]; }
-  inline T weight_y() const { return weights_[1]; }
-  inline T weight_w() const { return weights_[2]; }
-  inline T weight_h() const { return weights_[3]; }
-
-  inline void set_weight_x(T weight_x) { weights_[0] = weight_x; }
-  inline void set_weight_y(T weight_y) { weights_[1] = weight_y; }
-  inline void set_weight_w(T weight_w) { weights_[2] = weight_w; }
-  inline void set_weight_h(T weight_h) { weights_[3] = weight_h; }
-
- private:
-  std::array<T, 4> weights_;
+  inline void set_weight_x(T weight_x) { this->mut_elem()[0] = weight_x; }
+  inline void set_weight_y(T weight_y) { this->mut_elem()[1] = weight_y; }
+  inline void set_weight_w(T weight_w) { this->mut_elem()[2] = weight_w; }
+  inline void set_weight_h(T weight_h) { this->mut_elem()[3] = weight_h; }
 };
 
-class Slice {
+class Indexes {
  public:
-  Slice(size_t capacity, int32_t* index_ptr, bool init_index = true)
-      : capacity_(capacity), size_(capacity), index_ptr_(index_ptr) {
+  Indexes(size_t capacity, size_t size, int32_t* index_ptr, bool init_index)
+      : capacity_(capacity), size_(size), index_ptr_(index_ptr) {
     if (init_index) { std::iota(index_ptr_, index_ptr_ + size_, 0); }
   }
+  Indexes(size_t capacity, int32_t* index_ptr, bool init_index = false)
+      : Indexes(capacity, capacity, index_ptr, init_index) {}
 
   void Truncate(size_t size) {
-    CHECK_GE(size, 0);
-    if (size < capacity_) { size_ = size; }
+    CHECK_LE(size, capacity_);
+    size_ = size;
   }
 
-  void Fill(const Slice& other) {
+  void Assign(const Indexes& other) {
     CHECK_LE(other.size(), capacity_);
-    FOR_RANGE(int32_t, i, 0, other.size()) { index_ptr_[i] = other.GetIndex(i); }
+    FOR_RANGE(size_t, i, 0, other.size()) { index_ptr_[i] = other.GetIndex(i); }
     size_ = other.size();
   }
 
-  void Concat(const Slice& other) {
-    CHECK_LE(other.size(), capacity_ - size_);
-    FOR_RANGE(int32_t, i, 0, other.size()) { index_ptr_[size_ + i] = other.GetIndex(i); }
-    size_ += other.size();
+  Indexes Slice(size_t begin, size_t end) const {
+    CHECK_LE(begin, end);
+    CHECK_LE(end, size_);
+    return Indexes(end - begin, index_ptr_ + begin, false);
   }
 
-  Slice Sub(size_t begin, size_t end) const {
-    CHECK_GE(end, begin);
-    CHECK_GE(begin, 0);
-    CHECK_LE(end, size_);
-    return Slice(end - begin, index_ptr_ + begin, false);
+  void Concat(const Indexes& other) {
+    CHECK_LE(other.size(), capacity_ - size_);
+    FOR_RANGE(size_t, i, 0, other.size()) { index_ptr_[size_ + i] = other.GetIndex(i); }
+    size_ += other.size();
   }
 
   void PushBack(int32_t index) {
     CHECK_LT(size_, capacity_);
-    index_ptr_[size_] = index;
-    ++size_;
+    index_ptr_[size_++] = index;
+  }
+
+  size_t Find(const std::function<bool(int32_t)>& Condition) const {
+    FOR_RANGE(size_t, i, 0, this->size()) {
+      if (Condition(GetIndex(i))) { return i; }
+    }
+    return this->size();
+  }
+
+  void Filter(const std::function<bool(size_t, int32_t)>& FilterFunc) {
+    size_t keep_num = 0;
+    FOR_RANGE(size_t, i, 0, size_) {
+      int32_t cur_index = GetIndex(i);
+      if (!FilterFunc(i, cur_index)) {
+        // keep_num <= i so index_ptr_ never be written before read
+        mut_index_ptr()[keep_num++] = cur_index;
+      }
+    }
+    size_ = keep_num;
   }
 
   void Sort(const std::function<bool(int32_t, int32_t)>& Compare) {
@@ -190,6 +207,7 @@ class Slice {
   }
 
   void Shuffle(size_t begin, size_t end) {
+    CHECK_LE(begin, end);
     CHECK_LE(end, size_);
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -197,6 +215,12 @@ class Slice {
   }
 
   void Shuffle() { Shuffle(0, size_); }
+
+  void ForEach(const std::function<bool(size_t, int32_t)>& DoNext) {
+    FOR_RANGE(size_t, i, 0, size_) {
+      if (!DoNext(i, GetIndex(i))) { break; }
+    }
+  }
 
   int32_t GetIndex(size_t n) const {
     CHECK_LT(n, size_);
@@ -214,316 +238,349 @@ class Slice {
   int32_t* index_ptr_;
 };
 
-template<typename T>
-class BoxesSlice : public Slice {
+template<typename IndexType, typename T>
+class BBoxIndex : public IndexType {
  public:
-  BoxesSlice(size_t capacity, int32_t* index_ptr, const T* boxes_ptr, bool init_index = true)
-      : Slice(capacity, index_ptr, init_index), boxes_ptr_(boxes_ptr) {}
-  BoxesSlice(const Slice& slice, const T* boxes_ptr) : Slice(slice), boxes_ptr_(boxes_ptr) {}
+  BBoxIndex(const IndexType& indexes, const T* bbox_ptr)
+      : IndexType(indexes), bbox_ptr_(bbox_ptr) {}
 
-  void FilterByBox(const std::function<bool(const BBox<T>*)>& FilterBox) {
-    size_t keep_num = 0;
-    FOR_RANGE(size_t, i, 0, this->size()) {
-      if (!FilterBox(GetBBox(i))) {
-        // keep_num <= i so index_ptr_ never be written before read
-        this->mut_index_ptr()[keep_num++] = this->index_ptr()[i];
-      }
-    }
-    this->Truncate(keep_num);
+  void FilterByBBox(const std::function<bool(size_t, int32_t, const BBox<T>*)>& FilterFunc) {
+    this->Filter([&](size_t n, int32_t index) { return FilterFunc(n, index, bbox(index)); });
   }
 
-  void SortByBox(const std::function<bool(const BBox<T>&, const BBox<T>&)>& Compare) {
-    std::sort(this->mut_index_ptr(), this->mut_index_ptr() + this->size(),
-              [&](int32_t lhs_index, int32_t rhs_index) {
-                const BBox<T>* bbox = BBox<T>::Cast(boxes_ptr_);
-                return Compare(bbox[lhs_index], bbox[rhs_index]);
-              });
+  void SortByBBox(const std::function<bool(const BBox<T>&, const BBox<T>&)>& Compare) {
+    this->Sort([&](int32_t lhs_index, int32_t rhs_index) {
+      return Compare(bbox(lhs_index), bbox(rhs_index));
+    });
   }
 
-  inline const BBox<T>* GetBBox(size_t n) const {
+  const BBox<T>* GetBBox(size_t n) const {
     CHECK_LT(n, this->size());
-    return BBox<T>::Cast(boxes_ptr_) + this->GetIndex(n);
+    return BBox<T>::Cast(bbox_ptr_) + this->GetIndex(n);
   }
-
-  const T* boxes_ptr() const { return boxes_ptr_; }
-  const BBox<T>* bbox(int32_t box_index) const { return BBox<T>::Cast(boxes_ptr_) + box_index; }
+  const BBox<T>* bbox(int32_t index) const {
+    CHECK_GE(index, 0);
+    return BBox<T>::Cast(bbox_ptr_) + index;
+  }
+  BBox<T>* mut_bbox(int32_t index) {
+    CHECK_GE(index, 0);
+    return BBox<T>::MutCast(bbox_ptr_) + index;
+  }
+  const T* bbox_ptr() const { return bbox_ptr_; }
+  T* mut_bbox_ptr() { return bbox_ptr_; }
 
  private:
-  const T* boxes_ptr_;
+  const T* bbox_ptr_;
 };
 
-struct GroupLabel {
-  int32_t label;
-  size_t begin;
-  size_t size;
-};
-
-template<typename SliceType>
-class LabelSlice : public SliceType {
+template<typename IndexType>
+class LabelIndex : public IndexType {
  public:
-  LabelSlice(const SliceType& slice, int32_t* label_ptr, bool init_label = true)
-      : SliceType(slice), label_ptr_(label_ptr) {
-    if (init_label) { std::fill(label_ptr_, label_ptr_ + this->capacity(), -1); }
+  LabelIndex(const IndexType& indexes, int32_t* label_ptr)
+      : IndexType(indexes), label_ptr_(label_ptr) {}
+
+  void FillLabel(int32_t begin, int32_t end, int32_t label) {
+    CHECK_GE(begin, 0);
+    CHECK_GE(end, begin);
+    std::fill(label_ptr_ + begin, label_ptr_ + end, label);
+  }
+
+  void FillLabel(int32_t label) { FillLabel(0, this->capacity(), label); }
+
+  void SortByLabel(const std::function<bool(int32_t, int32_t)>& Compare) {
+    this->Sort([&](int32_t lhs_index, int32_t rhs_index) {
+      return Compare(label(lhs_index), label(rhs_index));
+    });
+  }
+
+  size_t FindByLabel(const std::function<bool(int32_t)>& Condition) const {
+    return this->Find([&](int32_t index) { return Condition(label(index)); });
+  }
+
+  void ForEachLabel(const std::function<bool(size_t, int32_t, int32_t)>& DoNext) {
+    this->ForEach([&](size_t n, int32_t index) { return DoNext(n, index, label(index)); });
   }
 
   int32_t GetLabel(size_t n) const {
     CHECK_LT(n, this->size());
-    return label_ptr_[this->GetIndex(n)];
+    return label(this->GetIndex(n));
   }
 
   void SetLabel(size_t n, int32_t label) {
     CHECK_LT(n, this->size());
-    label_ptr_[this->GetIndex(n)] = label;
+    set_label(this->GetIndex(n), label);
   }
 
-  void SortByLabel(const std::function<bool(int32_t, int32_t)>& Compare) {
-    std::sort(this->mut_index_ptr(), this->mut_index_ptr() + this->size(),
-              [&](int32_t lhs_index, int32_t rhs_index) {
-                return Compare(label_ptr_[lhs_index], label_ptr_[rhs_index]);
-              });
+  int32_t label(int32_t index) const {
+    CHECK_GE(index, 0);
+    return label_ptr_[index];
   }
-
-  size_t FindByLabel(const std::function<bool(int32_t)>& Condition) const {
-    FOR_RANGE(size_t, i, 0, this->size()) {
-      if (Condition(label_ptr_[this->GetIndex(i)])) { return i; }
-    }
-    return this->size();
+  void set_label(int32_t index, int32_t label) {
+    CHECK_GE(index, 0);
+    label_ptr_[index] = label;
   }
-
   const int32_t* label_ptr() const { return label_ptr_; }
   int32_t* mut_label_ptr() { return label_ptr_; }
-  int32_t label(int32_t box_index) const { return label_ptr_[box_index]; }
-  void set_label(int32_t box_index, int32_t label) { label_ptr_[box_index] = label; }
 
  private:
   int32_t* label_ptr_;
 };
 
-template<typename SliceType>
-LabelSlice<SliceType> GenLabelSlice(const SliceType& slice, int32_t* label_ptr,
-                                    bool init_label = true) {
-  return LabelSlice<SliceType>(slice, label_ptr, init_label);
-}
-
-template<typename SliceType>
-class BoxesToNearestGtBoxesSlice : public SliceType {
+template<typename IndexType, typename T>
+class ScoreIndex : public IndexType {
  public:
-  BoxesToNearestGtBoxesSlice(const SliceType& slice, float* max_overlap_ptr,
-                             int32_t* gt_box_index_ptr)
-      : SliceType(slice),
+  ScoreIndex(const IndexType& indexes, const T* score_ptr)
+      : IndexType(indexes), score_ptr_(score_ptr) {}
+
+  void SortByScore(const std::function<bool(T, T)>& Compare) {
+    this->Sort([&](int32_t lhs_index, int32_t rhs_index) {
+      return Compare(score(lhs_index), score(rhs_index));
+    });
+  }
+
+  size_t FindByScore(const std::function<bool(T)>& Condition) {
+    return this->Find([&](int32_t index) { return Condition(score(index)); });
+  }
+
+  void FilterByScore(const std::function<bool(size_t, int32_t, T)>& FilterFunc) {
+    this->Filter([&](size_t n, int32_t index) { return FilterFunc(n, index, score(index)); });
+  }
+
+  T GetScore(size_t n) const {
+    CHECK_LT(n, this->size());
+    return score(this->GetIndex(n));
+  }
+  T score(int32_t index) const {
+    CHECK_GE(index, 0);
+    return score_ptr_[index];
+  }
+  const T* score_ptr() const { return score_ptr_; }
+
+ private:
+  const T* score_ptr_;
+};
+
+template<typename IndexType>
+class MaxOverlapIndex : public IndexType {
+ public:
+  MaxOverlapIndex(const IndexType& slice, float* max_overlap_ptr, int32_t* max_overlap_gt_index_ptr,
+                  bool init_max_overlap)
+      : IndexType(slice),
         max_overlap_ptr_(max_overlap_ptr),
-        max_overlap_gt_box_index_ptr_(gt_box_index_ptr) {}
-
-  float GetMaxOverlap(size_t n) const {
-    CHECK_LT(n, this->size());
-    return this->max_overlap(this->GetIndex(n));
-  }
-  int32_t GetMaxOverlapGtBoxIndex(size_t n) const {
-    CHECK_LT(n, this->size());
-    return this->max_overlap_gt_box_index(this->GetIndex(n));
+        max_overlap_gt_index_ptr_(max_overlap_gt_index_ptr) {
+    if (init_max_overlap) {
+      memset(max_overlap_ptr_, 0, this->capacity() * sizeof(float));
+      std::fill(max_overlap_gt_index_ptr_, max_overlap_gt_index_ptr_ + this->capacity(), -1);
+    }
   }
 
-  void UpdateMaxOverlapGtBox(int32_t box_index, int32_t gt_box_index, float overlap,
-                             const std::function<void()>& DoUpdateHandle = []() {}) {
-    CHECK_GE(box_index, 0);
-    if (overlap > max_overlap_ptr_[box_index]) {
-      max_overlap_ptr_[box_index] = overlap;
-      max_overlap_gt_box_index_ptr_[box_index] = gt_box_index;
+  void UpdateMaxOverlap(int32_t index, int32_t gt_index, float overlap,
+                        const std::function<void()>& DoUpdateHandle = []() {}) {
+    CHECK_GE(index, 0);
+    if (overlap > max_overlap(index)) {
+      set_max_overlap(index, overlap);
+      set_max_overlap_gt_index(index, gt_index);
       DoUpdateHandle();
     }
   }
 
-  void SortByOverlap(const std::function<bool(float, float)>& Compare) {
-    std::sort(this->mut_index_ptr(), this->mut_index_ptr() + this->size(),
-              [&](int32_t lhs_index, int32_t rhs_index) {
-                return Compare(this->max_overlap(lhs_index), this->max_overlap(rhs_index));
-              });
+  void SortByMaxOverlap(const std::function<bool(float, float)>& Compare) {
+    this->Sort([&](int32_t lhs_index, int32_t rhs_index) {
+      return Compare(max_overlap(lhs_index), max_overlap(rhs_index));
+    });
   }
 
-  size_t FindByOverlap(const std::function<bool(float)>& Condition) {
-    FOR_RANGE(size_t, i, 0, this->size()) {
-      if (Condition(this->max_overlap(this->GetIndex(i)))) { return i; }
-    }
-    return this->size();
+  size_t FindByMaxOverlap(const std::function<bool(float)>& Condition) {
+    return this->Find([&](int32_t index) { return Condition(max_overlap(index)); });
   }
 
-  void ForEachOverlap(const std::function<bool(float, size_t, int32_t)>& Hanlder) {
-    FOR_RANGE(size_t, i, 0, this->size()) {
-      int32_t index = this->GetIndex(i);
-      if (!Hanlder(max_overlap(index), i, index)) { break; }
-    }
+  void ForEachMaxOverlap(const std::function<bool(size_t, int32_t, float)>& DoNext) {
+    this->ForEach([&](size_t n, int32_t index) { return DoNext(n, index, max_overlap(index)); });
   }
 
+  float GetMaxOverlap(size_t n) const {
+    CHECK_LT(n, this->size());
+    return max_overlap(this->GetIndex(n));
+  }
+  int32_t GetMaxOverlapGtIndex(size_t n) const {
+    CHECK_LT(n, this->size());
+    return max_overlap_gt_index(this->GetIndex(n));
+  }
   float max_overlap(int32_t index) const {
     if (index < 0) { return 1; }
     return max_overlap_ptr_[index];
   }
-  int32_t max_overlap_gt_box_index(int32_t index) const {
-    if (index < 0) { return -index - 1; }
-    return max_overlap_gt_box_index_ptr_[index];
+  void set_max_overlap(int32_t index, float overlap) {
+    CHECK_GE(index, 0);
+    max_overlap_ptr_[index] = overlap;
   }
-  void set_max_overlap_gt_box_index(int32_t index, int32_t gt_index) {
-    max_overlap_gt_box_index_ptr_[index] = gt_index;
+  int32_t max_overlap_gt_index(int32_t index) const {
+    if (index < 0) { return -index - 1; }
+    return max_overlap_gt_index_ptr_[index];
+  }
+  void set_max_overlap_gt_index(int32_t index, int32_t gt_index) {
+    CHECK_GE(index, 0);
+    max_overlap_gt_index_ptr_[index] = gt_index;
   }
 
  private:
   float* max_overlap_ptr_;
-  int32_t* max_overlap_gt_box_index_ptr_;
+  int32_t* max_overlap_gt_index_ptr_;
 };
 
-template<typename SliceType>
-BoxesToNearestGtBoxesSlice<SliceType> GenBoxesToNearestGtBoxesSlice(const SliceType& slice,
-                                                                    float* max_overlap_ptr,
-                                                                    int32_t* gt_box_index_ptr) {
-  return BoxesToNearestGtBoxesSlice<SliceType>(slice, max_overlap_ptr, gt_box_index_ptr);
-}
+template<typename T>
+using BoxesIndex = BBoxIndex<Indexes, T>;
 
-template<typename SliceType>
-class GtBoxesToNearestBoxesSlice : public SliceType {
- public:
-  GtBoxesToNearestBoxesSlice(const SliceType& slice, float* gt_max_overlaps_ptr,
-                             int32_t* nearest_boxes_index_ptr)
-      : SliceType(slice),
-        gt_max_overlaps_ptr_(gt_max_overlaps_ptr),
-        nearest_boxes_index_ptr_(nearest_boxes_index_ptr),
-        last_gt_box_index_(-1),
-        last_gt_box_nearest_boxes_index_end_(0),
-        nearest_boxes_count_(0) {}
-
-  void UpdateNearestBox(int32_t gt_box_index, int32_t box_index, float overlap) {
-    if (gt_box_index != last_gt_box_index_) {
-      last_gt_box_nearest_boxes_index_end_ = nearest_boxes_count_;
-      last_gt_box_index_ = gt_box_index;
-    }
-    if (overlap >= gt_max_overlaps_ptr_[gt_box_index]) {
-      if (overlap > gt_max_overlaps_ptr_[gt_box_index]) {
-        nearest_boxes_count_ = last_gt_box_nearest_boxes_index_end_;
-      }
-      nearest_boxes_index_ptr_[nearest_boxes_count_++] = box_index;
-      gt_max_overlaps_ptr_[gt_box_index] = overlap;
-    }
-  }
-
-  void ForEachNearestBox(const std::function<void(int32_t)>& Handler) const {
-    FOR_RANGE(size_t, i, 0, nearest_boxes_count_) { Handler(nearest_boxes_index_ptr_[i]); }
-  }
-
- private:
-  float* gt_max_overlaps_ptr_;
-  int32_t* nearest_boxes_index_ptr_;
-  int32_t last_gt_box_index_;
-  int32_t last_gt_box_nearest_boxes_index_end_;
-  size_t nearest_boxes_count_;
-};
-
-template<typename SliceType>
-GtBoxesToNearestBoxesSlice<SliceType> GenGtBoxesToNearestBoxesSlice(
-    const SliceType& slice, float* gt_max_overlaps_ptr, int32_t* nearest_boxes_index_ptr) {
-  return GtBoxesToNearestBoxesSlice<SliceType>(slice, gt_max_overlaps_ptr, nearest_boxes_index_ptr);
+template<typename T>
+BoxesIndex<T> GenBoxesIndex(size_t capacity, int32_t* index_ptr, const T* boxes_ptr,
+                            bool init_index = false) {
+  return BoxesIndex<T>(Indexes(capacity, index_ptr, init_index), boxes_ptr);
 }
 
 template<typename T>
-class ScoredBBoxSlice final {
+using ScoredBoxesIndex = ScoreIndex<BoxesIndex<T>, T>;
+
+template<typename T>
+ScoredBoxesIndex<T> GenScoredBoxesIndex(size_t capacity, int32_t* index_ptr, const T* boxes_ptr,
+                                        const T* score_ptr, bool init_index = false) {
+  return ScoredBoxesIndex<T>(BoxesIndex<T>(Indexes(capacity, index_ptr, init_index), boxes_ptr),
+                             score_ptr);
+}
+
+template<typename PbValueList>
+class GtBoxesPbValueList {
  public:
-  ScoredBBoxSlice(int32_t len, const T* bbox_ptr, const T* score_ptr, int32_t* index_slice)
-      : len_(len),
-        bbox_ptr_(bbox_ptr),
-        score_ptr_(score_ptr),
-        index_slice_(index_slice),
-        available_len_(len) {}
-
-  void Sort(const std::function<bool(const T, const T, const BBox<T>&, const BBox<T>&)>& Compare);
-  void DescSortByScore(bool init_index);
-  void DescSortByScore() { DescSortByScore(true); }
-  void NmsFrom(float nms_threshold, const ScoredBBoxSlice<T>& pre_nms_slice);
-
-  void Truncate(int32_t len);
-  void TruncateByThreshold(float thresh);
-  int32_t FindByThreshold(const float thresh);
-  void Concat(const ScoredBBoxSlice& other);
-  void Filter(const std::function<bool(const T, const BBox<T>*)>& IsFiltered);
-  ScoredBBoxSlice<T> Slice(const int32_t begin, const int32_t end);
-  void Shuffle();
-
-  inline int32_t GetSlice(int32_t i) const {
-    CHECK_LT(i, available_len_);
-    return index_slice_[i];
-  }
-  inline const BBox<T>* GetBBox(int32_t i) const {
-    CHECK_LT(i, available_len_);
-    return BBox<T>::Cast(bbox_ptr_) + index_slice_[i];
-  }
-  inline T GetScore(int32_t i) const {
-    CHECK_LT(i, available_len_);
-    return score_ptr_[index_slice_[i]];
-  }
-
-  // Getters
-  int32_t len() const { return len_; }
-  const T* bbox_ptr() const { return bbox_ptr_; }
-  const T* score_ptr() const { return score_ptr_; }
-  const int32_t* index_slice() const { return index_slice_; }
-  int32_t available_len() const { return available_len_; }
-  // Setters
-  int32_t* mut_index_slice() { return index_slice_; }
-
- private:
-  const int32_t len_;
-  const T* bbox_ptr_;
-  const T* score_ptr_;
-  int32_t* index_slice_;
-  int32_t available_len_;
-};
-
-template<typename ListType>
-class GtBoxes {
- public:
-  GtBoxes(const ListType& box_list) : box_list_(box_list) {
-    CHECK_EQ(box_list.value().value_size() % 4, 0);
+  GtBoxesPbValueList(const PbValueList& box_pb) : box_pb_(box_pb) {
+    CHECK_EQ(box_pb.value().value_size() % 4, 0);
   }
 
   template<typename T>
-  void ConvertNormalToAbsCoord(int32_t im_h, int32_t im_w) {
-    BBox<T>* bbox = BBox<T>::MutCast(box_list_.mutable_value()->mutable_value()->mutable_data());
-    FOR_RANGE(size_t, i, 0, size()) {
-      bbox[i].set_x1(bbox[i].x1() * im_w);
-      bbox[i].set_y1(bbox[i].y1() * im_h);
-      bbox[i].set_x2(bbox[i].x2() * im_w - 1);
-      bbox[i].set_y2(bbox[i].y2() * im_h - 1);
+  const BBox<T>* GetBBox(int32_t index) const {
+    CHECK_GE(index, 0);
+    CHECK_LT(index, this->size());
+    return BBox<T>::Cast(box_pb_.value().value().data()) + index;
+  }
+
+  virtual void Erase(int32_t index) {
+    CHECK_GE(index, 0);
+    CHECK_LT(index, this->size());
+    box_pb_.mutable_value()->mutable_value()->erase(
+        box_pb_.value().value().begin() + index * 4,
+        box_pb_.value().value().begin() + (index + 1) * 4);
+  }
+
+  void Filter(const Int32List& fitler_inds) {
+    for (auto it = fitler_inds.value().begin(); it != fitler_inds.value().end(); ++it) {
+      this->Erase(*it);
     }
   }
 
   template<typename T>
-  const BBox<T>* GetBBox(size_t index) const {
-    return BBox<T>::Cast(box_list_.value().value().data() + index * 4);
+  void ForEachBox(const std::function<void(int32_t, const BBox<T>*)>& Handler) const {
+    const BBox<T>* bbox = BBox<T>::Cast(box_pb_.value().value().data());
+    FOR_RANGE(size_t, i, 0, this->size()) { Handler(i, bbox + i); }
   }
 
-  size_t size() const { return box_list_.value().value_size() / 4; }
-  const ListType& box_list() const { return box_list_; }
+  template<typename T>
+  void ForEachBox(const std::function<void(int32_t, BBox<T>*)>& Handler) {
+    BBox<T>* bbox = BBox<T>::MutCast(box_pb_.mutable_value()->mutable_value()->mutable_data());
+    FOR_RANGE(size_t, i, 0, this->size()) { Handler(i, bbox + i); }
+  }
+
+  size_t size() const { return box_pb_.value().value_size() / 4; }
+  const PbValueList& box_pb() const { return box_pb_; }
 
  private:
-  ListType box_list_;
-};
+  PbValueList box_pb_;
+};  // namespace oneflow
 
-template<typename BoxListType, typename LabelListType>
-class GtBoxesWithLabels : public GtBoxes<BoxListType> {
+template<typename LabelPb, typename BoxPb>
+class GtBoxesAndLabelsPbValueList : public GtBoxesPbValueList<BoxPb> {
  public:
-  GtBoxesWithLabels(const BoxListType& box_list, const LabelListType& label_list)
-      : GtBoxes<BoxListType>(box_list), label_list_(label_list) {
-    size_t size = label_list.value().value_size();
-    CHECK_EQ(this->size(), size);
+  GtBoxesAndLabelsPbValueList(const BoxPb& box_pb, const LabelPb& label_pb)
+      : GtBoxesPbValueList<BoxPb>(box_pb), label_pb_(label_pb) {
+    // CHECK_EQ(this->size(), box_pb.value().value_size() / 4);
+    CHECK_EQ(this->size(), label_pb.value().value_size());
   }
 
   int32_t GetLabel(int32_t index) const {
     if (index < 0) { return 0; }
-    return label_list_.value().value(index);
+    CHECK_LT(index, label_pb_.value().value_size());
+    return label_pb_.value().value(index);
   }
 
-  const LabelListType& label_list() const { return label_list_; }
+  virtual void Erase(int32_t index) override {
+    CHECK_GE(index, 0);
+    CHECK_LT(index, label_pb_.value().value_size());
+    label_pb_.mutable_value()->mutable_value()->erase(label_pb_.value().value().begin() + index);
+    GtBoxesPbValueList<BoxPb>::Erase(index);
+  }
+
+  void ForEachLabel(const std::function<void(int32_t, int32_t)>& Handler) const {
+    FOR_RANGE(size_t, i, 0, label_pb_.value().value_size()) {
+      Handler(i, label_pb_.value().value(i));
+    }
+  }
+
+  // virtual size_t size() const { return label_pb_.value().value_size(); }
+  const LabelPb& label_pb() const { return label_pb_; }
 
  private:
-  LabelListType label_list_;
+  LabelPb label_pb_;
 };
+
+template<typename BoxPb>
+class GtBoxesWithMaxOverlapPbValueList : public GtBoxesPbValueList<BoxPb> {
+ public:
+  GtBoxesWithMaxOverlapPbValueList(const BoxPb& box_pb)
+      : GtBoxesPbValueList<BoxPb>(box_pb), last_gt_index_(-1), last_gt_max_overlap_with_end_(0) {
+    max_overlap_pb_.mutable_value()->Resize(this->size(), 0.f);
+  }
+
+  float GetMaxOverlap(int32_t index) const {
+    CHECK_GE(index, 0);
+    CHECK_LT(index, max_overlap_pb_.value_size());
+    return max_overlap_pb_.value(index);
+  }
+
+  void SetMaxOverlap(int32_t index, float overlap) {
+    CHECK_GE(index, 0);
+    CHECK_LT(index, max_overlap_pb_.value_size());
+    max_overlap_pb_.set_value(index, overlap);
+  }
+
+  void AddMaxOverlapWithIndex(int32_t index) { max_overlap_with_index_pb_.add_value(index); }
+
+  void UpdateMaxOverlap(int32_t gt_index, int32_t index, float overlap) {
+    if (gt_index != last_gt_index_) {
+      last_gt_max_overlap_with_end_ = max_overlap_with_index_pb_.value_size();
+      last_gt_index_ = gt_index;
+    }
+    if (overlap >= GetMaxOverlap(gt_index)) {
+      if (overlap > GetMaxOverlap(gt_index)) {
+        max_overlap_with_index_pb_.mutable_value()->Truncate(last_gt_max_overlap_with_end_);
+      }
+      AddMaxOverlapWithIndex(index);
+      SetMaxOverlap(gt_index, overlap);
+    }
+  }
+
+  void ForEachMaxOverlapWithIndex(const std::function<void(int32_t)>& Handler) const {
+    FOR_RANGE(size_t, i, 0, max_overlap_with_index_pb_.value_size()) {
+      Handler(max_overlap_with_index_pb_.value(i));
+    }
+  }
+
+ private:
+  FloatList max_overlap_pb_;
+  Int32List max_overlap_with_index_pb_;
+  int32_t last_gt_index_;
+  int32_t last_gt_max_overlap_with_end_;
+};
+
+using GtBoxes = GtBoxesPbValueList<FloatList16>;
+using GtBoxesAndLabels = GtBoxesAndLabelsPbValueList<Int32List16, FloatList16>;
+using GtBoxesWithMaxOverlap = GtBoxesWithMaxOverlapPbValueList<FloatList16>;
 
 template<typename T>
 struct FasterRcnnUtil final {
@@ -534,15 +591,12 @@ struct FasterRcnnUtil final {
                                const BBoxRegressionWeights& bbox_reg_ws, T* deltas);
   static void ClipBoxes(int64_t boxes_num, const int64_t image_height, const int64_t image_width,
                         T* bboxes);
-  static size_t ConvertGtBoxesToAbsoluteCoord(const FloatList16* gt_boxes,
-                                              const size_t image_height, const size_t image_width,
-                                              T* converted_gt_boxes);
+  static void Nms(float threshold, const ScoredBoxesIndex<T>& pre_nms_boxes,
+                  ScoredBoxesIndex<T>& post_nms_boxes);
   static void ForEachOverlapBetweenBoxesAndGtBoxes(
-      const BoxesSlice<T>& boxes_slice, const BoxesSlice<T>& gt_boxes_slice,
+      const BoxesIndex<T>& boxes, const GtBoxes& gt_boxes,
       const std::function<void(int32_t, int32_t, float)>& Handler);
-  static void ForEachOverlapBetweenBoxesAndGtBoxes(
-      const BoxesSlice<T>& boxes, const GtBoxes<FloatList16>& gt_boxes,
-      const std::function<void(int32_t, int32_t, float)>& Handler);
+  static void CorrectGtBoxCoord(int32_t image_height, int32_t image_weight, BBox<float>* bbox);
 };
 
 }  // namespace oneflow

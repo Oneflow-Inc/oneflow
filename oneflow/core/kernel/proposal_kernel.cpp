@@ -21,6 +21,8 @@ void ProposalKernel<T>::ForwardDataContent(
   Blob* rois_blob = BnInOp2Blob("rois");
   Blob* roi_probs_blob = BnInOp2Blob("roi_probs");
   Blob* proposals_blob = BnInOp2Blob("proposals");
+  std::memset(rois_blob->mut_dptr(), 0, rois_blob->shape().elem_cnt() * sizeof(T));
+  std::memset(roi_probs_blob->mut_dptr(), 0, roi_probs_blob->shape().elem_cnt() * sizeof(T));
   const ProposalOpConf& conf = op_conf().proposal_conf();
   const AnchorGeneratorConf& anchor_generator_conf = conf.anchors_generator_conf();
   const BBoxRegressionWeights& bbox_reg_ws = conf.bbox_reg_weights();
@@ -45,31 +47,31 @@ void ProposalKernel<T>::ForwardDataContent(
     FasterRcnnUtil<T>::ClipBoxes(num_proposals, anchor_generator_conf.image_height(),
                                  anchor_generator_conf.image_width(), proposals_ptr);
 
-    ScoredBBoxSlice<T> pre_nms_slice(num_proposals, const_proposals_ptr, class_prob_ptr,
-                                     pre_nms_slice_ptr);
-    pre_nms_slice.DescSortByScore();
-    pre_nms_slice.Filter([&](const T score, const BBox<T>* bbox) {
+    auto pre_nms_slice = GenScoredBoxesIndex(num_proposals, pre_nms_slice_ptr, const_proposals_ptr,
+                                             class_prob_ptr, true);
+    pre_nms_slice.SortByScore([](T lhs_score, T rhs_score) { return lhs_score > rhs_score; });
+    pre_nms_slice.FilterByBBox([&](size_t n, int32_t index, const BBox<T>* bbox) {
       return (bbox->width() < conf.min_size()) || (bbox->height() < conf.min_size());
     });
     pre_nms_slice.Truncate(conf.pre_nms_top_n());
 
-    ScoredBBoxSlice<T> post_nms_slice(conf.post_nms_top_n(), const_proposals_ptr, class_prob_ptr,
-                                      post_nms_slice_ptr);
-    post_nms_slice.NmsFrom(conf.nms_threshold(), pre_nms_slice);
+    auto post_nms_slice = GenScoredBoxesIndex(conf.post_nms_top_n(), post_nms_slice_ptr,
+                                              const_proposals_ptr, class_prob_ptr, true);
+    FasterRcnnUtil<T>::Nms(conf.nms_threshold(), pre_nms_slice, post_nms_slice);
 
     CopyRoI(i, post_nms_slice, rois_blob);
-    FOR_RANGE(int32_t, j, 0, post_nms_slice.available_len()) {
+    FOR_RANGE(int32_t, j, 0, post_nms_slice.size()) {
       roi_probs_blob->mut_dptr<T>(i)[j] = post_nms_slice.GetScore(j);
     }
   }
 }
 
 template<typename T>
-void ProposalKernel<T>::CopyRoI(const int64_t im_index, const ScoredBBoxSlice<T>& slice,
+void ProposalKernel<T>::CopyRoI(const int64_t im_index, const ScoredBoxesIndex<T>& boxes,
                                 Blob* rois_blob) const {
-  FOR_RANGE(int32_t, i, 0, slice.available_len()) {
+  FOR_RANGE(int32_t, i, 0, boxes.size()) {
     BBox<T>* roi_bbox = BBox<T>::MutCast(rois_blob->mut_dptr<T>(im_index, i));
-    const BBox<T>* proposal_bbox = slice.GetBBox(i);
+    const BBox<T>* proposal_bbox = boxes.GetBBox(i);
     roi_bbox->set_x1(proposal_bbox->x1());
     roi_bbox->set_y1(proposal_bbox->y1());
     roi_bbox->set_x2(proposal_bbox->x2());

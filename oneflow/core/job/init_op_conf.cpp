@@ -231,11 +231,6 @@ void InitInitializerConf(InitializerConf* initializer, const InitializerConf::Ty
       initializer->set_allocated_msra_conf(msra_conf);
       break;
     }
-    case InitializerConf::kNoneConf: {
-      NoneInitializerConf* none_conf = new NoneInitializerConf();
-      initializer->set_allocated_none_conf(none_conf);
-      break;
-    }
     case InitializerConf::TYPE_NOT_SET: {
       LOG(INFO) << "InitializerConf::TYPE_NOT_SET";
       break;

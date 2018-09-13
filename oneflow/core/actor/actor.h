@@ -12,6 +12,7 @@
 #include "oneflow/core/persistence/snapshot_manager.h"
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/thread/thread_context.h"
+#include "oneflow/core/actor/register_slot.h"
 
 namespace oneflow {
 
@@ -91,6 +92,9 @@ class Actor {
                   // area
   }
 
+  virtual bool ConsumedCtrlRegstValid(int64_t regst_desc_id) const { return true; }
+  virtual bool ProducedCtrlRegstValid(int64_t regst_desc_id) const { return true; }
+
   // Async Do on device_ctx_
   void AsyncLaunchKernel(const KernelCtx&, std::function<Regst*(int64_t)> Regst4RegstDescId);
   void AsyncLaunchKernel(const KernelCtx&);
@@ -111,11 +115,12 @@ class Actor {
   Regst* GetCurSoleWriteableRegst();
 
   // Status Of Naive Consumed Registers
-  virtual std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName();
-  Regst* GetNaiveCurReadable(int64_t regst_desc_id);
-  Regst* GetNaiveNextReadable(int64_t regst_desc_id);
-  Regst* GetNaiveSoleCurReadable();
-  Regst* GetNaiveFirstCurReadable();
+  virtual std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() {
+    return {false, {}};
+  }
+  Regst* GetNaiveCurReadable(int64_t desc_id) { return naive_consumed_data_rs_.Front(desc_id); }
+  Regst* GetNaiveSoleCurReadable() { return naive_consumed_data_rs_.SoleFront(); }
+  Regst* GetNaiveFirstCurReadable() { return naive_consumed_data_rs_.FirstFront(); }
   Regst* GetSoleProducedRegst(int64_t regst_desc_id);
   int64_t GetSoleProducedDataRegstDescId() const;
 
@@ -129,7 +134,8 @@ class Actor {
   int ProcessWriteableCtrlRegstMsg(const ActorMsg& msg);
   int ProcessReadableCtrlRegstMsg(const ActorMsg& msg);
   void AsyncSendEORDMsgForAllProducedCtrlRegstDesc();
-  void AsyncSendCtrlRegstMsg();
+  void AsyncSendCtrlRegstMsgToProducer();
+  void AsyncSendCtrlRegstMsgToConsumer();
   int TryUpdtStateAsProducedRegst(Regst* regst);
   void TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids);
   void AddNaiveConsumed(const RegstDescIdSet&);
@@ -154,27 +160,24 @@ class Actor {
 
   // Status of Produced Registers
   HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_data_regsts_;
-  HashMap<int64_t, std::deque<Regst*>> writeable_produced_data_regst_;
   HashMap<int64_t, int64_t> produced_data_regst2expected_act_id_;
   HashMap<Regst*, int64_t> produced_data_regst2reading_cnt_;
-  int64_t actual_writeable_produced_data_regst_desc_num_;
-  int64_t writeable_produced_data_regst_desc_cnt_;
   int64_t total_reading_data_cnt_;
 
+  RegstSlot writeable_produced_data_rs_;
+  int64_t actual_writeable_produced_data_regst_desc_num_;
   // Status of Naive Consumed Registers
-  HashMap<int64_t, std::deque<Regst*>> naive_readable_data_regst_;
-  size_t naive_readable_data_regst_cnt_;
-  bool is_naive_readable_data_eord_;
+  RegstSlot naive_consumed_data_rs_;
+  bool is_naive_consumed_data_eord_;
 
   // Status of Control Registers
   HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_ctrl_regst_;
-  HashMap<int64_t, std::deque<Regst*>> writeable_produced_ctrl_regst_;
   HashMap<int64_t, int64_t> produced_ctrl_regst2expected_act_id_;
   HashMap<Regst*, int64_t> produced_ctrl_regst2reading_cnt_;
-  HashMap<int64_t, std::deque<Regst*>> consumed_ctrl_regst_;
   int64_t total_reading_ctrl_cnt_;
-  int64_t readable_ctrl_regst_desc_cnt_;
-  int64_t writeable_ctrl_regst_desc_cnt_;
+
+  RegstSlot writeable_produced_ctrl_rs_;
+  RegstSlot consumed_ctrl_rs_;
   bool is_consumed_ctrl_eord_;
 };
 

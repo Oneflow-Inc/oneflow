@@ -72,7 +72,7 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   rpn_bbox_targets_blob_desc->mut_shape() = Shape({image_num, fm_h, fm_w, 4 * base_anchors_num});
   // output: rpn_bbox_inside_weights (N, H, W, 4 * A) T
   *GetBlobDesc4BnInOp("rpn_bbox_inside_weights") = *rpn_bbox_targets_blob_desc;
-  // output: rpn_bbox_outside_weights (N, H, 4 * A) T
+  // output: rpn_bbox_outside_weights (N, H, W, 4 * A) T
   *GetBlobDesc4BnInOp("rpn_bbox_outside_weights") = *rpn_bbox_targets_blob_desc;
 
   // const_buf: anchors (H, W, A, 4) T

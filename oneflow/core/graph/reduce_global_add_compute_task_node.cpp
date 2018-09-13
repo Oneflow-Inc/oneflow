@@ -9,12 +9,18 @@ void ReduceGlobalAddCompTaskNode::ProduceAllRegstsAndBindEdges() {
 }
 
 void ReduceGlobalAddCompTaskNode::ConsumeAllRegsts() {
+  int64_t machine_num = logical_node()->parallel_desc()->sorted_machine_ids().size();
+  int64_t dev_num_of_each_machine = logical_node()->parallel_desc()->device_num_of_each_machine();
+  CHECK_EQ(machine_num * dev_num_of_each_machine, parallel_ctx()->parallel_num());
+  bool has_local_reduce = machine_num > 1 && dev_num_of_each_machine > 1;
+
   for (TaskEdge* edge : in_edges()) {
     std::vector<CompTaskNode*> pred_comp_task_nodes = GetPredCompTaskNodesOnEdge(edge);
     CHECK_EQ(pred_comp_task_nodes.size(), 1);
-    int64_t parallel_id = pred_comp_task_nodes.front()->parallel_id();
-    ConsumeRegst("in_" + std::to_string(parallel_id), edge->GetSoleRegst());
-    in_parallel_ids_.Add(parallel_id);
+    int64_t in_parallel_id = pred_comp_task_nodes.front()->parallel_id();
+    int64_t in_machine_rank = in_parallel_id / dev_num_of_each_machine;
+    int64_t in_edge_index = has_local_reduce ? in_machine_rank : in_parallel_id;
+    ConsumeRegst("in_" + std::to_string(in_edge_index), edge->GetSoleRegst());
   }
 }
 
@@ -23,8 +29,7 @@ void ReduceGlobalAddCompTaskNode::BuildExecGphAndRegst() {
   OperatorConf reduce_global_add_op_conf;
   reduce_global_add_op_conf.set_name("reduce_global_add_" + NewUniqueId());
   reduce_global_add_op_conf.set_device_type(this->device_type());
-  *reduce_global_add_op_conf.mutable_reduce_global_add_conf()->mutable_in_parallel_ids() =
-      in_parallel_ids_;
+  reduce_global_add_op_conf.mutable_reduce_global_add_conf()->set_in_num(in_edges().size());
   std::shared_ptr<Operator> reduce_global_add_op = ConstructOp(reduce_global_add_op_conf);
   node->mut_op() = reduce_global_add_op;
   for (const std::string& input_bn : reduce_global_add_op->input_bns()) {
