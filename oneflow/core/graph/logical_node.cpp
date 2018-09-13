@@ -252,6 +252,8 @@ void LogicalNode::GenSortedCompTaskNodes(
       comp_task_node->mut_parallel_ctx()->set_parallel_id(parallel_idx++);
       comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);
       comp_task_node->mut_parallel_ctx()->set_parallel_set_id(node_id());
+      comp_task_node->mut_parallel_ctx()->set_rank_id(
+          comp_task_node->parallel_ctx()->parallel_id());
       comp_task_node->mut_parallel_ctx()->set_rank_num(parallel_num);
       comp_task_node->mut_parallel_ctx()->set_device_num_of_each_machine(
           device_num_of_each_machine);
