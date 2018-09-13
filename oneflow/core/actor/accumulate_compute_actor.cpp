@@ -26,7 +26,7 @@ void AccumulateCompActor::Init(const TaskProto& task_proto, int32_t max_acc_cnt,
 }
 
 int64_t AccumulateCompActor::ActNumForEachOutput(int64_t regst_desc_id) const {
-  return regst_desc_id == GetSoleProducedDataRegstDescId() ? max_acc_cnt_ : 1;
+  return regst_desc_id == Name2SoleRegstDescId("acc") ? max_acc_cnt_ : 1;
 }
 
 void AccumulateCompActor::Act() {

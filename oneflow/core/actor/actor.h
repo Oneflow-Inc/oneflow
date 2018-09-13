@@ -59,12 +59,11 @@ class Actor {
   virtual void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const {}
   virtual void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*) const;
   void ForEachCurNaiveReadableRegst(std::function<void(const Regst*)>) const;
-  void ForEachCurConsumedCtrlRegst(std::function<void(const Regst*)>) const;
 
   int64_t act_id() const { return act_id_; }
   int64_t ReadingCnt4ProducedRegst(Regst* regst) const;
   void IncreaseReadingCnt4ProducedRegst(Regst* regst, int64_t val);
-  void IncreaseTotalReadingCnt(int64_t val) { total_reading_data_cnt_ += val; }
+  void IncreaseTotalReadingCnt(int64_t val) { total_reading_cnt_ += val; }
 
   // Msg Handler
   void set_msg_handler(MsgHandler val) { msg_handler_ = val; }
@@ -78,8 +77,8 @@ class Actor {
   int HandlerNormal(const ActorMsg& msg);
   int HandlerZombie(const ActorMsg& msg);
 
-  virtual void NormalProcessCustomizedEordMsg(const ActorMsg&) {}
-  virtual void NormalProcessNaiveReadableRegstMsg(const std::deque<Regst*>&) {}
+  virtual void NormalProcessCustomizedEordMsg(const ActorMsg&) { UNIMPLEMENTED(); }
+  virtual void NormalProcessNaiveReadableRegstMsg(const std::deque<Regst*>&) { UNIMPLEMENTED(); }
   virtual void NormalProcessCustomizedReadableRegstMsg(const ActorMsg&) { UNIMPLEMENTED(); }
   virtual bool NormalTryProcessReadableMsgFromOtherMachine(const ActorMsg&) { return false; }
 
@@ -109,26 +108,24 @@ class Actor {
   virtual void AsyncSendCustomizedProducedRegstMsgToConsumer() { UNIMPLEMENTED(); }
 
   void AsyncSendMsg(const ActorMsg&);
-  void AsyncSendEORDMsgToConsumers(int64_t regst_desc_id);
-  void AsyncSendEORDMsgForAllProducedRegstDesc();
   void AsyncSendRegstMsgToProducer(Regst*);
   void AsyncSendRegstMsgToProducer(Regst*, int64_t producer);
+  void AsyncSendEORDMsgForAllProducedRegstDesc();
   void AsyncDo(std::function<void()> func) { device_ctx_->AddCallBack(func); }
 
   // Status of Produced Registers
-  Regst* GetNaiveCurWriteable(int desc_id) { return naive_produced_data_rs_.Front(desc_id); }
+  Regst* GetNaiveCurWriteable(int desc_id) { return naive_produced_rs_.Front(desc_id); }
   Regst* GetNaiveCurWriteable(const std::string& name) {
     return GetNaiveCurWriteable(Name2SoleRegstDescId(name));
   }
-  Regst* GetNaiveSoleCurWriteable() { return naive_produced_data_rs_.SoleFront(); }
+  Regst* GetNaiveSoleCurWriteable() { return naive_produced_rs_.SoleFront(); }
 
   // Status Of Naive Consumed Registers
-  Regst* GetNaiveCurReadable(int64_t desc_id) { return naive_consumed_data_rs_.Front(desc_id); }
-  Regst* GetNaiveSoleCurReadable() { return naive_consumed_data_rs_.SoleFront(); }
-  Regst* GetNaiveFirstCurReadable() { return naive_consumed_data_rs_.FirstFront(); }
+  Regst* GetNaiveCurReadable(int64_t desc_id) { return naive_consumed_rs_.Front(desc_id); }
+  Regst* GetNaiveSoleCurReadable() { return naive_consumed_rs_.SoleFront(); }
+  Regst* GetNaiveFirstCurReadable() { return naive_consumed_rs_.FirstFront(); }
 
-  Regst* GetSoleProducedRegst(int64_t regst_desc_id);
-  int64_t GetSoleProducedDataRegstDescId() const;
+  Regst* GetSoleProducedRegst4RegstDescId(int64_t regst_desc_id);
 
  private:
   bool IsReadReady();
@@ -137,12 +134,6 @@ class Actor {
   virtual bool IsCustomizedWriteReady() { return true; }
   virtual bool IsCustomizedReadAlwaysUnReadyFromNow() { return false; }
 
-  bool IsCtrlReady();
-  int ProcessWriteableCtrlRegstMsg(const ActorMsg& msg);
-  int ProcessReadableCtrlRegstMsg(const ActorMsg& msg);
-  void AsyncSendEORDMsgForAllProducedCtrlRegstDesc();
-  void AsyncSendCtrlRegstMsgToProducer();
-  void AsyncSendCtrlRegstMsgToConsumer();
   int TryUpdtStateAsProducedRegst(Regst* regst);
   virtual void UpdtStateAsCustomizedProducedRegst(Regst* regst) { UNIMPLEMENTED(); }
   int64_t GetGlobalWorkStreamId() const;
@@ -152,14 +143,13 @@ class Actor {
   }
   void TryLogActEvent(const std::function<void()>& Callback) const;
 
-  virtual std::pair<bool, std::vector<std::string>> GetNaiveOrCustomizedConsumedRegstDescName() {
+  virtual std::pair<bool, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName() {
     return {false, {}};
   }
-  virtual std::pair<bool, std::vector<std::string>> GetNaiveOrCustomizedProducedRegstDescName() {
+  virtual std::pair<bool, HashSet<std::string>> GetNaiveOrCustomizedProducedRegstDescName() {
     return {false, {}};
   }
   void TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids);
-  void AddNaiveConsumed(const RegstDescIdSet&);
   void TakeOverNaiveProduced(const PbMap<std::string, RegstDescProto>& produced_ids);
 
   int64_t actor_id_;
@@ -174,24 +164,14 @@ class Actor {
   int64_t remaining_eord_cnt_;
 
   // Status of Produced Registers
-  HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_data_regsts_;
-  HashMap<int64_t, int64_t> produced_data_regst2expected_act_id_;
-  HashMap<Regst*, int64_t> produced_data_regst2reading_cnt_;
-  int64_t total_reading_data_cnt_;
+  HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_regsts_;
+  HashMap<int64_t, int64_t> produced_regst2expected_act_id_;
+  HashMap<Regst*, int64_t> produced_regst2reading_cnt_;
+  int64_t total_reading_cnt_;
 
-  RegstSlot naive_produced_data_rs_;
-  RegstSlot naive_consumed_data_rs_;
-  bool is_naive_consumed_data_eord_;
-
-  // Status of Control Registers
-  HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_ctrl_regst_;
-  HashMap<int64_t, int64_t> produced_ctrl_regst2expected_act_id_;
-  HashMap<Regst*, int64_t> produced_ctrl_regst2reading_cnt_;
-  int64_t total_reading_ctrl_cnt_;
-
-  RegstSlot writeable_produced_ctrl_rs_;
-  RegstSlot consumed_ctrl_rs_;
-  bool is_consumed_ctrl_eord_;
+  RegstSlot naive_produced_rs_;
+  RegstSlot naive_consumed_rs_;
+  bool is_naive_consumed_eord_;
 };
 
 class ScopedActEventRecorder;

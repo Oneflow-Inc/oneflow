@@ -16,7 +16,7 @@ void NormalForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
     pre_forward_model_regst_ = GetNaiveCurWriteable(forward_model_regst_desc_id_);
   }
   if (const_buf_regst_desc_id_ != -1) {
-    const_buf_regst_ = GetSoleProducedRegst(const_buf_regst_desc_id_);
+    const_buf_regst_ = GetSoleProducedRegst4RegstDescId(const_buf_regst_desc_id_);
   }
   send_const_buf_regst_ = false;
   if (random_seed_ == -1 || (model_regst_desc_id_ == -1 && const_model_regst_desc_id_ == -1)) {
