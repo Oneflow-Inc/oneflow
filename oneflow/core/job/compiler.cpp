@@ -41,6 +41,7 @@ void ToDotFile(const Plan& plan, const std::string& filepath) {
   }
   out_stream << "}\n";
 }
+
 }  // namespace
 
 Plan Compiler::Compile() {
@@ -101,10 +102,7 @@ Plan Compiler::DoCompile() {
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::PinConsumedRegst, _1));
-  task_gph->AcyclicTopoForEachNode(
-      [](TaskNode* node) { return node->GetTaskType() != kNormalMdUpdt; }, &TaskNode::Build);
-  task_gph->AcyclicTopoForEachNode(
-      [](TaskNode* node) { return node->GetTaskType() == kNormalMdUpdt; }, &TaskNode::Build);
+  task_gph->MdUpdtDelayedTopoForEachNode(&TaskNode::Build);
   task_gph->RemoveEmptyRegsts();
   task_gph->AddOrderingCtrlEdgeInSameChain();
   if (job_desc->IsTrain() && job_desc->enable_mem_sharing()) {

@@ -74,12 +74,21 @@ void TaskGraph::GeneratePersistenceThrdId(
   }
 }
 
+void TaskGraph::MdUpdtDelayedTopoForEachNode(std::function<void(TaskNode* node)> Handler) const {
+  HashSet<const TaskNode*> built_nodes;
+  auto Build = [&](TaskNode* node) {
+    CHECK(built_nodes.emplace(node).second);
+    Handler(node);
+  };
+  AcyclicTopoForEachNode([](TaskNode* node) { return node->GetTaskType() != kNormalMdUpdt; },
+                         Build);
+  AcyclicTopoForEachNode([](TaskNode* node) { return node->GetTaskType() == kNormalMdUpdt; },
+                         Build);
+  ForEachNode([&](TaskNode* node) { CHECK(built_nodes.find(node) != built_nodes.end()); });
+}
+
 void TaskGraph::AcyclicTopoForEachNode(std::function<bool(TaskNode* node)> IsAllowedStartNode,
                                        std::function<void(TaskNode* node)> Handler) const {
-  std::list<TaskNode*> starts;
-  ForEachNode([&](TaskNode* node) {
-    if (node->in_edges().empty() && IsAllowedStartNode(node)) { starts.push_back(node); }
-  });
   auto ForEachInNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& Handler) {
     node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
       if (IsBackEdge(node_on_in_edge, node)) return;
@@ -92,6 +101,15 @@ void TaskGraph::AcyclicTopoForEachNode(std::function<bool(TaskNode* node)> IsAll
       Handler(const_cast<TaskNode*>(node_on_out_edge));
     });
   };
+  auto IsSourceNode = [&](TaskNode* node) {
+    int32_t in_node_num = 0;
+    ForEachInNode(node, [&](TaskNode* in_node) { ++in_node_num; });
+    return in_node_num == 0;
+  };
+  std::list<TaskNode*> starts;
+  ForEachNode([&](TaskNode* node) {
+    if (IsSourceNode(node) && IsAllowedStartNode(node)) { starts.push_back(node); }
+  });
   // DfsTopo will cause inappropriate chain graph
   TopoForEachNode(starts, ForEachInNode, ForEachOutNode, Handler);
 }
@@ -349,16 +367,30 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceAdd) {
           if (src_comp_task->machine_id() == dst_comp_task->machine_id()) {
             BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, false);
           }
+          src_comp_task->mut_parallel_ctx()->set_rank_id(src_comp_task->parallel_id()
+                                                         % pd->device_num_of_each_machine());
+          src_comp_task->mut_parallel_ctx()->set_rank_num(pd->device_num_of_each_machine());
+          dst_comp_task->mut_parallel_ctx()->set_rank_id(dst_comp_task->parallel_id()
+                                                         % pd->device_num_of_each_machine());
           dst_comp_task->mut_parallel_ctx()->set_rank_num(pd->device_num_of_each_machine());
         } else {
           if (src_comp_task->parallel_id() % pd->device_num_of_each_machine()
               == dst_comp_task->parallel_id() % pd->device_num_of_each_machine()) {
             BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, false);
           }
+          src_comp_task->mut_parallel_ctx()->set_rank_id(src_comp_task->parallel_id()
+                                                         / pd->device_num_of_each_machine());
+          src_comp_task->mut_parallel_ctx()->set_rank_num(pd->sorted_machine_ids().size());
+          dst_comp_task->mut_parallel_ctx()->set_rank_id(dst_comp_task->parallel_id()
+                                                         / pd->device_num_of_each_machine());
           dst_comp_task->mut_parallel_ctx()->set_rank_num(pd->sorted_machine_ids().size());
         }
       } else {
         BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, false);
+        src_comp_task->mut_parallel_ctx()->set_rank_id(src_comp_task->parallel_id());
+        src_comp_task->mut_parallel_ctx()->set_rank_num(
+            src_comp_task->parallel_ctx()->parallel_num());
+        dst_comp_task->mut_parallel_ctx()->set_rank_id(dst_comp_task->parallel_id());
         dst_comp_task->mut_parallel_ctx()->set_rank_num(
             dst_comp_task->parallel_ctx()->parallel_num());
       }

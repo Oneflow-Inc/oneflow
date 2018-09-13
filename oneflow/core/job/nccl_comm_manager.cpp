@@ -21,7 +21,6 @@ NcclCommMgr::NcclCommMgr(const Plan& plan) {
   }
 
   for (const auto& pair : parallel_set2nccl_tasks) {
-
     std::vector<ncclComm_t> comms(pair.second.size());
 
     ncclUniqueId nccl_unique_id{};

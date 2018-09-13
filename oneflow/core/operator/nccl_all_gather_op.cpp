@@ -20,7 +20,7 @@ void NcclAllGatherOp::InferBlobDescs(
   BlobDesc* out_blob = GetBlobDesc4BnInOp(SoleObn());
   *out_blob = *in_blob;
   int64_t elem_cnt = in_blob->shape().elem_cnt();
-  int64_t rank_num = parallel_ctx->device_num_of_each_machine();
+  int64_t rank_num = parallel_ctx->rank_num();
   out_blob->mut_shape() = Shape({elem_cnt * rank_num});
 }
 
