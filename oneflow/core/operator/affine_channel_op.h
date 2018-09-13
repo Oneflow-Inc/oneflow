@@ -7,11 +7,6 @@
 
 namespace oneflow {
 
-struct AffineChannelOpCtx : public OpContext {
-  int32_t axis;
-  int32_t dims;
-};
-
 class AffineChannelOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AffineChannelOp);
@@ -25,22 +20,6 @@ class AffineChannelOp final : public Operator {
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext*,
                       std::function<void(OpContext*)> EnrollOpCtx) const override;
-
- private:
-  void InferParamBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                           const AffineChannelOpConf&, int64_t norm_part_num, DataType in_data_type,
-                           bool use_cudnn) const;
-  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                            const ParallelContext*, KernelConf*, const OpContext*) const override;
-#ifdef WITH_CUDA
-  void InferBlobDescsForCudnn(
-      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp) const;
-  void VirtualGenKernelConfForCudnn(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-      KernelConf*) const;
-#endif
-  void VirtualFixParallelDesc(ParallelDesc* pr_desc) const override;
-  AffineChannelOpCtx* NewAffineChannelOpCtx(const Shape& in_shape) const;
 };
 
 }  // namespace oneflow
