@@ -186,6 +186,8 @@ void PoolingKernel<DeviceType::kCPU, T>::BackwardNCDHW(const PoolingCtx& ctx,
                                                        const Blob* out_diff_blob,
                                                        const Blob* out_blob, const Blob* in_blob,
                                                        Blob* in_diff_blob) const {
+  // xfjiang: test instance num
+  LOG(INFO) << "pool instance num: " << *out_diff_blob->instance_num();
   Shape in(ctx.kernel_conf().in());
   Shape out(ctx.kernel_conf().out());
   const PbRf<int32_t>& pool_size = ctx.kernel_conf().pool_size();
@@ -280,6 +282,8 @@ void PoolingKernel<DeviceType::kCPU, T>::BackwardNDHWC(const PoolingCtx& ctx,
                                                        const Blob* out_diff_blob,
                                                        const Blob* out_blob, const Blob* in_blob,
                                                        Blob* in_diff_blob) const {
+  // xfjiang: test instance num
+  LOG(INFO) << "pool instance num: " << *out_diff_blob->instance_num();
   Shape in(ctx.kernel_conf().in());
   Shape out(ctx.kernel_conf().out());
   const PbRf<int32_t>& pool_size = ctx.kernel_conf().pool_size();

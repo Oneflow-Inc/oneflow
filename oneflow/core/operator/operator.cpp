@@ -155,7 +155,7 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
     if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), &BlobDesc::has_data_id_field)) {
       kernel_conf->set_need_do_data_id(true);
     }
-    if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), &BlobDesc::has_instance_num_field)
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, input_bns(), &BlobDesc::has_instance_num_field)
         || HasBlobDescWithField(GetBlobDesc4BnInOp, input_diff_bns(),
                                 &BlobDesc::has_instance_num_field)) {
       kernel_conf->set_need_do_instance_num(true);

@@ -89,26 +89,35 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(nullptr);
 
   // set instance num
-  bool has_instance_num = false;
-  CompTaskNode* split_node = FindReduceSplitCompTaskNode();
-  if (split_node) {
-    std::shared_ptr<RegstDesc> out_regst = split_node->GetProducedRegst("out_0");
-    out_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
-      if (out_regst->GetBlobDesc(lbi)->has_instance_num_field()) { has_instance_num = true; }
-    });
-  } else {
-    CompTaskNode* bw_node = FindCorrespondingBackwardCompTaskNode();
-    std::shared_ptr<RegstDesc> in_diff_regst = bw_node->GetProducedRegst("in_diff");
-    in_diff_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
-      if (in_diff_regst->GetBlobDesc(lbi)->has_instance_num_field()) { has_instance_num = true; }
-    });
-  }
-  if (has_instance_num) {
-    std::shared_ptr<RegstDesc> model_regst = GetProducedRegst("model");
-    model_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
-      model_regst->MutBlobDesc(lbi)->set_has_instance_num_field(true);
-    });
-  }
+  // bool has_instance_num = false;
+  // CompTaskNode* split_node = FindReduceSplitCompTaskNode();
+  // if (split_node) {
+  //   std::shared_ptr<RegstDesc> out_regst = split_node->GetProducedRegst("out_0");
+  //   out_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
+  //     if (out_regst->GetBlobDesc(lbi)->has_instance_num_field()) { has_instance_num = true; }
+  //   });
+  // } else {
+  //   CompTaskNode* bw_node = FindCorrespondingBackwardCompTaskNode();
+  //   std::shared_ptr<RegstDesc> in_diff_regst = bw_node->GetProducedRegst("in_diff");
+  //   in_diff_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
+  //     if (in_diff_regst->GetBlobDesc(lbi)->has_instance_num_field()) { has_instance_num = true; }
+  //   });
+  // }
+  // if (has_instance_num) {
+  //   std::shared_ptr<RegstDesc> model_regst = GetProducedRegst("model");
+  //   model_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
+  //     model_regst->MutBlobDesc(lbi)->set_has_instance_num_field(true);
+  //   });
+  // }
+  // if (has_instance_num) {
+  //   for (int32_t i = 0; i < logical_node()->SoleOp()->op_conf().normal_mdupdt_conf().in_num();
+  //        i++) {
+  //     std::shared_ptr<RegstDesc> in_regst = GetProducedRegst("in_" + std::to_string(i));
+  //     in_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
+  //       in_regst->MutBlobDesc(lbi)->set_has_instance_num_field(true);
+  //     });
+  //   }
+  // }
 }
 
 void NormalMdUpdtCompTaskNode::LockRegsts() { GetProducedRegst("data_tmp")->Lock(); }
