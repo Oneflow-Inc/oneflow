@@ -587,20 +587,20 @@ message ReduceSplitOpConf {
 
 message ReduceScatterOpConf {
   required int32 out_num = 1;
-};
+}
 
 message ReduceLocalAddOpConf {
   required int32 in_num = 1;
   required int32 out_num = 2;
-};
+}
 
 message ReduceGlobalAddOpConf {
-  repeated int64 in_parallel_ids = 1;
-};
+  required int32 in_num = 1;
+}
 
 message ReduceGatherOpConf {
   required int32 in_num = 1;
-};
+}
 
 message AccuracyOpConf {
   required string prediction = 1;
@@ -703,7 +703,7 @@ message OperatorConf {
     ReduceConcatOpConf reduce_concat_conf = 404;
     ReduceSplitOpConf reduce_split_conf = 405;
     RecordLoadOpConf record_load_conf = 406;
-    AccuracyOpConf accuracy_conf=407;
+    AccuracyOpConf accuracy_conf = 407;
     AccuracyPrintOpConf accuracy_print_conf = 408;
   }
 }

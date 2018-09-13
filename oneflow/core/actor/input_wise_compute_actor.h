@@ -22,6 +22,8 @@ class InputWiseCompActor : public CompActor {
     return GetDeviceType() == DeviceType::kGPU && Global<JobDesc>::Get()->enable_mem_sharing();
   }
 
+  bool ProducedCtrlRegstValid(int64_t regst_desc_id) const override;
+
  private:
   void Act() override;
   void NormalProcessCustomizedReadableRegstMsg(const ActorMsg&) override;
