@@ -84,6 +84,7 @@ class Actor {
   virtual void Act() { UNIMPLEMENTED(); }
   virtual bool IsCustomizedReadReady() { return true; }
   virtual bool IsCustomizedReadAlwaysUnReadyFromNow() { return false; }
+  virtual bool IsCustomizedCtrlReady();
   bool IsWriteReady();
   virtual void AsyncReturnAllCustomizedReadableRegst() {}
   virtual int64_t ActNumForEachOutput(int64_t regst_desc_id) const { return 1; }
@@ -93,7 +94,7 @@ class Actor {
   }
 
   virtual bool ConsumedCtrlRegstValid(int64_t regst_desc_id) const { return true; }
-  virtual bool ProducedCtrlRegstValid(int64_t regst_desc_id) const { return true; }
+  virtual bool ProducedCtrlRegstValid(const Regst* regst) const { return true; }
 
   // Async Do on device_ctx_
   void AsyncLaunchKernel(const KernelCtx&, std::function<Regst*(int64_t)> Regst4RegstDescId);

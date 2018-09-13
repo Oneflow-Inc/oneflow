@@ -22,7 +22,8 @@ class InputWiseCompActor : public CompActor {
     return GetDeviceType() == DeviceType::kGPU && Global<JobDesc>::Get()->enable_mem_sharing();
   }
 
-  bool ProducedCtrlRegstValid(int64_t regst_desc_id) const override;
+  bool ProducedCtrlRegstValid(const Regst* regst) const override;
+  bool IsCustomizedCtrlReady() override { return true; }
 
  private:
   void Act() override;
@@ -49,6 +50,7 @@ class InputWiseCompActor : public CompActor {
   HashMap<int64_t, bool> regst_desc_id2is_processed_;
   int64_t processed_regst_desc_id_cnt_;
   int64_t cur_processed_regst_desc_id_;
+  int64_t just_processed_regst_desc_id_;
 
   HashMap<int64_t, int64_t> regst_desc_id2in_bn_id_;
 };

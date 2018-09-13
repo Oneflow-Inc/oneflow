@@ -94,6 +94,8 @@ class ReduceCompTaskNodeIf {
 int64_t InferRegstSize(const RegstDesc& regst);
 void BuildCtrlRegstBetweenReduceCopyNodes(const CompTaskNode* src_reduce,
                                           const CompTaskNode* dst_reduce, int64_t copy_node_num);
+void BuildCtrlRegstBetweenReduceAddAndGather(CompTaskNode* src_reduce,
+                                             const CompTaskNode* dst_reduce, int64_t copy_node_num);
 
 }  // namespace oneflow
 
