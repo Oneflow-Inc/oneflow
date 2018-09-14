@@ -12,10 +12,10 @@ enum ParallelPolicy {
 message ParallelContext {
   required int64 parallel_id = 1;
   required int64 parallel_num = 2;
-  optional int64 parallel_set_id = 3;
-  optional int64 rank_id = 4;
-  optional int64 rank_num = 5;
-  required ParallelPolicy policy = 6;
+  required ParallelPolicy policy = 3;
+  optional int64 parallel_set_id = 4;
+  optional int64 rank_id = 5;
+  optional int64 rank_num = 6;
 }
 
 message ParallelConf {
