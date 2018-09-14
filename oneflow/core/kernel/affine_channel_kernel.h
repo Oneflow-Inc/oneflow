@@ -2,8 +2,6 @@
 #define ONEFLOW_CORE_KERNEL_AFFINE_CHANNEL_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/kernel/normalization_kernel.h"
-#include "oneflow/core/persistence/snapshot_manager.h"
 
 namespace oneflow {
 

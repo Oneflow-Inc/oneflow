@@ -33,7 +33,8 @@ void Kernel::InitModelAndConstBuf(const KernelCtx& ctx, const ParallelContext* p
   InitConstBufBlobs(ctx.device_ctx, BnInOp2Blob);
   std::string model_load_dir = "";
   if (snapshot) {
-    model_load_dir = snapshot->GetDirFromOpName(op_conf().name());
+    std::string snapshot_load_path = snapshot->GetDirFromOpName(op_conf().name());
+    if (GlobalFS()->IsDirectory(snapshot_load_path)) { model_load_dir = snapshot_load_path; }
   } else {
     model_load_dir = op_conf().model_load_dir();
   }

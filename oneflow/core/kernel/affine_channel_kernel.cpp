@@ -1,6 +1,4 @@
 #include "oneflow/core/kernel/affine_channel_kernel.h"
-#include "oneflow/core/common/data_type.h"
-#include "oneflow/core/kernel/transpose_kernel.h"
 
 namespace oneflow {
 
@@ -27,7 +25,15 @@ void AffineChannelKernel<device_type, T>::ForwardDataContent(
 template<DeviceType device_type, typename T>
 void AffineChannelKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  TODO();
+  const auto& conf = this->op_conf().affine_channel_conf();
+  const Blob* out_diff_blob = BnInOp2Blob("out_diff");
+  const Blob* scale_blob = BnInOp2Blob("scale");
+  Blob* in_diff_blob = BnInOp2Blob("in_diff");
+  int64_t channel_dim = out_diff_blob->shape().At(conf.channel_axis());
+  int64_t per_channel_dim = out_diff_blob->shape().Count(conf.channel_axis() + 1);
+  AffineChannelKernelUtil<device_type, T>::Backward(
+      ctx.device_ctx, out_diff_blob->shape().elem_cnt(), channel_dim, per_channel_dim,
+      out_diff_blob->dptr<T>(), scale_blob->dptr<T>(), in_diff_blob->mut_dptr<T>());
 }
 
 template<DeviceType device_type, typename T>

@@ -1,9 +1,9 @@
 #include "oneflow/core/operator/affine_channel_op.h"
-#include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
 
 void AffineChannelOp::InitFromOpConf() {
+  mut_op_conf()->set_trainable(false);
   EnrollInputBn("in");
   EnrollOutputBn("out");
   EnrollModelBn("scale");
@@ -17,6 +17,7 @@ const PbMessage& AffineChannelOp::GetCustomizedConf() const {
 void AffineChannelOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, std::function<void(OpContext*)> EnrollOpCtx) const {
+  CHECK(op_conf().has_model_load_dir());
   const auto& conf = op_conf().affine_channel_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   const DataType in_data_type = in_blob_desc->data_type();

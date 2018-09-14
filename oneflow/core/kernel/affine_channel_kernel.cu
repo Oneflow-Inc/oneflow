@@ -38,7 +38,8 @@ class AffineChannelKernelUtil<DeviceType::kGPU, T> final {
 
   static void Backward(DeviceCtx* ctx, int64_t n, int64_t channel_dim, int64_t per_channel_dim,
                        const T* out_diff, const T* scale, T* in_diff) {
-    TODO();
+    ScaleBackward<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        n, out_diff, scale, channel_dim, per_channel_dim, in_diff);
   }
 };
 
