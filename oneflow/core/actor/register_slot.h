@@ -32,6 +32,8 @@ class RegstSlot final {
   int TryPushBackRegst(Regst* regst);
   int TryPopFrontRegst(int64_t regst_desc_id);
 
+  void PopFrontRegsts(const std::vector<int64_t>& regst_desc_ids);
+
   void InitedDone();
   void InsertRegstDescId(int64_t regst_desc_id);
 

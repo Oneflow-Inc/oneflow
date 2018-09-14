@@ -13,7 +13,7 @@ void RecordLoadActor::VirtualCompActorInit(const TaskProto& task_proto) {
 }
 
 void RecordLoadActor::Act() {
-  Regst* regst = GetNaiveSoleCurWriteable();
+  Regst* regst = GetNaiveCurWriteable("record");
   regst->set_piece_id(piece_id_++);
 
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
