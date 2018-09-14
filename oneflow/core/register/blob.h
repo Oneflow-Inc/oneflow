@@ -49,58 +49,16 @@ class Blob final {
     return static_cast<T*>(dptr_);
   }
 
-  template<typename T>
-  typename std::enable_if<!std::is_same<T, void>::value, const T*>::type dptr(int64_t dim0) const {
-    CHECK_GE(shape().NumAxes(), 1);
-    CHECK_GE(dim0, 0);
-    CHECK_LT(dim0, shape().At(0));
-    return dptr<T>() + dim0 * shape().Count(1);
+  template<typename T, typename... Int64s>
+  typename std::enable_if<!std::is_same<T, void>::value, const T*>::type dptr(
+      int64_t dim0, Int64s... remainder_dims) const {
+    return dptr<T>() + GetDptrOffset(0, dim0, remainder_dims...);
   }
 
-  template<typename T>
-  typename std::enable_if<!std::is_same<T, void>::value, const T*>::type dptr(int64_t dim0,
-                                                                              int64_t dim1) const {
-    CHECK_GE(shape().NumAxes(), 2);
-    CHECK_GE(dim1, 0);
-    CHECK_LT(dim1, shape().At(1));
-    return dptr<T>(dim0) + dim1 * shape().Count(2);
-  }
-
-  template<typename T>
-  typename std::enable_if<!std::is_same<T, void>::value, const T*>::type dptr(int64_t dim0,
-                                                                              int64_t dim1,
-                                                                              int64_t dim2) const {
-    CHECK_GE(shape().NumAxes(), 3);
-    CHECK_GE(dim2, 0);
-    CHECK_LT(dim2, shape().At(2));
-    return dptr<T>(dim0, dim1) + dim2 * shape().Count(3);
-  }
-
-  template<typename T>
-  typename std::enable_if<!std::is_same<T, void>::value, T*>::type mut_dptr(int64_t dim0) {
-    CHECK_GE(shape().NumAxes(), 1);
-    CHECK_GE(dim0, 0);
-    CHECK_LT(dim0, shape().At(0));
-    return mut_dptr<T>() + dim0 * shape().Count(1);
-  }
-
-  template<typename T>
-  typename std::enable_if<!std::is_same<T, void>::value, T*>::type mut_dptr(int64_t dim0,
-                                                                            int64_t dim1) {
-    CHECK_GE(shape().NumAxes(), 2);
-    CHECK_GE(dim1, 0);
-    CHECK_LT(dim1, shape().At(1));
-    return mut_dptr<T>(dim0) + dim1 * shape().Count(2);
-  }
-
-  template<typename T>
-  typename std::enable_if<!std::is_same<T, void>::value, T*>::type mut_dptr(int64_t dim0,
-                                                                            int64_t dim1,
-                                                                            int64_t dim2) {
-    CHECK_GE(shape().NumAxes(), 3);
-    CHECK_GE(dim2, 0);
-    CHECK_LT(dim2, shape().At(2));
-    return mut_dptr<T>(dim0, dim1) + dim2 * shape().Count(3);
+  template<typename T, typename... Int64s>
+  typename std::enable_if<!std::is_same<T, void>::value, T*>::type mut_dptr(
+      int64_t dim0, Int64s... remainder_dims) {
+    return mut_dptr<T>() + GetDptrOffset(0, dim0, remainder_dims...);
   }
 
   const RtBlobDesc& blob_desc() const { return *blob_desc_; }
@@ -131,6 +89,15 @@ class Blob final {
   const MemoryCase& mem_case() const;
 
  private:
+  int64_t GetDptrOffset(int32_t index) const { return 0; }
+  template<typename... Int64s>
+  int64_t GetDptrOffset(int32_t index, int64_t cur_dim, Int64s... remainder) const {
+    CHECK_GE(shape().NumAxes(), index + 1);
+    CHECK_GE(cur_dim, 0);
+    CHECK_LT(cur_dim, shape().At(index));
+    return cur_dim * shape().Count(index + 1) + GetDptrOffset(index + 1, remainder...);
+  }
+
   template<typename T>
   void CheckDataType() const {
     LOG_IF(FATAL, (std::is_same<T, void>::value == false && std::is_same<T, char>::value == false
