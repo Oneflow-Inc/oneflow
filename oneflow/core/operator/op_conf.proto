@@ -606,6 +606,15 @@ message NormalizationOpConf {
   optional ActivationType activation = 13 [default = kNone];
 }
 
+message AffineChannelOpConf {
+  required string in = 1;
+  required string out = 2;
+  optional int32 channel_axis = 3 [default = 1]; // NCHW = 1, NHWC = 3
+  optional InitializerConf scale_initializer = 4;
+  optional InitializerConf bias_initializer = 5;
+  optional ActivationType activation = 6 [default = kNone];
+}
+
 message DropoutOpConf {
   required string in = 1;
   required string out = 2;
@@ -860,6 +869,7 @@ message OperatorConf {
     MaximumOpConf maximum_conf = 302;
     LocalResponseNormalizationOpConf local_response_normalization_conf = 300;
     NormalizationOpConf normalization_conf = 350;
+    AffineChannelOpConf affine_channel_conf = 351;
     ReduceScatterOpConf reduce_scatter_conf = 400;
     ReduceLocalAddOpConf reduce_local_add_conf = 401;
     ReduceGlobalAddOpConf reduce_global_add_conf = 402;
