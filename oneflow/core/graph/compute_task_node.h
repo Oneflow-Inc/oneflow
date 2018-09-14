@@ -24,7 +24,6 @@ class CompTaskNode : public TaskNode {
 
   // logical_node_
   const LogicalNode* logical_node() const { return logical_node_; }
-  LogicalNode* mut_logical_node() { return const_cast<LogicalNode*>(logical_node_); }
   void set_logical_node(const LogicalNode* val) { logical_node_ = val; }
 
  protected:

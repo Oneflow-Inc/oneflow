@@ -20,7 +20,6 @@ void SharedModelDiffAddOp::InferBlobDescs(
   FOR_RANGE(int32_t, i, 1, input_bns().size()) {
     CHECK(*in_0_blob_desc == *GetBlobDesc4BnInOp(input_bns().Get(i)));
   }
-  // TODO(shiyuan) *GetBlobDesc4BnInOp("out") = *in_0_blob_desc;
 }
 
 REGISTER_OP(OperatorConf::kSharedModelDiffAddConf, SharedModelDiffAddOp);

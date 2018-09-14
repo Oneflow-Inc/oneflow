@@ -76,9 +76,10 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
     op_conf.set_device_type(logical_node()->parallel_desc()->device_type());
     op_conf.mutable_normal_mdupdt_conf()->set_model_diff(lbi.op_name() + '/' + lbi.blob_name());
     op_conf.mutable_normal_mdupdt_conf()->set_model(lbi.op_name() + '/' + lbi.blob_name());
-    // TODO(shiyuan)
-    *(op_conf.mutable_normal_mdupdt_conf()->mutable_user_conf()) =
-        Global<JobDesc>::Get()->other_conf().train_conf().model_update_conf();
+    if (Global<JobDesc>::Get()->IsTrain()) {
+      *(op_conf.mutable_normal_mdupdt_conf()->mutable_user_conf()) =
+          Global<JobDesc>::Get()->other_conf().train_conf().model_update_conf();
+    }
     std::shared_ptr<Operator> model_update_op = ConstructOp(op_conf);
     model_update_node = mut_exec_gph().NewNode();
     model_update_node->mut_op() = model_update_op;
@@ -89,7 +90,6 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
     Connect(shared_model_diff_add_node, exec_edge, model_update_node);
 
     model_update_node->BindBnWithRegst(model_update_op->SoleIbn(), out_regst);
-    // TODO(shiyuan)
     model_update_node->BindBnWithRegst(model_update_op->SoleObn(), GetProducedRegst("model"));
     model_update_node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, GetProducedRegst("data_tmp"));
   });
