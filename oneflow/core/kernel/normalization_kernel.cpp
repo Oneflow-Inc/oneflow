@@ -168,24 +168,24 @@ void NormalizationKernel<device_type, T>::InitModelBlobsWithDir(
   const auto& conf = this->op_conf().normalization_conf();
   if (conf.scale()) {
     Blob* gamma_blob = BnInOp2Blob("gamma");
-    KernelUtil<device_type, T>::InitializeWithDir(ctx, 0, part_num, model_load_dir, gamma_blob,
-                                                  "gamma", gamma_blob->shape().At(0),
+    KernelUtil<device_type, T>::InitializeWithDir(ctx, part_id, part_num, model_load_dir,
+                                                  gamma_blob, "gamma", gamma_blob->shape().At(0),
                                                   gamma_blob->shape().Count(1));
   }
   if (conf.center()) {
     Blob* beta_blob = BnInOp2Blob("beta");
-    KernelUtil<device_type, T>::InitializeWithDir(ctx, 0, part_num, model_load_dir, beta_blob,
+    KernelUtil<device_type, T>::InitializeWithDir(ctx, part_id, part_num, model_load_dir, beta_blob,
                                                   "beta", beta_blob->shape().At(0),
                                                   beta_blob->shape().Count(1));
   }
   Blob* mean_blob = BnInOp2Blob("moving_mean");
-  KernelUtil<device_type, T>::InitializeWithDir(ctx, 0, part_num, model_load_dir, mean_blob,
+  KernelUtil<device_type, T>::InitializeWithDir(ctx, part_id, part_num, model_load_dir, mean_blob,
                                                 "moving_mean", mean_blob->shape().At(0),
                                                 mean_blob->shape().Count(1));
   Blob* variance_blob = BnInOp2Blob("moving_variance");
-  KernelUtil<device_type, T>::InitializeWithDir(ctx, 0, part_num, model_load_dir, variance_blob,
-                                                "moving_variance", variance_blob->shape().At(0),
-                                                variance_blob->shape().Count(1));
+  KernelUtil<device_type, T>::InitializeWithDir(
+      ctx, part_id, part_num, model_load_dir, variance_blob, "moving_variance",
+      variance_blob->shape().At(0), variance_blob->shape().Count(1));
 }
 
 template<DeviceType device_type, typename T>

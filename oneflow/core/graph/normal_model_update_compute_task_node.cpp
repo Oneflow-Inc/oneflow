@@ -22,6 +22,7 @@ void NormalMdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
   int32_t max_model_regst = 1;
   auto model_regst = ProduceRegst("model", false, 1, max_model_regst);
   auto const_model_regst = ProduceRegst("const_model", false, 1, 1);
+  auto moving_model_regst = ProduceRegst("moving_model", false, 1, 1);
   ProduceRegst("data_tmp", false, 1, 1);
   related_init_model_task_id_ = -1;
   for (TaskEdge* out_edge : out_edges()) {
@@ -36,6 +37,7 @@ void NormalMdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
       }
     } else {
       out_edge->AddRegst("model", model_regst);
+      out_edge->AddRegst("moving_model", moving_model_regst);
     }
   }
 }
@@ -64,10 +66,14 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
   }
   node->BindBnWithRegst(node->op()->SoleObn(), GetProducedRegst("model"));
   node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, GetProducedRegst("data_tmp"));
+  node->AddBnToRegstAndBindIt(&Operator::moving_model_bns, GetProducedRegst("moving_model"));
   node->InferBlobDescs(nullptr);
 }
 
-void NormalMdUpdtCompTaskNode::LockRegsts() { GetProducedRegst("data_tmp")->Lock(); }
+void NormalMdUpdtCompTaskNode::LockRegsts() {
+  GetProducedRegst("data_tmp")->Lock();
+  GetProducedRegst("moving_model")->Lock();
+}
 
 void NormalMdUpdtCompTaskNode::ToProto(TaskProto* task_proto) {
   CompTaskNode::ToProto(task_proto);

@@ -107,6 +107,7 @@ class Operator {
   DEFINE_BLOB_NAMES_GETTER(model_bns);
   DEFINE_BLOB_NAMES_GETTER(model_diff_bns);
   DEFINE_BLOB_NAMES_GETTER(const_model_bns);
+  DEFINE_BLOB_NAMES_GETTER(moving_model_bns);
   DEFINE_BLOB_NAMES_GETTER(const_buf_bns);
   DEFINE_BLOB_NAMES_GETTER(forward_model_bns);
 
@@ -188,6 +189,7 @@ class Operator {
   virtual LogicalBlobId cmbn2lbi(const std::string& const_model_bn) const;
   virtual LogicalBlobId cbbn2lbi(const std::string& const_buf_bn) const;
   virtual LogicalBlobId mbn2lbi(const std::string& model_bn) const;
+  virtual LogicalBlobId mmbn2lbi(const std::string& moving_model_bn) const;
   virtual LogicalBlobId fwmbn2lbi(const std::string& forward_model_bn) const;
 
   OperatorConf* mut_op_conf() { return op_attribute_.mutable_op_conf(); }
@@ -208,6 +210,7 @@ class Operator {
   // enroll model blobs
   void EnrollModelBn(const std::string& mbn);
   void EnrollModelDiffBn(const std::string& mdbn);
+  void EnrollMovingModelBn(const std::string& mmbn);
   void EnrollConstModelBn(const std::string& cmbn);
 
   void EnrollConstBufBn(const std::string& cbbn);

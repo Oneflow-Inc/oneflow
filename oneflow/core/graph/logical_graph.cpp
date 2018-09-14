@@ -526,7 +526,7 @@ void LogicalGraph::SetupNormalMdUpdtOp() {
   ForEachLogicalNode<NormalMdUpdtLogicalNode>([](NormalMdUpdtLogicalNode* node) {
     if (node->in_edges().size() < 1) { return; }
     OperatorConf op_conf;
-    op_conf.set_name("md_update_" + NewUniqueId());
+    op_conf.set_name("md_update_" + node->fw_logical_node()->SoleOp()->op_name());
     op_conf.set_device_type(node->parallel_desc()->device_type());
     NormalModelUpdateOpConf* mdupdt_conf = op_conf.mutable_normal_mdupdt_conf();
     const JobDesc* job_desc = Global<JobDesc>::Get();
@@ -560,6 +560,7 @@ MdSaveLogicalNode* LogicalGraph::BuildMdSaveStruct(const ForwardLogicalNode* fw_
 NormalMdUpdtLogicalNode* LogicalGraph::BuildNormalMdUpdtAndMdSaveStruct(
     bool is_train, ForwardLogicalNode* fw_logical) {
   NormalMdUpdtLogicalNode* md_updt_logical = NewNode<NormalMdUpdtLogicalNode>();
+  md_updt_logical->set_fw_logical_node(fw_logical);
   md_updt_logical->mut_parallel_desc() = fw_logical->parallel_desc();
   if (Global<JobDesc>::Get()->enable_write_snapshot()) {
     BuildMdSaveStruct(fw_logical, md_updt_logical);

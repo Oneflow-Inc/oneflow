@@ -4,6 +4,25 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
+void MomentumMdUpdateKernel<device_type, T>::MemSetMovingModelBlobs(
+    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  InitializerConf momentum_initializer_conf;
+  momentum_initializer_conf.mutable_constant_conf()->set_value(0.0f);
+  KernelUtil<device_type, T>::InitializeWithConf(ctx, momentum_initializer_conf, 0,
+                                                 BnInOp2Blob("momentum"));
+}
+
+template<DeviceType device_type, typename T>
+void MomentumMdUpdateKernel<device_type, T>::InitMovingModelBlobsWithDir(
+    DeviceCtx* ctx, int32_t part_id, int32_t part_num, const std::string& model_load_dir,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  Blob* momentum_blob = BnInOp2Blob("momentum");
+  KernelUtil<device_type, T>::InitializeWithDir(
+      ctx, part_id, part_num, model_load_dir, momentum_blob, "momentum",
+      momentum_blob->shape().At(0), momentum_blob->shape().Count(1));
+}
+
+template<DeviceType device_type, typename T>
 void MomentumMdUpdateKernel<device_type, T>::UpdateModel(
     DeviceCtx* ctx, int64_t batch_size, T learning_rate, T l1, T l2, const Blob* pre_model_blob,
     const Blob* model_diff_blob, int64_t next_model_vid,
