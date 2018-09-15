@@ -131,11 +131,10 @@ message OpAttribute {
 
   repeated string model_bns = 10;
   repeated string model_diff_bns = 11;
-  repeated string moving_model_bns = 12;
-  repeated string const_model_bns = 13;
+  repeated string const_model_bns = 12;
   
-  repeated string forward_model_bns = 14;
-  repeated string const_buf_bns = 15;
+  repeated string forward_model_bns = 13;
+  repeated string const_buf_bns = 14;
 }
 
 message HingeLossKernelConf {

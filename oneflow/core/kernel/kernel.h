@@ -23,8 +23,6 @@ class Kernel {
   void InitModelAndConstBuf(const KernelCtx& ctx, const ParallelContext* parallel_ctx,
                             const Snapshot*,
                             std::function<Blob*(const std::string&)> BnInOp2Blob) const;
-  void InitMovingModel(const KernelCtx& ctx, const ParallelContext* parallel_ctx, const Snapshot*,
-                       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
   void Launch(const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
@@ -48,11 +46,6 @@ class Kernel {
   virtual void InitModelBlobsWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
                                      const std::string& model_load_dir,
                                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
-  virtual void MemSetMovingModelBlobs(DeviceCtx* ctx,
-                                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
-  virtual void InitMovingModelBlobsWithDir(
-      DeviceCtx* ctx, int32_t part_id, int32_t part_num, const std::string& model_load_dir,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual ActivationType GetActivationType() const { return ActivationType::kNone; }
 
   virtual void Forward(const KernelCtx& ctx,

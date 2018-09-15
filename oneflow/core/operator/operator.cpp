@@ -220,12 +220,6 @@ LogicalBlobId Operator::mbn2lbi(const std::string& model_bn) const {
   ret.set_blob_name(model_bn);
   return ret;
 }
-LogicalBlobId Operator::mmbn2lbi(const std::string& moving_model_bn) const {
-  LogicalBlobId ret;
-  ret.set_op_name(op_name());
-  ret.set_blob_name(moving_model_bn);
-  return ret;
-}
 LogicalBlobId Operator::fwmbn2lbi(const std::string& forward_model_bn) const {
   LogicalBlobId ret;
   ret.set_op_name(op_name());
@@ -300,11 +294,6 @@ void Operator::EnrollModelBn(const std::string& mbn) {
   std::string mdbn = GenDiffBn(mbn);
   *(mut_model_diff_bns()->Add()) = mdbn;
   CHECK(mut_bn_in_op2lbi()->insert({mdbn, lbi}).second);
-}
-void Operator::EnrollMovingModelBn(const std::string& mmbn) {
-  LogicalBlobId lbi = mmbn2lbi(mmbn);
-  *(mut_moving_model_bns()->Add()) = mmbn;
-  CHECK(mut_bn_in_op2lbi()->insert({mmbn, lbi}).second);
 }
 void Operator::EnrollModelDiffBn(const std::string& mdbn) {
   LogicalBlobId lbi = mbn2lbi(mdbn);

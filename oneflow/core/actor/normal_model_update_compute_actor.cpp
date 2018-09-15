@@ -6,7 +6,7 @@ namespace oneflow {
 void NormalMdUpdtCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   model_regst_desc_id_ = Name2SoleRegstDescId("model");
   const_model_regst_desc_id_ = Name2SoleRegstDescId("const_model");
-  moving_model_regst_desc_id_ = Name2SoleRegstDescId("moving_model");
+  forward_model_regst_desc_id_ = Name2SoleRegstDescId("forward_model");
   init_remaining_cnt_ = 0;
   if (model_regst_desc_id_ != -1) { init_remaining_cnt_ += 1; }
   if (const_model_regst_desc_id_ != -1) {
@@ -51,21 +51,21 @@ void NormalMdUpdtCompActor::InitRegstBySendToFw(int64_t regst_desc_id) {
   Global<ActorMsgBus>::Get()->SendMsg(msg);
 }
 
-void NormalMdUpdtCompActor::InitMovingModel() {
-  if (moving_model_regst_desc_id_ == -1) { return; }
-  Regst* moving_model_regst = GetCurWriteableRegst(moving_model_regst_desc_id_);
+void NormalMdUpdtCompActor::InitModelAndConstBuf() {
+  if (forward_model_regst_desc_id_ == -1) { return; }
+  Regst* forward_model_regst = GetCurWriteableRegst(forward_model_regst_desc_id_);
   for (const ExecKernel& ek : exec_kernel_vec()) {
     KernelCtx kernel_ctx = GenDefaultKernelCtx();
-    ek.kernel->InitMovingModel(kernel_ctx, parallel_ctx(),
-                               Global<SnapshotMgr>::Get()->GetReadableSnapshot(),
-                               [&](const std::string& bn_in_op) {
-                                 const LogicalBlobId& lbi = ek.kernel->BnInOp2Lbi(bn_in_op);
-                                 Blob* blob = nullptr;
-                                 if (moving_model_regst) {
-                                   blob = moving_model_regst->GetBlobByLbi(lbi);
-                                 }
-                                 return blob;
-                               });
+    ek.kernel->InitModelAndConstBuf(kernel_ctx, parallel_ctx(),
+                                    Global<SnapshotMgr>::Get()->GetReadableSnapshot(),
+                                    [&](const std::string& bn_in_op) {
+                                      const LogicalBlobId& lbi = ek.kernel->BnInOp2Lbi(bn_in_op);
+                                      Blob* blob = nullptr;
+                                      if (forward_model_regst) {
+                                        blob = forward_model_regst->GetBlobByLbi(lbi);
+                                      }
+                                      return blob;
+                                    });
   }
 }
 
@@ -74,7 +74,7 @@ int NormalMdUpdtCompActor::HandlerInitModelAndConstModel(const ActorMsg& msg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kInitModel);
     InitRegstBySendToFw(model_regst_desc_id_);
     InitRegstBySendToFw(const_model_regst_desc_id_);
-    InitMovingModel();
+    InitModelAndConstBuf();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     init_remaining_cnt_ -= 1;
   } else {

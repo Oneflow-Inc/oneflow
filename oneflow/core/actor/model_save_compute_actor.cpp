@@ -10,10 +10,12 @@ void MdSaveCompActor::VirtualSinkCompActorInit(const TaskProto& task_proto) {
 void* MdSaveCompActor::NewOther() {
   auto tpl = new MdSaveOther;
   std::get<0>(*tpl) = Global<SnapshotMgr>::Get()->GetWriteableSnapshot(next_snapshot_id_++);
-  std::get<1>(*tpl) = [this](LbiBlobHandler handler) {
-    for (const auto& pair : GetNaiveSoleCurReadable()->lbi2blob()) {
-      handler(pair.first, static_cast<const Blob*>(pair.second.get()));
-    }
+  std::get<1>(*tpl) = [this](LbiBlobHandler Handler) {
+    ForEachNaiveCurReadable([&](const Regst* regst) {
+      for (const auto& pair : regst->lbi2blob()) {
+        Handler(pair.first, static_cast<const Blob*>(pair.second.get()));
+      }
+    });
   };
   return tpl;
 }

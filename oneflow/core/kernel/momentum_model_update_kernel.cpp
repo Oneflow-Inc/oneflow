@@ -4,8 +4,9 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-void MomentumMdUpdateKernel<device_type, T>::MemSetMovingModelBlobs(
-    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+void MomentumMdUpdateKernel<device_type, T>::InitModelBlobsWithRandomSeed(
+    DeviceCtx* ctx, std::mt19937* random_seed_gen,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   InitializerConf momentum_initializer_conf;
   momentum_initializer_conf.mutable_constant_conf()->set_value(0.0f);
   KernelUtil<device_type, T>::InitializeWithConf(ctx, momentum_initializer_conf, 0,
@@ -13,7 +14,7 @@ void MomentumMdUpdateKernel<device_type, T>::MemSetMovingModelBlobs(
 }
 
 template<DeviceType device_type, typename T>
-void MomentumMdUpdateKernel<device_type, T>::InitMovingModelBlobsWithDir(
+void MomentumMdUpdateKernel<device_type, T>::InitModelBlobsWithDir(
     DeviceCtx* ctx, int32_t part_id, int32_t part_num, const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* momentum_blob = BnInOp2Blob("momentum");
