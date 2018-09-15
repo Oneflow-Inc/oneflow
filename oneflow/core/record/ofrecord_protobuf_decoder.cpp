@@ -1,5 +1,5 @@
 #include "oneflow/core/record/ofrecord_protobuf_decoder.h"
-#include "oneflow/core/record/record.h"
+#include "oneflow/core/record/encode.h"
 
 namespace oneflow {
 
@@ -28,7 +28,7 @@ void OFRecordDecoderImpl<EncodeCase::kProtobuf, T>::ReadOneCol(
     DeviceCtx* ctx, const Feature& feature, const BlobConf& blob_conf, int32_t col_id, T* out_dptr,
     int64_t one_col_elem_num, std::function<int32_t(void)> NextRandomInt) const {
   *out_dptr->mutable_value() = GetFeatureDataList<T>(feature);
-  CheckRecordValue<T>(*out_dptr);
+  CheckPbListSize<T>(*out_dptr);
 }
 
 #define INSTANTIATE_OFRECORD_PROTOBUF_DECODER(type_cpp, type_proto) \
