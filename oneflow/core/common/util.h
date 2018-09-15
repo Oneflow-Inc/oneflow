@@ -214,6 +214,11 @@ inline T MaxVal() {
   return std::numeric_limits<T>::max();
 }
 
+//  encode case
+#define ENCODE_CASE_DATA_TYPE_SEQ_PRODUCT                                            \
+  OF_PP_SEQ_PRODUCT((EncodeCase::kRaw)(EncodeCase::kJpeg), ARITHMETIC_DATA_TYPE_SEQ) \
+  OF_PP_SEQ_PRODUCT((EncodeCase::kProtobuf), PB_LIST_DATA_TYPE_SEQ)
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_UTIL_H_

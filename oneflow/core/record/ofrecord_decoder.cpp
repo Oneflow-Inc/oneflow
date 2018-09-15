@@ -1,4 +1,3 @@
-#include "oneflow/core/record/encode.h"
 #include "oneflow/core/record/ofrecord_decoder.h"
 #include "oneflow/core/record/ofrecord_raw_decoder.h"
 #include "oneflow/core/record/ofrecord_jpeg_decoder.h"

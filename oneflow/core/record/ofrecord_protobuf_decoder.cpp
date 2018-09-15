@@ -1,5 +1,4 @@
 #include "oneflow/core/record/ofrecord_protobuf_decoder.h"
-#include "oneflow/core/record/encode.h"
 
 namespace oneflow {
 
