@@ -16,6 +16,11 @@ void AccumulateKernel<device_type, T>::ForwardInstanceNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   this->AccumulateField(ctx.device_ctx, BnInOp2Blob, this->op_attribute().input_bns(),
                         this->op_attribute().output_bns(), &Blob::AccumulateInstanceNumFrom);
+  // xfjiang: test instance num
+  Blob* one_blob = BnInOp2Blob("one");
+  Blob* acc_blob = BnInOp2Blob("acc");
+  LOG(INFO) << "acc instance num (one): " << *(one_blob->instance_num());
+  LOG(INFO) << "acc instance num (acc): " << *(acc_blob->instance_num());
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAccumulateConf, AccumulateKernel, FLOATING_DATA_TYPE_SEQ);

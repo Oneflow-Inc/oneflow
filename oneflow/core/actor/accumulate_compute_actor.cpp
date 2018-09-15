@@ -38,6 +38,8 @@ void AccumulateCompActor::Act() {
     Blob* out_blob = out_regst->packed_blob();
     cpy_func_(kernel_ctx.device_ctx, out_blob->mut_dptr(), in_blob->dptr(),
               in_blob->ByteSizeOfDataContentField());
+    Memcpy<DeviceType::kCPU>(kernel_ctx.device_ctx, out_blob->mut_header_ptr(),
+                             in_blob->header_ptr(), in_blob->ByteSizeOfBlobHeader());
   } else {
     AsyncLaunchKernel(kernel_ctx);
   }
