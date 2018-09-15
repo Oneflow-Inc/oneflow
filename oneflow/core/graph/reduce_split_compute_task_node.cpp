@@ -52,20 +52,17 @@ void ReduceSplitCompTaskNode::BuildExecGphAndRegst() {
 
 CompTaskNode* ReduceSplitCompTaskNode::FindPeerReduceConcatTaskNode() {
   CompTaskNode* src_node = this;
-  bool found_direct_node = true;
-
-  while (src_node->GetTaskType() != TaskType::kReduceConcat && found_direct_node) {
-    found_direct_node = false;
+  while (src_node->GetTaskType() != TaskType::kReduceConcat) {
+    CompTaskNode* comp_task_node = nullptr;
     for (TaskEdge* edge : src_node->in_edges()) {
-      CompTaskNode* comp_task_node = dynamic_cast<CompTaskNode*>(edge->src_node());
-      if (comp_task_node != nullptr) {
+      comp_task_node = dynamic_cast<CompTaskNode*>(edge->src_node());
+      if (comp_task_node) {
         src_node = comp_task_node;
         CHECK(src_node->GetTaskType() != TaskType::kNormalBackward);
-        found_direct_node = true;
         break;
       }
     }
-    if (found_direct_node == false) { break; }
+    CHECK(comp_task_node);
   }
   return src_node;
 }

@@ -21,6 +21,7 @@ class ReduceGatherCompTaskNode final : public CompTaskNode, public ReduceCompTas
 
  private:
   void BuildExecGphAndRegst() override;
+  CompTaskNode* FindNearestReduceAddTaskNode();
 };
 
 }  // namespace oneflow
