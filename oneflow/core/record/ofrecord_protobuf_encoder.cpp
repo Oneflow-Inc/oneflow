@@ -1,5 +1,5 @@
 #include "oneflow/core/record/ofrecord_protobuf_encoder.h"
-#include "oneflow/core/record/record.h"
+#include "oneflow/core/record/encode.h"
 
 namespace oneflow {
 
@@ -22,7 +22,7 @@ void OFRecordEncoderImpl<EncodeCase::kProtobuf, T>::EncodeOneCol(
     DeviceCtx* ctx, const Blob* in_blob, int64_t in_offset, Feature& feature,
     const std::string& field_name, int64_t one_col_elem_num) const {
   const T& data = in_blob->dptr<T>()[in_offset];
-  CheckRecordValue<T>(data);
+  CheckPbListSize<T>(data);
   *GetMutFeatureDataList<T>(feature) = data.value();
 }
 
