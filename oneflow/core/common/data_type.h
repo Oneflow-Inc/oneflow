@@ -26,30 +26,6 @@ namespace oneflow {
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_PB_LIST_DATA_TYPE_PB_LIST_FIELD_SEQ, \
                                    PB_LIST_TYPE_PB_LIST_FIELD_SEQ, PB_LIST_SIZE_SHIFT_SEQ)
 
-template<typename T>
-inline void CheckPbListSize(const T& data) {
-  // do nothing
-}
-
-#define SPECIALIZE_CHECK_PB_LIST_SIZE(type_prefix, shift)                           \
-  template<>                                                                        \
-  inline void CheckPbListSize<type_prefix##shift>(const type_prefix##shift& data) { \
-    CHECK_EQ(data.value().value_size(), 1);                                         \
-    CHECK_LE(data.value().value(0).size(), static_cast<int32_t>(1) << shift);       \
-  }
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(SPECIALIZE_CHECK_PB_LIST_SIZE, (BytesList),
-                                 PB_LIST_SIZE_SHIFT_SEQ);
-#undef SPECIALIZE_CHECK_PB_LIST_SIZE
-
-#define SPECIALIZE_CHECK_PB_LIST_SIZE(type_prefix, shift)                           \
-  template<>                                                                        \
-  inline void CheckPbListSize<type_prefix##shift>(const type_prefix##shift& data) { \
-    CHECK_LE(data.value().value_size(), static_cast<int32_t>(1) << shift);          \
-  }
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(SPECIALIZE_CHECK_PB_LIST_SIZE, (FloatList)(DoubleList)(Int32List),
-                                 PB_LIST_SIZE_SHIFT_SEQ);
-#undef SPECIALIZE_CHECK_PB_LIST_SIZE
-
 class OFRecord;
 // SEQ
 
@@ -156,6 +132,8 @@ bool IsIntegralDataType(DataType data_type);
 bool IsFloatingDataType(DataType data_type);
 bool IsPbDataType(DataType data_type);
 size_t GetSizeOfDataType(DataType data_type);
+template<typename T>
+void CheckPbListSize(const T& data) {}
 
 }  // namespace oneflow
 
