@@ -15,6 +15,8 @@ class ReduceLocalAddKernel final : public KernelIf<device_type> {
  private:
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
+  void ForwardPackedHeader(const KernelCtx&,
+                           std::function<Blob*(const std::string&)>) const override;
 };
 
 }  // namespace oneflow

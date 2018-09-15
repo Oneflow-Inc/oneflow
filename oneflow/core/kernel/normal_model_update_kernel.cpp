@@ -32,6 +32,7 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
   } else {
     total_instance_num = Global<JobDesc>::Get()->BatchSize();
   }
+  LOG(INFO) << "model update instance num: " << total_instance_num;
   float l1 = Global<JobDesc>::Get()->L1();
   float l2 = Global<JobDesc>::Get()->L2();
   UpdateModel(ctx.device_ctx, total_instance_num, static_cast<T>(learning_rate), static_cast<T>(l1),

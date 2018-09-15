@@ -24,6 +24,26 @@ void ReduceGlobalAddKernel<device_type, T>::ForwardDataContent(
   }
 }
 
+template<DeviceType device_type, typename T>
+void ReduceGlobalAddKernel<device_type, T>::ForwardPackedHeader(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const auto* other_val = static_cast<std::tuple<int64_t, bool, bool>*>(ctx.other);
+  int64_t in_bn_id = std::get<0>(*other_val);
+  bool is_out_blob_inited = std::get<1>(*other_val);
+  bool is_inplace_in_blob = std::get<2>(*other_val);
+
+  if (is_inplace_in_blob) { return; }
+
+  Blob* out_blob = BnInOp2Blob("out");
+  Blob* in_blob = BnInOp2Blob(this->op_attribute().input_bns().Get(in_bn_id));
+  if (is_out_blob_inited) {
+    // do nothing
+  } else {
+    Memcpy<DeviceType::kCPU>(ctx.device_ctx, out_blob->mut_header_ptr(), in_blob->header_ptr(),
+                             out_blob->ByteSizeOfBlobHeader());
+  }
+}
+
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReduceGlobalAddConf, ReduceGlobalAddKernel,
                            FLOATING_DATA_TYPE_SEQ);
 
