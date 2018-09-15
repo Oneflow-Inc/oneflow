@@ -66,13 +66,15 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
   }
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   shared_model_diff_add_node->BindBnWithRegst(logical_node()->SoleOp()->SoleObn(), out_regst);
+  // "model" regst is already bound with lbis and locked by the corresponding
+  // NormalForwardCompTaskNode
   out_regst->CopyBlobDescFrom(GetProducedRegst("model").get());
 
   ExecNode* model_update_node = nullptr;
   ExecEdge* exec_edge = nullptr;
   out_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
     OperatorConf op_conf;
-    op_conf.set_name("md_update_" + NewUniqueId());
+    op_conf.set_name("md_update_" + lbi.op_name() + "_" + lbi.blob_name());
     op_conf.set_device_type(logical_node()->parallel_desc()->device_type());
     op_conf.mutable_normal_mdupdt_conf()->set_model_diff(lbi.op_name() + '/' + lbi.blob_name());
     op_conf.mutable_normal_mdupdt_conf()->set_model(lbi.op_name() + '/' + lbi.blob_name());

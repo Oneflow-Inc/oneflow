@@ -472,7 +472,6 @@ message MaximumOpConf {
 
 message SharedModelDiffAddOpConf {
   required int32 in_num = 1;
-  optional ActivationType activation = 2 [default = kNone];
 }
 
 message LocalResponseNormalizationOpConf {
