@@ -410,7 +410,8 @@ message NormalModelUpdateOpUserConf {
 
 message NormalModelUpdateOpConf {
   required NormalModelUpdateOpUserConf user_conf = 1;
-  required int32 in_num = 2;
+  required string model_diff = 2;
+  required string model = 3;
 }
 
 message AccumulateOpConf {
@@ -500,6 +501,10 @@ message AddOpConf {
 message MaximumOpConf {
   repeated string in = 1;
   required string out = 2;
+}
+
+message SharedModelDiffAddOpConf {
+  required int32 in_num = 1;
 }
 
 message LocalResponseNormalizationOpConf {
@@ -841,8 +846,9 @@ message OperatorConf {
     AccumulateOpConf accumulate_conf = 115;
     NormalModelUpdateOpConf normal_mdupdt_conf = 116;
     ModelSaveOpConf model_save_conf = 117;
-    PodBoxingOpConf pod_boxing_conf = 150;
-    PbBoxingOpConf pb_boxing_conf = 151;
+    SharedModelDiffAddOpConf shared_model_diff_add_conf = 118;
+    PodBoxingOpConf pod_boxing_conf = 119;
+    PbBoxingOpConf pb_boxing_conf = 120;
     
     // user op
     TransposeOpConf transpose_conf = 201;
