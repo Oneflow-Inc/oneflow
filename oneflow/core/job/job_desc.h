@@ -66,8 +66,10 @@ class JobDesc final {
   int32_t PieceNumOfPrintAccuracy() const;
   int64_t BatchSize() const;
   int64_t NumOfPiecesInBatch() const;
-  float L1() const;
-  float L2() const;
+  float l1_weight() const;
+  float l1_bias() const;
+  float l2_weight() const;
+  float l2_bias() const;
   int32_t DataPartNum() const;
 
  private:

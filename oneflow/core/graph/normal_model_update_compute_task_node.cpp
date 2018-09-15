@@ -82,6 +82,17 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
     if (Global<JobDesc>::Get()->IsTrain()) {
       *(op_conf.mutable_normal_mdupdt_conf()->mutable_user_conf()) =
           Global<JobDesc>::Get()->other_conf().train_conf().model_update_conf();
+      if (lbi.blob_name() == "weight") {
+        op_conf.mutable_normal_mdupdt_conf()->set_l1(Global<JobDesc>::Get()->l1_weight());
+        op_conf.mutable_normal_mdupdt_conf()->set_l2(Global<JobDesc>::Get()->l2_weight());
+      } else if (lbi.blob_name() == "bias") {
+        op_conf.mutable_normal_mdupdt_conf()->set_l1(Global<JobDesc>::Get()->l1_bias());
+        op_conf.mutable_normal_mdupdt_conf()->set_l2(Global<JobDesc>::Get()->l2_bias());
+      } else {
+        op_conf.mutable_normal_mdupdt_conf()->set_l1(0);
+        op_conf.mutable_normal_mdupdt_conf()->set_l2(0);
+        op_conf.mutable_normal_mdupdt_conf()->mutable_user_conf()->mutable_naive_conf();
+      }
     }
     std::shared_ptr<Operator> model_update_op = ConstructOp(op_conf);
     model_update_node = mut_exec_gph().NewNode();

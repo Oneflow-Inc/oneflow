@@ -379,6 +379,8 @@ message NormalModelUpdateOpConf {
   required NormalModelUpdateOpUserConf user_conf = 1;
   required string model_diff = 2;
   required string model = 3;
+  required float l1 = 4;
+  required float l2 = 5;
 }
 
 message AccumulateOpConf {
