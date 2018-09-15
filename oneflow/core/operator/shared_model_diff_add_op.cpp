@@ -7,7 +7,7 @@ void SharedModelDiffAddOp::InitFromOpConf() {
   FOR_RANGE(int32_t, i, 0, op_conf().shared_model_diff_add_conf().in_num()) {
     EnrollInputBn("in_" + std::to_string(i), false);
   }
-  EnrollOutputBn("out", false);
+  EnrollOutputBn("processed_model_diff", false);
 }
 const PbMessage& SharedModelDiffAddOp::GetCustomizedConf() const {
   return op_conf().shared_model_diff_add_conf();

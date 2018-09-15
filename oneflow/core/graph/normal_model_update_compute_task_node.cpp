@@ -22,7 +22,7 @@ void NormalMdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
   int32_t max_model_regst = 1;
   auto model_regst = ProduceRegst("model", false, 1, max_model_regst);
   auto const_model_regst = ProduceRegst("const_model", false, 1, 1);
-  ProduceRegst("out", false, 1, 1);
+  ProduceRegst("processed_model_diff", false, 1, 1);
   ProduceRegst("data_tmp", false, 1, 1);
   related_init_model_task_id_ = -1;
   for (TaskEdge* out_edge : out_edges()) {
@@ -64,15 +64,16 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
     shared_model_diff_add_node->BindBnWithRegst(
         shared_model_diff_add_node->op()->input_bns().Get(ibn_idx++), pair.second.front());
   }
-  std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
-  shared_model_diff_add_node->BindBnWithRegst(logical_node()->SoleOp()->SoleObn(), out_regst);
+  std::shared_ptr<RegstDesc> processed_model_diff_regst = GetProducedRegst("processed_model_diff");
+  shared_model_diff_add_node->BindBnWithRegst(logical_node()->SoleOp()->SoleObn(),
+                                              processed_model_diff_regst);
   // "model" regst is already bound with lbis and locked by the corresponding
   // NormalForwardCompTaskNode
-  out_regst->CopyBlobDescFrom(GetProducedRegst("model").get());
+  processed_model_diff_regst->CopyBlobDescFrom(GetProducedRegst("model").get());
 
   ExecNode* model_update_node = nullptr;
   ExecEdge* exec_edge = nullptr;
-  out_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
+  processed_model_diff_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
     OperatorConf op_conf;
     op_conf.set_name("md_update_" + lbi.op_name() + "_" + lbi.blob_name());
     op_conf.set_device_type(logical_node()->parallel_desc()->device_type());
@@ -91,7 +92,7 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
     exec_edge->mut_dst_bn() = model_update_op->SoleIbn();
     Connect(shared_model_diff_add_node, exec_edge, model_update_node);
 
-    model_update_node->BindBnWithRegst(model_update_op->SoleIbn(), out_regst);
+    model_update_node->BindBnWithRegst(model_update_op->SoleIbn(), processed_model_diff_regst);
     model_update_node->BindBnWithRegst(model_update_op->SoleObn(), GetProducedRegst("model"));
     model_update_node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, GetProducedRegst("data_tmp"));
   });
@@ -99,7 +100,7 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
 }
 
 void NormalMdUpdtCompTaskNode::LockRegsts() {
-  GetProducedRegst("out")->Lock();
+  GetProducedRegst("processed_model_diff")->Lock();
   GetProducedRegst("data_tmp")->Lock();
 }
 
