@@ -1,6 +1,7 @@
 #include "oneflow/core/record/ofrecord_decoder.h"
 #include "oneflow/core/record/ofrecord_raw_decoder.h"
 #include "oneflow/core/record/ofrecord_jpeg_decoder.h"
+#include "oneflow/core/record/ofrecord_protobuf_decoder.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/thread/thread_manager.h"
 
@@ -56,7 +57,14 @@ void DoScalePreprocess(const ScalePreprocessConf& conf, T* dptr, int64_t n) {
 }
 
 template<typename T>
-void DoPreprocess(const PreprocessConf& conf, T* dptr, const Shape& shape) {
+typename std::enable_if<IsPbType<T>::value>::type DoPreprocess(const PreprocessConf& conf, T* dptr,
+                                                               const Shape& shape) {
+  UNIMPLEMENTED();
+}
+
+template<typename T>
+typename std::enable_if<!IsPbType<T>::value>::type DoPreprocess(const PreprocessConf& conf, T* dptr,
+                                                                const Shape& shape) {
   int64_t n = shape.Count(1);
   if (conf.has_subtract_conf()) {
     DoSubtractPreprocess<T>(conf.subtract_conf(), dptr, n);
@@ -188,13 +196,9 @@ void OFRecordDecoder<encode_case, T>::ReadPartDataContent(
 
 OFRecordDecoderIf* GetOFRecordDecoder(EncodeCase encode_case, DataType data_type) {
   static const HashMap<std::string, OFRecordDecoderIf*> obj = {
-
 #define MAKE_ENTRY(et, dt) \
   {GetHashKey(et, OF_PP_PAIR_SECOND(dt)), new OFRecordDecoderImpl<et, OF_PP_PAIR_FIRST(dt)>},
-
-      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, ENCODE_CASE_SEQ, ARITHMETIC_DATA_TYPE_SEQ)
-
-  };
+      OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, ENCODE_CASE_DATA_TYPE_SEQ_PRODUCT)};
   return obj.at(GetHashKey(encode_case, data_type));
 }
 
