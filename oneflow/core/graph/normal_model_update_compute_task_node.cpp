@@ -56,6 +56,9 @@ bool NormalMdUpdtCompTaskNode::IsReadyForBuild() {
 
 void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
   if (!IsTrainable()) { return; }
+  // TODO(jiyuan):
+  // 1, add add op if necessary.
+  // 2, add mdupdt_op for each lbi. (modify the bn_in_op2lbi for the in/out of each mdupdt op)
   ExecNode* node = mut_exec_gph().NewNode();
   node->mut_op() = logical_node()->SoleOp();
   size_t ibn_idx = 0;

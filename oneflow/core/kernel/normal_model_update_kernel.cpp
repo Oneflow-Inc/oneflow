@@ -19,6 +19,7 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
     learning_rate =
         GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, cur_batch_num);
   }
+  // TODO(jiyuan): single in for mdupdt kernel, no need to accumuate the inputs
   const OpAttribute& op_attribute = this->kernel_conf().op_attribute();
   Blob* in_0 = BnInOp2Blob(op_attribute.input_bns(0));
   FOR_RANGE(size_t, i, 1, op_attribute.input_bns().size()) {

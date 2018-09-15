@@ -523,6 +523,7 @@ void LogicalGraph::AddReduceScatterAddGatherNodes(LogicalNode* src, LogicalNode*
 }
 
 void LogicalGraph::SetupNormalMdUpdtOp() {
+  // TODO(jiyuan): add op to mdupdt op to logical node in NormalMdUpdtCompTaskNode instead
   ForEachLogicalNode<NormalMdUpdtLogicalNode>([](NormalMdUpdtLogicalNode* node) {
     if (node->in_edges().size() < 1) { return; }
     OperatorConf op_conf;
