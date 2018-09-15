@@ -149,10 +149,10 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
                              bool is_forward, const ParallelContext* parallel_ctx,
                              KernelConf* kernel_conf, const OpContext* op_ctx) const {
   *(kernel_conf->mutable_op_attribute()) = op_attribute_;
-  if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), &BlobDesc::header_is_opaque)) {
+  if (HasBlobDescWithField(GetBlobDesc4BnInOp, input_bns(), &BlobDesc::header_is_opaque)) {
     kernel_conf->set_need_do_opaque_header(true);
   } else {
-    if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), &BlobDesc::has_data_id_field)) {
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, input_bns(), &BlobDesc::has_data_id_field)) {
       kernel_conf->set_need_do_data_id(true);
     }
     if (HasBlobDescWithField(GetBlobDesc4BnInOp, input_bns(), &BlobDesc::has_instance_num_field)
