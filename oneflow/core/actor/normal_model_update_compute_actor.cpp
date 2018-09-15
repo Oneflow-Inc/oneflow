@@ -52,6 +52,7 @@ void NormalMdUpdtCompActor::InitRegstBySendToFw(int64_t regst_desc_id) {
 }
 
 void NormalMdUpdtCompActor::InitModelAndConstBuf() {
+  // TODO move model and const model from fw into here
   if (forward_model_regst_desc_id_ == -1) { return; }
   Regst* forward_model_regst = GetCurWriteableRegst(forward_model_regst_desc_id_);
   for (const ExecKernel& ek : exec_kernel_vec()) {
