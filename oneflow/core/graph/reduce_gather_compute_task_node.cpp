@@ -55,27 +55,38 @@ void ReduceGatherCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx* ctx
   }
 
   ctx->DoGather(ctx->StageSegmentCount());
-  std::vector<TaskNode*> global_add_on_in_edge;
-  ForEachNodeOnInEdge([&](TaskNode* node) {
-    if (node->GetTaskType() == kReduceAdd) { global_add_on_in_edge.push_back(node); }
+
+  TaskNode* nearest_add_task_node = nullptr;
+  TaskNode* current_task_node = this;
+  while (current_task_node) {
+    TaskNode* reduce_task_node = nullptr;
+    current_task_node->ForEachNodeOnInEdge([&](TaskNode* node) {
+      if (dynamic_cast<ReduceCompTaskNodeIf*>(node)) {
+        CHECK(reduce_task_node == nullptr);
+        reduce_task_node = node;
+      }
+    });
+
+    if (reduce_task_node->GetTaskType() == TaskType::kReduceAdd) {
+      nearest_add_task_node = reduce_task_node;
+      break;
+    }
+
+    CHECK(reduce_task_node);
+    current_task_node = reduce_task_node;
+  }
+  CHECK(nearest_add_task_node);
+
+  TaskNode* nearest_add_copy_d2h = nullptr;
+  nearest_add_task_node->ForEachNodeOnOutEdge([&](TaskNode* node) {
+    if (node->GetTaskType() == TaskType::kCopyHd) { nearest_add_copy_d2h = node; }
   });
 
-  // If not local gather
-  if (global_add_on_in_edge.size()) {
-    CHECK_EQ(global_add_on_in_edge.size(), 1);
-    TaskNode* global_add_copy_d2h = nullptr;
-    for (TaskEdge* out_edge : global_add_on_in_edge.front()->out_edges()) {
-      if (out_edge->dst_node()->GetTaskType() == TaskType::kCopyHd) {
-        global_add_copy_d2h = out_edge->dst_node();
-      }
+  ForEachNodeOnInEdge([&](TaskNode* node) {
+    if (node->GetTaskType() == TaskType::kCopyHd) {
+      nearest_add_copy_d2h->BuildCtrlRegstDesc(node);
     }
-
-    for (TaskEdge* in_edge : this->in_edges()) {
-      if (in_edge->src_node()->GetTaskType() == TaskType::kCopyHd) {
-        global_add_copy_d2h->BuildCtrlRegstDesc(in_edge->src_node());
-      }
-    }
-  }
+  });
 }
 
 }  // namespace oneflow
