@@ -22,7 +22,7 @@ void Blob::Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, cha
   }
 
   regst_ = regst;
-  blob_desc_ = blob_desc;
+  blob_desc_ = new RtBlobDesc(blob_desc->blob_desc_proto());
   header_ptr_ = header_ptr;
   if (blob_desc->has_data_id_field()) {
     data_id_ptr_ = header_ptr;
