@@ -106,6 +106,17 @@ void Blob::AccumulateInstanceNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
                                               mut_instance_num(), 1);
 }
 
+void Blob::AccumulateInstanceNumInPackedHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs) {
+  const int32_t* instance_num_from_ptr = reinterpret_cast<const int32_t*>(
+      static_cast<const char*>(rhs->header_ptr()) + rhs->ByteSizeOfDataIdField()
+      + rhs->ByteSizeOfColNumField());
+  int32_t* instance_num_to_ptr =
+      reinterpret_cast<int32_t*>(static_cast<char*>(this->mut_header_ptr())
+                                 + rhs->ByteSizeOfDataIdField() + rhs->ByteSizeOfColNumField());
+  KernelUtil<DeviceType::kCPU, int32_t>::Axpy(device_ctx, 1, 1, instance_num_from_ptr, 1,
+                                              instance_num_to_ptr, 1);
+}
+
 void Blob::CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs) { return; }
   if (is_contiguous_) {

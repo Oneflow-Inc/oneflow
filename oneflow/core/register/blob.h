@@ -86,6 +86,7 @@ class Blob final {
   void CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyInstanceNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void AccumulateInstanceNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  void AccumulateInstanceNumInPackedHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
 
   int32_t col_id() const;
