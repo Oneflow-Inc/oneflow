@@ -656,9 +656,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne) {
   FOR_RANGE(size_t, i, 0, sorted_src_comp_tasks.size()) {
     CompTaskNode* src = sorted_src_comp_tasks[i];
     CompTaskNode* dst = sorted_dst_comp_tasks[i];
-    bool use_buf_task_node = true;
-    if (dst->GetTaskType() == TaskType::kMdSave) { use_buf_task_node = false; }
-    BuildTaskPath(src, dst, MutBufTask, use_buf_task_node);
+    BuildTaskPath(src, dst, MutBufTask, (dst->GetTaskType() != TaskType::kMdSave));
   }
 }
 
