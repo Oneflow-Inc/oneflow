@@ -91,7 +91,8 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
       } else {
         op_conf.mutable_normal_mdupdt_conf()->set_l1(0);
         op_conf.mutable_normal_mdupdt_conf()->set_l2(0);
-        op_conf.mutable_normal_mdupdt_conf()->mutable_user_conf()->mutable_naive_conf();
+        // TODO(shiyuan)
+        // op_conf.mutable_normal_mdupdt_conf()->mutable_user_conf()->mutable_naive_conf();
       }
     }
     std::shared_ptr<Operator> model_update_op = ConstructOp(op_conf);
