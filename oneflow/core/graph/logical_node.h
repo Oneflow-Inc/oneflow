@@ -191,16 +191,10 @@ class NormalMdUpdtLogicalNode final : public LogicalNode {
 
   OVERRIDE_PURE_VIRTUAL_METHOD();
 
-  void set_fw_logical_node(const ForwardLogicalNode* fw_logical_node) {
-    fw_logical_node_ = fw_logical_node;
-  }
-  const ForwardLogicalNode* fw_logical_node() const { return fw_logical_node_; }
-
  private:
   void FixCompTaskNode(CompTaskNode*) const override;
 
   uint32_t random_seed_;
-  const ForwardLogicalNode* fw_logical_node_;
 };
 
 DECLARE_NAIVE_LOGICAL_NODE(MdSaveLogicalNode);

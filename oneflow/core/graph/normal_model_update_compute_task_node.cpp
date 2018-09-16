@@ -26,6 +26,8 @@ void NormalMdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("processed_model_diff", false, 1, 1);
   ProduceRegst("data_tmp", false, 1, 1);
   related_init_model_task_id_ = -1;
+  std::list<std::pair<std::string, std::shared_ptr<RegstDesc>>> model_to_save{
+      {"model", model_regst}, {"forward_model", forward_model_regst}};
   for (TaskEdge* out_edge : out_edges()) {
     TaskNode* dst_node = out_edge->dst_node();
     if (IsForwardTaskType(dst_node->GetTaskType()) || IsBackwardTaskType(dst_node->GetTaskType())) {
@@ -37,8 +39,8 @@ void NormalMdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
         related_init_model_task_id_ = fw_node->task_id();
       }
     } else {
-      out_edge->AddRegst("model", model_regst);
-      out_edge->AddRegst("forward_model", forward_model_regst);
+      out_edge->AddRegst(model_to_save.front().first, model_to_save.front().second);
+      model_to_save.pop_front();
     }
   }
 }

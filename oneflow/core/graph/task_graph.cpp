@@ -124,6 +124,25 @@ void TaskGraph::RemoveEmptyRegsts() {
   ForEachNode([&](TaskNode* node) { node->UnbindBnWithEmptyRegst(); });
 }
 
+void TaskGraph::RemoveEdgesWithoutNonEmptyRegst() {
+  std::list<TaskEdge*> del_edges;
+  ForEachEdge([&](TaskEdge* edge) {
+    if (edge->IsAllRegstEmpty()) { del_edges.push_back(edge); }
+  });
+  for (TaskEdge* edge : del_edges) {
+    DisConnect(edge);
+    DeleteEdge(edge);
+  }
+}
+
+void TaskGraph::RemoveNodesWithoutEdge() {
+  std::list<TaskNode*> del_nodes;
+  ForEachNode([&](TaskNode* node) {
+    if (node->in_edges().empty() && node->out_edges().empty()) { del_nodes.push_back(node); }
+  });
+  for (TaskNode* node : del_nodes) { DeleteNode(node); }
+}
+
 void TaskGraph::AddOrderingCtrlEdgeInSameChain() { BuildCtrlRegstDescInSameChain(); }
 
 void TaskGraph::MergeChainAndSetOrderInGraphForEachNode() {

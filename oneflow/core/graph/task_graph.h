@@ -43,6 +43,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
   const char* TypeName() const override { return "TaskGraph"; }
   void RemoveEmptyRegsts();
+  void RemoveEdgesWithoutNonEmptyRegst();
+  void RemoveNodesWithoutEdge();
   void AddOrderingCtrlEdgeInSameChain();
 
   void EnableMemSharingInReduceStruct();

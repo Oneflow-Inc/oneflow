@@ -556,9 +556,11 @@ MdSaveLogicalNode* LogicalGraph::BuildMdSaveStruct(const ForwardLogicalNode* fw_
 NormalMdUpdtLogicalNode* LogicalGraph::BuildNormalMdUpdtAndMdSaveStruct(
     bool is_train, ForwardLogicalNode* fw_logical) {
   NormalMdUpdtLogicalNode* md_updt_logical = NewNode<NormalMdUpdtLogicalNode>();
-  md_updt_logical->set_fw_logical_node(fw_logical);
   md_updt_logical->mut_parallel_desc() = fw_logical->parallel_desc();
   if (Global<JobDesc>::Get()->enable_write_snapshot()) {
+    // for model
+    BuildMdSaveStruct(fw_logical, md_updt_logical);
+    // for forward_model
     BuildMdSaveStruct(fw_logical, md_updt_logical);
   }
   return md_updt_logical;
