@@ -18,6 +18,7 @@ class NormalModelUpdtOp : public Operator {
   virtual void MdUpdtVirtualInitFromOpConf() {}
 
  private:
+  LogicalBlobId obn2lbi(const std::string& output_bn) const override;
 };
 
 }  // namespace oneflow
