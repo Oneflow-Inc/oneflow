@@ -7,7 +7,6 @@ namespace oneflow {
 
 template<typename T>
 class OFRecordDecoderImpl<EncodeCase::kRaw, T> final : public OFRecordDecoder<EncodeCase::kRaw, T> {
- public:
  private:
   int32_t GetColNumOfFeature(const Feature&, int64_t one_col_elem_num) const override;
   void ReadOneCol(DeviceCtx*, const Feature&, const BlobConf& blob_conf, int32_t col_id,

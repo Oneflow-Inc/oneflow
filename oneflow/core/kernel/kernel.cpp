@@ -1,4 +1,5 @@
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/common/gdb.h"
 
 namespace oneflow {
 
@@ -30,9 +31,13 @@ void Kernel::InitModelAndConstBuf(const KernelCtx& ctx, const ParallelContext* p
 void Kernel::Launch(const KernelCtx& ctx,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (kernel_conf_.is_forward()) {
+    gdb::ForwardEnterBreakPoint(op_attribute(), BnInOp2Blob);
     Forward(ctx, BnInOp2Blob);
+    gdb::ForwardLeaveBreakPoint(op_attribute(), BnInOp2Blob);
   } else {
+    gdb::BackwardEnterBreakPoint(op_attribute(), BnInOp2Blob);
     Backward(ctx, BnInOp2Blob);
+    gdb::BackwardLeaveBreakPoint(op_attribute(), BnInOp2Blob);
   }
 }
 
