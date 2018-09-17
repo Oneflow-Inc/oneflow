@@ -74,8 +74,8 @@ void NcclCommMgr::NcclCommInitRank4Tasks(const std::vector<TaskProto>& tasks,
   FOR_RANGE(size_t, i, 0, tasks.size()) {
     int32_t device_id = GetDeviceId4Task(tasks.at(i));
     cudaSetDevice(device_id);
-    NcclCheck(ncclCommInitRank(&((*comms)[i]), (int32_t)tasks.at(i).parallel_ctx().rank_num(), nccl_unique_id,
-                     (int32_t)tasks.at(i).parallel_ctx().rank_id()));
+    NcclCheck(ncclCommInitRank(&((*comms)[i]), (int32_t)tasks.at(i).parallel_ctx().rank_num(),
+                               nccl_unique_id, (int32_t)tasks.at(i).parallel_ctx().rank_id()));
   }
   NcclCheck(ncclGroupEnd());
 }
