@@ -23,7 +23,6 @@ void ReduceGatherKernel<device_type>::ForwardPackedHeader(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const auto* other_val = static_cast<std::pair<int64_t, bool>*>(ctx.other);
   int64_t in_bn_id = other_val->first;
-  bool is_inplace = other_val->second;
 
   Blob* out_blob = BnInOp2Blob("out");
   Blob* in_blob = BnInOp2Blob(this->op_attribute().input_bns().Get(in_bn_id));

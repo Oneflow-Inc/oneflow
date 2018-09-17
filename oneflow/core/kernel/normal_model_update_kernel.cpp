@@ -18,24 +18,16 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
     learning_rate =
         GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, cur_batch_num);
   }
-  const OpAttribute& op_attribute = this->kernel_conf().op_attribute();
-  Blob* in_0 = BnInOp2Blob(op_attribute.input_bns(0));
-  FOR_RANGE(size_t, i, 1, op_attribute.input_bns().size()) {
-    Blob* in_i = BnInOp2Blob(op_attribute.input_bns(i));
-    KernelUtil<device_type, T>::Axpy(ctx.device_ctx, in_0->shape().elem_cnt(), static_cast<T>(1.0),
-                                     in_i->dptr<T>(), 1, in_0->mut_dptr<T>(), 1);
-  }
   int64_t total_instance_num = 0;
   // TODO: add a switch in instance number in op_conf
   if (true) {
-    total_instance_num = 100;
-    // total_instance_num = *reinterpret_cast<const int32_t*>(
-    //     static_cast<const char*>(in_0->header_ptr()) + in_0->ByteSizeOfDataIdField()
-    //     + in_0->ByteSizeOfColNumField());
+    Blob* model_diff_blob = BnInOp2Blob("model_diff");
+    total_instance_num = *reinterpret_cast<const int32_t*>(
+        static_cast<const char*>(model_diff_blob->header_ptr())
+        + model_diff_blob->ByteSizeOfDataIdField() + model_diff_blob->ByteSizeOfColNumField());
   } else {
     total_instance_num = Global<JobDesc>::Get()->BatchSize();
   }
-  LOG(INFO) << "model update instance num: " << total_instance_num;
   float l1 = Global<JobDesc>::Get()->L1();
   float l2 = Global<JobDesc>::Get()->L2();
   UpdateModel(ctx.device_ctx, total_instance_num, static_cast<T>(learning_rate), static_cast<T>(l1),

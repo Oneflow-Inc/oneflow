@@ -1,6 +1,4 @@
 #include "oneflow/core/graph/normal_model_update_compute_task_node.h"
-#include "oneflow/core/graph/reduce_split_compute_task_node.h"
-#include "oneflow/core/graph/normal_backward_compute_task_node.h"
 #include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
@@ -57,26 +55,6 @@ bool NormalMdUpdtCompTaskNode::IsReadyForBuild() {
   return GetProducedRegst("model")->IsLocked() && GetProducedRegst("const_model")->IsLocked();
 }
 
-CompTaskNode* NormalMdUpdtCompTaskNode::FindReduceSplitCompTaskNode() {
-  for (TaskEdge* edge : this->in_edges()) {
-    CompTaskNode* comp_task_node = dynamic_cast<CompTaskNode*>(edge->src_node());
-    CHECK(comp_task_node != nullptr);
-    if (comp_task_node->GetTaskType() == TaskType::kReduceSplit) { return comp_task_node; }
-  }
-  return nullptr;
-}
-
-CompTaskNode* NormalMdUpdtCompTaskNode::FindCorrespondingBackwardCompTaskNode() {
-  CompTaskNode* cur_node = this;
-  while (cur_node->GetTaskType() != TaskType::kNormalBackward) {
-    for (TaskEdge* edge : cur_node->in_edges()) {
-      CompTaskNode* comp_task_node = dynamic_cast<CompTaskNode*>(edge->src_node());
-      if (comp_task_node != nullptr) { cur_node = comp_task_node; }
-    }
-  }
-  return cur_node;
-}
-
 void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
   if (!IsTrainable()) { return; }
   ExecNode* shared_model_diff_add_node = mut_exec_gph().NewNode();
@@ -86,13 +64,26 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
     shared_model_diff_add_node->BindBnWithRegst(
         shared_model_diff_add_node->op()->input_bns().Get(ibn_idx++), pair.second.front());
   }
-
   std::shared_ptr<RegstDesc> processed_model_diff_regst = GetProducedRegst("processed_model_diff");
   shared_model_diff_add_node->BindBnWithRegst(logical_node()->SoleOp()->SoleObn(),
                                               processed_model_diff_regst);
   // "model" regst is already bound with lbis and locked by the corresponding
   // NormalForwardCompTaskNode
   processed_model_diff_regst->CopyBlobDescFrom(GetProducedRegst("model").get());
+
+  // set instance num if necessary
+  // bool has_instance_num = false;
+  // for (TaskEdge* edge : in_edges()) {
+  //   auto regst_descs = edge->GetRegsts();
+  //   for (auto& regst_desc : regst_descs) {
+  //     regst_desc->ForEachLbi([&](const LogicalBlobId& lbi) {
+  //       if (regst_desc->MutBlobDesc(lbi)->has_instance_num_field()) { has_instance_num = true; }
+  //     });
+  //   }
+  // }
+  // processed_model_diff_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
+  //   processed_model_diff_regst->MutBlobDesc(lbi)->set_has_instance_num_field(has_instance_num);
+  // });
 
   ExecNode* model_update_node = nullptr;
   ExecEdge* exec_edge = nullptr;
