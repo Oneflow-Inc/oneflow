@@ -12,6 +12,14 @@ class MomentumMdUpdateKernel final : public NormalMdUpdateKernel<device_type, T>
   MomentumMdUpdateKernel() = default;
   ~MomentumMdUpdateKernel() = default;
 
+ protected:
+  void InitModelBlobsWithRandomSeed(
+      DeviceCtx* ctx, std::mt19937* random_seed_gen,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void InitModelBlobsWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
+                             const std::string& model_load_dir,
+                             std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+
  private:
   void UpdateModel(DeviceCtx* ctx, int64_t batch_size, T learning_rate, T l1, T l2,
                    int64_t next_model_vid,
