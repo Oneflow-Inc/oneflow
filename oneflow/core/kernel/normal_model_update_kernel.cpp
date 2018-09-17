@@ -28,6 +28,7 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
   int64_t total_instance_num = 0;
   // TODO: add a switch in instance number in op_conf
   if (true) {
+    total_instance_num = 100;
     // total_instance_num = *reinterpret_cast<const int32_t*>(
     //     static_cast<const char*>(in_0->header_ptr()) + in_0->ByteSizeOfDataIdField()
     //     + in_0->ByteSizeOfColNumField());

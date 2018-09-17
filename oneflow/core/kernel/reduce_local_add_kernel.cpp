@@ -51,32 +51,11 @@ void ReduceLocalAddKernel<device_type, T>::ForwardPackedHeader(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const auto* other_val = static_cast<std::tuple<int64_t, bool, bool, bool>*>(ctx.other);
   int32_t in_bn_id = std::get<0>(*other_val);
-  bool is_inited = std::get<1>(*other_val);
-  bool is_inplace_in_blob = std::get<2>(*other_val);
-  bool enable_inplace = std::get<3>(*other_val);
-
-  if (is_inplace_in_blob) { return; }
-
-  if (enable_inplace) {
-    Blob* in_blob = BnInOp2Blob(this->op_attribute().input_bns().Get(in_bn_id));
-    Blob* first_out_blob = BnInOp2Blob(this->op_attribute().output_bns().Get(0));
-    if (is_inited) {
-      // do nothing
-    } else {
-      Memcpy<device_type>(ctx.device_ctx, first_out_blob->mut_header_ptr(), in_blob->header_ptr(),
-                          first_out_blob->ByteSizeOfBlobHeader());
-    }
-  } else {
-    Blob* in_blob = BnInOp2Blob(this->op_attribute().input_bns().Get(in_bn_id));
-    if (is_inited) {
-      // do nothing
-    } else {
-      FOR_RANGE(int32_t, i, 0, this->op_attribute().output_bns().size()) {
-        Blob* out_blob = BnInOp2Blob(this->op_attribute().output_bns().Get(i));
-        Memcpy<device_type>(ctx.device_ctx, out_blob->mut_header_ptr(), in_blob->header_ptr(),
-                            out_blob->ByteSizeOfBlobHeader());
-      }
-    }
+  Blob* in_blob = BnInOp2Blob(this->op_attribute().input_bns().Get(in_bn_id));
+  FOR_RANGE(int32_t, i, 0, this->op_attribute().output_bns().size()) {
+    Blob* out_blob = BnInOp2Blob(this->op_attribute().output_bns().Get(i));
+    Memcpy<device_type>(ctx.device_ctx, out_blob->mut_header_ptr(), in_blob->header_ptr(),
+                        out_blob->ByteSizeOfBlobHeader());
   }
 }
 
