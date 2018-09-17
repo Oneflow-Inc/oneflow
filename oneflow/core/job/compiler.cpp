@@ -7,7 +7,7 @@ namespace oneflow {
 namespace {
 
 void ToDotFile(const Plan& plan, const std::string& filepath) {
-  TeePersistentLogStream log_stream(filepath);
+  auto log_stream = TeePersistentLogStream::Create(filepath);
   log_stream << "digraph {\n";
   HashSet<int64_t> regst_desc_ids;
   for (const TaskProto& task_proto : plan.task()) {

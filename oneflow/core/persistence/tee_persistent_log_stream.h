@@ -22,25 +22,20 @@ class LogStreamDestination final {
 class TeePersistentLogStream final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TeePersistentLogStream);
-  explicit TeePersistentLogStream(const std::string& path);
   ~TeePersistentLogStream();
 
   void Write(const char* s, size_t n);
+  void Write(const std::string& str);
+  void Write(const PbMessage& proto);
+
+  static std::unique_ptr<TeePersistentLogStream> Create(const std::string& path);
 
  private:
+  explicit TeePersistentLogStream(const std::string& path);
   void Flush();
   std::vector<LogStreamDestination> destinations_;
   std::vector<std::unique_ptr<PersistentOutStream>> branches_;
 };
-
-template<typename T>
-typename std::enable_if<std::is_fundamental<T>::value, TeePersistentLogStream&>::type operator<<(
-    TeePersistentLogStream& log_stream, const T& x) {
-  const char* x_ptr = reinterpret_cast<const char*>(&x);
-  size_t n = sizeof(x);
-  log_stream.Write(x_ptr, n);
-  return log_stream;
-}
 
 inline TeePersistentLogStream& operator<<(TeePersistentLogStream& log_stream,
                                           const std::string& s) {
@@ -48,13 +43,11 @@ inline TeePersistentLogStream& operator<<(TeePersistentLogStream& log_stream,
   return log_stream;
 }
 
-template<size_t n>
-TeePersistentLogStream& operator<<(TeePersistentLogStream& log_stream, const char (&s)[n]) {
-  log_stream.Write(s, strlen(s));
+inline std::unique_ptr<TeePersistentLogStream>& operator<<(
+    std::unique_ptr<TeePersistentLogStream>& log_stream, const std::string& s) {
+  log_stream->Write(s.c_str(), s.size());
   return log_stream;
 }
-
-void SaveProtoAsTextFile(const PbMessage& proto, const std::string& path);
 
 }  // namespace oneflow
 

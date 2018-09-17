@@ -217,15 +217,15 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, int64_t this_mchn_id) {
     PullPlan("mem_shared_plan", &mem_shared_plan);
   }
   OF_BARRIER();
-  SaveProtoAsTextFile(naive_plan, "naive_plan");
-  SaveProtoAsTextFile(mem_shared_plan, "mem_shared_plan");
+  TeePersistentLogStream::Create("naive_plan")->Write(naive_plan);
+  TeePersistentLogStream::Create("mem_shared_plan")->Write(mem_shared_plan);
   LOG(INFO) << "push_pull_plan:" << GetCurTime() - start;
   if (HasRelayPlacement()) {
     // Experiment Runtime
     { Runtime experiment_run(mem_shared_plan, true); }
     // Improve
     if (machine_ctx->IsThisMachineMaster()) {
-      SaveProtoAsTextFile(amd, "available_mem_desc");
+      TeePersistentLogStream::Create("available_mem_desc")->Write(amd);
       CHECK_GT(amd.machine_amd_size(), 0);
       improved_plan = Improver().Improve(
           amd, naive_plan, JoinPath(LogDir(), ActEventLogger::experiment_act_event_bin_filename()));
@@ -234,7 +234,7 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, int64_t this_mchn_id) {
       PullPlan("improved_plan", &improved_plan);
     }
     OF_BARRIER();
-    SaveProtoAsTextFile(improved_plan, "improved_plan");
+    TeePersistentLogStream::Create("improved_plan")->Write(improved_plan);
     Global<CtrlClient>::Get()->Clear();
     OF_BARRIER();
   } else {
