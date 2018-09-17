@@ -8,15 +8,14 @@ ThreadPool::ThreadPool(int32_t thread_num)
     Channel<std::function<void()>>* chan = &(work_chans_.at(i));
     threads_[i] = std::thread([chan]() {
       std::function<void()> work;
-      while (chan->Receive(&work) == 0) { work(); }
+      while (chan->Receive(&work) == kChannelStatusSuccess) { work(); }
     });
   }
 }
 
 ThreadPool::~ThreadPool() {
   FOR_RANGE(int32_t, i, 0, work_chans_.size()) {
-    work_chans_.at(i).CloseSendEnd();
-    work_chans_.at(i).CloseReceiveEnd();
+    work_chans_.at(i).Close();
     threads_.at(i).join();
   }
 }
