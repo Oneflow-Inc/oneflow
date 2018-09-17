@@ -102,7 +102,6 @@ void NormalForwardCompActor::Act() {
     }
   });
   AsyncSendNaiveProducedRegstMsgToConsumer([&](Regst* regst) {
-    if (actor_id() == 3) { LOG(ERROR) << "kLOss " << regst->regst_desc_id() << "," << piece_id; }
     regst->set_piece_id(piece_id);
     regst->set_model_version_id(model_version_id);
     return regst->regst_desc_id() != forward_model_regst_desc_id_;
