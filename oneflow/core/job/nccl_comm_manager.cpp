@@ -32,8 +32,13 @@ NcclCommMgr::NcclCommMgr(const Plan& plan) {
     NcclGetUniqueId4Tasks(pair.second, &nccl_unique_id);
     std::vector<ncclComm_t> comms(pair.second.size());
     NcclCommInitRank4Tasks(pair.second, &comms, nccl_unique_id);
-    CHECK_EQ(comms.size(), pair.second.size());
     FOR_RANGE(size_t, i, 0, pair.second.size()) {
+      int32_t device_id;
+      int32_t rank;
+      NcclCheck(ncclCommCuDevice(comms.at(i), &device_id));
+      NcclCheck(ncclCommUserRank(comms.at(i), &rank));
+      LOG(INFO) << "Created nccl communicator for task " << pair.second.at(i).task_id()
+                << " with rank " << rank << " on device " << device_id;
       CHECK(actor_id2comm_.emplace(pair.second.at(i).task_id(), comms.at(i)).second);
     }
   }
@@ -69,8 +74,8 @@ void NcclCommMgr::NcclCommInitRank4Tasks(const std::vector<TaskProto>& tasks,
   FOR_RANGE(size_t, i, 0, tasks.size()) {
     int32_t device_id = GetDeviceId4Task(tasks.at(i));
     cudaSetDevice(device_id);
-    ncclCommInitRank(&(*comms)[i], (int32_t)tasks.at(i).parallel_ctx().rank_num(), nccl_unique_id,
-                     (int32_t)tasks.at(i).parallel_ctx().rank_id());
+    NcclCheck(ncclCommInitRank(&((*comms)[i]), (int32_t)tasks.at(i).parallel_ctx().rank_num(), nccl_unique_id,
+                     (int32_t)tasks.at(i).parallel_ctx().rank_id()));
   }
   NcclCheck(ncclGroupEnd());
 }
@@ -83,7 +88,7 @@ void NcclCommMgr::NcclGetUniqueId4Tasks(const std::vector<TaskProto>& tasks,
   if (task_type == TaskType::kNcclAllGather || task_type == TaskType::kNcclReduceScatter
       || (!is_global)) {
     NcclCheck(ncclGetUniqueId(nccl_unique_id));
-  } else {
+  } else if (task_type == TaskType::kNcclAllReduce) {
     bool should_create_unique_id =
         std::find_if(tasks.begin(), tasks.end(),
                      [](const TaskProto& task) { return task.parallel_ctx().parallel_id() == 0; })
@@ -100,6 +105,8 @@ void NcclCommMgr::NcclGetUniqueId4Tasks(const std::vector<TaskProto>& tasks,
             memcpy(nccl_unique_id->internal, val.data(), NCCL_UNIQUE_ID_BYTES);
           });
     }
+  } else {
+    UNIMPLEMENTED();
   }
 }
 

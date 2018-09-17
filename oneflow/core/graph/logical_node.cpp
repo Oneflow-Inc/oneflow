@@ -242,6 +242,8 @@ void LogicalNode::GenSortedCompTaskNodes(
           }
           case CudaWorkType::kMix: {
             comp_task_node->set_thrd_id(id_mgr->GetGpuMixThrdId(dev_phy_id));
+            comp_task_node->mut_parallel_ctx()->set_rank_id(comp_task_node->parallel_ctx()->parallel_id());
+            comp_task_node->mut_parallel_ctx()->set_rank_num(comp_task_node->parallel_ctx()->parallel_num());
             break;
           }
           case CudaWorkType::kMdUpdt: {
