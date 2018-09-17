@@ -80,7 +80,7 @@ void NormalForwardCompActor::Act() {
   int64_t model_version_id = -1;
   if (model_regst_) { model_version_id = model_regst_->model_version_id(); }
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
-  int64_t piece_id = GetNaiveFirstCurReadable()->piece_id();
+  int64_t piece_id = GetPieceId4NaiveCurReadableDataRegst();
   std::tuple<int64_t, std::function<const Blob*(const LogicalBlobId&)>> other_val(
       piece_id, [this](const LogicalBlobId& lbi) -> const Blob* {
         CHECK_NOTNULL(pre_forward_model_regst_);
@@ -102,6 +102,7 @@ void NormalForwardCompActor::Act() {
     }
   });
   AsyncSendNaiveProducedRegstMsgToConsumer([&](Regst* regst) {
+    if (actor_id() == 3) { LOG(ERROR) << "kLOss " << regst->regst_desc_id() << "," << piece_id; }
     regst->set_piece_id(piece_id);
     regst->set_model_version_id(model_version_id);
     return regst->regst_desc_id() != forward_model_regst_desc_id_;

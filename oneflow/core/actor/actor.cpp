@@ -57,6 +57,9 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
       regst_desc_id_vec.push_back(regst_desc_id);
     }
     remaining_eord_cnt_ += pair.second.regst_desc_id_size();
+    if (pair.first == "in_ctrl") {
+      consumed_ctrl_regst_desc_ids_.insert(regst_desc_id_vec.begin(), regst_desc_id_vec.end());
+    }
   }
 
   total_reading_cnt_ = 0;
@@ -126,6 +129,19 @@ int64_t Actor::ReadingCnt4ProducedRegst(Regst* regst) const {
 
 void Actor::IncreaseReadingCnt4ProducedRegst(Regst* regst, int64_t val) {
   produced_regst2reading_cnt_.at(regst) += val;
+}
+
+int64_t Actor::GetPieceId4NaiveCurReadableDataRegst() const {
+  int64_t pid = -1;
+  naive_consumed_rs_.ForChosenFrontRegst(
+      [&pid](int64_t) { return pid == -1; },
+      [&pid](Regst* regst) {
+        if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) {
+          pid = regst->piece_id();
+        }
+      });
+  CHECK_NE(-1, pid);
+  return pid;
 }
 
 void Actor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
@@ -269,7 +285,7 @@ void Actor::ActUntilFail() {
 
     std::vector<int64_t> regst_desc_ids;
     naive_consumed_rs_.ForChosenFrontRegst(
-        [this](int64_t regst_desc_id) { return IsProducedCtrlRegstDescId(regst_desc_id) == false; },
+        [this](int64_t regst_desc_id) { return IsConsumedCtrlRegstDescId(regst_desc_id) == false; },
         [&](Regst* regst) {
           if (IsNaiveAllowedReturnToProducer(regst) == false) { return; }
           AsyncSendRegstMsgToProducer(regst);
@@ -372,7 +388,7 @@ void Actor::AsyncSendRegstMsgToProducer(Regst* regst, int64_t producer) {
 
 void Actor::AsyncSendConsumedCtrlRegstMsgToProducer() {
   auto IsChosenRegstDescId = [this](int64_t regst_desc_id) {
-    return IsProducedCtrlRegstDescId(regst_desc_id) && ConsumedCtrlRegstValid(regst_desc_id);
+    return IsConsumedCtrlRegstDescId(regst_desc_id) && ConsumedCtrlRegstValid(regst_desc_id);
   };
 
   std::vector<int64_t> regst_desc_ids;

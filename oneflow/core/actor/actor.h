@@ -64,6 +64,7 @@ class Actor {
   int64_t ReadingCnt4ProducedRegst(Regst* regst) const;
   void IncreaseReadingCnt4ProducedRegst(Regst* regst, int64_t val);
   void IncreaseTotalReadingCnt(int64_t val) { total_reading_cnt_ += val; }
+  int64_t GetPieceId4NaiveCurReadableDataRegst() const;
 
   // Msg Handler
   void set_msg_handler(MsgHandler val) { msg_handler_ = val; }
@@ -117,7 +118,6 @@ class Actor {
   Regst* GetNaiveCurReadable(const std::string& name) {
     return GetNaiveCurReadable(Name2SoleRegstDescId(name));
   }
-  Regst* GetNaiveFirstCurReadable() { return naive_consumed_rs_.FirstFront(); }
   Regst* GetNaiveCurWriteable(int desc_id) { return naive_produced_rs_.Front(desc_id); }
   Regst* GetNaiveCurWriteable(const std::string& name) {
     return GetNaiveCurWriteable(Name2SoleRegstDescId(name));
@@ -125,6 +125,9 @@ class Actor {
 
   Regst* GetSoleProducedRegst4RegstDescId(int64_t regst_desc_id);
 
+  bool IsConsumedCtrlRegstDescId(int64_t regst_desc_id) {
+    consumed_ctrl_regst_desc_ids_.find(regst_desc_id) != consumed_ctrl_regst_desc_ids_.end();
+  }
   bool IsProducedCtrlRegstDescId(int64_t regst_desc_id) {
     produced_ctrl_regst_desc_ids_.find(regst_desc_id) != produced_ctrl_regst_desc_ids_.end();
   }
@@ -178,6 +181,7 @@ class Actor {
   bool is_naive_consumed_eord_;
 
   HashSet<int64_t> produced_ctrl_regst_desc_ids_;
+  HashSet<int64_t> consumed_ctrl_regst_desc_ids_;
 };
 
 class ScopedActEventRecorder;

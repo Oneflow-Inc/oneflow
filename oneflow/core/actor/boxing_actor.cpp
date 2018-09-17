@@ -16,7 +16,7 @@ void BoxingActor::NormalProcessNaiveReadableRegstMsg(const std::deque<Regst*>& r
 }
 
 void BoxingActor::Act(std::function<bool(Regst*)>* IsNaiveAllowedReturnToProducer) {
-  int64_t piece_id = GetNaiveFirstCurReadable()->piece_id();
+  int64_t piece_id = GetPieceId4NaiveCurReadableDataRegst();
   AsyncLaunchKernel(GenDefaultKernelCtx());
   AsyncSendNaiveProducedRegstMsgToConsumer([&](Regst* regst) {
     regst->set_piece_id(piece_id);
