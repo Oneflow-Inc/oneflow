@@ -1,12 +1,18 @@
 #include "oneflow/core/actor/normal_model_update_compute_actor.h"
 #include "oneflow/core/job/runtime_context.h"
+#include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 
 void NormalMdUpdtCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   model_regst_desc_id_ = Name2SoleRegstDescId("model");
   const_model_regst_desc_id_ = Name2SoleRegstDescId("const_model");
-  forward_model_regst_desc_id_ = Name2SoleRegstDescId("forward_model");
+  int64_t forward_model_regst_desc_id = Name2SoleRegstDescId("forward_model");
+  if (forward_model_regst_desc_id != -1) {
+    forward_model_regst_ = GetCurWriteableRegst(forward_model_regst_desc_id);
+  } else {
+    forward_model_regst_ = nullptr;
+  }
   init_remaining_cnt_ = 0;
   if (model_regst_desc_id_ != -1) { init_remaining_cnt_ += 1; }
   if (const_model_regst_desc_id_ != -1) {
@@ -14,7 +20,9 @@ void NormalMdUpdtCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
     DecreaseActualWriteableProducedDataRegstDescNum(1);
   }
   next_model_version_id_ = 0;
-  related_save_model_actor_id_ = task_proto.related_save_model_task_id();
+  for (int64_t model_save_related_actor_id : task_proto.related_save_model_task_ids()) {
+    related_save_model_actor_ids_.insert(model_save_related_actor_id);
+  }
   related_init_model_actor_id_ = task_proto.related_init_model_task_id();
   pre_model_regst_ = nullptr;
   OF_SET_MSG_HANDLER(&NormalMdUpdtCompActor::HandlerInitModelAndConstModel);
@@ -36,10 +44,23 @@ void NormalMdUpdtCompActor::Act() {
   bool need_save_model = NeedModelSave(next_model_version_id_ - 1);
   bool need_send_model = next_model_version_id_ < job_desc->TotalBatchNum();
   AsyncSendRegstMsgToConsumer(RegstPreProcess, [&](int64_t actor_id) {
-    return (need_save_model && actor_id == related_save_model_actor_id_)
-           || (need_send_model && actor_id != related_save_model_actor_id_);
+    bool is_for_save_model =
+        related_save_model_actor_ids_.find(actor_id) != related_save_model_actor_ids_.end();
+    return (need_save_model && is_for_save_model) || (need_send_model && !is_for_save_model);
   });
+  if (need_save_model && forward_model_regst_ != nullptr) {
+    AsyncSendRegstMsgToConsumer([&](Regst* regst) { return regst == forward_model_regst_; });
+  }
   next_model_version_id_ += 1;
+}
+
+int64_t NormalMdUpdtCompActor::ActNumForEachOutput(int64_t regst_desc_id) const {
+  const auto* job_desc = Global<JobDesc>::Get();
+  if (forward_model_regst_ != nullptr && regst_desc_id == forward_model_regst_->regst_desc_id()) {
+    return std::min<int64_t>(job_desc->TotalBatchNum() - (forward_model_regst_->act_id() + 1),
+                             job_desc->NumOfBatchesInSnapshot());
+  }
+  return 1;
 }
 
 void NormalMdUpdtCompActor::InitRegstBySendToFw(int64_t regst_desc_id) {
@@ -51,8 +72,7 @@ void NormalMdUpdtCompActor::InitRegstBySendToFw(int64_t regst_desc_id) {
 
 void NormalMdUpdtCompActor::InitModelAndConstBuf() {
   // TODO move model and const model from fw into here
-  if (forward_model_regst_desc_id_ == -1) { return; }
-  Regst* forward_model_regst = GetCurWriteableRegst(forward_model_regst_desc_id_);
+  if (forward_model_regst_ == nullptr) { return; }
   for (const ExecKernel& ek : exec_kernel_vec()) {
     KernelCtx kernel_ctx = GenDefaultKernelCtx();
     ek.kernel->InitModelAndConstBuf(kernel_ctx, parallel_ctx(),
@@ -60,8 +80,8 @@ void NormalMdUpdtCompActor::InitModelAndConstBuf() {
                                     [&](const std::string& bn_in_op) {
                                       const LogicalBlobId& lbi = ek.kernel->BnInOp2Lbi(bn_in_op);
                                       Blob* blob = nullptr;
-                                      if (forward_model_regst) {
-                                        blob = forward_model_regst->GetBlobByLbi(lbi);
+                                      if (forward_model_regst_) {
+                                        blob = forward_model_regst_->GetBlobByLbi(lbi);
                                       }
                                       return blob;
                                     });

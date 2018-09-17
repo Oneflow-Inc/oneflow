@@ -79,7 +79,7 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
   ExecEdge* exec_edge = nullptr;
   processed_model_diff_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
     OperatorConf op_conf;
-    op_conf.set_name("md_update_" + lbi.op_name() + "_" + lbi.blob_name());
+    op_conf.set_name("md_update-" + lbi.op_name() + "-" + lbi.blob_name());
     op_conf.set_device_type(logical_node()->parallel_desc()->device_type());
     op_conf.mutable_normal_mdupdt_conf()->set_model_diff(lbi.op_name() + '/' + lbi.blob_name());
     op_conf.mutable_normal_mdupdt_conf()->set_model(lbi.op_name() + '/' + lbi.blob_name());
@@ -119,8 +119,7 @@ void NormalMdUpdtCompTaskNode::ToProto(TaskProto* task_proto) {
     } else if (IsBackwardTaskType(node->GetTaskType())) {
       // do nothing
     } else {
-      CHECK_EQ(task_proto->related_save_model_task_id(), -1);
-      task_proto->set_related_save_model_task_id(node->task_id());
+      task_proto->add_related_save_model_task_ids(node->task_id());
     }
   });
   task_proto->set_related_init_model_task_id(related_init_model_task_id_);

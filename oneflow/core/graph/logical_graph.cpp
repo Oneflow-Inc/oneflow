@@ -560,8 +560,11 @@ NormalMdUpdtLogicalNode* LogicalGraph::BuildNormalMdUpdtAndMdSaveStruct(
   if (Global<JobDesc>::Get()->enable_write_snapshot()) {
     // for model
     BuildMdSaveStruct(fw_logical, md_updt_logical);
-    // for forward_model
-    BuildMdSaveStruct(fw_logical, md_updt_logical);
+    // TODO: remove the following ugly hard coded `if'
+    if (Global<JobDesc>::Get()->other_conf().train_conf().model_update_conf().has_momentum_conf()) {
+      // for forward_model
+      BuildMdSaveStruct(fw_logical, md_updt_logical);
+    }
   }
   return md_updt_logical;
 }
