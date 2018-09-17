@@ -67,10 +67,10 @@ void CopyCommNetActor::Act() {
   int64_t src_actor_id = readable_it->second.producer;
   int64_t src_machine_id = Global<IDMgr>::Get()->MachineId4ActorId(src_actor_id);
   // writeable
-  void* writeable_token = GetCurSoleWriteableRegst()->comm_net_token();
+  void* writeable_token = GetNaiveSoleCurWriteable()->comm_net_token();
   // Async
   Global<CommNet>::Get()->Read(actor_read_id_, src_machine_id, readable_token, writeable_token);
-  AsyncSendRegstMsgToConsumer([&](Regst* regst) {
+  AsyncSendNaiveProducedRegstMsgToConsumer([&](Regst* regst) {
     regst->set_piece_id(next_piece_id_);
     return true;
   });

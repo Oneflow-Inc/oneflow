@@ -17,9 +17,6 @@ class AccumulateCompActor : public CompActor {
 
  private:
   void Act() override;
-  std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
-    return {true, {}};
-  }
 
   ColIdOrder order_;
   std::function<void(DeviceCtx*, void* dst, const void* src, size_t)> cpy_func_;

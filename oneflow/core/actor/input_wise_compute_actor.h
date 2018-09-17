@@ -34,8 +34,8 @@ class InputWiseCompActor : public CompActor {
     return ReceiveAllEordMsg() && readable_regst_desc_cnt_ == 0;
   }
   void AsyncReturnAllCustomizedReadableRegst() override;
-  std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
-    return {false, {}};
+  std::pair<bool, std::vector<std::string>> GetNaiveOrCustomizedConsumedRegstDescName() override {
+    return {true, {}};
   }
   virtual void SetKernelCtxOther(void** other) { *other = nullptr; }
   void UpdateMemberStatusAfterAct();
