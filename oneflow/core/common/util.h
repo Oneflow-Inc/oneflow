@@ -26,6 +26,7 @@
 #include "oneflow/core/common/meta_util.hpp"
 
 DECLARE_string(log_dir);
+DECLARE_int64(this_machine_id);
 
 namespace std {
 template<typename T0, typename T1>
@@ -121,10 +122,7 @@ inline std::string NewUniqueId() {
   return std::to_string(id++);
 }
 
-inline const std::string& LogDir() {
-  static std::string v = FLAGS_log_dir;
-  return v;
-}
+std::string LogDir();
 
 template<typename K, typename V>
 void EraseIf(HashMap<K, V>* hash_map, std::function<bool(typename HashMap<K, V>::iterator)> cond) {

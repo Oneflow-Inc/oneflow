@@ -46,7 +46,6 @@ class Kernel {
   virtual void InitModelBlobsWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
                                      const std::string& model_load_dir,
                                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
-
   virtual ActivationType GetActivationType() const { return ActivationType::kNone; }
 
   virtual void Forward(const KernelCtx& ctx,
