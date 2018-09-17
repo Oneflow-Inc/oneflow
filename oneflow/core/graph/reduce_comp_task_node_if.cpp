@@ -2,6 +2,7 @@
 #include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/graph/reduce_comp_task_node_if.h"
 #include "task_node.h"
+#include "reduce_comp_task_node_if.h"
 
 namespace oneflow {
 
@@ -37,6 +38,20 @@ void BuildCtrlRegstBetweenReduceCopyNodes(const CompTaskNode* src_reduce,
   for (const auto& kv : mem_shared_offset2copy_nodes) {
     kv.second.copy_d2h->BuildCtrlRegstDesc(kv.second.copy_h2d);
   }
+}
+
+TaskNode* ReduceCompTaskNodeIf::FindPredReduceTaskNodeIf(std::function<bool(TaskNode*)> predicate) {
+  TaskNode* current = AsTaskNode();
+  while (current) {
+    auto reduce_task_node_edge_it =
+        std::find_if(current->in_edges().begin(), current->in_edges().end(), [](TaskEdge* edge) {
+          return dynamic_cast<ReduceCompTaskNodeIf*>(edge->src_node()) != nullptr;
+        });
+    if (reduce_task_node_edge_it == current->in_edges().end()) { return nullptr; }
+    current = (*reduce_task_node_edge_it)->src_node();
+    if (predicate(current)) { return current; }
+  }
+  return nullptr;
 }
 
 }  // namespace oneflow

@@ -56,7 +56,10 @@ void ReduceGatherCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx* ctx
 
   ctx->DoGather(ctx->StageSegmentCount());
 
-  TaskNode* nearest_add_task_node = FindNearestReduceAddTaskNode();
+  TaskNode* nearest_add_task_node = FindPredReduceTaskNodeIf(
+      [](TaskNode* node) { return node->GetTaskType() == TaskType::kReduceAdd; });
+  CHECK(nearest_add_task_node);
+
   TaskNode* nearest_add_copy_d2h = nullptr;
   nearest_add_task_node->ForEachNodeOnOutEdge([&](TaskNode* node) {
     if (node->GetTaskType() == TaskType::kCopyHd) { nearest_add_copy_d2h = node; }
@@ -67,23 +70,6 @@ void ReduceGatherCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx* ctx
       nearest_add_copy_d2h->BuildCtrlRegstDesc(node);
     }
   });
-}
-
-CompTaskNode* ReduceGatherCompTaskNode::FindNearestReduceAddTaskNode() {
-  CompTaskNode* src_node = this;
-  while (src_node->GetTaskType() != TaskType::kReduceAdd) {
-    CompTaskNode* comp_task_node = nullptr;
-    for (TaskEdge* edge : src_node->in_edges()) {
-      comp_task_node = dynamic_cast<CompTaskNode*>(edge->src_node());
-      if (comp_task_node) {
-        src_node = comp_task_node;
-        CHECK(src_node->GetTaskType() != TaskType::kNormalBackward);
-        break;
-      }
-    }
-    CHECK(comp_task_node);
-  }
-  return src_node;
 }
 
 }  // namespace oneflow
