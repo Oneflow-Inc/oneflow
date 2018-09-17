@@ -161,7 +161,7 @@ void Graph<NodeType, EdgeType>::ToDotWithStream(StreamT& out_stream) {
 
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::ToDotWithFilePath(const std::string& file_path) {
-  TeePersistentLogStream log_stream(file_path);
+  auto log_stream = TeePersistentLogStream::Create(file_path);
   ToDotWithStream(log_stream);
 }
 
