@@ -487,13 +487,7 @@ void LogicalGraph::AddAllReduce(LogicalNode* src, LogicalNode* dst) {
   CHECK_EQ(src_pd->parallel_num(), dst_pd->parallel_num());
   CHECK_EQ(src_pd->device_type(), dst_pd->device_type());
   if (Global<JobDesc>::Get()->enable_nccl()) {
-    if (src_pd->sorted_machine_ids().size() == 1) {
-      AddNcclAllReduce(src, dst);
-    } else if (src_pd->device_num_of_each_machine() == 1) {
-      AddReduceScatterAddGatherNodes(src, dst, false);
-    } else {
-      AddNcclReduceScatterAndAllGather(src, dst);
-    }
+    AddNcclAllReduce(src, dst);
   } else {
     bool with_local_reduce =
         src_pd->sorted_machine_ids().size() > 1 && src_pd->device_num_of_each_machine() > 1;
