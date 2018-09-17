@@ -79,7 +79,7 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
   ExecEdge* exec_edge = nullptr;
   processed_model_diff_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
     OperatorConf op_conf;
-    op_conf.set_name("md_update-" + lbi.op_name() + "-" + lbi.blob_name());
+    op_conf.set_name("model_update-" + lbi.op_name() + "-" + lbi.blob_name());
     op_conf.set_device_type(logical_node()->parallel_desc()->device_type());
     op_conf.mutable_normal_mdupdt_conf()->set_model_diff(lbi.op_name() + '/' + lbi.blob_name());
     op_conf.mutable_normal_mdupdt_conf()->set_model(lbi.op_name() + '/' + lbi.blob_name());

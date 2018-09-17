@@ -337,13 +337,6 @@ std::vector<std::shared_ptr<RegstDesc>> TaskEdge::GetRegsts() const {
   return regst_descs;
 }
 
-bool TaskEdge::IsAllRegstEmpty() const {
-  for (auto& pair : name_in_producer2regst_) {
-    if (pair.second->NumOfLbi() > 0) { return false; }
-  }
-  return true;
-}
-
 void TaskEdge::AddRegst(const std::string& name_in_producer, std::shared_ptr<RegstDesc> regst) {
   CHECK(name_in_producer2regst_.emplace(name_in_producer, regst).second);
 }

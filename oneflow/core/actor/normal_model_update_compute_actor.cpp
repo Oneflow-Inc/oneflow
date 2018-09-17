@@ -1,6 +1,5 @@
 #include "oneflow/core/actor/normal_model_update_compute_actor.h"
 #include "oneflow/core/job/runtime_context.h"
-#include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 
@@ -71,7 +70,7 @@ void NormalMdUpdtCompActor::InitRegstBySendToFw(int64_t regst_desc_id) {
 }
 
 void NormalMdUpdtCompActor::InitModelAndConstBuf() {
-  // TODO move model and const model from fw into here
+  // TODO move the initiation of model and const model from fw op into this function
   if (forward_model_regst_ == nullptr) { return; }
   for (const ExecKernel& ek : exec_kernel_vec()) {
     KernelCtx kernel_ctx = GenDefaultKernelCtx();

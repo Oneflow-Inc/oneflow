@@ -120,7 +120,6 @@ class Actor {
   }
   Regst* GetNaiveCurReadable(int64_t desc_id) { return naive_consumed_data_rs_.Front(desc_id); }
   Regst* GetNaiveSoleCurReadable() { return naive_consumed_data_rs_.SoleFront(); }
-  void ForEachNaiveCurReadable(std::function<void(const Regst*)>) const;
   Regst* GetNaiveFirstCurReadable() { return naive_consumed_data_rs_.FirstFront(); }
   Regst* GetSoleProducedRegst(int64_t regst_desc_id);
   int64_t GetSoleProducedDataRegstDescId() const;
