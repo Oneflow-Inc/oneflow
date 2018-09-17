@@ -30,7 +30,7 @@ class CopyCommNetActor final : public Actor {
   bool IsCustomizedReadReady() override;
   bool IsCustomizedReadAlwaysUnReadyFromNow() override;
   void AsyncReturnAllCustomizedReadableRegst() override;
-  std::pair<bool, std::vector<std::string>> GetNaiveOrCustomizedConsumedRegstDescName() override {
+  std::pair<bool, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName() override {
     return {true, {}};
   }
 

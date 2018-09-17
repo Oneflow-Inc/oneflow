@@ -16,7 +16,7 @@ void NormalForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
     pre_forward_model_regst_ = GetNaiveCurWriteable(forward_model_regst_desc_id_);
   }
   if (const_buf_regst_desc_id_ != -1) {
-    const_buf_regst_ = GetSoleProducedRegst(const_buf_regst_desc_id_);
+    const_buf_regst_ = GetSoleProducedRegst4RegstDescId(const_buf_regst_desc_id_);
   }
   send_const_buf_regst_ = false;
   if (random_seed_ == -1 || (model_regst_desc_id_ == -1 && const_model_regst_desc_id_ == -1)) {
@@ -80,7 +80,7 @@ void NormalForwardCompActor::Act() {
   int64_t model_version_id = -1;
   if (model_regst_) { model_version_id = model_regst_->model_version_id(); }
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
-  int64_t piece_id = GetNaiveFirstCurReadable()->piece_id();
+  int64_t piece_id = GetPieceId4NaiveCurReadableDataRegst();
   std::tuple<int64_t, std::function<const Blob*(const LogicalBlobId&)>> other_val(
       piece_id, [this](const LogicalBlobId& lbi) -> const Blob* {
         CHECK_NOTNULL(pre_forward_model_regst_);

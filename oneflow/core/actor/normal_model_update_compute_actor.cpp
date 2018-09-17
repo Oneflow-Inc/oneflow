@@ -15,7 +15,7 @@ void NormalMdUpdtCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   pre_model_regst_ = nullptr;
   const_model_regst_ = nullptr;
   if (const_model_regst_desc_id_ != -1) {
-    const_model_regst_ = GetSoleProducedRegst(const_model_regst_desc_id_);
+    const_model_regst_ = GetSoleProducedRegst4RegstDescId(const_model_regst_desc_id_);
   }
   send_const_model_regst_ = false;
   OF_SET_MSG_HANDLER(&NormalMdUpdtCompActor::HandlerInitModelAndConstModel);

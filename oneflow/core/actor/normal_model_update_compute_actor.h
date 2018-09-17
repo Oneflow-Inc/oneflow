@@ -14,7 +14,7 @@ class NormalMdUpdtCompActor final : public CompActor {
  private:
   void VirtualCompActorInit(const TaskProto&) override;
   void Act() override;
-  std::pair<bool, std::vector<std::string>> GetNaiveOrCustomizedProducedRegstDescName() override {
+  std::pair<bool, HashSet<std::string>> GetNaiveOrCustomizedProducedRegstDescName() override {
     return {false, {"const_model"}};
   }
   bool IsCustomizedWriteReady() override;

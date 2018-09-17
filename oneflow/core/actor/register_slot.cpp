@@ -31,6 +31,11 @@ int RegstSlot::TryPopFrontRegst(int64_t regst_desc_id) {
   return 0;
 }
 
+void RegstSlot::PopFrontRegsts(const std::vector<int64_t>& regst_desc_ids) {
+  CHECK(is_inited_);
+  for (int64_t regst_desc_id : regst_desc_ids) { CHECK_EQ(0, TryPopFrontRegst(regst_desc_id)); }
+}
+
 void RegstSlot::InsertRegstDescId(int64_t regst_desc_id) {
   CHECK(is_inited_ == false);
   CHECK(regst_desc_id2regsts_.emplace(regst_desc_id, std::deque<Regst*>()).second);
@@ -66,7 +71,7 @@ void RegstSlot::InitedDone() {
 }
 
 void RegstSlot::ForChosenFrontRegst(std::function<bool(int64_t)> IsChosenRegstDescId,
-                                    std::function<void(const Regst*)> Handler) const {
+                                    std::function<void(Regst*)> Handler) const {
   for (const auto& kv : regst_desc_id2regsts_) {
     if (IsChosenRegstDescId(kv.first)) {
       CHECK(kv.second.empty() == false);
@@ -82,7 +87,7 @@ void RegstSlot::ForChosenRegstDeq(std::function<bool(int64_t)> IsChosenRegstDesc
   }
 }
 
-void RegstSlot::ForEachFrontRegst(std::function<void(const Regst*)> Handler) const {
+void RegstSlot::ForEachFrontRegst(std::function<void(Regst*)> Handler) const {
   ForChosenFrontRegst([](int64_t) { return true; }, Handler);
 }
 

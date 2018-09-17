@@ -10,7 +10,7 @@ void DecodeCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
 }
 
 void DecodeCompActor::Act(std::function<bool(Regst*)>* IsNaiveAllowedReturnToProducer) {
-  Regst* in_regst = GetNaiveSoleCurReadable();
+  Regst* in_regst = GetNaiveCurReadable("record");
   CHECK_LE(decode_status_.cur_col_id_, decode_status_.max_col_id_);
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
   kernel_ctx.other = &decode_status_;

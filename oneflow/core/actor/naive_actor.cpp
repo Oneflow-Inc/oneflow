@@ -4,7 +4,7 @@ namespace oneflow {
 
 void NaiveActor::Act() {
   AsyncLaunchKernel(GenDefaultKernelCtx());
-  int64_t piece_id = GetNaiveFirstCurReadable()->piece_id();
+  int64_t piece_id = GetPieceId4NaiveCurReadableDataRegst();
   AsyncSendNaiveProducedRegstMsgToConsumer([&](Regst* regst) {
     regst->set_piece_id(piece_id);
     return true;
