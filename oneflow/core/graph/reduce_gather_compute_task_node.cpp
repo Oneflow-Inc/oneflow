@@ -64,6 +64,7 @@ void ReduceGatherCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx* ctx
   nearest_add_task_node->ForEachNodeOnOutEdge([&](TaskNode* node) {
     if (node->GetTaskType() == TaskType::kCopyHd) { nearest_add_copy_d2h = node; }
   });
+  CHECK(nearest_add_copy_d2h);
 
   ForEachNodeOnInEdge([&](TaskNode* node) {
     if (node->GetTaskType() == TaskType::kCopyHd) {
