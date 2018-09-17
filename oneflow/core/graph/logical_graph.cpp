@@ -330,7 +330,7 @@ void LogicalGraph::BuildLossPrintStruct() {
     std::shared_ptr<Operator> loss_print_op = ConstructOp(loss_print_op_conf);
     ParallelConf loss_print_pr_conf;
     loss_print_pr_conf.set_policy(kDataParallel);
-    loss_print_pr_conf.add_device_name("0:cpu:1");
+    loss_print_pr_conf.add_device_name("0:cpu:0");
     LossPrintLogicalNode* loss_print_logical = NewNode<LossPrintLogicalNode>();
     loss_print_logical->mut_op_vec() = {loss_print_op};
     loss_print_logical->mut_parallel_desc().reset(new ParallelDesc(loss_print_pr_conf));
@@ -363,7 +363,7 @@ void LogicalGraph::BuildAccuracyPrintStruct() {
     std::shared_ptr<Operator> accuracy_print_op = ConstructOp(accuracy_print_op_conf);
     ParallelConf accuracy_print_pr_conf;
     accuracy_print_pr_conf.set_policy(kDataParallel);
-    accuracy_print_pr_conf.add_device_name("0:cpu:1");
+    accuracy_print_pr_conf.add_device_name("0:cpu:0");
     AccuracyPrintLogicalNode* accuracy_print_logical = NewNode<AccuracyPrintLogicalNode>();
     accuracy_print_logical->mut_op_vec() = {accuracy_print_op};
     accuracy_print_logical->mut_parallel_desc().reset(new ParallelDesc(accuracy_print_pr_conf));
