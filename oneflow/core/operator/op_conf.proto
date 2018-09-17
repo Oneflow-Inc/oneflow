@@ -398,9 +398,8 @@ message WarmupConf {
 }
 
 message NormalModelUpdateOpUserConf {
-  optional double learning_rate = 1 [default = 0.01];
-  optional LearningRateDecayConf learning_rate_decay = 2;
-  optional WarmupConf warmup_conf = 3;
+  optional LearningRateDecayConf learning_rate_decay = 1;
+  optional WarmupConf warmup_conf = 2;
   oneof normal_mdupdt {
     NaiveModelUpdateConf naive_conf = 1000;
     MomentumModelUpdateConf momentum_conf = 1001;
@@ -412,6 +411,9 @@ message NormalModelUpdateOpConf {
   required NormalModelUpdateOpUserConf user_conf = 1;
   required string model_diff = 2;
   required string model = 3;
+  required float learning_rate = 4;
+  required float l1 = 5;
+  required float l2 = 6;
 }
 
 message AccumulateOpConf {
