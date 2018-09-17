@@ -47,15 +47,14 @@ class JobDesc final {
   size_t rdma_recv_msg_buf_byte() const;
   bool collect_act_event() const { return job_conf_.other().collect_act_event(); }
   bool enable_mem_sharing() const { return job_conf_.other().enable_mem_sharing(); }
+  const FileSystemConf& data_fs_conf() const;
+  const FileSystemConf& snapshot_fs_conf() const;
   bool enable_write_snapshot() const {
     return IsTrain() && job_conf_.other().enable_write_snapshot();
   }
+  bool write_snapshot_to_master() const { return snapshot_fs_conf().has_localfs_conf(); }
   bool enable_blob_mem_sharing() const { return job_conf_.other().enable_blob_mem_sharing(); }
   int64_t reduce_group_size() const { return job_conf_.other().reduce_group_size(); }
-
-  // machine_name <-> machine_id
-  int64_t MachineID4MachineName(const std::string& machine_name) const;
-  const std::string& MachineName4MachineId(int64_t machine_id) const;
 
   // Train conf
   const std::string& MdSaveSnapshotsPath() const;
@@ -77,13 +76,11 @@ class JobDesc final {
  private:
   friend class Global<JobDesc>;
   JobDesc(const std::string& job_conf_filepath);
+  void SanityCheck();
   void SplitDecodeOps();
   void AddRecordLoadOps();
 
   JobConf1 job_conf_;
-
-  HashMap<std::string, int64_t> machine_name2machine_id_;
-  HashMap<int64_t, std::string> machine_id2machine_name_;
 };
 
 }  // namespace oneflow

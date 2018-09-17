@@ -1,6 +1,6 @@
 #include "oneflow/core/job/profiler.h"
 #include "oneflow/core/job/job_desc.h"
-#include "oneflow/core/persistence/persistent_out_stream.h"
+#include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/actor/act_event_logger.h"
 
@@ -84,7 +84,7 @@ void Profiler::Profile(const Plan& plan, const std::string& act_event_filepath) 
             [](const ProfileInfoPair& lhs, const ProfileInfoPair& rhs) {
               return lhs.second.CalcBottleNeckScore() > rhs.second.CalcBottleNeckScore();
             });
-  PersistentOutStream out_stream(LocalFS(), JoinPath(LogDir(), "oneflow.profile"));
+  auto log_stream = TeePersistentLogStream::Create("oneflow.profile");
   double mdupdt_act_interval = 0.0;
   int32_t mdupdt_task_num = 0;
   for (const ProfileInfoPair& pair : profile_info_vec) {
@@ -93,10 +93,10 @@ void Profiler::Profile(const Plan& plan, const std::string& act_event_filepath) 
       mdupdt_act_interval += pair.second.avg_act_interval();
     }
   }
-  out_stream << "time_of_one_batch:" << std::to_string(mdupdt_act_interval / mdupdt_task_num)
+  log_stream << "time_of_one_batch:" << std::to_string(mdupdt_act_interval / mdupdt_task_num)
              << "\n";
   for (const ProfileInfoPair& pair : profile_info_vec) {
-    out_stream << "actor_id:" << std::to_string(pair.first)
+    log_stream << "actor_id:" << std::to_string(pair.first)
                << " act_num: " << std::to_string(pair.second.act_num())
                << " avg_act_time:" << std::to_string(pair.second.avg_act_time())
                << " avg_act_interval:" << std::to_string(pair.second.avg_act_interval())
