@@ -43,9 +43,9 @@ void NormalMdUpdtCompActor::Act() {
   bool need_save_model = NeedModelSave(next_model_version_id_ - 1);
   bool need_send_model = next_model_version_id_ < job_desc->TotalBatchNum();
   AsyncSendRegstMsgToConsumer(RegstPreProcess, [&](int64_t actor_id) {
-    bool is_for_save_model =
+    bool is_saving_related =
         related_save_model_actor_ids_.find(actor_id) != related_save_model_actor_ids_.end();
-    return (need_save_model && is_for_save_model) || (need_send_model && !is_for_save_model);
+    return (need_save_model && is_saving_related) || (need_send_model && !is_saving_related);
   });
   if (need_save_model && forward_model_regst_ != nullptr) {
     AsyncSendRegstMsgToConsumer([&](Regst* regst) { return regst == forward_model_regst_; });
