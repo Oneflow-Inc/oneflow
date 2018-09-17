@@ -89,6 +89,8 @@ class ReduceCompTaskNodeIf {
     std::sort((*edge_infos).begin(), (*edge_infos).end(),
               [](const EdgeInfo& lhs, const EdgeInfo& rhs) { return lhs.order < rhs.order; });
   }
+  TaskNode* AsTaskNode() { return dynamic_cast<TaskNode*>(this); }
+  TaskNode* FindPredReduceTaskNodeIf(std::function<bool(TaskNode*)> predicate);
 };
 
 int64_t InferRegstSize(const RegstDesc& regst);

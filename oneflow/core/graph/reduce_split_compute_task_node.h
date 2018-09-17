@@ -22,7 +22,6 @@ class ReduceSplitCompTaskNode final : public CompTaskNode, public ReduceCompTask
  private:
   void BuildExecGphAndRegst() override;
   void FixPackedBlobDescOfProducedRegst() override;
-  CompTaskNode* FindPeerReduceConcatTaskNode();
 };
 
 }  // namespace oneflow
