@@ -488,7 +488,11 @@ message EncodeConf {
   oneof encode {
     EncodeRaw raw = 1;
     EncodeJpeg jpeg = 2;
+    EncodeProtobuf protobuf = 3;
   }
+}
+
+message EncodeProtobuf {
 }
 
 message EncodeRaw {
