@@ -8,19 +8,21 @@ namespace oneflow {
 TEST(Snapshot, write_and_read) {
   JobDescProto jb_desc_proto;
   auto job_conf = jb_desc_proto.mutable_job_conf();
-  auto gfs_conf = job_conf->mutable_global_fs_conf();
-  gfs_conf->set_allocated_localfs_conf(new LocalFsConf);
+  auto job_other = job_conf->mutable_other();
+  auto snapshot_path_conf = job_conf->mutable_other()->mutable_snapshot_path_conf();
+  snapshot_path_conf->set_allocated_localfs_conf(new LocalFsConf);
   auto resource = jb_desc_proto.mutable_resource();
   resource->add_machine();
   Global<JobDesc>::Get()->InitFromProto(jb_desc_proto);
+  fs::FileSystem* snapshot_fs = GetFS(Global<JobDesc>::Get()->snapshot_path_conf());
 
   std::string current_dir = GetCwd();
   StringReplace(&current_dir, '\\', '/');
   std::string snapshot_root_path = JoinPath(current_dir, "/tmp_snapshot_test_asdfasdf");
-  if (GlobalFS()->IsDirectory(snapshot_root_path)) {
-    ASSERT_TRUE(GlobalFS()->ListDir(snapshot_root_path).empty());
+  if (snapshot_fs->IsDirectory(snapshot_root_path)) {
+    ASSERT_TRUE(snapshot_fs->ListDir(snapshot_root_path).empty());
   } else {
-    GlobalFS()->CreateDir(snapshot_root_path);
+    snapshot_fs->CreateDir(snapshot_root_path);
   }
 
   std::string key = "key/name";
@@ -41,13 +43,13 @@ TEST(Snapshot, write_and_read) {
   // read
   {
     auto read_stream_ptr =
-        std::make_unique<NormalPersistentInStream>(GlobalFS(), JoinPath(snapshot_root_path, key));
+        std::make_unique<NormalPersistentInStream>(snapshot_fs, JoinPath(snapshot_root_path, key));
     std::string content;
     read_stream_ptr->ReadLine(&content);
     ASSERT_EQ(content, "ab");
   }
-  GlobalFS()->RecursivelyDeleteDir(snapshot_root_path);
-  ASSERT_TRUE(!GlobalFS()->IsDirectory(snapshot_root_path));
+  snapshot_fs->RecursivelyDeleteDir(snapshot_root_path);
+  ASSERT_TRUE(!snapshot_fs->IsDirectory(snapshot_root_path));
 }
 
 }  // namespace oneflow

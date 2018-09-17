@@ -330,7 +330,7 @@ void LogicalGraph::BuildLossPrintStruct() {
     std::shared_ptr<Operator> loss_print_op = ConstructOp(loss_print_op_conf);
     ParallelConf loss_print_pr_conf;
     loss_print_pr_conf.set_policy(kDataParallel);
-    loss_print_pr_conf.add_device_name(Global<JobDesc>::Get()->MachineName4MachineId(0) + ":cpu:1");
+    loss_print_pr_conf.add_device_name("0:cpu:0");
     LossPrintLogicalNode* loss_print_logical = NewNode<LossPrintLogicalNode>();
     loss_print_logical->mut_op_vec() = {loss_print_op};
     loss_print_logical->mut_parallel_desc().reset(new ParallelDesc(loss_print_pr_conf));
@@ -363,8 +363,7 @@ void LogicalGraph::BuildAccuracyPrintStruct() {
     std::shared_ptr<Operator> accuracy_print_op = ConstructOp(accuracy_print_op_conf);
     ParallelConf accuracy_print_pr_conf;
     accuracy_print_pr_conf.set_policy(kDataParallel);
-    accuracy_print_pr_conf.add_device_name(Global<JobDesc>::Get()->MachineName4MachineId(0)
-                                           + ":cpu:1");
+    accuracy_print_pr_conf.add_device_name("0:cpu:0");
     AccuracyPrintLogicalNode* accuracy_print_logical = NewNode<AccuracyPrintLogicalNode>();
     accuracy_print_logical->mut_op_vec() = {accuracy_print_op};
     accuracy_print_logical->mut_parallel_desc().reset(new ParallelDesc(accuracy_print_pr_conf));
@@ -544,10 +543,13 @@ MdSaveLogicalNode* LogicalGraph::BuildMdSaveStruct(const ForwardLogicalNode* fw_
   auto md_save_logical = NewNode<MdSaveLogicalNode>();
   md_save_logical->mut_op_vec() = {model_save_op};
   auto md_save_pr_desc = new ParallelDesc(*(fw_logical->parallel_desc()));
+  md_save_pr_desc->set_device_type(DeviceType::kCPU);
   if (fw_logical->parallel_desc()->policy() == ParallelPolicy::kDataParallel) {
     md_save_pr_desc->RandomSelectOneDeviceAndRemoveTheOthers();
   }
-  md_save_pr_desc->set_device_type(DeviceType::kCPU);
+  if (Global<JobDesc>::Get()->write_snapshot_to_master()) {
+    md_save_pr_desc->UseCPUDevicesOnMaster();
+  }
   md_save_logical->mut_parallel_desc().reset(md_save_pr_desc);
   Connect<LogicalNode>(need_save_logical, NewEdge(), md_save_logical);
   return md_save_logical;

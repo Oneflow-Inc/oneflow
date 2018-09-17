@@ -1,4 +1,8 @@
-globalfs_conf {
+data_fs_conf {
+  localfs_conf {
+  }
+}
+snapshot_fs_conf {
   localfs_conf {
   }
 }
