@@ -66,14 +66,29 @@ int64_t JobDesc::NumOfPiecesInBatch() const {
   CHECK_EQ(BatchSize() % PieceSize(), 0);
   return BatchSize() / PieceSize();
 }
-float JobDesc::L1() const {
+float JobDesc::primary_lr() const {
   CHECK(IsTrain());
-  return job_conf_.other().train_conf().l1();
+  return job_conf_.other().train_conf().primary_lr();
 }
-
-float JobDesc::L2() const {
+float JobDesc::secondary_lr() const {
   CHECK(IsTrain());
-  return job_conf_.other().train_conf().l2();
+  return job_conf_.other().train_conf().secondary_lr();
+}
+float JobDesc::weight_l1() const {
+  CHECK(IsTrain());
+  return job_conf_.other().train_conf().weight_l1();
+}
+float JobDesc::bias_l1() const {
+  CHECK(IsTrain());
+  return job_conf_.other().train_conf().bias_l1();
+}
+float JobDesc::weight_l2() const {
+  CHECK(IsTrain());
+  return job_conf_.other().train_conf().weight_l2();
+}
+float JobDesc::bias_l2() const {
+  CHECK(IsTrain());
+  return job_conf_.other().train_conf().bias_l2();
 }
 
 int32_t JobDesc::DataPartNum() const { return job_conf_.other().data_part_num(); }
