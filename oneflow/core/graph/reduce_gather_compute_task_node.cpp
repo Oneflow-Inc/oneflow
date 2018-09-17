@@ -4,25 +4,40 @@
 namespace oneflow {
 
 void ReduceGatherCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  this->SoleOutEdge()->AddRegst("out", ProduceRegst("out", false, 1, 1));
+  std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", false, 1, 1);
+  for (TaskEdge* edge : out_edges()) { edge->AddRegst("out", out_regst); }
 }
 
 void ReduceGatherCompTaskNode::ConsumeAllRegsts() {
+  int64_t machine_num = logical_node()->parallel_desc()->sorted_machine_ids().size();
+  int64_t dev_num_of_each_machine = logical_node()->parallel_desc()->device_num_of_each_machine();
+  CHECK_EQ(machine_num * dev_num_of_each_machine, parallel_ctx()->parallel_num());
+  bool has_local_reduce = machine_num > 1 && dev_num_of_each_machine > 1;
+
   for (TaskEdge* edge : in_edges()) {
     TaskNode* src_node = edge->src_node();
-    while (src_node->GetTaskType() != TaskType::kReduceGlobalAdd) {
+    while (dynamic_cast<CompTaskNode*>(src_node) == nullptr) {
       src_node = src_node->SoleInEdge()->src_node();
     }
-    CompTaskNode* reduce_global_add_node = dynamic_cast<CompTaskNode*>(src_node);
-    ConsumeRegst("in_" + std::to_string(reduce_global_add_node->parallel_id()),
-                 edge->GetSoleRegst());
+    bool is_local_gather = src_node->GetTaskType() == TaskType::kReduceGather;
+    int64_t in_parallel_id = src_node->parallel_ctx()->parallel_id();
+    int64_t in_device_rank = in_parallel_id % dev_num_of_each_machine;
+    int64_t in_machine_rank = in_parallel_id / dev_num_of_each_machine;
+    int64_t in_edge_index =
+        has_local_reduce ? (is_local_gather ? in_device_rank : in_machine_rank) : in_parallel_id;
+    ConsumeRegst("in_" + std::to_string(in_edge_index), edge->GetSoleRegst());
   }
 }
 
 void ReduceGatherCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
-  std::shared_ptr<Operator> reduce_gather_op = this->logical_node()->SoleOp();
+  OperatorConf reduce_gather_op_conf;
+  reduce_gather_op_conf.set_name("reduce_gather_" + NewUniqueId());
+  reduce_gather_op_conf.set_device_type(this->device_type());
+  reduce_gather_op_conf.mutable_reduce_gather_conf()->set_in_num(in_edges().size());
+  std::shared_ptr<Operator> reduce_gather_op = ConstructOp(reduce_gather_op_conf);
   node->mut_op() = reduce_gather_op;
+
   FOR_RANGE(size_t, i, 0, reduce_gather_op->input_bns().size()) {
     node->BindBnWithRegst(reduce_gather_op->input_bns().Get(i),
                           GetSoleConsumedRegst("in_" + std::to_string(i)));
