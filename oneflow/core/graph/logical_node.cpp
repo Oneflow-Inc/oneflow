@@ -14,6 +14,8 @@
 #include "oneflow/core/graph/reduce_local_add_compute_task_node.h"
 #include "oneflow/core/graph/reduce_global_add_compute_task_node.h"
 #include "oneflow/core/graph/reduce_gather_compute_task_node.h"
+#include "oneflow/core/graph/reduce_concat_compute_task_node.h"
+#include "oneflow/core/graph/reduce_split_compute_task_node.h"
 #include "oneflow/core/graph/accuracy_compute_task_node.h"
 #include "oneflow/core/graph/accuracy_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/accuracy_print_compute_task_node.h"
@@ -197,6 +199,7 @@ void LogicalNode::GenSortedCompTaskNodes(
     std::function<void(CompTaskNode*)> Handler) const {
   int64_t parallel_idx = 0;
   int64_t parallel_num = parallel_desc_->parallel_num();
+  int64_t device_num_of_each_machine = parallel_desc_->device_num_of_each_machine();
   for (int64_t machine_id : parallel_desc_->sorted_machine_ids()) {
     for (int64_t dev_phy_id : parallel_desc_->sorted_dev_phy_ids(machine_id)) {
       CompTaskNode* comp_task_node = NewCompTaskNode();
@@ -238,6 +241,8 @@ void LogicalNode::GenSortedCompTaskNodes(
       comp_task_node->set_logical_node(this);
       comp_task_node->mut_parallel_ctx()->set_parallel_id(parallel_idx++);
       comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);
+      comp_task_node->mut_parallel_ctx()->set_device_num_of_each_machine(
+          device_num_of_each_machine);
       comp_task_node->mut_parallel_ctx()->set_policy(parallel_desc_->policy());
       FixCompTaskNode(comp_task_node);
       Handler(comp_task_node);
@@ -335,6 +340,18 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("MdDiffAcc"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalBackward"
                               "NormalMdUpdt",
                               BldSubTskGphToNormalMdUpdt);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalBackward"
+                              "ReduceConcat",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("MdDiffAcc"
+                              "ReduceConcat",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceConcat"
+                              "ReduceScatter",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalBackward"
+                              "ReduceScatter",
+                              &TaskGraph::BldSubTskGphByOneToOne);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("MdDiffAcc"
                               "ReduceScatter",
                               &TaskGraph::BldSubTskGphByOneToOne);
@@ -351,7 +368,16 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGlobalAdd"
                               "ReduceGather",
                               &TaskGraph::BldSubTskGphByReduceGlobalAdd2ReduceGather);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
+                              "ReduceGather",
+                              &TaskGraph::BldSubTskGphByReduceGather2ReduceGather);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
                               "NormalMdUpdt",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceSplit"
+                              "NormalMdUpdt",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
+                              "ReduceSplit",
                               &TaskGraph::BldSubTskGphByOneToOne);
 
 BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src, const LogicalNode* dst) {
@@ -395,10 +421,12 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
   OF_PP_MAKE_TUPLE_SEQ(MdSave, kMdSaveArea)               \
   OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc, kDataBackwardArea)      \
   OF_PP_MAKE_TUPLE_SEQ(Print, kPrintArea)                 \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceConcat, kMdUpdtArea)         \
   OF_PP_MAKE_TUPLE_SEQ(ReduceScatter, kMdUpdtArea)        \
   OF_PP_MAKE_TUPLE_SEQ(ReduceLocalAdd, kMdUpdtArea)       \
   OF_PP_MAKE_TUPLE_SEQ(ReduceGlobalAdd, kMdUpdtArea)      \
   OF_PP_MAKE_TUPLE_SEQ(ReduceGather, kMdUpdtArea)         \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceSplit, kMdUpdtArea)          \
   OF_PP_MAKE_TUPLE_SEQ(Accuracy, kDataForwardArea)        \
   OF_PP_MAKE_TUPLE_SEQ(AccuracyAcc, kDataForwardArea)     \
   OF_PP_MAKE_TUPLE_SEQ(AccuracyPrint, kPrintArea)

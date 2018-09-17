@@ -104,6 +104,14 @@ message ReduceGatherKernelConf {
   repeated int64 data_offset = 1;
 }
 
+message ReduceConcatKernelConf {
+  repeated int64 data_offset = 1;
+}
+
+message ReduceSplitKernelConf {
+  repeated int64 data_offset = 1;
+}
+
 message AccuracyKernelConf { 
   required DataType prediction_type = 1;
   required DataType label_type = 2;
@@ -129,6 +137,10 @@ message OpAttribute {
   repeated string const_buf_bns = 14;
 }
 
+message HingeLossKernelConf {
+  required LossKernelConf loss_conf = 1;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1; 
   optional bool need_do_data_id = 2 [default = false];
@@ -144,6 +156,7 @@ message KernelConf {
     SparseCrossEntropyLossKernelConf sparse_cross_entropy_loss_conf = 102;
     DecodeRandomKernelConf decode_random_conf = 103;
     DecodeOFRecordKernelConf decode_ofrecord_conf = 104;
+    HingeLossKernelConf hinge_loss_conf = 105;
     SoftmaxKernelConf softmax_conf = 116;
     TransposeKernelConf transpose_conf = 117;
     ReduceSumKernelConf reduce_sum_conf = 120;
@@ -154,6 +167,8 @@ message KernelConf {
     NormalizationKernelConf normalization_conf = 250;
     LocalResponseNormalizationKernelConf local_response_normalization_conf = 300;
     ReduceGatherKernelConf reduce_gather_conf = 350;
+    ReduceConcatKernelConf reduce_concat_conf = 351;
+    ReduceSplitKernelConf reduce_split_conf = 352;
     AccuracyKernelConf accuracy_conf = 401;
   }
 }

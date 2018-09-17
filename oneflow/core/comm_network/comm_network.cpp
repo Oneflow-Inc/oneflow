@@ -3,7 +3,7 @@
 namespace oneflow {
 
 CommNet::~CommNet() {
-  ready_cbs_.CloseSendEnd();
+  ready_cbs_.Close();
   ready_cb_poller_.join();
 }
 
@@ -69,38 +69,17 @@ void CommNet::AddWorkToStream(void* actor_read_id, const std::function<void()>& 
 }
 
 CommNet::CommNet(const Plan& plan) {
-  HashMap<int64_t, int64_t> rid2mid;
-  HashMap<int64_t, int64_t> tid2mid;
   int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
-
-  for (const TaskProto& task_proto : plan.task()) {
-    for (const auto& regst_desc_it : task_proto.produced_regst_desc()) {
-      rid2mid.emplace(regst_desc_it.second.regst_desc_id(), task_proto.machine_id());
-    }
-    CHECK(tid2mid.emplace(task_proto.task_id(), task_proto.machine_id()).second);
-  }
-  for (const TaskProto& task_proto : plan.task()) {
-    if (task_proto.machine_id() != this_machine_id) { continue; }
-    for (const auto& regst_desc_set_it : task_proto.consumed_regst_desc_id()) {
-      for (int64_t regst_desc_id : regst_desc_set_it.second.regst_desc_id()) {
-        auto rid2mid_it = rid2mid.find(regst_desc_id);
-        CHECK(rid2mid_it != rid2mid.end());
-        peer_machine_id_.insert(rid2mid_it->second);
-      }
-    }
-    for (const auto& regst_desc_it : task_proto.produced_regst_desc()) {
-      for (int64_t consumer_task_id : regst_desc_it.second.consumer_task_id()) {
-        auto tid2mid_it = tid2mid.find(consumer_task_id);
-        CHECK(tid2mid_it != tid2mid.end());
-        peer_machine_id_.insert(tid2mid_it->second);
-      }
-    }
-  }
-  peer_machine_id_.erase(this_machine_id);
+  HashMap<int64_t, MachineIds> net_topo;
+  net_topo = PbMap2HashMap(plan.net_topo().peer_machine_ids());
+  auto machine_ids_it = net_topo.find(this_machine_id);
+  CHECK(machine_ids_it != net_topo.end());
+  std::vector<int64_t> peer_machine_ids = PbRf2StdVec(machine_ids_it->second.machine_id());
+  peer_machine_id_.insert(peer_machine_ids.begin(), peer_machine_ids.end());
 
   ready_cb_poller_ = std::thread([this]() {
     std::function<void()> cb;
-    while (ready_cbs_.Receive(&cb) == 0) { cb(); }
+    while (ready_cbs_.Receive(&cb) == kChannelStatusSuccess) { cb(); }
   });
 }
 

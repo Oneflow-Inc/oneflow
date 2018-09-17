@@ -2,11 +2,14 @@
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/graph/chain_logical_graph.h"
+#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 
 LogicalGraph::LogicalGraph(bool is_train) {
   BuildFwStruct();
+  if (is_train) { GroupNodesForReduceStruct(); }
   SetMainModelParallel();
   if (is_train) { BuildBwStruct(); }
   MergeEdge();
@@ -18,6 +21,30 @@ LogicalGraph::LogicalGraph(bool is_train) {
   BuildModelStruct(is_train);
   if (is_train) { ConnectFwToBw(); }
   ToDotWithAutoFilePath();
+}
+
+void LogicalGraph::GroupNodesForReduceStruct() {
+  ChainLogicalGraph chain_logical_graph(*this);
+  std::vector<std::vector<const LogicalNode*>> fw_node_groups;
+  chain_logical_graph.ForEachNode(
+      [&](ChainLogicalNode* node) { fw_node_groups.emplace_back(node->logical_nodes()); });
+  for (auto& fw_node_group : fw_node_groups) {
+    if (fw_node_group.size() < Global<JobDesc>::Get()->reduce_group_size()) {
+      fw_node_groups_.emplace_back(std::move(fw_node_group));
+    } else {
+      int64_t fw_node_group_size = fw_node_group.size();
+      int64_t seg_num = fw_node_group_size / Global<JobDesc>::Get()->reduce_group_size() + 1;
+      BalancedSplitter bs(fw_node_group_size, seg_num);
+      FOR_RANGE(int64_t, idx, 0, seg_num) {
+        std::vector<const LogicalNode*> sub_fw_node_group;
+        Range range = bs.At(idx);
+        FOR_RANGE(int64_t, nid, range.begin(), range.end()) {
+          sub_fw_node_group.emplace_back(fw_node_group[nid]);
+        }
+        fw_node_groups_.emplace_back(std::move(sub_fw_node_group));
+      }
+    }
+  }
 }
 
 template<typename LogicalNodeType>
@@ -90,38 +117,33 @@ void LogicalGraph::NaiveBuildFwStruct(
 
 void LogicalGraph::FixSharedModelNodes(
     const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes) {
+  HashSet<std::string> all_shared_model_op_names;
   const DLNetConf& dlnet_conf = Global<JobDesc>::Get()->dlnet_conf();
   for (const OpNameSet& op_name_set : dlnet_conf.shared_model_group()) {
+    std::vector<std::string> shared_model_op_names(op_name_set.op_name().begin(),
+                                                   op_name_set.op_name().end());
+    SortAndRemoveDuplication(&shared_model_op_names);
+    CHECK_GE(shared_model_op_names.size(), 2);
+
     auto shared_model_nodes = std::make_shared<std::vector<LogicalNode*>>();
-    for (const std::string& op_name : op_name_set.op_name()) {
+    shared_model_nodes->reserve(shared_model_op_names.size());
+    for (const std::string& op_name : shared_model_op_names) {
+      CHECK(all_shared_model_op_names.insert(op_name).second);
       CHECK_EQ(op_name2nodes.at(op_name).size(), 1);
       shared_model_nodes->push_back(op_name2nodes.at(op_name).front());
     }
-    SortAndRemoveDuplication(shared_model_nodes.get());
+
     for (LogicalNode* cur_node : *shared_model_nodes) {
       cur_node->mut_shared_model_nodes() = shared_model_nodes;
     }
+
     const std::string& shared_op_name = shared_model_nodes->front()->SoleOp()->op_name();
+    const ParallelDesc* shared_parallel_desc = shared_model_nodes->front()->parallel_desc().get();
     FOR_RANGE(size_t, i, 1, shared_model_nodes->size()) {
       shared_model_nodes->at(i)->SoleOp()->FixLbiWhenShareModel(shared_op_name);
+      CHECK(shared_model_nodes->at(i)->parallel_desc()->Equal(shared_parallel_desc));
     }
   }
-  ForEachNode([&](LogicalNode* cur_node) {
-    if (cur_node->shared_model_nodes()) {
-      for (LogicalNode* shared_node : *(cur_node->shared_model_nodes())) {
-        if (shared_node->parallel_desc() == nullptr) { continue; }
-        if (cur_node->parallel_desc()) {
-          CHECK(cur_node->parallel_desc()->Equal(shared_node->parallel_desc().get()));
-        } else {
-          cur_node->mut_parallel_desc() = shared_node->parallel_desc();
-        }
-      }
-    } else {
-      // do nothing
-    }
-    CHECK(cur_node->parallel_desc())
-        << "Please set the placement of " << cur_node->SoleOp()->op_name();
-  });
 }
 
 void LogicalGraph::SetMainModelParallel() {
@@ -308,7 +330,7 @@ void LogicalGraph::BuildLossPrintStruct() {
     std::shared_ptr<Operator> loss_print_op = ConstructOp(loss_print_op_conf);
     ParallelConf loss_print_pr_conf;
     loss_print_pr_conf.set_policy(kDataParallel);
-    loss_print_pr_conf.add_device_name(Global<JobDesc>::Get()->MachineName4MachineId(0) + ":cpu:0");
+    loss_print_pr_conf.add_device_name("0:cpu:0");
     LossPrintLogicalNode* loss_print_logical = NewNode<LossPrintLogicalNode>();
     loss_print_logical->mut_op_vec() = {loss_print_op};
     loss_print_logical->mut_parallel_desc().reset(new ParallelDesc(loss_print_pr_conf));
@@ -341,8 +363,7 @@ void LogicalGraph::BuildAccuracyPrintStruct() {
     std::shared_ptr<Operator> accuracy_print_op = ConstructOp(accuracy_print_op_conf);
     ParallelConf accuracy_print_pr_conf;
     accuracy_print_pr_conf.set_policy(kDataParallel);
-    accuracy_print_pr_conf.add_device_name(Global<JobDesc>::Get()->MachineName4MachineId(0)
-                                           + ":cpu:0");
+    accuracy_print_pr_conf.add_device_name("0:cpu:0");
     AccuracyPrintLogicalNode* accuracy_print_logical = NewNode<AccuracyPrintLogicalNode>();
     accuracy_print_logical->mut_op_vec() = {accuracy_print_op};
     accuracy_print_logical->mut_parallel_desc().reset(new ParallelDesc(accuracy_print_pr_conf));
@@ -352,6 +373,7 @@ void LogicalGraph::BuildAccuracyPrintStruct() {
 
 void LogicalGraph::BuildModelStruct(bool is_train) {
   HashMap<const LogicalNode*, NormalMdUpdtLogicalNode*> first_shared2mdupdt;
+  HashMap<const LogicalNode*, ReduceCtx> fw_node2reduce_ctx;
   ForEachLogicalNode<ForwardLogicalNode>([&](ForwardLogicalNode* fw_logical) {
     if (Global<JobDesc>::Get()->enable_write_snapshot()
         && fw_logical->HasOpWithForwardModelBlob()) {
@@ -397,62 +419,116 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
         }
         if (md_diff_acc_logical->parallel_desc()->parallel_num() > 1
             && md_diff_acc_logical->parallel_desc()->policy() == kDataParallel) {
-          BuildReduceStruct(md_diff_acc_logical, md_updt_logical);
+          ReduceCtx reduce_ctx;
+          reduce_ctx.fw_logicals.emplace_back(fw_logical);
+          reduce_ctx.bw_logicals.emplace_back(bw_logical);
+          reduce_ctx.md_diff_acc_logicals.emplace_back(md_diff_acc_logical);
+          reduce_ctx.md_updt_logicals.emplace_back(md_updt_logical);
+          CHECK(fw_node2reduce_ctx.emplace(fw_logical, reduce_ctx).second);
         } else {
           Connect<LogicalNode>(md_diff_acc_logical, NewEdge(), md_updt_logical);
         }
       }
     }
   });
+  for (auto& fw_node_group : fw_node_groups_) {
+    ReduceCtx group_reduce_ctx;
+    for (auto& fw_node : fw_node_group) {
+      auto reduce_ctx_it = fw_node2reduce_ctx.find(fw_node);
+      if (reduce_ctx_it != fw_node2reduce_ctx.end()) {
+        auto& reduce_ctx = reduce_ctx_it->second;
+        group_reduce_ctx.fw_logicals.emplace_back(reduce_ctx.fw_logicals.at(0));
+        group_reduce_ctx.bw_logicals.emplace_back(reduce_ctx.bw_logicals.at(0));
+        group_reduce_ctx.md_diff_acc_logicals.emplace_back(reduce_ctx.md_diff_acc_logicals.at(0));
+        group_reduce_ctx.md_updt_logicals.emplace_back(reduce_ctx.md_updt_logicals.at(0));
+      }
+    }
+    BuildReduceStruct(group_reduce_ctx);
+  }
   SetupNormalMdUpdtOp();
 }
 
-void LogicalGraph::BuildReduceStruct(LogicalNode* src, LogicalNode* dst) {
+void LogicalGraph::BuildReduceStruct(const ReduceCtx& reduce_ctx) {
+  if (reduce_ctx.fw_logicals.size() > 1) {
+    std::shared_ptr<const ParallelDesc> src_pd = reduce_ctx.fw_logicals[0]->parallel_desc();
+
+    OperatorConf reduce_concat_op_conf;
+    reduce_concat_op_conf.set_name("reduce_concat_" + NewUniqueId());
+    reduce_concat_op_conf.set_device_type(src_pd->device_type());
+    reduce_concat_op_conf.mutable_reduce_concat_conf()->set_in_num(reduce_ctx.fw_logicals.size());
+    LogicalNode* reduce_concat_node = NewNode<ReduceConcatLogicalNode>();
+    reduce_concat_node->mut_op_vec() = {ConstructOp(reduce_concat_op_conf)};
+    reduce_concat_node->mut_parallel_desc() = src_pd;
+
+    OperatorConf reduce_split_op_conf;
+    reduce_split_op_conf.set_name("reduce_split_" + NewUniqueId());
+    reduce_split_op_conf.set_device_type(src_pd->device_type());
+    reduce_split_op_conf.mutable_reduce_split_conf()->set_out_num(reduce_ctx.fw_logicals.size());
+    LogicalNode* reduce_split_node = NewNode<ReduceSplitLogicalNode>();
+    reduce_split_node->mut_op_vec() = {ConstructOp(reduce_split_op_conf)};
+    reduce_split_node->mut_parallel_desc() = src_pd;
+
+    for (auto& md_diff_acc_node : reduce_ctx.md_diff_acc_logicals) {
+      Connect(md_diff_acc_node, NewEdge(), reduce_concat_node);
+    }
+    for (auto& md_updt_node : reduce_ctx.md_updt_logicals) {
+      Connect(reduce_split_node, NewEdge(), md_updt_node);
+    }
+    AddReduceScatterAddGatherNodes(reduce_concat_node, reduce_split_node);
+  } else if (reduce_ctx.fw_logicals.size() == 1) {
+    AddReduceScatterAddGatherNodes(reduce_ctx.md_diff_acc_logicals.at(0),
+                                   reduce_ctx.md_updt_logicals.at(0));
+  }
+}
+
+void LogicalGraph::AddReduceScatterAddGatherNodes(LogicalNode* src, LogicalNode* dst) {
   std::shared_ptr<const ParallelDesc> src_pd = src->parallel_desc();
   std::shared_ptr<const ParallelDesc> dst_pd = dst->parallel_desc();
   CHECK_EQ(src_pd->parallel_num(), dst_pd->parallel_num());
   CHECK_EQ(src_pd->device_type(), dst_pd->device_type());
+
   // Reduce Scatter
   LogicalNode* reduce_scatter_node = NewNode<ReduceScatterLogicalNode>();
   reduce_scatter_node->mut_parallel_desc() = src_pd;
-  LogicalNode* pred_reduce_global_node = reduce_scatter_node;
+  Connect(src, NewEdge(), reduce_scatter_node);
+
+  LogicalNode* pred_reduce_global_add_node = reduce_scatter_node;
   if (src_pd->sorted_machine_ids().size() > 1 && src_pd->device_num_of_each_machine() > 1) {
     // Reduce Local Add
     LogicalNode* reduce_local_add_node = NewNode<ReduceLocalAddLogicalNode>();
     reduce_local_add_node->mut_parallel_desc() = src_pd;
     Connect(reduce_scatter_node, NewEdge(), reduce_local_add_node);
-    pred_reduce_global_node = reduce_local_add_node;
+    pred_reduce_global_add_node = reduce_local_add_node;
   }
   // Reduce Global Add
   LogicalNode* reduce_global_add_node = NewNode<ReduceGlobalAddLogicalNode>();
   reduce_global_add_node->mut_parallel_desc() = src_pd;
-  // Reduce Gather
-  OperatorConf reduce_gather_op_conf;
-  reduce_gather_op_conf.set_name("reduce_gather_" + NewUniqueId());
-  reduce_gather_op_conf.set_device_type(src_pd->device_type());
-  reduce_gather_op_conf.mutable_reduce_gather_conf()->set_in_num(src_pd->parallel_num());
+  Connect(pred_reduce_global_add_node, NewEdge(), reduce_global_add_node);
+
+  // Reduce Global Gather
   LogicalNode* reduce_gather_node = NewNode<ReduceGatherLogicalNode>();
-  reduce_gather_node->mut_op_vec() = {ConstructOp(reduce_gather_op_conf)};
   reduce_gather_node->mut_parallel_desc() = src_pd;
-  // Connect
-  Connect(src, NewEdge(), reduce_scatter_node);
-  Connect(pred_reduce_global_node, NewEdge(), reduce_global_add_node);
   Connect(reduce_global_add_node, NewEdge(), reduce_gather_node);
-  Connect(reduce_gather_node, NewEdge(), dst);
+
+  LogicalNode* pred_dst_node = reduce_gather_node;
+  if (src_pd->sorted_machine_ids().size() > 1 && src_pd->device_num_of_each_machine() > 1) {
+    // Reduce Local Gather
+    LogicalNode* reduce_local_gather_node = NewNode<ReduceGatherLogicalNode>();
+    reduce_local_gather_node->mut_parallel_desc() = src_pd;
+    Connect(reduce_gather_node, NewEdge(), reduce_local_gather_node);
+    pred_dst_node = reduce_local_gather_node;
+  }
+  Connect(pred_dst_node, NewEdge(), dst);
 }
 
 void LogicalGraph::SetupNormalMdUpdtOp() {
   ForEachLogicalNode<NormalMdUpdtLogicalNode>([](NormalMdUpdtLogicalNode* node) {
     if (node->in_edges().size() < 1) { return; }
+    // Add shared_model_diff_add_op
     OperatorConf op_conf;
-    op_conf.set_name("md_update_" + NewUniqueId());
+    op_conf.set_name("md_diff_add_" + NewUniqueId());
     op_conf.set_device_type(node->parallel_desc()->device_type());
-    NormalModelUpdateOpConf* mdupdt_conf = op_conf.mutable_normal_mdupdt_conf();
-    const JobDesc* job_desc = Global<JobDesc>::Get();
-    if (Global<JobDesc>::Get()->IsTrain()) {
-      *(mdupdt_conf->mutable_user_conf()) = job_desc->other_conf().train_conf().model_update_conf();
-    }
-    mdupdt_conf->set_in_num(node->in_edges().size());
+    op_conf.mutable_shared_model_diff_add_conf()->set_in_num(node->in_edges().size());
     node->mut_op_vec() = {ConstructOp(op_conf)};
   });
 }
@@ -467,10 +543,13 @@ MdSaveLogicalNode* LogicalGraph::BuildMdSaveStruct(const ForwardLogicalNode* fw_
   auto md_save_logical = NewNode<MdSaveLogicalNode>();
   md_save_logical->mut_op_vec() = {model_save_op};
   auto md_save_pr_desc = new ParallelDesc(*(fw_logical->parallel_desc()));
+  md_save_pr_desc->set_device_type(DeviceType::kCPU);
   if (fw_logical->parallel_desc()->policy() == ParallelPolicy::kDataParallel) {
     md_save_pr_desc->RandomSelectOneDeviceAndRemoveTheOthers();
   }
-  md_save_pr_desc->set_device_type(DeviceType::kCPU);
+  if (Global<JobDesc>::Get()->write_snapshot_to_master()) {
+    md_save_pr_desc->UseCPUDevicesOnMaster();
+  }
   md_save_logical->mut_parallel_desc().reset(md_save_pr_desc);
   Connect<LogicalNode>(need_save_logical, NewEdge(), md_save_logical);
   return md_save_logical;

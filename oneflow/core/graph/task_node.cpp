@@ -81,7 +81,7 @@ void TaskNode::PinConsumedRegst() {
 }
 
 void TaskNode::Build() {
-  CHECK(IsReadyForBuild());
+  if (consumed_regsts_.size()) { CHECK(IsReadyForBuild()); }
   BuildExecGphAndRegst();
   LockRegsts();
   FixRegisterNumRange();
@@ -98,7 +98,7 @@ void TaskNode::EraseZeroSizeConsumedRegst() {
       auto regst_ptr = *it;
       CHECK(regst_ptr);
       if (regst_ptr->regst_desc_type().has_data_regst_desc() && regst_ptr->NumOfLbi() == 0) {
-        pair.second.erase(it++);
+        it = pair.second.erase(it);
       } else {
         ++it;
       }
@@ -331,6 +331,12 @@ std::shared_ptr<RegstDesc> TaskEdge::GetSoleRegst() const {
   return name_in_producer2regst_.begin()->second;
 }
 
+std::vector<std::shared_ptr<RegstDesc>> TaskEdge::GetRegsts() const {
+  std::vector<std::shared_ptr<RegstDesc>> regst_descs;
+  for (auto& pair : name_in_producer2regst_) { regst_descs.emplace_back(pair.second); }
+  return regst_descs;
+}
+
 void TaskEdge::AddRegst(const std::string& name_in_producer, std::shared_ptr<RegstDesc> regst) {
   CHECK(name_in_producer2regst_.emplace(name_in_producer, regst).second);
 }
@@ -356,12 +362,10 @@ RegstDescIdSet* FindOrCreateConsumedCtrlRegstDescIdSet(TaskProto* task_proto,
 }
 
 std::map<TaskType, std::string> task_type2color = {
-    {kInvalid, "0"},       {kNormalForward, "2"},  {kNormalBackward, "3"},
-    {kRecordLoad, "1"},    {kDecode, "1"},         {kLoss, "4"},
-    {kLossAcc, "5"},       {kLossPrint, "1"},      {kNormalMdUpdt, "6"},
-    {kMdSave, "1"},        {kMdDiffAcc, "7"},      {kCopyHd, "8"},
-    {kCopyCommNet, "9"},   {kBoxing, "10"},        {kPrint, "1"},
-    {kReduceScatter, "2"}, {kReduceLocalAdd, "2"}, {kReduceGlobalAdd, "2"},
-    {kReduceGather, "2"},  {kAccuracy, "4"},       {kAccuracyPrint, "1"},
-    {kAccuracyAcc, "5"}};
+    {kInvalid, "0"},       {kNormalForward, "2"},  {kNormalBackward, "3"},  {kRecordLoad, "1"},
+    {kDecode, "1"},        {kLoss, "4"},           {kLossAcc, "5"},         {kLossPrint, "1"},
+    {kNormalMdUpdt, "6"},  {kMdSave, "1"},         {kMdDiffAcc, "7"},       {kCopyHd, "8"},
+    {kCopyCommNet, "9"},   {kBoxing, "10"},        {kPrint, "1"},           {kReduceConcat, "2"},
+    {kReduceScatter, "2"}, {kReduceLocalAdd, "2"}, {kReduceGlobalAdd, "2"}, {kReduceGather, "2"},
+    {kReduceSplit, "2"},   {kAccuracy, "4"},       {kAccuracyPrint, "1"},   {kAccuracyAcc, "5"}};
 }  // namespace oneflow

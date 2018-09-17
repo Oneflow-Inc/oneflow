@@ -4,7 +4,7 @@
 #include <stack>
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/graph/node.h"
-#include "oneflow/core/persistence/persistent_out_stream.h"
+#include "oneflow/core/persistence/tee_persistent_log_stream.h"
 
 namespace oneflow {
 
@@ -148,10 +148,12 @@ template<typename NodeType, typename EdgeType>
 template<typename StreamT>
 void Graph<NodeType, EdgeType>::ToDotWithStream(StreamT& out_stream) {
   out_stream << "digraph {\n";
-  this->ForEachNode([&](NodeType* node) { out_stream << "\"" << node->VisualStr() << "\"\n"; });
+  this->ForEachNode([&](NodeType* node) {
+    out_stream << "\"" << node->node_id_str() << "\" [label=\"" << node->VisualStr() << "\"]\n";
+  });
   this->ForEachEdge([&](const EdgeType* edge) {
-    out_stream << "\"" << edge->src_node()->VisualStr() << "\" -> "
-               << "\"" << edge->dst_node()->VisualStr() << "\""
+    out_stream << "\"" << edge->src_node()->node_id_str() << "\" -> "
+               << "\"" << edge->dst_node()->node_id_str() << "\""
                << "[label=\"" << edge->VisualStr() << "\"];\n";
   });
   out_stream << "}\n";
@@ -159,15 +161,13 @@ void Graph<NodeType, EdgeType>::ToDotWithStream(StreamT& out_stream) {
 
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::ToDotWithFilePath(const std::string& file_path) {
-  std::string dir_name = Dirname(file_path);
-  if (!LocalFS()->IsDirectory(dir_name)) { LocalFS()->RecursivelyCreateDir(dir_name); }
-  PersistentOutStream out_stream(LocalFS(), file_path);
-  ToDotWithStream(out_stream);
+  auto log_stream = TeePersistentLogStream::Create(file_path);
+  ToDotWithStream(log_stream);
 }
 
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::ToDotWithAutoFilePath() {
-  std::string file_path = LogDir() + "/dot/" + TypeName() + "/" + NewUniqueId() + ".dot";
+  std::string file_path = JoinPath("dot", TypeName(), NewUniqueId() + ".dot");
   ToDotWithFilePath(file_path);
 }
 

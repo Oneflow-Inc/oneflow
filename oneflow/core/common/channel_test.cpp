@@ -5,14 +5,14 @@ namespace oneflow {
 
 void CallFromSenderThread(Channel<int>* channel, Range range) {
   for (int i = range.begin(); i < range.end(); ++i) {
-    if (channel->Send(i) == -1) { break; }
+    if (channel->Send(i) != kChannelStatusSuccess) { break; }
   }
 }
 
 void CallFromReceiverThread(std::vector<int>* visit, Channel<int>* channel) {
   int num = -1;
   int* num_ptr = &num;
-  while (channel->Receive(num_ptr) == 0) { ++visit->at(*num_ptr); }
+  while (channel->Receive(num_ptr) == kChannelStatusSuccess) { ++visit->at(*num_ptr); }
 }
 
 TEST(Channel, 30sender40receiver) {
@@ -35,9 +35,8 @@ TEST(Channel, 30sender40receiver) {
     receivers.push_back(std::thread(CallFromReceiverThread, &visits[i], &channel));
   }
   for (std::thread& this_thread : senders) { this_thread.join(); }
-  channel.CloseSendEnd();
+  channel.Close();
   for (std::thread& this_thread : receivers) { this_thread.join(); }
-  channel.CloseReceiveEnd();
   for (int i = 0; i < range_num; ++i) {
     int visit_count = 0;
     for (int j = 0; j < receiver_num; j++) { visit_count += visits[j][i]; }

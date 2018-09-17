@@ -16,7 +16,7 @@ GpuThread::GpuThread(int64_t thrd_id, int64_t dev_id) {
   });
   cb_event_poller_ = std::thread([this]() {
     CudaCBEvent cb_event;
-    while (cb_event_chan_.Receive(&cb_event) == 0) {
+    while (cb_event_chan_.Receive(&cb_event) == kChannelStatusSuccess) {
       CudaCheck(cudaEventSynchronize(cb_event.event));
       cb_event.callback();
       CudaCheck(cudaEventDestroy(cb_event.event));
@@ -25,8 +25,7 @@ GpuThread::GpuThread(int64_t thrd_id, int64_t dev_id) {
 }
 
 GpuThread::~GpuThread() {
-  cb_event_chan_.CloseSendEnd();
-  cb_event_chan_.CloseReceiveEnd();
+  cb_event_chan_.Close();
   cb_event_poller_.join();
 }
 
