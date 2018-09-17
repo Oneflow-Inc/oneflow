@@ -26,12 +26,11 @@ __global__ void GetLocalLearningRateGpu(int64_t n, int64_t batch_size, T learnin
 
 template<typename T>
 __global__ void UpdateModelGpu(int64_t n, int64_t batch_size, T l1, T l2, T momentum_beta,
-                               const T* pre_model, const T* model_diff, T* momentum, T* model,
-                               T* data_tmp) {
+                               const T* model_diff, T* model, T* momentum, T* data_tmp) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    T reg_diff = RegularizeDiff(model_diff[i], batch_size, l1, l2, pre_model[i]);
+    T reg_diff = RegularizeDiff(model_diff[i], batch_size, l1, l2, model[i]);
     momentum[i] = momentum_beta * momentum[i] - data_tmp[2] * reg_diff;
-    model[i] = pre_model[i] + momentum[i];
+    model[i] = model[i] + momentum[i];
   }
 }
 
@@ -42,14 +41,14 @@ class LARSMdUpdateKernelUtil<DeviceType::kGPU, T> final {
  public:
   static void UpdateModel(DeviceCtx* ctx, int64_t n, int64_t batch_size, T learning_rate, T l1,
                           T l2, T momentum_beta, T epsilon, T lars_coefficient,
-                          int64_t next_model_vid, const T* pre_model, const T* model_diff,
-                          T* momentum, T* model, T* data_tmp) {
-    KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, pre_model, 1, pre_model, 1, &data_tmp[0]);
+                          int64_t next_model_vid, const T* model_diff, T* model, T* momentum,
+                          T* data_tmp) {
+    KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, model, 1, model, 1, &data_tmp[0]);
     KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, model_diff, 1, model_diff, 1, &data_tmp[1]);
     GetLocalLearningRateGpu<T><<<1, 1, 0, ctx->cuda_stream()>>>(
         n, batch_size, learning_rate, l2, epsilon, lars_coefficient, next_model_vid, data_tmp);
     UpdateModelGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-        n, batch_size, l1, l2, momentum_beta, pre_model, model_diff, momentum, model, data_tmp);
+        n, batch_size, l1, l2, momentum_beta, model_diff, model, momentum, data_tmp);
   }
 };
 

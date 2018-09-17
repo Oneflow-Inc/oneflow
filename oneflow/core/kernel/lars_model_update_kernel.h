@@ -14,7 +14,7 @@ class LARSMdUpdateKernel final : public NormalMdUpdateKernel<device_type, T> {
 
  private:
   void UpdateModel(DeviceCtx* ctx, int64_t batch_size, T learning_rate, T l1, T l2,
-                   const Blob* pre_model_blob, const Blob* model_diff_blob, int64_t next_model_vid,
+                   int64_t next_model_vid,
                    std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
@@ -23,8 +23,7 @@ class LARSMdUpdateKernelUtil final {
  public:
   static void UpdateModel(DeviceCtx*, int64_t n, int64_t batch_size, T learning_rate, T l1, T l2,
                           T momentum_beta, T epsilon, T lars_coefficient, int64_t next_model_vid,
-                          const T* pre_model, const T* model_diff, T* momentum, T* model,
-                          T* data_tmp);
+                          const T* model_diff, T* model, T* momentum, T* data_tmp);
 };
 
 DECLARE_MDUPDT_KERNEL_CREATOR(LARS);
