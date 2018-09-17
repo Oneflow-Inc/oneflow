@@ -18,7 +18,11 @@ class NcclCommMgr final {
   friend class Global<NcclCommMgr>;
   NcclCommMgr(const Plan& plan);
 
+  void NcclCommInitRank4Tasks(const std::vector<TaskProto>& tasks, std::vector<ncclComm_t>* comms,
+                              ncclUniqueId nccl_unique_id);
+  void NcclGetUniqueId4Tasks(const std::vector<TaskProto>& tasks, ncclUniqueId* nccl_unique_id);
   bool IsNcclTaskType(const TaskType& tt) const;
+  int32_t GetDeviceId4Task(const TaskProto& task);
 
   HashMap<int64_t, ncclComm_t> actor_id2comm_;
 };
