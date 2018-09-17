@@ -558,6 +558,12 @@ message DecodeRandomOpConf {
   required InitializerConf distribution = 7; 
 }
 
+message DefineTestBlobConf {
+  required string out = 1;
+  required ShapeProto shape = 2;
+  required DataType data_type = 3;
+}
+
 message NormalizationOpConf {
   required string in = 1;
   required string out = 2;
@@ -720,6 +726,7 @@ message OperatorConf {
     PrintOpConf print_conf = 233;
     AccuracyPrintOpConf accuracy_print_conf = 234;
     LossPrintOpConf loss_print_conf = 235;
+    DefineTestBlobConf define_test_blob_conf = 236;
   }
 }
 
