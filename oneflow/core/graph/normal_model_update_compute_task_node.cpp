@@ -82,17 +82,22 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
     if (Global<JobDesc>::Get()->IsTrain()) {
       *(op_conf.mutable_normal_mdupdt_conf()->mutable_user_conf()) =
           Global<JobDesc>::Get()->other_conf().train_conf().model_update_conf();
+
+      float primary_lr = Global<JobDesc>::Get()->primary_lr();
+      float secondary_lr = Global<JobDesc>::Get()->secondary_lr();
+      if (secondary_lr < 0) { secondary_lr = primary_lr; }
       if (lbi.blob_name() == "weight") {
-        op_conf.mutable_normal_mdupdt_conf()->set_l1(Global<JobDesc>::Get()->l1_weight());
-        op_conf.mutable_normal_mdupdt_conf()->set_l2(Global<JobDesc>::Get()->l2_weight());
+        op_conf.mutable_normal_mdupdt_conf()->set_learning_rate(primary_lr);
+        op_conf.mutable_normal_mdupdt_conf()->set_l1(Global<JobDesc>::Get()->weight_l1());
+        op_conf.mutable_normal_mdupdt_conf()->set_l2(Global<JobDesc>::Get()->weight_l2());
       } else if (lbi.blob_name() == "bias") {
-        op_conf.mutable_normal_mdupdt_conf()->set_l1(Global<JobDesc>::Get()->l1_bias());
-        op_conf.mutable_normal_mdupdt_conf()->set_l2(Global<JobDesc>::Get()->l2_bias());
+        op_conf.mutable_normal_mdupdt_conf()->set_learning_rate(secondary_lr);
+        op_conf.mutable_normal_mdupdt_conf()->set_l1(Global<JobDesc>::Get()->bias_l1());
+        op_conf.mutable_normal_mdupdt_conf()->set_l2(Global<JobDesc>::Get()->bias_l2());
       } else {
+        op_conf.mutable_normal_mdupdt_conf()->set_learning_rate(primary_lr);
         op_conf.mutable_normal_mdupdt_conf()->set_l1(0);
         op_conf.mutable_normal_mdupdt_conf()->set_l2(0);
-        // TODO(shiyuan)
-        // op_conf.mutable_normal_mdupdt_conf()->mutable_user_conf()->mutable_naive_conf();
       }
     }
     std::shared_ptr<Operator> model_update_op = ConstructOp(op_conf);
