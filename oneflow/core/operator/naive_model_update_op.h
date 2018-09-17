@@ -13,10 +13,6 @@ class NaiveModelUpdateOp final : public NormalModelUpdtOp {
 
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override {}
-
- private:
-  LogicalBlobId ibn2lbi(const std::string& input_bn) const override { return GenPackedLbi(); }
-  LogicalBlobId obn2lbi(const std::string& output_bn) const override { return GenPackedLbi(); }
 };
 
 }  // namespace oneflow
