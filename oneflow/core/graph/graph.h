@@ -4,7 +4,7 @@
 #include <stack>
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/graph/node.h"
-#include "oneflow/core/job/log_stream_manager.h"
+#include "oneflow/core/persistence/tee_persistent_log_stream.h"
 
 namespace oneflow {
 
@@ -161,9 +161,8 @@ void Graph<NodeType, EdgeType>::ToDotWithStream(StreamT& out_stream) {
 
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::ToDotWithFilePath(const std::string& file_path) {
-  auto log_stream = Global<LogStreamMgr>::Get()->Create(file_path);
-  ToDotWithStream(*log_stream);
-  log_stream->Flush();
+  auto log_stream = TeePersistentLogStream::Create(file_path);
+  ToDotWithStream(log_stream);
 }
 
 template<typename NodeType, typename EdgeType>

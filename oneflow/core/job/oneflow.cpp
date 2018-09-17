@@ -10,7 +10,7 @@
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/runtime.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
-#include "oneflow/core/job/log_stream_manager.h"
+#include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/actor/act_event_logger.h"
 
@@ -196,7 +196,6 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, int64_t this_mchn_id) {
   Global<CtrlClient>::New();
   FixCpuDeviceNum();
   Global<IDMgr>::New();
-  Global<LogStreamMgr>::New();
   // Compile
   Plan naive_plan;
   Plan mem_shared_plan;
@@ -218,15 +217,15 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, int64_t this_mchn_id) {
     PullPlan("mem_shared_plan", &mem_shared_plan);
   }
   OF_BARRIER();
-  Global<LogStreamMgr>::Get()->SaveProtoAsTextFile(naive_plan, "naive_plan");
-  Global<LogStreamMgr>::Get()->SaveProtoAsTextFile(mem_shared_plan, "mem_shared_plan");
+  TeePersistentLogStream::Create("naive_plan")->Write(naive_plan);
+  TeePersistentLogStream::Create("mem_shared_plan")->Write(mem_shared_plan);
   LOG(INFO) << "push_pull_plan:" << GetCurTime() - start;
   if (HasRelayPlacement()) {
     // Experiment Runtime
     { Runtime experiment_run(mem_shared_plan, true); }
     // Improve
     if (machine_ctx->IsThisMachineMaster()) {
-      PrintProtoToTextFile(amd, JoinPath(LogDir(), "available_mem_desc"));
+      TeePersistentLogStream::Create("available_mem_desc")->Write(amd);
       CHECK_GT(amd.machine_amd_size(), 0);
       improved_plan = Improver().Improve(
           amd, naive_plan, JoinPath(LogDir(), ActEventLogger::experiment_act_event_bin_filename()));
@@ -235,7 +234,7 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, int64_t this_mchn_id) {
       PullPlan("improved_plan", &improved_plan);
     }
     OF_BARRIER();
-    Global<LogStreamMgr>::Get()->SaveProtoAsTextFile(improved_plan, "improved_plan");
+    TeePersistentLogStream::Create("improved_plan")->Write(improved_plan);
     Global<CtrlClient>::Get()->Clear();
     OF_BARRIER();
   } else {
@@ -248,7 +247,6 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, int64_t this_mchn_id) {
                                      JoinPath(LogDir(), ActEventLogger::act_event_bin_filename()));
   }
   // Delete All Global
-  Global<LogStreamMgr>::Delete();
   Global<CtrlClient>::Delete();
   ctrl_server_.reset();
   Global<Profiler>::Delete();
