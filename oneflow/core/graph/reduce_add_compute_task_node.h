@@ -10,7 +10,7 @@ class ReduceAddCompTaskNode final : public CompTaskNode, public ReduceCompTaskNo
  public:
   OF_DISALLOW_COPY_AND_MOVE(ReduceAddCompTaskNode);
   ReduceAddCompTaskNode() = default;
-  ~ReduceAddCompTaskNode() = default;
+  ~ReduceAddCompTaskNode() override = default;
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
@@ -21,8 +21,6 @@ class ReduceAddCompTaskNode final : public CompTaskNode, public ReduceCompTaskNo
 
  private:
   void BuildExecGphAndRegst() override;
-
-  PbRf<int64_t> in_parallel_ids_;
 };
 
 }  // namespace oneflow
