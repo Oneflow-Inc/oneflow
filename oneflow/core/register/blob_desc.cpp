@@ -5,7 +5,7 @@
 namespace oneflow {
 
 BlobDesc::BlobDesc()
-    : BlobDesc(Shape(), Global<JobDesc>::Get()->DefaultDataType(), false, false, false, 1) {}
+    : BlobDesc(Shape(), Global<JobDesc>::Get()->DefaultDataType(), false, false, true, 1) {}
 
 BlobDesc::BlobDesc(const Shape& shape, DataType data_type, bool has_data_id, bool has_col_num,
                    bool has_instance_num, int32_t max_col_num)
@@ -48,6 +48,7 @@ BlobDesc::BlobDesc(int64_t header_byte_size, const Shape& shape, DataType data_t
     opaque_header_ = FieldDesc(Shape({header_byte_size}), DataType::kChar);
   } else {
     header_is_opaque_ = false;
+    has_instance_num_ = true;
   }
 }
 
@@ -168,7 +169,7 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     int64_t total_elem_cnt = body_byte_size / size_of_one_elem;
     if (header_byte_size == 0) {
       ret.reset(
-          new BlobDesc(Shape({total_elem_cnt}), sole_data_type, false, false, false, max_col_num));
+          new BlobDesc(Shape({total_elem_cnt}), sole_data_type, false, false, true, max_col_num));
     } else {
       ret.reset(
           new BlobDesc(header_byte_size, Shape({total_elem_cnt}), sole_data_type, max_col_num));

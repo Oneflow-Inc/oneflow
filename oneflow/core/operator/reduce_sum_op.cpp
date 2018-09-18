@@ -36,7 +36,6 @@ void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   out_blob->set_has_data_id_field(in_blob->has_data_id_field()
                                   && op_conf().reduce_sum_conf().has_axis()
                                   && GetCorrectAxis(GetBlobDesc4BnInOp) > 0);
-  out_blob->set_has_instance_num_field(in_blob->has_instance_num_field());
 }
 
 void ReduceSumOp::VirtualGenKernelConf(

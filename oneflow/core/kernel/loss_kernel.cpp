@@ -55,14 +55,11 @@ void LossKernel<device_type, PredType, LabelType>::ForwardColNum(
 template<DeviceType device_type, typename PredType, typename LabelType>
 void LossKernel<device_type, PredType, LabelType>::ForwardInstanceNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  // xfjiang: 目前没有接Faster R-CNN，暂时从prediciton diff开始测试ForwardInstanceNum()
-  // BnInOp2Blob(GenDiffBn("prediction"))->CopyInstanceNumFrom(ctx.device_ctx,
-  // BnInOp2Blob("label")); BnInOp2Blob("loss")->CopyInstanceNumFrom(ctx.device_ctx,
-  // Blob* label_blob = BnInOp2Blob("label");
-  Blob* prediction_diff_blob = BnInOp2Blob(GenDiffBn("prediction"));
-  Blob* loss_blob = BnInOp2Blob("loss");
-  // prediction_diff_blob->CopyInstanceNumFrom(ctx.device_ctx, prediction_diff_blob);
-  loss_blob->CopyInstanceNumFrom(ctx.device_ctx, prediction_diff_blob);
+  // xfjiang: test instance num
+  Blob* label_blob = BnInOp2Blob("label");
+  *(label_blob->mut_instance_num()) = 100;
+  BnInOp2Blob(GenDiffBn("prediction"))->CopyInstanceNumFrom(ctx.device_ctx, label_blob);
+  BnInOp2Blob("loss")->CopyInstanceNumFrom(ctx.device_ctx, label_blob);
 }
 
 template<typename T>

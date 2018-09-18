@@ -28,9 +28,7 @@ void LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
                             const ParallelContext* parallel_ctx,
                             std::function<void(OpContext*)>) const {
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
-  // xfjiang: test instance_num
   BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");
-  label_blob_desc->set_has_instance_num_field(true);
   CHECK_EQ(pred_blob_desc->has_data_id_field(), label_blob_desc->has_data_id_field());
   CHECK(IsIntegralDataType(label_blob_desc->data_type()));
   CHECK_GE(pred_blob_desc->shape().NumAxes(), 2);
@@ -40,7 +38,6 @@ void LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   loss_blob_desc->mut_shape() = Shape({pred_blob_desc->shape().At(0)});
   loss_blob_desc->set_data_type(pred_blob_desc->data_type());
   loss_blob_desc->set_has_data_id_field(pred_blob_desc->has_data_id_field());
-  loss_blob_desc->set_has_instance_num_field(label_blob_desc->has_instance_num_field());
 
   if (!GetValFromCustomizedConf<std::string>("weight").empty()) {
     // reduction_coefficient
