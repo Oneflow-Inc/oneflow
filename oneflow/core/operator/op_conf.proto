@@ -592,7 +592,7 @@ message DecodeRandomOpConf {
 }
 
 message DefineTestBlobConf {
-  required string name = 1;
+  required string out = 1;
   required ShapeProto shape = 2;
   required DataType data_type = 3;
 }
