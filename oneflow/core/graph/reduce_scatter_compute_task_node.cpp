@@ -48,11 +48,11 @@ void ReduceScatterCompTaskNode::BuildExecGphAndRegst() {
 void ReduceScatterCompTaskNode::EnableMemSharingInReduce(const ReduceMemSharingCtx& ctx) {
   const ReduceRankingCtx& ranking_ctx = GetRankingCtx();
 
-  int64_t offset = ctx.Offset4RankingParallelId(ranking_ctx, parallel_id());
-  int64_t reduce_size = ctx.SegmentSize4Ranking(ranking_ctx);
+  int64_t offset = ctx.Offset4RankingParallelId(ranking_ctx.CtxWithGather(), parallel_id());
+
   int64_t scatter_count = produced_regsts().size();
-  CHECK_EQ(reduce_size % scatter_count, 0);
-  int64_t out_size = reduce_size / scatter_count;
+  CHECK_EQ(scatter_count, ranking_ctx.StageSegmentCount());
+  int64_t out_size = ctx.SegmentSize4Ranking(ranking_ctx);
   FOR_RANGE(int64_t, i, 0, scatter_count) {
     RegstDesc* out = GetProducedRegst("out_" + std::to_string(i)).get();
     ctx.EnableMemSharing4Regst(out, offset + i * out_size);
