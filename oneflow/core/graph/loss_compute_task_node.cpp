@@ -46,8 +46,8 @@ void LossCompTaskNode::BuildExecGphAndRegst() {
       out_regst->AddLbi(loss_op->BnInOp2Lbi(obn));
       loss_node->BindBnWithRegst(obn, out_regst);
     }
-    loss_node->InferBlobDescs(parallel_ctx());
   }
+  mut_exec_gph().TopoForEachNode([this](ExecNode* node) { node->InferBlobDescs(parallel_ctx()); });
 }
 
 void LossCompTaskNode::BuildRegstWhenTraining() {
@@ -57,12 +57,12 @@ void LossCompTaskNode::BuildRegstWhenTraining() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   std::shared_ptr<RegstDesc> data_tmp_regst = GetProducedRegst("data_tmp");
   loss_node->AddBnToRegstAndBindIt(&Operator::input_diff_bns, out_regst);
-  data_tmp_regst->AddLbi(loss_op->BnInOp2Lbi("loss"));
-  loss_node->BindBnWithRegst("loss", data_tmp_regst);
-  loss_node->InferBlobDescs(parallel_ctx());
   for (std::shared_ptr<RegstDesc> regst : GetConsumedRegst("in")) {
     out_regst->CopyBlobDescWithoutAddLbi(regst.get());
   }
+  data_tmp_regst->AddLbi(loss_op->BnInOp2Lbi("loss"));
+  loss_node->BindBnWithRegst("loss", data_tmp_regst);
+
   std::shared_ptr<const Operator> sum_op = op_vec[1];
   ExecNode* sum_node = mut_exec_gph().NewNode();
   sum_node->mut_op() = sum_op;
@@ -78,7 +78,6 @@ void LossCompTaskNode::BuildRegstWhenTraining() {
     loss_regst->AddLbi(loss_op->BnInOp2Lbi("reduction_coefficient"));
     loss_node->BindBnWithRegst("reduction_coefficient", loss_regst);
   }
-  sum_node->InferBlobDescs(parallel_ctx());
 }
 
 }  // namespace oneflow
