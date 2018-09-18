@@ -9,6 +9,7 @@ namespace oneflow {
 
 class ReduceMemSharingCtx final {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(ReduceMemSharingCtx);
   ReduceMemSharingCtx(int64_t mem_size, int64_t mem_shared_id)
       : mem_size_(mem_size), mem_shared_id_(mem_shared_id) {}
   ~ReduceMemSharingCtx() = default;

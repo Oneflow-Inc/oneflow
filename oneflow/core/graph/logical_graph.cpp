@@ -545,16 +545,16 @@ void LogicalGraph::AddNcclAllReduce(LogicalNode* src, LogicalNode* dst) {
 }
 
 void LogicalGraph::AddReduceScatterAddGatherNodes(LogicalNode* src, LogicalNode* dst,
-                                                  const ReduceRankingCtx& ranking_ctx) {
+                                                  const ReduceRankingCtx& prev_ranking_ctx) {
   std::shared_ptr<const ParallelDesc> src_pd = src->parallel_desc();
 
   int64_t segment_count =
-      ranking_ctx.TotalSegmentCount() == 1
+      prev_ranking_ctx.TotalSegmentCount() == 1
           ? (src_pd->device_num_of_each_machine() == 1 ? src_pd->sorted_machine_ids().size()
                                                        : src_pd->device_num_of_each_machine())
           : src_pd->sorted_machine_ids().size();
 
-  ReduceRankingCtx current_ranking_ctx = ranking_ctx.CtxWithScatter(segment_count);
+  ReduceRankingCtx current_ranking_ctx = prev_ranking_ctx.CtxWithScatter(segment_count);
   ReduceScatterLogicalNode* reduce_scatter_node = NewNode<ReduceScatterLogicalNode>();
   reduce_scatter_node->mut_parallel_desc() = src_pd;
   reduce_scatter_node->mut_ranking_ctx() = current_ranking_ctx;

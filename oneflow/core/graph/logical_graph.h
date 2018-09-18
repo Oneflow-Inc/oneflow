@@ -54,7 +54,7 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   void BuildAccuracyPrintStruct();
   void BuildModelStruct(bool is_train);
   void AddReduceScatterAddGatherNodes(LogicalNode* src, LogicalNode* dst,
-                                      const ReduceRankingCtx& ranking_ctx);
+                                      const ReduceRankingCtx& prev_ranking_ctx);
   void AddAllReduce(LogicalNode* src, LogicalNode* dst);
   void AddNcclAllReduce(LogicalNode* src, LogicalNode* dst);
   void AddNcclReduceScatterAndAllGather(LogicalNode* src, LogicalNode* dst);
