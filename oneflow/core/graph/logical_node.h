@@ -210,15 +210,29 @@ class ReduceAddLogicalNode final : public LogicalNode {
 
  private:
   bool is_local() const {
-    // TODO: set is_local when build logical graph
+    // TODO: infer is_local when build logical graph
     return out_edges().size() == 1
            && dynamic_cast<ReduceScatterLogicalNode*>(SoleOutEdge()->dst_node()) != nullptr;
   }
+
+  bool has_lcoal() const {
+    // TODO: infer has_lcoal when build logical graph
+    return parallel_desc()->sorted_machine_ids().size() > 1
+           && parallel_desc()->device_num_of_each_machine() > 1;
+  }
+
   void FixCompTaskNode(CompTaskNode* task_node) const override {
-    if (is_local()) {
-      task_node->mut_parallel_ctx()->set_rank_id(
-          parallel_desc()->DeviceRank4ParallelId(task_node->parallel_id()));
-      task_node->mut_parallel_ctx()->set_rank_num(parallel_desc()->device_num_of_each_machine());
+    if (has_lcoal()) {
+      if (is_local()) {
+        task_node->mut_parallel_ctx()->set_rank_id(
+            parallel_desc()->DeviceRank4ParallelId(task_node->parallel_id()));
+        task_node->mut_parallel_ctx()->set_rank_num(parallel_desc()->device_num_of_each_machine());
+      } else {
+        task_node->mut_parallel_ctx()->set_rank_id(
+            parallel_desc()->MachineRank4ParallelId(task_node->parallel_id()));
+        task_node->mut_parallel_ctx()->set_rank_num(parallel_desc()->sorted_machine_ids().size());
+      }
+
     } else {
       task_node->mut_parallel_ctx()->set_rank_id(task_node->parallel_ctx()->parallel_id());
       task_node->mut_parallel_ctx()->set_rank_num(task_node->parallel_ctx()->parallel_num());
