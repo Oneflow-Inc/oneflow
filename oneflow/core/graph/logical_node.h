@@ -200,8 +200,6 @@ class NormalMdUpdtLogicalNode final : public LogicalNode {
 
 DECLARE_NAIVE_LOGICAL_NODE(MdSaveLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(MdDiffAccLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(ReduceConcatLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(ReduceSplitLogicalNode);
 
 class ReduceLogicalNode : public LogicalNode {
  public:
@@ -223,35 +221,20 @@ class ReduceLogicalNode : public LogicalNode {
   }
 };
 
-class ReduceScatterLogicalNode final : public ReduceLogicalNode {
- public:
-  LOGICAL_NODE_BOILERPLATE(ReduceScatterLogicalNode)
-};
+#define DECLARE_REDUCE_LOGICAL_NODE(name)       \
+  class name final : public ReduceLogicalNode { \
+   public:                                      \
+    LOGICAL_NODE_BOILERPLATE(name);             \
+  }
 
-class ReduceGatherLogicalNode final : public ReduceLogicalNode {
- public:
-  LOGICAL_NODE_BOILERPLATE(ReduceGatherLogicalNode)
-};
-
-class ReduceAddLogicalNode final : public ReduceLogicalNode {
- public:
-  LOGICAL_NODE_BOILERPLATE(ReduceAddLogicalNode)
-};
-
-class NcclAllReduceLogicalNode final : public ReduceLogicalNode {
- public:
-  LOGICAL_NODE_BOILERPLATE(NcclAllReduceLogicalNode)
-};
-
-class NcclReduceScatterLogicalNode final : public ReduceLogicalNode {
- public:
-  LOGICAL_NODE_BOILERPLATE(NcclReduceScatterLogicalNode)
-};
-
-class NcclAllGatherLogicalNode final : public ReduceLogicalNode {
- public:
-  LOGICAL_NODE_BOILERPLATE(NcclAllGatherLogicalNode)
-};
+DECLARE_REDUCE_LOGICAL_NODE(ReduceConcatLogicalNode);
+DECLARE_REDUCE_LOGICAL_NODE(ReduceSplitLogicalNode);
+DECLARE_REDUCE_LOGICAL_NODE(ReduceScatterLogicalNode);
+DECLARE_REDUCE_LOGICAL_NODE(ReduceGatherLogicalNode);
+DECLARE_REDUCE_LOGICAL_NODE(ReduceAddLogicalNode);
+DECLARE_REDUCE_LOGICAL_NODE(NcclAllReduceLogicalNode);
+DECLARE_REDUCE_LOGICAL_NODE(NcclAllGatherLogicalNode);
+DECLARE_REDUCE_LOGICAL_NODE(NcclReduceScatterLogicalNode);
 
 }  // namespace oneflow
 
