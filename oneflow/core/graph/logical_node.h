@@ -4,6 +4,7 @@
 #include "oneflow/core/graph/boxing_task_node.h"
 #include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/graph/reduce_ranking_context.h"
 
 namespace oneflow {
 
@@ -199,80 +200,57 @@ class NormalMdUpdtLogicalNode final : public LogicalNode {
 
 DECLARE_NAIVE_LOGICAL_NODE(MdSaveLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(MdDiffAccLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(ReduceScatterLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(ReduceGatherLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(ReduceConcatLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(ReduceSplitLogicalNode);
 
-class ReduceAddLogicalNode final : public LogicalNode {
+class ReduceLogicalNode : public LogicalNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ReduceLogicalNode);
+  ~ReduceLogicalNode() override = default;
+
+  ReduceRankingCtx& mut_ranking_ctx() { return ranking_ctx_; }
+  const ReduceRankingCtx& ranking_ctx() const { return ranking_ctx_; }
+
+ protected:
+  ReduceLogicalNode() = default;
+
+ private:
+  ReduceRankingCtx ranking_ctx_;
+  void FixCompTaskNode(CompTaskNode* task_node) const override {
+    task_node->mut_parallel_ctx()->set_rank_id(
+        ranking_ctx().StageRank4ParallelId(task_node->parallel_id()));
+    task_node->mut_parallel_ctx()->set_rank_num(ranking_ctx().StageSegmentCount());
+  }
+};
+
+class ReduceScatterLogicalNode final : public ReduceLogicalNode {
+ public:
+  LOGICAL_NODE_BOILERPLATE(ReduceScatterLogicalNode)
+};
+
+class ReduceGatherLogicalNode final : public ReduceLogicalNode {
+ public:
+  LOGICAL_NODE_BOILERPLATE(ReduceGatherLogicalNode)
+};
+
+class ReduceAddLogicalNode final : public ReduceLogicalNode {
  public:
   LOGICAL_NODE_BOILERPLATE(ReduceAddLogicalNode)
-
- private:
-  bool is_local() const {
-    // TODO: infer is_local when build logical graph
-    return out_edges().size() == 1
-           && dynamic_cast<ReduceScatterLogicalNode*>(SoleOutEdge()->dst_node()) != nullptr;
-  }
-
-  bool has_lcoal() const {
-    // TODO: infer has_lcoal when build logical graph
-    return parallel_desc()->sorted_machine_ids().size() > 1
-           && parallel_desc()->device_num_of_each_machine() > 1;
-  }
-
-  void FixCompTaskNode(CompTaskNode* task_node) const override {
-    if (has_lcoal()) {
-      if (is_local()) {
-        task_node->mut_parallel_ctx()->set_rank_id(
-            parallel_desc()->DeviceRank4ParallelId(task_node->parallel_id()));
-        task_node->mut_parallel_ctx()->set_rank_num(parallel_desc()->device_num_of_each_machine());
-      } else {
-        task_node->mut_parallel_ctx()->set_rank_id(
-            parallel_desc()->MachineRank4ParallelId(task_node->parallel_id()));
-        task_node->mut_parallel_ctx()->set_rank_num(parallel_desc()->sorted_machine_ids().size());
-      }
-
-    } else {
-      task_node->mut_parallel_ctx()->set_rank_id(task_node->parallel_ctx()->parallel_id());
-      task_node->mut_parallel_ctx()->set_rank_num(task_node->parallel_ctx()->parallel_num());
-    }
-  }
 };
 
-class NcclAllReduceLogicalNode final : public LogicalNode {
+class NcclAllReduceLogicalNode final : public ReduceLogicalNode {
  public:
   LOGICAL_NODE_BOILERPLATE(NcclAllReduceLogicalNode)
-
- private:
-  void FixCompTaskNode(CompTaskNode* task_node) const override {
-    task_node->mut_parallel_ctx()->set_rank_id(task_node->parallel_ctx()->parallel_id());
-    task_node->mut_parallel_ctx()->set_rank_num(task_node->parallel_ctx()->parallel_num());
-  }
 };
 
-class NcclReduceScatterLogicalNode final : public LogicalNode {
+class NcclReduceScatterLogicalNode final : public ReduceLogicalNode {
  public:
   LOGICAL_NODE_BOILERPLATE(NcclReduceScatterLogicalNode)
-
- private:
-  void FixCompTaskNode(CompTaskNode* task_node) const override {
-    task_node->mut_parallel_ctx()->set_rank_id(
-        parallel_desc()->DeviceRank4ParallelId(task_node->parallel_id()));
-    task_node->mut_parallel_ctx()->set_rank_num(parallel_desc()->device_num_of_each_machine());
-  }
 };
 
-class NcclAllGatherLogicalNode final : public LogicalNode {
+class NcclAllGatherLogicalNode final : public ReduceLogicalNode {
  public:
   LOGICAL_NODE_BOILERPLATE(NcclAllGatherLogicalNode)
-
- private:
-  void FixCompTaskNode(CompTaskNode* task_node) const override {
-    task_node->mut_parallel_ctx()->set_rank_id(
-        parallel_desc()->DeviceRank4ParallelId(task_node->parallel_id()));
-    task_node->mut_parallel_ctx()->set_rank_num(parallel_desc()->device_num_of_each_machine());
-  }
 };
 
 }  // namespace oneflow

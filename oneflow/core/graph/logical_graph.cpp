@@ -491,39 +491,45 @@ void LogicalGraph::AddAllReduce(LogicalNode* src, LogicalNode* dst) {
         || Global<JobDesc>::Get()->use_nccl_all_reduce_cross_machine()) {
       AddNcclAllReduce(src, dst);
     } else if (src_pd->device_num_of_each_machine() == 1) {
-      AddReduceScatterAddGatherNodes(src, dst, false);
+      AddReduceScatterAddGatherNodes(src, dst, ReduceRankingCtx());
     } else {
       AddNcclReduceScatterAndAllGather(src, dst);
     }
   } else {
-    bool with_local_reduce =
-        src_pd->sorted_machine_ids().size() > 1 && src_pd->device_num_of_each_machine() > 1;
-    AddReduceScatterAddGatherNodes(src, dst, with_local_reduce);
+    AddReduceScatterAddGatherNodes(src, dst, ReduceRankingCtx());
   }
 }
 
 void LogicalGraph::AddNcclReduceScatterAndAllGather(LogicalNode* src, LogicalNode* dst) {
   std::shared_ptr<const ParallelDesc> src_pd = src->parallel_desc();
 
+  ReduceRankingCtx init_ranking_ctx;
+
   OperatorConf nccl_reduce_scatter_op_conf;
   nccl_reduce_scatter_op_conf.set_name("nccl_reduce_scatter_" + NewUniqueId());
   nccl_reduce_scatter_op_conf.set_device_type(src_pd->device_type());
   nccl_reduce_scatter_op_conf.mutable_nccl_reduce_scatter_conf();
-  LogicalNode* nccl_reduce_scatter_node = NewNode<NcclReduceScatterLogicalNode>();
+  NcclReduceScatterLogicalNode* nccl_reduce_scatter_node = NewNode<NcclReduceScatterLogicalNode>();
   nccl_reduce_scatter_node->mut_op_vec() = {ConstructOp(nccl_reduce_scatter_op_conf)};
   nccl_reduce_scatter_node->mut_parallel_desc() = src_pd;
-  Connect(src, NewEdge(), nccl_reduce_scatter_node);
+  nccl_reduce_scatter_node->mut_ranking_ctx() = init_ranking_ctx;
+  Connect<LogicalNode>(src, NewEdge(), nccl_reduce_scatter_node);
+
+  ReduceRankingCtx ranking_ctx_with_scatter =
+      init_ranking_ctx.CtxWithScatter(src_pd->device_num_of_each_machine());
 
   OperatorConf nccl_all_gather_op_conf;
   nccl_all_gather_op_conf.set_name("nccl_all_gather_" + NewUniqueId());
   nccl_all_gather_op_conf.set_device_type(src_pd->device_type());
   nccl_all_gather_op_conf.mutable_nccl_all_gather_conf();
-  LogicalNode* nccl_all_gather_node = NewNode<NcclAllGatherLogicalNode>();
+  NcclAllGatherLogicalNode* nccl_all_gather_node = NewNode<NcclAllGatherLogicalNode>();
   nccl_all_gather_node->mut_op_vec() = {ConstructOp(nccl_all_gather_op_conf)};
   nccl_all_gather_node->mut_parallel_desc() = src_pd;
-  Connect(nccl_all_gather_node, NewEdge(), dst);
+  nccl_all_gather_node->mut_ranking_ctx() = ranking_ctx_with_scatter;
+  Connect<LogicalNode>(nccl_all_gather_node, NewEdge(), dst);
 
-  AddReduceScatterAddGatherNodes(nccl_reduce_scatter_node, nccl_all_gather_node, false);
+  AddReduceScatterAddGatherNodes(nccl_reduce_scatter_node, nccl_all_gather_node,
+                                 ranking_ctx_with_scatter);
 }
 
 void LogicalGraph::AddNcclAllReduce(LogicalNode* src, LogicalNode* dst) {
@@ -540,44 +546,38 @@ void LogicalGraph::AddNcclAllReduce(LogicalNode* src, LogicalNode* dst) {
 }
 
 void LogicalGraph::AddReduceScatterAddGatherNodes(LogicalNode* src, LogicalNode* dst,
-                                                  bool with_local_reduce) {
+                                                  const ReduceRankingCtx& ranking_ctx) {
   std::shared_ptr<const ParallelDesc> src_pd = src->parallel_desc();
-  // Reduce Scatter
-  LogicalNode* reduce_scatter_node = NewNode<ReduceScatterLogicalNode>();
+
+  int64_t segment_count =
+      ranking_ctx.TotalSegmentCount() == 1
+          ? (src_pd->device_num_of_each_machine() == 1 ? src_pd->sorted_machine_ids().size()
+                                                       : src_pd->device_num_of_each_machine())
+          : src_pd->sorted_machine_ids().size();
+
+  ReduceScatterLogicalNode* reduce_scatter_node = NewNode<ReduceScatterLogicalNode>();
   reduce_scatter_node->mut_parallel_desc() = src_pd;
-  Connect(src, NewEdge(), reduce_scatter_node);
+  reduce_scatter_node->mut_ranking_ctx() = ranking_ctx;
+  Connect<LogicalNode>(src, NewEdge(), reduce_scatter_node);
 
-  LogicalNode* pred_reduce_global_add_node = reduce_scatter_node;
-  if (with_local_reduce) {
-    // Reduce Local Add
-    LogicalNode* reduce_local_add_node = NewNode<ReduceAddLogicalNode>();
-    reduce_local_add_node->mut_parallel_desc() = src_pd;
-    Connect(reduce_scatter_node, NewEdge(), reduce_local_add_node);
+  ReduceRankingCtx ranking_ctx_with_scatter = ranking_ctx.CtxWithScatter(segment_count);
 
-    LogicalNode* reduce_local_scatter_node = NewNode<ReduceScatterLogicalNode>();
-    reduce_local_scatter_node->mut_parallel_desc() = src_pd;
-    Connect(reduce_local_add_node, NewEdge(), reduce_local_scatter_node);
-    pred_reduce_global_add_node = reduce_local_scatter_node;
-  }
-  // Reduce Global Add
-  LogicalNode* reduce_global_add_node = NewNode<ReduceAddLogicalNode>();
-  reduce_global_add_node->mut_parallel_desc() = src_pd;
-  Connect(pred_reduce_global_add_node, NewEdge(), reduce_global_add_node);
+  ReduceAddLogicalNode* reduce_add_node = NewNode<ReduceAddLogicalNode>();
+  reduce_add_node->mut_parallel_desc() = src_pd;
+  reduce_add_node->mut_ranking_ctx() = ranking_ctx_with_scatter;
+  Connect<LogicalNode>(reduce_scatter_node, NewEdge(), reduce_add_node);
 
-  // Reduce Global Gather
-  LogicalNode* reduce_gather_node = NewNode<ReduceGatherLogicalNode>();
+  ReduceGatherLogicalNode* reduce_gather_node = NewNode<ReduceGatherLogicalNode>();
   reduce_gather_node->mut_parallel_desc() = src_pd;
-  Connect(reduce_global_add_node, NewEdge(), reduce_gather_node);
+  reduce_gather_node->mut_ranking_ctx() = ranking_ctx_with_scatter;
 
-  LogicalNode* pred_dst_node = reduce_gather_node;
-  if (with_local_reduce) {
-    // Reduce Local Gather
-    LogicalNode* reduce_local_gather_node = NewNode<ReduceGatherLogicalNode>();
-    reduce_local_gather_node->mut_parallel_desc() = src_pd;
-    Connect(reduce_gather_node, NewEdge(), reduce_local_gather_node);
-    pred_dst_node = reduce_local_gather_node;
+  if (ranking_ctx_with_scatter.TotalSegmentCount() == src_pd->parallel_num()) {
+    Connect<LogicalNode>(reduce_add_node, NewEdge(), reduce_gather_node);
+  } else {
+    AddReduceScatterAddGatherNodes(reduce_add_node, reduce_gather_node, ranking_ctx_with_scatter);
   }
-  Connect(pred_dst_node, NewEdge(), dst);
+
+  Connect<LogicalNode>(reduce_gather_node, NewEdge(), dst);
 }
 
 void LogicalGraph::SetupNormalMdUpdtOp() {
