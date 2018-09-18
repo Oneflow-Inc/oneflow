@@ -18,16 +18,10 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
     learning_rate =
         GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, cur_batch_num);
   }
-  int64_t total_instance_num = 0;
-  // TODO: add a switch in instance number in op_conf
-  if (true) {
-    Blob* model_diff_blob = BnInOp2Blob("model_diff");
-    total_instance_num = *reinterpret_cast<const int32_t*>(
-        static_cast<const char*>(model_diff_blob->header_ptr())
-        + model_diff_blob->ByteSizeOfDataIdField() + model_diff_blob->ByteSizeOfColNumField());
-  } else {
-    total_instance_num = Global<JobDesc>::Get()->BatchSize();
-  }
+  Blob* model_diff_blob = BnInOp2Blob("model_diff");
+  int32_t total_instance_num = *reinterpret_cast<const int32_t*>(
+      static_cast<const char*>(model_diff_blob->header_ptr())
+      + model_diff_blob->ByteSizeOfDataIdField() + model_diff_blob->ByteSizeOfColNumField());
   float l1 = Global<JobDesc>::Get()->L1();
   float l2 = Global<JobDesc>::Get()->L2();
   UpdateModel(ctx.device_ctx, total_instance_num, static_cast<T>(learning_rate), static_cast<T>(l1),

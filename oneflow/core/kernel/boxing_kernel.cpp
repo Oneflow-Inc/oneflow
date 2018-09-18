@@ -270,8 +270,8 @@ void BoxingKernel<T>::ForwardField(const KernelCtx& ctx,
       ConcatSplitField<Iter>(ctx.device_ctx, BnInOp2Blob, ibn_0_, 0, op_attribute().output_bns(),
                              boxing_conf.split_box().axis());
     } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
-      CopyField(ctx.device_ctx, BnInOp2Blob, BnInOp2Blob(ibn_0_.Get(0)),
-                op_attribute().output_bns(), Iter::GetCopyBlobFieldMthd());
+      ManimulateField(ctx.device_ctx, BnInOp2Blob, BnInOp2Blob(ibn_0_.Get(0)),
+                      op_attribute().output_bns(), Iter::GetCopyBlobFieldMthd());
     } else {
       UNIMPLEMENTED();
     }

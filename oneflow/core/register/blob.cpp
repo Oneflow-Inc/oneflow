@@ -69,52 +69,56 @@ void Blob::set_max_col_id(int32_t val) { regst_->set_max_col_id(val); }
 const MemoryCase& Blob::mem_case() const { return regst_->regst_desc()->mem_case(); }
 
 void Blob::CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
-  if (this == rhs) { return; }
+  if (this == nullptr || this == rhs) { return; }
   AutoMemcpy(device_ctx, mut_dptr(), rhs->dptr(), ByteSizeOfDataContentField(), mem_case(),
              rhs->mem_case());
 }
 
 void Blob::CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs) {
-  if (this == rhs || ByteSizeOfBlobHeader() == 0) { return; }
+  if (this == nullptr || this == rhs || ByteSizeOfBlobHeader() == 0) { return; }
   CHECK_EQ(ByteSizeOfBlobHeader(), rhs->ByteSizeOfBlobHeader());
   Memcpy<DeviceType::kCPU>(device_ctx, mut_header_ptr(), rhs->header_ptr(), ByteSizeOfBlobHeader());
 }
 
 void Blob::CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs) {
-  if (this == rhs || ByteSizeOfDataIdField() == 0) { return; }
+  if (this == nullptr || this == rhs || ByteSizeOfDataIdField() == 0) { return; }
   CHECK_EQ(ByteSizeOfDataIdField(), rhs->ByteSizeOfDataIdField());
   Memcpy<DeviceType::kCPU>(device_ctx, mut_data_id(), rhs->data_id(), ByteSizeOfDataIdField());
 }
 
 void Blob::CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
-  if (this == rhs || ByteSizeOfColNumField() == 0) { return; }
+  if (this == nullptr || this == rhs || ByteSizeOfColNumField() == 0) { return; }
   CHECK_EQ(ByteSizeOfColNumField(), rhs->ByteSizeOfColNumField());
   Memcpy<DeviceType::kCPU>(device_ctx, mut_col_num(), rhs->col_num(), ByteSizeOfColNumField());
 }
 
 void Blob::CopyInstanceNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
-  if (this == rhs || ByteSizeOfInstanceNumField() == 0) { return; }
+  if (this == nullptr || this == rhs || ByteSizeOfInstanceNumField() == 0) { return; }
   CHECK_EQ(ByteSizeOfInstanceNumField(), rhs->ByteSizeOfInstanceNumField());
   Memcpy<DeviceType::kCPU>(device_ctx, mut_instance_num(), rhs->instance_num(),
                            ByteSizeOfInstanceNumField());
 }
 
 void Blob::AccumulateInstanceNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
-  if (this == rhs || ByteSizeOfInstanceNumField() == 0) { return; }
+  if (this == nullptr || this == rhs || ByteSizeOfInstanceNumField() == 0) { return; }
   CHECK_EQ(ByteSizeOfInstanceNumField(), rhs->ByteSizeOfInstanceNumField());
   KernelUtil<DeviceType::kCPU, int32_t>::Axpy(device_ctx, 1, 1, rhs->instance_num(), 1,
                                               mut_instance_num(), 1);
 }
 
 void Blob::AccumulateInstanceNumInPackedHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs) {
+  CHECK_EQ(ByteSizeOfBlobHeader() % sizeof(int32_t), 0);
+  int32_t instance_num_size = ByteSizeOfBlobHeader() / sizeof(int32_t);
   const int32_t* instance_num_from_ptr = reinterpret_cast<const int32_t*>(
       static_cast<const char*>(rhs->header_ptr()) + rhs->ByteSizeOfDataIdField()
       + rhs->ByteSizeOfColNumField());
   int32_t* instance_num_to_ptr =
       reinterpret_cast<int32_t*>(static_cast<char*>(this->mut_header_ptr())
                                  + rhs->ByteSizeOfDataIdField() + rhs->ByteSizeOfColNumField());
-  KernelUtil<DeviceType::kCPU, int32_t>::Axpy(device_ctx, 1, 1, instance_num_from_ptr, 1,
-                                              instance_num_to_ptr, 1);
+  for (int32_t i = 0; i < instance_num_size; i++) {
+    KernelUtil<DeviceType::kCPU, int32_t>::Axpy(device_ctx, 1, 1, instance_num_from_ptr + i, 1,
+                                                instance_num_to_ptr + i, 1);
+  }
 }
 
 void Blob::CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) {
