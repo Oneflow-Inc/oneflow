@@ -808,6 +808,13 @@ message MultiplyOpConf {
   required string out = 4;
 }
 
+message UpsampleNearestOpConf {
+  required string in = 1;
+  required string out = 2;
+  required int32 scale = 3 [default = 2];
+  required string data_format = 4 [default = "channels_first"];
+}
+
 enum Norm {
   L1 = 1;
   L2 = 2;
@@ -851,7 +858,7 @@ message OperatorConf {
     SharedModelDiffAddOpConf shared_model_diff_add_conf = 118;
     PodBoxingOpConf pod_boxing_conf = 119;
     PbBoxingOpConf pb_boxing_conf = 120;
-    
+
     // user op
     TransposeOpConf transpose_conf = 201;
     ReshapeOpConf reshape_conf = 202;
@@ -898,6 +905,7 @@ message OperatorConf {
     AnchorTargetOpConf anchor_target_conf = 1006;
     SigmoidCrossEntropyLossOpConf sigmoid_cross_entropy_loss_conf = 1007;
     AffineChannelOpConf affine_channel_conf = 1008;
+    UpsampleNearestOpConf upsample_nearest_conf = 1009;
   }
 }
 
