@@ -538,11 +538,13 @@ void LogicalGraph::AddNcclAllReduce(LogicalNode* src, LogicalNode* dst) {
   nccl_all_reduce_op_conf.set_name("nccl_all_reduce_" + NewUniqueId());
   nccl_all_reduce_op_conf.set_device_type(src_pd->device_type());
   nccl_all_reduce_op_conf.mutable_nccl_all_reduce_conf();
-  LogicalNode* nccl_all_reduce_node = NewNode<NcclAllReduceLogicalNode>();
+  NcclAllReduceLogicalNode* nccl_all_reduce_node = NewNode<NcclAllReduceLogicalNode>();
   nccl_all_reduce_node->mut_op_vec() = {ConstructOp(nccl_all_reduce_op_conf)};
   nccl_all_reduce_node->mut_parallel_desc() = src_pd;
-  Connect(src, NewEdge(), nccl_all_reduce_node);
-  Connect(nccl_all_reduce_node, NewEdge(), dst);
+  nccl_all_reduce_node->mut_ranking_ctx() =
+      ReduceRankingCtx().CtxWithScatter(src_pd->parallel_num());
+  Connect<LogicalNode>(src, NewEdge(), nccl_all_reduce_node);
+  Connect<LogicalNode>(nccl_all_reduce_node, NewEdge(), dst);
 }
 
 void LogicalGraph::AddReduceScatterAddGatherNodes(LogicalNode* src, LogicalNode* dst,
