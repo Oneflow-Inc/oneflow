@@ -209,9 +209,6 @@ void LogicalNode::GenSortedCompTaskNodes(
       comp_task_node->mut_parallel_ctx()->set_parallel_id(parallel_idx++);
       comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);
       comp_task_node->mut_parallel_ctx()->set_policy(parallel_desc_->policy());
-      int64_t rank_id =
-          comp_task_node->parallel_id() % parallel_desc_->device_num_of_each_machine();
-      int64_t rank_num = parallel_desc_->device_num_of_each_machine();
 
       const IDMgr* id_mgr = Global<IDMgr>::Get();
       if (parallel_desc_->device_type() == DeviceType::kGPU) {
@@ -230,22 +227,14 @@ void LogicalNode::GenSortedCompTaskNodes(
           }
           case CudaWorkType::kNcclScatter: {
             comp_task_node->set_thrd_id(id_mgr->GetGpuNcclScatterThrdId(dev_phy_id));
-            comp_task_node->mut_parallel_ctx()->set_rank_id(rank_id);
-            comp_task_node->mut_parallel_ctx()->set_rank_num(rank_num);
             break;
           }
           case CudaWorkType::kNcclGather: {
             comp_task_node->set_thrd_id(id_mgr->GetGpuNcclGatherThrdId(dev_phy_id));
-            comp_task_node->mut_parallel_ctx()->set_rank_id(rank_id);
-            comp_task_node->mut_parallel_ctx()->set_rank_num(rank_num);
             break;
           }
           case CudaWorkType::kMix: {
             comp_task_node->set_thrd_id(id_mgr->GetGpuMixThrdId(dev_phy_id));
-            comp_task_node->mut_parallel_ctx()->set_rank_id(
-                comp_task_node->parallel_ctx()->parallel_id());
-            comp_task_node->mut_parallel_ctx()->set_rank_num(
-                comp_task_node->parallel_ctx()->parallel_num());
             break;
           }
           case CudaWorkType::kMdUpdt: {

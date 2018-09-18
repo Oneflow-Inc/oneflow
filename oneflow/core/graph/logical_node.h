@@ -200,13 +200,66 @@ class NormalMdUpdtLogicalNode final : public LogicalNode {
 DECLARE_NAIVE_LOGICAL_NODE(MdSaveLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(MdDiffAccLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(ReduceScatterLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(ReduceAddLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(ReduceGatherLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(ReduceConcatLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(ReduceSplitLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(NcclAllReduceLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(NcclReduceScatterLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(NcclAllGatherLogicalNode);
+
+class ReduceAddLogicalNode final : public LogicalNode {
+ public:
+  LOGICAL_NODE_BOILERPLATE(ReduceAddLogicalNode)
+
+ private:
+  bool is_local() const {
+    // TODO: set is_local when build logical graph
+    return out_edges().size() == 1
+           && dynamic_cast<ReduceScatterLogicalNode*>(SoleOutEdge()->dst_node()) != nullptr;
+  }
+  void FixCompTaskNode(CompTaskNode* task_node) const override {
+    if (is_local()) {
+      task_node->mut_parallel_ctx()->set_rank_id(
+          parallel_desc()->DeviceRank4ParallelId(task_node->parallel_id()));
+      task_node->mut_parallel_ctx()->set_rank_num(parallel_desc()->device_num_of_each_machine());
+    } else {
+      task_node->mut_parallel_ctx()->set_rank_id(task_node->parallel_ctx()->parallel_id());
+      task_node->mut_parallel_ctx()->set_rank_num(task_node->parallel_ctx()->parallel_num());
+    }
+  }
+};
+
+class NcclAllReduceLogicalNode final : public LogicalNode {
+ public:
+  LOGICAL_NODE_BOILERPLATE(NcclAllReduceLogicalNode)
+
+ private:
+  void FixCompTaskNode(CompTaskNode* task_node) const override {
+    task_node->mut_parallel_ctx()->set_rank_id(task_node->parallel_ctx()->parallel_id());
+    task_node->mut_parallel_ctx()->set_rank_num(task_node->parallel_ctx()->parallel_num());
+  }
+};
+
+class NcclReduceScatterLogicalNode final : public LogicalNode {
+ public:
+  LOGICAL_NODE_BOILERPLATE(NcclReduceScatterLogicalNode)
+
+ private:
+  void FixCompTaskNode(CompTaskNode* task_node) const override {
+    task_node->mut_parallel_ctx()->set_rank_id(
+        parallel_desc()->DeviceRank4ParallelId(task_node->parallel_id()));
+    task_node->mut_parallel_ctx()->set_rank_num(parallel_desc()->device_num_of_each_machine());
+  }
+};
+
+class NcclAllGatherLogicalNode final : public LogicalNode {
+ public:
+  LOGICAL_NODE_BOILERPLATE(NcclAllGatherLogicalNode)
+
+ private:
+  void FixCompTaskNode(CompTaskNode* task_node) const override {
+    task_node->mut_parallel_ctx()->set_rank_id(
+        parallel_desc()->DeviceRank4ParallelId(task_node->parallel_id()));
+    task_node->mut_parallel_ctx()->set_rank_num(parallel_desc()->device_num_of_each_machine());
+  }
+};
 
 }  // namespace oneflow
 
