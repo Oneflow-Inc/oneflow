@@ -52,7 +52,6 @@ class ReduceCompTaskNodeIf {
     std::sort((*edge_infos).begin(), (*edge_infos).end(),
               [](const EdgeInfo& lhs, const EdgeInfo& rhs) { return lhs.order < rhs.order; });
   }
-  TaskNode* AsTaskNode() { return dynamic_cast<TaskNode*>(this); }
   CompTaskNode* AsCompTaskNode() { return dynamic_cast<CompTaskNode*>(this); }
   const ReduceRankingCtx& GetRankingCtx() {
     const ReduceLogicalNode* reduce_logical_node =

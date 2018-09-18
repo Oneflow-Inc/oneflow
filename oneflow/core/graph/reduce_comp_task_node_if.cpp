@@ -41,7 +41,7 @@ void BuildCtrlRegstBetweenReduceCopyNodes(const CompTaskNode* src_reduce,
 }
 
 TaskNode* ReduceCompTaskNodeIf::FindPredReduceTaskNodeIf(std::function<bool(TaskNode*)> predicate) {
-  TaskNode* current = AsTaskNode();
+  TaskNode* current = AsCompTaskNode();
   while (current) {
     auto reduce_task_node_edge_it =
         std::find_if(current->in_edges().begin(), current->in_edges().end(), [](TaskEdge* edge) {
