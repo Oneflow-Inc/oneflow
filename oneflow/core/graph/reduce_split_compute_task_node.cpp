@@ -63,13 +63,13 @@ void ReduceSplitCompTaskNode::FixPackedBlobDescOfProducedRegst() {
   }
 }
 
-void ReduceSplitCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx* ctx) {
-  CHECK_EQ(ctx->TotalSegmentCount(), 1);
+void ReduceSplitCompTaskNode::EnableMemSharingInReduce(const ReduceMemSharingCtx& ctx) {
+  CHECK_EQ(GetRankingCtx().TotalSegmentCount(), 1);
   size_t split_num = produced_regsts().size();
   int64_t offset = 0;
   FOR_RANGE(int32_t, idx, 0, split_num) {
     RegstDesc* split_out_regst = GetProducedRegst("out_" + std::to_string(idx)).get();
-    ctx->EnableMemSharing4Regst(split_out_regst, offset);
+    ctx.EnableMemSharing4Regst(split_out_regst, offset);
     offset += InferRegstSize(*split_out_regst);
   }
 }

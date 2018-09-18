@@ -41,18 +41,20 @@ void ReduceAddCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(parallel_ctx());
 }
 
-void ReduceAddCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx* ctx) {
-  int64_t offset = ctx->CtxWithGather().Offset4ParallelId(parallel_id());
-  int64_t rank = ctx->StageRank4ParallelId(parallel_id());
-  int64_t segment_size = ctx->StageSegmentSize();
+void ReduceAddCompTaskNode::EnableMemSharingInReduce(const ReduceMemSharingCtx& ctx) {
+  const ReduceRankingCtx& ranking_ctx = GetRankingCtx();
+  int64_t offset = ctx.Offset4RankingParallelId(ranking_ctx.CtxWithGather(), parallel_id());
+  int64_t rank = ranking_ctx.StageRank4ParallelId(parallel_id());
+  int64_t segment_size = ctx.SegmentSize4Ranking(ranking_ctx);
 
-  ctx->EnableMemSharing4Regst(GetProducedRegst("out").get(), ctx->Offset4ParallelId(parallel_id()));
+  ctx.EnableMemSharing4Regst(GetProducedRegst("out").get(),
+                             ctx.Offset4RankingParallelId(ranking_ctx, parallel_id()));
   for (const auto& kv : consumed_regsts()) {
     auto in_parallel_id = oneflow_cast<int64_t>(kv.first.substr(3));
     CHECK_EQ(1, kv.second.size());
     if (in_parallel_id == rank) { continue; }
     RegstDesc* regst = kv.second.front().get();
-    ctx->EnableMemSharing4Regst(regst, offset + in_parallel_id * segment_size);
+    ctx.EnableMemSharing4Regst(regst, offset + in_parallel_id * segment_size);
   }
 
   std::vector<CompTaskNode*> scatter_on_in_edge;
@@ -65,7 +67,7 @@ void ReduceAddCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx* ctx) {
   CHECK_EQ(scatter_on_in_edge.size(), 1);
   if (!scatter_on_in_edge.empty()) {
     BuildCtrlRegstBetweenReduceCopyNodes(scatter_on_in_edge.front(), this,
-                                         ctx->StageSegmentCount() - 1);
+                                         ranking_ctx.StageSegmentCount() - 1);
   }
 }
 

@@ -203,11 +203,9 @@ void TaskGraph::EnableMemSharingInReduceStruct() {
     for (TaskNode* reduce_node : reduce_task_nodes) {
       auto reduce_task_node_if = dynamic_cast<ReduceCompTaskNodeIf*>(reduce_node);
       CHECK(reduce_task_node_if);
-      reduce_task_node_if->EnableMemSharingInReduce(&ctx);
+      reduce_task_node_if->EnableMemSharingInReduce(ctx);
       has_enabled_nodes.insert(reduce_node);
     }
-
-    CHECK_EQ(ctx.TotalSegmentCount(), 1);
   });
 }
 
