@@ -3,7 +3,7 @@
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/plan.pb.h"
-#include "nccl.h"
+#include <nccl.h>
 
 namespace oneflow {
 

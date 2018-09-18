@@ -1,8 +1,7 @@
 #ifndef ONEFLOW_CORE_JOB_MACHINE_CONTEXT_H_
 #define ONEFLOW_CORE_JOB_MACHINE_CONTEXT_H_
 
-#include "oneflow/core/job/id_manager.h"
-#include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
@@ -20,7 +19,7 @@ class MachineCtx final {
 
  private:
   friend class Global<MachineCtx>;
-  MachineCtx(const std::string& this_mchn_name);
+  explicit MachineCtx(const std::string& this_mchn_name);
 
   int64_t this_machine_id_;
 };

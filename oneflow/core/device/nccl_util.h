@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_DEVICE_NCCL_UTIL_H_
 #define ONEFLOW_CORE_DEVICE_NCCL_UTIL_H_
 
-#include "nccl.h"
+#include <nccl.h>
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/util.h"
 
