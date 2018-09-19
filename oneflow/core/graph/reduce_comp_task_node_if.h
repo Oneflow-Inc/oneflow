@@ -20,18 +20,18 @@ class ReduceMemSharingCtx final {
     regst->set_mem_shared_offset(offset);
   }
 
-  int64_t Offset4RankingParallelId(const ReduceRankingCtx& ranking, int64_t parallel_id) const {
-    if (ranking.TotalSegmentCount() == 1) {
+  int64_t Offset4RankCtxParallelId(const ReduceRankCtx& rank_ctx, int64_t parallel_id) const {
+    if (rank_ctx.TotalSegmentCount() == 1) {
       return 0;
     } else {
-      ReduceRankingCtx if_gather = ranking.CtxWithGather();
-      return Offset4RankingParallelId(if_gather, parallel_id)
-             + ranking.StageRank4ParallelId(parallel_id) * SegmentSize4Ranking(ranking);
+      ReduceRankCtx if_gather = rank_ctx.CtxWithGather();
+      return Offset4RankCtxParallelId(if_gather, parallel_id)
+             + rank_ctx.StageRank4ParallelId(parallel_id) * SegmentSize4RankCtx(rank_ctx);
     }
   }
 
-  int64_t SegmentSize4Ranking(const ReduceRankingCtx& ranking) const {
-    return mem_size_ / ranking.TotalSegmentCount();
+  int64_t SegmentSize4RankCtx(const ReduceRankCtx& rank_ctx) const {
+    return mem_size_ / rank_ctx.TotalSegmentCount();
   }
 
  private:
@@ -54,11 +54,11 @@ class ReduceCompTaskNodeIf {
               [](const EdgeInfo& lhs, const EdgeInfo& rhs) { return lhs.order < rhs.order; });
   }
   CompTaskNode* AsCompTaskNode() { return dynamic_cast<CompTaskNode*>(this); }
-  const ReduceRankingCtx& GetRankingCtx() {
+  const ReduceRankCtx& GetRankCtx() {
     const ReduceLogicalNode* reduce_logical_node =
         dynamic_cast<const ReduceLogicalNode*>(AsCompTaskNode()->logical_node());
     CHECK(reduce_logical_node);
-    return reduce_logical_node->ranking_ctx();
+    return reduce_logical_node->rank_ctx();
   }
   TaskNode* FindPredReduceTaskNodeIf(std::function<bool(TaskNode*)> predicate);
 };

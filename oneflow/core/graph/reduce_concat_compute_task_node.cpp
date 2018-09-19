@@ -39,7 +39,7 @@ void ReduceConcatCompTaskNode::BuildExecGphAndRegst() {
 }
 
 void ReduceConcatCompTaskNode::EnableMemSharingInReduce(const ReduceMemSharingCtx& ctx) {
-  CHECK_EQ(GetRankingCtx().TotalSegmentCount(), 1);
+  CHECK_EQ(GetRankCtx().TotalSegmentCount(), 1);
   ctx.EnableMemSharing4Regst(GetProducedRegst("out").get(), 0);
 
   size_t concat_num = consumed_regsts().size();

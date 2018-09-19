@@ -64,7 +64,7 @@ void ReduceSplitCompTaskNode::FixPackedBlobDescOfProducedRegst() {
 }
 
 void ReduceSplitCompTaskNode::EnableMemSharingInReduce(const ReduceMemSharingCtx& ctx) {
-  CHECK_EQ(GetRankingCtx().TotalSegmentCount(), 1);
+  CHECK_EQ(GetRankCtx().TotalSegmentCount(), 1);
   size_t split_num = produced_regsts().size();
   int64_t offset = 0;
   FOR_RANGE(int32_t, idx, 0, split_num) {

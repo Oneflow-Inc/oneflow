@@ -5,7 +5,7 @@ namespace oneflow {
 void NcclAllGatherCompTaskNode::EnableMemSharingInReduce(const ReduceMemSharingCtx& ctx) {
   ctx.EnableMemSharing4Regst(
       GetProducedRegst("out").get(),
-      ctx.Offset4RankingParallelId(GetRankingCtx().CtxWithGather(), parallel_id()));
+      ctx.Offset4RankCtxParallelId(GetRankCtx().CtxWithGather(), parallel_id()));
 }
 
 }  // namespace oneflow

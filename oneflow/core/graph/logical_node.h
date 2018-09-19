@@ -4,7 +4,7 @@
 #include "oneflow/core/graph/boxing_task_node.h"
 #include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/graph/reduce_ranking_context.h"
+#include "oneflow/core/graph/reduce_rank_context.h"
 
 namespace oneflow {
 
@@ -206,18 +206,18 @@ class ReduceLogicalNode : public LogicalNode {
   OF_DISALLOW_COPY_AND_MOVE(ReduceLogicalNode);
   ~ReduceLogicalNode() override = default;
 
-  ReduceRankingCtx& mut_ranking_ctx() { return ranking_ctx_; }
-  const ReduceRankingCtx& ranking_ctx() const { return ranking_ctx_; }
+  ReduceRankCtx& mut_rank_ctx() { return rank_ctx_; }
+  const ReduceRankCtx& rank_ctx() const { return rank_ctx_; }
 
  protected:
   ReduceLogicalNode() = default;
 
  private:
-  ReduceRankingCtx ranking_ctx_;
+  ReduceRankCtx rank_ctx_;
   void FixCompTaskNode(CompTaskNode* task_node) const override {
     task_node->mut_parallel_ctx()->set_rank_id(
-        ranking_ctx().StageRank4ParallelId(task_node->parallel_id()));
-    task_node->mut_parallel_ctx()->set_rank_num(ranking_ctx().StageSegmentCount());
+        rank_ctx().StageRank4ParallelId(task_node->parallel_id()));
+    task_node->mut_parallel_ctx()->set_rank_num(rank_ctx().StageSegmentCount());
   }
 };
 
