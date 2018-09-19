@@ -815,7 +815,6 @@ message UpsampleNearestOpConf {
   required string data_format = 4;
 }
 
-
 message ResizeNearestNeighborOpConf {
   required string in = 1;
   required string out = 2;
