@@ -63,19 +63,24 @@ void CopyCommNetActor::Act() {
   // readable
   auto readable_it = piece_id2regst_ctx.find(next_piece_id_);
   void* readable_token = readable_it->second.comm_net_token;
-  Regst* readable_regst = readable_it->second.regst_raw_ptr;
   int64_t src_actor_id = readable_it->second.producer;
   int64_t src_machine_id = Global<IDMgr>::Get()->MachineId4ActorId(src_actor_id);
   // writeable
   void* writeable_token = GetNaiveCurWriteable("copy_out")->comm_net_token();
   // Async
   Global<CommNet>::Get()->Read(actor_read_id_, src_machine_id, readable_token, writeable_token);
-  AsyncSendNaiveProducedRegstMsgToConsumer([&](Regst* regst) {
+}
+
+void CopyCommNetActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
+  HandleProducedNaiveDataRegstToConsumer([&](Regst* regst) {
     regst->set_piece_id(next_piece_id_);
     return true;
   });
-  AsyncSendRegstMsgToProducer(readable_regst, src_actor_id);
+}
 
+void CopyCommNetActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
+  auto readable_it = piece_id2regst_ctx.find(next_piece_id_);
+  AsyncSendRegstMsgToProducer(readable_it->second.regst_raw_ptr, readable_it->second.producer);
   piece_id2regst_ctx.erase(readable_it);
   next_piece_id_ += 1;
 }

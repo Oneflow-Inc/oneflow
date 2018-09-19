@@ -37,12 +37,10 @@ class InputWiseCompActor : public CompActor {
   std::pair<bool, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName() override {
     return {true, {}};
   }
+  void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
+  void AsyncSendCustomizedConsumedRegstMsgToProducer() override;
+
   virtual void SetKernelCtxOther(void** other) { *other = nullptr; }
-  void UpdateMemberStatusAfterAct();
-  bool NeedSendRegstMsgToConsumer();
-  void UpdateMemberStatusAfterSendRegstMsgToConsumer();
-  virtual void VirtualUpdateMemberStatusAfterAct() {}
-  virtual void VirtualUpdateMemberStatusAfterSendRegstMsgToConsumer() {}
 
   HashMap<int64_t, std::queue<Regst*>> readable_regsts_;
   int64_t readable_regst_desc_cnt_;

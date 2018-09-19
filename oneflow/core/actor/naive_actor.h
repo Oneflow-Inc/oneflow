@@ -17,6 +17,7 @@ class NaiveActor final : public Actor {
 
  private:
   void Act() override;
+  void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
 };
 
 }  // namespace oneflow

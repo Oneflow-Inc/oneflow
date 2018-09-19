@@ -173,8 +173,10 @@ void Actor::SetReadableRegstInfo(const Regst* regst, ReadableRegstInfo* info) co
   info->set_act_id(regst->act_id());
 }
 
-void Actor::ForEachCurNaiveReadableRegst(std::function<void(const Regst*)> func) const {
-  naive_consumed_rs_.ForEachFrontRegst(func);
+void Actor::ForEachCurNaiveReadableDataRegst(std::function<void(const Regst*)> func) const {
+  naive_consumed_rs_.ForEachFrontRegst([func](Regst* regst) {
+    if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) { func(regst); }
+  });
 }
 
 int Actor::HandlerNormal(const ActorMsg& msg) {
@@ -251,7 +253,7 @@ void Actor::TryLogActEvent(const std::function<void()>& DoAct) const {
     act_event->set_work_stream_id(GetGlobalWorkStreamId());
     act_event->set_act_id(act_id_);
     act_event->set_ready_time(GetCurTime());
-    ForEachCurNaiveReadableRegst([&](const Regst* readable_regst) {
+    naive_consumed_rs_.ForEachFrontRegst([&](const Regst* readable_regst) {
       ReadableRegstInfo* info = act_event->add_readable_regst_infos();
       Actor::SetReadableRegstInfo(readable_regst, info);
     });
@@ -280,19 +282,31 @@ void Actor::ActUntilFail() {
     act_id_ += 1;
     std::function<bool(Regst*)> IsNaiveAllowedReturnToProducer = [](Regst*) { return true; };
     TryLogActEvent([&] { Act(&IsNaiveAllowedReturnToProducer); });
-    AsyncSendConsumedCtrlRegstMsgToProducer();
-    AsyncSendProducedCtrlRegstMsgToConsumer();
 
-    std::vector<int64_t> regst_desc_ids;
-    naive_consumed_rs_.ForChosenFrontRegst(
-        [this](int64_t regst_desc_id) { return IsConsumedCtrlRegstDescId(regst_desc_id) == false; },
-        [&](Regst* regst) {
-          if (IsNaiveAllowedReturnToProducer(regst) == false) { return; }
-          AsyncSendRegstMsgToProducer(regst);
-          regst_desc_ids.push_back(regst->regst_desc_id());
-        });
-    naive_consumed_rs_.PopFrontRegsts(regst_desc_ids);
+    AsyncSendCustomizedProducedRegstMsgToConsumer();
+    AsyncSendNaiveProducedRegstMsgToConsumer();
+
+    AsyncSendCustomizedConsumedRegstMsgToProducer();
+    AsyncSendNaiveConsumedRegstMsgToProducer();
   }
+}
+
+void Actor::AsyncSendNaiveProducedRegstMsgToConsumer() {
+  VirtualAsyncSendNaiveProducedRegstMsgToConsumer();
+  AsyncSendProducedCtrlRegstMsgToConsumer();
+}
+
+void Actor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
+  HandleProducedNaiveDataRegstToConsumer();
+}
+
+void Actor::AsyncSendNaiveConsumedRegstMsgToProducer() {
+  VirtualAsyncSendNaiveConsumedRegstMsgToProducer();
+  AsyncSendConsumedCtrlRegstMsgToProducer();
+}
+
+void Actor::VirtualAsyncSendNaiveConsumedRegstMsgToProducer() {
+  HandleConsumedNaiveDataRegstToProducer([](Regst* regst) { return true; });
 }
 
 bool Actor::IsReadReady() { return naive_consumed_rs_.IsCurSlotReady() && IsCustomizedReadReady(); }
@@ -323,8 +337,8 @@ void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx) {
   });
 }
 
-void Actor::AsyncSendNaiveProducedRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProcess,
-                                                     std::function<bool(int64_t)> IsAllowedActor) {
+void Actor::HandleProducedNaiveDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess,
+                                                   std::function<bool(int64_t)> IsAllowedActor) {
   std::vector<int64_t> regst_desc_ids;
   auto HandleRegstToConsumer = [&](Regst* regst, std::function<bool(Regst*)> RegstPreProcess,
                                    std::function<bool(int64_t)> IsAllowedActor) {
@@ -348,21 +362,31 @@ void Actor::AsyncSendNaiveProducedRegstMsgToConsumer(std::function<bool(Regst*)>
       [this](int64_t regst_desc_id) { return IsProducedCtrlRegstDescId(regst_desc_id) == false; },
       [&](Regst* regst) { HandleRegstToConsumer(regst, RegstPreProcess, IsAllowedActor); });
 
-  for (int64_t regst_desc_id : regst_desc_ids) {
-    CHECK_EQ(0, naive_produced_rs_.TryPopFrontRegst(regst_desc_id));
-  }
+  naive_produced_rs_.PopFrontRegsts(regst_desc_ids);
 }
 
-void Actor::AsyncSendNaiveProducedRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProcess) {
-  AsyncSendNaiveProducedRegstMsgToConsumer(RegstPreProcess, [](int64_t) { return true; });
+void Actor::HandleProducedNaiveDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess) {
+  HandleProducedNaiveDataRegstToConsumer(RegstPreProcess, [](int64_t) { return true; });
 }
 
-void Actor::AsyncSendNaiveProducedRegstMsgToConsumer(std::function<bool(int64_t)> IsAllowedActor) {
-  AsyncSendNaiveProducedRegstMsgToConsumer([](Regst*) { return true; }, IsAllowedActor);
+void Actor::HandleProducedNaiveDataRegstToConsumer(std::function<bool(int64_t)> IsAllowedActor) {
+  HandleProducedNaiveDataRegstToConsumer([](Regst*) { return true; }, IsAllowedActor);
 }
 
-void Actor::AsyncSendNaiveProducedRegstMsgToConsumer() {
-  AsyncSendNaiveProducedRegstMsgToConsumer([](Regst*) { return true; });
+void Actor::HandleProducedNaiveDataRegstToConsumer() {
+  HandleProducedNaiveDataRegstToConsumer([](Regst*) { return true; });
+}
+
+void Actor::HandleConsumedNaiveDataRegstToProducer(std::function<bool(Regst*)> IsAllowedRegst) {
+  std::vector<int64_t> regst_desc_ids;
+  naive_consumed_rs_.ForEachFrontRegst([&](Regst* regst) {
+    if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) {
+      if (IsAllowedRegst(regst) == false) { return; }
+      AsyncSendRegstMsgToProducer(regst);
+      regst_desc_ids.push_back(regst->regst_desc_id());
+    }
+  });
+  naive_consumed_rs_.PopFrontRegsts(regst_desc_ids);
 }
 
 void Actor::AsyncSendEORDMsgForAllProducedRegstDesc() {

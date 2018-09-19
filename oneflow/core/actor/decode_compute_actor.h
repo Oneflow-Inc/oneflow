@@ -15,6 +15,8 @@ class DecodeCompActor final : public CompActor {
  private:
   void VirtualCompActorInit(const TaskProto&) override;
   void Act(std::function<bool(Regst*)>* IsNaiveAllowedReturnToProducer) override;
+  void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
+  void VirtualAsyncSendNaiveConsumedRegstMsgToProducer() override;
 
   int32_t piece_id_;
   DecodeStatus decode_status_;

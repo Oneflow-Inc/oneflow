@@ -16,6 +16,7 @@ class CopyHdActor final : public Actor {
  private:
   void VirtualActorInit(const TaskProto&) override;
   void Act() override;
+  void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
 };
 
 #endif

@@ -23,6 +23,8 @@ class NormalBackwardCompActor final : public CompActor {
   std::pair<bool, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName() override {
     return {true, {"activation", "data_tmp", "out", "out_diff", "in"}};
   }
+  void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
+  void AsyncSendCustomizedConsumedRegstMsgToProducer() override;
 
   void AsyncReturnModelRegstUntilModelVersionIdEqual(int64_t model_version_id);
   void AsyncReturnModelRegstUntilLastPieceIdGreaterThan(int64_t piece_id);
