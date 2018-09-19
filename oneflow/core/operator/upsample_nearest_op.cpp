@@ -22,7 +22,6 @@ void UpsampleNearestOp::VirtualGenKernelConf(
                                    op_conf().upsample_nearest_conf().new_h(), align_corners));
   conf->set_scale_w(GetResizeScale(in_blob_desc->shape().At(3),
                                    op_conf().upsample_nearest_conf().new_w(), align_corners));
-  conf->set_align_corners(align_corners);
 }
 
 void UpsampleNearestOp::InferBlobDescs(

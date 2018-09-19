@@ -7,12 +7,12 @@ namespace oneflow {
 
 namespace {
 
-template<typename T, bool align_corners>
+template<typename T>
 __global__ void UpsampleNearestForward(const int64_t nthreads, const T* in_dptr,
                                        const int64_t height, const int64_t width,
                                        const int64_t channel_num, const int64_t new_height,
                                        const int64_t new_width, const float scale_h,
-                                       const float scale_w, T* out_dptr) {
+                                       const float scale_w, const bool align_corners, T* out_dptr) {
   const int64_t new_area = new_height * new_width;
   const int64_t channel_area = channel_num * height * width;
   const int64_t channel_new_area = channel_num * new_height * new_width;
@@ -31,12 +31,13 @@ __global__ void UpsampleNearestForward(const int64_t nthreads, const T* in_dptr,
   }
 }
 
-template<typename T, bool align_corners>
+template<typename T>
 __global__ void UpsampleNearestBackward(const int64_t nthreads, const T* out_diff_dptr,
                                         const int64_t height, const int64_t width,
                                         const int64_t channel_num, const int64_t new_height,
                                         const int64_t new_width, const float scale_h,
-                                        const float scale_w, T* in_diff_dptr) {
+                                        const float scale_w, const bool align_corners,
+                                        T* in_diff_dptr) {
   const int64_t area = height * width;
   const int64_t new_area = new_height * new_width;
   const int64_t channel_area = channel_num * height * width;
