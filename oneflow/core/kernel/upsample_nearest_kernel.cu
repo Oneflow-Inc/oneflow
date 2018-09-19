@@ -9,8 +9,8 @@ namespace {
 
 template<typename T>
 __global__ void UpsampleNearestForward(const int64_t nthreads, const T* in_dptr,
-                                       const int64_t height, const int64_t width,
-                                       const int64_t channel_num, const int64_t new_height,
+                                       const int64_t channel_num, const int64_t height,
+                                       const int64_t width, const int64_t new_height,
                                        const int64_t new_width, const float scale_h,
                                        const float scale_w, const bool align_corners, T* out_dptr) {
   const int64_t new_area = new_height * new_width;
@@ -33,8 +33,8 @@ __global__ void UpsampleNearestForward(const int64_t nthreads, const T* in_dptr,
 
 template<typename T>
 __global__ void UpsampleNearestBackward(const int64_t nthreads, const T* out_diff_dptr,
-                                        const int64_t height, const int64_t width,
-                                        const int64_t channel_num, const int64_t new_height,
+                                        const int64_t channel_num, const int64_t height,
+                                        const int64_t width, const int64_t new_height,
                                         const int64_t new_width, const float scale_h,
                                         const float scale_w, const bool align_corners,
                                         T* in_diff_dptr) {
@@ -62,11 +62,30 @@ __global__ void UpsampleNearestBackward(const int64_t nthreads, const T* out_dif
 
 template<typename T>
 struct UpsampleNearestUtil<DeviceType::kGPU, T> {
-  static void Forward(const KernelCtx& ctx, const UpsampleNearestOpConf& conf, const Blob* in_blob,
-                      Blob* out_blob) {}
+  static void Forward(const KernelCtx& ctx, const UpsampleNearestOpConf& conf,
+                      const UpsampleNearestKernelConf& kernel_conf, const Blob* in_blob,
+                      Blob* out_blob) {
+    const int64_t elem_cnt = out_blob->shape().elem_cnt();
+
+    UpsampleNearestForward<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                                ctx.device_ctx->cuda_stream()>>>(
+        elem_cnt, in_blob->dptr<T>(), in_blob->shape().At(1), in_blob->shape().At(2),
+        in_blob->shape().At(3), out_blob->shape().At(2), out_blob->shape().At(3),
+        kernel_conf.scale_h(), kernel_conf.scale_w(), conf.align_corners(),
+        out_blob->mut_dptr<T>());
+  }
 
   static void Backward(const KernelCtx& ctx, const UpsampleNearestOpConf& conf,
-                       const Blob* out_diff_blob, Blob* in_diff_blob) {}
+                       const UpsampleNearestKernelConf& kernel_conf, const Blob* out_diff_blob,
+                       Blob* in_diff_blob) {
+    const int64_t elem_cnt = out_diff_blob->shape().elem_cnt();
+    UpsampleNearestBackward<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                                 ctx.device_ctx->cuda_stream()>>>(
+        elem_cnt, out_diff_blob->dptr<T>(), in_diff_blob->shape().At(1),
+        in_diff_blob->shape().At(2), in_diff_blob->shape().At(3), out_diff_blob->shape().At(2),
+        out_diff_blob->shape().At(3), kernel_conf.scale_h(), kernel_conf.scale_w(),
+        conf.align_corners(), in_diff_blob->mut_dptr<T>());
+  }
 };
 
 #define INSTANTIATE_UPSAMPLE_NEAREST_KERNEL_UTIL(type_cpp, type_proto) \

@@ -21,10 +21,12 @@ class UpsampleNearest final : public KernelIf<device_type> {
 
 template<DeviceType device_type, typename T>
 struct UpsampleNearestUtil {
-  static void Forward(const KernelCtx& ctx, const UpsampleNearestOpConf& conf, const Blob* in_blob,
+  static void Forward(const KernelCtx& ctx, const UpsampleNearestOpConf& conf,
+                      const UpsampleNearestKernelConf& kernel_conf, const Blob* in_blob,
                       Blob* out_blob);
   static void Backward(const KernelCtx& ctx, const UpsampleNearestOpConf& conf,
-                       const Blob* out_diff_blob, Blob* in_diff_blob);
+                       const UpsampleNearestKernelConf& kernel_conf, const Blob* out_diff_blob,
+                       Blob* in_diff_blob);
 };
 
 }  // namespace oneflow
