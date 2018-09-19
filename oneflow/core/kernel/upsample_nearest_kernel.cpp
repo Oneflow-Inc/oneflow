@@ -7,6 +7,7 @@ void UpsampleNearest<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
+  auto kernel_conf = this->kernel_conf();
   UpsampleNearestUtil<device_type, T>::Forward(ctx, this->op_conf().upsample_nearest_conf(),
                                                in_blob, out_blob);
 }

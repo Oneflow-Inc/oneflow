@@ -811,8 +811,10 @@ message MultiplyOpConf {
 message UpsampleNearestOpConf {
   required string in = 1;
   required string out = 2;
-  required int32 scale = 3 [default = 2];
-  required string data_format = 4 [default = "channels_first"];
+  required string data_format = 3 [default = "channels_first"];
+  required int64 new_h = 4;
+  required int64 new_w = 5;
+  optional bool align_corners = 6 [default = false];
 }
 
 enum Norm {

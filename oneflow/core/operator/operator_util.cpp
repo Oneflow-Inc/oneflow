@@ -126,4 +126,10 @@ void Get3DOutputSize(const std::vector<int64_t>& in, const std::vector<int32_t>&
   }
 }
 
+float GetResizeScale(const int64_t input_size, const int64_t output_size,
+                     const bool align_corners) {
+  return (align_corners && output_size > 1) ? (input_size - 1) / static_cast<float>(output_size - 1)
+                                            : input_size / static_cast<float>(output_size);
+}
+
 }  // namespace oneflow

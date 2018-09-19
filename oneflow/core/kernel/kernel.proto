@@ -120,7 +120,7 @@ message ReduceSplitKernelConf {
   repeated int64 data_offset = 1;
 }
 
-message AccuracyKernelConf { 
+message AccuracyKernelConf {
   required DataType prediction_type = 1;
   required DataType label_type = 2;
 }
@@ -149,6 +149,12 @@ message OpAttribute {
 
 message HingeLossKernelConf {
   required LossKernelConf loss_conf = 1;
+}
+
+message UpsampleNearestKernelConf {
+  required int32 scale_h = 1;
+  required int32 scale_w = 2;
+  required bool align_corners = 3;
 }
 
 message KernelConf {
@@ -182,5 +188,6 @@ message KernelConf {
     AccuracyKernelConf accuracy_conf = 401;
     SmoothL1LossKernelConf smooth_l1_loss_conf = 402;
     SigmoidCrossEntropyLossKernelConf sigmoid_cross_entropy_loss_conf = 403;
+    UpsampleNearestKernelConf upsample_nearest_conf = 404;
   }
 }
