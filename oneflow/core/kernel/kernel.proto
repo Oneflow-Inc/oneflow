@@ -152,8 +152,8 @@ message HingeLossKernelConf {
 }
 
 message UpsampleNearestKernelConf {
-  required int32 scale_h = 1;
-  required int32 scale_w = 2;
+  required float scale_h = 1;
+  required float scale_w = 2;
 }
 
 message KernelConf {
