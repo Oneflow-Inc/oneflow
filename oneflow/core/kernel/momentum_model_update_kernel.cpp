@@ -31,7 +31,6 @@ void MomentumMdUpdateKernel<device_type, T>::UpdateModel(
   Blob* model_blob = BnInOp2Blob("model");
   Blob* momentum_blob = BnInOp2Blob("momentum");
   float beta = this->op_conf().normal_mdupdt_conf().user_conf().momentum_conf().beta();
-  if (next_model_vid == 1) { beta = 0.0f; }
 
   MomentumMdUpdateKernelUtil<device_type, T>::UpdateModel(
       ctx, model_blob->shape().elem_cnt(), batch_size, static_cast<T>(beta), learning_rate, l1, l2,
