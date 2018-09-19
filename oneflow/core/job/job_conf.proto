@@ -59,7 +59,7 @@ message OtherConf {
   optional uint64 persistence_buf_mbyte = 106 [default = 64];
   optional uint64 reserved_host_mem_mbyte = 107 [default = 500];
   optional uint64 reserved_device_mem_mbyte = 108 [default = 500];
-  optional bool save_downloaded_file_to_local_fs = 109 [default = true];
+  optional bool save_downloaded_file_to_local_fs = 109 [default = false];
   optional uint64 rdma_mem_block_mbyte = 110 [default = 8];
   optional uint64 rdma_recv_msg_buf_mbyte = 111 [default = 6];
 
