@@ -58,7 +58,7 @@ class Actor {
   const std::vector<ExecKernel>& exec_kernel_vec() { return exec_kernel_vec_; }
   virtual void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const {}
   virtual void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*) const;
-  void ForEachCurNaiveReadableRegst(std::function<void(const Regst*)>) const;
+  void ForEachCurNaiveReadableDataRegst(std::function<void(const Regst*)>) const;
 
   int64_t act_id() const { return act_id_; }
   int64_t ReadingCnt4ProducedRegst(Regst* regst) const;
@@ -101,12 +101,12 @@ class Actor {
   void AsyncLaunchKernel(const KernelCtx&, std::function<Regst*(int64_t)> Regst4RegstDescId);
   void AsyncLaunchKernel(const KernelCtx&);
 
-  void AsyncSendNaiveProducedRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProcess,
-                                                std::function<bool(int64_t)> IsAllowedActor);
-  void AsyncSendNaiveProducedRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProcess);
-  void AsyncSendNaiveProducedRegstMsgToConsumer(std::function<bool(int64_t)> IsAllowedActor);
-  void AsyncSendNaiveProducedRegstMsgToConsumer();
-  virtual void AsyncSendCustomizedProducedRegstMsgToConsumer() { UNIMPLEMENTED(); }
+  void HandleProducedDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess,
+                                         std::function<bool(int64_t)> IsAllowedActor);
+  void HandleProducedDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess);
+  void HandleProducedDataRegstToConsumer(std::function<bool(int64_t)> IsAllowedActor);
+  void HandleProducedDataRegstToConsumer();
+  void HandleConsumedDataRegstToProducer(std::function<bool(Regst*)> IsAllowedRegst);
 
   void AsyncSendMsg(const ActorMsg&);
   void AsyncSendRegstMsgToProducer(Regst*);
@@ -126,10 +126,10 @@ class Actor {
   Regst* GetSoleProducedRegst4RegstDescId(int64_t regst_desc_id);
 
   bool IsConsumedCtrlRegstDescId(int64_t regst_desc_id) {
-    consumed_ctrl_regst_desc_ids_.find(regst_desc_id) != consumed_ctrl_regst_desc_ids_.end();
+    return consumed_ctrl_regst_desc_ids_.find(regst_desc_id) != consumed_ctrl_regst_desc_ids_.end();
   }
   bool IsProducedCtrlRegstDescId(int64_t regst_desc_id) {
-    produced_ctrl_regst_desc_ids_.find(regst_desc_id) != produced_ctrl_regst_desc_ids_.end();
+    return produced_ctrl_regst_desc_ids_.find(regst_desc_id) != produced_ctrl_regst_desc_ids_.end();
   }
 
  private:
@@ -138,6 +138,15 @@ class Actor {
   virtual bool IsCustomizedReadReady() { return true; }
   virtual bool IsCustomizedWriteReady() { return true; }
   virtual bool IsCustomizedReadAlwaysUnReadyFromNow() { return false; }
+
+  // Send Msgs
+  void AsyncSendNaiveProducedRegstMsgToConsumer();
+  virtual void VirtualAsyncSendNaiveProducedRegstMsgToConsumer();
+  virtual void AsyncSendCustomizedProducedRegstMsgToConsumer() {}
+
+  void AsyncSendNaiveConsumedRegstMsgToProducer();
+  virtual void VirtualAsyncSendNaiveConsumedRegstMsgToProducer();
+  virtual void AsyncSendCustomizedConsumedRegstMsgToProducer() {}
 
   int TryUpdtStateAsProducedRegst(Regst* regst);
   virtual void UpdtStateAsCustomizedProducedRegst(Regst* regst) { UNIMPLEMENTED(); }

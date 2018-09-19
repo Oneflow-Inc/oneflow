@@ -21,7 +21,10 @@ void RecordLoadActor::Act() {
   AsyncLaunchKernel(kernel_ctx);
 
   if (record_load_status_.is_eof) { is_eof_ = true; }
-  if (record_load_status_.record_num > 0) { AsyncSendNaiveProducedRegstMsgToConsumer(); }
+}
+
+void RecordLoadActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
+  if (record_load_status_.record_num > 0) { HandleProducedDataRegstToConsumer(); }
 }
 
 bool RecordLoadActor::IsCustomizedReadReady() {

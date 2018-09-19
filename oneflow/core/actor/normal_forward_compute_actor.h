@@ -24,9 +24,12 @@ class NormalForwardCompActor final : public CompActor {
   std::pair<bool, HashSet<std::string>> GetNaiveOrCustomizedProducedRegstDescName() override {
     return {false, {"const_buf"}};
   }
+  void AsyncSendCustomizedProducedRegstMsgToConsumer() override {}
+  void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
+  void AsyncSendCustomizedConsumedRegstMsgToProducer() override;
+
   bool IsCustomizedWriteReady() override;
   void UpdtStateAsCustomizedProducedRegst(Regst* regst) override;
-  void AsyncSendCustomizedProducedRegstMsgToConsumer() override;
   bool CheckOutputActId(int64_t regst_desc_id) const override;
 
   int HandlerInitModelAndConstBuf(const ActorMsg&);
@@ -39,14 +42,16 @@ class NormalForwardCompActor final : public CompActor {
   void SendMsgToForwardModelSaveActor(int64_t batch_id);
   void SendConstBufInitMsgToBwActor();
 
+  int64_t random_seed_;
+  int64_t cur_piece_id_;
+
+  int64_t forward_model_regst_desc_id_;
+  Regst* pre_forward_model_regst_;
+  // customized consumed
   int64_t model_regst_desc_id_;
   int64_t const_model_regst_desc_id_;
-  int64_t forward_model_regst_desc_id_;
-  int64_t random_seed_;
   Regst* model_regst_;
   Regst* const_model_regst_;
-  Regst* pre_forward_model_regst_;
-
   // customized produced
   int64_t const_buf_regst_desc_id_;
   Regst* const_buf_regst_;

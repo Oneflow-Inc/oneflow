@@ -50,7 +50,6 @@ void NormalBackwardCompActor::NormalProcessCustomizedReadableRegstMsg(const Acto
 }
 
 void NormalBackwardCompActor::Act() {
-  int64_t piece_id = GetNaiveCurReadable(any_out_diff_regst_desc_id_)->piece_id();
   AsyncLaunchKernel(GenDefaultKernelCtx(), [this](int64_t regst_desc_id) -> Regst* {
     if (regst_desc_id == model_regst_desc_id_) {
       return model_regst_queue_.front();
@@ -62,10 +61,18 @@ void NormalBackwardCompActor::Act() {
       return nullptr;
     }
   });
-  AsyncSendNaiveProducedRegstMsgToConsumer([&](Regst* regst) {
+}
+
+void NormalBackwardCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
+  int64_t piece_id = GetNaiveCurReadable(any_out_diff_regst_desc_id_)->piece_id();
+  HandleProducedDataRegstToConsumer([&](Regst* regst) {
     regst->set_piece_id(piece_id);
     return true;
   });
+}
+
+void NormalBackwardCompActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
+  int64_t piece_id = GetNaiveCurReadable(any_out_diff_regst_desc_id_)->piece_id();
   AsyncReturnModelRegstUntilLastPieceIdGreaterThan(piece_id);
 }
 

@@ -18,6 +18,7 @@ class RecordLoadActor final : public CompActor {
   std::pair<bool, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName() override {
     return {true, {}};
   }
+  void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
   bool IsCustomizedReadReady() override;
   bool IsCustomizedReadAlwaysUnReadyFromNow() override { return !IsCustomizedReadReady(); }
 

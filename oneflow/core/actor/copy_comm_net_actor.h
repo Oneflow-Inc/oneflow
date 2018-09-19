@@ -22,17 +22,20 @@ class CopyCommNetActor final : public Actor {
 
   void VirtualActorInit(const TaskProto&) override;
   void InitDeviceCtx(const ThreadCtx&) override;
-  void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const override;
   void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*) const override;
-  void NormalProcessCustomizedEordMsg(const ActorMsg&) override { is_in_eord_ = true; }
-  bool NormalTryProcessReadableMsgFromOtherMachine(const ActorMsg&) override;
-  void Act() override;
-  bool IsCustomizedReadReady() override;
-  bool IsCustomizedReadAlwaysUnReadyFromNow() override;
-  void AsyncReturnAllCustomizedReadableRegst() override;
+
   std::pair<bool, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName() override {
     return {true, {}};
   }
+  void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const override;
+  void NormalProcessCustomizedEordMsg(const ActorMsg&) override { is_in_eord_ = true; }
+  bool NormalTryProcessReadableMsgFromOtherMachine(const ActorMsg&) override;
+  void Act() override;
+  void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
+  void AsyncSendCustomizedConsumedRegstMsgToProducer() override;
+  bool IsCustomizedReadReady() override;
+  bool IsCustomizedReadAlwaysUnReadyFromNow() override;
+  void AsyncReturnAllCustomizedReadableRegst() override;
 
   bool is_in_eord_;
   HashMap<int64_t, RegstCtx> piece_id2regst_ctx;

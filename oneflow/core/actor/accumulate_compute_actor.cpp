@@ -42,8 +42,11 @@ void AccumulateCompActor::Act() {
     AsyncLaunchKernel(kernel_ctx);
   }
   if (IsLastRegstInPieceWithOrder(in_regst, order_)) { acc_cnt_ += 1; }
+}
+
+void AccumulateCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   if (acc_cnt_ == max_acc_cnt_) {
-    AsyncSendNaiveProducedRegstMsgToConsumer([&](Regst* regst) {
+    HandleProducedDataRegstToConsumer([&](Regst* regst) {
       regst->set_piece_id(next_piece_id_);
       return true;
     });

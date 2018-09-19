@@ -17,9 +17,11 @@ class NormalMdUpdtCompActor final : public CompActor {
   std::pair<bool, HashSet<std::string>> GetNaiveOrCustomizedProducedRegstDescName() override {
     return {false, {"const_model"}};
   }
+  void AsyncSendCustomizedProducedRegstMsgToConsumer() override {}
+  void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
   bool IsCustomizedWriteReady() override;
   void UpdtStateAsCustomizedProducedRegst(Regst* regst) override;
-  void AsyncSendCustomizedProducedRegstMsgToConsumer() override;
+  void SendConstModelRegstToConsumer();
   bool CheckOutputActId(int64_t regst_desc_id) const override;
 
   void InitRegstBySendToFw(Regst* regst);

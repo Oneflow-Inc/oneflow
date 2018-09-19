@@ -17,6 +17,7 @@ class AccumulateCompActor : public CompActor {
 
  private:
   void Act() override;
+  void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
 
   ColIdOrder order_;
   std::function<void(DeviceCtx*, void* dst, const void* src, size_t)> cpy_func_;
