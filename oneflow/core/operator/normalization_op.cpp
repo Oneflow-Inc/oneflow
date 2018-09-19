@@ -83,7 +83,7 @@ void NormalizationOp::InferParamBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const NormalizationOpConf& conf, int64_t norm_part_num, DataType in_data_type,
     bool use_cudnn) const {
-  BlobDesc blob_desc(Shape({norm_part_num}), in_data_type, false, false, false, 1);
+  BlobDesc blob_desc(Shape({norm_part_num}), in_data_type, false, false, true, 1);
   std::list<std::string> blob_names = {"moving_mean", "moving_variance"};
   std::list<std::string> bns_needless_in_predict_or_cudnn = {"new_mean", "new_variance"};
   std::list<std::string> bns_need_in_cudnn = {"cache_mean_for_cudnn_bw",
