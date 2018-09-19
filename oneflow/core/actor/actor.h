@@ -101,12 +101,12 @@ class Actor {
   void AsyncLaunchKernel(const KernelCtx&, std::function<Regst*(int64_t)> Regst4RegstDescId);
   void AsyncLaunchKernel(const KernelCtx&);
 
-  void HandleProducedDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess,
-                                         std::function<bool(int64_t)> IsAllowedActor);
-  void HandleProducedDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess);
-  void HandleProducedDataRegstToConsumer(std::function<bool(int64_t)> IsAllowedActor);
-  void HandleProducedDataRegstToConsumer();
-  void HandleConsumedDataRegstToProducer(std::function<bool(Regst*)> IsAllowedRegst);
+  void HandleProducedNaiveDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess,
+                                              std::function<bool(int64_t)> IsAllowedActor);
+  void HandleProducedNaiveDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess);
+  void HandleProducedNaiveDataRegstToConsumer(std::function<bool(int64_t)> IsAllowedActor);
+  void HandleProducedNaiveDataRegstToConsumer();
+  void HandleConsumedNaiveDataRegstToProducer(std::function<bool(Regst*)> IsAllowedRegst);
 
   void AsyncSendMsg(const ActorMsg&);
   void AsyncSendRegstMsgToProducer(Regst*);

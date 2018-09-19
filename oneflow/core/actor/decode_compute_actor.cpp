@@ -18,7 +18,7 @@ void DecodeCompActor::Act(std::function<bool(Regst*)>* IsNaiveAllowedReturnToPro
 
 void DecodeCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   Regst* in_regst = GetNaiveCurReadable("record");
-  HandleProducedDataRegstToConsumer([this, in_regst](Regst* regst) {
+  HandleProducedNaiveDataRegstToConsumer([this, in_regst](Regst* regst) {
     regst->set_piece_id(in_regst->piece_id());
     regst->set_col_id(decode_status_.cur_col_id_);
     regst->set_max_col_id(decode_status_.max_col_id_);
@@ -33,7 +33,8 @@ void DecodeCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
 }
 
 void DecodeCompActor::VirtualAsyncSendNaiveConsumedRegstMsgToProducer() {
-  HandleConsumedDataRegstToProducer([this](Regst*) { return decode_status_.cur_col_id_ == 0; });
+  HandleConsumedNaiveDataRegstToProducer(
+      [this](Regst*) { return decode_status_.cur_col_id_ == 0; });
 }
 
 REGISTER_ACTOR(kDecode, DecodeCompActor);

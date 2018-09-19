@@ -64,7 +64,7 @@ void NormalMdUpdtCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
 
   bool need_save_model = NeedModelSave(next_model_version_id_ - 1);
   bool need_send_model = next_model_version_id_ < Global<JobDesc>::Get()->TotalBatchNum();
-  HandleProducedDataRegstToConsumer(
+  HandleProducedNaiveDataRegstToConsumer(
       [cur_model_regst](Regst* regst) { return regst == cur_model_regst; },
       [&](int64_t actor_id) {
         return (need_save_model && actor_id == related_save_model_actor_id_)
@@ -100,7 +100,7 @@ int NormalMdUpdtCompActor::HandlerInitModelAndConstModel(const ActorMsg& msg) {
 int NormalMdUpdtCompActor::HandlerSendInitialModel(const ActorMsg& actor_msg) {
   CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kSendInitialModel);
   pre_model_regst_ = GetNaiveCurWriteable(model_regst_desc_id_);
-  HandleProducedDataRegstToConsumer([&](Regst* regst) {
+  HandleProducedNaiveDataRegstToConsumer([&](Regst* regst) {
     regst->set_model_version_id(next_model_version_id_);
     return true;
   });

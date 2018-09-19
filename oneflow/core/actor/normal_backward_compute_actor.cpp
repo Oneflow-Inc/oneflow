@@ -65,7 +65,7 @@ void NormalBackwardCompActor::Act() {
 
 void NormalBackwardCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   int64_t piece_id = GetNaiveCurReadable(any_out_diff_regst_desc_id_)->piece_id();
-  HandleProducedDataRegstToConsumer([&](Regst* regst) {
+  HandleProducedNaiveDataRegstToConsumer([&](Regst* regst) {
     regst->set_piece_id(piece_id);
     return true;
   });

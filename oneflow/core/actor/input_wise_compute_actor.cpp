@@ -78,7 +78,7 @@ void InputWiseCompActor::Act() {
 
 void InputWiseCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   if (processed_regst_desc_id_cnt_ == regst_desc_id2is_processed_.size()) {
-    HandleProducedDataRegstToConsumer();
+    HandleProducedNaiveDataRegstToConsumer();
     for (auto& pair : regst_desc_id2is_processed_) {
       CHECK(pair.second);
       pair.second = false;

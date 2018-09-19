@@ -19,7 +19,7 @@ void BoxingActor::Act() { AsyncLaunchKernel(GenDefaultKernelCtx()); }
 
 void BoxingActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   int64_t piece_id = GetPieceId4NaiveCurReadableDataRegst();
-  HandleProducedDataRegstToConsumer([&](Regst* regst) {
+  HandleProducedNaiveDataRegstToConsumer([&](Regst* regst) {
     regst->set_piece_id(piece_id);
     return regst->col_id() <= regst->max_col_id();
   });
@@ -41,7 +41,7 @@ void BoxingActor::VirtualAsyncSendNaiveConsumedRegstMsgToProducer() {
     }
     return true;
   };
-  HandleConsumedDataRegstToProducer(IsNaiveAllowedReturnToProducer);
+  HandleConsumedNaiveDataRegstToProducer(IsNaiveAllowedReturnToProducer);
 }
 
 void BoxingActor::TrySetColIdOrder(const Regst* regst) {

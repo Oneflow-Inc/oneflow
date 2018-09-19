@@ -46,7 +46,7 @@ void AccumulateCompActor::Act() {
 
 void AccumulateCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   if (acc_cnt_ == max_acc_cnt_) {
-    HandleProducedDataRegstToConsumer([&](Regst* regst) {
+    HandleProducedNaiveDataRegstToConsumer([&](Regst* regst) {
       regst->set_piece_id(next_piece_id_);
       return true;
     });

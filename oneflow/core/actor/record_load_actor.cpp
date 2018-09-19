@@ -24,7 +24,7 @@ void RecordLoadActor::Act() {
 }
 
 void RecordLoadActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  if (record_load_status_.record_num > 0) { HandleProducedDataRegstToConsumer(); }
+  if (record_load_status_.record_num > 0) { HandleProducedNaiveDataRegstToConsumer(); }
 }
 
 bool RecordLoadActor::IsCustomizedReadReady() {

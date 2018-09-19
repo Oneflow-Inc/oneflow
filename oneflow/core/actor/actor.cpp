@@ -288,20 +288,6 @@ void Actor::ActUntilFail() {
 
     AsyncSendCustomizedConsumedRegstMsgToProducer();
     AsyncSendNaiveConsumedRegstMsgToProducer();
-
-    // AsyncSendConsumedCtrlRegstMsgToProducer();
-    // AsyncSendProducedCtrlRegstMsgToConsumer();
-
-    // std::vector<int64_t> regst_desc_ids;
-    // naive_consumed_rs_.ForChosenFrontRegst(
-    //     [this](int64_t regst_desc_id) { return IsConsumedCtrlRegstDescId(regst_desc_id) == false;
-    //     },
-    //     [&](Regst* regst) {
-    //       if (IsNaiveAllowedReturnToProducer(regst) == false) { return; }
-    //       AsyncSendRegstMsgToProducer(regst);
-    //       regst_desc_ids.push_back(regst->regst_desc_id());
-    //     });
-    // naive_consumed_rs_.PopFrontRegsts(regst_desc_ids);
   }
 }
 
@@ -311,7 +297,7 @@ void Actor::AsyncSendNaiveProducedRegstMsgToConsumer() {
 }
 
 void Actor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  HandleProducedDataRegstToConsumer();
+  HandleProducedNaiveDataRegstToConsumer();
 }
 
 void Actor::AsyncSendNaiveConsumedRegstMsgToProducer() {
@@ -320,7 +306,7 @@ void Actor::AsyncSendNaiveConsumedRegstMsgToProducer() {
 }
 
 void Actor::VirtualAsyncSendNaiveConsumedRegstMsgToProducer() {
-  HandleConsumedDataRegstToProducer([](Regst* regst) { return true; });
+  HandleConsumedNaiveDataRegstToProducer([](Regst* regst) { return true; });
 }
 
 bool Actor::IsReadReady() { return naive_consumed_rs_.IsCurSlotReady() && IsCustomizedReadReady(); }
@@ -351,8 +337,8 @@ void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx) {
   });
 }
 
-void Actor::HandleProducedDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess,
-                                              std::function<bool(int64_t)> IsAllowedActor) {
+void Actor::HandleProducedNaiveDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess,
+                                                   std::function<bool(int64_t)> IsAllowedActor) {
   std::vector<int64_t> regst_desc_ids;
   auto HandleRegstToConsumer = [&](Regst* regst, std::function<bool(Regst*)> RegstPreProcess,
                                    std::function<bool(int64_t)> IsAllowedActor) {
@@ -379,19 +365,19 @@ void Actor::HandleProducedDataRegstToConsumer(std::function<bool(Regst*)> RegstP
   naive_produced_rs_.PopFrontRegsts(regst_desc_ids);
 }
 
-void Actor::HandleProducedDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess) {
-  HandleProducedDataRegstToConsumer(RegstPreProcess, [](int64_t) { return true; });
+void Actor::HandleProducedNaiveDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess) {
+  HandleProducedNaiveDataRegstToConsumer(RegstPreProcess, [](int64_t) { return true; });
 }
 
-void Actor::HandleProducedDataRegstToConsumer(std::function<bool(int64_t)> IsAllowedActor) {
-  HandleProducedDataRegstToConsumer([](Regst*) { return true; }, IsAllowedActor);
+void Actor::HandleProducedNaiveDataRegstToConsumer(std::function<bool(int64_t)> IsAllowedActor) {
+  HandleProducedNaiveDataRegstToConsumer([](Regst*) { return true; }, IsAllowedActor);
 }
 
-void Actor::HandleProducedDataRegstToConsumer() {
-  HandleProducedDataRegstToConsumer([](Regst*) { return true; });
+void Actor::HandleProducedNaiveDataRegstToConsumer() {
+  HandleProducedNaiveDataRegstToConsumer([](Regst*) { return true; });
 }
 
-void Actor::HandleConsumedDataRegstToProducer(std::function<bool(Regst*)> IsAllowedRegst) {
+void Actor::HandleConsumedNaiveDataRegstToProducer(std::function<bool(Regst*)> IsAllowedRegst) {
   std::vector<int64_t> regst_desc_ids;
   naive_consumed_rs_.ForEachFrontRegst([&](Regst* regst) {
     if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) {
