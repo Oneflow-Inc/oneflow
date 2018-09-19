@@ -57,7 +57,7 @@ void LossKernel<device_type, PredType, LabelType>::ForwardInstanceNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // xfjiang: test instance num
   Blob* label_blob = BnInOp2Blob("label");
-  *(label_blob->mut_instance_num()) = 100;
+  *(label_blob->mut_instance_num()) = 600;
   BnInOp2Blob(GenDiffBn("prediction"))->CopyInstanceNumFrom(ctx.device_ctx, label_blob);
   BnInOp2Blob("loss")->CopyInstanceNumFrom(ctx.device_ctx, label_blob);
 }
