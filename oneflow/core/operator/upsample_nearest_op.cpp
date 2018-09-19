@@ -15,13 +15,11 @@ const PbMessage& UpsampleNearestOp::GetCustomizedConf() const {
 void UpsampleNearestOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
-  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-  UpsampleNearestKernelConf* conf = kernel_conf->mutable_upsample_nearest_conf();
-  const bool align_corners = op_conf().upsample_nearest_conf().align_corners();
-  conf->set_scale_h(GetResizeScale(in_blob_desc->shape().At(2),
-                                   op_conf().upsample_nearest_conf().new_h(), align_corners));
-  conf->set_scale_w(GetResizeScale(in_blob_desc->shape().At(3),
-                                   op_conf().upsample_nearest_conf().new_w(), align_corners));
+  ResizeNearestNeighborKernelConf* conf = kernel_conf->mutable_resize_nearest_neighbor_conf();
+  const int32_t scale = op_conf().upsample_nearest_conf().scale();
+  conf->set_scale_h(1.f / scale);
+  conf->set_scale_w(1.f / scale);
+  conf->set_align_corners(false);
 }
 
 void UpsampleNearestOp::InferBlobDescs(
@@ -34,11 +32,11 @@ void UpsampleNearestOp::InferBlobDescs(
       || in_blob_desc->shape().NumAxes() != 4) {
     LOG(FATAL) << "upsample_nearest only supports NCHW";
   }
-  CHECK_GE(op_conf().upsample_nearest_conf().new_h(), 0);
-  CHECK_GE(op_conf().upsample_nearest_conf().new_w(), 0);
+  const int32_t scale = op_conf().upsample_nearest_conf().scale();
+  CHECK_GT(scale, 1);
   out_blob_desc->mut_shape() =
       Shape({in_blob_desc->shape().At(0), in_blob_desc->shape().At(1),
-             op_conf().upsample_nearest_conf().new_h(), op_conf().upsample_nearest_conf().new_w()});
+             scale * in_blob_desc->shape().At(2), scale * in_blob_desc->shape().At(3)});
 }
 
 REGISTER_OP(OperatorConf::kUpsampleNearestConf, UpsampleNearestOp);

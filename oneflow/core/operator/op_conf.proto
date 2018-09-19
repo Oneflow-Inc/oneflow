@@ -811,6 +811,14 @@ message MultiplyOpConf {
 message UpsampleNearestOpConf {
   required string in = 1;
   required string out = 2;
+  required int32 scale = 3;
+  required string data_format = 4;
+}
+
+
+message ResizeNearestNeighborOpConf {
+  required string in = 1;
+  required string out = 2;
   required string data_format = 3;
   required int64 new_h = 4;
   required int64 new_w = 5;
@@ -908,6 +916,7 @@ message OperatorConf {
     SigmoidCrossEntropyLossOpConf sigmoid_cross_entropy_loss_conf = 1007;
     AffineChannelOpConf affine_channel_conf = 1008;
     UpsampleNearestOpConf upsample_nearest_conf = 1009;
+    ResizeNearestNeighborOpConf resize_nearest_neighbor_conf = 1010;
   }
 }
 
