@@ -7,6 +7,8 @@
 #include <sys/sysinfo.h>
 #endif
 
+DEFINE_int64(this_machine_id, -1, "");
+
 namespace oneflow {
 
 #define DEFINE_ONEFLOW_STR2INT_CAST(dst_type, cast_func) \
@@ -84,6 +86,11 @@ size_t GetAvailableCpuMemSize() {
   TODO();
 #endif
   return 0;
+}
+
+std::string LogDir() {
+  std::string v = FLAGS_log_dir + "/" + std::to_string(FLAGS_this_machine_id);
+  return v;
 }
 
 }  // namespace oneflow

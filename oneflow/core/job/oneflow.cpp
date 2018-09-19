@@ -10,6 +10,7 @@
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/runtime.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
+#include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/actor/act_event_logger.h"
 
@@ -150,10 +151,10 @@ bool HasRelayPlacement() {
   for (const PlacementGroup& p_group : placement.placement_group()) {
     const ParallelConf& p_conf = p_group.parallel_conf();
     for (const std::string& device_name : p_conf.device_name()) {
-      std::string mchn_name;
+      int64_t mchn_id;
       std::string device_tag;
       std::string device_id_str;
-      ParseDeviceNameConf(device_name, &mchn_name, &device_tag, &device_id_str);
+      ParseDeviceNameConf(device_name, &mchn_id, &device_tag, &device_id_str);
       if (device_tag == "cpu") {
         break;
       } else if (device_tag == "gpu") {
@@ -177,16 +178,16 @@ class Oneflow final {
   OF_DISALLOW_COPY_AND_MOVE(Oneflow);
   ~Oneflow() = default;
 
-  Oneflow(const std::string& job_conf_filepath, const std::string& this_mchn_name);
+  Oneflow(const std::string& job_conf_filepath, int64_t this_mchn_id);
 
  private:
   std::unique_ptr<CtrlServer> ctrl_server_;
 };
 
-Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_mchn_name) {
+Oneflow::Oneflow(const std::string& job_conf_filepath, int64_t this_mchn_id) {
   // New All Global
   Global<JobDesc>::New(job_conf_filepath);
-  Global<MachineCtx>::New(this_mchn_name);
+  Global<MachineCtx>::New(this_mchn_id);
   const MachineCtx* machine_ctx = Global<MachineCtx>::Get();
   bool DoProfile =
       machine_ctx->IsThisMachineMaster() && Global<JobDesc>::Get()->collect_act_event();
@@ -216,15 +217,15 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
     PullPlan("mem_shared_plan", &mem_shared_plan);
   }
   OF_BARRIER();
-  PrintProtoToTextFile(naive_plan, JoinPath(LogDir(), "naive_plan"));
-  PrintProtoToTextFile(mem_shared_plan, JoinPath(LogDir(), "mem_shared_plan"));
+  TeePersistentLogStream::Create("naive_plan")->Write(naive_plan);
+  TeePersistentLogStream::Create("mem_shared_plan")->Write(mem_shared_plan);
   LOG(INFO) << "push_pull_plan:" << GetCurTime() - start;
   if (HasRelayPlacement()) {
     // Experiment Runtime
     { Runtime experiment_run(mem_shared_plan, true); }
     // Improve
     if (machine_ctx->IsThisMachineMaster()) {
-      PrintProtoToTextFile(amd, JoinPath(LogDir(), "available_mem_desc"));
+      TeePersistentLogStream::Create("available_mem_desc")->Write(amd);
       CHECK_GT(amd.machine_amd_size(), 0);
       improved_plan = Improver().Improve(
           amd, naive_plan, JoinPath(LogDir(), ActEventLogger::experiment_act_event_bin_filename()));
@@ -233,7 +234,7 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
       PullPlan("improved_plan", &improved_plan);
     }
     OF_BARRIER();
-    PrintProtoToTextFile(improved_plan, JoinPath(LogDir(), "improved_plan"));
+    TeePersistentLogStream::Create("improved_plan")->Write(improved_plan);
     Global<CtrlClient>::Get()->Clear();
     OF_BARRIER();
   } else {
@@ -257,16 +258,16 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
 }  // namespace oneflow
 
 DEFINE_string(job_conf, "", "");
-DEFINE_string(this_machine_name, "", "");
 
 int main(int argc, char** argv) {
   using namespace oneflow;
   google::InitGoogleLogging(argv[0]);
   gflags::SetVersionString(BuildVersionString());
   gflags::ParseCommandLineFlags(&argc, &argv, true);
+  CHECK_GE(FLAGS_this_machine_id, 0);
   LocalFS()->RecursivelyCreateDirIfNotExist(LogDir());
   RedirectStdoutAndStderrToGlogDir();
-  { Oneflow flow(FLAGS_job_conf, FLAGS_this_machine_name); }
+  { Oneflow flow(FLAGS_job_conf, FLAGS_this_machine_id); }
   CloseStdoutAndStderr();
   return 0;
 }

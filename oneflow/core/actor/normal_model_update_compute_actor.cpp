@@ -6,11 +6,19 @@ namespace oneflow {
 void NormalMdUpdtCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   model_regst_desc_id_ = Name2SoleRegstDescId("model");
   const_model_regst_desc_id_ = Name2SoleRegstDescId("const_model");
+  int64_t forward_model_regst_desc_id = Name2SoleRegstDescId("forward_model");
+  if (forward_model_regst_desc_id != -1) {
+    forward_model_regst_ = GetNaiveCurWriteable(forward_model_regst_desc_id);
+  } else {
+    forward_model_regst_ = nullptr;
+  }
   init_remaining_cnt_ = 0;
   if (model_regst_desc_id_ != -1) { init_remaining_cnt_ += 1; }
   if (const_model_regst_desc_id_ != -1) { init_remaining_cnt_ += 1; }
   next_model_version_id_ = 0;
-  related_save_model_actor_id_ = task_proto.related_save_model_task_id();
+  for (int64_t model_save_related_actor_id : task_proto.related_save_model_task_ids()) {
+    related_save_model_actor_ids_.insert(model_save_related_actor_id);
+  }
   related_init_model_actor_id_ = task_proto.related_init_model_task_id();
   pre_model_regst_ = nullptr;
   const_model_regst_ = nullptr;
@@ -51,9 +59,7 @@ void NormalMdUpdtCompActor::SendConstModelRegstToConsumer() {
 
 void NormalMdUpdtCompActor::Act() {
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
-  std::tuple<int64_t, const Blob*> other_val(next_model_version_id_,
-                                             pre_model_regst_->packed_blob());
-  kernel_ctx.other = &other_val;
+  kernel_ctx.other = &next_model_version_id_;
   AsyncLaunchKernel(kernel_ctx);
 }
 
@@ -67,15 +73,47 @@ void NormalMdUpdtCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   HandleProducedNaiveDataRegstToConsumer(
       [cur_model_regst](Regst* regst) { return regst == cur_model_regst; },
       [&](int64_t actor_id) {
-        return (need_save_model && actor_id == related_save_model_actor_id_)
-               || (need_send_model && actor_id != related_save_model_actor_id_);
+        bool is_saving_related =
+            related_save_model_actor_ids_.find(actor_id) != related_save_model_actor_ids_.end();
+        return (need_save_model && is_saving_related) || (need_send_model && !is_saving_related);
       });
+  if (need_save_model && forward_model_regst_ != nullptr) {
+    HandleProducedNaiveDataRegstToConsumer(
+        [&](Regst* regst) { return regst == forward_model_regst_; });
+  }
   next_model_version_id_ += 1;
+}
+
+int64_t NormalMdUpdtCompActor::ActNumForEachOutput(int64_t regst_desc_id) const {
+  const auto* job_desc = Global<JobDesc>::Get();
+  if (forward_model_regst_ != nullptr && regst_desc_id == forward_model_regst_->regst_desc_id()) {
+    return std::min<int64_t>(job_desc->TotalBatchNum() - (forward_model_regst_->act_id() + 1),
+                             job_desc->NumOfBatchesInSnapshot());
+  }
+  return 1;
 }
 
 void NormalMdUpdtCompActor::InitRegstBySendToFw(Regst* regst) {
   ActorMsg msg = ActorMsg::BuildRegstMsgToConsumer(actor_id(), related_init_model_actor_id_, regst);
   Global<ActorMsgBus>::Get()->SendMsg(msg);
+}
+
+void NormalMdUpdtCompActor::InitModelAndConstBuf() {
+  // TODO move the initiation of model and const model from fw op into this function
+  if (forward_model_regst_ == nullptr) { return; }
+  for (const ExecKernel& ek : exec_kernel_vec()) {
+    KernelCtx kernel_ctx = GenDefaultKernelCtx();
+    ek.kernel->InitModelAndConstBuf(kernel_ctx, parallel_ctx(),
+                                    Global<SnapshotMgr>::Get()->GetReadableSnapshot(),
+                                    [&](const std::string& bn_in_op) {
+                                      const LogicalBlobId& lbi = ek.kernel->BnInOp2Lbi(bn_in_op);
+                                      Blob* blob = nullptr;
+                                      if (forward_model_regst_) {
+                                        blob = forward_model_regst_->GetBlobByLbi(lbi);
+                                      }
+                                      return blob;
+                                    });
+  }
 }
 
 int NormalMdUpdtCompActor::HandlerInitModelAndConstModel(const ActorMsg& msg) {
@@ -85,6 +123,7 @@ int NormalMdUpdtCompActor::HandlerInitModelAndConstModel(const ActorMsg& msg) {
       InitRegstBySendToFw(GetNaiveCurWriteable(model_regst_desc_id_));
     }
     if (const_model_regst_desc_id_ != -1) { InitRegstBySendToFw(const_model_regst_); }
+    InitModelAndConstBuf();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     init_remaining_cnt_ -= 1;
   } else {

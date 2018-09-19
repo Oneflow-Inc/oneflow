@@ -1,4 +1,8 @@
-globalfs_conf {
+data_fs_conf {
+  localfs_conf {
+  }
+}
+snapshot_fs_conf {
   localfs_conf {
   }
 }
@@ -7,8 +11,8 @@ data_part_num: 6
 train_conf {
   batch_size: 6000
   total_batch_num: 100
+  primary_lr: 0.01
   model_update_conf {
-    learning_rate: 0.01
     naive_conf {
     }
   }
