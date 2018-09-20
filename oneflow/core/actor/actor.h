@@ -78,42 +78,28 @@ class Actor {
   int HandlerNormal(const ActorMsg& msg);
   int HandlerZombie(const ActorMsg& msg);
 
-  virtual void NormalProcessCustomizedEordMsg(const ActorMsg&) {}
-  virtual void NormalProcessNaiveReadableRegstMsg(const std::deque<Regst*>&) {}
-  virtual void NormalProcessCustomizedReadableRegstMsg(const ActorMsg&) { UNIMPLEMENTED(); }
-  virtual bool NormalTryProcessReadableMsgFromOtherMachine(const ActorMsg&) { return false; }
-
-  // Act
-  void ActUntilFail();
-  virtual void Act(std::function<bool(Regst*)>* IsNaiveAllowedReturnToProducer) { Act(); }
-  virtual void Act() { UNIMPLEMENTED(); }
-  virtual void AsyncReturnAllCustomizedReadableRegst() {}
-  virtual int64_t ActNumForEachOutput(int64_t regst_desc_id) const { return 1; }
-  virtual bool CheckOutputActId(int64_t regst_desc_id) const {
-    return true;  // TODO(jiyuan): figure out the ActNumForEachOutput of the model regsts to MdSave
-                  // area
-  }
-
   virtual bool ConsumedCtrlRegstValid(int64_t regst_desc_id) const { return true; }
   virtual bool ProducedCtrlRegstValid(int64_t regst_desc_id) const { return true; }
 
   // Async Do on device_ctx_
+  void AsyncDo(std::function<void()> func) { device_ctx_->AddCallBack(func); }
   void AsyncLaunchKernel(const KernelCtx&, std::function<Regst*(int64_t)> Regst4RegstDescId);
   void AsyncLaunchKernel(const KernelCtx&);
 
+  // Util For Derived Actor to Send Msg
+  void AsyncSendMsg(const ActorMsg&);
   void HandleProducedNaiveDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess,
                                               std::function<bool(int64_t)> IsAllowedActor);
   void HandleProducedNaiveDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess);
   void HandleProducedNaiveDataRegstToConsumer(std::function<bool(int64_t)> IsAllowedActor);
   void HandleProducedNaiveDataRegstToConsumer();
-  void HandleConsumedNaiveDataRegstToProducer(std::function<bool(Regst*)> IsAllowedRegst);
 
-  void AsyncSendMsg(const ActorMsg&);
+  void HandleConsumedNaiveDataRegstToProducer(std::function<bool(Regst*)> IsAllowedRegst);
   void AsyncSendRegstMsgToProducer(Regst*);
   void AsyncSendRegstMsgToProducer(Regst*, int64_t producer);
   void AsyncSendEORDMsgForAllProducedRegstDesc();
-  void AsyncDo(std::function<void()> func) { device_ctx_->AddCallBack(func); }
 
+  // Get Regst
   Regst* GetNaiveCurReadable(int64_t desc_id) { return naive_consumed_rs_.Front(desc_id); }
   Regst* GetNaiveCurReadable(const std::string& name) {
     return GetNaiveCurReadable(Name2SoleRegstDescId(name));
@@ -122,9 +108,14 @@ class Actor {
   Regst* GetNaiveCurWriteable(const std::string& name) {
     return GetNaiveCurWriteable(Name2SoleRegstDescId(name));
   }
-
   Regst* GetSoleProducedRegst4RegstDescId(int64_t regst_desc_id);
 
+ private:
+  int64_t GetGlobalWorkStreamId() const;
+  int64_t GetLocalWorkStreamId() const;
+  virtual bool NeedCollectActEvent() const {
+    return Global<RuntimeCtx>::Get()->NeedCollectActEvent();
+  }
   bool IsConsumedCtrlRegstDescId(int64_t regst_desc_id) {
     return consumed_ctrl_regst_desc_ids_.find(regst_desc_id) != consumed_ctrl_regst_desc_ids_.end();
   }
@@ -132,31 +123,32 @@ class Actor {
     return produced_ctrl_regst_desc_ids_.find(regst_desc_id) != produced_ctrl_regst_desc_ids_.end();
   }
 
- private:
+  // Process Msg
+  virtual void NormalProcessCustomizedEordMsg(const ActorMsg&) {}
+  virtual void NormalProcessNaiveReadableRegstMsg(const std::deque<Regst*>&) {}
+  virtual void NormalProcessCustomizedReadableRegstMsg(const ActorMsg&) { UNIMPLEMENTED(); }
+  virtual bool NormalTryProcessReadableMsgFromOtherMachine(const ActorMsg&) { return false; }
+  int TryUpdtStateAsProducedRegst(Regst* regst);
+  virtual void UpdtStateAsCustomizedProducedRegst(Regst* regst) { UNIMPLEMENTED(); }
+
+  // Act
+  void ActUntilFail();
+  virtual void Act() { UNIMPLEMENTED(); }
+  virtual int64_t ActNumForEachOutput(int64_t regst_desc_id) const { return 1; }
+  virtual bool CheckOutputActId(int64_t regst_desc_id) const {
+    return true;  // TODO(jiyuan): figure out the ActNumForEachOutput of the model regsts to MdSave
+                  // area
+  }
+  void TryLogActEvent(const std::function<void()>& Callback) const;
+
+  // Ready
   bool IsReadReady();
   bool IsWriteReady();
   virtual bool IsCustomizedReadReady() { return true; }
   virtual bool IsCustomizedWriteReady() { return true; }
   virtual bool IsCustomizedReadAlwaysUnReadyFromNow() { return false; }
 
-  // Send Msgs
-  void AsyncSendNaiveProducedRegstMsgToConsumer();
-  virtual void VirtualAsyncSendNaiveProducedRegstMsgToConsumer();
-  virtual void AsyncSendCustomizedProducedRegstMsgToConsumer() {}
-
-  void AsyncSendNaiveConsumedRegstMsgToProducer();
-  virtual void VirtualAsyncSendNaiveConsumedRegstMsgToProducer();
-  virtual void AsyncSendCustomizedConsumedRegstMsgToProducer() {}
-
-  int TryUpdtStateAsProducedRegst(Regst* regst);
-  virtual void UpdtStateAsCustomizedProducedRegst(Regst* regst) { UNIMPLEMENTED(); }
-  int64_t GetGlobalWorkStreamId() const;
-  int64_t GetLocalWorkStreamId() const;
-  virtual bool NeedCollectActEvent() const {
-    return Global<RuntimeCtx>::Get()->NeedCollectActEvent();
-  }
-  void TryLogActEvent(const std::function<void()>& Callback) const;
-
+  // NaiveOrCustomized
   virtual std::pair<bool, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName() {
     return {false, {}};
   }
@@ -166,8 +158,17 @@ class Actor {
   void TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids);
   void TakeOverNaiveProduced(const PbMap<std::string, RegstDescProto>& produced_ids);
 
+  // Send Msgs
+  void AsyncSendNaiveProducedRegstMsgToConsumer();
+  virtual void VirtualAsyncSendNaiveProducedRegstMsgToConsumer();
+  virtual void AsyncSendCustomizedProducedRegstMsgToConsumer() {}
+  void AsyncSendNaiveConsumedRegstMsgToProducer();
+  virtual void VirtualAsyncSendNaiveConsumedRegstMsgToProducer();
+  virtual void AsyncSendCustomizedConsumedRegstMsgToProducer() {}
   void AsyncSendConsumedCtrlRegstMsgToProducer();
   void AsyncSendProducedCtrlRegstMsgToConsumer();
+  int64_t HandleRegstToConsumer(Regst* regst, std::function<bool(int64_t)> IsAllowedActor);
+  virtual void AsyncReturnAllCustomizedReadableRegst() {}
 
   int64_t actor_id_;
   int64_t act_id_;

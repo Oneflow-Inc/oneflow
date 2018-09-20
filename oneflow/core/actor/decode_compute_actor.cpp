@@ -9,7 +9,7 @@ void DecodeCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   OF_SET_MSG_HANDLER(&DecodeCompActor::HandlerNormal);
 }
 
-void DecodeCompActor::Act(std::function<bool(Regst*)>* IsNaiveAllowedReturnToProducer) {
+void DecodeCompActor::Act() {
   CHECK_LE(decode_status_.cur_col_id_, decode_status_.max_col_id_);
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
   kernel_ctx.other = &decode_status_;

@@ -280,8 +280,7 @@ void Actor::TryLogActEvent(const std::function<void()>& DoAct) const {
 void Actor::ActUntilFail() {
   while (IsReadReady() && IsWriteReady()) {
     act_id_ += 1;
-    std::function<bool(Regst*)> IsNaiveAllowedReturnToProducer = [](Regst*) { return true; };
-    TryLogActEvent([&] { Act(&IsNaiveAllowedReturnToProducer); });
+    TryLogActEvent([&] { Act(); });
 
     AsyncSendCustomizedProducedRegstMsgToConsumer();
     AsyncSendNaiveProducedRegstMsgToConsumer();
@@ -307,6 +306,59 @@ void Actor::AsyncSendNaiveConsumedRegstMsgToProducer() {
 
 void Actor::VirtualAsyncSendNaiveConsumedRegstMsgToProducer() {
   HandleConsumedNaiveDataRegstToProducer([](Regst* regst) { return true; });
+}
+
+void Actor::AsyncSendConsumedCtrlRegstMsgToProducer() {
+  auto IsChosenRegstDescId = [this](int64_t regst_desc_id) {
+    return IsConsumedCtrlRegstDescId(regst_desc_id) && ConsumedCtrlRegstValid(regst_desc_id);
+  };
+
+  std::vector<int64_t> regst_desc_ids;
+  naive_consumed_rs_.ForChosenRegstDeq(IsChosenRegstDescId, [&](const std::deque<Regst*>& reg_deq) {
+    CHECK(reg_deq.empty() == false);
+    Regst* regst = reg_deq.front();
+    CHECK(regst->regst_desc()->regst_desc_type().has_ctrl_regst_desc());
+    int32_t returned_regst_num =
+        regst->regst_desc()->regst_desc_type().ctrl_regst_desc().returned_regst_num();
+    CHECK_GE(returned_regst_num, 1);
+    CHECK_GE(reg_deq.size(), returned_regst_num);
+    for (size_t i = 0; i < returned_regst_num; ++i) {
+      Regst* regst = reg_deq.at(i);
+      AsyncSendMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, regst->producer_actor_id(), regst));
+      regst_desc_ids.push_back(regst->regst_desc_id());
+    }
+  });
+  naive_consumed_rs_.PopFrontRegsts(regst_desc_ids);
+}
+
+void Actor::AsyncSendProducedCtrlRegstMsgToConsumer() {
+  auto IsChosenRegstDescId = [this](int64_t regst_desc_id) {
+    return IsProducedCtrlRegstDescId(regst_desc_id) && ProducedCtrlRegstValid(regst_desc_id);
+  };
+
+  std::vector<int64_t> regst_desc_ids;
+  naive_produced_rs_.ForChosenFrontRegst(IsChosenRegstDescId, [&](Regst* regst) {
+    CHECK(regst->regst_desc()->regst_desc_type().has_ctrl_regst_desc());
+    int64_t real_consumer_cnt = HandleRegstToConsumer(regst, [](int64_t) { return true; });
+    if (real_consumer_cnt > 0) { regst_desc_ids.push_back(regst->regst_desc_id()); }
+  });
+  naive_produced_rs_.PopFrontRegsts(regst_desc_ids);
+}
+
+int64_t Actor::HandleRegstToConsumer(Regst* regst, std::function<bool(int64_t)> IsAllowedActor) {
+  auto regst_reading_cnt_it = produced_regst2reading_cnt_.find(regst);
+  CHECK_EQ(regst_reading_cnt_it->second, 0);
+  regst->set_act_id(act_id_);
+
+  int64_t real_consumer_cnt = 0;
+  for (int64_t consumer : regst->consumers_actor_id()) {
+    if (!IsAllowedActor(consumer)) { continue; }
+    AsyncSendMsg(ActorMsg::BuildRegstMsgToConsumer(actor_id_, consumer, regst));
+    real_consumer_cnt += 1;
+  }
+  total_reading_cnt_ += real_consumer_cnt;
+  regst_reading_cnt_it->second += real_consumer_cnt;
+  return real_consumer_cnt;
 }
 
 bool Actor::IsReadReady() { return naive_consumed_rs_.IsCurSlotReady() && IsCustomizedReadReady(); }
@@ -340,28 +392,13 @@ void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx) {
 void Actor::HandleProducedNaiveDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess,
                                                    std::function<bool(int64_t)> IsAllowedActor) {
   std::vector<int64_t> regst_desc_ids;
-  auto HandleRegstToConsumer = [&](Regst* regst, std::function<bool(Regst*)> RegstPreProcess,
-                                   std::function<bool(int64_t)> IsAllowedActor) {
-    if (RegstPreProcess(regst) == false) { return; }
-    auto regst_reading_cnt_it = produced_regst2reading_cnt_.find(regst);
-    CHECK_EQ(regst_reading_cnt_it->second, 0);
-    regst->set_act_id(act_id_);
-
-    int64_t real_consumer_cnt = 0;
-    for (int64_t consumer : regst->consumers_actor_id()) {
-      if (!IsAllowedActor(consumer)) { continue; }
-      AsyncSendMsg(ActorMsg::BuildRegstMsgToConsumer(actor_id_, consumer, regst));
-      real_consumer_cnt += 1;
+  naive_produced_rs_.ForEachFrontRegst([&](Regst* regst) {
+    if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) {
+      if (RegstPreProcess(regst) == false) { return; }
+      int64_t real_consumer_cnt = HandleRegstToConsumer(regst, IsAllowedActor);
+      if (real_consumer_cnt > 0) { regst_desc_ids.push_back(regst->regst_desc_id()); }
     }
-    total_reading_cnt_ += real_consumer_cnt;
-    regst_reading_cnt_it->second += real_consumer_cnt;
-    if (real_consumer_cnt > 0) { regst_desc_ids.push_back(regst->regst_desc_id()); }
-  };
-
-  naive_produced_rs_.ForChosenFrontRegst(
-      [this](int64_t regst_desc_id) { return IsProducedCtrlRegstDescId(regst_desc_id) == false; },
-      [&](Regst* regst) { HandleRegstToConsumer(regst, RegstPreProcess, IsAllowedActor); });
-
+  });
   naive_produced_rs_.PopFrontRegsts(regst_desc_ids);
 }
 
@@ -408,53 +445,6 @@ void Actor::AsyncSendRegstMsgToProducer(Regst* regst) {
 
 void Actor::AsyncSendRegstMsgToProducer(Regst* regst, int64_t producer) {
   AsyncSendMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, producer, regst));
-}
-
-void Actor::AsyncSendConsumedCtrlRegstMsgToProducer() {
-  auto IsChosenRegstDescId = [this](int64_t regst_desc_id) {
-    return IsConsumedCtrlRegstDescId(regst_desc_id) && ConsumedCtrlRegstValid(regst_desc_id);
-  };
-
-  std::vector<int64_t> regst_desc_ids;
-  naive_consumed_rs_.ForChosenRegstDeq(IsChosenRegstDescId, [&](const std::deque<Regst*>& reg_deq) {
-    CHECK(reg_deq.empty() == false);
-    Regst* regst = reg_deq.front();
-    CHECK(regst->regst_desc()->regst_desc_type().has_ctrl_regst_desc());
-    int32_t returned_regst_num =
-        regst->regst_desc()->regst_desc_type().ctrl_regst_desc().returned_regst_num();
-    CHECK_GE(returned_regst_num, 1);
-    CHECK_GE(reg_deq.size(), returned_regst_num);
-    for (size_t i = 0; i < returned_regst_num; ++i) {
-      Regst* regst = reg_deq.at(i);
-      AsyncSendMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, regst->producer_actor_id(), regst));
-      regst_desc_ids.push_back(regst->regst_desc_id());
-    }
-  });
-  naive_consumed_rs_.PopFrontRegsts(regst_desc_ids);
-}
-
-void Actor::AsyncSendProducedCtrlRegstMsgToConsumer() {
-  auto IsChosenRegstDescId = [this](int64_t regst_desc_id) {
-    return IsProducedCtrlRegstDescId(regst_desc_id) && ProducedCtrlRegstValid(regst_desc_id);
-  };
-
-  std::vector<int64_t> regst_desc_ids;
-  naive_produced_rs_.ForChosenFrontRegst(IsChosenRegstDescId, [&](Regst* regst) {
-    CHECK(regst->regst_desc()->regst_desc_type().has_ctrl_regst_desc());
-    auto regst_reading_cnt_it = produced_regst2reading_cnt_.find(regst);
-    CHECK_EQ(regst_reading_cnt_it->second, 0);
-    regst->set_act_id(act_id_);
-
-    for (int64_t consumer : regst->consumers_actor_id()) {
-      AsyncSendMsg(ActorMsg::BuildRegstMsgToConsumer(actor_id_, consumer, regst));
-      total_reading_cnt_ += 1;
-      regst_reading_cnt_it->second += 1;
-    }
-    if (regst->consumers_actor_id().empty() == false) {
-      regst_desc_ids.push_back(regst->regst_desc_id());
-    }
-  });
-  naive_produced_rs_.PopFrontRegsts(regst_desc_ids);
 }
 
 Regst* Actor::GetSoleProducedRegst4RegstDescId(int64_t regst_desc_id) {
