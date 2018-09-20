@@ -205,7 +205,6 @@ void LogicalNode::GenSortedCompTaskNodes(
     for (int64_t dev_phy_id : parallel_desc_->sorted_dev_phy_ids(machine_id)) {
       CompTaskNode* comp_task_node = NewCompTaskNode();
       comp_task_node->set_machine_id(machine_id);
-      comp_task_node->mut_parallel_ctx()->set_parallel_set_id(node_id());
       comp_task_node->mut_parallel_ctx()->set_parallel_id(parallel_idx++);
       comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);
       comp_task_node->mut_parallel_ctx()->set_policy(parallel_desc_->policy());
