@@ -88,8 +88,9 @@ void NcclCommMgr::NcclGetUniqueId4Tasks(const std::vector<TaskProto>& tasks,
     NcclCheck(ncclGetUniqueId(nccl_unique_id));
   } else {
     bool should_create_unique_id =
-        std::find_if(tasks.begin(), tasks.end(),
-                     [](const TaskProto& task) { return task.parallel_ctx().parallel_id() == 0; })
+        std::find_if(
+            tasks.begin(), tasks.end(),
+            [](const TaskProto& task) { return task.parallel_ctx().rank_ctx().rank_id() == 0; })
         != tasks.end();
     std::string nccl_unique_id_rpc_key =
         "nccl_unique_id_" + std::to_string(tasks.front().parallel_ctx().rank_ctx().rank_set_id());
