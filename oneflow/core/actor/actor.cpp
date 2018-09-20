@@ -347,15 +347,15 @@ void Actor::HandleProducedNaiveDataRegstToConsumer(std::function<bool(Regst*)> R
     CHECK_EQ(regst_reading_cnt_it->second, 0);
     regst->set_act_id(act_id_);
 
+    int64_t real_consumer_cnt = 0;
     for (int64_t consumer : regst->consumers_actor_id()) {
       if (!IsAllowedActor(consumer)) { continue; }
       AsyncSendMsg(ActorMsg::BuildRegstMsgToConsumer(actor_id_, consumer, regst));
-      total_reading_cnt_ += 1;
-      regst_reading_cnt_it->second += 1;
+      real_consumer_cnt += 1;
     }
-    if (regst->consumers_actor_id().empty() == false) {
-      regst_desc_ids.push_back(regst->regst_desc_id());
-    }
+    total_reading_cnt_ += real_consumer_cnt;
+    regst_reading_cnt_it->second += real_consumer_cnt;
+    if (real_consumer_cnt > 0) { regst_desc_ids.push_back(regst->regst_desc_id()); }
   };
 
   naive_produced_rs_.ForChosenFrontRegst(
