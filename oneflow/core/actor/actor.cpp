@@ -212,9 +212,10 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
   } else {
     UNIMPLEMENTED();
   }
-  // TODO: refactor code below for potential bugs
-  if (((is_naive_consumed_eord_ && naive_consumed_rs_.available_regst_desc_cnt() == 0)
-       || IsCustomizedReadAlwaysUnReadyFromNow())) {
+  if ((naive_consumed_rs_.total_regst_desc_cnt() != 0 && is_naive_consumed_eord_
+       && naive_consumed_rs_.available_regst_desc_cnt() == 0)
+      || (naive_consumed_rs_.total_regst_desc_cnt() == 0
+          && IsCustomizedReadAlwaysUnReadyFromNow())) {
     CHECK_EQ(naive_consumed_rs_.available_regst_desc_cnt(), 0);
     AsyncReturnAllCustomizedReadableRegst();
     AsyncSendEORDMsgForAllProducedRegstDesc();
