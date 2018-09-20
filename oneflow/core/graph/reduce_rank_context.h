@@ -18,6 +18,16 @@ class ReduceRankCtx final {
     return rank % segment_count_of_each_stage_.back();
   }
 
+  int64_t RankSet4ParallelId(int64_t parallel_id) const {
+    if (Depth() == 1) {
+      return parallel_id;
+    } else {
+      ReduceRankCtx if_gather = CtxWithGather();
+      return (parallel_id / TotalSegmentCount() * if_gather.TotalSegmentCount()
+              + parallel_id % if_gather.TotalSegmentCount());
+    }
+  }
+
   ReduceRankCtx CtxWithGather() const {
     CHECK_GT(segment_count_of_each_stage_.size(), 1);
     std::vector<int64_t> segment_counts = segment_count_of_each_stage_;
@@ -38,6 +48,8 @@ class ReduceRankCtx final {
   }
 
   int64_t StageSegmentCount() const { return segment_count_of_each_stage_.back(); }
+
+  int64_t Depth() const { return segment_count_of_each_stage_.size(); }
 
  private:
   explicit ReduceRankCtx(std::vector<int64_t> counts)

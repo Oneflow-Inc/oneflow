@@ -84,13 +84,9 @@ void NcclCommMgr::NcclCommInitRank4Tasks(const std::vector<TaskProto>& tasks,
 
 void NcclCommMgr::NcclGetUniqueId4Tasks(const std::vector<TaskProto>& tasks,
                                         ncclUniqueId* nccl_unique_id) {
-  TaskType task_type = tasks.front().task_type();
-  bool is_global = (tasks.front().parallel_ctx().rank_ctx().rank_num()
-                    == tasks.front().parallel_ctx().parallel_num());
-  if (task_type == TaskType::kNcclAllGather || task_type == TaskType::kNcclReduceScatter
-      || (!is_global)) {
+  if (tasks.size() == tasks.front().parallel_ctx().rank_ctx().rank_num()) {
     NcclCheck(ncclGetUniqueId(nccl_unique_id));
-  } else if (task_type == TaskType::kNcclAllReduce) {
+  } else {
     bool should_create_unique_id =
         std::find_if(tasks.begin(), tasks.end(),
                      [](const TaskProto& task) { return task.parallel_ctx().parallel_id() == 0; })
@@ -107,8 +103,6 @@ void NcclCommMgr::NcclGetUniqueId4Tasks(const std::vector<TaskProto>& tasks,
             memcpy(nccl_unique_id->internal, val.data(), NCCL_UNIQUE_ID_BYTES);
           });
     }
-  } else {
-    UNIMPLEMENTED();
   }
 }
 
