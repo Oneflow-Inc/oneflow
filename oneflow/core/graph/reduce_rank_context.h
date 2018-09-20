@@ -51,6 +51,10 @@ class ReduceRankCtx final {
 
   int64_t Depth() const { return segment_count_of_each_stage_.size(); }
 
+  bool operator==(const ReduceRankCtx& rhs) const {
+    return segment_count_of_each_stage_ == rhs.segment_count_of_each_stage_;
+  }
+
  private:
   explicit ReduceRankCtx(std::vector<int64_t> counts)
       : segment_count_of_each_stage_(std::move(counts)) {}
