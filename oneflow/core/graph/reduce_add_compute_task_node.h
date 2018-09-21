@@ -21,6 +21,8 @@ class ReduceAddCompTaskNode final : public CompTaskNode, public ReduceCompTaskNo
 
  private:
   void BuildExecGphAndRegst() override;
+  void BuildCtrlRegstBetweenReduceCopyNodes(const CompTaskNode* src_reduce,
+                                            const CompTaskNode* dst_reduce, int64_t copy_node_num);
 };
 
 }  // namespace oneflow
