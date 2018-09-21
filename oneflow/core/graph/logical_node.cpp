@@ -360,81 +360,15 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("MdDiffAcc"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalBackward"
                               "NormalMdUpdt",
                               BldSubTskGphToNormalMdUpdt);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalBackward"
-                              "ReduceConcat",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("MdDiffAcc"
-                              "ReduceConcat",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceConcat"
-                              "ReduceScatter",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalBackward"
-                              "ReduceScatter",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("MdDiffAcc"
-                              "ReduceScatter",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceConcat"
-                              "NcclReduceScatter",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalBackward"
-                              "NcclReduceScatter",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("MdDiffAcc"
-                              "NcclReduceScatter",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalBackward"
-                              "NcclAllReduce",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("MdDiffAcc"
-                              "NcclAllReduce",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceConcat"
-                              "NcclAllReduce",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclAllReduce"
-                              "NormalMdUpdt",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclAllReduce"
-                              "ReduceSplit",
-                              &TaskGraph::BldSubTskGphByOneToOne);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceScatter"
                               "ReduceAdd",
                               &TaskGraph::BldSubTskGphByReduceScatter2ReduceAdd);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceAdd"
-                              "ReduceScatter",
-                              &TaskGraph::BldSubTskGphByOneToOne);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceAdd"
                               "ReduceGather",
                               &TaskGraph::BldSubTskGphByReduceAdd2ReduceGather);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
                               "ReduceGather",
                               &TaskGraph::BldSubTskGphByReduceGather2ReduceGather);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
-                              "NormalMdUpdt",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
-                              "ReduceSplit",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclReduceScatter"
-                              "ReduceScatter",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
-                              "NcclAllGather",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclReduceScatter"
-                              "NcclAllGather",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclAllGather"
-                              "NormalMdUpdt",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclAllGather"
-                              "ReduceSplit",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceSplit"
-                              "NormalMdUpdt",
-                              &TaskGraph::BldSubTskGphByOneToOne);
 
 BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src, const LogicalNode* dst) {
   std::string k = ConcatTypeName(src, dst);
