@@ -315,6 +315,7 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
   auto it = GetFuncForFindBldSubTskGphMthd()->find(k);
   if (it != GetFuncForFindBldSubTskGphMthd()->end()) { return it->second(src_node, dst_node); }
   if (src_pd->parallel_num() == dst_pd->parallel_num()) {
+    // NOTE: AllReduce is always DataParallel
     if (src_pd->policy() == kDataParallel && dst_pd->policy() == kDataParallel) {
       return &TaskGraph::BldSubTskGphByOneToOne;
     } else if (src_pd->policy() == kModelParallel && dst_pd->policy() == kModelParallel
