@@ -31,6 +31,7 @@ class ReduceMemSharingCtx final {
   }
 
   int64_t SegmentSize4RankCtx(const ReduceRankCtx& rank_ctx) const {
+    CHECK_EQ(mem_size_ % rank_ctx.TotalSegmentCount(), 0);
     return mem_size_ / rank_ctx.TotalSegmentCount();
   }
 
