@@ -488,7 +488,7 @@ void LogicalGraph::AddAllReduce(LogicalNode* src, LogicalNode* dst) {
   CHECK_EQ(src_pd->device_type(), dst_pd->device_type());
   if (Global<JobDesc>::Get()->enable_nccl()) {
     if (src_pd->sorted_machine_ids().size() == 1
-        || Global<JobDesc>::Get()->use_nccl_all_reduce_cross_machine()) {
+        || Global<JobDesc>::Get()->use_nccl_inter_node_communication()) {
       AddNcclAllReduce(src, dst);
     } else if (src_pd->device_num_of_each_machine() == 1) {
       AddReduceScatterAddGatherNodes(src, dst, ReduceRankCtx());
