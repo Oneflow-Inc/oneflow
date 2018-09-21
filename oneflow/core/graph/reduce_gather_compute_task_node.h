@@ -10,7 +10,7 @@ class ReduceGatherCompTaskNode final : public CompTaskNode, public ReduceCompTas
  public:
   OF_DISALLOW_COPY_AND_MOVE(ReduceGatherCompTaskNode);
   ReduceGatherCompTaskNode() = default;
-  ~ReduceGatherCompTaskNode() = default;
+  ~ReduceGatherCompTaskNode() override = default;
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;

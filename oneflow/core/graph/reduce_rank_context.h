@@ -10,11 +10,9 @@ class ReduceRankCtx final {
   ReduceRankCtx() : segment_count_of_each_stage_({1}) {}
   ~ReduceRankCtx() = default;
 
-  int64_t StageRank4ParallelId(int64_t parallel_id) const {
+  int64_t Rank4ParallelId(int64_t parallel_id) const {
     int64_t rank = parallel_id;
-    FOR_RANGE(size_t, i, 0, segment_count_of_each_stage_.size() - 1) {
-      rank /= segment_count_of_each_stage_.at(i);
-    }
+    if (Depth() > 1) { rank /= CtxWithGather().TotalSegmentCount(); }
     return rank % segment_count_of_each_stage_.back();
   }
 
@@ -35,9 +33,10 @@ class ReduceRankCtx final {
     return ReduceRankCtx(segment_counts);
   }
 
-  ReduceRankCtx CtxWithScatter(int64_t size) const {
+  ReduceRankCtx CtxWithScatter(int64_t segment_count) const {
+    CHECK_GT(segment_count, 1);
     std::vector<int64_t> segment_counts = segment_count_of_each_stage_;
-    segment_counts.push_back(size);
+    segment_counts.push_back(segment_count);
     return ReduceRankCtx(segment_counts);
   }
 
@@ -56,8 +55,8 @@ class ReduceRankCtx final {
   }
 
  private:
-  explicit ReduceRankCtx(std::vector<int64_t> counts)
-      : segment_count_of_each_stage_(std::move(counts)) {}
+  explicit ReduceRankCtx(std::vector<int64_t> segment_count_of_each_stage)
+      : segment_count_of_each_stage_(std::move(segment_count_of_each_stage)) {}
   std::vector<int64_t> segment_count_of_each_stage_;
 };
 

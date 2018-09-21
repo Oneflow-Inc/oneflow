@@ -16,7 +16,7 @@ TEST(ReduceRankCtx, test) {
   ASSERT_EQ(ctx.StageSegmentCount(), 1);
 
   for (int64_t i = 0; i < 24; i++) {
-    ASSERT_EQ(ctx.StageRank4ParallelId(i), 0);
+    ASSERT_EQ(ctx.Rank4ParallelId(i), 0);
     ASSERT_EQ(ctx.RankSet4ParallelId(i), i);
   }
 
@@ -25,7 +25,7 @@ TEST(ReduceRankCtx, test) {
   ASSERT_EQ(ctx_24.TotalSegmentCount(), 24);
   ASSERT_EQ(ctx_24.StageSegmentCount(), 24);
   for (int64_t i = 0; i < 24; i++) {
-    ASSERT_EQ(ctx_24.StageRank4ParallelId(i), i);
+    ASSERT_EQ(ctx_24.Rank4ParallelId(i), i);
     ASSERT_EQ(ctx_24.RankSet4ParallelId(i), 0);
   }
 
@@ -38,7 +38,7 @@ TEST(ReduceRankCtx, test) {
   ASSERT_EQ(ctx_4.TotalSegmentCount(), 4);
   ASSERT_EQ(ctx_4.StageSegmentCount(), 4);
   for (int64_t i = 0; i < 24; i++) {
-    ASSERT_EQ(ctx_4.StageRank4ParallelId(i), ctx_4_ranks[i]);
+    ASSERT_EQ(ctx_4.Rank4ParallelId(i), ctx_4_ranks[i]);
     ASSERT_EQ(ctx_4.RankSet4ParallelId(i), ctx_4_sets[i]);
   }
 
@@ -51,7 +51,7 @@ TEST(ReduceRankCtx, test) {
   ASSERT_EQ(ctx_6.TotalSegmentCount(), 6);
   ASSERT_EQ(ctx_6.StageSegmentCount(), 6);
   for (int64_t i = 0; i < 24; i++) {
-    ASSERT_EQ(ctx_6.StageRank4ParallelId(i), ctx_6_ranks[i]);
+    ASSERT_EQ(ctx_6.Rank4ParallelId(i), ctx_6_ranks[i]);
     ASSERT_EQ(ctx_6.RankSet4ParallelId(i), ctx_6_sets[i]);
   }
 
@@ -62,7 +62,7 @@ TEST(ReduceRankCtx, test) {
   ASSERT_EQ(ctx_3_2.TotalSegmentCount(), 6);
   ASSERT_EQ(ctx_3_2.StageSegmentCount(), 2);
   for (int64_t i = 0; i < 6; i++) {
-    ASSERT_EQ(ctx_3_2.StageRank4ParallelId(i), ctx_3_2_ranks[i]);
+    ASSERT_EQ(ctx_3_2.Rank4ParallelId(i), ctx_3_2_ranks[i]);
     ASSERT_EQ(ctx_3_2.RankSet4ParallelId(i), ctx_3_2_sets[i]);
   }
 
@@ -75,7 +75,7 @@ TEST(ReduceRankCtx, test) {
   ASSERT_EQ(ctx_4_3_2.TotalSegmentCount(), 24);
   ASSERT_EQ(ctx_4_3_2.StageSegmentCount(), 2);
   for (int64_t i = 0; i < 24; i++) {
-    ASSERT_EQ(ctx_4_3_2.StageRank4ParallelId(i), ctx_4_3_2_ranks[i]);
+    ASSERT_EQ(ctx_4_3_2.Rank4ParallelId(i), ctx_4_3_2_ranks[i]);
     ASSERT_EQ(ctx_4_3_2.RankSet4ParallelId(i), ctx_4_3_2_sets[i]);
   }
 }

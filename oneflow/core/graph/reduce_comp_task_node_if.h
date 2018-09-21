@@ -26,7 +26,7 @@ class ReduceMemSharingCtx final {
     } else {
       ReduceRankCtx if_gather = rank_ctx.CtxWithGather();
       return Offset4RankCtxParallelId(if_gather, parallel_id)
-             + rank_ctx.StageRank4ParallelId(parallel_id) * SegmentSize4RankCtx(rank_ctx);
+             + rank_ctx.Rank4ParallelId(parallel_id) * SegmentSize4RankCtx(rank_ctx);
     }
   }
 

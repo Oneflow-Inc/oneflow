@@ -216,7 +216,7 @@ class ReduceLogicalNode : public LogicalNode {
   ReduceRankCtx rank_ctx_;
   void FixCompTaskNode(CompTaskNode* task_node) const override {
     task_node->mut_parallel_ctx()->mutable_rank_ctx()->set_rank_id(
-        rank_ctx().StageRank4ParallelId(task_node->parallel_id()));
+        rank_ctx().Rank4ParallelId(task_node->parallel_id()));
     task_node->mut_parallel_ctx()->mutable_rank_ctx()->set_rank_num(rank_ctx().StageSegmentCount());
     int64_t rank_set_id =
         ((node_id() << 32) | rank_ctx().RankSet4ParallelId(task_node->parallel_id()));

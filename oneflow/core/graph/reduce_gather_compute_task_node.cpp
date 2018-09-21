@@ -45,7 +45,7 @@ void ReduceGatherCompTaskNode::BuildExecGphAndRegst() {
 void ReduceGatherCompTaskNode::EnableMemSharingInReduce(const ReduceMemSharingCtx& ctx) {
   const ReduceRankCtx& rank_ctx = GetRankCtx();
   int64_t base_offset = ctx.Offset4RankCtxParallelId(rank_ctx.CtxWithGather(), parallel_id());
-  int64_t rank = rank_ctx.StageRank4ParallelId(parallel_id());
+  int64_t rank = rank_ctx.Rank4ParallelId(parallel_id());
   ctx.EnableMemSharing4Regst(GetProducedRegst("out").get(), base_offset);
   for (const auto& kv : consumed_regsts()) {
     auto in_parallel_id = oneflow_cast<int64_t>(kv.first.substr(3));
