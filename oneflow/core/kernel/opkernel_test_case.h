@@ -86,6 +86,7 @@ class OpKernelTestCase {
   }
 
   void EnrollBlobRegst(const std::string& blob_name, Regst*);
+  Regst* CreatRegst(DeviceType);
   template<typename T>
   Blob* InitBlob(const std::string&, const BlobDesc* blob_desc, const std::vector<T>& val);
   template<typename T>

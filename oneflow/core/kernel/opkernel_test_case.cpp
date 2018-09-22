@@ -213,6 +213,31 @@ void OpKernelTestCase::EnrollBlobRegst(const std::string& blob_name, Regst* regs
   CHECK(bn_in_op2regst_.emplace(blob_name, regst).second);
 }
 
+Regst* OpKernelTestCase::CreatRegst(DeviceType device_type) {
+  if (Global<JobDesc>::Get() == nullptr) Global<JobDesc>::New();
+  Regst* regst = nullptr;
+  RegstDescProto* regst_desc_proto = new RegstDescProto();
+  regst_desc_proto->set_regst_desc_id(-1);
+  regst_desc_proto->set_producer_task_id(0);
+  regst_desc_proto->set_mem_shared_id(-1);
+  regst_desc_proto->set_min_register_num(1);
+  regst_desc_proto->set_max_register_num(1);
+  regst_desc_proto->set_register_num(1);
+  regst_desc_proto->mutable_regst_desc_type()->mutable_ctrl_regst_desc();
+  if (device_type == DeviceType::kCPU) {
+    regst_desc_proto->mutable_mem_case()->mutable_host_mem();
+  } else {
+    regst_desc_proto->mutable_mem_case()->mutable_device_cuda_mem();
+  }
+  std::list<const RegstDescProto*> regst_protos;
+  regst_protos.push_back(regst_desc_proto);
+  if (Global<RegstMgr>::Get() != nullptr) { Global<RegstMgr>::Delete(); }
+  Global<RegstMgr>::New(regst_protos);
+  Global<RegstMgr>::Get()->NewRegsts(*regst_desc_proto,
+                                     [&regst](Regst* ret_regst) { regst = ret_regst; });
+  return regst;
+}
+
 template<typename T>
 Blob* OpKernelTestCase::InitBlob(const std::string& name, const BlobDesc* blob_desc,
                                  const std::vector<T>& val) {
