@@ -1,5 +1,6 @@
 #include "oneflow/core/kernel/opkernel_test_case.h"
 #include "oneflow/core/common/switch_func.h"
+#include "oneflow/core/register/register_manager.h"
 
 namespace oneflow {
 
@@ -16,6 +17,27 @@ struct HingeLossTestUtil final {
   template<typename LabelType>
   static void Test(OpKernelTestCase* test_case, const std::string& job_type,
                    const std::string& fw_or_bw) {
+    if (Global<JobDesc>::Get() == nullptr) Global<JobDesc>::New();
+    Regst* regst = nullptr;
+    RegstDescProto* regst_desc_proto = new RegstDescProto();
+    regst_desc_proto->set_regst_desc_id(-1);
+    regst_desc_proto->set_producer_task_id(0);
+    regst_desc_proto->set_mem_shared_id(-1);
+    regst_desc_proto->set_min_register_num(1);
+    regst_desc_proto->set_max_register_num(1);
+    regst_desc_proto->set_register_num(1);
+    regst_desc_proto->mutable_regst_desc_type()->mutable_ctrl_regst_desc();
+    if (device_type == DeviceType::kCPU) {
+      regst_desc_proto->mutable_mem_case()->mutable_host_mem();
+    } else {
+      regst_desc_proto->mutable_mem_case()->mutable_device_cuda_mem();
+    }
+    std::list<const RegstDescProto*> regst_protos;
+    regst_protos.push_back(regst_desc_proto);
+    if (Global<RegstMgr>::Get() != nullptr) { Global<RegstMgr>::Delete(); }
+    Global<RegstMgr>::New(regst_protos);
+    Global<RegstMgr>::Get()->NewRegsts(*regst_desc_proto,
+                                       [&regst](Regst* ret_regst) { regst = ret_regst; });
     test_case->set_is_train(job_type == "train");
     test_case->set_is_forward(fw_or_bw == "forward");
     HingeLossOpConf* hinge_loss_conf = test_case->mut_op_conf()->mutable_hinge_loss_conf();
@@ -29,6 +51,9 @@ struct HingeLossTestUtil final {
         new BlobDesc(Shape({2, 5}), GetDataType<PredType>::value, false, false, 1);
     BlobDesc* loss_blob_desc =
         new BlobDesc(Shape({2}), GetDataType<PredType>::value, false, false, 1);
+    test_case->EnrollBlobRegst("label", regst);
+    test_case->EnrollBlobRegst("prediction", regst);
+    test_case->EnrollBlobRegst("tmp_diff", regst);
     test_case->InitBlob<LabelType>("label", label_blob_desc, {2, 2});
     test_case->InitBlob<PredType>(
         "prediction", pred_blob_desc,
@@ -46,7 +71,6 @@ void HingeLossKernelTestCase(OpKernelTestCase* test_case, const std::string& lab
   HingeLossTestUtil<device_type, PredType>::SwitchTest(SwitchCase(label_type), test_case, job_type,
                                                        fw_or_bw);
 }
-
 TEST_CPU_AND_GPU_OPKERNEL(HingeLossKernelTestCase, FLOATING_DATA_TYPE_SEQ,
                           OF_PP_SEQ_MAP(OF_PP_PAIR_FIRST, INT_DATA_TYPE_SEQ), (train)(predict),
                           (forward)(backward));

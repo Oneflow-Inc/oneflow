@@ -1,5 +1,6 @@
 #include "oneflow/core/kernel/opkernel_test_case.h"
 #include "oneflow/core/device/cuda_stream_handle.h"
+#include "oneflow/core/register/register_manager.h"
 
 namespace oneflow {
 
@@ -70,10 +71,10 @@ DataType DataType4CppTypeString(const std::string& cpp_type_str) {
 
 template<>
 Blob* OpKernelTestUtil<DeviceType::kCPU>::CreateBlob(const BlobDesc* blob_desc, Regst* regst) {
-  RtBlobDesc rt_blob_desc(*blob_desc);
+  RtBlobDesc* rt_blob_desc = new RtBlobDesc(*blob_desc);
   void* mem_ptr = nullptr;
-  CudaCheck(cudaMallocHost(&mem_ptr, rt_blob_desc.TotalByteSize()));
-  return new Blob(regst, &rt_blob_desc, static_cast<char*>(mem_ptr));
+  CudaCheck(cudaMallocHost(&mem_ptr, rt_blob_desc->TotalByteSize()));
+  return new Blob(regst, rt_blob_desc, static_cast<char*>(mem_ptr));
 }
 
 template<>
