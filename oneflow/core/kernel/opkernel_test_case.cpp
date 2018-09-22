@@ -213,9 +213,8 @@ void OpKernelTestCase::EnrollBlobRegst(const std::string& blob_name, Regst* regs
   CHECK(bn_in_op2regst_.emplace(blob_name, regst).second);
 }
 
-Regst* OpKernelTestCase::CreatRegst(DeviceType device_type) {
+void OpKernelTestCase::CreatRegst(DeviceType device_type) {
   if (Global<JobDesc>::Get() == nullptr) Global<JobDesc>::New();
-  Regst* regst = nullptr;
   RegstDescProto* regst_desc_proto = new RegstDescProto();
   regst_desc_proto->set_regst_desc_id(-1);
   regst_desc_proto->set_producer_task_id(0);
@@ -234,8 +233,7 @@ Regst* OpKernelTestCase::CreatRegst(DeviceType device_type) {
   if (Global<RegstMgr>::Get() != nullptr) { Global<RegstMgr>::Delete(); }
   Global<RegstMgr>::New(regst_protos);
   Global<RegstMgr>::Get()->NewRegsts(*regst_desc_proto,
-                                     [&regst](Regst* ret_regst) { regst = ret_regst; });
-  return regst;
+                                     [this](Regst* ret_regst) { regst_ = ret_regst; });
 }
 
 template<typename T>
