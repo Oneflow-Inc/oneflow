@@ -90,21 +90,6 @@ void FileSystem::RecursivelyCreateDir(const std::string& dirname) {
   }
 }
 
-struct GlobalFSConstructor {
-  GlobalFSConstructor() {
-    const GlobalFSConf& gfs_conf = Global<JobDesc>::Get()->other_conf().globalfs_conf();
-    if (gfs_conf.has_localfs_conf()) {
-      CHECK_EQ(Global<JobDesc>::Get()->resource().machine().size(), 1);
-      gfs = LocalFS();
-    } else if (gfs_conf.has_hdfs_conf()) {
-      gfs = new HadoopFileSystem(gfs_conf.hdfs_conf());
-    } else {
-      UNIMPLEMENTED();
-    }
-  }
-  FileSystem* gfs;
-};
-
 }  // namespace fs
 
 fs::FileSystem* LocalFS() {
@@ -116,9 +101,25 @@ fs::FileSystem* LocalFS() {
   return fs;
 }
 
-fs::FileSystem* GlobalFS() {
-  static fs::GlobalFSConstructor gfs_constructor;
-  return gfs_constructor.gfs;
+fs::FileSystem* NetworkFS() { return LocalFS(); }
+
+fs::FileSystem* HadoopFS(const HdfsConf& hdfs_conf) {
+  static fs::FileSystem* fs = new fs::HadoopFileSystem(hdfs_conf);
+  return fs;
 }
 
+fs::FileSystem* GetFS(const FileSystemConf& file_system_conf) {
+  if (file_system_conf.has_localfs_conf()) {
+    return LocalFS();
+  } else if (file_system_conf.has_networkfs_conf()) {
+    return NetworkFS();
+  } else if (file_system_conf.has_hdfs_conf()) {
+    return HadoopFS(file_system_conf.hdfs_conf());
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+fs::FileSystem* DataFS() { return GetFS(Global<JobDesc>::Get()->data_fs_conf()); }
+fs::FileSystem* SnapshotFS() { return GetFS(Global<JobDesc>::Get()->snapshot_fs_conf()); }
 }  // namespace oneflow

@@ -176,6 +176,7 @@ class NormalBackwardLogicalNode final : public BackwardLogicalNode {
 
 DECLARE_NAIVE_LOGICAL_NODE(RecordLoadLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(DecodeLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(DecodeRandomLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(PrintLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(LossLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(LossAccLogicalNode);

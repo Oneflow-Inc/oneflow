@@ -19,7 +19,7 @@ class MachineCtx final {
 
  private:
   friend class Global<MachineCtx>;
-  explicit MachineCtx(const std::string& this_mchn_name);
+  explicit MachineCtx(int64_t this_mchn_id);
 
   int64_t this_machine_id_;
 };

@@ -34,6 +34,7 @@ enum TaskType {
   kAccuracy = 26;
   kAccuracyAcc = 27;
   kAccuracyPrint = 28;
+  kDecodeRandom = 29;
 };
 
 enum AreaType {
@@ -70,6 +71,6 @@ message TaskProto {
   // compute task
   optional ParallelContext parallel_ctx = 1000; // CompTask
   optional int64 random_seed = 1001; // ForwardCompTask
-  optional int64 related_save_model_task_id = 1002 [default = -1];
+  repeated int64 related_save_model_task_ids = 1002;
   optional int64 related_init_model_task_id = 1003 [default = -1];
 };

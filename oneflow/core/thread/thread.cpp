@@ -5,8 +5,7 @@ namespace oneflow {
 Thread::~Thread() {
   actor_thread_.join();
   CHECK(id2task_.empty());
-  msg_channel_.CloseSendEnd();
-  msg_channel_.CloseReceiveEnd();
+  msg_channel_.Close();
 }
 
 void Thread::AddTask(const TaskProto& task) {
@@ -17,7 +16,7 @@ void Thread::AddTask(const TaskProto& task) {
 void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
   ActorMsg msg;
   while (true) {
-    CHECK_EQ(msg_channel_.Receive(&msg), 0);
+    CHECK_EQ(msg_channel_.Receive(&msg), kChannelStatusSuccess);
     if (msg.msg_type() == ActorMsgType::kCmdMsg) {
       if (msg.actor_cmd() == ActorCmd::kStopThread) {
         CHECK(id2actor_ptr_.empty());

@@ -8,30 +8,21 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 void NormalMdUpdateKernel<device_type, T>::Forward(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  auto tpl = reinterpret_cast<std::tuple<int64_t, const Blob*>*>(ctx.other);
-  int64_t next_model_vid = std::get<0>(*tpl);
+  int64_t next_model_vid = *reinterpret_cast<int64_t*>(ctx.other);
   int64_t cur_batch_num = next_model_vid - 1;
   const NormalModelUpdateOpUserConf& conf = this->op_conf().normal_mdupdt_conf().user_conf();
-  double learning_rate = conf.learning_rate();
+  float learning_rate = this->op_conf().normal_mdupdt_conf().learning_rate();
   if (TriggerWarmup(conf, learning_rate, cur_batch_num)) {
     learning_rate = GetWarmupLearningRate(conf.warmup_conf(), learning_rate, cur_batch_num);
   } else if (conf.has_learning_rate_decay()) {
     learning_rate =
         GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, cur_batch_num);
   }
-  const OpAttribute& op_attribute = this->kernel_conf().op_attribute();
-  Blob* in_0 = BnInOp2Blob(op_attribute.input_bns(0));
-  FOR_RANGE(size_t, i, 1, op_attribute.input_bns().size()) {
-    Blob* in_i = BnInOp2Blob(op_attribute.input_bns(i));
-    KernelUtil<device_type, T>::Axpy(ctx.device_ctx, in_0->shape().elem_cnt(), static_cast<T>(1.0),
-                                     in_i->dptr<T>(), 1, in_0->mut_dptr<T>(), 1);
-  }
-
   int64_t batch_size = Global<JobDesc>::Get()->BatchSize();
-  float l1 = Global<JobDesc>::Get()->L1();
-  float l2 = Global<JobDesc>::Get()->L2();
+  float l1 = this->op_conf().normal_mdupdt_conf().l1();
+  float l2 = this->op_conf().normal_mdupdt_conf().l2();
   UpdateModel(ctx.device_ctx, batch_size, static_cast<T>(learning_rate), static_cast<T>(l1),
-              static_cast<T>(l2), std::get<1>(*tpl), in_0, next_model_vid, BnInOp2Blob);
+              static_cast<T>(l2), next_model_vid, BnInOp2Blob);
 }
 
 #define INSTANTIATE_KERNEL(device_type, data_type_pair) \

@@ -9,6 +9,7 @@
 #include "oneflow/core/graph/normal_model_update_compute_task_node.h"
 #include "oneflow/core/graph/print_compute_task_node.h"
 #include "oneflow/core/graph/decode_compute_task_node.h"
+#include "oneflow/core/graph/decode_random_compute_task_node.h"
 #include "oneflow/core/graph/record_load_compute_task_node.h"
 #include "oneflow/core/graph/reduce_scatter_compute_task_node.h"
 #include "oneflow/core/graph/reduce_add_compute_task_node.h"
@@ -393,6 +394,7 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
   OF_PP_MAKE_TUPLE_SEQ(NormalBackward, kDataBackwardArea) \
   OF_PP_MAKE_TUPLE_SEQ(RecordLoad, kDataPreprocessArea)   \
   OF_PP_MAKE_TUPLE_SEQ(Decode, kDataPreprocessArea)       \
+  OF_PP_MAKE_TUPLE_SEQ(DecodeRandom, kDataPreprocessArea) \
   OF_PP_MAKE_TUPLE_SEQ(Loss, kDataForwardArea)            \
   OF_PP_MAKE_TUPLE_SEQ(LossAcc, kDataForwardArea)         \
   OF_PP_MAKE_TUPLE_SEQ(LossPrint, kPrintArea)             \
