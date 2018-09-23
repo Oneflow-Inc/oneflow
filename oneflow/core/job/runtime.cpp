@@ -3,6 +3,7 @@
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/job/nccl_comm_manager.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/graph/task_node.h"
@@ -111,9 +112,11 @@ void Runtime::NewAllGlobal(const Plan& plan, bool is_experiment_phase) {
   Global<RegstMgr>::New(plan);
   Global<ActorMsgBus>::New();
   Global<ThreadMgr>::New(plan);
+  Global<NcclCommMgr>::New(plan);
 }
 
 void Runtime::DeleteAllGlobal() {
+  Global<NcclCommMgr>::Delete();
   Global<ThreadMgr>::Delete();
   Global<ActorMsgBus>::Delete();
   Global<RegstMgr>::Delete();
