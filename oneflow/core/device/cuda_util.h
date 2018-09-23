@@ -11,6 +11,7 @@
 #include <cuda_runtime.h>
 #include <cudnn.h>
 #include <curand.h>
+#include <nccl.h>
 
 namespace oneflow {
 
@@ -30,11 +31,13 @@ inline int32_t BlocksNum4ThreadsNum(const int32_t n) {
 
 size_t GetAvailableGpuMemSize(int dev_id);
 
-#define CUDA_WORK_TYPE_SEQ       \
-  OF_PP_MAKE_TUPLE_SEQ(kCompute) \
-  OF_PP_MAKE_TUPLE_SEQ(kCopyH2D) \
-  OF_PP_MAKE_TUPLE_SEQ(kCopyD2H) \
-  OF_PP_MAKE_TUPLE_SEQ(kMix)     \
+#define CUDA_WORK_TYPE_SEQ           \
+  OF_PP_MAKE_TUPLE_SEQ(kCompute)     \
+  OF_PP_MAKE_TUPLE_SEQ(kCopyH2D)     \
+  OF_PP_MAKE_TUPLE_SEQ(kCopyD2H)     \
+  OF_PP_MAKE_TUPLE_SEQ(kNcclScatter) \
+  OF_PP_MAKE_TUPLE_SEQ(kNcclGather)  \
+  OF_PP_MAKE_TUPLE_SEQ(kMix)         \
   OF_PP_MAKE_TUPLE_SEQ(kMdUpdt)
 
 enum class CudaWorkType {

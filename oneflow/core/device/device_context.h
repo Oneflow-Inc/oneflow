@@ -17,6 +17,7 @@ class DeviceCtx {
   virtual const cublasHandle_t& cublas_pmh_handle() const { UNIMPLEMENTED(); }
   virtual const cublasHandle_t& cublas_pmd_handle() const { UNIMPLEMENTED(); }
   virtual const cudnnHandle_t& cudnn_handle() const { UNIMPLEMENTED(); }
+  virtual const ncclComm_t& nccl_handle() const { UNIMPLEMENTED(); }
 #endif
 
   virtual void AddCallBack(std::function<void()>) const = 0;

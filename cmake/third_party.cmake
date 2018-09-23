@@ -31,6 +31,7 @@ if (BUILD_CUDA)
     list(APPEND CUDA_LIBRARIES ${cuda_lib_dir}/${extra_cuda_lib})
   endforeach()
   find_package(CuDNN REQUIRED)
+  find_package(NCCL REQUIRED)
 endif()
 
 if (NOT WIN32)
@@ -59,6 +60,7 @@ set(oneflow_third_party_libs
     ${farmhash_STATIC_LIBRARIES}
     ${CUDNN_LIBRARIES}
     ${CUDA_LIBRARIES}
+    ${NCCL_LIBRARIES}
     ${BLAS_LIBRARIES}
     ${LIBJPEG_STATIC_LIBRARIES}
     ${OPENCV_STATIC_LIBRARIES}
