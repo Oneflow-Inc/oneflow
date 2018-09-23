@@ -73,12 +73,21 @@ void TaskGraph::GeneratePersistenceThrdId(
   }
 }
 
+void TaskGraph::MdUpdtDelayedTopoForEachNode(std::function<void(TaskNode* node)> Handler) const {
+  HashSet<const TaskNode*> built_nodes;
+  auto Build = [&](TaskNode* node) {
+    CHECK(built_nodes.emplace(node).second);
+    Handler(node);
+  };
+  AcyclicTopoForEachNode([](TaskNode* node) { return node->GetTaskType() != kNormalMdUpdt; },
+                         Build);
+  AcyclicTopoForEachNode([](TaskNode* node) { return node->GetTaskType() == kNormalMdUpdt; },
+                         Build);
+  ForEachNode([&](TaskNode* node) { CHECK(built_nodes.find(node) != built_nodes.end()); });
+}
+
 void TaskGraph::AcyclicTopoForEachNode(std::function<bool(TaskNode* node)> IsAllowedStartNode,
                                        std::function<void(TaskNode* node)> Handler) const {
-  std::list<TaskNode*> starts;
-  ForEachNode([&](TaskNode* node) {
-    if (node->in_edges().empty() && IsAllowedStartNode(node)) { starts.push_back(node); }
-  });
   auto ForEachInNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& Handler) {
     node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
       if (IsBackEdge(node_on_in_edge, node)) return;
@@ -91,6 +100,15 @@ void TaskGraph::AcyclicTopoForEachNode(std::function<bool(TaskNode* node)> IsAll
       Handler(const_cast<TaskNode*>(node_on_out_edge));
     });
   };
+  auto IsSourceNode = [&](TaskNode* node) {
+    int32_t in_node_num = 0;
+    ForEachInNode(node, [&](TaskNode* in_node) { ++in_node_num; });
+    return in_node_num == 0;
+  };
+  std::list<TaskNode*> starts;
+  ForEachNode([&](TaskNode* node) {
+    if (IsSourceNode(node) && IsAllowedStartNode(node)) { starts.push_back(node); }
+  });
   // DfsTopo will cause inappropriate chain graph
   TopoForEachNode(starts, ForEachInNode, ForEachOutNode, Handler);
 }
@@ -638,7 +656,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne) {
   FOR_RANGE(size_t, i, 0, sorted_src_comp_tasks.size()) {
     CompTaskNode* src = sorted_src_comp_tasks[i];
     CompTaskNode* dst = sorted_dst_comp_tasks[i];
-    BuildTaskPath(src, dst, MutBufTask, true);
+    BuildTaskPath(src, dst, MutBufTask, (dst->GetTaskType() != TaskType::kMdSave));
   }
 }
 

@@ -18,16 +18,18 @@ class NormalMdUpdtCompActor final : public CompActor {
     return {true, {}};
   }
   bool CheckOutputActId(int64_t regst_desc_id) const override;
-
+  void InitModelAndConstBuf();
   void InitRegstBySendToFw(int64_t regst_desc_id);
   int HandlerInitModelAndConstModel(const ActorMsg&);
   int HandlerSendInitialModel(const ActorMsg&);
+  int64_t ActNumForEachOutput(int64_t regst_desc_id) const override;
 
   int64_t model_regst_desc_id_;
   int64_t const_model_regst_desc_id_;
+  Regst* forward_model_regst_;
   int8_t init_remaining_cnt_;
   int64_t next_model_version_id_;
-  int64_t related_save_model_actor_id_;
+  HashSet<int64_t> related_save_model_actor_ids_;
   int64_t related_init_model_actor_id_;
   Regst* pre_model_regst_;
 };

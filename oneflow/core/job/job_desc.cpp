@@ -5,15 +5,6 @@
 
 namespace oneflow {
 
-int64_t JobDesc::MachineID4MachineName(const std::string& machine_name) const {
-  auto it = machine_name2machine_id_.find(machine_name);
-  CHECK(it != machine_name2machine_id_.end()) << "Undefined machine name: " << machine_name;
-  return it->second;
-}
-const std::string& JobDesc::MachineName4MachineId(int64_t machine_id) const {
-  return machine_id2machine_name_.at(machine_id);
-}
-
 int64_t JobDesc::piece_num_of_experiment_phase() const {
   return job_conf_.other().piece_num_of_experiment_phase();
 }
@@ -75,17 +66,37 @@ int64_t JobDesc::NumOfPiecesInBatch() const {
   CHECK_EQ(BatchSize() % PieceSize(), 0);
   return BatchSize() / PieceSize();
 }
-float JobDesc::L1() const {
+float JobDesc::primary_lr() const {
   CHECK(IsTrain());
-  return job_conf_.other().train_conf().l1();
+  return job_conf_.other().train_conf().primary_lr();
 }
-
-float JobDesc::L2() const {
+float JobDesc::secondary_lr() const {
   CHECK(IsTrain());
-  return job_conf_.other().train_conf().l2();
+  return job_conf_.other().train_conf().secondary_lr();
+}
+float JobDesc::weight_l1() const {
+  CHECK(IsTrain());
+  return job_conf_.other().train_conf().weight_l1();
+}
+float JobDesc::bias_l1() const {
+  CHECK(IsTrain());
+  return job_conf_.other().train_conf().bias_l1();
+}
+float JobDesc::weight_l2() const {
+  CHECK(IsTrain());
+  return job_conf_.other().train_conf().weight_l2();
+}
+float JobDesc::bias_l2() const {
+  CHECK(IsTrain());
+  return job_conf_.other().train_conf().bias_l2();
 }
 
 int32_t JobDesc::DataPartNum() const { return job_conf_.other().data_part_num(); }
+
+const FileSystemConf& JobDesc::data_fs_conf() const { return job_conf_.other().data_fs_conf(); }
+const FileSystemConf& JobDesc::snapshot_fs_conf() const {
+  return job_conf_.other().snapshot_fs_conf();
+}
 
 JobDesc::JobDesc(const std::string& job_conf_filepath) {
   if (TryParseProtoFromTextFile(job_conf_filepath, &job_conf_) == false) {
@@ -96,12 +107,7 @@ JobDesc::JobDesc(const std::string& job_conf_filepath) {
     ParseProtoFromTextFile(job_conf.placement(), job_conf_.mutable_placement());
     ParseProtoFromTextFile(job_conf.other(), job_conf_.mutable_other());
   }
-  Init();
-}
-
-JobDesc::JobDesc(const JobConf1& job_conf) : job_conf_(job_conf) { Init(); }
-
-void JobDesc::Init() {
+  SanityCheck();
   SplitDecodeOps();
   AddRecordLoadOps();
 #ifndef WITH_RDMA
@@ -128,12 +134,13 @@ void JobDesc::Init() {
 #ifndef WITH_CUDA
   CHECK_EQ(job_conf_.resource().gpu_device_num(), 0);
 #endif
+}
+
+void JobDesc::SanityCheck() {
   int64_t machine_num = job_conf_.resource().machine_size();
-  for (int64_t i = 0; i < machine_num; ++i) {
-    const std::string& machine_name = job_conf_.resource().machine(i).name();
-    CHECK(machine_name2machine_id_.emplace(machine_name, i).second);
-    CHECK(machine_id2machine_name_.emplace(i, machine_name).second);
-  }
+  FOR_RANGE(int64_t, i, 0, machine_num) { CHECK_EQ(job_conf_.resource().machine(i).id(), i); }
+  CHECK_GE(FLAGS_this_machine_id, 0);
+  CHECK_LT(FLAGS_this_machine_id, machine_num);
 }
 
 void JobDesc::SplitDecodeOps() {

@@ -1,4 +1,5 @@
 #include "oneflow/core/job/compiler.h"
+#include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/device/cudnn_conv_ctx_cache.h"
 
 namespace oneflow {
@@ -6,11 +7,11 @@ namespace oneflow {
 namespace {
 
 void ToDotFile(const Plan& plan, const std::string& filepath) {
-  PersistentOutStream out_stream(LocalFS(), filepath);
-  out_stream << "digraph {\n";
+  auto log_stream = TeePersistentLogStream::Create(filepath);
+  log_stream << "digraph {\n";
   HashSet<int64_t> regst_desc_ids;
   for (const TaskProto& task_proto : plan.task()) {
-    out_stream << "task" << std::to_string(task_proto.task_id()) << "[label=\""
+    log_stream << "task" << std::to_string(task_proto.task_id()) << "[label=\""
                << std::to_string(task_proto.task_id()) << "\\n"
                << std::to_string(task_proto.machine_id()) << ":"
                << std::to_string(task_proto.thrd_id()) << ":"
@@ -23,24 +24,25 @@ void ToDotFile(const Plan& plan, const std::string& filepath) {
     }
   }
   for (const int64_t regst_task_id : regst_desc_ids) {
-    out_stream << "regst_desc" << std::to_string(regst_task_id) << "[label=\""
+    log_stream << "regst_desc" << std::to_string(regst_task_id) << "[label=\""
                << std::to_string(regst_task_id) << "\", shape=box];\n";
   }
   for (const TaskProto& task_proto : plan.task()) {
     for (const auto& pair : task_proto.produced_regst_desc()) {
-      out_stream << "task" << std::to_string(task_proto.task_id()) << "->regst_desc"
+      log_stream << "task" << std::to_string(task_proto.task_id()) << "->regst_desc"
                  << std::to_string(pair.second.regst_desc_id()) << "[label=\"" << pair.first
                  << "\"];\n";
     }
     for (const auto& pair : task_proto.consumed_regst_desc_id()) {
       for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
-        out_stream << "regst_desc" << std::to_string(regst_desc_id) << "->task"
+        log_stream << "regst_desc" << std::to_string(regst_desc_id) << "->task"
                    << std::to_string(task_proto.task_id()) << "[label=\"" << pair.first << "\"];\n";
       }
     }
   }
-  out_stream << "}\n";
+  log_stream << "}\n";
 }
+
 }  // namespace
 
 Plan Compiler::Compile() {
@@ -101,10 +103,7 @@ Plan Compiler::DoCompile() {
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::PinConsumedRegst, _1));
-  task_gph->AcyclicTopoForEachNode(
-      [](TaskNode* node) { return node->GetTaskType() != kNormalMdUpdt; }, &TaskNode::Build);
-  task_gph->AcyclicTopoForEachNode(
-      [](TaskNode* node) { return node->GetTaskType() == kNormalMdUpdt; }, &TaskNode::Build);
+  task_gph->MdUpdtDelayedTopoForEachNode(&TaskNode::Build);
   task_gph->RemoveEmptyRegsts();
   task_gph->AddOrderingCtrlEdgeInSameChain();
   if (job_desc->IsTrain() && job_desc->enable_mem_sharing()) {
@@ -122,7 +121,7 @@ Plan Compiler::DoCompile() {
   });
   plan.set_total_mbn_num(total_mbn_num);
   GenNetTopo(&plan);
-  ToDotFile(plan, JoinPath(LogDir(), "/dot/plan.dot"));
+  ToDotFile(plan, "/dot/plan.dot");
 #ifdef WITH_CUDA
   Global<CudnnConvCtxCache>::Delete();
 #endif
