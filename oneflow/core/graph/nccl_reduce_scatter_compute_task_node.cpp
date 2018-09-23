@@ -3,17 +3,14 @@
 
 namespace oneflow {
 
-void NcclReduceScatterCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx* ctx) {
-  int64_t offset = ctx->Offset4ParallelId(parallel_id());
-  int64_t rank = ctx->StageRank4ParallelId(parallel_id());
+void NcclReduceScatterCompTaskNode::EnableMemSharingInReduce(const ReduceMemSharingCtx& ctx) {
+  const ReduceRankCtx& rank_ctx = GetRankCtx();
+  int64_t offset = ctx.Offset4RankCtxParallelId(rank_ctx, parallel_id());
   RegstDesc* out_regst = GetProducedRegst("out").get();
-  int64_t out_size = InferRegstSize(*out_regst);
-  CHECK_EQ(ctx->StageSegmentSize() % out_size, 0);
-  ctx->EnableMemSharing4Regst(out_regst, offset + out_size * rank);
-  ctx->DoScatter(ctx->StageSegmentSize() / out_size);
+  ctx.EnableMemSharing4Regst(out_regst, offset);
   if (this->SoleInEdge()->src_node()->GetTaskType() == TaskType::kReduceConcat) { return; }
-
-  ctx->EnableMemSharing4Regst(GetSoleConsumedRegst("in").get(), offset);
+  ctx.EnableMemSharing4Regst(GetSoleConsumedRegst("in").get(),
+                             ctx.Offset4RankCtxParallelId(rank_ctx.CtxWithGather(), parallel_id()));
 }
 
 }  // namespace oneflow

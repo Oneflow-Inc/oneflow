@@ -38,15 +38,15 @@ void ReduceConcatCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(parallel_ctx());
 }
 
-void ReduceConcatCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx* ctx) {
-  CHECK_EQ(ctx->TotalSegmentCount(), 1);
-  ctx->EnableMemSharing4Regst(GetProducedRegst("out").get(), 0);
+void ReduceConcatCompTaskNode::EnableMemSharingInReduce(const ReduceMemSharingCtx& ctx) {
+  CHECK_EQ(GetRankCtx().TotalSegmentCount(), 1);
+  ctx.EnableMemSharing4Regst(GetProducedRegst("out").get(), 0);
 
   size_t concat_num = consumed_regsts().size();
   int64_t offset = 0;
   FOR_RANGE(int32_t, idx, 0, concat_num) {
     RegstDesc* concat_in_regst = GetSoleConsumedRegst("in_" + std::to_string(idx)).get();
-    ctx->EnableMemSharing4Regst(concat_in_regst, offset);
+    ctx.EnableMemSharing4Regst(concat_in_regst, offset);
     offset += InferRegstSize(*concat_in_regst);
   }
 }

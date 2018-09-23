@@ -3,13 +3,15 @@
 
 #include "oneflow/core/register/register_desc.h"
 #include "oneflow/core/graph/compute_task_node.h"
+#include "logical_node.h"
 
 namespace oneflow {
 
 class ReduceMemSharingCtx final {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(ReduceMemSharingCtx);
   ReduceMemSharingCtx(int64_t mem_size, int64_t mem_shared_id)
-      : mem_size_(mem_size), mem_shared_id_(mem_shared_id), scatter_segment_counts_({1}) {}
+      : mem_size_(mem_size), mem_shared_id_(mem_shared_id) {}
   ~ReduceMemSharingCtx() = default;
 
   void EnableMemSharing4Regst(RegstDesc* regst, int64_t offset) const {
@@ -18,67 +20,30 @@ class ReduceMemSharingCtx final {
     regst->set_mem_shared_offset(offset);
   }
 
-  void DoScatter(int64_t size) {
-    CHECK_EQ(StageSegmentSize() % size, 0);
-    scatter_segment_counts_.push_back(size);
-  }
-
-  int64_t StageRank4ParallelId(int64_t parallel_id) const {
-    int64_t rank = parallel_id;
-    FOR_RANGE(size_t, i, 0, scatter_segment_counts_.size() - 1) {
-      rank /= scatter_segment_counts_.at(i);
-    }
-    return rank % scatter_segment_counts_.back();
-  }
-
-  int64_t Offset4ParallelId(int64_t parallel_id) const {
-    if (TotalSegmentCount() == 1) {
+  int64_t Offset4RankCtxParallelId(const ReduceRankCtx& rank_ctx, int64_t parallel_id) const {
+    if (rank_ctx.TotalSegmentCount() == 1) {
       return 0;
     } else {
-      ReduceMemSharingCtx if_gather = CtxWithGather();
-      return if_gather.Offset4ParallelId(parallel_id)
-             + StageRank4ParallelId(parallel_id) * StageSegmentSize();
+      ReduceRankCtx if_gather = rank_ctx.CtxWithGather();
+      return Offset4RankCtxParallelId(if_gather, parallel_id)
+             + rank_ctx.Rank4ParallelId(parallel_id) * SegmentSize4RankCtx(rank_ctx);
     }
   }
 
-  void DoGather(int64_t size) {
-    CHECK_EQ(scatter_segment_counts_.back(), size);
-    CHECK_GT(scatter_segment_counts_.size(), 1);
-    scatter_segment_counts_.pop_back();
+  int64_t SegmentSize4RankCtx(const ReduceRankCtx& rank_ctx) const {
+    CHECK_EQ(mem_size_ % rank_ctx.TotalSegmentCount(), 0);
+    return mem_size_ / rank_ctx.TotalSegmentCount();
   }
-
-  ReduceMemSharingCtx CtxWithGather() const {
-    ReduceMemSharingCtx ctx = *this;
-    ctx.DoGather(scatter_segment_counts_.back());
-    return ctx;
-  }
-
-  ReduceMemSharingCtx CtxWithScatter(int64_t size) const {
-    ReduceMemSharingCtx ctx = *this;
-    ctx.DoScatter(size);
-    return ctx;
-  }
-
-  int64_t TotalSegmentCount() const {
-    int64_t cnt = 1;
-    for (const int64_t dim : scatter_segment_counts_) { cnt *= dim; }
-    return cnt;
-  }
-
-  int64_t StageSegmentCount() const { return scatter_segment_counts_.back(); }
-
-  int64_t StageSegmentSize() const { return mem_size_ / TotalSegmentCount(); }
 
  private:
   int64_t mem_size_;
   int64_t mem_shared_id_;
-  std::vector<int64_t> scatter_segment_counts_;
 };
 
 class ReduceCompTaskNodeIf {
  public:
   virtual ~ReduceCompTaskNodeIf() = default;
-  virtual void EnableMemSharingInReduce(ReduceMemSharingCtx*) = 0;
+  virtual void EnableMemSharingInReduce(const ReduceMemSharingCtx& ctx) = 0;
 
  protected:
   struct EdgeInfo {
@@ -89,13 +54,17 @@ class ReduceCompTaskNodeIf {
     std::sort((*edge_infos).begin(), (*edge_infos).end(),
               [](const EdgeInfo& lhs, const EdgeInfo& rhs) { return lhs.order < rhs.order; });
   }
-  TaskNode* AsTaskNode() { return dynamic_cast<TaskNode*>(this); }
+  CompTaskNode* AsCompTaskNode() { return dynamic_cast<CompTaskNode*>(this); }
+  const ReduceRankCtx& GetRankCtx() {
+    const ReduceLogicalNode* reduce_logical_node =
+        dynamic_cast<const ReduceLogicalNode*>(AsCompTaskNode()->logical_node());
+    CHECK(reduce_logical_node);
+    return reduce_logical_node->rank_ctx();
+  }
   TaskNode* FindPredReduceTaskNodeIf(std::function<bool(TaskNode*)> predicate);
 };
 
 int64_t InferRegstSize(const RegstDesc& regst);
-void BuildCtrlRegstBetweenReduceCopyNodes(const CompTaskNode* src_reduce,
-                                          const CompTaskNode* dst_reduce, int64_t copy_node_num);
 
 }  // namespace oneflow
 

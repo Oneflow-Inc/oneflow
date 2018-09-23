@@ -41,18 +41,20 @@ void ReduceAddCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(parallel_ctx());
 }
 
-void ReduceAddCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx* ctx) {
-  int64_t offset = ctx->CtxWithGather().Offset4ParallelId(parallel_id());
-  int64_t rank = ctx->StageRank4ParallelId(parallel_id());
-  int64_t segment_size = ctx->StageSegmentSize();
+void ReduceAddCompTaskNode::EnableMemSharingInReduce(const ReduceMemSharingCtx& ctx) {
+  const ReduceRankCtx& rank_ctx = GetRankCtx();
+  int64_t offset = ctx.Offset4RankCtxParallelId(rank_ctx.CtxWithGather(), parallel_id());
+  int64_t rank = rank_ctx.Rank4ParallelId(parallel_id());
+  int64_t segment_size = ctx.SegmentSize4RankCtx(rank_ctx);
 
-  ctx->EnableMemSharing4Regst(GetProducedRegst("out").get(), ctx->Offset4ParallelId(parallel_id()));
+  ctx.EnableMemSharing4Regst(GetProducedRegst("out").get(),
+                             ctx.Offset4RankCtxParallelId(rank_ctx, parallel_id()));
   for (const auto& kv : consumed_regsts()) {
     auto in_parallel_id = oneflow_cast<int64_t>(kv.first.substr(3));
     CHECK_EQ(1, kv.second.size());
     if (in_parallel_id == rank) { continue; }
     RegstDesc* regst = kv.second.front().get();
-    ctx->EnableMemSharing4Regst(regst, offset + in_parallel_id * segment_size);
+    ctx.EnableMemSharing4Regst(regst, offset + in_parallel_id * segment_size);
   }
 
   std::vector<CompTaskNode*> scatter_on_in_edge;
@@ -65,7 +67,38 @@ void ReduceAddCompTaskNode::EnableMemSharingInReduce(ReduceMemSharingCtx* ctx) {
   CHECK_EQ(scatter_on_in_edge.size(), 1);
   if (!scatter_on_in_edge.empty()) {
     BuildCtrlRegstBetweenReduceCopyNodes(scatter_on_in_edge.front(), this,
-                                         ctx->StageSegmentCount() - 1);
+                                         rank_ctx.StageSegmentCount() - 1);
+  }
+}
+
+void ReduceAddCompTaskNode::BuildCtrlRegstBetweenReduceCopyNodes(const CompTaskNode* src_reduce,
+                                                                 const CompTaskNode* dst_reduce,
+                                                                 int64_t copy_node_num) {
+  struct ReduceCopyNodePair {
+    TaskNode* copy_h2d;
+    TaskNode* copy_d2h;
+    ReduceCopyNodePair() : copy_h2d(nullptr), copy_d2h(nullptr) {}
+  };
+  HashMap<int64_t, ReduceCopyNodePair> mem_shared_offset2copy_nodes;
+
+  for (TaskEdge* out_edge : src_reduce->out_edges()) {
+    if (out_edge->dst_node()->GetTaskType() == TaskType::kCopyHd) {
+      int64_t offset = out_edge->GetSoleRegst()->mem_shared_offset();
+      mem_shared_offset2copy_nodes[offset].copy_d2h = out_edge->dst_node();
+    }
+  }
+  CHECK_EQ(copy_node_num, mem_shared_offset2copy_nodes.size());
+
+  for (TaskEdge* in_edge : dst_reduce->in_edges()) {
+    if (in_edge->src_node()->GetTaskType() == TaskType::kCopyHd) {
+      int64_t offset = in_edge->GetSoleRegst()->mem_shared_offset();
+      CHECK(mem_shared_offset2copy_nodes.find(offset) != mem_shared_offset2copy_nodes.end());
+      mem_shared_offset2copy_nodes.at(offset).copy_h2d = in_edge->src_node();
+    }
+  }
+
+  for (const auto& kv : mem_shared_offset2copy_nodes) {
+    kv.second.copy_d2h->BuildCtrlRegstDesc(kv.second.copy_h2d);
   }
 }
 

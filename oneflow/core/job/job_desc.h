@@ -52,8 +52,8 @@ class JobDesc final {
   }
   bool enable_blob_mem_sharing() const { return job_conf_.other().enable_blob_mem_sharing(); }
   bool enable_nccl() const { return job_conf_.other().enable_nccl(); }
-  bool use_nccl_all_reduce_cross_machine() const {
-    return job_conf_.other().use_nccl_all_reduce_cross_machine();
+  bool use_nccl_inter_node_communication() const {
+    return job_conf_.other().use_nccl_inter_node_communication();
   }
   int64_t reduce_group_size() const { return job_conf_.other().reduce_group_size(); }
 

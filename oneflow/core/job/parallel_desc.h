@@ -40,11 +40,6 @@ class ParallelDesc {
   bool Equal(const ParallelDesc& rhs) const;
   bool Equal(const ParallelDesc* rhs) const { return Equal(*rhs); }
 
-  int64_t DevicePhyId4ParallelId(int64_t parallel_id) const;
-  int64_t MachineId4ParallelId(int64_t parallel_id) const;
-  int64_t MachineRank4ParallelId(int64_t parallel_id) const;
-  int64_t DeviceRank4ParallelId(int64_t parallel_id) const;
-
  private:
   void ClearUp();
   void CheckValidity();

@@ -34,7 +34,7 @@ class NcclUtil final {
   }
 
   static void ReduceScatter(DeviceCtx* ctx, Blob* send_blob, Blob* recv_blob) {
-    auto elem_cnt = (size_t)send_blob->shape().elem_cnt();
+    auto elem_cnt = (size_t)recv_blob->shape().elem_cnt();
     NcclCheck(ncclReduceScatter(send_blob->dptr(), recv_blob->mut_dptr(), elem_cnt,
                                 GetNcclDataType(send_blob->data_type()), ncclSum,
                                 ctx->nccl_handle(), ctx->cuda_stream()));
