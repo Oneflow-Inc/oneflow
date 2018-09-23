@@ -2,6 +2,7 @@ syntax = "proto2";
 package oneflow;
 
 import "oneflow/core/register/field_desc.proto";
+import "oneflow/core/common/shape.proto";
 
 message FieldHeaderDesc {
   // shape: [body.shape.dim(0)]
@@ -30,5 +31,5 @@ message BlobDescProto {
   required BlobHeaderDescProto header = 1;
   required FieldDescProto body = 2;
   // the element count of instance_nested_shape.shape equals body.shape.dim(0)
-  required ShapeProto instance_nested_shape = 3;
+  optional ShapeProto instance_nested_shape = 3;
 }
