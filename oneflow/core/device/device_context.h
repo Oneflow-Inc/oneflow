@@ -14,8 +14,6 @@ class DeviceCtx {
   OF_DISALLOW_COPY_AND_MOVE(DeviceCtx);
   virtual ~DeviceCtx() = default;
 
-  virtual std::unique_ptr<DeviceCtx> Copy() const = 0;
-
 #ifdef WITH_CUDA
   virtual const cudaStream_t& cuda_stream() const { UNIMPLEMENTED(); }
   virtual const cublasHandle_t& cublas_pmh_handle() const { UNIMPLEMENTED(); }
