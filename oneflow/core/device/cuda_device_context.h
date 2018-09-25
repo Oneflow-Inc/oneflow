@@ -17,10 +17,6 @@ class CudaDeviceCtx : public DeviceCtx {
 
   explicit CudaDeviceCtx(CudaStreamHandle* cuda_handler) : cuda_handler_(cuda_handler) {}
 
-  std::unique_ptr<DeviceCtx> Copy() const override {
-    return std::unique_ptr<DeviceCtx>(new CudaDeviceCtx(cuda_handler_));
-  }
-
   const cudaStream_t& cuda_stream() const override { return *(cuda_handler_->cuda_stream()); }
   const cublasHandle_t& cublas_pmh_handle() const override {
     return *(cuda_handler_->cublas_pmh_handle());
