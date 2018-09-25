@@ -6,10 +6,14 @@
 namespace oneflow {
 
 void NcclActor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
+#ifdef WITH_NCCL
   CHECK_EQ(GetDeviceType(), DeviceType::kGPU);
   // CHECK_EQ(GetLocalWorkStreamId(), 0);
   mut_device_ctx().reset(new NcclDeviceCtx(
       thread_ctx.g_cuda_stream.get(), Global<NcclCommMgr>::Get()->NcclComm4ActorId(actor_id())));
+#else
+  UNIMPLEMENTED();
+#endif  // WITH_NCCL
 }
 
 REGISTER_ACTOR(TaskType::kNcclAllReduce, NcclActor);

@@ -6,7 +6,7 @@
 
 namespace oneflow {
 
-#ifdef WITH_CUDA
+#ifdef WITH_NCCL
 
 class NcclDeviceCtx final : public CudaDeviceCtx {
  public:
@@ -21,7 +21,7 @@ class NcclDeviceCtx final : public CudaDeviceCtx {
   ncclComm_t nccl_handler_;
 };
 
-#endif  // WITH_CUDA
+#endif  // WITH_NCCL
 
 }  // namespace oneflow
 
