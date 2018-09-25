@@ -15,10 +15,6 @@ class NcclDeviceCtx final : public CudaDeviceCtx {
       : CudaDeviceCtx(cuda_handler), nccl_handler_(nccl_handler) {}
   ~NcclDeviceCtx() override = default;
 
-  std::unique_ptr<DeviceCtx> Copy() const override {
-    return std::unique_ptr<DeviceCtx>(new NcclDeviceCtx(cuda_handler_, nccl_handler_));
-  }
-
   const ncclComm_t& nccl_handle() const override { return nccl_handler_; }
 
  private:
