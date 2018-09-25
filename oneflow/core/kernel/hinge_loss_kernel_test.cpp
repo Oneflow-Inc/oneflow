@@ -16,9 +16,9 @@ struct HingeLossTestUtil final {
   template<typename LabelType>
   static void Test(OpKernelTestCase* test_case, const std::string& job_type,
                    const std::string& fw_or_bw) {
-    test_case->CreatRegst(device_type);
     test_case->set_is_train(job_type == "train");
     test_case->set_is_forward(fw_or_bw == "forward");
+    test_case->CreatRegst(device_type);
     HingeLossOpConf* hinge_loss_conf = test_case->mut_op_conf()->mutable_hinge_loss_conf();
     hinge_loss_conf->set_norm(Norm::L2);
     hinge_loss_conf->set_label("test/label");

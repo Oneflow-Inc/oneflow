@@ -108,6 +108,12 @@ JobDesc::JobDesc(const std::string& job_conf_filepath) {
     ParseProtoFromTextFile(job_conf.other(), job_conf_.mutable_other());
   }
   SanityCheck();
+  Init();
+}
+
+JobDesc::JobDesc(const JobConf1& job_conf) : job_conf_(job_conf) { Init(); }
+
+void JobDesc::Init() {
   SplitDecodeOps();
   AddRecordLoadOps();
 #ifndef WITH_RDMA

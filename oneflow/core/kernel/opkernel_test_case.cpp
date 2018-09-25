@@ -214,7 +214,6 @@ void OpKernelTestCase::EnrollBlobRegst(const std::string& blob_name, Regst* regs
 }
 
 void OpKernelTestCase::CreatRegst(DeviceType device_type) {
-  if (Global<JobDesc>::Get() == nullptr) Global<JobDesc>::New();
   RegstDescProto* regst_desc_proto = new RegstDescProto();
   regst_desc_proto->set_regst_desc_id(-1);
   regst_desc_proto->set_producer_task_id(0);
