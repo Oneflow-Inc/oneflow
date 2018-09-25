@@ -3,6 +3,9 @@
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/plan.pb.h"
+
+#ifdef WITH_NCCL
+
 #include <nccl.h>
 
 namespace oneflow {
@@ -28,5 +31,7 @@ class NcclCommMgr final {
 };
 
 }  // namespace oneflow
+
+#endif  // WITH_NCCL
 
 #endif  // ONEFLOW_CORE_JOB_NCCL_COMM_MANAGER_H_
