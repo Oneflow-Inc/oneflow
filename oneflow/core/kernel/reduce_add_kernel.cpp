@@ -1,9 +1,9 @@
-#include "oneflow/core/kernel/reduce_global_add_kernel.h"
+#include "oneflow/core/kernel/reduce_add_kernel.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-void ReduceGlobalAddKernel<device_type, T>::ForwardDataContent(
+void ReduceAddKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const auto* other_val = static_cast<std::tuple<int64_t, bool, bool>*>(ctx.other);
   int64_t in_bn_id = std::get<0>(*other_val);
@@ -24,7 +24,6 @@ void ReduceGlobalAddKernel<device_type, T>::ForwardDataContent(
   }
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReduceGlobalAddConf, ReduceGlobalAddKernel,
-                           FLOATING_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReduceAddConf, ReduceAddKernel, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
