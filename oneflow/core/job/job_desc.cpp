@@ -113,6 +113,9 @@ JobDesc::JobDesc(const std::string& job_conf_filepath) {
 #ifndef WITH_RDMA
   CHECK_EQ(job_conf_.other().use_rdma(), false) << "Please compile ONEFLOW with RDMA";
 #endif
+#ifndef WITH_NCCL
+  CHECK_EQ(job_conf_.other().enable_nccl(), false) << "Please compile ONEFLOW with NCCL";
+#endif  // WITH_NCCL
   int64_t piece_exp = job_conf_.other().piece_num_of_experiment_phase();
   if (job_conf_.other().has_train_conf()) {
     TrainConf* train_conf = job_conf_.mutable_other()->mutable_train_conf();
