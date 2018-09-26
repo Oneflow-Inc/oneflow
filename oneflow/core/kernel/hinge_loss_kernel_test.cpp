@@ -18,6 +18,7 @@ struct HingeLossTestUtil final {
                    const std::string& fw_or_bw) {
     test_case->set_is_train(job_type == "train");
     test_case->set_is_forward(fw_or_bw == "forward");
+    test_case->CreatRegst(device_type);
     HingeLossOpConf* hinge_loss_conf = test_case->mut_op_conf()->mutable_hinge_loss_conf();
     hinge_loss_conf->set_norm(Norm::L2);
     hinge_loss_conf->set_label("test/label");
@@ -29,6 +30,9 @@ struct HingeLossTestUtil final {
         new BlobDesc(Shape({2, 5}), GetDataType<PredType>::value, false, false, 1);
     BlobDesc* loss_blob_desc =
         new BlobDesc(Shape({2}), GetDataType<PredType>::value, false, false, 1);
+    test_case->EnrollBlobRegst("label");
+    test_case->EnrollBlobRegst("prediction");
+    test_case->EnrollBlobRegst("tmp_diff");
     test_case->InitBlob<LabelType>("label", label_blob_desc, {2, 2});
     test_case->InitBlob<PredType>(
         "prediction", pred_blob_desc,
@@ -46,7 +50,6 @@ void HingeLossKernelTestCase(OpKernelTestCase* test_case, const std::string& lab
   HingeLossTestUtil<device_type, PredType>::SwitchTest(SwitchCase(label_type), test_case, job_type,
                                                        fw_or_bw);
 }
-
 TEST_CPU_AND_GPU_OPKERNEL(HingeLossKernelTestCase, FLOATING_DATA_TYPE_SEQ,
                           OF_PP_SEQ_MAP(OF_PP_PAIR_FIRST, INT_DATA_TYPE_SEQ), (train)(predict),
                           (forward)(backward));
