@@ -830,6 +830,13 @@ message HingeLossOpConf {
   optional Norm norm = 7[default = L1];
 }
 
+message BatchPermutationOpConf {
+  required string in = 1;
+  required string out = 2;
+  required int32 scale = 3 [default = 2];
+  required string data_format = 4 [default = "channels_first"];
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -906,6 +913,7 @@ message OperatorConf {
     SigmoidCrossEntropyLossOpConf sigmoid_cross_entropy_loss_conf = 1007;
     AffineChannelOpConf affine_channel_conf = 1008;
     UpsampleNearestOpConf upsample_nearest_conf = 1009;
+    BatchPermutationOpConf batch_permutation_conf = 1010;
   }
 }
 
