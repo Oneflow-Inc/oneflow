@@ -4,18 +4,18 @@ package oneflow;
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
 
-// TODO: rename FieldDescProto to ShapePod
+// TODO: rename FieldDescProto to ShapePodProto
 message FieldDescProto {
   required ShapeProto shape = 1;
   required DataType data_type = 2;
 }
 
-message StructPod {
+message StructPodProto {
   repeated NamedField field = 1;
   optional int32 align_shift = 2 [default = 3];
 }
 
-message UnionPod {
+message UnionPodProto {
   repeated NamedField field = 1;
 }
 
@@ -27,7 +27,7 @@ message NamedField {
 message PodProto {
   oneof pod_type {
     FieldDescProto shaped_pod = 1;
-    StructPod struct_pod = 2;
-    UnionPod union_pod = 3;
+    StructPodProto struct_pod = 2;
+    UnionPodProto union_pod = 3;
   }
 }
