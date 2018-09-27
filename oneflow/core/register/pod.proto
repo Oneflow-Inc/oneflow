@@ -1,0 +1,27 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/common/shape.proto";
+import "oneflow/core/common/data_type.proto";
+
+message ShapedPodProto {
+  required ShapeProto shape = 1;
+  required DataType data_type = 2;
+}
+
+message StructPodProto {
+  repeated NamedField field = 1;
+}
+
+message NamedField {
+  required string name = 1;
+  required PodProto field = 2;
+  optional int32 align_shift = 3 [default = 3];
+}
+
+message PodProto {
+  oneof pod_type {
+    ShapedPodProto shaped_pod = 1;
+    StructPodProto struct_pod = 2;
+  }
+}
