@@ -53,6 +53,11 @@ DataType PodHelper::GetDataType() const {
 
 size_t PodHelper::ByteSize() const { return SizeOfPod(pod_proto()); }
 
+size_t PodHelper::FieldAlignedByteSize(const std::string& field_name) const {
+  CHECK(pod_proto().has_struct_pod());
+  return SizeOfNamedField(pod_proto().struct_pod().field(GetFieldOffset(field_name)));
+}
+
 int32_t PodHelper::GetFieldOffset(const std::string& field_name) const {
   CHECK(pod_proto().has_struct_pod());
   const StructPodProto& struct_pod = pod_proto().struct_pod();

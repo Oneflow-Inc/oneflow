@@ -18,8 +18,10 @@ class PodHelper final {
   DataType GetDataType() const;
 
   size_t ByteSize() const;
+  size_t FieldAlignedByteSize(const std::string& field_name) const;
+
   bool HasField(const std::string& field_name) const;
-  PodHelper Field(const std::string&) const;
+  PodHelper Field(const std::string& field_name) const;
   size_t PtrOffset4Field(const std::string& field_name) const;
 
   PodHelper MutField(const std::string& field_name);
