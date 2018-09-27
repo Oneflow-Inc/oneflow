@@ -59,6 +59,7 @@ class BlobDesc {
   int32_t blob_mem_id_;
 
   FieldDesc body_field_;
+  ShapedPodDesc body_shaped_pod_desc_;
   StructPodDesc pod_desc_;
 };
 

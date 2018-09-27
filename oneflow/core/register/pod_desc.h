@@ -23,6 +23,7 @@ class PodDesc {
 
 class ShapedPodDesc final : public PodDesc {
  public:
+  ShapedPodDesc() = default;
   ShapedPodDesc(const Shape& shape, DataType data_type)
       : PodDesc(), shape_(shape), data_type_(data_type) {}
   explicit ShapedPodDesc(const ShapedPodProto& shape_pod);
@@ -30,6 +31,8 @@ class ShapedPodDesc final : public PodDesc {
 
   const Shape& shape() const { return shape_; }
   DataType data_type() const { return data_type_; }
+  Shape* mut_shape() { return &shape_; }
+  void set_data_type(DataType data_type) { data_type_ = data_type; }
 
   size_t ByteSize() const override;
   void ToProto(PodProto* pod_proto) const override;
