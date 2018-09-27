@@ -2,20 +2,12 @@ syntax = "proto2";
 package oneflow;
 
 import "oneflow/core/register/field_desc.proto";
+import "oneflow/core/register/pod.proto";
 import "oneflow/core/common/shape.proto";
 
 message FieldHeaderDesc {
-  // shape: [body.shape.dim(0)]
   optional FieldDescProto data_id = 1;
-
-  // shape: [body.shape.dim(0)]
   optional FieldDescProto col_num = 2;
-
-  // shape: [body.shape.dim(0)]
-  optional FieldDescProto instance_available_elem_cnt = 3;
-
-  // shape: [instance_extra_shape.shape.dim(0)]
-  optional FieldDescProto available_instance_num = 4;
 }
 
 message BlobHeaderDescProto {
@@ -30,6 +22,5 @@ message BlobHeaderDescProto {
 message BlobDescProto {
   required BlobHeaderDescProto header = 1;
   required FieldDescProto body = 2;
-  // the element count of instance_extra_shape.shape equals body.shape.dim(0)
-  optional ShapeProto instance_extra_shape = 3;
+  required PodProto pod = 3;
 }

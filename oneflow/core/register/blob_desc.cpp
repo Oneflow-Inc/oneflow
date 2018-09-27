@@ -81,6 +81,7 @@ void BlobDesc::HeaderToProto(BlobDescProto* proto) const {
 void BlobDesc::ToProto(BlobDescProto* proto) const {
   HeaderToProto(proto);
   body_field_.ToProto(proto->mutable_body());
+  proto->mutable_pod();
 }
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
