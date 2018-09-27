@@ -1,16 +1,16 @@
 #include "oneflow/core/register/pod_ptr.h"
-#include "oneflow/core/register/pod_helper.h"
 
 namespace oneflow {
 
 bool PodPtr::HasField(const std::string& field_name) const {
-  return PodHelper(*pod_proto_).HasField(field_name);
+  const auto* struct_pod = dynamic_cast<const StructPodDesc*>(pod_desc_);
+  return struct_pod && struct_pod->HasField(field_name);
 }
 
 PodPtr PodPtr::Field(const std::string& field_name) const {
-  PodHelper pod_helper(*pod_proto_);
-  return PodPtr(pod_helper.Field(field_name).pod_proto(),
-                mem_ptr_ + pod_helper.PtrOffset4Field(field_name));
+  const auto* struct_pod = dynamic_cast<const StructPodDesc*>(pod_desc_);
+  CHECK_NOTNULL(struct_pod);
+  return PodPtr(struct_pod->Field(field_name), mem_ptr_ + struct_pod->PtrOffset4Field(field_name));
 }
 
 }  // namespace oneflow

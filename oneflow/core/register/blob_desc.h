@@ -5,6 +5,7 @@
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/register/field_desc.h"
 #include "oneflow/core/register/blob_desc.pb.h"
+#include "oneflow/core/register/pod_desc.h"
 #include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
@@ -58,7 +59,7 @@ class BlobDesc {
   int32_t blob_mem_id_;
 
   FieldDesc body_field_;
-  PodProto pod_proto_;
+  std::shared_ptr<StructPodDesc> pod_desc_;
 };
 
 std::unique_ptr<BlobDesc> ComputePackedBlobDesc(

@@ -22,5 +22,5 @@ message BlobHeaderDescProto {
 message BlobDescProto {
   required BlobHeaderDescProto header = 1;
   required FieldDescProto body = 2;
-  required PodProto pod = 3;
+  required StructPodProto pod_desc = 3;
 }
