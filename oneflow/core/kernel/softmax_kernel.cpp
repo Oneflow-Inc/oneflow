@@ -90,7 +90,7 @@ struct SoftmaxKernelUtil<DeviceType::kCPU, T> {
 
   static void Div(DeviceCtx* ctx, const int64_t n, const int64_t w, T* matrix, const T* vector) {
     for (int64_t i = 0; i < n; ++i) {
-      KernelUtil<DeviceType::kCPU, T>::Div(ctx, w, matrix + i * w, vector + i);
+      KernelUtil<DeviceType::kCPU, T>::Div(ctx, w, matrix + i * w, vector[i]);
     }
   }
 };

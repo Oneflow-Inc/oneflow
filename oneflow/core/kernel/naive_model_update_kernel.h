@@ -13,16 +13,15 @@ class NaiveMdUpdateKernel final : public NormalMdUpdateKernel<device_type, T> {
   ~NaiveMdUpdateKernel() = default;
 
  private:
-  void UpdateModel(DeviceCtx* ctx, int64_t batch_size, T learning_rate, T l1, T l2,
-                   int64_t next_model_vid,
+  void UpdateModel(DeviceCtx* ctx, T learning_rate, T l1, T l2, int64_t next_model_vid,
                    std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
 template<DeviceType device_type, typename T>
 class NaiveMdUpdateKernelUtil final {
  public:
-  static void UpdateModel(DeviceCtx*, int64_t n, int64_t batch_size, T learning_rate, T l1, T l2,
-                          const T* model_diff, T* model);
+  static void UpdateModel(DeviceCtx*, int64_t n, T learning_rate, T l1, T l2, const T* model_diff,
+                          T* model);
 };
 
 DECLARE_MDUPDT_KERNEL_CREATOR(Naive);

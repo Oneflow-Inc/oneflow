@@ -1,19 +1,19 @@
-#include "oneflow/core/operator/shared_model_diff_add_op.h"
+#include "oneflow/core/operator/process_model_diff_op.h"
 
 namespace oneflow {
 
-void SharedModelDiffAddOp::InitFromOpConf() {
-  CHECK(op_conf().has_shared_model_diff_add_conf());
-  FOR_RANGE(int32_t, i, 0, op_conf().shared_model_diff_add_conf().in_num()) {
+void ProcessModelDiffOp::InitFromOpConf() {
+  CHECK(op_conf().has_process_model_diff_conf());
+  FOR_RANGE(int32_t, i, 0, op_conf().process_model_diff_conf().in_num()) {
     EnrollInputBn("in_" + std::to_string(i), false);
   }
   EnrollOutputBn("processed_model_diff", false);
 }
-const PbMessage& SharedModelDiffAddOp::GetCustomizedConf() const {
-  return op_conf().shared_model_diff_add_conf();
+const PbMessage& ProcessModelDiffOp::GetCustomizedConf() const {
+  return op_conf().process_model_diff_conf();
 }
 
-void SharedModelDiffAddOp::InferBlobDescs(
+void ProcessModelDiffOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* in_0_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(0));
@@ -22,6 +22,6 @@ void SharedModelDiffAddOp::InferBlobDescs(
   }
 }
 
-REGISTER_OP(OperatorConf::kSharedModelDiffAddConf, SharedModelDiffAddOp);
+REGISTER_OP(OperatorConf::kProcessModelDiffConf, ProcessModelDiffOp);
 
 }  // namespace oneflow

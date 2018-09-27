@@ -61,16 +61,16 @@ bool NormalMdUpdtCompTaskNode::IsReadyForBuild() {
 
 void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
   if (!IsTrainable()) { return; }
-  ExecNode* shared_model_diff_add_node = mut_exec_gph().NewNode();
-  shared_model_diff_add_node->mut_op() = logical_node()->SoleOp();
+  ExecNode* process_model_diff_node = mut_exec_gph().NewNode();
+  process_model_diff_node->mut_op() = logical_node()->SoleOp();
   size_t ibn_idx = 0;
   for (const auto& pair : consumed_regsts()) {
-    shared_model_diff_add_node->BindBnWithRegst(
-        shared_model_diff_add_node->op()->input_bns().Get(ibn_idx++), pair.second.front());
+    process_model_diff_node->BindBnWithRegst(
+        process_model_diff_node->op()->input_bns().Get(ibn_idx++), pair.second.front());
   }
   std::shared_ptr<RegstDesc> processed_model_diff_regst = GetProducedRegst("processed_model_diff");
-  shared_model_diff_add_node->BindBnWithRegst(logical_node()->SoleOp()->SoleObn(),
-                                              processed_model_diff_regst);
+  process_model_diff_node->BindBnWithRegst(logical_node()->SoleOp()->SoleObn(),
+                                           processed_model_diff_regst);
   // "model" regst is already bound with lbis and locked by the corresponding
   // NormalForwardCompTaskNode
   processed_model_diff_regst->CopyBlobDescFrom(GetProducedRegst("model").get());
@@ -111,7 +111,7 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
     exec_edge->set_lbi(lbi);
     exec_edge->mut_src_bn() = lbi.blob_name();
     exec_edge->mut_dst_bn() = model_update_op->SoleIbn();
-    Connect(shared_model_diff_add_node, exec_edge, model_update_node);
+    Connect(process_model_diff_node, exec_edge, model_update_node);
 
     model_update_node->BindBnWithRegst(model_update_op->SoleIbn(), processed_model_diff_regst);
     model_update_node->BindBnWithRegst(model_update_op->SoleObn(), GetProducedRegst("model"));

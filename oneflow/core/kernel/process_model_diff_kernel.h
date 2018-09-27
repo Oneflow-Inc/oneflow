@@ -1,16 +1,16 @@
-#ifndef ONEFLOW_CORE_KERNEL_SHARED_MODEL_DIFF_ADD_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_SHARED_MODEL_DIFF_ADD_KERNEL_H_
+#ifndef ONEFLOW_CORE_KERNEL_PROCESS_MODEL_DIFF_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_PROCESS_MODEL_DIFF_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class SharedModelDiffAddKernel final : public KernelIf<device_type> {
+class ProcessModelDiffKernel final : public KernelIf<device_type> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(SharedModelDiffAddKernel);
-  SharedModelDiffAddKernel() = default;
-  ~SharedModelDiffAddKernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ProcessModelDiffKernel);
+  ProcessModelDiffKernel() = default;
+  ~ProcessModelDiffKernel() = default;
 
  private:
   void ForwardDataContent(const KernelCtx& ctx,
@@ -22,4 +22,4 @@ class SharedModelDiffAddKernel final : public KernelIf<device_type> {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_SHARED_MODEL_DIFF_ADD_KERNEL_H_
+#endif  // ONEFLOW_CORE_KERNEL_PROCESS_MODEL_DIFF_KERNEL_H_

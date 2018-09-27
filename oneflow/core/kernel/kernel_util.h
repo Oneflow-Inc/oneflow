@@ -163,7 +163,7 @@ struct KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T>::va
                    const T beta, T* c, const int ldc);
 
   static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
-  static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha);
+  static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T alpha);
   static void Div(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
   static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
   static void Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsilon);
@@ -270,7 +270,7 @@ struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T>::va
                    const T beta, T* c, const int ldc);
 
   static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
-  static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha);
+  static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T alpha);
   static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
   static void Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsilon);
 

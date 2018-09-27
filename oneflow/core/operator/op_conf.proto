@@ -479,7 +479,7 @@ message MaximumOpConf {
   required string out = 2;
 }
 
-message SharedModelDiffAddOpConf {
+message ProcessModelDiffOpConf {
   required int32 in_num = 1;
 }
 
@@ -701,7 +701,7 @@ message OperatorConf {
     AccumulateOpConf accumulate_conf = 117;
     NormalModelUpdateOpConf normal_mdupdt_conf = 118;
     ModelSaveOpConf model_save_conf = 119;
-    SharedModelDiffAddOpConf shared_model_diff_add_conf = 120;
+    ProcessModelDiffOpConf process_model_diff_conf = 120;
     
     // domain op
     TransposeOpConf transpose_conf = 201;

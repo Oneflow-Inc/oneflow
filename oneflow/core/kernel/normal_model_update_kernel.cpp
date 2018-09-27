@@ -19,11 +19,10 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
     learning_rate =
         GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, cur_batch_num);
   }
-  int64_t batch_size = Global<JobDesc>::Get()->BatchSize();
   float l1 = this->op_conf().normal_mdupdt_conf().l1();
   float l2 = this->op_conf().normal_mdupdt_conf().l2();
-  UpdateModel(ctx.device_ctx, batch_size, static_cast<T>(learning_rate), static_cast<T>(l1),
-              static_cast<T>(l2), next_model_vid, BnInOp2Blob);
+  UpdateModel(ctx.device_ctx, static_cast<T>(learning_rate), static_cast<T>(l1), static_cast<T>(l2),
+              next_model_vid, BnInOp2Blob);
 }
 
 #define INSTANTIATE_KERNEL(device_type, data_type_pair) \

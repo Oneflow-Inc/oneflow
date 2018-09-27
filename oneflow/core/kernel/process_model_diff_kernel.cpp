@@ -1,11 +1,11 @@
-#include "oneflow/core/kernel/shared_model_diff_add_kernel.h"
+#include "oneflow/core/kernel/process_model_diff_kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/kernel/kernel_common.hpp"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-void SharedModelDiffAddKernel<device_type, T>::ForwardDataContent(
+void ProcessModelDiffKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const PbRpf<std::string>& ibns = this->op_attribute().input_bns();
   size_t in_num = ibns.size();
@@ -24,13 +24,15 @@ void SharedModelDiffAddKernel<device_type, T>::ForwardDataContent(
                              in_blob(r + 2), in_blob(r + 3), in_blob(r + 4), in_blob(r + 5),
                              in_blob(r + 6), in_blob(r + 7));
   }
+  KernelUtil<device_type, T>::Div(ctx.device_ctx, out_blob->shape().elem_cnt(),
+                                  out_blob->mut_dptr<T>(), Global<JobDesc>::Get()->BatchSize());
 }
 
 template<DeviceType device_type, typename T>
-const PbMessage& SharedModelDiffAddKernel<device_type, T>::GetCustomizedOpConf() const {
-  return this->op_conf().shared_model_diff_add_conf();
+const PbMessage& ProcessModelDiffKernel<device_type, T>::GetCustomizedOpConf() const {
+  return this->op_conf().process_model_diff_conf();
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSharedModelDiffAddConf, SharedModelDiffAddKernel,
-                           ARITHMETIC_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kProcessModelDiffConf, ProcessModelDiffKernel,
+                           FLOATING_DATA_TYPE_SEQ);
 }  // namespace oneflow

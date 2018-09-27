@@ -615,11 +615,11 @@ void LogicalGraph::AddReduceScatterAddGatherNodes(LogicalNode* src, LogicalNode*
 void LogicalGraph::SetupNormalMdUpdtOp() {
   ForEachLogicalNode<NormalMdUpdtLogicalNode>([](NormalMdUpdtLogicalNode* node) {
     if (node->in_edges().size() < 1) { return; }
-    // Add shared_model_diff_add_op
+    // Add process_model_diff_op
     OperatorConf op_conf;
-    op_conf.set_name("md_diff_add_" + NewUniqueId());
+    op_conf.set_name("prcs_md_diff_" + NewUniqueId());
     op_conf.set_device_type(node->parallel_desc()->device_type());
-    op_conf.mutable_shared_model_diff_add_conf()->set_in_num(node->in_edges().size());
+    op_conf.mutable_process_model_diff_conf()->set_in_num(node->in_edges().size());
     node->mut_op_vec() = {ConstructOp(op_conf)};
   });
 }
