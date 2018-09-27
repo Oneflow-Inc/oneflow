@@ -10,7 +10,8 @@ class PodPtr final {
   ~PodPtr() = default;
 
   template<typename T>
-  T* get() const {
+  T* Get() const {
+    CHECK(pod_proto_->has_shaped_pod());
     CHECK_EQ(pod_proto_->shaped_pod().data_type(), GetDataType<T>::value);
     return static_cast<T*>(mem_ptr_);
   }
