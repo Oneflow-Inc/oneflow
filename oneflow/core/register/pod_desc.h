@@ -10,7 +10,6 @@ namespace oneflow {
 
 class PodDesc {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(PodDesc);
   PodDesc() = default;
   virtual ~PodDesc() = default;
 
@@ -19,11 +18,11 @@ class PodDesc {
 
   virtual size_t ByteSize() const = 0;
   virtual void ToProto(PodProto* pod_proto) const = 0;
+  virtual std::unique_ptr<PodDesc> Clone() const = 0;
 };
 
 class ShapedPodDesc final : public PodDesc {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ShapedPodDesc);
   ShapedPodDesc(const Shape& shape, DataType data_type)
       : PodDesc(), shape_(shape), data_type_(data_type) {}
   explicit ShapedPodDesc(const ShapedPodProto& shape_pod);
@@ -34,6 +33,7 @@ class ShapedPodDesc final : public PodDesc {
 
   size_t ByteSize() const override;
   void ToProto(PodProto* pod_proto) const override;
+  std::unique_ptr<PodDesc> Clone() const override { return std::make_unique<ShapedPodDesc>(*this); }
 
  private:
   Shape shape_;
@@ -44,22 +44,33 @@ class AlignedFieldPodDesc;
 
 class StructPodDesc final : public PodDesc {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(StructPodDesc);
   StructPodDesc() = default;
-  explicit StructPodDesc(const StructPodProto& struct_pod);
+  explicit StructPodDesc(const StructPodProto&);
+  explicit StructPodDesc(const StructPodDesc&);
   ~StructPodDesc() = default;
 
   size_t ByteSize() const override;
   void ToProto(PodProto* pod_proto) const override { ToProto(pod_proto->mutable_struct_pod()); }
+  std::unique_ptr<PodDesc> Clone() const override { return std::make_unique<StructPodDesc>(*this); }
   void ToProto(StructPodProto* pod_proto) const;
 
   bool HasField(const std::string& name) const;
   const PodDesc& Field(const std::string& name) const;
-  void AddField(const std::string& name, std::unique_ptr<PodDesc>&& field, size_t align_shift = 3);
+  void AddField(const std::string& name, const Shape& shape, DataType data_type,
+                size_t align_shift);
+  void AddField(const std::string& name, const Shape& shape, DataType data_type) {
+    AddField(name, shape, data_type, 3);
+  }
+  void AddCopedField(const std::string& name, const PodDesc& pod_desc, size_t align_shift);
+  void AddCopedField(const std::string& name, const PodDesc& pod_desc) {
+    AddCopedField(name, pod_desc, 3);
+  }
   size_t PtrOffset4Field(const std::string& field_name) const;
 
  private:
+  void InitFromProto(const StructPodProto& struct_pod);
   void AddField(std::unique_ptr<AlignedFieldPodDesc>&& field);
+  void AddField(const std::string& name, std::unique_ptr<PodDesc>&& field, size_t align_shift = 3);
 
   std::vector<std::unique_ptr<AlignedFieldPodDesc>> fields_;
   HashMap<std::string, int32_t> name2field_idx_;
@@ -78,6 +89,7 @@ class AlignedFieldPodDesc final : public PodDesc {
   explicit AlignedFieldPodDesc(const AlignedFieldPodProto& aligned_field_pod);
   size_t ByteSize() const override;
   void ToProto(PodProto* pod_proto) const override { UNIMPLEMENTED(); }
+  std::unique_ptr<PodDesc> Clone() const override { UNIMPLEMENTED(); }
   void ToProto(AlignedFieldPodProto* aligned_field_proto) const;
 
   const PodDesc& field() const { return *field_; }

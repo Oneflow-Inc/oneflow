@@ -59,7 +59,7 @@ class BlobDesc {
   int32_t blob_mem_id_;
 
   FieldDesc body_field_;
-  std::shared_ptr<StructPodDesc> pod_desc_;
+  StructPodDesc pod_desc_;
 };
 
 std::unique_ptr<BlobDesc> ComputePackedBlobDesc(

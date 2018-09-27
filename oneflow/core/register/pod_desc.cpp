@@ -41,7 +41,19 @@ void AlignedFieldPodDesc::ToProto(AlignedFieldPodProto* aligned_field_proto) con
   field_->ToProto(aligned_field_proto->mutable_field());
 }
 
-StructPodDesc::StructPodDesc(const StructPodProto& struct_pod) {
+StructPodDesc::StructPodDesc(const StructPodProto& struct_pod_proto) {
+  InitFromProto(struct_pod_proto);
+}
+
+StructPodDesc::StructPodDesc(const StructPodDesc& struct_pod_desc) {
+  StructPodProto struct_pod_proto;
+  struct_pod_desc.ToProto(&struct_pod_proto);
+  InitFromProto(struct_pod_proto);
+}
+
+void StructPodDesc::InitFromProto(const StructPodProto& struct_pod) {
+  CHECK(name2field_idx_.empty());
+  CHECK(fields_.empty());
   for (const auto& field : struct_pod.field()) {
     std::unique_ptr<AlignedFieldPodDesc> aligned_pod(new AlignedFieldPodDesc(field));
     AddField(std::move(aligned_pod));
@@ -65,6 +77,16 @@ bool StructPodDesc::HasField(const std::string& name) const {
 const PodDesc& StructPodDesc::Field(const std::string& name) const {
   CHECK(HasField(name));
   return fields_.at(name2field_idx_.at(name))->field();
+}
+
+void StructPodDesc::AddCopedField(const std::string& name, const PodDesc& pod_desc,
+                                  size_t align_shift) {
+  AddField(name, pod_desc.Clone(), align_shift);
+}
+
+void StructPodDesc::AddField(const std::string& name, const Shape& shape, DataType data_type,
+                             size_t align_shift) {
+  AddField(name, std::make_unique<ShapedPodDesc>(shape, data_type), align_shift);
 }
 
 void StructPodDesc::AddField(const std::string& name, std::unique_ptr<PodDesc>&& field,

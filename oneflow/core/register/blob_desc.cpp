@@ -14,9 +14,7 @@ BlobDesc::BlobDesc(const Shape& shape, DataType data_type, bool has_data_id, boo
       has_col_num_(has_col_num),
       max_col_num_(max_col_num),
       blob_mem_id_(-1),
-      body_field_(shape, data_type) {
-  pod_desc_ = std::make_shared<StructPodDesc>();
-}
+      body_field_(shape, data_type) {}
 BlobDesc::BlobDesc(const BlobDescProto& proto) : body_field_(proto.body()) {
   max_col_num_ = proto.header().max_col_num();
   blob_mem_id_ = proto.header().blob_mem_id();
@@ -31,7 +29,6 @@ BlobDesc::BlobDesc(const BlobDescProto& proto) : body_field_(proto.body()) {
     has_data_id_ = proto.header().field_header().has_data_id();
     has_col_num_ = proto.header().field_header().has_col_num();
   }
-  pod_desc_ = std::make_shared<StructPodDesc>();
 }
 
 BlobDesc::BlobDesc(int64_t header_byte_size, const Shape& shape, DataType data_type,
@@ -47,7 +44,6 @@ BlobDesc::BlobDesc(int64_t header_byte_size, const Shape& shape, DataType data_t
   } else {
     header_is_opaque_ = false;
   }
-  pod_desc_ = std::make_shared<StructPodDesc>();
 }
 void BlobDesc::set_has_data_id_field(bool val) {
   CHECK(!header_is_opaque_);
@@ -85,7 +81,7 @@ void BlobDesc::HeaderToProto(BlobDescProto* proto) const {
 void BlobDesc::ToProto(BlobDescProto* proto) const {
   HeaderToProto(proto);
   body_field_.ToProto(proto->mutable_body());
-  pod_desc_->ToProto(proto->mutable_pod_desc());
+  pod_desc_.ToProto(proto->mutable_pod_desc());
 }
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
