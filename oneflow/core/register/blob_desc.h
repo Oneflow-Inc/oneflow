@@ -58,6 +58,7 @@ class BlobDesc {
   int32_t blob_mem_id_;
 
   FieldDesc body_field_;
+  PodProto pod_proto_;
 };
 
 std::unique_ptr<BlobDesc> ComputePackedBlobDesc(

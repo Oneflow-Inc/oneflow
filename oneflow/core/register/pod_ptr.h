@@ -1,3 +1,5 @@
+#ifndef ONEFLOW_CORE_REGISTER_POD_PTR_H_
+#define ONEFLOW_CORE_REGISTER_POD_PTR_H_
 #include "oneflow/core/register/pod.pb.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.h"
@@ -10,9 +12,14 @@ class PodPtr final {
   ~PodPtr() = default;
 
   template<typename T>
-  T* Get() const {
-    CHECK(pod_proto_->has_shaped_pod());
-    CHECK_EQ(pod_proto_->shaped_pod().data_type(), GetDataType<T>::value);
+  const T* Get() const {
+    CheckDataType<T>();
+    return static_cast<T*>(mem_ptr_);
+  }
+
+  template<typename T>
+  T* Mut() {
+    CheckDataType<T>();
     return static_cast<T*>(mem_ptr_);
   }
 
@@ -21,10 +28,15 @@ class PodPtr final {
   PodPtr Field(const std::string& field_name) const;
 
  private:
+  template<typename T>
+  void CheckDataType() {
+    CHECK(pod_proto_->has_shaped_pod());
+    CHECK_EQ(pod_proto_->shaped_pod().data_type(), GetDataType<T>::value);
+  }
   const PodProto* pod_proto_;
   char* mem_ptr_;
 };
 
-size_t SizeOfPod(const PodProto& pod_proto);
-
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_REGISTER_POD_PTR_H_
