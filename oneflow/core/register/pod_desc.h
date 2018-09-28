@@ -14,11 +14,15 @@ class PodDesc {
   virtual ~PodDesc() = default;
 
   template<typename T>
-  const T* Cast() const;
+  const T& Cast() const;
+  template<typename T>
+  T* MutCast();
 
   virtual size_t ByteSize() const = 0;
   virtual void ToProto(PodProto* pod_proto) const = 0;
   virtual std::unique_ptr<PodDesc> Clone() const = 0;
+  virtual bool operator==(const PodDesc& rhs) const = 0;
+  bool operator!=(const PodDesc& rhs) const { return !(*this == rhs); }
 };
 
 class ShapedPodDesc final : public PodDesc {
@@ -28,7 +32,6 @@ class ShapedPodDesc final : public PodDesc {
       : PodDesc(), shape_(shape), data_type_(data_type) {}
   explicit ShapedPodDesc(const ShapedPodProto& shape_pod);
   ~ShapedPodDesc() = default;
-
   const Shape& shape() const { return shape_; }
   DataType data_type() const { return data_type_; }
   Shape* mut_shape() { return &shape_; }
@@ -37,6 +40,7 @@ class ShapedPodDesc final : public PodDesc {
   size_t ByteSize() const override;
   void ToProto(PodProto* pod_proto) const override;
   std::unique_ptr<PodDesc> Clone() const override { return std::make_unique<ShapedPodDesc>(*this); }
+  bool operator==(const PodDesc& rhs) const override;
 
  private:
   Shape shape_;
@@ -52,26 +56,25 @@ class StructPodDesc final : public PodDesc {
   explicit StructPodDesc(const StructPodDesc&);
   ~StructPodDesc() = default;
 
-  size_t ByteSize() const override;
-  void ToProto(PodProto* pod_proto) const override { ToProto(pod_proto->mutable_struct_pod()); }
-  std::unique_ptr<PodDesc> Clone() const override { return std::make_unique<StructPodDesc>(*this); }
-  void ToProto(StructPodProto* pod_proto) const;
-
-  bool HasField(const std::string& name) const;
+  StructPodDesc* MutStructField(const std::string& name);
+  ShapedPodDesc* MutShapedField(const std::string& name);
   const PodDesc& Field(const std::string& name) const;
-  void AddField(const std::string& name, const Shape& shape, DataType data_type,
-                size_t align_shift);
-  void AddField(const std::string& name, const Shape& shape, DataType data_type) {
-    AddField(name, shape, data_type, 3);
-  }
-  void AddCopedField(const std::string& name, const PodDesc& pod_desc, size_t align_shift);
-  void AddCopedField(const std::string& name, const PodDesc& pod_desc) {
-    AddCopedField(name, pod_desc, 3);
-  }
+  void AddField(const std::string& name, const PodDesc& pod_desc) { AddField(name, pod_desc, 3); }
+  bool HasField(const std::string& name) const;
+  size_t ByteSize() const override;
+  void Clear();
+
+  void InitFromProto(const StructPodProto& struct_pod);
+  StructPodDesc& operator=(const StructPodDesc&);
+  std::unique_ptr<PodDesc> Clone() const override { return std::make_unique<StructPodDesc>(*this); }
+  void ToProto(PodProto* pod_proto) const override { ToProto(pod_proto->mutable_struct_pod()); }
+  void ToProto(StructPodProto* pod_proto) const;
+  void AddField(const std::string& name, const PodDesc& pod_desc, size_t align_shift);
+  bool operator==(const PodDesc& rhs) const override;
   size_t PtrOffset4Field(const std::string& field_name) const;
 
  private:
-  void InitFromProto(const StructPodProto& struct_pod);
+  PodDesc* MutExistedField(const std::string& name);
   void AddField(std::unique_ptr<AlignedFieldPodDesc>&& field);
   void AddField(const std::string& name, std::unique_ptr<PodDesc>&& field, size_t align_shift = 3);
 
@@ -90,13 +93,16 @@ class AlignedFieldPodDesc final : public PodDesc {
                       size_t align_shift = 3)
       : PodDesc(), name_(name), field_(std::move(field)), align_shift_(align_shift) {}
   explicit AlignedFieldPodDesc(const AlignedFieldPodProto& aligned_field_pod);
+
   size_t ByteSize() const override;
   void ToProto(PodProto* pod_proto) const override { UNIMPLEMENTED(); }
   std::unique_ptr<PodDesc> Clone() const override { UNIMPLEMENTED(); }
   void ToProto(AlignedFieldPodProto* aligned_field_proto) const;
+  bool operator==(const PodDesc& rhs) const override;
 
   const PodDesc& field() const { return *field_; }
   const std::string& name() const { return name_; }
+  PodDesc* mut_field() { return field_.get(); }
 
   std::string name_;
   std::unique_ptr<PodDesc> field_;
@@ -104,7 +110,14 @@ class AlignedFieldPodDesc final : public PodDesc {
 };
 
 template<typename T>
-const T* PodDesc::Cast() const {
+const T& PodDesc::Cast() const {
+  static_assert(std::is_same<T, ShapedPodDesc>::value || std::is_same<T, StructPodDesc>::value,
+                "only ShapedPodDesc and StructPodDesc supported");
+  return *dynamic_cast<T*>(this);
+}
+
+template<typename T>
+T* PodDesc::MutCast() {
   static_assert(std::is_same<T, ShapedPodDesc>::value || std::is_same<T, StructPodDesc>::value,
                 "only ShapedPodDesc and StructPodDesc supported");
   return dynamic_cast<T*>(this);

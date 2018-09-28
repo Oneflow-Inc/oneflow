@@ -19,7 +19,8 @@ class BlobDesc {
   BlobDesc(const Shape&, DataType, bool has_data_id, bool has_col_num, int32_t max_col_num);
   BlobDesc(const Shape& shape) : body_field_(shape) {}
   BlobDesc(const BlobDescProto& proto);
-  BlobDesc(int64_t header_byte_size, const Shape&, DataType, int32_t max_col_num);
+  BlobDesc(const StructPodDesc& header_pod_desc, int64_t header_byte_size, const Shape&, DataType,
+           int32_t max_col_num);
 
   const Shape& shape() const { return body_field_.shape(); }
   Shape& mut_shape() { return body_field_.mut_shape(); }
@@ -47,11 +48,12 @@ class BlobDesc {
 
  private:
   void HeaderToProto(BlobDescProto* proto) const;
-  void DataIdFieldToProto(FieldHeaderDesc* proto) const;
-  void ColNumFieldToProto(FieldHeaderDesc* proto) const;
+  void DataIdFieldToProto(FieldHeaderDesc* proto, StructPodDesc* header_pod_desc) const;
+  void ColNumFieldToProto(FieldHeaderDesc* proto, StructPodDesc* header_pod_desc) const;
 
   bool header_is_opaque_;
   FieldDesc opaque_header_;
+  StructPodDesc opaque_header_pod_desc_;
 
   bool has_data_id_;
   bool has_col_num_;
@@ -59,8 +61,6 @@ class BlobDesc {
   int32_t blob_mem_id_;
 
   FieldDesc body_field_;
-  ShapedPodDesc body_shaped_pod_desc_;
-  StructPodDesc pod_desc_;
 };
 
 std::unique_ptr<BlobDesc> ComputePackedBlobDesc(

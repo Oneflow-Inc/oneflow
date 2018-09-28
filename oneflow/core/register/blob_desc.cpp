@@ -23,6 +23,7 @@ BlobDesc::BlobDesc(const BlobDescProto& proto) : body_field_(proto.body()) {
     has_data_id_ = false;
     has_col_num_ = false;
     opaque_header_ = FieldDesc(proto.header().opaque_header());
+    opaque_header_pod_desc_.InitFromProto(proto.header().header_pod_desc());
   } else {
     CHECK(proto.header().has_field_header());
     header_is_opaque_ = false;
@@ -31,8 +32,8 @@ BlobDesc::BlobDesc(const BlobDescProto& proto) : body_field_(proto.body()) {
   }
 }
 
-BlobDesc::BlobDesc(int64_t header_byte_size, const Shape& shape, DataType data_type,
-                   int32_t max_col_num)
+BlobDesc::BlobDesc(const StructPodDesc& header_pod_desc, int64_t header_byte_size,
+                   const Shape& shape, DataType data_type, int32_t max_col_num)
     : has_data_id_(false),
       has_col_num_(false),
       max_col_num_(max_col_num),
@@ -41,6 +42,7 @@ BlobDesc::BlobDesc(int64_t header_byte_size, const Shape& shape, DataType data_t
   if (header_byte_size > 0) {
     header_is_opaque_ = true;
     opaque_header_ = FieldDesc(Shape({header_byte_size}), DataType::kChar);
+    opaque_header_pod_desc_ = header_pod_desc;
   } else {
     header_is_opaque_ = false;
   }
@@ -54,16 +56,19 @@ void BlobDesc::set_has_col_num_field(bool val) {
   CHECK(!header_is_opaque_);
   has_col_num_ = val;
 }
-void BlobDesc::DataIdFieldToProto(FieldHeaderDesc* proto) const {
-  FieldDesc data_id_field(Shape({body_field_.shape().At(0),
-                                 static_cast<int64_t>(Global<JobDesc>::Get()->SizeOfOneDataId())}),
-                          DataType::kChar);
+void BlobDesc::DataIdFieldToProto(FieldHeaderDesc* proto, StructPodDesc* header_pod_desc) const {
+  Shape shape(
+      {body_field_.shape().At(0), static_cast<int64_t>(Global<JobDesc>::Get()->SizeOfOneDataId())});
+  FieldDesc data_id_field(shape, DataType::kChar);
   data_id_field.ToProto(proto->mutable_data_id());
+  header_pod_desc->AddField("data_id", ShapedPodDesc(shape, DataType::kChar));
 }
 
-void BlobDesc::ColNumFieldToProto(FieldHeaderDesc* proto) const {
-  FieldDesc col_num_field(Shape({body_field_.shape().At(0)}), DataType::kInt32);
+void BlobDesc::ColNumFieldToProto(FieldHeaderDesc* proto, StructPodDesc* header_pod_desc) const {
+  Shape shape({body_field_.shape().At(0)});
+  FieldDesc col_num_field(shape, DataType::kInt32);
   col_num_field.ToProto(proto->mutable_col_num());
+  header_pod_desc->AddField("col_num", ShapedPodDesc(shape, DataType::kInt32));
 }
 
 void BlobDesc::HeaderToProto(BlobDescProto* proto) const {
@@ -71,21 +76,24 @@ void BlobDesc::HeaderToProto(BlobDescProto* proto) const {
   proto->mutable_header()->set_blob_mem_id(blob_mem_id_);
   if (!header_is_opaque_) {
     FieldHeaderDesc* field_header = proto->mutable_header()->mutable_field_header();
-    if (has_data_id_field()) { DataIdFieldToProto(field_header); }
-    if (has_col_num_field()) { ColNumFieldToProto(field_header); }
+    StructPodDesc header_pod_desc;
+    if (has_data_id_field()) { DataIdFieldToProto(field_header, &header_pod_desc); }
+    if (has_col_num_field()) { ColNumFieldToProto(field_header, &header_pod_desc); }
+    header_pod_desc.ToProto(proto->mutable_header()->mutable_header_pod_desc());
   } else {
     opaque_header_.ToProto(proto->mutable_header()->mutable_opaque_header());
+    opaque_header_pod_desc_.ToProto(proto->mutable_header()->mutable_header_pod_desc());
   }
 }
 
 void BlobDesc::ToProto(BlobDescProto* proto) const {
   HeaderToProto(proto);
   body_field_.ToProto(proto->mutable_body());
-  pod_desc_.ToProto(proto->mutable_pod_desc());
 }
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
   return header_is_opaque_ == rhs.header_is_opaque_ && opaque_header_ == rhs.opaque_header_
+         && opaque_header_pod_desc_ == rhs.opaque_header_pod_desc_
          && has_data_id_ == rhs.has_data_id_ && has_col_num_ == rhs.has_col_num_
          && max_col_num_ == rhs.max_col_num_ && blob_mem_id_ == rhs.blob_mem_id_
          && body_field_ == rhs.body_field_;
@@ -94,6 +102,7 @@ bool BlobDesc::operator==(const BlobDesc& rhs) const {
 BlobDesc& BlobDesc::operator=(const BlobDesc& blob_desc) {
   header_is_opaque_ = blob_desc.header_is_opaque_;
   opaque_header_ = blob_desc.opaque_header_;
+  opaque_header_pod_desc_ = blob_desc.opaque_header_pod_desc_;
   has_data_id_ = blob_desc.has_data_id_;
   has_col_num_ = blob_desc.has_col_num_;
   max_col_num_ = blob_desc.max_col_num_;
@@ -112,11 +121,16 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
   std::unique_ptr<BlobDesc> ret(new BlobDesc());
   const BlobDesc* last_blob_desc = nullptr;
   HashMap<int32_t, size_t> blob_mem_id2size;
-
+  StructPodDesc opaque_header_pod_desc;
   for (auto& pair : lbi2blob_desc) {
     BlobDesc* blob_desc = pair.second.get();
     RtBlobDesc rt_blob_desc(*blob_desc);
     header_byte_size += rt_blob_desc.ByteSizeOfBlobHeader();
+    auto* header_pod_desc = opaque_header_pod_desc.MutStructField(pair.first.op_name())
+                                ->MutStructField(pair.first.blob_name())
+                                ->MutStructField(std::to_string(pair.first.clone_id()))
+                                ->MutStructField(std::to_string(pair.first.is_packed_id()));
+    *header_pod_desc = rt_blob_desc.header_pod_desc();
     int64_t cur_body_byte_size = rt_blob_desc.ByteSizeOfBlobBody();
     int32_t blob_mem_id = blob_desc->blob_mem_id();
     if (blob_mem_id == -1) {
@@ -151,12 +165,12 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     if (header_byte_size == 0) {
       ret.reset(new BlobDesc(Shape({total_elem_cnt}), sole_data_type, false, false, max_col_num));
     } else {
-      ret.reset(
-          new BlobDesc(header_byte_size, Shape({total_elem_cnt}), sole_data_type, max_col_num));
+      ret.reset(new BlobDesc(opaque_header_pod_desc, header_byte_size, Shape({total_elem_cnt}),
+                             sole_data_type, max_col_num));
     }
   } else {
-    ret.reset(
-        new BlobDesc(header_byte_size, Shape({body_byte_size}), DataType::kChar, max_col_num));
+    ret.reset(new BlobDesc(opaque_header_pod_desc, header_byte_size, Shape({body_byte_size}),
+                           DataType::kChar, max_col_num));
   }
   return ret;
 }

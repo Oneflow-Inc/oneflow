@@ -13,6 +13,7 @@ RtBlobDesc::RtBlobDesc(const BlobDescProto& blob_desc_proto) { InitFromProto(blo
 void RtBlobDesc::InitFromProto(const BlobDescProto& blob_desc_proto) {
   blob_desc_proto_ = blob_desc_proto;
   body_desc_ = FieldDesc(blob_desc_proto.body());
+  header_pod_desc_.InitFromProto(blob_desc_proto.header().header_pod_desc());
   if (blob_desc_proto.header().has_opaque_header()) {
     CHECK(header_desc_.emplace("opaque_header", FieldDesc(blob_desc_proto.header().opaque_header()))
               .second);
