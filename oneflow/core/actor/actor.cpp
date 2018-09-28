@@ -119,7 +119,7 @@ int64_t Actor::Name2SoleRegstDescId(const std::string& name) const {
   return -1;
 }
 
-const std::vector<int64_t>& Actor::Name2RegstDescId(const std::string& name) const {
+const std::vector<int64_t>& Actor::Name2RegstDescIds(const std::string& name) const {
   return name2regst_desc_id_.at(name);
 }
 

@@ -3,7 +3,7 @@
 namespace oneflow {
 
 void NormalBackwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
-  any_out_diff_regst_desc_id_ = Name2RegstDescId("out_diff").front();
+  any_out_diff_regst_desc_id_ = Name2RegstDescIds("out_diff").front();
   model_regst_desc_id_ = Name2SoleRegstDescId("model");
   const_model_regst_desc_id_ = Name2SoleRegstDescId("const_model");
   const_model_regst_ = nullptr;

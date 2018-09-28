@@ -51,7 +51,7 @@ class Actor {
   DeviceType GetDeviceType() const;
   virtual void VirtualActorInit(const TaskProto&) {}
   int64_t Name2SoleRegstDescId(const std::string& name) const;
-  const std::vector<int64_t>& Name2RegstDescId(const std::string& name) const;
+  const std::vector<int64_t>& Name2RegstDescIds(const std::string& name) const;
   virtual void InitDeviceCtx(const ThreadCtx&);
   std::unique_ptr<DeviceCtx>& mut_device_ctx() { return device_ctx_; }
   KernelCtx GenDefaultKernelCtx() const;
