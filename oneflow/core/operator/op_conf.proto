@@ -839,6 +839,13 @@ message HingeLossOpConf {
   optional Norm norm = 7[default = L1];
 }
 
+message BatchPermutationOpConf {
+  required string in = 1;
+  required string indices = 2;
+  required string out = 3;
+  required string data_format = 4;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -916,6 +923,7 @@ message OperatorConf {
     AffineChannelOpConf affine_channel_conf = 1008;
     UpsampleNearestOpConf upsample_nearest_conf = 1009;
     ResizeNearestNeighborOpConf resize_nearest_neighbor_conf = 1010;
+    BatchPermutationOpConf batch_permutation_conf = 1011;
   }
 }
 
