@@ -1,5 +1,4 @@
 #include "oneflow/core/graph/model_diff_accumulate_compute_task_node.h"
-#include "model_diff_accumulate_compute_task_node.h"
 
 namespace oneflow {
 
@@ -11,8 +10,8 @@ void MdDiffAccCompTaskNode::FixPackedBlobDescOfProducedRegst() {
 }
 
 void MdDiffAccCompTaskNode::InferProducedRegstTimeShape() {
-  std::shared_ptr<Shape> time_shape;
-  time_shape.reset(new Shape({Global<JobDesc>::Get()->TotalBatchNum()}));
+  std::shared_ptr<Shape> time_shape =
+      std::make_shared<Shape>(std::vector<int64_t>({Global<JobDesc>::Get()->TotalBatchNum()}));
   for (auto& pair : produced_regsts()) { pair.second->mut_time_shape() = time_shape; }
 }
 

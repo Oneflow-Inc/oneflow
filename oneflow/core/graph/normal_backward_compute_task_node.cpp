@@ -1,7 +1,6 @@
 #include "oneflow/core/graph/normal_backward_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/logical_node.h"
-#include "normal_backward_compute_task_node.h"
 
 namespace oneflow {
 

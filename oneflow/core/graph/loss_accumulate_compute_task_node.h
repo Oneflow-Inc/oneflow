@@ -14,10 +14,9 @@ class LossAccCompTaskNode final : public AccCompTaskNode {
 
  private:
   void InferProducedRegstTimeShape() override {
-    std::shared_ptr<Shape> time_shape;
-    time_shape.reset(new Shape({Global<JobDesc>::Get()->TotalBatchNum()
-                                * Global<JobDesc>::Get()->NumOfPiecesInBatch()
-                                / Global<JobDesc>::Get()->PieceNumOfPrintLoss()}));
+    std::shared_ptr<Shape> time_shape = std::make_shared<Shape>(std::vector<int64_t>(
+        {Global<JobDesc>::Get()->TotalBatchNum() * Global<JobDesc>::Get()->NumOfPiecesInBatch()
+         / Global<JobDesc>::Get()->PieceNumOfPrintLoss()}));
     for (auto& pair : produced_regsts()) { pair.second->mut_time_shape() = time_shape; }
   }
 };

@@ -1,6 +1,5 @@
 #include "oneflow/core/graph/normal_model_update_compute_task_node.h"
 #include "oneflow/core/graph/logical_node.h"
-#include "normal_model_update_compute_task_node.h"
 
 namespace oneflow {
 

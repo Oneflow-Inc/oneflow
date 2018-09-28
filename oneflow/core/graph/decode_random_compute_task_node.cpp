@@ -1,7 +1,6 @@
 #include "oneflow/core/graph/decode_random_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/logical_node.h"
-#include "decode_random_compute_task_node.h"
 
 namespace oneflow {
 
@@ -19,8 +18,7 @@ void DecodeRandomCompTaskNode::BuildExecGphAndRegst() {
 }
 
 void DecodeRandomCompTaskNode::InferProducedRegstTimeShape() {
-  std::shared_ptr<Shape> time_shape;
-  time_shape.reset(new Shape(
+  std::shared_ptr<Shape> time_shape = std::make_shared<Shape>(std::vector<int64_t>(
       {Global<JobDesc>::Get()->TotalBatchNum(), Global<JobDesc>::Get()->NumOfPiecesInBatch()}));
   for (auto& pair : produced_regsts()) { pair.second->mut_time_shape() = time_shape; }
 }
