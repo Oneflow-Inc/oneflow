@@ -39,6 +39,8 @@ void Get3DOutputSize(const std::vector<int64_t>& in, const std::vector<int32_t>&
                      std::vector<int64_t>* out, std::vector<int32_t>* padding_before,
                      std::vector<int32_t>* padding_after, std::vector<int32_t>* dilation_rate);
 
+float GetResizeScale(const int64_t input_size, const int64_t output_size, const bool align_corners);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_OPERATOR_OPERATOR_UTIL_H_

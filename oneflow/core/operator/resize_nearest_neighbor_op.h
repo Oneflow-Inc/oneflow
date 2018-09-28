@@ -1,16 +1,16 @@
-#ifndef ONEFLOW_CORE_OPERATOR_UPSAMPLE_NEAREST_OP_H_
-#define ONEFLOW_CORE_OPERATOR_UPSAMPLE_NEAREST_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_RESIZE_NEAREST_NEIGHBOR_OP_H_
+#define ONEFLOW_CORE_OPERATOR_RESIZE_NEAREST_NEIGHBOR_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/operator_util.h"
 
 namespace oneflow {
 
-class UpsampleNearestOp final : public Operator {
+class ResizeNearestNeighborOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(UpsampleNearestOp);
-  UpsampleNearestOp() = default;
-  ~UpsampleNearestOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ResizeNearestNeighborOp);
+  ResizeNearestNeighborOp() = default;
+  ~ResizeNearestNeighborOp() = default;
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
@@ -24,4 +24,4 @@ class UpsampleNearestOp final : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_UPSAMPLE_NEAREST_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_RESIZE_NEAREST_NEIGHBOR_OP_H_
