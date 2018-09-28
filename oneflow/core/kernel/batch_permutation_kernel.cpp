@@ -29,11 +29,25 @@ template<typename T>
 struct BatchPermutationUtil<DeviceType::kCPU, T> {
   static void Forward(const KernelCtx& ctx, const BatchPermutationOpConf& conf, const Blob* in_blob,
                       const Blob* indices_blob, Blob* out_blob) {
-    UNIMPLEMENTED();
+    int32_t channel_area = in_blob->shape().At(1) * in_blob->shape().At(2) * in_blob->shape().At(3);
+    size_t channel_size = channel_area * sizeof(T);
+    for (int i = 0; i < in_blob->shape().At(0); i++) {
+      int32_t idx = indices_blob->dptr<int32_t>()[i];
+      Memcpy<DeviceType::kCPU>(ctx.device_ctx, out_blob->mut_dptr<T>() + i * channel_area,
+                               in_blob->dptr<T>() + idx * channel_area, channel_size);
+    }
   }
+
   static void Backward(const KernelCtx& ctx, const BatchPermutationOpConf& conf,
                        const Blob* out_diff_blob, const Blob* indices_blob, Blob* in_diff_blob) {
-    UNIMPLEMENTED();
+    int32_t channel_area =
+        out_diff_blob->shape().At(1) * out_diff_blob->shape().At(2) * out_diff_blob->shape().At(3);
+    size_t channel_size = channel_area * sizeof(T);
+    for (int i = 0; i < out_diff_blob->shape().At(0); i++) {
+      int32_t idx = indices_blob->dptr<int32_t>()[i];
+      Memcpy<DeviceType::kCPU>(ctx.device_ctx, in_diff_blob->mut_dptr<T>() + idx * channel_area,
+                               out_diff_blob->dptr<T>() + i * channel_area, channel_size);
+    }
   }
 };
 
