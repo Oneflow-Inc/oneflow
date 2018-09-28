@@ -80,6 +80,25 @@ void TaskNode::PinConsumedRegst() {
   }
 }
 
+void TaskNode::InferProducedRegstTimeShape() {
+  std::shared_ptr<Shape> time_shape;
+
+  for (const auto& pair : consumed_regsts_) {
+    for (const std::shared_ptr<RegstDesc>& regst : pair.second) {
+      if (regst->time_shape()) {
+        if (time_shape) {
+          CHECK(*time_shape.get() == *regst->time_shape().get());
+        } else {
+          time_shape = regst->time_shape();
+        }
+      }
+    }
+  }
+
+  CHECK(time_shape);
+  for (auto& pair : produced_regsts_) { pair.second->mut_time_shape() = time_shape; }
+}
+
 void TaskNode::Build() {
   if (consumed_regsts_.size()) { CHECK(IsReadyForBuild()); }
   BuildExecGphAndRegst();

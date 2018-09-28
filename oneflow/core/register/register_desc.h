@@ -54,6 +54,8 @@ class RegstDesc final {
   int32_t mem_shared_id() const { return mem_shared_id_; }
   void set_mem_shared_id(int32_t val) { mem_shared_id_ = val; }
 
+  const std::shared_ptr<Shape>& time_shape() const { return time_shape_; }
+  std::shared_ptr<Shape>& mut_time_shape() { return time_shape_; }
   RegstDescTypeProto* mut_regst_desc_type() { return &regst_desc_type_; }
   const RegstDescTypeProto& regst_desc_type() const { return regst_desc_type_; }
 
@@ -79,6 +81,8 @@ class RegstDesc final {
   bool enable_mem_sharing_;
   int32_t mem_shared_id_;
   int64_t mem_shared_offset_;
+
+  std::shared_ptr<Shape> time_shape_;
 };
 
 }  // namespace oneflow

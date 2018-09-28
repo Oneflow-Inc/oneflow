@@ -4,6 +4,7 @@ package oneflow;
 import "oneflow/core/register/blob_desc.proto";
 import "oneflow/core/memory/memory_case.proto";
 import "oneflow/core/operator/op_conf.proto";
+import "oneflow/core/common/shape.proto";
 
 message LbiBlobDescPair {
   required LogicalBlobId lbi = 1;
@@ -39,4 +40,5 @@ message RegstDescProto {
   required bool enable_mem_sharing = 9;
   required int32 mem_shared_id = 10;
   required int64 mem_shared_offset = 11;
+  required ShapeProto time_shape = 12;
 }

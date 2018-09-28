@@ -3,6 +3,7 @@
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "record_load_compute_task_node.h"
 
 namespace oneflow {
 
@@ -21,6 +22,13 @@ void RecordLoadCompTaskNode::BuildExecGphAndRegst() {
     node->BindBnWithRegst(obn, record_regst);
   }
   node->InferBlobDescs(parallel_ctx());
+}
+
+void RecordLoadCompTaskNode::InferProducedRegstTimeShape() {
+  std::shared_ptr<Shape> time_shape;
+  time_shape.reset(new Shape(
+      {Global<JobDesc>::Get()->TotalBatchNum(), Global<JobDesc>::Get()->NumOfPiecesInBatch()}));
+  for (auto& pair : produced_regsts()) { pair.second->mut_time_shape() = time_shape; }
 }
 
 }  // namespace oneflow

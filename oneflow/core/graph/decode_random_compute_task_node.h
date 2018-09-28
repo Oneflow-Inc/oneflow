@@ -16,6 +16,9 @@ class DecodeRandomCompTaskNode final : public CompTaskNode {
   void BuildExecGphAndRegst() override;
 
   TaskType GetTaskType() const override { return TaskType::kDecodeRandom; }
+
+ private:
+  void InferProducedRegstTimeShape() override;
 };
 
 }  // namespace oneflow

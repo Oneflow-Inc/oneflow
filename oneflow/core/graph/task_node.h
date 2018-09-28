@@ -59,6 +59,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void ProduceAllRegstsAndBindEdges() = 0;
   virtual void ConsumeAllRegsts() = 0;
   void PinConsumedRegst();
+  virtual void InferProducedRegstTimeShape();
   void Build();
   virtual bool IsReadyForBuild() { return IsAllConsumedRegstLocked(); }
 

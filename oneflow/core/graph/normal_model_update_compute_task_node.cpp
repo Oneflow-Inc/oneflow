@@ -1,5 +1,6 @@
 #include "oneflow/core/graph/normal_model_update_compute_task_node.h"
 #include "oneflow/core/graph/logical_node.h"
+#include "normal_model_update_compute_task_node.h"
 
 namespace oneflow {
 
@@ -140,6 +141,16 @@ void NormalMdUpdtCompTaskNode::ToProto(TaskProto* task_proto) {
     }
   });
   task_proto->set_related_init_model_task_id(related_init_model_task_id_);
+}
+
+void NormalMdUpdtCompTaskNode::InferProducedRegstTimeShape() {
+  for (auto& pair : produced_regsts()) {
+    if (pair.first == "const_model") {
+      pair.second->mut_time_shape().reset(new Shape({1}));
+    } else {
+      pair.second->mut_time_shape().reset(new Shape({Global<JobDesc>::Get()->TotalBatchNum()}));
+    }
+  }
 }
 
 }  // namespace oneflow

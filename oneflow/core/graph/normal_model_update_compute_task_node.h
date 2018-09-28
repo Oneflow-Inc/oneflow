@@ -28,6 +28,7 @@ class NormalMdUpdtCompTaskNode final : public CompTaskNode {
   bool IsTrainable() const;
   uint32_t random_seed_;
   int64_t related_init_model_task_id_;
+  void InferProducedRegstTimeShape() override;
 };
 
 }  // namespace oneflow

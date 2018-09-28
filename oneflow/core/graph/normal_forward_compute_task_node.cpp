@@ -1,6 +1,7 @@
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/logical_node.h"
+#include "normal_forward_compute_task_node.h"
 
 namespace oneflow {
 
@@ -144,6 +145,28 @@ void NormalForwardCompTaskNode::BuildModel7ConstModel7DataTmp7BufRegsts() {
       node->BindBnWithRegst(mbn, model_regst);
     }
   });
+}
+
+void NormalForwardCompTaskNode::InferProducedRegstTimeShape() {
+  const std::list<std::shared_ptr<RegstDesc>>& in_regsts = GetConsumedRegst("in");
+  CHECK_GT(in_regsts.size(), 0);
+  const std::shared_ptr<Shape>& in_time_shape = in_regsts.front()->time_shape();
+  for (const auto& regst : in_regsts) { CHECK(*in_time_shape == *(regst->time_shape())); }
+
+  for (auto& pair : produced_regsts()) {
+    if (pair.first == "forward_model") {
+      int64_t model_save_num =
+          RoundUp(static_cast<size_t>(Global<JobDesc>::Get()->TotalBatchNum()),
+                  static_cast<size_t>(Global<JobDesc>::Get()->NumOfBatchesInSnapshot()))
+              / Global<JobDesc>::Get()->NumOfBatchesInSnapshot()
+          + 1;
+      pair.second->mut_time_shape().reset(new Shape({model_save_num}));
+    } else if (pair.first == "const_buf") {
+      pair.second->mut_time_shape().reset(new Shape({1}));
+    } else {
+      pair.second->mut_time_shape() = in_time_shape;
+    }
+  }
 }
 
 }  // namespace oneflow

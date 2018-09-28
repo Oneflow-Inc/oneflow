@@ -9,10 +9,17 @@ class LossAccCompTaskNode final : public AccCompTaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LossAccCompTaskNode);
   LossAccCompTaskNode() = default;
-  ~LossAccCompTaskNode() = default;
+  ~LossAccCompTaskNode() override = default;
   TaskType GetTaskType() const override { return TaskType::kLossAcc; }
 
  private:
+  void InferProducedRegstTimeShape() override {
+    std::shared_ptr<Shape> time_shape;
+    time_shape.reset(new Shape({Global<JobDesc>::Get()->TotalBatchNum()
+                                * Global<JobDesc>::Get()->NumOfPiecesInBatch()
+                                / Global<JobDesc>::Get()->PieceNumOfPrintLoss()}));
+    for (auto& pair : produced_regsts()) { pair.second->mut_time_shape() = time_shape; }
+  }
 };
 
 }  // namespace oneflow

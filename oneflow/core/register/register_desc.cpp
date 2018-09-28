@@ -132,6 +132,8 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
   ret->set_enable_mem_sharing(enable_mem_sharing_);
   ret->set_mem_shared_id(mem_shared_id_);
   ret->set_mem_shared_offset(mem_shared_offset_);
+  CHECK(time_shape_);
+  time_shape_->ToProto(ret->mutable_time_shape());
 }
 
 bool RegstDesc::HasSameBlobDescs(const RegstDesc* rhs) {

@@ -9,11 +9,12 @@ class MdDiffAccCompTaskNode final : public AccCompTaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MdDiffAccCompTaskNode);
   MdDiffAccCompTaskNode() = default;
-  ~MdDiffAccCompTaskNode() = default;
+  ~MdDiffAccCompTaskNode() override = default;
   TaskType GetTaskType() const override { return TaskType::kMdDiffAcc; }
 
  private:
   void FixPackedBlobDescOfProducedRegst() override;
+  void InferProducedRegstTimeShape() override;
 };
 
 }  // namespace oneflow
