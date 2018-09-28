@@ -832,9 +832,9 @@ message HingeLossOpConf {
 
 message BatchPermutationOpConf {
   required string in = 1;
-  required string out = 2;
-  required int32 scale = 3 [default = 2];
-  required string data_format = 4 [default = "channels_first"];
+  required string indices = 2;
+  required string out = 3;
+  required string data_format = 4;
 }
 
 message OperatorConf {

@@ -22,9 +22,9 @@ class BatchPermutation final : public KernelIf<device_type> {
 template<DeviceType device_type, typename T>
 struct BatchPermutationUtil {
   static void Forward(const KernelCtx& ctx, const BatchPermutationOpConf& conf, const Blob* in_blob,
-                      Blob* out_blob);
+                      const Blob* indices_blob, Blob* out_blob);
   static void Backward(const KernelCtx& ctx, const BatchPermutationOpConf& conf,
-                       const Blob* out_diff_blob, Blob* in_diff_blob);
+                       const Blob* out_diff_blob, const Blob* indices_blob, Blob* in_diff_blob);
 };
 
 }  // namespace oneflow

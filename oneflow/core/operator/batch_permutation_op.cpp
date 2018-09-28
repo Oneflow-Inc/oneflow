@@ -5,6 +5,7 @@ namespace oneflow {
 void BatchPermutationOp::InitFromOpConf() {
   CHECK(op_conf().has_batch_permutation_conf());
   EnrollInputBn("in");
+  EnrollInputBn("indices", false);
   EnrollOutputBn("out");
 }
 
@@ -17,16 +18,18 @@ void BatchPermutationOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-  BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+  const BlobDesc* indices_blob_desc = GetBlobDesc4BnInOp("indices");
   if (op_conf().batch_permutation_conf().data_format() != "channels_first"
       || in_blob_desc->shape().NumAxes() != 4) {
     LOG(FATAL) << "batch_permutation only supports NCHW";
   }
-  const int32_t scale = op_conf().batch_permutation_conf().scale();
-  CHECK_GT(scale, 1);
-  out_blob_desc->mut_shape() =
-      Shape({in_blob_desc->shape().At(0), in_blob_desc->shape().At(1),
-             scale * in_blob_desc->shape().At(2), scale * in_blob_desc->shape().At(3)});
+  if (indices_blob_desc->shape().NumAxes() != 1) {
+    FOR_RANGE(int32_t, idx, 1, indices_blob_desc->shape().NumAxes()) {
+      CHECK_EQ(indices_blob_desc->shape().At(idx), 1);
+    }
+  }
+  CHECK_EQ(indices_blob_desc->data_type(), DataType::kInt32);
+  CHECK_EQ(indices_blob_desc->shape().At(0), in_blob_desc->shape().At(0));
 }
 
 REGISTER_OP(OperatorConf::kBatchPermutationConf, BatchPermutationOp);
