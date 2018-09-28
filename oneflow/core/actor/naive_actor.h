@@ -16,7 +16,7 @@ class NaiveActor : public Actor {
   }
 
  private:
-  void Act() final;
+  void Act() override final;
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
 };
 
