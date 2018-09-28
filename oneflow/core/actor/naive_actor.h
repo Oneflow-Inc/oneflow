@@ -5,18 +5,18 @@
 
 namespace oneflow {
 
-class NaiveActor final : public Actor {
+class NaiveActor : public Actor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(NaiveActor);
   NaiveActor() = default;
-  ~NaiveActor() = default;
+  ~NaiveActor() override = default;
 
   void VirtualActorInit(const TaskProto&) override {
     OF_SET_MSG_HANDLER(&NaiveActor::HandlerNormal);
   }
 
  private:
-  void Act() override;
+  void Act() final;
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
 };
 

@@ -1,4 +1,5 @@
 #include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 

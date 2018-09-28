@@ -4,25 +4,18 @@
 namespace oneflow {
 
 void ReduceScatterCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  int64_t machine_num = logical_node()->parallel_desc()->sorted_machine_ids().size();
-  int64_t dev_num_of_each_machine = logical_node()->parallel_desc()->device_num_of_each_machine();
-  CHECK_EQ(machine_num * dev_num_of_each_machine, parallel_ctx()->parallel_num());
-  bool has_local_reduce = machine_num > 1 && dev_num_of_each_machine > 1;
-  if (has_local_reduce) {
-    CHECK_EQ(out_edges().size(), dev_num_of_each_machine);
-  } else {
-    CHECK_EQ(out_edges().size(), parallel_ctx()->parallel_num());
-  }
-
+  std::vector<EdgeInfo> edge_infos;
   for (TaskEdge* edge : out_edges()) {
     std::vector<CompTaskNode*> comp_task_nodes = GetSuccCompTaskNodesOnEdge(edge);
     CHECK_EQ(comp_task_nodes.size(), 1);
-    int64_t out_parallel_id = comp_task_nodes.front()->parallel_ctx()->parallel_id();
-    int64_t out_device_rank = out_parallel_id % dev_num_of_each_machine;
-    int64_t out_edge_index = has_local_reduce ? out_device_rank : out_parallel_id;
+    EdgeInfo edge_info = {edge, comp_task_nodes.front()->task_id()};
+    edge_infos.push_back(edge_info);
+  }
+  SortEdges(&edge_infos);
+  FOR_RANGE(int64_t, out_edge_index, 0, edge_infos.size()) {
     std::string out_regst_name = "out_" + std::to_string(out_edge_index);
     std::shared_ptr<RegstDesc> out_regst = ProduceRegst(out_regst_name, false, 1, 1);
-    edge->AddRegst(out_regst_name, out_regst);
+    edge_infos[out_edge_index].edge->AddRegst(out_regst_name, out_regst);
   }
 }
 
@@ -50,6 +43,22 @@ void ReduceScatterCompTaskNode::BuildExecGphAndRegst() {
     node->BindBnWithRegst(out_name, out_regst);
   }
   node->InferBlobDescs(parallel_ctx());
+}
+
+void ReduceScatterCompTaskNode::EnableMemSharingInReduce(const ReduceMemSharingCtx& ctx) {
+  const ReduceRankCtx& rank_ctx = GetRankCtx();
+
+  int64_t offset = ctx.Offset4RankCtxParallelId(rank_ctx.CtxWithGather(), parallel_id());
+
+  int64_t scatter_count = produced_regsts().size();
+  CHECK_EQ(scatter_count, rank_ctx.StageSegmentCount());
+  int64_t out_size = ctx.SegmentSize4RankCtx(rank_ctx);
+  FOR_RANGE(int64_t, i, 0, scatter_count) {
+    RegstDesc* out = GetProducedRegst("out_" + std::to_string(i)).get();
+    ctx.EnableMemSharing4Regst(out, offset + i * out_size);
+  }
+  if (this->SoleInEdge()->src_node()->GetTaskType() == TaskType::kReduceConcat) { return; }
+  ctx.EnableMemSharing4Regst(GetSoleConsumedRegst("in").get(), offset);
 }
 
 }  // namespace oneflow
