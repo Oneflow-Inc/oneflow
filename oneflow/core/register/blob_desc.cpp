@@ -39,6 +39,7 @@ BlobDesc::BlobDesc(const StructPodDesc& header_pod_desc, int64_t header_byte_siz
       max_col_num_(max_col_num),
       blob_mem_id_(-1),
       body_field_(shape, data_type) {
+  CHECK_EQ(header_pod_desc.ByteSize(), header_byte_size);
   if (header_byte_size > 0) {
     header_is_opaque_ = true;
     opaque_header_ = FieldDesc(Shape({header_byte_size}), DataType::kChar);
@@ -126,10 +127,10 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     BlobDesc* blob_desc = pair.second.get();
     RtBlobDesc rt_blob_desc(*blob_desc);
     header_byte_size += rt_blob_desc.ByteSizeOfBlobHeader();
+    CHECK(!pair.first.is_packed_id());
     auto* header_pod_desc = opaque_header_pod_desc.MutStructField(pair.first.op_name())
-                                ->MutStructField(pair.first.blob_name())
                                 ->MutStructField(std::to_string(pair.first.clone_id()))
-                                ->MutStructField(std::to_string(pair.first.is_packed_id()));
+                                ->MutStructField(pair.first.blob_name());
     *header_pod_desc = rt_blob_desc.header_pod_desc();
     int64_t cur_body_byte_size = rt_blob_desc.ByteSizeOfBlobBody();
     int32_t blob_mem_id = blob_desc->blob_mem_id();

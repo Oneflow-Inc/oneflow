@@ -59,7 +59,7 @@ class StructPodDesc final : public PodDesc {
   StructPodDesc* MutStructField(const std::string& name);
   ShapedPodDesc* MutShapedField(const std::string& name);
   const PodDesc& Field(const std::string& name) const;
-  void AddField(const std::string& name, const PodDesc& pod_desc) { AddField(name, pod_desc, 3); }
+  void AddField(const std::string& name, const PodDesc& pod_desc) { AddField(name, pod_desc, 8); }
   bool HasField(const std::string& name) const;
   size_t ByteSize() const override;
   void Clear();
@@ -69,14 +69,14 @@ class StructPodDesc final : public PodDesc {
   std::unique_ptr<PodDesc> Clone() const override { return std::make_unique<StructPodDesc>(*this); }
   void ToProto(PodProto* pod_proto) const override { ToProto(pod_proto->mutable_struct_pod()); }
   void ToProto(StructPodProto* pod_proto) const;
-  void AddField(const std::string& name, const PodDesc& pod_desc, size_t align_shift);
+  void AddField(const std::string& name, const PodDesc& pod_desc, size_t alignment);
   bool operator==(const PodDesc& rhs) const override;
   size_t PtrOffset4Field(const std::string& field_name) const;
 
  private:
   PodDesc* MutExistedField(const std::string& name);
   void AddField(std::unique_ptr<AlignedFieldPodDesc>&& field);
-  void AddField(const std::string& name, std::unique_ptr<PodDesc>&& field, size_t align_shift = 3);
+  void AddField(const std::string& name, std::unique_ptr<PodDesc>&& field, size_t alignment = 8);
 
   std::vector<std::unique_ptr<AlignedFieldPodDesc>> fields_;
   HashMap<std::string, int32_t> name2field_idx_;
@@ -90,8 +90,8 @@ class AlignedFieldPodDesc final : public PodDesc {
  private:
   friend class StructPodDesc;
   AlignedFieldPodDesc(const std::string& name, std::unique_ptr<PodDesc>&& field,
-                      size_t align_shift = 3)
-      : PodDesc(), name_(name), field_(std::move(field)), align_shift_(align_shift) {}
+                      size_t alignment = 8)
+      : PodDesc(), name_(name), field_(std::move(field)), alignment_(alignment) {}
   explicit AlignedFieldPodDesc(const AlignedFieldPodProto& aligned_field_pod);
 
   size_t ByteSize() const override;
@@ -106,7 +106,7 @@ class AlignedFieldPodDesc final : public PodDesc {
 
   std::string name_;
   std::unique_ptr<PodDesc> field_;
-  size_t align_shift_;
+  size_t alignment_;
 };
 
 template<typename T>

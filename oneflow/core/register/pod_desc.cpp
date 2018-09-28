@@ -34,23 +34,21 @@ void ShapedPodDesc::ToProto(PodProto* pod_proto) const {
 AlignedFieldPodDesc::AlignedFieldPodDesc(const AlignedFieldPodProto& aligned_field_pod) {
   name_ = aligned_field_pod.name();
   field_ = std::move(NewPodDesc(aligned_field_pod.field()));
-  align_shift_ = aligned_field_pod.align_shift();
+  alignment_ = aligned_field_pod.alignment();
 }
 
-size_t AlignedFieldPodDesc::ByteSize() const {
-  return RoundUp(field_->ByteSize(), 1 << align_shift_);
-}
+size_t AlignedFieldPodDesc::ByteSize() const { return RoundUp(field_->ByteSize(), alignment_); }
 
 bool AlignedFieldPodDesc::operator==(const PodDesc& rhs) const {
   const auto* aligned_field_rhs = dynamic_cast<const AlignedFieldPodDesc*>(&rhs);
   if (aligned_field_rhs == nullptr) { return false; }
   return name() == aligned_field_rhs->name() && field() == aligned_field_rhs->field()
-         && align_shift_ == aligned_field_rhs->align_shift_;
+         && alignment_ == aligned_field_rhs->alignment_;
 }
 
 void AlignedFieldPodDesc::ToProto(AlignedFieldPodProto* aligned_field_proto) const {
   aligned_field_proto->set_name(name_);
-  aligned_field_proto->set_align_shift(align_shift_);
+  aligned_field_proto->set_alignment(alignment_);
   field_->ToProto(aligned_field_proto->mutable_field());
 }
 
@@ -111,13 +109,13 @@ const PodDesc& StructPodDesc::Field(const std::string& name) const {
   return fields_.at(name2field_idx_.at(name))->field();
 }
 
-void StructPodDesc::AddField(const std::string& name, const PodDesc& pod_desc, size_t align_shift) {
-  AddField(name, pod_desc.Clone(), align_shift);
+void StructPodDesc::AddField(const std::string& name, const PodDesc& pod_desc, size_t alignment) {
+  AddField(name, pod_desc.Clone(), alignment);
 }
 
 void StructPodDesc::AddField(const std::string& name, std::unique_ptr<PodDesc>&& field,
-                             size_t align_shift) {
-  auto* aligned_pod = new AlignedFieldPodDesc(name, std::move(field), align_shift);
+                             size_t alignment) {
+  auto* aligned_pod = new AlignedFieldPodDesc(name, std::move(field), alignment);
   AddField(std::unique_ptr<AlignedFieldPodDesc>(aligned_pod));
 }
 
