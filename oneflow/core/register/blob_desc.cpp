@@ -26,21 +26,17 @@ BlobDesc::BlobDesc(const BlobDescProto& proto) : body_field_(proto.body()) {
   CHECK(has_col_num_ && !header_is_opaque_);
 }
 
-BlobDesc::BlobDesc(const StructPodDesc& header_pod_desc, int64_t header_byte_size,
-                   const Shape& shape, DataType data_type, int32_t max_col_num)
+BlobDesc::BlobDesc(const StructPodDesc& opaque_header_pod_desc, const Shape& shape,
+                   DataType data_type, int32_t max_col_num)
     : has_data_id_(false),
       has_col_num_(false),
       max_col_num_(max_col_num),
       blob_mem_id_(-1),
       body_field_(shape, data_type) {
-  CHECK_EQ(header_pod_desc.ByteSize(), header_byte_size);
-  if (header_byte_size > 0) {
-    header_is_opaque_ = true;
-    header_pod_desc_ = header_pod_desc;
-  } else {
-    header_is_opaque_ = false;
-  }
+  header_is_opaque_ = true;
+  header_pod_desc_ = opaque_header_pod_desc;
 }
+
 void BlobDesc::set_has_data_id_field(bool val) {
   CHECK(!header_is_opaque_);
   has_data_id_ = val;
@@ -100,18 +96,14 @@ BlobDesc& BlobDesc::operator=(const BlobDesc& blob_desc) {
 
 std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     const HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>& lbi2blob_desc) {
-  int64_t header_byte_size = 0;
   int64_t body_byte_size = 0;
   HashSet<int> data_type_set;
   int32_t max_col_num = -1;
-  int32_t blob_desc_cnt = 0;
-  std::unique_ptr<BlobDesc> ret(new BlobDesc());
   HashMap<int32_t, size_t> blob_mem_id2size;
   StructPodDesc opaque_header_pod_desc;
   for (auto& pair : lbi2blob_desc) {
     BlobDesc* blob_desc = pair.second.get();
     RtBlobDesc rt_blob_desc(*blob_desc);
-    header_byte_size += rt_blob_desc.ByteSizeOfBlobHeader();
     {
       std::string lbi_str;
       pair.first.SerializeToString(&lbi_str);
@@ -135,27 +127,17 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     } else {
       CHECK_EQ(max_col_num, blob_desc->max_col_num());
     }
-    blob_desc_cnt += 1;
   }
   for (auto& pair : blob_mem_id2size) { body_byte_size += pair.second; }
-  if (blob_desc_cnt == 0) {
-    // do nothing
-  } else if (data_type_set.size() == 1) {
-    DataType sole_data_type = static_cast<DataType>(*(data_type_set.begin()));
-    int64_t size_of_one_elem = GetSizeOfDataType(sole_data_type);
-    CHECK_EQ(body_byte_size % size_of_one_elem, 0);
-    int64_t total_elem_cnt = body_byte_size / size_of_one_elem;
-    if (header_byte_size == 0) {
-      ret.reset(new BlobDesc(Shape({total_elem_cnt}), sole_data_type, false, false, max_col_num));
-    } else {
-      ret.reset(new BlobDesc(opaque_header_pod_desc, header_byte_size, Shape({total_elem_cnt}),
-                             sole_data_type, max_col_num));
-    }
-  } else {
-    ret.reset(new BlobDesc(opaque_header_pod_desc, header_byte_size, Shape({body_byte_size}),
-                           DataType::kChar, max_col_num));
+  DataType data_type = DataType::kChar;
+  int64_t body_elem_cnt = body_byte_size;
+  if (data_type_set.size() == 1) {
+    data_type = static_cast<DataType>(*(data_type_set.begin()));
+    CHECK_EQ(body_byte_size % GetSizeOfDataType(data_type), 0);
+    body_elem_cnt = body_byte_size / GetSizeOfDataType(data_type);
   }
-  return ret;
+  return std::make_unique<BlobDesc>(opaque_header_pod_desc, Shape({body_elem_cnt}), data_type,
+                                    max_col_num);
 }
 
 }  // namespace oneflow
