@@ -107,21 +107,21 @@ class BBoxImpl;
 template<typename T>
 class BBoxImpl<BBoxCoord::kCorner, T> final : public BBox<BBoxImpl<T>> {
  public:
-  T left() const override { return this->bbox()[0]; }
-  T right() const override { return this->bbox()[1]; }
-  T top() const override { return this->bbox()[2]; }
-  T bottom() const override { return this->bbox()[3]; }
-  T center_x() const override { return this->left() + 0.5f * this->width(); }
-  T center_y() const override { return this->top() + 0.5f * this->height(); }
-  T width() const override { return this->right() - this->left() + OneVal<T>::value; }
-  T height() const override { return this->bottom() - this->top() + OneVal<T>::value; }
-  void set_center_coord(T ctr_x, T ctr_y, T w, T h) override {
+  T left() const { return this->bbox()[0]; }
+  T right() const { return this->bbox()[1]; }
+  T top() const { return this->bbox()[2]; }
+  T bottom() const { return this->bbox()[3]; }
+  T center_x() const { return this->left() + 0.5f * this->width(); }
+  T center_y() const { return this->top() + 0.5f * this->height(); }
+  T width() const { return this->right() - this->left() + OneVal<T>::value; }
+  T height() const { return this->bottom() - this->top() + OneVal<T>::value; }
+  void set_center_coord(T ctr_x, T ctr_y, T w, T h) {
     this->mut_bbox()[0] = static_cast<T>(ctr_x - 0.5f * w);
     this->mut_bbox()[1] = static_cast<T>(ctr_y - 0.5f * h);
     this->mut_bbox()[2] = static_cast<T>(ctr_x + 0.5f * w - 1.f);
     this->mut_bbox()[3] = static_cast<T>(ctr_y + 0.5f * h - 1.f);
   }
-  void set_corner_coord(T left, T top, T right, T bottom) override {
+  void set_corner_coord(T left, T top, T right, T bottom) {
     this->mut_bbox()[0] = left;
     this->mut_bbox()[1] = top;
     this->mut_bbox()[2] = right;
