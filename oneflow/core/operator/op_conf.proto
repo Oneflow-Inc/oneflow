@@ -613,6 +613,22 @@ message NormalizationOpConf {
   optional ActivationType activation = 13 [default = kNone];
 }
 
+message FpnCollectOpConf{
+  required string rpn_rois_fpn_2 = 1;
+  required string rpn_rois_fpn_3 = 2;
+  required string rpn_rois_fpn_4 = 3;
+  required string rpn_rois_fpn_5 = 4;
+  required string rpn_rois_fpn_6 = 5;
+  required string rpn_roi_probs_fpn_2 = 6;
+  required string rpn_roi_probs_fpn_3 = 7;
+  required string rpn_roi_probs_fpn_4 = 8;
+  required string rpn_roi_probs_fpn_5 = 9;
+  required string rpn_roi_probs_fpn_6 = 10;
+  required string out = 11;
+  required int32 post_nms_topn = 12;
+  optional int32 level = 13 [default = 6]; 
+}
+
 message AffineChannelOpConf {
   required string in = 1;
   required string out = 2;
@@ -924,6 +940,7 @@ message OperatorConf {
     UpsampleNearestOpConf upsample_nearest_conf = 1009;
     ResizeNearestNeighborOpConf resize_nearest_neighbor_conf = 1010;
     BatchPermutationOpConf batch_permutation_conf = 1011;
+    FpnCollectOpConf fpn_collect_conf = 1012;
   }
 }
 
