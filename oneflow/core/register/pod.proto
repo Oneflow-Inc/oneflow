@@ -15,7 +15,7 @@ message StructPodProto {
 
 message AlignedFieldPodProto {
   required string name = 1;
-  required int32 align_size = 2;
+  optional int32 align_size = 2 [default = 1];
   required PodProto field = 3;
 }
 

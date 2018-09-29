@@ -48,7 +48,7 @@ bool AlignedFieldPodDesc::operator==(const PodDesc& rhs) const {
 
 void AlignedFieldPodDesc::ToProto(AlignedFieldPodProto* aligned_field_proto) const {
   aligned_field_proto->set_name(name_);
-  aligned_field_proto->set_align_size(align_size_);
+  if (align_size_ > 1) { aligned_field_proto->set_align_size(align_size_); }
   field_->ToProto(aligned_field_proto->mutable_field());
 }
 
