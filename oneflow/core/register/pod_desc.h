@@ -90,8 +90,7 @@ class AlignedFieldPodDesc final : public PodDesc {
 
  private:
   friend class StructPodDesc;
-  AlignedFieldPodDesc(const std::string& name, std::unique_ptr<PodDesc>&& field,
-                      size_t alignment = 8)
+  AlignedFieldPodDesc(const std::string& name, std::unique_ptr<PodDesc>&& field, size_t alignment)
       : PodDesc(), name_(name), field_(std::move(field)), alignment_(alignment) {}
   explicit AlignedFieldPodDesc(const AlignedFieldPodProto& aligned_field_pod);
 

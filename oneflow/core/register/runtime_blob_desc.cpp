@@ -53,6 +53,7 @@ bool RtBlobDesc::has_col_num_field() const { return HasField("col_num"); }
 size_t RtBlobDesc::ByteSizeOfBlobHeader() const {
   size_t header_size = 0;
   for (auto& pair : header_desc_) { header_size += ByteSizeOfField(pair.first); }
+  CHECK_EQ(header_size, header_pod_desc_.ByteSize());
   return header_size;
 }
 

@@ -9,6 +9,7 @@
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/record/record_io.h"
+#include "oneflow/core/register/pod_ptr.h"
 
 namespace oneflow {
 
@@ -114,6 +115,7 @@ class Blob final {
   void* dptr_;
   const RtBlobDesc* blob_desc_;
   Regst* regst_;
+  PodPtr header_pod_ptr_;
 };
 
 template<typename RecordType>

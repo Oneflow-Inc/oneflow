@@ -8,23 +8,23 @@ namespace oneflow {
 
 class PodPtr final {
  public:
-  PodPtr(const PodDesc& pod_desc, char* mem_ptr) : pod_desc_(&pod_desc), mem_ptr_(mem_ptr) {}
+  PodPtr(const PodDesc& pod_desc, char* ptr) : pod_desc_(&pod_desc), ptr_(ptr) {}
   ~PodPtr() = default;
 
   template<typename T>
-  const T* Get() const {
+  const T* ShapedPodPtr() const {
     CheckDataType<T>();
-    return static_cast<T*>(mem_ptr_);
+    return reinterpret_cast<T*>(ptr_);
   }
 
   template<typename T>
-  T* Mut() {
+  T* MutShapedPodPtr() {
     CheckDataType<T>();
-    return static_cast<T*>(mem_ptr_);
+    return reinterpret_cast<T*>(ptr_);
   }
 
   const PodDesc& pod_desc() const { return *pod_desc_; }
-  char* mem_ptr() const { return mem_ptr_; }
+  char* ptr() const { return ptr_; }
   bool HasField(const std::string& field_name) const;
   PodPtr Field(const std::string& field_name) const;
 
@@ -35,8 +35,9 @@ class PodPtr final {
     CHECK_NOTNULL(shaped_pod);
     CHECK_EQ(shaped_pod->data_type(), GetDataType<T>::value);
   }
+
   const PodDesc* pod_desc_;
-  char* mem_ptr_;
+  char* ptr_;
 };
 
 }  // namespace oneflow

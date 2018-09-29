@@ -6,11 +6,13 @@
 
 namespace oneflow {
 
-Blob::Blob(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr) {
+Blob::Blob(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr)
+    : header_pod_ptr_(blob_desc->header_pod_desc(), header_ptr) {
   Init(regst, blob_desc, header_ptr, header_ptr + blob_desc->ByteSizeOfBlobHeader());
 }
 
-Blob::Blob(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr) {
+Blob::Blob(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr)
+    : header_pod_ptr_(blob_desc->header_pod_desc(), header_ptr) {
   Init(regst, blob_desc, header_ptr, body_ptr);
 }
 
@@ -26,17 +28,21 @@ void Blob::Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, cha
   header_ptr_ = header_ptr;
   if (blob_desc->has_data_id_field()) {
     data_id_ptr_ = header_ptr;
+    CHECK(header_pod_ptr_.HasField("data_id"));
+    CHECK_EQ(header_pod_ptr_.Field("data_id").ptr(), data_id_ptr_);
   } else {
     data_id_ptr_ = nullptr;
   }
   char* offset = header_ptr + blob_desc->ByteSizeOfDataIdField();
   if (blob_desc->has_col_num_field()) {
     col_num_ptr_ = reinterpret_cast<int32_t*>(offset);
+    CHECK(header_pod_ptr_.HasField("col_num"));
+    CHECK_EQ(header_pod_ptr_.Field("col_num").MutShapedPodPtr<int32_t>(), col_num_ptr_);
   } else {
     col_num_ptr_ = nullptr;
   }
   dptr_ = body_ptr;
-}
+}  // namespace oneflow
 
 const char* Blob::data_id(int32_t no) const {
   CHECK_NOTNULL(data_id_ptr_);

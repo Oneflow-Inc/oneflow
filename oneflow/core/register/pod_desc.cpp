@@ -92,7 +92,7 @@ bool StructPodDesc::HasField(const std::string& name) const {
 }
 
 StructPodDesc* StructPodDesc::MutStructField(const std::string& name) {
-  return MutStructField(name, kCudaAlignSize);
+  return MutStructField(name, 1);
 }
 
 StructPodDesc* StructPodDesc::MutStructField(const std::string& name, int32_t alignment) {
@@ -109,7 +109,7 @@ const PodDesc& StructPodDesc::Field(const std::string& name) const {
 }
 
 void StructPodDesc::AddField(const std::string& name, const PodDesc& pod_desc) {
-  return AddField(name, pod_desc, kCudaAlignSize);
+  return AddField(name, pod_desc, 1);
 }
 
 void StructPodDesc::AddField(const std::string& name, const PodDesc& pod_desc, size_t alignment) {
