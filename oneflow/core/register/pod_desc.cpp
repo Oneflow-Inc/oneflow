@@ -91,6 +91,13 @@ bool StructPodDesc::HasField(const std::string& name) const {
   return name2field_idx_.find(name) != name2field_idx_.end();
 }
 
+const ShapedPodDesc& StructPodDesc::ShapedField(const std::string& name) const {
+  return Field(name).Cast<ShapedPodDesc>();
+}
+const StructPodDesc& StructPodDesc::StructField(const std::string& name) const {
+  return Field(name).Cast<StructPodDesc>();
+}
+
 StructPodDesc* StructPodDesc::MutStructField(const std::string& name) {
   return MutStructField(name, 1);
 }

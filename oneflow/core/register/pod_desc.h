@@ -58,6 +58,8 @@ class StructPodDesc final : public PodDesc {
 
   StructPodDesc* MutStructField(const std::string& name);
   const PodDesc& Field(const std::string& name) const;
+  const ShapedPodDesc& ShapedField(const std::string& name) const;
+  const StructPodDesc& StructField(const std::string& name) const;
   void AddField(const std::string& name, const PodDesc& pod_desc);
   size_t ByteSize() const override;
   void InitFromProto(const StructPodProto& struct_pod);
@@ -113,7 +115,7 @@ template<typename T>
 const T& PodDesc::Cast() const {
   static_assert(std::is_same<T, ShapedPodDesc>::value || std::is_same<T, StructPodDesc>::value,
                 "only ShapedPodDesc and StructPodDesc supported");
-  return *dynamic_cast<T*>(this);
+  return *dynamic_cast<const T*>(this);
 }
 
 template<typename T>

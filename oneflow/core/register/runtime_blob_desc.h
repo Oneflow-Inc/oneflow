@@ -41,14 +41,8 @@ class RtBlobDesc {
 
  private:
   void InitFromProto(const BlobDescProto& proto);
-  HashMap<std::string, FieldDesc>::const_iterator GetFieldIteratorOrFail(
-      const std::string& field_name) const;
-  bool HasField(const std::string& field_name) const;
-  size_t ByteSizeOfField(const std::string& field_name) const;
-  size_t AlignedByteSizeOfField(const std::string& field_name) const;
 
   BlobDescProto blob_desc_proto_;
-  HashMap<std::string, FieldDesc> header_desc_;
   FieldDesc body_desc_;
   StructPodDesc header_pod_desc_;
 };

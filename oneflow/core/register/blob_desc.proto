@@ -4,19 +4,11 @@ package oneflow;
 import "oneflow/core/register/field_desc.proto";
 import "oneflow/core/register/pod.proto";
 
-message FieldHeaderDesc {
-  optional FieldDescProto data_id = 1;
-  optional FieldDescProto col_num = 2;
-}
-
 message BlobHeaderDescProto {
   required int32 max_col_num = 1;
   required int32 blob_mem_id = 2;
-  oneof header_type {
-    FieldDescProto opaque_header = 3;
-    FieldHeaderDesc field_header = 4;
-  }
-  required StructPodProto header_pod_desc = 5;
+  required bool is_packed = 3;
+  required StructPodProto header_pod_desc = 4;
 }
 
 message BlobDescProto {

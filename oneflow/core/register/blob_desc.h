@@ -48,12 +48,11 @@ class BlobDesc {
 
  private:
   void HeaderToProto(BlobDescProto* proto) const;
-  void DataIdFieldToProto(FieldHeaderDesc* proto, StructPodDesc* header_pod_desc) const;
-  void ColNumFieldToProto(FieldHeaderDesc* proto, StructPodDesc* header_pod_desc) const;
+  void DataIdFieldToProto(StructPodDesc* header_pod_desc) const;
+  void ColNumFieldToProto(StructPodDesc* header_pod_desc) const;
 
   bool header_is_opaque_;
-  FieldDesc opaque_header_;
-  StructPodDesc opaque_header_pod_desc_;
+  StructPodDesc header_pod_desc_;
 
   bool has_data_id_;
   bool has_col_num_;
