@@ -12,21 +12,20 @@ class PodPtr final {
   ~PodPtr() = default;
 
   template<typename T>
-  const T* ShapedPodPtr() const {
-    CheckDataType<T>();
-    return reinterpret_cast<T*>(ptr_);
-  }
+  const T* ShapedPtr() const;
+  template<typename T>
+  const T* ShapedPtr(const std::string& field_name, const T* default_ptr) const;
 
   template<typename T>
-  T* MutShapedPodPtr() {
-    CheckDataType<T>();
-    return reinterpret_cast<T*>(ptr_);
-  }
+  T* MutShapedPtr();
+  template<typename T>
+  T* MutShapedPtr(const std::string& field_name, T* default_ptr);
 
   const PodDesc& pod_desc() const { return *pod_desc_; }
   char* ptr() const { return ptr_; }
   bool HasField(const std::string& field_name) const;
-  PodPtr Field(const std::string& field_name) const;
+  const PodPtr Field(const std::string& field_name) const;
+  PodPtr MutField(const std::string& field_name);
 
  private:
   template<typename T>
@@ -36,9 +35,33 @@ class PodPtr final {
     CHECK_EQ(shaped_pod->data_type(), GetDataType<T>::value);
   }
 
-  const PodDesc* pod_desc_;
-  char* ptr_;
+  const PodDesc* const pod_desc_;
+  char* const ptr_;
 };
+
+template<typename T>
+const T* PodPtr::ShapedPtr() const {
+  CheckDataType<T>();
+  return reinterpret_cast<const T*>(ptr_);
+}
+
+template<typename T>
+const T* PodPtr::ShapedPtr(const std::string& field_name, const T* default_ptr) const {
+  if (!HasField(field_name)) { return default_ptr; }
+  return Field(field_name).ShapedPtr<T>();
+}
+
+template<typename T>
+T* PodPtr::MutShapedPtr() {
+  CheckDataType<T>();
+  return reinterpret_cast<T*>(ptr_);
+}
+
+template<typename T>
+T* PodPtr::MutShapedPtr(const std::string& field_name, T* default_ptr) {
+  if (!HasField(field_name)) { return default_ptr; }
+  return MutField(field_name).MutShapedPtr<T>();
+}
 
 }  // namespace oneflow
 
