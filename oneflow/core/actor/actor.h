@@ -104,7 +104,7 @@ class Actor {
   Regst* GetNaiveCurReadable(const std::string& name) {
     return GetNaiveCurReadable(Name2SoleRegstDescId(name));
   }
-  Regst* GetNaiveCurWriteable(int desc_id) { return naive_produced_rs_.Front(desc_id); }
+  Regst* GetNaiveCurWriteable(int64_t desc_id) { return naive_produced_rs_.Front(desc_id); }
   Regst* GetNaiveCurWriteable(const std::string& name) {
     return GetNaiveCurWriteable(Name2SoleRegstDescId(name));
   }
@@ -178,7 +178,6 @@ class Actor {
   MsgHandler msg_handler_;
   std::unique_ptr<DeviceCtx> device_ctx_;
   HashSet<int64_t> eord_regst_desc_ids_;
-  std::unique_ptr<CudaStreamHandle> cuda_handle_;
   int64_t remaining_eord_cnt_;
 
   HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_regsts_;
