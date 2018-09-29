@@ -67,8 +67,8 @@ class StructPodDesc final : public PodDesc {
   std::unique_ptr<PodDesc> Clone() const override { return std::make_unique<StructPodDesc>(*this); }
   void ToProto(PodProto* pod_proto) const override { ToProto(pod_proto->mutable_struct_pod()); }
   void ToProto(StructPodProto* pod_proto) const;
-  StructPodDesc* MutStructField(const std::string& name, int32_t default_alignment);
-  void AddField(const std::string& name, const PodDesc& pod_desc, size_t alignment);
+  StructPodDesc* MutStructField(const std::string& name, int32_t default_align_size);
+  void AddField(const std::string& name, const PodDesc& pod_desc, size_t align_size);
   bool operator==(const PodDesc& rhs) const override;
   size_t PtrOffset4Field(const std::string& field_name) const;
 
@@ -77,7 +77,7 @@ class StructPodDesc final : public PodDesc {
   PodDesc* MutExistedField(const std::string& name);
   void AddField(std::unique_ptr<AlignedFieldPodDesc>&& field);
   void AddField(const std::string& name, std::unique_ptr<PodDesc>&& field);
-  void AddField(const std::string& name, std::unique_ptr<PodDesc>&& field, size_t alignment);
+  void AddField(const std::string& name, std::unique_ptr<PodDesc>&& field, size_t align_size);
 
   std::vector<std::unique_ptr<AlignedFieldPodDesc>> fields_;
   HashMap<std::string, int32_t> name2field_idx_;
@@ -90,8 +90,8 @@ class AlignedFieldPodDesc final : public PodDesc {
 
  private:
   friend class StructPodDesc;
-  AlignedFieldPodDesc(const std::string& name, std::unique_ptr<PodDesc>&& field, size_t alignment)
-      : PodDesc(), name_(name), field_(std::move(field)), alignment_(alignment) {}
+  AlignedFieldPodDesc(const std::string& name, std::unique_ptr<PodDesc>&& field, size_t align_size)
+      : PodDesc(), name_(name), field_(std::move(field)), align_size_(align_size) {}
   explicit AlignedFieldPodDesc(const AlignedFieldPodProto& aligned_field_pod);
 
   size_t ByteSize() const override;
@@ -106,7 +106,7 @@ class AlignedFieldPodDesc final : public PodDesc {
 
   std::string name_;
   std::unique_ptr<PodDesc> field_;
-  size_t alignment_;
+  size_t align_size_;
 };
 
 template<typename T>

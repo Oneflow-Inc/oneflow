@@ -120,7 +120,6 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
   int32_t max_col_num = -1;
   int32_t blob_desc_cnt = 0;
   std::unique_ptr<BlobDesc> ret(new BlobDesc());
-  const BlobDesc* last_blob_desc = nullptr;
   HashMap<int32_t, size_t> blob_mem_id2size;
   StructPodDesc opaque_header_pod_desc;
   for (auto& pair : lbi2blob_desc) {
@@ -151,13 +150,10 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
       CHECK_EQ(max_col_num, blob_desc->max_col_num());
     }
     blob_desc_cnt += 1;
-    last_blob_desc = blob_desc;
   }
   for (auto& pair : blob_mem_id2size) { body_byte_size += pair.second; }
   if (blob_desc_cnt == 0) {
     // do nothing
-  } else if (blob_desc_cnt == 1) {
-    ret.reset(new BlobDesc(*last_blob_desc));
   } else if (data_type_set.size() == 1) {
     DataType sole_data_type = static_cast<DataType>(*(data_type_set.begin()));
     int64_t size_of_one_elem = GetSizeOfDataType(sole_data_type);

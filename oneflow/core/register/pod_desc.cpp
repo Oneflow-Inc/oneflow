@@ -34,21 +34,21 @@ void ShapedPodDesc::ToProto(PodProto* pod_proto) const {
 AlignedFieldPodDesc::AlignedFieldPodDesc(const AlignedFieldPodProto& aligned_field_pod) {
   name_ = aligned_field_pod.name();
   field_ = std::move(NewPodDesc(aligned_field_pod.field()));
-  alignment_ = aligned_field_pod.alignment();
+  align_size_ = aligned_field_pod.align_size();
 }
 
-size_t AlignedFieldPodDesc::ByteSize() const { return RoundUp(field_->ByteSize(), alignment_); }
+size_t AlignedFieldPodDesc::ByteSize() const { return RoundUp(field_->ByteSize(), align_size_); }
 
 bool AlignedFieldPodDesc::operator==(const PodDesc& rhs) const {
   const auto* aligned_field_rhs = dynamic_cast<const AlignedFieldPodDesc*>(&rhs);
   if (aligned_field_rhs == nullptr) { return false; }
   return name() == aligned_field_rhs->name() && field() == aligned_field_rhs->field()
-         && alignment_ == aligned_field_rhs->alignment_;
+         && align_size_ == aligned_field_rhs->align_size_;
 }
 
 void AlignedFieldPodDesc::ToProto(AlignedFieldPodProto* aligned_field_proto) const {
   aligned_field_proto->set_name(name_);
-  aligned_field_proto->set_alignment(alignment_);
+  aligned_field_proto->set_align_size(align_size_);
   field_->ToProto(aligned_field_proto->mutable_field());
 }
 
@@ -95,8 +95,8 @@ StructPodDesc* StructPodDesc::MutStructField(const std::string& name) {
   return MutStructField(name, 1);
 }
 
-StructPodDesc* StructPodDesc::MutStructField(const std::string& name, int32_t alignment) {
-  if (!HasField(name)) { AddField(name, std::make_unique<StructPodDesc>(), alignment); }
+StructPodDesc* StructPodDesc::MutStructField(const std::string& name, int32_t align_size) {
+  if (!HasField(name)) { AddField(name, std::make_unique<StructPodDesc>(), align_size); }
   return MutExistedField(name)->MutCast<StructPodDesc>();
 }
 
@@ -112,13 +112,13 @@ void StructPodDesc::AddField(const std::string& name, const PodDesc& pod_desc) {
   return AddField(name, pod_desc, 1);
 }
 
-void StructPodDesc::AddField(const std::string& name, const PodDesc& pod_desc, size_t alignment) {
-  AddField(name, pod_desc.Clone(), alignment);
+void StructPodDesc::AddField(const std::string& name, const PodDesc& pod_desc, size_t align_size) {
+  AddField(name, pod_desc.Clone(), align_size);
 }
 
 void StructPodDesc::AddField(const std::string& name, std::unique_ptr<PodDesc>&& field,
-                             size_t alignment) {
-  auto* aligned_pod = new AlignedFieldPodDesc(name, std::move(field), alignment);
+                             size_t align_size) {
+  auto* aligned_pod = new AlignedFieldPodDesc(name, std::move(field), align_size);
   AddField(std::unique_ptr<AlignedFieldPodDesc>(aligned_pod));
 }
 

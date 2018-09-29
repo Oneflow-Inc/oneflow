@@ -18,7 +18,7 @@ void DefineTestBlobOp::InferBlobDescs(
   const DefineTestBlobConf& conf = op_conf().define_test_blob_conf();
   out_blob_desc->mut_shape() = Shape(conf.shape());
   out_blob_desc->set_data_type(conf.data_type());
-  out_blob_desc->set_has_data_id_field(false);
+  out_blob_desc->set_has_data_id_field(Global<JobDesc>::Get()->SizeOfOneDataId() > 0);
   out_blob_desc->set_has_col_num_field(false);
   out_blob_desc->set_max_col_num(1);
 }
