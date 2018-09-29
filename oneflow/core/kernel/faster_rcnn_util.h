@@ -430,6 +430,9 @@ class MaxOverlapIndex : public IndexType {
 
 template<typename T>
 using BoxesIndex = BBoxIndex<Indexes, T>;
+// ?
+template<typename T>
+using ScoresIndex = ScoreIndex<Indexes, T>;
 
 template<typename T>
 BoxesIndex<T> GenBoxesIndex(size_t capacity, int32_t* index_ptr, const T* boxes_ptr,
