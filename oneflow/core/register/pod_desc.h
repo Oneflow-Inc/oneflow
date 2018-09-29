@@ -57,26 +57,27 @@ class StructPodDesc final : public PodDesc {
   ~StructPodDesc() = default;
 
   StructPodDesc* MutStructField(const std::string& name);
-  ShapedPodDesc* MutShapedField(const std::string& name);
   const PodDesc& Field(const std::string& name) const;
-  void AddField(const std::string& name, const PodDesc& pod_desc) { AddField(name, pod_desc, 8); }
-  bool HasField(const std::string& name) const;
+  void AddField(const std::string& name, const PodDesc& pod_desc);
   size_t ByteSize() const override;
-  void Clear();
-
   void InitFromProto(const StructPodProto& struct_pod);
+
+  bool HasField(const std::string& name) const;
   StructPodDesc& operator=(const StructPodDesc&);
   std::unique_ptr<PodDesc> Clone() const override { return std::make_unique<StructPodDesc>(*this); }
   void ToProto(PodProto* pod_proto) const override { ToProto(pod_proto->mutable_struct_pod()); }
   void ToProto(StructPodProto* pod_proto) const;
+  StructPodDesc* MutStructField(const std::string& name, int32_t default_alignment);
   void AddField(const std::string& name, const PodDesc& pod_desc, size_t alignment);
   bool operator==(const PodDesc& rhs) const override;
   size_t PtrOffset4Field(const std::string& field_name) const;
 
  private:
+  void Clear();
   PodDesc* MutExistedField(const std::string& name);
   void AddField(std::unique_ptr<AlignedFieldPodDesc>&& field);
-  void AddField(const std::string& name, std::unique_ptr<PodDesc>&& field, size_t alignment = 8);
+  void AddField(const std::string& name, std::unique_ptr<PodDesc>&& field);
+  void AddField(const std::string& name, std::unique_ptr<PodDesc>&& field, size_t alignment);
 
   std::vector<std::unique_ptr<AlignedFieldPodDesc>> fields_;
   HashMap<std::string, int32_t> name2field_idx_;

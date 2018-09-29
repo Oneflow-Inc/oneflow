@@ -92,13 +92,12 @@ bool StructPodDesc::HasField(const std::string& name) const {
 }
 
 StructPodDesc* StructPodDesc::MutStructField(const std::string& name) {
-  if (!HasField(name)) { AddField(name, std::make_unique<StructPodDesc>()); }
-  return MutExistedField(name)->MutCast<StructPodDesc>();
+  return MutStructField(name, kCudaAlignSize);
 }
 
-ShapedPodDesc* StructPodDesc::MutShapedField(const std::string& name) {
-  if (!HasField(name)) { AddField(name, std::make_unique<ShapedPodDesc>()); }
-  return MutExistedField(name)->MutCast<ShapedPodDesc>();
+StructPodDesc* StructPodDesc::MutStructField(const std::string& name, int32_t alignment) {
+  if (!HasField(name)) { AddField(name, std::make_unique<StructPodDesc>(), alignment); }
+  return MutExistedField(name)->MutCast<StructPodDesc>();
 }
 
 PodDesc* StructPodDesc::MutExistedField(const std::string& name) {
@@ -107,6 +106,10 @@ PodDesc* StructPodDesc::MutExistedField(const std::string& name) {
 
 const PodDesc& StructPodDesc::Field(const std::string& name) const {
   return fields_.at(name2field_idx_.at(name))->field();
+}
+
+void StructPodDesc::AddField(const std::string& name, const PodDesc& pod_desc) {
+  return AddField(name, pod_desc, kCudaAlignSize);
 }
 
 void StructPodDesc::AddField(const std::string& name, const PodDesc& pod_desc, size_t alignment) {
