@@ -10,19 +10,18 @@ message ShapedPodProto {
 }
 
 message StructPodProto {
-  repeated AlignedFieldPodProto field = 1;
+  repeated FieldPodProto field = 1;
 }
 
-message AlignedFieldPodProto {
+message FieldPodProto {
   required string name = 1;
   required int32 alignment = 2;
-  required PodProto field = 3;
+  required PodProto pod = 3;
 }
 
 message PodProto {
   oneof pod_type {
     ShapedPodProto shaped_pod = 1;
     StructPodProto struct_pod = 2;
-    AlignedFieldPodProto aligned_field_pod = 3;
   }
 }

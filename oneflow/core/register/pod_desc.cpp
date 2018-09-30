@@ -7,13 +7,22 @@ namespace {
 std::unique_ptr<PodDesc> NewPodDesc(const PodProto& pod) {
   if (pod.has_shaped_pod()) { return std::make_unique<ShapedPodDesc>(pod.shaped_pod()); }
   if (pod.has_struct_pod()) { return std::make_unique<StructPodDesc>(pod.struct_pod()); }
-  // ignore aligned field pod
+  // ignore field pod
   UNIMPLEMENTED();
+  return std::unique_ptr<PodDesc>();
 }
 
 }  // namespace
 
-ShapedPodDesc::ShapedPodDesc(const ShapedPodProto& shaped_pod) : PodDesc() {
+ShapedPodDesc::ShapedPodDesc(const ShapedPodProto& shaped_pod) { InitFromProto(shaped_pod); }
+
+ShapedPodDesc::ShapedPodDesc(const ShapedPodDesc& shape_pod) {
+  PodProto pod_proto;
+  ToProto(&pod_proto);
+  InitFromProto(pod_proto.shaped_pod());
+}
+
+void ShapedPodDesc::InitFromProto(const ShapedPodProto& shaped_pod) {
   shape_ = Shape(shaped_pod.shape());
   data_type_ = shaped_pod.data_type();
 }
@@ -31,25 +40,25 @@ void ShapedPodDesc::ToProto(PodProto* pod_proto) const {
   pod_proto->mutable_shaped_pod()->set_data_type(data_type_);
 }
 
-AlignedFieldPodDesc::AlignedFieldPodDesc(const AlignedFieldPodProto& aligned_field_pod) {
-  name_ = aligned_field_pod.name();
-  field_ = std::move(NewPodDesc(aligned_field_pod.field()));
-  alignment_ = aligned_field_pod.alignment();
+FieldPodDesc::FieldPodDesc(const FieldPodProto& field_pod) {
+  name_ = field_pod.name();
+  pod_ = std::move(NewPodDesc(field_pod.pod()));
+  alignment_ = field_pod.alignment();
 }
 
-size_t AlignedFieldPodDesc::ByteSize() const { return RoundUp(field_->ByteSize(), alignment_); }
+size_t FieldPodDesc::ByteSize() const { return RoundUp(pod_->ByteSize(), alignment_); }
 
-bool AlignedFieldPodDesc::operator==(const PodDesc& rhs) const {
-  const auto* aligned_field_rhs = dynamic_cast<const AlignedFieldPodDesc*>(&rhs);
-  if (aligned_field_rhs == nullptr) { return false; }
-  return name() == aligned_field_rhs->name() && field() == aligned_field_rhs->field()
-         && alignment_ == aligned_field_rhs->alignment_;
+bool FieldPodDesc::operator==(const PodDesc& rhs) const {
+  const auto* field_rhs = dynamic_cast<const FieldPodDesc*>(&rhs);
+  if (field_rhs == nullptr) { return false; }
+  return name() == field_rhs->name() && pod() == field_rhs->pod()
+         && alignment_ == field_rhs->alignment_;
 }
 
-void AlignedFieldPodDesc::ToProto(AlignedFieldPodProto* aligned_field_proto) const {
-  aligned_field_proto->set_name(name_);
-  aligned_field_proto->set_alignment(alignment_);
-  field_->ToProto(aligned_field_proto->mutable_field());
+void FieldPodDesc::ToProto(FieldPodProto* field_pod_proto) const {
+  field_pod_proto->set_name(name_);
+  field_pod_proto->set_alignment(alignment_);
+  pod_->ToProto(field_pod_proto->mutable_pod());
 }
 
 StructPodDesc::StructPodDesc(const StructPodProto& struct_pod_proto) {
@@ -62,8 +71,8 @@ void StructPodDesc::InitFromProto(const StructPodProto& struct_pod) {
   CHECK(name2field_idx_.empty());
   CHECK(fields_.empty());
   for (const auto& field : struct_pod.field()) {
-    std::unique_ptr<AlignedFieldPodDesc> aligned_pod(new AlignedFieldPodDesc(field));
-    AddField(std::move(aligned_pod));
+    std::unique_ptr<FieldPodDesc> pod(new FieldPodDesc(field));
+    AddField(std::move(pod));
   }
 }
 
@@ -101,11 +110,11 @@ StructPodDesc* StructPodDesc::MutStructField(const std::string& name, int32_t al
 }
 
 PodDesc* StructPodDesc::MutExistedField(const std::string& name) {
-  return fields_.at(name2field_idx_.at(name))->mut_field();
+  return fields_.at(name2field_idx_.at(name))->mut_pod();
 }
 
 const PodDesc& StructPodDesc::Field(const std::string& name) const {
-  return fields_.at(name2field_idx_.at(name))->field();
+  return fields_.at(name2field_idx_.at(name))->pod();
 }
 
 void StructPodDesc::AddField(const std::string& name, const PodDesc& pod_desc) {
@@ -118,16 +127,16 @@ void StructPodDesc::AddField(const std::string& name, const PodDesc& pod_desc, s
 
 void StructPodDesc::AddField(const std::string& name, std::unique_ptr<PodDesc>&& field,
                              size_t alignment) {
-  auto* aligned_pod = new AlignedFieldPodDesc(name, std::move(field), alignment);
-  AddField(std::unique_ptr<AlignedFieldPodDesc>(aligned_pod));
+  auto* pod = new FieldPodDesc(name, std::move(field), alignment);
+  AddField(std::unique_ptr<FieldPodDesc>(pod));
 }
 
-void StructPodDesc::AddField(std::unique_ptr<AlignedFieldPodDesc>&& field) {
+void StructPodDesc::AddField(std::unique_ptr<FieldPodDesc>&& field) {
   CHECK(name2field_idx_.emplace(field->name(), fields_.size()).second);
   fields_.emplace_back(std::move(field));
 }
 
-size_t StructPodDesc::PtrOffset4Field(const std::string& field_name) const {
+size_t StructPodDesc::ByteOffset4Field(const std::string& field_name) const {
   CHECK(HasField(field_name));
   size_t offset = 0;
   for (int32_t i = 0; i < name2field_idx_.at(field_name); ++i) {
