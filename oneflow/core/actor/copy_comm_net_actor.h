@@ -24,8 +24,9 @@ class CopyCommNetActor final : public Actor {
   void InitDeviceCtx(const ThreadCtx&) override;
   void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*) const override;
 
-  std::pair<bool, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName() override {
-    return {true, {}};
+  std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName()
+      override {
+    return {RegstNameType::kNaive, {}};
   }
   void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const override;
   void NormalProcessCustomizedEordMsg(const ActorMsg&) override { is_in_eord_ = true; }

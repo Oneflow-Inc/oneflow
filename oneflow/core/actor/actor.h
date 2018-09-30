@@ -43,6 +43,7 @@ class Actor {
     HashMap<std::string, int64_t> bn_in_op2regst_desc_id;
   };
   using MsgHandler = int (Actor::*)(const ActorMsg&);
+  enum class RegstNameType { kNaive = 0, kCustomized };
 
   // Util
   Actor() = default;
@@ -149,11 +150,13 @@ class Actor {
   virtual bool IsCustomizedReadAlwaysUnReadyFromNow() { return false; }
 
   // NaiveOrCustomized
-  virtual std::pair<bool, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName() {
-    return {false, {}};
+  virtual std::pair<RegstNameType, HashSet<std::string>>
+  GetNaiveOrCustomizedConsumedRegstDescName() {
+    return {RegstNameType::kCustomized, {}};
   }
-  virtual std::pair<bool, HashSet<std::string>> GetNaiveOrCustomizedProducedRegstDescName() {
-    return {false, {}};
+  virtual std::pair<RegstNameType, HashSet<std::string>>
+  GetNaiveOrCustomizedProducedRegstDescName() {
+    return {RegstNameType::kCustomized, {}};
   }
   void TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids);
   void TakeOverNaiveProduced(const PbMap<std::string, RegstDescProto>& produced_ids);

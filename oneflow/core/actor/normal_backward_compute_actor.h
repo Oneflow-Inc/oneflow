@@ -20,8 +20,9 @@ class NormalBackwardCompActor final : public CompActor {
   void Act() override;
   bool IsCustomizedReadReady() override;
   void AsyncReturnAllCustomizedReadableRegst() override;
-  std::pair<bool, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName() override {
-    return {true, {"activation", "data_tmp", "out", "out_diff", "in"}};
+  std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName()
+      override {
+    return {RegstNameType::kNaive, {"activation", "data_tmp", "out", "out_diff", "in"}};
   }
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
   void AsyncSendCustomizedConsumedRegstMsgToProducer() override;

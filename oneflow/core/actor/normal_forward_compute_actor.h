@@ -18,11 +18,13 @@ class NormalForwardCompActor final : public CompActor {
   void Act() override;
   bool IsCustomizedReadReady() override;
   void AsyncReturnAllCustomizedReadableRegst() override;
-  std::pair<bool, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName() override {
-    return {true, {"in"}};
+  std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName()
+      override {
+    return {RegstNameType::kNaive, {"in"}};
   }
-  std::pair<bool, HashSet<std::string>> GetNaiveOrCustomizedProducedRegstDescName() override {
-    return {false, {"const_buf"}};
+  std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedProducedRegstDescName()
+      override {
+    return {RegstNameType::kCustomized, {"const_buf"}};
   }
   void AsyncSendCustomizedProducedRegstMsgToConsumer() override {}
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;

@@ -15,8 +15,9 @@ class RecordLoadActor final : public CompActor {
  private:
   void VirtualCompActorInit(const TaskProto&) override;
   void Act() override;
-  std::pair<bool, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName() override {
-    return {true, {}};
+  std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName()
+      override {
+    return {RegstNameType::kNaive, {}};
   }
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
   bool IsCustomizedReadReady() override;

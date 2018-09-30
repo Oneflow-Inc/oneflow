@@ -71,7 +71,7 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
 
 void Actor::TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids) {
   auto res = GetNaiveOrCustomizedConsumedRegstDescName();
-  bool is_naive_names = res.first;
+  bool is_naive_names = res.first == RegstNameType::kNaive;
   const HashSet<std::string>& names = res.second;
 
   for (const auto& pair : consumed_ids) {
@@ -87,7 +87,7 @@ void Actor::TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& cons
 
 void Actor::TakeOverNaiveProduced(const PbMap<std::string, RegstDescProto>& produced_ids) {
   auto res = GetNaiveOrCustomizedProducedRegstDescName();
-  bool is_naive_names = res.first;
+  bool is_naive_names = res.first == RegstNameType::kNaive;
   const HashSet<std::string>& names = res.second;
 
   for (const auto& pair : produced_ids) {
