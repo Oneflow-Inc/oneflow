@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_JOB_MACHINE_CONTEXT_H_
 #define ONEFLOW_CORE_JOB_MACHINE_CONTEXT_H_
 
-#include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
@@ -19,7 +19,7 @@ class MachineCtx final {
 
  private:
   friend class Global<MachineCtx>;
-  MachineCtx(int64_t this_mchn_id);
+  explicit MachineCtx(int64_t this_mchn_id);
 
   int64_t this_machine_id_;
 };

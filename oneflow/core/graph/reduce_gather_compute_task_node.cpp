@@ -9,23 +9,17 @@ void ReduceGatherCompTaskNode::ProduceAllRegstsAndBindEdges() {
 }
 
 void ReduceGatherCompTaskNode::ConsumeAllRegsts() {
-  int64_t machine_num = logical_node()->parallel_desc()->sorted_machine_ids().size();
-  int64_t dev_num_of_each_machine = logical_node()->parallel_desc()->device_num_of_each_machine();
-  CHECK_EQ(machine_num * dev_num_of_each_machine, parallel_ctx()->parallel_num());
-  bool has_local_reduce = machine_num > 1 && dev_num_of_each_machine > 1;
-
+  std::vector<EdgeInfo> edge_infos;
   for (TaskEdge* edge : in_edges()) {
-    TaskNode* src_node = edge->src_node();
-    while (dynamic_cast<CompTaskNode*>(src_node) == nullptr) {
-      src_node = src_node->SoleInEdge()->src_node();
-    }
-    bool is_local_gather = src_node->GetTaskType() == TaskType::kReduceGather;
-    int64_t in_parallel_id = src_node->parallel_ctx()->parallel_id();
-    int64_t in_device_rank = in_parallel_id % dev_num_of_each_machine;
-    int64_t in_machine_rank = in_parallel_id / dev_num_of_each_machine;
-    int64_t in_edge_index =
-        has_local_reduce ? (is_local_gather ? in_device_rank : in_machine_rank) : in_parallel_id;
-    ConsumeRegst("in_" + std::to_string(in_edge_index), edge->GetSoleRegst());
+    std::vector<CompTaskNode*> pred_comp_task_nodes = GetPredCompTaskNodesOnEdge(edge);
+    CHECK_EQ(pred_comp_task_nodes.size(), 1);
+    EdgeInfo edge_info = {edge, pred_comp_task_nodes.front()->task_id()};
+    edge_infos.push_back(edge_info);
+  }
+  SortEdges(&edge_infos);
+  FOR_RANGE(int64_t, in_edge_index, 0, edge_infos.size()) {
+    ConsumeRegst("in_" + std::to_string(in_edge_index),
+                 edge_infos[in_edge_index].edge->GetSoleRegst());
   }
 }
 
@@ -46,6 +40,37 @@ void ReduceGatherCompTaskNode::BuildExecGphAndRegst() {
   out_regst->AddLbi(reduce_gather_op->BnInOp2Lbi(reduce_gather_op->SoleObn()));
   node->BindBnWithRegst(reduce_gather_op->SoleObn(), out_regst);
   node->InferBlobDescs(parallel_ctx());
+}
+
+void ReduceGatherCompTaskNode::EnableMemSharingInReduce(const ReduceMemSharingCtx& ctx) {
+  const ReduceRankCtx& rank_ctx = GetRankCtx();
+  int64_t base_offset = ctx.Offset4RankCtxParallelId(rank_ctx.CtxWithGather(), parallel_id());
+  int64_t rank = rank_ctx.Rank4ParallelId(parallel_id());
+  ctx.EnableMemSharing4Regst(GetProducedRegst("out").get(), base_offset);
+  for (const auto& kv : consumed_regsts()) {
+    auto in_parallel_id = oneflow_cast<int64_t>(kv.first.substr(3));
+    CHECK_EQ(1, kv.second.size());
+    if (in_parallel_id == rank) { continue; }
+    RegstDesc* regst = kv.second.front().get();
+    ctx.EnableMemSharing4Regst(regst,
+                               base_offset + in_parallel_id * ctx.SegmentSize4RankCtx(rank_ctx));
+  }
+
+  TaskNode* nearest_add_task_node = FindPredReduceTaskNodeIf(
+      [](TaskNode* node) { return node->GetTaskType() == TaskType::kReduceAdd; });
+  CHECK(nearest_add_task_node);
+
+  TaskNode* nearest_add_copy_d2h = nullptr;
+  nearest_add_task_node->ForEachNodeOnOutEdge([&](TaskNode* node) {
+    if (node->GetTaskType() == TaskType::kCopyHd) { nearest_add_copy_d2h = node; }
+  });
+  CHECK(nearest_add_copy_d2h);
+
+  ForEachNodeOnInEdge([&](TaskNode* node) {
+    if (node->GetTaskType() == TaskType::kCopyHd) {
+      nearest_add_copy_d2h->BuildCtrlRegstDesc(node);
+    }
+  });
 }
 
 }  // namespace oneflow

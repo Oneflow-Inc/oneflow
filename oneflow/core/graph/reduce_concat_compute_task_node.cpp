@@ -8,10 +8,6 @@ void ReduceConcatCompTaskNode::ProduceAllRegstsAndBindEdges() {
 }
 
 void ReduceConcatCompTaskNode::ConsumeAllRegsts() {
-  struct EdgeInfo {
-    int64_t bw_node_order;
-    TaskEdge* edge;
-  };
   std::vector<EdgeInfo> edge_infos;
   for (TaskEdge* edge : in_edges()) {
     TaskNode* src_node = edge->src_node();
@@ -19,12 +15,10 @@ void ReduceConcatCompTaskNode::ConsumeAllRegsts() {
       src_node = src_node->SoleInEdge()->src_node();
     }
     CompTaskNode* bw_node = dynamic_cast<CompTaskNode*>(src_node);
-    EdgeInfo edge_info{bw_node->order_in_graph(), edge};
+    EdgeInfo edge_info{edge, bw_node->order_in_graph()};
     edge_infos.emplace_back(edge_info);
   }
-  std::sort(edge_infos.begin(), edge_infos.end(), [](const EdgeInfo& lhs, const EdgeInfo& rhs) {
-    return lhs.bw_node_order < rhs.bw_node_order;
-  });
+  SortEdges(&edge_infos);
   FOR_RANGE(size_t, idx, 0, edge_infos.size()) {
     ConsumeRegst("in_" + std::to_string(idx), edge_infos[idx].edge->GetSoleRegst());
   }
@@ -42,6 +36,19 @@ void ReduceConcatCompTaskNode::BuildExecGphAndRegst() {
   out_regst->AddLbi(reduce_concat_op->BnInOp2Lbi(reduce_concat_op->SoleObn()));
   node->BindBnWithRegst(reduce_concat_op->SoleObn(), out_regst);
   node->InferBlobDescs(parallel_ctx());
+}
+
+void ReduceConcatCompTaskNode::EnableMemSharingInReduce(const ReduceMemSharingCtx& ctx) {
+  CHECK_EQ(GetRankCtx().TotalSegmentCount(), 1);
+  ctx.EnableMemSharing4Regst(GetProducedRegst("out").get(), 0);
+
+  size_t concat_num = consumed_regsts().size();
+  int64_t offset = 0;
+  FOR_RANGE(int32_t, idx, 0, concat_num) {
+    RegstDesc* concat_in_regst = GetSoleConsumedRegst("in_" + std::to_string(idx)).get();
+    ctx.EnableMemSharing4Regst(concat_in_regst, offset);
+    offset += InferRegstSize(*concat_in_regst);
+  }
 }
 
 }  // namespace oneflow

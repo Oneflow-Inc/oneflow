@@ -9,30 +9,6 @@
 
 namespace oneflow {
 
-struct ReduceTaskNodes {
-  CompTaskNode* concat = nullptr;
-  CompTaskNode* scatter = nullptr;
-  CompTaskNode* local_add = nullptr;
-  CompTaskNode* global_add = nullptr;
-  CompTaskNode* gather = nullptr;
-  CompTaskNode* local_gather = nullptr;
-  CompTaskNode* split = nullptr;
-  bool operator==(const ReduceTaskNodes& rhs) const {
-    return this->concat == rhs.concat && this->scatter == rhs.scatter
-           && this->local_add == rhs.local_add && this->global_add == rhs.global_add
-           && this->gather == rhs.gather && this->local_gather == rhs.local_gather
-           && this->split == rhs.split;
-  }
-};
-
-struct ReduceTaskNodesHasher {
-  std::size_t operator()(const ReduceTaskNodes& key) const {
-    return (size_t)(key.concat) ^ (size_t)(key.scatter) ^ (size_t)(key.local_add)
-           ^ (size_t)(key.global_add) ^ (size_t)(key.gather) ^ (size_t)(key.local_gather)
-           ^ (size_t)(key.split);
-  }
-};
-
 class TaskGraph final : public Graph<TaskNode, TaskEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TaskGraph);
@@ -46,14 +22,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void AddOrderingCtrlEdgeInSameChain();
 
   void EnableMemSharingInReduceStruct();
-  void CollectReduceTaskNodes(std::unordered_set<ReduceTaskNodes, ReduceTaskNodesHasher>*) const;
-  void EnableMemSharingInOneReduce(const ReduceTaskNodes&);
-  void AddCtrlEdge4MemSharingInOneReduce(const ReduceTaskNodes&);
-  void BuildCtrlRegstBetweenReduceCopyNodes(const CompTaskNode* src_reduce,
-                                            const CompTaskNode* dst_reduce, int64_t copy_node_num);
 
-  void AddCtrlEdgeInReduceStruct();
-  void AddMutexCtrlEdgeInSameChain();
   void AddOrderCtrlEdgeBetweenCopyAndMdUpdt();
   void RmUselessConsumeRelationshipBetweenFwBw();
   void AcyclicTopoForEachNode(std::function<void(TaskNode* node)> Handler) const;
@@ -64,10 +33,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceLocalAdd);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceGlobalAdd);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGlobalAdd2ReduceGather);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceAdd);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceAdd2ReduceGather);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGather2ReduceGather);
 
  private:
@@ -101,20 +68,6 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void SetAreaIdForNewNodes(const LogicalNode* src_logical, const LogicalNode* dst_logical);
   void MergeChainAndSetOrderInGraphForEachNode();
   void BuildCtrlRegstDescInSameChain();
-
-  template<typename LogicalNodeType, typename TaskNodeType>
-  void AddCtrlEdgeForReduceTaskNode(int64_t total_machine_num);
-
-  template<typename TaskNodeType>
-  void CollectCopyCommNetForReduceTaskNodes(
-      const std::vector<TaskNodeType*>& reduce_task_nodes,
-      std::vector<std::pair<CopyCommNetTaskNode*, int64_t>>* commnet_nodes_with_sort_val);
-
-  template<typename TaskNodeType>
-  bool IsEndingTaskType(TaskType type);
-
-  void EnableMemSharingInReduceConcatSplitIfNeed(
-      const ReduceTaskNodes&, std::function<void(RegstDesc*, int64_t)> SetMemSharedField4Regst);
 
   void GeneratePersistenceThrdId(
       const std::vector<std::pair<int64_t, CompTaskNode*>>& persistence_nodes);

@@ -293,6 +293,12 @@ message RMSPropModelUpdateConf {
   optional float epsilon = 2 [default = 1e-8];
 }
 
+message LARSModelUpdateConf {
+  optional float momentum_beta = 1 [default = 0.9];
+  optional float epsilon = 2 [default = 1e-9];
+  optional float lars_coefficient = 3 [default = 0.0001];
+}
+
 message ExponentialDecayConf {
   required int64 decay_batches = 1;
   required double decay_rate = 2;
@@ -371,6 +377,7 @@ message NormalModelUpdateOpUserConf {
     NaiveModelUpdateConf naive_conf = 1000;
     MomentumModelUpdateConf momentum_conf = 1001;
     RMSPropModelUpdateConf rmsprop_conf = 1002;
+    LARSModelUpdateConf lars_conf = 1003;
   }
 }
 
@@ -598,6 +605,15 @@ message ReduceConcatOpConf {
   required int32 in_num = 1;
 }
 
+message NcclAllReduceOpConf {
+}
+
+message NcclReduceScatterOpConf {
+}
+
+message NcclAllGatherOpConf {
+}
+
 message ReduceSplitOpConf {
   required int32 out_num = 1;
 }
@@ -606,12 +622,7 @@ message ReduceScatterOpConf {
   required int32 out_num = 1;
 }
 
-message ReduceLocalAddOpConf {
-  required int32 in_num = 1;
-  required int32 out_num = 2;
-}
-
-message ReduceGlobalAddOpConf {
+message ReduceAddOpConf {
   required int32 in_num = 1;
 }
 
@@ -680,15 +691,17 @@ message OperatorConf {
     ConcatOpConf concat_conf = 107;
     BoxingOpConf boxing_conf = 108;
     ReduceScatterOpConf reduce_scatter_conf = 109;
-    ReduceLocalAddOpConf reduce_local_add_conf = 110;
-    ReduceGlobalAddOpConf reduce_global_add_conf = 111;
-    ReduceGatherOpConf reduce_gather_conf = 112;
-    ReduceConcatOpConf reduce_concat_conf = 113;
-    ReduceSplitOpConf reduce_split_conf = 114;
-    AccumulateOpConf accumulate_conf = 115;
-    NormalModelUpdateOpConf normal_mdupdt_conf = 116;
-    ModelSaveOpConf model_save_conf = 117;
-    SharedModelDiffAddOpConf shared_model_diff_add_conf = 118;
+    ReduceAddOpConf reduce_add_conf = 110;
+    ReduceGatherOpConf reduce_gather_conf = 111;
+    ReduceConcatOpConf reduce_concat_conf = 112;
+    ReduceSplitOpConf reduce_split_conf = 113;
+    NcclAllReduceOpConf nccl_all_reduce_conf = 114;
+    NcclReduceScatterOpConf nccl_reduce_scatter_conf = 115;
+    NcclAllGatherOpConf nccl_all_gather_conf = 116;
+    AccumulateOpConf accumulate_conf = 117;
+    NormalModelUpdateOpConf normal_mdupdt_conf = 118;
+    ModelSaveOpConf model_save_conf = 119;
+    SharedModelDiffAddOpConf shared_model_diff_add_conf = 120;
     
     // domain op
     TransposeOpConf transpose_conf = 201;
