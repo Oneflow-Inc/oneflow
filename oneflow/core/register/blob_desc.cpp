@@ -26,15 +26,15 @@ BlobDesc::BlobDesc(const BlobDescProto& proto) : body_field_(proto.body()) {
   CHECK(has_col_num_ && !header_is_opaque_);
 }
 
-BlobDesc::BlobDesc(const StructPodDesc& opaque_header_pod_desc, const Shape& shape,
+BlobDesc::BlobDesc(bool header_is_opaque, const StructPodDesc& header_pod_desc, const Shape& shape,
                    DataType data_type, int32_t max_col_num)
     : has_data_id_(false),
       has_col_num_(false),
       max_col_num_(max_col_num),
       blob_mem_id_(-1),
       body_field_(shape, data_type) {
-  header_is_opaque_ = true;
-  header_pod_desc_ = opaque_header_pod_desc;
+  header_is_opaque_ = header_is_opaque;
+  header_pod_desc_ = header_pod_desc;
 }
 
 void BlobDesc::set_has_data_id_field(bool val) {
@@ -136,7 +136,7 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     CHECK_EQ(body_byte_size % GetSizeOfDataType(data_type), 0);
     body_elem_cnt = body_byte_size / GetSizeOfDataType(data_type);
   }
-  return std::make_unique<BlobDesc>(opaque_header_pod_desc, Shape({body_elem_cnt}), data_type,
+  return std::make_unique<BlobDesc>(true, opaque_header_pod_desc, Shape({body_elem_cnt}), data_type,
                                     max_col_num);
 }
 

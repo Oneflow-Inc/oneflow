@@ -19,7 +19,7 @@ class BlobDesc {
   BlobDesc(const Shape&, DataType, bool has_data_id, bool has_col_num, int32_t max_col_num);
   BlobDesc(const Shape& shape) : body_field_(shape) {}
   BlobDesc(const BlobDescProto& proto);
-  BlobDesc(const StructPodDesc& opaque_header_pod_desc, const Shape&, DataType,
+  BlobDesc(bool header_is_opaque, const StructPodDesc& header_pod_desc, const Shape&, DataType,
            int32_t max_col_num);
 
   const Shape& shape() const { return body_field_.shape(); }
