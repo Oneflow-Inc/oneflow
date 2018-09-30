@@ -4,10 +4,10 @@ package oneflow;
 message Machine {
   required string addr = 1; // domain name or ip
   required int32 port = 2;
-  optional int32 port_map = 3 [default = 0];
-  optional int32 epoll_port = 4 [default = 0];
-  optional int32 epoll_port_map = 5 [default = 0];
-  required string name = 6;
+  required int64 id = 3;
+  optional int32 port_map = 4 [default = 0];
+  optional int32 epoll_port = 5 [default = 0];
+  optional int32 epoll_port_map = 6 [default = 0];
 }
 
 enum DeviceType {

@@ -3,6 +3,10 @@
 
 #include "oneflow/core/device/cuda_util.h"
 
+#ifdef WITH_NCCL
+#include <nccl.h>
+#endif  // WITH_NCCL
+
 namespace oneflow {
 
 class DeviceCtx {
@@ -10,13 +14,14 @@ class DeviceCtx {
   OF_DISALLOW_COPY_AND_MOVE(DeviceCtx);
   virtual ~DeviceCtx() = default;
 
-  virtual std::unique_ptr<DeviceCtx> Copy() const = 0;
-
 #ifdef WITH_CUDA
   virtual const cudaStream_t& cuda_stream() const { UNIMPLEMENTED(); }
   virtual const cublasHandle_t& cublas_pmh_handle() const { UNIMPLEMENTED(); }
   virtual const cublasHandle_t& cublas_pmd_handle() const { UNIMPLEMENTED(); }
   virtual const cudnnHandle_t& cudnn_handle() const { UNIMPLEMENTED(); }
+#ifdef WITH_NCCL
+  virtual const ncclComm_t& nccl_handle() const { UNIMPLEMENTED(); }
+#endif  // WITH_NCCL
 #endif
 
   virtual void AddCallBack(std::function<void()>) const = 0;

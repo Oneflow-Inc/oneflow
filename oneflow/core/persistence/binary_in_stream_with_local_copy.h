@@ -25,8 +25,10 @@ class BinaryInStreamWithLocalCopy final : public BinaryInStream {
   int32_t ReadAndWriteToLocal(char* s, size_t n);
   int32_t ReadFromLocal(char* s, size_t n) { return in_stream_->Read(s, n); }
 
+  bool Restart();
   void CopyToLocalFinish();
 
+  bool once_read_;
   std::unique_ptr<BinaryInStream> in_stream_;
   std::string local_copy_path_;
   std::unique_ptr<PersistentOutStream> out_stream_;

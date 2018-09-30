@@ -293,6 +293,12 @@ message RMSPropModelUpdateConf {
   optional float epsilon = 2 [default = 1e-8];
 }
 
+message LARSModelUpdateConf {
+  optional float momentum_beta = 1 [default = 0.9];
+  optional float epsilon = 2 [default = 1e-9];
+  optional float lars_coefficient = 3 [default = 0.0001];
+}
+
 message ExponentialDecayConf {
   required int64 decay_batches = 1;
   required double decay_rate = 2;
@@ -365,19 +371,23 @@ message WarmupConf {
 }
 
 message NormalModelUpdateOpUserConf {
-  optional double learning_rate = 1 [default = 0.01];
-  optional LearningRateDecayConf learning_rate_decay = 2;
-  optional WarmupConf warmup_conf = 3;
+  optional LearningRateDecayConf learning_rate_decay = 1;
+  optional WarmupConf warmup_conf = 2;
   oneof normal_mdupdt {
     NaiveModelUpdateConf naive_conf = 1000;
     MomentumModelUpdateConf momentum_conf = 1001;
     RMSPropModelUpdateConf rmsprop_conf = 1002;
+    LARSModelUpdateConf lars_conf = 1003;
   }
 }
 
 message NormalModelUpdateOpConf {
   required NormalModelUpdateOpUserConf user_conf = 1;
-  required int32 in_num = 2;
+  required string model_diff = 2;
+  required string model = 3;
+  required float learning_rate = 4;
+  required float l1 = 5;
+  required float l2 = 6;
 }
 
 message AccumulateOpConf {
@@ -469,6 +479,10 @@ message MaximumOpConf {
   required string out = 2;
 }
 
+message SharedModelDiffAddOpConf {
+  required int32 in_num = 1;
+}
+
 message LocalResponseNormalizationOpConf {
   required string in = 1;
   required string out = 2;
@@ -483,7 +497,11 @@ message EncodeConf {
   oneof encode {
     EncodeRaw raw = 1;
     EncodeJpeg jpeg = 2;
+    EncodeProtobuf protobuf = 3;
   }
+}
+
+message EncodeProtobuf {
 }
 
 message EncodeRaw {
@@ -547,6 +565,12 @@ message DecodeRandomOpConf {
   required InitializerConf distribution = 7; 
 }
 
+message DefineTestBlobConf {
+  required string out = 1;
+  required ShapeProto shape = 2;
+  required DataType data_type = 3;
+}
+
 message NormalizationOpConf {
   required string in = 1;
   required string out = 2;
@@ -581,6 +605,15 @@ message ReduceConcatOpConf {
   required int32 in_num = 1;
 }
 
+message NcclAllReduceOpConf {
+}
+
+message NcclReduceScatterOpConf {
+}
+
+message NcclAllGatherOpConf {
+}
+
 message ReduceSplitOpConf {
   required int32 out_num = 1;
 }
@@ -589,12 +622,7 @@ message ReduceScatterOpConf {
   required int32 out_num = 1;
 }
 
-message ReduceLocalAddOpConf {
-  required int32 in_num = 1;
-  required int32 out_num = 2;
-}
-
-message ReduceGlobalAddOpConf {
+message ReduceAddOpConf {
   required int32 in_num = 1;
 }
 
@@ -653,58 +681,65 @@ message OperatorConf {
   optional bool enable_cudnn = 5;
   optional int64 cudnn_buf_limit_mbyte = 6 [default = 1024]; // 1GByte
   oneof op_type {
-    FullyConnectedOpConf fully_connected_conf = 101;
-    DecodeOFRecordOpConf decode_ofrecord_conf = 102;
-    DecodeRandomOpConf decode_random_conf = 103;
-    ReluOpConf relu_conf = 104;
-    SoftmaxOpConf softmax_conf = 105;
-    SparseCrossEntropyLossOpConf sparse_cross_entropy_loss_conf = 106;
-    CopyHdOpConf copy_hd_conf = 107;
-    CloneOpConf clone_conf = 108;
-    BoxingOpConf boxing_conf = 109;
-    NormalModelUpdateOpConf normal_mdupdt_conf = 110;
-    ModelSaveOpConf model_save_conf = 111;
-    AccumulateOpConf accumulate_conf = 112;
-    ConcatOpConf concat_conf = 113;
-    CopyCommNetOpConf copy_comm_net_conf = 114;
-    SparseSoftmaxCrossEntropyLossOpConf sparse_softmax_cross_entropy_loss_conf = 117;
-    PrintOpConf print_conf = 118;
-    LossPrintOpConf loss_print_conf = 119;
-    ReduceSumOpConf reduce_sum_conf = 120;
-    BasicRnnOpConf basic_rnn_conf = 121;
-    ReshapeOpConf reshape_conf = 122;
-    SigmoidOpConf sigmoid_conf = 123;
-    TanHOpConf tanh_conf = 124;
-    Conv1DOpConf conv_1d_conf = 125;
-    Conv2DOpConf conv_2d_conf = 126;
-    Conv3DOpConf conv_3d_conf = 127;
-    TransposeOpConf transpose_conf = 128;
-    MatmulOpConf matmul_conf = 129;
-    DotOpConf dot_conf = 130;
-    MultiplyOpConf multiply_conf = 131;
-    HingeLossOpConf hinge_loss_conf = 132;
-    DropoutOpConf dropout_conf = 140;
-    AveragePooling1DOpConf average_pooling_1d_conf = 200;
-    MaxPooling1DOpConf max_pooling_1d_conf = 201;
-    AveragePooling2DOpConf average_pooling_2d_conf = 202;
-    MaxPooling2DOpConf max_pooling_2d_conf = 203;
-    AveragePooling3DOpConf average_pooling_3d_conf = 204;
-    MaxPooling3DOpConf max_pooling_3d_conf = 205;
-    EmbeddingLookupOpConf embedding_lookup_conf = 250;
-    EmbeddingLookupAccumulateOpConf embedding_lookup_accumulate_conf = 251;
-    AddOpConf add_conf = 301;
-    MaximumOpConf maximum_conf = 302;
-    LocalResponseNormalizationOpConf local_response_normalization_conf = 300;
-    NormalizationOpConf normalization_conf = 350;
-    ReduceScatterOpConf reduce_scatter_conf = 400;
-    ReduceLocalAddOpConf reduce_local_add_conf = 401;
-    ReduceGlobalAddOpConf reduce_global_add_conf = 402;
-    ReduceGatherOpConf reduce_gather_conf = 403;
-    ReduceConcatOpConf reduce_concat_conf = 404;
-    ReduceSplitOpConf reduce_split_conf = 405;
-    RecordLoadOpConf record_load_conf = 406;
-    AccuracyOpConf accuracy_conf = 407;
-    AccuracyPrintOpConf accuracy_print_conf = 408;
+    // system op
+    DecodeOFRecordOpConf decode_ofrecord_conf = 101;
+    DecodeRandomOpConf decode_random_conf = 102;
+    RecordLoadOpConf record_load_conf = 103;
+    CopyHdOpConf copy_hd_conf = 104;
+    CloneOpConf clone_conf = 105;
+    CopyCommNetOpConf copy_comm_net_conf = 106;
+    ConcatOpConf concat_conf = 107;
+    BoxingOpConf boxing_conf = 108;
+    ReduceScatterOpConf reduce_scatter_conf = 109;
+    ReduceAddOpConf reduce_add_conf = 110;
+    ReduceGatherOpConf reduce_gather_conf = 111;
+    ReduceConcatOpConf reduce_concat_conf = 112;
+    ReduceSplitOpConf reduce_split_conf = 113;
+    NcclAllReduceOpConf nccl_all_reduce_conf = 114;
+    NcclReduceScatterOpConf nccl_reduce_scatter_conf = 115;
+    NcclAllGatherOpConf nccl_all_gather_conf = 116;
+    AccumulateOpConf accumulate_conf = 117;
+    NormalModelUpdateOpConf normal_mdupdt_conf = 118;
+    ModelSaveOpConf model_save_conf = 119;
+    SharedModelDiffAddOpConf shared_model_diff_add_conf = 120;
+    
+    // domain op
+    TransposeOpConf transpose_conf = 201;
+    ReshapeOpConf reshape_conf = 202;
+    BasicRnnOpConf basic_rnn_conf = 203;
+    FullyConnectedOpConf fully_connected_conf = 204;
+    Conv1DOpConf conv_1d_conf = 205;
+    Conv2DOpConf conv_2d_conf = 206;
+    Conv3DOpConf conv_3d_conf = 207;
+    AveragePooling1DOpConf average_pooling_1d_conf = 208;
+    MaxPooling1DOpConf max_pooling_1d_conf = 209;
+    AveragePooling2DOpConf average_pooling_2d_conf = 210;
+    MaxPooling2DOpConf max_pooling_2d_conf = 211;
+    AveragePooling3DOpConf average_pooling_3d_conf = 212;
+    MaxPooling3DOpConf max_pooling_3d_conf = 213;
+    EmbeddingLookupOpConf embedding_lookup_conf = 214;
+    EmbeddingLookupAccumulateOpConf embedding_lookup_accumulate_conf = 215;
+    LocalResponseNormalizationOpConf local_response_normalization_conf = 216;
+    NormalizationOpConf normalization_conf = 217;
+    DropoutOpConf dropout_conf = 218;
+    ReduceSumOpConf reduce_sum_conf = 219;
+    AddOpConf add_conf = 220;
+    MatmulOpConf matmul_conf = 221;
+    DotOpConf dot_conf = 222;
+    MultiplyOpConf multiply_conf = 223;
+    MaximumOpConf maximum_conf = 224;
+    SigmoidOpConf sigmoid_conf = 225;
+    TanHOpConf tanh_conf = 226;
+    ReluOpConf relu_conf = 227;
+    SoftmaxOpConf softmax_conf = 228;
+    SparseCrossEntropyLossOpConf sparse_cross_entropy_loss_conf = 229;
+    HingeLossOpConf hinge_loss_conf = 230;
+    SparseSoftmaxCrossEntropyLossOpConf sparse_softmax_cross_entropy_loss_conf = 231;
+    AccuracyOpConf accuracy_conf = 232;
+    PrintOpConf print_conf = 233;
+    AccuracyPrintOpConf accuracy_print_conf = 234;
+    LossPrintOpConf loss_print_conf = 235;
+    DefineTestBlobConf define_test_blob_conf = 236;
   }
 }
 

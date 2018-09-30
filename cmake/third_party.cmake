@@ -32,6 +32,14 @@ if (BUILD_CUDA)
     list(APPEND CUDA_LIBRARIES ${cuda_lib_dir}/${extra_cuda_lib})
   endforeach()
   find_package(CuDNN REQUIRED)
+  if (BUILD_NCCL)
+    find_package(NCCL REQUIRED)
+    if (NCCL_VERSION VERSION_LESS 2.0)
+      message(FATAL_ERROR "minimum nccl version required is 2.0")
+    else()
+      add_definitions(-DWITH_NCCL)
+    endif()
+  endif()
 endif()
 
 if (NOT WIN32)
@@ -60,6 +68,7 @@ set(oneflow_third_party_libs
     ${farmhash_STATIC_LIBRARIES}
     ${CUDNN_LIBRARIES}
     ${CUDA_LIBRARIES}
+    ${NCCL_LIBRARIES}
     ${BLAS_LIBRARIES}
     ${LIBJPEG_STATIC_LIBRARIES}
     ${OPENCV_STATIC_LIBRARIES}
