@@ -16,10 +16,8 @@ class NaiveActor : public Actor {
   }
 
  private:
-  void Act() final;
-  std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
-    return {true, {}};
-  }
+  void Act() override final;
+  void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
 };
 
 }  // namespace oneflow
