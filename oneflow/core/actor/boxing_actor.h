@@ -15,10 +15,9 @@ class BoxingActor final : public Actor {
 
  private:
   void NormalProcessNaiveReadableRegstMsg(const std::deque<Regst*>&) override;
-  void Act(std::function<bool(Regst*)>* IsNaiveAllowedReturnToProducer) override;
-  std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
-    return {true, {}};
-  }
+  void Act() override;
+  void VirtualAsyncSendNaiveProducedRegstMsgToConsumer();
+  void VirtualAsyncSendNaiveConsumedRegstMsgToProducer();
   void TrySetColIdOrder(const Regst*);
 
   // <regst_desc_id, <pid, cid>>
