@@ -18,7 +18,7 @@ ShapedPodDesc::ShapedPodDesc(const ShapedPodProto& shaped_pod) { InitFromProto(s
 
 ShapedPodDesc::ShapedPodDesc(const ShapedPodDesc& shape_pod) {
   PodProto pod_proto;
-  ToProto(&pod_proto);
+  shape_pod.ToProto(&pod_proto);
   InitFromProto(pod_proto.shaped_pod());
 }
 

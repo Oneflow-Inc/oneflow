@@ -36,8 +36,8 @@ class PodPtr final {
     CHECK_EQ(shaped_pod->data_type(), GetDataType<T>::value);
   }
 
-  const PodDesc* pod_desc_;
-  char* ptr_;
+  const PodDesc* const pod_desc_;
+  char* const ptr_;
 };
 
 }  // namespace oneflow
