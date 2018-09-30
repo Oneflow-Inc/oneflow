@@ -25,6 +25,7 @@ class RtBlobDesc {
 
   bool has_data_id_field() const;
   bool has_col_num_field() const;
+  const StructPodDesc& header_pod_desc() const { return header_pod_desc_; }
 
   int32_t max_col_num() const { return blob_desc_proto_.header().max_col_num(); }
 
@@ -40,15 +41,10 @@ class RtBlobDesc {
 
  private:
   void InitFromProto(const BlobDescProto& proto);
-  HashMap<std::string, FieldDesc>::const_iterator GetFieldIteratorOrFail(
-      const std::string& field_name) const;
-  bool HasField(const std::string& field_name) const;
-  size_t ByteSizeOfField(const std::string& field_name) const;
-  size_t AlignedByteSizeOfField(const std::string& field_name) const;
 
   BlobDescProto blob_desc_proto_;
-  HashMap<std::string, FieldDesc> header_desc_;
   FieldDesc body_desc_;
+  StructPodDesc header_pod_desc_;
 };
 
 }  // namespace oneflow

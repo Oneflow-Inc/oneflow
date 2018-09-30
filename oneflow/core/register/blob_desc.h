@@ -5,6 +5,7 @@
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/register/field_desc.h"
 #include "oneflow/core/register/blob_desc.pb.h"
+#include "oneflow/core/register/pod_desc.h"
 #include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
@@ -18,7 +19,8 @@ class BlobDesc {
   BlobDesc(const Shape&, DataType, bool has_data_id, bool has_col_num, int32_t max_col_num);
   BlobDesc(const Shape& shape) : body_field_(shape) {}
   BlobDesc(const BlobDescProto& proto);
-  BlobDesc(int64_t header_byte_size, const Shape&, DataType, int32_t max_col_num);
+  BlobDesc(bool header_is_opaque, const StructPodDesc& header_pod_desc, const Shape&, DataType,
+           int32_t max_col_num);
 
   const Shape& shape() const { return body_field_.shape(); }
   Shape& mut_shape() { return body_field_.mut_shape(); }
@@ -46,11 +48,11 @@ class BlobDesc {
 
  private:
   void HeaderToProto(BlobDescProto* proto) const;
-  void DataIdFieldToProto(FieldHeaderDesc* proto) const;
-  void ColNumFieldToProto(FieldHeaderDesc* proto) const;
+  void DataIdFieldToProto(StructPodDesc* header_pod_desc) const;
+  void ColNumFieldToProto(StructPodDesc* header_pod_desc) const;
 
   bool header_is_opaque_;
-  FieldDesc opaque_header_;
+  StructPodDesc header_pod_desc_;
 
   bool has_data_id_;
   bool has_col_num_;
