@@ -8,11 +8,8 @@ template<DeviceType device_type, typename T>
 void FpnCollectKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   //to do :
-  //       *in two function
+  //       *in one function?
   //       *repeated blob?
-  //       *best sort method :nth element + sort
-  //       *blob shape
-  
   
   //1. concat all rois and probs
   level = this->kernel_conf().fpn_collect_conf().level();
@@ -42,18 +39,13 @@ void FpnCollectKernel<device_type, T>::ForwardDataContent(
     prob_col_offset += roi_in_col_num;
   }
   //2. sort and select topn
-  post_nms_topn = this->kernel_conf().fpn_collect_conf().post_nms_topn();
   Blob* index_blob = BnInOp2Blob("index");
-  Blob* out_blob = BnInOp2Blob("box");
   index_ptr = index_blob->dptr<T>();
   score_ptr = score_inputs_blob->mut_dptr<T>();
   scoreindex = ScoresIndex<T>(Indexes(row_num, index_ptr, init_index = false),score_ptr);
-  scoreindex.SortByScore([](T lhs_score, T rhs_score) { return lhs_score > rhs_score; });
-  for(int32_t i = 0; i < post_nms_topn ; i++){
-    si=scoreindex.GetIndex(i);
-    for(int32_t j = 0 ; j < 5 ; j++)
-      out_blob->mut_dptr<T>()[i * 5 + j] = roi_inputs_blob->dptr<T>()[si * 5 + j];
-  }
+
+
+  //sort method :nth element + sort
   
 }
 

@@ -627,6 +627,7 @@ message FpnCollectOpConf{
   required string out = 11;
   required int32 post_nms_topn = 12;
   optional int32 level = 13 [default = 6]; 
+  repeated int32 index = 14;
 }
 
 message AffineChannelOpConf {
