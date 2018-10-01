@@ -20,8 +20,6 @@ class RtBlobDesc {
   const BlobDescProto& blob_desc_proto() const { return blob_desc_proto_; }
   const Shape& shape() const;  // body shape
   DataType data_type() const;  // body data type
-  const Shape& shape(const std::string& field_name) const;
-  DataType data_type(const std::string& field_name) const;
 
   bool has_data_id_field() const;
   bool has_col_num_field() const;
@@ -41,14 +39,8 @@ class RtBlobDesc {
 
  private:
   void InitFromProto(const BlobDescProto& proto);
-  HashMap<std::string, FieldDesc>::const_iterator GetFieldIteratorOrFail(
-      const std::string& field_name) const;
-  bool HasField(const std::string& field_name) const;
-  size_t ByteSizeOfField(const std::string& field_name) const;
-  size_t AlignedByteSizeOfField(const std::string& field_name) const;
 
   BlobDescProto blob_desc_proto_;
-  HashMap<std::string, FieldDesc> header_desc_;
   FieldDesc body_desc_;
   StructPodDesc header_pod_desc_;
 };

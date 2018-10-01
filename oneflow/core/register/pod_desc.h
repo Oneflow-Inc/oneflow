@@ -81,12 +81,14 @@ class StructPodDesc final : public PodDesc {
   ~StructPodDesc() = default;
 
   StructPodDesc* MutStructField(const FieldId& field_id);
+  const PodDesc& Field(FieldKey field_key) const { return Field(NewFieldId(field_key)); }
   const PodDesc& Field(const FieldId& field_id) const;
   void AddField(FieldKey field_key, const PodDesc& pod_desc);
   void AddField(const FieldId& field_id, const PodDesc& pod_desc);
   size_t ByteSize() const override;
   void InitFromProto(const StructPodProto& struct_pod);
 
+  bool HasField(FieldKey field_key) const { return HasField(NewFieldId(field_key)); }
   bool HasField(const FieldId& field_id) const;
   StructPodDesc& operator=(const StructPodDesc&);
   std::unique_ptr<PodDesc> Clone() const override { return std::make_unique<StructPodDesc>(*this); }
