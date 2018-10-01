@@ -127,10 +127,7 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     BlobDesc* blob_desc = pair.second.get();
     RtBlobDesc rt_blob_desc(*blob_desc);
     header_byte_size += rt_blob_desc.ByteSizeOfBlobHeader();
-    {
-      *opaque_header_pod_desc.MutStructField(NewFieldId(pair.first)) =
-          rt_blob_desc.header_pod_desc();
-    }
+    *opaque_header_pod_desc.MutStructField(NewFieldId(pair.first)) = rt_blob_desc.header_pod_desc();
     int64_t cur_body_byte_size = rt_blob_desc.ByteSizeOfBlobBody();
     int32_t blob_mem_id = blob_desc->blob_mem_id();
     if (blob_mem_id == -1) {
