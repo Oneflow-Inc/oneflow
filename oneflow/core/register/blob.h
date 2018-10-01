@@ -88,6 +88,8 @@ class Blob final {
   void set_max_col_id(int32_t val);
   bool IsColValid() const { return col_id() <= max_col_id(); }
   const MemoryCase& mem_case() const;
+  const PodPtr* header_pod_ptr() const { return &header_pod_ptr_; }
+  PodPtr* header_pod_ptr() { return &header_pod_ptr_; }
 
  private:
   int64_t GetDptrOffset(int32_t index) const { return 0; }
