@@ -415,6 +415,17 @@ void Actor::HandleProducedNaiveDataRegstToConsumer() {
   HandleProducedNaiveDataRegstToConsumer([](Regst*) { return true; });
 }
 
+void Actor::AsyncSendRegstMsgToConsumer(Regst* regst) {
+  AsyncSendRegstMsgToConsumer(regst, [](int64_t) { return true; });
+}
+
+void Actor::AsyncSendRegstMsgToConsumer(Regst* regst, std::function<bool(int64_t)> IsAllowedActor) {
+  int64_t real_consumer_cnt = HandleRegstToConsumer(regst, IsAllowedActor);
+  if (real_consumer_cnt > 0) {
+    CHECK_EQ(0, naive_produced_rs_.TryPopFrontRegst(regst->regst_desc_id()));
+  }
+}
+
 void Actor::HandleConsumedNaiveDataRegstToProducer(std::function<bool(Regst*)> IsAllowedRegst) {
   std::vector<int64_t> regst_desc_ids;
   naive_consumed_rs_.ForEachFrontRegst([&](Regst* regst) {
