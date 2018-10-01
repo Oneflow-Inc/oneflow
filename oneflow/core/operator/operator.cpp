@@ -186,7 +186,7 @@ int64_t Operator::cudnn_buf_limit_byte() const {
   if (op_conf().has_cudnn_buf_limit_mbyte()) {
     cudnn_buf_limit_mbyte = op_conf().cudnn_buf_limit_mbyte();
   } else {
-    cudnn_buf_limit_mbyte = Global<JobDesc>::Get()->default_cudnn_buf_limit_mbyte();
+    cudnn_buf_limit_mbyte = Global<JobDesc>::Get()->cudnn_buf_limit_mbyte();
   }
   return cudnn_buf_limit_mbyte * 1024 * 1024;
 }
