@@ -181,6 +181,16 @@ void Operator::VirtualGenKernelConf(
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
 }
 
+int64_t Operator::cudnn_buf_limit_byte() const {
+  int64_t cudnn_buf_limit_mbyte = 0;
+  if (op_conf().has_cudnn_buf_limit_mbyte()) {
+    cudnn_buf_limit_mbyte = op_conf().cudnn_buf_limit_mbyte();
+  } else {
+    cudnn_buf_limit_mbyte = Global<JobDesc>::Get()->default_cudnn_buf_limit_mbyte();
+  }
+  return cudnn_buf_limit_mbyte * 1024 * 1024;
+}
+
 LogicalBlobId Operator::ibn2lbi(const std::string& input_bn) const {
   const google::protobuf::Descriptor* desc = GetCustomizedConf().GetDescriptor();
   const google::protobuf::FieldDescriptor* fd = desc->FindFieldByName(input_bn);
