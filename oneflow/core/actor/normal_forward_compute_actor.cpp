@@ -206,7 +206,7 @@ void NormalForwardCompActor::SendMsgToForwardModelSaveActor(int64_t batch_id) {
   Regst* fw_model_regst = GetNaiveCurWriteable(forward_model_regst_desc_id_);
   CHECK(fw_model_regst);
   fw_model_regst->set_model_version_id(batch_id);
-  HandleRegstToConsumer(fw_model_regst, [](int64_t) { return true; });
+  AsyncSendRegstMsgToConsumer(fw_model_regst, [](int64_t) { return true; });
 }
 
 void NormalForwardCompActor::SendConstBufInitMsgToBwActor() {
