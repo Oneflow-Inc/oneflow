@@ -12,14 +12,14 @@ class PodPtr final {
   ~PodPtr() = default;
 
   template<typename T>
-  const T* ShapedPtr() const;
+  const T* TensorPtr() const;
   template<typename T>
-  const T* ShapedPtr(FieldKey field_key, const T* default_ptr) const;
+  const T* TensorPtr(FieldKey field_key, const T* default_ptr) const;
 
   template<typename T>
-  T* MutShapedPtr();
+  T* MutTensorPtr();
   template<typename T>
-  T* MutShapedPtr(FieldKey field_key, T* default_ptr);
+  T* MutTensorPtr(FieldKey field_key, T* default_ptr);
 
   const PodDesc& pod_desc() const { return *pod_desc_; }
   char* ptr() const { return ptr_; }
@@ -34,9 +34,9 @@ class PodPtr final {
  private:
   template<typename T>
   void CheckDataType() {
-    const auto* shaped_pod = dynamic_cast<const ShapedPodDesc*>(pod_desc_);
-    CHECK_NOTNULL(shaped_pod);
-    CHECK_EQ(shaped_pod->data_type(), GetDataType<T>::value);
+    const auto* tensor_pod = dynamic_cast<const TensorPodDesc*>(pod_desc_);
+    CHECK_NOTNULL(tensor_pod);
+    CHECK_EQ(tensor_pod->data_type(), GetDataType<T>::value);
   }
 
   const PodDesc* const pod_desc_;
@@ -44,25 +44,25 @@ class PodPtr final {
 };
 
 template<typename T>
-const T* PodPtr::ShapedPtr(FieldKey field_key, const T* default_ptr) const {
+const T* PodPtr::TensorPtr(FieldKey field_key, const T* default_ptr) const {
   if (!HasField(field_key)) { return default_ptr; }
-  return Field(field_key).ShapedPtr<T>();
+  return Field(field_key).TensorPtr<T>();
 }
 
 template<typename T>
-T* PodPtr::MutShapedPtr(FieldKey field_key, T* default_ptr) {
+T* PodPtr::MutTensorPtr(FieldKey field_key, T* default_ptr) {
   if (!HasField(field_key)) { return default_ptr; }
-  return MutField(field_key).MutShapedPtr<T>();
+  return MutField(field_key).MutTensorPtr<T>();
 }
 
 template<typename T>
-const T* PodPtr::ShapedPtr() const {
+const T* PodPtr::TensorPtr() const {
   CheckDataType<T>();
   return reinterpret_cast<const T*>(ptr_);
 }
 
 template<typename T>
-T* PodPtr::MutShapedPtr() {
+T* PodPtr::MutTensorPtr() {
   CheckDataType<T>();
   return reinterpret_cast<T*>(ptr_);
 }

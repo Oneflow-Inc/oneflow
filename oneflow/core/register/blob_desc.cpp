@@ -62,14 +62,14 @@ void BlobDesc::DataIdFieldToProto(FieldHeaderDesc* proto, StructPodDesc* header_
       {body_field_.shape().At(0), static_cast<int64_t>(Global<JobDesc>::Get()->SizeOfOneDataId())});
   FieldDesc data_id_field(shape, DataType::kChar);
   data_id_field.ToProto(proto->mutable_data_id());
-  header_pod_desc->AddField(FieldKey::kDataId, ShapedPodDesc(shape, DataType::kChar));
+  header_pod_desc->AddField(FieldKey::kDataId, TensorPodDesc(shape, DataType::kChar));
 }
 
 void BlobDesc::ColNumFieldToProto(FieldHeaderDesc* proto, StructPodDesc* header_pod_desc) const {
   Shape shape({body_field_.shape().At(0)});
   FieldDesc col_num_field(shape, DataType::kInt32);
   col_num_field.ToProto(proto->mutable_col_num());
-  header_pod_desc->AddField(FieldKey::kColNum, ShapedPodDesc(shape, DataType::kInt32));
+  header_pod_desc->AddField(FieldKey::kColNum, TensorPodDesc(shape, DataType::kInt32));
 }
 
 void BlobDesc::HeaderToProto(BlobDescProto* proto) const {

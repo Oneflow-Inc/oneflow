@@ -47,23 +47,23 @@ class PodDesc {
   bool operator!=(const PodDesc& rhs) const { return !(*this == rhs); }
 };
 
-class ShapedPodDesc final : public PodDesc {
+class TensorPodDesc final : public PodDesc {
  public:
-  ShapedPodDesc() = default;
-  ShapedPodDesc(const Shape& shape, DataType data_type) : shape_(shape), data_type_(data_type) {}
-  explicit ShapedPodDesc(const ShapedPodProto& shape_pod);
-  explicit ShapedPodDesc(const ShapedPodDesc& shape_pod);
-  ~ShapedPodDesc() = default;
+  TensorPodDesc() = default;
+  TensorPodDesc(const Shape& shape, DataType data_type) : shape_(shape), data_type_(data_type) {}
+  explicit TensorPodDesc(const TensorPodProto& shape_pod_proto);
+  explicit TensorPodDesc(const TensorPodDesc& shape_pod);
+  ~TensorPodDesc() = default;
   const Shape& shape() const { return shape_; }
   DataType data_type() const { return data_type_; }
   Shape* mut_shape() { return &shape_; }
   void set_data_type(DataType data_type) { data_type_ = data_type; }
 
-  void InitFromProto(const ShapedPodProto& shape_pod);
+  void InitFromProto(const TensorPodProto& shape_pod);
 
   size_t ByteSize() const override;
   void ToProto(PodProto* pod_proto) const override;
-  std::unique_ptr<PodDesc> Clone() const override { return std::make_unique<ShapedPodDesc>(*this); }
+  std::unique_ptr<PodDesc> Clone() const override { return std::make_unique<TensorPodDesc>(*this); }
   bool operator==(const PodDesc& rhs) const override;
 
  private:
@@ -138,15 +138,15 @@ class FieldPodDesc final : public PodDesc {
 
 template<typename T>
 const T& PodDesc::Cast() const {
-  static_assert(std::is_same<T, ShapedPodDesc>::value || std::is_same<T, StructPodDesc>::value,
-                "only ShapedPodDesc and StructPodDesc supported");
+  static_assert(std::is_same<T, TensorPodDesc>::value || std::is_same<T, StructPodDesc>::value,
+                "only TensorPodDesc and StructPodDesc supported");
   return *dynamic_cast<T*>(this);
 }
 
 template<typename T>
 T* PodDesc::MutCast() {
-  static_assert(std::is_same<T, ShapedPodDesc>::value || std::is_same<T, StructPodDesc>::value,
-                "only ShapedPodDesc and StructPodDesc supported");
+  static_assert(std::is_same<T, TensorPodDesc>::value || std::is_same<T, StructPodDesc>::value,
+                "only TensorPodDesc and StructPodDesc supported");
   return dynamic_cast<T*>(this);
 }
 

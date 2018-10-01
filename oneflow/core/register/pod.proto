@@ -5,7 +5,7 @@ import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/register/logical_blob_id.proto";
 
-message ShapedPodProto {
+message TensorPodProto {
   required ShapeProto shape = 1;
   required DataType data_type = 2;
 }
@@ -35,7 +35,7 @@ message FieldPodProto {
 
 message PodProto {
   oneof pod_type {
-    ShapedPodProto shaped_pod = 1;
+    TensorPodProto tensor_pod = 1;
     StructPodProto struct_pod = 2;
   }
 }

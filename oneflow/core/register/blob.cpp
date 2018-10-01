@@ -21,8 +21,8 @@ void Blob::Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, cha
   regst_ = regst;
   blob_desc_ = blob_desc;
   header_ptr_ = header_ptr;
-  data_id_ptr_ = header_pod_ptr_.MutShapedPtr<char>(FieldKey::kDataId, nullptr);
-  col_num_ptr_ = header_pod_ptr_.MutShapedPtr<int32_t>(FieldKey::kColNum, nullptr);
+  data_id_ptr_ = header_pod_ptr_.MutTensorPtr<char>(FieldKey::kDataId, nullptr);
+  col_num_ptr_ = header_pod_ptr_.MutTensorPtr<int32_t>(FieldKey::kColNum, nullptr);
   dptr_ = body_ptr;
 }
 

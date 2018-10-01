@@ -5,7 +5,7 @@ namespace oneflow {
 namespace {
 
 std::unique_ptr<PodDesc> NewPodDesc(const PodProto& pod) {
-  if (pod.has_shaped_pod()) { return std::make_unique<ShapedPodDesc>(pod.shaped_pod()); }
+  if (pod.has_tensor_pod()) { return std::make_unique<TensorPodDesc>(pod.tensor_pod()); }
   if (pod.has_struct_pod()) { return std::make_unique<StructPodDesc>(pod.struct_pod()); }
   // ignore field pod
   UNIMPLEMENTED();
@@ -26,30 +26,30 @@ FieldId NewFieldId(const LogicalBlobId& lbi) {
   return ret;
 }
 
-ShapedPodDesc::ShapedPodDesc(const ShapedPodProto& shaped_pod) { InitFromProto(shaped_pod); }
+TensorPodDesc::TensorPodDesc(const TensorPodProto& tensor_pod) { InitFromProto(tensor_pod); }
 
-ShapedPodDesc::ShapedPodDesc(const ShapedPodDesc& shape_pod) {
+TensorPodDesc::TensorPodDesc(const TensorPodDesc& tensor_pod) {
   PodProto pod_proto;
-  shape_pod.ToProto(&pod_proto);
-  InitFromProto(pod_proto.shaped_pod());
+  tensor_pod.ToProto(&pod_proto);
+  InitFromProto(pod_proto.tensor_pod());
 }
 
-void ShapedPodDesc::InitFromProto(const ShapedPodProto& shaped_pod) {
-  shape_ = Shape(shaped_pod.shape());
-  data_type_ = shaped_pod.data_type();
+void TensorPodDesc::InitFromProto(const TensorPodProto& tensor_pod) {
+  shape_ = Shape(tensor_pod.shape());
+  data_type_ = tensor_pod.data_type();
 }
 
-size_t ShapedPodDesc::ByteSize() const { return shape_.elem_cnt() * GetSizeOfDataType(data_type_); }
+size_t TensorPodDesc::ByteSize() const { return shape_.elem_cnt() * GetSizeOfDataType(data_type_); }
 
-bool ShapedPodDesc::operator==(const PodDesc& rhs) const {
-  const auto* shaped_rhs = dynamic_cast<const ShapedPodDesc*>(&rhs);
-  if (shaped_rhs == nullptr) { return false; }
-  return shape() == shaped_rhs->shape() && data_type() == shaped_rhs->data_type();
+bool TensorPodDesc::operator==(const PodDesc& rhs) const {
+  const auto* tensor_rhs = dynamic_cast<const TensorPodDesc*>(&rhs);
+  if (tensor_rhs == nullptr) { return false; }
+  return shape() == tensor_rhs->shape() && data_type() == tensor_rhs->data_type();
 }
 
-void ShapedPodDesc::ToProto(PodProto* pod_proto) const {
-  shape_.ToProto(pod_proto->mutable_shaped_pod()->mutable_shape());
-  pod_proto->mutable_shaped_pod()->set_data_type(data_type_);
+void TensorPodDesc::ToProto(PodProto* pod_proto) const {
+  shape_.ToProto(pod_proto->mutable_tensor_pod()->mutable_shape());
+  pod_proto->mutable_tensor_pod()->set_data_type(data_type_);
 }
 
 FieldPodDesc::FieldPodDesc(const FieldPodProto& field_pod) {
