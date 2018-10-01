@@ -62,14 +62,14 @@ void BlobDesc::DataIdFieldToProto(FieldHeaderDesc* proto, StructPodDesc* header_
       {body_field_.shape().At(0), static_cast<int64_t>(Global<JobDesc>::Get()->SizeOfOneDataId())});
   FieldDesc data_id_field(shape, DataType::kChar);
   data_id_field.ToProto(proto->mutable_data_id());
-  header_pod_desc->AddField("data_id", ShapedPodDesc(shape, DataType::kChar));
+  header_pod_desc->AddField(FieldKey::kDataId, ShapedPodDesc(shape, DataType::kChar));
 }
 
 void BlobDesc::ColNumFieldToProto(FieldHeaderDesc* proto, StructPodDesc* header_pod_desc) const {
   Shape shape({body_field_.shape().At(0)});
   FieldDesc col_num_field(shape, DataType::kInt32);
   col_num_field.ToProto(proto->mutable_col_num());
-  header_pod_desc->AddField("col_num", ShapedPodDesc(shape, DataType::kInt32));
+  header_pod_desc->AddField(FieldKey::kColNum, ShapedPodDesc(shape, DataType::kInt32));
 }
 
 void BlobDesc::HeaderToProto(BlobDescProto* proto) const {
@@ -128,9 +128,8 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     RtBlobDesc rt_blob_desc(*blob_desc);
     header_byte_size += rt_blob_desc.ByteSizeOfBlobHeader();
     {
-      std::string lbi_str;
-      pair.first.SerializeToString(&lbi_str);
-      *opaque_header_pod_desc.MutStructField(lbi_str) = rt_blob_desc.header_pod_desc();
+      *opaque_header_pod_desc.MutStructField(NewFieldId(pair.first)) =
+          rt_blob_desc.header_pod_desc();
     }
     int64_t cur_body_byte_size = rt_blob_desc.ByteSizeOfBlobBody();
     int32_t blob_mem_id = blob_desc->blob_mem_id();

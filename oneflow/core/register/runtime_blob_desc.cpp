@@ -13,11 +13,10 @@ RtBlobDesc::RtBlobDesc(const BlobDescProto& blob_desc_proto) { InitFromProto(blo
 void RtBlobDesc::InitFromProto(const BlobDescProto& blob_desc_proto) {
   blob_desc_proto_ = blob_desc_proto;
   body_desc_ = FieldDesc(blob_desc_proto.body());
+  header_pod_desc_.InitFromProto(blob_desc_proto.header().header_pod_desc());
   if (blob_desc_proto.header().has_opaque_header()) {
     CHECK(header_desc_.emplace("opaque_header", FieldDesc(blob_desc_proto.header().opaque_header()))
               .second);
-    header_pod_desc_.AddField("opaque_header",
-                              StructPodDesc(blob_desc_proto.header().header_pod_desc()));
   } else {
     CHECK(blob_desc_proto.header().has_field_header());
     if (blob_desc_proto.header().field_header().has_data_id()) {
@@ -30,7 +29,6 @@ void RtBlobDesc::InitFromProto(const BlobDescProto& blob_desc_proto) {
                 .emplace("col_num", FieldDesc(blob_desc_proto.header().field_header().col_num()))
                 .second);
     }
-    header_pod_desc_.InitFromProto(blob_desc_proto.header().header_pod_desc());
   }
   CHECK_EQ(header_pod_desc_.ByteSize(), ByteSizeOfBlobHeader());
 }

@@ -14,6 +14,18 @@ std::unique_ptr<PodDesc> NewPodDesc(const PodProto& pod) {
 
 }  // namespace
 
+FieldId NewFieldId(FieldKey key) {
+  FieldId ret;
+  ret.set_key(key);
+  return ret;
+}
+
+FieldId NewFieldId(const LogicalBlobId& lbi) {
+  FieldId ret;
+  *ret.mutable_lbi() = lbi;
+  return ret;
+}
+
 ShapedPodDesc::ShapedPodDesc(const ShapedPodProto& shaped_pod) { InitFromProto(shaped_pod); }
 
 ShapedPodDesc::ShapedPodDesc(const ShapedPodDesc& shape_pod) {
@@ -41,7 +53,7 @@ void ShapedPodDesc::ToProto(PodProto* pod_proto) const {
 }
 
 FieldPodDesc::FieldPodDesc(const FieldPodProto& field_pod) {
-  name_ = field_pod.name();
+  field_id_ = field_pod.field_id();
   pod_ = std::move(NewPodDesc(field_pod.pod()));
   alignment_ = field_pod.alignment();
 }
@@ -51,12 +63,12 @@ size_t FieldPodDesc::ByteSize() const { return RoundUp(pod_->ByteSize(), alignme
 bool FieldPodDesc::operator==(const PodDesc& rhs) const {
   const auto* field_rhs = dynamic_cast<const FieldPodDesc*>(&rhs);
   if (field_rhs == nullptr) { return false; }
-  return name() == field_rhs->name() && pod() == field_rhs->pod()
+  return field_id() == field_rhs->field_id() && pod() == field_rhs->pod()
          && alignment_ == field_rhs->alignment_;
 }
 
 void FieldPodDesc::ToProto(FieldPodProto* field_pod_proto) const {
-  field_pod_proto->set_name(name_);
+  *field_pod_proto->mutable_field_id() = field_id_;
   field_pod_proto->set_alignment(alignment_);
   pod_->ToProto(field_pod_proto->mutable_pod());
 }
@@ -68,7 +80,7 @@ StructPodDesc::StructPodDesc(const StructPodProto& struct_pod_proto) {
 StructPodDesc::StructPodDesc(const StructPodDesc& struct_pod_desc) { *this = struct_pod_desc; }
 
 void StructPodDesc::InitFromProto(const StructPodProto& struct_pod) {
-  CHECK(name2field_idx_.empty());
+  CHECK(field_id2field_idx_.empty());
   CHECK(fields_.empty());
   for (const auto& field : struct_pod.field()) {
     std::unique_ptr<FieldPodDesc> pod(new FieldPodDesc(field));
@@ -85,8 +97,8 @@ size_t StructPodDesc::ByteSize() const {
 bool StructPodDesc::operator==(const PodDesc& rhs) const {
   const auto* struct_rhs = dynamic_cast<const StructPodDesc*>(&rhs);
   if (struct_rhs == nullptr) { return false; }
-  if (name2field_idx_ != struct_rhs->name2field_idx_) { return false; }
-  for (int i = 0; i < name2field_idx_.size(); ++i) {
+  if (field_id2field_idx_ != struct_rhs->field_id2field_idx_) { return false; }
+  for (int i = 0; i < field_id2field_idx_.size(); ++i) {
     if (*fields_.at(i) != *struct_rhs->fields_.at(i)) { return false; }
   }
   return true;
@@ -96,50 +108,54 @@ void StructPodDesc::ToProto(StructPodProto* struct_pod_proto) const {
   for (const auto& field : fields_) { field->ToProto(struct_pod_proto->add_field()); }
 }
 
-bool StructPodDesc::HasField(const std::string& name) const {
-  return name2field_idx_.find(name) != name2field_idx_.end();
+bool StructPodDesc::HasField(const FieldId& field_id) const {
+  return field_id2field_idx_.find(field_id) != field_id2field_idx_.end();
 }
 
-StructPodDesc* StructPodDesc::MutStructField(const std::string& name) {
-  return MutStructField(name, 1);
+StructPodDesc* StructPodDesc::MutStructField(const FieldId& field_id) {
+  return MutStructField(field_id, 1);
 }
 
-StructPodDesc* StructPodDesc::MutStructField(const std::string& name, int32_t alignment) {
-  if (!HasField(name)) { AddField(name, std::make_unique<StructPodDesc>(), alignment); }
-  return MutExistedField(name)->MutCast<StructPodDesc>();
+StructPodDesc* StructPodDesc::MutStructField(const FieldId& field_id, int32_t alignment) {
+  if (!HasField(field_id)) { AddField(field_id, std::make_unique<StructPodDesc>(), alignment); }
+  return MutExistedField(field_id)->MutCast<StructPodDesc>();
 }
 
-PodDesc* StructPodDesc::MutExistedField(const std::string& name) {
-  return fields_.at(name2field_idx_.at(name))->mut_pod();
+PodDesc* StructPodDesc::MutExistedField(const FieldId& field_id) {
+  return fields_.at(field_id2field_idx_.at(field_id))->mut_pod();
 }
 
-const PodDesc& StructPodDesc::Field(const std::string& name) const {
-  return fields_.at(name2field_idx_.at(name))->pod();
+const PodDesc& StructPodDesc::Field(const FieldId& field_id) const {
+  return fields_.at(field_id2field_idx_.at(field_id))->pod();
 }
 
-void StructPodDesc::AddField(const std::string& name, const PodDesc& pod_desc) {
-  return AddField(name, pod_desc, 1);
+void StructPodDesc::AddField(FieldKey field_key, const PodDesc& pod_desc) {
+  return AddField(NewFieldId(field_key), pod_desc);
 }
 
-void StructPodDesc::AddField(const std::string& name, const PodDesc& pod_desc, size_t alignment) {
-  AddField(name, pod_desc.Clone(), alignment);
+void StructPodDesc::AddField(const FieldId& field_id, const PodDesc& pod_desc) {
+  return AddField(field_id, pod_desc, 1);
 }
 
-void StructPodDesc::AddField(const std::string& name, std::unique_ptr<PodDesc>&& field,
+void StructPodDesc::AddField(const FieldId& field_id, const PodDesc& pod_desc, size_t alignment) {
+  AddField(field_id, pod_desc.Clone(), alignment);
+}
+
+void StructPodDesc::AddField(const FieldId& field_id, std::unique_ptr<PodDesc>&& field,
                              size_t alignment) {
-  auto* pod = new FieldPodDesc(name, std::move(field), alignment);
+  auto* pod = new FieldPodDesc(field_id, std::move(field), alignment);
   AddField(std::unique_ptr<FieldPodDesc>(pod));
 }
 
 void StructPodDesc::AddField(std::unique_ptr<FieldPodDesc>&& field) {
-  CHECK(name2field_idx_.emplace(field->name(), fields_.size()).second);
+  CHECK(field_id2field_idx_.emplace(field->field_id(), fields_.size()).second);
   fields_.emplace_back(std::move(field));
 }
 
-size_t StructPodDesc::ByteOffset4Field(const std::string& field_name) const {
-  CHECK(HasField(field_name));
+size_t StructPodDesc::ByteOffset4Field(const FieldId& field_id) const {
+  CHECK(HasField(field_id));
   size_t offset = 0;
-  for (int32_t i = 0; i < name2field_idx_.at(field_name); ++i) {
+  for (int32_t i = 0; i < field_id2field_idx_.at(field_id); ++i) {
     offset += fields_.at(i)->ByteSize();
   }
   return offset;
@@ -154,9 +170,9 @@ StructPodDesc& StructPodDesc::operator=(const StructPodDesc& struct_pod_desc) {
 }
 
 void StructPodDesc::Clear() {
-  CHECK_EQ(fields_.size(), name2field_idx_.size());
+  CHECK_EQ(fields_.size(), field_id2field_idx_.size());
   fields_.clear();
-  name2field_idx_.clear();
+  field_id2field_idx_.clear();
 }
 
 }  // namespace oneflow

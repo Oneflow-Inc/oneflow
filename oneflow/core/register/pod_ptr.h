@@ -25,8 +25,11 @@ class PodPtr final {
 
   const PodDesc& pod_desc() const { return *pod_desc_; }
   char* ptr() const { return ptr_; }
-  bool HasField(const std::string& field_name) const;
-  PodPtr Field(const std::string& field_name) const;
+  bool HasField(FieldKey field_key) const { return HasField(NewFieldId(field_key)); }
+  PodPtr Field(FieldKey field_key) const { return Field(NewFieldId(field_key)); }
+
+  bool HasField(const FieldId& field_id) const;
+  PodPtr Field(const FieldId& field_id) const;
 
  private:
   template<typename T>

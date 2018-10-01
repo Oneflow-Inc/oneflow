@@ -3,10 +3,31 @@
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/register/pod.pb.h"
 
+namespace std {
+
+template<>
+struct hash<oneflow::FieldId> {
+  size_t operator()(const oneflow::FieldId& field_id) const {
+    if (field_id.has_key()) { return std::hash<int>()(field_id.key()); }
+    if (field_id.has_lbi()) { return std::hash<oneflow::LogicalBlobId>()(field_id.lbi()); }
+    UNIMPLEMENTED();
+  }
+};
+
+}  // namespace std
+
 namespace oneflow {
+
+FieldId NewFieldId(FieldKey key);
+FieldId NewFieldId(const LogicalBlobId& lbi);
+inline bool operator==(const FieldId& lhs, const FieldId& rhs) {
+  PbMd message_diff;
+  return message_diff.Equivalent(lhs, rhs);
+}
 
 class PodDesc {
  public:
@@ -59,31 +80,32 @@ class StructPodDesc final : public PodDesc {
   explicit StructPodDesc(const StructPodDesc&);
   ~StructPodDesc() = default;
 
-  StructPodDesc* MutStructField(const std::string& name);
-  const PodDesc& Field(const std::string& name) const;
-  void AddField(const std::string& name, const PodDesc& pod_desc);
+  StructPodDesc* MutStructField(const FieldId& field_id);
+  const PodDesc& Field(const FieldId& field_id) const;
+  void AddField(FieldKey field_key, const PodDesc& pod_desc);
+  void AddField(const FieldId& field_id, const PodDesc& pod_desc);
   size_t ByteSize() const override;
   void InitFromProto(const StructPodProto& struct_pod);
 
-  bool HasField(const std::string& name) const;
+  bool HasField(const FieldId& field_id) const;
   StructPodDesc& operator=(const StructPodDesc&);
   std::unique_ptr<PodDesc> Clone() const override { return std::make_unique<StructPodDesc>(*this); }
   void ToProto(PodProto* pod_proto) const override { ToProto(pod_proto->mutable_struct_pod()); }
   void ToProto(StructPodProto* pod_proto) const;
-  StructPodDesc* MutStructField(const std::string& name, int32_t default_alignment);
-  void AddField(const std::string& name, const PodDesc& pod_desc, size_t alignment);
+  StructPodDesc* MutStructField(const FieldId& field_id, int32_t default_alignment);
+  void AddField(const FieldId& field_id, const PodDesc& pod_desc, size_t alignment);
   bool operator==(const PodDesc& rhs) const override;
-  size_t ByteOffset4Field(const std::string& field_name) const;
+  size_t ByteOffset4Field(const FieldId& field_name) const;
 
  private:
   void Clear();
-  PodDesc* MutExistedField(const std::string& name);
+  PodDesc* MutExistedField(const FieldId& field_id);
   void AddField(std::unique_ptr<FieldPodDesc>&& field);
-  void AddField(const std::string& name, std::unique_ptr<PodDesc>&& field);
-  void AddField(const std::string& name, std::unique_ptr<PodDesc>&& field, size_t alignment);
+  void AddField(const FieldId& field_id, std::unique_ptr<PodDesc>&& field);
+  void AddField(const FieldId& field_id, std::unique_ptr<PodDesc>&& field, size_t alignment);
 
   std::vector<std::unique_ptr<FieldPodDesc>> fields_;
-  HashMap<std::string, int32_t> name2field_idx_;
+  HashMap<FieldId, int32_t> field_id2field_idx_;
 };
 
 class FieldPodDesc final : public PodDesc {
@@ -93,8 +115,8 @@ class FieldPodDesc final : public PodDesc {
 
  private:
   friend class StructPodDesc;
-  FieldPodDesc(const std::string& name, std::unique_ptr<PodDesc>&& pod, size_t alignment)
-      : PodDesc(), name_(name), pod_(std::move(pod)), alignment_(alignment) {}
+  FieldPodDesc(const FieldId& field_id, std::unique_ptr<PodDesc>&& pod, size_t alignment)
+      : PodDesc(), field_id_(field_id), pod_(std::move(pod)), alignment_(alignment) {}
   explicit FieldPodDesc(const FieldPodProto& field_pod_proto);
 
   size_t ByteSize() const override;
@@ -104,10 +126,10 @@ class FieldPodDesc final : public PodDesc {
   bool operator==(const PodDesc& rhs) const override;
 
   const PodDesc& pod() const { return *pod_; }
-  const std::string& name() const { return name_; }
+  const FieldId& field_id() const { return field_id_; }
   PodDesc* mut_pod() { return pod_.get(); }
 
-  std::string name_;
+  FieldId field_id_;
   std::unique_ptr<PodDesc> pod_;
   size_t alignment_;
 };

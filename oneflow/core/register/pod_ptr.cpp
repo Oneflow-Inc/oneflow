@@ -2,15 +2,15 @@
 
 namespace oneflow {
 
-bool PodPtr::HasField(const std::string& field_name) const {
+bool PodPtr::HasField(const FieldId& field_id) const {
   const auto* struct_pod = dynamic_cast<const StructPodDesc*>(pod_desc_);
-  return struct_pod && struct_pod->HasField(field_name);
+  return struct_pod && struct_pod->HasField(field_id);
 }
 
-PodPtr PodPtr::Field(const std::string& field_name) const {
+PodPtr PodPtr::Field(const FieldId& field_id) const {
   const auto* struct_pod = dynamic_cast<const StructPodDesc*>(pod_desc_);
   CHECK_NOTNULL(struct_pod);
-  return PodPtr(struct_pod->Field(field_name), ptr_ + struct_pod->ByteOffset4Field(field_name));
+  return PodPtr(struct_pod->Field(field_id), ptr_ + struct_pod->ByteOffset4Field(field_id));
 }
 
 }  // namespace oneflow
