@@ -13,12 +13,7 @@ class AccuracyAccCompTaskNode final : public AccCompTaskNode {
   TaskType GetTaskType() const override { return TaskType::kAccuracyAcc; }
 
  private:
-  void InferProducedRegstTimeShape() override {
-    std::shared_ptr<Shape> time_shape = std::make_shared<Shape>(std::vector<int64_t>(
-        {Global<JobDesc>::Get()->TotalBatchNum() * Global<JobDesc>::Get()->NumOfPiecesInBatch()
-         / Global<JobDesc>::Get()->PieceNumOfPrintAccuracy()}));
-    for (auto& pair : produced_regsts()) { pair.second->mut_time_shape() = time_shape; }
-  }
+  void InferProducedRegstTimeShape() override;
 };
 
 }  // namespace oneflow
