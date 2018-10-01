@@ -679,7 +679,7 @@ message OperatorConf {
   optional bool trainable = 3 [default = true];
   optional DeviceType device_type = 4 [default = kInvalidDevice];
   optional bool enable_cudnn = 5;
-  optional int64 cudnn_buf_limit_mbyte = 6 [default = 4096]; // 4GByte
+  optional int64 cudnn_buf_limit_mbyte = 6;
   oneof op_type {
     // system op
     DecodeOFRecordOpConf decode_ofrecord_conf = 101;
