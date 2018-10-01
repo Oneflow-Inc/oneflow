@@ -178,16 +178,16 @@ class Oneflow final {
   OF_DISALLOW_COPY_AND_MOVE(Oneflow);
   ~Oneflow() = default;
 
-  Oneflow(const std::string& job_conf_filepath, int64_t this_mchn_id);
+  Oneflow(const std::string& job_conf_filepath);
 
  private:
   std::unique_ptr<CtrlServer> ctrl_server_;
 };
 
-Oneflow::Oneflow(const std::string& job_conf_filepath, int64_t this_mchn_id) {
+Oneflow::Oneflow(const std::string& job_conf_filepath) {
   // New All Global
   Global<JobDesc>::New(job_conf_filepath);
-  Global<MachineCtx>::New(this_mchn_id);
+  Global<MachineCtx>::New();
   const MachineCtx* machine_ctx = Global<MachineCtx>::Get();
   bool DoProfile =
       machine_ctx->IsThisMachineMaster() && Global<JobDesc>::Get()->collect_act_event();
@@ -264,10 +264,9 @@ int main(int argc, char** argv) {
   google::InitGoogleLogging(argv[0]);
   gflags::SetVersionString(BuildVersionString());
   gflags::ParseCommandLineFlags(&argc, &argv, true);
-  CHECK_GE(FLAGS_this_machine_id, 0);
   LocalFS()->RecursivelyCreateDirIfNotExist(LogDir());
   RedirectStdoutAndStderrToGlogDir();
-  { Oneflow flow(FLAGS_job_conf, FLAGS_this_machine_id); }
+  { Oneflow flow(FLAGS_job_conf); }
   CloseStdoutAndStderr();
   return 0;
 }
