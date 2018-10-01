@@ -78,7 +78,7 @@ void NormalMdUpdtCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
         return (need_save_model && is_saving_related) || (need_send_model && !is_saving_related);
       });
   if (need_save_model && forward_model_regst_ != nullptr) {
-    HandleRegstToConsumer(forward_model_regst_, [](int64_t) { return true; });
+    AsyncSendRegstMsgToConsumer(forward_model_regst_);
   }
   next_model_version_id_ += 1;
 }

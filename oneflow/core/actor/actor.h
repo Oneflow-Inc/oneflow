@@ -89,12 +89,13 @@ class Actor {
 
   // Util For Derived Actor to Send Msg
   void AsyncSendMsg(const ActorMsg&);
-  int64_t HandleRegstToConsumer(Regst* regst, std::function<bool(int64_t)> IsAllowedActor);
   void HandleProducedNaiveDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess,
                                               std::function<bool(int64_t)> IsAllowedActor);
   void HandleProducedNaiveDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess);
   void HandleProducedNaiveDataRegstToConsumer(std::function<bool(int64_t)> IsAllowedActor);
   void HandleProducedNaiveDataRegstToConsumer();
+  void AsyncSendRegstMsgToConsumer(Regst* regst);
+  void AsyncSendRegstMsgToConsumer(Regst* regst, std::function<bool(int64_t)> IsAllowedActor);
 
   void HandleConsumedNaiveDataRegstToProducer(std::function<bool(Regst*)> IsAllowedRegst);
   void AsyncSendRegstMsgToProducer(Regst*);
@@ -171,6 +172,7 @@ class Actor {
   virtual void AsyncSendCustomizedConsumedRegstMsgToProducer() {}
   void AsyncSendConsumedCtrlRegstMsgToProducer();
   void AsyncSendProducedCtrlRegstMsgToConsumer();
+  int64_t HandleRegstToConsumer(Regst* regst, std::function<bool(int64_t)> IsAllowedActor);
   virtual void AsyncReturnAllCustomizedReadableRegst() {}
 
   int64_t actor_id_;
