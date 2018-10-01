@@ -17,6 +17,7 @@ void ProposalKernel<T>::ForwardDataContent(
   // input blob
   const Blob* bbox_pred_blob = BnInOp2Blob("bbox_pred");
   const Blob* class_prob_blob = BnInOp2Blob("class_prob");
+  const Blob* anchors_blob = BnInOp2Blob("anchors");
   // output blob
   Blob* rois_blob = BnInOp2Blob("rois");
   Blob* roi_probs_blob = BnInOp2Blob("roi_probs");
@@ -33,7 +34,7 @@ void ProposalKernel<T>::ForwardDataContent(
       anchor_generator_conf.aspect_ratios_size() * anchor_generator_conf.anchor_scales_size();
   const int64_t num_proposals = height * width * num_anchors;
 
-  const T* anchors_ptr = BnInOp2Blob("anchors")->dptr<T>();
+  const T* anchors_ptr = anchors_blob->dptr<T>();
   const T* const_proposals_ptr = proposals_blob->dptr<T>();
   T* proposals_ptr = proposals_blob->mut_dptr<T>();
   int32_t* pre_nms_slice_ptr = BnInOp2Blob("pre_nms_slice")->mut_dptr<int32_t>();
@@ -53,7 +54,10 @@ void ProposalKernel<T>::ForwardDataContent(
     pre_nms_slice.FilterByBBox([&](size_t n, int32_t index, const BBox<T>* bbox) {
       return (bbox->width() < conf.min_size()) || (bbox->height() < conf.min_size());
     });
-    pre_nms_slice.Truncate(conf.pre_nms_top_n());
+    size_t pre_nms_top_n = conf.pre_nms_top_n() > 0
+                               ? std::min<size_t>(num_proposals, conf.pre_nms_top_n())
+                               : num_proposals;
+    pre_nms_slice.Truncate(pre_nms_top_n);
 
     auto post_nms_slice = GenScoredBoxesIndex(conf.post_nms_top_n(), post_nms_slice_ptr,
                                               const_proposals_ptr, class_prob_ptr, true);
