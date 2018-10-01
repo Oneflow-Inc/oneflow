@@ -9,6 +9,7 @@
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/record/record_io.h"
+#include "oneflow/core/register/pod_ptr.h"
 
 namespace oneflow {
 
@@ -87,6 +88,8 @@ class Blob final {
   void set_max_col_id(int32_t val);
   bool IsColValid() const { return col_id() <= max_col_id(); }
   const MemoryCase& mem_case() const;
+  const PodPtr* header_pod_ptr() const { return &header_pod_ptr_; }
+  PodPtr* header_pod_ptr() { return &header_pod_ptr_; }
 
  private:
   int64_t GetDptrOffset(int32_t index) const { return 0; }
@@ -114,6 +117,7 @@ class Blob final {
   void* dptr_;
   const RtBlobDesc* blob_desc_;
   Regst* regst_;
+  PodPtr header_pod_ptr_;
 };
 
 template<typename RecordType>
