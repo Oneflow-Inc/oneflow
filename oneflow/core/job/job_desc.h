@@ -55,7 +55,12 @@ class JobDesc final {
   }
   bool write_snapshot_to_master() const { return snapshot_fs_conf().has_localfs_conf(); }
   bool enable_blob_mem_sharing() const { return job_conf_.other().enable_blob_mem_sharing(); }
+  bool enable_nccl() const { return job_conf_.other().enable_nccl(); }
+  bool use_nccl_inter_node_communication() const {
+    return job_conf_.other().use_nccl_inter_node_communication();
+  }
   int64_t reduce_group_size() const { return job_conf_.other().reduce_group_size(); }
+  int64_t cudnn_buf_limit_mbyte() const { return job_conf_.other().cudnn_buf_limit_mbyte(); }
 
   // Train conf
   const std::string& MdSaveSnapshotsPath() const;
@@ -77,6 +82,8 @@ class JobDesc final {
  private:
   friend class Global<JobDesc>;
   JobDesc(const std::string& job_conf_filepath);
+  JobDesc(const JobConf1& job_conf_);
+  void Init();
   void SanityCheck();
   void SplitDecodeOps();
   void AddRecordLoadOps();

@@ -18,9 +18,20 @@ class NormalForwardCompActor final : public CompActor {
   void Act() override;
   bool IsCustomizedReadReady() override;
   void AsyncReturnAllCustomizedReadableRegst() override;
-  std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
-    return {false, {"in"}};
+  std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName()
+      override {
+    return {RegstNameType::kNaive, {"in"}};
   }
+  std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedProducedRegstDescName()
+      override {
+    return {RegstNameType::kCustomized, {"const_buf"}};
+  }
+  void AsyncSendCustomizedProducedRegstMsgToConsumer() override {}
+  void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
+  void AsyncSendCustomizedConsumedRegstMsgToProducer() override;
+
+  bool IsCustomizedWriteReady() override;
+  void UpdtStateAsCustomizedProducedRegst(Regst* regst) override;
   bool CheckOutputActId(int64_t regst_desc_id) const override;
 
   int HandlerInitModelAndConstBuf(const ActorMsg&);
@@ -33,15 +44,20 @@ class NormalForwardCompActor final : public CompActor {
   void SendMsgToForwardModelSaveActor(int64_t batch_id);
   void SendConstBufInitMsgToBwActor();
 
+  int64_t random_seed_;
+  int64_t cur_piece_id_;
+
+  int64_t forward_model_regst_desc_id_;
+  Regst* pre_forward_model_regst_;
+  // customized consumed
   int64_t model_regst_desc_id_;
   int64_t const_model_regst_desc_id_;
-  int64_t const_buf_regst_desc_id_;
-  int64_t forward_model_regst_desc_id_;
-  int64_t random_seed_;
   Regst* model_regst_;
   Regst* const_model_regst_;
+  // customized produced
+  int64_t const_buf_regst_desc_id_;
   Regst* const_buf_regst_;
-  Regst* pre_forward_model_regst_;
+  bool send_const_buf_regst_;
 };
 
 }  // namespace oneflow

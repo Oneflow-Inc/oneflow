@@ -4,6 +4,7 @@
 #include "oneflow/core/graph/boxing_task_node.h"
 #include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/graph/reduce_rank_context.h"
 
 namespace oneflow {
 
@@ -200,12 +201,44 @@ class NormalMdUpdtLogicalNode final : public LogicalNode {
 
 DECLARE_NAIVE_LOGICAL_NODE(MdSaveLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(MdDiffAccLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(ReduceScatterLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(ReduceLocalAddLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(ReduceGlobalAddLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(ReduceGatherLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(ReduceConcatLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(ReduceSplitLogicalNode);
+
+class ReduceLogicalNode : public LogicalNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ReduceLogicalNode);
+  ~ReduceLogicalNode() override = default;
+
+  ReduceRankCtx& mut_rank_ctx() { return rank_ctx_; }
+  const ReduceRankCtx& rank_ctx() const { return rank_ctx_; }
+
+ protected:
+  ReduceLogicalNode() = default;
+
+ private:
+  ReduceRankCtx rank_ctx_;
+  void FixCompTaskNode(CompTaskNode* task_node) const override {
+    task_node->mut_parallel_ctx()->mutable_rank_ctx()->set_rank_id(
+        rank_ctx().Rank4ParallelId(task_node->parallel_id()));
+    task_node->mut_parallel_ctx()->mutable_rank_ctx()->set_rank_num(rank_ctx().StageSegmentCount());
+    int64_t rank_set_id =
+        ((node_id() << 32) | rank_ctx().RankSet4ParallelId(task_node->parallel_id()));
+    task_node->mut_parallel_ctx()->mutable_rank_ctx()->set_rank_set_id(rank_set_id);
+  }
+};
+
+#define DECLARE_REDUCE_LOGICAL_NODE(name)       \
+  class name final : public ReduceLogicalNode { \
+   public:                                      \
+    LOGICAL_NODE_BOILERPLATE(name);             \
+  }
+
+DECLARE_REDUCE_LOGICAL_NODE(ReduceConcatLogicalNode);
+DECLARE_REDUCE_LOGICAL_NODE(ReduceSplitLogicalNode);
+DECLARE_REDUCE_LOGICAL_NODE(ReduceScatterLogicalNode);
+DECLARE_REDUCE_LOGICAL_NODE(ReduceGatherLogicalNode);
+DECLARE_REDUCE_LOGICAL_NODE(ReduceAddLogicalNode);
+DECLARE_REDUCE_LOGICAL_NODE(NcclAllReduceLogicalNode);
+DECLARE_REDUCE_LOGICAL_NODE(NcclAllGatherLogicalNode);
+DECLARE_REDUCE_LOGICAL_NODE(NcclReduceScatterLogicalNode);
 
 }  // namespace oneflow
 

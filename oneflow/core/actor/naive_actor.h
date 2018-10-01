@@ -5,21 +5,19 @@
 
 namespace oneflow {
 
-class NaiveActor final : public Actor {
+class NaiveActor : public Actor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(NaiveActor);
   NaiveActor() = default;
-  ~NaiveActor() = default;
+  ~NaiveActor() override = default;
 
   void VirtualActorInit(const TaskProto&) override {
     OF_SET_MSG_HANDLER(&NaiveActor::HandlerNormal);
   }
 
  private:
-  void Act() override;
-  std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
-    return {true, {}};
-  }
+  void Act() override final;
+  void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
 };
 
 }  // namespace oneflow

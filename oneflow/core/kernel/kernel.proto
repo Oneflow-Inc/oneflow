@@ -3,6 +3,7 @@ package oneflow;
 
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
+import "oneflow/core/register/logical_blob_id.proto";
 import "oneflow/core/operator/op_conf.proto";
 
 message ConvKernelConf {
