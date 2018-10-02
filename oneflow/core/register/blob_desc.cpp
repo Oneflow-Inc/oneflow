@@ -48,6 +48,7 @@ BlobDesc::BlobDesc(const StructPodDesc& header_pod_desc, int64_t header_byte_siz
     header_is_opaque_ = false;
   }
 }
+
 void BlobDesc::set_has_data_id_field(bool val) {
   CHECK(!header_is_opaque_);
   has_data_id_ = val;
@@ -57,6 +58,18 @@ void BlobDesc::set_has_col_num_field(bool val) {
   CHECK(!header_is_opaque_);
   has_col_num_ = val;
 }
+
+void BlobDesc::set_has_instance_available_elen_cnt(bool val) {
+  CHECK(!header_is_opaque_);
+  has_instance_available_elen_cnt_ = val;
+}
+
+Shape& BlobDesc::mut_instance_inner_shape() {
+  CHECK(!header_is_opaque_);
+  if (!instance_inner_shape_) { instance_inner_shape_.reset(new Shape()); }
+  return *instance_inner_shape_;
+}
+
 void BlobDesc::DataIdFieldToProto(FieldHeaderDesc* proto, StructPodDesc* header_pod_desc) const {
   Shape shape(
       {body_field_.shape().At(0), static_cast<int64_t>(Global<JobDesc>::Get()->SizeOfOneDataId())});
