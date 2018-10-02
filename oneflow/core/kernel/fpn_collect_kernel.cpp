@@ -24,7 +24,7 @@ void FpnCollectKernel<device_type, T>::ConcatAllRoisAndScores(
   Blob* roi_inputs_blob = BnInOp2Blob("roi_inputs");
   Blob* score_inputs_blob = BnInOp2Blob("score_inputs");
   int64_t N = roi_inputs_blob->shape().At(0);
-  int64_t R = roi_inputs_blob->shape().At(0);
+  int64_t R = roi_inputs_blob->shape().At(1);
   const int64_t row_num = N * R;
   const int64_t roi_out_col_num = roi_inputs_blob->shape().Count(1);
   const int64_t score_out_col_num = score_inputs_blob->shape().Count(1);

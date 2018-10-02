@@ -24,35 +24,36 @@ void FpnCollectOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
                                   const ParallelContext* parallel_ctx) const {
   const FpnCollectOpConf& conf = op_conf().fpn_collect_conf();
   int32_t level = conf.level();
-  int32_t topn_R = conf.post_nms_topn();
-  int32_t R = 0;
+  CHECK_GE(level, 2);
+  int32_t post_nms_topn = conf.post_nms_topn();
   BlobDesc* roi_blob_desc_2 = GetBlobDesc4BnInOp("rpn_rois_fpn_2");
   BlobDesc* prob_blob_desc_2 = GetBlobDesc4BnInOp("rpn_rois_probs_fpn_2");
   int32_t N = roi_blob_desc_2->shape().At(0);
-  // rpn_rois_fpn_i : (N,ri,4)
-  // rpn_rois_probs_fpn_i : (N,ri)
-  for (int32_t i = 2; i <= level; i++) {
+  int32_t R = N * roi_blob_desc_2->shape().At(1);
+  // rpn_rois_fpn_i : (N, R, 4)
+  // rpn_rois_probs_fpn_i : (N,R)
+  for (int32_t i = 3; i <= level; i++) {
     std::string roi_bn = "rpn_rois_fpn_" + std::to_string(i);
     BlobDesc* roi_blob_desc = GetBlobDesc4BnInOp(roi_bn);
     CHECK_EQ(roi_blob_desc->shape().At(0), N);
-    R += roi_blob_desc->shape().At(1);
+    CHECK_EQ(roi_blob_desc->shape().At(1), roi_blob_desc_2->shape().At(1));
   }
-  // index (N,R) int32
+  // index (N, R) int32
   BlobDesc* index_blob_desc = GetBlobDesc4BnInOp("index");
   index_blob_desc->mut_shape() = Shape({N, R});
   index_blob_desc->set_data_type(DataType::kInt32);
-  // roi_inputs (N,R,4)
+  // roi_inputs (N, R, 4)
   BlobDesc* roi_inputs_blob_desc = GetBlobDesc4BnInOp("roi_inputs");
   roi_inputs_blob_desc->mut_shape() = Shape({N, R, 4});
   roi_inputs_blob_desc->set_data_type(roi_blob_desc_2->data_type());
-  // score_inputs (R)
+  // score_inputs (N, R)
   BlobDesc* score_inputs_blob_desc = GetBlobDesc4BnInOp("score_inputs");
   score_inputs_blob_desc->mut_shape() = Shape({N, R});
   score_inputs_blob_desc->set_data_type(prob_blob_desc_2->data_type());
   // out (topR ,4)
-  CHECK_GE(N * R, topn_R);
+  CHECK_GE(R * N, post_nms_topn);
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  out_blob_desc->mut_shape() = Shape({topn_R, 5});
+  out_blob_desc->mut_shape() = Shape({post_nms_topn, 4});
   out_blob_desc->set_data_type(roi_blob_desc_2->data_type());
 }
 
