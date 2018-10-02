@@ -23,10 +23,12 @@ void RecordLoadCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(parallel_ctx());
 }
 
-void RecordLoadCompTaskNode::InferProducedRegstTimeShape() {
-  std::shared_ptr<Shape> time_shape = std::make_shared<Shape>(std::vector<int64_t>(
+void RecordLoadCompTaskNode::InferProducedDataRegstTimeShape() {
+  std::shared_ptr<Shape> time_shape(new Shape(
       {Global<JobDesc>::Get()->TotalBatchNum(), Global<JobDesc>::Get()->NumOfPiecesInBatch()}));
-  for (auto& pair : produced_regsts()) { pair.second->mut_time_shape() = time_shape; }
+  ForEachProducedDataRegst([&time_shape](const std::string& name, RegstDesc* regst) {
+    *regst->mut_data_regst_time_shape() = time_shape;
+  });
 }
 
 }  // namespace oneflow

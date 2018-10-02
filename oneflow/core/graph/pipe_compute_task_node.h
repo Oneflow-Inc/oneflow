@@ -15,6 +15,7 @@ class PipeCompTaskNode : public CompTaskNode {
   void BuildExecGphAndRegst() override;
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() final;
+  void InferProducedDataRegstTimeShape() final;
 };
 
 }  // namespace oneflow

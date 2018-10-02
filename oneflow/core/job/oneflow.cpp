@@ -171,32 +171,6 @@ bool HasRelayPlacement() {
   return false;
 }
 
-void FixPlanCtrlRegstTimeShape(Plan* plan) {
-  for (TaskProto& tp : *plan->mutable_task()) {
-    for (auto& pair : *tp.mutable_produced_regst_desc()) {
-      if (pair.second.has_time_shape()) { continue; }
-      CHECK(pair.second.regst_desc_type().has_ctrl_regst_desc());
-      auto regst_have_time_shape_it =
-          std::find_if(tp.produced_regst_desc().begin(), tp.produced_regst_desc().end(),
-                       [&](PbMapPair<std::string, oneflow::RegstDescProto> p) {
-                         if (!p.second.has_time_shape()) {
-                           return false;
-                         } else {
-                           if (tp.task_type() == TaskType::kNormalForward) {
-                             return p.first != "forward_model" && p.first != "const_buf";
-                           } else if (tp.task_type() == TaskType::kNormalMdUpdt) {
-                             return p.first == "const_model";
-                           } else {
-                             return true;
-                           }
-                         }
-                       });
-      CHECK(regst_have_time_shape_it != tp.produced_regst_desc().end());
-      *pair.second.mutable_time_shape() = regst_have_time_shape_it->second.time_shape();
-    }
-  }
-}
-
 }  // namespace
 
 class Oneflow final {
@@ -236,7 +210,6 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, int64_t this_mchn_id) {
     LOG(INFO) << "compile time: " << GetCurTime() - start;
     amd = PullAvailableMemDesc();
     mem_shared_plan = Improver().ImproveMemSharedIdOnly(amd, naive_plan);
-    FixPlanCtrlRegstTimeShape(&mem_shared_plan);
     PushPlan("naive_plan", naive_plan);
     PushPlan("mem_shared_plan", mem_shared_plan);
   } else {
@@ -256,7 +229,6 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, int64_t this_mchn_id) {
       CHECK_GT(amd.machine_amd_size(), 0);
       improved_plan = Improver().Improve(
           amd, naive_plan, JoinPath(LogDir(), ActEventLogger::experiment_act_event_bin_filename()));
-      FixPlanCtrlRegstTimeShape(&improved_plan);
       PushPlan("improved_plan", improved_plan);
     } else {
       PullPlan("improved_plan", &improved_plan);

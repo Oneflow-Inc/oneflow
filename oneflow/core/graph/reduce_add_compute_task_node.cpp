@@ -102,4 +102,8 @@ void ReduceAddCompTaskNode::BuildCtrlRegstBetweenReduceCopyNodes(const CompTaskN
   }
 }
 
+void ReduceAddCompTaskNode::InferProducedDataRegstTimeShape() {
+  NaiveInferProducedDataRegstTimeShape();
+}
+
 }  // namespace oneflow

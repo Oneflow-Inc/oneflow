@@ -120,6 +120,8 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
       *(pb_pair->mutable_lbi()) = pair.first;
       pair.second->ToProto(pb_pair->mutable_blob_desc());
     }
+    CHECK(data_regst_time_shape_);
+    data_regst_time_shape_->ToProto(data_regst_desc_proto->mutable_time_shape());
   } else if (regst_desc_type_.has_ctrl_regst_desc()) {
     // do nothing
   } else {
@@ -132,8 +134,6 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
   ret->set_enable_mem_sharing(enable_mem_sharing_);
   ret->set_mem_shared_id(mem_shared_id_);
   ret->set_mem_shared_offset(mem_shared_offset_);
-  CHECK(time_shape_);
-  time_shape_->ToProto(ret->mutable_time_shape());
 }
 
 bool RegstDesc::HasSameBlobDescs(const RegstDesc* rhs) {

@@ -9,11 +9,11 @@ class AccuracyAccCompTaskNode final : public AccCompTaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AccuracyAccCompTaskNode);
   AccuracyAccCompTaskNode() = default;
-  ~AccuracyAccCompTaskNode() override = default;
+  ~AccuracyAccCompTaskNode() = default;
   TaskType GetTaskType() const override { return TaskType::kAccuracyAcc; }
 
  private:
-  void InferProducedRegstTimeShape() override;
+  void InferProducedDataRegstTimeShape() override;
 };
 
 }  // namespace oneflow

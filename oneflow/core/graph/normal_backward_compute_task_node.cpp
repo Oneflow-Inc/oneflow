@@ -221,13 +221,18 @@ void NormalBackwardCompTaskNode::RmUselessConsumeRelationshipToFw() {
   if (need_out_blob == false) { EraseConsumedRegstsByName("out"); }
 }
 
-void NormalBackwardCompTaskNode::InferProducedRegstTimeShape() {
+void NormalBackwardCompTaskNode::InferProducedDataRegstTimeShape() {
   const std::list<std::shared_ptr<RegstDesc>>& out_diff_regsts = GetConsumedRegst("out_diff");
-  CHECK_GT(out_diff_regsts.size(), 0);
-  const std::shared_ptr<Shape>& in_time_shape = out_diff_regsts.front()->time_shape();
-  for (const auto& regst : out_diff_regsts) { CHECK(*in_time_shape == *(regst->time_shape())); }
+  CHECK(!out_diff_regsts.empty());
+  const std::shared_ptr<Shape>& out_diff_time_shape =
+      out_diff_regsts.front()->data_regst_time_shape();
+  for (const auto& regst : out_diff_regsts) {
+    CHECK(*out_diff_time_shape == *(regst->data_regst_time_shape()));
+  }
 
-  for (auto& pair : produced_regsts()) { pair.second->mut_time_shape() = in_time_shape; }
+  ForEachProducedDataRegst([&out_diff_time_shape](const std::string& name, RegstDesc* regst) {
+    *regst->mut_data_regst_time_shape() = out_diff_time_shape;
+  });
 }
 
 }  // namespace oneflow

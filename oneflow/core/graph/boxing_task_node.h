@@ -57,6 +57,7 @@ class BoxingTaskNode : public TaskNode {
                                         const LogicalNode* out_logical,
                                         const std::vector<EdgeInfo>& sorted_in_edges,
                                         const std::vector<EdgeInfo>& sorted_out_edges);
+  void InferProducedDataRegstTimeShape() final;
 };
 
 #define OVERRIDE_BLD_BOXING_OP_METHOD(x) DECLARE_BLD_BOXING_OP_CONF_METHOD(x) override

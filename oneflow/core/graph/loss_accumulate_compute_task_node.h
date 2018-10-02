@@ -9,11 +9,11 @@ class LossAccCompTaskNode final : public AccCompTaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LossAccCompTaskNode);
   LossAccCompTaskNode() = default;
-  ~LossAccCompTaskNode() override = default;
+  ~LossAccCompTaskNode() = default;
   TaskType GetTaskType() const override { return TaskType::kLossAcc; }
 
  private:
-  void InferProducedRegstTimeShape() override;
+  void InferProducedDataRegstTimeShape() override;
 };
 
 }  // namespace oneflow
