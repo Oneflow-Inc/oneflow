@@ -1,11 +1,12 @@
 #ifndef ONEFLOW_CORE_KERNEL_DECODE_RANDOM_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_DECODE_RANDOM_KERNEL_H_
 
-#include "oneflow/core/kernel/decode_ofrecord_kernel.h"
+#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
-class DecodeRandomKernel final : public KernelIf<DeviceType::kCPU> {
+template<DeviceType device_type>
+class DecodeRandomKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DecodeRandomKernel);
   DecodeRandomKernel() = default;
