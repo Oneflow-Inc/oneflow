@@ -4,15 +4,10 @@ namespace oneflow {
 
 void FpnCollectOp::InitFromOpConf() {
   CHECK(op_conf().has_relu_conf());
-  // rois:[r,5] probs:[r]
-  for (int32_t i = 2; i <= 6; i++) {
-    std::string roi_bn = "rpn_rois_fpn_" + std::to_string(i);
-    std::string prob_bn = "rpn_roi_probs_fpn_" + std::to_string(i);
-    EnrollInputBn(roi_bn);
-    EnrollInputBn(prob_bn);
-  }
-
+  EnrollRepeatedInputBn("rpn_rois_fpn");
+  EnrollRepeatedInputBn("rpn_roi_probs_fpn");
   EnrollOutputBn("out");
+
   EnrollDataTmpBn("roi_inputs");
   EnrollDataTmpBn("index");
   EnrollDataTmpBn("score_inputs");
@@ -24,37 +19,34 @@ void FpnCollectOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
                                   const ParallelContext* parallel_ctx) const {
   const FpnCollectOpConf& conf = op_conf().fpn_collect_conf();
   int32_t level = conf.level();
-  CHECK_GE(level, 2);
-  int32_t post_nms_topn = conf.post_nms_topn();
-  BlobDesc* roi_blob_desc_2 = GetBlobDesc4BnInOp("rpn_rois_fpn_2");
-  BlobDesc* prob_blob_desc_2 = GetBlobDesc4BnInOp("rpn_rois_probs_fpn_2");
-  int32_t N = roi_blob_desc_2->shape().At(0);
-  int32_t R = N * roi_blob_desc_2->shape().At(1);
-  // rpn_rois_fpn_i : (N, R, 4)
-  // rpn_rois_probs_fpn_i : (N,R)
-  for (int32_t i = 3; i <= level; i++) {
-    std::string roi_bn = "rpn_rois_fpn_" + std::to_string(i);
-    BlobDesc* roi_blob_desc = GetBlobDesc4BnInOp(roi_bn);
+  CHECK_GE(level <= input_bns().size()/2);
+  // rpn_rois_fpn_i : (N, R, 5)
+  // rpn_rois_probs_fpn_i : (N, R)
+  int32_t post_nms_topn = conf.post_nms_top_n();
+  BlobDesc* input_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(0));
+  int32_t N = input_blob_desc->shape().At(0);
+  int32_t R = input_blob_desc->shape().At(1);
+  for (size_t i = 1; i < input_bns().size(); i++) {
+    BlobDesc* input_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(i))
     CHECK_EQ(roi_blob_desc->shape().At(0), N);
-    CHECK_EQ(roi_blob_desc->shape().At(1), roi_blob_desc_2->shape().At(1));
+    CHECK_EQ(roi_blob_desc->shape().At(1), R);
   }
-  // index (N, R) int32
+  // index (N * R) int32
   BlobDesc* index_blob_desc = GetBlobDesc4BnInOp("index");
-  index_blob_desc->mut_shape() = Shape({N, R});
+  index_blob_desc->mut_shape() = Shape({N * R});
   index_blob_desc->set_data_type(DataType::kInt32);
-  // roi_inputs (N, R, 4)
+  // roi_inputs (N, R, 5)
   BlobDesc* roi_inputs_blob_desc = GetBlobDesc4BnInOp("roi_inputs");
-  roi_inputs_blob_desc->mut_shape() = Shape({N, R, 4});
-  roi_inputs_blob_desc->set_data_type(roi_blob_desc_2->data_type());
+  roi_inputs_blob_desc->mut_shape() = Shape({N, R, 5});
+  roi_inputs_blob_desc->set_data_type(input_blob_desc->data_type());
   // score_inputs (N, R)
   BlobDesc* score_inputs_blob_desc = GetBlobDesc4BnInOp("score_inputs");
   score_inputs_blob_desc->mut_shape() = Shape({N, R});
-  score_inputs_blob_desc->set_data_type(prob_blob_desc_2->data_type());
-  // out (topR ,4)
-  CHECK_GE(R * N, post_nms_topn);
+  score_inputs_blob_desc->set_data_type(input_blob_desc->data_type());
+  // out (post_nms_topn ,5)
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  out_blob_desc->mut_shape() = Shape({post_nms_topn, 4});
-  out_blob_desc->set_data_type(roi_blob_desc_2->data_type());
+  out_blob_desc->mut_shape() = Shape({post_nms_topn, 5});
+  out_blob_desc->set_data_type(input_blob_desc->data_type());
 }
 
 REGISTER_OP(OperatorConf::kFpnCollectConf, FpnCollectOp);

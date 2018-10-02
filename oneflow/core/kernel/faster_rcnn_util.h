@@ -438,6 +438,15 @@ BoxesIndex<T> GenBoxesIndex(size_t capacity, int32_t* index_ptr, const T* boxes_
 }
 
 template<typename T>
+using ScoresIndex = ScoreIndex<Indexes, T>;
+
+template<typename T>
+ScoresIndex <T> GenScoresIndex(size_t capacity, int32_t* index_ptr, const T* score_ptr,
+                            bool init_index = false) {
+  return ScoresIndex <T>(Indexes(capacity, index_ptr, init_index), score_ptr);
+}
+
+template<typename T>
 using ScoredBoxesIndex = ScoreIndex<BoxesIndex<T>, T>;
 
 template<typename T>

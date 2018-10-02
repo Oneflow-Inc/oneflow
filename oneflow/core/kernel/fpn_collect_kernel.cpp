@@ -8,11 +8,10 @@ template<DeviceType device_type, typename T>
 void FpnCollectKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // to do :
-  //       *type of score : the same as bbox?
   //       *better sort method :nth element + sort
 
   const int32_t level = this->op_conf().fpn_collect_conf().level();
-  const int32_t post_nms_topn = this->op_conf().fpn_collect_conf().post_nms_topn();
+  const int32_t post_nms_topn = this->op_conf().fpn_collect_conf().post_nms_top_n();
   ConcatAllRoisAndScores(ctx, level, BnInOp2Blob);
   SortAndSelectTopnRois(post_nms_topn, BnInOp2Blob);
 }
@@ -31,9 +30,9 @@ void FpnCollectKernel<device_type, T>::ConcatAllRoisAndScores(
   int64_t roi_col_offset = 0;
   int64_t prob_col_offset = 0;
 
-  for (int32_t i = 2; i <= level; i++) {
-    std::string roi_bn = "rpn_rois_fpn_" + std::to_string(i);
-    std::string prob_bn = "rpn_roi_probs_fpn_" + std::to_string(i);
+  for (int32_t i = 0; i < level; i++) {
+    std::string roi_bn = "rpn_rois_fpn" + std::to_string(i);
+    std::string prob_bn = "rpn_roi_probs_fpn" + std::to_string(i);
 
     const Blob* roi_blob = BnInOp2Blob(roi_bn);
     const Blob* prob_blob = BnInOp2Blob(prob_bn);
@@ -60,15 +59,13 @@ void FpnCollectKernel<device_type, T>::SortAndSelectTopnRois(
   Blob* index_blob = BnInOp2Blob("index");
   Blob* out_blob = BnInOp2Blob("out");
   size_t index_size = roi_inputs_blob->shape().At(0) * roi_inputs_blob->shape().At(1);
-  auto scored_rois =
-      GenScoredBoxesIndex(index_size, index_blob->mut_dptr<int32_t>(), roi_inputs_blob->dptr<T>(),
-                          score_inputs_blob->dptr<T>(), false);
-  scored_rois.SortByScore([](T lhs_score, T rhs_score) { return lhs_score > rhs_score; });
-  for (int32_t i = 0; i < topn; i++) {
-    int32_t batch_idx = i / roi_inputs_blob->shape().At(1);
-    const BBox<T>* roi = scored_rois.GetBBox(i);
-    out_blob->mut_dptr<T>()[i * 4] = batch_idx;
-    for (int32_t j = 1; j < 5; j++) { out_blob->mut_dptr<T>()[i * 4 + j] = roi->bbox()[j]; }
+  auto scored_index = GenScoresIndex(index_size, index_blob->mut_dptr<int32_t>(),
+                                     score_inputs_blob->dptr<T>(), false);
+  scored_index.SortByScore([](T lhs_score, T rhs_score) { return lhs_score > rhs_score; });
+  for (int64_t i = 0; i < topn; i++) {
+    const size_t si = scored_rois.GetIndex(i);
+    for (int64_t j = 0; j < 5; j++) { 
+        out_blob->mut_dptr<T>()[i * 5 + j] = roi_inputs_blob->dptr<T>()[si * 5 + j]; }
   }
 }
 
