@@ -5,7 +5,8 @@
 namespace oneflow {
 
 BinaryInStreamWithLocalCopy::BinaryInStreamWithLocalCopy(fs::FileSystem* fs,
-                                                         const std::string& file_path) {
+                                                         const std::string& file_path)
+    : once_read_(false) {
   LOG(INFO) << "New BinaryInStreamWithLocalCopy " << file_path;
   in_stream_.reset(new BinaryInStreamWithoutLocalCopy(fs, file_path));
   local_copy_path_ = JoinPath(LogDir(), "global_fs_buffer", file_path);
@@ -14,16 +15,20 @@ BinaryInStreamWithLocalCopy::BinaryInStreamWithLocalCopy(fs::FileSystem* fs,
 }
 
 int32_t BinaryInStreamWithLocalCopy::ReadAndWriteToLocal(char* s, size_t n) {
-  int32_t ret = in_stream_->Read(s, n);
-  if (ret == -1) {
+  if (Restart()) {
     CopyToLocalFinish();
     return Read(s, n);
-  } else if (ret == 0) {
-    out_stream_->Write(s, n);
-    return 0;
   } else {
-    UNIMPLEMENTED();
+    int32_t ret = in_stream_->Read(s, n);
+    CHECK_EQ(ret, 0);
+    out_stream_->Write(s, n);
+    once_read_ = true;
+    return 0;
   }
+}
+
+bool BinaryInStreamWithLocalCopy::Restart() {
+  return in_stream_->cur_file_pos() == 0 && once_read_;
 }
 
 void BinaryInStreamWithLocalCopy::CopyToLocalFinish() {

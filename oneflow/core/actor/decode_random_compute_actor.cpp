@@ -9,11 +9,10 @@ void DecodeRandomActor::VirtualCompActorInit(const TaskProto& task_proto) {
 }
 
 void DecodeRandomActor::Act() {
-  Regst* regst = GetCurSoleWriteableRegst();
+  Regst* regst = GetNaiveCurWriteable("out");
   regst->set_piece_id(piece_id_++);
 
   AsyncLaunchKernel(GenDefaultKernelCtx());
-  AsyncSendRegstMsgToConsumer();
 }
 
 bool DecodeRandomActor::IsCustomizedReadReady() {
