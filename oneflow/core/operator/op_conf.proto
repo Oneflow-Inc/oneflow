@@ -667,6 +667,12 @@ message HingeLossOpConf {
   optional Norm norm = 7[default = L1];
 }
 
+message RepeatOpConf {
+  required string in = 1;
+  required string out = 2;
+  required int64 repeat_num = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -734,6 +740,7 @@ message OperatorConf {
     AccuracyPrintOpConf accuracy_print_conf = 234;
     LossPrintOpConf loss_print_conf = 235;
     DefineTestBlobConf define_test_blob_conf = 236;
+    RepeatOpConf repeat_conf = 237;
   }
 }
 

@@ -3,11 +3,13 @@
 namespace oneflow {
 
 bool IsForwardTaskType(TaskType tt) {
-  return tt == TaskType::kNormalForward || tt == TaskType::kRecurrentForward;
+  return tt == TaskType::kNormalForward || tt == TaskType::kRecurrentForward
+         || tt == TaskType::kRepeatForward;
 }
 
 bool IsBackwardTaskType(TaskType tt) {
-  return tt == TaskType::kNormalBackward || tt == TaskType::kRecurrentBackward;
+  return tt == TaskType::kNormalBackward || tt == TaskType::kRecurrentBackward
+         || tt == TaskType::kRepeatBackward;
 }
 
 bool IsMdUpdtTaskType(TaskType tt) { return tt == TaskType::kNormalMdUpdt; }
@@ -84,7 +86,7 @@ void TaskNode::NaiveInferProducedDataRegstTimeShape() {
   std::shared_ptr<Shape> time_shape;
   ForEachConsumedDataRegst([&time_shape](const std::string& name, const RegstDesc* regst) {
     if (time_shape) {
-      CHECK(*time_shape.get() == *regst->data_regst_time_shape().get());
+      CHECK_EQ(*time_shape.get(), *regst->data_regst_time_shape().get());
     } else {
       time_shape = regst->data_regst_time_shape();
     }
@@ -410,5 +412,6 @@ std::map<TaskType, std::string> task_type2color = {
     {kNcclAllReduce, "2"},  {kNcclReduceScatter, "2"},
     {kNcclAllGather, "2"},  {kAccuracy, "4"},
     {kAccuracyPrint, "1"},  {kAccuracyAcc, "5"},
-    {kDecodeRandom, "1"}};
+    {kDecodeRandom, "1"},   {kRepeatForward, "2"},
+    {kRepeatBackward, "3"}};
 }  // namespace oneflow
