@@ -3,7 +3,7 @@
 namespace oneflow {
 
 void NormalBackwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
-  any_out_diff_regst_desc_id_ = Name2RegstDescId("out_diff").front();
+  any_out_diff_regst_desc_id_ = Name2RegstDescIds("out_diff").front();
   model_regst_desc_id_ = Name2SoleRegstDescId("model");
   const_model_regst_desc_id_ = Name2SoleRegstDescId("const_model");
   const_model_regst_ = nullptr;
@@ -50,7 +50,6 @@ void NormalBackwardCompActor::NormalProcessCustomizedReadableRegstMsg(const Acto
 }
 
 void NormalBackwardCompActor::Act() {
-  int64_t piece_id = GetNaiveCurReadable(any_out_diff_regst_desc_id_)->piece_id();
   AsyncLaunchKernel(GenDefaultKernelCtx(), [this](int64_t regst_desc_id) -> Regst* {
     if (regst_desc_id == model_regst_desc_id_) {
       return model_regst_queue_.front();
@@ -62,10 +61,18 @@ void NormalBackwardCompActor::Act() {
       return nullptr;
     }
   });
-  AsyncSendRegstMsgToConsumer([&](Regst* regst) {
+}
+
+void NormalBackwardCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
+  int64_t piece_id = GetNaiveCurReadable(any_out_diff_regst_desc_id_)->piece_id();
+  HandleProducedNaiveDataRegstToConsumer([&](Regst* regst) {
     regst->set_piece_id(piece_id);
     return true;
   });
+}
+
+void NormalBackwardCompActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
+  int64_t piece_id = GetNaiveCurReadable(any_out_diff_regst_desc_id_)->piece_id();
   AsyncReturnModelRegstUntilLastPieceIdGreaterThan(piece_id);
 }
 

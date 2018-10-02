@@ -6,35 +6,23 @@
 
 namespace oneflow {
 
-Blob::Blob(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr) {
+Blob::Blob(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr)
+    : header_pod_ptr_(blob_desc->header_pod_desc(), header_ptr) {
   Init(regst, blob_desc, header_ptr, header_ptr + blob_desc->ByteSizeOfBlobHeader());
 }
 
-Blob::Blob(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr) {
+Blob::Blob(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr)
+    : header_pod_ptr_(blob_desc->header_pod_desc(), header_ptr) {
   Init(regst, blob_desc, header_ptr, body_ptr);
 }
 
 void Blob::Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr) {
-  if (body_ptr == header_ptr + blob_desc->ByteSizeOfBlobHeader()) {
-    is_contiguous_ = true;
-  } else {
-    is_contiguous_ = false;
-  }
-
+  is_contiguous_ = (body_ptr == header_ptr + blob_desc->ByteSizeOfBlobHeader());
   regst_ = regst;
   blob_desc_ = blob_desc;
   header_ptr_ = header_ptr;
-  if (blob_desc->has_data_id_field()) {
-    data_id_ptr_ = header_ptr;
-  } else {
-    data_id_ptr_ = nullptr;
-  }
-  char* offset = header_ptr + blob_desc->ByteSizeOfDataIdField();
-  if (blob_desc->has_col_num_field()) {
-    col_num_ptr_ = reinterpret_cast<int32_t*>(offset);
-  } else {
-    col_num_ptr_ = nullptr;
-  }
+  data_id_ptr_ = header_pod_ptr_.MutTensorPtr<char>(FieldKey::kDataId, nullptr);
+  col_num_ptr_ = header_pod_ptr_.MutTensorPtr<int32_t>(FieldKey::kColNum, nullptr);
   dptr_ = body_ptr;
 }
 
