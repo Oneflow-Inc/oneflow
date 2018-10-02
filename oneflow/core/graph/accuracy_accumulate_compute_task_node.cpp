@@ -7,7 +7,7 @@ void AccuracyAccCompTaskNode::InferProducedDataRegstTimeShape() {
                                     * Global<JobDesc>::Get()->NumOfPiecesInBatch()
                                     / Global<JobDesc>::Get()->PieceNumOfPrintAccuracy();
   std::shared_ptr<Shape> time_shape(new Shape({accuracy_acc_output_num}));
-  ForEachProducedDataRegst([&time_shape](const std::string& name, RegstDesc* regst) {
+  ForEachProducedDataRegst([time_shape](const std::string& name, RegstDesc* regst) {
     *regst->mut_data_regst_time_shape() = time_shape;
   });
 }

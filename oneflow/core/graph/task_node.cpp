@@ -92,7 +92,7 @@ void TaskNode::NaiveInferProducedDataRegstTimeShape() {
 
   CHECK(time_shape);
 
-  ForEachProducedDataRegst([&time_shape](const std::string& name, RegstDesc* regst) {
+  ForEachProducedDataRegst([time_shape](const std::string& name, RegstDesc* regst) {
     *regst->mut_data_regst_time_shape() = time_shape;
   });
 }

@@ -154,7 +154,7 @@ void NormalForwardCompTaskNode::InferProducedDataRegstTimeShape() {
     CHECK(*in_time_shape == *(regst->data_regst_time_shape()));
   }
 
-  ForEachProducedDataRegst([&in_time_shape](const std::string& name, RegstDesc* regst) {
+  ForEachProducedDataRegst([in_time_shape](const std::string& name, RegstDesc* regst) {
     if (name == "const_buf") {
       regst->mut_data_regst_time_shape()->reset(new Shape({1}));
     } else {

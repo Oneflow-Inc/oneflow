@@ -230,7 +230,7 @@ void NormalBackwardCompTaskNode::InferProducedDataRegstTimeShape() {
     CHECK(*out_diff_time_shape == *(regst->data_regst_time_shape()));
   }
 
-  ForEachProducedDataRegst([&out_diff_time_shape](const std::string& name, RegstDesc* regst) {
+  ForEachProducedDataRegst([out_diff_time_shape](const std::string& name, RegstDesc* regst) {
     *regst->mut_data_regst_time_shape() = out_diff_time_shape;
   });
 }
