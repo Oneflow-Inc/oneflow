@@ -148,6 +148,24 @@ void KernelIf<device_type>::ForwardField(DeviceCtx* ctx,
 }
 
 template<DeviceType device_type>
+void KernelIf<device_type>::ForwardInstanceAvailableElemCnt(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  TODO();
+}
+
+template<DeviceType device_type>
+void KernelIf<device_type>::ForwardAvailableInstanceNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  TODO();
+}
+
+template<DeviceType device_type>
+void KernelIf<device_type>::BackwardAvailableInstanceNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  TODO();
+}
+
+template<DeviceType device_type>
 void KernelIf<device_type>::ForwardPackedHeader(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),

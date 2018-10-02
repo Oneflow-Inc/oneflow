@@ -51,4 +51,8 @@ void ReduceConcatCompTaskNode::EnableMemSharingInReduce(const ReduceMemSharingCt
   }
 }
 
+void ReduceConcatCompTaskNode::InferProducedDataRegstTimeShape() {
+  NaiveInferProducedDataRegstTimeShape();
+}
+
 }  // namespace oneflow

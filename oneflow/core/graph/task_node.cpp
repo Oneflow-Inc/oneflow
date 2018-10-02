@@ -80,6 +80,41 @@ void TaskNode::PinConsumedRegst() {
   }
 }
 
+void TaskNode::NaiveInferProducedDataRegstTimeShape() {
+  std::shared_ptr<Shape> time_shape;
+  ForEachConsumedDataRegst([&time_shape](const std::string& name, const RegstDesc* regst) {
+    if (time_shape) {
+      CHECK(*time_shape.get() == *regst->data_regst_time_shape().get());
+    } else {
+      time_shape = regst->data_regst_time_shape();
+    }
+  });
+
+  CHECK(time_shape);
+
+  ForEachProducedDataRegst([time_shape](const std::string& name, RegstDesc* regst) {
+    *regst->mut_data_regst_time_shape() = time_shape;
+  });
+}
+
+void TaskNode::ForEachConsumedDataRegst(
+    std::function<void(const std::string&, const RegstDesc*)> Handler) const {
+  for (const auto& pair : consumed_regsts_) {
+    for (const auto& regst : pair.second) {
+      if (!regst->regst_desc_type().has_data_regst_desc()) { continue; }
+      Handler(pair.first, regst.get());
+    }
+  }
+}
+
+void TaskNode::ForEachProducedDataRegst(
+    std::function<void(const std::string&, RegstDesc*)> Handler) {
+  for (auto& pair : produced_regsts_) {
+    if (!pair.second->regst_desc_type().has_data_regst_desc()) { continue; }
+    Handler(pair.first, pair.second.get());
+  }
+}
+
 void TaskNode::Build() {
   if (consumed_regsts_.size()) { CHECK(IsReadyForBuild()); }
   BuildExecGphAndRegst();

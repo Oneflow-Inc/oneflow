@@ -29,6 +29,7 @@ class NormalBackwardCompTaskNode final : public CompTaskNode {
   void BindInRegst();
   void InferBlobDescsInProducedRegsts();
   CompTaskNode* GetRelatedFwTaskNode();
+  void InferProducedDataRegstTimeShape() override;
 };
 
 }  // namespace oneflow
