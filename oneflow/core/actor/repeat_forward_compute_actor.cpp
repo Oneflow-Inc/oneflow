@@ -23,10 +23,6 @@ void RepeatForwardCompActor::VirtualAsyncSendNaiveConsumedRegstMsgToProducer() {
   if (repeat_count_ == repeat_num_) {
     HandleConsumedNaiveDataRegstToProducer([](Regst* regst) { return true; });
   }
-};
-
-bool RepeatForwardCompActor::ConsumedCtrlRegstValid(int64_t regst_desc_id) const {
-  return repeat_count_ == repeat_num_;
 }
 
 void RepeatForwardCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {

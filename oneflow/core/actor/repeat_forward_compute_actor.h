@@ -15,7 +15,6 @@ class RepeatForwardCompActor final : public CompActor {
   void VirtualCompActorInit(const TaskProto& proto) override;
   void Act() override;
   void VirtualAsyncSendNaiveConsumedRegstMsgToProducer() override;
-  bool ConsumedCtrlRegstValid(int64_t regst_desc_id) const override;
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
 
   int64_t repeat_num_ = -1;

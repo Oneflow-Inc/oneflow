@@ -31,9 +31,6 @@ void RepeatBackwardCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() 
   }
 }
 
-bool RepeatBackwardCompActor::ProducedCtrlRegstValid(int64_t regst_desc_id) const {
-  return acc_count_ == repeat_num_;
-}
 REGISTER_ACTOR(kRepeatBackward, RepeatBackwardCompActor);
 
 }  // namespace oneflow
