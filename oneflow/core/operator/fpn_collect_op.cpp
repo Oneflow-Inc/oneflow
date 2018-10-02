@@ -3,7 +3,7 @@
 namespace oneflow {
 
 void FpnCollectOp::InitFromOpConf() {
-  CHECK(op_conf().has_relu_conf());
+  CHECK(op_conf().has_fpn_collect_conf());
   EnrollRepeatedInputBn("rpn_rois_fpn");
   EnrollRepeatedInputBn("rpn_roi_probs_fpn");
   EnrollOutputBn("out");
