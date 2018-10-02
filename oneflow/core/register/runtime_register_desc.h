@@ -29,6 +29,7 @@ class RtRegstDesc {
   size_t TotalSeparatedByteSize4AllRegst() const;
   size_t SeparatedByteSize4OneRegst() const;
   size_t MainByteSize4OneRegst() const;
+  const Shape& data_regst_time_shape() const;
 
  private:
   int64_t regst_desc_id_;
@@ -39,6 +40,7 @@ class RtRegstDesc {
   MemoryCase mem_case_;
   HashMap<LogicalBlobId, std::unique_ptr<RtBlobDesc>> lbi2blob_desc_;
   std::unique_ptr<RtBlobDesc> packed_blob_desc_;
+  std::unique_ptr<Shape> data_regst_time_shape_;
 };
 
 }  // namespace oneflow

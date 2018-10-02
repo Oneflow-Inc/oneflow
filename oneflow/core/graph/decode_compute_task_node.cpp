@@ -30,4 +30,8 @@ void DecodeCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(parallel_ctx());
 }
 
+void DecodeCompTaskNode::InferProducedDataRegstTimeShape() {
+  NaiveInferProducedDataRegstTimeShape();
+}
+
 }  // namespace oneflow
