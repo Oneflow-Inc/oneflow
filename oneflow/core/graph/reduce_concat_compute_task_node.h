@@ -22,6 +22,7 @@ class ReduceConcatCompTaskNode final : public CompTaskNode, public ReduceCompTas
 
  private:
   void BuildExecGphAndRegst() override;
+  void InferProducedDataRegstTimeShape() override;
 };
 
 }  // namespace oneflow

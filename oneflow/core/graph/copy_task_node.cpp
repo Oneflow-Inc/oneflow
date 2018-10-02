@@ -36,6 +36,8 @@ void CopyTaskNode::BuildExecGphAndRegst() {
   node->BindBnWithRegst(node->op()->SoleObn(), out_regst);
 }
 
+void CopyTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataRegstTimeShape(); }
+
 void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, int64_t machine_id, int64_t dev_phy_id) {
   copy_type_ = copy_type;
   set_machine_id(machine_id);

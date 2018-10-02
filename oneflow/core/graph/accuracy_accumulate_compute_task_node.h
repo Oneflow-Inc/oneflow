@@ -13,6 +13,7 @@ class AccuracyAccCompTaskNode final : public AccCompTaskNode {
   TaskType GetTaskType() const override { return TaskType::kAccuracyAcc; }
 
  private:
+  void InferProducedDataRegstTimeShape() override;
 };
 
 }  // namespace oneflow

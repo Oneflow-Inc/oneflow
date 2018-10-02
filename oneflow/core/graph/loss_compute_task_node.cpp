@@ -80,4 +80,6 @@ void LossCompTaskNode::BuildRegstWhenTraining() {
   }
 }
 
+void LossCompTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataRegstTimeShape(); }
+
 }  // namespace oneflow

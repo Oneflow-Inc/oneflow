@@ -19,6 +19,8 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
       CHECK(lbi2blob_desc_.emplace(pair.lbi(), std::move(blob_desc)).second);
     }
     packed_blob_desc_.reset(new RtBlobDesc(data_regst_desc.packed_blob_desc()));
+    CHECK(data_regst_desc.has_time_shape());
+    data_regst_time_shape_.reset(new Shape(data_regst_desc.time_shape()));
   } else {
     packed_blob_desc_.reset(new RtBlobDesc(BlobDesc()));
   }
@@ -60,6 +62,12 @@ size_t RtRegstDesc::SeparatedByteSize4OneRegst() const {
   } else {
     return 0;
   }
+}
+
+const Shape& RtRegstDesc::data_regst_time_shape() const {
+  CHECK(regst_desc_type_.has_data_regst_desc());
+  CHECK(data_regst_time_shape_);
+  return *data_regst_time_shape_;
 }
 
 }  // namespace oneflow

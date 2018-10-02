@@ -61,4 +61,8 @@ void ReduceScatterCompTaskNode::EnableMemSharingInReduce(const ReduceMemSharingC
   ctx.EnableMemSharing4Regst(GetSoleConsumedRegst("in").get(), offset);
 }
 
+void ReduceScatterCompTaskNode::InferProducedDataRegstTimeShape() {
+  NaiveInferProducedDataRegstTimeShape();
+}
+
 }  // namespace oneflow

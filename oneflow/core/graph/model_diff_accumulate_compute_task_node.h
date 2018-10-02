@@ -14,6 +14,7 @@ class MdDiffAccCompTaskNode final : public AccCompTaskNode {
 
  private:
   void FixPackedBlobDescOfProducedRegst() override;
+  void InferProducedDataRegstTimeShape() override;
 };
 
 }  // namespace oneflow

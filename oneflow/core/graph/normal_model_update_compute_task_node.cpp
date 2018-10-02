@@ -142,4 +142,15 @@ void NormalMdUpdtCompTaskNode::ToProto(TaskProto* task_proto) {
   task_proto->set_related_init_model_task_id(related_init_model_task_id_);
 }
 
+void NormalMdUpdtCompTaskNode::InferProducedDataRegstTimeShape() {
+  ForEachProducedDataRegst([](const std::string& name, RegstDesc* regst) {
+    if (name == "const_model") {
+      regst->mut_data_regst_time_shape()->reset(new Shape({1}));
+    } else {
+      regst->mut_data_regst_time_shape()->reset(
+          new Shape({Global<JobDesc>::Get()->TotalBatchNum()}));
+    }
+  });
+}
+
 }  // namespace oneflow
