@@ -155,4 +155,10 @@ void RegstMgr::InitOFRecordBlobIfNeed(Blob* blob_ptr) {
   }
 }
 
+const RtRegstDesc& RegstMgr::RegstDesc4RegstDescId(int64_t regst_desc_id) const {
+  const auto& it = regst_desc_id2rt_regst_desc_.find(regst_desc_id);
+  CHECK(it != regst_desc_id2rt_regst_desc_.end());
+  return *it->second;
+}
+
 }  // namespace oneflow
