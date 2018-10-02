@@ -63,9 +63,10 @@ void FpnCollectKernel<device_type, T>::SortAndSelectTopnRois(
                                      score_inputs_blob->dptr<T>(), false);
   scored_index.SortByScore([](T lhs_score, T rhs_score) { return lhs_score > rhs_score; });
   for (int64_t i = 0; i < topn; i++) {
-    const size_t si = scored_rois.GetIndex(i);
-    for (int64_t j = 0; j < 5; j++) { 
-        out_blob->mut_dptr<T>()[i * 5 + j] = roi_inputs_blob->dptr<T>()[si * 5 + j]; }
+    const size_t si = scored_index.GetIndex(i);
+    for (int64_t j = 0; j < 5; j++) {
+      out_blob->mut_dptr<T>()[i * 5 + j] = roi_inputs_blob->dptr<T>()[si * 5 + j];
+    }
   }
 }
 

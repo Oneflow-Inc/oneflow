@@ -441,9 +441,9 @@ template<typename T>
 using ScoresIndex = ScoreIndex<Indexes, T>;
 
 template<typename T>
-ScoresIndex <T> GenScoresIndex(size_t capacity, int32_t* index_ptr, const T* score_ptr,
-                            bool init_index = false) {
-  return ScoresIndex <T>(Indexes(capacity, index_ptr, init_index), score_ptr);
+ScoresIndex<T> GenScoresIndex(size_t capacity, int32_t* index_ptr, const T* score_ptr,
+                              bool init_index = false) {
+  return ScoresIndex<T>(Indexes(capacity, index_ptr, init_index), score_ptr);
 }
 
 template<typename T>

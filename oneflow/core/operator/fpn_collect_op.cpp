@@ -19,7 +19,7 @@ void FpnCollectOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
                                   const ParallelContext* parallel_ctx) const {
   const FpnCollectOpConf& conf = op_conf().fpn_collect_conf();
   int32_t level = conf.level();
-  CHECK_GE(level <= input_bns().size()/2);
+  CHECK(level <= input_bns().size() / 2);
   // rpn_rois_fpn_i : (N, R, 5)
   // rpn_rois_probs_fpn_i : (N, R)
   int32_t post_nms_topn = conf.post_nms_top_n();
@@ -27,9 +27,9 @@ void FpnCollectOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   int32_t N = input_blob_desc->shape().At(0);
   int32_t R = input_blob_desc->shape().At(1);
   for (size_t i = 1; i < input_bns().size(); i++) {
-    BlobDesc* input_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(i))
-    CHECK_EQ(roi_blob_desc->shape().At(0), N);
-    CHECK_EQ(roi_blob_desc->shape().At(1), R);
+    BlobDesc* input_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(i));
+    CHECK_EQ(input_blob_desc->shape().At(0), N);
+    CHECK_EQ(input_blob_desc->shape().At(1), R);
   }
   // index (N * R) int32
   BlobDesc* index_blob_desc = GetBlobDesc4BnInOp("index");
