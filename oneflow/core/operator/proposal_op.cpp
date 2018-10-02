@@ -38,7 +38,6 @@ void ProposalOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   const int32_t post_nms_top_n = GetValFromCustomizedConf<int32_t>("post_nms_top_n");
   CHECK_GT(post_nms_top_n, 0);
   CHECK(pre_nms_top_n == -1 || pre_nms_top_n > post_nms_top_n);
-  CHECK_LE(pre_nms_top_n, bbox_pred_blob_desc->shape().Count(1) / 4);
   // in: class_prob (n, h, w, a)
   // in: bbox_pred (n, h, w, a * 4)
   FOR_RANGE(int32_t, i, 0, 3) {
