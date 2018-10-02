@@ -6,7 +6,7 @@ set(EIGEN_INSTALL_DIR ${THIRD_PARTY_DIR}/eigen)
 # set(eigen_URL https://github.com/eigenteam/eigen-git-mirror)
 # set(eigen_TAG e9e95489a0b241412e31f0525e85b2fab386c786)
 
-set(eigen_URL http://down.geeek.info/deps/eigenteam-eigen-git-mirror-3.3.0-690-ge9e9548.tar.gz)
+set(eigen_URL http://down.oneflow.org/eigenteam-eigen-git-mirror-3.3.0-690-ge9e9548.tar.gz)
 
 add_definitions(-DEIGEN_NO_AUTOMATIC_RESIZING -DEIGEN_NO_MALLOC -DEIGEN_USE_GPU)
 

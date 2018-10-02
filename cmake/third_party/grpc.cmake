@@ -7,7 +7,7 @@ set(GRPC_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/include)
 # set(GRPC_URL https://github.com/yuanms2/grpc.git)
 # set(GRPC_TAG e0db46e140405f0f94f03c9a55b302e39a514c48)
 
-set(GRPC_URL http://down.geeek.info/deps/yuanms2-grpc-v1.0.0-pre2-41-ge0db46e.tar.gz)
+set(GRPC_URL http://down.oneflow.org/yuanms2-grpc-v1.0.0-pre2-41-ge0db46e.tar.gz)
 
 if(WIN32)
     set(GRPC_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/${CMAKE_BUILD_TYPE})

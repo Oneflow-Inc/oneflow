@@ -9,7 +9,7 @@ set(PROTOBUF_PATCH_DIR ${CMAKE_CURRENT_SOURCE_DIR}/cmake/patches/protobuf)
 # set(PROTOBUF_URL https://github.com/mrry/protobuf.git)  # Includes MSVC fix.
 # set(PROTOBUF_TAG 1d2c7b6c7376f396c8c7dd9b6afd2d4f83f3cb05)
 
-set(PROTOBUF_URL http://down.geeek.info/deps/mrry-protobuf-v3.1.0-alpha-1-8-g1d2c7b6.tar.gz)  # Includes MSVC fix.
+set(PROTOBUF_URL http://down.oneflow.org/mrry-protobuf-v3.1.0-alpha-1-8-g1d2c7b6.tar.gz)  # Includes MSVC fix.
 
 if(WIN32)
     set(PROTOBUF_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf/${CMAKE_BUILD_TYPE})

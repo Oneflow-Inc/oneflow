@@ -8,7 +8,7 @@ set(gflags_LIB_DIR ${CMAKE_CURRENT_BINARY_DIR}/gflags/src/gflags/lib)
 # set(gflags_URL https://github.com/gflags/gflags.git)
 # set(gflags_TAG 9314597d4b742ed6f95665241345e590a0f5759b)
 
-set(gflags_URL http://down.geeek.info/deps/gflags-gflags-v2.2.0-6-g9314597.tar.gz)
+set(gflags_URL http://down.oneflow.org/gflags-gflags-v2.2.0-6-g9314597.tar.gz)
 
 if(WIN32)
     set(GFLAGS_BUILD_LIBRARY_DIR ${gflags_LIB_DIR}/${CMAKE_BUILD_TYPE})
