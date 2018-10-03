@@ -20,6 +20,8 @@ class DecodeRandomKernel final : public KernelIf<device_type> {
 
   std::unique_ptr<std::mt19937> gen_;
   std::unique_ptr<std::uniform_int_distribution<uint32_t>> dis_;
+
+  mutable bool is_init_;
 };
 
 }  // namespace oneflow

@@ -5,7 +5,7 @@
 namespace oneflow {
 
 void DecodeRandomCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  ProduceRegst("out", true);
+  ProduceRegst("out", false);
   for (TaskEdge* edge : out_edges()) { BindEdgeWithProducedRegst(edge, "out"); }
 }
 
