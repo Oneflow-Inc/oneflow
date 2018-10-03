@@ -140,6 +140,8 @@ struct CpuKernelUtilIf {
                                 const std::string& model_dir, Blob* blob,
                                 const std::string& bn_in_op, int32_t dim_num,
                                 int64_t num_in_each_dim);
+  static void ExtractInstanceNumFromHeader(DeviceCtx* ctx, int32_t instance_num,
+                                           Blob* instance_num_blob);
 };
 
 // CPU, Floating
@@ -245,6 +247,8 @@ struct GpuKernelUtilIf {
                                 const std::string& model_dir, Blob* blob,
                                 const std::string& bn_in_op, int32_t dim_num,
                                 int64_t num_in_each_dim);
+  static void ExtractInstanceNumFromHeader(DeviceCtx* ctx, int32_t instance_num,
+                                           Blob* instance_num_blob);
 };
 
 // GPU, Floating

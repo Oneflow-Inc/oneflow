@@ -82,6 +82,7 @@ void ConvOp<NDims>::InitFromOpConf() {
   EnrollInputBn("in");
   EnrollOutputBn("out");
   EnrollModelBn("weight");
+  EnrollInstanceNumBn("instance_num");
   EnrollFwBufBn("fw_cudnn_buf");
   EnrollBwBufBn("bw_cudnn_buf");
   EnrollFwBufBn("fw_col_buf");
@@ -128,6 +129,9 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
     weight_shape[dhw_offset + i] = GetPbRfFromCustomizedConf<int32_t>("kernel_size").Get(i);
   }
   GetBlobDesc4BnInOp("weight")->mut_shape() = Shape(weight_shape);
+
+  // instance num
+  // GetBlobDesc4BnInOp("instance_num")->mut_shape() = Shape({1});
 
   if (GetValFromCustomizedConf<bool>("use_bias")) {
     // bias and bias_multiplier

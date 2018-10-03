@@ -138,6 +138,11 @@ void NormalBackwardCompTaskNode::BuildInDiffRegst() {
         CHECK(found_lbis.empty() || found_lbis.find(lbi) != found_lbis.end());
       }
     }
+    for (const std::string& inbn : cur_node->op()->instance_num_bns()) {
+      const LogicalBlobId& lbi = cur_node->op()->BnInOp2Lbi(inbn);
+      in_diff_regst->AddLbi(lbi);
+      cur_node->BindBnWithRegst(inbn, in_diff_regst);
+    }
   });
 }
 

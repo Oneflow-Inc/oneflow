@@ -9,6 +9,7 @@ void FullyConnectedOp::InitFromOpConf() {
   EnrollInputBn("in");
   EnrollOutputBn("out");
   EnrollModelBn("weight");
+  EnrollInstanceNumBn("instance_num");
 
   if (op_conf().fully_connected_conf().use_bias()) {
     EnrollModelBn("bias");
@@ -39,6 +40,9 @@ void FullyConnectedOp::InferBlobDescs(
 
   // weight
   GetBlobDesc4BnInOp("weight")->mut_shape() = Shape({units, in_blob_desc->shape().Count(1)});
+
+  // instance num
+  GetBlobDesc4BnInOp("instance_num")->mut_shape() = Shape({1});
 
   if (conf.use_bias()) {
     // bias
