@@ -23,7 +23,6 @@ void FpnCollectKernel<device_type, T>::ConcatAllRoisAndScores(
   Blob* roi_inputs_blob = BnInOp2Blob("roi_inputs");
   Blob* score_inputs_blob = BnInOp2Blob("score_inputs");
   int64_t N = roi_inputs_blob->shape().At(0);
-  int64_t R = roi_inputs_blob->shape().At(1);
   const int64_t row_num = N;
   const int64_t roi_out_col_num = roi_inputs_blob->shape().Count(1);
   const int64_t score_out_col_num = score_inputs_blob->shape().Count(1);
@@ -36,8 +35,8 @@ void FpnCollectKernel<device_type, T>::ConcatAllRoisAndScores(
 
     const Blob* roi_blob = BnInOp2Blob(roi_bn);
     const Blob* prob_blob = BnInOp2Blob(prob_bn);
-    const int64_t roi_in_col_num = roi_blob->shape().Count(2);
-    const int64_t prob_in_col_num = prob_blob->shape().Count(2);
+    const int64_t roi_in_col_num = roi_blob->shape().Count(1);
+    const int64_t prob_in_col_num = prob_blob->shape().Count(1);
 
     KernelUtil<device_type, T>::CopyColsRegion(
         ctx.device_ctx, row_num, roi_in_col_num, roi_blob->dptr<T>(), 0, roi_in_col_num,
@@ -47,8 +46,9 @@ void FpnCollectKernel<device_type, T>::ConcatAllRoisAndScores(
     KernelUtil<device_type, T>::CopyColsRegion(
         ctx.device_ctx, row_num, prob_in_col_num, prob_blob->dptr<T>(), 0, prob_in_col_num,
         score_inputs_blob->mut_dptr<T>(), prob_col_offset, score_out_col_num);
-    prob_col_offset += roi_in_col_num;
+    prob_col_offset += prob_in_col_num;
   }
+  LOG(INFO) << "HELLO";
 }
 
 template<DeviceType device_type, typename T>
@@ -60,7 +60,7 @@ void FpnCollectKernel<device_type, T>::SortAndSelectTopnRois(
   Blob* out_blob = BnInOp2Blob("out");
   size_t index_size = roi_inputs_blob->shape().At(0) * roi_inputs_blob->shape().At(1);
   auto scored_index = GenScoresIndex(index_size, index_blob->mut_dptr<int32_t>(),
-                                     score_inputs_blob->dptr<T>(), false);
+                                     score_inputs_blob->dptr<T>(), true);
   scored_index.SortByScore([](T lhs_score, T rhs_score) { return lhs_score > rhs_score; });
   for (int64_t i = 0; i < topn; i++) {
     const size_t si = scored_index.GetIndex(i);
@@ -68,6 +68,7 @@ void FpnCollectKernel<device_type, T>::SortAndSelectTopnRois(
       out_blob->mut_dptr<T>()[i * 5 + j] = roi_inputs_blob->dptr<T>()[si * 5 + j];
     }
   }
+  LOG(INFO) << "HELLO2";
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kFpnCollectConf, FpnCollectKernel, FLOATING_DATA_TYPE_SEQ);

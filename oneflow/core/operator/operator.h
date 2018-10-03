@@ -56,8 +56,8 @@ class Operator {
   bool DevIsGpuAndEnableCudnn() const { return device_type() == DeviceType::kGPU && EnableCudnn(); }
   const OperatorConf& op_conf() const { return op_attribute_.op_conf(); }
   virtual const PbMessage& GetCustomizedConf() const { UNIMPLEMENTED(); }
-  
-  int32_t GetRepeatedInputBnNum(const std::string& ibn_prefix);
+
+  int32_t GetRepeatedInputBnNum(const std::string& ibn_prefix) const;
 
   bool HasFieldInCustomizedConf(const std::string& field_name) const {
     return HasFieldInPbMessage(GetCustomizedConf(), field_name);

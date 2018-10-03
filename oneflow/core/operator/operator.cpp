@@ -372,11 +372,10 @@ void Operator::EnrollForwardModelBn(const std::string& fwmbn) {
   CHECK(mut_bn_in_op2lbi()->insert({fwmbn, lbi}).second);
 }
 
-
-int32_t Operator::GetRepeatedInputBnNum(const std::string& ibn_prefix) {
+int32_t Operator::GetRepeatedInputBnNum(const std::string& ibn_prefix) const {
   int32_t count = 0;
-  for(size_t i = 0; i < input_bns().size(); ++i){
-    if(input_bns().Get(i).compare(0,ibn_prefix.length(),ibn_prefix) == 0){count++;}
+  for (size_t i = 0; i < input_bns().size(); ++i) {
+    if (input_bns().Get(i).compare(0, ibn_prefix.length(), ibn_prefix) == 0) { count++; }
   }
   return count;
 }
