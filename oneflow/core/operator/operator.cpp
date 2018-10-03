@@ -93,6 +93,28 @@ const std::string& Operator::SoleBbbn() const {
   CHECK_EQ(bw_buf_bns().size(), 1);
   return bw_buf_bns().Get(0);
 }
+std::string Operator::RepeatedIbn(const std::string& prefix, int32_t idx) const {
+  CHECK_LT(idx, RepeatedIbnSize(prefix));
+  return prefix + "_" + std::to_string(idx);
+}
+int32_t Operator::RepeatedIbnSize(const std::string& prefix) const {
+  int32_t ret = 0;
+  ForEachInputBn([&ret, &prefix](const std::string& ibn) {
+    if (ibn.find(prefix) != std::string::npos) { ret++; }
+  });
+  return ret;
+}
+std::string Operator::RepeatedObn(const std::string& prefix, int32_t idx) const {
+  CHECK_LT(idx, RepeatedObnSize(prefix));
+  return prefix + "_" + std::to_string(idx);
+}
+int32_t Operator::RepeatedObnSize(const std::string& prefix) const {
+  int32_t ret = 0;
+  ForEachOutputBn([&ret, &prefix](const std::string& ibn) {
+    if (ibn.find(prefix) != std::string::npos) { ret++; }
+  });
+  return ret;
+}
 
 void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx,
@@ -341,6 +363,27 @@ void Operator::EnrollOutputBn(const std::string& obn, bool has_diff) {
     CHECK(mut_bn_in_op2lbi()->insert({odbn, lbi}).second);
   }
 }
+
+void Operator::EnrollRepeatedOutputBn(const std::string& ibn_prefix, int32_t num, bool has_diff) {
+  FOR_RANGE(int32_t, i, 0, num) {
+    std::string ibn = ibn_prefix + "_" + std::to_string(i);
+    EnrollOutputBn(ibn, has_diff);
+  }
+}
+
+void Operator::EnrollRepeatedOutputBn(const std::string& ibn_prefix, bool has_diff) {
+  EnrollRepeatedOutputBn(ibn_prefix, GetPbRpfFromCustomizedConf<std::string>(ibn_prefix).size(),
+                         has_diff);
+}
+
+void Operator::EnrollRepeatedOutputBn(const std::string& ibn_prefix, int32_t num) {
+  EnrollRepeatedOutputBn(ibn_prefix, num, true);
+}
+
+void Operator::EnrollRepeatedOutputBn(const std::string& ibn_prefix) {
+  EnrollRepeatedOutputBn(ibn_prefix, true);
+}
+
 void Operator::EnrollModelBn(const std::string& mbn) {
   if (op_conf().trainable() == false) {
     EnrollConstModelBn(mbn);

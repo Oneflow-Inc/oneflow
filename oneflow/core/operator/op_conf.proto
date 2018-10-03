@@ -830,6 +830,15 @@ message HingeLossOpConf {
   optional Norm norm = 7[default = L1];
 }
 
+message FpnDistributeOpConf {
+  required string collected_rois = 1;
+  repeated string rois = 2; // num = rpn_max_level - rpn_min_level + 1
+  required string roi_indices = 3;
+  required int32 rpn_min_level = 4 [default = 2];
+  required int32 rpn_max_level = 5 [default = 5];
+  required int32 roi_canonical_level = 6 [default = 4];
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -906,6 +915,7 @@ message OperatorConf {
     SigmoidCrossEntropyLossOpConf sigmoid_cross_entropy_loss_conf = 1007;
     AffineChannelOpConf affine_channel_conf = 1008;
     UpsampleNearestOpConf upsample_nearest_conf = 1009;
+    FpnDistributeOpConf fpn_distribute_conf = 1013;
   }
 }
 

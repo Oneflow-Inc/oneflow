@@ -93,6 +93,10 @@ class Operator {
   const std::string& SoleDtbn() const;
   const std::string& SoleFbbn() const;
   const std::string& SoleBbbn() const;
+  std::string RepeatedIbn(const std::string&, int32_t) const;
+  int32_t RepeatedIbnSize(const std::string&) const;
+  std::string RepeatedObn(const std::string&, int32_t) const;
+  int32_t RepeatedObnSize(const std::string&) const;
 
 #define DEFINE_BLOB_NAMES_GETTER(getter_name)                                           \
   const PbRpf<std::string>& getter_name() const { return op_attribute_.getter_name(); } \
@@ -212,6 +216,10 @@ class Operator {
   void EnrollRepeatedInputBn(const std::string& ibn_prefix);
   void EnrollOutputBn(const std::string& obn, bool has_diff);
   void EnrollOutputBn(const std::string& obn) { EnrollOutputBn(obn, true); }
+  void EnrollRepeatedOutputBn(const std::string& ibn_prefix, int32_t num, bool has_diff);
+  void EnrollRepeatedOutputBn(const std::string& ibn_prefix, bool has_diff);
+  void EnrollRepeatedOutputBn(const std::string& ibn_prefix, int32_t num);
+  void EnrollRepeatedOutputBn(const std::string& ibn_prefix);
   void EnrollPbInputBn(const std::string& pibn);
   void EnrollPbOutputBn(const std::string& obn);
 
