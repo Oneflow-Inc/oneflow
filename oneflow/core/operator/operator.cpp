@@ -372,6 +372,15 @@ void Operator::EnrollForwardModelBn(const std::string& fwmbn) {
   CHECK(mut_bn_in_op2lbi()->insert({fwmbn, lbi}).second);
 }
 
+
+int32_t Operator::GetRepeatedInputBnNum(const std::string& ibn_prefix) {
+  int32_t count = 0;
+  for(size_t i = 0; i < input_bns().size(); ++i){
+    if(input_bns().Get(i).compare(0,ibn_prefix.length(),ibn_prefix) == 0){count++;}
+  }
+  return count;
+}
+
 void Operator::StrFieldTolower(const std::string& field_name) {
   std::string field_val = GetValFromCustomizedConf<std::string>(field_name);
   std::transform(field_val.begin(), field_val.end(), field_val.begin(), ::tolower);

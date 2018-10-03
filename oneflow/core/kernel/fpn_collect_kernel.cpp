@@ -24,20 +24,20 @@ void FpnCollectKernel<device_type, T>::ConcatAllRoisAndScores(
   Blob* score_inputs_blob = BnInOp2Blob("score_inputs");
   int64_t N = roi_inputs_blob->shape().At(0);
   int64_t R = roi_inputs_blob->shape().At(1);
-  const int64_t row_num = N * R;
+  const int64_t row_num = N;
   const int64_t roi_out_col_num = roi_inputs_blob->shape().Count(1);
   const int64_t score_out_col_num = score_inputs_blob->shape().Count(1);
   int64_t roi_col_offset = 0;
   int64_t prob_col_offset = 0;
 
   for (int32_t i = 0; i < level; i++) {
-    std::string roi_bn = "rpn_rois_fpn" + std::to_string(i);
-    std::string prob_bn = "rpn_roi_probs_fpn" + std::to_string(i);
+    std::string roi_bn = "rpn_rois_fpn_" + std::to_string(i);
+    std::string prob_bn = "rpn_roi_probs_fpn_" + std::to_string(i);
 
     const Blob* roi_blob = BnInOp2Blob(roi_bn);
     const Blob* prob_blob = BnInOp2Blob(prob_bn);
-    const int64_t roi_in_col_num = roi_blob->shape().Count(1);
-    const int64_t prob_in_col_num = prob_blob->shape().Count(1);
+    const int64_t roi_in_col_num = roi_blob->shape().Count(2);
+    const int64_t prob_in_col_num = prob_blob->shape().Count(2);
 
     KernelUtil<device_type, T>::CopyColsRegion(
         ctx.device_ctx, row_num, roi_in_col_num, roi_blob->dptr<T>(), 0, roi_in_col_num,

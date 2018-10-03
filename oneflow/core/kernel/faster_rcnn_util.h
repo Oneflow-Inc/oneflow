@@ -223,7 +223,7 @@ class Indexes {
   }
 
   int32_t GetIndex(size_t n) const {
-    CHECK_LT(n, size_);
+    CHECK_LE(n, size_);
     return index_ptr_[n];
   }
 
