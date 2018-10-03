@@ -56,6 +56,17 @@ else()
 endif()
 message(STATUS "Found Blas Lib: " ${BLAS_LIBRARIES})
 
+if (NOT WIN32 AND BUILD_THIRD_PARTY)
+    message(STATUS "downloading shared libs ....")
+    set(LIBHDFS_URL "http://down.oneflow.org/shared_libs/libhdfs3.so")
+    set(LIBPROTOBUF_URL "http://down.oneflow.org/shared_libs/libprotobuf.so")
+    set(dist_dir "${PROJECT_BINARY_DIR}/bin/shared")
+    file(DOWNLOAD ${LIBHDFS_URL} "${dist_dir}/libhdfs3.so" SHOW_PROGRESS)
+    file(DOWNLOAD ${LIBPROTOBUF_URL} "${dist_dir}/libprotobuf.so" SHOW_PROGRESS)
+else()
+    message(STATUS "should build your own hdfs.dll & protobuf.dll")
+endif()
+
 set(oneflow_third_party_libs
     ${CMAKE_THREAD_LIBS_INIT}
     ${GLOG_STATIC_LIBRARIES}
