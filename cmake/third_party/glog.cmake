@@ -6,7 +6,7 @@ set(GLOG_LIBRARY_DIR ${THIRD_PARTY_DIR}/glog/lib)
 # set(glog_URL https://github.com/google/glog.git)
 # set(glog_TAG da816ea70645e463aa04f9564544939fa327d5a7)
 
-set(gflags_URL http://down.oneflow.org/google-glog-v0.3.4-88-gda816ea.tar.gz)
+set(gflags_URL http://download.oneflow.org/google-glog-v0.3.4-88-gda816ea.tar.gz)
 
 if(WIN32)
     set(GLOG_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/glog/src/glog/${CMAKE_BUILD_TYPE})

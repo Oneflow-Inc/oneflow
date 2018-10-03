@@ -7,7 +7,7 @@ set(ZLIB_LIBRARY_DIR ${THIRD_PARTY_DIR}/zlib/lib)
 set(ZLIB_INSTALL ${CMAKE_CURRENT_BINARY_DIR}/zlib/install)
 # set(ZLIB_TAG 50893291621658f355bc5b4d450a8d06a563053d)
 
-set(ZLIB_URL http://down.oneflow.org/madler-zlib-v1.2.8-0-g5089329.tar.gz)
+set(ZLIB_URL http://download.oneflow.org/madler-zlib-v1.2.8-0-g5089329.tar.gz)
 
 if(WIN32)
     set(ZLIB_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/zlib/install/lib)

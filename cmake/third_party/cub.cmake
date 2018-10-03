@@ -6,7 +6,7 @@ set(CUB_BUILD_INCLUDE ${CMAKE_CURRENT_BINARY_DIR}/cub/src/cub/cub)
 # set(CUB_URL https://github.com/NVlabs/cub.git)
 # set(CUB_TAG c3cceac115c072fb63df1836ff46d8c60d9eb304)
 
-set(CUB_URL http://down.oneflow.org/NVlabs-cub-v1.8.0-0-gc3cceac.tar.gz)
+set(CUB_URL http://download.oneflow.org/NVlabs-cub-v1.8.0-0-gc3cceac.tar.gz)
 
 if(BUILD_THIRD_PARTY)
 

@@ -8,7 +8,7 @@ set(OPENCV_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/src)
 # set(OPENCV_URL https://github.com/opencv/opencv.git)
 # set(OPENCV_TAG 51cef2651e91003e6a6760f496719dbb325cfc61)
 
-set(OPENCV_URL http://down.oneflow.org/opencv-opencv-3.3.1-127-g51cef26.tar.gz)
+set(OPENCV_URL http://download.oneflow.org/opencv-opencv-3.3.1-127-g51cef26.tar.gz)
 
 if(WIN32)
 elseif(APPLE AND ("${CMAKE_GENERATOR}" STREQUAL "Xcode"))

@@ -12,7 +12,7 @@ set(googlemock_SRC_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/google
 # set(googletest_URL https://github.com/google/googletest.git)
 # set(googletest_TAG ec44c6c1675c25b9827aacd08c02433cccde7780)
 
-set(googletest_URL http://down.oneflow.org/google-googletest-release-1.8.0-0-gec44c6c.tar.gz)
+set(googletest_URL http://download.oneflow.org/google-googletest-release-1.8.0-0-gec44c6c.tar.gz)
 
 if(WIN32)
     set(GOOGLETEST_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googlemock/gtest/${CMAKE_BUILD_TYPE})
