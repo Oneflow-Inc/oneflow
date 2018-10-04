@@ -201,6 +201,7 @@ class NormalMdUpdtLogicalNode final : public LogicalNode {
 
 DECLARE_NAIVE_LOGICAL_NODE(MdSaveLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(MdDiffAccLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(PackLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(UnpackLogicalNode);
 
 class ReduceLogicalNode : public LogicalNode {

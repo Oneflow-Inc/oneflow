@@ -15,9 +15,9 @@ class PackCompTaskNode final : public CompTaskNode {
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
-  void BuildExecGphAndRegst() override;
 
  private:
+  void BuildExecGphAndRegst() override;
   void InferProducedDataRegstTimeShape() override;
 };
 

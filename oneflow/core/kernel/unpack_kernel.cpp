@@ -16,7 +16,7 @@ void UnpackKernel<device_type>::ForwardDataContent(
   CHECK_EQ(total_unpack_num, RoundUp(in_byte_size, out_byte_size));
 
   const char* src_dptr = in_blob->dptr<char>() + out_byte_size * out_index;
-  char* dst_dptr = out_blob->dptr<char>();
+  char* dst_dptr = out_blob->mut_dptr<char>();
   size_t actual_copy_byte_size = out_byte_size;
   if (out_index + 1 == total_unpack_num) {
     actual_copy_byte_size = in_byte_size - out_byte_size * out_index;
