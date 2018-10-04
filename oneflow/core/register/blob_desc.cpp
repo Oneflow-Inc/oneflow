@@ -70,12 +70,12 @@ void BlobDesc::set_has_col_num_field(bool val) {
   has_col_num_ = val;
 }
 
-void BlobDesc::set_has_instance_varying_elem_cnt(bool val) {
+void BlobDesc::set_has_instance_varying_elem_cnt_field(bool val) {
   CHECK(!header_is_opaque_);
   has_instance_varying_elem_cnt_ = val;
 }
 
-void BlobDesc::set_has_varying_instance_num(bool val) {
+void BlobDesc::set_has_varying_instance_num_field(bool val) {
   CHECK(!header_is_opaque_);
   has_varying_instance_num_ = val;
 }
@@ -121,8 +121,8 @@ void BlobDesc::HeaderToProto(BlobDescProto* proto) const {
     StructPodDesc header_pod_desc;
     if (has_data_id_field()) { DataIdFieldToProto(field_header, &header_pod_desc); }
     if (has_col_num_field()) { ColNumFieldToProto(field_header, &header_pod_desc); }
-    if (has_instance_varying_elem_cnt()) { InstanceVaryingElemCntToProto(&header_pod_desc); }
-    if (has_varying_instance_num()) { VaryingInstanceNumToProto(&header_pod_desc); }
+    if (has_instance_varying_elem_cnt_field()) { InstanceVaryingElemCntToProto(&header_pod_desc); }
+    if (has_varying_instance_num_field()) { VaryingInstanceNumToProto(&header_pod_desc); }
     header_pod_desc.ToProto(proto->mutable_header()->mutable_header_pod_desc());
   } else {
     opaque_header_.ToProto(proto->mutable_header()->mutable_opaque_header());

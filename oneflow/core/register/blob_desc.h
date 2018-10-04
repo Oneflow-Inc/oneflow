@@ -37,11 +37,11 @@ class BlobDesc {
   bool has_data_id_field() const { return has_data_id_; }
   void set_has_data_id_field(bool val);
 
-  bool has_instance_varying_elem_cnt() const { return has_instance_varying_elem_cnt_; }
-  void set_has_instance_varying_elem_cnt(bool val);
+  bool has_instance_varying_elem_cnt_field() const { return has_instance_varying_elem_cnt_; }
+  void set_has_instance_varying_elem_cnt_field(bool val);
 
-  bool has_varying_instance_num() const { return has_varying_instance_num_; }
-  void set_has_varying_instance_num(bool val);
+  bool has_varying_instance_num_field() const { return has_varying_instance_num_; }
+  void set_has_varying_instance_num_field(bool val);
 
   bool has_col_num_field() const { return has_col_num_; }
   void set_has_col_num_field(bool val);
