@@ -11,6 +11,7 @@ include(grpc)
 include(libjpeg-turbo)
 include(opencv)
 include(eigen)
+# include(libhdfs3)
 if (BUILD_CUDA)
   include(cub)
 endif()
@@ -55,6 +56,17 @@ else()
 endif()
 message(STATUS "Found Blas Lib: " ${BLAS_LIBRARIES})
 
+if (NOT WIN32 AND BUILD_THIRD_PARTY)
+    message(STATUS "downloading shared libs ....")
+    set(LIBHDFS_URL "http://down.oneflow.org/shared_libs/libhdfs3.so")
+    set(LIBPROTOBUF_URL "http://down.oneflow.org/shared_libs/libprotobuf.so")
+    set(dist_dir "${PROJECT_BINARY_DIR}/bin/shared")
+    file(DOWNLOAD ${LIBHDFS_URL} "${dist_dir}/libhdfs3.so" SHOW_PROGRESS)
+    file(DOWNLOAD ${LIBPROTOBUF_URL} "${dist_dir}/libprotobuf.so" SHOW_PROGRESS)
+else()
+    message(STATUS "should build your own hdfs.dll & protobuf.dll")
+endif()
+
 set(oneflow_third_party_libs
     ${CMAKE_THREAD_LIBS_INIT}
     ${GLOG_STATIC_LIBRARIES}
@@ -71,7 +83,7 @@ set(oneflow_third_party_libs
     ${BLAS_LIBRARIES}
     ${LIBJPEG_STATIC_LIBRARIES}
     ${OPENCV_STATIC_LIBRARIES}
-    ${CMAKE_DL_LIBS}
+    #${CMAKE_DL_LIBS}
 )
 message(STATUS "oneflow_third_party_libs: " ${oneflow_third_party_libs})
 
@@ -117,3 +129,21 @@ include_directories(
     ${OPENCV_INCLUDE_DIR}
     ${EIGEN_INCLUDE_DIR}
 )
+
+set(include_directories
+    ${ZLIB_INCLUDE_DIR}
+    ${GFLAGS_INCLUDE_DIR}
+    ${GLOG_INCLUDE_DIR}
+    ${GOOGLETEST_INCLUDE_DIR}
+    ${GOOGLEMOCK_INCLUDE_DIR}
+    ${PROTOBUF_INCLUDE_DIR}
+    ${GRPC_INCLUDE_DIR}
+    ${CUDNN_INCLUDE_DIRS}
+    ${CUB_INCLUDE_DIR}
+    ${LIBJPEG_INCLUDE_DIR}
+    ${OPENCV_INCLUDE_DIR}
+    ${EIGEN_INCLUDE_DIR}
+)
+
+message(STATUS "oneflow_include_dir: " ${include_directories})
+

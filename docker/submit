@@ -1,0 +1,114 @@
+#! /usr/bin/env python
+# coding: utf-8
+
+import os
+import pdb
+
+from string import Template
+from distutils.spawn import find_executable
+
+machine_tpl=Template("""
+machine{
+    addr: "$addr"
+    port: $port
+    port_map: $port_map
+    epoll_port: $epoll_port
+    epoll_port_map: $epoll_port_map
+    name: "$name"
+}
+""")
+
+resource_tpl=Template("""
+$machine_list
+
+gpu_device_num: $gpu_count
+""")
+
+# default work path
+WORK_PATH=os.getenv('WORK_PATH') or '/userhome/'
+os.chdir(WORK_PATH)
+
+# use if give CONF_PATH env, else use current dir.
+CONF_PATH=os.getenv('CONF_PATH') or '.'
+
+# use if give LOG_PATH env, else use 'log' under current dir.
+LOG_DIR=os.getenv('LOG_DIR') or './log'
+
+def render(tpl, value):
+    return tpl.substitute(value)
+
+
+def check():
+    file_list=['net.prototxt', 'job.prototxt', 'placement.prototxt', 'other.prototxt']
+    for f in file_list:
+        if not os.path.isfile(os.path.join(CONF_PATH, f)):
+            raise Exception(os.path.join(CONF_PATH, f) + ' not exist.')
+
+    if not find_executable('oneflow'):
+        raise Exception('oneflow executable not exist.')
+    
+
+def run():
+    check()
+
+    cmdTpl=Template('$excutable -job_conf=$job_conf -this_machine_name=$this_machine_name -log_dir=$log_dir-$this_machine_name & tail --retry -f $log_dir-$this_machine_name/oneflow.INFO')
+    cmdValue={
+        "excutable": find_executable('oneflow'),
+        "job_conf": os.path.join(os.path.join(CONF_PATH, 'job.prototxt')),
+        "this_machine_name": os.getenv('PAI_TASK_ROLE_INDEX'),
+        "log_dir": LOG_DIR
+    }
+
+    cmd=render(cmdTpl, cmdValue)
+    print(cmd)
+
+    os.system(cmd)
+
+
+def generate():
+    # get env
+    role_name=os.getenv('PAI_TASK_ROLE_NAME')
+    host_list=os.getenv('PAI_TASK_ROLE_' + role_name + '_HOST_LIST').split(',')
+    gpu_count=int(os.getenv('PAI_TASK_GPU_NUM')) * len(host_list)
+
+    machine_list=[]
+    
+    open_port=os.getenv('PAI_PORT_MAP_10001')
+    if len(host_list)==1:
+        machine_list.append(
+            render(machine_tpl, {
+                "addr": "127.0.0.1",
+                "port":10001, 
+                "port_map": 10001,
+                "name": 0
+            })
+        )
+    else:
+        for x in range(0, 2):
+            # PAI_PORT_LIST_oneflow_runner_x2_1=10.11.2.45,10077,10044,10097
+            machine_info = os.getenv('PAI_PORT_LIST_' + role_name + '_' + str(x)).split(',')
+            machine_list.append(
+                render(machine_tpl, {
+                    "addr": machine_info[0],
+                    "port": 10001,
+                    "port_map": machine_info[1],
+                    "epoll_port": 10002,
+                    "epoll_port_map": machine_info[2]
+                    "name": x
+                })
+            )
+    
+    resource_string=render(resource_tpl, {
+        "machine_list": '\n'.join(machine_list),
+        "gpu_count": gpu_count
+    })
+    
+    with open(os.path.join(CONF_PATH, 'resource.prototxt'), 'w') as f:
+        f.write(resource_string)
+        f.close()
+    
+
+if __name__ == "__main__":
+    generate()
+    run()
+

@@ -7,8 +7,8 @@
 #include "oneflow/core/persistence/hadoop/hdfs.h"
 
 extern "C" {
-struct hdfs_internal;
-typedef hdfs_internal* hdfsFS;
+struct HdfsFileSystemInternalWrapper;
+typedef HdfsFileSystemInternalWrapper* hdfsFS;
 }
 
 namespace oneflow {

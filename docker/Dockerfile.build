@@ -1,0 +1,24 @@
+FROM nvidia/cuda:9.1-cudnn7-devel-centos7
+LABEL Author="xxmyjk <xxmyj.k@gmail.com>"
+
+USER root
+
+RUN yum install -y epel-release
+RUN yum update -y && yum install -y \
+    cmake3 \
+    make \
+    libibverbs \
+    rdma-core-devel \
+    libgsasl \
+    nasm \
+    git
+
+RUN ln -s /usr/bin/cmake3 /usr/bin/cmake
+ADD ./bin/clang-format /usr/local/bin/
+
+RUN yum clean -y all && rm -rf /var/cache/yum
+
+ENV LD_LIBRARY_PATH="/mnt/lib:/usr/lib64:${LD_LIBRARY_PATH}"
+ENV PATH="${LD_LIBRARY_PATH}:${PATH}"
+
+WORKDIR /opt
