@@ -3,6 +3,13 @@
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/persistence/hadoop/hadoop_file_system.h"
 
+#ifdef PLATFORM_POSIX
+
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/types.h>
+#include <ifaddrs.h>
+
 namespace oneflow {
 
 int64_t JobDesc::piece_num_of_experiment_phase() const {
@@ -108,6 +115,7 @@ JobDesc::JobDesc(const std::string& job_conf_filepath) {
     ParseProtoFromTextFile(job_conf.other(), job_conf_.mutable_other());
   }
   SanityCheck();
+  ParseThisMachineId();
   Init();
 }
 
@@ -148,8 +156,29 @@ void JobDesc::Init() {
 void JobDesc::SanityCheck() {
   int64_t machine_num = job_conf_.resource().machine_size();
   FOR_RANGE(int64_t, i, 0, machine_num) { CHECK_EQ(job_conf_.resource().machine(i).id(), i); }
-  CHECK_GE(FLAGS_this_machine_id, 0);
-  CHECK_LT(FLAGS_this_machine_id, machine_num);
+}
+
+void JobDesc::ParseThisMachineId() {
+  auto resource_conf = job_conf_.resource();
+  int64_t machine_num = resource_conf.machine_size();
+  struct ifaddrs* ifaddr = NULL;
+  char addr[INET_ADDRSTRLEN];
+  memset(addr, '\0', sizeof(addr));
+  CHECK_EQ(getifaddrs(&ifaddr), 0);
+  while (ifaddr != NULL) {
+    if (ifaddr->ifa_addr->sa_family == AF_INET) {
+      PCHECK(inet_ntop(AF_INET,
+                       &(reinterpret_cast<struct sockaddr_in*>(ifaddr->ifa_addr)->sin_addr), addr,
+                       INET_ADDRSTRLEN));
+      FOR_RANGE(int64_t, i, 0, machine_num) {
+        if (resource_conf.machine(i).addr() == std::string(addr)) { this_machine_id_ = i; }
+      }
+    }
+    ifaddr = ifaddr->ifa_next;
+  }
+  freeifaddrs(ifaddr);
+  CHECK_GE(this_machine_id_, 0);
+  CHECK_LT(this_machine_id_, machine_num);
 }
 
 void JobDesc::SplitDecodeOps() {
@@ -247,3 +276,5 @@ void JobDesc::AddRecordLoadOps() {
 }
 
 }  // namespace oneflow
+
+#endif  // PLATFORM_POSIX
