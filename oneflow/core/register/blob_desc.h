@@ -35,7 +35,9 @@ class BlobDesc {
   bool header_is_opaque() const { return header_is_opaque_; };
 
   bool has_data_id_field() const { return has_data_id_; }
+  bool has_instance_available_elen_cnt() const { return has_instance_available_elen_cnt_; }
   void set_has_data_id_field(bool val);
+  void set_has_instance_available_elen_cnt(bool val);
 
   bool has_instance_varying_elem_cnt() const { TODO(); }
   void set_has_instance_varying_elem_cnt(bool val);
@@ -68,6 +70,7 @@ class BlobDesc {
 
   bool has_data_id_;
   bool has_col_num_;
+  bool has_instance_available_elen_cnt_;
   int64_t max_col_num_;
   int32_t blob_mem_id_;
 
