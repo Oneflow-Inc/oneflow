@@ -61,9 +61,9 @@ void FullyConnectedKernel<device_type, T>::BackwardDataContent(
     // extract instance num from header
     // xfjiang: test instance num
     int32_t instance_num = 600;
-    Blob* instance_num_blob = BnInOp2Blob("instance_num");
-    KernelUtil<device_type, T>::ExtractInstanceNumFromHeader(ctx.device_ctx, instance_num,
-                                                             instance_num_blob);
+    Blob* total_instance_num_diff_blob = BnInOp2Blob("total_instance_num_diff");
+    KernelUtil<device_type, T>::ExtractInstanceNumFromHeader(
+        ctx.device_ctx, instance_num, total_instance_num_diff_blob->mut_dptr<T>());
     LOG(INFO) << "Hello...";
   }
 }

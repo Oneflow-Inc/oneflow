@@ -9,12 +9,11 @@ void FullyConnectedOp::InitFromOpConf() {
   EnrollInputBn("in");
   EnrollOutputBn("out");
   EnrollModelBn("weight");
-  EnrollInstanceNumBn("instance_num");
-
   if (op_conf().fully_connected_conf().use_bias()) {
     EnrollModelBn("bias");
     EnrollConstBufBn("bias_multiplier");
   }
+  EnrollModelBn("total_instance_num");
 }
 
 const PbMessage& FullyConnectedOp::GetCustomizedConf() const {
@@ -41,9 +40,6 @@ void FullyConnectedOp::InferBlobDescs(
   // weight
   GetBlobDesc4BnInOp("weight")->mut_shape() = Shape({units, in_blob_desc->shape().Count(1)});
 
-  // instance num
-  GetBlobDesc4BnInOp("instance_num")->mut_shape() = Shape({1});
-
   if (conf.use_bias()) {
     // bias
     GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({1, units});
@@ -51,6 +47,9 @@ void FullyConnectedOp::InferBlobDescs(
     // bias_multiplier
     GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() = Shape({in_blob_desc->shape().At(0), 1});
   }
+
+  // instance num
+  GetBlobDesc4BnInOp("total_instance_num")->mut_shape() = Shape({1});
 }
 
 REGISTER_OP(OperatorConf::kFullyConnectedConf, FullyConnectedOp);

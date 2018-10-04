@@ -270,10 +270,9 @@ KU_IF_METHOD InitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num
   PersistentInStream in_stream(SnapshotFS(), file_path, begin_pos);
   in_stream.Read(blob->mut_dptr<char>(), blob_size);
 }
-KU_IF_METHOD ExtractInstanceNumFromHeader(DeviceCtx* ctx, int32_t instance_num,
-                                          Blob* instance_num_blob) {
-  CHECK_EQ(instance_num_blob->shape().elem_cnt(), 1);
-  *instance_num_blob->mut_dptr<T>() = static_cast<T>(instance_num);
+KU_IF_METHOD ExtractInstanceNumFromHeader(DeviceCtx* ctx, const int32_t instance_num,
+                                          T* instance_num_ptr) {
+  *instance_num_ptr = static_cast<T>(instance_num);
 }
 
 #define KU_FLOATING_METHOD \

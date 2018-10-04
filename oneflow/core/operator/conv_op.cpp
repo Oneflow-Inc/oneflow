@@ -82,7 +82,6 @@ void ConvOp<NDims>::InitFromOpConf() {
   EnrollInputBn("in");
   EnrollOutputBn("out");
   EnrollModelBn("weight");
-  EnrollInstanceNumBn("instance_num");
   EnrollFwBufBn("fw_cudnn_buf");
   EnrollBwBufBn("bw_cudnn_buf");
   EnrollFwBufBn("fw_col_buf");
@@ -91,6 +90,7 @@ void ConvOp<NDims>::InitFromOpConf() {
     EnrollModelBn("bias");
     EnrollConstBufBn("bias_multiplier");
   }
+  EnrollModelBn("total_instance_num");
 }
 
 template<int32_t NDims>
@@ -130,9 +130,6 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   }
   GetBlobDesc4BnInOp("weight")->mut_shape() = Shape(weight_shape);
 
-  // instance num
-  // GetBlobDesc4BnInOp("instance_num")->mut_shape() = Shape({1});
-
   if (GetValFromCustomizedConf<bool>("use_bias")) {
     // bias and bias_multiplier
     GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({filters, 1});
@@ -142,6 +139,9 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
       GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() = Shape(bias_mul_shape);
     }
   }
+
+  // instance num
+  GetBlobDesc4BnInOp("total_instance_num")->mut_shape() = Shape({1});
 
   ConvOpCtx* conv_op_ctx = new ConvOpCtx();
   EnrollOpCtx(conv_op_ctx);

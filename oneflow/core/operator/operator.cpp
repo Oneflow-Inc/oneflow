@@ -218,12 +218,6 @@ LogicalBlobId Operator::cmbn2lbi(const std::string& const_model_bn) const {
   ret.set_blob_name(const_model_bn);
   return ret;
 }
-LogicalBlobId Operator::inbn2lbi(const std::string& instance_num_bn) const {
-  LogicalBlobId ret;
-  ret.set_op_name(op_name());
-  ret.set_blob_name(instance_num_bn);
-  return ret;
-}
 LogicalBlobId Operator::cbbn2lbi(const std::string& const_buf_bn) const {
   LogicalBlobId ret;
   ret.set_op_name(op_name());
@@ -319,10 +313,6 @@ void Operator::EnrollModelDiffBn(const std::string& mdbn) {
 void Operator::EnrollConstModelBn(const std::string& cmbn) {
   *(mut_const_model_bns()->Add()) = cmbn;
   CHECK(mut_bn_in_op2lbi()->insert({cmbn, cmbn2lbi(cmbn)}).second);
-}
-void Operator::EnrollInstanceNumBn(const std::string& inbn) {
-  *(mut_instance_num_bns()->Add()) = inbn;
-  CHECK(mut_bn_in_op2lbi()->insert({inbn, inbn2lbi(inbn)}).second);
 }
 void Operator::EnrollConstBufBn(const std::string& cbbn) {
   *(mut_const_buf_bns()->Add()) = cbbn;
