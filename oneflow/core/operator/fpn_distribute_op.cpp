@@ -5,6 +5,7 @@ namespace oneflow {
 void FpnDistributeOp::InitFromOpConf() {
   CHECK(op_conf().has_fpn_distribute_conf());
   EnrollInputBn("collected_rois", false);
+  EnrollDataTmpBn("target_levels");
   EnrollRepeatedOutputBn("rois", false);
   EnrollOutputBn("roi_indices", false);
 }
@@ -25,12 +26,19 @@ void FpnDistributeOp::InferBlobDescs(
     // TODO: change later when dynamic features are in place
     *GetBlobDesc4BnInOp(RepeatedObn("rois", idx)) = *collected_rois_blob_desc;
   }
-  CHECK_EQ(RepeatedObnSize("rois"), op_conf().fpn_distribute_conf().rpn_max_level()
-                                        - op_conf().fpn_distribute_conf().rpn_min_level() + 1);
+  CHECK_EQ(RepeatedObnSize("rois"), op_conf().fpn_distribute_conf().roi_max_level()
+                                        - op_conf().fpn_distribute_conf().roi_min_level() + 1);
+  CHECK_GE(op_conf().fpn_distribute_conf().roi_max_level(),
+           op_conf().fpn_distribute_conf().roi_canonical_level());
+  CHECK_LE(op_conf().fpn_distribute_conf().roi_min_level(),
+           op_conf().fpn_distribute_conf().roi_canonical_level());
   // roi_indices: (post_nms_topn)
   BlobDesc* roi_indices_blob_desc = GetBlobDesc4BnInOp("roi_indices");
   roi_indices_blob_desc->mut_shape() = Shape({collected_rois_blob_desc->shape().At(0)});
   roi_indices_blob_desc->set_data_type(DataType::kInt32);
+  BlobDesc* target_levels_blob_desc = GetBlobDesc4BnInOp("target_levels");
+  target_levels_blob_desc->mut_shape() = Shape({collected_rois_blob_desc->shape().At(0)});
+  target_levels_blob_desc->set_data_type(DataType::kInt32);
 }
 
 REGISTER_OP(OperatorConf::kFpnDistributeConf, FpnDistributeOp);

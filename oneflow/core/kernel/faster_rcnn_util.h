@@ -99,6 +99,22 @@ class BBox final : public Serial<BBox<T>, 4> {
 };
 
 template<typename T>
+class BBox2 final : public Serial<BBox2<T>, 5> {
+ public:
+  using BBoxArray = typename Serial<BBox2<T>, 5>::ElemArray;
+
+  inline int32_t batch_idx() const { return static_cast<int32_t>(this->elem()[0]); }
+  inline T x1() const { return this->elem()[1]; }
+  inline T y1() const { return this->elem()[2]; }
+  inline T x2() const { return this->elem()[3]; }
+  inline T y2() const { return this->elem()[4]; }
+
+  inline T width() const { return x2() - x1() + OneVal<T>::value; }
+  inline T height() const { return y2() - y1() + OneVal<T>::value; }
+  inline T Area() const { return width() * height(); }
+};
+
+template<typename T>
 class BBoxDelta final : public Serial<BBoxDelta<T>, 4> {
  public:
   inline T dx() const { return this->elem()[0]; }

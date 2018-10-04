@@ -834,9 +834,10 @@ message FpnDistributeOpConf {
   required string collected_rois = 1;
   repeated string rois = 2; // num = rpn_max_level - rpn_min_level + 1
   required string roi_indices = 3;
-  required int32 rpn_min_level = 4 [default = 2];
-  required int32 rpn_max_level = 5 [default = 5];
+  required int32 roi_min_level = 4 [default = 2];
+  required int32 roi_max_level = 5 [default = 5];
   required int32 roi_canonical_level = 6 [default = 4];
+  required int32 roi_canonical_scale = 7 [default = 224];
 }
 
 message OperatorConf {
