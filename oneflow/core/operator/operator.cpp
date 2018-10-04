@@ -393,8 +393,9 @@ int32_t Operator::GetRepeatedInputBnNum(const std::string& ibn_prefix) const {
   return count;
 }
 
-std::string& GetRepeatedInputBn(const std::string& ibn_prefix, size_t idx) const {
-  return std::string roi_bn = ibn_prefix + "_" + std::to_string(i);
+std::string Operator::GetRepeatedInputBn(const std::string& ibn_prefix, size_t idx) const {
+  std::string ibn = ibn_prefix + "_" + std::to_string(idx);
+  return ibn;
 }
 
 void Operator::ForEachInputBn(const std::function<void(const std::string&)>& Handler) const {

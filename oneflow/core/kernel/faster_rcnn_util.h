@@ -207,8 +207,9 @@ class Indexes {
   }
 
   void NthElement(size_t n, const std::function<bool(int32_t, int32_t)>& Compare) {
-    std::nth_element(index_ptr_, index_ptr_ + n, index_ptr_ + size_,
-              [&](int32_t lhs_index, int32_t rhs_index) { return Compare(lhs_index, rhs_index); });
+    std::nth_element(
+        index_ptr_, index_ptr_ + n, index_ptr_ + size_,
+        [&](int32_t lhs_index, int32_t rhs_index) { return Compare(lhs_index, rhs_index); });
   }
 
   void Shuffle(size_t begin, size_t end) {
@@ -342,13 +343,13 @@ class ScoreIndex : public IndexType {
       return Compare(score(lhs_index), score(rhs_index));
     });
   }
-  
-  void NthElementByScore(size_t n ,const std::function<bool(T, T)>& Compare) {
+
+  void NthElementByScore(size_t n, const std::function<bool(T, T)>& Compare) {
     this->NthElement(n, [&](int32_t lhs_index, int32_t rhs_index) {
       return Compare(score(lhs_index), score(rhs_index));
     });
   }
-  
+
   size_t FindByScore(const std::function<bool(T)>& Condition) {
     return this->Find([&](int32_t index) { return Condition(score(index)); });
   }
