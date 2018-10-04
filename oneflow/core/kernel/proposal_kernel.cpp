@@ -74,7 +74,9 @@ template<typename T>
 void ProposalKernel<T>::CopyRoI(const int64_t im_index, const ScoredBoxesIndex<T>& boxes,
                                 Blob* rois_blob) const {
   FOR_RANGE(int32_t, i, 0, boxes.size()) {
-    BBox<T>* roi_bbox = BBox<T>::MutCast(rois_blob->mut_dptr<T>(im_index, i));
+    T* out_rois_ptr = rois_blob->mut_dptr<T>(im_index, i);
+    out_rois_ptr[0] = im_index;
+    BBox<T>* roi_bbox = BBox<T>::MutCast(out_rois_ptr + 1);
     const BBox<T>* proposal_bbox = boxes.GetBBox(i);
     roi_bbox->set_x1(proposal_bbox->x1());
     roi_bbox->set_y1(proposal_bbox->y1());

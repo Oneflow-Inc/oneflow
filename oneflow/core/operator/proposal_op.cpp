@@ -62,9 +62,9 @@ void ProposalOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   BlobDesc* post_nms_slice_blob_desc = GetBlobDesc4BnInOp("post_nms_slice");
   post_nms_slice_blob_desc->mut_shape() = Shape({post_nms_top_n});
   post_nms_slice_blob_desc->set_data_type(DataType::kInt32);
-  // out: rois (n, r, 4)
+  // out: rois (n, r, 5)
   BlobDesc* rois_blob_desc = GetBlobDesc4BnInOp("rois");
-  rois_blob_desc->mut_shape() = Shape({num_images, post_nms_top_n, 4});
+  rois_blob_desc->mut_shape() = Shape({num_images, post_nms_top_n, 5});
   rois_blob_desc->set_data_type(bbox_pred_blob_desc->data_type());
   rois_blob_desc->set_has_data_id_field(bbox_pred_blob_desc->has_data_id_field());
   // out: roi_probs (n, r)
