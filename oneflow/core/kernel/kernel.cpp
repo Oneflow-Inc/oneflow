@@ -108,19 +108,19 @@ void KernelIf<device_type>::ForwardColNum(
 }
 
 template<DeviceType device_type>
-void KernelIf<device_type>::ForwardInstanceAvailableElemCnt(
+void KernelIf<device_type>::ForwardInstanceVaryingElemCnt(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   TODO();
 }
 
 template<DeviceType device_type>
-void KernelIf<device_type>::ForwardAvailableInstanceNum(
+void KernelIf<device_type>::ForwardVaryingInstanceNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   TODO();
 }
 
 template<DeviceType device_type>
-void KernelIf<device_type>::BackwardAvailableInstanceNum(
+void KernelIf<device_type>::BackwardVaryingInstanceNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   TODO();
 }
