@@ -665,7 +665,6 @@ NormalMdUpdtLogicalNode* LogicalGraph::BuildNormalMdUpdtAndMdSaveStruct(
 void LogicalGraph::ConnectFwToBw() {
   ForEachLogicalNode<BackwardLogicalNode>([this](BackwardLogicalNode* bw_node) {
     if (bw_node->fw_node() == nullptr) { return; }
-    if (bw_node->TypeName() == "RepeatBackward") { return; }
     Connect<LogicalNode>(bw_node->fw_node(), NewEdge(), bw_node);
   });
 }
