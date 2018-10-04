@@ -3,10 +3,12 @@
 
 namespace oneflow {
 
+RepeatBackwardLogicalNode::RepeatBackwardLogicalNode() { area_id_ = NewAreaId(); }
+
 CompTaskNode* RepeatBackwardLogicalNode::NewCompTaskNode() const {
   return new RepeatBackwardCompTaskNode();
 }
 
-int64_t RepeatBackwardLogicalNode::GetAreaId() const { return AreaType::kDataBackwardArea; };
+int64_t RepeatBackwardLogicalNode::GetAreaId() const { return area_id_; };
 
 }  // namespace oneflow

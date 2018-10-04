@@ -4,6 +4,8 @@
 
 namespace oneflow {
 
+RepeatForwardLogicalNode::RepeatForwardLogicalNode() { area_id_ = NewAreaId(); }
+
 BackwardLogicalNode* RepeatForwardLogicalNode::NewCorrectBackwardNode() {
   return new RepeatBackwardLogicalNode();
 }
@@ -12,6 +14,6 @@ CompTaskNode* RepeatForwardLogicalNode::NewCompTaskNode() const {
   return new RepeatForwardCompTaskNode();
 }
 
-int64_t RepeatForwardLogicalNode::GetAreaId() const { return AreaType::kDataForwardArea; };
+int64_t RepeatForwardLogicalNode::GetAreaId() const { return area_id_; };
 
 }  // namespace oneflow

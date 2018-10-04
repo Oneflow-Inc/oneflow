@@ -8,13 +8,15 @@ namespace oneflow {
 class RepeatBackwardLogicalNode final : public BackwardLogicalNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RepeatBackwardLogicalNode);
-  RepeatBackwardLogicalNode() = default;
+  RepeatBackwardLogicalNode();
   ~RepeatBackwardLogicalNode() override = default;
 
  private:
   std::string TypeName() const override { return "RepeatBackward"; };
   CompTaskNode* NewCompTaskNode() const override;
   int64_t GetAreaId() const override;
+
+  int64_t area_id_;
 };
 
 }  // namespace oneflow
