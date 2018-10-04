@@ -8,14 +8,19 @@ void RepeatForwardCompActor::VirtualCompActorInit(const TaskProto& proto) {
   CHECK(kernel_conf.op_attribute().op_conf().has_repeat_conf());
   repeat_num_ = kernel_conf.op_attribute().op_conf().repeat_conf().repeat_num();
   OF_SET_MSG_HANDLER(&RepeatForwardCompActor::HandlerNormal);
+
+  // TODO: check produced_regst mem sharing conf and set only_launch_at_first_time_
 }
 
 void RepeatForwardCompActor::Act() {
   // reset repeat_count if need
   if (repeat_count_ == repeat_num_) { repeat_count_ = 0; }
 
-  KernelCtx kernel_ctx = GenDefaultKernelCtx();
-  AsyncLaunchKernel(kernel_ctx);
+  if ((!only_launch_at_first_time_) || repeat_count_ == 0) {
+    KernelCtx kernel_ctx = GenDefaultKernelCtx();
+    AsyncLaunchKernel(kernel_ctx);
+  }
+
   repeat_count_ += 1;
 }
 

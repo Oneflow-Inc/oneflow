@@ -19,6 +19,7 @@ class RepeatForwardCompActor final : public CompActor {
 
   int64_t repeat_num_ = -1;
   int64_t repeat_count_ = 0;
+  bool only_launch_at_first_time_ = true;
 };
 
 }  // namespace oneflow
