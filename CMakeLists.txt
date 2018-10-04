@@ -5,6 +5,8 @@ option(BUILD_THIRD_PARTY "Build third party or oneflow" OFF)
 option(BUILD_RDMA "" ON)
 option(BUILD_CUDA "" ON)
 option(BUILD_NCCL "" ON)
+option(BUILD_HDFS "" OFF)
+option(DOWNLOAD_LIBS "" OFF)
 option(RELEASE_VERSION "" OFF)
 
 # Project
