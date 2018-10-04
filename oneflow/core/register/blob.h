@@ -35,11 +35,23 @@ class Blob final {
   const int32_t* col_num() const { return col_num_ptr_; }
   int32_t* mut_col_num() { return col_num_ptr_; }
 
-  int32_t instance_available_elen_cnt(int32_t no) const { TODO(); }
-  void set_instance_available_elen_cnt(int32_t no, int32_t val) { TODO(); }
+  int32_t instance_varying_elem_cnt(int32_t no) const { TODO(); }
+  void set_instance_varying_elem_cnt(int32_t no, int32_t val) { TODO(); }
 
-  const int32_t* instance_available_elen_cnt() const { TODO(); }
-  int32_t* mut_instance_available_elen_cnt() { TODO(); }
+  const int32_t* instance_varying_elem_cnt() const { TODO(); }
+  int32_t* mut_instance_varying_elem_cnt() { TODO(); }
+
+  int32_t varying_instance_num(int32_t no) const { TODO(); }
+  void set_varying_instance_num(int32_t no, int32_t val) { TODO(); }
+
+  const int32_t* varying_instance_num() const { TODO(); }
+  int32_t* mut_varying_instance_num() { TODO(); }
+
+  int32_t instance_available_elem_cnt(int32_t no) const { TODO(); }
+  const int32_t* instance_available_elem_cnt() const { TODO(); }
+
+  int32_t available_instance_num(int32_t no) const { TODO(); }
+  const int32_t* available_instance_num() const { TODO(); }
 
   const void* header_ptr() const { return header_ptr_; }
   void* mut_header_ptr() { return header_ptr_; }

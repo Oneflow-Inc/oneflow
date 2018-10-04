@@ -15,7 +15,15 @@ BlobDesc::BlobDesc(const Shape& shape, DataType data_type, bool has_data_id, boo
       max_col_num_(max_col_num),
       blob_mem_id_(-1),
       body_field_(shape, data_type) {}
-BlobDesc::BlobDesc(const BlobDescProto& proto) : body_field_(proto.body()) {
+
+BlobDesc::BlobDesc(const BlobDesc& BlobDesc) {
+  BlobDescProto proto;
+  BlobDesc.ToProto(&proto);
+  InitFromProto(proto);
+}
+
+void BlobDesc::InitFromProto(const BlobDescProto& proto) {
+  body_field_.InitFromProto(proto.body());
   max_col_num_ = proto.header().max_col_num();
   blob_mem_id_ = proto.header().blob_mem_id();
   if (proto.header().has_opaque_header()) {
@@ -59,9 +67,9 @@ void BlobDesc::set_has_col_num_field(bool val) {
   has_col_num_ = val;
 }
 
-void BlobDesc::set_has_instance_available_elen_cnt(bool val) {
+void BlobDesc::set_has_instance_varying_elem_cnt(bool val) {
   CHECK(!header_is_opaque_);
-  has_instance_available_elen_cnt_ = val;
+  TODO();
 }
 
 Shape& BlobDesc::mut_instance_inner_shape() {
