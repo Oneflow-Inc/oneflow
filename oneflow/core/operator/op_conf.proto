@@ -837,7 +837,7 @@ message FpnDistributeOpConf {
   required int32 roi_min_level = 4 [default = 2];
   required int32 roi_max_level = 5 [default = 5];
   required int32 roi_canonical_level = 6 [default = 4];
-  required int32 roi_canonical_scale = 7 [default = 224];
+  required float roi_canonical_scale = 7 [default = 224];
 }
 
 message OperatorConf {
