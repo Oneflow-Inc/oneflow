@@ -9,7 +9,10 @@ void RepeatForwardCompActor::VirtualCompActorInit(const TaskProto& proto) {
   repeat_num_ = kernel_conf.op_attribute().op_conf().repeat_conf().repeat_num();
   OF_SET_MSG_HANDLER(&RepeatForwardCompActor::HandlerNormal);
 
-  // TODO: check produced_regst mem sharing conf and set only_launch_at_first_time_
+  const RegstDescProto& out_regst_desc = proto.produced_regst_desc().at("out");
+  only_launch_at_first_time_ =
+      !out_regst_desc.enable_mem_sharing() && out_regst_desc.register_num() == 1;
+  CHECK(only_launch_at_first_time_);
 }
 
 void RepeatForwardCompActor::Act() {
