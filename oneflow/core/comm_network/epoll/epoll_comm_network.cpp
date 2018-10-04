@@ -110,7 +110,7 @@ void EpollCommNet::InitSockets() {
     if (bind_result == 0) {
       machine_id2sockfd_[this_machine_id] = listen_sockfd;
       PCHECK(listen(listen_sockfd, total_machine_num) == 0);
-      PushPort(this_machine_id, this_machine.epoll_port_map());
+      PushPort(this_machine_id, this_machine.epoll_external_port());
     } else {
       PCHECK(errno == EACCES || errno == EADDRINUSE);
     }
@@ -141,8 +141,9 @@ void EpollCommNet::InitSockets() {
     }
     uint16_t peer_port;
     const Machine& peer_machine = Global<JobDesc>::Get()->resource().machine(peer_id);
-    if (peer_machine.epoll_port_map() && peer_machine.epoll_port_map() == PullPort(peer_id)) {
-      peer_port = peer_machine.epoll_port_map();
+    if (peer_machine.epoll_external_port()
+        && peer_machine.epoll_external_port() == PullPort(peer_id)) {
+      peer_port = peer_machine.epoll_external_port();
     } else {
       peer_port = PullPort(peer_id);
     }
