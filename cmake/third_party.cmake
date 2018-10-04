@@ -14,6 +14,9 @@ include(eigen)
 if (BUILD_CUDA)
   include(cub)
 endif()
+if (BUILD_HDFS)
+  include(libhdfs3)
+endif()
 
 if (BUILD_CUDA)
   set(CUDA_SEPARABLE_COMPILATION ON)
@@ -54,6 +57,17 @@ else()
   set(BLAS_LIBRARIES ${MKL_LIB_PATH}/mkl_core_dll.lib ${MKL_LIB_PATH}/mkl_sequential_dll.lib ${MKL_LIB_PATH}/mkl_intel_lp64_dll.lib)
 endif()
 message(STATUS "Found Blas Lib: " ${BLAS_LIBRARIES})
+
+if (NOT WIN32 AND DOWNLOAD_LIBS)
+    message(STATUS "downloading shared libs ....")
+    set(LIBHDFS_URL "http://download.oneflow.org/shared_libs/libhdfs3.so")
+    set(LIBPROTOBUF_URL "http://download.oneflow.org/shared_libs/libprotobuf.so")
+    set(dist_dir "${PROJECT_BINARY_DIR}/bin/shared")
+    file(DOWNLOAD ${LIBHDFS_URL} "${dist_dir}/libhdfs3.so" SHOW_PROGRESS)
+    file(DOWNLOAD ${LIBPROTOBUF_URL} "${dist_dir}/libprotobuf.so" SHOW_PROGRESS)
+else()
+    message(STATUS "should build your own hdfs.dll & protobuf.dll")
+endif()
 
 set(oneflow_third_party_libs
     ${CMAKE_THREAD_LIBS_INIT}

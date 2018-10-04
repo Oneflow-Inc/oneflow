@@ -3,8 +3,10 @@ include (ExternalProject)
 set(LIBJPEG_INCLUDE_DIR ${THIRD_PARTY_DIR}/libjpeg-turbo/include)
 set(LIBJPEG_LIBRARY_DIR ${THIRD_PARTY_DIR}/libjpeg-turbo/lib)
 
-set(LIBJPEG_URL https://github.com/libjpeg-turbo/libjpeg-turbo.git)
-set(LIBJPEG_TAG 3041cf67ffdc7230e377802cba0e5c325d6d01c6)
+# set(LIBJPEG_URL https://github.com/libjpeg-turbo/libjpeg-turbo.git)
+# set(LIBJPEG_TAG 3041cf67ffdc7230e377802cba0e5c325d6d01c6)
+
+set(LIBJPEG_URL http://download.oneflow.org/libjpeg-turbo-libjpeg-turbo-1.5.90-22-g3041cf6.tar.gz)
 
 if(WIN32)
 elseif(APPLE AND ("${CMAKE_GENERATOR}" STREQUAL "Xcode"))
@@ -50,8 +52,9 @@ if(BUILD_THIRD_PARTY)
 
 ExternalProject_Add(libjpeg-turbo
     PREFIX libjpeg-turbo
-    GIT_REPOSITORY ${LIBJPEG_URL}
-    GIT_TAG ${LIBJPEG_TAG}
+    # GIT_REPOSITORY ${LIBJPEG_URL}
+    # GIT_TAG ${LIBJPEG_TAG}
+    URL ${LIBJPEG_URL}
     UPDATE_COMMAND ""
     INSTALL_COMMAND ""
     BUILD_IN_SOURCE 1

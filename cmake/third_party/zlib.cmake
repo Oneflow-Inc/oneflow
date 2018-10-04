@@ -3,9 +3,11 @@ include (ExternalProject)
 set(ZLIB_INCLUDE_DIR ${THIRD_PARTY_DIR}/zlib/include)
 set(ZLIB_LIBRARY_DIR ${THIRD_PARTY_DIR}/zlib/lib)
 
-set(ZLIB_URL https://github.com/madler/zlib)
+# set(ZLIB_URL https://github.com/madler/zlib)
 set(ZLIB_INSTALL ${CMAKE_CURRENT_BINARY_DIR}/zlib/install)
-set(ZLIB_TAG 50893291621658f355bc5b4d450a8d06a563053d)
+# set(ZLIB_TAG 50893291621658f355bc5b4d450a8d06a563053d)
+
+set(ZLIB_URL http://download.oneflow.org/madler-zlib-v1.2.8-0-g5089329.tar.gz)
 
 if(WIN32)
     set(ZLIB_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/zlib/install/lib)
@@ -32,8 +34,9 @@ if(BUILD_THIRD_PARTY)
 
 ExternalProject_Add(zlib
     PREFIX zlib
-    GIT_REPOSITORY ${ZLIB_URL}
-    GIT_TAG ${ZLIB_TAG}
+    # GIT_REPOSITORY ${ZLIB_URL}
+    # GIT_TAG ${ZLIB_TAG}
+    URL ${ZLIB_URL}
     UPDATE_COMMAND ""
     INSTALL_DIR ${ZLIB_INSTALL}
     BUILD_IN_SOURCE 1

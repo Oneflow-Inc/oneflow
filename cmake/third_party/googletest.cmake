@@ -9,8 +9,10 @@ set(GOOGLEMOCK_LIBRARY_DIR ${THIRD_PARTY_DIR}/googlemock/lib)
 set(googletest_SRC_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googletest/include)
 set(googlemock_SRC_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googlemock/include)
 
-set(googletest_URL https://github.com/google/googletest.git)
-set(googletest_TAG ec44c6c1675c25b9827aacd08c02433cccde7780)
+# set(googletest_URL https://github.com/google/googletest.git)
+# set(googletest_TAG ec44c6c1675c25b9827aacd08c02433cccde7780)
+
+set(googletest_URL http://download.oneflow.org/google-googletest-release-1.8.0-0-gec44c6c.tar.gz)
 
 if(WIN32)
     set(GOOGLETEST_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/googletest/src/googletest/googlemock/gtest/${CMAKE_BUILD_TYPE})
@@ -43,8 +45,9 @@ if(BUILD_THIRD_PARTY)
 
 ExternalProject_Add(googletest
     PREFIX googletest
-    GIT_REPOSITORY ${googletest_URL}
-    GIT_TAG ${googletest_TAG}
+    # GIT_REPOSITORY ${googletest_URL}
+    # GIT_TAG ${googletest_TAG}
+    URL ${googletest_URL}
     UPDATE_COMMAND ""
     BUILD_IN_SOURCE 1
     INSTALL_COMMAND ""
