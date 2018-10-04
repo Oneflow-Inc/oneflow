@@ -147,9 +147,10 @@ void JobDesc::Init() {
 
 void JobDesc::SanityCheck() {
   int64_t machine_num = job_conf_.resource().machine_size();
-  FOR_RANGE(int64_t, i, 0, machine_num) { CHECK_EQ(job_conf_.resource().machine(i).id(), i); }
-  CHECK_GE(FLAGS_this_machine_id, 0);
-  CHECK_LT(FLAGS_this_machine_id, machine_num);
+  FOR_RANGE(int64_t, i, 0, machine_num) {
+    CHECK_EQ(job_conf_.resource().machine(i).id(), i);
+    CHECK_NE(job_conf_.resource().machine(i).hostname(), "");
+  }
 }
 
 void JobDesc::SplitDecodeOps() {

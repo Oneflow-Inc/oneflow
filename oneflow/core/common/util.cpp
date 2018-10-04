@@ -89,7 +89,9 @@ size_t GetAvailableCpuMemSize() {
 }
 
 std::string LogDir() {
-  std::string v = FLAGS_log_dir + "/" + std::to_string(FLAGS_this_machine_id);
+  char hostname[32];  // TODO(shiyuan)
+  CHECK_EQ(gethostname(hostname, sizeof(hostname)), 0);
+  std::string v = FLAGS_log_dir + "/" + std::string(hostname);
   return v;
 }
 
