@@ -80,6 +80,8 @@ class Kernel {
   }
   virtual void BackwardActivation(const KernelCtx& ctx, const Blob* out_blob,
                                   const Blob* out_diff_blob, Blob* bw_activation_blob) const {}
+  virtual void ExtractInstanceNumFromHeaderIfHasModelBns(
+      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {};
 
   virtual const PbMessage& GetCustomizedOpConf() const { UNIMPLEMENTED(); }
   virtual const PbMessage& GetCustomizedKernelConf() const { UNIMPLEMENTED(); }
@@ -143,6 +145,8 @@ class KernelIfWithModel : virtual public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KernelIfWithModel);
   virtual ~KernelIfWithModel() = default;
+  virtual void ExtractInstanceNumFromHeaderIfHasModelBns(
+      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
  protected:
   KernelIfWithModel() = default;

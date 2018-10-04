@@ -16,6 +16,7 @@ void RecurrentOp::InitFromOpConf() {
   }
   EnrollOutputBn("out");
   EnrollOutputBn("rec_out");
+  EnrollModelBn("total_instance_num");
   VirtualInitFromOpConf();
 }
 

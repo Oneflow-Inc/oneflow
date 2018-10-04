@@ -10,6 +10,7 @@ void EmbeddingLookupOp::InitFromOpConf() {
   EnrollOutputBn("out");
   EnrollModelBn("weight");
   EnrollModelDiffBn(GenDiffBn("ids"));
+  EnrollModelBn("total_instance_num");
 }
 
 const PbMessage& EmbeddingLookupOp::GetCustomizedConf() const {
