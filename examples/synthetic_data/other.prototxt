@@ -1,0 +1,27 @@
+data_fs_conf {
+  localfs_conf {
+  }
+}
+snapshot_fs_conf {
+  localfs_conf {
+  }
+}
+piece_size: 600
+data_part_num: 6
+train_conf {
+  batch_size: 6000
+  total_batch_num: 100
+  primary_lr: 0.01
+  model_update_conf {
+    naive_conf {
+    }
+  }
+  model_save_snapshots_path: "/tmp/snapshot"
+  num_of_batches_in_snapshot: 10
+  default_initializer_conf {
+    random_normal_conf {
+      mean: 0.0
+      std: 0.1
+    }
+  }
+}

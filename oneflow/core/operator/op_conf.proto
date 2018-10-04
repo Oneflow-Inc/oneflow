@@ -555,8 +555,7 @@ message DecodeRandomOpConf {
   required string out = 1;
   required ShapeProto shape = 2;
   required DataType data_type = 3;
-  optional int32 max_sequence_size = 4 [default = 1];
-  required InitializerConf distribution = 7; 
+  required InitializerConf data_initializer = 4; 
 }
 
 message DefineTestBlobConf {
