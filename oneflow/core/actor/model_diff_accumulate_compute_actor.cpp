@@ -10,6 +10,7 @@ void MdDiffAccCompActor::VirtualCompActorInit(const TaskProto& proto) {
                                     ->RegstDesc4RegstDescId(Name2SoleRegstDescId("acc"))
                                     .data_regst_time_shape();
   CHECK_EQ(one_time_shape.At(0), Global<JobDesc>::Get()->TotalBatchNum());
+  CHECK_EQ(one_time_shape.At(1), Global<JobDesc>::Get()->NumOfPiecesInBatch());
   CHECK_EQ(acc_time_shape.At(0), Global<JobDesc>::Get()->TotalBatchNum());
   CHECK_EQ(acc_time_shape.NumAxes(), 1);
   AccumulateCompActor::Init(proto, static_cast<int32_t>(one_time_shape.Count(1)),
