@@ -8,7 +8,7 @@ namespace oneflow {
 class RepeatForwardLogicalNode final : public ForwardLogicalNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RepeatForwardLogicalNode);
-  RepeatForwardLogicalNode() = default;
+  RepeatForwardLogicalNode();
   ~RepeatForwardLogicalNode() override = default;
 
  private:
@@ -16,6 +16,8 @@ class RepeatForwardLogicalNode final : public ForwardLogicalNode {
   std::string TypeName() const override { return "RepeatForward"; };
   CompTaskNode* NewCompTaskNode() const override;
   int64_t GetAreaId() const override;
+
+  int64_t area_id_;
 };
 
 }  // namespace oneflow
