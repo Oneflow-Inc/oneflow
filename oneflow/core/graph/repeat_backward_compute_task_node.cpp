@@ -5,7 +5,7 @@ namespace oneflow {
 
 void RepeatBackwardCompTaskNode::ConsumeAllRegsts() {
   for (const TaskEdge* edge : in_edges()) {
-    if (edge->dst_node()->GetTaskType() == TaskType::kRepeatForward) { continue; }
+    if (edge->src_node()->GetTaskType() == TaskType::kRepeatForward) { continue; }
     CHECK(consumed_regsts().empty());
     ConsumeRegst("out_diff", edge->GetSoleRegst());
   }
