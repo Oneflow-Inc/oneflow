@@ -37,11 +37,11 @@ class BlobDesc {
   bool has_data_id_field() const { return has_data_id_; }
   void set_has_data_id_field(bool val);
 
-  bool has_instance_varying_elem_cnt() const { TODO(); }
+  bool has_instance_varying_elem_cnt() const { return has_instance_varying_elem_cnt_; }
   void set_has_instance_varying_elem_cnt(bool val);
 
-  bool has_varying_instance_varying_num() const { TODO(); }
-  bool set_has_varying_instance_varying_num(bool val) const { TODO(); }
+  bool has_varying_instance_num() const { return has_varying_instance_num_; }
+  void set_has_varying_instance_num(bool val);
 
   bool has_col_num_field() const { return has_col_num_; }
   void set_has_col_num_field(bool val);
@@ -61,6 +61,8 @@ class BlobDesc {
   void HeaderToProto(BlobDescProto* proto) const;
   void DataIdFieldToProto(FieldHeaderDesc* proto, StructPodDesc* header_pod_desc) const;
   void ColNumFieldToProto(FieldHeaderDesc* proto, StructPodDesc* header_pod_desc) const;
+  void InstanceVaryingElemCntToProto(StructPodDesc* header_pod_desc) const;
+  void VaryingInstanceNumToProto(StructPodDesc* header_pod_desc) const;
 
   bool header_is_opaque_;
   FieldDesc opaque_header_;
@@ -68,6 +70,8 @@ class BlobDesc {
 
   bool has_data_id_;
   bool has_col_num_;
+  bool has_instance_varying_elem_cnt_;
+  bool has_varying_instance_num_;
   int64_t max_col_num_;
   int32_t blob_mem_id_;
 

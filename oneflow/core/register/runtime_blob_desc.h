@@ -20,6 +20,7 @@ class RtBlobDesc {
   const BlobDescProto& blob_desc_proto() const { return blob_desc_proto_; }
   const Shape& shape() const;  // body shape
   DataType data_type() const;  // body data type
+  const Shape* instance_inner_shape() const { return instance_inner_shape_.get(); }
 
   bool has_data_id_field() const;
   bool has_col_num_field() const;
@@ -47,6 +48,7 @@ class RtBlobDesc {
   BlobDescProto blob_desc_proto_;
   FieldDesc body_desc_;
   StructPodDesc header_pod_desc_;
+  std::unique_ptr<Shape> instance_inner_shape_;
 };
 
 }  // namespace oneflow

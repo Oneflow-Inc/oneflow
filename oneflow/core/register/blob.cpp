@@ -44,6 +44,45 @@ void Blob::set_col_num(int32_t no, int32_t val) {
   *(col_num_ptr_ + no) = val;
 }
 
+int32_t Blob::instance_varying_elem_cnt(int32_t no) const {
+  CHECK_NOTNULL(instance_varying_elem_cnt_ptr_);
+  CHECK_GE(no, 0);
+  CHECK_LT(no, blob_desc_->shape().Count(1));
+  return instance_varying_elem_cnt_ptr_[no];
+}
+
+void Blob::set_instance_varying_elem_cnt(int32_t no, int32_t val) {
+  CHECK_NOTNULL(instance_varying_elem_cnt_ptr_);
+  CHECK_GE(no, 0);
+  CHECK_LT(no, blob_desc_->shape().Count(1));
+  instance_varying_elem_cnt_ptr_[no] = val;
+}
+
+int32_t Blob::varying_instance_num(int32_t no) const {
+  CHECK_NOTNULL(varying_instance_num_ptr_);
+  CHECK_GE(no, 0);
+  CHECK_LT(no, instance_inner_shape()->Count(1));
+  return varying_instance_num_ptr_[no];
+}
+
+void Blob::set_varying_instance_num(int32_t no, int32_t val) {
+  CHECK_NOTNULL(varying_instance_num_ptr_);
+  CHECK_GE(no, 0);
+  CHECK_LT(no, instance_inner_shape()->Count(1));
+  varying_instance_num_ptr_[no] = val;
+}
+
+int32_t Blob::instance_available_elem_cnt(int32_t no) const {
+  if (instance_varying_elem_cnt_ptr_ != nullptr) { return instance_varying_elem_cnt(no); }
+  return blob_desc_->shape().Count(1);
+}
+
+int32_t Blob::available_instance_num(int32_t no) const {
+  if (varying_instance_num_ptr_ != nullptr) { return varying_instance_num(no); }
+  if (instance_inner_shape()) { return instance_inner_shape()->Count(1); }
+  return 1;
+}
+
 int32_t Blob::col_id() const { return regst_->col_id(); }
 void Blob::set_col_id(int32_t val) { regst_->set_col_id(val); }
 int32_t Blob::max_col_id() const { return regst_->max_col_id(); }

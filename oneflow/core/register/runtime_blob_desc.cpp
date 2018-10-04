@@ -14,6 +14,9 @@ void RtBlobDesc::InitFromProto(const BlobDescProto& blob_desc_proto) {
   blob_desc_proto_ = blob_desc_proto;
   body_desc_ = FieldDesc(blob_desc_proto.body());
   header_pod_desc_.InitFromProto(blob_desc_proto.header().header_pod_desc());
+  if (blob_desc_proto.has_instance_inner_shape()) {
+    instance_inner_shape_.reset(new Shape(blob_desc_proto.instance_inner_shape()));
+  }
 }
 
 const Shape& RtBlobDesc::shape() const { return body_desc_.shape(); }

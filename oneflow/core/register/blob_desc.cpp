@@ -38,6 +38,9 @@ void BlobDesc::InitFromProto(const BlobDescProto& proto) {
     has_data_id_ = proto.header().field_header().has_data_id();
     has_col_num_ = proto.header().field_header().has_col_num();
   }
+  if (proto.has_instance_inner_shape()) {
+    instance_inner_shape_.reset(new Shape(proto.instance_inner_shape()));
+  }
 }
 
 BlobDesc::BlobDesc(const StructPodDesc& header_pod_desc, int64_t header_byte_size,
@@ -69,7 +72,12 @@ void BlobDesc::set_has_col_num_field(bool val) {
 
 void BlobDesc::set_has_instance_varying_elem_cnt(bool val) {
   CHECK(!header_is_opaque_);
-  TODO();
+  has_instance_varying_elem_cnt_ = val;
+}
+
+void BlobDesc::set_has_varying_instance_num(bool val) {
+  CHECK(!header_is_opaque_);
+  has_varying_instance_num_ = val;
 }
 
 Shape& BlobDesc::mut_instance_inner_shape() {
@@ -93,6 +101,18 @@ void BlobDesc::ColNumFieldToProto(FieldHeaderDesc* proto, StructPodDesc* header_
   header_pod_desc->AddField(FieldKey::kColNum, TensorPodDesc(shape, DataType::kInt32));
 }
 
+void BlobDesc::InstanceVaryingElemCntToProto(StructPodDesc* header_pod_desc) const {
+  Shape shape({body_field_.shape().At(0)});
+  header_pod_desc->AddField(FieldKey::kInstanceVaryingElemCnt,
+                            TensorPodDesc(shape, DataType::kInt32));
+}
+
+void BlobDesc::VaryingInstanceNumToProto(StructPodDesc* header_pod_desc) const {
+  CHECK(instance_inner_shape_);
+  Shape shape({instance_inner_shape_->At(0)});
+  header_pod_desc->AddField(FieldKey::kVaryingInstanceNum, TensorPodDesc(shape, DataType::kInt32));
+}
+
 void BlobDesc::HeaderToProto(BlobDescProto* proto) const {
   proto->mutable_header()->set_max_col_num(max_col_num_);
   proto->mutable_header()->set_blob_mem_id(blob_mem_id_);
@@ -101,6 +121,8 @@ void BlobDesc::HeaderToProto(BlobDescProto* proto) const {
     StructPodDesc header_pod_desc;
     if (has_data_id_field()) { DataIdFieldToProto(field_header, &header_pod_desc); }
     if (has_col_num_field()) { ColNumFieldToProto(field_header, &header_pod_desc); }
+    if (has_instance_varying_elem_cnt()) { InstanceVaryingElemCntToProto(&header_pod_desc); }
+    if (has_varying_instance_num()) { VaryingInstanceNumToProto(&header_pod_desc); }
     header_pod_desc.ToProto(proto->mutable_header()->mutable_header_pod_desc());
   } else {
     opaque_header_.ToProto(proto->mutable_header()->mutable_opaque_header());
@@ -111,6 +133,9 @@ void BlobDesc::HeaderToProto(BlobDescProto* proto) const {
 void BlobDesc::ToProto(BlobDescProto* proto) const {
   HeaderToProto(proto);
   body_field_.ToProto(proto->mutable_body());
+  if (instance_inner_shape_) {
+    instance_inner_shape_->ToProto(proto->mutable_instance_inner_shape());
+  }
 }
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {

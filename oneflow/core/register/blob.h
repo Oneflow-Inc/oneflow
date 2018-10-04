@@ -35,23 +35,20 @@ class Blob final {
   const int32_t* col_num() const { return col_num_ptr_; }
   int32_t* mut_col_num() { return col_num_ptr_; }
 
-  int32_t instance_varying_elem_cnt(int32_t no) const { TODO(); }
-  void set_instance_varying_elem_cnt(int32_t no, int32_t val) { TODO(); }
+  int32_t instance_varying_elem_cnt(int32_t no) const;
+  void set_instance_varying_elem_cnt(int32_t no, int32_t val);
 
-  const int32_t* instance_varying_elem_cnt() const { TODO(); }
-  int32_t* mut_instance_varying_elem_cnt() { TODO(); }
+  const int32_t* instance_varying_elem_cnt() const { return instance_varying_elem_cnt_ptr_; }
+  int32_t* mut_instance_varying_elem_cnt() { return instance_varying_elem_cnt_ptr_; }
 
-  int32_t varying_instance_num(int32_t no) const { TODO(); }
-  void set_varying_instance_num(int32_t no, int32_t val) { TODO(); }
+  int32_t varying_instance_num(int32_t no) const;
+  void set_varying_instance_num(int32_t no, int32_t val);
 
-  const int32_t* varying_instance_num() const { TODO(); }
-  int32_t* mut_varying_instance_num() { TODO(); }
+  const int32_t* varying_instance_num() const { return varying_instance_num_ptr_; }
+  int32_t* mut_varying_instance_num() { return varying_instance_num_ptr_; }
 
-  int32_t instance_available_elem_cnt(int32_t no) const { TODO(); }
-  const int32_t* instance_available_elem_cnt() const { TODO(); }
-
-  int32_t available_instance_num(int32_t no) const { TODO(); }
-  const int32_t* available_instance_num() const { TODO(); }
+  int32_t instance_available_elem_cnt(int32_t no) const;
+  int32_t available_instance_num(int32_t no) const;
 
   const void* header_ptr() const { return header_ptr_; }
   void* mut_header_ptr() { return header_ptr_; }
@@ -110,6 +107,7 @@ class Blob final {
   PodPtr* header_pod_ptr() { return &header_pod_ptr_; }
 
  private:
+  const Shape* instance_inner_shape() const { return blob_desc_->instance_inner_shape(); }
   int64_t GetDptrOffset(int32_t index) const { return 0; }
   template<typename... Int64s>
   int64_t GetDptrOffset(int32_t index, int64_t cur_dim, Int64s... remainder) const {
@@ -132,6 +130,8 @@ class Blob final {
   void* header_ptr_;
   char* data_id_ptr_;
   int32_t* col_num_ptr_;
+  int32_t* instance_varying_elem_cnt_ptr_;
+  int32_t* varying_instance_num_ptr_;
   void* dptr_;
   const RtBlobDesc* blob_desc_;
   Regst* regst_;
