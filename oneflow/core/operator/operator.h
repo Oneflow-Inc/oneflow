@@ -58,6 +58,7 @@ class Operator {
   virtual const PbMessage& GetCustomizedConf() const { UNIMPLEMENTED(); }
 
   int32_t GetRepeatedInputBnNum(const std::string& ibn_prefix) const;
+  std::string& GetRepeatedInputBn(const std::string& ibn_prefix, int32_t idx) const;
 
   bool HasFieldInCustomizedConf(const std::string& field_name) const {
     return HasFieldInPbMessage(GetCustomizedConf(), field_name);
