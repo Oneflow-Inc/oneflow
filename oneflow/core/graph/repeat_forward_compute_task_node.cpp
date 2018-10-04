@@ -8,7 +8,7 @@ void RepeatForwardCompTaskNode::ConsumeAllRegsts() {
 }
 
 void RepeatForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", false);
+  std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", false, 1, 1);
   for (TaskEdge* edge : out_edges()) { edge->AddRegst("out", out_regst); }
 }
 

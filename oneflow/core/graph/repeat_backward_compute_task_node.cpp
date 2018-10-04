@@ -12,7 +12,7 @@ void RepeatBackwardCompTaskNode::ConsumeAllRegsts() {
 }
 
 void RepeatBackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  std::shared_ptr<RegstDesc> out_regst = ProduceRegst("in_diff", false);
+  std::shared_ptr<RegstDesc> out_regst = ProduceRegst("in_diff", false, 1, 1);
   for (TaskEdge* edge : out_edges()) { edge->AddRegst("in_diff", out_regst); }
 }
 
