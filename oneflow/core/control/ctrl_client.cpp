@@ -159,7 +159,8 @@ CtrlClient::CtrlClient() {
         std::unique_lock<std::mutex> lck(need_heartbeat_thread_stop_mtx_);
         if (need_heartbeat_thread_stop_) { break; }
       }
-      for (size_t i = 0; i < stubs_.size(); ++i) {
+
+      for (int64_t i = 0; i < stubs_.size(); ++i) {
         grpc::ClientContext client_ctx;
         GRPC_CHECK(stubs_[i]->CallMethod<CtrlMethod::kLoadServer>(&client_ctx, request, &response))
             << "Machine " << i << " lost";
