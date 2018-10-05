@@ -4,6 +4,11 @@ namespace oneflow {
 
 void NormalBackwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   any_out_diff_regst_desc_id_ = Name2RegstDescIds("out_diff").front();
+  const Shape& out_diff_time_shape = Global<RegstMgr>::Get()
+                                         ->RegstDesc4RegstDescId(any_out_diff_regst_desc_id_)
+                                         .data_regst_time_shape();
+  actual_num_of_piece_in_batch_ = out_diff_time_shape.Count(1);
+
   model_regst_desc_id_ = Name2SoleRegstDescId("model");
   const_model_regst_desc_id_ = Name2SoleRegstDescId("const_model");
   const_model_regst_ = nullptr;
@@ -31,7 +36,7 @@ void NormalBackwardCompActor::ForEachCurCustomizedReadableRegst(
 void NormalBackwardCompActor::NormalProcessNaiveReadableRegstMsg(const std::deque<Regst*>& rq) {
   if (rq.size() == 1 && rq.front()->regst_desc_id() == any_out_diff_regst_desc_id_) {
     AsyncReturnModelRegstUntilModelVersionIdEqual(
-        GetModelVersionIdFromPieceId(rq.front()->piece_id()));
+        GetModelVersionIdFromPieceId(rq.front()->piece_id(), actual_num_of_piece_in_batch_));
   }
 }
 
@@ -80,7 +85,8 @@ bool NormalBackwardCompActor::IsCustomizedReadReady() {
   if (model_regst_desc_id_ != -1) {
     if (model_regst_queue_.empty()) { return false; }
     int64_t expected_model_vid =
-        GetModelVersionIdFromPieceId(GetNaiveCurReadable(any_out_diff_regst_desc_id_)->piece_id());
+        GetModelVersionIdFromPieceId(GetNaiveCurReadable(any_out_diff_regst_desc_id_)->piece_id(),
+                                     actual_num_of_piece_in_batch_);
     CHECK_EQ(expected_model_vid, model_regst_queue_.front()->model_version_id());
   }
   if (const_model_regst_desc_id_ != -1 && const_model_regst_ == nullptr) { return false; }
@@ -119,7 +125,8 @@ void NormalBackwardCompActor::AsyncReturnModelRegstUntilLastPieceIdGreaterThan(i
   if (model_regst_desc_id_ == -1) { return; }
   while (model_regst_queue_.empty() == false) {
     int64_t model_vid = model_regst_queue_.front()->model_version_id();
-    int64_t last_piece_id = GetLastPieceIdForModelVersionId(model_vid);
+    int64_t last_piece_id =
+        GetLastPieceIdForModelVersionId(model_vid, actual_num_of_piece_in_batch_);
     if (last_piece_id > piece_id) { return; }
     AsyncSendRegstMsgToProducer(model_regst_queue_.front());
     model_regst_queue_.pop();
