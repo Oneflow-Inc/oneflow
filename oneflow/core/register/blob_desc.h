@@ -18,8 +18,8 @@ class BlobDesc {
   BlobDesc();
   BlobDesc(const Shape&, DataType, bool has_data_id, bool has_col_num, int32_t max_col_num);
   explicit BlobDesc(const Shape& shape) : body_field_(shape) {}
-  explicit BlobDesc(const BlobDescProto& proto);
-  explicit BlobDesc(const BlobDesc& blob_desc) { TODO(); }
+  explicit BlobDesc(const BlobDescProto& proto) { InitFromProto(proto); }
+  explicit BlobDesc(const BlobDesc& blob_desc);
   BlobDesc(const StructPodDesc& header_pod_desc, int64_t header_byte_size, const Shape&, DataType,
            int32_t max_col_num);
 
@@ -39,6 +39,12 @@ class BlobDesc {
   void set_has_data_id_field(bool val);
   void set_has_instance_available_elen_cnt(bool val);
 
+  bool has_instance_varying_elem_cnt() const { TODO(); }
+  void set_has_instance_varying_elem_cnt(bool val);
+
+  bool has_varying_instance_varying_num() const { TODO(); }
+  bool set_has_varying_instance_varying_num(bool val) const { TODO(); }
+
   bool has_col_num_field() const { return has_col_num_; }
   void set_has_col_num_field(bool val);
 
@@ -53,6 +59,7 @@ class BlobDesc {
   BlobDesc& operator=(const BlobDesc& blob_desc);
 
  private:
+  void InitFromProto(const BlobDescProto& proto);
   void HeaderToProto(BlobDescProto* proto) const;
   void DataIdFieldToProto(FieldHeaderDesc* proto, StructPodDesc* header_pod_desc) const;
   void ColNumFieldToProto(FieldHeaderDesc* proto, StructPodDesc* header_pod_desc) const;

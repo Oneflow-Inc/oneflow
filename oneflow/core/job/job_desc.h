@@ -26,7 +26,6 @@ class JobDesc final {
   DataType DefaultDataType() const { return job_conf_.other().default_data_type(); }
   size_t SizeOfOneDataId() const { return job_conf_.other().max_data_id_length() * sizeof(char); }
   bool use_rdma() const { return job_conf_.other().use_rdma(); }
-  bool use_synthetic_data() const { return job_conf_.other().use_synthetic_data(); }
   bool EnableCudnn() const { return job_conf_.other().enable_cudnn(); }
   int64_t TotalMachineNum() const { return job_conf_.resource().machine().size(); }
   int32_t CpuDeviceNum() const { return job_conf_.resource().cpu_device_num(); }
@@ -61,6 +60,7 @@ class JobDesc final {
   }
   int64_t reduce_group_size() const { return job_conf_.other().reduce_group_size(); }
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.other().cudnn_buf_limit_mbyte(); }
+  int32_t this_machine_id() const { return this_machine_id_; }
 
   // Train conf
   const std::string& MdSaveSnapshotsPath() const;
@@ -85,10 +85,12 @@ class JobDesc final {
   JobDesc(const JobConf1& job_conf_);
   void Init();
   void SanityCheck();
+  void ParseThisMachineId();
   void SplitDecodeOps();
   void AddRecordLoadOps();
 
   JobConf1 job_conf_;
+  int64_t this_machine_id_;
 };
 
 }  // namespace oneflow
