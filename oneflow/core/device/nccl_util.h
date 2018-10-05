@@ -5,13 +5,13 @@
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/util.h"
 
-#ifdef WITH_NCCL
+#ifdef WITH_CUDA
 #include <nccl.h>
-#endif  // WITH_NCCL
+#endif  // WITH_CUDA
 
 namespace oneflow {
 
-#ifdef WITH_NCCL
+#ifdef WITH_CUDA
 inline ncclDataType_t GetNcclDataType(const DataType& dt) {
   switch (dt) {
 #define NCCL_DATA_TYPE_CASE(dtype) \
@@ -26,13 +26,13 @@ inline ncclDataType_t GetNcclDataType(const DataType& dt) {
 }
 
 void NcclCheck(ncclResult_t error);
-#endif  // WITH_NCCL
+#endif  // WITH_CUDA
 
 class NcclUtil final {
  public:
   using NcclReduceMthd = void(DeviceCtx*, Blob*, Blob*);
   static void AllReduce(DeviceCtx* ctx, Blob* send_blob, Blob* recv_blob) {
-#ifdef WITH_NCCL
+#ifdef WITH_CUDA
 
     auto elem_cnt = (size_t)send_blob->shape().elem_cnt();
     NcclCheck(ncclAllReduce(send_blob->dptr(), recv_blob->mut_dptr(), elem_cnt,
@@ -40,11 +40,11 @@ class NcclUtil final {
                             ctx->cuda_stream()));
 #else
     UNIMPLEMENTED();
-#endif  // WITH_NCCL
+#endif  // WITH_CUDA
   }
 
   static void ReduceScatter(DeviceCtx* ctx, Blob* send_blob, Blob* recv_blob) {
-#ifdef WITH_NCCL
+#ifdef WITH_CUDA
 
     auto elem_cnt = (size_t)recv_blob->shape().elem_cnt();
     NcclCheck(ncclReduceScatter(send_blob->dptr(), recv_blob->mut_dptr(), elem_cnt,
@@ -52,11 +52,11 @@ class NcclUtil final {
                                 ctx->nccl_handle(), ctx->cuda_stream()));
 #else
     UNIMPLEMENTED();
-#endif  // WITH_NCCL
+#endif  // WITH_CUDA
   }
 
   static void AllGather(DeviceCtx* ctx, Blob* send_blob, Blob* recv_blob) {
-#ifdef WITH_NCCL
+#ifdef WITH_CUDA
 
     auto elem_cnt = (size_t)send_blob->shape().elem_cnt();
     NcclCheck(ncclAllGather(send_blob->dptr(), recv_blob->mut_dptr(), elem_cnt,
@@ -64,7 +64,7 @@ class NcclUtil final {
                             ctx->cuda_stream()));
 #else
     UNIMPLEMENTED();
-#endif  // WITH_NCCL
+#endif  // WITH_CUDA
   }
 };
 

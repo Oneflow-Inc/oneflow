@@ -1,0 +1,66 @@
+include (ExternalProject)
+
+set(NCCL_INCLUDE_DIR ${THIRD_PARTY_DIR}/nccl/include)
+set(NCCL_LIBRARY_DIR ${THIRD_PARTY_DIR}/nccl/lib)
+
+set(NCCL_URL https://github.com/NVIDIA/nccl.git)
+set(NCCL_TAG f93fe9bfd94884cec2ba711897222e0df5569a53)
+set(NCCL_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/nccl/src/nccl/build)
+
+if(WIN32)
+    #set(NCCL_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/nccl/install/lib)
+    #set(NCCL_LIBRARY_NAMES libnccl_static.lib)
+elseif(APPLE AND ("${CMAKE_GENERATOR}" STREQUAL "Xcode"))
+    #set(NCCL_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/nccl/install/lib)
+    #set(NCCL_LIBRARY_NAMES libnccl_static.a)
+else()
+    set(NCCL_BUILD_LIBRARY_DIR ${NCCL_BUILD_DIR}/lib)
+    set(NCCL_LIBRARY_NAMES libnccl_static.a)
+endif()
+
+foreach(LIBRARY_NAME ${NCCL_LIBRARY_NAMES})
+    list(APPEND NCCL_STATIC_LIBRARIES ${NCCL_LIBRARY_DIR}/${LIBRARY_NAME})
+    list(APPEND NCCL_BUILD_STATIC_LIBRARIES ${NCCL_BUILD_LIBRARY_DIR}/${LIBRARY_NAME})
+endforeach()
+
+set(NCCL_HEADERS
+    "${NCCL_BUILD_DIR}/include/nccl.h"
+)
+
+if(BUILD_THIRD_PARTY)
+
+ExternalProject_Add(nccl
+    PREFIX nccl
+    GIT_REPOSITORY ${NCCL_URL}
+    GIT_TAG ${NCCL_TAG}
+    UPDATE_COMMAND ""
+    CONFIGURE_COMMAND ""
+    #INSTALL_DIR ${NCCL_INSTALL}
+    BUILD_IN_SOURCE 1
+    BUILD_COMMAND make -j src.build
+    INSTALL_COMMAND ""
+)
+
+# put nccl includes in the directory where they are expected
+add_custom_target(nccl_create_header_dir
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${NCCL_INCLUDE_DIR}
+    DEPENDS nccl)
+
+add_custom_target(nccl_copy_headers_to_destination
+    DEPENDS nccl_create_header_dir)
+
+foreach(header_file ${NCCL_HEADERS})
+    add_custom_command(TARGET nccl_copy_headers_to_destination PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${header_file} ${NCCL_INCLUDE_DIR})
+endforeach()
+
+# pub nccl libs in the directory where they are expected
+add_custom_target(nccl_create_library_dir
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${NCCL_LIBRARY_DIR}
+    DEPENDS nccl)
+
+add_custom_target(nccl_copy_libs_to_destination
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${NCCL_BUILD_STATIC_LIBRARIES} ${NCCL_LIBRARY_DIR}
+    DEPENDS nccl_create_library_dir)
+
+endif(BUILD_THIRD_PARTY)

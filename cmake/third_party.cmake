@@ -11,6 +11,7 @@ include(grpc)
 include(libjpeg-turbo)
 include(opencv)
 include(eigen)
+include(nccl)
 if (BUILD_CUDA)
   include(cub)
 endif()
@@ -31,14 +32,6 @@ if (BUILD_CUDA)
     list(APPEND CUDA_LIBRARIES ${cuda_lib_dir}/${extra_cuda_lib})
   endforeach()
   find_package(CuDNN REQUIRED)
-  if (BUILD_NCCL)
-    find_package(NCCL REQUIRED)
-    if (NCCL_VERSION VERSION_LESS 2.0)
-      message(FATAL_ERROR "minimum nccl version required is 2.0")
-    else()
-      add_definitions(-DWITH_NCCL)
-    endif()
-  endif()
 endif()
 
 if (NOT WIN32)
@@ -67,7 +60,7 @@ set(oneflow_third_party_libs
     ${farmhash_STATIC_LIBRARIES}
     ${CUDNN_LIBRARIES}
     ${CUDA_LIBRARIES}
-    ${NCCL_LIBRARIES}
+    ${NCCL_STATIC_LIBRARIES}
     ${BLAS_LIBRARIES}
     ${LIBJPEG_STATIC_LIBRARIES}
     ${OPENCV_STATIC_LIBRARIES}
@@ -101,6 +94,8 @@ set(oneflow_third_party_dependencies
   opencv_copy_headers_to_destination
   opencv_copy_libs_to_destination
   eigen
+  nccl_copy_headers_to_destination
+  nccl_copy_libs_to_destination
 )
 
 include_directories(
@@ -116,4 +111,5 @@ include_directories(
     ${LIBJPEG_INCLUDE_DIR}
     ${OPENCV_INCLUDE_DIR}
     ${EIGEN_INCLUDE_DIR}
+    ${NCCL_INCLUDE_DIR}
 )
