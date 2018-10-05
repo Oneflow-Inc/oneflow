@@ -2,7 +2,6 @@
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/persistence/hadoop/hadoop_file_system.h"
-#include "oneflow/core/common/str_util.h"
 
 #ifdef PLATFORM_POSIX
 
@@ -111,25 +110,11 @@ const FileSystemConf& JobDesc::snapshot_fs_conf() const {
 JobDesc::JobDesc(const std::string& job_conf_filepath) {
   if (TryParseProtoFromTextFile(job_conf_filepath, &job_conf_) == false) {
     JobConf2 job_conf;
-    std::string job_conf_path = Dirname(job_conf_filepath);
     ParseProtoFromTextFile(job_conf_filepath, &job_conf);
-
-    ParseProtoFromTextFile(job_conf_path == Dirname(job_conf.net())
-                               ? job_conf.net()
-                               : JoinPath(job_conf_path, job_conf.net()),
-                           job_conf_.mutable_net());
-    ParseProtoFromTextFile(job_conf_path == Dirname(job_conf.net())
-                               ? job_conf.net()
-                               : JoinPath(job_conf_path, job_conf.resource()),
-                           job_conf_.mutable_resource());
-    ParseProtoFromTextFile(job_conf_path == Dirname(job_conf.net())
-                               ? job_conf.net()
-                               : JoinPath(job_conf_path, job_conf.placement()),
-                           job_conf_.mutable_placement());
-    ParseProtoFromTextFile(job_conf_path == Dirname(job_conf.net())
-                               ? job_conf.net()
-                               : JoinPath(job_conf_path, job_conf.other()),
-                           job_conf_.mutable_other());
+    ParseProtoFromTextFile(job_conf.net(), job_conf_.mutable_net());
+    ParseProtoFromTextFile(job_conf.resource(), job_conf_.mutable_resource());
+    ParseProtoFromTextFile(job_conf.placement(), job_conf_.mutable_placement());
+    ParseProtoFromTextFile(job_conf.other(), job_conf_.mutable_other());
   }
   SanityCheck();
   ParseThisMachineId();
