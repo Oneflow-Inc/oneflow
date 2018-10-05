@@ -26,6 +26,7 @@ class BlobDesc {
   const Shape& shape() const { return body_field_.shape(); }
   Shape& mut_shape() { return body_field_.mut_shape(); }
 
+  bool has_instance_inner_shape() const { return bool(instance_inner_shape_); }
   const Shape& instance_inner_shape() const { return *instance_inner_shape_; }
   Shape& mut_instance_inner_shape();
 
@@ -66,12 +67,12 @@ class BlobDesc {
 
   bool header_is_opaque_;
   FieldDesc opaque_header_;
-  StructPodDesc opaque_header_pod_desc_;
+  StructPodDesc header_pod_desc_;
 
   bool has_data_id_;
   bool has_col_num_;
-  bool has_instance_varying_elem_cnt_;
   bool has_varying_instance_num_;
+  bool has_instance_varying_elem_cnt_;
   int64_t max_col_num_;
   int32_t blob_mem_id_;
 

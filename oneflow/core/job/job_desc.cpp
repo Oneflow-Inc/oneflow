@@ -41,10 +41,7 @@ int32_t JobDesc::NumOfBatchesInSnapshot() const {
   CHECK(IsTrain());
   return job_conf_.other().train_conf().num_of_batches_in_snapshot();
 }
-int64_t JobDesc::TotalBatchNum() const {
-  CHECK(IsTrain());
-  return job_conf_.other().train_conf().total_batch_num();
-}
+int64_t JobDesc::TotalBatchNum() const { return job_conf_.other().total_batch_num(); }
 const InitializerConf* JobDesc::DefaultInitializerConf() const {
   CHECK(IsTrain());
   return GetMsgPtrFromPbMessage<InitializerConf>(job_conf_.other().train_conf(),
@@ -63,6 +60,7 @@ int64_t JobDesc::BatchSize() const {
   return job_conf_.other().train_conf().batch_size();
 }
 int64_t JobDesc::NumOfPiecesInBatch() const {
+  if (IsPredict()) { return 1; }
   CHECK_EQ(BatchSize() % PieceSize(), 0);
   return BatchSize() / PieceSize();
 }
@@ -134,7 +132,7 @@ void JobDesc::Init() {
     if (piece_exp == -1) { piece_exp = 19 * NumOfPiecesInBatch(); }
     piece_exp = std::max(piece_exp, NumOfPiecesInBatch());
     piece_exp = std::max(piece_exp, train_conf->piece_num_of_print_loss());
-    piece_exp = std::min(piece_exp, train_conf->total_batch_num() * NumOfPiecesInBatch());
+    piece_exp = std::min(piece_exp, job_conf_.other().total_batch_num() * NumOfPiecesInBatch());
   } else {
     if (piece_exp == -1) { piece_exp = 19; }
   }

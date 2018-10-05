@@ -23,6 +23,10 @@ void Blob::Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, cha
   header_ptr_ = header_ptr;
   data_id_ptr_ = header_pod_ptr_.MutTensorPtr<char>(FieldKey::kDataId, nullptr);
   col_num_ptr_ = header_pod_ptr_.MutTensorPtr<int32_t>(FieldKey::kColNum, nullptr);
+  varying_instance_num_ptr_ =
+      header_pod_ptr_.MutTensorPtr<int32_t>(FieldKey::kVaryingInstanceNum, nullptr);
+  instance_varying_elem_cnt_ptr_ =
+      header_pod_ptr_.MutTensorPtr<int32_t>(FieldKey::kInstanceVaryingElemCnt, nullptr);
   dptr_ = body_ptr;
   dynamic_shape_ = blob_desc->shape();
 }
