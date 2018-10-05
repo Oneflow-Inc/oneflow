@@ -5,7 +5,7 @@
 #include "oneflow/core/device/nccl_util.h"
 #include "nccl_comm_manager.h"
 
-#ifdef WITH_NCCL
+#ifdef WITH_CUDA
 
 namespace oneflow {
 
@@ -111,4 +111,4 @@ void NcclCommMgr::NcclGetUniqueId4Tasks(const std::vector<TaskProto>& tasks,
 
 }  // namespace oneflow
 
-#endif  // WITH_NCCL
+#endif  // WITH_CUDA

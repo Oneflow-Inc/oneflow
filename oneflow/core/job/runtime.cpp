@@ -112,15 +112,15 @@ void Runtime::NewAllGlobal(const Plan& plan, bool is_experiment_phase) {
   Global<RegstMgr>::New(plan);
   Global<ActorMsgBus>::New();
   Global<ThreadMgr>::New(plan);
-#ifdef WITH_NCCL
+#ifdef WITH_CUDA
   Global<NcclCommMgr>::New(plan);
-#endif  // WITH_NCCL
+#endif  // WITH_CUDA
 }
 
 void Runtime::DeleteAllGlobal() {
-#ifdef WITH_NCCL
+#ifdef WITH_CUDA
   Global<NcclCommMgr>::Delete();
-#endif  // WITH_NCCL
+#endif  // WITH_CUDA
   Global<ThreadMgr>::Delete();
   Global<ActorMsgBus>::Delete();
   Global<RegstMgr>::Delete();
