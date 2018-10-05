@@ -16,10 +16,10 @@ class NormalMdUpdateKernel : public KernelIf<device_type> {
 
  protected:
   NormalMdUpdateKernel() = default;
-  void GetTotalInstanceNumFromGpu(std::function<Blob*(const std::string&)> BnInOp2Blob,
-                                  int32_t* total_instance_num_ptr) const;
-  virtual void UpdateModel(DeviceCtx* ctx, int64_t batch_size, T learning_rate, T l1, T l2,
-                           int64_t next_model_vid,
+  // void GetTotalInstanceNumFromGpu(std::function<Blob*(const std::string&)> BnInOp2Blob,
+  //                                 int32_t* total_instance_num_ptr) const;
+  virtual void UpdateModel(DeviceCtx* ctx, const int32_t* total_instance_num_ptr, T learning_rate,
+                           T l1, T l2, int64_t next_model_vid,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
 };
 
