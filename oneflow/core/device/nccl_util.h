@@ -4,10 +4,7 @@
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/util.h"
-
-#ifdef WITH_CUDA
-#include <nccl.h>
-#endif  // WITH_CUDA
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 

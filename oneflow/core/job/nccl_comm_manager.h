@@ -6,7 +6,7 @@
 
 #ifdef WITH_CUDA
 
-#include <nccl.h>
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 
