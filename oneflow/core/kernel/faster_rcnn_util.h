@@ -99,6 +99,22 @@ class BBox final : public Serial<BBox<T>, 4> {
 };
 
 template<typename T>
+class BBox2 final : public Serial<BBox2<T>, 5> {
+ public:
+  using BBoxArray = typename Serial<BBox2<T>, 5>::ElemArray;
+
+  inline int32_t batch_idx() const { return static_cast<int32_t>(this->elem()[0]); }
+  inline T x1() const { return this->elem()[1]; }
+  inline T y1() const { return this->elem()[2]; }
+  inline T x2() const { return this->elem()[3]; }
+  inline T y2() const { return this->elem()[4]; }
+
+  inline T width() const { return x2() - x1() + OneVal<T>::value; }
+  inline T height() const { return y2() - y1() + OneVal<T>::value; }
+  inline T Area() const { return width() * height(); }
+};
+
+template<typename T>
 class BBoxDelta final : public Serial<BBoxDelta<T>, 4> {
  public:
   inline T dx() const { return this->elem()[0]; }
@@ -204,6 +220,16 @@ class Indexes {
   void Sort(const std::function<bool(int32_t, int32_t)>& Compare) {
     std::sort(index_ptr_, index_ptr_ + size_,
               [&](int32_t lhs_index, int32_t rhs_index) { return Compare(lhs_index, rhs_index); });
+  }
+
+  void ArgSort(Indexes& buf) {
+    // Warning: buf must be prefilled
+    CHECK_EQ(buf.size(), size_);
+    std::sort(buf.mut_index_ptr(), buf.mut_index_ptr() + size_,
+              [&](int32_t lhs_index, int32_t rhs_index) {
+                return GetIndex(lhs_index) < GetIndex(rhs_index);
+              });
+    Assign(buf);
   }
 
   void Shuffle(size_t begin, size_t end) {
