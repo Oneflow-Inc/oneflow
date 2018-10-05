@@ -8,11 +8,11 @@ set(NCCL_TAG f93fe9bfd94884cec2ba711897222e0df5569a53)
 set(NCCL_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/nccl/src/nccl/build)
 
 if(WIN32)
-    #set(NCCL_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/nccl/install/lib)
-    #set(NCCL_LIBRARY_NAMES libnccl_static.lib)
+    set(NCCL_BUILD_LIBRARY_DIR ${NCCL_BUILD_DIR}/lib)
+    set(NCCL_LIBRARY_NAMES libnccl_static.lib)
 elseif(APPLE AND ("${CMAKE_GENERATOR}" STREQUAL "Xcode"))
-    #set(NCCL_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/nccl/install/lib)
-    #set(NCCL_LIBRARY_NAMES libnccl_static.a)
+    set(NCCL_BUILD_LIBRARY_DIR ${NCCL_BUILD_DIR}/lib)
+    set(NCCL_LIBRARY_NAMES libnccl_static.a)
 else()
     set(NCCL_BUILD_LIBRARY_DIR ${NCCL_BUILD_DIR}/lib)
     set(NCCL_LIBRARY_NAMES libnccl_static.a)
@@ -35,7 +35,6 @@ ExternalProject_Add(nccl
     GIT_TAG ${NCCL_TAG}
     UPDATE_COMMAND ""
     CONFIGURE_COMMAND ""
-    #INSTALL_DIR ${NCCL_INSTALL}
     BUILD_IN_SOURCE 1
     BUILD_COMMAND make -j src.build
     INSTALL_COMMAND ""
