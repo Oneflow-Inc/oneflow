@@ -51,6 +51,10 @@ void Kernel::Forward(const KernelCtx& ctx,
     CHECK(!kernel_conf_.need_do_opaque_header());
     ForwardVaryingInstanceNum(ctx, BnInOp2Blob);
   }
+  if (kernel_conf_.need_do_instance_varying_elem_cnt()) {
+    CHECK(!kernel_conf_.need_do_opaque_header());
+    ForwardInstanceVaryingElemCnt(ctx, BnInOp2Blob);
+  }
   ForwardDataContent(ctx, BnInOp2Blob);
   if (GetActivationType() != ActivationType::kNone) {
     const PbRpf<std::string> obns = this->op_attribute().output_bns();
@@ -64,9 +68,6 @@ void Kernel::Forward(const KernelCtx& ctx,
   } else {
     if (kernel_conf_.need_do_data_id()) { ForwardDataId(ctx, BnInOp2Blob); }
     if (kernel_conf_.need_do_col_num()) { ForwardColNum(ctx, BnInOp2Blob); }
-    if (kernel_conf_.need_do_instance_varying_elem_cnt()) {
-      ForwardInstanceVaryingElemCnt(ctx, BnInOp2Blob);
-    }
   }
 }
 
