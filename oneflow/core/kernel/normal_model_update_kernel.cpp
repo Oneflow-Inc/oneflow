@@ -19,11 +19,26 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
     learning_rate =
         GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, cur_batch_num);
   }
-  int64_t batch_size = Global<JobDesc>::Get()->BatchSize();
+  int32_t total_instance_num = 0;
+  if (device_type == DeviceType::kCPU) {
+    total_instance_num =
+        *reinterpret_cast<const int32_t*>(BnInOp2Blob("total_instance_num_diff")->dptr<T>());
+  } else if (device_type == DeviceType::kGPU) {
+    this->GetTotalInstanceNumFromGpu(BnInOp2Blob, &total_instance_num);
+  } else {
+    UNIMPLEMENTED();
+  }
+  CHECK_GE(total_instance_num, 0);
   float l1 = this->op_conf().normal_mdupdt_conf().l1();
   float l2 = this->op_conf().normal_mdupdt_conf().l2();
-  UpdateModel(ctx.device_ctx, batch_size, static_cast<T>(learning_rate), static_cast<T>(l1),
+  UpdateModel(ctx.device_ctx, total_instance_num, static_cast<T>(learning_rate), static_cast<T>(l1),
               static_cast<T>(l2), next_model_vid, BnInOp2Blob);
+}
+
+template<DeviceType device_type, typename T>
+void NormalMdUpdateKernel<device_type, T>::GetTotalInstanceNumFromGpu(
+    std::function<Blob*(const std::string&)> BnInOp2Blob, int32_t* total_instance_num_ptr) const {
+  *total_instance_num_ptr = 6000;
 }
 
 #define INSTANTIATE_KERNEL(device_type, data_type_pair) \
