@@ -20,8 +20,8 @@ void FpnCollectOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   // useful vars
   const FpnCollectOpConf& conf = op_conf().fpn_collect_conf();
   int32_t post_nms_topn = conf.post_nms_top_n();
-  int32_t level = GetRepeatedInputBnNum("rpn_rois_fpn");
-  CHECK(GetRepeatedInputBnNum("rpn_roi_probs_fpn") == level);
+  int32_t level = RepeatedIbnSize("rpn_rois_fpn");
+  CHECK(RepeatedIbnSize("rpn_roi_probs_fpn") == level);
   CHECK(conf.level() <= level);
   // rpn_rois_fpn_i : (N, R, 5)
   // rpn_rois_probs_fpn_i : (N, R)
@@ -29,8 +29,8 @@ void FpnCollectOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   int32_t N = input_blob_desc->shape().At(0);
   int32_t R = input_blob_desc->shape().At(1);
   FOR_RANGE(size_t, i, 0, level) {
-    std::string roi_bn = GetRepeatedInputBn("rpn_rois_fpn", i);
-    std::string prob_bn = GetRepeatedInputBn("rpn_roi_probs_fpn", i);
+    std::string roi_bn = RepeatedIbn("rpn_rois_fpn", i);
+    std::string prob_bn = RepeatedIbn("rpn_roi_probs_fpn", i);
     BlobDesc* roi_blob_desc = GetBlobDesc4BnInOp(roi_bn);
     BlobDesc* prob_blob_desc = GetBlobDesc4BnInOp(prob_bn);
     CHECK(roi_blob_desc->shape().At(0) == N);
