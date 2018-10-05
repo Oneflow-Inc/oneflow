@@ -2,8 +2,8 @@
 
 namespace oneflow {
 
-#ifdef WITH_NCCL
+#ifdef WITH_CUDA
 void NcclCheck(ncclResult_t error) { CHECK_EQ(error, ncclSuccess) << ncclGetErrorString(error); }
-#endif  // WITH_NCCL
+#endif  // WITH_CUDA
 
 }  // namespace oneflow
