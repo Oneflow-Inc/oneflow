@@ -440,6 +440,19 @@ LogicalBlobId Operator::dtbn2lbi(const std::string& data_tmp_bn) const {
   return lbi;
 }
 
+int32_t Operator::GetRepeatedInputBnNum(const std::string& ibn_prefix) const {
+  int32_t count = 0;
+  for (size_t i = 0; i < input_bns().size(); ++i) {
+    if (input_bns().Get(i).compare(0, ibn_prefix.length(), ibn_prefix) == 0) { count++; }
+  }
+  return count;
+}
+
+std::string Operator::GetRepeatedInputBn(const std::string& ibn_prefix, size_t idx) const {
+  std::string ibn = ibn_prefix + "_" + std::to_string(idx);
+  return ibn;
+}
+
 void Operator::ForEachInputBn(const std::function<void(const std::string&)>& Handler) const {
   for (const std::string& ibn : input_bns()) { Handler(ibn); }
   for (const std::string& pibn : pb_input_bns()) { Handler(pibn); }
