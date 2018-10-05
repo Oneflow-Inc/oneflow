@@ -161,10 +161,12 @@ void JobDesc::SanityCheck() {
 }
 
 void JobDesc::ParseThisMachineId() {
+  this_machine_id_ = -1;
 #ifdef PLATFORM_POSIX
   auto resource_conf = job_conf_.resource();
   int64_t machine_num = resource_conf.machine_size();
   struct ifaddrs* ifaddr = NULL;
+  struct ifaddrs* ifa = NULL;
   char addr[INET_ADDRSTRLEN];
   memset(addr, '\0', sizeof(addr));
   HashMap<std::string, int64_t> ip_addr2machine_id;
@@ -172,17 +174,17 @@ void JobDesc::ParseThisMachineId() {
     CHECK(ip_addr2machine_id.emplace(resource_conf.machine(i).addr(), i).second);
   }
   CHECK_EQ(getifaddrs(&ifaddr), 0);
-  while (ifaddr != NULL) {
-    if (ifaddr->ifa_addr->sa_family == AF_INET) {
-      PCHECK(inet_ntop(AF_INET,
-                       &(reinterpret_cast<struct sockaddr_in*>(ifaddr->ifa_addr)->sin_addr), addr,
-                       INET_ADDRSTRLEN));
+  for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+    if (ifa->ifa_addr == NULL) { continue; }
+    if (ifa->ifa_addr->sa_family == AF_INET) {
+      PCHECK(inet_ntop(AF_INET, &(reinterpret_cast<struct sockaddr_in*>(ifa->ifa_addr)->sin_addr),
+                       addr, INET_ADDRSTRLEN));
       auto ip_addr2machine_id_it = ip_addr2machine_id.find(std::string(addr));
       if (ip_addr2machine_id_it != ip_addr2machine_id.end()) {
         this_machine_id_ = ip_addr2machine_id_it->second;
+        break;
       }
     }
-    ifaddr = ifaddr->ifa_next;
   }
   freeifaddrs(ifaddr);
   CHECK_GE(this_machine_id_, 0);
