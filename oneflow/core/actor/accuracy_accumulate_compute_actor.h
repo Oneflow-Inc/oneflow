@@ -11,12 +11,8 @@ class AccuracyAccCompActor final : public AccumulateCompActor {
   AccuracyAccCompActor() = default;
   ~AccuracyAccCompActor() = default;
 
-  void VirtualCompActorInit(const TaskProto& proto) override {
-    AccumulateCompActor::Init(proto, Global<JobDesc>::Get()->PieceNumOfPrintAccuracy(),
-                              ColIdOrder::kAscending);
-  }
-
  private:
+  void VirtualCompActorInit(const TaskProto& proto) override;
 };
 
 }  // namespace oneflow
