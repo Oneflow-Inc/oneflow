@@ -6,6 +6,7 @@ void FpnDistributeOp::InitFromOpConf() {
   CHECK(op_conf().has_fpn_distribute_conf());
   EnrollInputBn("collected_rois", false);
   EnrollDataTmpBn("target_levels");
+  EnrollDataTmpBn("roi_indices_buf");
   EnrollRepeatedOutputBn("rois", false);
   EnrollOutputBn("roi_indices", false);
 }
@@ -36,6 +37,7 @@ void FpnDistributeOp::InferBlobDescs(
   BlobDesc* roi_indices_blob_desc = GetBlobDesc4BnInOp("roi_indices");
   roi_indices_blob_desc->mut_shape() = Shape({collected_rois_blob_desc->shape().At(0)});
   roi_indices_blob_desc->set_data_type(DataType::kInt32);
+  *GetBlobDesc4BnInOp("roi_indices_buf") = *roi_indices_blob_desc;
   BlobDesc* target_levels_blob_desc = GetBlobDesc4BnInOp("target_levels");
   target_levels_blob_desc->mut_shape() = Shape({collected_rois_blob_desc->shape().At(0)});
   target_levels_blob_desc->set_data_type(DataType::kInt32);

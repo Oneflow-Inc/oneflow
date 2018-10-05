@@ -29,6 +29,12 @@ void FpnDistributeKernel<T>::ForwardDataContent(
     rois_blob_vec[idx] = BnInOp2Blob("rois_" + std::to_string(idx));
   }
   Blob* roi_indices_blob = BnInOp2Blob("roi_indices");
+  Blob* roi_indices_buf_blob = BnInOp2Blob("roi_indices_buf");
+  int32_t roi_indices_size = roi_indices_blob->shape().At(0);
+  Indexes roi_indices(roi_indices_size, roi_indices_size, roi_indices_blob->mut_dptr<int32_t>(),
+                      false);
+  Indexes roi_indices_buf(roi_indices_size, roi_indices_size,
+                          roi_indices_buf_blob->mut_dptr<int32_t>(), true);
   Blob* target_levels_blob = BnInOp2Blob("target_levels");
   std::vector<int32_t> level_copy_idx(level_count, 0);
   size_t roi_size = 5 * sizeof(T);
@@ -55,6 +61,7 @@ void FpnDistributeKernel<T>::ForwardDataContent(
       }
     }
   }
+  roi_indices.ArgSort(roi_indices_buf);
 }
 
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kFpnDistributeConf, FpnDistributeKernel,

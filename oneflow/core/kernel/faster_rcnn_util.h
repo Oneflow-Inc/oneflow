@@ -222,6 +222,16 @@ class Indexes {
               [&](int32_t lhs_index, int32_t rhs_index) { return Compare(lhs_index, rhs_index); });
   }
 
+  void ArgSort(Indexes& buf) {
+    // Warning: buf must be prefilled
+    CHECK_EQ(buf.size(), size_);
+    std::sort(buf.mut_index_ptr(), buf.mut_index_ptr() + size_,
+              [&](int32_t lhs_index, int32_t rhs_index) {
+                return GetIndex(lhs_index) < GetIndex(rhs_index);
+              });
+    Assign(buf);
+  }
+
   void Shuffle(size_t begin, size_t end) {
     CHECK_LE(begin, end);
     CHECK_LE(end, size_);
