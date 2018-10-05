@@ -10,6 +10,8 @@
 #include <sys/types.h>
 #include <ifaddrs.h>
 
+#endif  // PLATFORM_POSIX
+
 namespace oneflow {
 
 int64_t JobDesc::piece_num_of_experiment_phase() const {
@@ -159,26 +161,34 @@ void JobDesc::SanityCheck() {
 }
 
 void JobDesc::ParseThisMachineId() {
+#ifdef PLATFORM_POSIX
   auto resource_conf = job_conf_.resource();
   int64_t machine_num = resource_conf.machine_size();
   struct ifaddrs* ifaddr = NULL;
   char addr[INET_ADDRSTRLEN];
   memset(addr, '\0', sizeof(addr));
+  HashMap<std::string, int64_t> ip_addr2machine_id;
+  FOR_RANGE(int64_t, i, 0, machine_num) {
+    CHECK(ip_addr2machine_id.emplace(resource_conf.machine(i).addr(), i).second);
+  }
   CHECK_EQ(getifaddrs(&ifaddr), 0);
   while (ifaddr != NULL) {
     if (ifaddr->ifa_addr->sa_family == AF_INET) {
       PCHECK(inet_ntop(AF_INET,
                        &(reinterpret_cast<struct sockaddr_in*>(ifaddr->ifa_addr)->sin_addr), addr,
                        INET_ADDRSTRLEN));
-      FOR_RANGE(int64_t, i, 0, machine_num) {
-        if (resource_conf.machine(i).addr() == std::string(addr)) { this_machine_id_ = i; }
-      }
+      auto ip_addr2machine_id_it = ip_addr2machine_id.find(std::string(addr));
+      CHECK(ip_addr2machine_id_it != ip_addr2machine_id.end());
+      this_machine_id_ = ip_addr2machine_id_it->second;
     }
     ifaddr = ifaddr->ifa_next;
   }
   freeifaddrs(ifaddr);
   CHECK_GE(this_machine_id_, 0);
   CHECK_LT(this_machine_id_, machine_num);
+#else
+  UNIMPLEMENTED()
+#endif
 }
 
 void JobDesc::SplitDecodeOps() {
@@ -276,5 +286,3 @@ void JobDesc::AddRecordLoadOps() {
 }
 
 }  // namespace oneflow
-
-#endif  // PLATFORM_POSIX
