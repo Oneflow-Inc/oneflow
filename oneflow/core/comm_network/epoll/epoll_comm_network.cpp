@@ -104,11 +104,11 @@ void EpollCommNet::InitSockets() {
       return true;
     } else {
       PCHECK(errno == EACCES || errno == EADDRINUSE);
+      return false;
     }
-    return false;
   };
   if (this_machine.epoll_port() != 0) {
-    EpollListen(this_machine.epoll_port());
+    CHECK(EpollListen(this_machine.epoll_port()));
     if (this_machine.epoll_external_port()) {
       PushPort(this_machine_id, this_machine.epoll_external_port());
     } else {
