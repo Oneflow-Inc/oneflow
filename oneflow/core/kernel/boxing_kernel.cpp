@@ -295,6 +295,18 @@ void BoxingKernel<T>::ForwardColNum(const KernelCtx& ctx,
 }
 
 template<typename T>
+void BoxingKernel<T>::ForwardVaryingInstanceNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  ForwardField<VaryingInstanceNumIterator>(ctx, BnInOp2Blob);
+}
+
+template<typename T>
+void BoxingKernel<T>::ForwardInstanceVaryingElemCnt(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  ForwardField<InstanceVaryingElemCntIterator>(ctx, BnInOp2Blob);
+}
+
+template<typename T>
 void BoxingKernel<T>::SetColId(const KernelCtx& ctx,
                                std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const BoxingOpConf& boxing_conf = op_conf().boxing_conf();

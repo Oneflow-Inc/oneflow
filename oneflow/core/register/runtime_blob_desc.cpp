@@ -27,6 +27,14 @@ bool RtBlobDesc::has_data_id_field() const { return header_pod_desc_.HasField(Fi
 
 bool RtBlobDesc::has_col_num_field() const { return header_pod_desc_.HasField(FieldKey::kColNum); }
 
+bool RtBlobDesc::has_varying_instance_num_field() const {
+  return header_pod_desc_.HasField(FieldKey::kVaryingInstanceNum);
+}
+
+bool RtBlobDesc::has_instance_varying_elem_cnt_field() const {
+  return header_pod_desc_.HasField(FieldKey::kInstanceVaryingElemCnt);
+}
+
 size_t RtBlobDesc::ByteSizeOfBlobHeader() const { return header_pod_desc_.ByteSize(); }
 
 size_t RtBlobDesc::ByteSizeOfBlobBody() const { return body_desc_.AlignedByteSize(); }
@@ -39,6 +47,16 @@ size_t RtBlobDesc::ByteSizeOfDataIdField() const {
 size_t RtBlobDesc::ByteSizeOfColNumField() const {
   if (!has_col_num_field()) { return 0; }
   return header_pod_desc_.Field(FieldKey::kColNum).ByteSize();
+}
+
+size_t RtBlobDesc::ByteSizeOfVaryingInstanceNumField() const {
+  if (!has_varying_instance_num_field()) { return 0; }
+  return header_pod_desc_.Field(FieldKey::kVaryingInstanceNum).ByteSize();
+}
+
+size_t RtBlobDesc::ByteSizeOfInstanceVaryingElemCntField() const {
+  if (!has_instance_varying_elem_cnt_field()) { return 0; }
+  return header_pod_desc_.Field(FieldKey::kInstanceVaryingElemCnt).ByteSize();
 }
 
 size_t RtBlobDesc::ByteSizeOfDataContentField() const { return body_desc_.ByteSize(); }

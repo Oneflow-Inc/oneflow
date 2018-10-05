@@ -109,6 +109,7 @@ void BlobDesc::InstanceVaryingElemCntToProto(StructPodDesc* header_pod_desc) con
 
 void BlobDesc::VaryingInstanceNumToProto(StructPodDesc* header_pod_desc) const {
   CHECK(instance_inner_shape_);
+  CHECK_EQ(instance_inner_shape_->elem_cnt(), body_field_.shape().At(0));
   Shape shape({instance_inner_shape_->At(0)});
   header_pod_desc->AddField(FieldKey::kVaryingInstanceNum, TensorPodDesc(shape, DataType::kInt32));
 }

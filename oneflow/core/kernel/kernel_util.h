@@ -451,6 +451,40 @@ class ColNumIterator final : public FieldIterator {
   size_t GetSizeOfField(Blob* blob) const override { return blob->ByteSizeOfColNumField(); }
 };
 
+class VaryingInstanceNumIterator final : public FieldIterator {
+ public:
+  VaryingInstanceNumIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,
+                             const PbRpf<std::string>* bns, int32_t axis)
+      : FieldIterator(BnInOp2Blob, bns, axis) {}
+  static CopyBlobFieldMthd GetCopyBlobFieldMthd() { return &Blob::CopyVaryingInstanceNumFrom; }
+
+ private:
+  char* GetMutPtr(Blob* blob) override {
+    return reinterpret_cast<char*>(blob->mut_varying_instance_num());
+  }
+
+  size_t GetSizeOfField(Blob* blob) const override {
+    return blob->ByteSizeOfVaryingInstanceNumField();
+  }
+};
+
+class InstanceVaryingElemCntIterator final : public FieldIterator {
+ public:
+  InstanceVaryingElemCntIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,
+                                 const PbRpf<std::string>* bns, int32_t axis)
+      : FieldIterator(BnInOp2Blob, bns, axis) {}
+  static CopyBlobFieldMthd GetCopyBlobFieldMthd() { return &Blob::CopyInstanceVaryingElemCntFrom; }
+
+ private:
+  char* GetMutPtr(Blob* blob) override {
+    return reinterpret_cast<char*>(blob->mut_instance_varying_elem_cnt());
+  }
+
+  size_t GetSizeOfField(Blob* blob) const override {
+    return blob->ByteSizeOfInstanceVaryingElemCntField();
+  }
+};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_KERNEL_UTIL_H_

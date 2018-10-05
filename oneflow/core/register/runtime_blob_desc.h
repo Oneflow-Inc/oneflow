@@ -24,8 +24,8 @@ class RtBlobDesc {
 
   bool has_data_id_field() const;
   bool has_col_num_field() const;
-  bool has_instance_varying_elen_cnt() const { TODO(); }
-  bool has_varying_instance_num() const { TODO(); }
+  bool has_instance_varying_elem_cnt_field() const;
+  bool has_varying_instance_num_field() const;
   const StructPodDesc& header_pod_desc() const { return header_pod_desc_; }
 
   int32_t max_col_num() const { return blob_desc_proto_.header().max_col_num(); }
@@ -36,8 +36,8 @@ class RtBlobDesc {
 
   size_t ByteSizeOfDataIdField() const;
   size_t ByteSizeOfColNumField() const;
-  size_t ByteSizeOfInstanceVaryingElemCntField() const { TODO(); }
-  size_t ByteSizeOfVaryingInstanceNumField() const { TODO(); }
+  size_t ByteSizeOfVaryingInstanceNumField() const;
+  size_t ByteSizeOfInstanceVaryingElemCntField() const;
   size_t ByteSizeOfDataContentField() const;
 
   bool operator==(const RtBlobDesc& rhs) const;

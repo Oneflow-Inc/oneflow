@@ -47,6 +47,10 @@ const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
 
 void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (kernel_conf_.need_do_varying_instance_num()) {
+    CHECK(!kernel_conf_.need_do_opaque_header());
+    ForwardVaryingInstanceNum(ctx, BnInOp2Blob);
+  }
   ForwardDataContent(ctx, BnInOp2Blob);
   if (GetActivationType() != ActivationType::kNone) {
     const PbRpf<std::string> obns = this->op_attribute().output_bns();
@@ -60,11 +64,18 @@ void Kernel::Forward(const KernelCtx& ctx,
   } else {
     if (kernel_conf_.need_do_data_id()) { ForwardDataId(ctx, BnInOp2Blob); }
     if (kernel_conf_.need_do_col_num()) { ForwardColNum(ctx, BnInOp2Blob); }
+    if (kernel_conf_.need_do_instance_varying_elem_cnt()) {
+      ForwardInstanceVaryingElemCnt(ctx, BnInOp2Blob);
+    }
   }
 }
 
 void Kernel::Backward(const KernelCtx& ctx,
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (kernel_conf_.need_do_varying_instance_num()) {
+    CHECK(!kernel_conf_.need_do_opaque_header());
+    BackwardVaryingInstanceNum(ctx, BnInOp2Blob);
+  }
   ActivationType activation = GetActivationType();
   if (activation != ActivationType::kNone) {
     const PbRpf<std::string> obns = this->op_attribute().output_bns();
@@ -110,19 +121,25 @@ void KernelIf<device_type>::ForwardColNum(
 template<DeviceType device_type>
 void KernelIf<device_type>::ForwardInstanceVaryingElemCnt(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  TODO();
+  CHECK(kernel_conf().can_naive_do_instance_varying_elem_cnt());
+  CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
+            &Blob::CopyInstanceVaryingElemCntFrom);
 }
 
 template<DeviceType device_type>
 void KernelIf<device_type>::ForwardVaryingInstanceNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  TODO();
+  CHECK(kernel_conf().can_naive_do_varying_instance_num());
+  CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
+            &Blob::CopyVaryingInstanceNumFrom);
 }
 
 template<DeviceType device_type>
 void KernelIf<device_type>::BackwardVaryingInstanceNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  TODO();
+  CHECK(kernel_conf().can_naive_do_varying_instance_num());
+  CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().output_diff_bns(),
+            op_attribute().input_diff_bns(), &Blob::CopyVaryingInstanceNumFrom);
 }
 
 template<DeviceType device_type>
