@@ -178,8 +178,9 @@ void JobDesc::ParseThisMachineId() {
                        &(reinterpret_cast<struct sockaddr_in*>(ifaddr->ifa_addr)->sin_addr), addr,
                        INET_ADDRSTRLEN));
       auto ip_addr2machine_id_it = ip_addr2machine_id.find(std::string(addr));
-      CHECK(ip_addr2machine_id_it != ip_addr2machine_id.end());
-      this_machine_id_ = ip_addr2machine_id_it->second;
+      if (ip_addr2machine_id_it != ip_addr2machine_id.end()) {
+        this_machine_id_ = ip_addr2machine_id_it->second;
+      }
     }
     ifaddr = ifaddr->ifa_next;
   }
