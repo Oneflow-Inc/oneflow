@@ -147,6 +147,27 @@ static bool HasAllBlobDescWithField(
   return true;
 }
 
+static bool HasSameInstanceInnerShape(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const PbRpf<std::string>& input_bns, const PbRpf<std::string>& output_bns) {
+  auto ForEachBn = [&](const std::function<void(const std::string&)>& Handler) {
+    for (const auto& bn : input_bns) { Handler(bn); }
+    for (const auto& bn : output_bns) { Handler(bn); }
+  };
+  bool ret = true;
+  std::unique_ptr<Shape> instance_inner_shape;
+  ForEachBn([&](const std::string& bn) {
+    if (ret == false) { return; }
+    const auto& inner_shape = GetBlobDesc4BnInOp(bn)->instance_inner_shape();
+    if (instance_inner_shape) {
+      if (!(*instance_inner_shape == inner_shape)) { ret = false; }
+    } else {
+      instance_inner_shape.reset(new Shape(inner_shape));
+    }
+  });
+  return ret;
+}
+
 ActivationType Operator::GetActivationType() const {
   if (HasFieldInCustomizedConf("activation")) {
     return static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"));
@@ -175,7 +196,7 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
       kernel_conf->set_need_do_instance_varying_elem_cnt(true);
       if (HasAllBlobDescWithField(GetBlobDesc4BnInOp, input_bns(),
                                   &BlobDesc::has_instance_varying_elem_cnt_field)
-          || HasAllBlobDescWithField(GetBlobDesc4BnInOp, output_bns(),
+          && HasAllBlobDescWithField(GetBlobDesc4BnInOp, output_bns(),
                                      &BlobDesc::has_instance_varying_elem_cnt_field)) {
         kernel_conf->set_can_naive_do_instance_varying_elem_cnt(true);
       }
@@ -184,8 +205,9 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
       kernel_conf->set_need_do_varying_instance_num(true);
       if (HasAllBlobDescWithField(GetBlobDesc4BnInOp, input_bns(),
                                   &BlobDesc::has_varying_instance_num_field)
-          || HasAllBlobDescWithField(GetBlobDesc4BnInOp, output_bns(),
-                                     &BlobDesc::has_varying_instance_num_field)) {
+          && HasAllBlobDescWithField(GetBlobDesc4BnInOp, output_bns(),
+                                     &BlobDesc::has_varying_instance_num_field)
+          && HasSameInstanceInnerShape(GetBlobDesc4BnInOp, input_bns(), output_bns())) {
         kernel_conf->set_can_naive_do_varying_instance_num(true);
       }
     }
