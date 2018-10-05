@@ -18,6 +18,8 @@ enum FieldKey {
   kInvalidFieldKey = 0;
   kDataId = 1;
   kColNum = 2;
+  kInstanceVaryingElemCnt = 3;
+  kVaryingInstanceNum = 4;
 }
 
 message FieldId {
