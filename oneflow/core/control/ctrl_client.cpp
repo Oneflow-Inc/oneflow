@@ -144,7 +144,7 @@ void CtrlClient::EraseCount(const std::string& k) {
 CtrlClient::CtrlClient() {
   stubs_.reserve(Global<JobDesc>::Get()->TotalMachineNum());
   for (int64_t i = 0; i < Global<JobDesc>::Get()->TotalMachineNum(); ++i) {
-    std::string addr = Global<MachineCtx>::Get()->GetCtrlAddr(i);
+    std::string addr = Global<MachineCtx>::Get()->GetAddr(i);
     std::string port = Global<MachineCtx>::Get()->GetCtrlPort(i);
     stubs_.push_back(CtrlService::NewStub(addr + ":" + port));
     LoadServer(addr + ":" + port, stubs_[i].get());

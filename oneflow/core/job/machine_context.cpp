@@ -3,20 +3,19 @@
 
 namespace oneflow {
 
-std::string MachineCtx::GetCtrlAddr(int64_t machine_id) const {
-  const Machine& mchn = Global<JobDesc>::Get()->resource().machine(machine_id);
-  return mchn.addr();
+std::string MachineCtx::GetAddr(int64_t machine_id) const {
+  if (machine_id != this_machine_id_) {
+    const Machine& mchn = Global<JobDesc>::Get()->resource().machine(machine_id);
+    return mchn.addr();
+  } else {
+    return "0.0.0.0";
+  }
 }
 
 std::string MachineCtx::GetCtrlPort(int64_t machine_id) const {
   const Machine& mchn = Global<JobDesc>::Get()->resource().machine(machine_id);
   return mchn.external_port() == 0 ? std::to_string(mchn.port())
                                    : std::to_string(mchn.external_port());
-}
-
-std::string MachineCtx::GetListenPort(int64_t machine_id) const {
-  const Machine& mchn = Global<JobDesc>::Get()->resource().machine(machine_id);
-  return std::to_string(mchn.port());
 }
 
 MachineCtx::MachineCtx(int64_t this_mchn_id) : this_machine_id_(this_mchn_id) {
