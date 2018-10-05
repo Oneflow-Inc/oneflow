@@ -26,7 +26,6 @@
 #include "oneflow/core/common/meta_util.hpp"
 
 DECLARE_string(log_dir);
-DECLARE_int64(this_machine_id);
 
 namespace std {
 template<typename T0, typename T1>

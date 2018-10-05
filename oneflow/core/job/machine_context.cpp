@@ -19,7 +19,7 @@ std::string MachineCtx::GetCtrlClientPort(int64_t machine_id) const {
                                    : std::to_string(mchn.external_port());
 }
 
-MachineCtx::MachineCtx(int64_t this_mchn_id) : this_machine_id_(this_mchn_id) {
+MachineCtx::MachineCtx() : this_machine_id_(Global<JobDesc>::Get()->this_machine_id()) {
   LOG(INFO) << "this machine id: " << this_machine_id_;
 }
 

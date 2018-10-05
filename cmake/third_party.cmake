@@ -11,9 +11,6 @@ include(grpc)
 include(libjpeg-turbo)
 include(opencv)
 include(eigen)
-if (BUILD_CUDA)
-  include(cub)
-endif()
 
 if (BUILD_CUDA)
   set(CUDA_SEPARABLE_COMPILATION ON)
@@ -31,14 +28,6 @@ if (BUILD_CUDA)
     list(APPEND CUDA_LIBRARIES ${cuda_lib_dir}/${extra_cuda_lib})
   endforeach()
   find_package(CuDNN REQUIRED)
-  if (BUILD_NCCL)
-    find_package(NCCL REQUIRED)
-    if (NCCL_VERSION VERSION_LESS 2.0)
-      message(FATAL_ERROR "minimum nccl version required is 2.0")
-    else()
-      add_definitions(-DWITH_NCCL)
-    endif()
-  endif()
 endif()
 
 if (NOT WIN32)
@@ -65,14 +54,11 @@ set(oneflow_third_party_libs
     ${GRPC_STATIC_LIBRARIES}
     ${ZLIB_STATIC_LIBRARIES}
     ${farmhash_STATIC_LIBRARIES}
-    ${CUDNN_LIBRARIES}
-    ${CUDA_LIBRARIES}
-    ${NCCL_LIBRARIES}
     ${BLAS_LIBRARIES}
     ${LIBJPEG_STATIC_LIBRARIES}
     ${OPENCV_STATIC_LIBRARIES}
-    ${CMAKE_DL_LIBS}
 )
+
 message(STATUS "oneflow_third_party_libs: " ${oneflow_third_party_libs})
 
 if(WIN32)
@@ -97,7 +83,6 @@ set(oneflow_third_party_dependencies
   protobuf_copy_binary_to_destination
   grpc_copy_headers_to_destination
   grpc_copy_libs_to_destination
-  cub_copy_headers_to_destination
   opencv_copy_headers_to_destination
   opencv_copy_libs_to_destination
   eigen
@@ -111,9 +96,26 @@ include_directories(
     ${GOOGLEMOCK_INCLUDE_DIR}
     ${PROTOBUF_INCLUDE_DIR}
     ${GRPC_INCLUDE_DIR}
-    ${CUDNN_INCLUDE_DIRS}
-    ${CUB_INCLUDE_DIR}
     ${LIBJPEG_INCLUDE_DIR}
     ${OPENCV_INCLUDE_DIR}
     ${EIGEN_INCLUDE_DIR}
 )
+
+if (BUILD_CUDA)
+  include(cub)
+  include(nccl)
+
+  list(APPEND oneflow_third_party_libs ${CUDA_LIBRARIES})
+  list(APPEND oneflow_third_party_libs ${CUDNN_LIBRARIES})
+  list(APPEND oneflow_third_party_libs ${NCCL_STATIC_LIBRARIES})
+
+  list(APPEND oneflow_third_party_dependencies cub_copy_headers_to_destination)
+  list(APPEND oneflow_third_party_dependencies nccl_copy_headers_to_destination)
+  list(APPEND oneflow_third_party_dependencies nccl_copy_libs_to_destination)
+
+  include_directories(
+    ${CUDNN_INCLUDE_DIRS}
+    ${CUB_INCLUDE_DIR}
+    ${NCCL_INCLUDE_DIR}
+)
+endif()

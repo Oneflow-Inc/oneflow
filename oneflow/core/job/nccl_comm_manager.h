@@ -4,9 +4,9 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/plan.pb.h"
 
-#ifdef WITH_NCCL
+#ifdef WITH_CUDA
 
-#include <nccl.h>
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 
@@ -32,6 +32,6 @@ class NcclCommMgr final {
 
 }  // namespace oneflow
 
-#endif  // WITH_NCCL
+#endif  // WITH_CUDA
 
 #endif  // ONEFLOW_CORE_JOB_NCCL_COMM_MANAGER_H_
