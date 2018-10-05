@@ -4,12 +4,8 @@
 namespace oneflow {
 
 std::string MachineCtx::GetAddr(int64_t machine_id) const {
-  if (machine_id != this_machine_id_) {
-    const Machine& mchn = Global<JobDesc>::Get()->resource().machine(machine_id);
-    return mchn.addr();
-  } else {
-    return "0.0.0.0";
-  }
+  const Machine& mchn = Global<JobDesc>::Get()->resource().machine(machine_id);
+  return mchn.addr();
 }
 
 std::string MachineCtx::GetCtrlPort(int64_t machine_id) const {

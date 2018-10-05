@@ -8,8 +8,7 @@ namespace oneflow {
 
 namespace {
 
-sockaddr_in GetSockAddr(int64_t machine_id, uint16_t port) {
-  std::string addr = Global<MachineCtx>::Get()->GetAddr(machine_id);
+sockaddr_in GetSockAddr(const std::string& addr, uint16_t port) {
   sockaddr_in sa;
   sa.sin_family = AF_INET;
   sa.sin_port = htons(port);
@@ -96,17 +95,12 @@ void EpollCommNet::InitSockets() {
   int listen_sockfd = socket(AF_INET, SOCK_STREAM, 0);
   const Machine& this_machine = Global<JobDesc>::Get()->resource().machine(this_machine_id);
   auto EpollListen = [&](uint16_t listen_port) {
-    sockaddr_in this_sockaddr = GetSockAddr(this_machine_id, listen_port);
+    sockaddr_in this_sockaddr = GetSockAddr("0.0.0.0", listen_port);
     int bind_result =
         bind(listen_sockfd, reinterpret_cast<sockaddr*>(&this_sockaddr), sizeof(this_sockaddr));
     if (bind_result == 0) {
       machine_id2sockfd_[this_machine_id] = listen_sockfd;
       PCHECK(listen(listen_sockfd, total_machine_num) == 0);
-      if (this_machine.epoll_port()) {
-        PushPort(this_machine_id, this_machine.epoll_external_port());
-      } else {
-        PushPort(this_machine_id, listen_port);
-      }
       return true;
     } else {
       PCHECK(errno == EACCES || errno == EADDRINUSE);
@@ -115,11 +109,15 @@ void EpollCommNet::InitSockets() {
   };
   if (this_machine.epoll_port() != 0) {
     EpollListen(this_machine.epoll_port());
+    PushPort(this_machine_id, this_machine.epoll_external_port());
   } else {
     uint16_t this_listen_port = 1024;
     uint16_t listen_port_max = MaxVal<uint16_t>();
     for (; this_listen_port < listen_port_max; ++this_listen_port) {
-      if (EpollListen(this_listen_port)) { break; }
+      if (EpollListen(this_listen_port)) {
+        PushPort(this_machine_id, this_listen_port);
+        break;
+      }
     }
     CHECK_LT(this_listen_port, listen_port_max);
   }
@@ -136,7 +134,7 @@ void EpollCommNet::InitSockets() {
       CHECK_EQ(peer_machine.epoll_external_port(), peer_port);
     }
 
-    sockaddr_in peer_sockaddr = GetSockAddr(peer_id, peer_port);
+    sockaddr_in peer_sockaddr = GetSockAddr(peer_machine.addr(), peer_port);
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     PCHECK(connect(sockfd, reinterpret_cast<sockaddr*>(&peer_sockaddr), sizeof(peer_sockaddr))
            == 0);
