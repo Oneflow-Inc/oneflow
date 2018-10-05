@@ -100,7 +100,11 @@ std::string Operator::RepeatedIbn(const std::string& prefix, int32_t idx) const 
 int32_t Operator::RepeatedIbnSize(const std::string& prefix) const {
   int32_t ret = 0;
   ForEachInputBn([&ret, &prefix](const std::string& ibn) {
-    if (ibn.find(prefix) != std::string::npos) { ret++; }
+    std::string idx_str = std::to_string(ret);
+    size_t idx_size = idx_str.size();
+    size_t ibn_size = ibn.size();
+    std::string prefix_substr = ibn.substr(0, ibn_size - idx_size - 1);
+    if (prefix_substr == prefix) { ret++; }
   });
   return ret;
 }
@@ -110,8 +114,12 @@ std::string Operator::RepeatedObn(const std::string& prefix, int32_t idx) const 
 }
 int32_t Operator::RepeatedObnSize(const std::string& prefix) const {
   int32_t ret = 0;
-  ForEachOutputBn([&ret, &prefix](const std::string& ibn) {
-    if (ibn.find(prefix) != std::string::npos) { ret++; }
+  ForEachOutputBn([&ret, &prefix](const std::string& obn) {
+    std::string idx_str = std::to_string(ret);
+    size_t idx_size = idx_str.size();
+    size_t obn_size = obn.size();
+    std::string prefix_substr = obn.substr(0, obn_size - idx_size - 1);
+    if (prefix_substr == prefix) { ret++; }
   });
   return ret;
 }
