@@ -17,6 +17,7 @@ class RepeatOp final : public Operator {
                       const ParallelContext* parallel_ctx) const override;
   void InitFromOpConf() override;
   LogicalNode* NewProperLogicalNode() override;
+  bool NeedInBlobWhenBackward() const override { return false; }
 };
 
 }  // namespace oneflow
