@@ -9,7 +9,6 @@ import "oneflow/core/job/placement.proto";
 
 message TrainConf {
   required int64 batch_size = 1; // batch_size % piece_size = 0
-  required int64 total_batch_num = 2;
   required NormalModelUpdateOpUserConf model_update_conf = 3;
   required string model_save_snapshots_path = 4;
   optional string model_load_snapshot_path = 5 [default = ""];
@@ -50,6 +49,7 @@ message FileSystemConf {
 message OtherConf {
   required int64 piece_size = 2;
   required int32 data_part_num = 3; // piece_size % data_part_num = 0
+  required int64 total_batch_num = 4;
 
   optional bool use_rdma = 100 [default = false];
   optional string model_load_path = 101 [default = ""];
