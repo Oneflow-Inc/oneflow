@@ -109,7 +109,11 @@ void EpollCommNet::InitSockets() {
   };
   if (this_machine.epoll_port() != 0) {
     EpollListen(this_machine.epoll_port());
-    PushPort(this_machine_id, this_machine.epoll_external_port());
+    if (this_machine.epoll_external_port()) {
+      PushPort(this_machine_id, this_machine.epoll_external_port());
+    } else {
+      PushPort(this_machine_id, this_machine.epoll_port());
+    }
   } else {
     uint16_t this_listen_port = 1024;
     uint16_t listen_port_max = MaxVal<uint16_t>();
