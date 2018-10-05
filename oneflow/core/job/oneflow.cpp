@@ -192,7 +192,8 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, int64_t this_mchn_id) {
   bool DoProfile =
       machine_ctx->IsThisMachineMaster() && Global<JobDesc>::Get()->collect_act_event();
   if (DoProfile) { Global<Profiler>::New(); }
-  ctrl_server_.reset(new CtrlServer(machine_ctx->GetThisCtrlServerAddr()));
+  ctrl_server_.reset(
+      new CtrlServer(machine_ctx->GetBcastAddr() + ":" + machine_ctx->GetThisListenPort()));
   Global<CtrlClient>::New();
   FixCpuDeviceNum();
   Global<IDMgr>::New();

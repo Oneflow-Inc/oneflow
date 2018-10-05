@@ -122,9 +122,7 @@ void LibHDFS::LoadAndBind() {
   const char* kLibHdfsDso = "libhdfs.so";
 #endif
   status_ = TryLoadAndBind(kLibHdfsDso, &handle_);
-  if (!status_) {
-    LOG(FATAL) << "Could not load & bind libhdfs.so";
-  }
+  if (!status_) { LOG(FATAL) << "Could not load & bind libhdfs.so"; }
 }
 
 HadoopFileSystem::HadoopFileSystem(const HdfsConf& hdfs_conf)

@@ -145,8 +145,9 @@ CtrlClient::CtrlClient() {
   stubs_.reserve(Global<JobDesc>::Get()->TotalMachineNum());
   for (int64_t i = 0; i < Global<JobDesc>::Get()->TotalMachineNum(); ++i) {
     std::string addr = Global<MachineCtx>::Get()->GetCtrlAddr(i);
-    stubs_.push_back(CtrlService::NewStub(addr));
-    LoadServer(addr, stubs_[i].get());
+    std::string port = Global<MachineCtx>::Get()->GetCtrlPort(i);
+    stubs_.push_back(CtrlService::NewStub(addr + ":" + port));
+    LoadServer(addr + ":" + port, stubs_[i].get());
   }
   need_heartbeat_thread_stop_ = false;
   heartbeat_thread_ = std::thread([this]() {
