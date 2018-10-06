@@ -20,17 +20,17 @@ void FpnCollectOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   // useful vars
   const FpnCollectOpConf& conf = op_conf().fpn_collect_conf();
   int32_t post_nms_topn = conf.post_nms_top_n();
-  int32_t level = GetRepeatedInputBnNum("rpn_rois_fpn");
-  CHECK(GetRepeatedInputBnNum("rpn_roi_probs_fpn") == level);
+  int32_t level = RepeatedIbnSize("rpn_rois_fpn");
+  CHECK(RepeatedIbnSize("rpn_roi_probs_fpn") == level);
   CHECK(conf.level() <= level);
   // rpn_rois_fpn_i : (N, R, 5)
   // rpn_rois_probs_fpn_i : (N, R)
   BlobDesc* input_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(0));
   int32_t N = input_blob_desc->shape().At(0);
   int32_t R = input_blob_desc->shape().At(1);
-  for (int32_t i = 0; i < level; i++) {
-    std::string roi_bn = "rpn_rois_fpn_" + std::to_string(i);
-    std::string prob_bn = "rpn_roi_probs_fpn_" + std::to_string(i);
+  FOR_RANGE(size_t, i, 0, level) {
+    std::string roi_bn = RepeatedIbn("rpn_rois_fpn", i);
+    std::string prob_bn = RepeatedIbn("rpn_roi_probs_fpn", i);
     BlobDesc* roi_blob_desc = GetBlobDesc4BnInOp(roi_bn);
     BlobDesc* prob_blob_desc = GetBlobDesc4BnInOp(prob_bn);
     CHECK(roi_blob_desc->shape().At(0) == N);
@@ -43,15 +43,15 @@ void FpnCollectOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   BlobDesc* index_blob_desc = GetBlobDesc4BnInOp("index");
   index_blob_desc->mut_shape() = Shape({N * R * level});
   index_blob_desc->set_data_type(DataType::kInt32);
-  // roi_inputs (N * R * level, 5)
+  // roi_inputs (N * R * level, 5) T
   BlobDesc* roi_inputs_blob_desc = GetBlobDesc4BnInOp("roi_inputs");
   roi_inputs_blob_desc->mut_shape() = Shape({N, R * level, 5});
   roi_inputs_blob_desc->set_data_type(input_blob_desc->data_type());
-  // score_inputs (N * R * level)
+  // score_inputs (N * R * level) T
   BlobDesc* score_inputs_blob_desc = GetBlobDesc4BnInOp("score_inputs");
   score_inputs_blob_desc->mut_shape() = Shape({N, R * level});
   score_inputs_blob_desc->set_data_type(input_blob_desc->data_type());
-  // out (post_nms_topn ,5)
+  // out (post_nms_topn ,5) T
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   out_blob_desc->mut_shape() = Shape({post_nms_topn, 5});
   out_blob_desc->set_data_type(input_blob_desc->data_type());

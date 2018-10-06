@@ -618,7 +618,7 @@ message FpnCollectOpConf{
   repeated string rpn_roi_probs_fpn = 2;
   required string out = 3;
   required int32 post_nms_top_n = 4;
-  optional int32 level = 5 [default = 5]; 
+  optional int32 level = 5 [default = 5];
 }
 
 message AffineChannelOpConf {
@@ -854,6 +854,16 @@ message BatchPermutationOpConf {
   required string data_format = 4;
 }
 
+message FpnDistributeOpConf {
+  required string collected_rois = 1;
+  repeated string rois = 2; // num = rpn_max_level - rpn_min_level + 1
+  required string roi_indices = 3;
+  required int32 roi_min_level = 4 [default = 2];
+  required int32 roi_max_level = 5 [default = 5];
+  required int32 roi_canonical_level = 6 [default = 4];
+  required float roi_canonical_scale = 7 [default = 224];
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -933,6 +943,7 @@ message OperatorConf {
     ResizeNearestNeighborOpConf resize_nearest_neighbor_conf = 1010;
     BatchPermutationOpConf batch_permutation_conf = 1011;
     FpnCollectOpConf fpn_collect_conf = 1012;
+    FpnDistributeOpConf fpn_distribute_conf = 1013;
   }
 }
 

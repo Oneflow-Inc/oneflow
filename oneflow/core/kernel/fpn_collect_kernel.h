@@ -18,7 +18,7 @@ class FpnCollectKernel final : public KernelIf<device_type> {
                           std::function<Blob*(const std::string&)>) const override;
   void ConcatAllRoisAndScores(const KernelCtx& ctx, const int32_t,
                               const std::function<Blob*(const std::string&)>&) const;
-  void SortAndSelectTopnRois(const int32_t, const std::function<Blob*(const std::string&)>&) const;
+  void SortAndSelectTopnRois(const size_t, const std::function<Blob*(const std::string&)>&) const;
 };
 
 }  // namespace oneflow
