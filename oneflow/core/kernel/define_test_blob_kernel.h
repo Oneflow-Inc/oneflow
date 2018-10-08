@@ -12,8 +12,16 @@ class DefineTestBlobKernel final : public KernelIf<DeviceType::kCPU> {
   ~DefineTestBlobKernel() = default;
 
  private:
-  void Forward(const KernelCtx& ctx,
-               std::function<Blob*(const std::string&)> BnInOp2Blob) const override {}
+  void ForwardInstanceVaryingElemCnt(
+      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardVaryingInstanceNum(
+      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardDataId(const KernelCtx& ctx,
+                     std::function<Blob*(const std::string&)> BnInOp2Blob) const override {}
+  void ForwardColNum(const KernelCtx& ctx,
+                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {}
 };
 
 }  // namespace oneflow

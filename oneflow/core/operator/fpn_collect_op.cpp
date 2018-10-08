@@ -52,10 +52,11 @@ void FpnCollectOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   score_inputs_blob_desc->mut_shape() = Shape({N, R * level});
   score_inputs_blob_desc->set_data_type(input_blob_desc->data_type());
   // out (post_nms_topn ,5) T
-  BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  out_blob_desc->mut_instance_inner_shape() = Shape({1,post_nms_top_n});
+  BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out"); 
   out_blob_desc->mut_shape() = Shape({post_nms_topn, 5});
   out_blob_desc->set_data_type(input_blob_desc->data_type());
+  out_blob_desc->mut_instance_inner_shape() = Shape({1,post_nms_top_n});
+  out_blob_desc->set_has_varying_instance_num_field(true);
 }
 
 REGISTER_OP(OperatorConf::kFpnCollectConf, FpnCollectOp);

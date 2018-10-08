@@ -78,7 +78,6 @@ void FpnCollectKernel<device_type, T>::SortAndSelectTopnRois(
       out_blob->mut_dptr<T>()[i * 5 + j] = roi_inputs_blob->dptr<T>()[si * 5 + j];
     }
   }
-
   LOG(INFO) << "TEST COLLECT BREAK POINT 2";
 }
 
