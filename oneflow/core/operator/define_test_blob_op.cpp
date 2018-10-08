@@ -26,7 +26,7 @@ void DefineTestBlobOp::InferBlobDescs(
   if (conf.has_instance_inner_shape()) {
     out_blob_desc->mut_instance_inner_shape() = Shape(conf.instance_inner_shape());
   }
-  CHECK(conf.has_varying_instance_num() && conf.has_instance_inner_shape());
+  if (conf.has_varying_instance_num()) { CHECK(conf.has_instance_inner_shape()); }
 }
 
 REGISTER_OP(OperatorConf::kDefineTestBlobConf, DefineTestBlobOp);
