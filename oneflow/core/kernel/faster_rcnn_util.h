@@ -232,6 +232,12 @@ class Indexes {
     Assign(buf);
   }
 
+  void NthElement(size_t n, const std::function<bool(int32_t, int32_t)>& Compare) {
+    std::nth_element(
+        index_ptr_, index_ptr_ + n, index_ptr_ + size_,
+        [&](int32_t lhs_index, int32_t rhs_index) { return Compare(lhs_index, rhs_index); });
+  }
+
   void Shuffle(size_t begin, size_t end) {
     CHECK_LE(begin, end);
     CHECK_LE(end, size_);
@@ -364,6 +370,12 @@ class ScoreIndex : public IndexType {
     });
   }
 
+  void NthElementByScore(size_t n, const std::function<bool(T, T)>& Compare) {
+    this->NthElement(n, [&](int32_t lhs_index, int32_t rhs_index) {
+      return Compare(score(lhs_index), score(rhs_index));
+    });
+  }
+
   size_t FindByScore(const std::function<bool(T)>& Condition) {
     return this->Find([&](int32_t index) { return Condition(score(index)); });
   }
@@ -461,6 +473,15 @@ template<typename T>
 BoxesIndex<T> GenBoxesIndex(size_t capacity, int32_t* index_ptr, const T* boxes_ptr,
                             bool init_index = false) {
   return BoxesIndex<T>(Indexes(capacity, index_ptr, init_index), boxes_ptr);
+}
+
+template<typename T>
+using ScoresIndex = ScoreIndex<Indexes, T>;
+
+template<typename T>
+ScoresIndex<T> GenScoresIndex(size_t capacity, int32_t* index_ptr, const T* score_ptr,
+                              bool init_index = false) {
+  return ScoresIndex<T>(Indexes(capacity, index_ptr, init_index), score_ptr);
 }
 
 template<typename T>

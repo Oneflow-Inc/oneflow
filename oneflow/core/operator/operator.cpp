@@ -100,7 +100,11 @@ std::string Operator::RepeatedIbn(const std::string& prefix, int32_t idx) const 
 int32_t Operator::RepeatedIbnSize(const std::string& prefix) const {
   int32_t ret = 0;
   ForEachInputBn([&ret, &prefix](const std::string& ibn) {
-    if (ibn.find(prefix) != std::string::npos) { ret++; }
+    std::string idx_str = std::to_string(ret);
+    size_t idx_size = idx_str.size();
+    size_t ibn_size = ibn.size();
+    std::string prefix_substr = ibn.substr(0, ibn_size - idx_size - 1);
+    if (prefix_substr == prefix) { ret++; }
   });
   return ret;
 }
@@ -110,8 +114,12 @@ std::string Operator::RepeatedObn(const std::string& prefix, int32_t idx) const 
 }
 int32_t Operator::RepeatedObnSize(const std::string& prefix) const {
   int32_t ret = 0;
-  ForEachOutputBn([&ret, &prefix](const std::string& ibn) {
-    if (ibn.find(prefix) != std::string::npos) { ret++; }
+  ForEachOutputBn([&ret, &prefix](const std::string& obn) {
+    std::string idx_str = std::to_string(ret);
+    size_t idx_size = idx_str.size();
+    size_t obn_size = obn.size();
+    std::string prefix_substr = obn.substr(0, obn_size - idx_size - 1);
+    if (prefix_substr == prefix) { ret++; }
   });
   return ret;
 }
@@ -181,6 +189,37 @@ static bool HasBlobDescWithField(
   return false;
 }
 
+static bool HasAllBlobDescWithField(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const PbRpf<std::string>& bn_in_ops, bool (BlobDesc::*has_field)() const) {
+  for (const std::string& bn_in_op : bn_in_ops) {
+    const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
+    if (blob_desc && !(blob_desc->*has_field)()) { return false; }
+  }
+  return true;
+}
+
+static bool HasSameInstanceInnerShape(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const PbRpf<std::string>& input_bns, const PbRpf<std::string>& output_bns) {
+  auto ForEachBn = [&](const std::function<void(const std::string&)>& Handler) {
+    for (const auto& bn : input_bns) { Handler(bn); }
+    for (const auto& bn : output_bns) { Handler(bn); }
+  };
+  bool ret = true;
+  std::unique_ptr<Shape> instance_inner_shape;
+  ForEachBn([&](const std::string& bn) {
+    if (ret == false) { return; }
+    const auto& inner_shape = GetBlobDesc4BnInOp(bn)->instance_inner_shape();
+    if (instance_inner_shape) {
+      if (!(*instance_inner_shape == inner_shape)) { ret = false; }
+    } else {
+      instance_inner_shape.reset(new Shape(inner_shape));
+    }
+  });
+  return ret;
+}
+
 ActivationType Operator::GetActivationType() const {
   if (HasFieldInCustomizedConf("activation")) {
     return static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"));
@@ -210,6 +249,26 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
         || HasBnWithField(pobns, &BlobDesc::has_col_num_field)) {
       kernel_conf->set_need_do_col_num(true);
     }
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, obns,
+                             &BlobDesc::has_instance_varying_elem_cnt_field)) {
+      kernel_conf->set_need_do_instance_varying_elem_cnt(true);
+      if (HasAllBlobDescWithField(GetBlobDesc4BnInOp, input_bns(),
+                                  &BlobDesc::has_instance_varying_elem_cnt_field)
+          && HasAllBlobDescWithField(GetBlobDesc4BnInOp, output_bns(),
+                                     &BlobDesc::has_instance_varying_elem_cnt_field)) {
+        kernel_conf->set_can_naive_do_instance_varying_elem_cnt(true);
+      }
+    }
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, obns, &BlobDesc::has_varying_instance_num_field)) {
+      kernel_conf->set_need_do_varying_instance_num(true);
+      if (HasAllBlobDescWithField(GetBlobDesc4BnInOp, input_bns(),
+                                  &BlobDesc::has_varying_instance_num_field)
+          && HasAllBlobDescWithField(GetBlobDesc4BnInOp, output_bns(),
+                                     &BlobDesc::has_varying_instance_num_field)
+          && HasSameInstanceInnerShape(GetBlobDesc4BnInOp, input_bns(), output_bns())) {
+        kernel_conf->set_can_naive_do_varying_instance_num(true);
+      }
+    }
   }
 
   kernel_conf->set_is_forward(is_forward);
@@ -235,6 +294,16 @@ void Operator::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx) const {
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
+}
+
+int64_t Operator::cudnn_buf_limit_byte() const {
+  int64_t cudnn_buf_limit_mbyte = 0;
+  if (op_conf().has_cudnn_buf_limit_mbyte()) {
+    cudnn_buf_limit_mbyte = op_conf().cudnn_buf_limit_mbyte();
+  } else {
+    cudnn_buf_limit_mbyte = Global<JobDesc>::Get()->cudnn_buf_limit_mbyte();
+  }
+  return cudnn_buf_limit_mbyte * 1024 * 1024;
 }
 
 LogicalBlobId Operator::ibn2lbi(const std::string& input_bn) const {
@@ -438,6 +507,19 @@ LogicalBlobId Operator::dtbn2lbi(const std::string& data_tmp_bn) const {
   lbi.set_op_name(op_name());
   lbi.set_blob_name(data_tmp_bn);
   return lbi;
+}
+
+int32_t Operator::GetRepeatedInputBnNum(const std::string& ibn_prefix) const {
+  int32_t count = 0;
+  for (size_t i = 0; i < input_bns().size(); ++i) {
+    if (input_bns().Get(i).compare(0, ibn_prefix.length(), ibn_prefix) == 0) { count++; }
+  }
+  return count;
+}
+
+std::string Operator::GetRepeatedInputBn(const std::string& ibn_prefix, size_t idx) const {
+  std::string ibn = ibn_prefix + "_" + std::to_string(idx);
+  return ibn;
 }
 
 void Operator::ForEachInputBn(const std::function<void(const std::string&)>& Handler) const {

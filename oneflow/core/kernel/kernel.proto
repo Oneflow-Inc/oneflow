@@ -3,6 +3,7 @@ package oneflow;
 
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
+import "oneflow/core/register/logical_blob_id.proto";
 import "oneflow/core/operator/op_conf.proto";
 
 message ConvKernelConf {
@@ -120,7 +121,7 @@ message ReduceSplitKernelConf {
   repeated int64 data_offset = 1;
 }
 
-message AccuracyKernelConf { 
+message AccuracyKernelConf {
   required DataType prediction_type = 1;
   required DataType label_type = 2;
 }
@@ -151,15 +152,25 @@ message HingeLossKernelConf {
   required LossKernelConf loss_conf = 1;
 }
 
+message ResizeNearestNeighborKernelConf {
+  required float scale_h = 1;
+  required float scale_w = 2;
+  required bool align_corners = 3;
+}
+
 message KernelConf {
-  required OpAttribute op_attribute = 1;
-  optional bool need_do_data_id = 2 [default = false];
-  optional bool need_do_col_num = 3 [default = false];
-  optional bool need_do_opaque_header = 4 [default = false];
-  required bool is_forward = 5;
-  required DataType data_type = 6;
-  optional ActivationType forward_activation = 7 [default = kNone];
-  optional ActivationType backward_activation = 8 [default = kNone];
+  required OpAttribute op_attribute = 1; 
+  required bool is_forward = 2;
+  required DataType data_type = 3;
+  optional ActivationType forward_activation = 4 [default = kNone];
+  optional ActivationType backward_activation = 5 [default = kNone];
+  optional bool need_do_data_id = 6 [default = false];
+  optional bool need_do_col_num = 7 [default = false];
+  optional bool need_do_opaque_header = 8 [default = false];
+  optional bool need_do_instance_varying_elem_cnt = 9 [default = false];
+  optional bool need_do_varying_instance_num = 10 [default = false];
+  optional bool can_naive_do_instance_varying_elem_cnt = 11 [default = false];
+  optional bool can_naive_do_varying_instance_num = 12 [default = false];
 
   oneof kernel_type {
     SparseSoftmaxCrossEntropyLossKernelConf sparse_softmax_cross_entropy_loss_conf = 101;
@@ -182,5 +193,6 @@ message KernelConf {
     AccuracyKernelConf accuracy_conf = 401;
     SmoothL1LossKernelConf smooth_l1_loss_conf = 402;
     SigmoidCrossEntropyLossKernelConf sigmoid_cross_entropy_loss_conf = 403;
+    ResizeNearestNeighborKernelConf resize_nearest_neighbor_conf = 404;
   }
 }

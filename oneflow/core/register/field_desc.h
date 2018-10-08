@@ -16,6 +16,8 @@ class FieldDesc {
   FieldDesc(const Shape& shape) : FieldDesc() { shape_ = shape; }
   FieldDesc(const FieldDescProto& proto);
 
+  void InitFromProto(const FieldDescProto& proto);
+
   const Shape& shape() const { return shape_; }
   Shape& mut_shape() { return shape_; }
 

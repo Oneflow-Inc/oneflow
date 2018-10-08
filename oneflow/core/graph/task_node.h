@@ -59,6 +59,11 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void ProduceAllRegstsAndBindEdges() = 0;
   virtual void ConsumeAllRegsts() = 0;
   void PinConsumedRegst();
+  virtual void InferProducedDataRegstTimeShape() = 0;
+  void NaiveInferProducedDataRegstTimeShape();
+  void ForEachProducedDataRegst(std::function<void(const std::string&, RegstDesc*)> Handler);
+  void ForEachConsumedDataRegst(
+      std::function<void(const std::string&, const RegstDesc*)> Handler) const;
   void Build();
   virtual bool IsReadyForBuild() { return IsAllConsumedRegstLocked(); }
 

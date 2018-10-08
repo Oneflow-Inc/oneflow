@@ -158,4 +158,21 @@ void NormalForwardCompTaskNode::BuildModel7ConstModel7DataTmp7BufRegsts() {
   });
 }
 
+void NormalForwardCompTaskNode::InferProducedDataRegstTimeShape() {
+  const std::list<std::shared_ptr<RegstDesc>>& in_regsts = GetConsumedRegst("in");
+  CHECK(!in_regsts.empty());
+  const std::shared_ptr<Shape>& in_time_shape = in_regsts.front()->data_regst_time_shape();
+  for (const auto& regst : in_regsts) {
+    CHECK(*in_time_shape == *(regst->data_regst_time_shape()));
+  }
+
+  ForEachProducedDataRegst([in_time_shape](const std::string& name, RegstDesc* regst) {
+    if (name == "const_buf") {
+      regst->mut_data_regst_time_shape()->reset(new Shape({1}));
+    } else {
+      *regst->mut_data_regst_time_shape() = in_time_shape;
+    }
+  });
+}
+
 }  // namespace oneflow

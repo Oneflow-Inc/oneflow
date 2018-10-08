@@ -57,6 +57,9 @@ class Operator {
   const OperatorConf& op_conf() const { return op_attribute_.op_conf(); }
   virtual const PbMessage& GetCustomizedConf() const { UNIMPLEMENTED(); }
 
+  int32_t GetRepeatedInputBnNum(const std::string& ibn_prefix) const;
+  std::string GetRepeatedInputBn(const std::string& ibn_prefix, size_t idx) const;
+
   bool HasFieldInCustomizedConf(const std::string& field_name) const {
     return HasFieldInPbMessage(GetCustomizedConf(), field_name);
   }
@@ -153,7 +156,7 @@ class Operator {
                      bool is_forward, const ParallelContext*, KernelConf*, const OpContext*) const;
 
  protected:
-  int64_t cudnn_buf_limit_byte() const { return op_conf().cudnn_buf_limit_mbyte() * 1024 * 1024; }
+  int64_t cudnn_buf_limit_byte() const;
 
   virtual PbMessage* MutableCustomizedKernelConf(KernelConf*) const {
     UNIMPLEMENTED();

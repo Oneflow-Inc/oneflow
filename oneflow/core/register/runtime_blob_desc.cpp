@@ -13,21 +13,9 @@ RtBlobDesc::RtBlobDesc(const BlobDescProto& blob_desc_proto) { InitFromProto(blo
 void RtBlobDesc::InitFromProto(const BlobDescProto& blob_desc_proto) {
   blob_desc_proto_ = blob_desc_proto;
   body_desc_ = FieldDesc(blob_desc_proto.body());
-  if (blob_desc_proto.header().has_opaque_header()) {
-    CHECK(header_desc_.emplace("opaque_header", FieldDesc(blob_desc_proto.header().opaque_header()))
-              .second);
-  } else {
-    CHECK(blob_desc_proto.header().has_field_header());
-    if (blob_desc_proto.header().field_header().has_data_id()) {
-      CHECK(header_desc_
-                .emplace("data_id", FieldDesc(blob_desc_proto.header().field_header().data_id()))
-                .second);
-    }
-    if (blob_desc_proto.header().field_header().has_col_num()) {
-      CHECK(header_desc_
-                .emplace("col_num", FieldDesc(blob_desc_proto.header().field_header().col_num()))
-                .second);
-    }
+  header_pod_desc_.InitFromProto(blob_desc_proto.header().header_pod_desc());
+  if (blob_desc_proto.has_instance_inner_shape()) {
+    instance_inner_shape_.reset(new Shape(blob_desc_proto.instance_inner_shape()));
   }
 }
 
@@ -35,34 +23,40 @@ const Shape& RtBlobDesc::shape() const { return body_desc_.shape(); }
 
 DataType RtBlobDesc::data_type() const { return body_desc_.data_type(); }
 
-const Shape& RtBlobDesc::shape(const std::string& field_name) const {
-  auto field_it = GetFieldIteratorOrFail(field_name);
-  return field_it->second.shape();
+bool RtBlobDesc::has_data_id_field() const { return header_pod_desc_.HasField(FieldKey::kDataId); }
+
+bool RtBlobDesc::has_col_num_field() const { return header_pod_desc_.HasField(FieldKey::kColNum); }
+
+bool RtBlobDesc::has_varying_instance_num_field() const {
+  return header_pod_desc_.HasField(FieldKey::kVaryingInstanceNum);
 }
 
-DataType RtBlobDesc::data_type(const std::string& field_name) const {
-  auto field_it = GetFieldIteratorOrFail(field_name);
-  return field_it->second.data_type();
+bool RtBlobDesc::has_instance_varying_elem_cnt_field() const {
+  return header_pod_desc_.HasField(FieldKey::kInstanceVaryingElemCnt);
 }
 
-bool RtBlobDesc::has_data_id_field() const { return HasField("data_id"); }
-
-bool RtBlobDesc::has_col_num_field() const { return HasField("col_num"); }
-
-size_t RtBlobDesc::ByteSizeOfBlobHeader() const {
-  size_t header_size = 0;
-  for (auto& pair : header_desc_) { header_size += ByteSizeOfField(pair.first); }
-  return header_size;
-}
+size_t RtBlobDesc::ByteSizeOfBlobHeader() const { return header_pod_desc_.ByteSize(); }
 
 size_t RtBlobDesc::ByteSizeOfBlobBody() const { return body_desc_.AlignedByteSize(); }
 
 size_t RtBlobDesc::ByteSizeOfDataIdField() const {
-  return HasField("data_id") ? ByteSizeOfField("data_id") : 0;
+  if (!has_data_id_field()) { return 0; }
+  return header_pod_desc_.Field(FieldKey::kDataId).ByteSize();
 }
 
 size_t RtBlobDesc::ByteSizeOfColNumField() const {
-  return HasField("col_num") ? ByteSizeOfField("col_num") : 0;
+  if (!has_col_num_field()) { return 0; }
+  return header_pod_desc_.Field(FieldKey::kColNum).ByteSize();
+}
+
+size_t RtBlobDesc::ByteSizeOfVaryingInstanceNumField() const {
+  if (!has_varying_instance_num_field()) { return 0; }
+  return header_pod_desc_.Field(FieldKey::kVaryingInstanceNum).ByteSize();
+}
+
+size_t RtBlobDesc::ByteSizeOfInstanceVaryingElemCntField() const {
+  if (!has_instance_varying_elem_cnt_field()) { return 0; }
+  return header_pod_desc_.Field(FieldKey::kInstanceVaryingElemCnt).ByteSize();
 }
 
 size_t RtBlobDesc::ByteSizeOfDataContentField() const { return body_desc_.ByteSize(); }
@@ -72,27 +66,6 @@ size_t RtBlobDesc::TotalByteSize() const { return ByteSizeOfBlobHeader() + ByteS
 bool RtBlobDesc::operator==(const RtBlobDesc& rhs) const {
   PbMd message_diff;
   return message_diff.Equals(blob_desc_proto_, rhs.blob_desc_proto());
-}
-
-HashMap<std::string, FieldDesc>::const_iterator RtBlobDesc::GetFieldIteratorOrFail(
-    const std::string& field_name) const {
-  auto field_it = header_desc_.find(field_name);
-  CHECK(field_it != header_desc_.end());
-  return field_it;
-}
-
-bool RtBlobDesc::HasField(const std::string& field_name) const {
-  return header_desc_.find(field_name) != header_desc_.end();
-}
-
-size_t RtBlobDesc::ByteSizeOfField(const std::string& field_name) const {
-  auto field_it = GetFieldIteratorOrFail(field_name);
-  return field_it->second.ByteSize();
-}
-
-size_t RtBlobDesc::AlignedByteSizeOfField(const std::string& field_name) const {
-  auto field_it = GetFieldIteratorOrFail(field_name);
-  return field_it->second.AlignedByteSize();
 }
 
 }  // namespace oneflow

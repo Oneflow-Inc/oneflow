@@ -16,6 +16,9 @@ class DecodeCompTaskNode final : public CompTaskNode {
   void BuildExecGphAndRegst() override;
 
   TaskType GetTaskType() const override { return TaskType::kDecode; }
+
+ private:
+  void InferProducedDataRegstTimeShape() override;
 };
 
 }  // namespace oneflow

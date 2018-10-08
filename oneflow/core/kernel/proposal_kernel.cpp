@@ -17,6 +17,7 @@ void ProposalKernel<T>::ForwardDataContent(
   // input blob
   const Blob* bbox_pred_blob = BnInOp2Blob("bbox_pred");
   const Blob* class_prob_blob = BnInOp2Blob("class_prob");
+  const Blob* anchors_blob = BnInOp2Blob("anchors");
   // output blob
   Blob* rois_blob = BnInOp2Blob("rois");
   Blob* roi_probs_blob = BnInOp2Blob("roi_probs");
@@ -33,7 +34,7 @@ void ProposalKernel<T>::ForwardDataContent(
       anchor_generator_conf.aspect_ratios_size() * anchor_generator_conf.anchor_scales_size();
   const int64_t num_proposals = height * width * num_anchors;
 
-  const T* anchors_ptr = BnInOp2Blob("anchors")->dptr<T>();
+  const T* anchors_ptr = anchors_blob->dptr<T>();
   const T* const_proposals_ptr = proposals_blob->dptr<T>();
   T* proposals_ptr = proposals_blob->mut_dptr<T>();
   int32_t* pre_nms_slice_ptr = BnInOp2Blob("pre_nms_slice")->mut_dptr<int32_t>();
@@ -53,7 +54,10 @@ void ProposalKernel<T>::ForwardDataContent(
     pre_nms_slice.FilterByBBox([&](size_t n, int32_t index, const BBox<T>* bbox) {
       return (bbox->width() < conf.min_size()) || (bbox->height() < conf.min_size());
     });
-    pre_nms_slice.Truncate(conf.pre_nms_top_n());
+    size_t pre_nms_top_n = conf.pre_nms_top_n() > 0
+                               ? std::min<size_t>(num_proposals, conf.pre_nms_top_n())
+                               : num_proposals;
+    pre_nms_slice.Truncate(pre_nms_top_n);
 
     auto post_nms_slice = GenScoredBoxesIndex(conf.post_nms_top_n(), post_nms_slice_ptr,
                                               const_proposals_ptr, class_prob_ptr, true);
@@ -63,6 +67,7 @@ void ProposalKernel<T>::ForwardDataContent(
     FOR_RANGE(int32_t, j, 0, post_nms_slice.size()) {
       roi_probs_blob->mut_dptr<T>(i)[j] = post_nms_slice.GetScore(j);
     }
+    roi_probs_blob->set_instance_varying_elem_cnt(i, post_nms_slice.size());
   }
 }
 
@@ -70,13 +75,16 @@ template<typename T>
 void ProposalKernel<T>::CopyRoI(const int64_t im_index, const ScoredBoxesIndex<T>& boxes,
                                 Blob* rois_blob) const {
   FOR_RANGE(int32_t, i, 0, boxes.size()) {
-    BBox<T>* roi_bbox = BBox<T>::MutCast(rois_blob->mut_dptr<T>(im_index, i));
+    T* out_rois_ptr = rois_blob->mut_dptr<T>(im_index, i);
+    out_rois_ptr[0] = im_index;
+    BBox<T>* roi_bbox = BBox<T>::MutCast(out_rois_ptr + 1);
     const BBox<T>* proposal_bbox = boxes.GetBBox(i);
     roi_bbox->set_x1(proposal_bbox->x1());
     roi_bbox->set_y1(proposal_bbox->y1());
     roi_bbox->set_x2(proposal_bbox->x2());
     roi_bbox->set_y2(proposal_bbox->y2());
   }
+  rois_blob->set_instance_varying_elem_cnt(im_index, boxes.size());
 }
 
 template<typename T>
