@@ -61,7 +61,7 @@ void Blob::set_instance_varying_elem_cnt(int32_t no, int32_t val) {
   CHECK_GE(no, 0);
   CHECK_LT(no, blob_desc_->shape().At(0));
   CHECK_GE(val, 0);
-  CHECK_LT(val, blob_desc_->shape().Count(1));
+  CHECK_LE(val, blob_desc_->shape().Count(1));
   instance_varying_elem_cnt_ptr_[no] = val;
 }
 
@@ -77,7 +77,7 @@ void Blob::set_varying_instance_num(int32_t no, int32_t val) {
   CHECK_GE(no, 0);
   CHECK_LT(no, instance_inner_shape()->At(0));
   CHECK_GE(val, 0);
-  CHECK_LT(val, instance_inner_shape()->Count(1));
+  CHECK_LE(val, instance_inner_shape()->Count(1));
   varying_instance_num_ptr_[no] = val;
 }
 
