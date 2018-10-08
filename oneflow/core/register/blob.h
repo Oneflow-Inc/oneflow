@@ -81,6 +81,7 @@ class Blob final {
   const RtBlobDesc& blob_desc() const { return *blob_desc_; }
   const RtBlobDesc* blob_desc_ptr() const { return blob_desc_; }
   const Shape& static_shape() const { return blob_desc_->shape(); }
+  const Shape* instance_inner_shape() const { return blob_desc_->instance_inner_shape(); }
   const Shape& shape() const;
   DataType data_type() const { return blob_desc_->data_type(); }
   bool has_data_id_field() const { return blob_desc_->has_data_id_field(); }
@@ -114,7 +115,6 @@ class Blob final {
 
  private:
   const Shape& dynamic_shape() const;
-  const Shape* instance_inner_shape() const { return blob_desc_->instance_inner_shape(); }
   int64_t GetDptrOffset(int32_t index) const { return 0; }
   template<typename... Int64s>
   int64_t GetDptrOffset(int32_t index, int64_t cur_dim, Int64s... remainder) const {
