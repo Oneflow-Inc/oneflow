@@ -120,6 +120,8 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
       *(pb_pair->mutable_lbi()) = pair.first;
       pair.second->ToProto(pb_pair->mutable_blob_desc());
     }
+    CHECK(data_regst_time_shape_);
+    data_regst_time_shape_->ToProto(data_regst_desc_proto->mutable_time_shape());
   } else if (regst_desc_type_.has_ctrl_regst_desc()) {
     // do nothing
   } else {

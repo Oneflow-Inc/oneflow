@@ -9,6 +9,7 @@
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/record/record_io.h"
+#include "oneflow/core/register/pod_ptr.h"
 
 namespace oneflow {
 
@@ -33,6 +34,22 @@ class Blob final {
 
   const int32_t* col_num() const { return col_num_ptr_; }
   int32_t* mut_col_num() { return col_num_ptr_; }
+
+  int32_t instance_varying_elem_cnt(int32_t no) const;
+  void set_instance_varying_elem_cnt(int32_t no, int32_t val);
+
+  const int32_t* instance_varying_elem_cnt() const { return instance_varying_elem_cnt_ptr_; }
+  int32_t* mut_instance_varying_elem_cnt() { return instance_varying_elem_cnt_ptr_; }
+
+  int32_t varying_instance_num(int32_t no) const;
+  void set_varying_instance_num(int32_t no, int32_t val);
+
+  const int32_t* varying_instance_num() const { return varying_instance_num_ptr_; }
+  int32_t* mut_varying_instance_num() { return varying_instance_num_ptr_; }
+
+  int32_t instance_available_elem_cnt(int32_t no) const;
+  int32_t available_instance_num(int32_t no) const;
+  int32_t available_instance_num() const;
 
   const void* header_ptr() const { return header_ptr_; }
   void* mut_header_ptr() { return header_ptr_; }
@@ -63,7 +80,8 @@ class Blob final {
 
   const RtBlobDesc& blob_desc() const { return *blob_desc_; }
   const RtBlobDesc* blob_desc_ptr() const { return blob_desc_; }
-  const Shape& shape() const { return blob_desc_->shape(); }
+  const Shape& static_shape() const { return blob_desc_->shape(); }
+  const Shape& shape() const;
   DataType data_type() const { return blob_desc_->data_type(); }
   bool has_data_id_field() const { return blob_desc_->has_data_id_field(); }
   bool has_col_num_field() const { return blob_desc_->has_col_num_field(); }
@@ -71,6 +89,8 @@ class Blob final {
   size_t ByteSizeOfBlobHeader() const { return blob_desc_->ByteSizeOfBlobHeader(); }
   size_t ByteSizeOfDataIdField() const { return blob_desc_->ByteSizeOfDataIdField(); }
   size_t ByteSizeOfColNumField() const { return blob_desc_->ByteSizeOfColNumField(); }
+  size_t ByteSizeOfVaryingInstanceNumField() const;
+  size_t ByteSizeOfInstanceVaryingElemCntField() const;
   size_t ByteSizeOfDataContentField() const { return blob_desc_->ByteSizeOfDataContentField(); }
   size_t TotalByteSize() const { return blob_desc_->TotalByteSize(); }
 
@@ -79,6 +99,8 @@ class Blob final {
   void CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  void CopyVaryingInstanceNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  void CopyInstanceVaryingElemCntFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
 
   int32_t col_id() const;
@@ -87,8 +109,12 @@ class Blob final {
   void set_max_col_id(int32_t val);
   bool IsColValid() const { return col_id() <= max_col_id(); }
   const MemoryCase& mem_case() const;
+  const PodPtr* header_pod_ptr() const { return &header_pod_ptr_; }
+  PodPtr* header_pod_ptr() { return &header_pod_ptr_; }
 
  private:
+  const Shape& dynamic_shape() const;
+  const Shape* instance_inner_shape() const { return blob_desc_->instance_inner_shape(); }
   int64_t GetDptrOffset(int32_t index) const { return 0; }
   template<typename... Int64s>
   int64_t GetDptrOffset(int32_t index, int64_t cur_dim, Int64s... remainder) const {
@@ -111,9 +137,13 @@ class Blob final {
   void* header_ptr_;
   char* data_id_ptr_;
   int32_t* col_num_ptr_;
+  int32_t* instance_varying_elem_cnt_ptr_;
+  int32_t* varying_instance_num_ptr_;
   void* dptr_;
   const RtBlobDesc* blob_desc_;
   Regst* regst_;
+  PodPtr header_pod_ptr_;
+  mutable Shape dynamic_shape_;
 };
 
 template<typename RecordType>

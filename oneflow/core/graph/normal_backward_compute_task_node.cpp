@@ -11,8 +11,9 @@ void NormalBackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   for (TaskEdge* edge : out_edges()) {
     const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
     if (succ_logical->TypeName() == "MdDiffAcc" || succ_logical->TypeName() == "NormalMdUpdt"
-        || succ_logical->TypeName() == "ReduceScatter"
-        || succ_logical->TypeName() == "ReduceConcat") {
+        || succ_logical->TypeName() == "ReduceScatter" || succ_logical->TypeName() == "ReduceConcat"
+        || succ_logical->TypeName() == "NcclAllReduce"
+        || succ_logical->TypeName() == "NcclReduceScatter") {
       edge->AddRegst("model_diff", ProduceRegst("model_diff", true));
     } else {
       BindEdgeWithProducedRegst(edge, "in_diff");
@@ -218,6 +219,20 @@ void NormalBackwardCompTaskNode::RmUselessConsumeRelationshipToFw() {
   });
   if (need_in_blob == false) { EraseConsumedRegstsByName("in"); }
   if (need_out_blob == false) { EraseConsumedRegstsByName("out"); }
+}
+
+void NormalBackwardCompTaskNode::InferProducedDataRegstTimeShape() {
+  const std::list<std::shared_ptr<RegstDesc>>& out_diff_regsts = GetConsumedRegst("out_diff");
+  CHECK(!out_diff_regsts.empty());
+  const std::shared_ptr<Shape>& out_diff_time_shape =
+      out_diff_regsts.front()->data_regst_time_shape();
+  for (const auto& regst : out_diff_regsts) {
+    CHECK(*out_diff_time_shape == *(regst->data_regst_time_shape()));
+  }
+
+  ForEachProducedDataRegst([out_diff_time_shape](const std::string& name, RegstDesc* regst) {
+    *regst->mut_data_regst_time_shape() = out_diff_time_shape;
+  });
 }
 
 }  // namespace oneflow

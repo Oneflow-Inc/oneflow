@@ -9,11 +9,17 @@ enum ParallelPolicy {
   kModelParallel = 2;
 }
 
+message RankContext {
+  required int64 rank_set_id = 1;
+  required int64 rank_id = 2;
+  required int64 rank_num = 3;
+}
+
 message ParallelContext {
   required int64 parallel_id = 1;
   required int64 parallel_num = 2;
-  required int64 device_num_of_each_machine = 3;
-  required ParallelPolicy policy = 4;
+  required ParallelPolicy policy = 3;
+  optional RankContext rank_ctx = 4;
 }
 
 message ParallelConf {

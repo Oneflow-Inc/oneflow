@@ -15,6 +15,9 @@ class AccuracyCompTaskNode final : public CompTaskNode {
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
   TaskType GetTaskType() const override { return TaskType::kAccuracy; }
+
+ private:
+  void InferProducedDataRegstTimeShape() override;
 };
 
 }  // namespace oneflow

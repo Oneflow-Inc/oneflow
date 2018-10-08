@@ -14,8 +14,9 @@ class DecodeRandomActor final : public CompActor {
  private:
   void VirtualCompActorInit(const TaskProto&) override;
   void Act() override;
-  std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
-    return {false, {}};
+  std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName()
+      override {
+    return {RegstNameType::kNaive, {}};
   }
   bool IsCustomizedReadReady() override;
   bool IsCustomizedReadAlwaysUnReadyFromNow() override { return !IsCustomizedReadReady(); }

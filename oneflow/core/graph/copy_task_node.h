@@ -19,6 +19,7 @@ class CopyTaskNode : public TaskNode {
   virtual OperatorConf NewCopyOpConf() = 0;
 
  private:
+  void InferProducedDataRegstTimeShape() final;
 };
 
 class CopyHdTaskNode final : public CopyTaskNode {

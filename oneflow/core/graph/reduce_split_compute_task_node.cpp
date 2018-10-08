@@ -1,3 +1,4 @@
+#include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/graph/reduce_split_compute_task_node.h"
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/register/register_desc.h"
@@ -5,10 +6,6 @@
 namespace oneflow {
 
 void ReduceSplitCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  struct EdgeInfo {
-    int64_t bw_node_order;
-    TaskEdge* edge;
-  };
   std::vector<EdgeInfo> edge_infos;
   for (TaskEdge* edge : out_edges()) {
     TaskNode* dst_node = edge->dst_node();
@@ -18,14 +15,12 @@ void ReduceSplitCompTaskNode::ProduceAllRegstsAndBindEdges() {
       if (IsBackwardTaskType(mdupdt_edge->dst_node()->GetTaskType())) {
         CompTaskNode* bw_node = dynamic_cast<CompTaskNode*>(mdupdt_edge->dst_node());
         // There may be multiple out_regsts on the same edge for shared_model app
-        EdgeInfo edge_info{bw_node->order_in_graph(), edge};
+        EdgeInfo edge_info{edge, bw_node->order_in_graph()};
         edge_infos.emplace_back(edge_info);
       }
     }
   }
-  std::sort(edge_infos.begin(), edge_infos.end(), [](const EdgeInfo& lhs, const EdgeInfo& rhs) {
-    return lhs.bw_node_order < rhs.bw_node_order;
-  });
+  SortEdges(&edge_infos);
   FOR_RANGE(size_t, idx, 0, edge_infos.size()) {
     std::string out_regst_name = "out_" + std::to_string(idx);
     std::shared_ptr<RegstDesc> out_regst = ProduceRegst(out_regst_name, false, 1, 1);
@@ -43,9 +38,11 @@ void ReduceSplitCompTaskNode::BuildExecGphAndRegst() {
   node->mut_op() = reduce_split_op;
   node->BindBnWithRegst(reduce_split_op->SoleIbn(), GetSoleConsumedRegst("in"));
 
-  CompTaskNode* reduce_concat_node = FindPeerReduceConcatTaskNode();
-  CHECK_EQ(reduce_concat_node->consumed_regsts().size(), produced_regsts().size());
+  TaskNode* reduce_concat_node = FindPredReduceTaskNodeIf(
+      [](TaskNode* node) { return node->GetTaskType() == TaskType::kReduceConcat; });
+  CHECK(reduce_concat_node);
 
+  CHECK_EQ(reduce_concat_node->consumed_regsts().size(), produced_regsts().size());
   FOR_RANGE(size_t, i, 0, reduce_split_op->output_bns().size()) {
     std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out_" + std::to_string(i));
     CHECK(out_regst.get() != nullptr);
@@ -53,26 +50,6 @@ void ReduceSplitCompTaskNode::BuildExecGphAndRegst() {
         reduce_concat_node->GetSoleConsumedRegst("in_" + std::to_string(i)).get());
     node->BindBnWithRegst(reduce_split_op->output_bns().Get(i), out_regst);
   }
-}
-
-CompTaskNode* ReduceSplitCompTaskNode::FindPeerReduceConcatTaskNode() {
-  CompTaskNode* src_node = this;
-  bool found_direct_node = true;
-
-  while (src_node->GetTaskType() != TaskType::kReduceConcat && found_direct_node) {
-    found_direct_node = false;
-    for (TaskEdge* edge : src_node->in_edges()) {
-      CompTaskNode* comp_task_node = dynamic_cast<CompTaskNode*>(edge->src_node());
-      if (comp_task_node != nullptr) {
-        src_node = comp_task_node;
-        CHECK(src_node->GetTaskType() != TaskType::kNormalBackward);
-        found_direct_node = true;
-        break;
-      }
-    }
-    if (found_direct_node == false) { break; }
-  }
-  return src_node;
 }
 
 void ReduceSplitCompTaskNode::FixPackedBlobDescOfProducedRegst() {
@@ -84,6 +61,21 @@ void ReduceSplitCompTaskNode::FixPackedBlobDescOfProducedRegst() {
     shape =
         Shape({static_cast<int64_t>(RoundUp(shape.elem_cnt(), parallel_ctx()->parallel_num()))});
   }
+}
+
+void ReduceSplitCompTaskNode::EnableMemSharingInReduce(const ReduceMemSharingCtx& ctx) {
+  CHECK_EQ(GetRankCtx().TotalSegmentCount(), 1);
+  size_t split_num = produced_regsts().size();
+  int64_t offset = 0;
+  FOR_RANGE(int32_t, idx, 0, split_num) {
+    RegstDesc* split_out_regst = GetProducedRegst("out_" + std::to_string(idx)).get();
+    ctx.EnableMemSharing4Regst(split_out_regst, offset);
+    offset += InferRegstSize(*split_out_regst);
+  }
+}
+
+void ReduceSplitCompTaskNode::InferProducedDataRegstTimeShape() {
+  NaiveInferProducedDataRegstTimeShape();
 }
 
 }  // namespace oneflow
