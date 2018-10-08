@@ -860,6 +860,12 @@ message BatchPermutationOpConf {
   required string data_format = 4;
 }
 
+message VStackOpConf {
+  repeated string in = 1;
+  required string out = 2;
+  optional bool identity_shape = 3 [default = false];
+}
+
 message FpnDistributeOpConf {
   required string collected_rois = 1;
   repeated string rois = 2; // num = rpn_max_level - rpn_min_level + 1
@@ -952,6 +958,7 @@ message OperatorConf {
     BatchPermutationOpConf batch_permutation_conf = 1011;
     FpnCollectOpConf fpn_collect_conf = 1012;
     FpnDistributeOpConf fpn_distribute_conf = 1013;
+    VStackOpConf v_stack_conf = 1014;
   }
 }
 
