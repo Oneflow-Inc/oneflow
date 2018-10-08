@@ -31,4 +31,8 @@ void AccuracyCompTaskNode::BuildExecGphAndRegst() {
   accuracy_node->InferBlobDescs(parallel_ctx());
 }
 
+void AccuracyCompTaskNode::InferProducedDataRegstTimeShape() {
+  NaiveInferProducedDataRegstTimeShape();
+}
+
 }  // namespace oneflow
