@@ -8,10 +8,12 @@ template<DeviceType device_type, typename T>
 void FpnCollectKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const int64_t level = this->op_conf().fpn_collect_conf().level();
-  const int64_t post_nms_topn = this->op_conf().fpn_collect_conf().post_nms_top_n();
+  int64_t post_nms_topn = this->op_conf().fpn_collect_conf().post_nms_top_n();
   int64_t available_num = ConcatAllRoisAndScores(ctx, level, BnInOp2Blob);
-  if(available_num < post_nms_topn){post_nms_topn = available_num;}
+  if (available_num < post_nms_topn) { post_nms_topn = available_num; }
   SortAndSelectTopnRois(post_nms_topn, BnInOp2Blob);
+  // set varing_instance_num header field
+  BnInOp2Blob("out")->set_varying_instance_num(0, post_nms_topn);
 }
 
 template<DeviceType device_type, typename T>
@@ -28,7 +30,6 @@ int64_t FpnCollectKernel<device_type, T>::ConcatAllRoisAndScores(
   int64_t available_roi_num = 0;
   int64_t available_prob_num = 0;
 
-
   FOR_RANGE(size_t, i, 0, level) {
     std::string roi_bn = "rpn_rois_fpn_" + std::to_string(i);
     std::string prob_bn = "rpn_roi_probs_fpn_" + std::to_string(i);
@@ -37,11 +38,13 @@ int64_t FpnCollectKernel<device_type, T>::ConcatAllRoisAndScores(
     const Blob* prob_blob = BnInOp2Blob(prob_bn);
     const int64_t roi_in_col_num = roi_blob->shape().Count(1);
     const int64_t prob_in_col_num = prob_blob->shape().Count(1);
-    
-    available_roi_num += roi_blob->instance_available_elem_cnt();
-    available_prob_num += roi_blob->instance_available_elem_cnt();
-    CHECK_EQ(available_roi_num, available_prob_num);    
- 
+
+    FOR_RANGE(size_t, j, 0, roi_blob->shape().At(0)) {
+      available_roi_num += roi_blob->instance_varying_elem_cnt(j);
+      available_prob_num += prob_blob->instance_varying_elem_cnt(j);
+    }
+    CHECK_EQ(available_roi_num, available_prob_num);
+
     KernelUtil<device_type, T>::CopyColsRegion(
         ctx.device_ctx, row_num, roi_in_col_num, roi_blob->dptr<T>(), 0, roi_in_col_num,
         roi_inputs_blob->mut_dptr<T>(), roi_col_offset, roi_out_col_num);
@@ -79,6 +82,12 @@ void FpnCollectKernel<device_type, T>::SortAndSelectTopnRois(
     }
   }
   LOG(INFO) << "TEST COLLECT BREAK POINT 2";
+}
+
+template<DeviceType device_type, typename T>
+void FpnCollectKernel<device_type, T>::ForwardVaryingInstanceNum(
+      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  // do nothing
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kFpnCollectConf, FpnCollectKernel, FLOATING_DATA_TYPE_SEQ);
