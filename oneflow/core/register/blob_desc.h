@@ -37,7 +37,6 @@ class BlobDesc {
 
   bool has_data_id_field() const { return has_data_id_; }
   void set_has_data_id_field(bool val);
-  void set_has_instance_available_elen_cnt(bool val);
 
   bool has_instance_varying_elem_cnt_field() const { return has_instance_varying_elem_cnt_; }
   void set_has_instance_varying_elem_cnt_field(bool val);
