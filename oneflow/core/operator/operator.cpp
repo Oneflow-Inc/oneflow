@@ -93,6 +93,36 @@ const std::string& Operator::SoleBbbn() const {
   CHECK_EQ(bw_buf_bns().size(), 1);
   return bw_buf_bns().Get(0);
 }
+std::string Operator::RepeatedIbn(const std::string& prefix, int32_t idx) const {
+  CHECK_LT(idx, RepeatedIbnSize(prefix));
+  return prefix + "_" + std::to_string(idx);
+}
+int32_t Operator::RepeatedIbnSize(const std::string& prefix) const {
+  int32_t ret = 0;
+  ForEachInputBn([&ret, &prefix](const std::string& ibn) {
+    std::string idx_str = std::to_string(ret);
+    size_t idx_size = idx_str.size();
+    size_t ibn_size = ibn.size();
+    std::string prefix_substr = ibn.substr(0, ibn_size - idx_size - 1);
+    if (prefix_substr == prefix) { ret++; }
+  });
+  return ret;
+}
+std::string Operator::RepeatedObn(const std::string& prefix, int32_t idx) const {
+  CHECK_LT(idx, RepeatedObnSize(prefix));
+  return prefix + "_" + std::to_string(idx);
+}
+int32_t Operator::RepeatedObnSize(const std::string& prefix) const {
+  int32_t ret = 0;
+  ForEachOutputBn([&ret, &prefix](const std::string& obn) {
+    std::string idx_str = std::to_string(ret);
+    size_t idx_size = idx_str.size();
+    size_t obn_size = obn.size();
+    std::string prefix_substr = obn.substr(0, obn_size - idx_size - 1);
+    if (prefix_substr == prefix) { ret++; }
+  });
+  return ret;
+}
 
 void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx,
@@ -297,9 +327,21 @@ LogicalBlobId Operator::pibn2lbi(const std::string& pb_input_bn) const {
   return lbi;
 }
 LogicalBlobId Operator::obn2lbi(const std::string& output_bn) const {
+  const google::protobuf::Descriptor* desc = GetCustomizedConf().GetDescriptor();
+  const google::protobuf::FieldDescriptor* fd = desc->FindFieldByName(output_bn);
+  std::string name;
+  if (fd) {
+    name = GetValFromCustomizedConf<std::string>(output_bn);
+  } else {
+    size_t underline_pos = output_bn.rfind('_');
+    CHECK_NE(underline_pos, std::string::npos);
+    std::string obn_prefix = output_bn.substr(0, underline_pos);
+    int32_t obn_idx = oneflow_cast<int32_t>(output_bn.substr(underline_pos + 1));
+    name = GetPbRpfFromCustomizedConf<std::string>(obn_prefix).Get(obn_idx);
+  }
   LogicalBlobId ret;
   ret.set_op_name(op_name());
-  ret.set_blob_name(GetValFromCustomizedConf<std::string>(output_bn));
+  ret.set_blob_name(name);
   return ret;
 }
 LogicalBlobId Operator::pobn2lbi(const std::string& pb_output_bn) const {
@@ -402,6 +444,27 @@ void Operator::EnrollOutputBn(const std::string& obn, bool has_diff) {
     CHECK(mut_bn_in_op2lbi()->insert({odbn, lbi}).second);
   }
 }
+
+void Operator::EnrollRepeatedOutputBn(const std::string& ibn_prefix, int32_t num, bool has_diff) {
+  FOR_RANGE(int32_t, i, 0, num) {
+    std::string ibn = ibn_prefix + "_" + std::to_string(i);
+    EnrollOutputBn(ibn, has_diff);
+  }
+}
+
+void Operator::EnrollRepeatedOutputBn(const std::string& ibn_prefix, bool has_diff) {
+  EnrollRepeatedOutputBn(ibn_prefix, GetPbRpfFromCustomizedConf<std::string>(ibn_prefix).size(),
+                         has_diff);
+}
+
+void Operator::EnrollRepeatedOutputBn(const std::string& ibn_prefix, int32_t num) {
+  EnrollRepeatedOutputBn(ibn_prefix, num, true);
+}
+
+void Operator::EnrollRepeatedOutputBn(const std::string& ibn_prefix) {
+  EnrollRepeatedOutputBn(ibn_prefix, true);
+}
+
 void Operator::EnrollModelBn(const std::string& mbn) {
   if (op_conf().trainable() == false) {
     EnrollConstModelBn(mbn);
@@ -444,6 +507,19 @@ LogicalBlobId Operator::dtbn2lbi(const std::string& data_tmp_bn) const {
   lbi.set_op_name(op_name());
   lbi.set_blob_name(data_tmp_bn);
   return lbi;
+}
+
+int32_t Operator::GetRepeatedInputBnNum(const std::string& ibn_prefix) const {
+  int32_t count = 0;
+  for (size_t i = 0; i < input_bns().size(); ++i) {
+    if (input_bns().Get(i).compare(0, ibn_prefix.length(), ibn_prefix) == 0) { count++; }
+  }
+  return count;
+}
+
+std::string Operator::GetRepeatedInputBn(const std::string& ibn_prefix, size_t idx) const {
+  std::string ibn = ibn_prefix + "_" + std::to_string(idx);
+  return ibn;
 }
 
 void Operator::ForEachInputBn(const std::function<void(const std::string&)>& Handler) const {

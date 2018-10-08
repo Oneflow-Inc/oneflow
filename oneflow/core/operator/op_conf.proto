@@ -615,6 +615,14 @@ message NormalizationOpConf {
   optional ActivationType activation = 13 [default = kNone];
 }
 
+message FpnCollectOpConf{
+  repeated string rpn_rois_fpn = 1;
+  repeated string rpn_roi_probs_fpn = 2;
+  required string out = 3;
+  required int32 post_nms_top_n = 4;
+  optional int32 level = 5 [default = 5];
+}
+
 message AffineChannelOpConf {
   required string in = 1;
   required string out = 2;
@@ -858,6 +866,16 @@ message VStackOpConf {
   optional bool identity_shape = 3 [default = false];
 }
 
+message FpnDistributeOpConf {
+  required string collected_rois = 1;
+  repeated string rois = 2; // num = rpn_max_level - rpn_min_level + 1
+  required string roi_indices = 3;
+  required int32 roi_min_level = 4 [default = 2];
+  required int32 roi_max_level = 5 [default = 5];
+  required int32 roi_canonical_level = 6 [default = 4];
+  required float roi_canonical_scale = 7 [default = 224];
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -938,7 +956,9 @@ message OperatorConf {
     UpsampleNearestOpConf upsample_nearest_conf = 1009;
     ResizeNearestNeighborOpConf resize_nearest_neighbor_conf = 1010;
     BatchPermutationOpConf batch_permutation_conf = 1011;
-    VStackOpConf v_stack_conf = 1012;
+    FpnCollectOpConf fpn_collect_conf = 1012;
+    FpnDistributeOpConf fpn_distribute_conf = 1013;
+    VStackOpConf v_stack_conf = 1014;
   }
 }
 
