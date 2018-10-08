@@ -28,7 +28,7 @@ CtrlServer::CtrlServer() : is_first_connect_(true), this_machine_addr_("") {
   Init();
 
   if (FLAGS_grpc_use_no_signal) { grpc_use_signal(-1); }
-  int port = Global<JobDesc>::Get()->resource().rpc_port();
+  int port = Global<JobDesc>::Get()->resource().ctrl_port();
   grpc::ServerBuilder server_builder;
   int bound_port = 0;
   server_builder.AddListeningPort("0.0.0.0:" + std::to_string(port),
@@ -65,6 +65,8 @@ void CtrlServer::Init() {
     if (this->is_first_connect_) {
       this->this_machine_addr_ = call->request().addr();
       this->is_first_connect_ = false;
+    } else {
+      CHECK_EQ(call->request().addr(), this->this_machine_addr_);
     }
     call->SendResponse();
     EnqueueRequest<CtrlMethod::kLoadServer>();

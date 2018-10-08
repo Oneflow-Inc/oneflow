@@ -147,8 +147,8 @@ CtrlClient::CtrlClient() {
   std::string addr = "";
   for (int64_t i = 0; i < Global<JobDesc>::Get()->TotalMachineNum(); ++i) {
     const Machine& mchn = Global<JobDesc>::Get()->resource().machine(i);
-    port = (mchn.rpc_port_agent() != -1) ? (mchn.rpc_port_agent())
-                                         : Global<JobDesc>::Get()->resource().rpc_port();
+    port = (mchn.ctrl_port_agent() != -1) ? (mchn.ctrl_port_agent())
+                                          : Global<JobDesc>::Get()->resource().ctrl_port();
     addr = mchn.addr() + ":" + std::to_string(port);
     stubs_.push_back(CtrlService::NewStub(addr));
     LoadServer(mchn.addr(), stubs_[i].get());
@@ -158,7 +158,6 @@ CtrlClient::CtrlClient() {
     std::mt19937 gen(NewRandomSeed());
     std::uniform_int_distribution<int32_t> sleep_second_dis(7, 13);
     LoadServerRequest request;
-    request.set_addr("");
     LoadServerResponse response;
     while (true) {
       {
@@ -167,6 +166,7 @@ CtrlClient::CtrlClient() {
       }
       for (size_t i = 0; i < stubs_.size(); ++i) {
         grpc::ClientContext client_ctx;
+        request.set_addr(Global<JobDesc>::Get()->resource().machine(i).addr());
         GRPC_CHECK(stubs_[i]->CallMethod<CtrlMethod::kLoadServer>(&client_ctx, request, &response))
             << "Machine " << i << " lost";
       }

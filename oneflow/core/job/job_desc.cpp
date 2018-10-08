@@ -150,7 +150,7 @@ void JobDesc::SanityCheck() {
   FOR_RANGE(int64_t, i, 0, machine_num) { CHECK_EQ(job_conf_.resource().machine(i).id(), i); }
 }
 
-int64_t JobDesc::ParseMachineId(const std::string& addr) {
+int64_t JobDesc::GetMachineId(const std::string& addr) const {
   int64_t machine_id = -1;
   auto resource_conf = job_conf_.resource();
   int64_t machine_num = resource_conf.machine_size();
