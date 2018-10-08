@@ -28,10 +28,10 @@ void VStackOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
     CHECK_EQ(in_i_blob_desc->data_type(), in_0_blob_desc->data_type());
     CHECK_EQ(in_i_blob_desc->has_data_id_field(), in_0_blob_desc->has_data_id_field());
     if (conf.identity_shape()) {
-      CHECK(in_i_blob_desc->has_varing_instance_num());
+      CHECK(in_i_blob_desc->has_varying_instance_num_field());
       CHECK_EQ(in_i_blob_desc->shape().At(0), in_0_blob_desc->shape().At(0));
     } else {
-      CHECK(!in_i_blob_desc->has_varing_instance_num());
+      CHECK(!in_i_blob_desc->has_varying_instance_num_field());
       out_dim_vec[0] += in_i_blob_desc->shape().At(0);
     }
   }
