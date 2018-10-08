@@ -32,6 +32,14 @@ void VStackKernel<device_type, T>::ForwardVaryingInstanceNum(
 template<DeviceType device_type, typename T>
 void VStackKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  // const Blob* out_blob = BnInOp2Blob("out");
+  // for (const auto& input_bn : this->op_attribute().input_bns()) {
+  //   const Blob* in_blob = BnInOp2Blob(input_bn);
+  //   int64_t instance_num = in_blob->shape().At(0);
+  //   Memcpy<device_type>(ctx.device_ctx, out_blob->mut_dptr<T>(out_instance_offset),
+  //                       in_blob->dptr<T>(), instance_num * elem_cnt_per_instance * sizeof(T));
+  //   out_instance_offset += instance_num;
+  // }
   TODO();
 }
 
