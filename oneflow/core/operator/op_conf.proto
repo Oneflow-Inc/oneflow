@@ -863,7 +863,7 @@ message BatchPermutationOpConf {
 message VStackOpConf {
   repeated string in = 1;
   required string out = 2;
-  optional bool identity_shape = 3 [default = false];
+  optional bool shape_identical = 3 [default = false];
 }
 
 message FpnDistributeOpConf {
