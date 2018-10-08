@@ -11,12 +11,12 @@ void VStackKernel<device_type, T>::ForwardDataContent(
   int64_t out_instance_offset = 0;
   for (const auto& input_bn : this->op_attribute().input_bns()) {
     const Blob* in_blob = BnInOp2Blob(input_bn);
-    int64_t instance_num = in_blob->available_instance_num();
+    int64_t instance_num = in_blob->shape().At(0);
     Memcpy<device_type>(ctx.device_ctx, out_blob->mut_dptr<T>(out_instance_offset),
                         in_blob->dptr<T>(), instance_num * elem_cnt_per_instance * sizeof(T));
     out_instance_offset += instance_num;
   }
-  CHECK_LE(out_instance_offset, out_blob->shape().At(0));
+  CHECK_LE(out_instance_offset, out_blob->static_shape().At(0));
 }
 
 template<DeviceType device_type, typename T>
