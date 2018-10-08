@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_OPERATOR_VSTACK_OP_H_
-#define ONEFLOW_CORE_OPERATOR_VSTACK_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_V_STACK_OP_H_
+#define ONEFLOW_CORE_OPERATOR_V_STACK_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 
