@@ -7,7 +7,7 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void UpdateModelGpu(int64_t n, const int32_t* total_instance_num_ptr, T learning_rate,
+__global__ void UpdateModelGpu(int64_t n, const T* total_instance_num_ptr, T learning_rate,
                                T decay_rate, T epsilon, T l1, T l2, const T* model_diff, T* model,
                                T* mean_square) {
   CUDA_1D_KERNEL_LOOP(i, n) {
@@ -22,7 +22,7 @@ __global__ void UpdateModelGpu(int64_t n, const int32_t* total_instance_num_ptr,
 template<typename T>
 class RMSPropMdUpdateKernelUtil<DeviceType::kGPU, T> final {
  public:
-  static void UpdateModel(DeviceCtx* ctx, int64_t n, const int32_t* total_instance_num_ptr,
+  static void UpdateModel(DeviceCtx* ctx, int64_t n, const T* total_instance_num_ptr,
                           T learning_rate, T decay_rate, T epsilon, T l1, T l2, const T* model_diff,
                           T* model, T* mean_square) {
     UpdateModelGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(

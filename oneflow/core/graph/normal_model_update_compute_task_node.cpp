@@ -83,7 +83,7 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
     op_conf.set_device_type(logical_node()->parallel_desc()->device_type());
     op_conf.mutable_normal_mdupdt_conf()->set_model_diff(lbi.op_name() + '/' + lbi.blob_name());
     op_conf.mutable_normal_mdupdt_conf()->set_total_instance_num_diff(lbi.op_name() + '/'
-                                                                      + lbi.blob_name());
+                                                                      + "total_instance_num");
     op_conf.mutable_normal_mdupdt_conf()->set_model(lbi.op_name() + '/' + lbi.blob_name());
     if (Global<JobDesc>::Get()->IsTrain()) {
       *(op_conf.mutable_normal_mdupdt_conf()->mutable_user_conf()) =
@@ -114,9 +114,6 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
     model_update_node = mut_exec_gph().NewNode();
     model_update_node->mut_op() = model_update_op;
     exec_edge = mut_exec_gph().NewEdge();
-    // exec_edge->set_lbi(lbi);
-    // exec_edge->mut_src_bn() = lbi.blob_name();
-    // exec_edge->mut_dst_bn() = model_update_op->SoleIbn();
     Connect(shared_model_diff_add_node, exec_edge, model_update_node);
 
     model_update_node->BindBnsWithRegst(&Operator::input_bns, processed_model_diff_regst);

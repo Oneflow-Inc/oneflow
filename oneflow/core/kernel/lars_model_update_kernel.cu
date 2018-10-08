@@ -7,9 +7,9 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void GetLocalLearningRateGpu(const const int32_t* total_instance_num_ptr,
-                                        T learning_rate, T l2, T epsilon, T lars_coefficient,
-                                        int64_t next_model_vid, T* data_tmp) {
+__global__ void GetLocalLearningRateGpu(const const T* total_instance_num_ptr, T learning_rate,
+                                        T l2, T epsilon, T lars_coefficient, int64_t next_model_vid,
+                                        T* data_tmp) {
   T* model_norm = &data_tmp[0];
   T* model_diff_norm = &data_tmp[1];
   T* local_learning_rate = &data_tmp[2];
@@ -25,7 +25,7 @@ __global__ void GetLocalLearningRateGpu(const const int32_t* total_instance_num_
 }
 
 template<typename T>
-__global__ void UpdateModelGpu(int64_t n, const int32_t* total_instance_num_ptr, T l1, T l2,
+__global__ void UpdateModelGpu(int64_t n, const T* total_instance_num_ptr, T l1, T l2,
                                T momentum_beta, const T* model_diff, T* model, T* momentum,
                                T* data_tmp) {
   CUDA_1D_KERNEL_LOOP(i, n) {
@@ -40,7 +40,7 @@ __global__ void UpdateModelGpu(int64_t n, const int32_t* total_instance_num_ptr,
 template<typename T>
 class LARSMdUpdateKernelUtil<DeviceType::kGPU, T> final {
  public:
-  static void UpdateModel(DeviceCtx* ctx, int64_t n, const int32_t* total_instance_num_ptr,
+  static void UpdateModel(DeviceCtx* ctx, int64_t n, const T* total_instance_num_ptr,
                           T learning_rate, T l1, T l2, T momentum_beta, T epsilon,
                           T lars_coefficient, int64_t next_model_vid, const T* model_diff, T* model,
                           T* momentum, T* data_tmp) {

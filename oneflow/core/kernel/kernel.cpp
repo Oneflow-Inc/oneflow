@@ -138,7 +138,6 @@ void KernelIfWithModel<device_type, T>::ExtractInstanceNumFromHeaderIfHasModelBn
     Blob* total_instance_num_diff_blob = BnInOp2Blob("total_instance_num_diff");
     KernelUtil<device_type, T>::ExtractInstanceNumFromHeader(
         ctx.device_ctx, instance_num, total_instance_num_diff_blob->mut_dptr<T>());
-    // LOG(INFO) << "Hello...";
   }
 }
 

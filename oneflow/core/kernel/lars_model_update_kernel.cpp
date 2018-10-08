@@ -5,7 +5,7 @@ namespace oneflow {
 
 template<DeviceType device_type, typename T>
 void LARSMdUpdateKernel<device_type, T>::UpdateModel(
-    DeviceCtx* ctx, const int32_t* total_instance_num_ptr, T learning_rate, T l1, T l2,
+    DeviceCtx* ctx, const T* total_instance_num_ptr, T learning_rate, T l1, T l2,
     int64_t next_model_vid, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* model_diff_blob = BnInOp2Blob("model_diff");
   Blob* model_blob = BnInOp2Blob("model");
@@ -29,7 +29,7 @@ void LARSMdUpdateKernel<device_type, T>::UpdateModel(
 template<typename T>
 class LARSMdUpdateKernelUtil<DeviceType::kCPU, T> final {
  public:
-  static void UpdateModel(DeviceCtx* ctx, int64_t n, const int32_t* total_instance_num_ptr,
+  static void UpdateModel(DeviceCtx* ctx, int64_t n, const T* total_instance_num_ptr,
                           T learning_rate, T l1, T l2, T momentum_beta, T epsilon,
                           T lars_coefficient, int64_t next_model_vid, const T* model_diff, T* model,
                           T* momentum, T* data_tmp) {

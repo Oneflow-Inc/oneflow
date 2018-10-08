@@ -25,7 +25,7 @@ void MomentumMdUpdateKernel<device_type, T>::InitModelBlobsWithDir(
 
 template<DeviceType device_type, typename T>
 void MomentumMdUpdateKernel<device_type, T>::UpdateModel(
-    DeviceCtx* ctx, const int32_t* total_instance_num_ptr, T learning_rate, T l1, T l2,
+    DeviceCtx* ctx, const T* total_instance_num_ptr, T learning_rate, T l1, T l2,
     int64_t next_model_vid, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* model_diff_blob = BnInOp2Blob("model_diff");
   Blob* model_blob = BnInOp2Blob("model");
@@ -42,7 +42,7 @@ void MomentumMdUpdateKernel<device_type, T>::UpdateModel(
 template<typename T>
 class MomentumMdUpdateKernelUtil<DeviceType::kCPU, T> final {
  public:
-  static void UpdateModel(DeviceCtx*, int64_t n, const int32_t* total_instance_num_ptr, T beta,
+  static void UpdateModel(DeviceCtx*, int64_t n, const T* total_instance_num_ptr, T beta,
                           T learning_rate, T l1, T l2, const T* model_diff, T* model, T* momentum) {
     for (int64_t i = 0; i != n; ++i) {
       T reg_diff = RegularizeDiff(model_diff[i], *total_instance_num_ptr, l1, l2, model[i]);

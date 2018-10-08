@@ -21,15 +21,15 @@ class MomentumMdUpdateKernel final : public NormalMdUpdateKernel<device_type, T>
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
  private:
-  void UpdateModel(DeviceCtx* ctx, const int32_t* total_instance_num_ptr, T learning_rate, T l1,
-                   T l2, int64_t next_model_vid,
+  void UpdateModel(DeviceCtx* ctx, const T* total_instance_num_ptr, T learning_rate, T l1, T l2,
+                   int64_t next_model_vid,
                    std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
 template<DeviceType device_type, typename T>
 class MomentumMdUpdateKernelUtil final {
  public:
-  static void UpdateModel(DeviceCtx*, int64_t n, const int32_t* total_instance_num_ptr, T beta,
+  static void UpdateModel(DeviceCtx*, int64_t n, const T* total_instance_num_ptr, T beta,
                           T learning_rate, T l1, T l2, const T* model_diff, T* model, T* momentum);
 };
 
