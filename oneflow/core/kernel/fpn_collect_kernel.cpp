@@ -86,7 +86,7 @@ void FpnCollectKernel<device_type, T>::SortAndSelectTopnRois(
 
 template<DeviceType device_type, typename T>
 void FpnCollectKernel<device_type, T>::ForwardVaryingInstanceNum(
-      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // do nothing
 }
 
