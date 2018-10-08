@@ -40,8 +40,8 @@ int64_t FpnCollectKernel<device_type, T>::ConcatAllRoisAndScores(
     const int64_t prob_in_col_num = prob_blob->shape().Count(1);
 
     FOR_RANGE(size_t, j, 0, roi_blob->shape().At(0)) {
-      available_roi_num += roi_blob->instance_varying_elem_cnt(j);
-      available_prob_num += prob_blob->instance_varying_elem_cnt(j);
+      available_roi_num += roi_blob->instance_available_elem_cnt(j) / roi_blob->shape().Count(2);
+      available_prob_num += prob_blob->instance_available_elem_cnt(j);
     }
     CHECK_EQ(available_roi_num, available_prob_num);
 
