@@ -42,7 +42,7 @@ int32_t JobDesc::NumOfBatchesInSnapshot() const {
   return job_conf_.other().train_conf().num_of_batches_in_snapshot();
 }
 int64_t JobDesc::TotalBatchNum() const {
-  // CHECK(IsTrain());
+  CHECK(IsTrain());
   return job_conf_.other().train_conf().total_batch_num();
 }
 const InitializerConf* JobDesc::DefaultInitializerConf() const {
@@ -59,7 +59,7 @@ int32_t JobDesc::PieceNumOfPrintAccuracy() const {
   return job_conf_.other().train_conf().piece_num_of_print_accuracy();
 }
 int64_t JobDesc::BatchSize() const {
-  // CHECK(IsTrain());
+  CHECK(IsTrain());
   return job_conf_.other().train_conf().batch_size();
 }
 int64_t JobDesc::NumOfPiecesInBatch() const {
