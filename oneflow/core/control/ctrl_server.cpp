@@ -62,14 +62,10 @@ void CtrlServer::HandleRpcs() {
 
 void CtrlServer::Init() {
   Add([this](CtrlCall<CtrlMethod::kLoadServer>* call) {
-    /*
-     * if (this->is_first_connect_) {
-          this->this_machine_addr_ = call->request().addr();
-          this->is_first_connect_ = false;
-        } else {
-          CHECK_EQ(call->request().addr(), this->this_machine_addr_);
-        }
-        */
+    if (this->is_first_connect_) {
+      this->this_machine_addr_ = call->request().addr();
+      this->is_first_connect_ = false;
+    }
     call->SendResponse();
     EnqueueRequest<CtrlMethod::kLoadServer>();
   });
@@ -202,6 +198,6 @@ void CtrlServer::Init() {
     call->SendResponse();
     EnqueueRequest<CtrlMethod::kEraseCount>();
   });
-}  // namespace oneflow
+}
 
 }  // namespace oneflow

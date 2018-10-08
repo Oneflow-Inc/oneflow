@@ -151,13 +151,14 @@ CtrlClient::CtrlClient() {
                                          : Global<JobDesc>::Get()->resource().rpc_port();
     addr = mchn.addr() + ":" + std::to_string(port);
     stubs_.push_back(CtrlService::NewStub(addr));
-    LoadServer(addr, stubs_[i].get());
+    LoadServer(mchn.addr(), stubs_[i].get());
   }
   need_heartbeat_thread_stop_ = false;
   heartbeat_thread_ = std::thread([this]() {
     std::mt19937 gen(NewRandomSeed());
     std::uniform_int_distribution<int32_t> sleep_second_dis(7, 13);
     LoadServerRequest request;
+    request.set_addr("");
     LoadServerResponse response;
     while (true) {
       {
