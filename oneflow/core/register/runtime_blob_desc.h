@@ -20,7 +20,8 @@ class RtBlobDesc {
   const BlobDescProto& blob_desc_proto() const { return blob_desc_proto_; }
   const Shape& shape() const;  // body shape
   DataType data_type() const;  // body data type
-  const Shape* instance_inner_shape() const { return instance_inner_shape_.get(); }
+  bool has_instance_inner_shape() const { return bool(instance_inner_shape_); }
+  const Shape& instance_inner_shape() const { return *instance_inner_shape_; }
 
   bool has_data_id_field() const;
   bool has_col_num_field() const;

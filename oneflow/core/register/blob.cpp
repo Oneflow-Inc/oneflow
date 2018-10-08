@@ -68,36 +68,22 @@ void Blob::set_instance_varying_elem_cnt(int32_t no, int32_t val) {
 int32_t Blob::varying_instance_num(int32_t no) const {
   CHECK_NOTNULL(varying_instance_num_ptr_);
   CHECK_GE(no, 0);
-  CHECK_LT(no, instance_inner_shape()->At(0));
+  CHECK_LT(no, instance_inner_shape().At(0));
   return varying_instance_num_ptr_[no];
 }
 
 void Blob::set_varying_instance_num(int32_t no, int32_t val) {
   CHECK_NOTNULL(varying_instance_num_ptr_);
   CHECK_GE(no, 0);
-  CHECK_LT(no, instance_inner_shape()->At(0));
+  CHECK_LT(no, instance_inner_shape().At(0));
   CHECK_GE(val, 0);
-  CHECK_LT(val, instance_inner_shape()->Count(1));
+  CHECK_LT(val, instance_inner_shape().Count(1));
   varying_instance_num_ptr_[no] = val;
 }
 
 int32_t Blob::instance_available_elem_cnt(int32_t no) const {
   if (instance_varying_elem_cnt_ptr_ != nullptr) { return instance_varying_elem_cnt(no); }
   return blob_desc_->shape().Count(1);
-}
-
-int32_t Blob::available_instance_num(int32_t no) const {
-  if (varying_instance_num_ptr_ != nullptr) { return varying_instance_num(no); }
-  return instance_inner_shape()->Count(1);
-}
-
-int32_t Blob::available_instance_num() const {
-  if (varying_instance_num_ptr_ != nullptr) {
-    size_t num = 0;
-    FOR_RANGE(int, i, 0, instance_inner_shape()->At(0)) { num += varying_instance_num(i); }
-    return num;
-  }
-  return blob_desc_->shape().At(0);
 }
 
 const Shape& Blob::shape() const {
@@ -107,7 +93,7 @@ const Shape& Blob::shape() const {
 
 const Shape& Blob::dynamic_shape() const {
   size_t last_invalid_instance_num =
-      instance_inner_shape()->Count(1) - varying_instance_num(instance_inner_shape()->At(0) - 1);
+      instance_inner_shape().Count(1) - varying_instance_num(instance_inner_shape().At(0) - 1);
   size_t contiguous_instance_num = blob_desc_->shape().At(0) - last_invalid_instance_num;
   if (dynamic_shape_.At(0) != contiguous_instance_num) {
     dynamic_shape_.Set(0, contiguous_instance_num);

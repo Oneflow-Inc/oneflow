@@ -18,11 +18,7 @@ BlobDesc::BlobDesc(const Shape& shape, DataType data_type, bool has_data_id, boo
       blob_mem_id_(-1),
       body_field_(shape, data_type) {}
 
-BlobDesc::BlobDesc(const BlobDesc& BlobDesc) {
-  BlobDescProto proto;
-  BlobDesc.ToProto(&proto);
-  InitFromProto(proto);
-}
+BlobDesc::BlobDesc(const BlobDesc& BlobDesc) { *this = BlobDesc; }
 
 void BlobDesc::InitFromProto(const BlobDescProto& proto) {
   body_field_.InitFromProto(proto.body());
@@ -158,16 +154,9 @@ bool BlobDesc::operator==(const BlobDesc& rhs) const {
 }
 
 BlobDesc& BlobDesc::operator=(const BlobDesc& blob_desc) {
-  header_is_opaque_ = blob_desc.header_is_opaque_;
-  opaque_header_ = blob_desc.opaque_header_;
-  header_pod_desc_ = blob_desc.header_pod_desc_;
-  has_data_id_ = blob_desc.has_data_id_;
-  has_col_num_ = blob_desc.has_col_num_;
-  has_varying_instance_num_ = blob_desc.has_varying_instance_num_;
-  has_instance_varying_elem_cnt_ = blob_desc.has_instance_varying_elem_cnt_;
-  max_col_num_ = blob_desc.max_col_num_;
-  body_field_ = blob_desc.body_field_;
-  blob_mem_id_ = -1;
+  BlobDescProto proto;
+  blob_desc.ToProto(&proto);
+  InitFromProto(proto);
   return *this;
 }
 
