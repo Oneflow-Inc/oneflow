@@ -19,12 +19,12 @@ void VStackKernel<device_type, T>::ForwardDataContent(
   CHECK_LE(out_instance_offset, out_blob->shape().At(0));
 }
 
-template<DeviceType device_type>
-void VStackKernel<device_type>::ForwardVaryingInstanceNum(
+template<DeviceType device_type, typename T>
+void VStackKernel<device_type, T>::ForwardVaryingInstanceNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   int64_t total_instance_num = 0;
   for (const auto& input_bn : this->op_attribute().input_bns()) {
-    total_instance_num  += BnInOp2Blob(input_bn)->varying_instance_num(0);
+    total_instance_num += BnInOp2Blob(input_bn)->varying_instance_num(0);
   }
   BnInOp2Blob("out")->set_varying_instance_num(0, total_instance_num);
 }

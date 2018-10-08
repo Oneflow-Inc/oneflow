@@ -18,9 +18,7 @@ void VStackOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
   auto CheckShape = [](const Shape& lhs_shape, const Shape& rhs_shape) {
     int64_t in_axes_num = lhs_shape.NumAxes();
     CHECK_EQ(rhs_shape.NumAxes(), in_axes_num);
-    for (int64_t j = 1; j < in_axes_num; ++j) {
-      CHECK_EQ(lhs_shape.At(j), rhs_shape.At(j));
-    }
+    for (int64_t j = 1; j < in_axes_num; ++j) { CHECK_EQ(lhs_shape.At(j), rhs_shape.At(j)); }
   };
   for (size_t i = 1; i < input_bns().size(); ++i) {
     const BlobDesc* in_i_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(i));
