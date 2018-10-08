@@ -81,8 +81,18 @@ void Blob::set_varying_instance_num(int32_t no, int32_t val) {
   varying_instance_num_ptr_[no] = val;
 }
 
+
 int32_t Blob::instance_available_elem_cnt(int32_t no) const {
   if (instance_varying_elem_cnt_ptr_ != nullptr) { return instance_varying_elem_cnt(no); }
+  return blob_desc_->shape().Count(1);
+}
+
+int32_t Blob::instance_available_elem_cnt() const {
+  if (instance_varying_elem_cnt_ptr_ != nullptr) { 
+    size_t num = 0;
+    FOR_RANGE(int, i, 0, blob_desc_->shape().At(0)){ num += instance_varying_elem_cnt(i); }
+    return num;
+  }
   return blob_desc_->shape().Count(1);
 }
 

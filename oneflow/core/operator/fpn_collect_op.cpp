@@ -43,16 +43,17 @@ void FpnCollectOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   BlobDesc* index_blob_desc = GetBlobDesc4BnInOp("index");
   index_blob_desc->mut_shape() = Shape({N * R * level});
   index_blob_desc->set_data_type(DataType::kInt32);
-  // roi_inputs (N * R * level, 5) T
+  // roi_inputs (N , R * level, 5) T
   BlobDesc* roi_inputs_blob_desc = GetBlobDesc4BnInOp("roi_inputs");
   roi_inputs_blob_desc->mut_shape() = Shape({N, R * level, 5});
   roi_inputs_blob_desc->set_data_type(input_blob_desc->data_type());
-  // score_inputs (N * R * level) T
+  // score_inputs (N , R * level) T
   BlobDesc* score_inputs_blob_desc = GetBlobDesc4BnInOp("score_inputs");
   score_inputs_blob_desc->mut_shape() = Shape({N, R * level});
   score_inputs_blob_desc->set_data_type(input_blob_desc->data_type());
   // out (post_nms_topn ,5) T
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+  out_blob_desc->mut_instance_inner_shape() = Shape({1,post_nms_top_n});
   out_blob_desc->mut_shape() = Shape({post_nms_topn, 5});
   out_blob_desc->set_data_type(input_blob_desc->data_type());
 }
