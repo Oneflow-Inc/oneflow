@@ -52,6 +52,13 @@ void LossKernel<device_type, PredType, LabelType>::ForwardColNum(
   BnInOp2Blob(GenDiffBn("prediction"))->CopyColNumFrom(ctx.device_ctx, BnInOp2Blob("prediction"));
 }
 
+template<DeviceType device_type, typename PredType, typename LabelType>
+void LossKernel<device_type, PredType, LabelType>::ForwardVaryingInstanceNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  BnInOp2Blob(GenDiffBn("prediction"))
+      ->CopyVaryingInstanceNumFrom(ctx.device_ctx, BnInOp2Blob("prediction"));
+}
+
 template<typename T>
 struct LossKernelUtil<DeviceType::kCPU, T> {
   static void ComputeReductionCoefficient(DeviceCtx* ctx, int64_t data_num, int64_t weight_length,

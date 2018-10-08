@@ -594,8 +594,8 @@ message DefineTestBlobConf {
   required string out = 1;
   required ShapeProto shape = 2;
   required DataType data_type = 3;
-  optional bool has_instance_varying_elem_cnt_field = 4;
-  optional bool has_varying_instance_num_field = 5;
+  optional int32 instance_varying_elem_cnt = 4;
+  optional int32 varying_instance_num = 5;
   optional ShapeProto instance_inner_shape = 6;
 }
 
@@ -958,7 +958,7 @@ message OperatorConf {
     BatchPermutationOpConf batch_permutation_conf = 1011;
     FpnCollectOpConf fpn_collect_conf = 1012;
     FpnDistributeOpConf fpn_distribute_conf = 1013;
-    VStackOpConf v_stack_conf = 1014;
+    VStackOpConf vstack_conf = 1014;
   }
 }
 
