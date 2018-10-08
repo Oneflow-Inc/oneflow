@@ -1,6 +1,7 @@
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/job/profiler.h"
+#include "oneflow/core/job/job_desc.h"
 #include "grpc/grpc_posix.h"
 
 DEFINE_bool(grpc_use_no_signal, false, "prevent GRPC library from using any signals");
@@ -23,20 +24,22 @@ CtrlServer::~CtrlServer() {
   cq_->Shutdown();
 }
 
-CtrlServer::CtrlServer(const std::string& server_addr) {
+CtrlServer::CtrlServer() : is_first_connect_(true), this_machine_addr_("") {
   Init();
 
   if (FLAGS_grpc_use_no_signal) { grpc_use_signal(-1); }
-  int port = ExtractPortFromAddr(server_addr);
+  int port = Global<JobDesc>::Get()->resource().rpc_port();
   grpc::ServerBuilder server_builder;
   int bound_port = 0;
-  server_builder.AddListeningPort(server_addr, grpc::InsecureServerCredentials(), &bound_port);
+  server_builder.AddListeningPort("0.0.0.0:" + port, grpc::InsecureServerCredentials(),
+                                  &bound_port);
   grpc_service_.reset(new CtrlService::AsyncService);
   server_builder.RegisterService(grpc_service_.get());
   cq_ = server_builder.AddCompletionQueue();
   grpc_server_ = server_builder.BuildAndStart();
   CHECK_EQ(port, bound_port) << "Port " << port << " is unavailable";
-  LOG(INFO) << "CtrlServer listening on " << server_addr;
+  LOG(INFO) << "CtrlServer listening on "
+            << "0.0.0.0:" + port;
   loop_thread_ = std::thread(&CtrlServer::HandleRpcs, this);
 }
 
@@ -59,6 +62,12 @@ void CtrlServer::HandleRpcs() {
 
 void CtrlServer::Init() {
   Add([this](CtrlCall<CtrlMethod::kLoadServer>* call) {
+    if (is_first_connect_) {
+      this_machine_addr_ = call->request().addr();
+      is_first_connect_ = false;
+    } else {
+      CHECK_EQ(call->request().addr(), this_machine_addr_);
+    }
     call->SendResponse();
     EnqueueRequest<CtrlMethod::kLoadServer>();
   });
@@ -191,6 +200,6 @@ void CtrlServer::Init() {
     call->SendResponse();
     EnqueueRequest<CtrlMethod::kEraseCount>();
   });
-}
+}  // namespace oneflow
 
 }  // namespace oneflow

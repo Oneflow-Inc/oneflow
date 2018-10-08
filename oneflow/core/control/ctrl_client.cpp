@@ -174,6 +174,7 @@ void CtrlClient::LoadServer(const std::string& server_addr, CtrlService::Stub* s
   for (; retry_idx < max_retry_num; ++retry_idx) {
     grpc::ClientContext client_ctx;
     LoadServerRequest request;
+    request.set_addr(server_addr);
     LoadServerResponse response;
     grpc::Status st = stub->CallMethod<CtrlMethod::kLoadServer>(&client_ctx, request, &response);
     if (st.error_code() == grpc::StatusCode::OK) {

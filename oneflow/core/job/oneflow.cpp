@@ -187,13 +187,15 @@ class Oneflow final {
 Oneflow::Oneflow(const std::string& job_conf_filepath) {
   // New All Global
   Global<JobDesc>::New(job_conf_filepath);
-  Global<MachineCtx>::New();
+  ctrl_server_.reset(new CtrlServer());
+  Global<CtrlClient>::New();
+  OF_BARRIER();
+  int64_t this_mchn_id = Global<JobDesc>::Get()->ParseMachineId(ctrl_server_->this_machine_addr());
+  Global<MachineCtx>::New(this_mchn_id);
   const MachineCtx* machine_ctx = Global<MachineCtx>::Get();
   bool DoProfile =
       machine_ctx->IsThisMachineMaster() && Global<JobDesc>::Get()->collect_act_event();
   if (DoProfile) { Global<Profiler>::New(); }
-  ctrl_server_.reset(new CtrlServer(machine_ctx->GetThisCtrlAddr()));
-  Global<CtrlClient>::New();
   FixCpuDeviceNum();
   Global<IDMgr>::New();
   // Compile
