@@ -7,8 +7,9 @@ template<typename T>
 void AccuracyPrintKernel<T>::Forward(const KernelCtx& kernel_ctx,
                                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* accuracy_acc_blob = BnInOp2Blob("accuracy_acc");
+  const Blob* total_instance_num_blob = BnInOp2Blob("total_instance_num");
   T accuracy_num = accuracy_acc_blob->dptr<T>()[0];
-  int total_num = Global<JobDesc>::Get()->BatchSize();
+  int32_t total_num = static_cast<int32_t>(total_instance_num_blob->dptr<T>()[0]);
   float accuracy = accuracy_num / total_num;
   const char* accuracy_op_name = op_conf().name().c_str() + AccuracyPrintPrefix.length();
   auto kernel_conf = this->kernel_conf();

@@ -418,6 +418,7 @@ message LossPrintOpConf {
 
 message AccuracyPrintOpConf {
   required LogicalBlobId accuracy_lbi = 1;
+  required LogicalBlobId total_instance_num_lbi = 2;
   optional int32 top_k_print = 3 [default = 1];
 }
 

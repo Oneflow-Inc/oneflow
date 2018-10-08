@@ -18,6 +18,12 @@ void AccuracyKernel<device_type, PredType, LabelType>::ForwardDataContent(
   AccuracyKernelUtil<device_type, PredType, LabelType>::Forward(
       ctx.device_ctx, N, D, top_k, X->dptr<PredType>(), label->dptr<LabelType>(),
       accuracy->mut_dptr<PredType>());
+
+  // total instance num
+  // xfjiang: test instance num
+  int32_t total_instance_num = 600;
+  KernelUtil<device_type, PredType>::ExtractInstanceNumFromHeader(
+      ctx.device_ctx, total_instance_num, BnInOp2Blob("total_instance_num")->mut_dptr<PredType>());
 }
 
 template<typename PredType, typename LabelType>
