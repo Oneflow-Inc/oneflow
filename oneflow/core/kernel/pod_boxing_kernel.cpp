@@ -18,7 +18,7 @@ void CalcSumOfBlobs(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnI
                            src_blob_0->ByteSizeOfDataContentField());
   FOR_RANGE(size_t, i, 1, src_bns.size()) {
     Blob* src_blob_i = BnInOp2Blob(src_bns.Get(i));
-    KernelUtil<DeviceType::kCPU, T>::Axpy(ctx, dst_blob->shape().elem_cnt(), 1.0,
+    KernelUtil<DeviceType::kCPU, T>::Axpy(ctx, dst_blob->static_shape().elem_cnt(), 1.0,
                                           src_blob_i->dptr<T>(), 1, dst_blob->mut_dptr<T>(), 1);
   }
 }
@@ -32,10 +32,10 @@ class DataContentDesc final {
   DataContentDesc(std::function<Blob*(const std::string&)> BnInOp2Blob,
                   const PbRpf<std::string>* bns, int32_t axis) {
     BnInOp2Blob_ = BnInOp2Blob;
-    seg_num_ = BnInOp2Blob(bns->Get(0))->shape().Count(0, axis);
+    seg_num_ = BnInOp2Blob(bns->Get(0))->static_shape().Count(0, axis);
     elem_sum_.assign(bns->size(), 0);
     FOR_RANGE(size_t, i, 0, elem_sum_.size()) {
-      elem_sum_[i] = BnInOp2Blob(bns->Get(i))->shape().Count(axis);
+      elem_sum_[i] = BnInOp2Blob(bns->Get(i))->static_shape().Count(axis);
       if (i > 0) { elem_sum_[i] += elem_sum_[i - 1]; }
     }
     bns_ = bns;
@@ -58,7 +58,7 @@ class DataContentDesc final {
     if (bn_idx > 0) { idx_in_blob -= elem_sum_[bn_idx - 1]; }
     Blob* blob = BnInOp2Blob_(bns_->Get(bn_idx));
     std::get<1>(ret) = blob->mut_dptr<char>()
-                       + (seg_idx * blob->shape().Count(axis_) + idx_in_blob)
+                       + (seg_idx * blob->static_shape().Count(axis_) + idx_in_blob)
                              * GetSizeOfDataType(blob->data_type());
     return ret;
   }

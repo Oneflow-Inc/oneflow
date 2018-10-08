@@ -41,23 +41,27 @@ void PodBoxingOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
     }
   }
 
+  std::vector<int64_t> instance_inner_shape_vec;
   std::vector<int64_t> data_tmp_blob_shape_vec =
       GetBlobDesc4BnInOp(InputBns().Get(0))->shape().dim_vec();
-  InferDataTmpBlobDesc(GetBlobDesc4BnInOp, &data_tmp_blob_shape_vec);
-  InferOutBlobDescs(GetBlobDesc4BnInOp, data_tmp_blob_shape_vec);
+  InferDataTmpBlobDesc(GetBlobDesc4BnInOp, &data_tmp_blob_shape_vec, &instance_inner_shape_vec);
+  InferOutBlobDescs(GetBlobDesc4BnInOp, data_tmp_blob_shape_vec, instance_inner_shape_vec);
 }
 
 void PodBoxingOp::InferDataTmpBlobDesc(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    std::vector<int64_t>* data_tmp_vec_ptr) const {
+    std::vector<int64_t>* data_tmp_vec_ptr, std::vector<int64_t>* instance_inner_shape_vec) const {
   const BoxingOpConf& conf = boxing_conf();
-  *data_tmp_vec_ptr = CalcDataTmpBlobShapeVec(GetBlobDesc4BnInOp);
+  *data_tmp_vec_ptr = CalcDataTmpBlobShapeVec(GetBlobDesc4BnInOp, instance_inner_shape_vec);
   CHECK_NE(conf.out_box_case(), BoxingOpConf::OUT_BOX_NOT_SET);
   if (conf.in_box_case() == BoxingOpConf::kAddBox
       && conf.out_box_case() == BoxingOpConf::kSplitBox) {
     BlobDesc* data_tmp_blob_desc = GetBlobDesc4BnInOp(SoleDtbn());
     data_tmp_blob_desc->mut_shape() = Shape(*data_tmp_vec_ptr);
     data_tmp_blob_desc->set_data_type(GetBlobDesc4BnInOp(InputBns().Get(0))->data_type());
+    if (instance_inner_shape_vec->size() > 0) {
+      data_tmp_blob_desc->mut_instance_inner_shape() = Shape(*instance_inner_shape_vec);
+    }
   }
 }
 

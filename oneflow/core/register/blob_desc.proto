@@ -3,6 +3,7 @@ package oneflow;
 
 import "oneflow/core/register/field_desc.proto";
 import "oneflow/core/register/pod.proto";
+import "oneflow/core/common/shape.proto";
 
 message FieldHeaderDesc {
   optional FieldDescProto data_id = 1;
@@ -22,4 +23,5 @@ message BlobHeaderDescProto {
 message BlobDescProto {
   required BlobHeaderDescProto header = 1;
   required FieldDescProto body = 2;
+  optional ShapeProto instance_inner_shape = 3;
 }
