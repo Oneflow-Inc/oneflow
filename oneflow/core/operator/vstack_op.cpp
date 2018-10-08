@@ -1,18 +1,18 @@
-#include "oneflow/core/operator/v_stack_op.h"
+#include "oneflow/core/operator/vstack_op.h"
 
 namespace oneflow {
 
 void VStackOp::InitFromOpConf() {
-  CHECK(op_conf().has_v_stack_conf());
+  CHECK(op_conf().has_vstack_conf());
   EnrollRepeatedInputBn("in");
   EnrollOutputBn("out");
 }
 
-const PbMessage& VStackOp::GetCustomizedConf() const { return op_conf().v_stack_conf(); }
+const PbMessage& VStackOp::GetCustomizedConf() const { return op_conf().vstack_conf(); }
 
 void VStackOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext* parallel_ctx) const {
-  const VStackOpConf& conf = op_conf().v_stack_conf();
+  const VStackOpConf& conf = op_conf().vstack_conf();
   const BlobDesc* in_0_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(0));
   std::vector<int64_t> out_dim_vec = in_0_blob_desc->shape().dim_vec();
   auto CheckShape = [](const Shape& lhs_shape, const Shape& rhs_shape) {
@@ -39,6 +39,6 @@ void VStackOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
   out_blob_desc->mut_shape() = Shape(out_dim_vec);
 }
 
-REGISTER_OP(OperatorConf::kVStackConf, VStackOp);
+REGISTER_OP(OperatorConf::kVstackConf, VStackOp);
 
 }  // namespace oneflow

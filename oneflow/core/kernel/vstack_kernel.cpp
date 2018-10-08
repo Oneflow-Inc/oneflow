@@ -1,4 +1,4 @@
-#include "oneflow/core/kernel/v_stack_kernel.h"
+#include "oneflow/core/kernel/vstack_kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
@@ -35,6 +35,6 @@ void VStackKernel<device_type, T>::BackwardDataContent(
   TODO();
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kVStackConf, VStackKernel, ARITHMETIC_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kVstackConf, VStackKernel, ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

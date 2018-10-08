@@ -958,7 +958,7 @@ message OperatorConf {
     BatchPermutationOpConf batch_permutation_conf = 1011;
     FpnCollectOpConf fpn_collect_conf = 1012;
     FpnDistributeOpConf fpn_distribute_conf = 1013;
-    VStackOpConf v_stack_conf = 1014;
+    VStackOpConf vstack_conf = 1014;
   }
 }
 
