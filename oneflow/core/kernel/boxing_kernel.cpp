@@ -55,26 +55,26 @@ void ConcatSplitColId(std::function<Blob*(const std::string&)> BnInOp2Blob,
                       const PbRpf<std::string>& input_bns, const PbRpf<std::string>& output_bns) {
   auto in_iter = input_bns.begin();
   auto out_iter = output_bns.begin();
-  int64_t in_data_num = BnInOp2Blob(*in_iter)->shape().At(0);
-  int64_t out_data_num = BnInOp2Blob(*out_iter)->shape().At(0);
+  int64_t in_data_num = BnInOp2Blob(*in_iter)->static_shape().At(0);
+  int64_t out_data_num = BnInOp2Blob(*out_iter)->static_shape().At(0);
   int32_t max_col_id = BnInOp2Blob(*in_iter)->col_id();
   while (in_iter != input_bns.end() && out_iter != input_bns.end()) {
     if (in_data_num < out_data_num) {
       ++in_iter;
-      in_data_num += BnInOp2Blob(*in_iter)->shape().At(0);
+      in_data_num += BnInOp2Blob(*in_iter)->static_shape().At(0);
       max_col_id = std::max(max_col_id, BnInOp2Blob(*in_iter)->col_id());
     } else if (in_data_num > out_data_num) {
       BnInOp2Blob(*out_iter)->set_col_id(max_col_id);
       max_col_id = BnInOp2Blob(*in_iter)->col_id();
       ++out_iter;
-      out_data_num += BnInOp2Blob(*out_iter)->shape().At(0);
+      out_data_num += BnInOp2Blob(*out_iter)->static_shape().At(0);
     } else {
       BnInOp2Blob(*out_iter)->set_col_id(max_col_id);
       ++in_iter;
-      in_data_num += BnInOp2Blob(*in_iter)->shape().At(0);
+      in_data_num += BnInOp2Blob(*in_iter)->static_shape().At(0);
       max_col_id = BnInOp2Blob(*in_iter)->col_id();
       ++out_iter;
-      out_data_num += BnInOp2Blob(*out_iter)->shape().At(0);
+      out_data_num += BnInOp2Blob(*out_iter)->static_shape().At(0);
     }
   }
 }
@@ -137,6 +137,18 @@ void BoxingKernel<T>::ForwardColNum(const KernelCtx& ctx,
 }
 
 template<typename T>
+void BoxingKernel<T>::ForwardVaryingInstanceNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  ForwardField<VaryingInstanceNumIterator>(ctx, BnInOp2Blob);
+}
+
+template<typename T>
+void BoxingKernel<T>::ForwardInstanceVaryingElemCnt(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  ForwardField<InstanceVaryingElemCntIterator>(ctx, BnInOp2Blob);
+}
+
+template<typename T>
 void BoxingKernel<T>::SetColId(const KernelCtx& ctx,
                                std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (boxing_conf().in_box_case() == BoxingOpConf::kConcatBox
@@ -158,7 +170,7 @@ void BoxingKernel<T>::SetMaxColId(const KernelCtx& ctx,
   for (const std::string& obn : OutputBns()) {
     int32_t max_col_num_in_blob = 0;
     Blob* out_blob = BnInOp2Blob(obn);
-    FOR_RANGE(int32_t, i, 0, out_blob->shape().At(0)) {
+    FOR_RANGE(int32_t, i, 0, out_blob->static_shape().At(0)) {
       max_col_num_in_blob = std::max(max_col_num_in_blob, out_blob->col_num(i));
     }
     out_blob->set_max_col_id(max_col_num_in_blob - 1);

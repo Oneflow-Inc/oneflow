@@ -1,3 +1,4 @@
+#include <cfenv>
 #include "oneflow/core/kernel/faster_rcnn_util.h"
 #include "oneflow/core/common/data_type.h"
 
@@ -17,9 +18,10 @@ void FasterRcnnUtil<T>::GenerateAnchors(const AnchorGeneratorConf& conf, Blob* a
   const float base_ctr = 0.5 * (fm_stride - 1);
   std::vector<T> base_anchors(num_anchors * 4);
   BBox<T>* base_anchor_bbox = BBox<T>::MutCast(base_anchors.data());
+  std::fesetround(FE_TONEAREST);
   FOR_RANGE(int32_t, i, 0, ratios_size) {
-    const int32_t wr = std::round(std::sqrt(fm_stride * fm_stride / conf.aspect_ratios(i)));
-    const int32_t hr = std::round(wr * conf.aspect_ratios(i));
+    const int32_t wr = std::nearbyint(std::sqrt(fm_stride * fm_stride / conf.aspect_ratios(i)));
+    const int32_t hr = std::nearbyint(wr * conf.aspect_ratios(i));
     FOR_RANGE(int32_t, j, 0, scales_size) {
       const float scale = conf.anchor_scales(j) / fm_stride;
       const int32_t ws = wr * scale;
