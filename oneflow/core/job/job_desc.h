@@ -59,6 +59,7 @@ class JobDesc final {
   }
   int64_t reduce_group_size() const { return job_conf_.other().reduce_group_size(); }
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.other().cudnn_buf_limit_mbyte(); }
+  int32_t this_machine_id() const { return this_machine_id_; }
 
   // Train conf
   const std::string& MdSaveSnapshotsPath() const;
@@ -83,10 +84,12 @@ class JobDesc final {
   JobDesc(const JobConf1& job_conf_);
   void Init();
   void SanityCheck();
+  void ParseThisMachineId();
   void SplitDecodeOps();
   void AddRecordLoadOps();
 
   JobConf1 job_conf_;
+  int64_t this_machine_id_;
 };
 
 }  // namespace oneflow
