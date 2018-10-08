@@ -358,6 +358,10 @@ void LogicalGraph::BuildLossPrintStruct() {
 
     *(loss_print_conf->mutable_loss_lbi()) = reduce_loss_op->BnInOp2Lbi("out");
 
+    *(loss_print_conf->mutable_total_instance_num_lbi()->mutable_op_name()) = loss_op->op_name();
+    *(loss_print_conf->mutable_total_instance_num_lbi()->mutable_blob_name()) =
+        "total_instance_num";
+
     if (!loss_op->GetValFromCustomizedConf<std::string>("weight").empty()) {
       *(loss_print_conf->mutable_reduction_lbi()) = loss_op->BnInOp2Lbi("reduction_coefficient");
     }

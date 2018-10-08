@@ -410,9 +410,10 @@ message PrintOpConf {
 
 message LossPrintOpConf {
   required LogicalBlobId loss_lbi = 1;
-  optional LogicalBlobId reduction_lbi = 2;
-  optional float weight_scalar = 3 [default = 1.0];
-  optional LossReductionType reduction_type = 4 [default = kSumOverN];
+  required LogicalBlobId total_instance_num_lbi = 2;
+  optional LogicalBlobId reduction_lbi = 3;
+  optional float weight_scalar = 4 [default = 1.0];
+  optional LossReductionType reduction_type = 5 [default = kSumOverN];
 }
 
 message AccuracyPrintOpConf {

@@ -7,10 +7,13 @@ template<typename T>
 void LossPrintKernel<T>::Forward(const KernelCtx& kernel_ctx,
                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* loss_acc_blob = BnInOp2Blob("loss_acc");
+  const Blob* total_instance_num_blob = BnInOp2Blob("total_instance_num");
   const Blob* reduction_acc_blob = BnInOp2Blob("reduction_acc");
   T loss_reduced = loss_acc_blob->dptr<T>()[0];
   T reduction_coefficient = -1.0;
-  if (reduction_acc_blob != nullptr) {
+  if (total_instance_num_blob != nullptr) {
+    reduction_coefficient = total_instance_num_blob->dptr<T>()[0];
+  } else if (reduction_acc_blob != nullptr) {
     reduction_coefficient = reduction_acc_blob->dptr<T>()[0];
   } else {
     auto conf = op_conf().loss_print_conf();
@@ -19,6 +22,7 @@ void LossPrintKernel<T>::Forward(const KernelCtx& kernel_ctx,
         Global<JobDesc>::Get()->PieceSize() * Global<JobDesc>::Get()->PieceNumOfPrintLoss());
   }
   loss_reduced /= reduction_coefficient;
+  LOG(INFO) << "total instance num: " << reduction_coefficient;
   const char* loss_op_name = op_conf().name().c_str() + LossPrintPrefix.length();
   LOG(INFO) << loss_op_name << ":" << loss_reduced;
 }
