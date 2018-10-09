@@ -124,7 +124,7 @@ void PushPlan(const std::string& plan_name, const Plan& plan) {
 void PullPlan(const std::string& plan_name, Plan* plan) {
   ClusterThrdIds cluster_thrd_ids;
   Global<CtrlClient>::Get()->PullKV(cluster_thrd_ids_key(plan_name), &cluster_thrd_ids);
-  PrintProtoToTextFile(cluster_thrd_ids, JoinPath(LogDir(), cluster_thrd_ids_key(plan_name)));
+  PrintProtoToTextFile(cluster_thrd_ids, JoinPath(FLAGS_log_dir, cluster_thrd_ids_key(plan_name)));
   HashMap<int64_t, ThrdIds> machine_id2thrd_ids;
   machine_id2thrd_ids = PbMap2HashMap(cluster_thrd_ids.machine_id2thrd_ids());
   int64_t machine_id = Global<MachineCtx>::Get()->this_machine_id();
@@ -228,7 +228,8 @@ Oneflow::Oneflow(const std::string& job_conf_filepath) {
       TeePersistentLogStream::Create("available_mem_desc")->Write(amd);
       CHECK_GT(amd.machine_amd_size(), 0);
       improved_plan = Improver().Improve(
-          amd, naive_plan, JoinPath(LogDir(), ActEventLogger::experiment_act_event_bin_filename()));
+          amd, naive_plan,
+          JoinPath(FLAGS_log_dir, ActEventLogger::experiment_act_event_bin_filename()));
       PushPlan("improved_plan", improved_plan);
     } else {
       PullPlan("improved_plan", &improved_plan);
@@ -243,8 +244,8 @@ Oneflow::Oneflow(const std::string& job_conf_filepath) {
   // Runtime
   { Runtime run(improved_plan, false); }
   if (DoProfile) {
-    Global<Profiler>::Get()->Profile(improved_plan,
-                                     JoinPath(LogDir(), ActEventLogger::act_event_bin_filename()));
+    Global<Profiler>::Get()->Profile(
+        improved_plan, JoinPath(FLAGS_log_dir, ActEventLogger::act_event_bin_filename()));
   }
   // Delete All Global
   Global<CtrlClient>::Delete();
@@ -261,10 +262,11 @@ DEFINE_string(job_conf, "", "");
 
 int main(int argc, char** argv) {
   using namespace oneflow;
+  FLAGS_log_dir = LogDir();
   google::InitGoogleLogging(argv[0]);
   gflags::SetVersionString(BuildVersionString());
   gflags::ParseCommandLineFlags(&argc, &argv, true);
-  LocalFS()->RecursivelyCreateDirIfNotExist(LogDir());
+  LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir);
   RedirectStdoutAndStderrToGlogDir();
   { Oneflow flow(FLAGS_job_conf); }
   CloseStdoutAndStderr();
