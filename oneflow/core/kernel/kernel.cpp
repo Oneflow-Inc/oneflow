@@ -120,14 +120,6 @@ void KernelIf<device_type>::ForwardColNum(
 }
 
 template<DeviceType device_type>
-void KernelIf<device_type>::ForwardDim1ValidNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CHECK(kernel_conf().can_naive_do_dim1_valid_num());
-  CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
-            &Blob::CopyDim1ValidNumFrom);
-}
-
-template<DeviceType device_type>
 void KernelIf<device_type>::ForwardDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CHECK(kernel_conf().can_naive_do_dim0_valid_num());

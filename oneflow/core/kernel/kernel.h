@@ -133,8 +133,6 @@ class KernelIf : public Kernel {
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   virtual void ForwardColNum(const KernelCtx& ctx,
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  virtual void ForwardDim1ValidNum(
-      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   virtual void ForwardDim0ValidNum(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 

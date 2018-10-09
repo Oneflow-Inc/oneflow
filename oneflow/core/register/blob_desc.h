@@ -17,7 +17,6 @@ class BlobDesc {
 
   BlobDesc();
   BlobDesc(const Shape&, DataType, bool has_data_id, bool has_col_num, int32_t max_col_num);
-  explicit BlobDesc(const Shape& shape) : body_field_(shape) {}
   explicit BlobDesc(const BlobDescProto& proto) { InitFromProto(proto); }
   explicit BlobDesc(const BlobDesc& blob_desc);
   BlobDesc(const StructPodDesc& header_pod_desc, int64_t header_byte_size, const Shape&, DataType,
