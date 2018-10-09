@@ -19,6 +19,15 @@ void ClearPbBlob(Blob* blob) {
   }
 }
 
+void CheckSameDim0ValidNum(const PbRpf<std::string>& bns,
+                           const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+  const void* mem_ptr = BnInOp2Blob(bns.Get(0))->dim1_valid_num();
+  size_t len = BnInOp2Blob(bns.Get(0))->ByteSizeOfDim0ValidNumField();
+  FOR_RANGE(int, i, 1, bns.size()) {
+    CHECK_EQ(std::memcmp(BnInOp2Blob(bns.Get(i))->dim1_valid_num(), mem_ptr, len), 0);
+  }
+}
+
 }  // namespace
 
 void Kernel::Init(const ParallelContext* parallel_ctx, const KernelConf& kernel_conf,
@@ -69,13 +78,13 @@ const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
 void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   ClearPbBlobs(ctx, BnInOp2Blob);
-  if (kernel_conf_.need_do_varying_instance_num()) {
+  if (kernel_conf_.need_do_dim0_valid_num()) {
     CHECK(!kernel_conf_.need_do_opaque_header());
-    ForwardVaryingInstanceNum(ctx, BnInOp2Blob);
+    ForwardDim0ValidNum(ctx, BnInOp2Blob);
   }
-  if (kernel_conf_.need_do_instance_varying_elem_cnt()) {
+  if (kernel_conf_.need_do_dim1_valid_num()) {
     CHECK(!kernel_conf_.need_do_opaque_header());
-    ForwardInstanceVaryingElemCnt(ctx, BnInOp2Blob);
+    ForwardDim1ValidNum(ctx, BnInOp2Blob);
   }
   ForwardDataContent(ctx, BnInOp2Blob);
   if (GetActivationType() != ActivationType::kNone) {
@@ -105,9 +114,9 @@ void Kernel::ClearPbBlobs(const KernelCtx& ctx,
 
 void Kernel::Backward(const KernelCtx& ctx,
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (kernel_conf_.need_do_varying_instance_num()) {
+  if (kernel_conf_.need_do_dim0_valid_num()) {
     CHECK(!kernel_conf_.need_do_opaque_header());
-    BackwardVaryingInstanceNum(ctx, BnInOp2Blob);
+    BackwardDim0ValidNum(ctx, BnInOp2Blob);
   }
   ActivationType activation = GetActivationType();
   if (activation != ActivationType::kNone) {
@@ -160,27 +169,21 @@ void KernelIf<device_type>::ForwardField(DeviceCtx* ctx,
 }
 
 template<DeviceType device_type>
-void KernelIf<device_type>::ForwardInstanceVaryingElemCnt(
+void KernelIf<device_type>::ForwardDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CHECK(kernel_conf().can_naive_do_instance_varying_elem_cnt());
-  CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
-            &Blob::CopyInstanceVaryingElemCntFrom);
+  CHECK(kernel_conf().can_naive_do_dim0_valid_num());
+  CheckSameDim0ValidNum(op_attribute().input_bns(), BnInOp2Blob);
+  CopyField(ctx.device_ctx, BnInOp2Blob, BnInOp2Blob(op_attribute().input_bns(0)),
+            op_attribute().output_bns(), &Blob::CopyDim0ValidNumFrom);
 }
 
 template<DeviceType device_type>
-void KernelIf<device_type>::ForwardVaryingInstanceNum(
+void KernelIf<device_type>::BackwardDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CHECK(kernel_conf().can_naive_do_varying_instance_num());
-  CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
-            &Blob::CopyVaryingInstanceNumFrom);
-}
-
-template<DeviceType device_type>
-void KernelIf<device_type>::BackwardVaryingInstanceNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CHECK(kernel_conf().can_naive_do_varying_instance_num());
-  CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().output_diff_bns(),
-            op_attribute().input_diff_bns(), &Blob::CopyVaryingInstanceNumFrom);
+  CHECK(kernel_conf().can_naive_do_dim0_valid_num());
+  CheckSameDim0ValidNum(op_attribute().output_diff_bns(), BnInOp2Blob);
+  CopyField(ctx.device_ctx, BnInOp2Blob, BnInOp2Blob(op_attribute().output_diff_bns(0)),
+            op_attribute().input_diff_bns(), &Blob::CopyDim0ValidNumFrom);
 }
 
 template<DeviceType device_type>

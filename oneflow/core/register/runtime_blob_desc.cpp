@@ -14,8 +14,8 @@ void RtBlobDesc::InitFromProto(const BlobDescProto& blob_desc_proto) {
   blob_desc_proto_ = blob_desc_proto;
   body_desc_ = FieldDesc(blob_desc_proto.body());
   header_pod_desc_.InitFromProto(blob_desc_proto.header().header_pod_desc());
-  if (blob_desc_proto.has_instance_inner_shape()) {
-    instance_inner_shape_.reset(new Shape(blob_desc_proto.instance_inner_shape()));
+  if (blob_desc_proto.has_dim0_inner_shape()) {
+    dim0_inner_shape_.reset(new Shape(blob_desc_proto.dim0_inner_shape()));
   }
 }
 
@@ -27,12 +27,12 @@ bool RtBlobDesc::has_data_id_field() const { return header_pod_desc_.HasField(Fi
 
 bool RtBlobDesc::has_col_num_field() const { return header_pod_desc_.HasField(FieldKey::kColNum); }
 
-bool RtBlobDesc::has_varying_instance_num_field() const {
-  return header_pod_desc_.HasField(FieldKey::kVaryingInstanceNum);
+bool RtBlobDesc::has_dim0_valid_num_field() const {
+  return header_pod_desc_.HasField(FieldKey::kDim0ValidNum);
 }
 
-bool RtBlobDesc::has_instance_varying_elem_cnt_field() const {
-  return header_pod_desc_.HasField(FieldKey::kInstanceVaryingElemCnt);
+bool RtBlobDesc::has_dim1_valid_num_field() const {
+  return header_pod_desc_.HasField(FieldKey::kDim1ValidNum);
 }
 
 size_t RtBlobDesc::ByteSizeOfBlobHeader() const { return header_pod_desc_.ByteSize(); }
@@ -49,14 +49,14 @@ size_t RtBlobDesc::ByteSizeOfColNumField() const {
   return header_pod_desc_.Field(FieldKey::kColNum).ByteSize();
 }
 
-size_t RtBlobDesc::ByteSizeOfVaryingInstanceNumField() const {
-  if (!has_varying_instance_num_field()) { return 0; }
-  return header_pod_desc_.Field(FieldKey::kVaryingInstanceNum).ByteSize();
+size_t RtBlobDesc::ByteSizeOfDim0ValidNumField() const {
+  if (!has_dim0_valid_num_field()) { return 0; }
+  return header_pod_desc_.Field(FieldKey::kDim0ValidNum).ByteSize();
 }
 
-size_t RtBlobDesc::ByteSizeOfInstanceVaryingElemCntField() const {
-  if (!has_instance_varying_elem_cnt_field()) { return 0; }
-  return header_pod_desc_.Field(FieldKey::kInstanceVaryingElemCnt).ByteSize();
+size_t RtBlobDesc::ByteSizeOfDim1ValidNumField() const {
+  if (!has_dim1_valid_num_field()) { return 0; }
+  return header_pod_desc_.Field(FieldKey::kDim1ValidNum).ByteSize();
 }
 
 size_t RtBlobDesc::ByteSizeOfDataContentField() const { return body_desc_.ByteSize(); }
