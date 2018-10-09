@@ -35,21 +35,17 @@ class Blob final {
   const int32_t* col_num() const { return col_num_ptr_; }
   int32_t* mut_col_num() { return col_num_ptr_; }
 
-  int32_t instance_varying_elem_cnt(int32_t no) const;
-  void set_instance_varying_elem_cnt(int32_t no, int32_t val);
+  int32_t dim1_valid_num(int32_t no) const;
+  void set_dim1_valid_num(int32_t no, int32_t val);
 
-  const int32_t* instance_varying_elem_cnt() const { return instance_varying_elem_cnt_ptr_; }
-  int32_t* mut_instance_varying_elem_cnt() { return instance_varying_elem_cnt_ptr_; }
+  const int32_t* dim1_valid_num() const { return dim1_valid_num_ptr_; }
+  int32_t* mut_dim1_valid_num() { return dim1_valid_num_ptr_; }
 
-  int32_t varying_instance_num(int32_t no) const;
-  void set_varying_instance_num(int32_t no, int32_t val);
+  int32_t dim0_valid_num(int32_t no) const;
+  void set_dim0_valid_num(int32_t no, int32_t val);
 
-  const int32_t* varying_instance_num() const { return varying_instance_num_ptr_; }
-  int32_t* mut_varying_instance_num() { return varying_instance_num_ptr_; }
-
-  int32_t instance_available_elem_cnt(int32_t no) const;
-  int32_t available_instance_num(int32_t no) const;
-  int32_t available_instance_num() const;
+  const int32_t* dim0_valid_num() const { return dim0_valid_num_ptr_; }
+  int32_t* mut_dim0_valid_num() { return dim0_valid_num_ptr_; }
 
   const void* header_ptr() const { return header_ptr_; }
   void* mut_header_ptr() { return header_ptr_; }
@@ -81,8 +77,10 @@ class Blob final {
   const RtBlobDesc& blob_desc() const { return *blob_desc_; }
   const RtBlobDesc* blob_desc_ptr() const { return blob_desc_; }
   const Shape& static_shape() const { return blob_desc_->shape(); }
-  const Shape* instance_inner_shape() const { return blob_desc_->instance_inner_shape(); }
   const Shape& shape() const;
+  bool has_dim0_inner_shape() const { return blob_desc_->has_dim0_inner_shape(); }
+  const Shape& dim0_inner_shape() const { return blob_desc_->dim0_inner_shape(); }
+
   DataType data_type() const { return blob_desc_->data_type(); }
   bool has_data_id_field() const { return blob_desc_->has_data_id_field(); }
   bool has_col_num_field() const { return blob_desc_->has_col_num_field(); }
@@ -90,8 +88,8 @@ class Blob final {
   size_t ByteSizeOfBlobHeader() const { return blob_desc_->ByteSizeOfBlobHeader(); }
   size_t ByteSizeOfDataIdField() const { return blob_desc_->ByteSizeOfDataIdField(); }
   size_t ByteSizeOfColNumField() const { return blob_desc_->ByteSizeOfColNumField(); }
-  size_t ByteSizeOfVaryingInstanceNumField() const;
-  size_t ByteSizeOfInstanceVaryingElemCntField() const;
+  size_t ByteSizeOfDim0ValidNumField() const;
+  size_t ByteSizeOfDim1ValidNumField() const;
   size_t ByteSizeOfDataContentField() const { return blob_desc_->ByteSizeOfDataContentField(); }
   size_t TotalByteSize() const { return blob_desc_->TotalByteSize(); }
 
@@ -100,8 +98,8 @@ class Blob final {
   void CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
-  void CopyVaryingInstanceNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
-  void CopyInstanceVaryingElemCntFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  void CopyDim0ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  void CopyDim1ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
 
   int32_t col_id() const;
@@ -137,8 +135,8 @@ class Blob final {
   void* header_ptr_;
   char* data_id_ptr_;
   int32_t* col_num_ptr_;
-  int32_t* instance_varying_elem_cnt_ptr_;
-  int32_t* varying_instance_num_ptr_;
+  int32_t* dim1_valid_num_ptr_;
+  int32_t* dim0_valid_num_ptr_;
   void* dptr_;
   const RtBlobDesc* blob_desc_;
   Regst* regst_;

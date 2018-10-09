@@ -12,10 +12,10 @@ class DefineTestBlobKernel final : public KernelIf<DeviceType::kCPU> {
   ~DefineTestBlobKernel() = default;
 
  private:
-  void ForwardInstanceVaryingElemCnt(
-      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void ForwardVaryingInstanceNum(
-      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardDim1ValidNum(const KernelCtx& ctx,
+                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardDim0ValidNum(const KernelCtx& ctx,
+                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void ForwardDataId(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const override {}
   void ForwardColNum(const KernelCtx& ctx,
