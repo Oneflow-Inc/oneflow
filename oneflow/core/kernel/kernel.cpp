@@ -3,6 +3,19 @@
 
 namespace oneflow {
 
+namespace {
+
+void CheckSameDim0ValidNum(const PbRpf<std::string>& bns,
+                           const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+  const void* mem_ptr = BnInOp2Blob(bns.Get(0))->dim1_valid_num();
+  size_t len = BnInOp2Blob(bns.Get(0))->ByteSizeOfDim0ValidNumField();
+  FOR_RANGE(int, i, 1, bns.size()) {
+    CHECK_EQ(std::memcmp(BnInOp2Blob(bns.Get(i))->dim1_valid_num(), mem_ptr, len), 0);
+  }
+}
+
+}  // namespace
+
 void Kernel::Init(const ParallelContext* parallel_ctx, const KernelConf& kernel_conf,
                   DeviceCtx* device_ctx) {
   kernel_conf_ = kernel_conf;
@@ -123,15 +136,17 @@ template<DeviceType device_type>
 void KernelIf<device_type>::ForwardDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CHECK(kernel_conf().can_naive_do_dim0_valid_num());
-  CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
-            &Blob::CopyDim0ValidNumFrom);
+  CheckSameDim0ValidNum(op_attribute().input_bns(), BnInOp2Blob);
+  CopyField(ctx.device_ctx, BnInOp2Blob, BnInOp2Blob(op_attribute().input_bns(0)),
+            op_attribute().output_bns(), &Blob::CopyDim0ValidNumFrom);
 }
 
 template<DeviceType device_type>
 void KernelIf<device_type>::BackwardDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CHECK(kernel_conf().can_naive_do_dim0_valid_num());
-  CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().output_diff_bns(),
+  CheckSameDim0ValidNum(op_attribute().output_diff_bns(), BnInOp2Blob);
+  CopyField(ctx.device_ctx, BnInOp2Blob, BnInOp2Blob(op_attribute().output_diff_bns(0)),
             op_attribute().input_diff_bns(), &Blob::CopyDim0ValidNumFrom);
 }
 
