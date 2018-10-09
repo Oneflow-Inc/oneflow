@@ -8,14 +8,23 @@ namespace oneflow {
 
 namespace {
 
-sockaddr_in GetSockAddr(int64_t machine_id, uint16_t port) {
-  const Machine& machine = Global<JobDesc>::Get()->resource().machine(machine_id);
-  const std::string& addr = machine.addr();
+sockaddr_in GetSockAddr(const std::string& addr, uint16_t port) {
   sockaddr_in sa;
   sa.sin_family = AF_INET;
   sa.sin_port = htons(port);
   PCHECK(inet_pton(AF_INET, addr.c_str(), &(sa.sin_addr)) == 1);
   return sa;
+}
+
+int SockListen(int* listen_sockfd, uint16_t listen_port, int32_t total_machine_num) {
+  sockaddr_in sa = GetSockAddr("0.0.0.0", listen_port);
+  int bind_result = bind(*listen_sockfd, reinterpret_cast<sockaddr*>(&sa), sizeof(sa));
+  if (bind_result == 0) {
+    PCHECK(listen(*listen_sockfd, total_machine_num) == 0);
+  } else {
+    PCHECK(errno == EACCES || errno == EADDRINUSE);
+  }
+  return bind_result;
 }
 
 int64_t GetMachineId(const sockaddr_in& sa) {
@@ -83,6 +92,7 @@ EpollCommNet::EpollCommNet(const Plan& plan) : CommNetIf(plan) {
 
 void EpollCommNet::InitSockets() {
   int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
+  auto this_machine = Global<JobDesc>::Get()->resource().machine(this_machine_id);
   int64_t total_machine_num = Global<JobDesc>::Get()->TotalMachineNum();
   machine_id2sockfd_.assign(total_machine_num, -1);
   sockfd2helper_.clear();
@@ -92,24 +102,26 @@ void EpollCommNet::InitSockets() {
     poller_idx = (poller_idx + 1) % pollers_.size();
     return new SocketHelper(sockfd, poller);
   };
+
   // listen
   int listen_sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  uint16_t this_listen_port = 1024;
-  uint16_t listen_port_max = MaxVal<uint16_t>();
-  for (; this_listen_port < listen_port_max; ++this_listen_port) {
-    sockaddr_in this_sockaddr = GetSockAddr(this_machine_id, this_listen_port);
-    int bind_result =
-        bind(listen_sockfd, reinterpret_cast<sockaddr*>(&this_sockaddr), sizeof(this_sockaddr));
-    if (bind_result == 0) {
-      PCHECK(listen(listen_sockfd, total_machine_num) == 0);
-      PushPort(this_machine_id, this_listen_port);
-      break;
-    } else {
-      PCHECK(errno == EACCES || errno == EADDRINUSE);
+  uint16_t this_listen_port = Global<JobDesc>::Get()->resource().data_port();
+  if (this_listen_port != -1) {
+    CHECK_EQ(SockListen(&(listen_sockfd), this_listen_port, total_machine_num), 0);
+    PushPort(this_machine_id,
+             ((this_machine.data_port_agent() != -1) ? (this_machine.data_port_agent())
+                                                     : (this_listen_port)));
+  } else {
+    for (this_listen_port = 1024; this_listen_port < MaxVal<uint16_t>(); ++this_listen_port) {
+      if (SockListen(&(listen_sockfd), this_listen_port, total_machine_num) == 0) {
+        PushPort(this_machine_id, this_listen_port);
+        break;
+      }
     }
+    CHECK_LT(this_listen_port, MaxVal<uint16_t>());
   }
-  CHECK_LT(this_listen_port, listen_port_max);
   int32_t src_machine_count = 0;
+
   // connect
   for (int64_t peer_id : peer_machine_id()) {
     if (peer_id < this_machine_id) {
@@ -117,13 +129,15 @@ void EpollCommNet::InitSockets() {
       continue;
     }
     uint16_t peer_port = PullPort(peer_id);
-    sockaddr_in peer_sockaddr = GetSockAddr(peer_id, peer_port);
+    auto peer_machine = Global<JobDesc>::Get()->resource().machine(peer_id);
+    sockaddr_in peer_sockaddr = GetSockAddr(peer_machine.addr(), peer_port);
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     PCHECK(connect(sockfd, reinterpret_cast<sockaddr*>(&peer_sockaddr), sizeof(peer_sockaddr))
            == 0);
     CHECK(sockfd2helper_.emplace(sockfd, NewSocketHelper(sockfd)).second);
     machine_id2sockfd_[peer_id] = sockfd;
   }
+
   // accept
   FOR_RANGE(int32_t, idx, 0, src_machine_count) {
     sockaddr_in peer_sockaddr;
@@ -136,6 +150,7 @@ void EpollCommNet::InitSockets() {
   }
   PCHECK(close(listen_sockfd) == 0);
   ClearPort(this_machine_id);
+
   // useful log
   FOR_RANGE(int64_t, machine_id, 0, total_machine_num) {
     LOG(INFO) << "machine " << machine_id << " sockfd " << machine_id2sockfd_[machine_id];
