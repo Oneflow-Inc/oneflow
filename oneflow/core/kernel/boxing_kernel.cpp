@@ -24,7 +24,7 @@ void CalcSumOfBlobs(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnI
                            src_blob_0->ByteSizeOfDataContentField());
   FOR_RANGE(size_t, i, 1, src_bns.size()) {
     Blob* src_blob_i = BnInOp2Blob(src_bns.Get(i));
-    KernelUtil<DeviceType::kCPU, T>::Axpy(ctx, dst_blob->shape().elem_cnt(), 1.0,
+    KernelUtil<DeviceType::kCPU, T>::Axpy(ctx, dst_blob->static_shape().elem_cnt(), 1.0,
                                           src_blob_i->dptr<T>(), 1, dst_blob->mut_dptr<T>(), 1);
   }
 }
@@ -44,10 +44,10 @@ class DataContentDesc final {
   DataContentDesc(std::function<Blob*(const std::string&)> BnInOp2Blob,
                   const PbRpf<std::string>* bns, int32_t axis) {
     BnInOp2Blob_ = BnInOp2Blob;
-    seg_num_ = BnInOp2Blob(bns->Get(0))->shape().Count(0, axis);
+    seg_num_ = BnInOp2Blob(bns->Get(0))->static_shape().Count(0, axis);
     elem_sum_.assign(bns->size(), 0);
     FOR_RANGE(size_t, i, 0, elem_sum_.size()) {
-      elem_sum_[i] = BnInOp2Blob(bns->Get(i))->shape().Count(axis);
+      elem_sum_[i] = BnInOp2Blob(bns->Get(i))->static_shape().Count(axis);
       if (i > 0) { elem_sum_[i] += elem_sum_[i - 1]; }
     }
     bns_ = bns;
@@ -70,7 +70,7 @@ class DataContentDesc final {
     if (bn_idx > 0) { idx_in_blob -= elem_sum_[bn_idx - 1]; }
     Blob* blob = BnInOp2Blob_(bns_->Get(bn_idx));
     std::get<1>(ret) = blob->mut_dptr<char>()
-                       + (seg_idx * blob->shape().Count(axis_) + idx_in_blob)
+                       + (seg_idx * blob->static_shape().Count(axis_) + idx_in_blob)
                              * GetSizeOfDataType(blob->data_type());
     return ret;
   }
@@ -178,26 +178,26 @@ void ConcatSplitColId(std::function<Blob*(const std::string&)> BnInOp2Blob,
                       const PbRpf<std::string>& input_bns, const PbRpf<std::string>& output_bns) {
   auto in_iter = input_bns.begin();
   auto out_iter = output_bns.begin();
-  int64_t in_data_num = BnInOp2Blob(*in_iter)->shape().At(0);
-  int64_t out_data_num = BnInOp2Blob(*out_iter)->shape().At(0);
+  int64_t in_data_num = BnInOp2Blob(*in_iter)->static_shape().At(0);
+  int64_t out_data_num = BnInOp2Blob(*out_iter)->static_shape().At(0);
   int32_t max_col_id = BnInOp2Blob(*in_iter)->col_id();
   while (in_iter != input_bns.end() && out_iter != input_bns.end()) {
     if (in_data_num < out_data_num) {
       ++in_iter;
-      in_data_num += BnInOp2Blob(*in_iter)->shape().At(0);
+      in_data_num += BnInOp2Blob(*in_iter)->static_shape().At(0);
       max_col_id = std::max(max_col_id, BnInOp2Blob(*in_iter)->col_id());
     } else if (in_data_num > out_data_num) {
       BnInOp2Blob(*out_iter)->set_col_id(max_col_id);
       max_col_id = BnInOp2Blob(*in_iter)->col_id();
       ++out_iter;
-      out_data_num += BnInOp2Blob(*out_iter)->shape().At(0);
+      out_data_num += BnInOp2Blob(*out_iter)->static_shape().At(0);
     } else {
       BnInOp2Blob(*out_iter)->set_col_id(max_col_id);
       ++in_iter;
-      in_data_num += BnInOp2Blob(*in_iter)->shape().At(0);
+      in_data_num += BnInOp2Blob(*in_iter)->static_shape().At(0);
       max_col_id = BnInOp2Blob(*in_iter)->col_id();
       ++out_iter;
-      out_data_num += BnInOp2Blob(*out_iter)->shape().At(0);
+      out_data_num += BnInOp2Blob(*out_iter)->static_shape().At(0);
     }
   }
 }
@@ -295,6 +295,18 @@ void BoxingKernel<T>::ForwardColNum(const KernelCtx& ctx,
 }
 
 template<typename T>
+void BoxingKernel<T>::ForwardDim0ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  ForwardField<Dim0ValidNumIterator>(ctx, BnInOp2Blob);
+}
+
+template<typename T>
+void BoxingKernel<T>::ForwardDim1ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  ForwardField<Dim1ValidNumIterator>(ctx, BnInOp2Blob);
+}
+
+template<typename T>
 void BoxingKernel<T>::SetColId(const KernelCtx& ctx,
                                std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const BoxingOpConf& boxing_conf = op_conf().boxing_conf();
@@ -319,7 +331,7 @@ void BoxingKernel<T>::SetMaxColId(const KernelCtx& ctx,
   for (const std::string& obn : op_attribute().output_bns()) {
     int32_t max_col_num_in_blob = 0;
     Blob* out_blob = BnInOp2Blob(obn);
-    FOR_RANGE(int32_t, i, 0, out_blob->shape().At(0)) {
+    FOR_RANGE(int32_t, i, 0, out_blob->static_shape().At(0)) {
       max_col_num_in_blob = std::max(max_col_num_in_blob, out_blob->col_num(i));
     }
     out_blob->set_max_col_id(max_col_num_in_blob - 1);
