@@ -21,7 +21,7 @@ void AccuracyKernel<device_type, PredType, LabelType>::ForwardDataContent(
 
   // total instance num
   // xfjiang: test instance num
-  int32_t total_instance_num = 600;
+  int32_t total_instance_num = 300;
   KernelUtil<device_type, PredType>::ExtractInstanceNumFromHeader(
       ctx.device_ctx, total_instance_num, BnInOp2Blob("total_instance_num")->mut_dptr<PredType>());
 }
