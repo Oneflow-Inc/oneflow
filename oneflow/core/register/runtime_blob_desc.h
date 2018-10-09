@@ -20,13 +20,13 @@ class RtBlobDesc {
   const BlobDescProto& blob_desc_proto() const { return blob_desc_proto_; }
   const Shape& shape() const;  // body shape
   DataType data_type() const;  // body data type
-  bool has_instance_inner_shape() const { return bool(instance_inner_shape_); }
-  const Shape& instance_inner_shape() const { return *instance_inner_shape_; }
+  bool has_dim0_inner_shape() const { return bool(dim0_inner_shape_); }
+  const Shape& dim0_inner_shape() const { return *dim0_inner_shape_; }
 
   bool has_data_id_field() const;
   bool has_col_num_field() const;
   bool has_instance_varying_elem_cnt_field() const;
-  bool has_varying_instance_num_field() const;
+  bool has_dim0_valid_num_field() const;
   const StructPodDesc& header_pod_desc() const { return header_pod_desc_; }
 
   int32_t max_col_num() const { return blob_desc_proto_.header().max_col_num(); }
@@ -37,7 +37,7 @@ class RtBlobDesc {
 
   size_t ByteSizeOfDataIdField() const;
   size_t ByteSizeOfColNumField() const;
-  size_t ByteSizeOfVaryingInstanceNumField() const;
+  size_t ByteSizeOfDim0ValidNumField() const;
   size_t ByteSizeOfInstanceVaryingElemCntField() const;
   size_t ByteSizeOfDataContentField() const;
 
@@ -49,7 +49,7 @@ class RtBlobDesc {
   BlobDescProto blob_desc_proto_;
   FieldDesc body_desc_;
   StructPodDesc header_pod_desc_;
-  std::unique_ptr<Shape> instance_inner_shape_;
+  std::unique_ptr<Shape> dim0_inner_shape_;
 };
 
 }  // namespace oneflow

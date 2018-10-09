@@ -26,9 +26,9 @@ class BlobDesc {
   const Shape& shape() const { return body_field_.shape(); }
   Shape& mut_shape() { return body_field_.mut_shape(); }
 
-  bool has_instance_inner_shape() const { return bool(instance_inner_shape_); }
-  const Shape& instance_inner_shape() const { return *instance_inner_shape_; }
-  Shape& mut_instance_inner_shape();
+  bool has_dim0_inner_shape() const { return bool(dim0_inner_shape_); }
+  const Shape& dim0_inner_shape() const { return *dim0_inner_shape_; }
+  Shape& mut_dim0_inner_shape();
 
   DataType data_type() const { return body_field_.data_type(); }
   void set_data_type(DataType val) { body_field_.set_data_type(val); }
@@ -41,8 +41,8 @@ class BlobDesc {
   bool has_instance_varying_elem_cnt_field() const { return has_instance_varying_elem_cnt_; }
   void set_has_instance_varying_elem_cnt_field(bool val);
 
-  bool has_varying_instance_num_field() const { return has_varying_instance_num_; }
-  void set_has_varying_instance_num_field(bool val);
+  bool has_dim0_valid_num_field() const { return has_dim0_valid_num_; }
+  void set_has_dim0_valid_num_field(bool val);
 
   bool has_col_num_field() const { return has_col_num_; }
   void set_has_col_num_field(bool val);
@@ -63,7 +63,7 @@ class BlobDesc {
   void DataIdFieldToProto(FieldHeaderDesc* proto, StructPodDesc* header_pod_desc) const;
   void ColNumFieldToProto(FieldHeaderDesc* proto, StructPodDesc* header_pod_desc) const;
   void InstanceVaryingElemCntToProto(StructPodDesc* header_pod_desc) const;
-  void VaryingInstanceNumToProto(StructPodDesc* header_pod_desc) const;
+  void Dim0ValidNumToProto(StructPodDesc* header_pod_desc) const;
 
   bool header_is_opaque_;
   FieldDesc opaque_header_;
@@ -71,13 +71,13 @@ class BlobDesc {
 
   bool has_data_id_;
   bool has_col_num_;
-  bool has_varying_instance_num_;
+  bool has_dim0_valid_num_;
   bool has_instance_varying_elem_cnt_;
   int64_t max_col_num_;
   int32_t blob_mem_id_;
 
   FieldDesc body_field_;
-  std::unique_ptr<Shape> instance_inner_shape_;
+  std::unique_ptr<Shape> dim0_inner_shape_;
 };
 
 std::unique_ptr<BlobDesc> ComputePackedBlobDesc(

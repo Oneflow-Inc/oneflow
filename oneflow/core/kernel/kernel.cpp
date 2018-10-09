@@ -47,9 +47,9 @@ const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
 
 void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (kernel_conf_.need_do_varying_instance_num()) {
+  if (kernel_conf_.need_do_dim0_valid_num()) {
     CHECK(!kernel_conf_.need_do_opaque_header());
-    ForwardVaryingInstanceNum(ctx, BnInOp2Blob);
+    ForwardDim0ValidNum(ctx, BnInOp2Blob);
   }
   if (kernel_conf_.need_do_instance_varying_elem_cnt()) {
     CHECK(!kernel_conf_.need_do_opaque_header());
@@ -73,9 +73,9 @@ void Kernel::Forward(const KernelCtx& ctx,
 
 void Kernel::Backward(const KernelCtx& ctx,
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (kernel_conf_.need_do_varying_instance_num()) {
+  if (kernel_conf_.need_do_dim0_valid_num()) {
     CHECK(!kernel_conf_.need_do_opaque_header());
-    BackwardVaryingInstanceNum(ctx, BnInOp2Blob);
+    BackwardDim0ValidNum(ctx, BnInOp2Blob);
   }
   ActivationType activation = GetActivationType();
   if (activation != ActivationType::kNone) {
@@ -128,19 +128,19 @@ void KernelIf<device_type>::ForwardInstanceVaryingElemCnt(
 }
 
 template<DeviceType device_type>
-void KernelIf<device_type>::ForwardVaryingInstanceNum(
+void KernelIf<device_type>::ForwardDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CHECK(kernel_conf().can_naive_do_varying_instance_num());
+  CHECK(kernel_conf().can_naive_do_dim0_valid_num());
   CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
-            &Blob::CopyVaryingInstanceNumFrom);
+            &Blob::CopyDim0ValidNumFrom);
 }
 
 template<DeviceType device_type>
-void KernelIf<device_type>::BackwardVaryingInstanceNum(
+void KernelIf<device_type>::BackwardDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CHECK(kernel_conf().can_naive_do_varying_instance_num());
+  CHECK(kernel_conf().can_naive_do_dim0_valid_num());
   CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().output_diff_bns(),
-            op_attribute().input_diff_bns(), &Blob::CopyVaryingInstanceNumFrom);
+            op_attribute().input_diff_bns(), &Blob::CopyDim0ValidNumFrom);
 }
 
 template<DeviceType device_type>

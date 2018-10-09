@@ -155,14 +155,14 @@ static bool HasSameInstanceInnerShape(
     for (const auto& bn : output_bns) { Handler(bn); }
   };
   bool ret = true;
-  std::unique_ptr<Shape> instance_inner_shape;
+  std::unique_ptr<Shape> dim0_inner_shape;
   ForEachBn([&](const std::string& bn) {
     if (ret == false) { return; }
-    const auto& inner_shape = GetBlobDesc4BnInOp(bn)->instance_inner_shape();
-    if (instance_inner_shape) {
-      if (!(*instance_inner_shape == inner_shape)) { ret = false; }
+    const auto& inner_shape = GetBlobDesc4BnInOp(bn)->dim0_inner_shape();
+    if (dim0_inner_shape) {
+      if (!(*dim0_inner_shape == inner_shape)) { ret = false; }
     } else {
-      instance_inner_shape.reset(new Shape(inner_shape));
+      dim0_inner_shape.reset(new Shape(inner_shape));
     }
   });
   return ret;
@@ -201,14 +201,14 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
         kernel_conf->set_can_naive_do_instance_varying_elem_cnt(true);
       }
     }
-    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_varying_instance_num_field)) {
-      kernel_conf->set_need_do_varying_instance_num(true);
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_dim0_valid_num_field)) {
+      kernel_conf->set_need_do_dim0_valid_num(true);
       if (HasAllBlobDescWithField(GetBlobDesc4BnInOp, input_bns(),
-                                  &BlobDesc::has_varying_instance_num_field)
+                                  &BlobDesc::has_dim0_valid_num_field)
           && HasAllBlobDescWithField(GetBlobDesc4BnInOp, output_bns(),
-                                     &BlobDesc::has_varying_instance_num_field)
+                                     &BlobDesc::has_dim0_valid_num_field)
           && HasSameInstanceInnerShape(GetBlobDesc4BnInOp, input_bns(), output_bns())) {
-        kernel_conf->set_can_naive_do_varying_instance_num(true);
+        kernel_conf->set_can_naive_do_dim0_valid_num(true);
       }
     }
   }

@@ -295,9 +295,9 @@ void BoxingKernel<T>::ForwardColNum(const KernelCtx& ctx,
 }
 
 template<typename T>
-void BoxingKernel<T>::ForwardVaryingInstanceNum(
+void BoxingKernel<T>::ForwardDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  ForwardField<VaryingInstanceNumIterator>(ctx, BnInOp2Blob);
+  ForwardField<Dim0ValidNumIterator>(ctx, BnInOp2Blob);
 }
 
 template<typename T>
