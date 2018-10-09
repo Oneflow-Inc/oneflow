@@ -15,6 +15,8 @@ class FpnDistributeKernel final : public KernelIf<DeviceType::kCPU> {
  private:
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
+  void ForwardVaryingInstanceNum(
+      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
 }  // namespace oneflow

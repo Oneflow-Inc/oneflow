@@ -587,7 +587,7 @@ message DecodeRandomOpConf {
   required string out = 1;
   required ShapeProto shape = 2;
   required DataType data_type = 3;
-  required InitializerConf data_initializer = 4; 
+  required InitializerConf data_initializer = 4;
 }
 
 message DefineTestBlobConf {
@@ -906,7 +906,7 @@ message OperatorConf {
     SharedModelDiffAddOpConf shared_model_diff_add_conf = 120;
     PodBoxingOpConf pod_boxing_conf = 121;
     PbBoxingOpConf pb_boxing_conf = 122;
-    
+
     // user op
     TransposeOpConf transpose_conf = 201;
     ReshapeOpConf reshape_conf = 202;

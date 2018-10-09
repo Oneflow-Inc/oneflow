@@ -62,6 +62,16 @@ void FpnDistributeKernel<T>::ForwardDataContent(
     }
   }
   roi_indices.ArgSort(roi_indices_buf);
+  FOR_RANGE(int64_t, target_level_idx, 0, level_count) {
+    rois_blob_vec[target_level_idx]->set_varying_instance_num(0,
+                                                              level_copy_idx[target_level_idx] / 5);
+  }
+}
+
+template<typename T>
+void FpnDistributeKernel<T>::ForwardVaryingInstanceNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  // do nothing here because it will be set in ForwardDataContent
 }
 
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kFpnDistributeConf, FpnDistributeKernel,
