@@ -32,16 +32,17 @@ void VStackKernel<device_type, T>::ForwardVaryingInstanceNum(
 template<DeviceType device_type, typename T>
 void VStackKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  
-  const Blob* out_blob = BnInOp2Blob("out");
-  for (const auto& input_bn : this->op_attribute().input_bns()) {
-    const Blob* in_blob = BnInOp2Blob(input_bn);
-    int64_t instance_num = in_blob->shape().At(0);
-    Memcpy<device_type>(ctx.device_ctx, out_blob->mut_dptr<T>(out_instance_offset),
-                        in_blob->dptr<T>(), instance_num * elem_cnt_per_instance * sizeof(T));
+  const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
+  const int64_t elem_cnt_per_instance = out_diff_blob->shape().Count(1);
+  int64_t out_instance_offset = 0;
+  for (const auto& in_diff_bn : this->op_attribute().input_diff_bns()) {
+    Blob* in_diff_blob = BnInOp2Blob(in_diff_bn);
+    int64_t instance_num = in_diff_blob->shape().At(0);
+    Memcpy<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr<T>(),
+                        out_diff_blob->dptr<T>(out_instance_offset),
+                        instance_num * elem_cnt_per_instance * sizeof(T));
     out_instance_offset += instance_num;
   }
-  TODO();
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kVstackConf, VStackKernel, ARITHMETIC_DATA_TYPE_SEQ);
