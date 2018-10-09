@@ -22,9 +22,13 @@ void FpnDistributeOp::InferBlobDescs(
   const BlobDesc* collected_rois_blob_desc = GetBlobDesc4BnInOp("collected_rois");
   CHECK_EQ(collected_rois_blob_desc->shape().At(1), 5);
   CHECK_EQ(collected_rois_blob_desc->shape().NumAxes(), 2);
-  // outs: (post_nms_topn, 5)
+  if (collected_rois_blob_desc->has_dim0_valid_num_field()) {
+    CHECK(collected_rois_blob_desc->has_dim0_inner_shape());
+    CHECK_EQ(collected_rois_blob_desc->dim0_inner_shape().NumAxes(), 2);
+    CHECK_EQ(collected_rois_blob_desc->dim0_inner_shape().At(0), 1);
+  }
+  // out: rois (post_nms_topn, 5)
   FOR_RANGE(int32_t, idx, 0, RepeatedObnSize("rois")) {
-    // TODO: change later when dynamic features are in place
     *GetBlobDesc4BnInOp(RepeatedObn("rois", idx)) = *collected_rois_blob_desc;
   }
   CHECK_EQ(RepeatedObnSize("rois"), op_conf().fpn_distribute_conf().roi_max_level()
@@ -33,12 +37,12 @@ void FpnDistributeOp::InferBlobDescs(
            op_conf().fpn_distribute_conf().roi_canonical_level());
   CHECK_LE(op_conf().fpn_distribute_conf().roi_min_level(),
            op_conf().fpn_distribute_conf().roi_canonical_level());
-  // roi_indices: (post_nms_topn)
+  // out: roi_indices (post_nms_topn)
   BlobDesc* roi_indices_blob_desc = GetBlobDesc4BnInOp("roi_indices");
+  *roi_indices_blob_desc = *collected_rois_blob_desc;
   roi_indices_blob_desc->mut_shape() = Shape({collected_rois_blob_desc->shape().At(0)});
   roi_indices_blob_desc->set_data_type(DataType::kInt32);
-  roi_indices_blob_desc->set_has_dim0_valid_num_field(true);
-  roi_indices_blob_desc->mut_dim0_inner_shape() = collected_rois_blob_desc->dim0_inner_shape();
+  // datatmp: roi_indices_buf
   *GetBlobDesc4BnInOp("roi_indices_buf") = *roi_indices_blob_desc;
   BlobDesc* target_levels_blob_desc = GetBlobDesc4BnInOp("target_levels");
   target_levels_blob_desc->mut_shape() = Shape({collected_rois_blob_desc->shape().At(0)});

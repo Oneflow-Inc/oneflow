@@ -26,7 +26,9 @@ void VStackKernel<device_type, T>::ForwardDim0ValidNum(
   for (const auto& input_bn : this->op_attribute().input_bns()) {
     total_instance_num += BnInOp2Blob(input_bn)->dim0_valid_num(0);
   }
-  BnInOp2Blob("out")->set_dim0_valid_num(0, total_instance_num);
+  Blob* out_blob = BnInOp2Blob("out");
+  CHECK_LE(total_instance_num, out_blob->dim0_inner_shape().Count(1));
+  out_blob->set_dim0_valid_num(0, total_instance_num);
 }
 
 template<DeviceType device_type, typename T>
