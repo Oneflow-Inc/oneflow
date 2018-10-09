@@ -51,6 +51,21 @@ struct BatchPermutationUtil<DeviceType::kCPU, T> {
   }
 };
 
+template<DeviceType device_type, typename T>
+void BatchPermutation<device_type, T>::ForwardVaryingInstanceNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  CHECK_EQ(BnInOp2Blob("out")->varying_instance_num(0),
+           BnInOp2Blob("indices")->varying_instance_num(0));
+  BnInOp2Blob("out")->set_varying_instance_num(0, BnInOp2Blob("indices")->varying_instance_num(0));
+}
+
+template<DeviceType device_type, typename T>
+void BatchPermutation<device_type, T>::BackwardVaryingInstanceNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  BnInOp2Blob(GenDiffBn("in"))
+      ->set_varying_instance_num(0, BnInOp2Blob("indices")->varying_instance_num(0));
+}
+
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBatchPermutationConf, BatchPermutation,
                            FLOATING_DATA_TYPE_SEQ);
 

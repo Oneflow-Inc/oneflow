@@ -30,6 +30,11 @@ void BatchPermutationOp::InferBlobDescs(
   }
   CHECK_EQ(indices_blob_desc->data_type(), DataType::kInt32);
   CHECK_EQ(indices_blob_desc->shape().At(0), in_blob_desc->shape().At(0));
+  if (indices_blob_desc->has_varying_instance_num_field()
+      || in_blob_desc->has_varying_instance_num_field()) {
+    CHECK_EQ(indices_blob_desc->instance_inner_shape().At(0), 1);
+    CHECK_EQ(in_blob_desc->instance_inner_shape().At(0), 1);
+  }
 }
 
 REGISTER_OP(OperatorConf::kBatchPermutationConf, BatchPermutationOp);

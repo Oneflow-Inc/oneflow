@@ -62,6 +62,7 @@ void FpnDistributeKernel<T>::ForwardDataContent(
     }
   }
   roi_indices.ArgSort(roi_indices_buf);
+  roi_indices_blob->set_varying_instance_num(0, roi_indices_idx);
   FOR_RANGE(int64_t, target_level_idx, 0, level_count) {
     rois_blob_vec[target_level_idx]->set_varying_instance_num(0,
                                                               level_copy_idx[target_level_idx] / 5);
