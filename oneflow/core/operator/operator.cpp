@@ -191,14 +191,13 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
     if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_col_num_field)) {
       kernel_conf->set_need_do_col_num(true);
     }
-    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns,
-                             &BlobDesc::has_instance_varying_elem_cnt_field)) {
-      kernel_conf->set_need_do_instance_varying_elem_cnt(true);
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_dim1_valid_num_field)) {
+      kernel_conf->set_need_do_dim1_valid_num(true);
       if (HasAllBlobDescWithField(GetBlobDesc4BnInOp, input_bns(),
-                                  &BlobDesc::has_instance_varying_elem_cnt_field)
+                                  &BlobDesc::has_dim1_valid_num_field)
           && HasAllBlobDescWithField(GetBlobDesc4BnInOp, output_bns(),
-                                     &BlobDesc::has_instance_varying_elem_cnt_field)) {
-        kernel_conf->set_can_naive_do_instance_varying_elem_cnt(true);
+                                     &BlobDesc::has_dim1_valid_num_field)) {
+        kernel_conf->set_can_naive_do_dim1_valid_num(true);
       }
     }
     if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_dim0_valid_num_field)) {

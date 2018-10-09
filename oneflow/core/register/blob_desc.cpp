@@ -13,7 +13,7 @@ BlobDesc::BlobDesc(const Shape& shape, DataType data_type, bool has_data_id, boo
       has_data_id_(has_data_id),
       has_col_num_(has_col_num),
       has_dim0_valid_num_(false),
-      has_instance_varying_elem_cnt_(false),
+      has_dim1_valid_num_(false),
       max_col_num_(max_col_num),
       blob_mem_id_(-1),
       body_field_(shape, data_type) {}
@@ -30,7 +30,7 @@ void BlobDesc::InitFromProto(const BlobDescProto& proto) {
     has_data_id_ = false;
     has_col_num_ = false;
     has_dim0_valid_num_ = false;
-    has_instance_varying_elem_cnt_ = false;
+    has_dim1_valid_num_ = false;
     opaque_header_ = FieldDesc(proto.header().opaque_header());
   } else {
     CHECK(proto.header().has_field_header());
@@ -38,7 +38,7 @@ void BlobDesc::InitFromProto(const BlobDescProto& proto) {
     has_data_id_ = header_pod_desc_.HasField(FieldKey::kDataId);
     has_col_num_ = header_pod_desc_.HasField(FieldKey::kColNum);
     has_dim0_valid_num_ = header_pod_desc_.HasField(FieldKey::kDim0ValidNum);
-    has_instance_varying_elem_cnt_ = header_pod_desc_.HasField(FieldKey::kInstanceVaryingElemCnt);
+    has_dim1_valid_num_ = header_pod_desc_.HasField(FieldKey::kInstanceVaryingElemCnt);
   }
   if (proto.has_dim0_inner_shape()) {
     dim0_inner_shape_.reset(new Shape(proto.dim0_inner_shape()));
@@ -50,7 +50,7 @@ BlobDesc::BlobDesc(const StructPodDesc& header_pod_desc, int64_t header_byte_siz
     : has_data_id_(false),
       has_col_num_(false),
       has_dim0_valid_num_(false),
-      has_instance_varying_elem_cnt_(false),
+      has_dim1_valid_num_(false),
       max_col_num_(max_col_num),
       blob_mem_id_(-1),
       body_field_(shape, data_type) {
@@ -74,9 +74,9 @@ void BlobDesc::set_has_col_num_field(bool val) {
   has_col_num_ = val;
 }
 
-void BlobDesc::set_has_instance_varying_elem_cnt_field(bool val) {
+void BlobDesc::set_has_dim1_valid_num_field(bool val) {
   CHECK(!header_is_opaque_);
-  has_instance_varying_elem_cnt_ = val;
+  has_dim1_valid_num_ = val;
 }
 
 void BlobDesc::set_has_dim0_valid_num_field(bool val) {
@@ -126,7 +126,7 @@ void BlobDesc::HeaderToProto(BlobDescProto* proto) const {
     StructPodDesc header_pod_desc;
     if (has_data_id_field()) { DataIdFieldToProto(field_header, &header_pod_desc); }
     if (has_col_num_field()) { ColNumFieldToProto(field_header, &header_pod_desc); }
-    if (has_instance_varying_elem_cnt_field()) { InstanceVaryingElemCntToProto(&header_pod_desc); }
+    if (has_dim1_valid_num_field()) { InstanceVaryingElemCntToProto(&header_pod_desc); }
     if (has_dim0_valid_num_field()) { Dim0ValidNumToProto(&header_pod_desc); }
     header_pod_desc.ToProto(proto->mutable_header()->mutable_header_pod_desc());
   } else {
@@ -145,9 +145,8 @@ bool BlobDesc::operator==(const BlobDesc& rhs) const {
   return header_is_opaque_ == rhs.header_is_opaque_ && opaque_header_ == rhs.opaque_header_
          && header_pod_desc_ == rhs.header_pod_desc_ && has_data_id_ == rhs.has_data_id_
          && has_col_num_ == rhs.has_col_num_ && has_dim0_valid_num_ == rhs.has_dim0_valid_num_
-         && has_instance_varying_elem_cnt_ == rhs.has_instance_varying_elem_cnt_
-         && max_col_num_ == rhs.max_col_num_ && blob_mem_id_ == rhs.blob_mem_id_
-         && body_field_ == rhs.body_field_;
+         && has_dim1_valid_num_ == rhs.has_dim1_valid_num_ && max_col_num_ == rhs.max_col_num_
+         && blob_mem_id_ == rhs.blob_mem_id_ && body_field_ == rhs.body_field_;
 }
 
 BlobDesc& BlobDesc::operator=(const BlobDesc& blob_desc) {

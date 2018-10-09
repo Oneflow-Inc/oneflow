@@ -24,7 +24,7 @@ void Blob::Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, cha
   data_id_ptr_ = header_pod_ptr_.MutTensorPtr<char>(FieldKey::kDataId, nullptr);
   col_num_ptr_ = header_pod_ptr_.MutTensorPtr<int32_t>(FieldKey::kColNum, nullptr);
   dim0_valid_num_ptr_ = header_pod_ptr_.MutTensorPtr<int32_t>(FieldKey::kDim0ValidNum, nullptr);
-  instance_varying_elem_cnt_ptr_ =
+  dim1_valid_num_ptr_ =
       header_pod_ptr_.MutTensorPtr<int32_t>(FieldKey::kInstanceVaryingElemCnt, nullptr);
   dptr_ = body_ptr;
   dynamic_shape_ = blob_desc->shape();
@@ -48,20 +48,20 @@ void Blob::set_col_num(int32_t no, int32_t val) {
   *(col_num_ptr_ + no) = val;
 }
 
-int32_t Blob::instance_varying_elem_cnt(int32_t no) const {
-  CHECK_NOTNULL(instance_varying_elem_cnt_ptr_);
+int32_t Blob::dim1_valid_num(int32_t no) const {
+  CHECK_NOTNULL(dim1_valid_num_ptr_);
   CHECK_GE(no, 0);
   CHECK_LT(no, blob_desc_->shape().At(0));
-  return instance_varying_elem_cnt_ptr_[no];
+  return dim1_valid_num_ptr_[no];
 }
 
-void Blob::set_instance_varying_elem_cnt(int32_t no, int32_t val) {
-  CHECK_NOTNULL(instance_varying_elem_cnt_ptr_);
+void Blob::set_dim1_valid_num(int32_t no, int32_t val) {
+  CHECK_NOTNULL(dim1_valid_num_ptr_);
   CHECK_GE(no, 0);
   CHECK_LT(no, blob_desc_->shape().At(0));
   CHECK_GE(val, 0);
   CHECK_LE(val, blob_desc_->shape().Count(1));
-  instance_varying_elem_cnt_ptr_[no] = val;
+  dim1_valid_num_ptr_[no] = val;
 }
 
 int32_t Blob::dim0_valid_num(int32_t no) const {
@@ -81,7 +81,7 @@ void Blob::set_dim0_valid_num(int32_t no, int32_t val) {
 }
 
 int32_t Blob::instance_available_elem_cnt(int32_t no) const {
-  if (instance_varying_elem_cnt_ptr_ != nullptr) { return instance_varying_elem_cnt(no); }
+  if (dim1_valid_num_ptr_ != nullptr) { return dim1_valid_num(no); }
   return blob_desc_->shape().Count(1);
 }
 
@@ -148,8 +148,7 @@ void Blob::CopyDim0ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
 void Blob::CopyInstanceVaryingElemCntFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs || ByteSizeOfDim0ValidNumField() == 0) { return; }
   CHECK_EQ(ByteSizeOfInstanceVaryingElemCntField(), rhs->ByteSizeOfInstanceVaryingElemCntField());
-  Memcpy<DeviceType::kCPU>(device_ctx, mut_instance_varying_elem_cnt(),
-                           rhs->instance_varying_elem_cnt(),
+  Memcpy<DeviceType::kCPU>(device_ctx, mut_dim1_valid_num(), rhs->dim1_valid_num(),
                            ByteSizeOfInstanceVaryingElemCntField());
 }
 

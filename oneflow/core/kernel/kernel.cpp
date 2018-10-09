@@ -51,7 +51,7 @@ void Kernel::Forward(const KernelCtx& ctx,
     CHECK(!kernel_conf_.need_do_opaque_header());
     ForwardDim0ValidNum(ctx, BnInOp2Blob);
   }
-  if (kernel_conf_.need_do_instance_varying_elem_cnt()) {
+  if (kernel_conf_.need_do_dim1_valid_num()) {
     CHECK(!kernel_conf_.need_do_opaque_header());
     ForwardInstanceVaryingElemCnt(ctx, BnInOp2Blob);
   }
@@ -122,7 +122,7 @@ void KernelIf<device_type>::ForwardColNum(
 template<DeviceType device_type>
 void KernelIf<device_type>::ForwardInstanceVaryingElemCnt(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CHECK(kernel_conf().can_naive_do_instance_varying_elem_cnt());
+  CHECK(kernel_conf().can_naive_do_dim1_valid_num());
   CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
             &Blob::CopyInstanceVaryingElemCntFrom);
 }

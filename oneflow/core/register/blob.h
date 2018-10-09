@@ -35,11 +35,11 @@ class Blob final {
   const int32_t* col_num() const { return col_num_ptr_; }
   int32_t* mut_col_num() { return col_num_ptr_; }
 
-  int32_t instance_varying_elem_cnt(int32_t no) const;
-  void set_instance_varying_elem_cnt(int32_t no, int32_t val);
+  int32_t dim1_valid_num(int32_t no) const;
+  void set_dim1_valid_num(int32_t no, int32_t val);
 
-  const int32_t* instance_varying_elem_cnt() const { return instance_varying_elem_cnt_ptr_; }
-  int32_t* mut_instance_varying_elem_cnt() { return instance_varying_elem_cnt_ptr_; }
+  const int32_t* dim1_valid_num() const { return dim1_valid_num_ptr_; }
+  int32_t* mut_dim1_valid_num() { return dim1_valid_num_ptr_; }
 
   int32_t dim0_valid_num(int32_t no) const;
   void set_dim0_valid_num(int32_t no, int32_t val);
@@ -137,7 +137,7 @@ class Blob final {
   void* header_ptr_;
   char* data_id_ptr_;
   int32_t* col_num_ptr_;
-  int32_t* instance_varying_elem_cnt_ptr_;
+  int32_t* dim1_valid_num_ptr_;
   int32_t* dim0_valid_num_ptr_;
   void* dptr_;
   const RtBlobDesc* blob_desc_;

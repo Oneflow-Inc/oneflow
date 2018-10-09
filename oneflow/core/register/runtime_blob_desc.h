@@ -25,7 +25,7 @@ class RtBlobDesc {
 
   bool has_data_id_field() const;
   bool has_col_num_field() const;
-  bool has_instance_varying_elem_cnt_field() const;
+  bool has_dim1_valid_num_field() const;
   bool has_dim0_valid_num_field() const;
   const StructPodDesc& header_pod_desc() const { return header_pod_desc_; }
 

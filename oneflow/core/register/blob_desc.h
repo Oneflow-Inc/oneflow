@@ -38,8 +38,8 @@ class BlobDesc {
   bool has_data_id_field() const { return has_data_id_; }
   void set_has_data_id_field(bool val);
 
-  bool has_instance_varying_elem_cnt_field() const { return has_instance_varying_elem_cnt_; }
-  void set_has_instance_varying_elem_cnt_field(bool val);
+  bool has_dim1_valid_num_field() const { return has_dim1_valid_num_; }
+  void set_has_dim1_valid_num_field(bool val);
 
   bool has_dim0_valid_num_field() const { return has_dim0_valid_num_; }
   void set_has_dim0_valid_num_field(bool val);
@@ -72,7 +72,7 @@ class BlobDesc {
   bool has_data_id_;
   bool has_col_num_;
   bool has_dim0_valid_num_;
-  bool has_instance_varying_elem_cnt_;
+  bool has_dim1_valid_num_;
   int64_t max_col_num_;
   int32_t blob_mem_id_;
 

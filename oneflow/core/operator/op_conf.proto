@@ -562,7 +562,7 @@ message DefineTestBlobConf {
   required string out = 1;
   required ShapeProto shape = 2;
   required DataType data_type = 3;
-  optional bool has_instance_varying_elem_cnt_field = 4;
+  optional bool has_dim1_valid_num_field = 4;
   optional bool has_dim0_valid_num_field = 5;
   optional ShapeProto dim0_inner_shape = 6;
 }

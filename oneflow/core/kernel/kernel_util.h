@@ -475,7 +475,7 @@ class InstanceVaryingElemCntIterator final : public FieldIterator {
 
  private:
   char* GetMutPtr(Blob* blob) override {
-    return reinterpret_cast<char*>(blob->mut_instance_varying_elem_cnt());
+    return reinterpret_cast<char*>(blob->mut_dim1_valid_num());
   }
 
   size_t GetSizeOfField(Blob* blob) const override {
