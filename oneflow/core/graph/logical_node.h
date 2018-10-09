@@ -242,8 +242,6 @@ DECLARE_REDUCE_LOGICAL_NODE(NcclAllReduceLogicalNode);
 DECLARE_REDUCE_LOGICAL_NODE(NcclAllGatherLogicalNode);
 DECLARE_REDUCE_LOGICAL_NODE(NcclReduceScatterLogicalNode);
 
-int64_t NewAreaId();
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_GRAPH_LOGICAL_NODE_H_

@@ -144,6 +144,11 @@ REGISTER_FUNC_FOR_FIND_LBIS("NormalBackward"
                             "NormalMdUpdt",
                             ReturnPackedLbi);
 
+static int64_t NewAreaId() {
+  static int64_t next_area_id = AreaType_ARRAYSIZE;
+  return ++next_area_id;
+}
+
 }  // namespace
 
 std::shared_ptr<Operator> LogicalNode::SoleOp() const {
@@ -414,15 +419,23 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
   OF_PP_MAKE_TUPLE_SEQ(NcclAllGather, kMdUpdtArea)        \
   OF_PP_MAKE_TUPLE_SEQ(Accuracy, kDataForwardArea)        \
   OF_PP_MAKE_TUPLE_SEQ(AccuracyAcc, kDataForwardArea)     \
-  OF_PP_MAKE_TUPLE_SEQ(AccuracyPrint, kPrintArea)         \
-  OF_PP_MAKE_TUPLE_SEQ(Pack, kDataForwardArea)            \
-  OF_PP_MAKE_TUPLE_SEQ(Unpack, kDataForwardArea)
+  OF_PP_MAKE_TUPLE_SEQ(AccuracyPrint, kPrintArea)
 
-#define DEFINE_VIRTUAL_METHOD(x, area_type)                                             \
-  std::string x##LogicalNode::TypeName() const { return #x; }                           \
-  CompTaskNode* x##LogicalNode::NewCompTaskNode() const { return new x##CompTaskNode; } \
+#define DEFINE_BASIC_VIRTUAL_METHOD(x)                        \
+  std::string x##LogicalNode::TypeName() const { return #x; } \
+  CompTaskNode* x##LogicalNode::NewCompTaskNode() const { return new x##CompTaskNode; }
+
+#define DEFINE_VIRTUAL_METHOD(x, area_type) \
+  DEFINE_BASIC_VIRTUAL_METHOD(x)            \
   int64_t x##LogicalNode::GetAreaId() const { return area_type; }
 OF_PP_FOR_EACH_TUPLE(DEFINE_VIRTUAL_METHOD, LOGICAL_TYPE_SEQ);
+
+#define DEFINE_VIRTUAL_METHOD_WITH_NEW_AREAID(x) \
+  DEFINE_BASIC_VIRTUAL_METHOD(x)                 \
+  int64_t x##LogicalNode::GetAreaId() const { return NewAreaId(); }
+
+DEFINE_VIRTUAL_METHOD_WITH_NEW_AREAID(Pack)
+DEFINE_VIRTUAL_METHOD_WITH_NEW_AREAID(Unpack)
 
 BackwardLogicalNode* ForwardLogicalNode::NewBackwardNode() {
   bw_node_ = NewCorrectBackwardNode();
@@ -446,11 +459,6 @@ void NormalMdUpdtLogicalNode::FixCompTaskNode(CompTaskNode* node) const {
   } else {
     UNIMPLEMENTED();
   }
-}
-
-int64_t NewAreaId() {
-  static int64_t next_area_id = AreaType_ARRAYSIZE;
-  return ++next_area_id;
 }
 
 }  // namespace oneflow
