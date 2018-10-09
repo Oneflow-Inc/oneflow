@@ -83,6 +83,28 @@ void GetWindowedOutputSize(int64_t input_size, int32_t filter_size, int32_t stri
                         nullptr);
 }
 
+void GetDewindowedOutputSize(int64_t input_size, int32_t filter_size, int32_t stride,
+                             const std::string& padding_type, int64_t* output_size,
+                             int32_t* padding_before, int32_t* padding_after) {
+  CHECK_GT(stride, 0);
+
+  if (padding_type == "valid" || padding_type == "same") {
+    if (padding_before) { *padding_before = 0; }
+    if (padding_after) { *padding_after = 0; }
+    if (output_size) { *output_size = (input_size - 1) * stride + filter_size; }
+  } else {
+    UNIMPLEMENTED();
+  }
+  if (output_size) { CHECK_GE((*output_size), 0); }
+}
+
+void GetDewindowedOutputSize(int64_t input_size, int32_t filter_size, int32_t stride,
+                             const std::string& padding_type, int64_t* output_size,
+                             int32_t* padding_size) {
+  GetDewindowedOutputSize(input_size, filter_size, stride, padding_type, output_size, padding_size,
+                          nullptr);
+}
+
 void Get3DOutputSize(const std::vector<int64_t>& in, const std::vector<int32_t>& pool_size,
                      const std::vector<int32_t>& strides, const std::string& padding_type,
                      std::vector<int64_t>* out, std::vector<int32_t>* padding) {
