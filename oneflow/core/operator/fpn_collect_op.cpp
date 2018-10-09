@@ -55,8 +55,8 @@ void FpnCollectOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   out_blob_desc->mut_shape() = Shape({post_nms_topn, 5});
   out_blob_desc->set_data_type(input_blob_desc->data_type());
-  out_blob_desc->mut_instance_inner_shape() = Shape({1, post_nms_topn});
-  out_blob_desc->set_has_varying_instance_num_field(true);
+  out_blob_desc->mut_dim0_inner_shape() = Shape({1, post_nms_topn});
+  out_blob_desc->set_has_dim0_valid_num_field(true);
 }
 
 REGISTER_OP(OperatorConf::kFpnCollectConf, FpnCollectOp);

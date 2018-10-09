@@ -16,8 +16,8 @@ class FpnCollectKernel final : public KernelIf<device_type> {
  private:
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
-  void ForwardVaryingInstanceNum(
-      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardDim0ValidNum(const KernelCtx& ctx,
+                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   int64_t ConcatAllRoisAndScores(const KernelCtx& ctx, const int32_t,
                                  const std::function<Blob*(const std::string&)>&) const;
   void SortAndSelectTopnRois(const size_t, const std::function<Blob*(const std::string&)>&) const;

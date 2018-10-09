@@ -20,7 +20,7 @@ void RoIAlignOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   const BlobDesc* rois_blob_desc = GetBlobDesc4BnInOp("rois");
   CHECK_EQ(rois_blob_desc->shape().NumAxes(), 2);
   CHECK_EQ(rois_blob_desc->shape().At(1), 5);
-  CHECK_EQ(rois_blob_desc->instance_inner_shape().At(0), 1);
+  CHECK_EQ(rois_blob_desc->dim0_inner_shape().At(0), 1);
   // out: (R, C, pool_h, pool_w)
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   out_blob_desc->mut_shape() =
@@ -29,9 +29,8 @@ void RoIAlignOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   out_blob_desc->set_data_type(in_blob_desc->data_type());
   out_blob_desc->set_has_data_id_field(rois_blob_desc->has_data_id_field());
   out_blob_desc->set_has_col_num_field(rois_blob_desc->has_col_num_field());
-  out_blob_desc->set_has_varying_instance_num_field(
-      rois_blob_desc->has_varying_instance_num_field());
-  out_blob_desc->mut_instance_inner_shape() = rois_blob_desc->instance_inner_shape();
+  out_blob_desc->set_has_dim0_valid_num_field(rois_blob_desc->has_dim0_valid_num_field());
+  out_blob_desc->mut_dim0_inner_shape() = rois_blob_desc->dim0_inner_shape();
 }
 
 REGISTER_OP(OperatorConf::kRoiAlignConf, RoIAlignOp);

@@ -81,6 +81,7 @@ void TaskNode::PinConsumedRegst() {
 }
 
 void TaskNode::NaiveInferProducedDataRegstTimeShape() {
+  if (IsMeaningLess()) { return; }
   std::shared_ptr<Shape> time_shape;
   ForEachConsumedDataRegst([&time_shape](const std::string& name, const RegstDesc* regst) {
     if (time_shape) {

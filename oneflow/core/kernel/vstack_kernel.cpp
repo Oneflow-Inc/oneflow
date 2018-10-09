@@ -20,13 +20,13 @@ void VStackKernel<device_type, T>::ForwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
-void VStackKernel<device_type, T>::ForwardVaryingInstanceNum(
+void VStackKernel<device_type, T>::ForwardDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   int64_t total_instance_num = 0;
   for (const auto& input_bn : this->op_attribute().input_bns()) {
-    total_instance_num += BnInOp2Blob(input_bn)->varying_instance_num(0);
+    total_instance_num += BnInOp2Blob(input_bn)->dim0_valid_num(0);
   }
-  BnInOp2Blob("out")->set_varying_instance_num(0, total_instance_num);
+  BnInOp2Blob("out")->set_dim0_valid_num(0, total_instance_num);
 }
 
 template<DeviceType device_type, typename T>
@@ -46,11 +46,10 @@ void VStackKernel<device_type, T>::BackwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
-void VStackKernel<device_type, T>::BackwardVaryingInstanceNum(
+void VStackKernel<device_type, T>::BackwardDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   for (const auto& in_bn : this->op_attribute().input_bns()) {
-    BnInOp2Blob(GenDiffBn(in_bn))
-        ->set_varying_instance_num(0, BnInOp2Blob(in_bn)->varying_instance_num(0));
+    BnInOp2Blob(GenDiffBn(in_bn))->set_dim0_valid_num(0, BnInOp2Blob(in_bn)->dim0_valid_num(0));
   }
 }
 

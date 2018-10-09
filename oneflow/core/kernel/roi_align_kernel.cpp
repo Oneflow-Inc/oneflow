@@ -26,13 +26,13 @@ void RoIAlignKernel<device_type, T>::BackwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
-void RoIAlignKernel<device_type, T>::ForwardVaryingInstanceNum(
+void RoIAlignKernel<device_type, T>::ForwardDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob("out")->CopyVaryingInstanceNumFrom(ctx.device_ctx, BnInOp2Blob("rois"));
+  BnInOp2Blob("out")->CopyDim0ValidNumFrom(ctx.device_ctx, BnInOp2Blob("rois"));
 }
 
 template<DeviceType device_type, typename T>
-void RoIAlignKernel<device_type, T>::BackwardVaryingInstanceNum(
+void RoIAlignKernel<device_type, T>::BackwardDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // do nothing
 }

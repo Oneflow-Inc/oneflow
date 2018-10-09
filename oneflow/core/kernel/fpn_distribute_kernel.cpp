@@ -62,15 +62,14 @@ void FpnDistributeKernel<T>::ForwardDataContent(
     }
   }
   roi_indices.ArgSort(roi_indices_buf);
-  roi_indices_blob->set_varying_instance_num(0, roi_indices_idx);
+  roi_indices_blob->set_dim0_valid_num(0, roi_indices_idx);
   FOR_RANGE(int64_t, target_level_idx, 0, level_count) {
-    rois_blob_vec[target_level_idx]->set_varying_instance_num(0,
-                                                              level_copy_idx[target_level_idx] / 5);
+    rois_blob_vec[target_level_idx]->set_dim0_valid_num(0, level_copy_idx[target_level_idx] / 5);
   }
 }
 
 template<typename T>
-void FpnDistributeKernel<T>::ForwardVaryingInstanceNum(
+void FpnDistributeKernel<T>::ForwardDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // do nothing here because it will be set in ForwardDataContent
 }

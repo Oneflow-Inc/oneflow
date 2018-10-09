@@ -23,5 +23,5 @@ message BlobHeaderDescProto {
 message BlobDescProto {
   required BlobHeaderDescProto header = 1;
   required FieldDescProto body = 2;
-  optional ShapeProto instance_inner_shape = 3;
+  optional ShapeProto dim0_inner_shape = 3;
 }

@@ -17,10 +17,10 @@ class VStackKernel final : public KernelIf<device_type> {
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void BackwardDataContent(const KernelCtx& ctx,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void ForwardVaryingInstanceNum(
-      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void BackwardVaryingInstanceNum(
-      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardDim0ValidNum(const KernelCtx& ctx,
+                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void BackwardDim0ValidNum(const KernelCtx& ctx,
+                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
 }  // namespace oneflow

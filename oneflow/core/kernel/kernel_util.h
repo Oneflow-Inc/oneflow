@@ -496,38 +496,34 @@ class ColNumIterator final : public FieldIterator {
   size_t GetSizeOfField(Blob* blob) const override { return blob->ByteSizeOfColNumField(); }
 };
 
-class VaryingInstanceNumIterator final : public FieldIterator {
+class Dim0ValidNumIterator final : public FieldIterator {
  public:
-  VaryingInstanceNumIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,
-                             const PbRpf<std::string>* bns, int32_t axis)
+  Dim0ValidNumIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,
+                       const PbRpf<std::string>* bns, int32_t axis)
       : FieldIterator(BnInOp2Blob, bns, axis) {}
-  static CopyBlobFieldMthd GetCopyBlobFieldMthd() { return &Blob::CopyVaryingInstanceNumFrom; }
+  static CopyBlobFieldMthd GetCopyBlobFieldMthd() { return &Blob::CopyDim0ValidNumFrom; }
 
  private:
   char* GetMutPtr(Blob* blob) override {
-    return reinterpret_cast<char*>(blob->mut_varying_instance_num());
+    return reinterpret_cast<char*>(blob->mut_dim0_valid_num());
   }
 
-  size_t GetSizeOfField(Blob* blob) const override {
-    return blob->ByteSizeOfVaryingInstanceNumField();
-  }
+  size_t GetSizeOfField(Blob* blob) const override { return blob->ByteSizeOfDim0ValidNumField(); }
 };
 
-class InstanceVaryingElemCntIterator final : public FieldIterator {
+class Dim1ValidNumIterator final : public FieldIterator {
  public:
-  InstanceVaryingElemCntIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,
-                                 const PbRpf<std::string>* bns, int32_t axis)
+  Dim1ValidNumIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,
+                       const PbRpf<std::string>* bns, int32_t axis)
       : FieldIterator(BnInOp2Blob, bns, axis) {}
-  static CopyBlobFieldMthd GetCopyBlobFieldMthd() { return &Blob::CopyInstanceVaryingElemCntFrom; }
+  static CopyBlobFieldMthd GetCopyBlobFieldMthd() { return &Blob::CopyDim1ValidNumFrom; }
 
  private:
   char* GetMutPtr(Blob* blob) override {
-    return reinterpret_cast<char*>(blob->mut_instance_varying_elem_cnt());
+    return reinterpret_cast<char*>(blob->mut_dim1_valid_num());
   }
 
-  size_t GetSizeOfField(Blob* blob) const override {
-    return blob->ByteSizeOfInstanceVaryingElemCntField();
-  }
+  size_t GetSizeOfField(Blob* blob) const override { return blob->ByteSizeOfDim1ValidNumField(); }
 };
 
 }  // namespace oneflow

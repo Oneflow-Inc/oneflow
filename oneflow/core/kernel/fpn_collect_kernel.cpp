@@ -13,7 +13,7 @@ void FpnCollectKernel<device_type, T>::ForwardDataContent(
   if (available_num < post_nms_topn) { post_nms_topn = available_num; }
   SortAndSelectTopnRois(post_nms_topn, BnInOp2Blob);
   // set varing_instance_num header field
-  BnInOp2Blob("out")->set_varying_instance_num(0, post_nms_topn);
+  BnInOp2Blob("out")->set_dim0_valid_num(0, post_nms_topn);
 }
 
 template<DeviceType device_type, typename T>
@@ -39,9 +39,13 @@ int64_t FpnCollectKernel<device_type, T>::ConcatAllRoisAndScores(
     const int64_t roi_in_col_num = roi_blob->shape().Count(1);
     const int64_t prob_in_col_num = prob_blob->shape().Count(1);
 
+    auto GetValidDim1 = [](const Blob* blob, int32_t no) -> int32_t {
+      if (blob->dim1_valid_num() != nullptr) { return blob->dim1_valid_num(no); }
+      return blob->shape().At(1);
+    };
     FOR_RANGE(size_t, j, 0, roi_blob->shape().At(0)) {
-      available_roi_num += roi_blob->instance_available_elem_cnt(j) / roi_blob->shape().Count(2);
-      available_prob_num += prob_blob->instance_available_elem_cnt(j);
+      available_roi_num += GetValidDim1(roi_blob, j);
+      available_prob_num += GetValidDim1(prob_blob, j);
     }
     CHECK_EQ(available_roi_num, available_prob_num);
 
@@ -85,7 +89,7 @@ void FpnCollectKernel<device_type, T>::SortAndSelectTopnRois(
 }
 
 template<DeviceType device_type, typename T>
-void FpnCollectKernel<device_type, T>::ForwardVaryingInstanceNum(
+void FpnCollectKernel<device_type, T>::ForwardDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // do nothing
 }

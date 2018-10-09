@@ -67,7 +67,7 @@ void ProposalKernel<T>::ForwardDataContent(
     FOR_RANGE(int32_t, j, 0, post_nms_slice.size()) {
       roi_probs_blob->mut_dptr<T>(i)[j] = post_nms_slice.GetScore(j);
     }
-    roi_probs_blob->set_instance_varying_elem_cnt(i, post_nms_slice.size());
+    roi_probs_blob->set_dim1_valid_num(i, post_nms_slice.size());
   }
 }
 
@@ -84,7 +84,7 @@ void ProposalKernel<T>::CopyRoI(const int64_t im_index, const ScoredBoxesIndex<T
     roi_bbox->set_x2(proposal_bbox->x2());
     roi_bbox->set_y2(proposal_bbox->y2());
   }
-  rois_blob->set_instance_varying_elem_cnt(im_index, boxes.size() * rois_blob->shape().Count(2));
+  rois_blob->set_dim1_valid_num(im_index, boxes.size());
 }
 
 template<typename T>
@@ -95,7 +95,7 @@ void ProposalKernel<T>::ForwardDataId(const KernelCtx& ctx,
 }
 
 template<typename T>
-void ProposalKernel<T>::ForwardInstanceVaryingElemCnt(
+void ProposalKernel<T>::ForwardDim1ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // do nothing
 }

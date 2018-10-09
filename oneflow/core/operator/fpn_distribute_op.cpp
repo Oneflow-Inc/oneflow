@@ -37,9 +37,8 @@ void FpnDistributeOp::InferBlobDescs(
   BlobDesc* roi_indices_blob_desc = GetBlobDesc4BnInOp("roi_indices");
   roi_indices_blob_desc->mut_shape() = Shape({collected_rois_blob_desc->shape().At(0)});
   roi_indices_blob_desc->set_data_type(DataType::kInt32);
-  roi_indices_blob_desc->set_has_varying_instance_num_field(true);
-  roi_indices_blob_desc->mut_instance_inner_shape() =
-      collected_rois_blob_desc->instance_inner_shape();
+  roi_indices_blob_desc->set_has_dim0_valid_num_field(true);
+  roi_indices_blob_desc->mut_dim0_inner_shape() = collected_rois_blob_desc->dim0_inner_shape();
   *GetBlobDesc4BnInOp("roi_indices_buf") = *roi_indices_blob_desc;
   BlobDesc* target_levels_blob_desc = GetBlobDesc4BnInOp("target_levels");
   target_levels_blob_desc->mut_shape() = Shape({collected_rois_blob_desc->shape().At(0)});

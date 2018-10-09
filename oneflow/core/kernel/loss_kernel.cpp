@@ -53,10 +53,10 @@ void LossKernel<device_type, PredType, LabelType>::ForwardColNum(
 }
 
 template<DeviceType device_type, typename PredType, typename LabelType>
-void LossKernel<device_type, PredType, LabelType>::ForwardVaryingInstanceNum(
+void LossKernel<device_type, PredType, LabelType>::ForwardDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   BnInOp2Blob(GenDiffBn("prediction"))
-      ->CopyVaryingInstanceNumFrom(ctx.device_ctx, BnInOp2Blob("prediction"));
+      ->CopyDim0ValidNumFrom(ctx.device_ctx, BnInOp2Blob("prediction"));
 }
 
 template<typename T>
