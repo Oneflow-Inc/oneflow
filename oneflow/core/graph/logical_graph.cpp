@@ -354,20 +354,19 @@ void LogicalGraph::BuildLossPrintStruct() {
     OperatorConf loss_print_op_conf;
     loss_print_op_conf.set_name(LossPrintPrefix + loss_op->op_name());
     loss_print_op_conf.set_device_type(DeviceType::kCPU);
+
     auto loss_print_conf = loss_print_op_conf.mutable_loss_print_conf();
-
     *(loss_print_conf->mutable_loss_lbi()) = reduce_loss_op->BnInOp2Lbi("out");
-
     *(loss_print_conf->mutable_total_instance_num_lbi()->mutable_op_name()) = loss_op->op_name();
     *(loss_print_conf->mutable_total_instance_num_lbi()->mutable_blob_name()) =
         "total_instance_num";
-
     if (!loss_op->GetValFromCustomizedConf<std::string>("weight").empty()) {
       *(loss_print_conf->mutable_reduction_lbi()) = loss_op->BnInOp2Lbi("reduction_coefficient");
     }
     loss_print_conf->set_weight_scalar(loss_op->GetValFromCustomizedConf<float>("weight_scalar"));
     loss_print_conf->set_reduction_type(
         static_cast<LossReductionType>(loss_op->GetEnumFromCustomizedConf("reduction")));
+
     std::shared_ptr<Operator> loss_print_op = ConstructOp(loss_print_op_conf);
     ParallelConf loss_print_pr_conf;
     loss_print_pr_conf.set_policy(kDataParallel);
@@ -396,11 +395,10 @@ void LogicalGraph::BuildAccuracyPrintStruct() {
     OperatorConf accuracy_print_op_conf;
     accuracy_print_op_conf.set_name(AccuracyPrintPrefix + accuracy_op->op_name());
     accuracy_print_op_conf.set_device_type(DeviceType::kCPU);
+
     auto accuracy_print_conf = accuracy_print_op_conf.mutable_accuracy_print_conf();
-
-    *(accuracy_print_conf->mutable_accuracy_lbi()) = accuracy_op->BnInOp2Lbi("accuracy");
     accuracy_print_conf->set_top_k_print(accuracy_op->op_conf().accuracy_conf().top_k());
-
+    *(accuracy_print_conf->mutable_accuracy_lbi()) = accuracy_op->BnInOp2Lbi("accuracy");
     *(accuracy_print_conf->mutable_total_instance_num_lbi()->mutable_op_name()) =
         accuracy_op->op_name();
     *(accuracy_print_conf->mutable_total_instance_num_lbi()->mutable_blob_name()) =

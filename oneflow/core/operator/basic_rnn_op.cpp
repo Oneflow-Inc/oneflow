@@ -12,7 +12,7 @@ void BasicRnnOp::VirtualInitFromOpConf() {
     EnrollModelBn("bias");
     EnrollConstBufBn("bias_multiplier");
   }
-  EnrollModelBn("total_instance_num");
+  EnrollModelBn("total_instance_num");  // just enroll to remind
 }
 
 void BasicRnnOp::VirtualInferBlobDescs(

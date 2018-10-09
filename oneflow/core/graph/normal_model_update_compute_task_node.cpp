@@ -101,6 +101,8 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
         op_conf.mutable_normal_mdupdt_conf()->set_l1(Global<JobDesc>::Get()->bias_l1());
         op_conf.mutable_normal_mdupdt_conf()->set_l2(Global<JobDesc>::Get()->bias_l2());
       } else if (lbi.blob_name() == "total_instance_num") {
+        // we don't treat total_instance_num as model, just use total_instance_num_diff to get total
+        // instance num for training other models
         op_conf.mutable_normal_mdupdt_conf()->set_learning_rate(-1.0);
         op_conf.mutable_normal_mdupdt_conf()->set_l1(0);
         op_conf.mutable_normal_mdupdt_conf()->set_l2(0);
