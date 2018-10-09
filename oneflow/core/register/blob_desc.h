@@ -62,7 +62,7 @@ class BlobDesc {
   void HeaderToProto(BlobDescProto* proto) const;
   void DataIdFieldToProto(FieldHeaderDesc* proto, StructPodDesc* header_pod_desc) const;
   void ColNumFieldToProto(FieldHeaderDesc* proto, StructPodDesc* header_pod_desc) const;
-  void InstanceVaryingElemCntToProto(StructPodDesc* header_pod_desc) const;
+  void Dim1ValidNumToProto(StructPodDesc* header_pod_desc) const;
   void Dim0ValidNumToProto(StructPodDesc* header_pod_desc) const;
 
   bool header_is_opaque_;

@@ -53,7 +53,7 @@ void Kernel::Forward(const KernelCtx& ctx,
   }
   if (kernel_conf_.need_do_dim1_valid_num()) {
     CHECK(!kernel_conf_.need_do_opaque_header());
-    ForwardInstanceVaryingElemCnt(ctx, BnInOp2Blob);
+    ForwardDim1ValidNum(ctx, BnInOp2Blob);
   }
   ForwardDataContent(ctx, BnInOp2Blob);
   if (GetActivationType() != ActivationType::kNone) {
@@ -120,11 +120,11 @@ void KernelIf<device_type>::ForwardColNum(
 }
 
 template<DeviceType device_type>
-void KernelIf<device_type>::ForwardInstanceVaryingElemCnt(
+void KernelIf<device_type>::ForwardDim1ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CHECK(kernel_conf().can_naive_do_dim1_valid_num());
   CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
-            &Blob::CopyInstanceVaryingElemCntFrom);
+            &Blob::CopyDim1ValidNumFrom);
 }
 
 template<DeviceType device_type>

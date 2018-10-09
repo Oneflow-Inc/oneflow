@@ -32,7 +32,7 @@ bool RtBlobDesc::has_dim0_valid_num_field() const {
 }
 
 bool RtBlobDesc::has_dim1_valid_num_field() const {
-  return header_pod_desc_.HasField(FieldKey::kInstanceVaryingElemCnt);
+  return header_pod_desc_.HasField(FieldKey::kDim1ValidNum);
 }
 
 size_t RtBlobDesc::ByteSizeOfBlobHeader() const { return header_pod_desc_.ByteSize(); }
@@ -54,9 +54,9 @@ size_t RtBlobDesc::ByteSizeOfDim0ValidNumField() const {
   return header_pod_desc_.Field(FieldKey::kDim0ValidNum).ByteSize();
 }
 
-size_t RtBlobDesc::ByteSizeOfInstanceVaryingElemCntField() const {
+size_t RtBlobDesc::ByteSizeOfDim1ValidNumField() const {
   if (!has_dim1_valid_num_field()) { return 0; }
-  return header_pod_desc_.Field(FieldKey::kInstanceVaryingElemCnt).ByteSize();
+  return header_pod_desc_.Field(FieldKey::kDim1ValidNum).ByteSize();
 }
 
 size_t RtBlobDesc::ByteSizeOfDataContentField() const { return body_desc_.ByteSize(); }

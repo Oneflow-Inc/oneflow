@@ -24,8 +24,7 @@ void Blob::Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, cha
   data_id_ptr_ = header_pod_ptr_.MutTensorPtr<char>(FieldKey::kDataId, nullptr);
   col_num_ptr_ = header_pod_ptr_.MutTensorPtr<int32_t>(FieldKey::kColNum, nullptr);
   dim0_valid_num_ptr_ = header_pod_ptr_.MutTensorPtr<int32_t>(FieldKey::kDim0ValidNum, nullptr);
-  dim1_valid_num_ptr_ =
-      header_pod_ptr_.MutTensorPtr<int32_t>(FieldKey::kInstanceVaryingElemCnt, nullptr);
+  dim1_valid_num_ptr_ = header_pod_ptr_.MutTensorPtr<int32_t>(FieldKey::kDim1ValidNum, nullptr);
   dptr_ = body_ptr;
   dynamic_shape_ = blob_desc->shape();
 }
@@ -60,7 +59,7 @@ void Blob::set_dim1_valid_num(int32_t no, int32_t val) {
   CHECK_GE(no, 0);
   CHECK_LT(no, blob_desc_->shape().At(0));
   CHECK_GE(val, 0);
-  CHECK_LE(val, blob_desc_->shape().Count(1));
+  CHECK_LE(val, blob_desc_->shape().At(1));
   dim1_valid_num_ptr_[no] = val;
 }
 
@@ -78,11 +77,6 @@ void Blob::set_dim0_valid_num(int32_t no, int32_t val) {
   CHECK_GE(val, 0);
   CHECK_LE(val, dim0_inner_shape().Count(1));
   dim0_valid_num_ptr_[no] = val;
-}
-
-int32_t Blob::instance_available_elem_cnt(int32_t no) const {
-  if (dim1_valid_num_ptr_ != nullptr) { return dim1_valid_num(no); }
-  return blob_desc_->shape().Count(1);
 }
 
 const Shape& Blob::shape() const {
@@ -134,8 +128,8 @@ size_t Blob::ByteSizeOfDim0ValidNumField() const {
   return blob_desc_->ByteSizeOfDim0ValidNumField();
 }
 
-size_t Blob::ByteSizeOfInstanceVaryingElemCntField() const {
-  return blob_desc_->ByteSizeOfInstanceVaryingElemCntField();
+size_t Blob::ByteSizeOfDim1ValidNumField() const {
+  return blob_desc_->ByteSizeOfDim1ValidNumField();
 }
 
 void Blob::CopyDim0ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
@@ -145,11 +139,11 @@ void Blob::CopyDim0ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
                            ByteSizeOfDim0ValidNumField());
 }
 
-void Blob::CopyInstanceVaryingElemCntFrom(DeviceCtx* device_ctx, const Blob* rhs) {
+void Blob::CopyDim1ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs || ByteSizeOfDim0ValidNumField() == 0) { return; }
-  CHECK_EQ(ByteSizeOfInstanceVaryingElemCntField(), rhs->ByteSizeOfInstanceVaryingElemCntField());
+  CHECK_EQ(ByteSizeOfDim1ValidNumField(), rhs->ByteSizeOfDim1ValidNumField());
   Memcpy<DeviceType::kCPU>(device_ctx, mut_dim1_valid_num(), rhs->dim1_valid_num(),
-                           ByteSizeOfInstanceVaryingElemCntField());
+                           ByteSizeOfDim1ValidNumField());
 }
 
 void Blob::CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) {

@@ -38,7 +38,7 @@ void BlobDesc::InitFromProto(const BlobDescProto& proto) {
     has_data_id_ = header_pod_desc_.HasField(FieldKey::kDataId);
     has_col_num_ = header_pod_desc_.HasField(FieldKey::kColNum);
     has_dim0_valid_num_ = header_pod_desc_.HasField(FieldKey::kDim0ValidNum);
-    has_dim1_valid_num_ = header_pod_desc_.HasField(FieldKey::kInstanceVaryingElemCnt);
+    has_dim1_valid_num_ = header_pod_desc_.HasField(FieldKey::kDim1ValidNum);
   }
   if (proto.has_dim0_inner_shape()) {
     dim0_inner_shape_.reset(new Shape(proto.dim0_inner_shape()));
@@ -105,10 +105,9 @@ void BlobDesc::ColNumFieldToProto(FieldHeaderDesc* proto, StructPodDesc* header_
   header_pod_desc->AddField(FieldKey::kColNum, TensorPodDesc(shape, DataType::kInt32));
 }
 
-void BlobDesc::InstanceVaryingElemCntToProto(StructPodDesc* header_pod_desc) const {
+void BlobDesc::Dim1ValidNumToProto(StructPodDesc* header_pod_desc) const {
   Shape shape({body_field_.shape().At(0)});
-  header_pod_desc->AddField(FieldKey::kInstanceVaryingElemCnt,
-                            TensorPodDesc(shape, DataType::kInt32));
+  header_pod_desc->AddField(FieldKey::kDim1ValidNum, TensorPodDesc(shape, DataType::kInt32));
 }
 
 void BlobDesc::Dim0ValidNumToProto(StructPodDesc* header_pod_desc) const {
@@ -126,7 +125,7 @@ void BlobDesc::HeaderToProto(BlobDescProto* proto) const {
     StructPodDesc header_pod_desc;
     if (has_data_id_field()) { DataIdFieldToProto(field_header, &header_pod_desc); }
     if (has_col_num_field()) { ColNumFieldToProto(field_header, &header_pod_desc); }
-    if (has_dim1_valid_num_field()) { InstanceVaryingElemCntToProto(&header_pod_desc); }
+    if (has_dim1_valid_num_field()) { Dim1ValidNumToProto(&header_pod_desc); }
     if (has_dim0_valid_num_field()) { Dim0ValidNumToProto(&header_pod_desc); }
     header_pod_desc.ToProto(proto->mutable_header()->mutable_header_pod_desc());
   } else {

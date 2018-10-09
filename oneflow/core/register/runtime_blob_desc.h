@@ -38,7 +38,7 @@ class RtBlobDesc {
   size_t ByteSizeOfDataIdField() const;
   size_t ByteSizeOfColNumField() const;
   size_t ByteSizeOfDim0ValidNumField() const;
-  size_t ByteSizeOfInstanceVaryingElemCntField() const;
+  size_t ByteSizeOfDim1ValidNumField() const;
   size_t ByteSizeOfDataContentField() const;
 
   bool operator==(const RtBlobDesc& rhs) const;
