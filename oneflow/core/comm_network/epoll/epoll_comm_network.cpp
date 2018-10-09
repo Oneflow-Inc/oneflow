@@ -16,11 +16,11 @@ sockaddr_in GetSockAddr(const std::string& addr, uint16_t port) {
   return sa;
 }
 
-int SockListen(int* listen_sockfd, uint16_t listen_port, int32_t total_machine_num) {
+int SockListen(int listen_sockfd, uint16_t listen_port, int32_t total_machine_num) {
   sockaddr_in sa = GetSockAddr("0.0.0.0", listen_port);
-  int bind_result = bind(*listen_sockfd, reinterpret_cast<sockaddr*>(&sa), sizeof(sa));
+  int bind_result = bind(listen_sockfd, reinterpret_cast<sockaddr*>(&sa), sizeof(sa));
   if (bind_result == 0) {
-    PCHECK(listen(*listen_sockfd, total_machine_num) == 0);
+    PCHECK(listen(listen_sockfd, total_machine_num) == 0);
   } else {
     PCHECK(errno == EACCES || errno == EADDRINUSE);
   }
@@ -107,13 +107,13 @@ void EpollCommNet::InitSockets() {
   int listen_sockfd = socket(AF_INET, SOCK_STREAM, 0);
   uint16_t this_listen_port = Global<JobDesc>::Get()->resource().data_port();
   if (this_listen_port != -1) {
-    CHECK_EQ(SockListen(&(listen_sockfd), this_listen_port, total_machine_num), 0);
+    CHECK_EQ(SockListen(listen_sockfd, this_listen_port, total_machine_num), 0);
     PushPort(this_machine_id,
              ((this_machine.data_port_agent() != -1) ? (this_machine.data_port_agent())
                                                      : (this_listen_port)));
   } else {
     for (this_listen_port = 1024; this_listen_port < MaxVal<uint16_t>(); ++this_listen_port) {
-      if (SockListen(&(listen_sockfd), this_listen_port, total_machine_num) == 0) {
+      if (SockListen(listen_sockfd, this_listen_port, total_machine_num) == 0) {
         PushPort(this_machine_id, this_listen_port);
         break;
       }
