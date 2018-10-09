@@ -84,7 +84,7 @@ void ProposalKernel<T>::CopyRoI(const int64_t im_index, const ScoredBoxesIndex<T
     roi_bbox->set_x2(proposal_bbox->x2());
     roi_bbox->set_y2(proposal_bbox->y2());
   }
-  rois_blob->set_instance_varying_elem_cnt(im_index, boxes.size());
+  rois_blob->set_instance_varying_elem_cnt(im_index, boxes.size() * rois_blob->shape().Count(2));
 }
 
 template<typename T>
@@ -92,6 +92,12 @@ void ProposalKernel<T>::ForwardDataId(const KernelCtx& ctx,
                                       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   BnInOp2Blob("rois")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("bbox_pred"));
   BnInOp2Blob("roi_probs")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("bbox_pred"));
+}
+
+template<typename T>
+void ProposalKernel<T>::ForwardInstanceVaryingElemCnt(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  // do nothing
 }
 
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kProposalConf, ProposalKernel, FLOATING_DATA_TYPE_SEQ);

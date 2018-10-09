@@ -28,6 +28,9 @@ void RoIAlignOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   out_blob_desc->set_data_type(in_blob_desc->data_type());
   out_blob_desc->set_has_data_id_field(rois_blob_desc->has_data_id_field());
   out_blob_desc->set_has_col_num_field(rois_blob_desc->has_col_num_field());
+  out_blob_desc->set_has_varying_instance_num_field(
+      rois_blob_desc->has_varying_instance_num_field());
+  out_blob_desc->mut_instance_inner_shape() = rois_blob_desc->instance_inner_shape();
 }
 
 REGISTER_OP(OperatorConf::kRoiAlignConf, RoIAlignOp);
