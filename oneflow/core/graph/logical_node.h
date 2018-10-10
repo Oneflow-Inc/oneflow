@@ -131,7 +131,7 @@ class ForwardLogicalNode : public LogicalNode {
 
   BackwardLogicalNode* bw_node() const { return bw_node_; }
 
-  virtual BackwardLogicalNode* NewBackwardNode();
+  BackwardLogicalNode* NewBackwardNode();
 
  protected:
   virtual BackwardLogicalNode* NewCorrectBackwardNode() = 0;

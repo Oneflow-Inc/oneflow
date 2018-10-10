@@ -41,8 +41,8 @@ std::function<bool(const LogicalNode*)> MakePredicatorHasActualOutDiff(const Log
 }
 
 static bool IsCurLogicalNodeGeneralForward(LogicalNode* node) {
-  if (node->TypeName() == "NormalForwardLogicalNode" || node->TypeName() == "PackLogicalNode"
-      || node->TypeName() == "UnpackLogicalNode") {
+  if (node->TypeName() == "NormalForward" || node->TypeName() == "Pack"
+      || node->TypeName() == "Unpack") {
     return true;
   }
   return false;
