@@ -385,11 +385,6 @@ KU_IF_METHOD InitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num
       ctx, part_id, part_num, model_dir, host_blob.get(), bn_in_op, dim_num, num_in_each_dim);
   AFTER_CPU_INITIALIZE();
 }
-KU_IF_METHOD PutSingleValueIntoBlob(DeviceCtx* ctx, const int32_t instance_num,
-                                    T* instance_num_ptr) {
-  GpuSetSingleValue<T>
-      <<<1, 1, 0, ctx->cuda_stream()>>>(static_cast<T>(instance_num), instance_num_ptr);
-}
 
 #define KU_FLOATING_METHOD \
   template<typename T>     \

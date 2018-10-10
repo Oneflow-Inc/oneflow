@@ -184,11 +184,10 @@ void KernelIfWithModel<device_type, T>::CalculateTotalInsatcneNum(
   } else {
     total_instance_num = out_diff_blob->static_shape().At(0);
   }
-  // xfjiang: test instance num
-  total_instance_num = 300;
+  total_instance_num = 300;  // xfjiang: test instance num
   Blob* total_instance_num_diff_blob = BnInOp2Blob("total_instance_num_diff");
-  KernelUtil<device_type, T>::PutSingleValueIntoBlob(ctx.device_ctx, total_instance_num,
-                                                     total_instance_num_diff_blob->mut_dptr<T>());
+  this->PutTotalInstanceNumIntoBlob(ctx.device_ctx, total_instance_num,
+                                    total_instance_num_diff_blob->mut_dptr<T>());
 }
 
 template<DeviceType device_type>
@@ -284,5 +283,15 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_IF, DEVICE_TYPE_SEQ);
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_IF_SUBCLASS, DEVICE_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ);
+
+#define INSTANTIATE_CPU_KERNEL_IF_MEMBER_FUNCTION(type_cpp, proto_t)                  \
+  template<>                                                                          \
+  template<>                                                                          \
+  void KernelIf<DeviceType::kCPU>::PutTotalInstanceNumIntoBlob(                       \
+      DeviceCtx* ctx, const int32_t instance_num, type_cpp* instance_num_ptr) const { \
+    *instance_num_ptr = static_cast<type_cpp>(instance_num);                          \
+  }
+
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CPU_KERNEL_IF_MEMBER_FUNCTION, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
