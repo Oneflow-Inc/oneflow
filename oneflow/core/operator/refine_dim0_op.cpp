@@ -1,0 +1,75 @@
+#include "oneflow/core/operator/refine_dim0_op.h"
+
+namespace oneflow {
+
+void RefineDim0Op::InitFromOpConf() {
+  CHECK(op_conf().has_refine_dim0_conf());
+  EnrollInputBn("in");
+  EnrollOutputBn("out");
+}
+
+const PbMessage& RefineDim0Op::GetCustomizedConf() const { return op_conf().refine_dim0_conf(); }
+
+void RefineDim0Op::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                  const ParallelContext* parallel_ctx) const {
+  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
+  BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+  *out_blob_desc = *in_blob_desc;
+
+  std::vector<int64_t> shape_vec;
+  std::vector<int64_t> inner_shape_vec;
+  const RefineDim0OpConf& conf = op_conf().refine_dim0_conf();
+  switch (conf.type_case()) {
+    case RefineDim0OpConf::kShrinkConf: {
+      int64_t shrink_axis = conf.shrink_conf().axis();
+      CHECK_GE(shrink_axis, 1);
+      CHECK(in_blob_desc->has_dim0_inner_shape());
+      CHECK(!out_blob_desc->has_dim1_valid_num_field());
+      const Shape& shape = in_blob_desc->shape();
+      const Shape& inner_shape = in_blob_desc->dim0_inner_shape();
+      shape_vec.reserve(shape.dim_vec().size() + inner_shape.NumAxes() - shrink_axis);
+      inner_shape_vec.reserve(shrink_axis);
+      FOR_RANGE(int64_t, axis, shrink_axis, inner_shape.NumAxes()) {
+        shape_vec.emplace_back(inner_shape.At(axis));
+        if (axis == 1) {
+          out_blob_desc->set_has_dim1_valid_num_field(true);
+          out_blob_desc->set_has_dim0_valid_num_field(false);
+        }
+      }
+      shape_vec.insert(shape_vec.end(), shape.dim_vec().begin(), shape.dim_vec().end());
+      FOR_RANGE(int64_t, axis, 0, shrink_axis) {
+        inner_shape_vec.emplace_back(inner_shape.At(axis));
+      }
+      break;
+    }
+    case RefineDim0OpConf::kExtendConf: {
+      int64_t extend_axis = conf.extend_conf().axis();
+      CHECK_GE(extend_axis, 1);
+      const Shape& shape = in_blob_desc->shape();
+      if (in_blob_desc->has_dim0_inner_shape()) {
+        CHECK(!in_blob_desc->has_dim1_valid_num_field());
+        const Shape& inner_shape = in_blob_desc->dim0_inner_shape();
+        inner_shape_vec.reserve(inner_shape.NumAxes() + extend_axis);
+        FOR_RANGE(int64_t, axis, 0, inner_shape.NumAxes()) {
+          inner_shape_vec.emplace_back(inner_shape.At(axis));
+        }
+      } else {
+        inner_shape_vec.reserve(1 + extend_axis);
+        inner_shape_vec.emplace_back(shape.At(0));
+      }
+      shape_vec.reserve(shape.dim_vec().size() - extend_axis);
+      FOR_RANGE(int64_t, axis, extend_axis, shape.NumAxes()) {
+        shape_vec.emplace_back(shape.At(axis));
+      }
+      FOR_RANGE(int64_t, axis, 1, extend_axis + 1) { inner_shape_vec.emplace_back(shape.At(axis)); }
+      break;
+    }
+    default: { UNIMPLEMENTED(); }
+  }
+  out_blob_desc->mut_shape() = Shape(shape_vec);
+  out_blob_desc->mut_dim0_inner_shape() = Shape(inner_shape_vec);
+}
+
+REGISTER_OP(OperatorConf::kRefineDim0Conf, RefineDim0Op);
+
+}  // namespace oneflow
