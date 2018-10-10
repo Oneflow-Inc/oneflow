@@ -5,7 +5,7 @@
 namespace oneflow {
 
 TeePersistentLogStream::TeePersistentLogStream(const std::string& path) {
-  destinations_.emplace_back(LocalFS(), LogDir());
+  destinations_.emplace_back(LocalFS(), FLAGS_log_dir);
   branches_.reserve(destinations_.size());
   for (const auto& destination : destinations_) {
     branches_.emplace_back(std::make_unique<PersistentOutStream>(

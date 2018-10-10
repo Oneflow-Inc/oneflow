@@ -558,14 +558,16 @@ message DecodeRandomOpConf {
   required string out = 1;
   required ShapeProto shape = 2;
   required DataType data_type = 3;
-  optional int32 max_sequence_size = 4 [default = 1];
-  required InitializerConf distribution = 7; 
+  required InitializerConf data_initializer = 4; 
 }
 
 message DefineTestBlobConf {
   required string out = 1;
   required ShapeProto shape = 2;
   required DataType data_type = 3;
+  optional bool has_dim1_valid_num_field = 4;
+  optional bool has_dim0_valid_num_field = 5;
+  optional ShapeProto dim0_inner_shape = 6;
 }
 
 message NormalizationOpConf {

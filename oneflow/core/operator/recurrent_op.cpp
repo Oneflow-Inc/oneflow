@@ -40,7 +40,8 @@ void RecurrentOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
     CHECK_EQ(h0_blob_desc->has_data_id_field(), in_blob_desc->has_data_id_field());
     CHECK_EQ(h0_blob_desc->max_col_num(), 1);
   } else {
-    *GetBlobDesc4BnInOp("h0") = BlobDesc(h0_shape);
+    // *GetBlobDesc4BnInOp("h0") = BlobDesc(h0_shape);
+    TODO();
   }
   if (parallel_ctx->policy() == kModelParallel) {
     BalancedSplitter splitter(hidden_size, parallel_ctx->parallel_num());
