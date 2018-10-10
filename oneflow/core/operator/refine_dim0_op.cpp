@@ -70,11 +70,10 @@ void RefineDim0Op::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
       FOR_RANGE(int64_t, axis, extend_axis + 1, shape.NumAxes()) {
         shape_vec.emplace_back(shape.At(axis));
       }
+      out_blob_desc->set_has_dim1_valid_num_field(false);
       if (has_inner_shape) {
-        out_blob_desc->set_has_dim1_valid_num_field(false);
         out_blob_desc->set_has_dim0_valid_num_field(in_blob_desc->has_dim0_valid_num_field());
       } else {
-        out_blob_desc->set_has_dim1_valid_num_field(false);
         out_blob_desc->set_has_dim0_valid_num_field(in_blob_desc->has_dim1_valid_num_field());
       }
       break;
