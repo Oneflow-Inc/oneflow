@@ -131,7 +131,7 @@ class ForwardLogicalNode : public LogicalNode {
 
   BackwardLogicalNode* bw_node() const { return bw_node_; }
 
-  BackwardLogicalNode* NewBackwardNode();
+  virtual BackwardLogicalNode* NewBackwardNode();
 
  protected:
   virtual BackwardLogicalNode* NewCorrectBackwardNode() = 0;
@@ -168,6 +168,35 @@ class NormalBackwardLogicalNode final : public BackwardLogicalNode {
   LOGICAL_NODE_BOILERPLATE(NormalBackwardLogicalNode);
 };
 
+template<typename DualNodeType>
+class DualLogicalNode : public LogicalNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DualLogicalNode);
+  DualLogicalNode() : dual_node_(nullptr) {}
+  virtual ~DualLogicalNode() = default;
+
+  virtual DualNodeType* NewDualNode() = 0;
+  DualNodeType* dual_node() { return dual_node_; }
+
+ private:
+  DualNodeType* dual_node_;
+};
+
+class UnpackLogicalNode;
+
+#define DECLARE_ONE_DUAL_LOGICAL_NODE(name, dual_name)   \
+  class name final : public DualLogicalNode<dual_name> { \
+   public:                                               \
+    LOGICAL_NODE_BOILERPLATE(name);                      \
+    dual_name* NewDualNode() override;                   \
+  }  // namespace oneflow
+
+#define DECLARE_PAIR_DUAL_LOGICAL_NODE(name1, name2) \
+  DECLARE_ONE_DUAL_LOGICAL_NODE(name1, name2);       \
+  DECLARE_ONE_DUAL_LOGICAL_NODE(name2, name1);
+
+DECLARE_PAIR_DUAL_LOGICAL_NODE(PackLogicalNode, UnpackLogicalNode)
+
 #define DECLARE_NAIVE_LOGICAL_NODE(name)  \
   class name final : public LogicalNode { \
    public:                                \
@@ -201,8 +230,6 @@ class NormalMdUpdtLogicalNode final : public LogicalNode {
 
 DECLARE_NAIVE_LOGICAL_NODE(MdSaveLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(MdDiffAccLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(PackLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(UnpackLogicalNode);
 
 class ReduceLogicalNode : public LogicalNode {
  public:

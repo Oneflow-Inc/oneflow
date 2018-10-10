@@ -40,6 +40,28 @@ std::function<bool(const LogicalNode*)> MakePredicatorHasActualOutDiff(const Log
   };
 }
 
+static bool IsCurLogicalNodeGeneralForward(LogicalNode* node) {
+  if (node->TypeName() == "NormalForwardLogicalNode" || node->TypeName() == "PackLogicalNode"
+      || node->TypeName() == "UnpackLogicalNode") {
+    return true;
+  }
+  return false;
+}
+
+static LogicalNode* GetGeneralBackLogicalNode4GeneralForwardLogical(LogicalNode* fw_node) {
+  CHECK(IsCurLogicalNodeGeneralForward(fw_node));
+  ForwardLogicalNode* tmp_node = dynamic_cast<ForwardLogicalNode*>(fw_node);
+  LogicalNode* bw_node = nullptr;
+  if (tmp_node != nullptr) {
+    bw_node = tmp_node->bw_node();
+  } else if (fw_node->TypeName() == "PackLogicalNode") {
+    bw_node = dynamic_cast<PackLogicalNode*>(fw_node)->dual_node();
+  } else {
+    bw_node = dynamic_cast<UnpackLogicalNode*>(fw_node)->dual_node();
+  }
+  return bw_node;
+}
+
 }  // namespace
 
 LogicalGraph::LogicalGraph(bool is_train) {
@@ -204,23 +226,31 @@ void LogicalGraph::NaiveBuildBwStruct() {
   auto HasActualOutDiff = MakePredicatorHasActualOutDiff(this);
   HashSet<LogicalNode*> nodes_need_bw;
   TopoForEachNode([&](LogicalNode* logical_node) {
-    auto fw_node = dynamic_cast<ForwardLogicalNode*>(logical_node);
-    if (fw_node == nullptr) { return; }
-    if (fw_node->HasOpWithModelBlob()) {
-      CHECK(nodes_need_bw.insert(fw_node).second);
+    if (IsCurLogicalNodeGeneralForward(logical_node) == false) { return; }
+    if (logical_node->HasOpWithModelBlob()) {
+      CHECK(nodes_need_bw.insert(logical_node).second);
       return;
     }
-    for (LogicalEdge* edge : fw_node->in_edges()) {
+    for (LogicalEdge* edge : logical_node->in_edges()) {
       if (nodes_need_bw.find(edge->src_node()) != nodes_need_bw.end()
-          && HasActualOutDiff(fw_node)) {
-        CHECK(nodes_need_bw.insert(fw_node).second);
+          && HasActualOutDiff(logical_node)) {
+        CHECK(nodes_need_bw.insert(logical_node).second);
         return;
       }
     }
   });
   for (LogicalNode* fw_node : nodes_need_bw) {
-    BackwardLogicalNode* bw_node = static_cast<ForwardLogicalNode*>(fw_node)->NewBackwardNode();
-    if (bw_node) { AddAllocatedNode(bw_node); }
+    LogicalNode* bw_node = nullptr;
+    ForwardLogicalNode* tmp_node = dynamic_cast<ForwardLogicalNode*>(fw_node);
+    if (tmp_node != nullptr) {
+      bw_node = tmp_node->NewBackwardNode();
+    } else if (fw_node->TypeName() == "PackLogicalNode") {
+      bw_node = dynamic_cast<PackLogicalNode*>(fw_node)->NewDualNode();
+    } else {
+      CHECK(fw_node->TypeName() == "UnpackLogicalNode");
+      bw_node = dynamic_cast<UnpackLogicalNode*>(fw_node)->NewDualNode();
+    }
+    AddAllocatedNode(bw_node);
   }
   std::list<LogicalEdge*> fw_edges;
   ForEachEdge([&](LogicalEdge* edge) { fw_edges.push_back(edge); });
@@ -232,18 +262,21 @@ void LogicalGraph::NaiveBuildBwStruct() {
       UpdateEdge2Obn(bw_edge, edge2obn_.at(fw_edge));
       return bw_edge;
     };
-    auto fw_src_node = dynamic_cast<ForwardLogicalNode*>(fw_edge->src_node());
-    if (fw_src_node == nullptr) { continue; }
-    BackwardLogicalNode* bw_src_node = fw_src_node->bw_node();
+
+    LogicalNode* fw_src_node = fw_edge->src_node();
+    if (IsCurLogicalNodeGeneralForward(fw_src_node) == false) { continue; }
+    LogicalNode* bw_src_node = GetGeneralBackLogicalNode4GeneralForwardLogical(fw_src_node);
     if (bw_src_node == nullptr) { continue; }
-    auto fw_dst_node = dynamic_cast<ForwardLogicalNode*>(fw_edge->dst_node());
-    if (fw_dst_node == nullptr) {
-      if (dynamic_cast<LossLogicalNode*>(fw_edge->dst_node())) {
-        Connect<LogicalNode>(fw_edge->dst_node(), NewBwEdge(), bw_src_node);
+
+    LogicalNode* fw_dst_node = fw_edge->dst_node();
+    if (IsCurLogicalNodeGeneralForward(fw_dst_node) == false) {
+      if (dynamic_cast<LossLogicalNode*>(fw_dst_node)) {
+        Connect<LogicalNode>(fw_dst_node, NewBwEdge(), bw_src_node);
       }
     } else {
-      BackwardLogicalNode* bw_dst_node = fw_dst_node->bw_node();
-      if (bw_dst_node) { Connect<LogicalNode>(bw_dst_node, NewBwEdge(), bw_src_node); }
+      LogicalNode* bw_dst_node = GetGeneralBackLogicalNode4GeneralForwardLogical(fw_dst_node);
+      if (bw_dst_node == nullptr) { continue; }
+      Connect<LogicalNode>(bw_dst_node, NewBwEdge(), bw_src_node);
     }
   }
 }
