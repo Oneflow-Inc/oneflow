@@ -114,9 +114,7 @@ void Kernel::Backward(const KernelCtx& ctx,
   }
   if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
   if (kernel_conf_.need_do_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
-  if (this->op_attribute().model_bns().size() > 0) {
-    ExtractInstanceNumFromHeaderIfHasModelBns(ctx, BnInOp2Blob);
-  }
+  if (this->op_attribute().model_bns().size() > 0) { CalculateTotalInsatcneNum(ctx, BnInOp2Blob); }
 }
 
 bool Kernel::HasModelBns() const { return op_attribute().model_bns().size() > 0; }
@@ -174,15 +172,23 @@ void KernelIf<device_type>::BackwardColNum(
 }
 
 template<DeviceType device_type, typename T>
-void KernelIfWithModel<device_type, T>::ExtractInstanceNumFromHeaderIfHasModelBns(
+void KernelIfWithModel<device_type, T>::CalculateTotalInsatcneNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CHECK_GT(this->op_attribute().model_bns().size(), 0);
-  // extract instance num from header
+  int32_t total_instance_num = 0;
+  Blob* out_diff_blob = BnInOp2Blob("out_diff");
+  if (out_diff_blob->blob_desc_ptr()->has_dim0_valid_num_field()) {
+    for (int32_t i = 0; i < out_diff_blob->dim0_inner_shape().At(0); i++) {
+      total_instance_num += out_diff_blob->dim0_valid_num(i);
+    }
+  } else {
+    total_instance_num = out_diff_blob->static_shape().At(0);
+  }
   // xfjiang: test instance num
-  int32_t instance_num = 300;
+  total_instance_num = 300;
   Blob* total_instance_num_diff_blob = BnInOp2Blob("total_instance_num_diff");
   KernelUtil<device_type, T>::ExtractInstanceNumFromHeader(
-      ctx.device_ctx, instance_num, total_instance_num_diff_blob->mut_dptr<T>());
+      ctx.device_ctx, total_instance_num, total_instance_num_diff_blob->mut_dptr<T>());
 }
 
 template<DeviceType device_type>
