@@ -31,7 +31,6 @@ void NormalizationOp::InitFromOpConf() {
   EnrollDataTmpBn("trans_out");
   EnrollDataTmpBn("cache_mean_for_cudnn_bw");
   EnrollDataTmpBn("cache_inv_variance_for_cudnn_bw");
-  EnrollModelBn("total_instance_num");
 }
 
 const PbMessage& NormalizationOp::GetCustomizedConf() const {
