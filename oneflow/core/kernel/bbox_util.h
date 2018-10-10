@@ -1,0 +1,198 @@
+#ifndef ONEFLOW_CORE_KERNEL_BBOX_UTIL_H_
+#define ONEFLOW_CORE_KERNEL_BBOX_UTIL_H_
+
+namespace oneflow {
+
+template<typename T, size_t N>
+class ArrayBuffer;
+
+template<template<typename, template<typename> class> class Wrapper, template<typename> class Base,
+         typename T, size_t N>
+class ArrayBuffer<Wrapper<T, Base>, N> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ArrayBuffer);
+  ArrayBuffer() = delete;
+  ~ArrayBuffer() = delete;
+
+  // traits
+  using ElemType = T;
+  using ElemArray = std::array<ElemType, N>;
+  using WrapperType = Wrapper<T, Base>;
+
+  static const WrapperType* Cast(const ElemType* buf) {
+    return reinterpret_cast<const WrapperType*>(buf);
+  }
+  static WrapperType* MutCast(ElemType* buf) { return reinterpret_cast<WrapperType*>(buf); }
+
+  const ElemArray& elem() const { return elem_; }
+  ElemArray& mut_elem() { return elem_; }
+
+ private:
+  ElemArray elem_;
+};
+
+template<typename Impl>
+class BBoxBase : public ArrayBuffer<Impl, 4> {
+ public:
+  using T = typename ArrayBuffer<Impl, 4>::ElemType;
+
+  T bbox_elem(size_t n) const { return this->elem()[n]; }
+  void set_bbox_elem(size_t n, T val) { this->mut_elem()[n] = val; }
+};
+
+template<typename Impl>
+class InstIndexedBBoxBase : public ArrayBuffer<Impl, 5> {
+ public:
+  using T = typename ArrayBuffer<Impl, 5>::ElemType;
+
+  T bbox_elem(size_t n) const { return this->elem()[n + 1]; }
+  void set_bbox_elem(size_t n, T val) { this->mut_elem()[n + 1] = val; }
+
+  template<typename IndexType>
+  IndexType inst_index() const {
+    return static_cast<IndexType>(this->elem()[0]);
+  }
+  void set_inst_index(T index) const { this->mut_elem()[0] = index; }
+};
+
+template<typename T>
+class BBoxDelta;
+
+template<typename Impl>
+class BBoxIf {
+  using T = typename Impl::ElemType;
+  template<typename U>
+  using OtherBBox = BBoxIf<typename Impl::template ImplTempType<U>>;
+
+  Impl* impl() { return dynamic_cast<Impl*>(this); }
+  const Impl* impl() const { return dynamic_cast<const Impl*>(this); }
+
+  template<typename U>
+  float InterOverUnion(const OtherBBox<U>* other) const {
+    const float iw =
+        std::min<float>(right(), other->right()) - std::max<float>(left(), other->left()) + 1.f;
+    if (iw <= 0) { return 0.f; }
+    const float ih =
+        std::min<float>(bottom(), other->bottom()) - std::max<float>(top(), other->top()) + 1.f;
+    if (ih <= 0) { return 0.f; }
+    const float inter = iw * ih;
+    return inter / (area() + other->area() - inter);
+  }
+
+  template<typename U, typename V>
+  void Transform(const OtherBBox<U>* bbox, const BBoxDelta<V>* delta,
+                 const BBoxRegressionWeights& bbox_reg_ws) {
+    float dx = delta->dx() / bbox_reg_ws.weight_x();
+    float dy = delta->dy() / bbox_reg_ws.weight_y();
+    float dw = delta->dw() / bbox_reg_ws.weight_w();
+    float dh = delta->dh() / bbox_reg_ws.weight_h();
+
+    float pred_ctr_x = dx * bbox->width() + bbox->center_x();
+    float pred_ctr_y = dy * bbox->height() + bbox->center_y();
+    float pred_w = std::exp(dw) * bbox->width();
+    float pred_h = std::exp(dh) * bbox->height();
+    set_center_coord(pred_ctr_x, pred_ctr_y, pred_w, pred_h);
+  }
+
+  void Clip(const int64_t height, const int64_t width) {
+    T left = std::max<T>(std::min<T>(left(), width - 1), 0);
+    T top = std::max<T>(std::min<T>(top(), height - 1), 0);
+    T right = std::max<T>(std::min<T>(right(), width - 1), 0);
+    T bottom = std::max<T>(std::min<T>(bottom(), height - 1), 0);
+    set_corner_coord(left, top, right, bottom);
+  }
+
+  T left() const { return impl()->left(); }
+  T right() const { return impl()->right(); }
+  T top() const { return impl()->top(); }
+  T bottom() const { return impl()->bottom(); }
+  T center_x() const { return impl()->center_x(); }
+  T center_y() const { return impl()->center_y(); }
+  T width() const { return impl()->width(); }
+  T height() const { return impl()->height(); }
+  T area() const { return width() * height(); }
+
+  void set_center_coord(T ctr_x, T ctr_y, T w, T h) {
+    impl()->set_center_coord(ctr_x, ctr_y, w, h);
+  }
+  void set_corner_coord(T left, T top, T right, T bottom) {
+    impl()->set_corner_coord(left, top, right, bottom);
+  }
+};
+
+enum class BBoxCoord { kCorner = 0, kCenter };
+
+template<typename T, template<typename> class Base, BBoxCoord Coord>
+class BBoxImpl;
+
+template<typename T, template<typename> class Base>
+class BBoxImpl<T, Base, BBoxCoord::kCorner> final
+    : public BBoxIf<BBoxImpl<T, Base, BBoxCoord::kCorner>>,
+      public Base<BBoxImpl<T, Base, BBoxCoord::kCorner>> {
+ public:
+  using ElemType = typename Base<BBoxImpl<T, Base, BBoxCoord::kCorner>>::T;
+  template<typename U>
+  using ImplTempType = BBoxImpl<U, Base, BBoxCoord::kCorner>;
+
+  T left() const { return this->bbox_elem(0); }
+  T right() const { return this->bbox_elem(1); }
+  T top() const { return this->bbox_elem(2); }
+  T bottom() const { return this->bbox_elem(3); }
+  T center_x() const { return this->left() + 0.5f * this->width(); }
+  T center_y() const { return this->top() + 0.5f * this->height(); }
+  T width() const { return this->right() - this->left() + OneVal<T>::value; }
+  T height() const { return this->bottom() - this->top() + OneVal<T>::value; }
+  void set_center_coord(T ctr_x, T ctr_y, T w, T h) {
+    this->set_bbox_elem(0, static_cast<T>(ctr_x - 0.5f * w));
+    this->set_bbox_elem(1, static_cast<T>(ctr_y - 0.5f * h));
+    this->set_bbox_elem(2, static_cast<T>(ctr_x + 0.5f * w - 1.f));
+    this->set_bbox_elem(3, static_cast<T>(ctr_y + 0.5f * h - 1.f));
+  }
+  void set_corner_coord(T left, T top, T right, T bottom) {
+    this->set_bbox_elem(0, left);
+    this->set_bbox_elem(1, top);
+    this->set_bbox_elem(2, right);
+    this->set_bbox_elem(3, bottom);
+  }
+};
+
+template<typename T>
+class BBoxDelta final : public ArrayBuffer<BBoxDelta<T>, 4> {
+ public:
+  T dx() const { return this->elem()[0]; }
+  T dy() const { return this->elem()[1]; }
+  T dw() const { return this->elem()[2]; }
+  T dh() const { return this->elem()[3]; }
+
+  void set_dx(T dx) { this->mut_elem()[0] = dx; }
+  void set_dy(T dy) { this->mut_elem()[1] = dy; }
+  void set_dw(T dw) { this->mut_elem()[2] = dw; }
+  void set_dh(T dh) { this->mut_elem()[3] = dh; }
+
+  template<typename U, typename V>
+  void TransformInverse(const BBoxIf<U>* bbox, const BBoxIf<V>* target_bbox,
+                        const BBoxRegressionWeights& bbox_reg_ws) {
+    set_dx(bbox_reg_ws.weight_x() * (target_bbox->center_x() - bbox->center_x()) / bbox->width());
+    set_dy(bbox_reg_ws.weight_y() * (target_bbox->center_y() - bbox->center_y()) / bbox->height());
+    set_dw(bbox_reg_ws.weight_w() * std::log(target_bbox->width() / bbox->width()));
+    set_dh(bbox_reg_ws.weight_h() * std::log(target_bbox->height() / bbox->height()));
+  }
+};
+
+template<typename T>
+class BBoxWeights final : public ArrayBuffer<BBoxWeights<T>, 4> {
+ public:
+  inline T weight_x() const { return this->elem()[0]; }
+  inline T weight_y() const { return this->elem()[1]; }
+  inline T weight_w() const { return this->elem()[2]; }
+  inline T weight_h() const { return this->elem()[3]; }
+
+  inline void set_weight_x(T weight_x) { this->mut_elem()[0] = weight_x; }
+  inline void set_weight_y(T weight_y) { this->mut_elem()[1] = weight_y; }
+  inline void set_weight_w(T weight_w) { this->mut_elem()[2] = weight_w; }
+  inline void set_weight_h(T weight_h) { this->mut_elem()[3] = weight_h; }
+};
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_KERNEL_BBOX_UTIL_H_
