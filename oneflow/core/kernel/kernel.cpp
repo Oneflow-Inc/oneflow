@@ -187,8 +187,8 @@ void KernelIfWithModel<device_type, T>::CalculateTotalInsatcneNum(
   // xfjiang: test instance num
   total_instance_num = 300;
   Blob* total_instance_num_diff_blob = BnInOp2Blob("total_instance_num_diff");
-  KernelUtil<device_type, T>::ExtractInstanceNumFromHeader(
-      ctx.device_ctx, total_instance_num, total_instance_num_diff_blob->mut_dptr<T>());
+  KernelUtil<device_type, T>::PutSingleValueIntoBlob(ctx.device_ctx, total_instance_num,
+                                                     total_instance_num_diff_blob->mut_dptr<T>());
 }
 
 template<DeviceType device_type>
