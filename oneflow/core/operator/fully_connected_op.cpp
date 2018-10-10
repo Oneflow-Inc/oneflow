@@ -13,7 +13,6 @@ void FullyConnectedOp::InitFromOpConf() {
     EnrollModelBn("bias");
     EnrollConstBufBn("bias_multiplier");
   }
-  EnrollModelBn("total_instance_num");
 }
 
 const PbMessage& FullyConnectedOp::GetCustomizedConf() const {

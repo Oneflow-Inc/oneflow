@@ -10,7 +10,6 @@ void EmbeddingLookupOp::InitFromOpConf() {
   EnrollOutputBn("out");
   EnrollModelBn("weight");
   EnrollModelDiffBn(GenDiffBn("ids"));
-  EnrollModelBn("total_instance_num");  // just enroll to remind
 }
 
 const PbMessage& EmbeddingLookupOp::GetCustomizedConf() const {

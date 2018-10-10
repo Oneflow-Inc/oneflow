@@ -90,7 +90,6 @@ void ConvOp<NDims>::InitFromOpConf() {
     EnrollModelBn("bias");
     EnrollConstBufBn("bias_multiplier");
   }
-  EnrollModelBn("total_instance_num");
 }
 
 template<int32_t NDims>
