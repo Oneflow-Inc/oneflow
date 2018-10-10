@@ -21,6 +21,8 @@ int SockListen(int listen_sockfd, uint16_t listen_port, int32_t total_machine_nu
   int bind_result = bind(listen_sockfd, reinterpret_cast<sockaddr*>(&sa), sizeof(sa));
   if (bind_result == 0) {
     PCHECK(listen(listen_sockfd, total_machine_num) == 0);
+    LOG(INFO) << "CommNet:Epoll listening on "
+              << "0.0.0.0:" + std::to_string(listen_port);
   } else {
     PCHECK(errno == EACCES || errno == EADDRINUSE);
   }
@@ -105,7 +107,7 @@ void EpollCommNet::InitSockets() {
 
   // listen
   int listen_sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  uint16_t this_listen_port = Global<JobDesc>::Get()->resource().data_port();
+  int32_t this_listen_port = Global<JobDesc>::Get()->resource().data_port();
   if (this_listen_port != -1) {
     CHECK_EQ(SockListen(listen_sockfd, this_listen_port, total_machine_num), 0);
     PushPort(this_machine_id,
