@@ -26,7 +26,7 @@ void DefineTestBlobOp::InferBlobDescs(
   if (conf.has_dim0_inner_shape()) {
     out_blob_desc->mut_dim0_inner_shape() = Shape(conf.dim0_inner_shape());
   }
-  CHECK(conf.has_dim0_valid_num() && conf.has_dim0_inner_shape());
+  if (conf.has_dim0_valid_num()) { CHECK(conf.has_dim0_inner_shape()); }
 }
 
 REGISTER_OP(OperatorConf::kDefineTestBlobConf, DefineTestBlobOp);
