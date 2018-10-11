@@ -1,6 +1,11 @@
 #ifndef ONEFLOW_CORE_KERNEL_BBOX_UTIL_H_
 #define ONEFLOW_CORE_KERNEL_BBOX_UTIL_H_
 
+//#include <array>
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/common/data_type.h"
+#include "oneflow/core/operator/op_conf.pb.h"
+
 namespace oneflow {
 
 template<typename T, size_t N>
@@ -331,13 +336,12 @@ class BBoxIndices<Indices, Impl<T, Base, Coord>> : public Indices {
 template<typename Indices>
 class LabelIndices : public Indices {
  public:
-  LabelIndices(const Indices& inds, int32_t* label_buf)
-      : LabelIndices(inds), label_buf_(label_buf) {}
+  LabelIndices(const Indices& inds, int32_t* label_buf) : Indices(inds), label_buf_(label_buf) {}
 
   void AssignLabel(int32_t begin, int32_t end, int32_t label) {
     CHECK_GE(begin, 0);
     CHECK_GE(end, begin);
-    std::fill(label_buf_ + begin, label_label_buf_ptr_ + end, label);
+    std::fill(label_buf_ + begin, label_buf_ + end, label);
   }
 
   void AssignLabel(int32_t label) { AssignLabel(0, this->capacity(), label); }
@@ -384,7 +388,7 @@ class LabelIndices : public Indices {
 template<typename Indices, typename T>
 class ScoreIndices : public Indices {
  public:
-  ScoreIndex(const Indices& inds, const T* score_buf) : Indices(inds), score_buf_(score_buf) {}
+  ScoreIndices(const Indices& inds, const T* score_buf) : Indices(inds), score_buf_(score_buf) {}
 
   void SortByScore(const std::function<bool(T, T)>& Compare) {
     this->Sort([&](int32_t lhs_index, int32_t rhs_index) {
@@ -433,7 +437,7 @@ class MaxOverlapWithGtIndices : public Indices {
     CHECK_GE(index, 0);
     if (overlap > max_overlap(index)) {
       set_max_overlap(index, overlap);
-      set_max_overlap_index(index, gt_index);
+      set_max_overlap_gt_index(index, gt_index);
       DoUpdateHandle();
     }
   }
