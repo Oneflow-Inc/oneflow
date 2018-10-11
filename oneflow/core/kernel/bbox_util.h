@@ -328,6 +328,160 @@ class BBoxIndices<Indices, Impl<T, Base, Coord>> : public Indices {
   const T* bbox_buf_;
 };
 
+template<typename Indices>
+class LabelIndices : public Indices {
+ public:
+  LabelIndices(const Indices& inds, int32_t* label_buf)
+      : LabelIndices(inds), label_buf_(label_buf) {}
+
+  void AssignLabel(int32_t begin, int32_t end, int32_t label) {
+    CHECK_GE(begin, 0);
+    CHECK_GE(end, begin);
+    std::fill(label_buf_ + begin, label_label_buf_ptr_ + end, label);
+  }
+
+  void AssignLabel(int32_t label) { AssignLabel(0, this->capacity(), label); }
+
+  void SortByLabel(const std::function<bool(int32_t, int32_t)>& Compare) {
+    this->Sort([&](int32_t lhs_index, int32_t rhs_index) {
+      return Compare(label(lhs_index), label(rhs_index));
+    });
+  }
+
+  size_t FindByLabel(const std::function<bool(int32_t)>& Condition) const {
+    return this->Find([&](int32_t index) { return Condition(label(index)); });
+  }
+
+  void ForEachLabel(const std::function<bool(size_t, int32_t, int32_t)>& DoNext) {
+    this->ForEach([&](size_t n, int32_t index) { return DoNext(n, index, label(index)); });
+  }
+
+  int32_t GetLabel(size_t n) const {
+    CHECK_LT(n, this->size());
+    return label(this->GetIndex(n));
+  }
+
+  void SetLabel(size_t n, int32_t label) {
+    CHECK_LT(n, this->size());
+    set_label(this->GetIndex(n), label);
+  }
+
+  int32_t label(int32_t index) const {
+    CHECK_GE(index, 0);
+    return label_buf_[index];
+  }
+  void set_label(int32_t index, int32_t label) {
+    CHECK_GE(index, 0);
+    label_buf_[index] = label;
+  }
+  const int32_t* label() const { return label_buf_; }
+  int32_t* mut_label() { return label_buf_; }
+
+ private:
+  int32_t* label_buf_;
+};
+
+template<typename Indices, typename T>
+class ScoreIndices : public Indices {
+ public:
+  ScoreIndex(const Indices& inds, const T* score_buf) : Indices(inds), score_buf_(score_buf) {}
+
+  void SortByScore(const std::function<bool(T, T)>& Compare) {
+    this->Sort([&](int32_t lhs_index, int32_t rhs_index) {
+      return Compare(score(lhs_index), score(rhs_index));
+    });
+  }
+
+  size_t FindByScore(const std::function<bool(T)>& Condition) {
+    return this->Find([&](int32_t index) { return Condition(score(index)); });
+  }
+
+  void FilterByScore(const std::function<bool(size_t, int32_t, T)>& FilterFunc) {
+    this->Filter([&](size_t n, int32_t index) { return FilterFunc(n, index, score(index)); });
+  }
+
+  T GetScore(size_t n) const {
+    CHECK_LT(n, this->size());
+    return score(this->GetIndex(n));
+  }
+  T score(int32_t index) const {
+    CHECK_GE(index, 0);
+    return score_buf_[index];
+  }
+  const T* score() const { return score_buf_; }
+
+ private:
+  T* score_buf_;
+};
+
+template<typename Indices>
+class MaxOverlapWithGtIndices : public Indices {
+ public:
+  MaxOverlapWithGtIndices(const Indices& inds, float* max_overlap_buf,
+                          int32_t* max_overlap_gt_index_buf, bool init_max_overlap)
+      : Indices(inds),
+        max_overlap_buf_(max_overlap_buf),
+        max_overlap_gt_index_buf_(max_overlap_gt_index_buf) {
+    if (init_max_overlap) {
+      memset(max_overlap_buf, 0, this->capacity() * sizeof(float));
+      std::fill(max_overlap_gt_index_buf_, max_overlap_gt_index_buf_ + this->capacity(), -1);
+    }
+  }
+
+  void UpdateMaxOverlap(int32_t index, int32_t gt_index, float overlap,
+                        const std::function<void()>& DoUpdateHandle = []() {}) {
+    CHECK_GE(index, 0);
+    if (overlap > max_overlap(index)) {
+      set_max_overlap(index, overlap);
+      set_max_overlap_index(index, gt_index);
+      DoUpdateHandle();
+    }
+  }
+
+  void SortByMaxOverlap(const std::function<bool(float, float)>& Compare) {
+    this->Sort([&](int32_t lhs_index, int32_t rhs_index) {
+      return Compare(max_overlap(lhs_index), max_overlap(rhs_index));
+    });
+  }
+
+  size_t FindByMaxOverlap(const std::function<bool(float)>& Condition) {
+    return this->Find([&](int32_t index) { return Condition(max_overlap(index)); });
+  }
+
+  void ForEachMaxOverlap(const std::function<bool(size_t, int32_t, float)>& DoNext) {
+    this->ForEach([&](size_t n, int32_t index) { return DoNext(n, index, max_overlap(index)); });
+  }
+
+  float GetMaxOverlap(size_t n) const {
+    CHECK_LT(n, this->size());
+    return max_overlap(this->GetIndex(n));
+  }
+  int32_t GetMaxOverlapGtIndex(size_t n) const {
+    CHECK_LT(n, this->size());
+    return max_overlap_gt_index(this->GetIndex(n));
+  }
+  float max_overlap(int32_t index) const {
+    if (index < 0) { return 1; }
+    return max_overlap_buf_[index];
+  }
+  void set_max_overlap(int32_t index, float overlap) {
+    CHECK_GE(index, 0);
+    max_overlap_buf_[index] = overlap;
+  }
+  int32_t max_overlap_gt_index(int32_t index) const {
+    if (index < 0) { return -index - 1; }
+    return max_overlap_gt_index_buf_[index];
+  }
+  void set_max_overlap_gt_index(int32_t index, int32_t gt_index) {
+    CHECK_GE(index, 0);
+    max_overlap_gt_index_buf_[index] = gt_index;
+  }
+
+ private:
+  float* max_overlap_buf_;
+  int32_t* max_overlap_gt_index_buf_;
+};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_BBOX_UTIL_H_
