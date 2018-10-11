@@ -36,5 +36,5 @@ do
   echo "copy files to ${host}"
   scp ${exec_path} ./*.prototxt ./train.sh ${USER}@${host}:~/oneflow_workdir
   echo "start training on ${host}"
-  ssh ${USER}@${host} "(cd ~/oneflow_workdir; nohup ./train.sh --nocopy &) &>/dev/null"
+  ssh ${USER}@${host} "(cd ~/oneflow_workdir; nohup ./train.sh --nocopy &) >/dev/null"
 done
