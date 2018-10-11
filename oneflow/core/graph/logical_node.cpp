@@ -22,6 +22,8 @@
 #include "oneflow/core/graph/accuracy_compute_task_node.h"
 #include "oneflow/core/graph/accuracy_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/accuracy_print_compute_task_node.h"
+#include "oneflow/core/graph/pack_task_node.h"
+#include "oneflow/core/graph/unpack_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
 
 namespace oneflow {
@@ -141,6 +143,11 @@ REGISTER_FUNC_FOR_FIND_LBIS("MdDiffAcc"
 REGISTER_FUNC_FOR_FIND_LBIS("NormalBackward"
                             "NormalMdUpdt",
                             ReturnPackedLbi);
+
+static int64_t NewAreaId() {
+  static int64_t next_area_id = AreaType_ARRAYSIZE;
+  return ++next_area_id;
+}
 
 }  // namespace
 
@@ -414,11 +421,21 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
   OF_PP_MAKE_TUPLE_SEQ(AccuracyAcc, kDataForwardArea)     \
   OF_PP_MAKE_TUPLE_SEQ(AccuracyPrint, kPrintArea)
 
-#define DEFINE_VIRTUAL_METHOD(x, area_type)                                             \
-  std::string x##LogicalNode::TypeName() const { return #x; }                           \
-  CompTaskNode* x##LogicalNode::NewCompTaskNode() const { return new x##CompTaskNode; } \
+#define DEFINE_BASIC_VIRTUAL_METHOD(x)                        \
+  std::string x##LogicalNode::TypeName() const { return #x; } \
+  CompTaskNode* x##LogicalNode::NewCompTaskNode() const { return new x##CompTaskNode; }
+
+#define DEFINE_VIRTUAL_METHOD(x, area_type) \
+  DEFINE_BASIC_VIRTUAL_METHOD(x)            \
   int64_t x##LogicalNode::GetAreaId() const { return area_type; }
 OF_PP_FOR_EACH_TUPLE(DEFINE_VIRTUAL_METHOD, LOGICAL_TYPE_SEQ);
+
+#define DEFINE_VIRTUAL_METHOD_WITH_NEW_AREAID(x) \
+  DEFINE_BASIC_VIRTUAL_METHOD(x)                 \
+  int64_t x##LogicalNode::GetAreaId() const { return NewAreaId(); }
+
+DEFINE_VIRTUAL_METHOD_WITH_NEW_AREAID(Pack)
+DEFINE_VIRTUAL_METHOD_WITH_NEW_AREAID(Unpack)
 
 BackwardLogicalNode* ForwardLogicalNode::NewBackwardNode() {
   bw_node_ = NewCorrectBackwardNode();
@@ -443,5 +460,9 @@ void NormalMdUpdtLogicalNode::FixCompTaskNode(CompTaskNode* node) const {
     UNIMPLEMENTED();
   }
 }
+
+UnpackLogicalNode* PackLogicalNode::NewCorrectDualNode() { return new UnpackLogicalNode; }
+
+PackLogicalNode* UnpackLogicalNode::NewCorrectDualNode() { return new PackLogicalNode; }
 
 }  // namespace oneflow

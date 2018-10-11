@@ -168,6 +168,48 @@ class NormalBackwardLogicalNode final : public BackwardLogicalNode {
   LOGICAL_NODE_BOILERPLATE(NormalBackwardLogicalNode);
 };
 
+template<typename DualNodeType1, typename DualNodeType2>
+class DualLogicalNode : public LogicalNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DualLogicalNode);
+  DualLogicalNode() : dual_node_(nullptr) {}
+  virtual ~DualLogicalNode() = default;
+
+  DualNodeType2* NewDualNode() {
+    dual_node_ = NewCorrectDualNode();
+    dual_node_->mut_op_vec() = op_vec();
+    dual_node_->mut_parallel_desc() = parallel_desc();
+    dual_node_->dual_node_ = dynamic_cast<DualNodeType1*>(this);
+    CHECK(dual_node_->dual_node_);
+    dual_node_->set_main_model_parallel(main_model_parallel());
+    return dual_node_;
+  }
+  DualNodeType2* dual_node() { return dual_node_; }
+
+ private:
+  friend class DualLogicalNode<DualNodeType2, DualNodeType1>;
+
+  virtual DualNodeType2* NewCorrectDualNode() = 0;
+
+  DualNodeType2* dual_node_;
+};
+
+class PackLogicalNode;
+class UnpackLogicalNode;
+
+#define DECLARE_ONE_DUAL_LOGICAL_NODE(name, dual_name)         \
+  class name final : public DualLogicalNode<name, dual_name> { \
+   public:                                                     \
+    LOGICAL_NODE_BOILERPLATE(name);                            \
+    dual_name* NewCorrectDualNode() override;                  \
+  }
+
+#define DECLARE_PAIR_DUAL_LOGICAL_NODE(name1, name2) \
+  DECLARE_ONE_DUAL_LOGICAL_NODE(name1, name2);       \
+  DECLARE_ONE_DUAL_LOGICAL_NODE(name2, name1);
+
+DECLARE_PAIR_DUAL_LOGICAL_NODE(PackLogicalNode, UnpackLogicalNode)
+
 #define DECLARE_NAIVE_LOGICAL_NODE(name)  \
   class name final : public LogicalNode { \
    public:                                \
