@@ -193,6 +193,141 @@ class BBoxWeights final : public ArrayBuffer<BBoxWeights<T>, 4> {
   inline void set_weight_h(T weight_h) { this->mut_elem()[3] = weight_h; }
 };
 
+class IndexSequence {
+ public:
+  IndexSequence(size_t capacity, size_t size, int32_t* index_buf, bool init_index)
+      : capacity_(capacity), size_(size), index_buf_(index_buf) {
+    if (init_index) { std::iota(index_buf_, index_buf_ + size_, 0); }
+  }
+  IndexSequence(size_t capacity, int32_t* index_buf, bool init_index = false)
+      : IndexSequence(capacity, capacity, index_buf, init_index) {}
+
+  void Truncate(size_t size) {
+    CHECK_LE(size, capacity_);
+    size_ = size;
+  }
+
+  void Assign(const IndexSequence& other) {
+    CHECK_LE(other.size(), capacity_);
+    FOR_RANGE(size_t, i, 0, other.size()) { index_buf_[i] = other.GetIndex(i); }
+    size_ = other.size();
+  }
+
+  IndexSequence Slice(size_t begin, size_t end) const {
+    CHECK_LE(begin, end);
+    CHECK_LE(end, size_);
+    return IndexSequence(end - begin, index_buf_ + begin, false);
+  }
+
+  void Concat(const IndexSequence& other) {
+    CHECK_LE(other.size(), capacity_ - size_);
+    FOR_RANGE(size_t, i, 0, other.size()) { index_buf_[size_ + i] = other.GetIndex(i); }
+    size_ += other.size();
+  }
+
+  void PushBack(int32_t index) {
+    CHECK_LT(size_, capacity_);
+    index_buf_[size_++] = index;
+  }
+
+  size_t Find(const std::function<bool(int32_t)>& Condition) const {
+    FOR_RANGE(size_t, i, 0, this->size()) {
+      if (Condition(GetIndex(i))) { return i; }
+    }
+    return this->size();
+  }
+
+  void Filter(const std::function<bool(size_t, int32_t)>& FilterFunc) {
+    size_t keep_num = 0;
+    FOR_RANGE(size_t, i, 0, size_) {
+      int32_t cur_index = GetIndex(i);
+      if (!FilterFunc(i, cur_index)) {
+        // keep_num <= i so index_ptr_ never be written before read
+        mut_index()[keep_num++] = cur_index;
+      }
+    }
+    size_ = keep_num;
+  }
+
+  void Sort(const std::function<bool(int32_t, int32_t)>& Compare) {
+    std::sort(index_buf_, index_buf_ + size_,
+              [&](int32_t lhs_index, int32_t rhs_index) { return Compare(lhs_index, rhs_index); });
+  }
+
+  void Shuffle(size_t begin, size_t end) {
+    CHECK_LE(begin, end);
+    CHECK_LE(end, size_);
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::shuffle(index_buf_ + begin, index_buf_ + end, gen);
+  }
+
+  void Shuffle() { Shuffle(0, size_); }
+
+  void ForEach(const std::function<bool(size_t, int32_t)>& DoNext) {
+    FOR_RANGE(size_t, i, 0, size_) {
+      if (!DoNext(i, GetIndex(i))) { break; }
+    }
+  }
+
+  int32_t GetIndex(size_t n) const {
+    CHECK_LT(n, size_);
+    return index_buf_[n];
+  }
+
+  const int32_t* index() const { return index_buf_; }
+  int32_t* mut_index() { return index_buf_; }
+  size_t capacity() const { return capacity_; }
+  size_t size() const { return size_; };
+
+ private:
+  const size_t capacity_;
+  size_t size_;
+  int32_t* index_buf_;
+};
+
+template<typename Indices, typename BBox>
+class BBoxIndices;
+
+template<typename Indices, typename T, template<typename> class Base, BBoxCoord Coord,
+         template<typename, template<typename> class, BBoxCoord> class Impl>
+class BBoxIndices<Indices, Impl<T, Base, Coord>> : public Indices {
+ public:
+  using BBox = Impl<T, Base, Coord>;
+  template<typename U>
+  using BBoxT = Impl<U, Base, Coord>;
+
+  BBoxIndices(const Indices& inds, const T* bbox_buf) : Indices(inds), bbox_buf_(bbox_buf) {}
+
+  void FilterByBBox(const std::function<bool(size_t, int32_t, const BBox*)>& FilterFunc) {
+    this->Filter([&](size_t n, int32_t index) { return FilterFunc(n, index, bbox(index)); });
+  }
+
+  void SortByBBox(const std::function<bool(const BBox*, const BBox*)>& Compare) {
+    this->Sort([&](int32_t lhs_index, int32_t rhs_index) {
+      return Compare(bbox(lhs_index), bbox(rhs_index));
+    });
+  }
+
+  const BBox* GetBBox(size_t n) const {
+    CHECK_LT(n, this->size());
+    return BBox::Cast(bbox_buf_) + this->GetIndex(n);
+  }
+  const BBox* bbox(int32_t index) const {
+    CHECK_GE(index, 0);
+    return BBox::Cast(bbox_buf_) + index;
+  }
+  BBox* mut_bbox(int32_t index) {
+    CHECK_GE(index, 0);
+    return BBox::MutCast(bbox_buf_) + index;
+  }
+  const T* bbox() const { return bbox_buf_; }
+  T* mut_bbox() { return bbox_buf_; }
+
+ private:
+  const T* bbox_buf_;
+};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_BBOX_UTIL_H_
