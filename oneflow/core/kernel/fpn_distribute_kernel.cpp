@@ -30,7 +30,7 @@ void FpnDistributeKernel<T>::ForwardDataContent(
   }
   Blob* roi_indices_blob = BnInOp2Blob("roi_indices");
   Blob* roi_indices_buf_blob = BnInOp2Blob("roi_indices_buf");
-  int32_t roi_indices_size = roi_indices_blob->shape().At(0);
+  int32_t roi_indices_size = roi_indices_blob->static_shape().At(0);
   Indexes roi_indices(roi_indices_size, roi_indices_size, roi_indices_blob->mut_dptr<int32_t>(),
                       false);
   Indexes roi_indices_buf(roi_indices_size, roi_indices_size,
