@@ -5,8 +5,8 @@ namespace oneflow {
 void UnpackOp::InitFromOpConf() {
   CHECK(op_conf().has_unpack_conf());
 
-  EnrollInputBn("in", false);
-  EnrollInputBn("out", false);
+  EnrollInputBn("in");
+  EnrollOutputBn("out");
 }
 
 void UnpackOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

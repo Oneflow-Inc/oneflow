@@ -461,8 +461,8 @@ void NormalMdUpdtLogicalNode::FixCompTaskNode(CompTaskNode* node) const {
   }
 }
 
-UnpackLogicalNode* PackLogicalNode::NewDualNode() { return new UnpackLogicalNode; }
+UnpackLogicalNode* PackLogicalNode::NewCorrectDualNode() { return new UnpackLogicalNode; }
 
-PackLogicalNode* UnpackLogicalNode::NewDualNode() { return new PackLogicalNode; }
+PackLogicalNode* UnpackLogicalNode::NewCorrectDualNode() { return new PackLogicalNode; }
 
 }  // namespace oneflow

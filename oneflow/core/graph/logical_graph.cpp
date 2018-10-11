@@ -54,7 +54,7 @@ static LogicalNode* GetGeneralBackLogicalNode4GeneralForwardLogical(LogicalNode*
   LogicalNode* bw_node = nullptr;
   if (tmp_node != nullptr) {
     bw_node = tmp_node->bw_node();
-  } else if (fw_node->TypeName() == "PackLogicalNode") {
+  } else if (fw_node->TypeName() == "Pack") {
     bw_node = dynamic_cast<PackLogicalNode*>(fw_node)->dual_node();
   } else {
     bw_node = dynamic_cast<UnpackLogicalNode*>(fw_node)->dual_node();
@@ -244,10 +244,10 @@ void LogicalGraph::NaiveBuildBwStruct() {
     ForwardLogicalNode* tmp_node = dynamic_cast<ForwardLogicalNode*>(fw_node);
     if (tmp_node != nullptr) {
       bw_node = tmp_node->NewBackwardNode();
-    } else if (fw_node->TypeName() == "PackLogicalNode") {
+    } else if (fw_node->TypeName() == "Pack") {
       bw_node = dynamic_cast<PackLogicalNode*>(fw_node)->NewDualNode();
     } else {
-      CHECK(fw_node->TypeName() == "UnpackLogicalNode");
+      CHECK(fw_node->TypeName() == "Unpack");
       bw_node = dynamic_cast<UnpackLogicalNode*>(fw_node)->NewDualNode();
     }
     AddAllocatedNode(bw_node);
