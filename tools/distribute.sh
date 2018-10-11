@@ -16,7 +16,7 @@ echo "Working on hosts:${host_list[@]}"
 
 ##############################################
 #1 prepare oneflow_temp folder on each host
-for host in "${hosts[@]}"
+for host in "${host_list[@]}"
 do
   ssh ${USER}@${host} "mkdir -p ~/oneflow_workdir"
 done
@@ -30,10 +30,11 @@ else
   exec_path=~/oneflow/build/bin/oneflow
 fi
 
-for host in "${hosts[@]}"
+for host in "${host_list[@]}"
 do
-  echo "start training on ${host}"
   ssh ${USER}@${host} "rm -rf ~/oneflow_workdir/*"
+  echo "copy files to ${host}"
   scp ${exec_path} ./*.prototxt ./train.sh ${USER}@${host}:~/oneflow_workdir
-  ssh ${USER}@${host} "cd ~/oneflow_workdir; nohup ./train.sh --nocopy &"
+  echo "start training on ${host}"
+  ssh ${USER}@${host} "(cd ~/oneflow_workdir; nohup ./train.sh --nocopy &) &>/dev/null"
 done
