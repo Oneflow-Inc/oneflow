@@ -18,7 +18,7 @@ echo "Working on hosts:${host_list[@]}"
 #1 prepare oneflow_temp folder on each host
 for host in "${hosts[@]}"
 do
-  ssh ${USER}@${host} "mkdir -p ~/oneflow_distribute"
+  ssh ${USER}@${host} "mkdir -p ~/oneflow_workdir"
 done
 
 ##############################################
@@ -27,13 +27,13 @@ if [ -n "$1" ]
 then
   exec_path=$1
 else
-  exec_path="~/oneflow/build/bin/oneflow"
+  exec_path=~/oneflow/build/bin/oneflow
 fi
 
 for host in "${hosts[@]}"
 do
   echo "start training on ${host}"
-  ssh ${USER}@${host} 'rm -rf ~/oneflow_distribute/*'
-  scp ${exec_path} ./*.prototxt ./train.sh ${USER}@${host}:~/oneflow_distribute
-  ssh ${USER}@${host} "cd ~/oneflow_distribute; nohup ./train.sh --nocopy &"
+  ssh ${USER}@${host} "rm -rf ~/oneflow_workdir/*"
+  scp ${exec_path} ./*.prototxt ./train.sh ${USER}@${host}:~/oneflow_workdir
+  ssh ${USER}@${host} "cd ~/oneflow_workdir; nohup ./train.sh --nocopy &"
 done
