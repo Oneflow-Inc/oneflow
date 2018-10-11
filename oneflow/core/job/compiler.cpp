@@ -111,7 +111,7 @@ Plan Compiler::DoCompile() {
   }
   if (job_desc->IsTrain()) { task_gph->AddOrderCtrlEdgeBetweenCopyAndMdUpdt(); }
   if (job_desc->IsTrain()) { task_gph->RmUselessConsumeRelationshipBetweenFwBw(); }
-  task_gph->MdUpdtDelayedTopoForEachNode(&TaskNode::InferProducedDataRegstTimeShape);
+  task_gph->MdUpdtDelayedTopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
 
   Plan plan;
   task_gph->ForEachNode([&](TaskNode* task_node) {
