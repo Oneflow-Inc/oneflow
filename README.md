@@ -8,3 +8,16 @@ mkdir build && cd build
 cmake -DBUILD_THIRD_PARTY=ON .. && make
 cmake -DBUILD_THIRD_PARTY=OFF .. && make
 ```
+### Build
+
+Building OneFlow from source requires a `BLAS libary` installed. On CentOS, if you have `Intel MKL` installed, please update the environment variable. 
+
+```
+    export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
+```
+
+Or you can install OpenBLAS through: 
+
+```
+    sudo yum install epel-release & sudo yum install openblas-devel
+```
