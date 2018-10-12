@@ -17,8 +17,8 @@ void RepeatOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
   BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
 
-  BlobDesc* in_diff_blob_desc = GetBlobDesc4BnInOp("in_diff");
-  BlobDesc* out_diff_blob_desc = GetBlobDesc4BnInOp("out_diff");
+  BlobDesc* in_diff_blob_desc = GetBlobDesc4BnInOp(GenDiffBn("in"));
+  BlobDesc* out_diff_blob_desc = GetBlobDesc4BnInOp(GenDiffBn("out"));
 
   if (in_blob_desc && out_blob_desc) {
     *out_blob_desc = *in_blob_desc;

@@ -14,10 +14,10 @@ void RepeatKernel<device_type, T>::ForwardDataContent(
 template<DeviceType device_type, typename T>
 void RepeatKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* in_diff_blob = BnInOp2Blob("in_diff");
-  const Blob* out_diff_blob = BnInOp2Blob("out_diff");
+  Blob* in_diff_blob = BnInOp2Blob(GenDiffBn("in"));
+  const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
 
-  const int64_t& acc_count = *(int64_t*)ctx.other;
+  const int64_t acc_count = *static_cast<int64_t*>(ctx.other);
 
   if (acc_count == 0) {
     in_diff_blob->CopyDataContentFrom(ctx.device_ctx, out_diff_blob);
