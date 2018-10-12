@@ -21,3 +21,18 @@ Or you can install OpenBLAS through:
 ```
     sudo yum install epel-release & sudo yum install openblas-devel
 ```
+
+#### download third party
+
+```
+    cmake -DTHIRD_PARTY=ON .. &&  make
+    cmake -DTHIRD_PARTY=OFF .. && make
+```
+
+#### build third party
+
+```
+    cmake -DTHIRD_PARTY=ON -DDOWNLOAD_THIRD_PARTY=OFF .. &&  make
+    cmake -DTHIRD_PARTY=OFF -DDOWNLOAD_THIRD_PARTY=OFF .. && make
+```
+
