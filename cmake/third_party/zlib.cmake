@@ -30,7 +30,7 @@ set(ZLIB_HEADERS
     "${ZLIB_INSTALL}/include/zlib.h"
 )
 
-if(BUILD_THIRD_PARTY)
+if(THIRD_PARTY)
 
 ExternalProject_Add(zlib
     PREFIX zlib
@@ -69,4 +69,4 @@ add_custom_target(zlib_copy_libs_to_destination
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ZLIB_BUILD_STATIC_LIBRARIES} ${ZLIB_LIBRARY_DIR}
     DEPENDS zlib_create_library_dir)
 
-endif(BUILD_THIRD_PARTY)
+endif(THIRD_PARTY)

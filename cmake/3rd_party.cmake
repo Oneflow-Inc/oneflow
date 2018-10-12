@@ -20,6 +20,8 @@ if (BUILD_CUDA)
   set(THIRD_PARTY_URL http://download.oneflow.org/third_party_without_cuda.tgz)
 endif()
 
+list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir}/third_party)
+list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir})
 if (BUILD_CUDA)
   set(CUDA_SEPARABLE_COMPILATION ON)
   find_package(CUDA REQUIRED)

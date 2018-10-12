@@ -10,7 +10,7 @@ set(eigen_URL http://download.oneflow.org/eigenteam-eigen-git-mirror-3.3.0-690-g
 
 add_definitions(-DEIGEN_NO_AUTOMATIC_RESIZING -DEIGEN_NO_MALLOC -DEIGEN_USE_GPU)
 
-if (BUILD_THIRD_PARTY)
+if (THIRD_PARTY)
   
 ExternalProject_Add(eigen
     PREFIX eigen
@@ -29,4 +29,4 @@ ExternalProject_Add(eigen
 )
 
 
-endif(BUILD_THIRD_PARTY)
+endif(THIRD_PARTY)

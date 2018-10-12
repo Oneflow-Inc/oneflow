@@ -119,7 +119,6 @@ include_directories(
 )
 
 if (BUILD_CUDA)
-  include(cub)
   include(nccl)
 
   list(APPEND oneflow_third_party_libs ${CUDA_LIBRARIES})

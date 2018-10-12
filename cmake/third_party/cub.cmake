@@ -8,7 +8,7 @@ set(CUB_BUILD_INCLUDE ${CMAKE_CURRENT_BINARY_DIR}/cub/src/cub/cub)
 
 set(CUB_URL http://download.oneflow.org/NVlabs-cub-v1.8.0-0-gc3cceac.tar.gz)
 
-if(BUILD_THIRD_PARTY)
+if(THIRD_PARTY)
 
 ExternalProject_Add(cub
     PREFIX cub
@@ -27,4 +27,4 @@ add_custom_target(cub_copy_headers_to_destination
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CUB_BUILD_INCLUDE} ${CUB_INCLUDE_DIR}/cub
     DEPENDS cub_create_header_dir)
 
-endif(BUILD_THIRD_PARTY)
+endif(THIRD_PARTY)
