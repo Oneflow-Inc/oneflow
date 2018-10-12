@@ -46,7 +46,7 @@ class BBoxBase : public ArrayBuffer<Impl, 4> {
 };
 
 template<typename Impl>
-class InstIndexedBBoxBase : public ArrayBuffer<Impl, 5> {
+class ImIndexedBBoxBase : public ArrayBuffer<Impl, 5> {
  public:
   using T = typename ArrayBuffer<Impl, 5>::ElemType;
 
@@ -54,10 +54,10 @@ class InstIndexedBBoxBase : public ArrayBuffer<Impl, 5> {
   void set_bbox_elem(size_t n, T val) { this->mut_elem()[n + 1] = val; }
 
   template<typename IndexType>
-  IndexType inst_index() const {
+  IndexType im_index() const {
     return static_cast<IndexType>(this->elem()[0]);
   }
-  void set_inst_index(T index) const { this->mut_elem()[0] = index; }
+  void set_im_index(T index) const { this->mut_elem()[0] = index; }
 };
 
 template<typename T>
@@ -485,6 +485,15 @@ class MaxOverlapWithGtIndices : public Indices {
   float* max_overlap_buf_;
   int32_t* max_overlap_gt_index_buf_;
 };
+
+template<typename BBox>
+struct BBoxUtil final : {
+  using T = typename BBox::ElemType;
+  using BBoxIndicesT = BBoxIndices<IndexSequence, BBox>;
+
+  static void Nms(float thresh, const BBoxIndicesT& pre_nms_bbox_inds,
+                  BBoxIndicesT& post_nms_bbox_inds);
+}
 
 }  // namespace oneflow
 

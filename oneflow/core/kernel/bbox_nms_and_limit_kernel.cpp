@@ -1,6 +1,4 @@
 #include "oneflow/core/kernel/bbox_nms_and_limit_kernel.h"
-#include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/kernel/faster_rcnn_util.h"
 #include "oneflow/core/common/auto_registration_factory.h"
 
 namespace oneflow {
@@ -20,13 +18,14 @@ using ForEachType = std::function<void(const std::function<void(int32_t, float)>
 // clang-format off
 #define DEFINE_SCORING_METHOD(k, score_ptr, default_score, for_each_nearby)              \
 class OF_PP_CAT(ScoreMethod, __LINE__) final : public ScoringMethodIf<T> {               \
-  public:                                                                                \
-   T scoring(const ScoredBoxesIndex<T>& slice, const T default_score,                     \
+ public:                                                                                 \
+  using ScoredBoxesIndices = typename ScoringMethodIf<T>::ScoredBoxesIndices;            \
+  T scoring(const ScoredBoxesIndices& slice, const T default_score,                      \
              const ForEachType& for_each_nearby) const override;                         \
 };                                                                                       \
 REGISTER_SCORING_METHOD(k, OF_PP_CAT(ScoreMethod, __LINE__));                            \
 template<typename T>                                                                     \
-T OF_PP_CAT(ScoreMethod, __LINE__)<T>::scoring(const ScoredBoxesIndex<T>& slice,          \
+T OF_PP_CAT(ScoreMethod, __LINE__)<T>::scoring(const ScoredBoxesIndices& slice,          \
                                                const T default_score,                    \
                                                const ForEachType& for_each_nearby) const
 // clang-format on
@@ -88,6 +87,15 @@ DEFINE_SCORING_METHOD(ScoringMethod::kTempAvg, slice, default_score, ForEach) {
   return 0;
 }
 
+template<typename T> 
+BboxNmsAndLimitKernel<T>::ScoredBoxesIndices
+GenScoredBoxesIndices(size_t capacity, int32_t* index_buf, const T* bbox_buf,
+                      const T* score_buf, bool init_index) {
+  using BBoxT = typename BboxNmsAndLimitKernel<T>::BBox;
+  BBoxIndices<IndexSequence, BBoxT> bbox_inds(IndexSequence(capacity, index_buf, init_index), bbox_buf);
+  return ScoreIndices<BBoxIndices<IndexSequence, BBoxT>, T>(bbox_inds, score_buf);
+}
+
 }  // namespace
 
 template<typename T>
@@ -100,21 +108,26 @@ void BboxNmsAndLimitKernel<T>::VirtualKernelInit(const ParallelContext* parallel
 }
 
 template<typename T>
-void BboxNmsAndLimitKernel<T>::ForwardDataId(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob("labeled_bbox")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("rois"));
-  BnInOp2Blob("bbox_score")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("rois"));
-}
-
-template<typename T>
 void BboxNmsAndLimitKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* bbox_blob = BnInOp2Blob("bbox");
-  const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
+  const Blob* bbox_blob = BnInOp2Blob("bbox");
+  const Blob* bbox_pred_blob = BnInOp2Blob("bbox_pred");
+  Blob* target_bbox_blob = BnInOp2Blob("target_bbox");
   const int64_t image_num = BnInOp2Blob("rois")->shape().At(0);
   const int32_t class_num = bbox_blob->shape().At(1);
+
+  BroadcastBboxTransform(bbox_blob, bbox_pred_blob, target_bbox_blob);
+  ClipBBox(target_bbox_blob);
+  auto im_grouped_bbox_inds = GroupBBox(target_bbox_blob);
+  for (auto& pair : im_grouped_bbox_inds) {
+  
+  
+  }
+
+
+  ///////////
+
   FOR_RANGE(int64_t, i, 0, image_num) {
-    BroadcastBboxTransform(i, BnInOp2Blob);
     ClipBox(bbox_blob);
     auto slice = NmsAndTryVote(i, BnInOp2Blob);
     Limit(conf.detections_per_im(), conf.threshold(), slice);
@@ -125,51 +138,140 @@ void BboxNmsAndLimitKernel<T>::ForwardDataContent(
 
 template<typename T>
 void BboxNmsAndLimitKernel<T>::BroadcastBboxTransform(
-    const int64_t im_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  const Blob* rois_blob = BnInOp2Blob("rois");
-  const Blob* bbox_delta_blob = BnInOp2Blob("bbox_delta");
-  Blob* bbox_blob = BnInOp2Blob("bbox");
-  const int64_t rois_num = bbox_blob->shape().At(0);
-  const int64_t class_num = bbox_blob->shape().At(1);
-  CHECK_EQ(rois_blob->shape().At(1), rois_num);
-  CHECK_EQ(bbox_delta_blob->shape().elem_cnt(), rois_blob->shape().elem_cnt() * class_num);
-  CHECK_EQ(bbox_delta_blob->shape().At(0), rois_blob->shape().At(0) * rois_num);
+    const Blob* bbox_blob, const Blob* bbox_pred_blob, 
+    Blob* target_bbox_blob) const {
   const BBoxRegressionWeights& bbox_reg_ws = op_conf().bbox_nms_and_limit_conf().bbox_reg_weights();
-  // bbox broadcast
-  FOR_RANGE(int64_t, i, 0, rois_num) {
-    const BBox<T>* roi_bbox = BBox<T>::Cast(rois_blob->dptr<T>(im_index, i));
-    const BBoxDelta<T>* class_bbox_delta =
-        BBoxDelta<T>::Cast(bbox_delta_blob->dptr<T>(im_index * rois_num + i));
-    FOR_RANGE(int64_t, j, 0, class_num) {
-      BBox<T>::MutCast(bbox_blob->mut_dptr<T>(i, j))
-          ->Transform(roi_bbox, class_bbox_delta + j, bbox_reg_ws);
+  int64_t num_boxes = bbox_blob->shape().At(0);
+  int64_t num_classes = bbox_pred_blob->shape().At(1) / 4;
+  CHECK_EQ(bbox_pred_blob->shape().At(0), num_boxes)
+  FOR_RANGE(int64_t, i, 0, num_boxes) {
+    const auto* bbox = BBox::Cast(bbox_blob->dptr<T>(i));
+    const auto* delta = BBoxDelta<T>::Cast(bbox_pred_blob->dptr<T>(i));
+    FOR_RANGE(int64_t, j, 0, num_classes) {
+      BBox::MutCast(target_bbox_blob->mut_dptr<T>(i, j))->Transform(bbox, delta + j, bbox_reg_ws);
     }
   }
 }
 
 template<typename T>
-void BboxNmsAndLimitKernel<T>::ClipBox(Blob* bbox_blob) const {
+void BboxNmsAndLimitKernel<T>::ClipBBox(Blob* target_bbox_blob) const {
   const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
-  FasterRcnnUtil<T>::ClipBoxes(bbox_blob->shape().Count(0, 2), conf.image_height(),
-                               conf.image_width(), bbox_blob->mut_dptr<T>());
+  auto* bbox_ptr = BBox::MutCast(target_bbox_blob->mut_dptr<T>());
+  FOR_RANGE(int64_t, i, 0, target_bbox_blob->shape().Count(0, 2)) { 
+    bbox_ptr[i].Clip(conf.image_height(), conf.image_width()); 
+  }
 }
 
 template<typename T>
-ScoredBoxesIndex<T> BboxNmsAndLimitKernel<T>::NmsAndTryVote(
+typename BboxNmsAndLimitKernel<T>::Image2IndexVecMap
+BboxNmsAndLimitKernel<T>::GroupBBox(Blob* target_bbox_blob) const {
+  Image2IndexVecMap im_grouped_bbox_inds;
+  FOR_RANGE(int32_t, i, 0, target_bbox_blob->shape().At(0)) {
+    const auto* bbox = BBox::Cast(target_bbox_blob->dptr<T>(i, 0));
+    int32_t im_idx = bbox->im_index<int32_t>();
+    im_grouped_bbox_inds[im_idx].emplace_back(i);
+  }
+}
+
+template<typename T>
+typename BboxNmsAndLimitKernel<T>::ScoredBoxesIndices
+BboxNmsAndLimitKernel<T>::ApplyNmsAndVoteByClass(
+    const std::vector<int32_t>& bbox_row_ids, const Blob* bbox_prob_blob,
+    Blob* bbox_score_blob, Blob* target_bbox_blob) const {
+  int32_t num_classes = bbox_prob_blob->shape().At();
+  std::vector<int32_t> all_cls_bbox_inds(bbox_row_ids.size() * num_classes);
+  FOR_RANGE(int32_t, k, 1, num_classes) {
+    std::vector<int32_t> cls_bbox_inds(bbox_row_ids.size());
+    std::transform(bbox_row_ids.begin(), bbox_row_ids.end(), cls_bbox_inds.begin(), [&](int32_t idx) {
+      return idx * num_classes + k;
+    });
+    std::sort(cls_bbox_inds.begin(), cls_bbox_inds.end(), [&](int32_t l_idx, int32_t h_idx) {
+      return bbox_prob_ptr[l_idx] > bbox_prob_ptr[h_idx];
+    });
+    auto lt_thresh_it = std::find_if(cls_bbox_inds.begin(), cls_bbox_inds.end(), [&](int32_t idx) {
+      return bbox_prob_ptr[idx] < conf.score_threshold();
+    })
+    cls_bbox_inds.erase(lt_thresh_it, cls_bbox_inds.end());
+    // nms
+    auto pre_nms_inds = GenScoredBoxesIndices(cls_bbox_inds.size(), cls_bbox_inds.data(), 
+                                              target_bbox_blob->dptr<T>(), bbox_prob_ptr, false);
+    std::vector<int32_t> post_nms_bbox_inds(cls_bbox_inds.size());
+    auto post_nms_inds = GenScoredBoxesIndices(post_nms_bbox_inds.size(), post_nms_bbox_inds.data(), 
+                                              target_bbox_blob->dptr<T>(), bbox_prob_ptr, false);
+    BBoxUtil<BBox>::Nms(conf.nms_threshold(), pre_nms_inds, post_nms_inds);
+    // voting
+    if (conf.bbox_vote_enabled()) {
+      //VoteBboxAndScore(pre_nms_slice, post_nms_slice, voting_score_blob, bbox_blob);
+    }
+    // concat all class
+    all_bbox_inds.insert(all_bbox_inds.end(), post_nms_inds.index(), 
+                          post_nms_inds.index() + post_nms_inds.size());
+  }
+}
+
+
+template<typename T>
+BboxNmsAndLimitKernel<T>::ScoredBoxesIndices BboxNmsAndLimitKernel<T>::NmsAndTryVote(
     const int64_t im_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  // input: scores (n * r, c) <=> (n, r * c)
+  const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
   const Blob* scores_blob = BnInOp2Blob("scores");
-  // datatmp: bbox (r, c, 4)
   Blob* bbox_blob = BnInOp2Blob("bbox");
-  // datatmp: voting_score_blob (r, c)
   Blob* voting_score_blob = BnInOp2Blob("voting_score");
+  Blob* pre_nms_index_slice_blob = BnInOp2Blob("pre_nms_index_slice");
+  Blob* post_nms_index_slice_blob = BnInOp2Blob("post_nms_index_slice");
   const int64_t boxes_num = bbox_blob->shape().At(0);
   const int64_t class_num = scores_blob->shape().At(1);
   const T* bbox_ptr = bbox_blob->dptr<T>();
   const T* scores_ptr = scores_blob->dptr<T>(im_index * boxes_num);
-  Blob* pre_nms_index_slice_blob = BnInOp2Blob("pre_nms_index_slice");
-  Blob* post_nms_index_slice_blob = BnInOp2Blob("post_nms_index_slice");
-  const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
+
+  ///////
+
+  HashMap<int32_t, std::vector<int32_t>> im_grouped_bbox_inds;
+  FOR_RANGE(int32_t, i, 0, num_boxes) {
+    const auto* bbox = BBox::Cast(target_bbox_blob->dptr<T>(i, 0));
+    int32_t im_idx = bbox->im_index<int32_t>();
+    im_grouped_bbox_inds[im_idx].emplace_back(i);
+  }
+
+  for (auto& pair : im_grouped_bbox_inds) {
+    std::vector<int32_t> all_bbox_inds(pair.second.size() * num_classes);
+    FOR_RANGE(int32_t, k, 1, num_classes) {
+      std::vector<int32_t> cls_bbox_inds(pair.second.size());
+      std::transform(pair.second.begin(), pair.second.end(), cls_bbox_inds.begin(), [&](int32_t idx) {
+        return idx * num_classes + k;
+      });
+      std::sort(cls_bbox_inds.begin(), cls_bbox_inds.end(), [&](int32_t l_idx, int32_t h_idx) {
+        return bbox_prob_ptr[l_idx] > bbox_prob_ptr[h_idx];
+      });
+      auto lt_thresh_it = std::find_if(cls_bbox_inds.begin(), cls_bbox_inds.end(), [&](int32_t idx) {
+        return bbox_prob_ptr[idx] < conf.score_threshold();
+      })
+      cls_bbox_inds.erase(lt_thresh_it, cls_bbox_inds.end());
+      // nms
+      auto pre_nms_inds = GenScoredBoxesIndices(cls_bbox_inds.size(), cls_bbox_inds.data(), 
+                                                target_bbox_blob->dptr<T>(), bbox_prob_ptr, false);
+      std::vector<int32_t> post_nms_bbox_inds(cls_bbox_inds.size());
+      auto post_nms_inds = GenScoredBoxesIndices(post_nms_bbox_inds.size(), post_nms_bbox_inds.data(), 
+                                                target_bbox_blob->dptr<T>(), bbox_prob_ptr, false);
+      BBoxUtil<BBox>::Nms(conf.nms_threshold(), pre_nms_inds, post_nms_inds);
+      // voting
+      if (conf.bbox_vote_enabled()) {
+        //VoteBboxAndScore(pre_nms_slice, post_nms_slice, voting_score_blob, bbox_blob);
+      }
+      // concat all class
+      all_bbox_inds.insert(all_bbox_inds.end(), post_nms_inds.index(), 
+                           post_nms_inds.index() + post_nms_inds.size());
+    }
+  }
+
+
+
+  /////////
+
+
+  IndexSequence bbox_inds(num_boxes, bbox_inds_blob->mut_dptr<int32_t>());
+  bbox_inds.GroupBy()
+
   auto all_class_boxes =
       GenScoredBoxesIndex(boxes_num * class_num, post_nms_index_slice_blob->mut_dptr<int32_t>(),
                           bbox_ptr, voting_score_blob->dptr<T>(), false);
@@ -188,7 +290,7 @@ ScoredBoxesIndex<T> BboxNmsAndLimitKernel<T>::NmsAndTryVote(
     auto post_nms_slice =
         GenScoredBoxesIndex(boxes_num, cls_post_nms_idx_ptr, bbox_ptr, scores_ptr, false);
     FasterRcnnUtil<T>::Nms(conf.nms_threshold(), pre_nms_slice, post_nms_slice);
-
+  
     if (conf.bbox_vote_enabled()) {
       VoteBboxAndScore(pre_nms_slice, post_nms_slice, voting_score_blob, bbox_blob);
     }
