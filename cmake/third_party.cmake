@@ -2,23 +2,25 @@ if (NOT WIN32)
   find_package(Threads)
 endif()
 
-include(zlib)
-include(protobuf)
-include(googletest)
-include(gflags)
-include(glog)
-include(grpc)
-include(libjpeg-turbo)
-include(opencv)
-include(eigen)
-if (BUILD_CUDA)
-  include(cub)
-endif()
-if (BUILD_HDFS)
-  include(libhdfs3)
+if (DOWNLOAD_THIRD_PARTY)
+  include(zlib)
+  include(protobuf)
+else()
+  include(zlib)
+  include(protobuf)
+  include(googletest)
+  include(gflags)
+  include(glog)
+  include(grpc)
+  include(libjpeg-turbo)
+  include(opencv)
+  include(eigen)
 endif()
 
 if (BUILD_CUDA)
+  include(cub)
+  include(nccl)
+
   set(CUDA_SEPARABLE_COMPILATION ON)
   find_package(CUDA REQUIRED)
   add_definitions(-DWITH_CUDA)
@@ -34,6 +36,20 @@ if (BUILD_CUDA)
     list(APPEND CUDA_LIBRARIES ${cuda_lib_dir}/${extra_cuda_lib})
   endforeach()
   find_package(CuDNN REQUIRED)
+
+  list(APPEND oneflow_third_party_libs ${CUDA_LIBRARIES})
+  list(APPEND oneflow_third_party_libs ${CUDNN_LIBRARIES})
+  list(APPEND oneflow_third_party_libs ${NCCL_STATIC_LIBRARIES})
+
+  list(APPEND oneflow_third_party_dependencies cub_copy_headers_to_destination)
+  list(APPEND oneflow_third_party_dependencies nccl_copy_headers_to_destination)
+  list(APPEND oneflow_third_party_dependencies nccl_copy_libs_to_destination)
+
+  include_directories(
+    ${CUDNN_INCLUDE_DIRS}
+    ${CUB_INCLUDE_DIR}
+    ${NCCL_INCLUDE_DIR}
+  )
 endif()
 
 if (NOT WIN32)
@@ -49,17 +65,6 @@ else()
   set(BLAS_LIBRARIES ${MKL_LIB_PATH}/mkl_core_dll.lib ${MKL_LIB_PATH}/mkl_sequential_dll.lib ${MKL_LIB_PATH}/mkl_intel_lp64_dll.lib)
 endif()
 message(STATUS "Found Blas Lib: " ${BLAS_LIBRARIES})
-
-if (NOT WIN32 AND DOWNLOAD_LIBS)
-    message(STATUS "downloading shared libs ....")
-    set(LIBHDFS_URL "http://download.oneflow.org/shared_libs/libhdfs3.so")
-    set(LIBPROTOBUF_URL "http://download.oneflow.org/shared_libs/libprotobuf.so")
-    set(dist_dir "${PROJECT_BINARY_DIR}/bin/shared")
-    file(DOWNLOAD ${LIBHDFS_URL} "${dist_dir}/libhdfs3.so" SHOW_PROGRESS)
-    file(DOWNLOAD ${LIBPROTOBUF_URL} "${dist_dir}/libprotobuf.so" SHOW_PROGRESS)
-else()
-    message(STATUS "should build your own hdfs.dll & protobuf.dll")
-endif()
 
 set(oneflow_third_party_libs
     ${CMAKE_THREAD_LIBS_INIT}
@@ -118,20 +123,3 @@ include_directories(
     ${EIGEN_INCLUDE_DIR}
 )
 
-if (BUILD_CUDA)
-  include(nccl)
-
-  list(APPEND oneflow_third_party_libs ${CUDA_LIBRARIES})
-  list(APPEND oneflow_third_party_libs ${CUDNN_LIBRARIES})
-  list(APPEND oneflow_third_party_libs ${NCCL_STATIC_LIBRARIES})
-
-  list(APPEND oneflow_third_party_dependencies cub_copy_headers_to_destination)
-  list(APPEND oneflow_third_party_dependencies nccl_copy_headers_to_destination)
-  list(APPEND oneflow_third_party_dependencies nccl_copy_libs_to_destination)
-
-  include_directories(
-    ${CUDNN_INCLUDE_DIRS}
-    ${CUB_INCLUDE_DIR}
-    ${NCCL_INCLUDE_DIR}
-)
-endif()
