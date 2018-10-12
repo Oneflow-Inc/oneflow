@@ -8,6 +8,7 @@ namespace oneflow {
 class MachineCtx final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MachineCtx);
+  MachineCtx() = delete;
   ~MachineCtx() = default;
 
   int64_t this_machine_id() const { return this_machine_id_; }
@@ -18,7 +19,7 @@ class MachineCtx final {
 
  private:
   friend class Global<MachineCtx>;
-  MachineCtx();
+  explicit MachineCtx(int64_t this_mchn_id);
 
   int64_t this_machine_id_;
 };
