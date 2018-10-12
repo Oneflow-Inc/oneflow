@@ -13,15 +13,19 @@ include(opencv)
 include(eigen)
 
 if (THIRD_PARTY AND DOWNLOAD_THIRD_PARTY)
-  set(THIRD_PARTY_URL http://download.oneflow.org/third_party_without_cuda.tgz)
   if (BUILD_CUDA)
-    # TODO: without cuda third_party tgz
+    set(THIRD_PARTY_URL http://download.oneflow.org/third_party_with_cuda.tgz)
+  else()
     set(THIRD_PARTY_URL http://download.oneflow.org/third_party_without_cuda.tgz)
   endif()
 
   if (NOT WIN32)
     message(STATUS "downloading third_partys ...")
     file(DOWNLOAD ${THIRD_PARTY_URL} ${PROJECT_BINARY_DIR}/third_party.tgz SHOW_PROGRESS)
+    execute_process(
+      COMMAND ${CMAKE_COMMAND} -E tar zxvf ${PROJECT_BINARY_DIR}/third_party.tgz
+      WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    )
   else()
     message(STATUS "win32 not support yet.")
   endif()
