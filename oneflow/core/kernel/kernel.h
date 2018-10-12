@@ -152,9 +152,6 @@ class KernelIf : public Kernel {
   void CopyField(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
                  const PbRpf<std::string>& from_bns, const PbRpf<std::string>& to_bns,
                  void (Blob::*Copy)(DeviceCtx*, const Blob*)) const;
-  template<typename T>
-  void PutTotalInstanceNumIntoBlob(DeviceCtx* ctx, const int32_t instance_num,
-                                   T* instance_num_ptr) const;
   bool EnableCudnn() const { return op_conf().enable_cudnn(); }
 };
 

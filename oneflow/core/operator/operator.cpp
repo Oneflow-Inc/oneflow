@@ -348,24 +348,18 @@ void Operator::EnrollModelBn(const std::string& mbn) {
     EnrollConstModelBn(mbn);
     return;
   }
-  LogicalBlobId lbi = mbn2lbi(mbn);
-  *(mut_model_bns()->Add()) = mbn;
-  CHECK(mut_bn_in_op2lbi()->insert({mbn, lbi}).second);
-  std::string mdbn = GenDiffBn(mbn);
-  *(mut_model_diff_bns()->Add()) = mdbn;
-  CHECK(mut_bn_in_op2lbi()->insert({mdbn, lbi}).second);
-  // we don't treat total_instance_num as model, just use total_instance_num_diff to store total
-  // instance num for training other models
+  auto Enroll = [&](const std::string& mbn) {
+    LogicalBlobId lbi = mbn2lbi(mbn);
+    *(mut_model_bns()->Add()) = mbn;
+    CHECK(mut_bn_in_op2lbi()->insert({mbn, lbi}).second);
+    std::string mdbn = GenDiffBn(mbn);
+    *(mut_model_diff_bns()->Add()) = mdbn;
+    CHECK(mut_bn_in_op2lbi()->insert({mdbn, lbi}).second);
+  };
+  Enroll(mbn);
+  // we don't treat total_instance_num as model, just use total_instance_num_diff
   auto it = op_attribute_.mutable_bn_in_op2lbi()->find("total_instance_num");
-  if (it == op_attribute_.mutable_bn_in_op2lbi()->end()) {
-    std::string tinbn = "total_instance_num";
-    lbi = mbn2lbi(tinbn);
-    *(mut_model_bns()->Add()) = tinbn;
-    CHECK(mut_bn_in_op2lbi()->insert({tinbn, lbi}).second);
-    std::string tidbn = GenDiffBn(tinbn);
-    *(mut_model_diff_bns()->Add()) = tidbn;
-    CHECK(mut_bn_in_op2lbi()->insert({tidbn, lbi}).second);
-  }
+  if (it == op_attribute_.mutable_bn_in_op2lbi()->end()) { Enroll("total_instance_num"); }
 }
 void Operator::EnrollModelDiffBn(const std::string& mdbn) {
   LogicalBlobId lbi = mbn2lbi(mdbn);

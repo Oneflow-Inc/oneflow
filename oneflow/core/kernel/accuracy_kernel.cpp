@@ -29,9 +29,8 @@ void AccuracyKernel<device_type, PredType, LabelType>::ForwardDataContent(
   } else {
     total_instance_num = label_blob->static_shape().At(0);
   }
-  total_instance_num = 300;  // xfjiang: test instance num
-  this->PutTotalInstanceNumIntoBlob(ctx.device_ctx, total_instance_num,
-                                    BnInOp2Blob("total_instance_num")->mut_dptr<PredType>());
+  KernelUtil<device_type, PredType>::Set(ctx.device_ctx, static_cast<PredType>(total_instance_num),
+                                         BnInOp2Blob("total_instance_num")->mut_dptr<PredType>());
 }
 
 template<typename PredType, typename LabelType>

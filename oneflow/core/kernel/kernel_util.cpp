@@ -270,6 +270,7 @@ KU_IF_METHOD InitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num
   PersistentInStream in_stream(SnapshotFS(), file_path, begin_pos);
   in_stream.Read(blob->mut_dptr<char>(), blob_size);
 }
+KU_IF_METHOD Set(DeviceCtx* ctx, const T value, T* addr) { *addr = value; }
 
 #define KU_FLOATING_METHOD \
   template<typename T>     \

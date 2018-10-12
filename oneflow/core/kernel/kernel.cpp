@@ -174,20 +174,20 @@ void KernelIf<device_type>::BackwardColNum(
 template<DeviceType device_type, typename T>
 void KernelIfWithModel<device_type, T>::CalculateTotalInsatcneNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CHECK_GT(this->op_attribute().model_bns().size(), 0);
+  CHECK_GT(this->op_attribute().model_bns().size(), 1);
   int32_t total_instance_num = 0;
-  Blob* out_diff_blob = BnInOp2Blob("out_diff");
-  if (out_diff_blob->blob_desc_ptr()->has_dim0_valid_num_field()) {
-    for (int32_t i = 0; i < out_diff_blob->dim0_inner_shape().At(0); i++) {
+  // TODO: CHECK total_instance_num equal
+  Blob* out_diff_blob = BnInOp2Blob(this->op_attribute().output_diff_bns().Get(0));
+  if (out_diff_blob->has_dim0_valid_num_field()) {
+    FOR_RANGE(int32_t, i, 0, out_diff_blob->dim0_inner_shape().At(0)) {
       total_instance_num += out_diff_blob->dim0_valid_num(i);
     }
   } else {
     total_instance_num = out_diff_blob->static_shape().At(0);
   }
-  total_instance_num = 300;  // xfjiang: test instance num
   Blob* total_instance_num_diff_blob = BnInOp2Blob("total_instance_num_diff");
-  this->PutTotalInstanceNumIntoBlob(ctx.device_ctx, total_instance_num,
-                                    total_instance_num_diff_blob->mut_dptr<T>());
+  KernelUtil<device_type, T>::Set(ctx.device_ctx, static_cast<T>(total_instance_num),
+                                  total_instance_num_diff_blob->mut_dptr<T>());
 }
 
 template<DeviceType device_type>
@@ -283,15 +283,5 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_IF, DEVICE_TYPE_SEQ);
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_IF_SUBCLASS, DEVICE_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ);
-
-#define INSTANTIATE_CPU_KERNEL_IF_MEMBER_FUNCTION(type_cpp, proto_t)                  \
-  template<>                                                                          \
-  template<>                                                                          \
-  void KernelIf<DeviceType::kCPU>::PutTotalInstanceNumIntoBlob(                       \
-      DeviceCtx* ctx, const int32_t instance_num, type_cpp* instance_num_ptr) const { \
-    *instance_num_ptr = static_cast<type_cpp>(instance_num);                          \
-  }
-
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CPU_KERNEL_IF_MEMBER_FUNCTION, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
