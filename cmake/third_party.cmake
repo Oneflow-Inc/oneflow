@@ -11,6 +11,7 @@ include(grpc)
 include(libjpeg-turbo)
 include(opencv)
 include(eigen)
+include(cocoapi)
 
 if (BUILD_CUDA)
   set(CUDA_SEPARABLE_COMPILATION ON)
@@ -57,6 +58,7 @@ set(oneflow_third_party_libs
     ${BLAS_LIBRARIES}
     ${LIBJPEG_STATIC_LIBRARIES}
     ${OPENCV_STATIC_LIBRARIES}
+    ${COCOAPI_STATIC_LIBRARIES}
 )
 
 message(STATUS "oneflow_third_party_libs: " ${oneflow_third_party_libs})
@@ -86,6 +88,8 @@ set(oneflow_third_party_dependencies
   opencv_copy_headers_to_destination
   opencv_copy_libs_to_destination
   eigen
+  cocoapi_copy_headers_to_destination
+  cocoapi_copy_libs_to_destination
 )
 
 include_directories(
@@ -99,6 +103,7 @@ include_directories(
     ${LIBJPEG_INCLUDE_DIR}
     ${OPENCV_INCLUDE_DIR}
     ${EIGEN_INCLUDE_DIR}
+    ${COCOAPI_INCLUDE_DIR}
 )
 
 if (BUILD_CUDA)
