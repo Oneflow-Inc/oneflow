@@ -88,8 +88,6 @@ size_t Blob::ContiguousDim0ValidNum() const {
   size_t last_invalid_instance_num =
       dim0_inner_shape().Count(1) - dim0_valid_num(dim0_inner_shape().At(0) - 1);
   size_t contiguous_instance_num = blob_desc_->shape().At(0) - last_invalid_instance_num;
-  CHECK_GT(contiguous_instance_num, 0);
-  CHECK_LE(contiguous_instance_num, static_shape().At(0));
   return contiguous_instance_num;
 }
 
@@ -100,6 +98,8 @@ bool Blob::IsShapeEmpty() const {
 
 const Shape& Blob::dynamic_shape() const {
   size_t contiguous_instance_num = ContiguousDim0ValidNum();
+  CHECK_GT(contiguous_instance_num, 0);
+  CHECK_LE(contiguous_instance_num, static_shape().At(0));
   if (dynamic_shape_.At(0) != contiguous_instance_num) {
     dynamic_shape_.Set(0, contiguous_instance_num);
   }
