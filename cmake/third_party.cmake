@@ -2,20 +2,16 @@ if (NOT WIN32)
   find_package(Threads)
 endif()
 
-if (DOWNLOAD_THIRD_PARTY)
-  include(zlib)
-  include(protobuf)
-else()
-  include(zlib)
-  include(protobuf)
-  include(googletest)
-  include(gflags)
-  include(glog)
-  include(grpc)
-  include(libjpeg-turbo)
-  include(opencv)
-  include(eigen)
-endif()
+include(zlib)
+include(protobuf)
+include(zlib)
+include(protobuf)
+include(googletest)
+include(gflags)
+include(glog)
+include(grpc)
+include(libjpeg-turbo)
+include(opencv)
 
 if (BUILD_CUDA)
   include(cub)
@@ -92,23 +88,28 @@ endif()
 set(oneflow_third_party_dependencies
   zlib_copy_headers_to_destination
   zlib_copy_libs_to_destination
-  gflags_copy_headers_to_destination
-  gflags_copy_libs_to_destination
-  glog_copy_headers_to_destination
-  glog_copy_libs_to_destination
-  googletest_copy_headers_to_destination
-  googletest_copy_libs_to_destination
-  googlemock_copy_headers_to_destination
-  googlemock_copy_libs_to_destination
   protobuf_copy_headers_to_destination
   protobuf_copy_libs_to_destination
   protobuf_copy_binary_to_destination
-  grpc_copy_headers_to_destination
-  grpc_copy_libs_to_destination
-  opencv_copy_headers_to_destination
-  opencv_copy_libs_to_destination
-  eigen
 )
+
+if (NOT DOWNLOAD_THIRD_PARTY)
+  list(APPEND oneflow_third_party_dependencies 
+    gflags_copy_headers_to_destination
+    gflags_copy_libs_to_destination
+    glog_copy_headers_to_destination
+    glog_copy_libs_to_destination
+    googletest_copy_headers_to_destination
+    googletest_copy_libs_to_destination
+    googlemock_copy_headers_to_destination
+    googlemock_copy_libs_to_destination
+    grpc_copy_headers_to_destination
+    grpc_copy_libs_to_destination
+    opencv_copy_headers_to_destination
+    opencv_copy_libs_to_destination
+    eigen
+  )
+endif()
 
 include_directories(
     ${ZLIB_INCLUDE_DIR}

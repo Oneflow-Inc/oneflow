@@ -7,7 +7,7 @@ set(CUB_URL https://github.com/NVlabs/cub.git)
 set(CUB_TAG c3cceac115c072fb63df1836ff46d8c60d9eb304)
 
 
-if(THIRD_PARTY)
+if(NOT DOWNLOAD_THIRD_PARTY AND THIRD_PARTY)
 
 ExternalProject_Add(cub
     PREFIX cub

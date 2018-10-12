@@ -27,7 +27,7 @@ set(NCCL_HEADERS
     "${NCCL_BUILD_DIR}/include/nccl.h"
 )
 
-if(THIRD_PARTY)
+if(NOT DOWNLOAD_THIRD_PARTY AND THIRD_PARTY)
 
 ExternalProject_Add(nccl
     PREFIX nccl

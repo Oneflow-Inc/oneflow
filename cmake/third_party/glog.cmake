@@ -31,7 +31,7 @@ set (GLOG_PUBLIC_H
   ${CMAKE_CURRENT_BINARY_DIR}/glog/src/glog/src/glog/log_severity.h
 )
 
-if(THIRD_PARTY)
+if(NOT DOWNLOAD_THIRD_PARTY AND THIRD_PARTY)
 
 ExternalProject_Add(glog
     DEPENDS gflags_copy_headers_to_destination gflags_copy_libs_to_destination

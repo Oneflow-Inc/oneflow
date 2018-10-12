@@ -29,7 +29,7 @@ foreach(LIBRARY_NAME ${OPENCV_3RDPARTY_LIBRARY_NAMES})
 endforeach()
 
 
-if (THIRD_PARTY)
+if (NOT DOWNLOAD_THIRD_PARTY AND THIRD_PARTY)
 
 ExternalProject_Add(opencv
     DEPENDS libjpeg_copy_headers_to_destination libjpeg_copy_libs_to_destination

@@ -46,7 +46,7 @@ set(LIBJPEG_HEADERS
      "${LIBJPEG_BUILD_LIBRARY_DIR}/turbojpeg.h"
 )
 
-if(THIRD_PARTY)
+if(NOT DOWNLOAD_THIRD_PARTY AND THIRD_PARTY)
 
 ExternalProject_Add(libjpeg-turbo
     PREFIX libjpeg-turbo
