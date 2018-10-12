@@ -92,8 +92,14 @@ class Kernel {
   }
   virtual void BackwardActivation(const KernelCtx& ctx, const Blob* out_blob,
                                   const Blob* out_diff_blob, Blob* bw_activation_blob) const {}
-  virtual void CalculateTotalInsatcneNum(
-      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {};
+  virtual int32_t CalculateTotalInsatcneNum(
+      const int32_t index, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    UNIMPLEMENTED();
+  }
+  virtual void CalculateTotalInsatcneNumAndSetIntoBlob(
+      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    UNIMPLEMENTED();
+  }
 
   virtual const PbMessage& GetCustomizedOpConf() const { UNIMPLEMENTED(); }
   virtual const PbMessage& GetCustomizedKernelConf() const { UNIMPLEMENTED(); }
@@ -160,7 +166,9 @@ class KernelIfWithModel : virtual public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KernelIfWithModel);
   virtual ~KernelIfWithModel() = default;
-  virtual void CalculateTotalInsatcneNum(
+  int32_t CalculateTotalInsatcneNum(
+      const int32_t index, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void CalculateTotalInsatcneNumAndSetIntoBlob(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
  protected:
