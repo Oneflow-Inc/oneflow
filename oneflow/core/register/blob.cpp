@@ -51,7 +51,10 @@ int32_t Blob::dim1_valid_num(int32_t no) const {
   CHECK_NOTNULL(dim1_valid_num_ptr_);
   CHECK_GE(no, 0);
   CHECK_LT(no, blob_desc_->shape().At(0));
-  return dim1_valid_num_ptr_[no];
+  int32_t val = dim1_valid_num_ptr_[no];
+  CHECK_GE(val, 0);
+  CHECK_LE(val, blob_desc_->shape().At(1));
+  return val;
 }
 
 void Blob::set_dim1_valid_num(int32_t no, int32_t val) {
@@ -67,7 +70,10 @@ int32_t Blob::dim0_valid_num(int32_t no) const {
   CHECK_NOTNULL(dim0_valid_num_ptr_);
   CHECK_GE(no, 0);
   CHECK_LT(no, dim0_inner_shape().At(0));
-  return dim0_valid_num_ptr_[no];
+  int32_t val = dim0_valid_num_ptr_[no];
+  CHECK_GE(val, 0);
+  CHECK_LE(val, dim0_inner_shape().Count(1));
+  return val;
 }
 
 void Blob::set_dim0_valid_num(int32_t no, int32_t val) {
@@ -85,10 +91,13 @@ const Shape& Blob::shape() const {
 }
 
 size_t Blob::ContiguousDim0ValidNum() const {
-  size_t last_invalid_instance_num =
-      dim0_inner_shape().Count(1) - dim0_valid_num(dim0_inner_shape().At(0) - 1);
-  size_t contiguous_instance_num = blob_desc_->shape().At(0) - last_invalid_instance_num;
-  return contiguous_instance_num;
+  size_t contiguous_invalid_instance_num = 0;
+  for (int i = dim0_inner_shape().At(0) - 1; i >= 0; ++i) {
+    size_t valid_num = dim0_valid_num(i);
+    contiguous_invalid_instance_num += dim0_inner_shape().Count(1) - valid_num;
+    if (valid_num > 0) { break; }
+  }
+  return blob_desc_->shape().At(0) - contiguous_invalid_instance_num;
 }
 
 bool Blob::IsShapeEmpty() const {
