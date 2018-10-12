@@ -22,7 +22,7 @@ void AccuracyKernel<device_type, PredType, LabelType>::ForwardDataContent(
   // total instance num
   int32_t total_instance_num = 0;
   Blob* label_blob = BnInOp2Blob("label");
-  if (label_blob->blob_desc_ptr()->has_dim0_valid_num_field()) {
+  if (label_blob->has_dim0_valid_num_field()) {
     for (int32_t i = 0; i < label_blob->dim0_inner_shape().At(0); i++) {
       total_instance_num += label_blob->dim0_valid_num(i);
     }
