@@ -78,6 +78,7 @@ class Blob final {
   const RtBlobDesc* blob_desc_ptr() const { return blob_desc_; }
   const Shape& static_shape() const { return blob_desc_->shape(); }
   const Shape& shape() const;
+  bool IsShapeEmpty() const;
   bool has_dim0_inner_shape() const { return blob_desc_->has_dim0_inner_shape(); }
   const Shape& dim0_inner_shape() const { return blob_desc_->dim0_inner_shape(); }
 
@@ -113,6 +114,7 @@ class Blob final {
 
  private:
   const Shape& dynamic_shape() const;
+  size_t ContiguousDim0ValidNum() const;
   int64_t GetDptrOffset(int32_t index) const { return 0; }
   template<typename... Int64s>
   int64_t GetDptrOffset(int32_t index, int64_t cur_dim, Int64s... remainder) const {
