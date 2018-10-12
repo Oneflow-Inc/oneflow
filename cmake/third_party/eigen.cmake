@@ -28,4 +28,4 @@ ExternalProject_Add(eigen
 )
 
 
-endif(THIRD_PARTY)
+endif(NOT DOWNLOAD_THIRD_PARTY AND THIRD_PARTY)

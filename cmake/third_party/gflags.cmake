@@ -57,4 +57,4 @@ add_custom_target(gflags_copy_libs_to_destination
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GFLAGS_BUILD_STATIC_LIBRARIES} ${GFLAGS_LIBRARY_DIR}
   DEPENDS gflags_create_library_dir)
 
-endif(THIRD_PARTY)
+endif(NOT DOWNLOAD_THIRD_PARTY AND THIRD_PARTY)

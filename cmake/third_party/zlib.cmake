@@ -28,7 +28,7 @@ set(ZLIB_HEADERS
     "${ZLIB_INSTALL}/include/zlib.h"
 )
 
-if(NOT DOWNLOAD_THIRD_PARTY AND THIRD_PARTY)
+if(THIRD_PARTY)
 
 ExternalProject_Add(zlib
     PREFIX zlib

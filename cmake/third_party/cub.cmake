@@ -25,4 +25,4 @@ add_custom_target(cub_copy_headers_to_destination
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CUB_BUILD_INCLUDE} ${CUB_INCLUDE_DIR}/cub
     DEPENDS cub_create_header_dir)
 
-endif(THIRD_PARTY)
+endif(NOT DOWNLOAD_THIRD_PARTY AND THIRD_PARTY)

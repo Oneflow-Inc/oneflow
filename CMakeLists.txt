@@ -12,11 +12,7 @@ option(RELEASE_VERSION "" OFF)
 
 # Project
 if (THIRD_PARTY)
-  if (DOWNLOAD_THIRD_PARTY)
-    project(3rd_party)
-  else()
-    project(third_party C CXX)
-  endif()
+  project(third_party C CXX)
 else()
   project(oneflow C CXX)
 endif()
