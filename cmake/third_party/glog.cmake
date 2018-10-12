@@ -3,10 +3,8 @@ include (ExternalProject)
 set(GLOG_INCLUDE_DIR ${THIRD_PARTY_DIR}/glog/include)
 set(GLOG_LIBRARY_DIR ${THIRD_PARTY_DIR}/glog/lib)
 
-# set(glog_URL https://github.com/google/glog.git)
-# set(glog_TAG da816ea70645e463aa04f9564544939fa327d5a7)
-
-set(gflags_URL http://download.oneflow.org/google-glog-v0.3.4-88-gda816ea.tar.gz)
+set(glog_URL https://github.com/google/glog.git)
+set(glog_TAG da816ea70645e463aa04f9564544939fa327d5a7)
 
 if(WIN32)
     set(GLOG_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/glog/src/glog/${CMAKE_BUILD_TYPE})
@@ -38,9 +36,8 @@ if(THIRD_PARTY)
 ExternalProject_Add(glog
     DEPENDS gflags_copy_headers_to_destination gflags_copy_libs_to_destination
     PREFIX glog
-    # GIT_REPOSITORY ${glog_URL}
-    # GIT_TAG ${glog_TAG}
-    URL ${gflags_URL}
+    GIT_REPOSITORY ${glog_URL}
+    GIT_TAG ${glog_TAG}
     UPDATE_COMMAND ""
     BUILD_IN_SOURCE 1
     INSTALL_COMMAND ""
