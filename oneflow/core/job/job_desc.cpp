@@ -119,9 +119,9 @@ void JobDesc::Init() {
 #ifndef WITH_RDMA
   CHECK_EQ(job_conf_.other().use_rdma(), false) << "Please compile ONEFLOW with RDMA";
 #endif
-#ifndef WITH_NCCL
+#ifndef WITH_CUDA
   CHECK_EQ(job_conf_.other().enable_nccl(), false) << "Please compile ONEFLOW with NCCL";
-#endif  // WITH_NCCL
+#endif  // WITH_CUDA
   int64_t piece_exp = job_conf_.other().piece_num_of_experiment_phase();
   if (job_conf_.other().has_train_conf()) {
     TrainConf* train_conf = job_conf_.mutable_other()->mutable_train_conf();
@@ -148,8 +148,21 @@ void JobDesc::Init() {
 void JobDesc::SanityCheck() {
   int64_t machine_num = job_conf_.resource().machine_size();
   FOR_RANGE(int64_t, i, 0, machine_num) { CHECK_EQ(job_conf_.resource().machine(i).id(), i); }
-  CHECK_GE(FLAGS_this_machine_id, 0);
-  CHECK_LT(FLAGS_this_machine_id, machine_num);
+}
+
+int64_t JobDesc::GetMachineId(const std::string& addr) const {
+  int64_t machine_id = -1;
+  auto resource_conf = job_conf_.resource();
+  int64_t machine_num = resource_conf.machine_size();
+  FOR_RANGE(int64_t, i, 0, machine_num) {
+    if (addr == resource_conf.machine(i).addr()) {
+      machine_id = i;
+      break;
+    }
+  }
+  CHECK_GE(machine_id, 0);
+  CHECK_LT(machine_id, machine_num);
+  return machine_id;
 }
 
 void JobDesc::SplitDecodeOps() {
