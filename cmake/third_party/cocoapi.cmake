@@ -6,13 +6,10 @@ set(COCOAPI_LIBRARY_DIR ${THIRD_PARTY_DIR}/cocoapi/lib)
 set(COCOAPI_URL https://github.com/cocodataset/cocoapi.git)
 set(COCOAPI_TAG ed842bffd41f6ff38707c4f0968d2cfd91088688)
 set(COCOAPI_BASE_DIR ${CMAKE_CURRENT_BINARY_DIR}/cocoapi/src/cocoapi)
-set(COCOAPI_LIBRARY_NAMES libcocoapi_static.a)
+set(COCOAPI_LIBRARY_NAME libcocoapi_static.a)
 
-
-foreach(LIBRARY_NAME ${COCOAPI_LIBRARY_NAMES})
-    list(APPEND COCOAPI_STATIC_LIBRARIES ${COCOAPI_LIBRARY_DIR}/${LIBRARY_NAME})
-    list(APPEND COCOAPI_BUILD_STATIC_LIBRARIES ${COCOAPI_BASE_DIR}/${LIBRARY_NAME})
-endforeach()
+list(APPEND COCOAPI_STATIC_LIBRARIES ${COCOAPI_LIBRARY_DIR}/${COCOAPI_LIBRARY_NAME})
+list(APPEND COCOAPI_BUILD_STATIC_LIBRARIES ${COCOAPI_BASE_DIR}/${COCOAPI_LIBRARY_NAME})
 
 set(COCOAPI_HEADERS
     "${COCOAPI_BASE_DIR}/common/maskApi.h"
@@ -27,7 +24,7 @@ ExternalProject_Add(cocoapi
     UPDATE_COMMAND ""
     CONFIGURE_COMMAND ""
     BUILD_IN_SOURCE 1
-    BUILD_COMMAND gcc -c common/maskApi.c -o maskApi.o && ar rcs ${COCOAPI_LIBRARY_NAMES} maskApi.o
+    BUILD_COMMAND gcc -c common/maskApi.c -o maskApi.o && ar rcs ${COCOAPI_LIBRARY_NAME} maskApi.o
     INSTALL_COMMAND ""
 )
 
