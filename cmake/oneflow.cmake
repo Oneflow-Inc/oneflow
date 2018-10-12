@@ -3,7 +3,7 @@ list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/oneflow.cpp)
 list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/tools/gen_resnet.cpp)
 list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/tools/gen_alexnet.cpp)
 list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/tools/gen_googlenet.cpp)
-
+include(FindCuDNN)
 function(oneflow_add_executable)
   if (BUILD_CUDA)
     cuda_add_executable(${ARGV})

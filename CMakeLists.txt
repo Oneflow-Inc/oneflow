@@ -79,7 +79,7 @@ list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir}/third_party)
 list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir})
 include(util)
 include(proto2cpp)
-include(third_party)
+include(3rd_party)
 
 if (BUILD_THIRD_PARTY)
   add_custom_target(prepare_oneflow_third_party ALL DEPENDS ${oneflow_third_party_dependencies})
