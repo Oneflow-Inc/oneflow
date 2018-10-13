@@ -4,15 +4,14 @@ namespace oneflow {
 
 void BboxNmsAndLimitOp::InitFromOpConf() {
   CHECK(op_conf().has_bbox_nms_and_limit_conf());
-  EnrollInputBn("rois", false);
-  EnrollInputBn("bbox_delta", false);
-  EnrollInputBn("scores", false);
-  EnrollPbOutputBn("labeled_bbox");
-  EnrollPbOutputBn("bbox_score");
-  EnrollDataTmpBn("bbox");
-  EnrollDataTmpBn("voting_score");
-  EnrollDataTmpBn("pre_nms_index_slice");
-  EnrollDataTmpBn("post_nms_index_slice");
+  EnrollInputBn("bbox", false);
+  EnrollInputBn("bbox_pred", false);
+  EnrollInputBn("bbox_prob", false);
+  EnrollOutputBn("out_bbox", false);
+  EnrollOutputBn("out_bbox_score", false);
+  EnrollOutputBn("out_bbox_label", false);
+  EnrollDataTmpBn("target_bbox");
+  EnrollDataTmpBn("bbox_score");
 }
 
 const PbMessage& BboxNmsAndLimitOp::GetCustomizedConf() const {
@@ -22,7 +21,7 @@ const PbMessage& BboxNmsAndLimitOp::GetCustomizedConf() const {
 void BboxNmsAndLimitOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
-  kernel_conf->set_data_type(GetBlobDesc4BnInOp("bbox_delta")->data_type());
+  kernel_conf->set_data_type(GetBlobDesc4BnInOp("bbox_pred")->data_type());
 }
 
 void BboxNmsAndLimitOp::InferBlobDescs(
@@ -31,43 +30,51 @@ void BboxNmsAndLimitOp::InferBlobDescs(
   CHECK_EQ(device_type(), DeviceType::kCPU);
   const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
   if (conf.bbox_vote_enabled()) { CHECK(conf.has_bbox_vote()); }
-  // input: bbox_delta (n * r, c * 4)
-  const BlobDesc* bbox_delta_blob_desc = GetBlobDesc4BnInOp("bbox_delta");
-  // input: scores (n * r, c)
-  const BlobDesc* scores_blob_desc = GetBlobDesc4BnInOp("scores");
-  // input: rois (n, r, 4)
-  const BlobDesc* rois_blob_desc = GetBlobDesc4BnInOp("rois");
-  const int64_t images_num = rois_blob_desc->shape().At(0);
-  const int64_t rois_num = rois_blob_desc->shape().At(1);
-  const int64_t class_num = scores_blob_desc->shape().At(1);
-  CHECK_EQ(bbox_delta_blob_desc->shape().At(0), scores_blob_desc->shape().At(0));
-  CHECK_EQ(bbox_delta_blob_desc->shape().At(0), images_num * rois_num);
-  CHECK_EQ(bbox_delta_blob_desc->shape().At(1), class_num * 4);
-  CHECK_EQ(rois_blob_desc->shape().At(2), 4);
-  // output: labeled_bbox (n) pb
-  BlobDesc* labeled_bbox_blob_desc = GetBlobDesc4BnInOp("labeled_bbox");
-  labeled_bbox_blob_desc->mut_shape() = Shape({images_num});
-  labeled_bbox_blob_desc->set_data_type(DataType::kInt32List16);
-  labeled_bbox_blob_desc->set_has_data_id_field(rois_blob_desc->has_data_id_field());
-  // output: bbox_score (n) pb
-  BlobDesc* bbox_score_blob_desc = GetBlobDesc4BnInOp("bbox_score");
-  bbox_score_blob_desc->mut_shape() = Shape({images_num});
-  bbox_score_blob_desc->set_data_type(DataType::kFloatList16);
-  bbox_score_blob_desc->set_has_data_id_field(rois_blob_desc->has_data_id_field());
-  // datatmp: bbox (r, c, 4)
-  BlobDesc* bbox_blob_desc = GetBlobDesc4BnInOp("bbox");
-  bbox_blob_desc->mut_shape() = Shape({rois_num, class_num, 4});
-  bbox_blob_desc->set_data_type(bbox_delta_blob_desc->data_type());
+  int32_t num_limit = conf.detections_per_im();
+
+  // input: bbox (r, 5)
+  const BlobDesc* bbox_bd = GetBlobDesc4BnInOp("bbox");
+  // input: bbox_pred (r, c * 4)
+  const BlobDesc* bbox_pred_bd = GetBlobDesc4BnInOp("bbox_pred");
+  // input: bbox_prob (r, c)
+  const BlobDesc* bbox_prob_bd = GetBlobDesc4BnInOp("bbox_prob");
+  const int64_t num_boxes = bbox_bd->shape().At(0);
+  const int64_t num_classes = bbox_prob_bd->shape().At(1);
+  CHECK_EQ(bbox_bd->shape().At(1), 5);
+  CHECK_EQ(bbox_pred_bd->shape().At(0), num_boxes);
+  CHECK_EQ(bbox_prob_bd->shape().At(0), num_boxes);
+  CHECK_EQ(bbox_pred_bd->shape().At(1), num_classes * 4);
+  CHECK(!bbox_bd->has_data_id_field());
+  CHECK(!bbox_pred_bd->has_data_id_field());
+  CHECK(!bbox_prob_bd->has_data_id_field());
+
+  // output: out_bbox (num_limit, 5)
+  BlobDesc* out_bbox_bd = GetBlobDesc4BnInOp("out_bbox");
+  out_bbox_bd->mut_shape() = Shape({num_limit, 5});
+  out_bbox_bd->set_data_type(bbox_bd->data_type());
+  out_bbox_bd->mut_dim0_inner_shape() = Shape({1, num_limit});
+  out_bbox_bd->set_has_dim0_valid_num_field(true);
+  // output: out_bbox_label (num_limit)
+  BlobDesc* out_bbox_label_bd = GetBlobDesc4BnInOp("out_bbox_label");
+  out_bbox_label_bd->mut_shape() = Shape({num_limit});
+  out_bbox_label_bd->set_data_type(DataType::kInt32);
+  out_bbox_label_bd->mut_dim0_inner_shape() = Shape({1, num_limit});
+  out_bbox_label_bd->set_has_dim0_valid_num_field(true);
+  // output: out_bbox_score (num_limit)
+  BlobDesc* out_bbox_score_bd = GetBlobDesc4BnInOp("out_bbox_score");
+  out_bbox_score_bd->mut_shape() = Shape({num_limit});
+  out_bbox_score_bd->set_data_type(bbox_prob_bd->data_type());
+  out_bbox_score_bd->mut_dim0_inner_shape() = Shape({1, num_limit});
+  out_bbox_score_bd->set_has_dim0_valid_num_field(true);
+
+  // datatmp: target_bbox (r, c, 5)
+  BlobDesc* target_bbox_bd = GetBlobDesc4BnInOp("target_bbox");
+  target_bbox_bd->mut_shape() = Shape({num_boxes, num_classes, 5});
+  target_bbox_bd->set_data_type(bbox_bd->data_type());
   // datatmp: voting_score (r, c)
-  BlobDesc* voting_score_blob_desc = GetBlobDesc4BnInOp("voting_score");
-  voting_score_blob_desc->mut_shape() = Shape({rois_num, class_num});
-  voting_score_blob_desc->set_data_type(scores_blob_desc->data_type());
-  // datatmp: pre_nms_index_slice (c, r)
-  BlobDesc* pre_nms_index_blob_desc = GetBlobDesc4BnInOp("pre_nms_index_slice");
-  pre_nms_index_blob_desc->mut_shape() = Shape({class_num, rois_num});
-  pre_nms_index_blob_desc->set_data_type(DataType::kInt32);
-  // datatmp: post_nms_index_slice (c, r)
-  *GetBlobDesc4BnInOp("post_nms_index_slice") = *pre_nms_index_blob_desc;
+  BlobDesc* voting_score_bd = GetBlobDesc4BnInOp("bbox_score");
+  voting_score_bd->mut_shape() = Shape({num_boxes, num_classes});
+  voting_score_bd->set_data_type(bbox_prob_bd->data_type());
 }
 
 REGISTER_OP(OperatorConf::kBboxNmsAndLimitConf, BboxNmsAndLimitOp);
