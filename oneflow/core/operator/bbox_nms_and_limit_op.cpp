@@ -54,32 +54,29 @@ void BboxNmsAndLimitOp::InferBlobDescs(
   BlobDesc* out_bbox_bd = GetBlobDesc4BnInOp("out_bbox");
   out_bbox_bd->mut_shape() = Shape({num_limit, 5});
   out_bbox_bd->set_data_type(bbox_bd->data_type());
+  out_bbox_bd->mut_dim0_inner_shape() = Shape({1, num_limit});
   out_bbox_bd->set_has_dim0_valid_num_field(true);
   // output: out_bbox_label (num_limit)
   BlobDesc* out_bbox_label_bd = GetBlobDesc4BnInOp("out_bbox_label");
   out_bbox_label_bd->mut_shape() = Shape({num_limit});
   out_bbox_label_bd->set_data_type(DataType::kInt32);
+  out_bbox_label_bd->mut_dim0_inner_shape() = Shape({1, num_limit});
   out_bbox_label_bd->set_has_dim0_valid_num_field(true);
   // output: out_bbox_score (num_limit)
   BlobDesc* out_bbox_score_bd = GetBlobDesc4BnInOp("out_bbox_score");
   out_bbox_score_bd->mut_shape() = Shape({num_limit});
   out_bbox_score_bd->set_data_type(bbox_prob_bd->data_type());
+  out_bbox_score_bd->mut_dim0_inner_shape() = Shape({1, num_limit});
   out_bbox_score_bd->set_has_dim0_valid_num_field(true);
 
-  // datatmp: target_bbox (r, c, 4)
+  // datatmp: target_bbox (r, c, 5)
   BlobDesc* target_bbox_bd = GetBlobDesc4BnInOp("target_bbox");
-  target_bbox_bd->mut_shape() = Shape({num_boxes, num_classes, 4});
+  target_bbox_bd->mut_shape() = Shape({num_boxes, num_classes, 5});
   target_bbox_bd->set_data_type(bbox_bd->data_type());
   // datatmp: voting_score (r, c)
-  BlobDesc* voting_score_bd = GetBlobDesc4BnInOp("voting_score");
+  BlobDesc* voting_score_bd = GetBlobDesc4BnInOp("bbox_score");
   voting_score_bd->mut_shape() = Shape({num_boxes, num_classes});
   voting_score_bd->set_data_type(bbox_prob_bd->data_type());
-  // datatmp: pre_nms_inds (c, r)
-  BlobDesc* pre_nms_inds_bd = GetBlobDesc4BnInOp("pre_nms_inds");
-  pre_nms_inds_bd->mut_shape() = Shape({num_classes, num_boxes});
-  pre_nms_inds_bd->set_data_type(DataType::kInt32);
-  // datatmp: post_nms_inds (c, r)
-  *GetBlobDesc4BnInOp("post_nms_inds") = *pre_nms_inds_bd;
 }
 
 REGISTER_OP(OperatorConf::kBboxNmsAndLimitConf, BboxNmsAndLimitOp);

@@ -51,7 +51,7 @@ class BboxNmsAndLimitKernel final : public KernelIf<DeviceType::kCPU> {
                                               const Blob* bbox_prob_blob, Blob* bbox_score_blob,
                                               Blob* target_bbox_blob) const;
   void VoteBboxAndScore(const ScoredBoxesIndices& pre_nms_inds,
-                        const ScoredBoxesIndices& post_nms_inds) const;
+                        ScoredBoxesIndices& post_nms_inds) const;
   void VoteBbox(const ScoredBoxesIndices& pre_nms_inds, BBox* votee_bbox,
                 const std::function<void(const std::function<void(int32_t, float)>&)>&) const;
   void Limit(const Blob* bbox_score_blob, std::vector<int32_t>& bbox_inds) const;

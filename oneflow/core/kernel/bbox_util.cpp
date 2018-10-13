@@ -29,4 +29,9 @@ void BBoxUtil<BBox>::Nms(float thresh, const BBoxIndicesT& pre_nms_bbox_inds,
   CHECK_LE(post_nms_bbox_inds.size(), pre_nms_bbox_inds.size());
 }
 
+#define INITIATE_BBOX_UTIL(T, type_cpp)                                \
+  template struct BBoxUtil<BBoxImpl<T, BBoxBase, BBoxCoord::kCorner>>; \
+  template struct BBoxUtil<BBoxImpl<T, ImIndexedBBoxBase, BBoxCoord::kCorner>>;
+OF_PP_FOR_EACH_TUPLE(INITIATE_BBOX_UTIL, FLOATING_DATA_TYPE_SEQ);
+
 }  // namespace oneflow

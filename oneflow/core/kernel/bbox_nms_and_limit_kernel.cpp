@@ -88,12 +88,14 @@ DEFINE_SCORING_METHOD(ScoringMethod::kTempAvg, slice, default_score, ForEach) {
 }
 
 template<typename T>
-typename BboxNmsAndLimitKernel<T>::ScoredBoxesIndices GenScoredBoxesIndices(
-    size_t capacity, int32_t* index_buf, const T* bbox_buf, const T* score_buf, bool init_index) {
-  using BBoxT = typename BboxNmsAndLimitKernel<T>::BBox;
+typename BboxNmsAndLimitKernel<typename std::remove_const<T>::type>::ScoredBoxesIndices
+GenScoredBoxesIndices(size_t capacity, int32_t* index_buf, T* bbox_buf, T* score_buf,
+                      bool init_index) {
+  using TT = typename std::remove_const<T>::type;
+  using BBoxT = typename BboxNmsAndLimitKernel<TT>::BBox;
   BBoxIndices<IndexSequence, BBoxT> bbox_inds(IndexSequence(capacity, index_buf, init_index),
-                                              bbox_buf);
-  return ScoreIndices<BBoxIndices<IndexSequence, BBoxT>, T>(bbox_inds, score_buf);
+                                              const_cast<TT*>(bbox_buf));
+  return ScoreIndices<BBoxIndices<IndexSequence, BBoxT>, TT>(bbox_inds, score_buf);
 }
 
 }  // namespace
@@ -105,6 +107,12 @@ void BboxNmsAndLimitKernel<T>::VirtualKernelInit(const ParallelContext* parallel
     scoring_method_.reset(NewObj<ScoringMethodIf<T>>(conf.bbox_vote().scoring_method()));
     scoring_method_->Init(conf.bbox_vote());
   }
+}
+
+template<typename T>
+void BboxNmsAndLimitKernel<T>::ForwardDim0ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  // do nothing
 }
 
 template<typename T>
@@ -147,7 +155,9 @@ void BboxNmsAndLimitKernel<T>::BroadcastBboxTransform(const Blob* bbox_blob,
     const auto* bbox = BBox::Cast(bbox_blob->dptr<T>(i));
     const auto* delta = BBoxDelta<T>::Cast(bbox_pred_blob->dptr<T>(i));
     FOR_RANGE(int64_t, j, 0, num_classes) {
-      BBox::MutCast(target_bbox_blob->mut_dptr<T>(i, j))->Transform(bbox, delta + j, bbox_reg_ws);
+      BBox* target_bbox = BBox::MutCast(target_bbox_blob->mut_dptr<T>(i, j));
+      target_bbox->Transform(bbox, delta + j, bbox_reg_ws);
+      target_bbox->set_im_index(bbox->im_index());
     }
   }
 }
@@ -166,10 +176,11 @@ typename BboxNmsAndLimitKernel<T>::Image2IndexVecMap BboxNmsAndLimitKernel<T>::G
     Blob* target_bbox_blob) const {
   Image2IndexVecMap im_grouped_bbox_inds;
   FOR_RANGE(int32_t, i, 0, target_bbox_blob->shape().At(0)) {
-    const auto* bbox = BBox::Cast(target_bbox_blob->dptr<T>(i, 0));
-    int32_t im_idx = bbox->im_index<int32_t>();
+    const BBox* bbox = BBox::Cast(target_bbox_blob->dptr<T>(i, 0));
+    int32_t im_idx = static_cast<int32_t>(bbox->im_index());
     im_grouped_bbox_inds[im_idx].emplace_back(i);
   }
+  return im_grouped_bbox_inds;
 }
 
 template<typename T>
@@ -193,11 +204,13 @@ std::vector<int32_t> BboxNmsAndLimitKernel<T>::ApplyNmsAndVoteByClass(
     });
     cls_bbox_inds.erase(lt_thresh_it, cls_bbox_inds.end());
     // nms
-    auto pre_nms_inds = GenScoredBoxesIndices(cls_bbox_inds.size(), cls_bbox_inds.data(),
-                                              target_bbox_blob->dptr<T>(), bbox_prob_ptr, false);
+    ScoredBoxesIndices pre_nms_inds =
+        GenScoredBoxesIndices(cls_bbox_inds.size(), cls_bbox_inds.data(),
+                              target_bbox_blob->dptr<T>(), bbox_prob_ptr, false);
     std::vector<int32_t> post_nms_bbox_inds(cls_bbox_inds.size());
-    auto post_nms_inds = GenScoredBoxesIndices(post_nms_bbox_inds.size(), post_nms_bbox_inds.data(),
-                                               target_bbox_blob->dptr<T>(), bbox_score_ptr, false);
+    ScoredBoxesIndices post_nms_inds =
+        GenScoredBoxesIndices(post_nms_bbox_inds.size(), post_nms_bbox_inds.data(),
+                              target_bbox_blob->mut_dptr<T>(), bbox_score_ptr, false);
     BBoxUtil<BBox>::Nms(conf.nms_threshold(), pre_nms_inds, post_nms_inds);
     // voting
     if (conf.bbox_vote_enabled()) { VoteBboxAndScore(pre_nms_inds, post_nms_inds); }
@@ -213,7 +226,7 @@ std::vector<int32_t> BboxNmsAndLimitKernel<T>::ApplyNmsAndVoteByClass(
 
 template<typename T>
 void BboxNmsAndLimitKernel<T>::VoteBboxAndScore(const ScoredBoxesIndices& pre_nms_inds,
-                                                const ScoredBoxesIndices& post_nms_inds) const {
+                                                ScoredBoxesIndices& post_nms_inds) const {
   const T voting_thresh = op_conf().bbox_nms_and_limit_conf().bbox_vote().threshold();
   FOR_RANGE(size_t, i, 0, post_nms_inds.size()) {
     const auto* votee_bbox = post_nms_inds.GetBBox(i);
@@ -284,7 +297,7 @@ void BboxNmsAndLimitKernel<T>::OutputBBoxScore(const std::vector<int32_t> out_bb
                                                Blob* out_bbox_score_blob) const {
   int32_t out_cnt = 0;
   for (int32_t bbox_idx : out_bbox_inds) {
-    out_bbox_score_blob->mut_dptr<T>(out_cnt++) = bbox_score_blob->dptr<T>() + bbox_idx;
+    out_bbox_score_blob->mut_dptr<T>()[out_cnt++] = bbox_score_blob->dptr<T>()[bbox_idx];
   }
   CHECK_LE(out_cnt, out_bbox_score_blob->shape().elem_cnt());
   out_bbox_score_blob->set_dim0_valid_num(0, out_cnt);
@@ -296,7 +309,7 @@ void BboxNmsAndLimitKernel<T>::OutputBBoxLabel(const std::vector<int32_t> out_bb
                                                Blob* out_bbox_label_blob) const {
   int32_t out_cnt = 0;
   for (int32_t bbox_idx : out_bbox_inds) {
-    out_bbox_label_blob->mut_dptr<T>(out_cnt++) = bbox_idx % num_classes;
+    out_bbox_label_blob->mut_dptr<T>()[out_cnt++] = bbox_idx % num_classes;
   }
   CHECK_LE(out_cnt, out_bbox_label_blob->shape().elem_cnt());
   out_bbox_label_blob->set_dim0_valid_num(0, out_cnt);
