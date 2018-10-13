@@ -11,9 +11,7 @@ void BboxNmsAndLimitOp::InitFromOpConf() {
   EnrollOutputBn("out_bbox_score", false);
   EnrollOutputBn("out_bbox_label", false);
   EnrollDataTmpBn("target_bbox");
-  EnrollDataTmpBn("voting_score");
-  EnrollDataTmpBn("pre_nms_inds");
-  EnrollDataTmpBn("post_nms_inds");
+  EnrollDataTmpBn("bbox_score");
 }
 
 const PbMessage& BboxNmsAndLimitOp::GetCustomizedConf() const {
