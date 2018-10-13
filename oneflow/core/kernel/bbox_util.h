@@ -8,38 +8,30 @@
 
 namespace oneflow {
 
-template<typename T, size_t N>
-class ArrayBuffer;
-
-template<template<typename, template<typename> class> class Wrapper, template<typename> class Base,
-         typename T, size_t N>
-class ArrayBuffer<Wrapper<T, Base>, N> {
+template<typename Wrapper, size_t N>
+class ArrayBuffer {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ArrayBuffer);
   ArrayBuffer() = delete;
   ~ArrayBuffer() = delete;
 
-  // traits
-  using ElemType = T;
-  using ElemArray = std::array<ElemType, N>;
-  using WrapperType = Wrapper<T, Base>;
+  using T = typename Wrapper::ElemType;
+  using ArrayT = std::array<T, N>;
 
-  static const WrapperType* Cast(const ElemType* buf) {
-    return reinterpret_cast<const WrapperType*>(buf);
-  }
-  static WrapperType* MutCast(ElemType* buf) { return reinterpret_cast<WrapperType*>(buf); }
+  static const Wrapper* Cast(const T* buf) { return reinterpret_cast<const Wrapper*>(buf); }
+  static Wrapper* MutCast(T* buf) { return reinterpret_cast<Wrapper*>(buf); }
 
-  const ElemArray& elem() const { return elem_; }
-  ElemArray& mut_elem() { return elem_; }
+  const ArrayT& elem() const { return elem_; }
+  ArrayT& mut_elem() { return elem_; }
 
  private:
-  ElemArray elem_;
+  ArrayT elem_;
 };
 
 template<typename Impl>
 class BBoxBase : public ArrayBuffer<Impl, 4> {
  public:
-  using T = typename ArrayBuffer<Impl, 4>::ElemType;
+  using T = typename Impl::ElemType;
 
   T bbox_elem(size_t n) const { return this->elem()[n]; }
   void set_bbox_elem(size_t n, T val) { this->mut_elem()[n] = val; }
@@ -48,16 +40,16 @@ class BBoxBase : public ArrayBuffer<Impl, 4> {
 template<typename Impl>
 class ImIndexedBBoxBase : public ArrayBuffer<Impl, 5> {
  public:
-  using T = typename ArrayBuffer<Impl, 5>::ElemType;
+  using T = typename Impl::ElemType;
 
   T bbox_elem(size_t n) const { return this->elem()[n + 1]; }
   void set_bbox_elem(size_t n, T val) { this->mut_elem()[n + 1] = val; }
 
-  template<typename IndexType>
+  template<typename IndexType = T>
   IndexType im_index() const {
     return static_cast<IndexType>(this->elem()[0]);
   }
-  void set_im_index(T index) const { this->mut_elem()[0] = index; }
+  void set_im_index(T index) { this->mut_elem()[0] = index; }
 };
 
 template<typename T>
@@ -67,7 +59,7 @@ template<typename Impl>
 class BBoxIf {
   using T = typename Impl::ElemType;
   template<typename U>
-  using OtherBBox = BBoxIf<typename Impl::template ImplTempType<U>>;
+  using OtherBBox = BBoxIf<typename Impl::template ImplT<U>>;
 
   Impl* impl() { return dynamic_cast<Impl*>(this); }
   const Impl* impl() const { return dynamic_cast<const Impl*>(this); }
@@ -132,12 +124,12 @@ class BBoxImpl;
 
 template<typename T, template<typename> class Base>
 class BBoxImpl<T, Base, BBoxCoord::kCorner> final
-    : public BBoxIf<BBoxImpl<T, Base, BBoxCoord::kCorner>>,
-      public Base<BBoxImpl<T, Base, BBoxCoord::kCorner>> {
+    : public Base<BBoxImpl<T, Base, BBoxCoord::kCorner>>,
+      public BBoxIf<BBoxImpl<T, Base, BBoxCoord::kCorner>> {
  public:
-  using ElemType = typename Base<BBoxImpl<T, Base, BBoxCoord::kCorner>>::T;
+  using ElemType = T;
   template<typename U>
-  using ImplTempType = BBoxImpl<U, Base, BBoxCoord::kCorner>;
+  using ImplT = BBoxImpl<U, Base, BBoxCoord::kCorner>;
 
   T left() const { return this->bbox_elem(0); }
   T right() const { return this->bbox_elem(1); }
@@ -164,6 +156,8 @@ class BBoxImpl<T, Base, BBoxCoord::kCorner> final
 template<typename T>
 class BBoxDelta final : public ArrayBuffer<BBoxDelta<T>, 4> {
  public:
+  using ElemType = T;
+
   T dx() const { return this->elem()[0]; }
   T dy() const { return this->elem()[1]; }
   T dw() const { return this->elem()[2]; }
@@ -187,6 +181,8 @@ class BBoxDelta final : public ArrayBuffer<BBoxDelta<T>, 4> {
 template<typename T>
 class BBoxWeights final : public ArrayBuffer<BBoxWeights<T>, 4> {
  public:
+  using ElemType = T;
+
   inline T weight_x() const { return this->elem()[0]; }
   inline T weight_y() const { return this->elem()[1]; }
   inline T weight_w() const { return this->elem()[2]; }

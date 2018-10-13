@@ -43,11 +43,11 @@ class BboxNmsAndLimitKernel final : public KernelIf<DeviceType::kCPU> {
   void ForwardDim0ValidNum(const KernelCtx& ctx,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
-  void BroadcastBboxTransform(const Blob* bbox_blob, const Blob* bbox_pred_blob, 
+  void BroadcastBboxTransform(const Blob* bbox_blob, const Blob* bbox_pred_blob,
                               Blob* target_bbox_blob) const;
   void ClipBBox(Blob* target_bbox_blob) const;
-  Image2IndexVecMap GroupBBox(Blob* target_bbox_blob) const ;
-  std::vector<int32_t> ApplyNmsAndVoteByClass(const std::vector<int32_t>& bbox_row_ids, 
+  Image2IndexVecMap GroupBBox(Blob* target_bbox_blob) const;
+  std::vector<int32_t> ApplyNmsAndVoteByClass(const std::vector<int32_t>& bbox_row_ids,
                                               const Blob* bbox_prob_blob, Blob* bbox_score_blob,
                                               Blob* target_bbox_blob) const;
   void VoteBboxAndScore(const ScoredBoxesIndices& pre_nms_inds,
@@ -55,12 +55,12 @@ class BboxNmsAndLimitKernel final : public KernelIf<DeviceType::kCPU> {
   void VoteBbox(const ScoredBoxesIndices& pre_nms_inds, BBox* votee_bbox,
                 const std::function<void(const std::function<void(int32_t, float)>&)>&) const;
   void Limit(const Blob* bbox_score_blob, std::vector<int32_t>& bbox_inds) const;
-  void OutputBBox(const std::vector<int32_t> out_bbox_inds, const Blob* target_bbox_blob, 
+  void OutputBBox(const std::vector<int32_t> out_bbox_inds, const Blob* target_bbox_blob,
                   Blob* out_bbox_blob) const;
-  void OutputBBoxScore(const std::vector<int32_t> out_bbox_inds, const Blob* bbox_score_blob, 
-                  Blob* out_bbox_score_blob) const;
-  void OutputBBoxLabel(const std::vector<int32_t> out_bbox_inds, const int32_t num_classes,, 
-                  Blob* out_bbox_label_blob) const;
+  void OutputBBoxScore(const std::vector<int32_t> out_bbox_inds, const Blob* bbox_score_blob,
+                       Blob* out_bbox_score_blob) const;
+  void OutputBBoxLabel(const std::vector<int32_t> out_bbox_inds, const int32_t num_classes,
+                       Blob* out_bbox_label_blob) const;
 
   std::unique_ptr<ScoringMethodIf<T>> scoring_method_;
 };
