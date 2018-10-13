@@ -487,13 +487,13 @@ class MaxOverlapWithGtIndices : public Indices {
 };
 
 template<typename BBox>
-struct BBoxUtil final : {
+struct BBoxUtil final {
   using T = typename BBox::ElemType;
   using BBoxIndicesT = BBoxIndices<IndexSequence, BBox>;
 
   static void Nms(float thresh, const BBoxIndicesT& pre_nms_bbox_inds,
                   BBoxIndicesT& post_nms_bbox_inds);
-}
+};
 
 }  // namespace oneflow
 
