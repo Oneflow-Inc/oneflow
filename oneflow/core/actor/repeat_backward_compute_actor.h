@@ -16,8 +16,9 @@ class RepeatBackwardCompActor final : public CompActor {
   void Act() override;
   int64_t ActNumForEachOutput(int64_t regst_desc_id) const override { return repeat_num_; };
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
-  int64_t repeat_num_ = -1;
-  int64_t acc_count_ = 0;
+
+  int64_t repeat_num_;
+  int64_t acc_count_;
 };
 
 }  // namespace oneflow

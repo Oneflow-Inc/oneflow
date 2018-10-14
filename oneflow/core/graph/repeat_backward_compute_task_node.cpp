@@ -35,10 +35,7 @@ void RepeatBackwardCompTaskNode::InferProducedDataRegstTimeShape() {
   CHECK(!time_shape_dim_vec.empty());
   CHECK(time_shape_dim_vec.back() == repeat_num);
   time_shape_dim_vec.pop_back();
-  std::shared_ptr<Shape> time_shape(new Shape(time_shape_dim_vec));
-  ForEachProducedDataRegst([time_shape](const std::string& name, RegstDesc* regst) {
-    *regst->mut_data_regst_time_shape() = time_shape;
-  });
+  GetProducedRegst("in_diff")->mut_data_regst_time_shape()->reset(new Shape(time_shape_dim_vec));
 }
 
 }  // namespace oneflow

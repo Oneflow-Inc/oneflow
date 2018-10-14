@@ -8,6 +8,7 @@ void RepeatBackwardCompActor::VirtualCompActorInit(const TaskProto& proto) {
   const KernelConf& kernel_conf = proto.exec_sequence().exec_node().Get(0).kernel_conf();
   CHECK(kernel_conf.op_attribute().op_conf().has_repeat_conf());
   repeat_num_ = kernel_conf.op_attribute().op_conf().repeat_conf().repeat_num();
+  acc_count_ = 0;
   OF_SET_MSG_HANDLER(&RepeatBackwardCompActor::HandlerNormal);
 }
 

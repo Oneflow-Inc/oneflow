@@ -29,10 +29,7 @@ void RepeatForwardCompTaskNode::InferProducedDataRegstTimeShape() {
   CHECK(this->logical_node()->SoleOp()->op_conf().has_repeat_conf());
   time_shape_dim_vec.push_back(
       this->logical_node()->SoleOp()->op_conf().repeat_conf().repeat_num());
-  std::shared_ptr<Shape> time_shape(new Shape(time_shape_dim_vec));
-  ForEachProducedDataRegst([time_shape](const std::string& name, RegstDesc* regst) {
-    *regst->mut_data_regst_time_shape() = time_shape;
-  });
+  GetProducedRegst("out")->mut_data_regst_time_shape()->reset(new Shape(time_shape_dim_vec));
 }
 
 }  // namespace oneflow

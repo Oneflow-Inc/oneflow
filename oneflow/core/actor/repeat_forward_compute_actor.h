@@ -17,9 +17,8 @@ class RepeatForwardCompActor final : public CompActor {
   void VirtualAsyncSendNaiveConsumedRegstMsgToProducer() override;
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
 
-  int64_t repeat_num_ = -1;
-  int64_t repeat_count_ = 0;
-  bool only_launch_at_first_time_ = true;
+  int64_t repeat_num_;
+  int64_t repeat_count_;
 };
 
 }  // namespace oneflow
