@@ -25,7 +25,6 @@ class JobDesc final {
   DataType DefaultDataType() const { return job_conf_.other().default_data_type(); }
   size_t SizeOfOneDataId() const { return job_conf_.other().max_data_id_length() * sizeof(char); }
   bool use_rdma() const { return job_conf_.other().use_rdma(); }
-  bool use_synthetic_data() const { return job_conf_.other().use_synthetic_data(); }
   bool EnableCudnn() const { return job_conf_.other().enable_cudnn(); }
   int64_t TotalMachineNum() const { return job_conf_.resource().machine().size(); }
   int32_t CpuDeviceNum() const { return job_conf_.resource().cpu_device_num(); }
@@ -60,6 +59,7 @@ class JobDesc final {
   }
   int64_t reduce_group_size() const { return job_conf_.other().reduce_group_size(); }
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.other().cudnn_buf_limit_mbyte(); }
+  int64_t GetMachineId(const std::string& addr) const;
 
   // Train conf
   const std::string& MdSaveSnapshotsPath() const;

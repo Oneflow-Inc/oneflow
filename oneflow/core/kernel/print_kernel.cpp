@@ -18,6 +18,7 @@ void PrintKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
 
 void PrintKernel::Forward(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (HasEmptyShapeBlob(this->op_attribute().input_bns(), BnInOp2Blob)) { return; }
   auto GetBlob = [&](int64_t blob_id) -> Blob* {
     return BnInOp2Blob(this->op_attribute().input_bns(blob_id));
   };

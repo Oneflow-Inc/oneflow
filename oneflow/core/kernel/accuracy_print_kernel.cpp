@@ -6,6 +6,7 @@ namespace oneflow {
 template<typename T>
 void AccuracyPrintKernel<T>::Forward(const KernelCtx& kernel_ctx,
                                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (HasEmptyShapeBlob(this->op_attribute().input_bns(), BnInOp2Blob)) { return; }
   const Blob* accuracy_acc_blob = BnInOp2Blob("accuracy_acc");
   T accuracy_num = accuracy_acc_blob->dptr<T>()[0];
   int total_num = Global<JobDesc>::Get()->BatchSize();

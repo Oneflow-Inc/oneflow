@@ -14,7 +14,7 @@ class DecodeRandomOp final : public Operator {
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
-  LogicalNode* NewProperLogicalNode() override { return new DecodeLogicalNode; }
+  LogicalNode* NewProperLogicalNode() override { return new DecodeRandomLogicalNode; }
 
   bool IsDecodeOp() const override { return true; }
 
