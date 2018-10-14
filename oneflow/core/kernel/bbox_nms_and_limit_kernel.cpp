@@ -95,7 +95,7 @@ GenScoredBoxesIndices(size_t capacity, int32_t* index_buf, T* bbox_buf, T* score
   using BBoxT = typename BboxNmsAndLimitKernel<TT>::BBox;
   BBoxIndices<IndexSequence, BBoxT> bbox_inds(IndexSequence(capacity, index_buf, init_index),
                                               const_cast<TT*>(bbox_buf));
-  return ScoreIndices<BBoxIndices<IndexSequence, BBoxT>, TT>(bbox_inds, score_buf);
+  return ScoreIndices<BBoxIndices<IndexSequence, BBoxT>, TT>(bbox_inds, const_cast<TT*>(score_buf));
 }
 
 }  // namespace
@@ -204,11 +204,10 @@ std::vector<int32_t> BboxNmsAndLimitKernel<T>::ApplyNmsAndVoteByClass(
     });
     cls_bbox_inds.erase(lt_thresh_it, cls_bbox_inds.end());
     // nms
-    ScoredBoxesIndices pre_nms_inds =
-        GenScoredBoxesIndices(cls_bbox_inds.size(), cls_bbox_inds.data(),
-                              target_bbox_blob->dptr<T>(), bbox_prob_ptr, false);
+    auto pre_nms_inds = GenScoredBoxesIndices(cls_bbox_inds.size(), cls_bbox_inds.data(),
+                                              target_bbox_blob->dptr<T>(), bbox_prob_ptr, false);
     std::vector<int32_t> post_nms_bbox_inds(cls_bbox_inds.size());
-    ScoredBoxesIndices post_nms_inds =
+    auto post_nms_inds =
         GenScoredBoxesIndices(post_nms_bbox_inds.size(), post_nms_bbox_inds.data(),
                               target_bbox_blob->mut_dptr<T>(), bbox_score_ptr, false);
     BBoxUtil<BBox>::Nms(conf.nms_threshold(), pre_nms_inds, post_nms_inds);
