@@ -8,69 +8,82 @@
 
 namespace oneflow {
 
+enum class BBoxCoord { kCorner = 0, kCenter, kNormCorner, kNormCenter, kAlignCorner };
+
 template<typename T, size_t N>
 class ArrayBuffer;
 
-template<template<typename, template<typename> class> class Wrapper, template<typename> class Base,
-         typename T, size_t N>
-class ArrayBuffer<Wrapper<T, Base>, N> {
+template<typename T>
+struct BBoxBase;
+
+template<typename T>
+struct ImIndexedBBoxBase;
+
+template<typename T>
+struct BBoxIf;
+
+template<typename T, template<typename> class Base, BBoxCoord Coord>
+struct BBoxImpl;
+
+template<typename T>
+struct BBoxDelta;
+
+template<typename T, typename ImplT, size_t N>
+class ArrayBufferBase {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ArrayBuffer);
-  ArrayBuffer() = delete;
-  ~ArrayBuffer() = delete;
+  OF_DISALLOW_COPY_AND_MOVE(ArrayBufferBase);
+  ArrayBufferBase() = delete;
+  ~ArrayBufferBase() = delete;
 
-  // traits
-  using ElemType = T;
-  using ElemArray = std::array<ElemType, N>;
-  using WrapperType = Wrapper<T, Base>;
+  using ArrayType = std::array<T, N>;
+  using Impl = ImplT;
 
-  static const WrapperType* Cast(const ElemType* buf) {
-    return reinterpret_cast<const WrapperType*>(buf);
-  }
-  static WrapperType* MutCast(ElemType* buf) { return reinterpret_cast<WrapperType*>(buf); }
+  static const Impl* Cast(const T* ptr) { return reinterpret_cast<const Impl*>(ptr); }
+  static Impl* MutCast(T* ptr) { return reinterpret_cast<Impl*>(ptr); }
 
-  const ElemArray& elem() const { return elem_; }
-  ElemArray& mut_elem() { return elem_; }
+  const ArrayType& elem() const { return elem_; }
+  ArrayType& mut_elem() { return elem_; }
 
  private:
-  ElemArray elem_;
+  ArrayType elem_;
 };
 
-template<typename Impl>
-class BBoxBase : public ArrayBuffer<Impl, 4> {
- public:
-  using T = typename ArrayBuffer<Impl, 4>::ElemType;
+template<template<typename, template<typename> class, BBoxCoord> class BBoxImplT, typename T,
+         template<typename> class BBoxBaseT, BBoxCoord Coord, size_t N>
+class ArrayBuffer<BBoxImplT<T, BBoxBaseT, Coord>, N>
+    : public ArrayBufferBase<T, BBoxImplT<T, BBoxBaseT, Coord>, N> {};
 
+template<template<typename> class ImplT, typename T, size_t N>
+class ArrayBuffer<ImplT<T>, N> : public ArrayBufferBase<T, ImplT<T>, N> {};
+
+template<template<typename, template<typename> class, BBoxCoord> class BBoxImplT, typename T,
+         BBoxCoord Coord>
+struct BBoxBase<BBoxImplT<T, BBoxBase, Coord>>
+    : public ArrayBuffer<BBoxImplT<T, BBoxBase, Coord>, 4> {
   T bbox_elem(size_t n) const { return this->elem()[n]; }
   void set_bbox_elem(size_t n, T val) { this->mut_elem()[n] = val; }
 };
 
-template<typename Impl>
-class InstIndexedBBoxBase : public ArrayBuffer<Impl, 5> {
- public:
-  using T = typename ArrayBuffer<Impl, 5>::ElemType;
-
+template<template<typename, template<typename> class, BBoxCoord> class BBoxImplT, typename T,
+         BBoxCoord Coord>
+struct ImIndexedBBoxBase<BBoxImplT<T, ImIndexedBBoxBase, Coord>>
+    : public ArrayBuffer<BBoxImplT<T, ImIndexedBBoxBase, Coord>, 5> {
   T bbox_elem(size_t n) const { return this->elem()[n + 1]; }
   void set_bbox_elem(size_t n, T val) { this->mut_elem()[n + 1] = val; }
 
-  template<typename IndexType>
-  IndexType inst_index() const {
-    return static_cast<IndexType>(this->elem()[0]);
-  }
-  void set_inst_index(T index) const { this->mut_elem()[0] = index; }
+  T im_index() const { return this->elem()[0]; }
+  void set_im_index(T index) { this->mut_elem()[0] = index; }
 };
 
-template<typename T>
-class BBoxDelta;
-
-template<typename Impl>
-class BBoxIf {
-  using T = typename Impl::ElemType;
+template<template<typename, template<typename> class, BBoxCoord> class BBoxImplT, typename T,
+         template<typename> class BBoxBaseT, BBoxCoord Coord>
+struct BBoxIf<BBoxImplT<T, BBoxBaseT, Coord>> {
   template<typename U>
-  using OtherBBox = BBoxIf<typename Impl::template ImplTempType<U>>;
+  using OtherBBox = BBoxIf<BBoxImplT<U, BBoxBaseT, Coord>>;
+  using Impl = BBoxImplT<T, BBoxBaseT, Coord>;
 
-  Impl* impl() { return dynamic_cast<Impl*>(this); }
-  const Impl* impl() const { return dynamic_cast<const Impl*>(this); }
+  Impl* impl() { return static_cast<Impl*>(this); }
+  const Impl* impl() const { return static_cast<const Impl*>(this); }
 
   template<typename U>
   float InterOverUnion(const OtherBBox<U>* other) const {
@@ -100,10 +113,10 @@ class BBoxIf {
   }
 
   void Clip(const int64_t height, const int64_t width) {
-    T left = std::max<T>(std::min<T>(left(), width - 1), 0);
-    T top = std::max<T>(std::min<T>(top(), height - 1), 0);
-    T right = std::max<T>(std::min<T>(right(), width - 1), 0);
-    T bottom = std::max<T>(std::min<T>(bottom(), height - 1), 0);
+    T left = std::max<T>(std::min<T>(this->left(), width - 1), 0);
+    T top = std::max<T>(std::min<T>(this->top(), height - 1), 0);
+    T right = std::max<T>(std::min<T>(this->right(), width - 1), 0);
+    T bottom = std::max<T>(std::min<T>(this->bottom(), height - 1), 0);
     set_corner_coord(left, top, right, bottom);
   }
 
@@ -125,19 +138,11 @@ class BBoxIf {
   }
 };
 
-enum class BBoxCoord { kCorner = 0, kCenter };
-
-template<typename T, template<typename> class Base, BBoxCoord Coord>
-class BBoxImpl;
-
-template<typename T, template<typename> class Base>
-class BBoxImpl<T, Base, BBoxCoord::kCorner> final
-    : public BBoxIf<BBoxImpl<T, Base, BBoxCoord::kCorner>>,
-      public Base<BBoxImpl<T, Base, BBoxCoord::kCorner>> {
- public:
-  using ElemType = typename Base<BBoxImpl<T, Base, BBoxCoord::kCorner>>::T;
-  template<typename U>
-  using ImplTempType = BBoxImpl<U, Base, BBoxCoord::kCorner>;
+template<typename T, template<typename> class BBoxBaseT>
+struct BBoxImpl<T, BBoxBaseT, BBoxCoord::kCorner> final
+    : public BBoxIf<BBoxImpl<T, BBoxBaseT, BBoxCoord::kCorner>>,
+      public BBoxBaseT<BBoxImpl<T, BBoxBaseT, BBoxCoord::kCorner>> {
+  using ElemType = T;
 
   T left() const { return this->bbox_elem(0); }
   T right() const { return this->bbox_elem(1); }
@@ -162,8 +167,7 @@ class BBoxImpl<T, Base, BBoxCoord::kCorner> final
 };
 
 template<typename T>
-class BBoxDelta final : public ArrayBuffer<BBoxDelta<T>, 4> {
- public:
+struct BBoxDelta final : public ArrayBuffer<BBoxDelta<T>, 4> {
   T dx() const { return this->elem()[0]; }
   T dy() const { return this->elem()[1]; }
   T dw() const { return this->elem()[2]; }
@@ -185,8 +189,7 @@ class BBoxDelta final : public ArrayBuffer<BBoxDelta<T>, 4> {
 };
 
 template<typename T>
-class BBoxWeights final : public ArrayBuffer<BBoxWeights<T>, 4> {
- public:
+struct BBoxWeights final : public ArrayBuffer<BBoxWeights<T>, 4> {
   inline T weight_x() const { return this->elem()[0]; }
   inline T weight_y() const { return this->elem()[1]; }
   inline T weight_w() const { return this->elem()[2]; }
@@ -302,7 +305,7 @@ class BBoxIndices<Indices, Impl<T, Base, Coord>> : public Indices {
   template<typename U>
   using BBoxT = Impl<U, Base, Coord>;
 
-  BBoxIndices(const Indices& inds, const T* bbox_buf) : Indices(inds), bbox_buf_(bbox_buf) {}
+  BBoxIndices(const Indices& inds, T* bbox_buf) : Indices(inds), bbox_buf_(bbox_buf) {}
 
   void FilterByBBox(const std::function<bool(size_t, int32_t, const BBox*)>& FilterFunc) {
     this->Filter([&](size_t n, int32_t index) { return FilterFunc(n, index, bbox(index)); });
@@ -330,7 +333,7 @@ class BBoxIndices<Indices, Impl<T, Base, Coord>> : public Indices {
   T* mut_bbox() { return bbox_buf_; }
 
  private:
-  const T* bbox_buf_;
+  T* bbox_buf_;
 };
 
 template<typename Indices>
@@ -388,7 +391,7 @@ class LabelIndices : public Indices {
 template<typename Indices, typename T>
 class ScoreIndices : public Indices {
  public:
-  ScoreIndices(const Indices& inds, const T* score_buf) : Indices(inds), score_buf_(score_buf) {}
+  ScoreIndices(const Indices& inds, T* score_buf) : Indices(inds), score_buf_(score_buf) {}
 
   void SortByScore(const std::function<bool(T, T)>& Compare) {
     this->Sort([&](int32_t lhs_index, int32_t rhs_index) {
@@ -408,11 +411,20 @@ class ScoreIndices : public Indices {
     CHECK_LT(n, this->size());
     return score(this->GetIndex(n));
   }
+  void SetScore(size_t n, T score) {
+    CHECK_LT(n, this->size());
+    set_score(this->GetIndex(n));
+  }
   T score(int32_t index) const {
     CHECK_GE(index, 0);
-    return score_buf_[index];
+    return score()[index];
+  }
+  void set_score(int32_t index, T score) {
+    CHECK_GE(index, 0);
+    mut_score()[index] = score;
   }
   const T* score() const { return score_buf_; }
+  T* mut_score() { return score_buf_; }
 
  private:
   T* score_buf_;
@@ -484,6 +496,15 @@ class MaxOverlapWithGtIndices : public Indices {
  private:
   float* max_overlap_buf_;
   int32_t* max_overlap_gt_index_buf_;
+};
+
+template<typename BBox>
+struct BBoxUtil final {
+  using T = typename BBox::ElemType;
+  using BBoxIndicesT = BBoxIndices<IndexSequence, BBox>;
+
+  static void Nms(float thresh, const BBoxIndicesT& pre_nms_bbox_inds,
+                  BBoxIndicesT& post_nms_bbox_inds);
 };
 
 }  // namespace oneflow
