@@ -77,6 +77,10 @@ void Kernel::Forward(const KernelCtx& ctx,
     CHECK(!kernel_conf_.need_do_opaque_header());
     ForwardDim1ValidNum(ctx, BnInOp2Blob);
   }
+  if (kernel_conf_.need_do_dim2_valid_num()) {
+    CHECK(!kernel_conf_.need_do_opaque_header());
+    ForwardDim2ValidNum(ctx, BnInOp2Blob);
+  }
   ForwardDataContent(ctx, BnInOp2Blob);
   if (GetActivationType() != ActivationType::kNone) {
     const PbRpf<std::string> obns = this->op_attribute().output_bns();

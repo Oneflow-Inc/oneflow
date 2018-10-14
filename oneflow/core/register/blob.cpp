@@ -25,6 +25,7 @@ void Blob::Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, cha
   col_num_ptr_ = header_pod_ptr_.MutTensorPtr<int32_t>(FieldKey::kColNum, nullptr);
   dim0_valid_num_ptr_ = header_pod_ptr_.MutTensorPtr<int32_t>(FieldKey::kDim0ValidNum, nullptr);
   dim1_valid_num_ptr_ = header_pod_ptr_.MutTensorPtr<int32_t>(FieldKey::kDim1ValidNum, nullptr);
+  dim2_valid_num_ptr_ = header_pod_ptr_.MutTensorPtr<int32_t>(FieldKey::kDim2ValidNum, nullptr);
   dptr_ = body_ptr;
   dynamic_shape_ = blob_desc->shape();
 }
@@ -47,25 +48,6 @@ void Blob::set_col_num(int32_t no, int32_t val) {
   *(col_num_ptr_ + no) = val;
 }
 
-int32_t Blob::dim1_valid_num(int32_t no) const {
-  CHECK_NOTNULL(dim1_valid_num_ptr_);
-  CHECK_GE(no, 0);
-  CHECK_LT(no, blob_desc_->shape().At(0));
-  int32_t val = dim1_valid_num_ptr_[no];
-  CHECK_GE(val, 0);
-  CHECK_LE(val, blob_desc_->shape().At(1));
-  return val;
-}
-
-void Blob::set_dim1_valid_num(int32_t no, int32_t val) {
-  CHECK_NOTNULL(dim1_valid_num_ptr_);
-  CHECK_GE(no, 0);
-  CHECK_LT(no, blob_desc_->shape().At(0));
-  CHECK_GE(val, 0);
-  CHECK_LE(val, blob_desc_->shape().At(1));
-  dim1_valid_num_ptr_[no] = val;
-}
-
 int32_t Blob::dim0_valid_num(int32_t no) const {
   CHECK_NOTNULL(dim0_valid_num_ptr_);
   CHECK_GE(no, 0);
@@ -75,7 +57,6 @@ int32_t Blob::dim0_valid_num(int32_t no) const {
   CHECK_LE(val, dim0_inner_shape().Count(1));
   return val;
 }
-
 void Blob::set_dim0_valid_num(int32_t no, int32_t val) {
   CHECK_NOTNULL(dim0_valid_num_ptr_);
   CHECK_GE(no, 0);
@@ -83,6 +64,46 @@ void Blob::set_dim0_valid_num(int32_t no, int32_t val) {
   CHECK_GE(val, 0);
   CHECK_LE(val, dim0_inner_shape().Count(1));
   dim0_valid_num_ptr_[no] = val;
+}
+
+int32_t Blob::dim1_valid_num(int32_t no) const {
+  CHECK_NOTNULL(dim1_valid_num_ptr_);
+  CHECK_GE(no, 0);
+  CHECK_LT(no, blob_desc_->shape().At(0));
+  int32_t val = dim1_valid_num_ptr_[no];
+  CHECK_GE(val, 0);
+  CHECK_LE(val, blob_desc_->shape().At(1));
+  return val;
+}
+void Blob::set_dim1_valid_num(int32_t no, int32_t val) {
+  CHECK_NOTNULL(dim1_valid_num_ptr_);
+  CHECK_GE(no, 0);
+  CHECK_LT(no, blob_desc_->shape().At(0));
+  CHECK_GE(val, 0);
+  CHECK_LE(val, blob_desc_->shape().At(1));
+  dim1_valid_num_ptr_[no] = val;
+}
+
+int32_t Blob::dim2_valid_num(int32_t dim0_idx, int32_t dim1_idx) const {
+  CHECK_NOTNULL(dim2_valid_num_ptr_);
+  CHECK_GE(dim0_idx, 0);
+  CHECK_LT(dim0_idx, blob_desc_->shape().At(0));
+  CHECK_GE(dim1_idx, 0);
+  CHECK_LT(dim1_idx, blob_desc_->shape().At(1));
+  int32_t val = *(dim2_valid_num_ptr_ + dim0_idx * blob_desc_->shape().At(1) + dim1_idx);
+  CHECK_GE(val, 0);
+  CHECK_LE(val, blob_desc_->shape().At(2));
+  return val;
+}
+void Blob::set_dim2_valid_num(int32_t dim0_idx, int32_t dim1_idx, int32_t val) {
+  CHECK_NOTNULL(dim2_valid_num_ptr_);
+  CHECK_GE(dim0_idx, 0);
+  CHECK_LT(dim0_idx, blob_desc_->shape().At(0));
+  CHECK_GE(dim1_idx, 0);
+  CHECK_LT(dim1_idx, blob_desc_->shape().At(1));
+  CHECK_GE(val, 0);
+  CHECK_LE(val, blob_desc_->shape().At(2));
+  *(dim2_valid_num_ptr_ + dim0_idx * blob_desc_->shape().At(1) + dim1_idx) = val;
 }
 
 const Shape& Blob::shape() const {
@@ -153,6 +174,10 @@ size_t Blob::ByteSizeOfDim1ValidNumField() const {
   return blob_desc_->ByteSizeOfDim1ValidNumField();
 }
 
+size_t Blob::ByteSizeOfDim2ValidNumField() const {
+  return blob_desc_->ByteSizeOfDim2ValidNumField();
+}
+
 void Blob::CopyDim0ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs || ByteSizeOfDim0ValidNumField() == 0) { return; }
   CHECK_EQ(ByteSizeOfDim0ValidNumField(), rhs->ByteSizeOfDim0ValidNumField());
@@ -161,10 +186,17 @@ void Blob::CopyDim0ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
 }
 
 void Blob::CopyDim1ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
-  if (this == rhs || ByteSizeOfDim0ValidNumField() == 0) { return; }
+  if (this == rhs || ByteSizeOfDim1ValidNumField() == 0) { return; }
   CHECK_EQ(ByteSizeOfDim1ValidNumField(), rhs->ByteSizeOfDim1ValidNumField());
   Memcpy<DeviceType::kCPU>(device_ctx, mut_dim1_valid_num(), rhs->dim1_valid_num(),
                            ByteSizeOfDim1ValidNumField());
+}
+
+void Blob::CopyDim2ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
+  if (this == rhs || ByteSizeOfDim2ValidNumField() == 0) { return; }
+  CHECK_EQ(ByteSizeOfDim2ValidNumField(), rhs->ByteSizeOfDim2ValidNumField());
+  Memcpy<DeviceType::kCPU>(device_ctx, mut_dim2_valid_num(), rhs->dim2_valid_num(),
+                           ByteSizeOfDim2ValidNumField());
 }
 
 void Blob::CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) {
