@@ -20,7 +20,7 @@ void RoIAlignOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   const BlobDesc* rois_blob_desc = GetBlobDesc4BnInOp("rois");
   CHECK_EQ(rois_blob_desc->shape().NumAxes(), 2);
   CHECK_EQ(rois_blob_desc->shape().At(1), 5);
-  CHECK_EQ(rois_blob_desc->dim0_inner_shape().At(0), 1);
+  CHECK(rois_blob_desc->has_dim0_inner_shape());
   // out: (R, C, pool_h, pool_w)
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   out_blob_desc->mut_shape() =
