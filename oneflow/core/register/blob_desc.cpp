@@ -126,7 +126,6 @@ void BlobDesc::Dim1ValidNumToProto(StructPodDesc* header_pod_desc) const {
 }
 
 void BlobDesc::Dim2ValidNumToProto(StructPodDesc* header_pod_desc) const {
-  CHECK(has_dim1_valid_num_field());
   Shape shape({body_field_.shape().At(0), body_field_.shape().At(1)});
   header_pod_desc->AddField(FieldKey::kDim2ValidNum, TensorPodDesc(shape, DataType::kInt32));
 }

@@ -26,7 +26,6 @@ void Blob::Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, cha
   dim0_valid_num_ptr_ = header_pod_ptr_.MutTensorPtr<int32_t>(FieldKey::kDim0ValidNum, nullptr);
   dim1_valid_num_ptr_ = header_pod_ptr_.MutTensorPtr<int32_t>(FieldKey::kDim1ValidNum, nullptr);
   dim2_valid_num_ptr_ = header_pod_ptr_.MutTensorPtr<int32_t>(FieldKey::kDim2ValidNum, nullptr);
-  if (dim2_valid_num_ptr_ != nullptr) { CHECK_NOTNULL(dim1_valid_num_ptr_); }
   dptr_ = body_ptr;
   dynamic_shape_ = blob_desc->shape();
 }
@@ -87,8 +86,10 @@ void Blob::set_dim1_valid_num(int32_t no, int32_t val) {
 
 int32_t Blob::dim2_valid_num(int32_t dim0_idx, int32_t dim1_idx) const {
   CHECK_NOTNULL(dim2_valid_num_ptr_);
+  CHECK_GE(dim0_idx, 0);
+  CHECK_LT(dim0_idx, blob_desc_->shape().At(0));
   CHECK_GE(dim1_idx, 0);
-  CHECK_LT(dim1_idx, dim1_valid_num(dim0_idx));
+  CHECK_LT(dim1_idx, blob_desc_->shape().At(1));
   int32_t val = *(dim2_valid_num_ptr_ + dim0_idx * blob_desc_->shape().At(1) + dim1_idx);
   CHECK_GE(val, 0);
   CHECK_LE(val, blob_desc_->shape().At(2));
@@ -96,8 +97,10 @@ int32_t Blob::dim2_valid_num(int32_t dim0_idx, int32_t dim1_idx) const {
 }
 void Blob::set_dim2_valid_num(int32_t dim0_idx, int32_t dim1_idx, int32_t val) {
   CHECK_NOTNULL(dim2_valid_num_ptr_);
+  CHECK_GE(dim0_idx, 0);
+  CHECK_LT(dim0_idx, blob_desc_->shape().At(0));
   CHECK_GE(dim1_idx, 0);
-  CHECK_LT(dim1_idx, dim1_valid_num(dim0_idx));
+  CHECK_LT(dim1_idx, blob_desc_->shape().At(1));
   CHECK_GE(val, 0);
   CHECK_LE(val, blob_desc_->shape().At(2));
   *(dim2_valid_num_ptr_ + dim0_idx * blob_desc_->shape().At(1) + dim1_idx) = val;

@@ -20,6 +20,8 @@ class DefineTestBlobKernel final : public KernelIf<DeviceType::kCPU> {
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void ForwardDim1ValidNum(const KernelCtx& ctx,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardDim2ValidNum(const KernelCtx& ctx,
+                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
 }  // namespace oneflow
