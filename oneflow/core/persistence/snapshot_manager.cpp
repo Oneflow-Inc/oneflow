@@ -1,13 +1,16 @@
 #include "oneflow/core/persistence/snapshot_manager.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/machine_context.h"
 
 namespace oneflow {
 
 SnapshotMgr::SnapshotMgr(const Plan& plan) {
   if (Global<JobDesc>::Get()->enable_write_snapshot()) {
     model_save_snapshots_path_ = Global<JobDesc>::Get()->MdSaveSnapshotsPath();
-    OfCallOnce(model_save_snapshots_path_, SnapshotFS(), &fs::FileSystem::MakeEmptyDir);
+    if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+      OfCallOnce(model_save_snapshots_path_, SnapshotFS(), &fs::FileSystem::MakeEmptyDir);
+    }
   }
   const std::string& load_path = Global<JobDesc>::Get()->MdLoadSnapshotPath();
   if (load_path != "") { readable_snapshot_.reset(new Snapshot(load_path)); }
