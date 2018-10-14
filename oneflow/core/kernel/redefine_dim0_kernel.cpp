@@ -1,24 +1,24 @@
-#include "oneflow/core/kernel/refine_dim0_kernel.h"
+#include "oneflow/core/kernel/redefine_dim0_kernel.h"
 
 namespace oneflow {
 
 template<DeviceType device_type>
-void RefineDim0Kernel<device_type>::ForwardDataContent(
+void RedefineDim0Kernel<device_type>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   BnInOp2Blob("out")->CopyDataContentFrom(ctx.device_ctx, BnInOp2Blob("in"));
 }
 
 template<DeviceType device_type>
-void RefineDim0Kernel<device_type>::BackwardDataContent(
+void RedefineDim0Kernel<device_type>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   BnInOp2Blob(GenDiffBn("in"))->CopyDataContentFrom(ctx.device_ctx, BnInOp2Blob(GenDiffBn("out")));
 }
 
 template<DeviceType device_type>
-void RefineDim0Kernel<device_type>::ForwardDim1ValidNum(
+void RedefineDim0Kernel<device_type>::ForwardDim1ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const RefineDim0OpConf& conf = this->op_conf().refine_dim0_conf();
-  CHECK_EQ(conf.type_case(), RefineDim0OpConf::kShrinkConf);
+  const RedefineDim0OpConf& conf = this->op_conf().redefine_dim0_conf();
+  CHECK_EQ(conf.type_case(), RedefineDim0OpConf::kShrinkConf);
   CHECK_EQ(conf.shrink_conf().axis(), 1);
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
@@ -30,13 +30,13 @@ void RefineDim0Kernel<device_type>::ForwardDim1ValidNum(
 }
 
 template<DeviceType device_type>
-void RefineDim0Kernel<device_type>::ForwardDim0ValidNum(
+void RedefineDim0Kernel<device_type>::ForwardDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const RefineDim0OpConf& conf = this->op_conf().refine_dim0_conf();
+  const RedefineDim0OpConf& conf = this->op_conf().redefine_dim0_conf();
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
   switch (conf.type_case()) {
-    case RefineDim0OpConf::kShrinkConf: {
+    case RedefineDim0OpConf::kShrinkConf: {
       CHECK(in_blob->has_dim0_inner_shape());
       CHECK(out_blob->has_dim0_inner_shape());
       FOR_RANGE(int64_t, i, 0, out_blob->dim0_inner_shape().At(0)) {
@@ -44,7 +44,7 @@ void RefineDim0Kernel<device_type>::ForwardDim0ValidNum(
       }
       break;
     }
-    case RefineDim0OpConf::kExtendConf: {
+    case RedefineDim0OpConf::kExtendConf: {
       bool has_inner_shape = in_blob->has_dim0_inner_shape();
       FOR_RANGE(int64_t, i, 0, out_blob->shape().At(0)) {
         int32_t valid_num =
@@ -58,13 +58,13 @@ void RefineDim0Kernel<device_type>::ForwardDim0ValidNum(
 }
 
 template<DeviceType device_type>
-void RefineDim0Kernel<device_type>::BackwardDim0ValidNum(
+void RedefineDim0Kernel<device_type>::BackwardDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const RefineDim0OpConf& conf = this->op_conf().refine_dim0_conf();
+  const RedefineDim0OpConf& conf = this->op_conf().redefine_dim0_conf();
   const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
   Blob* in_diff_blob = BnInOp2Blob(GenDiffBn("in"));
   switch (conf.type_case()) {
-    case RefineDim0OpConf::kShrinkConf: {
+    case RedefineDim0OpConf::kShrinkConf: {
       CHECK(out_diff_blob->has_dim0_inner_shape());
       CHECK(in_diff_blob->has_dim0_inner_shape());
       FOR_RANGE(int64_t, i, 0, in_diff_blob->dim0_inner_shape().At(0)) {
@@ -72,7 +72,7 @@ void RefineDim0Kernel<device_type>::BackwardDim0ValidNum(
       }
       break;
     }
-    case RefineDim0OpConf::kExtendConf: {
+    case RedefineDim0OpConf::kExtendConf: {
       CHECK(out_diff_blob->has_dim0_inner_shape());
       if (in_diff_blob->has_dim0_inner_shape()) {
         FOR_RANGE(int64_t, i, 0, in_diff_blob->dim0_inner_shape().At(0)) {
@@ -89,6 +89,6 @@ void RefineDim0Kernel<device_type>::BackwardDim0ValidNum(
   }
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kRefineDim0Conf, RefineDim0Kernel);
+ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kRedefineDim0Conf, RedefineDim0Kernel);
 
 }  // namespace oneflow

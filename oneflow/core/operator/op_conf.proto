@@ -860,7 +860,7 @@ message ExtendDim0Conf {
   required int32 axis = 1;
 }
 
-message RefineDim0OpConf {
+message RedefineDim0OpConf {
   required string in = 1;
   required string out = 2;
   oneof type {
@@ -949,7 +949,7 @@ message OperatorConf {
     UpsampleNearestOpConf upsample_nearest_conf = 1009;
     ResizeNearestNeighborOpConf resize_nearest_neighbor_conf = 1010;
     BatchPermutationOpConf batch_permutation_conf = 1011;
-    RefineDim0OpConf refine_dim0_conf = 1015;
+    RedefineDim0OpConf redefine_dim0_conf = 1015;
   }
 }
 
