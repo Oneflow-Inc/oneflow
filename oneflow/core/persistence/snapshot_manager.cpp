@@ -9,7 +9,7 @@ SnapshotMgr::SnapshotMgr(const Plan& plan) {
   if (Global<JobDesc>::Get()->enable_write_snapshot()) {
     model_save_snapshots_path_ = Global<JobDesc>::Get()->MdSaveSnapshotsPath();
     if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-      OfCallOnce(model_save_snapshots_path_, SnapshotFS(), &fs::FileSystem::MakeEmptyDir);
+      SnapshotFS()->MakeEmptyDir(model_save_snapshots_path_);
     }
   }
   const std::string& load_path = Global<JobDesc>::Get()->MdLoadSnapshotPath();
