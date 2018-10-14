@@ -15,7 +15,7 @@ class RepeatForwardCompTaskNode final : public CompTaskNode {
   void ConsumeAllRegsts() override;
 
   TaskType GetTaskType() const override { return TaskType::kRepeatForward; }
-  CudaWorkType GetCudaWorkType() const override { return CudaWorkType::kMix; }
+  CudaWorkType GetCudaWorkType() const override { return CudaWorkType::kCompute; }
 
  private:
   void BuildExecGphAndRegst() override;
