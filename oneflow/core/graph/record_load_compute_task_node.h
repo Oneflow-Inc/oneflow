@@ -18,6 +18,9 @@ class RecordLoadCompTaskNode final : public CompTaskNode {
 
   TaskType GetTaskType() const override { return TaskType::kRecordLoad; }
   bool IsPersistence() const override { return true; }
+
+ private:
+  void InferProducedDataRegstTimeShape() override;
 };
 
 }  // namespace oneflow

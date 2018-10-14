@@ -7,8 +7,6 @@
 #include <sys/sysinfo.h>
 #endif
 
-DEFINE_int64(this_machine_id, -1, "");
-
 namespace oneflow {
 
 #define DEFINE_ONEFLOW_STR2INT_CAST(dst_type, cast_func) \
@@ -54,8 +52,8 @@ COMMAND(feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW));
 #endif
 
 void RedirectStdoutAndStderrToGlogDir() {
-  PCHECK(freopen(JoinPath(LogDir(), "stdout").c_str(), "a+", stdout));
-  PCHECK(freopen(JoinPath(LogDir(), "stderr").c_str(), "a+", stderr));
+  PCHECK(freopen(JoinPath(FLAGS_log_dir, "stdout").c_str(), "a+", stdout));
+  PCHECK(freopen(JoinPath(FLAGS_log_dir, "stderr").c_str(), "a+", stderr));
 }
 
 void CloseStdoutAndStderr() {
@@ -89,7 +87,9 @@ size_t GetAvailableCpuMemSize() {
 }
 
 std::string LogDir() {
-  std::string v = FLAGS_log_dir + "/" + std::to_string(FLAGS_this_machine_id);
+  char hostname[255];
+  CHECK_EQ(gethostname(hostname, sizeof(hostname)), 0);
+  std::string v = FLAGS_log_dir + "/" + std::string(hostname);
   return v;
 }
 

@@ -15,20 +15,24 @@ void BoxingActor::NormalProcessNaiveReadableRegstMsg(const std::deque<Regst*>& r
   }
 }
 
-void BoxingActor::Act(std::function<bool(Regst*)>* IsNaiveAllowedReturnToProducer) {
-  int64_t piece_id = GetNaiveFirstCurReadable()->piece_id();
-  AsyncLaunchKernel(GenDefaultKernelCtx());
-  AsyncSendRegstMsgToConsumer([&](Regst* regst) {
+void BoxingActor::Act() { AsyncLaunchKernel(GenDefaultKernelCtx()); }
+
+void BoxingActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
+  int64_t piece_id = GetPieceId4NaiveCurReadableDataRegst();
+  HandleProducedNaiveDataRegstToConsumer([&](Regst* regst) {
     regst->set_piece_id(piece_id);
     return regst->col_id() <= regst->max_col_id();
   });
+}
+
+void BoxingActor::VirtualAsyncSendNaiveConsumedRegstMsgToProducer() {
   int32_t cur_max_cid = 0;
   int32_t cur_max_maxcid = 0;
-  ForEachCurNaiveReadableRegst([&](const Regst* regst) {
+  ForEachCurNaiveReadableDataRegst([&](const Regst* regst) {
     cur_max_cid = std::max(cur_max_cid, regst->col_id());
     cur_max_maxcid = std::max(cur_max_maxcid, regst->max_col_id());
   });
-  *IsNaiveAllowedReturnToProducer = [this, cur_max_cid, cur_max_maxcid](Regst* regst) {
+  auto IsNaiveAllowedReturnToProducer = [this, cur_max_cid, cur_max_maxcid](Regst* regst) {
     if (col_id_order_ == ColIdOrder::kAscending) {
       if (regst->IsMaxCol() && cur_max_cid < cur_max_maxcid) { return false; }
     } else if (col_id_order_ == ColIdOrder::kDescending) {
@@ -37,6 +41,7 @@ void BoxingActor::Act(std::function<bool(Regst*)>* IsNaiveAllowedReturnToProduce
     }
     return true;
   };
+  HandleConsumedNaiveDataRegstToProducer(IsNaiveAllowedReturnToProducer);
 }
 
 void BoxingActor::TrySetColIdOrder(const Regst* regst) {

@@ -5,7 +5,7 @@
 namespace oneflow {
 
 void DecodeRandomCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  ProduceRegst("out", true);
+  ProduceRegst("out", false);
   for (TaskEdge* edge : out_edges()) { BindEdgeWithProducedRegst(edge, "out"); }
 }
 
@@ -15,6 +15,15 @@ void DecodeRandomCompTaskNode::BuildExecGphAndRegst() {
   node->mut_op() = logical_node()->SoleOp();
   node->AddBnToRegstAndBindIt(&Operator::output_bns, out_regst);
   node->InferBlobDescs(parallel_ctx());
+}
+
+void DecodeRandomCompTaskNode::InferProducedDataRegstTimeShape() {
+  std::shared_ptr<Shape> time_shape(new Shape(
+      {Global<JobDesc>::Get()->TotalBatchNum(), Global<JobDesc>::Get()->NumOfPiecesInBatch()}));
+
+  ForEachProducedDataRegst([time_shape](const std::string& name, RegstDesc* regst) {
+    *regst->mut_data_regst_time_shape() = time_shape;
+  });
 }
 
 }  // namespace oneflow

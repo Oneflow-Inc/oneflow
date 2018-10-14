@@ -5,6 +5,7 @@ import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/record/image.proto";
 import "oneflow/core/job/resource.proto";
+import "oneflow/core/register/logical_blob_id.proto";
 
 enum ActivationType {
   kNone = 0;
@@ -283,14 +284,6 @@ message BoxSplitConf {
 message BoxCloneConf {
 }
 
-message LogicalBlobId {
-  optional string op_name = 1;
-  optional string blob_name = 2;
-  optional int32 clone_id = 3 [default = -1];
-  optional bool is_packed_id = 4 [default = false];
-  optional bool is_pb_blob = 5 [default = false];
-}
-
 message BoxingOpConf {
   required LogicalBlobId lbi = 1;
   required int32 in_num = 2;
@@ -324,6 +317,12 @@ message MomentumModelUpdateConf {
 message RMSPropModelUpdateConf {
   optional float decay_rate = 1 [default = 0.99];
   optional float epsilon = 2 [default = 1e-8];
+}
+
+message LARSModelUpdateConf {
+  optional float momentum_beta = 1 [default = 0.9];
+  optional float epsilon = 2 [default = 1e-9];
+  optional float lars_coefficient = 3 [default = 0.0001];
 }
 
 message ExponentialDecayConf {
@@ -404,6 +403,7 @@ message NormalModelUpdateOpUserConf {
     NaiveModelUpdateConf naive_conf = 1000;
     MomentumModelUpdateConf momentum_conf = 1001;
     RMSPropModelUpdateConf rmsprop_conf = 1002;
+    LARSModelUpdateConf lars_conf = 1003;
   }
 }
 
@@ -587,14 +587,16 @@ message DecodeRandomOpConf {
   required string out = 1;
   required ShapeProto shape = 2;
   required DataType data_type = 3;
-  optional int32 max_sequence_size = 4 [default = 1];
-  required InitializerConf initializer = 7;
+  required InitializerConf data_initializer = 4; 
 }
 
 message DefineTestBlobConf {
   required string out = 1;
   required ShapeProto shape = 2;
   required DataType data_type = 3;
+  optional int32 dim1_valid_num = 4;
+  optional int32 dim0_valid_num = 5;
+  optional ShapeProto dim0_inner_shape = 6;
 }
 
 message NormalizationOpConf {
@@ -640,6 +642,15 @@ message ReduceConcatOpConf {
   required int32 in_num = 1;
 }
 
+message NcclAllReduceOpConf {
+}
+
+message NcclReduceScatterOpConf {
+}
+
+message NcclAllGatherOpConf {
+}
+
 message ReduceSplitOpConf {
   required int32 out_num = 1;
 }
@@ -648,12 +659,7 @@ message ReduceScatterOpConf {
   required int32 out_num = 1;
 }
 
-message ReduceLocalAddOpConf {
-  required int32 in_num = 1;
-  required int32 out_num = 2;
-}
-
-message ReduceGlobalAddOpConf {
+message ReduceAddOpConf {
   required int32 in_num = 1;
 }
 
@@ -846,13 +852,30 @@ message BatchPermutationOpConf {
   required string data_format = 4;
 }
 
+message ShrinkDim0Conf {
+  required int32 axis = 1;
+}
+
+message ExtendDim0Conf {
+  required int32 axis = 1;
+}
+
+message RedefineDim0OpConf {
+  required string in = 1;
+  required string out = 2;
+  oneof type {
+    ShrinkDim0Conf shrink_conf = 3;
+    ExtendDim0Conf extend_conf = 4;
+  }
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
   optional bool trainable = 3 [default = true];
   optional DeviceType device_type = 4 [default = kInvalidDevice];
   optional bool enable_cudnn = 5;
-  optional int64 cudnn_buf_limit_mbyte = 6 [default = 1024]; // 1GByte
+  optional int64 cudnn_buf_limit_mbyte = 6;
   oneof op_type {
     // system op
     DecodeOFRecordOpConf decode_ofrecord_conf = 101;
@@ -863,18 +886,20 @@ message OperatorConf {
     CopyCommNetOpConf copy_comm_net_conf = 106;
     ConcatOpConf concat_conf = 107;
     ReduceScatterOpConf reduce_scatter_conf = 109;
-    ReduceLocalAddOpConf reduce_local_add_conf = 110;
-    ReduceGlobalAddOpConf reduce_global_add_conf = 111;
-    ReduceGatherOpConf reduce_gather_conf = 112;
-    ReduceConcatOpConf reduce_concat_conf = 113;
-    ReduceSplitOpConf reduce_split_conf = 114;
-    AccumulateOpConf accumulate_conf = 115;
-    NormalModelUpdateOpConf normal_mdupdt_conf = 116;
-    ModelSaveOpConf model_save_conf = 117;
-    SharedModelDiffAddOpConf shared_model_diff_add_conf = 118;
-    PodBoxingOpConf pod_boxing_conf = 119;
-    PbBoxingOpConf pb_boxing_conf = 120;
-
+    ReduceAddOpConf reduce_add_conf = 110;
+    ReduceGatherOpConf reduce_gather_conf = 111;
+    ReduceConcatOpConf reduce_concat_conf = 112;
+    ReduceSplitOpConf reduce_split_conf = 113;
+    NcclAllReduceOpConf nccl_all_reduce_conf = 114;
+    NcclReduceScatterOpConf nccl_reduce_scatter_conf = 115;
+    NcclAllGatherOpConf nccl_all_gather_conf = 116;
+    AccumulateOpConf accumulate_conf = 117;
+    NormalModelUpdateOpConf normal_mdupdt_conf = 118;
+    ModelSaveOpConf model_save_conf = 119;
+    SharedModelDiffAddOpConf shared_model_diff_add_conf = 120;
+    PodBoxingOpConf pod_boxing_conf = 121;
+    PbBoxingOpConf pb_boxing_conf = 122;
+    
     // user op
     TransposeOpConf transpose_conf = 201;
     ReshapeOpConf reshape_conf = 202;
@@ -924,6 +949,7 @@ message OperatorConf {
     UpsampleNearestOpConf upsample_nearest_conf = 1009;
     ResizeNearestNeighborOpConf resize_nearest_neighbor_conf = 1010;
     BatchPermutationOpConf batch_permutation_conf = 1011;
+    RedefineDim0OpConf redefine_dim0_conf = 1015;
   }
 }
 

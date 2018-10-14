@@ -86,6 +86,8 @@ class OpKernelTestCase {
   }
 
   void EnrollBlobRegst(const std::string& blob_name, Regst*);
+  void EnrollBlobRegst(const std::string& blob_name) { EnrollBlobRegst(blob_name, regst_); }
+  void CreatRegst(DeviceType);
   template<typename T>
   Blob* InitBlob(const std::string&, const BlobDesc* blob_desc, const std::vector<T>& val);
   template<typename T>
@@ -149,6 +151,7 @@ class OpKernelTestCase {
   HashMap<std::string, DeviceType> bn_in_op2device_type_;
   std::list<std::string> forward_asserted_blob_names_;
   std::list<std::string> backward_asserted_blob_names_;
+  Regst* regst_;
 };
 
 // diff results runned by differnt kernel implementation

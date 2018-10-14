@@ -30,8 +30,10 @@ const BoxingOpConf& PbBoxingOp::boxing_conf() const {
 
 void PbBoxingOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx) const {
-  std::vector<int64_t> fake_data_tmp_blob_shape_vec = CalcDataTmpBlobShapeVec(GetBlobDesc4BnInOp);
-  InferOutBlobDescs(GetBlobDesc4BnInOp, fake_data_tmp_blob_shape_vec);
+  std::vector<int64_t> dim0_inner_shape_vec;
+  std::vector<int64_t> fake_data_tmp_blob_shape_vec =
+      CalcDataTmpBlobShapeVec(GetBlobDesc4BnInOp, &dim0_inner_shape_vec);
+  InferOutBlobDescs(GetBlobDesc4BnInOp, fake_data_tmp_blob_shape_vec, dim0_inner_shape_vec);
 }
 
 REGISTER_OP(OperatorConf::kPbBoxingConf, PbBoxingOp);

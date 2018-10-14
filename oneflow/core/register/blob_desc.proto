@@ -2,6 +2,8 @@ syntax = "proto2";
 package oneflow;
 
 import "oneflow/core/register/field_desc.proto";
+import "oneflow/core/register/pod.proto";
+import "oneflow/core/common/shape.proto";
 
 message FieldHeaderDesc {
   optional FieldDescProto data_id = 1;
@@ -15,9 +17,11 @@ message BlobHeaderDescProto {
     FieldDescProto opaque_header = 3;
     FieldHeaderDesc field_header = 4;
   }
+  required StructPodProto header_pod_desc = 5;
 }
 
 message BlobDescProto {
   required BlobHeaderDescProto header = 1;
   required FieldDescProto body = 2;
+  optional ShapeProto dim0_inner_shape = 3;
 }

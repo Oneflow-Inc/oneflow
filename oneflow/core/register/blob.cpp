@@ -6,36 +6,27 @@
 
 namespace oneflow {
 
-Blob::Blob(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr) {
+Blob::Blob(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr)
+    : header_pod_ptr_(blob_desc->header_pod_desc(), header_ptr) {
   Init(regst, blob_desc, header_ptr, header_ptr + blob_desc->ByteSizeOfBlobHeader());
 }
 
-Blob::Blob(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr) {
+Blob::Blob(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr)
+    : header_pod_ptr_(blob_desc->header_pod_desc(), header_ptr) {
   Init(regst, blob_desc, header_ptr, body_ptr);
 }
 
 void Blob::Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr) {
-  if (body_ptr == header_ptr + blob_desc->ByteSizeOfBlobHeader()) {
-    is_contiguous_ = true;
-  } else {
-    is_contiguous_ = false;
-  }
-
+  is_contiguous_ = (body_ptr == header_ptr + blob_desc->ByteSizeOfBlobHeader());
   regst_ = regst;
   blob_desc_ = blob_desc;
   header_ptr_ = header_ptr;
-  if (blob_desc->has_data_id_field()) {
-    data_id_ptr_ = header_ptr;
-  } else {
-    data_id_ptr_ = nullptr;
-  }
-  char* offset = header_ptr + blob_desc->ByteSizeOfDataIdField();
-  if (blob_desc->has_col_num_field()) {
-    col_num_ptr_ = reinterpret_cast<int32_t*>(offset);
-  } else {
-    col_num_ptr_ = nullptr;
-  }
+  data_id_ptr_ = header_pod_ptr_.MutTensorPtr<char>(FieldKey::kDataId, nullptr);
+  col_num_ptr_ = header_pod_ptr_.MutTensorPtr<int32_t>(FieldKey::kColNum, nullptr);
+  dim0_valid_num_ptr_ = header_pod_ptr_.MutTensorPtr<int32_t>(FieldKey::kDim0ValidNum, nullptr);
+  dim1_valid_num_ptr_ = header_pod_ptr_.MutTensorPtr<int32_t>(FieldKey::kDim1ValidNum, nullptr);
   dptr_ = body_ptr;
+  dynamic_shape_ = blob_desc->shape();
 }
 
 const char* Blob::data_id(int32_t no) const {
@@ -54,6 +45,53 @@ int32_t Blob::col_num(int32_t no) const {
 void Blob::set_col_num(int32_t no, int32_t val) {
   CHECK_NOTNULL(col_num_ptr_);
   *(col_num_ptr_ + no) = val;
+}
+
+int32_t Blob::dim1_valid_num(int32_t no) const {
+  CHECK_NOTNULL(dim1_valid_num_ptr_);
+  CHECK_GE(no, 0);
+  CHECK_LT(no, blob_desc_->shape().At(0));
+  return dim1_valid_num_ptr_[no];
+}
+
+void Blob::set_dim1_valid_num(int32_t no, int32_t val) {
+  CHECK_NOTNULL(dim1_valid_num_ptr_);
+  CHECK_GE(no, 0);
+  CHECK_LT(no, blob_desc_->shape().At(0));
+  CHECK_GE(val, 0);
+  CHECK_LE(val, blob_desc_->shape().At(1));
+  dim1_valid_num_ptr_[no] = val;
+}
+
+int32_t Blob::dim0_valid_num(int32_t no) const {
+  CHECK_NOTNULL(dim0_valid_num_ptr_);
+  CHECK_GE(no, 0);
+  CHECK_LT(no, dim0_inner_shape().At(0));
+  return dim0_valid_num_ptr_[no];
+}
+
+void Blob::set_dim0_valid_num(int32_t no, int32_t val) {
+  CHECK_NOTNULL(dim0_valid_num_ptr_);
+  CHECK_GE(no, 0);
+  CHECK_LT(no, dim0_inner_shape().At(0));
+  CHECK_GE(val, 0);
+  CHECK_LE(val, dim0_inner_shape().Count(1));
+  dim0_valid_num_ptr_[no] = val;
+}
+
+const Shape& Blob::shape() const {
+  if (dim0_valid_num_ptr_ == nullptr) { return static_shape(); }
+  return dynamic_shape();
+}
+
+const Shape& Blob::dynamic_shape() const {
+  size_t last_invalid_instance_num =
+      dim0_inner_shape().Count(1) - dim0_valid_num(dim0_inner_shape().At(0) - 1);
+  size_t contiguous_instance_num = blob_desc_->shape().At(0) - last_invalid_instance_num;
+  if (dynamic_shape_.At(0) != contiguous_instance_num) {
+    dynamic_shape_.Set(0, contiguous_instance_num);
+  }
+  return dynamic_shape_;
 }
 
 int32_t Blob::col_id() const { return regst_->col_id(); }
@@ -84,6 +122,28 @@ void Blob::CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs || ByteSizeOfColNumField() == 0) { return; }
   CHECK_EQ(ByteSizeOfColNumField(), rhs->ByteSizeOfColNumField());
   Memcpy<DeviceType::kCPU>(device_ctx, mut_col_num(), rhs->col_num(), ByteSizeOfColNumField());
+}
+
+size_t Blob::ByteSizeOfDim0ValidNumField() const {
+  return blob_desc_->ByteSizeOfDim0ValidNumField();
+}
+
+size_t Blob::ByteSizeOfDim1ValidNumField() const {
+  return blob_desc_->ByteSizeOfDim1ValidNumField();
+}
+
+void Blob::CopyDim0ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
+  if (this == rhs || ByteSizeOfDim0ValidNumField() == 0) { return; }
+  CHECK_EQ(ByteSizeOfDim0ValidNumField(), rhs->ByteSizeOfDim0ValidNumField());
+  Memcpy<DeviceType::kCPU>(device_ctx, mut_dim0_valid_num(), rhs->dim0_valid_num(),
+                           ByteSizeOfDim0ValidNumField());
+}
+
+void Blob::CopyDim1ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
+  if (this == rhs || ByteSizeOfDim0ValidNumField() == 0) { return; }
+  CHECK_EQ(ByteSizeOfDim1ValidNumField(), rhs->ByteSizeOfDim1ValidNumField());
+  Memcpy<DeviceType::kCPU>(device_ctx, mut_dim1_valid_num(), rhs->dim1_valid_num(),
+                           ByteSizeOfDim1ValidNumField());
 }
 
 void Blob::CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) {

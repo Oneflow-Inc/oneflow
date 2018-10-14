@@ -19,9 +19,11 @@ class BoxingOp : public Operator {
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
   LogicalBlobId obn2lbi(const std::string& output_bn) const override;
   std::vector<int64_t> CalcDataTmpBlobShapeVec(
-      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp) const;
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      std::vector<int64_t>* dim0_inner_shape_vec) const;
   void InferOutBlobDescs(const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
-                         const std::vector<int64_t>& data_tmp_blob_shape_vec) const;
+                         const std::vector<int64_t>& data_tmp_blob_shape_vec,
+                         const std::vector<int64_t>& dim0_inner_shape_vec) const;
 };
 
 }  // namespace oneflow

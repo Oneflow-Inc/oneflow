@@ -18,6 +18,7 @@ class RegstMgr final {
   ~RegstMgr() = default;
 
   void NewRegsts(const RegstDescProto& regst_desc_proto, std::function<void(Regst*)> OneRegstDone);
+  const RtRegstDesc& RegstDesc4RegstDescId(int64_t regst_desc_id) const;
 
  private:
   friend class Global<RegstMgr>;

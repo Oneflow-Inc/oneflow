@@ -1,5 +1,7 @@
 #include "oneflow/core/device/cuda_stream_handle.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/machine_context.h"
 
 namespace oneflow {
 

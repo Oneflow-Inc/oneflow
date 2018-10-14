@@ -62,6 +62,14 @@ class Kernel {
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
+  virtual void ForwardDim1ValidNum(const KernelCtx& ctx,
+                                   std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    UNIMPLEMENTED();
+  }
+  virtual void ForwardDim0ValidNum(const KernelCtx& ctx,
+                                   std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    UNIMPLEMENTED();
+  }
   virtual void ForwardPackedHeader(const KernelCtx& ctx,
                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
@@ -78,6 +86,10 @@ class Kernel {
   }
   virtual void BackwardColNum(const KernelCtx& ctx,
                               std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    UNIMPLEMENTED();
+  }
+  virtual void BackwardDim0ValidNum(const KernelCtx& ctx,
+                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
   virtual void BackwardActivation(const KernelCtx& ctx, const Blob* out_blob,
@@ -123,6 +135,9 @@ class KernelIf : public Kernel {
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   virtual void ForwardColNum(const KernelCtx& ctx,
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  virtual void ForwardDim0ValidNum(
+      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+
   virtual void ForwardPackedHeader(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   virtual void BackwardDataId(const KernelCtx& ctx,
@@ -132,6 +147,8 @@ class KernelIf : public Kernel {
   void ForwardField(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
                     void (Blob::*Copy)(DeviceCtx*, const Blob*)) const;
 
+  virtual void BackwardDim0ValidNum(
+      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void CopyField(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
                  const Blob* from_blob, const PbRpf<std::string>& to_bns,
                  void (Blob::*Copy)(DeviceCtx*, const Blob*)) const;

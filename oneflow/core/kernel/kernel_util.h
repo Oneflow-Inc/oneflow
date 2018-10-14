@@ -397,7 +397,7 @@ class DataContentIterator final {
   DataContentIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,
                       const PbRpf<std::string>* bns, int32_t axis) {
     BnInOp2Blob_ = BnInOp2Blob;
-    seg_num_ = BnInOp2Blob(bns->Get(0))->shape().Count(0, axis);
+    seg_num_ = BnInOp2Blob(bns->Get(0))->static_shape().Count(0, axis);
     seg_idx_ = 0;
     bns_ = bns;
     bn_idx_ = 0;
@@ -408,7 +408,7 @@ class DataContentIterator final {
     std::tuple<char*, size_t> ret(nullptr, 0);
     if (seg_idx_ == seg_num_) { return ret; }
     Blob* blob = BnInOp2Blob_(bns_->Get(bn_idx_));
-    int64_t elem_num = blob->shape().Count(axis_);
+    int64_t elem_num = blob->static_shape().Count(axis_);
     std::get<1>(ret) = elem_num * GetSizeOfDataType(blob->data_type());
     if (blob->IsColValid()) {
       std::get<0>(ret) = blob->mut_dptr<char>() + seg_idx_ * std::get<1>(ret);
@@ -494,6 +494,36 @@ class ColNumIterator final : public FieldIterator {
   char* GetMutPtr(Blob* blob) override { return reinterpret_cast<char*>(blob->mut_col_num()); }
 
   size_t GetSizeOfField(Blob* blob) const override { return blob->ByteSizeOfColNumField(); }
+};
+
+class Dim0ValidNumIterator final : public FieldIterator {
+ public:
+  Dim0ValidNumIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,
+                       const PbRpf<std::string>* bns, int32_t axis)
+      : FieldIterator(BnInOp2Blob, bns, axis) {}
+  static CopyBlobFieldMthd GetCopyBlobFieldMthd() { return &Blob::CopyDim0ValidNumFrom; }
+
+ private:
+  char* GetMutPtr(Blob* blob) override {
+    return reinterpret_cast<char*>(blob->mut_dim0_valid_num());
+  }
+
+  size_t GetSizeOfField(Blob* blob) const override { return blob->ByteSizeOfDim0ValidNumField(); }
+};
+
+class Dim1ValidNumIterator final : public FieldIterator {
+ public:
+  Dim1ValidNumIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,
+                       const PbRpf<std::string>* bns, int32_t axis)
+      : FieldIterator(BnInOp2Blob, bns, axis) {}
+  static CopyBlobFieldMthd GetCopyBlobFieldMthd() { return &Blob::CopyDim1ValidNumFrom; }
+
+ private:
+  char* GetMutPtr(Blob* blob) override {
+    return reinterpret_cast<char*>(blob->mut_dim1_valid_num());
+  }
+
+  size_t GetSizeOfField(Blob* blob) const override { return blob->ByteSizeOfDim1ValidNumField(); }
 };
 
 }  // namespace oneflow
