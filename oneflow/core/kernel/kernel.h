@@ -60,11 +60,15 @@ class Kernel {
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
+  virtual void ForwardDim0ValidNum(const KernelCtx& ctx,
+                                   std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    UNIMPLEMENTED();
+  }
   virtual void ForwardDim1ValidNum(const KernelCtx& ctx,
                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
-  virtual void ForwardDim0ValidNum(const KernelCtx& ctx,
+  virtual void ForwardDim2ValidNum(const KernelCtx& ctx,
                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
