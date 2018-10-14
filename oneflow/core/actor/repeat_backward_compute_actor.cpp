@@ -23,7 +23,7 @@ void RepeatBackwardCompActor::Act() {
 void RepeatBackwardCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   if (acc_count_ == repeat_num_) {
     Regst* out_diff_regst = GetNaiveCurReadable("out_diff");
-    int64_t piece_id = out_diff_regst->piece_id();
+    int64_t piece_id = out_diff_regst->piece_id() / repeat_num_;
     HandleProducedNaiveDataRegstToConsumer([piece_id](Regst* regst) {
       regst->set_piece_id(piece_id);
       return true;

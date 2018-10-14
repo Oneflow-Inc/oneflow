@@ -35,10 +35,10 @@ void RepeatForwardCompActor::VirtualAsyncSendNaiveConsumedRegstMsgToProducer() {
 }
 
 void RepeatForwardCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  int64_t in_regst_piece_id = GetNaiveCurReadable("in")->piece_id();
+  int64_t piece_id = GetNaiveCurReadable("in")->piece_id() * repeat_num_ + repeat_count_ - 1;
 
   HandleProducedNaiveDataRegstToConsumer([&](Regst* regst) {
-    regst->set_piece_id(in_regst_piece_id);
+    regst->set_piece_id(piece_id);
     return true;
   });
 }
