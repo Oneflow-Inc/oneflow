@@ -913,7 +913,7 @@ message ExtendDim0Conf {
   required int32 axis = 1;
 }
 
-message RefineDim0OpConf {
+message RedefineDim0OpConf {
   required string in = 1;
   required string out = 2;
   oneof type {
@@ -1007,7 +1007,7 @@ message OperatorConf {
     FpnCollectOpConf fpn_collect_conf = 1012;
     FpnDistributeOpConf fpn_distribute_conf = 1013;
     VStackOpConf vstack_conf = 1014;
-    RefineDim0OpConf refine_dim0_conf = 1015;
+    RedefineDim0OpConf redefine_dim0_conf = 1015;
   }
 }
 

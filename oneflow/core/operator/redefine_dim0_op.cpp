@@ -1,24 +1,26 @@
-#include "oneflow/core/operator/refine_dim0_op.h"
+#include "oneflow/core/operator/redefine_dim0_op.h"
 
 namespace oneflow {
 
-void RefineDim0Op::InitFromOpConf() {
-  CHECK(op_conf().has_refine_dim0_conf());
+void RedefineDim0Op::InitFromOpConf() {
+  CHECK(op_conf().has_redefine_dim0_conf());
   EnrollInputBn("in");
   EnrollOutputBn("out");
 }
 
-const PbMessage& RefineDim0Op::GetCustomizedConf() const { return op_conf().refine_dim0_conf(); }
+const PbMessage& RedefineDim0Op::GetCustomizedConf() const {
+  return op_conf().redefine_dim0_conf();
+}
 
-void RefineDim0Op::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                  const ParallelContext* parallel_ctx) const {
+void RedefineDim0Op::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                    const ParallelContext* parallel_ctx) const {
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   std::vector<int64_t> shape_vec;
   std::vector<int64_t> inner_shape_vec;
-  const RefineDim0OpConf& conf = op_conf().refine_dim0_conf();
+  const RedefineDim0OpConf& conf = op_conf().redefine_dim0_conf();
   switch (conf.type_case()) {
-    case RefineDim0OpConf::kShrinkConf: {
+    case RedefineDim0OpConf::kShrinkConf: {
       int64_t shrink_axis = conf.shrink_conf().axis();
       CHECK_GE(shrink_axis, 1);
       CHECK(in_blob_desc->has_dim0_inner_shape());
@@ -43,7 +45,7 @@ void RefineDim0Op::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
       }
       break;
     }
-    case RefineDim0OpConf::kExtendConf: {
+    case RedefineDim0OpConf::kExtendConf: {
       int64_t extend_axis = conf.extend_conf().axis();
       CHECK_GE(extend_axis, 1);
       const Shape& shape = in_blob_desc->shape();
@@ -86,6 +88,6 @@ void RefineDim0Op::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   }
 }
 
-REGISTER_OP(OperatorConf::kRefineDim0Conf, RefineDim0Op);
+REGISTER_OP(OperatorConf::kRedefineDim0Conf, RedefineDim0Op);
 
 }  // namespace oneflow

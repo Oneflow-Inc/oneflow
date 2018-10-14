@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_KERNEL_REFINE_DIM0_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_REFINE_DIM0_KERNEL_H_
+#ifndef ONEFLOW_CORE_KERNEL_REDEFINE_DIM0_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_REDEFINE_DIM0_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_context.h"
@@ -7,11 +7,11 @@
 namespace oneflow {
 
 template<DeviceType device_type>
-class RefineDim0Kernel final : public KernelIf<device_type> {
+class RedefineDim0Kernel final : public KernelIf<device_type> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(RefineDim0Kernel);
-  RefineDim0Kernel() = default;
-  ~RefineDim0Kernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(RedefineDim0Kernel);
+  RedefineDim0Kernel() = default;
+  ~RedefineDim0Kernel() = default;
 
  private:
   void ForwardDataContent(const KernelCtx&,
@@ -28,4 +28,4 @@ class RefineDim0Kernel final : public KernelIf<device_type> {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_REFINE_DIM0_KERNEL_H_
+#endif  // ONEFLOW_CORE_KERNEL_REDEFINE_DIM0_KERNEL_H_

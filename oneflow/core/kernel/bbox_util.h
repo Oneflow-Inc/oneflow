@@ -8,7 +8,7 @@
 
 namespace oneflow {
 
-enum class BBoxCoord { kCorner = 0, kCenter };
+enum class BBoxCoord { kCorner = 0, kCenter, kNormCorner, kNormCenter, kAlignCorner };
 
 template<typename T, size_t N>
 class ArrayBuffer;
@@ -391,7 +391,7 @@ class LabelIndices : public Indices {
 template<typename Indices, typename T>
 class ScoreIndices : public Indices {
  public:
-  ScoreIndices(const Indices& inds, const T* score_buf) : Indices(inds), score_buf_(score_buf) {}
+  ScoreIndices(const Indices& inds, T* score_buf) : Indices(inds), score_buf_(score_buf) {}
 
   void SortByScore(const std::function<bool(T, T)>& Compare) {
     this->Sort([&](int32_t lhs_index, int32_t rhs_index) {
@@ -411,14 +411,23 @@ class ScoreIndices : public Indices {
     CHECK_LT(n, this->size());
     return score(this->GetIndex(n));
   }
+  void SetScore(size_t n, T score) {
+    CHECK_LT(n, this->size());
+    set_score(this->GetIndex(n));
+  }
   T score(int32_t index) const {
     CHECK_GE(index, 0);
-    return score_buf_[index];
+    return score()[index];
+  }
+  void set_score(int32_t index, T score) {
+    CHECK_GE(index, 0);
+    mut_score()[index] = score;
   }
   const T* score() const { return score_buf_; }
+  T* mut_score() { return score_buf_; }
 
  private:
-  const T* score_buf_;
+  T* score_buf_;
 };
 
 template<typename Indices>
