@@ -30,6 +30,14 @@ void BboxTransformOp::InferBlobDescs(
 
   // output: out_bbox (n, r, 4) or (n, r, 4*c) or (r, 4) or (r, 4*c)
   *GetBlobDesc4BnInOp("out_bbox") = *bbox_delta_blob_desc;
+  if (bbox_blob_desc->has_dim0_inner_shape()) {
+    CHECK(bbox_delta_blob_desc->has_dim0_inner_shape());
+    CHECK_EQ(bbox_blob_desc->dim0_inner_shape(), bbox_delta_blob_desc->dim0_inner_shape());
+    CHECK_EQ(bbox_blob_desc->has_dim0_valid_num_field(),
+             bbox_delta_blob_desc->has_dim0_valid_num_field());
+  }
+  CHECK_EQ(bbox_blob_desc->has_dim1_valid_num_field(),
+           bbox_delta_blob_desc->has_dim0_valid_num_field());
 }
 
 REGISTER_OP(OperatorConf::kBboxTransformConf, BboxTransformOp);

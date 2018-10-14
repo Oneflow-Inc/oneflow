@@ -25,6 +25,28 @@ void BboxTransformKernel<device_type, T>::ForwardDataContent(
   }
 }
 
+template<DeviceType device_type, typename T>
+void BboxTransformKernel<device_type, T>::ForwardDim0ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* bbox_blob = BnInOp2Blob("bbox");
+  const Blob* bbox_delta_blob = BnInOp2Blob("bbox_delta");
+  FOR_RANGE(int64_t, i, 0, bbox_blob->dim0_inner_shape().At(0)) {
+    CHECK_EQ(bbox_blob->dim0_valid_num(i), bbox_delta_blob->dim0_valid_num(i));
+  }
+  BnInOp2Blob("out_bbox")->CopyDim0ValidNumFrom(ctx.device_ctx, bbox_blob);
+}
+
+template<DeviceType device_type, typename T>
+void BboxTransformKernel<device_type, T>::ForwardDim1ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* bbox_blob = BnInOp2Blob("bbox");
+  const Blob* bbox_delta_blob = BnInOp2Blob("bbox_delta");
+  FOR_RANGE(int64_t, i, 0, bbox_blob->static_shape().At(0)) {
+    CHECK_EQ(bbox_blob->dim1_valid_num(i), bbox_delta_blob->dim1_valid_num(i));
+  }
+  BnInOp2Blob("out_bbox")->CopyDim1ValidNumFrom(ctx.device_ctx, bbox_blob);
+}
+
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBboxTransformConf, BboxTransformKernel,
                            FLOATING_DATA_TYPE_SEQ);
 
