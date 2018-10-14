@@ -242,6 +242,31 @@ DECLARE_REDUCE_LOGICAL_NODE(NcclReduceScatterLogicalNode);
 
 int64_t NewAreaId();
 
+class RepeatForwardLogicalNode final : public ForwardLogicalNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(RepeatForwardLogicalNode);
+  RepeatForwardLogicalNode();
+  ~RepeatForwardLogicalNode() override = default;
+
+  OVERRIDE_PURE_VIRTUAL_METHOD();
+
+ private:
+  BackwardLogicalNode* NewCorrectBackwardNode() override;
+  int64_t area_id_;
+};
+
+class RepeatBackwardLogicalNode final : public BackwardLogicalNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(RepeatBackwardLogicalNode);
+  RepeatBackwardLogicalNode();
+  ~RepeatBackwardLogicalNode() override = default;
+
+  OVERRIDE_PURE_VIRTUAL_METHOD();
+
+ private:
+  int64_t area_id_;
+};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_GRAPH_LOGICAL_NODE_H_

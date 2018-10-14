@@ -1,4 +1,4 @@
-#include "oneflow/core/graph/repeat_forward_logical_node.h"
+#include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/operator/repeat_op.h"
 
 namespace oneflow {
