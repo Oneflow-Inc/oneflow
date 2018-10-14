@@ -35,17 +35,20 @@ class Blob final {
   const int32_t* col_num() const { return col_num_ptr_; }
   int32_t* mut_col_num() { return col_num_ptr_; }
 
+  int32_t dim0_valid_num(int32_t no) const;
+  void set_dim0_valid_num(int32_t no, int32_t val);
+  const int32_t* dim0_valid_num() const { return dim0_valid_num_ptr_; }
+  int32_t* mut_dim0_valid_num() { return dim0_valid_num_ptr_; }
+
   int32_t dim1_valid_num(int32_t no) const;
   void set_dim1_valid_num(int32_t no, int32_t val);
-
   const int32_t* dim1_valid_num() const { return dim1_valid_num_ptr_; }
   int32_t* mut_dim1_valid_num() { return dim1_valid_num_ptr_; }
 
-  int32_t dim0_valid_num(int32_t no) const;
-  void set_dim0_valid_num(int32_t no, int32_t val);
-
-  const int32_t* dim0_valid_num() const { return dim0_valid_num_ptr_; }
-  int32_t* mut_dim0_valid_num() { return dim0_valid_num_ptr_; }
+  int32_t dim2_valid_num(int32_t dim0, int32_t dim1) const;
+  void set_dim2_valid_num(int32_t dim0, int32_t dim1, int32_t val);
+  const int32_t* dim2_valid_num() const { return dim2_valid_num_ptr_; }
+  int32_t* mut_dim2_valid_num() { return dim2_valid_num_ptr_; }
 
   const void* header_ptr() const { return header_ptr_; }
   void* mut_header_ptr() { return header_ptr_; }
@@ -91,6 +94,7 @@ class Blob final {
   size_t ByteSizeOfColNumField() const { return blob_desc_->ByteSizeOfColNumField(); }
   size_t ByteSizeOfDim0ValidNumField() const;
   size_t ByteSizeOfDim1ValidNumField() const;
+  size_t ByteSizeOfDim2ValidNumField() const;
   size_t ByteSizeOfDataContentField() const { return blob_desc_->ByteSizeOfDataContentField(); }
   size_t TotalByteSize() const { return blob_desc_->TotalByteSize(); }
 
@@ -101,6 +105,7 @@ class Blob final {
   void CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyDim0ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyDim1ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  void CopyDim2ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
 
   int32_t col_id() const;
@@ -137,8 +142,9 @@ class Blob final {
   void* header_ptr_;
   char* data_id_ptr_;
   int32_t* col_num_ptr_;
-  int32_t* dim1_valid_num_ptr_;
   int32_t* dim0_valid_num_ptr_;
+  int32_t* dim1_valid_num_ptr_;
+  int32_t* dim2_valid_num_ptr_;
   void* dptr_;
   const RtBlobDesc* blob_desc_;
   Regst* regst_;

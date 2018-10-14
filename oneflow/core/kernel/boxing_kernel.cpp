@@ -307,6 +307,12 @@ void BoxingKernel<T>::ForwardDim1ValidNum(
 }
 
 template<typename T>
+void BoxingKernel<T>::ForwardDim2ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  ForwardField<Dim2ValidNumIterator>(ctx, BnInOp2Blob);
+}
+
+template<typename T>
 void BoxingKernel<T>::SetColId(const KernelCtx& ctx,
                                std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const BoxingOpConf& boxing_conf = op_conf().boxing_conf();
