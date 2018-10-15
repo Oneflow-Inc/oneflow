@@ -61,7 +61,8 @@ const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
 bool Kernel::HasEmptyShapeBlob(const PbRpf<std::string>& bns,
                                const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   for (const auto& bn : bns) {
-    if (BnInOp2Blob(bn)->IsShapeEmpty()) { return true; }
+    Blob* blob = BnInOp2Blob(bn);
+    if (blob && blob->IsShapeEmpty()) { return true; }
   }
   return false;
 }
