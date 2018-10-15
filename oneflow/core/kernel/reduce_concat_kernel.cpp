@@ -24,8 +24,8 @@ void ReduceConcatKernel<device_type>::ForwardPackedHeader(
   bool is_first_in_blob = std::get<2>(*other_val);
   if (is_first_in_blob) {
     int64_t in_bn_id = std::get<0>(*other_val);
-    Blob* out_blob = BnInOp2Blob("out");
     Blob* in_blob = BnInOp2Blob(this->op_attribute().input_bns().Get(in_bn_id));
+    Blob* out_blob = BnInOp2Blob("out");
     Memcpy<DeviceType::kCPU>(ctx.device_ctx, out_blob->mut_header_ptr(), in_blob->header_ptr(),
                              out_blob->ByteSizeOfBlobHeader());
   }
