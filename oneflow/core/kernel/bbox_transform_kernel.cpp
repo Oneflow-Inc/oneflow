@@ -8,8 +8,8 @@ void BboxTransformKernel<device_type, T>::ForwardDataContent(
   const Blob* bbox_blob = BnInOp2Blob("bbox");
   const Blob* bbox_delta_blob = BnInOp2Blob("bbox_delta");
   Blob* out_bbox_blob = BnInOp2Blob("out_bbox");
-  const BBoxRegressionWeights& bbox_reg_ws =
-      this->op_conf().bbox_transform_conf().bbox_reg_weights();
+  const BboxTransformOpConf& conf = this->op_conf().bbox_transform_conf();
+
   const int64_t num_axes = out_bbox_blob->shape().NumAxes();
   const int64_t num_boxes = out_bbox_blob->shape().Count(0, num_axes - 1);
   const int64_t num_classes =
@@ -20,7 +20,10 @@ void BboxTransformKernel<device_type, T>::ForwardDataContent(
       const auto* bbox = BBox::Cast(bbox_blob->dptr<T>()) + i;
       const auto* bbox_delta = BBoxDelta<T>::Cast(bbox_delta_blob->dptr<T>()) + offset;
       auto* out_bbox = BBox::MutCast(out_bbox_blob->mut_dptr<T>()) + offset;
-      out_bbox->Transform(bbox, bbox_delta, bbox_reg_ws);
+      out_bbox->Transform(bbox, bbox_delta, conf.bbox_reg_weights());
+      if (conf.has_clip_conf()) {
+        out_bbox->Clip(conf.clip_conf().height(), conf.clip_conf().width());
+      }
     }
   }
 }

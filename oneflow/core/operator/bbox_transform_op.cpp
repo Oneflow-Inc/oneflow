@@ -20,13 +20,13 @@ void BboxTransformOp::InferBlobDescs(
   const BlobDesc* bbox_blob_desc = GetBlobDesc4BnInOp("bbox");
   // input: bbox_delta (n, r, 4) or (n, r, 4*c) or (r, 4) or (r, 4*c)
   const BlobDesc* bbox_delta_blob_desc = GetBlobDesc4BnInOp("bbox_delta");
-  CHECK_EQ(bbox_blob_desc->shape().NumAxes(), bbox_delta_blob_desc->shape().NumAxes());
-  FOR_RANGE(int64_t, i, 0, bbox_blob_desc->shape().NumAxes() - 1) {
+  int64_t num_axes = bbox_blob_desc->shape().NumAxes();
+  CHECK_EQ(bbox_delta_blob_desc->shape().NumAxes(), num_axes);
+  FOR_RANGE(int64_t, i, 0, num_axes - 1) {
     CHECK_EQ(bbox_blob_desc->shape().At(i), bbox_delta_blob_desc->shape().At(i));
   }
-  CHECK_EQ(bbox_blob_desc->shape().At(bbox_blob_desc->shape().NumAxes() - 1)
-               % bbox_delta_blob_desc->shape().At(bbox_delta_blob_desc->shape().NumAxes() - 1),
-           0);
+  CHECK_EQ(
+      bbox_blob_desc->shape().At(num_axes - 1) % bbox_delta_blob_desc->shape().At(num_axes - 1), 0);
 
   // output: out_bbox (n, r, 4) or (n, r, 4*c) or (r, 4) or (r, 4*c)
   *GetBlobDesc4BnInOp("out_bbox") = *bbox_delta_blob_desc;
