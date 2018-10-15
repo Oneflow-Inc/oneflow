@@ -377,6 +377,7 @@ void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx,
       Regst* regst = GetNaiveCurWriteable(regst_desc_id_it->second);
       if (regst == nullptr) { regst = GetNaiveCurReadable(regst_desc_id_it->second); }
       if (regst == nullptr) { regst = Regst4RegstDescId(regst_desc_id_it->second); }
+      if (regst == nullptr) { return nullptr; }
       const LogicalBlobId& lbi = ek.kernel->BnInOp2Lbi(bn_in_op);
       return regst->GetBlobByLbi(lbi);
     });

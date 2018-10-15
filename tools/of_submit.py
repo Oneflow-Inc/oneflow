@@ -47,7 +47,7 @@ def SubmitJobToOneMachine(machine, job_conf, oneflow_path, workdir):
   SystemCall("scp " + job_conf_file.name + remote_file_prefix + workdir + "/oneflow.job")
   os.remove(job_conf_file.name)
   oneflow_cmd = "bash -c \'\"cd " + workdir + "; nohup ./oneflow -logtostderr=0 -log_dir=./log -v=0 -logbuflevel=-1 " \
-                + "-job_conf=./oneflow.job -this_machine_id=" + str(machine.id) \
+                + "-job_conf=./oneflow.job " \
                 + " 1>/dev/null 2>&1 </dev/null & \"\'"
   SystemCall(ssh_prefix + oneflow_cmd);
 

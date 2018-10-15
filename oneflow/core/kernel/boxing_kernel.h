@@ -31,6 +31,9 @@ class BoxingKernel : public KernelIf<DeviceType::kCPU> {
   void ForwardDim1ValidNum(const KernelCtx& ctx,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
+  void ForwardDim2ValidNum(const KernelCtx& ctx,
+                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+
   void SetColId(const KernelCtx&, std::function<Blob*(const std::string&)>) const;
   void SetMaxColId(const KernelCtx&, std::function<Blob*(const std::string&)>) const;
 

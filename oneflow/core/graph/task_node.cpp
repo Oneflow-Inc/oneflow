@@ -98,6 +98,10 @@ void TaskNode::NaiveInferProducedDataRegstTimeShape() {
   });
 }
 
+void TaskNode::InferTimeShapeIfMeaningful() {
+  if (!IsMeaningLess()) { InferProducedDataRegstTimeShape(); }
+}
+
 void TaskNode::ForEachConsumedDataRegst(
     std::function<void(const std::string&, const RegstDesc*)> Handler) const {
   for (const auto& pair : consumed_regsts_) {

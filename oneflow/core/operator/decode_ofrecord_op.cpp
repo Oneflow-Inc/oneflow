@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/decode_ofrecord_op.h"
+#include "oneflow/core/record/ofrecord_decoder.h"
 
 namespace oneflow {
 
@@ -44,6 +45,10 @@ void DecodeOFRecordOp::InferBlobDescs(
     out_blob_desc->set_has_data_id_field(Global<JobDesc>::Get()->SizeOfOneDataId() > 0);
     out_blob_desc->set_has_col_num_field(blob_conf.max_sequence_size() > 1);
     out_blob_desc->set_max_col_num(blob_conf.max_sequence_size());
+    const auto& encode = blob_conf.encode_case();
+    const auto* decoder_if = GetOFRecordDecoder(encode.encode_case(), blob_conf.data_type());
+    out_blob_desc->set_has_dim1_valid_num_field(decoder_if->HasDim1ValidNumField(encode));
+    out_blob_desc->set_has_dim2_valid_num_field(decoder_if->HasDim2ValidNumField(encode));
   }
 }
 

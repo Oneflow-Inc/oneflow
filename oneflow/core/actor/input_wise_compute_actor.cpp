@@ -62,7 +62,7 @@ void InputWiseCompActor::Act() {
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
   SetKernelCtxOther(&(kernel_ctx.other));
   AsyncLaunchKernel(kernel_ctx, [&](int64_t regst_desc_id) -> Regst* {
-    CHECK_EQ(cur_processed_regst_desc_id_, regst_desc_id);
+    if (cur_processed_regst_desc_id_ != regst_desc_id) { return nullptr; }
     return cur_regst;
   });
   processed_regst_desc_id_cnt_ += 1;

@@ -143,10 +143,15 @@ void CtrlClient::EraseCount(const std::string& k) {
 
 CtrlClient::CtrlClient() {
   stubs_.reserve(Global<JobDesc>::Get()->TotalMachineNum());
+  int32_t port = -1;
+  std::string addr = "";
   for (int64_t i = 0; i < Global<JobDesc>::Get()->TotalMachineNum(); ++i) {
-    std::string addr = Global<MachineCtx>::Get()->GetCtrlAddr(i);
+    const Machine& mchn = Global<JobDesc>::Get()->resource().machine(i);
+    port = (mchn.ctrl_port_agent() != -1) ? (mchn.ctrl_port_agent())
+                                          : Global<JobDesc>::Get()->resource().ctrl_port();
+    addr = mchn.addr() + ":" + std::to_string(port);
     stubs_.push_back(CtrlService::NewStub(addr));
-    LoadServer(addr, stubs_[i].get());
+    LoadServer(mchn.addr(), stubs_[i].get());
   }
   need_heartbeat_thread_stop_ = false;
   heartbeat_thread_ = std::thread([this]() {
@@ -161,6 +166,7 @@ CtrlClient::CtrlClient() {
       }
       for (size_t i = 0; i < stubs_.size(); ++i) {
         grpc::ClientContext client_ctx;
+        request.set_addr(Global<JobDesc>::Get()->resource().machine(i).addr());
         GRPC_CHECK(stubs_[i]->CallMethod<CtrlMethod::kLoadServer>(&client_ctx, request, &response))
             << "Machine " << i << " lost";
       }
@@ -174,6 +180,7 @@ void CtrlClient::LoadServer(const std::string& server_addr, CtrlService::Stub* s
   for (; retry_idx < max_retry_num; ++retry_idx) {
     grpc::ClientContext client_ctx;
     LoadServerRequest request;
+    request.set_addr(server_addr);
     LoadServerResponse response;
     grpc::Status st = stub->CallMethod<CtrlMethod::kLoadServer>(&client_ctx, request, &response);
     if (st.error_code() == grpc::StatusCode::OK) {
