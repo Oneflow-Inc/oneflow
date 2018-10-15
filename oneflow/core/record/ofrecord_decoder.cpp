@@ -2,6 +2,7 @@
 #include "oneflow/core/record/ofrecord_raw_decoder.h"
 #include "oneflow/core/record/ofrecord_jpeg_decoder.h"
 #include "oneflow/core/record/ofrecord_protobuf_decoder.h"
+#include "oneflow/core/record/ofrecord_bytes_list_decoder.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/thread/thread_manager.h"
 

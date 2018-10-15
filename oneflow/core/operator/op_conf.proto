@@ -492,7 +492,11 @@ message EncodeConf {
     EncodeRaw raw = 1;
     EncodeJpeg jpeg = 2;
     EncodeProtobuf protobuf = 3;
+    EncodeBytesList bytes_list = 4;
   }
+}
+
+message EncodeBytesList {
 }
 
 message EncodeProtobuf {

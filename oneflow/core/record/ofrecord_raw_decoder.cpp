@@ -66,7 +66,8 @@ int32_t OFRecordDecoderImpl<EncodeCase::kRaw, T>::GetColNumOfFeature(
     UNIMPLEMENTED();
   }
   CHECK_EQ(elem_num % one_col_elem_num, 0);
-  return std::max<int32_t>(elem_num / one_col_elem_num, 1);
+  CHECK_LE(elem_num, one_col_elem_num);
+  return 1;
 }
 
 template<typename T>
