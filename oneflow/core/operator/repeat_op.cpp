@@ -16,17 +16,15 @@ void RepeatOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
                               const ParallelContext* parallel_ctx) const {
   BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+  *out_blob_desc = *in_blob_desc;
+}
 
+void RepeatOp::InferDiffBlobDescsWithoutFwBlob(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   BlobDesc* in_diff_blob_desc = GetBlobDesc4BnInOp(GenDiffBn("in"));
   BlobDesc* out_diff_blob_desc = GetBlobDesc4BnInOp(GenDiffBn("out"));
-
-  if (in_blob_desc && out_blob_desc) {
-    *out_blob_desc = *in_blob_desc;
-  } else if (in_diff_blob_desc && out_diff_blob_desc) {
-    *in_diff_blob_desc = *out_diff_blob_desc;
-  } else {
-    UNIMPLEMENTED();
-  }
+  *in_diff_blob_desc = *out_diff_blob_desc;
 }
 
 LogicalNode* RepeatOp::NewProperLogicalNode() { return new RepeatForwardLogicalNode(); }

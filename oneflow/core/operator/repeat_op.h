@@ -15,9 +15,13 @@ class RepeatOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override;
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
+  void InferDiffBlobDescsWithoutFwBlob(
+      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext*) const override;
   void InitFromOpConf() override;
   LogicalNode* NewProperLogicalNode() override;
   bool NeedInBlobWhenBackward() const override { return false; }
+  bool NeedOutBlobWhenBackward() const override { return false; }
 };
 
 }  // namespace oneflow

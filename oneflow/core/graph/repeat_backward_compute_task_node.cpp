@@ -24,7 +24,7 @@ void RepeatBackwardCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("in_diff");
   out_regst->AddLbi(sole_op->BnInOp2Lbi(sole_op->SoleIdbn()));
   node->BindBnWithRegst(sole_op->SoleIdbn(), out_regst);
-  node->InferBlobDescs(parallel_ctx());
+  node->InferDiffBlobDescsWithoutFwNode(parallel_ctx());
 }
 
 void RepeatBackwardCompTaskNode::InferProducedDataRegstTimeShape() {
