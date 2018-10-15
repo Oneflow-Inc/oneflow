@@ -499,6 +499,7 @@ message EncodeProtobuf {
 }
 
 message EncodeRaw {
+  optional bool dim1_varying_length = 1 [default = false];
 }
 
 message EncodeJpeg {
