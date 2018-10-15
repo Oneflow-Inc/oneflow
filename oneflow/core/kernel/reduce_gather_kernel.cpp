@@ -18,6 +18,17 @@ void ReduceGatherKernel<device_type>::ForwardDataContent(
   Memcpy<device_type>(ctx.device_ctx, dst_cur_dptr, in_blob->dptr<char>(), in_byte_size);
 }
 
+template<DeviceType device_type>
+void ReduceGatherKernel<device_type>::ForwardPackedHeader(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const auto* other_val = static_cast<std::pair<int64_t, bool>*>(ctx.other);
+  int64_t in_bn_id = other_val->first;
+  Blob* out_blob = BnInOp2Blob("out");
+  Blob* in_blob = BnInOp2Blob(this->op_attribute().input_bns().Get(in_bn_id));
+  Memcpy<DeviceType::kCPU>(ctx.device_ctx, out_blob->mut_header_ptr(), in_blob->header_ptr(),
+                           out_blob->ByteSizeOfBlobHeader());
+}
+
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kReduceGatherConf, ReduceGatherKernel);
 
 }  // namespace oneflow
