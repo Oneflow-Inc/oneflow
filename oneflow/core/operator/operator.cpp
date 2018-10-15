@@ -219,7 +219,7 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
         || HasBnWithField(pobns, &BlobDesc::has_col_num_field)) {
       kernel_conf->set_need_do_col_num(true);
     }
-    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_dim0_valid_num_field)) {
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, obns, &BlobDesc::has_dim0_valid_num_field)) {
       kernel_conf->set_need_do_dim0_valid_num(true);
       if (DoAllBlobDescHaveField(GetBlobDesc4BnInOp, input_bns(),
                                  &BlobDesc::has_dim0_valid_num_field)
@@ -229,10 +229,10 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
         kernel_conf->set_can_naive_do_dim0_valid_num(true);
       }
     }
-    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_dim1_valid_num_field)) {
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, obns, &BlobDesc::has_dim1_valid_num_field)) {
       kernel_conf->set_need_do_dim1_valid_num(true);
     }
-    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_dim2_valid_num_field)) {
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, obns, &BlobDesc::has_dim2_valid_num_field)) {
       kernel_conf->set_need_do_dim2_valid_num(true);
     }
   }
