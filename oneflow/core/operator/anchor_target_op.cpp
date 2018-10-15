@@ -51,10 +51,10 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   const int32_t max_gt_boxes_num = anchor_target_conf.max_gt_boxes_num();
   const int32_t base_anchors_num =
       anchor_generator_conf.anchor_scales_size() * anchor_generator_conf.aspect_ratios_size();
-  const int32_t fm_stride = anchor_generator_conf.feature_map_stride();
+  const float fm_stride = anchor_generator_conf.feature_map_stride();
   CHECK_GT(fm_stride, 0);
-  const int32_t fm_h = anchor_generator_conf.image_height() / fm_stride;
-  const int32_t fm_w = anchor_generator_conf.image_width() / fm_stride;
+  const int32_t fm_h = std::ceil(anchor_generator_conf.image_height() / fm_stride);
+  const int32_t fm_w = std::ceil(anchor_generator_conf.image_width() / fm_stride);
   CHECK_GT(fm_h, 0);
   CHECK_GT(fm_w, 0);
   // input: gt_boxes (N) FloatList16

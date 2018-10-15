@@ -38,7 +38,7 @@ void Operator::InitFromOpConf(const OperatorConf& op_conf) {
   if (GetActivationType() != ActivationType::kNone) { EnrollBwBufBn("bw_activation"); }
   InitFromOpConf();
   if (IsOpWithModel(op_attribute_) && this_op_conf->trainable() == false) {
-    CHECK(this_op_conf->has_model_load_dir());
+    CHECK(this_op_conf->has_model_load_dir()) << "op name: " << this_op_conf->name();
   }
 }
 
