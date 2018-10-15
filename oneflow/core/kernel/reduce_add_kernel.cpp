@@ -24,6 +24,16 @@ void ReduceAddKernel<device_type, T>::ForwardDataContent(
   }
 }
 
+template<DeviceType device_type, typename T>
+bool ReduceAddKernel<device_type, T>::HasEmptyShapeBlob(
+    const KernelCtx& ctx, const PbRpf<std::string>& bns,
+    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+  const auto* other_val = static_cast<std::pair<int64_t, bool>*>(ctx.other);
+  int64_t in_bn_id = other_val->first;
+  Blob* in_blob = BnInOp2Blob(this->op_attribute().input_bns().Get(in_bn_id));
+  return in_blob->IsShapeEmpty();
+}
+
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReduceAddConf, ReduceAddKernel, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

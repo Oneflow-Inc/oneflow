@@ -99,8 +99,8 @@ class Kernel {
 
   virtual const PbMessage& GetCustomizedOpConf() const { UNIMPLEMENTED(); }
   virtual const PbMessage& GetCustomizedKernelConf() const { UNIMPLEMENTED(); }
-  bool HasEmptyShapeBlob(const PbRpf<std::string>& bns,
-                         const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  virtual bool HasEmptyShapeBlob(const KernelCtx& ctx, const PbRpf<std::string>& bns,
+                                 const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 
 #define DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF(conf_type)                                   \
   template<typename T>                                                                   \

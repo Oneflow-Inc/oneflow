@@ -58,7 +58,7 @@ const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
   return op_attribute().bn_in_op2lbi().at(bn_in_op);
 }
 
-bool Kernel::HasEmptyShapeBlob(const PbRpf<std::string>& bns,
+bool Kernel::HasEmptyShapeBlob(const KernelCtx& ctx, const PbRpf<std::string>& bns,
                                const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   for (const auto& bn : bns) {
     Blob* blob = BnInOp2Blob(bn);
@@ -73,7 +73,7 @@ void Kernel::Forward(const KernelCtx& ctx,
     CHECK(!kernel_conf_.need_do_opaque_header());
     ForwardDim0ValidNum(ctx, BnInOp2Blob);
   }
-  if (HasEmptyShapeBlob(op_attribute().input_bns(), BnInOp2Blob)) { return; }
+  if (HasEmptyShapeBlob(ctx, op_attribute().input_bns(), BnInOp2Blob)) { return; }
   if (kernel_conf_.need_do_dim1_valid_num()) {
     CHECK(!kernel_conf_.need_do_opaque_header());
     ForwardDim1ValidNum(ctx, BnInOp2Blob);
@@ -104,7 +104,7 @@ void Kernel::Backward(const KernelCtx& ctx,
     CHECK(!kernel_conf_.need_do_opaque_header());
     BackwardDim0ValidNum(ctx, BnInOp2Blob);
   }
-  if (HasEmptyShapeBlob(op_attribute().output_diff_bns(), BnInOp2Blob)) { return; }
+  if (HasEmptyShapeBlob(ctx, op_attribute().output_diff_bns(), BnInOp2Blob)) { return; }
   ActivationType activation = GetActivationType();
   if (activation != ActivationType::kNone) {
     const PbRpf<std::string> obns = this->op_attribute().output_bns();
