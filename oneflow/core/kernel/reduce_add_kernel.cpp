@@ -31,10 +31,12 @@ void ReduceAddKernel<device_type, T>::ForwardPackedHeader(
   bool is_first_in_blob = std::get<3>(*other_val);
   if (is_first_in_blob) {
     int64_t in_bn_id = std::get<0>(*other_val);
-    Blob* out_blob = BnInOp2Blob("out");
     Blob* in_blob = BnInOp2Blob(this->op_attribute().input_bns().Get(in_bn_id));
-    Memcpy<DeviceType::kCPU>(ctx.device_ctx, out_blob->mut_header_ptr(), in_blob->header_ptr(),
-                             out_blob->ByteSizeOfBlobHeader());
+    FOR_RANGE(int32_t, i, 0, this->op_attribute().output_bns().size()) {
+      Blob* out_blob = BnInOp2Blob(this->op_attribute().output_bns().Get(i));
+      Memcpy<device_type>(ctx.device_ctx, out_blob->mut_header_ptr(), in_blob->header_ptr(),
+                          out_blob->ByteSizeOfBlobHeader());
+    }
   }
 }
 
