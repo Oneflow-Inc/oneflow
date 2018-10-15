@@ -9,6 +9,9 @@ template<typename T>
 class OFRecordDecoderImpl<EncodeCase::kJpeg, T> final
     : public OFRecordDecoder<EncodeCase::kJpeg, T> {
  public:
+  bool HasDim1ValidNumField(const EncodeConf& encode_conf) const override { return false; }
+  bool HasDim2ValidNumField(const EncodeConf& encode_conf) const override { return false; }
+
  private:
   int32_t GetColNumOfFeature(const Feature&, int64_t one_col_elem_num) const override;
   void ReadOneCol(DeviceCtx*, const Feature&, const BlobConf&, int32_t col_id, T* out_dptr,
