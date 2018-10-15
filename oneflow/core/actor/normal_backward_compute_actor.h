@@ -30,6 +30,7 @@ class NormalBackwardCompActor final : public CompActor {
   void AsyncReturnModelRegstUntilModelVersionIdEqual(int64_t model_version_id);
   void AsyncReturnModelRegstUntilLastPieceIdGreaterThan(int64_t piece_id);
 
+  int64_t actual_num_of_piece_in_batch_;
   int64_t any_out_diff_regst_desc_id_;
   int64_t model_regst_desc_id_;
   int64_t const_buf_regst_desc_id_;
