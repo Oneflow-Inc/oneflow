@@ -38,7 +38,7 @@ void OFRecordDecoderImpl<EncodeCase::kBytesList, T>::ReadOneCol(
   for (const auto& bytes : feature.bytes_list().value()) {
     CHECK_LE(bytes.size(), shape_count2);
     auto* in_dptr = reinterpret_cast<const T*>(bytes.c_str());
-    CopyElem(in_dptr, out_dptr, shape_count2);
+    CopyElem(in_dptr, out_dptr, bytes.size());
     out_dptr += shape_count2;
   }
 }
