@@ -6,6 +6,20 @@ template<DeviceType device_type, typename PredType, typename LabelType>
 void LossKernel<device_type, PredType, LabelType>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   VirtualLossForwardDataContent(ctx, BnInOp2Blob);
+
+  // total instance num
+  int32_t total_instance_num = 0;
+  Blob* label_blob = BnInOp2Blob("label");
+  if (label_blob->has_dim0_valid_num_field()) {
+    for (int32_t i = 0; i < label_blob->dim0_inner_shape().At(0); i++) {
+      total_instance_num += label_blob->dim0_valid_num(i);
+    }
+  } else {
+    total_instance_num = label_blob->static_shape().At(0);
+  }
+  KernelUtil<device_type, PredType>::Set(ctx.device_ctx, static_cast<PredType>(total_instance_num),
+                                         BnInOp2Blob("total_instance_num")->mut_dptr<PredType>());
+
   const LossKernelConf& conf = GetLossKernelConf(this->kernel_conf());
   int64_t n = BnInOp2Blob("prediction")->shape().At(0);
   Blob* weight_blob = BnInOp2Blob("weight");

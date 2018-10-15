@@ -21,6 +21,18 @@ class AccuracyOp final : public Operator {
                       std::function<void(OpContext*)> EnrollOpCtx) const override;
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const;
+
+ private:
+  LogicalBlobId obn2lbi(const std::string& output_bn) const override {
+    LogicalBlobId ret;
+    ret.set_op_name(op_name());
+    if (output_bn == "total_instance_num") {
+      ret.set_blob_name("total_instance_num");
+    } else {
+      ret.set_blob_name(GetValFromCustomizedConf<std::string>(output_bn));
+    }
+    return ret;
+  }
 };
 
 }  // namespace oneflow

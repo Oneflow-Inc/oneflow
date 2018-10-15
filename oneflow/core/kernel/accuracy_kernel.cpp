@@ -18,6 +18,19 @@ void AccuracyKernel<device_type, PredType, LabelType>::ForwardDataContent(
   AccuracyKernelUtil<device_type, PredType, LabelType>::Forward(
       ctx.device_ctx, N, D, top_k, X->dptr<PredType>(), label->dptr<LabelType>(),
       accuracy->mut_dptr<PredType>());
+
+  // total instance num
+  int32_t total_instance_num = 0;
+  Blob* label_blob = BnInOp2Blob("label");
+  if (label_blob->has_dim0_valid_num_field()) {
+    for (int32_t i = 0; i < label_blob->dim0_inner_shape().At(0); i++) {
+      total_instance_num += label_blob->dim0_valid_num(i);
+    }
+  } else {
+    total_instance_num = label_blob->static_shape().At(0);
+  }
+  KernelUtil<device_type, PredType>::Set(ctx.device_ctx, static_cast<PredType>(total_instance_num),
+                                         BnInOp2Blob("total_instance_num")->mut_dptr<PredType>());
 }
 
 template<typename PredType, typename LabelType>
@@ -66,6 +79,7 @@ REGISTER_KERNEL_CREATOR(OperatorConf::kAccuracyConf, CreateAccuracyKernel);
 #define MAKE_ENTRY(data_type_pair, label_type_pair)                                      \
   template struct AccuracyKernelUtil<DeviceType::kCPU, OF_PP_PAIR_FIRST(data_type_pair), \
                                      OF_PP_PAIR_FIRST(label_type_pair)>;
+
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, FLOATING_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

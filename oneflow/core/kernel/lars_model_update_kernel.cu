@@ -7,13 +7,14 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void GetLocalLearningRateGpu(int64_t batch_size, T learning_rate, T l2, T epsilon,
-                                        T lars_coefficient, int64_t next_model_vid, T* data_tmp) {
+__global__ void GetLocalLearningRateGpu(const const T* total_instance_num_ptr, T learning_rate,
+                                        T l2, T epsilon, T lars_coefficient, int64_t next_model_vid,
+                                        T* data_tmp) {
   T* model_norm = &data_tmp[0];
   T* model_diff_norm = &data_tmp[1];
   T* local_learning_rate = &data_tmp[2];
   *model_norm = std::sqrt(*model_norm);
-  *model_diff_norm = std::sqrt(*model_diff_norm) / batch_size;  // TODO(shiyuan)
+  *model_diff_norm = std::sqrt(*model_diff_norm) / *total_instance_num_ptr;  // TODO(shiyuan)
   if (next_model_vid == 1) {
     *local_learning_rate =
         learning_rate * lars_coefficient * (*model_norm) / (epsilon + (*model_diff_norm));
@@ -24,10 +25,11 @@ __global__ void GetLocalLearningRateGpu(int64_t batch_size, T learning_rate, T l
 }
 
 template<typename T>
-__global__ void UpdateModelGpu(int64_t n, int64_t batch_size, T l1, T l2, T momentum_beta,
-                               const T* model_diff, T* model, T* momentum, T* data_tmp) {
+__global__ void UpdateModelGpu(int64_t n, const T* total_instance_num_ptr, T l1, T l2,
+                               T momentum_beta, const T* model_diff, T* model, T* momentum,
+                               T* data_tmp) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    T reg_diff = RegularizeDiff(model_diff[i], batch_size, l1, l2, model[i]);
+    T reg_diff = RegularizeDiff(model_diff[i], *total_instance_num_ptr, l1, l2, model[i]);
     momentum[i] = momentum_beta * momentum[i] - data_tmp[2] * reg_diff;
     model[i] = model[i] + momentum[i];
   }
@@ -38,16 +40,17 @@ __global__ void UpdateModelGpu(int64_t n, int64_t batch_size, T l1, T l2, T mome
 template<typename T>
 class LARSMdUpdateKernelUtil<DeviceType::kGPU, T> final {
  public:
-  static void UpdateModel(DeviceCtx* ctx, int64_t n, int64_t batch_size, T learning_rate, T l1,
-                          T l2, T momentum_beta, T epsilon, T lars_coefficient,
-                          int64_t next_model_vid, const T* model_diff, T* model, T* momentum,
-                          T* data_tmp) {
+  static void UpdateModel(DeviceCtx* ctx, int64_t n, const T* total_instance_num_ptr,
+                          T learning_rate, T l1, T l2, T momentum_beta, T epsilon,
+                          T lars_coefficient, int64_t next_model_vid, const T* model_diff, T* model,
+                          T* momentum, T* data_tmp) {
     KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, model, 1, model, 1, &data_tmp[0]);
     KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, model_diff, 1, model_diff, 1, &data_tmp[1]);
-    GetLocalLearningRateGpu<T><<<1, 1, 0, ctx->cuda_stream()>>>(
-        batch_size, learning_rate, l2, epsilon, lars_coefficient, next_model_vid, data_tmp);
+    GetLocalLearningRateGpu<T>
+        <<<1, 1, 0, ctx->cuda_stream()>>>(total_instance_num_ptr, learning_rate, l2, epsilon,
+                                          lars_coefficient, next_model_vid, data_tmp);
     UpdateModelGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-        n, batch_size, l1, l2, momentum_beta, model_diff, model, momentum, data_tmp);
+        n, total_instance_num_ptr, l1, l2, momentum_beta, model_diff, model, momentum, data_tmp);
   }
 };
 
