@@ -19,10 +19,10 @@ static std::tuple<std::function<void(CtrlCall<(CtrlMethod)Idx>*)>...> GetHandler
 class CtrlServer final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CtrlServer);
-  CtrlServer() = delete;
   ~CtrlServer();
 
-  CtrlServer(const std::string& server_addr);
+  CtrlServer();
+  const std::string& this_machine_addr() { return this_machine_addr_; }
 
  private:
   void HandleRpcs();
@@ -77,6 +77,9 @@ class CtrlServer final {
   HashMap<std::string, std::list<CtrlCall<CtrlMethod::kPullKV>*>> pending_kv_calls_;
   // IncreaseCount, EraseCount
   HashMap<std::string, int32_t> count_;
+
+  bool is_first_connect_;
+  std::string this_machine_addr_;
 };
 
 }  // namespace oneflow

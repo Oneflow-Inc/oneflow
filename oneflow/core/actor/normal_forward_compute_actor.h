@@ -46,6 +46,7 @@ class NormalForwardCompActor final : public CompActor {
 
   int64_t random_seed_;
   int64_t cur_piece_id_;
+  int64_t actual_num_of_piece_in_batch_;
 
   int64_t forward_model_regst_desc_id_;
   Regst* pre_forward_model_regst_;
