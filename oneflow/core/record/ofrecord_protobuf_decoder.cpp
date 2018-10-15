@@ -17,6 +17,19 @@ OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_PB_LIST_DATA_LIST, PB_LIST_DATA_TYPE_PB_LIST
 }  // namespace
 
 template<typename T>
+bool OFRecordDecoderImpl<EncodeCase::kProtobuf, T>::HasDim1ValidNumField(
+    const EncodeConf& encode_conf) const {
+  UNIMPLEMENTED();
+  return false;
+}
+template<typename T>
+bool OFRecordDecoderImpl<EncodeCase::kProtobuf, T>::HasDim2ValidNumField(
+    const EncodeConf& encode_conf) const {
+  UNIMPLEMENTED();
+  return false;
+}
+
+template<typename T>
 int32_t OFRecordDecoderImpl<EncodeCase::kProtobuf, T>::GetColNumOfFeature(
     const Feature& feature, int64_t one_col_elem_num) const {
   return 1;

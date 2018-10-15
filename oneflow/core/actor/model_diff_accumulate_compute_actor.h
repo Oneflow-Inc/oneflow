@@ -11,12 +11,8 @@ class MdDiffAccCompActor final : public AccumulateCompActor {
   MdDiffAccCompActor() = default;
   ~MdDiffAccCompActor() = default;
 
-  void VirtualCompActorInit(const TaskProto& proto) override {
-    AccumulateCompActor::Init(proto, Global<JobDesc>::Get()->NumOfPiecesInBatch(),
-                              ColIdOrder::kDescending);
-  }
-
  private:
+  void VirtualCompActorInit(const TaskProto& proto) override;
 };
 
 }  // namespace oneflow

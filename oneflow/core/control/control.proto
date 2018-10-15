@@ -4,6 +4,7 @@ package oneflow;
 import "oneflow/core/actor/act_event.proto";
 
 message LoadServerRequest {
+  required string addr = 1;
 }
 
 message LoadServerResponse {
