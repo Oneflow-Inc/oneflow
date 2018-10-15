@@ -1,0 +1,8 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/record/record.proto";
+
+message PolyList {
+    repeated FloatList polygons = 1;
+}
