@@ -18,28 +18,13 @@ void ReduceConcatKernel<device_type>::ForwardDataContent(
 }
 
 template<DeviceType device_type>
-void ReduceConcatKernel<device_type>::ForwardPackedHeader(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const auto* other_val = static_cast<std::pair<int64_t, bool>*>(ctx.other);
-  int64_t in_bn_id = other_val->first;
-  Blob* out_blob = BnInOp2Blob("out");
-  Blob* in_blob = BnInOp2Blob(this->op_attribute().input_bns().Get(in_bn_id));
-  Memcpy<DeviceType::kCPU>(ctx.device_ctx, out_blob->mut_header_ptr(), in_blob->header_ptr(),
-                           out_blob->ByteSizeOfBlobHeader());
-}
-
-template<DeviceType device_type>
 bool ReduceConcatKernel<device_type>::HasEmptyShapeBlob(
     const KernelCtx& ctx, const PbRpf<std::string>& bns,
     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const auto* other_val = static_cast<std::pair<int64_t, bool>*>(ctx.other);
   int64_t in_bn_id = other_val->first;
   Blob* in_blob = BnInOp2Blob(this->op_attribute().input_bns().Get(in_bn_id));
-  if (in_blob->IsShapeEmpty()) {
-    return true;
-  } else {
-    return false;
-  }
+  return in_blob->IsShapeEmpty();
 }
 
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kReduceConcatConf, ReduceConcatKernel);

@@ -15,8 +15,6 @@ class ReduceConcatKernel final : public KernelIf<device_type> {
  private:
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
-  void ForwardPackedHeader(const KernelCtx&,
-                           std::function<Blob*(const std::string&)>) const override;
   bool HasEmptyShapeBlob(
       const KernelCtx& ctx, const PbRpf<std::string>& bns,
       const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
