@@ -412,7 +412,7 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
   HashMap<const LogicalNode*, NormalMdUpdtLogicalNode*> first_shared2mdupdt;
   HashMap<const LogicalNode*, ReduceCtx> fw_node2reduce_ctx;
   ForEachLogicalNode<ForwardLogicalNode>([&](ForwardLogicalNode* fw_logical) {
-    if (fw_logical->HasOpWithForwardModelBlob()) { BuildMdSaveStruct(fw_logical); }
+    if (fw_logical->HasOpWithForwardModelBlob()) { BuildMdSaveStructWhenNeeded(fw_logical); }
     if (fw_logical->HasOpWithModelOrConstModelBlob()) {
       // MdUpdt MdSave
       NormalMdUpdtLogicalNode* md_updt_logical = nullptr;
@@ -621,7 +621,7 @@ void LogicalGraph::SetupNormalMdUpdtOp() {
   });
 }
 
-MdSaveLogicalNode* LogicalGraph::BuildMdSaveStruct(LogicalNode* need_save_logical) {
+MdSaveLogicalNode* LogicalGraph::BuildMdSaveStructWhenNeeded(LogicalNode* need_save_logical) {
   if (Global<JobDesc>::Get()->enable_write_snapshot()) {
     OperatorConf md_save_op_conf;
     md_save_op_conf.set_name("md_save_" + NewUniqueId());
@@ -661,11 +661,11 @@ NormalMdUpdtLogicalNode* LogicalGraph::BuildNormalMdUpdtAndMdSaveStruct(
   NormalMdUpdtLogicalNode* md_updt_logical = NewNode<NormalMdUpdtLogicalNode>();
   md_updt_logical->mut_parallel_desc() = fw_logical->parallel_desc();
   // for model
-  BuildMdSaveStruct(md_updt_logical);
+  BuildMdSaveStructWhenNeeded(md_updt_logical);
   // TODO: remove the following ugly hard coded `if'
   if (Global<JobDesc>::Get()->other_conf().train_conf().model_update_conf().has_momentum_conf()) {
     // for forward_model
-    BuildMdSaveStruct(md_updt_logical);
+    BuildMdSaveStructWhenNeeded(md_updt_logical);
   }
   return md_updt_logical;
 }
