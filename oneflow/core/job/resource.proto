@@ -2,9 +2,10 @@ syntax = "proto2";
 package oneflow;
 
 message Machine {
-  required string addr = 1; // domain name or ip
-  required int32 port = 2;
-  required int64 id = 3;
+  required int64 id = 1;
+  required string addr = 2; // domain name or ip
+  optional int32 ctrl_port_agent = 3 [default = -1];
+  optional int32 data_port_agent = 4 [default = -1];
 }
 
 enum DeviceType {
@@ -15,10 +16,12 @@ enum DeviceType {
 
 message Resource {
   repeated Machine machine = 1;
-  optional int32 gpu_device_num = 2 [default = 0];
-  optional int32 cpu_device_num = 3 [default = 0];
-  optional int32 comm_net_worker_num = 4 [default = 4];
-  optional int32 max_mdsave_worker_num = 5 [default = 64];
+  required int32 ctrl_port = 2;
+  optional int32 data_port = 3 [default = -1];
+  optional int32 gpu_device_num = 4 [default = 0];
+  optional int32 cpu_device_num = 5 [default = 0];
+  optional int32 comm_net_worker_num = 6 [default = 4];
+  optional int32 max_mdsave_worker_num = 7 [default = 64];
 }
 
 // Usage:
