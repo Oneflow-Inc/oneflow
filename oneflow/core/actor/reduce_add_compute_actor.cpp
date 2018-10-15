@@ -11,8 +11,9 @@ void ReduceAddCompActor::SetKernelCtxOther(void** other) {
   bool is_inited = EnableInplace() ? true : processed_regst_desc_id_cnt() != 0;
   bool is_inplace_in_blob =
       EnableInplace() ? (in_bn_id == parallel_ctx()->rank_ctx().rank_id()) : false;
+  bool is_first_in_blob = processed_regst_desc_id_cnt() == 0;
 
-  other_val_ = std::make_tuple(in_bn_id, is_inited, is_inplace_in_blob);
+  other_val_ = std::make_tuple(in_bn_id, is_inited, is_inplace_in_blob, is_first_in_blob);
   *other = static_cast<void*>(&other_val_);
 }
 

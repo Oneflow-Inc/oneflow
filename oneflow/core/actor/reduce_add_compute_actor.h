@@ -15,7 +15,7 @@ class ReduceAddCompActor final : public InputWiseCompActor {
   void VirtualCompActorInit(const TaskProto& proto) override;
   void SetKernelCtxOther(void** other) override;
 
-  std::tuple<int64_t, bool, bool> other_val_;
+  std::tuple<int64_t, bool, bool, bool> other_val_;
 };
 
 }  // namespace oneflow
