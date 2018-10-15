@@ -24,7 +24,7 @@ template<typename T>
 void OFRecordDecoderImpl<EncodeCase::kRaw, T>::SetDim1ValidNum(const Feature& feature,
                                                                Blob* out_blob,
                                                                int32_t dim0_idx) const {
-  CHECK_GT(out_blob->static_shape().NumAxes(), 2);
+  CHECK_GE(out_blob->static_shape().NumAxes(), 2);
   int64_t elem_num = 0;
   if (feature.has_bytes_list()) {
     CHECK_EQ(feature.bytes_list().value_size(), 1);
