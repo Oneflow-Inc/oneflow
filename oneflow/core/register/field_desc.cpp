@@ -8,7 +8,9 @@ FieldDesc::FieldDesc() : FieldDesc(Shape(), Global<JobDesc>::Get()->DefaultDataT
 FieldDesc::FieldDesc(const Shape& shape, DataType data_type)
     : shape_(shape), data_type_(data_type) {}
 
-FieldDesc::FieldDesc(const FieldDescProto& proto) {
+FieldDesc::FieldDesc(const FieldDescProto& proto) { InitFromProto(proto); }
+
+void FieldDesc::InitFromProto(const FieldDescProto& proto) {
   shape_ = Shape(proto.shape());
   data_type_ = proto.data_type();
 }

@@ -20,9 +20,14 @@ class RtBlobDesc {
   const BlobDescProto& blob_desc_proto() const { return blob_desc_proto_; }
   const Shape& shape() const;  // body shape
   DataType data_type() const;  // body data type
+  bool has_dim0_inner_shape() const { return bool(dim0_inner_shape_); }
+  const Shape& dim0_inner_shape() const { return *dim0_inner_shape_; }
 
   bool has_data_id_field() const;
   bool has_col_num_field() const;
+  bool has_dim0_valid_num_field() const;
+  bool has_dim1_valid_num_field() const;
+  bool has_dim2_valid_num_field() const;
   const StructPodDesc& header_pod_desc() const { return header_pod_desc_; }
 
   int32_t max_col_num() const { return blob_desc_proto_.header().max_col_num(); }
@@ -33,6 +38,9 @@ class RtBlobDesc {
 
   size_t ByteSizeOfDataIdField() const;
   size_t ByteSizeOfColNumField() const;
+  size_t ByteSizeOfDim0ValidNumField() const;
+  size_t ByteSizeOfDim1ValidNumField() const;
+  size_t ByteSizeOfDim2ValidNumField() const;
   size_t ByteSizeOfDataContentField() const;
 
   bool operator==(const RtBlobDesc& rhs) const;
@@ -43,6 +51,7 @@ class RtBlobDesc {
   BlobDescProto blob_desc_proto_;
   FieldDesc body_desc_;
   StructPodDesc header_pod_desc_;
+  std::unique_ptr<Shape> dim0_inner_shape_;
 };
 
 }  // namespace oneflow

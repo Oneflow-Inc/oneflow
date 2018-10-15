@@ -499,6 +499,7 @@ message EncodeProtobuf {
 }
 
 message EncodeRaw {
+  optional bool dim1_varying_length = 1 [default = false];
 }
 
 message EncodeJpeg {
@@ -562,6 +563,10 @@ message DefineTestBlobConf {
   required string out = 1;
   required ShapeProto shape = 2;
   required DataType data_type = 3;
+  optional ShapeProto dim0_inner_shape = 4;
+  optional int32 dim0_valid_num = 5;
+  optional int32 dim1_valid_num = 6;
+  optional int32 dim2_valid_num = 7;
 }
 
 message NormalizationOpConf {
