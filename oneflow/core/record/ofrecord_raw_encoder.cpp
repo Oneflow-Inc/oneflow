@@ -7,6 +7,7 @@ void OFRecordEncoderImpl<EncodeCase::kRaw, T>::EncodeOneCol(DeviceCtx* ctx, cons
                                                             int64_t in_offset, Feature& feature,
                                                             const std::string& field_name,
                                                             int64_t one_col_elem_num) const {
+  if (in_blob->dim1_valid_num()) { TODO(); }
   const T* in_dptr = in_blob->dptr<T>() + in_offset;
   DataType data_type = GetDataType<T>();
   if (data_type == DataType::kInt8) {
