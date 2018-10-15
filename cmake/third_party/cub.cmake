@@ -7,7 +7,7 @@ set(CUB_URL https://github.com/NVlabs/cub.git)
 set(CUB_TAG c3cceac115c072fb63df1836ff46d8c60d9eb304)
 
 
-if(NOT DOWNLOAD_THIRD_PARTY AND THIRD_PARTY)
+if(THIRD_PARTY)
 
 ExternalProject_Add(cub
     PREFIX cub
@@ -25,4 +25,4 @@ add_custom_target(cub_copy_headers_to_destination
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CUB_BUILD_INCLUDE} ${CUB_INCLUDE_DIR}/cub
     DEPENDS cub_create_header_dir)
 
-endif(NOT DOWNLOAD_THIRD_PARTY AND THIRD_PARTY)
+endif(THIRD_PARTY)
