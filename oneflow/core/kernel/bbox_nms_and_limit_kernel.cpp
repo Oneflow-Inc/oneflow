@@ -191,7 +191,8 @@ std::vector<int32_t> BboxNmsAndLimitKernel<T>::ApplyNmsAndVoteByClass(
   const T* bbox_prob_ptr = bbox_prob_blob->dptr<T>();
   T* bbox_score_ptr = bbox_score_blob->mut_dptr<T>();
   int32_t num_classes = bbox_prob_blob->shape().At(1);
-  std::vector<int32_t> all_cls_bbox_inds(bbox_row_ids.size() * num_classes);
+  std::vector<int32_t> all_cls_bbox_inds;
+  all_cls_bbox_inds.reserve(bbox_row_ids.size() * num_classes);
   FOR_RANGE(int32_t, k, 1, num_classes) {
     std::vector<int32_t> cls_bbox_inds(bbox_row_ids.size());
     std::transform(bbox_row_ids.begin(), bbox_row_ids.end(), cls_bbox_inds.begin(),
@@ -266,14 +267,21 @@ void BboxNmsAndLimitKernel<T>::Limit(const Blob* bbox_score_blob,
                                      std::vector<int32_t>& bbox_inds) const {
   const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
   const T* bbox_score_ptr = bbox_score_blob->dptr<T>();
-  std::sort(bbox_inds.begin(), bbox_inds.end(), [&](int32_t l_idx, int32_t r_idx) {
-    return bbox_score_ptr[l_idx] > bbox_score_ptr[r_idx];
-  });
-  auto lt_threah_it = std::find_if(bbox_inds.begin(), bbox_inds.end(), [&](int32_t idx) {
-    return bbox_score_ptr[idx] < conf.threshold();
-  });
-  bbox_inds.erase(lt_threah_it, bbox_inds.end());
-  if (bbox_inds.size() > conf.detections_per_im()) { bbox_inds.resize(conf.detections_per_im()); }
+  // std::sort(bbox_inds.begin(), bbox_inds.end(), [&](int32_t l_idx, int32_t r_idx) {
+  //   return bbox_score_ptr[l_idx] > bbox_score_ptr[r_idx];
+  // });
+  // auto lt_threah_it = std::find_if(bbox_inds.begin(), bbox_inds.end(), [&](int32_t idx) {
+  //   return bbox_score_ptr[idx] < conf.threshold();
+  // });
+  // bbox_inds.erase(lt_threah_it, bbox_inds.end());
+  // if (bbox_inds.size() > conf.detections_per_im()) { bbox_inds.resize(conf.detections_per_im());
+  // }
+  if (bbox_inds.size() > conf.detections_per_im()) {
+    std::sort(bbox_inds.begin(), bbox_inds.end(), [&](int32_t l_idx, int32_t r_idx) {
+      return bbox_score_ptr[l_idx] > bbox_score_ptr[r_idx];
+    });
+    bbox_inds.resize(conf.detections_per_im());
+  }
 }
 
 template<typename T>
@@ -286,7 +294,7 @@ void BboxNmsAndLimitKernel<T>::OutputBBox(const std::vector<int32_t> out_bbox_in
     out_bbox->set_corner_coord(bbox->left(), bbox->top(), bbox->right(), bbox->bottom());
     out_bbox->set_im_index(bbox->im_index());
   }
-  CHECK_LE(out_cnt, out_bbox_blob->shape().At(0));
+  CHECK_LE(out_cnt, out_bbox_blob->static_shape().At(0));
   out_bbox_blob->set_dim0_valid_num(0, out_cnt);
 }
 
@@ -298,7 +306,7 @@ void BboxNmsAndLimitKernel<T>::OutputBBoxScore(const std::vector<int32_t> out_bb
   for (int32_t bbox_idx : out_bbox_inds) {
     out_bbox_score_blob->mut_dptr<T>()[out_cnt++] = bbox_score_blob->dptr<T>()[bbox_idx];
   }
-  CHECK_LE(out_cnt, out_bbox_score_blob->shape().elem_cnt());
+  CHECK_LE(out_cnt, out_bbox_score_blob->static_shape().elem_cnt());
   out_bbox_score_blob->set_dim0_valid_num(0, out_cnt);
 }
 
@@ -310,7 +318,7 @@ void BboxNmsAndLimitKernel<T>::OutputBBoxLabel(const std::vector<int32_t> out_bb
   for (int32_t bbox_idx : out_bbox_inds) {
     out_bbox_label_blob->mut_dptr<int32_t>()[out_cnt++] = bbox_idx % num_classes;
   }
-  CHECK_LE(out_cnt, out_bbox_label_blob->shape().elem_cnt());
+  CHECK_LE(out_cnt, out_bbox_label_blob->static_shape().elem_cnt());
   out_bbox_label_blob->set_dim0_valid_num(0, out_cnt);
 }
 
