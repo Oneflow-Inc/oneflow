@@ -19,13 +19,12 @@ class CompActor : public Actor {
   void VirtualActorInit(const TaskProto& task_proto) override { VirtualCompActorInit(task_proto); }
 };
 
-inline int64_t GetLastPieceIdForModelVersionId(int64_t model_version_id) {
-  int32_t num_of_pieces_in_batch = Global<JobDesc>::Get()->NumOfPiecesInBatch();
+inline int64_t GetLastPieceIdForModelVersionId(int64_t model_version_id,
+                                               int64_t num_of_pieces_in_batch) {
   return (model_version_id + 1) * num_of_pieces_in_batch - 1;
 }
 
-inline int64_t GetModelVersionIdFromPieceId(int64_t piece_id) {
-  int32_t num_of_pieces_in_batch = Global<JobDesc>::Get()->NumOfPiecesInBatch();
+inline int64_t GetModelVersionIdFromPieceId(int64_t piece_id, int64_t num_of_pieces_in_batch) {
   return piece_id / num_of_pieces_in_batch;
 }
 

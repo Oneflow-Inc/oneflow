@@ -3,12 +3,17 @@
 namespace oneflow {
 
 void NormalForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
+  random_seed_ = task_proto.random_seed();
+  cur_piece_id_ = -1;
+  int64_t any_in_regst_desc_id = Name2RegstDescIds("in").front();
+  const Shape& in_time_shape =
+      Global<RegstMgr>::Get()->RegstDesc4RegstDescId(any_in_regst_desc_id).data_regst_time_shape();
+  actual_num_of_piece_in_batch_ = in_time_shape.Count(1);
+
   model_regst_desc_id_ = Name2SoleRegstDescId("model");
   const_model_regst_desc_id_ = Name2SoleRegstDescId("const_model");
   const_buf_regst_desc_id_ = Name2SoleRegstDescId("const_buf");
   forward_model_regst_desc_id_ = Name2SoleRegstDescId("forward_model");
-  random_seed_ = task_proto.random_seed();
-  cur_piece_id_ = -1;
   model_regst_ = nullptr;
   const_model_regst_ = nullptr;
   const_buf_regst_ = nullptr;
@@ -103,7 +108,8 @@ void NormalForwardCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
 
 void NormalForwardCompActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
   if (Global<JobDesc>::Get()->IsTrain() && model_regst_) {
-    int64_t last_piece_id = GetLastPieceIdForModelVersionId(model_regst_->model_version_id());
+    int64_t last_piece_id = GetLastPieceIdForModelVersionId(model_regst_->model_version_id(),
+                                                            actual_num_of_piece_in_batch_);
     CHECK_LE(cur_piece_id_, last_piece_id);
     if (cur_piece_id_ == last_piece_id) { AsyncReturnModelRegst(); }
   }
@@ -195,8 +201,8 @@ void NormalForwardCompActor::TryAsyncReturnConstModelRegst() {
 
 void NormalForwardCompActor::TrySendMsgToForwardModelSaveActor(int64_t piece_id) {
   if (forward_model_regst_desc_id_ == -1) { return; }
-  bool is_last_piece_in_batch = (piece_id + 1) % Global<JobDesc>::Get()->NumOfPiecesInBatch() == 0;
-  int64_t batch_id = piece_id / Global<JobDesc>::Get()->NumOfPiecesInBatch();
+  bool is_last_piece_in_batch = (piece_id + 1) % actual_num_of_piece_in_batch_ == 0;
+  int64_t batch_id = piece_id / actual_num_of_piece_in_batch_;
   if (is_last_piece_in_batch && NeedModelSave(batch_id)) {
     SendMsgToForwardModelSaveActor(batch_id);
   }

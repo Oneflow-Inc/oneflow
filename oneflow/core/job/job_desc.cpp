@@ -3,15 +3,6 @@
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/persistence/hadoop/hadoop_file_system.h"
 
-#ifdef PLATFORM_POSIX
-
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/types.h>
-#include <ifaddrs.h>
-
-#endif  // PLATFORM_POSIX
-
 namespace oneflow {
 
 std::string JobDesc::MdLoadSnapshotPath() const {
@@ -120,7 +111,6 @@ JobDesc::JobDesc(const std::string& job_conf_filepath) {
     ParseProtoFromTextFile(job_conf.other(), job_conf_.mutable_other());
   }
   SanityCheck();
-  ParseThisMachineId();
   Init();
 }
 
@@ -163,38 +153,19 @@ void JobDesc::SanityCheck() {
   FOR_RANGE(int64_t, i, 0, machine_num) { CHECK_EQ(job_conf_.resource().machine(i).id(), i); }
 }
 
-void JobDesc::ParseThisMachineId() {
-  this_machine_id_ = -1;
-#ifdef PLATFORM_POSIX
+int64_t JobDesc::GetMachineId(const std::string& addr) const {
+  int64_t machine_id = -1;
   auto resource_conf = job_conf_.resource();
   int64_t machine_num = resource_conf.machine_size();
-  struct ifaddrs* ifaddr = NULL;
-  struct ifaddrs* ifa = NULL;
-  char addr[INET_ADDRSTRLEN];
-  memset(addr, '\0', sizeof(addr));
-  HashMap<std::string, int64_t> ip_addr2machine_id;
   FOR_RANGE(int64_t, i, 0, machine_num) {
-    CHECK(ip_addr2machine_id.emplace(resource_conf.machine(i).addr(), i).second);
-  }
-  CHECK_EQ(getifaddrs(&ifaddr), 0);
-  for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
-    if (ifa->ifa_addr == NULL) { continue; }
-    if (ifa->ifa_addr->sa_family == AF_INET) {
-      PCHECK(inet_ntop(AF_INET, &(reinterpret_cast<struct sockaddr_in*>(ifa->ifa_addr)->sin_addr),
-                       addr, INET_ADDRSTRLEN));
-      auto ip_addr2machine_id_it = ip_addr2machine_id.find(std::string(addr));
-      if (ip_addr2machine_id_it != ip_addr2machine_id.end()) {
-        this_machine_id_ = ip_addr2machine_id_it->second;
-        break;
-      }
+    if (addr == resource_conf.machine(i).addr()) {
+      machine_id = i;
+      break;
     }
   }
-  freeifaddrs(ifaddr);
-  CHECK_GE(this_machine_id_, 0);
-  CHECK_LT(this_machine_id_, machine_num);
-#else
-  UNIMPLEMENTED()
-#endif
+  CHECK_GE(machine_id, 0);
+  CHECK_LT(machine_id, machine_num);
+  return machine_id;
 }
 
 void JobDesc::SplitDecodeOps() {
