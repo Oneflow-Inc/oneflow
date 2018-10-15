@@ -83,11 +83,7 @@ void Runtime::NewAllGlobal(const Plan& plan, bool is_experiment_phase) {
   if (is_experiment_phase) {
     piece_num = job_desc->piece_num_of_experiment_phase();
   } else {
-    if (job_desc->IsTrain()) {
-      piece_num = job_desc->NumOfPiecesInBatch() * job_desc->TotalBatchNum();
-    } else {
-      piece_num = MaxVal<int64_t>();
-    }
+    piece_num = job_desc->NumOfPiecesInBatch() * job_desc->TotalBatchNum();
   }
   Global<RuntimeCtx>::New(piece_num, is_experiment_phase);
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()
