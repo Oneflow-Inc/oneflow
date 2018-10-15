@@ -5,6 +5,10 @@
 #include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/reduce_rank_context.h"
+#include "oneflow/core/graph/pack_forward_task_node.h"
+#include "oneflow/core/graph/pack_backward_task_node.h"
+#include "oneflow/core/graph/unpack_forward_task_node.h"
+#include "oneflow/core/graph/unpack_backward_task_node.h"
 
 namespace oneflow {
 
@@ -149,6 +153,32 @@ class NormalForwardLogicalNode final : public ForwardLogicalNode {
  private:
 };
 
+int64_t NewAreaId();
+
+#define LOGICAL_NODE_WITH_NEW_AREA_ID_BOILERPLATE(name)                             \
+ public:                                                                            \
+  OF_DISALLOW_COPY_AND_MOVE(name##LogicalNode);                                     \
+  name##LogicalNode() { area_id_ = NewAreaId(); }                                   \
+  ~name##LogicalNode() = default;                                                   \
+                                                                                    \
+  std::string TypeName() const override { return #name; }                           \
+  CompTaskNode* NewCompTaskNode() const override { return new name##CompTaskNode; } \
+  int64_t GetAreaId() const override { return area_id_; }                           \
+                                                                                    \
+ private:                                                                           \
+  int64_t area_id_;
+
+#define DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(name) \
+  class name##LogicalNode final : public ForwardLogicalNode {       \
+    LOGICAL_NODE_WITH_NEW_AREA_ID_BOILERPLATE(name)                 \
+                                                                    \
+   private:                                                         \
+    BackwardLogicalNode* NewCorrectBackwardNode() override;         \
+  }
+
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(PackForward);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(UnpackForward);
+
 class BackwardLogicalNode : public LogicalNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BackwardLogicalNode);
@@ -167,6 +197,14 @@ class NormalBackwardLogicalNode final : public BackwardLogicalNode {
  public:
   LOGICAL_NODE_BOILERPLATE(NormalBackwardLogicalNode);
 };
+
+#define DECLARE_DERIVED_BACKWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(name) \
+  class name##LogicalNode final : public BackwardLogicalNode {       \
+    LOGICAL_NODE_WITH_NEW_AREA_ID_BOILERPLATE(name);                 \
+  }
+
+DECLARE_DERIVED_BACKWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(PackBackward);
+DECLARE_DERIVED_BACKWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(UnpackBackward);
 
 #define DECLARE_NAIVE_LOGICAL_NODE(name)  \
   class name final : public LogicalNode { \

@@ -444,4 +444,17 @@ void NormalMdUpdtLogicalNode::FixCompTaskNode(CompTaskNode* node) const {
   }
 }
 
+int64_t NewAreaId() {
+  static int64_t next_area_id = AreaType_ARRAYSIZE;
+  return ++next_area_id;
+}
+
+BackwardLogicalNode* PackForwardLogicalNode::NewCorrectBackwardNode() {
+  return new PackBackwardLogicalNode;
+}
+
+BackwardLogicalNode* UnpackForwardLogicalNode::NewCorrectBackwardNode() {
+  return new UnpackBackwardLogicalNode;
+}
+
 }  // namespace oneflow

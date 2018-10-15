@@ -35,6 +35,10 @@ enum TaskType {
   kAccuracyAcc = 27;
   kAccuracyPrint = 28;
   kDecodeRandom = 29;
+  kPackForward = 30;
+  kPackBackward = 31;
+  kUnpackForward = 32;
+  kUnpackBackward = 33;
 };
 
 enum AreaType {
