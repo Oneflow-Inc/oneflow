@@ -11,12 +11,8 @@ class LossAccCompActor final : public AccumulateCompActor {
   LossAccCompActor() = default;
   ~LossAccCompActor() = default;
 
-  void VirtualCompActorInit(const TaskProto& proto) override {
-    AccumulateCompActor::Init(proto, Global<JobDesc>::Get()->PieceNumOfPrintLoss(),
-                              ColIdOrder::kAscending);
-  }
-
  private:
+  void VirtualCompActorInit(const TaskProto& proto) override;
 };
 
 }  // namespace oneflow
