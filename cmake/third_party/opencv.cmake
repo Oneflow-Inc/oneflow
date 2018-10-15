@@ -5,7 +5,7 @@ set(OPENCV_LIBRARY_DIR ${THIRD_PARTY_DIR}/opencv/lib)
 set(OPENCV_INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/build/install)
 
 set(OPENCV_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/src)
-set(OPENCV_URL https://github.com/Oneflow-Inc/opencv.git)
+set(OPENCV_URL https://github.com/opencv/opencv.git)
 set(OPENCV_TAG 51cef2651e91003e6a6760f496719dbb325cfc61)
 
 if(WIN32)
