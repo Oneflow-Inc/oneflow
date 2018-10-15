@@ -133,7 +133,7 @@ void BboxNmsAndLimitKernel<T>::ForwardDataContent(
   auto im_grouped_bbox_inds = GroupBBox(target_bbox_blob);
   for (auto& pair : im_grouped_bbox_inds) {
     auto im_detected_bbox_inds =
-        ApplyNmsAndVoteByClass(pair.second, bbox_pred_blob, bbox_score_blob, target_bbox_blob);
+        ApplyNmsAndVoteByClass(pair.second, bbox_prob_blob, bbox_score_blob, target_bbox_blob);
     all_im_bbox_inds.insert(all_im_bbox_inds.end(), im_detected_bbox_inds.begin(),
                             im_detected_bbox_inds.end());
   }
@@ -308,7 +308,7 @@ void BboxNmsAndLimitKernel<T>::OutputBBoxLabel(const std::vector<int32_t> out_bb
                                                Blob* out_bbox_label_blob) const {
   int32_t out_cnt = 0;
   for (int32_t bbox_idx : out_bbox_inds) {
-    out_bbox_label_blob->mut_dptr<T>()[out_cnt++] = bbox_idx % num_classes;
+    out_bbox_label_blob->mut_dptr<int32_t>()[out_cnt++] = bbox_idx % num_classes;
   }
   CHECK_LE(out_cnt, out_bbox_label_blob->shape().elem_cnt());
   out_bbox_label_blob->set_dim0_valid_num(0, out_cnt);
