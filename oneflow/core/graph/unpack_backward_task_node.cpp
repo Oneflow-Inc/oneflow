@@ -13,7 +13,7 @@ void UnpackBackwardCompTaskNode::ConsumeAllRegsts() {
     if (edge->src_node()->GetTaskType() == TaskType::kUnpackForward) {
       ConsumeRegst("in", edge->src_node()->GetSoleConsumedRegst("in"));
     } else {
-      ConsumeRegst("out_diff", SoleInEdge()->GetSoleRegst());
+      ConsumeRegst("out_diff", edge->GetSoleRegst());
     }
   }
 }

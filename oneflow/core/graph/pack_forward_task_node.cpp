@@ -36,7 +36,7 @@ void PackForwardCompTaskNode::InferProducedDataRegstTimeShape() {
   int64_t in_piece_size = in_regst->GetBlobDesc(op->BnInOp2Lbi("in"))->shape().At(0);
   int64_t out_piece_size = op->op_conf().pack_conf().out_size();
   CHECK_GT(time_shape_dim_vec.size(), 0);
-  CHECK_EQ(time_shape_dim_vec.back(), RoundUp(out_piece_size, in_piece_size));
+  CHECK_EQ(time_shape_dim_vec.back(), (out_piece_size + in_piece_size - 1) / in_piece_size);
   time_shape_dim_vec.pop_back();
   *out_regst->mut_data_regst_time_shape() = std::make_shared<Shape>(std::move(time_shape_dim_vec));
 }

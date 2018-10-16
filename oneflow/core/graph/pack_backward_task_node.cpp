@@ -10,10 +10,10 @@ void PackBackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
 
 void PackBackwardCompTaskNode::ConsumeAllRegsts() {
   for (TaskEdge* edge : in_edges()) {
-    if (edge->src_node()->GetTaskType() == TaskType::kUnpackForward) {
+    if (edge->src_node()->GetTaskType() == TaskType::kPackForward) {
       ConsumeRegst("in", edge->src_node()->GetSoleConsumedRegst("in"));
     } else {
-      ConsumeRegst("out_diff", SoleInEdge()->GetSoleRegst());
+      ConsumeRegst("out_diff", edge->GetSoleRegst());
     }
   }
 }

@@ -7,7 +7,7 @@ void PackKernelUtil<device_type>::Pack(DeviceCtx* ctx, size_t in_index, size_t t
                                        const Blob* in_blob, Blob* out_blob) {
   size_t in_byte_size = in_blob->ByteSizeOfDataContentField();
   size_t out_byte_size = out_blob->ByteSizeOfDataContentField();
-  CHECK_EQ(total_pack_num, RoundUp(out_byte_size, in_byte_size));
+  CHECK_EQ(total_pack_num, (out_byte_size + in_byte_size - 1) / in_byte_size);
 
   const char* src_dptr = in_blob->dptr<char>();
   char* dst_dptr = out_blob->mut_dptr<char>() + in_byte_size * in_index;
@@ -23,7 +23,7 @@ void PackKernelUtil<device_type>::Unpack(DeviceCtx* ctx, size_t out_index, size_
                                          const Blob* in_blob, Blob* out_blob) {
   size_t in_byte_size = in_blob->ByteSizeOfDataContentField();
   size_t out_byte_size = out_blob->ByteSizeOfDataContentField();
-  CHECK_EQ(total_unpack_num, RoundUp(in_byte_size, out_byte_size));
+  CHECK_EQ(total_unpack_num, (in_byte_size + out_byte_size - 1) / out_byte_size);
 
   const char* src_dptr = in_blob->dptr<char>() + out_byte_size * out_index;
   char* dst_dptr = out_blob->mut_dptr<char>();
