@@ -19,7 +19,7 @@ class AccuracyPrintOp final : public Operator {
     if (input_bn == "accuracy_acc") {
       return op_conf().accuracy_print_conf().accuracy_lbi();
     } else if (input_bn == "batch_instance_num") {
-      return op_conf().accuracy_print_conf().total_instance_num_lbi();
+      return op_conf().accuracy_print_conf().batch_instance_num_lbi();
     } else {
       UNIMPLEMENTED();
     }

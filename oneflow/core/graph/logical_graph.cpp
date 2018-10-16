@@ -357,8 +357,8 @@ void LogicalGraph::BuildLossPrintStruct() {
 
     auto loss_print_conf = loss_print_op_conf.mutable_loss_print_conf();
     *(loss_print_conf->mutable_loss_lbi()) = reduce_loss_op->BnInOp2Lbi("out");
-    *(loss_print_conf->mutable_total_instance_num_lbi()->mutable_op_name()) = loss_op->op_name();
-    *(loss_print_conf->mutable_total_instance_num_lbi()->mutable_blob_name()) =
+    *(loss_print_conf->mutable_batch_instance_num_lbi()->mutable_op_name()) = loss_op->op_name();
+    *(loss_print_conf->mutable_batch_instance_num_lbi()->mutable_blob_name()) =
         "batch_instance_num";
     if (!loss_op->GetValFromCustomizedConf<std::string>("weight").empty()) {
       *(loss_print_conf->mutable_reduction_lbi()) = loss_op->BnInOp2Lbi("reduction_coefficient");
@@ -399,9 +399,9 @@ void LogicalGraph::BuildAccuracyPrintStruct() {
     auto accuracy_print_conf = accuracy_print_op_conf.mutable_accuracy_print_conf();
     accuracy_print_conf->set_top_k_print(accuracy_op->op_conf().accuracy_conf().top_k());
     *(accuracy_print_conf->mutable_accuracy_lbi()) = accuracy_op->BnInOp2Lbi("accuracy");
-    *(accuracy_print_conf->mutable_total_instance_num_lbi()->mutable_op_name()) =
+    *(accuracy_print_conf->mutable_batch_instance_num_lbi()->mutable_op_name()) =
         accuracy_op->op_name();
-    *(accuracy_print_conf->mutable_total_instance_num_lbi()->mutable_blob_name()) =
+    *(accuracy_print_conf->mutable_batch_instance_num_lbi()->mutable_blob_name()) =
         "batch_instance_num";
 
     std::shared_ptr<Operator> accuracy_print_op = ConstructOp(accuracy_print_op_conf);
