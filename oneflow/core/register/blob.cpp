@@ -181,21 +181,21 @@ size_t Blob::ByteSizeOfDim2ValidNumField() const {
 void Blob::CopyDim0ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs || ByteSizeOfDim0ValidNumField() == 0) { return; }
   CHECK_EQ(ByteSizeOfDim0ValidNumField(), rhs->ByteSizeOfDim0ValidNumField());
-  Memcpy<DeviceType::kCPU>(device_ctx, mut_dim0_valid_num(), rhs->dim0_valid_num(),
+  Memcpy<DeviceType::kCPU>(device_ctx, mut_dim0_valid_num_ptr(), rhs->dim0_valid_num_ptr(),
                            ByteSizeOfDim0ValidNumField());
 }
 
 void Blob::CopyDim1ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs || ByteSizeOfDim1ValidNumField() == 0) { return; }
   CHECK_EQ(ByteSizeOfDim1ValidNumField(), rhs->ByteSizeOfDim1ValidNumField());
-  Memcpy<DeviceType::kCPU>(device_ctx, mut_dim1_valid_num(), rhs->dim1_valid_num(),
+  Memcpy<DeviceType::kCPU>(device_ctx, mut_dim1_valid_num_ptr(), rhs->dim1_valid_num_ptr(),
                            ByteSizeOfDim1ValidNumField());
 }
 
 void Blob::CopyDim2ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs || ByteSizeOfDim2ValidNumField() == 0) { return; }
   CHECK_EQ(ByteSizeOfDim2ValidNumField(), rhs->ByteSizeOfDim2ValidNumField());
-  Memcpy<DeviceType::kCPU>(device_ctx, mut_dim2_valid_num(), rhs->dim2_valid_num(),
+  Memcpy<DeviceType::kCPU>(device_ctx, mut_dim2_valid_num_ptr(), rhs->dim2_valid_num_ptr(),
                            ByteSizeOfDim2ValidNumField());
 }
 

@@ -37,18 +37,18 @@ class Blob final {
 
   int32_t dim0_valid_num(int32_t no) const;
   void set_dim0_valid_num(int32_t no, int32_t val);
-  const int32_t* dim0_valid_num() const { return dim0_valid_num_ptr_; }
-  int32_t* mut_dim0_valid_num() { return dim0_valid_num_ptr_; }
+  const int32_t* dim0_valid_num_ptr() const { return dim0_valid_num_ptr_; }
+  int32_t* mut_dim0_valid_num_ptr() { return dim0_valid_num_ptr_; }
 
   int32_t dim1_valid_num(int32_t no) const;
   void set_dim1_valid_num(int32_t no, int32_t val);
-  const int32_t* dim1_valid_num() const { return dim1_valid_num_ptr_; }
-  int32_t* mut_dim1_valid_num() { return dim1_valid_num_ptr_; }
+  const int32_t* dim1_valid_num_ptr() const { return dim1_valid_num_ptr_; }
+  int32_t* mut_dim1_valid_num_ptr() { return dim1_valid_num_ptr_; }
 
   int32_t dim2_valid_num(int32_t dim0, int32_t dim1) const;
   void set_dim2_valid_num(int32_t dim0, int32_t dim1, int32_t val);
-  const int32_t* dim2_valid_num() const { return dim2_valid_num_ptr_; }
-  int32_t* mut_dim2_valid_num() { return dim2_valid_num_ptr_; }
+  const int32_t* dim2_valid_num_ptr() const { return dim2_valid_num_ptr_; }
+  int32_t* mut_dim2_valid_num_ptr() { return dim2_valid_num_ptr_; }
 
   const void* header_ptr() const { return header_ptr_; }
   void* mut_header_ptr() { return header_ptr_; }
