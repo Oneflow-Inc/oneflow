@@ -19,7 +19,7 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
     learning_rate =
         GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, cur_batch_num);
   }
-  const T* batch_instance_num_ptr = BnInOp2Blob("total_instance_num_diff")->dptr<T>();
+  const T* batch_instance_num_ptr = BnInOp2Blob("batch_instance_num_diff")->dptr<T>();
   float l1 = this->op_conf().normal_mdupdt_conf().l1();
   float l2 = this->op_conf().normal_mdupdt_conf().l2();
   UpdateModel(ctx.device_ctx, batch_instance_num_ptr, static_cast<T>(learning_rate),

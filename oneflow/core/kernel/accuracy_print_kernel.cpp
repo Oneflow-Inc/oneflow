@@ -8,7 +8,7 @@ void AccuracyPrintKernel<T>::Forward(const KernelCtx& kernel_ctx,
                                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (HasEmptyShapeBlob(this->op_attribute().input_bns(), BnInOp2Blob)) { return; }
   const Blob* accuracy_acc_blob = BnInOp2Blob("accuracy_acc");
-  const Blob* total_instance_num_blob = BnInOp2Blob("total_instance_num");
+  const Blob* total_instance_num_blob = BnInOp2Blob("batch_instance_num");
   T accuracy_num = accuracy_acc_blob->dptr<T>()[0];
   int32_t total_num = static_cast<int32_t>(total_instance_num_blob->dptr<T>()[0]);
   float accuracy = accuracy_num / total_num;

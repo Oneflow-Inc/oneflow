@@ -5,24 +5,24 @@ namespace oneflow {
 template<DeviceType device_type, typename PredType, typename LabelType>
 int32_t AccuracyKernel<device_type, PredType, LabelType>::CalculateInstanceNumSum(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  int32_t total_instance_num = 0;
+  int32_t instance_num_sum = 0;
   Blob* label_blob = BnInOp2Blob("label");
   if (label_blob->has_dim0_valid_num_field()) {
     for (int32_t i = 0; i < label_blob->dim0_inner_shape().At(0); i++) {
-      total_instance_num += label_blob->dim0_valid_num(i);
+      instance_num_sum += label_blob->dim0_valid_num(i);
     }
   } else {
-    total_instance_num = label_blob->static_shape().At(0);
+    instance_num_sum = label_blob->static_shape().At(0);
   }
-  return total_instance_num;
+  return instance_num_sum;
 }
 
 template<DeviceType device_type, typename PredType, typename LabelType>
 void AccuracyKernel<device_type, PredType, LabelType>::SetInstanceNumSum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  int32_t total_instance_num = CalculateInstanceNumSum(BnInOp2Blob);
-  KernelUtil<device_type, PredType>::Set(ctx.device_ctx, static_cast<PredType>(total_instance_num),
-                                         BnInOp2Blob("total_instance_num")->mut_dptr<PredType>());
+  int32_t instance_num_sum = CalculateInstanceNumSum(BnInOp2Blob);
+  KernelUtil<device_type, PredType>::Set(ctx.device_ctx, static_cast<PredType>(instance_num_sum),
+                                         BnInOp2Blob("batch_instance_num")->mut_dptr<PredType>());
 }
 
 template<DeviceType device_type, typename PredType, typename LabelType>

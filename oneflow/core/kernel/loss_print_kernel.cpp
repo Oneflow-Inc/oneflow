@@ -8,7 +8,7 @@ void LossPrintKernel<T>::Forward(const KernelCtx& kernel_ctx,
                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (HasEmptyShapeBlob(this->op_attribute().input_bns(), BnInOp2Blob)) { return; }
   const Blob* loss_acc_blob = BnInOp2Blob("loss_acc");
-  const Blob* total_instance_num_blob = BnInOp2Blob("total_instance_num");
+  const Blob* total_instance_num_blob = BnInOp2Blob("batch_instance_num");
   const Blob* reduction_acc_blob = BnInOp2Blob("reduction_acc");
   T loss_reduced = loss_acc_blob->dptr<T>()[0];
   T reduction_coefficient = -1.0;

@@ -48,7 +48,7 @@ void FullyConnectedOp::InferBlobDescs(
   }
 
   // instance num
-  GetBlobDesc4BnInOp("total_instance_num")->mut_shape() = Shape({1});
+  GetBlobDesc4BnInOp("batch_instance_num")->mut_shape() = Shape({1});
 }
 
 REGISTER_OP(OperatorConf::kFullyConnectedConf, FullyConnectedOp);

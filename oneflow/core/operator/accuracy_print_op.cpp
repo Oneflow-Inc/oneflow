@@ -5,7 +5,7 @@ namespace oneflow {
 void AccuracyPrintOp::InitFromOpConf() {
   CHECK(op_conf().has_accuracy_print_conf());
   EnrollInputBn("accuracy_acc", false);
-  EnrollInputBn("total_instance_num", false);
+  EnrollInputBn("batch_instance_num", false);
 }
 
 const PbMessage& AccuracyPrintOp::GetCustomizedConf() const {

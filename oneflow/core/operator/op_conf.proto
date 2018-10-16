@@ -378,7 +378,7 @@ message NormalModelUpdateOpUserConf {
 message NormalModelUpdateOpConf {
   required NormalModelUpdateOpUserConf user_conf = 1;
   required string model_diff = 2;
-  required string total_instance_num_diff = 3;
+  required string batch_instance_num_diff = 3;
   required string model = 4;
   required float learning_rate = 5;
   required float l1 = 6;

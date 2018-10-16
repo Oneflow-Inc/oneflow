@@ -359,7 +359,7 @@ void LogicalGraph::BuildLossPrintStruct() {
     *(loss_print_conf->mutable_loss_lbi()) = reduce_loss_op->BnInOp2Lbi("out");
     *(loss_print_conf->mutable_total_instance_num_lbi()->mutable_op_name()) = loss_op->op_name();
     *(loss_print_conf->mutable_total_instance_num_lbi()->mutable_blob_name()) =
-        "total_instance_num";
+        "batch_instance_num";
     if (!loss_op->GetValFromCustomizedConf<std::string>("weight").empty()) {
       *(loss_print_conf->mutable_reduction_lbi()) = loss_op->BnInOp2Lbi("reduction_coefficient");
     }
@@ -402,7 +402,7 @@ void LogicalGraph::BuildAccuracyPrintStruct() {
     *(accuracy_print_conf->mutable_total_instance_num_lbi()->mutable_op_name()) =
         accuracy_op->op_name();
     *(accuracy_print_conf->mutable_total_instance_num_lbi()->mutable_blob_name()) =
-        "total_instance_num";
+        "batch_instance_num";
 
     std::shared_ptr<Operator> accuracy_print_op = ConstructOp(accuracy_print_op_conf);
     ParallelConf accuracy_print_pr_conf;

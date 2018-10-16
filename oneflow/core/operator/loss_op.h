@@ -35,8 +35,8 @@ class LossOp : public Operator {
   LogicalBlobId obn2lbi(const std::string& output_bn) const override {
     LogicalBlobId ret;
     ret.set_op_name(op_name());
-    if (output_bn == "total_instance_num") {
-      ret.set_blob_name("total_instance_num");
+    if (output_bn == "batch_instance_num") {
+      ret.set_blob_name("batch_instance_num");
     } else if (output_bn == "reduction_coefficient") {
       ret.set_blob_name("reduction_coefficient");
     } else {

@@ -354,9 +354,9 @@ void Operator::EnrollModelBn(const std::string& mbn) {
     CHECK(mut_bn_in_op2lbi()->insert({mdbn, lbi}).second);
   };
   Enroll(mbn);
-  // we don't treat total_instance_num as model, just use total_instance_num_diff
-  auto it = op_attribute_.mutable_bn_in_op2lbi()->find("total_instance_num");
-  if (it == op_attribute_.mutable_bn_in_op2lbi()->end()) { Enroll("total_instance_num"); }
+  // we don't treat batch_instance_num as model, just use batch_instance_num_diff
+  auto it = op_attribute_.mutable_bn_in_op2lbi()->find("batch_instance_num");
+  if (it == op_attribute_.mutable_bn_in_op2lbi()->end()) { Enroll("batch_instance_num"); }
 }
 void Operator::EnrollModelDiffBn(const std::string& mdbn) {
   LogicalBlobId lbi = mbn2lbi(mdbn);
