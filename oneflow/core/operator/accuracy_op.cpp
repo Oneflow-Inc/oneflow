@@ -34,7 +34,7 @@ void AccuracyOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   accuracy_blob_desc->mut_shape() = Shape({1});
   accuracy_blob_desc->set_data_type(pred_blob_desc->data_type());
 
-  // batch instance num
+  // accuracy instance num
   BlobDesc* accuracy_instance_num_blob_desc = GetBlobDesc4BnInOp("accuracy_instance_num");
   accuracy_instance_num_blob_desc->mut_shape() = Shape({1});
   accuracy_instance_num_blob_desc->set_data_type(pred_blob_desc->data_type());
