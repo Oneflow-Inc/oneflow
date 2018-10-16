@@ -3,9 +3,33 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename PredType, typename LabelType>
+int32_t LossKernel<device_type, PredType, LabelType>::AddInstanceNum(
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  int32_t instance_num_sum = 0;
+  Blob* label_blob = BnInOp2Blob("label");
+  if (label_blob->has_dim0_valid_num_field()) {
+    for (int32_t i = 0; i < label_blob->dim0_inner_shape().At(0); i++) {
+      instance_num_sum += label_blob->dim0_valid_num(i);
+    }
+  } else {
+    instance_num_sum = label_blob->static_shape().At(0);
+  }
+  return instance_num_sum;
+}
+template<DeviceType device_type, typename PredType, typename LabelType>
+void LossKernel<device_type, PredType, LabelType>::SetInstanceNumSum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  int32_t instance_num_sum = AddInstanceNum(BnInOp2Blob);
+  KernelUtil<device_type, PredType>::Set(ctx.device_ctx, static_cast<PredType>(instance_num_sum),
+                                         BnInOp2Blob("batch_instance_num")->mut_dptr<PredType>());
+}
+
+template<DeviceType device_type, typename PredType, typename LabelType>
 void LossKernel<device_type, PredType, LabelType>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   VirtualLossForwardDataContent(ctx, BnInOp2Blob);
+  SetInstanceNumSum(ctx, BnInOp2Blob);
+
   const LossKernelConf& conf = GetLossKernelConf(this->kernel_conf());
   int64_t n = BnInOp2Blob("prediction")->shape().At(0);
   Blob* weight_blob = BnInOp2Blob("weight");

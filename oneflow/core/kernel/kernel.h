@@ -96,6 +96,13 @@ class Kernel {
   }
   virtual void BackwardActivation(const KernelCtx& ctx, const Blob* out_blob,
                                   const Blob* out_diff_blob, Blob* bw_activation_blob) const {}
+  virtual int32_t AddInstanceNum(std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    UNIMPLEMENTED();
+  }
+  virtual void SetInstanceNumSum(const KernelCtx& ctx,
+                                 std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    UNIMPLEMENTED();
+  }
 
   virtual const PbMessage& GetCustomizedOpConf() const { UNIMPLEMENTED(); }
   virtual const PbMessage& GetCustomizedKernelConf() const { UNIMPLEMENTED(); }

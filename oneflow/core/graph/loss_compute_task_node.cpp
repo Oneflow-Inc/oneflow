@@ -73,7 +73,9 @@ void LossCompTaskNode::BuildRegstWhenTraining() {
 
   std::shared_ptr<RegstDesc> loss_regst = GetProducedRegst("loss");
   loss_regst->AddLbi(sum_op->BnInOp2Lbi(sum_op->SoleObn()));
+  loss_regst->AddLbi(loss_op->BnInOp2Lbi("batch_instance_num"));
   sum_node->BindBnWithRegst(sum_op->SoleObn(), loss_regst);
+  loss_node->BindBnWithRegst("batch_instance_num", loss_regst);
   if (!loss_op->GetValFromCustomizedConf<std::string>("weight").empty()) {
     loss_regst->AddLbi(loss_op->BnInOp2Lbi("reduction_coefficient"));
     loss_node->BindBnWithRegst("reduction_coefficient", loss_regst);
