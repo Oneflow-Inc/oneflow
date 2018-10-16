@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_KERNEL_BBOX_NMS_AND_LIMIT_H_
-#define ONEFLOW_CORE_KERNEL_BBOX_NMS_AND_LIMIT_H_
+#ifndef ONEFLOW_CORE_KERNEL_BBOX_NMS_AND_LIMIT_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_BBOX_NMS_AND_LIMIT_KERNEL_H_
 
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/kernel/kernel.h"
