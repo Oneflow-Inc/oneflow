@@ -409,7 +409,7 @@ message PrintOpConf {
 
 message LossPrintOpConf {
   required LogicalBlobId loss_lbi = 1;
-  required LogicalBlobId batch_instance_num_lbi = 2;
+  required LogicalBlobId loss_instance_num_lbi = 2;
   optional LogicalBlobId reduction_lbi = 3;
   optional float weight_scalar = 4 [default = 1.0];
   optional LossReductionType reduction_type = 5 [default = kSumOverN];
@@ -417,7 +417,7 @@ message LossPrintOpConf {
 
 message AccuracyPrintOpConf {
   required LogicalBlobId accuracy_lbi = 1;
-  required LogicalBlobId batch_instance_num_lbi = 2;
+  required LogicalBlobId accuracy_instance_num_lbi = 2;
   optional int32 top_k_print = 3 [default = 1];
 }
 

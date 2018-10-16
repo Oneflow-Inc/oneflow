@@ -20,8 +20,9 @@ template<DeviceType device_type, typename PredType, typename LabelType>
 void AccuracyKernel<device_type, PredType, LabelType>::SetInstanceNumSum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   int32_t instance_num_sum = AddInstanceNum(BnInOp2Blob);
-  KernelUtil<device_type, PredType>::Set(ctx.device_ctx, static_cast<PredType>(instance_num_sum),
-                                         BnInOp2Blob("batch_instance_num")->mut_dptr<PredType>());
+  KernelUtil<device_type, PredType>::Set(
+      ctx.device_ctx, static_cast<PredType>(instance_num_sum),
+      BnInOp2Blob("accuracy_instance_num")->mut_dptr<PredType>());
 }
 
 template<DeviceType device_type, typename PredType, typename LabelType>

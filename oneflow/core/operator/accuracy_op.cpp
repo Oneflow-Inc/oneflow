@@ -6,7 +6,7 @@ void AccuracyOp::InitFromOpConf() {
   EnrollInputBn("prediction", false);
   EnrollInputBn("label", false);
   EnrollOutputBn("accuracy", false);
-  EnrollOutputBn("batch_instance_num", false);
+  EnrollOutputBn("accuracy_instance_num", false);
 }
 
 const PbMessage& AccuracyOp::GetCustomizedConf() const { return op_conf().accuracy_conf(); }
@@ -35,10 +35,10 @@ void AccuracyOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   accuracy_blob_desc->set_data_type(pred_blob_desc->data_type());
 
   // batch instance num
-  BlobDesc* batch_instance_num_blob_desc = GetBlobDesc4BnInOp("batch_instance_num");
-  batch_instance_num_blob_desc->mut_shape() = Shape({1});
-  batch_instance_num_blob_desc->set_data_type(pred_blob_desc->data_type());
-  batch_instance_num_blob_desc->set_has_data_id_field(pred_blob_desc->has_data_id_field());
+  BlobDesc* accuracy_instance_num_blob_desc = GetBlobDesc4BnInOp("accuracy_instance_num");
+  accuracy_instance_num_blob_desc->mut_shape() = Shape({1});
+  accuracy_instance_num_blob_desc->set_data_type(pred_blob_desc->data_type());
+  accuracy_instance_num_blob_desc->set_has_data_id_field(pred_blob_desc->has_data_id_field());
 }
 
 REGISTER_OP(OperatorConf::kAccuracyConf, AccuracyOp);
