@@ -13,7 +13,7 @@ class RMSPropMdUpdateKernel final : public NormalMdUpdateKernel<device_type, T> 
   ~RMSPropMdUpdateKernel() = default;
 
  private:
-  void UpdateModel(DeviceCtx* ctx, int64_t batch_size, T learning_rate, T l1, T l2,
+  void UpdateModel(DeviceCtx* ctx, const T* batch_instance_num_ptr, T learning_rate, T l1, T l2,
                    int64_t next_model_vid,
                    std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
@@ -23,8 +23,9 @@ class RMSPropMdUpdateKernelUtil final {
  public:
   // mean_square = (1 - decay_rate) * model_diff ^ 2 + decay_rate * mean_square
   // model = model - learning_rate * model_diff / sqrt(mean_square + epsilon)
-  static void UpdateModel(DeviceCtx*, int64_t n, int64_t batch_size, T learning_rate, T decay_rate,
-                          T epsilon, T l1, T l2, const T* model_diff, T* model, T* mean_square);
+  static void UpdateModel(DeviceCtx*, int64_t n, const T* batch_instance_num_ptr, T learning_rate,
+                          T decay_rate, T epsilon, T l1, T l2, const T* model_diff, T* model,
+                          T* mean_square);
 };
 
 DECLARE_MDUPDT_KERNEL_CREATOR(RMSProp);

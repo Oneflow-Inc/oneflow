@@ -345,12 +345,17 @@ void Operator::EnrollModelBn(const std::string& mbn) {
     EnrollConstModelBn(mbn);
     return;
   }
-  LogicalBlobId lbi = mbn2lbi(mbn);
-  *(mut_model_bns()->Add()) = mbn;
-  CHECK(mut_bn_in_op2lbi()->insert({mbn, lbi}).second);
-  std::string mdbn = GenDiffBn(mbn);
-  *(mut_model_diff_bns()->Add()) = mdbn;
-  CHECK(mut_bn_in_op2lbi()->insert({mdbn, lbi}).second);
+  auto Enroll = [&](const std::string& mbn) {
+    LogicalBlobId lbi = mbn2lbi(mbn);
+    *(mut_model_bns()->Add()) = mbn;
+    CHECK(mut_bn_in_op2lbi()->insert({mbn, lbi}).second);
+    std::string mdbn = GenDiffBn(mbn);
+    *(mut_model_diff_bns()->Add()) = mdbn;
+    CHECK(mut_bn_in_op2lbi()->insert({mdbn, lbi}).second);
+  };
+  Enroll(mbn);
+  auto it = op_attribute_.mutable_bn_in_op2lbi()->find("total_instance_num");
+  if (it == op_attribute_.mutable_bn_in_op2lbi()->end()) { Enroll("total_instance_num"); }
 }
 void Operator::EnrollModelDiffBn(const std::string& mdbn) {
   LogicalBlobId lbi = mbn2lbi(mdbn);
