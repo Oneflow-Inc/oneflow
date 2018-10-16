@@ -7,10 +7,10 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void UpdateModelGpu(const int64_t n, const T* total_instance_num_ptr, T learning_rate,
+__global__ void UpdateModelGpu(const int64_t n, const T* batch_instance_num_ptr, T learning_rate,
                                T l1, T l2, const T* model_diff, T* model) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    T reg_diff = RegularizeDiff(model_diff[i], *total_instance_num_ptr, l1, l2, model[i]);
+    T reg_diff = RegularizeDiff(model_diff[i], *batch_instance_num_ptr, l1, l2, model[i]);
     model[i] = model[i] - learning_rate * reg_diff;
   }
 }
@@ -20,10 +20,10 @@ __global__ void UpdateModelGpu(const int64_t n, const T* total_instance_num_ptr,
 template<typename T>
 class NaiveMdUpdateKernelUtil<DeviceType::kGPU, T> final {
  public:
-  static void UpdateModel(DeviceCtx* ctx, const int64_t n, const T* total_instance_num_ptr,
+  static void UpdateModel(DeviceCtx* ctx, const int64_t n, const T* batch_instance_num_ptr,
                           T learning_rate, T l1, T l2, const T* model_diff, T* model) {
     UpdateModelGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-        n, total_instance_num_ptr, learning_rate, l1, l2, model_diff, model);
+        n, batch_instance_num_ptr, learning_rate, l1, l2, model_diff, model);
   }
 };
 

@@ -13,7 +13,7 @@ class NaiveMdUpdateKernel final : public NormalMdUpdateKernel<device_type, T> {
   ~NaiveMdUpdateKernel() = default;
 
  private:
-  void UpdateModel(DeviceCtx* ctx, const T* total_instance_num_ptr, T learning_rate, T l1, T l2,
+  void UpdateModel(DeviceCtx* ctx, const T* batch_instance_num_ptr, T learning_rate, T l1, T l2,
                    int64_t next_model_vid,
                    std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
@@ -21,7 +21,7 @@ class NaiveMdUpdateKernel final : public NormalMdUpdateKernel<device_type, T> {
 template<DeviceType device_type, typename T>
 class NaiveMdUpdateKernelUtil final {
  public:
-  static void UpdateModel(DeviceCtx*, int64_t n, const T* total_instance_num_ptr, T learning_rate,
+  static void UpdateModel(DeviceCtx*, int64_t n, const T* batch_instance_num_ptr, T learning_rate,
                           T l1, T l2, const T* model_diff, T* model);
 };
 

@@ -3,6 +3,29 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename PredType, typename LabelType>
+int32_t AccuracyKernel<device_type, PredType, LabelType>::CalculateInstanceNumSum(
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  int32_t total_instance_num = 0;
+  Blob* label_blob = BnInOp2Blob("label");
+  if (label_blob->has_dim0_valid_num_field()) {
+    for (int32_t i = 0; i < label_blob->dim0_inner_shape().At(0); i++) {
+      total_instance_num += label_blob->dim0_valid_num(i);
+    }
+  } else {
+    total_instance_num = label_blob->static_shape().At(0);
+  }
+  return total_instance_num;
+}
+
+template<DeviceType device_type, typename PredType, typename LabelType>
+void AccuracyKernel<device_type, PredType, LabelType>::SetInstanceNumSum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  int32_t total_instance_num = CalculateInstanceNumSum(BnInOp2Blob);
+  KernelUtil<device_type, PredType>::Set(ctx.device_ctx, static_cast<PredType>(total_instance_num),
+                                         BnInOp2Blob("total_instance_num")->mut_dptr<PredType>());
+}
+
+template<DeviceType device_type, typename PredType, typename LabelType>
 void AccuracyKernel<device_type, PredType, LabelType>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* X = BnInOp2Blob("prediction");
@@ -18,19 +41,7 @@ void AccuracyKernel<device_type, PredType, LabelType>::ForwardDataContent(
   AccuracyKernelUtil<device_type, PredType, LabelType>::Forward(
       ctx.device_ctx, N, D, top_k, X->dptr<PredType>(), label->dptr<LabelType>(),
       accuracy->mut_dptr<PredType>());
-
-  // total instance num
-  int32_t total_instance_num = 0;
-  Blob* label_blob = BnInOp2Blob("label");
-  if (label_blob->has_dim0_valid_num_field()) {
-    for (int32_t i = 0; i < label_blob->dim0_inner_shape().At(0); i++) {
-      total_instance_num += label_blob->dim0_valid_num(i);
-    }
-  } else {
-    total_instance_num = label_blob->static_shape().At(0);
-  }
-  KernelUtil<device_type, PredType>::Set(ctx.device_ctx, static_cast<PredType>(total_instance_num),
-                                         BnInOp2Blob("total_instance_num")->mut_dptr<PredType>());
+  SetInstanceNumSum(ctx, BnInOp2Blob);
 }
 
 template<typename PredType, typename LabelType>
