@@ -21,7 +21,7 @@ void SparseSoftmaxCrossEntropyLossOp::VirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
-  CHECK_EQ(pred_blob_desc->shape().NumAxes(), 2);
+  CHECK_GE(pred_blob_desc->shape().NumAxes(), 2);
   // prob
   BlobDesc* prob_blob_desc = GetBlobDesc4BnInOp("prob");
   prob_blob_desc->mut_shape() = Shape(pred_blob_desc->shape());
