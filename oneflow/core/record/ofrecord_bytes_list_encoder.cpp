@@ -30,10 +30,10 @@ void OFRecordEncoderImpl<EncodeCase::kBytesList, T>::EncodeOneCol(
   }
 }
 
-#define INSTANTIATE_OFENCORD_BYTES_LIST_ENCODER(type_cpp, type_proto) \
+#define INSTANTIATE_OFRECORD_BYTES_LIST_ENCODER(type_cpp, type_proto) \
   template class OFRecordEncoderImpl<EncodeCase::kBytesList, type_cpp>;
 
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_OFENCORD_BYTES_LIST_ENCODER,
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_OFRECORD_BYTES_LIST_ENCODER,
                      ((char, DataType::kChar))((int8_t, DataType::kInt8)))
 
 }  // namespace oneflow
