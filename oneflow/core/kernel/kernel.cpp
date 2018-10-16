@@ -210,9 +210,9 @@ void KernelIfWithModel<device_type, T>::SetInstanceNumSum(
   FOR_RANGE(int32_t, i, 1, this->op_attribute().output_diff_bns_size()) {
     CHECK_EQ(instance_num_sum, CalculateInstanceNumSum(i, BnInOp2Blob));
   }
-  Blob* total_instance_num_diff_blob = BnInOp2Blob("batch_instance_num_diff");
+  Blob* batch_instance_num_diff_blob = BnInOp2Blob("batch_instance_num_diff");
   KernelUtil<device_type, T>::Set(ctx.device_ctx, static_cast<T>(instance_num_sum),
-                                  total_instance_num_diff_blob->mut_dptr<T>());
+                                  batch_instance_num_diff_blob->mut_dptr<T>());
 }
 
 template<DeviceType device_type>
