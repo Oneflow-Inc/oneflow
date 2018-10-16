@@ -35,6 +35,7 @@ void RepeatForwardCompActor::VirtualAsyncSendNaiveConsumedRegstMsgToProducer() {
 }
 
 void RepeatForwardCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
+  // TODO: variable naming
   int64_t piece_id = GetNaiveCurReadable("in")->piece_id() * repeat_num_ + repeat_count_ - 1;
 
   HandleProducedNaiveDataRegstToConsumer([&](Regst* regst) {
