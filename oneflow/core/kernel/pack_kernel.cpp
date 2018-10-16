@@ -13,16 +13,6 @@ void PackKernel<device_type>::ForwardDataContent(
                                     BnInOp2Blob("out"));
 }
 
-template<DeviceType device_type>
-void PackKernel<device_type>::BackwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  auto* res = static_cast<std::pair<size_t, size_t>*>(ctx.other);
-  size_t in_diff_index = res->first;
-  size_t total_unpack_num = res->second;
-  PackKernelUtil<device_type>::Unpack(ctx.device_ctx, in_diff_index, total_unpack_num,
-                                      BnInOp2Blob("out_diff"), BnInOp2Blob("in_diff"));
-}
-
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kPackConf, PackKernel);
 
 }  // namespace oneflow

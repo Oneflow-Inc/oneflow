@@ -16,7 +16,9 @@ class PackKernel final : public KernelIf<device_type> {
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void BackwardDataContent(const KernelCtx& ctx,
-                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    UNIMPLEMENTED();
+  }
 };
 
 }  // namespace oneflow

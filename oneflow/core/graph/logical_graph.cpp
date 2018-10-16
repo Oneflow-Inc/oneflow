@@ -411,6 +411,16 @@ void LogicalGraph::BuildAccuracyPrintStruct() {
 void LogicalGraph::BuildModelStruct(bool is_train) {
   HashMap<const LogicalNode*, NormalMdUpdtLogicalNode*> first_shared2mdupdt;
   HashMap<const LogicalNode*, ReduceCtx> fw_node2reduce_ctx;
+  bool must_have_model_diff_acc = false;
+  ForEachLogicalNode<ForwardLogicalNode>(
+      [&must_have_model_diff_acc](ForwardLogicalNode* fw_logical) {
+        if (must_have_model_diff_acc) { return; }
+        if (fw_logical->TypeName() == "PackForward" || fw_logical->TypeName() == "UnpackForward"
+            || fw_logical->TypeName() == "RepeatForward") {
+          must_have_model_diff_acc = true;
+          return;
+        }
+      });
   ForEachLogicalNode<ForwardLogicalNode>([&](ForwardLogicalNode* fw_logical) {
     if (Global<JobDesc>::Get()->enable_write_snapshot()
         && fw_logical->HasOpWithForwardModelBlob()) {
@@ -440,7 +450,7 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
       if (is_train && fw_logical->HasOpWithModelBlob()) {
         CHECK_NOTNULL(bw_logical);
         LogicalNode* md_diff_acc_logical = nullptr;
-        if (Global<JobDesc>::Get()->NumOfPiecesInBatch() > 1) {
+        if (must_have_model_diff_acc || Global<JobDesc>::Get()->NumOfPiecesInBatch() > 1) {
           OperatorConf md_diff_acc_op_conf;
           md_diff_acc_op_conf.set_name("md_diff_acc_" + NewUniqueId());
           md_diff_acc_op_conf.set_device_type(fw_logical->parallel_desc()->device_type());

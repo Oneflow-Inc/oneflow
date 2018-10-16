@@ -6,7 +6,6 @@
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/reduce_rank_context.h"
 #include "oneflow/core/graph/pack_forward_task_node.h"
-#include "oneflow/core/graph/pack_backward_task_node.h"
 #include "oneflow/core/graph/unpack_forward_task_node.h"
 #include "oneflow/core/graph/unpack_backward_task_node.h"
 
@@ -203,7 +202,6 @@ class NormalBackwardLogicalNode final : public BackwardLogicalNode {
     LOGICAL_NODE_WITH_NEW_AREA_ID_BOILERPLATE(name);                 \
   }
 
-DECLARE_DERIVED_BACKWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(PackBackward);
 DECLARE_DERIVED_BACKWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(UnpackBackward);
 
 #define DECLARE_NAIVE_LOGICAL_NODE(name)  \

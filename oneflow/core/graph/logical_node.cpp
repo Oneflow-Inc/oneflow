@@ -449,9 +449,7 @@ int64_t NewAreaId() {
   return ++next_area_id;
 }
 
-BackwardLogicalNode* PackForwardLogicalNode::NewCorrectBackwardNode() {
-  return new PackBackwardLogicalNode;
-}
+BackwardLogicalNode* PackForwardLogicalNode::NewCorrectBackwardNode() { UNIMPLEMENTED(); }
 
 BackwardLogicalNode* UnpackForwardLogicalNode::NewCorrectBackwardNode() {
   return new UnpackBackwardLogicalNode;
