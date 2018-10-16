@@ -30,8 +30,7 @@ class LossKernel : public KernelIf<device_type> {
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     UNIMPLEMENTED();
   }
-  int32_t CalculateInstanceNumSum(
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  int32_t AddInstanceNum(std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void SetInstanceNumSum(const KernelCtx& ctx,
                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };

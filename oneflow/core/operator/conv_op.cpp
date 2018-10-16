@@ -140,7 +140,7 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   }
 
   // batch instance num
-  GetBlobDesc4BnInOp("batch_instance_num")->mut_shape() = Shape({1});
+  GetBlobDesc4BnInOp("total_instance_num")->mut_shape() = Shape({1});
 
   ConvOpCtx* conv_op_ctx = new ConvOpCtx();
   EnrollOpCtx(conv_op_ctx);

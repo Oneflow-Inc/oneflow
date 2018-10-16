@@ -96,12 +96,11 @@ class Kernel {
   }
   virtual void BackwardActivation(const KernelCtx& ctx, const Blob* out_blob,
                                   const Blob* out_diff_blob, Blob* bw_activation_blob) const {}
-  virtual int32_t CalculateInstanceNumSum(
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  virtual int32_t AddInstanceNum(std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
-  virtual int32_t CalculateInstanceNumSum(
-      const int32_t index, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  virtual int32_t AddInstanceNum(const int32_t index,
+                                 std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
   virtual void SetInstanceNumSum(const KernelCtx& ctx,
@@ -176,8 +175,8 @@ class KernelIfWithModel : virtual public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KernelIfWithModel);
   virtual ~KernelIfWithModel() = default;
-  int32_t CalculateInstanceNumSum(
-      const int32_t index, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  int32_t AddInstanceNum(const int32_t index,
+                         std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void SetInstanceNumSum(const KernelCtx& ctx,
                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 

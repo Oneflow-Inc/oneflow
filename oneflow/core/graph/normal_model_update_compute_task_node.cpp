@@ -82,8 +82,8 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
     op_conf.set_name("model_update-" + lbi.op_name() + "-" + lbi.blob_name());
     op_conf.set_device_type(logical_node()->parallel_desc()->device_type());
     op_conf.mutable_normal_mdupdt_conf()->set_model_diff(lbi.op_name() + '/' + lbi.blob_name());
-    op_conf.mutable_normal_mdupdt_conf()->set_batch_instance_num_diff(lbi.op_name() + '/'
-                                                                      + "batch_instance_num");
+    op_conf.mutable_normal_mdupdt_conf()->set_total_instance_num_diff(lbi.op_name() + '/'
+                                                                      + "total_instance_num");
     op_conf.mutable_normal_mdupdt_conf()->set_model(lbi.op_name() + '/' + lbi.blob_name());
     if (Global<JobDesc>::Get()->IsTrain()) {
       *(op_conf.mutable_normal_mdupdt_conf()->mutable_user_conf()) =
@@ -100,8 +100,8 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
         op_conf.mutable_normal_mdupdt_conf()->set_learning_rate(secondary_lr);
         op_conf.mutable_normal_mdupdt_conf()->set_l1(Global<JobDesc>::Get()->bias_l1());
         op_conf.mutable_normal_mdupdt_conf()->set_l2(Global<JobDesc>::Get()->bias_l2());
-      } else if (lbi.blob_name() == "batch_instance_num") {
-        // we don't treat batch_instance_num as model, just use batch_instance_num_diff
+      } else if (lbi.blob_name() == "total_instance_num") {
+        // we don't treat total_instance_num as model, just use total_instance_num_diff
         op_conf.mutable_normal_mdupdt_conf()->set_learning_rate(-1.0);
         op_conf.mutable_normal_mdupdt_conf()->set_l1(0);
         op_conf.mutable_normal_mdupdt_conf()->set_l2(0);

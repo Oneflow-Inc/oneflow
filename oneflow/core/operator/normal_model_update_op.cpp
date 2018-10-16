@@ -7,7 +7,7 @@ namespace oneflow {
 
 void NormalModelUpdtOp::InitFromOpConf() {
   EnrollInputBn("model_diff", false);
-  EnrollInputBn("batch_instance_num_diff", false);
+  EnrollInputBn("total_instance_num_diff", false);
   EnrollOutputBn("model", false);
   MdUpdtVirtualInitFromOpConf();
 }
