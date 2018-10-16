@@ -145,8 +145,8 @@ struct BBoxImpl<T, BBoxBaseT, BBoxCoord::kCorner> final
   using ElemType = T;
 
   T left() const { return this->bbox_elem(0); }
-  T right() const { return this->bbox_elem(1); }
-  T top() const { return this->bbox_elem(2); }
+  T top() const { return this->bbox_elem(1); }
+  T right() const { return this->bbox_elem(2); }
   T bottom() const { return this->bbox_elem(3); }
   T center_x() const { return this->left() + 0.5f * this->width(); }
   T center_y() const { return this->top() + 0.5f * this->height(); }
