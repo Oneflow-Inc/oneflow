@@ -15,6 +15,8 @@ class OFRecordDecoderIf {
   virtual int32_t DecodeOneCol(DeviceCtx*, Blob* in_blob, const BlobConf&, int32_t cur_col_id,
                                Blob* out_blob,
                                std::function<int32_t(void)> NextRandomInt) const = 0;
+  virtual bool HasDim1ValidNumField(const EncodeConf& encode_conf) const = 0;
+  virtual bool HasDim2ValidNumField(const EncodeConf& encode_conf) const = 0;
 
  protected:
   OFRecordDecoderIf() = default;
@@ -37,6 +39,12 @@ class OFRecordDecoder : public OFRecordDecoderIf {
   virtual void ReadOneCol(DeviceCtx*, const Feature&, const BlobConf&, int32_t col_id, T* out_dptr,
                           int64_t one_col_elem_num,
                           std::function<int32_t(void)> NextRandomInt) const = 0;
+  virtual void SetDim1ValidNum(const Feature& feature, Blob* out_blob, int32_t dim0_idx) const {
+    UNIMPLEMENTED();
+  }
+  virtual void SetDim2ValidNum(const Feature& feature, Blob* out_blob, int32_t dim0_idx) const {
+    UNIMPLEMENTED();
+  }
 
  private:
   // return: max_col_num
