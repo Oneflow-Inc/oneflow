@@ -49,12 +49,16 @@ void Blob::set_col_num(int32_t no, int32_t val) {
 }
 
 int32_t Blob::dim0_valid_num(int32_t no) const {
-  CHECK_NOTNULL(dim0_valid_num_ptr_);
   CHECK_GE(no, 0);
   CHECK_LT(no, dim0_inner_shape().At(0));
-  int32_t val = dim0_valid_num_ptr_[no];
-  CHECK_GE(val, 0);
-  CHECK_LE(val, dim0_inner_shape().Count(1));
+  int32_t val;
+  if (dim0_valid_num_ptr_) {
+    val = dim0_valid_num_ptr_[no];
+    CHECK_GE(val, 0);
+    CHECK_LE(val, dim0_inner_shape().Count(1));
+  } else {
+    val = dim0_inner_shape().Count(1);
+  }
   return val;
 }
 void Blob::set_dim0_valid_num(int32_t no, int32_t val) {
@@ -67,12 +71,16 @@ void Blob::set_dim0_valid_num(int32_t no, int32_t val) {
 }
 
 int32_t Blob::dim1_valid_num(int32_t no) const {
-  CHECK_NOTNULL(dim1_valid_num_ptr_);
   CHECK_GE(no, 0);
   CHECK_LT(no, blob_desc_->shape().At(0));
-  int32_t val = dim1_valid_num_ptr_[no];
-  CHECK_GE(val, 0);
-  CHECK_LE(val, blob_desc_->shape().At(1));
+  int32_t val;
+  if (dim1_valid_num_ptr_) {
+    val = dim1_valid_num_ptr_[no];
+    CHECK_GE(val, 0);
+    CHECK_LE(val, blob_desc_->shape().At(1));
+  } else {
+    val = blob_desc_->shape().At(1);
+  }
   return val;
 }
 void Blob::set_dim1_valid_num(int32_t no, int32_t val) {
@@ -85,14 +93,18 @@ void Blob::set_dim1_valid_num(int32_t no, int32_t val) {
 }
 
 int32_t Blob::dim2_valid_num(int32_t dim0_idx, int32_t dim1_idx) const {
-  CHECK_NOTNULL(dim2_valid_num_ptr_);
   CHECK_GE(dim0_idx, 0);
   CHECK_LT(dim0_idx, blob_desc_->shape().At(0));
   CHECK_GE(dim1_idx, 0);
   CHECK_LT(dim1_idx, blob_desc_->shape().At(1));
-  int32_t val = *(dim2_valid_num_ptr_ + dim0_idx * blob_desc_->shape().At(1) + dim1_idx);
-  CHECK_GE(val, 0);
-  CHECK_LE(val, blob_desc_->shape().At(2));
+  int32_t val;
+  if (dim2_valid_num_ptr_) {
+    val = *(dim2_valid_num_ptr_ + dim0_idx * blob_desc_->shape().At(1) + dim1_idx);
+    CHECK_GE(val, 0);
+    CHECK_LE(val, blob_desc_->shape().At(2));
+  } else {
+    val = blob_desc_->shape().At(2);
+  }
   return val;
 }
 void Blob::set_dim2_valid_num(int32_t dim0_idx, int32_t dim1_idx, int32_t val) {
