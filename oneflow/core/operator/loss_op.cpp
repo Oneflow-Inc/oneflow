@@ -39,11 +39,11 @@ void LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   loss_blob_desc->mut_shape() = Shape({pred_blob_desc->shape().At(0)});
   loss_blob_desc->set_data_type(pred_blob_desc->data_type());
   loss_blob_desc->set_has_data_id_field(pred_blob_desc->has_data_id_field());
-  // total instance num
-  BlobDesc* total_instance_num_blob_desc = GetBlobDesc4BnInOp("batch_instance_num");
-  total_instance_num_blob_desc->mut_shape() = Shape({1});
-  total_instance_num_blob_desc->set_data_type(pred_blob_desc->data_type());
-  total_instance_num_blob_desc->set_has_data_id_field(pred_blob_desc->has_data_id_field());
+  // batch instance num
+  BlobDesc* batch_instance_num_blob_desc = GetBlobDesc4BnInOp("batch_instance_num");
+  batch_instance_num_blob_desc->mut_shape() = Shape({1});
+  batch_instance_num_blob_desc->set_data_type(pred_blob_desc->data_type());
+  batch_instance_num_blob_desc->set_has_data_id_field(pred_blob_desc->has_data_id_field());
 
   if (!GetValFromCustomizedConf<std::string>("weight").empty()) {
     // reduction_coefficient

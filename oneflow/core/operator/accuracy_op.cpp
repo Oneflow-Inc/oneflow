@@ -34,11 +34,11 @@ void AccuracyOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   accuracy_blob_desc->mut_shape() = Shape({1});
   accuracy_blob_desc->set_data_type(pred_blob_desc->data_type());
 
-  // total instance num
-  BlobDesc* total_instance_num_blob_desc = GetBlobDesc4BnInOp("batch_instance_num");
-  total_instance_num_blob_desc->mut_shape() = Shape({1});
-  total_instance_num_blob_desc->set_data_type(pred_blob_desc->data_type());
-  total_instance_num_blob_desc->set_has_data_id_field(pred_blob_desc->has_data_id_field());
+  // batch instance num
+  BlobDesc* batch_instance_num_blob_desc = GetBlobDesc4BnInOp("batch_instance_num");
+  batch_instance_num_blob_desc->mut_shape() = Shape({1});
+  batch_instance_num_blob_desc->set_data_type(pred_blob_desc->data_type());
+  batch_instance_num_blob_desc->set_has_data_id_field(pred_blob_desc->has_data_id_field());
 }
 
 REGISTER_OP(OperatorConf::kAccuracyConf, AccuracyOp);

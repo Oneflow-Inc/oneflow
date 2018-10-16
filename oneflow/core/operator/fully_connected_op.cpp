@@ -47,7 +47,7 @@ void FullyConnectedOp::InferBlobDescs(
     GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() = Shape({in_blob_desc->shape().At(0), 1});
   }
 
-  // instance num
+  // batch instance num
   GetBlobDesc4BnInOp("batch_instance_num")->mut_shape() = Shape({1});
 }
 
