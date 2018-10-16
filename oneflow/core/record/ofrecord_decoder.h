@@ -39,10 +39,10 @@ class OFRecordDecoder : public OFRecordDecoderIf {
   virtual void ReadOneCol(DeviceCtx*, const Feature&, const BlobConf&, int32_t col_id, T* out_dptr,
                           int64_t one_col_elem_num,
                           std::function<int32_t(void)> NextRandomInt) const = 0;
-  virtual void SetDim1ValidNum(const Feature& feature, Blob* out_blob, int32_t dim0_idx) const {
+  virtual void SetDim1ValidNum(const Feature& feature, Blob* out_blob, int64_t dim0_idx) const {
     UNIMPLEMENTED();
   }
-  virtual void SetDim2ValidNum(const Feature& feature, Blob* out_blob, int32_t dim0_idx) const {
+  virtual void SetDim2ValidNum(const Feature& feature, Blob* out_blob, int64_t dim0_idx) const {
     UNIMPLEMENTED();
   }
 

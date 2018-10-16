@@ -117,17 +117,17 @@ void BlobDesc::Dim0ValidNumToProto(StructPodDesc* header_pod_desc) const {
   CHECK(dim0_inner_shape_);
   CHECK_EQ(dim0_inner_shape_->elem_cnt(), body_field_.shape().At(0));
   Shape shape({dim0_inner_shape_->At(0)});
-  header_pod_desc->AddField(FieldKey::kDim0ValidNum, TensorPodDesc(shape, DataType::kInt32));
+  header_pod_desc->AddField(FieldKey::kDim0ValidNum, TensorPodDesc(shape, DataType::kInt64));
 }
 
 void BlobDesc::Dim1ValidNumToProto(StructPodDesc* header_pod_desc) const {
   Shape shape({body_field_.shape().At(0)});
-  header_pod_desc->AddField(FieldKey::kDim1ValidNum, TensorPodDesc(shape, DataType::kInt32));
+  header_pod_desc->AddField(FieldKey::kDim1ValidNum, TensorPodDesc(shape, DataType::kInt64));
 }
 
 void BlobDesc::Dim2ValidNumToProto(StructPodDesc* header_pod_desc) const {
   Shape shape({body_field_.shape().At(0), body_field_.shape().At(1)});
-  header_pod_desc->AddField(FieldKey::kDim2ValidNum, TensorPodDesc(shape, DataType::kInt32));
+  header_pod_desc->AddField(FieldKey::kDim2ValidNum, TensorPodDesc(shape, DataType::kInt64));
 }
 
 void BlobDesc::HeaderToProto(BlobDescProto* proto) const {
