@@ -36,7 +36,7 @@ void AccuracyKernel<device_type, PredType, LabelType>::ForwardDataContent(
   int32_t N = BnInOp2Blob("prediction")->shape().At(0);
   int32_t D = BnInOp2Blob("prediction")->shape().Count(1);
   CHECK_EQ(label->shape().NumAxes(), 1);
-  CHECK_EQ(X->blob_desc().shape().At(0), N);
+  CHECK_EQ(X->shape().At(0), N);
 
   AccuracyKernelUtil<device_type, PredType, LabelType>::Forward(
       ctx.device_ctx, N, D, top_k, X->dptr<PredType>(), label->dptr<LabelType>(),
