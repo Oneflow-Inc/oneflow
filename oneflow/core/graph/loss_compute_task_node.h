@@ -18,6 +18,7 @@ class LossCompTaskNode final : public CompTaskNode {
 
  private:
   void BuildRegstWhenTraining();
+  void InferProducedDataRegstTimeShape() override;
 };
 
 }  // namespace oneflow

@@ -26,16 +26,16 @@ void ReduceScatterOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   int32_t out_num = op_conf().reduce_scatter_conf().out_num();
-  const BlobDesc* in_blob = GetBlobDesc4BnInOp(SoleIbn());
-  BalancedSplitter model_splitter(in_blob->shape().elem_cnt(), parallel_ctx->parallel_num());
-  BalancedSplitter device_splitter(parallel_ctx->parallel_num(), out_num);
   CHECK_GE(out_num, 2);
+
+  const BlobDesc* in_blob = GetBlobDesc4BnInOp(SoleIbn());
+  int64_t model_elem_cnt = in_blob->shape().elem_cnt();
+  CHECK_EQ(0, model_elem_cnt % out_num);
+
   for (int32_t i = 0; i < out_num; ++i) {
     BlobDesc* out_blob = GetBlobDesc4BnInOp(output_bns().Get(i));
     *out_blob = *in_blob;
-    Range model_range = device_splitter.At(i);
-    out_blob->mut_shape() =
-        Shape({model_splitter.At(model_range.begin(), model_range.end() - 1).size()});
+    out_blob->mut_shape() = Shape({model_elem_cnt / out_num});
   }
 }
 

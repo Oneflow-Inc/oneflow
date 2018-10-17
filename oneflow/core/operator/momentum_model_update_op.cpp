@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-void MomentumModelUpdateOp::MdUpdtVirtualInitFromOpConf() { EnrollDataTmpBn("momentum"); }
+void MomentumModelUpdateOp::MdUpdtVirtualInitFromOpConf() { EnrollForwardModelBn("momentum"); }
 
 void MomentumModelUpdateOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

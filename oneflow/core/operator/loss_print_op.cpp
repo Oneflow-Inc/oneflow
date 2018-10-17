@@ -4,7 +4,7 @@ namespace oneflow {
 
 void LossPrintOp::InitFromOpConf() {
   CHECK(op_conf().has_loss_print_conf());
-  EnrollInputBn("loss_acc");
+  EnrollInputBn("loss_acc", false);
   if (op_conf().loss_print_conf().has_reduction_lbi()) { EnrollInputBn("reduction_acc"); }
 }
 

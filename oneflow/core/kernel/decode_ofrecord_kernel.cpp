@@ -26,12 +26,9 @@ void DecodeOFRecordKernel::Forward(const KernelCtx& ctx,
     const BlobConf& blob_conf = decode_conf.blob(i);
     OFRecordDecoderIf* decoder =
         GetOFRecordDecoder(blob_conf.encode_case().encode_case(), blob_conf.data_type());
-    int32_t compute_thread_num = Global<ThreadMgr>::Get()->compute_thread_pool()->thread_num();
-    int32_t max_col_id = decoder->DecodeOneCol(
-        ctx.device_ctx,
-        compute_thread_num / parallel_num_ + (compute_thread_num % parallel_num_ == 0 ? 0 : 1),
-        in_blob, blob_conf, status->cur_col_id_, out_blob,
-        std::bind(&DecodeOFRecordKernel::NextRandomInt, this));
+    int32_t max_col_id =
+        decoder->DecodeOneCol(ctx.device_ctx, in_blob, blob_conf, status->cur_col_id_, out_blob,
+                              std::bind(&DecodeOFRecordKernel::NextRandomInt, this));
 
     if (status->max_col_id_ == -1) {
       status->max_col_id_ = max_col_id;

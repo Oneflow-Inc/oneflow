@@ -1,12 +1,16 @@
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
+#include "oneflow/core/graph/normal_backward_compute_task_node.h"
 #include "oneflow/core/graph/normal_model_update_compute_task_node.h"
 #include "oneflow/core/graph/chain_graph.h"
 #include "oneflow/core/graph/boxing_task_node.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/graph/reduce_global_add_compute_task_node.h"
+#include "oneflow/core/graph/reduce_add_compute_task_node.h"
 #include "oneflow/core/graph/reduce_gather_compute_task_node.h"
+#include "oneflow/core/graph/reduce_split_compute_task_node.h"
+#include "oneflow/core/register/runtime_blob_desc.h"
+#include "oneflow/core/job/thrd_id_generator.h"
 
 namespace oneflow {
 
@@ -24,28 +28,25 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   };
 
   std::vector<int64_t> cpu_device_offset(job_desc->TotalMachineNum(), 0);
-  std::vector<int64_t> persistence_offset(job_desc->TotalMachineNum(), 0);
   auto AllocateCpuThrdIdEvenly = [&](const TaskNode* task_node) {
+    CHECK(!task_node->IsPersistence());
     int64_t ret = -1;
-    if (task_node->IsPersistence() == false) {
-      int64_t& offset = cpu_device_offset.at(task_node->machine_id());
-      ret = Global<IDMgr>::Get()->GetCpuDeviceThrdId(offset);
-      offset = (offset + 1) % job_desc->CpuDeviceNum();
-    } else {
-      int64_t& offset = persistence_offset.at(task_node->machine_id());
-      ret = Global<IDMgr>::Get()->GetPersistenceThrdId(offset);
-      offset = (offset + 1) % job_desc->PersistenceWorkerNum();
-    }
+    int64_t& offset = cpu_device_offset.at(task_node->machine_id());
+    ret = Global<IDMgr>::Get()->GetCpuDeviceThrdId(offset);
+    offset = (offset + 1) % job_desc->CpuDeviceNum();
     return ret;
   };
+
+  std::vector<std::pair<int64_t, CompTaskNode*>> machine_persistence_task_vec;
   logical_gph_->ForEachNode([&](const LogicalNode* logical_node) {
     logical_node->GenSortedCompTaskNodes(
-        AllocateCpuThrdIdEvenly, [&](CompTaskNode* comp_task_node) {
+        AllocateCpuThrdIdEvenly, &machine_persistence_task_vec, [&](CompTaskNode* comp_task_node) {
           AddAllocatedNode(comp_task_node);
           logical2sorted_comp_tasks[logical_node].push_back(comp_task_node);
           comp_task_node->set_area_id(logical_node->GetAreaId());
         });
   });
+  GeneratePersistenceThrdId(machine_persistence_task_vec);
   logical_gph_->ForEachEdge([&](const LogicalEdge* logical_edge) {
     BldSubTskGphMthd method =
         GetMthdForBldSubTskGph(logical_edge->src_node(), logical_edge->dst_node());
@@ -55,17 +56,83 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
                     &logical2sorted_out_box, MutBufTask, AllocateCpuThrdIdEvenly);
     SetAreaIdForNewNodes(logical_edge->src_node(), logical_edge->dst_node());
   });
+  MergeChainAndSetOrderInGraphForEachNode();
   ToDotWithAutoFilePath();
 }
 
-void TaskGraph::FindChainsInSameStream() {
-  CollectAncestorsForEachNode();
+void TaskGraph::GeneratePersistenceThrdId(
+    const std::vector<std::pair<int64_t, CompTaskNode*>>& persistence_nodes) {
+  std::vector<std::pair<int64_t, TaskType>> machine_task_type_vec;
+  for (auto pair : persistence_nodes) {
+    machine_task_type_vec.emplace_back(std::make_pair(pair.first, pair.second->GetTaskType()));
+  }
 
-  ChainGraph chain_gph(*this);
-  const auto& ordered_chain_nodes = chain_gph.ordered_chain_nodes();
+  ThrdIdGenerator generator(machine_task_type_vec, Global<IDMgr>::Get()->BasePersistenceThrdId());
+  for (const auto pair : persistence_nodes) {
+    int64_t thrd_id = generator.GenerateThrdId(pair.first, pair.second->GetTaskType());
+    pair.second->set_thrd_id(thrd_id);
+  }
+}
+
+void TaskGraph::MdUpdtDelayedTopoForEachNode(std::function<void(TaskNode* node)> Handler) const {
+  HashSet<const TaskNode*> built_nodes;
+  auto Build = [&](TaskNode* node) {
+    CHECK(built_nodes.emplace(node).second);
+    Handler(node);
+  };
+  AcyclicTopoForEachNode([](TaskNode* node) { return node->GetTaskType() != kNormalMdUpdt; },
+                         Build);
+  AcyclicTopoForEachNode([](TaskNode* node) { return node->GetTaskType() == kNormalMdUpdt; },
+                         Build);
+  ForEachNode([&](TaskNode* node) { CHECK(built_nodes.find(node) != built_nodes.end()); });
+}
+
+void TaskGraph::AcyclicTopoForEachNode(std::function<bool(TaskNode* node)> IsAllowedStartNode,
+                                       std::function<void(TaskNode* node)> Handler) const {
+  auto ForEachInNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& Handler) {
+    node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
+      if (IsBackEdge(node_on_in_edge, node)) return;
+      Handler(const_cast<TaskNode*>(node_on_in_edge));
+    });
+  };
+  auto ForEachOutNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& Handler) {
+    node->ForEachNodeOnOutEdge([&](TaskNode* node_on_out_edge) {
+      if (IsBackEdge(node, node_on_out_edge)) return;
+      Handler(const_cast<TaskNode*>(node_on_out_edge));
+    });
+  };
+  auto IsSourceNode = [&](TaskNode* node) {
+    int32_t in_node_num = 0;
+    ForEachInNode(node, [&](TaskNode* in_node) { ++in_node_num; });
+    return in_node_num == 0;
+  };
+  std::list<TaskNode*> starts;
+  ForEachNode([&](TaskNode* node) {
+    if (IsSourceNode(node) && IsAllowedStartNode(node)) { starts.push_back(node); }
+  });
+  // DfsTopo will cause inappropriate chain graph
+  TopoForEachNode(starts, ForEachInNode, ForEachOutNode, Handler);
+}
+
+void TaskGraph::AcyclicTopoForEachNode(std::function<void(TaskNode* node)> Handler) const {
+  return AcyclicTopoForEachNode([](TaskNode*) { return true; }, Handler);
+}
+
+void TaskGraph::RemoveEmptyRegsts() {
+  ForEachNode([&](TaskNode* node) { node->EraseZeroSizeProducedBlob(); });
+  ForEachNode([&](TaskNode* node) { node->EraseZeroSizeConsumedRegst(); });
+  ForEachNode([&](TaskNode* node) { node->EraseZeroSizeProducedRegst(); });
+  ForEachNode([&](TaskNode* node) { node->UnbindBnWithEmptyRegst(); });
+}
+
+void TaskGraph::AddOrderingCtrlEdgeInSameChain() { BuildCtrlRegstDescInSameChain(); }
+
+void TaskGraph::MergeChainAndSetOrderInGraphForEachNode() {
+  ChainGraph chain_graph(*this);
+  const auto& ordered_chain_nodes = chain_graph.OrderdedChainNodes();
   int64_t order_in_graph = 0;
   for (auto& chain_node : ordered_chain_nodes) {
-    auto& ordered_in_chain = chain_node->task_nodes();
+    auto& ordered_in_chain = chain_node->TaskNodes();
     int64_t chain_id = chain_node->chain_id();
     for (auto& task_node : ordered_in_chain) {
       task_node->set_chain_id(chain_id);
@@ -76,9 +143,7 @@ void TaskGraph::FindChainsInSameStream() {
   }
 }
 
-void TaskGraph::AddOrderingCtrlEdgeInSameChain() {
-  FindChainsInSameStream();
-
+void TaskGraph::BuildCtrlRegstDescInSameChain() {
   HashMap<int64_t, TaskNode*> chain_id2node;
   for (auto node : ordered_task_nodes_) {
     int64_t chain_id = node->chain_id();
@@ -92,99 +157,65 @@ void TaskGraph::AddOrderingCtrlEdgeInSameChain() {
   }
 }
 
-void TaskGraph::AddCtrlEdgeInReduceStruct() {
-  int64_t total_machine_num = Global<JobDesc>::Get()->resource().machine().size();
-  if (total_machine_num == 1) { return; }
+void TaskGraph::EnableMemSharingInReduceStruct() {
+  auto GetPredReduceTaskNode = [](TaskNode* succ) {
+    std::vector<TaskNode*> nodes;
+    succ->ForEachNodeOnInEdge([&](TaskNode* pred) {
+      if (dynamic_cast<ReduceCompTaskNodeIf*>(pred)) { nodes.push_back(pred); }
+    });
+    return nodes;
+  };
 
-  AddCtrlEdgeForReduceTaskNode<ReduceGlobalAddLogicalNode, ReduceGlobalAddCompTaskNode>(
-      total_machine_num);
-  AddCtrlEdgeForReduceTaskNode<ReduceGatherLogicalNode, ReduceGatherCompTaskNode>(
-      total_machine_num);
-}
+  HashSet<TaskNode*> has_enabled_nodes;
 
-template<typename LogicalNodeType, typename TaskNodeType>
-void TaskGraph::AddCtrlEdgeForReduceTaskNode(int64_t total_machine_num) {
-  HashMap<const LogicalNodeType*, HashMap<int64_t, std::vector<TaskNodeType*>>>
-      machine_id2reduce_task_nodes4same_logical_node;
-  ForEachNode([&](TaskNode* task_node) {
-    TaskNodeType* reduce_task_node = dynamic_cast<TaskNodeType*>(task_node);
-    if (reduce_task_node != nullptr) {
-      const LogicalNodeType* logical_node =
-          dynamic_cast<const LogicalNodeType*>(reduce_task_node->logical_node());
-      CHECK(logical_node != nullptr);
-      machine_id2reduce_task_nodes4same_logical_node[logical_node][reduce_task_node->machine_id()]
-          .push_back(reduce_task_node);
+  auto CollectReduceTaskNode = [&](TaskNode* from) {
+    std::list<TaskNode*> nodes;
+    TaskNode* succ = from;
+    while (true) {
+      std::vector<TaskNode*> pred_reduce_nodes = GetPredReduceTaskNode(succ);
+      if (pred_reduce_nodes.size() != 1) { break; }
+      TaskNode* pred_reduce_node = pred_reduce_nodes.front();
+      if (has_enabled_nodes.find(pred_reduce_node) != has_enabled_nodes.end()) { break; }
+      nodes.push_back(pred_reduce_node);
+      succ = pred_reduce_node;
+    }
+    nodes.reverse();
+    return nodes;
+  };
+
+  auto CalcModelSize = [](NormalMdUpdtCompTaskNode* node) {
+    auto* pred = dynamic_cast<ReduceSplitCompTaskNode*>(node->SoleInEdge()->src_node());
+    if (pred) { return InferRegstSize(*pred->GetSoleConsumedRegst("in")); }
+    return InferRegstSize(*(node->consumed_regsts().begin()->second.front()));
+  };
+
+  ForEachNode([&](TaskNode* node) {
+    auto* updt = dynamic_cast<NormalMdUpdtCompTaskNode*>(node);
+    if (!updt) { return; }
+    if (updt->parallel_ctx()->policy() != ParallelPolicy::kDataParallel) { return; }
+    if (updt->device_type() != DeviceType::kGPU) { return; }
+    if (updt->parallel_ctx()->parallel_num() < 2) { return; }
+    std::list<TaskNode*> reduce_task_nodes = CollectReduceTaskNode(updt);
+
+    int64_t mem_shared_id = Global<IDMgr>::Get()->NewMemSharedId();
+    int64_t mem_size = CalcModelSize(updt);
+    ReduceMemSharingCtx ctx(mem_size, mem_shared_id);
+    for (TaskNode* reduce_node : reduce_task_nodes) {
+      auto reduce_task_node_if = dynamic_cast<ReduceCompTaskNodeIf*>(reduce_node);
+      CHECK(reduce_task_node_if);
+      reduce_task_node_if->EnableMemSharingInReduce(ctx);
+      has_enabled_nodes.insert(reduce_node);
     }
   });
+}
 
-  for (const auto& kv : machine_id2reduce_task_nodes4same_logical_node) {
-    const auto& machine_id2reduce_task_nodes = kv.second;
-    if (machine_id2reduce_task_nodes.size() == 1) { continue; }
-    for (int64_t machine_id = 0; machine_id < machine_id2reduce_task_nodes.size(); ++machine_id) {
-      std::vector<std::pair<CopyCommNetTaskNode*, int64_t>> commnet_nodes_with_sort_val;
-      CollectCopyCommNetForReduceTaskNodes(machine_id2reduce_task_nodes.at(machine_id),
-                                           &commnet_nodes_with_sort_val);
-
-      std::vector<int64_t> machine_id2sort_order(total_machine_num);
-      for (size_t i = 0; i < total_machine_num; ++i) {
-        machine_id2sort_order.at(i) = (i + total_machine_num - machine_id - 1) % total_machine_num;
-      }
-      std::sort(commnet_nodes_with_sort_val.begin(), commnet_nodes_with_sort_val.end(),
-                [&](const std::pair<CopyCommNetTaskNode*, int64_t>& lhs,
-                    const std::pair<CopyCommNetTaskNode*, int64_t>& rhs) {
-                  if (lhs.first->peer_machine_id() == rhs.first->peer_machine_id()) {
-                    return lhs.second < rhs.second;
-                  }
-                  return machine_id2sort_order.at(lhs.first->peer_machine_id())
-                         < machine_id2sort_order.at(rhs.first->peer_machine_id());
-                });
-
-      for (size_t i = 0; i < commnet_nodes_with_sort_val.size() - 1; ++i) {
-        commnet_nodes_with_sort_val.at(i).first->BuildCtrlRegstDescIfNeed(
-            commnet_nodes_with_sort_val.at(i + 1).first);
-      }
-    }
+void TaskGraph::RmUselessConsumeRelationshipBetweenFwBw() {
+  for (TaskNode* task_node : ordered_task_nodes_) {
+    auto bw_node = dynamic_cast<NormalBackwardCompTaskNode*>(task_node);
+    if (bw_node == nullptr) { continue; }
+    bw_node->RmUselessConsumeRelationshipToFw();
   }
 }
-
-template<typename TaskNodeType>
-void TaskGraph::CollectCopyCommNetForReduceTaskNodes(
-    const std::vector<TaskNodeType*>& reduce_task_nodes,
-    std::vector<std::pair<CopyCommNetTaskNode*, int64_t>>* commnet_nodes_with_sort_val) {
-  HashSet<CopyCommNetTaskNode*> inserted_commnet_nodes;
-  for (TaskNodeType* reduce_task_node : reduce_task_nodes) {
-    for (TaskEdge* in_edge : reduce_task_node->in_edges()) {
-      TaskNode* pre_node = in_edge->src_node();
-
-      while (IsEndingTaskType<TaskNodeType>(pre_node->GetTaskType()) == false) {
-        if (pre_node->GetTaskType() == TaskType::kCopyCommNet) {
-          CopyCommNetTaskNode* commnet_node = dynamic_cast<CopyCommNetTaskNode*>(pre_node);
-          CHECK(commnet_node != nullptr);
-
-          if (inserted_commnet_nodes.find(commnet_node) == inserted_commnet_nodes.end()) {
-            commnet_nodes_with_sort_val->emplace_back(
-                commnet_node, reduce_task_node->parallel_ctx()->parallel_id());
-            inserted_commnet_nodes.insert(commnet_node);
-          }
-          break;
-        }
-        pre_node = pre_node->SoleInEdge()->src_node();
-      }
-    }
-  }
-}
-
-template<>
-bool TaskGraph::IsEndingTaskType<ReduceGlobalAddCompTaskNode>(TaskType type) {
-  return type == TaskType::kReduceLocalAdd;
-}
-
-template<>
-bool TaskGraph::IsEndingTaskType<ReduceGatherCompTaskNode>(TaskType type) {
-  return type == TaskType::kReduceGlobalAdd;
-}
-
-void TaskGraph::AddMutexCtrlEdgeInSameChain() { UNIMPLEMENTED(); }
 
 void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {
   for (TaskNode* task_node : ordered_task_nodes_) {
@@ -241,43 +272,6 @@ void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {
   }
 }
 
-void TaskGraph::CollectAncestorsForEachNode() {
-  std::vector<TaskNode*> ordered_nodes;
-  AcyclicTopoForEachNode([&](TaskNode* node) { ordered_nodes.emplace_back(node); });
-  for (auto it = ordered_nodes.begin(); it != ordered_nodes.end(); ++it) {
-    TaskNode* task_node = *it;
-    task_node->mut_ancestors().clear();
-    task_node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
-      if (IsBackEdge(node_on_in_edge, task_node)) return;
-      task_node->mut_ancestors().insert(node_on_in_edge->ancestors().begin(),
-                                        node_on_in_edge->ancestors().end());
-      task_node->mut_ancestors().insert(node_on_in_edge);
-
-    });
-  }
-}
-
-void TaskGraph::AcyclicTopoForEachNode(std::function<void(TaskNode* node)> handler) const {
-  std::list<TaskNode*> starts;
-  ForEachNode([&](TaskNode* node) {
-    if (node->consumed_regsts().empty() && !node->IsMeaningLess()) { starts.push_back(node); }
-  });
-  auto ForEachInNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& handler) {
-    node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
-      if (IsBackEdge(node_on_in_edge, node)) return;
-      handler(const_cast<TaskNode*>(node_on_in_edge));
-    });
-  };
-  auto ForEachOutNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& handler) {
-    node->ForEachNodeOnOutEdge([&](TaskNode* node_on_out_edge) {
-      if (IsBackEdge(node, node_on_out_edge)) return;
-      handler(const_cast<TaskNode*>(node_on_out_edge));
-    });
-  };
-  // DfsTopo will cause inappropriate chain graph
-  TopoForEachNode(starts, ForEachInNode, ForEachOutNode, handler);
-}
-
 void TaskGraph::SetAreaIdForNewNodes(const LogicalNode* src_logical,
                                      const LogicalNode* dst_logical) {
   CHECK(src_logical != nullptr && dst_logical != nullptr);
@@ -298,7 +292,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
   std::vector<TaskNode*>* sorted_out_box = nullptr;
   if (logical2sorted_out_box->find(src_logical) == logical2sorted_out_box->end()) {
     BuildOutBoxing(src_logical, sorted_src_comp_tasks, &((*logical2sorted_out_box)[src_logical]),
-                   AllocateCpuThrdIdEvenly);
+                   MutBufTask, AllocateCpuThrdIdEvenly);
   }
   sorted_out_box = &(logical2sorted_out_box->at(src_logical));
 
@@ -319,7 +313,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne) {
   FOR_RANGE(size_t, i, 0, sorted_src_comp_tasks.size()) {
     CompTaskNode* src = sorted_src_comp_tasks[i];
     CompTaskNode* dst = sorted_dst_comp_tasks[i];
-    BuildTaskPath(src, dst, MutBufTask, true);
+    BuildTaskPath(src, dst, MutBufTask, (dst->GetTaskType() != TaskType::kMdSave));
   }
 }
 
@@ -353,51 +347,64 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink) {
                          nullptr, MutBufTask, AllocateCpuThrdIdEvenly);
 }
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceLocalAdd) {
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceAdd) {
+  const LogicalNode* src_logical_node = sorted_src_comp_tasks.front()->logical_node();
+  const auto& pd = src_logical_node->parallel_desc();
+  bool has_local_reduce =
+      pd->sorted_machine_ids().size() > 1 && pd->device_num_of_each_machine() > 1;
+  const LogicalNode* pred_src_logical_node = src_logical_node->SoleInEdge()->src_node();
+  bool is_local_reduce =
+      has_local_reduce
+          ? !(dynamic_cast<const ReduceAddLogicalNode*>(pred_src_logical_node)
+              || dynamic_cast<const NcclReduceScatterLogicalNode*>(pred_src_logical_node))
+          : false;
   for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
     for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
-      if (src_comp_task->machine_id() == dst_comp_task->machine_id()) {
+      if (has_local_reduce) {
+        if (is_local_reduce) {
+          if (src_comp_task->machine_id() == dst_comp_task->machine_id()) {
+            BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, false);
+          }
+        } else {
+          if (src_comp_task->parallel_id() % pd->device_num_of_each_machine()
+              == dst_comp_task->parallel_id() % pd->device_num_of_each_machine()) {
+            BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, false);
+          }
+        }
+      } else {
         BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, false);
       }
     }
   }
 }
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceGlobalAdd) {
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceAdd2ReduceGather) {
+  const auto& pd = sorted_src_comp_tasks.front()->logical_node()->parallel_desc();
+  bool has_local_reduce =
+      pd->sorted_machine_ids().size() > 1 && pd->device_num_of_each_machine() > 1;
   for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
     for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
-      CHECK_EQ(src_comp_task->machine_id(), dst_comp_task->machine_id());
-      BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, false);
-    }
-  }
-}
-
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd) {
-  std::vector<CompTaskNode*> src_nodes_in_same_machine;
-  FOR_RANGE(int32_t, i, 0, sorted_src_comp_tasks.size()) {
-    src_nodes_in_same_machine.push_back(sorted_src_comp_tasks[i]);
-    if (i + 1 == sorted_src_comp_tasks.size()
-        || sorted_src_comp_tasks[i + 1]->machine_id() != sorted_src_comp_tasks[i]->machine_id()) {
-      BalancedSplitter splitter(src_nodes_in_same_machine.front()->parallel_ctx()->parallel_num(),
-                                src_nodes_in_same_machine.size());
-      int32_t splitter_idx = 0;
-      for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
-        if (splitter.At(splitter_idx).end() == dst_comp_task->parallel_ctx()->parallel_id()) {
-          ++splitter_idx;
+      if (has_local_reduce) {
+        if (src_comp_task->parallel_id() % pd->device_num_of_each_machine()
+            == dst_comp_task->parallel_id() % pd->device_num_of_each_machine()) {
+          BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, true);
         }
-        BuildTaskPath(src_nodes_in_same_machine[splitter_idx], dst_comp_task, MutBufTask, false);
+      } else {
+        BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, true);
       }
-      CHECK_EQ(splitter_idx + 1, src_nodes_in_same_machine.size());
-      src_nodes_in_same_machine.clear();
     }
   }
 }
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGlobalAdd2ReduceGather) {
-  CHECK_GE(sorted_src_comp_tasks.size(), 2);
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGather2ReduceGather) {
+  const auto& pd = sorted_src_comp_tasks.front()->logical_node()->parallel_desc();
+  CHECK_GT(pd->device_num_of_each_machine(), 1);
+  CHECK_GT(pd->sorted_machine_ids().size(), 1);
   for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
     for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
-      BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, true);
+      if (src_comp_task->machine_id() == dst_comp_task->machine_id()) {
+        BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, true);
+      }
     }
   }
 }
@@ -483,16 +490,25 @@ TaskNode* TaskGraph::AddCopyCommNetTaskBetween(TaskNode* src, TaskNode* dst) {
   return copy_comm_net_task;
 }
 
-void TaskGraph::BuildOutBoxing(const LogicalNode* logical,
-                               const std::vector<CompTaskNode*>& sorted_comp_tasks,
-                               std::vector<TaskNode*>* sorted_out_box,
-                               std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly) {
+void TaskGraph::BuildOutBoxing(
+    const LogicalNode* logical, const std::vector<CompTaskNode*>& sorted_comp_tasks,
+    std::vector<TaskNode*>* sorted_out_box,
+    std::function<TaskNode**(CompTaskNode* src, int64_t machine_id, int32_t mem_zone_id)>
+        MutBufTask,
+    std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly) {
   std::map<int64_t, std::vector<TaskNode*>> machine_id2bound_task;
   for (CompTaskNode* comp_task : sorted_comp_tasks) {
     TaskNode* task = comp_task;
     if (task->device_type() == DeviceType::kGPU) {
-      task = AddCopyD2HTaskFrom(comp_task);
-      Connect<TaskNode>(comp_task, NewEdge(), task);
+      TaskNode** buf_task =
+          MutBufTask(comp_task, comp_task->machine_id(), Global<IDMgr>::Get()->CpuMemZoneId());
+      if ((*buf_task) == nullptr) {
+        task = AddCopyD2HTaskFrom(comp_task);
+        Connect<TaskNode>(comp_task, NewEdge(), task);
+        *buf_task = task;
+      } else {
+        task = *buf_task;
+      }
     }
     machine_id2bound_task[task->machine_id()].push_back(task);
   }

@@ -18,23 +18,28 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph);
 
   const char* TypeName() const override { return "TaskGraph"; }
+  void RemoveEmptyRegsts();
   void AddOrderingCtrlEdgeInSameChain();
-  void AddCtrlEdgeInReduceStruct();
-  void AddMutexCtrlEdgeInSameChain();
+
+  void EnableMemSharingInReduceStruct();
+
   void AddOrderCtrlEdgeBetweenCopyAndMdUpdt();
-  void AcyclicTopoForEachNode(std::function<void(TaskNode* node)> handler) const;
+  void RmUselessConsumeRelationshipBetweenFwBw();
+  void AcyclicTopoForEachNode(std::function<void(TaskNode* node)> Handler) const;
+  void MdUpdtDelayedTopoForEachNode(std::function<void(TaskNode* node)> Handler) const;
 
 #define DECLARE_BLD_SUB_TASK_GRAPH_METHOD(method_name) void method_name BLD_SUB_TSK_GPH_MTHD_ARGS();
 
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceLocalAdd);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceGlobalAdd);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGlobalAdd2ReduceGather);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceAdd);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceAdd2ReduceGather);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGather2ReduceGather);
 
  private:
+  void AcyclicTopoForEachNode(std::function<bool(TaskNode* node)> IsAllowedStartNode,
+                              std::function<void(TaskNode* node)> Handler) const;
   void BuildTaskPath(
       CompTaskNode* src, CompTaskNode* dst,
       std::function<TaskNode**(CompTaskNode* src, int64_t machine_id, int32_t mem_zone_id)>
@@ -48,10 +53,12 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   TaskNode* AddCopyH2DTaskTo(TaskNode*);
   TaskNode* AddCopyD2HTaskFrom(TaskNode*);
   TaskNode* AddCopyCommNetTaskBetween(TaskNode* src, TaskNode* dst);
-  void BuildOutBoxing(const LogicalNode* logical,
-                      const std::vector<CompTaskNode*>& sorted_comp_tasks,
-                      std::vector<TaskNode*>* sorted_out_box,
-                      std::function<int64_t(const TaskNode*)> AllocateCpuThrdId);
+  void BuildOutBoxing(
+      const LogicalNode* logical, const std::vector<CompTaskNode*>& sorted_comp_tasks,
+      std::vector<TaskNode*>* sorted_out_box,
+      std::function<TaskNode**(CompTaskNode* src, int64_t machine_id, int32_t mem_zone_id)>
+          MutBufTask,
+      std::function<int64_t(const TaskNode*)> AllocateCpuThrdId);
   void BuildInBoxing(const LogicalNode* logical,
                      const std::vector<CompTaskNode*>& sorted_comp_tasks,
                      std::vector<TaskNode*>* sorted_in_box,
@@ -59,19 +66,11 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void ConnectWithCopyCommNetIfNeed(TaskNode* src, TaskNode* dst);
 
   void SetAreaIdForNewNodes(const LogicalNode* src_logical, const LogicalNode* dst_logical);
-  void CollectAncestorsForEachNode();
-  void FindChainsInSameStream();
+  void MergeChainAndSetOrderInGraphForEachNode();
+  void BuildCtrlRegstDescInSameChain();
 
-  template<typename LogicalNodeType, typename TaskNodeType>
-  void AddCtrlEdgeForReduceTaskNode(int64_t total_machine_num);
-
-  template<typename TaskNodeType>
-  void CollectCopyCommNetForReduceTaskNodes(
-      const std::vector<TaskNodeType*>& reduce_task_nodes,
-      std::vector<std::pair<CopyCommNetTaskNode*, int64_t>>* commnet_nodes_with_sort_val);
-
-  template<typename TaskNodeType>
-  bool IsEndingTaskType(TaskType type);
+  void GeneratePersistenceThrdId(
+      const std::vector<std::pair<int64_t, CompTaskNode*>>& persistence_nodes);
 
   std::unique_ptr<const LogicalGraph> logical_gph_;
   std::vector<TaskNode*> ordered_task_nodes_;

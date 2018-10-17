@@ -31,10 +31,6 @@ class CompTaskNode : public TaskNode {
   const LogicalNode* GetOnePredLogicalNodeOnEdge(TaskEdge* edge);
   std::vector<CompTaskNode*> GetSuccCompTaskNodesOnEdge(TaskEdge* edge) const;
   std::vector<CompTaskNode*> GetPredCompTaskNodesOnEdge(TaskEdge* edge) const;
-  void ProduceB121Regst(const std::string& b121_name);
-  void BindEdgeWithProducedB121Regst(TaskEdge*, const std::string& b121_name);
-  bool TryAddLbiToB121RegstAndBindIt(ExecNode*, const std::string& bn,
-                                     const std::string& b121_name);
 
  private:
   ParallelContext parallel_ctx_;

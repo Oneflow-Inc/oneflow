@@ -13,6 +13,8 @@ class MdDiffAccCompTaskNode final : public AccCompTaskNode {
   TaskType GetTaskType() const override { return TaskType::kMdDiffAcc; }
 
  private:
+  void FixPackedBlobDescOfProducedRegst() override;
+  void InferProducedDataRegstTimeShape() override;
 };
 
 }  // namespace oneflow

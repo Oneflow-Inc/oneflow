@@ -16,11 +16,17 @@ void ActEventLogger::PrintActEventToLogDir(const ActEvent& act_event) {
   txt_out_stream_ << act_event_txt;
 }
 
+std::string ActEventLogger::experiment_act_event_bin_filename() {
+  return experiment_prefix_ + act_event_bin_filename_;
+}
+
+std::string ActEventLogger::act_event_bin_filename() { return act_event_bin_filename_; }
+
 ActEventLogger::ActEventLogger(bool is_experiment)
-    : bin_out_stream_(LocalFS(), JoinPath(LogDir(), (is_experiment ? experiment_prefix_ : "")
-                                                        + act_event_bin_filename_)),
-      txt_out_stream_(LocalFS(), JoinPath(LogDir(), (is_experiment ? experiment_prefix_ : "")
-                                                        + act_event_txt_filename_)) {}
+    : bin_out_stream_(LocalFS(), JoinPath(FLAGS_log_dir, (is_experiment ? experiment_prefix_ : "")
+                                                             + act_event_bin_filename_)),
+      txt_out_stream_(LocalFS(), JoinPath(FLAGS_log_dir, (is_experiment ? experiment_prefix_ : "")
+                                                             + act_event_txt_filename_)) {}
 
 void ParseActEvents(const std::string& act_event_filepath,
                     std::list<std::unique_ptr<ActEvent>>* act_events) {

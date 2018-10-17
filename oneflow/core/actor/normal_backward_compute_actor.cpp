@@ -3,8 +3,7 @@
 namespace oneflow {
 
 void NormalBackwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
-  b121_out_regst_desc_id_ = Name2SoleRegstDescId("boxing_out");
-  if (b121_out_regst_desc_id_ == -1) { b121_out_regst_desc_id_ = Name2SoleRegstDescId("121_out"); }
+  any_out_diff_regst_desc_id_ = Name2RegstDescIds("out_diff").front();
   model_regst_desc_id_ = Name2SoleRegstDescId("model");
   const_model_regst_desc_id_ = Name2SoleRegstDescId("const_model");
   const_model_regst_ = nullptr;
@@ -30,8 +29,9 @@ void NormalBackwardCompActor::ForEachCurCustomizedReadableRegst(
 }
 
 void NormalBackwardCompActor::NormalProcessNaiveReadableRegstMsg(const std::deque<Regst*>& rq) {
-  if (rq.size() == 1 && rq.front()->regst_desc_id() == b121_out_regst_desc_id_) {
-    AsyncReturnModelRegstUntilModelVersionIdEqual(rq.front()->model_version_id());
+  if (rq.size() == 1 && rq.front()->regst_desc_id() == any_out_diff_regst_desc_id_) {
+    AsyncReturnModelRegstUntilModelVersionIdEqual(
+        GetModelVersionIdFromPieceId(rq.front()->piece_id()));
   }
 }
 
@@ -50,8 +50,6 @@ void NormalBackwardCompActor::NormalProcessCustomizedReadableRegstMsg(const Acto
 }
 
 void NormalBackwardCompActor::Act() {
-  int64_t out_diff_regst_desc_id = Name2RegstDescId("out_diff").front();
-  int64_t piece_id = GetNaiveCurReadable(out_diff_regst_desc_id)->piece_id();
   AsyncLaunchKernel(GenDefaultKernelCtx(), [this](int64_t regst_desc_id) -> Regst* {
     if (regst_desc_id == model_regst_desc_id_) {
       return model_regst_queue_.front();
@@ -63,24 +61,26 @@ void NormalBackwardCompActor::Act() {
       return nullptr;
     }
   });
-  AsyncSendRegstMsgToConsumer([&](Regst* regst) {
+}
+
+void NormalBackwardCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
+  int64_t piece_id = GetNaiveCurReadable(any_out_diff_regst_desc_id_)->piece_id();
+  HandleProducedNaiveDataRegstToConsumer([&](Regst* regst) {
     regst->set_piece_id(piece_id);
     return true;
   });
-  if (b121_out_regst_desc_id_ != -1) {
-    Regst* next_b121_out = GetNaiveNextReadable(b121_out_regst_desc_id_);
-    if (next_b121_out == nullptr) {
-      AsyncReturnModelRegstUntilLastPieceIdGreaterThan(piece_id);
-    } else {
-      AsyncReturnModelRegstUntilModelVersionIdEqual(next_b121_out->model_version_id());
-    }
-  }
+}
+
+void NormalBackwardCompActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
+  int64_t piece_id = GetNaiveCurReadable(any_out_diff_regst_desc_id_)->piece_id();
+  AsyncReturnModelRegstUntilLastPieceIdGreaterThan(piece_id);
 }
 
 bool NormalBackwardCompActor::IsCustomizedReadReady() {
   if (model_regst_desc_id_ != -1) {
     if (model_regst_queue_.empty()) { return false; }
-    int64_t expected_model_vid = GetNaiveCurReadable(b121_out_regst_desc_id_)->model_version_id();
+    int64_t expected_model_vid =
+        GetModelVersionIdFromPieceId(GetNaiveCurReadable(any_out_diff_regst_desc_id_)->piece_id());
     CHECK_EQ(expected_model_vid, model_regst_queue_.front()->model_version_id());
   }
   if (const_model_regst_desc_id_ != -1 && const_model_regst_ == nullptr) { return false; }

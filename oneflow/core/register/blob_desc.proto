@@ -1,13 +1,25 @@
 syntax = "proto2";
 package oneflow;
 
-import "oneflow/core/common/shape.proto";
-import "oneflow/core/common/data_type.proto";
+import "oneflow/core/register/field_desc.proto";
+import "oneflow/core/register/pod.proto";
+
+message FieldHeaderDesc {
+  optional FieldDescProto data_id = 1;
+  optional FieldDescProto col_num = 2;
+}
+
+message BlobHeaderDescProto {
+  required int32 max_col_num = 1;
+  required int32 blob_mem_id = 2;
+  oneof header_type {
+    FieldDescProto opaque_header = 3;
+    FieldHeaderDesc field_header = 4;
+  }
+  required StructPodProto header_pod_desc = 5;
+}
 
 message BlobDescProto {
-  required ShapeProto shape = 1;
-  required DataType data_type = 2;
-  required bool has_data_id_field = 4;
-  required bool has_col_num_field = 5;
-  required int32 max_col_num = 6;
+  required BlobHeaderDescProto header = 1;
+  required FieldDescProto body = 2;
 }

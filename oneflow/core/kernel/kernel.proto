@@ -3,6 +3,7 @@ package oneflow;
 
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
+import "oneflow/core/register/logical_blob_id.proto";
 import "oneflow/core/operator/op_conf.proto";
 
 message ConvKernelConf {
@@ -103,6 +104,15 @@ message DecodeOFRecordKernelConf {
 message ReduceGatherKernelConf {
   repeated int64 data_offset = 1;
 }
+
+message ReduceConcatKernelConf {
+  repeated int64 data_offset = 1;
+}
+
+message ReduceSplitKernelConf {
+  repeated int64 data_offset = 1;
+}
+
 message AccuracyKernelConf { 
   required DataType prediction_type = 1;
   required DataType label_type = 2;
@@ -117,29 +127,37 @@ message OpAttribute {
   repeated string output_bns = 5;
   repeated string output_diff_bns = 6;
   repeated string data_tmp_bns = 7;
+  repeated string fw_buf_bns = 8;
+  repeated string bw_buf_bns = 9;
 
-  repeated string model_bns = 8;
-  repeated string model_diff_bns = 9;
-  repeated string const_model_bns = 10;
+  repeated string model_bns = 10;
+  repeated string model_diff_bns = 11;
+  repeated string const_model_bns = 12;
   
-  repeated string forward_model_bns = 11;
-  repeated string const_buf_bns = 12;
+  repeated string forward_model_bns = 13;
+  repeated string const_buf_bns = 14;
+}
+
+message HingeLossKernelConf {
+  required LossKernelConf loss_conf = 1;
 }
 
 message KernelConf {
   required OpAttribute op_attribute = 1; 
-  required bool need_do_data_id = 2;
-  required bool need_do_col_num = 3;
-  required bool is_forward = 4;
-  required DataType data_type = 5;
-  optional ActivationType forward_activation = 6 [default = kNone];
-  optional ActivationType backward_activation = 7 [default = kNone];
+  optional bool need_do_data_id = 2 [default = false];
+  optional bool need_do_col_num = 3 [default = false];
+  optional bool need_do_opaque_header = 4 [default = false];
+  required bool is_forward = 5;
+  required DataType data_type = 6;
+  optional ActivationType forward_activation = 7 [default = kNone];
+  optional ActivationType backward_activation = 8 [default = kNone];
 
   oneof kernel_type {
     SparseSoftmaxCrossEntropyLossKernelConf sparse_softmax_cross_entropy_loss_conf = 101;
     SparseCrossEntropyLossKernelConf sparse_cross_entropy_loss_conf = 102;
     DecodeRandomKernelConf decode_random_conf = 103;
     DecodeOFRecordKernelConf decode_ofrecord_conf = 104;
+    HingeLossKernelConf hinge_loss_conf = 105;
     SoftmaxKernelConf softmax_conf = 116;
     TransposeKernelConf transpose_conf = 117;
     ReduceSumKernelConf reduce_sum_conf = 120;
@@ -150,6 +168,8 @@ message KernelConf {
     NormalizationKernelConf normalization_conf = 250;
     LocalResponseNormalizationKernelConf local_response_normalization_conf = 300;
     ReduceGatherKernelConf reduce_gather_conf = 350;
+    ReduceConcatKernelConf reduce_concat_conf = 351;
+    ReduceSplitKernelConf reduce_split_conf = 352;
     AccuracyKernelConf accuracy_conf = 401;
   }
 }

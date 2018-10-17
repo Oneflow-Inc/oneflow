@@ -3,6 +3,7 @@
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/job/nccl_comm_manager.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/graph/task_node.h"
@@ -89,7 +90,8 @@ void Runtime::NewAllGlobal(const Plan& plan, bool is_experiment_phase) {
     }
   }
   Global<RuntimeCtx>::New(piece_num, is_experiment_phase);
-  if (Global<RuntimeCtx>::Get()->NeedCollectActEvent()) {
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()
+      && Global<RuntimeCtx>::Get()->NeedCollectActEvent()) {
     Global<ActEventLogger>::New(is_experiment_phase);
   }
   if (job_desc->TotalMachineNum() > 1) {
@@ -110,9 +112,15 @@ void Runtime::NewAllGlobal(const Plan& plan, bool is_experiment_phase) {
   Global<RegstMgr>::New(plan);
   Global<ActorMsgBus>::New();
   Global<ThreadMgr>::New(plan);
+#ifdef WITH_CUDA
+  Global<NcclCommMgr>::New(plan);
+#endif  // WITH_CUDA
 }
 
 void Runtime::DeleteAllGlobal() {
+#ifdef WITH_CUDA
+  Global<NcclCommMgr>::Delete();
+#endif  // WITH_CUDA
   Global<ThreadMgr>::Delete();
   Global<ActorMsgBus>::Delete();
   Global<RegstMgr>::Delete();

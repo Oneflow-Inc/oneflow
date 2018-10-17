@@ -14,10 +14,8 @@ class CopyHdKernel final : public KernelIf<DeviceType::kGPU> {
   ~CopyHdKernel() = default;
 
  private:
-  void VirtualKernelInit(const ParallelContext*) override;
-  void Forward(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
-
-  cudaMemcpyKind cp_kind_;
+  void ForwardDataContent(const KernelCtx&,
+                          std::function<Blob*(const std::string&)>) const override;
 };
 
 #endif

@@ -25,9 +25,13 @@ void AccumulateCompActor::Init(const TaskProto& task_proto, int32_t max_acc_cnt,
   next_piece_id_ = 0;
 }
 
+int64_t AccumulateCompActor::ActNumForEachOutput(int64_t regst_desc_id) const {
+  return regst_desc_id == Name2SoleRegstDescId("acc") ? max_acc_cnt_ : 1;
+}
+
 void AccumulateCompActor::Act() {
-  Regst* in_regst = GetNaiveSoleCurReadable();
-  Regst* out_regst = GetCurSoleWriteableRegst();
+  Regst* in_regst = GetNaiveCurReadable("one");
+  Regst* out_regst = GetNaiveCurWriteable("acc");
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
   if (acc_cnt_ == 0 && IsFirstRegstInPieceWithOrder(in_regst, order_)) {
     Blob* in_blob = in_regst->packed_blob();
@@ -38,8 +42,11 @@ void AccumulateCompActor::Act() {
     AsyncLaunchKernel(kernel_ctx);
   }
   if (IsLastRegstInPieceWithOrder(in_regst, order_)) { acc_cnt_ += 1; }
+}
+
+void AccumulateCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   if (acc_cnt_ == max_acc_cnt_) {
-    AsyncSendRegstMsgToConsumer([&](Regst* regst) {
+    HandleProducedNaiveDataRegstToConsumer([&](Regst* regst) {
       regst->set_piece_id(next_piece_id_);
       return true;
     });

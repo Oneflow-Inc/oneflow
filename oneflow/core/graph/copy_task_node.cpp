@@ -1,11 +1,26 @@
 #include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/job/thrd_id_generator.h"
 
 namespace oneflow {
 
 void CopyTaskNode::ProduceAllRegstsAndBindEdges() {
   std::string name("copy_out");
-  auto out_regst = ProduceRegst(name, false);
+  std::shared_ptr<RegstDesc> out_regst(nullptr);
+  CopyHdTaskNode* copy_hd = dynamic_cast<CopyHdTaskNode*>(this);
+  if (copy_hd != nullptr) {
+    TaskType dst_node_type = (*out_edges().begin())->dst_node()->GetTaskType();
+    if (copy_hd->copy_type() == CopyHdOpConf::H2D
+        && (dst_node_type == TaskType::kReduceAdd || dst_node_type == TaskType::kReduceGather)) {
+      out_regst = ProduceRegst(name, false, 1, 1);
+    }
+    TaskType src_node_type = SoleInEdge()->src_node()->GetTaskType();
+    if (copy_hd->copy_type() == CopyHdOpConf::D2H
+        && (src_node_type == TaskType::kReduceScatter || src_node_type == TaskType::kReduceAdd)) {
+      out_regst = ProduceRegst(name, false, 1, 1);
+    }
+  }
+  if (out_regst == nullptr) { out_regst = ProduceRegst(name, false); }
   for (TaskEdge* edge : out_edges()) { edge->AddRegst(name, out_regst); }
 }
 
@@ -20,6 +35,8 @@ void CopyTaskNode::BuildExecGphAndRegst() {
   node->BindBnWithRegst(node->op()->SoleIbn(), in_regst);
   node->BindBnWithRegst(node->op()->SoleObn(), out_regst);
 }
+
+void CopyTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataRegstTimeShape(); }
 
 void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, int64_t machine_id, int64_t dev_phy_id) {
   copy_type_ = copy_type;

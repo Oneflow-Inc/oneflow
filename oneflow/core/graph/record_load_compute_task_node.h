@@ -15,10 +15,12 @@ class RecordLoadCompTaskNode final : public CompTaskNode {
   void ConsumeAllRegsts() override {}
   void BuildExecGphAndRegst() override;
   bool IsMeaningLess() override { return false; }
-  void EraseEmptyProducedRegst() override {}
 
   TaskType GetTaskType() const override { return TaskType::kRecordLoad; }
   bool IsPersistence() const override { return true; }
+
+ private:
+  void InferProducedDataRegstTimeShape() override;
 };
 
 }  // namespace oneflow

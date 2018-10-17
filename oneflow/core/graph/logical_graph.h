@@ -22,26 +22,24 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   int64_t total_mbn_num() const { return total_mbn_num_; }
 
  private:
-  struct B121CloneInfo {
-    LogicalNode* pred_node;
-    LogicalBlobId lbi;
-    std::vector<LogicalEdge*> edges_boxing;
-    std::vector<LogicalEdge*> edges_121;
-  };
   struct BackwardCloneInfo {
     LogicalNode* succ_node;
     LogicalBlobId lbi;
     std::vector<LogicalEdge*> edges;
   };
+  struct ReduceCtx {
+    std::vector<LogicalNode*> fw_logicals;
+    std::vector<LogicalNode*> bw_logicals;
+    std::vector<LogicalNode*> md_diff_acc_logicals;
+    std::vector<LogicalNode*> md_updt_logicals;
+  };
   template<typename LogicalNodeType>
   void ForEachLogicalNode(std::function<void(LogicalNodeType*)> Handler);
+  void GroupNodesForReduceStruct();
 
   void BuildFwStruct();
   void NaiveBuildFwStruct(HashMap<std::string, std::vector<LogicalNode*>>* op_name2nodes);
   void FixSharedModelNodes(const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes);
-  void AddB121Clone();
-  void CollectB121CloneInfos(std::vector<B121CloneInfo>* clone_infos);
-  void AddOneB121CloneNode(const B121CloneInfo& clone_info);
   void ReConnectToFwClone(LogicalNode* clone_node, const LogicalBlobId& lbi,
                           const std::vector<LogicalEdge*>& edges, const std::string& obn);
   void SetMainModelParallel();
@@ -49,17 +47,18 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   void NaiveBuildBwStruct();
   void AddBackwardClone();
   void AddOneBackwardClone(const BackwardCloneInfo& clone_info);
-  void MoveBackwardActivations();
-  void RemoveBackwardAdd();
-  void CollectBackwardB121CloneInfos(HashMap<LogicalNode*, LogicalNode*>* bw_add_node2pre_node);
-  void RemoveOneBackwardAdd(const std::pair<LogicalNode*, LogicalNode*>& bw_add_node_and_pre);
 
   void MergeEdge();
   void SetNodeDataLbi();
   void BuildLossPrintStruct();
   void BuildAccuracyPrintStruct();
   void BuildModelStruct(bool is_train);
-  void BuildReduceStruct(LogicalNode* src, LogicalNode* dst);
+  void AddReduceScatterAddGatherNodes(LogicalNode* src, LogicalNode* dst,
+                                      const ReduceRankCtx& prev_rank_ctx);
+  void AddAllReduce(LogicalNode* src, LogicalNode* dst);
+  void AddNcclAllReduce(LogicalNode* src, LogicalNode* dst);
+  void AddNcclReduceScatterAndAllGather(LogicalNode* src, LogicalNode* dst);
+  void BuildReduceStruct(const ReduceCtx& reduce_ctx);
   void SetupNormalMdUpdtOp();
   MdSaveLogicalNode* BuildMdSaveStruct(const ForwardLogicalNode* fw_logical,
                                        LogicalNode* need_save_logical);
@@ -71,9 +70,9 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
 
   int64_t total_mbn_num_;
 
+  std::vector<std::vector<const LogicalNode*>> fw_node_groups_;
   HashMap<const LogicalEdge*, std::string> edge2ibn_;
   HashMap<const LogicalEdge*, std::string> edge2obn_;
-  HashMap<LogicalNode*, LogicalNode*> bw_clone2fw_producer_;
 };
 
 }  // namespace oneflow

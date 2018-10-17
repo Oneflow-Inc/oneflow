@@ -24,7 +24,6 @@ class RecordLoadKernel final : public KernelIf<DeviceType::kCPU> {
 
   std::unique_ptr<PersistentInStream> in_stream_;
   int64_t piece_size_in_one_loader_;
-  mutable int64_t loaded_cnt_;
 };
 
 }  // namespace oneflow

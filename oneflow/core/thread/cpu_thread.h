@@ -11,7 +11,7 @@ class CpuThread final : public Thread {
   CpuThread() = delete;
   ~CpuThread() = default;
 
-  CpuThread(int64_t thrd_id, size_t buf_size);
+  CpuThread(int64_t thrd_id);
 
  private:
 };

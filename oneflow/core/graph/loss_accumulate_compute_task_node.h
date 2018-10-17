@@ -13,6 +13,7 @@ class LossAccCompTaskNode final : public AccCompTaskNode {
   TaskType GetTaskType() const override { return TaskType::kLossAcc; }
 
  private:
+  void InferProducedDataRegstTimeShape() override;
 };
 
 }  // namespace oneflow

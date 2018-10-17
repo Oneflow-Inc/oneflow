@@ -208,4 +208,6 @@ std::shared_ptr<Operator> BoxingTaskNode::NewBoxingOp(
   return ConstructOp(op_conf);
 }
 
+void BoxingTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataRegstTimeShape(); }
+
 }  // namespace oneflow

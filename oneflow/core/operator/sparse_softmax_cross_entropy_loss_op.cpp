@@ -1,8 +1,12 @@
 #include "oneflow/core/operator/sparse_softmax_cross_entropy_loss_op.h"
+#include "oneflow/core/register/runtime_blob_desc.h"
 
 namespace oneflow {
 
-void SparseSoftmaxCrossEntropyLossOp::VirtualInitFromOpConf() { EnrollDataTmpBn("prob"); }
+void SparseSoftmaxCrossEntropyLossOp::VirtualInitFromOpConf() {
+  EnrollDataTmpBn("prob");
+  EnrollDataTmpBn("fw_buf");
+}
 
 const PbMessage& SparseSoftmaxCrossEntropyLossOp::GetCustomizedConf() const {
   return op_conf().sparse_softmax_cross_entropy_loss_conf();
@@ -15,14 +19,18 @@ LossKernelConf* SparseSoftmaxCrossEntropyLossOp::GetMutLossKernelConf(
 
 void SparseSoftmaxCrossEntropyLossOp::VirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, size_t* buf_size) const {
+    const ParallelContext* parallel_ctx) const {
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
   CHECK_EQ(pred_blob_desc->shape().NumAxes(), 2);
   // prob
   BlobDesc* prob_blob_desc = GetBlobDesc4BnInOp("prob");
   prob_blob_desc->mut_shape() = Shape(pred_blob_desc->shape());
   prob_blob_desc->set_data_type(pred_blob_desc->data_type());
-  *buf_size = pred_blob_desc->ByteSizeOfDataContentField();
+  // temp storage for RowMax etc.
+  BlobDesc* fw_buf_blob_desc = GetBlobDesc4BnInOp("fw_buf");
+  fw_buf_blob_desc->mut_shape() =
+      Shape({static_cast<int64_t>(RtBlobDesc(*pred_blob_desc).ByteSizeOfDataContentField())});
+  fw_buf_blob_desc->set_data_type(DataType::kChar);
 }
 
 REGISTER_OP(OperatorConf::kSparseSoftmaxCrossEntropyLossConf, SparseSoftmaxCrossEntropyLossOp);

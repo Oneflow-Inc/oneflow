@@ -22,18 +22,14 @@ void RecordLoadKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
     data_paths.push_back(JoinPath(data_dir, part_name_prefix + std::string(zero_count, '0') + num));
   }
   if (Global<JobDesc>::Get()->IsTrain()) {
-    if (Global<JobDesc>::Get()->save_downloaded_file_to_local_fs() && GlobalFS() != LocalFS()) {
-      in_stream_.reset(new PersistentInStream(GlobalFS(), data_paths, true, true));
-    } else {
-      in_stream_.reset(new PersistentInStream(GlobalFS(), data_paths, true, false));
-    }
+    in_stream_.reset(new PersistentInStream(
+        DataFS(), data_paths, true, Global<JobDesc>::Get()->save_downloaded_file_to_local_fs()));
   } else {
-    in_stream_.reset(new PersistentInStream(GlobalFS(), data_paths, false, false));
+    in_stream_.reset(new PersistentInStream(DataFS(), data_paths, false, false));
   }
   int64_t global_piece_size = Global<JobDesc>::Get()->PieceSize();
   CHECK_EQ(global_piece_size % parallel_ctx->parallel_num(), 0);
   piece_size_in_one_loader_ = global_piece_size / parallel_ctx->parallel_num();
-  loaded_cnt_ = 0;
 }
 
 void RecordLoadKernel::Forward(const KernelCtx& ctx,
@@ -41,10 +37,7 @@ void RecordLoadKernel::Forward(const KernelCtx& ctx,
   auto status = static_cast<RecordLoadStatus*>(ctx.other);
   Blob* out_blob = BnInOp2Blob("out");
   RecordBlob<OFRecord> record_blob(out_blob);
-  if (!Global<JobDesc>::Get()->use_synthetic_data() || loaded_cnt_ < 2) {
-    record_blob.ReadFrom(in_stream_.get());
-    ++loaded_cnt_;
-  }
+  record_blob.ReadFrom(in_stream_.get());
   status->record_num = record_blob.record_num();
   if (status->record_num < piece_size_in_one_loader_) { status->is_eof = true; }
 }

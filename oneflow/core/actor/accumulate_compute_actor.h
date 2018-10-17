@@ -13,12 +13,11 @@ class AccumulateCompActor : public CompActor {
 
  protected:
   void Init(const TaskProto&, int32_t max_acc_cnt, ColIdOrder order);
+  int64_t ActNumForEachOutput(int64_t regst_desc_id) const override;
 
  private:
   void Act() override;
-  std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
-    return {true, {}};
-  }
+  void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
 
   ColIdOrder order_;
   std::function<void(DeviceCtx*, void* dst, const void* src, size_t)> cpy_func_;

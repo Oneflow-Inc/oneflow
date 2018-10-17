@@ -12,6 +12,7 @@ void SparseSoftmaxCrossEntropyLossKernel<device_type, PredType, LabelType>::
   const Blob* label_blob = BnInOp2Blob("label");
   Blob* prob_blob = BnInOp2Blob("prob");
   Blob* loss_blob = BnInOp2Blob("loss");
+  Blob* buf_blob = BnInOp2Blob("fw_buf");
   const int64_t n = prediction_blob->shape().At(0);
   const int64_t w = prediction_blob->shape().Count(1);
   const PredType* pred = prediction_blob->dptr<PredType>();
@@ -20,7 +21,8 @@ void SparseSoftmaxCrossEntropyLossKernel<device_type, PredType, LabelType>::
   PredType* loss = loss_blob->mut_dptr<PredType>();
   // forward
   SoftmaxComputeProb<device_type, PredType>(ctx.device_ctx, n, w, pred, loss, prob,
-                                            ctx.device_ctx->buf_ptr(), ctx.device_ctx->buf_size());
+                                            buf_blob->mut_dptr(),
+                                            buf_blob->ByteSizeOfDataContentField());
   SparseCrossEntropyLossKernelUtil<device_type, PredType, LabelType>::Forward(ctx.device_ctx, n, w,
                                                                               prob, label, loss);
   // backward

@@ -9,11 +9,16 @@
 #include "oneflow/core/graph/normal_model_update_compute_task_node.h"
 #include "oneflow/core/graph/print_compute_task_node.h"
 #include "oneflow/core/graph/decode_compute_task_node.h"
+#include "oneflow/core/graph/decode_random_compute_task_node.h"
 #include "oneflow/core/graph/record_load_compute_task_node.h"
 #include "oneflow/core/graph/reduce_scatter_compute_task_node.h"
-#include "oneflow/core/graph/reduce_local_add_compute_task_node.h"
-#include "oneflow/core/graph/reduce_global_add_compute_task_node.h"
+#include "oneflow/core/graph/reduce_add_compute_task_node.h"
 #include "oneflow/core/graph/reduce_gather_compute_task_node.h"
+#include "oneflow/core/graph/reduce_concat_compute_task_node.h"
+#include "oneflow/core/graph/reduce_split_compute_task_node.h"
+#include "oneflow/core/graph/nccl_all_reduce_compute_task_node.h"
+#include "oneflow/core/graph/nccl_reduce_scatter_compute_task_node.h"
+#include "oneflow/core/graph/nccl_all_gather_compute_task_node.h"
 #include "oneflow/core/graph/accuracy_compute_task_node.h"
 #include "oneflow/core/graph/accuracy_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/accuracy_print_compute_task_node.h"
@@ -158,14 +163,15 @@ std::vector<LogicalBlobId> LogicalNode::GetLbisTo(const LogicalNode* dst) const 
 
 void LogicalNode::SetDataLbisTo(const LogicalNode* dst, const std::vector<LogicalBlobId>& lbis) {
   CHECK(dst2data_lbis_.emplace(dst, lbis).second);
-  BldSubTskGphMthd mthd = GetMthdForBldSubTskGph(this, dst);
-  if (mthd == &TaskGraph::BldSubTskGphByBoxing) {
-    lbi_boxing_.insert(lbis.begin(), lbis.end());
-  } else if (mthd == &TaskGraph::BldSubTskGphByOneToOne) {
-    lbi_121_.insert(lbis.begin(), lbis.end());
-  } else {
-    UNIMPLEMENTED();
+}
+
+bool LogicalNode::IsDataLbiOnOutEdge(const LogicalBlobId& lbi) const {
+  for (const auto& pair : dst2data_lbis_) {
+    if (std::find(pair.second.begin(), pair.second.end(), lbi) != pair.second.end()) {
+      return true;
+    }
   }
+  return false;
 }
 
 std::string LogicalNode::VisualStr() const {
@@ -192,6 +198,7 @@ bool LogicalNode::HasOpWithForwardModelBlob() const {
 
 void LogicalNode::GenSortedCompTaskNodes(
     std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly,
+    std::vector<std::pair<int64_t, CompTaskNode*>>* nodes,
     std::function<void(CompTaskNode*)> Handler) const {
   int64_t parallel_idx = 0;
   int64_t parallel_num = parallel_desc_->parallel_num();
@@ -199,6 +206,10 @@ void LogicalNode::GenSortedCompTaskNodes(
     for (int64_t dev_phy_id : parallel_desc_->sorted_dev_phy_ids(machine_id)) {
       CompTaskNode* comp_task_node = NewCompTaskNode();
       comp_task_node->set_machine_id(machine_id);
+      comp_task_node->mut_parallel_ctx()->set_parallel_id(parallel_idx++);
+      comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);
+      comp_task_node->mut_parallel_ctx()->set_policy(parallel_desc_->policy());
+
       const IDMgr* id_mgr = Global<IDMgr>::Get();
       if (parallel_desc_->device_type() == DeviceType::kGPU) {
         switch (comp_task_node->GetCudaWorkType()) {
@@ -214,6 +225,14 @@ void LogicalNode::GenSortedCompTaskNodes(
             comp_task_node->set_thrd_id(id_mgr->GetGpuD2HThrdId(dev_phy_id));
             break;
           }
+          case CudaWorkType::kNcclScatter: {
+            comp_task_node->set_thrd_id(id_mgr->GetGpuNcclScatterThrdId(dev_phy_id));
+            break;
+          }
+          case CudaWorkType::kNcclGather: {
+            comp_task_node->set_thrd_id(id_mgr->GetGpuNcclGatherThrdId(dev_phy_id));
+            break;
+          }
           case CudaWorkType::kMix: {
             comp_task_node->set_thrd_id(id_mgr->GetGpuMixThrdId(dev_phy_id));
             break;
@@ -226,18 +245,14 @@ void LogicalNode::GenSortedCompTaskNodes(
         }
       } else if (parallel_desc_->device_type() == DeviceType::kCPU) {
         if (comp_task_node->IsPersistence()) {
-          comp_task_node->set_thrd_id(AllocateCpuThrdIdEvenly(comp_task_node));
+          nodes->push_back({machine_id, comp_task_node});
         } else {
-          comp_task_node->set_thrd_id(
-              id_mgr->GetCpuDeviceThrdId(dev_phy_id % Global<JobDesc>::Get()->CpuDeviceNum()));
+          comp_task_node->set_thrd_id(AllocateCpuThrdIdEvenly(comp_task_node));
         }
       } else {
         UNIMPLEMENTED();
       }
       comp_task_node->set_logical_node(this);
-      comp_task_node->mut_parallel_ctx()->set_parallel_id(parallel_idx++);
-      comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);
-      comp_task_node->mut_parallel_ctx()->set_policy(parallel_desc_->policy());
       FixCompTaskNode(comp_task_node);
       Handler(comp_task_node);
     }
@@ -289,6 +304,7 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
   auto it = GetFuncForFindBldSubTskGphMthd()->find(k);
   if (it != GetFuncForFindBldSubTskGphMthd()->end()) { return it->second(src_node, dst_node); }
   if (src_pd->parallel_num() == dst_pd->parallel_num()) {
+    // NOTE: AllReduce is always DataParallel
     if (src_pd->policy() == kDataParallel && dst_pd->policy() == kDataParallel) {
       return &TaskGraph::BldSubTskGphByOneToOne;
     } else if (src_pd->policy() == kModelParallel && dst_pd->policy() == kModelParallel
@@ -334,24 +350,15 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("MdDiffAcc"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalBackward"
                               "NormalMdUpdt",
                               BldSubTskGphToNormalMdUpdt);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("MdDiffAcc"
-                              "ReduceScatter",
-                              &TaskGraph::BldSubTskGphByOneToOne);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceScatter"
-                              "ReduceLocalAdd",
-                              &TaskGraph::BldSubTskGphByReduceScatter2ReduceLocalAdd);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceScatter"
-                              "ReduceGlobalAdd",
-                              &TaskGraph::BldSubTskGphByReduceScatter2ReduceGlobalAdd);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceLocalAdd"
-                              "ReduceGlobalAdd",
-                              &TaskGraph::BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGlobalAdd"
+                              "ReduceAdd",
+                              &TaskGraph::BldSubTskGphByReduceScatter2ReduceAdd);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceAdd"
                               "ReduceGather",
-                              &TaskGraph::BldSubTskGphByReduceGlobalAdd2ReduceGather);
+                              &TaskGraph::BldSubTskGphByReduceAdd2ReduceGather);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
-                              "NormalMdUpdt",
-                              &TaskGraph::BldSubTskGphByOneToOne);
+                              "ReduceGather",
+                              &TaskGraph::BldSubTskGphByReduceGather2ReduceGather);
 
 BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src, const LogicalNode* dst) {
   std::string k = ConcatTypeName(src, dst);
@@ -387,6 +394,7 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
   OF_PP_MAKE_TUPLE_SEQ(NormalBackward, kDataBackwardArea) \
   OF_PP_MAKE_TUPLE_SEQ(RecordLoad, kDataPreprocessArea)   \
   OF_PP_MAKE_TUPLE_SEQ(Decode, kDataPreprocessArea)       \
+  OF_PP_MAKE_TUPLE_SEQ(DecodeRandom, kDataPreprocessArea) \
   OF_PP_MAKE_TUPLE_SEQ(Loss, kDataForwardArea)            \
   OF_PP_MAKE_TUPLE_SEQ(LossAcc, kDataForwardArea)         \
   OF_PP_MAKE_TUPLE_SEQ(LossPrint, kPrintArea)             \
@@ -394,10 +402,14 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
   OF_PP_MAKE_TUPLE_SEQ(MdSave, kMdSaveArea)               \
   OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc, kDataBackwardArea)      \
   OF_PP_MAKE_TUPLE_SEQ(Print, kPrintArea)                 \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceConcat, kMdUpdtArea)         \
   OF_PP_MAKE_TUPLE_SEQ(ReduceScatter, kMdUpdtArea)        \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceLocalAdd, kMdUpdtArea)       \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceGlobalAdd, kMdUpdtArea)      \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceAdd, kMdUpdtArea)            \
   OF_PP_MAKE_TUPLE_SEQ(ReduceGather, kMdUpdtArea)         \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceSplit, kMdUpdtArea)          \
+  OF_PP_MAKE_TUPLE_SEQ(NcclAllReduce, kMdUpdtArea)        \
+  OF_PP_MAKE_TUPLE_SEQ(NcclReduceScatter, kMdUpdtArea)    \
+  OF_PP_MAKE_TUPLE_SEQ(NcclAllGather, kMdUpdtArea)        \
   OF_PP_MAKE_TUPLE_SEQ(Accuracy, kDataForwardArea)        \
   OF_PP_MAKE_TUPLE_SEQ(AccuracyAcc, kDataForwardArea)     \
   OF_PP_MAKE_TUPLE_SEQ(AccuracyPrint, kPrintArea)

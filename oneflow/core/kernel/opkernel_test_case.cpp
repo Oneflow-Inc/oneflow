@@ -1,5 +1,6 @@
 #include "oneflow/core/kernel/opkernel_test_case.h"
 #include "oneflow/core/device/cuda_stream_handle.h"
+#include "oneflow/core/register/register_manager.h"
 
 namespace oneflow {
 
@@ -70,9 +71,17 @@ DataType DataType4CppTypeString(const std::string& cpp_type_str) {
 
 template<>
 Blob* OpKernelTestUtil<DeviceType::kCPU>::CreateBlob(const BlobDesc* blob_desc, Regst* regst) {
+  RtBlobDesc* rt_blob_desc = new RtBlobDesc(*blob_desc);
   void* mem_ptr = nullptr;
-  CudaCheck(cudaMallocHost(&mem_ptr, blob_desc->TotalByteSize()));
-  return new Blob(regst, blob_desc, static_cast<char*>(mem_ptr));
+  CudaCheck(cudaMallocHost(&mem_ptr, rt_blob_desc->TotalByteSize()));
+  return new Blob(regst, rt_blob_desc, static_cast<char*>(mem_ptr));
+}
+
+template<>
+Blob* OpKernelTestUtil<DeviceType::kCPU>::CreateBlob(const RtBlobDesc* rt_blob_desc, Regst* regst) {
+  void* mem_ptr = nullptr;
+  CudaCheck(cudaMallocHost(&mem_ptr, rt_blob_desc->TotalByteSize()));
+  return new Blob(regst, rt_blob_desc, static_cast<char*>(mem_ptr));
 }
 
 template<DeviceType src_device_type, DeviceType dst_device_type>
@@ -115,14 +124,14 @@ DEFINE_STATIC_SWITCH_FUNC(void, BlobCopy, MAKE_TWO_DEVICE_SWITCH_ENTRY,
 
 template<>
 void OpKernelTestUtil<DeviceType::kCPU>::BuildKernelCtx(KernelCtx* ctx) {
-  ctx->device_ctx = new CpuDeviceCtx(nullptr, 0);
+  ctx->device_ctx = new CpuDeviceCtx();
 }
 
 template<>
 void OpKernelTestUtil<DeviceType::kGPU>::BuildKernelCtx(KernelCtx* ctx) {
   if (!Global<CudaStreamHandle>::Get()) { Global<CudaStreamHandle>::New(nullptr); }
   CudaStreamHandle* cuda_handle = Global<CudaStreamHandle>::Get();
-  ctx->device_ctx = new CudaDeviceCtx(nullptr, 0, cuda_handle);
+  ctx->device_ctx = new CudaDeviceCtx(cuda_handle);
 }
 
 template<>
@@ -202,6 +211,28 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CPU_OPKERNEL_TEST_UTIL_METHODS, POD_DATA_TYPE_S
 
 void OpKernelTestCase::EnrollBlobRegst(const std::string& blob_name, Regst* regst) {
   CHECK(bn_in_op2regst_.emplace(blob_name, regst).second);
+}
+
+void OpKernelTestCase::CreatRegst(DeviceType device_type) {
+  RegstDescProto* regst_desc_proto = new RegstDescProto();
+  regst_desc_proto->set_regst_desc_id(-1);
+  regst_desc_proto->set_producer_task_id(0);
+  regst_desc_proto->set_mem_shared_id(-1);
+  regst_desc_proto->set_min_register_num(1);
+  regst_desc_proto->set_max_register_num(1);
+  regst_desc_proto->set_register_num(1);
+  regst_desc_proto->mutable_regst_desc_type()->mutable_ctrl_regst_desc();
+  if (device_type == DeviceType::kCPU) {
+    regst_desc_proto->mutable_mem_case()->mutable_host_mem();
+  } else {
+    regst_desc_proto->mutable_mem_case()->mutable_device_cuda_mem();
+  }
+  std::list<const RegstDescProto*> regst_protos;
+  regst_protos.push_back(regst_desc_proto);
+  if (Global<RegstMgr>::Get() != nullptr) { Global<RegstMgr>::Delete(); }
+  Global<RegstMgr>::New(regst_protos);
+  Global<RegstMgr>::Get()->NewRegsts(*regst_desc_proto,
+                                     [this](Regst* ret_regst) { regst_ = ret_regst; });
 }
 
 template<typename T>
@@ -338,11 +369,15 @@ void OpKernelTestCase::set_default_data_type(DataType default_data_type) {
   });
 }
 
-void OpKernelTestCase::UpdateGlobalJobDesc() { TODO(); }
+void OpKernelTestCase::UpdateGlobalJobDesc() {
+  if (Global<JobDesc>::Get()) { Global<JobDesc>::Delete(); }
+  Global<JobDesc>::New(job_conf_);
+}
 
 void OpKernelTestCase::InitBeforeRun() {
   for (const auto& pair : bn_in_op2blob_) {
-    bn_in_op2blob_desc_[pair.first] = pair.second->blob_desc();
+    BlobDesc blob_desc(pair.second->blob_desc().blob_desc_proto());
+    bn_in_op2blob_desc_[pair.first] = blob_desc;
   }
   SwitchBuildKernelCtx(SwitchCase(default_device_type()), &kernel_ctx_);
 }

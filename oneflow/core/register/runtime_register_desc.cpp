@@ -15,21 +15,59 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
   if (proto.regst_desc_type().has_data_regst_desc()) {
     const DataRegstDesc& data_regst_desc = proto.regst_desc_type().data_regst_desc();
     for (const LbiBlobDescPair& pair : data_regst_desc.lbi2blob_desc()) {
-      auto blob_desc = std::make_unique<BlobDesc>(pair.blob_desc());
+      auto blob_desc = std::make_unique<RtBlobDesc>(pair.blob_desc());
       CHECK(lbi2blob_desc_.emplace(pair.lbi(), std::move(blob_desc)).second);
     }
-    packed_blob_desc_ = BlobDesc(data_regst_desc.packed_blob_desc());
+    packed_blob_desc_.reset(new RtBlobDesc(data_regst_desc.packed_blob_desc()));
+    CHECK(data_regst_desc.has_time_shape());
+    data_regst_time_shape_.reset(new Shape(data_regst_desc.time_shape()));
+  } else {
+    packed_blob_desc_.reset(new RtBlobDesc(BlobDesc()));
   }
 }
 
-const BlobDesc* RtRegstDesc::GetBlobDescFromLbi(const LogicalBlobId& lbi) const {
+const RtBlobDesc* RtRegstDesc::GetRtBlobDescFromLbi(const LogicalBlobId& lbi) const {
   auto it = lbi2blob_desc_.find(lbi);
   if (it == lbi2blob_desc_.end()) {
     CHECK(lbi.is_packed_id());
-    return &packed_blob_desc_;
+    return packed_blob_desc_.get();
   } else {
     return it->second.get();
   }
+}
+
+size_t RtRegstDesc::TotalByteSize4AllRegst() const {
+  return packed_blob_desc_->TotalByteSize() * register_num_;
+}
+
+size_t RtRegstDesc::TotalMainByteSize4AllRegst() const {
+  return MainByteSize4OneRegst() * register_num_;
+}
+
+size_t RtRegstDesc::MainByteSize4OneRegst() const {
+  if (mem_case_.has_device_cuda_mem()) {
+    return packed_blob_desc_->ByteSizeOfBlobBody();
+  } else {
+    return packed_blob_desc_->TotalByteSize();
+  }
+}
+
+size_t RtRegstDesc::TotalSeparatedByteSize4AllRegst() const {
+  return SeparatedByteSize4OneRegst() * register_num_;
+}
+
+size_t RtRegstDesc::SeparatedByteSize4OneRegst() const {
+  if (mem_case_.has_device_cuda_mem()) {
+    return packed_blob_desc_->ByteSizeOfBlobHeader();
+  } else {
+    return 0;
+  }
+}
+
+const Shape& RtRegstDesc::data_regst_time_shape() const {
+  CHECK(regst_desc_type_.has_data_regst_desc());
+  CHECK(data_regst_time_shape_);
+  return *data_regst_time_shape_;
 }
 
 }  // namespace oneflow

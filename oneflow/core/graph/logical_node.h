@@ -4,6 +4,7 @@
 #include "oneflow/core/graph/boxing_task_node.h"
 #include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/graph/reduce_rank_context.h"
 
 namespace oneflow {
 
@@ -34,8 +35,7 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   // Lbis
   std::vector<LogicalBlobId> GetLbisTo(const LogicalNode* dst) const;
   void SetDataLbisTo(const LogicalNode* dst, const std::vector<LogicalBlobId>&);
-  const HashSet<LogicalBlobId>& lbi_boxing() const { return lbi_boxing_; }
-  const HashSet<LogicalBlobId>& lbi_121() const { return lbi_121_; }
+  bool IsDataLbiOnOutEdge(const LogicalBlobId& lbi) const;
 
   // util
   virtual std::string TypeName() const = 0;
@@ -44,6 +44,7 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   bool HasOpWithModelBlob() const;
   bool HasOpWithForwardModelBlob() const;
   void GenSortedCompTaskNodes(std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly,
+                              std::vector<std::pair<int64_t, CompTaskNode*>>* nodes,
                               std::function<void(CompTaskNode*)>) const;
 
   // model split
@@ -68,8 +69,6 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   LogicalNode* main_model_parallel_;
 
   HashMap<const LogicalNode*, std::vector<LogicalBlobId>> dst2data_lbis_;
-  HashSet<LogicalBlobId> lbi_boxing_;
-  HashSet<LogicalBlobId> lbi_121_;
 };
 
 #define BLD_SUB_TSK_GPH_MTHD_ARGS()                                                       \
@@ -134,8 +133,6 @@ class ForwardLogicalNode : public LogicalNode {
 
   BackwardLogicalNode* NewBackwardNode();
 
-  void SetBwNode(BackwardLogicalNode* bw_node) { bw_node_ = bw_node; }
-
  protected:
   virtual BackwardLogicalNode* NewCorrectBackwardNode() = 0;
 
@@ -179,6 +176,7 @@ class NormalBackwardLogicalNode final : public BackwardLogicalNode {
 
 DECLARE_NAIVE_LOGICAL_NODE(RecordLoadLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(DecodeLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(DecodeRandomLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(PrintLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(LossLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(LossAccLogicalNode);
@@ -203,10 +201,44 @@ class NormalMdUpdtLogicalNode final : public LogicalNode {
 
 DECLARE_NAIVE_LOGICAL_NODE(MdSaveLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(MdDiffAccLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(ReduceScatterLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(ReduceLocalAddLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(ReduceGlobalAddLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(ReduceGatherLogicalNode);
+
+class ReduceLogicalNode : public LogicalNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ReduceLogicalNode);
+  ~ReduceLogicalNode() override = default;
+
+  ReduceRankCtx& mut_rank_ctx() { return rank_ctx_; }
+  const ReduceRankCtx& rank_ctx() const { return rank_ctx_; }
+
+ protected:
+  ReduceLogicalNode() = default;
+
+ private:
+  ReduceRankCtx rank_ctx_;
+  void FixCompTaskNode(CompTaskNode* task_node) const override {
+    task_node->mut_parallel_ctx()->mutable_rank_ctx()->set_rank_id(
+        rank_ctx().Rank4ParallelId(task_node->parallel_id()));
+    task_node->mut_parallel_ctx()->mutable_rank_ctx()->set_rank_num(rank_ctx().StageSegmentCount());
+    int64_t rank_set_id =
+        ((node_id() << 32) | rank_ctx().RankSet4ParallelId(task_node->parallel_id()));
+    task_node->mut_parallel_ctx()->mutable_rank_ctx()->set_rank_set_id(rank_set_id);
+  }
+};
+
+#define DECLARE_REDUCE_LOGICAL_NODE(name)       \
+  class name final : public ReduceLogicalNode { \
+   public:                                      \
+    LOGICAL_NODE_BOILERPLATE(name);             \
+  }
+
+DECLARE_REDUCE_LOGICAL_NODE(ReduceConcatLogicalNode);
+DECLARE_REDUCE_LOGICAL_NODE(ReduceSplitLogicalNode);
+DECLARE_REDUCE_LOGICAL_NODE(ReduceScatterLogicalNode);
+DECLARE_REDUCE_LOGICAL_NODE(ReduceGatherLogicalNode);
+DECLARE_REDUCE_LOGICAL_NODE(ReduceAddLogicalNode);
+DECLARE_REDUCE_LOGICAL_NODE(NcclAllReduceLogicalNode);
+DECLARE_REDUCE_LOGICAL_NODE(NcclAllGatherLogicalNode);
+DECLARE_REDUCE_LOGICAL_NODE(NcclReduceScatterLogicalNode);
 
 }  // namespace oneflow
 

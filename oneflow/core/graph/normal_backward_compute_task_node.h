@@ -15,7 +15,7 @@ class NormalBackwardCompTaskNode final : public CompTaskNode {
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
   TaskType GetTaskType() const override { return TaskType::kNormalBackward; }
-  bool IsBwClone() const;
+  void RmUselessConsumeRelationshipToFw();
 
  protected:
   void BuildExecGphAndBindOutDiffRegst();
@@ -23,10 +23,13 @@ class NormalBackwardCompTaskNode final : public CompTaskNode {
   void BuildInDiffRegst();
 
  private:
+  void FixPackedBlobDescOfProducedRegst() override;
   void LinkFwExecNode();
   void BindModelDiffRegst();
+  void BindInRegst();
   void InferBlobDescsInProducedRegsts();
   CompTaskNode* GetRelatedFwTaskNode();
+  void InferProducedDataRegstTimeShape() override;
 };
 
 }  // namespace oneflow

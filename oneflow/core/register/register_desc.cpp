@@ -2,6 +2,7 @@
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/register/runtime_blob_desc.h"
 
 namespace oneflow {
 
@@ -22,10 +23,16 @@ RegstDesc::RegstDesc() {
   max_register_num_ = kMaxRegisterNum;
   is_locked_ = false;
   enable_mem_sharing_ = false;
+  mem_shared_id_ = -1;
+  mem_shared_offset_ = -1;
 }
 
 void RegstDesc::AddConsumer(const TaskNode* new_consumer) {
   CHECK(consumers_.insert(new_consumer).second);
+}
+
+void RegstDesc::DeleteConsumer(const TaskNode* consumer) {
+  CHECK_EQ(consumers_.erase(consumer), 1);
 }
 
 void RegstDesc::UpdtMinRegstNumIfNeed(int32_t val) {
@@ -40,16 +47,7 @@ void RegstDesc::UpdtMaxRegstNumIfNeed(int32_t val) {
 void RegstDesc::Lock() {
   CHECK_EQ(is_locked_, false);
   is_locked_ = true;
-  auto it = lbi2blob_desc_.begin();
-  packed_blob_desc_.reset(new BlobDesc);
-  *packed_blob_desc_ = ComputePackedBlobDesc([&]() {
-    const BlobDesc* ret = nullptr;
-    if (it != lbi2blob_desc_.end()) {
-      ret = it->second.get();
-      ++it;
-    }
-    return ret;
-  });
+  packed_blob_desc_ = ComputePackedBlobDesc(lbi2blob_desc_);
 }
 
 void RegstDesc::CopyBlobDescFrom(const RegstDesc* rhs) {
@@ -104,7 +102,7 @@ void RegstDesc::ForEachLbi(std::function<void(const LogicalBlobId&)> func) const
 void RegstDesc::EraseZeroSizeBlob() {
   EraseIf<LogicalBlobId, std::unique_ptr<BlobDesc>>(
       &lbi2blob_desc_, [](HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>::iterator it) {
-        return it->second->ByteSizeOfDataContentField() == 0;
+        return RtBlobDesc(*(it->second)).ByteSizeOfDataContentField() == 0;
       });
 }
 
@@ -122,6 +120,8 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
       *(pb_pair->mutable_lbi()) = pair.first;
       pair.second->ToProto(pb_pair->mutable_blob_desc());
     }
+    CHECK(data_regst_time_shape_);
+    data_regst_time_shape_->ToProto(data_regst_desc_proto->mutable_time_shape());
   } else if (regst_desc_type_.has_ctrl_regst_desc()) {
     // do nothing
   } else {
@@ -132,7 +132,8 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
   ret->set_register_num(min_register_num_);
   *(ret->mutable_mem_case()) = mem_case_;
   ret->set_enable_mem_sharing(enable_mem_sharing_);
-  ret->set_mem_shared_id(-1);
+  ret->set_mem_shared_id(mem_shared_id_);
+  ret->set_mem_shared_offset(mem_shared_offset_);
 }
 
 bool RegstDesc::HasSameBlobDescs(const RegstDesc* rhs) {
@@ -156,6 +157,7 @@ void InitCtrlRegstDesc(int64_t producer_task_id, RegstDescProto* ctrl_regst_prot
   ctrl_regst_proto->mutable_mem_case()->mutable_host_mem();
   ctrl_regst_proto->set_enable_mem_sharing(false);
   ctrl_regst_proto->set_mem_shared_id(-1);
+  ctrl_regst_proto->set_mem_shared_offset(-1);
 }
 
 }  // namespace oneflow

@@ -6,9 +6,11 @@
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/profiler.h"
+#include "oneflow/core/job/sub_plan.pb.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/runtime.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
+#include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/actor/act_event_logger.h"
 
@@ -76,6 +78,99 @@ void FixCpuDeviceNum() {
   Global<JobDesc>::Get()->SetCpuDeviceNum(cpu_device_num);
 }
 
+std::string cluster_thrd_ids_key(const std::string& plan_name) {
+  return plan_name + "_cluster_thrd_ids";
+}
+
+std::string net_topo_key(const std::string& plan_name) { return plan_name + "_net_topo"; }
+
+std::string sub_plan_key(const std::string& plan_name, int64_t machine_id, int64_t thrd_id) {
+  return plan_name + "_" + std::to_string(machine_id) + "_" + std::to_string(thrd_id);
+}
+
+std::string total_mbn_num_key(const std::string& plan_name) { return plan_name + "_total_mbn_num"; }
+
+void PushPlan(const std::string& plan_name, const Plan& plan) {
+  HashMap<int64_t, std::set<int64_t>> machine_id2thrd_id_set;
+  HashMap<std::pair<int64_t, int64_t>, std::vector<TaskProto>> mchn_thrd_id2task_protos;
+  for (const auto& task : plan.task()) {
+    machine_id2thrd_id_set[task.machine_id()].insert(task.thrd_id());
+    mchn_thrd_id2task_protos[std::make_pair(task.machine_id(), task.thrd_id())].emplace_back(task);
+  }
+
+  HashMap<int64_t, ThrdIds> machine_id2thrd_ids;
+  for (const auto& pair : machine_id2thrd_id_set) {
+    CHECK(machine_id2thrd_ids.emplace(pair.first, ThrdIds()).second);
+    std::vector<int64_t> thrd_id_vec(pair.second.begin(), pair.second.end());
+    *(machine_id2thrd_ids.at(pair.first).mutable_thrd_id()) = StdVec2PbRf(thrd_id_vec);
+  }
+
+  ClusterThrdIds cluster_thrd_ids;
+  *(cluster_thrd_ids.mutable_machine_id2thrd_ids()) = HashMap2PbMap(machine_id2thrd_ids);
+  Global<CtrlClient>::Get()->PushKV(cluster_thrd_ids_key(plan_name), cluster_thrd_ids);
+
+  for (const auto& pair : mchn_thrd_id2task_protos) {
+    SubPlan sub_plan;
+    *(sub_plan.mutable_task()) = StdVec2PbRpf(pair.second);
+    Global<CtrlClient>::Get()->PushKV(sub_plan_key(plan_name, pair.first.first, pair.first.second),
+                                      sub_plan);
+  }
+  Global<CtrlClient>::Get()->PushKV(total_mbn_num_key(plan_name),
+                                    std::to_string(plan.total_mbn_num()));
+
+  Global<CtrlClient>::Get()->PushKV(net_topo_key(plan_name), plan.net_topo());
+}
+
+void PullPlan(const std::string& plan_name, Plan* plan) {
+  ClusterThrdIds cluster_thrd_ids;
+  Global<CtrlClient>::Get()->PullKV(cluster_thrd_ids_key(plan_name), &cluster_thrd_ids);
+  PrintProtoToTextFile(cluster_thrd_ids, JoinPath(FLAGS_log_dir, cluster_thrd_ids_key(plan_name)));
+  HashMap<int64_t, ThrdIds> machine_id2thrd_ids;
+  machine_id2thrd_ids = PbMap2HashMap(cluster_thrd_ids.machine_id2thrd_ids());
+  int64_t machine_id = Global<MachineCtx>::Get()->this_machine_id();
+  auto thrd_ids_it = machine_id2thrd_ids.find(machine_id);
+  CHECK(thrd_ids_it != machine_id2thrd_ids.end());
+  std::vector<int64_t> thrd_id_vec = PbRf2StdVec(thrd_ids_it->second.thrd_id());
+  for (auto thrd_id : thrd_id_vec) {
+    SubPlan sub_plan;
+    Global<CtrlClient>::Get()->PullKV(sub_plan_key(plan_name, machine_id, thrd_id), &sub_plan);
+    plan->mutable_task()->MergeFrom(sub_plan.task());
+  }
+  NetTopo net_topo;
+  std::string total_mbn_num;
+  Global<CtrlClient>::Get()->PullKV(total_mbn_num_key(plan_name), &total_mbn_num);
+  plan->set_total_mbn_num(oneflow_cast<int64_t>(total_mbn_num));
+  Global<CtrlClient>::Get()->PullKV(net_topo_key(plan_name), &net_topo);
+  *(plan->mutable_net_topo()) = net_topo;
+}
+
+bool HasRelayPlacement() {
+  PbMd message_diff;
+  const ParallelConf* last_gpu_conf_ptr = nullptr;
+  const Placement& placement = Global<JobDesc>::Get()->placement();
+  for (const PlacementGroup& p_group : placement.placement_group()) {
+    const ParallelConf& p_conf = p_group.parallel_conf();
+    for (const std::string& device_name : p_conf.device_name()) {
+      int64_t mchn_id;
+      std::string device_tag;
+      std::string device_id_str;
+      ParseDeviceNameConf(device_name, &mchn_id, &device_tag, &device_id_str);
+      if (device_tag == "cpu") {
+        break;
+      } else if (device_tag == "gpu") {
+        if (last_gpu_conf_ptr && !message_diff.Equivalent(*last_gpu_conf_ptr, p_conf)) {
+          return true;
+        }
+        last_gpu_conf_ptr = &p_conf;
+        break;
+      } else {
+        UNIMPLEMENTED();
+      }
+    }
+  }
+  return false;
+}
+
 }  // namespace
 
 class Oneflow final {
@@ -83,68 +178,81 @@ class Oneflow final {
   OF_DISALLOW_COPY_AND_MOVE(Oneflow);
   ~Oneflow() = default;
 
-  Oneflow(const std::string& job_conf_filepath, const std::string& this_mchn_name);
+  Oneflow(const std::string& job_conf_filepath);
 
  private:
   std::unique_ptr<CtrlServer> ctrl_server_;
 };
 
-Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_mchn_name) {
+Oneflow::Oneflow(const std::string& job_conf_filepath) {
   // New All Global
   Global<JobDesc>::New(job_conf_filepath);
-  Global<MachineCtx>::New(this_mchn_name);
-  const MachineCtx* machine_ctx = Global<MachineCtx>::Get();
-  if (machine_ctx->IsThisMachineMaster()) { Global<Profiler>::New(); }
-  ctrl_server_.reset(new CtrlServer(machine_ctx->GetThisCtrlAddr()));
+  ctrl_server_.reset(new CtrlServer());
   Global<CtrlClient>::New();
+  OF_BARRIER();
+  int64_t this_mchn_id = Global<JobDesc>::Get()->GetMachineId(ctrl_server_->this_machine_addr());
+  Global<MachineCtx>::New(this_mchn_id);
+  const MachineCtx* machine_ctx = Global<MachineCtx>::Get();
+  bool DoProfile =
+      machine_ctx->IsThisMachineMaster() && Global<JobDesc>::Get()->collect_act_event();
+  if (DoProfile) { Global<Profiler>::New(); }
   FixCpuDeviceNum();
   Global<IDMgr>::New();
   // Compile
   Plan naive_plan;
-  Plan plan;
+  Plan mem_shared_plan;
+  Plan improved_plan;
   PushAvailableMemDescOfThisMachine();
   AvailableMemDesc amd;
+  double start = GetCurTime();
 
   if (machine_ctx->IsThisMachineMaster()) {
+    double start = GetCurTime();
     naive_plan = Compiler().Compile();
+    LOG(INFO) << "compile time: " << GetCurTime() - start;
     amd = PullAvailableMemDesc();
-    plan = Improver().ImproveMemSharedIdOnly(amd, naive_plan);
-    Global<CtrlClient>::Get()->PushKV("mem_shared_plan", plan);
+    mem_shared_plan = Improver().ImproveMemSharedIdOnly(amd, naive_plan);
+    PushPlan("naive_plan", naive_plan);
+    PushPlan("mem_shared_plan", mem_shared_plan);
   } else {
-    Global<CtrlClient>::Get()->PullKV("mem_shared_plan", &plan);
+    PullPlan("naive_plan", &naive_plan);
+    PullPlan("mem_shared_plan", &mem_shared_plan);
   }
   OF_BARRIER();
-  PrintProtoToTextFile(naive_plan, JoinPath(LogDir(), "naive_plan"));
-  PrintProtoToTextFile(plan, JoinPath(LogDir(), "mem_shared_plan"));
-  // Experiment Runtime
-  { Runtime experiment_run(plan, true); }
-  // Improve
-  if (machine_ctx->IsThisMachineMaster()) {
-    PrintProtoToTextFile(amd, JoinPath(LogDir(), "available_mem_desc"));
-    CHECK_GT(amd.machine_amd_size(), 0);
-    plan = Improver().Improve(amd, naive_plan,
-                              JoinPath(LogDir(), ActEventLogger::experiment_prefix_
-                                                     + ActEventLogger::act_event_bin_filename_));
-    Global<CtrlClient>::Get()->PushKV("improved_plan", plan);
-  } else {
-    Global<CtrlClient>::Get()->PullKV("improved_plan", &plan);
-  }
-  OF_BARRIER();
-  PrintProtoToTextFile(plan, JoinPath(LogDir(), "improved_plan"));
-  Global<CtrlClient>::Get()->Clear();
-  OF_BARRIER();
-  // Runtime
-  { Runtime run(plan, false); }
-  if (machine_ctx->IsThisMachineMaster()) {
-    if (Global<JobDesc>::Get()->collect_act_event()) {
-      Global<Profiler>::Get()->Profile(plan,
-                                       JoinPath(LogDir(), ActEventLogger::act_event_bin_filename_));
+  TeePersistentLogStream::Create("naive_plan")->Write(naive_plan);
+  TeePersistentLogStream::Create("mem_shared_plan")->Write(mem_shared_plan);
+  LOG(INFO) << "push_pull_plan:" << GetCurTime() - start;
+  if (HasRelayPlacement()) {
+    // Experiment Runtime
+    { Runtime experiment_run(mem_shared_plan, true); }
+    // Improve
+    if (machine_ctx->IsThisMachineMaster()) {
+      TeePersistentLogStream::Create("available_mem_desc")->Write(amd);
+      CHECK_GT(amd.machine_amd_size(), 0);
+      improved_plan = Improver().Improve(
+          amd, naive_plan,
+          JoinPath(FLAGS_log_dir, ActEventLogger::experiment_act_event_bin_filename()));
+      PushPlan("improved_plan", improved_plan);
+    } else {
+      PullPlan("improved_plan", &improved_plan);
     }
+    OF_BARRIER();
+    TeePersistentLogStream::Create("improved_plan")->Write(improved_plan);
+    Global<CtrlClient>::Get()->Clear();
+    OF_BARRIER();
+  } else {
+    improved_plan = mem_shared_plan;
+  }
+  // Runtime
+  { Runtime run(improved_plan, false); }
+  if (DoProfile) {
+    Global<Profiler>::Get()->Profile(
+        improved_plan, JoinPath(FLAGS_log_dir, ActEventLogger::act_event_bin_filename()));
   }
   // Delete All Global
   Global<CtrlClient>::Delete();
   ctrl_server_.reset();
-  if (machine_ctx->IsThisMachineMaster()) { Global<Profiler>::Delete(); }
+  Global<Profiler>::Delete();
   Global<MachineCtx>::Delete();
   Global<IDMgr>::Delete();
   Global<JobDesc>::Delete();
@@ -153,16 +261,16 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
 }  // namespace oneflow
 
 DEFINE_string(job_conf, "", "");
-DEFINE_string(this_machine_name, "", "");
 
 int main(int argc, char** argv) {
   using namespace oneflow;
+  FLAGS_log_dir = LogDir();
   google::InitGoogleLogging(argv[0]);
   gflags::SetVersionString(BuildVersionString());
   gflags::ParseCommandLineFlags(&argc, &argv, true);
-  LocalFS()->RecursivelyCreateDirIfNotExist(LogDir());
+  LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir);
   RedirectStdoutAndStderrToGlogDir();
-  { Oneflow flow(FLAGS_job_conf, FLAGS_this_machine_name); }
+  { Oneflow flow(FLAGS_job_conf); }
   CloseStdoutAndStderr();
   return 0;
 }

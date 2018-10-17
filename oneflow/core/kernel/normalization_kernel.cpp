@@ -92,7 +92,7 @@ void NormalizationKernel<DeviceType::kGPU, float>::NormalizationCudnnForward(
   float* moving_mean = BnInOp2Blob("moving_mean")->mut_dptr<float>();
   float* moving_variance = BnInOp2Blob("moving_variance")->mut_dptr<float>();
   double epsilon = this->op_conf().normalization_conf().epsilon();
-  if (Global<JobDesc>::Get()->IsTrain()) {
+  if (this->op_conf().trainable()) {
     InitMovingMeanAndMovingVariance(ctx, BnInOp2Blob, false);
     double momentum = this->op_conf().normalization_conf().momentum();
     CudaCheck(cudnnBatchNormalizationForwardTraining(
@@ -166,25 +166,26 @@ void NormalizationKernel<device_type, T>::InitModelBlobsWithDir(
     DeviceCtx* ctx, int32_t part_id, int32_t part_num, const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const auto& conf = this->op_conf().normalization_conf();
-  int32_t dim_num = this->kernel_conf().normalization_conf().transpose_cols();
   if (conf.scale()) {
     Blob* gamma_blob = BnInOp2Blob("gamma");
-    KernelUtil<device_type, T>::InitializeWithDir(ctx, 0, part_num, model_load_dir, gamma_blob,
-                                                  "gamma", dim_num, gamma_blob->shape().Count(1));
+    KernelUtil<device_type, T>::InitializeWithDir(ctx, part_id, part_num, model_load_dir,
+                                                  gamma_blob, "gamma", gamma_blob->shape().At(0),
+                                                  gamma_blob->shape().Count(1));
   }
   if (conf.center()) {
     Blob* beta_blob = BnInOp2Blob("beta");
-    KernelUtil<device_type, T>::InitializeWithDir(ctx, 0, part_num, model_load_dir, beta_blob,
-                                                  "beta", dim_num, beta_blob->shape().Count(1));
+    KernelUtil<device_type, T>::InitializeWithDir(ctx, part_id, part_num, model_load_dir, beta_blob,
+                                                  "beta", beta_blob->shape().At(0),
+                                                  beta_blob->shape().Count(1));
   }
   Blob* mean_blob = BnInOp2Blob("moving_mean");
-  KernelUtil<device_type, T>::InitializeWithDir(ctx, 0, part_num, model_load_dir, mean_blob,
-                                                "moving_mean", dim_num,
+  KernelUtil<device_type, T>::InitializeWithDir(ctx, part_id, part_num, model_load_dir, mean_blob,
+                                                "moving_mean", mean_blob->shape().At(0),
                                                 mean_blob->shape().Count(1));
   Blob* variance_blob = BnInOp2Blob("moving_variance");
-  KernelUtil<device_type, T>::InitializeWithDir(ctx, 0, part_num, model_load_dir, variance_blob,
-                                                "moving_variance", dim_num,
-                                                variance_blob->shape().Count(1));
+  KernelUtil<device_type, T>::InitializeWithDir(
+      ctx, part_id, part_num, model_load_dir, variance_blob, "moving_variance",
+      variance_blob->shape().At(0), variance_blob->shape().Count(1));
 }
 
 template<DeviceType device_type, typename T>

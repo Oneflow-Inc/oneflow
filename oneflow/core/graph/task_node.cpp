@@ -29,16 +29,16 @@ std::shared_ptr<RegstDesc> TaskNode::GetProducedRegst(const std::string& name) {
   }
 }
 
-const std::list<std::weak_ptr<RegstDesc>>& TaskNode::GetConsumedRegst(const std::string& name) {
+const std::list<std::shared_ptr<RegstDesc>>& TaskNode::GetConsumedRegst(const std::string& name) {
   return consumed_regsts_.at(name);
 }
 
 std::shared_ptr<RegstDesc> TaskNode::GetSoleConsumedRegst(const std::string& name) {
   auto it = consumed_regsts_.find(name);
   if (it == consumed_regsts_.end()) { return nullptr; }
-  const std::list<std::weak_ptr<RegstDesc>>& vec = it->second;
+  const std::list<std::shared_ptr<RegstDesc>>& vec = it->second;
   CHECK_EQ(vec.size(), 1);
-  return vec.front().lock();
+  return vec.front();
 }
 
 DeviceType TaskNode::device_type() const {
@@ -74,24 +74,92 @@ void TaskNode::set_order_in_graph(int64_t val) {
 
 void TaskNode::PinConsumedRegst() {
   for (auto& pair : consumed_regsts_) {
-    for (std::weak_ptr<RegstDesc> regst : pair.second) {
-      PinConsumedRegstMemCase(regst.lock()->mut_mem_case());
+    for (std::shared_ptr<RegstDesc> regst : pair.second) {
+      PinConsumedRegstMemCase(regst->mut_mem_case());
     }
   }
 }
 
+void TaskNode::NaiveInferProducedDataRegstTimeShape() {
+  if (IsMeaningLess()) { return; }
+  std::shared_ptr<Shape> time_shape;
+  ForEachConsumedDataRegst([&time_shape](const std::string& name, const RegstDesc* regst) {
+    if (time_shape) {
+      CHECK(*time_shape.get() == *regst->data_regst_time_shape().get());
+    } else {
+      time_shape = regst->data_regst_time_shape();
+    }
+  });
+
+  CHECK(time_shape);
+
+  ForEachProducedDataRegst([time_shape](const std::string& name, RegstDesc* regst) {
+    *regst->mut_data_regst_time_shape() = time_shape;
+  });
+}
+
+void TaskNode::InferTimeShapeIfMeaningful() {
+  if (!IsMeaningLess()) { InferProducedDataRegstTimeShape(); }
+}
+
+void TaskNode::ForEachConsumedDataRegst(
+    std::function<void(const std::string&, const RegstDesc*)> Handler) const {
+  for (const auto& pair : consumed_regsts_) {
+    for (const auto& regst : pair.second) {
+      if (!regst->regst_desc_type().has_data_regst_desc()) { continue; }
+      Handler(pair.first, regst.get());
+    }
+  }
+}
+
+void TaskNode::ForEachProducedDataRegst(
+    std::function<void(const std::string&, RegstDesc*)> Handler) {
+  for (auto& pair : produced_regsts_) {
+    if (!pair.second->regst_desc_type().has_data_regst_desc()) { continue; }
+    Handler(pair.first, pair.second.get());
+  }
+}
+
 void TaskNode::Build() {
+  if (consumed_regsts_.size()) { CHECK(IsReadyForBuild()); }
   BuildExecGphAndRegst();
   LockRegsts();
   FixRegisterNumRange();
+  FixPackedBlobDescOfProducedRegst();
 }
 
-void TaskNode::EraseEmptyProducedRegst() {
+void TaskNode::EraseZeroSizeProducedBlob() {
   for (auto& pair : produced_regsts_) { pair.second->EraseZeroSizeBlob(); }
+}
+
+void TaskNode::EraseZeroSizeConsumedRegst() {
+  for (auto& pair : consumed_regsts_) {
+    for (auto it = pair.second.begin(); it != pair.second.end();) {
+      auto regst_ptr = *it;
+      CHECK(regst_ptr);
+      if (regst_ptr->regst_desc_type().has_data_regst_desc() && regst_ptr->NumOfLbi() == 0) {
+        it = pair.second.erase(it);
+      } else {
+        ++it;
+      }
+    }
+  }
+  EraseIf<std::string, std::list<std::shared_ptr<RegstDesc>>>(
+      &consumed_regsts_,
+      [](HashMap<std::string, std::list<std::shared_ptr<RegstDesc>>>::iterator it) {
+        return it->second.empty();
+      });
+}
+
+void TaskNode::EraseZeroSizeProducedRegst() {
   EraseIf<std::string, std::shared_ptr<RegstDesc>>(
       &produced_regsts_, [](HashMap<std::string, std::shared_ptr<RegstDesc>>::iterator it) {
         return it->second->regst_desc_type().has_data_regst_desc() && it->second->NumOfLbi() == 0;
       });
+}
+
+void TaskNode::UnbindBnWithEmptyRegst() {
+  exec_gph_.ForEachNode([&](ExecNode* exec_node) { exec_node->UnbindBnWithEmptyRegst(); });
 }
 
 std::string TaskNode::VisualStr() const {
@@ -120,12 +188,11 @@ void TaskNode::ToProto(TaskProto* task_proto) {
     pair.second->ToProto(&regst_desc_proto);
     CHECK(produced_regst_proto->insert({pair.first, regst_desc_proto}).second);
   }
-  ClearOutOfDateConsumedRegst();
   auto consumed_regst_proto = task_proto->mutable_consumed_regst_desc_id();
   for (const auto& pair : consumed_regsts_) {
     RegstDescIdSet regst_desc_ids;
-    for (std::weak_ptr<RegstDesc> regst : pair.second) {
-      regst_desc_ids.add_regst_desc_id(regst.lock()->regst_desc_id());
+    for (std::shared_ptr<RegstDesc> regst : pair.second) {
+      regst_desc_ids.add_regst_desc_id(regst->regst_desc_id());
     }
     CHECK(consumed_regst_proto->insert({pair.first, regst_desc_ids}).second);
   }
@@ -142,12 +209,9 @@ int64_t TaskNode::MemZoneId121() const {
 
 void TaskNode::BuildCtrlRegstDescIfNeed(TaskNode* dst_node) {
   if (IsMeaningLess() || dst_node->IsMeaningLess()) { return; }
-  if (!Global<JobDesc>::Get()->IsTrain() && GetTaskType() == kNormalMdUpdt
-      && dst_node->GetTaskType() == kNormalMdUpdt) {
-    return;
+  for (const TaskEdge* in_edge : dst_node->in_edges()) {
+    if (in_edge->src_node() == this) { return; }
   }
-  const auto& dst_ancestors = dst_node->ancestors();
-  if (dst_ancestors.find(this) != dst_ancestors.end()) return;
   BuildCtrlRegstDesc(dst_node);
 }
 
@@ -231,8 +295,8 @@ void TaskNode::ConsumeRegst(const std::string& name, std::shared_ptr<RegstDesc> 
 
 bool TaskNode::IsAllConsumedRegstLocked() {
   for (const auto& pair : consumed_regsts_) {
-    for (std::weak_ptr<RegstDesc> regst_desc : pair.second) {
-      if (regst_desc.lock()->IsLocked() == false) { return false; }
+    for (std::shared_ptr<RegstDesc> regst_desc : pair.second) {
+      if (regst_desc->IsLocked() == false) { return false; }
     }
   }
   return true;
@@ -241,8 +305,8 @@ bool TaskNode::IsAllConsumedRegstLocked() {
 void TaskNode::TryLockConsumedRegst(const std::string& name) {
   auto consumed_regsts_it = consumed_regsts_.find(name);
   if (consumed_regsts_it == consumed_regsts_.end()) { return; }
-  for (std::weak_ptr<RegstDesc> wrd : consumed_regsts_it->second) {
-    std::shared_ptr<RegstDesc> srd = wrd.lock();
+  for (std::shared_ptr<RegstDesc> wrd : consumed_regsts_it->second) {
+    std::shared_ptr<RegstDesc> srd = wrd;
     if (srd->IsLocked() == false) { srd->Lock(); }
   }
 }
@@ -262,8 +326,8 @@ void TaskNode::FixRegisterNumRange() {
         break;
       }
     }
-    if (in_same_stream == false
-        && area_id_ != static_cast<int64_t>(kMdUpdtArea)) {  // TODO: delete this hack
+    if (in_same_stream == false && area_id_ != static_cast<int64_t>(kMdUpdtArea)
+        && GetTaskType() == TaskType::kCopyHd) {  // TODO: delete this hack
       if (produced_regst->max_register_num() >= 2) { produced_regst->UpdtMinRegstNumIfNeed(2); }
     }
   }
@@ -291,30 +355,26 @@ int64_t TaskNode::GlobalWorkStreamId() const {
   return Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(task_id_);
 }
 
-void TaskNode::ClearOutOfDateConsumedRegst() {
-  for (auto& pair : consumed_regsts_) {
-    for (auto it = pair.second.begin(); it != pair.second.end();) {
-      if (it->lock() == nullptr) {
-        pair.second.erase(it++);
-      } else {
-        ++it;
-      }
-    }
+void TaskNode::EraseConsumedRegstsByName(const std::string& name) {
+  if (consumed_regsts_.find(name) != consumed_regsts_.end()) {
+    for (auto& regst : consumed_regsts_[name]) { regst->DeleteConsumer(this); }
+    CHECK_EQ(consumed_regsts_.erase(name), 1);
   }
-  EraseIf<std::string, std::list<std::weak_ptr<RegstDesc>>>(
-      &consumed_regsts_,
-      [](HashMap<std::string, std::list<std::weak_ptr<RegstDesc>>>::iterator it) {
-        return it->second.empty();
-      });
 }
 
 std::shared_ptr<RegstDesc> TaskEdge::GetRegst(const std::string& name_in_producer) const {
-  return name_in_producer2regst_.at(name_in_producer).lock();
+  return name_in_producer2regst_.at(name_in_producer);
 }
 
 std::shared_ptr<RegstDesc> TaskEdge::GetSoleRegst() const {
   CHECK_EQ(name_in_producer2regst_.size(), 1);
-  return name_in_producer2regst_.begin()->second.lock();
+  return name_in_producer2regst_.begin()->second;
+}
+
+std::vector<std::shared_ptr<RegstDesc>> TaskEdge::GetRegsts() const {
+  std::vector<std::shared_ptr<RegstDesc>> regst_descs;
+  for (auto& pair : name_in_producer2regst_) { regst_descs.emplace_back(pair.second); }
+  return regst_descs;
 }
 
 void TaskEdge::AddRegst(const std::string& name_in_producer, std::shared_ptr<RegstDesc> regst) {
@@ -342,12 +402,18 @@ RegstDescIdSet* FindOrCreateConsumedCtrlRegstDescIdSet(TaskProto* task_proto,
 }
 
 std::map<TaskType, std::string> task_type2color = {
-    {kInvalid, "0"},       {kNormalForward, "2"},  {kNormalBackward, "3"},
-    {kRecordLoad, "1"},    {kDecode, "1"},         {kLoss, "4"},
-    {kLossAcc, "5"},       {kLossPrint, "1"},      {kNormalMdUpdt, "6"},
-    {kMdSave, "1"},        {kMdDiffAcc, "7"},      {kCopyHd, "8"},
-    {kCopyCommNet, "9"},   {kBoxing, "10"},        {kPrint, "1"},
-    {kReduceScatter, "2"}, {kReduceLocalAdd, "2"}, {kReduceGlobalAdd, "2"},
-    {kReduceGather, "2"},  {kAccuracy, "4"},       {kAccuracyPrint, "1"},
-    {kAccuracyAcc, "5"}};
+    {kInvalid, "0"},        {kNormalForward, "2"},
+    {kNormalBackward, "3"}, {kRecordLoad, "1"},
+    {kDecode, "1"},         {kLoss, "4"},
+    {kLossAcc, "5"},        {kLossPrint, "1"},
+    {kNormalMdUpdt, "6"},   {kMdSave, "1"},
+    {kMdDiffAcc, "7"},      {kCopyHd, "8"},
+    {kCopyCommNet, "9"},    {kBoxing, "10"},
+    {kPrint, "1"},          {kReduceConcat, "2"},
+    {kReduceScatter, "2"},  {kReduceAdd, "2"},
+    {kReduceGather, "2"},   {kReduceSplit, "2"},
+    {kNcclAllReduce, "2"},  {kNcclReduceScatter, "2"},
+    {kNcclAllGather, "2"},  {kAccuracy, "4"},
+    {kAccuracyPrint, "1"},  {kAccuracyAcc, "5"},
+    {kDecodeRandom, "1"}};
 }  // namespace oneflow

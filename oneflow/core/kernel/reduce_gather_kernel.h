@@ -5,7 +5,8 @@
 
 namespace oneflow {
 
-class ReduceGatherKernel final : public Kernel {
+template<DeviceType device_type>
+class ReduceGatherKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ReduceGatherKernel);
   ReduceGatherKernel() = default;

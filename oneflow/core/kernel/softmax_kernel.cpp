@@ -30,7 +30,8 @@ void SoftmaxKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob(this->op_attribute().input_bns(0));
   Blob* out_blob = BnInOp2Blob(this->op_attribute().output_bns(0));
-  Blob* tmp_blob = BnInOp2Blob("softmax_num");
+  Blob* tmp_blob = BnInOp2Blob("fw_softmax_num");
+  Blob* buf_blob = BnInOp2Blob("fw_buf");
   auto conf = this->kernel_conf().softmax_conf();
   const int64_t n = conf.transpose_rows();
   const int64_t w = conf.transpose_cols();
@@ -40,13 +41,13 @@ void SoftmaxKernel<device_type, T>::ForwardDataContent(
     Blob* transpose_out_blob = BnInOp2Blob("transpose_out");
     Transpose<device_type, T>(ctx.device_ctx, in_blob, transpose_in_blob, conf.perm());
     SoftmaxComputeProb<device_type, T>(ctx.device_ctx, n, w, transpose_in_blob->dptr<T>(), tmp,
-                                       transpose_out_blob->mut_dptr<T>(), ctx.device_ctx->buf_ptr(),
-                                       ctx.device_ctx->buf_size());
+                                       transpose_out_blob->mut_dptr<T>(), buf_blob->mut_dptr(),
+                                       buf_blob->ByteSizeOfDataContentField());
     Transpose<device_type, T>(ctx.device_ctx, transpose_out_blob, out_blob, conf.perm());
   } else {
     SoftmaxComputeProb<device_type, T>(ctx.device_ctx, n, w, in_blob->dptr<T>(), tmp,
-                                       out_blob->mut_dptr<T>(), ctx.device_ctx->buf_ptr(),
-                                       ctx.device_ctx->buf_size());
+                                       out_blob->mut_dptr<T>(), buf_blob->mut_dptr(),
+                                       buf_blob->ByteSizeOfDataContentField());
   }
 }
 
@@ -56,7 +57,8 @@ void SoftmaxKernel<device_type, T>::BackwardDataContent(
   const Blob* out_blob = BnInOp2Blob(this->op_attribute().output_bns(0));
   const Blob* out_diff_blob = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
   Blob* in_diff_blob = BnInOp2Blob(this->op_attribute().input_diff_bns(0));
-  Blob* tmp_blob = BnInOp2Blob("softmax_num");
+  Blob* tmp_blob = BnInOp2Blob("bw_softmax_num");
+  Blob* buf_blob = BnInOp2Blob("bw_buf");
   auto conf = this->kernel_conf().softmax_conf();
   const int64_t n = conf.transpose_rows();
   const int64_t w = conf.transpose_cols();
@@ -68,13 +70,13 @@ void SoftmaxKernel<device_type, T>::BackwardDataContent(
     Transpose<device_type, T>(ctx.device_ctx, out_diff_blob, transpose_out_diff_blob, conf.perm());
     SoftmaxComputeDiff<device_type, T>(ctx.device_ctx, n, w, transpose_out_diff_blob->dptr<T>(),
                                        transpose_out_blob->dptr<T>(), tmp,
-                                       transpose_in_diff_blob->mut_dptr<T>(),
-                                       ctx.device_ctx->buf_ptr(), ctx.device_ctx->buf_size());
+                                       transpose_in_diff_blob->mut_dptr<T>(), buf_blob->mut_dptr(),
+                                       buf_blob->ByteSizeOfDataContentField());
     Transpose<device_type, T>(ctx.device_ctx, transpose_in_diff_blob, in_diff_blob, conf.perm());
   } else {
-    SoftmaxComputeDiff<device_type, T>(ctx.device_ctx, n, w, out_diff_blob->dptr<T>(),
-                                       out_blob->dptr<T>(), tmp, in_diff_blob->mut_dptr<T>(),
-                                       ctx.device_ctx->buf_ptr(), ctx.device_ctx->buf_size());
+    SoftmaxComputeDiff<device_type, T>(
+        ctx.device_ctx, n, w, out_diff_blob->dptr<T>(), out_blob->dptr<T>(), tmp,
+        in_diff_blob->mut_dptr<T>(), buf_blob->mut_dptr(), buf_blob->ByteSizeOfDataContentField());
   }
 }
 
@@ -88,7 +90,7 @@ struct SoftmaxKernelUtil<DeviceType::kCPU, T> {
 
   static void Div(DeviceCtx* ctx, const int64_t n, const int64_t w, T* matrix, const T* vector) {
     for (int64_t i = 0; i < n; ++i) {
-      KernelUtil<DeviceType::kCPU, T>::Div(ctx, n, matrix + i * w, vector + i);
+      KernelUtil<DeviceType::kCPU, T>::Div(ctx, w, matrix + i * w, vector + i);
     }
   }
 };

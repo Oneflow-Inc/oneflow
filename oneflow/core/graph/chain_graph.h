@@ -5,20 +5,20 @@
 #include <bitset>
 
 namespace oneflow {
-const int64_t MAX_ANCESTOR_NUM = 10000;
+// 1KB
+const int64_t BITSET_SIZE = 8 * 1024;
 
 class TaskNode;
-class ChainNode;
 
 struct Chain {
   // nodes belong to this chain
   std::vector<TaskNode*> nodes;
   // ancestors of the nodes in this chain
-  std::bitset<MAX_ANCESTOR_NUM> ancestors;
+  std::vector<std::bitset<BITSET_SIZE>> ancestors;
   // ancestors_and_this = nodes + ancestors
-  std::bitset<MAX_ANCESTOR_NUM> ancestors_and_this;
-  int64_t stream_id;
-  int64_t area_id;
+  std::vector<std::bitset<BITSET_SIZE>> ancestors_and_this;
+
+  std::pair<int64_t, int64_t> stream_area_id;
 };
 
 using ChainIt = std::list<Chain>::iterator;
@@ -33,12 +33,12 @@ class ChainNode final : public Node<ChainNode, ChainEdge> {
   virtual ~ChainNode() = default;
 
   std::string VisualStr() const override;
-  const std::vector<TaskNode*>& task_nodes() const { return task_nodes_; }
+  const std::vector<TaskNode*>& TaskNodes() const { return task_nodes_; }
   int64_t chain_id() const {
     CHECK_NE(chain_id_, -1);
     return chain_id_;
   }
-  void set_chain_id(int64_t val) { chain_id_ = val; }
+  void SetChainId(int64_t val) { chain_id_ = val; }
 
  private:
   std::vector<TaskNode*> task_nodes_;
@@ -64,21 +64,27 @@ class ChainGraph final : public Graph<ChainNode, ChainEdge> {
 
   ChainGraph(const TaskGraph& task_gph);
   const char* TypeName() const override { return "ChainGraph"; }
-  const std::vector<ChainNode*>& ordered_chain_nodes() const { return ordered_chain_nodes_; }
-  const std::vector<TaskNode*>& ordered_task_nodes() const { return ordered_task_nodes_; }
+  const std::vector<ChainNode*>& OrderdedChainNodes() const { return ordered_chain_nodes_; }
 
  private:
-  ChainNode* ChainNode4TaskNode(TaskNode* task_node) const;
   bool HasChainEdge(ChainNode* src, ChainNode* dst) const;
-  void GroupTaskNodesByMachine(const std::vector<TaskNode*>& ordered_task_nodes,
-                               HashMap<int64_t, std::vector<TaskNode*>>* machine2tasks);
+  ChainNode* ChainNode4TaskNode(TaskNode* task_node) const {
+    return task_node2chain_node_.at(task_node);
+  }
+
+  void GroupTaskNodesByMachineAndCollectAncestors(
+      const TaskGraph& task_gph, HashMap<int64_t, std::vector<TaskNode*>>* machine2tasks,
+      HashMap<TaskNode*, HashSet<TaskNode*>>* node2ancestors) const;
   void MergeTaskNodes(const HashMap<int64_t, std::vector<TaskNode*>>& machine2tasks,
-                      std::vector<std::vector<TaskNode*>>* chains);
+                      const HashMap<TaskNode*, HashSet<TaskNode*>>& node2ancestors,
+                      std::vector<std::vector<TaskNode*>>* chains) const;
+  void InitChainNode(const std::vector<std::vector<TaskNode*>>& chains);
+  void InitChainEdge(const std::vector<std::vector<TaskNode*>>& chains);
+  void SetChainId4ChainNode();
 
   const TaskGraph& task_gph_;
   HashMap<TaskNode*, ChainNode*> task_node2chain_node_;
   std::vector<ChainNode*> ordered_chain_nodes_;
-  std::vector<TaskNode*> ordered_task_nodes_;
 };
 
 }  // namespace oneflow

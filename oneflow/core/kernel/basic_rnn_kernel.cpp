@@ -83,15 +83,17 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
                            plus_op_out_diff_blob->mut_dptr<T>());
   }
 
-  // h2h_weight_diff = plus_op_out_diff * hidden
-  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans, OneVal<T>::value,
-                                       ZeroVal<T>::value, plus_op_out_diff_blob, hidden_blob,
-                                       BnInOp2Blob("h2h_weight_diff"));
+  if (this->op_conf().trainable()) {
+    // h2h_weight_diff = plus_op_out_diff * hidden
+    KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans, OneVal<T>::value,
+                                         ZeroVal<T>::value, plus_op_out_diff_blob, hidden_blob,
+                                         BnInOp2Blob("h2h_weight_diff"));
 
-  // i2h_weight_diff = plus_op_out_diff * in
-  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans, OneVal<T>::value,
-                                       ZeroVal<T>::value, plus_op_out_diff_blob, BnInOp2Blob("in"),
-                                       BnInOp2Blob("i2h_weight_diff"));
+    // i2h_weight_diff = plus_op_out_diff * in
+    KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans, OneVal<T>::value,
+                                         ZeroVal<T>::value, plus_op_out_diff_blob,
+                                         BnInOp2Blob("in"), BnInOp2Blob("i2h_weight_diff"));
+  }
 
   if (BnInOp2Blob("in_diff") != nullptr) {
     // in_diff = plus_op_out_diff * i2h_weight
@@ -100,7 +102,7 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
                                          BnInOp2Blob("i2h_weight"), BnInOp2Blob("in_diff"));
   }
 
-  if (BnInOp2Blob("bias_diff") != nullptr) {
+  if (BnInOp2Blob("bias_diff") != nullptr && this->op_conf().trainable()) {
     // bias_diff = bias_multiplier * plus_op_out_diff
     KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans, OneVal<T>::value,
                                          ZeroVal<T>::value, BnInOp2Blob("bias_multiplier"),

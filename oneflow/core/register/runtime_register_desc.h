@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_REGISTER_RUNTIME_REGISTER_DESC_H_
 
 #include "oneflow/core/memory/memory_case.pb.h"
-#include "oneflow/core/register/blob_desc.h"
+#include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/register/register_desc.pb.h"
 
 namespace oneflow {
@@ -22,11 +22,14 @@ class RtRegstDesc {
   const MemoryCase& mem_case() const { return mem_case_; }
   const RegstDescTypeProto& regst_desc_type() const { return regst_desc_type_; }
 
-  const BlobDesc* GetBlobDescFromLbi(const LogicalBlobId& lbi) const;
-  const BlobDesc* packed_blob_desc() const { return &packed_blob_desc_; }
-  size_t TotalByteSize4AllRegst() const {
-    return packed_blob_desc_.TotalByteSize() * register_num_;
-  }
+  const RtBlobDesc* GetRtBlobDescFromLbi(const LogicalBlobId& lbi) const;
+  const RtBlobDesc* packed_blob_desc() const { return packed_blob_desc_.get(); }
+  size_t TotalByteSize4AllRegst() const;
+  size_t TotalMainByteSize4AllRegst() const;
+  size_t TotalSeparatedByteSize4AllRegst() const;
+  size_t SeparatedByteSize4OneRegst() const;
+  size_t MainByteSize4OneRegst() const;
+  const Shape& data_regst_time_shape() const;
 
  private:
   int64_t regst_desc_id_;
@@ -35,8 +38,9 @@ class RtRegstDesc {
   int64_t register_num_;
   RegstDescTypeProto regst_desc_type_;
   MemoryCase mem_case_;
-  HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2blob_desc_;
-  BlobDesc packed_blob_desc_;
+  HashMap<LogicalBlobId, std::unique_ptr<RtBlobDesc>> lbi2blob_desc_;
+  std::unique_ptr<RtBlobDesc> packed_blob_desc_;
+  std::unique_ptr<Shape> data_regst_time_shape_;
 };
 
 }  // namespace oneflow

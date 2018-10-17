@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/reduce_gather_op.h"
+#include "oneflow/core/register/runtime_blob_desc.h"
 
 namespace oneflow {
 
@@ -17,7 +18,6 @@ const PbMessage& ReduceGatherOp::GetCustomizedConf() const {
 void ReduceGatherOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                     const ParallelContext* parallel_ctx) const {
   int32_t in_num = op_conf().reduce_gather_conf().in_num();
-  CHECK_EQ(in_num, parallel_ctx->parallel_num());
   CHECK_GE(in_num, 2);
   BlobDesc* first_in_blob = GetBlobDesc4BnInOp(input_bns().Get(0));
   BlobDesc* out_blob = GetBlobDesc4BnInOp(SoleObn());
@@ -36,9 +36,9 @@ void ReduceGatherOp::VirtualGenKernelConf(
   int64_t offset = 0;
   for (int32_t i = 0; i < op_conf().reduce_gather_conf().in_num(); ++i) {
     reduce_gather_conf->mutable_data_offset()->Add(offset);
-    offset += GetBlobDesc4BnInOp(input_bns().Get(i))->ByteSizeOfDataContentField();
+    offset += RtBlobDesc(*(GetBlobDesc4BnInOp(input_bns().Get(i)))).ByteSizeOfDataContentField();
   }
-  CHECK_EQ(offset, GetBlobDesc4BnInOp(SoleObn())->ByteSizeOfDataContentField());
+  CHECK_EQ(offset, RtBlobDesc(*GetBlobDesc4BnInOp(SoleObn())).ByteSizeOfDataContentField());
 }
 
 LogicalBlobId ReduceGatherOp::obn2lbi(const std::string& output_bn) const {

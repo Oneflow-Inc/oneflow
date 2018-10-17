@@ -5,7 +5,8 @@
 
 namespace oneflow {
 
-class ReduceScatterKernel final : public Kernel {
+template<DeviceType device_type>
+class ReduceScatterKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ReduceScatterKernel);
   ReduceScatterKernel() = default;

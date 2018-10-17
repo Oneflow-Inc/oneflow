@@ -9,28 +9,28 @@ namespace oneflow {
 
 #ifdef WITH_CUDA
 
-class CudaDeviceCtx final : public DeviceCtx {
+class CudaDeviceCtx : public DeviceCtx {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaDeviceCtx);
   CudaDeviceCtx() = delete;
-  ~CudaDeviceCtx() = default;
+  ~CudaDeviceCtx() override = default;
 
-  CudaDeviceCtx(void* buf_ptr, size_t buf_size, CudaStreamHandle* cuda_handler)
-      : DeviceCtx(buf_ptr, buf_size), cuda_handler_(cuda_handler) {}
-  std::unique_ptr<DeviceCtx> Copy() const {
-    return std::unique_ptr<DeviceCtx>(new CudaDeviceCtx(buf_ptr(), buf_size(), cuda_handler_));
+  explicit CudaDeviceCtx(CudaStreamHandle* cuda_handler) : cuda_handler_(cuda_handler) {}
+
+  const cudaStream_t& cuda_stream() const override { return *(cuda_handler_->cuda_stream()); }
+  const cublasHandle_t& cublas_pmh_handle() const override {
+    return *(cuda_handler_->cublas_pmh_handle());
   }
-
-  const cudaStream_t& cuda_stream() const { return *(cuda_handler_->cuda_stream()); }
-  const cublasHandle_t& cublas_pmh_handle() const { return *(cuda_handler_->cublas_pmh_handle()); }
-  const cublasHandle_t& cublas_pmd_handle() const { return *(cuda_handler_->cublas_pmd_handle()); }
-  const cudnnHandle_t& cudnn_handle() const { return *(cuda_handler_->cudnn_handle()); }
+  const cublasHandle_t& cublas_pmd_handle() const override {
+    return *(cuda_handler_->cublas_pmd_handle());
+  }
+  const cudnnHandle_t& cudnn_handle() const override { return *(cuda_handler_->cudnn_handle()); }
 
   void AddCallBack(std::function<void()> callback) const override {
     cuda_handler_->AddCallBack(callback);
   }
 
- private:
+ protected:
   CudaStreamHandle* cuda_handler_;
 };
 

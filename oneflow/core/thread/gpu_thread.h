@@ -13,7 +13,7 @@ class GpuThread final : public Thread {
   GpuThread() = delete;
   ~GpuThread();
 
-  GpuThread(int64_t thrd_id, int64_t dev_id, size_t buf_size);
+  GpuThread(int64_t thrd_id, int64_t dev_id);
 
  private:
   Channel<CudaCBEvent> cb_event_chan_;

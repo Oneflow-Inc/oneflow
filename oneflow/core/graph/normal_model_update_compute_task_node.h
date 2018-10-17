@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_GRAPH_NORMAL_MODEL_UPDATE_COMPUTE_TASK_NODE_H_
 
 #include "oneflow/core/graph/compute_task_node.h"
+#include "oneflow/core/graph/normal_forward_compute_task_node.h"
 
 namespace oneflow {
 
@@ -23,6 +24,9 @@ class NormalMdUpdtCompTaskNode final : public CompTaskNode {
   CudaWorkType GetCudaWorkType() const override { return CudaWorkType::kMdUpdt; }
 
  private:
+  const NormalForwardCompTaskNode* GetForwardTaskNode() const;
+  bool IsTrainable() const;
+  void InferProducedDataRegstTimeShape() override;
   uint32_t random_seed_;
   int64_t related_init_model_task_id_;
 };

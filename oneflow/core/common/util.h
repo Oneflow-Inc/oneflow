@@ -121,10 +121,7 @@ inline std::string NewUniqueId() {
   return std::to_string(id++);
 }
 
-inline const std::string& LogDir() {
-  static std::string v = FLAGS_log_dir;
-  return v;
-}
+std::string LogDir();
 
 template<typename K, typename V>
 void EraseIf(HashMap<K, V>* hash_map, std::function<bool(typename HashMap<K, V>::iterator)> cond) {
@@ -164,9 +161,6 @@ inline uint32_t NewRandomSeed() {
 
 #define BOOL_SEQ (true)(false)
 #define PARALLEL_POLICY_SEQ (ParallelPolicy::kModelParallel)(ParallelPolicy::kDataParallel)
-#define ENCODE_CASE_SEQ                  \
-  OF_PP_MAKE_TUPLE_SEQ(EncodeCase::kRaw) \
-  OF_PP_MAKE_TUPLE_SEQ(EncodeCase::kJpeg)
 
 #define FOR_RANGE(type, i, begin, end) for (type i = (begin), __end = (end); i < __end; ++i)
 #define FOR_EACH(it, container) for (auto it = container.begin(); it != container.end(); ++it)
@@ -180,7 +174,7 @@ inline double GetCurTime() {
 
 const size_t kCudaAlignSize = 8;
 const size_t kCudaMemAllocAlignSize = 256;
-inline size_t RoundUp(size_t n, size_t align) { return (n + align - 1) / align * align; }
+inline size_t RoundUp(size_t n, size_t val) { return (n + val - 1) / val * val; }
 
 size_t GetAvailableCpuMemSize();
 
@@ -216,6 +210,11 @@ template<typename T>
 inline T MaxVal() {
   return std::numeric_limits<T>::max();
 }
+
+//  encode case
+#define ENCODE_CASE_DATA_TYPE_SEQ_PRODUCT                                            \
+  OF_PP_SEQ_PRODUCT((EncodeCase::kRaw)(EncodeCase::kJpeg), ARITHMETIC_DATA_TYPE_SEQ) \
+  OF_PP_SEQ_PRODUCT((EncodeCase::kProtobuf), PB_LIST_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
 

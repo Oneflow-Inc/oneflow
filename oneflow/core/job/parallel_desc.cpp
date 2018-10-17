@@ -1,33 +1,30 @@
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
-namespace {
-
-void ParseDeviceNameConf(const std::string& device_name, std::string* mchn_name,
-                         std::string* device_tag, std::string* device_id_str) {
+void ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id, std::string* device_tag,
+                         std::string* device_id_str) {
   size_t second_delimiter_pos = device_name.rfind(":");
   CHECK_NE(second_delimiter_pos, std::string::npos);
   size_t first_delimiter_pos = device_name.rfind(":", second_delimiter_pos - 1);
   CHECK_NE(first_delimiter_pos, std::string::npos);
-  *mchn_name = device_name.substr(0, first_delimiter_pos);
+  *mchn_id = oneflow_cast<int64_t>(device_name.substr(0, first_delimiter_pos));
   *device_tag =
       device_name.substr(first_delimiter_pos + 1, second_delimiter_pos - first_delimiter_pos - 1);
   *device_id_str = device_name.substr(second_delimiter_pos + 1);
 }
 
-}  // namespace
-
 ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
   policy_ = user_conf.policy();
-  HashSet<std::string> machine_name_set;
+  HashSet<int64_t> machine_id_set;
   device_type_ = DeviceType::kInvalidDevice;
   for (const std::string& device_name : user_conf.device_name()) {
-    std::string mchn_name;
+    int64_t mchn_id;
     std::string device_tag;
     std::string device_id_str;
-    ParseDeviceNameConf(device_name, &mchn_name, &device_tag, &device_id_str);
-    machine_name_set.insert(mchn_name);
+    ParseDeviceNameConf(device_name, &mchn_id, &device_tag, &device_id_str);
+    machine_id_set.insert(mchn_id);
     if (device_tag == "cpu") {
       CHECK_STREQ(device_tag.c_str(), "cpu");
       CHECK(device_type_ == DeviceType::kInvalidDevice || device_type_ == DeviceType::kCPU);
@@ -37,8 +34,7 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
       CHECK(device_type_ == DeviceType::kInvalidDevice || device_type_ == DeviceType::kGPU);
       device_type_ = DeviceType::kGPU;
     }
-    int64_t machine_id = Global<JobDesc>::Get()->MachineID4MachineName(mchn_name);
-    sorted_machine_ids_.push_back(machine_id);
+    sorted_machine_ids_.push_back(mchn_id);
     int64_t minus_pos = device_id_str.find("-");
     if (minus_pos == std::string::npos) {
       device_id_str = device_id_str + "-" + device_id_str;
@@ -51,11 +47,11 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
       if (device_type_ == DeviceType::kGPU) {
         CHECK_LT(dev_phy_id, Global<JobDesc>::Get()->GpuDeviceNum());
       }
-      machine_id2sorted_dev_phy_ids_[machine_id].push_back(dev_phy_id);
+      machine_id2sorted_dev_phy_ids_[mchn_id].push_back(dev_phy_id);
     }
   }
   ClearUp();
-  CheckValidity();
+  SanityCheck();
 }
 
 void ParallelDesc::RemoveNeedlessDevice(const std::string& op_name, int32_t max_device_num) {
@@ -108,6 +104,13 @@ void ParallelDesc::RandomSelectOneDeviceAndRemoveTheOthers() {
   parallel_num_ = 1;
 }
 
+void ParallelDesc::UseCPUDevicesOnMaster() {
+  sorted_machine_ids_ = {0};
+  std::vector<int64_t> sorted_dev_phy_ids(parallel_num_);
+  std::iota(sorted_dev_phy_ids.begin(), sorted_dev_phy_ids.end(), 0);
+  machine_id2sorted_dev_phy_ids_ = {{0, sorted_dev_phy_ids}};
+}
+
 bool ParallelDesc::Equal(const ParallelDesc& rhs) const {
   return device_type_ == rhs.device_type_ && policy_ == rhs.policy_
          && sorted_machine_ids_ == rhs.sorted_machine_ids_
@@ -128,7 +131,7 @@ void ParallelDesc::ClearUp() {
   SortAndRemoveDuplication(&sorted_machine_ids_);
 }
 
-void ParallelDesc::CheckValidity() {
+void ParallelDesc::SanityCheck() {
   device_num_of_each_machine_ = -1;
   for (auto& pair : machine_id2sorted_dev_phy_ids_) {
     if (device_num_of_each_machine_ == -1) {

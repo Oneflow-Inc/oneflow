@@ -24,6 +24,11 @@ inline int64_t GetLastPieceIdForModelVersionId(int64_t model_version_id) {
   return (model_version_id + 1) * num_of_pieces_in_batch - 1;
 }
 
+inline int64_t GetModelVersionIdFromPieceId(int64_t piece_id) {
+  int32_t num_of_pieces_in_batch = Global<JobDesc>::Get()->NumOfPiecesInBatch();
+  return piece_id / num_of_pieces_in_batch;
+}
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_ACTOR_COMPUTE_ACTOR_H_

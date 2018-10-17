@@ -23,13 +23,18 @@ enum TaskType {
   kBoxing = 14;
   kPrint = 15;
   kRecordLoad = 16;
-  kReduceLocalAdd = 17;
-  kReduceGlobalAdd = 18;
+  kReduceAdd = 18;
   kReduceGather = 19;
   kReduceScatter = 20;
-  kAccuracy = 21;
-  kAccuracyAcc = 22;
-  kAccuracyPrint = 23;
+  kReduceConcat = 21;
+  kReduceSplit = 22;
+  kNcclAllReduce = 23;
+  kNcclReduceScatter = 24;
+  kNcclAllGather = 25;
+  kAccuracy = 26;
+  kAccuracyAcc = 27;
+  kAccuracyPrint = 28;
+  kDecodeRandom = 29;
 };
 
 enum AreaType {
@@ -66,6 +71,6 @@ message TaskProto {
   // compute task
   optional ParallelContext parallel_ctx = 1000; // CompTask
   optional int64 random_seed = 1001; // ForwardCompTask
-  optional int64 related_save_model_task_id = 1002 [default = -1];
+  repeated int64 related_save_model_task_ids = 1002;
   optional int64 related_init_model_task_id = 1003 [default = -1];
 };

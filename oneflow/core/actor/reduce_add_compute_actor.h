@@ -5,17 +5,17 @@
 
 namespace oneflow {
 
-class ReduceAddCompActor : public InputWiseCompActor {
+class ReduceAddCompActor final : public InputWiseCompActor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ReduceAddCompActor);
   ReduceAddCompActor() = default;
   ~ReduceAddCompActor() = default;
 
  private:
-  void VirtualCompActorInit(const TaskProto& proto) override { InputWiseCompActor::Init(proto); }
+  void VirtualCompActorInit(const TaskProto& proto) override;
   void SetKernelCtxOther(void** other) override;
 
-  std::pair<int64_t, bool> other_val_;
+  std::tuple<int64_t, bool, bool> other_val_;
 };
 
 }  // namespace oneflow

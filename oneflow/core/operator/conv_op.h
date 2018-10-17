@@ -4,19 +4,11 @@
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/operator_util.h"
 #include "oneflow/core/device/cudnn_util.h"
+#include "oneflow/core/device/cudnn_conv_ctx_cache.h"
 
 namespace oneflow {
 
 #ifdef WITH_CUDA
-struct CudnnConvAlgoCtx final {
-  cudnnConvolutionFwdAlgo_t fwd_algo;
-  cudnnConvolutionBwdFilterAlgo_t bwd_filter_algo;
-  cudnnConvolutionBwdDataAlgo_t bwd_data_algo;
-  size_t fwd_ws_size;
-  size_t bwd_filter_ws_size;
-  size_t bwd_data_ws_size;
-};
-
 class CudnnConvDesc final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudnnConvDesc);
@@ -33,6 +25,7 @@ class CudnnConvDesc final {
 #endif  // WITH_CUDA
 
 struct ConvOpCtx : public OpContext {
+  int64_t col_buf_size;
 #ifdef WITH_CUDA
   CudnnConvAlgoCtx cudnn_conv_algo_ctx;
 #endif  // WITH_CUDA
@@ -46,9 +39,12 @@ class ConvOp : public Operator {
   virtual ~ConvOp() = default;
 
   void InitFromOpConf() override;
+  bool NeedOutBlobWhenBackward() const override { return false; }
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext*, size_t* buf_size,
+                      const ParallelContext*,
                       std::function<void(OpContext*)> EnrollOpCtx) const override;
+  void InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                           const ParallelContext*, const OpContext*) const override;
 
   int32_t ModelSplitAxis() const override;
   int32_t MaxModelSplitNum() const override;
@@ -65,7 +61,7 @@ class ConvOp : public Operator {
                               const OpContext*) const;
 #ifdef WITH_CUDA
   void InferCudnnAlgo(std::function<const BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-                      CudnnConvAlgoCtx* conv_ctx) const;
+                      CudnnConvAlgoCtx* conv_ctx, const int64_t device_id) const;
 #endif  // WITH_CUDA
 };
 
