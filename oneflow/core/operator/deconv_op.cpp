@@ -85,7 +85,9 @@ template<int32_t NDims>
 void DeconvOp<NDims>::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, std::function<void(OpContext*)> EnrollOpCtx) const {
-  if (!DevIsGpuAndEnableCudnn()) { LOG(FATAL) << "CUDNN is required for Deconv"; }
+  CHECK_EQ(parallel_ctx->policy(), ParallelPolicy::kDataParallel)
+      << "Deconv only supports data parallel for now";
+  CHECK(DevIsGpuAndEnableCudnn()) << "CUDNN is required for Deconv";
   const std::string& data_format = GetValFromCustomizedConf<std::string>("data_format");
 
   // in

@@ -20,7 +20,14 @@ class DeconvKernelIf : public KernelIfWithActivation<device_type, T>,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void BackwardDataContent(const KernelCtx&,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-
+  void InitConstBufBlobs(DeviceCtx*,
+                         std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void InitModelBlobsWithRandomSeed(
+      DeviceCtx*, std::mt19937* random_seed_gen,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void InitModelBlobsWithDir(DeviceCtx*, int32_t part_id, int32_t part_num,
+                             const std::string& model_load_dir,
+                             std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   virtual void DoForwardDataContent(DeviceCtx*, const Blob* in_blob, const Blob* weight_blob,
                                     Blob* out_blob,
                                     std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
