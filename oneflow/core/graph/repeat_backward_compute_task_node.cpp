@@ -12,8 +12,8 @@ void RepeatBackwardCompTaskNode::ConsumeAllRegsts() {
 }
 
 void RepeatBackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  std::shared_ptr<RegstDesc> out_regst = ProduceRegst("in_diff", false, 1, 1);
-  for (TaskEdge* edge : out_edges()) { edge->AddRegst("in_diff", out_regst); }
+  std::shared_ptr<RegstDesc> in_diff_regst = ProduceRegst("in_diff", false, 1, 1);
+  SoleOutEdge()->AddRegst("in_diff", in_diff_regst);
 }
 
 void RepeatBackwardCompTaskNode::BuildExecGphAndRegst() {
@@ -21,9 +21,9 @@ void RepeatBackwardCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<Operator> sole_op = this->logical_node()->SoleOp();
   node->mut_op() = sole_op;
   node->BindBnWithRegst(sole_op->SoleOdbn(), GetSoleConsumedRegst("out_diff"));
-  std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("in_diff");
-  out_regst->AddLbi(sole_op->BnInOp2Lbi(sole_op->SoleIdbn()));
-  node->BindBnWithRegst(sole_op->SoleIdbn(), out_regst);
+  std::shared_ptr<RegstDesc> in_diff_regst = GetProducedRegst("in_diff");
+  in_diff_regst->AddLbi(sole_op->BnInOp2Lbi(sole_op->SoleIdbn()));
+  node->BindBnWithRegst(sole_op->SoleIdbn(), in_diff_regst);
   node->InferDiffBlobDescsWithoutFwNode(parallel_ctx());
 }
 

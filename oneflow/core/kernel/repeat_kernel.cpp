@@ -1,5 +1,4 @@
 #include "oneflow/core/kernel/repeat_kernel.h"
-#include "repeat_kernel.h"
 
 namespace oneflow {
 

@@ -1,5 +1,4 @@
 #include "oneflow/core/actor/repeat_backward_compute_actor.h"
-#include "repeat_backward_compute_actor.h"
 
 namespace oneflow {
 
@@ -9,6 +8,7 @@ void RepeatBackwardCompActor::VirtualCompActorInit(const TaskProto& proto) {
   CHECK(kernel_conf.op_attribute().op_conf().has_repeat_conf());
   repeat_num_ = kernel_conf.op_attribute().op_conf().repeat_conf().repeat_num();
   acc_count_ = 0;
+  cur_piece_id_ = 0;
   OF_SET_MSG_HANDLER(&RepeatBackwardCompActor::HandlerNormal);
 }
 
@@ -23,13 +23,11 @@ void RepeatBackwardCompActor::Act() {
 
 void RepeatBackwardCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   if (acc_count_ == repeat_num_) {
-    Regst* out_diff_regst = GetNaiveCurReadable("out_diff");
-    // TODO: variable naming
-    int64_t piece_id = out_diff_regst->piece_id() / repeat_num_;
-    HandleProducedNaiveDataRegstToConsumer([piece_id](Regst* regst) {
-      regst->set_piece_id(piece_id);
+    HandleProducedNaiveDataRegstToConsumer([this](Regst* regst) {
+      regst->set_piece_id(cur_piece_id_);
       return true;
     });
+    cur_piece_id_ += 1;
   }
 }
 

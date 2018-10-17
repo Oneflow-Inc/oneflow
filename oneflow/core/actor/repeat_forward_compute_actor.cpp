@@ -8,6 +8,7 @@ void RepeatForwardCompActor::VirtualCompActorInit(const TaskProto& proto) {
   CHECK(kernel_conf.op_attribute().op_conf().has_repeat_conf());
   repeat_num_ = kernel_conf.op_attribute().op_conf().repeat_conf().repeat_num();
   repeat_count_ = 0;
+  cur_piece_id_ = 0;
 
   const RegstDescProto& out_regst_desc = proto.produced_regst_desc().at("out");
   CHECK(!out_regst_desc.enable_mem_sharing());
@@ -35,13 +36,11 @@ void RepeatForwardCompActor::VirtualAsyncSendNaiveConsumedRegstMsgToProducer() {
 }
 
 void RepeatForwardCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  // TODO: variable naming
-  int64_t piece_id = GetNaiveCurReadable("in")->piece_id() * repeat_num_ + repeat_count_ - 1;
-
-  HandleProducedNaiveDataRegstToConsumer([&](Regst* regst) {
-    regst->set_piece_id(piece_id);
+  HandleProducedNaiveDataRegstToConsumer([this](Regst* regst) {
+    regst->set_piece_id(cur_piece_id_);
     return true;
   });
+  cur_piece_id_ += 1;
 }
 
 REGISTER_ACTOR(kRepeatForward, RepeatForwardCompActor);

@@ -19,6 +19,7 @@ class RepeatBackwardCompActor final : public CompActor {
 
   int64_t repeat_num_;
   int64_t acc_count_;
+  int64_t cur_piece_id_;
 };
 
 }  // namespace oneflow
