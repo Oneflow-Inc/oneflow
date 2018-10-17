@@ -129,7 +129,9 @@ void Kernel::Backward(const KernelCtx& ctx,
   }
   if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
   if (kernel_conf_.need_do_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
-  if (this->op_attribute().model_diff_bns().size() > 0) { SetInstanceNumSum(ctx, BnInOp2Blob); }
+  if (this->op_attribute().model_diff_bns().size() > 0) {
+    SetTotalInstanceNumDiffBlob(ctx, BnInOp2Blob);
+  }
 }
 
 bool Kernel::HasModelBns() const { return op_attribute().model_bns().size() > 0; }
@@ -192,7 +194,7 @@ void KernelIf<device_type>::BackwardColNum(
 }
 
 template<DeviceType device_type, typename T>
-int32_t KernelIfWithModel<device_type, T>::AddInstanceNum(
+int32_t KernelIfWithModel<device_type, T>::CalcInstanceNumSum(
     const int32_t index, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CHECK_LT(index, this->op_attribute().output_diff_bns_size());
   int32_t instance_num_sum = 0;
@@ -207,12 +209,12 @@ int32_t KernelIfWithModel<device_type, T>::AddInstanceNum(
   return instance_num_sum;
 }
 template<DeviceType device_type, typename T>
-void KernelIfWithModel<device_type, T>::SetInstanceNumSum(
+void KernelIfWithModel<device_type, T>::SetTotalInstanceNumDiffBlob(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CHECK_GT(this->op_attribute().model_bns().size(), 1);
-  int32_t instance_num_sum = AddInstanceNum(0, BnInOp2Blob);
+  int32_t instance_num_sum = CalcInstanceNumSum(0, BnInOp2Blob);
   FOR_RANGE(int32_t, i, 1, this->op_attribute().output_diff_bns_size()) {
-    CHECK_EQ(instance_num_sum, AddInstanceNum(i, BnInOp2Blob));
+    CHECK_EQ(instance_num_sum, CalcInstanceNumSum(i, BnInOp2Blob));
   }
   Blob* total_instance_num_diff_blob = BnInOp2Blob("total_instance_num_diff");
   KernelUtil<device_type, T>::Set(ctx.device_ctx, static_cast<T>(instance_num_sum),

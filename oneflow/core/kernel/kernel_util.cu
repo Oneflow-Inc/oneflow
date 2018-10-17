@@ -124,7 +124,7 @@ __global__ void gpu_add(const int64_t n, T* out, const T* in_0, const T* in_1, c
 }
 
 template<typename T>
-__global__ void GpuSet(const T value, T* addr) {
+__global__ void gpu_set(const T value, T* addr) {
   *addr = value;
 }
 
@@ -386,7 +386,7 @@ KU_IF_METHOD InitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num
   AFTER_CPU_INITIALIZE();
 }
 KU_IF_METHOD Set(DeviceCtx* ctx, const T value, T* addr) {
-  GpuSet<T><<<1, 1, 0, ctx->cuda_stream()>>>(value, addr);
+  gpu_set<T><<<1, 1, 0, ctx->cuda_stream()>>>(value, addr);
 }
 
 #define KU_FLOATING_METHOD \
