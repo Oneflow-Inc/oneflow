@@ -287,6 +287,8 @@ void BboxNmsAndLimitKernel<T>::Limit(const Blob* bbox_score_blob,
 template<typename T>
 void BboxNmsAndLimitKernel<T>::OutputBBox(const std::vector<int32_t> out_bbox_inds,
                                           const Blob* target_bbox_blob, Blob* out_bbox_blob) const {
+  std::memset(out_bbox_blob->mut_dptr<T>(), 0,
+              out_bbox_blob->static_shape().elem_cnt() * sizeof(T));
   int32_t out_cnt = 0;
   for (int32_t bbox_idx : out_bbox_inds) {
     const auto* bbox = BBox::Cast(target_bbox_blob->dptr<T>()) + bbox_idx;
@@ -302,6 +304,8 @@ template<typename T>
 void BboxNmsAndLimitKernel<T>::OutputBBoxScore(const std::vector<int32_t> out_bbox_inds,
                                                const Blob* bbox_score_blob,
                                                Blob* out_bbox_score_blob) const {
+  std::memset(out_bbox_score_blob->mut_dptr<T>(), 0,
+              out_bbox_score_blob->static_shape().elem_cnt() * sizeof(T));
   int32_t out_cnt = 0;
   for (int32_t bbox_idx : out_bbox_inds) {
     out_bbox_score_blob->mut_dptr<T>()[out_cnt++] = bbox_score_blob->dptr<T>()[bbox_idx];
@@ -314,6 +318,8 @@ template<typename T>
 void BboxNmsAndLimitKernel<T>::OutputBBoxLabel(const std::vector<int32_t> out_bbox_inds,
                                                const int32_t num_classes,
                                                Blob* out_bbox_label_blob) const {
+  std::memset(out_bbox_label_blob->mut_dptr<int32_t>(), 0,
+              out_bbox_label_blob->static_shape().elem_cnt() * sizeof(int32_t));
   int32_t out_cnt = 0;
   for (int32_t bbox_idx : out_bbox_inds) {
     out_bbox_label_blob->mut_dptr<int32_t>()[out_cnt++] = bbox_idx % num_classes;
