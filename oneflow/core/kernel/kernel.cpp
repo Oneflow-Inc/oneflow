@@ -165,6 +165,7 @@ void KernelIf<device_type>::BackwardDim0ValidNum(
   for (const auto& bn : op_attribute().input_diff_bns()) {
     if (BnInOp2Blob(bn) != nullptr) { *input_diff_bns.Add() = bn; }
   }
+  if (input_diff_bns.empty()) { return; }
   CopyField(ctx.device_ctx, BnInOp2Blob, BnInOp2Blob(op_attribute().output_diff_bns(0)),
             input_diff_bns, &Blob::CopyDim0ValidNumFrom);
 }
