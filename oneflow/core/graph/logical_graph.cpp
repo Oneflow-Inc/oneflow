@@ -412,10 +412,7 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
   HashMap<const LogicalNode*, NormalMdUpdtLogicalNode*> first_shared2mdupdt;
   HashMap<const LogicalNode*, ReduceCtx> fw_node2reduce_ctx;
   ForEachLogicalNode<ForwardLogicalNode>([&](ForwardLogicalNode* fw_logical) {
-    if (Global<JobDesc>::Get()->enable_write_snapshot()
-        && fw_logical->HasOpWithForwardModelBlob()) {
-      BuildMdSaveStruct(fw_logical, fw_logical);
-    }
+    if (fw_logical->HasOpWithForwardModelBlob()) { BuildMdSaveStructIfNeed(fw_logical); }
     if (fw_logical->HasOpWithModelOrConstModelBlob()) {
       // MdUpdt MdSave
       NormalMdUpdtLogicalNode* md_updt_logical = nullptr;
@@ -624,40 +621,59 @@ void LogicalGraph::SetupNormalMdUpdtOp() {
   });
 }
 
-MdSaveLogicalNode* LogicalGraph::BuildMdSaveStruct(const ForwardLogicalNode* fw_logical,
-                                                   LogicalNode* need_save_logical) {
-  OperatorConf md_save_op_conf;
-  md_save_op_conf.set_name("md_save_" + NewUniqueId());
-  md_save_op_conf.set_device_type(DeviceType::kCPU);
-  md_save_op_conf.mutable_model_save_conf();
-  auto model_save_op = ConstructOp(md_save_op_conf);
-  auto md_save_logical = NewNode<MdSaveLogicalNode>();
-  md_save_logical->mut_op_vec() = {model_save_op};
-  auto md_save_pr_desc = new ParallelDesc(*(fw_logical->parallel_desc()));
-  md_save_pr_desc->set_device_type(DeviceType::kCPU);
-  if (fw_logical->parallel_desc()->policy() == ParallelPolicy::kDataParallel) {
-    md_save_pr_desc->RandomSelectOneDeviceAndRemoveTheOthers();
+MdSaveLogicalNode* LogicalGraph::BuildMdSaveStructIfNeed(LogicalNode* need_save_logical) {
+  if (Global<JobDesc>::Get()->enable_write_snapshot()) {
+    OperatorConf md_save_op_conf;
+    md_save_op_conf.set_name("md_save_" + NewUniqueId());
+    md_save_op_conf.set_device_type(DeviceType::kCPU);
+    md_save_op_conf.mutable_model_save_conf();
+    auto model_save_op = ConstructOp(md_save_op_conf);
+    auto md_save_logical = NewNode<MdSaveLogicalNode>();
+    md_save_logical->mut_op_vec() = {model_save_op};
+    ParallelConf pr_conf;
+    auto related_pr_desc = need_save_logical->parallel_desc();
+    pr_conf.set_policy(related_pr_desc->policy());
+    if (pr_conf.policy() == ParallelPolicy::kDataParallel) {
+      if (Global<JobDesc>::Get()->write_snapshot_to_master()) {
+        pr_conf.add_device_name("0:cpu:0");
+      } else {
+        std::mt19937 gen(NewRandomSeed());
+        std::uniform_int_distribution<> machine_selector(
+            0, related_pr_desc->sorted_machine_ids().size() - 1);
+        int64_t selected_mchn_id = related_pr_desc->sorted_machine_ids().at(machine_selector(gen));
+        pr_conf.add_device_name(std::to_string(selected_mchn_id) + ":cpu:0");
+      }
+    } else if (pr_conf.policy() == ParallelPolicy::kModelParallel) {
+      if (Global<JobDesc>::Get()->write_snapshot_to_master()) {
+        pr_conf.add_device_name("0:cpu:0-" + std::to_string(related_pr_desc->parallel_num() - 1));
+      } else {
+        for (int64_t i = 0; i < related_pr_desc->sorted_machine_ids().size(); ++i) {
+          pr_conf.add_device_name(
+              std::to_string(related_pr_desc->sorted_machine_ids().at(i)) + ":cpu:0-"
+              + std::to_string(related_pr_desc->device_num_of_each_machine() - 1));
+        }
+      }
+    } else {
+      UNIMPLEMENTED();
+    }
+    md_save_logical->mut_parallel_desc().reset(new ParallelDesc(pr_conf));
+    Connect<LogicalNode>(need_save_logical, NewEdge(), md_save_logical);
+    return md_save_logical;
+  } else {
+    return nullptr;
   }
-  if (Global<JobDesc>::Get()->write_snapshot_to_master()) {
-    md_save_pr_desc->UseCPUDevicesOnMaster();
-  }
-  md_save_logical->mut_parallel_desc().reset(md_save_pr_desc);
-  Connect<LogicalNode>(need_save_logical, NewEdge(), md_save_logical);
-  return md_save_logical;
 }
 
 NormalMdUpdtLogicalNode* LogicalGraph::BuildNormalMdUpdtAndMdSaveStruct(
     bool is_train, ForwardLogicalNode* fw_logical) {
   NormalMdUpdtLogicalNode* md_updt_logical = NewNode<NormalMdUpdtLogicalNode>();
   md_updt_logical->mut_parallel_desc() = fw_logical->parallel_desc();
-  if (Global<JobDesc>::Get()->enable_write_snapshot()) {
-    // for model
-    BuildMdSaveStruct(fw_logical, md_updt_logical);
-    // TODO: remove the following ugly hard coded `if'
-    if (Global<JobDesc>::Get()->other_conf().train_conf().model_update_conf().has_momentum_conf()) {
-      // for forward_model
-      BuildMdSaveStruct(fw_logical, md_updt_logical);
-    }
+  // for model
+  BuildMdSaveStructIfNeed(md_updt_logical);
+  // TODO: remove the following ugly hard coded `if'
+  if (Global<JobDesc>::Get()->other_conf().train_conf().model_update_conf().has_momentum_conf()) {
+    // for forward_model
+    BuildMdSaveStructIfNeed(md_updt_logical);
   }
   return md_updt_logical;
 }

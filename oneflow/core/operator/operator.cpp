@@ -106,7 +106,7 @@ void Operator::InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> 
 
 void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
   if (model_bns().empty() && const_model_bns().empty()) {
-    pr_desc->set_policy(ParallelPolicy::kDataParallel);
+    pr_desc->set_policy(ParallelPolicy::kDataParallel);  // TODO(shiyuan)
   }
   if (pr_desc->policy() == kModelParallel && MaxModelSplitNum() != -1) {
     pr_desc->RemoveNeedlessDevice(op_name(), MaxModelSplitNum());
