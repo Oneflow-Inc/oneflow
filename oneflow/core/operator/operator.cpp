@@ -89,9 +89,7 @@ void Operator::InferTotalInstanceNumDesc(
   if (it != op_attribute_.bn_in_op2lbi().end()) {
     GetBlobDesc4BnInOp("total_instance_num")->mut_shape() = Shape({1});
     for (const std::string& bn : op_attribute_.model_bns()) {
-      if (bn == "total_instance_num") {
-        continue;
-      } else {
+      if (bn != "total_instance_num") {
         GetBlobDesc4BnInOp("total_instance_num")
             ->set_data_type(GetBlobDesc4BnInOp(bn)->data_type());
         break;
