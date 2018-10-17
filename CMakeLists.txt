@@ -7,7 +7,6 @@ option(DOWNLOAD_THIRD_PARTY "Donwload third party instead of build from source" 
 option(USE_CLANG_FORMAT "" OFF)
 option(BUILD_RDMA "" ON)
 option(BUILD_CUDA "" ON)
-option(BUILD_NCCL "" ON)
 option(RELEASE_VERSION "" OFF)
 
 # Project
