@@ -81,23 +81,6 @@ void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> Get
   }
 }
 
-void Operator::InferTotalInstanceNumDesc(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, std::function<void(OpContext*)> EnrollOpCtx) const {
-  CHECK_GE(op_attribute_.model_bns().size(), 2);
-  auto it = op_attribute_.bn_in_op2lbi().find("total_instance_num");
-  if (it != op_attribute_.bn_in_op2lbi().end()) {
-    GetBlobDesc4BnInOp("total_instance_num")->mut_shape() = Shape({1});
-    for (const std::string& bn : op_attribute_.model_bns()) {
-      if (bn != "total_instance_num") {
-        GetBlobDesc4BnInOp("total_instance_num")
-            ->set_data_type(GetBlobDesc4BnInOp(bn)->data_type());
-        break;
-      }
-    }
-  }
-}
-
 void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext* parallel_ctx,
                               std::function<void(OpContext*)> EnrollOpCtx) const {
@@ -407,6 +390,23 @@ LogicalBlobId Operator::dtbn2lbi(const std::string& data_tmp_bn) const {
   lbi.set_op_name(op_name());
   lbi.set_blob_name(data_tmp_bn);
   return lbi;
+}
+
+void Operator::InferTotalInstanceNumDesc(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, std::function<void(OpContext*)> EnrollOpCtx) const {
+  CHECK_GE(op_attribute_.model_bns().size(), 2);
+  auto it = op_attribute_.bn_in_op2lbi().find("total_instance_num");
+  if (it != op_attribute_.bn_in_op2lbi().end()) {
+    GetBlobDesc4BnInOp("total_instance_num")->mut_shape() = Shape({1});
+    for (const std::string& bn : op_attribute_.model_bns()) {
+      if (bn != "total_instance_num") {
+        GetBlobDesc4BnInOp("total_instance_num")
+            ->set_data_type(GetBlobDesc4BnInOp(bn)->data_type());
+        break;
+      }
+    }
+  }
 }
 
 std::string GenDiffBn(const std::string& bn) { return bn + "_diff"; }
