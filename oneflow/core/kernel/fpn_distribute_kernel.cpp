@@ -29,8 +29,9 @@ void FpnDistributeKernel<T>::ForwardDataContent(
     rois_blob_vec[idx] = BnInOp2Blob("rois_" + std::to_string(idx));
   }
   Blob* roi_indices_blob = BnInOp2Blob("roi_indices");
+  roi_indices_blob->set_dim0_valid_num(0, collected_rois_blob->shape().At(0));
   Blob* roi_indices_buf_blob = BnInOp2Blob("roi_indices_buf");
-  int32_t roi_indices_size = roi_indices_blob->static_shape().At(0);
+  int32_t roi_indices_size = roi_indices_blob->shape().At(0);
   Indexes roi_indices(roi_indices_size, roi_indices_size, roi_indices_blob->mut_dptr<int32_t>(),
                       false);
   Indexes roi_indices_buf(roi_indices_size, roi_indices_size,
@@ -55,14 +56,13 @@ void FpnDistributeKernel<T>::ForwardDataContent(
   int32_t roi_indices_idx = 0;
   FOR_RANGE(int64_t, target_level_idx, 0, level_count) {
     int32_t target_level = target_level_idx + conf.roi_min_level();
-    FOR_RANGE(int64_t, collected_roi_idx, 0, target_levels_blob->shape().At(0)) {
+    FOR_RANGE(int64_t, collected_roi_idx, 0, roi_indices_blob->shape().At(0)) {
       if (target_level == target_levels_blob->dptr<int32_t>()[collected_roi_idx]) {
         roi_indices_blob->mut_dptr<int32_t>()[roi_indices_idx++] = collected_roi_idx;
       }
     }
   }
   roi_indices.ArgSort(roi_indices_buf);
-  roi_indices_blob->set_dim0_valid_num(0, roi_indices_idx);
   FOR_RANGE(int64_t, target_level_idx, 0, level_count) {
     rois_blob_vec[target_level_idx]->set_dim0_valid_num(0, level_copy_idx[target_level_idx] / 5);
   }
