@@ -35,6 +35,7 @@ class ArrayBufferBase {
   ArrayBufferBase() = delete;
   ~ArrayBufferBase() = delete;
 
+  static const size_t ElemCnt = N;
   using ArrayType = std::array<T, N>;
   using Impl = ImplT;
 
@@ -502,7 +503,8 @@ template<typename BBox>
 struct BBoxUtil final {
   using T = typename BBox::ElemType;
   using BBoxIndicesT = BBoxIndices<IndexSequence, BBox>;
-
+  
+  static size_t BBoxUtil<BBox>::GenerateAnchors(const AnchorGeneratorConf& conf, T* anchors_ptr);
   static void Nms(float thresh, const BBoxIndicesT& pre_nms_bbox_inds,
                   BBoxIndicesT& post_nms_bbox_inds);
 };

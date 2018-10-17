@@ -58,20 +58,24 @@ void SetBBoxOutsideWeights(int32_t index, int32_t label, float reduction_coeffic
 template<typename T>
 void AnchorTargetKernel<T>::InitConstBufBlobs(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const AnchorTargetOpConf& conf = op_conf().anchor_target_conf();
   Blob* anchors_blob = BnInOp2Blob("anchors");
-  const AnchorTargetOpConf& anchor_target_conf = op_conf().anchor_target_conf();
-  const AnchorGeneratorConf& anchor_generator_conf = anchor_target_conf.anchor_generator_conf();
-  float straddle_thresh = anchor_target_conf.straddle_thresh();
-  FasterRcnnUtil<T>::GenerateAnchors(anchor_generator_conf, anchors_blob);
-  auto inside_inds = GenBoxesIndex(anchors_blob->shape().Count(0, 3),
-                                   BnInOp2Blob("inside_anchors_index")->mut_dptr<int32_t>(),
-                                   anchors_blob->dptr<T>(), true);
-  inside_inds.FilterByBBox([&](size_t n, int32_t index, const BBox<T>* bbox) {
-    return bbox->x1() < -straddle_thresh || bbox->y1() < -straddle_thresh
-           || bbox->x2() >= anchor_generator_conf.image_width() + straddle_thresh
-           || bbox->y2() >= anchor_generator_conf.image_height() + straddle_thresh;
+  Blob* inside_inds_blob = BnInOp2Blob("anchors_inside_inds");
+  size_t num_anchors = 0;
+  for (const AnchorGeneratorConf& anchor_generator_conf : conf.anchor_generator_conf()) {
+    num_anchors += BBoxUtil<T>::GenerateAnchors(anchor_generator_conf, 
+                                                  anchors_blob->mut_dptr<T>(num_anchors));
+  }
+  CHECK_EQ(num_anchors, anchors_blob->shape().At(0));
+
+  IndexSequence inside_inds(num_anchors, inside_inds_blob->mut_dptr<int32_t>(), true);
+  inside_inds.Filter([&](size_t n, int32_t index) {
+    const auto* bbox = BBox::Cast(anchors_blob->dptr<T>(index));
+    return bbox->left() < -conf.straddle_thresh() || bbox->top() < -conf.straddle_thresh()
+           || bbox->right() >= conf.image_width() + conf.straddle_thresh()
+           || bbox->bottom() >= conf.image_height() + conf.straddle_thresh();
   });
-  *(BnInOp2Blob("inside_anchors_num")->mut_dptr<int32_t>()) = inside_inds.size();
+  inside_inds_blob->set_dim0_valid_num(0, inside_inds.size());
 }
 
 template<typename T>

@@ -6,16 +6,15 @@ void AnchorTargetOp::InitFromOpConf() {
   CHECK_EQ(this->device_type(), DeviceType::kCPU);
   CHECK(op_conf().has_anchor_target_conf());
 
-  EnrollPbInputBn("gt_boxes");
+  EnrollInputBn("gt_boxes", false);
 
-  EnrollOutputBn("rpn_labels", false);
-  EnrollOutputBn("rpn_bbox_targets", false);
-  EnrollOutputBn("rpn_bbox_inside_weights", false);
-  EnrollOutputBn("rpn_bbox_outside_weights", false);
+  EnrollRepeatedOutputBn("rpn_labels", false);
+  EnrollRepeatedOutputBn("rpn_bbox_targets", false);
+  EnrollRepeatedOutputBn("rpn_bbox_inside_weights", false);
+  EnrollRepeatedOutputBn("rpn_bbox_outside_weights", false);
 
   EnrollConstBufBn("anchors");
-  EnrollConstBufBn("inside_anchors_index");
-  EnrollConstBufBn("inside_anchors_num");
+  EnrollConstBufBn("anchors_inside_inds");
 
   EnrollDataTmpBn("anchor_boxes_index");
   EnrollDataTmpBn("gt_boxes_absolute");
@@ -46,47 +45,50 @@ const DataType AnchorTargetOp::GetDataTypeFromInputPb(const BlobDesc* gt_boxes_b
 
 void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                     const ParallelContext* parallel_ctx) const {
-  const AnchorTargetOpConf& anchor_target_conf = op_conf().anchor_target_conf();
-  const AnchorGeneratorConf& anchor_generator_conf = anchor_target_conf.anchor_generator_conf();
-  const int32_t max_gt_boxes_num = anchor_target_conf.max_gt_boxes_num();
-  const int32_t base_anchors_num =
+  const AnchorTargetOpConf& op_conf = op_conf().anchor_target_conf();
+  const size_t num_layers = op_conf.anchor_generator_conf_size();
+  CHECK_EQ(RepeatedObnSize("rpn_labels"), num_layers);
+  CHECK_EQ(RepeatedObnSize("rpn_bbox_targets"), num_layers);
+  CHECK_EQ(RepeatedObnSize("rpn_bbox_inside_weights"), num_layers);
+  CHECK_EQ(RepeatedObnSize("rpn_bbox_outside_weights"), num_layers);
+  // input: gt_boxes (N, G, 4)
+  const BlobDesc* gt_boxes_bd = GetBlobDesc4BnInOp("gt_boxes");
+  int64_t num_ims = gt_boxes_bd->shape().At(0);
+  int64_t num_anchors = 0;
+  FOR_RANGE(size_t, layer, 0, num_layers) {
+    const AnchorGeneratorConf& anchor_generator_conf : op_conf.anchor_generator_conf(layer);
+    const int64_t num_anchors_per_cell =
       anchor_generator_conf.anchor_scales_size() * anchor_generator_conf.aspect_ratios_size();
-  const float fm_stride = anchor_generator_conf.feature_map_stride();
-  CHECK_GT(fm_stride, 0);
-  const int32_t fm_h = std::ceil(anchor_generator_conf.image_height() / fm_stride);
-  const int32_t fm_w = std::ceil(anchor_generator_conf.image_width() / fm_stride);
-  CHECK_GT(fm_h, 0);
-  CHECK_GT(fm_w, 0);
-  // input: gt_boxes (N) FloatList16
-  const BlobDesc* gt_boxes_blob_desc = GetBlobDesc4BnInOp("gt_boxes");
-  CHECK_EQ(gt_boxes_blob_desc->shape().NumAxes(), 1);
-  int64_t image_num = gt_boxes_blob_desc->shape().At(0);
-  const DataType bbox_data_type = GetDataTypeFromInputPb(gt_boxes_blob_desc);
-  // output: rpn_labels (N, H, W, A) int32_t
-  BlobDesc* rpn_labels_blob_desc = GetBlobDesc4BnInOp("rpn_labels");
-  rpn_labels_blob_desc->set_data_type(DataType::kInt32);
-  rpn_labels_blob_desc->mut_shape() = Shape({image_num, fm_h, fm_w, base_anchors_num});
-  // output: rpn_bbox_targets (N, H, W, 4 * A) T
-  BlobDesc* rpn_bbox_targets_blob_desc = GetBlobDesc4BnInOp("rpn_bbox_targets");
-  rpn_bbox_targets_blob_desc->set_data_type(bbox_data_type);
-  rpn_bbox_targets_blob_desc->mut_shape() = Shape({image_num, fm_h, fm_w, 4 * base_anchors_num});
-  // output: rpn_bbox_inside_weights (N, H, W, 4 * A) T
-  *GetBlobDesc4BnInOp("rpn_bbox_inside_weights") = *rpn_bbox_targets_blob_desc;
-  // output: rpn_bbox_outside_weights (N, H, W, 4 * A) T
-  *GetBlobDesc4BnInOp("rpn_bbox_outside_weights") = *rpn_bbox_targets_blob_desc;
-
-  // const_buf: anchors (H, W, A, 4) T
+    const float fm_stride = anchor_generator_conf.feature_map_stride();
+    CHECK_GT(fm_stride, 0);
+    const int64_t height = std::ceil(anchor_generator_conf.image_height() / fm_stride);
+    const int64_t width = std::ceil(anchor_generator_conf.image_width() / fm_stride);
+    CHECK_GT(height, 0);
+    CHECK_GT(width, 0);
+    num_anchors += height * width * num_anchors_per_cell;
+    // repeat output: rpn_labels (N, H, W, A) int32_t
+    BlobDesc* rpn_labels_bd = GetBlobDesc4BnInOp(RepeatedObn("rpn_labels", layer));
+    rpn_labels_bd->set_data_type(DataType::kInt32);
+    rpn_labels_bd->mut_shape() = Shape({num_ims, height, width, num_anchors_per_cell});
+    // repeat output: rpn_bbox_targets (N, H, W, 4 * A) T
+    BlobDesc* rpn_bbox_targets_bd = GetBlobDesc4BnInOp(RepeatedObn("rpn_bbox_targets", layer));
+    rpn_bbox_targets_bd->set_data_type(gt_boxes_bd->data_type());
+    rpn_bbox_targets_bd->mut_shape() = Shape({num_ims, height, width, num_anchors_per_cell * 4});
+    // repeat output: rpn_bbox_inside_weights same as rpn_bbox_targets
+    *GetBlobDesc4BnInOp(RepeatedObn("rpn_bbox_inside_weights", layer)) = *rpn_bbox_targets_bd;
+    // repeat output: rpn_bbox_outside_weights same as rpn_bbox_targets
+    *GetBlobDesc4BnInOp(RepeatedObn("rpn_bbox_outside_weights", layer)) = *rpn_bbox_targets_bd;
+  }
+  // const_buf: anchors ((H1 * W1 + H2 * W2 + ...) * A, 4) T
   BlobDesc* anchors_blob_desc = GetBlobDesc4BnInOp("anchors");
-  anchors_blob_desc->set_data_type(bbox_data_type);
-  anchors_blob_desc->mut_shape() = Shape({fm_h, fm_w, base_anchors_num, 4});
-  // const_buf: inside_anchors_index (H * W * A) int32_t
-  BlobDesc* inside_anchors_index_blob_desc = GetBlobDesc4BnInOp("inside_anchors_index");
-  inside_anchors_index_blob_desc->set_data_type(DataType::kInt32);
-  inside_anchors_index_blob_desc->mut_shape() = Shape({fm_h * fm_w * base_anchors_num});
-  // const_buf: inside_anchors_num (1) int32_t
-  BlobDesc* inside_anchors_num_blob_desc = GetBlobDesc4BnInOp("inside_anchors_num");
-  inside_anchors_num_blob_desc->set_data_type(DataType::kInt32);
-  inside_anchors_num_blob_desc->mut_shape() = Shape({1});
+  anchors_blob_desc->set_data_type(gt_boxes_bd->data_type());
+  anchors_blob_desc->mut_shape() = Shape({num_anchors, 4});
+  // const_buf: anchors_inside_inds (H1 * W1 + H2 * W2 + ...) * A) int32_t
+  BlobDesc* anchors_inside_inds_bd = GetBlobDesc4BnInOp("anchors_inside_inds");
+  anchors_inside_inds_bd->set_data_type(DataType::kInt32);
+  anchors_inside_inds_bd->mut_shape() = Shape({num_anchors});
+  anchors_inside_inds_bd->mut_dim0_inner_shape() = Shape({1, num_anchors});
+  anchors_inside_inds_bd->set_has_dim0_valid_num_field(true);
 
   // data_tmp: anchor_boxes_index (H * W * A) int32_t
   *GetBlobDesc4BnInOp("anchor_boxes_index") = *inside_anchors_index_blob_desc;
