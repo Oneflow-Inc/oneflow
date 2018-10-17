@@ -630,7 +630,6 @@ MdSaveLogicalNode* LogicalGraph::BuildMdSaveStructIfNeed(LogicalNode* need_save_
     auto model_save_op = ConstructOp(md_save_op_conf);
     auto md_save_logical = NewNode<MdSaveLogicalNode>();
     md_save_logical->mut_op_vec() = {model_save_op};
-
     ParallelConf pr_conf;
     auto related_pr_desc = need_save_logical->parallel_desc();
     pr_conf.set_policy(related_pr_desc->policy());
@@ -641,43 +640,22 @@ MdSaveLogicalNode* LogicalGraph::BuildMdSaveStructIfNeed(LogicalNode* need_save_
         std::mt19937 gen(NewRandomSeed());
         std::uniform_int_distribution<> machine_selector(
             0, related_pr_desc->sorted_machine_ids().size() - 1);
-        int64_t selected_machine_id =
-            related_pr_desc->sorted_machine_ids().at(machine_selector(gen));
-        std::uniform_int_distribution<> device_selector(
-            0, related_pr_desc->sorted_dev_phy_ids(selected_machine_id).size() - 1);
-        int64_t selected_device_id =
-            related_pr_desc->sorted_dev_phy_ids(selected_machine_id).at(device_selector(gen));
-        pr_conf.add_device_name(std::to_string(selected_machine_id)
-                                + ":cpu:" + std::to_string(selected_device_id));
+        int64_t selected_mchn_id = related_pr_desc->sorted_machine_ids().at(machine_selector(gen));
+        pr_conf.add_device_name(std::to_string(selected_mchn_id) + ":cpu:0");
       }
     } else if (pr_conf.policy() == ParallelPolicy::kModelParallel) {
       if (Global<JobDesc>::Get()->write_snapshot_to_master()) {
-        pr_conf.add_device_name("0:cpu:0-" + std::to_string(related_pr_desc->parallel_num()));
+        pr_conf.add_device_name("0:cpu:0-" + std::to_string(related_pr_desc->parallel_num() - 1));
       } else {
-        int64_t machine_id = -1;
-        int64_t min_device_id = -1;
-        int64_t max_device_id = -1;
         for (int64_t i = 0; i < related_pr_desc->sorted_machine_ids().size(); ++i) {
-          machine_id = related_pr_desc->sorted_machine_ids().at(i);
-          CHECK_GE(machine_id, 0);
-          min_device_id = related_pr_desc->sorted_dev_phy_ids(machine_id).front();
-          max_device_id = related_pr_desc->sorted_dev_phy_ids(machine_id).back();
-          CHECK_GE(min_device_id, 0);
-          CHECK_GE(max_device_id, min_device_id);
-          if (min_device_id == max_device_id) {
-            pr_conf.add_device_name(std::to_string(machine_id)
-                                    + ":cpu:" + std::to_string(min_device_id));
-          } else {
-            pr_conf.add_device_name(std::to_string(machine_id)
-                                    + ":cpu:" + std::to_string(min_device_id) + "-"
-                                    + std::to_string(max_device_id));
-          }
+          pr_conf.add_device_name(
+              std::to_string(related_pr_desc->sorted_machine_ids().at(i)) + ":cpu:0-"
+              + std::to_string(related_pr_desc->device_num_of_each_machine() - 1));
         }
       }
     } else {
       UNIMPLEMENTED();
     }
-
     md_save_logical->mut_parallel_desc().reset(new ParallelDesc(pr_conf));
     Connect<LogicalNode>(need_save_logical, NewEdge(), md_save_logical);
     return md_save_logical;
