@@ -7,10 +7,10 @@ namespace {
 
 void CheckSameDim0ValidNum(const PbRpf<std::string>& bns,
                            const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
-  const void* mem_ptr = BnInOp2Blob(bns.Get(0))->dim1_valid_num();
+  const void* mem_ptr = BnInOp2Blob(bns.Get(0))->dim1_valid_num_ptr();
   size_t len = BnInOp2Blob(bns.Get(0))->ByteSizeOfDim0ValidNumField();
   FOR_RANGE(int, i, 1, bns.size()) {
-    CHECK_EQ(std::memcmp(BnInOp2Blob(bns.Get(i))->dim1_valid_num(), mem_ptr, len), 0);
+    CHECK_EQ(std::memcmp(BnInOp2Blob(bns.Get(i))->dim1_valid_num_ptr(), mem_ptr, len), 0);
   }
 }
 
@@ -100,7 +100,7 @@ void Kernel::Forward(const KernelCtx& ctx,
 
 void Kernel::Backward(const KernelCtx& ctx,
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (kernel_conf_.need_do_dim0_valid_num()) {
+  if (kernel_conf_.need_do_dim0_valid_num() && op_attribute().input_diff_bns_size() > 0) {
     CHECK(!kernel_conf_.need_do_opaque_header());
     BackwardDim0ValidNum(ctx, BnInOp2Blob);
   }
@@ -162,8 +162,13 @@ void KernelIf<device_type>::BackwardDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CHECK(kernel_conf().can_naive_do_dim0_valid_num());
   CheckSameDim0ValidNum(op_attribute().output_diff_bns(), BnInOp2Blob);
+  PbRpf<std::string> input_diff_bns;
+  for (const auto& bn : op_attribute().input_diff_bns()) {
+    if (BnInOp2Blob(bn) != nullptr) { *input_diff_bns.Add() = bn; }
+  }
+  if (input_diff_bns.empty()) { return; }
   CopyField(ctx.device_ctx, BnInOp2Blob, BnInOp2Blob(op_attribute().output_diff_bns(0)),
-            op_attribute().input_diff_bns(), &Blob::CopyDim0ValidNumFrom);
+            input_diff_bns, &Blob::CopyDim0ValidNumFrom);
 }
 
 template<DeviceType device_type>

@@ -17,8 +17,8 @@ class OFRecordDecoderImpl<EncodeCase::kBytesList, T> final
   void ReadOneCol(DeviceCtx*, const Feature&, const BlobConf& blob_conf, int32_t col_id,
                   T* out_dptr, int64_t one_col_elem_num,
                   std::function<int32_t(void)> NextRandomInt) const override;
-  void SetDim1ValidNum(const Feature& feature, Blob* out_blob, int32_t dim0_idx) const override;
-  void SetDim2ValidNum(const Feature& feature, Blob* out_blob, int32_t dim0_idx) const override;
+  void SetDim1ValidNum(const Feature& feature, Blob* out_blob, int64_t dim0_idx) const override;
+  void SetDim2ValidNum(const Feature& feature, Blob* out_blob, int64_t dim0_idx) const override;
 };
 
 }  // namespace oneflow

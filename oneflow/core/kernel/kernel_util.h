@@ -462,7 +462,7 @@ class Dim0ValidNumIterator final : public FieldIterator {
 
  private:
   char* GetMutPtr(Blob* blob) override {
-    return reinterpret_cast<char*>(blob->mut_dim0_valid_num());
+    return reinterpret_cast<char*>(blob->mut_dim0_valid_num_ptr());
   }
 
   size_t GetSizeOfField(Blob* blob) const override { return blob->ByteSizeOfDim0ValidNumField(); }
@@ -477,7 +477,7 @@ class Dim1ValidNumIterator final : public FieldIterator {
 
  private:
   char* GetMutPtr(Blob* blob) override {
-    return reinterpret_cast<char*>(blob->mut_dim1_valid_num());
+    return reinterpret_cast<char*>(blob->mut_dim1_valid_num_ptr());
   }
 
   size_t GetSizeOfField(Blob* blob) const override { return blob->ByteSizeOfDim1ValidNumField(); }
@@ -492,7 +492,7 @@ class Dim2ValidNumIterator final : public FieldIterator {
 
  private:
   char* GetMutPtr(Blob* blob) override {
-    return reinterpret_cast<char*>(blob->mut_dim2_valid_num());
+    return reinterpret_cast<char*>(blob->mut_dim2_valid_num_ptr());
   }
 
   size_t GetSizeOfField(Blob* blob) const override { return blob->ByteSizeOfDim2ValidNumField(); }
