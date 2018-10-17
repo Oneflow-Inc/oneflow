@@ -23,7 +23,7 @@ bool OFRecordDecoderImpl<EncodeCase::kRaw, T>::HasDim1ValidNumField(
 template<typename T>
 void OFRecordDecoderImpl<EncodeCase::kRaw, T>::SetDim1ValidNum(const Feature& feature,
                                                                Blob* out_blob,
-                                                               int32_t dim0_idx) const {
+                                                               int64_t dim0_idx) const {
   CHECK_GE(out_blob->static_shape().NumAxes(), 2);
   int64_t elem_num = 0;
   if (feature.has_bytes_list()) {
@@ -100,6 +100,6 @@ void OFRecordDecoderImpl<EncodeCase::kRaw, T>::ReadOneCol(
 #define INSTANTIATE_OFRECORD_RAW_DECODER(type_cpp, type_proto) \
   template class OFRecordDecoderImpl<EncodeCase::kRaw, type_cpp>;
 
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_OFRECORD_RAW_DECODER, ARITHMETIC_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_OFRECORD_RAW_DECODER, ARITHMETIC_DATA_TYPE_SEQ CHAR_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

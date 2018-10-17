@@ -570,9 +570,9 @@ message DefineTestBlobConf {
   required ShapeProto shape = 2;
   required DataType data_type = 3;
   optional ShapeProto dim0_inner_shape = 4;
-  optional int32 dim0_valid_num = 5;
-  optional int32 dim1_valid_num = 6;
-  optional int32 dim2_valid_num = 7;
+  optional int64 dim0_valid_num = 5;
+  optional int64 dim1_valid_num = 6;
+  optional int64 dim2_valid_num = 7;
 }
 
 message NormalizationOpConf {

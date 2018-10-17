@@ -7,10 +7,10 @@ namespace {
 
 void CheckSameDim0ValidNum(const PbRpf<std::string>& bns,
                            const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
-  const void* mem_ptr = BnInOp2Blob(bns.Get(0))->dim1_valid_num();
+  const void* mem_ptr = BnInOp2Blob(bns.Get(0))->dim1_valid_num_ptr();
   size_t len = BnInOp2Blob(bns.Get(0))->ByteSizeOfDim0ValidNumField();
   FOR_RANGE(int, i, 1, bns.size()) {
-    CHECK_EQ(std::memcmp(BnInOp2Blob(bns.Get(i))->dim1_valid_num(), mem_ptr, len), 0);
+    CHECK_EQ(std::memcmp(BnInOp2Blob(bns.Get(i))->dim1_valid_num_ptr(), mem_ptr, len), 0);
   }
 }
 
@@ -100,7 +100,7 @@ void Kernel::Forward(const KernelCtx& ctx,
 
 void Kernel::Backward(const KernelCtx& ctx,
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (kernel_conf_.need_do_dim0_valid_num()) {
+  if (kernel_conf_.need_do_dim0_valid_num() && op_attribute().input_diff_bns_size() > 0) {
     CHECK(!kernel_conf_.need_do_opaque_header());
     BackwardDim0ValidNum(ctx, BnInOp2Blob);
   }
