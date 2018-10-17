@@ -100,7 +100,7 @@ void Kernel::Forward(const KernelCtx& ctx,
 
 void Kernel::Backward(const KernelCtx& ctx,
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (kernel_conf_.need_do_dim0_valid_num()) {
+  if (kernel_conf_.need_do_dim0_valid_num() && op_attribute().input_diff_bns_size() > 0) {
     CHECK(!kernel_conf_.need_do_opaque_header());
     BackwardDim0ValidNum(ctx, BnInOp2Blob);
   }
