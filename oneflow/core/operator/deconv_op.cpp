@@ -99,10 +99,6 @@ void DeconvOp<NDims>::InferBlobDescs(
   int64_t data_num = in_blob_desc->shape().At(0);
   int64_t channels = in_blob_desc->shape().At(1);
   int32_t filters = GetValFromCustomizedConf<int32_t>("filters");
-  if (parallel_ctx->policy() == kModelParallel) {
-    BalancedSplitter splitter(channels, parallel_ctx->parallel_num());
-    channels = splitter.At(parallel_ctx->parallel_id()).size();
-  }
   std::vector<int64_t> out;
   GetOutAndPad(in_blob_desc->shape(), GetCustomizedConf(), &out, nullptr, nullptr);
   std::vector<int64_t> out_shape = {data_num, filters};
