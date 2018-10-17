@@ -78,8 +78,6 @@ set(oneflow_third_party_libs
     ${OPENCV_STATIC_LIBRARIES}
 )
 
-message(STATUS "oneflow_third_party_libs: " ${oneflow_third_party_libs})
-
 if(WIN32)
   # static gflags lib requires "PathMatchSpecA" defined in "ShLwApi.Lib"
   list(APPEND oneflow_third_party_libs "ShLwApi.Lib")
@@ -143,3 +141,5 @@ if (BUILD_CUDA)
     ${NCCL_INCLUDE_DIR}
 )
 endif()
+
+message(STATUS "oneflow_third_party_libs: " ${oneflow_third_party_libs})
