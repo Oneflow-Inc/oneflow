@@ -60,8 +60,7 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   void AddNcclReduceScatterAndAllGather(LogicalNode* src, LogicalNode* dst);
   void BuildReduceStruct(const ReduceCtx& reduce_ctx);
   void SetupNormalMdUpdtOp();
-  MdSaveLogicalNode* BuildMdSaveStruct(const ForwardLogicalNode* fw_logical,
-                                       LogicalNode* need_save_logical);
+  MdSaveLogicalNode* BuildMdSaveStructIfNeed(LogicalNode* need_save_logical);
   NormalMdUpdtLogicalNode* BuildNormalMdUpdtAndMdSaveStruct(bool is_train,
                                                             ForwardLogicalNode* fw_logical);
   void ConnectFwToBw();
