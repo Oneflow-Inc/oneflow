@@ -32,9 +32,6 @@ if (THIRD_PARTY AND DOWNLOAD_THIRD_PARTY)
 endif()
 
 if (BUILD_CUDA)
-  include(cub)
-  include(nccl)
-
   set(CUDA_SEPARABLE_COMPILATION ON)
   find_package(CUDA REQUIRED)
   add_definitions(-DWITH_CUDA)
@@ -50,20 +47,6 @@ if (BUILD_CUDA)
     list(APPEND CUDA_LIBRARIES ${cuda_lib_dir}/${extra_cuda_lib})
   endforeach()
   find_package(CuDNN REQUIRED)
-
-  list(APPEND oneflow_third_party_libs ${CUDA_LIBRARIES})
-  list(APPEND oneflow_third_party_libs ${CUDNN_LIBRARIES})
-  list(APPEND oneflow_third_party_libs ${NCCL_STATIC_LIBRARIES})
-
-  list(APPEND oneflow_third_party_dependencies cub_copy_headers_to_destination)
-  list(APPEND oneflow_third_party_dependencies nccl_copy_headers_to_destination)
-  list(APPEND oneflow_third_party_dependencies nccl_copy_libs_to_destination)
-
-  include_directories(
-    ${CUDNN_INCLUDE_DIRS}
-    ${CUB_INCLUDE_DIR}
-    ${NCCL_INCLUDE_DIR}
-  )
 endif()
 
 if (NOT WIN32)
@@ -142,3 +125,21 @@ include_directories(
     ${EIGEN_INCLUDE_DIR}
 )
 
+if (BUILD_CUDA)
+  include(cub)
+  include(nccl)
+
+  list(APPEND oneflow_third_party_libs ${CUDA_LIBRARIES})
+  list(APPEND oneflow_third_party_libs ${CUDNN_LIBRARIES})
+  list(APPEND oneflow_third_party_libs ${NCCL_STATIC_LIBRARIES})
+
+  list(APPEND oneflow_third_party_dependencies cub_copy_headers_to_destination)
+  list(APPEND oneflow_third_party_dependencies nccl_copy_headers_to_destination)
+  list(APPEND oneflow_third_party_dependencies nccl_copy_libs_to_destination)
+
+  include_directories(
+    ${CUDNN_INCLUDE_DIRS}
+    ${CUB_INCLUDE_DIR}
+    ${NCCL_INCLUDE_DIR}
+)
+endif()
