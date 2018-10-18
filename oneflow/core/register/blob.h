@@ -110,6 +110,8 @@ class Blob final {
   void CopyDim2ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
 
+  size_t CalcDim0ValidNumSum() const;
+
   int32_t col_id() const;
   void set_col_id(int32_t val);
   int32_t max_col_id() const;
