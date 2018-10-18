@@ -15,17 +15,7 @@ class LossPrintOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override;
 
  private:
-  LogicalBlobId ibn2lbi(const std::string& input_bn) const override {
-    if (input_bn == "loss_acc") {
-      return op_conf().loss_print_conf().loss_lbi();
-    } else if (input_bn == "loss_instance_num") {
-      return op_conf().loss_print_conf().loss_instance_num_lbi();
-    } else if (input_bn == "reduction_acc") {
-      return op_conf().loss_print_conf().reduction_lbi();
-    } else {
-      UNIMPLEMENTED();
-    }
-  }
+  LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
 };
 
 }  // namespace oneflow
