@@ -20,8 +20,8 @@ Or you can install OpenBLAS and other tools through:
 
 ```
     cd oneflow && mkdir build && cd build
-    cmake -DTHIRD_PARTY=ON -DDOWNLOAD_THIRD_PARTY=OFF .. &&  make
-    cmake -DTHIRD_PARTY=OFF -DDOWNLOAD_THIRD_PARTY=OFF .. && make
+    cmake -DTHIRD_PARTY=ON -DPRECOMPILED_THIRD_PARTY=OFF .. &&  make -j
+    cmake -DTHIRD_PARTY=OFF -DPRECOMPILED_THIRD_PARTY=OFF .. && make -j
 ```
 
 If you do not want to compile the third part code from source, you can also download the pre-compiled third party dependencies from oneflow.org
@@ -30,8 +30,8 @@ If you do not want to compile the third part code from source, you can also down
 
 ```
     cd oneflow && mkdir build && cd build
-    cmake -DTHIRD_PARTY=ON .. &&  make
-    cmake -DTHIRD_PARTY=OFF .. && make
+    cmake -DTHIRD_PARTY=ON .. &&  make -j
+    cmake -DTHIRD_PARTY=OFF .. && make -j
 ```
 
 

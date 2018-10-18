@@ -12,7 +12,7 @@ include(libjpeg-turbo)
 include(opencv)
 include(eigen)
 
-if (THIRD_PARTY AND DOWNLOAD_THIRD_PARTY)
+if (THIRD_PARTY AND PRECOMPILED_THIRD_PARTY)
   if (BUILD_CUDA)
     set(THIRD_PARTY_URL http://download.oneflow.org/third_party_with_cuda.tgz)
   else()
@@ -92,7 +92,7 @@ set(oneflow_third_party_dependencies
   protobuf_copy_binary_to_destination
 )
 
-if (NOT DOWNLOAD_THIRD_PARTY)
+if (NOT PRECOMPILED_THIRD_PARTY)
   list(APPEND oneflow_third_party_dependencies 
     gflags_copy_headers_to_destination
     gflags_copy_libs_to_destination

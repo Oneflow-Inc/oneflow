@@ -31,7 +31,7 @@ set (GLOG_PUBLIC_H
   ${CMAKE_CURRENT_BINARY_DIR}/glog/src/glog/src/glog/log_severity.h
 )
 
-if(THIRD_PARTY AND NOT DOWNLOAD_THIRD_PARTY)
+if(THIRD_PARTY AND NOT PRECOMPILED_THIRD_PARTY)
 
 ExternalProject_Add(glog
     DEPENDS gflags_copy_headers_to_destination gflags_copy_libs_to_destination
@@ -74,4 +74,4 @@ add_custom_target(glog_copy_libs_to_destination
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GLOG_BUILD_STATIC_LIBRARIES} ${GLOG_LIBRARY_DIR}
   DEPENDS glog_create_library_dir)
 
-endif(THIRD_PARTY AND NOT DOWNLOAD_THIRD_PARTY)
+endif(THIRD_PARTY AND NOT PRECOMPILED_THIRD_PARTY)
