@@ -211,7 +211,7 @@ int32_t KernelIfWithModel<device_type, T>::CalcInstanceNumSum(
 template<DeviceType device_type, typename T>
 void KernelIfWithModel<device_type, T>::SetTotalInstanceNumDiffBlob(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CHECK_GT(this->op_attribute().model_bns().size(), 1);
+  CHECK_GE(this->op_attribute().model_bns().size(), 2);
   int32_t instance_num_sum = CalcInstanceNumSum(0, BnInOp2Blob);
   FOR_RANGE(int32_t, i, 1, this->op_attribute().output_diff_bns_size()) {
     CHECK_EQ(instance_num_sum, CalcInstanceNumSum(i, BnInOp2Blob));
