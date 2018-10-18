@@ -8,7 +8,7 @@ int32_t LossKernel<device_type, PredType, LabelType>::CalcInstanceNumSum(
   int32_t instance_num_sum = 0;
   Blob* label_blob = BnInOp2Blob("label");
   if (label_blob->has_dim0_valid_num_field()) {
-    for (int32_t i = 0; i < label_blob->dim0_inner_shape().At(0); i++) {
+    FOR_RANGE(int32_t, i, 0, label_blob->dim0_inner_shape().At(0)) {
       instance_num_sum += label_blob->dim0_valid_num(i);
     }
   } else {
@@ -16,6 +16,7 @@ int32_t LossKernel<device_type, PredType, LabelType>::CalcInstanceNumSum(
   }
   return instance_num_sum;
 }
+
 template<DeviceType device_type, typename PredType, typename LabelType>
 void LossKernel<device_type, PredType, LabelType>::SetTotalInstanceNumDiffBlob(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
