@@ -21,7 +21,7 @@ class MomentumMdUpdateKernel final : public NormalMdUpdateKernel<device_type, T>
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
  private:
-  void UpdateModel(DeviceCtx* ctx, int64_t batch_size, T learning_rate, T l1, T l2,
+  void UpdateModel(DeviceCtx* ctx, const T* batch_instance_num_ptr, T learning_rate, T l1, T l2,
                    int64_t next_model_vid,
                    std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
@@ -29,8 +29,8 @@ class MomentumMdUpdateKernel final : public NormalMdUpdateKernel<device_type, T>
 template<DeviceType device_type, typename T>
 class MomentumMdUpdateKernelUtil final {
  public:
-  static void UpdateModel(DeviceCtx*, int64_t n, int64_t batch_size, T beta, T learning_rate, T l1,
-                          T l2, const T* model_diff, T* model, T* momentum);
+  static void UpdateModel(DeviceCtx*, int64_t n, const T* batch_instance_num_ptr, T beta,
+                          T learning_rate, T l1, T l2, const T* model_diff, T* model, T* momentum);
 };
 
 DECLARE_MDUPDT_KERNEL_CREATOR(Momentum);
