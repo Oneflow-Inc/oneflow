@@ -36,11 +36,12 @@ class ArrayBufferBase {
   ~ArrayBufferBase() = delete;
 
   static const size_t ElemCnt = N;
-  using ArrayType = std::array<T, N>;
+  using ElemType = typename std::remove_const<T>::type;
+  using ArrayType = std::array<ElemType, N>;
   using Impl = ImplT;
 
-  static const Impl* Cast(const T* ptr) { return reinterpret_cast<const Impl*>(ptr); }
-  static Impl* MutCast(T* ptr) { return reinterpret_cast<Impl*>(ptr); }
+  static const Impl* Cast(const ElemType* ptr) { return reinterpret_cast<const Impl*>(ptr); }
+  static Impl* MutCast(ElemType* ptr) { return reinterpret_cast<Impl*>(ptr); }
 
   const ArrayType& elem() const { return elem_; }
   ArrayType& mut_elem() { return elem_; }
@@ -143,8 +144,6 @@ template<typename T, template<typename> class BBoxBaseT>
 struct BBoxImpl<T, BBoxBaseT, BBoxCoord::kCorner> final
     : public BBoxIf<BBoxImpl<T, BBoxBaseT, BBoxCoord::kCorner>>,
       public BBoxBaseT<BBoxImpl<T, BBoxBaseT, BBoxCoord::kCorner>> {
-  using ElemType = T;
-
   T left() const { return this->bbox_elem(0); }
   T top() const { return this->bbox_elem(1); }
   T right() const { return this->bbox_elem(2); }
@@ -211,11 +210,6 @@ class IndexSequence {
   IndexSequence(size_t capacity, int32_t* index_buf, bool init_index = false)
       : IndexSequence(capacity, capacity, index_buf, init_index) {}
 
-  void Truncate(size_t size) {
-    CHECK_LE(size, capacity_);
-    size_ = size;
-  }
-
   void Assign(const IndexSequence& other) {
     CHECK_LE(other.size(), capacity_);
     FOR_RANGE(size_t, i, 0, other.size()) { index_buf_[i] = other.GetIndex(i); }
@@ -234,11 +228,6 @@ class IndexSequence {
     size_ += other.size();
   }
 
-  void PushBack(int32_t index) {
-    CHECK_LT(size_, capacity_);
-    index_buf_[size_++] = index;
-  }
-
   size_t Find(const std::function<bool(int32_t)>& Condition) const {
     FOR_RANGE(size_t, i, 0, this->size()) {
       if (Condition(GetIndex(i))) { return i; }
@@ -246,11 +235,11 @@ class IndexSequence {
     return this->size();
   }
 
-  void Filter(const std::function<bool(size_t, int32_t)>& FilterFunc) {
+  void Filter(const std::function<bool(int32_t)>& FilterFunc) {
     size_t keep_num = 0;
     FOR_RANGE(size_t, i, 0, size_) {
       int32_t cur_index = GetIndex(i);
-      if (!FilterFunc(i, cur_index)) {
+      if (!FilterFunc(cur_index)) {
         // keep_num <= i so index_ptr_ never be written before read
         mut_index()[keep_num++] = cur_index;
       }
@@ -273,10 +262,20 @@ class IndexSequence {
 
   void Shuffle() { Shuffle(0, size_); }
 
-  void ForEach(const std::function<bool(size_t, int32_t)>& DoNext) {
+  void ForEach(const std::function<bool(int32_t)>& DoNext) {
     FOR_RANGE(size_t, i, 0, size_) {
-      if (!DoNext(i, GetIndex(i))) { break; }
+      if (!DoNext(GetIndex(i))) { break; }
     }
+  }
+
+  void Truncate(size_t size) {
+    CHECK_LE(size, capacity_);
+    size_ = size;
+  }
+
+  void PushBack(int32_t index) {
+    CHECK_LT(size_, capacity_);
+    index_buf_[size_++] = index;
   }
 
   int32_t GetIndex(size_t n) const {
@@ -308,19 +307,13 @@ class BBoxIndices<Indices, Impl<T, Base, Coord>> : public Indices {
 
   BBoxIndices(const Indices& inds, T* bbox_buf) : Indices(inds), bbox_buf_(bbox_buf) {}
 
-  void FilterByBBox(const std::function<bool(size_t, int32_t, const BBox*)>& FilterFunc) {
-    this->Filter([&](size_t n, int32_t index) { return FilterFunc(n, index, bbox(index)); });
-  }
-
-  void SortByBBox(const std::function<bool(const BBox*, const BBox*)>& Compare) {
-    this->Sort([&](int32_t lhs_index, int32_t rhs_index) {
-      return Compare(bbox(lhs_index), bbox(rhs_index));
-    });
-  }
-
   const BBox* GetBBox(size_t n) const {
     CHECK_LT(n, this->size());
     return BBox::Cast(bbox_buf_) + this->GetIndex(n);
+  }
+  BBox* GetMutBBox(size_t n) {
+    CHECK_LT(n, this->size());
+    return BBox::MutCast(bbox_buf_) + this->GetIndex(n);
   }
   const BBox* bbox(int32_t index) const {
     CHECK_GE(index, 0);
@@ -342,38 +335,22 @@ class LabelIndices : public Indices {
  public:
   LabelIndices(const Indices& inds, int32_t* label_buf) : Indices(inds), label_buf_(label_buf) {}
 
-  void AssignLabel(int32_t begin, int32_t end, int32_t label) {
-    CHECK_GE(begin, 0);
-    CHECK_GE(end, begin);
-    std::fill(label_buf_ + begin, label_buf_ + end, label);
+  void FillLabels(int32_t begin_index, int32_t end_index, int32_t label) {
+    CHECK_GE(begin_index, 0);
+    CHECK_LE(begin_index, end_index);
+    CHECK_LE(end_index, this->capacity());
+    std::fill(label_buf_ + begin_index, label_buf_ + end_index, label);
   }
-
-  void AssignLabel(int32_t label) { AssignLabel(0, this->capacity(), label); }
-
-  void SortByLabel(const std::function<bool(int32_t, int32_t)>& Compare) {
-    this->Sort([&](int32_t lhs_index, int32_t rhs_index) {
-      return Compare(label(lhs_index), label(rhs_index));
-    });
-  }
-
-  size_t FindByLabel(const std::function<bool(int32_t)>& Condition) const {
-    return this->Find([&](int32_t index) { return Condition(label(index)); });
-  }
-
-  void ForEachLabel(const std::function<bool(size_t, int32_t, int32_t)>& DoNext) {
-    this->ForEach([&](size_t n, int32_t index) { return DoNext(n, index, label(index)); });
-  }
+  void FillLabels(int32_t label) { FillLabels(0, this->capacity(), label); }
 
   int32_t GetLabel(size_t n) const {
     CHECK_LT(n, this->size());
     return label(this->GetIndex(n));
   }
-
   void SetLabel(size_t n, int32_t label) {
     CHECK_LT(n, this->size());
     set_label(this->GetIndex(n), label);
   }
-
   int32_t label(int32_t index) const {
     CHECK_GE(index, 0);
     return label_buf_[index];
@@ -432,50 +409,36 @@ class ScoreIndices : public Indices {
 };
 
 template<typename Indices>
-class MaxOverlapWithGtIndices : public Indices {
+class MaxOverlapIndices : public Indices {
  public:
-  MaxOverlapWithGtIndices(const Indices& inds, float* max_overlap_buf,
-                          int32_t* max_overlap_gt_index_buf, bool init_max_overlap)
+  MaxOverlapIndices(const Indices& inds, float* max_overlap_buf,
+                    int32_t* max_overlap_with_index_buf, bool init_max_overlap)
       : Indices(inds),
         max_overlap_buf_(max_overlap_buf),
-        max_overlap_gt_index_buf_(max_overlap_gt_index_buf) {
+        max_overlap_with_index_buf_(max_overlap_with_index_buf) {
     if (init_max_overlap) {
       memset(max_overlap_buf, 0, this->capacity() * sizeof(float));
-      std::fill(max_overlap_gt_index_buf_, max_overlap_gt_index_buf_ + this->capacity(), -1);
+      std::fill(max_overlap_with_index_buf_, max_overlap_with_index_buf_ + this->capacity(), -1);
     }
   }
 
-  void UpdateMaxOverlap(int32_t index, int32_t gt_index, float overlap,
-                        const std::function<void()>& DoUpdateHandle = []() {}) {
+  void TryUpdateMaxOverlap(int32_t index, int32_t with_index, float overlap,
+                           const std::function<void()>& DoUpdateHandle = []() {}) {
     CHECK_GE(index, 0);
     if (overlap > max_overlap(index)) {
       set_max_overlap(index, overlap);
-      set_max_overlap_gt_index(index, gt_index);
+      set_max_overlap_with_index(index, with_index);
       DoUpdateHandle();
     }
-  }
-
-  void SortByMaxOverlap(const std::function<bool(float, float)>& Compare) {
-    this->Sort([&](int32_t lhs_index, int32_t rhs_index) {
-      return Compare(max_overlap(lhs_index), max_overlap(rhs_index));
-    });
-  }
-
-  size_t FindByMaxOverlap(const std::function<bool(float)>& Condition) {
-    return this->Find([&](int32_t index) { return Condition(max_overlap(index)); });
-  }
-
-  void ForEachMaxOverlap(const std::function<bool(size_t, int32_t, float)>& DoNext) {
-    this->ForEach([&](size_t n, int32_t index) { return DoNext(n, index, max_overlap(index)); });
   }
 
   float GetMaxOverlap(size_t n) const {
     CHECK_LT(n, this->size());
     return max_overlap(this->GetIndex(n));
   }
-  int32_t GetMaxOverlapGtIndex(size_t n) const {
+  int32_t GetMaxOverlapWithIndex(size_t n) const {
     CHECK_LT(n, this->size());
-    return max_overlap_gt_index(this->GetIndex(n));
+    return max_overlap_with_index(this->GetIndex(n));
   }
   float max_overlap(int32_t index) const {
     if (index < 0) { return 1; }
@@ -485,28 +448,31 @@ class MaxOverlapWithGtIndices : public Indices {
     CHECK_GE(index, 0);
     max_overlap_buf_[index] = overlap;
   }
-  int32_t max_overlap_gt_index(int32_t index) const {
+  int32_t max_overlap_with_index(int32_t index) const {
     if (index < 0) { return -index - 1; }
-    return max_overlap_gt_index_buf_[index];
+    return max_overlap_with_index_buf_[index];
   }
-  void set_max_overlap_gt_index(int32_t index, int32_t gt_index) {
+  void set_max_overlap_with_index(int32_t index, int32_t with_index) {
     CHECK_GE(index, 0);
-    max_overlap_gt_index_buf_[index] = gt_index;
+    max_overlap_with_index_buf_[index] = with_index;
   }
 
  private:
   float* max_overlap_buf_;
-  int32_t* max_overlap_gt_index_buf_;
+  int32_t* max_overlap_with_index_buf_;
 };
 
 template<typename BBox>
 struct BBoxUtil final {
   using T = typename BBox::ElemType;
   using BBoxIndicesT = BBoxIndices<IndexSequence, BBox>;
-  
-  static size_t BBoxUtil<BBox>::GenerateAnchors(const AnchorGeneratorConf& conf, T* anchors_ptr);
+
+  static size_t GenerateAnchors(const AnchorGeneratorConf& conf, T* anchors_ptr);
   static void Nms(float thresh, const BBoxIndicesT& pre_nms_bbox_inds,
                   BBoxIndicesT& post_nms_bbox_inds);
+  static void ForEachOverlapBetweenBoxesAndGtBoxes(
+      const BBoxIndicesT& boxes, const BBoxIndicesT& gt_boxes,
+      const std::function<void(int32_t, int32_t, float)>& Handler);
 };
 
 }  // namespace oneflow

@@ -843,7 +843,7 @@ message AnchorTargetOpConf {
   repeated AnchorGeneratorConf anchor_generator_conf = 6;
   required float positive_overlap_threshold = 7 [default = 0.7];
   required float negative_overlap_threshold = 8 [default = 0.3];
-  required int32 subsample_num = 9 [default = 256];
+  required int32 total_subsample_num = 9 [default = 256];
   required float foreground_fraction = 10 [default = 0.5];
   required BBoxRegressionWeights bbox_reg_weights = 11;
   optional float straddle_thresh = 12 [default = 0.0];

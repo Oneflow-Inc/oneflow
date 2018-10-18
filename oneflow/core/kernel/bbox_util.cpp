@@ -13,7 +13,7 @@ size_t BBoxUtil<BBox>::GenerateAnchors(const AnchorGeneratorConf& conf, T* ancho
   const int32_t scales_size = conf.anchor_scales_size();
   const int32_t ratios_size = conf.aspect_ratios_size();
   const int32_t num_anchors = scales_size * ratios_size;
-  
+
   const float base_ctr = 0.5 * (fm_stride - 1);
   std::vector<T> base_anchors_vec(num_anchors * BBox::ElemCnt);
   // scale first, ratio last
@@ -36,10 +36,9 @@ size_t BBoxUtil<BBox>::GenerateAnchors(const AnchorGeneratorConf& conf, T* ancho
     FOR_RANGE(int32_t, w, 0, width) {
       auto* anchor_bbox = BBox::MutCast(anchors_ptr) + (h * width + w) * num_anchors;
       FOR_RANGE(int32_t, i, 0, num_anchors) {
-        anchor_bbox[i].set_corner_coord(base_anchors[i].left() + w * fm_stride, 
-                                        base_anchors[i].top() + w * fm_stride,
-                                        base_anchors[i].right() + w * fm_stride,
-                                        base_anchors[i].bottom() + w * fm_stride);
+        anchor_bbox[i].set_corner_coord(
+            base_anchors[i].left() + w * fm_stride, base_anchors[i].top() + w * fm_stride,
+            base_anchors[i].right() + w * fm_stride, base_anchors[i].bottom() + w * fm_stride);
       }
     }
   }
@@ -71,9 +70,24 @@ void BBoxUtil<BBox>::Nms(float thresh, const BBoxIndicesT& pre_nms_bbox_inds,
   CHECK_LE(post_nms_bbox_inds.size(), pre_nms_bbox_inds.size());
 }
 
-#define INITIATE_BBOX_UTIL(T, type_cpp)                                \
-  template struct BBoxUtil<BBoxImpl<T, BBoxBase, BBoxCoord::kCorner>>; \
-  template struct BBoxUtil<BBoxImpl<T, ImIndexedBBoxBase, BBoxCoord::kCorner>>;
+template<typename BBox>
+void BBoxUtil<BBox>::ForEachOverlapBetweenBoxesAndGtBoxes(
+    const BBoxIndicesT& boxes, const BBoxIndicesT& gt_boxes,
+    const std::function<void(int32_t, int32_t, float)>& Handler) {
+  FOR_RANGE(size_t, i, 0, gt_boxes.size()) {
+    FOR_RANGE(size_t, j, 0, boxes.size()) {
+      float overlap = boxes.GetBBox(j)->InterOverUnion(gt_boxes.GetBBox(i));
+      Handler(boxes.GetIndex(j), gt_boxes.GetIndex(i), overlap);
+    }
+  }
+}
+
+#define INITIATE_BBOX_UTIL(T, type_cpp)                                         \
+  template struct BBoxUtil<BBoxImpl<T, BBoxBase, BBoxCoord::kCorner>>;          \
+  template struct BBoxUtil<BBoxImpl<T, ImIndexedBBoxBase, BBoxCoord::kCorner>>; \
+  template struct BBoxUtil<BBoxImpl<const T, BBoxBase, BBoxCoord::kCorner>>;    \
+  template struct BBoxUtil<BBoxImpl<const T, ImIndexedBBoxBase, BBoxCoord::kCorner>>;
+
 OF_PP_FOR_EACH_TUPLE(INITIATE_BBOX_UTIL, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
