@@ -223,4 +223,11 @@ void Blob::CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   }
 }
 
+size_t Blob::CalcDim0ValidNumSum() const {
+  if (dim0_valid_num_ptr() == nullptr) { return static_shape().At(0); }
+  size_t sum = 0;
+  FOR_RANGE(int64_t, i, 0, dim0_inner_shape().At(0)) { sum += dim0_valid_num(i); }
+  return sum;
+}
+
 }  // namespace oneflow
