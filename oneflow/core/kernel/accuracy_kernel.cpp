@@ -3,7 +3,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename PredType, typename LabelType>
-int32_t AccuracyKernel<device_type, PredType, LabelType>::AddInstanceNum(
+int32_t AccuracyKernel<device_type, PredType, LabelType>::CalcInstanceNumSum(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   int32_t instance_num_sum = 0;
   Blob* label_blob = BnInOp2Blob("label");
@@ -16,10 +16,11 @@ int32_t AccuracyKernel<device_type, PredType, LabelType>::AddInstanceNum(
   }
   return instance_num_sum;
 }
+
 template<DeviceType device_type, typename PredType, typename LabelType>
-void AccuracyKernel<device_type, PredType, LabelType>::SetInstanceNumSum(
+void AccuracyKernel<device_type, PredType, LabelType>::SetTotalInstanceNumDiffBlob(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  int32_t instance_num_sum = AddInstanceNum(BnInOp2Blob);
+  int32_t instance_num_sum = CalcInstanceNumSum(BnInOp2Blob);
   KernelUtil<device_type, PredType>::Set(
       ctx.device_ctx, static_cast<PredType>(instance_num_sum),
       BnInOp2Blob("accuracy_instance_num")->mut_dptr<PredType>());
@@ -41,7 +42,7 @@ void AccuracyKernel<device_type, PredType, LabelType>::ForwardDataContent(
   AccuracyKernelUtil<device_type, PredType, LabelType>::Forward(
       ctx.device_ctx, N, D, top_k, X->dptr<PredType>(), label->dptr<LabelType>(),
       accuracy->mut_dptr<PredType>());
-  SetInstanceNumSum(ctx, BnInOp2Blob);
+  SetTotalInstanceNumDiffBlob(ctx, BnInOp2Blob);
 }
 
 template<typename PredType, typename LabelType>
