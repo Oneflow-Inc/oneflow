@@ -195,10 +195,10 @@ template<DeviceType device_type, typename T>
 void KernelIfWithModel<device_type, T>::SetDim0ValidNumSum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CHECK_GE(this->op_attribute().model_bns().size(), 2);
-  int32_t instance_num_sum =
+  int32_t dim0_valid_num_sum =
       BnInOp2Blob(this->op_attribute().output_diff_bns(0))->CalcDim0ValidNumSum();
   Blob* total_instance_num_diff_blob = BnInOp2Blob("total_instance_num_diff");
-  KernelUtil<device_type, T>::Set(ctx.device_ctx, static_cast<T>(instance_num_sum),
+  KernelUtil<device_type, T>::Set(ctx.device_ctx, static_cast<T>(dim0_valid_num_sum),
                                   total_instance_num_diff_blob->mut_dptr<T>());
 }
 

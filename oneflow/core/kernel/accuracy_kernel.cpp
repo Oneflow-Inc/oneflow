@@ -6,9 +6,10 @@ template<DeviceType device_type, typename PredType, typename LabelType>
 void AccuracyKernel<device_type, PredType, LabelType>::SetDim0ValidNumSum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CHECK_GE(this->op_attribute().input_bns().size(), 2);
-  int32_t instance_num_sum = BnInOp2Blob(this->op_attribute().input_bns(0))->CalcDim0ValidNumSum();
+  int32_t dim0_valid_num_sum =
+      BnInOp2Blob(this->op_attribute().input_bns(0))->CalcDim0ValidNumSum();
   KernelUtil<device_type, PredType>::Set(
-      ctx.device_ctx, static_cast<PredType>(instance_num_sum),
+      ctx.device_ctx, static_cast<PredType>(dim0_valid_num_sum),
       BnInOp2Blob("accuracy_instance_num")->mut_dptr<PredType>());
 }
 
