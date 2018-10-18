@@ -96,8 +96,8 @@ class Kernel {
   }
   virtual void BackwardActivation(const KernelCtx& ctx, const Blob* out_blob,
                                   const Blob* out_diff_blob, Blob* bw_activation_blob) const {}
-  virtual void SetDim0ValidNumSum(const KernelCtx& ctx,
-                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  virtual void SetTotalInstanceNumDiffBlob(
+      const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
   virtual const PbMessage& GetCustomizedOpConf() const { UNIMPLEMENTED(); }
@@ -170,8 +170,9 @@ class KernelIfWithModel : virtual public KernelIf<device_type> {
   virtual ~KernelIfWithModel() = default;
 
  private:
-  void SetDim0ValidNumSum(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void SetTotalInstanceNumDiffBlob(
+      const KernelCtx& ctx,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
 
  protected:
   KernelIfWithModel() = default;
