@@ -355,7 +355,7 @@ void LogicalGraph::BuildLossPrintStruct() {
     loss_print_op_conf.set_name(LossPrintPrefix + loss_op->op_name());
     loss_print_op_conf.set_device_type(DeviceType::kCPU);
 
-    auto loss_print_conf = loss_print_op_conf.mutable_loss_print_conf();
+    auto* loss_print_conf = loss_print_op_conf.mutable_loss_print_conf();
     *(loss_print_conf->mutable_loss_lbi()) = reduce_loss_op->BnInOp2Lbi("out");
     *(loss_print_conf->mutable_loss_instance_num_lbi()->mutable_op_name()) = loss_op->op_name();
     *(loss_print_conf->mutable_loss_instance_num_lbi()->mutable_blob_name()) = "loss_instance_num";
@@ -395,7 +395,7 @@ void LogicalGraph::BuildAccuracyPrintStruct() {
     accuracy_print_op_conf.set_name(AccuracyPrintPrefix + accuracy_op->op_name());
     accuracy_print_op_conf.set_device_type(DeviceType::kCPU);
 
-    auto accuracy_print_conf = accuracy_print_op_conf.mutable_accuracy_print_conf();
+    auto* accuracy_print_conf = accuracy_print_op_conf.mutable_accuracy_print_conf();
     accuracy_print_conf->set_top_k_print(accuracy_op->op_conf().accuracy_conf().top_k());
     *(accuracy_print_conf->mutable_accuracy_lbi()) = accuracy_op->BnInOp2Lbi("accuracy");
     *(accuracy_print_conf->mutable_accuracy_instance_num_lbi()->mutable_op_name()) =

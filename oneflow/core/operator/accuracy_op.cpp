@@ -41,6 +41,17 @@ void AccuracyOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   accuracy_instance_num_blob_desc->set_has_data_id_field(pred_blob_desc->has_data_id_field());
 }
 
+LogicalBlobId AccuracyOp::obn2lbi(const std::string& output_bn) const {
+  LogicalBlobId ret;
+  ret.set_op_name(op_name());
+  if (output_bn == "accuracy_instance_num") {
+    ret.set_blob_name("accuracy_instance_num");
+  } else {
+    ret.set_blob_name(GetValFromCustomizedConf<std::string>(output_bn));
+  }
+  return ret;
+}
+
 REGISTER_OP(OperatorConf::kAccuracyConf, AccuracyOp);
 
 }  // namespace oneflow

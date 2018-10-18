@@ -3,7 +3,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename PredType, typename LabelType>
-void AccuracyKernel<device_type, PredType, LabelType>::SetTotalInstanceNumDiffBlob(
+void AccuracyKernel<device_type, PredType, LabelType>::SetDim0ValidNumSum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CHECK_GE(this->op_attribute().input_bns().size(), 2);
   int32_t instance_num_sum = BnInOp2Blob(this->op_attribute().input_bns(0))->CalcDim0ValidNumSum();
@@ -28,7 +28,7 @@ void AccuracyKernel<device_type, PredType, LabelType>::ForwardDataContent(
   AccuracyKernelUtil<device_type, PredType, LabelType>::Forward(
       ctx.device_ctx, N, D, top_k, X->dptr<PredType>(), label->dptr<LabelType>(),
       accuracy->mut_dptr<PredType>());
-  SetTotalInstanceNumDiffBlob(ctx, BnInOp2Blob);
+  SetDim0ValidNumSum(ctx, BnInOp2Blob);
 }
 
 template<typename PredType, typename LabelType>

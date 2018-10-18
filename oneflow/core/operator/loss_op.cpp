@@ -54,4 +54,17 @@ void LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   VirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
+LogicalBlobId LossOp::obn2lbi(const std::string& output_bn) const {
+  LogicalBlobId ret;
+  ret.set_op_name(op_name());
+  if (output_bn == "loss_instance_num") {
+    ret.set_blob_name("loss_instance_num");
+  } else if (output_bn == "reduction_coefficient") {
+    ret.set_blob_name("reduction_coefficient");
+  } else {
+    ret.set_blob_name(GetValFromCustomizedConf<std::string>(output_bn));
+  }
+  return ret;
+}
+
 }  // namespace oneflow

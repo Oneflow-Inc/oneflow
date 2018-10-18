@@ -8,19 +8,21 @@ void LossPrintKernel<T>::Forward(const KernelCtx& kernel_ctx,
                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (HasEmptyShapeBlob(this->op_attribute().input_bns(), BnInOp2Blob)) { return; }
   const Blob* loss_acc_blob = BnInOp2Blob("loss_acc");
-  const Blob* loss_instance_num_blob = BnInOp2Blob("loss_instance_num");
-  const Blob* reduction_acc_blob = BnInOp2Blob("reduction_acc");
   T loss_reduced = loss_acc_blob->dptr<T>()[0];
   T reduction_coefficient = -1.0;
-  if (loss_instance_num_blob != nullptr) {
-    reduction_coefficient = loss_instance_num_blob->dptr<T>()[0];
-  } else if (reduction_acc_blob != nullptr) {
+  const Blob* reduction_acc_blob = BnInOp2Blob("reduction_acc");
+  if (reduction_acc_blob != nullptr) {
     reduction_coefficient = reduction_acc_blob->dptr<T>()[0];
   } else {
-    auto conf = op_conf().loss_print_conf();
-    reduction_coefficient = GetReductionCoefficient(
-        conf.weight_scalar(), conf.reduction_type(),
-        Global<JobDesc>::Get()->PieceSize() * Global<JobDesc>::Get()->PieceNumOfPrintLoss());
+    const Blob* loss_instance_num_blob = BnInOp2Blob("loss_instance_num");
+    if (loss_instance_num_blob != nullptr) {
+      reduction_coefficient = loss_instance_num_blob->dptr<T>()[0];
+    } else {
+      auto conf = op_conf().loss_print_conf();
+      reduction_coefficient = GetReductionCoefficient(
+          conf.weight_scalar(), conf.reduction_type(),
+          Global<JobDesc>::Get()->PieceSize() * Global<JobDesc>::Get()->PieceNumOfPrintLoss());
+    }
   }
   loss_reduced /= reduction_coefficient;
   const char* loss_op_name = op_conf().name().c_str() + LossPrintPrefix.length();

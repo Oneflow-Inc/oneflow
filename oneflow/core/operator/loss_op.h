@@ -32,18 +32,7 @@ class LossOp : public Operator {
                             KernelConf* kernel_conf) const override;
 
  private:
-  LogicalBlobId obn2lbi(const std::string& output_bn) const override {
-    LogicalBlobId ret;
-    ret.set_op_name(op_name());
-    if (output_bn == "loss_instance_num") {
-      ret.set_blob_name("loss_instance_num");
-    } else if (output_bn == "reduction_coefficient") {
-      ret.set_blob_name("reduction_coefficient");
-    } else {
-      ret.set_blob_name(GetValFromCustomizedConf<std::string>(output_bn));
-    }
-    return ret;
-  }
+  LogicalBlobId obn2lbi(const std::string& output_bn) const override;
 };
 
 }  // namespace oneflow

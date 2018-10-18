@@ -23,16 +23,7 @@ class AccuracyOp final : public Operator {
                             const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const;
 
  private:
-  LogicalBlobId obn2lbi(const std::string& output_bn) const override {
-    LogicalBlobId ret;
-    ret.set_op_name(op_name());
-    if (output_bn == "accuracy_instance_num") {
-      ret.set_blob_name("accuracy_instance_num");
-    } else {
-      ret.set_blob_name(GetValFromCustomizedConf<std::string>(output_bn));
-    }
-    return ret;
-  }
+  LogicalBlobId obn2lbi(const std::string& output_bn) const override;
 };
 
 }  // namespace oneflow

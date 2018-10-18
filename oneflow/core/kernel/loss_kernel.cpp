@@ -3,7 +3,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename PredType, typename LabelType>
-void LossKernel<device_type, PredType, LabelType>::SetTotalInstanceNumDiffBlob(
+void LossKernel<device_type, PredType, LabelType>::SetDim0ValidNumSum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CHECK_GE(this->op_attribute().input_bns().size(), 2);
   int32_t instance_num_sum = BnInOp2Blob(this->op_attribute().input_bns(0))->CalcDim0ValidNumSum();
@@ -15,7 +15,7 @@ template<DeviceType device_type, typename PredType, typename LabelType>
 void LossKernel<device_type, PredType, LabelType>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   VirtualLossForwardDataContent(ctx, BnInOp2Blob);
-  SetTotalInstanceNumDiffBlob(ctx, BnInOp2Blob);
+  SetDim0ValidNumSum(ctx, BnInOp2Blob);
 
   const LossKernelConf& conf = GetLossKernelConf(this->kernel_conf());
   int64_t n = BnInOp2Blob("prediction")->shape().At(0);
