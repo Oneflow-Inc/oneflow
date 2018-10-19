@@ -3,14 +3,17 @@
 ### 1.1 Linux 
 
 ### Build
-Install some required software through:
+
+####install some required software
+
+Several basic dependencies:
 
 ```
     sudo yum -y install epel-release
     sudo yum -y install git gcc-c++ cmake3 kernel-devel-$(uname -r) nasm
 ```
 
-Install GPU support (optional):
+GPU support (optional):
 
  - [NVIDIA GPU drivers and CUDA Toolkit](https://developer.nvidia.com/cuda-90-download-archive)
  - [cuDNN SDK](https://developer.nvidia.com/cudnn)
