@@ -62,7 +62,7 @@ void BBoxUtil<BBox>::Nms(float thresh, const BBoxIndicesT& pre_nms_bbox_inds,
   };
   FOR_RANGE(size_t, pre_nms_i, 0, pre_nms_bbox_inds.size()) {
     if (IsSuppressed(pre_nms_i)) { continue; }
-    post_nms_bbox_inds.mut_index()[keep_num++] = pre_nms_bbox_inds.GetIndex(pre_nms_i);
+    post_nms_bbox_inds.index()[keep_num++] = pre_nms_bbox_inds.GetIndex(pre_nms_i);
     if (keep_num == post_nms_bbox_inds.size()) { break; }
   }
   post_nms_bbox_inds.Truncate(keep_num);

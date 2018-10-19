@@ -59,17 +59,16 @@ AnchorTargetKernel<T>::GetImageAnchorBoxes(
     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   Blob* anchor_boxes_inds_blob = BnInOp2Blob("anchor_boxes_inds");
   anchor_boxes_inds_blob->CopyFrom(ctx.device_ctx, BnInOp2Blob("anchors_inside_inds"));
-  IndexSequence inds(anchor_boxes_inds_blob->static_shape().elem_cnt(),
-                     anchor_boxes_inds_blob->dim0_valid_num(0),
-                     anchor_boxes_inds_blob->mut_dptr<int32_t>(), false);
-
   MaxOverlapOfLabeledBoxesWithGt anchor_boxes(
-      MaxOverlapOfBoxesWithGt(AnchorBoxes(inds, BnInOp2Blob("anchors")->dptr<T>()),
-                              BnInOp2Blob("max_overlaps")->mut_dptr<float>(),
-                              BnInOp2Blob("max_overlaps_with_gt_index")->mut_dptr<int32_t>(), true),
+      MaxOverlapOfBoxesWithGt(
+          AnchorBoxes(IndexSequence(anchor_boxes_inds_blob->static_shape().elem_cnt(),
+                                    anchor_boxes_inds_blob->dim0_valid_num(0),
+                                    anchor_boxes_inds_blob->mut_dptr<int32_t>(), false),
+                      BnInOp2Blob("anchors")->dptr<T>()),
+          BnInOp2Blob("max_overlaps")->mut_dptr<float>(),
+          BnInOp2Blob("max_overlaps_with_gt_index")->mut_dptr<int32_t>(), true),
       BnInOp2Blob("anchor_boxes_labels")->mut_dptr<int32_t>());
   anchor_boxes.FillLabels(-1);
-
   return anchor_boxes;
 }
 
@@ -79,10 +78,10 @@ typename AnchorTargetKernel<T>::GtBoxes AnchorTargetKernel<T>::GetImageGtBoxes(
   const Blob* gt_boxes_blob = BnInOp2Blob("gt_boxes");
   Blob* gt_boxes_inds_blob = BnInOp2Blob("gt_boxes_inds");
   gt_boxes_inds_blob->set_dim0_valid_num(0, gt_boxes_blob->dim1_valid_num(im_index));
-  IndexSequence inds(gt_boxes_inds_blob->static_shape().elem_cnt(),
-                     gt_boxes_inds_blob->dim0_valid_num(0), gt_boxes_inds_blob->mut_dptr<int32_t>(),
-                     true);
-  GtBoxes gt_boxes(inds, gt_boxes_blob->dptr<T>(im_index));
+  GtBoxes gt_boxes(IndexSequence(gt_boxes_inds_blob->static_shape().elem_cnt(),
+                                 gt_boxes_inds_blob->dim0_valid_num(0),
+                                 gt_boxes_inds_blob->mut_dptr<int32_t>(), true),
+                   gt_boxes_blob->dptr<T>(im_index));
   gt_boxes.Filter([&](int32_t index) { return gt_boxes.bbox(index)->area() <= 0; });
   return gt_boxes;
 }

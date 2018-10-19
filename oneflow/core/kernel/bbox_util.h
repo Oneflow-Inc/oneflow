@@ -253,7 +253,7 @@ class IndexSequence {
       int32_t cur_index = GetIndex(i);
       if (!FilterFunc(cur_index)) {
         // keep_num <= i so index_ptr_ never be written before read
-        mut_index()[keep_num++] = cur_index;
+        index()[keep_num++] = cur_index;
       }
     }
     size_ = keep_num;
@@ -296,7 +296,7 @@ class IndexSequence {
   }
 
   const int32_t* index() const { return index_buf_; }
-  int32_t* mut_index() { return index_buf_; }
+  int32_t* index() { return index_buf_; }
   size_t capacity() const { return capacity_; }
   size_t size() const { return size_; };
 
@@ -424,11 +424,11 @@ template<typename Indices>
 class MaxOverlapIndices : public Indices {
  public:
   MaxOverlapIndices(const Indices& inds, float* max_overlap_buf,
-                    int32_t* max_overlap_with_index_buf, bool init_max_overlap)
+                    int32_t* max_overlap_with_index_buf, bool init)
       : Indices(inds),
         max_overlap_buf_(max_overlap_buf),
         max_overlap_with_index_buf_(max_overlap_with_index_buf) {
-    if (init_max_overlap) {
+    if (init) {
       memset(max_overlap_buf, 0, this->capacity() * sizeof(float));
       std::fill(max_overlap_with_index_buf_, max_overlap_with_index_buf_ + this->capacity(), -1);
     }
