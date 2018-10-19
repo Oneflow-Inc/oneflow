@@ -22,4 +22,5 @@ enum DataType {
   kInt32List16 = 17;
   kInt32List24 = 18;
   kUInt8 = 20;
+  kUInt32 = 21;
 }

@@ -38,7 +38,7 @@ void RleSegmentationResultOp::InferBlobDescs(
   Shape shape({mask_blob_desc->shape().At(0), conf.im_height() * conf.im_weight()});
   *out_blob_desc = *mask_blob_desc;
   out_blob_desc->mut_shape() = shape;
-  out_blob_desc->set_data_type(DataType::kUInt8);
+  out_blob_desc->set_data_type(DataType::kUInt32);
   out_blob_desc->set_has_dim1_valid_num_field(true);
 
   // padded_mask: (M_w + 2, M + 2).
