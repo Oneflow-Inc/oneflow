@@ -78,6 +78,7 @@ typename AnchorTargetKernel<T>::GtBoxes AnchorTargetKernel<T>::GetImageGtBoxes(
     size_t im_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const Blob* gt_boxes_blob = BnInOp2Blob("gt_boxes");
   Blob* gt_boxes_inds_blob = BnInOp2Blob("gt_boxes_inds");
+  gt_boxes_inds_blob->set_dim0_valid_num(0, gt_boxes_blob->dim1_valid_num(im_index));
   IndexSequence inds(gt_boxes_inds_blob->static_shape().elem_cnt(),
                      gt_boxes_inds_blob->dim0_valid_num(0), gt_boxes_inds_blob->mut_dptr<int32_t>(),
                      true);
@@ -99,7 +100,7 @@ void AnchorTargetKernel<T>::CalcMaxOverlapAndSetPositiveLabels(
       last_gt_index = gt_index;
     }
     if (overlap >= gt_max_overlap[gt_index]) {
-      if (overlap > gt_max_overlap[index]) { gt_max_overlap_with_indices.resize(num_recorded); }
+      if (overlap > gt_max_overlap[gt_index]) { gt_max_overlap_with_indices.resize(num_recorded); }
       gt_max_overlap[gt_index] = overlap;
       gt_max_overlap_with_indices.emplace_back(index);
     }
@@ -107,7 +108,7 @@ void AnchorTargetKernel<T>::CalcMaxOverlapAndSetPositiveLabels(
   // Set the anchor box whose max overlap with gt boxes greater than
   // threshold to positive label
   float positive_overlap_threshold = op_conf().anchor_target_conf().positive_overlap_threshold();
-  BBoxUtil<BBox>::ForEachOverlapBetweenBoxesAndGtBoxes(
+  ForEachOverlapBetweenBoxesAndGtBoxes(
       anchor_boxes, gt_boxes, [&](int32_t index, int32_t gt_index, float overlap) {
         anchor_boxes.TryUpdateMaxOverlap(index, gt_index, overlap, [&]() {
           if (overlap >= positive_overlap_threshold) { anchor_boxes.set_label(index, 1); }
@@ -207,14 +208,14 @@ void AnchorTargetKernel<T>::OutputForEachImage(
     auto* outside_weights = BBoxWeights<T>::MutCast(
         BnInOp2Blob("rpn_bbox_outside_weights_" + std::to_string(layer))->mut_dptr<T>(im_index));
     // Copy label to each layer output
-    std::memcpy(rpn_labels_ptr + layer_offset, boxes.label() + layer_offset,
-                num_per_layer * sizeof(int32_t));
-    FOR_RANGE(size_t, i, layer_offset, layer_offset + num_per_layer) {
-      int32_t label = boxes.label(i);
+    std::memcpy(rpn_labels_ptr, boxes.label() + layer_offset, num_per_layer * sizeof(int32_t));
+    FOR_RANGE(size_t, i, 0, num_per_layer) {
+      int32_t bbox_idx = layer_offset + i;
+      int32_t label = boxes.label(bbox_idx);
       // Calc bbox target and set inside weights for each layer output
       if (label == 1) {
-        const auto* box = boxes.bbox(i);
-        const auto* gt_box = gt_boxes.GetBBox(boxes.max_overlap_with_index(i));
+        const auto* box = boxes.bbox(bbox_idx);
+        const auto* gt_box = gt_boxes.GetBBox(boxes.max_overlap_with_index(bbox_idx));
         bbox_targets[i].TransformInverse(box, gt_box, bbox_reg_ws);
         inside_weights[i].set_weight_x(1.f);
         inside_weights[i].set_weight_y(1.f);

@@ -37,8 +37,8 @@ size_t BBoxUtil<BBox>::GenerateAnchors(const AnchorGeneratorConf& conf, T* ancho
       auto* anchor_bbox = BBox::MutCast(anchors_ptr) + (h * width + w) * num_anchors;
       FOR_RANGE(int32_t, i, 0, num_anchors) {
         anchor_bbox[i].set_corner_coord(
-            base_anchors[i].left() + w * fm_stride, base_anchors[i].top() + w * fm_stride,
-            base_anchors[i].right() + w * fm_stride, base_anchors[i].bottom() + w * fm_stride);
+            base_anchors[i].left() + w * fm_stride, base_anchors[i].top() + h * fm_stride,
+            base_anchors[i].right() + w * fm_stride, base_anchors[i].bottom() + h * fm_stride);
       }
     }
   }
@@ -68,18 +68,6 @@ void BBoxUtil<BBox>::Nms(float thresh, const BBoxIndicesT& pre_nms_bbox_inds,
   post_nms_bbox_inds.Truncate(keep_num);
 
   CHECK_LE(post_nms_bbox_inds.size(), pre_nms_bbox_inds.size());
-}
-
-template<typename BBox>
-void BBoxUtil<BBox>::ForEachOverlapBetweenBoxesAndGtBoxes(
-    const BBoxIndicesT& boxes, const BBoxIndicesT& gt_boxes,
-    const std::function<void(int32_t, int32_t, float)>& Handler) {
-  FOR_RANGE(size_t, i, 0, gt_boxes.size()) {
-    FOR_RANGE(size_t, j, 0, boxes.size()) {
-      float overlap = boxes.GetBBox(j)->InterOverUnion(gt_boxes.GetBBox(i));
-      Handler(boxes.GetIndex(j), gt_boxes.GetIndex(i), overlap);
-    }
-  }
 }
 
 #define INITIATE_BBOX_UTIL(T, type_cpp)                                         \

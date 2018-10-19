@@ -8,7 +8,7 @@
 
 namespace oneflow {
 
-enum class BBoxCoord { kCorner = 0, kCenter, kNormCorner, kNormCenter, kAlignCorner };
+enum class BBoxCoord { kCorner = 0, kCenter, kGtCorner, kNormCorner, kNormCenter, kAlignCorner };
 
 template<typename T, size_t N>
 class ArrayBuffer;
@@ -80,15 +80,13 @@ struct ImIndexedBBoxBase<BBoxImplT<T, ImIndexedBBoxBase, Coord>>
 template<template<typename, template<typename> class, BBoxCoord> class BBoxImplT, typename T,
          template<typename> class BBoxBaseT, BBoxCoord Coord>
 struct BBoxIf<BBoxImplT<T, BBoxBaseT, Coord>> {
-  template<typename U>
-  using OtherBBox = BBoxIf<BBoxImplT<U, BBoxBaseT, Coord>>;
   using Impl = BBoxImplT<T, BBoxBaseT, Coord>;
 
   Impl* impl() { return static_cast<Impl*>(this); }
   const Impl* impl() const { return static_cast<const Impl*>(this); }
 
   template<typename U>
-  float InterOverUnion(const OtherBBox<U>* other) const {
+  float InterOverUnion(const BBoxIf<U>* other) const {
     const float iw =
         std::min<float>(right(), other->right()) - std::max<float>(left(), other->left()) + 1.f;
     if (iw <= 0) { return 0.f; }
@@ -100,7 +98,7 @@ struct BBoxIf<BBoxImplT<T, BBoxBaseT, Coord>> {
   }
 
   template<typename U, typename V>
-  void Transform(const OtherBBox<U>* bbox, const BBoxDelta<V>* delta,
+  void Transform(const BBoxIf<U>* bbox, const BBoxDelta<V>* delta,
                  const BBoxRegressionWeights& bbox_reg_ws) {
     float dx = delta->dx() / bbox_reg_ws.weight_x();
     float dy = delta->dy() / bbox_reg_ws.weight_y();
@@ -141,7 +139,7 @@ struct BBoxIf<BBoxImplT<T, BBoxBaseT, Coord>> {
 };
 
 template<typename T, template<typename> class BBoxBaseT>
-struct BBoxImpl<T, BBoxBaseT, BBoxCoord::kCorner> final
+struct BBoxImpl<T, BBoxBaseT, BBoxCoord::kCorner>
     : public BBoxIf<BBoxImpl<T, BBoxBaseT, BBoxCoord::kCorner>>,
       public BBoxBaseT<BBoxImpl<T, BBoxBaseT, BBoxCoord::kCorner>> {
   T left() const { return this->bbox_elem(0); }
@@ -164,6 +162,20 @@ struct BBoxImpl<T, BBoxBaseT, BBoxCoord::kCorner> final
     this->set_bbox_elem(2, right);
     this->set_bbox_elem(3, bottom);
   }
+};
+
+template<typename T, template<typename> class BBoxBaseT>
+struct BBoxImpl<T, BBoxBaseT, BBoxCoord::kGtCorner>
+    : public BBoxIf<BBoxImpl<T, BBoxBaseT, BBoxCoord::kGtCorner>>,
+      public BBoxBaseT<BBoxImpl<T, BBoxBaseT, BBoxCoord::kGtCorner>> {
+  T left() const { return this->bbox_elem(0); }
+  T top() const { return this->bbox_elem(1); }
+  T right() const { return this->bbox_elem(2) - 1; }
+  T bottom() const { return this->bbox_elem(3) - 1; }
+  T center_x() const { return this->left() + 0.5f * this->width(); }
+  T center_y() const { return this->top() + 0.5f * this->height(); }
+  T width() const { return this->right() - this->left() + OneVal<T>::value; }
+  T height() const { return this->bottom() - this->top() + OneVal<T>::value; }
 };
 
 template<typename T>
@@ -462,6 +474,19 @@ class MaxOverlapIndices : public Indices {
   int32_t* max_overlap_with_index_buf_;
 };
 
+template<typename BBox, typename GtBBox>
+void ForEachOverlapBetweenBoxesAndGtBoxes(
+    const BBoxIndices<IndexSequence, BBox>& boxes,
+    const BBoxIndices<IndexSequence, GtBBox>& gt_boxes,
+    const std::function<void(int32_t, int32_t, float)>& Handler) {
+  FOR_RANGE(size_t, i, 0, gt_boxes.size()) {
+    FOR_RANGE(size_t, j, 0, boxes.size()) {
+      float overlap = boxes.GetBBox(j)->InterOverUnion(gt_boxes.GetBBox(i));
+      Handler(boxes.GetIndex(j), gt_boxes.GetIndex(i), overlap);
+    }
+  }
+}
+
 template<typename BBox>
 struct BBoxUtil final {
   using T = typename BBox::ElemType;
@@ -470,9 +495,6 @@ struct BBoxUtil final {
   static size_t GenerateAnchors(const AnchorGeneratorConf& conf, T* anchors_ptr);
   static void Nms(float thresh, const BBoxIndicesT& pre_nms_bbox_inds,
                   BBoxIndicesT& post_nms_bbox_inds);
-  static void ForEachOverlapBetweenBoxesAndGtBoxes(
-      const BBoxIndicesT& boxes, const BBoxIndicesT& gt_boxes,
-      const std::function<void(int32_t, int32_t, float)>& Handler);
 };
 
 }  // namespace oneflow
