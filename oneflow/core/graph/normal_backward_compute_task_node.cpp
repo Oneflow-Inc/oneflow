@@ -176,7 +176,14 @@ void NormalBackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
     }
 
     std::shared_ptr<RegstDesc> md_diff_regst = GetProducedRegst("model_diff");
-    if (md_diff_regst) { md_diff_regst->CopyBlobDescFrom(GetSoleConsumedRegst("model").get()); }
+    if (md_diff_regst) {
+      md_diff_regst->CopyBlobDescFrom(GetSoleConsumedRegst("model").get());
+      md_diff_regst->ForEachLbi([md_diff_regst](const LogicalBlobId& lbi) {
+        BlobDesc* blob_desc = md_diff_regst->MutBlobDesc(lbi);
+        blob_desc->set_has_dim0_valid_num_field(true);
+        blob_desc->mut_dim0_inner_shape() = Shape({1, blob_desc->shape().At(0)});
+      });
+    }
 
     std::shared_ptr<RegstDesc> activation_diff_regst = GetProducedRegst("activation_diff");
     activation_diff_regst->CopyBlobDescWithoutAddLbi(GetSoleConsumedRegst("activation").get());

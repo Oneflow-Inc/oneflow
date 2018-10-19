@@ -140,7 +140,6 @@ bool Blob::IsShapeEmpty() const {
 
 const Shape& Blob::dynamic_shape() const {
   size_t contiguous_instance_num = ContiguousDim0ValidNum();
-  CHECK_GT(contiguous_instance_num, 0);
   CHECK_LE(contiguous_instance_num, static_shape().At(0));
   if (dynamic_shape_.At(0) != contiguous_instance_num) {
     dynamic_shape_.Set(0, contiguous_instance_num);

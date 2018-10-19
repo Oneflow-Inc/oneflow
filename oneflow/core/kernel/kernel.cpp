@@ -171,6 +171,23 @@ void KernelIf<device_type>::BackwardDim0ValidNum(
   if (input_diff_bns.empty()) { return; }
   CopyField(ctx.device_ctx, BnInOp2Blob, BnInOp2Blob(op_attribute().output_diff_bns(0)),
             input_diff_bns, &Blob::CopyDim0ValidNumFrom);
+
+  if (op_attribute().model_diff_bns().size() > 0) {
+    bool is_out_diff_empty = HasEmptyShapeBlob(op_attribute().output_diff_bns(), BnInOp2Blob);
+    for (const std::string& bn : op_attribute().model_diff_bns()) {
+      Blob* blob = BnInOp2Blob(bn);
+      if (blob) {
+        CHECK(blob->has_dim0_inner_shape());
+        CHECK_EQ(1, blob->dim0_inner_shape().At(0));
+        CHECK(blob->has_dim0_valid_num_field());
+        if (is_out_diff_empty) {
+          blob->set_dim0_valid_num(0, 0);
+        } else {
+          blob->set_dim0_valid_num(0, blob->shape().At(0));
+        }
+      }
+    }
+  }
 }
 
 template<DeviceType device_type>
