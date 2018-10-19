@@ -1,77 +1,40 @@
-#include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/kernel/faster_rcnn_util.h"
 #include "oneflow/core/kernel/anchor_target_kernel.h"
 
 namespace oneflow {
 
-namespace {
-
-template<typename T>
-void SetBBoxTargets(int32_t index, int32_t label, const MaxOverlapIndex<BoxesIndex<T>>& boxes,
-                    const GtBoxes& gt_boxes, const BBoxRegressionWeights& bbox_reg_ws,
-                    BBoxDelta<T>* bbox_targets) {
-  if (label == 1) {
-    const BBox<T>* box = boxes.bbox(index);
-    const BBox<float>* gt_box = gt_boxes.GetBBox<float>(boxes.max_overlap_gt_index(index));
-    bbox_targets[index].TransformInverse(box, gt_box, bbox_reg_ws);
-  } else {
-    bbox_targets[index].set_dx(0.f);
-    bbox_targets[index].set_dy(0.f);
-    bbox_targets[index].set_dw(0.f);
-    bbox_targets[index].set_dh(0.f);
-  }
-}
-
-template<typename T>
-void SetBBoxInsideWeights(int32_t index, int32_t label, BBoxWeights<T>* inside_weights) {
-  if (label == 1) {
-    inside_weights[index].set_weight_x(1.f);
-    inside_weights[index].set_weight_y(1.f);
-    inside_weights[index].set_weight_w(1.f);
-    inside_weights[index].set_weight_h(1.f);
-  } else {
-    inside_weights[index].set_weight_x(0.f);
-    inside_weights[index].set_weight_y(0.f);
-    inside_weights[index].set_weight_w(0.f);
-    inside_weights[index].set_weight_h(0.f);
-  }
-}
-
-template<typename T>
-void SetBBoxOutsideWeights(int32_t index, int32_t label, float reduction_coefficient,
-                           BBoxWeights<T>* outside_weights) {
-  if (label == 1 || label == 0) {
-    outside_weights[index].set_weight_x(reduction_coefficient);
-    outside_weights[index].set_weight_y(reduction_coefficient);
-    outside_weights[index].set_weight_w(reduction_coefficient);
-    outside_weights[index].set_weight_h(reduction_coefficient);
-  } else {
-    outside_weights[index].set_weight_x(0.f);
-    outside_weights[index].set_weight_y(0.f);
-    outside_weights[index].set_weight_w(0.f);
-    outside_weights[index].set_weight_h(0.f);
-  }
-}
-
-}  // namespace
+namespace {}  // namespace
 
 template<typename T>
 void AnchorTargetKernel<T>::InitConstBufBlobs(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const AnchorTargetOpConf& conf = op_conf().anchor_target_conf();
+  const float straddle_thresh = conf.straddle_thresh();
+  int32_t im_height = -1;
+  int32_t im_width = -1;
   Blob* anchors_blob = BnInOp2Blob("anchors");
-  const AnchorTargetOpConf& anchor_target_conf = op_conf().anchor_target_conf();
-  const AnchorGeneratorConf& anchor_generator_conf = anchor_target_conf.anchor_generator_conf();
-  float straddle_thresh = anchor_target_conf.straddle_thresh();
-  FasterRcnnUtil<T>::GenerateAnchors(anchor_generator_conf, anchors_blob);
-  auto inside_inds = GenBoxesIndex(anchors_blob->shape().Count(0, 3),
-                                   BnInOp2Blob("inside_anchors_index")->mut_dptr<int32_t>(),
-                                   anchors_blob->dptr<T>(), true);
-  inside_inds.FilterByBBox([&](size_t n, int32_t index, const BBox<T>* bbox) {
-    return bbox->x1() < -straddle_thresh || bbox->y1() < -straddle_thresh
-           || bbox->x2() >= anchor_generator_conf.image_width() + straddle_thresh
-           || bbox->y2() >= anchor_generator_conf.image_height() + straddle_thresh;
+  Blob* inside_inds_blob = BnInOp2Blob("anchors_inside_inds");
+  size_t num_anchors = 0;
+  for (const AnchorGeneratorConf& anchor_generator_conf : conf.anchor_generator_conf()) {
+    if (im_height == -1) {
+      im_height = anchor_generator_conf.image_height();
+      im_width = anchor_generator_conf.image_width();
+    } else {
+      CHECK_EQ(im_height, anchor_generator_conf.image_height());
+      CHECK_EQ(im_width, anchor_generator_conf.image_width());
+    }
+    num_anchors += BBoxUtil<MutBBox>::GenerateAnchors(anchor_generator_conf,
+                                                      anchors_blob->mut_dptr<T>(num_anchors));
+  }
+  CHECK_EQ(num_anchors, anchors_blob->shape().At(0));
+
+  IndexSequence inside_inds(num_anchors, inside_inds_blob->mut_dptr<int32_t>(), true);
+  inside_inds.Filter([&](int32_t index) {
+    const BBox* bbox = BBox::Cast(anchors_blob->dptr<T>(index));
+    return bbox->left() < -straddle_thresh || bbox->top() < -straddle_thresh
+           || bbox->right() >= im_width + straddle_thresh
+           || bbox->bottom() >= im_height + straddle_thresh;
   });
-  *(BnInOp2Blob("inside_anchors_num")->mut_dptr<int32_t>()) = inside_inds.size();
+  inside_inds_blob->set_dim0_valid_num(0, inside_inds.size());
 }
 
 template<typename T>
@@ -80,80 +43,90 @@ void AnchorTargetKernel<T>::ForwardDataContent(
   FOR_RANGE(size_t, im_index, 0, BnInOp2Blob("gt_boxes")->shape().At(0)) {
     auto gt_boxes = GetImageGtBoxes(im_index, BnInOp2Blob);
     auto anchor_boxes = GetImageAnchorBoxes(ctx, im_index, BnInOp2Blob);
-    ComputeOverlapsAndSetLabels(gt_boxes, anchor_boxes);
+    CalcMaxOverlapAndSetPositiveLabels(gt_boxes, anchor_boxes);
     size_t fg_cnt = SubsampleForeground(anchor_boxes);
     size_t bg_cnt = SubsampleBackground(fg_cnt, anchor_boxes);
     // size_t fg_cnt = ChoiceForeground(anchor_boxes);
     // size_t bg_cnt = ChoiceBackground(fg_cnt, anchor_boxes);
-    ComputeTargetsAndWriteOutput(im_index, fg_cnt + bg_cnt, gt_boxes, anchor_boxes, BnInOp2Blob);
+    OutputForEachImage(im_index, fg_cnt + bg_cnt, gt_boxes, anchor_boxes, BnInOp2Blob);
   }
 }
 
 template<typename T>
-typename AnchorTargetKernel<T>::BoxesLabelAndMaxOverlap AnchorTargetKernel<T>::GetImageAnchorBoxes(
+typename AnchorTargetKernel<T>::MaxOverlapOfLabeledBoxesWithGt
+AnchorTargetKernel<T>::GetImageAnchorBoxes(
     const KernelCtx& ctx, size_t im_index,
     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  const Blob* anchors_blob = BnInOp2Blob("anchors");
-  Blob* anchor_boxes_index_blob = BnInOp2Blob("anchor_boxes_index");
-  anchor_boxes_index_blob->CopyDataContentFrom(ctx.device_ctx, BnInOp2Blob("inside_anchors_index"));
-  auto anchor_boxes =
-      GenBoxesIndex(anchors_blob->shape().Count(0, 3), anchor_boxes_index_blob->mut_dptr<int32_t>(),
-                    anchors_blob->dptr<T>(), false);
-  anchor_boxes.Truncate(*(BnInOp2Blob("inside_anchors_num")->dptr<int32_t>()));
+  Blob* anchor_boxes_inds_blob = BnInOp2Blob("anchor_boxes_inds");
+  anchor_boxes_inds_blob->CopyFrom(ctx.device_ctx, BnInOp2Blob("anchors_inside_inds"));
+  IndexSequence inds(anchor_boxes_inds_blob->static_shape().elem_cnt(),
+                     anchor_boxes_inds_blob->dim0_valid_num(0),
+                     anchor_boxes_inds_blob->mut_dptr<int32_t>(), false);
 
-  BoxesWithMaxOverlap boxes_with_max_overlap(
-      anchor_boxes, BnInOp2Blob("max_overlaps")->mut_dptr<float>(),
-      BnInOp2Blob("anchor_nearest_gt_box_index")->mut_dptr<int32_t>(), true);
+  MaxOverlapOfLabeledBoxesWithGt anchor_boxes(
+      MaxOverlapOfBoxesWithGt(AnchorBoxes(inds, BnInOp2Blob("anchors")->dptr<T>()),
+                              BnInOp2Blob("max_overlaps")->mut_dptr<float>(),
+                              BnInOp2Blob("max_overlaps_with_gt_index")->mut_dptr<int32_t>(), true),
+      BnInOp2Blob("anchor_boxes_labels")->mut_dptr<int32_t>());
+  anchor_boxes.FillLabels(-1);
 
-  Blob* rpn_labels_blob = BnInOp2Blob("rpn_labels");
-  BoxesLabelAndMaxOverlap labeled_boxes_with_max_overlap(
-      boxes_with_max_overlap, rpn_labels_blob->mut_dptr<int32_t>(im_index));
-  labeled_boxes_with_max_overlap.FillLabel(0, rpn_labels_blob->shape().Count(1), -1);
-
-  return labeled_boxes_with_max_overlap;
+  return anchor_boxes;
 }
 
 template<typename T>
-GtBoxesWithMaxOverlap AnchorTargetKernel<T>::GetImageGtBoxes(
+typename AnchorTargetKernel<T>::GtBoxes AnchorTargetKernel<T>::GetImageGtBoxes(
     size_t im_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  const AnchorGeneratorConf& anchor_generator_conf =
-      op_conf().anchor_target_conf().anchor_generator_conf();
-  GtBoxesWithMaxOverlap gt_boxes(*(BnInOp2Blob("gt_boxes")->dptr<FloatList16>(im_index)));
-  Int32List invalid_gt_inds;
-  gt_boxes.ForEachBox<float>([&](int32_t index, BBox<float>* box) {
-    if (box->Area() <= 0) {
-      invalid_gt_inds.add_value(index);
-    } else {
-      FasterRcnnUtil<T>::CorrectGtBoxCoord(anchor_generator_conf.image_height(),
-                                           anchor_generator_conf.image_width(), box);
-    }
-  });
-  gt_boxes.Filter(invalid_gt_inds);
-
+  const Blob* gt_boxes_blob = BnInOp2Blob("gt_boxes");
+  Blob* gt_boxes_inds_blob = BnInOp2Blob("gt_boxes_inds");
+  gt_boxes_inds_blob->set_dim0_valid_num(0, gt_boxes_blob->dim1_valid_num(im_index));
+  IndexSequence inds(gt_boxes_inds_blob->static_shape().elem_cnt(),
+                     gt_boxes_inds_blob->dim0_valid_num(0), gt_boxes_inds_blob->mut_dptr<int32_t>(),
+                     true);
+  GtBoxes gt_boxes(inds, gt_boxes_blob->dptr<T>(im_index));
+  gt_boxes.Filter([&](int32_t index) { return gt_boxes.bbox(index)->area() <= 0; });
   return gt_boxes;
 }
 
 template<typename T>
-void AnchorTargetKernel<T>::ComputeOverlapsAndSetLabels(
-    GtBoxesWithMaxOverlap& gt_boxes, BoxesLabelAndMaxOverlap& anchor_boxes) const {
+void AnchorTargetKernel<T>::CalcMaxOverlapAndSetPositiveLabels(
+    const GtBoxes& gt_boxes, MaxOverlapOfLabeledBoxesWithGt& anchor_boxes) const {
+  std::vector<float> gt_max_overlap(gt_boxes.size(), 0);
+  std::vector<int32_t> gt_max_overlap_with_indices;
+  size_t num_recorded = 0;
+  int32_t last_gt_index = -1;
+  auto TryRecordGtMaxOverlap = [&](int32_t gt_index, int32_t index, float overlap) {
+    if (gt_index != last_gt_index) {
+      num_recorded = gt_max_overlap_with_indices.size();
+      last_gt_index = gt_index;
+    }
+    if (overlap >= gt_max_overlap[gt_index]) {
+      if (overlap > gt_max_overlap[gt_index]) { gt_max_overlap_with_indices.resize(num_recorded); }
+      gt_max_overlap[gt_index] = overlap;
+      gt_max_overlap_with_indices.emplace_back(index);
+    }
+  };
+  // Set the anchor box whose max overlap with gt boxes greater than
+  // threshold to positive label
   float positive_overlap_threshold = op_conf().anchor_target_conf().positive_overlap_threshold();
-  FasterRcnnUtil<T>::ForEachOverlapBetweenBoxesAndGtBoxes(
+  ForEachOverlapBetweenBoxesAndGtBoxes(
       anchor_boxes, gt_boxes, [&](int32_t index, int32_t gt_index, float overlap) {
-        anchor_boxes.UpdateMaxOverlap(index, gt_index, overlap, [&]() {
+        anchor_boxes.TryUpdateMaxOverlap(index, gt_index, overlap, [&]() {
           if (overlap >= positive_overlap_threshold) { anchor_boxes.set_label(index, 1); }
         });
-        gt_boxes.UpdateMaxOverlap(gt_index, index, overlap);
+        TryRecordGtMaxOverlap(gt_index, index, overlap);
       });
-
-  gt_boxes.ForEachMaxOverlapWithIndex([&](int32_t index) { anchor_boxes.set_label(index, 1); });
+  // Set every anchor box which is nearest to each gt box to positive label
+  for (int32_t index : gt_max_overlap_with_indices) { anchor_boxes.set_label(index, 1); }
 }
 
 template<typename T>
-size_t AnchorTargetKernel<T>::SubsampleForeground(BoxesLabelAndMaxOverlap& boxes) const {
+size_t AnchorTargetKernel<T>::SubsampleForeground(MaxOverlapOfLabeledBoxesWithGt& boxes) const {
   const AnchorTargetOpConf& conf = op_conf().anchor_target_conf();
-  size_t fg_cnt = conf.batch_size_per_image() * conf.foreground_fraction();
-  boxes.SortByLabel([](int32_t lhs_label, int32_t rhs_label) { return lhs_label > rhs_label; });
-  size_t fg_end = boxes.FindByLabel([](int32_t label) { return label != 1; });
+  size_t fg_cnt = conf.total_subsample_num() * conf.foreground_fraction();
+  boxes.Sort([&](int32_t lhs_index, int32_t rhs_index) {
+    return boxes.label(lhs_index) > boxes.label(rhs_index);
+  });
+  size_t fg_end = boxes.Find([&](int32_t index) { return boxes.label(index) != 1; });
   if (fg_end > fg_cnt) {
     boxes.Shuffle(0, fg_end);
     FOR_RANGE(size_t, i, fg_cnt, fg_end) { boxes.SetLabel(i, -1); }
@@ -165,13 +138,14 @@ size_t AnchorTargetKernel<T>::SubsampleForeground(BoxesLabelAndMaxOverlap& boxes
 
 template<typename T>
 size_t AnchorTargetKernel<T>::SubsampleBackground(size_t fg_cnt,
-                                                  BoxesLabelAndMaxOverlap& boxes) const {
+                                                  MaxOverlapOfLabeledBoxesWithGt& boxes) const {
   const AnchorTargetOpConf& conf = op_conf().anchor_target_conf();
-  size_t bg_cnt = conf.batch_size_per_image() - fg_cnt;
-  boxes.SortByMaxOverlap(
-      [](float lhs_overlap, float rhs_overlap) { return lhs_overlap < rhs_overlap; });
-  size_t bg_end = boxes.FindByMaxOverlap(
-      [&](float overlap) { return overlap >= conf.negative_overlap_threshold(); });
+  size_t bg_cnt = conf.total_subsample_num() - fg_cnt;
+  boxes.Sort([&](int32_t lhs_index, int32_t rhs_index) {
+    return boxes.max_overlap(lhs_index) < boxes.max_overlap(rhs_index);
+  });
+  size_t bg_end = boxes.Find(
+      [&](int32_t index) { return boxes.max_overlap(index) >= conf.negative_overlap_threshold(); });
   if (bg_end > bg_cnt) {
     boxes.Shuffle(0, bg_end);
   } else {
@@ -182,58 +156,96 @@ size_t AnchorTargetKernel<T>::SubsampleBackground(size_t fg_cnt,
 }
 
 template<typename T>
-void AnchorTargetKernel<T>::ComputeTargetsAndWriteOutput(
-    size_t im_index, size_t total_sample_count, const GtBoxesWithMaxOverlap& gt_boxes,
-    const BoxesLabelAndMaxOverlap& anchor_boxes,
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  CHECK_GT(total_sample_count, 0);
-  const float reduction_coefficient = 1.f / total_sample_count;
-  BBoxDelta<T>* bbox_target =
-      BBoxDelta<T>::MutCast(BnInOp2Blob("rpn_bbox_targets")->mut_dptr<T>(im_index));
-  BBoxWeights<T>* inside_weights =
-      BBoxWeights<T>::MutCast(BnInOp2Blob("rpn_bbox_inside_weights")->mut_dptr<T>(im_index));
-  BBoxWeights<T>* outside_weights =
-      BBoxWeights<T>::MutCast(BnInOp2Blob("rpn_bbox_outside_weights")->mut_dptr<T>(im_index));
-  const BBoxRegressionWeights& bbox_reg_ws = op_conf().anchor_target_conf().bbox_reg_weights();
-
-  FOR_RANGE(int32_t, i, 0, anchor_boxes.capacity()) {
-    int32_t label = anchor_boxes.label(i);
-    SetBBoxTargets(i, label, anchor_boxes, gt_boxes, bbox_reg_ws, bbox_target);
-    SetBBoxInsideWeights(i, label, inside_weights);
-    SetBBoxOutsideWeights(i, label, reduction_coefficient, outside_weights);
-  }
-}
-
-template<typename T>
-size_t AnchorTargetKernel<T>::ChoiceForeground(BoxesLabelAndMaxOverlap& boxes) const {
+size_t AnchorTargetKernel<T>::ChoiceForeground(MaxOverlapOfLabeledBoxesWithGt& boxes) const {
   const AnchorTargetOpConf& conf = op_conf().anchor_target_conf();
-  size_t fg_cnt = conf.batch_size_per_image() * conf.foreground_fraction();
+  size_t fg_cnt = conf.total_subsample_num() * conf.foreground_fraction();
   size_t fg_num = 0;
-  boxes.ForEachLabel([&](size_t n, int32_t index, int32_t label) {
+  boxes.ForEach([&](int32_t index) {
+    int32_t label = boxes.label(index);
     if (label == 1) {
       if (fg_num >= fg_cnt) { boxes.set_label(index, -1); }
       ++fg_num;
     }
     return true;
   });
-  if (fg_num < fg_cnt) { fg_cnt = fg_num; }
-  return fg_cnt;
+  return fg_num < fg_cnt ? fg_num : fg_cnt;
 }
+
 template<typename T>
 size_t AnchorTargetKernel<T>::ChoiceBackground(size_t fg_cnt,
-                                               BoxesLabelAndMaxOverlap& boxes) const {
+                                               MaxOverlapOfLabeledBoxesWithGt& boxes) const {
   const AnchorTargetOpConf& conf = op_conf().anchor_target_conf();
-  size_t bg_cnt = conf.batch_size_per_image() - fg_cnt;
+  size_t bg_cnt = conf.total_subsample_num() - fg_cnt;
   size_t bg_num = 0;
-  boxes.ForEachMaxOverlap([&](size_t n, int32_t index, float overlap) {
-    if (overlap < conf.negative_overlap_threshold()) {
+  boxes.ForEach([&](int32_t index) {
+    if (boxes.max_overlap(index) < conf.negative_overlap_threshold()) {
       if (bg_num < bg_cnt) { boxes.set_label(index, 0); }
       ++bg_num;
     }
     return true;
   });
-  if (bg_num < bg_cnt) { bg_cnt = bg_num; }
-  return bg_cnt;
+  return bg_num < bg_cnt ? bg_num : bg_cnt;
+}
+
+template<typename T>
+void AnchorTargetKernel<T>::OutputForEachImage(
+    size_t im_index, size_t total_sample_cnt, const GtBoxes& gt_boxes,
+    const MaxOverlapOfLabeledBoxesWithGt& boxes,
+    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+  CHECK_GT(total_sample_cnt, 0);
+  const float reduction_coefficient = 1.f / total_sample_cnt;
+  const AnchorTargetOpConf& conf = op_conf().anchor_target_conf();
+  const BBoxRegressionWeights& bbox_reg_ws = conf.bbox_reg_weights();
+  size_t layer_offset = 0;
+  FOR_RANGE(size_t, layer, 0, conf.anchor_generator_conf_size()) {
+    Blob* rpn_labels_blob = BnInOp2Blob("rpn_labels_" + std::to_string(layer));
+    size_t num_per_layer = rpn_labels_blob->shape().Count(1, 4);
+    int32_t* rpn_labels_ptr = rpn_labels_blob->mut_dptr<int32_t>(im_index);
+    auto* bbox_targets = BBoxDelta<T>::MutCast(
+        BnInOp2Blob("rpn_bbox_targets_" + std::to_string(layer))->mut_dptr<T>(im_index));
+    auto* inside_weights = BBoxWeights<T>::MutCast(
+        BnInOp2Blob("rpn_bbox_inside_weights_" + std::to_string(layer))->mut_dptr<T>(im_index));
+    auto* outside_weights = BBoxWeights<T>::MutCast(
+        BnInOp2Blob("rpn_bbox_outside_weights_" + std::to_string(layer))->mut_dptr<T>(im_index));
+    // Copy label to each layer output
+    std::memcpy(rpn_labels_ptr, boxes.label() + layer_offset, num_per_layer * sizeof(int32_t));
+    FOR_RANGE(size_t, i, 0, num_per_layer) {
+      int32_t bbox_idx = layer_offset + i;
+      int32_t label = boxes.label(bbox_idx);
+      // Calc bbox target and set inside weights for each layer output
+      if (label == 1) {
+        const auto* box = boxes.bbox(bbox_idx);
+        const auto* gt_box = gt_boxes.GetBBox(boxes.max_overlap_with_index(bbox_idx));
+        bbox_targets[i].TransformInverse(box, gt_box, bbox_reg_ws);
+        inside_weights[i].set_weight_x(1.f);
+        inside_weights[i].set_weight_y(1.f);
+        inside_weights[i].set_weight_w(1.f);
+        inside_weights[i].set_weight_h(1.f);
+      } else {
+        bbox_targets[i].set_dx(0.f);
+        bbox_targets[i].set_dy(0.f);
+        bbox_targets[i].set_dw(0.f);
+        bbox_targets[i].set_dh(0.f);
+        inside_weights[i].set_weight_x(0.f);
+        inside_weights[i].set_weight_y(0.f);
+        inside_weights[i].set_weight_w(0.f);
+        inside_weights[i].set_weight_h(0.f);
+      }
+      // Set outside weights for each layer output
+      if (label == 1 || label == 0) {
+        outside_weights[i].set_weight_x(reduction_coefficient);
+        outside_weights[i].set_weight_y(reduction_coefficient);
+        outside_weights[i].set_weight_w(reduction_coefficient);
+        outside_weights[i].set_weight_h(reduction_coefficient);
+      } else {
+        outside_weights[i].set_weight_x(0.f);
+        outside_weights[i].set_weight_y(0.f);
+        outside_weights[i].set_weight_w(0.f);
+        outside_weights[i].set_weight_h(0.f);
+      }
+    }
+    layer_offset += num_per_layer;
+  }
 }
 
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kAnchorTargetConf, AnchorTargetKernel,

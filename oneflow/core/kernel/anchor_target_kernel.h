@@ -2,21 +2,23 @@
 #define ONEFLOW_CORE_OPERATOR_ANCHOR_TARGET_KERNEL_OP_H_
 
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/kernel/kernel_context.h"
-#include "oneflow/core/kernel/random_generator.h"
-#include "oneflow/core/kernel/faster_rcnn_util.h"
+#include "oneflow/core/kernel/bbox_util.h"
 
 namespace oneflow {
 
 template<typename T>
 class AnchorTargetKernel final : public KernelIf<DeviceType::kCPU> {
  public:
-  using BoxesWithMaxOverlap = MaxOverlapIndex<BoxesIndex<T>>;
-  using BoxesLabelAndMaxOverlap = LabelIndex<BoxesWithMaxOverlap>;
-
   OF_DISALLOW_COPY_AND_MOVE(AnchorTargetKernel);
   AnchorTargetKernel() = default;
   ~AnchorTargetKernel() = default;
+
+  using BBox = BBoxImpl<const T, BBoxBase, BBoxCoord::kCorner>;
+  using MutBBox = BBoxImpl<T, BBoxBase, BBoxCoord::kCorner>;
+  using AnchorBoxes = BBoxIndices<IndexSequence, BBox>;
+  using MaxOverlapOfBoxesWithGt = MaxOverlapIndices<AnchorBoxes>;
+  using MaxOverlapOfLabeledBoxesWithGt = LabelIndices<MaxOverlapOfBoxesWithGt>;
+  using GtBoxes = BBoxIndices<IndexSequence, BBoxImpl<const T, BBoxBase, BBoxCoord::kGtCorner>>;
 
  private:
   void InitConstBufBlobs(DeviceCtx*,
@@ -24,21 +26,21 @@ class AnchorTargetKernel final : public KernelIf<DeviceType::kCPU> {
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
 
-  BoxesLabelAndMaxOverlap GetImageAnchorBoxes(
+  MaxOverlapOfLabeledBoxesWithGt GetImageAnchorBoxes(
       const KernelCtx& ctx, size_t im_index,
       const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  GtBoxesWithMaxOverlap GetImageGtBoxes(
-      size_t im_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  void ComputeOverlapsAndSetLabels(GtBoxesWithMaxOverlap& gt_boxes,
-                                   BoxesLabelAndMaxOverlap& anchor_boxes) const;
-  size_t SubsampleForeground(BoxesLabelAndMaxOverlap& boxes) const;
-  size_t SubsampleBackground(size_t fg_cnt, BoxesLabelAndMaxOverlap& boxes) const;
-  size_t ChoiceForeground(BoxesLabelAndMaxOverlap& boxes) const;
-  size_t ChoiceBackground(size_t fg_cnt, BoxesLabelAndMaxOverlap& boxes) const;
-  void ComputeTargetsAndWriteOutput(
-      size_t im_index, size_t total_sample_count, const GtBoxesWithMaxOverlap& gt_boxes,
-      const BoxesLabelAndMaxOverlap& anchor_boxes,
-      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  GtBoxes GetImageGtBoxes(size_t im_index,
+                          const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+
+  void CalcMaxOverlapAndSetPositiveLabels(const GtBoxes& gt_boxes,
+                                          MaxOverlapOfLabeledBoxesWithGt& anchor_boxes) const;
+  size_t SubsampleForeground(MaxOverlapOfLabeledBoxesWithGt& boxes) const;
+  size_t SubsampleBackground(size_t fg_cnt, MaxOverlapOfLabeledBoxesWithGt& boxes) const;
+  size_t ChoiceForeground(MaxOverlapOfLabeledBoxesWithGt& boxes) const;
+  size_t ChoiceBackground(size_t fg_cnt, MaxOverlapOfLabeledBoxesWithGt& boxes) const;
+  void OutputForEachImage(size_t im_index, size_t total_sample_cnt, const GtBoxes& gt_boxes,
+                          const MaxOverlapOfLabeledBoxesWithGt& boxes,
+                          const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 };
 
 }  // namespace oneflow
