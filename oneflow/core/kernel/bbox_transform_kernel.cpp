@@ -19,7 +19,7 @@ void BboxTransformKernel<device_type, T>::ForwardDataContent(
       int32_t offset = i * num_classes + j;
       const auto* bbox = BBox::Cast(bbox_blob->dptr<T>()) + i;
       const auto* bbox_delta = BBoxDelta<T>::Cast(bbox_delta_blob->dptr<T>()) + offset;
-      auto* out_bbox = BBox::MutCast(out_bbox_blob->mut_dptr<T>()) + offset;
+      auto* out_bbox = BBox::Cast(out_bbox_blob->mut_dptr<T>()) + offset;
       out_bbox->Transform(bbox, bbox_delta, conf.bbox_reg_weights());
       if (conf.has_clip_conf()) {
         out_bbox->Clip(conf.clip_conf().height(), conf.clip_conf().width());
