@@ -5,7 +5,7 @@ set(PROTOBUF_LIBRARY_DIR ${THIRD_PARTY_DIR}/protobuf/lib)
 set(PROTOBUF_BINARY_DIR ${THIRD_PARTY_DIR}/protobuf/bin)
 
 set(PROTOBUF_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf/src)
-set(PROTOBUF_URL https://github.com/mrry/protobuf.git)  # Includes MSVC fix.
+set(PROTOBUF_URL https://github.com/protocolbuffers/protobuf.git)
 set(PROTOBUF_TAG 1d2c7b6c7376f396c8c7dd9b6afd2d4f83f3cb05)
 
 if(WIN32)
@@ -31,7 +31,7 @@ endforeach()
 set(PROTOBUF_BUILD_PROTOC_EXECUTABLE ${PROTOBUF_BUILD_LIBRARY_DIR}/${PROTOC_EXECUTABLE_NAME})
 set(PROTOBUF_PROTOC_EXECUTABLE ${PROTOBUF_BINARY_DIR}/${PROTOC_EXECUTABLE_NAME})
 
-if (BUILD_THIRD_PARTY)
+if (THIRD_PARTY)
 
 ExternalProject_Add(protobuf
     PREFIX protobuf
@@ -83,4 +83,4 @@ add_custom_target(protobuf_copy_binary_to_destination
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROTOBUF_BUILD_PROTOC_EXECUTABLE} ${PROTOBUF_BINARY_DIR}
   DEPENDS protobuf_create_binary_dir)
 
-endif(BUILD_THIRD_PARTY)
+endif(THIRD_PARTY)

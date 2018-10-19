@@ -12,6 +12,25 @@ include(libjpeg-turbo)
 include(opencv)
 include(eigen)
 
+if (THIRD_PARTY AND PRECOMPILED_THIRD_PARTY)
+  if (BUILD_CUDA)
+    set(THIRD_PARTY_URL http://download.oneflow.org/third_party_with_cuda.tgz)
+  else()
+    set(THIRD_PARTY_URL http://download.oneflow.org/third_party_without_cuda.tgz)
+  endif()
+
+  if (NOT WIN32)
+    message(STATUS "downloading third_partys ...")
+    file(DOWNLOAD ${THIRD_PARTY_URL} ${PROJECT_BINARY_DIR}/third_party.tgz SHOW_PROGRESS)
+    execute_process(
+      COMMAND ${CMAKE_COMMAND} -E tar zxvf ${PROJECT_BINARY_DIR}/third_party.tgz
+      WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    )
+  else()
+    message(STATUS "win32 not support yet.")
+  endif()
+endif()
+
 if (BUILD_CUDA)
   set(CUDA_SEPARABLE_COMPILATION ON)
   find_package(CUDA REQUIRED)
@@ -59,8 +78,6 @@ set(oneflow_third_party_libs
     ${OPENCV_STATIC_LIBRARIES}
 )
 
-message(STATUS "oneflow_third_party_libs: " ${oneflow_third_party_libs})
-
 if(WIN32)
   # static gflags lib requires "PathMatchSpecA" defined in "ShLwApi.Lib"
   list(APPEND oneflow_third_party_libs "ShLwApi.Lib")
@@ -70,23 +87,28 @@ endif()
 set(oneflow_third_party_dependencies
   zlib_copy_headers_to_destination
   zlib_copy_libs_to_destination
-  gflags_copy_headers_to_destination
-  gflags_copy_libs_to_destination
-  glog_copy_headers_to_destination
-  glog_copy_libs_to_destination
-  googletest_copy_headers_to_destination
-  googletest_copy_libs_to_destination
-  googlemock_copy_headers_to_destination
-  googlemock_copy_libs_to_destination
   protobuf_copy_headers_to_destination
   protobuf_copy_libs_to_destination
   protobuf_copy_binary_to_destination
-  grpc_copy_headers_to_destination
-  grpc_copy_libs_to_destination
-  opencv_copy_headers_to_destination
-  opencv_copy_libs_to_destination
-  eigen
 )
+
+if (NOT PRECOMPILED_THIRD_PARTY)
+  list(APPEND oneflow_third_party_dependencies 
+    gflags_copy_headers_to_destination
+    gflags_copy_libs_to_destination
+    glog_copy_headers_to_destination
+    glog_copy_libs_to_destination
+    googletest_copy_headers_to_destination
+    googletest_copy_libs_to_destination
+    googlemock_copy_headers_to_destination
+    googlemock_copy_libs_to_destination
+    grpc_copy_headers_to_destination
+    grpc_copy_libs_to_destination
+    opencv_copy_headers_to_destination
+    opencv_copy_libs_to_destination
+    eigen
+  )
+endif()
 
 include_directories(
     ${ZLIB_INCLUDE_DIR}
@@ -119,3 +141,5 @@ if (BUILD_CUDA)
     ${NCCL_INCLUDE_DIR}
 )
 endif()
+
+message(STATUS "oneflow_third_party_libs: " ${oneflow_third_party_libs})
