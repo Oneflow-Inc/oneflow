@@ -15,7 +15,7 @@ Install GPU support (optional):
  - [NVIDIA GPU drivers and CUDA Toolkit](https://developer.nvidia.com/cuda-90-download-archive)
  - [cuDNN SDK](https://developer.nvidia.com/cudnn)
 
-Building OneFlow from source requires a `BLAS libary` installed. On CentOS, if you have `Intel MKL` installed, please update the environment variable. 
+Building OneFlow from source requires a `BLAS library` installed. On CentOS, if you have `Intel MKL` installed, please update the environment variable. 
 
 ```
     export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
