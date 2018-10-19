@@ -1,6 +1,7 @@
 #include <opencv2/opencv.hpp>
 #include "oneflow/core/kernel/rle_segmentation_result_kernel.h"
 #include "oneflow/core/kernel/faster_rcnn_util.h"
+#include "oneflow/core/kernel/rle_util.h"
 
 namespace oneflow {
 
@@ -24,7 +25,13 @@ void Resize(cv::Mat* img, Blob* padded_mask_blob, const BBox<float>* bbox) {
 
 void CopyToImMask(Blob* im_mask_blob, const cv::Mat& img) { TODO(); }
 
-void RleEncode(Blob* out_blob, const Blob* im_mask_blob) {}
+void RleEncodeIntoOutputblob(Blob* out_blob, const Blob* im_mask_blob, int32_t dim0_idx) {
+  size_t height = im_mask_blob->shape().At(0);
+  size_t width = im_mask_blob->shape().At(1);
+  size_t len = RleEncode(out_blob->mut_dptr<uint32_t>(dim0_idx), im_mask_blob->dptr<uint8_t>(),
+                         height, width);
+  CHECK_EQ(len, out_blob->shape().Count(1));
+}
 
 }  // namespace
 
@@ -46,7 +53,7 @@ void RleSegmentationResultKernel<T>::ForwardDataContent(
     ExpandRoi(expanded_roi, rois_blob, i, mask_blob->shape());
     Resize(&img, padded_mask_blob, expanded_roi);
     CopyToImMask(im_mask_blob, img);
-    RleEncode(out_blob, im_mask_blob);
+    RleEncodeIntoOutputblob(out_blob, im_mask_blob, i);
   }
 }
 
