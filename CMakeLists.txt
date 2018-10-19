@@ -2,12 +2,12 @@
 cmake_minimum_required(VERSION 3.5)
 
 option(THIRD_PARTY "Build third party or oneflow" OFF)
-option(PRECOMPILED_THIRD_PARTY "Donwload third party instead of build from source" ON)
+option(PRECOMPILED_THIRD_PARTY "Donwload precompiled third party instead of building from source" ON)
 
 option(USE_CLANG_FORMAT "" OFF)
-option(BUILD_RDMA "" ON)
+option(BUILD_RDMA "" OFF)
 option(BUILD_CUDA "" ON)
-option(RELEASE_VERSION "" OFF)
+option(RELEASE_VERSION "" ON)
 
 # Project
 if (THIRD_PARTY)
