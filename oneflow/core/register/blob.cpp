@@ -125,7 +125,7 @@ const Shape& Blob::shape() const {
 
 size_t Blob::ContiguousDim0ValidNum() const {
   size_t contiguous_invalid_instance_num = 0;
-  for (int i = dim0_inner_shape().At(0) - 1; i >= 0; ++i) {
+  for (int i = dim0_inner_shape().At(0) - 1; i >= 0; --i) {
     size_t valid_num = dim0_valid_num(i);
     contiguous_invalid_instance_num += dim0_inner_shape().Count(1) - valid_num;
     if (valid_num > 0) { break; }
