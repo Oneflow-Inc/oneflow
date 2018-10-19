@@ -804,6 +804,16 @@ message BboxClipConf {
   required int32 height = 2;
 }
 
+message RleSegmentationResultOpConf {
+  required string roi_labels = 1;
+  required string rois = 2;
+  required string masks = 3;
+  required string out = 4;
+  required int64 im_weight = 5;
+  required int64 im_height = 6;
+  optional bool class_specific_mask = 7 [default = true];
+}
+
 message BboxTransformOpConf {
   required string bbox = 1;
   required string bbox_delta = 2;
@@ -1028,6 +1038,7 @@ message OperatorConf {
     FpnDistributeOpConf fpn_distribute_conf = 1013;
     VStackOpConf vstack_conf = 1014;
     RedefineDim0OpConf redefine_dim0_conf = 1015;
+    RleSegmentationResultOpConf rle_segmentation_result_conf = 1016;
     BboxTransformOpConf bbox_transform_conf = 1100;
   }
 }
