@@ -28,7 +28,7 @@ Or you can install OpenBLAS and other tools through:
     cmake -DTHIRD_PARTY=ON -DPRECOMPILED_THIRD_PARTY=OFF .. &&  make -j
 ```
 
-If you do not want to compile the third part code from source, you can also download the pre-compiled third party dependencies from oneflow.org
+If you do not want to compile the third party code from source, you can also download the pre-compiled third party dependencies from oneflow.org
 
 #### download pre-compiled third party
 
