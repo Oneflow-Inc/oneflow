@@ -3,6 +3,17 @@
 ### 1.1 Linux 
 
 ### Build
+Install some required software through:
+
+```
+    sudo yum -y install epel-release
+    sudo yum -y install git gcc-c++ cmake3 kernel-devel-$(uname -r) nasm
+```
+
+Install GPU support (optional):
+
+ - [NVIDIA GPU drivers and CUDA Toolkit](https://developer.nvidia.com/cuda-90-download-archive)
+ - [cuDNN SDK](https://developer.nvidia.com/cudnn)
 
 Building OneFlow from source requires a `BLAS libary` installed. On CentOS, if you have `Intel MKL` installed, please update the environment variable. 
 
@@ -10,10 +21,10 @@ Building OneFlow from source requires a `BLAS libary` installed. On CentOS, if y
     export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
 ```
 
-Or you can install OpenBLAS and other tools through:
+Or you can install OpenBLAS through:
 
 ```
-    sudo yum -y install epel-release && sudo yum -y install git gcc-c++ cmake3 openblas-devel kernel-devel-$(uname -r) nasm
+    sudo yum -y install openblas-devel
 ```
 
 #### create `build` directory:
