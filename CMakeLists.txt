@@ -1,13 +1,16 @@
 # Minimum CMake required
 cmake_minimum_required(VERSION 3.5)
 
-option(BUILD_THIRD_PARTY "Build third party or oneflow" OFF)
-option(BUILD_RDMA "" ON)
+option(THIRD_PARTY "Build third party or oneflow" OFF)
+option(PRECOMPILED_THIRD_PARTY "Donwload precompiled third party instead of building from source" ON)
+
+option(USE_CLANG_FORMAT "" OFF)
+option(BUILD_RDMA "" OFF)
 option(BUILD_CUDA "" ON)
-option(RELEASE_VERSION "" OFF)
+option(RELEASE_VERSION "" ON)
 
 # Project
-if (BUILD_THIRD_PARTY)
+if (THIRD_PARTY)
   project(third_party C CXX)
 else()
   project(oneflow C CXX)
@@ -78,9 +81,9 @@ include(util)
 include(proto2cpp)
 include(third_party)
 
-if (BUILD_THIRD_PARTY)
+if (THIRD_PARTY)
   add_custom_target(prepare_oneflow_third_party ALL DEPENDS ${oneflow_third_party_dependencies})
-  set(BUILD_THIRD_PARTY OFF CACHE BOOL "" FORCE)
+  set(THIRD_PARTY OFF CACHE BOOL "" FORCE)
 else()
   include(oneflow)
 endif()

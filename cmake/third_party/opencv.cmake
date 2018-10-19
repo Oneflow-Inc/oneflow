@@ -5,7 +5,7 @@ set(OPENCV_LIBRARY_DIR ${THIRD_PARTY_DIR}/opencv/lib)
 set(OPENCV_INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/build/install)
 
 set(OPENCV_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/src)
-set(OPENCV_URL https://github.com/Oneflow-Inc/opencv.git)
+set(OPENCV_URL https://github.com/opencv/opencv.git)
 set(OPENCV_TAG 51cef2651e91003e6a6760f496719dbb325cfc61)
 
 if(WIN32)
@@ -29,7 +29,7 @@ foreach(LIBRARY_NAME ${OPENCV_3RDPARTY_LIBRARY_NAMES})
 endforeach()
 
 
-if (BUILD_THIRD_PARTY)
+if (THIRD_PARTY AND NOT PRECOMPILED_THIRD_PARTY)
 
 ExternalProject_Add(opencv
     DEPENDS libjpeg_copy_headers_to_destination libjpeg_copy_libs_to_destination
@@ -124,4 +124,4 @@ add_custom_target(opencv_copy_libs_to_destination
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${OPENCV_BUILD_STATIC_LIBRARIES} ${OPENCV_LIBRARY_DIR}
   DEPENDS opencv_create_library_dir)
 
-endif(BUILD_THIRD_PARTY)
+endif(THIRD_PARTY AND NOT PRECOMPILED_THIRD_PARTY)
