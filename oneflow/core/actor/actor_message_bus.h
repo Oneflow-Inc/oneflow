@@ -17,7 +17,6 @@ class ActorMsgBus final {
 
  private:
   friend class Global<ActorMsgBus>;
-
   ActorMsgBus() = default;
 };
 
