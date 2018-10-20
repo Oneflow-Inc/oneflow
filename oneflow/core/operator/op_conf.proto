@@ -725,10 +725,10 @@ message AccuracyOpConf {
 }
 
 message ProposalTargetOpConf {
-  required string rpn_rois = 1;
+  required string rois = 1;
   required string gt_boxes = 2;
   required string gt_labels = 3;
-  required string rois = 4;
+  required string out_rois = 4;
   required string labels = 5;
   required string bbox_targets = 6;
   required string bbox_inside_weights = 7;
@@ -739,10 +739,7 @@ message ProposalTargetOpConf {
   required float foreground_fraction = 12 [default = 0.5];
   required BBoxRegressionWeights bbox_reg_weights = 13;
   required int32 num_classes = 14;
-  required int32 num_rois_per_image = 15 [default = 256];
-  required int32 max_gt_boxes_num = 16 [default = 256];
-  required int32 image_height = 17;
-  required int32 image_width = 18;
+  required int32 num_sampled_rois_per_image = 15 [default = 256];
 }
 
 enum ScoringMethod {
