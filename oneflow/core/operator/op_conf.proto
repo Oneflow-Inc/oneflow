@@ -468,6 +468,13 @@ message PrintOpConf {
   optional int32 part_name_suffix_length = 4 [default = -1];
 }
 
+message BlobDumpOpConf {
+  repeated PrintRecordConf in = 1;
+  required string dump_dir = 2;
+  optional string part_name_prefix = 3 [default = "part-"];
+  optional int32 part_name_suffix_length = 4 [default = -1];
+}
+
 message LossPrintOpConf {
   required LogicalBlobId loss_lbi = 1;
   optional LogicalBlobId reduction_lbi = 2;
@@ -1011,6 +1018,7 @@ message OperatorConf {
     DefineTestBlobConf define_test_blob_conf = 236;
     Deconv2DOpConf deconv_2d_conf = 237;
     Deconv3DOpConf deconv_3d_conf = 238;
+    BlobDumpOpConf blob_dump_conf = 239;
     RoIPoolingOpConf roi_pooling_conf = 1000;
     SmoothL1LossOpConf smooth_l1_loss_conf = 1001;
     ProposalOpConf proposal_conf = 1002;
