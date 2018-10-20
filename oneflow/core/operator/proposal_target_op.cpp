@@ -16,9 +16,10 @@ void ProposalTargetOp::InitFromOpConf() {
   EnrollOutputBn("bbox_inside_weights", false);
   EnrollOutputBn("bbox_outside_weights", false);
   // Enroll data tmp
-  EnrollDataTmpBn("boxes_index");
+  EnrollDataTmpBn("gt_boxes_inds");
+  EnrollDataTmpBn("rois_inds");
   EnrollDataTmpBn("max_overlaps");
-  EnrollDataTmpBn("max_overlaps_gt_boxes_index");
+  EnrollDataTmpBn("max_overlaps_with_gt_index");
 }
 
 const PbMessage& ProposalTargetOp::GetCustomizedConf() const {
@@ -29,6 +30,9 @@ void ProposalTargetOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const ProposalTargetOpConf& conf = op_conf().proposal_target_conf();
+  CHECK_GE(conf.foreground_threshold(), conf.background_threshold_high());
+  CHECK_GE(conf.background_threshold_high(), conf.background_threshold_low());
+  CHECK_GE(conf.background_threshold_low(), 0.f);
   // input: rois (r, 5) T
   const BlobDesc* rois_blob_desc = GetBlobDesc4BnInOp("rois");
   // input: gt_boxes (n, g, 4)
@@ -39,9 +43,10 @@ void ProposalTargetOp::InferBlobDescs(
   CHECK(gt_boxes_blob_desc->has_dim1_valid_num_field());
   CHECK(gt_labels_blob_desc->has_dim1_valid_num_field());
   const int64_t num_images = gt_boxes_blob_desc->shape().At(0);
+  const int64_t max_num_gt_per_im = gt_boxes_blob_desc->shape().At(1);
   CHECK_EQ(gt_labels_blob_desc->shape().At(0), num_images);
   const int64_t num_rois = rois_blob_desc->shape().At(0);
-  //const int64_t num_sampled_rois = conf.num_sampled_rois_per_image();
+  // const int64_t num_sampled_rois = conf.num_sampled_rois_per_image();
   const int64_t total_num_sampled_rois = conf.num_sampled_rois_per_image() * num_images;
   CHECK_GE(total_num_sampled_rois, num_rois);
   const int64_t num_classes = conf.num_classes();
@@ -69,19 +74,22 @@ void ProposalTargetOp::InferBlobDescs(
   // output: bbox_outside_weights (total_num_sampled_rois, num_classes * 4) T
   *GetBlobDesc4BnInOp("bbox_outside_weights") = *bbox_targets_blob_desc;
 
-  // data tmp: boxes_index (rois_num + max_gt_boxes_num) int32_t
-  BlobDesc* boxes_index_blob_desc = GetBlobDesc4BnInOp("boxes_index");
-  boxes_index_blob_desc->mut_shape() = Shape({rois_num + max_gt_boxes_num});
-  boxes_index_blob_desc->set_data_type(DataType::kInt32);
-  // data tmp: max_overlaps (rois_num + max_gt_boxes_num) float
+  // data tmp: gt_boxes_inds (n * g) int32_t
+  BlobDesc* gt_boxes_inds_blob_desc = GetBlobDesc4BnInOp("gt_boxes_inds");
+  gt_boxes_inds_blob_desc->mut_shape() = Shape({num_images * max_num_gt_per_im});
+  gt_boxes_inds_blob_desc->set_data_type(DataType::kInt32);
+  // data tmp: rois_inds (r + g) int32_t
+  BlobDesc* rois_inds_blob_desc = GetBlobDesc4BnInOp("rois_inds");
+  rois_inds_blob_desc->mut_shape() = Shape({num_rois + max_num_gt_per_im});
+  rois_inds_blob_desc->set_data_type(DataType::kInt32);
+  // data tmp: max_overlaps (r + g) float
   BlobDesc* max_overlaps_blob_desc = GetBlobDesc4BnInOp("max_overlaps");
-  max_overlaps_blob_desc->mut_shape() = Shape({rois_num + max_gt_boxes_num});
+  max_overlaps_blob_desc->mut_shape() = Shape({num_rois + max_num_gt_per_im});
   max_overlaps_blob_desc->set_data_type(DataType::kFloat);
-  // data tmp: max_overlaps_gt_boxes_index (rois_num + max_gt_boxes_num) int32_t
-  BlobDesc* max_overlaps_gt_boxes_index_blob_desc =
-      GetBlobDesc4BnInOp("max_overlaps_gt_boxes_index");
-  max_overlaps_gt_boxes_index_blob_desc->mut_shape() = Shape({rois_num + max_gt_boxes_num});
-  max_overlaps_gt_boxes_index_blob_desc->set_data_type(DataType::kInt32);
+  // data tmp: max_overlaps_gt_boxes_index (r + g) int32_t
+  BlobDesc* max_overlaps_gt_index_bd = GetBlobDesc4BnInOp("max_overlaps_with_gt_index");
+  max_overlaps_gt_index_bd->mut_shape() = Shape({num_rois + max_num_gt_per_im});
+  max_overlaps_gt_index_bd->set_data_type(DataType::kInt32);
 }
 
 REGISTER_OP(OperatorConf::kProposalTargetConf, ProposalTargetOp);
