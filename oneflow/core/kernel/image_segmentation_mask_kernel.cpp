@@ -1,5 +1,5 @@
 #include <opencv2/opencv.hpp>
-#include "oneflow/core/kernel/rle_segmentation_result_kernel.h"
+#include "oneflow/core/kernel/image_segmentation_mask_kernel.h"
 #include "oneflow/core/kernel/faster_rcnn_util.h"
 #include "oneflow/core/record/ofrecord_decoder.h"
 

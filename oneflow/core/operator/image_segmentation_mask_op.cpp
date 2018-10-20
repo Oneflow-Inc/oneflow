@@ -1,4 +1,4 @@
-#include "oneflow/core/operator/rle_segmentation_result_op.h"
+#include "oneflow/core/operator/image_segmentation_mask_op.h"
 
 namespace oneflow {
 
