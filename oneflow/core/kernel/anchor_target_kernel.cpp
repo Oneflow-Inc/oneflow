@@ -2,7 +2,22 @@
 
 namespace oneflow {
 
-namespace {}  // namespace
+namespace {
+
+template<typename BBox, typename GtBBox>
+void ForEachOverlapBetweenBoxesAndGtBoxes(
+    const BBoxIndices<IndexSequence, BBox>& boxes,
+    const BBoxIndices<IndexSequence, GtBBox>& gt_boxes,
+    const std::function<void(int32_t, int32_t, float)>& Handler) {
+  FOR_RANGE(size_t, i, 0, gt_boxes.size()) {
+    FOR_RANGE(size_t, j, 0, boxes.size()) {
+      float overlap = boxes.GetBBox(j)->InterOverUnion(gt_boxes.GetBBox(i));
+      Handler(boxes.GetIndex(j), gt_boxes.GetIndex(i), overlap);
+    }
+  }
+}
+
+}  // namespace
 
 template<typename T>
 void AnchorTargetKernel<T>::InitConstBufBlobs(

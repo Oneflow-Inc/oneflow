@@ -169,8 +169,9 @@ template<typename T>
 struct BBoxImpl<T, BBoxCategory::kIndexCorner>
     : public QuinBBoxWrapper<BBoxImpl<T, BBoxCategory::kIndexCorner>>,
       public CornerCoordBBoxIf<BBoxImpl<T, BBoxCategory::kIndexCorner>> {
-  T index() const { return this->elem()[0]; }
+  int32_t index() const { return static_cast<int32_t>(this->elem()[0]); }
   void set_index(T index) { this->elem()[0] = index; }
+  void set_index(int32_t index) { this->elem()[0] = static_cast<T>(index); }
 };
 
 template<typename T>
@@ -483,19 +484,6 @@ class MaxOverlapIndices : public Indices {
   float* max_overlap_buf_;
   int32_t* max_overlap_with_index_buf_;
 };
-
-template<typename BBox, typename GtBBox>
-void ForEachOverlapBetweenBoxesAndGtBoxes(
-    const BBoxIndices<IndexSequence, BBox>& boxes,
-    const BBoxIndices<IndexSequence, GtBBox>& gt_boxes,
-    const std::function<void(int32_t, int32_t, float)>& Handler) {
-  FOR_RANGE(size_t, i, 0, gt_boxes.size()) {
-    FOR_RANGE(size_t, j, 0, boxes.size()) {
-      float overlap = boxes.GetBBox(j)->InterOverUnion(gt_boxes.GetBBox(i));
-      Handler(boxes.GetIndex(j), gt_boxes.GetIndex(i), overlap);
-    }
-  }
-}
 
 template<typename BBox>
 struct BBoxUtil final {
