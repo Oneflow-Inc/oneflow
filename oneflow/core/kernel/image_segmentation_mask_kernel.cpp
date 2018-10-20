@@ -71,8 +71,8 @@ void BinarizeMask(std::vector<uint8_t>* binary_img, const cv::Mat& img, const fl
   }
 }
 
-void CopyToOutBlob(Blob* out_blob, int32_t dim0_idx, const std::vector<uint8_t>& binary_img,
-                   const BBox<float>* expanded_bbox) {
+void CopyToOutputBlob(Blob* out_blob, int32_t dim0_idx, const std::vector<uint8_t>& binary_img,
+                      const BBox<float>* expanded_bbox) {
   uint8_t* im_mask_ptr = out_blob->mut_dptr<uint8_t>(dim0_idx);
   size_t width = out_blob->shape().At(2);
   size_t height = out_blob->shape().At(1);
@@ -92,6 +92,10 @@ void CopyToOutBlob(Blob* out_blob, int32_t dim0_idx, const std::vector<uint8_t>&
              w, h);
 }
 
+void ClearOutputBlob(Blob* out_blob) {
+  std::memset(out_blob->mut_dptr<uint8_t>(), 0, out_blob->shape().elem_cnt() * sizeof(uint8_t));
+}
+
 }  // namespace
 
 template<typename T>
@@ -103,6 +107,7 @@ void ImageSegmentationMaskKernel<T>::ForwardDataContent(
   const Blob* roi_labels_blob = BnInOp2Blob("roi_labels");
   Blob* padded_mask_blob = BnInOp2Blob("padded_mask");
   Blob* out_blob = BnInOp2Blob("out");
+  ClearOutputBlob(out_blob);
   FOR_RANGE(int32_t, i, 0, mask_blob->shape().At(0)) {
     cv::Mat img;
     std::array<float, 4> expanded_bbox;
@@ -113,7 +118,7 @@ void ImageSegmentationMaskKernel<T>::ForwardDataContent(
     ResizeMask(&img, padded_mask_blob, expanded_roi);
     std::vector<uint8_t> binarized_img;
     BinarizeMask(&binarized_img, img, threshold);
-    CopyToOutBlob(out_blob, i, binarized_img, expanded_roi);
+    CopyToOutputBlob(out_blob, i, binarized_img, expanded_roi);
   }
 }
 

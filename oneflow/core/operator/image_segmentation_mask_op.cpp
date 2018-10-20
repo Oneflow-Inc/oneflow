@@ -9,7 +9,6 @@ void ImageSegmentationMaskOp::InitFromOpConf() {
   EnrollInputBn("rois", false);
   EnrollInputBn("masks", false);
   EnrollDataTmpBn("padded_mask");
-  EnrollDataTmpBn("im_mask");
   EnrollOutputBn("out", false);
 }
 
@@ -28,7 +27,7 @@ void ImageSegmentationMaskOp::InferBlobDescs(
   CHECK_GE(conf.im_weight(), mask_blob_desc->shape().At(3));
   CHECK_EQ(mask_blob_desc->shape().At(0), roi_labels_blob_desc->shape().At(0));
   CHECK_EQ(mask_blob_desc->shape().At(0), rois_blob_desc->shape().At(0));
-  CHECK_EQ(mask_blob_desc->shape().NumAxes(), 3);
+  CHECK_EQ(mask_blob_desc->shape().NumAxes(), 4);
   CHECK_EQ(roi_labels_blob_desc->shape().NumAxes(), 1);
   CHECK_EQ(rois_blob_desc->shape().NumAxes(), 2);
   CHECK_EQ(rois_blob_desc->shape().At(1), 5);
@@ -44,13 +43,8 @@ void ImageSegmentationMaskOp::InferBlobDescs(
   // To work around an issue with cv2.resize, zero-pad the masks by 1 pixel
   BlobDesc* padded_mask_blob_desc = GetBlobDesc4BnInOp("padded_mask");
   padded_mask_blob_desc->mut_shape() =
-      Shape({mask_blob_desc->shape().At(1) + 2, mask_blob_desc->shape().At(2) + 2});
+      Shape({mask_blob_desc->shape().At(2) + 2, mask_blob_desc->shape().At(3) + 2});
   padded_mask_blob_desc->set_data_type(mask_blob_desc->data_type());
-
-  // im_mask: (im_height, im_width)
-  BlobDesc* im_mask_blob_desc = GetBlobDesc4BnInOp("im_mask");
-  im_mask_blob_desc->mut_shape() = Shape({conf.im_height(), conf.im_weight()});
-  im_mask_blob_desc->set_data_type(DataType::kUInt8);
 }
 
 void ImageSegmentationMaskOp::VirtualGenKernelConf(
