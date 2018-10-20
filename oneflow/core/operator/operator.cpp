@@ -105,8 +105,10 @@ void Operator::InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> 
 }
 
 void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
+  // TODO(shiyuan): When all ops are model-parallel, some ops without a model will be forced to
+  // data-parallel, causing the data to be split.
   if (model_bns().empty() && const_model_bns().empty()) {
-    pr_desc->set_policy(ParallelPolicy::kDataParallel);  // TODO(shiyuan)
+    pr_desc->set_policy(ParallelPolicy::kDataParallel);
   }
   if (pr_desc->policy() == kModelParallel && MaxModelSplitNum() != -1) {
     pr_desc->RemoveNeedlessDevice(op_name(), MaxModelSplitNum());
