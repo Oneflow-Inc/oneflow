@@ -1,16 +1,16 @@
-#ifndef ONEFLOW_CORE_KERNEL_RLE_SEGMENTATION_RESULT_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_RLE_SEGMENTATION_RESULT_KERNEL_H_
+#ifndef ONEFLOW_CORE_KERNEL_IMAGE_SEGMENTATION_MASK_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_IMAGE_SEGMENTATION_MASK_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
 template<typename T>
-class RleSegmentationResultKernel final : public KernelIf<DeviceType::kCPU> {
+class ImageSegmentationMaskKernel final : public KernelIf<DeviceType::kCPU> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(RleSegmentationResultKernel);
-  RleSegmentationResultKernel() = default;
-  ~RleSegmentationResultKernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ImageSegmentationMaskKernel);
+  ImageSegmentationMaskKernel() = default;
+  ~ImageSegmentationMaskKernel() = default;
 
  private:
   void ForwardDataContent(const KernelCtx&,
@@ -19,4 +19,4 @@ class RleSegmentationResultKernel final : public KernelIf<DeviceType::kCPU> {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_RLE_SEGMENTATION_RESULT_KERNEL_H_
+#endif  // ONEFLOW_CORE_KERNEL_IMAGE_SEGMENTATION_MASK_KERNEL_H_

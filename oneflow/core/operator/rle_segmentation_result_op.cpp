@@ -2,9 +2,9 @@
 
 namespace oneflow {
 
-void RleSegmentationResultOp::InitFromOpConf() {
+void ImageSegmentationMaskOp::InitFromOpConf() {
   CHECK(device_type() == DeviceType::kCPU);
-  if (!op_conf().rle_segmentation_result_conf().class_specific_mask()) { TODO(); }
+  if (!op_conf().image_segmentation_mask_conf().class_specific_mask()) { TODO(); }
   EnrollInputBn("roi_labels", false);
   EnrollInputBn("rois", false);
   EnrollInputBn("masks", false);
@@ -13,14 +13,14 @@ void RleSegmentationResultOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
-const PbMessage& RleSegmentationResultOp::GetCustomizedConf() const {
-  return op_conf().rle_segmentation_result_conf();
+const PbMessage& ImageSegmentationMaskOp::GetCustomizedConf() const {
+  return op_conf().image_segmentation_mask_conf();
 }
 
-void RleSegmentationResultOp::InferBlobDescs(
+void ImageSegmentationMaskOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  const auto& conf = op_conf().rle_segmentation_result_conf();
+  const auto& conf = op_conf().image_segmentation_mask_conf();
   const BlobDesc* mask_blob_desc = GetBlobDesc4BnInOp("masks");
   const BlobDesc* roi_labels_blob_desc = GetBlobDesc4BnInOp("roi_labels");
   const BlobDesc* rois_blob_desc = GetBlobDesc4BnInOp("rois");
@@ -53,12 +53,12 @@ void RleSegmentationResultOp::InferBlobDescs(
   im_mask_blob_desc->set_data_type(DataType::kUInt8);
 }
 
-void RleSegmentationResultOp::VirtualGenKernelConf(
+void ImageSegmentationMaskOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   kernel_conf->set_data_type(GetBlobDesc4BnInOp("masks")->data_type());
 }
 
-REGISTER_OP(OperatorConf::kRleSegmentationResultConf, RleSegmentationResultOp);
+REGISTER_OP(OperatorConf::kImageSegmentationMaskConf, ImageSegmentationMaskOp);
 
 }  // namespace oneflow

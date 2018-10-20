@@ -1,7 +1,6 @@
 #include <opencv2/opencv.hpp>
 #include "oneflow/core/kernel/rle_segmentation_result_kernel.h"
 #include "oneflow/core/kernel/faster_rcnn_util.h"
-#include "oneflow/core/kernel/rle_util.h"
 #include "oneflow/core/record/ofrecord_decoder.h"
 
 namespace oneflow {
@@ -96,9 +95,9 @@ void CopyToOutBlob(Blob* out_blob, int32_t dim0_idx, const std::vector<uint8_t>&
 }  // namespace
 
 template<typename T>
-void RleSegmentationResultKernel<T>::ForwardDataContent(
+void ImageSegmentationMaskKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const float threshold = this->op_conf().rle_segmentation_result_conf().binary_threshold();
+  const float threshold = this->op_conf().image_segmentation_mask_conf().binary_threshold();
   const Blob* mask_blob = BnInOp2Blob("masks");
   const Blob* rois_blob = BnInOp2Blob("rois");
   const Blob* roi_labels_blob = BnInOp2Blob("roi_labels");
@@ -118,7 +117,7 @@ void RleSegmentationResultKernel<T>::ForwardDataContent(
   }
 }
 
-ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kRleSegmentationResultConf,
-                               RleSegmentationResultKernel, FLOATING_DATA_TYPE_SEQ);
+ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kImageSegmentationMaskConf,
+                               ImageSegmentationMaskKernel, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

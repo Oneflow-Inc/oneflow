@@ -811,7 +811,7 @@ message BboxClipConf {
   required int32 height = 2;
 }
 
-message RleSegmentationResultOpConf {
+message ImageSegmentationMaskOpConf {
   required string roi_labels = 1;
   required string rois = 2;
   required string masks = 3;
@@ -1046,7 +1046,7 @@ message OperatorConf {
     FpnDistributeOpConf fpn_distribute_conf = 1013;
     VStackOpConf vstack_conf = 1014;
     RedefineDim0OpConf redefine_dim0_conf = 1015;
-    RleSegmentationResultOpConf rle_segmentation_result_conf = 1016;
+    ImageSegmentationMaskOpConf image_segmentation_mask_conf = 1016;
     BboxTransformOpConf bbox_transform_conf = 1100;
   }
 }
