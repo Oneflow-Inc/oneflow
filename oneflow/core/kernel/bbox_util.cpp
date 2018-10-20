@@ -1,6 +1,5 @@
 #include <cfenv>
 #include "oneflow/core/kernel/bbox_util.h"
-#include "oneflow/core/common/data_type.h"
 
 namespace oneflow {
 
@@ -25,7 +24,7 @@ size_t BBoxUtil<BBox>::GenerateAnchors(const AnchorGeneratorConf& conf, T* ancho
       const float scale = conf.anchor_scales(j) / fm_stride;
       const int32_t ws = wr * scale;
       const int32_t hs = hr * scale;
-      auto* base_anchor_bbox = BBox::MutCast(base_anchors_vec.data()) + i * scales_size + j;
+      auto* base_anchor_bbox = BBox::Cast(base_anchors_vec.data()) + i * scales_size + j;
       base_anchor_bbox->set_corner_coord(base_ctr - 0.5 * (ws - 1), base_ctr - 0.5 * (hs - 1),
                                          base_ctr + 0.5 * (ws - 1), base_ctr + 0.5 * (hs - 1));
     }
@@ -34,7 +33,7 @@ size_t BBoxUtil<BBox>::GenerateAnchors(const AnchorGeneratorConf& conf, T* ancho
   const auto* base_anchors = BBox::Cast(base_anchors_vec.data());
   FOR_RANGE(int32_t, h, 0, height) {
     FOR_RANGE(int32_t, w, 0, width) {
-      auto* anchor_bbox = BBox::MutCast(anchors_ptr) + (h * width + w) * num_anchors;
+      auto* anchor_bbox = BBox::Cast(anchors_ptr) + (h * width + w) * num_anchors;
       FOR_RANGE(int32_t, i, 0, num_anchors) {
         anchor_bbox[i].set_corner_coord(
             base_anchors[i].left() + w * fm_stride, base_anchors[i].top() + h * fm_stride,
@@ -70,12 +69,14 @@ void BBoxUtil<BBox>::Nms(float thresh, const BBoxIndicesT& pre_nms_bbox_inds,
   CHECK_LE(post_nms_bbox_inds.size(), pre_nms_bbox_inds.size());
 }
 
-#define INITIATE_BBOX_UTIL(T, type_cpp)                                         \
-  template struct BBoxUtil<BBoxImpl<T, BBoxBase, BBoxCoord::kCorner>>;          \
-  template struct BBoxUtil<BBoxImpl<T, ImIndexedBBoxBase, BBoxCoord::kCorner>>; \
-  template struct BBoxUtil<BBoxImpl<const T, BBoxBase, BBoxCoord::kCorner>>;    \
-  template struct BBoxUtil<BBoxImpl<const T, ImIndexedBBoxBase, BBoxCoord::kCorner>>;
+#define INITIATE_BBOX_UTIL(T)                                   \
+  template struct BBoxUtil<BBoxImpl<T, BBoxCategory::kCorner>>; \
+  template struct BBoxUtil<BBoxImpl<T, BBoxCategory::kIndexCorner>>;
 
-OF_PP_FOR_EACH_TUPLE(INITIATE_BBOX_UTIL, FLOATING_DATA_TYPE_SEQ);
+#define INITIATE_BBOX_UTIL_TYPE(type_type, type_val) \
+  INITIATE_BBOX_UTIL(type_type)                      \
+  INITIATE_BBOX_UTIL(const type_type)
+
+OF_PP_FOR_EACH_TUPLE(INITIATE_BBOX_UTIL_TYPE, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

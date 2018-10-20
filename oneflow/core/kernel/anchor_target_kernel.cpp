@@ -82,7 +82,7 @@ typename AnchorTargetKernel<T>::GtBoxes AnchorTargetKernel<T>::GetImageGtBoxes(
                                  gt_boxes_inds_blob->dim0_valid_num(0),
                                  gt_boxes_inds_blob->mut_dptr<int32_t>(), true),
                    gt_boxes_blob->dptr<T>(im_index));
-  gt_boxes.Filter([&](int32_t index) { return gt_boxes.bbox(index)->area() <= 0; });
+  gt_boxes.Filter([&](int32_t index) { return gt_boxes.bbox(index)->Area() <= 0; });
   return gt_boxes;
 }
 
@@ -200,11 +200,11 @@ void AnchorTargetKernel<T>::OutputForEachImage(
     Blob* rpn_labels_blob = BnInOp2Blob("rpn_labels_" + std::to_string(layer));
     size_t num_per_layer = rpn_labels_blob->shape().Count(1, 4);
     int32_t* rpn_labels_ptr = rpn_labels_blob->mut_dptr<int32_t>(im_index);
-    auto* bbox_targets = BBoxDelta<T>::MutCast(
+    auto* bbox_targets = BBoxDelta<T>::Cast(
         BnInOp2Blob("rpn_bbox_targets_" + std::to_string(layer))->mut_dptr<T>(im_index));
-    auto* inside_weights = BBoxWeights<T>::MutCast(
+    auto* inside_weights = BBoxWeights<T>::Cast(
         BnInOp2Blob("rpn_bbox_inside_weights_" + std::to_string(layer))->mut_dptr<T>(im_index));
-    auto* outside_weights = BBoxWeights<T>::MutCast(
+    auto* outside_weights = BBoxWeights<T>::Cast(
         BnInOp2Blob("rpn_bbox_outside_weights_" + std::to_string(layer))->mut_dptr<T>(im_index));
     // Copy label to each layer output
     std::memcpy(rpn_labels_ptr, boxes.label() + layer_offset, num_per_layer * sizeof(int32_t));
