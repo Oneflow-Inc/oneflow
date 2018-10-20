@@ -53,7 +53,7 @@ void ExpandRoi(BBox<float>* expanded_bbox, const Blob* rois_blob, int32_t dim0_i
   expanded_bbox->set_y2(center_y + half_h);
 }
 
-void Resize(cv::Mat* ret_img, Blob* padded_mask_blob, const BBox<float>* bbox) {
+void ResizeMask(cv::Mat* ret_img, Blob* padded_mask_blob, const BBox<float>* bbox) {
   cv::Mat mask_img(padded_mask_blob->shape().At(1), padded_mask_blob->shape().At(0), CV_8UC1,
                    padded_mask_blob->mut_dptr<uint8_t>());
   const auto& size = cv::Size(bbox->width(), bbox->height());
@@ -62,7 +62,7 @@ void Resize(cv::Mat* ret_img, Blob* padded_mask_blob, const BBox<float>* bbox) {
   *ret_img = img;
 }
 
-void Binarize(std::vector<uint8_t>* binary_img, const cv::Mat& img, const float threshold) {
+void BinarizeMask(std::vector<uint8_t>* binary_img, const cv::Mat& img, const float threshold) {
   binary_img->resize(img.rows * img.cols);
   CHECK(img.isContinuous());
   CHECK(img.type() == CV_32FC1);
@@ -72,11 +72,11 @@ void Binarize(std::vector<uint8_t>* binary_img, const cv::Mat& img, const float 
   }
 }
 
-void CopyToImMask(Blob* im_mask_blob, const std::vector<uint8_t>& binary_img,
-                  const BBox<float>* expanded_bbox) {
-  uint8_t* im_mask_ptr = im_mask_blob->mut_dptr<uint8_t>();
-  size_t width = im_mask_blob->shape().At(1);
-  size_t height = im_mask_blob->shape().At(0);
+void CopyToOutBlob(Blob* out_blob, int32_t dim0_idx, const std::vector<uint8_t>& binary_img,
+                   const BBox<float>* expanded_bbox) {
+  uint8_t* im_mask_ptr = out_blob->mut_dptr<uint8_t>(dim0_idx);
+  size_t width = out_blob->shape().At(2);
+  size_t height = out_blob->shape().At(1);
   size_t bbox_w = expanded_bbox->width();
   size_t bbox_h = expanded_bbox->height();
   CHECK_LE(bbox_w, width);
@@ -93,14 +93,6 @@ void CopyToImMask(Blob* im_mask_blob, const std::vector<uint8_t>& binary_img,
              w, h);
 }
 
-void RleEncodeIntoOutputblob(Blob* out_blob, const Blob* im_mask_blob, int32_t dim0_idx) {
-  size_t height = im_mask_blob->shape().At(0);
-  size_t width = im_mask_blob->shape().At(1);
-  size_t len = RleEncode(out_blob->mut_dptr<uint32_t>(dim0_idx), im_mask_blob->dptr<uint8_t>(),
-                         height, width);
-  CHECK_EQ(len, out_blob->shape().Count(1));
-}
-
 }  // namespace
 
 template<typename T>
@@ -111,7 +103,6 @@ void RleSegmentationResultKernel<T>::ForwardDataContent(
   const Blob* rois_blob = BnInOp2Blob("rois");
   const Blob* roi_labels_blob = BnInOp2Blob("roi_labels");
   Blob* padded_mask_blob = BnInOp2Blob("padded_mask");
-  Blob* im_mask_blob = BnInOp2Blob("im_mask");
   Blob* out_blob = BnInOp2Blob("out");
   FOR_RANGE(int32_t, i, 0, mask_blob->shape().At(0)) {
     cv::Mat img;
@@ -120,11 +111,10 @@ void RleSegmentationResultKernel<T>::ForwardDataContent(
 
     InitPaddedMask<T>(padded_mask_blob, mask_blob, roi_labels_blob, i);
     ExpandRoi(expanded_roi, rois_blob, i, mask_blob->shape());
-    Resize(&img, padded_mask_blob, expanded_roi);
+    ResizeMask(&img, padded_mask_blob, expanded_roi);
     std::vector<uint8_t> binarized_img;
-    Binarize(&binarized_img, img, threshold);
-    CopyToImMask(im_mask_blob, binarized_img, expanded_roi);
-    RleEncodeIntoOutputblob(out_blob, im_mask_blob, i);
+    BinarizeMask(&binarized_img, img, threshold);
+    CopyToOutBlob(out_blob, i, binarized_img, expanded_roi);
   }
 }
 

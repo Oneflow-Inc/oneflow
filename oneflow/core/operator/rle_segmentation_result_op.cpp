@@ -33,13 +33,12 @@ void RleSegmentationResultOp::InferBlobDescs(
   CHECK_EQ(rois_blob_desc->shape().NumAxes(), 2);
   CHECK_EQ(rois_blob_desc->shape().At(1), 5);
 
-  // out: (R, L)  where L is maximum length of rle output
+  // out: (R, im_height, im_weight)
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  Shape shape({mask_blob_desc->shape().At(0), conf.im_height() * conf.im_weight()});
+  Shape shape({mask_blob_desc->shape().At(0), conf.im_height(), conf.im_weight()});
   *out_blob_desc = *mask_blob_desc;
   out_blob_desc->mut_shape() = shape;
-  out_blob_desc->set_data_type(DataType::kUInt32);
-  out_blob_desc->set_has_dim1_valid_num_field(true);
+  out_blob_desc->set_data_type(DataType::kUInt8);
 
   // padded_mask: (M_w + 2, M + 2).
   // To work around an issue with cv2.resize, zero-pad the masks by 1 pixel
