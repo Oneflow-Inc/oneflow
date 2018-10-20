@@ -46,7 +46,7 @@ void RleSegmentationResultOp::InferBlobDescs(
   BlobDesc* padded_mask_blob_desc = GetBlobDesc4BnInOp("padded_mask");
   padded_mask_blob_desc->mut_shape() =
       Shape({mask_blob_desc->shape().At(1) + 2, mask_blob_desc->shape().At(2) + 2});
-  padded_mask_blob_desc->set_data_type(DataType::kUInt8);
+  padded_mask_blob_desc->set_data_type(mask_blob_desc->data_type());
 
   // im_mask: (im_height, im_width)
   BlobDesc* im_mask_blob_desc = GetBlobDesc4BnInOp("im_mask");

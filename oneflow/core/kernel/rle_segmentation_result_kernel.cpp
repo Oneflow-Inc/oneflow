@@ -22,12 +22,31 @@ void CopyRegion(T* dst_ptr, size_t dst_step, const T* src_ptr, size_t src_step, 
 template<typename T>
 void InitPaddedMask(Blob* padded_mask_blob, const Blob* mask_blob, const Blob* roi_labels_blob,
                     int32_t dim0_idx) {
-  TODO();
+  int32_t class_id = *roi_labels_blob->dptr<int32_t>(dim0_idx);
+  CHECK_GT(class_id, 0);
+  const T* mask_ptr = mask_blob->dptr<T>(dim0_idx, class_id);
+  T* padded_mask_ptr = padded_mask_blob->mut_dptr<T>();
+  int32_t width = mask_blob->shape().At(3);
+  int32_t height = mask_blob->shape().At(2);
+  CHECK_EQ(width + 2, padded_mask_blob->shape().At(1));
+  CHECK_EQ(height + 2, padded_mask_blob->shape().At(0));
+  CopyRegion(GetPointerPtr<T>(padded_mask_ptr, width + 2, height + 2, 1, 1), width + 2,
+             GetPointerPtr<const T>(mask_ptr, width, height, 0, 0), width, width, height);
 }
 
 void ExpandRoi(BBox<float>* expanded_bbox, const Blob* rois_blob, int32_t dim0_idx,
                const Shape& mask_shape) {
-  TODO();
+  const float scale_w = (mask_shape.At(3) + 2.0) / mask_shape.At(3);
+  const float scale_h = (mask_shape.At(2) + 2.0) / mask_shape.At(2);
+  const auto* bbox = BBox<float>::Cast(&rois_blob->dptr<float>(dim0_idx)[1]);
+  const float center_x = bbox->center_x();
+  const float center_y = bbox->center_y();
+  const float half_w = bbox->width() * scale_w / 2.0;
+  const float half_h = bbox->height() * scale_h / 2.0;
+  expanded_bbox->set_x1(center_x - half_w);
+  expanded_bbox->set_y1(center_y - half_h);
+  expanded_bbox->set_x2(center_x + half_w);
+  expanded_bbox->set_y2(center_y + half_h);
 }
 
 void Resize(cv::Mat* img, Blob* padded_mask_blob, const BBox<float>* bbox) {

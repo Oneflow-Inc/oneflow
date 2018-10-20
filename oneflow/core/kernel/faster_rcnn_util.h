@@ -44,6 +44,8 @@ class BBox final : public Serial<BBox<T>, 4> {
   inline T y1() const { return this->elem()[1]; }
   inline T x2() const { return this->elem()[2]; }
   inline T y2() const { return this->elem()[3]; }
+  inline T center_x() const { return (x1() + x2()) / 2.0; }
+  inline T center_y() const { return (y1() + y2()) / 2.0; }
 
   inline void set_x1(T x1) { this->mut_elem()[0] = x1; }
   inline void set_y1(T y1) { this->mut_elem()[1] = y1; }
