@@ -22,6 +22,9 @@ struct BBoxDelta;
 template<typename T>
 struct BBoxWeights;
 
+template<typename T>
+class BBoxRegWeights;
+
 template<typename Wrapper, typename T, size_t N>
 class ArrayBuffer {
  public:
@@ -83,7 +86,7 @@ struct BBoxIf<ImplT<T, Cat>> {
 
   template<typename U, typename V>
   void Transform(const BBoxIf<U>* bbox, const BBoxDelta<V>* delta,
-                 const BBoxRegressionWeights& bbox_reg_ws) {
+                 const BBoxRegWeights<T>& bbox_reg_ws) {
     float dx = delta->dx() / bbox_reg_ws.weight_x();
     float dy = delta->dy() / bbox_reg_ws.weight_y();
     float dw = delta->dw() / bbox_reg_ws.weight_w();
@@ -186,7 +189,7 @@ struct BBoxDelta final : public ArrayBuffer<BBoxDelta<T>, T, 4> {
 
   template<typename U, typename V>
   void TransformInverse(const BBoxIf<U>* bbox, const BBoxIf<V>* target_bbox,
-                        const BBoxRegressionWeights& bbox_reg_ws) {
+                        const BBoxRegWeights<T>& bbox_reg_ws) {
     set_dx(bbox_reg_ws.weight_x() * (target_bbox->center_x() - bbox->center_x()) / bbox->width());
     set_dy(bbox_reg_ws.weight_y() * (target_bbox->center_y() - bbox->center_y()) / bbox->height());
     set_dw(bbox_reg_ws.weight_w() * std::log(target_bbox->width() / bbox->width()));
@@ -205,6 +208,20 @@ struct BBoxWeights final : public ArrayBuffer<BBoxWeights<T>, T, 4> {
   inline void set_weight_y(T weight_y) { this->elem()[1] = weight_y; }
   inline void set_weight_w(T weight_w) { this->elem()[2] = weight_w; }
   inline void set_weight_h(T weight_h) { this->elem()[3] = weight_h; }
+};
+
+template<typename T>
+class BBoxRegWeights final {
+ public:
+  BBoxRegWeights(const BBoxRegressionWeights& bbox_reg_weights)
+      : bbox_reg_weights_(bbox_reg_weights) {}
+  T weight_x() const { return static_cast<T>(bbox_reg_weights_.weight_x()); }
+  T weight_y() const { return static_cast<T>(bbox_reg_weights_.weight_y()); }
+  T weight_w() const { return static_cast<T>(bbox_reg_weights_.weight_w()); }
+  T weight_h() const { return static_cast<T>(bbox_reg_weights_.weight_h()); }
+
+ private:
+  const BBoxRegressionWeights& bbox_reg_weights_;
 };
 
 class IndexSequence {
