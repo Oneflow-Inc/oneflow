@@ -1,9 +1,7 @@
 #ifndef ONEFLOW_CORE_KERNEL_BBOX_UTIL_H_
 #define ONEFLOW_CORE_KERNEL_BBOX_UTIL_H_
 
-//#include <array>
 #include "oneflow/core/common/util.h"
-//#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 
 namespace oneflow {
