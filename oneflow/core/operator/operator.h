@@ -120,10 +120,10 @@ class Operator {
   DEFINE_BLOB_NAMES_GETTER(pb_input_bns);
   DEFINE_BLOB_NAMES_GETTER(pb_output_bns);
 
+#undef DEFINE_BLOB_NAMES_GETTER
+
   void ForEachInputBn(const std::function<void(const std::string&)>& Handler) const;
   void ForEachOutputBn(const std::function<void(const std::string&)>& Handler) const;
-
-#undef DEFINE_BLOB_NAMES_GETTER
 
   // Read: shape of input_blobs
   // Write: shape of output_blobs, model_blobs, data_tmp_blobs, const_model_blobs, const_buf_blobs

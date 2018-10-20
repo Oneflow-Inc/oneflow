@@ -21,10 +21,10 @@ void ClearPbBlob(Blob* blob) {
 
 void CheckSameDim0ValidNum(const PbRpf<std::string>& bns,
                            const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
-  const void* mem_ptr = BnInOp2Blob(bns.Get(0))->dim1_valid_num();
+  const void* mem_ptr = BnInOp2Blob(bns.Get(0))->dim0_valid_num();
   size_t len = BnInOp2Blob(bns.Get(0))->ByteSizeOfDim0ValidNumField();
   FOR_RANGE(int, i, 1, bns.size()) {
-    CHECK_EQ(std::memcmp(BnInOp2Blob(bns.Get(i))->dim1_valid_num(), mem_ptr, len), 0);
+    CHECK_EQ(std::memcmp(BnInOp2Blob(bns.Get(i))->dim0_valid_num(), mem_ptr, len), 0);
   }
 }
 
