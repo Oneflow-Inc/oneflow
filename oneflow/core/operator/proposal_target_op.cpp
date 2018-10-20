@@ -20,6 +20,7 @@ void ProposalTargetOp::InitFromOpConf() {
   EnrollDataTmpBn("rois_inds");
   EnrollDataTmpBn("max_overlaps");
   EnrollDataTmpBn("max_overlaps_with_gt_index");
+  EnrollDataTmpBn("sampled_inds");
 }
 
 const PbMessage& ProposalTargetOp::GetCustomizedConf() const {
@@ -43,7 +44,7 @@ void ProposalTargetOp::InferBlobDescs(
   CHECK(gt_boxes_blob_desc->has_dim1_valid_num_field());
   CHECK(gt_labels_blob_desc->has_dim1_valid_num_field());
   const int64_t num_images = gt_boxes_blob_desc->shape().At(0);
-  const int64_t max_num_gt_per_im = gt_boxes_blob_desc->shape().At(1);
+  const int64_t num_gt = gt_boxes_blob_desc->shape().Count(0, 2);
   CHECK_EQ(gt_labels_blob_desc->shape().At(0), num_images);
   const int64_t num_rois = rois_blob_desc->shape().At(0);
   // const int64_t num_sampled_rois = conf.num_sampled_rois_per_image();
@@ -76,20 +77,24 @@ void ProposalTargetOp::InferBlobDescs(
 
   // data tmp: gt_boxes_inds (n * g) int32_t
   BlobDesc* gt_boxes_inds_blob_desc = GetBlobDesc4BnInOp("gt_boxes_inds");
-  gt_boxes_inds_blob_desc->mut_shape() = Shape({num_images * max_num_gt_per_im});
+  gt_boxes_inds_blob_desc->mut_shape() = Shape({num_gt});
   gt_boxes_inds_blob_desc->set_data_type(DataType::kInt32);
-  // data tmp: rois_inds (r + g) int32_t
+  // data tmp: rois_inds (r + n * g) int32_t
   BlobDesc* rois_inds_blob_desc = GetBlobDesc4BnInOp("rois_inds");
-  rois_inds_blob_desc->mut_shape() = Shape({num_rois + max_num_gt_per_im});
+  rois_inds_blob_desc->mut_shape() = Shape({num_rois + num_gt});
   rois_inds_blob_desc->set_data_type(DataType::kInt32);
-  // data tmp: max_overlaps (r + g) float
+  // data tmp: max_overlaps (r + n * g) float
   BlobDesc* max_overlaps_blob_desc = GetBlobDesc4BnInOp("max_overlaps");
-  max_overlaps_blob_desc->mut_shape() = Shape({num_rois + max_num_gt_per_im});
+  max_overlaps_blob_desc->mut_shape() = Shape({num_rois + num_gt});
   max_overlaps_blob_desc->set_data_type(DataType::kFloat);
-  // data tmp: max_overlaps_gt_boxes_index (r + g) int32_t
+  // data tmp: max_overlaps_gt_boxes_index (r + n * g) int32_t
   BlobDesc* max_overlaps_gt_index_bd = GetBlobDesc4BnInOp("max_overlaps_with_gt_index");
-  max_overlaps_gt_index_bd->mut_shape() = Shape({num_rois + max_num_gt_per_im});
+  max_overlaps_gt_index_bd->mut_shape() = Shape({num_rois + num_gt});
   max_overlaps_gt_index_bd->set_data_type(DataType::kInt32);
+  // data tmp: sampled_inds (total_num_sampled_rois) int32_t
+  BlobDesc* sampled_inds_blob_desc = GetBlobDesc4BnInOp("sampled_inds");
+  sampled_inds_blob_desc->mut_shape() = Shape({total_num_sampled_rois});
+  sampled_inds_blob_desc->set_data_type(DataType::kInt32);
 }
 
 REGISTER_OP(OperatorConf::kProposalTargetConf, ProposalTargetOp);

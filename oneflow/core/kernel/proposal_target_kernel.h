@@ -24,17 +24,23 @@ class ProposalTargetKernel final : public KernelIf<DeviceType::kCPU> {
  private:
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
-  LabeledGtBox GetImageGtBoxes(const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  MaxOverlapOfRoiBoxWithGt GetImageRoiBoxes(
-      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  void FindNearestGtBoxForEachRoiBox(size_t max_num_gt_per_im, const LabeledGtBox& gt_boxes,
+  void ForwardDim0ValidNum(const KernelCtx& ctx,
+                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+
+  auto GetImageGtBoxes(const std::function<Blob*(const std::string&)>& BnInOp2Blob) const
+      -> LabeledGtBox;
+  auto GetImageRoiBoxes(const std::function<Blob*(const std::string&)>& BnInOp2Blob) const
+      -> MaxOverlapOfRoiBoxWithGt;
+  void FindNearestGtBoxForEachRoiBox(const std::function<Blob*(const std::string&)>& BnInOp2Blob,
+                                     const LabeledGtBox& gt_boxes,
                                      MaxOverlapOfRoiBoxWithGt& roi_boxes) const;
   void ConcatGtBoxesToRoiBoxesHead(const LabeledGtBox& gt_boxes,
                                    MaxOverlapOfRoiBoxWithGt& roi_boxes) const;
-  void SubsampleForegroundAndBackground(size_t num_im, const LabeledGtBox& gt_boxes,
+  void SubsampleForegroundAndBackground(const std::function<Blob*(const std::string&)>& BnInOp2Blob,
+                                        const LabeledGtBox& gt_boxes,
                                         MaxOverlapOfRoiBoxWithGt& boxes) const;
-  void Output(const LabeledGtBox& gt_boxes, const MaxOverlapOfRoiBoxWithGt& boxes,
-              const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  void Output(const std::function<Blob*(const std::string&)>& BnInOp2Blob,
+              const LabeledGtBox& gt_boxes, const MaxOverlapOfRoiBoxWithGt& boxes) const;
 };
 
 }  // namespace oneflow
