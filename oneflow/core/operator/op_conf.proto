@@ -468,6 +468,13 @@ message PrintOpConf {
   optional int32 part_name_suffix_length = 4 [default = -1];
 }
 
+message BlobDumpOpConf {
+  repeated PrintRecordConf in = 1;
+  required string dump_dir = 2;
+  optional string part_name_prefix = 3 [default = "part-"];
+  optional int32 part_name_suffix_length = 4 [default = -1];
+}
+
 message LossPrintOpConf {
   required LogicalBlobId loss_lbi = 1;
   optional LogicalBlobId reduction_lbi = 2;
@@ -847,18 +854,17 @@ message RoIAlignOpConf {
 
 message AnchorTargetOpConf {
   required string gt_boxes = 1;
-  required string rpn_labels = 2;
-  required string rpn_bbox_targets = 3;
-  required string rpn_bbox_inside_weights = 4;
-  required string rpn_bbox_outside_weights = 5;
-  required AnchorGeneratorConf anchor_generator_conf = 6;
-  required int32 max_gt_boxes_num = 7 [default = 256];
-  required float positive_overlap_threshold = 8 [default = 0.7];
-  required float negative_overlap_threshold = 9 [default = 0.3];
-  required int32 batch_size_per_image = 10 [default = 256];
-  required float foreground_fraction = 11 [default = 0.5];
-  required float straddle_thresh = 12 [default = 0.0];
-  required BBoxRegressionWeights bbox_reg_weights = 13;
+  repeated string rpn_labels = 2;
+  repeated string rpn_bbox_targets = 3;
+  repeated string rpn_bbox_inside_weights = 4;
+  repeated string rpn_bbox_outside_weights = 5;
+  repeated AnchorGeneratorConf anchor_generator_conf = 6;
+  required float positive_overlap_threshold = 7 [default = 0.7];
+  required float negative_overlap_threshold = 8 [default = 0.3];
+  required int32 total_subsample_num = 9 [default = 256];
+  required float foreground_fraction = 10 [default = 0.5];
+  required BBoxRegressionWeights bbox_reg_weights = 11;
+  optional float straddle_thresh = 12 [default = 0.0];
 }
 
 message MatmulOpConf {
@@ -1023,6 +1029,7 @@ message OperatorConf {
     DefineTestBlobConf define_test_blob_conf = 236;
     Deconv2DOpConf deconv_2d_conf = 237;
     Deconv3DOpConf deconv_3d_conf = 238;
+    BlobDumpOpConf blob_dump_conf = 239;
     RoIPoolingOpConf roi_pooling_conf = 1000;
     SmoothL1LossOpConf smooth_l1_loss_conf = 1001;
     ProposalOpConf proposal_conf = 1002;

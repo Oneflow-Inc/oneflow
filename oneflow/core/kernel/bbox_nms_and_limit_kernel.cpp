@@ -155,9 +155,9 @@ void BboxNmsAndLimitKernel<T>::BroadcastBboxTransform(const Blob* bbox_blob,
     const auto* bbox = BBox::Cast(bbox_blob->dptr<T>(i));
     const auto* delta = BBoxDelta<T>::Cast(bbox_pred_blob->dptr<T>(i));
     FOR_RANGE(int64_t, j, 0, num_classes) {
-      BBox* target_bbox = BBox::MutCast(target_bbox_blob->mut_dptr<T>(i, j));
+      BBox* target_bbox = BBox::Cast(target_bbox_blob->mut_dptr<T>(i, j));
       target_bbox->Transform(bbox, delta + j, bbox_reg_ws);
-      target_bbox->set_im_index(bbox->im_index());
+      target_bbox->set_index(bbox->index());
     }
   }
 }
@@ -165,7 +165,7 @@ void BboxNmsAndLimitKernel<T>::BroadcastBboxTransform(const Blob* bbox_blob,
 template<typename T>
 void BboxNmsAndLimitKernel<T>::ClipBBox(Blob* target_bbox_blob) const {
   const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
-  auto* bbox_ptr = BBox::MutCast(target_bbox_blob->mut_dptr<T>());
+  auto* bbox_ptr = BBox::Cast(target_bbox_blob->mut_dptr<T>());
   FOR_RANGE(int64_t, i, 0, target_bbox_blob->shape().Count(0, 2)) {
     bbox_ptr[i].Clip(conf.image_height(), conf.image_width());
   }
@@ -177,7 +177,7 @@ typename BboxNmsAndLimitKernel<T>::Image2IndexVecMap BboxNmsAndLimitKernel<T>::G
   Image2IndexVecMap im_grouped_bbox_inds;
   FOR_RANGE(int32_t, i, 0, target_bbox_blob->shape().At(0)) {
     const BBox* bbox = BBox::Cast(target_bbox_blob->dptr<T>(i, 0));
-    int32_t im_idx = static_cast<int32_t>(bbox->im_index());
+    int32_t im_idx = static_cast<int32_t>(bbox->index());
     im_grouped_bbox_inds[im_idx].emplace_back(i);
   }
   return im_grouped_bbox_inds;
@@ -242,7 +242,7 @@ void BboxNmsAndLimitKernel<T>::VoteBboxAndScore(const ScoredBoxesIndices& pre_nm
     T* score_ptr = const_cast<T*>(post_nms_inds.score());
     score_ptr[bbox_idx] =
         scoring_method_->scoring(pre_nms_inds, post_nms_inds.GetScore(i), ForEachNearBy);
-    VoteBbox(pre_nms_inds, post_nms_inds.mut_bbox(bbox_idx), ForEachNearBy);
+    VoteBbox(pre_nms_inds, post_nms_inds.bbox(bbox_idx), ForEachNearBy);
   }
 }
 
@@ -292,9 +292,9 @@ void BboxNmsAndLimitKernel<T>::OutputBBox(const std::vector<int32_t> out_bbox_in
   int32_t out_cnt = 0;
   for (int32_t bbox_idx : out_bbox_inds) {
     const auto* bbox = BBox::Cast(target_bbox_blob->dptr<T>()) + bbox_idx;
-    auto* out_bbox = BBox::MutCast(out_bbox_blob->mut_dptr<T>()) + (out_cnt++);
+    auto* out_bbox = BBox::Cast(out_bbox_blob->mut_dptr<T>()) + (out_cnt++);
     out_bbox->set_corner_coord(bbox->left(), bbox->top(), bbox->right(), bbox->bottom());
-    out_bbox->set_im_index(bbox->im_index());
+    out_bbox->set_index(bbox->index());
   }
   CHECK_LE(out_cnt, out_bbox_blob->static_shape().At(0));
   out_bbox_blob->set_dim0_valid_num(0, out_cnt);
