@@ -37,15 +37,15 @@ void InitPaddedMask(Blob* padded_mask_blob, const Blob* mask_blob, const Blob* r
              GetPointerPtr<const T>(mask_ptr, width, height, 0, 0), width, width, height);
 }
 
-void ExpandRoi(BBox<uint32_t>* expanded_bbox, const Blob* rois_blob, int32_t dim0_idx,
+void ExpandRoi(BBox<int32_t>* expanded_bbox, const Blob* rois_blob, int32_t dim0_idx,
                const Shape& mask_shape) {
   const float scale_w = (mask_shape.At(3) + 2.0) / mask_shape.At(3);
   const float scale_h = (mask_shape.At(2) + 2.0) / mask_shape.At(2);
   const auto* bbox = BBox<float>::Cast(&rois_blob->dptr<float>(dim0_idx)[1]);
-  const float center_x = bbox->center_x();
-  const float center_y = bbox->center_y();
-  const float half_w = bbox->width() * scale_w / 2.0;
-  const float half_h = bbox->height() * scale_h / 2.0;
+  const float center_x = (bbox->x2() + bbox->x1()) * 0.5;
+  const float center_y = (bbox->y2() + bbox->y1()) * 0.5;
+  const float half_w = (bbox->x2() - bbox->x1()) * 0.5 * scale_w;
+  const float half_h = (bbox->y2() - bbox->y1()) * 0.5 * scale_h;
   expanded_bbox->set_x1(center_x - half_w);
   expanded_bbox->set_y1(center_y - half_h);
   expanded_bbox->set_x2(center_x + half_w);
@@ -65,7 +65,7 @@ int GetCVType<double>() {
 }
 
 template<typename T>
-void ResizeMask(cv::Mat* ret_img, Blob* padded_mask_blob, const BBox<uint32_t>* bbox) {
+void ResizeMask(cv::Mat* ret_img, Blob* padded_mask_blob, const BBox<int32_t>* bbox) {
   cv::Mat mask_img(padded_mask_blob->shape().At(1), padded_mask_blob->shape().At(0), GetCVType<T>(),
                    padded_mask_blob->mut_dptr<T>());
   const auto& size = cv::Size(bbox->width(), bbox->height());
@@ -85,7 +85,7 @@ void BinarizeMask(std::vector<uint8_t>* binary_img, const cv::Mat& img, const fl
 }
 
 void CopyToOutputBlob(Blob* out_blob, int32_t dim0_idx, const std::vector<uint8_t>& binary_img,
-                      const BBox<uint32_t>* expanded_bbox) {
+                      const BBox<int32_t>* expanded_bbox) {
   uint8_t* im_mask_ptr = out_blob->mut_dptr<uint8_t>(dim0_idx);
   size_t width = out_blob->shape().At(2);
   size_t height = out_blob->shape().At(1);
@@ -123,8 +123,8 @@ void ImageSegmentationMaskKernel<T>::ForwardDataContent(
   ClearBlob<uint8_t>(out_blob);
   FOR_RANGE(int32_t, i, 0, mask_blob->shape().At(0)) {
     cv::Mat img;
-    std::array<uint32_t, 4> expanded_bbox;
-    auto* expanded_roi = BBox<uint32_t>::MutCast(&expanded_bbox[0]);
+    std::array<int32_t, 4> expanded_bbox;
+    auto* expanded_roi = BBox<int32_t>::MutCast(&expanded_bbox[0]);
 
     InitPaddedMask<T>(padded_mask_blob, mask_blob, roi_labels_blob, i);
     ExpandRoi(expanded_roi, rois_blob, i, mask_blob->shape());
