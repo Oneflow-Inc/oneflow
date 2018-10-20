@@ -1,0 +1,223 @@
+#include "oneflow/core/kernel/mask_target_kernel.h"
+#include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/record/coco.pb.h"
+extern "C" {
+#include <maskApi.h>
+}
+
+namespace oneflow {
+
+template<typename T>
+void MaskTargetKernel<T>::ForwardDataContent(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  static_assert(SegmBBox::ElemCnt == 4, "number of elements in SegmBBox should be 4");
+  static_assert(RoiBBox::ElemCnt == 5, "number of elements in RoiBBox should be 5");
+  std::vector<std::vector<PolygonList>> segms;
+  // input blobs
+  const Blob* in_rois_blob = BnInOp2Blob("in_rois");
+  const Blob* in_labels_blob = BnInOp2Blob("in_labels");
+  const Blob* gt_segms_blob = BnInOp2Blob("gt_segm_polygon_lists");
+  // output blobs
+  Blob* masks_blob = BnInOp2Blob("masks");
+  Blob* mask_rois_blob = BnInOp2Blob("mask_rois");
+  // data tmp blobs
+  Blob* gt_bboxes_blob = BnInOp2Blob("gt_segm_bboxes");
+  // const buf blobs
+  const Blob* mask_ignore_labels_blob = BnInOp2Blob("mask_ignore_labels");
+  const auto num_classes = static_cast<size_t>(masks_blob->static_shape().At(1));
+  const auto mask_h = static_cast<size_t>(masks_blob->static_shape().At(2));
+  const auto mask_w = static_cast<size_t>(masks_blob->static_shape().At(3));
+
+  ParseSegmPolygonLists(gt_segms_blob, &segms);
+  ComputeSegmBBoxes(segms, gt_bboxes_blob);
+
+  CHECK_EQ(in_rois_blob->dim0_valid_num(0), in_labels_blob->dim0_valid_num(0));
+  int32_t mask_idx = 0;
+  // set dim0_valid_num to max
+  std::vector<int32_t> fg_roi_cnts(gt_bboxes_blob->shape().At(0));
+  std::vector<int32_t> bg_roi_cnts(gt_bboxes_blob->shape().At(0));
+  std::vector<T> img_first_bg_roi_data(gt_bboxes_blob->shape().At(0) * RoiBBox::ElemCnt);
+  RoiBBox* img_first_bg_roi = RoiBBox::Cast(img_first_bg_roi_data.data());
+  masks_blob->set_dim0_valid_num(0, masks_blob->static_shape().At(0));
+  mask_rois_blob->set_dim0_valid_num(0, mask_rois_blob->static_shape().At(0));
+  const RoiBBox* in_roi_bboxes = RoiBBox::Cast(in_rois_blob->dptr<T>());
+  RoiBBox* mask_roi_bboxes = RoiBBox::Cast(mask_rois_blob->mut_dptr<T>());
+  FOR_RANGE(int32_t, roi_idx, 0, in_rois_blob->dim0_valid_num(0)) {
+    const int32_t in_label = *in_labels_blob->dptr<int32_t>(roi_idx);
+    CHECK_GE(in_label, 0);
+    CHECK_LT(in_label, num_classes);
+    const RoiBBox& in_roi = in_roi_bboxes[roi_idx];
+    const auto img_idx = static_cast<int32_t>(in_roi.index());
+    CHECK_GE(img_idx, 0);
+    CHECK_LT(img_idx, gt_bboxes_blob->shape().At(0));
+    CHECK_GE(gt_bboxes_blob->dim1_valid_num(img_idx), 1);
+    if (in_label == 0) {
+      bg_roi_cnts[img_idx] += 1;
+      if (bg_roi_cnts[img_idx] == 1) { img_first_bg_roi[img_idx].elem() = in_roi.elem(); }
+      continue;
+    } else {
+      fg_roi_cnts[img_idx] += 1;
+    }
+
+    mask_roi_bboxes[mask_idx].elem() = in_roi.elem();
+    Memcpy<kCPU>(ctx.device_ctx, masks_blob->mut_dptr<T>(mask_idx),
+                 mask_ignore_labels_blob->dptr<T>(),
+                 mask_ignore_labels_blob->ByteSizeOfDataContentField());
+    size_t max_iou_gt_idx =
+        GetMaxOverlapIndex(in_roi, SegmBBox::Cast(gt_bboxes_blob->mut_dptr<float>(img_idx)),
+                           static_cast<size_t>(gt_bboxes_blob->dim1_valid_num(img_idx)));
+    Segm2Mask(segms.at(static_cast<size_t>(img_idx)).at(max_iou_gt_idx), in_roi, mask_h, mask_w,
+              masks_blob->mut_dptr<T>(mask_idx, in_label));
+    mask_idx += 1;
+  }
+
+  FOR_RANGE(int32_t, i, 0, fg_roi_cnts.size()) {
+    if (fg_roi_cnts[i] == 0) {
+      CHECK_GT(bg_roi_cnts[i], 0);
+      RoiBBox ::Cast(mask_rois_blob->mut_dptr<T>(mask_idx))->elem() = img_first_bg_roi[i].elem();
+      Memcpy<kCPU>(ctx.device_ctx, masks_blob->mut_dptr<T>(mask_idx),
+                   mask_ignore_labels_blob->dptr<T>(),
+                   mask_ignore_labels_blob->ByteSizeOfDataContentField());
+      mask_idx += 1;
+    }
+  }
+  masks_blob->set_dim0_valid_num(0, mask_idx);
+  mask_rois_blob->set_dim0_valid_num(0, mask_idx);
+}
+
+template<typename T>
+void MaskTargetKernel<T>::ForwardDim0ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  // do nothing here because it will be set in ForwardDataContent
+}
+
+template<typename T>
+void MaskTargetKernel<T>::InitConstBufBlobs(
+    DeviceCtx*, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  Blob* mask_ignore_labels = BnInOp2Blob("mask_ignore_labels");
+  std::fill(mask_ignore_labels->mut_dptr<T>(),
+            mask_ignore_labels->mut_dptr<T>() + mask_ignore_labels->shape().elem_cnt(),
+            -OneVal<T>::value);
+}
+
+template<typename T>
+void MaskTargetKernel<T>::ComputeSegmBBoxes(const std::vector<std::vector<PolygonList>>& segms,
+                                            Blob* bboxes) const {
+  FOR_RANGE(int32_t, n, 0, segms.size()) {
+    bboxes->set_dim1_valid_num(n, segms.at(n).size());
+    SegmBBox* bboxes_ptr = SegmBBox::Cast(bboxes->mut_dptr<float>(n));
+    FOR_RANGE(int32_t, g, 0, segms.at(n).size()) { Segm2BBox(segms.at(n).at(g), &bboxes_ptr[g]); }
+  }
+}
+
+template<typename T>
+void MaskTargetKernel<T>::ParseSegmPolygonLists(
+    const Blob* gt_segms, std::vector<std::vector<PolygonList>>* segms) const {
+  segms->resize(static_cast<size_t>(gt_segms->shape().At(0)));
+  FOR_RANGE(size_t, n, 0, gt_segms->shape().At(0)) {
+    segms->at(n).resize(static_cast<size_t>(gt_segms->dim1_valid_num(n)));
+    FOR_RANGE(size_t, g, 0, gt_segms->dim1_valid_num(n)) {
+      CHECK(segms->at(n).at(g).ParseFromArray(gt_segms->dptr<char>(n, g),
+                                              gt_segms->dim2_valid_num(n, g)));
+    }
+  }
+}
+
+template<typename T>
+void MaskTargetKernel<T>::Segm2BBox(const PolygonList& segm, SegmBBox* bbox) const {
+  CHECK_GE(segm.polygons_size(), 1);
+  Polygon2BBox(segm.polygons(0), bbox);
+  FOR_RANGE(int32_t, i, 1, segm.polygons_size()) {
+    float one_bbox_elem[4];
+    SegmBBox* one_bbox = SegmBBox::Cast(one_bbox_elem);
+    Polygon2BBox(segm.polygons(i), one_bbox);
+    bbox->set_corner_coord(
+        std::min(bbox->left(), one_bbox->left()), std::min(bbox->top(), one_bbox->top()),
+        std::max(bbox->right(), one_bbox->right()), std::max(bbox->bottom(), one_bbox->bottom()));
+  }
+}
+
+template<typename T>
+void MaskTargetKernel<T>::Polygon2BBox(const FloatList& polygon, SegmBBox* bbox) const {
+  const PbRf<float>& xy = polygon.value();
+  CHECK_EQ(xy.size() % 2, 0);
+  CHECK_GE(xy.size() / 2, 3);
+  bbox->set_corner_coord(xy[0], xy[1], xy[0], xy[1]);
+  FOR_RANGE(int32_t, i, 1, polygon.value_size() / 2) {
+    bbox->set_corner_coord(std::min(bbox->left(), xy[i * 2]), std::min(bbox->top(), xy[i * 2 + 1]),
+                           std::max(bbox->right(), xy[i * 2]),
+                           std::max(bbox->bottom(), xy[i * 2 + 1]));
+  }
+}
+
+template<typename T>
+void MaskTargetKernel<T>::PolygonXy2MaskBitmap(const std::vector<double>& xy, size_t mask_h,
+                                               size_t mask_w, uint8_t* bitmap) const {
+  CHECK_EQ(xy.size() % 2, 0);
+  RLE rle;
+  rleFrPoly(&rle, xy.data(), xy.size() / 2, mask_h, mask_w);
+  rleDecode(&rle, bitmap, 1);
+  rleFree(&rle);
+}
+
+template<typename T>
+void MaskTargetKernel<T>::Segm2Mask(const PolygonList& segm, const RoiBBox& fg_roi, size_t mask_h,
+                                    size_t mask_w, T* mask) const {
+  CHECK_GE(segm.polygons_size(), 1);
+  size_t mask_elem_num = mask_h * mask_w;
+  std::vector<uint8_t> mask_vec(mask_elem_num);
+  std::vector<uint8_t> one_mask_vec;
+  std::vector<double> xy;
+  double scale_w =
+      static_cast<double>(mask_w) / std::max(OneVal<T>::value, fg_roi.right() - fg_roi.left());
+  double scale_h =
+      static_cast<double>(mask_h) / std::max(OneVal<T>::value, fg_roi.bottom() - fg_roi.top());
+  FOR_RANGE(int32_t, i, 0, segm.polygons_size()) {
+    const PbRf<float>& polygon_xy = segm.polygons(i).value();
+    CHECK_EQ(polygon_xy.size() % 2, 0);
+    xy.resize(static_cast<size_t>(polygon_xy.size()));
+    FOR_RANGE(int32_t, j, 0, polygon_xy.size()) {
+      if (j % 2 == 0) {
+        xy[j] = (polygon_xy[j] - fg_roi.left()) * scale_w;
+      } else {
+        xy[j] = (polygon_xy[j] - fg_roi.top()) * scale_h;
+      }
+    }
+
+    if (i == 0) {
+      PolygonXy2MaskBitmap(xy, mask_h, mask_w, mask_vec.data());
+    } else {
+      one_mask_vec.resize(mask_elem_num);
+      PolygonXy2MaskBitmap(xy, mask_h, mask_w, one_mask_vec.data());
+      std::transform(mask_vec.cbegin(), mask_vec.cend(), one_mask_vec.cbegin(), mask_vec.begin(),
+                     std::bit_or<uint8_t>());
+    }
+  }
+
+  FOR_RANGE(int32_t, r, 0, mask_h) {
+    FOR_RANGE(int32_t, c, 0, mask_w) {
+      mask[r * mask_w + c] = mask_vec[c * mask_h + r] ? OneVal<T>::value : ZeroVal<T>::value;
+    }
+  }
+}
+
+template<typename T>
+size_t MaskTargetKernel<T>::GetMaxOverlapIndex(const RoiBBox& fg_roi, const SegmBBox* gt_bboxs,
+                                               size_t gt_bboxs_num) const {
+  CHECK_GE(gt_bboxs_num, 1);
+  size_t max_overlap_idx = 0;
+  float max_overlap = fg_roi.InterOverUnion(&gt_bboxs[0]);
+  FOR_RANGE(size_t, i, 1, gt_bboxs_num) {
+    float overlap = fg_roi.InterOverUnion(&gt_bboxs[i]);
+    if (overlap > max_overlap) {
+      max_overlap_idx = i;
+      max_overlap = overlap;
+    }
+  }
+  return max_overlap_idx;
+}
+
+ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kMaskTargetConf, MaskTargetKernel,
+                               FLOATING_DATA_TYPE_SEQ);
+
+}  // namespace oneflow

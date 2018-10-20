@@ -948,6 +948,17 @@ message RedefineDim0OpConf {
   }
 }
 
+message MaskTargetOpConf {
+  required string in_rois = 1;
+  required string in_labels = 2;
+  required string gt_segm_polygon_lists = 3;
+  required string mask_rois = 4;
+  required string masks = 5;
+  required int32 num_classes = 6;
+  required int32 mask_h = 7;
+  required int32 mask_w = 8;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1035,6 +1046,7 @@ message OperatorConf {
     FpnDistributeOpConf fpn_distribute_conf = 1013;
     VStackOpConf vstack_conf = 1014;
     RedefineDim0OpConf redefine_dim0_conf = 1015;
+    MaskTargetOpConf mask_target_conf = 1016;
     BboxTransformOpConf bbox_transform_conf = 1100;
   }
 }
