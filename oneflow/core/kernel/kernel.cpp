@@ -100,11 +100,15 @@ void Kernel::Forward(const KernelCtx& ctx,
 
 void Kernel::Backward(const KernelCtx& ctx,
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (op_attribute().model_diff_bns().size() > 0) {
+    BackwardModelDiffDim0ValidNum(ctx, BnInOp2Blob);
+  }
   if (kernel_conf_.need_do_dim0_valid_num() && op_attribute().input_diff_bns_size() > 0) {
     CHECK(!kernel_conf_.need_do_opaque_header());
-    BackwardDim0ValidNum(ctx, BnInOp2Blob);
+    BackwardInDiffDim0ValidNum(ctx, BnInOp2Blob);
   }
   if (HasEmptyShapeBlob(op_attribute().output_diff_bns(), BnInOp2Blob)) { return; }
+  CHECK_EQ(false, HasEmptyShapeBlob(op_attribute().model_diff_bns(), BnInOp2Blob));
   ActivationType activation = GetActivationType();
   if (activation != ActivationType::kNone) {
     const PbRpf<std::string> obns = this->op_attribute().output_bns();
@@ -160,7 +164,22 @@ void KernelIf<device_type>::ForwardDim0ValidNum(
 }
 
 template<DeviceType device_type>
-void KernelIf<device_type>::BackwardDim0ValidNum(
+void KernelIf<device_type>::BackwardModelDiffDim0ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  bool is_out_diff_empty = HasEmptyShapeBlob(op_attribute().output_diff_bns(), BnInOp2Blob);
+  for (const std::string& bn : op_attribute().model_diff_bns()) {
+    Blob* blob = BnInOp2Blob(bn);
+    CHECK(blob);
+    if (blob->has_dim0_valid_num_field()) {
+      CHECK(blob->has_dim0_inner_shape());
+      CHECK_EQ(1, blob->dim0_inner_shape().At(0));
+      blob->set_dim0_valid_num(0, is_out_diff_empty ? 0 : blob->static_shape().At(0));
+    }
+  }
+}
+
+template<DeviceType device_type>
+void KernelIf<device_type>::BackwardInDiffDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CHECK(kernel_conf().can_naive_do_dim0_valid_num());
   CheckSameDim0ValidNum(op_attribute().output_diff_bns(), BnInOp2Blob);
@@ -171,23 +190,6 @@ void KernelIf<device_type>::BackwardDim0ValidNum(
   if (input_diff_bns.empty()) { return; }
   CopyField(ctx.device_ctx, BnInOp2Blob, BnInOp2Blob(op_attribute().output_diff_bns(0)),
             input_diff_bns, &Blob::CopyDim0ValidNumFrom);
-
-  if (op_attribute().model_diff_bns().size() > 0) {
-    bool is_out_diff_empty = HasEmptyShapeBlob(op_attribute().output_diff_bns(), BnInOp2Blob);
-    for (const std::string& bn : op_attribute().model_diff_bns()) {
-      Blob* blob = BnInOp2Blob(bn);
-      if (blob) {
-        CHECK(blob->has_dim0_inner_shape());
-        CHECK_EQ(1, blob->dim0_inner_shape().At(0));
-        CHECK(blob->has_dim0_valid_num_field());
-        if (is_out_diff_empty) {
-          blob->set_dim0_valid_num(0, 0);
-        } else {
-          blob->set_dim0_valid_num(0, blob->shape().At(0));
-        }
-      }
-    }
-  }
 }
 
 template<DeviceType device_type>
@@ -257,6 +259,9 @@ void KernelIf<device_type>::CopyField(DeviceCtx* ctx,
     CopyField(ctx, BnInOp2Blob, in_blob, to_bns, Copy);
   } else if (to_bns.size() == 1) {
     Blob* in_blob = BnInOp2Blob(from_bns[0]);
+    if (in_blob == nullptr) {
+      LOG(ERROR) << "op_name: " << op_conf().name() << ", " << from_bns[0];
+    }
     Blob* out_blob = BnInOp2Blob(to_bns[0]);
     (out_blob->*Copy)(ctx, in_blob);
   } else {

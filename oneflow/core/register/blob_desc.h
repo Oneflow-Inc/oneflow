@@ -28,6 +28,7 @@ class BlobDesc {
   bool has_dim0_inner_shape() const { return bool(dim0_inner_shape_); }
   const Shape& dim0_inner_shape() const { return *dim0_inner_shape_; }
   Shape& mut_dim0_inner_shape();
+  void clear_dim0_inner_shape() { dim0_inner_shape_.reset(nullptr); }
 
   DataType data_type() const { return body_field_.data_type(); }
   void set_data_type(DataType val) { body_field_.set_data_type(val); }
