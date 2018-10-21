@@ -30,6 +30,8 @@ class NormalBackwardCompTaskNode final : public CompTaskNode {
   void InferBlobDescsInProducedRegsts();
   CompTaskNode* GetRelatedFwTaskNode();
   void InferProducedDataRegstTimeShape() override;
+
+  std::string type_name4model_related_logical_node_;
 };
 
 }  // namespace oneflow

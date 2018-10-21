@@ -40,7 +40,7 @@ int64_t FpnCollectKernel<device_type, T>::ConcatAllRoisAndScores(
     const int64_t prob_in_col_num = prob_blob->shape().Count(1);
 
     auto GetValidDim1 = [](const Blob* blob, int32_t no) -> int32_t {
-      if (blob->dim1_valid_num() != nullptr) { return blob->dim1_valid_num(no); }
+      if (blob->dim1_valid_num_ptr() != nullptr) { return blob->dim1_valid_num(no); }
       return blob->shape().At(1);
     };
     FOR_RANGE(size_t, j, 0, roi_blob->shape().At(0)) {
