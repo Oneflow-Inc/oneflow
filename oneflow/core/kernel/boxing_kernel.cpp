@@ -313,6 +313,13 @@ void BoxingKernel<T>::ForwardDim2ValidNum(
 }
 
 template<typename T>
+void BoxingKernel<T>::ForwardRecordIdxInDevicePiece(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  // record indexes is not allowed to be passed through boxing op
+  UNIMPLEMENTED();
+}
+
+template<typename T>
 void BoxingKernel<T>::SetColId(const KernelCtx& ctx,
                                std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const BoxingOpConf& boxing_conf = op_conf().boxing_conf();
