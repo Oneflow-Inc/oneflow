@@ -259,9 +259,6 @@ void KernelIf<device_type>::CopyField(DeviceCtx* ctx,
     CopyField(ctx, BnInOp2Blob, in_blob, to_bns, Copy);
   } else if (to_bns.size() == 1) {
     Blob* in_blob = BnInOp2Blob(from_bns[0]);
-    if (in_blob == nullptr) {
-      LOG(ERROR) << "op_name: " << op_conf().name() << ", " << from_bns[0];
-    }
     Blob* out_blob = BnInOp2Blob(to_bns[0]);
     (out_blob->*Copy)(ctx, in_blob);
   } else {
