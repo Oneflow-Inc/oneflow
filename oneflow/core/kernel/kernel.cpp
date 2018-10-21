@@ -92,6 +92,10 @@ void Kernel::Forward(const KernelCtx& ctx,
     CHECK(!kernel_conf_.need_do_opaque_header());
     ForwardDim2ValidNum(ctx, BnInOp2Blob);
   }
+  if (kernel_conf_.need_do_record_idx_in_device_piece()) {
+    CHECK(!kernel_conf_.need_do_opaque_header());
+    ForwardRecordIdxInDevicePiece(ctx, BnInOp2Blob);
+  }
   ForwardDataContent(ctx, BnInOp2Blob);
   if (GetActivationType() != ActivationType::kNone) {
     const PbRpf<std::string> obns = this->op_attribute().output_bns();
