@@ -28,6 +28,7 @@ class RtBlobDesc {
   bool has_dim0_valid_num_field() const;
   bool has_dim1_valid_num_field() const;
   bool has_dim2_valid_num_field() const;
+  bool has_record_idx_in_device_piece_field() const;
   const StructPodDesc& header_pod_desc() const { return header_pod_desc_; }
 
   int32_t max_col_num() const { return blob_desc_proto_.header().max_col_num(); }
@@ -41,6 +42,7 @@ class RtBlobDesc {
   size_t ByteSizeOfDim0ValidNumField() const;
   size_t ByteSizeOfDim1ValidNumField() const;
   size_t ByteSizeOfDim2ValidNumField() const;
+  size_t ByteSizeOfRecordIdxInDevicePieceField() const;
   size_t ByteSizeOfDataContentField() const;
 
   bool operator==(const RtBlobDesc& rhs) const;
