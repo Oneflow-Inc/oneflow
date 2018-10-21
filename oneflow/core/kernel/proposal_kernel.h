@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_KERNEL_PROPOSAL_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/kernel/faster_rcnn_util.h"
+#include "oneflow/core/kernel/bbox_util.h"
 
 namespace oneflow {
 
@@ -13,15 +13,26 @@ class ProposalKernel final : public KernelIf<DeviceType::kCPU> {
   ProposalKernel() = default;
   ~ProposalKernel() = default;
 
+  using BBox = BBoxImpl<const T, BBoxCategory::kCorner>;
+  using MutBBox = BBoxImpl<T, BBoxCategory::kCorner>;
+  using RoiBox = BBoxImpl<T, BBoxCategory::kIndexCorner>;
+  using BoxesSlice = BBoxIndices<IndexSequence, BBox>;
+  using ScoreSlice = ScoreIndices<IndexSequence, const T>;
+
  private:
-  void ForwardDataId(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
-  void ForwardDim1ValidNum(const KernelCtx& ctx,
+  void ForwardDim0ValidNum(const KernelCtx& ctx,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void InitConstBufBlobs(DeviceCtx*,
                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void CopyRoI(const int64_t im_index, const ScoredBoxesIndex<T>& boxes, Blob* rois_blob) const;
+
+  ScoreSlice RegionProposal(const int64_t im_index,
+                            const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  BoxesSlice ApplyNms(const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  size_t WriteRoisToOutput(const size_t num_output, const int32_t im_index,
+                           const ScoreSlice& score_slice, const BoxesSlice& post_nms_slice,
+                           const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 };
 
 }  // namespace oneflow

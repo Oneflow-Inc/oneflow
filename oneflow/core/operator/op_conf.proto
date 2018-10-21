@@ -788,7 +788,7 @@ message ProposalOpConf {
   required string bbox_pred = 2;
   required string rois = 3;
   required string roi_probs = 4;
-  required AnchorGeneratorConf anchors_generator_conf = 5;
+  required AnchorGeneratorConf anchor_generator_conf = 5;
   required BBoxRegressionWeights bbox_reg_weights = 6;
   required int32 min_size = 7;
   required int32 pre_nms_top_n = 8;

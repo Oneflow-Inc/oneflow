@@ -1,101 +1,94 @@
 #include "oneflow/core/kernel/proposal_kernel.h"
-#include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/kernel/faster_rcnn_util.h"
 
 namespace oneflow {
 
 template<typename T>
 void ProposalKernel<T>::InitConstBufBlobs(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  FasterRcnnUtil<T>::GenerateAnchors(op_conf().proposal_conf().anchors_generator_conf(),
-                                     BnInOp2Blob("anchors"));
+  BBoxUtil<MutBBox>::GenerateAnchors(op_conf().proposal_conf().anchor_generator_conf(),
+                                     BnInOp2Blob("anchors")->mut_dptr<T>());
 }
 
 template<typename T>
 void ProposalKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  // input blob
-  const Blob* bbox_pred_blob = BnInOp2Blob("bbox_pred");
-  const Blob* class_prob_blob = BnInOp2Blob("class_prob");
-  const Blob* anchors_blob = BnInOp2Blob("anchors");
-  // output blob
-  Blob* rois_blob = BnInOp2Blob("rois");
-  Blob* roi_probs_blob = BnInOp2Blob("roi_probs");
-  Blob* proposals_blob = BnInOp2Blob("proposals");
-  std::memset(rois_blob->mut_dptr(), 0, rois_blob->shape().elem_cnt() * sizeof(T));
-  std::memset(roi_probs_blob->mut_dptr(), 0, roi_probs_blob->shape().elem_cnt() * sizeof(T));
+  int32_t num_output = 0;
+  FOR_RANGE(int64_t, im_i, 0, BnInOp2Blob("class_prob")->shape().At(0)) {
+    auto score_slice = RegionProposal(im_i, BnInOp2Blob);
+    auto post_nms_slice = ApplyNms(BnInOp2Blob);
+    num_output += WriteRoisToOutput(num_output, im_i, score_slice, post_nms_slice, BnInOp2Blob);
+  }
+  BnInOp2Blob("rois")->set_dim0_valid_num(0, num_output);
+  BnInOp2Blob("roi_probs")->set_dim0_valid_num(0, num_output);
+}
+
+template<typename T>
+typename ProposalKernel<T>::ScoreSlice ProposalKernel<T>::RegionProposal(
+    const int64_t im_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const ProposalOpConf& conf = op_conf().proposal_conf();
-  const AnchorGeneratorConf& anchor_generator_conf = conf.anchors_generator_conf();
-  const BBoxRegressionWeights& bbox_reg_ws = conf.bbox_reg_weights();
-  const int64_t num_images = class_prob_blob->shape().At(0);
-  const int64_t height = class_prob_blob->shape().At(1);
-  const int64_t width = class_prob_blob->shape().At(2);
-  const int64_t num_anchors =
-      anchor_generator_conf.aspect_ratios_size() * anchor_generator_conf.anchor_scales_size();
-  const int64_t num_proposals = height * width * num_anchors;
+  Blob* proposals_blob = BnInOp2Blob("proposals");
+  Blob* score_slice_blob = BnInOp2Blob("score_slice");
 
-  const T* anchors_ptr = anchors_blob->dptr<T>();
-  const T* const_proposals_ptr = proposals_blob->dptr<T>();
-  T* proposals_ptr = proposals_blob->mut_dptr<T>();
-  int32_t* pre_nms_slice_ptr = BnInOp2Blob("pre_nms_slice")->mut_dptr<int32_t>();
-  int32_t* post_nms_slice_ptr = BnInOp2Blob("post_nms_slice")->mut_dptr<int32_t>();
-  FOR_RANGE(int64_t, i, 0, num_images) {
-    const T* bbox_pred_ptr = bbox_pred_blob->dptr<T>(i);
-    const T* class_prob_ptr = class_prob_blob->dptr<T>(i);
-
-    FasterRcnnUtil<T>::BboxTransform(num_proposals, anchors_ptr, bbox_pred_ptr, bbox_reg_ws,
-                                     proposals_ptr);
-    FasterRcnnUtil<T>::ClipBoxes(num_proposals, anchor_generator_conf.image_height(),
-                                 anchor_generator_conf.image_width(), proposals_ptr);
-
-    auto pre_nms_slice = GenScoredBoxesIndex(num_proposals, pre_nms_slice_ptr, const_proposals_ptr,
-                                             class_prob_ptr, true);
-    pre_nms_slice.SortByScore([](T lhs_score, T rhs_score) { return lhs_score > rhs_score; });
-    pre_nms_slice.FilterByBBox([&](size_t n, int32_t index, const BBox<T>* bbox) {
-      return (bbox->width() < conf.min_size()) || (bbox->height() < conf.min_size());
-    });
-    size_t pre_nms_top_n = conf.pre_nms_top_n() > 0
-                               ? std::min<size_t>(num_proposals, conf.pre_nms_top_n())
-                               : num_proposals;
-    pre_nms_slice.Truncate(pre_nms_top_n);
-
-    auto post_nms_slice = GenScoredBoxesIndex(conf.post_nms_top_n(), post_nms_slice_ptr,
-                                              const_proposals_ptr, class_prob_ptr, true);
-    FasterRcnnUtil<T>::Nms(conf.nms_threshold(), pre_nms_slice, post_nms_slice);
-
-    CopyRoI(i, post_nms_slice, rois_blob);
-    FOR_RANGE(int32_t, j, 0, post_nms_slice.size()) {
-      roi_probs_blob->mut_dptr<T>(i)[j] = post_nms_slice.GetScore(j);
-    }
-    roi_probs_blob->set_dim1_valid_num(i, post_nms_slice.size());
+  size_t num_proposals = proposals_blob->shape().At(0);
+  ScoreSlice score_slice(IndexSequence(score_slice_blob->shape().elem_cnt(),
+                                       score_slice_blob->mut_dptr<int32_t>(), true),
+                         BnInOp2Blob("class_prob")->dptr<T>(im_index));
+  score_slice.NthElem(num_proposals, [&](int32_t lhs_index, int32_t rhs_index) {
+    return score_slice.score(lhs_index) > score_slice.score(rhs_index);
+  });
+  score_slice.Truncate(num_proposals);
+  score_slice.Sort([&](int32_t lhs_index, int32_t rhs_index) {
+    return score_slice.score(lhs_index) > score_slice.score(rhs_index);
+  });
+  const auto* bbox_delta = BBoxDelta<T>::Cast(BnInOp2Blob("bbox_pred")->dptr<T>(im_index));
+  const auto* anchor_bbox = BBox::Cast(BnInOp2Blob("anchors")->dptr<T>());
+  auto* prop_bbox = MutBBox::Cast(proposals_blob->mut_dptr<T>());
+  FOR_RANGE(size_t, i, 0, score_slice.size()) {
+    int32_t index = score_slice.GetIndex(i);
+    prop_bbox[i].Transform(anchor_bbox + index, bbox_delta + index, conf.bbox_reg_weights());
+    prop_bbox[i].Clip(conf.anchor_generator_conf().image_height(),
+                      conf.anchor_generator_conf().image_width());
   }
+  return score_slice;
 }
 
 template<typename T>
-void ProposalKernel<T>::CopyRoI(const int64_t im_index, const ScoredBoxesIndex<T>& boxes,
-                                Blob* rois_blob) const {
-  FOR_RANGE(int32_t, i, 0, boxes.size()) {
-    T* out_rois_ptr = rois_blob->mut_dptr<T>(im_index, i);
-    out_rois_ptr[0] = im_index;
-    BBox<T>* roi_bbox = BBox<T>::MutCast(out_rois_ptr + 1);
-    const BBox<T>* proposal_bbox = boxes.GetBBox(i);
-    roi_bbox->set_x1(proposal_bbox->x1());
-    roi_bbox->set_y1(proposal_bbox->y1());
-    roi_bbox->set_x2(proposal_bbox->x2());
-    roi_bbox->set_y2(proposal_bbox->y2());
+typename ProposalKernel<T>::BoxesSlice ProposalKernel<T>::ApplyNms(
+    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+  const ProposalOpConf& conf = op_conf().proposal_conf();
+  const Blob* proposals_blob = BnInOp2Blob("proposals");
+  Blob* pre_nms_inds_blob = BnInOp2Blob("pre_nms_slice");
+  Blob* post_nms_inds_blob = BnInOp2Blob("post_nms_slice");
+  BoxesSlice pre_nms_slice(IndexSequence(pre_nms_inds_blob->shape().elem_cnt(),
+                                         pre_nms_inds_blob->mut_dptr<int32_t>(), true),
+                           proposals_blob->dptr<T>());
+  BoxesSlice post_nms_slice(IndexSequence(post_nms_inds_blob->shape().elem_cnt(),
+                                          post_nms_inds_blob->mut_dptr<int32_t>(), true),
+                            proposals_blob->dptr<T>());
+  BBoxUtil<BBox>::Nms(conf.nms_threshold(), pre_nms_slice, post_nms_slice);
+  return post_nms_slice;
+}
+
+template<typename T>
+size_t ProposalKernel<T>::WriteRoisToOutput(
+    const size_t num_output, const int32_t im_index, const ScoreSlice& score_slice,
+    const BoxesSlice& post_nms_slice,
+    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+  Blob* rois_blob = BnInOp2Blob("rois");
+  Blob* rois_prob_blob = BnInOp2Blob("roi_probs");
+  FOR_RANGE(size_t, i, 0, post_nms_slice.size()) {
+    const auto* prop_bbox = post_nms_slice.GetBBox(i);
+    auto* roi_bbox = RoiBox::Cast(rois_blob->mut_dptr<T>(num_output));
+    roi_bbox->set_corner_coord(prop_bbox->left(), prop_bbox->top(), prop_bbox->right(),
+                               prop_bbox->bottom());
+    roi_bbox->set_index(im_index);
+    rois_prob_blob->mut_dptr<T>()[num_output] = score_slice.GetScore(post_nms_slice.GetIndex(i));
   }
-  rois_blob->set_dim1_valid_num(im_index, boxes.size());
+  return num_output + post_nms_slice.size();
 }
 
 template<typename T>
-void ProposalKernel<T>::ForwardDataId(const KernelCtx& ctx,
-                                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob("rois")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("bbox_pred"));
-  BnInOp2Blob("roi_probs")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("bbox_pred"));
-}
-
-template<typename T>
-void ProposalKernel<T>::ForwardDim1ValidNum(
+void ProposalKernel<T>::ForwardDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // do nothing
 }

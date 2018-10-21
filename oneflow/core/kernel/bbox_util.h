@@ -284,6 +284,20 @@ class IndexSequence {
 
   void Shuffle() { Shuffle(0, size_); }
 
+  void NthElem(size_t begin, size_t nth, size_t end,
+               const std::function<bool(int32_t, int32_t)>& Compare) {
+    CHECK_LE(begin, nth);
+    CHECK_LE(nth, end);
+    CHECK_LE(end, size());
+    std::nth_element(
+        index() + begin, index() + nth, index() + end,
+        [&](int32_t lhs_index, int32_t rhs_index) { return Compare(lhs_index, rhs_index); });
+  }
+
+  void NthElem(size_t nth, const std::function<bool(int32_t, int32_t)>& Compare) {
+    NthElem(0, nth, size(), Compare);
+  }
+
   void ForEach(const std::function<bool(int32_t)>& DoNext) {
     FOR_RANGE(size_t, i, 0, size_) {
       if (!DoNext(GetIndex(i))) { break; }
