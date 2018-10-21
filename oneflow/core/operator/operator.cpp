@@ -98,6 +98,9 @@ void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> Get
                                 const ParallelContext* parallel_ctx,
                                 std::function<void(OpContext*)> EnrollOpCtx) const {
   InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, EnrollOpCtx);
+  if (op_attribute_.model_bns().size() > 0) {
+    InferTotalInstanceNumDesc(GetBlobDesc4BnInOp, parallel_ctx, EnrollOpCtx);
+  }
 }
 
 void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -234,6 +237,16 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
     }
     if (HasBlobDescWithField(GetBlobDesc4BnInOp, obns, &BlobDesc::has_dim2_valid_num_field)) {
       kernel_conf->set_need_do_dim2_valid_num(true);
+    }
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, obns,
+                             &BlobDesc::has_record_idx_in_device_piece_field)) {
+      kernel_conf->set_need_do_record_idx_in_device_piece(true);
+      if (DoAllBlobDescHaveField(GetBlobDesc4BnInOp, input_bns(),
+                                 &BlobDesc::has_record_idx_in_device_piece_field)
+          && DoAllBlobDescHaveField(GetBlobDesc4BnInOp, output_bns(),
+                                    &BlobDesc::has_record_idx_in_device_piece_field)) {
+        kernel_conf->set_can_naive_do_record_idx_in_device_piece(true);
+      }
     }
   }
 
@@ -403,12 +416,17 @@ void Operator::EnrollModelBn(const std::string& mbn) {
     EnrollConstModelBn(mbn);
     return;
   }
-  LogicalBlobId lbi = mbn2lbi(mbn);
-  *(mut_model_bns()->Add()) = mbn;
-  CHECK(mut_bn_in_op2lbi()->insert({mbn, lbi}).second);
-  std::string mdbn = GenDiffBn(mbn);
-  *(mut_model_diff_bns()->Add()) = mdbn;
-  CHECK(mut_bn_in_op2lbi()->insert({mdbn, lbi}).second);
+  auto Enroll = [&](const std::string& mbn) {
+    LogicalBlobId lbi = mbn2lbi(mbn);
+    *(mut_model_bns()->Add()) = mbn;
+    CHECK(mut_bn_in_op2lbi()->insert({mbn, lbi}).second);
+    std::string mdbn = GenDiffBn(mbn);
+    *(mut_model_diff_bns()->Add()) = mdbn;
+    CHECK(mut_bn_in_op2lbi()->insert({mdbn, lbi}).second);
+  };
+  Enroll(mbn);
+  auto it = op_attribute_.bn_in_op2lbi().find("total_instance_num");
+  if (it == op_attribute_.bn_in_op2lbi().end()) { Enroll("total_instance_num"); }
 }
 void Operator::EnrollModelDiffBn(const std::string& mdbn) {
   LogicalBlobId lbi = mbn2lbi(mdbn);
@@ -450,6 +468,23 @@ void Operator::ForEachInputBn(const std::function<void(const std::string&)>& Han
 void Operator::ForEachOutputBn(const std::function<void(const std::string&)>& Handler) const {
   for (const std::string& obn : output_bns()) { Handler(obn); }
   for (const std::string& pobn : pb_output_bns()) { Handler(pobn); }
+}
+
+void Operator::InferTotalInstanceNumDesc(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, std::function<void(OpContext*)> EnrollOpCtx) const {
+  CHECK_GE(op_attribute_.model_bns().size(), 2);
+  auto it = op_attribute_.bn_in_op2lbi().find("total_instance_num");
+  if (it != op_attribute_.bn_in_op2lbi().end()) {
+    GetBlobDesc4BnInOp("total_instance_num")->mut_shape() = Shape({1});
+    for (const std::string& bn : op_attribute_.model_bns()) {
+      if (bn != "total_instance_num") {
+        GetBlobDesc4BnInOp("total_instance_num")
+            ->set_data_type(GetBlobDesc4BnInOp(bn)->data_type());
+        break;
+      }
+    }
+  }
 }
 
 std::string GenDiffBn(const std::string& bn) { return bn + "_diff"; }

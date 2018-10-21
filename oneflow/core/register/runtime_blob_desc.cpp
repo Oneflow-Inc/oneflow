@@ -39,6 +39,10 @@ bool RtBlobDesc::has_dim2_valid_num_field() const {
   return header_pod_desc_.HasField(FieldKey::kDim2ValidNum);
 }
 
+bool RtBlobDesc::has_record_idx_in_device_piece_field() const {
+  return header_pod_desc_.HasField(FieldKey::kRecordIdxInDevicePiece);
+}
+
 size_t RtBlobDesc::ByteSizeOfBlobHeader() const { return header_pod_desc_.ByteSize(); }
 
 size_t RtBlobDesc::ByteSizeOfBlobBody() const { return body_desc_.AlignedByteSize(); }
@@ -66,6 +70,11 @@ size_t RtBlobDesc::ByteSizeOfDim1ValidNumField() const {
 size_t RtBlobDesc::ByteSizeOfDim2ValidNumField() const {
   if (!has_dim2_valid_num_field()) { return 0; }
   return header_pod_desc_.Field(FieldKey::kDim2ValidNum).ByteSize();
+}
+
+size_t RtBlobDesc::ByteSizeOfRecordIdxInDevicePieceField() const {
+  if (!has_record_idx_in_device_piece_field()) { return 0; }
+  return header_pod_desc_.Field(FieldKey::kRecordIdxInDevicePiece).ByteSize();
 }
 
 size_t RtBlobDesc::ByteSizeOfDataContentField() const { return body_desc_.ByteSize(); }

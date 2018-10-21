@@ -7,7 +7,7 @@ namespace oneflow {
 template<typename T>
 void OFRecordDecoderImpl<EncodeCase::kBytesList, T>::SetDim1ValidNum(const Feature& feature,
                                                                      Blob* out_blob,
-                                                                     int32_t dim0_idx) const {
+                                                                     int64_t dim0_idx) const {
   static_assert(sizeof(T) == 1, "only char and int8_t supported");
   CHECK_GE(out_blob->static_shape().NumAxes(), 2);
   CHECK(feature.has_bytes_list());
@@ -19,7 +19,7 @@ void OFRecordDecoderImpl<EncodeCase::kBytesList, T>::SetDim1ValidNum(const Featu
 template<typename T>
 void OFRecordDecoderImpl<EncodeCase::kBytesList, T>::SetDim2ValidNum(const Feature& feature,
                                                                      Blob* out_blob,
-                                                                     int32_t dim0_idx) const {
+                                                                     int64_t dim0_idx) const {
   static_assert(sizeof(T) == 1, "only char and int8_t supported");
   CHECK_GE(out_blob->static_shape().NumAxes(), 3);
   CHECK(feature.has_bytes_list());

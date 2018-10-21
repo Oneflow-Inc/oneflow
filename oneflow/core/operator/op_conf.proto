@@ -410,10 +410,11 @@ message NormalModelUpdateOpUserConf {
 message NormalModelUpdateOpConf {
   required NormalModelUpdateOpUserConf user_conf = 1;
   required string model_diff = 2;
-  required string model = 3;
-  required float learning_rate = 4;
-  required float l1 = 5;
-  required float l2 = 6;
+  required string total_instance_num_diff = 3;
+  required string model = 4;
+  required float learning_rate = 5;
+  required float l1 = 6;
+  required float l2 = 7;
 }
 
 message AccumulateOpConf {
@@ -600,9 +601,10 @@ message DefineTestBlobConf {
   required ShapeProto shape = 2;
   required DataType data_type = 3;
   optional ShapeProto dim0_inner_shape = 4;
-  optional int32 dim0_valid_num = 5;
-  optional int32 dim1_valid_num = 6;
-  optional int32 dim2_valid_num = 7;
+  optional int64 dim0_valid_num = 5;
+  optional int64 dim1_valid_num = 6;
+  optional int64 dim2_valid_num = 7;
+  repeated int64 record_idx_in_device_piece = 8;
 }
 
 message NormalizationOpConf {

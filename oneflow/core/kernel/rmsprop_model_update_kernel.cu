@@ -7,11 +7,11 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void UpdateModelGpu(int64_t n, int64_t batch_size, T learning_rate, T decay_rate,
-                               T epsilon, T l1, T l2, const T* model_diff, T* model,
+__global__ void UpdateModelGpu(int64_t n, const T* batch_instance_num_ptr, T learning_rate,
+                               T decay_rate, T epsilon, T l1, T l2, const T* model_diff, T* model,
                                T* mean_square) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    T reg_diff = RegularizeDiff(model_diff[i], batch_size, l1, l2, model[i]);
+    T reg_diff = RegularizeDiff(model_diff[i], *batch_instance_num_ptr, l1, l2, model[i]);
     mean_square[i] = (1 - decay_rate) * reg_diff * reg_diff + decay_rate * mean_square[i];
     model[i] = model[i] - learning_rate * reg_diff / std::sqrt(mean_square[i] + epsilon);
   }
@@ -22,11 +22,12 @@ __global__ void UpdateModelGpu(int64_t n, int64_t batch_size, T learning_rate, T
 template<typename T>
 class RMSPropMdUpdateKernelUtil<DeviceType::kGPU, T> final {
  public:
-  static void UpdateModel(DeviceCtx* ctx, int64_t n, int64_t batch_size, T learning_rate,
-                          T decay_rate, T epsilon, T l1, T l2, const T* model_diff, T* model,
-                          T* mean_square) {
+  static void UpdateModel(DeviceCtx* ctx, int64_t n, const T* batch_instance_num_ptr,
+                          T learning_rate, T decay_rate, T epsilon, T l1, T l2, const T* model_diff,
+                          T* model, T* mean_square) {
     UpdateModelGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-        n, batch_size, learning_rate, decay_rate, epsilon, l1, l2, model_diff, model, mean_square);
+        n, batch_instance_num_ptr, learning_rate, decay_rate, epsilon, l1, l2, model_diff, model,
+        mean_square);
   }
 };
 
