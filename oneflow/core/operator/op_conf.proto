@@ -761,6 +761,19 @@ message BBoxRegressionWeights {
   required float weight_h = 4 [default = 1.0];
 }
 
+message BboxClipConf {
+  required int32 width = 1;
+  required int32 height = 2;
+}
+
+message BboxTransformOpConf {
+  required string bbox = 1;
+  required string bbox_delta = 2;
+  required string out_bbox = 3;
+  required BBoxRegressionWeights bbox_reg_weights = 4;
+  optional BboxClipConf clip_conf = 5;
+}
+
 message RoIPoolingOpConf {
   required string in = 1;
   required string rois = 2;
@@ -956,6 +969,7 @@ message OperatorConf {
     ResizeNearestNeighborOpConf resize_nearest_neighbor_conf = 1010;
     BatchPermutationOpConf batch_permutation_conf = 1011;
     RedefineDim0OpConf redefine_dim0_conf = 1015;
+    BboxTransformOpConf bbox_transform_conf = 1100;
   }
 }
 
