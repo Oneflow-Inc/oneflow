@@ -2,6 +2,7 @@
 #include "oneflow/core/record/ofrecord_raw_decoder.h"
 #include "oneflow/core/record/ofrecord_jpeg_decoder.h"
 #include "oneflow/core/record/ofrecord_protobuf_decoder.h"
+#include "oneflow/core/record/ofrecord_bytes_list_decoder.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/thread/thread_manager.h"
 
@@ -185,8 +186,8 @@ void OFRecordDecoder<encode_case, T>::ReadPartDataContent(
     if (col_id < out_blob->col_num(i)) {
       ReadOneCol(ctx, feature, blob_conf, col_id, out_dptr, one_col_elem_num,
                  [&]() { return distribution(gen); });
-      if (out_blob->dim1_valid_num()) { SetDim1ValidNum(feature, out_blob, i); }
-      if (out_blob->dim2_valid_num()) { SetDim2ValidNum(feature, out_blob, i); }
+      if (out_blob->dim1_valid_num_ptr()) { SetDim1ValidNum(feature, out_blob, i); }
+      if (out_blob->dim2_valid_num_ptr()) { SetDim2ValidNum(feature, out_blob, i); }
       FOR_RANGE(size_t, j, 0, blob_conf.preprocess_size()) {
         DoPreprocess<T>(blob_conf.preprocess(j), out_dptr, out_blob->shape());
       }
