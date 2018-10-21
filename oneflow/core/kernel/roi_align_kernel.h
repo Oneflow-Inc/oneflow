@@ -19,8 +19,8 @@ class RoIAlignKernel final : public RoIResizeKernel<device_type> {
                            std::function<Blob*(const std::string&)>) const override;
   void ForwardDim0ValidNum(const KernelCtx& ctx,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void BackwardDim0ValidNum(const KernelCtx& ctx,
-                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void BackwardInDiffDim0ValidNum(
+      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
 template<DeviceType device_type, typename T>

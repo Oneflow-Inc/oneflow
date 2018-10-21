@@ -32,7 +32,7 @@ void RoIAlignKernel<device_type, T>::ForwardDim0ValidNum(
 }
 
 template<DeviceType device_type, typename T>
-void RoIAlignKernel<device_type, T>::BackwardDim0ValidNum(
+void RoIAlignKernel<device_type, T>::BackwardInDiffDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // do nothing
 }

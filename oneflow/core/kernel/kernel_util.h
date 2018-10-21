@@ -140,6 +140,7 @@ struct CpuKernelUtilIf {
                                 const std::string& model_dir, Blob* blob,
                                 const std::string& bn_in_op, int32_t dim_num,
                                 int64_t num_in_each_dim);
+  static void Set(DeviceCtx* ctx, const T value, T* addr);
 };
 
 // CPU, Floating
@@ -245,6 +246,7 @@ struct GpuKernelUtilIf {
                                 const std::string& model_dir, Blob* blob,
                                 const std::string& bn_in_op, int32_t dim_num,
                                 int64_t num_in_each_dim);
+  static void Set(DeviceCtx* ctx, const T value, T* addr);
 };
 
 // GPU, Floating
@@ -505,7 +507,7 @@ class Dim0ValidNumIterator final : public FieldIterator {
 
  private:
   char* GetMutPtr(Blob* blob) override {
-    return reinterpret_cast<char*>(blob->mut_dim0_valid_num());
+    return reinterpret_cast<char*>(blob->mut_dim0_valid_num_ptr());
   }
 
   size_t GetSizeOfField(Blob* blob) const override { return blob->ByteSizeOfDim0ValidNumField(); }
@@ -520,7 +522,7 @@ class Dim1ValidNumIterator final : public FieldIterator {
 
  private:
   char* GetMutPtr(Blob* blob) override {
-    return reinterpret_cast<char*>(blob->mut_dim1_valid_num());
+    return reinterpret_cast<char*>(blob->mut_dim1_valid_num_ptr());
   }
 
   size_t GetSizeOfField(Blob* blob) const override { return blob->ByteSizeOfDim1ValidNumField(); }
@@ -535,7 +537,7 @@ class Dim2ValidNumIterator final : public FieldIterator {
 
  private:
   char* GetMutPtr(Blob* blob) override {
-    return reinterpret_cast<char*>(blob->mut_dim2_valid_num());
+    return reinterpret_cast<char*>(blob->mut_dim2_valid_num_ptr());
   }
 
   size_t GetSizeOfField(Blob* blob) const override { return blob->ByteSizeOfDim2ValidNumField(); }

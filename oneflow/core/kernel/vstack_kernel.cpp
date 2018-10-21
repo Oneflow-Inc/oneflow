@@ -48,7 +48,7 @@ void VStackKernel<device_type, T>::BackwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
-void VStackKernel<device_type, T>::BackwardDim0ValidNum(
+void VStackKernel<device_type, T>::BackwardInDiffDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   for (const auto& in_bn : this->op_attribute().input_bns()) {
     BnInOp2Blob(GenDiffBn(in_bn))->set_dim0_valid_num(0, BnInOp2Blob(in_bn)->dim0_valid_num(0));
