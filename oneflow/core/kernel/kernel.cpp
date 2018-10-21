@@ -14,6 +14,16 @@ void CheckSameDim0ValidNum(const PbRpf<std::string>& bns,
   }
 }
 
+void CheckSameRecordIdxInDevicePiece(const PbRpf<std::string>& bns,
+                                     const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+  const void* mem_ptr = BnInOp2Blob(bns.Get(0))->record_idx_in_device_piece_ptr();
+  size_t len = BnInOp2Blob(bns.Get(0))->ByteSizeOfRecordIdxInDevicePieceField();
+  FOR_RANGE(int, i, 1, bns.size()) {
+    CHECK_EQ(std::memcmp(BnInOp2Blob(bns.Get(i))->record_idx_in_device_piece_ptr(), mem_ptr, len),
+             0);
+  }
+}
+
 }  // namespace
 
 void Kernel::Init(const ParallelContext* parallel_ctx, const KernelConf& kernel_conf,
@@ -157,6 +167,15 @@ void KernelIf<device_type>::ForwardDim0ValidNum(
   CheckSameDim0ValidNum(op_attribute().input_bns(), BnInOp2Blob);
   CopyField(ctx.device_ctx, BnInOp2Blob, BnInOp2Blob(op_attribute().input_bns(0)),
             op_attribute().output_bns(), &Blob::CopyDim0ValidNumFrom);
+}
+
+template<DeviceType device_type>
+void KernelIf<device_type>::ForwardRecordIdxInDevicePiece(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  CHECK(kernel_conf().can_naive_do_record_idx_in_device_piece());
+  CheckSameRecordIdxInDevicePiece(op_attribute().input_bns(), BnInOp2Blob);
+  CopyField(ctx.device_ctx, BnInOp2Blob, BnInOp2Blob(op_attribute().input_bns(0)),
+            op_attribute().output_bns(), &Blob::CopyRecordIdxInDevicePieceFrom);
 }
 
 template<DeviceType device_type>

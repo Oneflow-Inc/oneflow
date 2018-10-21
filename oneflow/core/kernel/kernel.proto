@@ -154,7 +154,9 @@ message KernelConf {
   optional bool need_do_dim0_valid_num = 9 [default = false];
   optional bool need_do_dim1_valid_num = 10 [default = false];
   optional bool need_do_dim2_valid_num = 11 [default = false];
-  optional bool can_naive_do_dim0_valid_num = 12 [default = false];
+  optional bool need_do_record_idx_in_device_piece = 12 [default = false];
+  optional bool can_naive_do_dim0_valid_num = 13 [default = false];
+  optional bool can_naive_do_record_idx_in_device_piece = 14 [default = false];
 
   oneof kernel_type {
     SparseSoftmaxCrossEntropyLossKernelConf sparse_softmax_cross_entropy_loss_conf = 101;
