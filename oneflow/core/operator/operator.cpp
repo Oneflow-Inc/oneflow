@@ -210,6 +210,16 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
     if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_dim2_valid_num_field)) {
       kernel_conf->set_need_do_dim2_valid_num(true);
     }
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns,
+                             &BlobDesc::has_record_idx_in_device_piece_field)) {
+      kernel_conf->set_need_do_record_idx_in_device_piece(true);
+      if (DoAllBlobDescHaveField(GetBlobDesc4BnInOp, input_bns(),
+                                 &BlobDesc::has_record_idx_in_device_piece_field)
+          && DoAllBlobDescHaveField(GetBlobDesc4BnInOp, output_bns(),
+                                    &BlobDesc::has_record_idx_in_device_piece_field)) {
+        kernel_conf->set_can_naive_do_record_idx_in_device_piece(true);
+      }
+    }
   }
 
   kernel_conf->set_is_forward(is_forward);

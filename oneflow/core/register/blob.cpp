@@ -26,6 +26,8 @@ void Blob::Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, cha
   dim0_valid_num_ptr_ = header_pod_ptr_.MutTensorPtr<int64_t>(FieldKey::kDim0ValidNum, nullptr);
   dim1_valid_num_ptr_ = header_pod_ptr_.MutTensorPtr<int64_t>(FieldKey::kDim1ValidNum, nullptr);
   dim2_valid_num_ptr_ = header_pod_ptr_.MutTensorPtr<int64_t>(FieldKey::kDim2ValidNum, nullptr);
+  record_idx_in_device_piece_ptr_ =
+      header_pod_ptr_.MutTensorPtr<int64_t>(FieldKey::kRecordIdxInDevicePiece, nullptr);
   dptr_ = body_ptr;
   dynamic_shape_ = blob_desc->shape();
 }
@@ -107,6 +109,30 @@ int64_t Blob::dim2_valid_num(int64_t dim0_idx, int64_t dim1_idx) const {
   }
   return val;
 }
+
+int64_t Blob::record_idx_in_device_piece(int64_t no) const {
+  CHECK_GE(no, 0);
+  CHECK_LT(no, shape().At(0));
+  int64_t val;
+  if (record_idx_in_device_piece_ptr_) {
+    val = record_idx_in_device_piece_ptr_[no];
+    CHECK_GE(val, 0);
+    CHECK_LE(val, shape().At(1));
+  } else {
+    val = shape().At(1);
+  }
+  return val;
+}
+
+void Blob::set_record_idx_in_device_piece(int64_t no, int64_t val) {
+  CHECK_NOTNULL(record_idx_in_device_piece_ptr_);
+  CHECK_GE(no, 0);
+  CHECK_LT(no, static_shape().At(0));
+  CHECK_GE(val, 0);
+  CHECK_LE(val, static_shape().At(1));
+  record_idx_in_device_piece_ptr_[no] = val;
+}
+
 void Blob::set_dim2_valid_num(int64_t dim0_idx, int64_t dim1_idx, int64_t val) {
   CHECK_NOTNULL(dim2_valid_num_ptr_);
   CHECK_GE(dim0_idx, 0);
@@ -125,7 +151,7 @@ const Shape& Blob::shape() const {
 
 size_t Blob::ContiguousDim0ValidNum() const {
   size_t contiguous_invalid_instance_num = 0;
-  for (int i = dim0_inner_shape().At(0) - 1; i >= 0; ++i) {
+  for (int i = dim0_inner_shape().At(0) - 1; i >= 0; --i) {
     size_t valid_num = dim0_valid_num(i);
     contiguous_invalid_instance_num += dim0_inner_shape().Count(1) - valid_num;
     if (valid_num > 0) { break; }
@@ -140,7 +166,6 @@ bool Blob::IsShapeEmpty() const {
 
 const Shape& Blob::dynamic_shape() const {
   size_t contiguous_instance_num = ContiguousDim0ValidNum();
-  CHECK_GT(contiguous_instance_num, 0);
   CHECK_LE(contiguous_instance_num, static_shape().At(0));
   if (dynamic_shape_.At(0) != contiguous_instance_num) {
     dynamic_shape_.Set(0, contiguous_instance_num);
@@ -190,6 +215,10 @@ size_t Blob::ByteSizeOfDim2ValidNumField() const {
   return blob_desc_->ByteSizeOfDim2ValidNumField();
 }
 
+size_t Blob::ByteSizeOfRecordIdxInDevicePieceField() const {
+  return blob_desc_->ByteSizeOfRecordIdxInDevicePieceField();
+}
+
 void Blob::CopyDim0ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs || ByteSizeOfDim0ValidNumField() == 0) { return; }
   CHECK_EQ(ByteSizeOfDim0ValidNumField(), rhs->ByteSizeOfDim0ValidNumField());
@@ -209,6 +238,14 @@ void Blob::CopyDim2ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   CHECK_EQ(ByteSizeOfDim2ValidNumField(), rhs->ByteSizeOfDim2ValidNumField());
   Memcpy<DeviceType::kCPU>(device_ctx, mut_dim2_valid_num_ptr(), rhs->dim2_valid_num_ptr(),
                            ByteSizeOfDim2ValidNumField());
+}
+
+void Blob::CopyRecordIdxInDevicePieceFrom(DeviceCtx* device_ctx, const Blob* rhs) {
+  if (this == rhs || ByteSizeOfRecordIdxInDevicePieceField() == 0) { return; }
+  CHECK_EQ(ByteSizeOfRecordIdxInDevicePieceField(), rhs->ByteSizeOfRecordIdxInDevicePieceField());
+  Memcpy<DeviceType::kCPU>(device_ctx, mut_record_idx_in_device_piece_ptr(),
+                           rhs->record_idx_in_device_piece_ptr(),
+                           ByteSizeOfRecordIdxInDevicePieceField());
 }
 
 void Blob::CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) {
