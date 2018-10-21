@@ -21,10 +21,20 @@ void ClearPbBlob(Blob* blob) {
 
 void CheckSameDim0ValidNum(const PbRpf<std::string>& bns,
                            const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
-  const void* mem_ptr = BnInOp2Blob(bns.Get(0))->dim1_valid_num();
+  const void* mem_ptr = BnInOp2Blob(bns.Get(0))->dim0_valid_num_ptr();
   size_t len = BnInOp2Blob(bns.Get(0))->ByteSizeOfDim0ValidNumField();
   FOR_RANGE(int, i, 1, bns.size()) {
-    CHECK_EQ(std::memcmp(BnInOp2Blob(bns.Get(i))->dim1_valid_num(), mem_ptr, len), 0);
+    CHECK_EQ(std::memcmp(BnInOp2Blob(bns.Get(i))->dim0_valid_num_ptr(), mem_ptr, len), 0);
+  }
+}
+
+void CheckSameRecordIdxInDevicePiece(const PbRpf<std::string>& bns,
+                                     const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+  const void* mem_ptr = BnInOp2Blob(bns.Get(0))->record_idx_in_device_piece_ptr();
+  size_t len = BnInOp2Blob(bns.Get(0))->ByteSizeOfRecordIdxInDevicePieceField();
+  FOR_RANGE(int, i, 1, bns.size()) {
+    CHECK_EQ(std::memcmp(BnInOp2Blob(bns.Get(i))->record_idx_in_device_piece_ptr(), mem_ptr, len),
+             0);
   }
 }
 
@@ -100,6 +110,10 @@ void Kernel::Forward(const KernelCtx& ctx,
     CHECK(!kernel_conf_.need_do_opaque_header());
     ForwardDim2ValidNum(ctx, BnInOp2Blob);
   }
+  if (kernel_conf_.need_do_record_idx_in_device_piece()) {
+    CHECK(!kernel_conf_.need_do_opaque_header());
+    ForwardRecordIdxInDevicePiece(ctx, BnInOp2Blob);
+  }
   ForwardDataContent(ctx, BnInOp2Blob);
   if (GetActivationType() != ActivationType::kNone) {
     const PbRpf<std::string> obns = this->op_attribute().output_bns();
@@ -128,11 +142,15 @@ void Kernel::ClearPbBlobs(const KernelCtx& ctx,
 
 void Kernel::Backward(const KernelCtx& ctx,
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (kernel_conf_.need_do_dim0_valid_num()) {
+  if (op_attribute().model_diff_bns().size() > 0) {
+    BackwardModelDiffDim0ValidNum(ctx, BnInOp2Blob);
+  }
+  if (kernel_conf_.need_do_dim0_valid_num() && op_attribute().input_diff_bns_size() > 0) {
     CHECK(!kernel_conf_.need_do_opaque_header());
-    BackwardDim0ValidNum(ctx, BnInOp2Blob);
+    BackwardInDiffDim0ValidNum(ctx, BnInOp2Blob);
   }
   if (HasEmptyShapeBlob(op_attribute().output_diff_bns(), BnInOp2Blob)) { return; }
+  CHECK_EQ(false, HasEmptyShapeBlob(op_attribute().model_diff_bns(), BnInOp2Blob));
   ActivationType activation = GetActivationType();
   if (activation != ActivationType::kNone) {
     const PbRpf<std::string> obns = this->op_attribute().output_bns();
@@ -157,6 +175,9 @@ void Kernel::Backward(const KernelCtx& ctx,
   }
   if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
   if (kernel_conf_.need_do_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
+  if (this->op_attribute().model_diff_bns().size() > 0) {
+    SetTotalInstanceNumDiffBlob(ctx, BnInOp2Blob);
+  }
 }
 
 bool Kernel::HasModelBns() const { return op_attribute().model_bns().size() > 0; }
@@ -193,12 +214,41 @@ void KernelIf<device_type>::ForwardDim0ValidNum(
 }
 
 template<DeviceType device_type>
-void KernelIf<device_type>::BackwardDim0ValidNum(
+void KernelIf<device_type>::ForwardRecordIdxInDevicePiece(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  CHECK(kernel_conf().can_naive_do_record_idx_in_device_piece());
+  CheckSameRecordIdxInDevicePiece(op_attribute().input_bns(), BnInOp2Blob);
+  CopyField(ctx.device_ctx, BnInOp2Blob, BnInOp2Blob(op_attribute().input_bns(0)),
+            op_attribute().output_bns(), &Blob::CopyRecordIdxInDevicePieceFrom);
+}
+
+template<DeviceType device_type>
+void KernelIf<device_type>::BackwardModelDiffDim0ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  bool is_out_diff_empty = HasEmptyShapeBlob(op_attribute().output_diff_bns(), BnInOp2Blob);
+  for (const std::string& bn : op_attribute().model_diff_bns()) {
+    Blob* blob = BnInOp2Blob(bn);
+    CHECK(blob);
+    if (blob->has_dim0_valid_num_field()) {
+      CHECK(blob->has_dim0_inner_shape());
+      CHECK_EQ(1, blob->dim0_inner_shape().At(0));
+      blob->set_dim0_valid_num(0, is_out_diff_empty ? 0 : blob->static_shape().At(0));
+    }
+  }
+}
+
+template<DeviceType device_type>
+void KernelIf<device_type>::BackwardInDiffDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CHECK(kernel_conf().can_naive_do_dim0_valid_num());
   CheckSameDim0ValidNum(op_attribute().output_diff_bns(), BnInOp2Blob);
+  PbRpf<std::string> input_diff_bns;
+  for (const auto& bn : op_attribute().input_diff_bns()) {
+    if (BnInOp2Blob(bn) != nullptr) { *input_diff_bns.Add() = bn; }
+  }
+  if (input_diff_bns.empty()) { return; }
   CopyField(ctx.device_ctx, BnInOp2Blob, BnInOp2Blob(op_attribute().output_diff_bns(0)),
-            op_attribute().input_diff_bns(), &Blob::CopyDim0ValidNumFrom);
+            input_diff_bns, &Blob::CopyDim0ValidNumFrom);
 }
 
 template<DeviceType device_type>
@@ -219,6 +269,34 @@ void KernelIf<device_type>::BackwardColNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().output_diff_bns(),
             op_attribute().input_diff_bns(), &Blob::CopyColNumFrom);
+}
+
+template<DeviceType device_type, typename T>
+int32_t KernelIfWithModel<device_type, T>::CalcInstanceNumSum(
+    const int32_t index, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  CHECK_LT(index, this->op_attribute().output_diff_bns_size());
+  int32_t instance_num_sum = 0;
+  Blob* out_diff_blob = BnInOp2Blob(this->op_attribute().output_diff_bns().Get(index));
+  if (out_diff_blob->has_dim0_valid_num_field()) {
+    FOR_RANGE(int32_t, i, 0, out_diff_blob->dim0_inner_shape().At(0)) {
+      instance_num_sum += out_diff_blob->dim0_valid_num(i);
+    }
+  } else {
+    instance_num_sum = out_diff_blob->static_shape().At(0);
+  }
+  return instance_num_sum;
+}
+template<DeviceType device_type, typename T>
+void KernelIfWithModel<device_type, T>::SetTotalInstanceNumDiffBlob(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  CHECK_GE(this->op_attribute().model_bns().size(), 2);
+  int32_t instance_num_sum = CalcInstanceNumSum(0, BnInOp2Blob);
+  FOR_RANGE(int32_t, i, 1, this->op_attribute().output_diff_bns_size()) {
+    CHECK_EQ(instance_num_sum, CalcInstanceNumSum(i, BnInOp2Blob));
+  }
+  Blob* total_instance_num_diff_blob = BnInOp2Blob("total_instance_num_diff");
+  KernelUtil<device_type, T>::Set(ctx.device_ctx, static_cast<T>(instance_num_sum),
+                                  total_instance_num_diff_blob->mut_dptr<T>());
 }
 
 template<DeviceType device_type>
