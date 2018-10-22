@@ -1,99 +1,76 @@
 #include "oneflow/core/kernel/fpn_collect_kernel.h"
-#include "oneflow/core/kernel/faster_rcnn_util.h"
-#include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
-void FpnCollectKernel<device_type, T>::ForwardDataContent(
+template<typename T>
+void FpnCollectKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const int64_t level = this->op_conf().fpn_collect_conf().level();
-  int64_t post_nms_topn = this->op_conf().fpn_collect_conf().post_nms_top_n();
-  int64_t available_num = ConcatAllRoisAndScores(ctx, level, BnInOp2Blob);
-  if (available_num < post_nms_topn) { post_nms_topn = available_num; }
-  SortAndSelectTopnRois(post_nms_topn, BnInOp2Blob);
-  // set varing_instance_num header field
-  BnInOp2Blob("out")->set_dim0_valid_num(0, post_nms_topn);
-}
-
-template<DeviceType device_type, typename T>
-int64_t FpnCollectKernel<device_type, T>::ConcatAllRoisAndScores(
-    const KernelCtx& ctx, const int32_t level,
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  Blob* roi_inputs_blob = BnInOp2Blob("roi_inputs");
-  Blob* score_inputs_blob = BnInOp2Blob("score_inputs");
-  const int64_t row_num = roi_inputs_blob->shape().At(0);
-  const int64_t roi_out_col_num = roi_inputs_blob->shape().Count(1);
-  const int64_t score_out_col_num = score_inputs_blob->shape().Count(1);
-  int64_t roi_col_offset = 0;
-  int64_t prob_col_offset = 0;
-  int64_t available_roi_num = 0;
-  int64_t available_prob_num = 0;
-
-  FOR_RANGE(size_t, i, 0, level) {
-    std::string roi_bn = "rpn_rois_fpn_" + std::to_string(i);
-    std::string prob_bn = "rpn_roi_probs_fpn_" + std::to_string(i);
-
-    const Blob* roi_blob = BnInOp2Blob(roi_bn);
-    const Blob* prob_blob = BnInOp2Blob(prob_bn);
-    const int64_t roi_in_col_num = roi_blob->shape().Count(1);
-    const int64_t prob_in_col_num = prob_blob->shape().Count(1);
-
-    auto GetValidDim1 = [](const Blob* blob, int32_t no) -> int32_t {
-      if (blob->dim1_valid_num_ptr() != nullptr) { return blob->dim1_valid_num(no); }
-      return blob->shape().At(1);
-    };
-    FOR_RANGE(size_t, j, 0, roi_blob->shape().At(0)) {
-      available_roi_num += GetValidDim1(roi_blob, j);
-      available_prob_num += GetValidDim1(prob_blob, j);
+  const FpnCollectOpConf& conf = this->op_conf().fpn_collect_conf();
+  std::vector<const Blob*> rois_fpn_blobs(conf.num_layers());
+  std::vector<const Blob*> roi_probs_fpn_blobs(conf.num_layers());
+  FOR_RANGE(size_t, i, 0, conf.num_layers()) {
+    rois_fpn_blobs[i] = BnInOp2Blob("rpn_rois_fpn_" + std::to_string(i));
+    roi_probs_fpn_blobs[i] = BnInOp2Blob("rpn_roi_probs_fpn_" + std::to_string(i));
+    if (rois_fpn_blobs[i]->has_dim0_valid_num_field()) {
+      CHECK_EQ(rois_fpn_blobs[i]->dim0_valid_num(0), roi_probs_fpn_blobs[i]->dim0_valid_num(0));
     }
-    CHECK_EQ(available_roi_num, available_prob_num);
-
-    KernelUtil<device_type, T>::CopyColsRegion(
-        ctx.device_ctx, row_num, roi_in_col_num, roi_blob->dptr<T>(), 0, roi_in_col_num,
-        roi_inputs_blob->mut_dptr<T>(), roi_col_offset, roi_out_col_num);
-    roi_col_offset += roi_in_col_num;
-
-    KernelUtil<device_type, T>::CopyColsRegion(
-        ctx.device_ctx, row_num, prob_in_col_num, prob_blob->dptr<T>(), 0, prob_in_col_num,
-        score_inputs_blob->mut_dptr<T>(), prob_col_offset, score_out_col_num);
-    prob_col_offset += prob_in_col_num;
   }
-  LOG(INFO) << "TEST COLLECT BREAK POINT 1";
-  return available_roi_num;
-}
-
-template<DeviceType device_type, typename T>
-void FpnCollectKernel<device_type, T>::SortAndSelectTopnRois(
-    const size_t topn, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  const Blob* roi_inputs_blob = BnInOp2Blob("roi_inputs");
-  const Blob* score_inputs_blob = BnInOp2Blob("score_inputs");
-  Blob* index_blob = BnInOp2Blob("index");
+  Blob* roi_inds_blob = BnInOp2Blob("roi_inds");
   Blob* out_blob = BnInOp2Blob("out");
-  size_t index_size = roi_inputs_blob->shape().At(0) * roi_inputs_blob->shape().At(1);
-  auto scored_index = GenScoresIndex(index_size, index_blob->mut_dptr<int32_t>(),
-                                     score_inputs_blob->dptr<T>(), true);
+  size_t num_out_rois = out_blob->static_shape().At(0);
 
-  auto comp = [](T lhs_score, T rhs_score) { return lhs_score > rhs_score; };
-  scored_index.NthElementByScore(topn, comp);
-  scored_index.Truncate(topn);
-  scored_index.SortByScore(comp);
+  auto GlobalIndex2LayerAndIndexInLayer = [&](int32_t index) {
+    int32_t row_len = roi_inds_blob->shape().At(1);
+    int32_t layer = index / row_len;
+    int32_t index_in_layer = index % row_len;
+    return std::make_pair(layer, index_in_layer);
+  };
+  auto GetRoiScore = [&](int32_t index) {
+    int32_t layer = -1;
+    int32_t index_in_layer = -1;
+    std::tie(layer, index_in_layer) = GlobalIndex2LayerAndIndexInLayer(index);
+    return roi_probs_fpn_blobs[layer]->dptr<T>()[index_in_layer];
+  };
+  auto GetRoiBBox = [&](int32_t index) {
+    int32_t layer = -1;
+    int32_t index_in_layer = -1;
+    std::tie(layer, index_in_layer) = GlobalIndex2LayerAndIndexInLayer(index);
+    return BBox::Cast(rois_fpn_blobs[layer]->dptr<T>()) + index_in_layer;
+  };
+  auto Compare = [&](int32_t lhs_index, int32_t rhs_index) {
+    return GetRoiScore(lhs_index) > GetRoiScore(rhs_index);
+  };
 
-  FOR_RANGE(size_t, i, 0, topn) {
-    const size_t si = scored_index.GetIndex(i);
-    FOR_RANGE(size_t, j, 0, 5) {
-      out_blob->mut_dptr<T>()[i * 5 + j] = roi_inputs_blob->dptr<T>()[si * 5 + j];
-    }
+  // TODO: support multi image inference
+  IndexSequence roi_inds(roi_inds_blob->shape().elem_cnt(), roi_inds_blob->mut_dptr<int32_t>(),
+                         true);
+  roi_inds.Filter([&](int32_t index) {
+    int32_t layer = -1;
+    int32_t index_in_layer = -1;
+    std::tie(layer, index_in_layer) = GlobalIndex2LayerAndIndexInLayer(index);
+    return index_in_layer >= rois_fpn_blobs[layer]->shape().At(0);
+  });
+  roi_inds.NthElem(num_out_rois, Compare);
+  roi_inds.Truncate(num_out_rois);
+  roi_inds.Sort(Compare);
+
+  FOR_RANGE(size_t, i, 0, roi_inds.size()) {
+    const auto* roi_bbox = GetRoiBBox(roi_inds.GetIndex(i));
+    auto* out_roi_bbox = MutBBox::Cast(out_blob->mut_dptr<T>());
+    out_roi_bbox[i].set_corner_coord(roi_bbox->left(), roi_bbox->top(), roi_bbox->right(),
+                                     roi_bbox->bottom());
+    out_roi_bbox[i].set_index(roi_bbox->index());
   }
-  LOG(INFO) << "TEST COLLECT BREAK POINT 2";
+  out_blob->set_dim0_valid_num(0, roi_inds.size());
 }
 
-template<DeviceType device_type, typename T>
-void FpnCollectKernel<device_type, T>::ForwardDim0ValidNum(
+template<typename T>
+void FpnCollectKernel<T>::ForwardDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // do nothing
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kFpnCollectConf, FpnCollectKernel, FLOATING_DATA_TYPE_SEQ);
+ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kFpnCollectConf, FpnCollectKernel,
+                               FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
