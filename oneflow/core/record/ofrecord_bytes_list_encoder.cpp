@@ -37,6 +37,7 @@ void OFRecordEncoderImpl<EncodeCase::kBytesList, T>::EncodeMultiCol(
   CHECK(!in_blob->has_dim2_valid_num_field());
   CHECK_GT(in_offsets.size(), 0);
   for (int64_t in_offset : in_offsets) {
+    CHECK_EQ(in_offset % dim0_elem_num, 0);
     int64_t dim0_idx = in_offset / dim0_elem_num;
     feature.mutable_bytes_list()->add_value(in_blob->dptr<char>() + in_offset,
                                             in_blob->dim1_valid_num(dim0_idx) * dim1_elem_num);

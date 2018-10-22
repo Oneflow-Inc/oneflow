@@ -45,9 +45,9 @@ void CheckRecordIds(const PbRpf<std::string>& bns_with_record_ids,
   }
 }
 
-void InitRecordData(std::map<int64_t, RecordOffsets>* record_id2record_data,
-                    const std::function<Blob*(const std::string&)> BnInOp2Blob,
-                    const PbRpf<std::string>& bns) {
+void InitRecordOffsets(std::map<int64_t, RecordOffsets>* record_id2record_offsets,
+                       const std::function<Blob*(const std::string&)> BnInOp2Blob,
+                       const PbRpf<std::string>& bns) {
   PbRpf<std::string> bns_with_record_ids;
   PbRpf<std::string> bns_without_record_ids;
   SplitBns(&bns_with_record_ids, &bns_without_record_ids, BnInOp2Blob, bns);
@@ -58,7 +58,7 @@ void InitRecordData(std::map<int64_t, RecordOffsets>* record_id2record_data,
     const Blob* blob = BnInOp2Blob(bns.Get(blob_id));
     FOR_RANGE(int64_t, i, 0, blob->shape().At(0)) {
       int64_t record_id = blob->record_idx_in_device_piece(i);
-      std::vector<int64_t>* vec = &(*record_id2record_data)[record_id].blob_id2offsets[blob_id];
+      std::vector<int64_t>* vec = &(*record_id2record_offsets)[record_id].blob_id2offsets[blob_id];
       vec->push_back(i * blob->shape().Count(1));
     }
   }
@@ -81,16 +81,16 @@ void PrintKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
 void PrintKernel::Forward(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (HasEmptyShapeBlob(this->op_attribute().input_bns(), BnInOp2Blob)) { return; }
-  std::map<int64_t, RecordOffsets> record_id2record_data;
-  InitRecordData(&record_id2record_data, BnInOp2Blob, this->op_attribute().input_bns());
+  std::map<int64_t, RecordOffsets> record_id2record_offsets;
+  InitRecordOffsets(&record_id2record_offsets, BnInOp2Blob, this->op_attribute().input_bns());
   auto GetBlob = [&](int64_t blob_id) -> Blob* {
     return BnInOp2Blob(this->op_attribute().input_bns(blob_id));
   };
   const auto& conf = op_conf().print_conf();
   OFRecord record;
-  for (const auto& record_id7record_data : record_id2record_data) {
+  for (const auto& record_id7record_offsets : record_id2record_offsets) {
     record.clear_feature();
-    for (const auto& pair : record_id7record_data.second.blob_id2offsets) {
+    for (const auto& pair : record_id7record_offsets.second.blob_id2offsets) {
       int64_t blob_id = pair.first;
       const std::vector<int64_t>& offsets = pair.second;
       const Blob* cur_blob = GetBlob(blob_id);

@@ -268,6 +268,7 @@ size_t Blob::CalcDim0ValidNumSum() const {
 
 void CheckSameRecordIdxInDevicePiece(const PbRpf<std::string>& bns,
                                      const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+  if (bns.empty()) { return; }
   const void* mem_ptr = BnInOp2Blob(bns.Get(0))->record_idx_in_device_piece_ptr();
   size_t len = BnInOp2Blob(bns.Get(0))->ByteSizeOfRecordIdxInDevicePieceField();
   FOR_RANGE(int, i, 1, bns.size()) {
