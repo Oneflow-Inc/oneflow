@@ -815,7 +815,7 @@ message ImageSegmentationMaskOpConf {
   required string rois = 2;
   required string masks = 3;
   required string out = 4;
-  required int64 im_weight = 5;
+  required int64 im_width = 5;
   required int64 im_height = 6;
   optional float binary_threshold = 7 [default = 0.5];
   optional bool class_specific_mask = 8 [default = true];
