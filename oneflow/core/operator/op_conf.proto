@@ -792,10 +792,10 @@ message ProposalOpConf {
   required string roi_probs = 4;
   required AnchorGeneratorConf anchor_generator_conf = 5;
   required BBoxRegressionWeights bbox_reg_weights = 6;
-  required int32 min_size = 7;
-  required int32 pre_nms_top_n = 8;
-  required int32 post_nms_top_n = 9;
-  required float nms_threshold = 10;
+  required int32 pre_nms_top_n = 7;
+  required int32 post_nms_top_n = 8;
+  required float nms_threshold = 9;
+  optional int32 min_size = 10 [default = 0];
 }
 
 message BBoxRegressionWeights {
@@ -815,7 +815,7 @@ message ImageSegmentationMaskOpConf {
   required string rois = 2;
   required string masks = 3;
   required string out = 4;
-  required int64 im_weight = 5;
+  required int64 im_width = 5;
   required int64 im_height = 6;
   optional float binary_threshold = 7 [default = 0.5];
   optional bool class_specific_mask = 8 [default = true];
@@ -864,6 +864,7 @@ message AnchorTargetOpConf {
   required float foreground_fraction = 10 [default = 0.5];
   required BBoxRegressionWeights bbox_reg_weights = 11;
   optional float straddle_thresh = 12 [default = 0.0];
+  optional bool random_subsample = 13 [default = true];
 }
 
 message MatmulOpConf {
@@ -958,6 +959,12 @@ message RedefineDim0OpConf {
   }
 }
 
+message RleEncodeOpConf {
+  required string in = 1;
+  required string out = 2;
+  optional int32 rle_max_bytes = 3 [default = 1048576];
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1046,6 +1053,7 @@ message OperatorConf {
     VStackOpConf vstack_conf = 1014;
     RedefineDim0OpConf redefine_dim0_conf = 1015;
     ImageSegmentationMaskOpConf image_segmentation_mask_conf = 1016;
+    RleEncodeOpConf rle_encode_conf = 1017;
     BboxTransformOpConf bbox_transform_conf = 1100;
   }
 }

@@ -59,10 +59,15 @@ void AnchorTargetKernel<T>::ForwardDataContent(
     auto gt_boxes = GetImageGtBoxes(im_index, BnInOp2Blob);
     auto anchor_boxes = GetImageAnchorBoxes(ctx, im_index, BnInOp2Blob);
     CalcMaxOverlapAndSetPositiveLabels(gt_boxes, anchor_boxes);
-    size_t fg_cnt = SubsampleForeground(anchor_boxes);
-    size_t bg_cnt = SubsampleBackground(fg_cnt, anchor_boxes);
-    // size_t fg_cnt = ChoiceForeground(anchor_boxes);
-    // size_t bg_cnt = ChoiceBackground(fg_cnt, anchor_boxes);
+    size_t fg_cnt = 0;
+    size_t bg_cnt = 0;
+    if (op_conf().anchor_target_conf().random_subsample()) {
+      fg_cnt = SubsampleForeground(anchor_boxes);
+      bg_cnt = SubsampleBackground(fg_cnt, anchor_boxes);
+    } else {
+      fg_cnt = ChoiceForeground(anchor_boxes);
+      bg_cnt = ChoiceBackground(fg_cnt, anchor_boxes);
+    }
     OutputForEachImage(im_index, fg_cnt + bg_cnt, gt_boxes, anchor_boxes, BnInOp2Blob);
   }
 }

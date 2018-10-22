@@ -117,9 +117,8 @@ int64_t Blob::record_idx_in_device_piece(int64_t no) const {
   if (record_idx_in_device_piece_ptr_) {
     val = record_idx_in_device_piece_ptr_[no];
     CHECK_GE(val, 0);
-    CHECK_LE(val, shape().At(1));
   } else {
-    val = shape().At(1);
+    val = no;
   }
   return val;
 }
@@ -265,6 +264,17 @@ size_t Blob::CalcDim0ValidNumSum() const {
   size_t sum = 0;
   FOR_RANGE(int64_t, i, 0, dim0_inner_shape().At(0)) { sum += dim0_valid_num(i); }
   return sum;
+}
+
+void CheckSameRecordIdxInDevicePiece(const PbRpf<std::string>& bns,
+                                     const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+  if (bns.empty()) { return; }
+  const void* mem_ptr = BnInOp2Blob(bns.Get(0))->record_idx_in_device_piece_ptr();
+  size_t len = BnInOp2Blob(bns.Get(0))->ByteSizeOfRecordIdxInDevicePieceField();
+  FOR_RANGE(int, i, 1, bns.size()) {
+    CHECK_EQ(std::memcmp(BnInOp2Blob(bns.Get(i))->record_idx_in_device_piece_ptr(), mem_ptr, len),
+             0);
+  }
 }
 
 }  // namespace oneflow

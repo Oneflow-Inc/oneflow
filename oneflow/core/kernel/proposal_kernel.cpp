@@ -63,7 +63,7 @@ typename ProposalKernel<T>::BoxesSlice ProposalKernel<T>::ApplyNms(
                                          pre_nms_inds_blob->mut_dptr<int32_t>(), true),
                            proposals_blob->dptr<T>());
   BoxesSlice post_nms_slice(IndexSequence(post_nms_inds_blob->shape().elem_cnt(),
-                                          post_nms_inds_blob->mut_dptr<int32_t>(), true),
+                                          post_nms_inds_blob->mut_dptr<int32_t>(), false),
                             proposals_blob->dptr<T>());
   BBoxUtil<BBox>::Nms(conf.nms_threshold(), pre_nms_slice, post_nms_slice);
   return post_nms_slice;
@@ -79,10 +79,10 @@ size_t ProposalKernel<T>::WriteRoisToOutput(
   FOR_RANGE(size_t, i, 0, post_nms_slice.size()) {
     const auto* prop_bbox = post_nms_slice.GetBBox(i);
     auto* roi_bbox = RoiBox::Cast(rois_blob->mut_dptr<T>(num_output));
-    roi_bbox->set_corner_coord(prop_bbox->left(), prop_bbox->top(), prop_bbox->right(),
-                               prop_bbox->bottom());
-    roi_bbox->set_index(im_index);
-    rois_prob_blob->mut_dptr<T>()[num_output] = score_slice.GetScore(post_nms_slice.GetIndex(i));
+    roi_bbox[i].set_corner_coord(prop_bbox->left(), prop_bbox->top(), prop_bbox->right(),
+                                 prop_bbox->bottom());
+    roi_bbox[i].set_index(im_index);
+    rois_prob_blob->mut_dptr<T>(num_output)[i] = score_slice.GetScore(post_nms_slice.GetIndex(i));
   }
   return num_output + post_nms_slice.size();
 }

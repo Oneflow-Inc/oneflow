@@ -10,6 +10,9 @@ class OFRecordEncoderImpl<EncodeCase::kRaw, T> final : public OFRecordEncoderIf 
  private:
   void EncodeOneCol(DeviceCtx*, const Blob* in_blob, int64_t in_offset, Feature&,
                     const std::string& field_name, int64_t one_col_elem_num) const override;
+  void EncodeMultiCol(DeviceCtx*, const Blob* in_blob, const std::vector<int64_t>& in_offsets,
+                      Feature&, const std::string& field_name,
+                      int64_t one_col_elem_num) const override;
 };
 
 }  // namespace oneflow

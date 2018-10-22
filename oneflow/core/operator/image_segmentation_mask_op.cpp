@@ -24,7 +24,7 @@ void ImageSegmentationMaskOp::InferBlobDescs(
   const BlobDesc* roi_labels_blob_desc = GetBlobDesc4BnInOp("roi_labels");
   const BlobDesc* rois_blob_desc = GetBlobDesc4BnInOp("rois");
   CHECK_GE(conf.im_height(), mask_blob_desc->shape().At(2));
-  CHECK_GE(conf.im_weight(), mask_blob_desc->shape().At(3));
+  CHECK_GE(conf.im_width(), mask_blob_desc->shape().At(3));
   CHECK_EQ(mask_blob_desc->shape().At(0), roi_labels_blob_desc->shape().At(0));
   CHECK_EQ(mask_blob_desc->shape().At(0), rois_blob_desc->shape().At(0));
   CHECK_EQ(mask_blob_desc->shape().NumAxes(), 4);
@@ -32,9 +32,9 @@ void ImageSegmentationMaskOp::InferBlobDescs(
   CHECK_EQ(rois_blob_desc->shape().NumAxes(), 2);
   CHECK_EQ(rois_blob_desc->shape().At(1), 5);
 
-  // out: (R, im_height, im_weight)
+  // out: (R, im_height, im_width)
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  Shape shape({mask_blob_desc->shape().At(0), conf.im_height(), conf.im_weight()});
+  Shape shape({mask_blob_desc->shape().At(0), conf.im_height(), conf.im_width()});
   *out_blob_desc = *mask_blob_desc;
   out_blob_desc->mut_shape() = shape;
   out_blob_desc->set_data_type(DataType::kUInt8);

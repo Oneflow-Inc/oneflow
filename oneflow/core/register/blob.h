@@ -6,6 +6,7 @@
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/common/range.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/record/record_io.h"
@@ -138,10 +139,10 @@ class Blob final {
   int64_t GetDptrOffset(int32_t index) const { return 0; }
   template<typename... Int64s>
   int64_t GetDptrOffset(int32_t index, int64_t cur_dim, Int64s... remainder) const {
-    CHECK_GE(shape().NumAxes(), index + 1);
+    CHECK_GE(static_shape().NumAxes(), index + 1);
     CHECK_GE(cur_dim, 0);
-    CHECK_LT(cur_dim, shape().At(index));
-    return cur_dim * shape().Count(index + 1) + GetDptrOffset(index + 1, remainder...);
+    CHECK_LT(cur_dim, static_shape().At(index));
+    return cur_dim * static_shape().Count(index + 1) + GetDptrOffset(index + 1, remainder...);
   }
 
   template<typename T>
@@ -195,6 +196,9 @@ class RecordBlob final {
   Blob* records_;
   int32_t record_num_;
 };
+
+void CheckSameRecordIdxInDevicePiece(const PbRpf<std::string>& bns,
+                                     const std::function<Blob*(const std::string&)>& BnInOp2Blob);
 
 }  // namespace oneflow
 
