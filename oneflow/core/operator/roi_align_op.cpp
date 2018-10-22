@@ -23,14 +23,11 @@ void RoIAlignOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   CHECK(rois_blob_desc->has_dim0_inner_shape());
   // out: (R, C, pool_h, pool_w)
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+  *out_blob_desc = *rois_blob_desc;
   out_blob_desc->mut_shape() =
       Shape({rois_blob_desc->shape().At(0), in_blob_desc->shape().At(1),
              op_conf().roi_align_conf().pooled_h(), op_conf().roi_align_conf().pooled_w()});
   out_blob_desc->set_data_type(in_blob_desc->data_type());
-  out_blob_desc->set_has_data_id_field(rois_blob_desc->has_data_id_field());
-  out_blob_desc->set_has_col_num_field(rois_blob_desc->has_col_num_field());
-  out_blob_desc->set_has_dim0_valid_num_field(rois_blob_desc->has_dim0_valid_num_field());
-  out_blob_desc->mut_dim0_inner_shape() = rois_blob_desc->dim0_inner_shape();
 }
 
 REGISTER_OP(OperatorConf::kRoiAlignConf, RoIAlignOp);
