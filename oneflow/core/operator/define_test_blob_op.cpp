@@ -17,7 +17,7 @@ void DefineTestBlobOp::InferBlobDescs(
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   const DefineTestBlobConf& conf = op_conf().define_test_blob_conf();
   Shape shape(conf.shape());
-  CHECK_EQ(shape.At(0) * parallel_ctx->parallel_num(), Global<JobDesc>::Get()->PieceSize());
+  // CHECK_EQ(shape.At(0) * parallel_ctx->parallel_num(), Global<JobDesc>::Get()->PieceSize());
   out_blob_desc->mut_shape() = shape;
   out_blob_desc->set_data_type(conf.data_type());
   out_blob_desc->set_has_data_id_field(Global<JobDesc>::Get()->SizeOfOneDataId() > 0);

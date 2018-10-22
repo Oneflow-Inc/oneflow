@@ -663,8 +663,8 @@ message FpnCollectOpConf{
   repeated string rpn_rois_fpn = 1;
   repeated string rpn_roi_probs_fpn = 2;
   required string out = 3;
-  required int32 post_nms_top_n = 4;
-  optional int32 level = 5 [default = 5];
+  required int32 num_layers = 4;
+  required int32 top_n_per_piece = 5;
 }
 
 message AffineChannelOpConf {
