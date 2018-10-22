@@ -32,7 +32,7 @@ void ProposalOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   const int64_t num_anchors_per_cell =
       anchor_generator_conf.aspect_ratios_size() * anchor_generator_conf.anchor_scales_size();
   CHECK_EQ(num_anchors_per_cell, class_prob_blob_desc->shape().At(3));
-  CHECK_EQ(num_anchors_per_cell, bbox_pred_blob_desc->shape().At(3) * 4);
+  CHECK_EQ(num_anchors_per_cell * 4, bbox_pred_blob_desc->shape().At(3));
   const int64_t fm_height =
       std::ceil(anchor_generator_conf.image_height() / anchor_generator_conf.feature_map_stride());
   const int64_t fm_width =
@@ -66,7 +66,7 @@ void ProposalOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   roi_probs_blob_desc->mut_dim0_inner_shape() = Shape({1, roi_probs_blob_desc->shape().At(0)});
   roi_probs_blob_desc->set_has_dim0_valid_num_field(true);
 
-  // datatmp: score_slice (num_anchors) int32_t
+  // datatmp: score_slice (H * W * A) int32_t
   BlobDesc* score_slice_blob_desc = GetBlobDesc4BnInOp("score_slice");
   score_slice_blob_desc->mut_shape() = Shape({num_anchors});
   score_slice_blob_desc->set_data_type(DataType::kInt32);

@@ -140,8 +140,8 @@ class Blob final {
   int64_t GetDptrOffset(int32_t index, int64_t cur_dim, Int64s... remainder) const {
     CHECK_GE(shape().NumAxes(), index + 1);
     CHECK_GE(cur_dim, 0);
-    CHECK_LT(cur_dim, shape().At(index));
-    return cur_dim * shape().Count(index + 1) + GetDptrOffset(index + 1, remainder...);
+    CHECK_LT(cur_dim, static_shape().At(index));
+    return cur_dim * static_shape().Count(index + 1) + GetDptrOffset(index + 1, remainder...);
   }
 
   template<typename T>
