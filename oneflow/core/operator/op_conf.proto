@@ -864,6 +864,7 @@ message AnchorTargetOpConf {
   required float foreground_fraction = 10 [default = 0.5];
   required BBoxRegressionWeights bbox_reg_weights = 11;
   optional float straddle_thresh = 12 [default = 0.0];
+  optional bool random_subsample = 13 [default = true];
 }
 
 message MatmulOpConf {
