@@ -5,15 +5,6 @@ namespace oneflow {
 
 namespace {
 
-void CheckSameDim0ValidNum(const PbRpf<std::string>& bns,
-                           const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
-  const void* mem_ptr = BnInOp2Blob(bns.Get(0))->dim0_valid_num_ptr();
-  size_t len = BnInOp2Blob(bns.Get(0))->ByteSizeOfDim0ValidNumField();
-  FOR_RANGE(int, i, 1, bns.size()) {
-    CHECK_EQ(std::memcmp(BnInOp2Blob(bns.Get(i))->dim0_valid_num_ptr(), mem_ptr, len), 0);
-  }
-}
-
 void CheckSameRecordIdxInDevicePiece(const PbRpf<std::string>& bns,
                                      const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
   const void* mem_ptr = BnInOp2Blob(bns.Get(0))->record_idx_in_device_piece_ptr();
@@ -75,6 +66,16 @@ bool Kernel::HasEmptyShapeBlob(const PbRpf<std::string>& bns,
     if (blob && blob->IsShapeEmpty()) { return true; }
   }
   return false;
+}
+
+void Kernel::CheckSameDim0ValidNum(
+    const PbRpf<std::string>& bns,
+    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+  const void* mem_ptr = BnInOp2Blob(bns.Get(0))->dim0_valid_num_ptr();
+  size_t len = BnInOp2Blob(bns.Get(0))->ByteSizeOfDim0ValidNumField();
+  FOR_RANGE(int, i, 1, bns.size()) {
+    CHECK_EQ(std::memcmp(BnInOp2Blob(bns.Get(i))->dim0_valid_num_ptr(), mem_ptr, len), 0);
+  }
 }
 
 void Kernel::Forward(const KernelCtx& ctx,

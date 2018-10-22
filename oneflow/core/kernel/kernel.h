@@ -112,6 +112,8 @@ class Kernel {
   virtual const PbMessage& GetCustomizedKernelConf() const { UNIMPLEMENTED(); }
   bool HasEmptyShapeBlob(const PbRpf<std::string>& bns,
                          const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  void CheckSameDim0ValidNum(const PbRpf<std::string>& bns,
+                             const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 
 #define DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF(conf_type)                                   \
   template<typename T>                                                                   \
