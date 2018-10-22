@@ -15,11 +15,8 @@ void RleEncodeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   // input: in (R, H, W)
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
   CHECK_EQ(in->data_type(), DataType::kUInt8);
+  CHECK_EQ(in->shape().NumAxes(), 3);
   // output: out(R, RLE_MAX_BYTES)
-  if (in->has_dim0_valid_num_field()) {
-    CHECK_EQ(in->dim0_inner_shape().NumAxes(), 2);
-    CHECK_EQ(in->dim0_inner_shape().At(0), 1);
-  }
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   *out = *in;
   out->mut_shape() = Shape({in->shape().At(0), op_conf().rle_encode_conf().rle_max_bytes()});
