@@ -28,16 +28,6 @@ void CheckSameDim0ValidNum(const PbRpf<std::string>& bns,
   }
 }
 
-void CheckSameRecordIdxInDevicePiece(const PbRpf<std::string>& bns,
-                                     const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
-  const void* mem_ptr = BnInOp2Blob(bns.Get(0))->record_idx_in_device_piece_ptr();
-  size_t len = BnInOp2Blob(bns.Get(0))->ByteSizeOfRecordIdxInDevicePieceField();
-  FOR_RANGE(int, i, 1, bns.size()) {
-    CHECK_EQ(std::memcmp(BnInOp2Blob(bns.Get(i))->record_idx_in_device_piece_ptr(), mem_ptr, len),
-             0);
-  }
-}
-
 }  // namespace
 
 void Kernel::Init(const ParallelContext* parallel_ctx, const KernelConf& kernel_conf,

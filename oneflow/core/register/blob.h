@@ -6,6 +6,7 @@
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/common/range.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/record/record_io.h"
@@ -195,6 +196,9 @@ class RecordBlob final {
   Blob* records_;
   int32_t record_num_;
 };
+
+void CheckSameRecordIdxInDevicePiece(const PbRpf<std::string>& bns,
+                                     const std::function<Blob*(const std::string&)>& BnInOp2Blob);
 
 }  // namespace oneflow
 

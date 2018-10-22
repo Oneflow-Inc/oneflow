@@ -6,13 +6,7 @@ void PrintOp::InitFromOpConf() {
   CHECK(op_conf().has_print_conf());
   const PrintOpConf& conf = op_conf().print_conf();
 
-  FOR_RANGE(int32_t, i, 0, conf.in_size()) {
-    if (conf.in(i).encode_case().has_protobuf()) {
-      EnrollPbInputBn("in_" + std::to_string(i));
-    } else {
-      EnrollInputBn("in_" + std::to_string(i), false);
-    }
-  }
+  FOR_RANGE(int32_t, i, 0, conf.in_size()) { EnrollInputBn("in_" + std::to_string(i), false); }
 }
 
 const PbMessage& PrintOp::GetCustomizedConf() const { return op_conf().print_conf(); }
