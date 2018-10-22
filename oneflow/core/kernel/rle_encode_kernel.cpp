@@ -25,13 +25,6 @@ void RleEncodeKernel::ForwardDataContent(
   }
 };
 
-void RleEncodeKernel::ForwardDim0ValidNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* in = BnInOp2Blob("in");
-  Blob* out = BnInOp2Blob("out");
-  out->set_dim0_valid_num(0, in->dim0_valid_num(0));
-}
-
 void RleEncodeKernel::ForwardDim1ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // do nothing
