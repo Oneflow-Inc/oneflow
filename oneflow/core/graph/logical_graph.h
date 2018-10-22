@@ -68,6 +68,8 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   void UpdateEdge2Ibn(const LogicalEdge* edge, const std::string& ibn);
   void UpdateEdge2Obn(const LogicalEdge* edge, const std::string& obn);
 
+  bool MustHaveModelDiffAcc();
+
   int64_t total_mbn_num_;
 
   std::vector<std::vector<const LogicalNode*>> fw_node_groups_;
