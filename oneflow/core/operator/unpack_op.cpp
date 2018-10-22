@@ -14,9 +14,13 @@ void UnpackOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp(SoleIbn());
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(SoleObn());
   *out_blob_desc = *in_blob_desc;
-  std::vector<int64_t> dim_vec(in_blob_desc->shape().dim_vec());
-  dim_vec.at(0) = op_conf().unpack_conf().out_size();
-  out_blob_desc->mut_shape() = Shape(dim_vec);
+  int32_t unpack_num = op_conf().unpack_conf().unpack_num();
+  if (in_blob_desc->has_dim0_inner_shape()) {
+    CHECK_EQ(0, in_blob_desc->dim0_inner_shape().Count(1) % unpack_num);
+  } else {
+    CHECK_EQ(0, in_blob_desc->shape().At(0) % unpack_num);
+  }
+  out_blob_desc->mut_shape().Set(0, out_blob_desc->shape().At(0) / unpack_num);
 }
 
 REGISTER_OP(OperatorConf::kUnpackConf, UnpackOp);

@@ -14,9 +14,8 @@ void PackOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp(SoleIbn());
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(SoleObn());
   *out_blob_desc = *in_blob_desc;
-  std::vector<int64_t> dim_vec(in_blob_desc->shape().dim_vec());
-  dim_vec.at(0) = op_conf().pack_conf().out_size();
-  out_blob_desc->mut_shape() = Shape(dim_vec);
+  out_blob_desc->mut_shape().Set(0,
+                                 out_blob_desc->shape().At(0) * op_conf().pack_conf().pack_num());
 }
 
 REGISTER_OP(OperatorConf::kPackConf, PackOp);
