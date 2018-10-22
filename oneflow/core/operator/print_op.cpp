@@ -7,11 +7,7 @@ void PrintOp::InitFromOpConf() {
   const PrintOpConf& conf = op_conf().print_conf();
 
   FOR_RANGE(int32_t, i, 0, conf.in_size()) {
-    if (conf.in(i).encode_case().has_protobuf()) {
-      EnrollPbInputBn("in_" + std::to_string(i));
-    } else {
-      EnrollInputBn("in_" + std::to_string(i), false);
-    }
+    EnrollInputBn("in_" + std::to_string(i), false);
   }
 }
 

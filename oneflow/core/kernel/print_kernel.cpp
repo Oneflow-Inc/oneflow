@@ -23,7 +23,7 @@ void PrintKernel::Forward(const KernelCtx& ctx,
     return BnInOp2Blob("in_" + std::to_string(blob_id));
   };
   const auto& conf = op_conf().print_conf();
-  int32_t total_blob_num = op_attribute().input_bns_size() + op_attribute().pb_input_bns_size();
+  int32_t total_blob_num = op_attribute().input_bns_size();
   int64_t min_record_num = MaxVal<int64_t>();
   bool has_data_id_field = false;
   bool has_col_num_field = false;
