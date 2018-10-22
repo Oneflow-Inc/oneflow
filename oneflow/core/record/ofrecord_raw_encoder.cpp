@@ -11,7 +11,8 @@ void OFRecordEncoderImpl<EncodeCase::kRaw, T>::EncodeOneCol(DeviceCtx* ctx, cons
   CHECK_EQ(one_col_elem_num, in_blob->shape().Count(1));
   CHECK_EQ(in_offset % one_col_elem_num, 0);
   int64_t dim0_idx = in_offset / one_col_elem_num;
-  int64_t elem_num = in_blob->dim1_valid_num(dim0_idx) * in_blob->shape().Count(2);
+  int64_t dim1_elem_num = in_blob->shape().NumAxes() == 1 ? 1 : in_blob->shape().Count(2);
+  int64_t elem_num = in_blob->dim1_valid_num(dim0_idx) * dim1_elem_num;
 
   const T* in_dptr = in_blob->dptr<T>() + in_offset;
   DataType data_type = GetDataType<T>();
