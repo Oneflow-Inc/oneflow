@@ -958,6 +958,12 @@ message RedefineDim0OpConf {
   }
 }
 
+message RleEncodeOpConf {
+  required string in = 1;
+  required string out = 2;
+  optional int32 rle_max_bytes = 3 [default = 1048576];
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1046,6 +1052,7 @@ message OperatorConf {
     VStackOpConf vstack_conf = 1014;
     RedefineDim0OpConf redefine_dim0_conf = 1015;
     ImageSegmentationMaskOpConf image_segmentation_mask_conf = 1016;
+    RleEncodeOpConf rle_encode_conf = 1017;
     BboxTransformOpConf bbox_transform_conf = 1100;
   }
 }
