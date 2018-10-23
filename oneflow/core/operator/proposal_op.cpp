@@ -33,10 +33,11 @@ void ProposalOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
       anchor_generator_conf.aspect_ratios_size() * anchor_generator_conf.anchor_scales_size();
   CHECK_EQ(num_anchors_per_cell, class_prob_blob_desc->shape().At(3));
   CHECK_EQ(num_anchors_per_cell * 4, bbox_pred_blob_desc->shape().At(3));
+  const float fm_stride = anchor_generator_conf.feature_map_stride();
   const int64_t fm_height =
-      std::ceil(anchor_generator_conf.image_height() / anchor_generator_conf.feature_map_stride());
+      std::ceil(anchor_generator_conf.image_height() / fm_stride);
   const int64_t fm_width =
-      std::ceil(anchor_generator_conf.image_width() / anchor_generator_conf.feature_map_stride());
+      std::ceil(anchor_generator_conf.image_width() / fm_stride);
   CHECK_EQ(fm_height, bbox_pred_blob_desc->shape().At(1));
   CHECK_EQ(fm_width, bbox_pred_blob_desc->shape().At(2));
   CHECK_EQ(fm_height, class_prob_blob_desc->shape().At(1));
