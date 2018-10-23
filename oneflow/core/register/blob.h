@@ -98,7 +98,7 @@ class Blob final {
   bool has_dim1_valid_num_field() const { return blob_desc_->has_dim1_valid_num_field(); }
   bool has_dim2_valid_num_field() const { return blob_desc_->has_dim2_valid_num_field(); }
   bool has_record_idx_in_device_piece_field() const {
-    return blob_desc_->has_dim2_valid_num_field();
+    return blob_desc_->has_record_idx_in_device_piece_field();
   }
   int32_t max_col_num() const { return blob_desc_->max_col_num(); }
   size_t ByteSizeOfBlobHeader() const { return blob_desc_->ByteSizeOfBlobHeader(); }

@@ -47,7 +47,6 @@ void ProposalTargetOp::InferBlobDescs(
   const int64_t num_gt = gt_boxes_blob_desc->shape().Count(0, 2);
   CHECK_EQ(gt_labels_blob_desc->shape().At(0), num_images);
   const int64_t num_rois = rois_blob_desc->shape().At(0);
-  // const int64_t num_sampled_rois = conf.num_sampled_rois_per_image();
   const int64_t total_num_sampled_rois = conf.num_sampled_rois_per_image() * num_images;
   CHECK_GE(total_num_sampled_rois, num_rois);
   const int64_t num_classes = conf.num_classes();
@@ -58,18 +57,24 @@ void ProposalTargetOp::InferBlobDescs(
   out_rois_blob_desc->set_data_type(rois_blob_desc->data_type());
   out_rois_blob_desc->mut_dim0_inner_shape() = Shape({1, total_num_sampled_rois});
   out_rois_blob_desc->set_has_dim0_valid_num_field(true);
+  out_rois_blob_desc->set_has_record_idx_in_device_piece_field(
+      rois_blob_desc->has_record_idx_in_device_piece_field());
   // output: labels (total_num_sampled_rois) int32_t
   BlobDesc* labels_blob_desc = GetBlobDesc4BnInOp("labels");
   labels_blob_desc->mut_shape() = Shape({total_num_sampled_rois});
   labels_blob_desc->set_data_type(DataType::kInt32);
   labels_blob_desc->mut_dim0_inner_shape() = Shape({1, total_num_sampled_rois});
   labels_blob_desc->set_has_dim0_valid_num_field(true);
+  labels_blob_desc->set_has_record_idx_in_device_piece_field(
+      rois_blob_desc->has_record_idx_in_device_piece_field());
   // output: bbox_targets (total_num_sampled_rois, num_classes * 4) T
   BlobDesc* bbox_targets_blob_desc = GetBlobDesc4BnInOp("bbox_targets");
   bbox_targets_blob_desc->mut_shape() = Shape({total_num_sampled_rois, num_classes * 4});
   bbox_targets_blob_desc->set_data_type(rois_blob_desc->data_type());
   bbox_targets_blob_desc->mut_dim0_inner_shape() = Shape({1, total_num_sampled_rois});
   bbox_targets_blob_desc->set_has_dim0_valid_num_field(true);
+  bbox_targets_blob_desc->set_has_record_idx_in_device_piece_field(
+      rois_blob_desc->has_record_idx_in_device_piece_field());
   // output: bbox_inside_weights (total_num_sampled_rois, num_classes * 4) T
   *GetBlobDesc4BnInOp("bbox_inside_weights") = *bbox_targets_blob_desc;
   // output: bbox_outside_weights (total_num_sampled_rois, num_classes * 4) T

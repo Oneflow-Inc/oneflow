@@ -154,7 +154,8 @@ void ProposalTargetKernel<T>::Output(const std::function<Blob*(const std::string
     auto* out_rois_bbox = BBox::Cast(out_rois_blob->mut_dptr<T>(i));
     out_rois_bbox->set_corner_coord(rois_bbox->left(), rois_bbox->top(), rois_bbox->right(),
                                     rois_bbox->bottom());
-    out_rois_bbox->set_index(rois_bbox->index());
+    int32_t im_index = rois_bbox->index();
+    out_rois_bbox->set_index(im_index);
     // output labels
     int32_t gt_index = boxes.GetMaxOverlapWithIndex(i);
     int32_t label = gt_index >= 0 ? gt_boxes.label(gt_index) : 0;
@@ -177,6 +178,13 @@ void ProposalTargetKernel<T>::Output(const std::function<Blob*(const std::string
       outside_weights[label].set_weight_w(1.0);
       outside_weights[label].set_weight_h(1.0);
     }
+    if (BnInOp2Blob("rois")->has_record_idx_in_device_piece_field()) {
+      out_rois_blob->set_record_idx_in_device_piece(i, im_index);
+      labels_blob->set_record_idx_in_device_piece(i, im_index);
+      bbox_targets_blob->set_record_idx_in_device_piece(i, im_index);
+      bbox_inside_weights_blob->set_record_idx_in_device_piece(i, im_index);
+      bbox_outside_weights_blob->set_record_idx_in_device_piece(i, im_index);
+    }
   }
   out_rois_blob->set_dim0_valid_num(0, boxes.size());
   labels_blob->set_dim0_valid_num(0, boxes.size());
@@ -187,6 +195,12 @@ void ProposalTargetKernel<T>::Output(const std::function<Blob*(const std::string
 
 template<typename T>
 void ProposalTargetKernel<T>::ForwardDim0ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  // do nothing
+}
+
+template<typename T>
+void ProposalTargetKernel<T>::ForwardRecordIdxInDevicePiece(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // do nothing
 }
