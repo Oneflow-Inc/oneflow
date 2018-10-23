@@ -552,15 +552,11 @@ message EncodeConf {
   oneof encode {
     EncodeRaw raw = 1;
     EncodeJpeg jpeg = 2;
-    EncodeProtobuf protobuf = 3;
-    EncodeBytesList bytes_list = 4;
+    EncodeBytesList bytes_list = 3;
   }
 }
 
 message EncodeBytesList {
-}
-
-message EncodeProtobuf {
 }
 
 message EncodeRaw {
