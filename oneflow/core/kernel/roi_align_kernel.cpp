@@ -37,6 +37,12 @@ void RoIAlignKernel<device_type, T>::BackwardInDiffDim0ValidNum(
   // do nothing
 }
 
+template<DeviceType device_type, typename T>
+void RoIAlignKernel<device_type, T>::ForwardRecordIdxInDevicePiece(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  BnInOp2Blob("out")->CopyRecordIdxInDevicePieceFrom(ctx.device_ctx, BnInOp2Blob("rois"));
+}
+
 template<typename T>
 struct RoIAlignKernelUtil<DeviceType::kCPU, T> {
   static void Forward(const KernelCtx& ctx, const RoIAlignOpConf& conf, const Blob* in_blob,
