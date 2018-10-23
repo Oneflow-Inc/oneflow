@@ -5,25 +5,29 @@
 
 namespace oneflow {
 
-class BoxingOp : public Operator {
+class BoxingOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BoxingOp);
   BoxingOp() = default;
-  virtual ~BoxingOp() = default;
+  ~BoxingOp() = default;
+
+  void InitFromOpConf() override;
+  const PbMessage& GetCustomizedConf() const override;
+
+  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                      const ParallelContext* parallel_ctx) const override;
 
  protected:
-  virtual const BoxingOpConf& boxing_conf() const = 0;
-  virtual const PbRpf<std::string>& InputBns() const = 0;
-  virtual const PbRpf<std::string>& OutputBns() const = 0;
-  const PbMessage& GetCustomizedConf() const { return boxing_conf(); }
+  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                            const ParallelContext* parallel_ctx,
+                            KernelConf* kernel_conf) const override;
+
+ private:
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
   LogicalBlobId obn2lbi(const std::string& output_bn) const override;
-  std::vector<int64_t> CalcDataTmpBlobShapeVec(
-      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
-      std::vector<int64_t>* dim0_inner_shape_vec) const;
-  void InferOutBlobDescs(const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
-                         const std::vector<int64_t>& data_tmp_blob_shape_vec,
-                         const std::vector<int64_t>& dim0_inner_shape_vec) const;
+  void InferDataTmpBlobDesc(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                            std::vector<int64_t>* data_tmp_vec_ptr,
+                            std::vector<int64_t>* data_tmp_dim0_inner_shape_vec_ptr) const;
 };
 
 }  // namespace oneflow
