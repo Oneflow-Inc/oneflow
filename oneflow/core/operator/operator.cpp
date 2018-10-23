@@ -24,6 +24,12 @@ void Operator::InitFromOpConf(const OperatorConf& op_conf) {
   if (this_op_conf->has_enable_cudnn() == false) {
     this_op_conf->set_enable_cudnn(Global<JobDesc>::Get()->EnableCudnn());
   }
+  std::string md_load_dir = JoinPath(Global<JobDesc>::Get()->ModelLoadPath(), op_conf.name());
+  if (SnapshotFS()->FileExists(md_load_dir) && SnapshotFS()->IsDirectory(md_load_dir)) {
+    this_op_conf->set_model_load_dir(md_load_dir);
+  } else {
+    CHECK(this_op_conf->trainable());
+  }
   if (GetActivationType() != ActivationType::kNone) { EnrollBwBufBn("bw_activation"); }
   InitFromOpConf();
 }

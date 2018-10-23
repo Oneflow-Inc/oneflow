@@ -11,8 +11,9 @@ message TrainConf {
   required int64 batch_size = 1; // batch_size % piece_size = 0
   required NormalModelUpdateOpUserConf model_update_conf = 3;
   required string model_save_snapshots_path = 4;
-  required int32 num_of_batches_in_snapshot = 5;
-
+  optional string model_load_snapshot_path = 5 [default = ""];
+  required int32 num_of_batches_in_snapshot = 6;
+  
   optional InitializerConf default_initializer_conf = 100;
   required float primary_lr = 101;
   optional float secondary_lr = 102 [default = -1];
@@ -51,7 +52,7 @@ message OtherConf {
   required int64 total_batch_num = 4;
 
   optional bool use_rdma = 100 [default = false];
-  optional string model_load_snapshot_path = 101 [default = ""];
+  optional string model_load_path = 101 [default = ""];
   optional int32 max_data_id_length = 102 [default = 0];
   optional bool enable_cudnn = 103 [default = true];
   optional DataType default_data_type = 104 [default = kFloat]; // kFloat or kDouble

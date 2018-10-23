@@ -36,9 +36,11 @@ void Kernel::InitModelAndConstBuf(const KernelCtx& ctx, const ParallelContext* p
                                   const Snapshot* snapshot,
                                   std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   InitConstBufBlobs(ctx.device_ctx, BnInOp2Blob);
-  std::string model_load_dir = op_conf().model_load_dir();
-  if (model_load_dir == "" && snapshot) {
+  std::string model_load_dir = "";
+  if (snapshot) {
     model_load_dir = snapshot->GetDirFromOpName(op_conf().name());
+  } else {
+    model_load_dir = op_conf().model_load_dir();
   }
   if (model_load_dir == "") {
     std::mt19937* random_seed_gen = static_cast<std::mt19937*>(ctx.other);
