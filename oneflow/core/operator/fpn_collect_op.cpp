@@ -23,21 +23,33 @@ void FpnCollectOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   int64_t max_num_rois_per_layer = 0;
   int64_t total_num_rois = 0;
   DataType data_type = DataType::kInvalidDataType;
+  bool has_record_idx_in_device_piece_field = false;
+  bool set_has_record_idx_in_device_piece_field = false;
   FOR_RANGE(size_t, i, 0, num_layers) {
     // input: rpn_rois_fpn_i (R, 5) T
-    BlobDesc* rois_blob_desc = GetBlobDesc4BnInOp(RepeatedIbn("rpn_rois_fpn", i));
+    BlobDesc* rois_blob_desc_i = GetBlobDesc4BnInOp(RepeatedIbn("rpn_rois_fpn", i));
     // input: rpn_rois_fpn_i (R) T
-    BlobDesc* roi_probs_blob_desc = GetBlobDesc4BnInOp(RepeatedIbn("rpn_roi_probs_fpn", i));
-    CHECK_EQ(rois_blob_desc->shape().At(0), roi_probs_blob_desc->shape().At(0));
-    CHECK_EQ(rois_blob_desc->data_type(), roi_probs_blob_desc->data_type());
-    CHECK_EQ(rois_blob_desc->has_dim0_valid_num_field(),
-             roi_probs_blob_desc->has_dim0_valid_num_field());
-    max_num_rois_per_layer = std::max(max_num_rois_per_layer, rois_blob_desc->shape().At(0));
-    total_num_rois += rois_blob_desc->shape().At(0);
+    BlobDesc* roi_probs_blob_desc_i = GetBlobDesc4BnInOp(RepeatedIbn("rpn_roi_probs_fpn", i));
+    CHECK_EQ(rois_blob_desc_i->shape().At(0), roi_probs_blob_desc_i->shape().At(0));
+    CHECK_EQ(rois_blob_desc_i->data_type(), roi_probs_blob_desc_i->data_type());
+    CHECK_EQ(rois_blob_desc_i->has_dim0_valid_num_field(),
+             roi_probs_blob_desc_i->has_dim0_valid_num_field());
+    CHECK_EQ(rois_blob_desc_i->has_record_idx_in_device_piece_field(),
+             roi_probs_blob_desc_i->has_record_idx_in_device_piece_field());
+    max_num_rois_per_layer = std::max(max_num_rois_per_layer, rois_blob_desc_i->shape().At(0));
+    total_num_rois += rois_blob_desc_i->shape().At(0);
     if (data_type == DataType::kInvalidDataType) {
-      data_type = rois_blob_desc->data_type();
+      data_type = rois_blob_desc_i->data_type();
     } else {
-      CHECK_EQ(data_type, rois_blob_desc->data_type());
+      CHECK_EQ(data_type, rois_blob_desc_i->data_type());
+    }
+    if (!set_has_record_idx_in_device_piece_field) {
+      has_record_idx_in_device_piece_field =
+          rois_blob_desc_i->has_record_idx_in_device_piece_field();
+      set_has_record_idx_in_device_piece_field = true;
+    } else {
+      CHECK_EQ(has_record_idx_in_device_piece_field,
+               rois_blob_desc_i->has_record_idx_in_device_piece_field());
     }
   }
   CHECK_LE(total_top_n, total_num_rois);
@@ -48,6 +60,7 @@ void FpnCollectOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   out_blob_desc->set_data_type(data_type);
   out_blob_desc->mut_dim0_inner_shape() = Shape({1, total_top_n});
   out_blob_desc->set_has_dim0_valid_num_field(true);
+  out_blob_desc->set_has_record_idx_in_device_piece_field(has_record_idx_in_device_piece_field);
 
   // datatmp: roi_inds (num_layers, max_num_rois_per_layer) int32
   BlobDesc* roi_inds_blob_desc = GetBlobDesc4BnInOp("roi_inds");
