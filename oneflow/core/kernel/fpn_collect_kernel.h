@@ -21,6 +21,8 @@ class FpnCollectKernel final : public KernelIf<DeviceType::kCPU> {
                           std::function<Blob*(const std::string&)>) const override;
   void ForwardDim0ValidNum(const KernelCtx& ctx,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardRecordIdxInDevicePiece(
+      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
 }  // namespace oneflow
