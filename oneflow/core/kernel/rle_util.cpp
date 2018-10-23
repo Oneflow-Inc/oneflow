@@ -1,14 +1,16 @@
 #include <cstring>
 #include "oneflow/core/kernel/rle_util.h"
+#include "oneflow/core/common/util.h"
 
 extern "C" {
-
 #include "maskApi.h"
 }
 
 namespace oneflow {
 
-size_t RleEncode(uint32_t* buf, const uint8_t* mask, size_t h, size_t w) {
+namespace RleUtil {
+
+size_t Encode(uint32_t* buf, const uint8_t* mask, size_t h, size_t w) {
   RLE rle;
   rleEncode(&rle, mask, h, w, 1);
   size_t len = rle.m;
@@ -16,5 +18,27 @@ size_t RleEncode(uint32_t* buf, const uint8_t* mask, size_t h, size_t w) {
   rleFree(&rle);
   return len;
 }
+
+void PolygonXy2ColMajorMask(const double* xy, size_t num_xy, size_t h, size_t w, uint8_t* mask) {
+  CHECK_EQ(num_xy % 2, 0);
+  RLE rle;
+  rleFrPoly(&rle, xy, num_xy / 2, h, w);
+  rleDecode(&rle, mask, 1);
+  rleFree(&rle);
+}
+
+size_t EncodeToString(const uint8_t* mask, size_t h, size_t w, size_t max_len, char* out) {
+  RLE rle;
+  rleEncode(&rle, mask, h, w, 1);
+  char* str = rleToString(&rle);
+  const size_t len = strlen(str);
+  CHECK_LE(len, max_len);
+  std::memcpy(out, str, len);
+  free(str);
+  rleFree(&rle);
+  return len;
+}
+
+}  // namespace RleUtil
 
 }  // namespace oneflow

@@ -6,7 +6,14 @@
 
 namespace oneflow {
 
-size_t RleEncode(uint32_t* buf, const uint8_t* mask, size_t h, size_t w);
-}
+namespace RleUtil {
+
+size_t Encode(uint32_t* buf, const uint8_t* mask, size_t h, size_t w);
+void PolygonXy2ColMajorMask(const double* xy, size_t num_xy, size_t h, size_t w, uint8_t* mask);
+size_t EncodeToString(const uint8_t* mask, size_t h, size_t w, size_t max_len, char* out);
+
+}  // namespace RleUtil
+
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_RLE_H_

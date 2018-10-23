@@ -12,7 +12,6 @@ class NormalMdUpdtCompTaskNode final : public CompTaskNode {
   NormalMdUpdtCompTaskNode() = default;
   ~NormalMdUpdtCompTaskNode() = default;
 
-  bool IsPredict7NotTrainable();
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   bool IsReadyForBuild() override;
