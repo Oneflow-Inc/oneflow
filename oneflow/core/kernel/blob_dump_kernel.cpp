@@ -23,7 +23,7 @@ void BlobDumpKernel::Forward(const KernelCtx& ctx,
     return BnInOp2Blob("in_" + std::to_string(blob_id));
   };
   const auto& conf = op_conf().blob_dump_conf();
-  int32_t total_blob_num = op_attribute().input_bns_size() + op_attribute().pb_input_bns_size();
+  int32_t total_blob_num = op_attribute().input_bns_size();
 
   OFRecord record;
   FOR_RANGE(int32_t, blob_id, 0, total_blob_num) {

@@ -148,7 +148,6 @@ inline bool operator<(const LogicalBlobId& lhs, const LogicalBlobId& rhs) {
   if (lhs.blob_name() != rhs.blob_name()) { return lhs.blob_name() < rhs.blob_name(); }
   if (lhs.clone_id() != rhs.clone_id()) { return lhs.clone_id() < rhs.clone_id(); }
   if (lhs.is_packed_id() != rhs.is_packed_id()) { return lhs.is_packed_id() < rhs.is_packed_id(); }
-  if (lhs.is_pb_blob() != rhs.is_pb_blob()) { return lhs.is_pb_blob() < rhs.is_pb_blob(); }
   return false;
 }
 
