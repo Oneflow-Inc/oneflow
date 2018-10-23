@@ -328,14 +328,6 @@ message BoxingOpConf {
   }
 }
 
-message PodBoxingOpConf {
-  required BoxingOpConf boxing_conf = 1;
-}
-
-message PbBoxingOpConf {
-  required BoxingOpConf boxing_conf = 1;
-}
-
 message NaiveModelUpdateConf {
 }
 
@@ -993,8 +985,7 @@ message OperatorConf {
     NormalModelUpdateOpConf normal_mdupdt_conf = 118;
     ModelSaveOpConf model_save_conf = 119;
     SharedModelDiffAddOpConf shared_model_diff_add_conf = 120;
-    PodBoxingOpConf pod_boxing_conf = 121;
-    PbBoxingOpConf pb_boxing_conf = 122;
+    BoxingOpConf boxing_conf = 121;
 
     // user op
     TransposeOpConf transpose_conf = 201;
