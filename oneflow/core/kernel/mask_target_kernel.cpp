@@ -1,9 +1,7 @@
 #include "oneflow/core/kernel/mask_target_kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/record/coco.pb.h"
-extern "C" {
-#include <maskApi.h>
-}
+#include "oneflow/core/kernel/rle_util.h"
 
 namespace oneflow {
 
@@ -158,16 +156,6 @@ void MaskTargetKernel<T>::Polygon2BBox(const FloatList& polygon, SegmBBox* bbox)
 }
 
 template<typename T>
-void MaskTargetKernel<T>::PolygonXy2ColMajorMask(const std::vector<double>& xy, size_t mask_h,
-                                                 size_t mask_w, uint8_t* bitmap) const {
-  CHECK_EQ(xy.size() % 2, 0);
-  RLE rle;
-  rleFrPoly(&rle, xy.data(), xy.size() / 2, mask_h, mask_w);
-  rleDecode(&rle, bitmap, 1);
-  rleFree(&rle);
-}
-
-template<typename T>
 void MaskTargetKernel<T>::Segm2Mask(const PolygonList& segm, const RoiBBox& fg_roi, size_t mask_h,
                                     size_t mask_w, T* mask) const {
   CHECK_GE(segm.polygons_size(), 1);
@@ -192,10 +180,10 @@ void MaskTargetKernel<T>::Segm2Mask(const PolygonList& segm, const RoiBBox& fg_r
     }
 
     if (i == 0) {
-      PolygonXy2ColMajorMask(xy, mask_h, mask_w, mask_vec.data());
+      RleUtil::PolygonXy2ColMajorMask(xy.data(), xy.size(), mask_h, mask_w, mask_vec.data());
     } else {
       one_mask_vec.resize(mask_elem_num);
-      PolygonXy2ColMajorMask(xy, mask_h, mask_w, one_mask_vec.data());
+      RleUtil::PolygonXy2ColMajorMask(xy.data(), xy.size(), mask_h, mask_w, one_mask_vec.data());
       std::transform(mask_vec.cbegin(), mask_vec.cend(), one_mask_vec.cbegin(), mask_vec.begin(),
                      std::bit_or<uint8_t>());
     }

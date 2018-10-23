@@ -34,8 +34,6 @@ class MaskTargetKernel final : public KernelIf<DeviceType::kCPU> {
   void Segm2Mask(const PolygonList& segm, const RoiBBox& fg_roi, size_t mask_h, size_t mask_w,
                  T* mask) const;
   void Polygon2BBox(const FloatList& polygon, SegmBBox* bbox) const;
-  void PolygonXy2ColMajorMask(const std::vector<double>& xy, size_t mask_h, size_t mask_w,
-                              uint8_t* bitmap) const;
   size_t GetMaxOverlapIndex(const RoiBBox& fg_roi, const SegmBBox* gt_bboxs,
                             size_t gt_bboxs_num) const;
 };
