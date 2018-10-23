@@ -117,9 +117,8 @@ int64_t Blob::record_idx_in_device_piece(int64_t no) const {
   if (record_idx_in_device_piece_ptr_) {
     val = record_idx_in_device_piece_ptr_[no];
     CHECK_GE(val, 0);
-    CHECK_LE(val, shape().At(1));
   } else {
-    val = shape().At(1);
+    val = no;
   }
   return val;
 }
