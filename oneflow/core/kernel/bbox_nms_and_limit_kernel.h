@@ -42,6 +42,8 @@ class BboxNmsAndLimitKernel final : public KernelIf<DeviceType::kCPU> {
                           std::function<Blob*(const std::string&)>) const override;
   void ForwardDim0ValidNum(const KernelCtx& ctx,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardRecordIdxInDevicePiece(
+      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
   void BroadcastBboxTransform(const Blob* bbox_blob, const Blob* bbox_pred_blob,
                               Blob* target_bbox_blob) const;
@@ -61,6 +63,7 @@ class BboxNmsAndLimitKernel final : public KernelIf<DeviceType::kCPU> {
                        Blob* out_bbox_score_blob) const;
   void OutputBBoxLabel(const std::vector<int32_t> out_bbox_inds, const int32_t num_classes,
                        Blob* out_bbox_label_blob) const;
+  void FillRecordIdInDevicePiece(const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 
   std::unique_ptr<ScoringMethodIf<T>> scoring_method_;
 };

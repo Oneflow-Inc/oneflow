@@ -54,18 +54,24 @@ void BboxNmsAndLimitOp::InferBlobDescs(
   out_bbox_bd->set_data_type(bbox_bd->data_type());
   out_bbox_bd->mut_dim0_inner_shape() = Shape({1, num_limit});
   out_bbox_bd->set_has_dim0_valid_num_field(true);
+  out_bbox_bd->set_has_record_idx_in_device_piece_field(
+      bbox_bd->has_record_idx_in_device_piece_field());
   // output: out_bbox_label (num_limit)
   BlobDesc* out_bbox_label_bd = GetBlobDesc4BnInOp("out_bbox_label");
   out_bbox_label_bd->mut_shape() = Shape({num_limit});
   out_bbox_label_bd->set_data_type(DataType::kInt32);
   out_bbox_label_bd->mut_dim0_inner_shape() = Shape({1, num_limit});
   out_bbox_label_bd->set_has_dim0_valid_num_field(true);
+  out_bbox_label_bd->set_has_record_idx_in_device_piece_field(
+      bbox_bd->has_record_idx_in_device_piece_field());
   // output: out_bbox_score (num_limit)
   BlobDesc* out_bbox_score_bd = GetBlobDesc4BnInOp("out_bbox_score");
   out_bbox_score_bd->mut_shape() = Shape({num_limit});
   out_bbox_score_bd->set_data_type(bbox_prob_bd->data_type());
   out_bbox_score_bd->mut_dim0_inner_shape() = Shape({1, num_limit});
   out_bbox_score_bd->set_has_dim0_valid_num_field(true);
+  out_bbox_score_bd->set_has_record_idx_in_device_piece_field(
+      bbox_bd->has_record_idx_in_device_piece_field());
 
   // datatmp: target_bbox (r, c, 5)
   BlobDesc* target_bbox_bd = GetBlobDesc4BnInOp("target_bbox");
