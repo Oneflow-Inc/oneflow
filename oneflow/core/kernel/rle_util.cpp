@@ -27,6 +27,18 @@ void PolygonXy2ColMajorMask(const double* xy, size_t num_xy, size_t h, size_t w,
   rleFree(&rle);
 }
 
+size_t EncodeToString(const uint8_t* mask, size_t h, size_t w, size_t max_len, char* out) {
+  RLE rle;
+  rleEncode(&rle, mask, h, w, 1);
+  char* str = rleToString(&rle);
+  const size_t len = strlen(str);
+  CHECK_LE(len, max_len);
+  std::memcpy(out, str, len);
+  free(str);
+  rleFree(&rle);
+  return len;
+}
+
 }  // namespace RleUtil
 
 }  // namespace oneflow

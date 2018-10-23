@@ -117,13 +117,8 @@ class Operator {
   DEFINE_BLOB_NAMES_GETTER(const_model_bns);
   DEFINE_BLOB_NAMES_GETTER(const_buf_bns);
   DEFINE_BLOB_NAMES_GETTER(forward_model_bns);
-  DEFINE_BLOB_NAMES_GETTER(pb_input_bns);
-  DEFINE_BLOB_NAMES_GETTER(pb_output_bns);
 
 #undef DEFINE_BLOB_NAMES_GETTER
-
-  void ForEachInputBn(const std::function<void(const std::string&)>& Handler) const;
-  void ForEachOutputBn(const std::function<void(const std::string&)>& Handler) const;
 
   // Read: shape of input_blobs
   // Write: shape of output_blobs, model_blobs, data_tmp_blobs, const_model_blobs, const_buf_blobs
@@ -197,9 +192,7 @@ class Operator {
       KernelConf*) const {}
 
   virtual LogicalBlobId ibn2lbi(const std::string& input_bn) const;
-  virtual LogicalBlobId pibn2lbi(const std::string& pb_input_bn) const;
   virtual LogicalBlobId obn2lbi(const std::string& output_bn) const;
-  virtual LogicalBlobId pobn2lbi(const std::string& pb_output_bn) const;
   virtual LogicalBlobId cmbn2lbi(const std::string& const_model_bn) const;
   virtual LogicalBlobId cbbn2lbi(const std::string& const_buf_bn) const;
   virtual LogicalBlobId mbn2lbi(const std::string& model_bn) const;
@@ -223,8 +216,6 @@ class Operator {
   void EnrollRepeatedOutputBn(const std::string& ibn_prefix, bool has_diff);
   void EnrollRepeatedOutputBn(const std::string& ibn_prefix, int32_t num);
   void EnrollRepeatedOutputBn(const std::string& ibn_prefix);
-  void EnrollPbInputBn(const std::string& pibn);
-  void EnrollPbOutputBn(const std::string& obn);
 
   // enroll model blobs
   void EnrollModelBn(const std::string& mbn);

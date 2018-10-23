@@ -381,16 +381,6 @@ void TaskEdge::AddRegst(const std::string& name_in_producer, std::shared_ptr<Reg
   CHECK(name_in_producer2regst_.emplace(name_in_producer, regst).second);
 }
 
-void TaskEdge::ForEachRegst(const std::function<void(std::shared_ptr<RegstDesc>)>& Handler) const {
-  for (const auto& pair : name_in_producer2regst_) { Handler(pair.second); }
-}
-
-std::list<std::shared_ptr<RegstDesc>> TaskEdge::GetAllRegsts() const {
-  std::list<std::shared_ptr<RegstDesc>> ret;
-  for (const auto& pair : name_in_producer2regst_) { ret.push_back(pair.second); }
-  return ret;
-}
-
 RegstDescProto* FindOrCreateProducedCtrlRegstDesc(TaskProto* task_proto,
                                                   const std::string& regst_desc_name) {
   auto* produced_regst_desc = task_proto->mutable_produced_regst_desc();
