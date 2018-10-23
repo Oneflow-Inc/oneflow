@@ -34,6 +34,7 @@ void MaskTargetKernel<T>::ForwardDataContent(
   ComputeSegmBBoxes(segms, gt_bboxes_blob);
 
   const int64_t num_rois = rois_blob->shape().At(0);
+  CHECK_GT(num_rois, 0);
   CHECK_EQ(labels_blob->shape().At(0), num_rois);
   int64_t mask_idx = 0;
   // set dim0_valid_num to max
@@ -73,15 +74,11 @@ void MaskTargetKernel<T>::ForwardDataContent(
 
   // handle empty output
   if (mask_idx == 0) {
-    const auto* labels_ptr = labels_blob->dptr<int32_t>();
-    const int32_t* it = std::find(labels_ptr, labels_ptr + num_rois, 0);
-    CHECK_NE(it, labels_ptr + num_rois);
-    const int64_t bg_roi_idx = it - labels_ptr;
-    mask_roi_bboxes[mask_idx].elem() = roi_bboxes[bg_roi_idx].elem();
+    mask_roi_bboxes[mask_idx].elem() = roi_bboxes[0].elem();
     Memcpy<kCPU>(ctx.device_ctx, masks_blob->mut_dptr<T>(mask_idx),
                  mask_ignore_labels_blob->dptr<T>(),
                  mask_ignore_labels_blob->ByteSizeOfDataContentField());
-    CopyRecordIdxIfNeed(bg_roi_idx, mask_idx);
+    CopyRecordIdxIfNeed(0, mask_idx);
     mask_idx += 1;
   }
 

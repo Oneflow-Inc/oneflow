@@ -980,7 +980,6 @@ message MaskTargetOpConf {
   required int32 mask_width = 8;
 }
 
-
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
