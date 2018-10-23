@@ -48,7 +48,7 @@ void ProposalTargetOp::InferBlobDescs(
   CHECK_EQ(gt_labels_blob_desc->shape().At(0), num_images);
   const int64_t num_rois = rois_blob_desc->shape().At(0);
   const int64_t total_num_sampled_rois = conf.num_sampled_rois_per_image() * num_images;
-  CHECK_GE(total_num_sampled_rois, num_rois);
+  CHECK_LE(total_num_sampled_rois, num_rois);
   const int64_t num_classes = conf.num_classes();
 
   // output: rois (total_num_sampled_rois, 5) T

@@ -149,29 +149,40 @@ void ProposalTargetKernel<T>::Output(const std::function<Blob*(const std::string
               bbox_outside_weights_blob->shape().elem_cnt() * sizeof(T));
 
   FOR_RANGE(size_t, i, 0, boxes.size()) {
-    // output out_rois
-    const auto* rois_bbox = boxes.GetBBox(i);
-    auto* out_rois_bbox = BBox::Cast(out_rois_blob->mut_dptr<T>(i));
-    out_rois_bbox->set_corner_coord(rois_bbox->left(), rois_bbox->top(), rois_bbox->right(),
-                                    rois_bbox->bottom());
-    int32_t im_index = rois_bbox->index();
-    out_rois_bbox->set_index(im_index);
-    // output labels
     int32_t gt_index = boxes.GetMaxOverlapWithIndex(i);
     int32_t label = gt_index >= 0 ? gt_boxes.label(gt_index) : 0;
     labels_blob->mut_dptr<int32_t>()[i] = label;
+    int32_t index = boxes.GetIndex(i);
+    int32_t im_index = -1;
+    auto* out_rois_bbox = BBox::Cast(out_rois_blob->mut_dptr<T>(i));
+    auto* bbox_targets = BBoxDelta<T>::Cast(bbox_targets_blob->mut_dptr<T>(i));
+    if (index >= 0) {
+      const auto* rois_bbox = boxes.bbox(index);
+      out_rois_bbox->set_corner_coord(rois_bbox->left(), rois_bbox->top(), rois_bbox->right(),
+                                      rois_bbox->bottom());
+      if (label > 0) {
+        bbox_targets[label].TransformInverse(rois_bbox, gt_boxes.bbox(gt_index),
+                                             conf.bbox_reg_weights());
+      }
+      im_index = rois_bbox->index();
+    } else {
+      int32_t index_gt = -index - 1;
+      const auto* gt_bbox = gt_boxes.bbox(index_gt);
+      out_rois_bbox->set_corner_coord(gt_bbox->left(), gt_bbox->top(), gt_bbox->right(),
+                                      gt_bbox->bottom());
+      if (label > 0) {
+        bbox_targets[label].TransformInverse(gt_bbox, gt_boxes.bbox(gt_index),
+                                             conf.bbox_reg_weights());
+      }
+      im_index = index_gt / BnInOp2Blob("gt_boxes")->shape().At(1);
+    }
+    out_rois_bbox->set_index(im_index);
     if (label > 0) {
-      // output bbox_targets
-      auto* bbox_targets = BBoxDelta<T>::Cast(bbox_targets_blob->mut_dptr<T>(i));
-      bbox_targets[label].TransformInverse(rois_bbox, gt_boxes.bbox(gt_index),
-                                           conf.bbox_reg_weights());
-      // output bbox_inside_weights
       auto* inside_weights = BBoxWeights<T>::Cast(bbox_inside_weights_blob->mut_dptr<T>(i));
       inside_weights[label].set_weight_x(1.0);
       inside_weights[label].set_weight_y(1.0);
       inside_weights[label].set_weight_w(1.0);
       inside_weights[label].set_weight_h(1.0);
-      // output bbox_outside_weights
       auto* outside_weights = BBoxWeights<T>::Cast(bbox_outside_weights_blob->mut_dptr<T>(i));
       outside_weights[label].set_weight_x(1.0);
       outside_weights[label].set_weight_y(1.0);
