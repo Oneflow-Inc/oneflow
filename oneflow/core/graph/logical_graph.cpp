@@ -129,24 +129,24 @@ void LogicalGraph::NaiveBuildFwStruct(
     cur_node->mut_op_vec() = {cur_op};
     cur_node->SoleOp()->FixParallelDesc(parallel_desc_ptr.get());
     cur_node->mut_parallel_desc() = parallel_desc_ptr;
-    cur_node->SoleOp()->ForEachOutputBn([&](const std::string& obn) {
+    for (const std::string& obn : cur_node->SoleOp()->output_bns()) {
       const LogicalBlobId& lbi = cur_node->SoleOp()->BnInOp2Lbi(obn);
       CHECK(lbi2producer.emplace(lbi, cur_node).second);
       CHECK(lbi2obn.emplace(lbi, obn).second);
-    });
+    }
     (*op_name2nodes)[cur_op->op_name()].push_back(cur_node);
   }
   ForEachNode([&](LogicalNode* cur_node) {
-    cur_node->SoleOp()->ForEachInputBn([&](const std::string& ibn) {
+    for (const std::string& ibn : cur_node->SoleOp()->input_bns()) {
       const LogicalBlobId& lbi = cur_node->SoleOp()->BnInOp2Lbi(ibn);
       LogicalNode* pred_node = lbi2producer.at(lbi);
-      if (pred_node == cur_node) { return; }
+      if (pred_node == cur_node) { continue; }
       LogicalEdge* edge = NewEdge();
       edge->mut_lbis() = {lbi};
       UpdateEdge2Ibn(edge, ibn);
       UpdateEdge2Obn(edge, lbi2obn.at(lbi));
       Connect(pred_node, edge, cur_node);
-    });
+    }
   });
 }
 

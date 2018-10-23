@@ -33,20 +33,18 @@ void ProposalOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
       anchor_generator_conf.aspect_ratios_size() * anchor_generator_conf.anchor_scales_size();
   CHECK_EQ(num_anchors_per_cell, class_prob_blob_desc->shape().At(3));
   CHECK_EQ(num_anchors_per_cell * 4, bbox_pred_blob_desc->shape().At(3));
-  const int64_t fm_height =
-      std::ceil(anchor_generator_conf.image_height() / anchor_generator_conf.feature_map_stride());
-  const int64_t fm_width =
-      std::ceil(anchor_generator_conf.image_width() / anchor_generator_conf.feature_map_stride());
+  const float fm_stride = anchor_generator_conf.feature_map_stride();
+  const int64_t fm_height = std::ceil(anchor_generator_conf.image_height() / fm_stride);
+  const int64_t fm_width = std::ceil(anchor_generator_conf.image_width() / fm_stride);
   CHECK_EQ(fm_height, bbox_pred_blob_desc->shape().At(1));
   CHECK_EQ(fm_width, bbox_pred_blob_desc->shape().At(2));
   CHECK_EQ(fm_height, class_prob_blob_desc->shape().At(1));
   CHECK_EQ(fm_width, class_prob_blob_desc->shape().At(2));
   const int64_t num_anchors = fm_height * fm_width * num_anchors_per_cell;
   int64_t pre_nms_top_n = conf.pre_nms_top_n();
-  if (pre_nms_top_n == -1) { pre_nms_top_n = num_anchors; }
+  if (pre_nms_top_n <= 0 || pre_nms_top_n > num_anchors) { pre_nms_top_n = num_anchors; }
   int64_t post_nms_top_n = conf.post_nms_top_n();
-  CHECK_GT(post_nms_top_n, 0);
-  CHECK_GT(pre_nms_top_n, post_nms_top_n);
+  if (post_nms_top_n <= 0 || post_nms_top_n > pre_nms_top_n) { post_nms_top_n = pre_nms_top_n; }
 
   // const buf: anchors (H, W, A, 4) T
   BlobDesc* anchors_blob_desc = GetBlobDesc4BnInOp("anchors");

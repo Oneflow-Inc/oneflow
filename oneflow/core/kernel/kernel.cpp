@@ -5,20 +5,6 @@ namespace oneflow {
 
 namespace {
 
-template<typename T>
-void ClearPbBlob(Blob* blob) {
-  FOR_RANGE(int64_t, i, 0, blob->shape().elem_cnt()) { blob->mut_dptr<T>()[i].Clear(); }
-}
-
-void ClearPbBlob(Blob* blob) {
-  switch (blob->data_type()) {
-#define CLEAR_PB_BLOB_CASE(type_cpp, type_proto) \
-  case type_proto: return ClearPbBlob<type_cpp>(blob);
-    OF_PP_FOR_EACH_TUPLE(CLEAR_PB_BLOB_CASE, PB_DATA_TYPE_SEQ);
-    default: CHECK_NE(blob->data_type(), DataType::kInvalidDataType);
-  }
-}
-
 void CheckSameDim0ValidNum(const PbRpf<std::string>& bns,
                            const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
   const void* mem_ptr = BnInOp2Blob(bns.Get(0))->dim0_valid_num_ptr();
@@ -86,7 +72,6 @@ bool Kernel::HasEmptyShapeBlob(const PbRpf<std::string>& bns,
 
 void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  ClearPbBlobs(ctx, BnInOp2Blob);
   if (kernel_conf_.need_do_dim0_valid_num()) {
     CHECK(!kernel_conf_.need_do_opaque_header());
     ForwardDim0ValidNum(ctx, BnInOp2Blob);
@@ -117,16 +102,6 @@ void Kernel::Forward(const KernelCtx& ctx,
   } else {
     if (kernel_conf_.need_do_data_id()) { ForwardDataId(ctx, BnInOp2Blob); }
     if (kernel_conf_.need_do_col_num()) { ForwardColNum(ctx, BnInOp2Blob); }
-  }
-}
-
-void Kernel::ClearPbBlobs(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  for (const auto& out_bn : op_attribute().pb_output_bns()) {
-    Blob* out_blob = BnInOp2Blob(out_bn);
-    CHECK_NOTNULL(out_blob);
-    CHECK(IsPbDataType(out_blob->data_type()));
-    ClearPbBlob(out_blob);
   }
 }
 
@@ -189,9 +164,7 @@ void KernelIf<device_type>::ForwardField(DeviceCtx* ctx,
                                          std::function<Blob*(const std::string&)> BnInOp2Blob,
                                          void (Blob::*Copy)(DeviceCtx*, const Blob*)) const {
   const PbRpf<std::string>* input_bn = &op_attribute().input_bns();
-  if (input_bn->empty()) { input_bn = &op_attribute().pb_input_bns(); }
   CopyField(ctx, BnInOp2Blob, *input_bn, op_attribute().output_bns(), Copy);
-  CopyField(ctx, BnInOp2Blob, *input_bn, op_attribute().pb_output_bns(), Copy);
 }
 
 template<DeviceType device_type>
