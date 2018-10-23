@@ -22,6 +22,8 @@ class MaskTargetKernel final : public KernelIf<DeviceType::kCPU> {
                           std::function<Blob*(const std::string&)>) const override;
   void ForwardDim0ValidNum(const KernelCtx& ctx,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardRecordIdxInDevicePiece(
+      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void InitConstBufBlobs(DeviceCtx*,
                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
@@ -36,8 +38,6 @@ class MaskTargetKernel final : public KernelIf<DeviceType::kCPU> {
                               uint8_t* bitmap) const;
   size_t GetMaxOverlapIndex(const RoiBBox& fg_roi, const SegmBBox* gt_bboxs,
                             size_t gt_bboxs_num) const;
-  void FindFirstBgRoiAndCopyTo(const RoiBBox* rois, const int32_t* labels, int64_t num_rois,
-                               RoiBBox* out) const;
 };
 
 }  // namespace oneflow

@@ -27,6 +27,8 @@ void MaskTargetKernel<T>::ForwardDataContent(
   const auto num_classes = static_cast<size_t>(masks_blob->static_shape().At(1));
   const auto mask_h = static_cast<size_t>(masks_blob->static_shape().At(2));
   const auto mask_w = static_cast<size_t>(masks_blob->static_shape().At(3));
+  const bool input_blob_has_record_idx = rois_blob->has_record_idx_in_device_piece_field();
+  CHECK_EQ(labels_blob->has_record_idx_in_device_piece_field(), input_blob_has_record_idx);
 
   ParseSegmPolygonLists(gt_segms_blob, &segms);
   ComputeSegmBBoxes(segms, gt_bboxes_blob);
@@ -39,6 +41,13 @@ void MaskTargetKernel<T>::ForwardDataContent(
   mask_rois_blob->set_dim0_valid_num(0, num_rois);
   const RoiBBox* roi_bboxes = RoiBBox::Cast(rois_blob->dptr<T>());
   RoiBBox* mask_roi_bboxes = RoiBBox::Cast(mask_rois_blob->mut_dptr<T>());
+  const auto CopyRecordIdxIfNeed = [&](const int64_t roi_idx, const int64_t mask_idx) {
+    if (input_blob_has_record_idx) {
+      const int64_t record_idx = rois_blob->record_idx_in_device_piece(roi_idx);
+      masks_blob->set_record_idx_in_device_piece(mask_idx, record_idx);
+      mask_rois_blob->set_record_idx_in_device_piece(mask_idx, record_idx);
+    }
+  };
   FOR_RANGE(int64_t, roi_idx, 0, num_rois) {
     const int32_t label = *labels_blob->dptr<int32_t>(roi_idx);
     CHECK_GE(label, 0);
@@ -49,7 +58,6 @@ void MaskTargetKernel<T>::ForwardDataContent(
     CHECK_GE(img_idx, 0);
     CHECK_LT(img_idx, gt_bboxes_blob->shape().At(0));
     CHECK_GE(gt_bboxes_blob->dim1_valid_num(img_idx), 1);
-
     mask_roi_bboxes[mask_idx].elem() = fg_roi.elem();
     Memcpy<kCPU>(ctx.device_ctx, masks_blob->mut_dptr<T>(mask_idx),
                  mask_ignore_labels_blob->dptr<T>(),
@@ -59,16 +67,21 @@ void MaskTargetKernel<T>::ForwardDataContent(
                            static_cast<size_t>(gt_bboxes_blob->dim1_valid_num(img_idx)));
     Segm2Mask(segms.at(static_cast<size_t>(img_idx)).at(max_iou_gt_idx), fg_roi, mask_h, mask_w,
               masks_blob->mut_dptr<T>(mask_idx, label));
+    CopyRecordIdxIfNeed(roi_idx, mask_idx);
     mask_idx += 1;
   }
 
   // handle empty output
   if (mask_idx == 0) {
-    FindFirstBgRoiAndCopyTo(roi_bboxes, labels_blob->dptr<int32_t>(), num_rois,
-                            &mask_roi_bboxes[mask_idx]);
+    const auto* labels_ptr = labels_blob->dptr<int32_t>();
+    const int32_t* it = std::find(labels_ptr, labels_ptr + num_rois, 0);
+    CHECK_NE(it, labels_ptr + num_rois);
+    const int64_t bg_roi_idx = it - labels_ptr;
+    mask_roi_bboxes[mask_idx].elem() = roi_bboxes[bg_roi_idx].elem();
     Memcpy<kCPU>(ctx.device_ctx, masks_blob->mut_dptr<T>(mask_idx),
                  mask_ignore_labels_blob->dptr<T>(),
                  mask_ignore_labels_blob->ByteSizeOfDataContentField());
+    CopyRecordIdxIfNeed(bg_roi_idx, mask_idx);
     mask_idx += 1;
   }
 
@@ -78,6 +91,12 @@ void MaskTargetKernel<T>::ForwardDataContent(
 
 template<typename T>
 void MaskTargetKernel<T>::ForwardDim0ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  // do nothing here because it will be set in ForwardDataContent
+}
+
+template<typename T>
+void MaskTargetKernel<T>::ForwardRecordIdxInDevicePiece(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // do nothing here because it will be set in ForwardDataContent
 }
@@ -206,14 +225,6 @@ size_t MaskTargetKernel<T>::GetMaxOverlapIndex(const RoiBBox& fg_roi, const Segm
     }
   }
   return max_overlap_idx;
-}
-
-template<typename T>
-void MaskTargetKernel<T>::FindFirstBgRoiAndCopyTo(const RoiBBox* rois, const int32_t* labels,
-                                                  int64_t num_rois, RoiBBox* out) const {
-  const int32_t* it = std::find(labels, labels + num_rois, 0);
-  CHECK_NE(it, labels + num_rois);
-  out->elem() = rois[it - labels].elem();
 }
 
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kMaskTargetConf, MaskTargetKernel,
