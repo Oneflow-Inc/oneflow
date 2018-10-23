@@ -957,6 +957,21 @@ message RleEncodeOpConf {
   optional int32 rle_max_bytes = 3 [default = 1048576];
 }
 
+message MaskTargetOpConf {
+  //inputs
+  required string rois = 1;
+  required string labels = 2;
+  required string gt_segm_polygon_lists = 3;
+
+  //outputs
+  required string mask_rois = 4;
+  required string masks = 5;
+
+  required int32 num_classes = 6;
+  required int32 mask_height = 7;
+  required int32 mask_width = 8;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1045,6 +1060,7 @@ message OperatorConf {
     RedefineDim0OpConf redefine_dim0_conf = 1015;
     ImageSegmentationMaskOpConf image_segmentation_mask_conf = 1016;
     RleEncodeOpConf rle_encode_conf = 1017;
+    MaskTargetOpConf mask_target_conf = 1018;
     BboxTransformOpConf bbox_transform_conf = 1100;
   }
 }
