@@ -34,8 +34,7 @@ void NormalForwardCompTaskNode::ConsumeAllRegsts() {
       ConsumeRegst("model", edge->GetRegst("model"));
       ConsumeRegst("const_model", edge->GetRegst("const_model"));
     } else {
-      edge->ForEachRegst(
-          [&](std::shared_ptr<RegstDesc> regst_desc) { ConsumeRegst("in", regst_desc); });
+      ConsumeRegst("in", edge->GetSoleRegst());
     }
   }
 }
@@ -71,14 +70,14 @@ void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
   for (std::shared_ptr<const Operator> op : logical_node()->op_vec()) {
     ExecNode* cur_node = mut_exec_gph().NewNode();
     cur_node->mut_op() = op;
-    op->ForEachOutputBn([&](const std::string& obn) {
+    for (const std::string& obn : op->output_bns()) {
       const LogicalBlobId& lbi = op->BnInOp2Lbi(obn);
       CHECK(lbi2producer.insert({lbi, {cur_node, obn}}).second);
-    });
+    }
   }
   const std::list<std::shared_ptr<RegstDesc>>& in_regsts = GetConsumedRegst("in");
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
-    cur_node->op()->ForEachInputBn([&](const std::string& ibn) {
+    for (const std::string& ibn : cur_node->op()->input_bns()) {
       const LogicalBlobId& lbi = cur_node->op()->BnInOp2Lbi(ibn);
       auto producer_it = lbi2producer.find(lbi);
       if (producer_it != lbi2producer.end()) {
@@ -90,21 +89,16 @@ void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
       } else {
         cur_node->BindBnWithOneOfTheRegsts(ibn, in_regsts);
       }
-    });
+    }
   });
 }
 
 void NormalForwardCompTaskNode::BuildOutRegst() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
-  auto ForEachOutBn7Regst =
-      [&](const ExecNode* cur_node,
-          const std::function<void(const std::string&, std::shared_ptr<RegstDesc>)>& Handler) {
-        for (const auto& obn : cur_node->op()->output_bns()) { Handler(obn, out_regst); }
-      };
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
     HashSet<LogicalBlobId> found_lbis;
     for (ExecEdge* out_edge : cur_node->out_edges()) { found_lbis.insert(out_edge->lbi()); }
-    ForEachOutBn7Regst(cur_node, [&](const std::string& obn, std::shared_ptr<RegstDesc> out_regst) {
+    for (const std::string& obn : cur_node->op()->output_bns()) {
       const LogicalBlobId& lbi = cur_node->op()->BnInOp2Lbi(obn);
       if (logical_node()->IsDataLbiOnOutEdge(lbi)) {
         out_regst->AddLbi(lbi);
@@ -112,7 +106,7 @@ void NormalForwardCompTaskNode::BuildOutRegst() {
       } else {
         CHECK(found_lbis.empty() || found_lbis.find(lbi) != found_lbis.end());
       }
-    });
+    }
   });
 }
 

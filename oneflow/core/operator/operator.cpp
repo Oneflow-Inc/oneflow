@@ -91,13 +91,13 @@ std::string Operator::RepeatedIbn(const std::string& prefix, int32_t idx) const 
 }
 int32_t Operator::RepeatedIbnSize(const std::string& prefix) const {
   int32_t ret = 0;
-  ForEachInputBn([&ret, &prefix](const std::string& ibn) {
+  for (const auto& ibn : input_bns()) {
     std::string idx_str = std::to_string(ret);
     size_t idx_size = idx_str.size();
     size_t ibn_size = ibn.size();
     std::string prefix_substr = ibn.substr(0, ibn_size - idx_size - 1);
     if (prefix_substr == prefix) { ret++; }
-  });
+  }
   return ret;
 }
 std::string Operator::RepeatedObn(const std::string& prefix, int32_t idx) const {
@@ -106,13 +106,13 @@ std::string Operator::RepeatedObn(const std::string& prefix, int32_t idx) const 
 }
 int32_t Operator::RepeatedObnSize(const std::string& prefix) const {
   int32_t ret = 0;
-  ForEachOutputBn([&ret, &prefix](const std::string& obn) {
+  for (const auto& obn : output_bns()) {
     std::string idx_str = std::to_string(ret);
     size_t idx_size = idx_str.size();
     size_t obn_size = obn.size();
     std::string prefix_substr = obn.substr(0, obn_size - idx_size - 1);
     if (prefix_substr == prefix) { ret++; }
-  });
+  }
   return ret;
 }
 
@@ -492,14 +492,6 @@ int32_t Operator::GetRepeatedInputBnNum(const std::string& ibn_prefix) const {
 std::string Operator::GetRepeatedInputBn(const std::string& ibn_prefix, size_t idx) const {
   std::string ibn = ibn_prefix + "_" + std::to_string(idx);
   return ibn;
-}
-
-void Operator::ForEachInputBn(const std::function<void(const std::string&)>& Handler) const {
-  for (const std::string& ibn : input_bns()) { Handler(ibn); }
-}
-
-void Operator::ForEachOutputBn(const std::function<void(const std::string&)>& Handler) const {
-  for (const std::string& obn : output_bns()) { Handler(obn); }
 }
 
 void Operator::InferTotalInstanceNumDesc(

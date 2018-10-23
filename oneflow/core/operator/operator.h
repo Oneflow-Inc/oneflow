@@ -120,9 +120,6 @@ class Operator {
 
 #undef DEFINE_BLOB_NAMES_GETTER
 
-  void ForEachInputBn(const std::function<void(const std::string&)>& Handler) const;
-  void ForEachOutputBn(const std::function<void(const std::string&)>& Handler) const;
-
   // Read: shape of input_blobs
   // Write: shape of output_blobs, model_blobs, data_tmp_blobs, const_model_blobs, const_buf_blobs
   void InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
