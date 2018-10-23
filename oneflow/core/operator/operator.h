@@ -57,6 +57,9 @@ class Operator {
   const OperatorConf& op_conf() const { return op_attribute_.op_conf(); }
   virtual const PbMessage& GetCustomizedConf() const { UNIMPLEMENTED(); }
 
+  int32_t GetRepeatedInputBnNum(const std::string& ibn_prefix) const;
+  std::string GetRepeatedInputBn(const std::string& ibn_prefix, size_t idx) const;
+
   bool HasFieldInCustomizedConf(const std::string& field_name) const {
     return HasFieldInPbMessage(GetCustomizedConf(), field_name);
   }
@@ -93,6 +96,10 @@ class Operator {
   const std::string& SoleDtbn() const;
   const std::string& SoleFbbn() const;
   const std::string& SoleBbbn() const;
+  std::string RepeatedIbn(const std::string&, int32_t) const;
+  int32_t RepeatedIbnSize(const std::string&) const;
+  std::string RepeatedObn(const std::string&, int32_t) const;
+  int32_t RepeatedObnSize(const std::string&) const;
 
 #define DEFINE_BLOB_NAMES_GETTER(getter_name)                                           \
   const PbRpf<std::string>& getter_name() const { return op_attribute_.getter_name(); } \
@@ -113,10 +120,10 @@ class Operator {
   DEFINE_BLOB_NAMES_GETTER(pb_input_bns);
   DEFINE_BLOB_NAMES_GETTER(pb_output_bns);
 
+#undef DEFINE_BLOB_NAMES_GETTER
+
   void ForEachInputBn(const std::function<void(const std::string&)>& Handler) const;
   void ForEachOutputBn(const std::function<void(const std::string&)>& Handler) const;
-
-#undef DEFINE_BLOB_NAMES_GETTER
 
   // Read: shape of input_blobs
   // Write: shape of output_blobs, model_blobs, data_tmp_blobs, const_model_blobs, const_buf_blobs
@@ -212,6 +219,10 @@ class Operator {
   void EnrollRepeatedInputBn(const std::string& ibn_prefix);
   void EnrollOutputBn(const std::string& obn, bool has_diff);
   void EnrollOutputBn(const std::string& obn) { EnrollOutputBn(obn, true); }
+  void EnrollRepeatedOutputBn(const std::string& ibn_prefix, int32_t num, bool has_diff);
+  void EnrollRepeatedOutputBn(const std::string& ibn_prefix, bool has_diff);
+  void EnrollRepeatedOutputBn(const std::string& ibn_prefix, int32_t num);
+  void EnrollRepeatedOutputBn(const std::string& ibn_prefix);
   void EnrollPbInputBn(const std::string& pibn);
   void EnrollPbOutputBn(const std::string& obn);
 
@@ -230,6 +241,9 @@ class Operator {
   LogicalBlobId dtbn2lbi(const std::string& data_tmp_bn) const;
   LogicalBlobId fbbn2lbi(const std::string& fw_buf_bn) const { return dtbn2lbi(fw_buf_bn); }
   LogicalBlobId bbbn2lbi(const std::string& bw_buf_bn) const { return dtbn2lbi(bw_buf_bn); }
+  void InferTotalInstanceNumDesc(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                 const ParallelContext*,
+                                 std::function<void(OpContext*)> EnrollOpCtx) const;
 
   PbMap<std::string, LogicalBlobId>* mut_bn_in_op2lbi() {
     return op_attribute_.mutable_bn_in_op2lbi();

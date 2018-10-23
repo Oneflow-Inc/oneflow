@@ -17,7 +17,7 @@ void DefineTestBlobOp::InferBlobDescs(
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   const DefineTestBlobConf& conf = op_conf().define_test_blob_conf();
   Shape shape(conf.shape());
-  CHECK_EQ(shape.At(0) * parallel_ctx->parallel_num(), Global<JobDesc>::Get()->PieceSize());
+  // CHECK_EQ(shape.At(0) * parallel_ctx->parallel_num(), Global<JobDesc>::Get()->PieceSize());
   out_blob_desc->mut_shape() = shape;
   out_blob_desc->set_data_type(conf.data_type());
   out_blob_desc->set_has_data_id_field(Global<JobDesc>::Get()->SizeOfOneDataId() > 0);
@@ -25,6 +25,8 @@ void DefineTestBlobOp::InferBlobDescs(
   out_blob_desc->set_has_dim0_valid_num_field(conf.has_dim0_valid_num());
   out_blob_desc->set_has_dim1_valid_num_field(conf.has_dim1_valid_num());
   out_blob_desc->set_has_dim2_valid_num_field(conf.has_dim2_valid_num());
+  out_blob_desc->set_has_record_idx_in_device_piece_field(
+      !conf.record_idx_in_device_piece().empty());
   out_blob_desc->set_max_col_num(1);
   if (conf.has_dim0_inner_shape()) {
     out_blob_desc->mut_dim0_inner_shape() = Shape(conf.dim0_inner_shape());

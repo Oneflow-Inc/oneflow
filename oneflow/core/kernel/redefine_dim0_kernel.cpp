@@ -58,7 +58,7 @@ void RedefineDim0Kernel<device_type>::ForwardDim0ValidNum(
 }
 
 template<DeviceType device_type>
-void RedefineDim0Kernel<device_type>::BackwardDim0ValidNum(
+void RedefineDim0Kernel<device_type>::BackwardInDiffDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const RedefineDim0OpConf& conf = this->op_conf().redefine_dim0_conf();
   const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));

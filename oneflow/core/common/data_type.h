@@ -33,11 +33,16 @@ class OFRecord;
   OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat) \
   OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)
 
-#define SIGNED_INT_DATA_TYPE_SEQ                \
-  OF_PP_MAKE_TUPLE_SEQ(int8_t, DataType::kInt8) \
-  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
+#define SIGNED_INT_DATA_TYPE_SEQ                  \
+  OF_PP_MAKE_TUPLE_SEQ(int8_t, DataType::kInt8)   \
+  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \
+  OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
 
-#define INT_DATA_TYPE_SEQ SIGNED_INT_DATA_TYPE_SEQ
+#define UNSIGNED_INT_DATA_TYPE_SEQ                \
+  OF_PP_MAKE_TUPLE_SEQ(uint8_t, DataType::kUInt8) \
+  OF_PP_MAKE_TUPLE_SEQ(uint32_t, DataType::kUInt32)
+
+#define INT_DATA_TYPE_SEQ SIGNED_INT_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
 
 #define CHAR_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(char, DataType::kChar)
 

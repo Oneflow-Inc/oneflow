@@ -20,6 +20,19 @@ message ConvKernelConf {
   optional int32 cudnn_bwd_data_algo = 11 [default = -1];
 }
 
+message DeconvKernelConf {
+  required ShapeProto in = 1;
+  required ShapeProto out = 2;
+  required ShapeProto weight = 3;
+  required int32 dim = 4;
+  repeated int32 pad_small_side = 5;
+  repeated int32 pad_large_side = 6;
+  repeated int32 strides = 7;
+  optional int32 cudnn_fwd_algo = 8 [default = -1];
+  optional int32 cudnn_bwd_filter_algo = 9 [default = -1];
+  optional int32 cudnn_bwd_data_algo = 10 [default = -1];
+}
+
 message DropoutKernelConf {
   required ShapeProto in = 1;
   required ShapeProto random_mask = 2;
@@ -159,7 +172,7 @@ message ResizeNearestNeighborKernelConf {
 }
 
 message KernelConf {
-  required OpAttribute op_attribute = 1; 
+  required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
   required DataType data_type = 3;
   optional ActivationType forward_activation = 4 [default = kNone];
@@ -170,7 +183,9 @@ message KernelConf {
   optional bool need_do_dim0_valid_num = 9 [default = false];
   optional bool need_do_dim1_valid_num = 10 [default = false];
   optional bool need_do_dim2_valid_num = 11 [default = false];
-  optional bool can_naive_do_dim0_valid_num = 12 [default = false];
+  optional bool need_do_record_idx_in_device_piece = 12 [default = false];
+  optional bool can_naive_do_dim0_valid_num = 13 [default = false];
+  optional bool can_naive_do_record_idx_in_device_piece = 14 [default = false];
 
   oneof kernel_type {
     SparseSoftmaxCrossEntropyLossKernelConf sparse_softmax_cross_entropy_loss_conf = 101;
@@ -182,6 +197,7 @@ message KernelConf {
     TransposeKernelConf transpose_conf = 117;
     ReduceSumKernelConf reduce_sum_conf = 120;
     ConvKernelConf conv_conf = 127;
+    DeconvKernelConf deconv_conf = 128;
     DropoutKernelConf dropout_conf = 140;
     AveragePoolingKernelConf average_pooling_conf = 204;
     MaxPoolingKernelConf max_pooling_conf = 205;

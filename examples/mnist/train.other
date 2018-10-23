@@ -8,9 +8,9 @@ snapshot_fs_conf {
 }
 piece_size: 600
 data_part_num: 6
+total_batch_num: 100
 train_conf {
   batch_size: 6000
-  total_batch_num: 100
   primary_lr: 0.01
   model_update_conf {
     naive_conf {

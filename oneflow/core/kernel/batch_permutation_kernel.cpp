@@ -51,6 +51,25 @@ struct BatchPermutationUtil<DeviceType::kCPU, T> {
   }
 };
 
+template<DeviceType device_type, typename T>
+void BatchPermutation<device_type, T>::ForwardDim0ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  CHECK_EQ(BnInOp2Blob("in")->dim0_valid_num(0), BnInOp2Blob("indices")->dim0_valid_num(0));
+  BnInOp2Blob("out")->set_dim0_valid_num(0, BnInOp2Blob("indices")->dim0_valid_num(0));
+}
+
+template<DeviceType device_type, typename T>
+void BatchPermutation<device_type, T>::BackwardInDiffDim0ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  BnInOp2Blob(GenDiffBn("in"))->set_dim0_valid_num(0, BnInOp2Blob("indices")->dim0_valid_num(0));
+}
+
+template<DeviceType device_type, typename T>
+void BatchPermutation<device_type, T>::ForwardRecordIdxInDevicePiece(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  BnInOp2Blob("out")->CopyRecordIdxInDevicePieceFrom(ctx.device_ctx, BnInOp2Blob("indices"));
+}
+
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBatchPermutationConf, BatchPermutation,
                            FLOATING_DATA_TYPE_SEQ);
 

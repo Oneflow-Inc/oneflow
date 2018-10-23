@@ -12,7 +12,7 @@ void TestBoxingOp() {
   OperatorConf op_conf;
   DataType data_type = GetDataType<T>::value;
   op_conf.set_name("boxing_test");
-  BoxingOpConf* boxing_conf = op_conf.mutable_pod_boxing_conf()->mutable_boxing_conf();
+  BoxingOpConf* boxing_conf = op_conf->mutable_boxing_conf();
   boxing_conf->set_data_type(data_type);
   boxing_conf->set_lbn("boxing_blob");
   boxing_conf->set_in_num(4);
