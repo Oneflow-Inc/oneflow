@@ -52,7 +52,7 @@ void FpnDistributeKernel<T>::ForwardDataContent(
         rois_blob_vec[target_level_offset]->mut_dptr<T>() + level_copy_idx[target_level_offset],
         collected_roi_ptr, roi_size);
     rois_blob_vec[target_level_offset]->set_record_idx_in_device_piece(
-        level_copy_idx[target_level_offset],
+        level_copy_idx[target_level_offset] / 5,
         collected_rois_blob->record_idx_in_device_piece(collected_roi_idx));
     level_copy_idx[target_level_offset] += 5;
   }
