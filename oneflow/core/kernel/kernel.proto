@@ -157,8 +157,6 @@ message OpAttribute {
 
   repeated string forward_model_bns = 13;
   repeated string const_buf_bns = 14;
-  repeated string pb_input_bns = 15;
-  repeated string pb_output_bns = 16;
 }
 
 message HingeLossKernelConf {

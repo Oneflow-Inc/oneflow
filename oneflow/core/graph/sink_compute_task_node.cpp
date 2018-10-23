@@ -19,7 +19,6 @@ void SinkCompTaskNode::BuildExecGphAndRegst() {
       [&](const std::string& ibn) { node->BindBnWithOneOfTheRegsts(ibn, GetConsumedRegst("in")); });
   CHECK(node->op()->data_tmp_bns().empty());
   CHECK(node->op()->output_bns().empty());
-  CHECK(node->op()->pb_output_bns().empty());
 }
 
 }  // namespace oneflow

@@ -6,7 +6,6 @@ namespace oneflow {
 
 void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("out", true);
-  ProduceRegst("fw_pb_out", false);
   ProduceRegst("activation", true);
   ProduceRegst("data_tmp", true);
   ProduceRegst("fw_buf", true, 1, 1);
@@ -23,9 +22,6 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
       BindEdgeWithProducedRegst(edge, "const_buf");
     } else {
       BindEdgeWithProducedRegst(edge, "out");
-      if (edge->dst_node()->GetTaskType() != TaskType::kCopyHd) {
-        BindEdgeWithProducedRegst(edge, "fw_pb_out");
-      }
     }
   }
 }
@@ -100,12 +96,10 @@ void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
 
 void NormalForwardCompTaskNode::BuildOutRegst() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
-  std::shared_ptr<RegstDesc> pb_out_regst = GetProducedRegst("fw_pb_out");
   auto ForEachOutBn7Regst =
       [&](const ExecNode* cur_node,
           const std::function<void(const std::string&, std::shared_ptr<RegstDesc>)>& Handler) {
         for (const auto& obn : cur_node->op()->output_bns()) { Handler(obn, out_regst); }
-        for (const auto& pobn : cur_node->op()->pb_output_bns()) { Handler(pobn, pb_out_regst); }
       };
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
     HashSet<LogicalBlobId> found_lbis;
