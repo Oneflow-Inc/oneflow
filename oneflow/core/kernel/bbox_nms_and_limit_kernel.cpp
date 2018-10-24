@@ -116,7 +116,7 @@ void BboxNmsAndLimitKernel<T>::ForwardDim0ValidNum(
 }
 
 template<typename T>
-void BboxNmsAndLimitKernel<T>::ForwardRecordIdxInDevicePiece(
+void BboxNmsAndLimitKernel<T>::ForwardRecordIdInDevicePiece(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // do nothing
 }
@@ -147,7 +147,7 @@ void BboxNmsAndLimitKernel<T>::ForwardDataContent(
   OutputBBox(all_im_bbox_inds, target_bbox_blob, out_bbox_blob);
   OutputBBoxScore(all_im_bbox_inds, bbox_score_blob, out_bbox_score_blob);
   OutputBBoxLabel(all_im_bbox_inds, bbox_prob_blob->shape().At(1), out_bbox_label_blob);
-  if (bbox_blob->has_record_idx_in_device_piece_field()) { FillRecordIdInDevicePiece(BnInOp2Blob); }
+  if (bbox_blob->has_record_id_in_device_piece_field()) { FillRecordIdInDevicePiece(BnInOp2Blob); }
 }
 
 template<typename T>
@@ -346,9 +346,9 @@ void BboxNmsAndLimitKernel<T>::FillRecordIdInDevicePiece(
   Blob* out_bbox_label_blob = BnInOp2Blob("out_bbox_label");
   FOR_RANGE(size_t, i, 0, out_bbox_blob->shape().At(0)) {
     int64_t im_index = BBox::Cast(out_bbox_blob->mut_dptr<T>(i))->index();
-    out_bbox_blob->set_record_idx_in_device_piece(i, im_index);
-    out_bbox_score_blob->set_record_idx_in_device_piece(i, im_index);
-    out_bbox_label_blob->set_record_idx_in_device_piece(i, im_index);
+    out_bbox_blob->set_record_id_in_device_piece(i, im_index);
+    out_bbox_score_blob->set_record_id_in_device_piece(i, im_index);
+    out_bbox_label_blob->set_record_id_in_device_piece(i, im_index);
   }
 }
 

@@ -51,9 +51,9 @@ void FpnDistributeKernel<T>::ForwardDataContent(
         ctx.device_ctx,
         rois_blob_vec[target_level_offset]->mut_dptr<T>() + level_copy_idx[target_level_offset],
         collected_roi_ptr, roi_size);
-    rois_blob_vec[target_level_offset]->set_record_idx_in_device_piece(
+    rois_blob_vec[target_level_offset]->set_record_id_in_device_piece(
         level_copy_idx[target_level_offset] / 5,
-        collected_rois_blob->record_idx_in_device_piece(collected_roi_idx));
+        collected_rois_blob->record_id_in_device_piece(collected_roi_idx));
     level_copy_idx[target_level_offset] += 5;
   }
   int32_t roi_indices_idx = 0;
@@ -78,11 +78,11 @@ void FpnDistributeKernel<T>::ForwardDim0ValidNum(
 }
 
 template<typename T>
-void FpnDistributeKernel<T>::ForwardRecordIdxInDevicePiece(
+void FpnDistributeKernel<T>::ForwardRecordIdInDevicePiece(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // record indices of rois will be set in ForwardDataContent
   BnInOp2Blob("roi_indices")
-      ->CopyRecordIdxInDevicePieceFrom(ctx.device_ctx, BnInOp2Blob("collected_rois"));
+      ->CopyRecordIdInDevicePieceFrom(ctx.device_ctx, BnInOp2Blob("collected_rois"));
 }
 
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kFpnDistributeConf, FpnDistributeKernel,

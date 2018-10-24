@@ -57,9 +57,6 @@ class Operator {
   const OperatorConf& op_conf() const { return op_attribute_.op_conf(); }
   virtual const PbMessage& GetCustomizedConf() const { UNIMPLEMENTED(); }
 
-  int32_t GetRepeatedInputBnNum(const std::string& ibn_prefix) const;
-  std::string GetRepeatedInputBn(const std::string& ibn_prefix, size_t idx) const;
-
   bool HasFieldInCustomizedConf(const std::string& field_name) const {
     return HasFieldInPbMessage(GetCustomizedConf(), field_name);
   }
@@ -88,10 +85,8 @@ class Operator {
   }
 
   const std::string& SoleIbn() const;
-  const std::string& SolePibn() const;
   const std::string& SoleIdbn() const;
   const std::string& SoleObn() const;
-  const std::string& SolePobn() const;
   const std::string& SoleOdbn() const;
   const std::string& SoleDtbn() const;
   const std::string& SoleFbbn() const;
@@ -212,10 +207,10 @@ class Operator {
   void EnrollRepeatedInputBn(const std::string& ibn_prefix);
   void EnrollOutputBn(const std::string& obn, bool has_diff);
   void EnrollOutputBn(const std::string& obn) { EnrollOutputBn(obn, true); }
-  void EnrollRepeatedOutputBn(const std::string& ibn_prefix, int32_t num, bool has_diff);
-  void EnrollRepeatedOutputBn(const std::string& ibn_prefix, bool has_diff);
-  void EnrollRepeatedOutputBn(const std::string& ibn_prefix, int32_t num);
-  void EnrollRepeatedOutputBn(const std::string& ibn_prefix);
+  void EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num, bool has_diff);
+  void EnrollRepeatedOutputBn(const std::string& obn_prefix, bool has_diff);
+  void EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num);
+  void EnrollRepeatedOutputBn(const std::string& obn_prefix);
 
   // enroll model blobs
   void EnrollModelBn(const std::string& mbn);
@@ -245,6 +240,7 @@ class Operator {
 
 std::string GenDiffBn(const std::string& bn);
 std::string GenUnDiffBn(const std::string& diff_bn);
+std::string GenRepeatedBn(const std::string& bn_prefix, int32_t idx);
 
 #define REGISTER_OP(op_type_case, OpType) \
   REGISTER_CLASS_WITH_ARGS(op_type_case, Operator, OpType, const OperatorConf&)

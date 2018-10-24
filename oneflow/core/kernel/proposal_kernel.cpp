@@ -83,8 +83,8 @@ size_t ProposalKernel<T>::WriteRoisToOutput(
                                  prop_bbox->bottom());
     roi_bbox[i].set_index(im_index);
     rois_prob_blob->mut_dptr<T>(num_output)[i] = score_slice.GetScore(post_nms_slice.GetIndex(i));
-    rois_blob->set_record_idx_in_device_piece(num_output + i, im_index);
-    rois_prob_blob->set_record_idx_in_device_piece(num_output + i, im_index);
+    rois_blob->set_record_id_in_device_piece(num_output + i, im_index);
+    rois_prob_blob->set_record_id_in_device_piece(num_output + i, im_index);
   }
   return num_output + post_nms_slice.size();
 }
@@ -96,7 +96,7 @@ void ProposalKernel<T>::ForwardDim0ValidNum(
 }
 
 template<typename T>
-void ProposalKernel<T>::ForwardRecordIdxInDevicePiece(
+void ProposalKernel<T>::ForwardRecordIdInDevicePiece(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // do nothing
 }
