@@ -25,6 +25,8 @@ class UnpackKernel final : public KernelIf<device_type> {
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     UNIMPLEMENTED();
   }
+  void ForwardDataId(const KernelCtx& ctx,
+                     std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void ForwardRecordIdxInDevicePiece(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void BackwardInDiffDim0ValidNum(

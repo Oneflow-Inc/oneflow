@@ -19,18 +19,26 @@ void PackForwardCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<const Operator> op = logical_node()->SoleOp();
   ExecNode* exec_node = mut_exec_gph().NewNode();
   exec_node->mut_op() = op;
-  exec_node->BindBnWithRegst(op->SoleIbn(), GetSoleConsumedRegst("in"));
+  std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in");
+  exec_node->BindBnWithRegst(op->SoleIbn(), in_regst);
 
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   out_regst->AddLbi(op->BnInOp2Lbi(op->SoleObn()));
   exec_node->BindBnWithRegst(op->SoleObn(), out_regst);
 
-  const auto& related_up_consumed_regsts = related_unpack_->consumed_regsts();
-  CHECK_EQ(1, related_up_consumed_regsts.size());
-  CHECK_EQ(1, (*related_up_consumed_regsts.begin()).second.size());
-  std::shared_ptr<RegstDesc> related_up_consumed_regst =
-      (*related_up_consumed_regsts.begin()).second.front();
-  *out_regst->MutSoleBlobDesc() = *related_up_consumed_regst->SoleBlobDesc();
+  const auto& related_unpack_consumed_regsts = related_unpack_->consumed_regsts();
+  CHECK_EQ(1, related_unpack_consumed_regsts.size());
+  CHECK_EQ(1, (*related_unpack_consumed_regsts.begin()).second.size());
+  std::shared_ptr<RegstDesc> related_unpack_consumed_regst =
+      (*related_unpack_consumed_regsts.begin()).second.front();
+  const BlobDesc* related_unpack_in_blob = related_unpack_consumed_regst->SoleBlobDesc();
+  const BlobDesc* in_blob = in_regst->SoleBlobDesc();
+  BlobDesc* out_blob = out_regst->MutSoleBlobDesc();
+  *out_blob = *in_blob;
+  CHECK_EQ(op->op_conf().pack_conf().pack_num(),
+           related_unpack_in_blob->shape().At(0) / in_blob->shape().At(0));
+  out_blob->mut_shape().Set(0, related_unpack_in_blob->shape().At(0));
+  out_blob->mut_dim0_inner_shape() = related_unpack_in_blob->dim0_inner_shape();
 }
 
 void PackForwardCompTaskNode::InferProducedDataRegstTimeShape() {
@@ -44,11 +52,11 @@ void PackForwardCompTaskNode::InferProducedDataRegstTimeShape() {
   CHECK_EQ(pack_num, time_shape_dim_vec.back());
   time_shape_dim_vec.pop_back();
 
-  std::shared_ptr<RegstDesc> related_up_consumed_regst =
+  std::shared_ptr<RegstDesc> related_unpack_consumed_regst =
       (*related_unpack_->consumed_regsts().begin()).second.front();
   std::shared_ptr<Shape> pack_out_time_shape =
       std::make_shared<Shape>(std::move(time_shape_dim_vec));
-  CHECK_EQ(*pack_out_time_shape, *(related_up_consumed_regst->data_regst_time_shape()));
+  CHECK_EQ(*pack_out_time_shape, *(related_unpack_consumed_regst->data_regst_time_shape()));
   *(out_regst->mut_data_regst_time_shape()) = pack_out_time_shape;
 }
 

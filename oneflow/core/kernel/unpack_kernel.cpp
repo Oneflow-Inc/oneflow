@@ -32,21 +32,22 @@ void UnpackKernel<device_type>::ForwardDim0ValidNum(
 
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
-  CHECK_EQ(0, in_blob->dim0_inner_shape().Count(1) % total_unpack_num);
+  CHECK_EQ(0, total_unpack_num % in_blob->dim0_inner_shape().At(0));
+  size_t unpack_num4each_count1 = total_unpack_num / in_blob->dim0_inner_shape().At(0);
+  CHECK_EQ(0, in_blob->dim0_inner_shape().Count(1) % unpack_num4each_count1);
   CHECK_EQ(2, out_blob->dim0_inner_shape().NumAxes());
   CHECK_EQ(1, out_blob->dim0_inner_shape().At(0));
   CHECK_EQ(out_blob->static_shape().At(0), out_blob->dim0_inner_shape().At(1));
 
-  size_t total_num4each_count1 = in_blob->dim0_inner_shape().Count(1) / total_unpack_num;
-  size_t valid_num_idx = out_index / total_unpack_num;
-  size_t idx4cur_valid_num = out_index % total_unpack_num;
-  size_t cur_valid_num = in_blob->dim0_valid_num(valid_num_idx);
-  if ((idx4cur_valid_num + 1) * total_num4each_count1 <= cur_valid_num) {
-    out_blob->set_dim0_valid_num(1, total_num4each_count1);
-  } else if (idx4cur_valid_num * total_num4each_count1 >= cur_valid_num) {
-    out_blob->set_dim0_valid_num(1, 0);
+  size_t part_size = in_blob->dim0_inner_shape().Count(1) / unpack_num4each_count1;
+  size_t cur_valid_num = in_blob->dim0_valid_num(out_index / unpack_num4each_count1);
+  size_t idx_in_cur_valid_num = out_index % unpack_num4each_count1;
+  if ((idx_in_cur_valid_num + 1) * part_size <= cur_valid_num) {
+    out_blob->set_dim0_valid_num(0, part_size);
+  } else if (idx_in_cur_valid_num * part_size >= cur_valid_num) {
+    out_blob->set_dim0_valid_num(0, 0);
   } else {
-    out_blob->set_dim0_valid_num(1, cur_valid_num - idx4cur_valid_num * total_num4each_count1);
+    out_blob->set_dim0_valid_num(0, cur_valid_num - idx_in_cur_valid_num * part_size);
   }
 }
 
@@ -78,6 +79,23 @@ void UnpackKernel<device_type>::ForwardRecordIdxInDevicePiece(
   for (size_t i = 0; i < out_size; ++i) {
     out_blob->set_record_idx_in_device_piece(
         i, in_blob->record_idx_in_device_piece(i + out_index * out_size));
+  }
+}
+
+template<DeviceType device_type>
+void UnpackKernel<device_type>::ForwardDataId(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  auto* res = static_cast<std::pair<size_t, size_t>*>(ctx.other);
+  size_t out_index = res->first;
+  size_t total_unpack_num = res->second;
+
+  const Blob* in_blob = BnInOp2Blob("in");
+  Blob* out_blob = BnInOp2Blob("out");
+  size_t out_size = out_blob->static_shape().At(0);
+  for (size_t i = 0; i < out_size; ++i) {
+    Memcpy<DeviceType::kCPU>(ctx.device_ctx, out_blob->mut_data_id(i),
+                             in_blob->data_id(i + out_index * out_size),
+                             Global<JobDesc>::Get()->other_conf().max_data_id_length());
   }
 }
 

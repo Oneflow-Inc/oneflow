@@ -16,7 +16,9 @@ void UnpackOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
   *out_blob_desc = *in_blob_desc;
   int32_t unpack_num = op_conf().unpack_conf().unpack_num();
   if (in_blob_desc->has_dim0_inner_shape()) {
-    CHECK_EQ(0, in_blob_desc->dim0_inner_shape().Count(1) % unpack_num);
+    CHECK_EQ(0, unpack_num % in_blob_desc->dim0_inner_shape().At(0));
+    CHECK_EQ(0, in_blob_desc->dim0_inner_shape().Count(1)
+                    % (unpack_num / in_blob_desc->dim0_inner_shape().At(0)));
   } else {
     CHECK_EQ(0, in_blob_desc->shape().At(0) % unpack_num);
   }
