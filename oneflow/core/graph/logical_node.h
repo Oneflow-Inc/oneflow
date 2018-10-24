@@ -175,8 +175,20 @@ int64_t NewAreaId();
     BackwardLogicalNode* NewCorrectBackwardNode() override;         \
   }
 
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(PackForward);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(UnpackForward);
+
+class PackForwardLogicalNode final : public ForwardLogicalNode {
+  LOGICAL_NODE_WITH_NEW_AREA_ID_BOILERPLATE(PackForward)
+
+ public:
+  const UnpackForwardLogicalNode* related_unpack() const { return related_unpack_; }
+  void set_related_unpack(UnpackForwardLogicalNode* val) { related_unpack_ = val; }
+
+ private:
+  BackwardLogicalNode* NewCorrectBackwardNode() override;
+
+  UnpackForwardLogicalNode* related_unpack_;
+};
 
 class BackwardLogicalNode : public LogicalNode {
  public:

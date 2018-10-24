@@ -46,6 +46,20 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
           comp_task_node->set_area_id(logical_node->GetAreaId());
         });
   });
+
+  logical_gph_->ForEachNode([&](LogicalNode* logical) {
+    if (logical->TypeName() != "PackForward") { return; }
+    PackForwardLogicalNode* pack_fw = dynamic_cast<PackForwardLogicalNode*>(logical);
+    const UnpackForwardLogicalNode* unpack_fw = pack_fw->related_unpack();
+    const std::vector<CompTaskNode*>& pack_fw_tasks = logical2sorted_comp_tasks.at(pack_fw);
+    const std::vector<CompTaskNode*>& unpack_fw_tasks = logical2sorted_comp_tasks.at(unpack_fw);
+    CHECK_EQ(pack_fw_tasks.size(), unpack_fw_tasks.size());
+    for (size_t i = 0; i < pack_fw_tasks.size(); ++i) {
+      dynamic_cast<PackForwardCompTaskNode*>(pack_fw_tasks.at(i))
+          ->set_related_unpack(dynamic_cast<UnpackForwardCompTaskNode*>(unpack_fw_tasks.at(i)));
+    }
+  });
+
   GeneratePersistenceThrdId(machine_persistence_task_vec);
   logical_gph_->ForEachEdge([&](const LogicalEdge* logical_edge) {
     BldSubTskGphMthd method =
