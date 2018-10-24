@@ -57,14 +57,14 @@ void ProposalOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   rois_blob_desc->set_data_type(bbox_pred_blob_desc->data_type());
   rois_blob_desc->mut_dim0_inner_shape() = Shape({1, rois_blob_desc->shape().At(0)});
   rois_blob_desc->set_has_dim0_valid_num_field(true);
-  rois_blob_desc->set_has_record_idx_in_device_piece_field(true);
+  rois_blob_desc->set_has_record_id_in_device_piece_field(true);
   // out: roi_probs (num_images * post_nms_top_n) T
   BlobDesc* roi_probs_blob_desc = GetBlobDesc4BnInOp("roi_probs");
   roi_probs_blob_desc->mut_shape() = Shape({num_images * post_nms_top_n});
   roi_probs_blob_desc->set_data_type(class_prob_blob_desc->data_type());
   roi_probs_blob_desc->mut_dim0_inner_shape() = Shape({1, roi_probs_blob_desc->shape().At(0)});
   roi_probs_blob_desc->set_has_dim0_valid_num_field(true);
-  roi_probs_blob_desc->set_has_record_idx_in_device_piece_field(true);
+  roi_probs_blob_desc->set_has_record_id_in_device_piece_field(true);
 
   // datatmp: score_slice (H * W * A) int32_t
   BlobDesc* score_slice_blob_desc = GetBlobDesc4BnInOp("score_slice");

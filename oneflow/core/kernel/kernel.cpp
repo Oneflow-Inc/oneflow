@@ -87,9 +87,9 @@ void Kernel::Forward(const KernelCtx& ctx,
     CHECK(!kernel_conf_.need_do_opaque_header());
     ForwardDim2ValidNum(ctx, BnInOp2Blob);
   }
-  if (kernel_conf_.need_do_record_idx_in_device_piece()) {
+  if (kernel_conf_.need_do_record_id_in_device_piece()) {
     CHECK(!kernel_conf_.need_do_opaque_header());
-    ForwardRecordIdxInDevicePiece(ctx, BnInOp2Blob);
+    ForwardRecordIdInDevicePiece(ctx, BnInOp2Blob);
   }
   ForwardDataContent(ctx, BnInOp2Blob);
   if (GetActivationType() != ActivationType::kNone) {
@@ -179,12 +179,12 @@ void KernelIf<device_type>::ForwardDim0ValidNum(
 }
 
 template<DeviceType device_type>
-void KernelIf<device_type>::ForwardRecordIdxInDevicePiece(
+void KernelIf<device_type>::ForwardRecordIdInDevicePiece(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CHECK(kernel_conf().can_naive_do_record_idx_in_device_piece());
-  CheckSameRecordIdxInDevicePiece(op_attribute().input_bns(), BnInOp2Blob);
+  CHECK(kernel_conf().can_naive_do_record_id_in_device_piece());
+  CheckSameRecordIdInDevicePiece(op_attribute().input_bns(), BnInOp2Blob);
   CopyField(ctx.device_ctx, BnInOp2Blob, BnInOp2Blob(op_attribute().input_bns(0)),
-            op_attribute().output_bns(), &Blob::CopyRecordIdxInDevicePieceFrom);
+            op_attribute().output_bns(), &Blob::CopyRecordIdInDevicePieceFrom);
 }
 
 template<DeviceType device_type>

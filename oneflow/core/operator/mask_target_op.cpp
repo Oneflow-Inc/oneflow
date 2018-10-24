@@ -41,7 +41,7 @@ void MaskTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   int64_t class_num = conf.num_classes();
   DataType data_type = rois->data_type();
 
-  const bool input_has_record_idx = rois->has_record_idx_in_device_piece_field();
+  const bool input_has_record_id = rois->has_record_id_in_device_piece_field();
   CHECK_EQ(rois->has_dim0_valid_num_field(), labels->has_dim0_valid_num_field());
   auto CheckDim0InnerShapeIfNeed = [](const BlobDesc* blob_desc) {
     if (blob_desc->has_dim0_valid_num_field()) {
@@ -52,7 +52,7 @@ void MaskTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   };
   CheckDim0InnerShapeIfNeed(rois);
   CheckDim0InnerShapeIfNeed(labels);
-  CHECK_EQ(labels->has_record_idx_in_device_piece_field(), input_has_record_idx);
+  CHECK_EQ(labels->has_record_id_in_device_piece_field(), input_has_record_id);
   CHECK_EQ(rois->shape().At(1), 5);
   CHECK_EQ(labels->shape().At(0), R);
   CHECK_EQ(labels->data_type(), DataType::kInt32);
@@ -64,14 +64,14 @@ void MaskTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   mask_rois->set_data_type(data_type);
   mask_rois->set_has_dim0_valid_num_field(true);
   mask_rois->mut_dim0_inner_shape() = Shape({1, R});
-  mask_rois->set_has_record_idx_in_device_piece_field(input_has_record_idx);
+  mask_rois->set_has_record_id_in_device_piece_field(input_has_record_id);
   // output: masks (R, class_num , mask_h, mask_w) T
   BlobDesc* masks = GetBlobDesc4BnInOp("masks");
   masks->mut_shape() = Shape({R, class_num, conf.mask_height(), conf.mask_width()});
   masks->set_data_type(data_type);
   masks->set_has_dim0_valid_num_field(true);
   masks->mut_dim0_inner_shape() = Shape({1, R});
-  masks->set_has_record_idx_in_device_piece_field(input_has_record_idx);
+  masks->set_has_record_id_in_device_piece_field(input_has_record_id);
   // data tmp: mask_boxes (N,G,4) float
   BlobDesc* gt_segm_bboxes = GetBlobDesc4BnInOp("gt_segm_bboxes");
   gt_segm_bboxes->mut_shape() = Shape({N, G, 4});
