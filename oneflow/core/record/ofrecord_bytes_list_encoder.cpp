@@ -29,7 +29,7 @@ void OFRecordEncoderImpl<EncodeCase::kBytesList, T>::EncodeMultiCol(
     DeviceCtx*, const Blob* in_blob, const std::vector<int64_t>& in_offsets, Feature& feature,
     const std::string& field_name, int64_t one_col_elem_num) const {
   static_assert(sizeof(T) == 1, "only char and int8_t supported");
-  CHECK_GE(in_blob->shape().NumAxes(), 3);
+  CHECK_GE(in_blob->shape().NumAxes(), 2);
   int64_t dim0_elem_num = in_blob->shape().Count(1);
   CHECK_EQ(one_col_elem_num, dim0_elem_num);
   int64_t dim1_elem_num = in_blob->shape().Count(2);
