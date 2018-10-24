@@ -76,7 +76,7 @@ void Kernel::Forward(const KernelCtx& ctx,
     CHECK(!kernel_conf_.need_do_opaque_header());
     ForwardDim0ValidNum(ctx, BnInOp2Blob);
   }
-  if (HasEmptyShapeBlob(op_attribute().input_bns(), BnInOp2Blob) && !ShouldRunIfBlobEmpty()) {
+  if (HasEmptyShapeBlob(op_attribute().input_bns(), BnInOp2Blob) && !NeedForwardIfBlobEmpty()) {
     return;
   }
   if (kernel_conf_.need_do_dim1_valid_num()) {
@@ -116,7 +116,10 @@ void Kernel::Backward(const KernelCtx& ctx,
     CHECK(!kernel_conf_.need_do_opaque_header());
     BackwardInDiffDim0ValidNum(ctx, BnInOp2Blob);
   }
-  if (HasEmptyShapeBlob(op_attribute().output_diff_bns(), BnInOp2Blob)) { return; }
+  if (HasEmptyShapeBlob(op_attribute().output_diff_bns(), BnInOp2Blob)
+      && !NeedBackwardIfBlobEmpty()) {
+    return;
+  }
   CHECK_EQ(false, HasEmptyShapeBlob(op_attribute().model_diff_bns(), BnInOp2Blob));
   ActivationType activation = GetActivationType();
   if (activation != ActivationType::kNone) {
