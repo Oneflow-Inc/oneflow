@@ -15,7 +15,7 @@ class ProposalTargetKernel final : public KernelIf<DeviceType::kCPU> {
 
   using BBox = BBoxImpl<T, BBoxCategory::kIndexCorner>;
   using RoiBox = BBoxImpl<const T, BBoxCategory::kIndexCorner>;
-  using GtBox = BBoxImpl<const T, BBoxCategory::kGtCorner>;
+  using GtBox = BBoxImpl<const T, BBoxCategory::kCorner>;
   using RoiBoxIndices = BBoxIndices<IndexSequence, RoiBox>;
   using MaxOverlapOfRoiBoxWithGt = MaxOverlapIndices<RoiBoxIndices>;
   using GtBoxIndices = BBoxIndices<IndexSequence, GtBox>;
