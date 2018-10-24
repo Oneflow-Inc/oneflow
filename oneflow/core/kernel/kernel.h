@@ -94,7 +94,8 @@ class Kernel {
                               std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
-  virtual bool ShouldRunIfBlobEmpty() const { return false; }
+  virtual bool NeedForwardIfBlobEmpty() const { return false; }
+  virtual bool NeedBackwardIfBlobEmpty() const { return false; }
   virtual void BackwardInDiffDim0ValidNum(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
