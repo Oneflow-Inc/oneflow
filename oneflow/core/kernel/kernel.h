@@ -72,7 +72,7 @@ class Kernel {
                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
-  virtual void ForwardRecordIdxInDevicePiece(
+  virtual void ForwardRecordIdInDevicePiece(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
@@ -157,7 +157,7 @@ class KernelIf : public Kernel {
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   virtual void ForwardDim0ValidNum(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  virtual void ForwardRecordIdxInDevicePiece(
+  virtual void ForwardRecordIdInDevicePiece(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
   virtual void ForwardPackedHeader(
