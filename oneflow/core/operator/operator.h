@@ -35,7 +35,6 @@ class Operator {
   virtual LogicalNode* NewProperLogicalNode();
 
   virtual bool IsLossOp() const { return false; }
-  virtual bool IsDecodeOp() const { return false; }
   virtual bool IsRecurrentOp() const { return false; }
   virtual bool IsEmbeddingLookupOp() const { return false; }
 
