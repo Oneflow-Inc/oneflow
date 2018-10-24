@@ -85,36 +85,6 @@ const std::string& Operator::SoleBbbn() const {
   CHECK_EQ(bw_buf_bns().size(), 1);
   return bw_buf_bns().Get(0);
 }
-std::string Operator::RepeatedIbn(const std::string& prefix, int32_t idx) const {
-  CHECK_LT(idx, RepeatedIbnSize(prefix));
-  return prefix + "_" + std::to_string(idx);
-}
-int32_t Operator::RepeatedIbnSize(const std::string& prefix) const {
-  int32_t ret = 0;
-  for (const auto& ibn : input_bns()) {
-    std::string idx_str = std::to_string(ret);
-    size_t idx_size = idx_str.size();
-    size_t ibn_size = ibn.size();
-    std::string prefix_substr = ibn.substr(0, ibn_size - idx_size - 1);
-    if (prefix_substr == prefix) { ret++; }
-  }
-  return ret;
-}
-std::string Operator::RepeatedObn(const std::string& prefix, int32_t idx) const {
-  CHECK_LT(idx, RepeatedObnSize(prefix));
-  return prefix + "_" + std::to_string(idx);
-}
-int32_t Operator::RepeatedObnSize(const std::string& prefix) const {
-  int32_t ret = 0;
-  for (const auto& obn : output_bns()) {
-    std::string idx_str = std::to_string(ret);
-    size_t idx_size = idx_str.size();
-    size_t obn_size = obn.size();
-    std::string prefix_substr = obn.substr(0, obn_size - idx_size - 1);
-    if (prefix_substr == prefix) { ret++; }
-  }
-  return ret;
-}
 
 void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx,
