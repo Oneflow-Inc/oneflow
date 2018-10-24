@@ -189,12 +189,12 @@ void ProposalTargetKernel<T>::Output(const std::function<Blob*(const std::string
       outside_weights[label].set_weight_w(1.0);
       outside_weights[label].set_weight_h(1.0);
     }
-    if (BnInOp2Blob("rois")->has_record_idx_in_device_piece_field()) {
-      out_rois_blob->set_record_idx_in_device_piece(i, im_index);
-      labels_blob->set_record_idx_in_device_piece(i, im_index);
-      bbox_targets_blob->set_record_idx_in_device_piece(i, im_index);
-      bbox_inside_weights_blob->set_record_idx_in_device_piece(i, im_index);
-      bbox_outside_weights_blob->set_record_idx_in_device_piece(i, im_index);
+    if (BnInOp2Blob("rois")->has_record_id_in_device_piece_field()) {
+      out_rois_blob->set_record_id_in_device_piece(i, im_index);
+      labels_blob->set_record_id_in_device_piece(i, im_index);
+      bbox_targets_blob->set_record_id_in_device_piece(i, im_index);
+      bbox_inside_weights_blob->set_record_id_in_device_piece(i, im_index);
+      bbox_outside_weights_blob->set_record_id_in_device_piece(i, im_index);
     }
   }
   out_rois_blob->set_dim0_valid_num(0, boxes.size());
@@ -211,7 +211,7 @@ void ProposalTargetKernel<T>::ForwardDim0ValidNum(
 }
 
 template<typename T>
-void ProposalTargetKernel<T>::ForwardRecordIdxInDevicePiece(
+void ProposalTargetKernel<T>::ForwardRecordIdInDevicePiece(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // do nothing
 }

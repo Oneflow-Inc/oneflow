@@ -25,8 +25,8 @@ void MaskTargetKernel<T>::ForwardDataContent(
   const auto num_classes = static_cast<size_t>(masks_blob->static_shape().At(1));
   const auto mask_h = static_cast<size_t>(masks_blob->static_shape().At(2));
   const auto mask_w = static_cast<size_t>(masks_blob->static_shape().At(3));
-  const bool input_blob_has_record_idx = rois_blob->has_record_idx_in_device_piece_field();
-  CHECK_EQ(labels_blob->has_record_idx_in_device_piece_field(), input_blob_has_record_idx);
+  const bool input_blob_has_record_id = rois_blob->has_record_id_in_device_piece_field();
+  CHECK_EQ(labels_blob->has_record_id_in_device_piece_field(), input_blob_has_record_id);
 
   ParseSegmPolygonLists(gt_segms_blob, &segms);
   ComputeSegmBBoxes(segms, gt_bboxes_blob);
@@ -40,11 +40,11 @@ void MaskTargetKernel<T>::ForwardDataContent(
   mask_rois_blob->set_dim0_valid_num(0, num_rois);
   const RoiBBox* roi_bboxes = RoiBBox::Cast(rois_blob->dptr<T>());
   RoiBBox* mask_roi_bboxes = RoiBBox::Cast(mask_rois_blob->mut_dptr<T>());
-  const auto CopyRecordIdxIfNeed = [&](const int64_t roi_idx, const int64_t mask_idx) {
-    if (input_blob_has_record_idx) {
-      const int64_t record_idx = rois_blob->record_idx_in_device_piece(roi_idx);
-      masks_blob->set_record_idx_in_device_piece(mask_idx, record_idx);
-      mask_rois_blob->set_record_idx_in_device_piece(mask_idx, record_idx);
+  const auto CopyRecordIdIfNeed = [&](const int64_t roi_idx, const int64_t mask_idx) {
+    if (input_blob_has_record_id) {
+      const int64_t record_id = rois_blob->record_id_in_device_piece(roi_idx);
+      masks_blob->set_record_id_in_device_piece(mask_idx, record_id);
+      mask_rois_blob->set_record_id_in_device_piece(mask_idx, record_id);
     }
   };
   FOR_RANGE(int64_t, roi_idx, 0, num_rois) {
@@ -66,7 +66,7 @@ void MaskTargetKernel<T>::ForwardDataContent(
                            static_cast<size_t>(gt_bboxes_blob->dim1_valid_num(img_idx)));
     Segm2Mask(segms.at(static_cast<size_t>(img_idx)).at(max_iou_gt_idx), fg_roi, mask_h, mask_w,
               masks_blob->mut_dptr<T>(mask_idx, label));
-    CopyRecordIdxIfNeed(roi_idx, mask_idx);
+    CopyRecordIdIfNeed(roi_idx, mask_idx);
     mask_idx += 1;
   }
 
@@ -76,7 +76,7 @@ void MaskTargetKernel<T>::ForwardDataContent(
     Memcpy<kCPU>(ctx.device_ctx, masks_blob->mut_dptr<T>(mask_idx),
                  mask_ignore_labels_blob->dptr<T>(),
                  mask_ignore_labels_blob->ByteSizeOfDataContentField());
-    CopyRecordIdxIfNeed(0, mask_idx);
+    CopyRecordIdIfNeed(0, mask_idx);
     mask_idx += 1;
   }
 
@@ -91,7 +91,7 @@ void MaskTargetKernel<T>::ForwardDim0ValidNum(
 }
 
 template<typename T>
-void MaskTargetKernel<T>::ForwardRecordIdxInDevicePiece(
+void MaskTargetKernel<T>::ForwardRecordIdInDevicePiece(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // do nothing here because it will be set in ForwardDataContent
 }

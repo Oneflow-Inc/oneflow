@@ -27,6 +27,7 @@ void FpnDistributeOp::InferBlobDescs(
     CHECK_EQ(collected_rois_blob_desc->dim0_inner_shape().NumAxes(), 2);
     CHECK_EQ(collected_rois_blob_desc->dim0_inner_shape().At(0), 1);
   }
+  CHECK(collected_rois_blob_desc->has_record_id_in_device_piece_field());
   // out: rois (post_nms_topn, 5)
   FOR_RANGE(int32_t, idx, 0, RepeatedObnSize("rois")) {
     *GetBlobDesc4BnInOp(RepeatedObn("rois", idx)) = *collected_rois_blob_desc;

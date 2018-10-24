@@ -34,14 +34,14 @@ void DefineTestBlobKernel::ForwardDim2ValidNum(
   }
 }
 
-void DefineTestBlobKernel::ForwardRecordIdxInDevicePiece(
+void DefineTestBlobKernel::ForwardRecordIdInDevicePiece(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const auto& conf = op_conf().define_test_blob_conf();
-  if (conf.record_idx_in_device_piece().empty()) { return; }
+  if (conf.record_id_in_device_piece().empty()) { return; }
   Blob* out_blob = BnInOp2Blob("out");
   FOR_RANGE(int64_t, i, 0, out_blob->shape().At(0)) {
-    out_blob->set_record_idx_in_device_piece(
-        i, conf.record_idx_in_device_piece(i % conf.record_idx_in_device_piece_size()));
+    out_blob->set_record_id_in_device_piece(
+        i, conf.record_id_in_device_piece(i % conf.record_id_in_device_piece_size()));
   }
 }
 
