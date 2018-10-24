@@ -212,10 +212,10 @@ class Operator {
   void EnrollRepeatedInputBn(const std::string& ibn_prefix);
   void EnrollOutputBn(const std::string& obn, bool has_diff);
   void EnrollOutputBn(const std::string& obn) { EnrollOutputBn(obn, true); }
-  void EnrollRepeatedOutputBn(const std::string& ibn_prefix, int32_t num, bool has_diff);
-  void EnrollRepeatedOutputBn(const std::string& ibn_prefix, bool has_diff);
-  void EnrollRepeatedOutputBn(const std::string& ibn_prefix, int32_t num);
-  void EnrollRepeatedOutputBn(const std::string& ibn_prefix);
+  void EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num, bool has_diff);
+  void EnrollRepeatedOutputBn(const std::string& obn_prefix, bool has_diff);
+  void EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num);
+  void EnrollRepeatedOutputBn(const std::string& obn_prefix);
 
   // enroll model blobs
   void EnrollModelBn(const std::string& mbn);
@@ -245,6 +245,7 @@ class Operator {
 
 std::string GenDiffBn(const std::string& bn);
 std::string GenUnDiffBn(const std::string& diff_bn);
+std::string GenRepeatedBn(const std::string& bn_prefix, int32_t idx);
 
 #define REGISTER_OP(op_type_case, OpType) \
   REGISTER_CLASS_WITH_ARGS(op_type_case, Operator, OpType, const OperatorConf&)
