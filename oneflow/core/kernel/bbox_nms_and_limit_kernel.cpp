@@ -300,7 +300,7 @@ void BboxNmsAndLimitKernel<T>::OutputBBox(const std::vector<int32_t> out_bbox_in
   for (int32_t bbox_idx : out_bbox_inds) {
     const auto* bbox = BBox::Cast(target_bbox_blob->dptr<T>()) + bbox_idx;
     auto* out_bbox = BBox::Cast(out_bbox_blob->mut_dptr<T>()) + out_cnt;
-    out_bbox->set_corner_coord(bbox->left(), bbox->top(), bbox->right(), bbox->bottom());
+    out_bbox->set_ltrb(bbox->left(), bbox->top(), bbox->right(), bbox->bottom());
     out_bbox->set_index(bbox->index());
     ++out_cnt;
   }
