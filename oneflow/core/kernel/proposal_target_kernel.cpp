@@ -79,7 +79,7 @@ void ProposalTargetKernel<T>::ConcatGtBoxesToRoiBoxesHead(const LabeledGtBox& gt
   }
   // Set gt box index in rois_boxes_inds to -(gt_index+1)
   // 0 -> -1  1 -> -2  2 -> -3
-  FOR_RANGE(size_t, i, 0, gt_boxes.size()) { boxes.index()[i] = -(boxes.GetIndex(i) + 1); }
+  FOR_RANGE(size_t, i, 0, gt_boxes.size()) { boxes.index()[i] = -(gt_boxes.GetIndex(i) + 1); }
 }
 
 template<typename T>
@@ -101,7 +101,7 @@ void ProposalTargetKernel<T>::SubsampleForegroundAndBackground(
       [&](int32_t index) { return boxes.max_overlap(index) < conf.foreground_threshold(); });
   size_t fg_cnt = total_num_sampled_rois * conf.foreground_fraction();
   if (fg_cnt < fg_end) {
-    boxes.Shuffle(0, fg_end);
+    if (conf.random_subsample()) { boxes.Shuffle(0, fg_end); }
   } else {
     fg_cnt = fg_end;
   }
@@ -114,7 +114,7 @@ void ProposalTargetKernel<T>::SubsampleForegroundAndBackground(
       [&](int32_t index) { return boxes.max_overlap(index) < conf.background_threshold_low(); });
   size_t bg_cnt = total_num_sampled_rois - fg_cnt;
   if (bg_cnt < bg_end) {
-    boxes.Shuffle(0, bg_end);
+    if (conf.random_subsample()) { boxes.Shuffle(0, bg_end); }
   } else {
     bg_cnt = bg_end;
   }
