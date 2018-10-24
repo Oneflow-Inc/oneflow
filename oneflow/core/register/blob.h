@@ -50,10 +50,10 @@ class Blob final {
   const int64_t* dim2_valid_num_ptr() const { return dim2_valid_num_ptr_; }
   int64_t* mut_dim2_valid_num_ptr() { return dim2_valid_num_ptr_; }
 
-  int64_t record_idx_in_device_piece(int64_t no) const;
-  void set_record_idx_in_device_piece(int64_t no, int64_t val);
-  const int64_t* record_idx_in_device_piece_ptr() const { return record_idx_in_device_piece_ptr_; }
-  int64_t* mut_record_idx_in_device_piece_ptr() { return record_idx_in_device_piece_ptr_; }
+  int64_t record_id_in_device_piece(int64_t no) const;
+  void set_record_id_in_device_piece(int64_t no, int64_t val);
+  const int64_t* record_id_in_device_piece_ptr() const { return record_id_in_device_piece_ptr_; }
+  int64_t* mut_record_id_in_device_piece_ptr() { return record_id_in_device_piece_ptr_; }
 
   const void* header_ptr() const { return header_ptr_; }
   void* mut_header_ptr() { return header_ptr_; }
@@ -96,8 +96,8 @@ class Blob final {
   bool has_dim0_valid_num_field() const { return blob_desc_->has_dim0_valid_num_field(); }
   bool has_dim1_valid_num_field() const { return blob_desc_->has_dim1_valid_num_field(); }
   bool has_dim2_valid_num_field() const { return blob_desc_->has_dim2_valid_num_field(); }
-  bool has_record_idx_in_device_piece_field() const {
-    return blob_desc_->has_record_idx_in_device_piece_field();
+  bool has_record_id_in_device_piece_field() const {
+    return blob_desc_->has_record_id_in_device_piece_field();
   }
   int32_t max_col_num() const { return blob_desc_->max_col_num(); }
   size_t ByteSizeOfBlobHeader() const { return blob_desc_->ByteSizeOfBlobHeader(); }
@@ -106,7 +106,7 @@ class Blob final {
   size_t ByteSizeOfDim0ValidNumField() const;
   size_t ByteSizeOfDim1ValidNumField() const;
   size_t ByteSizeOfDim2ValidNumField() const;
-  size_t ByteSizeOfRecordIdxInDevicePieceField() const;
+  size_t ByteSizeOfRecordIdInDevicePieceField() const;
   size_t ByteSizeOfDataContentField() const { return blob_desc_->ByteSizeOfDataContentField(); }
   size_t TotalByteSize() const { return blob_desc_->TotalByteSize(); }
 
@@ -118,7 +118,7 @@ class Blob final {
   void CopyDim0ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyDim1ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyDim2ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
-  void CopyRecordIdxInDevicePieceFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  void CopyRecordIdInDevicePieceFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
 
   size_t CalcDim0ValidNumSum() const;
@@ -160,7 +160,7 @@ class Blob final {
   int64_t* dim0_valid_num_ptr_;
   int64_t* dim1_valid_num_ptr_;
   int64_t* dim2_valid_num_ptr_;
-  int64_t* record_idx_in_device_piece_ptr_;
+  int64_t* record_id_in_device_piece_ptr_;
   void* dptr_;
   const RtBlobDesc* blob_desc_;
   Regst* regst_;
