@@ -13,8 +13,8 @@ class FpnCollectKernel final : public KernelIf<DeviceType::kCPU> {
   FpnCollectKernel() = default;
   ~FpnCollectKernel() = default;
 
-  using BBox = BBoxImpl<const T, BBoxCategory::kIndexCorner>;
-  using MutBBox = BBoxImpl<T, BBoxCategory::kIndexCorner>;
+  using BBox = IndexedBBoxT<const T>;
+  using MutBBox = IndexedBBoxT<T>;
 
  private:
   void ForwardDataContent(const KernelCtx&,

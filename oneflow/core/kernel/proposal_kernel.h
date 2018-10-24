@@ -13,9 +13,9 @@ class ProposalKernel final : public KernelIf<DeviceType::kCPU> {
   ProposalKernel() = default;
   ~ProposalKernel() = default;
 
-  using BBox = BBoxImpl<const T, BBoxCategory::kCorner>;
-  using MutBBox = BBoxImpl<T, BBoxCategory::kCorner>;
-  using RoiBox = BBoxImpl<T, BBoxCategory::kIndexCorner>;
+  using BBox = BBoxT<const T>;
+  using MutBBox = BBoxT<T>;
+  using RoiBBox = IndexedBBoxT<T>;
   using BoxesSlice = BBoxIndices<IndexSequence, BBox>;
   using ScoreSlice = ScoreIndices<IndexSequence, const T>;
 

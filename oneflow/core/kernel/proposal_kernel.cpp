@@ -78,9 +78,9 @@ size_t ProposalKernel<T>::WriteRoisToOutput(
   Blob* rois_prob_blob = BnInOp2Blob("roi_probs");
   FOR_RANGE(size_t, i, 0, post_nms_slice.size()) {
     const auto* prop_bbox = post_nms_slice.GetBBox(i);
-    auto* roi_bbox = RoiBox::Cast(rois_blob->mut_dptr<T>(num_output));
-    roi_bbox[i].set_corner_coord(prop_bbox->left(), prop_bbox->top(), prop_bbox->right(),
-                                 prop_bbox->bottom());
+    auto* roi_bbox = RoiBBox::Cast(rois_blob->mut_dptr<T>(num_output));
+    roi_bbox[i].set_ltrb(prop_bbox->left(), prop_bbox->top(), prop_bbox->right(),
+                         prop_bbox->bottom());
     roi_bbox[i].set_index(im_index);
     rois_prob_blob->mut_dptr<T>(num_output)[i] = score_slice.GetScore(post_nms_slice.GetIndex(i));
     rois_blob->set_record_id_in_device_piece(num_output + i, im_index);

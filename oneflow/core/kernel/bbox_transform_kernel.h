@@ -13,7 +13,7 @@ class BboxTransformKernel final : public KernelIf<device_type> {
   BboxTransformKernel() = default;
   ~BboxTransformKernel() = default;
 
-  using BBox = BBoxImpl<T, BBoxCategory::kCorner>;
+  using BBox = BBoxT<T>;
 
  private:
   void ForwardDataContent(const KernelCtx&,
