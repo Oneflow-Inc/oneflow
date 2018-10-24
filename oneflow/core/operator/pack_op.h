@@ -16,10 +16,6 @@ class PackOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override { return op_conf().pack_conf(); }
   LogicalNode* NewProperLogicalNode() { return new PackForwardLogicalNode; }
 
-  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override {
-    UNIMPLEMENTED();
-  }
   bool NeedInBlobWhenBackward() const override { return true; }
   bool NeedOutBlobWhenBackward() const override { return false; }
 };

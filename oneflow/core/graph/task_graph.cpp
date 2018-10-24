@@ -48,8 +48,8 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   });
 
   logical_gph_->ForEachNode([&](LogicalNode* logical) {
-    if (logical->TypeName() != "PackForward") { return; }
     PackForwardLogicalNode* pack_fw = dynamic_cast<PackForwardLogicalNode*>(logical);
+    if (pack_fw == nullptr) { return; }
     const UnpackForwardLogicalNode* unpack_fw = pack_fw->related_unpack();
     const std::vector<CompTaskNode*>& pack_fw_tasks = logical2sorted_comp_tasks.at(pack_fw);
     const std::vector<CompTaskNode*>& unpack_fw_tasks = logical2sorted_comp_tasks.at(unpack_fw);
