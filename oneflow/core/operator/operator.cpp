@@ -475,19 +475,6 @@ LogicalBlobId Operator::dtbn2lbi(const std::string& data_tmp_bn) const {
   return lbi;
 }
 
-int32_t Operator::GetRepeatedInputBnNum(const std::string& ibn_prefix) const {
-  int32_t count = 0;
-  for (size_t i = 0; i < input_bns().size(); ++i) {
-    if (input_bns().Get(i).compare(0, ibn_prefix.length(), ibn_prefix) == 0) { count++; }
-  }
-  return count;
-}
-
-std::string Operator::GetRepeatedInputBn(const std::string& ibn_prefix, size_t idx) const {
-  std::string ibn = ibn_prefix + "_" + std::to_string(idx);
-  return ibn;
-}
-
 void Operator::InferTotalInstanceNumDesc(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, std::function<void(OpContext*)> EnrollOpCtx) const {

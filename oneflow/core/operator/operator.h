@@ -57,9 +57,6 @@ class Operator {
   const OperatorConf& op_conf() const { return op_attribute_.op_conf(); }
   virtual const PbMessage& GetCustomizedConf() const { UNIMPLEMENTED(); }
 
-  int32_t GetRepeatedInputBnNum(const std::string& ibn_prefix) const;
-  std::string GetRepeatedInputBn(const std::string& ibn_prefix, size_t idx) const;
-
   bool HasFieldInCustomizedConf(const std::string& field_name) const {
     return HasFieldInPbMessage(GetCustomizedConf(), field_name);
   }
@@ -88,10 +85,8 @@ class Operator {
   }
 
   const std::string& SoleIbn() const;
-  const std::string& SolePibn() const;
   const std::string& SoleIdbn() const;
   const std::string& SoleObn() const;
-  const std::string& SolePobn() const;
   const std::string& SoleOdbn() const;
   const std::string& SoleDtbn() const;
   const std::string& SoleFbbn() const;
