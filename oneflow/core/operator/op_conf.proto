@@ -688,6 +688,12 @@ message UnpackOpConf {
   required int32 unpack_num = 3;
 }
 
+message RepeatOpConf {
+  required string in = 1;
+  required string out = 2;
+  required int64 repeat_num = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -757,6 +763,7 @@ message OperatorConf {
     DefineTestBlobConf define_test_blob_conf = 236;
     PackOpConf pack_conf = 237;
     UnpackOpConf unpack_conf = 238;
+    RepeatOpConf repeat_conf = 239;
   }
 }
 

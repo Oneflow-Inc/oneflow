@@ -455,4 +455,8 @@ BackwardLogicalNode* UnpackForwardLogicalNode::NewCorrectBackwardNode() {
   return new UnpackBackwardLogicalNode;
 }
 
+BackwardLogicalNode* RepeatForwardLogicalNode::NewCorrectBackwardNode() {
+  return new RepeatBackwardLogicalNode();
+}
+
 }  // namespace oneflow
