@@ -12,8 +12,13 @@ void VStackKernel<device_type, T>::ForwardDataContent(
   for (const auto& input_bn : this->op_attribute().input_bns()) {
     const Blob* in_blob = BnInOp2Blob(input_bn);
     int64_t instance_num = in_blob->shape().At(0);
-    Memcpy<device_type>(ctx.device_ctx, out_blob->mut_dptr<T>(out_instance_offset),
-                        in_blob->dptr<T>(), instance_num * elem_cnt_per_instance * sizeof(T));
+    if (out_instance_offset < out_blob->shape().At(0)) {
+      Memcpy<device_type>(ctx.device_ctx, out_blob->mut_dptr<T>(out_instance_offset),
+                          in_blob->dptr<T>(), instance_num * elem_cnt_per_instance * sizeof(T));
+    } else {
+      CHECK_EQ(instance_num, 0);
+      CHECK_EQ(out_instance_offset, out_blob->shape().At(0));
+    }
     out_instance_offset += instance_num;
   }
   CHECK_LE(out_instance_offset, out_blob->static_shape().At(0));
@@ -40,9 +45,14 @@ void VStackKernel<device_type, T>::BackwardDataContent(
   for (const auto& in_bn : this->op_attribute().input_bns()) {
     int64_t instance_num = BnInOp2Blob(in_bn)->shape().At(0);
     Blob* in_diff_blob = BnInOp2Blob(GenDiffBn(in_bn));
-    Memcpy<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr<T>(),
-                        out_diff_blob->dptr<T>(out_instance_offset),
-                        instance_num * elem_cnt_per_instance * sizeof(T));
+    if (out_instance_offset < in_diff_blob->shape().At(0)) {
+      Memcpy<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr<T>(),
+                          out_diff_blob->dptr<T>(out_instance_offset),
+                          instance_num * elem_cnt_per_instance * sizeof(T));
+    } else {
+      CHECK_EQ(instance_num, 0);
+      CHECK_EQ(out_instance_offset, in_diff_blob->shape().At(0));
+    }
     out_instance_offset += instance_num;
   }
 }
