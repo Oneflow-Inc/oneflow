@@ -8,9 +8,10 @@ void AccuracyPrintKernel<T>::Forward(const KernelCtx& kernel_ctx,
                                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (HasEmptyShapeBlob(this->op_attribute().input_bns(), BnInOp2Blob)) { return; }
   const Blob* accuracy_acc_blob = BnInOp2Blob("accuracy_acc");
-  T accuracy_num = accuracy_acc_blob->dptr<T>()[0];
-  int total_num = Global<JobDesc>::Get()->BatchSize();
-  float accuracy = accuracy_num / total_num;
+  const Blob* accuracy_instance_num_blob = BnInOp2Blob("accuracy_instance_num");
+  T accurate_num = accuracy_acc_blob->dptr<T>()[0];
+  int64_t accuracy_instance_num = static_cast<int64_t>(accuracy_instance_num_blob->dptr<T>()[0]);
+  float accuracy = accurate_num / accuracy_instance_num;
   const char* accuracy_op_name = op_conf().name().c_str() + AccuracyPrintPrefix.length();
   auto kernel_conf = this->kernel_conf();
   const int32_t top_k_print =
