@@ -15,13 +15,7 @@ class AccuracyPrintOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override;
 
  private:
-  LogicalBlobId ibn2lbi(const std::string& input_bn) const override {
-    if (input_bn == "accuracy_acc") {
-      return op_conf().accuracy_print_conf().accuracy_lbi();
-    } else {
-      UNIMPLEMENTED();
-    }
-  }
+  LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
 };
 
 }  // namespace oneflow
