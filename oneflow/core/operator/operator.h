@@ -91,10 +91,6 @@ class Operator {
   const std::string& SoleDtbn() const;
   const std::string& SoleFbbn() const;
   const std::string& SoleBbbn() const;
-  std::string RepeatedIbn(const std::string&, int32_t) const;
-  int32_t RepeatedIbnSize(const std::string&) const;
-  std::string RepeatedObn(const std::string&, int32_t) const;
-  int32_t RepeatedObnSize(const std::string&) const;
 
 #define DEFINE_BLOB_NAMES_GETTER(getter_name)                                           \
   const PbRpf<std::string>& getter_name() const { return op_attribute_.getter_name(); } \
@@ -230,7 +226,7 @@ class Operator {
   void InferTotalInstanceNumDesc(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                  const ParallelContext*,
                                  std::function<void(OpContext*)> EnrollOpCtx) const;
-
+  std::string Bn2ConfName(const std::string& bn) const;
   PbMap<std::string, LogicalBlobId>* mut_bn_in_op2lbi() {
     return op_attribute_.mutable_bn_in_op2lbi();
   }
@@ -241,6 +237,7 @@ class Operator {
 std::string GenDiffBn(const std::string& bn);
 std::string GenUnDiffBn(const std::string& diff_bn);
 std::string GenRepeatedBn(const std::string& bn_prefix, int32_t idx);
+std::pair<std::string, int32_t> GenUnRepeatedBn(const std::string& bn);
 
 #define REGISTER_OP(op_type_case, OpType) \
   REGISTER_CLASS_WITH_ARGS(op_type_case, Operator, OpType, const OperatorConf&)

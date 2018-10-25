@@ -12,7 +12,7 @@ class ScoringMethodIf {
   ScoringMethodIf() = default;
   virtual ~ScoringMethodIf() = default;
 
-  using BBox = BBoxImpl<T, BBoxCategory::kIndexCorner>;
+  using BBox = IndexedBBoxT<T>;
   using ScoredBoxesIndices = ScoreIndices<BBoxIndices<IndexSequence, BBox>, T>;
 
   void Init(const BboxVoteConf& vote_conf) { vote_conf_ = vote_conf; }
@@ -32,7 +32,7 @@ class BboxNmsAndLimitKernel final : public KernelIf<DeviceType::kCPU> {
   BboxNmsAndLimitKernel() = default;
   ~BboxNmsAndLimitKernel() = default;
 
-  using BBox = BBoxImpl<T, BBoxCategory::kIndexCorner>;
+  using BBox = IndexedBBoxT<T>;
   using ScoredBoxesIndices = ScoreIndices<BBoxIndices<IndexSequence, BBox>, T>;
   using Image2IndexVecMap = HashMap<int32_t, std::vector<int32_t>>;
 

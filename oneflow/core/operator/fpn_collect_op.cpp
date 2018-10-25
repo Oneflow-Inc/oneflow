@@ -17,9 +17,9 @@ void FpnCollectOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   CHECK_EQ(parallel_ctx->policy(), kDataParallel);
   const FpnCollectOpConf& conf = op_conf().fpn_collect_conf();
   const int64_t num_layers = conf.num_layers();
-  const int64_t total_top_n = conf.top_n_per_piece() * parallel_ctx->parallel_num();
-  CHECK_EQ(RepeatedIbnSize("rpn_rois_fpn"), num_layers);
-  CHECK_EQ(RepeatedIbnSize("rpn_roi_probs_fpn"), num_layers);
+  int64_t total_top_n = conf.top_n_per_piece() * parallel_ctx->parallel_num();
+  CHECK_EQ(conf.rpn_rois_fpn_size(), num_layers);
+  CHECK_EQ(conf.rpn_roi_probs_fpn_size(), num_layers);
   int64_t max_num_rois_per_layer = 0;
   int64_t total_num_rois = 0;
   DataType data_type = DataType::kInvalidDataType;
@@ -27,9 +27,9 @@ void FpnCollectOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   bool set_has_record_id_in_device_piece_field = false;
   FOR_RANGE(size_t, i, 0, num_layers) {
     // input: rpn_rois_fpn_i (R, 5) T
-    BlobDesc* rois_blob_desc_i = GetBlobDesc4BnInOp(RepeatedIbn("rpn_rois_fpn", i));
+    BlobDesc* rois_blob_desc_i = GetBlobDesc4BnInOp(GenRepeatedBn("rpn_rois_fpn", i));
     // input: rpn_rois_fpn_i (R) T
-    BlobDesc* roi_probs_blob_desc_i = GetBlobDesc4BnInOp(RepeatedIbn("rpn_roi_probs_fpn", i));
+    BlobDesc* roi_probs_blob_desc_i = GetBlobDesc4BnInOp(GenRepeatedBn("rpn_roi_probs_fpn", i));
     CHECK_EQ(rois_blob_desc_i->shape().At(0), roi_probs_blob_desc_i->shape().At(0));
     CHECK_EQ(rois_blob_desc_i->data_type(), roi_probs_blob_desc_i->data_type());
     CHECK_EQ(rois_blob_desc_i->has_dim0_valid_num_field(),
@@ -51,7 +51,7 @@ void FpnCollectOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
                rois_blob_desc_i->has_record_id_in_device_piece_field());
     }
   }
-  CHECK_LE(total_top_n, total_num_rois);
+  total_top_n = std::min(total_top_n, total_num_rois);
 
   // output: out (total_top_n, 5) T
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
