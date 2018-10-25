@@ -29,7 +29,7 @@ typename ProposalTargetKernel<T>::LabeledGtBox ProposalTargetKernel<T>::GetImage
     int32_t dim1_valid_num = gt_boxes_blob->dim1_valid_num(i);
     CHECK_EQ(dim1_valid_num, gt_labels_blob->dim1_valid_num(i));
     FOR_RANGE(int32_t, j, 0, dim1_valid_num) {
-      if (GtBox::Cast(gt_boxes_blob->dptr<T>(i, j))->Area() > 0
+      if (GtBBox::Cast(gt_boxes_blob->dptr<T>(i, j))->Area() > 0
           && *(gt_labels_blob->dptr<int32_t>(i, j)) <= conf.num_classes()) {
         gt_boxes.PushBack(i * dim1_num + j);
       }
@@ -79,7 +79,7 @@ void ProposalTargetKernel<T>::ConcatGtBoxesToRoiBoxesHead(const LabeledGtBox& gt
   }
   // Set gt box index in rois_boxes_inds to -(gt_index+1)
   // 0 -> -1  1 -> -2  2 -> -3
-  FOR_RANGE(size_t, i, 0, gt_boxes.size()) { boxes.index()[i] = -(boxes.GetIndex(i) + 1); }
+  FOR_RANGE(size_t, i, 0, gt_boxes.size()) { boxes.index()[i] = -(gt_boxes.GetIndex(i) + 1); }
 }
 
 template<typename T>
@@ -101,7 +101,7 @@ void ProposalTargetKernel<T>::SubsampleForegroundAndBackground(
       [&](int32_t index) { return boxes.max_overlap(index) < conf.foreground_threshold(); });
   size_t fg_cnt = total_num_sampled_rois * conf.foreground_fraction();
   if (fg_cnt < fg_end) {
-    boxes.Shuffle(0, fg_end);
+    if (conf.random_subsample()) { boxes.Shuffle(0, fg_end); }
   } else {
     fg_cnt = fg_end;
   }
@@ -114,7 +114,7 @@ void ProposalTargetKernel<T>::SubsampleForegroundAndBackground(
       [&](int32_t index) { return boxes.max_overlap(index) < conf.background_threshold_low(); });
   size_t bg_cnt = total_num_sampled_rois - fg_cnt;
   if (bg_cnt < bg_end) {
-    boxes.Shuffle(0, bg_end);
+    if (conf.random_subsample()) { boxes.Shuffle(0, bg_end); }
   } else {
     bg_cnt = bg_end;
   }
@@ -140,13 +140,14 @@ void ProposalTargetKernel<T>::Output(const std::function<Blob*(const std::string
   Blob* bbox_targets_blob = BnInOp2Blob("bbox_targets");
   Blob* bbox_inside_weights_blob = BnInOp2Blob("bbox_inside_weights");
   Blob* bbox_outside_weights_blob = BnInOp2Blob("bbox_outside_weights");
-  std::memset(out_rois_blob->mut_dptr(), 0, out_rois_blob->shape().elem_cnt() * sizeof(T));
-  std::memset(labels_blob->mut_dptr(), 0, labels_blob->shape().elem_cnt() * sizeof(int32_t));
-  std::memset(bbox_targets_blob->mut_dptr(), 0, bbox_targets_blob->shape().elem_cnt() * sizeof(T));
+  std::memset(out_rois_blob->mut_dptr(), 0, out_rois_blob->static_shape().elem_cnt() * sizeof(T));
+  std::memset(labels_blob->mut_dptr(), 0, labels_blob->static_shape().elem_cnt() * sizeof(int32_t));
+  std::memset(bbox_targets_blob->mut_dptr(), 0,
+              bbox_targets_blob->static_shape().elem_cnt() * sizeof(T));
   std::memset(bbox_inside_weights_blob->mut_dptr(), 0,
-              bbox_inside_weights_blob->shape().elem_cnt() * sizeof(T));
+              bbox_inside_weights_blob->static_shape().elem_cnt() * sizeof(T));
   std::memset(bbox_outside_weights_blob->mut_dptr(), 0,
-              bbox_outside_weights_blob->shape().elem_cnt() * sizeof(T));
+              bbox_outside_weights_blob->static_shape().elem_cnt() * sizeof(T));
 
   FOR_RANGE(size_t, i, 0, boxes.size()) {
     int32_t gt_index = boxes.GetMaxOverlapWithIndex(i);
@@ -158,8 +159,8 @@ void ProposalTargetKernel<T>::Output(const std::function<Blob*(const std::string
     auto* bbox_targets = BBoxDelta<T>::Cast(bbox_targets_blob->mut_dptr<T>(i));
     if (index >= 0) {
       const auto* rois_bbox = boxes.bbox(index);
-      out_rois_bbox->set_corner_coord(rois_bbox->left(), rois_bbox->top(), rois_bbox->right(),
-                                      rois_bbox->bottom());
+      out_rois_bbox->set_ltrb(rois_bbox->left(), rois_bbox->top(), rois_bbox->right(),
+                              rois_bbox->bottom());
       if (label > 0) {
         bbox_targets[label].TransformInverse(rois_bbox, gt_boxes.bbox(gt_index),
                                              conf.bbox_reg_weights());
@@ -168,8 +169,7 @@ void ProposalTargetKernel<T>::Output(const std::function<Blob*(const std::string
     } else {
       int32_t index_gt = -index - 1;
       const auto* gt_bbox = gt_boxes.bbox(index_gt);
-      out_rois_bbox->set_corner_coord(gt_bbox->left(), gt_bbox->top(), gt_bbox->right(),
-                                      gt_bbox->bottom());
+      out_rois_bbox->set_ltrb(gt_bbox->left(), gt_bbox->top(), gt_bbox->right(), gt_bbox->bottom());
       if (label > 0) {
         bbox_targets[label].TransformInverse(gt_bbox, gt_boxes.bbox(gt_index),
                                              conf.bbox_reg_weights());

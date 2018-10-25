@@ -13,12 +13,12 @@ class AnchorTargetKernel final : public KernelIf<DeviceType::kCPU> {
   AnchorTargetKernel() = default;
   ~AnchorTargetKernel() = default;
 
-  using BBox = BBoxImpl<const T, BBoxCategory::kCorner>;
-  using MutBBox = BBoxImpl<T, BBoxCategory::kCorner>;
+  using BBox = BBoxT<const T>;
+  using MutBBox = BBoxT<T>;
   using AnchorBoxes = BBoxIndices<IndexSequence, BBox>;
   using MaxOverlapOfBoxesWithGt = MaxOverlapIndices<AnchorBoxes>;
   using MaxOverlapOfLabeledBoxesWithGt = LabelIndices<MaxOverlapOfBoxesWithGt>;
-  using GtBoxes = BBoxIndices<IndexSequence, BBoxImpl<const T, BBoxCategory::kGtCorner>>;
+  using GtBoxes = BBoxIndices<IndexSequence, BBox>;
 
  private:
   void InitConstBufBlobs(DeviceCtx*,

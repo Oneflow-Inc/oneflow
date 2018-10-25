@@ -25,8 +25,8 @@ size_t BBoxUtil<BBox>::GenerateAnchors(const AnchorGeneratorConf& conf, T* ancho
       const int32_t ws = wr * scale;
       const int32_t hs = hr * scale;
       auto* base_anchor_bbox = BBox::Cast(base_anchors_vec.data()) + i * scales_size + j;
-      base_anchor_bbox->set_corner_coord(base_ctr - 0.5 * (ws - 1), base_ctr - 0.5 * (hs - 1),
-                                         base_ctr + 0.5 * (ws - 1), base_ctr + 0.5 * (hs - 1));
+      base_anchor_bbox->set_ltrb(base_ctr - 0.5 * (ws - 1), base_ctr - 0.5 * (hs - 1),
+                                 base_ctr + 0.5 * (ws - 1), base_ctr + 0.5 * (hs - 1));
     }
   }
 
@@ -35,7 +35,7 @@ size_t BBoxUtil<BBox>::GenerateAnchors(const AnchorGeneratorConf& conf, T* ancho
     FOR_RANGE(int32_t, w, 0, width) {
       auto* anchor_bbox = BBox::Cast(anchors_ptr) + (h * width + w) * num_anchors;
       FOR_RANGE(int32_t, i, 0, num_anchors) {
-        anchor_bbox[i].set_corner_coord(
+        anchor_bbox[i].set_ltrb(
             base_anchors[i].left() + w * fm_stride, base_anchors[i].top() + h * fm_stride,
             base_anchors[i].right() + w * fm_stride, base_anchors[i].bottom() + h * fm_stride);
       }
@@ -69,9 +69,9 @@ void BBoxUtil<BBox>::Nms(float thresh, const BBoxIndicesT& pre_nms_bbox_inds,
   CHECK_LE(post_nms_bbox_inds.size(), pre_nms_bbox_inds.size());
 }
 
-#define INITIATE_BBOX_UTIL(T)                                   \
-  template struct BBoxUtil<BBoxImpl<T, BBoxCategory::kCorner>>; \
-  template struct BBoxUtil<BBoxImpl<T, BBoxCategory::kIndexCorner>>;
+#define INITIATE_BBOX_UTIL(T)                                 \
+  template struct BBoxUtil<BBoxImpl<T, BBoxCategory::kLTRB>>; \
+  template struct BBoxUtil<BBoxImpl<T, BBoxCategory::kILTRB>>;
 
 #define INITIATE_BBOX_UTIL_TYPE(type_type, type_val) \
   INITIATE_BBOX_UTIL(type_type)                      \

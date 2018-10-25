@@ -13,12 +13,12 @@ class ProposalTargetKernel final : public KernelIf<DeviceType::kCPU> {
   ProposalTargetKernel() = default;
   ~ProposalTargetKernel() = default;
 
-  using BBox = BBoxImpl<T, BBoxCategory::kIndexCorner>;
-  using RoiBox = BBoxImpl<const T, BBoxCategory::kIndexCorner>;
-  using GtBox = BBoxImpl<const T, BBoxCategory::kGtCorner>;
-  using RoiBoxIndices = BBoxIndices<IndexSequence, RoiBox>;
+  using BBox = IndexedBBoxT<T>;
+  using RoiBBox = IndexedBBoxT<const T>;
+  using GtBBox = BBoxT<const T>;
+  using RoiBoxIndices = BBoxIndices<IndexSequence, RoiBBox>;
   using MaxOverlapOfRoiBoxWithGt = MaxOverlapIndices<RoiBoxIndices>;
-  using GtBoxIndices = BBoxIndices<IndexSequence, GtBox>;
+  using GtBoxIndices = BBoxIndices<IndexSequence, GtBBox>;
   using LabeledGtBox = LabelIndices<GtBoxIndices>;
 
  private:
