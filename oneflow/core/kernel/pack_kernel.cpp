@@ -61,7 +61,7 @@ void PackKernel<device_type>::ForwardDim1ValidNum(
 }
 
 template<DeviceType device_type>
-void PackKernel<device_type>::ForwardRecordIdxInDevicePiece(
+void PackKernel<device_type>::ForwardRecordIdInDevicePiece(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto* res = static_cast<std::pair<size_t, size_t>*>(ctx.other);
   size_t in_index = res->first;
@@ -71,8 +71,8 @@ void PackKernel<device_type>::ForwardRecordIdxInDevicePiece(
   Blob* out_blob = BnInOp2Blob("out");
   size_t in_size = in_blob->static_shape().At(0);
   for (size_t i = 0; i < in_size; ++i) {
-    out_blob->set_record_idx_in_device_piece(i + in_index * in_size,
-                                             in_blob->record_idx_in_device_piece(i));
+    out_blob->set_record_id_in_device_piece(i + in_index * in_size,
+                                            in_blob->record_id_in_device_piece(i));
   }
 }
 
