@@ -4,11 +4,13 @@ namespace oneflow {
 
 bool IsForwardTaskType(TaskType tt) {
   return tt == TaskType::kNormalForward || tt == TaskType::kRecurrentForward
+         || tt == TaskType::kPackForward || tt == TaskType::kUnpackForward
          || tt == TaskType::kRepeatForward;
 }
 
 bool IsBackwardTaskType(TaskType tt) {
   return tt == TaskType::kNormalBackward || tt == TaskType::kRecurrentBackward
+         || tt == TaskType::kPackBackward || tt == TaskType::kUnpackBackward
          || tt == TaskType::kRepeatBackward;
 }
 
@@ -404,19 +406,21 @@ RegstDescIdSet* FindOrCreateConsumedCtrlRegstDescIdSet(TaskProto* task_proto,
 }
 
 std::map<TaskType, std::string> task_type2color = {
-    {kInvalid, "0"},        {kNormalForward, "2"},
-    {kNormalBackward, "3"}, {kRecordLoad, "1"},
-    {kDecode, "1"},         {kLoss, "4"},
-    {kLossAcc, "5"},        {kLossPrint, "1"},
-    {kNormalMdUpdt, "6"},   {kMdSave, "1"},
-    {kMdDiffAcc, "7"},      {kCopyHd, "8"},
-    {kCopyCommNet, "9"},    {kBoxing, "10"},
-    {kPrint, "1"},          {kReduceConcat, "2"},
-    {kReduceScatter, "2"},  {kReduceAdd, "2"},
-    {kReduceGather, "2"},   {kReduceSplit, "2"},
-    {kNcclAllReduce, "2"},  {kNcclReduceScatter, "2"},
-    {kNcclAllGather, "2"},  {kAccuracy, "4"},
-    {kAccuracyPrint, "1"},  {kAccuracyAcc, "5"},
-    {kDecodeRandom, "1"},   {kRepeatForward, "2"},
+    {kInvalid, "0"},         {kNormalForward, "2"},
+    {kNormalBackward, "3"},  {kRecordLoad, "1"},
+    {kDecode, "1"},          {kLoss, "4"},
+    {kLossAcc, "5"},         {kLossPrint, "1"},
+    {kNormalMdUpdt, "6"},    {kMdSave, "1"},
+    {kMdDiffAcc, "7"},       {kCopyHd, "8"},
+    {kCopyCommNet, "9"},     {kBoxing, "10"},
+    {kPrint, "1"},           {kReduceConcat, "2"},
+    {kReduceScatter, "2"},   {kReduceAdd, "2"},
+    {kReduceGather, "2"},    {kReduceSplit, "2"},
+    {kNcclAllReduce, "2"},   {kNcclReduceScatter, "2"},
+    {kNcclAllGather, "2"},   {kAccuracy, "4"},
+    {kAccuracyPrint, "1"},   {kAccuracyAcc, "5"},
+    {kDecodeRandom, "1"},    {kPackForward, "11"},
+    {kPackBackward, "12"},   {kUnpackForward, "11"},
+    {kUnpackBackward, "12"}, {kRepeatForward, "2"},
     {kRepeatBackward, "3"}};
 }  // namespace oneflow

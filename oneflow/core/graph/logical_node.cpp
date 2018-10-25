@@ -23,8 +23,6 @@
 #include "oneflow/core/graph/accuracy_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/accuracy_print_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
-#include "oneflow/core/graph/repeat_forward_compute_task_node.h"
-#include "oneflow/core/graph/repeat_backward_compute_task_node.h"
 
 namespace oneflow {
 
@@ -451,28 +449,14 @@ int64_t NewAreaId() {
   return ++next_area_id;
 }
 
-RepeatForwardLogicalNode::RepeatForwardLogicalNode() { area_id_ = NewAreaId(); }
+BackwardLogicalNode* PackForwardLogicalNode::NewCorrectBackwardNode() { UNIMPLEMENTED(); }
+
+BackwardLogicalNode* UnpackForwardLogicalNode::NewCorrectBackwardNode() {
+  return new UnpackBackwardLogicalNode;
+}
 
 BackwardLogicalNode* RepeatForwardLogicalNode::NewCorrectBackwardNode() {
   return new RepeatBackwardLogicalNode();
 }
-
-CompTaskNode* RepeatForwardLogicalNode::NewCompTaskNode() const {
-  return new RepeatForwardCompTaskNode();
-}
-
-int64_t RepeatForwardLogicalNode::GetAreaId() const { return area_id_; };
-
-std::string RepeatForwardLogicalNode::TypeName() const { return "RepeatForward"; };
-
-RepeatBackwardLogicalNode::RepeatBackwardLogicalNode() { area_id_ = NewAreaId(); }
-
-CompTaskNode* RepeatBackwardLogicalNode::NewCompTaskNode() const {
-  return new RepeatBackwardCompTaskNode();
-}
-
-int64_t RepeatBackwardLogicalNode::GetAreaId() const { return area_id_; };
-
-std::string RepeatBackwardLogicalNode::TypeName() const { return "RepeatBackward"; };
 
 }  // namespace oneflow

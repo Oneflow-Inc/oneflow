@@ -35,7 +35,6 @@ class Operator {
   virtual LogicalNode* NewProperLogicalNode();
 
   virtual bool IsLossOp() const { return false; }
-  virtual bool IsDecodeOp() const { return false; }
   virtual bool IsRecurrentOp() const { return false; }
   virtual bool IsEmbeddingLookupOp() const { return false; }
 
@@ -204,6 +203,10 @@ class Operator {
   void EnrollRepeatedInputBn(const std::string& ibn_prefix);
   void EnrollOutputBn(const std::string& obn, bool has_diff);
   void EnrollOutputBn(const std::string& obn) { EnrollOutputBn(obn, true); }
+  void EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num, bool has_diff);
+  void EnrollRepeatedOutputBn(const std::string& obn_prefix, bool has_diff);
+  void EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num);
+  void EnrollRepeatedOutputBn(const std::string& obn_prefix);
 
   // enroll model blobs
   void EnrollModelBn(const std::string& mbn);
@@ -220,7 +223,10 @@ class Operator {
   LogicalBlobId dtbn2lbi(const std::string& data_tmp_bn) const;
   LogicalBlobId fbbn2lbi(const std::string& fw_buf_bn) const { return dtbn2lbi(fw_buf_bn); }
   LogicalBlobId bbbn2lbi(const std::string& bw_buf_bn) const { return dtbn2lbi(bw_buf_bn); }
-
+  void InferTotalInstanceNumDesc(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                 const ParallelContext*,
+                                 std::function<void(OpContext*)> EnrollOpCtx) const;
+  std::string Bn2ConfName(const std::string& bn) const;
   PbMap<std::string, LogicalBlobId>* mut_bn_in_op2lbi() {
     return op_attribute_.mutable_bn_in_op2lbi();
   }
@@ -230,6 +236,8 @@ class Operator {
 
 std::string GenDiffBn(const std::string& bn);
 std::string GenUnDiffBn(const std::string& diff_bn);
+std::string GenRepeatedBn(const std::string& bn_prefix, int32_t idx);
+std::pair<std::string, int32_t> GenUnRepeatedBn(const std::string& bn);
 
 #define REGISTER_OP(op_type_case, OpType) \
   REGISTER_CLASS_WITH_ARGS(op_type_case, Operator, OpType, const OperatorConf&)

@@ -35,17 +35,25 @@ class Blob final {
   const int32_t* col_num() const { return col_num_ptr_; }
   int32_t* mut_col_num() { return col_num_ptr_; }
 
-  int32_t dim1_valid_num(int32_t no) const;
-  void set_dim1_valid_num(int32_t no, int32_t val);
+  int64_t dim0_valid_num(int64_t no) const;
+  void set_dim0_valid_num(int64_t no, int64_t val);
+  const int64_t* dim0_valid_num_ptr() const { return dim0_valid_num_ptr_; }
+  int64_t* mut_dim0_valid_num_ptr() { return dim0_valid_num_ptr_; }
 
-  const int32_t* dim1_valid_num() const { return dim1_valid_num_ptr_; }
-  int32_t* mut_dim1_valid_num() { return dim1_valid_num_ptr_; }
+  int64_t dim1_valid_num(int64_t no) const;
+  void set_dim1_valid_num(int64_t no, int64_t val);
+  const int64_t* dim1_valid_num_ptr() const { return dim1_valid_num_ptr_; }
+  int64_t* mut_dim1_valid_num_ptr() { return dim1_valid_num_ptr_; }
 
-  int32_t dim0_valid_num(int32_t no) const;
-  void set_dim0_valid_num(int32_t no, int32_t val);
+  int64_t dim2_valid_num(int64_t dim0, int64_t dim1) const;
+  void set_dim2_valid_num(int64_t dim0, int64_t dim1, int64_t val);
+  const int64_t* dim2_valid_num_ptr() const { return dim2_valid_num_ptr_; }
+  int64_t* mut_dim2_valid_num_ptr() { return dim2_valid_num_ptr_; }
 
-  const int32_t* dim0_valid_num() const { return dim0_valid_num_ptr_; }
-  int32_t* mut_dim0_valid_num() { return dim0_valid_num_ptr_; }
+  int64_t record_id_in_device_piece(int64_t no) const;
+  void set_record_id_in_device_piece(int64_t no, int64_t val);
+  const int64_t* record_id_in_device_piece_ptr() const { return record_id_in_device_piece_ptr_; }
+  int64_t* mut_record_id_in_device_piece_ptr() { return record_id_in_device_piece_ptr_; }
 
   const void* header_ptr() const { return header_ptr_; }
   void* mut_header_ptr() { return header_ptr_; }
@@ -85,12 +93,20 @@ class Blob final {
   DataType data_type() const { return blob_desc_->data_type(); }
   bool has_data_id_field() const { return blob_desc_->has_data_id_field(); }
   bool has_col_num_field() const { return blob_desc_->has_col_num_field(); }
+  bool has_dim0_valid_num_field() const { return blob_desc_->has_dim0_valid_num_field(); }
+  bool has_dim1_valid_num_field() const { return blob_desc_->has_dim1_valid_num_field(); }
+  bool has_dim2_valid_num_field() const { return blob_desc_->has_dim2_valid_num_field(); }
+  bool has_record_id_in_device_piece_field() const {
+    return blob_desc_->has_record_id_in_device_piece_field();
+  }
   int32_t max_col_num() const { return blob_desc_->max_col_num(); }
   size_t ByteSizeOfBlobHeader() const { return blob_desc_->ByteSizeOfBlobHeader(); }
   size_t ByteSizeOfDataIdField() const { return blob_desc_->ByteSizeOfDataIdField(); }
   size_t ByteSizeOfColNumField() const { return blob_desc_->ByteSizeOfColNumField(); }
   size_t ByteSizeOfDim0ValidNumField() const;
   size_t ByteSizeOfDim1ValidNumField() const;
+  size_t ByteSizeOfDim2ValidNumField() const;
+  size_t ByteSizeOfRecordIdInDevicePieceField() const;
   size_t ByteSizeOfDataContentField() const { return blob_desc_->ByteSizeOfDataContentField(); }
   size_t TotalByteSize() const { return blob_desc_->TotalByteSize(); }
 
@@ -101,7 +117,11 @@ class Blob final {
   void CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyDim0ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyDim1ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  void CopyDim2ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  void CopyRecordIdInDevicePieceFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
+
+  size_t CalcDim0ValidNumSum() const;
 
   int32_t col_id() const;
   void set_col_id(int32_t val);
@@ -118,10 +138,10 @@ class Blob final {
   int64_t GetDptrOffset(int32_t index) const { return 0; }
   template<typename... Int64s>
   int64_t GetDptrOffset(int32_t index, int64_t cur_dim, Int64s... remainder) const {
-    CHECK_GE(shape().NumAxes(), index + 1);
+    CHECK_GE(static_shape().NumAxes(), index + 1);
     CHECK_GE(cur_dim, 0);
-    CHECK_LT(cur_dim, shape().At(index));
-    return cur_dim * shape().Count(index + 1) + GetDptrOffset(index + 1, remainder...);
+    CHECK_LT(cur_dim, static_shape().At(index));
+    return cur_dim * static_shape().Count(index + 1) + GetDptrOffset(index + 1, remainder...);
   }
 
   template<typename T>
@@ -137,8 +157,10 @@ class Blob final {
   void* header_ptr_;
   char* data_id_ptr_;
   int32_t* col_num_ptr_;
-  int32_t* dim1_valid_num_ptr_;
-  int32_t* dim0_valid_num_ptr_;
+  int64_t* dim0_valid_num_ptr_;
+  int64_t* dim1_valid_num_ptr_;
+  int64_t* dim2_valid_num_ptr_;
+  int64_t* record_id_in_device_piece_ptr_;
   void* dptr_;
   const RtBlobDesc* blob_desc_;
   Regst* regst_;

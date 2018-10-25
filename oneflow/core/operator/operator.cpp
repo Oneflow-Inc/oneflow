@@ -76,6 +76,9 @@ void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> Get
                                 const ParallelContext* parallel_ctx,
                                 std::function<void(OpContext*)> EnrollOpCtx) const {
   InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, EnrollOpCtx);
+  if (op_attribute_.model_bns().size() > 0) {
+    InferTotalInstanceNumDesc(GetBlobDesc4BnInOp, parallel_ctx, EnrollOpCtx);
+  }
 }
 
 void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -191,15 +194,6 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
     if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_col_num_field)) {
       kernel_conf->set_need_do_col_num(true);
     }
-    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_dim1_valid_num_field)) {
-      kernel_conf->set_need_do_dim1_valid_num(true);
-      if (DoAllBlobDescHaveField(GetBlobDesc4BnInOp, input_bns(),
-                                 &BlobDesc::has_dim1_valid_num_field)
-          && DoAllBlobDescHaveField(GetBlobDesc4BnInOp, output_bns(),
-                                    &BlobDesc::has_dim1_valid_num_field)) {
-        kernel_conf->set_can_naive_do_dim1_valid_num(true);
-      }
-    }
     if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_dim0_valid_num_field)) {
       kernel_conf->set_need_do_dim0_valid_num(true);
       if (DoAllBlobDescHaveField(GetBlobDesc4BnInOp, input_bns(),
@@ -208,6 +202,22 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
                                     &BlobDesc::has_dim0_valid_num_field)
           && HaveSameDim0InnerShape(GetBlobDesc4BnInOp, input_bns(), output_bns())) {
         kernel_conf->set_can_naive_do_dim0_valid_num(true);
+      }
+    }
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_dim1_valid_num_field)) {
+      kernel_conf->set_need_do_dim1_valid_num(true);
+    }
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_dim2_valid_num_field)) {
+      kernel_conf->set_need_do_dim2_valid_num(true);
+    }
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns,
+                             &BlobDesc::has_record_id_in_device_piece_field)) {
+      kernel_conf->set_need_do_record_id_in_device_piece(true);
+      if (DoAllBlobDescHaveField(GetBlobDesc4BnInOp, input_bns(),
+                                 &BlobDesc::has_record_id_in_device_piece_field)
+          && DoAllBlobDescHaveField(GetBlobDesc4BnInOp, output_bns(),
+                                    &BlobDesc::has_record_id_in_device_piece_field)) {
+        kernel_conf->set_can_naive_do_record_id_in_device_piece(true);
       }
     }
   }
@@ -241,25 +251,23 @@ int64_t Operator::cudnn_buf_limit_byte() const {
   return cudnn_buf_limit_mbyte * 1024 * 1024;
 }
 
-LogicalBlobId Operator::ibn2lbi(const std::string& input_bn) const {
-  const google::protobuf::Descriptor* desc = GetCustomizedConf().GetDescriptor();
-  const google::protobuf::FieldDescriptor* fd = desc->FindFieldByName(input_bn);
-  std::string name;
+std::string Operator::Bn2ConfName(const std::string& bn) const {
+  const PbFd* fd = GetCustomizedConf().GetDescriptor()->FindFieldByName(bn);
   if (fd) {
-    name = GetValFromCustomizedConf<std::string>(input_bn);
+    return GetValFromCustomizedConf<std::string>(bn);
   } else {
-    size_t underline_pos = input_bn.rfind('_');
-    CHECK_NE(underline_pos, std::string::npos);
-    std::string ibn_prefix = input_bn.substr(0, underline_pos);
-    int32_t ibn_idx = oneflow_cast<int32_t>(input_bn.substr(underline_pos + 1));
-    name = GetPbRpfFromCustomizedConf<std::string>(ibn_prefix).Get(ibn_idx);
+    const std::pair<std::string, int32_t> prefix_idx = GenUnRepeatedBn(bn);
+    return GetPbRpfFromCustomizedConf<std::string>(prefix_idx.first).Get(prefix_idx.second);
   }
-  return GenLogicalBlobId(name);
+}
+
+LogicalBlobId Operator::ibn2lbi(const std::string& input_bn) const {
+  return GenLogicalBlobId(Bn2ConfName(input_bn));
 }
 LogicalBlobId Operator::obn2lbi(const std::string& output_bn) const {
   LogicalBlobId ret;
   ret.set_op_name(op_name());
-  ret.set_blob_name(GetValFromCustomizedConf<std::string>(output_bn));
+  ret.set_blob_name(Bn2ConfName(output_bn));
   return ret;
 }
 LogicalBlobId Operator::cmbn2lbi(const std::string& const_model_bn) const {
@@ -314,10 +322,7 @@ void Operator::EnrollInputBn(const std::string& ibn, bool has_diff) {
 }
 
 void Operator::EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num, bool has_diff) {
-  FOR_RANGE(int32_t, i, 0, num) {
-    std::string ibn = ibn_prefix + "_" + std::to_string(i);
-    EnrollInputBn(ibn, has_diff);
-  }
+  FOR_RANGE(int32_t, i, 0, num) { EnrollInputBn(GenRepeatedBn(ibn_prefix, i), has_diff); }
 }
 
 void Operator::EnrollRepeatedInputBn(const std::string& ibn_prefix, bool has_diff) {
@@ -343,17 +348,40 @@ void Operator::EnrollOutputBn(const std::string& obn, bool has_diff) {
     CHECK(mut_bn_in_op2lbi()->insert({odbn, lbi}).second);
   }
 }
+
+void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num, bool has_diff) {
+  FOR_RANGE(int32_t, i, 0, num) { EnrollOutputBn(GenRepeatedBn(obn_prefix, i), has_diff); }
+}
+
+void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix, bool has_diff) {
+  EnrollRepeatedOutputBn(obn_prefix, GetPbRpfFromCustomizedConf<std::string>(obn_prefix).size(),
+                         has_diff);
+}
+
+void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num) {
+  EnrollRepeatedOutputBn(obn_prefix, num, true);
+}
+
+void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix) {
+  EnrollRepeatedOutputBn(obn_prefix, true);
+}
+
 void Operator::EnrollModelBn(const std::string& mbn) {
   if (op_conf().trainable() == false) {
     EnrollConstModelBn(mbn);
     return;
   }
-  LogicalBlobId lbi = mbn2lbi(mbn);
-  *(mut_model_bns()->Add()) = mbn;
-  CHECK(mut_bn_in_op2lbi()->insert({mbn, lbi}).second);
-  std::string mdbn = GenDiffBn(mbn);
-  *(mut_model_diff_bns()->Add()) = mdbn;
-  CHECK(mut_bn_in_op2lbi()->insert({mdbn, lbi}).second);
+  auto Enroll = [&](const std::string& mbn) {
+    LogicalBlobId lbi = mbn2lbi(mbn);
+    *(mut_model_bns()->Add()) = mbn;
+    CHECK(mut_bn_in_op2lbi()->insert({mbn, lbi}).second);
+    std::string mdbn = GenDiffBn(mbn);
+    *(mut_model_diff_bns()->Add()) = mdbn;
+    CHECK(mut_bn_in_op2lbi()->insert({mdbn, lbi}).second);
+  };
+  Enroll(mbn);
+  auto it = op_attribute_.bn_in_op2lbi().find("total_instance_num");
+  if (it == op_attribute_.bn_in_op2lbi().end()) { Enroll("total_instance_num"); }
 }
 void Operator::EnrollModelDiffBn(const std::string& mdbn) {
   LogicalBlobId lbi = mbn2lbi(mdbn);
@@ -387,10 +415,43 @@ LogicalBlobId Operator::dtbn2lbi(const std::string& data_tmp_bn) const {
   return lbi;
 }
 
+void Operator::InferTotalInstanceNumDesc(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, std::function<void(OpContext*)> EnrollOpCtx) const {
+  CHECK_GE(op_attribute_.model_bns().size(), 2);
+  auto it = op_attribute_.bn_in_op2lbi().find("total_instance_num");
+  if (it != op_attribute_.bn_in_op2lbi().end()) {
+    GetBlobDesc4BnInOp("total_instance_num")->mut_shape() = Shape({1});
+    for (const std::string& bn : op_attribute_.model_bns()) {
+      if (bn != "total_instance_num") {
+        GetBlobDesc4BnInOp("total_instance_num")
+            ->set_data_type(GetBlobDesc4BnInOp(bn)->data_type());
+        break;
+      }
+    }
+  }
+}
+
 std::string GenDiffBn(const std::string& bn) { return bn + "_diff"; }
 std::string GenUnDiffBn(const std::string& diff_bn) {
   CHECK_STREQ(diff_bn.substr(diff_bn.size() - 5).c_str(), "_diff");
   return diff_bn.substr(0, diff_bn.size() - 5);
+}
+
+std::string GenRepeatedBn(const std::string& bn_prefix, int32_t idx) {
+  CHECK_GE(idx, 0);
+  return bn_prefix + "_" + std::to_string(idx);
+}
+
+std::pair<std::string, int32_t> GenUnRepeatedBn(const std::string& bn) {
+  const size_t underline_pos = bn.rfind('_');
+  CHECK_NE(underline_pos, std::string::npos);
+  CHECK_GT(underline_pos, 0);
+  CHECK_LT(underline_pos, bn.size() - 1);
+  const std::string prefix = bn.substr(0, underline_pos);
+  const int32_t idx = oneflow_cast<int32_t>(bn.substr(underline_pos + 1));
+  CHECK_GE(idx, 0);
+  return std::make_pair(prefix, idx);
 }
 
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf) {

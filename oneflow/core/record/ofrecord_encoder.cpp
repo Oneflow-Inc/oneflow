@@ -1,7 +1,7 @@
 #include "oneflow/core/record/ofrecord_encoder.h"
 #include "oneflow/core/record/ofrecord_raw_encoder.h"
 #include "oneflow/core/record/ofrecord_jpeg_encoder.h"
-#include "oneflow/core/record/ofrecord_protobuf_encoder.h"
+#include "oneflow/core/record/ofrecord_bytes_list_encoder.h"
 
 namespace oneflow {
 
