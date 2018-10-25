@@ -8,6 +8,8 @@
 #include "oneflow/core/graph/pack_forward_task_node.h"
 #include "oneflow/core/graph/unpack_forward_task_node.h"
 #include "oneflow/core/graph/unpack_backward_task_node.h"
+#include "oneflow/core/graph/repeat_forward_compute_task_node.h"
+#include "oneflow/core/graph/repeat_backward_compute_task_node.h"
 
 namespace oneflow {
 
@@ -288,6 +290,8 @@ DECLARE_REDUCE_LOGICAL_NODE(NcclAllReduceLogicalNode);
 DECLARE_REDUCE_LOGICAL_NODE(NcclAllGatherLogicalNode);
 DECLARE_REDUCE_LOGICAL_NODE(NcclReduceScatterLogicalNode);
 
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatForward);
+DECLARE_DERIVED_BACKWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatBackward);
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_GRAPH_LOGICAL_NODE_H_
