@@ -106,18 +106,16 @@ class Kernel {
   }
   virtual void BackwardActivation(const KernelCtx& ctx, const Blob* out_blob,
                                   const Blob* out_diff_blob, Blob* bw_activation_blob) const {}
-  virtual int32_t CalcInstanceNumSum(const int32_t index,
-                                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-    UNIMPLEMENTED();
-  }
   virtual void SetTotalInstanceNumDiffBlob(
-      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+      const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
   virtual const PbMessage& GetCustomizedOpConf() const { UNIMPLEMENTED(); }
   virtual const PbMessage& GetCustomizedKernelConf() const { UNIMPLEMENTED(); }
   bool HasEmptyShapeBlob(const PbRpf<std::string>& bns,
                          const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  void CheckSameDim0ValidNum(const PbRpf<std::string>& bns,
+                             const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 
 #define DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF(conf_type)                                   \
   template<typename T>                                                                   \
@@ -188,10 +186,9 @@ class KernelIfWithModel : virtual public KernelIf<device_type> {
   virtual ~KernelIfWithModel() = default;
 
  private:
-  int32_t CalcInstanceNumSum(const int32_t index,
-                             std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void SetTotalInstanceNumDiffBlob(
-      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+      const KernelCtx& ctx,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
 
  protected:
   KernelIfWithModel() = default;

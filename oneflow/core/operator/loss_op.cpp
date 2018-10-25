@@ -6,6 +6,7 @@ void LossOp::InitFromOpConf() {
   EnrollInputBn("prediction");
   EnrollInputBn("label", false);
   EnrollOutputBn("loss", false);
+  EnrollOutputBn("loss_instance_num", false);
   if (!GetValFromCustomizedConf<std::string>("weight").empty()) {
     EnrollInputBn("weight", false);
     EnrollOutputBn("reduction_coefficient", false);
@@ -38,6 +39,11 @@ void LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   loss_blob_desc->mut_shape() = Shape({pred_blob_desc->shape().At(0)});
   loss_blob_desc->set_data_type(pred_blob_desc->data_type());
   loss_blob_desc->set_has_data_id_field(pred_blob_desc->has_data_id_field());
+  // loss instance num
+  BlobDesc* loss_instance_num_blob_desc = GetBlobDesc4BnInOp("loss_instance_num");
+  loss_instance_num_blob_desc->mut_shape() = Shape({1});
+  loss_instance_num_blob_desc->set_data_type(pred_blob_desc->data_type());
+  loss_instance_num_blob_desc->set_has_data_id_field(pred_blob_desc->has_data_id_field());
 
   if (!GetValFromCustomizedConf<std::string>("weight").empty()) {
     // reduction_coefficient
@@ -46,6 +52,19 @@ void LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
     reduction_blob_desc->set_data_type(pred_blob_desc->data_type());
   }
   VirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
+}
+
+LogicalBlobId LossOp::obn2lbi(const std::string& output_bn) const {
+  LogicalBlobId ret;
+  ret.set_op_name(op_name());
+  if (output_bn == "loss_instance_num") {
+    ret.set_blob_name("loss_instance_num");
+  } else if (output_bn == "reduction_coefficient") {
+    ret.set_blob_name("reduction_coefficient");
+  } else {
+    ret.set_blob_name(GetValFromCustomizedConf<std::string>(output_bn));
+  }
+  return ret;
 }
 
 }  // namespace oneflow
