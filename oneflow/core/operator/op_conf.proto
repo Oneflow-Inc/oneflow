@@ -647,7 +647,7 @@ message NormalizationOpConf {
   optional ActivationType activation = 13 [default = kNone];
 }
 
-message FpnCollectOpConf{
+message FpnCollectOpConf {
   repeated string rpn_rois_fpn = 1;
   repeated string rpn_roi_probs_fpn = 2;
   required string out = 3;
