@@ -673,6 +673,19 @@ message HingeLossOpConf {
   optional Norm norm = 7[default = L1];
 }
 
+message PackOpConf {
+  required string in = 1;
+  required string out = 2;
+  required int32 pack_num = 3;
+  required string related_unpack = 4;
+}
+
+message UnpackOpConf {
+  required string in = 1;
+  required string out = 2;
+  required int32 unpack_num = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -740,6 +753,8 @@ message OperatorConf {
     AccuracyPrintOpConf accuracy_print_conf = 234;
     LossPrintOpConf loss_print_conf = 235;
     DefineTestBlobConf define_test_blob_conf = 236;
+    PackOpConf pack_conf = 237;
+    UnpackOpConf unpack_conf = 238;
   }
 }
 

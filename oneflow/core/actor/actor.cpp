@@ -422,21 +422,16 @@ void Actor::AsyncSendRegstMsgToConsumer(Regst* regst) {
 
 void Actor::AsyncSendRegstMsgToConsumer(Regst* regst, std::function<bool(int64_t)> IsAllowedActor) {
   int64_t real_consumer_cnt = HandleRegstToConsumer(regst, IsAllowedActor);
-  if (real_consumer_cnt > 0) {
-    CHECK_EQ(0, naive_produced_rs_.TryPopFrontRegst(regst->regst_desc_id()));
-  }
+  if (real_consumer_cnt > 0) { naive_produced_rs_.TryPopFrontRegst(regst->regst_desc_id()); }
 }
 
 void Actor::HandleConsumedNaiveDataRegstToProducer(std::function<bool(Regst*)> IsAllowedRegst) {
-  std::vector<int64_t> regst_desc_ids;
   naive_consumed_rs_.ForEachFrontRegst([&](Regst* regst) {
     if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) {
       if (IsAllowedRegst(regst) == false) { return; }
       AsyncSendRegstMsgToProducer(regst);
-      regst_desc_ids.push_back(regst->regst_desc_id());
     }
   });
-  naive_consumed_rs_.PopFrontRegsts(regst_desc_ids);
 }
 
 void Actor::AsyncSendEORDMsgForAllProducedRegstDesc() {
@@ -458,6 +453,7 @@ void Actor::AsyncSendRegstMsgToProducer(Regst* regst) {
 
 void Actor::AsyncSendRegstMsgToProducer(Regst* regst, int64_t producer) {
   AsyncSendMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, producer, regst));
+  naive_consumed_rs_.TryPopFrontRegst(regst->regst_desc_id());
 }
 
 Regst* Actor::GetSoleProducedRegst4RegstDescId(int64_t regst_desc_id) {

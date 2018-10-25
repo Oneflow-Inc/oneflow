@@ -3,11 +3,13 @@
 namespace oneflow {
 
 bool IsForwardTaskType(TaskType tt) {
-  return tt == TaskType::kNormalForward || tt == TaskType::kRecurrentForward;
+  return tt == TaskType::kNormalForward || tt == TaskType::kRecurrentForward
+         || tt == TaskType::kPackForward || tt == TaskType::kUnpackForward;
 }
 
 bool IsBackwardTaskType(TaskType tt) {
-  return tt == TaskType::kNormalBackward || tt == TaskType::kRecurrentBackward;
+  return tt == TaskType::kNormalBackward || tt == TaskType::kRecurrentBackward
+         || tt == TaskType::kPackBackward || tt == TaskType::kUnpackBackward;
 }
 
 bool IsMdUpdtTaskType(TaskType tt) { return tt == TaskType::kNormalMdUpdt; }
@@ -415,5 +417,7 @@ std::map<TaskType, std::string> task_type2color = {
     {kNcclAllReduce, "2"},  {kNcclReduceScatter, "2"},
     {kNcclAllGather, "2"},  {kAccuracy, "4"},
     {kAccuracyPrint, "1"},  {kAccuracyAcc, "5"},
-    {kDecodeRandom, "1"}};
+    {kDecodeRandom, "1"},   {kPackForward, "11"},
+    {kPackBackward, "12"},  {kUnpackForward, "11"},
+    {kUnpackBackward, "12"}};
 }  // namespace oneflow
