@@ -140,13 +140,14 @@ void ProposalTargetKernel<T>::Output(const std::function<Blob*(const std::string
   Blob* bbox_targets_blob = BnInOp2Blob("bbox_targets");
   Blob* bbox_inside_weights_blob = BnInOp2Blob("bbox_inside_weights");
   Blob* bbox_outside_weights_blob = BnInOp2Blob("bbox_outside_weights");
-  std::memset(out_rois_blob->mut_dptr(), 0, out_rois_blob->shape().elem_cnt() * sizeof(T));
-  std::memset(labels_blob->mut_dptr(), 0, labels_blob->shape().elem_cnt() * sizeof(int32_t));
-  std::memset(bbox_targets_blob->mut_dptr(), 0, bbox_targets_blob->shape().elem_cnt() * sizeof(T));
+  std::memset(out_rois_blob->mut_dptr(), 0, out_rois_blob->static_shape().elem_cnt() * sizeof(T));
+  std::memset(labels_blob->mut_dptr(), 0, labels_blob->static_shape().elem_cnt() * sizeof(int32_t));
+  std::memset(bbox_targets_blob->mut_dptr(), 0,
+              bbox_targets_blob->static_shape().elem_cnt() * sizeof(T));
   std::memset(bbox_inside_weights_blob->mut_dptr(), 0,
-              bbox_inside_weights_blob->shape().elem_cnt() * sizeof(T));
+              bbox_inside_weights_blob->static_shape().elem_cnt() * sizeof(T));
   std::memset(bbox_outside_weights_blob->mut_dptr(), 0,
-              bbox_outside_weights_blob->shape().elem_cnt() * sizeof(T));
+              bbox_outside_weights_blob->static_shape().elem_cnt() * sizeof(T));
 
   FOR_RANGE(size_t, i, 0, boxes.size()) {
     int32_t gt_index = boxes.GetMaxOverlapWithIndex(i);
