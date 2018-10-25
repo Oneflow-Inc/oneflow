@@ -408,6 +408,11 @@ message PrintOpConf {
   optional int32 part_name_suffix_length = 4 [default = -1];
 }
 
+message LogCounterOpConf {
+  required string in = 1;
+  optional int32 interval = 2 [default = 1];
+}
+
 message LossPrintOpConf {
   required LogicalBlobId loss_lbi = 1;
   required LogicalBlobId loss_instance_num_lbi = 2;
@@ -764,6 +769,7 @@ message OperatorConf {
     PackOpConf pack_conf = 237;
     UnpackOpConf unpack_conf = 238;
     RepeatOpConf repeat_conf = 239;
+    LogCounterOpConf log_counter_conf = 240;
   }
 }
 
