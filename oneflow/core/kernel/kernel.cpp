@@ -14,6 +14,16 @@ void CheckSameDim0ValidNum(const PbRpf<std::string>& bns,
   }
 }
 
+void ClearBlobDim0ValidNumIfNeed(const PbRpf<std::string>& bns,
+                                 const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+  for (const auto& bn : bns) {
+    Blob* blob = BnInOp2Blob(bn);
+    if (blob != nullptr && blob->has_dim0_valid_num_field()) {
+      std::memset(blob->mut_dim0_valid_num_ptr(), 0, blob->ByteSizeOfDim0ValidNumField());
+    }
+  }
+}
+
 }  // namespace
 
 void Kernel::Init(const ParallelContext* parallel_ctx, const KernelConf& kernel_conf,
@@ -77,6 +87,7 @@ void Kernel::Forward(const KernelCtx& ctx,
     ForwardDim0ValidNum(ctx, BnInOp2Blob);
   }
   if (HasEmptyShapeBlob(op_attribute().input_bns(), BnInOp2Blob) && !NeedForwardIfBlobEmpty()) {
+    ClearBlobDim0ValidNumIfNeed(op_attribute().output_bns(), BnInOp2Blob);
     return;
   }
   if (kernel_conf_.need_do_dim1_valid_num()) {
@@ -118,6 +129,7 @@ void Kernel::Backward(const KernelCtx& ctx,
   }
   if (HasEmptyShapeBlob(op_attribute().output_diff_bns(), BnInOp2Blob)
       && !NeedBackwardIfBlobEmpty()) {
+    ClearBlobDim0ValidNumIfNeed(op_attribute().input_diff_bns(), BnInOp2Blob);
     return;
   }
   CHECK_EQ(false, HasEmptyShapeBlob(op_attribute().model_diff_bns(), BnInOp2Blob));
