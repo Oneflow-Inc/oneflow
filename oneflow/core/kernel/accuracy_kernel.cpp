@@ -5,40 +5,37 @@ namespace oneflow {
 template<DeviceType device_type, typename PredType, typename LabelType>
 void AccuracyKernel<device_type, PredType, LabelType>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* X = BnInOp2Blob("prediction");
-  const Blob* label = BnInOp2Blob("label");
-  Blob* accuracy = BnInOp2Blob("accuracy");
-  auto kernel_conf = this->kernel_conf();
-  const int32_t top_k = kernel_conf.op_attribute().op_conf().accuracy_conf().top_k();
-  int32_t N = BnInOp2Blob("prediction")->shape().At(0);
-  int32_t D = BnInOp2Blob("prediction")->shape().Count(1);
-  CHECK_EQ(label->shape().NumAxes(), 1);
-  CHECK_EQ(X->blob_desc().shape().At(0), N);
+  const Blob* prediction_blob = BnInOp2Blob("prediction");
+  const Blob* label_blob = BnInOp2Blob("label");
+  CHECK_EQ(label_blob->shape().NumAxes(), 1);
+  Blob* accuracy_blob = BnInOp2Blob("accuracy");
+  const int32_t top_k = this->kernel_conf().op_attribute().op_conf().accuracy_conf().top_k();
+  int32_t n = prediction_blob->shape().At(0);
+  int32_t d = prediction_blob->shape().Count(1);
 
+  Memset<device_type>(ctx.device_ctx, accuracy_blob->mut_dptr<PredType>(), 0,
+                      accuracy_blob->ByteSizeOfDataContentField());
   AccuracyKernelUtil<device_type, PredType, LabelType>::Forward(
-      ctx.device_ctx, N, D, top_k, X->dptr<PredType>(), label->dptr<LabelType>(),
-      accuracy->mut_dptr<PredType>());
+      ctx.device_ctx, n, d, top_k, prediction_blob->dptr<PredType>(), label_blob->dptr<LabelType>(),
+      accuracy_blob->mut_dptr<PredType>());
 }
 
 template<typename PredType, typename LabelType>
 struct AccuracyKernelUtil<DeviceType::kCPU, PredType, LabelType> {
-  static void Forward(DeviceCtx* ctx, const int32_t N, const int32_t D, int32_t top_k,
-                      const PredType* XData, const LabelType* labelData, PredType* accuracyData) {
-    int correct = 0;
-    for (int i = 0; i < N; ++i) {
-      auto label_i = labelData[i];
-      auto label_pred = XData[i * D + label_i];
-      int cnt = 1;
-      for (int j = 0; j < D; ++j) {
-        auto pred = XData[i * D + j];
-        if (pred > label_pred) {
+  static void Forward(DeviceCtx* ctx, const int32_t n, const int32_t d, int32_t top_k,
+                      const PredType* prediction, const LabelType* label, PredType* accuracy) {
+    for (int32_t i = 0; i < n; ++i) {
+      const LabelType label_i = label[i];
+      const PredType pred_i = prediction[i * d + label_i];
+      int32_t cnt = 1;
+      for (int32_t j = 0; j < d; ++j) {
+        if (prediction[i * d + j] > pred_i) {
           if (++cnt > top_k) { break; }
         }
       }
-      if (cnt <= top_k) { ++correct; }
+      if (cnt <= top_k) { *accuracy += 1; }
     }
-    CHECK_LE(correct, N);
-    *accuracyData = static_cast<PredType>(correct);
+    CHECK_LE(*accuracy, n);
   }
 };
 

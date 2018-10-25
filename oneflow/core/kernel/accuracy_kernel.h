@@ -2,7 +2,6 @@
 #define ONEFLOW_CORE_KERNEL_ACCURACY_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/kernel/kernel_context.h"
 
 namespace oneflow {
 
@@ -20,8 +19,8 @@ class AccuracyKernel final : public KernelIf<device_type> {
 
 template<DeviceType device_type, typename PredType, typename LabelType>
 struct AccuracyKernelUtil {
-  static void Forward(DeviceCtx* ctx, const int32_t N, const int32_t D, int32_t top_k,
-                      const PredType* XData, const LabelType* labelData, PredType* accuracyData);
+  static void Forward(DeviceCtx* ctx, const int32_t n, const int32_t d, int32_t top_k,
+                      const PredType* prediction, const LabelType* label, PredType* accuracy);
 };
 
 }  // namespace oneflow

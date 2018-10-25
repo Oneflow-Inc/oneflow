@@ -9,43 +9,41 @@
 namespace oneflow {
 
 namespace {
-template<typename PredType>
-__global__ void AccuracySetZeroKernel(PredType* accuracy) {
-  *accuracy = 0;
-}
 
 template<typename PredType, typename LabelType>
-__global__ void AccuracyComputeKernel(const int32_t N, const int32_t D, const int32_t top_k,
-                                      const PredType* Xdata, const LabelType* labelData,
+__global__ void AccuracyComputeKernel(const int32_t n, const int32_t d, const int32_t top_k,
+                                      const PredType* prediction, const LabelType* label,
                                       PredType* accuracy) {
   typedef cub::BlockReduce<int32_t, kCudaThreadsNumPerBlock> BlockReduce;
   __shared__ typename BlockReduce::TempStorage temp_storage;
   int32_t correct = 0;
-  for (int32_t row = blockIdx.x; row < N; row += gridDim.x) {
-    const LabelType label = labelData[row];
-    const PredType label_pred = Xdata[row * D + label];
-    int32_t ngt = 0;
-    for (int32_t col = threadIdx.x; col < D; col += blockDim.x) {
-      const PredType pred = Xdata[row * D + col];
-      if (pred > label_pred || (pred == label_pred && col <= label)) { ++ngt; }
+  for (int32_t i = blockIdx.x; i < n; i += gridDim.x) {
+    const LabelType label_i = label[i];
+    const PredType pred_i = prediction[i * d + label_i];
+    int32_t cnt = 1;
+    for (int32_t j = threadIdx.x; j < d; j += blockDim.x) {
+      if (prediction[i * d + j] > pred_i) {
+        if (++cnt > top_k) { break; }
+      }
     }
-    ngt = BlockReduce(temp_storage).Sum(ngt);
-    if (ngt <= top_k) { ++correct; }
+    cnt = BlockReduce(temp_storage).Sum(cnt);
+    if (cnt <= top_k) { ++correct; }
     __syncthreads();
   }
   if (threadIdx.x == 0) { gpu_atomic_add(accuracy, static_cast<PredType>(correct)); }
 }
+
 }  // namespace
 
 template<typename PredType, typename LabelType>
 struct AccuracyKernelUtil<DeviceType::kGPU, PredType, LabelType> {
-  static void Forward(DeviceCtx* ctx, const int32_t N, const int32_t D, int32_t top_k,
-                      const PredType* XData, const LabelType* labelData, PredType* accuracyData) {
-    AccuracySetZeroKernel<<<1, 1, 0, ctx->cuda_stream()>>>(accuracyData);
-    AccuracyComputeKernel<<<BlocksNum4ThreadsNum(N), kCudaThreadsNumPerBlock, 0,
-                            ctx->cuda_stream()>>>(N, D, top_k, XData, labelData, accuracyData);
+  static void Forward(DeviceCtx* ctx, const int32_t n, const int32_t d, int32_t top_k,
+                      const PredType* prediction, const LabelType* label, PredType* accuracy) {
+    AccuracyComputeKernel<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                            ctx->cuda_stream()>>>(n, d, top_k, prediction, label, accuracy);
   };
 };
+
 #define MAKE_ENTRY(data_type_pair, label_type_pair)                                      \
   template struct AccuracyKernelUtil<DeviceType::kGPU, OF_PP_PAIR_FIRST(data_type_pair), \
                                      OF_PP_PAIR_FIRST(label_type_pair)>;
