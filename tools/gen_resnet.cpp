@@ -86,12 +86,17 @@ std::string ResidualBlocks(const int layer_num, const std::string& in) {
   std::string op_out = in;
   // layer number -> building block number array(residual block 2, 3, 4, 5)
   HashMap<int, std::vector<int>> layer_num2bb_num = {
-      {50, {3, 4, 6, 3}}, {101, {3, 4, 23, 3}}, {152, {3, 8, 36, 3}},
+      {50, {3, 4, 6, 3}},
+      {101, {3, 4, 23, 3}},
+      {152, {3, 8, 36, 3}},
   };
 
   // filter num of each residual block
   int res_block_filter_num[4][2] = {
-      {64, 256}, {128, 512}, {256, 1024}, {512, 2048},
+      {64, 256},
+      {128, 512},
+      {256, 1024},
+      {512, 2048},
   };
 
   std::vector<int> bb_num = layer_num2bb_num[layer_num];
