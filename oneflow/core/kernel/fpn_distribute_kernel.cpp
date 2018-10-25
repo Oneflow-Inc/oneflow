@@ -1,5 +1,4 @@
 #include "oneflow/core/kernel/fpn_distribute_kernel.h"
-//#include "oneflow/core/kernel/faster_rcnn_util.h"
 #include "oneflow/core/kernel/bbox_util.h"
 
 namespace oneflow {
