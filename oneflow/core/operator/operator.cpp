@@ -211,13 +211,13 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
       kernel_conf->set_need_do_dim2_valid_num(true);
     }
     if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns,
-                             &BlobDesc::has_record_idx_in_device_piece_field)) {
-      kernel_conf->set_need_do_record_idx_in_device_piece(true);
+                             &BlobDesc::has_record_id_in_device_piece_field)) {
+      kernel_conf->set_need_do_record_id_in_device_piece(true);
       if (DoAllBlobDescHaveField(GetBlobDesc4BnInOp, input_bns(),
-                                 &BlobDesc::has_record_idx_in_device_piece_field)
+                                 &BlobDesc::has_record_id_in_device_piece_field)
           && DoAllBlobDescHaveField(GetBlobDesc4BnInOp, output_bns(),
-                                    &BlobDesc::has_record_idx_in_device_piece_field)) {
-        kernel_conf->set_can_naive_do_record_idx_in_device_piece(true);
+                                    &BlobDesc::has_record_id_in_device_piece_field)) {
+        kernel_conf->set_can_naive_do_record_id_in_device_piece(true);
       }
     }
   }
@@ -324,10 +324,7 @@ void Operator::EnrollInputBn(const std::string& ibn, bool has_diff) {
 }
 
 void Operator::EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num, bool has_diff) {
-  FOR_RANGE(int32_t, i, 0, num) {
-    std::string ibn = ibn_prefix + "_" + std::to_string(i);
-    EnrollInputBn(ibn, has_diff);
-  }
+  FOR_RANGE(int32_t, i, 0, num) { EnrollInputBn(GenRepeatedBn(ibn_prefix, i), has_diff); }
 }
 
 void Operator::EnrollRepeatedInputBn(const std::string& ibn_prefix, bool has_diff) {
@@ -353,6 +350,24 @@ void Operator::EnrollOutputBn(const std::string& obn, bool has_diff) {
     CHECK(mut_bn_in_op2lbi()->insert({odbn, lbi}).second);
   }
 }
+
+void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num, bool has_diff) {
+  FOR_RANGE(int32_t, i, 0, num) { EnrollOutputBn(GenRepeatedBn(obn_prefix, i), has_diff); }
+}
+
+void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix, bool has_diff) {
+  EnrollRepeatedOutputBn(obn_prefix, GetPbRpfFromCustomizedConf<std::string>(obn_prefix).size(),
+                         has_diff);
+}
+
+void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num) {
+  EnrollRepeatedOutputBn(obn_prefix, num, true);
+}
+
+void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix) {
+  EnrollRepeatedOutputBn(obn_prefix, true);
+}
+
 void Operator::EnrollModelBn(const std::string& mbn) {
   if (op_conf().trainable() == false) {
     EnrollConstModelBn(mbn);
@@ -423,6 +438,11 @@ std::string GenDiffBn(const std::string& bn) { return bn + "_diff"; }
 std::string GenUnDiffBn(const std::string& diff_bn) {
   CHECK_STREQ(diff_bn.substr(diff_bn.size() - 5).c_str(), "_diff");
   return diff_bn.substr(0, diff_bn.size() - 5);
+}
+
+std::string GenRepeatedBn(const std::string& bn_prefix, int32_t idx) {
+  CHECK_GE(idx, 0);
+  return bn_prefix + "_" + std::to_string(idx);
 }
 
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf) {

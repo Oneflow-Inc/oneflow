@@ -494,15 +494,11 @@ message EncodeConf {
   oneof encode {
     EncodeRaw raw = 1;
     EncodeJpeg jpeg = 2;
-    EncodeProtobuf protobuf = 3;
-    EncodeBytesList bytes_list = 4;
+    EncodeBytesList bytes_list = 3;
   }
 }
 
 message EncodeBytesList {
-}
-
-message EncodeProtobuf {
 }
 
 message EncodeRaw {
@@ -574,7 +570,7 @@ message DefineTestBlobConf {
   optional int64 dim0_valid_num = 5;
   optional int64 dim1_valid_num = 6;
   optional int64 dim2_valid_num = 7;
-  repeated int64 record_idx_in_device_piece = 8;
+  repeated int64 record_id_in_device_piece = 8;
 }
 
 message NormalizationOpConf {

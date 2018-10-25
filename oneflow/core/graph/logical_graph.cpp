@@ -418,8 +418,8 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
   HashMap<const LogicalNode*, NormalMdUpdtLogicalNode*> first_shared2mdupdt;
   HashMap<const LogicalNode*, ReduceCtx> fw_node2reduce_ctx;
   ForEachLogicalNode<ForwardLogicalNode>([&](ForwardLogicalNode* fw_logical) {
-    if (Global<JobDesc>::Get()->enable_write_snapshot()
-        && fw_logical->HasOpWithForwardModelBlob()) {
+    if (Global<JobDesc>::Get()->enable_write_snapshot() && fw_logical->HasOpWithForwardModelBlob()
+        && fw_logical->SoleOp()->op_conf().trainable()) {
       BuildMdSaveStruct(fw_logical, fw_logical);
     }
     if (fw_logical->HasOpWithModelOrConstModelBlob()) {
