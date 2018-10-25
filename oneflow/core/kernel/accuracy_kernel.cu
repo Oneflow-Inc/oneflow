@@ -20,14 +20,15 @@ __global__ void AccuracyComputeKernel(const int32_t n, const int32_t d, const in
   for (int32_t i = blockIdx.x; i < n; i += gridDim.x) {
     const LabelType label_i = label[i];
     const PredType pred_i = prediction[i * d + label_i];
-    int32_t cnt = 1;
+    int32_t ngt = 0;
     for (int32_t j = threadIdx.x; j < d; j += blockDim.x) {
-      if (prediction[i * d + j] > pred_i) {
-        if (++cnt > top_k) { break; }
+      const PredType pred_tmp = prediction[i * d + j];
+      if ((pred_tmp > pred_i) || (pred_tmp == pred_i && j <= label_i)) {
+        if (++ngt > top_k) { break; }
       }
     }
-    cnt = BlockReduce(temp_storage).Sum(cnt);
-    if (cnt <= top_k) { ++correct; }
+    ngt = BlockReduce(temp_storage).Sum(ngt);
+    if (ngt <= top_k) { ++correct; }
     __syncthreads();
   }
   if (threadIdx.x == 0) { gpu_atomic_add(accuracy, static_cast<PredType>(correct)); }
