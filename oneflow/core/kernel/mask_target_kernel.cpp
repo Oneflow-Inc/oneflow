@@ -136,9 +136,9 @@ void MaskTargetKernel<T>::Segm2BBox(const PolygonList& segm, SegmBBox* bbox) con
     float one_bbox_elem[SegmBBox::ElemCnt];
     SegmBBox* one_bbox = SegmBBox::Cast(one_bbox_elem);
     Polygon2BBox(segm.polygons(i), one_bbox);
-    bbox->set_corner_coord(
-        std::min(bbox->left(), one_bbox->left()), std::min(bbox->top(), one_bbox->top()),
-        std::max(bbox->right(), one_bbox->right()), std::max(bbox->bottom(), one_bbox->bottom()));
+    bbox->set_ltrb(std::min(bbox->left(), one_bbox->left()), std::min(bbox->top(), one_bbox->top()),
+                   std::max(bbox->right(), one_bbox->right()),
+                   std::max(bbox->bottom(), one_bbox->bottom()));
   }
 }
 
@@ -147,11 +147,10 @@ void MaskTargetKernel<T>::Polygon2BBox(const FloatList& polygon, SegmBBox* bbox)
   const PbRf<float>& xy = polygon.value();
   CHECK_EQ(xy.size() % 2, 0);
   CHECK_GE(xy.size() / 2, 3);
-  bbox->set_corner_coord(xy[0], xy[1], xy[0], xy[1]);
+  bbox->set_ltrb(xy[0], xy[1], xy[0], xy[1]);
   FOR_RANGE(int32_t, i, 1, polygon.value_size() / 2) {
-    bbox->set_corner_coord(std::min(bbox->left(), xy[i * 2]), std::min(bbox->top(), xy[i * 2 + 1]),
-                           std::max(bbox->right(), xy[i * 2]),
-                           std::max(bbox->bottom(), xy[i * 2 + 1]));
+    bbox->set_ltrb(std::min(bbox->left(), xy[i * 2]), std::min(bbox->top(), xy[i * 2 + 1]),
+                   std::max(bbox->right(), xy[i * 2]), std::max(bbox->bottom(), xy[i * 2 + 1]));
   }
 }
 

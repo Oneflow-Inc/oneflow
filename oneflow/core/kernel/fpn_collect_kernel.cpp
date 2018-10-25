@@ -54,8 +54,8 @@ void FpnCollectKernel<T>::ForwardDataContent(
   FOR_RANGE(size_t, i, 0, roi_inds.size()) {
     const auto* roi_bbox = GetRoiBBox(roi_inds.GetIndex(i));
     auto* out_roi_bbox = MutBBox::Cast(out_blob->mut_dptr<T>());
-    out_roi_bbox[i].set_corner_coord(roi_bbox->left(), roi_bbox->top(), roi_bbox->right(),
-                                     roi_bbox->bottom());
+    out_roi_bbox[i].set_ltrb(roi_bbox->left(), roi_bbox->top(), roi_bbox->right(),
+                             roi_bbox->bottom());
     out_roi_bbox[i].set_index(roi_bbox->index());
     if (out_blob->has_record_id_in_device_piece_field()) {
       out_blob->set_record_id_in_device_piece(i, roi_bbox->index());

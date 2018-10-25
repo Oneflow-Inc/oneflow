@@ -18,6 +18,7 @@ const PbMessage& FpnDistributeOp::GetCustomizedConf() const {
 void FpnDistributeOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
+  const FpnDistributeOpConf& fpn_distribute_conf = op_conf().fpn_distribute_conf();
   // in: (post_nms_topn, 5)
   const BlobDesc* collected_rois_blob_desc = GetBlobDesc4BnInOp("collected_rois");
   CHECK_EQ(collected_rois_blob_desc->shape().At(1), 5);
@@ -29,15 +30,13 @@ void FpnDistributeOp::InferBlobDescs(
   }
   CHECK(collected_rois_blob_desc->has_record_id_in_device_piece_field());
   // out: rois (post_nms_topn, 5)
-  FOR_RANGE(int32_t, idx, 0, RepeatedObnSize("rois")) {
-    *GetBlobDesc4BnInOp(RepeatedObn("rois", idx)) = *collected_rois_blob_desc;
+  FOR_RANGE(int32_t, idx, 0, fpn_distribute_conf.rois_size()) {
+    *GetBlobDesc4BnInOp(GenRepeatedBn("rois", idx)) = *collected_rois_blob_desc;
   }
-  CHECK_EQ(RepeatedObnSize("rois"), op_conf().fpn_distribute_conf().roi_max_level()
-                                        - op_conf().fpn_distribute_conf().roi_min_level() + 1);
-  CHECK_GE(op_conf().fpn_distribute_conf().roi_max_level(),
-           op_conf().fpn_distribute_conf().roi_canonical_level());
-  CHECK_LE(op_conf().fpn_distribute_conf().roi_min_level(),
-           op_conf().fpn_distribute_conf().roi_canonical_level());
+  CHECK_EQ(fpn_distribute_conf.rois_size(),
+           fpn_distribute_conf.roi_max_level() - fpn_distribute_conf.roi_min_level() + 1);
+  CHECK_GE(fpn_distribute_conf.roi_max_level(), fpn_distribute_conf.roi_canonical_level());
+  CHECK_LE(fpn_distribute_conf.roi_min_level(), fpn_distribute_conf.roi_canonical_level());
   // out: roi_indices (post_nms_topn)
   BlobDesc* roi_indices_blob_desc = GetBlobDesc4BnInOp("roi_indices");
   *roi_indices_blob_desc = *collected_rois_blob_desc;

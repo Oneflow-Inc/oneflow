@@ -16,8 +16,8 @@ class MaskTargetKernel final : public KernelIf<DeviceType::kCPU> {
   ~MaskTargetKernel() override = default;
 
  private:
-  using RoiBBox = BBoxImpl<T, BBoxCategory::kIndexCorner>;
-  using SegmBBox = BBoxImpl<float, BBoxCategory::kCorner>;
+  using RoiBBox = IndexedBBoxT<T>;
+  using SegmBBox = BBoxT<float>;
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
   void ForwardDim0ValidNum(const KernelCtx& ctx,

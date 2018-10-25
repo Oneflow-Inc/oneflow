@@ -85,36 +85,6 @@ const std::string& Operator::SoleBbbn() const {
   CHECK_EQ(bw_buf_bns().size(), 1);
   return bw_buf_bns().Get(0);
 }
-std::string Operator::RepeatedIbn(const std::string& prefix, int32_t idx) const {
-  CHECK_LT(idx, RepeatedIbnSize(prefix));
-  return prefix + "_" + std::to_string(idx);
-}
-int32_t Operator::RepeatedIbnSize(const std::string& prefix) const {
-  int32_t ret = 0;
-  for (const auto& ibn : input_bns()) {
-    std::string idx_str = std::to_string(ret);
-    size_t idx_size = idx_str.size();
-    size_t ibn_size = ibn.size();
-    std::string prefix_substr = ibn.substr(0, ibn_size - idx_size - 1);
-    if (prefix_substr == prefix) { ret++; }
-  }
-  return ret;
-}
-std::string Operator::RepeatedObn(const std::string& prefix, int32_t idx) const {
-  CHECK_LT(idx, RepeatedObnSize(prefix));
-  return prefix + "_" + std::to_string(idx);
-}
-int32_t Operator::RepeatedObnSize(const std::string& prefix) const {
-  int32_t ret = 0;
-  for (const auto& obn : output_bns()) {
-    std::string idx_str = std::to_string(ret);
-    size_t idx_size = idx_str.size();
-    size_t obn_size = obn.size();
-    std::string prefix_substr = obn.substr(0, obn_size - idx_size - 1);
-    if (prefix_substr == prefix) { ret++; }
-  }
-  return ret;
-}
 
 void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx,
@@ -297,37 +267,23 @@ int64_t Operator::cudnn_buf_limit_byte() const {
   return cudnn_buf_limit_mbyte * 1024 * 1024;
 }
 
-LogicalBlobId Operator::ibn2lbi(const std::string& input_bn) const {
-  const google::protobuf::Descriptor* desc = GetCustomizedConf().GetDescriptor();
-  const google::protobuf::FieldDescriptor* fd = desc->FindFieldByName(input_bn);
-  std::string name;
+std::string Operator::Bn2ConfName(const std::string& bn) const {
+  const PbFd* fd = GetCustomizedConf().GetDescriptor()->FindFieldByName(bn);
   if (fd) {
-    name = GetValFromCustomizedConf<std::string>(input_bn);
+    return GetValFromCustomizedConf<std::string>(bn);
   } else {
-    size_t underline_pos = input_bn.rfind('_');
-    CHECK_NE(underline_pos, std::string::npos);
-    std::string ibn_prefix = input_bn.substr(0, underline_pos);
-    int32_t ibn_idx = oneflow_cast<int32_t>(input_bn.substr(underline_pos + 1));
-    name = GetPbRpfFromCustomizedConf<std::string>(ibn_prefix).Get(ibn_idx);
+    const std::pair<std::string, int32_t> prefix_idx = GenUnRepeatedBn(bn);
+    return GetPbRpfFromCustomizedConf<std::string>(prefix_idx.first).Get(prefix_idx.second);
   }
-  return GenLogicalBlobId(name);
+}
+
+LogicalBlobId Operator::ibn2lbi(const std::string& input_bn) const {
+  return GenLogicalBlobId(Bn2ConfName(input_bn));
 }
 LogicalBlobId Operator::obn2lbi(const std::string& output_bn) const {
-  const google::protobuf::Descriptor* desc = GetCustomizedConf().GetDescriptor();
-  const google::protobuf::FieldDescriptor* fd = desc->FindFieldByName(output_bn);
-  std::string name;
-  if (fd) {
-    name = GetValFromCustomizedConf<std::string>(output_bn);
-  } else {
-    size_t underline_pos = output_bn.rfind('_');
-    CHECK_NE(underline_pos, std::string::npos);
-    std::string obn_prefix = output_bn.substr(0, underline_pos);
-    int32_t obn_idx = oneflow_cast<int32_t>(output_bn.substr(underline_pos + 1));
-    name = GetPbRpfFromCustomizedConf<std::string>(obn_prefix).Get(obn_idx);
-  }
   LogicalBlobId ret;
   ret.set_op_name(op_name());
-  ret.set_blob_name(name);
+  ret.set_blob_name(Bn2ConfName(output_bn));
   return ret;
 }
 LogicalBlobId Operator::cmbn2lbi(const std::string& const_model_bn) const {
@@ -501,6 +457,17 @@ std::string GenUnDiffBn(const std::string& diff_bn) {
 std::string GenRepeatedBn(const std::string& bn_prefix, int32_t idx) {
   CHECK_GE(idx, 0);
   return bn_prefix + "_" + std::to_string(idx);
+}
+
+std::pair<std::string, int32_t> GenUnRepeatedBn(const std::string& bn) {
+  const size_t underline_pos = bn.rfind('_');
+  CHECK_NE(underline_pos, std::string::npos);
+  CHECK_GT(underline_pos, 0);
+  CHECK_LT(underline_pos, bn.size() - 1);
+  const std::string prefix = bn.substr(0, underline_pos);
+  const int32_t idx = oneflow_cast<int32_t>(bn.substr(underline_pos + 1));
+  CHECK_GE(idx, 0);
+  return std::make_pair(prefix, idx);
 }
 
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf) {
