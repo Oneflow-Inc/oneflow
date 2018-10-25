@@ -301,6 +301,16 @@ class IndexSequence {
     NthElem(0, nth, size(), Compare);
   }
 
+  void ArgSort(IndexSequence& index_inds) {
+    // Warning: buf must be prefilled
+    CHECK_EQ(index_inds.size(), size_);
+    std::sort(index_inds.index(), index_inds.index() + size_,
+              [&](int32_t lhs_index, int32_t rhs_index) {
+                return GetIndex(lhs_index) < GetIndex(rhs_index);
+              });
+    Assign(index_inds);
+  }
+
   void ForEach(const std::function<bool(int32_t)>& DoNext) {
     FOR_RANGE(size_t, i, 0, size_) {
       if (!DoNext(GetIndex(i))) { break; }
