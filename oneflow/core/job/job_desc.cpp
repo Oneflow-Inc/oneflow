@@ -42,7 +42,7 @@ int32_t JobDesc::NumOfBatchesInSnapshot() const {
   return job_conf_.other().train_conf().num_of_batches_in_snapshot();
 }
 int64_t JobDesc::TotalBatchNum() const {
-  if (!IsTrain()) { return MaxVal<int64_t>(); }
+  if (IsPredict()) { return MaxVal<int64_t>(); }
   return job_conf_.other().train_conf().total_batch_num();
 }
 const InitializerConf* JobDesc::DefaultInitializerConf() const {
