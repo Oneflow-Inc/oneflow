@@ -3,6 +3,18 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename PredType, typename LabelType>
+void AccuracyKernel<device_type, PredType, LabelType>::SetAccuracyInstanceNumBlob(
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+  CHECK_GE(this->op_attribute().input_bns().size(), 2);
+  this->CheckSameDim0ValidNum(this->op_attribute().input_bns(), BnInOp2Blob);
+  int64_t dim0_valid_num_sum =
+      BnInOp2Blob(this->op_attribute().input_bns(0))->CalcDim0ValidNumSum();
+  KernelUtil<device_type, PredType>::Set(
+      ctx.device_ctx, static_cast<PredType>(dim0_valid_num_sum),
+      BnInOp2Blob("accuracy_instance_num")->mut_dptr<PredType>());
+}
+
+template<DeviceType device_type, typename PredType, typename LabelType>
 void AccuracyKernel<device_type, PredType, LabelType>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* X = BnInOp2Blob("prediction");
@@ -18,6 +30,7 @@ void AccuracyKernel<device_type, PredType, LabelType>::ForwardDataContent(
   AccuracyKernelUtil<device_type, PredType, LabelType>::Forward(
       ctx.device_ctx, N, D, top_k, X->dptr<PredType>(), label->dptr<LabelType>(),
       accuracy->mut_dptr<PredType>());
+  SetAccuracyInstanceNumBlob(ctx, BnInOp2Blob);
 }
 
 template<typename PredType, typename LabelType>
