@@ -32,9 +32,9 @@ class ProposalKernel final : public KernelIf<DeviceType::kCPU> {
   ScoreSlice RegionProposal(const int64_t im_index,
                             const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   BoxesSlice ApplyNms(const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  size_t WriteRoisToOutput(const size_t num_output, const int32_t im_index,
-                           const ScoreSlice& score_slice, const BoxesSlice& post_nms_slice,
-                           const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  void WriteRoisToOutput(const size_t num_output, const int32_t im_index,
+                         const ScoreSlice& score_slice, const BoxesSlice& post_nms_slice,
+                         const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 };
 
 }  // namespace oneflow
