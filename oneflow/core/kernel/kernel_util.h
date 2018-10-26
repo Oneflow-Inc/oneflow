@@ -498,21 +498,6 @@ class ColNumIterator final : public FieldIterator {
   size_t GetSizeOfField(Blob* blob) const override { return blob->ByteSizeOfColNumField(); }
 };
 
-class Dim0ValidNumIterator final : public FieldIterator {
- public:
-  Dim0ValidNumIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,
-                       const PbRpf<std::string>* bns, int32_t axis)
-      : FieldIterator(BnInOp2Blob, bns, axis) {}
-  static CopyBlobFieldMthd GetCopyBlobFieldMthd() { return &Blob::CopyDim0ValidNumFrom; }
-
- private:
-  char* GetMutPtr(Blob* blob) override {
-    return reinterpret_cast<char*>(blob->mut_dim0_valid_num_ptr());
-  }
-
-  size_t GetSizeOfField(Blob* blob) const override { return blob->ByteSizeOfDim0ValidNumField(); }
-};
-
 class Dim1ValidNumIterator final : public FieldIterator {
  public:
   Dim1ValidNumIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,

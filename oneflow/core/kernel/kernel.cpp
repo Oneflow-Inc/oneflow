@@ -5,12 +5,13 @@ namespace oneflow {
 
 namespace {
 
-void CheckSameDim0ValidNum(const PbRpf<std::string>& bns,
-                           const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
-  const void* mem_ptr = BnInOp2Blob(bns.Get(0))->dim0_valid_num_ptr();
-  size_t len = BnInOp2Blob(bns.Get(0))->ByteSizeOfDim0ValidNumField();
-  FOR_RANGE(int, i, 1, bns.size()) {
-    CHECK_EQ(std::memcmp(BnInOp2Blob(bns.Get(i))->dim0_valid_num_ptr(), mem_ptr, len), 0);
+void ClearBlobDim0ValidNumIfNeed(const PbRpf<std::string>& bns,
+                                 const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+  for (const auto& bn : bns) {
+    Blob* blob = BnInOp2Blob(bn);
+    if (blob != nullptr && blob->has_dim0_valid_num_field()) {
+      std::memset(blob->mut_dim0_valid_num_ptr(), 0, blob->ByteSizeOfDim0ValidNumField());
+    }
   }
 }
 
@@ -70,6 +71,16 @@ bool Kernel::HasEmptyShapeBlob(const PbRpf<std::string>& bns,
   return false;
 }
 
+void Kernel::CheckSameDim0ValidNum(
+    const PbRpf<std::string>& bns,
+    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+  const void* mem_ptr = BnInOp2Blob(bns.Get(0))->dim0_valid_num_ptr();
+  size_t len = BnInOp2Blob(bns.Get(0))->ByteSizeOfDim0ValidNumField();
+  FOR_RANGE(int, i, 1, bns.size()) {
+    CHECK_EQ(std::memcmp(BnInOp2Blob(bns.Get(i))->dim0_valid_num_ptr(), mem_ptr, len), 0);
+  }
+}
+
 void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (kernel_conf_.need_do_dim0_valid_num()) {
@@ -77,6 +88,7 @@ void Kernel::Forward(const KernelCtx& ctx,
     ForwardDim0ValidNum(ctx, BnInOp2Blob);
   }
   if (HasEmptyShapeBlob(op_attribute().input_bns(), BnInOp2Blob) && !NeedForwardIfBlobEmpty()) {
+    ClearBlobDim0ValidNumIfNeed(op_attribute().output_bns(), BnInOp2Blob);
     return;
   }
   if (kernel_conf_.need_do_dim1_valid_num()) {
@@ -118,6 +130,7 @@ void Kernel::Backward(const KernelCtx& ctx,
   }
   if (HasEmptyShapeBlob(op_attribute().output_diff_bns(), BnInOp2Blob)
       && !NeedBackwardIfBlobEmpty()) {
+    ClearBlobDim0ValidNumIfNeed(op_attribute().input_diff_bns(), BnInOp2Blob);
     return;
   }
   CHECK_EQ(false, HasEmptyShapeBlob(op_attribute().model_diff_bns(), BnInOp2Blob));
@@ -240,30 +253,13 @@ void KernelIf<device_type>::BackwardColNum(
 }
 
 template<DeviceType device_type, typename T>
-int32_t KernelIfWithModel<device_type, T>::CalcInstanceNumSum(
-    const int32_t index, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CHECK_LT(index, this->op_attribute().output_diff_bns_size());
-  int32_t instance_num_sum = 0;
-  Blob* out_diff_blob = BnInOp2Blob(this->op_attribute().output_diff_bns().Get(index));
-  if (out_diff_blob->has_dim0_valid_num_field()) {
-    FOR_RANGE(int32_t, i, 0, out_diff_blob->dim0_inner_shape().At(0)) {
-      instance_num_sum += out_diff_blob->dim0_valid_num(i);
-    }
-  } else {
-    instance_num_sum = out_diff_blob->static_shape().At(0);
-  }
-  return instance_num_sum;
-}
-template<DeviceType device_type, typename T>
 void KernelIfWithModel<device_type, T>::SetTotalInstanceNumDiffBlob(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   CHECK_GE(this->op_attribute().model_bns().size(), 2);
-  int32_t instance_num_sum = CalcInstanceNumSum(0, BnInOp2Blob);
-  FOR_RANGE(int32_t, i, 1, this->op_attribute().output_diff_bns_size()) {
-    CHECK_EQ(instance_num_sum, CalcInstanceNumSum(i, BnInOp2Blob));
-  }
+  int64_t dim0_valid_num_sum =
+      BnInOp2Blob(this->op_attribute().output_diff_bns(0))->CalcDim0ValidNumSum();
   Blob* total_instance_num_diff_blob = BnInOp2Blob("total_instance_num_diff");
-  KernelUtil<device_type, T>::Set(ctx.device_ctx, static_cast<T>(instance_num_sum),
+  KernelUtil<device_type, T>::Set(ctx.device_ctx, static_cast<T>(dim0_valid_num_sum),
                                   total_instance_num_diff_blob->mut_dptr<T>());
 }
 
