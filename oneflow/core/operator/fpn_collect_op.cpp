@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/fpn_collect_op.h"
+#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 
@@ -17,7 +18,8 @@ void FpnCollectOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   CHECK_EQ(parallel_ctx->policy(), kDataParallel);
   const FpnCollectOpConf& conf = op_conf().fpn_collect_conf();
   const int64_t num_layers = conf.num_layers();
-  int64_t total_top_n = conf.top_n_per_piece() * parallel_ctx->parallel_num();
+  BalancedSplitter bs(Global<JobDesc>::Get()->PieceSize(), parallel_ctx->parallel_num());
+  int64_t total_top_n = conf.top_n_per_image() * bs.At(parallel_ctx->parallel_id()).size();
   CHECK_EQ(conf.rpn_rois_fpn_size(), num_layers);
   CHECK_EQ(conf.rpn_roi_probs_fpn_size(), num_layers);
   int64_t max_num_rois_per_layer = 0;
