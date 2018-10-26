@@ -59,6 +59,12 @@ void LossKernel<device_type, PredType, LabelType>::ForwardDim0ValidNum(
       ->CopyDim0ValidNumFrom(ctx.device_ctx, BnInOp2Blob("prediction"));
 }
 
+template<DeviceType device_type, typename PredType, typename LabelType>
+void LossKernel<device_type, PredType, LabelType>::ForwardRecordIdInDevicePiece(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  // do nothing
+}
+
 template<typename T>
 struct LossKernelUtil<DeviceType::kCPU, T> {
   static void ComputeReductionCoefficient(DeviceCtx* ctx, int64_t data_num, int64_t weight_length,
