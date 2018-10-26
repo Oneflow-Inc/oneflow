@@ -468,15 +468,22 @@ message BlobDumpOpConf {
   optional int32 part_name_suffix_length = 4 [default = -1];
 }
 
+message LogCounterOpConf {
+  required string in = 1;
+  optional int32 interval = 2 [default = 1];
+}
+
 message LossPrintOpConf {
   required LogicalBlobId loss_lbi = 1;
-  optional LogicalBlobId reduction_lbi = 2;
-  optional float weight_scalar = 3 [default = 1.0];
-  optional LossReductionType reduction_type = 4 [default = kSumOverN];
+  required LogicalBlobId loss_instance_num_lbi = 2;
+  optional LogicalBlobId reduction_lbi = 3;
+  optional float weight_scalar = 4 [default = 1.0];
+  optional LossReductionType reduction_type = 5 [default = kSumOverN];
 }
 
 message AccuracyPrintOpConf {
   required LogicalBlobId accuracy_lbi = 1;
+  required LogicalBlobId accuracy_instance_num_lbi = 2;
   optional int32 top_k_print = 3 [default = 1];
 }
 
@@ -969,6 +976,25 @@ message MaskTargetOpConf {
   required int32 mask_width = 8;
 }
 
+message PackOpConf {
+  required string in = 1;
+  required string out = 2;
+  required int32 pack_num = 3;
+  required string related_unpack = 4;
+}
+
+message UnpackOpConf {
+  required string in = 1;
+  required string out = 2;
+  required int32 unpack_num = 3;
+}
+
+message RepeatOpConf {
+  required string in = 1;
+  required string out = 2;
+  required int64 repeat_num = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1036,9 +1062,13 @@ message OperatorConf {
     AccuracyPrintOpConf accuracy_print_conf = 234;
     LossPrintOpConf loss_print_conf = 235;
     DefineTestBlobConf define_test_blob_conf = 236;
-    Deconv2DOpConf deconv_2d_conf = 237;
-    Deconv3DOpConf deconv_3d_conf = 238;
-    BlobDumpOpConf blob_dump_conf = 239;
+    PackOpConf pack_conf = 237;
+    UnpackOpConf unpack_conf = 238;
+    RepeatOpConf repeat_conf = 239;
+    Deconv2DOpConf deconv_2d_conf = 240;
+    Deconv3DOpConf deconv_3d_conf = 241;
+    BlobDumpOpConf blob_dump_conf = 242;
+    LogCounterOpConf log_counter_conf = 243;
     RoIPoolingOpConf roi_pooling_conf = 1000;
     SmoothL1LossOpConf smooth_l1_loss_conf = 1001;
     ProposalOpConf proposal_conf = 1002;
