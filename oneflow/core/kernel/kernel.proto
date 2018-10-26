@@ -26,7 +26,7 @@ message DropoutKernelConf {
   required ShapeProto out = 3;
 };
 
-message LossKernelConf { 
+message LossKernelConf {
   required DataType prediction_type = 1;
   required DataType label_type = 2;
   required float weight_scalar = 3;
@@ -74,7 +74,7 @@ message SoftmaxKernelConf {
 
 message TransposeKernelConf {
   repeated int32 perm = 1;
-  repeated int32 invert_perm = 2; 
+  repeated int32 invert_perm = 2;
 }
 
 message LocalResponseNormalizationKernelConf {
@@ -113,7 +113,7 @@ message ReduceSplitKernelConf {
   repeated int64 data_offset = 1;
 }
 
-message AccuracyKernelConf { 
+message AccuracyKernelConf {
   required DataType prediction_type = 1;
   required DataType label_type = 2;
 }
@@ -121,7 +121,7 @@ message AccuracyKernelConf {
 message OpAttribute {
   required OperatorConf op_conf = 1;
   map<string, LogicalBlobId> bn_in_op2lbi = 2;
-  
+
   repeated string input_bns = 3;
   repeated string input_diff_bns = 4;
   repeated string output_bns = 5;
@@ -133,7 +133,7 @@ message OpAttribute {
   repeated string model_bns = 10;
   repeated string model_diff_bns = 11;
   repeated string const_model_bns = 12;
-  
+
   repeated string forward_model_bns = 13;
   repeated string const_buf_bns = 14;
 }
@@ -143,7 +143,7 @@ message HingeLossKernelConf {
 }
 
 message KernelConf {
-  required OpAttribute op_attribute = 1; 
+  required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
   required DataType data_type = 3;
   optional ActivationType forward_activation = 4 [default = kNone];
