@@ -31,9 +31,22 @@ void PackForwardCompTaskNode::BuildExecGphAndRegst() {
   CHECK_EQ(1, (*related_unpack_consumed_regsts.begin()).second.size());
   std::shared_ptr<RegstDesc> related_unpack_consumed_regst =
       (*related_unpack_consumed_regsts.begin()).second.front();
-  const BlobDesc* related_unpack_in_blob = related_unpack_consumed_regst->SoleBlobDesc();
-  const BlobDesc* in_blob = in_regst->SoleBlobDesc();
+
+  auto GetBlobDescFromRegst = [&](std::shared_ptr<RegstDesc> regst) -> const BlobDesc* {
+    const BlobDesc* ret_blob = nullptr;
+    regst->ForEachLbi([&](const LogicalBlobId& lbi) {
+      if (ret_blob == nullptr) {
+        ret_blob = regst->GetBlobDesc(lbi);
+      } else {
+        CHECK_EQ(ret_blob->dim0_inner_shape(), regst->GetBlobDesc(lbi)->dim0_inner_shape());
+      }
+    });
+    return ret_blob;
+  };
+  const BlobDesc* related_unpack_in_blob = GetBlobDescFromRegst(related_unpack_consumed_regst);
+  const BlobDesc* in_blob = GetBlobDescFromRegst(in_regst);
   BlobDesc* out_blob = out_regst->MutSoleBlobDesc();
+
   *out_blob = *in_blob;
   CHECK_EQ(op->op_conf().pack_conf().pack_num(),
            related_unpack_in_blob->shape().At(0) / in_blob->shape().At(0));
