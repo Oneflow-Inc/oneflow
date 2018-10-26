@@ -53,9 +53,9 @@ void PackKernel<device_type>::ForwardDim1ValidNum(
 
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
-  size_t in_size = in_blob->static_shape().At(0);
-  for (size_t i = 0; i < in_size; ++i) {
-    out_blob->set_dim1_valid_num(i + in_index * in_size, in_blob->dim1_valid_num(i));
+  for (size_t i = 0; i < in_blob->shape().At(0); ++i) {
+    out_blob->set_dim1_valid_num(i + in_index * in_blob->static_shape().At(0),
+                                 in_blob->dim1_valid_num(i));
   }
 }
 
@@ -67,9 +67,8 @@ void PackKernel<device_type>::ForwardRecordIdInDevicePiece(
 
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
-  size_t in_size = in_blob->static_shape().At(0);
-  for (size_t i = 0; i < in_size; ++i) {
-    out_blob->set_record_id_in_device_piece(i + in_index * in_size,
+  for (size_t i = 0; i < in_blob->shape().At(0); ++i) {
+    out_blob->set_record_id_in_device_piece(i + in_index * in_blob->static_shape().At(0),
                                             in_blob->record_id_in_device_piece(i));
   }
 }
@@ -82,11 +81,10 @@ void PackKernel<device_type>::ForwardDataId(
 
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
-  size_t in_size = in_blob->static_shape().At(0);
-  for (size_t i = 0; i < in_size; ++i) {
-    Memcpy<DeviceType::kCPU>(ctx.device_ctx, out_blob->mut_data_id(i + in_index * in_size),
-                             in_blob->data_id(i),
-                             Global<JobDesc>::Get()->other_conf().max_data_id_length());
+  for (size_t i = 0; i < in_blob->shape().At(0); ++i) {
+    Memcpy<DeviceType::kCPU>(
+        ctx.device_ctx, out_blob->mut_data_id(i + in_index * in_blob->static_shape().At(0)),
+        in_blob->data_id(i), Global<JobDesc>::Get()->other_conf().max_data_id_length());
   }
 }
 
