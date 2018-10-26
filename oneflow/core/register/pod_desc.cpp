@@ -80,8 +80,7 @@ StructPodDesc::StructPodDesc(const StructPodProto& struct_pod_proto) {
 StructPodDesc::StructPodDesc(const StructPodDesc& struct_pod_desc) { *this = struct_pod_desc; }
 
 void StructPodDesc::InitFromProto(const StructPodProto& struct_pod) {
-  CHECK(field_id2field_idx_.empty());
-  CHECK(fields_.empty());
+  Clear();
   for (const auto& field : struct_pod.field()) {
     std::unique_ptr<FieldPodDesc> pod(new FieldPodDesc(field));
     AddField(std::move(pod));
