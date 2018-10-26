@@ -8,7 +8,7 @@ void AccuracyPrintKernel<T>::Forward(const KernelCtx& kernel_ctx,
                                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* accuracy_acc_blob = BnInOp2Blob("accuracy_acc");
   T accuracy_num = accuracy_acc_blob->dptr<T>()[0];
-  int total_num = Global<JobDesc>::Get()->BatchSize();
+  int total_num = Global<JobDesc>::Get()->PieceSize() * Global<JobDesc>::Get()->PieceNumOfPrintAccuracy();
   float accuracy = accuracy_num / total_num;
   const char* accuracy_op_name = op_conf().name().c_str() + AccuracyPrintPrefix.length();
   auto kernel_conf = this->kernel_conf();
