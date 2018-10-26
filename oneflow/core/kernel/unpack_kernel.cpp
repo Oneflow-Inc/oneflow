@@ -37,7 +37,7 @@ void UnpackKernel<device_type>::ForwardDim0ValidNum(
   CHECK_EQ(0, in_blob->dim0_inner_shape().Count(1) % unpack_num4each_count1);
   CHECK_EQ(2, out_blob->dim0_inner_shape().NumAxes());
   CHECK_EQ(1, out_blob->dim0_inner_shape().At(0));
-  CHECK_EQ(out_blob->static_shape().At(0), out_blob->dim0_inner_shape().At(1));
+  CHECK_EQ(out_blob->static_shape().At(0), out_blob->dim0_inner_shape().Count(1));
 
   size_t part_size = in_blob->dim0_inner_shape().Count(1) / unpack_num4each_count1;
   size_t cur_valid_num = in_blob->dim0_valid_num(out_index / unpack_num4each_count1);
@@ -59,7 +59,7 @@ void UnpackKernel<device_type>::ForwardDim1ValidNum(
 
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
-  size_t out_size = out_blob->static_shape().At(0);
+  size_t out_size = out_blob->shape().At(0);
   for (size_t i = 0; i < out_size; ++i) {
     out_blob->set_dim1_valid_num(i, in_blob->dim1_valid_num(i + out_index * out_size));
   }
@@ -73,7 +73,7 @@ void UnpackKernel<device_type>::ForwardRecordIdInDevicePiece(
 
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
-  size_t out_size = out_blob->static_shape().At(0);
+  size_t out_size = out_blob->shape().At(0);
   for (size_t i = 0; i < out_size; ++i) {
     out_blob->set_record_id_in_device_piece(
         i, in_blob->record_id_in_device_piece(i + out_index * out_size));
@@ -88,7 +88,7 @@ void UnpackKernel<device_type>::ForwardDataId(
 
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
-  size_t out_size = out_blob->static_shape().At(0);
+  size_t out_size = out_blob->shape().At(0);
   for (size_t i = 0; i < out_size; ++i) {
     Memcpy<DeviceType::kCPU>(ctx.device_ctx, out_blob->mut_data_id(i),
                              in_blob->data_id(i + out_index * out_size),
