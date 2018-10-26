@@ -59,9 +59,9 @@ void UnpackKernel<device_type>::ForwardDim1ValidNum(
 
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
-  size_t out_size = out_blob->shape().At(0);
-  for (size_t i = 0; i < out_size; ++i) {
-    out_blob->set_dim1_valid_num(i, in_blob->dim1_valid_num(i + out_index * out_size));
+  for (size_t i = 0; i < out_blob->shape().At(0); ++i) {
+    out_blob->set_dim1_valid_num(
+        i, in_blob->dim1_valid_num(i + out_index * out_blob->static_shape().At(0)));
   }
 }
 
@@ -73,10 +73,9 @@ void UnpackKernel<device_type>::ForwardRecordIdInDevicePiece(
 
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
-  size_t out_size = out_blob->shape().At(0);
-  for (size_t i = 0; i < out_size; ++i) {
+  for (size_t i = 0; i < out_blob->shape().At(0); ++i) {
     out_blob->set_record_id_in_device_piece(
-        i, in_blob->record_id_in_device_piece(i + out_index * out_size));
+        i, in_blob->record_id_in_device_piece(i + out_index * out_blob->static_shape().At(0)));
   }
 }
 
@@ -88,10 +87,9 @@ void UnpackKernel<device_type>::ForwardDataId(
 
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
-  size_t out_size = out_blob->shape().At(0);
-  for (size_t i = 0; i < out_size; ++i) {
+  for (size_t i = 0; i < out_blob->shape().At(0); ++i) {
     Memcpy<DeviceType::kCPU>(ctx.device_ctx, out_blob->mut_data_id(i),
-                             in_blob->data_id(i + out_index * out_size),
+                             in_blob->data_id(i + out_index * out_blob->static_shape().At(0)),
                              Global<JobDesc>::Get()->other_conf().max_data_id_length());
   }
 }
