@@ -68,7 +68,7 @@ void MaskTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   // output: masks (R, class_num , mask_h, mask_w) T
   BlobDesc* masks = GetBlobDesc4BnInOp("masks");
   masks->mut_shape() = Shape({R, class_num, conf.mask_height(), conf.mask_width()});
-  masks->set_data_type(data_type);
+  masks->set_data_type(DataType::kInt32);
   masks->set_has_dim0_valid_num_field(true);
   masks->mut_dim0_inner_shape() = Shape({1, R});
   masks->set_has_record_id_in_device_piece_field(input_has_record_id);
@@ -80,7 +80,7 @@ void MaskTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   // const buf: mask_ignore_labels(class_num, mask_h, mask_w)
   BlobDesc* mask_ignore_labels = GetBlobDesc4BnInOp("mask_ignore_labels");
   mask_ignore_labels->mut_shape() = Shape({class_num, conf.mask_height(), conf.mask_width()});
-  mask_ignore_labels->set_data_type(data_type);
+  mask_ignore_labels->set_data_type(DataType::kInt32);
 }
 
 void MaskTargetOp::VirtualGenKernelConf(
