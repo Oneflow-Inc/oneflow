@@ -86,7 +86,7 @@ size_t ProposalKernel<T>::WriteRoisToOutput(
     rois_blob->set_record_id_in_device_piece(num_output + i, im_index);
     rois_prob_blob->set_record_id_in_device_piece(num_output + i, im_index);
   }
-  return num_output + post_nms_slice.size();
+  return post_nms_slice.size();
 }
 
 template<typename T>

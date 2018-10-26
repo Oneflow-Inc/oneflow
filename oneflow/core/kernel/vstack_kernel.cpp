@@ -37,6 +37,21 @@ void VStackKernel<device_type, T>::ForwardDim0ValidNum(
 }
 
 template<DeviceType device_type, typename T>
+void VStackKernel<device_type, T>::ForwardRecordIdInDevicePiece(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  int64_t total_instance_num = 0;
+  Blob* out_blob = BnInOp2Blob("out");
+  for (const auto& input_bn : this->op_attribute().input_bns()) {
+    const Blob* in_blob = BnInOp2Blob(input_bn);
+    std::memcpy(out_blob->mut_record_id_in_device_piece_ptr() + total_instance_num,
+                in_blob->record_id_in_device_piece_ptr(),
+                sizeof(*in_blob->record_id_in_device_piece_ptr()) * in_blob->dim0_valid_num(0));
+    total_instance_num += in_blob->dim0_valid_num(0);
+  }
+  out_blob->set_dim0_valid_num(0, total_instance_num);
+}
+
+template<DeviceType device_type, typename T>
 void VStackKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
