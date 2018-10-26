@@ -50,7 +50,6 @@ void PackKernel<device_type>::ForwardDim1ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto* res = static_cast<std::pair<size_t, size_t>*>(ctx.other);
   size_t in_index = res->first;
-  size_t total_pack_num = res->second;
 
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
@@ -65,7 +64,6 @@ void PackKernel<device_type>::ForwardRecordIdInDevicePiece(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto* res = static_cast<std::pair<size_t, size_t>*>(ctx.other);
   size_t in_index = res->first;
-  size_t total_pack_num = res->second;
 
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
@@ -81,7 +79,6 @@ void PackKernel<device_type>::ForwardDataId(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto* res = static_cast<std::pair<size_t, size_t>*>(ctx.other);
   size_t in_index = res->first;
-  size_t total_pack_num = res->second;
 
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
