@@ -30,6 +30,8 @@ class LossKernel : public KernelIf<device_type> {
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     UNIMPLEMENTED();
   }
+  void ForwardRecordIdInDevicePiece(
+      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void SetLossInstanceNumBlob(const KernelCtx& ctx,
                               const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 };

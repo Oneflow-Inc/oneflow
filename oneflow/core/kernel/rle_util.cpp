@@ -1,7 +1,7 @@
 #include <cstring>
+#include <fenv.h>
 #include "oneflow/core/kernel/rle_util.h"
 #include "oneflow/core/common/util.h"
-
 extern "C" {
 #include "maskApi.h"
 }
@@ -22,7 +22,10 @@ size_t Encode(uint32_t* buf, const uint8_t* mask, size_t h, size_t w) {
 void PolygonXy2ColMajorMask(const double* xy, size_t num_xy, size_t h, size_t w, uint8_t* mask) {
   CHECK_EQ(num_xy % 2, 0);
   RLE rle;
+  const int fe_excepts = fegetexcept();
+  CHECK_NE(fedisableexcept(fe_excepts), -1);
   rleFrPoly(&rle, xy, num_xy / 2, h, w);
+  CHECK_NE(feenableexcept(fe_excepts), -1);
   rleDecode(&rle, mask, 1);
   rleFree(&rle);
 }
