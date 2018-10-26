@@ -27,7 +27,7 @@ void PackKernel<device_type>::ForwardDim0ValidNum(
   CHECK_EQ(0, out_blob->dim0_inner_shape().Count(1) % pack_num4each_count1);
   CHECK_EQ(2, in_blob->dim0_inner_shape().NumAxes());
   CHECK_EQ(1, in_blob->dim0_inner_shape().At(0));
-  CHECK_EQ(in_blob->static_shape().At(0), in_blob->dim0_inner_shape().At(1));
+  CHECK_EQ(in_blob->static_shape().At(0), in_blob->dim0_inner_shape().Count(1));
 
   if (in_index == 0) {
     for (size_t i = 0; i < out_blob->dim0_inner_shape().At(0); ++i) {
@@ -53,7 +53,7 @@ void PackKernel<device_type>::ForwardDim1ValidNum(
 
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
-  size_t in_size = in_blob->static_shape().At(0);
+  size_t in_size = in_blob->shape().At(0);
   for (size_t i = 0; i < in_size; ++i) {
     out_blob->set_dim1_valid_num(i + in_index * in_size, in_blob->dim1_valid_num(i));
   }
@@ -67,7 +67,7 @@ void PackKernel<device_type>::ForwardRecordIdInDevicePiece(
 
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
-  size_t in_size = in_blob->static_shape().At(0);
+  size_t in_size = in_blob->shape().At(0);
   for (size_t i = 0; i < in_size; ++i) {
     out_blob->set_record_id_in_device_piece(i + in_index * in_size,
                                             in_blob->record_id_in_device_piece(i));
@@ -82,7 +82,7 @@ void PackKernel<device_type>::ForwardDataId(
 
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
-  size_t in_size = in_blob->static_shape().At(0);
+  size_t in_size = in_blob->shape().At(0);
   for (size_t i = 0; i < in_size; ++i) {
     Memcpy<DeviceType::kCPU>(ctx.device_ctx, out_blob->mut_data_id(i + in_index * in_size),
                              in_blob->data_id(i),
