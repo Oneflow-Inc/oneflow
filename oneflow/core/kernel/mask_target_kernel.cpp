@@ -73,8 +73,8 @@ void MaskTargetKernel<T>::ForwardDataContent(
   // handle empty output
   if (mask_idx == 0) {
     mask_roi_bboxes[mask_idx].elem() = roi_bboxes[0].elem();
-    Memcpy<kCPU>(ctx.device_ctx, masks_blob->mut_dptr<T>(mask_idx),
-                 mask_ignore_labels_blob->dptr<T>(),
+    Memcpy<kCPU>(ctx.device_ctx, masks_blob->mut_dptr<int32_t>(mask_idx),
+                 mask_ignore_labels_blob->dptr<int32_t>(),
                  mask_ignore_labels_blob->ByteSizeOfDataContentField());
     CopyRecordIdIfNeed(0, mask_idx);
     mask_idx += 1;
