@@ -659,7 +659,7 @@ message FpnCollectOpConf {
   repeated string rpn_roi_probs_fpn = 2;
   required string out = 3;
   required int32 num_layers = 4;
-  required int32 top_n_per_piece = 5;
+  required int32 top_n_per_image = 5;
 }
 
 message AffineChannelOpConf {
