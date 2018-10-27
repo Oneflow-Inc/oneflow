@@ -986,7 +986,10 @@ message PackOpConf {
 message UnpackOpConf {
   required string in = 1;
   required string out = 2;
-  required int32 unpack_num = 3;
+  oneof unpack_num_conf {
+    int32 unpack_num = 3;
+    int32 unpack_num_per_record = 4;
+  }
 }
 
 message RepeatOpConf {
