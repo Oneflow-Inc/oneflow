@@ -9,5 +9,6 @@ enum DataType {
   kInt8 = 4;
   kInt32 = 5;
   kInt64 = 6;
-  kOFRecord = 7;
+  kUInt8 = 7;
+  kOFRecord = 8;
 }
