@@ -16,7 +16,6 @@ void oneflow::RepeatOp::InitFromOpConf() {
 int32_t RepeatOp::GetRepeatNum(const ParallelContext& ctx) const {
   CHECK(op_conf().has_repeat_conf());
   const RepeatOpConf& conf = op_conf().repeat_conf();
-  CHECK(conf.has_repeat_num() || conf.has_repeat_num_per_record());
   if (conf.has_repeat_num()) {
     return conf.repeat_num();
   } else if (conf.has_repeat_num_per_record()) {
