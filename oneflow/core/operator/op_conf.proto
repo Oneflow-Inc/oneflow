@@ -979,8 +979,11 @@ message MaskTargetOpConf {
 message PackOpConf {
   required string in = 1;
   required string out = 2;
-  required int32 pack_num = 3;
-  required string related_unpack = 4;
+  oneof pack_num_conf {
+    int32 pack_num = 3;
+    int32 pack_num_per_record = 4;
+  }
+  required string related_unpack = 5;
 }
 
 message UnpackOpConf {
