@@ -32,8 +32,9 @@ void RepeatBackwardCompTaskNode::InferProducedDataRegstTimeShape() {
   std::vector<int64_t> time_shape_dim_vec =
       GetSoleConsumedRegst("out_diff")->data_regst_time_shape()->dim_vec();
   CHECK(this->logical_node()->SoleOp()->op_conf().has_repeat_conf());
-  int32_t repeat_num = RepeatOp::GetRepeatNum(
-      this->logical_node()->SoleOp()->op_conf().repeat_conf(), *parallel_ctx());
+  const RepeatOp* repeat_op = dynamic_cast<RepeatOp*>(this->logical_node()->SoleOp().get());
+  CHECK(repeat_op != nullptr);
+  int32_t repeat_num = repeat_op->GetRepeatNum(*parallel_ctx());
   CHECK(!time_shape_dim_vec.empty());
   CHECK(time_shape_dim_vec.back() == repeat_num);
   time_shape_dim_vec.pop_back();
