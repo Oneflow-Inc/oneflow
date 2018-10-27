@@ -6,9 +6,13 @@ namespace oneflow {
 void oneflow::RepeatOp::InitFromOpConf() {
   CHECK(op_conf().has_repeat_conf());
   const RepeatOpConf& conf = op_conf().repeat_conf();
-  CHECK(conf.has_repeat_num() || conf.has_repeat_num_per_record());
-  if (conf.has_repeat_num()) { CHECK_GE(conf.repeat_num(), 1); }
-  if (conf.has_repeat_num_per_record()) { CHECK_GE(conf.repeat_num_per_record(), 1); }
+  if (conf.has_repeat_num()) {
+    CHECK_GE(conf.repeat_num(), 1);
+  } else if (conf.has_repeat_num_per_record()) {
+    CHECK_GE(conf.repeat_num_per_record(), 1);
+  } else {
+    UNIMPLEMENTED();
+  }
   EnrollInputBn("in");
   EnrollOutputBn("out");
 }
