@@ -11,6 +11,8 @@ class RepeatOp final : public Operator {
   RepeatOp() = default;
   ~RepeatOp() override = default;
 
+  static int32_t GetRepeatNum(const RepeatOpConf& conf, const ParallelContext& ctx);
+
  private:
   const PbMessage& GetCustomizedConf() const override;
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

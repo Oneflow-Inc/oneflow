@@ -5,9 +5,24 @@ namespace oneflow {
 
 void oneflow::RepeatOp::InitFromOpConf() {
   CHECK(op_conf().has_repeat_conf());
-  CHECK_GE(op_conf().repeat_conf().repeat_num(), 1);
+  const RepeatOpConf& conf = op_conf().repeat_conf();
+  CHECK(conf.has_repeat_num() || conf.has_repeat_num_per_record());
+  if (conf.has_repeat_num()) { CHECK_GE(conf.repeat_num(), 1); }
+  if (conf.has_repeat_num_per_record()) { CHECK_GE(conf.repeat_num_per_record(), 1); }
   EnrollInputBn("in");
   EnrollOutputBn("out");
+}
+
+int32_t RepeatOp::GetRepeatNum(const RepeatOpConf& conf, const ParallelContext& ctx) {
+  CHECK(conf.has_repeat_num() || conf.has_repeat_num_per_record());
+  if (conf.has_repeat_num()) {
+    return conf.repeat_num();
+  } else {
+    int64_t repeat_num =
+        Global<JobDesc>::Get()->DevicePieceSize4ParallelCtx(ctx) * conf.repeat_num_per_record();
+    CHECK_LE(repeat_num, static_cast<int64_t>(MaxVal<int32_t>()));
+    return static_cast<int32_t>(repeat_num);
+  }
 }
 
 const PbMessage& RepeatOp::GetCustomizedConf() const { return op_conf().repeat_conf(); }

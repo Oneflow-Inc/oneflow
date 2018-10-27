@@ -992,7 +992,10 @@ message UnpackOpConf {
 message RepeatOpConf {
   required string in = 1;
   required string out = 2;
-  required int64 repeat_num = 3;
+  oneof repeat_num_conf {
+    int32 repeat_num = 3;
+    int32 repeat_num_per_record = 4;
+  }
 }
 
 message OperatorConf {

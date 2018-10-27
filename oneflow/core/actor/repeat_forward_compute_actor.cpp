@@ -1,4 +1,5 @@
 #include "oneflow/core/actor/repeat_forward_compute_actor.h"
+#include "oneflow/core/operator/repeat_op.h"
 
 namespace oneflow {
 
@@ -6,7 +7,8 @@ void RepeatForwardCompActor::VirtualCompActorInit(const TaskProto& proto) {
   CHECK_EQ(proto.exec_sequence().exec_node().size(), 1);
   const KernelConf& kernel_conf = proto.exec_sequence().exec_node().Get(0).kernel_conf();
   CHECK(kernel_conf.op_attribute().op_conf().has_repeat_conf());
-  repeat_num_ = kernel_conf.op_attribute().op_conf().repeat_conf().repeat_num();
+  repeat_num_ =
+      RepeatOp::GetRepeatNum(kernel_conf.op_attribute().op_conf().repeat_conf(), *parallel_ctx());
   repeat_count_ = 0;
   cur_piece_id_ = 0;
 
