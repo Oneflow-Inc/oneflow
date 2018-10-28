@@ -140,14 +140,14 @@ void BboxNmsAndLimitKernel<T>::ForwardDataContent(
   for (auto& pair : im_grouped_bbox_inds) {
     auto im_detected_bbox_inds =
         ApplyNmsAndVoteByClass(pair.second, bbox_prob_blob, bbox_score_blob, target_bbox_blob);
+    Limit(bbox_score_blob, im_detected_bbox_inds);
     all_im_bbox_inds.insert(all_im_bbox_inds.end(), im_detected_bbox_inds.begin(),
                             im_detected_bbox_inds.end());
   }
-  Limit(bbox_score_blob, all_im_bbox_inds);
   OutputBBox(all_im_bbox_inds, target_bbox_blob, out_bbox_blob);
   OutputBBoxScore(all_im_bbox_inds, bbox_score_blob, out_bbox_score_blob);
   OutputBBoxLabel(all_im_bbox_inds, bbox_prob_blob->shape().At(1), out_bbox_label_blob);
-  if (bbox_blob->has_record_id_in_device_piece_field()) { FillRecordIdInDevicePiece(BnInOp2Blob); }
+  FillRecordIdInDevicePiece(out_bbox_blob, out_bbox_score_blob, out_bbox_label_blob);
 }
 
 template<typename T>
@@ -296,16 +296,14 @@ void BboxNmsAndLimitKernel<T>::OutputBBox(const std::vector<int32_t> out_bbox_in
                                           const Blob* target_bbox_blob, Blob* out_bbox_blob) const {
   std::memset(out_bbox_blob->mut_dptr<T>(), 0,
               out_bbox_blob->static_shape().elem_cnt() * sizeof(T));
-  int32_t out_cnt = 0;
-  for (int32_t bbox_idx : out_bbox_inds) {
-    const auto* bbox = BBox::Cast(target_bbox_blob->dptr<T>()) + bbox_idx;
-    auto* out_bbox = BBox::Cast(out_bbox_blob->mut_dptr<T>()) + out_cnt;
+  CHECK_LE(out_bbox_inds.size(), out_bbox_blob->static_shape().At(0));
+  FOR_RANGE(size_t, i, 0, out_bbox_inds.size()) {
+    const auto* bbox = BBox::Cast(target_bbox_blob->dptr<T>()) + out_bbox_inds.at(i);
+    auto* out_bbox = BBox::Cast(out_bbox_blob->mut_dptr<T>()) + i;
     out_bbox->set_ltrb(bbox->left(), bbox->top(), bbox->right(), bbox->bottom());
     out_bbox->set_index(bbox->index());
-    ++out_cnt;
   }
-  CHECK_LE(out_cnt, out_bbox_blob->static_shape().At(0));
-  out_bbox_blob->set_dim0_valid_num(0, out_cnt);
+  out_bbox_blob->set_dim0_valid_num(0, out_bbox_inds.size());
 }
 
 template<typename T>
@@ -314,13 +312,11 @@ void BboxNmsAndLimitKernel<T>::OutputBBoxScore(const std::vector<int32_t> out_bb
                                                Blob* out_bbox_score_blob) const {
   std::memset(out_bbox_score_blob->mut_dptr<T>(), 0,
               out_bbox_score_blob->static_shape().elem_cnt() * sizeof(T));
-  int32_t out_cnt = 0;
-  for (int32_t bbox_idx : out_bbox_inds) {
-    out_bbox_score_blob->mut_dptr<T>()[out_cnt] = bbox_score_blob->dptr<T>()[bbox_idx];
-    ++out_cnt;
+  CHECK_LE(out_bbox_inds.size(), out_bbox_score_blob->static_shape().elem_cnt());
+  FOR_RANGE(size_t, i, 0, out_bbox_inds.size()) {
+    out_bbox_score_blob->mut_dptr<T>()[i] = bbox_score_blob->dptr<T>()[out_bbox_inds.at(i)];
   }
-  CHECK_LE(out_cnt, out_bbox_score_blob->static_shape().elem_cnt());
-  out_bbox_score_blob->set_dim0_valid_num(0, out_cnt);
+  out_bbox_score_blob->set_dim0_valid_num(0, out_bbox_inds.size());
 }
 
 template<typename T>
@@ -329,26 +325,24 @@ void BboxNmsAndLimitKernel<T>::OutputBBoxLabel(const std::vector<int32_t> out_bb
                                                Blob* out_bbox_label_blob) const {
   std::memset(out_bbox_label_blob->mut_dptr<int32_t>(), 0,
               out_bbox_label_blob->static_shape().elem_cnt() * sizeof(int32_t));
-  int32_t out_cnt = 0;
-  for (int32_t bbox_idx : out_bbox_inds) {
-    out_bbox_label_blob->mut_dptr<int32_t>()[out_cnt] = bbox_idx % num_classes;
-    ++out_cnt;
+  CHECK_LE(out_bbox_inds.size(), out_bbox_label_blob->static_shape().elem_cnt());
+  FOR_RANGE(size_t, i, 0, out_bbox_inds.size()) {
+    out_bbox_label_blob->mut_dptr<int32_t>()[i] = out_bbox_inds.at(i) % num_classes;
   }
-  CHECK_LE(out_cnt, out_bbox_label_blob->static_shape().elem_cnt());
-  out_bbox_label_blob->set_dim0_valid_num(0, out_cnt);
+  out_bbox_label_blob->set_dim0_valid_num(0, out_bbox_inds.size());
 }
 
 template<typename T>
-void BboxNmsAndLimitKernel<T>::FillRecordIdInDevicePiece(
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  Blob* out_bbox_blob = BnInOp2Blob("out_bbox");
-  Blob* out_bbox_score_blob = BnInOp2Blob("out_bbox_score");
-  Blob* out_bbox_label_blob = BnInOp2Blob("out_bbox_label");
-  FOR_RANGE(size_t, i, 0, out_bbox_blob->shape().At(0)) {
-    int64_t im_index = BBox::Cast(out_bbox_blob->mut_dptr<T>(i))->index();
-    out_bbox_blob->set_record_id_in_device_piece(i, im_index);
-    out_bbox_score_blob->set_record_id_in_device_piece(i, im_index);
-    out_bbox_label_blob->set_record_id_in_device_piece(i, im_index);
+void BboxNmsAndLimitKernel<T>::FillRecordIdInDevicePiece(Blob* out_bbox_blob,
+                                                         Blob* out_bbox_score_blob,
+                                                         Blob* out_bbox_label_blob) const {
+  if (out_bbox_blob->has_record_id_in_device_piece_field()) {
+    FOR_RANGE(size_t, i, 0, out_bbox_blob->shape().At(0)) {
+      int64_t im_index = BBox::Cast(out_bbox_blob->mut_dptr<T>(i))->index();
+      out_bbox_blob->set_record_id_in_device_piece(i, im_index);
+      out_bbox_score_blob->set_record_id_in_device_piece(i, im_index);
+      out_bbox_label_blob->set_record_id_in_device_piece(i, im_index);
+    }
   }
 }
 

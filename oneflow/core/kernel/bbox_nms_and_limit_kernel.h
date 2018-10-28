@@ -63,7 +63,8 @@ class BboxNmsAndLimitKernel final : public KernelIf<DeviceType::kCPU> {
                        Blob* out_bbox_score_blob) const;
   void OutputBBoxLabel(const std::vector<int32_t> out_bbox_inds, const int32_t num_classes,
                        Blob* out_bbox_label_blob) const;
-  void FillRecordIdInDevicePiece(const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  void FillRecordIdInDevicePiece(Blob* out_bbox_blob, Blob* out_bbox_score_blob,
+                                 Blob* out_bbox_label_blob) const;
 
   std::unique_ptr<ScoringMethodIf<T>> scoring_method_;
 };

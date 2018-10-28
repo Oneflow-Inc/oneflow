@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/bbox_nms_and_limit_op.h"
+#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 
@@ -30,7 +31,8 @@ void BboxNmsAndLimitOp::InferBlobDescs(
   CHECK_EQ(device_type(), DeviceType::kCPU);
   const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
   if (conf.bbox_vote_enabled()) { CHECK(conf.has_bbox_vote()); }
-  int32_t num_limit = conf.detections_per_im();
+  BalancedSplitter bs(Global<JobDesc>::Get()->PieceSize(), parallel_ctx->parallel_num());
+  int32_t num_limit = conf.detections_per_im() * bs.At(parallel_ctx->parallel_id()).size();
 
   // input: bbox (r, 5)
   const BlobDesc* bbox_bd = GetBlobDesc4BnInOp("bbox");
