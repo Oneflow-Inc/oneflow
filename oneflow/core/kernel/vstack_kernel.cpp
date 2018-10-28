@@ -58,15 +58,15 @@ void VStackKernel<device_type, T>::BackwardDataContent(
   const int64_t elem_cnt_per_instance = out_diff_blob->shape().Count(1);
   int64_t out_instance_offset = 0;
   for (const auto& in_bn : this->op_attribute().input_bns()) {
-    int64_t instance_num = BnInOp2Blob(in_bn)->shape().At(0);
     Blob* in_diff_blob = BnInOp2Blob(GenDiffBn(in_bn));
-    if (out_instance_offset < in_diff_blob->shape().At(0)) {
+    int64_t instance_num = in_diff_blob->shape().At(0);
+    CHECK_LE(out_instance_offset + instance_num, out_diff_blob->shape().At(0));
+    if (out_instance_offset < out_diff_blob->shape().At(0)) {
       Memcpy<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr<T>(),
                           out_diff_blob->dptr<T>(out_instance_offset),
                           instance_num * elem_cnt_per_instance * sizeof(T));
     } else {
       CHECK_EQ(instance_num, 0);
-      CHECK_EQ(out_instance_offset, in_diff_blob->shape().At(0));
     }
     out_instance_offset += instance_num;
   }
