@@ -128,7 +128,6 @@ void Blob::set_record_id_in_device_piece(int64_t no, int64_t val) {
   CHECK_GE(no, 0);
   CHECK_LT(no, static_shape().At(0));
   CHECK_GE(val, 0);
-  CHECK_LE(val, static_shape().At(1));
   record_id_in_device_piece_ptr_[no] = val;
 }
 
