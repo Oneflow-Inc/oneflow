@@ -40,12 +40,6 @@ void AccuracyKernel<device_type, PredType, LabelType>::ForwardDim0ValidNum(
 }
 
 template<DeviceType device_type, typename PredType, typename LabelType>
-void AccuracyKernel<device_type, PredType, LabelType>::ForwardDim1ValidNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNIMPLEMENTED();
-}
-
-template<DeviceType device_type, typename PredType, typename LabelType>
 void AccuracyKernel<device_type, PredType, LabelType>::ForwardRecordIdInDevicePiece(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // do nothing
