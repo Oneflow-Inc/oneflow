@@ -6,9 +6,10 @@ template<typename T>
 void FpnCollectKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const FpnCollectOpConf& conf = this->op_conf().fpn_collect_conf();
-  std::vector<const Blob*> rois_fpn_blobs(conf.num_layers());
-  std::vector<const Blob*> roi_probs_fpn_blobs(conf.num_layers());
-  FOR_RANGE(size_t, i, 0, conf.num_layers()) {
+  const size_t num_layers = conf.rpn_rois_fpn_size();
+  std::vector<const Blob*> rois_fpn_blobs(num_layers);
+  std::vector<const Blob*> roi_probs_fpn_blobs(num_layers);
+  FOR_RANGE(size_t, i, 0, num_layers) {
     rois_fpn_blobs[i] = BnInOp2Blob("rpn_rois_fpn_" + std::to_string(i));
     roi_probs_fpn_blobs[i] = BnInOp2Blob("rpn_roi_probs_fpn_" + std::to_string(i));
   }
@@ -67,7 +68,7 @@ void FpnCollectKernel<T>::ForwardDataContent(
 template<typename T>
 void FpnCollectKernel<T>::ForwardDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  FOR_RANGE(size_t, i, 0, this->op_conf().fpn_collect_conf().num_layers()) {
+  FOR_RANGE(size_t, i, 0, this->op_conf().fpn_collect_conf().rpn_rois_fpn_size()) {
     const Blob* rois_fpn_blobs_i = BnInOp2Blob("rpn_rois_fpn_" + std::to_string(i));
     const Blob* roi_probs_fpn_blobs_i = BnInOp2Blob("rpn_roi_probs_fpn_" + std::to_string(i));
     size_t field_len = rois_fpn_blobs_i->ByteSizeOfDim0ValidNumField();
@@ -81,7 +82,7 @@ void FpnCollectKernel<T>::ForwardDim0ValidNum(
 template<typename T>
 void FpnCollectKernel<T>::ForwardRecordIdInDevicePiece(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  FOR_RANGE(size_t, i, 0, this->op_conf().fpn_collect_conf().num_layers()) {
+  FOR_RANGE(size_t, i, 0, this->op_conf().fpn_collect_conf().rpn_rois_fpn_size()) {
     const Blob* rois_fpn_blobs_i = BnInOp2Blob("rpn_rois_fpn_" + std::to_string(i));
     const Blob* roi_probs_fpn_blobs_i = BnInOp2Blob("rpn_roi_probs_fpn_" + std::to_string(i));
     size_t field_len = rois_fpn_blobs_i->ByteSizeOfRecordIdInDevicePieceField();

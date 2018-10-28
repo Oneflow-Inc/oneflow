@@ -20,6 +20,8 @@ class VStackKernel final : public KernelIf<device_type> {
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void ForwardDim0ValidNum(const KernelCtx& ctx,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardRecordIdInDevicePiece(
+      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void BackwardInDiffDim0ValidNum(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
