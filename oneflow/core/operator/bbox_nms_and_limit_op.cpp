@@ -83,6 +83,6 @@ void BboxNmsAndLimitOp::InferBlobDescs(
   voting_score_bd->set_data_type(bbox_prob_bd->data_type());
 }
 
-REGISTER_OP(OperatorConf::kBboxNmsAndLimitConf, BboxNmsAndLimitOp);
+REGISTER_CPU_OP(OperatorConf::kBboxNmsAndLimitConf, BboxNmsAndLimitOp);
 
 }  // namespace oneflow

@@ -242,6 +242,8 @@ std::pair<std::string, int32_t> GenUnRepeatedBn(const std::string& bn);
 #define REGISTER_OP(op_type_case, OpType) \
   REGISTER_CLASS_WITH_ARGS(op_type_case, Operator, OpType, const OperatorConf&)
 
+#define REGISTER_CPU_OP(op_type_case, OpType) REGISTER_OP(op_type_case, OpType)
+
 #define REGISTER_OP_CREATOR(op_type_case, creator) \
   REGISTER_CLASS_CREATOR(op_type_case, Operator, creator, const OperatorConf&)
 

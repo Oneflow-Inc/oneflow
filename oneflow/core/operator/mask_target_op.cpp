@@ -89,6 +89,6 @@ void MaskTargetOp::VirtualGenKernelConf(
   kernel_conf->set_data_type(GetBlobDesc4BnInOp("rois")->data_type());
 }
 
-REGISTER_OP(OperatorConf::kMaskTargetConf, MaskTargetOp);
+REGISTER_CPU_OP(OperatorConf::kMaskTargetConf, MaskTargetOp);
 
 }  // namespace oneflow

@@ -24,6 +24,6 @@ void RleEncodeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   out->set_data_type(DataType::kChar);
 }
 
-REGISTER_OP(OperatorConf::kRleEncodeConf, RleEncodeOp);
+REGISTER_CPU_OP(OperatorConf::kRleEncodeConf, RleEncodeOp);
 
 }  // namespace oneflow

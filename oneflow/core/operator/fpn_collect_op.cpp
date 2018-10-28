@@ -67,6 +67,6 @@ void FpnCollectOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   roi_inds_blob_desc->set_data_type(DataType::kInt32);
 }
 
-REGISTER_OP(OperatorConf::kFpnCollectConf, FpnCollectOp);
+REGISTER_CPU_OP(OperatorConf::kFpnCollectConf, FpnCollectOp);
 
 }  // namespace oneflow

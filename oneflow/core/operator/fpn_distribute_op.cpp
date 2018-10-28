@@ -49,6 +49,6 @@ void FpnDistributeOp::InferBlobDescs(
   target_levels_blob_desc->set_data_type(DataType::kInt32);
 }
 
-REGISTER_OP(OperatorConf::kFpnDistributeConf, FpnDistributeOp);
+REGISTER_CPU_OP(OperatorConf::kFpnDistributeConf, FpnDistributeOp);
 
 }  // namespace oneflow

@@ -103,6 +103,6 @@ void AnchorTargetOp::VirtualGenKernelConf(
   kernel_conf->set_data_type(GetBlobDesc4BnInOp("gt_boxes")->data_type());
 }
 
-REGISTER_OP(OperatorConf::kAnchorTargetConf, AnchorTargetOp);
+REGISTER_CPU_OP(OperatorConf::kAnchorTargetConf, AnchorTargetOp);
 
 }  // namespace oneflow

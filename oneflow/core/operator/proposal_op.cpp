@@ -84,6 +84,6 @@ void ProposalOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   post_nms_slice_blob_desc->set_data_type(DataType::kInt32);
 }
 
-REGISTER_OP(OperatorConf::kProposalConf, ProposalOp);
+REGISTER_CPU_OP(OperatorConf::kProposalConf, ProposalOp);
 
 }  // namespace oneflow

@@ -21,6 +21,6 @@ LogicalBlobId BlobDumpOp::ibn2lbi(const std::string& input_bn) const {
   return Lbi4InputBn(input_bn);
 }
 
-REGISTER_OP(OperatorConf::kBlobDumpConf, BlobDumpOp);
+REGISTER_CPU_OP(OperatorConf::kBlobDumpConf, BlobDumpOp);
 
 }  // namespace oneflow

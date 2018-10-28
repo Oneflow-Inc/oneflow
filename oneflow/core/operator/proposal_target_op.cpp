@@ -102,5 +102,5 @@ void ProposalTargetOp::InferBlobDescs(
   sampled_inds_blob_desc->set_data_type(DataType::kInt32);
 }
 
-REGISTER_OP(OperatorConf::kProposalTargetConf, ProposalTargetOp);
+REGISTER_CPU_OP(OperatorConf::kProposalTargetConf, ProposalTargetOp);
 }  // namespace oneflow
