@@ -39,14 +39,14 @@ struct AutoRegistrationFactory {
   HashMap<int32_t, std::function<Base*(Args&&...)>> creators_;
 };
 
-#define REGISTER_VAR_NAME OF_PP_CAT(g_registry_var, __LINE__)
+#define REGISTER_VAR_NAME OF_PP_CAT(g_registry_var, __COUNTER__)
 
 #define REGISTER_CLASS(k, Base, Derived) \
   static AutoRegistrationFactory<Base>::RawRegisterType<Derived> REGISTER_VAR_NAME(k)
 #define REGISTER_CLASS_WITH_ARGS(k, Base, Derived, ...) \
-  static AutoRegistrationFactory<Base, __VA_ARGS__>::RawRegisterType<Derived> REGISTER_VAR_NAME(k)
+  static AutoRegistrationFactory<Base, ##__VA_ARGS__>::RawRegisterType<Derived> REGISTER_VAR_NAME(k)
 #define REGISTER_CLASS_CREATOR(k, Base, f, ...) \
-  static AutoRegistrationFactory<Base, __VA_ARGS__>::CreatorRegisterType REGISTER_VAR_NAME(k, f)
+  static AutoRegistrationFactory<Base, ##__VA_ARGS__>::CreatorRegisterType REGISTER_VAR_NAME(k, f)
 
 template<typename Base, typename... Args>
 inline Base* NewObj(int32_t k, Args&&... args) {
