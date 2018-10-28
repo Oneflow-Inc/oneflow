@@ -239,10 +239,24 @@ std::string GenUnDiffBn(const std::string& diff_bn);
 std::string GenRepeatedBn(const std::string& bn_prefix, int32_t idx);
 std::pair<std::string, int32_t> GenUnRepeatedBn(const std::string& bn);
 
-#define REGISTER_OP(op_type_case, OpType) \
+struct OnlyCpuSupportPredicator {
+  OnlyCpuSupportPredicator(bool only_cpu) : only_cpu_(only_cpu) {}
+  operator bool() { return only_cpu_; }
+
+ private:
+  bool only_cpu_;
+};
+
+#define REGISTER_OP(op_type_case, OpType)                                       \
+  REGISTER_CLASS_CREATOR(op_type_case, OnlyCpuSupportPredicator,                \
+                         ([] { return new OnlyCpuSupportPredicator(false); })); \
   REGISTER_CLASS_WITH_ARGS(op_type_case, Operator, OpType, const OperatorConf&)
 
-#define REGISTER_CPU_OP(op_type_case, OpType) REGISTER_OP(op_type_case, OpType)
+#define REGISTER_CPU_OP(op_type_case, OpType)                                  \
+  REGISTER_CLASS_CREATOR(op_type_case, OnlyCpuSupportPredicator,               \
+                         ([] { return new OnlyCpuSupportPredicator(true); })); \
+  extern "C" void Oneflow_OnlyCpuSupported_##OpType() {}                       \
+  REGISTER_CLASS_WITH_ARGS(op_type_case, Operator, OpType, const OperatorConf&)
 
 #define REGISTER_OP_CREATOR(op_type_case, creator) \
   REGISTER_CLASS_CREATOR(op_type_case, Operator, creator, const OperatorConf&)
