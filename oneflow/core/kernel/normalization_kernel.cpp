@@ -92,6 +92,8 @@ void NormalizationKernel<DeviceType::kGPU, float>::NormalizationCudnnForward(
   float* moving_mean = BnInOp2Blob("moving_mean")->mut_dptr<float>();
   float* moving_variance = BnInOp2Blob("moving_variance")->mut_dptr<float>();
   double epsilon = this->op_conf().normalization_conf().epsilon();
+  double min_epsilon = CUDNN_BN_MIN_EPSILON + 1e-8;
+  epsilon = epsilon < min_epsilon ? min_epsilon : epsilon;
   if (this->op_conf().trainable()) {
     InitMovingMeanAndMovingVariance(ctx, BnInOp2Blob, false);
     double momentum = this->op_conf().normalization_conf().momentum();
@@ -116,6 +118,9 @@ template<>
 void NormalizationKernel<DeviceType::kGPU, float>::NormalizationCudnnBackward(
     const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const cudnnTensorDescriptor_t& in_desc = normalization_ctx_->cudnn_in_tensor_desc();
+  double epsilon = static_cast<double>(this->op_conf().normalization_conf().epsilon());
+  double min_epsilon = CUDNN_BN_MIN_EPSILON + 1e-8;
+  epsilon = epsilon < min_epsilon ? min_epsilon : epsilon;
   CudaCheck(cudnnBatchNormalizationBackward(
       ctx.device_ctx->cudnn_handle(), normalization_ctx_->cudnn_batch_norm_mode(),
       OnePtr<float>::value, ZeroPtr<float>::value, OnePtr<float>::value, ZeroPtr<float>::value,
@@ -125,7 +130,7 @@ void NormalizationKernel<DeviceType::kGPU, float>::NormalizationCudnnBackward(
       normalization_ctx_->cudnn_param_tensor_desc(), BnInOp2Blob("gamma")->dptr<float>(),
       BnInOp2Blob(GenDiffBn("gamma"))->mut_dptr<float>(),
       BnInOp2Blob(GenDiffBn("beta"))->mut_dptr<float>(),
-      static_cast<double>(this->op_conf().normalization_conf().epsilon()),
+      epsilon,
       BnInOp2Blob("cache_mean_for_cudnn_bw")->dptr<float>(),
       BnInOp2Blob("cache_inv_variance_for_cudnn_bw")->dptr<float>()));
 }
@@ -356,8 +361,11 @@ void NormalizationKernel<device_type, T>::Normalize(
   const bool center = normalization_op_conf.center();
   Blob* inv_var_blob = BnInOp2Blob("inv_var");
   Blob* normalized_blob = BnInOp2Blob("normalized_in");
+  double epsilon = normalization_op_conf.epsilon();
+  double min_epsilon = CUDNN_BN_MIN_EPSILON + 1e-8;
+  epsilon = epsilon < min_epsilon ? min_epsilon : epsilon;
   Rsqrt<device_type, T>(ctx.device_ctx, norm_part_num, variance_blob->dptr<T>(),
-                        normalization_op_conf.epsilon(), inv_var_blob->mut_dptr<T>());
+                        epsilon, inv_var_blob->mut_dptr<T>());
   FOR_RANGE(int32_t, i, 0, norm_part_num) {
     ScalarSub<device_type, T>(ctx.device_ctx, norm_elem_num, in_blob->dptr<T>() + i * norm_elem_num,
                               mean_blob->dptr<T>() + i,
