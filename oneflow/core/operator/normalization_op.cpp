@@ -140,7 +140,7 @@ void NormalizationOp::InferBlobDescsForCudnn(
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   const DataType in_data_type = in_blob_desc->data_type();
   CHECK(conf.scale() && conf.center()) << "Cudnn batch norm must use scale and center";
-  CHECK_GT(conf.epsilon(), CUDNN_BN_MIN_EPSILON);
+  CHECK_GE(conf.epsilon(), CUDNN_BN_MIN_EPSILON);
   InferParamBlobDescs(GetBlobDesc4BnInOp, conf, in_blob_desc->shape().At(conf.axis()), in_data_type,
                       true);
 }
