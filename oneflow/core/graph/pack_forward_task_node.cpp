@@ -50,7 +50,7 @@ void PackForwardCompTaskNode::BuildExecGphAndRegst() {
 
   *out_blob = *in_blob;
   const PackOp* pack_op = dynamic_cast<const PackOp*>(op.get());
-  CHECK(pack_op != nullptr);
+  CHECK_NOTNULL(pack_op);
   CHECK_EQ(pack_op->GetPackNum(*parallel_ctx()),
            related_unpack_in_blob->shape().At(0) / in_blob->shape().At(0));
   out_blob->mut_shape().Set(0, related_unpack_in_blob->shape().At(0));
@@ -65,7 +65,7 @@ void PackForwardCompTaskNode::InferProducedDataRegstTimeShape() {
   std::vector<int64_t> time_shape_dim_vec(in_regst->data_regst_time_shape()->dim_vec());
 
   const PackOp* pack_op = dynamic_cast<const PackOp*>(logical_node()->SoleOp().get());
-  CHECK(pack_op != nullptr);
+  CHECK_NOTNULL(pack_op);
   int64_t pack_num = pack_op->GetPackNum(*parallel_ctx());
   CHECK_GT(time_shape_dim_vec.size(), 0);
   CHECK_EQ(pack_num, time_shape_dim_vec.back());

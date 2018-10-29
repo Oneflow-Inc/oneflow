@@ -34,7 +34,7 @@ void UnpackForwardCompTaskNode::InferProducedDataRegstTimeShape() {
   std::vector<int64_t> time_shape_dim_vec(in_regst->data_regst_time_shape()->dim_vec());
 
   const UnpackOp* op = dynamic_cast<UnpackOp*>(logical_node()->SoleOp().get());
-  CHECK(op != nullptr);
+  CHECK_NOTNULL(op);
   int64_t in_piece_size = in_regst->GetBlobDesc(op->BnInOp2Lbi("in"))->shape().At(0);
   int64_t unpack_num = op->GetUnpackNum(*parallel_ctx());
   CHECK_EQ(0, in_piece_size % unpack_num);

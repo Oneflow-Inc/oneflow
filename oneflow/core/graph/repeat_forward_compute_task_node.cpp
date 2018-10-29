@@ -32,7 +32,7 @@ void RepeatForwardCompTaskNode::InferProducedDataRegstTimeShape() {
   std::vector<int64_t> time_shape_dim_vec =
       GetSoleConsumedRegst("in")->data_regst_time_shape()->dim_vec();
   const RepeatOp* repeat_op = dynamic_cast<RepeatOp*>(this->logical_node()->SoleOp().get());
-  CHECK(repeat_op != nullptr);
+  CHECK_NOTNULL(repeat_op);
   int32_t repeat_num = repeat_op->GetRepeatNum(*parallel_ctx());
   time_shape_dim_vec.push_back(repeat_num);
   GetProducedRegst("out")->mut_data_regst_time_shape()->reset(new Shape(time_shape_dim_vec));
