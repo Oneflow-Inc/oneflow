@@ -258,7 +258,9 @@ struct OnlyCpuSupportPredicator {
   extern "C" void Oneflow_OnlyCpuSupported_##OpType() {}                       \
   REGISTER_CLASS_WITH_ARGS(op_type_case, Operator, OpType, const OperatorConf&)
 
-#define REGISTER_OP_CREATOR(op_type_case, creator) \
+#define REGISTER_OP_CREATOR(op_type_case, creator)                              \
+  REGISTER_CLASS_CREATOR(op_type_case, OnlyCpuSupportPredicator,                \
+                         ([] { return new OnlyCpuSupportPredicator(false); })); \
   REGISTER_CLASS_CREATOR(op_type_case, Operator, creator, const OperatorConf&)
 
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf);
