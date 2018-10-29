@@ -454,8 +454,15 @@ std::pair<std::string, int32_t> GenUnRepeatedBn(const std::string& bn) {
   return std::make_pair(prefix, idx);
 }
 
+bool IsOpOnlyCpuSupported(OperatorConf::OpTypeCase op_type_case) {
+  return *std::unique_ptr<OnlyCpuSupportPredicator>(NewObj<OnlyCpuSupportPredicator>(op_type_case));
+}
+
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf) {
   Operator* rptr = NewObj<Operator>(op_conf.op_type_case(), op_conf);
+  if (IsOpOnlyCpuSupported(op_conf.op_type_case())) {
+    CHECK_EQ(op_conf.device_type(), DeviceType::kCPU);
+  }
   rptr->InitFromOpConf(op_conf);
   return std::shared_ptr<Operator>(rptr);
 }
