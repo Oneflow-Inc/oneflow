@@ -18,6 +18,6 @@ void RecordLoadOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   out_blob_desc->set_data_type(kOFRecord);
 }
 
-REGISTER_OP(OperatorConf::kRecordLoadConf, RecordLoadOp);
+REGISTER_CPU_OP(OperatorConf::kRecordLoadConf, RecordLoadOp);
 
 }  // namespace oneflow

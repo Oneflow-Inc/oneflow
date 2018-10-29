@@ -12,7 +12,7 @@ class ScoringMethodIf {
   ScoringMethodIf() = default;
   virtual ~ScoringMethodIf() = default;
 
-  using BBox = BBoxImpl<T, BBoxCategory::kIndexCorner>;
+  using BBox = IndexedBBoxT<T>;
   using ScoredBoxesIndices = ScoreIndices<BBoxIndices<IndexSequence, BBox>, T>;
 
   void Init(const BboxVoteConf& vote_conf) { vote_conf_ = vote_conf; }
@@ -32,7 +32,7 @@ class BboxNmsAndLimitKernel final : public KernelIf<DeviceType::kCPU> {
   BboxNmsAndLimitKernel() = default;
   ~BboxNmsAndLimitKernel() = default;
 
-  using BBox = BBoxImpl<T, BBoxCategory::kIndexCorner>;
+  using BBox = IndexedBBoxT<T>;
   using ScoredBoxesIndices = ScoreIndices<BBoxIndices<IndexSequence, BBox>, T>;
   using Image2IndexVecMap = HashMap<int32_t, std::vector<int32_t>>;
 
@@ -42,6 +42,8 @@ class BboxNmsAndLimitKernel final : public KernelIf<DeviceType::kCPU> {
                           std::function<Blob*(const std::string&)>) const override;
   void ForwardDim0ValidNum(const KernelCtx& ctx,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardRecordIdInDevicePiece(
+      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
   void BroadcastBboxTransform(const Blob* bbox_blob, const Blob* bbox_pred_blob,
                               Blob* target_bbox_blob) const;
@@ -61,6 +63,7 @@ class BboxNmsAndLimitKernel final : public KernelIf<DeviceType::kCPU> {
                        Blob* out_bbox_score_blob) const;
   void OutputBBoxLabel(const std::vector<int32_t> out_bbox_inds, const int32_t num_classes,
                        Blob* out_bbox_label_blob) const;
+  void FillRecordIdInDevicePiece(const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 
   std::unique_ptr<ScoringMethodIf<T>> scoring_method_;
 };

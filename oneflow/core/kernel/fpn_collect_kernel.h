@@ -13,15 +13,15 @@ class FpnCollectKernel final : public KernelIf<DeviceType::kCPU> {
   FpnCollectKernel() = default;
   ~FpnCollectKernel() = default;
 
-  using BBox = BBoxImpl<const T, BBoxCategory::kIndexCorner>;
-  using MutBBox = BBoxImpl<T, BBoxCategory::kIndexCorner>;
+  using BBox = IndexedBBoxT<const T>;
+  using MutBBox = IndexedBBoxT<T>;
 
  private:
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
   void ForwardDim0ValidNum(const KernelCtx& ctx,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void ForwardRecordIdxInDevicePiece(
+  void ForwardRecordIdInDevicePiece(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 

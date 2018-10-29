@@ -19,10 +19,7 @@ void LossCompTaskNode::ProduceAllRegstsAndBindEdges() {
 }
 
 void LossCompTaskNode::ConsumeAllRegsts() {
-  for (TaskEdge* edge : in_edges()) {
-    edge->ForEachRegst(
-        [&](std::shared_ptr<RegstDesc> regst_desc) { ConsumeRegst("in", regst_desc); });
-  }
+  for (TaskEdge* edge : in_edges()) { ConsumeRegst("in", edge->GetSoleRegst()); }
 }
 
 void LossCompTaskNode::BuildExecGphAndRegst() {
@@ -35,9 +32,9 @@ void LossCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<const Operator> loss_op = op_vec[0];
   ExecNode* loss_node = mut_exec_gph().NewNode();
   loss_node->mut_op() = loss_op;
-  loss_op->ForEachInputBn([&](const std::string& ibn) {
+  for (const std::string& ibn : loss_op->input_bns()) {
     loss_node->BindBnWithOneOfTheRegsts(ibn, GetConsumedRegst("in"));
-  });
+  }
   std::shared_ptr<RegstDesc> data_tmp_regst = GetProducedRegst("data_tmp");
   loss_node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, data_tmp_regst);
 
@@ -76,7 +73,9 @@ void LossCompTaskNode::BuildRegstWhenTraining() {
 
   std::shared_ptr<RegstDesc> loss_regst = GetProducedRegst("loss");
   loss_regst->AddLbi(sum_op->BnInOp2Lbi(sum_op->SoleObn()));
+  loss_regst->AddLbi(loss_op->BnInOp2Lbi("loss_instance_num"));
   sum_node->BindBnWithRegst(sum_op->SoleObn(), loss_regst);
+  loss_node->BindBnWithRegst("loss_instance_num", loss_regst);
   if (!loss_op->GetValFromCustomizedConf<std::string>("weight").empty()) {
     loss_regst->AddLbi(loss_op->BnInOp2Lbi("reduction_coefficient"));
     loss_node->BindBnWithRegst("reduction_coefficient", loss_regst);

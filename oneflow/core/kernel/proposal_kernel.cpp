@@ -16,8 +16,10 @@ void ProposalKernel<T>::ForwardDataContent(
   FOR_RANGE(int64_t, im_i, 0, BnInOp2Blob("class_prob")->shape().At(0)) {
     auto score_slice = RegionProposal(im_i, BnInOp2Blob);
     auto post_nms_slice = ApplyNms(BnInOp2Blob);
-    num_output += WriteRoisToOutput(num_output, im_i, score_slice, post_nms_slice, BnInOp2Blob);
+    WriteRoisToOutput(num_output, im_i, score_slice, post_nms_slice, BnInOp2Blob);
+    num_output += post_nms_slice.size();
   }
+  CHECK_LE(num_output, BnInOp2Blob("rois")->static_shape().At(0));
   BnInOp2Blob("rois")->set_dim0_valid_num(0, num_output);
   BnInOp2Blob("roi_probs")->set_dim0_valid_num(0, num_output);
 }
@@ -70,7 +72,7 @@ typename ProposalKernel<T>::BoxesSlice ProposalKernel<T>::ApplyNms(
 }
 
 template<typename T>
-size_t ProposalKernel<T>::WriteRoisToOutput(
+void ProposalKernel<T>::WriteRoisToOutput(
     const size_t num_output, const int32_t im_index, const ScoreSlice& score_slice,
     const BoxesSlice& post_nms_slice,
     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
@@ -78,15 +80,14 @@ size_t ProposalKernel<T>::WriteRoisToOutput(
   Blob* rois_prob_blob = BnInOp2Blob("roi_probs");
   FOR_RANGE(size_t, i, 0, post_nms_slice.size()) {
     const auto* prop_bbox = post_nms_slice.GetBBox(i);
-    auto* roi_bbox = RoiBox::Cast(rois_blob->mut_dptr<T>(num_output));
-    roi_bbox[i].set_corner_coord(prop_bbox->left(), prop_bbox->top(), prop_bbox->right(),
-                                 prop_bbox->bottom());
+    auto* roi_bbox = RoiBBox::Cast(rois_blob->mut_dptr<T>(num_output));
+    roi_bbox[i].set_ltrb(prop_bbox->left(), prop_bbox->top(), prop_bbox->right(),
+                         prop_bbox->bottom());
     roi_bbox[i].set_index(im_index);
     rois_prob_blob->mut_dptr<T>(num_output)[i] = score_slice.GetScore(post_nms_slice.GetIndex(i));
-    rois_blob->set_record_idx_in_device_piece(num_output + i, im_index);
-    rois_prob_blob->set_record_idx_in_device_piece(num_output + i, im_index);
+    rois_blob->set_record_id_in_device_piece(num_output + i, im_index);
+    rois_prob_blob->set_record_id_in_device_piece(num_output + i, im_index);
   }
-  return num_output + post_nms_slice.size();
 }
 
 template<typename T>
@@ -96,7 +97,7 @@ void ProposalKernel<T>::ForwardDim0ValidNum(
 }
 
 template<typename T>
-void ProposalKernel<T>::ForwardRecordIdxInDevicePiece(
+void ProposalKernel<T>::ForwardRecordIdInDevicePiece(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // do nothing
 }

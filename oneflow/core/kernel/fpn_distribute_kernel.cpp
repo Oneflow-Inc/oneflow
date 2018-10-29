@@ -1,13 +1,14 @@
 #include "oneflow/core/kernel/fpn_distribute_kernel.h"
-#include "oneflow/core/kernel/faster_rcnn_util.h"
+#include "oneflow/core/kernel/bbox_util.h"
 
 namespace oneflow {
 
 namespace {
 
 template<typename T>
-int32_t BBoxFpnLevel(const BBox2<T>* box, const int32_t roi_min_level, const int32_t roi_max_level,
-                     const T roi_canonical_level, const T roi_canonical_scale) {
+int32_t BBoxFpnLevel(const IndexedBBoxT<T>* box, const int32_t roi_min_level,
+                     const int32_t roi_max_level, const T roi_canonical_level,
+                     const T roi_canonical_scale) {
   int32_t target_level =
       std::floor(roi_canonical_level
                  + std::log(std::sqrt(box->Area()) / roi_canonical_scale + 1e-6) / std::log(2));
@@ -32,16 +33,16 @@ void FpnDistributeKernel<T>::ForwardDataContent(
   roi_indices_blob->set_dim0_valid_num(0, collected_rois_blob->shape().At(0));
   Blob* roi_indices_buf_blob = BnInOp2Blob("roi_indices_buf");
   int32_t roi_indices_size = roi_indices_blob->shape().At(0);
-  Indexes roi_indices(roi_indices_size, roi_indices_size, roi_indices_blob->mut_dptr<int32_t>(),
-                      false);
-  Indexes roi_indices_buf(roi_indices_size, roi_indices_size,
-                          roi_indices_buf_blob->mut_dptr<int32_t>(), true);
+  IndexSequence roi_indices(roi_indices_size, roi_indices_size,
+                            roi_indices_blob->mut_dptr<int32_t>(), false);
+  IndexSequence roi_indices_buf(roi_indices_size, roi_indices_size,
+                                roi_indices_buf_blob->mut_dptr<int32_t>(), true);
   Blob* target_levels_blob = BnInOp2Blob("target_levels");
   std::vector<int32_t> level_copy_idx(level_count, 0);
   size_t roi_size = 5 * sizeof(T);
   FOR_RANGE(int64_t, collected_roi_idx, 0, collected_rois_blob->shape().At(0)) {
     const T* collected_roi_ptr = collected_rois_blob->dptr<T>(collected_roi_idx);
-    const BBox2<T>* roi_bbox = BBox2<T>::Cast(collected_roi_ptr);
+    const auto* roi_bbox = IndexedBBoxT<T>::Cast(collected_roi_ptr);
     int32_t target_level = BBoxFpnLevel<T>(roi_bbox, conf.roi_min_level(), conf.roi_max_level(),
                                            static_cast<T>(conf.roi_canonical_level()),
                                            static_cast<T>(conf.roi_canonical_scale()));
@@ -51,9 +52,9 @@ void FpnDistributeKernel<T>::ForwardDataContent(
         ctx.device_ctx,
         rois_blob_vec[target_level_offset]->mut_dptr<T>() + level_copy_idx[target_level_offset],
         collected_roi_ptr, roi_size);
-    rois_blob_vec[target_level_offset]->set_record_idx_in_device_piece(
-        level_copy_idx[target_level_offset],
-        collected_rois_blob->record_idx_in_device_piece(collected_roi_idx));
+    rois_blob_vec[target_level_offset]->set_record_id_in_device_piece(
+        level_copy_idx[target_level_offset] / 5,
+        collected_rois_blob->record_id_in_device_piece(collected_roi_idx));
     level_copy_idx[target_level_offset] += 5;
   }
   int32_t roi_indices_idx = 0;
@@ -78,11 +79,11 @@ void FpnDistributeKernel<T>::ForwardDim0ValidNum(
 }
 
 template<typename T>
-void FpnDistributeKernel<T>::ForwardRecordIdxInDevicePiece(
+void FpnDistributeKernel<T>::ForwardRecordIdInDevicePiece(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // record indices of rois will be set in ForwardDataContent
   BnInOp2Blob("roi_indices")
-      ->CopyRecordIdxInDevicePieceFrom(ctx.device_ctx, BnInOp2Blob("collected_rois"));
+      ->CopyRecordIdInDevicePieceFrom(ctx.device_ctx, BnInOp2Blob("collected_rois"));
 }
 
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kFpnDistributeConf, FpnDistributeKernel,

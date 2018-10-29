@@ -61,10 +61,6 @@ const std::string& Operator::SoleIbn() const {
   CHECK_EQ(input_bns().size(), 1);
   return input_bns().Get(0);
 }
-const std::string& Operator::SolePibn() const {
-  CHECK_EQ(pb_input_bns().size(), 1);
-  return pb_input_bns().Get(0);
-}
 const std::string& Operator::SoleIdbn() const {
   CHECK_EQ(input_diff_bns().size(), 1);
   return input_diff_bns().Get(0);
@@ -72,10 +68,6 @@ const std::string& Operator::SoleIdbn() const {
 const std::string& Operator::SoleObn() const {
   CHECK_EQ(output_bns().size(), 1);
   return output_bns().Get(0);
-}
-const std::string& Operator::SolePobn() const {
-  CHECK_EQ(pb_output_bns().size(), 1);
-  return pb_output_bns().Get(0);
 }
 const std::string& Operator::SoleOdbn() const {
   CHECK_EQ(output_diff_bns().size(), 1);
@@ -92,36 +84,6 @@ const std::string& Operator::SoleFbbn() const {
 const std::string& Operator::SoleBbbn() const {
   CHECK_EQ(bw_buf_bns().size(), 1);
   return bw_buf_bns().Get(0);
-}
-std::string Operator::RepeatedIbn(const std::string& prefix, int32_t idx) const {
-  CHECK_LT(idx, RepeatedIbnSize(prefix));
-  return prefix + "_" + std::to_string(idx);
-}
-int32_t Operator::RepeatedIbnSize(const std::string& prefix) const {
-  int32_t ret = 0;
-  ForEachInputBn([&ret, &prefix](const std::string& ibn) {
-    std::string idx_str = std::to_string(ret);
-    size_t idx_size = idx_str.size();
-    size_t ibn_size = ibn.size();
-    std::string prefix_substr = ibn.substr(0, ibn_size - idx_size - 1);
-    if (prefix_substr == prefix) { ret++; }
-  });
-  return ret;
-}
-std::string Operator::RepeatedObn(const std::string& prefix, int32_t idx) const {
-  CHECK_LT(idx, RepeatedObnSize(prefix));
-  return prefix + "_" + std::to_string(idx);
-}
-int32_t Operator::RepeatedObnSize(const std::string& prefix) const {
-  int32_t ret = 0;
-  ForEachOutputBn([&ret, &prefix](const std::string& obn) {
-    std::string idx_str = std::to_string(ret);
-    size_t idx_size = idx_str.size();
-    size_t obn_size = obn.size();
-    std::string prefix_substr = obn.substr(0, obn_size - idx_size - 1);
-    if (prefix_substr == prefix) { ret++; }
-  });
-  return ret;
 }
 
 void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -238,18 +200,14 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
     return HasBlobDescWithField(GetBlobDesc4BnInOp, bns, has_field);
   };
   *(kernel_conf->mutable_op_attribute()) = op_attribute_;
-  CHECK(!HasBnWithField(pb_output_bns(), &BlobDesc::header_is_opaque));
   if (HasBnWithField(output_bns(), &BlobDesc::header_is_opaque)) {
     kernel_conf->set_need_do_opaque_header(true);
   } else {
-    if (HasBnWithField(output_bns(), &BlobDesc::has_data_id_field)
-        || HasBnWithField(pb_output_bns(), &BlobDesc::has_data_id_field)) {
+    if (HasBnWithField(output_bns(), &BlobDesc::has_data_id_field)) {
       kernel_conf->set_need_do_data_id(true);
     }
     const PbRpf<std::string>& obns = IsLossOp() ? input_bns() : output_bns();
-    const PbRpf<std::string>& pobns = IsLossOp() ? pb_input_bns() : pb_output_bns();
-    if (HasBnWithField(obns, &BlobDesc::has_col_num_field)
-        || HasBnWithField(pobns, &BlobDesc::has_col_num_field)) {
+    if (HasBnWithField(obns, &BlobDesc::has_col_num_field)) {
       kernel_conf->set_need_do_col_num(true);
     }
     if (HasBlobDescWithField(GetBlobDesc4BnInOp, obns, &BlobDesc::has_dim0_valid_num_field)) {
@@ -269,13 +227,13 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
       kernel_conf->set_need_do_dim2_valid_num(true);
     }
     if (HasBlobDescWithField(GetBlobDesc4BnInOp, obns,
-                             &BlobDesc::has_record_idx_in_device_piece_field)) {
-      kernel_conf->set_need_do_record_idx_in_device_piece(true);
+                             &BlobDesc::has_record_id_in_device_piece_field)) {
+      kernel_conf->set_need_do_record_id_in_device_piece(true);
       if (DoAllBlobDescHaveField(GetBlobDesc4BnInOp, input_bns(),
-                                 &BlobDesc::has_record_idx_in_device_piece_field)
+                                 &BlobDesc::has_record_id_in_device_piece_field)
           && DoAllBlobDescHaveField(GetBlobDesc4BnInOp, output_bns(),
-                                    &BlobDesc::has_record_idx_in_device_piece_field)) {
-        kernel_conf->set_can_naive_do_record_idx_in_device_piece(true);
+                                    &BlobDesc::has_record_id_in_device_piece_field)) {
+        kernel_conf->set_can_naive_do_record_id_in_device_piece(true);
       }
     }
   }
@@ -287,12 +245,6 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
   }
   if (data_type == DataType::kInvalidDataType) {
     data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, output_diff_bns());
-  }
-  if (data_type == DataType::kInvalidDataType) {
-    data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, pb_input_bns());
-  }
-  if (data_type == DataType::kInvalidDataType) {
-    data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, pb_output_bns());
   }
   kernel_conf->set_data_type(data_type);
 
@@ -315,48 +267,24 @@ int64_t Operator::cudnn_buf_limit_byte() const {
   return cudnn_buf_limit_mbyte * 1024 * 1024;
 }
 
-LogicalBlobId Operator::ibn2lbi(const std::string& input_bn) const {
-  const google::protobuf::Descriptor* desc = GetCustomizedConf().GetDescriptor();
-  const google::protobuf::FieldDescriptor* fd = desc->FindFieldByName(input_bn);
-  std::string name;
+std::string Operator::Bn2ConfName(const std::string& bn) const {
+  const PbFd* fd = GetCustomizedConf().GetDescriptor()->FindFieldByName(bn);
   if (fd) {
-    name = GetValFromCustomizedConf<std::string>(input_bn);
+    return GetValFromCustomizedConf<std::string>(bn);
   } else {
-    size_t underline_pos = input_bn.rfind('_');
-    CHECK_NE(underline_pos, std::string::npos);
-    std::string ibn_prefix = input_bn.substr(0, underline_pos);
-    int32_t ibn_idx = oneflow_cast<int32_t>(input_bn.substr(underline_pos + 1));
-    name = GetPbRpfFromCustomizedConf<std::string>(ibn_prefix).Get(ibn_idx);
+    const std::pair<std::string, int32_t> prefix_idx = GenUnRepeatedBn(bn);
+    return GetPbRpfFromCustomizedConf<std::string>(prefix_idx.first).Get(prefix_idx.second);
   }
-  return GenLogicalBlobId(name);
 }
-LogicalBlobId Operator::pibn2lbi(const std::string& pb_input_bn) const {
-  LogicalBlobId lbi = ibn2lbi(pb_input_bn);
-  lbi.set_is_pb_blob(true);
-  return lbi;
+
+LogicalBlobId Operator::ibn2lbi(const std::string& input_bn) const {
+  return GenLogicalBlobId(Bn2ConfName(input_bn));
 }
 LogicalBlobId Operator::obn2lbi(const std::string& output_bn) const {
-  const google::protobuf::Descriptor* desc = GetCustomizedConf().GetDescriptor();
-  const google::protobuf::FieldDescriptor* fd = desc->FindFieldByName(output_bn);
-  std::string name;
-  if (fd) {
-    name = GetValFromCustomizedConf<std::string>(output_bn);
-  } else {
-    size_t underline_pos = output_bn.rfind('_');
-    CHECK_NE(underline_pos, std::string::npos);
-    std::string obn_prefix = output_bn.substr(0, underline_pos);
-    int32_t obn_idx = oneflow_cast<int32_t>(output_bn.substr(underline_pos + 1));
-    name = GetPbRpfFromCustomizedConf<std::string>(obn_prefix).Get(obn_idx);
-  }
   LogicalBlobId ret;
   ret.set_op_name(op_name());
-  ret.set_blob_name(name);
+  ret.set_blob_name(Bn2ConfName(output_bn));
   return ret;
-}
-LogicalBlobId Operator::pobn2lbi(const std::string& pb_output_bn) const {
-  LogicalBlobId lbi = obn2lbi(pb_output_bn);
-  lbi.set_is_pb_blob(true);
-  return lbi;
 }
 LogicalBlobId Operator::cmbn2lbi(const std::string& const_model_bn) const {
   LogicalBlobId ret;
@@ -410,10 +338,7 @@ void Operator::EnrollInputBn(const std::string& ibn, bool has_diff) {
 }
 
 void Operator::EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num, bool has_diff) {
-  FOR_RANGE(int32_t, i, 0, num) {
-    std::string ibn = ibn_prefix + "_" + std::to_string(i);
-    EnrollInputBn(ibn, has_diff);
-  }
+  FOR_RANGE(int32_t, i, 0, num) { EnrollInputBn(GenRepeatedBn(ibn_prefix, i), has_diff); }
 }
 
 void Operator::EnrollRepeatedInputBn(const std::string& ibn_prefix, bool has_diff) {
@@ -429,20 +354,6 @@ void Operator::EnrollRepeatedInputBn(const std::string& ibn_prefix) {
   EnrollRepeatedInputBn(ibn_prefix, true);
 }
 
-void Operator::EnrollPbInputBn(const std::string& pibn) {
-  LogicalBlobId lbi = pibn2lbi(pibn);
-  CHECK(lbi.is_pb_blob());
-  *(mut_pb_input_bns()->Add()) = pibn;
-  CHECK(mut_bn_in_op2lbi()->insert({pibn, lbi}).second);
-}
-
-void Operator::EnrollPbOutputBn(const std::string& pobn) {
-  LogicalBlobId lbi = pobn2lbi(pobn);
-  CHECK(lbi.is_pb_blob());
-  *(mut_pb_output_bns()->Add()) = pobn;
-  CHECK(mut_bn_in_op2lbi()->insert({pobn, lbi}).second);
-}
-
 void Operator::EnrollOutputBn(const std::string& obn, bool has_diff) {
   LogicalBlobId lbi = obn2lbi(obn);
   *(mut_output_bns()->Add()) = obn;
@@ -454,24 +365,21 @@ void Operator::EnrollOutputBn(const std::string& obn, bool has_diff) {
   }
 }
 
-void Operator::EnrollRepeatedOutputBn(const std::string& ibn_prefix, int32_t num, bool has_diff) {
-  FOR_RANGE(int32_t, i, 0, num) {
-    std::string ibn = ibn_prefix + "_" + std::to_string(i);
-    EnrollOutputBn(ibn, has_diff);
-  }
+void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num, bool has_diff) {
+  FOR_RANGE(int32_t, i, 0, num) { EnrollOutputBn(GenRepeatedBn(obn_prefix, i), has_diff); }
 }
 
-void Operator::EnrollRepeatedOutputBn(const std::string& ibn_prefix, bool has_diff) {
-  EnrollRepeatedOutputBn(ibn_prefix, GetPbRpfFromCustomizedConf<std::string>(ibn_prefix).size(),
+void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix, bool has_diff) {
+  EnrollRepeatedOutputBn(obn_prefix, GetPbRpfFromCustomizedConf<std::string>(obn_prefix).size(),
                          has_diff);
 }
 
-void Operator::EnrollRepeatedOutputBn(const std::string& ibn_prefix, int32_t num) {
-  EnrollRepeatedOutputBn(ibn_prefix, num, true);
+void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num) {
+  EnrollRepeatedOutputBn(obn_prefix, num, true);
 }
 
-void Operator::EnrollRepeatedOutputBn(const std::string& ibn_prefix) {
-  EnrollRepeatedOutputBn(ibn_prefix, true);
+void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix) {
+  EnrollRepeatedOutputBn(obn_prefix, true);
 }
 
 void Operator::EnrollModelBn(const std::string& mbn) {
@@ -523,29 +431,6 @@ LogicalBlobId Operator::dtbn2lbi(const std::string& data_tmp_bn) const {
   return lbi;
 }
 
-int32_t Operator::GetRepeatedInputBnNum(const std::string& ibn_prefix) const {
-  int32_t count = 0;
-  for (size_t i = 0; i < input_bns().size(); ++i) {
-    if (input_bns().Get(i).compare(0, ibn_prefix.length(), ibn_prefix) == 0) { count++; }
-  }
-  return count;
-}
-
-std::string Operator::GetRepeatedInputBn(const std::string& ibn_prefix, size_t idx) const {
-  std::string ibn = ibn_prefix + "_" + std::to_string(idx);
-  return ibn;
-}
-
-void Operator::ForEachInputBn(const std::function<void(const std::string&)>& Handler) const {
-  for (const std::string& ibn : input_bns()) { Handler(ibn); }
-  for (const std::string& pibn : pb_input_bns()) { Handler(pibn); }
-}
-
-void Operator::ForEachOutputBn(const std::function<void(const std::string&)>& Handler) const {
-  for (const std::string& obn : output_bns()) { Handler(obn); }
-  for (const std::string& pobn : pb_output_bns()) { Handler(pobn); }
-}
-
 void Operator::InferTotalInstanceNumDesc(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, std::function<void(OpContext*)> EnrollOpCtx) const {
@@ -569,7 +454,30 @@ std::string GenUnDiffBn(const std::string& diff_bn) {
   return diff_bn.substr(0, diff_bn.size() - 5);
 }
 
+std::string GenRepeatedBn(const std::string& bn_prefix, int32_t idx) {
+  CHECK_GE(idx, 0);
+  return bn_prefix + "_" + std::to_string(idx);
+}
+
+std::pair<std::string, int32_t> GenUnRepeatedBn(const std::string& bn) {
+  const size_t underline_pos = bn.rfind('_');
+  CHECK_NE(underline_pos, std::string::npos);
+  CHECK_GT(underline_pos, 0);
+  CHECK_LT(underline_pos, bn.size() - 1);
+  const std::string prefix = bn.substr(0, underline_pos);
+  const int32_t idx = oneflow_cast<int32_t>(bn.substr(underline_pos + 1));
+  CHECK_GE(idx, 0);
+  return std::make_pair(prefix, idx);
+}
+
+bool IsOpOnlyCpuSupported(OperatorConf::OpTypeCase op_type_case) {
+  return *std::unique_ptr<OnlyCpuSupportPredicator>(NewObj<OnlyCpuSupportPredicator>(op_type_case));
+}
+
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf) {
+  if (IsOpOnlyCpuSupported(op_conf.op_type_case())) {
+    CHECK_EQ(op_conf.device_type(), DeviceType::kCPU);
+  }
   Operator* rptr = NewObj<Operator>(op_conf.op_type_case(), op_conf);
   rptr->InitFromOpConf(op_conf);
   return std::shared_ptr<Operator>(rptr);

@@ -345,51 +345,6 @@ void CopyFromIterToIter(DeviceCtx* ctx, Iter& src_it, Iter& dst_it) {
   }
 }
 
-template<typename T>
-class RecordContentIterator final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(RecordContentIterator);
-  RecordContentIterator() = delete;
-  ~RecordContentIterator() = default;
-  RecordContentIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,
-                        const PbRpf<std::string>* bns, int32_t axis) {
-    BnInOp2Blob_ = BnInOp2Blob;
-    seg_num_ = BnInOp2Blob(bns->Get(0))->shape().Count(0, axis);
-    seg_idx_ = 0;
-    bns_ = bns;
-    bn_idx_ = 0;
-    axis_ = axis;
-    index_ = 0;
-  }
-
-  T* GetNext() {
-    T* ret = nullptr;
-    if (seg_idx_ == seg_num_) { return ret; }
-    Blob* blob = BnInOp2Blob_(bns_->Get(bn_idx_));
-    const int64_t elem_num = blob->shape().Count(axis_);
-    if (blob->IsColValid()) { ret = blob->mut_dptr<T>() + seg_idx_ * elem_num + index_; }
-    index_ += 1;
-    if (index_ == elem_num) {
-      index_ = 0;
-      bn_idx_ += 1;
-    }
-    if (bn_idx_ == bns_->size()) {
-      bn_idx_ = 0;
-      seg_idx_ += 1;
-    }
-    return ret;
-  }
-
- private:
-  std::function<Blob*(const std::string&)> BnInOp2Blob_;
-  int64_t seg_num_;
-  int64_t seg_idx_;
-  const PbRpf<std::string>* bns_;
-  int32_t bn_idx_;
-  int32_t axis_;
-  int32_t index_;
-};
-
 class DataContentIterator final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DataContentIterator);
@@ -496,21 +451,6 @@ class ColNumIterator final : public FieldIterator {
   char* GetMutPtr(Blob* blob) override { return reinterpret_cast<char*>(blob->mut_col_num()); }
 
   size_t GetSizeOfField(Blob* blob) const override { return blob->ByteSizeOfColNumField(); }
-};
-
-class Dim0ValidNumIterator final : public FieldIterator {
- public:
-  Dim0ValidNumIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,
-                       const PbRpf<std::string>* bns, int32_t axis)
-      : FieldIterator(BnInOp2Blob, bns, axis) {}
-  static CopyBlobFieldMthd GetCopyBlobFieldMthd() { return &Blob::CopyDim0ValidNumFrom; }
-
- private:
-  char* GetMutPtr(Blob* blob) override {
-    return reinterpret_cast<char*>(blob->mut_dim0_valid_num_ptr());
-  }
-
-  size_t GetSizeOfField(Blob* blob) const override { return blob->ByteSizeOfDim0ValidNumField(); }
 };
 
 class Dim1ValidNumIterator final : public FieldIterator {

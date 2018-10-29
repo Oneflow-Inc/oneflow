@@ -23,7 +23,6 @@ void AccuracyCompTaskNode::BuildExecGphAndRegst() {
     accuracy_node->BindBnWithOneOfTheRegsts(ibn, GetConsumedRegst("in"));
   }
   std::shared_ptr<RegstDesc> accuracy_regst = GetProducedRegst("accuracy");
-  CHECK(accuracy_op->pb_output_bns().empty());
   for (const std::string& obn : accuracy_op->output_bns()) {
     accuracy_regst->AddLbi(accuracy_op->BnInOp2Lbi(obn));
     accuracy_node->BindBnWithRegst(obn, accuracy_regst);
