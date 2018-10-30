@@ -43,23 +43,6 @@ void OFRecordEncoderImpl<EncodeCase::kRaw, T>::EncodeOneCol(DeviceCtx* ctx, cons
   CopyToFeature(feature, field_name, in_dptr, elem_num);
 }
 
-template<typename T>
-void OFRecordEncoderImpl<EncodeCase::kRaw, T>::EncodeMultiCol(
-    DeviceCtx*, const Blob* in_blob, const std::vector<int64_t>& in_offsets, Feature& feature,
-    const std::string& field_name, int64_t one_col_elem_num) const {
-  CHECK(!in_blob->has_dim1_valid_num_field());
-  CHECK(!in_blob->has_dim2_valid_num_field()) << "change to encode case `bytes_list' and try again";
-  CHECK_EQ(one_col_elem_num, in_blob->shape().Count(1));
-  size_t elem_num = in_offsets.size() * one_col_elem_num;
-  std::unique_ptr<T[]> buf(new T[elem_num]);
-  FOR_RANGE(int32_t, i, 0, in_offsets.size()) {
-    const T* cur_in_dptr = in_blob->dptr<T>() + in_offsets.at(i);
-    T* cur_out_dptr = &buf[i * one_col_elem_num];
-    Memcpy<DeviceType::kCPU>(nullptr, cur_out_dptr, cur_in_dptr, one_col_elem_num * sizeof(T));
-  }
-  CopyToFeature(feature, field_name, &buf[0], elem_num);
-}
-
 #define INSTANTIATE_OFRECORD_RAW_ENCODER(type_cpp, type_proto) \
   template class OFRecordEncoderImpl<EncodeCase::kRaw, type_cpp>;
 

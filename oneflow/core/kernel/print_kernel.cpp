@@ -4,68 +4,6 @@
 
 namespace oneflow {
 
-struct RecordOffsets {
-  HashMap<int64_t, std::vector<int64_t>> blob_id2offsets;
-};
-
-namespace {
-
-void SplitBns(PbRpf<std::string>* bns_with_record_ids, PbRpf<std::string>* bns_without_record_ids,
-              const std::function<Blob*(const std::string&)> BnInOp2Blob,
-              const PbRpf<std::string>& bns) {
-  for (const auto& bn : bns) {
-    if (BnInOp2Blob(bn)->has_record_id_in_device_piece_field()) {
-      *bns_with_record_ids->Add() = bn;
-    } else {
-      *bns_without_record_ids->Add() = bn;
-    }
-  }
-}
-
-void CheckSameDim0Size(const PbRpf<std::string>& bns,
-                       const std::function<Blob*(const std::string&)> BnInOp2Blob) {
-  FOR_RANGE(int32_t, i, 1, bns.size()) {
-    CHECK_EQ(BnInOp2Blob(bns.Get(0))->shape().At(0), BnInOp2Blob(bns.Get(i))->shape().At(0));
-  }
-}
-
-void CheckRecordIdInDevicePieceIsValid(const Blob* blob, size_t max_size) {
-  FOR_RANGE(int64_t, i, 0, blob->shape().At(0)) {
-    CHECK_LT(blob->record_id_in_device_piece(i), max_size);
-  }
-}
-
-void CheckRecordIds(const PbRpf<std::string>& bns_with_record_ids,
-                    const PbRpf<std::string>& bns_without_record_ids,
-                    const std::function<Blob*(const std::string&)> BnInOp2Blob) {
-  CHECK(!(bns_with_record_ids.empty() && bns_without_record_ids.empty()));
-  if (bns_without_record_ids.size() > 0 && bns_with_record_ids.size() > 0) {
-    size_t max_size = BnInOp2Blob(bns_without_record_ids.Get(0))->shape().At(0);
-    CheckRecordIdInDevicePieceIsValid(BnInOp2Blob(bns_with_record_ids.Get(0)), max_size);
-  }
-}
-
-void InitRecordOffsets(std::map<int64_t, RecordOffsets>* record_id2record_offsets,
-                       const std::function<Blob*(const std::string&)> BnInOp2Blob,
-                       const PbRpf<std::string>& bns) {
-  PbRpf<std::string> bns_with_record_ids;
-  PbRpf<std::string> bns_without_record_ids;
-  SplitBns(&bns_with_record_ids, &bns_without_record_ids, BnInOp2Blob, bns);
-  CheckSameRecordIdInDevicePiece(bns_with_record_ids, BnInOp2Blob);
-  CheckSameDim0Size(bns_without_record_ids, BnInOp2Blob);
-  CheckRecordIds(bns_with_record_ids, bns_without_record_ids, BnInOp2Blob);
-  FOR_RANGE(int64_t, blob_id, 0, bns.size()) {
-    const Blob* blob = BnInOp2Blob(bns.Get(blob_id));
-    FOR_RANGE(int64_t, i, 0, blob->shape().At(0)) {
-      int64_t record_id = blob->record_id_in_device_piece(i);
-      std::vector<int64_t>* vec = &(*record_id2record_offsets)[record_id].blob_id2offsets[blob_id];
-      vec->push_back(i * blob->shape().Count(1));
-    }
-  }
-}
-
-}  // namespace
-
 void PrintKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
   const auto& conf = op_conf().print_conf();
   const std::string& root_path = conf.print_dir();
