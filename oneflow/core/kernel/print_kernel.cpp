@@ -31,7 +31,7 @@ void PrintKernel::Forward(const KernelCtx& ctx,
       CHECK(record.feature().find(field_name) == record.feature().end())
           << "Field " << field_name << " found repeatedly in OfRecord";
       const int64_t one_col_elem_num = blob->shape().Count(1);
-      Feature& feature = record.mutable_feature()->at(field_name);
+      Feature& feature = (*(record.mutable_feature()))[field_name];
       GetOFRecordEncoder(print_conf.encode_case().encode_case(), blob->data_type())
           ->EncodeOneCol(ctx.device_ctx, blob, record_idx * one_col_elem_num, feature, field_name,
                          one_col_elem_num);
