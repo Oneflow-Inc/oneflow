@@ -80,37 +80,26 @@ void PrintKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
 
 void PrintKernel::Forward(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (HasEmptyShapeBlob(this->op_attribute().input_bns(), BnInOp2Blob)) { return; }
-  std::map<int64_t, RecordOffsets> record_id2record_offsets;
-  InitRecordOffsets(&record_id2record_offsets, BnInOp2Blob, this->op_attribute().input_bns());
-  auto GetBlob = [&](int64_t blob_id) -> Blob* {
-    return BnInOp2Blob(this->op_attribute().input_bns(blob_id));
-  };
-  const auto& conf = op_conf().print_conf();
-  OFRecord record;
-  for (const auto& record_id7record_offsets : record_id2record_offsets) {
-    record.clear_feature();
-    for (const auto& pair : record_id7record_offsets.second.blob_id2offsets) {
-      int64_t blob_id = pair.first;
-      const std::vector<int64_t>& offsets = pair.second;
-      const Blob* cur_blob = GetBlob(blob_id);
-      const PrintRecordConf& cur_print_conf = conf.in(blob_id);
-      std::string field_name = cur_print_conf.lbn();
-      if (cur_print_conf.has_name()) { field_name = cur_print_conf.name(); }
+  const PbRpf<std::string>& bns = this->op_attribute().input_bns();
+  CHECK_GT(bns.size(), 0);
+  const int64_t record_num = BnInOp2Blob(bns[0])->shape().At(0);
+  FOR_RANGE(int32_t, i, 1, bns.size()) {
+    CHECK_EQ(BnInOp2Blob(bns[i])->shape().At(0), record_num);
+  }
+
+  FOR_RANGE(int64_t, record_idx, 0, record_num) {
+    OFRecord record;
+    FOR_RANGE(int32_t, blob_idx, 0, bns.size()) {
+      const Blob* blob = BnInOp2Blob(bns[blob_idx]);
+      const PrintRecordConf& print_conf = op_conf().print_conf().in(blob_idx);
+      const std::string field_name = print_conf.has_name() ? print_conf.name() : print_conf.lbn();
       CHECK(record.feature().find(field_name) == record.feature().end())
-          << "Field " << field_name << " found repeatedly in OfRecord";
-      int64_t one_col_elem_num = cur_blob->shape().Count(1);
+      << "Field " << field_name << " found repeatedly in OfRecord";
+      const int64_t one_col_elem_num = blob->shape().Count(1);
       Feature& feature = (*(record.mutable_feature()))[field_name];
-      if (cur_blob->has_record_id_in_device_piece_field()) {
-        GetOFRecordEncoder(cur_print_conf.encode_case().encode_case(), cur_blob->data_type())
-            ->EncodeMultiCol(ctx.device_ctx, cur_blob, offsets, feature, field_name,
+      GetOFRecordEncoder(print_conf.encode_case().encode_case(), blob->data_type())
+              ->EncodeOneCol(ctx.device_ctx, blob, record_idx * one_col_elem_num, feature, field_name,
                              one_col_elem_num);
-      } else {
-        CHECK_EQ(offsets.size(), 1);
-        GetOFRecordEncoder(cur_print_conf.encode_case().encode_case(), cur_blob->data_type())
-            ->EncodeOneCol(ctx.device_ctx, cur_blob, offsets.at(0), feature, field_name,
-                           one_col_elem_num);
-      }
     }
     *out_stream_ << record;
   }
