@@ -83,9 +83,7 @@ void PrintKernel::Forward(const KernelCtx& ctx,
   const PbRpf<std::string>& bns = this->op_attribute().input_bns();
   CHECK_GT(bns.size(), 0);
   const int64_t record_num = BnInOp2Blob(bns[0])->shape().At(0);
-  FOR_RANGE(int32_t, i, 1, bns.size()) {
-    CHECK_EQ(BnInOp2Blob(bns[i])->shape().At(0), record_num);
-  }
+  FOR_RANGE(int32_t, i, 1, bns.size()) { CHECK_EQ(BnInOp2Blob(bns[i])->shape().At(0), record_num); }
 
   FOR_RANGE(int64_t, record_idx, 0, record_num) {
     OFRecord record;
@@ -94,12 +92,12 @@ void PrintKernel::Forward(const KernelCtx& ctx,
       const PrintRecordConf& print_conf = op_conf().print_conf().in(blob_idx);
       const std::string field_name = print_conf.has_name() ? print_conf.name() : print_conf.lbn();
       CHECK(record.feature().find(field_name) == record.feature().end())
-      << "Field " << field_name << " found repeatedly in OfRecord";
+          << "Field " << field_name << " found repeatedly in OfRecord";
       const int64_t one_col_elem_num = blob->shape().Count(1);
       Feature& feature = (*(record.mutable_feature()))[field_name];
       GetOFRecordEncoder(print_conf.encode_case().encode_case(), blob->data_type())
-              ->EncodeOneCol(ctx.device_ctx, blob, record_idx * one_col_elem_num, feature, field_name,
-                             one_col_elem_num);
+          ->EncodeOneCol(ctx.device_ctx, blob, record_idx * one_col_elem_num, feature, field_name,
+                         one_col_elem_num);
     }
     *out_stream_ << record;
   }
