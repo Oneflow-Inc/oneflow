@@ -13,7 +13,7 @@ void OFRecordEncoderImpl<EncodeCase::kRaw, T>::EncodeOneCol(DeviceCtx* ctx, cons
   CHECK_EQ(in_offset % one_col_elem_num, 0);
   int64_t dim0_idx = in_offset / one_col_elem_num;
   int64_t elem_num = shape.NumAxes() == 1 ? 1 : in_blob->dim1_valid_num(dim0_idx) * shape.Count(2);
-  
+
   const T* in_dptr = in_blob->dptr<T>() + in_offset;
   DataType data_type = GetDataType<T>();
   if (data_type == DataType::kInt8) {
