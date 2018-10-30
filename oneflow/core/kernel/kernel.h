@@ -50,8 +50,6 @@ class Kernel {
 
   virtual void Forward(const KernelCtx& ctx,
                        std::function<Blob*(const std::string&)> BnInOp2Blob) const;
-  virtual void ClearPbBlobs(const KernelCtx& ctx,
-                            std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void ForwardDataContent(const KernelCtx& ctx,
                                   std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual void ForwardDataId(const KernelCtx& ctx,
@@ -74,7 +72,7 @@ class Kernel {
                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
-  virtual void ForwardRecordIdxInDevicePiece(
+  virtual void ForwardRecordIdInDevicePiece(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
@@ -96,6 +94,8 @@ class Kernel {
                               std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
+  virtual bool NeedForwardIfBlobEmpty() const { return false; }
+  virtual bool NeedBackwardIfBlobEmpty() const { return false; }
   virtual void BackwardInDiffDim0ValidNum(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
@@ -106,18 +106,16 @@ class Kernel {
   }
   virtual void BackwardActivation(const KernelCtx& ctx, const Blob* out_blob,
                                   const Blob* out_diff_blob, Blob* bw_activation_blob) const {}
-  virtual int32_t CalcInstanceNumSum(const int32_t index,
-                                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-    UNIMPLEMENTED();
-  }
   virtual void SetTotalInstanceNumDiffBlob(
-      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+      const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
   virtual const PbMessage& GetCustomizedOpConf() const { UNIMPLEMENTED(); }
   virtual const PbMessage& GetCustomizedKernelConf() const { UNIMPLEMENTED(); }
   bool HasEmptyShapeBlob(const PbRpf<std::string>& bns,
                          const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  void CheckSameDim0ValidNum(const PbRpf<std::string>& bns,
+                             const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 
 #define DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF(conf_type)                                   \
   template<typename T>                                                                   \
@@ -158,7 +156,7 @@ class KernelIf : public Kernel {
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   virtual void ForwardDim0ValidNum(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  virtual void ForwardRecordIdxInDevicePiece(
+  virtual void ForwardRecordIdInDevicePiece(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
   virtual void ForwardPackedHeader(
@@ -190,10 +188,9 @@ class KernelIfWithModel : virtual public KernelIf<device_type> {
   virtual ~KernelIfWithModel() = default;
 
  private:
-  int32_t CalcInstanceNumSum(const int32_t index,
-                             std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void SetTotalInstanceNumDiffBlob(
-      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+      const KernelCtx& ctx,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
 
  protected:
   KernelIfWithModel() = default;

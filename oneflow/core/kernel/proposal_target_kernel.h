@@ -13,12 +13,12 @@ class ProposalTargetKernel final : public KernelIf<DeviceType::kCPU> {
   ProposalTargetKernel() = default;
   ~ProposalTargetKernel() = default;
 
-  using BBox = BBoxImpl<T, BBoxCategory::kIndexCorner>;
-  using RoiBox = BBoxImpl<const T, BBoxCategory::kIndexCorner>;
-  using GtBox = BBoxImpl<const T, BBoxCategory::kGtCorner>;
-  using RoiBoxIndices = BBoxIndices<IndexSequence, RoiBox>;
+  using BBox = IndexedBBoxT<T>;
+  using RoiBBox = IndexedBBoxT<const T>;
+  using GtBBox = BBoxT<const T>;
+  using RoiBoxIndices = BBoxIndices<IndexSequence, RoiBBox>;
   using MaxOverlapOfRoiBoxWithGt = MaxOverlapIndices<RoiBoxIndices>;
-  using GtBoxIndices = BBoxIndices<IndexSequence, GtBox>;
+  using GtBoxIndices = BBoxIndices<IndexSequence, GtBBox>;
   using LabeledGtBox = LabelIndices<GtBoxIndices>;
 
  private:
@@ -26,7 +26,7 @@ class ProposalTargetKernel final : public KernelIf<DeviceType::kCPU> {
                           std::function<Blob*(const std::string&)>) const override;
   void ForwardDim0ValidNum(const KernelCtx& ctx,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void ForwardRecordIdxInDevicePiece(
+  void ForwardRecordIdInDevicePiece(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
   auto GetImageGtBoxes(const std::function<Blob*(const std::string&)>& BnInOp2Blob) const

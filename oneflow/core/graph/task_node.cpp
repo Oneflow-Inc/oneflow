@@ -3,11 +3,15 @@
 namespace oneflow {
 
 bool IsForwardTaskType(TaskType tt) {
-  return tt == TaskType::kNormalForward || tt == TaskType::kRecurrentForward;
+  return tt == TaskType::kNormalForward || tt == TaskType::kRecurrentForward
+         || tt == TaskType::kPackForward || tt == TaskType::kUnpackForward
+         || tt == TaskType::kRepeatForward;
 }
 
 bool IsBackwardTaskType(TaskType tt) {
-  return tt == TaskType::kNormalBackward || tt == TaskType::kRecurrentBackward;
+  return tt == TaskType::kNormalBackward || tt == TaskType::kRecurrentBackward
+         || tt == TaskType::kPackBackward || tt == TaskType::kUnpackBackward
+         || tt == TaskType::kRepeatBackward;
 }
 
 bool IsMdUpdtTaskType(TaskType tt) { return tt == TaskType::kNormalMdUpdt; }
@@ -85,7 +89,7 @@ void TaskNode::NaiveInferProducedDataRegstTimeShape() {
   std::shared_ptr<Shape> time_shape;
   ForEachConsumedDataRegst([&time_shape](const std::string& name, const RegstDesc* regst) {
     if (time_shape) {
-      CHECK(*time_shape.get() == *regst->data_regst_time_shape().get());
+      CHECK_EQ(*time_shape.get(), *regst->data_regst_time_shape().get());
     } else {
       time_shape = regst->data_regst_time_shape();
     }
@@ -381,16 +385,6 @@ void TaskEdge::AddRegst(const std::string& name_in_producer, std::shared_ptr<Reg
   CHECK(name_in_producer2regst_.emplace(name_in_producer, regst).second);
 }
 
-void TaskEdge::ForEachRegst(const std::function<void(std::shared_ptr<RegstDesc>)>& Handler) const {
-  for (const auto& pair : name_in_producer2regst_) { Handler(pair.second); }
-}
-
-std::list<std::shared_ptr<RegstDesc>> TaskEdge::GetAllRegsts() const {
-  std::list<std::shared_ptr<RegstDesc>> ret;
-  for (const auto& pair : name_in_producer2regst_) { ret.push_back(pair.second); }
-  return ret;
-}
-
 RegstDescProto* FindOrCreateProducedCtrlRegstDesc(TaskProto* task_proto,
                                                   const std::string& regst_desc_name) {
   auto* produced_regst_desc = task_proto->mutable_produced_regst_desc();
@@ -412,18 +406,21 @@ RegstDescIdSet* FindOrCreateConsumedCtrlRegstDescIdSet(TaskProto* task_proto,
 }
 
 std::map<TaskType, std::string> task_type2color = {
-    {kInvalid, "0"},        {kNormalForward, "2"},
-    {kNormalBackward, "3"}, {kRecordLoad, "1"},
-    {kDecode, "1"},         {kLoss, "4"},
-    {kLossAcc, "5"},        {kLossPrint, "1"},
-    {kNormalMdUpdt, "6"},   {kMdSave, "1"},
-    {kMdDiffAcc, "7"},      {kCopyHd, "8"},
-    {kCopyCommNet, "9"},    {kBoxing, "10"},
-    {kPrint, "1"},          {kReduceConcat, "2"},
-    {kReduceScatter, "2"},  {kReduceAdd, "2"},
-    {kReduceGather, "2"},   {kReduceSplit, "2"},
-    {kNcclAllReduce, "2"},  {kNcclReduceScatter, "2"},
-    {kNcclAllGather, "2"},  {kAccuracy, "4"},
-    {kAccuracyPrint, "1"},  {kAccuracyAcc, "5"},
-    {kDecodeRandom, "1"}};
+    {kInvalid, "0"},         {kNormalForward, "2"},
+    {kNormalBackward, "3"},  {kRecordLoad, "1"},
+    {kDecode, "1"},          {kLoss, "4"},
+    {kLossAcc, "5"},         {kLossPrint, "1"},
+    {kNormalMdUpdt, "6"},    {kMdSave, "1"},
+    {kMdDiffAcc, "7"},       {kCopyHd, "8"},
+    {kCopyCommNet, "9"},     {kBoxing, "10"},
+    {kPrint, "1"},           {kReduceConcat, "2"},
+    {kReduceScatter, "2"},   {kReduceAdd, "2"},
+    {kReduceGather, "2"},    {kReduceSplit, "2"},
+    {kNcclAllReduce, "2"},   {kNcclReduceScatter, "2"},
+    {kNcclAllGather, "2"},   {kAccuracy, "4"},
+    {kAccuracyPrint, "1"},   {kAccuracyAcc, "5"},
+    {kDecodeRandom, "1"},    {kPackForward, "11"},
+    {kPackBackward, "12"},   {kUnpackForward, "11"},
+    {kUnpackBackward, "12"}, {kRepeatForward, "2"},
+    {kRepeatBackward, "3"}};
 }  // namespace oneflow

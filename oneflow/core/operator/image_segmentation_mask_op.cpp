@@ -53,6 +53,6 @@ void ImageSegmentationMaskOp::VirtualGenKernelConf(
   kernel_conf->set_data_type(GetBlobDesc4BnInOp("masks")->data_type());
 }
 
-REGISTER_OP(OperatorConf::kImageSegmentationMaskConf, ImageSegmentationMaskOp);
+REGISTER_CPU_OP(OperatorConf::kImageSegmentationMaskConf, ImageSegmentationMaskOp);
 
 }  // namespace oneflow

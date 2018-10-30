@@ -16,13 +16,13 @@ class MaskTargetKernel final : public KernelIf<DeviceType::kCPU> {
   ~MaskTargetKernel() override = default;
 
  private:
-  using RoiBBox = BBoxImpl<T, BBoxCategory::kIndexCorner>;
-  using SegmBBox = BBoxImpl<float, BBoxCategory::kCorner>;
+  using RoiBBox = IndexedBBoxT<T>;
+  using SegmBBox = BBoxT<float>;
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
   void ForwardDim0ValidNum(const KernelCtx& ctx,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void ForwardRecordIdxInDevicePiece(
+  void ForwardRecordIdInDevicePiece(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void InitConstBufBlobs(DeviceCtx*,
                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
@@ -32,7 +32,7 @@ class MaskTargetKernel final : public KernelIf<DeviceType::kCPU> {
   void ComputeSegmBBoxes(const std::vector<std::vector<PolygonList>>& segms, Blob* bboxes) const;
   void Segm2BBox(const PolygonList& segm, SegmBBox* bbox) const;
   void Segm2Mask(const PolygonList& segm, const RoiBBox& fg_roi, size_t mask_h, size_t mask_w,
-                 T* mask) const;
+                 int32_t* mask) const;
   void Polygon2BBox(const FloatList& polygon, SegmBBox* bbox) const;
   size_t GetMaxOverlapIndex(const RoiBBox& fg_roi, const SegmBBox* gt_bboxs,
                             size_t gt_bboxs_num) const;

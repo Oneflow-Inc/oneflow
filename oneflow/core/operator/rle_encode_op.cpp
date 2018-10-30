@@ -21,9 +21,9 @@ void RleEncodeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   *out = *in;
   out->mut_shape() = Shape({in->shape().At(0), op_conf().rle_encode_conf().rle_max_bytes()});
   out->set_has_dim1_valid_num_field(true);
-  out->set_data_type(DataType::kInt8);
+  out->set_data_type(DataType::kChar);
 }
 
-REGISTER_OP(OperatorConf::kRleEncodeConf, RleEncodeOp);
+REGISTER_CPU_OP(OperatorConf::kRleEncodeConf, RleEncodeOp);
 
 }  // namespace oneflow

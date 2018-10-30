@@ -26,9 +26,7 @@ class RegstMgr final {
   explicit RegstMgr(const Plan& plan);
   explicit RegstMgr(const std::list<const RegstDescProto*>& regst_protos);
   void InitFromRegstProtoList(const std::list<const RegstDescProto*>& regst_protos);
-  void InitPbBlobIfNeed(Blob* blob_ptr) const;
-  template<typename T>
-  void InitPbBlob(Blob* blob_ptr) const;
+  void InitOFRecordBlobIfNeed(Blob* blob_ptr);
   void NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regst*, const RtRegstDesc*,
                           char* main_mem_ptr);
 

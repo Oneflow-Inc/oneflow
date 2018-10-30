@@ -468,15 +468,22 @@ message BlobDumpOpConf {
   optional int32 part_name_suffix_length = 4 [default = -1];
 }
 
+message LogCounterOpConf {
+  required string in = 1;
+  optional int32 interval = 2 [default = 1];
+}
+
 message LossPrintOpConf {
   required LogicalBlobId loss_lbi = 1;
-  optional LogicalBlobId reduction_lbi = 2;
-  optional float weight_scalar = 3 [default = 1.0];
-  optional LossReductionType reduction_type = 4 [default = kSumOverN];
+  required LogicalBlobId loss_instance_num_lbi = 2;
+  optional LogicalBlobId reduction_lbi = 3;
+  optional float weight_scalar = 4 [default = 1.0];
+  optional LossReductionType reduction_type = 5 [default = kSumOverN];
 }
 
 message AccuracyPrintOpConf {
   required LogicalBlobId accuracy_lbi = 1;
+  required LogicalBlobId accuracy_instance_num_lbi = 2;
   optional int32 top_k_print = 3 [default = 1];
 }
 
@@ -552,15 +559,11 @@ message EncodeConf {
   oneof encode {
     EncodeRaw raw = 1;
     EncodeJpeg jpeg = 2;
-    EncodeProtobuf protobuf = 3;
-    EncodeBytesList bytes_list = 4;
+    EncodeBytesList bytes_list = 3;
   }
 }
 
 message EncodeBytesList {
-}
-
-message EncodeProtobuf {
 }
 
 message EncodeRaw {
@@ -632,7 +635,7 @@ message DefineTestBlobConf {
   optional int64 dim0_valid_num = 5;
   optional int64 dim1_valid_num = 6;
   optional int64 dim2_valid_num = 7;
-  repeated int64 record_idx_in_device_piece = 8;
+  repeated int64 record_id_in_device_piece = 8;
 }
 
 message NormalizationOpConf {
@@ -651,12 +654,11 @@ message NormalizationOpConf {
   optional ActivationType activation = 13 [default = kNone];
 }
 
-message FpnCollectOpConf{
+message FpnCollectOpConf {
   repeated string rpn_rois_fpn = 1;
   repeated string rpn_roi_probs_fpn = 2;
   required string out = 3;
-  required int32 num_layers = 4;
-  required int32 top_n_per_piece = 5;
+  required int32 top_n_per_image = 4;
 }
 
 message AffineChannelOpConf {
@@ -734,6 +736,7 @@ message ProposalTargetOpConf {
   required BBoxRegressionWeights bbox_reg_weights = 13;
   required int32 num_classes = 14;
   required int32 num_sampled_rois_per_image = 15 [default = 256];
+  optional bool random_subsample = 16 [default = true];
 }
 
 enum ScoringMethod {
@@ -972,6 +975,34 @@ message MaskTargetOpConf {
   required int32 mask_width = 8;
 }
 
+message PackOpConf {
+  required string in = 1;
+  required string out = 2;
+  oneof pack_num_conf {
+    int32 pack_num = 3;
+    int32 pack_num_per_record = 4;
+  }
+  required string related_unpack = 5;
+}
+
+message UnpackOpConf {
+  required string in = 1;
+  required string out = 2;
+  oneof unpack_num_conf {
+    int32 unpack_num = 3;
+    int32 unpack_num_per_record = 4;
+  }
+}
+
+message RepeatOpConf {
+  required string in = 1;
+  required string out = 2;
+  oneof repeat_num_conf {
+    int32 repeat_num = 3;
+    int32 repeat_num_per_record = 4;
+  }
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1039,9 +1070,13 @@ message OperatorConf {
     AccuracyPrintOpConf accuracy_print_conf = 234;
     LossPrintOpConf loss_print_conf = 235;
     DefineTestBlobConf define_test_blob_conf = 236;
-    Deconv2DOpConf deconv_2d_conf = 237;
-    Deconv3DOpConf deconv_3d_conf = 238;
-    BlobDumpOpConf blob_dump_conf = 239;
+    PackOpConf pack_conf = 237;
+    UnpackOpConf unpack_conf = 238;
+    RepeatOpConf repeat_conf = 239;
+    Deconv2DOpConf deconv_2d_conf = 240;
+    Deconv3DOpConf deconv_3d_conf = 241;
+    BlobDumpOpConf blob_dump_conf = 242;
+    LogCounterOpConf log_counter_conf = 243;
     RoIPoolingOpConf roi_pooling_conf = 1000;
     SmoothL1LossOpConf smooth_l1_loss_conf = 1001;
     ProposalOpConf proposal_conf = 1002;

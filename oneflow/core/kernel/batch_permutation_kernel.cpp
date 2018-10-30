@@ -65,9 +65,9 @@ void BatchPermutation<device_type, T>::BackwardInDiffDim0ValidNum(
 }
 
 template<DeviceType device_type, typename T>
-void BatchPermutation<device_type, T>::ForwardRecordIdxInDevicePiece(
+void BatchPermutation<device_type, T>::ForwardRecordIdInDevicePiece(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob("out")->CopyRecordIdxInDevicePieceFrom(ctx.device_ctx, BnInOp2Blob("indices"));
+  BnInOp2Blob("out")->CopyRecordIdInDevicePieceFrom(ctx.device_ctx, BnInOp2Blob("indices"));
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBatchPermutationConf, BatchPermutation,

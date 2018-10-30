@@ -57,9 +57,6 @@ class Operator {
   const OperatorConf& op_conf() const { return op_attribute_.op_conf(); }
   virtual const PbMessage& GetCustomizedConf() const { UNIMPLEMENTED(); }
 
-  int32_t GetRepeatedInputBnNum(const std::string& ibn_prefix) const;
-  std::string GetRepeatedInputBn(const std::string& ibn_prefix, size_t idx) const;
-
   bool HasFieldInCustomizedConf(const std::string& field_name) const {
     return HasFieldInPbMessage(GetCustomizedConf(), field_name);
   }
@@ -88,18 +85,12 @@ class Operator {
   }
 
   const std::string& SoleIbn() const;
-  const std::string& SolePibn() const;
   const std::string& SoleIdbn() const;
   const std::string& SoleObn() const;
-  const std::string& SolePobn() const;
   const std::string& SoleOdbn() const;
   const std::string& SoleDtbn() const;
   const std::string& SoleFbbn() const;
   const std::string& SoleBbbn() const;
-  std::string RepeatedIbn(const std::string&, int32_t) const;
-  int32_t RepeatedIbnSize(const std::string&) const;
-  std::string RepeatedObn(const std::string&, int32_t) const;
-  int32_t RepeatedObnSize(const std::string&) const;
 
 #define DEFINE_BLOB_NAMES_GETTER(getter_name)                                           \
   const PbRpf<std::string>& getter_name() const { return op_attribute_.getter_name(); } \
@@ -117,13 +108,8 @@ class Operator {
   DEFINE_BLOB_NAMES_GETTER(const_model_bns);
   DEFINE_BLOB_NAMES_GETTER(const_buf_bns);
   DEFINE_BLOB_NAMES_GETTER(forward_model_bns);
-  DEFINE_BLOB_NAMES_GETTER(pb_input_bns);
-  DEFINE_BLOB_NAMES_GETTER(pb_output_bns);
 
 #undef DEFINE_BLOB_NAMES_GETTER
-
-  void ForEachInputBn(const std::function<void(const std::string&)>& Handler) const;
-  void ForEachOutputBn(const std::function<void(const std::string&)>& Handler) const;
 
   // Read: shape of input_blobs
   // Write: shape of output_blobs, model_blobs, data_tmp_blobs, const_model_blobs, const_buf_blobs
@@ -197,9 +183,7 @@ class Operator {
       KernelConf*) const {}
 
   virtual LogicalBlobId ibn2lbi(const std::string& input_bn) const;
-  virtual LogicalBlobId pibn2lbi(const std::string& pb_input_bn) const;
   virtual LogicalBlobId obn2lbi(const std::string& output_bn) const;
-  virtual LogicalBlobId pobn2lbi(const std::string& pb_output_bn) const;
   virtual LogicalBlobId cmbn2lbi(const std::string& const_model_bn) const;
   virtual LogicalBlobId cbbn2lbi(const std::string& const_buf_bn) const;
   virtual LogicalBlobId mbn2lbi(const std::string& model_bn) const;
@@ -219,12 +203,10 @@ class Operator {
   void EnrollRepeatedInputBn(const std::string& ibn_prefix);
   void EnrollOutputBn(const std::string& obn, bool has_diff);
   void EnrollOutputBn(const std::string& obn) { EnrollOutputBn(obn, true); }
-  void EnrollRepeatedOutputBn(const std::string& ibn_prefix, int32_t num, bool has_diff);
-  void EnrollRepeatedOutputBn(const std::string& ibn_prefix, bool has_diff);
-  void EnrollRepeatedOutputBn(const std::string& ibn_prefix, int32_t num);
-  void EnrollRepeatedOutputBn(const std::string& ibn_prefix);
-  void EnrollPbInputBn(const std::string& pibn);
-  void EnrollPbOutputBn(const std::string& obn);
+  void EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num, bool has_diff);
+  void EnrollRepeatedOutputBn(const std::string& obn_prefix, bool has_diff);
+  void EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num);
+  void EnrollRepeatedOutputBn(const std::string& obn_prefix);
 
   // enroll model blobs
   void EnrollModelBn(const std::string& mbn);
@@ -244,7 +226,7 @@ class Operator {
   void InferTotalInstanceNumDesc(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                  const ParallelContext*,
                                  std::function<void(OpContext*)> EnrollOpCtx) const;
-
+  std::string Bn2ConfName(const std::string& bn) const;
   PbMap<std::string, LogicalBlobId>* mut_bn_in_op2lbi() {
     return op_attribute_.mutable_bn_in_op2lbi();
   }
@@ -254,11 +236,31 @@ class Operator {
 
 std::string GenDiffBn(const std::string& bn);
 std::string GenUnDiffBn(const std::string& diff_bn);
+std::string GenRepeatedBn(const std::string& bn_prefix, int32_t idx);
+std::pair<std::string, int32_t> GenUnRepeatedBn(const std::string& bn);
 
-#define REGISTER_OP(op_type_case, OpType) \
+struct OnlyCpuSupportPredicator {
+  OnlyCpuSupportPredicator(bool only_cpu) : only_cpu_(only_cpu) {}
+  operator bool() { return only_cpu_; }
+
+ private:
+  bool only_cpu_;
+};
+
+#define REGISTER_OP(op_type_case, OpType)                                       \
+  REGISTER_CLASS_CREATOR(op_type_case, OnlyCpuSupportPredicator,                \
+                         ([] { return new OnlyCpuSupportPredicator(false); })); \
   REGISTER_CLASS_WITH_ARGS(op_type_case, Operator, OpType, const OperatorConf&)
 
-#define REGISTER_OP_CREATOR(op_type_case, creator) \
+#define REGISTER_CPU_OP(op_type_case, OpType)                                  \
+  REGISTER_CLASS_CREATOR(op_type_case, OnlyCpuSupportPredicator,               \
+                         ([] { return new OnlyCpuSupportPredicator(true); })); \
+  extern "C" void Oneflow_OnlyCpuSupported_##OpType() {}                       \
+  REGISTER_CLASS_WITH_ARGS(op_type_case, Operator, OpType, const OperatorConf&)
+
+#define REGISTER_OP_CREATOR(op_type_case, creator)                              \
+  REGISTER_CLASS_CREATOR(op_type_case, OnlyCpuSupportPredicator,                \
+                         ([] { return new OnlyCpuSupportPredicator(false); })); \
   REGISTER_CLASS_CREATOR(op_type_case, Operator, creator, const OperatorConf&)
 
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf);

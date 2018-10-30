@@ -31,10 +31,10 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
                                     const ParallelContext* parallel_ctx) const {
   const AnchorTargetOpConf& conf = op_conf().anchor_target_conf();
   const size_t num_layers = conf.anchor_generator_conf_size();
-  CHECK_EQ(RepeatedObnSize("rpn_labels"), num_layers);
-  CHECK_EQ(RepeatedObnSize("rpn_bbox_targets"), num_layers);
-  CHECK_EQ(RepeatedObnSize("rpn_bbox_inside_weights"), num_layers);
-  CHECK_EQ(RepeatedObnSize("rpn_bbox_outside_weights"), num_layers);
+  CHECK_EQ(conf.rpn_labels_size(), num_layers);
+  CHECK_EQ(conf.rpn_bbox_targets_size(), num_layers);
+  CHECK_EQ(conf.rpn_bbox_inside_weights_size(), num_layers);
+  CHECK_EQ(conf.rpn_bbox_outside_weights_size(), num_layers);
   // input: gt_boxes (N, G, 4)
   const BlobDesc* gt_boxes_bd = GetBlobDesc4BnInOp("gt_boxes");
   CHECK(gt_boxes_bd->has_dim1_valid_num_field());
@@ -52,17 +52,17 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
     CHECK_GT(width, 0);
     num_anchors += height * width * num_anchors_per_cell;
     // repeat output: rpn_labels (N, H, W, A) int32_t
-    BlobDesc* rpn_labels_bd = GetBlobDesc4BnInOp(RepeatedObn("rpn_labels", layer));
+    BlobDesc* rpn_labels_bd = GetBlobDesc4BnInOp(GenRepeatedBn("rpn_labels", layer));
     rpn_labels_bd->set_data_type(DataType::kInt32);
     rpn_labels_bd->mut_shape() = Shape({num_ims, height, width, num_anchors_per_cell});
     // repeat output: rpn_bbox_targets (N, H, W, 4 * A) T
-    BlobDesc* rpn_bbox_targets_bd = GetBlobDesc4BnInOp(RepeatedObn("rpn_bbox_targets", layer));
+    BlobDesc* rpn_bbox_targets_bd = GetBlobDesc4BnInOp(GenRepeatedBn("rpn_bbox_targets", layer));
     rpn_bbox_targets_bd->set_data_type(gt_boxes_bd->data_type());
     rpn_bbox_targets_bd->mut_shape() = Shape({num_ims, height, width, num_anchors_per_cell * 4});
     // repeat output: rpn_bbox_inside_weights same as rpn_bbox_targets
-    *GetBlobDesc4BnInOp(RepeatedObn("rpn_bbox_inside_weights", layer)) = *rpn_bbox_targets_bd;
+    *GetBlobDesc4BnInOp(GenRepeatedBn("rpn_bbox_inside_weights", layer)) = *rpn_bbox_targets_bd;
     // repeat output: rpn_bbox_outside_weights same as rpn_bbox_targets
-    *GetBlobDesc4BnInOp(RepeatedObn("rpn_bbox_outside_weights", layer)) = *rpn_bbox_targets_bd;
+    *GetBlobDesc4BnInOp(GenRepeatedBn("rpn_bbox_outside_weights", layer)) = *rpn_bbox_targets_bd;
   }
   // const_buf: anchors ((H1 * W1 + H2 * W2 + ...) * A, 4) T
   BlobDesc* anchors_blob_desc = GetBlobDesc4BnInOp("anchors");
@@ -103,6 +103,6 @@ void AnchorTargetOp::VirtualGenKernelConf(
   kernel_conf->set_data_type(GetBlobDesc4BnInOp("gt_boxes")->data_type());
 }
 
-REGISTER_OP(OperatorConf::kAnchorTargetConf, AnchorTargetOp);
+REGISTER_CPU_OP(OperatorConf::kAnchorTargetConf, AnchorTargetOp);
 
 }  // namespace oneflow

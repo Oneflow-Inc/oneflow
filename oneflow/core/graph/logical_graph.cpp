@@ -96,6 +96,7 @@ void LogicalGraph::BuildFwStruct() {
   HashMap<std::string, std::vector<LogicalNode*>> op_name2nodes;
   NaiveBuildFwStruct(&op_name2nodes);
   FixSharedModelNodes(op_name2nodes);
+  LinkUnpackFw2PackFw(op_name2nodes);
   total_mbn_num_ = 0;
   ForEachNode([&](LogicalNode* node) {
     total_mbn_num_ +=
@@ -125,28 +126,32 @@ void LogicalGraph::NaiveBuildFwStruct(
     cur_op_conf.set_device_type(parallel_desc_ptr->device_type());
     std::shared_ptr<Operator> cur_op = ConstructOp(cur_op_conf);
     LogicalNode* cur_node = cur_op->NewProperLogicalNode();
+    if (cur_node->TypeName() == "PackForward" || cur_node->TypeName() == "UnpackForward") {
+      CHECK_EQ(
+          0, Global<JobDesc>::Get()->other_conf().piece_size() % parallel_desc_ptr->parallel_num());
+    }
     AddAllocatedNode(cur_node);
     cur_node->mut_op_vec() = {cur_op};
     cur_node->SoleOp()->FixParallelDesc(parallel_desc_ptr.get());
     cur_node->mut_parallel_desc() = parallel_desc_ptr;
-    cur_node->SoleOp()->ForEachOutputBn([&](const std::string& obn) {
+    for (const std::string& obn : cur_node->SoleOp()->output_bns()) {
       const LogicalBlobId& lbi = cur_node->SoleOp()->BnInOp2Lbi(obn);
       CHECK(lbi2producer.emplace(lbi, cur_node).second);
       CHECK(lbi2obn.emplace(lbi, obn).second);
-    });
+    }
     (*op_name2nodes)[cur_op->op_name()].push_back(cur_node);
   }
   ForEachNode([&](LogicalNode* cur_node) {
-    cur_node->SoleOp()->ForEachInputBn([&](const std::string& ibn) {
+    for (const std::string& ibn : cur_node->SoleOp()->input_bns()) {
       const LogicalBlobId& lbi = cur_node->SoleOp()->BnInOp2Lbi(ibn);
       LogicalNode* pred_node = lbi2producer.at(lbi);
-      if (pred_node == cur_node) { return; }
+      if (pred_node == cur_node) { continue; }
       LogicalEdge* edge = NewEdge();
       edge->mut_lbis() = {lbi};
       UpdateEdge2Ibn(edge, ibn);
       UpdateEdge2Obn(edge, lbi2obn.at(lbi));
       Connect(pred_node, edge, cur_node);
-    });
+    }
   });
 }
 
@@ -179,6 +184,20 @@ void LogicalGraph::FixSharedModelNodes(
       CHECK(shared_model_nodes->at(i)->parallel_desc()->Equal(shared_parallel_desc));
     }
   }
+}
+
+void LogicalGraph::LinkUnpackFw2PackFw(
+    const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes) {
+  ForEachLogicalNode<PackForwardLogicalNode>([&](PackForwardLogicalNode* pack_fw) {
+    const std::string& unpack_name = pack_fw->SoleOp()->op_conf().pack_conf().related_unpack();
+    auto it = op_name2nodes.find(unpack_name);
+    CHECK(it != op_name2nodes.end());
+    CHECK_EQ(1, it->second.size());
+    UnpackForwardLogicalNode* unpack_fw =
+        dynamic_cast<UnpackForwardLogicalNode*>(it->second.front());
+    CHECK(unpack_fw);
+    pack_fw->set_related_unpack(unpack_fw);
+  });
 }
 
 void LogicalGraph::SetMainModelParallel() {
@@ -354,16 +373,18 @@ void LogicalGraph::BuildLossPrintStruct() {
     OperatorConf loss_print_op_conf;
     loss_print_op_conf.set_name(LossPrintPrefix + loss_op->op_name());
     loss_print_op_conf.set_device_type(DeviceType::kCPU);
-    auto loss_print_conf = loss_print_op_conf.mutable_loss_print_conf();
 
+    auto* loss_print_conf = loss_print_op_conf.mutable_loss_print_conf();
     *(loss_print_conf->mutable_loss_lbi()) = reduce_loss_op->BnInOp2Lbi("out");
-
+    *(loss_print_conf->mutable_loss_instance_num_lbi()->mutable_op_name()) = loss_op->op_name();
+    *(loss_print_conf->mutable_loss_instance_num_lbi()->mutable_blob_name()) = "loss_instance_num";
     if (!loss_op->GetValFromCustomizedConf<std::string>("weight").empty()) {
       *(loss_print_conf->mutable_reduction_lbi()) = loss_op->BnInOp2Lbi("reduction_coefficient");
     }
     loss_print_conf->set_weight_scalar(loss_op->GetValFromCustomizedConf<float>("weight_scalar"));
     loss_print_conf->set_reduction_type(
         static_cast<LossReductionType>(loss_op->GetEnumFromCustomizedConf("reduction")));
+
     std::shared_ptr<Operator> loss_print_op = ConstructOp(loss_print_op_conf);
     ParallelConf loss_print_pr_conf;
     loss_print_pr_conf.set_policy(kDataParallel);
@@ -392,10 +413,14 @@ void LogicalGraph::BuildAccuracyPrintStruct() {
     OperatorConf accuracy_print_op_conf;
     accuracy_print_op_conf.set_name(AccuracyPrintPrefix + accuracy_op->op_name());
     accuracy_print_op_conf.set_device_type(DeviceType::kCPU);
-    auto accuracy_print_conf = accuracy_print_op_conf.mutable_accuracy_print_conf();
 
-    *(accuracy_print_conf->mutable_accuracy_lbi()) = accuracy_op->BnInOp2Lbi("accuracy");
+    auto* accuracy_print_conf = accuracy_print_op_conf.mutable_accuracy_print_conf();
     accuracy_print_conf->set_top_k_print(accuracy_op->op_conf().accuracy_conf().top_k());
+    *(accuracy_print_conf->mutable_accuracy_lbi()) = accuracy_op->BnInOp2Lbi("accuracy");
+    *(accuracy_print_conf->mutable_accuracy_instance_num_lbi()->mutable_op_name()) =
+        accuracy_op->op_name();
+    *(accuracy_print_conf->mutable_accuracy_instance_num_lbi()->mutable_blob_name()) =
+        "accuracy_instance_num";
 
     std::shared_ptr<Operator> accuracy_print_op = ConstructOp(accuracy_print_op_conf);
     ParallelConf accuracy_print_pr_conf;
@@ -408,9 +433,24 @@ void LogicalGraph::BuildAccuracyPrintStruct() {
   });
 }
 
+bool LogicalGraph::MustHaveModelDiffAcc() {
+  bool must_have_model_diff_acc = false;
+  ForEachLogicalNode<ForwardLogicalNode>(
+      [&must_have_model_diff_acc](ForwardLogicalNode* fw_logical) {
+        if (must_have_model_diff_acc) { return; }
+        if (fw_logical->TypeName() == "PackForward" || fw_logical->TypeName() == "UnpackForward"
+            || fw_logical->TypeName() == "RepeatForward") {
+          must_have_model_diff_acc = true;
+          return;
+        }
+      });
+  return must_have_model_diff_acc;
+}
+
 void LogicalGraph::BuildModelStruct(bool is_train) {
   HashMap<const LogicalNode*, NormalMdUpdtLogicalNode*> first_shared2mdupdt;
   HashMap<const LogicalNode*, ReduceCtx> fw_node2reduce_ctx;
+  bool must_have_model_diff_acc = MustHaveModelDiffAcc();
   ForEachLogicalNode<ForwardLogicalNode>([&](ForwardLogicalNode* fw_logical) {
     if (Global<JobDesc>::Get()->enable_write_snapshot() && fw_logical->HasOpWithForwardModelBlob()
         && fw_logical->SoleOp()->op_conf().trainable()) {
@@ -440,7 +480,7 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
       if (is_train && fw_logical->HasOpWithModelBlob()) {
         CHECK_NOTNULL(bw_logical);
         LogicalNode* md_diff_acc_logical = nullptr;
-        if (Global<JobDesc>::Get()->NumOfPiecesInBatch() > 1) {
+        if (must_have_model_diff_acc || Global<JobDesc>::Get()->NumOfPiecesInBatch() > 1) {
           OperatorConf md_diff_acc_op_conf;
           md_diff_acc_op_conf.set_name("md_diff_acc_" + NewUniqueId());
           md_diff_acc_op_conf.set_device_type(fw_logical->parallel_desc()->device_type());

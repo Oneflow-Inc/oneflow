@@ -95,6 +95,13 @@ BlobDesc* RegstDesc::MutBlobDesc(const LogicalBlobId& lbi) {
   }
 }
 
+const BlobDesc* RegstDesc::SoleBlobDesc() const {
+  CHECK_EQ(1, lbi2blob_desc_.size());
+  return (*lbi2blob_desc_.begin()).second.get();
+}
+
+BlobDesc* RegstDesc::MutSoleBlobDesc() { return const_cast<BlobDesc*>(SoleBlobDesc()); }
+
 void RegstDesc::ForEachLbi(std::function<void(const LogicalBlobId&)> func) const {
   for (const auto& p : lbi2blob_desc_) { func(p.first); }
 }
