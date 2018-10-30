@@ -9,8 +9,8 @@ int64_t JobDesc::piece_num_of_experiment_phase() const {
   return job_conf_.other().exp_run_conf().piece_num_of_experiment_phase();
 }
 
-bool JobDesc::must_run_experimentally() const {
-  return job_conf_.other().exp_run_conf().must_run_experimentally();
+bool JobDesc::enable_experiment_run() const {
+  return job_conf_.other().exp_run_conf().enable_experiment_run();
 }
 
 size_t JobDesc::persistence_buf_byte() const {

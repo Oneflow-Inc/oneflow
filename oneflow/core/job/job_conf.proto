@@ -47,7 +47,7 @@ message FileSystemConf {
 
 message ExperimentalRunConf {
   optional int64 piece_num_of_experiment_phase = 1 [default = -1];
-  optional bool must_run_experimentally = 2 [default = false];
+  optional bool enable_experiment_run = 2 [default = false];
 }
 
 message OtherConf {
