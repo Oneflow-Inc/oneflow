@@ -23,6 +23,6 @@ LogicalBlobId LossPrintOp::ibn2lbi(const std::string& input_bn) const {
 
 const PbMessage& LossPrintOp::GetCustomizedConf() const { return op_conf().loss_print_conf(); }
 
-REGISTER_OP(OperatorConf::kLossPrintConf, LossPrintOp);
+REGISTER_CPU_OP(OperatorConf::kLossPrintConf, LossPrintOp);
 
 }  // namespace oneflow

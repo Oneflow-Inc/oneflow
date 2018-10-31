@@ -16,6 +16,6 @@ LogicalBlobId PrintOp::ibn2lbi(const std::string& input_bn) const {
       op_conf().print_conf().in(oneflow_cast<int32_t>(input_bn.substr(3))).lbn());
 }
 
-REGISTER_OP(OperatorConf::kPrintConf, PrintOp);
+REGISTER_CPU_OP(OperatorConf::kPrintConf, PrintOp);
 
 }  // namespace oneflow
