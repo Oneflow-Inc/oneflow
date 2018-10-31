@@ -19,11 +19,10 @@ void DecodeOFRecordKernel::Forward(const KernelCtx& ctx,
   auto status = static_cast<DecodeStatus*>(ctx.other);
   Blob* in_blob = BnInOp2Blob("in");
   const DecodeOFRecordOpConf& decode_conf = op_conf().decode_ofrecord_conf();
-  const size_t out_num = op_attribute().output_bns_size();
-  CHECK_EQ(out_num, decode_conf.blob_size());
+  CHECK_EQ(op_attribute().output_bns_size(), decode_conf.blob_size());
   status->max_col_id_ = -1;
-  FOR_RANGE(int32_t, i, 0, out_num) {
-    Blob* out_blob = BnInOp2Blob("out_" + std::to_string(i));
+  FOR_RANGE(int32_t, i, 0, op_attribute().output_bns_size()) {
+    Blob* out_blob = BnInOp2Blob(op_attribute().output_bns(i));
     const BlobConf& blob_conf = decode_conf.blob(i);
     OFRecordDecoderIf* decoder =
         GetOFRecordDecoder(blob_conf.encode_case().encode_case(), blob_conf.data_type());
