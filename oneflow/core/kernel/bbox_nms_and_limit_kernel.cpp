@@ -129,7 +129,7 @@ void BboxNmsAndLimitKernel<T>::ForwardDataContent(
   const Blob* bbox_pred_blob = BnInOp2Blob("bbox_pred");
   const Blob* bbox_prob_blob = BnInOp2Blob("bbox_prob");
   Blob* target_bbox_blob = BnInOp2Blob("target_bbox");
-  Blob* bbox_score_blob = BnInOp2Blob("bbox_score");
+  Blob* vote_bbox_score_blob = BnInOp2Blob("bbox_score");
   Blob* out_bbox_blob = BnInOp2Blob("out_bbox");
   Blob* out_bbox_score_blob = BnInOp2Blob("out_bbox_score");
   Blob* out_bbox_label_blob = BnInOp2Blob("out_bbox_label");
@@ -141,21 +141,18 @@ void BboxNmsAndLimitKernel<T>::ForwardDataContent(
   auto im_grouped_bbox_inds_vec = GroupBBox(target_bbox_blob);
   FOR_RANGE(int32_t, i, 0, im_grouped_bbox_inds_vec.size()) {
     im_detected_bbox_inds_vec[i] = ApplyNmsAndVoteByClass(
-        im_grouped_bbox_inds_vec[i], bbox_prob_blob, bbox_score_blob, target_bbox_blob);
+        im_grouped_bbox_inds_vec[i], bbox_prob_blob, vote_bbox_score_blob, target_bbox_blob);
   }
   for (const auto& im_detected_bbox_inds : im_detected_bbox_inds_vec) {
     all_im_bbox_inds.insert(all_im_bbox_inds.end(), im_detected_bbox_inds.begin(),
                             im_detected_bbox_inds.end());
   }
-  if (op_conf().bbox_nms_and_limit_conf().bbox_vote_enabled()) {
-    Limit(bbox_score_blob, all_im_bbox_inds);
-    OutputBBoxScore(all_im_bbox_inds, bbox_score_blob, out_bbox_score_blob);
-  } else {
-    Limit(bbox_prob_blob, all_im_bbox_inds);
-    OutputBBoxScore(all_im_bbox_inds, bbox_prob_blob, out_bbox_score_blob);
-  }
+  const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
+  const Blob* bbox_score_blob = conf.bbox_vote_enabled() ? vote_bbox_score_blob : bbox_prob_blob;
+  Limit(bbox_score_blob, all_im_bbox_inds);
   OutputBBox(all_im_bbox_inds, target_bbox_blob, out_bbox_blob);
-  OutputBBoxLabel(all_im_bbox_inds, bbox_prob_blob->shape().At(1), out_bbox_label_blob);
+  OutputBBoxScore(all_im_bbox_inds, bbox_score_blob, out_bbox_score_blob);
+  OutputBBoxLabel(all_im_bbox_inds, bbox_score_blob->shape().At(1), out_bbox_label_blob);
   if (bbox_blob->has_record_id_in_device_piece_field()) { FillRecordIdInDevicePiece(BnInOp2Blob); }
 }
 
