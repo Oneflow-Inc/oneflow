@@ -57,6 +57,6 @@ LogicalBlobId DecodeOFRecordOp::obn2lbi(const std::string& output_bn) const {
   return ret;
 }
 
-REGISTER_OP(OperatorConf::kDecodeOfrecordConf, DecodeOFRecordOp);
+REGISTER_CPU_OP(OperatorConf::kDecodeOfrecordConf, DecodeOFRecordOp);
 
 }  // namespace oneflow
