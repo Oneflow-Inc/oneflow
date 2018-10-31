@@ -27,7 +27,7 @@ void ProposalKernel<T>::RegionProposal(
   Blob* score_slice_blob = BnInOp2Blob("score_slice");
 
   size_t num_proposals = proposals_blob->shape().At(1);
-  ScoreSlice score_slice(IndexSequence(score_slice_blob->shape().elem_cnt(),
+  ScoreSlice score_slice(IndexSequence(score_slice_blob->shape().Count(1),
                                        score_slice_blob->mut_dptr<int32_t>(im_index), true),
                          BnInOp2Blob("class_prob")->dptr<T>(im_index));
   score_slice.NthElem(num_proposals, [&](int32_t lhs_index, int32_t rhs_index) {
