@@ -75,7 +75,7 @@ void ImagePreprocessImpl<PreprocessCase::kExpendTo>::DoPreprocess(
   CHECK_GE(width, image->cols);
   CHECK_GE(height, image->rows);
   cv::Mat dst = cv::Mat::zeros(cv::Size(width, height), image->type());
-  image->copyTo(dst);
+  image->copyTo(dst(cv::Rect(0, 0, image->cols, image->rows)));
   *image = dst;
 }
 
