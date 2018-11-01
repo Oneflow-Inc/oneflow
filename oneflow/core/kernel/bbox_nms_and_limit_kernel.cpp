@@ -1,5 +1,8 @@
 #include "oneflow/core/kernel/bbox_nms_and_limit_kernel.h"
 #include "oneflow/core/common/auto_registration_factory.h"
+#include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/thread/thread_manager.h"
+#include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
 
@@ -133,16 +136,15 @@ void BboxNmsAndLimitKernel<T>::ForwardDataContent(
   Blob* out_bbox_blob = BnInOp2Blob("out_bbox");
   Blob* out_bbox_score_blob = BnInOp2Blob("out_bbox_score");
   Blob* out_bbox_label_blob = BnInOp2Blob("out_bbox_label");
-
   BroadcastBboxTransform(bbox_blob, bbox_pred_blob, target_bbox_blob);
   ClipBBox(target_bbox_blob);
   std::vector<int32_t> all_im_bbox_inds;
   std::vector<std::vector<int32_t>> im_detected_bbox_inds_vec(num_images_);
-  auto im_grouped_bbox_inds_vec = GroupBBox(target_bbox_blob);
-  FOR_RANGE(int32_t, i, 0, im_grouped_bbox_inds_vec.size()) {
+  std::vector<std::vector<int32_t>> im_grouped_bbox_inds_vec = GroupBBox(target_bbox_blob);
+  MultiThreadLoop(num_images_, [&](int64_t i) {
     im_detected_bbox_inds_vec[i] = ApplyNmsAndVoteByClass(
         im_grouped_bbox_inds_vec[i], bbox_prob_blob, vote_bbox_score_blob, target_bbox_blob);
-  }
+  });
   for (const auto& im_detected_bbox_inds : im_detected_bbox_inds_vec) {
     all_im_bbox_inds.insert(all_im_bbox_inds.end(), im_detected_bbox_inds.begin(),
                             im_detected_bbox_inds.end());
@@ -164,15 +166,18 @@ void BboxNmsAndLimitKernel<T>::BroadcastBboxTransform(const Blob* bbox_blob,
   int64_t num_boxes = bbox_blob->shape().At(0);
   int64_t num_classes = bbox_pred_blob->shape().At(1) / 4;
   CHECK_EQ(bbox_pred_blob->shape().At(0), num_boxes);
-  FOR_RANGE(int64_t, i, 0, num_boxes) {
-    const auto* bbox = BBox::Cast(bbox_blob->dptr<T>(i));
-    const auto* delta = BBoxDelta<T>::Cast(bbox_pred_blob->dptr<T>(i));
-    FOR_RANGE(int64_t, j, 0, num_classes) {
-      BBox* target_bbox = BBox::Cast(target_bbox_blob->mut_dptr<T>(i, j));
-      target_bbox->Transform(bbox, delta + j, bbox_reg_ws);
-      target_bbox->set_index(bbox->index());
-    }
-  }
+  const auto* bbox_ptr = BBox::Cast(bbox_blob->dptr<T>());
+  const auto* delta_ptr = BBoxDelta<T>::Cast(bbox_pred_blob->dptr<T>());
+  BBox* target_bbox_ptr = BBox::Cast(target_bbox_blob->mut_dptr<T>());
+  MultiThreadLoop(num_boxes * num_classes, [&](int64_t index) {
+    int64_t i = index / num_classes;
+    int64_t j = index % num_classes;
+    const auto* bbox = bbox_ptr + i;
+    const auto* delta = delta_ptr + i;
+    BBox* target_bbox = target_bbox_ptr + index;
+    target_bbox->Transform(bbox, delta + j, bbox_reg_ws);
+    target_bbox->set_index(bbox->index());
+  });
 }
 
 template<typename T>
