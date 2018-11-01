@@ -39,6 +39,7 @@ class JobDesc final {
   int64_t PieceSize() const { return job_conf_.other().piece_size(); }
   int64_t DevicePieceSize4ParallelCtx(const ParallelContext& ctx) const;
   int64_t piece_num_of_experiment_phase() const;
+  bool enable_experiment_run() const;
   float available_zone_mem_ratio() const;
   size_t persistence_buf_byte() const;
   size_t reserved_host_mem_byte() const;
