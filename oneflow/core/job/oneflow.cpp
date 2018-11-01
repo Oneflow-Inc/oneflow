@@ -144,33 +144,6 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
   *(plan->mutable_net_topo()) = net_topo;
 }
 
-bool HasRelayPlacement() {
-  PbMd message_diff;
-  const ParallelConf* last_gpu_conf_ptr = nullptr;
-  const Placement& placement = Global<JobDesc>::Get()->placement();
-  for (const PlacementGroup& p_group : placement.placement_group()) {
-    const ParallelConf& p_conf = p_group.parallel_conf();
-    for (const std::string& device_name : p_conf.device_name()) {
-      int64_t mchn_id;
-      std::string device_tag;
-      std::string device_id_str;
-      ParseDeviceNameConf(device_name, &mchn_id, &device_tag, &device_id_str);
-      if (device_tag == "cpu") {
-        break;
-      } else if (device_tag == "gpu") {
-        if (last_gpu_conf_ptr && !message_diff.Equivalent(*last_gpu_conf_ptr, p_conf)) {
-          return true;
-        }
-        last_gpu_conf_ptr = &p_conf;
-        break;
-      } else {
-        UNIMPLEMENTED();
-      }
-    }
-  }
-  return false;
-}
-
 }  // namespace
 
 class Oneflow final {
@@ -222,7 +195,7 @@ Oneflow::Oneflow(const std::string& job_conf_filepath) {
   TeePersistentLogStream::Create("naive_plan")->Write(naive_plan);
   TeePersistentLogStream::Create("mem_shared_plan")->Write(mem_shared_plan);
   LOG(INFO) << "push_pull_plan:" << GetCurTime() - start;
-  if (HasRelayPlacement()) {
+  if (Global<JobDesc>::Get()->enable_experiment_run()) {
     // Experiment Runtime
     { Runtime experiment_run(mem_shared_plan, true); }
     // Improve

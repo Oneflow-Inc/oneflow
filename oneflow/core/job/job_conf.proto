@@ -45,6 +45,11 @@ message FileSystemConf {
   }
 }
 
+message ExperimentalRunConf {
+  optional int64 piece_num_of_experiment_phase = 1 [default = -1];
+  optional bool enable_experiment_run = 2 [default = false];
+}
+
 message OtherConf {
   required int64 piece_size = 2;
   required int32 data_part_num = 3; // piece_size % data_part_num = 0
@@ -55,7 +60,7 @@ message OtherConf {
   optional int32 max_data_id_length = 102 [default = 0];
   optional bool enable_cudnn = 103 [default = true];
   optional DataType default_data_type = 104 [default = kFloat]; // kFloat or kDouble
-  optional int64 piece_num_of_experiment_phase = 105 [default = -1];
+  optional ExperimentalRunConf exp_run_conf = 105;
   optional uint64 persistence_buf_mbyte = 106 [default = 64];
   optional uint64 reserved_host_mem_mbyte = 107 [default = 500];
   optional uint64 reserved_device_mem_mbyte = 108 [default = 500];
