@@ -354,7 +354,6 @@ class BBoxIndices<Indices, BBoxImplT<T, Cat>> : public Indices {
   template<typename U>
   using BBoxT = BBoxImplT<U, Cat>;
   using RawT = typename std::remove_cv<T>::type;
-
   BBoxIndices(const Indices& inds, T* bbox_buf) : Indices(inds), bbox_buf_(bbox_buf) {}
 
   const BBox* GetBBox(size_t n) const {

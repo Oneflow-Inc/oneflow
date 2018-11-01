@@ -483,6 +483,9 @@ class Dim2ValidNumIterator final : public FieldIterator {
   size_t GetSizeOfField(Blob* blob) const override { return blob->ByteSizeOfDim2ValidNumField(); }
 };
 
+void SingleThreadLoop(size_t num, std::function<void(int64_t)> Callback);
+void MultiThreadLoop(size_t num, std::function<void(int64_t)> Callback);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_KERNEL_UTIL_H_

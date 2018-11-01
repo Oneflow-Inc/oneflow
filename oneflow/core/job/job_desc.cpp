@@ -12,7 +12,11 @@ std::string JobDesc::MdLoadSnapshotPath() const {
 }
 
 int64_t JobDesc::piece_num_of_experiment_phase() const {
-  return job_conf_.other().piece_num_of_experiment_phase();
+  return job_conf_.other().exp_run_conf().piece_num_of_experiment_phase();
+}
+
+bool JobDesc::enable_experiment_run() const {
+  return job_conf_.other().exp_run_conf().enable_experiment_run();
 }
 
 size_t JobDesc::persistence_buf_byte() const {
@@ -126,7 +130,7 @@ void JobDesc::Init() {
 #ifndef WITH_CUDA
   CHECK_EQ(job_conf_.other().enable_nccl(), false) << "Please compile ONEFLOW with NCCL";
 #endif  // WITH_CUDA
-  int64_t piece_exp = job_conf_.other().piece_num_of_experiment_phase();
+  int64_t piece_exp = job_conf_.other().exp_run_conf().piece_num_of_experiment_phase();
   if (job_conf_.other().has_train_conf()) {
     TrainConf* train_conf = job_conf_.mutable_other()->mutable_train_conf();
     if (train_conf->piece_num_of_print_loss() == -1) {
@@ -143,7 +147,7 @@ void JobDesc::Init() {
     if (piece_exp == -1) { piece_exp = 19; }
   }
   LOG(INFO) << "Set piece_num_of_experiment_phase " << piece_exp;
-  job_conf_.mutable_other()->set_piece_num_of_experiment_phase(piece_exp);
+  job_conf_.mutable_other()->mutable_exp_run_conf()->set_piece_num_of_experiment_phase(piece_exp);
 #ifndef WITH_CUDA
   CHECK_EQ(job_conf_.resource().gpu_device_num(), 0);
 #endif

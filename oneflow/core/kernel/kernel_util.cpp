@@ -1,5 +1,7 @@
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/common/blocking_counter.h"
+#include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/kernel/kernel.h"
 
@@ -148,6 +150,24 @@ void MatrixRowReduce(const int64_t row_num, const int64_t col_num, const T* x, T
 }
 
 }  // namespace
+
+void SingleThreadLoop(size_t num, std::function<void(int64_t i)> Callback) {
+  FOR_RANGE(int64_t, i, 0, num) { Callback(i); }
+}
+
+void MultiThreadLoop(size_t num, std::function<void(int64_t i)> Callback) {
+  size_t thread_num = Global<ThreadMgr>::Get()->compute_thread_pool()->thread_num();
+  thread_num = std::min(num, thread_num);
+  BalancedSplitter bs(num, thread_num);
+  BlockingCounter bc(thread_num);
+  FOR_RANGE(int64_t, range_id, 0, thread_num) {
+    Global<ThreadMgr>::Get()->compute_thread_pool()->AddWork([&bc, &bs, range_id, Callback] {
+      FOR_RANGE(int64_t, i, bs.At(range_id).begin(), bs.At(range_id).end()) { Callback(i); }
+      bc.Decrease();
+    });
+  }
+  bc.WaitUntilCntEqualZero();
+}
 
 template<>
 void Memcpy<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const void* src, size_t sz
