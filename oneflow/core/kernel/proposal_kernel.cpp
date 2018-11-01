@@ -13,8 +13,7 @@ void ProposalKernel<T>::InitConstBufBlobs(
 template<typename T>
 void ProposalKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  size_t im_num = BnInOp2Blob("class_prob")->shape().At(0);
-  MultiThreadLoop(im_num, [&](int64_t im_i) {
+  MultiThreadLoop(BnInOp2Blob("class_prob")->shape().At(0), [&](int64_t im_i) {
     RegionProposal(im_i, BnInOp2Blob);
     ApplyNms(im_i, BnInOp2Blob);
   });
