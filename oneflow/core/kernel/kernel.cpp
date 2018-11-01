@@ -197,21 +197,15 @@ bool Kernel::HasModelBns() const { return op_attribute().model_bns().size() > 0;
 template<DeviceType device_type>
 void KernelIf<device_type>::ForwardDataId(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  ForwardField(ctx.device_ctx, BnInOp2Blob, &Blob::CopyDataIdFrom);
+  CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
+            &Blob::CopyDataIdFrom);
 }
 
 template<DeviceType device_type>
 void KernelIf<device_type>::ForwardColNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  ForwardField(ctx.device_ctx, BnInOp2Blob, &Blob::CopyColNumFrom);
-}
-
-template<DeviceType device_type>
-void KernelIf<device_type>::ForwardField(DeviceCtx* ctx,
-                                         std::function<Blob*(const std::string&)> BnInOp2Blob,
-                                         void (Blob::*Copy)(DeviceCtx*, const Blob*)) const {
-  const PbRpf<std::string>* input_bn = &op_attribute().input_bns();
-  CopyField(ctx, BnInOp2Blob, *input_bn, op_attribute().output_bns(), Copy);
+  CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
+            &Blob::CopyColNumFrom);
 }
 
 template<DeviceType device_type>
