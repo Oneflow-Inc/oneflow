@@ -29,12 +29,11 @@ class ProposalKernel final : public KernelIf<DeviceType::kCPU> {
   void InitConstBufBlobs(DeviceCtx*,
                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
-  ScoreSlice* RegionProposal(const int64_t im_index,
-                             const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  BoxesSlice* ApplyNms(const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  void WriteRoisToOutput(const size_t num_output, const int32_t im_index,
-                         const ScoreSlice& score_slice, const BoxesSlice& post_nms_slice,
-                         const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  void RegionProposal(const int64_t im_index,
+                      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  void ApplyNms(const int64_t im_index,
+                const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  void WriteRoisToOutput(const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 };
 
 }  // namespace oneflow

@@ -119,7 +119,7 @@ void ImageSegmentationMaskKernel<T>::ForwardDataContent(
   Blob* out_blob = BnInOp2Blob("out");
   ClearBlob<T>(padded_mask_blob);
   ClearBlob<uint8_t>(out_blob);
-  
+
   FOR_RANGE(int32_t, i, 0, mask_blob->shape().At(0)) {
     cv::Mat img;
     std::array<int32_t, 4> expanded_bbox;

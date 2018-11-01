@@ -66,22 +66,23 @@ void ProposalOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   roi_probs_blob_desc->set_has_dim0_valid_num_field(true);
   roi_probs_blob_desc->set_has_record_id_in_device_piece_field(true);
 
-  // datatmp: score_slice (H * W * A) int32_t
+  // datatmp: score_slice (N, H * W * A) int32_t
   BlobDesc* score_slice_blob_desc = GetBlobDesc4BnInOp("score_slice");
-  score_slice_blob_desc->mut_shape() = Shape({num_anchors});
+  score_slice_blob_desc->mut_shape() = Shape({num_images, num_anchors});
   score_slice_blob_desc->set_data_type(DataType::kInt32);
-  // datatmp: proposals (pre_nms_top_n, 4) T
+  // datatmp: proposals (N, pre_nms_top_n, 4) T
   BlobDesc* proposal_blob_desc = GetBlobDesc4BnInOp("proposals");
-  proposal_blob_desc->mut_shape() = Shape({pre_nms_top_n, 4});
+  proposal_blob_desc->mut_shape() = Shape({num_images, pre_nms_top_n, 4});
   proposal_blob_desc->set_data_type(bbox_pred_blob_desc->data_type());
-  // datatmp: pre_nms_slice (pre_nms_top_n) int32_t
+  // datatmp: pre_nms_slice (N, pre_nms_top_n) int32_t
   BlobDesc* pre_nms_slice_blob_desc = GetBlobDesc4BnInOp("pre_nms_slice");
-  pre_nms_slice_blob_desc->mut_shape() = Shape({pre_nms_top_n});
+  pre_nms_slice_blob_desc->mut_shape() = Shape({num_images, pre_nms_top_n});
   pre_nms_slice_blob_desc->set_data_type(DataType::kInt32);
-  // datatmp: post_nms_slice (post_nms_top_n) int32_t
+  // datatmp: post_nms_slice (N, post_nms_top_n) int32_t
   BlobDesc* post_nms_slice_blob_desc = GetBlobDesc4BnInOp("post_nms_slice");
-  post_nms_slice_blob_desc->mut_shape() = Shape({post_nms_top_n});
+  post_nms_slice_blob_desc->mut_shape() = Shape({num_images, post_nms_top_n});
   post_nms_slice_blob_desc->set_data_type(DataType::kInt32);
+  post_nms_slice_blob_desc->set_has_dim1_valid_num_field(true);
 }
 
 REGISTER_CPU_OP(OperatorConf::kProposalConf, ProposalOp);

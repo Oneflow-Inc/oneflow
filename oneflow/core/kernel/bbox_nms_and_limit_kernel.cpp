@@ -109,6 +109,7 @@ void BboxNmsAndLimitKernel<T>::VirtualKernelInit(const ParallelContext* parallel
     scoring_method_.reset(NewObj<ScoringMethodIf<T>>(conf.bbox_vote().scoring_method()));
     scoring_method_->Init(conf.bbox_vote());
   }
+  num_images_ = Global<JobDesc>::Get()->DevicePieceSize4ParallelCtx(*parallel_ctx);
 }
 
 template<typename T>
@@ -126,7 +127,6 @@ void BboxNmsAndLimitKernel<T>::ForwardRecordIdInDevicePiece(
 template<typename T>
 void BboxNmsAndLimitKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
   const Blob* bbox_blob = BnInOp2Blob("bbox");
   const Blob* bbox_pred_blob = BnInOp2Blob("bbox_pred");
   const Blob* bbox_prob_blob = BnInOp2Blob("bbox_prob");
@@ -138,10 +138,8 @@ void BboxNmsAndLimitKernel<T>::ForwardDataContent(
   BroadcastBboxTransform(bbox_blob, bbox_pred_blob, target_bbox_blob);
   ClipBBox(target_bbox_blob);
   std::vector<int32_t> all_im_bbox_inds;
-  auto im_grouped_bbox_inds = GroupBBox(target_bbox_blob);
-  std::vector<std::vector<int32_t>> im_grouped_bbox_inds_vec;
-  for (auto& pair : im_grouped_bbox_inds) { im_grouped_bbox_inds_vec.push_back(pair.second); }
-  std::vector<std::vector<int32_t>> im_detected_bbox_inds_vec(im_grouped_bbox_inds.size());
+  std::vector<std::vector<int32_t>> im_detected_bbox_inds_vec(num_images_);
+  std::vector<std::vector<int32_t>> im_grouped_bbox_inds_vec = GroupBBox(target_bbox_blob);
   BlockingCounter bc(im_grouped_bbox_inds_vec.size());
   FOR_RANGE(int32_t, i, 0, im_grouped_bbox_inds_vec.size()) {
     Global<ThreadMgr>::Get()->compute_thread_pool()->AddWork(
@@ -157,11 +155,12 @@ void BboxNmsAndLimitKernel<T>::ForwardDataContent(
     all_im_bbox_inds.insert(all_im_bbox_inds.end(), im_detected_bbox_inds.begin(),
                             im_detected_bbox_inds.end());
   }
+  const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
   const Blob* bbox_score_blob = conf.bbox_vote_enabled() ? vote_bbox_score_blob : bbox_prob_blob;
   Limit(bbox_score_blob, all_im_bbox_inds);
   OutputBBox(all_im_bbox_inds, target_bbox_blob, out_bbox_blob);
   OutputBBoxScore(all_im_bbox_inds, bbox_score_blob, out_bbox_score_blob);
-  OutputBBoxLabel(all_im_bbox_inds, bbox_prob_blob->shape().At(1), out_bbox_label_blob);
+  OutputBBoxLabel(all_im_bbox_inds, bbox_score_blob->shape().At(1), out_bbox_label_blob);
   if (bbox_blob->has_record_id_in_device_piece_field()) { FillRecordIdInDevicePiece(BnInOp2Blob); }
 }
 
@@ -207,13 +206,12 @@ void BboxNmsAndLimitKernel<T>::ClipBBox(Blob* target_bbox_blob) const {
 }
 
 template<typename T>
-typename BboxNmsAndLimitKernel<T>::Image2IndexVecMap BboxNmsAndLimitKernel<T>::GroupBBox(
+std::vector<std::vector<int32_t>> BboxNmsAndLimitKernel<T>::GroupBBox(
     Blob* target_bbox_blob) const {
-  Image2IndexVecMap im_grouped_bbox_inds;
+  std::vector<std::vector<int32_t>> im_grouped_bbox_inds(num_images_);
   FOR_RANGE(int32_t, i, 0, target_bbox_blob->shape().At(0)) {
     const BBox* bbox = BBox::Cast(target_bbox_blob->dptr<T>(i, 0));
-    int32_t im_idx = static_cast<int32_t>(bbox->index());
-    im_grouped_bbox_inds[im_idx].emplace_back(i);
+    im_grouped_bbox_inds[bbox->index()].emplace_back(i);
   }
   return im_grouped_bbox_inds;
 }
@@ -299,15 +297,6 @@ void BboxNmsAndLimitKernel<T>::Limit(const Blob* bbox_score_blob,
                                      std::vector<int32_t>& bbox_inds) const {
   const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
   const T* bbox_score_ptr = bbox_score_blob->dptr<T>();
-  // std::sort(bbox_inds.begin(), bbox_inds.end(), [&](int32_t l_idx, int32_t r_idx) {
-  //   return bbox_score_ptr[l_idx] > bbox_score_ptr[r_idx];
-  // });
-  // auto lt_threah_it = std::find_if(bbox_inds.begin(), bbox_inds.end(), [&](int32_t idx) {
-  //   return bbox_score_ptr[idx] < conf.threshold();
-  // });
-  // bbox_inds.erase(lt_threah_it, bbox_inds.end());
-  // if (bbox_inds.size() > conf.detections_per_im()) { bbox_inds.resize(conf.detections_per_im());
-  // }
   if (bbox_inds.size() > conf.detections_per_im()) {
     std::sort(bbox_inds.begin(), bbox_inds.end(), [&](int32_t l_idx, int32_t r_idx) {
       return bbox_score_ptr[l_idx] > bbox_score_ptr[r_idx];

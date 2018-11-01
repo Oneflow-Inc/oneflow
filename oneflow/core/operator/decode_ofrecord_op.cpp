@@ -31,7 +31,7 @@ void DecodeOFRecordOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   BlobDesc* in_blob_desc = GetBlobDesc4BnInOp(SoleIbn());
   FOR_RANGE(size_t, i, 0, output_bns().size()) {
-    BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out_" + std::to_string(i));
+    BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(output_bns().Get(i));
     const BlobConf& blob_conf = op_conf().decode_ofrecord_conf().blob(i);
     std::vector<int64_t> dim_vec(1 + blob_conf.shape().dim_size());
     dim_vec[0] = in_blob_desc->shape().At(0);
