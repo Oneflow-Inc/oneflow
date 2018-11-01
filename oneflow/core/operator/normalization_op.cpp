@@ -6,7 +6,7 @@ namespace oneflow {
 void NormalizationOp::InitFromOpConf() {
   const auto& conf = op_conf().normalization_conf();
   float min_epsilon = CUDNN_BN_MIN_EPSILON + 1e-8;
-  if(conf.epsilon() < min_epsilon){
+  if (conf.epsilon() < min_epsilon) {
     this->mut_op_conf()->mutable_normalization_conf()->set_epsilon(min_epsilon);
   }
   CHECK_GE(conf.momentum(), 0);

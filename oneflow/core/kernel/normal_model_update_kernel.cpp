@@ -138,7 +138,7 @@ double ConstantWarmupLearningRate(const ConstantWarmupConf& conf, double lr,
 
 double LinearWarmupLearningRate(const LinearWarmupConf& conf, double lr, int64_t cur_batch_num) {
   CHECK_GT(conf.warmup_batches(), 0);
-  CHECK_GT(conf.start_multiplier(), 0);
+  CHECK_GE(conf.start_multiplier(), 0);
   CHECK_LT(conf.start_multiplier(), 1);
   double start_multiplier = conf.start_multiplier();
   double multiplier = 1.0;
