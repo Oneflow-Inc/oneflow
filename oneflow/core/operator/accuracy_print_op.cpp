@@ -22,6 +22,6 @@ const PbMessage& AccuracyPrintOp::GetCustomizedConf() const {
   return op_conf().accuracy_print_conf();
 }
 
-REGISTER_OP(OperatorConf::kAccuracyPrintConf, AccuracyPrintOp);
+REGISTER_CPU_OP(OperatorConf::kAccuracyPrintConf, AccuracyPrintOp);
 
 }  // namespace oneflow
