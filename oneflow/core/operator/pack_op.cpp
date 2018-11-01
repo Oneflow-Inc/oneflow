@@ -9,6 +9,21 @@ void PackOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
+int32_t PackOp::GetPackNum(const ParallelContext& ctx) const {
+  CHECK(op_conf().has_pack_conf());
+  const PackOpConf& conf = op_conf().pack_conf();
+  if (conf.has_pack_num()) {
+    return conf.pack_num();
+  } else if (conf.has_pack_num_per_record()) {
+    int64_t pack_num =
+        Global<JobDesc>::Get()->DevicePieceSize4ParallelCtx(ctx) * conf.pack_num_per_record();
+    CHECK_LE(pack_num, static_cast<int64_t>(MaxVal<int32_t>()));
+    return static_cast<int32_t>(pack_num);
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
 REGISTER_OP(OperatorConf::kPackConf, PackOp);
 
 }  // namespace oneflow

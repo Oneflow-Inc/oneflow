@@ -1,3 +1,4 @@
+#include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/common/protobuf.h"
@@ -255,6 +256,10 @@ void JobDesc::AddRecordLoadOps() {
       }
     }
   }
+}
+
+int64_t JobDesc::DevicePieceSize4ParallelCtx(const ParallelContext& ctx) const {
+  return BalancedSplitter(PieceSize(), ctx.parallel_num()).At(ctx.parallel_id()).size();
 }
 
 }  // namespace oneflow

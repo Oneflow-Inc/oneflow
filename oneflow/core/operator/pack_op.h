@@ -18,6 +18,7 @@ class PackOp final : public Operator {
 
   bool NeedInBlobWhenBackward() const override { return true; }
   bool NeedOutBlobWhenBackward() const override { return false; }
+  int32_t GetPackNum(const ParallelContext& ctx) const;
 };
 
 }  // namespace oneflow
