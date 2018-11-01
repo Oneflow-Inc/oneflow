@@ -222,7 +222,7 @@ Oneflow::Oneflow(const std::string& job_conf_filepath) {
   TeePersistentLogStream::Create("naive_plan")->Write(naive_plan);
   TeePersistentLogStream::Create("mem_shared_plan")->Write(mem_shared_plan);
   LOG(INFO) << "push_pull_plan:" << GetCurTime() - start;
-  if (HasRelayPlacement()) {
+  if (true) {
     // Experiment Runtime
     { Runtime experiment_run(mem_shared_plan, true); }
     // Improve

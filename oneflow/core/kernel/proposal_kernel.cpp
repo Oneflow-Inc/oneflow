@@ -1,4 +1,5 @@
 #include "oneflow/core/kernel/proposal_kernel.h"
+#include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
 
@@ -12,12 +13,24 @@ void ProposalKernel<T>::InitConstBufBlobs(
 template<typename T>
 void ProposalKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  size_t im_num = BnInOp2Blob("class_prob")->shape().At(0);
+  std::vector<std::unique_ptr<ScoreSlice>> score_slice_vec(im_num);
+  std::vector<std::unique_ptr<BoxesSlice>> post_nms_slice_vec(im_num);
+  BlockingCounter bc(im_num);
+  FOR_RANGE(int64_t, im_i, 0, im_num) {
+    Global<ThreadMgr>::Get()->compute_thread_pool()->AddWork(
+        [&bc, &score_slice_vec, &post_nms_slice_vec, im_i, &BnInOp2Blob, this] {
+          score_slice_vec[im_i].reset(RegionProposal(im_i, BnInOp2Blob));
+          post_nms_slice_vec[im_i].reset(ApplyNms(BnInOp2Blob));
+          bc.Decrease();
+        });
+  }
+  bc.WaitUntilCntEqualZero();
   int32_t num_output = 0;
-  FOR_RANGE(int64_t, im_i, 0, BnInOp2Blob("class_prob")->shape().At(0)) {
-    auto score_slice = RegionProposal(im_i, BnInOp2Blob);
-    auto post_nms_slice = ApplyNms(BnInOp2Blob);
-    WriteRoisToOutput(num_output, im_i, score_slice, post_nms_slice, BnInOp2Blob);
-    num_output += post_nms_slice.size();
+  FOR_RANGE(int64_t, im_i, 0, im_num) {
+    WriteRoisToOutput(num_output, im_i, *score_slice_vec[im_i], *post_nms_slice_vec[im_i],
+                      BnInOp2Blob);
+    num_output += post_nms_slice_vec[im_i]->size();
   }
   CHECK_LE(num_output, BnInOp2Blob("rois")->static_shape().At(0));
   BnInOp2Blob("rois")->set_dim0_valid_num(0, num_output);
@@ -25,28 +38,28 @@ void ProposalKernel<T>::ForwardDataContent(
 }
 
 template<typename T>
-typename ProposalKernel<T>::ScoreSlice ProposalKernel<T>::RegionProposal(
+typename ProposalKernel<T>::ScoreSlice* ProposalKernel<T>::RegionProposal(
     const int64_t im_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const ProposalOpConf& conf = op_conf().proposal_conf();
   Blob* proposals_blob = BnInOp2Blob("proposals");
   Blob* score_slice_blob = BnInOp2Blob("score_slice");
 
   size_t num_proposals = proposals_blob->shape().At(0);
-  ScoreSlice score_slice(IndexSequence(score_slice_blob->shape().elem_cnt(),
-                                       score_slice_blob->mut_dptr<int32_t>(), true),
-                         BnInOp2Blob("class_prob")->dptr<T>(im_index));
-  score_slice.NthElem(num_proposals, [&](int32_t lhs_index, int32_t rhs_index) {
-    return score_slice.score(lhs_index) > score_slice.score(rhs_index);
+  auto* score_slice = new ScoreSlice(IndexSequence(score_slice_blob->shape().elem_cnt(),
+                                                   score_slice_blob->mut_dptr<int32_t>(), true),
+                                     BnInOp2Blob("class_prob")->dptr<T>(im_index));
+  score_slice->NthElem(num_proposals, [&](int32_t lhs_index, int32_t rhs_index) {
+    return score_slice->score(lhs_index) > score_slice->score(rhs_index);
   });
-  score_slice.Truncate(num_proposals);
-  score_slice.Sort([&](int32_t lhs_index, int32_t rhs_index) {
-    return score_slice.score(lhs_index) > score_slice.score(rhs_index);
+  score_slice->Truncate(num_proposals);
+  score_slice->Sort([&](int32_t lhs_index, int32_t rhs_index) {
+    return score_slice->score(lhs_index) > score_slice->score(rhs_index);
   });
   const auto* bbox_delta = BBoxDelta<T>::Cast(BnInOp2Blob("bbox_pred")->dptr<T>(im_index));
   const auto* anchor_bbox = BBox::Cast(BnInOp2Blob("anchors")->dptr<T>());
   auto* prop_bbox = MutBBox::Cast(proposals_blob->mut_dptr<T>());
-  FOR_RANGE(size_t, i, 0, score_slice.size()) {
-    int32_t index = score_slice.GetIndex(i);
+  FOR_RANGE(size_t, i, 0, score_slice->size()) {
+    int32_t index = score_slice->GetIndex(i);
     prop_bbox[i].Transform(anchor_bbox + index, bbox_delta + index, conf.bbox_reg_weights());
     prop_bbox[i].Clip(conf.anchor_generator_conf().image_height(),
                       conf.anchor_generator_conf().image_width());
@@ -55,7 +68,7 @@ typename ProposalKernel<T>::ScoreSlice ProposalKernel<T>::RegionProposal(
 }
 
 template<typename T>
-typename ProposalKernel<T>::BoxesSlice ProposalKernel<T>::ApplyNms(
+typename ProposalKernel<T>::BoxesSlice* ProposalKernel<T>::ApplyNms(
     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const ProposalOpConf& conf = op_conf().proposal_conf();
   const Blob* proposals_blob = BnInOp2Blob("proposals");
@@ -64,10 +77,11 @@ typename ProposalKernel<T>::BoxesSlice ProposalKernel<T>::ApplyNms(
   BoxesSlice pre_nms_slice(IndexSequence(pre_nms_inds_blob->shape().elem_cnt(),
                                          pre_nms_inds_blob->mut_dptr<int32_t>(), true),
                            proposals_blob->dptr<T>());
-  BoxesSlice post_nms_slice(IndexSequence(post_nms_inds_blob->shape().elem_cnt(),
-                                          post_nms_inds_blob->mut_dptr<int32_t>(), false),
-                            proposals_blob->dptr<T>());
-  BBoxUtil<BBox>::Nms(conf.nms_threshold(), pre_nms_slice, post_nms_slice);
+  auto* post_nms_slice =
+      new BoxesSlice(IndexSequence(post_nms_inds_blob->shape().elem_cnt(),
+                                   post_nms_inds_blob->mut_dptr<int32_t>(), false),
+                     proposals_blob->dptr<T>());
+  BBoxUtil<BBox>::Nms(conf.nms_threshold(), pre_nms_slice, *post_nms_slice);
   return post_nms_slice;
 }
 
