@@ -286,12 +286,7 @@ void KernelIf<device_type>::CopyField(DeviceCtx* ctx,
     Blob* out_blob = BnInOp2Blob(to_bns[0]);
     (out_blob->*Copy)(ctx, in_blob);
   } else {
-    CHECK_EQ(from_bns.size(), to_bns.size());
-    FOR_RANGE(size_t, i, 0, from_bns.size()) {
-      Blob* in_blob = BnInOp2Blob(from_bns[i]);
-      Blob* out_blob = BnInOp2Blob(to_bns[i]);
-      (out_blob->*Copy)(ctx, in_blob);
-    }
+    CHECK(from_bns.empty() || to_bns.empty());
   }
 }
 
