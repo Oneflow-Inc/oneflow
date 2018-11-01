@@ -2,6 +2,7 @@
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/thread/thread_manager.h"
+#include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
 
@@ -140,17 +141,10 @@ void BboxNmsAndLimitKernel<T>::ForwardDataContent(
   std::vector<int32_t> all_im_bbox_inds;
   std::vector<std::vector<int32_t>> im_detected_bbox_inds_vec(num_images_);
   std::vector<std::vector<int32_t>> im_grouped_bbox_inds_vec = GroupBBox(target_bbox_blob);
-  BlockingCounter bc(im_grouped_bbox_inds_vec.size());
-  FOR_RANGE(int32_t, i, 0, im_grouped_bbox_inds_vec.size()) {
-    Global<ThreadMgr>::Get()->compute_thread_pool()->AddWork(
-        [this, &im_detected_bbox_inds_vec, &im_grouped_bbox_inds_vec, &bc, i, bbox_prob_blob,
-         vote_bbox_score_blob, target_bbox_blob] {
-          im_detected_bbox_inds_vec[i] = ApplyNmsAndVoteByClass(
-              im_grouped_bbox_inds_vec[i], bbox_prob_blob, vote_bbox_score_blob, target_bbox_blob);
-          bc.Decrease();
-        });
-  }
-  bc.WaitUntilCntEqualZero();
+  MultiThreadLoop(num_images_, [&](int64_t i) {
+    im_detected_bbox_inds_vec[i] = ApplyNmsAndVoteByClass(
+        im_grouped_bbox_inds_vec[i], bbox_prob_blob, vote_bbox_score_blob, target_bbox_blob);
+  });
   for (const auto& im_detected_bbox_inds : im_detected_bbox_inds_vec) {
     all_im_bbox_inds.insert(all_im_bbox_inds.end(), im_detected_bbox_inds.begin(),
                             im_detected_bbox_inds.end());
@@ -175,25 +169,15 @@ void BboxNmsAndLimitKernel<T>::BroadcastBboxTransform(const Blob* bbox_blob,
   const auto* bbox_ptr = BBox::Cast(bbox_blob->dptr<T>());
   const auto* delta_ptr = BBoxDelta<T>::Cast(bbox_pred_blob->dptr<T>());
   BBox* target_bbox_ptr = BBox::Cast(target_bbox_blob->mut_dptr<T>());
-  size_t thread_num = Global<ThreadMgr>::Get()->compute_thread_pool()->thread_num();
-  BalancedSplitter bs(num_boxes * num_classes, thread_num);
-  BlockingCounter bc(thread_num);
-  FOR_RANGE(int64_t, range_id, 0, thread_num) {
-    Global<ThreadMgr>::Get()->compute_thread_pool()->AddWork(
-        [&bs, &bc, range_id, num_classes, bbox_ptr, delta_ptr, target_bbox_ptr, &bbox_reg_ws] {
-          FOR_RANGE(int64_t, index, bs.At(range_id).begin(), bs.At(range_id).end()) {
-            int64_t i = index / num_classes;
-            int64_t j = index % num_classes;
-            const auto* bbox = bbox_ptr + i;
-            const auto* delta = delta_ptr + i;
-            BBox* target_bbox = target_bbox_ptr + index;
-            target_bbox->Transform(bbox, delta + j, bbox_reg_ws);
-            target_bbox->set_index(bbox->index());
-          }
-          bc.Decrease();
-        });
-  }
-  bc.WaitUntilCntEqualZero();
+  MultiThreadLoop(num_boxes * num_classes, [&](int64_t index) {
+    int64_t i = index / num_classes;
+    int64_t j = index % num_classes;
+    const auto* bbox = bbox_ptr + i;
+    const auto* delta = delta_ptr + i;
+    BBox* target_bbox = target_bbox_ptr + index;
+    target_bbox->Transform(bbox, delta + j, bbox_reg_ws);
+    target_bbox->set_index(bbox->index());
+  });
 }
 
 template<typename T>

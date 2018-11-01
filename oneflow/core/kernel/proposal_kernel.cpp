@@ -14,15 +14,10 @@ template<typename T>
 void ProposalKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   size_t im_num = BnInOp2Blob("class_prob")->shape().At(0);
-  BlockingCounter bc(im_num);
-  FOR_RANGE(int64_t, im_i, 0, im_num) {
-    Global<ThreadMgr>::Get()->compute_thread_pool()->AddWork([&bc, im_i, &BnInOp2Blob, this] {
-      RegionProposal(im_i, BnInOp2Blob);
-      ApplyNms(im_i, BnInOp2Blob);
-      bc.Decrease();
-    });
-  }
-  bc.WaitUntilCntEqualZero();
+  MultiThreadLoop(im_num, [&](int64_t im_i) {
+    RegionProposal(im_i, BnInOp2Blob);
+    ApplyNms(im_i, BnInOp2Blob);
+  });
   WriteRoisToOutput(BnInOp2Blob);
 }
 
