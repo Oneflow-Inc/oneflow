@@ -479,6 +479,9 @@ std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf) {
     CHECK_EQ(op_conf.device_type(), DeviceType::kCPU);
   }
   Operator* rptr = NewObj<Operator>(op_conf.op_type_case(), op_conf);
+  if (IsOpOnlyCpuSupported(op_conf.op_type_case())) {
+    CHECK_EQ(op_conf.device_type(), DeviceType::kCPU);
+  }
   rptr->InitFromOpConf(op_conf);
   return std::shared_ptr<Operator>(rptr);
 }
