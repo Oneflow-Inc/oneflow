@@ -173,9 +173,9 @@ void BboxNmsAndLimitKernel<T>::BroadcastBboxTransform(const Blob* bbox_blob,
     int64_t i = index / num_classes;
     int64_t j = index % num_classes;
     const auto* bbox = bbox_ptr + i;
-    const auto* delta = delta_ptr + i;
+    const auto* delta = delta_ptr + i * num_classes + j;
     BBox* target_bbox = target_bbox_ptr + index;
-    target_bbox->Transform(bbox, delta + j, bbox_reg_ws);
+    target_bbox->Transform(bbox, delta, bbox_reg_ws);
     target_bbox->set_index(bbox->index());
   });
 }
