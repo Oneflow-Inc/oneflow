@@ -171,9 +171,8 @@ void BboxNmsAndLimitKernel<T>::BroadcastBboxTransform(const Blob* bbox_blob,
   BBox* target_bbox_ptr = BBox::Cast(target_bbox_blob->mut_dptr<T>());
   MultiThreadLoop(num_boxes * num_classes, [&](int64_t index) {
     int64_t i = index / num_classes;
-    int64_t j = index % num_classes;
     const auto* bbox = bbox_ptr + i;
-    const auto* delta = delta_ptr + i * num_classes + j;
+    const auto* delta = delta_ptr + index;
     BBox* target_bbox = target_bbox_ptr + index;
     target_bbox->Transform(bbox, delta, bbox_reg_ws);
     target_bbox->set_index(bbox->index());
