@@ -125,6 +125,6 @@ OF_PP_FOR_EACH_TUPLE(MAKE_LOSS_KERNEL_UTIL_ENTRY, FLOATING_DATA_TYPE_SEQ)
                             OF_PP_PAIR_FIRST(label_type_pair)>;
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_LOSS_ENTRY, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ,
-                                 INT_DATA_TYPE_SEQ)
+                                 ARITHMETIC_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

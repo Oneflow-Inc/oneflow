@@ -1,5 +1,6 @@
 #include "oneflow/core/graph/repeat_backward_compute_task_node.h"
 #include "oneflow/core/graph/logical_node.h"
+#include "oneflow/core/operator/repeat_op.h"
 
 namespace oneflow {
 
@@ -31,7 +32,9 @@ void RepeatBackwardCompTaskNode::InferProducedDataRegstTimeShape() {
   std::vector<int64_t> time_shape_dim_vec =
       GetSoleConsumedRegst("out_diff")->data_regst_time_shape()->dim_vec();
   CHECK(this->logical_node()->SoleOp()->op_conf().has_repeat_conf());
-  int64_t repeat_num = this->logical_node()->SoleOp()->op_conf().repeat_conf().repeat_num();
+  const RepeatOp* repeat_op = dynamic_cast<RepeatOp*>(this->logical_node()->SoleOp().get());
+  CHECK_NOTNULL(repeat_op);
+  int32_t repeat_num = repeat_op->GetRepeatNum(parallel_ctx()->parallel_num());
   CHECK(!time_shape_dim_vec.empty());
   CHECK(time_shape_dim_vec.back() == repeat_num);
   time_shape_dim_vec.pop_back();
