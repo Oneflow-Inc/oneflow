@@ -70,6 +70,7 @@ void LossKernel<device_type, PredType, LabelType>::ForwardDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   BnInOp2Blob(GenDiffBn("prediction"))
       ->CopyDim0ValidNumFrom(ctx.device_ctx, BnInOp2Blob("prediction"));
+  BnInOp2Blob("loss")->CopyDim0ValidNumFrom(ctx.device_ctx, BnInOp2Blob("prediction"));
 }
 
 template<DeviceType device_type, typename PredType, typename LabelType>
