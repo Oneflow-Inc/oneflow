@@ -27,7 +27,7 @@ void PackKernel<device_type>::ForwardDim0ValidNum(
   CHECK_EQ(0, out_blob->dim0_inner_shape().Count(1) % pack_num4each_count1);
   CHECK_EQ(2, in_blob->dim0_inner_shape().NumAxes());
   CHECK_EQ(1, in_blob->dim0_inner_shape().At(0));
-  CHECK_EQ(in_blob->static_shape().At(0), in_blob->dim0_inner_shape().Count(1));
+  CHECK_EQ(in_blob->static_shape().At(0), in_blob->dim0_inner_shape().At(1));
 
   if (in_index == 0) {
     for (size_t i = 0; i < out_blob->dim0_inner_shape().At(0); ++i) {

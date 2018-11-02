@@ -37,7 +37,7 @@ void UnpackKernel<device_type>::ForwardDim0ValidNum(
   CHECK_EQ(0, in_blob->dim0_inner_shape().Count(1) % unpack_num4each_count1);
   CHECK_EQ(2, out_blob->dim0_inner_shape().NumAxes());
   CHECK_EQ(1, out_blob->dim0_inner_shape().At(0));
-  CHECK_EQ(out_blob->static_shape().At(0), out_blob->dim0_inner_shape().Count(1));
+  CHECK_EQ(out_blob->static_shape().At(0), out_blob->dim0_inner_shape().At(1));
 
   size_t part_size = in_blob->dim0_inner_shape().Count(1) / unpack_num4each_count1;
   size_t cur_valid_num = in_blob->dim0_valid_num(out_index / unpack_num4each_count1);
