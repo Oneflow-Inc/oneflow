@@ -31,11 +31,12 @@ void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
     fw_tmp_blob->set_data_type(DataType::kChar);
   }
   BlobDesc* out_blob = GetBlobDesc4BnInOp("out");
-  *out_blob = *in_blob;
+  if (op_conf().reduce_sum_conf().has_axis() && GetCorrectAxis(GetBlobDesc4BnInOp) > 0) {
+    *out_blob = *in_blob;
+  } else {
+    out_blob->set_data_type(in_blob->data_type());
+  }
   out_blob->mut_shape() = Shape(out_dim_vec);
-  out_blob->set_has_data_id_field(in_blob->has_data_id_field()
-                                  && op_conf().reduce_sum_conf().has_axis()
-                                  && GetCorrectAxis(GetBlobDesc4BnInOp) > 0);
 }
 
 void ReduceSumOp::VirtualGenKernelConf(
