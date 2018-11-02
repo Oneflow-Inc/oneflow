@@ -258,8 +258,4 @@ void JobDesc::AddRecordLoadOps() {
   }
 }
 
-int64_t JobDesc::DevicePieceSize4ParallelCtx(const ParallelContext& ctx) const {
-  return BalancedSplitter(PieceSize(), ctx.parallel_num()).At(ctx.parallel_id()).size();
-}
-
 }  // namespace oneflow
