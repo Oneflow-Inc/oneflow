@@ -1,5 +1,5 @@
 #include "oneflow/core/kernel/cast_kernel.h"
-#include "oneflow/core/record/ofrecord_decoder.h"
+#include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/switch_func.h"
 
 namespace oneflow {
