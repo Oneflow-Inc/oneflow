@@ -485,6 +485,17 @@ class Dim2ValidNumIterator final : public FieldIterator {
 
 void SingleThreadLoop(size_t num, std::function<void(int64_t)> Callback);
 void MultiThreadLoop(size_t num, std::function<void(int64_t)> Callback);
+template<typename T, typename U>
+typename std::enable_if<std::is_same<T, U>::value>::type CopyElem(const T* in_dptr, U* out_dptr,
+                                                                  int64_t elem_num) {
+  Memcpy<DeviceType::kCPU>(nullptr, out_dptr, in_dptr, elem_num * sizeof(T));
+}
+
+template<typename T, typename U>
+typename std::enable_if<!std::is_same<T, U>::value>::type CopyElem(const T* in_dptr, U* out_dptr,
+                                                                   int64_t elem_num) {
+  FOR_RANGE(int64_t, i, 0, elem_num) { *(out_dptr++) = static_cast<U>(*(in_dptr++)); }
+}
 
 }  // namespace oneflow
 
