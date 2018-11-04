@@ -14,8 +14,8 @@ void CopyBlob(const Blob* src, Blob* dst) {
 
 #define MAKE_CAST_SWITCH_ENTRY(func_name, T, U) func_name<T, U>
 DEFINE_STATIC_SWITCH_FUNC(void, CopyBlob, MAKE_CAST_SWITCH_ENTRY,
-                          MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ),
-                          MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ));
+                          MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ),
+                          MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ));
 
 }  // namespace
 

@@ -151,7 +151,7 @@ void BboxNmsAndLimitKernel<T>::ForwardDataContent(
   }
   const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
   const Blob* bbox_score_blob = conf.bbox_vote_enabled() ? vote_bbox_score_blob : bbox_prob_blob;
-  Limit(bbox_score_blob, all_im_bbox_inds);
+  Limit(out_bbox_blob->shape().At(0), bbox_score_blob, all_im_bbox_inds);
   OutputBBox(all_im_bbox_inds, target_bbox_blob, out_bbox_blob);
   OutputBBoxScore(all_im_bbox_inds, bbox_score_blob, out_bbox_score_blob);
   OutputBBoxLabel(all_im_bbox_inds, bbox_score_blob->shape().At(1), out_bbox_label_blob);
@@ -276,15 +276,14 @@ void BboxNmsAndLimitKernel<T>::VoteBbox(
 }
 
 template<typename T>
-void BboxNmsAndLimitKernel<T>::Limit(const Blob* bbox_score_blob,
+void BboxNmsAndLimitKernel<T>::Limit(size_t limit, const Blob* bbox_score_blob,
                                      std::vector<int32_t>& bbox_inds) const {
-  const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
   const T* bbox_score_ptr = bbox_score_blob->dptr<T>();
-  if (bbox_inds.size() > conf.detections_per_im()) {
+  if (bbox_inds.size() > limit) {
     std::sort(bbox_inds.begin(), bbox_inds.end(), [&](int32_t l_idx, int32_t r_idx) {
       return bbox_score_ptr[l_idx] > bbox_score_ptr[r_idx];
     });
-    bbox_inds.resize(conf.detections_per_im());
+    bbox_inds.resize(limit);
   }
 }
 

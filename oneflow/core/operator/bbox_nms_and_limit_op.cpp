@@ -30,8 +30,8 @@ void BboxNmsAndLimitOp::InferBlobDescs(
   CHECK_EQ(device_type(), DeviceType::kCPU);
   const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
   if (conf.bbox_vote_enabled()) { CHECK(conf.has_bbox_vote()); }
-  int32_t num_limit = conf.detections_per_im();
-
+  int32_t img_record = Global<JobDesc>::Get()->DevicePieceSize4ParallelCtx(*parallel_ctx);
+  int32_t num_limit = conf.detections_per_im() * img_record;
   // input: bbox (r, 5)
   const BlobDesc* bbox_bd = GetBlobDesc4BnInOp("bbox");
   // input: bbox_pred (r, c * 4)
