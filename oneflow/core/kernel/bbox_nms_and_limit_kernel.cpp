@@ -151,7 +151,7 @@ void BboxNmsAndLimitKernel<T>::ForwardDataContent(
   }
   const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
   const Blob* bbox_score_blob = conf.bbox_vote_enabled() ? vote_bbox_score_blob : bbox_prob_blob;
-  Limit(out_bbox_blob->shape().At(0), bbox_score_blob, all_im_bbox_inds);
+  Limit(out_bbox_blob->static_shape().At(0), bbox_score_blob, all_im_bbox_inds);
   OutputBBox(all_im_bbox_inds, target_bbox_blob, out_bbox_blob);
   OutputBBoxScore(all_im_bbox_inds, bbox_score_blob, out_bbox_score_blob);
   OutputBBoxLabel(all_im_bbox_inds, bbox_score_blob->shape().At(1), out_bbox_label_blob);
