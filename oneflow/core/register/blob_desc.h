@@ -41,24 +41,6 @@ class BlobDesc {
   template<FieldKey field_key>
   void SetHasField(bool val);
 
-  bool has_data_id_field() const { return has_data_id_; }
-  void set_has_data_id_field(bool val);
-
-  bool has_dim0_valid_num_field() const { return has_dim0_valid_num_; }
-  void set_has_dim0_valid_num_field(bool val);
-
-  bool has_dim1_valid_num_field() const { return has_dim1_valid_num_; }
-  void set_has_dim1_valid_num_field(bool val);
-
-  bool has_dim2_valid_num_field() const { return has_dim2_valid_num_; }
-  void set_has_dim2_valid_num_field(bool val);
-
-  bool has_record_id_in_device_piece_field() const { return has_record_id_in_device_piece_; }
-  void set_has_record_id_in_device_piece_field(bool val);
-
-  bool has_col_num_field() const { return has_col_num_; }
-  void set_has_col_num_field(bool val);
-
   int32_t max_col_num() const { return max_col_num_; }
   void set_max_col_num(int32_t val) { max_col_num_ = val; }
 

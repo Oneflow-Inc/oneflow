@@ -100,36 +100,6 @@ void BlobDesc::SetHasField(bool val) {
   }
 }
 
-void BlobDesc::set_has_data_id_field(bool val) {
-  CHECK(!header_is_opaque_);
-  has_data_id_ = val;
-}
-
-void BlobDesc::set_has_col_num_field(bool val) {
-  CHECK(!header_is_opaque_);
-  has_col_num_ = val;
-}
-
-void BlobDesc::set_has_dim0_valid_num_field(bool val) {
-  CHECK(!header_is_opaque_);
-  has_dim0_valid_num_ = val;
-}
-
-void BlobDesc::set_has_dim1_valid_num_field(bool val) {
-  CHECK(!header_is_opaque_);
-  has_dim1_valid_num_ = val;
-}
-
-void BlobDesc::set_has_dim2_valid_num_field(bool val) {
-  CHECK(!header_is_opaque_);
-  has_dim2_valid_num_ = val;
-}
-
-void BlobDesc::set_has_record_id_in_device_piece_field(bool val) {
-  CHECK(!header_is_opaque_);
-  has_record_id_in_device_piece_ = val;
-}
-
 Shape& BlobDesc::mut_dim0_inner_shape() {
   CHECK(!header_is_opaque_);
   if (!dim0_inner_shape_) { dim0_inner_shape_.reset(new Shape()); }

@@ -91,6 +91,8 @@ class Blob final {
   const Shape& dim0_inner_shape() const { return blob_desc_->dim0_inner_shape(); }
 
   DataType data_type() const { return blob_desc_->data_type(); }
+  template<FieldKey field_key>
+  bool HasField() const { return blob_desc_->HasField<field_key>(); }
   bool has_data_id_field() const { return blob_desc_->has_data_id_field(); }
   bool has_col_num_field() const { return blob_desc_->has_col_num_field(); }
   bool has_dim0_valid_num_field() const { return blob_desc_->has_dim0_valid_num_field(); }
