@@ -35,6 +35,12 @@ class BlobDesc {
 
   bool header_is_opaque() const { return header_is_opaque_; };
 
+  template<FieldKey field_key>
+  bool HasField() const;
+
+  template<FieldKey field_key>
+  void SetHasField(bool val);
+
   bool has_data_id_field() const { return has_data_id_; }
   void set_has_data_id_field(bool val);
 

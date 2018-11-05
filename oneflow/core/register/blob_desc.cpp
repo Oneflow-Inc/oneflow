@@ -72,6 +72,34 @@ BlobDesc::BlobDesc(const StructPodDesc& header_pod_desc, int64_t header_byte_siz
   }
 }
 
+template<FieldKey field_key>
+bool BlobDesc::HasField() const {
+  switch (field_key) {
+    case FieldKey::kDataId: return has_data_id_;
+    case FieldKey::kColNum: return has_col_num_;
+    case FieldKey::kDim0ValidNum: return has_dim0_valid_num_;
+    case FieldKey::kDim1ValidNum: return has_dim1_valid_num_;
+    case FieldKey::kDim2ValidNum: return has_dim2_valid_num_;
+    case FieldKey::kRecordIdInDevicePiece: return has_record_id_in_device_piece_;
+    default: UNIMPLEMENTED();
+  }
+  return false;
+}
+
+template<FieldKey field_key>
+void BlobDesc::SetHasField(bool val) {
+  CHECK(!header_is_opaque_);
+  switch (field_key) {
+    case FieldKey::kDataId: has_data_id_ = val;
+    case FieldKey::kColNum: has_col_num_ = val;
+    case FieldKey::kDim0ValidNum: has_dim0_valid_num_ = val;
+    case FieldKey::kDim1ValidNum: has_dim1_valid_num_ = val;
+    case FieldKey::kDim2ValidNum: has_dim2_valid_num_ = val;
+    case FieldKey::kRecordIdInDevicePiece: has_record_id_in_device_piece_ = val;
+    default: UNIMPLEMENTED();
+  }
+}
+
 void BlobDesc::set_has_data_id_field(bool val) {
   CHECK(!header_is_opaque_);
   has_data_id_ = val;
