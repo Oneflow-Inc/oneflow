@@ -99,6 +99,14 @@ class BlobDesc {
 std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     const HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>& lbi2blob_desc);
 
+#define FIELD_KEY_SEQ                           \
+  OF_PP_MAKE_TUPLE_SEQ(FieldKey::kDataId)       \
+  OF_PP_MAKE_TUPLE_SEQ(FieldKey::kColNum)       \
+  OF_PP_MAKE_TUPLE_SEQ(FieldKey::kDim0ValidNum) \
+  OF_PP_MAKE_TUPLE_SEQ(FieldKey::kDim1ValidNum) \
+  OF_PP_MAKE_TUPLE_SEQ(FieldKey::kDim2ValidNum) \
+  OF_PP_MAKE_TUPLE_SEQ(FieldKey::kRecordIdInDevicePiece)
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_REGISTER_BLOB_DESC_H_

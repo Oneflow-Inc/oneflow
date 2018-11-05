@@ -28,7 +28,7 @@ void DecodeRandomOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   FOR_RANGE(size_t, j, 1, dim_vec.size()) { dim_vec[j] = conf.shape().dim(j - 1); }
   out_blob_desc->mut_shape() = Shape(dim_vec);
   out_blob_desc->set_data_type(conf.data_type());
-  out_blob_desc->set_has_data_id_field(Global<JobDesc>::Get()->SizeOfOneDataId() > 0);
+  out_blob_desc->SetHasField<FieldKey::kDataId>(Global<JobDesc>::Get()->SizeOfOneDataId() > 0);
 }
 
 REGISTER_OP(OperatorConf::kDecodeRandomConf, DecodeRandomOp);

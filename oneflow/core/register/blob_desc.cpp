@@ -90,12 +90,12 @@ template<FieldKey field_key>
 void BlobDesc::SetHasField(bool val) {
   CHECK(!header_is_opaque_);
   switch (field_key) {
-    case FieldKey::kDataId: has_data_id_ = val;
-    case FieldKey::kColNum: has_col_num_ = val;
-    case FieldKey::kDim0ValidNum: has_dim0_valid_num_ = val;
-    case FieldKey::kDim1ValidNum: has_dim1_valid_num_ = val;
-    case FieldKey::kDim2ValidNum: has_dim2_valid_num_ = val;
-    case FieldKey::kRecordIdInDevicePiece: has_record_id_in_device_piece_ = val;
+    case FieldKey::kDataId: has_data_id_ = val; return;
+    case FieldKey::kColNum: has_col_num_ = val; return;
+    case FieldKey::kDim0ValidNum: has_dim0_valid_num_ = val; return;
+    case FieldKey::kDim1ValidNum: has_dim1_valid_num_ = val; return;
+    case FieldKey::kDim2ValidNum: has_dim2_valid_num_ = val; return;
+    case FieldKey::kRecordIdInDevicePiece: has_record_id_in_device_piece_ = val; return;
     default: UNIMPLEMENTED();
   }
 }
@@ -275,5 +275,10 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
   }
   return ret;
 }
+
+#define MAKE_HAS_FIELD_ENTRY(field_key)                \
+  template bool BlobDesc::HasField<field_key>() const; \
+  template void BlobDesc::SetHasField<field_key>(bool);
+OF_PP_FOR_EACH_TUPLE(MAKE_HAS_FIELD_ENTRY, FIELD_KEY_SEQ);
 
 }  // namespace oneflow

@@ -37,7 +37,8 @@ void RecurrentOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
     const BlobDesc* h0_blob_desc = GetBlobDesc4BnInOp("h0");
     CHECK_EQ(h0_blob_desc->data_type(), data_type);
     CHECK_EQ(h0_blob_desc->shape(), h0_shape);
-    CHECK_EQ(h0_blob_desc->has_data_id_field(), in_blob_desc->has_data_id_field());
+    CHECK_EQ(h0_blob_desc->HasField<FieldKey::kDataId>(),
+             in_blob_desc->HasField<FieldKey::kDataId>());
     CHECK_EQ(h0_blob_desc->max_col_num(), 1);
   } else {
     // *GetBlobDesc4BnInOp("h0") = BlobDesc(h0_shape);

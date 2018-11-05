@@ -9,7 +9,7 @@ void MomentumModelUpdateOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* model_blob_desc = GetBlobDesc4BnInOp("model");
   CHECK_EQ(model_blob_desc->data_type(), Global<JobDesc>::Get()->DefaultDataType());
-  CHECK_EQ(model_blob_desc->has_data_id_field(), false);
+  CHECK_EQ(model_blob_desc->HasField<FieldKey::kDataId>(), false);
   *GetBlobDesc4BnInOp("momentum") = *model_blob_desc;
 }
 
