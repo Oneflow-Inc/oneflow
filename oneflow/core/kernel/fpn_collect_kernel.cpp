@@ -3,22 +3,44 @@
 namespace oneflow {
 
 template<typename T>
+void FpnCollectKernel<T>::VirtualKernelInit(const ParallelContext* parallel_ctx) {
+  if (Global<JobDesc>::Get()->IsTrain()) {
+    num_groups_ = 1;
+    need_group_by_img_ = false;
+  } else {
+    num_groups_ = Global<JobDesc>::Get()->DevicePieceSize4ParallelCtx(*parallel_ctx);
+    need_group_by_img_ = true;
+  }
+}
+
+template<typename T>
 void FpnCollectKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const FpnCollectOpConf& conf = this->op_conf().fpn_collect_conf();
-  const size_t num_layers = conf.rpn_rois_fpn_size();
+  const int32_t num_layers = conf.rpn_rois_fpn_size();
   std::vector<const Blob*> rois_fpn_blobs(num_layers);
   std::vector<const Blob*> roi_probs_fpn_blobs(num_layers);
-  FOR_RANGE(size_t, i, 0, num_layers) {
+  int32_t row_len = 0;
+  FOR_RANGE(int32_t, i, 0, num_layers) {
     rois_fpn_blobs[i] = BnInOp2Blob("rpn_rois_fpn_" + std::to_string(i));
     roi_probs_fpn_blobs[i] = BnInOp2Blob("rpn_roi_probs_fpn_" + std::to_string(i));
+    row_len = std::max<int32_t>(row_len, rois_fpn_blobs[i]->shape().At(0));
   }
-  Blob* roi_inds_blob = BnInOp2Blob("roi_inds");
-  Blob* out_blob = BnInOp2Blob("out");
-  size_t num_out_rois = out_blob->static_shape().At(0);
+  std::vector<std::vector<int32_t>> im_grouped_roi_inds_vec(num_groups_);
+  FOR_RANGE(int32_t, i, 0, num_layers) {
+    const auto* rois_fpn_i_bbox = BBox::Cast(rois_fpn_blobs[i]->dptr<T>());
+    FOR_RANGE(int32_t, j, 0, rois_fpn_blobs[i]->shape().At(0)) {
+      const int32_t index = i * row_len + j;
+      const int32_t im_index = rois_fpn_i_bbox[j].index();
+      if (need_group_by_img_) {
+        im_grouped_roi_inds_vec[im_index].emplace_back(index);
+      } else {
+        im_grouped_roi_inds_vec.front().emplace_back(index);
+      }
+    }
+  }
 
   auto GlobalIndex2LayerAndIndexInLayer = [&](int32_t index) {
-    int32_t row_len = roi_inds_blob->shape().At(1);
     int32_t layer = index / row_len;
     int32_t index_in_layer = index % row_len;
     return std::make_pair(layer, index_in_layer);
@@ -39,30 +61,29 @@ void FpnCollectKernel<T>::ForwardDataContent(
     return GetRoiScore(lhs_index) > GetRoiScore(rhs_index);
   };
 
-  // TODO: support multi image inference
-  IndexSequence roi_inds(roi_inds_blob->shape().elem_cnt(), roi_inds_blob->mut_dptr<int32_t>(),
-                         true);
-  roi_inds.Filter([&](int32_t index) {
-    int32_t layer = -1;
-    int32_t index_in_layer = -1;
-    std::tie(layer, index_in_layer) = GlobalIndex2LayerAndIndexInLayer(index);
-    return index_in_layer >= rois_fpn_blobs[layer]->shape().At(0);
-  });
-  roi_inds.NthElem(num_out_rois, Compare);
-  roi_inds.Truncate(num_out_rois);
-  roi_inds.Sort(Compare);
-
-  FOR_RANGE(size_t, i, 0, roi_inds.size()) {
-    const auto* roi_bbox = GetRoiBBox(roi_inds.GetIndex(i));
-    auto* out_roi_bbox = MutBBox::Cast(out_blob->mut_dptr<T>());
-    out_roi_bbox[i].set_ltrb(roi_bbox->left(), roi_bbox->top(), roi_bbox->right(),
-                             roi_bbox->bottom());
-    out_roi_bbox[i].set_index(roi_bbox->index());
-    if (out_blob->has_record_id_in_device_piece_field()) {
-      out_blob->set_record_id_in_device_piece(i, roi_bbox->index());
+  Blob* out_blob = BnInOp2Blob("out");
+  const size_t top_n_per_image = conf.top_n_per_image();
+  size_t output_size = 0;
+  for (std::vector<int32_t>& roi_inds : im_grouped_roi_inds_vec) {
+    std::nth_element(roi_inds.begin(), roi_inds.begin() + top_n_per_image, roi_inds.end(), Compare);
+    roi_inds.resize(top_n_per_image);
+    // TODO: This sort is not required
+    std::sort(roi_inds.begin(), roi_inds.end(), Compare);
+    // output
+    for (const int32_t index : roi_inds) {
+      const auto* roi_bbox = GetRoiBBox(index);
+      auto* out_roi_bbox = MutBBox::Cast(out_blob->mut_dptr<T>());
+      out_roi_bbox[output_size].set_ltrb(roi_bbox->left(), roi_bbox->top(), roi_bbox->right(),
+                                         roi_bbox->bottom());
+      out_roi_bbox[output_size].set_index(roi_bbox->index());
+      if (out_blob->has_record_id_in_device_piece_field()) {
+        out_blob->set_record_id_in_device_piece(output_size, roi_bbox->index());
+      }
+      ++output_size;
     }
   }
-  out_blob->set_dim0_valid_num(0, roi_inds.size());
+  CHECK_GE(out_blob->static_shape().At(0), output_size);
+  out_blob->set_dim0_valid_num(0, output_size);
 }
 
 template<typename T>

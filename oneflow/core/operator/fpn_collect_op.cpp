@@ -8,7 +8,6 @@ void FpnCollectOp::InitFromOpConf() {
   EnrollRepeatedInputBn("rpn_rois_fpn");
   EnrollRepeatedInputBn("rpn_roi_probs_fpn");
   EnrollOutputBn("out");
-  EnrollDataTmpBn("roi_inds");
 }
 
 const PbMessage& FpnCollectOp::GetCustomizedConf() const { return op_conf().fpn_collect_conf(); }
@@ -61,11 +60,6 @@ void FpnCollectOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   out_blob_desc->mut_dim0_inner_shape() = Shape({1, total_top_n});
   out_blob_desc->set_has_dim0_valid_num_field(true);
   out_blob_desc->set_has_record_id_in_device_piece_field(has_record_id_in_device_piece_field);
-
-  // datatmp: roi_inds (num_layers, max_num_rois_per_layer) int32
-  BlobDesc* roi_inds_blob_desc = GetBlobDesc4BnInOp("roi_inds");
-  roi_inds_blob_desc->mut_shape() = Shape({num_layers, max_num_rois_per_layer});
-  roi_inds_blob_desc->set_data_type(DataType::kInt32);
 }
 
 REGISTER_CPU_OP(OperatorConf::kFpnCollectConf, FpnCollectOp);
