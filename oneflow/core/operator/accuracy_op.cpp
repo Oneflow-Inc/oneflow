@@ -26,12 +26,19 @@ void AccuracyOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");
   CHECK_EQ(pred_blob_desc->HasField<FieldKey::kDataId>(),
            label_blob_desc->HasField<FieldKey::kDataId>());
+  CHECK_EQ(pred_blob_desc->HasField<FieldKey::kDim0ValidNum>(),
+           label_blob_desc->HasField<FieldKey::kDim0ValidNum>());
+  CHECK_EQ(pred_blob_desc->has_dim0_inner_shape(), label_blob_desc->has_dim0_inner_shape());
+  if (pred_blob_desc->has_dim0_inner_shape()) {
+    CHECK_EQ(pred_blob_desc->dim0_inner_shape().At(0), 1);
+  }
   CHECK(IsIntegralDataType(label_blob_desc->data_type()));
   CHECK_GE(pred_blob_desc->shape().NumAxes(), 2);
   CHECK_EQ(label_blob_desc->shape(), Shape({pred_blob_desc->shape().At(0)}));
 
   // accuracy
   BlobDesc* accuracy_blob_desc = GetBlobDesc4BnInOp("accuracy");
+  *accuracy_blob_desc = *pred_blob_desc;
   accuracy_blob_desc->mut_shape() = Shape({1});
   accuracy_blob_desc->set_data_type(pred_blob_desc->data_type());
 
