@@ -5,11 +5,12 @@ namespace oneflow {
 namespace {
 
 float GetRandomFloatValue(float min, float max, std::function<int32_t(void)> NextRandomInt) {
-  float ratio = static_cast<float>(NextRandomInt()) / static_cast<float>(std::numeric_limits<int32_t>::max());
+  float ratio =
+      static_cast<float>(NextRandomInt()) / static_cast<float>(std::numeric_limits<int32_t>::max());
   return (max - min) * ratio + min;
 }
 
-}  // namepace
+}  // namespace
 
 void ImagePreprocessImpl<PreprocessCase::kResize>::DoPreprocess(
     cv::Mat* image, const ImagePreprocess& preprocess_conf,
@@ -33,10 +34,10 @@ void ImagePreprocessImpl<PreprocessCase::kCrop>::DoPreprocess(
   CHECK_LE(width, image->cols);
   CHECK_LE(height, image->rows);
   if (crop.random_xy()) {
-      int x_max = (image->cols - width);
-      int y_max = (image->rows - height); 
-      x = x_max > 0 ? (NextRandomInt() % x_max) : x_max;
-      y = y_max > 0 ? (NextRandomInt() % y_max) : y_max;
+    int32_t x_max = (image->cols - width);
+    int32_t y_max = (image->rows - height);
+    x = x_max > 0 ? (NextRandomInt() % x_max) : x_max;
+    y = y_max > 0 ? (NextRandomInt() % y_max) : y_max;
   } else {
     CHECK_LE(x, image->cols - width);
     CHECK_LE(y, image->rows - height);
@@ -59,17 +60,17 @@ void ImagePreprocessImpl<PreprocessCase::kCropWithRandomSize>::DoPreprocess(
   CHECK_LE(area_max, 1.0);
   CHECK_LE(ratio_min, ratio_max);
   CHECK_GT(ratio_min, 0.0);
-  while(max_attempts--) {
+  while (max_attempts--) {
     float area_size = GetRandomFloatValue(area_min, area_max, NextRandomInt) * image->total();
     float aspect_ratio = GetRandomFloatValue(ratio_min, ratio_max, NextRandomInt);
     float height_float = sqrt(area_size / aspect_ratio);
     int32_t height = static_cast<int32_t>(height_float);
     int32_t width = static_cast<int32_t>(height_float * aspect_ratio);
-    if(width <= image->cols && height <= image->rows) {
-      int x_max = (image->cols - width);
-      int y_max = (image->rows - height); 
-      int x = x_max > 0 ? (NextRandomInt() % x_max) : x_max;
-      int y = y_max > 0 ? (NextRandomInt() % y_max) : y_max;
+    if (width <= image->cols && height <= image->rows) {
+      int32_t x_max = (image->cols - width);
+      int32_t y_max = (image->rows - height);
+      int32_t x = x_max > 0 ? (NextRandomInt() % x_max) : x_max;
+      int32_t y = y_max > 0 ? (NextRandomInt() % y_max) : y_max;
       *image = (*image)(cv::Rect(x, y, width, height));
       return;
     }
