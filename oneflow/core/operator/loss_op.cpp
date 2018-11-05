@@ -30,18 +30,20 @@ void LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
                             std::function<void(OpContext*)>) const {
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
   const BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");
-  CHECK_EQ(pred_blob_desc->has_data_id_field(), label_blob_desc->has_data_id_field());
+  CHECK_EQ(pred_blob_desc->HasField<FieldKey::kDataId>(),
+           label_blob_desc->HasField<FieldKey::kDataId>());
   CHECK_GE(pred_blob_desc->shape().NumAxes(), 2);
   // loss
   BlobDesc* loss_blob_desc = GetBlobDesc4BnInOp("loss");
   loss_blob_desc->mut_shape() = Shape({pred_blob_desc->shape().At(0)});
   loss_blob_desc->set_data_type(pred_blob_desc->data_type());
-  loss_blob_desc->set_has_data_id_field(pred_blob_desc->has_data_id_field());
+  loss_blob_desc->SetHasField<FieldKey::kDataId>(pred_blob_desc->HasField<FieldKey::kDataId>());
   // loss instance num
   BlobDesc* loss_instance_num_blob_desc = GetBlobDesc4BnInOp("loss_instance_num");
   loss_instance_num_blob_desc->mut_shape() = Shape({1});
   loss_instance_num_blob_desc->set_data_type(pred_blob_desc->data_type());
-  loss_instance_num_blob_desc->set_has_data_id_field(pred_blob_desc->has_data_id_field());
+  loss_instance_num_blob_desc->SetHasField<FieldKey::kDataId>(
+      pred_blob_desc->HasField<FieldKey::kDataId>());
 
   if (!GetValFromCustomizedConf<std::string>("weight").empty()) {
     // reduction_coefficient

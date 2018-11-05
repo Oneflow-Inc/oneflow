@@ -24,7 +24,8 @@ void AccuracyOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
                                 std::function<void(OpContext*)>) const {
   BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
   BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");
-  CHECK_EQ(pred_blob_desc->has_data_id_field(), label_blob_desc->has_data_id_field());
+  CHECK_EQ(pred_blob_desc->HasField<FieldKey::kDataId>(),
+           label_blob_desc->HasField<FieldKey::kDataId>());
   CHECK(IsIntegralDataType(label_blob_desc->data_type()));
   CHECK_GE(pred_blob_desc->shape().NumAxes(), 2);
   CHECK_EQ(label_blob_desc->shape(), Shape({pred_blob_desc->shape().At(0)}));
@@ -38,7 +39,8 @@ void AccuracyOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   BlobDesc* accuracy_instance_num_blob_desc = GetBlobDesc4BnInOp("accuracy_instance_num");
   accuracy_instance_num_blob_desc->mut_shape() = Shape({1});
   accuracy_instance_num_blob_desc->set_data_type(pred_blob_desc->data_type());
-  accuracy_instance_num_blob_desc->set_has_data_id_field(pred_blob_desc->has_data_id_field());
+  accuracy_instance_num_blob_desc->SetHasField<FieldKey::kDataId>(
+      pred_blob_desc->HasField<FieldKey::kDataId>());
 }
 
 LogicalBlobId AccuracyOp::obn2lbi(const std::string& output_bn) const {

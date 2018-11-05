@@ -23,12 +23,10 @@ class RtBlobDesc {
   bool has_dim0_inner_shape() const { return bool(dim0_inner_shape_); }
   const Shape& dim0_inner_shape() const { return *dim0_inner_shape_; }
 
-  bool has_data_id_field() const;
-  bool has_col_num_field() const;
-  bool has_dim0_valid_num_field() const;
-  bool has_dim1_valid_num_field() const;
-  bool has_dim2_valid_num_field() const;
-  bool has_record_id_in_device_piece_field() const;
+  template<FieldKey field_key>
+  bool HasField() const {
+    return header_pod_desc_.HasField(field_key);
+  }
   const StructPodDesc& header_pod_desc() const { return header_pod_desc_; }
 
   int32_t max_col_num() const { return blob_desc_proto_.header().max_col_num(); }

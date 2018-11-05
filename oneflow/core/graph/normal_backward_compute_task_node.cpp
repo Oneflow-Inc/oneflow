@@ -182,7 +182,7 @@ void NormalBackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
       if (type_name4model_related_logical_node_ == "MdDiffAcc") {
         md_diff_regst->ForEachLbi([md_diff_regst](const LogicalBlobId& lbi) {
           BlobDesc* blob_desc = md_diff_regst->MutBlobDesc(lbi);
-          blob_desc->set_has_dim0_valid_num_field(true);
+          blob_desc->SetHasField<FieldKey::kDim0ValidNum>(true);
           blob_desc->mut_dim0_inner_shape() = Shape({1, blob_desc->shape().At(0)});
         });
       }

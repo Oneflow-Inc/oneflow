@@ -21,7 +21,7 @@ void AccCompTaskNode::BuildExecGphAndRegst() {
   exec_node->BindBnWithRegst(op->SoleObn(), acc_regst);
   acc_regst->ForEachLbi([acc_regst](const LogicalBlobId& lbi) {
     BlobDesc* blob_desc = acc_regst->MutBlobDesc(lbi);
-    blob_desc->set_has_dim0_valid_num_field(false);
+    blob_desc->SetHasField<FieldKey::kDim0ValidNum>(false);
     blob_desc->clear_dim0_inner_shape();
   });
 }

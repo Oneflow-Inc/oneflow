@@ -29,7 +29,7 @@ void RecurrentOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   DataType data_type = Global<JobDesc>::Get()->DefaultDataType();
   CHECK_EQ(in_blob_desc->data_type(), data_type);
   CHECK_EQ(in_blob_desc->shape().NumAxes(), 2);
-  CHECK_EQ(in_blob_desc->has_col_num_field(), true);
+  CHECK_EQ(in_blob_desc->HasField<FieldKey::kColNum>(), true);
   int64_t data_num = in_blob_desc->shape().At(0);
   int32_t hidden_size = GetValFromCustomizedConf<int32_t>("hidden_size");
   Shape h0_shape = Shape({data_num, hidden_size});

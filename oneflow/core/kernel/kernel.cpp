@@ -19,7 +19,7 @@ void ClearBlobDim0ValidNumIfNeed(const PbRpf<std::string>& bns,
                                  const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
   for (const auto& bn : bns) {
     Blob* blob = BnInOp2Blob(bn);
-    if (blob != nullptr && blob->has_dim0_valid_num_field()) {
+    if (blob != nullptr && blob->HasField<FieldKey::kDim0ValidNum>()) {
       std::memset(blob->mut_dim0_valid_num_ptr(), 0, blob->ByteSizeOfDim0ValidNumField());
     }
   }
@@ -211,7 +211,7 @@ void KernelIf<device_type>::BackwardModelDiffDim0ValidNum(
   for (const std::string& bn : op_attribute().model_diff_bns()) {
     Blob* blob = BnInOp2Blob(bn);
     CHECK(blob);
-    if (blob->has_dim0_valid_num_field()) {
+    if (blob->HasField<FieldKey::kDim0ValidNum>()) {
       CHECK(blob->has_dim0_inner_shape());
       CHECK_EQ(1, blob->dim0_inner_shape().At(0));
       blob->set_dim0_valid_num(0, is_out_diff_empty ? 0 : blob->static_shape().At(0));

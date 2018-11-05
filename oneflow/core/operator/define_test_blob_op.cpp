@@ -19,12 +19,13 @@ void DefineTestBlobOp::InferBlobDescs(
   Shape shape(conf.shape());
   out_blob_desc->mut_shape() = shape;
   out_blob_desc->set_data_type(conf.data_type());
-  out_blob_desc->set_has_data_id_field(Global<JobDesc>::Get()->SizeOfOneDataId() > 0);
-  out_blob_desc->set_has_col_num_field(false);
-  out_blob_desc->set_has_dim0_valid_num_field(conf.has_dim0_valid_num());
-  out_blob_desc->set_has_dim1_valid_num_field(conf.has_dim1_valid_num());
-  out_blob_desc->set_has_dim2_valid_num_field(conf.has_dim2_valid_num());
-  out_blob_desc->set_has_record_id_in_device_piece_field(!conf.record_id_in_device_piece().empty());
+  out_blob_desc->SetHasField<FieldKey::kDataId>(Global<JobDesc>::Get()->SizeOfOneDataId() > 0);
+  out_blob_desc->SetHasField<FieldKey::kColNum>(false);
+  out_blob_desc->SetHasField<FieldKey::kDim0ValidNum>(conf.has_dim0_valid_num());
+  out_blob_desc->SetHasField<FieldKey::kDim1ValidNum>(conf.has_dim1_valid_num());
+  out_blob_desc->SetHasField<FieldKey::kDim2ValidNum>(conf.has_dim2_valid_num());
+  out_blob_desc->SetHasField<FieldKey::kRecordIdInDevicePiece>(
+      !conf.record_id_in_device_piece().empty());
   out_blob_desc->set_max_col_num(1);
   if (conf.has_dim0_inner_shape()) {
     out_blob_desc->mut_dim0_inner_shape() = Shape(conf.dim0_inner_shape());

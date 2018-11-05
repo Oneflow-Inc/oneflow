@@ -92,15 +92,10 @@ class Blob final {
 
   DataType data_type() const { return blob_desc_->data_type(); }
   template<FieldKey field_key>
-  bool HasField() const { return blob_desc_->HasField<field_key>(); }
-  bool has_data_id_field() const { return blob_desc_->has_data_id_field(); }
-  bool has_col_num_field() const { return blob_desc_->has_col_num_field(); }
-  bool has_dim0_valid_num_field() const { return blob_desc_->has_dim0_valid_num_field(); }
-  bool has_dim1_valid_num_field() const { return blob_desc_->has_dim1_valid_num_field(); }
-  bool has_dim2_valid_num_field() const { return blob_desc_->has_dim2_valid_num_field(); }
-  bool has_record_id_in_device_piece_field() const {
-    return blob_desc_->has_record_id_in_device_piece_field();
+  bool HasField() const {
+    return blob_desc_->HasField<field_key>();
   }
+
   int32_t max_col_num() const { return blob_desc_->max_col_num(); }
   size_t ByteSizeOfBlobHeader() const { return blob_desc_->ByteSizeOfBlobHeader(); }
   size_t ByteSizeOfDataIdField() const { return blob_desc_->ByteSizeOfDataIdField(); }

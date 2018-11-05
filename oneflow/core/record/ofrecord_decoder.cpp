@@ -77,10 +77,10 @@ int32_t OFRecordDecoder<encode_case, T>::DecodeOneCol(
     DeviceCtx* ctx, Blob* in_blob, const BlobConf& blob_conf, int32_t col_id, Blob* out_blob,
     std::function<int32_t(void)> NextRandomInt) const {
   int32_t max_col_id = 0;
-  if (out_blob->has_col_num_field()) {
+  if (out_blob->HasField<FieldKey::kColNum>()) {
     max_col_id = ReadColNum(ctx, in_blob, blob_conf.name(), out_blob) - 1;
   }
-  if (out_blob->has_data_id_field()) { ReadDataId(ctx, in_blob, out_blob); }
+  if (out_blob->HasField<FieldKey::kDataId>()) { ReadDataId(ctx, in_blob, out_blob); }
   ReadDataContent(ctx, in_blob, blob_conf, col_id, out_blob, NextRandomInt);
   return max_col_id;
 }

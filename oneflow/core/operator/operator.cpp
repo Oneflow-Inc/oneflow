@@ -186,37 +186,41 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
   if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), &BlobDesc::header_is_opaque)) {
     kernel_conf->set_need_do_opaque_header(true);
   } else {
-    if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), &BlobDesc::has_data_id_field)) {
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(),
+                             &BlobDesc::HasField<FieldKey::kDataId>)) {
       kernel_conf->set_need_do_data_id(true);
     }
     const PbRpf<std::string>* bns = &output_bns();
     if (IsLossOp()) { bns = &input_bns(); }
-    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_col_num_field)) {
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::HasField<FieldKey::kColNum>)) {
       kernel_conf->set_need_do_col_num(true);
     }
-    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_dim0_valid_num_field)) {
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns,
+                             &BlobDesc::HasField<FieldKey::kDim0ValidNum>)) {
       kernel_conf->set_need_do_dim0_valid_num(true);
       if (DoAllBlobDescHaveField(GetBlobDesc4BnInOp, input_bns(),
-                                 &BlobDesc::has_dim0_valid_num_field)
+                                 &BlobDesc::HasField<FieldKey::kDim0ValidNum>)
           && DoAllBlobDescHaveField(GetBlobDesc4BnInOp, output_bns(),
-                                    &BlobDesc::has_dim0_valid_num_field)
+                                    &BlobDesc::HasField<FieldKey::kDim0ValidNum>)
           && HaveSameDim0InnerShape(GetBlobDesc4BnInOp, input_bns(), output_bns())) {
         kernel_conf->set_can_naive_do_dim0_valid_num(true);
       }
     }
-    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_dim1_valid_num_field)) {
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns,
+                             &BlobDesc::HasField<FieldKey::kDim1ValidNum>)) {
       kernel_conf->set_need_do_dim1_valid_num(true);
     }
-    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_dim2_valid_num_field)) {
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns,
+                             &BlobDesc::HasField<FieldKey::kDim2ValidNum>)) {
       kernel_conf->set_need_do_dim2_valid_num(true);
     }
     if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns,
-                             &BlobDesc::has_record_id_in_device_piece_field)) {
+                             &BlobDesc::HasField<FieldKey::kRecordIdInDevicePiece>)) {
       kernel_conf->set_need_do_record_id_in_device_piece(true);
       if (DoAllBlobDescHaveField(GetBlobDesc4BnInOp, input_bns(),
-                                 &BlobDesc::has_record_id_in_device_piece_field)
+                                 &BlobDesc::HasField<FieldKey::kRecordIdInDevicePiece>)
           && DoAllBlobDescHaveField(GetBlobDesc4BnInOp, output_bns(),
-                                    &BlobDesc::has_record_id_in_device_piece_field)) {
+                                    &BlobDesc::HasField<FieldKey::kRecordIdInDevicePiece>)) {
         kernel_conf->set_can_naive_do_record_id_in_device_piece(true);
       }
     }

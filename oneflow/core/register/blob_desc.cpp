@@ -149,12 +149,14 @@ void BlobDesc::HeaderToProto(BlobDescProto* proto) const {
   if (!header_is_opaque_) {
     FieldHeaderDesc* field_header = proto->mutable_header()->mutable_field_header();
     StructPodDesc header_pod_desc;
-    if (has_data_id_field()) { DataIdFieldToProto(field_header, &header_pod_desc); }
-    if (has_col_num_field()) { ColNumFieldToProto(field_header, &header_pod_desc); }
-    if (has_dim0_valid_num_field()) { Dim0ValidNumToProto(&header_pod_desc); }
-    if (has_dim1_valid_num_field()) { Dim1ValidNumToProto(&header_pod_desc); }
-    if (has_dim2_valid_num_field()) { Dim2ValidNumToProto(&header_pod_desc); }
-    if (has_record_id_in_device_piece_field()) { RecordIdInDevicePieceToProto(&header_pod_desc); }
+    if (HasField<FieldKey::kDataId>()) { DataIdFieldToProto(field_header, &header_pod_desc); }
+    if (HasField<FieldKey::kColNum>()) { ColNumFieldToProto(field_header, &header_pod_desc); }
+    if (HasField<FieldKey::kDim0ValidNum>()) { Dim0ValidNumToProto(&header_pod_desc); }
+    if (HasField<FieldKey::kDim1ValidNum>()) { Dim1ValidNumToProto(&header_pod_desc); }
+    if (HasField<FieldKey::kDim2ValidNum>()) { Dim2ValidNumToProto(&header_pod_desc); }
+    if (HasField<FieldKey::kRecordIdInDevicePiece>()) {
+      RecordIdInDevicePieceToProto(&header_pod_desc);
+    }
     header_pod_desc.ToProto(proto->mutable_header()->mutable_header_pod_desc());
   } else {
     opaque_header_.ToProto(proto->mutable_header()->mutable_opaque_header());

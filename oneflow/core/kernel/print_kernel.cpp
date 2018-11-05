@@ -26,14 +26,14 @@ void PrintKernel::Forward(const KernelCtx& ctx,
   int32_t total_blob_num = op_attribute().input_bns().size();
   const Blob* first_blob = GetBlob(0);
   int64_t max_record_num = first_blob->shape().At(0);
-  bool has_data_id_field = first_blob->has_data_id_field();
-  bool has_col_num_field = first_blob->has_col_num_field();
+  bool has_data_id_field = first_blob->HasField<FieldKey::kDataId>();
+  bool has_col_num_field = first_blob->HasField<FieldKey::kColNum>();
   if (has_col_num_field) { TODO(); }
   FOR_RANGE(int32_t, blob_id, 1, total_blob_num) {
     const Blob* cur_blob = GetBlob(blob_id);
     CHECK_EQ(cur_blob->shape().At(0), max_record_num);
-    CHECK_EQ(cur_blob->has_data_id_field(), has_data_id_field);
-    CHECK_EQ(cur_blob->has_col_num_field(), has_col_num_field);
+    CHECK_EQ(cur_blob->HasField<FieldKey::kDataId>(), has_data_id_field);
+    CHECK_EQ(cur_blob->HasField<FieldKey::kColNum>(), has_col_num_field);
   }
   OFRecord record;
   FOR_RANGE(int64_t, record_id, 0, max_record_num) {

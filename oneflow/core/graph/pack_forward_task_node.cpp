@@ -54,7 +54,7 @@ void PackForwardCompTaskNode::BuildExecGphAndRegst() {
   CHECK_EQ(pack_op->GetPackNum(parallel_ctx()->parallel_num()),
            related_unpack_in_blob->shape().At(0) / in_blob->shape().At(0));
   out_blob->mut_shape().Set(0, related_unpack_in_blob->shape().At(0));
-  if (out_blob->has_dim0_valid_num_field()) {
+  if (out_blob->HasField<FieldKey::kDim0ValidNum>()) {
     out_blob->mut_dim0_inner_shape() = related_unpack_in_blob->dim0_inner_shape();
   }
 }
