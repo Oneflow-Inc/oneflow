@@ -5,8 +5,7 @@ namespace oneflow {
 namespace {
 
 float GetRandomFloatValue(float min, float max, std::function<int32_t(void)> NextRandomInt) {
-  float ratio =
-      static_cast<float>(NextRandomInt()) / static_cast<float>(std::numeric_limits<int32_t>::max());
+  float ratio = static_cast<float>(NextRandomInt()) / static_cast<float>(MaxVal<int32_t>());
   return (max - min) * ratio + min;
 }
 
