@@ -17,10 +17,25 @@ message ImageCrop {
   required int32 height = 5;
 }
 
+message ImageCropWithRandomSize {
+  message AspectRatioRange {
+    optional float min = 1 [default = 0.75];
+    optional float max = 2 [default = 1.33];
+  }
+  message AreaRange {
+    optional float min = 1 [default = 0.05];
+    optional float max = 2 [default = 1.0];
+  }
+  required AspectRatioRange aspect_ratio_range = 1;
+  required AreaRange area_range = 2;
+  optional int32 max_attempts = 3 [default = 100];
+}
+
 message ImagePreprocess {
   oneof preprocess {
     ImageResize resize = 1;
     ImageCrop crop = 2;
-    ImageMirror mirror = 3;
+    ImageCropWithRandomSize crop_with_random_size = 3;
+    ImageMirror mirror = 4;
   }
 }
