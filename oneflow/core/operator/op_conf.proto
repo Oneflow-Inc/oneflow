@@ -714,6 +714,12 @@ message RepeatOpConf {
   }
 }
 
+message GroupByRecordIdOpConf {
+  required string in = 1;
+  required string out = 2;
+  optional bool trim_dim0 = 3 [default = false];
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -786,6 +792,7 @@ message OperatorConf {
     UnpackOpConf unpack_conf = 238;
     RepeatOpConf repeat_conf = 239;
     LogCounterOpConf log_counter_conf = 240;
+    GroupByRecordIdOpConf group_by_record_id_conf = 241;
   }
 }
 
