@@ -40,12 +40,6 @@ void GroupByRecordIdOp::InferBlobDescs(
   out->set_has_dim2_valid_num_field(in->has_dim1_valid_num_field());
 }
 
-void GroupByRecordIdOp::VirtualGenKernelConf(
-    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
-  kernel_conf->set_data_type(GetBlobDesc4BnInOp("in")->data_type());
-}
-
 REGISTER_CPU_OP(OperatorConf::kGroupByRecordIdConf, GroupByRecordIdOp);
 
 }  // namespace oneflow
