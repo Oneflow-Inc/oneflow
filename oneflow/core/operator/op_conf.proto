@@ -1021,17 +1021,25 @@ message L2NormalizeOpConf {
   optional float epsilon = 4 [default = 1e-8];
 }
 
+message AnchorScaleConf {
+  required float scale = 1;
+  repeated float aspect_ratio = 2;
+}
+
+message AnchorAspectRatioConf {
+  required float aspect_ratio = 1;
+  repeated float scale = 2;
+}
+
 message GenerateAnchorsOpConf {
   required string in = 1;
   required string out = 2;
-  repeated float scale = 3;
-  repeated bool scale_apply_ratio = 4;
-  repeated float aspect_ratio = 5;
-  repeated bool ratio_apply_flip = 6;
-  required int32 feature_map_stride = 7;
-  required int32 image_height = 8;
-  required int32 image_width = 9;
-  optional bool clip = 10 [default = false];
+  repeated AnchorScaleConf scale_conf = 3;
+  repeated AnchorAspectRatioConf aspect_ratio_conf = 4;
+  required int32 feature_map_stride = 5;
+  required int32 image_height = 6;
+  required int32 image_width = 7;
+  optional bool clip = 8 [default = false];
 }
 
 message OperatorConf {

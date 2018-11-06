@@ -7,16 +7,6 @@ void GenerateAnchorsOp::InitFromOpConf() {
   EnrollInputBn("in", false);
   EnrollOutputBn("out", false);
   EnrollConstBufBn("anchors");
-
-  GenerateAnchorsOpConf* conf = mut_op_conf()->mutable_generate_anchors_conf();
-  CHECK_GE(conf->scale_size(), conf->scale_apply_ratio_size());
-  CHECK_GE(conf->aspect_ratio_size(), conf->ratio_apply_flip_size());
-  FOR_RANGE(size_t, i, conf->scale_apply_ratio_size(), conf->scale_size()) {
-    conf->add_scale_apply_ratio(true);
-  }
-  FOR_RANGE(size_t, i, conf->ratio_apply_flip_size(), conf->aspect_ratio_size()) {
-    conf->add_ratio_apply_flip(true);
-  }
 }
 
 const PbMessage& GenerateAnchorsOp::GetCustomizedConf() const {
@@ -36,15 +26,16 @@ void GenerateAnchorsOp::InferBlobDescs(
   const float feat_step = conf.feature_map_stride();
   CHECK_EQ(feat_h, static_cast<int64_t>(std::ceil(img_h / feat_step)));
   CHECK_EQ(feat_w, static_cast<int64_t>(std::ceil(img_w / feat_step)));
-
+  // num of anchors
+  CHECK((conf.scale_conf_size() == 0) || (conf.aspect_ratio_conf_size() == 0));
   int64_t num_anchors = 0;
-  FOR_RANGE(size_t, i, 0, conf.scale_size()) {
-    num_anchors += 1;
-    if (conf.scale_apply_ratio(i)) {
-      FOR_RANGE(size_t, j, 0, conf.aspect_ratio_size()) {
-        num_anchors += 1 + conf.ratio_apply_flip(j);
-      }
-    }
+  for (const AnchorScaleConf& scale_conf : conf.scale_conf()) {
+    CHECK_GT(scale_conf.aspect_ratio_size(), 0);
+    num_anchors += scale_conf.aspect_ratio_size();
+  }
+  for (const AnchorAspectRatioConf& aspect_ratio_conf : conf.aspect_ratio_conf()) {
+    CHECK_GT(aspect_ratio_conf.scale_size(), 0);
+    num_anchors += aspect_ratio_conf.scale_size();
   }
   // const buf: anchors (H, W, A, 4) T
   BlobDesc* anchors_blob_desc = GetBlobDesc4BnInOp("anchors");
