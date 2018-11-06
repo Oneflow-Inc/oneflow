@@ -3,10 +3,18 @@
 namespace oneflow {
 
 void RepeatBackwardCompActor::VirtualCompActorInit(const TaskProto& proto) {
-  CHECK_EQ(proto.exec_sequence().exec_node().size(), 1);
-  const KernelConf& kernel_conf = proto.exec_sequence().exec_node().Get(0).kernel_conf();
-  CHECK(kernel_conf.op_attribute().op_conf().has_repeat_conf());
-  repeat_num_ = kernel_conf.op_attribute().op_conf().repeat_conf().repeat_num();
+  const Shape& out_diff_time_shape = Global<RegstMgr>::Get()
+                                         ->RegstDesc4RegstDescId(Name2SoleRegstDescId("out_diff"))
+                                         .data_regst_time_shape();
+  const Shape& in_diff_time_shape = Global<RegstMgr>::Get()
+                                        ->RegstDesc4RegstDescId(Name2SoleRegstDescId("in_diff"))
+                                        .data_regst_time_shape();
+  CHECK_GE(out_diff_time_shape.NumAxes(), 1);
+  CHECK_EQ(in_diff_time_shape.NumAxes() + 1, out_diff_time_shape.NumAxes());
+  FOR_RANGE(int64_t, i, 0, in_diff_time_shape.NumAxes()) {
+    CHECK_EQ(in_diff_time_shape.At(i), out_diff_time_shape.At(i));
+  }
+  repeat_num_ = out_diff_time_shape.At(out_diff_time_shape.NumAxes() - 1);
   acc_count_ = 0;
   cur_piece_id_ = 0;
   OF_SET_MSG_HANDLER(&RepeatBackwardCompActor::HandlerNormal);

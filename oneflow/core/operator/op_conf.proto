@@ -978,20 +978,36 @@ message MaskTargetOpConf {
 message PackOpConf {
   required string in = 1;
   required string out = 2;
-  required int32 pack_num = 3;
-  required string related_unpack = 4;
+  oneof pack_num_conf {
+    int32 pack_num = 3;
+    int32 pack_num_per_record = 4;
+  }
+  required string related_unpack = 5;
 }
 
 message UnpackOpConf {
   required string in = 1;
   required string out = 2;
-  required int32 unpack_num = 3;
+  oneof unpack_num_conf {
+    int32 unpack_num = 3;
+    int32 unpack_num_per_record = 4;
+  }
 }
 
 message RepeatOpConf {
   required string in = 1;
   required string out = 2;
-  required int64 repeat_num = 3;
+  oneof repeat_num_conf {
+    int32 repeat_num = 3;
+    int32 repeat_num_per_record = 4;
+  }
+}
+
+message L2NormalizeOpConf {
+  required string in = 1;
+  required string out = 2;
+  required int32 axis = 3 [default = -1];
+  optional float epsilon = 4 [default = 1e-8];
 }
 
 message OperatorConf {
@@ -1088,6 +1104,7 @@ message OperatorConf {
     RleEncodeOpConf rle_encode_conf = 1017;
     MaskTargetOpConf mask_target_conf = 1018;
     BboxTransformOpConf bbox_transform_conf = 1100;
+    L2NormalizeOpConf l2_normalize_conf = 1101;
   }
 }
 

@@ -20,6 +20,7 @@ class UnpackOp final : public Operator {
                       const ParallelContext* parallel_ctx) const override;
   bool NeedInBlobWhenBackward() const override { return true; }
   bool NeedOutBlobWhenBackward() const override { return false; }
+  int32_t GetUnpackNum(const ParallelContext& ctx) const;
 };
 
 }  // namespace oneflow
