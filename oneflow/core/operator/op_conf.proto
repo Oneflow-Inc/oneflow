@@ -1010,6 +1010,19 @@ message L2NormalizeOpConf {
   optional float epsilon = 4 [default = 1e-8];
 }
 
+message GenerateAnchorsOpConf {
+  required string in = 1;
+  required string out = 2;
+  repeated float scale = 3;
+  repeated bool scale_apply_ratio = 4;
+  repeated float aspect_ratio = 5;
+  repeated bool ratio_apply_flip = 6;
+  required int32 feature_map_stride = 7;
+  required int32 image_height = 8;
+  required int32 image_width = 9;
+  optional bool clip = 10 [default = false];
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1105,6 +1118,7 @@ message OperatorConf {
     MaskTargetOpConf mask_target_conf = 1018;
     BboxTransformOpConf bbox_transform_conf = 1100;
     L2NormalizeOpConf l2_normalize_conf = 1101;
+    GenerateAnchorsOpConf generate_anchors_conf = 1102;
   }
 }
 
