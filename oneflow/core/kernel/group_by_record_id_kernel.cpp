@@ -65,7 +65,7 @@ void GroupByRecordIdKernel<T>::ForwardDim1ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in = BnInOp2Blob("in");
   Blob* out = BnInOp2Blob("out");
-  const int64_t out_dim0_valid_num = static_cast<size_t>(out->shape().At(0));
+  const int64_t out_dim0_valid_num = out->shape().At(0);
   std::vector<int64_t> out_dim1_valid_num(static_cast<size_t>(out_dim0_valid_num));
   InDim0ToOutDim0Transform(in, [&](int64_t in_dim0_idx, int64_t out_dim0_idx) {
     CHECK_LT(out_dim0_idx, out_dim0_valid_num);
