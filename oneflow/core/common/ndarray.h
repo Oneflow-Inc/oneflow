@@ -11,6 +11,11 @@ namespace oneflow {
 
 template<typename T, int NDIMS>
 class NdArrayBase {
+ public:
+  using dtype = T;
+  static const int ndims = NDIMS;
+  static const bool immutable = true;
+
  protected:
   explicit NdArrayBase(const Shape& shape) : shape_(shape) { TODO(); }
   virtual ~NdArrayBase() = default;
@@ -127,6 +132,7 @@ void AssignVarNdArray(VarNdArray<T, NDIMS>* var_ndarray, const NdArray<T, NDIMS>
 template<typename Derived, typename T, int NDIMS>
 class VarNdArrayBase : public NdArray<T, NDIMS> {
  public:
+  static const bool immutable = false;
   VarNdArrayBase(const Shape& shape, T* ptr)
       : NdArray<T, NDIMS>(shape), ptr_(ptr), len_(shape.elem_cnt()) {}
   virtual ~VarNdArrayBase() = default;
@@ -207,10 +213,13 @@ class Slice final {
  public:
   static const int64_t kStart = LLONG_MIN;
   static const int64_t kEnd = LLONG_MAX;
+
+  Slice(const Slice&) = default;
   Slice(int64_t index) : start_(index), end_(index + 1), stride_(1), value_capacity_(0) {}
   Slice(const std::initializer_list<int64_t>& l);
+  ~Slice() = default;
 
-  void Bound(size_t value_capacity);
+  const Slice& Bound(size_t value_capacity);
 
   int64_t At(int64_t index) const;
   bool IsBounded() const;
@@ -222,6 +231,80 @@ class Slice final {
   int64_t end_;
   int64_t stride_;
   size_t value_capacity_;
+};
+
+template<typename XT, int NDIMS>
+class SliceNdArrayBase : public NdArray<typename XT::dtype, XT::ndims> {
+ public:
+  static const bool immutable = false;
+  static_assert(XT::ndims == NDIMS, "XT::ndims should equals NDIMS");
+  SliceNdArrayBase(XT&& x, std::array<Slice, NDIMS>&& slices)
+      : NdArray<typename XT::dtype, XT::ndims>(BoundedSlices2Shape(BoundSlices(x, slices))),
+        x_(x),
+        slices_(BoundSlices(x, slices)) {}
+  virtual ~SliceNdArrayBase() = default;
+
+  const XT& x() const { return x_; }
+  const Slice& slice(int32_t dim) const { return slices_[dim]; }
+
+ private:
+  static std::array<Slice, NDIMS>&& BoundSlices(XT&& x, std::array<Slice, NDIMS>&& slices) {
+    FOR_RANGE(int32_t, i, 0, NDIMS) { slices[i].Bound(x.shape().At(i)); }
+    return slices;
+  }
+  static Shape BoundedSlices2Shape(const std::array<Slice, NDIMS>& bounded_slices) {
+    std::vector<int64_t> dim_vec;
+    for (const Slice& slice : bounded_slices) {
+      CHECK_GT(slice.Size(), 0);
+      dim_vec.push_back(slice.Size());
+    }
+    return Shape(dim_vec);
+  }
+  const XT& x_;
+  std::array<Slice, NDIMS> slices_;
+};
+
+template<typename XT, typename Enable = void>
+class SliceNdArray;
+
+template<typename XT>
+class SliceNdArray<XT, typename std::enable_if<XT::ndims == 1>::type> final
+    : public SliceNdArrayBase<XT, XT::ndims> {
+ public:
+  SliceNdArray(XT&& x, Slice&& slice0) : SliceNdArrayBase<XT, XT::ndims>(x, {slice0}) {}
+};
+
+template<typename XT>
+class SliceNdArray<XT, typename std::enable_if<XT::ndims == 2>::type> final
+    : public SliceNdArrayBase<XT, XT::ndims> {
+ public:
+  SliceNdArray(XT&& x, Slice&& slice0, Slice&& slice1)
+      : SliceNdArrayBase<XT, XT::ndims>(x, {slice0, slice1}) {}
+};
+
+template<typename XT>
+class SliceNdArray<XT, typename std::enable_if<XT::ndims == 3>::type> final
+    : public SliceNdArrayBase<XT, XT::ndims> {
+ public:
+  SliceNdArray(XT&& x, Slice&& slice0, Slice&& slice1, Slice&& slice2)
+      : SliceNdArrayBase<XT, XT::ndims>(x, {slice0, slice1, slice2}) {}
+};
+
+template<typename XT>
+class SliceNdArray<XT, typename std::enable_if<XT::ndims == 4>::type> final
+    : public SliceNdArrayBase<XT, XT::ndims> {
+ public:
+  SliceNdArray(XT&& x, Slice&& slice0, Slice&& slice1, Slice&& slice2, Slice&& slice3)
+      : SliceNdArrayBase<XT, XT::ndims>(x, {slice0, slice1, slice2, slice3}) {}
+};
+
+template<typename XT>
+class SliceNdArray<XT, typename std::enable_if<XT::ndims == 5>::type> final
+    : public SliceNdArrayBase<XT, XT::ndims> {
+ public:
+  SliceNdArray(XT&& x, Slice&& slice0, Slice&& slice1, Slice&& slice2, Slice&& slice3,
+               Slice&& slice4)
+      : SliceNdArrayBase<XT, XT::ndims>(x, {slice0, slice1, slice2, slice3, slice4}) {}
 };
 
 }  // namespace oneflow

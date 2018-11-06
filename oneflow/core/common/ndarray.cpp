@@ -63,9 +63,9 @@ bool Slice::IsBounded() const {
          && (end_ <= value_capacity_);
 }
 
-void Slice::Bound(size_t value_capacity) {
+const Slice& Slice::Bound(size_t value_capacity) {
   CHECK_GT(value_capacity, 0);
-  if (value_capacity_ == value_capacity) { return; }
+  if (value_capacity_ == value_capacity) { return *this; }
   CHECK_EQ(value_capacity_, 0);
   value_capacity_ = value_capacity;
   if (start_ != kStart && start_ < 0) { start_ += value_capacity_; }
@@ -79,6 +79,7 @@ void Slice::Bound(size_t value_capacity) {
   CHECK_LE(start_, value_capacity_);
   CHECK_GE(end_, 0);
   CHECK_LE(end_, value_capacity_);
+  return *this;
 }
 
 size_t Slice::Size() const {
