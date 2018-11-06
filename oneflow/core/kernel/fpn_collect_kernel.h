@@ -25,6 +25,11 @@ class FpnCollectKernel final : public KernelIf<DeviceType::kCPU> {
   void ForwardRecordIdInDevicePiece(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
+  std::vector<std::vector<int32_t>> GroupRoiBoxes(const std::vector<const Blob*>& rois_fpn_blobs,
+                                                  const int32_t row_len) const;
+  std::vector<size_t> GetRoiGroupSizeVec(
+      const std::vector<std::vector<int32_t>>& im_grouped_roi_inds_vec) const;
+
   int32_t num_groups_;
   bool need_group_by_img_;
 };
