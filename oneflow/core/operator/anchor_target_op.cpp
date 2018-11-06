@@ -93,8 +93,6 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   BlobDesc* gt_boxes_inds_bd = GetBlobDesc4BnInOp("gt_boxes_inds");
   gt_boxes_inds_bd->set_data_type(DataType::kInt32);
   gt_boxes_inds_bd->mut_shape() = Shape({gt_boxes_bd->shape().At(1)});
-  gt_boxes_inds_bd->mut_dim0_inner_shape() = Shape({1, gt_boxes_bd->shape().At(1)});
-  gt_boxes_inds_bd->set_has_dim0_valid_num_field(true);
 }
 
 void AnchorTargetOp::VirtualGenKernelConf(

@@ -196,21 +196,19 @@ ActivationType Operator::GetActivationType() const {
 void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              bool is_forward, const ParallelContext* parallel_ctx,
                              KernelConf* kernel_conf, const OpContext* op_ctx) const {
-  auto HasBnWithField = [&](const PbRpf<std::string>& bns, bool (BlobDesc::*has_field)() const) {
-    return HasBlobDescWithField(GetBlobDesc4BnInOp, bns, has_field);
-  };
   *(kernel_conf->mutable_op_attribute()) = op_attribute_;
-  if (HasBnWithField(output_bns(), &BlobDesc::header_is_opaque)) {
+  if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), &BlobDesc::header_is_opaque)) {
     kernel_conf->set_need_do_opaque_header(true);
   } else {
-    if (HasBnWithField(output_bns(), &BlobDesc::has_data_id_field)) {
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), &BlobDesc::has_data_id_field)) {
       kernel_conf->set_need_do_data_id(true);
     }
-    const PbRpf<std::string>& obns = IsLossOp() ? input_bns() : output_bns();
-    if (HasBnWithField(obns, &BlobDesc::has_col_num_field)) {
+    const PbRpf<std::string>* bns = &output_bns();
+    if (IsLossOp()) { bns = &input_bns(); }
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_col_num_field)) {
       kernel_conf->set_need_do_col_num(true);
     }
-    if (HasBlobDescWithField(GetBlobDesc4BnInOp, obns, &BlobDesc::has_dim0_valid_num_field)) {
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_dim0_valid_num_field)) {
       kernel_conf->set_need_do_dim0_valid_num(true);
       if (DoAllBlobDescHaveField(GetBlobDesc4BnInOp, input_bns(),
                                  &BlobDesc::has_dim0_valid_num_field)
@@ -220,13 +218,13 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
         kernel_conf->set_can_naive_do_dim0_valid_num(true);
       }
     }
-    if (HasBlobDescWithField(GetBlobDesc4BnInOp, obns, &BlobDesc::has_dim1_valid_num_field)) {
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_dim1_valid_num_field)) {
       kernel_conf->set_need_do_dim1_valid_num(true);
     }
-    if (HasBlobDescWithField(GetBlobDesc4BnInOp, obns, &BlobDesc::has_dim2_valid_num_field)) {
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_dim2_valid_num_field)) {
       kernel_conf->set_need_do_dim2_valid_num(true);
     }
-    if (HasBlobDescWithField(GetBlobDesc4BnInOp, obns,
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns,
                              &BlobDesc::has_record_id_in_device_piece_field)) {
       kernel_conf->set_need_do_record_id_in_device_piece(true);
       if (DoAllBlobDescHaveField(GetBlobDesc4BnInOp, input_bns(),
@@ -475,10 +473,10 @@ bool IsOpOnlyCpuSupported(OperatorConf::OpTypeCase op_type_case) {
 }
 
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf) {
+  Operator* rptr = NewObj<Operator>(op_conf.op_type_case(), op_conf);
   if (IsOpOnlyCpuSupported(op_conf.op_type_case())) {
     CHECK_EQ(op_conf.device_type(), DeviceType::kCPU);
   }
-  Operator* rptr = NewObj<Operator>(op_conf.op_type_case(), op_conf);
   rptr->InitFromOpConf(op_conf);
   return std::shared_ptr<Operator>(rptr);
 }

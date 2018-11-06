@@ -1,5 +1,8 @@
 #include "oneflow/core/kernel/bbox_nms_and_limit_kernel.h"
 #include "oneflow/core/common/auto_registration_factory.h"
+#include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/thread/thread_manager.h"
+#include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
 
@@ -107,6 +110,7 @@ void BboxNmsAndLimitKernel<T>::VirtualKernelInit(const ParallelContext* parallel
     scoring_method_.reset(NewObj<ScoringMethodIf<T>>(conf.bbox_vote().scoring_method()));
     scoring_method_->Init(conf.bbox_vote());
   }
+  num_images_ = Global<JobDesc>::Get()->DevicePieceSize4ParallelCtx(*parallel_ctx);
 }
 
 template<typename T>
@@ -128,25 +132,29 @@ void BboxNmsAndLimitKernel<T>::ForwardDataContent(
   const Blob* bbox_pred_blob = BnInOp2Blob("bbox_pred");
   const Blob* bbox_prob_blob = BnInOp2Blob("bbox_prob");
   Blob* target_bbox_blob = BnInOp2Blob("target_bbox");
-  Blob* bbox_score_blob = BnInOp2Blob("bbox_score");
+  Blob* vote_bbox_score_blob = BnInOp2Blob("bbox_score");
   Blob* out_bbox_blob = BnInOp2Blob("out_bbox");
   Blob* out_bbox_score_blob = BnInOp2Blob("out_bbox_score");
   Blob* out_bbox_label_blob = BnInOp2Blob("out_bbox_label");
-
   BroadcastBboxTransform(bbox_blob, bbox_pred_blob, target_bbox_blob);
   ClipBBox(target_bbox_blob);
   std::vector<int32_t> all_im_bbox_inds;
-  auto im_grouped_bbox_inds = GroupBBox(target_bbox_blob);
-  for (auto& pair : im_grouped_bbox_inds) {
-    auto im_detected_bbox_inds =
-        ApplyNmsAndVoteByClass(pair.second, bbox_prob_blob, bbox_score_blob, target_bbox_blob);
+  std::vector<std::vector<int32_t>> im_detected_bbox_inds_vec(num_images_);
+  std::vector<std::vector<int32_t>> im_grouped_bbox_inds_vec = GroupBBox(target_bbox_blob);
+  MultiThreadLoop(num_images_, [&](int64_t i) {
+    im_detected_bbox_inds_vec[i] = ApplyNmsAndVoteByClass(
+        im_grouped_bbox_inds_vec[i], bbox_prob_blob, vote_bbox_score_blob, target_bbox_blob);
+  });
+  for (const auto& im_detected_bbox_inds : im_detected_bbox_inds_vec) {
     all_im_bbox_inds.insert(all_im_bbox_inds.end(), im_detected_bbox_inds.begin(),
                             im_detected_bbox_inds.end());
   }
-  Limit(bbox_score_blob, all_im_bbox_inds);
+  const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
+  const Blob* bbox_score_blob = conf.bbox_vote_enabled() ? vote_bbox_score_blob : bbox_prob_blob;
+  Limit(out_bbox_blob->static_shape().At(0), bbox_score_blob, all_im_bbox_inds);
   OutputBBox(all_im_bbox_inds, target_bbox_blob, out_bbox_blob);
   OutputBBoxScore(all_im_bbox_inds, bbox_score_blob, out_bbox_score_blob);
-  OutputBBoxLabel(all_im_bbox_inds, bbox_prob_blob->shape().At(1), out_bbox_label_blob);
+  OutputBBoxLabel(all_im_bbox_inds, bbox_score_blob->shape().At(1), out_bbox_label_blob);
   if (bbox_blob->has_record_id_in_device_piece_field()) { FillRecordIdInDevicePiece(BnInOp2Blob); }
 }
 
@@ -158,15 +166,17 @@ void BboxNmsAndLimitKernel<T>::BroadcastBboxTransform(const Blob* bbox_blob,
   int64_t num_boxes = bbox_blob->shape().At(0);
   int64_t num_classes = bbox_pred_blob->shape().At(1) / 4;
   CHECK_EQ(bbox_pred_blob->shape().At(0), num_boxes);
-  FOR_RANGE(int64_t, i, 0, num_boxes) {
-    const auto* bbox = BBox::Cast(bbox_blob->dptr<T>(i));
-    const auto* delta = BBoxDelta<T>::Cast(bbox_pred_blob->dptr<T>(i));
-    FOR_RANGE(int64_t, j, 0, num_classes) {
-      BBox* target_bbox = BBox::Cast(target_bbox_blob->mut_dptr<T>(i, j));
-      target_bbox->Transform(bbox, delta + j, bbox_reg_ws);
-      target_bbox->set_index(bbox->index());
-    }
-  }
+  const auto* bbox_ptr = BBox::Cast(bbox_blob->dptr<T>());
+  const auto* delta_ptr = BBoxDelta<T>::Cast(bbox_pred_blob->dptr<T>());
+  BBox* target_bbox_ptr = BBox::Cast(target_bbox_blob->mut_dptr<T>());
+  MultiThreadLoop(num_boxes * num_classes, [&](int64_t index) {
+    int64_t i = index / num_classes;
+    const auto* bbox = bbox_ptr + i;
+    const auto* delta = delta_ptr + index;
+    BBox* target_bbox = target_bbox_ptr + index;
+    target_bbox->Transform(bbox, delta, bbox_reg_ws);
+    target_bbox->set_index(bbox->index());
+  });
 }
 
 template<typename T>
@@ -179,13 +189,12 @@ void BboxNmsAndLimitKernel<T>::ClipBBox(Blob* target_bbox_blob) const {
 }
 
 template<typename T>
-typename BboxNmsAndLimitKernel<T>::Image2IndexVecMap BboxNmsAndLimitKernel<T>::GroupBBox(
+std::vector<std::vector<int32_t>> BboxNmsAndLimitKernel<T>::GroupBBox(
     Blob* target_bbox_blob) const {
-  Image2IndexVecMap im_grouped_bbox_inds;
+  std::vector<std::vector<int32_t>> im_grouped_bbox_inds(num_images_);
   FOR_RANGE(int32_t, i, 0, target_bbox_blob->shape().At(0)) {
     const BBox* bbox = BBox::Cast(target_bbox_blob->dptr<T>(i, 0));
-    int32_t im_idx = static_cast<int32_t>(bbox->index());
-    im_grouped_bbox_inds[im_idx].emplace_back(i);
+    im_grouped_bbox_inds[bbox->index()].emplace_back(i);
   }
   return im_grouped_bbox_inds;
 }
@@ -224,9 +233,6 @@ std::vector<int32_t> BboxNmsAndLimitKernel<T>::ApplyNmsAndVoteByClass(
     // concat all class
     all_cls_bbox_inds.insert(all_cls_bbox_inds.end(), post_nms_inds.index(),
                              post_nms_inds.index() + post_nms_inds.size());
-  }
-  if (!conf.bbox_vote_enabled()) {
-    std::memcpy(bbox_score_ptr, bbox_prob_ptr, bbox_prob_blob->shape().elem_cnt() * sizeof(T));
   }
   return all_cls_bbox_inds;
 }
@@ -270,24 +276,14 @@ void BboxNmsAndLimitKernel<T>::VoteBbox(
 }
 
 template<typename T>
-void BboxNmsAndLimitKernel<T>::Limit(const Blob* bbox_score_blob,
+void BboxNmsAndLimitKernel<T>::Limit(size_t limit, const Blob* bbox_score_blob,
                                      std::vector<int32_t>& bbox_inds) const {
-  const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
   const T* bbox_score_ptr = bbox_score_blob->dptr<T>();
-  // std::sort(bbox_inds.begin(), bbox_inds.end(), [&](int32_t l_idx, int32_t r_idx) {
-  //   return bbox_score_ptr[l_idx] > bbox_score_ptr[r_idx];
-  // });
-  // auto lt_threah_it = std::find_if(bbox_inds.begin(), bbox_inds.end(), [&](int32_t idx) {
-  //   return bbox_score_ptr[idx] < conf.threshold();
-  // });
-  // bbox_inds.erase(lt_threah_it, bbox_inds.end());
-  // if (bbox_inds.size() > conf.detections_per_im()) { bbox_inds.resize(conf.detections_per_im());
-  // }
-  if (bbox_inds.size() > conf.detections_per_im()) {
+  if (bbox_inds.size() > limit) {
     std::sort(bbox_inds.begin(), bbox_inds.end(), [&](int32_t l_idx, int32_t r_idx) {
       return bbox_score_ptr[l_idx] > bbox_score_ptr[r_idx];
     });
-    bbox_inds.resize(conf.detections_per_im());
+    bbox_inds.resize(limit);
   }
 }
 

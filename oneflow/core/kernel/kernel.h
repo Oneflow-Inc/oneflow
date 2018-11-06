@@ -165,8 +165,6 @@ class KernelIf : public Kernel {
                               std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   virtual void BackwardColNum(const KernelCtx& ctx,
                               std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void ForwardField(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
-                    void (Blob::*Copy)(DeviceCtx*, const Blob*)) const;
   virtual void BackwardInDiffDim0ValidNum(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   virtual void BackwardModelDiffDim0ValidNum(

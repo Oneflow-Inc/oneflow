@@ -78,7 +78,9 @@ AnchorTargetKernel<T>::GetImageAnchorBoxes(
     const KernelCtx& ctx, size_t im_index,
     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   Blob* anchor_boxes_inds_blob = BnInOp2Blob("anchor_boxes_inds");
-  anchor_boxes_inds_blob->CopyFrom(ctx.device_ctx, BnInOp2Blob("anchors_inside_inds"));
+  Blob* anchors_inside_inds_blob = BnInOp2Blob("anchors_inside_inds");
+  anchor_boxes_inds_blob->CopyDataContentFrom(ctx.device_ctx, anchors_inside_inds_blob);
+  anchor_boxes_inds_blob->set_dim0_valid_num(0, anchors_inside_inds_blob->dim0_valid_num(0));
   MaxOverlapOfLabeledBoxesWithGt anchor_boxes(
       MaxOverlapOfBoxesWithGt(
           AnchorBoxes(IndexSequence(anchor_boxes_inds_blob->static_shape().elem_cnt(),
@@ -97,11 +99,10 @@ typename AnchorTargetKernel<T>::GtBoxes AnchorTargetKernel<T>::GetImageGtBoxes(
     size_t im_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const Blob* gt_boxes_blob = BnInOp2Blob("gt_boxes");
   Blob* gt_boxes_inds_blob = BnInOp2Blob("gt_boxes_inds");
-  gt_boxes_inds_blob->set_dim0_valid_num(0, gt_boxes_blob->dim1_valid_num(im_index));
-  GtBoxes gt_boxes(IndexSequence(gt_boxes_inds_blob->static_shape().elem_cnt(),
-                                 gt_boxes_inds_blob->dim0_valid_num(0),
-                                 gt_boxes_inds_blob->mut_dptr<int32_t>(), true),
-                   gt_boxes_blob->dptr<T>(im_index));
+  GtBoxes gt_boxes(
+      IndexSequence(gt_boxes_inds_blob->shape().elem_cnt(), gt_boxes_blob->dim1_valid_num(im_index),
+                    gt_boxes_inds_blob->mut_dptr<int32_t>(), true),
+      gt_boxes_blob->dptr<T>(im_index));
   gt_boxes.Filter([&](int32_t index) { return gt_boxes.bbox(index)->Area() <= 0; });
   return gt_boxes;
 }

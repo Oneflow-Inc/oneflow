@@ -265,33 +265,4 @@ size_t Blob::CalcDim0ValidNumSum() const {
   return sum;
 }
 
-void CheckSameRecordIdInDevicePiece(const PbRpf<std::string>& bns,
-                                    const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
-  if (bns.empty()) { return; }
-  const Blob* first_blob = BnInOp2Blob(bns.Get(0));
-  auto Check = [first_blob](const Blob* blob, int64_t dim0_offset, int64_t dim0_cnt) {
-    CHECK_EQ(std::memcmp(blob->record_id_in_device_piece_ptr() + dim0_offset,
-                         first_blob->record_id_in_device_piece_ptr() + dim0_offset,
-                         sizeof(*first_blob->record_id_in_device_piece_ptr()) * dim0_cnt),
-             0);
-
-  };
-  if (first_blob->has_dim0_valid_num_field()) {
-    FOR_RANGE(int, i, 1, bns.size()) {
-      const Blob* blob = BnInOp2Blob(bns.Get(i));
-      CHECK_EQ(first_blob->dim0_inner_shape(), blob->dim0_inner_shape());
-      FOR_RANGE(int, j, 0, first_blob->dim0_inner_shape().At(0)) {
-        CHECK_EQ(first_blob->dim0_valid_num(j), blob->dim0_valid_num(j));
-        Check(blob, j * first_blob->dim0_inner_shape().Count(1), first_blob->dim0_valid_num(j));
-      }
-    }
-  } else {
-    FOR_RANGE(int, i, 1, bns.size()) {
-      const Blob* blob = BnInOp2Blob(bns.Get(i));
-      CHECK_EQ(first_blob->shape().At(0), blob->shape().At(0));
-      Check(blob, 0, blob->shape().At(0));
-    }
-  }
-}
-
 }  // namespace oneflow
