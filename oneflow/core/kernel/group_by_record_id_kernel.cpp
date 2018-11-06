@@ -39,12 +39,12 @@ void GroupByRecordIdKernel<T>::ForwardDataContent(
   Blob* out = BnInOp2Blob("out");
   CHECK_GE(in->shape().NumAxes(), 1);
   CHECK_EQ(in->shape().NumAxes() + 1, out->shape().NumAxes());
-  const size_t one_row_size = in->shape().Count(1) * sizeof(T);
-  CHECK_EQ(one_row_size, out->shape().Count(2) * sizeof(T));
+  const size_t size_per_instance = in->shape().Count(1) * sizeof(T);
+  CHECK_EQ(size_per_instance, out->shape().Count(2) * sizeof(T));
   InDim0ToOutDim0Dim1Transform(
       in, out, [&](int64_t in_dim0_idx, int64_t out_dim0_idx, int64_t out_dim1_idx) {
         Memcpy<DeviceType::kCPU>(ctx.device_ctx, out->mut_dptr<T>(out_dim0_idx, out_dim1_idx),
-                                 in->dptr<T>(in_dim0_idx), one_row_size);
+                                 in->dptr<T>(in_dim0_idx), size_per_instance);
       });
 }
 
