@@ -33,6 +33,8 @@ void GroupByRecordIdOp::InferBlobDescs(
   if (op_conf().group_by_record_id_conf().trim_dim0()) {
     out->set_has_dim0_valid_num_field(true);
     out->mut_dim0_inner_shape() = Shape({1, out->shape().At(0)});
+  } else {
+    out->set_has_dim0_valid_num_field(false);
   }
   out->set_has_dim1_valid_num_field(true);
   out->set_has_dim2_valid_num_field(in->has_dim1_valid_num_field());
