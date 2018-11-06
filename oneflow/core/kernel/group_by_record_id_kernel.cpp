@@ -49,6 +49,20 @@ void GroupByRecordIdKernel<T>::ForwardDataContent(
 }
 
 template<typename T>
+void GroupByRecordIdKernel<T>::ForwardDim0ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* in = BnInOp2Blob("in");
+  Blob* out = BnInOp2Blob("out");
+  CHECK(out->has_dim0_valid_num_field());
+  CHECK_EQ(out->dim0_inner_shape().At(0), 1);
+  int64_t out_dim0_valid_num = 0;
+  InDim0ToOutDim0Transform(in, out, [&](int64_t in_dim0_idx, int64_t out_dim0_idx) {
+    out_dim0_valid_num = std::max(out_dim0_valid_num, out_dim0_idx + 1);
+  });
+  out->set_dim0_valid_num(0, out_dim0_valid_num);
+}
+
+template<typename T>
 void GroupByRecordIdKernel<T>::ForwardDim1ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in = BnInOp2Blob("in");
@@ -72,7 +86,7 @@ void GroupByRecordIdKernel<T>::ForwardDim2ValidNum(
       in, out, [&](int64_t in_dim0_idx, int64_t out_dim0_idx, int64_t out_dim1_idx) {
         out->set_dim2_valid_num(out_dim0_idx, out_dim1_idx, in->dim1_valid_num(in_dim0_idx));
       });
-};
+}
 
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kGroupByRecordIdConf, GroupByRecordIdKernel,
                                POD_DATA_TYPE_SEQ);
