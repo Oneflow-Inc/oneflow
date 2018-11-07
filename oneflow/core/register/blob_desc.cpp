@@ -4,6 +4,10 @@
 
 namespace oneflow {
 
+#define INIT_HAS_FIELD_FALSE(field_key, field_name) has_##field_name##_ = false;
+#define INIT_HAS_FIELD_BY_POD(field_key, field_name) \
+  has_##field_name##_ = header_pod_desc_.HasField(field_key);
+
 BlobDesc::BlobDesc()
     : BlobDesc(Shape(), Global<JobDesc>::Get()->DefaultDataType(), false, false, 1) {}
 
@@ -29,22 +33,12 @@ void BlobDesc::InitFromProto(const BlobDescProto& proto) {
   header_pod_desc_.InitFromProto(proto.header().header_pod_desc());
   if (proto.header().has_opaque_header()) {
     header_is_opaque_ = true;
-    has_data_id_ = false;
-    has_col_num_ = false;
-    has_dim0_valid_num_ = false;
-    has_dim1_valid_num_ = false;
-    has_dim2_valid_num_ = false;
-    has_record_id_in_device_piece_ = false;
+    OF_PP_FOR_EACH_TUPLE(INIT_HAS_FIELD_FALSE, FIELD_KEY_AND_FIELD_NAME_SEQ)
     opaque_header_ = FieldDesc(proto.header().opaque_header());
   } else {
     CHECK(proto.header().has_field_header());
     header_is_opaque_ = false;
-    has_data_id_ = header_pod_desc_.HasField(FieldKey::kDataId);
-    has_col_num_ = header_pod_desc_.HasField(FieldKey::kColNum);
-    has_dim0_valid_num_ = header_pod_desc_.HasField(FieldKey::kDim0ValidNum);
-    has_dim1_valid_num_ = header_pod_desc_.HasField(FieldKey::kDim1ValidNum);
-    has_dim2_valid_num_ = header_pod_desc_.HasField(FieldKey::kDim2ValidNum);
-    has_record_id_in_device_piece_ = header_pod_desc_.HasField(FieldKey::kRecordIdInDevicePiece);
+    OF_PP_FOR_EACH_TUPLE(INIT_HAS_FIELD_BY_POD, FIELD_KEY_AND_FIELD_NAME_SEQ)
   }
   if (proto.has_dim0_inner_shape()) {
     dim0_inner_shape_.reset(new Shape(proto.dim0_inner_shape()));
@@ -53,15 +47,8 @@ void BlobDesc::InitFromProto(const BlobDescProto& proto) {
 
 BlobDesc::BlobDesc(const StructPodDesc& header_pod_desc, int64_t header_byte_size,
                    const Shape& shape, DataType data_type, int32_t max_col_num)
-    : has_data_id_(false),
-      has_col_num_(false),
-      has_dim0_valid_num_(false),
-      has_dim1_valid_num_(false),
-      has_dim2_valid_num_(false),
-      has_record_id_in_device_piece_(false),
-      max_col_num_(max_col_num),
-      blob_mem_id_(-1),
-      body_field_(shape, data_type) {
+    : max_col_num_(max_col_num), blob_mem_id_(-1), body_field_(shape, data_type) {
+  OF_PP_FOR_EACH_TUPLE(INIT_HAS_FIELD_FALSE, FIELD_KEY_AND_FIELD_NAME_SEQ)
   CHECK_EQ(header_pod_desc.ByteSize(), header_byte_size);
   if (header_byte_size > 0) {
     header_is_opaque_ = true;
@@ -72,33 +59,18 @@ BlobDesc::BlobDesc(const StructPodDesc& header_pod_desc, int64_t header_byte_siz
   }
 }
 
-template<FieldKey field_key>
-bool BlobDesc::HasField() const {
-  switch (field_key) {
-    case FieldKey::kDataId: return has_data_id_;
-    case FieldKey::kColNum: return has_col_num_;
-    case FieldKey::kDim0ValidNum: return has_dim0_valid_num_;
-    case FieldKey::kDim1ValidNum: return has_dim1_valid_num_;
-    case FieldKey::kDim2ValidNum: return has_dim2_valid_num_;
-    case FieldKey::kRecordIdInDevicePiece: return has_record_id_in_device_piece_;
-    default: UNIMPLEMENTED();
+#define DEFINE_HAS_FIELD_GETTER_AND_SETTER(field_key, field_name) \
+  template<>                                                      \
+  bool BlobDesc::HasField<field_key>() const {                    \
+    return has_##field_name##_;                                   \
+  }                                                               \
+  template<>                                                      \
+  void BlobDesc::SetHasField<field_key>(bool val) {               \
+    CHECK(!header_is_opaque_);                                    \
+    has_##field_name##_ = val;                                    \
   }
-  return false;
-}
 
-template<FieldKey field_key>
-void BlobDesc::SetHasField(bool val) {
-  CHECK(!header_is_opaque_);
-  switch (field_key) {
-    case FieldKey::kDataId: has_data_id_ = val; return;
-    case FieldKey::kColNum: has_col_num_ = val; return;
-    case FieldKey::kDim0ValidNum: has_dim0_valid_num_ = val; return;
-    case FieldKey::kDim1ValidNum: has_dim1_valid_num_ = val; return;
-    case FieldKey::kDim2ValidNum: has_dim2_valid_num_ = val; return;
-    case FieldKey::kRecordIdInDevicePiece: has_record_id_in_device_piece_ = val; return;
-    default: UNIMPLEMENTED();
-  }
-}
+OF_PP_FOR_EACH_TUPLE(DEFINE_HAS_FIELD_GETTER_AND_SETTER, FIELD_KEY_AND_FIELD_NAME_SEQ)
 
 Shape& BlobDesc::mut_dim0_inner_shape() {
   CHECK(!header_is_opaque_);
@@ -106,38 +78,46 @@ Shape& BlobDesc::mut_dim0_inner_shape() {
   return *dim0_inner_shape_;
 }
 
-void BlobDesc::DataIdFieldToProto(FieldHeaderDesc* proto, StructPodDesc* header_pod_desc) const {
+template<>
+void BlobDesc::FieldToProto<FieldKey::kDataId>(FieldHeaderDesc* proto,
+                                               StructPodDesc* header_pod_desc) const {
   Shape shape(
       {body_field_.shape().At(0), static_cast<int64_t>(Global<JobDesc>::Get()->SizeOfOneDataId())});
   FieldDesc data_id_field(shape, DataType::kChar);
   data_id_field.ToProto(proto->mutable_data_id());
   header_pod_desc->AddField(FieldKey::kDataId, TensorPodDesc(shape, DataType::kChar));
 }
-
-void BlobDesc::ColNumFieldToProto(FieldHeaderDesc* proto, StructPodDesc* header_pod_desc) const {
+template<>
+void BlobDesc::FieldToProto<FieldKey::kColNum>(FieldHeaderDesc* proto,
+                                               StructPodDesc* header_pod_desc) const {
   Shape shape({body_field_.shape().At(0)});
   FieldDesc col_num_field(shape, DataType::kInt32);
   col_num_field.ToProto(proto->mutable_col_num());
   header_pod_desc->AddField(FieldKey::kColNum, TensorPodDesc(shape, DataType::kInt32));
 }
-void BlobDesc::Dim0ValidNumToProto(StructPodDesc* header_pod_desc) const {
+template<>
+void BlobDesc::FieldToProto<FieldKey::kDim0ValidNum>(FieldHeaderDesc* proto,
+                                                     StructPodDesc* header_pod_desc) const {
   CHECK(dim0_inner_shape_);
   CHECK_EQ(dim0_inner_shape_->elem_cnt(), body_field_.shape().At(0));
   Shape shape({dim0_inner_shape_->At(0)});
   header_pod_desc->AddField(FieldKey::kDim0ValidNum, TensorPodDesc(shape, DataType::kInt64));
 }
-
-void BlobDesc::Dim1ValidNumToProto(StructPodDesc* header_pod_desc) const {
+template<>
+void BlobDesc::FieldToProto<FieldKey::kDim1ValidNum>(FieldHeaderDesc* proto,
+                                                     StructPodDesc* header_pod_desc) const {
   Shape shape({body_field_.shape().At(0)});
   header_pod_desc->AddField(FieldKey::kDim1ValidNum, TensorPodDesc(shape, DataType::kInt64));
 }
-
-void BlobDesc::Dim2ValidNumToProto(StructPodDesc* header_pod_desc) const {
+template<>
+void BlobDesc::FieldToProto<FieldKey::kDim2ValidNum>(FieldHeaderDesc* proto,
+                                                     StructPodDesc* header_pod_desc) const {
   Shape shape({body_field_.shape().At(0), body_field_.shape().At(1)});
   header_pod_desc->AddField(FieldKey::kDim2ValidNum, TensorPodDesc(shape, DataType::kInt64));
 }
-
-void BlobDesc::RecordIdInDevicePieceToProto(StructPodDesc* header_pod_desc) const {
+template<>
+void BlobDesc::FieldToProto<FieldKey::kRecordIdInDevicePiece>(
+    FieldHeaderDesc* proto, StructPodDesc* header_pod_desc) const {
   Shape shape({body_field_.shape().At(0)});
   header_pod_desc->AddField(FieldKey::kRecordIdInDevicePiece,
                             TensorPodDesc(shape, DataType::kInt64));
@@ -149,14 +129,9 @@ void BlobDesc::HeaderToProto(BlobDescProto* proto) const {
   if (!header_is_opaque_) {
     FieldHeaderDesc* field_header = proto->mutable_header()->mutable_field_header();
     StructPodDesc header_pod_desc;
-    if (HasField<FieldKey::kDataId>()) { DataIdFieldToProto(field_header, &header_pod_desc); }
-    if (HasField<FieldKey::kColNum>()) { ColNumFieldToProto(field_header, &header_pod_desc); }
-    if (HasField<FieldKey::kDim0ValidNum>()) { Dim0ValidNumToProto(&header_pod_desc); }
-    if (HasField<FieldKey::kDim1ValidNum>()) { Dim1ValidNumToProto(&header_pod_desc); }
-    if (HasField<FieldKey::kDim2ValidNum>()) { Dim2ValidNumToProto(&header_pod_desc); }
-    if (HasField<FieldKey::kRecordIdInDevicePiece>()) {
-      RecordIdInDevicePieceToProto(&header_pod_desc);
-    }
+#define HAS_FIELD_THEN_TO_PROTO(field_key, field_name) \
+  if (HasField<field_key>()) { FieldToProto<field_key>(field_header, &header_pod_desc); }
+    OF_PP_FOR_EACH_TUPLE(HAS_FIELD_THEN_TO_PROTO, FIELD_KEY_AND_FIELD_NAME_SEQ)
     header_pod_desc.ToProto(proto->mutable_header()->mutable_header_pod_desc());
   } else {
     opaque_header_.ToProto(proto->mutable_header()->mutable_opaque_header());
@@ -171,14 +146,13 @@ void BlobDesc::ToProto(BlobDescProto* proto) const {
 }
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
+#define HAS_FIELD_EQUAL(field_key, field_name) &&has_##field_name##_ == rhs.has_##field_name##_
   return header_is_opaque_ == rhs.header_is_opaque_ && opaque_header_ == rhs.opaque_header_
-         && header_pod_desc_ == rhs.header_pod_desc_ && has_data_id_ == rhs.has_data_id_
-         && has_col_num_ == rhs.has_col_num_ && has_dim0_valid_num_ == rhs.has_dim0_valid_num_
-         && has_dim1_valid_num_ == rhs.has_dim1_valid_num_
-         && has_dim2_valid_num_ == rhs.has_dim2_valid_num_
-         && has_record_id_in_device_piece_ == rhs.has_record_id_in_device_piece_
-         && max_col_num_ == rhs.max_col_num_ && blob_mem_id_ == rhs.blob_mem_id_
-         && body_field_ == rhs.body_field_;
+         && header_pod_desc_ == rhs.header_pod_desc_ && max_col_num_ == rhs.max_col_num_
+         && blob_mem_id_ == rhs.blob_mem_id_
+         && body_field_
+                == rhs.body_field_ OF_PP_FOR_EACH_TUPLE(HAS_FIELD_EQUAL,
+                                                        FIELD_KEY_AND_FIELD_NAME_SEQ);
 }
 
 BlobDesc& BlobDesc::operator=(const BlobDesc& blob_desc) {
@@ -247,10 +221,5 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
   }
   return ret;
 }
-
-#define MAKE_HAS_FIELD_ENTRY(field_key)                \
-  template bool BlobDesc::HasField<field_key>() const; \
-  template void BlobDesc::SetHasField<field_key>(bool);
-OF_PP_FOR_EACH_TUPLE(MAKE_HAS_FIELD_ENTRY, FIELD_KEY_SEQ);
 
 }  // namespace oneflow

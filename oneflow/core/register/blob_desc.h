@@ -10,6 +10,14 @@
 
 namespace oneflow {
 
+#define FIELD_KEY_AND_FIELD_NAME_SEQ                            \
+  OF_PP_MAKE_TUPLE_SEQ(FieldKey::kDataId, data_id)              \
+  OF_PP_MAKE_TUPLE_SEQ(FieldKey::kColNum, col_num)              \
+  OF_PP_MAKE_TUPLE_SEQ(FieldKey::kDim0ValidNum, dim0_valid_num) \
+  OF_PP_MAKE_TUPLE_SEQ(FieldKey::kDim1ValidNum, dim1_valid_num) \
+  OF_PP_MAKE_TUPLE_SEQ(FieldKey::kDim2ValidNum, dim2_valid_num) \
+  OF_PP_MAKE_TUPLE_SEQ(FieldKey::kRecordIdInDevicePiece, record_id_in_device_piece)
+
 class BlobDesc {
  public:
   // OF_DISALLOW_COPY_AND_MOVE(BlobDesc);
@@ -54,23 +62,19 @@ class BlobDesc {
  private:
   void InitFromProto(const BlobDescProto& proto);
   void HeaderToProto(BlobDescProto* proto) const;
-  void DataIdFieldToProto(FieldHeaderDesc* proto, StructPodDesc* header_pod_desc) const;
-  void ColNumFieldToProto(FieldHeaderDesc* proto, StructPodDesc* header_pod_desc) const;
-  void Dim0ValidNumToProto(StructPodDesc* header_pod_desc) const;
-  void Dim1ValidNumToProto(StructPodDesc* header_pod_desc) const;
-  void Dim2ValidNumToProto(StructPodDesc* header_pod_desc) const;
-  void RecordIdInDevicePieceToProto(StructPodDesc* header_pod_desc) const;
+  template<FieldKey field_key>
+  void FieldToProto(FieldHeaderDesc* proto, StructPodDesc* header_pod_desc) const;
 
   bool header_is_opaque_;
   FieldDesc opaque_header_;
   StructPodDesc header_pod_desc_;
 
-  bool has_data_id_;
-  bool has_col_num_;
-  bool has_dim0_valid_num_;
-  bool has_dim1_valid_num_;
-  bool has_dim2_valid_num_;
-  bool has_record_id_in_device_piece_;
+#define DEFINE_HAS_FIELD_MEMBER(field_key, field_name) bool has_##field_name##_;
+
+  OF_PP_FOR_EACH_TUPLE(DEFINE_HAS_FIELD_MEMBER, FIELD_KEY_AND_FIELD_NAME_SEQ)
+
+#undef DEFINE_HAS_FIELD_MEMBER
+
   int64_t max_col_num_;
   int32_t blob_mem_id_;
 
@@ -80,14 +84,6 @@ class BlobDesc {
 
 std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     const HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>& lbi2blob_desc);
-
-#define FIELD_KEY_SEQ                           \
-  OF_PP_MAKE_TUPLE_SEQ(FieldKey::kDataId)       \
-  OF_PP_MAKE_TUPLE_SEQ(FieldKey::kColNum)       \
-  OF_PP_MAKE_TUPLE_SEQ(FieldKey::kDim0ValidNum) \
-  OF_PP_MAKE_TUPLE_SEQ(FieldKey::kDim1ValidNum) \
-  OF_PP_MAKE_TUPLE_SEQ(FieldKey::kDim2ValidNum) \
-  OF_PP_MAKE_TUPLE_SEQ(FieldKey::kRecordIdInDevicePiece)
 
 }  // namespace oneflow
 
