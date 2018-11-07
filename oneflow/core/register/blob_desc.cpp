@@ -147,12 +147,12 @@ void BlobDesc::ToProto(BlobDescProto* proto) const {
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
 #define HAS_FIELD_EQUAL(field_key, field_name) &&has_##field_name##_ == rhs.has_##field_name##_
+  // clang-format off
   return header_is_opaque_ == rhs.header_is_opaque_ && opaque_header_ == rhs.opaque_header_
          && header_pod_desc_ == rhs.header_pod_desc_ && max_col_num_ == rhs.max_col_num_
-         && blob_mem_id_ == rhs.blob_mem_id_
-         && body_field_
-                == rhs.body_field_ OF_PP_FOR_EACH_TUPLE(HAS_FIELD_EQUAL,
-                                                        FIELD_KEY_AND_FIELD_NAME_SEQ);
+         && blob_mem_id_ == rhs.blob_mem_id_ && body_field_  == rhs.body_field_ 
+         OF_PP_FOR_EACH_TUPLE(HAS_FIELD_EQUAL, FIELD_KEY_AND_FIELD_NAME_SEQ);
+  // clang-format on
 }
 
 BlobDesc& BlobDesc::operator=(const BlobDesc& blob_desc) {
