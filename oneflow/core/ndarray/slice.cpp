@@ -1,4 +1,4 @@
-#include "oneflow/core/common/ndarray.h"
+#include "oneflow/core/ndarray/slice.h"
 
 namespace oneflow {
 
