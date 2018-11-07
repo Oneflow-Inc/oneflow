@@ -8,7 +8,7 @@ namespace {
 void CheckSameRecordIdInDevicePiece(const PbRpf<std::string>& bns,
                                     const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
   const void* mem_ptr = BnInOp2Blob(bns.Get(0))->record_id_in_device_piece_ptr();
-  size_t len = BnInOp2Blob(bns.Get(0))->ByteSizeOfRecordIdInDevicePieceField();
+  size_t len = BnInOp2Blob(bns.Get(0))->ByteSizeOfField<FieldKey::kRecordIdInDevicePiece>();
   FOR_RANGE(int, i, 1, bns.size()) {
     CHECK_EQ(std::memcmp(BnInOp2Blob(bns.Get(i))->record_id_in_device_piece_ptr(), mem_ptr, len),
              0);
@@ -20,7 +20,8 @@ void ClearBlobDim0ValidNumIfNeed(const PbRpf<std::string>& bns,
   for (const auto& bn : bns) {
     Blob* blob = BnInOp2Blob(bn);
     if (blob != nullptr && blob->HasField<FieldKey::kDim0ValidNum>()) {
-      std::memset(blob->mut_dim0_valid_num_ptr(), 0, blob->ByteSizeOfDim0ValidNumField());
+      std::memset(blob->mut_dim0_valid_num_ptr(), 0,
+                  blob->ByteSizeOfField<FieldKey::kDim0ValidNum>());
     }
   }
 }
@@ -82,7 +83,7 @@ void Kernel::CheckSameDim0ValidNum(
     const PbRpf<std::string>& bns,
     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const void* mem_ptr = BnInOp2Blob(bns.Get(0))->dim0_valid_num_ptr();
-  size_t len = BnInOp2Blob(bns.Get(0))->ByteSizeOfDim0ValidNumField();
+  size_t len = BnInOp2Blob(bns.Get(0))->ByteSizeOfField<FieldKey::kDim0ValidNum>();
   FOR_RANGE(int, i, 1, bns.size()) {
     CHECK_EQ(std::memcmp(BnInOp2Blob(bns.Get(i))->dim0_valid_num_ptr(), mem_ptr, len), 0);
   }

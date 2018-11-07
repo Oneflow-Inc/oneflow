@@ -97,13 +97,12 @@ class Blob final {
   }
 
   int32_t max_col_num() const { return blob_desc_->max_col_num(); }
+  template<FieldKey field_key>
+  size_t ByteSizeOfField() const {
+    return blob_desc_->ByteSizeOfField<field_key>();
+  }
   size_t ByteSizeOfBlobHeader() const { return blob_desc_->ByteSizeOfBlobHeader(); }
-  size_t ByteSizeOfDataIdField() const { return blob_desc_->ByteSizeOfDataIdField(); }
-  size_t ByteSizeOfColNumField() const { return blob_desc_->ByteSizeOfColNumField(); }
-  size_t ByteSizeOfDim0ValidNumField() const;
-  size_t ByteSizeOfDim1ValidNumField() const;
-  size_t ByteSizeOfDim2ValidNumField() const;
-  size_t ByteSizeOfRecordIdInDevicePieceField() const;
+  size_t ByteSizeOfBlobBody() const { return blob_desc_->ByteSizeOfBlobBody(); }
   size_t ByteSizeOfDataContentField() const { return blob_desc_->ByteSizeOfDataContentField(); }
   size_t TotalByteSize() const { return blob_desc_->TotalByteSize(); }
 

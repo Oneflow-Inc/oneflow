@@ -70,9 +70,7 @@ class BlobDesc {
   StructPodDesc header_pod_desc_;
 
 #define DEFINE_HAS_FIELD_MEMBER(field_key, field_name) bool has_##field_name##_;
-
   OF_PP_FOR_EACH_TUPLE(DEFINE_HAS_FIELD_MEMBER, FIELD_KEY_AND_FIELD_NAME_SEQ)
-
 #undef DEFINE_HAS_FIELD_MEMBER
 
   int64_t max_col_num_;

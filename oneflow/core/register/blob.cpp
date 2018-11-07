@@ -190,60 +190,50 @@ void Blob::CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs) {
 }
 
 void Blob::CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs) {
-  if (this == rhs || ByteSizeOfDataIdField() == 0) { return; }
-  CHECK_EQ(ByteSizeOfDataIdField(), rhs->ByteSizeOfDataIdField());
-  Memcpy<DeviceType::kCPU>(device_ctx, mut_data_id(), rhs->data_id(), ByteSizeOfDataIdField());
+  if (this == rhs || ByteSizeOfField<FieldKey::kDataId>() == 0) { return; }
+  CHECK_EQ(ByteSizeOfField<FieldKey::kDataId>(), rhs->ByteSizeOfField<FieldKey::kDataId>());
+  Memcpy<DeviceType::kCPU>(device_ctx, mut_data_id(), rhs->data_id(),
+                           ByteSizeOfField<FieldKey::kDataId>());
 }
 
 void Blob::CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
-  if (this == rhs || ByteSizeOfColNumField() == 0) { return; }
-  CHECK_EQ(ByteSizeOfColNumField(), rhs->ByteSizeOfColNumField());
-  Memcpy<DeviceType::kCPU>(device_ctx, mut_col_num(), rhs->col_num(), ByteSizeOfColNumField());
-}
-
-size_t Blob::ByteSizeOfDim0ValidNumField() const {
-  return blob_desc_->ByteSizeOfDim0ValidNumField();
-}
-
-size_t Blob::ByteSizeOfDim1ValidNumField() const {
-  return blob_desc_->ByteSizeOfDim1ValidNumField();
-}
-
-size_t Blob::ByteSizeOfDim2ValidNumField() const {
-  return blob_desc_->ByteSizeOfDim2ValidNumField();
-}
-
-size_t Blob::ByteSizeOfRecordIdInDevicePieceField() const {
-  return blob_desc_->ByteSizeOfRecordIdInDevicePieceField();
+  if (this == rhs || ByteSizeOfField<FieldKey::kColNum>() == 0) { return; }
+  CHECK_EQ(ByteSizeOfField<FieldKey::kColNum>(), rhs->ByteSizeOfField<FieldKey::kColNum>());
+  Memcpy<DeviceType::kCPU>(device_ctx, mut_col_num(), rhs->col_num(),
+                           ByteSizeOfField<FieldKey::kColNum>());
 }
 
 void Blob::CopyDim0ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
-  if (this == rhs || ByteSizeOfDim0ValidNumField() == 0) { return; }
-  CHECK_EQ(ByteSizeOfDim0ValidNumField(), rhs->ByteSizeOfDim0ValidNumField());
+  if (this == rhs || ByteSizeOfField<FieldKey::kDim0ValidNum>() == 0) { return; }
+  CHECK_EQ(ByteSizeOfField<FieldKey::kDim0ValidNum>(),
+           rhs->ByteSizeOfField<FieldKey::kDim0ValidNum>());
   Memcpy<DeviceType::kCPU>(device_ctx, mut_dim0_valid_num_ptr(), rhs->dim0_valid_num_ptr(),
-                           ByteSizeOfDim0ValidNumField());
+                           ByteSizeOfField<FieldKey::kDim0ValidNum>());
 }
 
 void Blob::CopyDim1ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
-  if (this == rhs || ByteSizeOfDim1ValidNumField() == 0) { return; }
-  CHECK_EQ(ByteSizeOfDim1ValidNumField(), rhs->ByteSizeOfDim1ValidNumField());
+  if (this == rhs || ByteSizeOfField<FieldKey::kDim1ValidNum>() == 0) { return; }
+  CHECK_EQ(ByteSizeOfField<FieldKey::kDim1ValidNum>(),
+           rhs->ByteSizeOfField<FieldKey::kDim1ValidNum>());
   Memcpy<DeviceType::kCPU>(device_ctx, mut_dim1_valid_num_ptr(), rhs->dim1_valid_num_ptr(),
-                           ByteSizeOfDim1ValidNumField());
+                           ByteSizeOfField<FieldKey::kDim1ValidNum>());
 }
 
 void Blob::CopyDim2ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
-  if (this == rhs || ByteSizeOfDim2ValidNumField() == 0) { return; }
-  CHECK_EQ(ByteSizeOfDim2ValidNumField(), rhs->ByteSizeOfDim2ValidNumField());
+  if (this == rhs || ByteSizeOfField<FieldKey::kDim2ValidNum>() == 0) { return; }
+  CHECK_EQ(ByteSizeOfField<FieldKey::kDim2ValidNum>(),
+           rhs->ByteSizeOfField<FieldKey::kDim2ValidNum>());
   Memcpy<DeviceType::kCPU>(device_ctx, mut_dim2_valid_num_ptr(), rhs->dim2_valid_num_ptr(),
-                           ByteSizeOfDim2ValidNumField());
+                           ByteSizeOfField<FieldKey::kDim2ValidNum>());
 }
 
 void Blob::CopyRecordIdInDevicePieceFrom(DeviceCtx* device_ctx, const Blob* rhs) {
-  if (this == rhs || ByteSizeOfRecordIdInDevicePieceField() == 0) { return; }
-  CHECK_EQ(ByteSizeOfRecordIdInDevicePieceField(), rhs->ByteSizeOfRecordIdInDevicePieceField());
+  if (this == rhs || ByteSizeOfField<FieldKey::kRecordIdInDevicePiece>() == 0) { return; }
+  CHECK_EQ(ByteSizeOfField<FieldKey::kRecordIdInDevicePiece>(),
+           rhs->ByteSizeOfField<FieldKey::kRecordIdInDevicePiece>());
   Memcpy<DeviceType::kCPU>(device_ctx, mut_record_id_in_device_piece_ptr(),
                            rhs->record_id_in_device_piece_ptr(),
-                           ByteSizeOfRecordIdInDevicePieceField());
+                           ByteSizeOfField<FieldKey::kRecordIdInDevicePiece>());
 }
 
 void Blob::CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) {

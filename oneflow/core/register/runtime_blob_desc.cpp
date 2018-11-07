@@ -27,36 +27,6 @@ size_t RtBlobDesc::ByteSizeOfBlobHeader() const { return header_pod_desc_.ByteSi
 
 size_t RtBlobDesc::ByteSizeOfBlobBody() const { return body_desc_.AlignedByteSize(); }
 
-size_t RtBlobDesc::ByteSizeOfDataIdField() const {
-  if (!HasField<FieldKey::kDataId>()) { return 0; }
-  return header_pod_desc_.Field(FieldKey::kDataId).ByteSize();
-}
-
-size_t RtBlobDesc::ByteSizeOfColNumField() const {
-  if (!HasField<FieldKey::kColNum>()) { return 0; }
-  return header_pod_desc_.Field(FieldKey::kColNum).ByteSize();
-}
-
-size_t RtBlobDesc::ByteSizeOfDim0ValidNumField() const {
-  if (!HasField<FieldKey::kDim0ValidNum>()) { return 0; }
-  return header_pod_desc_.Field(FieldKey::kDim0ValidNum).ByteSize();
-}
-
-size_t RtBlobDesc::ByteSizeOfDim1ValidNumField() const {
-  if (!HasField<FieldKey::kDim1ValidNum>()) { return 0; }
-  return header_pod_desc_.Field(FieldKey::kDim1ValidNum).ByteSize();
-}
-
-size_t RtBlobDesc::ByteSizeOfDim2ValidNumField() const {
-  if (!HasField<FieldKey::kDim2ValidNum>()) { return 0; }
-  return header_pod_desc_.Field(FieldKey::kDim2ValidNum).ByteSize();
-}
-
-size_t RtBlobDesc::ByteSizeOfRecordIdInDevicePieceField() const {
-  if (!HasField<FieldKey::kRecordIdInDevicePiece>()) { return 0; }
-  return header_pod_desc_.Field(FieldKey::kRecordIdInDevicePiece).ByteSize();
-}
-
 size_t RtBlobDesc::ByteSizeOfDataContentField() const { return body_desc_.ByteSize(); }
 
 size_t RtBlobDesc::TotalByteSize() const { return ByteSizeOfBlobHeader() + ByteSizeOfBlobBody(); }

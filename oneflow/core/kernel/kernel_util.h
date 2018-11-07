@@ -437,7 +437,9 @@ class DataIdIterator final : public FieldIterator {
  private:
   char* GetMutPtr(Blob* blob) override { return blob->mut_data_id(); }
 
-  size_t GetSizeOfField(Blob* blob) const override { return blob->ByteSizeOfDataIdField(); }
+  size_t GetSizeOfField(Blob* blob) const override {
+    return blob->ByteSizeOfField<FieldKey::kDataId>();
+  }
 };
 
 class ColNumIterator final : public FieldIterator {
@@ -450,7 +452,9 @@ class ColNumIterator final : public FieldIterator {
  private:
   char* GetMutPtr(Blob* blob) override { return reinterpret_cast<char*>(blob->mut_col_num()); }
 
-  size_t GetSizeOfField(Blob* blob) const override { return blob->ByteSizeOfColNumField(); }
+  size_t GetSizeOfField(Blob* blob) const override {
+    return blob->ByteSizeOfField<FieldKey::kColNum>();
+  }
 };
 
 class Dim1ValidNumIterator final : public FieldIterator {
@@ -465,7 +469,9 @@ class Dim1ValidNumIterator final : public FieldIterator {
     return reinterpret_cast<char*>(blob->mut_dim1_valid_num_ptr());
   }
 
-  size_t GetSizeOfField(Blob* blob) const override { return blob->ByteSizeOfDim1ValidNumField(); }
+  size_t GetSizeOfField(Blob* blob) const override {
+    return blob->ByteSizeOfField<FieldKey::kDim1ValidNum>();
+  }
 };
 
 class Dim2ValidNumIterator final : public FieldIterator {
@@ -480,7 +486,9 @@ class Dim2ValidNumIterator final : public FieldIterator {
     return reinterpret_cast<char*>(blob->mut_dim2_valid_num_ptr());
   }
 
-  size_t GetSizeOfField(Blob* blob) const override { return blob->ByteSizeOfDim2ValidNumField(); }
+  size_t GetSizeOfField(Blob* blob) const override {
+    return blob->ByteSizeOfField<FieldKey::kDim2ValidNum>();
+  }
 };
 
 template<typename T, typename U>
