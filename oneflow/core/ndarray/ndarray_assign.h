@@ -16,8 +16,8 @@ typename std::enable_if<!YT::immutable && !XT::immutable>::type NdArrayAssign(YT
   int64_t cur_index = 0;
   size_t total_elem_cnt = y_ndarray->shape().elem_cnt();
   while (cur_index < total_elem_cnt) {
-    if (dst_size == 0) { y_ndarray->GetMutPtrAndContiguousSize(&dst_ptr, &dst_size, cur_index); }
-    if (src_size == 0) { x_ndarray.GetMutPtrAndContiguousSize(&src_ptr, &src_size, cur_index); }
+    if (dst_size == 0) { y_ndarray->GetMutPtrAndContiguousSize(cur_index, &dst_ptr, &dst_size); }
+    if (src_size == 0) { x_ndarray.GetMutPtrAndContiguousSize(cur_index, &src_ptr, &src_size); }
     if (src_size == 0) { break; }
     size_t cp_size = std::min(dst_size, src_size);
     if (cp_size == 1) {

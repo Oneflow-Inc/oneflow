@@ -22,7 +22,7 @@ class VarNdArrayBase : public NdArray<T, NDIMS> {
     NdArrayAssign(dynamic_cast<Derived*>(this), ndarray);
   }
 
-  ALWAYS_INLINE void GetMutPtrAndContiguousSize(T** ptr, size_t* size, int64_t offset) const {
+  ALWAYS_INLINE void GetMutPtrAndContiguousSize(int64_t offset, T** ptr, size_t* size) const {
     *ptr = ptr_ + offset;
     *size = len_ - offset;
   }

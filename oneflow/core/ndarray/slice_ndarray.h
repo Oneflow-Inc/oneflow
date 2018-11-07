@@ -30,10 +30,10 @@ class SliceNdArrayBase : public NdArray<typename XT::dtype, XT::ndims> {
  protected:
   ALWAYS_INLINE const XT& x() const { return x_; }
   ALWAYS_INLINE const Slice& slice(int32_t dim) const { return slices_[dim]; }
-  ALWAYS_INLINE void GetMutPtrAndMinContiguousSize(typename XT::dtype** ptr, size_t* size,
-                                                   int64_t offset, int64_t x_offset) const {
+  ALWAYS_INLINE void GetMutPtrAndMinContiguousSize(int64_t offset, int64_t x_offset,
+                                                   typename XT::dtype** ptr, size_t* size) const {
     size_t x_contiguous_size;
-    this->x().GetMutPtrAndContiguousSize(ptr, &x_contiguous_size, x_offset);
+    this->x().GetMutPtrAndContiguousSize(x_offset, ptr, &x_contiguous_size);
     size_t slice_contiguous_size = (contiguous_len_ - offset % contiguous_len_);
     *size = std::min(x_contiguous_size, slice_contiguous_size);
   }
@@ -74,10 +74,10 @@ class SliceNdArray<XT, typename std::enable_if<XT::ndims == 1>::type> final
   using dtype = typename XT::dtype;
   ALWAYS_INLINE dtype Get(int64_t dim0) const { return this->x().Get(this->slice(0).Get(dim0)); }
   ALWAYS_INLINE dtype* Mut(int64_t dim0) const { return this->x().Mut(this->slice(0).Get(dim0)); }
-  ALWAYS_INLINE void GetMutPtrAndContiguousSize(dtype** ptr, size_t* size, int64_t offset) const {
+  ALWAYS_INLINE void GetMutPtrAndContiguousSize(int64_t offset, dtype** ptr, size_t* size) const {
     size_t dim0 = offset;
     size_t x_offset = this->slice(0).Get(dim0);
-    this->GetMutPtrAndMinContiguousSize(ptr, size, offset, x_offset);
+    this->GetMutPtrAndMinContiguousSize(offset, x_offset, ptr, size);
   }
   SliceNdArray<SliceNdArray<XT>> operator()(Slice&& slice0) {
     return SliceNdArray<SliceNdArray<XT>>(std::move(*this), std::move(slice0));
@@ -99,12 +99,12 @@ class SliceNdArray<XT, typename std::enable_if<XT::ndims == 2>::type> final
   ALWAYS_INLINE dtype* Mut(int64_t dim0, int64_t dim1) const {
     return this->x().Mut(this->slice(0).Get(dim0), this->slice(1).Get(dim1));
   }
-  ALWAYS_INLINE void GetMutPtrAndContiguousSize(dtype** ptr, size_t* size, int64_t offset) const {
+  ALWAYS_INLINE void GetMutPtrAndContiguousSize(int64_t offset, dtype** ptr, size_t* size) const {
     int64_t dim0 = 0;
     int64_t dim1 = 0;
     this->Offset2Dims(offset, &dim0, &dim1);
     size_t x_offset = this->x().Dims2Offset(this->slice(0).Get(dim0), this->slice(1).Get(dim1));
-    this->GetMutPtrAndMinContiguousSize(ptr, size, offset, x_offset);
+    this->GetMutPtrAndMinContiguousSize(offset, x_offset, ptr, size);
   }
   SliceNdArray<SliceNdArray<XT>> operator()(Slice&& slice0, Slice&& slice1) {
     return SliceNdArray<SliceNdArray<XT>>(std::move(*this), std::move(slice0), std::move(slice1));
@@ -128,14 +128,14 @@ class SliceNdArray<XT, typename std::enable_if<XT::ndims == 3>::type> final
     return this->x().Mut(this->slice(0).Get(dim0), this->slice(1).Get(dim1),
                          this->slice(2).Get(dim2));
   }
-  ALWAYS_INLINE void GetMutPtrAndContiguousSize(dtype** ptr, size_t* size, int64_t offset) const {
+  ALWAYS_INLINE void GetMutPtrAndContiguousSize(int64_t offset, dtype** ptr, size_t* size) const {
     int64_t dim0 = 0;
     int64_t dim1 = 0;
     int64_t dim2 = 0;
     this->Offset2Dims(offset, &dim0, &dim1, &dim2);
     size_t x_offset = this->x().Dims2Offset(this->slice(0).Get(dim0), this->slice(1).Get(dim1),
                                             this->slice(2).Get(dim2));
-    this->GetMutPtrAndMinContiguousSize(ptr, size, offset, x_offset);
+    this->GetMutPtrAndMinContiguousSize(offset, x_offset, ptr, size);
   }
   SliceNdArray<SliceNdArray<XT>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2) {
     return SliceNdArray<SliceNdArray<XT>>(std::move(*this), std::move(slice0), std::move(slice1),
@@ -161,7 +161,7 @@ class SliceNdArray<XT, typename std::enable_if<XT::ndims == 4>::type> final
     return this->x().Mut(this->slice(0).Get(dim0), this->slice(1).Get(dim1),
                          this->slice(2).Get(dim2), this->slice(3).Get(dim3));
   }
-  ALWAYS_INLINE void GetMutPtrAndContiguousSize(dtype** ptr, size_t* size, int64_t offset) const {
+  ALWAYS_INLINE void GetMutPtrAndContiguousSize(int64_t offset, dtype** ptr, size_t* size) const {
     int64_t dim0 = 0;
     int64_t dim1 = 0;
     int64_t dim2 = 0;
@@ -169,7 +169,7 @@ class SliceNdArray<XT, typename std::enable_if<XT::ndims == 4>::type> final
     this->Offset2Dims(offset, &dim0, &dim1, &dim2, &dim3);
     size_t x_offset = this->x().Dims2Offset(this->slice(0).Get(dim0), this->slice(1).Get(dim1),
                                             this->slice(2).Get(dim2), this->slice(3).Get(dim3));
-    this->GetMutPtrAndMinContiguousSize(ptr, size, offset, x_offset);
+    this->GetMutPtrAndMinContiguousSize(offset, x_offset, ptr, size);
   }
   SliceNdArray<SliceNdArray<XT>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2,
                                             Slice&& slice3) {
@@ -201,7 +201,7 @@ class SliceNdArray<XT, typename std::enable_if<XT::ndims == 5>::type> final
                          this->slice(2).Get(dim2), this->slice(3).Get(dim3),
                          this->slice(4).Get(dim4));
   }
-  ALWAYS_INLINE void GetMutPtrAndContiguousSize(dtype** ptr, size_t* size, int64_t offset) const {
+  ALWAYS_INLINE void GetMutPtrAndContiguousSize(int64_t offset, dtype** ptr, size_t* size) const {
     int64_t dim0 = 0;
     int64_t dim1 = 0;
     int64_t dim2 = 0;
@@ -211,7 +211,7 @@ class SliceNdArray<XT, typename std::enable_if<XT::ndims == 5>::type> final
     size_t x_offset = this->x().Dims2Offset(this->slice(0).Get(dim0), this->slice(1).Get(dim1),
                                             this->slice(2).Get(dim2), this->slice(3).Get(dim3),
                                             this->slice(4).Get(dim4));
-    this->GetMutPtrAndMinContiguousSize(ptr, size, offset, x_offset);
+    this->GetMutPtrAndMinContiguousSize(offset, x_offset, ptr, size);
   }
   SliceNdArray<SliceNdArray<XT>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2,
                                             Slice&& slice3, Slice&& slice4) {
