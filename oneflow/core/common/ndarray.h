@@ -153,6 +153,10 @@ class VarNdArrayBase : public NdArray<T, NDIMS> {
   size_t len_;
 };
 
+class Slice;
+template<typename XT, typename Enable = void>
+class SliceNdArray;
+
 template<typename T>
 class VarNdArray<T, 1> final : public VarNdArrayBase<VarNdArray<T, 1>, T, 1> {
  public:
@@ -161,6 +165,9 @@ class VarNdArray<T, 1> final : public VarNdArrayBase<VarNdArray<T, 1>, T, 1> {
 
   ALWAYS_INLINE T Get(int64_t dim0) const { return this->ptr()[dim0]; }
   ALWAYS_INLINE T* Mut(int64_t dim0) const { return this->ptr() + dim0; }
+  SliceNdArray<VarNdArray<T, 1>> operator()(Slice&& slice0) {
+    return SliceNdArray<VarNdArray<T, 1>>(std::move(*this), slice0);
+  }
 };
 
 template<typename T>
@@ -174,6 +181,9 @@ class VarNdArray<T, 2> final : public VarNdArrayBase<VarNdArray<T, 2>, T, 2> {
   }
   ALWAYS_INLINE T* Mut(int64_t dim0, int64_t dim1) const {
     return this->ptr() + this->Dims2Offset(dim0, dim1);
+  }
+  SliceNdArray<VarNdArray<T, 1>> operator()(Slice&& slice0, Slice&& slice1) {
+    return SliceNdArray<VarNdArray<T, 1>>(std::move(*this), slice0, slice1);
   }
 };
 
@@ -189,6 +199,9 @@ class VarNdArray<T, 3> final : public VarNdArrayBase<VarNdArray<T, 3>, T, 3> {
   ALWAYS_INLINE T* Mut(int64_t dim0, int64_t dim1, int64_t dim2) const {
     return this->ptr() + this->Dims2Offset(dim0, dim1, dim2);
   }
+  SliceNdArray<VarNdArray<T, 1>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2) {
+    return SliceNdArray<VarNdArray<T, 1>>(std::move(*this), slice0, slice1, slice2);
+  }
 };
 
 template<typename T>
@@ -203,6 +216,10 @@ class VarNdArray<T, 4> final : public VarNdArrayBase<VarNdArray<T, 4>, T, 4> {
   ALWAYS_INLINE T* Mut(int64_t dim0, int64_t dim1, int64_t dim2, int64_t dim3) const {
     return this->ptr() + this->Dims2Offset(dim0, dim1, dim2, dim3);
   }
+  SliceNdArray<VarNdArray<T, 1>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2,
+                                            Slice&& slice3) {
+    return SliceNdArray<VarNdArray<T, 1>>(std::move(*this), slice0, slice1, slice2, slice3);
+  }
 };
 
 template<typename T>
@@ -216,6 +233,10 @@ class VarNdArray<T, 5> final : public VarNdArrayBase<VarNdArray<T, 5>, T, 5> {
   }
   ALWAYS_INLINE T* Mut(int64_t dim0, int64_t dim1, int64_t dim2, int64_t dim3, int64_t dim4) const {
     return this->ptr() + this->Dims2Offset(dim0, dim1, dim2, dim3, dim4);
+  }
+  SliceNdArray<VarNdArray<T, 1>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2,
+                                            Slice&& slice3, Slice&& slice4) {
+    return SliceNdArray<VarNdArray<T, 1>>(std::move(*this), slice0, slice1, slice2, slice3, slice4);
   }
 };
 
@@ -301,9 +322,6 @@ class SliceNdArrayBase : public NdArray<typename XT::dtype, XT::ndims> {
   size_t contiguous_len_;
 };
 
-template<typename XT, typename Enable = void>
-class SliceNdArray;
-
 template<typename XT>
 class SliceNdArray<XT, typename std::enable_if<XT::ndims == 1>::type> final
     : public SliceNdArrayBase<SliceNdArray<XT>, XT, XT::ndims> {
@@ -319,6 +337,9 @@ class SliceNdArray<XT, typename std::enable_if<XT::ndims == 1>::type> final
     size_t dim0 = offset;
     size_t x_offset = this->slice(0).Get(dim0);
     this->GetMutPtrAndContiguousSize(ptr, size, offset, x_offset);
+  }
+  SliceNdArray<SliceNdArray<XT>> operator()(Slice&& slice0) {
+    return SliceNdArray<SliceNdArray<XT>>(std::move(*this), slice0);
   }
 };
 
@@ -343,6 +364,9 @@ class SliceNdArray<XT, typename std::enable_if<XT::ndims == 2>::type> final
     this->Offset2Dims(offset, &dim0, &dim1);
     size_t x_offset = this->x().Dims2Offset(this->slice(0).Get(dim0), this->slice(1).Get(dim1));
     this->GetMutPtrAndContiguousSize(ptr, size, offset, x_offset);
+  }
+  SliceNdArray<SliceNdArray<XT>> operator()(Slice&& slice0, Slice&& slice1) {
+    return SliceNdArray<SliceNdArray<XT>>(std::move(*this), slice0, slice1);
   }
 };
 
@@ -372,6 +396,9 @@ class SliceNdArray<XT, typename std::enable_if<XT::ndims == 3>::type> final
                                             this->slice(2).Get(dim2));
     this->GetMutPtrAndContiguousSize(ptr, size, offset, x_offset);
   }
+  SliceNdArray<SliceNdArray<XT>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2) {
+    return SliceNdArray<SliceNdArray<XT>>(std::move(*this), slice0, slice1, slice2);
+  }
 };
 
 template<typename XT>
@@ -400,6 +427,10 @@ class SliceNdArray<XT, typename std::enable_if<XT::ndims == 4>::type> final
     size_t x_offset = this->x().Dims2Offset(this->slice(0).Get(dim0), this->slice(1).Get(dim1),
                                             this->slice(2).Get(dim2), this->slice(3).Get(dim3));
     this->GetMutPtrAndContiguousSize(ptr, size, offset, x_offset);
+  }
+  SliceNdArray<SliceNdArray<XT>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2,
+                                            Slice&& slice3) {
+    return SliceNdArray<SliceNdArray<XT>>(std::move(*this), slice0, slice1, slice2, slice3);
   }
 };
 
@@ -437,6 +468,10 @@ class SliceNdArray<XT, typename std::enable_if<XT::ndims == 5>::type> final
                                             this->slice(2).Get(dim2), this->slice(3).Get(dim3),
                                             this->slice(4).Get(dim4));
     this->GetMutPtrAndContiguousSize(ptr, size, offset, x_offset);
+  }
+  SliceNdArray<SliceNdArray<XT>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2,
+                                            Slice&& slice3, Slice&& slice4) {
+    return SliceNdArray<SliceNdArray<XT>>(std::move(*this), slice0, slice1, slice2, slice3, slice4);
   }
 };
 
