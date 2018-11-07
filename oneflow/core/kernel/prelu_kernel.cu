@@ -59,17 +59,16 @@ __global__ void PReluBackward(const int64_t elem_cnt, const T* in_dptr, const T*
 
 template<typename T>
 __global__ void PReluWeightBackwardNCHW(const int64_t channel_num, const int64_t instance_num,
-                                        const int64_t elem_cnt, const T* in_dptr,
-                                        const T* out_diff_dptr, T* weight_diff_dptr) {
+                                        const int64_t area, const int64_t elem_cnt,
+                                        const T* in_dptr, const T* out_diff_dptr,
+                                        T* weight_diff_dptr) {
   int64_t c = blockIdx.x;
 
   T weight_sum = 0.0;
-  int64_t items_per_channel = elem_cnt / channel_num;
-  int64_t items_per_sample_channel = items_per_channel / instance_num;
-  for (int64_t i = threadIdx.x; i < items_per_channel; i += blockDim.x) {
-    int64_t n = i / items_per_sample_channel;
-    int64_t ii = n * items_per_sample_channel * channel_num + c * items_per_sample_channel
-                 + i % items_per_sample_channel;
+  int64_t channel_elem_cnt = elem_cnt / channel_num;
+  for (int64_t i = threadIdx.x; i < channel_elem_cnt; i += blockDim.x) {
+    int64_t n = i / area;
+    int64_t ii = n * area * channel_num + c * area + i % area;
     weight_sum += (in_dptr[ii] <= 0) * out_diff_dptr[ii] * in_dptr[ii];
   }
 
@@ -96,8 +95,8 @@ __global__ void PReluWeightBackwardNHWC(const int64_t channel_num, const int64_t
                                         T* weight_diff_dptr) {
   int64_t c = blockIdx.x;
   T weight_sum = 0.0;
-  int64_t items_per_channel = elem_cnt / channel_num;
-  for (int64_t i = threadIdx.x; i < items_per_channel; i += blockDim.x) {
+  int64_t channel_elem_cnt = elem_cnt / channel_num;
+  for (int64_t i = threadIdx.x; i < channel_elem_cnt; i += blockDim.x) {
     int64_t ii = i * channel_num + c;
     weight_sum += (in_dptr[ii] <= 0) * out_diff_dptr[ii] * in_dptr[ii];
   }
@@ -169,7 +168,7 @@ struct PReluKernelUtil<DeviceType::kGPU, T> {
         const int64_t area = out_diff_blob->shape().Count(2);
         PReluWeightBackwardNCHW<<<channel_num, kCudaThreadsNumPerBlock, 0,
                                   ctx.device_ctx->cuda_stream()>>>(
-            channel_num, instance_num, elem_cnt, in_blob->dptr<T>(), out_diff_blob->dptr<T>(),
+            channel_num, instance_num, area, elem_cnt, in_blob->dptr<T>(), out_diff_blob->dptr<T>(),
             weight_diff_blob->mut_dptr<T>());
         PReluBackwardNCHW<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                             ctx.device_ctx->cuda_stream()>>>(
