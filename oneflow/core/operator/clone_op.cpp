@@ -47,6 +47,8 @@ void CloneOp::VirtualGenKernelConf(
       kernel_conf->set_need_do_record_id_in_device_piece(true);
       kernel_conf->set_can_naive_do_record_id_in_device_piece(true);
     }
+  } else {
+    // do nothing
   }
 }
 
