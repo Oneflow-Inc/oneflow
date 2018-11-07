@@ -177,14 +177,14 @@ template<DeviceType device_type>
 void KernelIf<device_type>::ForwardDataId(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
-            &Blob::CopyDataIdFrom);
+            &Blob::CopyFieldFrom<FieldKey::kDataId>);
 }
 
 template<DeviceType device_type>
 void KernelIf<device_type>::ForwardColNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
-            &Blob::CopyColNumFrom);
+            &Blob::CopyFieldFrom<FieldKey::kColNum>);
 }
 
 template<DeviceType device_type>
@@ -193,7 +193,7 @@ void KernelIf<device_type>::ForwardDim0ValidNum(
   CHECK(kernel_conf().can_naive_do_dim0_valid_num());
   CheckSameDim0ValidNum(op_attribute().input_bns(), BnInOp2Blob);
   CopyField(ctx.device_ctx, BnInOp2Blob, BnInOp2Blob(op_attribute().input_bns(0)),
-            op_attribute().output_bns(), &Blob::CopyDim0ValidNumFrom);
+            op_attribute().output_bns(), &Blob::CopyFieldFrom<FieldKey::kDim0ValidNum>);
 }
 
 template<DeviceType device_type>
@@ -202,7 +202,7 @@ void KernelIf<device_type>::ForwardRecordIdInDevicePiece(
   CHECK(kernel_conf().can_naive_do_record_id_in_device_piece());
   CheckSameRecordIdInDevicePiece(op_attribute().input_bns(), BnInOp2Blob);
   CopyField(ctx.device_ctx, BnInOp2Blob, BnInOp2Blob(op_attribute().input_bns(0)),
-            op_attribute().output_bns(), &Blob::CopyRecordIdInDevicePieceFrom);
+            op_attribute().output_bns(), &Blob::CopyFieldFrom<FieldKey::kRecordIdInDevicePiece>);
 }
 
 template<DeviceType device_type>
@@ -231,7 +231,7 @@ void KernelIf<device_type>::BackwardInDiffDim0ValidNum(
   }
   if (input_diff_bns.empty()) { return; }
   CopyField(ctx.device_ctx, BnInOp2Blob, BnInOp2Blob(op_attribute().output_diff_bns(0)),
-            input_diff_bns, &Blob::CopyDim0ValidNumFrom);
+            input_diff_bns, &Blob::CopyFieldFrom<FieldKey::kDim0ValidNum>);
 }
 
 template<DeviceType device_type>
@@ -251,7 +251,7 @@ template<DeviceType device_type>
 void KernelIf<device_type>::BackwardColNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().output_diff_bns(),
-            op_attribute().input_diff_bns(), &Blob::CopyColNumFrom);
+            op_attribute().input_diff_bns(), &Blob::CopyFieldFrom<FieldKey::kColNum>);
 }
 
 template<DeviceType device_type, typename T>

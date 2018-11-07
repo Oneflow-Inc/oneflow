@@ -31,21 +31,22 @@ Blob* RecurrentKernel<device_type, T>::GetHiddenDiffBlob(
 template<DeviceType device_type, typename T>
 void RecurrentKernel<device_type, T>::ForwardDataId(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob("out")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("in"));
+  BnInOp2Blob("out")->CopyFieldFrom<FieldKey::kDataId>(ctx.device_ctx, BnInOp2Blob("in"));
 }
 
 template<DeviceType device_type, typename T>
 void RecurrentKernel<device_type, T>::ForwardColNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob("out")->CopyColNumFrom(ctx.device_ctx, BnInOp2Blob("in"));
-  BnInOp2Blob("rec_out")->CopyColNumFrom(ctx.device_ctx, BnInOp2Blob("in"));
+  BnInOp2Blob("out")->CopyFieldFrom<FieldKey::kColNum>(ctx.device_ctx, BnInOp2Blob("in"));
+  BnInOp2Blob("rec_out")->CopyFieldFrom<FieldKey::kColNum>(ctx.device_ctx, BnInOp2Blob("in"));
 }
 
 template<DeviceType device_type, typename T>
 void RecurrentKernel<device_type, T>::BackwardColNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob("in_diff")->CopyColNumFrom(ctx.device_ctx, BnInOp2Blob("out_diff"));
-  BnInOp2Blob("rec_in_diff")->CopyColNumFrom(ctx.device_ctx, BnInOp2Blob("out_diff"));
+  BnInOp2Blob("in_diff")->CopyFieldFrom<FieldKey::kColNum>(ctx.device_ctx, BnInOp2Blob("out_diff"));
+  BnInOp2Blob("rec_in_diff")
+      ->CopyFieldFrom<FieldKey::kColNum>(ctx.device_ctx, BnInOp2Blob("out_diff"));
 }
 
 template<DeviceType device_type, typename T>

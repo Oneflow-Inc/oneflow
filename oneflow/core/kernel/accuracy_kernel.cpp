@@ -36,7 +36,8 @@ void AccuracyKernel<device_type, PredType, LabelType>::ForwardDataContent(
 template<DeviceType device_type, typename PredType, typename LabelType>
 void AccuracyKernel<device_type, PredType, LabelType>::ForwardDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob("accuracy")->CopyDim0ValidNumFrom(ctx.device_ctx, BnInOp2Blob("prediction"));
+  BnInOp2Blob("accuracy")
+      ->CopyFieldFrom<FieldKey::kDim0ValidNum>(ctx.device_ctx, BnInOp2Blob("prediction"));
 }
 
 template<DeviceType device_type, typename PredType, typename LabelType>

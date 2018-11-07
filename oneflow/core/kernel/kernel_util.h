@@ -432,10 +432,12 @@ class DataIdIterator final : public FieldIterator {
   DataIdIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,
                  const PbRpf<std::string>* bns, int32_t axis)
       : FieldIterator(BnInOp2Blob, bns, axis) {}
-  static CopyBlobFieldMthd GetCopyBlobFieldMthd() { return &Blob::CopyDataIdFrom; }
+  static CopyBlobFieldMthd GetCopyBlobFieldMthd() {
+    return &Blob::CopyFieldFrom<FieldKey::kDataId>;
+  }
 
  private:
-  char* GetMutPtr(Blob* blob) override { return blob->mut_data_id(); }
+  char* GetMutPtr(Blob* blob) override { return blob->mut_data_id_ptr(); }
 
   size_t GetSizeOfField(Blob* blob) const override {
     return blob->ByteSizeOfField<FieldKey::kDataId>();
@@ -447,10 +449,12 @@ class ColNumIterator final : public FieldIterator {
   ColNumIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,
                  const PbRpf<std::string>* bns, int32_t axis)
       : FieldIterator(BnInOp2Blob, bns, axis) {}
-  static CopyBlobFieldMthd GetCopyBlobFieldMthd() { return &Blob::CopyColNumFrom; }
+  static CopyBlobFieldMthd GetCopyBlobFieldMthd() {
+    return &Blob::CopyFieldFrom<FieldKey::kColNum>;
+  }
 
  private:
-  char* GetMutPtr(Blob* blob) override { return reinterpret_cast<char*>(blob->mut_col_num()); }
+  char* GetMutPtr(Blob* blob) override { return reinterpret_cast<char*>(blob->mut_col_num_ptr()); }
 
   size_t GetSizeOfField(Blob* blob) const override {
     return blob->ByteSizeOfField<FieldKey::kColNum>();
@@ -462,7 +466,9 @@ class Dim1ValidNumIterator final : public FieldIterator {
   Dim1ValidNumIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,
                        const PbRpf<std::string>* bns, int32_t axis)
       : FieldIterator(BnInOp2Blob, bns, axis) {}
-  static CopyBlobFieldMthd GetCopyBlobFieldMthd() { return &Blob::CopyDim1ValidNumFrom; }
+  static CopyBlobFieldMthd GetCopyBlobFieldMthd() {
+    return &Blob::CopyFieldFrom<FieldKey::kDim1ValidNum>;
+  }
 
  private:
   char* GetMutPtr(Blob* blob) override {
@@ -479,7 +485,9 @@ class Dim2ValidNumIterator final : public FieldIterator {
   Dim2ValidNumIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,
                        const PbRpf<std::string>* bns, int32_t axis)
       : FieldIterator(BnInOp2Blob, bns, axis) {}
-  static CopyBlobFieldMthd GetCopyBlobFieldMthd() { return &Blob::CopyDim2ValidNumFrom; }
+  static CopyBlobFieldMthd GetCopyBlobFieldMthd() {
+    return &Blob::CopyFieldFrom<FieldKey::kDim2ValidNum>;
+  }
 
  private:
   char* GetMutPtr(Blob* blob) override {

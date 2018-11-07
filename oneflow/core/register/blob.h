@@ -26,14 +26,14 @@ class Blob final {
   const char* data_id(int32_t no) const;
   char* mut_data_id(int32_t no) { return const_cast<char*>(data_id(no)); }
 
-  const char* data_id() const { return data_id(0); }
-  char* mut_data_id() { return mut_data_id(0); }
+  const char* data_id_ptr() const { return data_id_ptr_; }
+  char* mut_data_id_ptr() { return data_id_ptr_; }
 
   int32_t col_num(int32_t no) const;
   void set_col_num(int32_t no, int32_t val);
 
-  const int32_t* col_num() const { return col_num_ptr_; }
-  int32_t* mut_col_num() { return col_num_ptr_; }
+  const int32_t* col_num_ptr() const { return col_num_ptr_; }
+  int32_t* mut_col_num_ptr() { return col_num_ptr_; }
 
   int64_t dim0_valid_num(int64_t no) const;
   void set_dim0_valid_num(int64_t no, int64_t val);
@@ -109,12 +109,16 @@ class Blob final {
   bool IsContiguous() const { return is_contiguous_; }
   void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  template<FieldKey field_key>
+  void CopyFieldFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  /*
   void CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyDim0ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyDim1ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyDim2ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyRecordIdInDevicePieceFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  */
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
 
   size_t CalcDim0ValidNumSum() const;
@@ -191,6 +195,12 @@ class RecordBlob final {
   Blob* records_;
   int32_t record_num_;
 };
+
+#define DECLARATION_COPY_FIELD_FROM_FUNC(field_key, field_name) \
+  template<>                                                    \
+  void Blob::CopyFieldFrom<field_key>(DeviceCtx * device_ctx, const Blob* rhs);
+
+OF_PP_FOR_EACH_TUPLE(DECLARATION_COPY_FIELD_FROM_FUNC, FIELD_KEY_AND_FIELD_NAME_SEQ)
 
 }  // namespace oneflow
 
