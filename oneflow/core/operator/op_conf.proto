@@ -1023,11 +1023,11 @@ message L2NormalizeOpConf {
 
 message AnchorScaleConf {
   required float scale = 1;
-  repeated float aspect_ratio = 2;
+  repeated float ratio = 2;
 }
 
 message AnchorAspectRatioConf {
-  required float aspect_ratio = 1;
+  required float ratio = 1;
   repeated float scale = 2;
 }
 
@@ -1040,6 +1040,18 @@ message GenerateAnchorsOpConf {
   required int32 image_height = 6;
   required int32 image_width = 7;
   optional bool clip = 8 [default = false];
+  enum Algorithm {
+    kFloating = 0;
+    kRoundRatioFirst = 1;
+  }
+  optional Algorithm algorithm = 9 [default = kFloating];
+  enum Coordinate {
+    kXYXY = 0;
+    kIntXYXY = 1;
+    kNormXYXY = 2;
+    kXYWH = 3;
+  }
+  optional Coordinate coordinate = 10 [default = kXYXY];
 }
 
 message OperatorConf {

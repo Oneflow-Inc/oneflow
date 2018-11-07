@@ -30,8 +30,8 @@ void GenerateAnchorsOp::InferBlobDescs(
   CHECK((conf.scale_conf_size() == 0) || (conf.aspect_ratio_conf_size() == 0));
   int64_t num_anchors = 0;
   for (const AnchorScaleConf& scale_conf : conf.scale_conf()) {
-    CHECK_GT(scale_conf.aspect_ratio_size(), 0);
-    num_anchors += scale_conf.aspect_ratio_size();
+    CHECK_GT(scale_conf.ratio_size(), 0);
+    num_anchors += scale_conf.ratio_size();
   }
   for (const AnchorAspectRatioConf& aspect_ratio_conf : conf.aspect_ratio_conf()) {
     CHECK_GT(aspect_ratio_conf.scale_size(), 0);
