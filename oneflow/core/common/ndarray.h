@@ -16,11 +16,14 @@ class NdArrayBase {
   static const int ndims = NDIMS;
   static const bool immutable = true;
 
+  ALWAYS_INLINE const Shape& shape() const { return shape_; }
+
  protected:
-  explicit NdArrayBase(const Shape& shape) : shape_(shape) { TODO(); }
+  explicit NdArrayBase(const Shape& shape) : shape_(shape) {
+    FOR_RANGE(int, i, 0, NDIMS) { dim_elem_cnt_[i] = shape.Count(i + 1); }
+  }
   virtual ~NdArrayBase() = default;
 
-  ALWAYS_INLINE const Shape& shape() const { return shape_; }
   ALWAYS_INLINE int64_t dim_elem_cnt(int32_t dim) const { return dim_elem_cnt_[dim]; }
 
  private:
@@ -122,7 +125,23 @@ template<typename T, int NDIMS>
 class VarNdArray;
 
 template<typename YT, typename XT, typename T = typename YT::dtype, int NDIMS = YT::ndims>
-void AssignNdArray(YT* var_ndarray, const XT& ndarray);
+typename std::enable_if<!YT::immutable && !XT::immutable>::type AssignNdArray(YT* y_ndarray,
+                                                                              const XT& x_ndarray);
+template<typename YT, typename XT, typename T = typename YT::dtype, int NDIMS = YT::ndims>
+typename std::enable_if<!YT::immutable && XT::immutable && NDIMS == 1>::type AssignNdArray(
+    YT* y_ndarray, const XT& x_ndarray);
+template<typename YT, typename XT, typename T = typename YT::dtype, int NDIMS = YT::ndims>
+typename std::enable_if<!YT::immutable && XT::immutable && NDIMS == 2>::type AssignNdArray(
+    YT* y_ndarray, const XT& x_ndarray);
+template<typename YT, typename XT, typename T = typename YT::dtype, int NDIMS = YT::ndims>
+typename std::enable_if<!YT::immutable && XT::immutable && NDIMS == 3>::type AssignNdArray(
+    YT* y_ndarray, const XT& x_ndarray);
+template<typename YT, typename XT, typename T = typename YT::dtype, int NDIMS = YT::ndims>
+typename std::enable_if<!YT::immutable && XT::immutable && NDIMS == 4>::type AssignNdArray(
+    YT* y_ndarray, const XT& x_ndarray);
+template<typename YT, typename XT, typename T = typename YT::dtype, int NDIMS = YT::ndims>
+typename std::enable_if<!YT::immutable && XT::immutable && NDIMS == 5>::type AssignNdArray(
+    YT* y_ndarray, const XT& x_ndarray);
 
 template<typename Derived, typename T, int NDIMS>
 class VarNdArrayBase : public NdArray<T, NDIMS> {
@@ -133,10 +152,8 @@ class VarNdArrayBase : public NdArray<T, NDIMS> {
   virtual ~VarNdArrayBase() = default;
 
   template<typename XT>
-  Derived& operator=(const XT& ndarray) {
-    auto* derived_this = static_cast<Derived*>(this);
-    AssignNdArray(derived_this, ndarray);
-    return *derived_this;
+  void Assign(const XT& ndarray) {
+    AssignNdArray(dynamic_cast<Derived*>(this), ndarray);
   }
 
   ALWAYS_INLINE void GetMutPtrAndContiguousSize(T** ptr, size_t* size, int64_t offset) const {
@@ -166,7 +183,7 @@ class VarNdArray<T, 1> final : public VarNdArrayBase<VarNdArray<T, 1>, T, 1> {
   ALWAYS_INLINE T Get(int64_t dim0) const { return this->ptr()[dim0]; }
   ALWAYS_INLINE T* Mut(int64_t dim0) const { return this->ptr() + dim0; }
   SliceNdArray<VarNdArray<T, 1>> operator()(Slice&& slice0) {
-    return SliceNdArray<VarNdArray<T, 1>>(std::move(*this), slice0);
+    return SliceNdArray<VarNdArray<T, 1>>(std::move(*this), std::move(slice0));
   }
 };
 
@@ -183,7 +200,7 @@ class VarNdArray<T, 2> final : public VarNdArrayBase<VarNdArray<T, 2>, T, 2> {
     return this->ptr() + this->Dims2Offset(dim0, dim1);
   }
   SliceNdArray<VarNdArray<T, 1>> operator()(Slice&& slice0, Slice&& slice1) {
-    return SliceNdArray<VarNdArray<T, 1>>(std::move(*this), slice0, slice1);
+    return SliceNdArray<VarNdArray<T, 1>>(std::move(*this), std::move(slice0), std::move(slice1));
   }
 };
 
@@ -200,7 +217,8 @@ class VarNdArray<T, 3> final : public VarNdArrayBase<VarNdArray<T, 3>, T, 3> {
     return this->ptr() + this->Dims2Offset(dim0, dim1, dim2);
   }
   SliceNdArray<VarNdArray<T, 1>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2) {
-    return SliceNdArray<VarNdArray<T, 1>>(std::move(*this), slice0, slice1, slice2);
+    return SliceNdArray<VarNdArray<T, 1>>(std::move(*this), std::move(slice0), std::move(slice1),
+                                          std::move(slice2));
   }
 };
 
@@ -218,7 +236,8 @@ class VarNdArray<T, 4> final : public VarNdArrayBase<VarNdArray<T, 4>, T, 4> {
   }
   SliceNdArray<VarNdArray<T, 1>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2,
                                             Slice&& slice3) {
-    return SliceNdArray<VarNdArray<T, 1>>(std::move(*this), slice0, slice1, slice2, slice3);
+    return SliceNdArray<VarNdArray<T, 1>>(std::move(*this), std::move(slice0), std::move(slice1),
+                                          std::move(slice2), std::move(slice3));
   }
 };
 
@@ -236,7 +255,8 @@ class VarNdArray<T, 5> final : public VarNdArrayBase<VarNdArray<T, 5>, T, 5> {
   }
   SliceNdArray<VarNdArray<T, 1>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2,
                                             Slice&& slice3, Slice&& slice4) {
-    return SliceNdArray<VarNdArray<T, 1>>(std::move(*this), slice0, slice1, slice2, slice3, slice4);
+    return SliceNdArray<VarNdArray<T, 1>>(std::move(*this), std::move(slice0), std::move(slice1),
+                                          std::move(slice2), std::move(slice3), std::move(slice4));
   }
 };
 
@@ -272,25 +292,24 @@ class SliceNdArrayBase : public NdArray<typename XT::dtype, XT::ndims> {
   static_assert(XT::ndims == NDIMS, "XT::ndims should equals NDIMS");
   static_assert(!XT::immutable, "XT should be mutable");
   SliceNdArrayBase(XT&& x, std::array<Slice, NDIMS>&& slices)
-      : NdArray<typename XT::dtype, XT::ndims>(BoundedSlices2Shape(BoundSlices(x, slices))),
+      : NdArray<typename XT::dtype, XT::ndims>(
+            BoundedSlices2Shape(BoundSlices(x, std::move(slices)))),
         x_(x),
-        slices_(BoundSlices(x, slices)) {
+        slices_(std::move(slices)) {
     SetContiguousLength(slices);
   }
   virtual ~SliceNdArrayBase() = default;
 
   template<typename AT>
-  Derived& operator=(const AT& ndarray) {
-    auto* derived_this = static_cast<Derived*>(this);
-    AssignNdArray(derived_this, ndarray);
-    return *derived_this;
+  void Assign(const AT& ndarray) {
+    AssignNdArray(dynamic_cast<Derived*>(this), ndarray);
   }
 
  protected:
   ALWAYS_INLINE const XT& x() const { return x_; }
   ALWAYS_INLINE const Slice& slice(int32_t dim) const { return slices_[dim]; }
-  ALWAYS_INLINE void GetMutPtrAndContiguousSize(typename XT::dtype** ptr, size_t* size,
-                                                int64_t offset, int64_t x_offset) {
+  ALWAYS_INLINE void GetMutPtrAndMinContiguousSize(typename XT::dtype** ptr, size_t* size,
+                                                   int64_t offset, int64_t x_offset) const {
     size_t x_contiguous_size;
     this->x().GetMutPtrAndContiguousSize(ptr, &x_contiguous_size, x_offset);
     size_t slice_contiguous_size = (contiguous_len_ - offset % contiguous_len_);
@@ -298,9 +317,9 @@ class SliceNdArrayBase : public NdArray<typename XT::dtype, XT::ndims> {
   }
 
  private:
-  static std::array<Slice, NDIMS>&& BoundSlices(XT&& x, std::array<Slice, NDIMS>&& slices) {
-    FOR_RANGE(int32_t, i, 0, NDIMS) { slices[i].Bound(x.shape().Get(i)); }
-    return slices;
+  static std::array<Slice, NDIMS>&& BoundSlices(const XT& x, std::array<Slice, NDIMS>&& slices) {
+    FOR_RANGE(int32_t, i, 0, NDIMS) { slices[i].Bound(x.shape().At(i)); }
+    return std::move(slices);
   }
   static Shape BoundedSlices2Shape(const std::array<Slice, NDIMS>& bounded_slices) {
     std::vector<int64_t> dim_vec;
@@ -327,7 +346,7 @@ class SliceNdArray<XT, typename std::enable_if<XT::ndims == 1>::type> final
     : public SliceNdArrayBase<SliceNdArray<XT>, XT, XT::ndims> {
  public:
   SliceNdArray(XT&& x, Slice&& slice0)
-      : SliceNdArrayBase<SliceNdArray<XT>, XT, XT::ndims>(x, {slice0}) {}
+      : SliceNdArrayBase<SliceNdArray<XT>, XT, XT::ndims>(std::move(x), {slice0}) {}
   ~SliceNdArray() = default;
 
   using dtype = typename XT::dtype;
@@ -336,10 +355,10 @@ class SliceNdArray<XT, typename std::enable_if<XT::ndims == 1>::type> final
   ALWAYS_INLINE void GetMutPtrAndContiguousSize(dtype** ptr, size_t* size, int64_t offset) const {
     size_t dim0 = offset;
     size_t x_offset = this->slice(0).Get(dim0);
-    this->GetMutPtrAndContiguousSize(ptr, size, offset, x_offset);
+    this->GetMutPtrAndMinContiguousSize(ptr, size, offset, x_offset);
   }
   SliceNdArray<SliceNdArray<XT>> operator()(Slice&& slice0) {
-    return SliceNdArray<SliceNdArray<XT>>(std::move(*this), slice0);
+    return SliceNdArray<SliceNdArray<XT>>(std::move(*this), std::move(slice0));
   }
 };
 
@@ -348,7 +367,7 @@ class SliceNdArray<XT, typename std::enable_if<XT::ndims == 2>::type> final
     : public SliceNdArrayBase<SliceNdArray<XT>, XT, XT::ndims> {
  public:
   SliceNdArray(XT&& x, Slice&& slice0, Slice&& slice1)
-      : SliceNdArrayBase<SliceNdArray<XT>, XT, XT::ndims>(x, {slice0, slice1}) {}
+      : SliceNdArrayBase<SliceNdArray<XT>, XT, XT::ndims>(std::move(x), {slice0, slice1}) {}
   ~SliceNdArray() = default;
 
   using dtype = typename XT::dtype;
@@ -363,10 +382,10 @@ class SliceNdArray<XT, typename std::enable_if<XT::ndims == 2>::type> final
     size_t dim1 = 0;
     this->Offset2Dims(offset, &dim0, &dim1);
     size_t x_offset = this->x().Dims2Offset(this->slice(0).Get(dim0), this->slice(1).Get(dim1));
-    this->GetMutPtrAndContiguousSize(ptr, size, offset, x_offset);
+    this->GetMutPtrAndMinContiguousSize(ptr, size, offset, x_offset);
   }
   SliceNdArray<SliceNdArray<XT>> operator()(Slice&& slice0, Slice&& slice1) {
-    return SliceNdArray<SliceNdArray<XT>>(std::move(*this), slice0, slice1);
+    return SliceNdArray<SliceNdArray<XT>>(std::move(*this), std::move(slice0), std::move(slice1));
   }
 };
 
@@ -375,7 +394,7 @@ class SliceNdArray<XT, typename std::enable_if<XT::ndims == 3>::type> final
     : public SliceNdArrayBase<SliceNdArray<XT>, XT, XT::ndims> {
  public:
   SliceNdArray(XT&& x, Slice&& slice0, Slice&& slice1, Slice&& slice2)
-      : SliceNdArrayBase<SliceNdArray<XT>, XT, XT::ndims>(x, {slice0, slice1, slice2}) {}
+      : SliceNdArrayBase<SliceNdArray<XT>, XT, XT::ndims>(std::move(x), {slice0, slice1, slice2}) {}
   ~SliceNdArray() = default;
 
   using dtype = typename XT::dtype;
@@ -394,10 +413,11 @@ class SliceNdArray<XT, typename std::enable_if<XT::ndims == 3>::type> final
     this->Offset2Dims(offset, &dim0, &dim1, &dim2);
     size_t x_offset = this->x().Dims2Offset(this->slice(0).Get(dim0), this->slice(1).Get(dim1),
                                             this->slice(2).Get(dim2));
-    this->GetMutPtrAndContiguousSize(ptr, size, offset, x_offset);
+    this->GetMutPtrAndMinContiguousSize(ptr, size, offset, x_offset);
   }
   SliceNdArray<SliceNdArray<XT>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2) {
-    return SliceNdArray<SliceNdArray<XT>>(std::move(*this), slice0, slice1, slice2);
+    return SliceNdArray<SliceNdArray<XT>>(std::move(*this), std::move(slice0), std::move(slice1),
+                                          std::move(slice2));
   }
 };
 
@@ -406,7 +426,8 @@ class SliceNdArray<XT, typename std::enable_if<XT::ndims == 4>::type> final
     : public SliceNdArrayBase<SliceNdArray<XT>, XT, XT::ndims> {
  public:
   SliceNdArray(XT&& x, Slice&& slice0, Slice&& slice1, Slice&& slice2, Slice&& slice3)
-      : SliceNdArrayBase<SliceNdArray<XT>, XT, XT::ndims>(x, {slice0, slice1, slice2, slice3}) {}
+      : SliceNdArrayBase<SliceNdArray<XT>, XT, XT::ndims>(std::move(x),
+                                                          {slice0, slice1, slice2, slice3}) {}
   ~SliceNdArray() = default;
 
   using dtype = typename XT::dtype;
@@ -426,11 +447,12 @@ class SliceNdArray<XT, typename std::enable_if<XT::ndims == 4>::type> final
     this->Offset2Dims(offset, &dim0, &dim1, &dim2, &dim3);
     size_t x_offset = this->x().Dims2Offset(this->slice(0).Get(dim0), this->slice(1).Get(dim1),
                                             this->slice(2).Get(dim2), this->slice(3).Get(dim3));
-    this->GetMutPtrAndContiguousSize(ptr, size, offset, x_offset);
+    this->GetMutPtrAndMinContiguousSize(ptr, size, offset, x_offset);
   }
   SliceNdArray<SliceNdArray<XT>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2,
                                             Slice&& slice3) {
-    return SliceNdArray<SliceNdArray<XT>>(std::move(*this), slice0, slice1, slice2, slice3);
+    return SliceNdArray<SliceNdArray<XT>>(std::move(*this), std::move(slice0), std::move(slice1),
+                                          std::move(slice2), std::move(slice3));
   }
 };
 
@@ -441,7 +463,7 @@ class SliceNdArray<XT, typename std::enable_if<XT::ndims == 5>::type> final
   SliceNdArray(XT&& x, Slice&& slice0, Slice&& slice1, Slice&& slice2, Slice&& slice3,
                Slice&& slice4)
       : SliceNdArrayBase<SliceNdArray<XT>, XT, XT::ndims>(
-            x, {slice0, slice1, slice2, slice3, slice4}) {}
+            std::move(x), {slice0, slice1, slice2, slice3, slice4}) {}
   ~SliceNdArray() = default;
 
   using dtype = typename XT::dtype;
@@ -467,11 +489,12 @@ class SliceNdArray<XT, typename std::enable_if<XT::ndims == 5>::type> final
     size_t x_offset = this->x().Dims2Offset(this->slice(0).Get(dim0), this->slice(1).Get(dim1),
                                             this->slice(2).Get(dim2), this->slice(3).Get(dim3),
                                             this->slice(4).Get(dim4));
-    this->GetMutPtrAndContiguousSize(ptr, size, offset, x_offset);
+    this->GetMutPtrAndMinContiguousSize(ptr, size, offset, x_offset);
   }
   SliceNdArray<SliceNdArray<XT>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2,
                                             Slice&& slice3, Slice&& slice4) {
-    return SliceNdArray<SliceNdArray<XT>>(std::move(*this), slice0, slice1, slice2, slice3, slice4);
+    return SliceNdArray<SliceNdArray<XT>>(std::move(*this), std::move(slice0), std::move(slice1),
+                                          std::move(slice2), std::move(slice3), std::move(slice4));
   }
 };
 
