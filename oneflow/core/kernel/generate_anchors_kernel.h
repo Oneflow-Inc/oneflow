@@ -12,6 +12,8 @@ class GenerateAnchorsKernel final : public KernelIf<DeviceType::kCPU> {
   GenerateAnchorsKernel() = default;
   ~GenerateAnchorsKernel() = default;
 
+  static const size_t kBoxElemSize = 4;
+
  private:
   void InitConstBufBlobs(DeviceCtx* ctx,
                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
@@ -21,6 +23,7 @@ class GenerateAnchorsKernel final : public KernelIf<DeviceType::kCPU> {
   //                    const int32_t width, Blob* boxes_blob) const;
   // T Clip(const T value, const bool use_clip) const;
   std::vector<T> GenerateBaseAnchors() const;
+  void ShiftAnchors(const std::vector<T>& base_anchors_vec, Blob* anchors_blob) const;
 };
 
 }  // namespace oneflow
