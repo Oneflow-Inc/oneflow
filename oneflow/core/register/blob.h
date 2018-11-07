@@ -111,14 +111,6 @@ class Blob final {
   void CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs);
   template<FieldKey field_key>
   void CopyFieldFrom(DeviceCtx* device_ctx, const Blob* rhs);
-  /*
-  void CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs);
-  void CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
-  void CopyDim0ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
-  void CopyDim1ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
-  void CopyDim2ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
-  void CopyRecordIdInDevicePieceFrom(DeviceCtx* device_ctx, const Blob* rhs);
-  */
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
 
   size_t CalcDim0ValidNumSum() const;

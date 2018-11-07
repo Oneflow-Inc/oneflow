@@ -34,21 +34,13 @@ class RtBlobDesc {
   size_t ByteSizeOfBlobHeader() const;
   size_t ByteSizeOfBlobBody() const;
   size_t TotalByteSize() const;
+  size_t ByteSizeOfDataContentField() const;
 
   template<FieldKey field_key>
   size_t ByteSizeOfField() const {
     if (!HasField<field_key>()) { return 0; }
     return header_pod_desc_.Field(field_key).ByteSize();
   }
-  /*
-  size_t ByteSizeOfDataIdField() const;
-  size_t ByteSizeOfColNumField() const;
-  size_t ByteSizeOfDim0ValidNumField() const;
-  size_t ByteSizeOfDim1ValidNumField() const;
-  size_t ByteSizeOfDim2ValidNumField() const;
-  size_t ByteSizeOfRecordIdInDevicePieceField() const;
-  */
-  size_t ByteSizeOfDataContentField() const;
 
   bool operator==(const RtBlobDesc& rhs) const;
 
