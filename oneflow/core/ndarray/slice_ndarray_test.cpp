@@ -94,6 +94,29 @@ TEST(SliceNdArray, 2d_slice_assign) {
   ASSERT_EQ(memcmp(expected.data(), buffer.data(), sizeof(int32_t) * buffer.size()), 0);
 }
 
+TEST(SliceNdArray, 2d_slice_reverse) {
+  // clang-format off
+  std::vector<int32_t> data({
+      100, 100, 100, 100,
+      100, 0,   1,   100,
+      100, 2,   3,   100,
+      100, 100, 100, 100,
+  });
+  std::vector<int32_t> buffer(16, 100);
+  std::vector<int32_t> expected({
+      100, 100, 100, 100,
+      100, 2,   3,   100,
+      100, 0,   1,   100,
+      100, 100, 100, 100,
+  });
+  // clang-format on
+  NdArrayHelper<int32_t, 2> ndarray;
+  auto&& data_ndarray = ndarray.Var({4LL, 4LL}, data.data());
+  auto&& buffer_ndarray = ndarray.Var({4LL, 4LL}, buffer.data());
+  buffer_ndarray({1, -1}, {1, -1}).Assign(data_ndarray({-2, 0, -1}, {1, -1}));
+  ASSERT_EQ(memcmp(expected.data(), buffer.data(), sizeof(int32_t) * buffer.size()), 0);
+}
+
 }  // namespace test
 
 }  // namespace oneflow

@@ -20,8 +20,8 @@ class Slice final {
   ALWAYS_INLINE int64_t Get(int64_t index) const { return start_ + index * stride_; }
   bool IsBounded() const;
   size_t Size() const;
-  bool is_contiguous() const;
-  bool is_covering_all() const;
+  bool IsContiguous() const;
+  bool IsCoveringAll() const;
 
  private:
   int64_t start_;

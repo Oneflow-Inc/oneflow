@@ -54,8 +54,8 @@ class SliceNdArrayBase : public NdArray<typename XT::dtype, XT::ndims> {
   void SetContiguousLength(const std::array<Slice, NDIMS>& bounded_slices) {
     contiguous_len_ = 1;
     for (int i = NDIMS - 1; i >= 0; --i) {
-      if (bounded_slices[i].is_contiguous()) { contiguous_len_ *= bounded_slices[i].Size(); }
-      if (!(bounded_slices[i].is_contiguous() && bounded_slices[i].is_covering_all())) { break; }
+      if (bounded_slices[i].IsContiguous()) { contiguous_len_ *= bounded_slices[i].Size(); }
+      if (!(bounded_slices[i].IsContiguous() && bounded_slices[i].IsCoveringAll())) { break; }
     }
   }
   const XT& x_;

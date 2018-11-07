@@ -59,7 +59,13 @@ size_t Slice::Size() const {
   return ((end_ - start_) + (stride_ - ((stride_ > 0) - (stride_ < 0)))) / stride_;
 }
 
-bool Slice::is_contiguous() const { return stride_ == 1; }
-bool Slice::is_covering_all() const { return start_ == 0 && end_ == value_capacity_; }
+bool Slice::IsContiguous() const {
+  CHECK(IsBounded());
+  return stride_ == 1;
+}
+bool Slice::IsCoveringAll() const {
+  CHECK(IsBounded());
+  return start_ == 0 && end_ == value_capacity_;
+}
 
 }  // namespace oneflow
