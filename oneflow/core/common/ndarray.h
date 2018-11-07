@@ -23,11 +23,6 @@ class NdArrayBase {
   ALWAYS_INLINE const Shape& shape() const { return shape_; }
   ALWAYS_INLINE int64_t dim_elem_cnt(int32_t dim) const { return dim_elem_cnt_[dim]; }
 
-  // contiguous buf logically and pysically
-  virtual void GetMutPtrAndContiguousSize(int64_t index, T** ptr, size_t* size) const {
-    UNIMPLEMENTED();
-  }
-
  private:
   Shape shape_;
   std::array<int64_t, NDIMS> dim_elem_cnt_;
@@ -126,8 +121,8 @@ class NdArray<T, 5> : public NdArrayBase<T, 5> {
 template<typename T, int NDIMS>
 class VarNdArray;
 
-template<typename T, int NDIMS>
-void AssignVarNdArray(VarNdArray<T, NDIMS>* var_ndarray, const NdArray<T, NDIMS>& ndarray);
+template<typename YT, typename XT, typename T = typename YT::dtype, int NDIMS = YT::ndims>
+void AssignNdArray(YT* var_ndarray, const XT& ndarray);
 
 template<typename Derived, typename T, int NDIMS>
 class VarNdArrayBase : public NdArray<T, NDIMS> {
@@ -137,22 +132,24 @@ class VarNdArrayBase : public NdArray<T, NDIMS> {
       : NdArray<T, NDIMS>(shape), ptr_(ptr), len_(shape.elem_cnt()) {}
   virtual ~VarNdArrayBase() = default;
 
-  Derived& operator=(const NdArray<T, 1>& ndarray) {
+  template<typename XT>
+  Derived& operator=(const XT& ndarray) {
     auto* derived_this = static_cast<Derived*>(this);
-    AssignVarNdArray(derived_this, ndarray);
+    AssignNdArray(derived_this, ndarray);
     return *derived_this;
   }
 
-  virtual void GetMutPtrAndContiguousSize(int64_t index, T** ptr, size_t* size) const override {
-    *ptr = ptr_ + index;
-    *size = len_ - index;
+  ALWAYS_INLINE void GetMutPtrAndContiguousSize(T** ptr, size_t* size, int64_t offset) const {
+    *ptr = ptr_ + offset;
+    *size = len_ - offset;
   }
 
  protected:
-  const T* ptr() const { return ptr_; }
+  ALWAYS_INLINE T* ptr() const { return ptr_; }
+  ALWAYS_INLINE size_t len() const { return len_; }
 
  private:
-  T* ptr_;
+  T* const ptr_;
   size_t len_;
 };
 
@@ -162,7 +159,8 @@ class VarNdArray<T, 1> final : public VarNdArrayBase<VarNdArray<T, 1>, T, 1> {
   VarNdArray(const Shape& shape, T* ptr) : VarNdArrayBase<VarNdArray<T, 1>, T, 1>(shape, ptr) {}
   ~VarNdArray() = default;
 
-  ALWAYS_INLINE T At(int64_t dim0) const { return this->ptr()[dim0]; }
+  ALWAYS_INLINE T Get(int64_t dim0) const { return this->ptr()[dim0]; }
+  ALWAYS_INLINE T* Mut(int64_t dim0) const { return this->ptr() + dim0; }
 };
 
 template<typename T>
@@ -171,8 +169,11 @@ class VarNdArray<T, 2> final : public VarNdArrayBase<VarNdArray<T, 2>, T, 2> {
   VarNdArray(const Shape& shape, T* ptr) : VarNdArrayBase<VarNdArray<T, 2>, T, 2>(shape, ptr) {}
   ~VarNdArray() = default;
 
-  ALWAYS_INLINE T At(int64_t dim0, int64_t dim1) const {
-    return *(this->ptr() + this->Dims2Offset(dim0, dim1));
+  ALWAYS_INLINE T Get(int64_t dim0, int64_t dim1) const {
+    return this->ptr()[this->Dims2Offset(dim0, dim1)];
+  }
+  ALWAYS_INLINE T* Mut(int64_t dim0, int64_t dim1) const {
+    return this->ptr() + this->Dims2Offset(dim0, dim1);
   }
 };
 
@@ -182,8 +183,11 @@ class VarNdArray<T, 3> final : public VarNdArrayBase<VarNdArray<T, 3>, T, 3> {
   VarNdArray(const Shape& shape, T* ptr) : VarNdArrayBase<VarNdArray<T, 3>, T, 3>(shape, ptr) {}
   ~VarNdArray() = default;
 
-  ALWAYS_INLINE T At(int64_t dim0, int64_t dim1, int64_t dim2) const {
-    return *(this->ptr() + this->Dims2Offset(dim0, dim1, dim2));
+  ALWAYS_INLINE T Get(int64_t dim0, int64_t dim1, int64_t dim2) const {
+    return this->ptr()[this->Dims2Offset(dim0, dim1, dim2)];
+  }
+  ALWAYS_INLINE T* Mut(int64_t dim0, int64_t dim1, int64_t dim2) const {
+    return this->ptr() + this->Dims2Offset(dim0, dim1, dim2);
   }
 };
 
@@ -193,8 +197,11 @@ class VarNdArray<T, 4> final : public VarNdArrayBase<VarNdArray<T, 4>, T, 4> {
   VarNdArray(const Shape& shape, T* ptr) : VarNdArrayBase<VarNdArray<T, 4>, T, 4>(shape, ptr) {}
   ~VarNdArray() = default;
 
-  ALWAYS_INLINE T At(int64_t dim0, int64_t dim1, int64_t dim2, int64_t dim3) const {
-    return *(this->ptr() + this->Dims2Offset(dim0, dim1, dim2, dim3));
+  ALWAYS_INLINE T Get(int64_t dim0, int64_t dim1, int64_t dim2, int64_t dim3) const {
+    return *this->Mut(dim0, dim1, dim2, dim3);
+  }
+  ALWAYS_INLINE T* Mut(int64_t dim0, int64_t dim1, int64_t dim2, int64_t dim3) const {
+    return this->ptr() + this->Dims2Offset(dim0, dim1, dim2, dim3);
   }
 };
 
@@ -204,8 +211,11 @@ class VarNdArray<T, 5> final : public VarNdArrayBase<VarNdArray<T, 5>, T, 5> {
   VarNdArray(const Shape& shape, T* ptr) : VarNdArrayBase<VarNdArray<T, 5>, T, 5>(shape, ptr) {}
   ~VarNdArray() = default;
 
-  ALWAYS_INLINE T At(int64_t dim0, int64_t dim1, int64_t dim2, int64_t dim3, int64_t dim4) const {
-    return *(this->ptr() + this->Dims2Offset(dim0, dim1, dim2, dim3, dim4));
+  ALWAYS_INLINE T Get(int64_t dim0, int64_t dim1, int64_t dim2, int64_t dim3, int64_t dim4) const {
+    return this->ptr()[this->Dims2Offset(dim0, dim1, dim2, dim3, dim4)];
+  }
+  ALWAYS_INLINE T* Mut(int64_t dim0, int64_t dim1, int64_t dim2, int64_t dim3, int64_t dim4) const {
+    return this->ptr() + this->Dims2Offset(dim0, dim1, dim2, dim3, dim4);
   }
 };
 
@@ -221,10 +231,11 @@ class Slice final {
 
   const Slice& Bound(size_t value_capacity);
 
-  int64_t At(int64_t index) const;
+  ALWAYS_INLINE int64_t Get(int64_t index) const { return start_ + index * stride_; }
   bool IsBounded() const;
   size_t Size() const;
   bool is_contiguous() const;
+  bool is_covering_all() const;
 
  private:
   int64_t start_;
@@ -233,23 +244,41 @@ class Slice final {
   size_t value_capacity_;
 };
 
-template<typename XT, int NDIMS>
+template<typename Derived, typename XT, int NDIMS>
 class SliceNdArrayBase : public NdArray<typename XT::dtype, XT::ndims> {
  public:
   static const bool immutable = false;
   static_assert(XT::ndims == NDIMS, "XT::ndims should equals NDIMS");
+  static_assert(!XT::immutable, "XT should be mutable");
   SliceNdArrayBase(XT&& x, std::array<Slice, NDIMS>&& slices)
       : NdArray<typename XT::dtype, XT::ndims>(BoundedSlices2Shape(BoundSlices(x, slices))),
         x_(x),
-        slices_(BoundSlices(x, slices)) {}
+        slices_(BoundSlices(x, slices)) {
+    SetContiguousLength(slices);
+  }
   virtual ~SliceNdArrayBase() = default;
 
-  const XT& x() const { return x_; }
-  const Slice& slice(int32_t dim) const { return slices_[dim]; }
+  template<typename AT>
+  Derived& operator=(const AT& ndarray) {
+    auto* derived_this = static_cast<Derived*>(this);
+    AssignNdArray(derived_this, ndarray);
+    return *derived_this;
+  }
+
+ protected:
+  ALWAYS_INLINE const XT& x() const { return x_; }
+  ALWAYS_INLINE const Slice& slice(int32_t dim) const { return slices_[dim]; }
+  ALWAYS_INLINE void GetMutPtrAndContiguousSize(typename XT::dtype** ptr, size_t* size,
+                                                int64_t offset, int64_t x_offset) {
+    size_t x_contiguous_size;
+    this->x().GetMutPtrAndContiguousSize(ptr, &x_contiguous_size, x_offset);
+    size_t slice_contiguous_size = (contiguous_len_ - offset % contiguous_len_);
+    *size = std::min(x_contiguous_size, slice_contiguous_size);
+  }
 
  private:
   static std::array<Slice, NDIMS>&& BoundSlices(XT&& x, std::array<Slice, NDIMS>&& slices) {
-    FOR_RANGE(int32_t, i, 0, NDIMS) { slices[i].Bound(x.shape().At(i)); }
+    FOR_RANGE(int32_t, i, 0, NDIMS) { slices[i].Bound(x.shape().Get(i)); }
     return slices;
   }
   static Shape BoundedSlices2Shape(const std::array<Slice, NDIMS>& bounded_slices) {
@@ -260,8 +289,16 @@ class SliceNdArrayBase : public NdArray<typename XT::dtype, XT::ndims> {
     }
     return Shape(dim_vec);
   }
+  void SetContiguousLength(const std::array<Slice, NDIMS>& bounded_slices) {
+    contiguous_len_ = 1;
+    for (int i = NDIMS - 1; i >= 0; --i) {
+      if (bounded_slices[i].is_contiguous()) { contiguous_len_ *= bounded_slices[i].Size(); }
+      if (!(bounded_slices[i].is_contiguous() && bounded_slices[i].is_covering_all())) { break; }
+    }
+  }
   const XT& x_;
   std::array<Slice, NDIMS> slices_;
+  size_t contiguous_len_;
 };
 
 template<typename XT, typename Enable = void>
@@ -269,43 +306,254 @@ class SliceNdArray;
 
 template<typename XT>
 class SliceNdArray<XT, typename std::enable_if<XT::ndims == 1>::type> final
-    : public SliceNdArrayBase<XT, XT::ndims> {
+    : public SliceNdArrayBase<SliceNdArray<XT>, XT, XT::ndims> {
  public:
-  SliceNdArray(XT&& x, Slice&& slice0) : SliceNdArrayBase<XT, XT::ndims>(x, {slice0}) {}
+  SliceNdArray(XT&& x, Slice&& slice0)
+      : SliceNdArrayBase<SliceNdArray<XT>, XT, XT::ndims>(x, {slice0}) {}
+  ~SliceNdArray() = default;
+
+  using dtype = typename XT::dtype;
+  ALWAYS_INLINE dtype Get(int64_t dim0) const { return this->x().Get(this->slice(0).Get(dim0)); }
+  ALWAYS_INLINE dtype* Mut(int64_t dim0) const { return this->x().Mut(this->slice(0).Get(dim0)); }
+  ALWAYS_INLINE void GetMutPtrAndContiguousSize(dtype** ptr, size_t* size, int64_t offset) const {
+    size_t dim0 = offset;
+    size_t x_offset = this->slice(0).Get(dim0);
+    this->GetMutPtrAndContiguousSize(ptr, size, offset, x_offset);
+  }
 };
 
 template<typename XT>
 class SliceNdArray<XT, typename std::enable_if<XT::ndims == 2>::type> final
-    : public SliceNdArrayBase<XT, XT::ndims> {
+    : public SliceNdArrayBase<SliceNdArray<XT>, XT, XT::ndims> {
  public:
   SliceNdArray(XT&& x, Slice&& slice0, Slice&& slice1)
-      : SliceNdArrayBase<XT, XT::ndims>(x, {slice0, slice1}) {}
+      : SliceNdArrayBase<SliceNdArray<XT>, XT, XT::ndims>(x, {slice0, slice1}) {}
+  ~SliceNdArray() = default;
+
+  using dtype = typename XT::dtype;
+  ALWAYS_INLINE dtype Get(int64_t dim0, int64_t dim1) const {
+    return this->x().Get(this->slice(0).Get(dim0), this->slice(1).Get(dim1));
+  }
+  ALWAYS_INLINE dtype* Mut(int64_t dim0, int64_t dim1) const {
+    return this->x().Mut(this->slice(0).Get(dim0), this->slice(1).Get(dim1));
+  }
+  ALWAYS_INLINE void GetMutPtrAndContiguousSize(dtype** ptr, size_t* size, int64_t offset) const {
+    size_t dim0 = 0;
+    size_t dim1 = 0;
+    this->Offset2Dims(offset, &dim0, &dim1);
+    size_t x_offset = this->x().Dims2Offset(this->slice(0).Get(dim0), this->slice(1).Get(dim1));
+    this->GetMutPtrAndContiguousSize(ptr, size, offset, x_offset);
+  }
 };
 
 template<typename XT>
 class SliceNdArray<XT, typename std::enable_if<XT::ndims == 3>::type> final
-    : public SliceNdArrayBase<XT, XT::ndims> {
+    : public SliceNdArrayBase<SliceNdArray<XT>, XT, XT::ndims> {
  public:
   SliceNdArray(XT&& x, Slice&& slice0, Slice&& slice1, Slice&& slice2)
-      : SliceNdArrayBase<XT, XT::ndims>(x, {slice0, slice1, slice2}) {}
+      : SliceNdArrayBase<SliceNdArray<XT>, XT, XT::ndims>(x, {slice0, slice1, slice2}) {}
+  ~SliceNdArray() = default;
+
+  using dtype = typename XT::dtype;
+  ALWAYS_INLINE dtype Get(int64_t dim0, int64_t dim1, int64_t dim2) const {
+    return this->x().Get(this->slice(0).Get(dim0), this->slice(1).Get(dim1),
+                         this->slice(2).Get(dim2));
+  }
+  ALWAYS_INLINE dtype* Mut(int64_t dim0, int64_t dim1, int64_t dim2) const {
+    return this->x().Mut(this->slice(0).Get(dim0), this->slice(1).Get(dim1),
+                         this->slice(2).Get(dim2));
+  }
+  ALWAYS_INLINE void GetMutPtrAndContiguousSize(dtype** ptr, size_t* size, int64_t offset) const {
+    size_t dim0 = 0;
+    size_t dim1 = 0;
+    size_t dim2 = 0;
+    this->Offset2Dims(offset, &dim0, &dim1, &dim2);
+    size_t x_offset = this->x().Dims2Offset(this->slice(0).Get(dim0), this->slice(1).Get(dim1),
+                                            this->slice(2).Get(dim2));
+    this->GetMutPtrAndContiguousSize(ptr, size, offset, x_offset);
+  }
 };
 
 template<typename XT>
 class SliceNdArray<XT, typename std::enable_if<XT::ndims == 4>::type> final
-    : public SliceNdArrayBase<XT, XT::ndims> {
+    : public SliceNdArrayBase<SliceNdArray<XT>, XT, XT::ndims> {
  public:
   SliceNdArray(XT&& x, Slice&& slice0, Slice&& slice1, Slice&& slice2, Slice&& slice3)
-      : SliceNdArrayBase<XT, XT::ndims>(x, {slice0, slice1, slice2, slice3}) {}
+      : SliceNdArrayBase<SliceNdArray<XT>, XT, XT::ndims>(x, {slice0, slice1, slice2, slice3}) {}
+  ~SliceNdArray() = default;
+
+  using dtype = typename XT::dtype;
+  ALWAYS_INLINE dtype Get(int64_t dim0, int64_t dim1, int64_t dim2, int64_t dim3) const {
+    return this->x().Get(this->slice(0).Get(dim0), this->slice(1).Get(dim1),
+                         this->slice(2).Get(dim2), this->slice(3).Get(dim3));
+  }
+  ALWAYS_INLINE dtype* Mut(int64_t dim0, int64_t dim1, int64_t dim2, int64_t dim3) const {
+    return this->x().Mut(this->slice(0).Get(dim0), this->slice(1).Get(dim1),
+                         this->slice(2).Get(dim2), this->slice(3).Get(dim3));
+  }
+  ALWAYS_INLINE void GetMutPtrAndContiguousSize(dtype** ptr, size_t* size, int64_t offset) const {
+    size_t dim0 = 0;
+    size_t dim1 = 0;
+    size_t dim2 = 0;
+    size_t dim3 = 0;
+    this->Offset2Dims(offset, &dim0, &dim1, &dim2, &dim3);
+    size_t x_offset = this->x().Dims2Offset(this->slice(0).Get(dim0), this->slice(1).Get(dim1),
+                                            this->slice(2).Get(dim2), this->slice(3).Get(dim3));
+    this->GetMutPtrAndContiguousSize(ptr, size, offset, x_offset);
+  }
 };
 
 template<typename XT>
 class SliceNdArray<XT, typename std::enable_if<XT::ndims == 5>::type> final
-    : public SliceNdArrayBase<XT, XT::ndims> {
+    : public SliceNdArrayBase<SliceNdArray<XT>, XT, XT::ndims> {
  public:
   SliceNdArray(XT&& x, Slice&& slice0, Slice&& slice1, Slice&& slice2, Slice&& slice3,
                Slice&& slice4)
-      : SliceNdArrayBase<XT, XT::ndims>(x, {slice0, slice1, slice2, slice3, slice4}) {}
+      : SliceNdArrayBase<SliceNdArray<XT>, XT, XT::ndims>(
+            x, {slice0, slice1, slice2, slice3, slice4}) {}
+  ~SliceNdArray() = default;
+
+  using dtype = typename XT::dtype;
+  ALWAYS_INLINE dtype Get(int64_t dim0, int64_t dim1, int64_t dim2, int64_t dim3,
+                          int64_t dim4) const {
+    return this->x().Get(this->slice(0).Get(dim0), this->slice(1).Get(dim1),
+                         this->slice(2).Get(dim2), this->slice(3).Get(dim3),
+                         this->slice(4).Get(dim4));
+  }
+  ALWAYS_INLINE dtype* Mut(int64_t dim0, int64_t dim1, int64_t dim2, int64_t dim3,
+                           int64_t dim4) const {
+    return this->x().Mut(this->slice(0).Get(dim0), this->slice(1).Get(dim1),
+                         this->slice(2).Get(dim2), this->slice(3).Get(dim3),
+                         this->slice(4).Get(dim4));
+  }
+  ALWAYS_INLINE void GetMutPtrAndContiguousSize(dtype** ptr, size_t* size, int64_t offset) const {
+    size_t dim0 = 0;
+    size_t dim1 = 0;
+    size_t dim2 = 0;
+    size_t dim3 = 0;
+    size_t dim4 = 0;
+    this->Offset2Dims(offset, &dim0, &dim1, &dim2, &dim3, &dim4);
+    size_t x_offset = this->x().Dims2Offset(this->slice(0).Get(dim0), this->slice(1).Get(dim1),
+                                            this->slice(2).Get(dim2), this->slice(3).Get(dim3),
+                                            this->slice(4).Get(dim4));
+    this->GetMutPtrAndContiguousSize(ptr, size, offset, x_offset);
+  }
 };
+
+template<typename YT, typename XT, typename T = typename YT::dtype, int NDIMS = YT::ndims>
+typename std::enable_if<!YT::immutable && !XT::immutable>::type AssignNdArray(YT* y_ndarray,
+                                                                              const XT& x_ndarray) {
+  CHECK_EQ(y_ndarray->shape(), x_ndarray.shape());
+  T* dst_ptr = nullptr;
+  size_t dst_size = 0;
+  T* src_ptr = nullptr;
+  size_t src_size = 0;
+  int64_t cur_index = 0;
+  size_t total_elem_cnt = y_ndarray->shape().elem_cnt();
+  while (cur_index < total_elem_cnt) {
+    if (dst_size == 0) { y_ndarray->GetMutPtrAndContiguousSize(&dst_ptr, &dst_size, cur_index); }
+    if (src_size == 0) { x_ndarray.GetMutPtrAndContiguousSize(&src_ptr, &src_size, cur_index); }
+    if (src_size == 0) { break; }
+    size_t cp_size = std::min(dst_size, src_size);
+    if (cp_size == 1) {
+      *dst_ptr = *src_ptr;
+    } else {
+      memcpy(dst_ptr, src_ptr, sizeof(T) * cp_size);
+    }
+    dst_ptr += cp_size;
+    src_ptr += cp_size;
+    dst_size -= cp_size;
+    src_size -= cp_size;
+    cur_index += cp_size;
+  }
+  CHECK_EQ(dst_size, 0);
+  CHECK_EQ(src_size, 0);
+  CHECK_EQ(cur_index, total_elem_cnt);
+}
+
+template<typename YT, typename XT, typename T = typename YT::dtype, int NDIMS = YT::ndims>
+typename std::enable_if<!YT::immutable && XT::immutable && NDIMS == 1>::type AssignNdArray(
+    YT* y_ndarray, const XT& x_ndarray) {
+  static_assert(YT::ndims == XT::ndims, "YT::ndims should equals XT::ndims");
+  CHECK_EQ(y_ndarray->shape().NumAxes(), 1);
+  CHECK_EQ(y_ndarray->shape(), x_ndarray.shape());
+  int64_t dim0_size = y_ndarray->shape().At(0);
+  FOR_RANGE(int64_t, i, 0, dim0_size) { *y_ndarray->Mut(i) = x_ndarray.Get(i); }
+}
+
+template<typename YT, typename XT, typename T = typename YT::dtype, int NDIMS = YT::ndims>
+typename std::enable_if<!YT::immutable && XT::immutable && NDIMS == 2>::type AssignNdArray(
+    YT* y_ndarray, const XT& x_ndarray) {
+  static_assert(YT::ndims == XT::ndims, "YT::ndims should equals XT::ndims");
+  CHECK_EQ(y_ndarray->shape().NumAxes(), 2);
+  CHECK_EQ(y_ndarray->shape(), x_ndarray.shape());
+  int64_t dim0_size = y_ndarray->shape().At(0);
+  int64_t dim1_size = y_ndarray->shape().At(1);
+  FOR_RANGE(int64_t, i, 0, dim0_size) {
+    FOR_RANGE(int64_t, j, 0, dim1_size) { *y_ndarray->Mut(i, j) = x_ndarray.Get(i, j); }
+  }
+}
+
+template<typename YT, typename XT, typename T = typename YT::dtype, int NDIMS = YT::ndims>
+typename std::enable_if<!YT::immutable && XT::immutable && NDIMS == 3>::type AssignNdArray(
+    YT* y_ndarray, const XT& x_ndarray) {
+  static_assert(YT::ndims == XT::ndims, "YT::ndims should equals XT::ndims");
+  CHECK_EQ(y_ndarray->shape().NumAxes(), 3);
+  CHECK_EQ(y_ndarray->shape(), x_ndarray.shape());
+  int64_t dim0_size = y_ndarray->shape().At(0);
+  int64_t dim1_size = y_ndarray->shape().At(1);
+  int64_t dim2_size = y_ndarray->shape().At(2);
+  FOR_RANGE(int64_t, i, 0, dim0_size) {
+    FOR_RANGE(int64_t, j, 0, dim1_size) {
+      FOR_RANGE(int64_t, k, 0, dim2_size) { *y_ndarray->Mut(i, j, k) = x_ndarray.Get(i, j, k); }
+    }
+  }
+}
+
+template<typename YT, typename XT, typename T = typename YT::dtype, int NDIMS = YT::ndims>
+typename std::enable_if<!YT::immutable && XT::immutable && NDIMS == 4>::type AssignNdArray(
+    YT* y_ndarray, const XT& x_ndarray) {
+  static_assert(YT::ndims == XT::ndims, "YT::ndims should equals XT::ndims");
+  CHECK_EQ(y_ndarray->shape().NumAxes(), 4);
+  CHECK_EQ(y_ndarray->shape(), x_ndarray.shape());
+  int64_t dim0_size = y_ndarray->shape().At(0);
+  int64_t dim1_size = y_ndarray->shape().At(1);
+  int64_t dim2_size = y_ndarray->shape().At(2);
+  int64_t dim3_size = y_ndarray->shape().At(3);
+  FOR_RANGE(int64_t, i, 0, dim0_size) {
+    FOR_RANGE(int64_t, j, 0, dim1_size) {
+      FOR_RANGE(int64_t, k, 0, dim2_size) {
+        FOR_RANGE(int64_t, n, 0, dim3_size) {
+          *y_ndarray->Mut(i, j, k, n) = x_ndarray.Get(i, j, k, n);
+        }
+      }
+    }
+  }
+}
+
+template<typename YT, typename XT, typename T = typename YT::dtype, int NDIMS = YT::ndims>
+typename std::enable_if<!YT::immutable && XT::immutable && NDIMS == 5>::type AssignNdArray(
+    YT* y_ndarray, const XT& x_ndarray) {
+  static_assert(YT::ndims == XT::ndims, "YT::ndims should equals XT::ndims");
+  CHECK_EQ(y_ndarray->shape().NumAxes(), 5);
+  CHECK_EQ(y_ndarray->shape(), x_ndarray.shape());
+  int64_t dim0_size = y_ndarray->shape().At(0);
+  int64_t dim1_size = y_ndarray->shape().At(1);
+  int64_t dim2_size = y_ndarray->shape().At(2);
+  int64_t dim3_size = y_ndarray->shape().At(3);
+  int64_t dim4_size = y_ndarray->shape().At(4);
+  FOR_RANGE(int64_t, i, 0, dim0_size) {
+    FOR_RANGE(int64_t, j, 0, dim1_size) {
+      FOR_RANGE(int64_t, k, 0, dim2_size) {
+        FOR_RANGE(int64_t, n, 0, dim3_size) {
+          FOR_RANGE(int64_t, m, 0, dim4_size) {
+            *y_ndarray->Mut(i, j, k, n, m) = x_ndarray.Get(i, j, k, n, m);
+          }
+        }
+      }
+    }
+  }
+}
 
 }  // namespace oneflow
 
