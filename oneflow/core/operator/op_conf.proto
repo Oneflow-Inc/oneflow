@@ -186,9 +186,9 @@ message ReluOpConf {
 message PReluOpConf {
   required string in = 1;
   required string out = 2;
-  optional bool channel_shared = 3 [default = false];
-  optional InitializerConf alpha_initializer = 4;
-  required string data_format = 5;
+  required string data_format = 3;
+  optional bool channel_shared = 4 [default = false];
+  optional InitializerConf alpha_initializer = 5;
 }
 
 message SigmoidOpConf {

@@ -18,6 +18,7 @@ class PReluOp final : public Operator {
   bool IsElemWiseOp() const override { return true; }
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
+  void VirtualFixParallelDesc(ParallelDesc* pr_desc) const override;
 };
 
 }  // namespace oneflow
