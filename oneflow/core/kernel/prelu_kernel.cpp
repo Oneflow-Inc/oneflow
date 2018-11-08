@@ -5,26 +5,20 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 void PReluKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* in_blob = BnInOp2Blob("in");
-  const Blob* weight_blob = BnInOp2Blob("weight");
-  Blob* out_blob = BnInOp2Blob("out");
-  PReluKernelUtil<device_type, T>::Forward(ctx, this->op_conf().prelu_conf(), in_blob, weight_blob,
-                                           out_blob);
+  PReluKernelUtil<device_type, T>::Forward(ctx, this->op_conf().prelu_conf(), BnInOp2Blob("in"),
+                                           BnInOp2Blob("weight"), BnInOp2Blob("out"));
 }
 
 template<DeviceType device_type, typename T>
 void PReluKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* in_blob = BnInOp2Blob("in");
-  const Blob* weight_blob = BnInOp2Blob("weight");
-  const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   Blob* in_diff_blob = BnInOp2Blob("in_diff");
-  Blob* weight_diff_blob = BnInOp2Blob("weight_diff");
   if (in_diff_blob == nullptr) { return; }
   Memset<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr<T>(), 0,
                       in_diff_blob->ByteSizeOfDataContentField());
-  PReluKernelUtil<device_type, T>::Backward(ctx, this->op_conf().prelu_conf(), in_blob, weight_blob,
-                                            out_diff_blob, in_diff_blob, weight_diff_blob);
+  PReluKernelUtil<device_type, T>::Backward(ctx, this->op_conf().prelu_conf(), BnInOp2Blob("in"),
+                                            BnInOp2Blob("weight"), BnInOp2Blob("out_diff"),
+                                            in_diff_blob, BnInOp2Blob("weight_diff"));
 }
 
 template<typename T>
