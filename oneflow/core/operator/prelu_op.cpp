@@ -24,7 +24,8 @@ void PReluOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlo
     if (conf.data_format() == "channels_first") {
       alpha_blob_desc->mut_shape() = Shape({in_blob_desc->shape().At(1)});
     } else if (conf.data_format() == "channels_last") {
-      alpha_blob_desc->mut_shape() = Shape({in_blob_desc->shape().At(3)});
+      alpha_blob_desc->mut_shape() =
+          Shape({in_blob_desc->shape().At(in_blob_desc->shape().NumAxes() - 1)});
     } else {
       UNIMPLEMENTED();
     }

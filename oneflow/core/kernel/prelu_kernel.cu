@@ -134,7 +134,7 @@ struct PReluKernelUtil<DeviceType::kGPU, T> {
             elem_cnt, channel_num, area, in_blob->dptr<T>(), alpha_blob->dptr<T>(),
             out_blob->mut_dptr<T>());
       } else if (conf.data_format() == "channels_last") {
-        const int64_t channel_num = in_blob->shape().At(3);
+        const int64_t channel_num = in_blob->shape().At(in_blob->shape().NumAxes() - 1);
         PReluForwardNHWC<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                            ctx.device_ctx->cuda_stream()>>>(
             elem_cnt, channel_num, in_blob->dptr<T>(), alpha_blob->dptr<T>(),
@@ -171,7 +171,7 @@ struct PReluKernelUtil<DeviceType::kGPU, T> {
             instance_num, channel_num, area, in_blob->dptr<T>(), alpha_blob->dptr<T>(),
             out_diff_blob->dptr<T>(), in_diff_blob->mut_dptr<T>());
       } else if (conf.data_format() == "channels_last") {
-        const int64_t channel_num = out_diff_blob->shape().At(3);
+        const int64_t channel_num = out_diff_blob->shape().At(in_blob->shape().NumAxes() - 1);
         PRelualphaBackwardNHWC<<<channel_num, kCudaThreadsNumPerBlock, 0,
                                  ctx.device_ctx->cuda_stream()>>>(
             channel_num, elem_cnt, in_blob->dptr<T>(), out_diff_blob->dptr<T>(),
