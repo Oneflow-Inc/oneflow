@@ -35,7 +35,7 @@ __global__ void PReluForwardNHWC(const int64_t elem_cnt, const int64_t channel_n
 }
 
 template<typename T>
-__global__ void PReluSharedalphaBackwardNCHW(const int64_t elem_cnt, const T* in_dptr,
+__global__ void PReluSharedAlphaBackwardNCHW(const int64_t elem_cnt, const T* in_dptr,
                                              const T* out_diff_dptr, T* alpha_diff_dptr) {
   T alpha_sum = 0.0;
   for (int64_t i = threadIdx.x; i < elem_cnt; i += blockDim.x) {
@@ -150,7 +150,7 @@ struct PReluKernelUtil<DeviceType::kGPU, T> {
                        Blob* alpha_diff_blob) {
     const int64_t elem_cnt = out_diff_blob->shape().elem_cnt();
     if (conf.channel_shared()) {
-      PReluSharedalphaBackwardNCHW<<<1, kCudaThreadsNumPerBlock, 0,
+      PReluSharedAlphaBackwardNCHW<<<1, kCudaThreadsNumPerBlock, 0,
                                      ctx.device_ctx->cuda_stream()>>>(
           elem_cnt, in_blob->dptr<T>(), out_diff_blob->dptr<T>(), alpha_diff_blob->mut_dptr<T>());
       PReluDataBackward<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
