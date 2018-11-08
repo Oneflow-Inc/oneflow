@@ -188,7 +188,7 @@ message PReluOpConf {
   required string out = 2;
   required string data_format = 3;
   optional bool channel_shared = 4 [default = false];
-  optional InitializerConf alpha_initializer = 5;
+  optional float alpha_init = 5 [default = 0.25];
 }
 
 message SigmoidOpConf {

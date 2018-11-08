@@ -38,9 +38,12 @@ template<DeviceType device_type, typename T>
 void PReluKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937* random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx, GetMsgPtrFromPbMessage(this->op_conf().prelu_conf(), "alpha_initializer"),
-      (*random_seed_gen)(), BnInOp2Blob("weight"));
+  const auto& prelu_conf = this->op_conf().prelu_conf();
+  float alpha_init = prelu_conf.alpha_init();
+  InitializerConf alpha_init_conf;
+  alpha_init_conf.mutable_constant_conf()->set_value(alpha_init);
+  KernelUtil<device_type, T>::InitializeWithProperConf(ctx, &alpha_init_conf, 0,
+                                                       BnInOp2Blob("weight"));
 }
 
 template<DeviceType device_type, typename T>
