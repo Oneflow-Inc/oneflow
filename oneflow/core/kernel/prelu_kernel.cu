@@ -57,7 +57,7 @@ __global__ void PReluDataBackward(const int64_t elem_cnt, const T* in_dptr, cons
 }
 
 template<typename T>
-__global__ void PRelualphaBackwardNCHW(const int64_t channel_num, const int64_t instance_num,
+__global__ void PReluAlphaBackwardNCHW(const int64_t channel_num, const int64_t instance_num,
                                        const int64_t area, const int64_t elem_cnt, const T* in_dptr,
                                        const T* out_diff_dptr, T* alpha_diff_dptr) {
   int64_t c = blockIdx.x;
@@ -87,7 +87,7 @@ __global__ void PReluDataBackwardNCHW(const int64_t elem_cnt, const int64_t chan
 }
 
 template<typename T>
-__global__ void PRelualphaBackwardNHWC(const int64_t channel_num, const int64_t elem_cnt,
+__global__ void PReluAlphaBackwardNHWC(const int64_t channel_num, const int64_t elem_cnt,
                                        const T* in_dptr, const T* out_diff_dptr,
                                        T* alpha_diff_dptr) {
   int64_t c = blockIdx.x;
@@ -162,7 +162,7 @@ struct PReluKernelUtil<DeviceType::kGPU, T> {
         const int64_t channel_num = out_diff_blob->shape().At(1);
         const int64_t instance_num = out_diff_blob->shape().At(0);
         const int64_t area = out_diff_blob->shape().Count(2);
-        PRelualphaBackwardNCHW<<<channel_num, kCudaThreadsNumPerBlock, 0,
+        PReluAlphaBackwardNCHW<<<channel_num, kCudaThreadsNumPerBlock, 0,
                                  ctx.device_ctx->cuda_stream()>>>(
             channel_num, instance_num, area, elem_cnt, in_blob->dptr<T>(), out_diff_blob->dptr<T>(),
             alpha_diff_blob->mut_dptr<T>());
@@ -172,7 +172,7 @@ struct PReluKernelUtil<DeviceType::kGPU, T> {
             out_diff_blob->dptr<T>(), in_diff_blob->mut_dptr<T>());
       } else if (conf.data_format() == "channels_last") {
         const int64_t channel_num = out_diff_blob->shape().At(in_blob->shape().NumAxes() - 1);
-        PRelualphaBackwardNHWC<<<channel_num, kCudaThreadsNumPerBlock, 0,
+        PReluAlphaBackwardNHWC<<<channel_num, kCudaThreadsNumPerBlock, 0,
                                  ctx.device_ctx->cuda_stream()>>>(
             channel_num, elem_cnt, in_blob->dptr<T>(), out_diff_blob->dptr<T>(),
             alpha_diff_blob->mut_dptr<T>());

@@ -21,7 +21,7 @@ void PReluKernel<device_type, T>::BackwardDataContent(
                       alpha_diff_blob->ByteSizeOfDataContentField());
   PReluKernelUtil<device_type, T>::Backward(ctx, this->op_conf().prelu_conf(), BnInOp2Blob("in"),
                                             BnInOp2Blob("alpha"), BnInOp2Blob("out_diff"),
-                                            in_diff_blob, BnInOp2Blob("alpha_diff"));
+                                            in_diff_blob, alpha_diff_blob);
 }
 
 template<typename T>
