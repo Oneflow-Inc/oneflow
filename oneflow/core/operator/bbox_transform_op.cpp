@@ -37,7 +37,7 @@ void BboxTransformOp::InferBlobDescs(
              bbox_delta_blob_desc->has_dim0_valid_num_field());
   }
   CHECK_EQ(bbox_blob_desc->has_dim1_valid_num_field(),
-           bbox_delta_blob_desc->has_dim0_valid_num_field());
+           bbox_delta_blob_desc->has_dim1_valid_num_field());
 }
 
 REGISTER_OP(OperatorConf::kBboxTransformConf, BboxTransformOp);

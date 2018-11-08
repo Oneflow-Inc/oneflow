@@ -41,8 +41,10 @@ void GenerateAnchorsOp::InferBlobDescs(
   BlobDesc* anchors_blob_desc = GetBlobDesc4BnInOp("anchors");
   anchors_blob_desc->mut_shape() = Shape({feat_h, feat_w, num_anchors, 4});
   anchors_blob_desc->set_data_type(in_blob_desc->data_type());
-  // output: same as anchors
-  *GetBlobDesc4BnInOp("anchors") = *anchors_blob_desc;
+  // output: out (N, H, W, A * 4)
+  BlobDesc* out_desc = GetBlobDesc4BnInOp("out");
+  out_desc->mut_shape() = Shape({in_blob_desc->shape().At(0), feat_h, feat_w, num_anchors * 4});
+  out_desc->set_data_type(in_blob_desc->data_type());
 }
 
 REGISTER_CPU_OP(OperatorConf::kGenerateAnchorsConf, GenerateAnchorsOp);
