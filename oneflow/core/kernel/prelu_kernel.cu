@@ -71,7 +71,7 @@ template<typename T>
 __global__ void PReluDataBackwardNCHW(const int64_t elem_cnt, const int64_t channel_num,
                                       const int64_t area, const T* in_dptr, const T* alpha_dptr,
                                       const T* out_dff_dptr, T* in_diff_dptr) {
-  CUDA_1D_KERNEL_LOOP(i, elem_cnt * channel_num * area) {
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     int64_t c = (i / area) % channel_num;
     in_diff_dptr[i] = (in_dptr[i] > 0) ? out_dff_dptr[i] : out_dff_dptr[i] * alpha_dptr[c];
   }
@@ -93,16 +93,6 @@ __global__ void PReluAlphaBackwardNHWC(const int64_t channel_num, const int64_t 
   __shared__ typename BlockReduce::TempStorage temp_storage;
   T sum = BlockReduce(temp_storage).Sum(alpha_sum);
   if (threadIdx.x == 0) { alpha_diff_dptr[c] = sum; }
-}
-
-template<typename T>
-__global__ void PReluDataBackwardNHWC(const int64_t elem_cnt, const int64_t channel_num,
-                                      const T* in_dptr, const T* alpha_dptr, const T* out_dff_dptr,
-                                      T* in_diff_dptr) {
-  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    int64_t c = i % channel_num;
-    in_diff_dptr[i] = (in_dptr[i] > 0) ? out_dff_dptr[i] : out_dff_dptr[i] * alpha_dptr[c];
-  }
 }
 
 }  // namespace
@@ -159,7 +149,7 @@ struct PReluKernelUtil<DeviceType::kGPU, T> {
             alpha_diff_blob->mut_dptr<T>());
         PReluDataBackwardNCHW<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                                 ctx.device_ctx->cuda_stream()>>>(
-            instance_num, channel_num, area, in_blob->dptr<T>(), alpha_blob->dptr<T>(),
+            elem_cnt, channel_num, area, in_blob->dptr<T>(), alpha_blob->dptr<T>(),
             out_diff_blob->dptr<T>(), in_diff_blob->mut_dptr<T>());
       } else if (conf.data_format() == "channels_last") {
         const int64_t channel_num = out_diff_blob->shape().At(in_blob->shape().NumAxes() - 1);
@@ -167,9 +157,9 @@ struct PReluKernelUtil<DeviceType::kGPU, T> {
                                  ctx.device_ctx->cuda_stream()>>>(
             channel_num, elem_cnt, in_blob->dptr<T>(), out_diff_blob->dptr<T>(),
             alpha_diff_blob->mut_dptr<T>());
-        PReluDataBackwardNHWC<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+        PReluDataBackwardNCHW<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                                 ctx.device_ctx->cuda_stream()>>>(
-            elem_cnt, channel_num, in_blob->dptr<T>(), alpha_blob->dptr<T>(),
+            elem_cnt, channel_num, 1, in_blob->dptr<T>(), alpha_blob->dptr<T>(),
             out_diff_blob->dptr<T>(), in_diff_blob->mut_dptr<T>());
       } else {
         UNIMPLEMENTED();
