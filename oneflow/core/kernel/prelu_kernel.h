@@ -28,10 +28,10 @@ class PReluKernel final : public KernelIf<device_type> {
 template<DeviceType device_type, typename T>
 struct PReluKernelUtil {
   static void Forward(const KernelCtx& ctx, const PReluOpConf& conf, const Blob* in_blob,
-                      const Blob* weight_blob, Blob* out_blob);
+                      const Blob* alpha_blob, Blob* out_blob);
   static void Backward(const KernelCtx& ctx, const PReluOpConf& conf, const Blob* in_blob,
-                       const Blob* weight_blob, const Blob* out_diff_blob, Blob* in_diff_blob,
-                       Blob* weight_diff_blob);
+                       const Blob* alpha_blob, const Blob* out_diff_blob, Blob* in_diff_blob,
+                       Blob* alpha_diff_blob);
 };
 
 }  // namespace oneflow

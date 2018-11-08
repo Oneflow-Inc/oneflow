@@ -6,7 +6,7 @@ void PReluOp::InitFromOpConf() {
   CHECK(op_conf().has_prelu_conf());
   StrFieldTolower("data_format");
   EnrollInputBn("in");
-  EnrollModelBn("weight");
+  EnrollModelBn("alpha");
   EnrollOutputBn("out");
 }
 
@@ -17,19 +17,19 @@ void PReluOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlo
   const PReluOpConf& conf = op_conf().prelu_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   *GetBlobDesc4BnInOp("out") = *in_blob_desc;
-  BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");
+  BlobDesc* alpha_blob_desc = GetBlobDesc4BnInOp("alpha");
   if (conf.channel_shared()) {
-    weight_blob_desc->mut_shape() = Shape({1});
+    alpha_blob_desc->mut_shape() = Shape({1});
   } else {
     if (conf.data_format() == "channels_first") {
-      weight_blob_desc->mut_shape() = Shape({in_blob_desc->shape().At(1)});
+      alpha_blob_desc->mut_shape() = Shape({in_blob_desc->shape().At(1)});
     } else if (conf.data_format() == "channels_last") {
-      weight_blob_desc->mut_shape() = Shape({in_blob_desc->shape().At(3)});
+      alpha_blob_desc->mut_shape() = Shape({in_blob_desc->shape().At(3)});
     } else {
       UNIMPLEMENTED();
     }
   }
-  weight_blob_desc->set_data_type(in_blob_desc->data_type());
+  alpha_blob_desc->set_data_type(in_blob_desc->data_type());
 }
 
 void PReluOp::VirtualFixParallelDesc(ParallelDesc* pr_desc) const {
