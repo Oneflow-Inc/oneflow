@@ -18,10 +18,9 @@ class NdArrayHelper final {
   VarNdArray<T, NDIMS> Var(const Shape& shape, T* ptr) const {
     return VarNdArray<T, NDIMS>(shape, ptr);
   }
-  template<int CONCAT_AXES, typename XT, typename T = typename XT::dtype, int NDIMS = XT::ndims>
-  ConcatVarNdArray<T, NDIMS, CONCAT_AXES> Concatenate(const std::vector<XT>& var_ndarrays) const {
-    static_assert(std::is_same<XT, VarNdArray<T, NDIMS>>::value,
-                  "only vector of VarNdArray can be Concatenated");
+  template<int CONCAT_AXES = 0, typename T = default_data_type, int NDIMS = default_ndims>
+  ConcatVarNdArray<T, NDIMS, CONCAT_AXES> Concatenate(
+      const std::vector<VarNdArray<T, NDIMS>>& var_ndarrays) const {
     return ConcatVarNdArray<T, NDIMS, CONCAT_AXES>(var_ndarrays);
   }
 };

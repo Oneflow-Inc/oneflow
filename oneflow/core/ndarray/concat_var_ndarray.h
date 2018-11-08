@@ -8,7 +8,7 @@
 namespace oneflow {
 
 template<typename Derived, typename T, int NDIMS, int CONCAT_AXES>
-class ConcatVarNdArrayBase final : public NdArray<T, NDIMS> {
+class ConcatVarNdArrayBase : public NdArray<T, NDIMS> {
  public:
   static const bool immutable = false;
   static_assert(CONCAT_AXES >= 0 && CONCAT_AXES < NDIMS, "CONCAT_AXES should be a valid dim");
@@ -16,7 +16,7 @@ class ConcatVarNdArrayBase final : public NdArray<T, NDIMS> {
       : NdArray<T, NDIMS>(CalcConcatenatedShape(var_ndarrays)),
         var_ndarrays_(var_ndarrays),
         dim_ranges_(CalcDimRanges(var_ndarrays)),
-        contiguous_lens_(CalcContiguousLengths(var_ndarrays)) {}
+        contiguous_lens_(CalcContiguousLens(var_ndarrays)) {}
   virtual ~ConcatVarNdArrayBase() = default;
 
   template<typename XT>
@@ -27,30 +27,61 @@ class ConcatVarNdArrayBase final : public NdArray<T, NDIMS> {
  protected:
   ALWAYS_INLINE void GetVarNdArrayIndexAndInputDim(int64_t output_dim, int32_t* var_index,
                                                    int64_t* input_dim) const {
-    TODO();
+    *var_index = VarNdArrayIndex4OutputDim(output_dim);
+    *input_dim = output_dim - dim_ranges_[*var_index].begin();
   }
   ALWAYS_INLINE const VarNdArray<T, NDIMS> var_ndarray(int32_t var_index) const {
     return var_ndarrays_[var_index];
   }
-  ALWAYS_INLINE void GetMutPtrAndMinContiguousSize(int32_t var_index, int64_t offset,
-                                                   int64_t input_offset, T** ptr, size_t* size) {
-    TODO();
+  ALWAYS_INLINE void GetMutPtrAndMinContiguousSize(int32_t var_index, int64_t var_offset, T** ptr,
+                                                   size_t* size) const {
+    size_t var_contiguous_size = 0;
+    var_ndarray(var_index).GetMutPtrAndContiguousSize(var_offset, ptr, &var_contiguous_size);
+    *size = std::min(var_contiguous_size,
+                     contiguous_lens_[var_index] - var_offset % contiguous_lens_[var_index]);
   }
 
  private:
   ALWAYS_INLINE int32_t VarNdArrayIndex4OutputDim(int64_t output_dim) const {
-    TODO();
-    return 0;
+    // TODO change to bianry search
+    FOR_RANGE(int32_t, i, 0, dim_ranges_.size()) {
+      if (output_dim >= dim_ranges_[i].begin() && output_dim < dim_ranges_[i].end()) { return i; }
+    }
+    UNIMPLEMENTED();
   }
-  Shape CalcConcatenatedShape(const std::vector<VarNdArray<T, NDIMS>>& var_ndarrays) {
+  Shape CalcConcatenatedShape(const std::vector<VarNdArray<T, NDIMS>>& var_ndarrays) const {
     CheckInputShape(var_ndarrays);
-    TODO();
-    return Shape();
+    Shape shape(var_ndarrays[0].shape());
+    int64_t axes_dim_num = 0;
+    FOR_RANGE(int32_t, i, 0, var_ndarrays.size()) {
+      axes_dim_num += var_ndarrays[i].shape().At(CONCAT_AXES);
+    }
+    shape.Set(CONCAT_AXES, axes_dim_num);
+    return shape;
   }
-  void CheckInputShape(const std::vector<VarNdArray<T, NDIMS>>& var_ndarrays) { TODO(); }
-  const std::vector<Range>& CalcDimRanges(const std::vector<VarNdArray<T, NDIMS>>& var_ndarrays) {
-    TODO();
+  void CheckInputShape(const std::vector<VarNdArray<T, NDIMS>>& var_ndarrays) const {
+    FOR_RANGE(int32_t, i, 1, var_ndarrays.size()) {
+      FOR_RANGE(int32_t, j, 0, NDIMS) {
+        if (j == CONCAT_AXES) { continue; }
+        CHECK_EQ(var_ndarrays[0].shape().At(j), var_ndarrays[i].shape().At(j));
+      }
+    }
+  }
+  std::vector<Range> CalcDimRanges(const std::vector<VarNdArray<T, NDIMS>>& var_ndarrays) const {
+    int64_t axes_dim_num = 0;
     std::vector<Range> ret;
+    FOR_RANGE(int32_t, i, 0, var_ndarrays.size()) {
+      ret.push_back(Range(axes_dim_num, axes_dim_num + var_ndarrays[i].shape().At(CONCAT_AXES)));
+      axes_dim_num += var_ndarrays[i].shape().At(CONCAT_AXES);
+    }
+    return ret;
+  }
+  std::vector<size_t> CalcContiguousLens(
+      const std::vector<VarNdArray<T, NDIMS>>& var_ndarrays) const {
+    std::vector<size_t> ret(var_ndarrays.size(), 0);
+    FOR_RANGE(int32_t, i, 0, var_ndarrays.size()) {
+      ret[i] = var_ndarrays[i].shape().Count(CONCAT_AXES);
+    }
     return ret;
   }
   const std::vector<VarNdArray<T, NDIMS>> var_ndarrays_;
@@ -86,7 +117,7 @@ class ConcatVarNdArray<T, 1, 0> final
     int32_t var_index = 0;
     int64_t dim0 = 0;
     this->GetVarNdArrayIndexAndInputDim(offset, &var_index, &dim0);
-    this->GetMutPtrAndMinContiguousSize(var_index, offset, dim0, ptr, size);
+    this->GetMutPtrAndMinContiguousSize(var_index, dim0, ptr, size);
   }
 };
 
@@ -96,23 +127,23 @@ class ConcatVarNdArray<T, 1, 0> final
     this->GetVarNdArrayIndexAndInputDim(dim##axes, &var_index, &dim##axes); \
     return this->var_ndarray(var_index).func(dim0, dim1);                   \
   }
-#define DEFINE_CONCAT_VAR_NDARRAY(axes)                                                \
-  template<typename T>                                                                 \
-  class ConcatVarNdArray<T, 2, axes> final                                             \
-      : public ConcatVarNdArrayBase<ConcatVarNdArray<T, 2, axes>, T, 2, axes> {        \
-   public:                                                                             \
-    DEFINE_CONCAT_VAR_NDARRAY_CTOR_DTOR(2, axes);                                      \
-    T DEFINE_ACCESS_FUNC_BODY(Get, axes);                                              \
-    T* DEFINE_ACCESS_FUNC_BODY(Mut, axes);                                             \
-    void GetMutPtrAndContiguousSize(int64_t offset, T** ptr, size_t* size) const {     \
-      int64_t dim0 = 0;                                                                \
-      int64_t dim1 = 0;                                                                \
-      this->Offset2Dims(offset, &dim0, &dim1);                                         \
-      int32_t var_index = 0;                                                           \
-      this->GetVarNdArrayIndexAndInputDim(dim##axes, &var_index, &dim##axes);          \
-      int64_t input_offset = this->var_ndarray(var_index).Dims2Offset(dim0, dim1);     \
-      this->GetMutPtrAndMinContiguousSize(var_index, offset, input_offset, ptr, size); \
-    }                                                                                  \
+#define DEFINE_CONCAT_VAR_NDARRAY(axes)                                            \
+  template<typename T>                                                             \
+  class ConcatVarNdArray<T, 2, axes> final                                         \
+      : public ConcatVarNdArrayBase<ConcatVarNdArray<T, 2, axes>, T, 2, axes> {    \
+   public:                                                                         \
+    DEFINE_CONCAT_VAR_NDARRAY_CTOR_DTOR(2, axes);                                  \
+    T DEFINE_ACCESS_FUNC_BODY(Get, axes);                                          \
+    T* DEFINE_ACCESS_FUNC_BODY(Mut, axes);                                         \
+    void GetMutPtrAndContiguousSize(int64_t offset, T** ptr, size_t* size) const { \
+      int64_t dim0 = 0;                                                            \
+      int64_t dim1 = 0;                                                            \
+      this->Offset2Dims(offset, &dim0, &dim1);                                     \
+      int32_t var_index = 0;                                                       \
+      this->GetVarNdArrayIndexAndInputDim(dim##axes, &var_index, &dim##axes);      \
+      int64_t input_offset = this->var_ndarray(var_index).Dims2Offset(dim0, dim1); \
+      this->GetMutPtrAndMinContiguousSize(var_index, input_offset, ptr, size);     \
+    }                                                                              \
   }
 DEFINE_CONCAT_VAR_NDARRAY(0);
 DEFINE_CONCAT_VAR_NDARRAY(1);
@@ -141,7 +172,7 @@ DEFINE_CONCAT_VAR_NDARRAY(1);
       int32_t var_index = 0;                                                             \
       this->GetVarNdArrayIndexAndInputDim(dim##axes, &var_index, &dim##axes);            \
       int64_t input_offset = this->var_ndarray(var_index).Dims2Offset(dim0, dim1, dim2); \
-      this->GetMutPtrAndMinContiguousSize(var_index, offset, input_offset, ptr, size);   \
+      this->GetMutPtrAndMinContiguousSize(var_index, input_offset, ptr, size);           \
     }                                                                                    \
   }
 DEFINE_CONCAT_VAR_NDARRAY(0);
@@ -173,7 +204,7 @@ DEFINE_CONCAT_VAR_NDARRAY(2);
       int32_t var_index = 0;                                                                   \
       this->GetVarNdArrayIndexAndInputDim(dim##axes, &var_index, &dim##axes);                  \
       int64_t input_offset = this->var_ndarray(var_index).Dims2Offset(dim0, dim1, dim2, dim3); \
-      this->GetMutPtrAndMinContiguousSize(var_index, offset, input_offset, ptr, size);         \
+      this->GetMutPtrAndMinContiguousSize(var_index, input_offset, ptr, size);                 \
     }                                                                                          \
   }
 DEFINE_CONCAT_VAR_NDARRAY(0);
@@ -189,27 +220,27 @@ DEFINE_CONCAT_VAR_NDARRAY(3);
     this->GetVarNdArrayIndexAndInputDim(dim##axes, &var_index, &dim##axes);          \
     return this->var_ndarray(var_index).func(dim0, dim1, dim2, dim3, dim4);          \
   }
-#define DEFINE_CONCAT_VAR_NDARRAY(axes)                                                \
-  template<typename T>                                                                 \
-  class ConcatVarNdArray<T, 5, axes> final                                             \
-      : public ConcatVarNdArrayBase<ConcatVarNdArray<T, 5, axes>, T, 5, axes> {        \
-   public:                                                                             \
-    DEFINE_CONCAT_VAR_NDARRAY_CTOR_DTOR(5, axes);                                      \
-    T DEFINE_ACCESS_FUNC_BODY(Get, axes);                                              \
-    T* DEFINE_ACCESS_FUNC_BODY(Mut, axes);                                             \
-    void GetMutPtrAndContiguousSize(int64_t offset, T** ptr, size_t* size) const {     \
-      int64_t dim0 = 0;                                                                \
-      int64_t dim1 = 0;                                                                \
-      int64_t dim2 = 0;                                                                \
-      int64_t dim3 = 0;                                                                \
-      int64_t dim4 = 0;                                                                \
-      this->Offset2Dims(offset, &dim0, &dim1, &dim2, &dim3, &dim4);                    \
-      int32_t var_index = 0;                                                           \
-      this->GetVarNdArrayIndexAndInputDim(dim##axes, &var_index, &dim##axes);          \
-      int64_t input_offset =                                                           \
-          this->var_ndarray(var_index).Dims2Offset(dim0, dim1, dim2, dim3, dim4);      \
-      this->GetMutPtrAndMinContiguousSize(var_index, offset, input_offset, ptr, size); \
-    }                                                                                  \
+#define DEFINE_CONCAT_VAR_NDARRAY(axes)                                            \
+  template<typename T>                                                             \
+  class ConcatVarNdArray<T, 5, axes> final                                         \
+      : public ConcatVarNdArrayBase<ConcatVarNdArray<T, 5, axes>, T, 5, axes> {    \
+   public:                                                                         \
+    DEFINE_CONCAT_VAR_NDARRAY_CTOR_DTOR(5, axes);                                  \
+    T DEFINE_ACCESS_FUNC_BODY(Get, axes);                                          \
+    T* DEFINE_ACCESS_FUNC_BODY(Mut, axes);                                         \
+    void GetMutPtrAndContiguousSize(int64_t offset, T** ptr, size_t* size) const { \
+      int64_t dim0 = 0;                                                            \
+      int64_t dim1 = 0;                                                            \
+      int64_t dim2 = 0;                                                            \
+      int64_t dim3 = 0;                                                            \
+      int64_t dim4 = 0;                                                            \
+      this->Offset2Dims(offset, &dim0, &dim1, &dim2, &dim3, &dim4);                \
+      int32_t var_index = 0;                                                       \
+      this->GetVarNdArrayIndexAndInputDim(dim##axes, &var_index, &dim##axes);      \
+      int64_t input_offset =                                                       \
+          this->var_ndarray(var_index).Dims2Offset(dim0, dim1, dim2, dim3, dim4);  \
+      this->GetMutPtrAndMinContiguousSize(var_index, input_offset, ptr, size);     \
+    }                                                                              \
   }
 DEFINE_CONCAT_VAR_NDARRAY(0);
 DEFINE_CONCAT_VAR_NDARRAY(1);
