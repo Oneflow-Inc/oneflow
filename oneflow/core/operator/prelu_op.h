@@ -15,7 +15,6 @@ class PReluOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override;
   bool NeedInBlobWhenBackward() const override { return true; }
   bool NeedOutBlobWhenBackward() const override { return false; }
-  bool IsElemWiseOp() const override { return true; }
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
   void VirtualFixParallelDesc(ParallelDesc* pr_desc) const override;
