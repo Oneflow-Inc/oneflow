@@ -11,7 +11,7 @@ template<typename T>
 __global__ void PReluForward(const int64_t elem_cnt, const T* in_dptr, const T* weight_dptr,
                              T* out_dptr) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    out_dptr[i] = (in_dptr[i] > 0) * in_dptr[i] + (in_dptr[i] < 0) * in_dptr[i] * weight_dptr[0];
+    out_dptr[i] = (in_dptr[i] >= 0) ? in_dptr[i] : in_dptr[i] * weight_dptr[0];
   }
 }
 
@@ -21,7 +21,7 @@ __global__ void PReluForwardNCHW(const int64_t elem_cnt, const int64_t channel_n
                                  T* out_dptr) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     int64_t c = (i / area) % channel_num;
-    out_dptr[i] = (in_dptr[i] > 0) * in_dptr[i] + (in_dptr[i] < 0) * in_dptr[i] * weight_dptr[c];
+    out_dptr[i] = (in_dptr[i] >= 0) ? in_dptr[i] : in_dptr[i] * weight_dptr[c];
   }
 }
 
@@ -30,7 +30,7 @@ __global__ void PReluForwardNHWC(const int64_t elem_cnt, const int64_t channel_n
                                  const T* in_dptr, const T* weight_dptr, T* out_dptr) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     int64_t c = i % channel_num;
-    out_dptr[i] = (in_dptr[i] > 0) * in_dptr[i] + (in_dptr[i] < 0) * in_dptr[i] * weight_dptr[c];
+    out_dptr[i] = (in_dptr[i] >= 0) ? in_dptr[i] : in_dptr[i] * weight_dptr[c];
   }
 }
 
@@ -39,7 +39,7 @@ __global__ void PReluSharedWeightBackwardNCHW(const int64_t elem_cnt, const T* i
                                               const T* out_diff_dptr, T* weight_diff_dptr) {
   T weight_sum = 0.0;
   for (int64_t i = threadIdx.x; i < elem_cnt; i += blockDim.x) {
-    weight_sum += (in_dptr[i] <= 0) * out_diff_dptr[i] * in_dptr[i];
+    weight_sum += (in_dptr[i] <= 0) ? out_diff_dptr[i] * in_dptr[i] : 0;
   }
 
   typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
@@ -49,11 +49,10 @@ __global__ void PReluSharedWeightBackwardNCHW(const int64_t elem_cnt, const T* i
 }
 
 template<typename T>
-__global__ void PReluBackward(const int64_t elem_cnt, const T* in_dptr, const T* weight_dptr,
-                              const T* out_dff_dptr, T* in_diff_dptr) {
+__global__ void PReluDataBackward(const int64_t elem_cnt, const T* in_dptr, const T* weight_dptr,
+                                  const T* out_dff_dptr, T* in_diff_dptr) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    in_diff_dptr[i] =
-        (in_dptr[i] > 0) * out_dff_dptr[i] + (in_dptr[i] <= 0) * out_dff_dptr[i] * weight_dptr[0];
+    in_diff_dptr[i] = (in_dptr[i] > 0) ? out_dff_dptr[i] : out_dff_dptr[i] * weight_dptr[0];
   }
 }
 
@@ -69,7 +68,7 @@ __global__ void PReluWeightBackwardNCHW(const int64_t channel_num, const int64_t
   for (int64_t i = threadIdx.x; i < channel_elem_cnt; i += blockDim.x) {
     int64_t n = i / area;
     int64_t ii = n * area * channel_num + c * area + i % area;
-    weight_sum += (in_dptr[ii] <= 0) * out_diff_dptr[ii] * in_dptr[ii];
+    weight_sum += (in_dptr[ii] <= 0) ? out_diff_dptr[ii] * in_dptr[ii] : 0;
   }
 
   typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
@@ -79,13 +78,12 @@ __global__ void PReluWeightBackwardNCHW(const int64_t channel_num, const int64_t
 }
 
 template<typename T>
-__global__ void PReluBackwardNCHW(const int64_t elem_cnt, const int64_t channel_num,
-                                  const int64_t dim, const T* in_dptr, const T* weight_dptr,
-                                  const T* out_dff_dptr, T* in_diff_dptr) {
+__global__ void PReluDataBackwardNCHW(const int64_t elem_cnt, const int64_t channel_num,
+                                      const int64_t dim, const T* in_dptr, const T* weight_dptr,
+                                      const T* out_dff_dptr, T* in_diff_dptr) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt * channel_num * dim) {
     int64_t c = (i / dim) % channel_num;
-    in_diff_dptr[i] =
-        (in_dptr[i] > 0) * out_dff_dptr[i] + (in_dptr[i] <= 0) * out_dff_dptr[i] * weight_dptr[c];
+    in_diff_dptr[i] = (in_dptr[i] > 0) ? out_dff_dptr[i] : out_dff_dptr[i] * weight_dptr[c];
   }
 }
 
@@ -98,7 +96,7 @@ __global__ void PReluWeightBackwardNHWC(const int64_t channel_num, const int64_t
   int64_t channel_elem_cnt = elem_cnt / channel_num;
   for (int64_t i = threadIdx.x; i < channel_elem_cnt; i += blockDim.x) {
     int64_t ii = i * channel_num + c;
-    weight_sum += (in_dptr[ii] <= 0) * out_diff_dptr[ii] * in_dptr[ii];
+    weight_sum += (in_dptr[ii] <= 0) ? out_diff_dptr[ii] * in_dptr[ii] : 0;
   }
 
   typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
@@ -108,13 +106,12 @@ __global__ void PReluWeightBackwardNHWC(const int64_t channel_num, const int64_t
 }
 
 template<typename T>
-__global__ void PReluBackwardNHWC(const int64_t elem_cnt, const int64_t channel_num,
-                                  const T* in_dptr, const T* weight_dptr, const T* out_dff_dptr,
-                                  T* in_diff_dptr) {
+__global__ void PReluDataBackwardNHWC(const int64_t elem_cnt, const int64_t channel_num,
+                                      const T* in_dptr, const T* weight_dptr, const T* out_dff_dptr,
+                                      T* in_diff_dptr) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     int64_t c = i % channel_num;
-    in_diff_dptr[i] =
-        (in_dptr[i] > 0) * out_dff_dptr[i] + (in_dptr[i] <= 0) * out_dff_dptr[i] * weight_dptr[c];
+    in_diff_dptr[i] = (in_dptr[i] > 0) ? out_dff_dptr[i] : out_dff_dptr[i] * weight_dptr[c];
   }
 }
 
@@ -154,11 +151,11 @@ struct PReluKernelUtil<DeviceType::kGPU, T> {
                        Blob* weight_diff_blob) {
     const int64_t elem_cnt = out_diff_blob->shape().elem_cnt();
     if (conf.channel_shared()) {
-      PReluSharedWeightBackwardNCHW<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+      PReluSharedWeightBackwardNCHW<<<1, kCudaThreadsNumPerBlock, 0,
                                       ctx.device_ctx->cuda_stream()>>>(
           elem_cnt, in_blob->dptr<T>(), out_diff_blob->dptr<T>(), weight_diff_blob->mut_dptr<T>());
-      PReluBackward<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                      ctx.device_ctx->cuda_stream()>>>(
+      PReluDataBackward<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                          ctx.device_ctx->cuda_stream()>>>(
           elem_cnt, in_blob->dptr<T>(), weight_blob->dptr<T>(), out_diff_blob->dptr<T>(),
           in_diff_blob->mut_dptr<T>());
     } else {
@@ -170,8 +167,8 @@ struct PReluKernelUtil<DeviceType::kGPU, T> {
                                   ctx.device_ctx->cuda_stream()>>>(
             channel_num, instance_num, area, elem_cnt, in_blob->dptr<T>(), out_diff_blob->dptr<T>(),
             weight_diff_blob->mut_dptr<T>());
-        PReluBackwardNCHW<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                            ctx.device_ctx->cuda_stream()>>>(
+        PReluDataBackwardNCHW<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                                ctx.device_ctx->cuda_stream()>>>(
             instance_num, channel_num, area, in_blob->dptr<T>(), weight_blob->dptr<T>(),
             out_diff_blob->dptr<T>(), in_diff_blob->mut_dptr<T>());
       } else if (conf.data_format() == "channels_last") {
@@ -180,8 +177,8 @@ struct PReluKernelUtil<DeviceType::kGPU, T> {
                                   ctx.device_ctx->cuda_stream()>>>(
             channel_num, elem_cnt, in_blob->dptr<T>(), out_diff_blob->dptr<T>(),
             weight_diff_blob->mut_dptr<T>());
-        PReluBackwardNHWC<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                            ctx.device_ctx->cuda_stream()>>>(
+        PReluDataBackwardNHWC<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                                ctx.device_ctx->cuda_stream()>>>(
             elem_cnt, channel_num, in_blob->dptr<T>(), weight_blob->dptr<T>(),
             out_diff_blob->dptr<T>(), in_diff_blob->mut_dptr<T>());
       } else {
