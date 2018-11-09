@@ -8,17 +8,8 @@
 namespace oneflow {
 namespace {
 template<typename T>
-__global__ void PReluForward(const int64_t elem_cnt, const T* in_dptr, const T* alpha_dptr,
-                             T* out_dptr) {
-  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    out_dptr[i] = (in_dptr[i] >= 0) ? in_dptr[i] : in_dptr[i] * alpha_dptr[0];
-  }
-}
-
-template<typename T>
-__global__ void PReluForwardNCHW(const int64_t elem_cnt, const int64_t channel_num,
-                                 const int64_t area, const T* in_dptr, const T* alpha_dptr,
-                                 T* out_dptr) {
+__global__ void PReluForward(const int64_t elem_cnt, const int64_t channel_num, const int64_t area,
+                             const T* in_dptr, const T* alpha_dptr, T* out_dptr) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     int64_t c = (i / area) % channel_num;
     out_dptr[i] = (in_dptr[i] >= 0) ? in_dptr[i] : in_dptr[i] * alpha_dptr[c];
@@ -105,21 +96,21 @@ struct PReluKernelUtil<DeviceType::kGPU, T> {
     if (conf.channel_shared()) {
       PReluForward<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                      ctx.device_ctx->cuda_stream()>>>(
-          elem_cnt, in_blob->dptr<T>(), alpha_blob->dptr<T>(), out_blob->mut_dptr<T>());
+          elem_cnt, 1, 1, in_blob->dptr<T>(), alpha_blob->dptr<T>(), out_blob->mut_dptr<T>());
     } else {
       if (conf.data_format() == "channels_first") {
         const int64_t channel_num = in_blob->shape().At(1);
         const int64_t area = in_blob->shape().Count(2);
-        PReluForwardNCHW<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                           ctx.device_ctx->cuda_stream()>>>(
-            elem_cnt, channel_num, area, in_blob->dptr<T>(), alpha_blob->dptr<T>(),
-            out_blob->mut_dptr<T>());
+        PReluForward<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                       ctx.device_ctx->cuda_stream()>>>(elem_cnt, channel_num, area,
+                                                        in_blob->dptr<T>(), alpha_blob->dptr<T>(),
+                                                        out_blob->mut_dptr<T>());
       } else if (conf.data_format() == "channels_last") {
         const int64_t channel_num = in_blob->shape().At(in_blob->shape().NumAxes() - 1);
-        PReluForwardNCHW<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                           ctx.device_ctx->cuda_stream()>>>(
-            elem_cnt, channel_num, 1, in_blob->dptr<T>(), alpha_blob->dptr<T>(),
-            out_blob->mut_dptr<T>());
+        PReluForward<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                       ctx.device_ctx->cuda_stream()>>>(elem_cnt, channel_num, 1,
+                                                        in_blob->dptr<T>(), alpha_blob->dptr<T>(),
+                                                        out_blob->mut_dptr<T>());
       } else {
         UNIMPLEMENTED();
       }
