@@ -1,0 +1,44 @@
+[submodule "cub"]
+	path = build/cub/src/cub
+	url = https://github.com/NVlabs/cub.git
+	branch = c3cceac115c072fb63df1836ff46d8c60d9eb304
+[submodule "eigen"]
+	path = build/eigen/src/eigen
+	url = https://github.com/eigenteam/eigen-git-mirror
+	branch = e9e95489a0b241412e31f0525e85b2fab386c786
+[submodule "gflags"]
+	path = build/gflags/src/gflags
+	url = https://github.com/gflags/gflags
+	branch = 9314597d4b742ed6f95665241345e590a0f5759b
+[submodule "glog"]
+	path = build/glog/src/glog
+	url = https://github.com/google/glog
+	branch = da816ea70645e463aa04f9564544939fa327d5a7
+[submodule "googletest"]
+	path = build/googletest/src/googletest
+	url = https://github.com/google/googletest
+	branch = ec44c6c1675c25b9827aacd08c02433cccde7780
+[submodule "grpc"]
+	path = build/grpc/src/grpc
+	url = https://github.com/yuanms2/grpc
+	branch = e0db46e140405f0f94f03c9a55b302e39a514c48
+[submodule "libjpeg-turbo"]
+	path = build/libjpeg-turbo/src/libjpeg-turbo
+	url = https://github.com/libjpeg-turbo/libjpeg-turbo
+	branch = 3041cf67ffdc7230e377802cba0e5c325d6d01c6
+[submodule "nccl"]
+	path = build/nccl/src/nccl
+	url = https://github.com/NVIDIA/nccl
+	branch = f93fe9bfd94884cec2ba711897222e0df5569a53
+[submodule "opencv"]
+	path = build/opencv/src/opencv
+	url = https://github.com/opencv/opencv
+	branch = 51cef2651e91003e6a6760f496719dbb325cfc61
+[submodule "protobuf"]
+	path = build/protobuf/src/protobuf
+	url = https://github.com/protocolbuffers/protobuf
+	branch = 1d2c7b6c7376f396c8c7dd9b6afd2d4f83f3cb05
+[submodule "zlib"]
+	path = build/zlib/src/zlib
+	url = https://github.com/madler/zlib
+	branch = 50893291621658f355bc5b4d450a8d06a563053d
