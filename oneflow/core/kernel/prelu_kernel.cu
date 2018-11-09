@@ -31,14 +31,6 @@ __global__ void PReluSharedAlphaBackwardNCHW(const int64_t elem_cnt, const T* in
 }
 
 template<typename T>
-__global__ void PReluDataBackward(const int64_t elem_cnt, const T* in_dptr, const T* alpha_dptr,
-                                  const T* out_dff_dptr, T* in_diff_dptr) {
-  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    in_diff_dptr[i] = (in_dptr[i] > 0) ? out_dff_dptr[i] : out_dff_dptr[i] * alpha_dptr[0];
-  }
-}
-
-template<typename T>
 __global__ void PReluAlphaBackwardNCHW(const int64_t channel_num, const int64_t instance_num,
                                        const int64_t area, const int64_t elem_cnt, const T* in_dptr,
                                        const T* out_diff_dptr, T* alpha_diff_dptr) {
@@ -59,9 +51,9 @@ __global__ void PReluAlphaBackwardNCHW(const int64_t channel_num, const int64_t 
 }
 
 template<typename T>
-__global__ void PReluDataBackwardNCHW(const int64_t elem_cnt, const int64_t channel_num,
-                                      const int64_t area, const T* in_dptr, const T* alpha_dptr,
-                                      const T* out_dff_dptr, T* in_diff_dptr) {
+__global__ void PReluDataBackward(const int64_t elem_cnt, const int64_t channel_num,
+                                  const int64_t area, const T* in_dptr, const T* alpha_dptr,
+                                  const T* out_dff_dptr, T* in_diff_dptr) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     int64_t c = (i / area) % channel_num;
     in_diff_dptr[i] = (in_dptr[i] > 0) ? out_dff_dptr[i] : out_dff_dptr[i] * alpha_dptr[c];
@@ -127,7 +119,7 @@ struct PReluKernelUtil<DeviceType::kGPU, T> {
           elem_cnt, in_blob->dptr<T>(), out_diff_blob->dptr<T>(), alpha_diff_blob->mut_dptr<T>());
       PReluDataBackward<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                           ctx.device_ctx->cuda_stream()>>>(
-          elem_cnt, in_blob->dptr<T>(), alpha_blob->dptr<T>(), out_diff_blob->dptr<T>(),
+          elem_cnt, 1, 1, in_blob->dptr<T>(), alpha_blob->dptr<T>(), out_diff_blob->dptr<T>(),
           in_diff_blob->mut_dptr<T>());
     } else {
       if (conf.data_format() == "channels_first") {
@@ -138,8 +130,8 @@ struct PReluKernelUtil<DeviceType::kGPU, T> {
                                  ctx.device_ctx->cuda_stream()>>>(
             channel_num, instance_num, area, elem_cnt, in_blob->dptr<T>(), out_diff_blob->dptr<T>(),
             alpha_diff_blob->mut_dptr<T>());
-        PReluDataBackwardNCHW<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                                ctx.device_ctx->cuda_stream()>>>(
+        PReluDataBackward<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                            ctx.device_ctx->cuda_stream()>>>(
             elem_cnt, channel_num, area, in_blob->dptr<T>(), alpha_blob->dptr<T>(),
             out_diff_blob->dptr<T>(), in_diff_blob->mut_dptr<T>());
       } else if (conf.data_format() == "channels_last") {
@@ -148,8 +140,8 @@ struct PReluKernelUtil<DeviceType::kGPU, T> {
                                  ctx.device_ctx->cuda_stream()>>>(
             channel_num, elem_cnt, in_blob->dptr<T>(), out_diff_blob->dptr<T>(),
             alpha_diff_blob->mut_dptr<T>());
-        PReluDataBackwardNCHW<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                                ctx.device_ctx->cuda_stream()>>>(
+        PReluDataBackward<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                            ctx.device_ctx->cuda_stream()>>>(
             elem_cnt, channel_num, 1, in_blob->dptr<T>(), alpha_blob->dptr<T>(),
             out_diff_blob->dptr<T>(), in_diff_blob->mut_dptr<T>());
       } else {
