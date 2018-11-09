@@ -4,8 +4,7 @@ set(GRPC_INCLUDE_DIR ${THIRD_PARTY_DIR}/grpc/include)
 set(GRPC_LIBRARY_DIR ${THIRD_PARTY_DIR}/grpc/lib)
 
 set(GRPC_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/include)
-set(GRPC_URL https://github.com/yuanms2/grpc.git)
-set(GRPC_TAG e0db46e140405f0f94f03c9a55b302e39a514c48)
+set(GRPC_URL ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc)
 
 if(WIN32)
     set(GRPC_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/grpc/src/grpc/${CMAKE_BUILD_TYPE})
@@ -31,8 +30,7 @@ if(THIRD_PARTY)
 ExternalProject_Add(grpc
     PREFIX grpc
     DEPENDS protobuf zlib
-    GIT_REPOSITORY ${GRPC_URL}
-    GIT_TAG ${GRPC_TAG}
+    URL ${GRPC_URL}
     UPDATE_COMMAND ""
     BUILD_IN_SOURCE 1
     INSTALL_COMMAND ""

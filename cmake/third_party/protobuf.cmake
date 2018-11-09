@@ -5,8 +5,7 @@ set(PROTOBUF_LIBRARY_DIR ${THIRD_PARTY_DIR}/protobuf/lib)
 set(PROTOBUF_BINARY_DIR ${THIRD_PARTY_DIR}/protobuf/bin)
 
 set(PROTOBUF_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf/src)
-set(PROTOBUF_URL https://github.com/protocolbuffers/protobuf.git)
-set(PROTOBUF_TAG 1d2c7b6c7376f396c8c7dd9b6afd2d4f83f3cb05)
+set(PROTOBUF_URL ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf)
 
 if(WIN32)
     set(PROTOBUF_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf/${CMAKE_BUILD_TYPE})
@@ -36,8 +35,7 @@ if (THIRD_PARTY)
 ExternalProject_Add(protobuf
     PREFIX protobuf
     DEPENDS zlib
-    GIT_REPOSITORY ${PROTOBUF_URL}
-    GIT_TAG ${PROTOBUF_TAG}
+    URL ${PROTOBUF_URL}
     UPDATE_COMMAND ""
     BUILD_IN_SOURCE 1
     SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf
