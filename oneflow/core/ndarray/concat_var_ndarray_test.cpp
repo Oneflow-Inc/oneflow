@@ -91,8 +91,8 @@ TEST(ConcatVarNdArray, 3d_concat) {
             3, 4,
             8, 9,
 	      
-	    13,14,
-	    18,19,
+            13,14,
+            18,19,
  };
  std::vector<int32_t> expected{
    0, 1, 2, 3, 4,
@@ -129,9 +129,9 @@ TEST(ConcatVarNdArray, 3d_concat_assign) {
  std::vector<int32_t> y1_expected{
             3, 4,
             8, 9,
-	      
-	    13,14,
-	    18,19,
+     
+            13,14,
+            18,19,
  };
  std::vector<int32_t> y0_buffer(2*2*3, -1);
  std::vector<int32_t> y1_buffer(2*2*2, -1);
