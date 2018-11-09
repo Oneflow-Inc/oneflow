@@ -8,7 +8,7 @@ namespace oneflow {
 template<typename YT, typename XT, typename T = typename YT::dtype, int NDIMS = YT::ndims>
 typename std::enable_if<!YT::immutable && !XT::immutable>::type NdArrayAssign(YT* y_ndarray,
                                                                               const XT& x_ndarray) {
-  CHECK_EQ(y_ndarray->shape(), x_ndarray.shape());
+  CHECK_EQ(y_ndarray->shape().elem_cnt(), x_ndarray.shape().elem_cnt());
   T* dst_ptr = nullptr;
   size_t dst_size = 0;
   T* src_ptr = nullptr;
@@ -118,6 +118,12 @@ typename std::enable_if<!YT::immutable && XT::immutable && NDIMS == 5>::type NdA
       }
     }
   }
+}
+
+template<typename YT, typename XT, typename T = typename YT::dtype, int NDIMS = YT::ndims>
+typename std::enable_if<YT::immutable || NDIMS >= 6 || NDIMS <= 0>::type NdArrayAssign(
+    YT* y_ndarray, const XT& x_ndarray) {
+  static_assert(true, "YT should be mutable and NDIMS shoule be in [1, 5]");
 }
 
 }  // namespace oneflow
