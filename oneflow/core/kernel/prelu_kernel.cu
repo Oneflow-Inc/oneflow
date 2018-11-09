@@ -12,7 +12,7 @@ __global__ void PReluForward(const int64_t elem_cnt, const int64_t channel_num, 
                              const T* in_dptr, const T* alpha_dptr, T* out_dptr) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     int64_t c = (i / area) % channel_num;
-    out_dptr[i] = (in_dptr[i] >= 0) ? in_dptr[i] : in_dptr[i] * alpha_dptr[c];
+    out_dptr[i] = (in_dptr[i] <= 0) ? in_dptr[i] * alpha_dptr[c] : in_dptr[i];
   }
 }
 
@@ -56,7 +56,7 @@ __global__ void PReluDataBackward(const int64_t elem_cnt, const int64_t channel_
                                   const T* out_dff_dptr, T* in_diff_dptr) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     int64_t c = (i / area) % channel_num;
-    in_diff_dptr[i] = (in_dptr[i] > 0) ? out_dff_dptr[i] : out_dff_dptr[i] * alpha_dptr[c];
+    in_diff_dptr[i] = (in_dptr[i] <= 0) ? out_dff_dptr[i] * alpha_dptr[c] : out_dff_dptr[i];
   }
 }
 
