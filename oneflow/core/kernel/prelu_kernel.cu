@@ -17,6 +17,16 @@ __global__ void PReluForward(const int64_t elem_cnt, const int64_t channel_num, 
 }
 
 template<typename T>
+__global__ void PReluDataBackward(const int64_t elem_cnt, const int64_t channel_num,
+                                  const int64_t area, const T* in_dptr, const T* alpha_dptr,
+                                  const T* out_dff_dptr, T* in_diff_dptr) {
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
+    int64_t c = (i / area) % channel_num;
+    in_diff_dptr[i] = (in_dptr[i] <= 0) ? out_dff_dptr[i] * alpha_dptr[c] : out_dff_dptr[i];
+  }
+}
+
+template<typename T>
 __global__ void PReluSharedAlphaBackwardNCHW(const int64_t elem_cnt, const T* in_dptr,
                                              const T* out_diff_dptr, T* alpha_diff_dptr) {
   T alpha_sum = 0.0;
@@ -48,16 +58,6 @@ __global__ void PReluAlphaBackwardNCHW(const int64_t channel_num, const int64_t 
   __shared__ typename BlockReduce::TempStorage temp_storage;
   T sum = BlockReduce(temp_storage).Sum(alpha_sum);
   if (threadIdx.x == 0) { alpha_diff_dptr[c] = sum; }
-}
-
-template<typename T>
-__global__ void PReluDataBackward(const int64_t elem_cnt, const int64_t channel_num,
-                                  const int64_t area, const T* in_dptr, const T* alpha_dptr,
-                                  const T* out_dff_dptr, T* in_diff_dptr) {
-  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    int64_t c = (i / area) % channel_num;
-    in_diff_dptr[i] = (in_dptr[i] <= 0) ? out_dff_dptr[i] * alpha_dptr[c] : out_dff_dptr[i];
-  }
 }
 
 template<typename T>
