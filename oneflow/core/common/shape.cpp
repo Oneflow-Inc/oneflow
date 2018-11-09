@@ -3,6 +3,7 @@
 
 namespace oneflow {
 
+Shape::Shape(const std::initializer_list<int64_t>& dim_vec) : dim_vec_(dim_vec) { UpdateElemCnt(); }
 Shape::Shape(const std::vector<int64_t>& dim_vec) : dim_vec_(dim_vec) { UpdateElemCnt(); }
 
 Shape::Shape(const ShapeProto& shape_proto) {

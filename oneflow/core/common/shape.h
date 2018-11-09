@@ -12,6 +12,7 @@ class Shape final {
   Shape() : elem_cnt_(0) {}
   explicit Shape(const std::vector<int64_t>& dim_vec);
   explicit Shape(const ShapeProto& shape_proto);
+  Shape(const std::initializer_list<int64_t>& dim_vec);
   ~Shape() = default;
   Shape& operator=(const Shape& shape);
 
