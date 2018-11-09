@@ -29,7 +29,7 @@ foreach(LIBRARY_NAME ${OPENCV_3RDPARTY_LIBRARY_NAMES})
 endforeach()
 
 
-if (THIRD_PARTY AND NOT PRECOMPILED_THIRD_PARTY)
+if (THIRD_PARTY)
 
 ExternalProject_Add(opencv
     DEPENDS libjpeg_copy_headers_to_destination libjpeg_copy_libs_to_destination
@@ -124,4 +124,4 @@ add_custom_target(opencv_copy_libs_to_destination
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${OPENCV_BUILD_STATIC_LIBRARIES} ${OPENCV_LIBRARY_DIR}
   DEPENDS opencv_create_library_dir)
 
-endif(THIRD_PARTY AND NOT PRECOMPILED_THIRD_PARTY)
+endif(THIRD_PARTY)
