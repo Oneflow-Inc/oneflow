@@ -78,6 +78,73 @@ TEST(ConcatVarNdArray, 2d_concat_assign) {
   ASSERT_EQ(memcmp(y1_buffer.data(), y1_expected.data(), sizeof(int32_t) * 4), 0);
 }
 
+TEST(ConcatVarNdArray, 3d_concat) {
+  // clang-format off
+ std::vector<int32_t> x0_data{
+   0, 1, 2,
+   5, 6, 7,
+
+   10,11,12,
+   15,16,17 
+ };
+ std::vector<int32_t> x1_data{
+            3, 4,
+            8, 9,
+	      
+	    13,14,
+	    18,19,
+ };
+ std::vector<int32_t> expected{
+   0, 1, 2, 3, 4,
+   5, 6, 7, 8, 9,
+     
+   10,11,12,13,14,
+   15,16,17,18,19,
+ };
+ std::vector<int32_t> buffer(20, -1);
+  // clang-format on
+  NdArrayHelper<int32_t, 3> ndarray;
+  auto x0 = ndarray.Var({2LL, 2LL, 3LL}, x0_data.data());
+  auto x1 = ndarray.Var({2LL, 2LL, 2LL}, x1_data.data());
+  ndarray.Var({2LL, 2LL, 5LL}, buffer.data()).Assign(ndarray.Concatenate<2>({x0, x1}));
+  ASSERT_EQ(memcmp(buffer.data(), expected.data(), sizeof(int32_t) * 20), 0);
+}
+
+TEST(ConcatVarNdArray, 3d_concat_assign) {
+  // clang-format off
+ std::vector<int32_t> x_data{
+   0, 1, 2, 3, 4,
+   5, 6, 7, 8, 9,
+     
+   10,11,12,13,14,
+   15,16,17,18,19,
+ };
+ std::vector<int32_t> y0_expected{
+   0, 1, 2,
+   5, 6, 7,
+
+   10,11,12,
+   15,16,17 
+ };
+ std::vector<int32_t> y1_expected{
+            3, 4,
+            8, 9,
+	      
+	    13,14,
+	    18,19,
+ };
+ std::vector<int32_t> y0_buffer(2*2*3, -1);
+ std::vector<int32_t> y1_buffer(2*2*2, -1);
+  // clang-format on
+  NdArrayHelper<int32_t, 3> ndarray;
+  auto x = ndarray.Var({2LL, 2LL, 5LL}, x_data.data());
+  auto y0 = ndarray.Var({2LL, 2LL, 3LL}, y0_buffer.data());
+  auto y1 = ndarray.Var({2LL, 2LL, 2LL}, y1_buffer.data());
+  ndarray.Concatenate<2>({y0, y1}).Assign(x);
+  ASSERT_EQ(memcmp(y0_buffer.data(), y0_expected.data(), sizeof(int32_t) * y0_expected.size()), 0);
+  ASSERT_EQ(memcmp(y1_buffer.data(), y1_expected.data(), sizeof(int32_t) * y1_expected.size()), 0);
+}
+
 }  // namespace test
 
 }  // namespace oneflow

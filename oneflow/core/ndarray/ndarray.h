@@ -7,8 +7,6 @@
 
 namespace oneflow {
 
-#define ALWAYS_INLINE inline
-
 template<typename T, int NDIMS>
 class NdArrayBase {
  public:
