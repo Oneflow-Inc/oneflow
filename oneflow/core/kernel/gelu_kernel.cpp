@@ -37,8 +37,8 @@ struct GeluKernelUtil<DeviceType::kCPU, T> {
     T inv_sqrt2 = std::sqrt(0.5);
     T coef = std::sqrt(2.0 / std::acos(-1.0));
     FOR_RANGE(int32_t, i, 0, n) {
-      dx[i] =
-          0.5 * (1.0 + std::erf(inv_sqrt2 * x[i]) + x[i] * coef * std::exp(-x[i] * x[i])) * dy[i];
+      dx[i] = 0.5 * (1.0 + std::erf(inv_sqrt2 * x[i]) + x[i] * coef * std::exp(-0.5 * x[i] * x[i]))
+              * dy[i];
     }
   }
 };

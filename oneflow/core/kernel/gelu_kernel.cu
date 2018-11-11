@@ -26,7 +26,7 @@ __global__ void GeluBackwardGpu(const int64_t n, const float* x, const float* dy
   float inv_sqrt2 = sqrtf(0.5);
   float coef = sqrtf(2.0 / acosf(-1.0));
   CUDA_1D_KERNEL_LOOP(i, n) {
-    dx[i] = 0.5 * (1.0 + erff(inv_sqrt2 * x[i]) + x[i] * coef * expf(-x[i] * x[i])) * dy[i];
+    dx[i] = 0.5 * (1.0 + erff(inv_sqrt2 * x[i]) + x[i] * coef * expf(-0.5 * x[i] * x[i])) * dy[i];
   }
 }
 
@@ -41,7 +41,7 @@ __global__ void GeluBackwardGpu(const int64_t n, const double* x, const double* 
   double inv_sqrt2 = sqrt(0.5);
   double coef = sqrt(2.0 / acos(-1.0));
   CUDA_1D_KERNEL_LOOP(i, n) {
-    dx[i] = 0.5 * (1.0 + erf(inv_sqrt2 * x[i]) + x[i] * coef * exp(-x[i] * x[i])) * dy[i];
+    dx[i] = 0.5 * (1.0 + erf(inv_sqrt2 * x[i]) + x[i] * coef * exp(-0.5 * x[i] * x[i])) * dy[i];
   }
 }
 
