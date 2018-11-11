@@ -719,6 +719,12 @@ message RepeatOpConf {
   }
 }
 
+message GatherOpConf {
+  required string indices = 1;
+  required string in = 2;
+  required string out = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -792,6 +798,7 @@ message OperatorConf {
     RepeatOpConf repeat_conf = 239;
     LogCounterOpConf log_counter_conf = 240;
     GeluOpConf gelu_conf = 241;
+    GatherOpConf gather_conf = 242;
   }
 }
 
