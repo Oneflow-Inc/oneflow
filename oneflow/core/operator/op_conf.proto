@@ -714,6 +714,23 @@ message RepeatOpConf {
   }
 }
 
+message ShrinkDim0Conf {
+  required int32 axis = 1;
+}
+
+message ExtendDim0Conf {
+  required int32 axis = 1;
+}
+
+message RedefineDim0OpConf {
+  required string in = 1;
+  required string out = 2;
+  oneof type {
+    ShrinkDim0Conf shrink_conf = 3;
+    ExtendDim0Conf extend_conf = 4;
+  }
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -786,6 +803,7 @@ message OperatorConf {
     UnpackOpConf unpack_conf = 238;
     RepeatOpConf repeat_conf = 239;
     LogCounterOpConf log_counter_conf = 240;
+    RedefineDim0OpConf redefine_dim0_conf = 241;
   }
 }
 
