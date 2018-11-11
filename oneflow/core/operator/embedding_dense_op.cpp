@@ -23,6 +23,7 @@ void EmbeddingDenseOp::InferBlobDescs(
   const BlobDesc* ids_blob_desc = GetBlobDesc4BnInOp("ids");
   CHECK_EQ(ids_blob_desc->data_type(), DataType::kInt32);
   // output: out [D0, ..., units]
+  CHECK(IsFloatingDataType(conf.data_type()));
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *ids_blob_desc;
   out_blob_desc->set_data_type(conf.data_type());
