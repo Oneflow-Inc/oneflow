@@ -714,13 +714,10 @@ message RepeatOpConf {
   }
 }
 
-message EmbeddingDenseOpConf {
-  required string ids = 1;
-  required string out = 2;
-  required int32 units = 3;
-  required int32 table_size = 4;
-  required DataType data_type = 5;
-  optional InitializerConf weight_initializer = 6;
+message GatherOpConf {
+  required string indices = 1;
+  required string in = 2;
+  required string out = 3;
 }
 
 message OperatorConf {
@@ -796,7 +793,7 @@ message OperatorConf {
     RepeatOpConf repeat_conf = 239;
     LogCounterOpConf log_counter_conf = 240;
 
-    EmbeddingDenseOpConf embedding_dense_conf = 2001;
+    GatherOpConf gather_conf = 2001;
   }
 }
 
