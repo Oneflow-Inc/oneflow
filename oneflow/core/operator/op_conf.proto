@@ -746,6 +746,12 @@ message ConstScalarOpConf {
   optional int32 rank = 6 [default = 1];
 }
 
+message MeanOpConf {
+  required string in = 1;
+  required string out = 2;
+  // TODO: axis of mean
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -822,6 +828,7 @@ message OperatorConf {
     GeluOpConf gelu_conf = 241;
     GatherOpConf gather_conf = 242;
     ConstScalarOpConf const_scalar_conf = 243;
+    MeanOpConf mean_conf = 244;
   }
 }
 
