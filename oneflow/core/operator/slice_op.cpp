@@ -29,7 +29,7 @@ void SliceOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlo
     CHECK_GE(start, 0);
     CHECK_LT(start, end);
     CHECK_LE(end, dim_len);
-    shape_vec[i + 1] = (end - start) / std::abs(step) + 1;
+    shape_vec[i + 1] = (end - start - 1) / std::abs(step) + 1;
   }
 
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
