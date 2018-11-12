@@ -26,9 +26,13 @@ void SliceOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlo
     int32_t dim_len = in_blob_desc->shape().At(i + 1);
     start = start >= 0 ? std::min(start, dim_len) : std::max(dim_len + start, 0);
     end = end >= 0 ? std::min(end, dim_len) : std::max(dim_len + end, 0);
-    if (step > 0 && start >= end) { end += dim_len; }
-    if (step < 0 && start <= end) { end -= dim_len; }
-    CHECK_NE(start, end);
+    if (start == end) {
+      if (step > 0) { end += dim_len; }
+      if (step < 0) { end -= dim_len; }
+    } else {
+      if (step > 0) { CHECK_LT(start, end); }
+      if (step < 0) { CHECK_GT(start, end); }
+    }
     shape_vec[i + 1] = (std::abs(end - start) - 1) / std::abs(step) + 1;
   }
 
