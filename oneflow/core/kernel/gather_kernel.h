@@ -14,10 +14,18 @@ class GatherKernel final : public KernelIf<device_type> {
 
  private:
   const PbMessage& GetCustomizedOpConf() const override;
-  void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)>) const override;
-  void BackwardDataContent(const KernelCtx&,
-                           std::function<Blob*(const std::string&)>) const override;
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void BackwardDataContent(const KernelCtx& ctx,
+                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+};
+
+template<DeviceType device_type, typename T>
+struct LookUpKernelUtil final {
+  static void Forward(DeviceCtx* ctx, const int32_t* indices, int64_t num_indices, const T* in,
+                      int64_t in_rows, int64_t in_cols, T* out);
+  static void Backward(DeviceCtx* ctx, const int32_t* indices, int64_t num_indices,
+                       const T* out_diff, int64_t in_rows, int64_t in_cols, T* in_diff);
 };
 
 }  // namespace oneflow
