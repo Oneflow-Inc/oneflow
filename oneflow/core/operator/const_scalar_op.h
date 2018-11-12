@@ -15,7 +15,7 @@ class ConstScalarOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override;
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
-  bool IsAllOutputConst() const override { return false; }
+  bool IsAllOutputConst() const override { return true; }
 };
 
 }  // namespace oneflow

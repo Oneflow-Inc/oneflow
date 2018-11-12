@@ -18,7 +18,7 @@ bool IsAllOutputNaive(const LogicalNode* logical_node) {
   }
 }
 
-}
+}  // namespace
 
 void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   if (IsAllOutputNaive(logical_node())) {
