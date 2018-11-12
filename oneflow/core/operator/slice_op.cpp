@@ -18,22 +18,18 @@ void SliceOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlo
   std::vector<int64_t> shape_vec(in_blob_desc->shape().NumAxes());
   shape_vec[0] = in_blob_desc->shape().At(0);
   FOR_RANGE(size_t, i, 0, conf.dim_slice_conf_size()) {
-    const DimSliceConf& dim_slice_conf = conf.dim_slice_conf(i);
-    int32_t start = dim_slice_conf.start();
-    int32_t end = dim_slice_conf.end();
-    int32_t step = dim_slice_conf.step();
-    CHECK_NE(step, 0);
     int32_t dim_len = in_blob_desc->shape().At(i + 1);
-    start = start >= 0 ? std::min(start, dim_len) : std::max(dim_len + start, 0);
-    end = end >= 0 ? std::min(end, dim_len) : std::max(dim_len + end, 0);
-    if (start == end) {
-      if (step > 0) { end += dim_len; }
-      if (step < 0) { end -= dim_len; }
-    } else {
-      if (step > 0) { CHECK_LT(start, end); }
-      if (step < 0) { CHECK_GT(start, end); }
-    }
-    shape_vec[i + 1] = (std::abs(end - start) - 1) / std::abs(step) + 1;
+    const DimSliceConf& dim_slice_conf = conf.dim_slice_conf(i);
+    int32_t step = dim_slice_conf.stride();
+    CHECK_GT(step, 0);
+    int32_t start = dim_slice_conf.has_start() ? dim_slice_conf.start() : 0;
+    int32_t end = dim_slice_conf.has_end() ? dim_slice_conf.end() : dim_len;
+    if (start < 0) { start += dim_len; }
+    if (end < 0) { end += dim_len; }
+    CHECK_GE(start, 0);
+    CHECK_LT(start, end);
+    CHECK_LE(end, dim_len);
+    shape_vec[i + 1] = (end - start) / std::abs(step) + 1;
   }
 
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
