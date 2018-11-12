@@ -719,7 +719,6 @@ message UnpackOpConf {
     int32 unpack_num_per_record = 4;
   }
 }
-
 message RepeatOpConf {
   required string in = 1;
   required string out = 2;
@@ -733,6 +732,16 @@ message GatherOpConf {
   required string indices = 1;
   required string in = 2;
   required string out = 3;
+}
+
+message SqrtOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
+message SquareOpConf {
+  required string in = 1;
+  required string out = 2;
 }
 
 message OperatorConf {
@@ -810,6 +819,8 @@ message OperatorConf {
     LogCounterOpConf log_counter_conf = 240;
     GeluOpConf gelu_conf = 241;
     GatherOpConf gather_conf = 242;
+    SqrtOpConf sqrt_conf = 243;
+    SquareOpConf square_conf = 244;
   }
 }
 
