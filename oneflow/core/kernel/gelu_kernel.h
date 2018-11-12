@@ -6,8 +6,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class GeluKernel final : public KernelIfWithModel<device_type, T>,
-                         public KernelIfWithActivation<device_type, T> {
+class GeluKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GeluKernel);
   GeluKernel() = default;
