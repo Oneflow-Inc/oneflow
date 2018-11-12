@@ -5,7 +5,11 @@
 namespace oneflow {
 
 void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  ProduceRegst("out", true);
+  if (logical_node()->SoleOp()->IsAllOutputNaive()) {
+    ProduceRegst("out", true);
+  } else {
+    ProduceRegst("out", false, 1, 1);
+  }
   ProduceRegst("activation", true);
   ProduceRegst("data_tmp", true);
   ProduceRegst("fw_buf", true, 1, 1);
