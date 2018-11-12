@@ -4,7 +4,7 @@ namespace oneflow {
 
 void VariableOp::InitFromOpConf() {
   CHECK(op_conf().has_variable_conf());
-  EnrollInputBn("tick");
+  EnrollInputBn("tick", false);
   EnrollOutputBn("out", Global<JobDesc>::Get()->IsTrain() && op_conf().trainable());
   EnrollModelBn("weight");
 }
