@@ -12,6 +12,7 @@ const PbMessage& ConstScalarOp::GetCustomizedConf() const { return op_conf().con
 
 void ConstScalarOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                    const ParallelContext* parallel_ctx) const {
+  CHECK_EQ(parallel_ctx->policy(), ParallelPolicy::kDataParallel);
   const ConstScalarOpConf& conf = op_conf().const_scalar_conf();
   const DataType& data_type =
       conf.has_data_type() ? conf.data_type() : Global<JobDesc>::Get()->DefaultDataType();
