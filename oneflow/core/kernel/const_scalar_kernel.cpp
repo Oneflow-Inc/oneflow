@@ -4,7 +4,7 @@ namespace oneflow {
 
 template<DeviceType device_type, typename T>
 void ConstScalarKernel<device_type, T>::VirtualKernelInit(const ParallelContext*) {
-  *output_inited_ = false;
+  output_inited_.reset(new bool(false));
   if (IsIntegralDataType(this->kernel_conf().data_type())) {
     CHECK(this->op_conf().const_scalar_conf().has_int_val());
     const_val_ = static_cast<T>(this->op_conf().const_scalar_conf().int_val());
