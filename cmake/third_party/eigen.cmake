@@ -3,7 +3,7 @@ include (ExternalProject)
 set(EIGEN_INCLUDE_DIR ${THIRD_PARTY_DIR}/eigen/include/eigen3)
 set(EIGEN_INSTALL_DIR ${THIRD_PARTY_DIR}/eigen)
 
-set(EIGEN_URL ${CMAKE_CURRENT_BINARY_DIR}/eigen/src/eigen)
+set(EIGEN_URL ${CMAKE_CURRENT_BINARY_DIR}/third_party/eigen/src/eigen)
 
 add_definitions(-DEIGEN_NO_AUTOMATIC_RESIZING -DEIGEN_NO_MALLOC -DEIGEN_USE_GPU)
 

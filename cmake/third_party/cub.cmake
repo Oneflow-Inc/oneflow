@@ -3,7 +3,7 @@ include (ExternalProject)
 set(CUB_INCLUDE_DIR ${THIRD_PARTY_DIR}/cub/include)
 set(CUB_BUILD_INCLUDE ${CMAKE_CURRENT_BINARY_DIR}/cub/src/cub/cub)
 
-set(CUB_URL ${CMAKE_CURRENT_BINARY_DIR}/cub/src/cub)
+set(CUB_URL ${CMAKE_CURRENT_BINARY_DIR}/third_party/cub/src/cub)
 
 if(THIRD_PARTY)
 

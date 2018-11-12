@@ -5,7 +5,7 @@ set(PROTOBUF_LIBRARY_DIR ${THIRD_PARTY_DIR}/protobuf/lib)
 set(PROTOBUF_BINARY_DIR ${THIRD_PARTY_DIR}/protobuf/bin)
 
 set(PROTOBUF_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf/src)
-set(PROTOBUF_URL ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf)
+set(PROTOBUF_URL ${CMAKE_CURRENT_BINARY_DIR}/third_party/protobuf/src/protobuf)
 
 if(WIN32)
     set(PROTOBUF_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/protobuf/src/protobuf/${CMAKE_BUILD_TYPE})
