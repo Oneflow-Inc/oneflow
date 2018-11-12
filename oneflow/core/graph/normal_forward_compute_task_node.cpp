@@ -7,18 +7,24 @@ namespace oneflow {
 
 namespace {
 
-bool IsVariableOp(const LogicalNode* logical_node) {
-  return dynamic_cast<VariableOp*>(logical_node->SoleOp().get()) != nullptr;
+bool IsAllOutputNaive(const LogicalNode* logical_node) {
+  const Operator* op = logical_node->SoleOp().get();
+  if (op->IsAllOutputConst()) {
+    return false;
+  } else if (dynamic_cast<const VariableOp*>(op) != nullptr) {
+    return false;
+  } else {
+    return true;
+  }
 }
 
 }  // namespace
 
 void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  // HACK: disable mem sharing for VariableOp
-  if (IsVariableOp(logical_node())) {
-    ProduceRegst("out", false, 1, 1);
-  } else {
+  if (IsAllOutputNaive(logical_node())) {
     ProduceRegst("out", true);
+  } else {
+    ProduceRegst("out", false, 1, 1);
   }
   ProduceRegst("activation", true);
   ProduceRegst("data_tmp", true);
