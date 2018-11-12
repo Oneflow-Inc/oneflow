@@ -9,7 +9,7 @@ template<DeviceType device_type, typename T>
 class ConstScalarKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConstScalarKernel);
-  ConstScalarKernel() = default;
+  ConstScalarKernel() : output_inited_(new bool(false)), const_val_(ZeroVal<T>::value) {}
   ~ConstScalarKernel() override = default;
 
  private:
