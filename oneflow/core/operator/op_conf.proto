@@ -413,6 +413,11 @@ message LogCounterOpConf {
   optional int32 interval = 2 [default = 1];
 }
 
+message GeluOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
 message LossPrintOpConf {
   required LogicalBlobId loss_lbi = 1;
   required LogicalBlobId loss_instance_num_lbi = 2;
@@ -714,6 +719,12 @@ message RepeatOpConf {
   }
 }
 
+message GatherOpConf {
+  required string indices = 1;
+  required string in = 2;
+  required string out = 3;
+}
+
 message ShrinkDim0Conf {
   required int32 axis = 1;
 }
@@ -803,7 +814,9 @@ message OperatorConf {
     UnpackOpConf unpack_conf = 238;
     RepeatOpConf repeat_conf = 239;
     LogCounterOpConf log_counter_conf = 240;
-    RedefineDim0OpConf redefine_dim0_conf = 241;
+    GeluOpConf gelu_conf = 241;
+    GatherOpConf gather_conf = 242;
+    RedefineDim0OpConf redefine_dim0_conf = 243;
   }
 }
 
