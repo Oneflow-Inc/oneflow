@@ -24,6 +24,11 @@ void ConstScalarKernel<device_type, T>::ForwardDataContent(
   *output_inited_ = true;
 }
 
+template<DeviceType device_type, typename T>
+const PbMessage& ConstScalarKernel<device_type, T>::GetCustomizedOpConf() const {
+  return this->op_conf().const_scalar_conf();
+}
+
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConstScalarConf, ConstScalarKernel,
                            ARITHMETIC_DATA_TYPE_SEQ);
 
