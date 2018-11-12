@@ -794,6 +794,18 @@ message MeanOpConf {
   // TODO: axis of mean
 }
 
+message DimSliceConf {
+  optional int32 start = 1 [default = 0];
+  optional int32 end = 2 [default = 0];
+  optional int32 stride = 3 [default = 1];
+}
+
+message SliceOpConf {
+  required string in = 1;
+  required string out = 2;
+  repeated DimSliceConf dim_slice_conf = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -878,6 +890,7 @@ message OperatorConf {
     BroadcastMulOpConf broadcast_mul_conf = 249;
     BroadcastDivOpConf broadcast_div_conf = 250;
     MeanOpConf mean_conf = 251;
+    SliceOpConf slice_conf = 252;
   }
 }
 
