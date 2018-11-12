@@ -17,7 +17,7 @@ class ConstScalarKernel final : public KernelIf<device_type> {
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
-  bool output_inited_;
+  std::unique_ptr<bool> output_inited_;
   T const_val_;
 };
 
