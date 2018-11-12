@@ -37,6 +37,7 @@ class Operator {
   virtual bool IsLossOp() const { return false; }
   virtual bool IsRecurrentOp() const { return false; }
   virtual bool IsEmbeddingLookupOp() const { return false; }
+  virtual bool IsAllOutputConst() const { return false; }
 
   bool NeedOutBlobWhenBackwardIf() const {
     return NeedOutBlobWhenBackward() || (GetActivationType() != ActivationType::kNone);
