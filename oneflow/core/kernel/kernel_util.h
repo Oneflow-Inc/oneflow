@@ -141,6 +141,7 @@ struct CpuKernelUtilIf {
                                 const std::string& bn_in_op, int32_t dim_num,
                                 int64_t num_in_each_dim);
   static void Set(DeviceCtx* ctx, const T value, T* addr);
+  static void Replicate(DeviceCtx* ctx, const int64_t n, T* y, const T* x);
 };
 
 // CPU, Floating
@@ -166,6 +167,7 @@ struct KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T>::va
   static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha);
   static void Div(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
+  static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T alpha);
   static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
   static void Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsilon);
   static void Powx(DeviceCtx* ctx, const int64_t n, const T* x, const float power, T* y);
@@ -247,6 +249,7 @@ struct GpuKernelUtilIf {
                                 const std::string& bn_in_op, int32_t dim_num,
                                 int64_t num_in_each_dim);
   static void Set(DeviceCtx* ctx, const T value, T* addr);
+  static void Replicate(DeviceCtx* ctx, const int64_t n, T* y, const T* x);
 };
 
 // GPU, Floating
@@ -273,6 +276,7 @@ struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T>::va
 
   static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha);
+  static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T alpha);
   static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
   static void Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsilon);
 
