@@ -496,6 +496,14 @@ message CastOpConf {
   required DataType data_type = 3;
 }
 
+message VariableOpConf {
+  required string tick = 1;
+  required string out = 2;
+  required ShapeProto shape = 3;
+  optional DataType data_type = 4;
+  optional InitializerConf initializer = 5;
+}
+
 message LocalResponseNormalizationOpConf {
   required string in = 1;
   required string out = 2;
@@ -575,10 +583,10 @@ message DecodeRandomOpConf {
   required string out = 1;
   required ShapeProto shape = 2;
   required DataType data_type = 3;
-  required InitializerConf data_initializer = 4; 
+  required InitializerConf data_initializer = 4;
 }
 
-message DefineTestBlobConf {
+message DefineTestBlobOpConf {
   required string out = 1;
   required ShapeProto shape = 2;
   required DataType data_type = 3;
@@ -661,6 +669,8 @@ message MatmulOpConf {
   optional string bias = 3;
   required int32 units = 4;
   required string out = 5;
+  optional bool transpose_a = 6 [default = false];
+  optional bool transpose_b = 7 [default = false];
 }
 
 message DotOpConf {
@@ -766,6 +776,7 @@ message OperatorConf {
     ModelSaveOpConf model_save_conf = 119;
     SharedModelDiffAddOpConf shared_model_diff_add_conf = 120;
     CastOpConf cast_conf = 121;
+    VariableOpConf variable_conf = 122;
     
     // domain op
     TransposeOpConf transpose_conf = 201;
@@ -803,7 +814,7 @@ message OperatorConf {
     PrintOpConf print_conf = 233;
     AccuracyPrintOpConf accuracy_print_conf = 234;
     LossPrintOpConf loss_print_conf = 235;
-    DefineTestBlobConf define_test_blob_conf = 236;
+    DefineTestBlobOpConf define_test_blob_conf = 236;
     PackOpConf pack_conf = 237;
     UnpackOpConf unpack_conf = 238;
     RepeatOpConf repeat_conf = 239;
