@@ -744,6 +744,30 @@ message SquareOpConf {
   required string out = 2;
 }
 
+message BroadcastAddOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+}
+
+message BroadcastSubOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+}
+
+message BroadcastMulOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+}
+
+message BroadcastDivOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+}
+
 message ConstScalarOpConf {
   required string tick = 1;
   required string out = 2;
@@ -855,7 +879,11 @@ message OperatorConf {
     SquareOpConf square_conf = 244;
     ConstScalarOpConf const_scalar_conf = 245;
     ConstRangeOpConf const_range_conf = 246;
-    SliceOpConf slice_conf = 247;
+    BroadcastAddOpConf broadcast_add_conf = 247;
+    BroadcastSubOpConf broadcast_sub_conf = 248;
+    BroadcastMulOpConf broadcast_mul_conf = 249;
+    BroadcastDivOpConf broadcast_div_conf = 250;
+    SliceOpConf slice_conf = 251;
   }
 }
 
