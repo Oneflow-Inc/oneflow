@@ -669,6 +669,8 @@ message MatmulOpConf {
   optional string bias = 3;
   required int32 units = 4;
   required string out = 5;
+  optional bool transpose_a = 6 [default = false];
+  optional bool transpose_b = 7 [default = false];
 }
 
 message DotOpConf {
