@@ -788,6 +788,12 @@ message ConstRangeOpConf {
   optional int64 stride = 6 [default = 1];
 }
 
+message MeanOpConf {
+  required string in = 1;
+  required string out = 2;
+  // TODO: axis of mean
+}
+
 message DimSliceConf {
   optional int32 start = 1 [default = 0];
   optional int32 end = 2 [default = 0];
@@ -883,7 +889,8 @@ message OperatorConf {
     BroadcastSubOpConf broadcast_sub_conf = 248;
     BroadcastMulOpConf broadcast_mul_conf = 249;
     BroadcastDivOpConf broadcast_div_conf = 250;
-    SliceOpConf slice_conf = 251;
+    MeanOpConf mean_conf = 251;
+    SliceOpConf slice_conf = 252;
   }
 }
 
