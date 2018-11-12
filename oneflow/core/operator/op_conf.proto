@@ -737,7 +737,7 @@ message GatherOpConf {
 
 message DimSliceConf {
   optional int32 start = 1 [default = 0];
-  optional int32 end = 2 [default = -1];
+  optional int32 end = 2 [default = 0];
   optional int32 step = 3 [default = 1];
 }
 
