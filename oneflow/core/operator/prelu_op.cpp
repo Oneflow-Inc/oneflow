@@ -60,6 +60,7 @@ void PReluOp::InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> G
     }
   }
 }
+
 void PReluOp::VirtualFixParallelDesc(ParallelDesc* pr_desc) const {
   pr_desc->set_policy(ParallelPolicy::kDataParallel);
 }
