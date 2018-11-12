@@ -6,8 +6,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class VariableKernel final : public KernelIfWithModel<device_type, T>,
-                             public KernelIfWithActivation<device_type, T> {
+class VariableKernel final : public KernelIfWithModel<device_type, T> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(VariableKernel);
   VariableKernel() : tick_(new int64_t(0)) {}

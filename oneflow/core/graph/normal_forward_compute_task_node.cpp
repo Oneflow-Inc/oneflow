@@ -1,11 +1,25 @@
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/logical_node.h"
+#include "oneflow/core/operator/variable_op.h"
 
 namespace oneflow {
 
+namespace {
+
+bool IsVariableOp(const LogicalNode* logical_node) {
+  return dynamic_cast<VariableOp*>(logical_node->SoleOp().get()) != nullptr;
+}
+
+}  // namespace
+
 void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  ProduceRegst("out", true);
+  // HACK: disable mem sharing for VariableOp
+  if (IsVariableOp(logical_node())) {
+    ProduceRegst("out", false, 1, 1);
+  } else {
+    ProduceRegst("out", true);
+  }
   ProduceRegst("activation", true);
   ProduceRegst("data_tmp", true);
   ProduceRegst("fw_buf", true, 1, 1);
