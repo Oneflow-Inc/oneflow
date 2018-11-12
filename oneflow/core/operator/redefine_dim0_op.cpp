@@ -32,6 +32,7 @@ void RedefineDim0Op::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
         inner_shape_vec.emplace_back(inner_shape.At(axis));
       }
       shape_vec.reserve(shape.dim_vec().size() + inner_shape.NumAxes() - shrink_axis);
+      shape_vec.emplace_back(inner_shape.Count(0, shrink_axis));
       FOR_RANGE(int64_t, axis, shrink_axis, inner_shape.NumAxes()) {
         shape_vec.emplace_back(inner_shape.At(axis));
       }

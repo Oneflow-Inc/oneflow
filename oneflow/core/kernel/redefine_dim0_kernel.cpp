@@ -25,7 +25,10 @@ void RedefineDim0Kernel<device_type>::ForwardDim1ValidNum(
   int64_t inst_num = out_blob->shape().At(0);
   CHECK_EQ(in_blob->dim0_inner_shape().At(0), inst_num);
   FOR_RANGE(int64_t, i, 0, inst_num) {
-    out_blob->set_dim1_valid_num(i, in_blob->dim0_valid_num(i));
+    int64_t valid_num = in_blob->dim0_valid_num(i);
+    int64_t col_num = in_blob->dim0_inner_shape().Count(2);
+    CHECK_EQ(valid_num % col_num, 0);
+    out_blob->set_dim1_valid_num(i, valid_num / col_num);
   }
 }
 
