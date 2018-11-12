@@ -730,8 +730,8 @@ message RepeatOpConf {
 }
 
 message GatherOpConf {
-  required string indices = 1;
-  required string in = 2;
+  required string in = 1;
+  required string indices = 2;
   required string out = 3;
 }
 
