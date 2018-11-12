@@ -13,12 +13,16 @@ class ConstRangeKernel final : public KernelIf<device_type> {
   ~ConstRangeKernel() override = default;
 
  private:
-  void VirtualKernelInit(const ParallelContext*) override;
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   const PbMessage& GetCustomizedOpConf() const override;
 
   std::unique_ptr<bool> output_inited_;
+};
+
+template<DeviceType device_type, typename T>
+struct ConstRangeKernelUtil final {
+  static void Fill(DeviceCtx* ctx, T start, int64_t size, T stride, T* out);
 };
 
 }  // namespace oneflow
