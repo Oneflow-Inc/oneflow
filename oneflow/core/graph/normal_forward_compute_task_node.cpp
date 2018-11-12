@@ -8,13 +8,7 @@ namespace oneflow {
 namespace {
 
 bool IsVariableOp(const LogicalNode* logical_node) {
-  FOR_EACH(op, logical_node->op_vec()) {
-    if (dynamic_cast<VariableOp*>(op->get()) != nullptr) {
-      CHECK_EQ(logical_node->op_vec().size(), 1);
-      return true;
-    }
-  }
-  return false;
+  return dynamic_cast<VariableOp*>(logical_node->SoleOp().get()) != nullptr;
 }
 
 }  // namespace
