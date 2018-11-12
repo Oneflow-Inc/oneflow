@@ -822,6 +822,7 @@ message OperatorConf {
     LogCounterOpConf log_counter_conf = 240;
     GeluOpConf gelu_conf = 241;
     GatherOpConf gather_conf = 242;
+    SliceOpConf slice_conf = 243;
   }
 }
 
