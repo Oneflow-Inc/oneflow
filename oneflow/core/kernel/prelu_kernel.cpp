@@ -19,9 +19,10 @@ void PReluKernel<device_type, T>::BackwardDataContent(
                       in_diff_blob->ByteSizeOfDataContentField());
   Memset<device_type>(ctx.device_ctx, alpha_diff_blob->mut_dptr<T>(), 0,
                       alpha_diff_blob->ByteSizeOfDataContentField());
-  PReluKernelUtil<device_type, T>::Backward(ctx, this->op_conf().prelu_conf(), BnInOp2Blob("in"),
-                                            BnInOp2Blob("alpha"), BnInOp2Blob("out_diff"),
-                                            in_diff_blob, alpha_diff_blob);
+  PReluKernelUtil<device_type, T>::Backward(
+      ctx, this->op_conf().prelu_conf(), this->kernel_conf().prelu_conf().perm(), BnInOp2Blob("in"),
+      BnInOp2Blob("alpha"), BnInOp2Blob("out_diff"), BnInOp2Blob("bw_buf"), in_diff_blob,
+      alpha_diff_blob);
 }
 
 template<typename T>
@@ -55,9 +56,10 @@ struct PReluKernelUtil<DeviceType::kCPU, T> {
       }
     }
   }
-  static void Backward(const KernelCtx& ctx, const PReluOpConf& conf, const Blob* in_blob,
-                       const Blob* alpha_blob, const Blob* out_diff_blob, Blob* in_diff_blob,
-                       Blob* alpha_diff_blob) {
+  static void Backward(const KernelCtx& ctx, const PReluOpConf& conf,
+                       const PbRf<int32_t>& permutation, const Blob* in_blob,
+                       const Blob* alpha_blob, const Blob* out_diff_blob, Blob* bw_buf_blob,
+                       Blob* in_diff_blob, Blob* alpha_diff_blob) {
     const T* in_dptr = in_blob->dptr<T>();
     const T* alpha_dptr = alpha_blob->dptr<T>();
     const T* out_diff_dptr = out_diff_blob->dptr<T>();

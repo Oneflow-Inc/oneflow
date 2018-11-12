@@ -27,55 +27,11 @@ __global__ void PReluDataBackward(const int64_t elem_cnt, const int64_t channel_
 }
 
 template<typename T>
-__global__ void PReluSharedAlphaBackwardNCHW(const int64_t elem_cnt, const T* in_dptr,
-                                             const T* out_diff_dptr, T* alpha_diff_dptr) {
-  T alpha_sum = 0.0;
-  for (int64_t i = threadIdx.x; i < elem_cnt; i += blockDim.x) {
-    alpha_sum += (in_dptr[i] <= 0) ? out_diff_dptr[i] * in_dptr[i] : 0;
+__global__ void PReluAlphaBackward(const int64_t elem_cnt, const T* in_dptr, const T* out_diff_dptr,
+                                   T* alpha_diff_buf_dptr) {
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
+    alpha_diff_buf_dptr[i] = (in_dptr[i] <= 0) ? out_diff_dptr[i] * in_dptr[i] : 0;
   }
-
-  typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
-  __shared__ typename BlockReduce::TempStorage temp_storage;
-  T sum = BlockReduce(temp_storage).Sum(alpha_sum);
-  if (threadIdx.x == 0) { *alpha_diff_dptr = sum; }
-}
-
-template<typename T>
-__global__ void PReluAlphaBackwardNCHW(const int64_t channel_num, const int64_t area,
-                                       const int64_t elem_cnt, const T* in_dptr,
-                                       const T* out_diff_dptr, T* alpha_diff_dptr) {
-  int64_t c = blockIdx.x;
-
-  T alpha_sum = 0.0;
-  int64_t channel_elem_cnt = elem_cnt / channel_num;
-  for (int64_t i = threadIdx.x; i < channel_elem_cnt; i += blockDim.x) {
-    int64_t n = i / area;
-    int64_t ii = n * area * channel_num + c * area + i % area;
-    alpha_sum += (in_dptr[ii] <= 0) ? out_diff_dptr[ii] * in_dptr[ii] : 0;
-  }
-
-  typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
-  __shared__ typename BlockReduce::TempStorage temp_storage;
-  T sum = BlockReduce(temp_storage).Sum(alpha_sum);
-  if (threadIdx.x == 0) { alpha_diff_dptr[c] = sum; }
-}
-
-template<typename T>
-__global__ void PReluAlphaBackwardNHWC(const int64_t channel_num, const int64_t elem_cnt,
-                                       const T* in_dptr, const T* out_diff_dptr,
-                                       T* alpha_diff_dptr) {
-  int64_t c = blockIdx.x;
-  T alpha_sum = 0.0;
-  int64_t channel_elem_cnt = elem_cnt / channel_num;
-  for (int64_t i = threadIdx.x; i < channel_elem_cnt; i += blockDim.x) {
-    int64_t ii = i * channel_num + c;
-    alpha_sum += (in_dptr[ii] <= 0) ? out_diff_dptr[ii] * in_dptr[ii] : 0;
-  }
-
-  typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
-  __shared__ typename BlockReduce::TempStorage temp_storage;
-  T sum = BlockReduce(temp_storage).Sum(alpha_sum);
-  if (threadIdx.x == 0) { alpha_diff_dptr[c] = sum; }
 }
 
 }  // namespace
@@ -109,36 +65,47 @@ struct PReluKernelUtil<DeviceType::kGPU, T> {
     }
   }
 
-  static void Backward(const KernelCtx& ctx, const PReluOpConf& conf, const Blob* in_blob,
-                       const Blob* alpha_blob, const Blob* out_diff_blob, Blob* in_diff_blob,
-                       Blob* alpha_diff_blob) {
+  static void Backward(const KernelCtx& ctx, const PReluOpConf& conf,
+                       const PbRf<int32_t>& permutation, const Blob* in_blob,
+                       const Blob* alpha_blob, const Blob* out_diff_blob, Blob* bw_buf_blob,
+                       Blob* in_diff_blob, Blob* alpha_diff_blob) {
     const int64_t elem_cnt = out_diff_blob->shape().elem_cnt();
+    // in_diff_blob acts as buffer here
+    PReluAlphaBackward<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                         ctx.device_ctx->cuda_stream()>>>(
+        elem_cnt, in_blob->dptr<T>(), out_diff_blob->dptr<T>(), in_diff_blob->mut_dptr<T>());
     if (conf.channel_shared()) {
-      PReluSharedAlphaBackwardNCHW<<<1, kCudaThreadsNumPerBlock, 0,
-                                     ctx.device_ctx->cuda_stream()>>>(
-          elem_cnt, in_blob->dptr<T>(), out_diff_blob->dptr<T>(), alpha_diff_blob->mut_dptr<T>());
+      KernelUtil<DeviceType::kGPU, T>::Sum(
+          ctx.device_ctx, elem_cnt, in_diff_blob->dptr<T>(), alpha_diff_blob->mut_dptr<T>(),
+          bw_buf_blob->mut_dptr<T>(), bw_buf_blob->ByteSizeOfDataContentField());
       PReluDataBackward<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                           ctx.device_ctx->cuda_stream()>>>(
           elem_cnt, 1, 1, in_blob->dptr<T>(), alpha_blob->dptr<T>(), out_diff_blob->dptr<T>(),
           in_diff_blob->mut_dptr<T>());
     } else {
+      KernelUtil<DeviceType::kGPU, T>::Transpose(
+          ctx.device_ctx, in_diff_blob->shape().NumAxes(), in_diff_blob->shape(),
+          bw_buf_blob->shape(), permutation, in_diff_blob->shape().elem_cnt(),
+          in_diff_blob->dptr<T>(), bw_buf_blob->mut_dptr<T>());
+      CHECK_EQ(elem_cnt, bw_buf_blob->shape().elem_cnt());
       if (conf.data_format() == "channels_first") {
         const int64_t channel_num = out_diff_blob->shape().At(1);
-        const int64_t area = out_diff_blob->shape().Count(2);
-        PReluAlphaBackwardNCHW<<<channel_num, kCudaThreadsNumPerBlock, 0,
-                                 ctx.device_ctx->cuda_stream()>>>(
-            channel_num, area, elem_cnt, in_blob->dptr<T>(), out_diff_blob->dptr<T>(),
-            alpha_diff_blob->mut_dptr<T>());
+        CHECK_EQ(channel_num, bw_buf_blob->shape().At(0));
+        KernelUtil<DeviceType::kGPU, T>::RowSum(
+            ctx.device_ctx, channel_num, bw_buf_blob->shape().Count(1), bw_buf_blob->dptr<T>(),
+            alpha_diff_blob->mut_dptr<T>(), in_diff_blob->mut_dptr<T>(),
+            in_diff_blob->ByteSizeOfDataContentField());
         PReluDataBackward<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                             ctx.device_ctx->cuda_stream()>>>(
-            elem_cnt, channel_num, area, in_blob->dptr<T>(), alpha_blob->dptr<T>(),
-            out_diff_blob->dptr<T>(), in_diff_blob->mut_dptr<T>());
+            elem_cnt, channel_num, out_diff_blob->shape().Count(2), in_blob->dptr<T>(),
+            alpha_blob->dptr<T>(), out_diff_blob->dptr<T>(), in_diff_blob->mut_dptr<T>());
       } else if (conf.data_format() == "channels_last") {
         const int64_t channel_num = out_diff_blob->shape().At(in_blob->shape().NumAxes() - 1);
-        PReluAlphaBackwardNHWC<<<channel_num, kCudaThreadsNumPerBlock, 0,
-                                 ctx.device_ctx->cuda_stream()>>>(
-            channel_num, elem_cnt, in_blob->dptr<T>(), out_diff_blob->dptr<T>(),
-            alpha_diff_blob->mut_dptr<T>());
+        CHECK_EQ(channel_num, bw_buf_blob->shape().At(0));
+        KernelUtil<DeviceType::kGPU, T>::RowSum(
+            ctx.device_ctx, channel_num, bw_buf_blob->shape().Count(1), bw_buf_blob->dptr<T>(),
+            alpha_diff_blob->mut_dptr<T>(), in_diff_blob->mut_dptr<T>(),
+            in_diff_blob->ByteSizeOfDataContentField());
         PReluDataBackward<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                             ctx.device_ctx->cuda_stream()>>>(
             elem_cnt, channel_num, 1, in_blob->dptr<T>(), alpha_blob->dptr<T>(),
