@@ -22,9 +22,12 @@ template<DeviceType device_type, typename T>
 void MeanKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
+  CHECK_EQ(1, out_diff_blob->shape().elem_cnt());
   Blob* in_diff_blob = BnInOp2Blob(GenDiffBn("in"));
 
   size_t total_elem_num = in_diff_blob->shape().elem_cnt();
+  KernelUtil<device_type, T>::Replicate(ctx.device_ctx, in_diff_blob->shape().elem_cnt(),
+                                        in_diff_blob->mut_dptr<T>(), out_diff_blob->dptr<T>());
   KernelUtil<device_type, T>::Div(ctx.device_ctx, in_diff_blob->shape().elem_cnt(),
                                   in_diff_blob->mut_dptr<T>(), static_cast<T>(total_elem_num));
 }

@@ -141,6 +141,7 @@ struct CpuKernelUtilIf {
                                 const std::string& bn_in_op, int32_t dim_num,
                                 int64_t num_in_each_dim);
   static void Set(DeviceCtx* ctx, const T value, T* addr);
+  static void Replicate(DeviceCtx* ctx, const int64_t n, T* y, const T* x);
 };
 
 // CPU, Floating
@@ -248,6 +249,7 @@ struct GpuKernelUtilIf {
                                 const std::string& bn_in_op, int32_t dim_num,
                                 int64_t num_in_each_dim);
   static void Set(DeviceCtx* ctx, const T value, T* addr);
+  static void Replicate(DeviceCtx* ctx, const int64_t n, T* y, const T* x);
 };
 
 // GPU, Floating

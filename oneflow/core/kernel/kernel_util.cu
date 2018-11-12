@@ -30,6 +30,11 @@ __global__ void DivByConstParaGpu(const int64_t n, T* x, const T alpha) {
 }
 
 template<typename T>
+__global__ void ReplicateGpu(const int64_t n, T* y, const T* x) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = *x; }
+}
+
+template<typename T>
 __global__ void MulGpu(const int64_t n, const T* x, const T* y, T* z) {
   CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y[i]; }
 }
@@ -392,6 +397,10 @@ KU_IF_METHOD InitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num
 }
 KU_IF_METHOD Set(DeviceCtx* ctx, const T value, T* addr) {
   gpu_set<T><<<1, 1, 0, ctx->cuda_stream()>>>(value, addr);
+}
+KU_IF_METHOD Replicate(DeviceCtx* ctx, const int64_t n, T* y, const T* x) {
+  ReplicateGpu<T>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y, x);
 }
 
 #define KU_FLOATING_METHOD \
