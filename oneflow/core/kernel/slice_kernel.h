@@ -17,6 +17,8 @@ class SliceKernel final : public KernelIf<device_type> {
                           std::function<Blob*(const std::string&)>) const override;
   void BackwardDataContent(const KernelCtx&,
                            std::function<Blob*(const std::string&)>) const override;
+  void InitConstBufBlobs(DeviceCtx*,
+                         std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
 template<DeviceType device_type, typename T>
