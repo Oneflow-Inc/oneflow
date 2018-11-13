@@ -171,6 +171,8 @@ struct KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T>::va
   static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
   static void MulByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
   static void Reciprocal(DeviceCtx* ctx, const int n, const T* x, T* y);
+  static void Square(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
+  static void Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsilon);
   static void Powx(DeviceCtx* ctx, const int64_t n, const T* x, const float power, T* y);
 
@@ -283,6 +285,8 @@ struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T>::va
   static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
   static void MulByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
   static void Reciprocal(DeviceCtx* ctx, const int n, const T* x, T* y);
+  static void Square(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
+  static void Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsilon);
 
   static void Sigmoid(DeviceCtx* ctx, int64_t n, const T* x, T* y);

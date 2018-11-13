@@ -20,7 +20,7 @@ __global__ void ExpGpu(const int64_t n, const T* x, T* y) {
 }
 
 template<typename T>
-__global__ void DivGpu(const int64_t n, T* x, const T* alpha_ptr) {
+__global__ void DivByConstParaPtrGpu(const int64_t n, T* x, const T* alpha_ptr) {
   CUDA_1D_KERNEL_LOOP(i, n) { x[i] = x[i] / (*alpha_ptr); }
 }
 
@@ -52,6 +52,16 @@ __global__ void MulByScalarGpu(const int64_t n, const T* x, const T* y, T* z) {
 template<typename T>
 __global__ void ReciprocalGpu(const int64_t n, const T* x, T* y) {
   CUDA_1D_KERNEL_LOOP(i, n) { y[i] = static_cast<T>(1.0) / x[i]; }
+}
+
+template<typename T>
+__global__ void SquareGpu(const int64_t n, const T* x, T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = x[i] * x[i]; }
+}
+
+template<typename T>
+__global__ void SqrtGpu(const int64_t n, const T* x, T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = std::sqrt(x[i]); }
 }
 
 template<typename T>
@@ -466,7 +476,7 @@ KU_FLOATING_METHOD Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
   ExpGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
 }
 KU_FLOATING_METHOD Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha) {
-  DivGpu<T>
+  DivByConstParaPtrGpu<T>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, alpha);
 }
 KU_FLOATING_METHOD Div(DeviceCtx* ctx, const int64_t n, T* x, const T alpha) {
@@ -488,6 +498,13 @@ KU_FLOATING_METHOD MulByScalar(DeviceCtx* ctx, const int64_t n, const T* x, cons
 KU_FLOATING_METHOD Reciprocal(DeviceCtx* ctx, const int n, const T* x, T* y) {
   ReciprocalGpu<T>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
+}
+KU_FLOATING_METHOD Square(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+  SquareGpu<T>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
+}
+KU_FLOATING_METHOD Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+  SqrtGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
 }
 KU_FLOATING_METHOD Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsilon) {
   RsqrtGpu<T>

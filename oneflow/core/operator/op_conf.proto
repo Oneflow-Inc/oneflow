@@ -749,24 +749,28 @@ message BroadcastAddOpConf {
   required string a = 1;
   required string b = 2;
   required string out = 3;
+  optional bool is_const = 4 [default = false];
 }
 
 message BroadcastSubOpConf {
   required string a = 1;
   required string b = 2;
   required string out = 3;
+  optional bool is_const = 4 [default = false];
 }
 
 message BroadcastMulOpConf {
   required string a = 1;
   required string b = 2;
   required string out = 3;
+  optional bool is_const = 4 [default = false];
 }
 
 message BroadcastDivOpConf {
   required string a = 1;
   required string b = 2;
   required string out = 3;
+  optional bool is_const = 4 [default = false];
 }
 
 message ConstScalarOpConf {
