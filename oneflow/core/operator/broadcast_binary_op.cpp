@@ -14,15 +14,22 @@ void BroadcastBinaryOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* a_blob_desc = GetBlobDesc4BnInOp("a");
   const BlobDesc* b_blob_desc = GetBlobDesc4BnInOp("b");
+  BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   if (a_blob_desc->shape().elem_cnt() == 1) {
     CHECK_EQ(a_blob_desc->shape().NumAxes(), 1);
-    *GetBlobDesc4BnInOp("out") = *b_blob_desc;
+    *out_blob_desc = *b_blob_desc;
   } else if (b_blob_desc->shape().elem_cnt() == 1) {
     CHECK_EQ(b_blob_desc->shape().NumAxes(), 1);
-    *GetBlobDesc4BnInOp("out") = *a_blob_desc;
+    *out_blob_desc = *a_blob_desc;
   } else {
-    CHECK_EQ(a_blob_desc->shape(), b_blob_desc->shape());
-    *GetBlobDesc4BnInOp("out") = *a_blob_desc;
+    *out_blob_desc = *a_blob_desc;
+    const auto& a_shape = a_blob_desc->shape();
+    const auto& b_shape = b_blob_desc->shape();
+    CHECK_EQ(a_shape.NumAxes(), b_shape.NumAxes());
+    FOR_RANGE(int64_t, i, 0, a_shape.NumAxes()) {
+      CHECK(a_shape.At(i) == 1 || b_shape.At(i) == 1 || a_shape.At(i) == b_shape.At(i));
+      out_blob_desc->mut_shape().Set(i, std::max(a_shape.At(i), b_shape.At(i)));
+    }
   }
 }
 

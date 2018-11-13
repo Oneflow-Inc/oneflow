@@ -749,24 +749,28 @@ message BroadcastAddOpConf {
   required string a = 1;
   required string b = 2;
   required string out = 3;
+  optional bool is_const = 4 [default = false];
 }
 
 message BroadcastSubOpConf {
   required string a = 1;
   required string b = 2;
   required string out = 3;
+  optional bool is_const = 4 [default = false];
 }
 
 message BroadcastMulOpConf {
   required string a = 1;
   required string b = 2;
   required string out = 3;
+  optional bool is_const = 4 [default = false];
 }
 
 message BroadcastDivOpConf {
   required string a = 1;
   required string b = 2;
   required string out = 3;
+  optional bool is_const = 4 [default = false];
 }
 
 message ConstScalarOpConf {
@@ -780,13 +784,25 @@ message ConstScalarOpConf {
   optional int32 rank = 6 [default = 1];
 }
 
+message BiasAddOpConf {
+  // inputs
+  required string a = 1;
+  required string b = 2;
+  // output
+  required string out = 3;
+}
+
 message ConstRangeOpConf {
   required string tick = 1;
   required string out = 2;
-  required int64 size = 3;
-  optional DataType data_type = 4 [default = kInt32];
-  optional int64 start = 5 [default = 0];
-  optional int64 stride = 6 [default = 1];
+  message UseDevicePieceSizeConf{}
+  oneof size_conf {
+    int64 size = 3;
+    UseDevicePieceSizeConf use_device_piece_size = 4;
+  }
+  optional DataType data_type = 5 [default = kInt32];
+  optional int64 start = 6 [default = 0];
+  optional int64 stride = 7 [default = 1];
 }
 
 message MeanOpConf {
@@ -892,6 +908,7 @@ message OperatorConf {
     BroadcastDivOpConf broadcast_div_conf = 250;
     MeanOpConf mean_conf = 251;
     SliceOpConf slice_conf = 252;
+    BiasAddOpConf bias_add_conf = 253;
   }
 }
 
