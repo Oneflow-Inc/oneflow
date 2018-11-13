@@ -789,7 +789,7 @@ message ConstRangeOpConf {
   required string out = 2;
   message UseDevicePieceSizeConf{}
   oneof size_conf {
-    int64 const_size = 3;
+    int64 size = 3;
     UseDevicePieceSizeConf use_device_piece_size = 4;
   }
   optional DataType data_type = 5 [default = kInt32];
