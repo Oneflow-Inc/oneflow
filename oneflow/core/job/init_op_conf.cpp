@@ -219,6 +219,12 @@ void InitInitializerConf(InitializerConf* initializer, const InitializerConf::Ty
       initializer->set_allocated_random_normal_conf(random_normal_conf);
       break;
     }
+    case InitializerConf::kTruncatedNormalConf: {
+      TruncatedNormalInitializerConf* truncated_normal_conf = new TruncatedNormalInitializerConf();
+      truncated_normal_conf->set_std(param1);
+      initializer->set_allocated_truncated_normal_conf(truncated_normal_conf);
+      break;
+    }
     case InitializerConf::kXavierConf: {
       XavierInitializerConf* xavier_conf = new XavierInitializerConf();
       xavier_conf->set_variance_norm(static_cast<VarianceNorm>(static_cast<int>(param1)));
