@@ -17,8 +17,24 @@ class SliceKernel final : public KernelIf<device_type> {
                           std::function<Blob*(const std::string&)>) const override;
   void BackwardDataContent(const KernelCtx&,
                            std::function<Blob*(const std::string&)>) const override;
+};
+
+template<typename T>
+class SliceKernel<DeviceType::kGPU, T> final : public KernelIf<DeviceType::kGPU> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(SliceKernel);
+  SliceKernel() = default;
+  ~SliceKernel() = default;
+
+ private:
+  void ForwardDataContent(const KernelCtx&,
+                          std::function<Blob*(const std::string&)>) const override;
+  void BackwardDataContent(const KernelCtx&,
+                           std::function<Blob*(const std::string&)>) const override;
   void InitConstBufBlobs(DeviceCtx*,
                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+
+  void InitOut2InOffsetFromHost(DeviceCtx* ctx, const Blob* in_blob, Blob* blob) const;
 };
 
 template<DeviceType device_type, typename T>

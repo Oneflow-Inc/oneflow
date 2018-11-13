@@ -38,12 +38,6 @@ void SliceKernel<device_type, T>::BackwardDataContent(
                                             BnInOp2Blob(GenDiffBn("out")), in_diff_blob);
 }
 
-template<DeviceType device_type, typename T>
-void SliceKernel<device_type, T>::InitConstBufBlobs(
-    DeviceCtx*, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  // TODO();
-}
-
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSliceConf, SliceKernel, ARITHMETIC_DATA_TYPE_SEQ);
 
 template<typename T>

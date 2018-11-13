@@ -499,6 +499,21 @@ typename std::enable_if<!std::is_same<T, U>::value>::type CopyElem(const T* in_d
   FOR_RANGE(int64_t, i, 0, elem_num) { *(out_dptr++) = static_cast<U>(*(in_dptr++)); }
 }
 
+// create temporary host blob store initializer result
+#define BEFORE_CPU_INITIALIZE()                                     \
+  RtBlobDesc blob_desc(blob->blob_desc().blob_desc_proto());        \
+  char* host_raw_dptr = nullptr;                                    \
+  CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize())); \
+  std::unique_ptr<Blob> host_blob;                                  \
+  host_blob.reset(new Blob(nullptr, &blob_desc, host_raw_dptr));
+
+// asynchronous copy to device
+#define AFTER_CPU_INITIALIZE()                                                          \
+  Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob->dptr(),                    \
+                           blob->ByteSizeOfDataContentField(), cudaMemcpyHostToDevice); \
+  CudaCheck(cudaStreamSynchronize(ctx->cuda_stream()));                                 \
+  CudaCheck(cudaFreeHost(host_raw_dptr));
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_KERNEL_UTIL_H_

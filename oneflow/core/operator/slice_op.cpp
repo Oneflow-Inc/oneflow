@@ -6,10 +6,7 @@ void SliceOp::InitFromOpConf() {
   CHECK(op_conf().has_slice_conf());
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  if (op_conf().device_type() == DeviceType::kGPU) {
-    EnrollConstBufBn("slice_dim_index");
-    EnrollConstBufBn("slice_dim_elem_cnt");
-  }
+  if (op_conf().device_type() == DeviceType::kGPU) { EnrollConstBufBn("out_to_in_offset"); }
 }
 
 const PbMessage& SliceOp::GetCustomizedConf() const { return op_conf().slice_conf(); }
@@ -40,16 +37,10 @@ void SliceOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlo
   *out_blob_desc = *in_blob_desc;
   out_blob_desc->mut_shape() = Shape(shape_vec);
 
-  BlobDesc* dim_index_blob_desc = GetBlobDesc4BnInOp("slice_dim_index");
-  if (dim_index_blob_desc) {
-    dim_index_blob_desc->mut_shape() =
-        Shape({out_blob_desc->shape().elem_cnt(), out_blob_desc->shape().NumAxes()});
-    dim_index_blob_desc->set_data_type(DataType::kInt32);
-  }
-  BlobDesc* dim_elem_cnt_blob_desc = GetBlobDesc4BnInOp("slice_dim_elem_cnt");
-  if (dim_elem_cnt_blob_desc) {
-    dim_elem_cnt_blob_desc->mut_shape() = Shape({out_blob_desc->shape().NumAxes()});
-    dim_elem_cnt_blob_desc->set_data_type(DataType::kInt32);
+  BlobDesc* offset_blob_desc = GetBlobDesc4BnInOp("out_to_in_offset");
+  if (offset_blob_desc) {
+    *offset_blob_desc = *out_blob_desc;
+    offset_blob_desc->set_data_type(DataType::kInt64);
   }
 }
 
