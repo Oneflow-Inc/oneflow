@@ -7,6 +7,7 @@ void BroadcastBinaryOp::InitFromOpConf() {
   EnrollInputBn("a");
   EnrollInputBn("b");
   EnrollOutputBn("out");
+  DerivedInitFromOpConf();
 }
 
 void BroadcastBinaryOp::InferBlobDescs(
@@ -31,6 +32,7 @@ void BroadcastBinaryOp::InferBlobDescs(
       out_blob_desc->mut_shape().Set(i, std::max(a_shape.At(i), b_shape.At(i)));
     }
   }
+  DerivedInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
 }  // namespace oneflow
