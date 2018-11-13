@@ -27,6 +27,9 @@ struct SliceKernelUtil final {
                        const Blob* out_diff_blob, Blob* in_diff_blob);
 };
 
+template<typename T, size_t NDIMS>
+struct NdArraySliceUtil;
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_SLICE_KERNEL_H_
