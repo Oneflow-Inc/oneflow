@@ -23,7 +23,17 @@ void GatherKernel<device_type, T>::ForwardDataContent(
 
 template<DeviceType device_type, typename T>
 void GatherKernel<device_type, T>::BackwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* indices_blob = BnInOp2Blob("indices");
+  const int64_t num_indices = indices_blob->shape().elem_cnt();
+  const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
+  Blob* in_diff_blob = BnInOp2Blob(GenDiffBn("in"));
+  const int64_t in_rows = in_diff_blob->shape().At(0);
+  const int64_t in_cols = in_diff_blob->shape().Count(1);
+  LookUpKernelUtil<device_type, T>::Backward(ctx.device_ctx, indices_blob->dptr<int32_t>(),
+                                            num_indices, out_diff_blob->dptr<T>(), in_rows, in_cols,
+                                             in_diff_blob->mut_dptr<T>());
+}
 
 template<typename T>
 struct LookUpKernelUtil<DeviceType::kCPU, T> final {
