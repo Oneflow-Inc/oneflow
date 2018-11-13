@@ -28,6 +28,11 @@ void MatmulKernel<device_type, T>::BackwardDataContent(
   Blob* b_diff_blob = BnInOp2Blob("b_diff");
   bool transpose_a = this->op_conf().matmul_conf().transpose_a();
   bool transpose_b = this->op_conf().matmul_conf().transpose_b();
+  // trans_a  trans_b  a_diff b_diff
+  //   T        T       b'g'   g'a'
+  //   T        F       bg'    ag
+  //   F        T       gb     g'a
+  //   F        F       gb'    a'g
   if (a_blob->static_shape().dim_vec().size() == 2) {
     Calc2DMatMul(ctx.device_ctx, b_blob, !(transpose_a ^ transpose_b), out_diff_blob, transpose_a,
                  a_diff_blob, !transpose_a);
