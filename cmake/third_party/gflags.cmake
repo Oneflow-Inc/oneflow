@@ -5,8 +5,7 @@ set(GFLAGS_LIBRARY_DIR ${THIRD_PARTY_DIR}/gflags/lib)
 
 set(gflags_HEADERS_DIR ${CMAKE_CURRENT_BINARY_DIR}/gflags/src/gflags/include)
 set(gflags_LIB_DIR ${CMAKE_CURRENT_BINARY_DIR}/gflags/src/gflags/lib)
-set(gflags_URL https://github.com/gflags/gflags.git)
-set(gflags_TAG 9314597d4b742ed6f95665241345e590a0f5759b)
+set(gflags_URL ${CMAKE_CURRENT_BINARY_DIR}/third_party/gflags/src/gflags)
 
 if(WIN32)
     set(GFLAGS_BUILD_LIBRARY_DIR ${gflags_LIB_DIR}/${CMAKE_BUILD_TYPE})
@@ -24,12 +23,11 @@ foreach(LIBRARY_NAME ${GFLAGS_LIBRARY_NAMES})
     list(APPEND GFLAGS_BUILD_STATIC_LIBRARIES ${GFLAGS_BUILD_LIBRARY_DIR}/${LIBRARY_NAME})
 endforeach()
 
-if (THIRD_PARTY AND NOT PRECOMPILED_THIRD_PARTY)
+if (THIRD_PARTY)
   
 ExternalProject_Add(gflags
     PREFIX gflags
-    GIT_REPOSITORY ${gflags_URL}
-    GIT_TAG ${gflags_TAG}
+    URL ${gflags_URL}
     UPDATE_COMMAND ""
     BUILD_IN_SOURCE 1
     INSTALL_COMMAND ""
@@ -57,4 +55,4 @@ add_custom_target(gflags_copy_libs_to_destination
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GFLAGS_BUILD_STATIC_LIBRARIES} ${GFLAGS_LIBRARY_DIR}
   DEPENDS gflags_create_library_dir)
 
-endif(THIRD_PARTY AND NOT PRECOMPILED_THIRD_PARTY)
+endif(THIRD_PARTY)

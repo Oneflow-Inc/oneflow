@@ -16,24 +16,25 @@ Or you can install OpenBLAS and other tools through:
     sudo yum -y install epel-release && sudo yum -y install git gcc-c++ cmake3 openblas-devel kernel-devel-$(uname -r) nasm
 ```
 
-#### create `build` directory:
+#### clone source code
+
+> note: with `--recursive` flag to clone third_party submodules
 
 ```
-    cd oneflow && mkdir build && cd build
+    git clone https://github.com/Oneflow-Inc/oneflow --recursive
+```
+
+or you can just clone source code and submodules step by step
+
+```
+    git clone https://github.com/Oneflow-Inc/oneflow
+    git submodule update --init --recursive
 ```
 
 #### build third party from source
 
 ```
-    cmake -DTHIRD_PARTY=ON -DPRECOMPILED_THIRD_PARTY=OFF .. &&  make -j
-```
-
-If you do not want to compile the third party code from source, you can also download the pre-compiled third party dependencies from oneflow.org
-
-#### download pre-compiled third party
-
-```
-    cmake -DTHIRD_PARTY=ON .. &&  make -j
+  cmake -DTHIRD_PARTY=ON .. && make -j
 ```
 
 #### build oneflow
