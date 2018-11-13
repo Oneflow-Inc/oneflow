@@ -25,6 +25,11 @@ __global__ void DivByConstParaPtrGpu(const int64_t n, T* x, const T* alpha_ptr) 
 }
 
 template<typename T>
+__global__ void DivGpu(const int64_t n, const T* x, const T* y, T* z) {
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] / y[i]; }
+}
+
+template<typename T>
 __global__ void DivByConstParaGpu(const int64_t n, T* x, const T alpha) {
   CUDA_1D_KERNEL_LOOP(i, n) { x[i] = x[i] / alpha; }
 }
@@ -40,8 +45,13 @@ __global__ void MulGpu(const int64_t n, const T* x, const T* y, T* z) {
 }
 
 template<typename T>
-__global__ void DivGpu(const int64_t n, const T* x, const T* y, T* z) {
-  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] / y[i]; }
+__global__ void MulByScalarGpu(const int64_t n, const T* x, const T* y, T* z) {
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y[0]; }
+}
+
+template<typename T>
+__global__ void ReciprocalGpu(const int64_t n, const T* x, T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = static_cast<T>(1.0) / x[i]; }
 }
 
 template<typename T>
@@ -473,13 +483,21 @@ KU_FLOATING_METHOD Div(DeviceCtx* ctx, const int64_t n, T* x, const T alpha) {
   DivByConstParaGpu<T>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, alpha);
 }
+KU_FLOATING_METHOD Div(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
+  DivGpu<T>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z);
+}
 KU_FLOATING_METHOD Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
   MulGpu<T>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z);
 }
-KU_FLOATING_METHOD Div(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
-  DivGpu<T>
+KU_FLOATING_METHOD MulByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
+  MulByScalarGpu<T>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z);
+}
+KU_FLOATING_METHOD Reciprocal(DeviceCtx* ctx, const int n, const T* x, T* y) {
+  ReciprocalGpu<T>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
 }
 KU_FLOATING_METHOD Square(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
   SquareGpu<T>
