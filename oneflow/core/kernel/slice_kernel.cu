@@ -36,6 +36,8 @@ void SliceKernel<DeviceType::kGPU, T>::BackwardDataContent(
   const Blob* offset_blob = BnInOp2Blob("out_to_in_offset");
   Blob* in_diff_blob = BnInOp2Blob(GenDiffBn("in"));
   const int64_t num_output = out_diff_blob->shape().elem_cnt();
+  Memset<DeviceType::kGPU>(ctx.device_ctx, in_diff_blob->mut_dptr<T>(), 0,
+                           in_diff_blob->ByteSizeOfDataContentField());
   SliceBackwardGpu<T><<<BlocksNum4ThreadsNum(num_output), kCudaThreadsNumPerBlock, 0,
                         ctx.device_ctx->cuda_stream()>>>(num_output, offset_blob->dptr<int64_t>(),
                                                          out_diff_blob->dptr<T>(),
@@ -67,9 +69,9 @@ void SliceKernel<DeviceType::kGPU, T>::InitOut2InOffsetFromHost(DeviceCtx* ctx, 
         if (dim_slice_conf.has_start()) { start = dim_slice_conf.start(); }
         if (dim_slice_conf.has_end()) { end = dim_slice_conf.end(); }
         stride = dim_slice_conf.stride();
+        if (start < 0) { start += dim_len; }
+        if (end < 0) { end += dim_len; }
       }
-      if (start < 0) { start += dim_len; }
-      if (end < 0) { end += dim_len; }
       offset += (start + dim_idx * stride) * in_blob->shape().Count(j + 1);
     }
     host_blob_ptr[i] = offset;

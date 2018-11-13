@@ -6,7 +6,10 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class SliceKernel final : public KernelIf<device_type> {
+class SliceKernel;
+
+template<typename T>
+class SliceKernel<DeviceType::kCPU, T> final : public KernelIf<DeviceType::kCPU> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SliceKernel);
   SliceKernel() = default;
@@ -35,14 +38,6 @@ class SliceKernel<DeviceType::kGPU, T> final : public KernelIf<DeviceType::kGPU>
                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
   void InitOut2InOffsetFromHost(DeviceCtx* ctx, const Blob* in_blob, Blob* blob) const;
-};
-
-template<DeviceType device_type, typename T>
-struct SliceKernelUtil final {
-  static void Forward(DeviceCtx* device_ctx, const PbRpf<DimSliceConf>& rep_dim_slice,
-                      const Blob* in_blob, Blob* out_blob);
-  static void Backward(DeviceCtx* device_ctx, const PbRpf<DimSliceConf>& rep_dim_slice,
-                       const Blob* out_diff_blob, Blob* in_diff_blob);
 };
 
 template<typename T, size_t NDIMS>
