@@ -16,8 +16,8 @@ void ConstRangeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   const ConstRangeOpConf& conf = op_conf().const_range_conf();
   CHECK(IsIntegralDataType(conf.data_type()));
   int64_t size = 0;
-  if (conf.has_const_size()) {
-    size = conf.const_size();
+  if (conf.has_size()) {
+    size = conf.size();
   } else if (conf.has_use_device_piece_size()) {
     CHECK_EQ(Global<JobDesc>::Get()->PieceSize() % parallel_ctx->parallel_num(), 0);
     size = Global<JobDesc>::Get()->PieceSize() / parallel_ctx->parallel_num();
