@@ -15,10 +15,19 @@ void ConstRangeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   CHECK_EQ(parallel_ctx->policy(), ParallelPolicy::kDataParallel);
   const ConstRangeOpConf& conf = op_conf().const_range_conf();
   CHECK(IsIntegralDataType(conf.data_type()));
-  CHECK_GE(conf.size(), 1);
+  int64_t size = 0;
+  if (conf.has_const_size()) {
+    size = conf.const_size();
+  } else if (conf.has_use_device_piece_size()) {
+    CHECK_EQ(Global<JobDesc>::Get()->PieceSize() % parallel_ctx->parallel_num(), 0);
+    size = Global<JobDesc>::Get()->PieceSize() / parallel_ctx->parallel_num();
+  } else {
+    UNIMPLEMENTED();
+  }
+  CHECK_GE(size, 1);
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   out->set_data_type(conf.data_type());
-  out->mut_shape() = Shape({conf.size()});
+  out->mut_shape() = Shape({size});
 }
 
 REGISTER_OP(OperatorConf::kConstRangeConf, ConstRangeOp);
