@@ -3,16 +3,13 @@ include (ExternalProject)
 set(CUB_INCLUDE_DIR ${THIRD_PARTY_DIR}/cub/include)
 set(CUB_BUILD_INCLUDE ${CMAKE_CURRENT_BINARY_DIR}/cub/src/cub/cub)
 
-set(CUB_URL https://github.com/NVlabs/cub.git)
-set(CUB_TAG c3cceac115c072fb63df1836ff46d8c60d9eb304)
-
+set(CUB_URL ${CMAKE_CURRENT_BINARY_DIR}/third_party/cub/src/cub)
 
 if(THIRD_PARTY)
 
 ExternalProject_Add(cub
     PREFIX cub
-    GIT_REPOSITORY ${CUB_URL}
-    GIT_TAG ${CUB_TAG}
+    URL ${CUB_URL}
     CONFIGURE_COMMAND ""
     BUILD_COMMAND ""
     INSTALL_COMMAND ""
