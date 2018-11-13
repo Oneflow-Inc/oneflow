@@ -14,6 +14,12 @@ class BroadcastBinaryOp : public Operator {
   void InitFromOpConf() override;
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
+
+ private:
+  virtual void DerivedInitFromOpConf() {}
+  virtual void DerivedInferBlobDescs(
+      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const {}
 };
 
 }  // namespace oneflow

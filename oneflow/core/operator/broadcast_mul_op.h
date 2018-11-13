@@ -11,7 +11,7 @@ class BroadcastMulOp final : public BroadcastBinaryOp {
   BroadcastMulOp() = default;
   ~BroadcastMulOp() = default;
 
-  bool NeedInBlobWhenBackward() const override { return false; }
+  bool NeedInBlobWhenBackward() const override { return true; }
 
   const PbMessage& GetCustomizedConf() const;
 };

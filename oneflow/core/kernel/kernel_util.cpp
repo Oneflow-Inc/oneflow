@@ -326,6 +326,12 @@ KU_FLOATING_METHOD Div(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, 
 KU_FLOATING_METHOD Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
   for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[i]; }
 }
+KU_FLOATING_METHOD MulByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
+  for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[0]; }
+}
+KU_FLOATING_METHOD Reciprocal(DeviceCtx* ctx, const int n, const T* x, T* y) {
+  for (int64_t i = 0; i < n; ++i) { y[i] = static_cast<T>(1.0) / x[i]; }
+}
 KU_FLOATING_METHOD Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsilon) {
   for (int64_t i = 0; i < n; ++i) { x[i] = 1.0 / std::sqrt(x[i] + epsilon); }
 }
