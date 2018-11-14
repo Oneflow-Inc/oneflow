@@ -88,6 +88,14 @@ struct KernelUtilIf {
            c->mut_dptr<T>());
   }
 
+  static void OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
+                            enum CBLAS_TRANSPOSE trans_b, const int batch_size, const int m,
+                            const int n, const int k, const T alpha, const T* a, const T* b,
+                            const T beta, T* c) {
+    Derived::BatchedGemm(ctx, CblasRowMajor, trans_a, trans_b, batch_size, m, n, k, alpha, a, b,
+                         beta, c);
+  }
+
   static void InitializeWithProperConf(DeviceCtx* ctx, const InitializerConf* initializer_conf,
                                        uint32_t random_seed, Blob* blob,
                                        const std::string& data_format = "") {
@@ -163,6 +171,10 @@ struct KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T>::va
                    const enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
                    const T alpha, const T* a, const int lda, const T* b, const int ldb,
                    const T beta, T* c, const int ldc);
+  static void BatchedGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
+                          const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
+                          int batch_size, int m, int n, int k, const T alpha, const T* a,
+                          const T* b, const T beta, T* c);
 
   static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha);
@@ -277,6 +289,10 @@ struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T>::va
                    const enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
                    const T alpha, const T* a, const int lda, const T* b, const int ldb,
                    const T beta, T* c, const int ldc);
+  static void BatchedGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
+                          const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
+                          int batch_size, int m, int n, int k, const T alpha, const T* a,
+                          const T* b, const T beta, T* c);
 
   static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha);
