@@ -524,6 +524,9 @@ typename std::enable_if<!std::is_same<T, U>::value>::type CopyElem(const T* in_d
   FOR_RANGE(int64_t, i, 0, elem_num) { *(out_dptr++) = static_cast<U>(*(in_dptr++)); }
 }
 
+template<typename T, typename U>
+void CopyElemOnGpu(DeviceCtx* ctx, const T* in_dptr, U* out_dptr, int64_t elem_num);
+
 // create temporary host blob store initializer result
 #define BEFORE_CPU_INITIALIZE()                                     \
   RtBlobDesc blob_desc(blob->blob_desc().blob_desc_proto());        \
