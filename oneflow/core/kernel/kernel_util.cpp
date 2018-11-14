@@ -40,7 +40,7 @@ void RngNormal(const int64_t elem_cnt, const T mean, const T std, uint32_t rando
 }
 
 template<typename T>
-void TruncatedRngNormal(const int64_t elem_cnt, const T std, uint32_t random_seed, T* dptr) {
+void RngTruncatedNormal(const int64_t elem_cnt, const T std, uint32_t random_seed, T* dptr) {
   CHECK_GE(elem_cnt, 0);
   CHECK(dptr);
   CHECK_GT(std, 0.0);
@@ -93,7 +93,7 @@ template<typename T>
 void TruncatedNormalInitializer(const TruncatedNormalInitializerConf& initializer_conf,
                                 uint32_t random_seed, Blob* blob) {
   CHECK(blob->shape().elem_cnt());
-  TruncatedRngNormal<T>(blob->shape().elem_cnt(), static_cast<T>(initializer_conf.std()),
+  RngTruncatedNormal<T>(blob->shape().elem_cnt(), static_cast<T>(initializer_conf.std()),
                         random_seed, blob->mut_dptr<T>());
 }
 
