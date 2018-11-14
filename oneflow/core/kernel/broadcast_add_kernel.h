@@ -11,6 +11,12 @@ class BroadcastAddKernel final : public BroadcastBinaryKernel<device_type, T> {
   OF_DISALLOW_COPY_AND_MOVE(BroadcastAddKernel);
   BroadcastAddKernel() = default;
   ~BroadcastAddKernel() = default;
+
+ private:
+  void ForwardDataContent(const KernelCtx&,
+                          std::function<Blob*(const std::string&)>) const override;
+  void BackwardDataContent(const KernelCtx&,
+                           std::function<Blob*(const std::string&)>) const override;
 };
 
 }  // namespace oneflow
