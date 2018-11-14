@@ -570,10 +570,10 @@ message DecodeRandomOpConf {
   required string out = 1;
   required ShapeProto shape = 2;
   required DataType data_type = 3;
-  required InitializerConf data_initializer = 4; 
+  required InitializerConf data_initializer = 4;
 }
 
-message DefineTestBlobConf {
+message DefineTestBlobOpConf {
   required string out = 1;
   required ShapeProto shape = 2;
   required DataType data_type = 3;
@@ -781,7 +781,7 @@ message OperatorConf {
     PrintOpConf print_conf = 233;
     AccuracyPrintOpConf accuracy_print_conf = 234;
     LossPrintOpConf loss_print_conf = 235;
-    DefineTestBlobConf define_test_blob_conf = 236;
+    DefineTestBlobOpConf define_test_blob_conf = 236;
     PackOpConf pack_conf = 237;
     UnpackOpConf unpack_conf = 238;
     RepeatOpConf repeat_conf = 239;
