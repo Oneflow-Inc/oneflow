@@ -4,8 +4,7 @@
 namespace oneflow {
 
 void BiasAddOp::InitFromOpConf() {
-  CHECK(op_conf().has_fully_connected_conf());
-
+  CHECK(op_conf().has_bias_add_conf());
   EnrollInputBn("a");
   EnrollInputBn("b");
   EnrollOutputBn("out");
