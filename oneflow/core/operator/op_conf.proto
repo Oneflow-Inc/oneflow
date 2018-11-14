@@ -37,6 +37,10 @@ message RandomNormalInitializerConf {
   optional float std = 2 [default = 1];
 }
 
+message TruncatedNormalInitializerConf {
+  optional float std = 1 [default = 1];
+}
+
 enum VarianceNorm {
   kFanIn = 0;
   kFanOut = 1;
@@ -58,8 +62,9 @@ message InitializerConf {
     RandomUniformInitializerConf random_uniform_conf = 3;
     RandomUniformIntInitializerConf random_uniform_int_conf = 4;
     RandomNormalInitializerConf random_normal_conf = 5;
-    XavierInitializerConf xavier_conf = 6;
-    MsraInitializerConf msra_conf = 7;
+    TruncatedNormalInitializerConf truncated_normal_conf = 6;
+    XavierInitializerConf xavier_conf = 7;
+    MsraInitializerConf msra_conf = 8;
   }
 }
 
@@ -730,8 +735,8 @@ message RepeatOpConf {
 }
 
 message GatherOpConf {
-  required string indices = 1;
-  required string in = 2;
+  required string in = 1;
+  required string indices = 2;
   required string out = 3;
 }
 

@@ -6,9 +6,17 @@ void SliceOp::InitFromOpConf() {
   CHECK(op_conf().has_slice_conf());
   EnrollInputBn("in");
   EnrollOutputBn("out");
+  if (op_conf().device_type() == DeviceType::kGPU) { EnrollConstBufBn("out_to_in_offset"); }
 }
 
 const PbMessage& SliceOp::GetCustomizedConf() const { return op_conf().slice_conf(); }
+
+void SliceOp::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+  const Shape& in_shape = GetBlobDesc4BnInOp("in")->shape();
+  in_shape.ToProto(kernel_conf->mutable_slice_conf()->mutable_in_shape());
+}
 
 void SliceOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const {
@@ -35,6 +43,12 @@ void SliceOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlo
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
   out_blob_desc->mut_shape() = Shape(shape_vec);
+
+  BlobDesc* offset_blob_desc = GetBlobDesc4BnInOp("out_to_in_offset");
+  if (offset_blob_desc) {
+    *offset_blob_desc = *out_blob_desc;
+    offset_blob_desc->set_data_type(DataType::kInt64);
+  }
 }
 
 REGISTER_OP(OperatorConf::kSliceConf, SliceOp);

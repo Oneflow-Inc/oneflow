@@ -334,21 +334,6 @@ size_t GetTmpSizeForReduceSum(DataType data_type, int64_t sum_elem_num) {
 
 #undef MAKE_CUB_DEVICE_REDUCE_SWITCH_ENTRY
 
-// create temporary host blob store initializer result
-#define BEFORE_CPU_INITIALIZE()                                     \
-  RtBlobDesc blob_desc(blob->blob_desc().blob_desc_proto());        \
-  char* host_raw_dptr = nullptr;                                    \
-  CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize())); \
-  std::unique_ptr<Blob> host_blob;                                  \
-  host_blob.reset(new Blob(nullptr, &blob_desc, host_raw_dptr));
-
-// asynchronous copy to device
-#define AFTER_CPU_INITIALIZE()                                                          \
-  Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob->dptr(),                    \
-                           blob->ByteSizeOfDataContentField(), cudaMemcpyHostToDevice); \
-  CudaCheck(cudaStreamSynchronize(ctx->cuda_stream()));                                 \
-  CudaCheck(cudaFreeHost(host_raw_dptr));
-
 #define KU_IF_METHOD                     \
   template<typename T, typename Derived> \
   void GpuKernelUtilIf<T, Derived>::
@@ -470,6 +455,36 @@ KU_FLOATING_METHOD Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
   cublasOperation_t cublas_trans_b = CblasTrans2CublasTrans(trans_b);
   cublas_gemm<T>(ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k, &alpha, b, ldb,
                  a, lda, &beta, c, ldc);
+}
+KU_FLOATING_METHOD BatchedGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
+                               const enum CBLAS_TRANSPOSE trans_a,
+                               const enum CBLAS_TRANSPOSE trans_b, int batch_size, int m, int n,
+                               int k, const T alpha, const T* a, const T* b, const T beta, T* c) {
+  const int a_stride = m * k;
+  const int b_stride = k * n;
+  const int c_stride = m * n;
+#if __CUDACC_VER_MAHOR__ < 8
+  FOR_RANGE(int32_t, i, 0, batch_size) {
+    KernelUtil<DeviceType::kGPU, T>::OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a + i * a_stride,
+                                            b + i * b_stride, beta, c + i * c_stride);
+  }
+#else
+  const int lda = (trans_a == CblasNoTrans) ? k : m;
+  const int ldb = (trans_b == CblasNoTrans) ? n : k;
+  cublasOperation_t cublas_trans_a = CblasTrans2CublasTrans(trans_a);
+  cublasOperation_t cublas_trans_b = CblasTrans2CublasTrans(trans_b);
+  if (std::is_same<type_cpp, float>) {
+    cublasSgemmStridedBatched(ctx->cublas_pmd_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
+                              &alpha, b, ldb, b_stride, a, lda, a_stride, &beta, c, n, c_stride,
+                              batch_size);
+  } else if (std::is_same<type_cpp, double>) {
+    cublasDgemmStridedBatched(ctx->cublas_pmd_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
+                              &alpha, b, ldb, b_stride, a, lda, a_stride, &beta, c, n, c_stride,
+                              batch_size);
+  } else {
+    UNIMPLEMENTED();
+  }
+#endif
 }
 
 KU_FLOATING_METHOD Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
