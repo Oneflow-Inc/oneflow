@@ -20,7 +20,7 @@ void BroadcastMulKernel<device_type, T>::ForwardDataContent(
                                             out->mut_dptr<T>());
   } else {
     CHECK_EQ(n, a->shape().elem_cnt());
-    CHECK_EQ(n, b->shape().elem_cnt());
+    CHECK(a->shape() == b->shape());
     KernelUtil<device_type, T>::Mul(ctx.device_ctx, n, a->dptr<T>(), b->dptr<T>(),
                                     out->mut_dptr<T>());
   }
@@ -36,21 +36,34 @@ void BroadcastMulKernel<device_type, T>::BackwardDataContent(
   Blob* b_diff = BnInOp2Blob(GenDiffBn("b"));
 
   int64_t n = out_diff->shape().elem_cnt();
-  if (a_diff->shape().elem_cnt() == 1) {
-    KernelUtil<device_type, T>::MulByScalar(ctx.device_ctx, n, out_diff->dptr<T>(), a->dptr<T>(),
-                                            b_diff->mut_dptr<T>());
-    KernelUtil<device_type, T>::Dot(ctx.device_ctx, n, out_diff->dptr<T>(), 1, b->dptr<T>(), 1,
-                                    a_diff->mut_dptr<T>());
+  if (a->shape().elem_cnt() == 1) {
+    if (a_diff) {
+      KernelUtil<device_type, T>::Dot(ctx.device_ctx, n, out_diff->dptr<T>(), 1, b->dptr<T>(), 1,
+                                      a_diff->mut_dptr<T>());
+    }
+    if (b_diff) {
+      KernelUtil<device_type, T>::MulByScalar(ctx.device_ctx, n, out_diff->dptr<T>(), a->dptr<T>(),
+                                              b_diff->mut_dptr<T>());
+    }
   } else if (b_diff->shape().elem_cnt() == 1) {
-    KernelUtil<device_type, T>::MulByScalar(ctx.device_ctx, n, out_diff->dptr<T>(), b->dptr<T>(),
-                                            a_diff->mut_dptr<T>());
-    KernelUtil<device_type, T>::Dot(ctx.device_ctx, n, out_diff->dptr<T>(), 1, a->dptr<T>(), 1,
-                                    b_diff->mut_dptr<T>());
+    if (a_diff) {
+      KernelUtil<device_type, T>::MulByScalar(ctx.device_ctx, n, out_diff->dptr<T>(), b->dptr<T>(),
+                                              a_diff->mut_dptr<T>());
+    }
+    if (b_diff) {
+      KernelUtil<device_type, T>::Dot(ctx.device_ctx, n, out_diff->dptr<T>(), 1, a->dptr<T>(), 1,
+                                      b_diff->mut_dptr<T>());
+    }
   } else {
-    KernelUtil<device_type, T>::Mul(ctx.device_ctx, n, out_diff->dptr<T>(), a->dptr<T>(),
-                                    b_diff->mut_dptr<T>());
-    KernelUtil<device_type, T>::Mul(ctx.device_ctx, n, out_diff->dptr<T>(), b->dptr<T>(),
-                                    a_diff->mut_dptr<T>());
+    CHECK(a->shape() == b->shape());
+    if (a_diff) {
+      KernelUtil<device_type, T>::Mul(ctx.device_ctx, n, out_diff->dptr<T>(), b->dptr<T>(),
+                                      a_diff->mut_dptr<T>());
+    }
+    if (b_diff) {
+      KernelUtil<device_type, T>::Mul(ctx.device_ctx, n, out_diff->dptr<T>(), a->dptr<T>(),
+                                      b_diff->mut_dptr<T>());
+    }
   }
 }
 
