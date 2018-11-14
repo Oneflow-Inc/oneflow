@@ -72,6 +72,28 @@ using remove_const_t = typename remove_const<T>::type;
 template<typename T>
 using remove_reference_t = typename remove_reference<T>::type;
 
+template<typename T>
+using decay_t = typename decay<T>::type;
+
+template<typename F, typename Tuple, size_t... Idx>
+auto apply_helper(F&& f, Tuple&& tp, std::index_sequence<Idx...>)
+    -> decltype(std::forward<F>(f)(std::get<Idx>(std::forward<Tuple>(tp))...)) {
+  return std::forward<F>(f)(std::get<Idx>(std::forward<Tuple>(tp))...);
+}
+
+template<typename F, typename Tuple>
+auto apply(F&& f, Tuple&& tp)
+    -> decltype(apply_helper(std::forward<F>(f), std::forward<Tuple>(tp),
+                             std::make_index_sequence<std::tuple_size<decay_t<Tuple>>::value>{})) {
+  return apply_helper(std::forward<F>(f), std::forward<Tuple>(tp),
+                      std::make_index_sequence<std::tuple_size<decay_t<Tuple>>::value>{});
+}
+
+template<typename F, typename... Args>
+auto invoke(F&& f, Args&&... args) -> decltype(std::forward<F>(f)(std::forward<Args>(args)...)) {
+  return std::forward<F>(f)(std::forward<Args>(args)...);
+}
+
 }  // namespace std
 
 #endif
