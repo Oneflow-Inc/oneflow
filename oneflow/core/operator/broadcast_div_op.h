@@ -11,9 +11,8 @@ class BroadcastDivOp final : public BroadcastBinaryOp {
   BroadcastDivOp() = default;
   ~BroadcastDivOp() = default;
 
+  const PbMessage& GetCustomizedConf() const override;
   bool NeedInBlobWhenBackward() const override { return false; }
-
-  const PbMessage& GetCustomizedConf() const;
 
  private:
   void DerivedInitFromOpConf() override;
