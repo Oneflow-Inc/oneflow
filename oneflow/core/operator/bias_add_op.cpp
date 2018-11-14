@@ -18,6 +18,8 @@ void BiasAddOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
   const BlobDesc* a_blob_desc = GetBlobDesc4BnInOp("a");
   const BlobDesc* b_blob_desc = GetBlobDesc4BnInOp("b");
 
+  CHECK_EQ(a_blob_desc->shape().NumAxes(), 2);
+  CHECK_EQ(b_blob_desc->shape().NumAxes(), 2);
   CHECK_EQ(a_blob_desc->shape().At(1), b_blob_desc->shape().At(1));
   CHECK_EQ(b_blob_desc->shape().At(0), 1);
   CHECK_EQ(a_blob_desc->data_type(), Global<JobDesc>::Get()->DefaultDataType());
