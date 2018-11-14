@@ -47,32 +47,33 @@ void SliceKernel<DeviceType::kGPU, T>::BackwardDataContent(
 template<typename T>
 void SliceKernel<DeviceType::kGPU, T>::InitConstBufBlobs(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  InitOut2InOffsetFromHost(ctx, BnInOp2Blob("in"), BnInOp2Blob("out_to_in_offset"));
+  Shape in_shape(this->kernel_conf().slice_conf().in_shape());
+  InitOut2InOffsetFromHost(ctx, in_shape, BnInOp2Blob("out_to_in_offset"));
 }
 
 template<typename T>
-void SliceKernel<DeviceType::kGPU, T>::InitOut2InOffsetFromHost(DeviceCtx* ctx, const Blob* in_blob,
+void SliceKernel<DeviceType::kGPU, T>::InitOut2InOffsetFromHost(DeviceCtx* ctx,
+                                                                const Shape& in_shape,
                                                                 Blob* blob) const {
   const SliceOpConf& conf = op_conf().slice_conf();
   BEFORE_CPU_INITIALIZE();
   int64_t* host_blob_ptr = host_blob->mut_dptr<int64_t>();
-  FOR_RANGE(size_t, i, 0, host_blob->shape().elem_cnt()) {
-    size_t offset = 0;
-    FOR_RANGE(size_t, j, 0, host_blob->shape().NumAxes()) {
-      const size_t dim_idx = i / host_blob->shape().Count(j + 1);
-      const size_t dim_len = host_blob->shape().At(j);
+  FOR_RANGE(int64_t, i, 0, host_blob->shape().elem_cnt()) {
+    int64_t offset = 0;
+    int64_t index = i;
+    FOR_RANGE(int64_t, j, 0, host_blob->shape().NumAxes()) {
+      const int64_t dim_elem_cnt = host_blob->shape().Count(j + 1);
+      const int64_t dim_i = index / dim_elem_cnt;
+      index = index % dim_elem_cnt;
       int64_t start = 0;
-      int64_t end = dim_len;
       int64_t stride = 1;
       if (j > 0) {
         const DimSliceConf& dim_slice_conf = conf.dim_slice_conf(j - 1);
         if (dim_slice_conf.has_start()) { start = dim_slice_conf.start(); }
-        if (dim_slice_conf.has_end()) { end = dim_slice_conf.end(); }
+        if (start < 0) { start += host_blob->shape().At(j); }
         stride = dim_slice_conf.stride();
-        if (start < 0) { start += dim_len; }
-        if (end < 0) { end += dim_len; }
       }
-      offset += (start + dim_idx * stride) * in_blob->shape().Count(j + 1);
+      offset += (start + dim_i * stride) * in_shape.Count(j + 1);
     }
     host_blob_ptr[i] = offset;
   }

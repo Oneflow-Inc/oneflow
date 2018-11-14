@@ -37,7 +37,7 @@ class SliceKernel<DeviceType::kGPU, T> final : public KernelIf<DeviceType::kGPU>
   void InitConstBufBlobs(DeviceCtx*,
                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
-  void InitOut2InOffsetFromHost(DeviceCtx* ctx, const Blob* in_blob, Blob* blob) const;
+  void InitOut2InOffsetFromHost(DeviceCtx* ctx, const Shape& in_shape, Blob* blob) const;
 };
 
 template<typename T, size_t NDIMS>

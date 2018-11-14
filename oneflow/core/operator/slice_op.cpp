@@ -11,6 +11,13 @@ void SliceOp::InitFromOpConf() {
 
 const PbMessage& SliceOp::GetCustomizedConf() const { return op_conf().slice_conf(); }
 
+void SliceOp::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+  const Shape& in_shape = GetBlobDesc4BnInOp("in")->shape();
+  in_shape.ToProto(kernel_conf->mutable_slice_conf()->mutable_in_shape());
+}
+
 void SliceOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const {
   const SliceOpConf& conf = op_conf().slice_conf();
