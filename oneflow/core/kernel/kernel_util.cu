@@ -656,4 +656,24 @@ __device__ double gpu_atomic_max(double* address, const double val) {
   return __longlong_as_double(old);
 }
 
+template<typename T, typename U>
+__global__ void CastOnGpu(const T* in, U* out, int64_t elem_num) {
+  CUDA_1D_KERNEL_LOOP(i, elem_num) { out[i] = static_cast<U>(in[i]); }
+}
+
+template<typename T, typename U>
+void CopyElemOnGpu(DeviceCtx* ctx, const T* in_dptr, U* out_dptr, int64_t elem_num) {
+  CastOnGpu<T, U>
+      <<<BlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          in_dptr, out_dptr, elem_num);
+}
+
+#define INSTANTIATE_COPY_ELEM_ON_GPU(T, U) \
+  template void CopyElemOnGpu(DeviceCtx* ctx, const T* in_dptr, U* out_dptr, int64_t elem_num);
+
+#define MAKE_COPY_ELEM_ON_GPU_ENTRY(TPair, UPair) \
+  INSTANTIATE_COPY_ELEM_ON_GPU(OF_PP_PAIR_FIRST(TPair), OF_PP_PAIR_FIRST(UPair))
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_COPY_ELEM_ON_GPU_ENTRY, POD_DATA_TYPE_SEQ, POD_DATA_TYPE_SEQ)
+
 }  // namespace oneflow

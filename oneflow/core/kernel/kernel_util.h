@@ -508,6 +508,9 @@ typename std::enable_if<!std::is_same<T, U>::value>::type CopyElem(const T* in_d
   FOR_RANGE(int64_t, i, 0, elem_num) { *(out_dptr++) = static_cast<U>(*(in_dptr++)); }
 }
 
+template<typename T, typename U>
+void CopyElemOnGpu(DeviceCtx* ctx, const T* in_dptr, U* out_dptr, int64_t elem_num);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_KERNEL_UTIL_H_
