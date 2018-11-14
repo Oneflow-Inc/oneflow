@@ -6,12 +6,13 @@ template<DeviceType device_type, typename T>
 void ConstRangeKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (*output_inited_) { return; }
+  Blob* out = BnInOp2Blob("out");
   const ConstRangeOpConf& range_conf = this->op_conf().const_range_conf();
-  const int64_t size = range_conf.size();
+  const int64_t size = out->shape().elem_cnt();
   const T start = static_cast<T>(range_conf.start());
   const T stride = static_cast<T>(range_conf.stride());
   ConstRangeKernelUtil<device_type, T>::Fill(ctx.device_ctx, start, size, stride,
-                                             BnInOp2Blob("out")->mut_dptr<T>());
+                                             out->mut_dptr<T>());
   *output_inited_ = true;
 }
 
