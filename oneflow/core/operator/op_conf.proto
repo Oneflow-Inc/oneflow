@@ -465,6 +465,7 @@ message ReshapeOpConf {
   required string in = 1;
   required string out = 2;
   required ShapeProto shape = 3;
+  optional bool has_dim0_in_shape = 4;
 }
 
 message EmbeddingLookupOpConf {
@@ -719,7 +720,6 @@ message UnpackOpConf {
     int32 unpack_num_per_record = 4;
   }
 }
-
 message RepeatOpConf {
   required string in = 1;
   required string out = 2;
@@ -735,6 +735,44 @@ message GatherOpConf {
   required string out = 3;
 }
 
+message SqrtOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
+message SquareOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
+message BroadcastAddOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
+message BroadcastSubOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
+message BroadcastMulOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
+message BroadcastDivOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
+
 message ConstScalarOpConf {
   required string tick = 1;
   required string out = 2;
@@ -746,13 +784,43 @@ message ConstScalarOpConf {
   optional int32 rank = 6 [default = 1];
 }
 
+message BiasAddOpConf {
+  // inputs
+  required string a = 1;
+  required string b = 2;
+  // output
+  required string out = 3;
+}
+
 message ConstRangeOpConf {
   required string tick = 1;
   required string out = 2;
-  required int64 size = 3;
-  optional DataType data_type = 4 [default = kInt32];
-  optional int64 start = 5 [default = 0];
-  optional int64 stride = 6 [default = 1];
+  message UseDevicePieceSizeConf{}
+  oneof size_conf {
+    int64 size = 3;
+    UseDevicePieceSizeConf use_device_piece_size = 4;
+  }
+  optional DataType data_type = 5 [default = kInt32];
+  optional int64 start = 6 [default = 0];
+  optional int64 stride = 7 [default = 1];
+}
+
+message MeanOpConf {
+  required string in = 1;
+  required string out = 2;
+  // TODO: axis of mean
+}
+
+message DimSliceConf {
+  optional int32 start = 1 [default = 0];
+  optional int32 end = 2 [default = 0];
+  optional int32 stride = 3 [default = 1];
+}
+
+message SliceOpConf {
+  required string in = 1;
+  required string out = 2;
+  repeated DimSliceConf dim_slice_conf = 3;
 }
 
 message OperatorConf {
@@ -830,8 +898,17 @@ message OperatorConf {
     LogCounterOpConf log_counter_conf = 240;
     GeluOpConf gelu_conf = 241;
     GatherOpConf gather_conf = 242;
-    ConstScalarOpConf const_scalar_conf = 243;
-    ConstRangeOpConf const_range_conf = 244;
+    SqrtOpConf sqrt_conf = 243;
+    SquareOpConf square_conf = 244;
+    ConstScalarOpConf const_scalar_conf = 245;
+    ConstRangeOpConf const_range_conf = 246;
+    BroadcastAddOpConf broadcast_add_conf = 247;
+    BroadcastSubOpConf broadcast_sub_conf = 248;
+    BroadcastMulOpConf broadcast_mul_conf = 249;
+    BroadcastDivOpConf broadcast_div_conf = 250;
+    MeanOpConf mean_conf = 251;
+    SliceOpConf slice_conf = 252;
+    BiasAddOpConf bias_add_conf = 253;
   }
 }
 
