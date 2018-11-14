@@ -12,12 +12,7 @@ class BroadcastDivOp final : public BroadcastBinaryOp {
   ~BroadcastDivOp() = default;
 
   const PbMessage& GetCustomizedConf() const override;
-  bool NeedInBlobWhenBackward() const override { return false; }
-
- private:
-  void DerivedInitFromOpConf() override;
-  void DerivedInferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx) const override;
+  bool NeedOutBlobWhenBackward() const override { return false; }
 };
 
 }  // namespace oneflow
