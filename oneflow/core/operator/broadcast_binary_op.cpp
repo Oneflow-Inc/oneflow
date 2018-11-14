@@ -3,7 +3,6 @@
 namespace oneflow {
 
 void BroadcastBinaryOp::InitFromOpConf() {
-  CHECK(op_conf().has_broadcast_add_conf());
   EnrollInputBn("a");
   EnrollInputBn("b");
   EnrollOutputBn("out");
