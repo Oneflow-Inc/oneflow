@@ -21,7 +21,7 @@ class GatherKernel final : public KernelIf<device_type> {
 };
 
 template<DeviceType device_type, typename T>
-struct LookUpKernelUtil final {
+struct LookupKernelUtil final {
   static void Forward(DeviceCtx* ctx, const int32_t* indices, int64_t num_indices, const T* in,
                       int64_t in_rows, int64_t in_cols, T* out);
   static void Backward(DeviceCtx* ctx, const int32_t* indices, int64_t num_indices,

@@ -16,7 +16,7 @@ void GatherKernel<device_type, T>::ForwardDataContent(
   const int64_t in_rows = in_blob->shape().At(0);
   const int64_t in_cols = in_blob->shape().Count(1);
   Blob* out = BnInOp2Blob("out");
-  LookUpKernelUtil<device_type, T>::Forward(ctx.device_ctx, indices_blob->dptr<int32_t>(),
+  LookupKernelUtil<device_type, T>::Forward(ctx.device_ctx, indices_blob->dptr<int32_t>(),
                                             num_indices, in_blob->dptr<T>(), in_rows, in_cols,
                                             out->mut_dptr<T>());
 }
@@ -30,13 +30,15 @@ void GatherKernel<device_type, T>::BackwardDataContent(
   Blob* in_diff_blob = BnInOp2Blob(GenDiffBn("in"));
   const int64_t in_rows = in_diff_blob->shape().At(0);
   const int64_t in_cols = in_diff_blob->shape().Count(1);
-  LookUpKernelUtil<device_type, T>::Backward(ctx.device_ctx, indices_blob->dptr<int32_t>(),
-                                            num_indices, out_diff_blob->dptr<T>(), in_rows, in_cols,
-                                             in_diff_blob->mut_dptr<T>());
+  Memset<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr<T>(), 0,
+                      in_diff_blob->ByteSizeOfDataContentField());
+  LookupKernelUtil<device_type, T>::Backward(ctx.device_ctx, indices_blob->dptr<int32_t>(),
+                                             num_indices, out_diff_blob->dptr<T>(), in_rows,
+                                             in_cols, in_diff_blob->mut_dptr<T>());
 }
 
 template<typename T>
-struct LookUpKernelUtil<DeviceType::kCPU, T> final {
+struct LookupKernelUtil<DeviceType::kCPU, T> final {
   static void Forward(DeviceCtx* ctx, const int32_t* indices, int64_t num_indices, const T* in,
                       int64_t in_rows, int64_t in_cols, T* out);
   static void Backward(DeviceCtx* ctx, const int32_t* indices, int64_t num_indices,
@@ -44,15 +46,27 @@ struct LookUpKernelUtil<DeviceType::kCPU, T> final {
 };
 
 template<typename T>
-void LookUpKernelUtil<DeviceType::kCPU, T>::Forward(DeviceCtx* ctx, const int32_t* indices,
+void LookupKernelUtil<DeviceType::kCPU, T>::Forward(DeviceCtx* ctx, const int32_t* indices,
                                                     int64_t num_indices, const T* in,
-                                                    int64_t in_rows, int64_t in_cols, T* out) {}
+                                                    int64_t in_rows, int64_t in_cols, T* out) {
+  FOR_RANGE(int64_t, i, 0, num_indices) {
+    const int32_t index = (indices[i] >= 0 && indices[i] < in_rows) ? indices[i] : 0;
+    const T* from = in + (index * in_cols);
+    T* to = out + (i * in_cols);
+    std::copy(from, from + in_cols, to);
+  }
+}
 
 template<typename T>
-void LookUpKernelUtil<DeviceType::kCPU, T>::Backward(DeviceCtx* ctx, const int32_t* indices,
+void LookupKernelUtil<DeviceType::kCPU, T>::Backward(DeviceCtx* ctx, const int32_t* indices,
                                                      int64_t num_indices, const T* out_diff,
                                                      int64_t in_rows, int64_t in_cols, T* in_diff) {
-
+  FOR_RANGE(int64_t, i, 0, num_indices) {
+    const int32_t index = (indices[i] >= 0 && indices[i] < in_rows) ? indices[i] : 0;
+    const T* from = out_diff + (i * in_cols);
+    T* to = in_diff + (index * in_cols);
+    std::transform(from, from + in_cols, to, to, std::plus<T>());
+  }
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kGatherConf, GatherKernel, FLOATING_DATA_TYPE_SEQ);
