@@ -15,12 +15,8 @@ class BroadcastBinaryOp : public Operator {
   bool IsAllOutputConst() const override { return GetValFromCustomizedConf<bool>("is_const"); }
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
-
- private:
-  virtual void DerivedInitFromOpConf() {}
-  virtual void DerivedInferBlobDescs(
-      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const {}
+  void InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                           const ParallelContext*);
 };
 
 }  // namespace oneflow
