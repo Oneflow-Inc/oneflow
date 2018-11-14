@@ -38,9 +38,10 @@ void BroadcastDivKernel<device_type, T>::BackwardDataContent(
   Blob* b_diff = BnInOp2Blob(GenDiffBn("b"));
 
   int64_t n = out_diff->shape().elem_cnt();
+  KernelUtil<device_type, T>::Reciprocal(ctx.device_ctx, b->shape().elem_cnt(), b->dptr<T>(),
+                                         tmp->mut_dptr<T>());
   if (a->shape().elem_cnt() == 1) {
     if (a_diff) {
-      KernelUtil<device_type, T>::Reciprocal(ctx.device_ctx, n, b->dptr<T>(), tmp->mut_dptr<T>());
       KernelUtil<device_type, T>::Dot(ctx.device_ctx, n, out_diff->dptr<T>(), 1, tmp->dptr<T>(), 1,
                                       a_diff->mut_dptr<T>());
     }
@@ -55,7 +56,6 @@ void BroadcastDivKernel<device_type, T>::BackwardDataContent(
     }
   } else if (b->shape().elem_cnt() == 1) {
     if (a_diff) {
-      KernelUtil<device_type, T>::Reciprocal(ctx.device_ctx, 1, b->dptr<T>(), tmp->mut_dptr<T>());
       KernelUtil<device_type, T>::MulByScalar(ctx.device_ctx, n, out_diff->dptr<T>(),
                                               tmp->dptr<T>(), a_diff->mut_dptr<T>());
     }
@@ -71,7 +71,6 @@ void BroadcastDivKernel<device_type, T>::BackwardDataContent(
   } else {
     CHECK(a->shape() == b->shape());
     if (a_diff) {
-      KernelUtil<device_type, T>::Reciprocal(ctx.device_ctx, n, b->dptr<T>(), tmp->mut_dptr<T>());
       KernelUtil<device_type, T>::Mul(ctx.device_ctx, n, out_diff->dptr<T>(), tmp->dptr<T>(),
                                       a_diff->mut_dptr<T>());
     }
