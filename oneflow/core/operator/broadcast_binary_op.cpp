@@ -16,10 +16,8 @@ void BroadcastBinaryOp::InferBlobDescs(
   const BlobDesc* b_blob_desc = GetBlobDesc4BnInOp("b");
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   if (a_blob_desc->shape().elem_cnt() == 1) {
-    CHECK_EQ(a_blob_desc->shape().NumAxes(), 1);
     *out_blob_desc = *b_blob_desc;
   } else if (b_blob_desc->shape().elem_cnt() == 1) {
-    CHECK_EQ(b_blob_desc->shape().NumAxes(), 1);
     *out_blob_desc = *a_blob_desc;
   } else {
     *out_blob_desc = *a_blob_desc;
