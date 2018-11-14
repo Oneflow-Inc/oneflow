@@ -88,6 +88,14 @@ struct KernelUtilIf {
            c->mut_dptr<T>());
   }
 
+  static void OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
+                            enum CBLAS_TRANSPOSE trans_b, const int batch_size, const int m,
+                            const int n, const int k, const T alpha, const T* a, const T* b,
+                            const T beta, T* c) {
+    Derived::BatchedGemm(ctx, CblasRowMajor, trans_a, trans_b, batch_size, m, n, k, alpha, a, b,
+                         beta, c);
+  }
+
   static void InitializeWithProperConf(DeviceCtx* ctx, const InitializerConf* initializer_conf,
                                        uint32_t random_seed, Blob* blob,
                                        const std::string& data_format = "") {
@@ -163,6 +171,10 @@ struct KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T>::va
                    const enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
                    const T alpha, const T* a, const int lda, const T* b, const int ldb,
                    const T beta, T* c, const int ldc);
+  static void BatchedGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
+                          const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
+                          int batch_size, int m, int n, int k, const T alpha, const T* a,
+                          const T* b, const T beta, T* c);
 
   static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha);
@@ -277,6 +289,10 @@ struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T>::va
                    const enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
                    const T alpha, const T* a, const int lda, const T* b, const int ldb,
                    const T beta, T* c, const int ldc);
+  static void BatchedGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
+                          const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
+                          int batch_size, int m, int n, int k, const T alpha, const T* a,
+                          const T* b, const T beta, T* c);
 
   static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha);
@@ -507,6 +523,21 @@ typename std::enable_if<!std::is_same<T, U>::value>::type CopyElem(const T* in_d
                                                                    int64_t elem_num) {
   FOR_RANGE(int64_t, i, 0, elem_num) { *(out_dptr++) = static_cast<U>(*(in_dptr++)); }
 }
+
+// create temporary host blob store initializer result
+#define BEFORE_CPU_INITIALIZE()                                     \
+  RtBlobDesc blob_desc(blob->blob_desc().blob_desc_proto());        \
+  char* host_raw_dptr = nullptr;                                    \
+  CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize())); \
+  std::unique_ptr<Blob> host_blob;                                  \
+  host_blob.reset(new Blob(nullptr, &blob_desc, host_raw_dptr));
+
+// asynchronous copy to device
+#define AFTER_CPU_INITIALIZE()                                                          \
+  Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob->dptr(),                    \
+                           blob->ByteSizeOfDataContentField(), cudaMemcpyHostToDevice); \
+  CudaCheck(cudaStreamSynchronize(ctx->cuda_stream()));                                 \
+  CudaCheck(cudaFreeHost(host_raw_dptr));
 
 }  // namespace oneflow
 
