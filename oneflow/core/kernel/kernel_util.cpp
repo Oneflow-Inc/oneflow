@@ -40,6 +40,24 @@ void RngNormal(const int64_t elem_cnt, const T mean, const T std, uint32_t rando
 }
 
 template<typename T>
+void RngTruncatedNormal(const int64_t elem_cnt, const T std, uint32_t random_seed, T* dptr) {
+  CHECK_GE(elem_cnt, 0);
+  CHECK(dptr);
+  CHECK_GT(std, 0.0);
+  T truncated_value = 2 * std;
+  std::mt19937 generator(random_seed);
+  std::normal_distribution<T> random_distribution(0, std);
+  int64_t index = 0;
+  while (true) {
+    T val = random_distribution(generator);
+    if (std::abs(val) < truncated_value) {
+      dptr[index++] = val;
+      if (index >= elem_cnt) { break; }
+    }
+  }
+}
+
+template<typename T>
 void ConstantInitializer(const T& value, Blob* blob) {
   T* dptr = blob->mut_dptr<T>();
   const int64_t elem_cnt = blob->shape().elem_cnt();
@@ -69,6 +87,14 @@ void RandomNormalInitializer(const RandomNormalInitializerConf& initializer_conf
   CHECK(blob->shape().elem_cnt());
   RngNormal<T>(blob->shape().elem_cnt(), static_cast<T>(initializer_conf.mean()),
                static_cast<T>(initializer_conf.std()), random_seed, blob->mut_dptr<T>());
+}
+
+template<typename T>
+void TruncatedNormalInitializer(const TruncatedNormalInitializerConf& initializer_conf,
+                                uint32_t random_seed, Blob* blob) {
+  CHECK(blob->shape().elem_cnt());
+  RngTruncatedNormal<T>(blob->shape().elem_cnt(), static_cast<T>(initializer_conf.std()),
+                        random_seed, blob->mut_dptr<T>());
 }
 
 template<typename T>
@@ -441,6 +467,8 @@ KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& ini
     RandomUniformInitializer<T>(initializer_conf.random_uniform_conf(), random_seed, blob);
   } else if (initializer_conf.has_random_normal_conf()) {
     RandomNormalInitializer<T>(initializer_conf.random_normal_conf(), random_seed, blob);
+  } else if (initializer_conf.has_truncated_normal_conf()) {
+    TruncatedNormalInitializer<T>(initializer_conf.truncated_normal_conf(), random_seed, blob);
   } else if (initializer_conf.has_xavier_conf()) {
     XavierInitializer<T>(initializer_conf.xavier_conf(), random_seed, blob, data_format);
   } else if (initializer_conf.has_msra_conf()) {
