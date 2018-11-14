@@ -12,7 +12,7 @@ __global__ void SliceForwardGpu(const int64_t n, const int64_t* offset, const T*
 template<typename T>
 __global__ void SliceBackwardGpu(const int64_t n, const int64_t* offset, const T* slice,
                                  T* entire) {
-  CUDA_1D_KERNEL_LOOP(i, n) { entire[offset[i]] /= slice[i]; }
+  CUDA_1D_KERNEL_LOOP(i, n) { entire[offset[i]] = slice[i]; }
 }
 
 }  // namespace
