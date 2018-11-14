@@ -1,6 +1,6 @@
 #include "oneflow/core/kernel/gather_kernel.h"
 #include "oneflow/core/kernel/kernel_util.cuh"
-
+#include <assert.h>
 namespace oneflow {
 
 namespace {
@@ -11,8 +11,8 @@ __global__ void LookupForwardGpu(const int64_t elem_cnt, const int32_t* indices,
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const int64_t out_idx = i / in_cols;
     const int64_t offset = i % in_cols;
-    const int64_t idx =
-        (indices[out_idx] >= 0 && indices[out_idx] < in_rows) ? indices[out_idx] : 0;
+    const int64_t idx = indices[out_idx];
+    assert(idx >= 0 && idx < in_rows);
     out[i] = in[idx * in_cols + offset];
   }
 }
@@ -23,8 +23,8 @@ __global__ void LookupBackwardGpu(const int64_t elem_cnt, const int32_t* indices
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const int64_t out_idx = i / in_cols;
     const int64_t offset = i % in_cols;
-    const int64_t idx =
-        (indices[out_idx] >= 0 && indices[out_idx] < in_rows) ? indices[out_idx] : 0;
+    const int64_t idx = indices[out_idx];
+    assert(idx >= 0 && idx < in_rows);
     gpu_atomic_add(in_diff + idx * in_cols + offset, out_diff[i]);
   }
 }

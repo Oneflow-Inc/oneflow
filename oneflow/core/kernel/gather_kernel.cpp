@@ -50,8 +50,9 @@ void LookupKernelUtil<DeviceType::kCPU, T>::Forward(DeviceCtx* ctx, const int32_
                                                     int64_t num_indices, const T* in,
                                                     int64_t in_rows, int64_t in_cols, T* out) {
   FOR_RANGE(int64_t, i, 0, num_indices) {
-    const int32_t index = (indices[i] >= 0 && indices[i] < in_rows) ? indices[i] : 0;
-    const T* from = in + (index * in_cols);
+    const int64_t idx = indices[i];
+    CHECK(idx >= 0 && idx < in_rows);
+    const T* from = in + (idx * in_cols);
     T* to = out + (i * in_cols);
     std::copy(from, from + in_cols, to);
   }
@@ -62,9 +63,10 @@ void LookupKernelUtil<DeviceType::kCPU, T>::Backward(DeviceCtx* ctx, const int32
                                                      int64_t num_indices, const T* out_diff,
                                                      int64_t in_rows, int64_t in_cols, T* in_diff) {
   FOR_RANGE(int64_t, i, 0, num_indices) {
-    const int32_t index = (indices[i] >= 0 && indices[i] < in_rows) ? indices[i] : 0;
+    const int64_t idx = indices[i];
+    CHECK(idx >= 0 && idx < in_rows);
     const T* from = out_diff + (i * in_cols);
-    T* to = in_diff + (index * in_cols);
+    T* to = in_diff + (idx * in_cols);
     std::transform(from, from + in_cols, to, to, std::plus<T>());
   }
 }
