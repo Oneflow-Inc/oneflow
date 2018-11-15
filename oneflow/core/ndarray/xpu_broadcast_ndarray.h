@@ -12,20 +12,20 @@ template<typename T>
 class XpuBroadcastNdarray final {
  public:
   OF_DEVICE_FUNC XpuBroadcastNdarray(const ExecShape& shape, const XpuVarNdarray<T>& var)
-      : shape_(&shape), var_(&var) {}
+      : shape_(shape), var_(var) {}
   OF_DEVICE_FUNC ~XpuBroadcastNdarray() = default;
 
   template<int NDIMS>
   OF_DEVICE_FUNC T Get(int64_t offset) const {
-    return var_->Get<NDIMS>(XpuBroadcastNdarrayUtil<T, NDIMS>::OriginVarOffset(this, offset));
+    return var_.Get<NDIMS>(XpuBroadcastNdarrayUtil<T, NDIMS>::OriginVarOffset(this, offset));
   }
 
-  OF_DEVICE_FUNC const ExecShape& shape() const { return *shape_; }
-  OF_DEVICE_FUNC const XpuVarNdarray<T>& var() const { return *var_; }
+  OF_DEVICE_FUNC const ExecShape& shape() const { return shape_; }
+  OF_DEVICE_FUNC const XpuVarNdarray<T>& var() const { return var_; }
 
  private:
-  const ExecShape* shape_;
-  const XpuVarNdarray<T>* var_;
+  const ExecShape& shape_;
+  const XpuVarNdarray<T>& var_;
 };
 
 template<typename T>
