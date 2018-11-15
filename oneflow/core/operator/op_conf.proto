@@ -828,6 +828,12 @@ message SliceOpConf {
   repeated DimSliceConf dim_slice_conf = 3;
 }
 
+message LayerNormOpConf {
+  required string in = 1;
+  required string out = 2;
+  //TODO: support not only the final dim layer norm
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -914,6 +920,7 @@ message OperatorConf {
     MeanOpConf mean_conf = 251;
     SliceOpConf slice_conf = 252;
     BiasAddOpConf bias_add_conf = 253;
+    LayerNormOpConf layer_norm_conf = 254;
   }
 }
 
