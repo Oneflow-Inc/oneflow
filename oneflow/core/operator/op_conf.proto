@@ -55,12 +55,12 @@ message MsraInitializerConf {
   required VarianceNorm variance_norm = 1;
 }
 
-message SequenceInitializerConf {
+message RangeInitializerConf {
   optional double start = 1 [default = 0];
   optional double stride = 2 [default = 1];
 }
 
-message IntSequenceInitializerConf {
+message IntRangeInitializerConf {
   optional int64 start = 1 [default = 0];
   optional int64 stride = 2 [default = 1];
 }
@@ -76,8 +76,8 @@ message InitializerConf {
     TruncatedNormalInitializerConf truncated_normal_conf = 6;
     XavierInitializerConf xavier_conf = 7;
     MsraInitializerConf msra_conf = 8;
-    SequenceInitializerConf sequence_conf = 9;
-    IntSequenceInitializerConf int_sequence_conf = 10;
+    RangeInitializerConf range_conf = 9;
+    IntRangeInitializerConf int_range_conf = 10;
   }
 }
 
