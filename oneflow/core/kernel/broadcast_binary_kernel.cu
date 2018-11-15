@@ -23,7 +23,7 @@ template<typename T, int NDIMS, const T (*binary_func)(const T, const T)>
 struct BroadcastBinaryFunc<DeviceType::kGPU, T, NDIMS, binary_func> final {
   static void Invoke(DeviceCtx* ctx, XpuVarNdarray<T>&& y, const XpuVarNdarray<const T>& a,
                      const XpuVarNdarray<const T>& b) {
-    size_t n = y.shape().ElemNum();
+    size_t n = y.host_shape().HostElemNum();
     GpuBroadcastBinaryFunc<T, NDIMS, binary_func>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(y, a, b);
   }
