@@ -23,4 +23,6 @@ void LayerNormOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   *GetBlobDesc4BnInOp("gamma") = *beta_blob;
 }
 
+REGISTER_OP(OperatorConf::kLayerNormConf, LayerNormOp);
+
 }  // namespace oneflow
