@@ -28,4 +28,7 @@ void LayerNormKernel<device_type, T>::InitModelBlobsWithDir(
   // TODO
 }
 
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kLayerNormConf, LayerNormKernel,
+                           FLOATING_DATA_TYPE_SEQ);
+
 }  // namespace oneflow
