@@ -34,6 +34,8 @@ class Shape final {
   int64_t Count(int64_t begin_axis, int64_t end_axis) const;
   int64_t Count(int64_t begin_axis) const;
 
+  Shape CreateLeftExtendedShape(int num_axes) const;
+
  private:
   void UpdateElemCnt();
 

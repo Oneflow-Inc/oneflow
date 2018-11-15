@@ -28,11 +28,11 @@ struct BroadcastBinaryKernelUtil final {
     const Blob* b_blob = BnInOp2Blob("b");
     Blob* out_blob = BnInOp2Blob("out");
     switch (out_blob->shape().NumAxes()) {
-#define MAKE_ENTRY(NDIMS)                                                                  \
-  case NDIMS:                                                                              \
-    return BroadcastBinaryKernelHelper<device_type, T, NDIMS, binary_func>::Forward(       \
-        kernel_ctx.device_ctx, XpuVarNdarray<T>(out_blob), XpuVarNdarray<const T>(a_blob), \
-        XpuVarNdarray<const T>(b_blob));
+#define MAKE_ENTRY(NDIMS)                                                            \
+  case NDIMS:                                                                        \
+    return BroadcastBinaryKernelHelper<device_type, T, NDIMS, binary_func>::Forward( \
+        kernel_ctx.device_ctx, XpuVarNdarray<T>(out_blob, NDIMS),                    \
+        XpuVarNdarray<const T>(a_blob, NDIMS), XpuVarNdarray<const T>(b_blob, NDIMS));
 
       OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, DIM_SEQ)
 #undef MAKE_ENTRY
