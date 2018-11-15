@@ -57,4 +57,11 @@ std::ostream& operator<<(std::ostream& out, const Shape& shape) {
   return out;
 }
 
+Shape Shape::CreateLeftExtendedShape(int num_axes) const {
+  CHECK_GE(num_axes, NumAxes());
+  std::vector<int64_t> dim_vec = this->dim_vec();
+  for (int i = 0; i < num_axes - NumAxes(); ++i) { dim_vec.insert(dim_vec.begin(), 1LL); }
+  return Shape(dim_vec);
+}
+
 }  // namespace oneflow

@@ -23,14 +23,14 @@ void BroadcastBinaryOp::InferBlobDescs(
   const BlobDesc* a_blob_desc = GetBlobDesc4BnInOp("a");
   const BlobDesc* b_blob_desc = GetBlobDesc4BnInOp("b");
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+  size_t output_num_axes = std::max(a_blob_desc->shape().NumAxes(), b_blob_desc->shape().NumAxes());
   if (IsScalarBlob(a_blob_desc)) {
     *out_blob_desc = *b_blob_desc;
   } else if (IsScalarBlob(b_blob_desc)) {
     *out_blob_desc = *a_blob_desc;
   } else {
-    const auto& a_shape = a_blob_desc->shape();
-    const auto& b_shape = b_blob_desc->shape();
-    CHECK_EQ(a_shape.NumAxes(), b_shape.NumAxes());
+    const auto& a_shape = a_blob_desc->shape().CreateLeftExtendedShape(output_num_axes);
+    const auto& b_shape = b_blob_desc->shape().CreateLeftExtendedShape(output_num_axes);
     *out_blob_desc = *a_blob_desc;
     FOR_RANGE(int64_t, i, 0, a_shape.NumAxes()) {
       CHECK(a_shape.At(i) == 1 || b_shape.At(i) == 1 || a_shape.At(i) == b_shape.At(i));

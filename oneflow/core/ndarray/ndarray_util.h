@@ -24,14 +24,6 @@ inline void XpuSyncThreads() {}
 #define OF_GLOBAL_FUNC
 #endif
 
-#if defined(__CUDACC__)
-#define WITH_XPU_PARAM(device_ctx_ptr, thread_num, ...)            \
-  <<<BlocksNum4ThreadsNum(thread_num), kCudaThreadsNumPerBlock, 0, \
-     device_ctx_ptr->cuda_stream()>>>(__VA_ARGS__)
-#else
-#define WITH_XPU_PARAM(device_ctx_ptr, thread_num, ...) (__VA_ARGS__)
-#endif
-
 #define GET_SEQ(n) OF_PP_CAT(OF_PP_CAT(GET_SEQ_, n), )
 #define GET_SEQ_0 OF_PP_MAKE_TUPLE_SEQ(0)
 #define GET_SEQ_1 GET_SEQ_0 OF_PP_MAKE_TUPLE_SEQ(1)
