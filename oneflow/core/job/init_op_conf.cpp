@@ -237,6 +237,20 @@ void InitInitializerConf(InitializerConf* initializer, const InitializerConf::Ty
       initializer->set_allocated_msra_conf(msra_conf);
       break;
     }
+    case InitializerConf::kSequenceConf: {
+      SequenceInitializerConf* sequence_conf = new SequenceInitializerConf();
+      sequence_conf->set_start(param1);
+      sequence_conf->set_stride(param2);
+      initializer->set_allocated_sequence_conf(sequence_conf);
+      break;
+    }
+    case InitializerConf::kIntSequenceConf: {
+      IntSequenceInitializerConf* int_sequence_conf = new IntSequenceInitializerConf();
+      int_sequence_conf->set_start(static_cast<int64_t>(param1));
+      int_sequence_conf->set_stride(static_cast<int64_t>(param2));
+      initializer->set_allocated_int_sequence_conf(int_sequence_conf);
+      break;
+    }
     case InitializerConf::TYPE_NOT_SET: {
       LOG(INFO) << "InitializerConf::TYPE_NOT_SET";
       break;
