@@ -4,6 +4,11 @@
 namespace oneflow {
 
 template<typename T>
+OF_DEVICE_FUNC const T UnaryFuncMinus(const T x) {
+  return -x;
+}
+
+template<typename T>
 OF_DEVICE_FUNC
     typename std::enable_if<std::is_same<T, float>::value || std::is_same<T, double>::value,
                             const T>::type

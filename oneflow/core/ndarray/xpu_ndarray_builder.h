@@ -4,6 +4,7 @@
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
 #include "oneflow/core/ndarray/xpu_reduce_ndarray.h"
 #include "oneflow/core/ndarray/xpu_binary_func_ndarray.h"
+#include "oneflow/core/ndarray/xpu_unary_func_ndarray.h"
 #include "oneflow/core/ndarray/xpu_broadcast_ndarray.h"
 
 namespace oneflow {
@@ -14,6 +15,10 @@ class XpuNdArrayBuilder final {
   OF_DEVICE_FUNC XpuNdArrayBuilder() = default;
   OF_DEVICE_FUNC ~XpuNdArrayBuilder() = default;
 
+  template<const T (*unary_func)(const T), typename X>
+  OF_DEVICE_FUNC XpuUnaryFuncNdarray<T, unary_func, X> Apply(const X& x) {
+    return XpuUnaryFuncNdarray<T, unary_func, X>(x);
+  }
   template<const T (*binary_func)(const T, const T), typename A, typename B>
   OF_DEVICE_FUNC XpuBinaryFuncNdarray<T, binary_func, A, B> Apply(const A& a, const B& b) {
     return XpuBinaryFuncNdarray<T, binary_func, A, B>(a, b);
