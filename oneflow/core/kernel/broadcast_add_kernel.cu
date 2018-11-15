@@ -19,9 +19,7 @@ struct BroadcastAddKernelUtil<DeviceType::kGPU, T, NDIMS> final {
   static void BackwardInputDiff(DeviceCtx* ctx, XpuVarNdarray<T>&& in_diff_a,
                                 const XpuVarNdarray<const T>& out_diff, XpuVarNdarray<T>&& bw_buf) {
     size_t n = out_diff.host_shape().HostElemNum();
-    GpuBackwardAddOpInputDiff<T, NDIMS>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            in_diff_a, out_diff, bw_buf);
+    GpuBackwardAddOpInputDiff<T, NDIMS> WITH_CUDA_PARAM(ctx, n, in_diff_a, out_diff, bw_buf);
   }
 };
 
