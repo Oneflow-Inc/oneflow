@@ -55,6 +55,17 @@ message MsraInitializerConf {
   required VarianceNorm variance_norm = 1;
 }
 
+message SequenceInitializerConf {
+  optional double start = 1 [default = 0];
+  optional double stride = 2 [default = 1];
+}
+
+message IntSequenceInitializerConf {
+  optional int64 start = 1 [default = 0];
+  optional int64 stride = 2 [default = 1];
+}
+
+
 message InitializerConf {
   oneof type {
     ConstantInitializerConf constant_conf = 1;
@@ -65,6 +76,8 @@ message InitializerConf {
     TruncatedNormalInitializerConf truncated_normal_conf = 6;
     XavierInitializerConf xavier_conf = 7;
     MsraInitializerConf msra_conf = 8;
+    SequenceInitializerConf sequence_conf = 9;
+    IntSequenceInitializerConf int_sequence_conf = 10;
   }
 }
 
@@ -834,6 +847,15 @@ message LayerNormOpConf {
   //TODO: support not only the final dim layer norm
 }
 
+message ConstantOpConf {
+  required string tick = 1;
+  required string out = 2;
+  optional ShapeProto shape = 3;
+  optional DataType data_type = 4;
+  optional InitializerConf initializer = 5;
+  optional bool use_device_piece_size_as_dim0 = 6 [default = false];
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -921,6 +943,7 @@ message OperatorConf {
     SliceOpConf slice_conf = 252;
     BiasAddOpConf bias_add_conf = 253;
     LayerNormOpConf layer_norm_conf = 254;
+    ConstantOpConf constant_conf = 255;
   }
 }
 
