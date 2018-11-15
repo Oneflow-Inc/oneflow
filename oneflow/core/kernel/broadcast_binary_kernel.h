@@ -15,7 +15,7 @@ class BroadcastBinaryKernel : public KernelIf<device_type> {
 };
 
 template<DeviceType device_type, typename T, int NDIMS, const T (*binary_func)(const T, const T)>
-struct BroadcastBinaryFunc final {
+struct BroadcastBinaryKernelHelper final {
   static void Forward(DeviceCtx* ctx, XpuVarNdarray<T>&& y, const XpuVarNdarray<const T>& a,
                       const XpuVarNdarray<const T>& b);
 };
@@ -30,11 +30,12 @@ struct BroadcastBinaryKernelUtil final {
     switch (out_blob->shape().NumAxes()) {
 #define MAKE_ENTRY(NDIMS)                                                                  \
   case NDIMS:                                                                              \
-    return BroadcastBinaryFunc<device_type, T, NDIMS, binary_func>::Forward(               \
+    return BroadcastBinaryKernelHelper<device_type, T, NDIMS, binary_func>::Forward(       \
         kernel_ctx.device_ctx, XpuVarNdarray<T>(out_blob), XpuVarNdarray<const T>(a_blob), \
         XpuVarNdarray<const T>(b_blob));
 
       OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, DIM_SEQ)
+#undef MAKE_ENTRY
       default: UNIMPLEMENTED();
     }
   }
