@@ -10,21 +10,17 @@ namespace oneflow {
 
 class ExecShape final {
  public:
+  explicit ExecShape(const Shape& shape);
   OF_DEVICE_FUNC ExecShape(const ExecShape&) = default;
-  OF_DEVICE_FUNC ExecShape(const Shape& shape);
 
   OF_DEVICE_FUNC int64_t At(int64_t dim) const { return dim_[dim]; }
 
-  OF_DEVICE_FUNC size_t ElemNum() const {
-    size_t elem_num = 1;
-    for (int i = 0; i < num_axes_; ++i) { elem_num *= dim_[i]; }
-    return elem_num;
-  }
+  OF_DEVICE_FUNC size_t ElemNum() const { return elem_num_; }
+  size_t HostElemNum() const { return elem_num_; }
 
-  size_t HostElemNum() const {
-    size_t elem_num = 1;
-    for (int i = 0; i < num_axes_; ++i) { elem_num *= dim_[i]; }
-    return elem_num;
+  OF_DEVICE_FUNC void Set(int64_t axis, int64_t value) {
+    dim_[axis] = value;
+    UpdateDimElemNumAndElemNum();
   }
 
   OF_DEVICE_FUNC int64_t Dims2Offset(int64_t dim0) const { return dim0; }
@@ -79,7 +75,16 @@ class ExecShape final {
   }
 
  private:
+  OF_DEVICE_FUNC void UpdateDimElemNumAndElemNum() {
+    elem_num_ = 1;
+    for (int i = num_axes_ - 1; i >= 0; --i) {
+      dim_elem_num_[i] = elem_num_;
+      elem_num_ *= dim_[i];
+    }
+  }
+
   size_t num_axes_;
+  size_t elem_num_;
   int64_t dim_[OF_PP_SEQ_SIZE(DIM_SEQ)];
   int64_t dim_elem_num_[OF_PP_SEQ_SIZE(DIM_SEQ)];
 };
