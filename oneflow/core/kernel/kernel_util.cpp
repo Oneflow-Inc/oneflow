@@ -142,6 +142,35 @@ void MsraInitializer(const MsraInitializerConf& initializer_conf, uint32_t rando
                blob->mut_dptr<T>());
 }
 
+template<typename T>
+void RangeInitializer(int64_t num_rows, int64_t num_cols, T start, T stride, T* out) {
+  FOR_RANGE(int64_t, r, 0, num_rows) {
+    FOR_RANGE(int64_t, c, 0, num_cols) { *(out + r * num_cols + c) = start + c * stride; }
+  }
+}
+
+template<typename T, typename RangeInitializerConfT>
+void RangeInitializer(const RangeInitializerConfT& initializer_conf, uint32_t random_seed,
+                      Blob* blob) {
+  CHECK_GT(blob->shape().NumAxes(), 0);
+  int64_t num_cols = blob->shape().At(blob->shape().NumAxes() - 1);
+  int64_t num_rows = blob->shape().elem_cnt() / num_cols;
+  RangeInitializer<T>(num_rows, num_cols, static_cast<T>(initializer_conf.start()),
+                      static_cast<T>(initializer_conf.stride()), blob->mut_dptr<T>());
+}
+
+template<typename T>
+void RangeInitializer(const RangeInitializerConf& initializer_conf, uint32_t random_seed,
+                      Blob* blob) {
+  RangeInitializer<T, RangeInitializerConf>(initializer_conf, random_seed, blob);
+}
+
+template<typename T>
+void IntSequenceInitializer(const IntRangeInitializerConf& initializer_conf, uint32_t random_seed,
+                            Blob* blob) {
+  RangeInitializer<T, IntRangeInitializerConf>(initializer_conf, random_seed, blob);
+}
+
 void ComputeOffset(const int32_t num_axes, const int64_t* shape, const int32_t* permutation,
                    std::vector<int64_t>& offset) {
   offset.resize(num_axes);
@@ -473,6 +502,8 @@ KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& ini
     XavierInitializer<T>(initializer_conf.xavier_conf(), random_seed, blob, data_format);
   } else if (initializer_conf.has_msra_conf()) {
     MsraInitializer<T>(initializer_conf.msra_conf(), random_seed, blob, data_format);
+  } else if (initializer_conf.has_range_conf()) {
+    RangeInitializer<T>(initializer_conf.range_conf(), random_seed, blob);
   } else {
     UNIMPLEMENTED();
   }
@@ -496,6 +527,8 @@ KU_INTEGRAL_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& ini
     ConstantInitializer<T>(static_cast<T>(initializer_conf.constant_int_conf().value()), blob);
   } else if (initializer_conf.has_random_uniform_int_conf()) {
     RandomIntUniformInitializer<T>(initializer_conf.random_uniform_int_conf(), random_seed, blob);
+  } else if (initializer_conf.has_int_range_conf()) {
+    IntSequenceInitializer<T>(initializer_conf.int_range_conf(), random_seed, blob);
   } else {
     UNIMPLEMENTED();
   }

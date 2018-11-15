@@ -146,6 +146,11 @@ message SliceKernelConf {
   required ShapeProto in_shape = 1;
 }
 
+message ConstantKernelConf {
+  required InitializerConf initializer = 1;
+  required uint32 random_seed = 2;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
@@ -182,5 +187,6 @@ message KernelConf {
     ReduceSplitKernelConf reduce_split_conf = 352;
     AccuracyKernelConf accuracy_conf = 401;
     SliceKernelConf slice_conf = 402;
+    ConstantKernelConf constant_conf = 403;
   }
 }

@@ -29,6 +29,10 @@ inline int32_t BlocksNum4ThreadsNum(const int32_t n) {
   return std::min((n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock, kCudaMaxBlocksNum);
 }
 
+#define WITH_CUDA_PARAM(device_ctx_ptr, thread_num, ...)           \
+  <<<BlocksNum4ThreadsNum(thread_num), kCudaThreadsNumPerBlock, 0, \
+     (device_ctx_ptr)->cuda_stream()>>>(__VA_ARGS__)
+
 size_t GetAvailableGpuMemSize(int dev_id);
 
 #define CUDA_WORK_TYPE_SEQ           \

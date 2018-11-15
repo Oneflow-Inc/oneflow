@@ -237,6 +237,20 @@ void InitInitializerConf(InitializerConf* initializer, const InitializerConf::Ty
       initializer->set_allocated_msra_conf(msra_conf);
       break;
     }
+    case InitializerConf::kRangeConf: {
+      RangeInitializerConf* range_conf = new RangeInitializerConf();
+      range_conf->set_start(param1);
+      range_conf->set_stride(param2);
+      initializer->set_allocated_range_conf(range_conf);
+      break;
+    }
+    case InitializerConf::kIntRangeConf: {
+      IntRangeInitializerConf* int_range_conf = new IntRangeInitializerConf();
+      int_range_conf->set_start(static_cast<int64_t>(param1));
+      int_range_conf->set_stride(static_cast<int64_t>(param2));
+      initializer->set_allocated_int_range_conf(int_range_conf);
+      break;
+    }
     case InitializerConf::TYPE_NOT_SET: {
       LOG(INFO) << "InitializerConf::TYPE_NOT_SET";
       break;
