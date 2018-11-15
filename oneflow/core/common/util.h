@@ -222,6 +222,8 @@ inline T MaxVal() {
 
 #if defined(__GNUC__)
 #define ALWAYS_INLINE __attribute__((always_inline))
+#elif defined(__CUDACC__)
+#define ALWAYS_INLINE __forceinline__
 #else
 #define ALWAYS_INLINE inline
 #endif
