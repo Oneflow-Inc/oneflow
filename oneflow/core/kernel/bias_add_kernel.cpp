@@ -14,8 +14,10 @@ void BiasAddKernel<device_type, T>::ForwardDataContent(
   // out = bias_multiplier * b + a
   Memcpy<device_type>(ctx.device_ctx, out_blob->mut_dptr<T>(), a_blob->dptr<T>(),
                       a_blob->ByteSizeOfDataContentField());
-  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasNoTrans, OneVal<T>::value,
-                                       OneVal<T>::value, bias_mul_blob, b_blob, out_blob);
+  KernelUtil<device_type, T>::OFGemm(ctx.device_ctx, CblasNoTrans, CblasNoTrans,
+                                     out_blob->shape().At(0), out_blob->shape().At(1), 1,
+                                     OneVal<T>::value, bias_mul_blob->dptr<T>(), b_blob->dptr<T>(),
+                                     OneVal<T>::value, out_blob->mut_dptr<T>());
 }
 
 template<DeviceType device_type, typename T>
@@ -28,11 +30,11 @@ void BiasAddKernel<device_type, T>::BackwardDataContent(
 
   Memcpy<device_type>(ctx.device_ctx, a_diff_blob->mut_dptr<T>(), out_diff_blob->dptr<T>(),
                       out_diff_blob->ByteSizeOfDataContentField());
-
   // b_diff = bias_multiplier * out_diff
-  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans, OneVal<T>::value,
-                                       ZeroVal<T>::value, bias_mul_blob, out_diff_blob,
-                                       b_diff_blob);
+  KernelUtil<device_type, T>::OFGemm(
+      ctx.device_ctx, CblasTrans, CblasNoTrans, 1, b_diff_blob->shape().At(0),
+      out_diff_blob->shape().At(0), OneVal<T>::value, bias_mul_blob->dptr<T>(),
+      out_diff_blob->dptr<T>(), ZeroVal<T>::value, b_diff_blob->mut_dptr<T>());
 }
 
 template<DeviceType device_type, typename T>
