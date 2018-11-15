@@ -45,7 +45,7 @@ void BroadcastMulKernel<device_type, T>::BackwardDataContent(
       KernelUtil<device_type, T>::MulByScalar(ctx.device_ctx, n, out_diff->dptr<T>(), a->dptr<T>(),
                                               b_diff->mut_dptr<T>());
     }
-  } else if (b_diff->shape().elem_cnt() == 1) {
+  } else if (b->shape().elem_cnt() == 1) {
     if (a_diff) {
       KernelUtil<device_type, T>::MulByScalar(ctx.device_ctx, n, out_diff->dptr<T>(), b->dptr<T>(),
                                               a_diff->mut_dptr<T>());
