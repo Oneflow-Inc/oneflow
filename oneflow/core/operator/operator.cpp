@@ -480,30 +480,56 @@ void EraseEmptyBnInVec(std::function<const BlobDesc*(const std::string&)> GetBlo
 }
 
 Shape GetShapeFromReshapeTypeConf(const ReshapeType& reshape_type, const Shape& origin_shape) {
-  /*
+  auto AlignDimIndex = [&](int32_t dim_index) {
+    if (dim_index < 0) { dim_index += origin_shape.NumAxes(); }
+    CHECK_GE(dim_index, 0);
+    CHECK_LE(dim_index, origin_shape.NumAxes());
+    return dim_index;
+  };
+
   std::vector<int64_t> dim_vec;
-  if (!conf.has_dim0_in_shape()) { dim_vec.push_back(in_blob_desc->shape().At(0)); }
-  for (int32_t i = 0; i < conf.shape().dim_size(); ++i) { dim_vec.push_back(conf.shape().dim(i)); }
-  int32_t dim_cnt_need_infer = 0;
-  int32_t dim_index_need_infer = -1;
-  int64_t elem_cnt = 1;
-  for (int32_t i = 0; i < dim_vec.size(); ++i) {
-    if (dim_vec[i] == -1) {
-      ++dim_cnt_need_infer;
-      dim_index_need_infer = i;
-    } else {
-      elem_cnt *= dim_vec[i];
+  if (reshape_type.has_shape()) {
+    if (!reshape_type.has_dim0_in_shape()) { dim_vec.push_back(origin_shape.At(0)); }
+    for (int32_t i = 0; i < reshape_type.shape().dim_size(); ++i) {
+      dim_vec.push_back(reshape_type.shape().dim(i));
     }
+    int32_t dim_cnt_need_infer = 0;
+    int32_t dim_index_need_infer = -1;
+    int64_t elem_cnt = 1;
+    for (int32_t i = 0; i < dim_vec.size(); ++i) {
+      if (dim_vec[i] == -1) {
+        ++dim_cnt_need_infer;
+        dim_index_need_infer = i;
+      } else {
+        elem_cnt *= dim_vec[i];
+      }
+    }
+    CHECK_LE(dim_cnt_need_infer, 1);
+    if (dim_cnt_need_infer == 1) {
+      dim_vec[dim_index_need_infer] = origin_shape.elem_cnt() / elem_cnt;
+    }
+  } else if (reshape_type.has_squeeze()) {
+    HashSet<int32_t> axis;
+    for (int32_t i = 0; i < reshape_type.squeeze().axis_size(); ++i) {
+      axis.insert(AlignDimIndex(reshape_type.squeeze().axis(i)));
+    }
+    for (int32_t i = 0; i < origin_shape.NumAxes(); ++i) {
+      if (axis.find(i) != axis.end() || (axis.size() == 0 && origin_shape.At(i) == 1)) {
+        CHECK_EQ(origin_shape.At(i), 1);
+        continue;
+      }
+      dim_vec.push_back(origin_shape.At(i));
+    }
+    if (dim_vec.size() == 0 && origin_shape.elem_cnt() == 1) { dim_vec.push_back(1); }
+  } else if (reshape_type.has_expand_dims()) {
+    dim_vec = origin_shape.dim_vec();
+    dim_vec.insert(dim_vec.begin() + AlignDimIndex(reshape_type.expand_dims().axis()), 1);
+  } else {
+    UNIMPLEMENTED();
   }
-  CHECK_LE(dim_cnt_need_infer, 1);
-  if (dim_cnt_need_infer == 1) {
-    dim_vec[dim_index_need_infer] = in_blob_desc->shape().elem_cnt() / elem_cnt;
-  }
-  out_blob_desc->mut_shape() = Shape(dim_vec);
-  CHECK_EQ(out_blob_desc->shape().elem_cnt(), in_blob_desc->shape().elem_cnt());
-  */
-  TODO();
-  return Shape();
+  Shape ret(dim_vec);
+  CHECK_EQ(ret.elem_cnt(), origin_shape.elem_cnt());
+  return ret;
 }
 
 }  // namespace oneflow

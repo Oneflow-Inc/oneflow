@@ -480,10 +480,11 @@ message BasicLstmOpConf {
 }
 
 message SqueezeConf {
+  repeated int32 axis = 1;
 }
 
 message ExpandDimConf {
-  repeated int32 dim_index = 1;
+  required int32 axis = 1;
 }
 
 message ReshapeType {
@@ -492,7 +493,7 @@ message ReshapeType {
   oneof type {
     ShapeProto shape = 3;
     SqueezeConf squeeze = 4;
-    ExpandDimConf expand_dim = 5;
+    ExpandDimConf expand_dims = 5;
   }
 }
 
