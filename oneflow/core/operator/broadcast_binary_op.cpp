@@ -41,9 +41,10 @@ void BroadcastBinaryOp::InferBlobDescs(
 
 void BroadcastBinaryOp::InferBwBufBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*) const {
+  const BlobDesc* out = GetBlobDesc4BnInOp("out");
   BlobDesc* bw_buf = GetBlobDesc4BnInOp("bw_buf");
-  bw_buf->mut_shape() = Shape({GetBlobDesc4BnInOp("out")->shape().elem_cnt()});
-  bw_buf->set_data_type(DataType::kChar);
+  bw_buf->mut_shape() = Shape({out->shape().elem_cnt()});
+  bw_buf->set_data_type(out->data_type());
 }
 
 }  // namespace oneflow
