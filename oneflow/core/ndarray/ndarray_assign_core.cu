@@ -8,17 +8,17 @@ namespace {
 
 template<typename T, int NDIMS>
 __global__ void NdArrayAssignGpu(XpuVarNdarray<T> y, const XpuReducedNdarray<T, NDIMS> reduced) {
-  NdArrayAssignCore<T, NDIMS>::Assign(&y, reduced);
+  NdArrayAssignCore<T, NDIMS>::Assign(y, reduced);
 }
 
 }  // namespace
 
 template<typename T, int NDIMS>
 struct NdArrayAssignCoreWrapper<DeviceType::kGPU, T, NDIMS> final {
-  static void Assign(DeviceCtx* ctx, XpuVarNdarray<T>* y,
+  static void Assign(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
                      const XpuReducedNdarray<T, NDIMS>& reduced) {
-    size_t n = y->host_shape().HostElemNum();
-    NdArrayAssignGpu<T, NDIMS> WITH_CUDA_PARAM(ctx, n, *y, reduced);
+    size_t n = y.host_shape().HostElemNum();
+    NdArrayAssignGpu<T, NDIMS> WITH_CUDA_PARAM(ctx, n, y, reduced);
   }
 };
 

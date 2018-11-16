@@ -8,7 +8,7 @@ namespace {
 
 template<typename T, int NDIMS>
 __global__ void NdArrayAssignGpu(XpuVarNdarray<T> y, const XpuReducedNdarray<T, NDIMS> reduced) {
-  NdArrayAssignCore<T, NDIMS>::Assign(&y, reduced);
+  NdArrayAssignCore<T, NDIMS>::Assign(y, reduced);
 }
 
 }  // namespace
