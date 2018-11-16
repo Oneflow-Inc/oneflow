@@ -284,6 +284,8 @@ inline LogicalBlobId GenLogicalBlobId(const std::string& lbn) {
   return lbi;
 }
 
+Shape GetShapeFromReshapeTypeConf(const ReshapeType& reshape_type, const Shape& origin_shape);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_OPERATOR_OPERATOR_H_

@@ -461,11 +461,27 @@ message BasicRnnOpConf {
 message BasicLstmOpConf {
 }
 
+message SqueezeConf {
+}
+
+message ExpandDimConf {
+  repeated int32 dim_index = 1;
+}
+
+message ReshapeType {
+  required string bn_in_op = 1;  
+  optional bool has_dim0_in_shape = 2 [default = false];
+  oneof type {
+    ShapeProto shape = 3;
+    SqueezeConf squeeze = 4;
+    ExpandDimConf expand_dim = 5;
+  }
+}
+
 message ReshapeOpConf {
   required string in = 1;
   required string out = 2;
-  required ShapeProto shape = 3;
-  optional bool has_dim0_in_shape = 4;
+  required ReshapeType type = 3;
 }
 
 message EmbeddingLookupOpConf {
@@ -818,6 +834,7 @@ message OperatorConf {
   optional DeviceType device_type = 4 [default = kInvalidDevice];
   optional bool enable_cudnn = 5;
   optional int64 cudnn_buf_limit_mbyte = 6;
+  repeated ReshapeType reshape_out_blob = 7;
   oneof op_type {
     // system op
     DecodeOFRecordOpConf decode_ofrecord_conf = 101;
