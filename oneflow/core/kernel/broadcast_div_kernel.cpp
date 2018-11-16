@@ -70,19 +70,29 @@ void BroadcastDivKernel<device_type, T>::BackwardDataContent(
                                       b_diff->mut_dptr<T>());
     }
   } else {
-    CHECK(a->shape() == b->shape());
+    size_t num_axes = out_diff->shape().NumAxes();
+    XpuVarNdarray<const T> out_diff_tensor(out_diff, num_axes);
+    Blob* bw_buf_blob = BnInOp2Blob("bw_buf");
+    XpuVarNdarray<const T> const_tmp(out_diff_tensor.shape(), bw_buf_blob->dptr<T>());
+    XpuVarNdarray<T> tmp(out_diff_tensor.shape(), bw_buf_blob->mut_dptr<T>());
     if (a_diff) {
-      KernelUtil<device_type, T>::Mul(ctx.device_ctx, n, out_diff->dptr<T>(), tmp->dptr<T>(),
-                                      a_diff->mut_dptr<T>());
+      XpuNdArrayUtil<device_type, T>::template Binary<BinaryFuncDiv>::SwitchBroadcastApply(
+          SwitchCase(num_axes), ctx.device_ctx, tmp, out_diff_tensor,
+          XpuVarNdarray<const T>(b, num_axes));
+      XpuNdArrayUtil<device_type, T>::SwitchReduce(
+          SwitchCase(num_axes), ctx.device_ctx, XpuVarNdarray<T>(a_diff, num_axes), const_tmp, tmp);
     }
     if (b_diff) {
-      KernelUtil<device_type, T>::Square(ctx.device_ctx, n, tmp->dptr<T>(), tmp->mut_dptr<T>());
-      KernelUtil<device_type, T>::Mul(ctx.device_ctx, n, tmp->dptr<T>(), a->dptr<T>(),
-                                      tmp->mut_dptr<T>());
-      KernelUtil<device_type, T>::Axpy(ctx.device_ctx, n, static_cast<T>(-2), tmp->dptr<T>(), 1,
-                                       tmp->mut_dptr<T>(), 1);
-      KernelUtil<device_type, T>::Mul(ctx.device_ctx, n, out_diff->dptr<T>(), tmp->dptr<T>(),
-                                      b_diff->mut_dptr<T>());
+      const Blob* out_blob = BnInOp2Blob("out");
+      XpuNdArrayUtil<device_type, T>::template Binary<BinaryFuncDiv>::SwitchBroadcastApply(
+          SwitchCase(num_axes), ctx.device_ctx, tmp, XpuVarNdarray<const T>(out_blob, num_axes),
+          XpuVarNdarray<const T>(b, num_axes));
+      XpuNdArrayUtil<device_type, T>::template Binary<BinaryFuncMul>::SwitchBroadcastApply(
+          SwitchCase(num_axes), ctx.device_ctx, tmp, out_diff_tensor, const_tmp);
+      XpuNdArrayUtil<device_type, T>::SwitchReduce(
+          SwitchCase(num_axes), ctx.device_ctx, XpuVarNdarray<T>(b_diff, num_axes), const_tmp, tmp);
+      XpuNdArrayUtil<device_type, T>::template ImplaceApplyUnary<UnaryFuncMinus>(
+          ctx.device_ctx, XpuVarNdarray<T>(b_diff, num_axes));
     }
   }
 }
