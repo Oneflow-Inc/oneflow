@@ -22,7 +22,7 @@ class XpuVarNdarray final {
       : shape_(shape), ptr_(ptr) {}
 
   const ExecShape& host_shape() const { return shape_; }
-  T* host_mut_ptr() { return ptr_; }
+  T* host_ptr() const { return ptr_; }
 
   OF_DEVICE_FUNC const ExecShape& shape() const { return shape_; }
   OF_DEVICE_FUNC T* ptr() const { return ptr_; }
