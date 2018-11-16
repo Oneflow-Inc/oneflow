@@ -11,7 +11,7 @@ template<typename T, int NDIMS, typename X>
 class XpuReduceNdarray final {
  public:
   OF_DEVICE_FUNC XpuReduceNdarray(const ExecShape& shape, const X& x, XpuVarNdarray<T>* storage)
-      : shape_(shape), data_(XpuVarNdarray<T>(x.shape(), storage->mut_ptr())) {
+      : shape_(shape), data_(XpuVarNdarray<T>(x.shape(), storage->ptr())) {
     data_.template Assign<NDIMS>(x);
     Reduce();
   }
@@ -35,13 +35,14 @@ class XpuReduceNdarray final {
 
   OF_DEVICE_FUNC void ReduceAxisOnceHalf(int axis, ExecShape* cur_shape) {
     while (cur_shape->At(axis) > 1) {
-      cur_shape->Set(axis, cur_shape->At(axis) / 2);
+      int64_t new_dim_val = cur_shape->At(axis) / 2;
+      cur_shape->Set(axis, new_dim_val);
       XPU_1D_KERNEL_LOOP(i, cur_shape->ElemNum()) {
         int64_t dim[NDIMS];
         ExecShapeUtil<NDIMS>::Offset2DimVec(*cur_shape, i, dim);
         int64_t small_offset = ExecShapeUtil<NDIMS>::DimVec2Offset(data_.shape(), dim);
         T* small_offset_ptr = data_.template Mut<NDIMS>(small_offset);
-        dim[axis] *= 2;
+        dim[axis] += new_dim_val;
         int64_t big_offset = ExecShapeUtil<NDIMS>::DimVec2Offset(data_.shape(), dim);
         const T big_offset_val = data_.template Get<NDIMS>(big_offset);
         *small_offset_ptr += big_offset_val;

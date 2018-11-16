@@ -16,6 +16,7 @@ class ExecShape final {
   OF_DEVICE_FUNC int64_t At(int64_t dim) const { return dim_[dim]; }
 
   OF_DEVICE_FUNC size_t ElemNum() const { return elem_num_; }
+  OF_DEVICE_FUNC size_t NumAxes() const { return num_axes_; }
   size_t HostElemNum() const { return elem_num_; }
 
   OF_DEVICE_FUNC void Set(int64_t axis, int64_t value) {

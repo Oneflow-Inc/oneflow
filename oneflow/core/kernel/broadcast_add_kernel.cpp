@@ -3,6 +3,7 @@
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
 #include "oneflow/core/kernel/broadcast_add_xpu_util.h"
 #include "oneflow/core/common/preprocessor.h"
+#include "oneflow/core/ndarray/xpu_ndarray_util.h"
 
 namespace oneflow {
 
@@ -21,12 +22,12 @@ void BroadcastAddKernel<device_type, T>::BackwardDataContent(
   Blob* bw_buf_blob = BnInOp2Blob("bw_buf");
   size_t num_axes = out_diff_blob->shape().NumAxes();
   if (a_diff_blob) {
-    SwitchBackwardInputDiff(
+    XpuNdArrayUtil<device_type, T>::SwitchReduce(
         SwitchCase(num_axes), kernel_ctx.device_ctx, XpuVarNdarray<T>(a_diff_blob, num_axes),
         XpuVarNdarray<const T>(out_diff_blob, num_axes), XpuVarNdarray<T>(bw_buf_blob, num_axes));
   }
   if (b_diff_blob) {
-    SwitchBackwardInputDiff(
+    XpuNdArrayUtil<device_type, T>::SwitchReduce(
         SwitchCase(num_axes), kernel_ctx.device_ctx, XpuVarNdarray<T>(b_diff_blob, num_axes),
         XpuVarNdarray<const T>(out_diff_blob, num_axes), XpuVarNdarray<T>(bw_buf_blob, num_axes));
   }
