@@ -158,7 +158,9 @@ inline uint32_t NewRandomSeed() {
 #define DEVICE_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU)
 #endif
 
-#define DIM_SEQ (1)(2)(3)(4)(5)(6)(7)(8)
+#define DIM_SEQ           \
+  OF_PP_MAKE_TUPLE_SEQ(1) \
+  OF_PP_MAKE_TUPLE_SEQ(2) OF_PP_MAKE_TUPLE_SEQ(3) OF_PP_MAKE_TUPLE_SEQ(4) OF_PP_MAKE_TUPLE_SEQ(5)
 
 #define BOOL_SEQ (true)(false)
 #define PARALLEL_POLICY_SEQ (ParallelPolicy::kModelParallel)(ParallelPolicy::kDataParallel)
@@ -220,6 +222,8 @@ inline T MaxVal() {
 
 #if defined(__GNUC__)
 #define ALWAYS_INLINE __attribute__((always_inline))
+#elif defined(__CUDACC__)
+#define ALWAYS_INLINE __forceinline__
 #else
 #define ALWAYS_INLINE inline
 #endif

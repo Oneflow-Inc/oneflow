@@ -20,8 +20,13 @@ __global__ void ExpGpu(const int64_t n, const T* x, T* y) {
 }
 
 template<typename T>
-__global__ void DivGpu(const int64_t n, T* x, const T* alpha_ptr) {
+__global__ void DivByConstParaPtrGpu(const int64_t n, T* x, const T* alpha_ptr) {
   CUDA_1D_KERNEL_LOOP(i, n) { x[i] = x[i] / (*alpha_ptr); }
+}
+
+template<typename T>
+__global__ void DivGpu(const int64_t n, const T* x, const T* y, T* z) {
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] / y[i]; }
 }
 
 template<typename T>
@@ -37,6 +42,26 @@ __global__ void ReplicateGpu(const int64_t n, T* y, const T* x) {
 template<typename T>
 __global__ void MulGpu(const int64_t n, const T* x, const T* y, T* z) {
   CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y[i]; }
+}
+
+template<typename T>
+__global__ void MulByScalarGpu(const int64_t n, const T* x, const T* y, T* z) {
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y[0]; }
+}
+
+template<typename T>
+__global__ void ReciprocalGpu(const int64_t n, const T* x, T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = static_cast<T>(1.0) / x[i]; }
+}
+
+template<typename T>
+__global__ void SquareGpu(const int64_t n, const T* x, T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = x[i] * x[i]; }
+}
+
+template<typename T>
+__global__ void SqrtGpu(const int64_t n, const T* x, T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = std::sqrt(x[i]); }
 }
 
 template<typename T>
@@ -309,21 +334,6 @@ size_t GetTmpSizeForReduceSum(DataType data_type, int64_t sum_elem_num) {
 
 #undef MAKE_CUB_DEVICE_REDUCE_SWITCH_ENTRY
 
-// create temporary host blob store initializer result
-#define BEFORE_CPU_INITIALIZE()                                     \
-  RtBlobDesc blob_desc(blob->blob_desc().blob_desc_proto());        \
-  char* host_raw_dptr = nullptr;                                    \
-  CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize())); \
-  std::unique_ptr<Blob> host_blob;                                  \
-  host_blob.reset(new Blob(nullptr, &blob_desc, host_raw_dptr));
-
-// asynchronous copy to device
-#define AFTER_CPU_INITIALIZE()                                                          \
-  Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob->dptr(),                    \
-                           blob->ByteSizeOfDataContentField(), cudaMemcpyHostToDevice); \
-  CudaCheck(cudaStreamSynchronize(ctx->cuda_stream()));                                 \
-  CudaCheck(cudaFreeHost(host_raw_dptr));
-
 #define KU_IF_METHOD                     \
   template<typename T, typename Derived> \
   void GpuKernelUtilIf<T, Derived>::
@@ -446,21 +456,70 @@ KU_FLOATING_METHOD Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
   cublas_gemm<T>(ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k, &alpha, b, ldb,
                  a, lda, &beta, c, ldc);
 }
+KU_FLOATING_METHOD BatchedGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
+                               const enum CBLAS_TRANSPOSE trans_a,
+                               const enum CBLAS_TRANSPOSE trans_b, int batch_size, int m, int n,
+                               int k, const T alpha, const T* a, const T* b, const T beta, T* c) {
+  const int a_stride = m * k;
+  const int b_stride = k * n;
+  const int c_stride = m * n;
+#if __CUDACC_VER_MAHOR__ < 8
+  FOR_RANGE(int32_t, i, 0, batch_size) {
+    KernelUtil<DeviceType::kGPU, T>::OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a + i * a_stride,
+                                            b + i * b_stride, beta, c + i * c_stride);
+  }
+#else
+  const int lda = (trans_a == CblasNoTrans) ? k : m;
+  const int ldb = (trans_b == CblasNoTrans) ? n : k;
+  cublasOperation_t cublas_trans_a = CblasTrans2CublasTrans(trans_a);
+  cublasOperation_t cublas_trans_b = CblasTrans2CublasTrans(trans_b);
+  if (std::is_same<type_cpp, float>) {
+    cublasSgemmStridedBatched(ctx->cublas_pmd_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
+                              &alpha, b, ldb, b_stride, a, lda, a_stride, &beta, c, n, c_stride,
+                              batch_size);
+  } else if (std::is_same<type_cpp, double>) {
+    cublasDgemmStridedBatched(ctx->cublas_pmd_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
+                              &alpha, b, ldb, b_stride, a, lda, a_stride, &beta, c, n, c_stride,
+                              batch_size);
+  } else {
+    UNIMPLEMENTED();
+  }
+#endif
+}
 
 KU_FLOATING_METHOD Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
   ExpGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
 }
 KU_FLOATING_METHOD Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha) {
-  DivGpu<T>
+  DivByConstParaPtrGpu<T>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, alpha);
 }
 KU_FLOATING_METHOD Div(DeviceCtx* ctx, const int64_t n, T* x, const T alpha) {
   DivByConstParaGpu<T>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, alpha);
 }
+KU_FLOATING_METHOD Div(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
+  DivGpu<T>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z);
+}
 KU_FLOATING_METHOD Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
   MulGpu<T>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z);
+}
+KU_FLOATING_METHOD MulByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
+  MulByScalarGpu<T>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z);
+}
+KU_FLOATING_METHOD Reciprocal(DeviceCtx* ctx, const int n, const T* x, T* y) {
+  ReciprocalGpu<T>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
+}
+KU_FLOATING_METHOD Square(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+  SquareGpu<T>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
+}
+KU_FLOATING_METHOD Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+  SqrtGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
 }
 KU_FLOATING_METHOD Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsilon) {
   RsqrtGpu<T>
@@ -611,5 +670,25 @@ __device__ double gpu_atomic_max(double* address, const double val) {
   } while (assumed != old);
   return __longlong_as_double(old);
 }
+
+template<typename T, typename U>
+__global__ void CastOnGpu(const T* in, U* out, int64_t elem_num) {
+  CUDA_1D_KERNEL_LOOP(i, elem_num) { out[i] = static_cast<U>(in[i]); }
+}
+
+template<typename T, typename U>
+void CopyElemOnGpu(DeviceCtx* ctx, const T* in_dptr, U* out_dptr, int64_t elem_num) {
+  CastOnGpu<T, U>
+      <<<BlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          in_dptr, out_dptr, elem_num);
+}
+
+#define INSTANTIATE_COPY_ELEM_ON_GPU(T, U) \
+  template void CopyElemOnGpu(DeviceCtx* ctx, const T* in_dptr, U* out_dptr, int64_t elem_num);
+
+#define MAKE_COPY_ELEM_ON_GPU_ENTRY(TPair, UPair) \
+  INSTANTIATE_COPY_ELEM_ON_GPU(OF_PP_PAIR_FIRST(TPair), OF_PP_PAIR_FIRST(UPair))
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_COPY_ELEM_ON_GPU_ENTRY, POD_DATA_TYPE_SEQ, POD_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

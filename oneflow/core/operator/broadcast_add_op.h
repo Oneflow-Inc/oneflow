@@ -14,7 +14,7 @@ class BroadcastAddOp final : public BroadcastBinaryOp {
   bool NeedInBlobWhenBackward() const override { return false; }
   bool NeedOutBlobWhenBackward() const override { return false; }
 
-  const PbMessage& GetCustomizedConf() const;
+  const PbMessage& GetCustomizedConf() const override;
 };
 
 }  // namespace oneflow
