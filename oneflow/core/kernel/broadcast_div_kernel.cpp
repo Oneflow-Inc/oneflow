@@ -1,4 +1,5 @@
 #include "oneflow/core/kernel/broadcast_div_kernel.h"
+#include "oneflow/core/ndarray/xpu_ndarray_util.h"
 
 namespace oneflow {
 
@@ -20,10 +21,10 @@ void BroadcastDivKernel<device_type, T>::ForwardDataContent(
     KernelUtil<device_type, T>::Div(ctx.device_ctx, n, a->dptr<T>(), out->dptr<T>(),
                                     out->mut_dptr<T>());
   } else {
-    CHECK_EQ(n, a->shape().elem_cnt());
-    CHECK(b->shape() == a->shape());
-    KernelUtil<device_type, T>::Div(ctx.device_ctx, n, a->dptr<T>(), b->dptr<T>(),
-                                    out->mut_dptr<T>());
+    size_t num_axes = out->shape().NumAxes();
+    XpuNdArrayUtil<device_type, T>::template Binary<BinaryFuncDiv>::SwitchBroadcastApply(
+        SwitchCase(num_axes), ctx.device_ctx, XpuVarNdarray<T>(out, num_axes),
+        XpuVarNdarray<const T>(a, num_axes), XpuVarNdarray<const T>(b, num_axes));
   }
 }
 

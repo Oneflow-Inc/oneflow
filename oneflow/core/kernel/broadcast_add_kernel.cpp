@@ -10,7 +10,13 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 void BroadcastAddKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& kernel_ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BroadcastBinaryKernelUtil<device_type, T, BinaryFuncAdd>::Forward(kernel_ctx, BnInOp2Blob);
+  const Blob* a_blob = BnInOp2Blob("a");
+  const Blob* b_blob = BnInOp2Blob("b");
+  Blob* out_blob = BnInOp2Blob("out");
+  size_t num_axes = out_blob->shape().NumAxes();
+  XpuNdArrayUtil<device_type, T>::template Binary<BinaryFuncAdd>::SwitchBroadcastApply(
+      SwitchCase(num_axes), kernel_ctx.device_ctx, XpuVarNdarray<T>(out_blob, num_axes),
+      XpuVarNdarray<const T>(a_blob, num_axes), XpuVarNdarray<const T>(b_blob, num_axes));
 }
 
 template<DeviceType device_type, typename T>
