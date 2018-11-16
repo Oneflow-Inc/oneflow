@@ -48,7 +48,10 @@ int64_t Shape::Count(int64_t begin_axis) const { return Count(begin_axis, NumAxe
 
 void Shape::UpdateElemCnt() {
   elem_cnt_ = 1;
-  for (int64_t s : dim_vec_) { elem_cnt_ *= s; }
+  for (int64_t s : dim_vec_) {
+    CHECK_GT(s, 0);
+    elem_cnt_ *= s;
+  }
   if (dim_vec_.size() == 0) { elem_cnt_ = 0; }
 }
 

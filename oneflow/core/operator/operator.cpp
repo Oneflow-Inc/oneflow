@@ -490,9 +490,8 @@ Shape GetShapeFromReshapeTypeConf(const ReshapeType& reshape_type, const Shape& 
   std::vector<int64_t> dim_vec;
   if (reshape_type.has_shape()) {
     if (!reshape_type.has_dim0_in_shape()) { dim_vec.push_back(origin_shape.At(0)); }
-    for (int32_t i = 0; i < reshape_type.shape().dim_size(); ++i) {
-      dim_vec.push_back(reshape_type.shape().dim(i));
-    }
+    dim_vec.insert(dim_vec.end(), reshape_type.shape().dim().begin(),
+                   reshape_type.shape().dim().end());
     int32_t dim_cnt_need_infer = 0;
     int32_t dim_index_need_infer = -1;
     int64_t elem_cnt = 1;
@@ -501,12 +500,14 @@ Shape GetShapeFromReshapeTypeConf(const ReshapeType& reshape_type, const Shape& 
         ++dim_cnt_need_infer;
         dim_index_need_infer = i;
       } else {
+        CHECK_GT(dim_vec[i], 0);
         elem_cnt *= dim_vec[i];
       }
     }
     CHECK_LE(dim_cnt_need_infer, 1);
     if (dim_cnt_need_infer == 1) {
       dim_vec[dim_index_need_infer] = origin_shape.elem_cnt() / elem_cnt;
+      CHECK_EQ(origin_shape.elem_cnt() % elem_cnt, 0);
     }
   } else if (reshape_type.has_squeeze()) {
     HashSet<int32_t> axis;
