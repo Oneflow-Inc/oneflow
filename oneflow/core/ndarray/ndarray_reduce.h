@@ -22,7 +22,7 @@ struct NdArrayReduce final {
     for (int i = 0; i < x.shape().NumAxes(); ++i) {
       if (y.shape().At(i) == x.shape().At(i)) { continue; }
       CHECK_EQ(y.shape().At(i), 1);
-      CHECK_GT(x.shape().At(i), 1);
+      CHECK_GT(x.shape().At(i), y.shape().At(i));
       if (is_first_reduced_dim) {
         ReduceAxis(ctx, i, storage, &cur_shape, x);
         is_first_reduced_dim = false;
@@ -57,7 +57,7 @@ struct NdArrayReduce final {
                                 ExecShape* cur_shape) {
     while (cur_shape->At(axis) > 1) {
       XpuReducedNdarray<T, NDIMS> from(*cur_shape, implace);
-      int64_t new_dim_value = (cur_shape->At(axis) < 16 ? 1 : cur_shape->At(axis) / 4);
+      int64_t new_dim_value = (cur_shape->At(axis) < 8 ? 1 : cur_shape->At(axis) / 4);
       cur_shape->Set(axis, new_dim_value);
       XpuReducedNdarray<T, NDIMS> to(*cur_shape, implace);
       NdArrayReduceCoreWrapper<device_type, T, NDIMS>::ReduceAxis(ctx, to, from, axis);
