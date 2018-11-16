@@ -20,12 +20,13 @@ class GatherKernel final : public KernelIf<device_type> {
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
-template<DeviceType device_type, typename T>
+template<DeviceType device_type, typename T, typename IndexT>
 struct LookupKernelUtil final {
-  static void Forward(DeviceCtx* ctx, const int32_t* indices, int64_t num_indices, const T* in,
-                      int64_t in_rows, int64_t in_cols, T* out);
-  static void Backward(DeviceCtx* ctx, const int32_t* indices, int64_t num_indices,
-                       const T* out_diff, int64_t in_rows, int64_t in_cols, T* in_diff);
+  static void Forward(DeviceCtx* ctx, const IndexT* indices, int64_t num_indices, const T* in,
+                      int64_t in_blocks, int64_t in_rows, int64_t in_cols, T* out);
+  static void Backward(DeviceCtx* ctx, const IndexT* indices, int64_t num_indices,
+                       const T* out_diff, int64_t in_blocks, int64_t in_rows, int64_t in_cols,
+                       T* in_diff);
 };
 
 }  // namespace oneflow

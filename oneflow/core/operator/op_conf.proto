@@ -751,6 +751,7 @@ message GatherOpConf {
   required string in = 1;
   required string indices = 2;
   required string out = 3;
+  optional int64 axis = 4 [default = 0];
 }
 
 message SqrtOpConf {

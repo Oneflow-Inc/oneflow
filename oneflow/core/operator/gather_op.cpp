@@ -13,18 +13,25 @@ const PbMessage& GatherOp::GetCustomizedConf() const { return op_conf().gather_c
 
 void GatherOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext* parallel_ctx) const {
-  const BlobDesc* indices_blob_desc = GetBlobDesc4BnInOp("indices");
-  CHECK_EQ(indices_blob_desc->data_type(), DataType::kInt32);
-  CHECK_GE(indices_blob_desc->shape().NumAxes(), 1);
-  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-  CHECK_GE(in_blob_desc->shape().NumAxes(), 1);
-  BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  *out_blob_desc = *indices_blob_desc;
-  out_blob_desc->set_data_type(in_blob_desc->data_type());
-  std::vector<int64_t> out_shape_dim_vec = indices_blob_desc->shape().dim_vec();
-  out_shape_dim_vec.insert(out_shape_dim_vec.end(), in_blob_desc->shape().dim_vec().cbegin() + 1,
-                           in_blob_desc->shape().dim_vec().cend());
-  out_blob_desc->mut_shape() = Shape(out_shape_dim_vec);
+  const BlobDesc* indices = GetBlobDesc4BnInOp("indices");
+  CHECK(IsIntegralDataType(indices->data_type()));
+  CHECK_GE(indices->shape().NumAxes(), 1);
+  const BlobDesc* in = GetBlobDesc4BnInOp("in");
+  CHECK_GE(in->shape().NumAxes(), 1);
+  const int64_t axis = op_conf().gather_conf().axis();
+  CHECK_GE(axis, 0);
+  CHECK_LT(axis, in->shape().NumAxes());
+  BlobDesc* out = GetBlobDesc4BnInOp("out");
+  *out = *indices;
+  out->set_data_type(in->data_type());
+  std::vector<int64_t> dim_vec;
+  dim_vec.insert(dim_vec.end(), in->shape().dim_vec().cbegin(),
+                 in->shape().dim_vec().cbegin() + axis);
+  dim_vec.insert(dim_vec.end(), indices->shape().dim_vec().cbegin(),
+                 indices->shape().dim_vec().cend());
+  dim_vec.insert(dim_vec.end(), in->shape().dim_vec().cbegin() + axis + 1,
+                 in->shape().dim_vec().end());
+  out->mut_shape() = Shape(dim_vec);
 }
 
 REGISTER_OP(OperatorConf::kGatherConf, GatherOp);
