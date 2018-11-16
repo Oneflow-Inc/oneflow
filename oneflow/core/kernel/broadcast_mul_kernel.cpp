@@ -35,7 +35,6 @@ void BroadcastMulKernel<device_type, T>::BackwardDataContent(
   const Blob* out_diff = BnInOp2Blob(GenDiffBn("out"));
   Blob* a_diff = BnInOp2Blob(GenDiffBn("a"));
   Blob* b_diff = BnInOp2Blob(GenDiffBn("b"));
-
   int64_t n = out_diff->shape().elem_cnt();
   if (a->shape().elem_cnt() == 1) {
     if (a_diff) {
@@ -56,14 +55,24 @@ void BroadcastMulKernel<device_type, T>::BackwardDataContent(
                                       b_diff->mut_dptr<T>());
     }
   } else {
-    CHECK(a->shape() == b->shape());
+    size_t num_axes = out_diff->shape().NumAxes();
+    XpuVarNdarray<const T> out_diff_tensor(out_diff, num_axes);
+    Blob* bw_buf_blob = BnInOp2Blob("bw_buf");
+    XpuVarNdarray<const T> const_tmp(out_diff_tensor.shape(), bw_buf_blob->dptr<T>());
+    XpuVarNdarray<T> tmp(out_diff_tensor.shape(), bw_buf_blob->mut_dptr<T>());
     if (a_diff) {
-      KernelUtil<device_type, T>::Mul(ctx.device_ctx, n, out_diff->dptr<T>(), b->dptr<T>(),
-                                      a_diff->mut_dptr<T>());
+      XpuNdArrayUtil<device_type, T>::template Binary<BinaryFuncMul>::SwitchBroadcastApply(
+          SwitchCase(num_axes), ctx.device_ctx, tmp, out_diff_tensor,
+          XpuVarNdarray<const T>(b, num_axes));
+      XpuNdArrayUtil<device_type, T>::SwitchReduce(
+          SwitchCase(num_axes), ctx.device_ctx, XpuVarNdarray<T>(a_diff, num_axes), const_tmp, tmp);
     }
     if (b_diff) {
-      KernelUtil<device_type, T>::Mul(ctx.device_ctx, n, out_diff->dptr<T>(), a->dptr<T>(),
-                                      b_diff->mut_dptr<T>());
+      XpuNdArrayUtil<device_type, T>::template Binary<BinaryFuncMul>::SwitchBroadcastApply(
+          SwitchCase(num_axes), ctx.device_ctx, tmp, out_diff_tensor,
+          XpuVarNdarray<const T>(a, num_axes));
+      XpuNdArrayUtil<device_type, T>::SwitchReduce(
+          SwitchCase(num_axes), ctx.device_ctx, XpuVarNdarray<T>(b_diff, num_axes), const_tmp, tmp);
     }
   }
 }
