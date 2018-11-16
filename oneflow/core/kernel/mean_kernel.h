@@ -18,6 +18,8 @@ class MeanKernel final : public KernelIf<device_type> {
   void BackwardDataContent(const KernelCtx&,
                            std::function<Blob*(const std::string&)>) const override;
   const PbMessage& GetCustomizedOpConf() const override { return this->op_conf().mean_conf(); }
+  void InitConstBufBlobs(DeviceCtx*,
+                         std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
 }  // namespace oneflow
