@@ -5,13 +5,13 @@ namespace oneflow {
 
 template<typename T, int NDIMS>
 struct NdArrayReduceCoreWrapper<DeviceType::kCPU, T, NDIMS> final {
-  static void ReduceAxis(DeviceCtx* ctx, T* dst_ptr, const XpuVarNdarray<const T>& x, int axis,
-                         int64_t new_dim_value) {
-    NdArrayReduceCore<T, NDIMS>::ReduceAxis(dst_ptr, x, axis, new_dim_value);
+  static void ReduceAxis(DeviceCtx* ctx, const XpuReducedNdarray<T, NDIMS>& dst_reduced,
+                         const XpuVarNdarray<const T>& x, int axis) {
+    NdArrayReduceCore<T, NDIMS>::ReduceAxis(dst_reduced, x, axis);
   }
-  static void ImplaceReduceAxis(DeviceCtx* ctx, const XpuReducedNdarray<T, NDIMS>& x, int axis,
-                                int64_t new_dim_value) {
-    NdArrayReduceCore<T, NDIMS>::ImplaceReduceAxis(x, axis, new_dim_value);
+  static void ReduceAxis(DeviceCtx* ctx, const XpuReducedNdarray<T, NDIMS>& dst_reduced,
+                         const XpuReducedNdarray<T, NDIMS>& x, int axis) {
+    NdArrayReduceCore<T, NDIMS>::ReduceAxis(dst_reduced, x, axis);
   }
 };
 
