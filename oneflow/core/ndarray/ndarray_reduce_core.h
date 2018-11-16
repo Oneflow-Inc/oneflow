@@ -8,45 +8,29 @@ namespace oneflow {
 
 template<DeviceType device_type, typename T, int NDIMS>
 struct NdArrayReduceCoreWrapper final {
-  static void ReduceAxis(DeviceCtx* ctx, T* dst_ptr, const XpuVarNdarray<const T>& x, int axis,
-                         int64_t new_dim_value);
-  static void ImplaceReduceAxis(DeviceCtx* ctx, const XpuReducedNdarray<T, NDIMS>& x, int axis,
-                                int64_t new_dim_value);
+  static void ReduceAxis(DeviceCtx* ctx, const XpuReducedNdarray<T, NDIMS>& dst_reduced,
+                         const XpuVarNdarray<const T>& x, int axis);
+  static void ReduceAxis(DeviceCtx* ctx, const XpuReducedNdarray<T, NDIMS>& dst_reduced,
+                         const XpuReducedNdarray<T, NDIMS>& x, int axis);
 };
 
 template<typename T, int NDIMS>
 struct NdArrayReduceCore final {
-  OF_DEVICE_FUNC static void ReduceAxis(T* dst_ptr, const XpuVarNdarray<const T>& x, int axis,
-                                        int64_t new_dim_value) {
-    XpuVarNdarray<T> dst_var(x.shape(), dst_ptr);
-    ExecShape to_shape(x.shape());
-    to_shape.Set(axis, new_dim_value);
-    XpuReducedNdarray<T, NDIMS> dst_reduced(to_shape, dst_var);
-    XPU_1D_KERNEL_LOOP(i, to_shape.ElemNum()) {
+  template<typename X>
+  OF_DEVICE_FUNC static void ReduceAxis(const XpuReducedNdarray<T, NDIMS>& dst_reduced, const X& x,
+                                        int axis) {
+    size_t n = dst_reduced.shape().ElemNum();
+    int64_t dst_dim_val = dst_reduced.shape().At(axis);
+    XPU_1D_KERNEL_LOOP(i, n) {
+      T* dst_reduced_ptr = dst_reduced.template Mut(i);
       int64_t coord[NDIMS];
-      ExecShapeUtil<NDIMS>::Offset2DimVec(to_shape, i, coord);
-      T* dst_reduced_ptr = dst_reduced.template Mut(coord);
+      ExecShapeUtil<NDIMS>::Offset2DimVec(dst_reduced.shape(), i, coord);
       T sum = 0;
       while (coord[axis] < x.shape().At(axis)) {
         sum += x.template Get<NDIMS>(coord);
-        coord[axis] += new_dim_value;
+        coord[axis] += dst_dim_val;
       }
       *dst_reduced_ptr = sum;
-    }
-  }
-  OF_DEVICE_FUNC static void ImplaceReduceAxis(const XpuReducedNdarray<T, NDIMS>& x, int axis,
-                                               int64_t new_dim_value) {
-    ExecShape to_shape(x.shape());
-    to_shape.Set(axis, new_dim_value);
-    XPU_1D_KERNEL_LOOP(i, to_shape.ElemNum()) {
-      int64_t coord[NDIMS];
-      ExecShapeUtil<NDIMS>::Offset2DimVec(to_shape, i, coord);
-      T* dst_reduced_ptr = x.template Mut(coord);
-      coord[axis] += new_dim_value;
-      while (coord[axis] < x.shape().At(axis)) {
-        *dst_reduced_ptr += x.template Get(coord);
-        coord[axis] += new_dim_value;
-      }
     }
   }
 };

@@ -18,6 +18,7 @@ class ExecShape final {
   OF_DEVICE_FUNC size_t ElemNum() const { return elem_num_; }
   OF_DEVICE_FUNC size_t NumAxes() const { return num_axes_; }
   size_t HostElemNum() const { return elem_num_; }
+  bool operator==(const ExecShape&) const;
 
   OF_DEVICE_FUNC void Set(int64_t axis, int64_t value) {
     dim_[axis] = value;

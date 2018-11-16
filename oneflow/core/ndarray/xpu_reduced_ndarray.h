@@ -25,8 +25,8 @@ class XpuReducedNdarray final {
   }
 
   template<int ndims = NDIMS>
-  OF_DEVICE_FUNC T Get(int64_t coord[NDIMS]) const {
-    return data_.template Get<NDIMS>(coord);
+  OF_DEVICE_FUNC T Get(int64_t coord[ndims]) const {
+    return data_.template Get<ndims>(coord);
   }
 
   template<int ndims = NDIMS>

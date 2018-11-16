@@ -7,30 +7,30 @@ namespace oneflow {
 namespace {
 
 template<typename T, int NDIMS>
-__global__ void NdArrayReduceGpuReduceAxis(T* dst_ptr, const XpuVarNdarray<const T> x, int axis,
-                                           int64_t new_dim_value) {
-  NdArrayReduceCore<T, NDIMS>::ReduceAxis(dst_ptr, x, axis, new_dim_value);
+__global__ void NdArrayReduceGpuReduceAxis(const XpuReducedNdarray<T, NDIMS> dst_reduced,
+                                           const XpuVarNdarray<const T> x, int axis) {
+  NdArrayReduceCore<T, NDIMS>::ReduceAxis(dst_reduced, x, axis);
 }
 
 template<typename T, int NDIMS>
-__global__ void NdArrayReduceGpuImplaceReduceAxis(const XpuReducedNdarray<T, NDIMS> x, int axis,
-                                                  int64_t new_dim_value) {
-  NdArrayReduceCore<T, NDIMS>::ImplaceReduceAxis(x, axis, new_dim_value);
+__global__ void NdArrayReduceGpuImplaceReduceAxis(const XpuReducedNdarray<T, NDIMS> dst_reduced,
+                                                  const XpuReducedNdarray<T, NDIMS> x, int axis) {
+  NdArrayReduceCore<T, NDIMS>::ReduceAxis(dst_reduced, x, axis);
 }
 
 }  // namespace
 
 template<typename T, int NDIMS>
 struct NdArrayReduceCoreWrapper<DeviceType::kGPU, T, NDIMS> final {
-  static void ReduceAxis(DeviceCtx* ctx, T* dst_ptr, const XpuVarNdarray<const T>& x, int axis,
-                         int64_t new_dim_value) {
+  static void ReduceAxis(DeviceCtx* ctx, const XpuReducedNdarray<T, NDIMS>& dst_reduced,
+                         const XpuVarNdarray<const T>& x, int axis) {
     size_t n = x.host_shape().HostElemNum();
-    NdArrayReduceGpuReduceAxis<T, NDIMS> WITH_CUDA_PARAM(ctx, n, dst_ptr, x, axis, new_dim_value);
+    NdArrayReduceGpuReduceAxis<T, NDIMS> WITH_CUDA_PARAM(ctx, n, dst_reduced, x, axis);
   }
-  static void ImplaceReduceAxis(DeviceCtx* ctx, const XpuReducedNdarray<T, NDIMS>& x, int axis,
-                                int64_t new_dim_value) {
+  static void ReduceAxis(DeviceCtx* ctx, const XpuReducedNdarray<T, NDIMS>& dst_reduced,
+                         const XpuReducedNdarray<T, NDIMS>& x, int axis) {
     size_t n = x.host_shape().HostElemNum();
-    NdArrayReduceGpuImplaceReduceAxis<T, NDIMS> WITH_CUDA_PARAM(ctx, n, x, axis, new_dim_value);
+    NdArrayReduceGpuImplaceReduceAxis<T, NDIMS> WITH_CUDA_PARAM(ctx, n, dst_reduced, x, axis);
   }
 };
 
