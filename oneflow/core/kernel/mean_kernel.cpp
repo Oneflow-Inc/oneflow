@@ -30,7 +30,7 @@ void MeanKernel<device_type, T>::BackwardDataContent(
   CHECK_EQ(1, out_diff_blob->shape().dim_vec().back());
   const Blob* mean_mul_blob = BnInOp2Blob("mean_multiplier");
   Blob* in_diff_blob = BnInOp2Blob(GenDiffBn("in"));
-  Blob* bw_tmp_blob = BnInOp2Blob("bw_tmp_blob");
+  Blob* bw_tmp_blob = BnInOp2Blob("bw_tmp");
 
   Memcpy<device_type>(ctx.device_ctx, bw_tmp_blob->mut_dptr(), out_diff_blob->dptr(),
                       out_diff_blob->ByteSizeOfDataContentField());
