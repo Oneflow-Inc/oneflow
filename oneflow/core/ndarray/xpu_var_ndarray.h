@@ -31,10 +31,19 @@ class XpuVarNdarray final {
   OF_DEVICE_FUNC T Get(int64_t offset) const {
     return ptr_[offset];
   }
+  template<int NDIMS>
+  OF_DEVICE_FUNC T Get(int64_t coord[NDIMS]) const {
+    return ptr_[ExecShapeUtil<NDIMS>::DimVec2Offset(shape(), coord)];
+  }
 
   template<int NDIMS>
-  OF_DEVICE_FUNC T* Mut(int64_t offset) {
+  OF_DEVICE_FUNC T* Mut(int64_t offset) const {
     return ptr_ + offset;
+  }
+
+  template<int NDIMS>
+  OF_DEVICE_FUNC T* Mut(int64_t coord[NDIMS]) const {
+    return ptr_ + ExecShapeUtil<NDIMS>::DimVec2Offset(shape(), coord);
   }
 
   template<int NDIMS, typename X>
@@ -46,7 +55,7 @@ class XpuVarNdarray final {
   template<int NDIMS, typename X>
   OF_DEVICE_FUNC void AssignWithoutSyncThreads(const X& x) {
     size_t n = shape_.ElemNum();
-    XPU_1D_KERNEL_LOOP(i, n) { *Mut<NDIMS>(i) = x.template Get<NDIMS>(i); }
+    XPU_1D_KERNEL_LOOP(i, n) { ptr_[i] = x.template Get<NDIMS>(i); }
   }
 
  private:
