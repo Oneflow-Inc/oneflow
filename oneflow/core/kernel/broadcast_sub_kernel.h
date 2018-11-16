@@ -1,15 +1,12 @@
 #ifndef ONEFLOW_CORE_KERNEL_BROADCAST_SUB_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_BROADCAST_SUB_KERNEL_H_
 
-#include "oneflow/core/kernel/broadcast_binary_kernel.h"
-#include "oneflow/core/ndarray/xpu_var_ndarray.h"
-#include "oneflow/core/common/switch_func.h"
-#include "oneflow/core/common/util.h"
+#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class BroadcastSubKernel final : public BroadcastBinaryKernel<device_type, T> {
+class BroadcastSubKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BroadcastSubKernel);
   BroadcastSubKernel() = default;

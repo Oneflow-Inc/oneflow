@@ -1,7 +1,6 @@
 #include "oneflow/core/kernel/broadcast_add_kernel.h"
 #include "oneflow/core/ndarray/binary_func.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
-#include "oneflow/core/kernel/broadcast_add_xpu_util.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/ndarray/xpu_ndarray_util.h"
 
@@ -38,14 +37,6 @@ void BroadcastAddKernel<device_type, T>::BackwardDataContent(
         XpuVarNdarray<const T>(out_diff_blob, num_axes), XpuVarNdarray<T>(bw_buf_blob, num_axes));
   }
 }
-
-template<typename T, int NDIMS>
-struct BroadcastAddKernelUtil<DeviceType::kCPU, T, NDIMS> final {
-  static void BackwardInputDiff(DeviceCtx*, XpuVarNdarray<T>&& in_diff_a,
-                                const XpuVarNdarray<const T>& out_diff, XpuVarNdarray<T>&& bw_buf) {
-    BroadcastAddXpuUtil<T, NDIMS>::BackwardInputDiff(&in_diff_a, out_diff, &bw_buf);
-  }
-};
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBroadcastAddConf, BroadcastAddKernel,
                            ARITHMETIC_DATA_TYPE_SEQ);
