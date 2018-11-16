@@ -11,7 +11,7 @@ template<typename T, int NDIMS, typename X>
 class XpuReduceNdarray final {
  public:
   OF_DEVICE_FUNC XpuReduceNdarray(const ExecShape& shape, const X& x, XpuVarNdarray<T>* storage)
-      : shape_(shape), data_(XpuVarNdarray<T>(x.shape(), storage->mut_ptr())) {
+      : shape_(shape), data_(XpuVarNdarray<T>(x.shape(), storage->ptr())) {
     data_.template Assign<NDIMS>(x);
     Reduce();
   }
