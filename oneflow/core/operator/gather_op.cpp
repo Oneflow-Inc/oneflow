@@ -19,9 +19,7 @@ void GatherOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
   CHECK_GE(in->shape().NumAxes(), 1);
   int64_t axis = op_conf().gather_conf().axis();
-  if (axis < 0) {
-    axis += in->shape().NumAxes();
-  }
+  if (axis < 0) { axis += in->shape().NumAxes(); }
   CHECK_GE(axis, 0);
   CHECK_LT(axis, in->shape().NumAxes());
   BlobDesc* out = GetBlobDesc4BnInOp("out");
