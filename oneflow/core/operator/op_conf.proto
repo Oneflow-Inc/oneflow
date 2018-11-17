@@ -856,6 +856,23 @@ message ConstantOpConf {
   optional bool use_device_piece_size_as_dim0 = 6 [default = false];
 }
 
+message DebugOpConf {
+  required string in = 1;
+  required string out = 2;
+  optional string in_blob_dump_dir = 3;
+  optional string out_diff_blob_dump_dir = 4;
+  optional string part_name_prefix = 5 [default = "part-"];
+  optional int32 part_name_suffix_length = 6 [default = -1];
+  oneof const_out {
+      string const_out_load_filepath = 7;
+      string const_serialized_out_feature = 8;
+  }
+  oneof const_in_diff {
+      string const_in_diff_load_filepath = 9;
+      string const_serialized_in_diff_feature = 10;
+  }
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -944,6 +961,7 @@ message OperatorConf {
     BiasAddOpConf bias_add_conf = 253;
     LayerNormOpConf layer_norm_conf = 254;
     ConstantOpConf constant_conf = 255;
+    DebugOpConf debug_conf = 256;
   }
 }
 
