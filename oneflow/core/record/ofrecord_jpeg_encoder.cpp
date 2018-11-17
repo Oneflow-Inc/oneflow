@@ -34,10 +34,8 @@ void OFRecordEncoderImpl<EncodeCase::kJpeg, T>::EncodeOneCol(DeviceCtx* ctx, con
     UNIMPLEMENTED();
   }
   std::vector<unsigned char> buf;
-  std::vector<int> param(1);
-  param[0] = cv::IMWRITE_JPEG_QUALITY;
   cv::Mat img = cv::Mat(shape.At(1), shape.At(2), type, const_cast<T*>(in_dptr)).clone();
-  cv::imencode(".jpg", img, buf, param);
+  cv::imencode(".jpg", img, buf, {});
   feature.mutable_bytes_list()->add_value(reinterpret_cast<const char*>(buf.data()), buf.size());
 }
 
