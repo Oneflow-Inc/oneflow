@@ -22,8 +22,7 @@ void GatherOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
   CHECK_GE(axis, 0);
   CHECK_LT(axis, in->shape().NumAxes());
   BlobDesc* out = GetBlobDesc4BnInOp("out");
-  *out = *indices;
-  out->set_data_type(in->data_type());
+  *out = *in;
   std::vector<int64_t> dim_vec;
   dim_vec.insert(dim_vec.end(), in->shape().dim_vec().cbegin(),
                  in->shape().dim_vec().cbegin() + axis);
