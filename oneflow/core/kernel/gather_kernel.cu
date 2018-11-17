@@ -9,9 +9,8 @@ namespace {
 template<typename T, typename IndexT>
 __global__ void GatherForwardGpu(const int64_t elem_cnt, const IndexT* indices, const T* in,
                                  int64_t in_blocks, int64_t in_rows, int64_t in_cols, T* out) {
-  const int64_t num_indices = elem_cnt / in_blocks;
+  const int64_t out_block_size = elem_cnt / in_blocks * in_cols;
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    const int64_t out_block_size = num_indices * in_cols;
     const int64_t block_idx = i / out_block_size;
     const int64_t block_offset = i % out_block_size;
     const int64_t offset = block_offset / in_cols;
@@ -25,9 +24,8 @@ __global__ void GatherForwardGpu(const int64_t elem_cnt, const IndexT* indices, 
 template<typename T, typename IndexT>
 __global__ void GatherBackwardGpu(const int64_t elem_cnt, const IndexT* indices, const T* out_diff,
                                   int64_t in_blocks, int64_t in_rows, int64_t in_cols, T* in_diff) {
-  const int64_t num_indices = elem_cnt / in_blocks;
+  const int64_t out_block_size = elem_cnt / in_blocks * in_cols;
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    const int64_t out_block_size = num_indices * in_cols;
     const int64_t block_idx = i / out_block_size;
     const int64_t block_offset = i % out_block_size;
     const int64_t offset = block_offset / in_cols;
