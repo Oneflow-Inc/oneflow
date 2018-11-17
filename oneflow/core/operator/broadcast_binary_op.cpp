@@ -22,6 +22,7 @@ void BroadcastBinaryOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* a_blob_desc = GetBlobDesc4BnInOp("a");
   const BlobDesc* b_blob_desc = GetBlobDesc4BnInOp("b");
+  CHECK_EQ(a_blob_desc->data_type(), b_blob_desc->data_type());
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   size_t output_num_axes = std::max(a_blob_desc->shape().NumAxes(), b_blob_desc->shape().NumAxes());
   if (IsScalarBlob(a_blob_desc)) {
