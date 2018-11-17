@@ -19,14 +19,14 @@ void GatherKernel<device_type, T>::ForwardDataContent(
   const int64_t in_blocks = in_blob->shape().Count(0, axis);
   Blob* out = BnInOp2Blob("out");
   switch (indices_blob->data_type()) {
-#define LOOKUP_FORWARD_CASE(type_cpp, type_proto)                                        \
+#define GATHER_FORWARD_CASE(type_cpp, type_proto)                                        \
   case type_proto:                                                                       \
-    LookupKernelUtil<device_type, T, type_cpp>::Forward(                                 \
+    GatherKernelUtil<device_type, T, type_cpp>::Forward(                                 \
         ctx.device_ctx, indices_blob->dptr<type_cpp>(), num_indices, in_blob->dptr<T>(), \
         in_blocks, in_rows, in_cols, out->mut_dptr<T>());                                \
     break;
-    OF_PP_FOR_EACH_TUPLE(LOOKUP_FORWARD_CASE, INT_DATA_TYPE_SEQ)
-#undef LOOKUP_FORWARD_CASE
+    OF_PP_FOR_EACH_TUPLE(GATHER_FORWARD_CASE, INT_DATA_TYPE_SEQ)
+#undef GATHER_FORWARD_CASE
     default: UNIMPLEMENTED();
   }
 }
@@ -45,20 +45,20 @@ void GatherKernel<device_type, T>::BackwardDataContent(
   Memset<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr<T>(), 0,
                       in_diff_blob->ByteSizeOfDataContentField());
   switch (indices_blob->data_type()) {
-#define LOOKUP_BACKWARD_CASE(type_cpp, type_proto)                                             \
+#define GATHER_BACKWARD_CASE(type_cpp, type_proto)                                             \
   case type_proto:                                                                             \
-    LookupKernelUtil<device_type, T, type_cpp>::Backward(                                      \
+    GatherKernelUtil<device_type, T, type_cpp>::Backward(                                      \
         ctx.device_ctx, indices_blob->dptr<type_cpp>(), num_indices, out_diff_blob->dptr<T>(), \
         in_blocks, in_rows, in_cols, in_diff_blob->mut_dptr<T>());                             \
     break;
-    OF_PP_FOR_EACH_TUPLE(LOOKUP_BACKWARD_CASE, INT_DATA_TYPE_SEQ)
-#undef LOOKUP_BACKWARD_CASE
+    OF_PP_FOR_EACH_TUPLE(GATHER_BACKWARD_CASE, INT_DATA_TYPE_SEQ)
+#undef GATHER_BACKWARD_CASE
     default: UNIMPLEMENTED();
   }
 }
 
 template<typename T, typename IndexT>
-struct LookupKernelUtil<DeviceType::kCPU, T, IndexT> final {
+struct GatherKernelUtil<DeviceType::kCPU, T, IndexT> final {
   static void Forward(DeviceCtx* ctx, const IndexT* indices, int64_t num_indices, const T* in,
                       int64_t in_blocks, int64_t in_rows, int64_t in_cols, T* out);
   static void Backward(DeviceCtx* ctx, const IndexT* indices, int64_t num_indices,
@@ -67,7 +67,7 @@ struct LookupKernelUtil<DeviceType::kCPU, T, IndexT> final {
 };
 
 template<typename T, typename IndexT>
-void LookupKernelUtil<DeviceType::kCPU, T, IndexT>::Forward(DeviceCtx* ctx, const IndexT* indices,
+void GatherKernelUtil<DeviceType::kCPU, T, IndexT>::Forward(DeviceCtx* ctx, const IndexT* indices,
                                                             int64_t num_indices, const T* in,
                                                             int64_t in_blocks, int64_t in_rows,
                                                             int64_t in_cols, T* out) {
@@ -83,7 +83,7 @@ void LookupKernelUtil<DeviceType::kCPU, T, IndexT>::Forward(DeviceCtx* ctx, cons
 }
 
 template<typename T, typename IndexT>
-void LookupKernelUtil<DeviceType::kCPU, T, IndexT>::Backward(DeviceCtx* ctx, const IndexT* indices,
+void GatherKernelUtil<DeviceType::kCPU, T, IndexT>::Backward(DeviceCtx* ctx, const IndexT* indices,
                                                              int64_t num_indices, const T* out_diff,
                                                              int64_t in_blocks, int64_t in_rows,
                                                              int64_t in_cols, T* in_diff) {

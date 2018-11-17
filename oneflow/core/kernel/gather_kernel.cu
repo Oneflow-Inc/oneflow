@@ -7,7 +7,7 @@ namespace oneflow {
 namespace {
 
 template<typename T, typename IndexT>
-__global__ void LookupForwardGpu(const int64_t elem_cnt, const IndexT* indices, const T* in,
+__global__ void GatherForwardGpu(const int64_t elem_cnt, const IndexT* indices, const T* in,
                                  int64_t in_blocks, int64_t in_rows, int64_t in_cols, T* out) {
   const int64_t num_indices = elem_cnt / in_blocks;
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
@@ -23,7 +23,7 @@ __global__ void LookupForwardGpu(const int64_t elem_cnt, const IndexT* indices, 
 }
 
 template<typename T, typename IndexT>
-__global__ void LookupBackwardGpu(const int64_t elem_cnt, const IndexT* indices, const T* out_diff,
+__global__ void GatherBackwardGpu(const int64_t elem_cnt, const IndexT* indices, const T* out_diff,
                                   int64_t in_blocks, int64_t in_rows, int64_t in_cols, T* in_diff) {
   const int64_t num_indices = elem_cnt / in_blocks;
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
@@ -41,7 +41,7 @@ __global__ void LookupBackwardGpu(const int64_t elem_cnt, const IndexT* indices,
 }  // namespace
 
 template<typename T, typename IndexT>
-struct LookupKernelUtil<DeviceType::kGPU, T, IndexT> final {
+struct GatherKernelUtil<DeviceType::kGPU, T, IndexT> final {
   static void Forward(DeviceCtx* ctx, const IndexT* indices, int64_t num_indices, const T* in,
                       int64_t in_blocks, int64_t in_rows, int64_t in_cols, T* out);
   static void Backward(DeviceCtx* ctx, const IndexT* indices, int64_t num_indices,
@@ -50,32 +50,32 @@ struct LookupKernelUtil<DeviceType::kGPU, T, IndexT> final {
 };
 
 template<typename T, typename IndexT>
-void LookupKernelUtil<DeviceType::kGPU, T, IndexT>::Forward(DeviceCtx* ctx, const IndexT* indices,
+void GatherKernelUtil<DeviceType::kGPU, T, IndexT>::Forward(DeviceCtx* ctx, const IndexT* indices,
                                                             int64_t num_indices, const T* in,
                                                             int64_t in_blocks, int64_t in_rows,
                                                             int64_t in_cols, T* out) {
   const int64_t elem_cnt = in_blocks * num_indices * in_cols;
-  LookupForwardGpu<T, IndexT>
+  GatherForwardGpu<T, IndexT>
       <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
           elem_cnt, indices, in, in_blocks, in_rows, in_cols, out);
 }
 
 template<typename T, typename IndexT>
-void LookupKernelUtil<DeviceType::kGPU, T, IndexT>::Backward(DeviceCtx* ctx, const IndexT* indices,
+void GatherKernelUtil<DeviceType::kGPU, T, IndexT>::Backward(DeviceCtx* ctx, const IndexT* indices,
                                                              int64_t num_indices, const T* out_diff,
                                                              int64_t in_blocks, int64_t in_rows,
                                                              int64_t in_cols, T* in_diff) {
   const int64_t elem_cnt = in_blocks * num_indices * in_cols;
-  LookupBackwardGpu<T, IndexT>
+  GatherBackwardGpu<T, IndexT>
       <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
           elem_cnt, indices, out_diff, in_blocks, in_rows, in_cols, in_diff);
 }
 
-#define MAKE_LOOK_UP_KERNEL_UTIL_ENTRY(in_type_pair, index_type_pair)                \
-  template struct LookupKernelUtil<DeviceType::kGPU, OF_PP_PAIR_FIRST(in_type_pair), \
+#define MAKE_GATHER_KERNEL_UTIL_ENTRY(in_type_pair, index_type_pair)                 \
+  template struct GatherKernelUtil<DeviceType::kGPU, OF_PP_PAIR_FIRST(in_type_pair), \
                                    OF_PP_PAIR_FIRST(index_type_pair)>;
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_LOOK_UP_KERNEL_UTIL_ENTRY, FLOATING_DATA_TYPE_SEQ,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_GATHER_KERNEL_UTIL_ENTRY, FLOATING_DATA_TYPE_SEQ,
                                  INT_DATA_TYPE_SEQ);
-#undef MAKE_LOOK_UP_KERNEL_UTIL_ENTRY
+#undef MAKE_GATHER_KERNEL_UTIL_ENTRY
 
 }  // namespace oneflow
