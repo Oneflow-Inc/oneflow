@@ -32,10 +32,12 @@ void BroadcastBinaryOp::InferBlobDescs(
     const auto& a_shape = a_blob_desc->shape().CreateLeftExtendedShape(output_num_axes);
     const auto& b_shape = b_blob_desc->shape().CreateLeftExtendedShape(output_num_axes);
     *out_blob_desc = *a_blob_desc;
+    Shape out_shape(a_shape);
     FOR_RANGE(int64_t, i, 0, a_shape.NumAxes()) {
       CHECK(a_shape.At(i) == 1 || b_shape.At(i) == 1 || a_shape.At(i) == b_shape.At(i));
-      out_blob_desc->mut_shape().Set(i, std::max(a_shape.At(i), b_shape.At(i)));
+      out_shape.Set(i, std::max(a_shape.At(i), b_shape.At(i)));
     }
+    out_blob_desc->mut_shape() = out_shape;
   }
 }
 
