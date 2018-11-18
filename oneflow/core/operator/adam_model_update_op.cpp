@@ -3,8 +3,8 @@
 namespace oneflow {
 
 void AdamModelUpdateOp::MdUpdtVirtualInitFromOpConf() {
-  EnrollDataTmpBn("beta1_t");
-  EnrollDataTmpBn("beta2_t");
+  EnrollForwardModelBn("beta1_t");
+  EnrollForwardModelBn("beta2_t");
   EnrollDataTmpBn("m");
   EnrollDataTmpBn("v");
 }
