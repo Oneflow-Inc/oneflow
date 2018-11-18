@@ -615,6 +615,7 @@ message DefineTestBlobOpConf {
   optional int64 dim1_valid_num = 6;
   optional int64 dim2_valid_num = 7;
   repeated int64 record_id_in_device_piece = 8;
+  optional bool has_diff = 9 [default = false];
 }
 
 message NormalizationOpConf {
