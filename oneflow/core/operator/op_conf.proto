@@ -243,6 +243,17 @@ message SparseCrossEntropyLossOpConf {
   optional string weight = 6;
 }
 
+message SigmoidCrossEntropyLossOpConf {
+  required string prediction = 1;
+  required string label = 2;
+  required string loss = 3;
+  optional bool normalize = 4 [default = true];
+  optional float scale = 5 [default = 1.0];
+  optional LossReductionType reduction = 6 [default = kSumOverN];
+  optional float weight_scalar = 7 [default = 1.0];
+  optional string weight = 8;
+}
+
 message ConcatOpConf {
   repeated string in = 1;
   required string out = 2;
@@ -874,12 +885,12 @@ message DebugOpConf {
   optional string part_name_prefix = 5 [default = "part-"];
   optional int32 part_name_suffix_length = 6 [default = -1];
   oneof const_out {
-      string const_out_feature_load_filepath = 7;
-      Feature const_out_feature = 8;
+    string const_out_feature_load_filepath = 7;
+    Feature const_out_feature = 8;
   }
   oneof const_in_diff {
-      string const_in_diff_feature_load_filepath = 9;
-      Feature const_in_diff_feature = 10;
+    string const_in_diff_feature_load_filepath = 9;
+    Feature const_in_diff_feature = 10;
   }
 }
 
@@ -914,7 +925,7 @@ message OperatorConf {
     SharedModelDiffAddOpConf shared_model_diff_add_conf = 120;
     CastOpConf cast_conf = 121;
     VariableOpConf variable_conf = 122;
-    
+
     // domain op
     TransposeOpConf transpose_conf = 201;
     ReshapeOpConf reshape_conf = 202;
@@ -972,6 +983,7 @@ message OperatorConf {
     LayerNormOpConf layer_norm_conf = 254;
     ConstantOpConf constant_conf = 255;
     DebugOpConf debug_conf = 256;
+    SigmoidCrossEntropyLossOpConf sigmoid_cross_entropy_loss_conf = 257;
   }
 }
 
