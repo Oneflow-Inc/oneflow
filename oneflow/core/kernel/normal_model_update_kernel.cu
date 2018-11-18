@@ -35,6 +35,7 @@ class NormalMdUpdateKernelUtil<DeviceType::kGPU, T> final {
                                BnInOp2Blob("global_norm")->ByteSizeOfDataContentField());
       KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, model_diff, 1, model_diff, 1, global_norm);
       KernelUtil<DeviceType::kGPU, T>::Sqrt(ctx, n, global_norm, global_norm);
+      KernelUtil<DeviceType::kGPU, T>::Div(ctx, n, global_norm, batch_instance_num_ptr);
     }
     ClipByGlobalNormGpu<T>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
