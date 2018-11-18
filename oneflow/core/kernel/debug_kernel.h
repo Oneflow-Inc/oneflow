@@ -24,6 +24,8 @@ class DebugKernel final : public KernelIf<DeviceType::kCPU> {
 
   std::unique_ptr<PersistentOutStream> in_blob_out_stream_;
   std::unique_ptr<PersistentOutStream> out_diff_blob_out_stream_;
+  Feature const_out_blob_feature_;
+  Feature const_in_diff_blob_feature_;
 };
 
 }  // namespace oneflow
