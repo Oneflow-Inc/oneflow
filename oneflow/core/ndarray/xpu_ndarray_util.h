@@ -5,6 +5,7 @@
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
 #include "oneflow/core/ndarray/ndarray_reduce.h"
 #include "oneflow/core/ndarray/ndarray_apply_unary.h"
+#include "oneflow/core/ndarray/ndarray_apply_broadcast_unary.h"
 #include "oneflow/core/ndarray/ndarray_apply_broadcast_binary.h"
 #include "oneflow/core/ndarray/xpu_reduced_ndarray.h"
 #include "oneflow/core/common/switch_func.h"
@@ -14,6 +15,20 @@ namespace oneflow {
 
 template<DeviceType device_type, typename T>
 struct XpuNdArrayUtil final {
+  template<const T (*unary_func)(const T)>
+  struct Unary final {
+    template<int NDIMS>
+    static void BroadcastApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
+                               const XpuVarNdarray<const T>& x) {
+      return NdArrayApplyBroadcastUnary<device_type, T, NDIMS, unary_func>::Apply(ctx, y, x);
+    }
+#define DEFINE_NDARRAY_BROADCAST_UNARY(func_name, NDIMS) \
+  XpuNdArrayUtil<device_type, T>::Unary<unary_func>::func_name<NDIMS>
+    DEFINE_STATIC_SWITCH_FUNC(void, BroadcastApply, DEFINE_NDARRAY_BROADCAST_UNARY,
+                              MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
+#undef DEFINE_NDARRAY_BROADCAST_UNARY
+  };
+
   template<const T (*binary_func)(const T, const T)>
   struct Binary final {
     template<int NDIMS>

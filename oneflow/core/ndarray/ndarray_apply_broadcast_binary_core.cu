@@ -5,7 +5,7 @@ namespace oneflow {
 namespace {
 
 template<typename T, int NDIMS, const T (*binary_func)(const T, const T)>
-__global__ void GpuBroadcastBinaryFunc(XpuVarNdarray<T> y, const XpuVarNdarray<const T> a,
+__global__ void GpuBroadcastBinaryFunc(const XpuVarNdarray<T> y, const XpuVarNdarray<const T> a,
                                        const XpuVarNdarray<const T> b) {
   NdArrayApplyBroadcastBinaryCore<T, NDIMS, binary_func>::Apply(y, a, b);
 }
