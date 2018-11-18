@@ -9,9 +9,7 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-void LoadAndDecode(Blob* blob, const std::string& serialized_feature) {
-  Feature feature;
-  feature.ParseFromArray(serialized_feature.c_str(), serialized_feature.size());
+void Decode(Blob* blob, const Feature& feature) {
   OFRecordDecoderImpl<EncodeCase::kRaw, T> decoder;
   decoder.ReadOneCol(nullptr, feature, BlobConf(), 0, blob->mut_dptr<T>(), blob->shape().elem_cnt(),
                      []() { return 0; });
@@ -21,7 +19,7 @@ template<typename T>
 void EncodeAndDump(const Blob* blob, PersistentOutStream* out_stream) {
   Feature feature;
   OFRecordEncoderImpl<EncodeCase::kRaw, T> encoder;
-  encoder.EncodeOneCol(nullptr, blob, 0, feature, "", blob->shape().elem_cnt());
+  encoder.EncodeBlob(nullptr, blob, &feature);
   *out_stream << feature;
   out_stream->Flush();
 }
@@ -61,8 +59,8 @@ void DebugKernel<T>::ForwardDataContent(
   if (conf.has_in_blob_dump_dir()) { EncodeAndDump<T>(in_blob, in_blob_out_stream_.get()); }
   if (conf.const_out_case() == DebugOpConf::ConstOutCase::CONST_OUT_NOT_SET) {
     out_blob->CopyDataContentFrom(ctx.device_ctx, in_blob);
-  } else if (conf.has_const_serialized_out_feature()) {
-    LoadAndDecode<T>(out_blob, conf.const_serialized_out_feature());
+  } else if (conf.has_const_out_feature()) {
+    Decode<T>(out_blob, conf.const_out_feature());
   } else {
     UNIMPLEMENTED();
   }
@@ -79,8 +77,8 @@ void DebugKernel<T>::BackwardDataContent(
   }
   if (conf.const_in_diff_case() == DebugOpConf::ConstInDiffCase::CONST_IN_DIFF_NOT_SET) {
     in_diff_blob->CopyDataContentFrom(ctx.device_ctx, out_diff_blob);
-  } else if (conf.has_const_serialized_in_diff_feature()) {
-    LoadAndDecode<T>(in_diff_blob, conf.const_serialized_in_diff_feature());
+  } else if (conf.has_const_in_diff_feature()) {
+    Decode<T>(in_diff_blob, conf.const_in_diff_feature());
   } else {
     UNIMPLEMENTED();
   }

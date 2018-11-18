@@ -4,6 +4,7 @@ package oneflow;
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/record/image.proto";
+import "oneflow/core/record/record.proto";
 import "oneflow/core/job/resource.proto";
 import "oneflow/core/register/logical_blob_id.proto";
 
@@ -864,12 +865,12 @@ message DebugOpConf {
   optional string part_name_prefix = 5 [default = "part-"];
   optional int32 part_name_suffix_length = 6 [default = -1];
   oneof const_out {
-      string const_out_load_filepath = 7;
-      string const_serialized_out_feature = 8;
+      string const_out_feature_load_filepath = 7;
+      Feature const_out_feature = 8;
   }
   oneof const_in_diff {
-      string const_in_diff_load_filepath = 9;
-      string const_serialized_in_diff_feature = 10;
+      string const_in_diff_feature_load_filepath = 9;
+      Feature const_in_diff_feature = 10;
   }
 }
 
