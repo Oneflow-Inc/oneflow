@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-template <DeviceType device_type, typename T>
+template<DeviceType device_type, typename T>
 class OneHotKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OneHotKernel)
@@ -16,10 +16,14 @@ class OneHotKernel final : public KernelIf<device_type> {
   const PbMessage& GetCustomizedOpConf() const override;
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void BackwardDataContent(const KernelCtx& ctx,
-                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
-}
+template<DeviceType device_type, typename T, typename IndexT>
+struct OneHotKernelUtil final {
+  static void Forward(DeviceCtx* ctx, const IndexT* indices, int64_t num_indices, int64_t depth,
+                      T* out);
+};
 
-#endif //ONEFLOW_CORE_KERNEL_ONE_HOT_KERNEL_H_
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_KERNEL_ONE_HOT_KERNEL_H_
