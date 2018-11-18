@@ -17,6 +17,7 @@ class XpuVarNdarray final {
         ptr_(blob->dptr<typename std::remove_const<T>::type>()) {}
   explicit XpuVarNdarray(Blob* blob, int ndims_extend_to)
       : shape_(blob->shape().CreateLeftExtendedShape(ndims_extend_to)), ptr_(blob->mut_dptr<T>()) {}
+  XpuVarNdarray(const Shape& shape, T* ptr) : shape_(shape), ptr_(ptr) {}
   OF_DEVICE_FUNC ALWAYS_INLINE XpuVarNdarray(const XpuVarNdarray&) = default;
   OF_DEVICE_FUNC ALWAYS_INLINE XpuVarNdarray(const ExecShape& shape, T* ptr)
       : shape_(shape), ptr_(ptr) {}
