@@ -8,6 +8,7 @@ void MeanOp::InitFromOpConf() {
   EnrollOutputBn("out");
   EnrollConstBufBn("mean_multiplier");
   EnrollBwBufBn("bw_tmp");
+  EnrollFwBufBn("fw_tmp");
 }
 
 void MeanOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -19,7 +20,7 @@ void MeanOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   int64_t reduced_dim_size = dim_vec.back();  // only calc mean on final dim now
   dim_vec.back() = 1;
   out_blob->mut_shape() = Shape(std::move(dim_vec));
-
+  *GetBlobDesc4BnInOp("fw_tmp") = *in_blob;
   GetBlobDesc4BnInOp("mean_multiplier")->mut_shape() = Shape({reduced_dim_size, 1});
 }
 

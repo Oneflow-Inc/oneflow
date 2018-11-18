@@ -1,5 +1,6 @@
 #include "oneflow/core/kernel/mean_kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/ndarray/xpu_ndarray_util.h"
 
 namespace oneflow {
 
@@ -7,20 +8,16 @@ template<DeviceType device_type, typename T>
 void MeanKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
-  const Blob* mean_mul_blob = BnInOp2Blob("mean_multiplier");
   Blob* out_blob = BnInOp2Blob("out");
-  size_t mean_dim_size = in_blob->shape().dim_vec().back();
-
-  // out = in * mean_mul
-  const int k = mean_dim_size;
-  const int m = in_blob->shape().elem_cnt() / k;
-  const int n = 1;
-  KernelUtil<device_type, T>::OFGemm(ctx.device_ctx, CblasNoTrans, CblasNoTrans, m, n, k, 1.0,
-                                     in_blob->dptr<T>(), mean_mul_blob->dptr<T>(), 0.0,
-                                     out_blob->mut_dptr<T>());
+  size_t count = in_blob->shape().elem_cnt() / out_blob->shape().elem_cnt();
+  Blob* fw_tmp_blob = BnInOp2Blob("fw_tmp");
+  size_t num_axes = in_blob->shape().NumAxes();
+  XpuNdArrayUtil<device_type, T>::SwitchReduce(
+      SwitchCase(num_axes), ctx.device_ctx, XpuVarNdarray<T>(out_blob, num_axes),
+      XpuVarNdarray<const T>(in_blob, num_axes), XpuVarNdarray<T>(fw_tmp_blob, num_axes));
 
   KernelUtil<device_type, T>::Div(ctx.device_ctx, out_blob->shape().elem_cnt(),
-                                  out_blob->mut_dptr<T>(), static_cast<T>(mean_dim_size));
+                                  out_blob->mut_dptr<T>(), static_cast<T>(count));
 }
 
 template<DeviceType device_type, typename T>
