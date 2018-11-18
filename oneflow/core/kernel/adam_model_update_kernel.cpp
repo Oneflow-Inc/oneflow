@@ -25,6 +25,7 @@ void AdamMdUpdateKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937* random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const auto& adam_conf = this->op_conf().normal_mdupdt_conf().user_conf().adam_conf();
+  if (!adam_conf.correct_deviation()) { return; }
   InitializerConf beta1_init_conf;
   InitializerConf beta2_init_conf;
   beta1_init_conf.mutable_constant_conf()->set_value(adam_conf.beta1());
@@ -39,6 +40,8 @@ template<DeviceType device_type, typename T>
 void AdamMdUpdateKernel<device_type, T>::InitModelBlobsWithDir(
     DeviceCtx* ctx, int32_t part_id, int32_t part_num, const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const auto& adam_conf = this->op_conf().normal_mdupdt_conf().user_conf().adam_conf();
+  if (!adam_conf.correct_deviation()) { return; }
   Blob* beta1_t_blob = BnInOp2Blob("beta1_t");
   Blob* beta2_t_blob = BnInOp2Blob("beta2_t");
   KernelUtil<device_type, T>::InitializeWithDir(
@@ -64,16 +67,19 @@ void AdamMdUpdateKernel<device_type, T>::UpdateModel(
     Memset<device_type>(ctx, m_blob->mut_dptr<T>(), 0, m_blob->ByteSizeOfDataContentField());
     Memset<device_type>(ctx, v_blob->mut_dptr<T>(), 0, v_blob->ByteSizeOfDataContentField());
   } else {
-    KernelUtil<device_type, T>::Scal(ctx, 1, static_cast<T>(adam_conf.beta1()),
-                                     beta1_t_blob->mut_dptr<T>(), 1);
-    KernelUtil<device_type, T>::Scal(ctx, 1, static_cast<T>(adam_conf.beta2()),
-                                     beta2_t_blob->mut_dptr<T>(), 1);
+    if (adam_conf.correct_deviation()) {
+      KernelUtil<device_type, T>::Scal(ctx, 1, static_cast<T>(adam_conf.beta1()),
+                                       beta1_t_blob->mut_dptr<T>(), 1);
+      KernelUtil<device_type, T>::Scal(ctx, 1, static_cast<T>(adam_conf.beta2()),
+                                       beta2_t_blob->mut_dptr<T>(), 1);
+    }
   }
   AdamMdUpdateKernelUtil<device_type, T>::UpdateModel(
       ctx, model_blob->shape().elem_cnt(), batch_instance_num_ptr, learning_rate, l1, l2,
       static_cast<T>(adam_conf.beta1()), static_cast<T>(adam_conf.beta2()),
       static_cast<T>(adam_conf.epsilon()), adam_conf.correct_deviation(), next_model_vid,
-      beta1_t_blob->dptr<T>(), beta2_t_blob->dptr<T>(), BnInOp2Blob("model_diff")->mut_dptr<T>(),
+      (beta1_t_blob ? beta1_t_blob->dptr<T>() : nullptr),
+      (beta2_t_blob ? beta2_t_blob->dptr<T>() : nullptr), BnInOp2Blob("model_diff")->mut_dptr<T>(),
       model_blob->mut_dptr<T>(), m_blob->mut_dptr<T>(), v_blob->mut_dptr<T>());
 }
 

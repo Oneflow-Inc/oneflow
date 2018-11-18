@@ -3,10 +3,12 @@
 namespace oneflow {
 
 void AdamModelUpdateOp::MdUpdtVirtualInitFromOpConf() {
-  EnrollForwardModelBn("beta1_t");
-  EnrollForwardModelBn("beta2_t");
   EnrollDataTmpBn("m");
   EnrollDataTmpBn("v");
+  if (this->op_conf().normal_mdupdt_conf().user_conf().adam_conf().correct_deviation()) {
+    EnrollForwardModelBn("beta1_t");
+    EnrollForwardModelBn("beta2_t");
+  }
 }
 
 void AdamModelUpdateOp::InferBlobDescs(
@@ -18,10 +20,12 @@ void AdamModelUpdateOp::InferBlobDescs(
   *GetBlobDesc4BnInOp("m") = *model_blob_desc;
   *GetBlobDesc4BnInOp("v") = *model_blob_desc;
 
-  *GetBlobDesc4BnInOp("beta1_t") = *model_blob_desc;
-  *GetBlobDesc4BnInOp("beta2_t") = *model_blob_desc;
-  GetBlobDesc4BnInOp("beta1_t")->mut_shape() = Shape({1});
-  GetBlobDesc4BnInOp("beta2_t")->mut_shape() = Shape({1});
+  if (this->op_conf().normal_mdupdt_conf().user_conf().adam_conf().correct_deviation()) {
+    *GetBlobDesc4BnInOp("beta1_t") = *model_blob_desc;
+    *GetBlobDesc4BnInOp("beta2_t") = *model_blob_desc;
+    GetBlobDesc4BnInOp("beta1_t")->mut_shape() = Shape({1});
+    GetBlobDesc4BnInOp("beta2_t")->mut_shape() = Shape({1});
+  }
 }
 
 REGISTER_CLASS(NormalModelUpdateOpUserConf::kAdamConf, NormalModelUpdtOp, AdamModelUpdateOp);
