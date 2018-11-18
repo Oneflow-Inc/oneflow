@@ -9,7 +9,9 @@ template<typename T>
 void UpdateMomentEstimate(int64_t n, T beta, int32_t p, const T* model_diff, const T* beta_t,
                           T* momentum) {
   FOR_RANGE(int64_t, i, 0, n) {
+    // Update biased moment estimate
     momentum[i] = beta * momentum[i] + (1 - beta) * std::pow(model_diff[i], p);
+    // Correct deviation of moment estimate
     momentum[i] = momentum[i] / (1 - *beta_t);
   }
 }
