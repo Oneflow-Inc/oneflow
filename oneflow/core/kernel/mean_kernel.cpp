@@ -40,15 +40,6 @@ void MeanKernel<device_type, T>::BackwardDataContent(
       XpuVarNdarray<const T>(in_diff_blob->shape(), bw_tmp_blob->dptr<T>()));
 }
 
-template<DeviceType device_type, typename T>
-void MeanKernel<device_type, T>::InitConstBufBlobs(
-    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  InitializerConf mean_multiplier_initializer_conf;
-  mean_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
-  KernelUtil<device_type, T>::InitializeWithConf(ctx, mean_multiplier_initializer_conf, 0,
-                                                 BnInOp2Blob("mean_multiplier"));
-}
-
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMeanConf, MeanKernel, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
