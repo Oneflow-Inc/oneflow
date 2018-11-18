@@ -4,7 +4,7 @@ namespace oneflow {
 
 void GatherOp::InitFromOpConf() {
   CHECK(op_conf().has_gather_conf());
-  EnrollInputBn("indices");
+  EnrollInputBn("indices", false);
   EnrollInputBn("in");
   EnrollOutputBn("out");
 }
