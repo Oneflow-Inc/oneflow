@@ -2,10 +2,19 @@
 
 namespace oneflow {
 
+const PbMessage& AdamModelUpdateOp::GetCustomizedConf() const {
+  return op_conf().normal_mdupdt_conf().user_conf().adam_conf();
+}
+
 void AdamModelUpdateOp::MdUpdtVirtualInitFromOpConf() {
+  CHECK_GE(GetValFromCustomizedConf<float>("beta1"), 0);
+  CHECK_LT(GetValFromCustomizedConf<float>("beta1"), 1);
+  CHECK_GE(GetValFromCustomizedConf<float>("beta2"), 0);
+  CHECK_LT(GetValFromCustomizedConf<float>("beta2"), 1);
+
   EnrollDataTmpBn("m");
   EnrollDataTmpBn("v");
-  if (this->op_conf().normal_mdupdt_conf().user_conf().adam_conf().correct_deviation()) {
+  if (GetValFromCustomizedConf<bool>("do_bias_correction")) {
     EnrollForwardModelBn("beta1_t");
     EnrollForwardModelBn("beta2_t");
   }
@@ -20,7 +29,7 @@ void AdamModelUpdateOp::InferBlobDescs(
   *GetBlobDesc4BnInOp("m") = *model_blob_desc;
   *GetBlobDesc4BnInOp("v") = *model_blob_desc;
 
-  if (this->op_conf().normal_mdupdt_conf().user_conf().adam_conf().correct_deviation()) {
+  if (GetValFromCustomizedConf<bool>("do_bias_correction")) {
     *GetBlobDesc4BnInOp("beta1_t") = *model_blob_desc;
     *GetBlobDesc4BnInOp("beta2_t") = *model_blob_desc;
     GetBlobDesc4BnInOp("beta1_t")->mut_shape() = Shape({1});
