@@ -402,7 +402,7 @@ message WarmupConf {
 }
 
 message ClipByGlobalNorm {
-  required float clip_radio = 1;
+  required float clip_ratio = 1;
   optional float global_norm = 2;
 }
 

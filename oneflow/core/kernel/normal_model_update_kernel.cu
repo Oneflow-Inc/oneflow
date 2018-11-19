@@ -7,10 +7,10 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void ClipByGlobalNormGpu(int64_t n, const T clip_radio, const T* global_norm,
+__global__ void ClipByGlobalNormGpu(int64_t n, const T clip_ratio, const T* global_norm,
                                     T* model_diff) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    model_diff[i] = model_diff[i] * clip_radio / max(*global_norm, clip_radio);
+    model_diff[i] = model_diff[i] * clip_ratio / max(*global_norm, clip_ratio);
   }
 }
 
@@ -36,7 +36,7 @@ class NormalMdUpdateKernelUtil<DeviceType::kGPU, T> final {
     }
     ClipByGlobalNormGpu<T>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            n, static_cast<T>(conf.clip_radio()), global_norm, model_diff);
+            n, static_cast<T>(conf.clip_ratio()), global_norm, model_diff);
   }
 };
 
