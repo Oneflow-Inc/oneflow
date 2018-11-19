@@ -28,8 +28,6 @@ class NormalMdUpdateKernelUtil<DeviceType::kGPU, T> final {
     if (conf.has_global_norm()) {
       *global_norm = static_cast<T>(conf.global_norm());
     } else {
-      Memset<DeviceType::kGPU>(ctx, global_norm, 0,
-                               BnInOp2Blob("global_norm")->ByteSizeOfDataContentField());
       KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, model_diff, 1, model_diff, 1, global_norm);
       KernelUtil<DeviceType::kGPU, T>::Sqrt(ctx, n, global_norm, global_norm);
       KernelUtil<DeviceType::kGPU, T>::Div(ctx, n, global_norm, batch_instance_num_ptr);
