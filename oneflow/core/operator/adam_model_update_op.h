@@ -11,11 +11,10 @@ class AdamModelUpdateOp final : public NormalModelUpdtOp {
   AdamModelUpdateOp() = default;
   ~AdamModelUpdateOp() = default;
 
-  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override;
-
  private:
   void MdUpdtVirtualInitFromOpConf() override;
+  void MdUpdtVirtualInferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                   const ParallelContext* parallel_ctx) const override;
 };
 
 }  // namespace oneflow

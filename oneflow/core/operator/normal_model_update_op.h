@@ -10,12 +10,17 @@ class NormalModelUpdtOp : public Operator {
   OF_DISALLOW_COPY_AND_MOVE(NormalModelUpdtOp);
   virtual ~NormalModelUpdtOp() = default;
 
-  virtual void InitFromOpConf();
+  void InitFromOpConf() override;
+  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                      const ParallelContext* parallel_ctx) const override;
   const PbMessage& GetCustomizedConf() const override;
 
  protected:
   NormalModelUpdtOp() = default;
   virtual void MdUpdtVirtualInitFromOpConf() {}
+  virtual void MdUpdtVirtualInferBlobDescs(
+      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext*) const {}
 
  private:
   LogicalBlobId obn2lbi(const std::string& output_bn) const override;
