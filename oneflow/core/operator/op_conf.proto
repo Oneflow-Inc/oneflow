@@ -779,6 +779,11 @@ message SqrtOpConf {
   required string out = 2;
 }
 
+message RsqrtOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
 message SquareOpConf {
   required string in = 1;
   required string out = 2;
@@ -969,14 +974,8 @@ message OperatorConf {
     LogCounterOpConf log_counter_conf = 240;
     GeluOpConf gelu_conf = 241;
     GatherOpConf gather_conf = 242;
-    SqrtOpConf sqrt_conf = 243;
-    SquareOpConf square_conf = 244;
     ConstScalarOpConf const_scalar_conf = 245;
     ConstRangeOpConf const_range_conf = 246;
-    BroadcastAddOpConf broadcast_add_conf = 247;
-    BroadcastSubOpConf broadcast_sub_conf = 248;
-    BroadcastMulOpConf broadcast_mul_conf = 249;
-    BroadcastDivOpConf broadcast_div_conf = 250;
     MeanOpConf mean_conf = 251;
     SliceOpConf slice_conf = 252;
     BiasAddOpConf bias_add_conf = 253;
@@ -984,6 +983,15 @@ message OperatorConf {
     ConstantOpConf constant_conf = 255;
     DebugOpConf debug_conf = 256;
     SigmoidCrossEntropyLossOpConf sigmoid_cross_entropy_loss_conf = 257;
+
+    // math op
+    BroadcastAddOpConf broadcast_add_conf = 500;
+    BroadcastSubOpConf broadcast_sub_conf = 501;
+    BroadcastMulOpConf broadcast_mul_conf = 502;
+    BroadcastDivOpConf broadcast_div_conf = 503;
+    SquareOpConf square_conf = 504;
+    SqrtOpConf sqrt_conf = 505;
+    RsqrtOpConf rsqrt_conf = 506;
   }
 }
 
