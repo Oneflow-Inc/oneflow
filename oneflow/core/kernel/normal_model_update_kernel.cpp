@@ -238,8 +238,8 @@ class NormalMdUpdateKernelUtil<DeviceType::kCPU, T> final {
     }
     FOR_RANGE(int64_t, i, 0, n) {
       model_diff_blob->mut_dptr<T>()[i] =
-          model_diff_blob->dptr<T>()[i] * conf.clip_ratio()
-          / std::max(*global_norm, static_cast<T>(conf.clip_ratio()));
+          model_diff_blob->dptr<T>()[i] * conf.clip_norm()
+          / std::max(*global_norm, static_cast<T>(conf.clip_norm()));
     }
   }
 };
