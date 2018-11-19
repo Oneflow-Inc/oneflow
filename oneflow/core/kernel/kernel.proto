@@ -151,6 +151,10 @@ message ConstantKernelConf {
   required uint32 random_seed = 2;
 }
 
+message GatherKernelConf {
+  required int64 axis = 1;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
@@ -188,5 +192,6 @@ message KernelConf {
     AccuracyKernelConf accuracy_conf = 401;
     SliceKernelConf slice_conf = 402;
     ConstantKernelConf constant_conf = 403;
+    GatherKernelConf gather_conf = 404;
   }
 }

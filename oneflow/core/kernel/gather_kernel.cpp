@@ -10,7 +10,7 @@ const PbMessage& GatherKernel<device_type, T>::GetCustomizedOpConf() const {
 template<DeviceType device_type, typename T>
 void GatherKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const int64_t axis = this->op_conf().gather_conf().axis();
+  const int64_t axis = this->kernel_conf().gather_conf().axis();
   const Blob* indices_blob = BnInOp2Blob("indices");
   const int64_t num_indices = indices_blob->shape().elem_cnt();
   const Blob* in_blob = BnInOp2Blob("in");
@@ -34,7 +34,7 @@ void GatherKernel<device_type, T>::ForwardDataContent(
 template<DeviceType device_type, typename T>
 void GatherKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const int64_t axis = this->op_conf().gather_conf().axis();
+  const int64_t axis = this->kernel_conf().gather_conf().axis();
   const Blob* indices_blob = BnInOp2Blob("indices");
   const int64_t num_indices = indices_blob->shape().elem_cnt();
   const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));

@@ -15,13 +15,10 @@ void GatherOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
                               const ParallelContext* parallel_ctx) const {
   const BlobDesc* indices = GetBlobDesc4BnInOp("indices");
   CHECK(IsIntegralDataType(indices->data_type()));
-  CHECK_GE(indices->shape().NumAxes(), 1);
+  CHECK_GT(indices->shape().NumAxes(), 0);
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
-  CHECK_GE(in->shape().NumAxes(), 1);
-  int64_t axis = op_conf().gather_conf().axis();
-  if (axis < 0) { axis += in->shape().NumAxes(); }
-  CHECK_GE(axis, 0);
-  CHECK_LT(axis, in->shape().NumAxes());
+  CHECK_GT(in->shape().NumAxes(), 0);
+  const int64_t axis = GetAxis(in);
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   *out = *in;
   std::vector<int64_t> dim_vec;
@@ -32,6 +29,21 @@ void GatherOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
   dim_vec.insert(dim_vec.end(), in->shape().dim_vec().cbegin() + axis + 1,
                  in->shape().dim_vec().end());
   out->mut_shape() = Shape(dim_vec);
+}
+
+void GatherOp::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+  kernel_conf->mutable_gather_conf()->set_axis(GetAxis(GetBlobDesc4BnInOp("in")));
+}
+
+int64_t GatherOp::GetAxis(const BlobDesc* in_blob_desc) const {
+  const GatherOpConf& conf = op_conf().gather_conf();
+  const int64_t axis =
+      conf.axis() < 0 ? in_blob_desc->shape().NumAxes() + conf.axis() : conf.axis();
+  CHECK_GE(axis, 0);
+  CHECK_LT(axis, in_blob_desc->shape().NumAxes());
+  return axis;
 }
 
 REGISTER_OP(OperatorConf::kGatherConf, GatherOp);
