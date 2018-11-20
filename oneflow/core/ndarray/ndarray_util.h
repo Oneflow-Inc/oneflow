@@ -23,7 +23,7 @@ namespace oneflow {
 #endif
 
 #if defined(__CUDACC__)
-OF_DEVICE_FUNC inline void XpuSyncThreads() { __syncthreads(); }
+OF_DEVICE_FUNC void XpuSyncThreads() { __syncthreads(); }
 #else
 inline void XpuSyncThreads() {}
 #endif
