@@ -72,6 +72,7 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   ExecNode* fw_node_;
 
   std::unique_ptr<OpContext> op_ctx_;
+  HashMap<std::string, Shape> bn_in_op2origin_shape_;
 };
 
 class ExecGraph final : public Graph<ExecNode, ExecEdge> {

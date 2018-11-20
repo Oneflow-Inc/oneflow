@@ -155,8 +155,7 @@ message KernelConf {
   required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
   required DataType data_type = 3;
-  optional ActivationType forward_activation = 4 [default = kNone];
-  optional ActivationType backward_activation = 5 [default = kNone];
+  map<string, ShapeProto> bn_in_op2origin_shape = 4;
   optional bool need_do_data_id = 6 [default = false];
   optional bool need_do_col_num = 7 [default = false];
   optional bool need_do_opaque_header = 8 [default = false];

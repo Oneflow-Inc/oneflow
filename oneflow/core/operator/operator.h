@@ -115,7 +115,8 @@ class Operator {
   // Read: shape of input_blobs
   // Write: shape of output_blobs, model_blobs, data_tmp_blobs, const_model_blobs, const_buf_blobs
   void InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                        const ParallelContext*, std::function<void(OpContext*)> EnrollOpCtx) const;
+                        const ParallelContext*, std::function<void(OpContext*)> EnrollOpCtx,
+                        HashMap<std::string, Shape>*) const;
   virtual void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext*,
                               std::function<void(OpContext*)> EnrollOpCtx) const;
@@ -140,7 +141,8 @@ class Operator {
   virtual int32_t ModelSplitAxis() const { return -1; }
   virtual int32_t MaxModelSplitNum() const { return -1; }
   void GenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                     bool is_forward, const ParallelContext*, KernelConf*, const OpContext*) const;
+                     bool is_forward, const ParallelContext*, KernelConf*, const OpContext*,
+                     const HashMap<std::string, Shape>&) const;
 
  protected:
   int64_t cudnn_buf_limit_byte() const;

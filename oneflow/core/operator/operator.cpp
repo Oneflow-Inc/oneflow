@@ -74,10 +74,16 @@ const std::string& Operator::SoleBbbn() const {
 
 void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx,
-                                std::function<void(OpContext*)> EnrollOpCtx) const {
+                                std::function<void(OpContext*)> EnrollOpCtx,
+                                HashMap<std::string, Shape>* bn_in_op2origin_shape) const {
   InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, EnrollOpCtx);
   if (op_attribute_.model_bns().size() > 0) {
     InferTotalInstanceNumDesc(GetBlobDesc4BnInOp, parallel_ctx, EnrollOpCtx);
+  }
+  for (const ReshapeType& type : op_conf().reshape_out_blob()) {
+    BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(type.bn_in_op());
+    CHECK(bn_in_op2origin_shape->insert({type.bn_in_op(), out_blob_desc->shape()}).second);
+    out_blob_desc->mut_shape() = GetShapeFromReshapeTypeConf(type, out_blob_desc->shape());
   }
 }
 
@@ -181,7 +187,8 @@ ActivationType Operator::GetActivationType() const {
 
 void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              bool is_forward, const ParallelContext* parallel_ctx,
-                             KernelConf* kernel_conf, const OpContext* op_ctx) const {
+                             KernelConf* kernel_conf, const OpContext* op_ctx,
+                             const HashMap<std::string, Shape>& bn_in_op2origin_shape) const {
   *(kernel_conf->mutable_op_attribute()) = op_attribute_;
   if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), &BlobDesc::header_is_opaque)) {
     kernel_conf->set_need_do_opaque_header(true);
@@ -231,6 +238,13 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
     data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, output_diff_bns());
   }
   kernel_conf->set_data_type(data_type);
+  for (const auto& pair : bn_in_op2origin_shape) {
+    // kernel_conf->mutable_bn_in_op2origin_shape()->insert({pair.first, ShapeProto()});
+    // pair.second->ToProto(&kernel_conf->mutable_bn_in_op2origin_shape()->at(pair.first));
+    ShapeProto shape_proto;
+    pair.second.ToProto(&shape_proto);
+    CHECK(kernel_conf->mutable_bn_in_op2origin_shape()->insert({pair.first, shape_proto}).second);
+  }
 
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf, op_ctx);
 }

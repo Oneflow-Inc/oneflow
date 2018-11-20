@@ -40,7 +40,8 @@ void ExecNode::UnbindBnWithEmptyRegst() {
 void ExecNode::ToProto(bool is_forward, const ParallelContext* parallel_ctx,
                        ExecNodeProto* ret) const {
   op_->GenKernelConf(GetBlobDesc4BnInOpFunc(), is_forward, parallel_ctx, ret->mutable_kernel_conf(),
-                     op_context());
+                     op_context(),
+                     fw_node_ ? fw_node_->bn_in_op2origin_shape_ : bn_in_op2origin_shape_);
   for (const auto& bn_regst : bn_in_op2regst_) {
     const std::string& bn_in_op = bn_regst.first;
     auto regst = bn_regst.second;
@@ -52,7 +53,8 @@ void ExecNode::ToProto(bool is_forward, const ParallelContext* parallel_ctx,
 
 void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx) {
   op_->InferBlobDescsIf(GetBlobDesc4BnInOpFunc(), parallel_ctx,
-                        [this](OpContext* op_ctx) { op_ctx_.reset(op_ctx); });
+                        [this](OpContext* op_ctx) { op_ctx_.reset(op_ctx); },
+                        &bn_in_op2origin_shape_);
 }
 
 void ExecNode::InferBwBufBlobDescs(const ParallelContext* parallel_ctx) {
