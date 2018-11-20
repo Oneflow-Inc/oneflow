@@ -163,11 +163,8 @@ void RangeInitializer(const RangeInitializerConfT& initializer_conf, uint32_t ra
                            : initializer_conf.axis();
   CHECK_GE(axis, 0);
   CHECK_LT(axis, blob->shape().NumAxes());
-  int64_t before_dim_size = blob->shape().Count(0, axis);
-  int64_t index_dim_size = blob->shape().At(axis);
-  int64_t after_dim_size = blob->shape().Count(axis + 1);
-  RangeInitializer<T>(before_dim_size, index_dim_size, after_dim_size,
-                      static_cast<T>(initializer_conf.start()),
+  RangeInitializer<T>(blob->shape().Count(0, axis), blob->shape().At(axis),
+                      blob->shape().Count(axis + 1), static_cast<T>(initializer_conf.start()),
                       static_cast<T>(initializer_conf.stride()), blob->mut_dptr<T>());
 }
 
