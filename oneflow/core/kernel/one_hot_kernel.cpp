@@ -6,9 +6,9 @@ namespace {
 
 template<DeviceType device_type, typename T, typename K>
 void Forward(DeviceCtx* ctx, const Blob* indices, Blob* out) {
+  const int64_t depth = out->shape().At(out->shape().NumAxes() - 1);
   OneHotKernelUtil<device_type, T, K>::Forward(ctx, indices->dptr<K>(), indices->shape().elem_cnt(),
-                                               out->shape().At(out->shape().NumAxes() - 1),
-                                               out->mut_dptr<T>());
+                                               depth, out->mut_dptr<T>());
 }
 
 }  // namespace
