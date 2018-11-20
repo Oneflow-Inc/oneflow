@@ -16,7 +16,8 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
   float learning_rate = this->op_conf().normal_mdupdt_conf().learning_rate();
   const T* batch_instance_num_ptr = BnInOp2Blob("total_instance_num_diff")->dptr<T>();
   if (conf.has_clip_conf()) {
-    ClipGradient(ctx.device_ctx, conf.clip_conf(), batch_instance_num_ptr, BnInOp2Blob);
+    ClipGradient(ctx.device_ctx, cur_batch_num, conf.clip_conf(), batch_instance_num_ptr,
+                 BnInOp2Blob);
   }
   if (TriggerWarmup(conf, learning_rate, cur_batch_num)) {
     learning_rate = GetWarmupLearningRate(conf.warmup_conf(), learning_rate, cur_batch_num);
@@ -186,11 +187,11 @@ double NormalMdUpdateKernel<device_type, T>::GetWarmupLearningRate(const WarmupC
 
 template<DeviceType device_type, typename T>
 void NormalMdUpdateKernel<device_type, T>::ClipGradient(
-    DeviceCtx* ctx, const ClipConf& conf, const T* batch_instance_num_ptr,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    DeviceCtx* ctx, const int64_t cur_batch_num, const ClipConf& conf,
+    const T* batch_instance_num_ptr, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (conf.has_clip_by_global_norm()) {
-    NormalMdUpdateKernelUtil<device_type, T>::ClipByGlobalNorm(ctx, conf.clip_by_global_norm(),
-                                                               batch_instance_num_ptr, BnInOp2Blob);
+    NormalMdUpdateKernelUtil<device_type, T>::ClipByGlobalNorm(
+        ctx, cur_batch_num, conf.clip_by_global_norm(), batch_instance_num_ptr, BnInOp2Blob);
   } else {
     UNIMPLEMENTED();
   }
@@ -221,14 +222,18 @@ double NormalMdUpdateKernel<device_type, T>::GetDecayedLearningRate(
 template<typename T>
 class NormalMdUpdateKernelUtil<DeviceType::kCPU, T> final {
  public:
-  static void ClipByGlobalNorm(DeviceCtx* ctx, const ClipByGlobalNorm& conf,
-                               const T* batch_instance_num_ptr,
+  static void ClipByGlobalNorm(DeviceCtx* ctx, const int64_t cur_batch_num,
+                               const ClipByGlobalNorm& conf, const T* batch_instance_num_ptr,
                                std::function<Blob*(const std::string&)> BnInOp2Blob) {
     Blob* model_diff_blob = BnInOp2Blob("model_diff");
     int64_t n = model_diff_blob->shape().elem_cnt();
     T* global_norm = BnInOp2Blob("global_norm")->mut_dptr<T>();
     if (conf.has_global_norm()) {
-      *global_norm = static_cast<T>(conf.global_norm());
+      if (cur_batch_num == 0) {
+        *global_norm = static_cast<T>(conf.global_norm());
+      } else {
+        CHECK_EQ(*global_norm, static_cast<T>(conf.global_norm()));
+      }
     } else {
       *global_norm = 0;
       FOR_RANGE(int64_t, i, 0, n) {

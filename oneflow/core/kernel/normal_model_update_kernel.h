@@ -26,15 +26,16 @@ class NormalMdUpdateKernel : public KernelIf<device_type> {
   double GetWarmupLearningRate(const WarmupConf&, double lr, int64_t cur_batch_num) const;
   double GetDecayedLearningRate(const LearningRateDecayConf&, double lr,
                                 int64_t cur_batch_num) const;
-  void ClipGradient(DeviceCtx* ctx, const ClipConf& conf, const T* batch_instance_num_ptr,
+  void ClipGradient(DeviceCtx* ctx, const int64_t cur_batch_num, const ClipConf& conf,
+                    const T* batch_instance_num_ptr,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 };
 
 template<DeviceType device_type, typename T>
 class NormalMdUpdateKernelUtil final {
  public:
-  static void ClipByGlobalNorm(DeviceCtx* ctx, const ClipByGlobalNorm& conf,
-                               const T* batch_instance_num_ptr,
+  static void ClipByGlobalNorm(DeviceCtx* ctx, const int64_t cur_batch_num,
+                               const ClipByGlobalNorm& conf, const T* batch_instance_num_ptr,
                                std::function<Blob*(const std::string&)> BnInOp2Blob);
 };
 

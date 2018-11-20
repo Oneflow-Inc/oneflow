@@ -19,15 +19,21 @@ __global__ void ClipByGlobalNormGpu(int64_t n, const T clip_norm, const T* globa
 template<typename T>
 class NormalMdUpdateKernelUtil<DeviceType::kGPU, T> final {
  public:
-  static void ClipByGlobalNorm(DeviceCtx* ctx, const ClipByGlobalNorm& conf,
-                               const T* batch_instance_num_ptr,
+  static void ClipByGlobalNorm(DeviceCtx* ctx, const int64_t cur_batch_num,
+                               const ClipByGlobalNorm& conf, const T* batch_instance_num_ptr,
                                std::function<Blob*(const std::string&)> BnInOp2Blob) {
     int64_t n = BnInOp2Blob("model_diff")->shape().elem_cnt();
     T* model_diff = BnInOp2Blob("model_diff")->mut_dptr<T>();
     T* global_norm = BnInOp2Blob("global_norm")->mut_dptr<T>();
     if (conf.has_global_norm()) {
-      *global_norm = static_cast<T>(conf.global_norm());
+      if (cur_batch_num == 0) {
+        *global_norm = static_cast<T>(conf.global_norm());
+      } else {
+        CHECK_EQ(*global_norm, static_cast<T>(conf.global_norm()));
+      }
     } else {
+      Memset<DeviceType::kGPU>(ctx, global_norm, 0,
+                               BnInOp2Blob("global_norm")->ByteSizeOfDataContentField());
       KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, model_diff, 1, model_diff, 1, global_norm);
       KernelUtil<DeviceType::kGPU, T>::Sqrt(ctx, n, global_norm, global_norm);
       KernelUtil<DeviceType::kGPU, T>::Div(ctx, n, global_norm, batch_instance_num_ptr);
