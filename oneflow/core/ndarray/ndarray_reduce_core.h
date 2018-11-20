@@ -13,8 +13,6 @@ namespace oneflow {
 template<DeviceType device_type, typename T, int NDIMS>
 struct NdArrayReduceCoreWrapper final {
   static void ReduceAxis(DeviceCtx* ctx, const XpuReducedNdarray<T, NDIMS>& dst_reduced,
-                         const XpuVarNdarray<const T>& x, int axis);
-  static void ReduceAxis(DeviceCtx* ctx, const XpuReducedNdarray<T, NDIMS>& dst_reduced,
                          const XpuReducedNdarray<T, NDIMS>& x, int axis);
 };
 
@@ -41,10 +39,11 @@ struct NdArrayReduceCore final {
                                                            const XpuVarNdarray<const T>& x,
                                                            const int64_t perm[NDIMS],
                                                            int64_t reshape_dim[2]) {
-    XpuNdArrayBuilder<T, NDIMS> ndarray;
-    const auto& x_transposed = ndarray.Transposed(implace, perm);
-    const auto& x_reshaped = ndarray.Reshape<2>(x_transposed, reshape_dim);
+    XpuNdArrayBuilder<const T, NDIMS> const_ndarray;
+    const auto& x_transposed = const_ndarray.Transposed(x, perm);
+    const auto& x_reshaped = const_ndarray.Reshape<2>(x_transposed, reshape_dim);
 
+    XpuNdArrayBuilder<T, NDIMS> ndarray;
     const auto& transposed = ndarray.Transposed(implace, perm);
     const auto& reshaped = ndarray.Reshape<2>(transposed, reshape_dim);
 
@@ -80,9 +79,11 @@ struct NdArrayReduceCore final {
       int64_t new_col_num = old_col_num / 2;
       XPU_BLOAD_THREAD_2D_KERNEL_LOOP(i, j, out_reshape_dim[0], old_col_num) {
         int64_t coord[2] = {i, j};
-        T* ptr = out_reshaped.template Mut<2>(coord);
-        coord[1] += old_col_num;
-        if (coord[1] < new_col_num) { *ptr += out_reshaped.template Get<2>(coord); }
+        if (coord[1] + old_col_num < new_col_num) {
+          T* ptr = out_reshaped.template Mut<2>(coord);
+          coord[1] += old_col_num;
+          *ptr += out_reshaped.template Get<2>(coord);
+        }
       }
       out_reshape_dim[1] = new_col_num;
       XpuSyncThreads();
