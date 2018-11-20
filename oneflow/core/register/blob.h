@@ -21,6 +21,7 @@ class Blob final {
   OF_DISALLOW_COPY_AND_MOVE(Blob);
   Blob(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr);
   Blob(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr);
+  Blob(Blob* from_blob, const Shape& origin_shape);
   virtual ~Blob() = default;
 
   const char* data_id(int32_t no) const;
@@ -84,7 +85,7 @@ class Blob final {
 
   const RtBlobDesc& blob_desc() const { return *blob_desc_; }
   const RtBlobDesc* blob_desc_ptr() const { return blob_desc_; }
-  const Shape& static_shape() const { return blob_desc_->shape(); }
+  const Shape& static_shape() const { return static_shape_; }
   const Shape& shape() const;
   bool IsShapeEmpty() const;
   bool has_dim0_inner_shape() const { return blob_desc_->has_dim0_inner_shape(); }
@@ -165,6 +166,7 @@ class Blob final {
   const RtBlobDesc* blob_desc_;
   Regst* regst_;
   PodPtr header_pod_ptr_;
+  Shape static_shape_;
   mutable Shape dynamic_shape_;
 };
 

@@ -16,6 +16,14 @@ Blob::Blob(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, char* bo
   Init(regst, blob_desc, header_ptr, body_ptr);
 }
 
+Blob::Blob(Blob* from_blob, const Shape& origin_shape)
+    : header_pod_ptr_(from_blob->blob_desc_->header_pod_desc(),
+                      static_cast<char*>(from_blob->header_ptr_)) {
+  Init(from_blob->regst_, from_blob->blob_desc_, static_cast<char*>(from_blob->header_ptr_),
+       static_cast<char*>(from_blob->dptr_));
+  static_shape_ = origin_shape;
+}
+
 void Blob::Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr) {
   is_contiguous_ = (body_ptr == header_ptr + blob_desc->ByteSizeOfBlobHeader());
   regst_ = regst;
@@ -30,6 +38,7 @@ void Blob::Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, cha
       header_pod_ptr_.MutTensorPtr<int64_t>(FieldKey::kRecordIdInDevicePiece, nullptr);
   dptr_ = body_ptr;
   dynamic_shape_ = blob_desc->shape();
+  static_shape_ = blob_desc->shape();
 }
 
 const char* Blob::data_id(int32_t no) const {
@@ -74,38 +83,38 @@ void Blob::set_dim0_valid_num(int64_t no, int64_t val) {
 
 int64_t Blob::dim1_valid_num(int64_t no) const {
   CHECK_GE(no, 0);
-  CHECK_LT(no, blob_desc_->shape().At(0));
+  CHECK_LT(no, static_shape_.At(0));
   int64_t val;
   if (dim1_valid_num_ptr_) {
     val = dim1_valid_num_ptr_[no];
     CHECK_GE(val, 0);
-    CHECK_LE(val, blob_desc_->shape().At(1));
+    CHECK_LE(val, static_shape_.At(1));
   } else {
-    val = blob_desc_->shape().At(1);
+    val = static_shape_.At(1);
   }
   return val;
 }
 void Blob::set_dim1_valid_num(int64_t no, int64_t val) {
   CHECK_NOTNULL(dim1_valid_num_ptr_);
   CHECK_GE(no, 0);
-  CHECK_LT(no, blob_desc_->shape().At(0));
+  CHECK_LT(no, static_shape_.At(0));
   CHECK_GE(val, 0);
-  CHECK_LE(val, blob_desc_->shape().At(1));
+  CHECK_LE(val, static_shape_.At(1));
   dim1_valid_num_ptr_[no] = val;
 }
 
 int64_t Blob::dim2_valid_num(int64_t dim0_idx, int64_t dim1_idx) const {
   CHECK_GE(dim0_idx, 0);
-  CHECK_LT(dim0_idx, blob_desc_->shape().At(0));
+  CHECK_LT(dim0_idx, static_shape_.At(0));
   CHECK_GE(dim1_idx, 0);
-  CHECK_LT(dim1_idx, blob_desc_->shape().At(1));
+  CHECK_LT(dim1_idx, static_shape_.At(1));
   int64_t val;
   if (dim2_valid_num_ptr_) {
-    val = *(dim2_valid_num_ptr_ + dim0_idx * blob_desc_->shape().At(1) + dim1_idx);
+    val = *(dim2_valid_num_ptr_ + dim0_idx * static_shape_.At(1) + dim1_idx);
     CHECK_GE(val, 0);
-    CHECK_LE(val, blob_desc_->shape().At(2));
+    CHECK_LE(val, static_shape_.At(2));
   } else {
-    val = blob_desc_->shape().At(2);
+    val = static_shape_.At(2);
   }
   return val;
 }
@@ -134,12 +143,12 @@ void Blob::set_record_id_in_device_piece(int64_t no, int64_t val) {
 void Blob::set_dim2_valid_num(int64_t dim0_idx, int64_t dim1_idx, int64_t val) {
   CHECK_NOTNULL(dim2_valid_num_ptr_);
   CHECK_GE(dim0_idx, 0);
-  CHECK_LT(dim0_idx, blob_desc_->shape().At(0));
+  CHECK_LT(dim0_idx, static_shape_.At(0));
   CHECK_GE(dim1_idx, 0);
-  CHECK_LT(dim1_idx, blob_desc_->shape().At(1));
+  CHECK_LT(dim1_idx, static_shape_.At(1));
   CHECK_GE(val, 0);
-  CHECK_LE(val, blob_desc_->shape().At(2));
-  *(dim2_valid_num_ptr_ + dim0_idx * blob_desc_->shape().At(1) + dim1_idx) = val;
+  CHECK_LE(val, static_shape_.At(2));
+  *(dim2_valid_num_ptr_ + dim0_idx * static_shape_.At(1) + dim1_idx) = val;
 }
 
 const Shape& Blob::shape() const {
@@ -154,7 +163,7 @@ size_t Blob::ContiguousDim0ValidNum() const {
     contiguous_invalid_instance_num += dim0_inner_shape().Count(1) - valid_num;
     if (valid_num > 0) { break; }
   }
-  return blob_desc_->shape().At(0) - contiguous_invalid_instance_num;
+  return static_shape_.At(0) - contiguous_invalid_instance_num;
 }
 
 bool Blob::IsShapeEmpty() const {
