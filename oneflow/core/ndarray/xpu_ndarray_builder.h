@@ -6,6 +6,8 @@
 #include "oneflow/core/ndarray/xpu_binary_func_ndarray.h"
 #include "oneflow/core/ndarray/xpu_unary_func_ndarray.h"
 #include "oneflow/core/ndarray/xpu_broadcast_ndarray.h"
+#include "oneflow/core/ndarray/xpu_transpose_ndarray.h"
+#include "oneflow/core/ndarray/xpu_reshape_ndarray.h"
 
 namespace oneflow {
 
@@ -31,6 +33,14 @@ class XpuNdArrayBuilder final {
   OF_DEVICE_FUNC XpuReduceNdarray<T, NDIMS, X> Reduce(const ExecShape& shape, const X& x,
                                                       XpuVarNdarray<T>* storage) {
     return XpuReduceNdarray<T, NDIMS, X>(shape, x, storage);
+  }
+  template<typename X>
+  OF_DEVICE_FUNC XpuTransposeNdarray<T, NDIMS, X> Transpose(const X& x, const int64_t perm[NDIMS]) {
+    return XpuTransposeNdarray<T, NDIMS, X>(x, perm);
+  }
+  template<int ndims = NDIMS, typename X>
+  OF_DEVICE_FUNC XpuReshapeNdarray<T, ndims, X> Reshape(const X& x, const int64_t dim[ndims]) {
+    return XpuReshapeNdarray<T, ndims, X>(x, dim);
   }
 };
 
