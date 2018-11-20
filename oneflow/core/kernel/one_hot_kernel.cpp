@@ -2,6 +2,25 @@
 
 namespace oneflow {
 
+namespace {
+
+template<DeviceType device_type, typename T, typename K>
+void Forward(DeviceCtx* ctx, const Blob* indices, Blob* out) {
+  OneHotKernelUtil<device_type, T, K>::Forward(ctx, indices->dptr<K>(), indices->shape().elem_cnt(),
+                                               out->shape().At(out->shape().NumAxes() - 1),
+                                               out->mut_dptr<T>());
+}
+
+}  // namespace
+
+#define MAKE_ONE_HOT_SWITCH_ENTRY(func_name, K) func_name<device_type, T, K>
+template<DeviceType device_type, typename T>
+struct OneHotUtil final {
+  DEFINE_STATIC_SWITCH_FUNC(void, Forward, MAKE_ONE_HOT_SWITCH_ENTRY,
+                            MAKE_DATA_TYPE_CTRV_SEQ(INT_DATA_TYPE_SEQ));
+};
+#undef MAKE_ONE_HOT_SWITCH_ENTRY
+
 template<DeviceType device_type, typename T>
 const PbMessage& OneHotKernel<device_type, T>::GetCustomizedOpConf() const {
   return this->op_conf().one_hot_conf();
@@ -12,33 +31,21 @@ void OneHotKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* indices = BnInOp2Blob("indices");
   Blob* out = BnInOp2Blob("out");
-  const int64_t num_indices = indices->shape().elem_cnt();
-  const int64_t depth = out->shape().At(out->shape().NumAxes() - 1);
-  switch (indices->data_type()) {
-#define ONE_HOT_FORWARD_CASE(type_cpp, type_proto)                                                 \
-  case type_proto:                                                                                 \
-    OneHotKernelUtil<device_type, T, type_cpp>::Forward(ctx.device_ctx, indices->dptr<type_cpp>(), \
-                                                        num_indices, depth, out->mut_dptr<T>());   \
-    break;
-    OF_PP_FOR_EACH_TUPLE(ONE_HOT_FORWARD_CASE, INT_DATA_TYPE_SEQ);
-#undef ONE_HOT_FORWARD_CASE
-    default: UNIMPLEMENTED();
-  }
+  OneHotUtil<device_type, T>::SwitchForward(SwitchCase(indices->data_type()), ctx.device_ctx,
+                                            indices, out);
 }
 
-template<typename T, typename IndexT>
-struct OneHotKernelUtil<DeviceType::kCPU, T, IndexT> final {
-  static void Forward(DeviceCtx* ctx, const IndexT* indices, int64_t num_indices, int64_t depth,
-                      T* out);
+template<typename T, typename K>
+struct OneHotKernelUtil<DeviceType::kCPU, T, K> final {
+  static void Forward(DeviceCtx* ctx, const K* indices, int64_t num_indices, int64_t depth, T* out);
 };
 
-template<typename T, typename IndexT>
-void OneHotKernelUtil<DeviceType::kCPU, T, IndexT>::Forward(DeviceCtx* ctx, const IndexT* indices,
-                                                            int64_t num_indices, int64_t depth,
-                                                            T* out) {
+template<typename T, typename K>
+void OneHotKernelUtil<DeviceType::kCPU, T, K>::Forward(DeviceCtx* ctx, const K* indices,
+                                                       int64_t num_indices, int64_t depth, T* out) {
   Memset<kCPU>(ctx, out, 0, num_indices * depth * sizeof(T));
   FOR_RANGE(int64_t, i, 0, num_indices) {
-    const IndexT idx = indices[i];
+    const K idx = indices[i];
     CHECK_GE(idx, 0);
     CHECK_LT(idx, depth);
     out[i * depth + idx] = OneVal<T>::value;
