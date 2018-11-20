@@ -11,6 +11,7 @@ namespace oneflow {
 class ExecShape final {
  public:
   explicit ExecShape(const Shape& shape);
+  OF_DEVICE_FUNC ExecShape(const int64_t dim[], int num_axes);
   OF_DEVICE_FUNC ExecShape(const ExecShape&) = default;
 
   OF_DEVICE_FUNC int64_t At(int64_t dim) const { return dim_[dim]; }
