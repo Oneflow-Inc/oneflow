@@ -145,10 +145,10 @@ void MsraInitializer(const MsraInitializerConf& initializer_conf, uint32_t rando
 template<typename T>
 void RangeInitializer(int64_t outer_size, int64_t idx_dim_size, int64_t inner_size, T start,
                       T stride, T* out) {
-  FOR_RANGE(int64_t, b, 0, outer_size) {
-    FOR_RANGE(int64_t, r, 0, idx_dim_size) {
-      FOR_RANGE(int64_t, c, 0, inner_size) {
-        *(out + b * idx_dim_size * inner_size + r * inner_size + c) = start + r * stride;
+  FOR_RANGE(int64_t, i, 0, outer_size) {
+    FOR_RANGE(int64_t, j, 0, idx_dim_size) {
+      FOR_RANGE(int64_t, k, 0, inner_size) {
+        *(out + i * idx_dim_size * inner_size + j * inner_size + k) = start + j * stride;
       }
     }
   }
