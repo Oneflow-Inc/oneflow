@@ -468,6 +468,7 @@ KU_FLOATING_METHOD BatchedGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
     KernelUtil<DeviceType::kGPU, T>::OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a + i * a_stride,
                                             b + i * b_stride, beta, c + i * c_stride);
   }
+
 #else
   const int lda = (trans_a == CblasNoTrans) ? k : m;
   const int ldb = (trans_b == CblasNoTrans) ? n : k;
@@ -481,6 +482,7 @@ KU_FLOATING_METHOD BatchedGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
     b_ptrs[i] = b + i * b_stride;
     c_ptrs[i] = c + i * c_stride;
   }
+#if CUDA_VERSION < 9010
   if (std::is_same<type_cpp, float>) {
     cublasSgemmBatched(ctx->cublas_pmd_handle(), cublas_trans_b, cublas_trans_a, n, m, k, &alpha,
                        b_ptrs.data(), ldb, a_ptrs.data(), lda, &beta, c_ptrs, ldc, batch_size);
@@ -490,17 +492,11 @@ KU_FLOATING_METHOD BatchedGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
   } else {
     UNIMPLEMENTED();
   }
-// if (std::is_same<type_cpp, float>) {
-//   cublasSgemmStridedBatched(ctx->cublas_pmd_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
-//                             &alpha, b, ldb, b_stride, a, lda, a_stride, &beta, c, n, c_stride,
-//                             batch_size);
-// } else if (std::is_same<type_cpp, double>) {
-//   cublasDgemmStridedBatched(ctx->cublas_pmd_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
-//                             &alpha, b, ldb, b_stride, a, lda, a_stride, &beta, c, n, c_stride,
-//                             batch_size);
-// } else {
-//   UNIMPLEMENTED();
-// }
+#else
+  cublasGemmBatchedEx(ctx->cublas_pmd_handle(), cublas_trans_b, cublas_trans_a, n, m, k, &alpha,
+                      b_ptrs.data(), CUDA_R_32F, ldb, a_ptrs.data(), CUDA_R_32F, lda, &beta,
+                      c_ptrs.data(), CUDA_R_32F, ldc, batch_size, CUDA_R_32F, CUBLAS_GEMM_DFALT);
+#endif
 #endif
 }
 
