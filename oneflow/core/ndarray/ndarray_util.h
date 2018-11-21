@@ -13,7 +13,17 @@ namespace oneflow {
 #endif
 
 #if defined(__CUDACC__)
-OF_DEVICE_FUNC inline void XpuSyncThreads() { __syncthreads(); }
+#define XPU_BLOAD_THREAD_2D_KERNEL_LOOP(i, j, m, n)     \
+  for (int64_t i = blockIdx.x; i < (m); i += gridDim.x) \
+    for (int64_t j = threadIdx.x; j < (n); j += blockDim.x)
+#else
+#define XPU_BLOAD_THREAD_2D_KERNEL_LOOP(i, j, m, n) \
+  for (int64_t i = 0; i < (m); ++i)                 \
+    for (int64_t j = 0; j < (n); ++j)
+#endif
+
+#if defined(__CUDACC__)
+OF_DEVICE_FUNC void XpuSyncThreads() { __syncthreads(); }
 #else
 inline void XpuSyncThreads() {}
 #endif

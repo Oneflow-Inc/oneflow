@@ -4,6 +4,7 @@ package oneflow;
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/record/image.proto";
+import "oneflow/core/record/record.proto";
 import "oneflow/core/job/resource.proto";
 import "oneflow/core/register/logical_blob_id.proto";
 
@@ -242,6 +243,17 @@ message SparseCrossEntropyLossOpConf {
   optional string weight = 6;
 }
 
+message SigmoidCrossEntropyLossOpConf {
+  required string prediction = 1;
+  required string label = 2;
+  required string loss = 3;
+  optional bool normalize = 4 [default = true];
+  optional float scale = 5 [default = 1.0];
+  optional LossReductionType reduction = 6 [default = kSumOverN];
+  optional float weight_scalar = 7 [default = 1.0];
+  optional string weight = 8;
+}
+
 message ConcatOpConf {
   repeated string in = 1;
   required string out = 2;
@@ -309,6 +321,13 @@ message LARSModelUpdateConf {
   optional float momentum_beta = 1 [default = 0.9];
   optional float epsilon = 2 [default = 1e-9];
   optional float lars_coefficient = 3 [default = 0.0001];
+}
+
+message AdamModelUpdateConf {
+  optional float beta1 = 1 [default = 0.9];
+  optional float beta2 = 2 [default = 0.999];
+  optional float epsilon = 3 [default = 1e-8];
+  optional bool do_bias_correction = 4 [default = false];
 }
 
 message ExponentialDecayConf {
@@ -390,6 +409,7 @@ message NormalModelUpdateOpUserConf {
     MomentumModelUpdateConf momentum_conf = 1001;
     RMSPropModelUpdateConf rmsprop_conf = 1002;
     LARSModelUpdateConf lars_conf = 1003;
+    AdamModelUpdateConf adam_conf = 1004;
   }
 }
 
@@ -614,6 +634,7 @@ message DefineTestBlobOpConf {
   optional int64 dim1_valid_num = 6;
   optional int64 dim2_valid_num = 7;
   repeated int64 record_id_in_device_piece = 8;
+  optional bool has_diff = 9 [default = false];
 }
 
 message NormalizationOpConf {
@@ -759,6 +780,11 @@ message SqrtOpConf {
   required string out = 2;
 }
 
+message RsqrtOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
 message SquareOpConf {
   required string in = 1;
   required string out = 2;
@@ -857,6 +883,23 @@ message ConstantOpConf {
   optional bool use_device_piece_size_as_dim0 = 6 [default = false];
 }
 
+message DebugOpConf {
+  required string in = 1;
+  required string out = 2;
+  optional string in_blob_dump_dir = 3;
+  optional string out_diff_blob_dump_dir = 4;
+  optional string part_name_prefix = 5 [default = "part-"];
+  optional int32 part_name_suffix_length = 6 [default = -1];
+  oneof const_out {
+    string const_out_feature_load_filepath = 7;
+    Feature const_out_feature = 8;
+  }
+  oneof const_in_diff {
+    string const_in_diff_feature_load_filepath = 9;
+    Feature const_in_diff_feature = 10;
+  }
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -888,7 +931,7 @@ message OperatorConf {
     SharedModelDiffAddOpConf shared_model_diff_add_conf = 120;
     CastOpConf cast_conf = 121;
     VariableOpConf variable_conf = 122;
-    
+
     // domain op
     TransposeOpConf transpose_conf = 201;
     ReshapeOpConf reshape_conf = 202;
@@ -932,19 +975,24 @@ message OperatorConf {
     LogCounterOpConf log_counter_conf = 240;
     GeluOpConf gelu_conf = 241;
     GatherOpConf gather_conf = 242;
-    SqrtOpConf sqrt_conf = 243;
-    SquareOpConf square_conf = 244;
     ConstScalarOpConf const_scalar_conf = 245;
     ConstRangeOpConf const_range_conf = 246;
-    BroadcastAddOpConf broadcast_add_conf = 247;
-    BroadcastSubOpConf broadcast_sub_conf = 248;
-    BroadcastMulOpConf broadcast_mul_conf = 249;
-    BroadcastDivOpConf broadcast_div_conf = 250;
     MeanOpConf mean_conf = 251;
     SliceOpConf slice_conf = 252;
     BiasAddOpConf bias_add_conf = 253;
     LayerNormOpConf layer_norm_conf = 254;
     ConstantOpConf constant_conf = 255;
+    DebugOpConf debug_conf = 256;
+    SigmoidCrossEntropyLossOpConf sigmoid_cross_entropy_loss_conf = 257;
+
+    // math op
+    BroadcastAddOpConf broadcast_add_conf = 500;
+    BroadcastSubOpConf broadcast_sub_conf = 501;
+    BroadcastMulOpConf broadcast_mul_conf = 502;
+    BroadcastDivOpConf broadcast_div_conf = 503;
+    SquareOpConf square_conf = 504;
+    SqrtOpConf sqrt_conf = 505;
+    RsqrtOpConf rsqrt_conf = 506;
   }
 }
 
