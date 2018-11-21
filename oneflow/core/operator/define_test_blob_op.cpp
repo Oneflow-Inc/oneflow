@@ -4,7 +4,7 @@ namespace oneflow {
 
 void DefineTestBlobOp::InitFromOpConf() {
   CHECK(op_conf().has_define_test_blob_conf());
-  EnrollOutputBn("out", false);
+  EnrollOutputBn("out", op_conf().define_test_blob_conf().has_diff());
 }
 
 const PbMessage& DefineTestBlobOp::GetCustomizedConf() const {
