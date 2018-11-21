@@ -473,17 +473,34 @@ KU_FLOATING_METHOD BatchedGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
   const int ldb = (trans_b == CblasNoTrans) ? n : k;
   cublasOperation_t cublas_trans_a = CblasTrans2CublasTrans(trans_a);
   cublasOperation_t cublas_trans_b = CblasTrans2CublasTrans(trans_b);
+  std::vector<T*> a_ptrs(batch_size);
+  std::vector<T*> b_ptrs(batch_size);
+  std::vector<T*> c_ptrs(batch_size);
+  FOR_RANGE(int, i, 0, batch_size) {
+    a_ptrs[i] = a + i * a_stride;
+    b_ptrs[i] = b + i * b_stride;
+    c_ptrs[i] = c + i * c_stride;
+  }
   if (std::is_same<type_cpp, float>) {
-    cublasSgemmStridedBatched(ctx->cublas_pmd_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
-                              &alpha, b, ldb, b_stride, a, lda, a_stride, &beta, c, n, c_stride,
-                              batch_size);
+    cublasSgemmBatched(ctx->cublas_pmd_handle(), cublas_trans_b, cublas_trans_a, n, m, k, &alpha,
+                       b_ptrs.data(), ldb, a_ptrs.data(), lda, &beta, c_ptrs, ldc, batch_size);
   } else if (std::is_same<type_cpp, double>) {
-    cublasDgemmStridedBatched(ctx->cublas_pmd_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
-                              &alpha, b, ldb, b_stride, a, lda, a_stride, &beta, c, n, c_stride,
-                              batch_size);
+    cublasDgemmBatched(ctx->cublas_pmd_handle(), cublas_trans_b, cublas_trans_a, n, m, k, &alpha,
+                       b_ptrs.data(), ldb, a_ptrs.data(), lda, &beta, c_ptrs, ldc, batch_size);
   } else {
     UNIMPLEMENTED();
   }
+// if (std::is_same<type_cpp, float>) {
+//   cublasSgemmStridedBatched(ctx->cublas_pmd_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
+//                             &alpha, b, ldb, b_stride, a, lda, a_stride, &beta, c, n, c_stride,
+//                             batch_size);
+// } else if (std::is_same<type_cpp, double>) {
+//   cublasDgemmStridedBatched(ctx->cublas_pmd_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
+//                             &alpha, b, ldb, b_stride, a, lda, a_stride, &beta, c, n, c_stride,
+//                             batch_size);
+// } else {
+//   UNIMPLEMENTED();
+// }
 #endif
 }
 
