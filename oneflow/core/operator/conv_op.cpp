@@ -158,8 +158,8 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
     // cudnn_buf
     InferCudnnAlgo(GetBlobDesc4BnInOp, &(conv_op_ctx->cudnn_conv_algo_ctx), 0);
     BlobDesc* fw_cudnn_buf = GetBlobDesc4BnInOp("fw_cudnn_buf");
-    fw_cudnn_buf->mut_shape() =
-        Shape({static_cast<int64_t>(conv_op_ctx->cudnn_conv_algo_ctx.fwd_ws_size)});
+    fw_cudnn_buf->mut_shape() = Shape({static_cast<int64_t>(
+        std::max(conv_op_ctx->cudnn_conv_algo_ctx.fwd_ws_size, kCudaAlignSize))});
     fw_cudnn_buf->set_data_type(DataType::kChar);
   }
 #endif  // WITH_CUDA
@@ -181,9 +181,10 @@ void ConvOp<NDims>::InferBwBufBlobDescs(
   if (DevIsGpuAndEnableCudnn()) {
     // cudnn_buf
     BlobDesc* bw_cudnn_buf = GetBlobDesc4BnInOp("bw_cudnn_buf");
-    bw_cudnn_buf->mut_shape() =
-        Shape({static_cast<int64_t>(std::max(conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_ws_size,
-                                             conv_op_ctx->cudnn_conv_algo_ctx.bwd_data_ws_size))});
+    bw_cudnn_buf->mut_shape() = Shape(
+        {static_cast<int64_t>(std::max(std::max(conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_ws_size,
+                                                conv_op_ctx->cudnn_conv_algo_ctx.bwd_data_ws_size),
+                                       kCudaAlignSize))});
     bw_cudnn_buf->set_data_type(DataType::kChar);
   }
 #endif  // WITH_CUDA
