@@ -239,11 +239,12 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
   }
   kernel_conf->set_data_type(data_type);
   for (const auto& pair : bn_in_op2origin_shape) {
-    // kernel_conf->mutable_bn_in_op2origin_shape()->insert({pair.first, ShapeProto()});
-    // pair.second->ToProto(&kernel_conf->mutable_bn_in_op2origin_shape()->at(pair.first));
     ShapeProto shape_proto;
     pair.second.ToProto(&shape_proto);
     CHECK(kernel_conf->mutable_bn_in_op2origin_shape()->insert({pair.first, shape_proto}).second);
+    CHECK(kernel_conf->mutable_bn_in_op2origin_shape()
+              ->insert({GenDiffBn(pair.first), shape_proto})
+              .second);
   }
 
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf, op_ctx);

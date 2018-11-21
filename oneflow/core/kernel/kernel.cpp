@@ -25,6 +25,18 @@ void ClearBlobDim0ValidNumIfNeed(const PbRpf<std::string>& bns,
   }
 }
 
+void UpdateBnInOp2BlobHasOriginShape(
+    HashMap<std::string, std::unique_ptr<Blob>>* bn_in_op2blob_has_origin_shape,
+    const KernelConf& kernel_conf, std::function<Blob*(const std::string&)> BnInOp2Blob) {
+  for (const auto& pair : kernel_conf.bn_in_op2origin_shape()) {
+    Blob* out_blob = BnInOp2Blob(pair.first);
+    if (out_blob) {
+      std::unique_ptr<Blob> blob_ptr(new Blob(out_blob, Shape(pair.second)));
+      CHECK(bn_in_op2blob_has_origin_shape->emplace(pair.first, std::move(blob_ptr)).second);
+    }
+  }
+}
+
 }  // namespace
 
 void Kernel::Init(const ParallelContext* parallel_ctx, const KernelConf& kernel_conf,
@@ -89,7 +101,19 @@ void Kernel::CheckSameDim0ValidNum(
 }
 
 void Kernel::Forward(const KernelCtx& ctx,
-                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+                     std::function<Blob*(const std::string&)> BnInOp2BlobAfterReshape) const {
+  HashMap<std::string, std::unique_ptr<Blob>> bn_in_op2blob_has_origin_shape_;
+  UpdateBnInOp2BlobHasOriginShape(&bn_in_op2blob_has_origin_shape_, kernel_conf_,
+                                  BnInOp2BlobAfterReshape);
+  auto BnInOp2Blob = [&](const std::string& bn) -> Blob* {
+    auto it = bn_in_op2blob_has_origin_shape_.find(bn);
+    if (it != bn_in_op2blob_has_origin_shape_.end()) {
+      return it->second.get();
+    } else {
+      return BnInOp2BlobAfterReshape(bn);
+    }
+  };
+
   if (kernel_conf_.need_do_dim0_valid_num()) {
     CHECK(!kernel_conf_.need_do_opaque_header());
     ForwardDim0ValidNum(ctx, BnInOp2Blob);
@@ -127,7 +151,19 @@ void Kernel::Forward(const KernelCtx& ctx,
 }
 
 void Kernel::Backward(const KernelCtx& ctx,
-                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+                      std::function<Blob*(const std::string&)> BnInOp2BlobAfterReshape) const {
+  HashMap<std::string, std::unique_ptr<Blob>> bn_in_op2blob_has_origin_shape_;
+  UpdateBnInOp2BlobHasOriginShape(&bn_in_op2blob_has_origin_shape_, kernel_conf_,
+                                  BnInOp2BlobAfterReshape);
+  auto BnInOp2Blob = [&](const std::string& bn) -> Blob* {
+    auto it = bn_in_op2blob_has_origin_shape_.find(bn);
+    if (it != bn_in_op2blob_has_origin_shape_.end()) {
+      return it->second.get();
+    } else {
+      return BnInOp2BlobAfterReshape(bn);
+    }
+  };
+
   if (op_attribute().model_diff_bns().size() > 0) {
     BackwardModelDiffDim0ValidNum(ctx, BnInOp2Blob);
   }
