@@ -19,9 +19,6 @@ class GatherOp final : public Operator {
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx,
                             KernelConf* kernel_conf) const override;
-
- private:
-  int64_t GetAxis(const BlobDesc* in_blob_desc) const;
 };
 
 }  // namespace oneflow
