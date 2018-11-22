@@ -187,27 +187,6 @@ struct Int64Array {
   int64_t val[kMaxDim];
 };
 
-__device__ void ComputeOffset(const int32_t num_axis, const int64_t* x_dims,
-                              const int32_t* permutation, int64_t* x_strides) {
-  int64_t buff[kMaxDim];
-  int64_t cur_stride = 1;
-  for (int32_t i = num_axis - 1; i >= 0; --i) {
-    buff[i] = cur_stride;
-#if __CUDA_ARCH__ >= 350
-    cur_stride *= __ldg(x_dims + i);
-#else
-    cur_stride *= x_dims[i];
-#endif
-  }
-  for (int32_t i = 0; i < num_axis; ++i) {
-#if __CUDA_ARCH__ >= 350
-    x_strides[i] = buff[__ldg(permutation + i)];
-#else
-    x_strides[i] = buff[permutation[i]];
-#endif
-  }
-}
-
 template<typename T>
 __global__ void CopyColsRegionGpu(const int64_t row_num, const int64_t col_num, const T* x,
                                   const int64_t x_col_offset, const int64_t x_lda, T* y,
@@ -230,24 +209,18 @@ __device__ int64_t GetXIndex(const int32_t num_axis, const int64_t* y_shape,
 }
 
 template<typename T>
-__global__ void TransposeGpu(const int32_t num_axis, const Int64Array x_shape,
-                             const Int64Array y_shape, const Int32Array permutation,
-                             const int64_t elem_cnt, const T* x, T* y) {
-  __shared__ int64_t x_strides[kMaxDim];
-  __shared__ int64_t x_dims_shared[kMaxDim];
+__global__ void TransposeGpu(const int32_t num_axis, const Int64Array y_shape,
+                             const Int64Array x_strides, const int64_t elem_cnt, const T* x, T* y) {
+  __shared__ int64_t x_strides_shared[kMaxDim];
   __shared__ int64_t y_dims_shared[kMaxDim];
-  __shared__ int32_t perm_shared[kMaxDim];
   const int32_t tid = threadIdx.x;
   if (tid < num_axis) {
-    x_dims_shared[tid] = x_shape.val[tid];
     y_dims_shared[tid] = y_shape.val[tid];
-    perm_shared[tid] = permutation.val[tid];
+    x_strides_shared[tid] = x_strides.val[tid];
   }
   __syncthreads();
-  if (tid == 0) { ComputeOffset(num_axis, x_dims_shared, perm_shared, x_strides); }
-  __syncthreads();
   CUDA_1D_KERNEL_LOOP(y_idx, elem_cnt) {
-    const int64_t x_idx = GetXIndex(num_axis, y_dims_shared, x_strides, y_idx);
+    const int64_t x_idx = GetXIndex(num_axis, y_dims_shared, x_strides_shared, y_idx);
 #if __CUDA_ARCH__ >= 350
     y[y_idx] = __ldg(x + x_idx);
 #else
@@ -367,17 +340,20 @@ KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_sh
                        const Shape& y_shape, const PbRf<int32_t>& permutation,
                        const int64_t elem_cnt, const T* x, T* y) {
   CHECK_LE(num_axis, kMaxDim);
-  Int64Array x_shape_struct;
   Int64Array y_shape_struct;
-  Int32Array perm_struct;
-  FOR_RANGE(int32_t, i, 0, num_axis) {
-    x_shape_struct.val[i] = x_shape.At(i);
-    y_shape_struct.val[i] = y_shape.At(i);
-    perm_struct.val[i] = permutation[i];
+  FOR_RANGE(int32_t, i, 0, num_axis) { y_shape_struct.val[i] = y_shape.At(i); }
+  Int64Array x_strides;
+  int64_t buff[kMaxDim];
+  int64_t cur_stride = 1;
+  for (int32_t i = num_axis - 1; i >= 0; --i) {
+    buff[i] = cur_stride;
+    cur_stride *= x_shape.At(i);
   }
+  for (int32_t i = 0; i < num_axis; ++i) { x_strides.val[i] = buff[permutation[i]]; }
+
   TransposeGpu<T>
       <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          num_axis, x_shape_struct, y_shape_struct, perm_struct, elem_cnt, x, y);
+          num_axis, y_shape_struct, x_strides, elem_cnt, x, y);
 }
 
 KU_IF_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
