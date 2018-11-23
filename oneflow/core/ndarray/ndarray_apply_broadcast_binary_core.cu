@@ -9,6 +9,10 @@ __global__ void GpuBroadcastBinaryFunc(const XpuVarNdarray<T> y, const XpuVarNda
                                        const XpuVarNdarray<const T> b) {
   NdArrayApplyBroadcastBinaryCore<T, NDIMS, binary_func>::Apply(y, a, b);
 }
+template<typename T, int NDIMS, const T (*binary_func)(const T, const T)>
+__global__ void GpuBroadcastBinaryFunc(const XpuVarNdarray<T> y, const XpuVarNdarray<const T> x) {
+  NdArrayApplyBroadcastBinaryCore<T, NDIMS, binary_func>::ImplaceApply(y, x);
+}
 
 }  // namespace
 
@@ -18,6 +22,11 @@ struct NdArrayApplyBroadcastBinaryCoreWrapper<DeviceType::kGPU, T, NDIMS, binary
                     const XpuVarNdarray<const T>& b) {
     size_t n = y.host_shape().HostElemNum();
     GpuBroadcastBinaryFunc<T, NDIMS, binary_func> WITH_CUDA_PARAM(ctx, n, y, a, b);
+  }
+  static void ImplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
+                           const XpuVarNdarray<const T>& x) {
+    size_t n = y.host_shape().HostElemNum();
+    GpuBroadcastBinaryFunc<T, NDIMS, binary_func> WITH_CUDA_PARAM(ctx, n, y, x);
   }
 };
 

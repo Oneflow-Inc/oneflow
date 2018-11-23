@@ -34,7 +34,7 @@ class XpuVarNdarray final {
   }
   template<int NDIMS>
   OF_DEVICE_FUNC T Get(int64_t coord[NDIMS]) const {
-    return ptr_[ExecShapeUtil<NDIMS>::DimVec2Offset(shape(), coord)];
+    return ptr_[shape().template Coordinate2Offset<NDIMS>(coord)];
   }
 
   template<int NDIMS>
@@ -44,19 +44,22 @@ class XpuVarNdarray final {
 
   template<int NDIMS>
   OF_DEVICE_FUNC T* Mut(int64_t coord[NDIMS]) const {
-    return ptr_ + ExecShapeUtil<NDIMS>::DimVec2Offset(shape(), coord);
+    return ptr_ + shape().template Coordinate2Offset<NDIMS>(coord);
   }
 
   template<int NDIMS, typename X>
   OF_DEVICE_FUNC void Assign(const X& x) const {
-    AssignWithoutSyncThreads<NDIMS>(x);
-    XpuSyncThreads();
-  }
-
-  template<int NDIMS, typename X>
-  OF_DEVICE_FUNC void AssignWithoutSyncThreads(const X& x) const {
     size_t n = shape_.ElemNum();
     XPU_1D_KERNEL_LOOP(i, n) { ptr_[i] = x.template Get<NDIMS>(i); }
+  }
+
+  template<const T (*binary_func)(const T, const T), int NDIMS, typename X>
+  OF_DEVICE_FUNC void BinaryAssign(const X& x) const {
+    size_t n = shape_.ElemNum();
+    XPU_1D_KERNEL_LOOP(i, n) {
+      T* ptr_i = ptr_ + i;
+      *ptr_i = binary_func(*ptr_i, x.template Get<NDIMS>(i));
+    }
   }
 
  private:
