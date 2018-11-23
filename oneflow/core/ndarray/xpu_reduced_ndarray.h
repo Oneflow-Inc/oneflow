@@ -10,11 +10,11 @@ namespace oneflow {
 template<typename T, int NDIMS, typename X = XpuVarNdarray<T>>
 class XpuReducedNdarray final {
  public:
-  OF_DEVICE_FUNC XpuReducedNdarray(const ExecShape& shape, const X& data)
+  OF_DEVICE_FUNC XpuReducedNdarray(const XpuShape& shape, const X& data)
       : shape_(shape), data_(data) {}
 
-  OF_DEVICE_FUNC const ExecShape& shape() const { return shape_; }
-  const ExecShape& host_shape() const { return shape_; }
+  OF_DEVICE_FUNC const XpuShape& shape() const { return shape_; }
+  const XpuShape& host_shape() const { return shape_; }
   OF_DEVICE_FUNC const X& data() const { return data_; }
 
   template<int ndims = NDIMS>
@@ -42,7 +42,7 @@ class XpuReducedNdarray final {
   }
 
  private:
-  ExecShape shape_;
+  XpuShape shape_;
   X data_;
 };
 

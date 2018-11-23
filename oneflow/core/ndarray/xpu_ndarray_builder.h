@@ -24,7 +24,7 @@ class XpuNdArrayBuilder final {
   OF_DEVICE_FUNC XpuBinaryFuncNdarray<T, binary_func, A, B> Apply(const A& a, const B& b) {
     return XpuBinaryFuncNdarray<T, binary_func, A, B>(a, b);
   }
-  OF_DEVICE_FUNC XpuBroadcastNdarray<const T> Broadcast(const ExecShape& shape,
+  OF_DEVICE_FUNC XpuBroadcastNdarray<const T> Broadcast(const XpuShape& shape,
                                                         const XpuVarNdarray<const T>& x) {
     return XpuBroadcastNdarray<const T>(shape, x);
   }
