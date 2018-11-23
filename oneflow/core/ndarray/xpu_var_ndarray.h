@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_NDARRAY_XPU_VAR_NDARRAY_H_
 #define ONEFLOW_CORE_NDARRAY_XPU_VAR_NDARRAY_H_
 
-#include "oneflow/core/ndarray/exec_shape.h"
+#include "oneflow/core/ndarray/xpu_shape.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/register/blob.h"
@@ -19,13 +19,13 @@ class XpuVarNdarray final {
       : shape_(blob->shape().CreateLeftExtendedShape(ndims_extend_to)), ptr_(blob->mut_dptr<T>()) {}
   XpuVarNdarray(const Shape& shape, T* ptr) : shape_(shape), ptr_(ptr) {}
   OF_DEVICE_FUNC ALWAYS_INLINE XpuVarNdarray(const XpuVarNdarray&) = default;
-  OF_DEVICE_FUNC ALWAYS_INLINE XpuVarNdarray(const ExecShape& shape, T* ptr)
+  OF_DEVICE_FUNC ALWAYS_INLINE XpuVarNdarray(const XpuShape& shape, T* ptr)
       : shape_(shape), ptr_(ptr) {}
 
-  const ExecShape& host_shape() const { return shape_; }
+  const XpuShape& host_shape() const { return shape_; }
   T* host_ptr() const { return ptr_; }
 
-  OF_DEVICE_FUNC const ExecShape& shape() const { return shape_; }
+  OF_DEVICE_FUNC const XpuShape& shape() const { return shape_; }
   OF_DEVICE_FUNC T* ptr() const { return ptr_; }
 
   template<int NDIMS>
@@ -63,7 +63,7 @@ class XpuVarNdarray final {
   }
 
  private:
-  ExecShape shape_;
+  XpuShape shape_;
   T* ptr_;
 };
 

@@ -55,7 +55,7 @@ class XpuTransposeNdarray final {
   }
 
   const X& x_;
-  ExecShape shape_;
+  XpuShape shape_;
   int64_t perm_[NDIMS];
 };
 

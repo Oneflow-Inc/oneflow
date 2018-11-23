@@ -12,7 +12,7 @@ struct NdArrayReduce final {
   static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
                      const XpuVarNdarray<T>& tmp_storage) {
     XpuVarNdarray<T> storage(x.shape(), tmp_storage.ptr());
-    ExecShape cur_shape(x.shape());
+    XpuShape cur_shape(x.shape());
     CHECK_EQ(y.shape().NumAxes(), x.shape().NumAxes());
     if (x.shape() == y.shape()) {
       XpuNdArrayAssign<device_type, T, NDIMS>::Assign(ctx, y, x);
@@ -30,7 +30,7 @@ struct NdArrayReduce final {
   }
 
   static void ImplaceReduceAxis(DeviceCtx* ctx, int axis, const XpuVarNdarray<T>& implace,
-                                ExecShape* cur_shape) {
+                                XpuShape* cur_shape) {
     while (cur_shape->At(axis) > 1) {
       XpuReducedNdarray<T, NDIMS> from(*cur_shape, implace);
       int64_t new_dim_value = (cur_shape->At(axis) + (8 - 1)) / 8;

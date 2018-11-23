@@ -11,7 +11,7 @@ struct XpuBroadcastNdarrayUtil;
 template<typename T>
 class XpuBroadcastNdarray final {
  public:
-  OF_DEVICE_FUNC XpuBroadcastNdarray(const ExecShape& shape, const XpuVarNdarray<T>& var)
+  OF_DEVICE_FUNC XpuBroadcastNdarray(const XpuShape& shape, const XpuVarNdarray<T>& var)
       : shape_(shape), var_(var) {}
   OF_DEVICE_FUNC ~XpuBroadcastNdarray() = default;
 
@@ -23,21 +23,21 @@ class XpuBroadcastNdarray final {
     return var_.template Get<NDIMS>(coord);
   }
 
-  OF_DEVICE_FUNC const ExecShape& shape() const { return shape_; }
+  OF_DEVICE_FUNC const XpuShape& shape() const { return shape_; }
   OF_DEVICE_FUNC const XpuVarNdarray<T>& var() const { return var_; }
 
  private:
-  const ExecShape& shape_;
+  const XpuShape& shape_;
   const XpuVarNdarray<T>& var_;
 };
 
 #define IMPLACE_SET_SRC_COORD(i) coord[i] %= src_shape.At(i);
-#define SPECIALIZE_XPU_BROADCAST_NDARRAY_UTIL(n)                                                 \
-  template<typename T>                                                                           \
-  struct XpuBroadcastNdarrayUtil<T, n + 1> final {                                               \
-    OF_DEVICE_FUNC static void SrcCoordinate(const ExecShape& src_shape, int64_t coord[n + 1]) { \
-      OF_PP_FOR_EACH_TUPLE(IMPLACE_SET_SRC_COORD, GET_SEQ(n));                                   \
-    }                                                                                            \
+#define SPECIALIZE_XPU_BROADCAST_NDARRAY_UTIL(n)                                                \
+  template<typename T>                                                                          \
+  struct XpuBroadcastNdarrayUtil<T, n + 1> final {                                              \
+    OF_DEVICE_FUNC static void SrcCoordinate(const XpuShape& src_shape, int64_t coord[n + 1]) { \
+      OF_PP_FOR_EACH_TUPLE(IMPLACE_SET_SRC_COORD, GET_SEQ(n));                                  \
+    }                                                                                           \
   }
 SPECIALIZE_XPU_BROADCAST_NDARRAY_UTIL(0);
 SPECIALIZE_XPU_BROADCAST_NDARRAY_UTIL(1);
