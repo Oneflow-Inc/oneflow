@@ -1025,6 +1025,7 @@ message RepeatOpConf {
 message GroupByRecordIdOpConf {
   required string in = 1;
   required string out = 2;
+  optional bool trim_dim0 = 3 [default = false];
 }
 
 message L2NormalizeOpConf {
