@@ -20,7 +20,7 @@ class XpuReducedNdarray final {
   template<int ndims = NDIMS>
   OF_DEVICE_FUNC T Get(int64_t offset) const {
     int64_t coord[NDIMS];
-    Offset2Coord(offset, coord);
+    shape_.template Offset2Coordinate<NDIMS>(offset, coord);
     return Get(coord);
   }
 
@@ -32,17 +32,13 @@ class XpuReducedNdarray final {
   template<int ndims = NDIMS>
   OF_DEVICE_FUNC T* Mut(int64_t offset) const {
     int64_t coord[NDIMS];
-    Offset2Coord(offset, coord);
+    shape_.template Offset2Coordinate<NDIMS>(offset, coord);
     return Mut(coord);
   }
 
   template<int ndims = NDIMS>
   OF_DEVICE_FUNC T* Mut(int64_t coord[NDIMS]) const {
     return data_.template Mut<NDIMS>(coord);
-  }
-
-  OF_DEVICE_FUNC void Offset2Coord(int64_t offset, int64_t coord[NDIMS]) const {
-    ExecShapeUtil<NDIMS>::Offset2DimVec(shape_, offset, coord);
   }
 
  private:

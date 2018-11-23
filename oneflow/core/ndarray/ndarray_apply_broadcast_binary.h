@@ -10,8 +10,20 @@ template<DeviceType device_type, typename T, int NDIMS, const T (*binary_func)(c
 struct NdArrayApplyBroadcastBinary final {
   static void Apply(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& a,
                     const XpuVarNdarray<const T>& b) {
+    using NdarrayAssign = XpuNdArrayAssign<device_type, T, NDIMS>;
+    using BroadcastBinary =
+        NdArrayApplyBroadcastBinaryCoreWrapper<device_type, T, NDIMS, binary_func>;
     CheckBroadcastable(y, a, b);
-    NdArrayApplyBroadcastBinaryCoreWrapper<device_type, T, NDIMS, binary_func>::Apply(ctx, y, a, b);
+    return BroadcastBinary::Apply(ctx, y, a, b);
+    if (a.shape() == y.shape()) {
+      NdarrayAssign::Assign(ctx, y, a);
+      BroadcastBinary::ImplaceApply(ctx, y, b);
+    } else if (b.shape() == y.shape()) {
+      NdarrayAssign::Assign(ctx, y, b);
+      BroadcastBinary::ImplaceApply(ctx, y, a);
+    } else {
+      BroadcastBinary::Apply(ctx, y, a, b);
+    }
   }
 
   static void CheckBroadcastable(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& a,
