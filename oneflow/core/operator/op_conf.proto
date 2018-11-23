@@ -830,6 +830,19 @@ message BboxTransformOpConf {
   optional BboxClipConf clip_conf = 5;
 }
 
+message BboxNmsOpConf {
+  required string bbox = 1;
+  required string bbox_score = 2;
+  required string out_bbox = 3;
+  required string out_bbox_score = 4;
+  optional string out_bbox_label = 5;
+  optional int32 num_classes = 6;
+  optional int32 pre_nms_top_n = 7;
+  optional float pre_nms_score_threshold = 8;
+  required float nms_threshold = 9;
+  required int32 post_nms_top_n = 10;
+}
+
 message RoIPoolingOpConf {
   required string in = 1;
   required string rois = 2;
@@ -1152,6 +1165,7 @@ message OperatorConf {
     BboxTransformOpConf bbox_transform_conf = 1100;
     L2NormalizeOpConf l2_normalize_conf = 1101;
     GenerateAnchorsOpConf generate_anchors_conf = 1102;
+    BboxNmsOpConf bbox_nms_conf = 1103;
   }
 }
 
