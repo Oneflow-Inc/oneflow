@@ -10,17 +10,17 @@ namespace oneflow {
 template<typename T, int NDIMS, typename X = XpuVarNdarray<T>>
 class XpuReducedNdarray final {
  public:
-  OF_DEVICE_FUNC XpuReducedNdarray(const ExecShape& shape, const X& data)
+  OF_DEVICE_FUNC XpuReducedNdarray(const XpuShape& shape, const X& data)
       : shape_(shape), data_(data) {}
 
-  OF_DEVICE_FUNC const ExecShape& shape() const { return shape_; }
-  const ExecShape& host_shape() const { return shape_; }
+  OF_DEVICE_FUNC const XpuShape& shape() const { return shape_; }
+  const XpuShape& host_shape() const { return shape_; }
   OF_DEVICE_FUNC const X& data() const { return data_; }
 
   template<int ndims = NDIMS>
   OF_DEVICE_FUNC T Get(int64_t offset) const {
     int64_t coord[NDIMS];
-    Offset2Coord(offset, coord);
+    shape_.template Offset2Coordinate<NDIMS>(offset, coord);
     return Get(coord);
   }
 
@@ -32,7 +32,7 @@ class XpuReducedNdarray final {
   template<int ndims = NDIMS>
   OF_DEVICE_FUNC T* Mut(int64_t offset) const {
     int64_t coord[NDIMS];
-    Offset2Coord(offset, coord);
+    shape_.template Offset2Coordinate<NDIMS>(offset, coord);
     return Mut(coord);
   }
 
@@ -41,12 +41,8 @@ class XpuReducedNdarray final {
     return data_.template Mut<NDIMS>(coord);
   }
 
-  OF_DEVICE_FUNC void Offset2Coord(int64_t offset, int64_t coord[NDIMS]) const {
-    ExecShapeUtil<NDIMS>::Offset2DimVec(shape_, offset, coord);
-  }
-
  private:
-  ExecShape shape_;
+  XpuShape shape_;
   X data_;
 };
 

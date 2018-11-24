@@ -11,83 +11,41 @@ struct XpuBroadcastNdarrayUtil;
 template<typename T>
 class XpuBroadcastNdarray final {
  public:
-  OF_DEVICE_FUNC XpuBroadcastNdarray(const ExecShape& shape, const XpuVarNdarray<T>& var)
+  OF_DEVICE_FUNC XpuBroadcastNdarray(const XpuShape& shape, const XpuVarNdarray<T>& var)
       : shape_(shape), var_(var) {}
   OF_DEVICE_FUNC ~XpuBroadcastNdarray() = default;
 
   template<int NDIMS>
   OF_DEVICE_FUNC T Get(int64_t offset) const {
-    return var_.Get<NDIMS>(XpuBroadcastNdarrayUtil<T, NDIMS>::OriginVarOffset(this, offset));
+    int64_t coord[NDIMS];
+    shape_.template Offset2Coordinate<NDIMS>(offset, coord);
+    XpuBroadcastNdarrayUtil<T, NDIMS>::SrcCoordinate(var_.shape(), coord);
+    return var_.template Get<NDIMS>(coord);
   }
 
-  OF_DEVICE_FUNC const ExecShape& shape() const { return shape_; }
+  OF_DEVICE_FUNC const XpuShape& shape() const { return shape_; }
   OF_DEVICE_FUNC const XpuVarNdarray<T>& var() const { return var_; }
 
  private:
-  const ExecShape& shape_;
+  const XpuShape& shape_;
   const XpuVarNdarray<T>& var_;
 };
 
-template<typename T>
-struct XpuBroadcastNdarrayUtil<T, 1> final {
-  OF_DEVICE_FUNC static int64_t OriginVarOffset(const XpuBroadcastNdarray<T>* ba, int64_t offset) {
-    return offset % ba->shape().At(0);
+#define IMPLACE_SET_SRC_COORD(i) coord[i] %= src_shape.At(i);
+#define SPECIALIZE_XPU_BROADCAST_NDARRAY_UTIL(n)                                                \
+  template<typename T>                                                                          \
+  struct XpuBroadcastNdarrayUtil<T, n + 1> final {                                              \
+    OF_DEVICE_FUNC static void SrcCoordinate(const XpuShape& src_shape, int64_t coord[n + 1]) { \
+      OF_PP_FOR_EACH_TUPLE(IMPLACE_SET_SRC_COORD, GET_SEQ(n));                                  \
+    }                                                                                           \
   }
-};
-
-template<typename T>
-struct XpuBroadcastNdarrayUtil<T, 2> final {
-  OF_DEVICE_FUNC static int64_t OriginVarOffset(const XpuBroadcastNdarray<T>* ba, int64_t offset) {
-    int64_t dim0 = 0;
-    int64_t dim1 = 0;
-    ba->shape().Offset2Dims(offset, &dim0, &dim1);
-    return ba->var().shape().Dims2Offset(dim0 % ba->var().shape().At(0),
-                                         dim1 % ba->var().shape().At(1));
-  }
-};
-
-template<typename T>
-struct XpuBroadcastNdarrayUtil<T, 3> final {
-  OF_DEVICE_FUNC static int64_t OriginVarOffset(const XpuBroadcastNdarray<T>* ba, int64_t offset) {
-    int64_t dim0 = 0;
-    int64_t dim1 = 0;
-    int64_t dim2 = 0;
-    ba->shape().Offset2Dims(offset, &dim0, &dim1, &dim2);
-    return ba->var().shape().Dims2Offset(dim0 % ba->var().shape().At(0),
-                                         dim1 % ba->var().shape().At(1),
-                                         dim2 % ba->var().shape().At(2));
-  }
-};
-
-template<typename T>
-struct XpuBroadcastNdarrayUtil<T, 4> final {
-  OF_DEVICE_FUNC static int64_t OriginVarOffset(const XpuBroadcastNdarray<T>* ba, int64_t offset) {
-    int64_t dim0 = 0;
-    int64_t dim1 = 0;
-    int64_t dim2 = 0;
-    int64_t dim3 = 0;
-    ba->shape().Offset2Dims(offset, &dim0, &dim1, &dim2, &dim3);
-    return ba->var().shape().Dims2Offset(
-        dim0 % ba->var().shape().At(0), dim1 % ba->var().shape().At(1),
-        dim2 % ba->var().shape().At(2), dim3 % ba->var().shape().At(3));
-  }
-};
-
-template<typename T>
-struct XpuBroadcastNdarrayUtil<T, 5> final {
-  OF_DEVICE_FUNC static int64_t OriginVarOffset(const XpuBroadcastNdarray<T>* ba, int64_t offset) {
-    int64_t dim0 = 0;
-    int64_t dim1 = 0;
-    int64_t dim2 = 0;
-    int64_t dim3 = 0;
-    int64_t dim4 = 0;
-    ba->shape().Offset2Dims(offset, &dim0, &dim1, &dim2, &dim3, &dim4);
-    return ba->var().shape().Dims2Offset(
-        dim0 % ba->var().shape().At(0), dim1 % ba->var().shape().At(1),
-        dim2 % ba->var().shape().At(2), dim3 % ba->var().shape().At(3),
-        dim4 % ba->var().shape().At(4));
-  }
-};
+SPECIALIZE_XPU_BROADCAST_NDARRAY_UTIL(0);
+SPECIALIZE_XPU_BROADCAST_NDARRAY_UTIL(1);
+SPECIALIZE_XPU_BROADCAST_NDARRAY_UTIL(2);
+SPECIALIZE_XPU_BROADCAST_NDARRAY_UTIL(3);
+SPECIALIZE_XPU_BROADCAST_NDARRAY_UTIL(4);
+#undef SPECIALIZE_XPU_BROADCAST_NDARRAY_UTIL
+#undef IMPLACE_SET_SRC_COORD
 
 }  // namespace oneflow
 

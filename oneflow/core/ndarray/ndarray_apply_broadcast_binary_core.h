@@ -13,6 +13,8 @@ template<DeviceType device_type, typename T, int NDIMS, const T (*binary_func)(c
 struct NdArrayApplyBroadcastBinaryCoreWrapper final {
   static void Apply(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& a,
                     const XpuVarNdarray<const T>& b);
+  static void ImplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
+                           const XpuVarNdarray<const T>& x);
 };
 
 template<typename T, int NDIMS, const T (*binary_func)(const T, const T)>
@@ -24,6 +26,12 @@ struct NdArrayApplyBroadcastBinaryCore final {
     const auto& b_broadcasted = ndarray.Broadcast(y.shape(), b);
     const auto& ret = ndarray.template Apply<binary_func>(a_broadcasted, b_broadcasted);
     y.template Assign<NDIMS>(ret);
+  }
+  OF_DEVICE_FUNC static void ImplaceApply(const XpuVarNdarray<T>& y,
+                                          const XpuVarNdarray<const T>& x) {
+    XpuNdArrayBuilder<T, NDIMS> ndarray;
+    const auto& x_broadcasted = ndarray.Broadcast(y.shape(), x);
+    y.template BinaryAssign<binary_func, NDIMS>(x_broadcasted);
   }
 };
 
