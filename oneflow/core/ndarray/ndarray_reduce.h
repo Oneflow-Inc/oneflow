@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_NDARRAY_NDARRAY_REDUCE_H_
 #define ONEFLOW_CORE_NDARRAY_NDARRAY_REDUCE_H_
 
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/ndarray/ndarray_reduce_core.h"
 #include "oneflow/core/ndarray/xpu_ndarray_assign.h"
@@ -31,9 +32,11 @@ struct NdArrayReduce final {
 
   static void ImplaceReduceAxis(DeviceCtx* ctx, int axis, const XpuVarNdarray<T>& implace,
                                 XpuShape* cur_shape) {
+    int64_t target_elem_num = cur_shape->ElemNum() / cur_shape->At(axis);
     while (cur_shape->At(axis) > 1) {
+      int64_t shrink = 8 + std::sqrt(target_elem_num);
       XpuReducedNdarray<T, NDIMS> from(*cur_shape, implace);
-      int64_t new_dim_value = (cur_shape->At(axis) + (8 - 1)) / 8;
+      int64_t new_dim_value = (cur_shape->At(axis) + (shrink - 1)) / shrink;
       cur_shape->Set(axis, new_dim_value);
       XpuReducedNdarray<T, NDIMS> to(*cur_shape, implace);
       NdArrayReduceCoreWrapper<device_type, T, NDIMS>::ReduceAxis(ctx, to, from, axis);
