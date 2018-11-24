@@ -32,6 +32,7 @@ struct NdArrayReduce final {
 
   static void ImplaceReduceAxis(DeviceCtx* ctx, int axis, const XpuVarNdarray<T>& implace,
                                 XpuShape* cur_shape) {
+    int64_t target_elem_num = cur_shape->ElemNum() / cur_shape->At(axis);
     while (cur_shape->At(axis) > 1) {
       int64_t shrink = 8 + std::sqrt(target_elem_num);
       XpuReducedNdarray<T, NDIMS> from(*cur_shape, implace);
