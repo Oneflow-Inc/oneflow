@@ -282,40 +282,6 @@ void MatrixRowReduce(DeviceCtx* ctx, const size_t row_num, const size_t col_num,
          ctx->cuda_stream()>>>(row_num, col_num, x, y, static_cast<T*>(temp_storage), temp_col_num);
 }
 
-void cublasgemmBatched(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb,
-                       int m, int n, int k, const float* alpha, const float* a_array[], int lda,
-                       const float* b_array[], int ldb, const float* beta, float* c_array[],
-                       int ldc, int batch_count) {
-  cublasSgemmBatched(handle, transa, transb, m, n, k, alpha, a_array, lda, b_array, ldb, beta,
-                     c_array, n, batch_count);
-}
-
-void cublasgemmBatched(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb,
-                       int m, int n, int k, const double* alpha, const double* a_array[], int lda,
-                       const double* b_array[], int ldb, const double* beta, double* c_array[],
-                       int ldc, int batch_count) {
-  cublasDgemmBatched(handle, transa, transb, m, n, k, alpha, a_array, lda, b_array, ldb, beta,
-                     c_array, n, batch_count);
-}
-
-void cublasgemmStridedBatched(cublasHandle_t handle, cublasOperation_t transa,
-                              cublasOperation_t transb, int m, int n, int k, const float* alpha,
-                              const float* a, int lda, int a_stride, const float* b, int ldb,
-                              int b_stride, const float* beta, float* c, int ldc, int c_stride,
-                              int batch_count) {
-  cublasSgemmStridedBatched(handle, transa, transb, m, n, k, alpha, a, lda, a_stride, b, ldb,
-                            b_stride, beta, c, ldc, c_stride, batch_count);
-}
-
-void cublasgemmStridedBatched(cublasHandle_t handle, cublasOperation_t transa,
-                              cublasOperation_t transb, int m, int n, int k, const double* alpha,
-                              const double* a, int lda, int a_stride, const double* b, int ldb,
-                              int b_stride, const double* beta, double* c, int ldc, int c_stride,
-                              int batch_count) {
-  cublasDgemmStridedBatched(handle, transa, transb, m, n, k, alpha, a, lda, a_stride, b, ldb,
-                            b_stride, beta, c, ldc, c_stride, batch_count);
-}
-
 }  // namespace
 
 template<>
@@ -473,22 +439,48 @@ KU_FLOATING_METHOD BatchedGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
   const int a_stride = m * k;
   const int b_stride = k * n;
   const int c_stride = m * n;
-#if CUDA_VERSION >= 9010
-  const int lda = (trans_a == CblasNoTrans) ? k : m;
-  const int ldb = (trans_b == CblasNoTrans) ? n : k;
-  const int ldc = n;
-  cublasOperation_t cublas_trans_a = CblasTrans2CublasTrans(trans_a);
-  cublasOperation_t cublas_trans_b = CblasTrans2CublasTrans(trans_b);
-  cublasgemmStridedBatched(ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
-                           &alpha, b, ldb, b_stride, a, lda, a_stride, &beta, c, ldc, c_stride,
-                           batch_size);
-#else
+  // #if CUDA_VERSION >= 9010
+  // const int lda = (trans_a == CblasNoTrans) ? k : m;
+  // const int ldb = (trans_b == CblasNoTrans) ? n : k;
+  // const int ldc = n;
+  // cublasOperation_t cublas_trans_a = CblasTrans2CublasTrans(trans_a);
+  // cublasOperation_t cublas_trans_b = CblasTrans2CublasTrans(trans_b);
+  // std::vector<const T*> a_ptrs(batch_size);
+  // std::vector<const T*> b_ptrs(batch_size);
+  // std::vector<T*> c_ptrs(batch_size);
+  // FOR_RANGE(int, i, 0, batch_size) {
+  //   a_ptrs[i] = a + i * a_stride;
+  //   b_ptrs[i] = b + i * b_stride;
+  //   c_ptrs[i] = c + i * c_stride;
+  // }
+  // T** dev_a_ptrs = nullptr;
+  // T** dev_b_ptrs = nullptr;
+  // T** dev_c_ptrs = nullptr;
+  // cudaMalloc(&dev_a_ptrs, batch_size * sizeof(T*));
+  // cudaMalloc(&dev_b_ptrs, batch_size * sizeof(T*));
+  // cudaMalloc(&dev_c_ptrs, batch_size * sizeof(T*));
+  // cudaMemcpy(dev_a_ptrs, a_ptrs.data(), batch_size * sizeof(T*), cudaMemcpyHostToDevice);
+  // cudaMemcpy(dev_b_ptrs, b_ptrs.data(), batch_size * sizeof(T*), cudaMemcpyHostToDevice);
+  // cudaMemcpy(dev_c_ptrs, c_ptrs.data(), batch_size * sizeof(T*), cudaMemcpyHostToDevice);
+  // cublasGemmBatchedEx(ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
+  //                     (const void*)(&alpha), (const void**)dev_b_ptrs, CUDA_R_32F, ldb,
+  //                     (const void**)dev_a_ptrs, CUDA_R_32F, lda, (const void*)(&beta),
+  //                     (void**)dev_c_ptrs, CUDA_R_32F, ldc, batch_size, CUDA_R_32F,
+  //                     CUBLAS_GEMM_DFALT);
+  // cublas_gemmBatched<T>(ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
+  // &alpha,
+  //                       (const T**)dev_b_ptrs, ldb, (const T**)dev_a_ptrs, lda, &beta,
+  //                       dev_c_ptrs, ldc, batch_size);
+  // cublas_gemmStridedBatched<T>(ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
+  //                              &alpha, b, ldb, b_stride, a, lda, a_stride, &beta, c, ldc,
+  //                              c_stride, batch_size);
+  // #else
   FOR_RANGE(int32_t, i, 0, batch_size) {
     KernelUtil<DeviceType::kGPU, T>::OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a + i * a_stride,
                                             b + i * b_stride, beta, c + i * c_stride);
   }
-
-#endif
+  //
+  // #endif
 }
 
 KU_FLOATING_METHOD Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
