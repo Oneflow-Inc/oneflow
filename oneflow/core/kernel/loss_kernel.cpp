@@ -1,4 +1,5 @@
 #include "oneflow/core/kernel/loss_kernel.h"
+#include "oneflow/core/ndarray/xpu_ndarray_util.h"
 
 namespace oneflow {
 
@@ -30,8 +31,11 @@ void LossKernel<device_type, PredType, LabelType>::ForwardDataContent(
     if (weight_blob != nullptr) {
       PredType* weight = weight_blob->mut_dptr<PredType>();
       if (weight_blob->shape().elem_cnt() == n) {
-        KernelUtil<device_type, PredType>::Mul(ctx.device_ctx, n, weight, prediction_diff,
-                                               prediction_diff);
+        const int64_t m = prediction_diff_blob->shape().Count(1);
+        XpuNdArrayUtil<device_type, PredType>::template Binary<BinaryFuncMul>::SwitchBroadcastApply(
+            SwitchCase(2), ctx.device_ctx, XpuVarNdarray<PredType>({n, m}, prediction_diff),
+            XpuVarNdarray<const PredType>({n, 1}, weight),
+            XpuVarNdarray<const PredType>({n, m}, prediction_diff));
       } else if (weight_blob->shape().elem_cnt() == 1) {
         KernelUtil<device_type, PredType>::Scal(ctx.device_ctx, n, weight, prediction_diff, 1);
       } else {
