@@ -37,7 +37,7 @@ void MeanKernel<device_type, T>::BackwardDataContent(
   size_t num_axes = in_diff_blob->shape().NumAxes();
   XpuNdArrayUtil<device_type, T>::template Unary<UnaryFuncIdentity>::SwitchBroadcastApply(
       SwitchCase(num_axes), ctx.device_ctx, XpuVarNdarray<T>(in_diff_blob, num_axes),
-      XpuVarNdarray<const T>(in_diff_blob->shape(), bw_tmp_blob->dptr<T>()));
+      XpuVarNdarray<const T>(out_diff_blob->shape(), bw_tmp_blob->dptr<T>()));
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMeanConf, MeanKernel, FLOATING_DATA_TYPE_SEQ);
