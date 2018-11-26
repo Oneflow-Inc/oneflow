@@ -12,8 +12,8 @@ void BroadcastSubKernel<device_type, T>::ForwardDataContent(
   const Blob* b_blob = BnInOp2Blob("b");
   Blob* out_blob = BnInOp2Blob("out");
   size_t num_axes = out_blob->shape().NumAxes();
-  NdarrayUtil<device_type, T>::template Binary<BinaryFuncSub>::SwitchBroadcastApply(
-      SwitchCase(num_axes), kernel_ctx.device_ctx, XpuVarNdarray<T>(out_blob, num_axes),
+  NdarrayUtil<device_type, T>::template BroadcastApply<BinaryFuncSub>(
+      kernel_ctx.device_ctx, XpuVarNdarray<T>(out_blob, num_axes),
       XpuVarNdarray<const T>(a_blob, num_axes), XpuVarNdarray<const T>(b_blob, num_axes));
 }
 
