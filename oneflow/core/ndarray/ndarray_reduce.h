@@ -5,6 +5,7 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/ndarray/ndarray_reduce_core.h"
 #include "oneflow/core/ndarray/xpu_ndarray_assign.h"
+#include "oneflow/core/ndarray/ndarray_reduce_impl.h"
 
 namespace oneflow {
 
@@ -13,7 +14,13 @@ struct NdArrayReduce final {
   static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
                      const XpuVarNdarray<T>& tmp_storage) {
     CHECK_EQ(y.shape().NumAxes(), x.shape().NumAxes());
-    return SwitchReduce(SwitchCase(y.shape().NumAxes()), ctx, y, x, tmp_storage);
+    if (ndarray::MatrixRowReduce<device_type, T>::Matched(y, x)) {
+      ndarray::MatrixRowReduce<device_type, T>::Reduce(ctx, y, x, tmp_storage);
+    } else if (ndarray::MatrixColReduce<device_type, T>::Matched(y, x)) {
+      ndarray::MatrixColReduce<device_type, T>::Reduce(ctx, y, x, tmp_storage);
+    } else {
+      return SwitchReduce(SwitchCase(y.shape().NumAxes()), ctx, y, x, tmp_storage);
+    }
   }
 
  private:
