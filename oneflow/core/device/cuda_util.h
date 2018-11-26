@@ -50,6 +50,21 @@ enum class CudaWorkType {
 };
 inline size_t GetCudaWorkTypeSize() { return OF_PP_SEQ_SIZE(CUDA_WORK_TYPE_SEQ); }
 
+#define CUDA_DATA_TYPE_SEQ                \
+  OF_PP_MAKE_TUPLE_SEQ(float, CUDA_R_32F) \
+  OF_PP_MAKE_TUPLE_SEQ(double, CUDA_R_64F)
+
+cudaDataType_t GetCudaDataType(DataType);
+
+template<typename T>
+struct CudaDataType;
+
+#define SPECIALIZE_CUDA_DATA_TYPE(type_cpp, type_cuda) \
+  template<>                                           \
+  struct CudaDataType<type_cpp> : std::integral_constant<cudaDataType_t, type_cuda> {};
+OF_PP_FOR_EACH_TUPLE(SPECIALIZE_CUDA_DATA_TYPE, CUDA_DATA_TYPE_SEQ);
+#undef SPECIALIZE_CUDA_DATA_TYPE
+
 }  // namespace oneflow
 
 #endif  // WITH_CUDA
