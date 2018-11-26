@@ -6,11 +6,12 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
+#include "oneflow/core/ndarray/xpu_ndarray_base.h"
 
 namespace oneflow {
 
 template<typename T>
-class XpuVarNdarray final {
+class XpuVarNdarray final : public XpuNdarrayBase<XpuVarNdarray<T>, T> {
  public:
   explicit XpuVarNdarray(const Blob* blob, int ndims_extend_to)
       : shape_(blob->shape().CreateLeftExtendedShape(ndims_extend_to)),

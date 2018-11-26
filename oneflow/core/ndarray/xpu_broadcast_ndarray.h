@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_NDARRAY_XPU_BROADCAST_NDARRAY_H_
 
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
+#include "oneflow/core/ndarray/xpu_ndarray_base.h"
 
 namespace oneflow {
 
@@ -9,7 +10,7 @@ template<typename T, int NDIMS>
 struct XpuBroadcastNdarrayUtil;
 
 template<typename T>
-class XpuBroadcastNdarray final {
+class XpuBroadcastNdarray final : public XpuNdarrayBase<XpuBroadcastNdarray<T>, T> {
  public:
   OF_DEVICE_FUNC XpuBroadcastNdarray(const XpuShape& shape, const XpuVarNdarray<T>& var)
       : shape_(shape), var_(var) {}
