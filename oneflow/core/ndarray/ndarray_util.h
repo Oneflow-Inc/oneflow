@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_NDARRAY_XPU_NDARRAY_UTIL_H_
-#define ONEFLOW_CORE_NDARRAY_XPU_NDARRAY_UTIL_H_
+#ifndef ONEFLOW_CORE_NDARRAY_NDARRAY_UTIL_H_
+#define ONEFLOW_CORE_NDARRAY_NDARRAY_UTIL_H_
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
@@ -14,7 +14,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-struct XpuNdArrayUtil final {
+struct NdarrayUtil final {
   template<const T (*unary_func)(const T)>
   struct Unary final {
     template<int NDIMS>
@@ -23,7 +23,7 @@ struct XpuNdArrayUtil final {
       return NdArrayApplyBroadcastUnary<device_type, T, NDIMS, unary_func>::Apply(ctx, y, x);
     }
 #define DEFINE_NDARRAY_BROADCAST_UNARY(func_name, NDIMS) \
-  XpuNdArrayUtil<device_type, T>::Unary<unary_func>::func_name<NDIMS>
+  NdarrayUtil<device_type, T>::Unary<unary_func>::func_name<NDIMS>
     DEFINE_STATIC_SWITCH_FUNC(void, BroadcastApply, DEFINE_NDARRAY_BROADCAST_UNARY,
                               MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
 #undef DEFINE_NDARRAY_BROADCAST_UNARY
@@ -37,7 +37,7 @@ struct XpuNdArrayUtil final {
       return NdArrayApplyBroadcastBinary<device_type, T, NDIMS, binary_func>::Apply(ctx, y, a, b);
     }
 #define DEFINE_NDARRAY_BROADCAST_BINARY(func_name, NDIMS) \
-  XpuNdArrayUtil<device_type, T>::Binary<binary_func>::func_name<NDIMS>
+  NdarrayUtil<device_type, T>::Binary<binary_func>::func_name<NDIMS>
     DEFINE_STATIC_SWITCH_FUNC(void, BroadcastApply, DEFINE_NDARRAY_BROADCAST_BINARY,
                               MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
 #undef DEFINE_NDARRAY_BROADCAST_BINARY
@@ -48,7 +48,7 @@ struct XpuNdArrayUtil final {
                      const XpuVarNdarray<T>& tmp_storage) {
     return NdArrayReduce<device_type, T, NDIMS>::Reduce(ctx, y, x, tmp_storage);
   }
-#define DEFINE_NDARRAY_REDUCE(func_name, NDIMS) XpuNdArrayUtil<device_type, T>::func_name<NDIMS>
+#define DEFINE_NDARRAY_REDUCE(func_name, NDIMS) NdarrayUtil<device_type, T>::func_name<NDIMS>
   DEFINE_STATIC_SWITCH_FUNC(void, Reduce, DEFINE_NDARRAY_REDUCE, MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
 #undef DEFINE_NDARRAY_REDUCE
 
@@ -60,4 +60,4 @@ struct XpuNdArrayUtil final {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_NDARRAY_XPU_NDARRAY_UTIL_H_
+#endif  // ONEFLOW_CORE_NDARRAY_NDARRAY_UTIL_H_
