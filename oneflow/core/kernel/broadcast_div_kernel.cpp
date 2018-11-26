@@ -1,5 +1,5 @@
 #include "oneflow/core/kernel/broadcast_div_kernel.h"
-#include "oneflow/core/ndarray/xpu_ndarray_util.h"
+#include "oneflow/core/ndarray/ndarray_util.h"
 
 namespace oneflow {
 

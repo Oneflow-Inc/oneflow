@@ -1,4 +1,4 @@
-#include "oneflow/core/ndarray/xpu_ndarray_util.h"
+#include "oneflow/core/ndarray/ndarray_util.h"
 #include <gtest/gtest.h>
 
 namespace oneflow {
