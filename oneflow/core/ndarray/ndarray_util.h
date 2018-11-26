@@ -16,6 +16,32 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 struct NdarrayUtil final {
   template<const T (*unary_func)(const T)>
+  static void BroadcastApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
+                             const XpuVarNdarray<const T>& x) {
+    CHECK_EQ(x.shape().NumAxes(), y.shape().NumAxes());
+    return Unary<unary_func>::SwitchBroadcastApply(SwitchCase(x.shape().NumAxes()), ctx, y, x);
+  }
+  template<const T (*binary_func)(const T, const T)>
+  static void BroadcastApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
+                             const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
+    CHECK_EQ(a.shape().NumAxes(), y.shape().NumAxes());
+    CHECK_EQ(b.shape().NumAxes(), y.shape().NumAxes());
+    return Binary<binary_func>::SwitchBroadcastApply(SwitchCase(y.shape().NumAxes()), ctx, y, a, b);
+  }
+
+  static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
+                     const XpuVarNdarray<T>& tmp_storage) {
+    CHECK_EQ(y.shape().NumAxes(), x.shape().NumAxes());
+    return SwitchReduce(SwitchCase(y.shape().NumAxes()), ctx, y, x, tmp_storage);
+  }
+
+  template<const T (*unary_func)(const T)>
+  static void ImplaceApplyUnary(DeviceCtx* ctx, const XpuVarNdarray<T>& y) {
+    return NdArrayApplyUnary<device_type, T, unary_func>::ImplaceApply(ctx, y);
+  }
+
+ private:
+  template<const T (*unary_func)(const T)>
   struct Unary final {
     template<int NDIMS>
     static void BroadcastApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
@@ -43,18 +69,6 @@ struct NdarrayUtil final {
 #undef DEFINE_NDARRAY_BROADCAST_BINARY
   };
 
-  static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
-                     const XpuVarNdarray<T>& tmp_storage) {
-    CHECK_EQ(y.shape().NumAxes(), x.shape().NumAxes());
-    return SwitchReduce(SwitchCase(y.shape().NumAxes()), ctx, y, x, tmp_storage);
-  }
-
-  template<const T (*unary_func)(const T)>
-  static void ImplaceApplyUnary(DeviceCtx* ctx, const XpuVarNdarray<T>& y) {
-    return NdArrayApplyUnary<device_type, T, unary_func>::ImplaceApply(ctx, y);
-  }
-
- private:
   template<int NDIMS>
   static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
                      const XpuVarNdarray<T>& tmp_storage) {

@@ -32,8 +32,8 @@ void LossKernel<device_type, PredType, LabelType>::ForwardDataContent(
       PredType* weight = weight_blob->mut_dptr<PredType>();
       if (weight_blob->shape().elem_cnt() == n) {
         const int64_t m = prediction_diff_blob->shape().Count(1);
-        NdarrayUtil<device_type, PredType>::template Binary<BinaryFuncMul>::SwitchBroadcastApply(
-            SwitchCase(2), ctx.device_ctx, XpuVarNdarray<PredType>({n, m}, prediction_diff),
+        NdarrayUtil<device_type, PredType>::template BroadcastApply<BinaryFuncMul>(
+            ctx.device_ctx, XpuVarNdarray<PredType>({n, m}, prediction_diff),
             XpuVarNdarray<const PredType>({n, 1}, weight),
             XpuVarNdarray<const PredType>({n, m}, prediction_diff));
       } else if (weight_blob->shape().elem_cnt() == 1) {

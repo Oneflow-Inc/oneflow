@@ -35,8 +35,8 @@ void MeanKernel<device_type, T>::BackwardDataContent(
   KernelUtil<device_type, T>::Div(ctx.device_ctx, bw_tmp_blob->shape().elem_cnt(),
                                   bw_tmp_blob->mut_dptr<T>(), static_cast<T>(count));
   size_t num_axes = in_diff_blob->shape().NumAxes();
-  NdarrayUtil<device_type, T>::template Unary<UnaryFuncIdentity>::SwitchBroadcastApply(
-      SwitchCase(num_axes), ctx.device_ctx, XpuVarNdarray<T>(in_diff_blob, num_axes),
+  NdarrayUtil<device_type, T>::template BroadcastApply<UnaryFuncIdentity>(
+      ctx.device_ctx, XpuVarNdarray<T>(in_diff_blob, num_axes),
       XpuVarNdarray<const T>(out_diff_blob->shape(), bw_tmp_blob->dptr<T>()));
 }
 
