@@ -15,7 +15,7 @@ class NormalBackwardCompActor final : public CompActor {
 
  private:
   void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const override;
-  void NormalProcessNaiveReadableRegstMsg(const std::deque<Regst*>&) override;
+  void NormalProcessNaiveReadableDataRegstMsg(const std::deque<Regst*>&) override;
   void NormalProcessCustomizedReadableRegstMsg(const ActorMsg&) override;
   void Act() override;
   bool IsCustomizedReadReady() override;

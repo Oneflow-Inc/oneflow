@@ -14,7 +14,7 @@ class BoxingActor final : public Actor {
   void VirtualActorInit(const TaskProto&) override;
 
  private:
-  void NormalProcessNaiveReadableRegstMsg(const std::deque<Regst*>&) override;
+  void NormalProcessNaiveReadableDataRegstMsg(const std::deque<Regst*>&) override;
   void Act() override;
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer();
   void VirtualAsyncSendNaiveConsumedRegstMsgToProducer();
