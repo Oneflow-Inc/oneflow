@@ -12,7 +12,7 @@ void NormalModelUpdtOp::InitFromOpConf() {
   EnrollOutputBn("model", false);
   if (op_conf().normal_mdupdt_conf().user_conf().has_clip_conf()
       && op_conf().normal_mdupdt_conf().user_conf().clip_conf().has_clip_by_global_norm()) {
-    EnrollDataTmpBn("global_norm");  // TODO(shiyuan) perhaps as OutputBlob
+    EnrollDataTmpBn("global_norm");
   }
   MdUpdtVirtualInitFromOpConf();
 }

@@ -26,16 +26,12 @@ class NormalMdUpdateKernelUtil<DeviceType::kGPU, T> final {
     T* model_diff = BnInOp2Blob("model_diff")->mut_dptr<T>();
     T* global_norm = BnInOp2Blob("global_norm")->mut_dptr<T>();
     if (conf.has_global_norm()) {
-      if (cur_batch_num == 0) {
-        *global_norm = static_cast<T>(conf.global_norm());
-      } else {
-        CHECK_EQ(*global_norm, static_cast<T>(conf.global_norm()));
-      }
+      KernelUtil<DeviceType::kGPU, T>::Set(ctx, static_cast<T>(conf.global_norm()), global_norm);
     } else {
       // The Dot does not read the result, so the global_norm need not be initialized.
       KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, model_diff, 1, model_diff, 1, global_norm);
-      KernelUtil<DeviceType::kGPU, T>::Sqrt(ctx, n, global_norm, global_norm);
-      KernelUtil<DeviceType::kGPU, T>::Div(ctx, n, global_norm, batch_instance_num_ptr);
+      KernelUtil<DeviceType::kGPU, T>::Sqrt(ctx, 1, global_norm, global_norm);
+      KernelUtil<DeviceType::kGPU, T>::Div(ctx, 1, global_norm, batch_instance_num_ptr);
     }
     ClipByGlobalNormGpu<T>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
