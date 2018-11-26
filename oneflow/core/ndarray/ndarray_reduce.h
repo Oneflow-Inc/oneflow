@@ -8,8 +8,9 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T, int NDIMS>
+template<DeviceType device_type, typename T>
 struct NdArrayReduce final {
+  template<int NDIMS>
   static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
                      const XpuVarNdarray<T>& tmp_storage) {
     XpuVarNdarray<T> storage(x.shape(), tmp_storage.ptr());
@@ -24,12 +25,13 @@ struct NdArrayReduce final {
       if (y.shape().At(i) == x.shape().At(i)) { continue; }
       CHECK_EQ(y.shape().At(i), 1);
       CHECK_GT(x.shape().At(i), y.shape().At(i));
-      ImplaceReduceAxis(ctx, i, storage, &cur_shape);
+      ImplaceReduceAxis<NDIMS>(ctx, i, storage, &cur_shape);
     }
     XpuReducedNdarray<T, NDIMS> reduced(y.shape(), storage);
     XpuNdArrayAssign<device_type, T, NDIMS>::Assign(ctx, y, reduced);
   }
 
+  template<int NDIMS>
   static void ImplaceReduceAxis(DeviceCtx* ctx, int axis, const XpuVarNdarray<T>& implace,
                                 XpuShape* cur_shape) {
     int64_t target_elem_num = cur_shape->ElemNum() / cur_shape->At(axis);

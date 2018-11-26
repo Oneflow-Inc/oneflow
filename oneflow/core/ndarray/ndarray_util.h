@@ -72,7 +72,7 @@ struct NdarrayUtil final {
   template<int NDIMS>
   static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
                      const XpuVarNdarray<T>& tmp_storage) {
-    return NdArrayReduce<device_type, T, NDIMS>::Reduce(ctx, y, x, tmp_storage);
+    return NdArrayReduce<device_type, T>::template Reduce<NDIMS>(ctx, y, x, tmp_storage);
   }
 #define DEFINE_NDARRAY_REDUCE(func_name, NDIMS) NdarrayUtil<device_type, T>::func_name<NDIMS>
   DEFINE_STATIC_SWITCH_FUNC(void, Reduce, DEFINE_NDARRAY_REDUCE, MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
