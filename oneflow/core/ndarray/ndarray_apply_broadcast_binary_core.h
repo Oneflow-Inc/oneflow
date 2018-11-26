@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_NDARRAY_NDARRAY_APPLY_BROADCAST_BINARY_CORE_H_
 #define ONEFLOW_CORE_NDARRAY_NDARRAY_APPLY_BROADCAST_BINARY_CORE_H_
 
-#include "oneflow/core/ndarray/ndarray_util.h"
+#include "oneflow/core/ndarray/xpu_util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
 #include "oneflow/core/ndarray/xpu_broadcast_ndarray.h"
 #include "oneflow/core/ndarray/xpu_binary_func_ndarray.h"
