@@ -14,7 +14,7 @@ void TestMiddleAxis(int num) {
   XpuVarNdarray<int32_t> tmp(XpuShape(Shape({num, num, num})), tmp_storage.data());
   std::vector<int32_t> ret(num * num, -999);
   XpuVarNdarray<int32_t> y(XpuShape(Shape({num, 1, num})), ret.data());
-  NdArrayReduce<DeviceType::kCPU, int32_t>::template Reduce<3>(nullptr, y, x, tmp);
+  NdArrayReduce<DeviceType::kCPU, int32_t>::Reduce(nullptr, y, x, tmp);
   for (int i = 0; i < num; ++i) {
     for (int j = 0; j < num; ++j) { ASSERT_EQ(ret[i * num + j], num); }
   }
@@ -29,7 +29,7 @@ TEST(NdArrayReduce, sum) {
   XpuVarNdarray<int32_t> tmp(XpuShape(Shape({100})), tmp_storage.data());
   int32_t ret = -100;
   XpuVarNdarray<int32_t> y(XpuShape(Shape({1})), &ret);
-  NdArrayReduce<DeviceType::kCPU, int32_t>::template Reduce<1>(nullptr, y, x, tmp);
+  NdArrayReduce<DeviceType::kCPU, int32_t>::Reduce(nullptr, y, x, tmp);
   ASSERT_EQ(ret, 100);
 }
 

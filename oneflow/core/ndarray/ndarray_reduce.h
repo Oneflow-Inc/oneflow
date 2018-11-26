@@ -10,6 +10,17 @@ namespace oneflow {
 
 template<DeviceType device_type, typename T>
 struct NdArrayReduce final {
+  static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
+                     const XpuVarNdarray<T>& tmp_storage) {
+    CHECK_EQ(y.shape().NumAxes(), x.shape().NumAxes());
+    return SwitchReduce(SwitchCase(y.shape().NumAxes()), ctx, y, x, tmp_storage);
+  }
+
+ private:
+#define DEFINE_NDARRAY_REDUCE(func_name, NDIMS) func_name<NDIMS>
+  DEFINE_STATIC_SWITCH_FUNC(void, Reduce, DEFINE_NDARRAY_REDUCE, MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
+#undef DEFINE_NDARRAY_REDUCE
+
   template<int NDIMS>
   static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
                      const XpuVarNdarray<T>& tmp_storage) {
