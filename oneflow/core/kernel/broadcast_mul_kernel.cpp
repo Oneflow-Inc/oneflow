@@ -64,15 +64,15 @@ void BroadcastMulKernel<device_type, T>::BackwardDataContent(
       NdarrayUtil<device_type, T>::template Binary<BinaryFuncMul>::SwitchBroadcastApply(
           SwitchCase(num_axes), ctx.device_ctx, tmp, out_diff_tensor,
           XpuVarNdarray<const T>(b, num_axes));
-      NdarrayUtil<device_type, T>::SwitchReduce(SwitchCase(num_axes), ctx.device_ctx,
-                                                XpuVarNdarray<T>(a_diff, num_axes), const_tmp, tmp);
+      NdarrayUtil<device_type, T>::Reduce(ctx.device_ctx, XpuVarNdarray<T>(a_diff, num_axes),
+                                          const_tmp, tmp);
     }
     if (b_diff) {
       NdarrayUtil<device_type, T>::template Binary<BinaryFuncMul>::SwitchBroadcastApply(
           SwitchCase(num_axes), ctx.device_ctx, tmp, out_diff_tensor,
           XpuVarNdarray<const T>(a, num_axes));
-      NdarrayUtil<device_type, T>::SwitchReduce(SwitchCase(num_axes), ctx.device_ctx,
-                                                XpuVarNdarray<T>(b_diff, num_axes), const_tmp, tmp);
+      NdarrayUtil<device_type, T>::Reduce(ctx.device_ctx, XpuVarNdarray<T>(b_diff, num_axes),
+                                          const_tmp, tmp);
     }
   }
 }
