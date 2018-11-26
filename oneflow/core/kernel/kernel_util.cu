@@ -450,12 +450,9 @@ KU_FLOATING_METHOD BatchedGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
                                const enum CBLAS_TRANSPOSE trans_b, int batch_size, int m, int n,
                                int k, const T alpha, const T* a, const T* b, const T beta, T* c,
                                T** buf) {
-  // const int a_stride = m * k;
-  // const int b_stride = k * n;
-  // const int c_stride = m * n;
-  int a_stride = m * k;
-  int b_stride = k * n;
-  int c_stride = m * n;
+  const int a_stride = m * k;
+  const int b_stride = k * n;
+  const int c_stride = m * n;
 #if CUDA_VERSION >= 9010
   const int lda = (trans_a == CblasNoTrans) ? k : m;
   const int ldb = (trans_b == CblasNoTrans) ? n : k;
@@ -468,20 +465,6 @@ KU_FLOATING_METHOD BatchedGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
   AssignStridedAddr<T>(ctx, dev_a_ptrs, const_cast<T*>(a), a_stride, batch_size);
   AssignStridedAddr<T>(ctx, dev_b_ptrs, const_cast<T*>(b), b_stride, batch_size);
   AssignStridedAddr<T>(ctx, dev_c_ptrs, c, c_stride, batch_size);
-  // std::vector<T*> a_ptrs(batch_size);
-  // std::vector<T*> b_ptrs(batch_size);
-  // std::vector<T*> c_ptrs(batch_size);
-  // FOR_RANGE(int, i, 0, batch_size) {
-  //   a_ptrs[i] = a + i * a_stride;
-  //   b_ptrs[i] = b + i * b_stride;
-  //   c_ptrs[i] = c + i * c_stride;
-  // }
-  // cudaMalloc(&dev_a_ptrs, batch_size * sizeof(T*));
-  // cudaMalloc(&dev_b_ptrs, batch_size * sizeof(T*));
-  // cudaMalloc(&dev_c_ptrs, batch_size * sizeof(T*));
-  // cudaMemcpy(dev_a_ptrs, a_ptrs.data(), batch_size * sizeof(T*), cudaMemcpyHostToDevice);
-  // cudaMemcpy(dev_b_ptrs, b_ptrs.data(), batch_size * sizeof(T*), cudaMemcpyHostToDevice);
-  // cudaMemcpy(dev_c_ptrs, c_ptrs.data(), batch_size * sizeof(T*), cudaMemcpyHostToDevice);
   cudaDataType_t data_type = CudaDataType<T>::value;
   cublasGemmBatchedEx(ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
                       reinterpret_cast<const void*>(&alpha),
@@ -490,13 +473,6 @@ KU_FLOATING_METHOD BatchedGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
                       data_type, lda, reinterpret_cast<const void*>(&beta),
                       reinterpret_cast<void**>(dev_c_ptrs), data_type, ldc, batch_size, data_type,
                       CUBLAS_GEMM_DEFAULT);
-// cublas_gemmBatched<T>(ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
-// &alpha,
-//                       (const T**)dev_b_ptrs, ldb, (const T**)dev_a_ptrs, lda, &beta,
-//                       dev_c_ptrs, ldc, batch_size);
-// cublas_gemmStridedBatched<T>(ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
-//                              &alpha, b, ldb, b_stride, a, lda, a_stride, &beta, c, ldc,
-//                              c_stride, batch_size);
 #else
   FOR_RANGE(int32_t, i, 0, batch_size) {
     KernelUtil<DeviceType::kGPU, T>::OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a + i * a_stride,
