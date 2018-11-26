@@ -325,8 +325,9 @@ void Actor::AsyncSendConsumedCtrlRegstMsgToProducer() {
     CHECK_GE(reg_deq.size(), returned_regst_num);
     for (size_t i = 0; i < returned_regst_num; ++i) {
       Regst* regst = reg_deq.at(i);
-      AsyncSendMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, regst->producer_actor_id(), regst));
+      // must access regst before sending it to producer
       regst_desc_ids.push_back(regst->regst_desc_id());
+      AsyncSendMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, regst->producer_actor_id(), regst));
     }
   });
   naive_consumed_rs_.PopFrontRegsts(regst_desc_ids);
@@ -452,8 +453,10 @@ void Actor::AsyncSendRegstMsgToProducer(Regst* regst) {
 }
 
 void Actor::AsyncSendRegstMsgToProducer(Regst* regst, int64_t producer) {
+  // must access regst before sending it to producer
+  int64_t regst_desc_id = regst->regst_desc_id();
   AsyncSendMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, producer, regst));
-  naive_consumed_rs_.TryPopFrontRegst(regst->regst_desc_id());
+  naive_consumed_rs_.TryPopFrontRegst(regst_desc_id);
 }
 
 Regst* Actor::GetSoleProducedRegst4RegstDescId(int64_t regst_desc_id) {
