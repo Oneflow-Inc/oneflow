@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_NDARRAY_XPU_REDUCED_NDARRAY_H_
 
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
-#include "oneflow/core/ndarray/ndarray_util.h"
+#include "oneflow/core/ndarray/xpu_util.h"
 #include "oneflow/core/ndarray/unary_func.h"
 
 namespace oneflow {

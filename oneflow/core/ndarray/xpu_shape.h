@@ -4,7 +4,7 @@
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/ndarray/ndarray_util.h"
+#include "oneflow/core/ndarray/xpu_util.h"
 
 namespace oneflow {
 

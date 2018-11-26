@@ -1,6 +1,6 @@
 #include "oneflow/core/kernel/mean_kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/ndarray/xpu_ndarray_util.h"
+#include "oneflow/core/ndarray/ndarray_util.h"
 
 namespace oneflow {
 
@@ -12,9 +12,9 @@ void MeanKernel<device_type, T>::ForwardDataContent(
   size_t count = in_blob->shape().elem_cnt() / out_blob->shape().elem_cnt();
   Blob* fw_tmp_blob = BnInOp2Blob("fw_tmp");
   size_t num_axes = in_blob->shape().NumAxes();
-  XpuNdArrayUtil<device_type, T>::SwitchReduce(
-      SwitchCase(num_axes), ctx.device_ctx, XpuVarNdarray<T>(out_blob, num_axes),
-      XpuVarNdarray<const T>(in_blob, num_axes), XpuVarNdarray<T>(fw_tmp_blob, num_axes));
+  NdarrayUtil<device_type, T>::Reduce(ctx.device_ctx, XpuVarNdarray<T>(out_blob, num_axes),
+                                      XpuVarNdarray<const T>(in_blob, num_axes),
+                                      XpuVarNdarray<T>(fw_tmp_blob, num_axes));
 
   KernelUtil<device_type, T>::Div(ctx.device_ctx, out_blob->shape().elem_cnt(),
                                   out_blob->mut_dptr<T>(), static_cast<T>(count));
@@ -35,8 +35,8 @@ void MeanKernel<device_type, T>::BackwardDataContent(
   KernelUtil<device_type, T>::Div(ctx.device_ctx, bw_tmp_blob->shape().elem_cnt(),
                                   bw_tmp_blob->mut_dptr<T>(), static_cast<T>(count));
   size_t num_axes = in_diff_blob->shape().NumAxes();
-  XpuNdArrayUtil<device_type, T>::template Unary<UnaryFuncIdentity>::SwitchBroadcastApply(
-      SwitchCase(num_axes), ctx.device_ctx, XpuVarNdarray<T>(in_diff_blob, num_axes),
+  NdarrayUtil<device_type, T>::template BroadcastApply<UnaryFuncIdentity>(
+      ctx.device_ctx, XpuVarNdarray<T>(in_diff_blob, num_axes),
       XpuVarNdarray<const T>(out_diff_blob->shape(), bw_tmp_blob->dptr<T>()));
 }
 
