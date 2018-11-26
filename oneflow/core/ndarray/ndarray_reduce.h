@@ -14,10 +14,10 @@ struct NdArrayReduce final {
   static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
                      const XpuVarNdarray<T>& tmp_storage) {
     CHECK_EQ(y.shape().NumAxes(), x.shape().NumAxes());
-    if (ndarray::MatrixRowReduce<device_type, T>::Matched(y, x)) {
-      ndarray::MatrixRowReduce<device_type, T>::Reduce(ctx, y, x, tmp_storage);
-    } else if (ndarray::MatrixColReduce<device_type, T>::Matched(y, x)) {
-      ndarray::MatrixColReduce<device_type, T>::Reduce(ctx, y, x, tmp_storage);
+    if (NdarrayMatrixRowReduce<device_type, T>::Matched(y, x)) {
+      NdarrayMatrixRowReduce<device_type, T>::Reduce(ctx, y, x, tmp_storage);
+    } else if (NdarrayMatrixColReduce<device_type, T>::Matched(y, x)) {
+      NdarrayMatrixColReduce<device_type, T>::Reduce(ctx, y, x, tmp_storage);
     } else {
       return SwitchReduce(SwitchCase(y.shape().NumAxes()), ctx, y, x, tmp_storage);
     }
