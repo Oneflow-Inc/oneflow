@@ -6,7 +6,6 @@
 #include "oneflow/core/ndarray/xpu_transpose_ndarray.h"
 #include "oneflow/core/ndarray/xpu_reshape_ndarray.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
-#include "oneflow/core/ndarray/xpu_ndarray_builder.h"
 
 namespace oneflow {
 
