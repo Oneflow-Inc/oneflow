@@ -2,7 +2,7 @@
 #include "oneflow/core/ndarray/binary_func.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
 #include "oneflow/core/common/preprocessor.h"
-#include "oneflow/core/ndarray/xpu_ndarray_util.h"
+#include "oneflow/core/ndarray/ndarray_util.h"
 
 namespace oneflow {
 
