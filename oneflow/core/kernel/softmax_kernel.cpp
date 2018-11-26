@@ -15,7 +15,10 @@ void SoftmaxComputeDiff(DeviceCtx* ctx, const int64_t n, const int64_t w, const 
   // dot product | get dot product sum_vec[i] from out[i] * out_diff[i]
   T* tmp = in_diff;
   KernelUtil<device_type, T>::Mul(ctx, n * w, out, out_diff, tmp);
-  KernelUtil<device_type, T>::RowSum(ctx, n, w, tmp, sum_vec, temp_storage, temp_storage_bytes);
+  NdarrayUtil<device_type, T>::Reduce(
+      ctx, XpuVarNdarray<T>({n, 1}, sum_vec), XpuVarNdarray<const T>({n, w}, tmp),
+      XpuVarNdarray<T>({static_cast<int64_t>(temp_storage_bytes / sizeof(T))},
+                       reinterpret_cast<T*>(temp_storage)));
   // copy out_diff to in_diff
   KernelUtil<device_type, T>::Copy(ctx, n * w, out_diff, 1, in_diff, 1);
   // sub | in_diff[i][j] -= sum_vec[i]
