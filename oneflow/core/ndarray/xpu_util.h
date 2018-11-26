@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_NDARRAY_NDARRAY_UTIL_H_
-#define ONEFLOW_CORE_NDARRAY_NDARRAY_UTIL_H_
+#ifndef ONEFLOW_CORE_NDARRAY_XPU_UTIL_H_
+#define ONEFLOW_CORE_NDARRAY_XPU_UTIL_H_
 
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/device/cuda_util.h"
@@ -37,4 +37,4 @@ namespace oneflow {
 #define GET_SEQ_5 GET_SEQ_5 OF_PP_MAKE_TUPLE_SEQ(5)
 }
 
-#endif  // ONEFLOW_CORE_NDARRAY_NDARRAY_UTIL_H_
+#endif  // ONEFLOW_CORE_NDARRAY_XPU_UTIL_H_

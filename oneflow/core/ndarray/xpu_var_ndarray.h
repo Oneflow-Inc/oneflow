@@ -5,7 +5,7 @@
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/register/blob.h"
-#include "oneflow/core/ndarray/ndarray_util.h"
+#include "oneflow/core/ndarray/xpu_util.h"
 #include "oneflow/core/ndarray/xpu_ndarray_base.h"
 
 namespace oneflow {
