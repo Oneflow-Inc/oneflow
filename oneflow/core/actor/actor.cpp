@@ -193,8 +193,11 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
       Regst* regst = msg.regst();
       if (naive_consumed_rs_.HasRegstDescId(regst->regst_desc_id())) {
         CHECK_EQ(0, naive_consumed_rs_.TryPushBackRegst(regst));
-        NormalProcessNaiveReadableRegstMsg(
-            naive_consumed_rs_.RegstDeq4RegstDescId(regst->regst_desc_id()));
+        const auto& rdeq = naive_consumed_rs_.RegstDeq4RegstDescId(regst->regst_desc_id());
+        CHECK(rdeq.empty() == false);
+        if (rdeq.front()->regst_desc()->regst_desc_type().has_data_regst_desc()) {
+          NormalProcessNaiveReadableDataRegstMsg(rdeq);
+        }
       } else if (TryUpdtStateAsProducedRegst(regst) == 0) {
         // do nothing
       } else {
