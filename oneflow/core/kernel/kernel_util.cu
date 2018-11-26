@@ -453,7 +453,6 @@ KU_FLOATING_METHOD BatchedGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
   const int a_stride = m * k;
   const int b_stride = k * n;
   const int c_stride = m * n;
-#if CUDA_VERSION >= 9010
   const int lda = (trans_a == CblasNoTrans) ? k : m;
   const int ldb = (trans_b == CblasNoTrans) ? n : k;
   const int ldc = n;
@@ -465,6 +464,7 @@ KU_FLOATING_METHOD BatchedGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
   AssignStridedAddr<T>(ctx, dev_a_ptrs, const_cast<T*>(a), a_stride, batch_size);
   AssignStridedAddr<T>(ctx, dev_b_ptrs, const_cast<T*>(b), b_stride, batch_size);
   AssignStridedAddr<T>(ctx, dev_c_ptrs, c, c_stride, batch_size);
+#if CUDA_VERSION >= 9010
   cudaDataType_t data_type = CudaDataType<T>::value;
   cublasGemmBatchedEx(ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
                       reinterpret_cast<const void*>(&alpha),
@@ -474,10 +474,9 @@ KU_FLOATING_METHOD BatchedGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
                       reinterpret_cast<void**>(dev_c_ptrs), data_type, ldc, batch_size, data_type,
                       CUBLAS_GEMM_DEFAULT);
 #else
-  FOR_RANGE(int32_t, i, 0, batch_size) {
-    KernelUtil<DeviceType::kGPU, T>::OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a + i * a_stride,
-                                            b + i * b_stride, beta, c + i * c_stride);
-  }
+  cublas_gemmBatched<T>(ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k, &alpha,
+                        const_cast<const T**>(dev_b_ptrs), ldb, const_cast<const T**>(dev_a_ptrs),
+                        lda, &beta, dev_c_ptrs, ldc, batch_size);
 #endif
 }
 
