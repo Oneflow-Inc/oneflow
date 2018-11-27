@@ -31,6 +31,17 @@ struct NdarrayMatrixColReduce final {
 };
 
 template<DeviceType device_type, typename T, const T (*binary_func)(const T, const T)>
+struct NdarrayNoReduce final {
+  static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
+    return x.shape() == y.shape();
+  }
+  static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
+                     const XpuVarNdarray<T>& tmp_storage) {
+    XpuNdArrayAssign<device_type, T>::Assign(ctx, y, x);
+  }
+};
+
+template<DeviceType device_type, typename T, const T (*binary_func)(const T, const T)>
 struct NdarrayDefaultReduce final {
   static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
                      const XpuVarNdarray<T>& tmp_storage) {
@@ -48,11 +59,8 @@ struct NdarrayDefaultReduce final {
     XpuVarNdarray<T> storage(x.shape(), tmp_storage.ptr());
     XpuShape cur_shape(x.shape());
     CHECK_EQ(y.shape().NumAxes(), x.shape().NumAxes());
-    if (x.shape() == y.shape()) {
-      XpuNdArrayAssign<device_type, T, NDIMS>::Assign(ctx, y, x);
-      return;
-    }
-    XpuNdArrayAssign<device_type, T, NDIMS>::Assign(ctx, storage, x);
+    CHECK(x.shape() != y.shape());
+    XpuNdArrayAssign<device_type, T>::Assign(ctx, storage, x);
     for (int i = 0; i < x.shape().NumAxes(); ++i) {
       if (y.shape().At(i) == x.shape().At(i)) { continue; }
       CHECK_EQ(y.shape().At(i), 1);
@@ -60,7 +68,7 @@ struct NdarrayDefaultReduce final {
       ImplaceReduceAxis<NDIMS>(ctx, i, storage, &cur_shape);
     }
     XpuReducedNdarray<T, NDIMS> reduced(y.shape(), storage);
-    XpuNdArrayAssign<device_type, T, NDIMS>::Assign(ctx, y, reduced);
+    XpuNdArrayAssign<device_type, T>::template Assign<NDIMS>(ctx, y, reduced);
   }
 
   template<int NDIMS>

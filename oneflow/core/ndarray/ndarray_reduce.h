@@ -12,7 +12,9 @@ struct NdArrayReduce final {
   static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
                      const XpuVarNdarray<T>& tmp_storage) {
     CHECK_EQ(y.shape().NumAxes(), x.shape().NumAxes());
-    if (NdarrayScalarReduce<device_type, T, binary_func>::Matched(y, x)) {
+    if (NdarrayNoReduce<device_type, T, binary_func>::Matched(y, x)) {
+      NdarrayNoReduce<device_type, T, binary_func>::Reduce(ctx, y, x, tmp_storage);
+    } else if (NdarrayScalarReduce<device_type, T, binary_func>::Matched(y, x)) {
       NdarrayScalarReduce<device_type, T, binary_func>::Reduce(ctx, y, x, tmp_storage);
     } else if (NdarrayMatrixRowReduce<device_type, T, binary_func>::Matched(y, x)) {
       NdarrayMatrixRowReduce<device_type, T, binary_func>::Reduce(ctx, y, x, tmp_storage);
