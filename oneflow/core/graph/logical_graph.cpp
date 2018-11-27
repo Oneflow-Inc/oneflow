@@ -694,7 +694,8 @@ NormalMdUpdtLogicalNode* LogicalGraph::BuildNormalMdUpdtAndMdSaveStruct(
     // for model
     BuildMdSaveStruct(fw_logical, md_updt_logical);
     // TODO: remove the following ugly hard coded `if'
-    if (Global<JobDesc>::Get()->other_conf().train_conf().model_update_conf().has_momentum_conf()) {
+    if (Global<JobDesc>::Get()->other_conf().train_conf().model_update_conf().has_momentum_conf()
+        || Global<JobDesc>::Get()->other_conf().train_conf().model_update_conf().has_adam_conf()) {
       // for forward_model
       BuildMdSaveStruct(fw_logical, md_updt_logical);
     }
