@@ -8,10 +8,10 @@ void OneHotOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
-const PbMessage &OneHotOp::GetCustomizedConf() const { return op_conf().one_hot_conf(); }
+const PbMessage& OneHotOp::GetCustomizedConf() const { return op_conf().one_hot_conf(); }
 
-void OneHotOp::InferBlobDescs(std::function<BlobDesc *(const std::string &)> GetBlobDesc4BnInOp,
-                              const ParallelContext *parallel_ctx) const {
+void OneHotOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                              const ParallelContext* parallel_ctx) const {
   const OneHotOpConf& conf = op_conf().one_hot_conf();
   const int64_t depth = conf.depth();
   const DataType data_type =
