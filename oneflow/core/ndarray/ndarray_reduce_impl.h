@@ -7,6 +7,13 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
+struct NdarrayScalarReduce final {
+  static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x);
+  static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
+                     const XpuVarNdarray<T>& tmp_storage);
+};
+
+template<DeviceType device_type, typename T>
 struct NdarrayMatrixRowReduce final {
   static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x);
   static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
