@@ -12,9 +12,9 @@ void MeanKernel<device_type, T>::ForwardDataContent(
   size_t count = in_blob->shape().elem_cnt() / out_blob->shape().elem_cnt();
   Blob* fw_tmp_blob = BnInOp2Blob("fw_tmp");
   size_t num_axes = in_blob->shape().NumAxes();
-  NdarrayUtil<device_type, T>::Reduce(ctx.device_ctx, XpuVarNdarray<T>(out_blob, num_axes),
-                                      XpuVarNdarray<const T>(in_blob, num_axes),
-                                      XpuVarNdarray<T>(fw_tmp_blob, num_axes));
+  NdarrayUtil<device_type, T>::ReduceSum(ctx.device_ctx, XpuVarNdarray<T>(out_blob, num_axes),
+                                         XpuVarNdarray<const T>(in_blob, num_axes),
+                                         XpuVarNdarray<T>(fw_tmp_blob, num_axes));
 
   KernelUtil<device_type, T>::Div(ctx.device_ctx, out_blob->shape().elem_cnt(),
                                   out_blob->mut_dptr<T>(), static_cast<T>(count));

@@ -78,8 +78,8 @@ void BroadcastDivKernel<device_type, T>::BackwardDataContent(
     if (a_diff) {
       NdarrayUtil<device_type, T>::template BroadcastApply<BinaryFuncDiv>(
           ctx.device_ctx, tmp, out_diff_tensor, XpuVarNdarray<const T>(b, num_axes));
-      NdarrayUtil<device_type, T>::Reduce(ctx.device_ctx, XpuVarNdarray<T>(a_diff, num_axes),
-                                          const_tmp, tmp);
+      NdarrayUtil<device_type, T>::ReduceSum(ctx.device_ctx, XpuVarNdarray<T>(a_diff, num_axes),
+                                             const_tmp, tmp);
     }
     if (b_diff) {
       const Blob* out_blob = BnInOp2Blob("out");
@@ -88,8 +88,8 @@ void BroadcastDivKernel<device_type, T>::BackwardDataContent(
           XpuVarNdarray<const T>(b, num_axes));
       NdarrayUtil<device_type, T>::template BroadcastApply<BinaryFuncMul>(
           ctx.device_ctx, tmp, out_diff_tensor, const_tmp);
-      NdarrayUtil<device_type, T>::Reduce(ctx.device_ctx, XpuVarNdarray<T>(b_diff, num_axes),
-                                          const_tmp, tmp);
+      NdarrayUtil<device_type, T>::ReduceSum(ctx.device_ctx, XpuVarNdarray<T>(b_diff, num_axes),
+                                             const_tmp, tmp);
       NdarrayUtil<device_type, T>::template ImplaceApplyUnary<UnaryFuncMinus>(
           ctx.device_ctx, XpuVarNdarray<T>(b_diff, num_axes));
     }

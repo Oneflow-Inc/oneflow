@@ -6,8 +6,9 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T, int NDIMS>
+template<DeviceType device_type, typename T>
 struct XpuNdArrayAssign final {
+  template<int NDIMS>
   static void Assign(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
                      const XpuReducedNdarray<T, NDIMS>& reduced) {
     NdArrayAssignCoreWrapper<device_type, T, NDIMS>::Assign(ctx, y, reduced);

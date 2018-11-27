@@ -205,12 +205,12 @@ void Erase(T& container, const std::function<bool(const typename T::value_type&)
 }
 
 template<typename T>
-inline T MinVal() {
+inline T GetMinVal() {
   return std::numeric_limits<T>::lowest();
 }
 
 template<typename T>
-inline T MaxVal() {
+inline T GetMaxVal() {
   return std::numeric_limits<T>::max();
 }
 
