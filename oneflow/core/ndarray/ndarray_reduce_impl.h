@@ -9,28 +9,28 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
+template<DeviceType device_type, typename T, const T (*binary_func)(const T, const T)>
 struct NdarrayScalarReduce final {
   static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x);
   static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
                      const XpuVarNdarray<T>& tmp_storage);
 };
 
-template<DeviceType device_type, typename T>
+template<DeviceType device_type, typename T, const T (*binary_func)(const T, const T)>
 struct NdarrayMatrixRowReduce final {
   static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x);
   static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
                      const XpuVarNdarray<T>& tmp_storage);
 };
 
-template<DeviceType device_type, typename T>
+template<DeviceType device_type, typename T, const T (*binary_func)(const T, const T)>
 struct NdarrayMatrixColReduce final {
   static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x);
   static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
                      const XpuVarNdarray<T>& tmp_storage);
 };
 
-template<DeviceType device_type, typename T>
+template<DeviceType device_type, typename T, const T (*binary_func)(const T, const T)>
 struct NdarrayDefaultReduce final {
   static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
                      const XpuVarNdarray<T>& tmp_storage) {
@@ -73,7 +73,7 @@ struct NdarrayDefaultReduce final {
       int64_t new_dim_value = (cur_shape->At(axis) + (shrink - 1)) / shrink;
       cur_shape->Set(axis, new_dim_value);
       XpuReducedNdarray<T, NDIMS> to(*cur_shape, implace);
-      NdArrayReduceCoreWrapper<device_type, T, NDIMS>::ReduceAxis(ctx, to, from, axis);
+      NdArrayReduceCoreWrapper<device_type, T, NDIMS, binary_func>::ReduceAxis(ctx, to, from, axis);
     }
   }
 };

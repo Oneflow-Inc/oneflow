@@ -7,19 +7,19 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
+template<DeviceType device_type, typename T, const T (*binary_func)(const T, const T)>
 struct NdArrayReduce final {
   static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
                      const XpuVarNdarray<T>& tmp_storage) {
     CHECK_EQ(y.shape().NumAxes(), x.shape().NumAxes());
-    if (NdarrayScalarReduce<device_type, T>::Matched(y, x)) {
-      NdarrayScalarReduce<device_type, T>::Reduce(ctx, y, x, tmp_storage);
-    } else if (NdarrayMatrixRowReduce<device_type, T>::Matched(y, x)) {
-      NdarrayMatrixRowReduce<device_type, T>::Reduce(ctx, y, x, tmp_storage);
-    } else if (NdarrayMatrixColReduce<device_type, T>::Matched(y, x)) {
-      NdarrayMatrixColReduce<device_type, T>::Reduce(ctx, y, x, tmp_storage);
+    if (NdarrayScalarReduce<device_type, T, binary_func>::Matched(y, x)) {
+      NdarrayScalarReduce<device_type, T, binary_func>::Reduce(ctx, y, x, tmp_storage);
+    } else if (NdarrayMatrixRowReduce<device_type, T, binary_func>::Matched(y, x)) {
+      NdarrayMatrixRowReduce<device_type, T, binary_func>::Reduce(ctx, y, x, tmp_storage);
+    } else if (NdarrayMatrixColReduce<device_type, T, binary_func>::Matched(y, x)) {
+      NdarrayMatrixColReduce<device_type, T, binary_func>::Reduce(ctx, y, x, tmp_storage);
     } else {
-      NdarrayDefaultReduce<device_type, T>::Reduce(ctx, y, x, tmp_storage);
+      NdarrayDefaultReduce<device_type, T, binary_func>::Reduce(ctx, y, x, tmp_storage);
     }
   }
 };

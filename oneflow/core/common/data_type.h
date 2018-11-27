@@ -95,6 +95,37 @@ TRAIT_CONST_VAR(One, 1);
 
 #undef TRAIT_CONST_VAR
 
+template<typename T>
+struct MaxValue;
+template<typename T>
+struct MinValue;
+
+#define TRAIT_LIMIT_VAL(max_or_min, T, limit_value)                                         \
+  template<>                                                                                \
+  struct max_or_min##Value<T> final {                                                       \
+    static_assert(alignof(int) == alignof(int32_t), "int32_t should be exactly int");       \
+    static_assert(alignof(long long) == alignof(int64_t), "int32_t should be exactly int"); \
+    constexpr static T value = limit_value;                                                 \
+  }
+
+TRAIT_LIMIT_VAL(Max, int8_t, CHAR_MAX);
+TRAIT_LIMIT_VAL(Max, int32_t, INT_MAX);
+TRAIT_LIMIT_VAL(Max, uint32_t, UINT_MAX);
+TRAIT_LIMIT_VAL(Max, int64_t, LLONG_MAX);
+TRAIT_LIMIT_VAL(Max, uint64_t, ULLONG_MAX);
+TRAIT_LIMIT_VAL(Max, float, FLT_MAX);
+TRAIT_LIMIT_VAL(Max, double, DBL_MAX);
+
+TRAIT_LIMIT_VAL(Min, int8_t, CHAR_MIN);
+TRAIT_LIMIT_VAL(Min, int32_t, INT_MIN);
+TRAIT_LIMIT_VAL(Min, uint32_t, 0);
+TRAIT_LIMIT_VAL(Min, int64_t, LLONG_MIN);
+TRAIT_LIMIT_VAL(Min, uint64_t, 0);
+TRAIT_LIMIT_VAL(Min, float, -FLT_MAX);
+TRAIT_LIMIT_VAL(Min, double, -DBL_MAX);
+
+#undef TRAIT_LIMIT_VAL
+
 // Func
 
 bool IsIntegralDataType(DataType data_type);

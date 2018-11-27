@@ -6,6 +6,22 @@
 
 namespace oneflow {
 
+template<typename T, const T (*binary_func)(const T, const T), typename Enable = void>
+struct CubFunctor4BianryFunc;
+
+#define SPECIALIZE_CUB_FUNCTOR_4_BINARY_FUNC(binary_func, cub_functor)                            \
+  template<typename T, const T (*bfunc)(const T, const T)>                                        \
+  struct CubFunctor4BianryFunc<T, bfunc, typename std::enable_if<bfunc == &binary_func<T>>::type> \
+      final {                                                                                     \
+    using type = cub_functor;                                                                     \
+  }
+
+SPECIALIZE_CUB_FUNCTOR_4_BINARY_FUNC(BinaryFuncAdd, cub::Sum);
+SPECIALIZE_CUB_FUNCTOR_4_BINARY_FUNC(BinaryFuncMax, cub::Max);
+SPECIALIZE_CUB_FUNCTOR_4_BINARY_FUNC(BinaryFuncMin, cub::Min);
+
+#undef SPECIALIZE_CUB_FUNCTOR_4_BINARY_FUNC
+
 namespace {
 
 template<typename T, const T (*binary_func)(const T, const T)>
@@ -26,8 +42,8 @@ struct RowOffsetFunctor final {
   int32_t num_cols_;
 };
 
-template<typename T>
-struct NdarrayScalarReduce<DeviceType::kGPU, T> final {
+template<typename T, const T (*binary_func)(const T, const T)>
+struct NdarrayScalarReduce<DeviceType::kGPU, T, binary_func> final {
   static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
     return y.shape().ElemNum() == 1;
   }
@@ -40,7 +56,8 @@ struct NdarrayScalarReduce<DeviceType::kGPU, T> final {
     auto DoReduce = [&](T* tmp_storage_ptr) {
       int retcode =
           cub::DeviceReduce::Reduce(tmp_storage_ptr, tmp_storage_bytes, x.ptr(), y.ptr(), x_size,
-                                    cub::Sum(), ZeroVal<T>::value, ctx->cuda_stream());
+                                    typename CubFunctor4BianryFunc<T, binary_func>::type(),
+                                    UnitOfBinaryFunc<T, binary_func>::value, ctx->cuda_stream());
       CHECK_EQ(retcode, 0) << "cub::DeviceSegmentedReduce::Reduce error";
     };
     DoReduce(nullptr);
@@ -49,8 +66,8 @@ struct NdarrayScalarReduce<DeviceType::kGPU, T> final {
   }
 };
 
-template<typename T>
-struct NdarrayMatrixRowReduce<DeviceType::kGPU, T> final {
+template<typename T, const T (*binary_func)(const T, const T)>
+struct NdarrayMatrixRowReduce<DeviceType::kGPU, T, binary_func> final {
   static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
     if (y.shape().ElemNum() > MaxVal<int32_t>()) { return false; }
     const auto& x_squeezed = SqueezeRight(x.shape());
@@ -76,7 +93,8 @@ struct NdarrayMatrixRowReduce<DeviceType::kGPU, T> final {
     auto DoReduce = [&](T* tmp_storage_ptr) {
       int retcode = cub::DeviceSegmentedReduce::Reduce(
           tmp_storage_ptr, tmp_storage_bytes, x.ptr(), y.ptr(), num_rows, transform_input_iter,
-          transform_input_iter + 1, cub::Sum(), ZeroVal<T>::value, ctx->cuda_stream());
+          transform_input_iter + 1, typename CubFunctor4BianryFunc<T, binary_func>::type(),
+          UnitOfBinaryFunc<T, binary_func>::value, ctx->cuda_stream());
       CHECK_EQ(retcode, 0) << "cub::DeviceSegmentedReduce::Reduce error";
     };
     DoReduce(nullptr);
@@ -97,8 +115,8 @@ struct NdarrayMatrixRowReduce<DeviceType::kGPU, T> final {
   }
 };
 
-template<typename T>
-struct NdarrayMatrixColReduce<DeviceType::kGPU, T> final {
+template<typename T, const T (*binary_func)(const T, const T)>
+struct NdarrayMatrixColReduce<DeviceType::kGPU, T, binary_func> final {
   static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
     if (y.shape().ElemNum() > MaxVal<int32_t>()) { return false; }
     const auto& x_squeezed = SqueezeLeft(x.shape());
@@ -119,8 +137,8 @@ struct NdarrayMatrixColReduce<DeviceType::kGPU, T> final {
     CHECK(Matched(y, x));
     int32_t num_rows = x.shape().ElemNum() / y.shape().ElemNum();
     int32_t num_cols = y.shape().ElemNum();
-    RUN_CUDA_KERNEL((NdarrayMatrixColReduceNaiveCudaKernel<T, BinaryFuncAdd>), ctx, num_cols,
-                    y.ptr(), x.ptr(), num_rows, num_cols);
+    RUN_CUDA_KERNEL((NdarrayMatrixColReduceNaiveCudaKernel<T, binary_func>), ctx, num_cols, y.ptr(),
+                    x.ptr(), num_rows, num_cols);
   }
 
  private:
@@ -139,10 +157,11 @@ struct NdarrayMatrixColReduce<DeviceType::kGPU, T> final {
   }
 };
 
-#define INSTANTIATE_NDARRAY_REDUCE_IMPL(type_cpp, type_proto)         \
-  template struct NdarrayScalarReduce<DeviceType::kGPU, type_cpp>;    \
-  template struct NdarrayMatrixRowReduce<DeviceType::kGPU, type_cpp>; \
-  template struct NdarrayMatrixColReduce<DeviceType::kGPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_IMPL, ARITHMETIC_DATA_TYPE_SEQ);
+#define INSTANTIATE_NDARRAY_REDUCE_IMPL(dtype, binary_func)                                       \
+  template struct NdarrayScalarReduce<DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype), binary_func>;    \
+  template struct NdarrayMatrixRowReduce<DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype), binary_func>; \
+  template struct NdarrayMatrixColReduce<DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype), binary_func>;
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_IMPL, ARITHMETIC_DATA_TYPE_SEQ,
+                                 REDUCE_BINARY_FUNC_SEQ);
 
 }  // namespace oneflow

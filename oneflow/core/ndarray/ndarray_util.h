@@ -29,9 +29,9 @@ struct NdarrayUtil final {
     return Binary<binary_func>::SwitchBroadcastApply(SwitchCase(y.shape().NumAxes()), ctx, y, a, b);
   }
 
-  static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
-                     const XpuVarNdarray<T>& tmp_storage) {
-    return NdArrayReduce<device_type, T>::Reduce(ctx, y, x, tmp_storage);
+  static void ReduceSum(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
+                        const XpuVarNdarray<T>& tmp_storage) {
+    return NdArrayReduce<device_type, T, BinaryFuncAdd>::Reduce(ctx, y, x, tmp_storage);
   }
 
   template<const T (*unary_func)(const T)>

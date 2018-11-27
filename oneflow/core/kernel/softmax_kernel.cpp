@@ -15,7 +15,7 @@ void SoftmaxComputeDiff(DeviceCtx* ctx, const int64_t n, const int64_t w, const 
   // dot product | get dot product sum_vec[i] from out[i] * out_diff[i]
   T* tmp = in_diff;
   KernelUtil<device_type, T>::Mul(ctx, n * w, out, out_diff, tmp);
-  NdarrayUtil<device_type, T>::Reduce(
+  NdarrayUtil<device_type, T>::ReduceSum(
       ctx, XpuVarNdarray<T>({n, 1}, sum_vec), XpuVarNdarray<const T>({n, w}, tmp),
       XpuVarNdarray<T>({static_cast<int64_t>(temp_storage_bytes / sizeof(T))},
                        reinterpret_cast<T*>(temp_storage)));
@@ -43,7 +43,7 @@ void SoftmaxComputeProb(DeviceCtx* ctx, const int64_t n, const int64_t w, const 
   KernelUtil<device_type, T>::Exp(ctx, n * w, prob, prob);
   // sum | calculate sum of every sample vector prob[i], store in tmp[i]
   //       the prob[i] now is store the tmp data after exp
-  NdarrayUtil<device_type, T>::Reduce(
+  NdarrayUtil<device_type, T>::ReduceSum(
       ctx, XpuVarNdarray<T>({n, 1}, tmp), XpuVarNdarray<const T>({n, w}, prob),
       XpuVarNdarray<T>({static_cast<int64_t>(temp_storage_bytes / sizeof(T))},
                        reinterpret_cast<T*>(temp_storage)));
