@@ -28,12 +28,18 @@ struct NdarrayUtil final {
     CHECK_EQ(b.shape().NumAxes(), y.shape().NumAxes());
     return Binary<binary_func>::SwitchBroadcastApply(SwitchCase(y.shape().NumAxes()), ctx, y, a, b);
   }
-
-  static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
-                     const XpuVarNdarray<T>& tmp_storage) {
-    return NdArrayReduce<device_type, T>::Reduce(ctx, y, x, tmp_storage);
+  static void ReduceSum(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
+                        const XpuVarNdarray<T>& tmp_storage) {
+    return NdArrayReduce<device_type, T, BinaryFuncAdd>::Reduce(ctx, y, x, tmp_storage);
   }
-
+  static void ReduceMax(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
+                        const XpuVarNdarray<T>& tmp_storage) {
+    return NdArrayReduce<device_type, T, BinaryFuncMax>::Reduce(ctx, y, x, tmp_storage);
+  }
+  static void ReduceMin(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
+                        const XpuVarNdarray<T>& tmp_storage) {
+    return NdArrayReduce<device_type, T, BinaryFuncMin>::Reduce(ctx, y, x, tmp_storage);
+  }
   template<const T (*unary_func)(const T)>
   static void ImplaceApplyUnary(DeviceCtx* ctx, const XpuVarNdarray<T>& y) {
     return NdArrayApplyUnary<device_type, T, unary_func>::ImplaceApply(ctx, y);

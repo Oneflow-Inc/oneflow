@@ -27,12 +27,12 @@ void BroadcastAddKernel<device_type, T>::BackwardDataContent(
   Blob* bw_buf_blob = BnInOp2Blob("bw_buf");
   size_t num_axes = out_diff_blob->shape().NumAxes();
   if (a_diff_blob) {
-    NdarrayUtil<device_type, T>::Reduce(
+    NdarrayUtil<device_type, T>::ReduceSum(
         kernel_ctx.device_ctx, XpuVarNdarray<T>(a_diff_blob, num_axes),
         XpuVarNdarray<const T>(out_diff_blob, num_axes), XpuVarNdarray<T>(bw_buf_blob, num_axes));
   }
   if (b_diff_blob) {
-    NdarrayUtil<device_type, T>::Reduce(
+    NdarrayUtil<device_type, T>::ReduceSum(
         kernel_ctx.device_ctx, XpuVarNdarray<T>(b_diff_blob, num_axes),
         XpuVarNdarray<const T>(out_diff_blob, num_axes), XpuVarNdarray<T>(bw_buf_blob, num_axes));
   }
