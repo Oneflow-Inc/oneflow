@@ -5,7 +5,7 @@ namespace oneflow {
 namespace {
 
 template<DeviceType device_type, typename T, typename K>
-void Encode(DeviceCtx* ctx, const Blob* indices, Blob* out) {
+void OneHot(DeviceCtx* ctx, const Blob* indices, Blob* out) {
   const int64_t depth = out->shape().At(out->shape().NumAxes() - 1);
   OneHotKernelUtil<device_type, T, K>::Encode(ctx, indices->dptr<K>(), indices->shape().elem_cnt(),
                                               depth, out->mut_dptr<T>());
@@ -13,13 +13,13 @@ void Encode(DeviceCtx* ctx, const Blob* indices, Blob* out) {
 
 }  // namespace
 
-#define MAKE_ONE_HOT_SWITCH_ENTRY(func_name, K) func_name<device_type, T, K>
 template<DeviceType device_type, typename T>
 struct OneHotUtil final {
-  DEFINE_STATIC_SWITCH_FUNC(void, Encode, MAKE_ONE_HOT_SWITCH_ENTRY,
+#define MAKE_ONE_HOT_SWITCH_ENTRY(func_name, K) func_name<device_type, T, K>
+  DEFINE_STATIC_SWITCH_FUNC(void, OneHot, MAKE_ONE_HOT_SWITCH_ENTRY,
                             MAKE_DATA_TYPE_CTRV_SEQ(INT_DATA_TYPE_SEQ));
-};
 #undef MAKE_ONE_HOT_SWITCH_ENTRY
+};
 
 template<DeviceType device_type, typename T>
 const PbMessage& OneHotKernel<device_type, T>::GetCustomizedOpConf() const {
@@ -31,7 +31,7 @@ void OneHotKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* indices = BnInOp2Blob("indices");
   Blob* out = BnInOp2Blob("out");
-  OneHotUtil<device_type, T>::SwitchEncode(SwitchCase(indices->data_type()), ctx.device_ctx,
+  OneHotUtil<device_type, T>::SwitchOneHot(SwitchCase(indices->data_type()), ctx.device_ctx,
                                            indices, out);
 }
 

@@ -33,12 +33,11 @@ void OneHotKernelUtil<DeviceType::kGPU, T, K>::Encode(DeviceCtx* ctx, const K* i
           elem_cnt, indices, depth, out);
 }
 
-#define MAKE_ONE_HOT_KERNEL_UTIL_GPU_ENTRY(data_type_pair, index_type_pair)            \
+#define INSTANTIATE_ONE_HOT_KERNEL_UTIL_GPU(data_type_pair, index_type_pair)           \
   template struct OneHotKernelUtil<DeviceType::kGPU, OF_PP_PAIR_FIRST(data_type_pair), \
                                    OF_PP_PAIR_FIRST(index_type_pair)>;
-
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ONE_HOT_KERNEL_UTIL_GPU_ENTRY, ARITHMETIC_DATA_TYPE_SEQ,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_ONE_HOT_KERNEL_UTIL_GPU, ARITHMETIC_DATA_TYPE_SEQ,
                                  INT_DATA_TYPE_SEQ);
-#undef MAKE_ONE_HOT_KERNEL_UTIL_GPU_ENTRY
+#undef INSTANTIATE_ONE_HOT_KERNEL_UTIL_GPU
 
 }  // namespace oneflow
