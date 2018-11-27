@@ -114,13 +114,13 @@ void EpollCommNet::InitSockets() {
              ((this_machine.data_port_agent() != -1) ? (this_machine.data_port_agent())
                                                      : (this_listen_port)));
   } else {
-    for (this_listen_port = 1024; this_listen_port < MaxVal<uint16_t>(); ++this_listen_port) {
+    for (this_listen_port = 1024; this_listen_port < GetMaxVal<uint16_t>(); ++this_listen_port) {
       if (SockListen(listen_sockfd, this_listen_port, total_machine_num) == 0) {
         PushPort(this_machine_id, this_listen_port);
         break;
       }
     }
-    CHECK_LT(this_listen_port, MaxVal<uint16_t>());
+    CHECK_LT(this_listen_port, GetMaxVal<uint16_t>());
   }
   int32_t src_machine_count = 0;
 

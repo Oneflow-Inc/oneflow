@@ -69,7 +69,7 @@ struct NdarrayScalarReduce<DeviceType::kGPU, T, binary_func> final {
 template<typename T, const T (*binary_func)(const T, const T)>
 struct NdarrayMatrixRowReduce<DeviceType::kGPU, T, binary_func> final {
   static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
-    if (y.shape().ElemNum() > MaxVal<int32_t>()) { return false; }
+    if (y.shape().ElemNum() > GetMaxVal<int32_t>()) { return false; }
     const auto& x_squeezed = SqueezeRight(x.shape());
     const auto& y_squeezed = SqueezeRight(y.shape());
     if (x_squeezed.NumAxes() == 0) { return false; }
@@ -118,7 +118,7 @@ struct NdarrayMatrixRowReduce<DeviceType::kGPU, T, binary_func> final {
 template<typename T, const T (*binary_func)(const T, const T)>
 struct NdarrayMatrixColReduce<DeviceType::kGPU, T, binary_func> final {
   static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
-    if (y.shape().ElemNum() > MaxVal<int32_t>()) { return false; }
+    if (y.shape().ElemNum() > GetMaxVal<int32_t>()) { return false; }
     const auto& x_squeezed = SqueezeLeft(x.shape());
     const auto& y_squeezed = SqueezeLeft(y.shape());
     if (x_squeezed.NumAxes() == 0) { return false; }

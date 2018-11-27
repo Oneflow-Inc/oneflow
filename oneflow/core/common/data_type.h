@@ -96,13 +96,13 @@ TRAIT_CONST_VAR(One, 1);
 #undef TRAIT_CONST_VAR
 
 template<typename T>
-struct MaxValue;
+struct MaxVal;
 template<typename T>
-struct MinValue;
+struct MinVal;
 
 #define TRAIT_LIMIT_VAL(max_or_min, T, limit_value)                                         \
   template<>                                                                                \
-  struct max_or_min##Value<T> final {                                                       \
+  struct max_or_min##Val<T> final {                                                         \
     static_assert(alignof(int) == alignof(int32_t), "int32_t should be exactly int");       \
     static_assert(alignof(long long) == alignof(int64_t), "int32_t should be exactly int"); \
     constexpr static T value = limit_value;                                                 \
