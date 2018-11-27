@@ -6,10 +6,6 @@ namespace oneflow {
 template<typename T, int NDIMS>
 struct NdArrayReduceCoreWrapper<DeviceType::kCPU, T, NDIMS> final {
   static void ReduceAxis(DeviceCtx* ctx, const XpuReducedNdarray<T, NDIMS>& dst_reduced,
-                         const XpuVarNdarray<const T>& x, int axis) {
-    NdArrayReduceCore<T, NDIMS>::ReduceAxis(dst_reduced, x, axis);
-  }
-  static void ReduceAxis(DeviceCtx* ctx, const XpuReducedNdarray<T, NDIMS>& dst_reduced,
                          const XpuReducedNdarray<T, NDIMS>& x, int axis) {
     NdArrayReduceCore<T, NDIMS>::ReduceAxis(dst_reduced, x, axis);
   }

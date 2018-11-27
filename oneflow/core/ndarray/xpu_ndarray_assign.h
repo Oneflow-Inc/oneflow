@@ -14,6 +14,7 @@ struct XpuNdArrayAssign final {
   }
   static void Assign(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
     CHECK(y.shape() == x.shape());
+    if (x.ptr() == y.ptr()) { return; }
     Memcpy<device_type>(ctx, y.ptr(), x.ptr(), y.shape().ElemNum() * sizeof(T));
   }
 };

@@ -1,15 +1,16 @@
-#ifndef ONEFLOW_CORE_NDARRAY_NDARRAY_REDUCE_XPU_H_
-#define ONEFLOW_CORE_NDARRAY_NDARRAY_REDUCE_XPU_H_
+#ifndef ONEFLOW_CORE_NDARRAY_NDARRAY_REDUCE_CORE_H_
+#define ONEFLOW_CORE_NDARRAY_NDARRAY_REDUCE_CORE_H_
 
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
 #include "oneflow/core/ndarray/xpu_reduced_ndarray.h"
+#include "oneflow/core/ndarray/xpu_transpose_ndarray.h"
+#include "oneflow/core/ndarray/xpu_reshape_ndarray.h"
+#include "oneflow/core/ndarray/xpu_util.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename T, int NDIMS>
 struct NdArrayReduceCoreWrapper final {
-  static void ReduceAxis(DeviceCtx* ctx, const XpuReducedNdarray<T, NDIMS>& dst_reduced,
-                         const XpuVarNdarray<const T>& x, int axis);
   static void ReduceAxis(DeviceCtx* ctx, const XpuReducedNdarray<T, NDIMS>& dst_reduced,
                          const XpuReducedNdarray<T, NDIMS>& x, int axis);
 };
@@ -24,7 +25,7 @@ struct NdArrayReduceCore final {
     XPU_1D_KERNEL_LOOP(i, n) {
       T* dst_reduced_ptr = dst_reduced.template Mut(i);
       int64_t coord[NDIMS];
-      ExecShapeUtil<NDIMS>::Offset2DimVec(dst_reduced.shape(), i, coord);
+      dst_reduced.shape().template Offset2Coordinate<NDIMS>(i, coord);
       T sum = 0;
       while (coord[axis] < x.shape().At(axis)) {
         sum += x.template Get<NDIMS>(coord);
@@ -37,4 +38,4 @@ struct NdArrayReduceCore final {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_NDARRAY_NDARRAY_REDUCE_XPU_H_
+#endif  // ONEFLOW_CORE_NDARRAY_NDARRAY_REDUCE_CORE_H_

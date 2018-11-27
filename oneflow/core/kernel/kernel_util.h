@@ -41,7 +41,7 @@ template<DeviceType device_type>
 void Memset(DeviceCtx*, void* dst, const char value, size_t sz);
 
 #if defined(__CUDACC__)
-#define OF_DEVICE_FUNC __device__
+#define OF_DEVICE_FUNC __device__ __forceinline__
 #else
 #define OF_DEVICE_FUNC
 #endif

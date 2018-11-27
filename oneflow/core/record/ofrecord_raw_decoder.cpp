@@ -85,7 +85,12 @@ void OFRecordDecoderImpl<EncodeCase::kRaw, T>::ReadOneCol(
   else if (feature.has_##PbT##_list()) {                                              \
     const auto& list = feature.PbT##_list();                                          \
     const CppT* in_dptr = list.value().data();                                        \
-    one_col_elem_num = std::max<int64_t>(one_col_elem_num, list.value_size());        \
+    if (blob_conf.encode_case().raw().dim1_varying_length()) {                        \
+      CHECK_LE(list.value_size(), one_col_elem_num);                                  \
+      one_col_elem_num = list.value_size();                                           \
+    } else {                                                                          \
+      CHECK_EQ(one_col_elem_num, list.value_size());                                  \
+    }                                                                                 \
     FixInDptrThenCopyElem<CppT, T>(ctx, in_dptr, col_id, one_col_elem_num, out_dptr); \
   }
   DEFINE_ONE_ELIF(float, float)

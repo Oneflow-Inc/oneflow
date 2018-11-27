@@ -1,36 +1,74 @@
 #ifndef ONEFLOW_CORE_NDARRAY_NDARRAY_UTIL_H_
 #define ONEFLOW_CORE_NDARRAY_NDARRAY_UTIL_H_
 
-#include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/ndarray/xpu_var_ndarray.h"
+#include "oneflow/core/ndarray/ndarray_reduce.h"
+#include "oneflow/core/ndarray/ndarray_apply_unary.h"
+#include "oneflow/core/ndarray/ndarray_apply_broadcast_unary.h"
+#include "oneflow/core/ndarray/ndarray_apply_broadcast_binary.h"
+#include "oneflow/core/ndarray/xpu_reduced_ndarray.h"
+#include "oneflow/core/common/switch_func.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
-#if defined(__CUDACC__)
-#define XPU_1D_KERNEL_LOOP(i, n) CUDA_1D_KERNEL_LOOP(i, n)
-#else
-#define XPU_1D_KERNEL_LOOP(i, n) FOR_RANGE(int64_t, i, 0, n)
-#endif
+template<DeviceType device_type, typename T>
+struct NdarrayUtil final {
+  template<const T (*unary_func)(const T)>
+  static void BroadcastApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
+                             const XpuVarNdarray<const T>& x) {
+    CHECK_EQ(x.shape().NumAxes(), y.shape().NumAxes());
+    return Unary<unary_func>::SwitchBroadcastApply(SwitchCase(x.shape().NumAxes()), ctx, y, x);
+  }
+  template<const T (*binary_func)(const T, const T)>
+  static void BroadcastApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
+                             const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
+    CHECK_EQ(a.shape().NumAxes(), y.shape().NumAxes());
+    CHECK_EQ(b.shape().NumAxes(), y.shape().NumAxes());
+    return Binary<binary_func>::SwitchBroadcastApply(SwitchCase(y.shape().NumAxes()), ctx, y, a, b);
+  }
 
-#if defined(__CUDACC__)
-OF_DEVICE_FUNC inline void XpuSyncThreads() { __syncthreads(); }
-#else
-inline void XpuSyncThreads() {}
-#endif
+  static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
+                     const XpuVarNdarray<T>& tmp_storage) {
+    return NdArrayReduce<device_type, T>::Reduce(ctx, y, x, tmp_storage);
+  }
 
-#if defined(__CUDACC__)
-#define OF_GLOBAL_FUNC __global__
-#else
-#define OF_GLOBAL_FUNC
-#endif
+  template<const T (*unary_func)(const T)>
+  static void ImplaceApplyUnary(DeviceCtx* ctx, const XpuVarNdarray<T>& y) {
+    return NdArrayApplyUnary<device_type, T, unary_func>::ImplaceApply(ctx, y);
+  }
 
-#define GET_SEQ(n) OF_PP_CAT(OF_PP_CAT(GET_SEQ_, n), )
-#define GET_SEQ_0 OF_PP_MAKE_TUPLE_SEQ(0)
-#define GET_SEQ_1 GET_SEQ_0 OF_PP_MAKE_TUPLE_SEQ(1)
-#define GET_SEQ_2 GET_SEQ_1 OF_PP_MAKE_TUPLE_SEQ(2)
-#define GET_SEQ_3 GET_SEQ_2 OF_PP_MAKE_TUPLE_SEQ(3)
-#define GET_SEQ_4 GET_SEQ_3 OF_PP_MAKE_TUPLE_SEQ(4)
-#define GET_SEQ_5 GET_SEQ_5 OF_PP_MAKE_TUPLE_SEQ(5)
-}
+ private:
+  template<const T (*unary_func)(const T)>
+  struct Unary final {
+    template<int NDIMS>
+    static void BroadcastApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
+                               const XpuVarNdarray<const T>& x) {
+      return NdArrayApplyBroadcastUnary<device_type, T, NDIMS, unary_func>::Apply(ctx, y, x);
+    }
+#define DEFINE_NDARRAY_BROADCAST_UNARY(func_name, NDIMS) \
+  NdarrayUtil<device_type, T>::Unary<unary_func>::func_name<NDIMS>
+    DEFINE_STATIC_SWITCH_FUNC(void, BroadcastApply, DEFINE_NDARRAY_BROADCAST_UNARY,
+                              MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
+#undef DEFINE_NDARRAY_BROADCAST_UNARY
+  };
+
+  template<const T (*binary_func)(const T, const T)>
+  struct Binary final {
+    template<int NDIMS>
+    static void BroadcastApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
+                               const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
+      return NdArrayApplyBroadcastBinary<device_type, T, NDIMS, binary_func>::Apply(ctx, y, a, b);
+    }
+#define DEFINE_NDARRAY_BROADCAST_BINARY(func_name, NDIMS) \
+  NdarrayUtil<device_type, T>::Binary<binary_func>::func_name<NDIMS>
+    DEFINE_STATIC_SWITCH_FUNC(void, BroadcastApply, DEFINE_NDARRAY_BROADCAST_BINARY,
+                              MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
+#undef DEFINE_NDARRAY_BROADCAST_BINARY
+  };
+};
+
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_NDARRAY_NDARRAY_UTIL_H_

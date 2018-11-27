@@ -1,5 +1,5 @@
 #include "oneflow/core/kernel/broadcast_div_kernel.h"
-#include "oneflow/core/ndarray/xpu_ndarray_util.h"
+#include "oneflow/core/ndarray/ndarray_util.h"
 
 namespace oneflow {
 
@@ -22,9 +22,9 @@ void BroadcastDivKernel<device_type, T>::ForwardDataContent(
                                     out->mut_dptr<T>());
   } else {
     size_t num_axes = out->shape().NumAxes();
-    XpuNdArrayUtil<device_type, T>::template Binary<BinaryFuncDiv>::SwitchBroadcastApply(
-        SwitchCase(num_axes), ctx.device_ctx, XpuVarNdarray<T>(out, num_axes),
-        XpuVarNdarray<const T>(a, num_axes), XpuVarNdarray<const T>(b, num_axes));
+    NdarrayUtil<device_type, T>::template BroadcastApply<BinaryFuncDiv>(
+        ctx.device_ctx, XpuVarNdarray<T>(out, num_axes), XpuVarNdarray<const T>(a, num_axes),
+        XpuVarNdarray<const T>(b, num_axes));
   }
 }
 
@@ -76,22 +76,21 @@ void BroadcastDivKernel<device_type, T>::BackwardDataContent(
     XpuVarNdarray<const T> const_tmp(out_diff_tensor.shape(), bw_buf_blob->dptr<T>());
     XpuVarNdarray<T> tmp(out_diff_tensor.shape(), bw_buf_blob->mut_dptr<T>());
     if (a_diff) {
-      XpuNdArrayUtil<device_type, T>::template Binary<BinaryFuncDiv>::SwitchBroadcastApply(
-          SwitchCase(num_axes), ctx.device_ctx, tmp, out_diff_tensor,
-          XpuVarNdarray<const T>(b, num_axes));
-      XpuNdArrayUtil<device_type, T>::SwitchReduce(
-          SwitchCase(num_axes), ctx.device_ctx, XpuVarNdarray<T>(a_diff, num_axes), const_tmp, tmp);
+      NdarrayUtil<device_type, T>::template BroadcastApply<BinaryFuncDiv>(
+          ctx.device_ctx, tmp, out_diff_tensor, XpuVarNdarray<const T>(b, num_axes));
+      NdarrayUtil<device_type, T>::Reduce(ctx.device_ctx, XpuVarNdarray<T>(a_diff, num_axes),
+                                          const_tmp, tmp);
     }
     if (b_diff) {
       const Blob* out_blob = BnInOp2Blob("out");
-      XpuNdArrayUtil<device_type, T>::template Binary<BinaryFuncDiv>::SwitchBroadcastApply(
-          SwitchCase(num_axes), ctx.device_ctx, tmp, XpuVarNdarray<const T>(out_blob, num_axes),
+      NdarrayUtil<device_type, T>::template BroadcastApply<BinaryFuncDiv>(
+          ctx.device_ctx, tmp, XpuVarNdarray<const T>(out_blob, num_axes),
           XpuVarNdarray<const T>(b, num_axes));
-      XpuNdArrayUtil<device_type, T>::template Binary<BinaryFuncMul>::SwitchBroadcastApply(
-          SwitchCase(num_axes), ctx.device_ctx, tmp, out_diff_tensor, const_tmp);
-      XpuNdArrayUtil<device_type, T>::SwitchReduce(
-          SwitchCase(num_axes), ctx.device_ctx, XpuVarNdarray<T>(b_diff, num_axes), const_tmp, tmp);
-      XpuNdArrayUtil<device_type, T>::template ImplaceApplyUnary<UnaryFuncMinus>(
+      NdarrayUtil<device_type, T>::template BroadcastApply<BinaryFuncMul>(
+          ctx.device_ctx, tmp, out_diff_tensor, const_tmp);
+      NdarrayUtil<device_type, T>::Reduce(ctx.device_ctx, XpuVarNdarray<T>(b_diff, num_axes),
+                                          const_tmp, tmp);
+      NdarrayUtil<device_type, T>::template ImplaceApplyUnary<UnaryFuncMinus>(
           ctx.device_ctx, XpuVarNdarray<T>(b_diff, num_axes));
     }
   }
