@@ -57,9 +57,18 @@ IBVerbsCommNet::IBVerbsCommNet(const Plan& plan)
     : CommNetIf(plan),
       token2mem_desc_(Global<JobDesc>::Get()->TotalMachineNum()),
       poll_exit_flag_(ATOMIC_FLAG_INIT) {
-  ibv_device** device_list = ibv_get_device_list(nullptr);
+  const auto& ibv_conf = Global<JobDesc>::Get()->ibverbs_conf();
+  int32_t device_num;
+  ibv_device** device_list = ibv_get_device_list(&device_num);
   PCHECK(device_list);
-  ibv_device* device = device_list[0];
+  int32_t device_index = 0;
+  ibv_device* device = device_list[device_index];
+  while ((ibv_conf.device_name() != "") && (device_index < device_num)) {
+    if (std::string(ibv_get_device_name(device)) == ibv_conf.device_name()) { break; }
+    device_index++;
+    device = device_list[device_index];
+  }
+  CHECK_LT(device_index, device_num);
   context_ = ibv_open_device(device);
   CHECK(context_);
   ibv_free_device_list(device_list);
@@ -76,10 +85,10 @@ IBVerbsCommNet::IBVerbsCommNet(const Plan& plan)
   int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
   qp_vec_.assign(Global<JobDesc>::Get()->TotalMachineNum(), nullptr);
   for (int64_t peer_id : peer_machine_id()) {
-    IBVerbsQP* cur_qp = new IBVerbsQP(context_, pd_, cq_, cq_);
+    IBVerbsQP* cur_qp = new IBVerbsQP(context_, pd_, cq_);
     qp_vec_.at(peer_id) = cur_qp;
     IBVerbsConnectionInfo conn_info;
-    conn_info.set_lid(port_attr.lid);
+    conn_info.set_local_id(port_attr.lid);
     conn_info.set_qp_num(cur_qp->qp_num());
     conn_info.set_subnet_prefix(gid.global.subnet_prefix);
     conn_info.set_interface_id(gid.global.interface_id);

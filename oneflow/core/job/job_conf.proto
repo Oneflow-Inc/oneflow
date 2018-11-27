@@ -46,11 +46,34 @@ message FileSystemConf {
   }
 }
 
-message OtherConf {
-  required int64 piece_size = 2;
-  required int32 data_part_num = 3; // piece_size % data_part_num = 0
+message EpollConf {
+}
 
-  optional bool use_rdma = 100 [default = false];
+message IBVerbsConf {
+  optional string device_name = 1 [default = ""];
+  optional uint32 pkey_index = 2 [default = 0];
+  optional uint32 queue_depth = 3 [default = 1024];
+  optional uint32 timeout = 4 [default = 14];
+  optional uint32 retry_cnt = 5 [default = 7];
+  optional uint32 sl = 6 [default = 0];
+  optional uint32 traffic_class = 7 [default = 0];
+  optional uint64 mem_block_mbyte = 8 [default = 8];
+}
+
+message CommNetworkConf {
+  oneof comm_net_type {
+    EpollConf epoll_conf = 1;
+    IBVerbsConf ibverbs_conf = 2;
+  }
+}
+
+message OtherConf {
+  required FileSystemConf data_fs_conf = 1;
+  required FileSystemConf snapshot_fs_conf = 2;
+  required CommNetworkConf comm_net_conf = 3;
+  required int64 piece_size = 4;
+  required int32 data_part_num = 5; // piece_size % data_part_num = 0
+
   optional string model_load_snapshot_path = 101 [default = ""];
   optional int32 max_data_id_length = 102 [default = 0];
   optional bool enable_cudnn = 103 [default = true];
@@ -60,8 +83,6 @@ message OtherConf {
   optional uint64 reserved_host_mem_mbyte = 107 [default = 500];
   optional uint64 reserved_device_mem_mbyte = 108 [default = 500];
   optional bool save_downloaded_file_to_local_fs = 109 [default = false];
-  optional uint64 rdma_mem_block_mbyte = 110 [default = 8];
-  optional uint64 rdma_recv_msg_buf_mbyte = 111 [default = 6];
 
   optional int64 reduce_group_size = 112 [default = 20];
   optional bool collect_act_event = 113 [default = false];
@@ -71,9 +92,6 @@ message OtherConf {
   optional bool enable_nccl = 142 [default = true];
   optional bool use_nccl_inter_node_communication = 143 [default = false];
   optional int64 cudnn_buf_limit_mbyte = 144 [default = 1024];  // 1GByte
-
-  required FileSystemConf data_fs_conf = 121;
-  required FileSystemConf snapshot_fs_conf = 122;
 
   oneof JobType {
     TrainConf train_conf = 200;

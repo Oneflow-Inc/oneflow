@@ -5,22 +5,18 @@
 
 namespace oneflow {
 
-IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, ibv_cq* send_cq, ibv_cq* recv_cq) {
-  // ctx_, pd_
-  ctx_ = ctx;
-  pd_ = pd;
+IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, ibv_cq* cq)
+    : ibv_conf_(Global<JobDesc>::Get()->ibverbs_conf()), ctx_(ctx), pd_(pd) {
   // qp_
   ibv_device_attr device_attr;
   CHECK_EQ(ibv_query_device(ctx, &device_attr), 0);
-  uint32_t max_recv_wr = Global<JobDesc>::Get()->rdma_recv_msg_buf_byte() / sizeof(ActorMsg);
-  max_recv_wr = std::min<uint32_t>(max_recv_wr, device_attr.max_qp_wr);
   ibv_qp_init_attr qp_init_attr;
   qp_init_attr.qp_context = nullptr;
-  qp_init_attr.send_cq = send_cq;
-  qp_init_attr.recv_cq = recv_cq;
+  qp_init_attr.send_cq = cq;
+  qp_init_attr.recv_cq = cq;
   qp_init_attr.srq = nullptr;
-  qp_init_attr.cap.max_send_wr = device_attr.max_qp_wr;
-  qp_init_attr.cap.max_recv_wr = max_recv_wr;
+  qp_init_attr.cap.max_send_wr = ibv_conf_.queue_depth();
+  qp_init_attr.cap.max_recv_wr = ibv_conf_.queue_depth();
   qp_init_attr.cap.max_send_sge = 1;
   qp_init_attr.cap.max_recv_sge = 1;
   qp_init_attr.cap.max_inline_data = 0;
@@ -29,7 +25,7 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, ibv_cq* send_cq, ibv_cq* recv
   qp_ = ibv_create_qp(pd, &qp_init_attr);
   CHECK(qp_);
   // recv_msg_buf_
-  recv_msg_buf_.assign(max_recv_wr, nullptr);
+  recv_msg_buf_.assign(ibv_conf_.queue_depth(), nullptr);
   FOR_RANGE(size_t, i, 0, recv_msg_buf_.size()) { recv_msg_buf_.at(i) = new ActorMsgMR(pd_); }
   // send_msg_buf_
   CHECK(send_msg_buf_.empty());
@@ -51,8 +47,8 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
   // IBV_QPS_INIT
   memset(&qp_attr, 0, sizeof(ibv_qp_attr));
   qp_attr.qp_state = IBV_QPS_INIT;
-  qp_attr.pkey_index = 0;
-  qp_attr.port_num = 1;
+  qp_attr.pkey_index = ibv_conf_.pkey_index();
+  qp_attr.port_num = 1;  // TODO(shiyuan)
   qp_attr.qp_access_flags =
       IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ;
   CHECK_EQ(ibv_modify_qp(qp_, &qp_attr,
@@ -64,14 +60,15 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
   qp_attr.ah_attr.grh.dgid.global.subnet_prefix = peer_info.subnet_prefix();
   qp_attr.ah_attr.grh.dgid.global.interface_id = peer_info.interface_id();
   qp_attr.ah_attr.grh.flow_label = 0;
-  qp_attr.ah_attr.grh.sgid_index = 0;
-  qp_attr.ah_attr.grh.hop_limit = MaxVal<uint8_t>();
-  qp_attr.ah_attr.dlid = peer_info.lid();
-  qp_attr.ah_attr.sl = 0;
+  qp_attr.ah_attr.grh.sgid_index = 0;  // TODO(shiyuan)
+  qp_attr.ah_attr.grh.traffic_class = ibv_conf_.traffic_class();
+  qp_attr.ah_attr.grh.hop_limit = 255;  // MaxVal<uint8_t>();
+  qp_attr.ah_attr.dlid = peer_info.local_id();
+  qp_attr.ah_attr.sl = ibv_conf_.sl();
   qp_attr.ah_attr.src_path_bits = 0;
-  qp_attr.ah_attr.static_rate = 0;
+  qp_attr.ah_attr.static_rate = 0;  // TODO(shiyuan)
   qp_attr.ah_attr.is_global = 1;
-  qp_attr.ah_attr.port_num = 1;
+  qp_attr.ah_attr.port_num = 1;  // TODO(shiyuan)
   qp_attr.path_mtu = port_attr.active_mtu;
   qp_attr.dest_qp_num = peer_info.qp_num();
   qp_attr.rq_psn = 0;
@@ -86,9 +83,9 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
   qp_attr.qp_state = IBV_QPS_RTS;
   qp_attr.sq_psn = 0;
   qp_attr.max_rd_atomic = 1;
-  qp_attr.retry_cnt = 7;
-  qp_attr.rnr_retry = 7;
-  qp_attr.timeout = 14;
+  qp_attr.retry_cnt = ibv_conf_.retry_cnt();
+  qp_attr.rnr_retry = 7;  // infinite
+  qp_attr.timeout = ibv_conf_.timeout();
   CHECK_EQ(ibv_modify_qp(qp_, &qp_attr,
                          IBV_QP_STATE | IBV_QP_SQ_PSN | IBV_QP_MAX_QP_RD_ATOMIC | IBV_QP_RETRY_CNT
                              | IBV_QP_RNR_RETRY | IBV_QP_TIMEOUT),
