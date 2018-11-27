@@ -1,8 +1,23 @@
 #include <cub/cub.cuh>
 #include "oneflow/core/ndarray/ndarray_reduce_impl.h"
+#include "oneflow/core/ndarray/binary_func.h"
 #include "oneflow/core/common/preprocessor.h"
 
 namespace oneflow {
+
+namespace {
+
+template<typename T, const T (*binary_func)(const T, const T)>
+void __global__ NdarrayMatrixColReduceNaiveCudaKernel(T* y_ptr, const T* x_ptr, int32_t num_rows,
+                                                      int32_t num_cols) {
+  CUDA_1D_KERNEL_LOOP(j, num_cols) {
+    T reduced = x_ptr[j];
+    FOR_RANGE(int32_t, i, 1, num_rows) { reduced = binary_func(reduced, x_ptr[i * num_cols + j]); }
+    y_ptr[j] = reduced;
+  }
+}
+
+}  // namespace
 
 struct RowOffsetFunctor final {
   OF_DEVICE_FUNC explicit RowOffsetFunctor(int32_t num_cols) : num_cols_(num_cols) {}
@@ -55,7 +70,7 @@ struct NdarrayMatrixRowReduce<DeviceType::kGPU, T> final {
 template<typename T>
 struct NdarrayMatrixColReduce<DeviceType::kGPU, T> final {
   static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
-    return false;
+    if (y.shape().ElemNum() > MaxVal<int32_t>()) { return false; }
     TODO();
     const auto& x_squeezed = SqueezeLeft(x.shape());
     const auto& y_squeezed = SqueezeLeft(y.shape());
@@ -72,6 +87,10 @@ struct NdarrayMatrixColReduce<DeviceType::kGPU, T> final {
   static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
                      const XpuVarNdarray<T>& tmp_storage) {
     CHECK(Matched(y, x));
+    int32_t num_rows = y.shape().ElemNum() / x.shape().ElemNum();
+    int32_t num_cols = x.shape().ElemNum();
+    RUN_CUDA_KERNEL((NdarrayMatrixColReduceNaiveCudaKernel<T, BinaryFuncAdd>), ctx, num_cols,
+                    y.ptr(), x.ptr(), num_rows, num_cols);
   }
 
  private:

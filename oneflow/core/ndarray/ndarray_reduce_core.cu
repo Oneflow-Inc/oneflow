@@ -19,7 +19,7 @@ struct NdArrayReduceCoreWrapper<DeviceType::kGPU, T, NDIMS> final {
   static void ReduceAxis(DeviceCtx* ctx, const XpuReducedNdarray<T, NDIMS>& dst_reduced,
                          const XpuReducedNdarray<T, NDIMS>& x, int axis) {
     size_t n = x.host_shape().HostElemNum();
-    NdArrayReduceGpuImplaceReduceAxis<T, NDIMS> WITH_CUDA_PARAM(ctx, n, dst_reduced, x, axis);
+    RUN_CUDA_KERNEL((NdArrayReduceGpuImplaceReduceAxis<T, NDIMS>), ctx, n, dst_reduced, x, axis);
   }
 };
 
