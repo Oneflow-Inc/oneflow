@@ -100,12 +100,12 @@ struct MaxVal;
 template<typename T>
 struct MinVal;
 
-#define TRAIT_LIMIT_VAL(max_or_min, T, limit_value)                                         \
-  template<>                                                                                \
-  struct max_or_min##Val<T> final {                                                         \
-    static_assert(alignof(int) == alignof(int32_t), "int32_t should be exactly int");       \
-    static_assert(alignof(long long) == alignof(int64_t), "int32_t should be exactly int"); \
-    constexpr static T value = limit_value;                                                 \
+#define TRAIT_LIMIT_VAL(max_or_min, T, limit_value)                                               \
+  template<>                                                                                      \
+  struct max_or_min##Val<T> final {                                                               \
+    static_assert(alignof(int) == alignof(int32_t), "int32_t should be exactly int");             \
+    static_assert(alignof(long long) == alignof(int64_t), "int64_t should be exactly long long"); \
+    constexpr static T value = limit_value;                                                       \
   }
 
 TRAIT_LIMIT_VAL(Max, int8_t, CHAR_MAX);

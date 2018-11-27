@@ -5,32 +5,21 @@
 
 namespace oneflow {
 
-template<typename T, const T (*binary_func)(const T, const T)>
-struct NdarrayScalarReduce<DeviceType::kCPU, T, binary_func> final {
-  static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) { return false; }
-  static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
-                     const XpuVarNdarray<T>& tmp_storage) {
-    UNIMPLEMENTED();
+#define SPECIALIZE_CPU_NDARRAY_REDUCE_IMPL(struct_name)                                            \
+  template<typename T, const T (*binary_func)(const T, const T)>                                   \
+  struct struct_name<DeviceType::kCPU, T, binary_func> final {                                     \
+    static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {              \
+      return false;                                                                                \
+    }                                                                                              \
+    static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x, \
+                       const XpuVarNdarray<T>& tmp_storage) {                                      \
+      UNIMPLEMENTED();                                                                             \
+    }                                                                                              \
   }
-};
-
-template<typename T, const T (*binary_func)(const T, const T)>
-struct NdarrayMatrixRowReduce<DeviceType::kCPU, T, binary_func> final {
-  static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) { return false; }
-  static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
-                     const XpuVarNdarray<T>& tmp_storage) {
-    UNIMPLEMENTED();
-  }
-};
-
-template<typename T, const T (*binary_func)(const T, const T)>
-struct NdarrayMatrixColReduce<DeviceType::kCPU, T, binary_func> final {
-  static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) { return false; }
-  static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
-                     const XpuVarNdarray<T>& tmp_storage) {
-    UNIMPLEMENTED();
-  }
-};
+SPECIALIZE_CPU_NDARRAY_REDUCE_IMPL(NdarrayScalarReduce);
+SPECIALIZE_CPU_NDARRAY_REDUCE_IMPL(NdarrayMatrixRowReduce);
+SPECIALIZE_CPU_NDARRAY_REDUCE_IMPL(NdarrayMatrixColReduce);
+#undef SPECIALIZE_CPU_NDARRAY_REDUCE_IMPL
 
 #define INSTANTIATE_NDARRAY_REDUCE_IMPL(dtype, binary_func)                                       \
   template struct NdarrayScalarReduce<DeviceType::kCPU, OF_PP_PAIR_FIRST(dtype), binary_func>;    \

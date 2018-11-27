@@ -9,26 +9,17 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T, const T (*binary_func)(const T, const T)>
-struct NdarrayScalarReduce final {
-  static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x);
-  static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
-                     const XpuVarNdarray<T>& tmp_storage);
-};
-
-template<DeviceType device_type, typename T, const T (*binary_func)(const T, const T)>
-struct NdarrayMatrixRowReduce final {
-  static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x);
-  static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
-                     const XpuVarNdarray<T>& tmp_storage);
-};
-
-template<DeviceType device_type, typename T, const T (*binary_func)(const T, const T)>
-struct NdarrayMatrixColReduce final {
-  static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x);
-  static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
-                     const XpuVarNdarray<T>& tmp_storage);
-};
+#define DECLARE_NDARRAY_REDUCE_IMPL(struct_name)                                                   \
+  template<DeviceType device_type, typename T, const T (*binary_func)(const T, const T)>           \
+  struct struct_name final {                                                                       \
+    static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x);               \
+    static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x, \
+                       const XpuVarNdarray<T>& tmp_storage);                                       \
+  }
+DECLARE_NDARRAY_REDUCE_IMPL(NdarrayScalarReduce);
+DECLARE_NDARRAY_REDUCE_IMPL(NdarrayMatrixRowReduce);
+DECLARE_NDARRAY_REDUCE_IMPL(NdarrayMatrixColReduce);
+#undef DECLARE_NDARRAY_REDUCE_IMPL
 
 template<DeviceType device_type, typename T, const T (*binary_func)(const T, const T)>
 struct NdarrayNoReduce final {
