@@ -24,7 +24,7 @@ IBVerbsMemDesc::IBVerbsMemDesc(ibv_pd* pd, void* mem_ptr, size_t byte_size) {
     ibv_mr* cur_mr =
         ibv_reg_mr(pd, ch_mem_ptr, cur_size,
                    IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
-    CHECK(cur_mr);
+    PCHECK(cur_mr);
     mr_vec_.push_back(cur_mr);
     ibv_sge cur_sge;
     cur_sge.addr = reinterpret_cast<uint64_t>(ch_mem_ptr);
@@ -40,7 +40,7 @@ IBVerbsMemDesc::IBVerbsMemDesc(ibv_pd* pd, void* mem_ptr, size_t byte_size) {
 }
 
 IBVerbsMemDesc::~IBVerbsMemDesc() {
-  for (ibv_mr* mr : mr_vec_) { CHECK_EQ(ibv_dereg_mr(mr), 0); }
+  for (ibv_mr* mr : mr_vec_) { PCHECK(ibv_dereg_mr(mr) == 0); }
 }
 
 IBVerbsMemDescProto IBVerbsMemDesc::ToProto() {

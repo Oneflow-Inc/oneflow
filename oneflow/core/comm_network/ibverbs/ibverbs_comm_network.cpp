@@ -23,9 +23,9 @@ IBVerbsCommNet::~IBVerbsCommNet() {
   for (IBVerbsQP* qp : qp_vec_) {
     if (qp) { delete qp; }
   }
-  CHECK_EQ(ibv_destroy_cq(cq_), 0);
-  CHECK_EQ(ibv_dealloc_pd(pd_), 0);
-  CHECK_EQ(ibv_close_device(context_), 0);
+  PCHECK(ibv_destroy_cq(cq_) == 0);
+  PCHECK(ibv_dealloc_pd(pd_) == 0);
+  PCHECK(ibv_close_device(context_) == 0);
 }
 
 void IBVerbsCommNet::RegisterMemoryDone() {
@@ -65,23 +65,23 @@ IBVerbsCommNet::IBVerbsCommNet(const Plan& plan)
   ibv_device* device = device_list[device_index];
   while ((ibv_conf.device_name() != "") && (device_index < device_num)) {
     if (std::string(ibv_get_device_name(device)) == ibv_conf.device_name()) { break; }
-    device_index++;
-    device = device_list[device_index];
+    device = device_list[++device_index];
   }
   CHECK_LT(device_index, device_num);
   context_ = ibv_open_device(device);
-  CHECK(context_);
+  PCHECK(context_);
   ibv_free_device_list(device_list);
   pd_ = ibv_alloc_pd(context_);
-  CHECK(pd_);
+  PCHECK(pd_);
   ibv_device_attr device_attr;
-  CHECK_EQ(ibv_query_device(context_, &device_attr), 0);
+  PCHECK(ibv_query_device(context_, &device_attr) == 0);
   cq_ = ibv_create_cq(context_, device_attr.max_cqe, nullptr, nullptr, 0);
-  CHECK(cq_);
+  PCHECK(cq_);
   ibv_port_attr port_attr;
-  CHECK_EQ(ibv_query_port(context_, 1, &port_attr), 0);
+  PCHECK(ibv_query_port(context_, 1, &port_attr) == 0);  // TODO(shiyuan): reuse port_num(1)?
+  // TODO(shiyuan): GID is the global address when sending packets between different subnets/
   ibv_gid gid;
-  CHECK_EQ(ibv_query_gid(context_, 1, 0, &gid), 0);
+  PCHECK(ibv_query_gid(context_, 1, 0, &gid) == 0);
   int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
   qp_vec_.assign(Global<JobDesc>::Get()->TotalMachineNum(), nullptr);
   for (int64_t peer_id : peer_machine_id()) {
@@ -106,6 +106,7 @@ IBVerbsCommNet::IBVerbsCommNet(const Plan& plan)
   }
   OF_BARRIER();
   poll_thread_ = std::thread(&IBVerbsCommNet::PollCQ, this);
+  // TODO(shiyuan): PingPeers
   OF_BARRIER();
 }
 
