@@ -22,7 +22,7 @@ void CudaCheck(T error);
 #define CUDA_1D_KERNEL_LOOP(i, n) \
   for (int32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < (n); i += blockDim.x * gridDim.x)
 
-const int32_t kCudaThreadsNumPerBlock = 512;
+const int32_t kCudaThreadsNumPerBlock = 1024;
 const int32_t kCudaMaxBlocksNum = 4096;
 
 inline int32_t BlocksNum4ThreadsNum(const int32_t n) {
