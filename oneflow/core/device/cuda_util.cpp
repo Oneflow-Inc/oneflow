@@ -45,7 +45,18 @@ const char* CurandGetErrorString(curandStatus_t error) {
   return "Unknown curand status";
 }
 
+cudaDeviceProp global_device_prop;
+
 }  // namespace
+
+void InitGlobalCudaDeviceProp() { cudaGetDeviceProperties(&global_device_prop, 0); }
+
+int32_t GetCudaThreadsNumPerBlock() { return global_device_prop.maxThreadsPerBlock; }
+
+int32_t GetCudaMaxBlocksNum() {
+  return global_device_prop.multiProcessorCount * global_device_prop.maxThreadsPerMultiProcessor
+         / kCudaThreadsNumPerBlock;
+}
 
 template<>
 void CudaCheck(cudaError_t error) {
