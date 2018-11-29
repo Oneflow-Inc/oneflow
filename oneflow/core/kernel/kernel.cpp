@@ -247,8 +247,10 @@ void KernelIf<device_type>::BackwardInDiffLossInstanceNum(
     CHECK_EQ(BnInOp2Blob(output_diff_bns.Get(i))->loss_instance_num(), loss_instance_num);
   }
   FOR_RANGE(int32_t, i, 0, input_diff_bns.size()) {
-    CHECK(BnInOp2Blob(input_diff_bns.Get(i))->has_loss_instance_num_field());
-    BnInOp2Blob(input_diff_bns.Get(i))->set_loss_instance_num(loss_instance_num);
+    Blob* input_diff_blob = BnInOp2Blob(input_diff_bns.Get(i));
+    if (!input_diff_blob) { continue; }
+    CHECK(input_diff_blob->has_loss_instance_num_field());
+    input_diff_blob->set_loss_instance_num(loss_instance_num);
   }
 }
 
