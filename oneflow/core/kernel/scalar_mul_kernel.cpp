@@ -29,7 +29,7 @@ void ScalarMulKernel<device_type, T>::BackwardDataContent(
   const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
   Blob* in_diff_blob = BnInOp2Blob(GenDiffBn("in"));
   T scalar_operand = 0;
-  const auto& conf = this->op_conf().scalar_add_conf();
+  const auto& conf = this->op_conf().scalar_mul_conf();
   if (IsIntegral<T>::value) {
     CHECK(conf.has_int_operand());
     scalar_operand = static_cast<T>(conf.int_operand());
