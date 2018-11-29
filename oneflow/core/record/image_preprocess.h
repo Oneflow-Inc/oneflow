@@ -66,10 +66,11 @@ class ImagePreprocessImpl<PreprocessCase::kMirror> final : public ImagePreproces
                     std::function<int32_t(void)> NextRandomInt) const override;
 };
 
-#define PREPROCESS_CASE_SEQ                     \
-  OF_PP_MAKE_TUPLE_SEQ(PreprocessCase::kResize) \
-  OF_PP_MAKE_TUPLE_SEQ(PreprocessCase::kMirror) \
-  OF_PP_MAKE_TUPLE_SEQ(PreprocessCase::kCrop)   \
+#define PREPROCESS_CASE_SEQ                         \
+  OF_PP_MAKE_TUPLE_SEQ(PreprocessCase::kResize)     \
+  OF_PP_MAKE_TUPLE_SEQ(PreprocessCase::kMirror)     \
+  OF_PP_MAKE_TUPLE_SEQ(PreprocessCase::kCrop)       \
+  OF_PP_MAKE_TUPLE_SEQ(PreprocessCase::kCenterCrop) \
   OF_PP_MAKE_TUPLE_SEQ(PreprocessCase::kCropWithRandomSize)
 
 ImagePreprocessIf* GetImagePreprocess(PreprocessCase);

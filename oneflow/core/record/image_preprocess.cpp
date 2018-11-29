@@ -54,7 +54,8 @@ void ImagePreprocessImpl<PreprocessCase::kCenterCrop>::DoPreprocess(
   int32_t middle_width = -1;
   int32_t middle_height = -1;
   float crop_aspect_ratio = width * 1.0 / height;
-  if ((image->cols * 1.0 / image->rows) > crop_aspect_ratio) {
+  CHECK_GT(crop_aspect_ratio, 0);
+  if ((image->cols * 1.0 / image->rows) >= crop_aspect_ratio) {
     middle_height = image->rows;
     middle_width = static_cast<int32_t>(middle_height * crop_aspect_ratio);
   } else {
