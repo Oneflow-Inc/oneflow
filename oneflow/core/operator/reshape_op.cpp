@@ -16,8 +16,12 @@ void ReshapeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
   BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   *out_blob_desc = *in_blob_desc;
 
-  out_blob_desc->mut_shape() =
-      GetShapeFromReshapeTypeConf(op_conf().reshape_conf().type(), in_blob_desc->shape());
+  const ReshapeOpConf conf = op_conf().reshape_conf();
+  ReshapeType reshape_type;
+  reshape_type.set_has_dim0_in_shape(conf.has_dim0_in_shape());
+  reshape_type.mutable_shape()->CopyFrom(conf.shape());
+
+  out_blob_desc->mut_shape() = GetShapeFromReshapeTypeConf(reshape_type, in_blob_desc->shape());
   ;
 }
 

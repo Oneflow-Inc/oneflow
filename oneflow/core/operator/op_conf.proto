@@ -508,7 +508,7 @@ message ExpandDimConf {
 }
 
 message ReshapeType {
-  required string bn_in_op = 1;  
+  optional string bn_in_op = 1 [default = "out"];  
   optional bool has_dim0_in_shape = 2 [default = false];
   oneof type {
     ShapeProto shape = 3;
@@ -520,7 +520,8 @@ message ReshapeType {
 message ReshapeOpConf {
   required string in = 1;
   required string out = 2;
-  required ReshapeType type = 3;
+  required ShapeProto shape = 3;
+  optional bool has_dim0_in_shape = 4 [default = false];
 }
 
 message EmbeddingLookupOpConf {
