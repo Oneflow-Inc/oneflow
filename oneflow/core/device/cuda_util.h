@@ -19,14 +19,18 @@ template<typename T>
 void CudaCheck(T error);
 
 // CUDA: grid stride looping
-#define CUDA_1D_KERNEL_LOOP(i, n) \
-  for (int32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < (n); i += blockDim.x * gridDim.x)
+#define CUDA_1D_KERNEL_LOOP(i, n)                                                                 \
+  for (int32_t i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; i < (n); \
+       i += step)
 
-const int32_t kCudaThreadsNumPerBlock = 512;
-const int32_t kCudaMaxBlocksNum = 4096;
+const int32_t kCudaThreadsNumPerBlock = 1024;
+
+int32_t GetCudaMaxBlocksNum();
+void InitGlobalCudaDeviceProp();
 
 inline int32_t BlocksNum4ThreadsNum(const int32_t n) {
-  return std::min((n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock, kCudaMaxBlocksNum);
+  return std::min((n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock,
+                  GetCudaMaxBlocksNum());
 }
 
 #define RUN_CUDA_KERNEL(func, device_ctx_ptr, thread_num, ...)         \
