@@ -165,7 +165,7 @@ void Kernel::Backward(const KernelCtx& ctx,
   }
   if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
   if (kernel_conf_.need_do_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
-  if (kernel_conf_.need_do_loss_instance_num()) { BackwardInDiffLossInstanceNum(ctx, BnInOp2Blob); }
+  BackwardInDiffLossInstanceNum(ctx, BnInOp2Blob);
   if (this->op_attribute().model_diff_bns().size() > 0) {
     SetTotalInstanceNumDiffBlob(ctx, BnInOp2Blob);
   }
