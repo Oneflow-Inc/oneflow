@@ -43,6 +43,14 @@ class ImagePreprocessImpl<PreprocessCase::kCrop> final : public ImagePreprocessI
 };
 
 template<>
+class ImagePreprocessImpl<PreprocessCase::kCenterCrop> final : public ImagePreprocessIf {
+ public:
+ private:
+  void DoPreprocess(cv::Mat* image, const ImagePreprocess& preprocess_conf,
+                    std::function<int32_t(void)> NextRandomInt) const override;
+};
+
+template<>
 class ImagePreprocessImpl<PreprocessCase::kCropWithRandomSize> final : public ImagePreprocessIf {
  public:
  private:

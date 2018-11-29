@@ -44,6 +44,35 @@ void ImagePreprocessImpl<PreprocessCase::kCrop>::DoPreprocess(
   *image = (*image)(cv::Rect(x, y, width, height));
 }
 
+void ImagePreprocessImpl<PreprocessCase::kCenterCrop>::DoPreprocess(
+    cv::Mat* image, const ImagePreprocess& preprocess_conf,
+    std::function<int32_t(void)> NextRandomInt) const {
+  CHECK(preprocess_conf.has_center_crop());
+  const ImageCenterCrop& conf = preprocess_conf.center_crop();
+  int32_t width = conf.width();
+  int32_t height = conf.height();
+  int32_t middle_width = -1;
+  int32_t middle_height = -1;
+  float crop_aspect_ratio = width * 1.0 / height;
+  if ((image->cols * 1.0 / image->rows) > crop_aspect_ratio) {
+    middle_height = image->rows;
+    middle_width = static_cast<int32_t>(middle_height * crop_aspect_ratio);
+  } else {
+    middle_width = image->cols;
+    middle_height = static_cast<int32_t>(middle_width / crop_aspect_ratio);
+  }
+  CHECK_GT(middle_width, 0);
+  CHECK_GT(middle_height, 0);
+  int32_t x = (image->cols - middle_width) / 2;
+  int32_t y = (image->rows - middle_height) / 2;
+  CHECK_GE(x, 0);
+  CHECK_GE(y, 0);
+  *image = (*image)(cv::Rect(x, y, middle_width, middle_height));
+  cv::Mat dst;
+  cv::resize(*image, dst, cv::Size(width, height), 0, 0, cv::INTER_LINEAR);
+  *image = dst;
+}
+
 void ImagePreprocessImpl<PreprocessCase::kCropWithRandomSize>::DoPreprocess(
     cv::Mat* image, const ImagePreprocess& preprocess_conf,
     std::function<int32_t(void)> NextRandomInt) const {
