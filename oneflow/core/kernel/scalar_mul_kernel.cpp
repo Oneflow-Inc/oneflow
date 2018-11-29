@@ -46,4 +46,6 @@ void ScalarMulKernel<device_type, T>::BackwardDataContent(
                                    in_diff_blob->mut_dptr<T>(), 1);
 }
 
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kScalarMulConf, ScalarMulKernel, ARITHMETIC_DATA_TYPE_SEQ);
+
 }  // namespace oneflow
