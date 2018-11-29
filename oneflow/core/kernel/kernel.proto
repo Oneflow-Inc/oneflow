@@ -139,6 +139,12 @@ message AccuracyKernelConf {
   required DataType label_type = 2;
 }
 
+message BboxNmsKernelConf {
+  required int32 num_classes = 1;
+  required bool need_broadcast = 2;
+  optional int32 device_piece_size = 3;
+}
+
 message OpAttribute {
   required OperatorConf op_conf = 1;
   map<string, LogicalBlobId> bn_in_op2lbi = 2;
@@ -208,5 +214,6 @@ message KernelConf {
     SmoothL1LossKernelConf smooth_l1_loss_conf = 402;
     SigmoidCrossEntropyLossKernelConf sigmoid_cross_entropy_loss_conf = 403;
     ResizeNearestNeighborKernelConf resize_nearest_neighbor_conf = 404;
+    BboxNmsKernelConf bbox_nms_conf = 405;
   }
 }

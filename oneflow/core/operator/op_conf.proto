@@ -840,7 +840,8 @@ message BboxNmsOpConf {
   optional int32 pre_nms_top_n = 7;
   optional float pre_nms_score_threshold = 8;
   required float nms_threshold = 9;
-  required int32 post_nms_top_n = 10;
+  optional int32 post_nms_top_n = 10;
+  optional int32 image_top_n = 11;
 }
 
 message RoIPoolingOpConf {
