@@ -48,6 +48,11 @@ void LossCompTaskNode::BuildExecGphAndRegst() {
     }
   }
   mut_exec_gph().TopoForEachNode([this](ExecNode* node) { node->InferBlobDescs(parallel_ctx()); });
+  FOR_EACH(input_diff_bn_it, loss_op->input_diff_bns()) {
+    GetProducedRegst("out")
+        ->MutBlobDesc(loss_op->BnInOp2Lbi(*input_diff_bn_it))
+        ->set_has_loss_instance_num_field(true);
+  }
 }
 
 void LossCompTaskNode::BuildRegstWhenTraining() {
@@ -57,10 +62,6 @@ void LossCompTaskNode::BuildRegstWhenTraining() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   std::shared_ptr<RegstDesc> data_tmp_regst = GetProducedRegst("data_tmp");
   loss_node->AddBnToRegstAndBindIt(&Operator::input_diff_bns, out_regst);
-  FOR_EACH(input_diff_bn_it, loss_op->input_diff_bns()) {
-    out_regst->MutBlobDesc(loss_op->BnInOp2Lbi(*input_diff_bn_it))
-        ->set_has_loss_instance_num_field(true);
-  }
   for (std::shared_ptr<RegstDesc> regst : GetConsumedRegst("in")) {
     out_regst->CopyBlobDescWithoutAddLbi(regst.get());
   }
