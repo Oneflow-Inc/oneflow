@@ -41,7 +41,7 @@ template<DeviceType device_type>
 void Memset(DeviceCtx*, void* dst, const char value, size_t sz);
 
 #if defined(__CUDACC__)
-#define OF_DEVICE_FUNC __device__ __forceinline__
+#define OF_DEVICE_FUNC __device__ __host__ __forceinline__
 #else
 #define OF_DEVICE_FUNC
 #endif
@@ -91,9 +91,9 @@ struct KernelUtilIf {
   static void OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
                             enum CBLAS_TRANSPOSE trans_b, const int batch_size, const int m,
                             const int n, const int k, const T alpha, const T* a, const T* b,
-                            const T beta, T* c) {
+                            const T beta, T* c, T** buf) {
     Derived::BatchedGemm(ctx, CblasRowMajor, trans_a, trans_b, batch_size, m, n, k, alpha, a, b,
-                         beta, c);
+                         beta, c, buf);
   }
 
   static void InitializeWithProperConf(DeviceCtx* ctx, const InitializerConf* initializer_conf,
@@ -174,7 +174,7 @@ struct KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T>::va
   static void BatchedGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
                           const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
                           int batch_size, int m, int n, int k, const T alpha, const T* a,
-                          const T* b, const T beta, T* c);
+                          const T* b, const T beta, T* c, T** buf);
 
   static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha);
@@ -292,7 +292,7 @@ struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T>::va
   static void BatchedGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
                           const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
                           int batch_size, int m, int n, int k, const T alpha, const T* a,
-                          const T* b, const T beta, T* c);
+                          const T* b, const T beta, T* c, T** buf);
 
   static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha);

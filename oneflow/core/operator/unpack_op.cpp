@@ -35,7 +35,7 @@ int32_t UnpackOp::GetUnpackNum(int64_t parallel_num) const {
     CHECK_EQ(Global<JobDesc>::Get()->PieceSize() % parallel_num, 0);
     int64_t unpack_num =
         Global<JobDesc>::Get()->PieceSize() / parallel_num * conf.unpack_num_per_record();
-    CHECK_LE(unpack_num, static_cast<int64_t>(MaxVal<int32_t>()));
+    CHECK_LE(unpack_num, static_cast<int64_t>(GetMaxVal<int32_t>()));
     return static_cast<int32_t>(unpack_num);
   } else {
     UNIMPLEMENTED();

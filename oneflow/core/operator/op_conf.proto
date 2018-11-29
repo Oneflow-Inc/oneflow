@@ -916,6 +916,31 @@ message DebugOpConf {
   }
 }
 
+message OneHotOpConf {
+  required string indices = 1;
+  required string out = 2;
+  required int64 depth = 3;
+  optional DataType data_type = 4;
+}
+
+message ScalarAddOpConf {
+  required string in = 1;
+  required string out = 2;
+  oneof scalar_operand {
+    int64 int_operand = 3;
+    double float_operand = 4;
+  }
+}
+
+message ScalarMulOpConf {
+  required string in = 1;
+  required string out = 2;
+  oneof scalar_operand {
+    int64 int_operand = 3;
+    double float_operand = 4;
+  }
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1001,6 +1026,7 @@ message OperatorConf {
     ConstantOpConf constant_conf = 255;
     DebugOpConf debug_conf = 256;
     SigmoidCrossEntropyLossOpConf sigmoid_cross_entropy_loss_conf = 257;
+    OneHotOpConf one_hot_conf = 258;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
@@ -1010,6 +1036,8 @@ message OperatorConf {
     SquareOpConf square_conf = 504;
     SqrtOpConf sqrt_conf = 505;
     RsqrtOpConf rsqrt_conf = 506;
+    ScalarAddOpConf scalar_add_conf = 507;
+    ScalarMulOpConf scalar_mul_conf = 508;
   }
 }
 

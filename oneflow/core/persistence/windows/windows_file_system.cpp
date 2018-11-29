@@ -17,7 +17,7 @@ typedef std::unique_ptr<void, decltype(CloseHandleFunc)> UniqueCloseHandlePtr;
 // PLEASE NOTE: hfile is expected to be an async handle
 // (i.e. opened with FILE_FLAG_OVERLAPPED)
 SSIZE_T pread(HANDLE hfile, char* src, size_t num_bytes, uint64_t offset) {
-  assert(num_bytes <= MaxVal<DWORD>());
+  assert(num_bytes <= GetMaxVal<DWORD>());
   OVERLAPPED overlapped = {0};
   ULARGE_INTEGER offset_union;
   offset_union.QuadPart = offset;
