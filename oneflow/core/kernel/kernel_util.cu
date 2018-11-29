@@ -339,6 +339,7 @@ KU_IF_METHOD RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num
 KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
                        const Shape& y_shape, const PbRf<int32_t>& permutation,
                        const int64_t elem_cnt, const T* x, T* y) {
+  CHECK_LE(y_shape.elem_cnt(), MaxVal<int32_t>::value);
   CHECK_LE(num_axis, kMaxDim);
   Int32Array y_shape_struct;
   FOR_RANGE(int32_t, i, 0, num_axis) { y_shape_struct.val[i] = y_shape.At(i); }
