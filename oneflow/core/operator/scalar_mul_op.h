@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class ScalarMulOp final : public CWiseOp {
+class ScalarMulOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ScalarMulOp);
   ScalarMulOp() = default;
