@@ -109,6 +109,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
   virtual void InferProducedDataRegstTimeShape() = 0;
   void NaiveInferProducedDataRegstTimeShape();
+  virtual void EnableHasLossInstanceNumForInDiffBlobDescIfNeed();
 
  private:
   void UpdateTaskId();

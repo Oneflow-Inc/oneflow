@@ -165,6 +165,7 @@ void Kernel::Backward(const KernelCtx& ctx,
   }
   if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
   if (kernel_conf_.need_do_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
+  if (kernel_conf_.need_do_loss_instance_num()) { BackwardInDiffLossInstanceNum(ctx, BnInOp2Blob); }
   if (this->op_attribute().model_diff_bns().size() > 0) {
     SetTotalInstanceNumDiffBlob(ctx, BnInOp2Blob);
   }
@@ -234,6 +235,24 @@ void KernelIf<device_type>::BackwardInDiffDim0ValidNum(
 }
 
 template<DeviceType device_type>
+void KernelIf<device_type>::BackwardInDiffLossInstanceNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const PbRpf<std::string>& output_diff_bns = op_attribute().output_diff_bns();
+  const PbRpf<std::string>& input_diff_bns = op_attribute().input_diff_bns();
+  CHECK_GT(output_diff_bns.size(), 0);
+  CHECK(BnInOp2Blob(output_diff_bns.Get(0))->has_loss_instance_num_field());
+  const int64_t loss_instance_num = BnInOp2Blob(output_diff_bns.Get(0))->loss_instance_num();
+  FOR_RANGE(int32_t, i, 1, output_diff_bns.size()) {
+    CHECK(BnInOp2Blob(output_diff_bns.Get(i))->has_loss_instance_num_field());
+    CHECK_EQ(BnInOp2Blob(output_diff_bns.Get(i))->loss_instance_num(), loss_instance_num);
+  }
+  FOR_RANGE(int32_t, i, 0, input_diff_bns.size()) {
+    CHECK(BnInOp2Blob(input_diff_bns.Get(i))->has_loss_instance_num_field());
+    BnInOp2Blob(input_diff_bns.Get(i))->set_loss_instance_num(loss_instance_num);
+  }
+}
+
+template<DeviceType device_type>
 void KernelIf<device_type>::ForwardPackedHeader(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
@@ -257,10 +276,10 @@ template<DeviceType device_type, typename T>
 void KernelIfWithModel<device_type, T>::SetTotalInstanceNumDiffBlob(
     const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   CHECK_GE(this->op_attribute().model_bns().size(), 2);
-  int64_t dim0_valid_num_sum =
-      BnInOp2Blob(this->op_attribute().output_diff_bns(0))->CalcDim0ValidNumSum();
+  const int64_t loss_instance_num =
+      BnInOp2Blob(this->op_attribute().output_diff_bns(0))->loss_instance_num();
   Blob* total_instance_num_diff_blob = BnInOp2Blob("total_instance_num_diff");
-  KernelUtil<device_type, T>::Set(ctx.device_ctx, static_cast<T>(dim0_valid_num_sum),
+  KernelUtil<device_type, T>::Set(ctx.device_ctx, static_cast<T>(loss_instance_num),
                                   total_instance_num_diff_blob->mut_dptr<T>());
 }
 

@@ -220,6 +220,13 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
         kernel_conf->set_can_naive_do_record_id_in_device_piece(true);
       }
     }
+
+    if ((!is_forward)
+        && HasBlobDescWithField(GetBlobDesc4BnInOp, output_diff_bns(),
+                                &BlobDesc::has_loss_instance_num_field)
+        && (!input_diff_bns().empty())) {
+      kernel_conf->set_need_do_loss_instance_num(true);
+    }
   }
 
   kernel_conf->set_is_forward(is_forward);

@@ -43,6 +43,10 @@ bool RtBlobDesc::has_record_id_in_device_piece_field() const {
   return header_pod_desc_.HasField(FieldKey::kRecordIdInDevicePiece);
 }
 
+bool RtBlobDesc::has_loss_instance_num_field() const {
+  return header_pod_desc_.HasField(FieldKey::kLossInstanceNum);
+}
+
 size_t RtBlobDesc::ByteSizeOfBlobHeader() const { return header_pod_desc_.ByteSize(); }
 
 size_t RtBlobDesc::ByteSizeOfBlobBody() const { return body_desc_.AlignedByteSize(); }
