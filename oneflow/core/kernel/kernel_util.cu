@@ -208,10 +208,10 @@ __global__ void CopyColsRegionGpu(const int64_t row_num, const int64_t col_num, 
   }
 }
 
-__device__ int64_t GetXIndex(const int32_t num_axis, const int64_t* y_shape,
-                             const int64_t* x_strides, int64_t y_idx) {
-  int64_t x_idx = 0;
-  for (int32_t i = num_axis - 1; i >= 0 && y_idx > 0; --i) {
+__device__ int32_t GetXIndex(const int32_t num_axis, const int32_t* y_shape,
+                             const int32_t* x_strides, int32_t y_idx) {
+  int32_t x_idx = 0;
+  for (int32_t i = num_axis - 1; i >= 0; --i) {
     x_idx += (y_idx % y_shape[i]) * x_strides[i];
     y_idx /= y_shape[i];
   }
@@ -219,10 +219,10 @@ __device__ int64_t GetXIndex(const int32_t num_axis, const int64_t* y_shape,
 }
 
 template<typename T>
-__global__ void TransposeGpu(const int32_t num_axis, const Int64Array y_shape,
-                             const Int64Array x_strides, const int64_t elem_cnt, const T* x, T* y) {
-  __shared__ int64_t x_strides_shared[kMaxDim];
-  __shared__ int64_t y_dims_shared[kMaxDim];
+__global__ void TransposeGpu(const int32_t num_axis, const Int32Array y_shape,
+                             const Int32Array x_strides, const int32_t elem_cnt, const T* x, T* y) {
+  __shared__ int32_t x_strides_shared[kMaxDim];
+  __shared__ int32_t y_dims_shared[kMaxDim];
   const int32_t tid = threadIdx.x;
   if (tid < num_axis) {
     y_dims_shared[tid] = y_shape.val[tid];
@@ -230,7 +230,7 @@ __global__ void TransposeGpu(const int32_t num_axis, const Int64Array y_shape,
   }
   __syncthreads();
   CUDA_1D_KERNEL_LOOP(y_idx, elem_cnt) {
-    const int64_t x_idx = GetXIndex(num_axis, y_dims_shared, x_strides_shared, y_idx);
+    const int32_t x_idx = GetXIndex(num_axis, y_dims_shared, x_strides_shared, y_idx);
 #if __CUDA_ARCH__ >= 350
     y[y_idx] = __ldg(x + x_idx);
 #else
@@ -362,12 +362,13 @@ KU_IF_METHOD RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num
 KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
                        const Shape& y_shape, const PbRf<int32_t>& permutation,
                        const int64_t elem_cnt, const T* x, T* y) {
+  CHECK_LE(y_shape.elem_cnt(), MaxVal<int32_t>::value);
   CHECK_LE(num_axis, kMaxDim);
-  Int64Array y_shape_struct;
+  Int32Array y_shape_struct;
   FOR_RANGE(int32_t, i, 0, num_axis) { y_shape_struct.val[i] = y_shape.At(i); }
-  Int64Array x_strides;
-  int64_t buff[kMaxDim];
-  int64_t cur_stride = 1;
+  Int32Array x_strides;
+  int32_t buff[kMaxDim];
+  int32_t cur_stride = 1;
   for (int32_t i = num_axis - 1; i >= 0; --i) {
     buff[i] = cur_stride;
     cur_stride *= x_shape.At(i);
