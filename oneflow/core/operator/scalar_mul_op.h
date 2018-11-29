@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_OPERATOR_SCALAR_MUL_OP_H_
 #define ONEFLOW_CORE_OPERATOR_SCALAR_MUL_OP_H_
 
-#include "oneflow/core/operator/cwise_op.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
