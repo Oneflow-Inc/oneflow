@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename PredType, typename LabelType>
+template<DeviceType device_type, typename PredType>
 class LossKernel : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LossKernel);
