@@ -19,7 +19,6 @@ class LossCompTaskNode final : public CompTaskNode {
  private:
   void BuildRegstWhenTraining();
   void InferProducedDataRegstTimeShape() override;
-  void LossOpFixInDiffHasLossInstanceNum(const Operator* loss_op);
 };
 
 }  // namespace oneflow

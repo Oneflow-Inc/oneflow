@@ -48,7 +48,8 @@ void LossCompTaskNode::BuildExecGphAndRegst() {
     }
   }
   mut_exec_gph().TopoForEachNode([this](ExecNode* node) { node->InferBlobDescs(parallel_ctx()); });
-  LossOpFixInDiffHasLossInstanceNum(loss_op.get());
+  mut_exec_gph().TopoForEachNode(
+      [this](ExecNode* node) { node->FixInDiffBlobDescs(parallel_ctx()); });
 }
 
 void LossCompTaskNode::BuildRegstWhenTraining() {
@@ -84,13 +85,5 @@ void LossCompTaskNode::BuildRegstWhenTraining() {
 }
 
 void LossCompTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataRegstTimeShape(); }
-
-void LossCompTaskNode::LossOpFixInDiffHasLossInstanceNum(const Operator* loss_op) {
-  FOR_EACH(input_diff_bn_it, loss_op->input_diff_bns()) {
-    GetProducedRegst("out")
-        ->MutBlobDesc(loss_op->BnInOp2Lbi(*input_diff_bn_it))
-        ->set_has_loss_instance_num_field(true);
-  }
-}
 
 }  // namespace oneflow
