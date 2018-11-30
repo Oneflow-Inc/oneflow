@@ -4,7 +4,7 @@ namespace oneflow {
 
 void LossOp::InitFromOpConf() {
   EnrollInputBn("prediction");
-  EnrollInputBn("label", false);
+  if (HasFieldInCustomizedConf("label")) { EnrollInputBn("label", false); }
   EnrollOutputBn("loss", false);
   EnrollOutputBn("loss_instance_num", false);
   if (!GetValFromCustomizedConf<std::string>("weight").empty()) {
@@ -29,10 +29,13 @@ void LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
                             const ParallelContext* parallel_ctx,
                             std::function<void(OpContext*)>) const {
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
-  const BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");
-  CHECK_EQ(pred_blob_desc->has_data_id_field(), label_blob_desc->has_data_id_field());
-  CHECK_EQ(pred_blob_desc->has_dim0_valid_num_field(), label_blob_desc->has_dim0_valid_num_field());
-  CHECK_EQ(pred_blob_desc->has_dim0_inner_shape(), label_blob_desc->has_dim0_inner_shape());
+  if (HasFieldInCustomizedConf("label")) {
+    const BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");
+    CHECK_EQ(pred_blob_desc->has_data_id_field(), label_blob_desc->has_data_id_field());
+    CHECK_EQ(pred_blob_desc->has_dim0_valid_num_field(),
+             label_blob_desc->has_dim0_valid_num_field());
+    CHECK_EQ(pred_blob_desc->has_dim0_inner_shape(), label_blob_desc->has_dim0_inner_shape());
+  }
   if (pred_blob_desc->has_dim0_inner_shape()) {
     CHECK_EQ(pred_blob_desc->dim0_inner_shape().At(0), 1);
   }

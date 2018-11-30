@@ -6,10 +6,9 @@ namespace oneflow {
 template<DeviceType device_type, typename PredType>
 void LossKernel<device_type, PredType>::SetLossInstanceNumBlob(
     const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  CHECK_GE(this->op_attribute().input_bns().size(), 2);
+  CHECK_GT(this->op_attribute().input_bns().size(), 0);
   // already did CheckSameDim0ValidNum in Kernel::Forward
-  int64_t dim0_valid_num_sum =
-      BnInOp2Blob(this->op_attribute().input_bns(0))->CalcDim0ValidNumSum();
+  int64_t dim0_valid_num_sum = BnInOp2Blob("prediction")->CalcDim0ValidNumSum();
   KernelUtil<device_type, PredType>::Set(ctx.device_ctx, static_cast<PredType>(dim0_valid_num_sum),
                                          BnInOp2Blob("loss_instance_num")->mut_dptr<PredType>());
 }
