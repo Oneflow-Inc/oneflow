@@ -3,8 +3,8 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename PredType, typename LabelType>
-void LossKernel<device_type, PredType, LabelType>::SetLossInstanceNumBlob(
+template<DeviceType device_type, typename PredType>
+void LossKernel<device_type, PredType>::SetLossInstanceNumBlob(
     const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   CHECK_GE(this->op_attribute().input_bns().size(), 2);
   // already did CheckSameDim0ValidNum in Kernel::Forward
@@ -14,8 +14,8 @@ void LossKernel<device_type, PredType, LabelType>::SetLossInstanceNumBlob(
                                          BnInOp2Blob("loss_instance_num")->mut_dptr<PredType>());
 }
 
-template<DeviceType device_type, typename PredType, typename LabelType>
-void LossKernel<device_type, PredType, LabelType>::ForwardDataContent(
+template<DeviceType device_type, typename PredType>
+void LossKernel<device_type, PredType>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   VirtualLossForwardDataContent(ctx, BnInOp2Blob);
   SetLossInstanceNumBlob(ctx, BnInOp2Blob);
@@ -57,28 +57,28 @@ void LossKernel<device_type, PredType, LabelType>::ForwardDataContent(
   }
 }
 
-template<DeviceType device_type, typename PredType, typename LabelType>
-void LossKernel<device_type, PredType, LabelType>::ForwardDataId(
+template<DeviceType device_type, typename PredType>
+void LossKernel<device_type, PredType>::ForwardDataId(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   BnInOp2Blob("loss")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("prediction"));
 }
 
-template<DeviceType device_type, typename PredType, typename LabelType>
-void LossKernel<device_type, PredType, LabelType>::ForwardColNum(
+template<DeviceType device_type, typename PredType>
+void LossKernel<device_type, PredType>::ForwardColNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   BnInOp2Blob(GenDiffBn("prediction"))->CopyColNumFrom(ctx.device_ctx, BnInOp2Blob("prediction"));
 }
 
-template<DeviceType device_type, typename PredType, typename LabelType>
-void LossKernel<device_type, PredType, LabelType>::ForwardDim0ValidNum(
+template<DeviceType device_type, typename PredType>
+void LossKernel<device_type, PredType>::ForwardDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   BnInOp2Blob(GenDiffBn("prediction"))
       ->CopyDim0ValidNumFrom(ctx.device_ctx, BnInOp2Blob("prediction"));
   BnInOp2Blob("loss")->CopyDim0ValidNumFrom(ctx.device_ctx, BnInOp2Blob("prediction"));
 }
 
-template<DeviceType device_type, typename PredType, typename LabelType>
-void LossKernel<device_type, PredType, LabelType>::ForwardRecordIdInDevicePiece(
+template<DeviceType device_type, typename PredType>
+void LossKernel<device_type, PredType>::ForwardRecordIdInDevicePiece(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // do nothing
 }
@@ -124,11 +124,9 @@ struct LossKernelUtil<DeviceType::kCPU, T> {
 
 OF_PP_FOR_EACH_TUPLE(MAKE_LOSS_KERNEL_UTIL_ENTRY, FLOATING_DATA_TYPE_SEQ)
 
-#define MAKE_LOSS_ENTRY(device_type, data_type_pair, label_type_pair)      \
-  template class LossKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair), \
-                            OF_PP_PAIR_FIRST(label_type_pair)>;
+#define MAKE_LOSS_ENTRY(device_type, data_type_pair) \
+  template class LossKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>;
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_LOSS_ENTRY, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ,
-                                 ARITHMETIC_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_LOSS_ENTRY, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
