@@ -329,6 +329,12 @@ KU_IF_METHOD Set(DeviceCtx* ctx, const T value, T* addr) { *addr = value; }
 KU_IF_METHOD Replicate(DeviceCtx* ctx, const int64_t n, T* y, const T* x) {
   for (int64_t i = 0; i < n; ++i) { y[i] = *x; }
 }
+KU_IF_METHOD AddByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z) {
+  for (int64_t i = 0; i < n; ++i) { z[i] = x[i] + y; }
+}
+KU_IF_METHOD MulByScalarPara(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z) {
+  for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y; }
+}
 
 #define KU_FLOATING_METHOD \
   template<typename T>     \
