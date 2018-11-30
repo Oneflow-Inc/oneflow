@@ -127,7 +127,6 @@ void TaskNode::ForEachProducedDataRegst(
 void TaskNode::Build() {
   if (consumed_regsts_.size()) { CHECK(IsReadyForBuild()); }
   BuildExecGphAndRegst();
-  EnableHasLossInstanceNumForInDiffBlobDescIfNeed();
   LockRegsts();
   FixRegisterNumRange();
   FixPackedBlobDescOfProducedRegst();
@@ -365,15 +364,6 @@ void TaskNode::EraseConsumedRegstsByName(const std::string& name) {
     for (auto& regst : consumed_regsts_[name]) { regst->DeleteConsumer(this); }
     CHECK_EQ(consumed_regsts_.erase(name), 1);
   }
-}
-
-void TaskNode::EnableHasLossInstanceNumForInDiffBlobDescIfNeed() {
-  const auto in_diff_regst_it = produced_regsts_.find("in_diff");
-  if (in_diff_regst_it == produced_regsts_.end()) { return; }
-  RegstDesc* in_diff_regst = in_diff_regst_it->second.get();
-  in_diff_regst->ForEachLbi([&in_diff_regst](const LogicalBlobId& lbi) {
-    in_diff_regst->MutBlobDesc(lbi)->set_has_loss_instance_num_field(true);
-  });
 }
 
 std::shared_ptr<RegstDesc> TaskEdge::GetRegst(const std::string& name_in_producer) const {
