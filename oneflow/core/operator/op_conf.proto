@@ -226,7 +226,7 @@ enum LossReductionType {
 }
 
 message SparseCrossEntropyOpConf {
-  required string probability = 1;
+  required string prediction = 1;
   required string label = 2;
   required string out = 3;
 }
