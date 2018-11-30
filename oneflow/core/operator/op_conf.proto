@@ -408,6 +408,13 @@ message PrintOpConf {
   optional int32 part_name_suffix_length = 4 [default = -1];
 }
 
+message OutStreamOpConf {
+  repeated PrintRecordConf in = 1;
+  required string print_dir = 2;
+  optional string part_name_prefix = 3 [default = "part-"];
+  optional int32 part_name_suffix_length = 4 [default = -1];
+}
+
 message LogCounterOpConf {
   required string in = 1;
   optional int32 interval = 2 [default = 1];
@@ -571,6 +578,14 @@ message DecodeRandomOpConf {
   required ShapeProto shape = 2;
   required DataType data_type = 3;
   required InitializerConf data_initializer = 4;
+}
+
+message DecodeInStreamOpConf {
+  required string out = 1;
+  required ShapeProto shape = 2;
+  required DataType data_type = 3;
+  optional ShapeProto dim0_inner_shape = 4;
+  optional int64 dim0_valid_num = 5;
 }
 
 message DefineTestBlobOpConf {
@@ -744,6 +759,7 @@ message OperatorConf {
     ModelSaveOpConf model_save_conf = 119;
     SharedModelDiffAddOpConf shared_model_diff_add_conf = 120;
     CastOpConf cast_conf = 121;
+    DecodeInStreamOpConf decode_in_stream_conf = 122;
     
     // domain op
     TransposeOpConf transpose_conf = 201;
@@ -786,6 +802,7 @@ message OperatorConf {
     UnpackOpConf unpack_conf = 238;
     RepeatOpConf repeat_conf = 239;
     LogCounterOpConf log_counter_conf = 240;
+    OutStreamOpConf out_stream_conf = 241;
   }
 }
 

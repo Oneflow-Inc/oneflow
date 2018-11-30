@@ -137,11 +137,14 @@ elseif(WIN32)
 endif()
 
 # build main
+find_package(Boost REQUIRED COMPONENTS system)
+include_directories(${Boost_INCLUDE_DIRS})
+
 set(RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
 foreach(cc ${of_main_cc})
   get_filename_component(main_name ${cc} NAME_WE)
   oneflow_add_executable(${main_name} ${cc})
-  target_link_libraries(${main_name} ${of_libs} ${oneflow_third_party_libs})
+  target_link_libraries(${main_name} ${Boost_LIBRARIES} ${of_libs} ${oneflow_third_party_libs})
   set_target_properties(${main_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 endforeach()
 

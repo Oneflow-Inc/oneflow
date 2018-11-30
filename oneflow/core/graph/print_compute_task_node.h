@@ -17,6 +17,18 @@ class PrintCompTaskNode final : public SinkCompTaskNode {
  private:
 };
 
+class OutStreamCompTaskNode final : public SinkCompTaskNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(OutStreamCompTaskNode);
+  OutStreamCompTaskNode() = default;
+  ~OutStreamCompTaskNode() = default;
+
+  TaskType GetTaskType() const override { return TaskType::kOutStream; }
+  bool IsPersistence() const override { return true; }
+
+ private:
+};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_GRAPH_PRINT_COMPUTE_TASK_NODE_H_

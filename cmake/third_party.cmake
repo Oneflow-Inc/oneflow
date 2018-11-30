@@ -104,6 +104,7 @@ include_directories(
     ${OPENCV_INCLUDE_DIR}
     ${EIGEN_INCLUDE_DIR}
     ${COCOAPI_INCLUDE_DIR}
+    ${THIRD_PARTY_DIR}/msgpack/include
 )
 
 if (BUILD_CUDA)

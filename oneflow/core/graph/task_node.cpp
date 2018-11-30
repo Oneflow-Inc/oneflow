@@ -422,5 +422,6 @@ std::map<TaskType, std::string> task_type2color = {
     {kDecodeRandom, "1"},    {kPackForward, "11"},
     {kPackBackward, "12"},   {kUnpackForward, "11"},
     {kUnpackBackward, "12"}, {kRepeatForward, "2"},
-    {kRepeatBackward, "3"}};
+    {kRepeatBackward, "3"},  {kDecodeInStream, "1"},
+    {kOutStream, "1"}};
 }  // namespace oneflow

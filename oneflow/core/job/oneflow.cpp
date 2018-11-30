@@ -1,3 +1,4 @@
+#include <oneflow/core/actor/of_serving.h>
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/ctrl_server.h"
@@ -161,6 +162,7 @@ Oneflow::Oneflow(const std::string& job_conf_filepath) {
   // New All Global
   Global<JobDesc>::New(job_conf_filepath);
   ctrl_server_.reset(new CtrlServer());
+  Global<OFServing>::New();
   Global<CtrlClient>::New();
   OF_BARRIER();
   int64_t this_mchn_id = Global<JobDesc>::Get()->GetMachineId(ctrl_server_->this_machine_addr());
@@ -228,6 +230,7 @@ Oneflow::Oneflow(const std::string& job_conf_filepath) {
   Global<Profiler>::Delete();
   Global<MachineCtx>::Delete();
   Global<IDMgr>::Delete();
+  Global<OFServing>::Delete();
   Global<JobDesc>::Delete();
 }
 
@@ -237,6 +240,7 @@ DEFINE_string(job_conf, "", "");
 
 int main(int argc, char** argv) {
   using namespace oneflow;
+  argc -= 2;
   FLAGS_log_dir = LogDir();
   google::InitGoogleLogging(argv[0]);
   gflags::SetVersionString(BuildVersionString());

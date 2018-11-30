@@ -10,6 +10,7 @@
 #include "oneflow/core/graph/print_compute_task_node.h"
 #include "oneflow/core/graph/decode_compute_task_node.h"
 #include "oneflow/core/graph/decode_random_compute_task_node.h"
+#include "oneflow/core/graph/decode_in_stream_compute_task_node.h"
 #include "oneflow/core/graph/record_load_compute_task_node.h"
 #include "oneflow/core/graph/reduce_scatter_compute_task_node.h"
 #include "oneflow/core/graph/reduce_add_compute_task_node.h"
@@ -389,29 +390,31 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
                                  "NormalMdUpdt",
                                  &BoxingTaskNode::BldBoxingOpConfWithAddAndClone);
 
-#define LOGICAL_TYPE_SEQ                                  \
-  OF_PP_MAKE_TUPLE_SEQ(NormalForward, kDataForwardArea)   \
-  OF_PP_MAKE_TUPLE_SEQ(NormalBackward, kDataBackwardArea) \
-  OF_PP_MAKE_TUPLE_SEQ(RecordLoad, kDataPreprocessArea)   \
-  OF_PP_MAKE_TUPLE_SEQ(Decode, kDataPreprocessArea)       \
-  OF_PP_MAKE_TUPLE_SEQ(DecodeRandom, kDataPreprocessArea) \
-  OF_PP_MAKE_TUPLE_SEQ(Loss, kDataForwardArea)            \
-  OF_PP_MAKE_TUPLE_SEQ(LossAcc, kDataForwardArea)         \
-  OF_PP_MAKE_TUPLE_SEQ(LossPrint, kPrintArea)             \
-  OF_PP_MAKE_TUPLE_SEQ(NormalMdUpdt, kMdUpdtArea)         \
-  OF_PP_MAKE_TUPLE_SEQ(MdSave, kMdSaveArea)               \
-  OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc, kDataBackwardArea)      \
-  OF_PP_MAKE_TUPLE_SEQ(Print, kPrintArea)                 \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceConcat, kMdUpdtArea)         \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceScatter, kMdUpdtArea)        \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceAdd, kMdUpdtArea)            \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceGather, kMdUpdtArea)         \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceSplit, kMdUpdtArea)          \
-  OF_PP_MAKE_TUPLE_SEQ(NcclAllReduce, kMdUpdtArea)        \
-  OF_PP_MAKE_TUPLE_SEQ(NcclReduceScatter, kMdUpdtArea)    \
-  OF_PP_MAKE_TUPLE_SEQ(NcclAllGather, kMdUpdtArea)        \
-  OF_PP_MAKE_TUPLE_SEQ(Accuracy, kDataForwardArea)        \
-  OF_PP_MAKE_TUPLE_SEQ(AccuracyAcc, kDataForwardArea)     \
+#define LOGICAL_TYPE_SEQ                                    \
+  OF_PP_MAKE_TUPLE_SEQ(NormalForward, kDataForwardArea)     \
+  OF_PP_MAKE_TUPLE_SEQ(NormalBackward, kDataBackwardArea)   \
+  OF_PP_MAKE_TUPLE_SEQ(RecordLoad, kDataPreprocessArea)     \
+  OF_PP_MAKE_TUPLE_SEQ(Decode, kDataPreprocessArea)         \
+  OF_PP_MAKE_TUPLE_SEQ(DecodeInStream, kDataPreprocessArea) \
+  OF_PP_MAKE_TUPLE_SEQ(DecodeRandom, kDataPreprocessArea)   \
+  OF_PP_MAKE_TUPLE_SEQ(Loss, kDataForwardArea)              \
+  OF_PP_MAKE_TUPLE_SEQ(LossAcc, kDataForwardArea)           \
+  OF_PP_MAKE_TUPLE_SEQ(LossPrint, kPrintArea)               \
+  OF_PP_MAKE_TUPLE_SEQ(NormalMdUpdt, kMdUpdtArea)           \
+  OF_PP_MAKE_TUPLE_SEQ(MdSave, kMdSaveArea)                 \
+  OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc, kDataBackwardArea)        \
+  OF_PP_MAKE_TUPLE_SEQ(Print, kPrintArea)                   \
+  OF_PP_MAKE_TUPLE_SEQ(OutStream, kPrintArea)               \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceConcat, kMdUpdtArea)           \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceScatter, kMdUpdtArea)          \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceAdd, kMdUpdtArea)              \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceGather, kMdUpdtArea)           \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceSplit, kMdUpdtArea)            \
+  OF_PP_MAKE_TUPLE_SEQ(NcclAllReduce, kMdUpdtArea)          \
+  OF_PP_MAKE_TUPLE_SEQ(NcclReduceScatter, kMdUpdtArea)      \
+  OF_PP_MAKE_TUPLE_SEQ(NcclAllGather, kMdUpdtArea)          \
+  OF_PP_MAKE_TUPLE_SEQ(Accuracy, kDataForwardArea)          \
+  OF_PP_MAKE_TUPLE_SEQ(AccuracyAcc, kDataForwardArea)       \
   OF_PP_MAKE_TUPLE_SEQ(AccuracyPrint, kPrintArea)
 
 #define DEFINE_VIRTUAL_METHOD(x, area_type)                                             \

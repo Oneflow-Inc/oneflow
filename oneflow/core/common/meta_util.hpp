@@ -18,18 +18,20 @@ namespace oneflow{
     template<typename T>
     struct function_traits;
 
-    template<typename Ret, typename... Args>
-    struct function_traits<Ret(Args...)>
+    template<typename Ret, typename Arg, typename... Args>
+    struct function_traits<Ret(Arg, Args...)>
     {
     public:
-        enum { arity = sizeof...(Args) };
-        typedef Ret function_type(Args...);
+        enum { arity = sizeof...(Args)+1 };
+        typedef Ret function_type(Arg, Args...);
         typedef Ret return_type;
         using stl_function_type = std::function<function_type>;
-        typedef Ret(*pointer)(Args...);
+        typedef Ret(*pointer)(Arg, Args...);
 
-        typedef std::tuple<Args...> tuple_type;
-        typedef std::tuple<std::remove_const_t<std::remove_reference_t<Args>>...> bare_tuple_type;
+        typedef std::tuple<Arg, Args...> tuple_type;
+        typedef std::tuple<Arg, std::remove_const_t<std::remove_reference_t<Args>>...> bare_tuple_type;
+        using args_tuple = std::tuple<std::string, Arg, std::remove_const_t<std::remove_reference_t<Args>>...>;
+        using args_tuple_2nd = std::tuple<std::string, std::remove_const_t<std::remove_reference_t<Args>>...>;
     };
 
     template<typename Ret, typename... Args>

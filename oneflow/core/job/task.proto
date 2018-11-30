@@ -41,6 +41,8 @@ enum TaskType {
   kUnpackBackward = 33;
   kRepeatForward = 34;
   kRepeatBackward = 35;
+  kDecodeInStream = 36;
+  kOutStream = 37;
 };
 
 enum AreaType {
