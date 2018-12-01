@@ -14,20 +14,19 @@ class connection : public std::enable_shared_from_this<connection>, private boos
  public:
   connection(boost::asio::io_service& io_service, std::size_t timeout_seconds)
       : socket_(io_service),
-        message_{boost::asio::buffer(head_), boost::asio::buffer(data_)},
+        data_(PAGE_SIZE),
+        message_{boost::asio::buffer(head_), boost::asio::buffer(data_.data(), data_.size())},
         timer_(io_service),
         timeout_seconds_(timeout_seconds) {}
 
-  ~connection() {
-    std::cout << "" << std::endl;
-    close();
-  }
+  ~connection() { close(); }
 
   void start() { read_head(); }
 
   tcp::socket& socket() { return socket_; }
 
   void response(const char* data, size_t len) {
+    assert(message_[1].size() > len);
     message_[0] = boost::asio::buffer(&len, sizeof(int32_t));
     message_[1] = boost::asio::buffer((char*)data, len);
     reset_timer();
@@ -58,6 +57,7 @@ class connection : public std::enable_shared_from_this<connection>, private boos
                               if (!ec) {
                                 const int body_len = *((int*)(head_));
                                 if (body_len > 0 && body_len < MAX_BUF_LEN) {
+                                  if (data_.size() < body_len) { data_.resize(body_len); }
                                   read_body(body_len);
                                   return;
                                 }
@@ -78,7 +78,7 @@ class connection : public std::enable_shared_from_this<connection>, private boos
 
   void read_body(std::size_t size) {
     auto self(this->shared_from_this());
-    boost::asio::async_read(socket_, boost::asio::buffer(data_, size),
+    boost::asio::async_read(socket_, boost::asio::buffer(data_.data(), size),
                             [this, self](boost::system::error_code ec, std::size_t length) {
                               cancel_timer();
 
@@ -89,7 +89,7 @@ class connection : public std::enable_shared_from_this<connection>, private boos
 
                               if (!ec) {
                                 router& _router = router::get();
-                                _router.route(data_, length, this);
+                                _router.route(data_.data(), length, this);
                               } else {
                                 LOG(INFO) << ec.message();
                               }
@@ -128,7 +128,7 @@ class connection : public std::enable_shared_from_this<connection>, private boos
 
   tcp::socket socket_;
   char head_[HEAD_LEN];
-  char data_[MAX_BUF_LEN];
+  std::vector<char> data_;
   std::array<boost::asio::mutable_buffer, 2> message_;
   boost::asio::steady_timer timer_;
   std::size_t timeout_seconds_;
