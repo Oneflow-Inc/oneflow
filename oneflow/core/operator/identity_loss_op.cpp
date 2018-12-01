@@ -16,7 +16,6 @@ void IdentityLossOp::VirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* prediction = GetBlobDesc4BnInOp("prediction");
-  CHECK_EQ(prediction->shape().Count(1), 1);
   BlobDesc* ones = GetBlobDesc4BnInOp("ones");
   *ones = *prediction;
 }

@@ -6,10 +6,8 @@ namespace oneflow {
 template<DeviceType device_type, typename PredType>
 void LossKernel<device_type, PredType>::SetLossInstanceNumBlob(
     const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  CHECK_GT(this->op_attribute().input_bns().size(), 0);
-  // already did CheckSameDim0ValidNum in Kernel::Forward
-  int64_t dim0_valid_num_sum = BnInOp2Blob("prediction")->CalcDim0ValidNumSum();
-  KernelUtil<device_type, PredType>::Set(ctx.device_ctx, static_cast<PredType>(dim0_valid_num_sum),
+  const int64_t loss_instance_num = CalcLossInstanceNum(ctx, BnInOp2Blob);
+  KernelUtil<device_type, PredType>::Set(ctx.device_ctx, static_cast<PredType>(loss_instance_num),
                                          BnInOp2Blob("loss_instance_num")->mut_dptr<PredType>());
 }
 
@@ -80,6 +78,12 @@ template<DeviceType device_type, typename PredType>
 void LossKernel<device_type, PredType>::ForwardRecordIdInDevicePiece(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // do nothing
+}
+
+template<DeviceType device_type, typename PredType>
+int64_t LossKernel<device_type, PredType>::CalcLossInstanceNum(
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+  return BnInOp2Blob("prediction")->CalcDim0ValidNumSum();
 }
 
 template<typename T>
