@@ -157,11 +157,37 @@ struct NdarrayMatrixColReduce<DeviceType::kGPU, T, binary_func> final {
   }
 };
 
+namespace {
+
+template<typename T, int NDIMS, const T (*binary_func)(const T, const T)>
+__global__ void NdArrayReduceGpuImplaceReduceAxis(const XpuReducedNdarray<T, NDIMS> dst_reduced,
+                                                  const XpuReducedNdarray<T, NDIMS> x, int axis) {
+  NdArrayReduceCore<T, NDIMS, binary_func>::ReduceAxis(dst_reduced, x, axis);
+}
+
+}  // namespace
+
+template<typename T, int NDIMS, const T (*binary_func)(const T, const T)>
+struct NdArrayReduceCoreWrapper<DeviceType::kGPU, T, NDIMS, binary_func> final {
+  static void ReduceAxis(DeviceCtx* ctx, const XpuReducedNdarray<T, NDIMS>& dst_reduced,
+                         const XpuReducedNdarray<T, NDIMS>& x, int axis) {
+    size_t n = x.host_shape().HostElemNum();
+    RUN_CUDA_KERNEL((NdArrayReduceGpuImplaceReduceAxis<T, NDIMS, binary_func>), ctx, n, dst_reduced,
+                    x, axis);
+  }
+};
+
 #define INSTANTIATE_NDARRAY_REDUCE_IMPL(dtype, binary_func)                                       \
   template struct NdarrayScalarReduce<DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype), binary_func>;    \
   template struct NdarrayMatrixRowReduce<DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype), binary_func>; \
   template struct NdarrayMatrixColReduce<DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype), binary_func>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_IMPL, ARITHMETIC_DATA_TYPE_SEQ,
                                  REDUCE_BINARY_FUNC_SEQ);
+
+#define INSTANTIATE_NDARRAY_REDUCE_CORE_WRAPPER(dtype_pair, NDIMS, binary_func)                   \
+  template struct NdArrayReduceCoreWrapper<DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype_pair), NDIMS, \
+                                           binary_func>;
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_CORE_WRAPPER, ARITHMETIC_DATA_TYPE_SEQ,
+                                 DIM_SEQ, REDUCE_BINARY_FUNC_SEQ);
 
 }  // namespace oneflow
