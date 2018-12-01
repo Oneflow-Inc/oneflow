@@ -13,7 +13,7 @@ void RngUniform(const int64_t elem_cnt, const T min, const T max, uint32_t rando
   CHECK(dptr);
   CHECK_LE(min, max);
   std::mt19937 generator(random_seed);
-  std::uniform_real_distribution<T> random_distribution(min, std::nextafter(max, MaxVal<T>()));
+  std::uniform_real_distribution<T> random_distribution(min, std::nextafter(max, GetMaxVal<T>()));
   for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = random_distribution(generator); }
 }
 
@@ -24,7 +24,7 @@ void RngIntUniform(const int64_t elem_cnt, const T min, const T max, uint32_t ra
   CHECK(dptr);
   CHECK_LE(min, max);
   std::mt19937 generator(random_seed);
-  std::uniform_int_distribution<T> random_distribution(min, std::nextafter(max, MaxVal<T>()));
+  std::uniform_int_distribution<T> random_distribution(min, std::nextafter(max, GetMaxVal<T>()));
   for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = random_distribution(generator); }
 }
 
@@ -329,6 +329,12 @@ KU_IF_METHOD Set(DeviceCtx* ctx, const T value, T* addr) { *addr = value; }
 KU_IF_METHOD Replicate(DeviceCtx* ctx, const int64_t n, T* y, const T* x) {
   for (int64_t i = 0; i < n; ++i) { y[i] = *x; }
 }
+KU_IF_METHOD AddByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z) {
+  for (int64_t i = 0; i < n; ++i) { z[i] = x[i] + y; }
+}
+KU_IF_METHOD MulByScalarPara(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z) {
+  for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y; }
+}
 
 #define KU_FLOATING_METHOD \
   template<typename T>     \
@@ -368,7 +374,8 @@ KU_FLOATING_METHOD Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
 KU_FLOATING_METHOD BatchedGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
                                const enum CBLAS_TRANSPOSE trans_a,
                                const enum CBLAS_TRANSPOSE trans_b, int batch_size, int m, int n,
-                               int k, const T alpha, const T* a, const T* b, const T beta, T* c) {
+                               int k, const T alpha, const T* a, const T* b, const T beta, T* c,
+                               T** buf) {
   const int a_stride = m * k;
   const int b_stride = k * n;
   const int c_stride = m * n;

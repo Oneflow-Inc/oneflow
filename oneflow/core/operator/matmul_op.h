@@ -14,6 +14,8 @@ class MatmulOp final : public Operator {
   bool NeedOutBlobWhenBackward() const override { return false; }
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
+  void InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                           const ParallelContext*) const override;
 };
 
 }  // namespace oneflow
