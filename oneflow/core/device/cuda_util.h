@@ -19,19 +19,23 @@ template<typename T>
 void CudaCheck(T error);
 
 // CUDA: grid stride looping
-#define CUDA_1D_KERNEL_LOOP(i, n) \
-  for (int32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < (n); i += blockDim.x * gridDim.x)
+#define CUDA_1D_KERNEL_LOOP(i, n)                                                                 \
+  for (int32_t i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; i < (n); \
+       i += step)
 
-const int32_t kCudaThreadsNumPerBlock = 512;
-const int32_t kCudaMaxBlocksNum = 4096;
+const int32_t kCudaThreadsNumPerBlock = 1024;
+
+int32_t GetCudaMaxBlocksNum();
+void InitGlobalCudaDeviceProp();
 
 inline int32_t BlocksNum4ThreadsNum(const int32_t n) {
-  return std::min((n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock, kCudaMaxBlocksNum);
+  return std::min((n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock,
+                  GetCudaMaxBlocksNum());
 }
 
-#define WITH_CUDA_PARAM(device_ctx_ptr, thread_num, ...)           \
-  <<<BlocksNum4ThreadsNum(thread_num), kCudaThreadsNumPerBlock, 0, \
-     (device_ctx_ptr)->cuda_stream()>>>(__VA_ARGS__)
+#define RUN_CUDA_KERNEL(func, device_ctx_ptr, thread_num, ...)         \
+  func<<<BlocksNum4ThreadsNum(thread_num), kCudaThreadsNumPerBlock, 0, \
+         (device_ctx_ptr)->cuda_stream()>>>(__VA_ARGS__)
 
 size_t GetAvailableGpuMemSize(int dev_id);
 
@@ -49,6 +53,21 @@ enum class CudaWorkType {
   OF_PP_FOR_EACH_TUPLE(DECLARE_CUDA_WORK_TYPE, CUDA_WORK_TYPE_SEQ)
 };
 inline size_t GetCudaWorkTypeSize() { return OF_PP_SEQ_SIZE(CUDA_WORK_TYPE_SEQ); }
+
+#define CUDA_DATA_TYPE_SEQ                \
+  OF_PP_MAKE_TUPLE_SEQ(float, CUDA_R_32F) \
+  OF_PP_MAKE_TUPLE_SEQ(double, CUDA_R_64F)
+
+cudaDataType_t GetCudaDataType(DataType);
+
+template<typename T>
+struct CudaDataType;
+
+#define SPECIALIZE_CUDA_DATA_TYPE(type_cpp, type_cuda) \
+  template<>                                           \
+  struct CudaDataType<type_cpp> : std::integral_constant<cudaDataType_t, type_cuda> {};
+OF_PP_FOR_EACH_TUPLE(SPECIALIZE_CUDA_DATA_TYPE, CUDA_DATA_TYPE_SEQ);
+#undef SPECIALIZE_CUDA_DATA_TYPE
 
 }  // namespace oneflow
 

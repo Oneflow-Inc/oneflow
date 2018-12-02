@@ -33,7 +33,7 @@ void NormalBackwardCompActor::ForEachCurCustomizedReadableRegst(
   }
 }
 
-void NormalBackwardCompActor::NormalProcessNaiveReadableRegstMsg(const std::deque<Regst*>& rq) {
+void NormalBackwardCompActor::NormalProcessNaiveReadableDataRegstMsg(const std::deque<Regst*>& rq) {
   if (rq.size() == 1 && rq.front()->regst_desc_id() == any_out_diff_regst_desc_id_) {
     AsyncReturnModelRegstUntilModelVersionIdEqual(
         GetModelVersionIdFromPieceId(rq.front()->piece_id(), actual_num_of_piece_in_batch_));

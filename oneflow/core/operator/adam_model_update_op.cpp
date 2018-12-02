@@ -9,8 +9,8 @@ void AdamModelUpdateOp::MdUpdtVirtualInitFromOpConf() {
   CHECK_GE(adam_conf.beta2(), 0);
   CHECK_LT(adam_conf.beta2(), 1);
 
-  EnrollDataTmpBn("m");
-  EnrollDataTmpBn("v");
+  EnrollForwardModelBn("m");
+  EnrollForwardModelBn("v");
   if (adam_conf.do_bias_correction()) {
     EnrollForwardModelBn("beta1_t");
     EnrollForwardModelBn("beta2_t");

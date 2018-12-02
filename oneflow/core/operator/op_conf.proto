@@ -254,6 +254,14 @@ message SigmoidCrossEntropyLossOpConf {
   optional string weight = 8;
 }
 
+message IdentityLossOpConf {
+  required string prediction = 1;
+  required string loss = 2;
+  optional LossReductionType reduction = 3 [default = kSumOverN];
+  optional float weight_scalar = 4 [default = 1.0];
+  optional string weight = 5;
+}
+
 message ConcatOpConf {
   repeated string in = 1;
   required string out = 2;
@@ -791,6 +799,11 @@ message SqrtOpConf {
   required string out = 2;
 }
 
+message RsqrtOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
 message SquareOpConf {
   required string in = 1;
   required string out = 2;
@@ -906,6 +919,31 @@ message DebugOpConf {
   }
 }
 
+message OneHotOpConf {
+  required string indices = 1;
+  required string out = 2;
+  required int64 depth = 3;
+  optional DataType data_type = 4;
+}
+
+message ScalarAddOpConf {
+  required string in = 1;
+  required string out = 2;
+  oneof scalar_operand {
+    int64 int_operand = 3;
+    double float_operand = 4;
+  }
+}
+
+message ScalarMulOpConf {
+  required string in = 1;
+  required string out = 2;
+  oneof scalar_operand {
+    int64 int_operand = 3;
+    double float_operand = 4;
+  }
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -981,14 +1019,8 @@ message OperatorConf {
     LogCounterOpConf log_counter_conf = 240;
     GeluOpConf gelu_conf = 241;
     GatherOpConf gather_conf = 242;
-    SqrtOpConf sqrt_conf = 243;
-    SquareOpConf square_conf = 244;
     ConstScalarOpConf const_scalar_conf = 245;
     ConstRangeOpConf const_range_conf = 246;
-    BroadcastAddOpConf broadcast_add_conf = 247;
-    BroadcastSubOpConf broadcast_sub_conf = 248;
-    BroadcastMulOpConf broadcast_mul_conf = 249;
-    BroadcastDivOpConf broadcast_div_conf = 250;
     MeanOpConf mean_conf = 251;
     SliceOpConf slice_conf = 252;
     BiasAddOpConf bias_add_conf = 253;
@@ -996,6 +1028,19 @@ message OperatorConf {
     ConstantOpConf constant_conf = 255;
     DebugOpConf debug_conf = 256;
     SigmoidCrossEntropyLossOpConf sigmoid_cross_entropy_loss_conf = 257;
+    OneHotOpConf one_hot_conf = 258;
+    IdentityLossOpConf identity_loss_conf = 259;
+
+    // math op
+    BroadcastAddOpConf broadcast_add_conf = 500;
+    BroadcastSubOpConf broadcast_sub_conf = 501;
+    BroadcastMulOpConf broadcast_mul_conf = 502;
+    BroadcastDivOpConf broadcast_div_conf = 503;
+    SquareOpConf square_conf = 504;
+    SqrtOpConf sqrt_conf = 505;
+    RsqrtOpConf rsqrt_conf = 506;
+    ScalarAddOpConf scalar_add_conf = 507;
+    ScalarMulOpConf scalar_mul_conf = 508;
   }
 }
 
