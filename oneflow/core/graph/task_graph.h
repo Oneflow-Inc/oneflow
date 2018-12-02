@@ -22,6 +22,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void AddOrderingCtrlEdgeInSameChain();
 
   void EnableMemSharingInReduceStruct();
+  void EnableMemSharingAfterAllManualSetForMdUpdt();
 
   void AddOrderCtrlEdgeBetweenCopyAndMdUpdt();
   void RmUselessConsumeRelationshipBetweenFwBw();
