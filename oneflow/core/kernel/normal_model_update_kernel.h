@@ -34,9 +34,8 @@ class NormalMdUpdateKernel : public KernelIf<device_type> {
 template<DeviceType device_type, typename T>
 class NormalMdUpdateKernelUtil final {
  public:
-  static void ClipByGlobalNorm(DeviceCtx* ctx, const int64_t cur_batch_num,
-                               const ClipByGlobalNorm& conf, const T* batch_instance_num_ptr,
-                               std::function<Blob*(const std::string&)> BnInOp2Blob);
+  static void CmptClipRatioByGlobalNorm(DeviceCtx* ctx, const T* global_norm_ptr, T clip_norm,
+                                        T* ratio_ptr);
 };
 
 #define DECLARE_MDUPDT_KERNEL_CREATOR(x) Kernel* Create##x##MdUpdtKernel(const KernelConf&);

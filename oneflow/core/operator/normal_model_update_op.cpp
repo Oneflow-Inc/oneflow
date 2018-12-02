@@ -12,7 +12,7 @@ void NormalModelUpdtOp::InitFromOpConf() {
   EnrollOutputBn("model", false);
   if (op_conf().normal_mdupdt_conf().user_conf().has_clip_conf()
       && op_conf().normal_mdupdt_conf().user_conf().clip_conf().has_clip_by_global_norm()) {
-    EnrollDataTmpBn("global_norm");
+    EnrollDataTmpBn("data_tmp");
   }
   MdUpdtVirtualInitFromOpConf();
 }
@@ -22,8 +22,8 @@ void NormalModelUpdtOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   if (op_conf().normal_mdupdt_conf().user_conf().has_clip_conf()
       && op_conf().normal_mdupdt_conf().user_conf().clip_conf().has_clip_by_global_norm()) {
-    *GetBlobDesc4BnInOp("global_norm") = *GetBlobDesc4BnInOp("model_diff");
-    GetBlobDesc4BnInOp("global_norm")->mut_shape() = Shape({1});
+    *GetBlobDesc4BnInOp("data_tmp") = *GetBlobDesc4BnInOp("model_diff");
+    GetBlobDesc4BnInOp("data_tmp")->mut_shape() = Shape({1});
   }
   MdUpdtVirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }

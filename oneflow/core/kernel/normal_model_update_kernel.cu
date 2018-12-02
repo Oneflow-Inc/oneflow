@@ -1,17 +1,13 @@
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/normal_model_update_kernel.h"
-#include "oneflow/core/kernel/normal_model_update_kernel.cuh"
 
 namespace oneflow {
 
 namespace {
 
 template<typename T>
-__global__ void ClipByGlobalNormGpu(int64_t n, const T clip_norm, const T* global_norm,
-                                    T* model_diff) {
-  CUDA_1D_KERNEL_LOOP(i, n) {
-    model_diff[i] = model_diff[i] * clip_norm / max(*global_norm, clip_norm);
-  }
+__global__ void CmptClipRatioByGlobalNormGpu(const T* global_norm_ptr, T clip_norm, T* ratio_ptr) {
+  *ratio_ptr = clip_norm / max(*global_norm_ptr, clip_norm);
 }
 
 }  // namespace
@@ -19,23 +15,10 @@ __global__ void ClipByGlobalNormGpu(int64_t n, const T clip_norm, const T* globa
 template<typename T>
 class NormalMdUpdateKernelUtil<DeviceType::kGPU, T> final {
  public:
-  static void ClipByGlobalNorm(DeviceCtx* ctx, const int64_t cur_batch_num,
-                               const ClipByGlobalNorm& conf, const T* batch_instance_num_ptr,
-                               std::function<Blob*(const std::string&)> BnInOp2Blob) {
-    int64_t n = BnInOp2Blob("model_diff")->shape().elem_cnt();
-    T* model_diff = BnInOp2Blob("model_diff")->mut_dptr<T>();
-    T* global_norm = BnInOp2Blob("global_norm")->mut_dptr<T>();
-    if (conf.has_global_norm()) {
-      KernelUtil<DeviceType::kGPU, T>::Set(ctx, static_cast<T>(conf.global_norm()), global_norm);
-    } else {
-      // The Dot does not read the result, so the global_norm need not be initialized.
-      KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, model_diff, 1, model_diff, 1, global_norm);
-      KernelUtil<DeviceType::kGPU, T>::Sqrt(ctx, 1, global_norm, global_norm);
-      KernelUtil<DeviceType::kGPU, T>::Div(ctx, 1, global_norm, batch_instance_num_ptr);
-    }
-    ClipByGlobalNormGpu<T>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            n, static_cast<T>(conf.clip_norm()), global_norm, model_diff);
+  static void CmptClipRatioByGlobalNorm(DeviceCtx* ctx, const T* global_norm_ptr, T clip_norm,
+                                        T* ratio_ptr) {
+    CmptClipRatioByGlobalNormGpu<T>
+        <<<1, 1, 0, ctx->cuda_stream()>>>(global_norm_ptr, clip_norm, ratio_ptr);
   }
 };
 

@@ -156,6 +156,27 @@ double LinearWarmupLearningRate(const LinearWarmupConf& conf, double lr, int64_t
   return lr * multiplier;
 }
 
+template<DeviceType device_type, typename T>
+void ClipByGlobalNorm(DeviceCtx* ctx, const int64_t cur_batch_num, const ClipByGlobalNormConf& conf,
+                      const T* batch_instance_num_ptr,
+                      std::function<Blob*(const std::string&)> BnInOp2Blob) {
+  int64_t n = BnInOp2Blob("model_diff")->shape().elem_cnt();
+  T* model_diff = BnInOp2Blob("model_diff")->mut_dptr<T>();
+  T* global_norm_ptr = BnInOp2Blob("data_tmp")->mut_dptr<T>();
+  if (conf.has_global_norm()) {
+    KernelUtil<device_type, T>::Set(ctx, static_cast<T>(conf.global_norm()), global_norm_ptr);
+  } else {
+    // The Dot does not read the result, so the global_norm need not be initialized.
+    KernelUtil<device_type, T>::Dot(ctx, n, model_diff, 1, model_diff, 1, global_norm_ptr);
+    KernelUtil<device_type, T>::Sqrt(ctx, 1, global_norm_ptr, global_norm_ptr);
+    KernelUtil<device_type, T>::Div(ctx, 1, global_norm_ptr, batch_instance_num_ptr);
+  }
+  T* ratio_ptr = BnInOp2Blob("data_tmp")->mut_dptr<T>();
+  NormalMdUpdateKernelUtil<device_type, T>::CmptClipRatioByGlobalNorm(
+      ctx, global_norm_ptr, static_cast<T>(conf.clip_norm()), ratio_ptr);
+  KernelUtil<device_type, T>::Scal(ctx, n, ratio_ptr, model_diff, 1);
+}
+
 }  // namespace
 
 template<DeviceType device_type, typename T>
@@ -190,8 +211,8 @@ void NormalMdUpdateKernel<device_type, T>::ClipGradient(
     DeviceCtx* ctx, const int64_t cur_batch_num, const ClipConf& conf,
     const T* batch_instance_num_ptr, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (conf.has_clip_by_global_norm()) {
-    NormalMdUpdateKernelUtil<device_type, T>::ClipByGlobalNorm(
-        ctx, cur_batch_num, conf.clip_by_global_norm(), batch_instance_num_ptr, BnInOp2Blob);
+    ClipByGlobalNorm<device_type, T>(ctx, cur_batch_num, conf.clip_by_global_norm(),
+                                     batch_instance_num_ptr, BnInOp2Blob);
   } else {
     UNIMPLEMENTED();
   }
@@ -222,30 +243,9 @@ double NormalMdUpdateKernel<device_type, T>::GetDecayedLearningRate(
 template<typename T>
 class NormalMdUpdateKernelUtil<DeviceType::kCPU, T> final {
  public:
-  static void ClipByGlobalNorm(DeviceCtx* ctx, const int64_t cur_batch_num,
-                               const ClipByGlobalNorm& conf, const T* batch_instance_num_ptr,
-                               std::function<Blob*(const std::string&)> BnInOp2Blob) {
-    Blob* model_diff_blob = BnInOp2Blob("model_diff");
-    int64_t n = model_diff_blob->shape().elem_cnt();
-    T* global_norm = BnInOp2Blob("global_norm")->mut_dptr<T>();
-    if (conf.has_global_norm()) {
-      if (cur_batch_num == 0) {
-        *global_norm = static_cast<T>(conf.global_norm());
-      } else {
-        CHECK_EQ(*global_norm, static_cast<T>(conf.global_norm()));
-      }
-    } else {
-      *global_norm = 0;
-      FOR_RANGE(int64_t, i, 0, n) {
-        *global_norm += model_diff_blob->dptr<T>()[i] * model_diff_blob->dptr<T>()[i];
-      }
-      *global_norm = std::sqrt(*global_norm) / (*batch_instance_num_ptr);
-    }
-    FOR_RANGE(int64_t, i, 0, n) {
-      model_diff_blob->mut_dptr<T>()[i] =
-          model_diff_blob->dptr<T>()[i] * conf.clip_norm()
-          / std::max(*global_norm, static_cast<T>(conf.clip_norm()));
-    }
+  static void CmptClipRatioByGlobalNorm(DeviceCtx* ctx, const T* global_norm_ptr, T clip_norm,
+                                        T* ratio_ptr) {
+    *ratio_ptr = clip_norm / std::max(*global_norm_ptr, clip_norm);
   }
 };
 

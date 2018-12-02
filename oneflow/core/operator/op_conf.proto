@@ -409,14 +409,14 @@ message WarmupConf {
   }
 }
 
-message ClipByGlobalNorm {
+message ClipByGlobalNormConf {
   required float clip_norm = 1;
   optional float global_norm = 2;
 }
 
 message ClipConf {
   oneof type {
-    ClipByGlobalNorm clip_by_global_norm = 1;
+    ClipByGlobalNormConf clip_by_global_norm = 1;
   }
 }
 
