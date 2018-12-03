@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename PredType, typename LabelType>
+template<DeviceType device_type, typename T>
 class SparseCrossEntropyKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SparseCrossEntropyKernel);
