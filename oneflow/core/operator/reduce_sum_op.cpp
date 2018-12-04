@@ -2,6 +2,34 @@
 #include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
+namespace {
+std::vector<int64_t> KeptDims(const int64_t num_axes, const std::vector<int64_t> dim_vec,
+                              const std::vector<int64_t> axis_vec) {
+  std::vector<int64_t> ret = dim_vec;
+  for (const auto& axis : axis_vec) { ret[axis] = 1; }
+  return ret;
+}
+
+std::vector<int64_t> OutDims(const int64_t num_axes, const std::vector<int64_t> dim_vec,
+                             const std::vector<int64_t> axis_vec) {
+  std::vector<int64_t> ret;
+  FOR_RANGE(int64_t, i, 0, num_axes) {
+    if (std::find(axis_vec.begin(), axis_vec.end(), i) == axis_vec.end()) ret.push_back(dim_vec[i]);
+  }
+  if (ret.empty()) { ret.push_back(1); }
+  return ret;
+}
+
+std::vector<int64_t> GetCorrectAxis(std::vector<int64_t> axis_vec, const int64_t num_axes) {
+  FOR_RANGE(size_t, i, 0, axis_vec.size()) {
+    if (axis_vec[i] < 0) { axis_vec[i] += num_axes; }
+    CHECK_LT(axis_vec[i], num_axes);
+    CHECK_GE(axis_vec[i], 0);
+  }
+  return axis_vec;
+}
+
+}  // namespace
 
 void ReduceSumOp::InitFromOpConf() {
   EnrollInputBn("in");
@@ -27,16 +55,14 @@ void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   } else {
     auto axis_repeated = conf.axis();
     std::vector<int64_t> axis_vec = {axis_repeated.begin(), axis_repeated.end()};
-    FOR_RANGE(size_t, i, 0, axis_vec.size()) {
-      axis_vec[i] = GetCorrectAxis(axis_vec[i], GetBlobDesc4BnInOp);
-    }
+    axis_vec = GetCorrectAxis(axis_vec, in_blob->shape().NumAxes());
     std::sort(axis_vec.begin(), axis_vec.end());
     CHECK(std::unique(axis_vec.begin(), axis_vec.end()) == axis_vec.end())
         << "duplicate found in axis";
     if (conf.keepdims() == true) {
-      out_dim_vec = KeptDims(GetBlobDesc4BnInOp);
+      out_dim_vec = KeptDims(in_blob->shape().NumAxes(), in_blob->shape().dim_vec(), axis_vec);
     } else {
-      out_dim_vec = OutDims(GetBlobDesc4BnInOp);
+      out_dim_vec = OutDims(in_blob->shape().NumAxes(), in_blob->shape().dim_vec(), axis_vec);
     }
   }
   CHECK(!out_dim_vec.empty());
@@ -48,43 +74,20 @@ void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
 void ReduceSumOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
     KernelConf* kernel_conf) const {
-  std::vector<int64_t> kept_dims = KeptDims(GetBlobDesc4BnInOp);
+  const ReduceSumOpConf& conf = op_conf().reduce_sum_conf();
+  const BlobDesc* in_blob = GetBlobDesc4BnInOp("in");
+  std::vector<int64_t> kept_dims;
+  if (conf.axis_size() == 0) {
+    kept_dims.resize(in_blob->shape().NumAxes());
+    std::fill(kept_dims.begin(), kept_dims.end(), 1);
+  } else {
+    auto axis_repeated = op_conf().reduce_sum_conf().axis();
+    std::vector<int64_t> axis_vec = {axis_repeated.begin(), axis_repeated.end()};
+    kept_dims = KeptDims(in_blob->shape().NumAxes(), in_blob->shape().dim_vec(),
+                         GetCorrectAxis(axis_vec, in_blob->shape().NumAxes()));
+  }
   *kernel_conf->mutable_reduce_sum_conf()->mutable_kept_dims_shape()->mutable_dim() = {
       kept_dims.begin(), kept_dims.end()};
-}
-
-std::vector<int64_t> ReduceSumOp::KeptDims(
-    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp) const {
-  std::vector<int64_t> ret = GetBlobDesc4BnInOp("in")->shape().dim_vec();
-  for (const auto& axis : op_conf().reduce_sum_conf().axis()) {
-    ret[GetCorrectAxis(axis, GetBlobDesc4BnInOp)] = 1;
-  }
-  return ret;
-}
-
-std::vector<int64_t> ReduceSumOp::OutDims(
-    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp) const {
-  const BlobDesc* in_blob = GetBlobDesc4BnInOp("in");
-  std::vector<int64_t> ret;
-  std::set<int64_t> correct_axis;
-  for (const auto& axis : op_conf().reduce_sum_conf().axis()) {
-    correct_axis.insert(GetCorrectAxis(axis, GetBlobDesc4BnInOp));
-  }
-  FOR_RANGE(int64_t, i, 0, in_blob->shape().NumAxes()) {
-    if (std::find(correct_axis.begin(), correct_axis.end(), i) == correct_axis.end())
-      ret.push_back(in_blob->shape().dim_vec()[i]);
-  }
-  if (ret.empty()) { ret.push_back(1); }
-  return ret;
-}
-
-int64_t ReduceSumOp::GetCorrectAxis(
-    int64_t axis, std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp) const {
-  const int64_t num_axes = GetBlobDesc4BnInOp("in")->shape().NumAxes();
-  if (axis < 0) { axis += num_axes; }
-  CHECK_LT(axis, num_axes);
-  CHECK_GE(axis, 0);
-  return axis;
 }
 
 REGISTER_OP(OperatorConf::kReduceSumConf, ReduceSumOp);
