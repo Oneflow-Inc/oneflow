@@ -13,43 +13,72 @@ const PbMessage& ReduceSumOp::GetCustomizedConf() const { return op_conf().reduc
 
 void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                  const ParallelContext*) const {
+  const ReduceSumOpConf& conf = op_conf().reduce_sum_conf();
   const BlobDesc* in_blob = GetBlobDesc4BnInOp("in");
-  std::vector<int64_t> out_dim_vec = {1};
-  if (op_conf().reduce_sum_conf().has_axis()) {
-    out_dim_vec = in_blob->shape().dim_vec();
-    int32_t axis = GetCorrectAxis(GetBlobDesc4BnInOp);
-    if (op_conf().reduce_sum_conf().keepdims() == true) {
-      out_dim_vec[axis] = 1;
+  *GetBlobDesc4BnInOp("fw_tmp") = *in_blob;
+  std::vector<int64_t> out_dim_vec = {};
+  if (conf.axis_size() == 0) {
+    if (conf.keepdims() == true) {
+      std::iota(out_dim_vec.begin(), out_dim_vec.end(), 1);
     } else {
-      out_dim_vec.erase(out_dim_vec.begin() + axis);
+      out_dim_vec = {1};
     }
-    if (out_dim_vec.empty()) { out_dim_vec.push_back(1); }
   } else {
-    BlobDesc* fw_tmp_blob = GetBlobDesc4BnInOp("fw_tmp");
-    fw_tmp_blob->mut_shape() = Shape({static_cast<int64_t>(
-        GetTmpSizeForReduceSum(in_blob->data_type(), in_blob->shape().elem_cnt()))});
-    fw_tmp_blob->set_data_type(DataType::kChar);
+    auto axis_repeated = conf.axis();
+    std::vector<int64_t> axis_vec = {axis_repeated.begin(), axis_repeated.end()};
+    std::sort(axis_vec.begin(), axis_vec.end());
+    CHECK(std::unique(axis_vec.begin(), axis_vec.end()) == axis_vec.end())
+        << "duplicate found in axis";
+    if (conf.keepdims() == true) {
+      out_dim_vec = KeptDims(GetBlobDesc4BnInOp);
+    } else {
+      out_dim_vec = OutDims(GetBlobDesc4BnInOp);
+    }
   }
+  CHECK(!out_dim_vec.empty());
   BlobDesc* out_blob = GetBlobDesc4BnInOp("out");
-  if (op_conf().reduce_sum_conf().has_axis() && GetCorrectAxis(GetBlobDesc4BnInOp) > 0) {
-    *out_blob = *in_blob;
-  } else {
-    out_blob->set_data_type(in_blob->data_type());
-  }
+  out_blob->set_data_type(in_blob->data_type());
   out_blob->mut_shape() = Shape(out_dim_vec);
 }
 
 void ReduceSumOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
     KernelConf* kernel_conf) const {
-  if (op_conf().reduce_sum_conf().has_axis() == false) { return; }
-  kernel_conf->mutable_reduce_sum_conf()->set_axis(GetCorrectAxis(GetBlobDesc4BnInOp));
+  std::vector<int64_t> kept_dims = KeptDims(GetBlobDesc4BnInOp);
+  *kernel_conf->mutable_reduce_sum_conf()->mutable_kept_dims_shape()->mutable_dim() = {
+      kept_dims.begin(), kept_dims.end()};
 }
 
-int32_t ReduceSumOp::GetCorrectAxis(
+std::vector<int64_t> ReduceSumOp::KeptDims(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp) const {
-  int32_t axis = op_conf().reduce_sum_conf().axis();
-  if (axis < 0) { axis += GetBlobDesc4BnInOp("in")->shape().NumAxes(); }
+  std::vector<int64_t> ret = GetBlobDesc4BnInOp("in")->shape().dim_vec();
+  for (const auto& axis : op_conf().reduce_sum_conf().axis()) {
+    ret[GetCorrectAxis(axis, GetBlobDesc4BnInOp)] = 1;
+  }
+  return ret;
+}
+
+std::vector<int64_t> ReduceSumOp::OutDims(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp) const {
+  const BlobDesc* in_blob = GetBlobDesc4BnInOp("in");
+  std::vector<int64_t> ret = {};
+  std::vector<int64_t> correct_axis = {};
+  for (const auto& axis : op_conf().reduce_sum_conf().axis()) {
+    correct_axis.push_back(GetCorrectAxis(axis, GetBlobDesc4BnInOp));
+  }
+  FOR_RANGE(int64_t, i, 0, in_blob->shape().NumAxes()) {
+    if (std::find(correct_axis.begin(), correct_axis.end(), i) == correct_axis.end())
+      ret.push_back(in_blob->shape().dim_vec()[i]);
+  }
+  if (ret.empty()) { ret.push_back(1); }
+  return ret;
+}
+
+int64_t ReduceSumOp::GetCorrectAxis(
+    int64_t axis, std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp) const {
+  const int64_t num_axes = GetBlobDesc4BnInOp("in")->shape().NumAxes();
+  if (axis < 0) { axis += num_axes; }
+  CHECK_LT(axis, num_axes);
   return axis;
 }
 
