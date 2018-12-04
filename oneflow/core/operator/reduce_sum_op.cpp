@@ -16,10 +16,11 @@ void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   const ReduceSumOpConf& conf = op_conf().reduce_sum_conf();
   const BlobDesc* in_blob = GetBlobDesc4BnInOp("in");
   *GetBlobDesc4BnInOp("fw_tmp") = *in_blob;
-  std::vector<int64_t> out_dim_vec = {};
+  std::vector<int64_t> out_dim_vec;
   if (conf.axis_size() == 0) {
     if (conf.keepdims() == true) {
-      std::iota(out_dim_vec.begin(), out_dim_vec.end(), 1);
+      out_dim_vec.resize(in_blob->shape().NumAxes());
+      std::fill(out_dim_vec.begin(), out_dim_vec.end(), 1);
     } else {
       out_dim_vec = {1};
     }
