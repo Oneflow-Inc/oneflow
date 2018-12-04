@@ -3,24 +3,26 @@
 
 namespace oneflow {
 namespace {
-std::vector<int64_t> KeptDims(const int64_t num_axes, const std::vector<int64_t> dim_vec,
+std::vector<int64_t> KeepDims(const std::vector<int64_t> dim_vec,
                               const std::vector<int64_t> axis_vec) {
   std::vector<int64_t> ret = dim_vec;
   for (const auto& axis : axis_vec) { ret[axis] = 1; }
   return ret;
 }
 
-std::vector<int64_t> OutDims(const int64_t num_axes, const std::vector<int64_t> dim_vec,
-                             const std::vector<int64_t> axis_vec) {
+std::vector<int64_t> DropDims(const std::vector<int64_t> dim_vec,
+                              const std::vector<int64_t> axis_vec) {
   std::vector<int64_t> ret;
-  FOR_RANGE(int64_t, i, 0, num_axes) {
-    if (std::find(axis_vec.begin(), axis_vec.end(), i) == axis_vec.end()) ret.push_back(dim_vec[i]);
+  FOR_RANGE(int64_t, i, 0, dim_vec.size()) {
+    if (std::find(axis_vec.begin(), axis_vec.end(), i) == axis_vec.end()) {
+      ret.push_back(dim_vec[i]);
+    }
   }
   if (ret.empty()) { ret.push_back(1); }
   return ret;
 }
 
-std::vector<int64_t> GetCorrectAxis(std::vector<int64_t> axis_vec, const int64_t num_axes) {
+std::vector<int64_t> ShiftAxisIfNegative(std::vector<int64_t> axis_vec, const int64_t num_axes) {
   FOR_RANGE(size_t, i, 0, axis_vec.size()) {
     if (axis_vec[i] < 0) { axis_vec[i] += num_axes; }
     CHECK_LT(axis_vec[i], num_axes);
@@ -55,14 +57,14 @@ void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   } else {
     auto axis_repeated = conf.axis();
     std::vector<int64_t> axis_vec = {axis_repeated.begin(), axis_repeated.end()};
-    axis_vec = GetCorrectAxis(axis_vec, in_blob->shape().NumAxes());
+    axis_vec = ShiftAxisIfNegative(axis_vec, in_blob->shape().NumAxes());
     std::sort(axis_vec.begin(), axis_vec.end());
     CHECK(std::unique(axis_vec.begin(), axis_vec.end()) == axis_vec.end())
         << "duplicate found in axis";
     if (conf.keepdims() == true) {
-      out_dim_vec = KeptDims(in_blob->shape().NumAxes(), in_blob->shape().dim_vec(), axis_vec);
+      out_dim_vec = KeepDims(in_blob->shape().dim_vec(), axis_vec);
     } else {
-      out_dim_vec = OutDims(in_blob->shape().NumAxes(), in_blob->shape().dim_vec(), axis_vec);
+      out_dim_vec = DropDims(in_blob->shape().dim_vec(), axis_vec);
     }
   }
   CHECK(!out_dim_vec.empty());
@@ -83,8 +85,8 @@ void ReduceSumOp::VirtualGenKernelConf(
   } else {
     auto axis_repeated = op_conf().reduce_sum_conf().axis();
     std::vector<int64_t> axis_vec = {axis_repeated.begin(), axis_repeated.end()};
-    kept_dims = KeptDims(in_blob->shape().NumAxes(), in_blob->shape().dim_vec(),
-                         GetCorrectAxis(axis_vec, in_blob->shape().NumAxes()));
+    kept_dims = KeepDims(in_blob->shape().dim_vec(),
+                         ShiftAxisIfNegative(axis_vec, in_blob->shape().NumAxes()));
   }
   *kernel_conf->mutable_reduce_sum_conf()->mutable_kept_dims_shape()->mutable_dim() = {
       kept_dims.begin(), kept_dims.end()};
