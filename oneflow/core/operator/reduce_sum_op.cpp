@@ -13,10 +13,10 @@ std::vector<int64_t> KeepDims(const std::vector<int64_t> dim_vec,
 std::vector<int64_t> DropDims(const std::vector<int64_t> dim_vec,
                               const std::vector<int64_t> axis_vec) {
   std::vector<int64_t> ret;
+  std::vector<int32_t> dim2is_reduced(dim_vec.size());
+  for (const auto& axis : axis_vec) { dim2is_reduced[axis] = 1; }
   FOR_RANGE(int64_t, i, 0, dim_vec.size()) {
-    if (std::find(axis_vec.begin(), axis_vec.end(), i) == axis_vec.end()) {
-      ret.push_back(dim_vec[i]);
-    }
+    if (dim2is_reduced[i] != 1) { ret.push_back(dim_vec[i]); }
   }
   if (ret.empty()) { ret.push_back(1); }
   return ret;
