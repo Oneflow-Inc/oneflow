@@ -33,10 +33,8 @@ class BoxingKernel final : public KernelIf<DeviceType::kCPU> {
 
   void SetColId(const KernelCtx&, std::function<Blob*(const std::string&)>) const;
   void SetMaxColId(const KernelCtx&, std::function<Blob*(const std::string&)>) const;
-  void BackwardInDiffLossInstanceNum(
-      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    UNIMPLEMENTED();
-  }
+  void ForwardLossInstanceNumIfNeed(const KernelCtx& ctx,
+                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
   PbRpf<std::string> ibn_0_;
   PbRpf<std::string> obn_0_;

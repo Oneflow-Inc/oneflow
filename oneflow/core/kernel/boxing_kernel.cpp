@@ -216,6 +216,7 @@ void BoxingKernel<T>::VirtualKernelInit(const ParallelContext*) {
 template<typename T>
 void BoxingKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  ForwardLossInstanceNumIfNeed(ctx, BnInOp2Blob);
   const BoxingOpConf& boxing_conf = op_conf().boxing_conf();
   if (boxing_conf.in_box_case() == BoxingOpConf::kConcatBox) {
     if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
@@ -348,6 +349,52 @@ void BoxingKernel<T>::SetMaxColId(const KernelCtx& ctx,
       max_col_num_in_blob = std::max(max_col_num_in_blob, out_blob->col_num(i));
     }
     out_blob->set_max_col_id(max_col_num_in_blob - 1);
+  }
+}
+
+template<typename T>
+void BoxingKernel<T>::ForwardLossInstanceNumIfNeed(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const PbRpf<std::string>& input_bns = op_attribute().input_diff_bns();
+  const PbRpf<std::string>& output_bns = op_attribute().output_diff_bns();
+  CHECK_GT(input_bns.size(), 0);
+  const bool need_do_loss_instance_num =
+      BnInOp2Blob(input_bns.Get(0))->has_loss_instance_num_field();
+  FOR_RANGE(int32_t, i, 1, input_bns.size()) {
+    CHECK_EQ(BnInOp2Blob(input_bns.Get(i))->has_loss_instance_num_field(),
+             need_do_loss_instance_num);
+  }
+  FOR_RANGE(int32_t, i, 0, output_bns.size()) {
+    CHECK_EQ(BnInOp2Blob(output_bns.Get(i))->has_loss_instance_num_field(),
+             need_do_loss_instance_num);
+  }
+  if (!need_do_loss_instance_num) { return; }
+  float in_loss_instance_num = BnInOp2Blob(input_bns.Get(0))->loss_instance_num();
+  const float loss_instance_num_epsilon = 1e-8;
+  const BoxingOpConf& conf = op_conf().boxing_conf();
+  if (conf.in_box_case() == BoxingOpConf::kConcatBox) {
+    FOR_RANGE(int32_t, i, 1, input_bns.size()) {
+      in_loss_instance_num += BnInOp2Blob(input_bns.Get(i))->loss_instance_num();
+    }
+  } else if (conf.in_box_case() == BoxingOpConf::kAddBox) {
+    FOR_RANGE(int32_t, i, 1, input_bns.size()) {
+      CHECK_LT(std::fabs(BnInOp2Blob(input_bns.Get(i))->loss_instance_num() - in_loss_instance_num),
+               loss_instance_num_epsilon);
+    }
+  } else {
+    UNIMPLEMENTED();
+  }
+  if (conf.out_box_case() == BoxingOpConf::kSplitBox) {
+    const float out_loss_instance_num = in_loss_instance_num / output_bns.size();
+    FOR_RANGE(int32_t, i, 0, output_bns.size()) {
+      BnInOp2Blob(output_bns.Get(i))->set_loss_instance_num(out_loss_instance_num);
+    }
+  } else if (conf.out_box_case() == BoxingOpConf::kCloneBox) {
+    FOR_RANGE(int32_t, i, 0, output_bns.size()) {
+      BnInOp2Blob(output_bns.Get(i))->set_loss_instance_num(in_loss_instance_num);
+    }
+  } else {
+    UNIMPLEMENTED();
   }
 }
 
