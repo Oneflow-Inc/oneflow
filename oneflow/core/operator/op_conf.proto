@@ -938,7 +938,7 @@ message ScalarMulOpConf {
   }
 }
 
-message ReduceInplaceIdentity {
+message ReduceInplaceIdentityOpConf {
 }
 
 message OperatorConf {
@@ -972,7 +972,7 @@ message OperatorConf {
     SharedModelDiffAddOpConf shared_model_diff_add_conf = 120;
     CastOpConf cast_conf = 121;
     VariableOpConf variable_conf = 122;
-    ReduceInplaceIdentity reduce_inplace_identity_conf = 123;
+    ReduceInplaceIdentityOpConf reduce_inplace_identity_conf = 123;
 
     // domain op
     TransposeOpConf transpose_conf = 201;

@@ -60,6 +60,7 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   int32_t GetMaxModelSplitNum() const;
 
   virtual int64_t GetAreaId() const = 0;
+  virtual bool MayConsumeModelDiff() const { return false; }
 
  protected:
   LogicalNode() : main_model_parallel_(nullptr) {}
@@ -243,6 +244,7 @@ class NormalMdUpdtLogicalNode final : public LogicalNode {
   ~NormalMdUpdtLogicalNode() = default;
 
   OVERRIDE_PURE_VIRTUAL_METHOD();
+  bool MayConsumeModelDiff() const override { return true; }
 
  private:
   void FixCompTaskNode(CompTaskNode*) const override;
@@ -251,7 +253,12 @@ class NormalMdUpdtLogicalNode final : public LogicalNode {
 };
 
 DECLARE_NAIVE_LOGICAL_NODE(MdSaveLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(MdDiffAccLogicalNode);
+
+class MdDiffAccLogicalNode final : public LogicalNode {
+ public:
+  LOGICAL_NODE_BOILERPLATE(MdDiffAccLogicalNode);
+  bool MayConsumeModelDiff() const override { return true; }
+};
 
 class ReduceLogicalNode : public LogicalNode {
  public:
@@ -276,38 +283,37 @@ class ReduceLogicalNode : public LogicalNode {
   }
 };
 
-class NcclAllReduceLogicalNode final : public ReduceLogicalNode {
- public:
-  LOGICAL_NODE_BOILERPLATE(NcclAllReduceLogicalNode);
-
-  void set_fw_logical_nodes(const std::vector<LogicalNode*>& fw_logical_nodes) {
-    fw_logical_nodes_ = fw_logical_nodes;
-  }
-  const LogicalNode* first_fw_logical_node() const { return fw_logical_nodes_.at(0); }
-
- private:
-  std::vector<LogicalNode*> fw_logical_nodes_;
-};
-
-#define DECLARE_REDUCE_LOGICAL_NODE(name)       \
-  class name final : public ReduceLogicalNode { \
-   public:                                      \
-    LOGICAL_NODE_BOILERPLATE(name);             \
+#define DECLARE_REDUCE_LOGICAL_NODE(name, may_consume_md_diff)                \
+  class name final : public ReduceLogicalNode {                               \
+   public:                                                                    \
+    LOGICAL_NODE_BOILERPLATE(name);                                           \
+    bool MayConsumeModelDiff() const override { return may_consume_md_diff; } \
   }
 
-DECLARE_REDUCE_LOGICAL_NODE(ReduceConcatLogicalNode);
-DECLARE_REDUCE_LOGICAL_NODE(ReduceSplitLogicalNode);
-DECLARE_REDUCE_LOGICAL_NODE(ReduceScatterLogicalNode);
-DECLARE_REDUCE_LOGICAL_NODE(ReduceGatherLogicalNode);
-DECLARE_REDUCE_LOGICAL_NODE(ReduceAddLogicalNode);
-DECLARE_REDUCE_LOGICAL_NODE(NcclAllGatherLogicalNode);
-DECLARE_REDUCE_LOGICAL_NODE(NcclReduceScatterLogicalNode);
+DECLARE_REDUCE_LOGICAL_NODE(ReduceConcatLogicalNode, true);
+DECLARE_REDUCE_LOGICAL_NODE(ReduceSplitLogicalNode, false);
+DECLARE_REDUCE_LOGICAL_NODE(ReduceScatterLogicalNode, true);
+DECLARE_REDUCE_LOGICAL_NODE(ReduceGatherLogicalNode, false);
+DECLARE_REDUCE_LOGICAL_NODE(NcclAllReduceLogicalNode, true);
+DECLARE_REDUCE_LOGICAL_NODE(ReduceAddLogicalNode, false);
+DECLARE_REDUCE_LOGICAL_NODE(NcclAllGatherLogicalNode, false);
+DECLARE_REDUCE_LOGICAL_NODE(NcclReduceScatterLogicalNode, true);
 
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatForward);
 DECLARE_DERIVED_BACKWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatBackward);
 
 class ReduceInplaceIdentityLogicalNode final : public LogicalNode {
-  LOGICAL_NODE_WITH_NEW_AREA_ID_BOILERPLATE(ReduceInplaceIdentity)
+  LOGICAL_NODE_WITH_NEW_AREA_ID_BOILERPLATE(ReduceInplaceIdentity);
+
+ public:
+  void set_fw_logical_nodes(const std::vector<LogicalNode*>& fw_logical_nodes) {
+    fw_logical_nodes_ = fw_logical_nodes;
+  }
+  const LogicalNode* first_fw_logical_node() const { return fw_logical_nodes_.at(0); }
+  bool MayConsumeModelDiff() const override { return true; }
+
+ private:
+  std::vector<LogicalNode*> fw_logical_nodes_;
 };
 
 }  // namespace oneflow

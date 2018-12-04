@@ -104,9 +104,9 @@ Plan Compiler::DoCompile() {
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::PinConsumedRegst, _1));
   task_gph->MdUpdtDelayedTopoForEachNode(&TaskNode::Build);
+  task_gph->AddReduceCtrlEdges();
   task_gph->RemoveEmptyRegsts();
   task_gph->AddOrderingCtrlEdgeInSameChain();
-  task_gph->AddReduceCtrlEdges();
   if (job_desc->IsTrain() && job_desc->enable_mem_sharing()) {
     task_gph->EnableMemSharingInReduceStruct();
     task_gph->EnableMemSharingAfterAllManualSetForMdUpdt();  // must last mem shared manual set

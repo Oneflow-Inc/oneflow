@@ -11,7 +11,7 @@
 #include "oneflow/core/graph/reduce_split_compute_task_node.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/job/thrd_id_generator.h"
-#include "oneflow/core/graph/nccl_all_reduce_compute_task_node.h"
+#include "oneflow/core/graph/reduce_inplace_identity_task_node.h"
 
 namespace oneflow {
 
@@ -180,60 +180,55 @@ void TaskGraph::AddReduceCtrlEdges() {
       logical_node2fw_order_in_graph[fw_node->logical_node()] = fw_node->order_in_graph();
     }
   }
-  auto OrderInGraph4NcclAllReduceLogicalNode = [&](const LogicalNode* logical_node) {
-    const auto* nccl_logical_node = dynamic_cast<const NcclAllReduceLogicalNode*>(logical_node);
-    CHECK_NOTNULL(nccl_logical_node);
-    return logical_node2fw_order_in_graph.at(nccl_logical_node->first_fw_logical_node());
+  auto OrderInGraph4IdentityLogicalNode = [&](const LogicalNode* logical_node) {
+    const auto* identity_logical_node =
+        dynamic_cast<const ReduceInplaceIdentityLogicalNode*>(logical_node);
+    CHECK_NOTNULL(identity_logical_node);
+    return logical_node2fw_order_in_graph.at(identity_logical_node->first_fw_logical_node());
   };
 
-  HashMap<int64_t, std::vector<NcclAllReduceCompTaskNode*>> parallel_id2nccl_nodes;
-  HashMap<int64_t, std::vector<const LogicalNode*>> parallel_id2nccl_logical_nodes;
+  HashMap<int64_t, std::vector<ReduceInplaceIdentityCompTaskNode*>> parallel_id2identity_nodes;
+  HashMap<int64_t, std::vector<const LogicalNode*>> parallel_id2identity_logical_nodes;
   HashSet<std::string> thrd_ids;
   for (auto* node : ordered_task_nodes_) {
-    auto* nccl_node = dynamic_cast<NcclAllReduceCompTaskNode*>(node);
-    if (nccl_node != nullptr) {
-      int64_t parallel_id = nccl_node->parallel_ctx()->parallel_id();
-      parallel_id2nccl_nodes[parallel_id].push_back(nccl_node);
-      parallel_id2nccl_logical_nodes[parallel_id].push_back(nccl_node->logical_node());
+    auto* identity_node = dynamic_cast<ReduceInplaceIdentityCompTaskNode*>(node);
+    if (identity_node != nullptr) {
+      int64_t parallel_id = identity_node->parallel_ctx()->parallel_id();
+      parallel_id2identity_nodes[parallel_id].push_back(identity_node);
+      parallel_id2identity_logical_nodes[parallel_id].push_back(identity_node->logical_node());
       thrd_ids.insert(std::to_string(node->machine_id()) + ":" + std::to_string(node->thrd_id()));
     }
   }
   int32_t idx = 0;
   const std::vector<const LogicalNode*>* first = nullptr;
-  for (auto& logical_nodes_pair : parallel_id2nccl_logical_nodes) {
-    auto& logical_nodes = logical_nodes_pair.second;
-    std::sort(logical_nodes.begin(), logical_nodes.end(),
+  for (auto& identity_logical_nodes_pair : parallel_id2identity_logical_nodes) {
+    auto& identity_logical_nodes = identity_logical_nodes_pair.second;
+    std::sort(identity_logical_nodes.begin(), identity_logical_nodes.end(),
               [&](const LogicalNode* lhs, const LogicalNode* rhs) {
-                return OrderInGraph4NcclAllReduceLogicalNode(lhs)
-                       < OrderInGraph4NcclAllReduceLogicalNode(rhs);
+                return OrderInGraph4IdentityLogicalNode(lhs)
+                       < OrderInGraph4IdentityLogicalNode(rhs);
               });
-    for (const auto* logical_node : logical_nodes) {
-      LOG(INFO) << "logical-node-visual-str " << logical_node->VisualStr();
-    }
-    LOG(INFO) << "logical-node-visual-str ===";
     if (idx == 0) {
-      first = &logical_nodes_pair.second;
+      first = &identity_logical_nodes;
     } else {
-      CHECK(logical_nodes_pair.second == *first);
+      CHECK(identity_logical_nodes == *first);
     }
     ++idx;
   }
-  for (auto& pair : parallel_id2nccl_nodes) {
-    auto& nccl_nodes = pair.second;
-    std::sort(nccl_nodes.begin(), nccl_nodes.end(),
-              [&](NcclAllReduceCompTaskNode* lhs, NcclAllReduceCompTaskNode* rhs) {
-                return OrderInGraph4NcclAllReduceLogicalNode(lhs->logical_node())
-                       < OrderInGraph4NcclAllReduceLogicalNode(rhs->logical_node());
+  for (auto& pair : parallel_id2identity_nodes) {
+    auto& identity_nodes = pair.second;
+    std::sort(identity_nodes.begin(), identity_nodes.end(),
+              [&](ReduceInplaceIdentityCompTaskNode* lhs, ReduceInplaceIdentityCompTaskNode* rhs) {
+                return OrderInGraph4IdentityLogicalNode(lhs->logical_node())
+                       < OrderInGraph4IdentityLogicalNode(rhs->logical_node());
               });
-    NcclAllReduceCompTaskNode* prev_nccl_node = nullptr;
-    int counter = 2;
-    for (int i = 0; i < nccl_nodes.size(); ++i) {
+    ReduceInplaceIdentityCompTaskNode* prev_identity_node = nullptr;
+    for (int i = 0; i < identity_nodes.size(); ++i) {
       if (i % 2 != 0) { continue; }
-      if (prev_nccl_node != nullptr) {
-        if (--counter < 0) { break; }
-        prev_nccl_node->BuildCtrlRegstDescIfNeed(nccl_nodes[i]);
+      if (prev_identity_node != nullptr) {
+        prev_identity_node->BuildCtrlRegstDescIfNeed(identity_nodes[i]);
       }
-      prev_nccl_node = nccl_nodes[i];
+      prev_identity_node = identity_nodes[i];
     }
   }
 }

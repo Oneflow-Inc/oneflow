@@ -3,14 +3,15 @@
 namespace oneflow {
 
 void ReduceInplaceIdentityOp::InitFromOpConf() {
-  EnrollInputBn("in");
-  EnrollOutputBn("out");
+  EnrollInputBn("in", false);
+  EnrollOutputBn("out", false);
 }
 
 void ReduceInplaceIdentityOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
+  CHECK_EQ(GetBlobDesc4BnInOp("out")->shape().elem_cnt() % parallel_ctx->parallel_num(), 0);
 }
 
 LogicalBlobId ReduceInplaceIdentityOp::obn2lbi(const std::string& output_bn) const {

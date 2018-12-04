@@ -12,4 +12,6 @@ void NaiveActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   });
 }
 
+REGISTER_ACTOR(TaskType::kReduceInplaceIdentity, NaiveActor);
+
 }  // namespace oneflow
