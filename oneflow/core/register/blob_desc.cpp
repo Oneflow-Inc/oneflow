@@ -155,7 +155,7 @@ void BlobDesc::RecordIdInDevicePieceToProto(StructPodDesc* header_pod_desc) cons
 }
 
 void BlobDesc::LossInstanceNumToProto(StructPodDesc* header_pod_desc) const {
-  header_pod_desc->AddField(FieldKey::kLossInstanceNum, TensorPodDesc({1}, DataType::kInt64));
+  header_pod_desc->AddField(FieldKey::kLossInstanceNum, TensorPodDesc({1}, DataType::kFloat));
 }
 
 void BlobDesc::HeaderToProto(BlobDescProto* proto) const {

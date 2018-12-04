@@ -28,8 +28,7 @@ void Blob::Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, cha
   dim2_valid_num_ptr_ = header_pod_ptr_.MutTensorPtr<int64_t>(FieldKey::kDim2ValidNum, nullptr);
   record_id_in_device_piece_ptr_ =
       header_pod_ptr_.MutTensorPtr<int64_t>(FieldKey::kRecordIdInDevicePiece, nullptr);
-  loss_instance_num_ptr_ =
-      header_pod_ptr_.MutTensorPtr<int64_t>(FieldKey::kLossInstanceNum, nullptr);
+  loss_instance_num_ptr_ = header_pod_ptr_.MutTensorPtr<float>(FieldKey::kLossInstanceNum, nullptr);
   dptr_ = body_ptr;
   dynamic_shape_ = blob_desc->shape();
 }
@@ -133,12 +132,12 @@ void Blob::set_record_id_in_device_piece(int64_t no, int64_t val) {
   record_id_in_device_piece_ptr_[no] = val;
 }
 
-int64_t Blob::loss_instance_num() const {
+float Blob::loss_instance_num() const {
   CHECK_NOTNULL(loss_instance_num_ptr_);
   return *loss_instance_num_ptr_;
 }
 
-void Blob::set_loss_instance_num(int64_t val) {
+void Blob::set_loss_instance_num(float val) {
   CHECK_NOTNULL(loss_instance_num_ptr_);
   *loss_instance_num_ptr_ = val;
 }

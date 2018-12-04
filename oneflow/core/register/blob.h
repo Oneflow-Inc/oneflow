@@ -54,10 +54,10 @@ class Blob final {
   void set_record_id_in_device_piece(int64_t no, int64_t val);
   const int64_t* record_id_in_device_piece_ptr() const { return record_id_in_device_piece_ptr_; }
   int64_t* mut_record_id_in_device_piece_ptr() { return record_id_in_device_piece_ptr_; }
-  int64_t loss_instance_num() const;
-  void set_loss_instance_num(int64_t val);
-  const int64_t* loss_instance_num_ptr() const { return loss_instance_num_ptr_; }
-  int64_t* mut_loss_instance_num_ptr() { return loss_instance_num_ptr_; }
+  float loss_instance_num() const;
+  void set_loss_instance_num(float val);
+  const float* loss_instance_num_ptr() const { return loss_instance_num_ptr_; }
+  float* mut_loss_instance_num_ptr() { return loss_instance_num_ptr_; }
 
   const void* header_ptr() const { return header_ptr_; }
   void* mut_header_ptr() { return header_ptr_; }
@@ -166,7 +166,7 @@ class Blob final {
   int64_t* dim1_valid_num_ptr_;
   int64_t* dim2_valid_num_ptr_;
   int64_t* record_id_in_device_piece_ptr_;
-  int64_t* loss_instance_num_ptr_;
+  float* loss_instance_num_ptr_;
   void* dptr_;
   const RtBlobDesc* blob_desc_;
   Regst* regst_;

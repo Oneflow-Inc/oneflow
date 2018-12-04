@@ -241,10 +241,13 @@ void KernelIf<device_type>::BackwardInDiffLossInstanceNum(
   const PbRpf<std::string>& input_diff_bns = op_attribute().input_diff_bns();
   CHECK_GT(output_diff_bns.size(), 0);
   CHECK(BnInOp2Blob(output_diff_bns.Get(0))->has_loss_instance_num_field());
-  const int64_t loss_instance_num = BnInOp2Blob(output_diff_bns.Get(0))->loss_instance_num();
+  const float loss_instance_num = BnInOp2Blob(output_diff_bns.Get(0))->loss_instance_num();
+  const float loss_instance_num_epsilon = 1e-8;
   FOR_RANGE(int32_t, i, 1, output_diff_bns.size()) {
     CHECK(BnInOp2Blob(output_diff_bns.Get(i))->has_loss_instance_num_field());
-    CHECK_EQ(BnInOp2Blob(output_diff_bns.Get(i))->loss_instance_num(), loss_instance_num);
+    CHECK_LT(
+        std::fabs(BnInOp2Blob(output_diff_bns.Get(i))->loss_instance_num() - loss_instance_num),
+        loss_instance_num_epsilon);
   }
   FOR_RANGE(int32_t, i, 0, input_diff_bns.size()) {
     Blob* input_diff_blob = BnInOp2Blob(input_diff_bns.Get(i));
@@ -278,7 +281,7 @@ template<DeviceType device_type, typename T>
 void KernelIfWithModel<device_type, T>::SetTotalInstanceNumDiffBlob(
     const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   CHECK_GE(this->op_attribute().model_bns().size(), 2);
-  const int64_t loss_instance_num =
+  const float loss_instance_num =
       BnInOp2Blob(this->op_attribute().output_diff_bns(0))->loss_instance_num();
   Blob* total_instance_num_diff_blob = BnInOp2Blob("total_instance_num_diff");
   KernelUtil<device_type, T>::Set(ctx.device_ctx, static_cast<T>(loss_instance_num),
