@@ -491,7 +491,7 @@ message ReduceSumOpConf {
   }
   required string out = 3;
   repeated int32 axis = 4;
-  optional bool keepdims = 5 [default = false];
+  optional bool keep_dims = 5 [default = false];
 }
 
 message BasicRnnOpConf {

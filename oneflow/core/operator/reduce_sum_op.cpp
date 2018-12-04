@@ -47,8 +47,8 @@ void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   const BlobDesc* in_blob = GetBlobDesc4BnInOp("in");
   *GetBlobDesc4BnInOp("fw_tmp") = *in_blob;
   std::vector<int64_t> out_dim_vec;
-  if (conf.axis_size() == 0) {
-    if (conf.keepdims() == true) {
+  if (conf.axis().empty()) {
+    if (conf.keep_dims() == true) {
       out_dim_vec.resize(in_blob->shape().NumAxes());
       std::fill(out_dim_vec.begin(), out_dim_vec.end(), 1);
     } else {
@@ -61,7 +61,7 @@ void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
     std::sort(axis_vec.begin(), axis_vec.end());
     CHECK(std::unique(axis_vec.begin(), axis_vec.end()) == axis_vec.end())
         << "duplicate found in axis";
-    if (conf.keepdims() == true) {
+    if (conf.keep_dims() == true) {
       out_dim_vec = KeepDims(in_blob->shape().dim_vec(), axis_vec);
     } else {
       out_dim_vec = DropDims(in_blob->shape().dim_vec(), axis_vec);
@@ -79,7 +79,7 @@ void ReduceSumOp::VirtualGenKernelConf(
   const ReduceSumOpConf& conf = op_conf().reduce_sum_conf();
   const BlobDesc* in_blob = GetBlobDesc4BnInOp("in");
   std::vector<int64_t> kept_dims;
-  if (conf.axis_size() == 0) {
+  if (conf.axis().empty()) {
     kept_dims.resize(in_blob->shape().NumAxes());
     std::fill(kept_dims.begin(), kept_dims.end(), 1);
   } else {
