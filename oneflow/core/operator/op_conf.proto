@@ -796,6 +796,7 @@ message SqrtOpConf {
 message RsqrtOpConf {
   required string in = 1;
   required string out = 2;
+  required float epsilon = 3 [default = 1e-12];
 }
 
 message SquareOpConf {

@@ -7,12 +7,6 @@ namespace oneflow {
 namespace {
 
 template<DeviceType device_type, typename T>
-void Rsqrt(DeviceCtx* ctx, const int64_t n, const T* x, const float epsilon, T* y) {
-  KernelUtil<device_type, T>::Copy(ctx, n, x, 1, y, 1);
-  KernelUtil<device_type, T>::Rsqrt(ctx, n, y, epsilon);
-}
-
-template<DeviceType device_type, typename T>
 void ScalarSub(DeviceCtx* ctx, const int64_t n, const T* x, const T* scalar_ptr, T* y) {
   KernelUtil<device_type, T>::Copy(ctx, n, x, 1, y, 1);
   KernelUtil<device_type, T>::Axpy(ctx, n, static_cast<T>(-1), scalar_ptr, 0, y, 1);
@@ -356,8 +350,8 @@ void NormalizationKernel<device_type, T>::Normalize(
   const bool center = normalization_op_conf.center();
   Blob* inv_var_blob = BnInOp2Blob("inv_var");
   Blob* normalized_blob = BnInOp2Blob("normalized_in");
-  Rsqrt<device_type, T>(ctx.device_ctx, norm_part_num, variance_blob->dptr<T>(),
-                        normalization_op_conf.epsilon(), inv_var_blob->mut_dptr<T>());
+  KernelUtil<device_type, T>::Rsqrt(ctx.device_ctx, norm_part_num, variance_blob->dptr<T>(),
+                                    normalization_op_conf.epsilon(), inv_var_blob->mut_dptr<T>());
   FOR_RANGE(int32_t, i, 0, norm_part_num) {
     ScalarSub<device_type, T>(ctx.device_ctx, norm_elem_num, in_blob->dptr<T>() + i * norm_elem_num,
                               mean_blob->dptr<T>() + i,

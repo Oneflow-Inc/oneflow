@@ -10,8 +10,13 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void RsqrtGpu(const int64_t n, T* x, const float epsilon) {
-  CUDA_1D_KERNEL_LOOP(i, n) { x[i] = 1.0 / std::sqrt(x[i] + epsilon); }
+__global__ void RsqrtGpu(const int64_t n, const T* x, const float epsilon, T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = 1.0 / std::sqrt(x[i] + epsilon); }
+}
+
+template<typename T>
+__global__ void PowxGpu(const int64_t n, const T* x, const float power, T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = std::pow(x[i], power); }
 }
 
 template<typename T>
@@ -533,9 +538,13 @@ KU_FLOATING_METHOD Square(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
 KU_FLOATING_METHOD Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
   SqrtGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
 }
-KU_FLOATING_METHOD Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsilon) {
-  RsqrtGpu<T>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, epsilon);
+KU_FLOATING_METHOD Rsqrt(DeviceCtx* ctx, const int64_t n, const T* x, const float epsilon, T* y) {
+  RsqrtGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+      n, x, epsilon, y);
+}
+KU_FLOATING_METHOD Powx(DeviceCtx* ctx, const int64_t n, const T* x, const float power, T* y) {
+  PowxGpu<T>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, power, y);
 }
 
 KU_FLOATING_METHOD Sigmoid(DeviceCtx* ctx, int64_t n, const T* x, T* y) {
