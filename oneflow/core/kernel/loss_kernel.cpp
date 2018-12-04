@@ -10,7 +10,8 @@ void LossKernel<device_type, PredType>::SetLossInstanceNum(
   KernelUtil<device_type, PredType>::Set(ctx.device_ctx, static_cast<PredType>(loss_instance_num),
                                          BnInOp2Blob("loss_instance_num")->mut_dptr<PredType>());
   CHECK(BnInOp2Blob(GenDiffBn("prediction"))->has_loss_instance_num_field());
-  BnInOp2Blob(GenDiffBn("prediction"))->set_loss_instance_num(loss_instance_num);
+  BnInOp2Blob(GenDiffBn("prediction"))
+      ->set_loss_instance_num(static_cast<float>(loss_instance_num));
 }
 
 template<DeviceType device_type, typename PredType>
