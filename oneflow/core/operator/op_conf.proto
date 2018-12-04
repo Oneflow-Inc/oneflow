@@ -938,6 +938,9 @@ message ScalarMulOpConf {
   }
 }
 
+message ReduceInplaceIdentity {
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -969,6 +972,7 @@ message OperatorConf {
     SharedModelDiffAddOpConf shared_model_diff_add_conf = 120;
     CastOpConf cast_conf = 121;
     VariableOpConf variable_conf = 122;
+    ReduceInplaceIdentity reduce_inplace_identity_conf = 123;
 
     // domain op
     TransposeOpConf transpose_conf = 201;
