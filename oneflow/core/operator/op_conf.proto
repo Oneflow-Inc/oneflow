@@ -232,6 +232,17 @@ message SparseCrossEntropyLossOpConf {
   optional string weight = 6;
 }
 
+message CenterLossOpConf {
+  required string prediction = 1;
+  required string label = 2;
+  required string loss = 3;
+  optional float alpha = 4;
+  required int32 num_of_classes = 5;
+  optional LossReductionType reduction = 6 [default = kSumOverN];
+  optional float weight_scalar = 7 [default = 1.0];
+  optional string weight = 8;
+}
+
 message ConcatOpConf {
   repeated string in = 1;
   required string out = 2;
@@ -742,13 +753,14 @@ message OperatorConf {
     SparseCrossEntropyLossOpConf sparse_cross_entropy_loss_conf = 229;
     HingeLossOpConf hinge_loss_conf = 230;
     SparseSoftmaxCrossEntropyLossOpConf sparse_softmax_cross_entropy_loss_conf = 231;
-    AccuracyOpConf accuracy_conf = 232;
-    PrintOpConf print_conf = 233;
-    AccuracyPrintOpConf accuracy_print_conf = 234;
-    LossPrintOpConf loss_print_conf = 235;
-    DefineTestBlobConf define_test_blob_conf = 236;
-    PReluOpConf prelu_conf = 237;
-    ScalarMulOpConf scalar_mul_conf = 238;
+    CenterLossOpConf center_loss_conf = 232;
+    AccuracyOpConf accuracy_conf = 233;
+    PrintOpConf print_conf = 234;
+    AccuracyPrintOpConf accuracy_print_conf = 235;
+    LossPrintOpConf loss_print_conf = 236;
+    DefineTestBlobConf define_test_blob_conf = 237;
+    PReluOpConf prelu_conf = 238;
+    ScalarMulOpConf scalar_mul_conf = 239;
   }
 }
 

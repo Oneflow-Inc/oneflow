@@ -143,6 +143,10 @@ message HingeLossKernelConf {
   required LossKernelConf loss_conf = 1;
 }
 
+message CenterLossKernelConf {
+  required LossKernelConf loss_conf = 1;
+}
+
 message PReluKernelConf {
   repeated int32 perm = 1;
 }
@@ -163,6 +167,7 @@ message KernelConf {
     DecodeRandomKernelConf decode_random_conf = 103;
     DecodeOFRecordKernelConf decode_ofrecord_conf = 104;
     HingeLossKernelConf hinge_loss_conf = 105;
+    CenterLossKernelConf center_loss_conf = 106;
     SoftmaxKernelConf softmax_conf = 116;
     TransposeKernelConf transpose_conf = 117;
     ReduceSumKernelConf reduce_sum_conf = 120;
