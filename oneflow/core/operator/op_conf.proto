@@ -225,6 +225,12 @@ enum LossReductionType {
   kSumOverNonZeroWeight = 3;
 }
 
+message SparseCrossEntropyOpConf {
+  required string prediction = 1;
+  required string label = 2;
+  required string out = 3;
+}
+
 message SparseSoftmaxCrossEntropyLossOpConf {
   required string prediction = 1;
   required string label = 2;
@@ -1018,6 +1024,7 @@ message OperatorConf {
     SigmoidCrossEntropyLossOpConf sigmoid_cross_entropy_loss_conf = 257;
     OneHotOpConf one_hot_conf = 258;
     IdentityLossOpConf identity_loss_conf = 259;
+    SparseCrossEntropyOpConf sparse_cross_entropy_conf= 260;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
