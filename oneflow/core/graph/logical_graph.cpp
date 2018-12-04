@@ -61,7 +61,7 @@ LogicalGraph::LogicalGraph(bool is_train) {
 void LogicalGraph::GroupNodesForReduceStruct() {
   ChainLogicalGraph chain_logical_graph(*this);
   std::vector<std::vector<const LogicalNode*>> fw_node_groups;
-  chain_logical_graph.ForEachNode(
+  chain_logical_graph.TopoForEachNode(
       [&](ChainLogicalNode* node) { fw_node_groups.emplace_back(node->logical_nodes()); });
   for (auto& fw_node_group : fw_node_groups) {
     if (fw_node_group.size() < Global<JobDesc>::Get()->reduce_group_size()) {
@@ -551,13 +551,14 @@ void LogicalGraph::BuildReduceStruct(const ReduceCtx& reduce_ctx) {
     for (auto& md_updt_node : reduce_ctx.md_updt_logicals) {
       Connect(reduce_split_node, NewEdge(), md_updt_node);
     }
-    AddAllReduce(reduce_concat_node, reduce_split_node);
+    AddAllReduce(reduce_concat_node, reduce_split_node, reduce_ctx);
   } else if (reduce_ctx.fw_logicals.size() == 1) {
-    AddAllReduce(reduce_ctx.md_diff_acc_logicals.at(0), reduce_ctx.md_updt_logicals.at(0));
+    AddAllReduce(reduce_ctx.md_diff_acc_logicals.at(0), reduce_ctx.md_updt_logicals.at(0),
+                 reduce_ctx);
   }
 }
 
-void LogicalGraph::AddAllReduce(LogicalNode* src, LogicalNode* dst) {
+void LogicalGraph::AddAllReduce(LogicalNode* src, LogicalNode* dst, const ReduceCtx& reduce_ctx) {
   std::shared_ptr<const ParallelDesc> src_pd = src->parallel_desc();
   std::shared_ptr<const ParallelDesc> dst_pd = dst->parallel_desc();
   CHECK_EQ(src_pd->parallel_num(), dst_pd->parallel_num());
@@ -565,7 +566,7 @@ void LogicalGraph::AddAllReduce(LogicalNode* src, LogicalNode* dst) {
   if (Global<JobDesc>::Get()->enable_nccl()) {
     if (src_pd->sorted_machine_ids().size() == 1
         || Global<JobDesc>::Get()->use_nccl_inter_node_communication()) {
-      AddNcclAllReduce(src, dst);
+      AddNcclAllReduce(src, dst, reduce_ctx);
     } else if (src_pd->device_num_of_each_machine() == 1) {
       AddReduceScatterAddGatherNodes(src, dst, ReduceRankCtx());
     } else {
@@ -604,13 +605,15 @@ void LogicalGraph::AddNcclReduceScatterAndAllGather(LogicalNode* src, LogicalNod
   AddReduceScatterAddGatherNodes(nccl_reduce_scatter_node, nccl_all_gather_node, rank_ctx);
 }
 
-void LogicalGraph::AddNcclAllReduce(LogicalNode* src, LogicalNode* dst) {
+void LogicalGraph::AddNcclAllReduce(LogicalNode* src, LogicalNode* dst,
+                                    const ReduceCtx& reduce_ctx) {
   std::shared_ptr<const ParallelDesc> src_pd = src->parallel_desc();
   OperatorConf nccl_all_reduce_op_conf;
   nccl_all_reduce_op_conf.set_name("nccl_all_reduce_" + NewUniqueId());
   nccl_all_reduce_op_conf.set_device_type(src_pd->device_type());
   nccl_all_reduce_op_conf.mutable_nccl_all_reduce_conf();
   NcclAllReduceLogicalNode* nccl_all_reduce_node = NewNode<NcclAllReduceLogicalNode>();
+  nccl_all_reduce_node->set_fw_logical_nodes(reduce_ctx.fw_logicals);
   nccl_all_reduce_node->mut_op_vec() = {ConstructOp(nccl_all_reduce_op_conf)};
   nccl_all_reduce_node->mut_parallel_desc() = src_pd;
   nccl_all_reduce_node->mut_rank_ctx() = ReduceRankCtx().CtxWithScatter(src_pd->parallel_num());

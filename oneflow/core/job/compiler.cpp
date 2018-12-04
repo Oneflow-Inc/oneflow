@@ -106,6 +106,7 @@ Plan Compiler::DoCompile() {
   task_gph->MdUpdtDelayedTopoForEachNode(&TaskNode::Build);
   task_gph->RemoveEmptyRegsts();
   task_gph->AddOrderingCtrlEdgeInSameChain();
+  task_gph->AddReduceCtrlEdges();
   if (job_desc->IsTrain() && job_desc->enable_mem_sharing()) {
     task_gph->EnableMemSharingInReduceStruct();
   }

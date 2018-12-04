@@ -275,6 +275,19 @@ class ReduceLogicalNode : public LogicalNode {
   }
 };
 
+class NcclAllReduceLogicalNode final : public ReduceLogicalNode {
+ public:
+  LOGICAL_NODE_BOILERPLATE(NcclAllReduceLogicalNode);
+
+  void set_fw_logical_nodes(const std::vector<LogicalNode*>& fw_logical_nodes) {
+    fw_logical_nodes_ = fw_logical_nodes;
+  }
+  const LogicalNode* first_fw_logical_node() const { return fw_logical_nodes_.at(0); }
+
+ private:
+  std::vector<LogicalNode*> fw_logical_nodes_;
+};
+
 #define DECLARE_REDUCE_LOGICAL_NODE(name)       \
   class name final : public ReduceLogicalNode { \
    public:                                      \
@@ -286,7 +299,6 @@ DECLARE_REDUCE_LOGICAL_NODE(ReduceSplitLogicalNode);
 DECLARE_REDUCE_LOGICAL_NODE(ReduceScatterLogicalNode);
 DECLARE_REDUCE_LOGICAL_NODE(ReduceGatherLogicalNode);
 DECLARE_REDUCE_LOGICAL_NODE(ReduceAddLogicalNode);
-DECLARE_REDUCE_LOGICAL_NODE(NcclAllReduceLogicalNode);
 DECLARE_REDUCE_LOGICAL_NODE(NcclAllGatherLogicalNode);
 DECLARE_REDUCE_LOGICAL_NODE(NcclReduceScatterLogicalNode);
 
