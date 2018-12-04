@@ -86,9 +86,12 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
                                                                       + "total_instance_num");
     op_conf.mutable_normal_mdupdt_conf()->set_model(lbi.op_name() + '/' + lbi.blob_name());
     if (Global<JobDesc>::Get()->IsTrain()) {
-      *(op_conf.mutable_normal_mdupdt_conf()->mutable_user_conf()) =
-          Global<JobDesc>::Get()->other_conf().train_conf().model_update_conf();
-
+      if (lbi.blob_name() == "total_instance_num") {
+        op_conf.mutable_normal_mdupdt_conf()->mutable_user_conf()->mutable_naive_conf();
+      } else {
+        *(op_conf.mutable_normal_mdupdt_conf()->mutable_user_conf()) =
+            Global<JobDesc>::Get()->other_conf().train_conf().model_update_conf();
+      }
       float primary_lr = Global<JobDesc>::Get()->primary_lr();
       float secondary_lr = Global<JobDesc>::Get()->secondary_lr();
       if (secondary_lr < 0) { secondary_lr = primary_lr; }
