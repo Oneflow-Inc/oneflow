@@ -10,6 +10,7 @@
 #include "oneflow/core/graph/unpack_backward_task_node.h"
 #include "oneflow/core/graph/repeat_forward_compute_task_node.h"
 #include "oneflow/core/graph/repeat_backward_compute_task_node.h"
+#include "oneflow/core/graph/reduce_inplace_identity_task_node.h"
 
 namespace oneflow {
 
@@ -304,6 +305,11 @@ DECLARE_REDUCE_LOGICAL_NODE(NcclReduceScatterLogicalNode);
 
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatForward);
 DECLARE_DERIVED_BACKWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatBackward);
+
+class ReduceInplaceIdentityLogicalNode final : public LogicalNode {
+  LOGICAL_NODE_WITH_NEW_AREA_ID_BOILERPLATE(ReduceInplaceIdentity)
+};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_GRAPH_LOGICAL_NODE_H_

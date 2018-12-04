@@ -41,6 +41,7 @@ enum TaskType {
   kUnpackBackward = 33;
   kRepeatForward = 34;
   kRepeatBackward = 35;
+  kReduceInplaceIdentity = 36;
 };
 
 enum AreaType {

@@ -290,6 +290,14 @@ void TaskGraph::EnableMemSharingInReduceStruct() {
   });
 }
 
+void TaskGraph::EnableMemSharingAfterAllManualSetForMdUpdt() {
+  ForEachNode([&](TaskNode* node) {
+    auto* updt = dynamic_cast<NormalMdUpdtCompTaskNode*>(node);
+    if (!updt) { return; }
+    updt->EnableMemSharingBetweenFirstInAndProcessedMdDiffRegst();
+  });
+}
+
 void TaskGraph::RmUselessConsumeRelationshipBetweenFwBw() {
   for (TaskNode* task_node : ordered_task_nodes_) {
     auto bw_node = dynamic_cast<NormalBackwardCompTaskNode*>(task_node);
