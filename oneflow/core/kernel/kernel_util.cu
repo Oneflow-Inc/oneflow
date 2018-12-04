@@ -11,7 +11,7 @@ namespace {
 
 template<typename T>
 __global__ void RsqrtGpu(const int64_t n, const T* x, const float epsilon, T* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = 1.0 / std::sqrt(x[i] + epsilon); }
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = rsqrt(x[i] + epsilon); }
 }
 
 template<typename T>
