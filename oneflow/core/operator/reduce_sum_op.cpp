@@ -55,7 +55,7 @@ void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
       out_dim_vec = {1};
     }
   } else {
-    auto axis_repeated = conf.axis();
+    const PbRf<int32_t>& axis_repeated = conf.axis();
     std::vector<int64_t> axis_vec = {axis_repeated.begin(), axis_repeated.end()};
     axis_vec = ShiftAxisIfNegative(axis_vec, in_blob->shape().NumAxes());
     std::sort(axis_vec.begin(), axis_vec.end());
@@ -83,13 +83,12 @@ void ReduceSumOp::VirtualGenKernelConf(
     kept_dims.resize(in_blob->shape().NumAxes());
     std::fill(kept_dims.begin(), kept_dims.end(), 1);
   } else {
-    auto axis_repeated = op_conf().reduce_sum_conf().axis();
+    const PbRf<int32_t>& axis_repeated = op_conf().reduce_sum_conf().axis();
     std::vector<int64_t> axis_vec = {axis_repeated.begin(), axis_repeated.end()};
     kept_dims = KeepDims(in_blob->shape().dim_vec(),
                          ShiftAxisIfNegative(axis_vec, in_blob->shape().NumAxes()));
   }
-  *kernel_conf->mutable_reduce_sum_conf()->mutable_kept_dims_shape()->mutable_dim() = {
-      kept_dims.begin(), kept_dims.end()};
+  Shape(kept_dims).ToProto(kernel_conf->mutable_reduce_sum_conf()->mutable_kept_dims_shape());
 }
 
 REGISTER_OP(OperatorConf::kReduceSumConf, ReduceSumOp);
