@@ -27,6 +27,9 @@ void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   } else {
     auto axis_repeated = conf.axis();
     std::vector<int64_t> axis_vec = {axis_repeated.begin(), axis_repeated.end()};
+    FOR_RANGE(size_t, i, 0, axis_vec.size()) {
+      axis_vec[i] = GetCorrectAxis(axis_vec[i], GetBlobDesc4BnInOp);
+    }
     std::sort(axis_vec.begin(), axis_vec.end());
     CHECK(std::unique(axis_vec.begin(), axis_vec.end()) == axis_vec.end())
         << "duplicate found in axis";
@@ -62,10 +65,10 @@ std::vector<int64_t> ReduceSumOp::KeptDims(
 std::vector<int64_t> ReduceSumOp::OutDims(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp) const {
   const BlobDesc* in_blob = GetBlobDesc4BnInOp("in");
-  std::vector<int64_t> ret = {};
-  std::vector<int64_t> correct_axis = {};
+  std::vector<int64_t> ret;
+  std::set<int64_t> correct_axis;
   for (const auto& axis : op_conf().reduce_sum_conf().axis()) {
-    correct_axis.push_back(GetCorrectAxis(axis, GetBlobDesc4BnInOp));
+    correct_axis.insert(GetCorrectAxis(axis, GetBlobDesc4BnInOp));
   }
   FOR_RANGE(int64_t, i, 0, in_blob->shape().NumAxes()) {
     if (std::find(correct_axis.begin(), correct_axis.end(), i) == correct_axis.end())
@@ -80,6 +83,7 @@ int64_t ReduceSumOp::GetCorrectAxis(
   const int64_t num_axes = GetBlobDesc4BnInOp("in")->shape().NumAxes();
   if (axis < 0) { axis += num_axes; }
   CHECK_LT(axis, num_axes);
+  CHECK_GE(axis, 0);
   return axis;
 }
 

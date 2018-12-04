@@ -31,7 +31,7 @@ class ReduceSumOp final : public Operator {
     const ReduceSumOpConf& conf = op_conf().reduce_sum_conf();
     if (conf.has_in_sys()) {
       CHECK_EQ(conf.axis_size(), 1);
-      CHECK_EQ(conf.axis()[0], 0);
+      CHECK_EQ(conf.axis().Get(0), 0);
       return conf.in_sys();
     } else if (conf.has_in()) {
       return GenLogicalBlobId(conf.in());
