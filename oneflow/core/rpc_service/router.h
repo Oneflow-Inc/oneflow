@@ -40,20 +40,26 @@ class router : boost::noncopyable {
   template<typename T>
   void route(const char* data, std::size_t size, T conn) {
     std::string result;
-    msgpack_codec codec;
-    auto p = codec.unpack<std::tuple<std::string>>(data, size);
-    auto func_name = std::get<0>(p);
-    auto it = map_invokers_.find(func_name);
-    if (it == map_invokers_.end()) {
-      result = codec.pack_args_str(result_code::FAIL, "unknown function: " + func_name);
-      callback_to_server_(func_name, result, conn, true);
-      return;
-    }
+    try {
+      msgpack_codec codec;
+      auto p = codec.unpack<std::tuple<std::string>>(data, size);
+      auto func_name = std::get<0>(p);
+      auto it = map_invokers_.find(func_name);
+      if (it == map_invokers_.end()) {
+        result = codec.pack_args_str(result_code::FAIL, "unknown function: " + func_name);
+        callback_to_server_(func_name, result, conn, true);
+        return;
+      }
 
-    ExecMode model;
-    it->second(conn, data, size, result, model);
-    if (model == ExecMode::sync && callback_to_server_) {
-      callback_to_server_(func_name, result, conn, false);
+      ExecMode model;
+      it->second(conn, data, size, result, model);
+      if (model == ExecMode::sync && callback_to_server_) {
+        callback_to_server_(func_name, result, conn, false);
+      }
+    } catch (const std::exception& ex) {
+      msgpack_codec codec;
+      result = codec.pack_args_str(result_code::FAIL, ex.what());
+      callback_to_server_("", result, conn, true);
     }
   }
 
@@ -107,7 +113,8 @@ class router : boost::noncopyable {
       !std::is_void<typename std::result_of<F(Self, connection*, Args...)>::type>::value>::type
   call_member(const F& f, Self* self, connection* ptr, std::string& result,
               const std::tuple<Arg, Args...>& tp) {
-    auto r = call_member_helper(f, self, typename std::make_index_sequence<sizeof...(Args)>{}, tp);
+    auto r =
+        call_member_helper(f, self, typename std::make_index_sequence<sizeof...(Args)>{}, tp, ptr);
     result = msgpack_codec::pack_args_str(result_code::OK, r);
   }
 

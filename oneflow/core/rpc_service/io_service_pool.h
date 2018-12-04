@@ -39,7 +39,10 @@ class io_service_pool : private boost::noncopyable {
   }
 
   void stop() {
-    for (std::size_t i = 0; i < io_services_.size(); ++i) io_services_[i]->stop();
+    for (std::size_t i = 0; i < io_services_.size(); ++i) {
+      io_services_[i]->stop();
+      io_services_[i]->reset();
+    }
   }
 
   boost::asio::io_service& get_io_service() {
