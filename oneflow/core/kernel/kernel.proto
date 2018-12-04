@@ -69,7 +69,7 @@ message MaxPoolingKernelConf {
 }
 
 message ReduceSumKernelConf {
-  optional int32 axis = 1;
+  required ShapeProto kept_dims_shape = 1;
 }
 
 message SoftmaxKernelConf {
