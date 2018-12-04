@@ -674,6 +674,12 @@ message HingeLossOpConf {
   optional Norm norm = 7[default = L1];
 }
 
+message ScalarMulOpConf {
+  required string in = 1;
+  required string out = 2;
+  required float scalar = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -742,6 +748,7 @@ message OperatorConf {
     LossPrintOpConf loss_print_conf = 235;
     DefineTestBlobConf define_test_blob_conf = 236;
     PReluOpConf prelu_conf = 237;
+    ScalarMulOpConf scalar_mul_conf = 238;
   }
 }
 
