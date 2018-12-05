@@ -19,6 +19,7 @@ class CenterLossOp final : public LossOp {
                              const ParallelContext* parallel_ctx) const override;
   LossKernelConf* GetMutLossKernelConf(KernelConf*) const override;
 };
+
 }  // namespace oneflow
 
 #endif

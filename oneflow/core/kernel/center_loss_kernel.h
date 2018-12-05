@@ -31,6 +31,8 @@ struct CenterLossKernelUtil {
   static void Lookup(DeviceCtx* ctx, const PredType* in, const int32_t in_row_num,
                      const int32_t in_col_num, const LabelType* indices,
                      const int32_t num_of_indices, PredType* out);
+  static void CalculateEuclideanDistance(DeviceCtx* ctx, const int64_t elem_cnt, const PredType* x,
+                                         const PredType* y, PredType* z);
   static void SparseUpdate(DeviceCtx* ctx, const PredType* diff, const int32_t diff_row_num,
                            const int32_t diff_col_num, const LabelType* indices,
                            int32_t num_of_indices, PredType* model, const int32_t model_row_num);

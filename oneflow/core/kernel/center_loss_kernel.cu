@@ -17,6 +17,15 @@ __global__ void LookupGpu(const int64_t elem_cnt, const LabelType* indices, cons
 }
 
 template<typename PredType, typename LabelType>
+__global__ void CauculateEuclideanDistanceGpu(const int64_t elem_cnt, const PredType* x,
+                                              const PredType* y, PredType* z) {
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
+    PredType diff = x[i] - y[i];
+    z[i] = 0.5 * diff * diff;
+  }
+}
+
+template<typename PredType, typename LabelType>
 __global__ void SparseUpdateGpu(const int64_t elem_cnt, const LabelType* indices,
                                 const PredType* diff, int32_t diff_row_num, int32_t diff_col_num,
                                 PredType* model, const int32_t model_row_num) {
@@ -39,6 +48,12 @@ struct CenterLossKernelUtil<DeviceType::kGPU, PredType, LabelType> {
     LookupGpu<PredType, LabelType>
         <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
             elem_cnt, indices, in, in_row_num, in_col_num, out);
+  }
+  static void CalculateEuclideanDistance(DeviceCtx* ctx, const int64_t elem_cnt, const PredType* x,
+                                         const PredType* y, PredType* z) {
+    CauculateEuclideanDistanceGpu<PredType, LabelType>
+        <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+            elem_cnt, x, y, z);
   }
   static void SparseUpdate(DeviceCtx* ctx, const PredType* diff, const int32_t diff_row_num,
                            const int32_t diff_col_num, const LabelType* indices,

@@ -30,4 +30,5 @@ void CenterLossOp::VirtualInferBlobDescs(
 }
 
 REGISTER_OP(OperatorConf::kCenterLossConf, CenterLossOp);
+
 }  // namespace oneflow
