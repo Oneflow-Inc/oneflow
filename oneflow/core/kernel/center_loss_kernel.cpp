@@ -28,12 +28,13 @@ void CenterLossKernel<device_type, PredType, LabelType>::VirtualLossForwardDataC
   Blob* loss_blob = BnInOp2Blob("loss");
   const int32_t n = prediction_blob->shape().At(0);
   const int32_t d = prediction_blob->shape().At(1);
-  auto& center_loss_op_conf = this->kernel_conf().op_attribute().op_conf().center_loss_conf();
+  const auto& center_loss_op_conf = this->kernel_conf().op_attribute().op_conf().center_loss_conf();
+  const int32_t num_of_classes = center_loss_op_conf.num_of_classes();
 
   // Forward
   CenterLossKernelUtil<device_type, PredType, LabelType>::Lookup(
-      ctx.device_ctx, prediction_blob->dptr<PredType>(), n, d, label_blob->dptr<LabelType>(), n,
-      piece_centers_blob->mut_dptr<PredType>());
+      ctx.device_ctx, prediction_blob->dptr<PredType>(), num_of_classes, d,
+      label_blob->dptr<LabelType>(), n, piece_centers_blob->mut_dptr<PredType>());
   CenterLossKernelUtil<device_type, PredType, LabelType>::CalculateEuclideanDistance(
       ctx.device_ctx, n * d, prediction_blob->dptr<PredType>(),
       piece_centers_blob->dptr<PredType>(), forward_tmp_blob->mut_dptr<PredType>());
@@ -47,8 +48,8 @@ void CenterLossKernel<device_type, PredType, LabelType>::VirtualLossForwardDataC
   KernelUtil<device_type, PredType>::Scal(ctx.device_ctx, n * d, (1 - center_loss_op_conf.alpha()),
                                           forward_tmp_blob->mut_dptr<PredType>(), 1);
   CenterLossKernelUtil<device_type, PredType, LabelType>::SparseUpdate(
-      ctx.device_ctx, forward_tmp_blob->dptr<PredType>(), n, d, label_blob->dptr<LabelType>(), n,
-      centers_blob->mut_dptr<PredType>(), center_loss_op_conf.num_of_classes());
+      ctx.device_ctx, forward_tmp_blob->dptr<PredType>(), n, d, label_blob->dptr<LabelType>(),
+      centers_blob->mut_dptr<PredType>(), num_of_classes);
 
   // Backward
   Blob* prediction_diff_blob = BnInOp2Blob("prediction_diff");
@@ -88,15 +89,15 @@ void CenterLossKernel<device_type, PredType, LabelType>::InitModelBlobsWithDir(
 
 template<typename PredType, typename LabelType>
 struct CenterLossKernelUtil<DeviceType::kCPU, PredType, LabelType> {
-  static void Lookup(DeviceCtx* ctx, const PredType* in, const int32_t in_row_num,
-                     const int32_t in_col_num, const LabelType* indices,
+  static void Lookup(DeviceCtx* ctx, const PredType* in, const int32_t table_size,
+                     const int32_t table_dim, const LabelType* indices,
                      const int32_t num_of_indices, PredType* out) {
     FOR_RANGE(int32_t, i, 0, num_of_indices) {
       const int32_t idx = indices[i];
-      CHECK(idx >= 0 && idx < in_row_num);
-      const PredType* from = in + (idx * in_col_num);
-      PredType* to = out + (i * in_col_num);
-      std::copy(from, from + in_col_num, to);
+      CHECK(idx >= 0 && idx < table_size);
+      const PredType* from = in + (idx * table_dim);
+      PredType* to = out + (i * table_dim);
+      std::copy(from, from + table_dim, to);
     }
   }
   static void CalculateEuclideanDistance(DeviceCtx* ctx, const int64_t elem_cnt, const PredType* x,
@@ -106,13 +107,16 @@ struct CenterLossKernelUtil<DeviceType::kCPU, PredType, LabelType> {
       z[i] = 0.5 * diff * diff;
     }
   }
-  static void SparseUpdate(DeviceCtx* ctx, const PredType* diff, const int32_t diff_row_num,
-                           const int32_t diff_col_num, const LabelType* indices,
-                           int32_t num_of_indices, PredType* model, const int32_t model_row_num) {
-    FOR_RANGE(int32_t, i, 0, num_of_indices) {
-      FOR_RANGE(int32_t, j, 0, diff_col_num) {
-        CHECK_LT(indices[i], model_row_num);
-        model[indices[i] * diff_col_num + j] -= diff[i * diff_col_num + j];
+  static void SparseUpdate(DeviceCtx* ctx, const PredType* diff, const int32_t update_num,
+                           const int32_t table_dim, const LabelType* indices, PredType* model,
+                           const int32_t table_size) {
+    FOR_RANGE(int32_t, i, 0, update_num) {
+      FOR_RANGE(int32_t, j, 0, table_dim) {
+        const int32_t idx = indices[i];
+        CHECK_LT(idx, table_size);
+        const PredType* from = diff + (i * table_dim);
+        PredType* to = model + (idx * table_dim);
+        std::copy(from, from + table_dim, to);
       }
     }
   }
