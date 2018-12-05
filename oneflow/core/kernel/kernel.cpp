@@ -25,21 +25,25 @@ void ClearBlobDim0ValidNumIfNeed(const PbRpf<std::string>& bns,
   }
 }
 
+void CheckCopyLossInstanceNumField(const PbRpf<std::string>& bns,
+                                   const std::function<Blob*(const std::string&)>& BnInOp2Blob,
+                                   bool expected) {
+  for (const std::string& bn : bns) {
+    const Blob* blob = BnInOp2Blob(bn);
+    if (blob != nullptr) { CHECK_EQ(blob->has_loss_instance_num_field(), expected); }
+  }
+}
+
 bool NeedCopyLossInstanceNum(const PbRpf<std::string>& from_bns, const PbRpf<std::string>& to_bns,
                              const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
-  if (from_bns.empty()) { return false; }
-  const bool need_copy_loss_instance_num =
-      BnInOp2Blob(from_bns.Get(0))->has_loss_instance_num_field();
-  FOR_RANGE(int32_t, i, 1, from_bns.size()) {
-    CHECK_EQ(BnInOp2Blob(from_bns.Get(i))->has_loss_instance_num_field(),
-             need_copy_loss_instance_num);
-  }
-  FOR_RANGE(int32_t, i, 0, to_bns.size()) {
-    Blob* blob = BnInOp2Blob(to_bns.Get(i));
-    if (blob != nullptr) {
-      CHECK_EQ(blob->has_loss_instance_num_field(), need_copy_loss_instance_num);
-    }
-  }
+  const auto& first_bn_has_loss_instance_num_it =
+      std::find_if(from_bns.cbegin(), from_bns.cend(), [&BnInOp2Blob](const std::string& bn) {
+        const Blob* blob = BnInOp2Blob(bn);
+        return blob != nullptr && blob->has_loss_instance_num_field();
+      });
+  const bool need_copy_loss_instance_num = first_bn_has_loss_instance_num_it != from_bns.end();
+  CheckCopyLossInstanceNumField(from_bns, BnInOp2Blob, need_copy_loss_instance_num);
+  CheckCopyLossInstanceNumField(to_bns, BnInOp2Blob, need_copy_loss_instance_num);
   return need_copy_loss_instance_num;
 }
 
