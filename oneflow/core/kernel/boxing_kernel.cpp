@@ -355,8 +355,8 @@ void BoxingKernel<T>::SetMaxColId(const KernelCtx& ctx,
 template<typename T>
 void BoxingKernel<T>::ForwardLossInstanceNumIfNeed(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const PbRpf<std::string>& input_bns = op_attribute().input_diff_bns();
-  const PbRpf<std::string>& output_bns = op_attribute().output_diff_bns();
+  const PbRpf<std::string>& input_bns = op_attribute().input_bns();
+  const PbRpf<std::string>& output_bns = op_attribute().output_bns();
   CHECK_GT(input_bns.size(), 0);
   const bool need_do_loss_instance_num =
       BnInOp2Blob(input_bns.Get(0))->has_loss_instance_num_field();
