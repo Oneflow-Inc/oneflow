@@ -223,7 +223,11 @@ void TaskGraph::AddReduceCtrlEdges() {
                        < OrderInGraph4IdentityLogicalNode(rhs->logical_node());
               });
     ReduceInplaceIdentityCompTaskNode* prev_identity_node = nullptr;
+    int32_t eager_count = Global<JobDesc>::Get()->eager_reduce_ratio() * identity_nodes.size();
     for (int i = 0; i < identity_nodes.size(); ++i) {
+      // Skip eager reduce nodes
+      if (i != 0 && i < eager_count) { continue; }
+      // one half on current batch's bw, another half on next batch's fw
       if (i % 2 != 0) { continue; }
       if (prev_identity_node != nullptr) {
         prev_identity_node->BuildCtrlRegstDescIfNeed(identity_nodes[i]);
