@@ -312,6 +312,13 @@ message LARSModelUpdateConf {
   optional float lars_coefficient = 3 [default = 0.0001];
 }
 
+message AdamModelUpdateConf {
+  optional float beta1 = 1 [default = 0.9];
+  optional float beta2 = 2 [default = 0.999];
+  optional float epsilon = 3 [default = 1e-8];
+  optional bool do_bias_correction = 4 [default = false];
+}
+
 message ExponentialDecayConf {
   required int64 decay_batches = 1;
   required double decay_rate = 2;
@@ -391,6 +398,7 @@ message NormalModelUpdateOpUserConf {
     MomentumModelUpdateConf momentum_conf = 1001;
     RMSPropModelUpdateConf rmsprop_conf = 1002;
     LARSModelUpdateConf lars_conf = 1003;
+    AdamModelUpdateConf adam_conf = 1004;
   }
 }
 
