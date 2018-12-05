@@ -30,6 +30,16 @@ __global__ void MulGpu(const int64_t n, const T* x, const T* y, T* z) {
 }
 
 template<typename T>
+__global__ void SubGpu(const int64_t n, const T* x, const T* y, T* z) {
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] - y[i]; }
+}
+
+template<typename T>
+__global__ void SquareGpu(const int64_t n, const T* x, T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = x[i] * x[i]; }
+}
+
+template<typename T>
 __global__ void AxpyGpu(const int n, const T alpha, const T* x, const int incx, T* y,
                         const int incy) {
   CUDA_1D_KERNEL_LOOP(i, n) { y[i * incy] += alpha * x[i * incx]; }
@@ -435,6 +445,14 @@ KU_FLOATING_METHOD Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha) {
 KU_FLOATING_METHOD Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
   MulGpu<T>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z);
+}
+KU_FLOATING_METHOD Sub(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
+  SubGpu<T>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z);
+}
+KU_FLOATING_METHOD Square(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+  SquareGpu<T>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
 }
 KU_FLOATING_METHOD Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsilon) {
   RsqrtGpu<T>
