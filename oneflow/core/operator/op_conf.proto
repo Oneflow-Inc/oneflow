@@ -375,12 +375,12 @@ message PolynomialDecayConf {
 }
 
 message CosineDecayConf {
-  required int64 decay_batches = 1; 
+  required int64 decay_batches = 1;
   optional double alpha = 2 [default = 0.0];
 }
 
 message LinearCosineDecayConf {
-  required int64 decay_batches = 1; 
+  required int64 decay_batches = 1;
   optional double num_periods = 2 [default = 0.5];
   optional double alpha = 3 [default = 0.0];
   optional double beta = 4 [default = 0.001];
@@ -490,8 +490,8 @@ message ReduceSumOpConf {
     LogicalBlobId in_sys = 2; // For System
   }
   required string out = 3;
-  optional int32 axis = 4;
-  optional bool keepdims = 5 [default = false];
+  repeated int32 axis = 4;
+  optional bool keep_dims = 5 [default = false];
 }
 
 message BasicRnnOpConf {
@@ -560,7 +560,7 @@ message VariableOpConf {
 message LocalResponseNormalizationOpConf {
   required string in = 1;
   required string out = 2;
-  required string data_format = 3; 
+  required string data_format = 3;
   optional int32 depth_radius = 4 [default = 5];
   optional double bias = 5 [default = 1];
   optional double alpha = 6 [default = 1];

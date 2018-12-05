@@ -27,14 +27,17 @@ void SparseCrossEntropyOp::InferBlobDescs(
     CHECK_EQ(pred_blob_desc->dim0_inner_shape().At(0), 1);
     CHECK_EQ(pred_blob_desc->dim0_inner_shape(), label_blob_desc->dim0_inner_shape());
   }
-  CHECK_GT(label_blob_desc->shape().NumAxes(), 0);
-  CHECK_EQ(pred_blob_desc->shape().NumAxes(), label_blob_desc->shape().NumAxes() + 1);
-  FOR_RANGE(int64_t, i, 0, label_blob_desc->shape().NumAxes()) {
+  CHECK_GE(pred_blob_desc->shape().NumAxes(), 2);
+  const int64_t num_out_axes = pred_blob_desc->shape().NumAxes() - 1;
+  CHECK_GE(label_blob_desc->shape().NumAxes(), num_out_axes);
+  CHECK_EQ(label_blob_desc->shape().Count(num_out_axes), 1);
+  FOR_RANGE(int64_t, i, 0, num_out_axes) {
     CHECK_EQ(pred_blob_desc->shape().At(i), label_blob_desc->shape().At(i));
   }
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *pred_blob_desc;
-  out_blob_desc->mut_shape() = label_blob_desc->shape();
+  out_blob_desc->mut_shape() = Shape(std::vector<int64_t>(
+      pred_blob_desc->shape().dim_vec().cbegin(), pred_blob_desc->shape().dim_vec().cend() - 1));
 }
 
 REGISTER_OP(OperatorConf::kSparseCrossEntropyConf, SparseCrossEntropyOp);

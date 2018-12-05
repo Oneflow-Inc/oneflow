@@ -146,6 +146,13 @@ void NormalMdUpdtCompTaskNode::ToProto(TaskProto* task_proto) {
   task_proto->set_related_init_model_task_id(related_init_model_task_id_);
 }
 
+void NormalMdUpdtCompTaskNode::FixPackedBlobDescOfProducedRegst() {
+  std::shared_ptr<RegstDesc> diff_add_out_regst = GetProducedRegst("processed_model_diff");
+  CHECK(diff_add_out_regst->IsLocked());
+  Shape& shape = diff_add_out_regst->MutBlobDesc(GenPackedLbi())->mut_shape();
+  shape = Shape({static_cast<int64_t>(RoundUp(shape.elem_cnt(), parallel_ctx()->parallel_num()))});
+}
+
 void NormalMdUpdtCompTaskNode::InferProducedDataRegstTimeShape() {
   ForEachProducedDataRegst([](const std::string& name, RegstDesc* regst) {
     if (name == "const_model") {
