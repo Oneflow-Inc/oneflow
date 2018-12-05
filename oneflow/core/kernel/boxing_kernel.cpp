@@ -216,7 +216,6 @@ void BoxingKernel<T>::VirtualKernelInit(const ParallelContext*) {
 template<typename T>
 void BoxingKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  ForwardLossInstanceNumIfNeed(ctx, BnInOp2Blob);
   const BoxingOpConf& boxing_conf = op_conf().boxing_conf();
   if (boxing_conf.in_box_case() == BoxingOpConf::kConcatBox) {
     if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
@@ -353,22 +352,11 @@ void BoxingKernel<T>::SetMaxColId(const KernelCtx& ctx,
 }
 
 template<typename T>
-void BoxingKernel<T>::ForwardLossInstanceNumIfNeed(
+void BoxingKernel<T>::ForwardLossInstanceNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const PbRpf<std::string>& input_bns = op_attribute().input_bns();
   const PbRpf<std::string>& output_bns = op_attribute().output_bns();
   CHECK_GT(input_bns.size(), 0);
-  const bool need_do_loss_instance_num =
-      BnInOp2Blob(input_bns.Get(0))->has_loss_instance_num_field();
-  FOR_RANGE(int32_t, i, 1, input_bns.size()) {
-    CHECK_EQ(BnInOp2Blob(input_bns.Get(i))->has_loss_instance_num_field(),
-             need_do_loss_instance_num);
-  }
-  FOR_RANGE(int32_t, i, 0, output_bns.size()) {
-    CHECK_EQ(BnInOp2Blob(output_bns.Get(i))->has_loss_instance_num_field(),
-             need_do_loss_instance_num);
-  }
-  if (!need_do_loss_instance_num) { return; }
   float in_loss_instance_num = BnInOp2Blob(input_bns.Get(0))->loss_instance_num();
   const float loss_instance_num_epsilon = 1e-8;
   const BoxingOpConf& conf = op_conf().boxing_conf();

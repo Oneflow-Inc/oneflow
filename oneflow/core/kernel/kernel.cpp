@@ -25,6 +25,40 @@ void ClearBlobDim0ValidNumIfNeed(const PbRpf<std::string>& bns,
   }
 }
 
+bool NeedCopyLossInstanceNum(const PbRpf<std::string>& from_bns, const PbRpf<std::string>& to_bns,
+                             const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+  if (from_bns.empty()) { return false; }
+  const bool need_copy_loss_instance_num =
+      BnInOp2Blob(from_bns.Get(0))->has_loss_instance_num_field();
+  FOR_RANGE(int32_t, i, 1, from_bns.size()) {
+    CHECK_EQ(BnInOp2Blob(from_bns.Get(i))->has_loss_instance_num_field(),
+             need_copy_loss_instance_num);
+  }
+  FOR_RANGE(int32_t, i, 0, to_bns.size()) {
+    Blob* blob = BnInOp2Blob(to_bns.Get(i));
+    if (blob != nullptr) {
+      CHECK_EQ(blob->has_loss_instance_num_field(), need_copy_loss_instance_num);
+    }
+  }
+  return need_copy_loss_instance_num;
+}
+
+void NaiveCopyLossInstanceNum(const PbRpf<std::string>& from_bns, const PbRpf<std::string>& to_bns,
+                              const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+  CHECK_GT(from_bns.size(), 0);
+  CHECK(BnInOp2Blob(from_bns.Get(0))->has_loss_instance_num_field());
+  const float loss_instance_num = BnInOp2Blob(from_bns.Get(0))->loss_instance_num();
+  const float loss_instance_num_epsilon = 1e-8;
+  FOR_RANGE(int32_t, i, 1, from_bns.size()) {
+    CHECK_LT(std::fabs(BnInOp2Blob(from_bns.Get(i))->loss_instance_num() - loss_instance_num),
+             loss_instance_num_epsilon);
+  }
+  FOR_RANGE(int32_t, i, 0, to_bns.size()) {
+    Blob* blob = BnInOp2Blob(to_bns.Get(i));
+    if (blob != nullptr) { blob->set_loss_instance_num(loss_instance_num); }
+  }
+}
+
 }  // namespace
 
 void Kernel::Init(const ParallelContext* parallel_ctx, const KernelConf& kernel_conf,
@@ -110,6 +144,7 @@ void Kernel::Forward(const KernelCtx& ctx,
     CHECK(!kernel_conf_.need_do_opaque_header());
     ForwardRecordIdInDevicePiece(ctx, BnInOp2Blob);
   }
+  if (NeedForwardLossInstanceNum(ctx, BnInOp2Blob)) { ForwardLossInstanceNum(ctx, BnInOp2Blob); }
   ForwardDataContent(ctx, BnInOp2Blob);
   if (GetActivationType() != ActivationType::kNone) {
     const PbRpf<std::string> obns = this->op_attribute().output_bns();
@@ -206,6 +241,19 @@ void KernelIf<device_type>::ForwardRecordIdInDevicePiece(
 }
 
 template<DeviceType device_type>
+void KernelIf<device_type>::ForwardLossInstanceNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  NaiveCopyLossInstanceNum(op_attribute().input_bns(), op_attribute().output_bns(), BnInOp2Blob);
+}
+
+template<DeviceType device_type>
+bool KernelIf<device_type>::NeedForwardLossInstanceNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  return NeedCopyLossInstanceNum(op_attribute().input_bns(), op_attribute().output_bns(),
+                                 BnInOp2Blob);
+}
+
+template<DeviceType device_type>
 void KernelIf<device_type>::BackwardModelDiffDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   bool is_out_diff_empty = HasEmptyShapeBlob(op_attribute().output_diff_bns(), BnInOp2Blob);
@@ -237,24 +285,10 @@ void KernelIf<device_type>::BackwardInDiffDim0ValidNum(
 template<DeviceType device_type>
 void KernelIf<device_type>::BackwardInDiffLossInstanceNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const PbRpf<std::string>& output_diff_bns = op_attribute().output_diff_bns();
-  const PbRpf<std::string>& input_diff_bns = op_attribute().input_diff_bns();
-  CHECK_GT(output_diff_bns.size(), 0);
-  CHECK(BnInOp2Blob(output_diff_bns.Get(0))->has_loss_instance_num_field());
-  const float loss_instance_num = BnInOp2Blob(output_diff_bns.Get(0))->loss_instance_num();
-  const float loss_instance_num_epsilon = 1e-8;
-  FOR_RANGE(int32_t, i, 1, output_diff_bns.size()) {
-    CHECK(BnInOp2Blob(output_diff_bns.Get(i))->has_loss_instance_num_field());
-    CHECK_LT(
-        std::fabs(BnInOp2Blob(output_diff_bns.Get(i))->loss_instance_num() - loss_instance_num),
-        loss_instance_num_epsilon);
-  }
-  FOR_RANGE(int32_t, i, 0, input_diff_bns.size()) {
-    Blob* input_diff_blob = BnInOp2Blob(input_diff_bns.Get(i));
-    if (!input_diff_blob) { continue; }
-    CHECK(input_diff_blob->has_loss_instance_num_field());
-    input_diff_blob->set_loss_instance_num(loss_instance_num);
-  }
+  CHECK(NeedCopyLossInstanceNum(op_attribute().output_diff_bns(), op_attribute().input_diff_bns(),
+                                BnInOp2Blob));
+  NaiveCopyLossInstanceNum(op_attribute().output_diff_bns(), op_attribute().input_diff_bns(),
+                           BnInOp2Blob);
 }
 
 template<DeviceType device_type>
