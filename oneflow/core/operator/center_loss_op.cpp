@@ -6,7 +6,7 @@ void CenterLossOp::VirtualInitFromOpConf() {
   EnrollForwardModelBn("centers");
   EnrollDataTmpBn("piece_centers");
   EnrollDataTmpBn("forward_tmp");
-  EnrollConstBufBn("ones_multipiler");
+  EnrollConstBufBn("ones_multiplier");
 }
 
 const PbMessage& CenterLossOp::GetCustomizedConf() const { return op_conf().center_loss_conf(); }
@@ -36,7 +36,7 @@ void CenterLossOp::VirtualInferBlobDescs(
   *forward_tmp_blob_desc = *prediction_blob_desc;
 
   // ones_multipiler [dim]
-  BlobDesc* ones_multipiler_blob_desc = GetBlobDesc4BnInOp("ones_multipiler");
+  BlobDesc* ones_multipiler_blob_desc = GetBlobDesc4BnInOp("ones_multiplier");
   *ones_multipiler_blob_desc = *prediction_blob_desc;
   ones_multipiler_blob_desc->mut_shape() = Shape({prediction_blob_desc->shape().At(1)});
 }

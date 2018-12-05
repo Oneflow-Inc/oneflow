@@ -8,7 +8,7 @@ template<DeviceType device_type, typename PredType>
 void ReduceMean(DeviceCtx* device_ctx, const int32_t row_num, const int32_t col_num,
                 const PredType* data, PredType* out,
                 std::function<Blob*(const std::string&)> BnInOp2Blob) {
-  const Blob* ones_multipiler_blob = BnInOp2Blob("ones_multipiler");
+  const Blob* ones_multipiler_blob = BnInOp2Blob("ones_multiplier");
   KernelUtil<device_type, PredType>::OFGemm(device_ctx, CblasNoTrans, CblasNoTrans, row_num, 1,
                                             col_num, 1.0, data,
                                             ones_multipiler_blob->dptr<PredType>(), 0.0, out);
@@ -141,8 +141,8 @@ Kernel* CreateCenterLossKernel(const KernelConf& kernel_conf) {
       OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(CENTER_LOSS_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
                                        FLOATING_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)};
   return creators.at(GetHashKey(kernel_conf.op_attribute().op_conf().device_type(),
-                                kernel_conf.accuracy_conf().prediction_type(),
-                                kernel_conf.accuracy_conf().label_type()))();
+                                kernel_conf.center_loss_conf().loss_conf().prediction_type(),
+                                kernel_conf.center_loss_conf().loss_conf().label_type()))();
 }
 
 }  // namespace
