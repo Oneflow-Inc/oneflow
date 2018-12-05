@@ -8,10 +8,14 @@ void LossCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("loss", false);
   ProduceRegst("out", true);
   ProduceRegst("data_tmp", true, 1, 1);
+  ProduceRegst("forward_model", false);
+  ProduceRegst("const_buf", false, 1, 1);
   for (TaskEdge* edge : out_edges()) {
     const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
     if (succ_logical->TypeName() == "LossAcc") {
       BindEdgeWithProducedRegst(edge, "loss");
+    } else if (succ_logical->TypeName() == "MdSave") {
+      BindEdgeWithProducedRegst(edge, "forward_model");
     } else {
       BindEdgeWithProducedRegst(edge, "out");
     }
@@ -37,6 +41,10 @@ void LossCompTaskNode::BuildExecGphAndRegst() {
   }
   std::shared_ptr<RegstDesc> data_tmp_regst = GetProducedRegst("data_tmp");
   loss_node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, data_tmp_regst);
+  std::shared_ptr<RegstDesc> forward_model_regst = GetProducedRegst("forward_model");
+  loss_node->AddBnToRegstAndBindIt(&Operator::forward_model_bns, forward_model_regst);
+  std::shared_ptr<RegstDesc> const_buf_regst = GetProducedRegst("const_buf");
+  loss_node->AddBnToRegstAndBindIt(&Operator::const_buf_bns, const_buf_regst);
 
   if (Global<JobDesc>::Get()->IsTrain()) {
     BuildRegstWhenTraining();
