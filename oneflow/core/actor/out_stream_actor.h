@@ -16,8 +16,6 @@ class OutStreamCompActor final : public SinkCompActor {
   void Act() override;
   void AsyncSendCustomizedProducedRegstMsgToConsumer() override;
   void VirtualSinkCompActorInit(const TaskProto&) override;
-
-  std::vector<std::pair<const char*, size_t>> data_;
 };
 
 }  // namespace oneflow

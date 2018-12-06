@@ -12,7 +12,7 @@ namespace oneflow {
 namespace rpc_service {
 class rpc_server : private boost::noncopyable {
  public:
-  rpc_server(short port, size_t size, size_t timeout_seconds = 0, size_t check_seconds = 10)
+  rpc_server(short port, size_t size, size_t timeout_seconds = 15, size_t check_seconds = 10)
       : io_service_pool_(size),
         acceptor_(io_service_pool_.get_io_service(), tcp::endpoint(tcp::v4(), port)),
         timeout_seconds_(timeout_seconds),
@@ -72,7 +72,7 @@ class rpc_server : private boost::noncopyable {
 
       std::unique_lock<std::mutex> lock(mtx_);
       for (auto it = connections_.cbegin(); it != connections_.cend();) {
-        if (it->second->has_closed() || it->second->socket().is_open()) {
+        if (it->second->has_closed()) {
           it = connections_.erase(it);
         } else {
           ++it;

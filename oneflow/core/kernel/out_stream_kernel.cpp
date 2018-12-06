@@ -4,18 +4,6 @@
 
 namespace oneflow {
 
-void OutStreamKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
-  const auto& conf = op_conf().out_stream_conf();
-  const std::string& root_path = conf.print_dir();
-  OfCallOnce(root_path, SnapshotFS(), &fs::FileSystem::RecursivelyCreateDir);
-  int32_t part_name_suffix_length = conf.part_name_suffix_length();
-  std::string num = std::to_string(parallel_ctx->parallel_id());
-  int32_t zero_count = std::max(part_name_suffix_length - static_cast<int32_t>(num.length()), 0);
-  std::string file_path =
-      JoinPath(root_path, conf.part_name_prefix() + std::string(zero_count, '0') + num);
-  out_stream_.reset(new PersistentOutStream(SnapshotFS(), file_path));
-}
-
 void OutStreamKernel::Forward(const KernelCtx& ctx,
                               std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (HasEmptyShapeBlob(this->op_attribute().input_bns(), BnInOp2Blob)) { return; }
@@ -36,16 +24,24 @@ void OutStreamKernel::Forward(const KernelCtx& ctx,
     CHECK_EQ(cur_blob->has_col_num_field(), has_col_num_field);
   }
 
-  int64_t conn_id = 0;
+  auto is_number = [](const std::string& s) {
+    return !s.empty()
+           && std::find_if(s.begin(), s.end(), [](char c) { return !std::isdigit(c); }) == s.end();
+  };
+
+  int64_t conn_id = -1;
   OFRecord record;
   FOR_RANGE(int64_t, record_id, 0, max_record_num) {
     record.clear_feature();
     if (has_data_id_field) {
       std::string data_id_str = first_blob->data_id(record_id);
+      if (data_id_str.empty()) { return; }
       size_t pos = data_id_str.find('_');
       const char* data_id = data_id_str.substr(0, pos).data();
-      if (conn_id == 0) {
+      if (conn_id == -1) {
         std::string conn_id_str = data_id_str.substr(pos + 1);
+        if (conn_id_str.empty() || !is_number(conn_id_str)) { return; }
+
         conn_id = std::stoll(conn_id_str);
       }
 
@@ -79,12 +75,7 @@ void OutStreamKernel::Forward(const KernelCtx& ctx,
     result.first = conn_id;
     result.second.append(buf, sizeof(int64_t));
     result.second.append(msg_bin);
-
-    //    std::string& result = *(std::string*)ctx.other;
-    //    result = std::to_string(max_record_num);
-    *out_stream_ << record;
   }
-  out_stream_->Flush();
 }
 
 REGISTER_KERNEL(OperatorConf::kOutStreamConf, OutStreamKernel);

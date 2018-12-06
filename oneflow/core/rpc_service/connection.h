@@ -39,7 +39,7 @@ class connection : public std::enable_shared_from_this<connection>, private boos
         socket_, message_,
         strand_.wrap([this, self](boost::system::error_code ec, std::size_t length) {
           cancel_timer();
-          if (!socket_.is_open()) { return; }
+          if (has_closed()) { return; }
           if (!ec) {
             read_head();
           } else {
@@ -113,7 +113,7 @@ class connection : public std::enable_shared_from_this<connection>, private boos
     auto self(this->shared_from_this());
     timer_.expires_from_now(std::chrono::seconds(timeout_seconds_));
     timer_.async_wait([this, self](const boost::system::error_code& ec) {
-      if (!socket_.is_open()) { return; }
+      if (has_closed()) { return; }
 
       if (ec) { return; }
 

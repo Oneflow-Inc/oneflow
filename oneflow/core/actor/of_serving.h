@@ -9,23 +9,19 @@
 
 namespace oneflow {
 
-using ConnBufferPair = std::pair<int64_t, std::vector<rpc_service::blob_t>>;
+using ConnBufferPair = std::pair<int64_t, std::vector<std::string>>;
 
 class OFServing final : public SinkCompActor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OFServing);
 
   void SendMsg(const std::pair<int64_t, std::string>& data) {
-    //    if (callback_ == nullptr) {
-    //      std::cout << "finish" << std::endl;
-    //      return;
-    //    }
+    int conn_id = data.first;
+    if (conn_id == -1) { return; }
 
-    int64_t conn_id = data.first;
-    rpc_service::connection* conn = reinterpret_cast<rpc_service::connection*>(conn_id);
     rpc_service::msgpack_codec codec;
     auto ret = codec.pack_args((int)rpc_service::result_code::OK, data.second);
-    server_.response(conn, ret.data(), ret.size());
+    server_.response(conn_id, ret.data(), ret.size());
   }
 
   Channel<ConnBufferPair>& InChannel() { return in_channel_; }
@@ -49,8 +45,8 @@ class OFServing final : public SinkCompActor {
   }
 
   void Predict(rpc_service::connection* conn, const std::string& version,
-               const std::vector<rpc_service::blob_t>& blobs) {
-    in_channel_.Send(std::make_pair(reinterpret_cast<int64_t>(conn), blobs));
+               const std::vector<std::string>& blobs) {
+    in_channel_.Send({conn->conn_id(), blobs});
   }
 
   void Init() {
@@ -63,8 +59,6 @@ class OFServing final : public SinkCompActor {
   }
 
   friend class Global<OFServing>;
-
-  //  std::function<void(const std::vector<std::pair<const char*, size_t>>&)> callback_;
 
   rpc_service::rpc_server server_;
   Channel<ConnBufferPair> in_channel_;
