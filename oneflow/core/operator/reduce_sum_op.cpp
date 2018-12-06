@@ -34,6 +34,7 @@ std::vector<int64_t> ShiftAxisIfNegative(std::vector<int64_t> axis_vec, const in
 }  // namespace
 
 void ReduceSumOp::InitFromOpConf() {
+  CHECK(op_conf().has_reduce_sum_conf());
   EnrollInputBn("in");
   EnrollOutputBn("out");
   EnrollDataTmpBn("fw_tmp");
