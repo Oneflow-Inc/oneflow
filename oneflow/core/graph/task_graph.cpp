@@ -222,13 +222,17 @@ void TaskGraph::AddReduceCtrlEdges() {
                 return OrderInGraph4IdentityLogicalNode(lhs->logical_node())
                        < OrderInGraph4IdentityLogicalNode(rhs->logical_node());
               });
+    int32_t eager_count = (1 - Global<JobDesc>::Get()->lazy_reduce_ratio()) * identity_nodes.size();
+    std::list<int32_t> identity_nodes_indexes;
+    for (int32_t i = 0; i < identity_nodes.size(); ++i) {
+      if (i == 0 || (i > eager_count && i % 2 == 0)) {
+        identity_nodes_indexes.push_back(i);
+      } else {
+        identity_nodes_indexes.push_front(i);
+      }
+    }
     ReduceInplaceIdentityCompTaskNode* prev_identity_node = nullptr;
-    int32_t eager_count = Global<JobDesc>::Get()->eager_reduce_ratio() * identity_nodes.size();
-    for (int i = 0; i < identity_nodes.size(); ++i) {
-      // Skip eager reduce nodes
-      if (i != 0 && i < eager_count) { continue; }
-      // one half on current batch's bw, another half on next batch's fw
-      if (i % 2 != 0) { continue; }
+    for (int32_t i : identity_nodes_indexes) {
       if (prev_identity_node != nullptr) {
         prev_identity_node->BuildCtrlRegstDescIfNeed(identity_nodes[i]);
       }

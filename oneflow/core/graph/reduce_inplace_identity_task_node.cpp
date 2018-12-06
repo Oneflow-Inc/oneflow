@@ -9,6 +9,11 @@ void ReduceInplaceIdentityCompTaskNode::ProduceAllRegstsAndBindEdges() {
   BindEdgeWithProducedRegst(SoleOutEdge(), "out");
 }
 
+void ReduceInplaceIdentityCompTaskNode::EnableMemSharingInReduce(const ReduceMemSharingCtx& ctx) {
+  ctx.EnableMemSharing4Regst(GetProducedRegst("out").get(), 0);
+  ctx.EnableMemSharing4Regst(GetSoleConsumedRegst("in").get(), 0);
+}
+
 void ReduceInplaceIdentityCompTaskNode::ConsumeAllRegsts() {
   ConsumeRegst("in", SoleInEdge()->GetSoleRegst());
 }

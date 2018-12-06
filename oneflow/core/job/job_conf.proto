@@ -76,7 +76,7 @@ message OtherConf {
   optional bool use_nccl_inter_node_communication = 143 [default = false];
   optional int64 cudnn_buf_limit_mbyte = 144 [default = 1024];  // 1GByte
   optional int64 reduce_group_size = 112 [default = 20];
-  optional float eager_reduce_ratio = 145 [default = 0.25];
+  optional float lazy_reduce_ratio = 145 [default = 0.0];
 
   required FileSystemConf data_fs_conf = 121;
   required FileSystemConf snapshot_fs_conf = 122;

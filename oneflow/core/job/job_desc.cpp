@@ -5,10 +5,11 @@
 
 namespace oneflow {
 
-float JobDesc::eager_reduce_ratio() const {
-  float ratio = job_conf_.other().eager_reduce_ratio();
+float JobDesc::lazy_reduce_ratio() const {
+  float ratio = job_conf_.other().lazy_reduce_ratio();
   CHECK_GE(ratio, 0.0);
   CHECK_LE(ratio, 1.0);
+  return ratio;
 }
 
 int64_t JobDesc::piece_num_of_experiment_phase() const {
