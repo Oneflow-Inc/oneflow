@@ -25,8 +25,8 @@ void ClearBlobDim0ValidNumIfNeed(const PbRpf<std::string>& bns,
   }
 }
 
-void CheckLossInstanceNumField(const PbRpf<std::string> &bns,
-                               const std::function<Blob *(const std::string &)> &BnInOp2Blob,
+void CheckLossInstanceNumField(const PbRpf<std::string>& bns,
+                               const std::function<Blob*(const std::string&)>& BnInOp2Blob,
                                bool expected) {
   for (const std::string& bn : bns) {
     const Blob* blob = BnInOp2Blob(bn);
@@ -132,6 +132,7 @@ void Kernel::Forward(const KernelCtx& ctx,
     CHECK(!kernel_conf_.need_do_opaque_header());
     ForwardDim0ValidNum(ctx, BnInOp2Blob);
   }
+  if (NeedForwardLossInstanceNum(ctx, BnInOp2Blob)) { ForwardLossInstanceNum(ctx, BnInOp2Blob); }
   if (HasEmptyShapeBlob(op_attribute().input_bns(), BnInOp2Blob) && !NeedForwardIfBlobEmpty()) {
     ClearBlobDim0ValidNumIfNeed(op_attribute().output_bns(), BnInOp2Blob);
     return;
@@ -148,7 +149,6 @@ void Kernel::Forward(const KernelCtx& ctx,
     CHECK(!kernel_conf_.need_do_opaque_header());
     ForwardRecordIdInDevicePiece(ctx, BnInOp2Blob);
   }
-  if (NeedForwardLossInstanceNum(ctx, BnInOp2Blob)) { ForwardLossInstanceNum(ctx, BnInOp2Blob); }
   ForwardDataContent(ctx, BnInOp2Blob);
   if (GetActivationType() != ActivationType::kNone) {
     const PbRpf<std::string> obns = this->op_attribute().output_bns();
@@ -174,6 +174,7 @@ void Kernel::Backward(const KernelCtx& ctx,
     CHECK(!kernel_conf_.need_do_opaque_header());
     BackwardInDiffDim0ValidNum(ctx, BnInOp2Blob);
   }
+  BackwardInDiffLossInstanceNum(ctx, BnInOp2Blob);
   if (HasEmptyShapeBlob(op_attribute().output_diff_bns(), BnInOp2Blob)
       && !NeedBackwardIfBlobEmpty()) {
     ClearBlobDim0ValidNumIfNeed(op_attribute().input_diff_bns(), BnInOp2Blob);
@@ -204,7 +205,6 @@ void Kernel::Backward(const KernelCtx& ctx,
   }
   if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
   if (kernel_conf_.need_do_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
-  BackwardInDiffLossInstanceNum(ctx, BnInOp2Blob);
   if (this->op_attribute().model_diff_bns().size() > 0) {
     SetTotalInstanceNumDiffBlob(ctx, BnInOp2Blob);
   }
