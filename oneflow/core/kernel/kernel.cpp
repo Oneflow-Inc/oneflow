@@ -25,9 +25,9 @@ void ClearBlobDim0ValidNumIfNeed(const PbRpf<std::string>& bns,
   }
 }
 
-void CheckCopyLossInstanceNumField(const PbRpf<std::string>& bns,
-                                   const std::function<Blob*(const std::string&)>& BnInOp2Blob,
-                                   bool expected) {
+void CheckLossInstanceNumField(const PbRpf<std::string> &bns,
+                               const std::function<Blob *(const std::string &)> &BnInOp2Blob,
+                               bool expected) {
   for (const std::string& bn : bns) {
     const Blob* blob = BnInOp2Blob(bn);
     if (blob != nullptr) { CHECK_EQ(blob->has_loss_instance_num_field(), expected); }
@@ -42,8 +42,8 @@ bool NeedCopyLossInstanceNum(const PbRpf<std::string>& from_bns, const PbRpf<std
         return blob != nullptr && blob->has_loss_instance_num_field();
       });
   const bool need_copy_loss_instance_num = first_bn_has_loss_instance_num_it != from_bns.end();
-  CheckCopyLossInstanceNumField(from_bns, BnInOp2Blob, need_copy_loss_instance_num);
-  CheckCopyLossInstanceNumField(to_bns, BnInOp2Blob, need_copy_loss_instance_num);
+  CheckLossInstanceNumField(from_bns, BnInOp2Blob, need_copy_loss_instance_num);
+  CheckLossInstanceNumField(to_bns, BnInOp2Blob, need_copy_loss_instance_num);
   return need_copy_loss_instance_num;
 }
 
