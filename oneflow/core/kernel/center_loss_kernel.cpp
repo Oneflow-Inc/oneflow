@@ -33,7 +33,7 @@ void CenterLossKernel<device_type, PredType, LabelType>::VirtualLossForwardDataC
 
   // Forward
   CenterLossKernelUtil<device_type, PredType, LabelType>::Lookup(
-      ctx.device_ctx, prediction_blob->dptr<PredType>(), num_of_classes, d,
+      ctx.device_ctx, centers_blob->dptr<PredType>(), num_of_classes, d,
       label_blob->dptr<LabelType>(), n, piece_centers_blob->mut_dptr<PredType>());
   CenterLossKernelUtil<device_type, PredType, LabelType>::CalculateEuclideanDistance(
       ctx.device_ctx, n * d, prediction_blob->dptr<PredType>(),
@@ -42,9 +42,9 @@ void CenterLossKernel<device_type, PredType, LabelType>::VirtualLossForwardDataC
                                     loss_blob->mut_dptr<PredType>(), BnInOp2Blob);
 
   // Update Centers
-  KernelUtil<device_type, PredType>::Sub(ctx.device_ctx, n * d, prediction_blob->dptr<PredType>(),
-                                         piece_centers_blob->dptr<PredType>(),
-                                         forward_tmp_blob->mut_dptr<PredType>());
+  KernelUtil<device_type, PredType>::Sub(
+      ctx.device_ctx, n * d, piece_centers_blob->dptr<PredType>(),
+      prediction_blob->dptr<PredType>(), forward_tmp_blob->mut_dptr<PredType>());
   KernelUtil<device_type, PredType>::Scal(ctx.device_ctx, n * d, (1 - center_loss_op_conf.alpha()),
                                           forward_tmp_blob->mut_dptr<PredType>(), 1);
   CenterLossKernelUtil<device_type, PredType, LabelType>::SparseUpdate(

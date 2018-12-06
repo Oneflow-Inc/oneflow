@@ -21,21 +21,21 @@ void CenterLossOp::VirtualInferBlobDescs(
   const BlobDesc* prediction_blob_desc = GetBlobDesc4BnInOp("prediction");
   CHECK_EQ(prediction_blob_desc->shape().NumAxes(), 2);
 
-  // centers [num_of_classes, dim]
+  // centers, [num_of_classes, dim]
   BlobDesc* centers_blob_desc = GetBlobDesc4BnInOp("centers");
   *centers_blob_desc = *prediction_blob_desc;
   centers_blob_desc->mut_shape() = Shape(
       {this->op_conf().center_loss_conf().num_of_classes(), prediction_blob_desc->shape().At(1)});
 
-  // piece_centers [piece_size, dim]
+  // piece_centers, [piece_size, dim]
   BlobDesc* piece_centers_blob_desc = GetBlobDesc4BnInOp("piece_centers");
   *piece_centers_blob_desc = *prediction_blob_desc;
 
-  // forward_tmp [piece_size, dim]
+  // forward_tmp, [piece_size, dim]
   BlobDesc* forward_tmp_blob_desc = GetBlobDesc4BnInOp("forward_tmp");
   *forward_tmp_blob_desc = *prediction_blob_desc;
 
-  // ones_multipiler [dim]
+  // ones_multiplier, [dim]
   BlobDesc* ones_multipiler_blob_desc = GetBlobDesc4BnInOp("ones_multiplier");
   *ones_multipiler_blob_desc = *prediction_blob_desc;
   ones_multipiler_blob_desc->mut_shape() = Shape({prediction_blob_desc->shape().At(1)});
