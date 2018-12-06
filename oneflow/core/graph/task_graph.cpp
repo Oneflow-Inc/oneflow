@@ -11,7 +11,7 @@
 #include "oneflow/core/graph/reduce_split_compute_task_node.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/job/thrd_id_generator.h"
-#include "oneflow/core/graph/reduce_inplace_identity_task_node.h"
+#include "oneflow/core/graph/reduce_identity_task_node.h"
 
 namespace oneflow {
 
@@ -182,16 +182,16 @@ void TaskGraph::AddReduceCtrlEdges() {
   }
   auto OrderInGraph4IdentityLogicalNode = [&](const LogicalNode* logical_node) {
     const auto* identity_logical_node =
-        dynamic_cast<const ReduceInplaceIdentityLogicalNode*>(logical_node);
+        dynamic_cast<const ReduceIdentityLogicalNode*>(logical_node);
     CHECK_NOTNULL(identity_logical_node);
     return logical_node2fw_order_in_graph.at(identity_logical_node->first_fw_logical_node());
   };
 
-  HashMap<int64_t, std::vector<ReduceInplaceIdentityCompTaskNode*>> parallel_id2identity_nodes;
+  HashMap<int64_t, std::vector<ReduceIdentityCompTaskNode*>> parallel_id2identity_nodes;
   HashMap<int64_t, std::vector<const LogicalNode*>> parallel_id2identity_logical_nodes;
   HashSet<std::string> thrd_ids;
   for (auto* node : ordered_task_nodes_) {
-    auto* identity_node = dynamic_cast<ReduceInplaceIdentityCompTaskNode*>(node);
+    auto* identity_node = dynamic_cast<ReduceIdentityCompTaskNode*>(node);
     if (identity_node != nullptr) {
       int64_t parallel_id = identity_node->parallel_ctx()->parallel_id();
       parallel_id2identity_nodes[parallel_id].push_back(identity_node);
@@ -218,7 +218,7 @@ void TaskGraph::AddReduceCtrlEdges() {
   for (auto& pair : parallel_id2identity_nodes) {
     auto& identity_nodes = pair.second;
     std::sort(identity_nodes.begin(), identity_nodes.end(),
-              [&](ReduceInplaceIdentityCompTaskNode* lhs, ReduceInplaceIdentityCompTaskNode* rhs) {
+              [&](ReduceIdentityCompTaskNode* lhs, ReduceIdentityCompTaskNode* rhs) {
                 return OrderInGraph4IdentityLogicalNode(lhs->logical_node())
                        < OrderInGraph4IdentityLogicalNode(rhs->logical_node());
               });
@@ -231,7 +231,7 @@ void TaskGraph::AddReduceCtrlEdges() {
         identity_nodes_indexes.push_front(i);
       }
     }
-    ReduceInplaceIdentityCompTaskNode* prev_identity_node = nullptr;
+    ReduceIdentityCompTaskNode* prev_identity_node = nullptr;
     for (int32_t i : identity_nodes_indexes) {
       if (prev_identity_node != nullptr) {
         prev_identity_node->BuildCtrlRegstDescIfNeed(identity_nodes[i]);

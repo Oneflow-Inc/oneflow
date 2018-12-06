@@ -301,9 +301,9 @@ DECLARE_REDUCE_LOGICAL_NODE(NcclReduceScatterLogicalNode, true);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatForward);
 DECLARE_DERIVED_BACKWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatBackward);
 
-class ReduceInplaceIdentityLogicalNode final : public LogicalNode {
+class ReduceIdentityLogicalNode final : public LogicalNode {
  public:
-  LOGICAL_NODE_BOILERPLATE(ReduceInplaceIdentityLogicalNode);
+  LOGICAL_NODE_BOILERPLATE(ReduceIdentityLogicalNode);
 
   void set_fw_logical_nodes(const std::vector<LogicalNode*>& fw_logical_nodes) {
     fw_logical_nodes_ = fw_logical_nodes;

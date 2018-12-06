@@ -1,24 +1,22 @@
-#ifndef ONEFLOW_CORE_OPERATOR_REDUCE_INPLACE_IDENTITY_OP_H_
-#define ONEFLOW_CORE_OPERATOR_REDUCE_INPLACE_IDENTITY_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_REDUCE_IDENTITY_OP_H_
+#define ONEFLOW_CORE_OPERATOR_REDUCE_IDENTITY_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
-class ReduceInplaceIdentityOp final : public Operator {
+class ReduceIdentityOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ReduceInplaceIdentityOp);
-  ReduceInplaceIdentityOp() = default;
-  ~ReduceInplaceIdentityOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ReduceIdentityOp);
+  ReduceIdentityOp() = default;
+  ~ReduceIdentityOp() = default;
 
-  LogicalNode* NewProperLogicalNode() { return new ReduceInplaceIdentityLogicalNode; }
+  LogicalNode* NewProperLogicalNode() { return new ReduceIdentityLogicalNode; }
   void InitFromOpConf() override;
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
-  const PbMessage& GetCustomizedConf() const override {
-    return op_conf().reduce_inplace_identity_conf();
-  }
+  const PbMessage& GetCustomizedConf() const override { return op_conf().reduce_identity_conf(); }
   bool IsElemWiseOp() const override { return true; }
   bool NeedInBlobWhenBackward() const override { return false; }
   bool NeedOutBlobWhenBackward() const override { return false; }
@@ -30,4 +28,4 @@ class ReduceInplaceIdentityOp final : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_REDUCE_INPLACE_IDENTITY_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_REDUCE_IDENTITY_OP_H_

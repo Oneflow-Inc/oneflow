@@ -566,18 +566,18 @@ void LogicalGraph::AddAllReduce(LogicalNode* src, LogicalNode* dst, const Reduce
   CHECK_EQ(src_pd->device_type(), dst_pd->device_type());
   {
     // We can not add ctrl edges between all_reduce nodes due to the implementation of nccl.
-    // So we add ctrl edges between ReduceInplaceIdentityTaskNode which may be followed by
+    // So we add ctrl edges between ReduceIdentityTaskNode which may be followed by
     // all_reduce nodes;
-    OperatorConf reduce_inplace_identity_conf;
-    reduce_inplace_identity_conf.set_name("reduce_inplace_identity_" + NewUniqueId());
-    reduce_inplace_identity_conf.set_device_type(src_pd->device_type());
-    reduce_inplace_identity_conf.mutable_reduce_inplace_identity_conf();
-    auto* reduce_inplace_identity_node = NewNode<ReduceInplaceIdentityLogicalNode>();
-    reduce_inplace_identity_node->mut_op_vec() = {ConstructOp(reduce_inplace_identity_conf)};
-    reduce_inplace_identity_node->mut_parallel_desc() = src_pd;
-    reduce_inplace_identity_node->set_fw_logical_nodes(reduce_ctx.fw_logicals);
-    Connect(src, NewEdge(), static_cast<LogicalNode*>(reduce_inplace_identity_node));
-    src = reduce_inplace_identity_node;
+    OperatorConf reduce_identity_conf;
+    reduce_identity_conf.set_name("reduce_identity_" + NewUniqueId());
+    reduce_identity_conf.set_device_type(src_pd->device_type());
+    reduce_identity_conf.mutable_reduce_identity_conf();
+    auto* reduce_identity_node = NewNode<ReduceIdentityLogicalNode>();
+    reduce_identity_node->mut_op_vec() = {ConstructOp(reduce_identity_conf)};
+    reduce_identity_node->mut_parallel_desc() = src_pd;
+    reduce_identity_node->set_fw_logical_nodes(reduce_ctx.fw_logicals);
+    Connect(src, NewEdge(), static_cast<LogicalNode*>(reduce_identity_node));
+    src = reduce_identity_node;
   }
   if (Global<JobDesc>::Get()->enable_nccl()) {
     if (src_pd->sorted_machine_ids().size() == 1

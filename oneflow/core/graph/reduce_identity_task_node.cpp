@@ -1,24 +1,24 @@
-#include "oneflow/core/graph/reduce_inplace_identity_task_node.h"
+#include "oneflow/core/graph/reduce_identity_task_node.h"
 #include "oneflow/core/graph/logical_node.h"
-#include "oneflow/core/operator/reduce_inplace_identity_op.h"
+#include "oneflow/core/operator/reduce_identity_op.h"
 
 namespace oneflow {
 
-void ReduceInplaceIdentityCompTaskNode::ProduceAllRegstsAndBindEdges() {
+void ReduceIdentityCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("out", false);
   BindEdgeWithProducedRegst(SoleOutEdge(), "out");
 }
 
-void ReduceInplaceIdentityCompTaskNode::EnableMemSharingInReduce(const ReduceMemSharingCtx& ctx) {
+void ReduceIdentityCompTaskNode::EnableMemSharingInReduce(const ReduceMemSharingCtx& ctx) {
   ctx.EnableMemSharing4Regst(GetProducedRegst("out").get(), 0);
   ctx.EnableMemSharing4Regst(GetSoleConsumedRegst("in").get(), 0);
 }
 
-void ReduceInplaceIdentityCompTaskNode::ConsumeAllRegsts() {
+void ReduceIdentityCompTaskNode::ConsumeAllRegsts() {
   ConsumeRegst("in", SoleInEdge()->GetSoleRegst());
 }
 
-void ReduceInplaceIdentityCompTaskNode::BuildExecGphAndRegst() {
+void ReduceIdentityCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<const Operator> op = logical_node()->SoleOp();
   ExecNode* exec_node = mut_exec_gph().NewNode();
   exec_node->mut_op() = op;
@@ -30,7 +30,7 @@ void ReduceInplaceIdentityCompTaskNode::BuildExecGphAndRegst() {
   exec_node->InferBlobDescs(parallel_ctx());
 }
 
-void ReduceInplaceIdentityCompTaskNode::InferProducedDataRegstTimeShape() {
+void ReduceIdentityCompTaskNode::InferProducedDataRegstTimeShape() {
   NaiveInferProducedDataRegstTimeShape();
 }
 
