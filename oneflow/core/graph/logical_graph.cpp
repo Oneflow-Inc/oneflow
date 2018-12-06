@@ -579,7 +579,7 @@ void LogicalGraph::AddAllReduce(LogicalNode* src, LogicalNode* dst, const Reduce
     Connect(src, NewEdge(), static_cast<LogicalNode*>(reduce_identity_node));
     src = reduce_identity_node;
   }
-  if (Global<JobDesc>::Get()->enable_nccl()) {
+  if (Global<JobDesc>::Get()->enable_nccl() && src_pd->device_type() == DeviceType::kGPU) {
     if (src_pd->sorted_machine_ids().size() == 1
         || Global<JobDesc>::Get()->use_nccl_inter_node_communication()) {
       AddNcclAllReduce(src, dst);
