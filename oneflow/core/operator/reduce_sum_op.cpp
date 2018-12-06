@@ -37,7 +37,11 @@ void ReduceSumOp::InitFromOpConf() {
   CHECK(op_conf().has_reduce_sum_conf());
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  EnrollDataTmpBn("fw_tmp");
+  if (op_conf().reduce_sum_conf().has_in_sys()) {
+    EnrollDataTmpBn("fw_tmp");
+  } else {
+    EnrollFwBufBn("fw_tmp");
+  }
 }
 
 const PbMessage& ReduceSumOp::GetCustomizedConf() const { return op_conf().reduce_sum_conf(); }
