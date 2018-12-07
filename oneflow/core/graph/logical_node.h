@@ -305,14 +305,19 @@ class ReduceIdentityLogicalNode final : public LogicalNode {
  public:
   LOGICAL_NODE_BOILERPLATE(ReduceIdentityLogicalNode);
 
-  void set_fw_logical_nodes(const std::vector<LogicalNode*>& fw_logical_nodes) {
-    fw_logical_nodes_ = fw_logical_nodes;
+  void set_first_fw_logical_node(const LogicalNode* first_fw_logical_node) {
+    first_fw_logical_node_ = first_fw_logical_node;
   }
-  const LogicalNode* first_fw_logical_node() const { return fw_logical_nodes_.at(0); }
+  void set_order_in_logical_graph(int32_t order_in_logical_graph) {
+    order_in_logical_graph_ = order_in_logical_graph;
+  }
+  int32_t order_in_logical_graph() const { return order_in_logical_graph_; }
+  const LogicalNode* first_fw_logical_node() const { return first_fw_logical_node_; }
   bool MayConsumeModelDiff() const override { return true; }
 
  private:
-  std::vector<LogicalNode*> fw_logical_nodes_;
+  int32_t order_in_logical_graph_;
+  const LogicalNode* first_fw_logical_node_;
 };
 
 }  // namespace oneflow

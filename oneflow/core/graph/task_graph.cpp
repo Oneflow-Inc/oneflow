@@ -15,6 +15,34 @@
 
 namespace oneflow {
 
+namespace {
+
+std::function<int32_t(const LogicalNode*)> MakeGetterReduceIdentityCtrlOrder(
+    const LogicalGraph& logical_graph) {
+  std::vector<const ReduceIdentityLogicalNode*> identity_logical_nodes;
+  logical_graph.ForEachNode([&](LogicalNode* node) {
+    auto* identity_logical_node = dynamic_cast<ReduceIdentityLogicalNode*>(node);
+    if (identity_logical_node == nullptr) { return; }
+    identity_logical_nodes.push_back(identity_logical_node);
+  });
+  std::sort(identity_logical_nodes.begin(), identity_logical_nodes.end(),
+            [](const ReduceIdentityLogicalNode* lhs, const ReduceIdentityLogicalNode* rhs) {
+              return lhs->order_in_logical_graph() < rhs->order_in_logical_graph();
+            });
+  auto identity_logical_node2ctrl_order = std::make_shared<HashMap<const LogicalNode*, int32_t>>();
+  int32_t eager_count =
+      (1 - Global<JobDesc>::Get()->lazy_reduce_ratio()) * identity_logical_nodes.size();
+  for (int32_t i = 0; i < identity_logical_nodes.size(); ++i) {
+    int32_t ctrl_order = (i == 0 || (i > eager_count && i % 2 == 0)) ? i : -i;
+    (*identity_logical_node2ctrl_order)[identity_logical_nodes[i]] = ctrl_order;
+  }
+  return [identity_logical_node2ctrl_order](const LogicalNode* identity_node) {
+    return identity_logical_node2ctrl_order->at(identity_node);
+  };
+}
+
+}  // namespace
+
 TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   logical_gph_ = std::move(logical_gph);
   HashMap<const LogicalNode*, std::vector<CompTaskNode*>> logical2sorted_comp_tasks;
@@ -173,70 +201,26 @@ void TaskGraph::BuildCtrlRegstDescInSameChain() {
 }
 
 void TaskGraph::AddReduceCtrlEdges() {
-  HashMap<const LogicalNode*, int32_t> logical_node2fw_order_in_graph;
-  for (auto* node : ordered_task_nodes_) {
-    auto* fw_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
-    if (fw_node != nullptr) {
-      logical_node2fw_order_in_graph[fw_node->logical_node()] = fw_node->order_in_graph();
-    }
-  }
-  auto OrderInGraph4IdentityLogicalNode = [&](const LogicalNode* logical_node) {
-    const auto* identity_logical_node =
-        dynamic_cast<const ReduceIdentityLogicalNode*>(logical_node);
-    CHECK_NOTNULL(identity_logical_node);
-    return logical_node2fw_order_in_graph.at(identity_logical_node->first_fw_logical_node());
-  };
-
-  HashMap<int64_t, std::vector<ReduceIdentityCompTaskNode*>> parallel_id2identity_nodes;
-  HashMap<int64_t, std::vector<const LogicalNode*>> parallel_id2identity_logical_nodes;
-  HashSet<std::string> thrd_ids;
+  HashMap<int64_t, std::vector<ReduceIdentityCompTaskNode*>> global_dev_id2identity_nodes;
   for (auto* node : ordered_task_nodes_) {
     auto* identity_node = dynamic_cast<ReduceIdentityCompTaskNode*>(node);
-    if (identity_node != nullptr) {
-      int64_t parallel_id = identity_node->parallel_ctx()->parallel_id();
-      parallel_id2identity_nodes[parallel_id].push_back(identity_node);
-      parallel_id2identity_logical_nodes[parallel_id].push_back(identity_node->logical_node());
-      thrd_ids.insert(std::to_string(node->machine_id()) + ":" + std::to_string(node->thrd_id()));
-    }
+    if (identity_node == nullptr) { continue; }
+    int64_t global_dev_id = Global<IDMgr>::Get()->GlobalDeviceId4TaskId(identity_node->task_id());
+    global_dev_id2identity_nodes[global_dev_id].push_back(identity_node);
   }
-  int32_t idx = 0;
-  const std::vector<const LogicalNode*>* first = nullptr;
-  for (auto& identity_logical_nodes_pair : parallel_id2identity_logical_nodes) {
-    auto& identity_logical_nodes = identity_logical_nodes_pair.second;
-    std::sort(identity_logical_nodes.begin(), identity_logical_nodes.end(),
-              [&](const LogicalNode* lhs, const LogicalNode* rhs) {
-                return OrderInGraph4IdentityLogicalNode(lhs)
-                       < OrderInGraph4IdentityLogicalNode(rhs);
-              });
-    if (idx == 0) {
-      first = &identity_logical_nodes;
-    } else {
-      CHECK(identity_logical_nodes == *first);
-    }
-    ++idx;
-  }
-  for (auto& pair : parallel_id2identity_nodes) {
+  auto GetCtrlOrder = MakeGetterReduceIdentityCtrlOrder(*logical_gph_);
+  for (auto& pair : global_dev_id2identity_nodes) {
     auto& identity_nodes = pair.second;
     std::sort(identity_nodes.begin(), identity_nodes.end(),
               [&](ReduceIdentityCompTaskNode* lhs, ReduceIdentityCompTaskNode* rhs) {
-                return OrderInGraph4IdentityLogicalNode(lhs->logical_node())
-                       < OrderInGraph4IdentityLogicalNode(rhs->logical_node());
+                return GetCtrlOrder(lhs->logical_node()) < GetCtrlOrder(rhs->logical_node());
               });
-    int32_t eager_count = (1 - Global<JobDesc>::Get()->lazy_reduce_ratio()) * identity_nodes.size();
-    std::list<int32_t> identity_nodes_indexes;
-    for (int32_t i = 0; i < identity_nodes.size(); ++i) {
-      if (i == 0 || (i > eager_count && i % 2 == 0)) {
-        identity_nodes_indexes.push_back(i);
-      } else {
-        identity_nodes_indexes.push_front(i);
-      }
-    }
     ReduceIdentityCompTaskNode* prev_identity_node = nullptr;
-    for (int32_t i : identity_nodes_indexes) {
+    for (auto* identity_node : identity_nodes) {
       if (prev_identity_node != nullptr) {
-        prev_identity_node->BuildCtrlRegstDescIfNeed(identity_nodes[i]);
+        prev_identity_node->BuildCtrlRegstDescIfNeed(identity_node);
       }
-      prev_identity_node = identity_nodes[i];
+      prev_identity_node = identity_node;
     }
   }
 }

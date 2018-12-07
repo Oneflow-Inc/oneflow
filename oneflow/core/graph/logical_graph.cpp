@@ -509,8 +509,10 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
       }
     }
   });
-  for (auto& fw_node_group : fw_node_groups_) {
+  for (int i = 0; i < fw_node_groups_.size(); ++i) {
+    auto& fw_node_group = fw_node_groups_[i];
     ReduceCtx group_reduce_ctx;
+    group_reduce_ctx.order_in_logical_graph = i;
     for (auto& fw_node : fw_node_group) {
       auto reduce_ctx_it = fw_node2reduce_ctx.find(fw_node);
       if (reduce_ctx_it != fw_node2reduce_ctx.end()) {
@@ -575,7 +577,8 @@ void LogicalGraph::AddAllReduce(LogicalNode* src, LogicalNode* dst, const Reduce
     auto* reduce_identity_node = NewNode<ReduceIdentityLogicalNode>();
     reduce_identity_node->mut_op_vec() = {ConstructOp(reduce_identity_conf)};
     reduce_identity_node->mut_parallel_desc() = src_pd;
-    reduce_identity_node->set_fw_logical_nodes(reduce_ctx.fw_logicals);
+    reduce_identity_node->set_order_in_logical_graph(reduce_ctx.order_in_logical_graph);
+    reduce_identity_node->set_first_fw_logical_node(reduce_ctx.fw_logicals.at(0));
     Connect(src, NewEdge(), static_cast<LogicalNode*>(reduce_identity_node));
     src = reduce_identity_node;
   }

@@ -28,6 +28,7 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
     std::vector<LogicalEdge*> edges;
   };
   struct ReduceCtx {
+    int32_t order_in_logical_graph;
     std::vector<LogicalNode*> fw_logicals;
     std::vector<LogicalNode*> bw_logicals;
     std::vector<LogicalNode*> md_diff_acc_logicals;
