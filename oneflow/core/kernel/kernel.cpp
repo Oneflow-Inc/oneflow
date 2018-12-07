@@ -25,6 +25,44 @@ void ClearBlobDim0ValidNumIfNeed(const PbRpf<std::string>& bns,
   }
 }
 
+void CheckLossInstanceNumField(const PbRpf<std::string>& bns,
+                               const std::function<Blob*(const std::string&)>& BnInOp2Blob,
+                               bool expected) {
+  for (const std::string& bn : bns) {
+    const Blob* blob = BnInOp2Blob(bn);
+    if (blob != nullptr) { CHECK_EQ(blob->has_loss_instance_num_field(), expected); }
+  }
+}
+
+bool NeedCopyLossInstanceNum(const PbRpf<std::string>& from_bns, const PbRpf<std::string>& to_bns,
+                             const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+  const auto& first_bn_has_loss_instance_num_it =
+      std::find_if(from_bns.cbegin(), from_bns.cend(), [&BnInOp2Blob](const std::string& bn) {
+        const Blob* blob = BnInOp2Blob(bn);
+        return blob != nullptr && blob->has_loss_instance_num_field();
+      });
+  const bool need_copy_loss_instance_num = first_bn_has_loss_instance_num_it != from_bns.end();
+  CheckLossInstanceNumField(from_bns, BnInOp2Blob, need_copy_loss_instance_num);
+  CheckLossInstanceNumField(to_bns, BnInOp2Blob, need_copy_loss_instance_num);
+  return need_copy_loss_instance_num;
+}
+
+void NaiveCopyLossInstanceNum(const PbRpf<std::string>& from_bns, const PbRpf<std::string>& to_bns,
+                              const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+  CHECK_GT(from_bns.size(), 0);
+  CHECK(BnInOp2Blob(from_bns.Get(0))->has_loss_instance_num_field());
+  const float loss_instance_num = BnInOp2Blob(from_bns.Get(0))->loss_instance_num();
+  const float loss_instance_num_epsilon = 1e-8;
+  FOR_RANGE(int32_t, i, 1, from_bns.size()) {
+    CHECK_LT(std::fabs(BnInOp2Blob(from_bns.Get(i))->loss_instance_num() - loss_instance_num),
+             loss_instance_num_epsilon);
+  }
+  FOR_RANGE(int32_t, i, 0, to_bns.size()) {
+    Blob* blob = BnInOp2Blob(to_bns.Get(i));
+    if (blob != nullptr) { blob->set_loss_instance_num(loss_instance_num); }
+  }
+}
+
 }  // namespace
 
 void Kernel::Init(const ParallelContext* parallel_ctx, const KernelConf& kernel_conf,
@@ -94,6 +132,7 @@ void Kernel::Forward(const KernelCtx& ctx,
     CHECK(!kernel_conf_.need_do_opaque_header());
     ForwardDim0ValidNum(ctx, BnInOp2Blob);
   }
+  if (NeedForwardLossInstanceNum(ctx, BnInOp2Blob)) { ForwardLossInstanceNum(ctx, BnInOp2Blob); }
   if (HasEmptyShapeBlob(op_attribute().input_bns(), BnInOp2Blob) && !NeedForwardIfBlobEmpty()) {
     ClearBlobDim0ValidNumIfNeed(op_attribute().output_bns(), BnInOp2Blob);
     return;
@@ -135,6 +174,7 @@ void Kernel::Backward(const KernelCtx& ctx,
     CHECK(!kernel_conf_.need_do_opaque_header());
     BackwardInDiffDim0ValidNum(ctx, BnInOp2Blob);
   }
+  BackwardInDiffLossInstanceNum(ctx, BnInOp2Blob);
   if (HasEmptyShapeBlob(op_attribute().output_diff_bns(), BnInOp2Blob)
       && !NeedBackwardIfBlobEmpty()) {
     ClearBlobDim0ValidNumIfNeed(op_attribute().input_diff_bns(), BnInOp2Blob);
@@ -205,6 +245,19 @@ void KernelIf<device_type>::ForwardRecordIdInDevicePiece(
 }
 
 template<DeviceType device_type>
+void KernelIf<device_type>::ForwardLossInstanceNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  NaiveCopyLossInstanceNum(op_attribute().input_bns(), op_attribute().output_bns(), BnInOp2Blob);
+}
+
+template<DeviceType device_type>
+bool KernelIf<device_type>::NeedForwardLossInstanceNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  return NeedCopyLossInstanceNum(op_attribute().input_bns(), op_attribute().output_bns(),
+                                 BnInOp2Blob);
+}
+
+template<DeviceType device_type>
 void KernelIf<device_type>::BackwardModelDiffDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   bool is_out_diff_empty = HasEmptyShapeBlob(op_attribute().output_diff_bns(), BnInOp2Blob);
@@ -234,6 +287,15 @@ void KernelIf<device_type>::BackwardInDiffDim0ValidNum(
 }
 
 template<DeviceType device_type>
+void KernelIf<device_type>::BackwardInDiffLossInstanceNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  CHECK(NeedCopyLossInstanceNum(op_attribute().output_diff_bns(), op_attribute().input_diff_bns(),
+                                BnInOp2Blob));
+  NaiveCopyLossInstanceNum(op_attribute().output_diff_bns(), op_attribute().input_diff_bns(),
+                           BnInOp2Blob);
+}
+
+template<DeviceType device_type>
 void KernelIf<device_type>::ForwardPackedHeader(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
@@ -257,10 +319,10 @@ template<DeviceType device_type, typename T>
 void KernelIfWithModel<device_type, T>::SetTotalInstanceNumDiffBlob(
     const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   CHECK_GE(this->op_attribute().model_bns().size(), 2);
-  int64_t dim0_valid_num_sum =
-      BnInOp2Blob(this->op_attribute().output_diff_bns(0))->CalcDim0ValidNumSum();
+  const float loss_instance_num =
+      BnInOp2Blob(this->op_attribute().output_diff_bns(0))->loss_instance_num();
   Blob* total_instance_num_diff_blob = BnInOp2Blob("total_instance_num_diff");
-  KernelUtil<device_type, T>::Set(ctx.device_ctx, static_cast<T>(dim0_valid_num_sum),
+  KernelUtil<device_type, T>::Set(ctx.device_ctx, static_cast<T>(loss_instance_num),
                                   total_instance_num_diff_blob->mut_dptr<T>());
 }
 
