@@ -30,7 +30,7 @@ class connection : public std::enable_shared_from_this<connection>, private boos
   bool has_closed() const { return has_closed_; }
 
   void response(const char* data, size_t len) {
-    assert(message_[1].size() > len);
+    assert(message_[1].size() >= len);
     message_[0] = boost::asio::buffer(&len, sizeof(int32_t));
     message_[1] = boost::asio::buffer((char*)data, len);
     reset_timer();
