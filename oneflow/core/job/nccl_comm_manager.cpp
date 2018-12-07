@@ -26,29 +26,49 @@ NcclCommMgr::NcclCommMgr(const Plan& plan) {
       CHECK_EQ(first.parallel_ctx().rank_ctx().rank_num(),
                task.parallel_ctx().rank_ctx().rank_num());
     }
-
     rank_set2nccl_tasks[task.parallel_ctx().rank_ctx().rank_set_id()].push_back(task);
   }
 
+  for (auto& pair : rank_set2nccl_tasks) {
+    std::sort(pair.second.begin(), pair.second.end(), [](const TaskProto& lhs, const TaskProto& rhs) {
+      return lhs.parallel_ctx().rank_ctx().rank_id() < rhs.parallel_ctx().rank_ctx().rank_id();
+    });
+  }
+
   for (const auto& pair : rank_set2nccl_tasks) {
-    ncclUniqueId nccl_unique_id{};
-    NcclGetUniqueId4Tasks(pair.second, &nccl_unique_id);
-    std::vector<ncclComm_t> comms(pair.second.size());
-    NcclCommInitRank4Tasks(pair.second, &comms, nccl_unique_id);
-    FOR_RANGE(size_t, i, 0, pair.second.size()) {
-      int32_t device_id;
-      int32_t rank;
-      NcclCheck(ncclCommCuDevice(comms.at(i), &device_id));
-      NcclCheck(ncclCommUserRank(comms.at(i), &rank));
-      LOG(INFO) << "Created nccl communicator for task " << pair.second.at(i).task_id()
-                << " with rank " << rank << " on device " << device_id;
-      CHECK(actor_id2comm_.emplace(pair.second.at(i).task_id(), comms.at(i)).second);
+    const std::vector<TaskProto>& tasks = pair.second;
+    std::vector<int64_t> thread_id_seq;
+    for (const TaskProto& task : tasks) { thread_id_seq.push_back(task.thrd_id()); }
+    if (thread_id_seq2comms_.find(thread_id_seq) != thread_id_seq2comms_.end()) {
+      const std::map<int64_t, ncclComm_t>& thread2comms = thread_id_seq2comms_.at(thread_id_seq);
+      for (const TaskProto &task : tasks) {
+        CHECK(actor_id2comm_.emplace(task.task_id(), thread2comms.at(task.thrd_id())).second);
+      }
+    } else {
+      std::map<int64_t, ncclComm_t> thread2comms;
+      ncclUniqueId nccl_unique_id{};
+      NcclGetUniqueId4Tasks(tasks, &nccl_unique_id);
+      std::vector<ncclComm_t> comms(tasks.size());
+      NcclCommInitRank4Tasks(tasks, &comms, nccl_unique_id);
+      FOR_RANGE(size_t, i, 0, tasks.size()) {
+        int32_t device_id;
+        int32_t rank;
+        NcclCheck(ncclCommCuDevice(comms.at(i), &device_id));
+        NcclCheck(ncclCommUserRank(comms.at(i), &rank));
+        LOG(INFO) << "Created nccl communicator for task " << tasks.at(i).task_id() << " with rank "
+                  << rank << " on device " << device_id;
+        CHECK(actor_id2comm_.emplace(tasks.at(i).task_id(), comms.at(i)).second);
+        thread2comms[tasks.at(i).thrd_id()] = comms.at(i);
+      }
+      thread_id_seq2comms_[thread_id_seq] = thread2comms;
     }
   }
 }
 
 NcclCommMgr::~NcclCommMgr() {
-  for (const auto& pair : actor_id2comm_) { ncclCommDestroy(pair.second); }
+  for (const auto& pair : thread_id_seq2comms_) {
+    for (const auto& thread7comm : pair.second) { ncclCommDestroy(thread7comm.second); }
+  }
 }
 
 ncclComm_t NcclCommMgr::NcclComm4ActorId(int64_t actor_id) const {

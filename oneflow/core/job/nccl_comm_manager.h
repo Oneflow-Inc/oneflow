@@ -28,6 +28,7 @@ class NcclCommMgr final {
   int32_t GetDeviceId4Task(const TaskProto& task);
 
   HashMap<int64_t, ncclComm_t> actor_id2comm_;
+  std::map<std::vector<int64_t>, std::map<int64_t, ncclComm_t>> thread_id_seq2comms_;
 };
 
 }  // namespace oneflow
