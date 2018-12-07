@@ -568,7 +568,7 @@ void LogicalGraph::AddAllReduce(LogicalNode* src, LogicalNode* dst, const Reduce
   CHECK_EQ(src_pd->device_type(), dst_pd->device_type());
   {
     // We can not add ctrl edges between all_reduce nodes due to the implementation of nccl.
-    // So we add ctrl edges between ReduceIdentityTaskNode which may be followed by
+    // So we add ctrl edges between ReduceIdentityTaskNodes which are followed by
     // all_reduce nodes;
     OperatorConf reduce_identity_conf;
     reduce_identity_conf.set_name("reduce_identity_" + NewUniqueId());
