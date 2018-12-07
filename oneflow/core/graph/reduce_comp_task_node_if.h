@@ -3,7 +3,7 @@
 
 #include "oneflow/core/register/register_desc.h"
 #include "oneflow/core/graph/compute_task_node.h"
-#include "logical_node.h"
+#include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 

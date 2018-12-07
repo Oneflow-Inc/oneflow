@@ -310,6 +310,7 @@ void AssignStridedAddr(DeviceCtx* ctx, T** dev_ptrs, T* start_ptr, int stride_le
 template<>
 void Memcpy<DeviceType::kGPU>(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
                               cudaMemcpyKind kind) {
+  if (dst == src) { return; }
   CudaCheck(cudaMemcpyAsync(dst, src, sz, kind, ctx->cuda_stream()));
 }
 
