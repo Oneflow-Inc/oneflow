@@ -356,6 +356,7 @@ void LogicalGraph::BuildLossPrintStruct() {
     reduce_loss_op_conf.set_device_type(loss_op->device_type());
     auto reduce_sum_conf = reduce_loss_op_conf.mutable_reduce_sum_conf();
     *(reduce_sum_conf->mutable_in_sys()) = loss_op->BnInOp2Lbi("loss");
+    reduce_sum_conf->add_axis(0);
     reduce_sum_conf->set_out("out");
     std::shared_ptr<Operator> reduce_loss_op = ConstructOp(reduce_loss_op_conf);
     loss_logical->mut_op_vec().push_back(reduce_loss_op);
@@ -562,7 +563,7 @@ void LogicalGraph::AddAllReduce(LogicalNode* src, LogicalNode* dst) {
   std::shared_ptr<const ParallelDesc> dst_pd = dst->parallel_desc();
   CHECK_EQ(src_pd->parallel_num(), dst_pd->parallel_num());
   CHECK_EQ(src_pd->device_type(), dst_pd->device_type());
-  if (Global<JobDesc>::Get()->enable_nccl()) {
+  if (Global<JobDesc>::Get()->enable_nccl() && src_pd->device_type() == DeviceType::kGPU) {
     if (src_pd->sorted_machine_ids().size() == 1
         || Global<JobDesc>::Get()->use_nccl_inter_node_communication()) {
       AddNcclAllReduce(src, dst);

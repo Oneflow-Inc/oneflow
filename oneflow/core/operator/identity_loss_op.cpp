@@ -17,7 +17,8 @@ void IdentityLossOp::VirtualInferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* prediction = GetBlobDesc4BnInOp("prediction");
   BlobDesc* ones = GetBlobDesc4BnInOp("ones");
-  *ones = *prediction;
+  ones->set_data_type(prediction->data_type());
+  ones->mut_shape() = prediction->shape();
 }
 
 REGISTER_OP(OperatorConf::kIdentityLossConf, IdentityLossOp);
