@@ -175,7 +175,6 @@ void ChainLogicalGraph::BuildGraph(const LogicalGraph& logical_graph,
 
 bool ChainLogicalGraph::IsLogicalNodeMergeable(const LogicalNode* logical_node) const {
   if (logical_node->parallel_desc()->policy() != kDataParallel) { return false; }
-  if (!dynamic_cast<const NormalForwardLogicalNode*>(logical_node)) { return false; }
   for (const std::shared_ptr<Operator>& op : logical_node->op_vec()) {
     if (dynamic_cast<FullyConnectedOp*>(op.get())) { return true; }
     if (op->IsRecurrentOp()) { return false; }
