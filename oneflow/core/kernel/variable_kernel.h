@@ -23,6 +23,7 @@ class VariableKernel final : public KernelIfWithModel<device_type, T> {
                              const std::string& model_load_dir,
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   const PbMessage& GetCustomizedOpConf() const override;
+  const std::string& ModelName() const;
 
   std::unique_ptr<int64_t> tick_;
 };
