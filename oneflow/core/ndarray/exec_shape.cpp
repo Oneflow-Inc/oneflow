@@ -1,8 +1,8 @@
-#include "oneflow/core/ndarray/exec_shape.h"
+#include "oneflow/core/ndarray/xpu_shape.h"
 
 namespace oneflow {
 
-ExecShape::ExecShape(const int64_t dim[], int num_axes) {
+XpuShape::XpuShape(const int64_t dim[], int num_axes) {
   num_axes_ = num_axes;
   int i = 0;
   for (; i < num_axes_; ++i) { dim_[i] = dim[i]; }
@@ -13,7 +13,7 @@ ExecShape::ExecShape(const int64_t dim[], int num_axes) {
   }
 }
 
-ExecShape::ExecShape(const Shape& shape) {
+XpuShape::XpuShape(const Shape& shape) {
   num_axes_ = shape.NumAxes();
   int i = 0;
   for (; i < num_axes_; ++i) { dim_[i] = shape.At(i); }
@@ -24,7 +24,7 @@ ExecShape::ExecShape(const Shape& shape) {
   }
 }
 
-bool ExecShape::operator==(const ExecShape& rhs) const {
+bool XpuShape::operator==(const XpuShape& rhs) const {
   if (num_axes_ != rhs.num_axes_) { return false; }
   if (elem_num_ != rhs.elem_num_) { return false; }
   for (int i = 0; i < num_axes_; ++i) {

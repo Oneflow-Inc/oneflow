@@ -225,6 +225,12 @@ enum LossReductionType {
   kSumOverNonZeroWeight = 3;
 }
 
+message SparseCrossEntropyOpConf {
+  required string prediction = 1;
+  required string label = 2;
+  required string out = 3;
+}
+
 message SparseSoftmaxCrossEntropyLossOpConf {
   required string prediction = 1;
   required string label = 2;
@@ -252,6 +258,14 @@ message SigmoidCrossEntropyLossOpConf {
   optional LossReductionType reduction = 6 [default = kSumOverN];
   optional float weight_scalar = 7 [default = 1.0];
   optional string weight = 8;
+}
+
+message IdentityLossOpConf {
+  required string prediction = 1;
+  required string loss = 2;
+  optional LossReductionType reduction = 3 [default = kSumOverN];
+  optional float weight_scalar = 4 [default = 1.0];
+  optional string weight = 5;
 }
 
 message ConcatOpConf {
@@ -361,12 +375,12 @@ message PolynomialDecayConf {
 }
 
 message CosineDecayConf {
-  required int64 decay_batches = 1; 
+  required int64 decay_batches = 1;
   optional double alpha = 2 [default = 0.0];
 }
 
 message LinearCosineDecayConf {
-  required int64 decay_batches = 1; 
+  required int64 decay_batches = 1;
   optional double num_periods = 2 [default = 0.5];
   optional double alpha = 3 [default = 0.0];
   optional double beta = 4 [default = 0.001];
@@ -476,8 +490,15 @@ message ReduceSumOpConf {
     LogicalBlobId in_sys = 2; // For System
   }
   required string out = 3;
-  optional int32 axis = 4;
-  optional bool keepdims = 5 [default = false];
+  repeated int32 axis = 4;
+  optional bool keep_dims = 5 [default = false];
+}
+
+message ReduceMeanOpConf {
+  required string in = 1;
+  required string out = 2;
+  repeated int32 axis = 3;
+  optional bool keep_dims = 4 [default = false];
 }
 
 message BasicRnnOpConf {
@@ -546,7 +567,7 @@ message VariableOpConf {
 message LocalResponseNormalizationOpConf {
   required string in = 1;
   required string out = 2;
-  required string data_format = 3; 
+  required string data_format = 3;
   optional int32 depth_radius = 4 [default = 5];
   optional double bias = 5 [default = 1];
   optional double alpha = 6 [default = 1];
@@ -876,6 +897,34 @@ message DebugOpConf {
   }
 }
 
+message OneHotOpConf {
+  required string indices = 1;
+  required string out = 2;
+  required int64 depth = 3;
+  optional DataType data_type = 4;
+}
+
+message ScalarAddOpConf {
+  required string in = 1;
+  required string out = 2;
+  oneof scalar_operand {
+    int64 int_operand = 3;
+    double float_operand = 4;
+  }
+}
+
+message ScalarMulOpConf {
+  required string in = 1;
+  required string out = 2;
+  oneof scalar_operand {
+    int64 int_operand = 3;
+    double float_operand = 4;
+  }
+}
+
+message ReduceIdentityOpConf {
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -907,6 +956,7 @@ message OperatorConf {
     SharedModelDiffAddOpConf shared_model_diff_add_conf = 120;
     CastOpConf cast_conf = 121;
     VariableOpConf variable_conf = 122;
+    ReduceIdentityOpConf reduce_identity_conf = 123;
 
     // domain op
     TransposeOpConf transpose_conf = 201;
@@ -958,6 +1008,10 @@ message OperatorConf {
     ConstantOpConf constant_conf = 255;
     DebugOpConf debug_conf = 256;
     SigmoidCrossEntropyLossOpConf sigmoid_cross_entropy_loss_conf = 257;
+    OneHotOpConf one_hot_conf = 258;
+    IdentityLossOpConf identity_loss_conf = 259;
+    SparseCrossEntropyOpConf sparse_cross_entropy_conf= 260;
+    ReduceMeanOpConf reduce_mean_conf = 261;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
@@ -967,6 +1021,8 @@ message OperatorConf {
     SquareOpConf square_conf = 504;
     SqrtOpConf sqrt_conf = 505;
     RsqrtOpConf rsqrt_conf = 506;
+    ScalarAddOpConf scalar_add_conf = 507;
+    ScalarMulOpConf scalar_mul_conf = 508;
   }
 }
 

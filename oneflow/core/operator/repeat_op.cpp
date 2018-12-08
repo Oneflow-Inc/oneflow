@@ -26,7 +26,7 @@ int32_t RepeatOp::GetRepeatNum(int64_t parallel_num) const {
     CHECK_EQ(Global<JobDesc>::Get()->PieceSize() % parallel_num, 0);
     int64_t repeat_num =
         Global<JobDesc>::Get()->PieceSize() / parallel_num * conf.repeat_num_per_record();
-    CHECK_LE(repeat_num, static_cast<int64_t>(MaxVal<int32_t>()));
+    CHECK_LE(repeat_num, static_cast<int64_t>(GetMaxVal<int32_t>()));
     return static_cast<int32_t>(repeat_num);
   } else {
     UNIMPLEMENTED();

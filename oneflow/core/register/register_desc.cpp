@@ -60,6 +60,12 @@ void RegstDesc::CopyBlobDescFrom(const RegstDesc* rhs) {
   CopyBlobDescWithoutAddLbi(rhs);
 }
 
+void RegstDesc::CopyMemSharedInfoFrom(const RegstDesc* rhs) {
+  enable_mem_sharing_ = rhs->enable_mem_sharing_;
+  mem_shared_id_ = rhs->mem_shared_id_;
+  mem_shared_offset_ = rhs->mem_shared_offset_;
+}
+
 void RegstDesc::CopyBlobDescWithoutAddLbi(const RegstDesc* rhs) {
   CHECK_EQ(is_locked_, false);
   for (const auto& pair : lbi2blob_desc_) {
@@ -141,6 +147,11 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
   ret->set_enable_mem_sharing(enable_mem_sharing_);
   ret->set_mem_shared_id(mem_shared_id_);
   ret->set_mem_shared_offset(mem_shared_offset_);
+}
+
+bool RegstDesc::HasSameMemSize(const RegstDesc* rhs) {
+  return RtBlobDesc(*(packed_blob_desc_.get())).TotalByteSize()
+         == RtBlobDesc(*(rhs->packed_blob_desc_.get())).TotalByteSize();
 }
 
 bool RegstDesc::HasSameBlobDescs(const RegstDesc* rhs) {

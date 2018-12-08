@@ -28,10 +28,10 @@ class XpuReshapeNdarray final {
 
  private:
   OF_DEVICE_FUNC int64_t Coord2Offset(const int64_t coord[NDIMS]) const {
-    return ExecShapeUtil<NDIMS>::Coord2Offset(shape_, coord);
+    return XpuShapeUtil<NDIMS>::Coord2Offset(shape_, coord);
   }
   const X& x_;
-  ExecShape shape_;
+  XpuShape shape_;
 };
 
 }  // namespace oneflow
