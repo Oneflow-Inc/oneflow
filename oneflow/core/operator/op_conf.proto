@@ -562,6 +562,7 @@ message VariableOpConf {
   required ShapeProto shape = 3;
   optional DataType data_type = 4;
   optional InitializerConf initializer = 5;
+  optional string model_name = 6 [default = "weight"];
 }
 
 message LocalResponseNormalizationOpConf {
