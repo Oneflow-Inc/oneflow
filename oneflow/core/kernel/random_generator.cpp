@@ -14,7 +14,7 @@ void RandomGenerator<DeviceType::kCPU>::Uniform(const int64_t elem_cnt, const T 
   CHECK_GE(elem_cnt, 0);
   CHECK(dptr);
   CHECK_LE(min, max);
-  std::uniform_real_distribution<T> random_distribution(min, std::nextafter(max, MaxVal<T>()));
+  std::uniform_real_distribution<T> random_distribution(min, std::nextafter(max, GetMaxVal<T>()));
   for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = random_distribution(mt19937_generator_); }
 }
 

@@ -128,8 +128,8 @@ void BoxingTaskNode::InitLogical2SortedEdgeInfo(
   for (const TaskEdge* edge : (this->*GetEdges)()) {
     EdgeInfo edge_info;
     edge_info.edge = edge;
-    edge_info.parallel_id_min = MaxVal<int64_t>();
-    edge_info.parallel_id_max = MinVal<int64_t>();
+    edge_info.parallel_id_min = GetMaxVal<int64_t>();
+    edge_info.parallel_id_max = GetMinVal<int64_t>();
     std::queue<const TaskNode*> node_queue;
     node_queue.push((edge->*SoleNode)());
     const LogicalNode* logical = nullptr;

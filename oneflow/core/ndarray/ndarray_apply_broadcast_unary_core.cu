@@ -15,7 +15,7 @@ template<typename T, int NDIMS, const T (*unary_func)(const T)>
 struct NdArrayApplyBroadcastUnaryCoreWrapper<DeviceType::kGPU, T, NDIMS, unary_func> final {
   static void Apply(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
     size_t n = y.host_shape().HostElemNum();
-    GpuBroadcastUnaryFunc<T, NDIMS, unary_func> WITH_CUDA_PARAM(ctx, n, y, x);
+    RUN_CUDA_KERNEL((GpuBroadcastUnaryFunc<T, NDIMS, unary_func>), ctx, n, y, x);
   }
 };
 

@@ -133,7 +133,10 @@ class Operator {
     UNIMPLEMENTED();
   }
   virtual void FixInDiffBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                  const ParallelContext*) const {}
+                                  const ParallelContext*) const;
+  virtual void VirtualFixInDiffBlobDescs(
+      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext*) const {}
 
   void FixParallelDesc(ParallelDesc* pr_desc) const;
   void FixLbiWhenShareModel(const std::string& shared_op_name);

@@ -10,10 +10,7 @@ void NormalBackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("bw_buf", true, 1, 1);
   for (TaskEdge* edge : out_edges()) {
     const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
-    if (succ_logical->TypeName() == "MdDiffAcc" || succ_logical->TypeName() == "NormalMdUpdt"
-        || succ_logical->TypeName() == "ReduceScatter" || succ_logical->TypeName() == "ReduceConcat"
-        || succ_logical->TypeName() == "NcclAllReduce"
-        || succ_logical->TypeName() == "NcclReduceScatter") {
+    if (succ_logical->MayConsumeModelDiff()) {
       edge->AddRegst("model_diff", ProduceRegst("model_diff", true));
       type_name4model_related_logical_node_ = succ_logical->TypeName();
     } else {

@@ -9,7 +9,7 @@ void BoxingActor::VirtualActorInit(const TaskProto& task_proto) {
   OF_SET_MSG_HANDLER(&BoxingActor::HandlerNormal);
 }
 
-void BoxingActor::NormalProcessNaiveReadableRegstMsg(const std::deque<Regst*>& rq) {
+void BoxingActor::NormalProcessNaiveReadableDataRegstMsg(const std::deque<Regst*>& rq) {
   if (rq.back()->packed_blob()->max_col_num() > 1 && col_id_order_ == ColIdOrder::kUnCertain) {
     TrySetColIdOrder(rq.back());
   }

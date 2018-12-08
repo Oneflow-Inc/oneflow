@@ -25,6 +25,12 @@ void AdamMdUpdateKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937* random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const auto& adam_conf = this->op_conf().normal_mdupdt_conf().user_conf().adam_conf();
+  InitializerConf m_init_conf;
+  InitializerConf v_init_conf;
+  m_init_conf.mutable_constant_conf()->set_value(0.0f);
+  v_init_conf.mutable_constant_conf()->set_value(0.0f);
+  KernelUtil<device_type, T>::InitializeWithProperConf(ctx, &m_init_conf, 0, BnInOp2Blob("m"));
+  KernelUtil<device_type, T>::InitializeWithProperConf(ctx, &v_init_conf, 0, BnInOp2Blob("v"));
   if (!adam_conf.do_bias_correction()) { return; }
   InitializerConf beta1_init_conf;
   InitializerConf beta2_init_conf;
@@ -41,6 +47,12 @@ void AdamMdUpdateKernel<device_type, T>::InitModelBlobsWithDir(
     DeviceCtx* ctx, int32_t part_id, int32_t part_num, const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const auto& adam_conf = this->op_conf().normal_mdupdt_conf().user_conf().adam_conf();
+  Blob* m_blob = BnInOp2Blob("m");
+  Blob* v_blob = BnInOp2Blob("v");
+  KernelUtil<device_type, T>::InitializeWithDir(ctx, part_id, part_num, model_load_dir, m_blob, "m",
+                                                m_blob->shape().At(0), m_blob->shape().Count(1));
+  KernelUtil<device_type, T>::InitializeWithDir(ctx, part_id, part_num, model_load_dir, v_blob, "v",
+                                                v_blob->shape().At(0), v_blob->shape().Count(1));
   if (!adam_conf.do_bias_correction()) { return; }
   Blob* beta1_t_blob = BnInOp2Blob("beta1_t");
   Blob* beta2_t_blob = BnInOp2Blob("beta2_t");
@@ -63,16 +75,11 @@ void AdamMdUpdateKernel<device_type, T>::UpdateModel(
   Blob* beta2_t_blob = BnInOp2Blob("beta2_t");
   const AdamModelUpdateConf& adam_conf =
       this->op_conf().normal_mdupdt_conf().user_conf().adam_conf();
-  if (next_model_vid == 1) {
-    Memset<device_type>(ctx, m_blob->mut_dptr<T>(), 0, m_blob->ByteSizeOfDataContentField());
-    Memset<device_type>(ctx, v_blob->mut_dptr<T>(), 0, v_blob->ByteSizeOfDataContentField());
-  } else {
-    if (adam_conf.do_bias_correction()) {
-      KernelUtil<device_type, T>::Scal(ctx, 1, static_cast<T>(adam_conf.beta1()),
-                                       beta1_t_blob->mut_dptr<T>(), 1);
-      KernelUtil<device_type, T>::Scal(ctx, 1, static_cast<T>(adam_conf.beta2()),
-                                       beta2_t_blob->mut_dptr<T>(), 1);
-    }
+  if ((next_model_vid != 1) && adam_conf.do_bias_correction()) {
+    KernelUtil<device_type, T>::Scal(ctx, 1, static_cast<T>(adam_conf.beta1()),
+                                     beta1_t_blob->mut_dptr<T>(), 1);
+    KernelUtil<device_type, T>::Scal(ctx, 1, static_cast<T>(adam_conf.beta2()),
+                                     beta2_t_blob->mut_dptr<T>(), 1);
   }
   AdamMdUpdateKernelUtil<device_type, T>::UpdateModel(
       ctx, model_blob->shape().elem_cnt(), batch_instance_num_ptr, learning_rate, l1, l2,
