@@ -2,6 +2,18 @@
 
 namespace oneflow {
 
+namespace {
+
+int64_t GetGatherAxis(const GatherOpConf& conf, const BlobDesc* in_blob_desc) {
+  const int64_t axis =
+      conf.axis() < 0 ? in_blob_desc->shape().NumAxes() + conf.axis() : conf.axis();
+  CHECK_GE(axis, 0);
+  CHECK_LT(axis, in_blob_desc->shape().NumAxes());
+  return axis;
+}
+
+}  // namespace
+
 void GatherOp::InitFromOpConf() {
   CHECK(op_conf().has_gather_conf());
   EnrollInputBn("indices", false);
@@ -13,18 +25,29 @@ const PbMessage& GatherOp::GetCustomizedConf() const { return op_conf().gather_c
 
 void GatherOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext* parallel_ctx) const {
-  const BlobDesc* indices_blob_desc = GetBlobDesc4BnInOp("indices");
-  CHECK_EQ(indices_blob_desc->data_type(), DataType::kInt32);
-  CHECK_GE(indices_blob_desc->shape().NumAxes(), 1);
-  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-  CHECK_GE(in_blob_desc->shape().NumAxes(), 1);
-  BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  *out_blob_desc = *indices_blob_desc;
-  out_blob_desc->set_data_type(in_blob_desc->data_type());
-  std::vector<int64_t> out_shape_dim_vec = indices_blob_desc->shape().dim_vec();
-  out_shape_dim_vec.insert(out_shape_dim_vec.end(), in_blob_desc->shape().dim_vec().cbegin() + 1,
-                           in_blob_desc->shape().dim_vec().cend());
-  out_blob_desc->mut_shape() = Shape(out_shape_dim_vec);
+  const BlobDesc* indices = GetBlobDesc4BnInOp("indices");
+  CHECK(IsIntegralDataType(indices->data_type()));
+  CHECK_GT(indices->shape().NumAxes(), 0);
+  const BlobDesc* in = GetBlobDesc4BnInOp("in");
+  CHECK_GT(in->shape().NumAxes(), 0);
+  const int64_t axis = GetGatherAxis(op_conf().gather_conf(), in);
+  BlobDesc* out = GetBlobDesc4BnInOp("out");
+  *out = *in;
+  std::vector<int64_t> dim_vec;
+  dim_vec.insert(dim_vec.end(), in->shape().dim_vec().cbegin(),
+                 in->shape().dim_vec().cbegin() + axis);
+  dim_vec.insert(dim_vec.end(), indices->shape().dim_vec().cbegin(),
+                 indices->shape().dim_vec().cend());
+  dim_vec.insert(dim_vec.end(), in->shape().dim_vec().cbegin() + axis + 1,
+                 in->shape().dim_vec().end());
+  out->mut_shape() = Shape(dim_vec);
+}
+
+void GatherOp::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+  const int64_t axis = GetGatherAxis(op_conf().gather_conf(), GetBlobDesc4BnInOp("in"));
+  kernel_conf->mutable_gather_conf()->set_axis(axis);
 }
 
 REGISTER_OP(OperatorConf::kGatherConf, GatherOp);
