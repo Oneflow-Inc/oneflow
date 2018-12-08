@@ -45,6 +45,10 @@ message SigmoidCrossEntropyLossKernelConf {
     required LossKernelConf loss_conf = 1;
 }
 
+message IdentityLossKernelConf {
+  required LossKernelConf loss_conf = 1;
+}
+
 message PoolingKernelConf {
   required ShapeProto in = 1;
   required ShapeProto out = 2;
@@ -65,7 +69,7 @@ message MaxPoolingKernelConf {
 }
 
 message ReduceSumKernelConf {
-  optional int32 axis = 1;
+  required ShapeProto kept_dims_shape = 1;
 }
 
 message SoftmaxKernelConf {
@@ -197,6 +201,7 @@ message KernelConf {
     SliceKernelConf slice_conf = 402;
     ConstantKernelConf constant_conf = 403;
     SigmoidCrossEntropyLossKernelConf sigmoid_cross_entropy_loss_conf = 404;
-    GatherKernelConf gather_conf = 405;
+    IdentityLossKernelConf identity_loss_conf = 405;
+    GatherKernelConf gather_conf = 406;
   }
 }

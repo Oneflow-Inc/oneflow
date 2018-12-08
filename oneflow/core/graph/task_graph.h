@@ -20,8 +20,10 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   const char* TypeName() const override { return "TaskGraph"; }
   void RemoveEmptyRegsts();
   void AddOrderingCtrlEdgeInSameChain();
+  void AddReduceCtrlEdges();
 
   void EnableMemSharingInReduceStruct();
+  void EnableMemSharingAfterAllManualSetForMdUpdt();
 
   void AddOrderCtrlEdgeBetweenCopyAndMdUpdt();
   void RmUselessConsumeRelationshipBetweenFwBw();
