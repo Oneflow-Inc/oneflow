@@ -61,7 +61,7 @@ LogicalGraph::LogicalGraph(bool is_train) {
 void LogicalGraph::GroupNodesForReduceStruct() {
   ChainLogicalGraph chain_logical_graph(*this);
   std::vector<std::vector<const LogicalNode*>> fw_node_groups;
-  chain_logical_graph.ForEachNode(
+  chain_logical_graph.TopoForEachNode(
       [&](ChainLogicalNode* node) { fw_node_groups.emplace_back(node->logical_nodes()); });
   for (auto& fw_node_group : fw_node_groups) {
     if (fw_node_group.size() < Global<JobDesc>::Get()->reduce_group_size()) {
@@ -509,8 +509,10 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
       }
     }
   });
-  for (auto& fw_node_group : fw_node_groups_) {
+  for (int i = 0; i < fw_node_groups_.size(); ++i) {
+    auto& fw_node_group = fw_node_groups_[i];
     ReduceCtx group_reduce_ctx;
+    group_reduce_ctx.order_in_logical_graph = i;
     for (auto& fw_node : fw_node_group) {
       auto reduce_ctx_it = fw_node2reduce_ctx.find(fw_node);
       if (reduce_ctx_it != fw_node2reduce_ctx.end()) {
@@ -552,17 +554,34 @@ void LogicalGraph::BuildReduceStruct(const ReduceCtx& reduce_ctx) {
     for (auto& md_updt_node : reduce_ctx.md_updt_logicals) {
       Connect(reduce_split_node, NewEdge(), md_updt_node);
     }
-    AddAllReduce(reduce_concat_node, reduce_split_node);
+    AddAllReduce(reduce_concat_node, reduce_split_node, reduce_ctx);
   } else if (reduce_ctx.fw_logicals.size() == 1) {
-    AddAllReduce(reduce_ctx.md_diff_acc_logicals.at(0), reduce_ctx.md_updt_logicals.at(0));
+    AddAllReduce(reduce_ctx.md_diff_acc_logicals.at(0), reduce_ctx.md_updt_logicals.at(0),
+                 reduce_ctx);
   }
 }
 
-void LogicalGraph::AddAllReduce(LogicalNode* src, LogicalNode* dst) {
+void LogicalGraph::AddAllReduce(LogicalNode* src, LogicalNode* dst, const ReduceCtx& reduce_ctx) {
   std::shared_ptr<const ParallelDesc> src_pd = src->parallel_desc();
   std::shared_ptr<const ParallelDesc> dst_pd = dst->parallel_desc();
   CHECK_EQ(src_pd->parallel_num(), dst_pd->parallel_num());
   CHECK_EQ(src_pd->device_type(), dst_pd->device_type());
+  {
+    // We can not add ctrl edges between all_reduce nodes due to the implementation of nccl.
+    // So we add ctrl edges between ReduceIdentityTaskNodes which are followed by
+    // all_reduce nodes;
+    OperatorConf reduce_identity_conf;
+    reduce_identity_conf.set_name("reduce_identity_" + NewUniqueId());
+    reduce_identity_conf.set_device_type(src_pd->device_type());
+    reduce_identity_conf.mutable_reduce_identity_conf();
+    auto* reduce_identity_node = NewNode<ReduceIdentityLogicalNode>();
+    reduce_identity_node->mut_op_vec() = {ConstructOp(reduce_identity_conf)};
+    reduce_identity_node->mut_parallel_desc() = src_pd;
+    reduce_identity_node->set_order_in_logical_graph(reduce_ctx.order_in_logical_graph);
+    reduce_identity_node->set_first_fw_logical_node(reduce_ctx.fw_logicals.at(0));
+    Connect(src, NewEdge(), static_cast<LogicalNode*>(reduce_identity_node));
+    src = reduce_identity_node;
+  }
   if (Global<JobDesc>::Get()->enable_nccl() && src_pd->device_type() == DeviceType::kGPU) {
     if (src_pd->sorted_machine_ids().size() == 1
         || Global<JobDesc>::Get()->use_nccl_inter_node_communication()) {

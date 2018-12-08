@@ -76,6 +76,11 @@ int64_t IDMgr::GlobalWorkStreamId4ActorId(int64_t actor_id) const {
   return GlobalWorkStreamId4TaskId(actor_id);
 }
 
+int64_t IDMgr::GlobalDeviceId4TaskId(int64_t task_id) const {
+  int shift = local_work_stream_id_bit_num_ + task_id_bit_num_;
+  return (task_id >> shift) << shift;
+}
+
 int64_t IDMgr::LocalWorkStreamId4TaskId(int64_t task_id) const {
   int64_t tmp = (task_id << (machine_id_bit_num_ + thread_id_bit_num_));
   tmp &= ~(static_cast<int64_t>(1) << 63);
