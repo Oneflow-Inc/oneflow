@@ -30,9 +30,10 @@ NcclCommMgr::NcclCommMgr(const Plan& plan) {
   }
 
   for (auto& pair : rank_set2nccl_tasks) {
-    std::sort(pair.second.begin(), pair.second.end(), [](const TaskProto& lhs, const TaskProto& rhs) {
-      return lhs.parallel_ctx().rank_ctx().rank_id() < rhs.parallel_ctx().rank_ctx().rank_id();
-    });
+    std::sort(
+        pair.second.begin(), pair.second.end(), [](const TaskProto& lhs, const TaskProto& rhs) {
+          return lhs.parallel_ctx().rank_ctx().rank_id() < rhs.parallel_ctx().rank_ctx().rank_id();
+        });
   }
 
   for (const auto& pair : rank_set2nccl_tasks) {
@@ -41,7 +42,7 @@ NcclCommMgr::NcclCommMgr(const Plan& plan) {
     for (const TaskProto& task : tasks) { thread_id_seq.push_back(task.thrd_id()); }
     if (thread_id_seq2comms_.find(thread_id_seq) != thread_id_seq2comms_.end()) {
       const std::map<int64_t, ncclComm_t>& thread2comms = thread_id_seq2comms_.at(thread_id_seq);
-      for (const TaskProto &task : tasks) {
+      for (const TaskProto& task : tasks) {
         CHECK(actor_id2comm_.emplace(task.task_id(), thread2comms.at(task.thrd_id())).second);
       }
     } else {
