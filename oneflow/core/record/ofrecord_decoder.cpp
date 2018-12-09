@@ -86,6 +86,59 @@ int32_t OFRecordDecoder<encode_case, T>::DecodeOneCol(
 }
 
 template<EncodeCase encode_case, typename T>
+bool OFRecordDecoder<encode_case, T>::Decode(DeviceCtx* ctx, const PredictParams& params,
+                                             Blob* out_blob,
+                                             std::function<int32_t(void)> NextRandomInt) const {
+  bool ret = false;
+
+  const std::vector<std::string>& buffers = params.buffers;
+  int32_t max_col = params.max_col;
+  const std::string& data_id = params.data_id;
+  const std::string& data_name = params.data_name;
+  int64_t id = params.tag_id;
+
+  int64_t ele_cnt = out_blob->shape().Count(1);
+  int64_t max_data_id_size = Global<JobDesc>::Get()->SizeOfOneDataId();
+
+  try {
+    for (int i = 0; i < buffers.size(); ++i) {
+      for (int col_id = 0; col_id < max_col; ++col_id) {
+        OFRecord record;
+        bool r = record.ParseFromArray(buffers[i].data(), buffers[i].size());
+        if (!r) {
+          LOG(ERROR) << "OFRecord parse error at elelemt " << i;
+          return false;
+        }
+        if (out_blob->has_data_id_field()) {
+          const Feature& feature = record.feature().at(data_id);
+          CHECK_EQ(feature.bytes_list().value_size(), 1);
+          const std::string& data_id_str = feature.bytes_list().value(0);
+          CHECK_LE(data_id_str.size(), max_data_id_size);
+          std::string data_id = data_id_str + "_" + std::to_string(id);
+          memcpy(out_blob->mut_data_id(i), data_id.c_str(), data_id.size());
+          if (data_id_str.size() != max_data_id_size) {
+            *(out_blob->mut_data_id(i) + data_id.size()) = '\0';
+          }
+        }
+
+        auto it = record.feature().find(data_name);
+        if (it != record.feature().end()) {
+          ReadOneCol(ctx, it->second, {}, col_id, out_blob->mut_dptr<T>() + i * ele_cnt, ele_cnt,
+                     NextRandomInt);
+        }
+      }
+    }
+    ret = true;
+  } catch (std::runtime_error& error) {
+    LOG(ERROR) << "runtime error in DecodeInStreamKernel: " << error.what();
+  } catch (std::exception& ex) {
+    LOG(ERROR) << "exception in DecodeInStreamKernel: " << ex.what();
+  } catch (...) { LOG(ERROR) << "unknown error in DecodeInStreamKernel"; }
+
+  return ret;
+}
+
+template<EncodeCase encode_case, typename T>
 int32_t OFRecordDecoder<encode_case, T>::ReadColNum(DeviceCtx* ctx, Blob* in_blob,
                                                     const std::string& name, Blob* out_blob) const {
   int32_t i = 0;

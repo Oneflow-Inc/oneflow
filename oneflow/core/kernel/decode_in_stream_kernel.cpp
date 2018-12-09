@@ -1,54 +1,31 @@
-#include <oneflow/core/rpc_service/codec.h>
+#include "oneflow/core/rpc_service/common.h"
+#include "oneflow/core/kernel/decode_ofrecord_kernel.h"
+#include "oneflow/core/record/ofrecord_decoder.h"
 #include "oneflow/core/kernel/decode_in_stream_kernel.h"
 
 namespace oneflow {
 
-template<DeviceType device_type>
-void DecodeInStreamKernel<device_type>::Forward(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  auto& conn_buffer_pair = *static_cast<std::pair<int64_t, std::vector<std::string>>*>(ctx.other);
+void DecodeInStreamKernel::Forward(const KernelCtx& ctx,
+                                   std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  auto& predic_params = *static_cast<PredictParams*>(ctx.other);
 
-  auto conn_id = std::to_string(std::get<0>(conn_buffer_pair));
-  auto& buffers = std::get<1>(conn_buffer_pair);
+  auto conn_id = std::to_string(predic_params.tag_id);
+  auto encode_case = static_cast<EncodeCase>(predic_params.encode_case);
+  auto data_type = static_cast<DataType>(predic_params.data_type);
+
+  auto& buffers = predic_params.buffers;
+  if (buffers.size() > Global<JobDesc>::Get()->PieceSize()) {
+    LOG(ERROR) << "number of predict buffers is more than piecesize";
+    return;
+  }
+
   Blob* out_blob = BnInOp2Blob("out");
   out_blob->set_dim0_valid_num(0, buffers.size());
-  int64_t ele_cnt = out_blob->shape().Count(1);
-  int64_t max_data_id_size = Global<JobDesc>::Get()->SizeOfOneDataId();
 
-  try {
-    for (int i = 0; i < buffers.size(); ++i) {
-      OFRecord record;
-      bool r = record.ParseFromArray(buffers[i].data(), buffers[i].size());
-      if (!r) {
-        LOG(ERROR) << "OFRecord parse error at elelemt " << i;
-        return;
-      }
-      if (out_blob->has_data_id_field()) {
-        const Feature& feature = record.feature().at("data_id");
-        CHECK_EQ(feature.bytes_list().value_size(), 1);
-        const std::string& data_id_str = feature.bytes_list().value(0);
-        CHECK_LE(data_id_str.size(), max_data_id_size);
-        std::string data_id = data_id_str + "_" + conn_id;
-        memcpy(out_blob->mut_data_id(i), data_id.c_str(), data_id.size());
-        if (data_id_str.size() != max_data_id_size) {
-          *(out_blob->mut_data_id(i) + data_id.size()) = '\0';
-        }
-      }
-
-      auto it = record.feature().find("img_raw");
-      if (it != record.feature().end() && out_blob->data_type() == DataType::kFloat) {
-        auto in_ptr = it->second.float_list().value().data();
-        float* out_ptr = out_blob->mut_dptr<float>() + i * ele_cnt;
-        memcpy(out_ptr, in_ptr, ele_cnt);
-      }
-    }
-  } catch (std::runtime_error& error) {
-    LOG(ERROR) << "runtime error in DecodeInStreamKernel: " << error.what();
-  } catch (std::exception& ex) {
-    LOG(ERROR) << "exception in DecodeInStreamKernel: " << ex.what();
-  } catch (...) { LOG(ERROR) << "unknown error in DecodeInStreamKernel"; }
+  OFRecordDecoderIf* decoder = GetOFRecordDecoder(encode_case, data_type);
+  decoder->Decode(ctx.device_ctx, predic_params, out_blob, nullptr);
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kDecodeInStreamConf, DecodeInStreamKernel);
+REGISTER_KERNEL(OperatorConf::kDecodeInStreamConf, DecodeInStreamKernel);
 
 }  // namespace oneflow

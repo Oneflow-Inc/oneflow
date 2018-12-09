@@ -1,5 +1,4 @@
 #include "oneflow/core/actor/decode_in_stream_actor.h"
-#include "oneflow/core/actor/of_serving.h"
 
 namespace oneflow {
 
@@ -11,7 +10,7 @@ void DecodeInStreamActor::Act() {
   Regst* regst = GetNaiveCurWriteable("out");
   regst->set_piece_id(piece_id_++);
 
-  ConnBufferPair records;
+  PredictParams records;
   Global<OFServing>::Get()->InChannel().Receive(&records);
 
   KernelCtx ctx = GenDefaultKernelCtx();
