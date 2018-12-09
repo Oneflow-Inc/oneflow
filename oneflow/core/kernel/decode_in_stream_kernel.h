@@ -5,8 +5,8 @@
 
 namespace oneflow {
 
-template<DeviceType device_type>
-class DecodeInStreamKernel final : public KernelIf<device_type> {
+// template<DeviceType device_type>
+class DecodeInStreamKernel final : public KernelIf<DeviceType::kCPU> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DecodeInStreamKernel);
   DecodeInStreamKernel() = default;
@@ -15,11 +15,6 @@ class DecodeInStreamKernel final : public KernelIf<device_type> {
  private:
   void Forward(const KernelCtx& ctx,
                std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  //  void VirtualKernelInit(const ParallelContext*) override;
-  mutable bool is_init_;
-  std::ifstream file_;
-  int64_t cur_read_size_;
-  int64_t total_size_;
 };
 
 }  // namespace oneflow
