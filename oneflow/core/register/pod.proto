@@ -22,6 +22,7 @@ enum FieldKey {
   kDim1ValidNum = 4;
   kDim2ValidNum = 5;
   kRecordIdInDevicePiece = 6;
+  kInstanceShape = 7;
 }
 
 message FieldId {
