@@ -93,6 +93,18 @@ void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> Get
   if (op_attribute_.model_bns().size() > 0) {
     InferTotalInstanceNumDesc(GetBlobDesc4BnInOp, parallel_ctx, EnrollOpCtx);
   }
+  // check only in/out blob has instance shape
+  for (const auto& pair : op_attribute_.bn_in_op2lbi()) {
+    auto it = std::find(input_bns().begin(), input_bns().end(), pair.first);
+    if (it != input_bns().end()) { continue; }
+    it = std::find(input_diff_bns().begin(), input_diff_bns().end(), pair.first);
+    if (it != input_diff_bns().end()) { continue; }
+    it = std::find(output_bns().begin(), output_bns().end(), pair.first);
+    if (it != output_bns().end()) { continue; }
+    it = std::find(output_diff_bns().begin(), output_diff_bns().end(), pair.first);
+    if (it != output_diff_bns().end()) { continue; }
+    CHECK(!GetBlobDesc4BnInOp(pair.first)->has_instance_shape_field());
+  }
 }
 
 void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -233,6 +245,11 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
                                     &BlobDesc::has_record_id_in_device_piece_field)) {
         kernel_conf->set_can_naive_do_record_id_in_device_piece(true);
       }
+    }
+    if (is_forward
+        && HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(),
+                                &BlobDesc::has_instance_shape_field)) {
+      kernel_conf->set_need_do_instance_shape(true);
     }
   }
 

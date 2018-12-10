@@ -227,7 +227,14 @@ void NormalBackwardCompTaskNode::RmUselessConsumeRelationshipToFw() {
       need_out_blob = need_out_blob || node->op()->NeedOutBlobWhenBackwardIf();
     }
   });
-  if (need_in_blob == false) { EraseConsumedRegstsByName("in"); }
+  if (need_in_blob == false) {
+    for (std::shared_ptr<RegstDesc> regst : GetConsumedRegst("in")) {
+      regst->ForEachLbi([&](const LogicalBlobId& lbi) {
+        CHECK(!regst->GetBlobDesc(lbi)->has_instance_shape_field());
+      });
+    }
+    EraseConsumedRegstsByName("in");
+  }
   if (need_out_blob == false) { EraseConsumedRegstsByName("out"); }
 }
 

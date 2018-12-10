@@ -45,6 +45,8 @@ void DecodeOFRecordOp::InferBlobDescs(
     const auto* decoder_if = GetOFRecordDecoder(encode.encode_case(), blob_conf.data_type());
     out_blob_desc->set_has_dim1_valid_num_field(decoder_if->HasDim1ValidNumField(encode));
     out_blob_desc->set_has_dim2_valid_num_field(decoder_if->HasDim2ValidNumField(encode));
+    if (blob_conf.use_dynamic_shape()) { CHECK(blob_conf.encode_case().has_jpeg()); }
+    out_blob_desc->set_has_instance_shape_field(blob_conf.use_dynamic_shape());
   }
 }
 
