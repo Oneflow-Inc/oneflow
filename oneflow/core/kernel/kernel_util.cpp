@@ -143,9 +143,14 @@ void MsraInitializer(const MsraInitializerConf& initializer_conf, uint32_t rando
 }
 
 template<typename T>
-void RangeInitializer(int64_t num_rows, int64_t num_cols, T start, T stride, T* out) {
-  FOR_RANGE(int64_t, r, 0, num_rows) {
-    FOR_RANGE(int64_t, c, 0, num_cols) { *(out + r * num_cols + c) = start + c * stride; }
+void RangeInitializer(int64_t outer_size, int64_t idx_dim_size, int64_t inner_size, T start,
+                      T stride, T* out) {
+  FOR_RANGE(int64_t, i, 0, outer_size) {
+    FOR_RANGE(int64_t, j, 0, idx_dim_size) {
+      FOR_RANGE(int64_t, k, 0, inner_size) {
+        *(out + i * idx_dim_size * inner_size + j * inner_size + k) = start + j * stride;
+      }
+    }
   }
 }
 
@@ -153,9 +158,13 @@ template<typename T, typename RangeInitializerConfT>
 void RangeInitializer(const RangeInitializerConfT& initializer_conf, uint32_t random_seed,
                       Blob* blob) {
   CHECK_GT(blob->shape().NumAxes(), 0);
-  int64_t num_cols = blob->shape().At(blob->shape().NumAxes() - 1);
-  int64_t num_rows = blob->shape().elem_cnt() / num_cols;
-  RangeInitializer<T>(num_rows, num_cols, static_cast<T>(initializer_conf.start()),
+  const int64_t axis = initializer_conf.axis() < 0
+                           ? blob->shape().NumAxes() + initializer_conf.axis()
+                           : initializer_conf.axis();
+  CHECK_GE(axis, 0);
+  CHECK_LT(axis, blob->shape().NumAxes());
+  RangeInitializer<T>(blob->shape().Count(0, axis), blob->shape().At(axis),
+                      blob->shape().Count(axis + 1), static_cast<T>(initializer_conf.start()),
                       static_cast<T>(initializer_conf.stride()), blob->mut_dptr<T>());
 }
 
