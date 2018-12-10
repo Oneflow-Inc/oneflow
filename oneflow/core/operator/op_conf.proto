@@ -930,6 +930,11 @@ message ScalarMulOpConf {
 message ReduceIdentityOpConf {
 }
 
+message IdentityOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -964,6 +969,7 @@ message OperatorConf {
     ReduceIdentityOpConf reduce_identity_conf = 123;
 
     // domain op
+    IdentityOpConf identity_conf = 200;
     TransposeOpConf transpose_conf = 201;
     ReshapeOpConf reshape_conf = 202;
     BasicRnnOpConf basic_rnn_conf = 203;
