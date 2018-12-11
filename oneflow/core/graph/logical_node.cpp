@@ -435,14 +435,6 @@ BackwardLogicalNode* NormalForwardLogicalNode::NewCorrectBackwardNode() {
   return new NormalBackwardLogicalNode;
 }
 
-BackwardLogicalNode* VariableLogicalNode::NewCorrectBackwardNode() {
-  return new NormalBackwardLogicalNode;
-}
-
-std::string VariableLogicalNode::TypeName() const { return "VariableForward"; }
-CompTaskNode* VariableLogicalNode::NewCompTaskNode() const { return new NormalForwardCompTaskNode; }
-int64_t VariableLogicalNode::GetAreaId() const { return kMdUpdtArea; }
-
 void NormalMdUpdtLogicalNode::FixCompTaskNode(CompTaskNode* node) const {
   NormalMdUpdtCompTaskNode* normal_mdupdt_node = static_cast<NormalMdUpdtCompTaskNode*>(node);
   if (parallel_desc()->policy() == ParallelPolicy::kDataParallel) {
