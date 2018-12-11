@@ -42,7 +42,6 @@ enum TaskType {
   kRepeatForward = 34;
   kRepeatBackward = 35;
   kReduceIdentity = 36;
-  kTick = 37;
 };
 
 enum AreaType {
