@@ -17,6 +17,7 @@ class ParallelDesc {
   ParallelDesc() = delete;
   ~ParallelDesc() = default;
 
+  ParallelDesc(const ParallelDesc&) = default;
   ParallelDesc(const ParallelConf& user_conf);
 
   // Getters
@@ -39,6 +40,7 @@ class ParallelDesc {
 
   //
   bool Equal(const ParallelDesc& rhs) const;
+  bool operator==(const ParallelDesc& rhs) const { return Equal(rhs); }
   bool Equal(const ParallelDesc* rhs) const { return Equal(*rhs); }
 
  private:
@@ -57,5 +59,21 @@ std::tuple<int32_t, int32_t> GetPartIdAndPartNumFromParallelCtx(
     const ParallelContext* parallel_ctx);
 
 }  // namespace oneflow
+
+namespace std {
+
+template<>
+struct hash<oneflow::ParallelDesc> {
+  size_t operator()(const oneflow::ParallelDesc& pr) const {
+    std::string str;
+    for (int machine_id : pr.sorted_machine_ids()) {
+      str += "::" + std::to_string(machine_id) + ":";
+      for (int dev_id : pr.sorted_dev_phy_ids(machine_id)) { str += std::to_string(dev_id) + ","; }
+    }
+    return hash<std::string>()(str);
+  }
+};
+
+}  // namespace std
 
 #endif  // ONEFLOW_CORE_JOB_PARALLEL_DESC_H_
