@@ -931,7 +931,7 @@ message ReduceIdentityOpConf {
 }
 
 message TickOpConf {
-  required string in = 1;
+  optional string in = 1;
   required string out = 2;
 }
 

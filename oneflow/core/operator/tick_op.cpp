@@ -3,8 +3,8 @@
 namespace oneflow {
 
 void TickOp::InitFromOpConf() {
-  EnrollInputBn("in");
-  EnrollOutputBn("out");
+  EnrollInputBn("in", false);
+  EnrollOutputBn("out", false);
 }
 
 void TickOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -15,6 +15,6 @@ void TickOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   out->mut_shape() = Shape({1});
 }
 
-REGISTER_OP(OperatorConf::kTickConf, TickOp);
+REGISTER_CPU_OP(OperatorConf::kTickConf, TickOp);
 
 }  // namespace oneflow
