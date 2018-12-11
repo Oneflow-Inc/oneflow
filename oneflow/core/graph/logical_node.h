@@ -164,6 +164,15 @@ class VariableLogicalNode final : public ForwardLogicalNode {
  private:
 };
 
+class TickLogicalNode final : public ForwardLogicalNode {
+ public:
+  LOGICAL_NODE_BOILERPLATE(TickLogicalNode);
+
+  BackwardLogicalNode* NewCorrectBackwardNode() override { UNIMPLEMENTED(); }
+
+ private:
+};
+
 int64_t NewAreaId();
 
 #define LOGICAL_NODE_WITH_NEW_AREA_ID_BOILERPLATE(name)                             \
