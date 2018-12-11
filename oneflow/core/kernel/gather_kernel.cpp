@@ -2,6 +2,46 @@
 
 namespace oneflow {
 
+namespace {
+
+Shape GetFlatShape(const Shape& shape, int64_t axis) {
+  CHECK_GT(shape.NumAxes(), 0);
+  CHECK_GE(axis, 0);
+  CHECK_LT(axis, shape.NumAxes());
+  return Shape({shape.Count(0, axis), shape.At(axis), shape.Count(axis + 1)});
+}
+
+template<DeviceType device_type, typename T, typename K>
+void GatherForward(DeviceCtx* ctx, const Blob* indices, const Blob* in, int64_t axis, Blob* out) {
+  const Shape flat_in_shape = GetFlatShape(in->shape(), axis);
+  GatherKernelUtil<device_type, T, K>::Forward(ctx, indices->dptr<K>(), indices->shape().elem_cnt(),
+                                               in->dptr<T>(), flat_in_shape, out->mut_dptr<T>());
+}
+
+template<DeviceType device_type, typename T, typename K>
+void GatherBackward(DeviceCtx* ctx, const Blob* indices, const Blob* out_diff, int64_t axis,
+                    Blob* in_diff) {
+  Memset<device_type>(ctx, in_diff->mut_dptr<T>(), 0, in_diff->ByteSizeOfDataContentField());
+  const Shape flat_in_shape = GetFlatShape(in_diff->shape(), axis);
+  GatherKernelUtil<device_type, T, K>::Backward(ctx, indices->dptr<K>(),
+                                                indices->shape().elem_cnt(), out_diff->dptr<T>(),
+                                                flat_in_shape, in_diff->mut_dptr<T>());
+}
+
+template<DeviceType device_type, typename T>
+struct GatherSwitchUtil final {
+#define MAKE_GATHER_SWITCH_ENTRY(func_name, K) func_name<device_type, T, K>
+#define DEFINE_GATHER_STATIC_SWITCH_FUNC(func_name)                    \
+  DEFINE_STATIC_SWITCH_FUNC(void, func_name, MAKE_GATHER_SWITCH_ENTRY, \
+                            MAKE_DATA_TYPE_CTRV_SEQ(INT_DATA_TYPE_SEQ));
+  DEFINE_GATHER_STATIC_SWITCH_FUNC(GatherForward);
+  DEFINE_GATHER_STATIC_SWITCH_FUNC(GatherBackward);
+#undef DEFINE_GATHER_STATIC_SWITCH_FUNC
+#undef MAKE_GATHER_SWITCH_ENTRY
+};
+
+}  // namespace
+
 template<DeviceType device_type, typename T>
 const PbMessage& GatherKernel<device_type, T>::GetCustomizedOpConf() const {
   return this->op_conf().gather_conf();
@@ -10,64 +50,61 @@ const PbMessage& GatherKernel<device_type, T>::GetCustomizedOpConf() const {
 template<DeviceType device_type, typename T>
 void GatherKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* indices_blob = BnInOp2Blob("indices");
-  const int64_t num_indices = indices_blob->shape().elem_cnt();
-  const Blob* in_blob = BnInOp2Blob("in");
-  const int64_t in_rows = in_blob->shape().At(0);
-  const int64_t in_cols = in_blob->shape().Count(1);
-  Blob* out = BnInOp2Blob("out");
-  LookupKernelUtil<device_type, T>::Forward(ctx.device_ctx, indices_blob->dptr<int32_t>(),
-                                            num_indices, in_blob->dptr<T>(), in_rows, in_cols,
-                                            out->mut_dptr<T>());
+  GatherSwitchUtil<device_type, T>::SwitchGatherForward(
+      SwitchCase(BnInOp2Blob("indices")->data_type()), ctx.device_ctx, BnInOp2Blob("indices"),
+      BnInOp2Blob("in"), this->kernel_conf().gather_conf().axis(), BnInOp2Blob("out"));
 }
 
 template<DeviceType device_type, typename T>
 void GatherKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* indices_blob = BnInOp2Blob("indices");
-  const int64_t num_indices = indices_blob->shape().elem_cnt();
-  const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
-  Blob* in_diff_blob = BnInOp2Blob(GenDiffBn("in"));
-  const int64_t in_rows = in_diff_blob->shape().At(0);
-  const int64_t in_cols = in_diff_blob->shape().Count(1);
-  Memset<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr<T>(), 0,
-                      in_diff_blob->ByteSizeOfDataContentField());
-  LookupKernelUtil<device_type, T>::Backward(ctx.device_ctx, indices_blob->dptr<int32_t>(),
-                                             num_indices, out_diff_blob->dptr<T>(), in_rows,
-                                             in_cols, in_diff_blob->mut_dptr<T>());
+  GatherSwitchUtil<device_type, T>::SwitchGatherBackward(
+      SwitchCase(BnInOp2Blob("indices")->data_type()), ctx.device_ctx, BnInOp2Blob("indices"),
+      BnInOp2Blob(GenDiffBn("out")), this->kernel_conf().gather_conf().axis(),
+      BnInOp2Blob(GenDiffBn("in")));
 }
 
-template<typename T>
-struct LookupKernelUtil<DeviceType::kCPU, T> final {
-  static void Forward(DeviceCtx* ctx, const int32_t* indices, int64_t num_indices, const T* in,
-                      int64_t in_rows, int64_t in_cols, T* out);
-  static void Backward(DeviceCtx* ctx, const int32_t* indices, int64_t num_indices,
-                       const T* out_diff, int64_t in_rows, int64_t in_cols, T* in_diff);
+template<typename T, typename K>
+struct GatherKernelUtil<DeviceType::kCPU, T, K> final {
+  static void Forward(DeviceCtx* ctx, const K* indices, int64_t num_indices, const T* in,
+                      const Shape& flat_in_shape, T* out);
+  static void Backward(DeviceCtx* ctx, const K* indices, int64_t num_indices, const T* out_diff,
+                       const Shape& flat_in_shape, T* in_diff);
 };
 
-template<typename T>
-void LookupKernelUtil<DeviceType::kCPU, T>::Forward(DeviceCtx* ctx, const int32_t* indices,
-                                                    int64_t num_indices, const T* in,
-                                                    int64_t in_rows, int64_t in_cols, T* out) {
-  FOR_RANGE(int64_t, i, 0, num_indices) {
-    const int64_t idx = indices[i];
-    CHECK(idx >= 0 && idx < in_rows);
-    const T* from = in + (idx * in_cols);
-    T* to = out + (i * in_cols);
-    std::copy(from, from + in_cols, to);
+template<typename T, typename K>
+void GatherKernelUtil<DeviceType::kCPU, T, K>::Forward(DeviceCtx* ctx, const K* indices,
+                                                       int64_t num_indices, const T* in,
+                                                       const Shape& flat_in_shape, T* out) {
+  const int64_t outer_dim_size = flat_in_shape.At(0);
+  const int64_t gather_dim_size = flat_in_shape.At(1);
+  const int64_t inner_dim_size = flat_in_shape.At(2);
+  FOR_RANGE(int64_t, outer_idx, 0, outer_dim_size) {
+    FOR_RANGE(int64_t, i, 0, num_indices) {
+      const int64_t idx = indices[i];
+      CHECK(idx >= 0 && idx < gather_dim_size);
+      const T* from = in + outer_idx * gather_dim_size * inner_dim_size + idx * inner_dim_size;
+      T* to = out + outer_idx * num_indices * inner_dim_size + i * inner_dim_size;
+      std::copy(from, from + inner_dim_size, to);
+    }
   }
 }
 
-template<typename T>
-void LookupKernelUtil<DeviceType::kCPU, T>::Backward(DeviceCtx* ctx, const int32_t* indices,
-                                                     int64_t num_indices, const T* out_diff,
-                                                     int64_t in_rows, int64_t in_cols, T* in_diff) {
-  FOR_RANGE(int64_t, i, 0, num_indices) {
-    const int64_t idx = indices[i];
-    CHECK(idx >= 0 && idx < in_rows);
-    const T* from = out_diff + (i * in_cols);
-    T* to = in_diff + (idx * in_cols);
-    std::transform(from, from + in_cols, to, to, std::plus<T>());
+template<typename T, typename K>
+void GatherKernelUtil<DeviceType::kCPU, T, K>::Backward(DeviceCtx* ctx, const K* indices,
+                                                        int64_t num_indices, const T* out_diff,
+                                                        const Shape& flat_in_shape, T* in_diff) {
+  const int64_t outer_dim_size = flat_in_shape.At(0);
+  const int64_t gather_dim_size = flat_in_shape.At(1);
+  const int64_t inner_dim_size = flat_in_shape.At(2);
+  FOR_RANGE(int64_t, outer_idx, 0, outer_dim_size) {
+    FOR_RANGE(int64_t, i, 0, num_indices) {
+      const int64_t idx = indices[i];
+      CHECK(idx >= 0 && idx < gather_dim_size);
+      const T* from = out_diff + outer_idx * num_indices * inner_dim_size + i * inner_dim_size;
+      T* to = in_diff + outer_idx * gather_dim_size * inner_dim_size + idx * inner_dim_size;
+      std::transform(from, from + inner_dim_size, to, to, std::plus<T>());
+    }
   }
 }
 

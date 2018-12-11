@@ -69,7 +69,7 @@ message MaxPoolingKernelConf {
 }
 
 message ReduceSumKernelConf {
-  optional int32 axis = 1;
+  required ShapeProto kept_dims_shape = 1;
 }
 
 message SoftmaxKernelConf {
@@ -159,6 +159,10 @@ message ConstantKernelConf {
   required uint32 random_seed = 2;
 }
 
+message GatherKernelConf {
+  required int64 axis = 1;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
@@ -198,5 +202,6 @@ message KernelConf {
     ConstantKernelConf constant_conf = 403;
     SigmoidCrossEntropyLossKernelConf sigmoid_cross_entropy_loss_conf = 404;
     IdentityLossKernelConf identity_loss_conf = 405;
+    GatherKernelConf gather_conf = 406;
   }
 }

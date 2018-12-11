@@ -21,6 +21,10 @@ struct NdarrayUtil final {
     CHECK_EQ(x.shape().NumAxes(), y.shape().NumAxes());
     return Unary<unary_func>::SwitchBroadcastApply(SwitchCase(x.shape().NumAxes()), ctx, y, x);
   }
+  static void BroadcastTo(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
+                          const XpuVarNdarray<const T>& x) {
+    return BroadcastApply<UnaryFuncIdentity>(ctx, y, x);
+  }
   template<const T (*binary_func)(const T, const T)>
   static void BroadcastApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
                              const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {

@@ -154,13 +154,13 @@ ChainGraph::ChainGraph(const TaskGraph& task_gph) : task_gph_(task_gph) {
 void ChainGraph::GroupTaskNodesByMachineAndCollectAncestors(
     const TaskGraph& task_gph, HashMap<int64_t, std::vector<TaskNode*>>* machine2tasks,
     HashMap<TaskNode*, HashSet<TaskNode*>>* node2ancestors) const {
-  task_gph.AcyclicTopoForEachNode([&](TaskNode* node) {
+  task_gph.AcyclicTopoForEachNode(TaskGraph::IsBackEdgeByAreaType, [&](TaskNode* node) {
     (*machine2tasks)[node->machine_id()].emplace_back(node);
     CHECK(node2ancestors->emplace(node, HashSet<TaskNode*>()).second);
     // to reduce memory consumption
     if (node->area_id() == kMdUpdtArea) { return; }
     node->ForEachNodeOnInEdge([&](TaskNode* in_node) {
-      if (IsBackEdge(in_node, node)) { return; }
+      if (TaskGraph::IsBackEdgeByAreaType(in_node, node)) { return; }
       (*node2ancestors)[node].insert(in_node);
       (*node2ancestors)[node].insert((*node2ancestors)[in_node].begin(),
                                      (*node2ancestors)[in_node].end());
@@ -207,7 +207,7 @@ void ChainGraph::InitChainEdge(const std::vector<std::vector<TaskNode*>>& chains
       auto cur_chain_node = ChainNode4TaskNode(cur_task_node);
       for (auto& task_in_edge : cur_task_node->in_edges()) {
         auto src_task_node = task_in_edge->src_node();
-        if (IsBackEdge(src_task_node, cur_task_node)) { continue; }
+        if (TaskGraph::IsBackEdgeByAreaType(src_task_node, cur_task_node)) { continue; }
         auto src_chain_node = ChainNode4TaskNode(src_task_node);
         if (cur_chain_node == src_chain_node) { continue; }
         if (HasChainEdge(src_chain_node, cur_chain_node)) { continue; }

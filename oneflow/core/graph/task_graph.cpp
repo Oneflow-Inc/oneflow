@@ -11,8 +11,37 @@
 #include "oneflow/core/graph/reduce_split_compute_task_node.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/job/thrd_id_generator.h"
+#include "oneflow/core/graph/reduce_identity_task_node.h"
 
 namespace oneflow {
+
+namespace {
+
+std::function<int32_t(const LogicalNode*)> MakeGetterReduceIdentityCtrlOrder(
+    const LogicalGraph& logical_graph) {
+  std::vector<const ReduceIdentityLogicalNode*> identity_logical_nodes;
+  logical_graph.ForEachNode([&](LogicalNode* node) {
+    auto* identity_logical_node = dynamic_cast<ReduceIdentityLogicalNode*>(node);
+    if (identity_logical_node == nullptr) { return; }
+    identity_logical_nodes.push_back(identity_logical_node);
+  });
+  std::sort(identity_logical_nodes.begin(), identity_logical_nodes.end(),
+            [](const ReduceIdentityLogicalNode* lhs, const ReduceIdentityLogicalNode* rhs) {
+              return lhs->order_in_logical_graph() < rhs->order_in_logical_graph();
+            });
+  auto identity_logical_node2ctrl_order = std::make_shared<HashMap<const LogicalNode*, int32_t>>();
+  int32_t eager_count =
+      (1 - Global<JobDesc>::Get()->lazy_reduce_ratio()) * identity_logical_nodes.size();
+  for (int32_t i = 0; i < identity_logical_nodes.size(); ++i) {
+    int32_t ctrl_order = (i == 0 || (i > eager_count && i % 2 == 0)) ? i : -i;
+    (*identity_logical_node2ctrl_order)[identity_logical_nodes[i]] = ctrl_order;
+  }
+  return [identity_logical_node2ctrl_order](const LogicalNode* identity_node) {
+    return identity_logical_node2ctrl_order->at(identity_node);
+  };
+}
+
+}  // namespace
 
 TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   logical_gph_ = std::move(logical_gph);
@@ -102,6 +131,7 @@ void TaskGraph::MdUpdtDelayedTopoForEachNode(std::function<void(TaskNode* node)>
 }
 
 void TaskGraph::AcyclicTopoForEachNode(std::function<bool(TaskNode* node)> IsAllowedStartNode,
+                                       std::function<bool(TaskNode*, TaskNode*)> IsBackEdge,
                                        std::function<void(TaskNode* node)> Handler) const {
   auto ForEachInNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& Handler) {
     node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
@@ -128,8 +158,18 @@ void TaskGraph::AcyclicTopoForEachNode(std::function<bool(TaskNode* node)> IsAll
   TopoForEachNode(starts, ForEachInNode, ForEachOutNode, Handler);
 }
 
+void TaskGraph::AcyclicTopoForEachNode(std::function<bool(TaskNode* node)> IsAllowedStartNode,
+                                       std::function<void(TaskNode* node)> Handler) const {
+  AcyclicTopoForEachNode(IsAllowedStartNode, &TaskGraph::IsBackEdgeByTaskType, Handler);
+}
+
+void TaskGraph::AcyclicTopoForEachNode(std::function<bool(TaskNode*, TaskNode*)> IsBackEdge,
+                                       std::function<void(TaskNode* node)> Handler) const {
+  AcyclicTopoForEachNode([](TaskNode*) { return true; }, IsBackEdge, Handler);
+}
+
 void TaskGraph::AcyclicTopoForEachNode(std::function<void(TaskNode* node)> Handler) const {
-  return AcyclicTopoForEachNode([](TaskNode*) { return true; }, Handler);
+  AcyclicTopoForEachNode([](TaskNode*) { return true; }, Handler);
 }
 
 void TaskGraph::RemoveEmptyRegsts() {
@@ -167,6 +207,31 @@ void TaskGraph::BuildCtrlRegstDescInSameChain() {
     } else {
       iter->second->BuildCtrlRegstDescIfNeed(node);
       iter->second = node;
+    }
+  }
+}
+
+void TaskGraph::AddReduceCtrlEdges() {
+  HashMap<int64_t, std::vector<ReduceIdentityCompTaskNode*>> global_dev_id2identity_nodes;
+  for (auto* node : ordered_task_nodes_) {
+    auto* identity_node = dynamic_cast<ReduceIdentityCompTaskNode*>(node);
+    if (identity_node == nullptr) { continue; }
+    int64_t global_dev_id = Global<IDMgr>::Get()->GlobalDeviceId4TaskId(identity_node->task_id());
+    global_dev_id2identity_nodes[global_dev_id].push_back(identity_node);
+  }
+  auto GetCtrlOrder = MakeGetterReduceIdentityCtrlOrder(*logical_gph_);
+  for (auto& pair : global_dev_id2identity_nodes) {
+    auto& identity_nodes = pair.second;
+    std::sort(identity_nodes.begin(), identity_nodes.end(),
+              [&](ReduceIdentityCompTaskNode* lhs, ReduceIdentityCompTaskNode* rhs) {
+                return GetCtrlOrder(lhs->logical_node()) < GetCtrlOrder(rhs->logical_node());
+              });
+    ReduceIdentityCompTaskNode* prev_identity_node = nullptr;
+    for (auto* identity_node : identity_nodes) {
+      if (prev_identity_node != nullptr) {
+        prev_identity_node->BuildCtrlRegstDescIfNeed(identity_node);
+      }
+      prev_identity_node = identity_node;
     }
   }
 }
@@ -575,8 +640,14 @@ void TaskGraph::ConnectWithCopyCommNetIfNeed(TaskNode* src, TaskNode* dst) {
   }
 }
 
-bool IsBackEdge(TaskNode* src, TaskNode* dst) {
+bool TaskGraph::IsBackEdgeByTaskType(TaskNode* src, TaskNode* dst) {
   return src->GetTaskType() == TaskType::kNormalMdUpdt
+         && (dst->GetTaskType() == TaskType::kNormalForward
+             || dst->GetTaskType() == TaskType::kNormalBackward);
+}
+
+bool TaskGraph::IsBackEdgeByAreaType(TaskNode* src, TaskNode* dst) {
+  return src->area_id() == AreaType::kMdUpdtArea
          && (dst->GetTaskType() == TaskType::kNormalForward
              || dst->GetTaskType() == TaskType::kNormalBackward);
 }

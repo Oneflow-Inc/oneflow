@@ -23,6 +23,7 @@
 #include "oneflow/core/graph/accuracy_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/accuracy_print_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
+#include "oneflow/core/graph/reduce_identity_task_node.h"
 
 namespace oneflow {
 
@@ -403,6 +404,7 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
   OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc, kDataBackwardArea)      \
   OF_PP_MAKE_TUPLE_SEQ(Print, kPrintArea)                 \
   OF_PP_MAKE_TUPLE_SEQ(ReduceConcat, kMdUpdtArea)         \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceIdentity, kMdUpdtArea)       \
   OF_PP_MAKE_TUPLE_SEQ(ReduceScatter, kMdUpdtArea)        \
   OF_PP_MAKE_TUPLE_SEQ(ReduceAdd, kMdUpdtArea)            \
   OF_PP_MAKE_TUPLE_SEQ(ReduceGather, kMdUpdtArea)         \
@@ -432,6 +434,14 @@ BackwardLogicalNode* ForwardLogicalNode::NewBackwardNode() {
 BackwardLogicalNode* NormalForwardLogicalNode::NewCorrectBackwardNode() {
   return new NormalBackwardLogicalNode;
 }
+
+BackwardLogicalNode* VariableLogicalNode::NewCorrectBackwardNode() {
+  return new NormalBackwardLogicalNode;
+}
+
+std::string VariableLogicalNode::TypeName() const { return "VariableForward"; }
+CompTaskNode* VariableLogicalNode::NewCompTaskNode() const { return new NormalForwardCompTaskNode; }
+int64_t VariableLogicalNode::GetAreaId() const { return kMdUpdtArea; }
 
 void NormalMdUpdtLogicalNode::FixCompTaskNode(CompTaskNode* node) const {
   NormalMdUpdtCompTaskNode* normal_mdupdt_node = static_cast<NormalMdUpdtCompTaskNode*>(node);

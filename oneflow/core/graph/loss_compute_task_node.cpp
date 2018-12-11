@@ -50,6 +50,8 @@ void LossCompTaskNode::BuildExecGphAndRegst() {
     }
   }
   mut_exec_gph().TopoForEachNode([this](ExecNode* node) { node->InferBlobDescs(parallel_ctx()); });
+  mut_exec_gph().TopoForEachNode(
+      [this](ExecNode* node) { node->FixInDiffBlobDescs(parallel_ctx()); });
 }
 
 void LossCompTaskNode::BuildRegstWhenTraining() {

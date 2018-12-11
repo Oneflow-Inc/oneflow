@@ -15,8 +15,8 @@ class AddOp final : public CWiseOp {
   const PbMessage& GetCustomizedConf() const override;
   bool NeedInBlobWhenBackward() const override { return false; }
   bool NeedOutBlobWhenBackward() const override { return false; }
-  virtual void FixInDiffBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                  const ParallelContext*) const override;
+  void VirtualFixInDiffBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                 const ParallelContext*) const override;
 };
 }  // namespace oneflow
 

@@ -1,4 +1,4 @@
-#include "oneflow/core/operator/reduce_sum_op.h"
+#include "oneflow/core/operator/reduce_mean_op.h"
 #include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
@@ -33,22 +33,19 @@ std::vector<int64_t> ShiftAxisIfNegative(std::vector<int64_t> axis_vec, const in
 
 }  // namespace
 
-void ReduceSumOp::InitFromOpConf() {
-  CHECK(op_conf().has_reduce_sum_conf());
+void ReduceMeanOp::InitFromOpConf() {
+  CHECK(op_conf().has_reduce_mean_conf());
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  if (op_conf().reduce_sum_conf().has_in_sys()) {
-    EnrollDataTmpBn("fw_tmp");
-  } else {
-    EnrollFwBufBn("fw_tmp");
-  }
+  EnrollFwBufBn("fw_tmp");
+  EnrollBwBufBn("bw_tmp");
 }
 
-const PbMessage& ReduceSumOp::GetCustomizedConf() const { return op_conf().reduce_sum_conf(); }
+const PbMessage& ReduceMeanOp::GetCustomizedConf() const { return op_conf().reduce_mean_conf(); }
 
-void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                 const ParallelContext*) const {
-  const ReduceSumOpConf& conf = op_conf().reduce_sum_conf();
+void ReduceMeanOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                  const ParallelContext*) const {
+  const ReduceMeanOpConf& conf = op_conf().reduce_mean_conf();
   const BlobDesc* in_blob = GetBlobDesc4BnInOp("in");
   *GetBlobDesc4BnInOp("fw_tmp") = *in_blob;
   std::vector<int64_t> out_dim_vec;
@@ -78,17 +75,17 @@ void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   out_blob->mut_shape() = Shape(out_dim_vec);
 }
 
-void ReduceSumOp::VirtualGenKernelConf(
+void ReduceMeanOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
     KernelConf* kernel_conf) const {
-  const ReduceSumOpConf& conf = op_conf().reduce_sum_conf();
+  const ReduceMeanOpConf& conf = op_conf().reduce_mean_conf();
   const BlobDesc* in_blob = GetBlobDesc4BnInOp("in");
   std::vector<int64_t> kept_dims;
   if (conf.axis().empty()) {
     kept_dims.resize(in_blob->shape().NumAxes());
     std::fill(kept_dims.begin(), kept_dims.end(), 1);
   } else {
-    const PbRf<int32_t>& axis_repeated = op_conf().reduce_sum_conf().axis();
+    const PbRf<int32_t>& axis_repeated = op_conf().reduce_mean_conf().axis();
     std::vector<int64_t> axis_vec = {axis_repeated.begin(), axis_repeated.end()};
     kept_dims = KeepDims(in_blob->shape().dim_vec(),
                          ShiftAxisIfNegative(axis_vec, in_blob->shape().NumAxes()));
@@ -96,6 +93,11 @@ void ReduceSumOp::VirtualGenKernelConf(
   Shape(kept_dims).ToProto(kernel_conf->mutable_reduce_sum_conf()->mutable_kept_dims_shape());
 }
 
-REGISTER_OP(OperatorConf::kReduceSumConf, ReduceSumOp);
+void ReduceMeanOp::InferBwBufBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*) const {
+  *GetBlobDesc4BnInOp("bw_tmp") = *GetBlobDesc4BnInOp("out");
+}
+
+REGISTER_OP(OperatorConf::kReduceMeanConf, ReduceMeanOp);
 
 }  // namespace oneflow
