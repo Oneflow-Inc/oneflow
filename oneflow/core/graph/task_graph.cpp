@@ -393,37 +393,6 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne) {
   }
 }
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByRecordLoadToTick) {
-  CHECK(src_logical->SoleOp()->op_conf().has_record_load_conf());
-  CHECK(dst_logical->SoleOp()->op_conf().has_tick_conf());
-  HashMap<size_t, std::vector<CompTaskNode*>> machine_id2record_load_tasks;
-  for (CompTaskNode* record_load : sorted_src_comp_tasks) {
-    machine_id2record_load_tasks[record_load->machine_id()].push_back(record_load);
-  }
-  size_t i = 0;
-  for (size_t i = 0; i < sorted_dst_comp_tasks.size(); ++i) {
-    CompTaskNode* tick_task = sorted_dst_comp_tasks.at(i);
-    CHECK_EQ(i, tick_task->machine_id());
-    std::vector<CompTaskNode*>& record_load_vec = machine_id2record_load_tasks.at(i);
-    Connect<TaskNode>(record_load_vec.at(0), NewEdge(), tick_task);
-  }
-}
-
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByTickToSource) {
-  CHECK(src_logical->SoleOp()->op_conf().has_tick_conf());
-  HashMap<size_t, std::vector<CompTaskNode*>> machine_id2dst_task_nodes;
-  for (CompTaskNode* dst_node : sorted_dst_comp_tasks) {
-    machine_id2dst_task_nodes[dst_node->machine_id()].push_back(dst_node);
-  }
-  size_t i = 0;
-  for (size_t i = 0; i < sorted_src_comp_tasks.size(); ++i) {
-    CompTaskNode* src_node = sorted_src_comp_tasks.at(i);
-    CHECK_EQ(i, src_node->machine_id());
-    std::vector<CompTaskNode*>& dst_vec = machine_id2dst_task_nodes.at(i);
-    for (CompTaskNode* dst_node : dst_vec) { Connect<TaskNode>(src_node, NewEdge(), dst_node); }
-  }
-}
-
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink) {
   CHECK_EQ(sorted_dst_comp_tasks.size(), 1);
   CompTaskNode* sole_dst_comp_task = sorted_dst_comp_tasks.front();
