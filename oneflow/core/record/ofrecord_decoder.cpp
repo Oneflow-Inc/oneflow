@@ -56,6 +56,8 @@ void DoScalePreprocess(const ScalePreprocessConf& conf, T* dptr, int64_t n) {
   FOR_RANGE(size_t, i, 0, n) { (*(dptr++)) *= conf.value(); }
 }
 
+}  // namespace
+
 template<typename T>
 void DoPreprocess(const PreprocessConf& conf, T* dptr, const Shape& shape) {
   int64_t n = shape.Count(1);
@@ -70,8 +72,6 @@ void DoPreprocess(const PreprocessConf& conf, T* dptr, const Shape& shape) {
   }
 }
 
-}  // namespace
-
 template<EncodeCase encode_case, typename T>
 int32_t OFRecordDecoder<encode_case, T>::DecodeOneCol(
     DeviceCtx* ctx, Blob* in_blob, const BlobConf& blob_conf, int32_t col_id, Blob* out_blob,
@@ -81,7 +81,11 @@ int32_t OFRecordDecoder<encode_case, T>::DecodeOneCol(
     max_col_id = ReadColNum(ctx, in_blob, blob_conf.name(), out_blob) - 1;
   }
   if (out_blob->has_data_id_field()) { ReadDataId(ctx, in_blob, out_blob); }
-  ReadDataContent(ctx, in_blob, blob_conf, col_id, out_blob, NextRandomInt);
+  if (blob_conf.use_dynamic_shape()) {
+    ReadDynamicDataContent(ctx, in_blob, blob_conf, col_id, out_blob, NextRandomInt);
+  } else {
+    ReadDataContent(ctx, in_blob, blob_conf, col_id, out_blob, NextRandomInt);
+  }
   return max_col_id;
 }
 
@@ -93,12 +97,12 @@ int32_t OFRecordDecoder<encode_case, T>::ReadColNum(DeviceCtx* ctx, Blob* in_blo
   RecordBlob<OFRecord> record_blob(in_blob);
   record_blob.ForEachRecord([&](const OFRecord& record) {
     const Feature& feature = record.feature().at(name);
-    int32_t col_num = GetColNumOfFeature(feature, out_blob->shape().Count(1));
+    int32_t col_num = GetColNumOfFeature(feature, out_blob->static_shape().Count(1));
     max_col_num = std::max(max_col_num, col_num);
     out_blob->set_col_num(i++, col_num);
   });
   CHECK_GT(max_col_num, 0);
-  while (i < out_blob->shape().At(0)) { out_blob->set_col_num(i++, 0); }
+  while (i < out_blob->static_shape().At(0)) { out_blob->set_col_num(i++, 0); }
   return max_col_num;
 }
 
@@ -120,7 +124,7 @@ void OFRecordDecoder<encode_case, T>::ReadDataId(DeviceCtx* ctx, Blob* in_blob,
     }
     i += 1;
   });
-  int64_t left_row_num = out_blob->shape().At(0) - record_blob.record_num();
+  int64_t left_row_num = out_blob->static_shape().At(0) - record_blob.record_num();
   if (left_row_num > 0) {
     Memset<DeviceType::kCPU>(ctx, out_blob->mut_data_id(record_blob.record_num()), '\0',
                              left_row_num * max_data_id_size);
@@ -132,7 +136,7 @@ void OFRecordDecoder<encode_case, T>::ReadDataContent(
     DeviceCtx* ctx, Blob* in_blob, const BlobConf& blob_conf, int32_t col_id, Blob* out_blob,
     std::function<int32_t(void)> NextRandomInt) const {
   RecordBlob<OFRecord> record_blob(in_blob);
-  int64_t one_col_elem_num = out_blob->shape().Count(1);
+  int64_t one_col_elem_num = out_blob->static_shape().Count(1);
   int32_t random_seed = NextRandomInt();
   int32_t thread_num = std::thread::hardware_concurrency() / 4;
   ThreadPool thread_pool(thread_num);
@@ -152,7 +156,7 @@ void OFRecordDecoder<encode_case, T>::ReadDataContent(
     ReadPartDataContent(ctx, in_blob, blob_conf, col_id, out_blob, 0, 1, one_col_elem_num,
                         random_seed);
   }
-  int64_t left_row_num = out_blob->shape().At(0) - record_blob.record_num();
+  int64_t left_row_num = out_blob->static_shape().At(0) - record_blob.record_num();
   if (left_row_num > 0) {
     Memset<DeviceType::kCPU>(ctx,
                              out_blob->mut_dptr<T>() + record_blob.record_num() * one_col_elem_num,

@@ -45,6 +45,11 @@ class OFRecordDecoder : public OFRecordDecoderIf {
   virtual void SetDim2ValidNum(const Feature& feature, Blob* out_blob, int64_t dim0_idx) const {
     UNIMPLEMENTED();
   }
+  virtual void ReadDynamicDataContent(DeviceCtx*, Blob* in_blob, const BlobConf&, int32_t col_id,
+                                      Blob* out_blob,
+                                      std::function<int32_t(void)> NextRandomInt) const {
+    UNIMPLEMENTED();
+  }
 
  private:
   // return: max_col_num
@@ -61,6 +66,9 @@ template<EncodeCase encode_case, typename T>
 class OFRecordDecoderImpl;
 
 OFRecordDecoderIf* GetOFRecordDecoder(EncodeCase, DataType);
+
+template<typename T>
+void DoPreprocess(const PreprocessConf& conf, T* dptr, const Shape& shape);
 
 }  // namespace oneflow
 
