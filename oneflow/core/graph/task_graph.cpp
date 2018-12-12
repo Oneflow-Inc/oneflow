@@ -400,27 +400,37 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByRecordLoadToTick) {
   for (CompTaskNode* record_load : sorted_src_comp_tasks) {
     machine_id2record_load_tasks[record_load->machine_id()].push_back(record_load);
   }
-  size_t i = 0;
   for (size_t i = 0; i < sorted_dst_comp_tasks.size(); ++i) {
     CompTaskNode* tick_task = sorted_dst_comp_tasks.at(i);
     CHECK_EQ(i, tick_task->machine_id());
-    std::vector<CompTaskNode*>& record_load_vec = machine_id2record_load_tasks.at(i);
+    const std::vector<CompTaskNode*>& record_load_vec = machine_id2record_load_tasks.at(i);
     Connect<TaskNode>(record_load_vec.at(0), NewEdge(), tick_task);
   }
 }
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByTickToSource) {
   CHECK(src_logical->SoleOp()->op_conf().has_tick_conf());
-  HashMap<size_t, std::vector<CompTaskNode*>> machine_id2dst_task_nodes;
-  for (CompTaskNode* dst_node : sorted_dst_comp_tasks) {
-    machine_id2dst_task_nodes[dst_node->machine_id()].push_back(dst_node);
+  HashMap<size_t, CompTaskNode*> machine_id2tick_task;
+  HashMap<size_t, std::vector<CompTaskNode*>> machine_id2dst_tasks;
+  for (CompTaskNode* tick_node : sorted_src_comp_tasks) {
+    CHECK(machine_id2tick_task.find(tick_node->machine_id()) == machine_id2tick_task.end());
+    machine_id2tick_task[tick_node->machine_id()] = tick_node;
   }
-  size_t i = 0;
-  for (size_t i = 0; i < sorted_src_comp_tasks.size(); ++i) {
-    CompTaskNode* src_node = sorted_src_comp_tasks.at(i);
-    CHECK_EQ(i, src_node->machine_id());
-    std::vector<CompTaskNode*>& dst_vec = machine_id2dst_task_nodes.at(i);
-    for (CompTaskNode* dst_node : dst_vec) { Connect<TaskNode>(src_node, NewEdge(), dst_node); }
+  for (CompTaskNode* dst_node : sorted_dst_comp_tasks) {
+    machine_id2dst_tasks[dst_node->machine_id()].push_back(dst_node);
+  }
+
+  CompTaskNode* first_tick = sorted_src_comp_tasks.at(0);
+  for (const auto& pair : machine_id2dst_tasks) {
+    size_t machine_id = pair.first;
+    for (CompTaskNode* dst_node : pair.second) {
+      if (machine_id2tick_task.find(machine_id) != machine_id2tick_task.end()) {
+        Connect<TaskNode>(machine_id2tick_task.at(machine_id), NewEdge(), dst_node);
+      } else {
+        TaskNode* next_node = AddCopyCommNetTaskBetween(first_tick, dst_node);
+        Connect<TaskNode>(first_tick, NewEdge(), next_node);
+      }
+    }
   }
 }
 
