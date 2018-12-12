@@ -13,6 +13,7 @@ class L2NormalizeOp final : public Operator {
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
+  bool NeedOutBlobWhenBackward() const override { return false; }
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
 };
@@ -20,4 +21,3 @@ class L2NormalizeOp final : public Operator {
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_OPERATOR_L2_NORMALIZE_OP_H_
-

@@ -30,4 +30,3 @@ struct L2NormalizeKernelUtil {
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_L2_NORMALIZE_KERNEL_H_
-
