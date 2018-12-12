@@ -50,7 +50,7 @@ bool IsNcclTaskType(const TaskType& tt) {
 
 std::string GetNcclGroupKey(const std::vector<int64_t>& sorted_device_ids) {
   std::ostringstream oss;
-  for (int64_t device_id : sorted_device_ids) {
+  for (const int64_t device_id : sorted_device_ids) {
     oss << std::setfill('0') << std::setw(sizeof(device_id) * 2) << std::hex << device_id;
   }
   return oss.str();
@@ -96,12 +96,12 @@ void Compiler::GenNcclTopo(Plan* plan) {
   auto GetOrCreateNcclGroup =
       [&](const std::vector<int64_t>& sorted_device_ids) -> const NcclCommGroup* {
     const std::string key = GetNcclGroupKey(sorted_device_ids);
-    if (Global<JobDesc>::Get()->enable_reuse_nccl_comm()) {
+    if (Global<JobDesc>::Get()->reuse_nccl_communicator()) {
       const auto it = nccl_group_key2nccl_group.find(key);
       if (it != nccl_group_key2nccl_group.end()) { return it->second; }
     }
     NcclCommGroup* group = nccl_topo->mutable_group()->Add();
-    for (int64_t device_id : sorted_device_ids) {
+    for (const int64_t device_id : sorted_device_ids) {
       NcclCommDesc* comm = group->mutable_comm()->Add();
       comm->set_id(++next_nccl_comm_id);
       comm->set_global_device_id(device_id);
