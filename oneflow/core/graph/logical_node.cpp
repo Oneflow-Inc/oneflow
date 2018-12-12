@@ -298,7 +298,11 @@ static bool IsModelParallel121(const LogicalNode* src_node, const LogicalNode* d
 BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const LogicalNode* dst_node) {
   std::shared_ptr<const ParallelDesc> src_pd = src_node->parallel_desc();
   std::shared_ptr<const ParallelDesc> dst_pd = dst_node->parallel_desc();
-  if (src_node->op_vec().size() == 1 && src_node->SoleOp()->op_conf().has_tick_conf()) {
+  if (src_node->op_vec().at(0)->op_conf().has_record_load_conf()
+      && dst_node->op_vec().at(0)->op_conf().has_tick_conf()) {
+    return &TaskGraph::BldSubTskGphByRecordLoadToTick;
+  }
+  if (src_node->op_vec().at(0)->op_conf().has_tick_conf()) {
     return &TaskGraph::BldSubTskGphByTickToSource;
   }
   if (src_pd->parallel_num() == 1 && dst_pd->parallel_num() == 1) {
