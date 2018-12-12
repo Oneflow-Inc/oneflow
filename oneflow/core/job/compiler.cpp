@@ -43,11 +43,86 @@ void ToDotFile(const Plan& plan, const std::string& filepath) {
   log_stream << "}\n";
 }
 
+bool IsNcclTaskType(const TaskType& tt) {
+  return tt == TaskType::kNcclAllGather || tt == TaskType::kNcclAllReduce
+         || tt == TaskType::kNcclReduceScatter;
+}
+
+std::string GetNcclGroupKey(const std::vector<int64_t>& sorted_device_ids) {
+  std::ostringstream oss;
+  for (int64_t device_id : sorted_device_ids) {
+    oss << std::setfill('0') << std::setw(sizeof(device_id) * 2) << std::hex << device_id;
+  }
+  return oss.str();
+}
+
 }  // namespace
 
 Plan Compiler::Compile() {
   Plan plan = DoCompile();
   return plan;
+}
+
+void Compiler::GenNcclTopo(Plan* plan) {
+  HashMap<int64_t, std::vector<const TaskProto*>> rank_set2nccl_tasks;
+  for (const TaskProto& task : plan->task()) {
+    if (!IsNcclTaskType(task.task_type())) { continue; }
+    CHECK_EQ(Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(task.thrd_id()), DeviceType::kGPU);
+    CHECK(task.has_parallel_ctx());
+    CHECK(task.parallel_ctx().has_rank_ctx());
+    const int64_t rank_set_id = task.parallel_ctx().rank_ctx().rank_set_id();
+    if (!rank_set2nccl_tasks[rank_set_id].empty()) {
+      const TaskProto* first = rank_set2nccl_tasks[rank_set_id].front();
+      CHECK_EQ(first->task_type(), task.task_type());
+      CHECK_EQ(first->parallel_ctx().rank_ctx().rank_num(),
+               task.parallel_ctx().rank_ctx().rank_num());
+    }
+    rank_set2nccl_tasks[rank_set_id].push_back(&task);
+  }
+  for (auto& pair : rank_set2nccl_tasks) {
+    std::vector<const TaskProto*>& tasks = pair.second;
+    std::sort(tasks.begin(), tasks.end(), [](const TaskProto* lhs, const TaskProto* rhs) {
+      return lhs->parallel_ctx().rank_ctx().rank_id() < lhs->parallel_ctx().rank_ctx().rank_id();
+    });
+    CHECK_EQ(tasks.size(), tasks.at(0)->parallel_ctx().rank_ctx().rank_num());
+    FOR_RANGE(size_t, i, 0, tasks.size()) {
+      CHECK_EQ(tasks.at(i)->parallel_ctx().rank_ctx().rank_id(), i);
+    }
+  }
+  HashMap<int64_t, int64_t> task_id2comm_id;
+  std::map<std::string, const NcclCommGroup*> nccl_group_key2nccl_group;
+  NcclTopo* nccl_topo = plan->mutable_nccl_topo();
+  int64_t next_nccl_comm_id = 0;
+  auto GetOrCreateNcclGroup =
+      [&](const std::vector<int64_t>& sorted_device_ids) -> const NcclCommGroup* {
+    const std::string key = GetNcclGroupKey(sorted_device_ids);
+    if (Global<JobDesc>::Get()->enable_reuse_nccl_comm()) {
+      const auto it = nccl_group_key2nccl_group.find(key);
+      if (it != nccl_group_key2nccl_group.end()) { return it->second; }
+    }
+    NcclCommGroup* group = nccl_topo->mutable_group()->Add();
+    for (int64_t device_id : sorted_device_ids) {
+      NcclCommDesc* comm = group->mutable_comm()->Add();
+      comm->set_id(++next_nccl_comm_id);
+      comm->set_global_device_id(device_id);
+    }
+    nccl_group_key2nccl_group[key] = group;
+    return group;
+  };
+  for (auto& pair : rank_set2nccl_tasks) {
+    std::vector<const TaskProto*>& tasks = pair.second;
+    std::vector<int64_t> device_ids(tasks.size());
+    std::transform(tasks.cbegin(), tasks.cend(), device_ids.begin(),
+                   [](const TaskProto* task) -> int64_t {
+                     return Global<IDMgr>::Get()->GlobalDeviceId4TaskId(task->task_id());
+                   });
+    const NcclCommGroup* group = GetOrCreateNcclGroup(device_ids);
+    CHECK_EQ(group->comm_size(), tasks.size());
+    FOR_RANGE(int32_t, i, 0, tasks.size()) {
+      task_id2comm_id.emplace(tasks[i]->task_id(), group->comm(i).id());
+    }
+  }
+  *nccl_topo->mutable_task_id2comm_id() = HashMap2PbMap(task_id2comm_id);
 }
 
 void Compiler::GenNetTopo(Plan* plan) {
@@ -122,6 +197,7 @@ Plan Compiler::DoCompile() {
   });
   plan.set_total_mbn_num(total_mbn_num);
   GenNetTopo(&plan);
+  GenNcclTopo(&plan);
   ToDotFile(plan, "/dot/plan.dot");
 #ifdef WITH_CUDA
   Global<CudnnConvCtxCache>::Delete();

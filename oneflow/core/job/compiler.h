@@ -19,6 +19,7 @@ class Compiler final {
  private:
   Plan DoCompile();
   void GenNetTopo(Plan* plan);
+  void GenNcclTopo(Plan* plan);
 };
 
 }  // namespace oneflow

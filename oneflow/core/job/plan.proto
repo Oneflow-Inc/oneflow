@@ -11,8 +11,23 @@ message NetTopo {
   map<int64, MachineIds> peer_machine_ids = 1;
 }
 
+message NcclCommDesc {
+  required int64 id = 1;
+  required int64 global_device_id = 2;
+}
+
+message NcclCommGroup {
+  repeated NcclCommDesc comm = 1;
+}
+
+message NcclTopo {
+  repeated NcclCommGroup group = 1;
+  map<int64, int64> task_id2comm_id = 2;
+}
+
 message Plan {
   repeated TaskProto task = 1;
   required int64 total_mbn_num = 2;
   required NetTopo net_topo = 3;
+  required NcclTopo nccl_topo = 4;
 }
