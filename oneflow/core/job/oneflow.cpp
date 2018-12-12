@@ -84,6 +84,8 @@ std::string cluster_thrd_ids_key(const std::string& plan_name) {
 
 std::string net_topo_key(const std::string& plan_name) { return plan_name + "_net_topo"; }
 
+std::string nccl_topo_key(const std::string& plan_name) { return plan_name + "_nccl_topo"; }
+
 std::string sub_plan_key(const std::string& plan_name, int64_t machine_id, int64_t thrd_id) {
   return plan_name + "_" + std::to_string(machine_id) + "_" + std::to_string(thrd_id);
 }
@@ -119,6 +121,9 @@ void PushPlan(const std::string& plan_name, const Plan& plan) {
                                     std::to_string(plan.total_mbn_num()));
 
   Global<CtrlClient>::Get()->PushKV(net_topo_key(plan_name), plan.net_topo());
+  if (Global<JobDesc>::Get()->enable_nccl()) {
+    Global<CtrlClient>::Get()->PushKV(nccl_topo_key(plan_name), plan.nccl_topo());
+  }
 }
 
 void PullPlan(const std::string& plan_name, Plan* plan) {
@@ -142,6 +147,10 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
   plan->set_total_mbn_num(oneflow_cast<int64_t>(total_mbn_num));
   Global<CtrlClient>::Get()->PullKV(net_topo_key(plan_name), &net_topo);
   *(plan->mutable_net_topo()) = net_topo;
+  NcclTopo* nccl_topo = plan->mutable_nccl_topo();
+  if (Global<JobDesc>::Get()->enable_nccl()) {
+    Global<CtrlClient>::Get()->PullKV(nccl_topo_key(plan_name), nccl_topo);
+  }
 }
 
 }  // namespace
