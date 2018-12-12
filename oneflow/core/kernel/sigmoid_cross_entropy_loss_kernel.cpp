@@ -1,5 +1,4 @@
 #include "oneflow/core/kernel/sigmoid_cross_entropy_loss_kernel.h"
-#include "oneflow/core/kernel/sparse_cross_entropy_loss_kernel.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
 
 namespace oneflow {
