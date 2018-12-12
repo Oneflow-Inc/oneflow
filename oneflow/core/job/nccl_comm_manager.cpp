@@ -9,104 +9,91 @@
 
 namespace oneflow {
 
-NcclCommMgr::NcclCommMgr(const Plan& plan) {
-  std::map<int64_t, std::vector<TaskProto>> rank_set2nccl_tasks;
+namespace {
 
-  for (const auto& task : plan.task()) {
-    if (task.machine_id() != Global<MachineCtx>::Get()->this_machine_id()) { continue; }
-    if (!IsNcclTaskType(task.task_type())) { continue; }
-
-    CHECK_EQ(Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(task.thrd_id()), DeviceType::kGPU);
-    CHECK(task.has_parallel_ctx());
-    CHECK(task.parallel_ctx().has_rank_ctx());
-
-    if (!rank_set2nccl_tasks[task.parallel_ctx().rank_ctx().rank_set_id()].empty()) {
-      TaskProto& first = rank_set2nccl_tasks[task.parallel_ctx().rank_ctx().rank_set_id()].front();
-      CHECK_EQ(first.task_type(), task.task_type());
-      CHECK_EQ(first.parallel_ctx().rank_ctx().rank_num(),
-               task.parallel_ctx().rank_ctx().rank_num());
-    }
-
-    rank_set2nccl_tasks[task.parallel_ctx().rank_ctx().rank_set_id()].push_back(task);
-  }
-
-  for (const auto& pair : rank_set2nccl_tasks) {
-    ncclUniqueId nccl_unique_id{};
-    NcclGetUniqueId4Tasks(pair.second, &nccl_unique_id);
-    std::vector<ncclComm_t> comms(pair.second.size());
-    NcclCommInitRank4Tasks(pair.second, &comms, nccl_unique_id);
-    FOR_RANGE(size_t, i, 0, pair.second.size()) {
-      int32_t device_id;
-      int32_t rank;
-      NcclCheck(ncclCommCuDevice(comms.at(i), &device_id));
-      NcclCheck(ncclCommUserRank(comms.at(i), &rank));
-      LOG(INFO) << "Created nccl communicator for task " << pair.second.at(i).task_id()
-                << " with rank " << rank << " on device " << device_id;
-      CHECK(actor_id2comm_.emplace(pair.second.at(i).task_id(), comms.at(i)).second);
-    }
-  }
+std::string GetNcclUniqueIdRpcKey(int64_t group_id) {
+  return "nccl_unique_id_" + std::to_string(group_id);
 }
 
-NcclCommMgr::~NcclCommMgr() {
-  for (const auto& pair : actor_id2comm_) { ncclCommDestroy(pair.second); }
-}
-
-ncclComm_t NcclCommMgr::NcclComm4ActorId(int64_t actor_id) const {
-  auto it = actor_id2comm_.find(actor_id);
-  if (it == actor_id2comm_.end()) {
-    return nullptr;
-  } else {
-    return it->second;
-  }
-}
-
-bool NcclCommMgr::IsNcclTaskType(const TaskType& tt) const {
+bool IsNcclTaskType(const TaskType& tt) {
   return tt == TaskType::kNcclAllGather || tt == TaskType::kNcclAllReduce
          || tt == TaskType::kNcclReduceScatter;
 }
 
-int32_t NcclCommMgr::GetDeviceId4Task(const TaskProto& task) {
-  int64_t thrd_id = Global<IDMgr>::Get()->ThrdId4ActorId(task.task_id());
-  return (int32_t)Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id);
+int32_t GetDeviceId4Task(int64_t task_id) {
+  int64_t thrd_id = Global<IDMgr>::Get()->ThrdId4ActorId(task_id);
+  return static_cast<int32_t>(Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id));
 }
 
-void NcclCommMgr::NcclCommInitRank4Tasks(const std::vector<TaskProto>& tasks,
-                                         std::vector<ncclComm_t>* comms,
-                                         ncclUniqueId nccl_unique_id) {
+int64_t GetMachineId(const NcclCommDesc& comm_desc) {
+  return Global<IDMgr>::Get()->MachineId4ActorId(comm_desc.global_device_id());
+}
+
+void GetOrCreateNcclUniqueId(const std::vector<const NcclCommDesc*>& comm_descs, int64_t group_id,
+                             int32_t num_rank, ncclUniqueId* unique_id) {
+  if (comm_descs.front()->rank_id() == 0) {
+    NcclCheck(ncclGetUniqueId(unique_id));
+    if (comm_descs.size() < num_rank) {
+      Global<CtrlClient>::Get()->PushKV(GetNcclUniqueIdRpcKey(group_id),
+                                        std::string(unique_id->internal, NCCL_UNIQUE_ID_BYTES));
+    }
+  } else {
+    Global<CtrlClient>::Get()->PullKV(
+        GetNcclUniqueIdRpcKey(group_id), [&unique_id](const std::string& val) {
+          memcpy(unique_id->internal, val.data(), NCCL_UNIQUE_ID_BYTES);
+        });
+  }
+}
+
+void CreateNcclComms4CommDescs(const std::vector<const NcclCommDesc*>& comm_descs,
+                               const ncclUniqueId& unique_id, int32_t num_rank,
+                               std::vector<ncclComm_t>* comms) {
+  comms->resize(comm_descs.size());
   NcclCheck(ncclGroupStart());
-  FOR_RANGE(size_t, i, 0, tasks.size()) {
-    int32_t device_id = GetDeviceId4Task(tasks.at(i));
+  FOR_RANGE(size_t, i, 0, comm_descs.size()) {
+    const NcclCommDesc* comm_desc = comm_descs.at(i);
+    const int32_t device_id = GetDeviceId4Task(comm_desc->global_device_id());
     cudaSetDevice(device_id);
-    NcclCheck(
-        ncclCommInitRank(&((*comms)[i]), (int32_t)tasks.at(i).parallel_ctx().rank_ctx().rank_num(),
-                         nccl_unique_id, (int32_t)tasks.at(i).parallel_ctx().rank_ctx().rank_id()));
+    NcclCheck(ncclCommInitRank(&comms->at(i), num_rank, unique_id,
+                               static_cast<int32_t>(comm_desc->rank_id())));
   }
   NcclCheck(ncclGroupEnd());
 }
 
-void NcclCommMgr::NcclGetUniqueId4Tasks(const std::vector<TaskProto>& tasks,
-                                        ncclUniqueId* nccl_unique_id) {
-  if (tasks.size() == tasks.front().parallel_ctx().rank_ctx().rank_num()) {
-    NcclCheck(ncclGetUniqueId(nccl_unique_id));
-  } else {
-    bool should_create_unique_id =
-        std::find_if(
-            tasks.begin(), tasks.end(),
-            [](const TaskProto& task) { return task.parallel_ctx().rank_ctx().rank_id() == 0; })
-        != tasks.end();
-    std::string nccl_unique_id_rpc_key =
-        "nccl_unique_id_" + std::to_string(tasks.front().parallel_ctx().rank_ctx().rank_set_id());
-    if (should_create_unique_id) {
-      NcclCheck(ncclGetUniqueId(nccl_unique_id));
-      Global<CtrlClient>::Get()->PushKV(
-          nccl_unique_id_rpc_key, std::string(nccl_unique_id->internal, NCCL_UNIQUE_ID_BYTES));
-    } else {
-      Global<CtrlClient>::Get()->PullKV(
-          nccl_unique_id_rpc_key, [&nccl_unique_id](const std::string& val) {
-            memcpy(nccl_unique_id->internal, val.data(), NCCL_UNIQUE_ID_BYTES);
-          });
+}  // namespace
+
+NcclCommMgr::NcclCommMgr(const Plan& plan) {
+  const int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
+  const NcclTopo& topo = plan.nccl_topo();
+  for (const NcclCommGroup& group : topo.group()) {
+    std::vector<const NcclCommDesc*> local_comm_descs;
+    for (const NcclCommDesc& comm_desc : group.comm_desc()) {
+      if (GetMachineId(comm_desc) == this_machine_id) { local_comm_descs.push_back(&comm_desc); }
+    }
+    if (local_comm_descs.empty()) { continue; }
+    ncclUniqueId nccl_unique_id{};
+    GetOrCreateNcclUniqueId(local_comm_descs, group.id(), group.comm_desc_size(), &nccl_unique_id);
+    std::vector<ncclComm_t> comms_vec;
+    CreateNcclComms4CommDescs(local_comm_descs, nccl_unique_id, group.comm_desc_size(), &comms_vec);
+    FOR_RANGE(size_t, i, 0, local_comm_descs.size()) {
+      comm_desc_id2comm_.emplace(local_comm_descs.at(i)->id(), comms_vec[i]);
     }
   }
+  for (const auto& pair : topo.task_id2comm_desc_id()) {
+    actor_id2comm_desc_id_[pair.first] = pair.second;
+  }
+}
+
+NcclCommMgr::~NcclCommMgr() {
+  for (const auto& pair : comm_desc_id2comm_) { ncclCommDestroy(pair.second); }
+}
+
+ncclComm_t NcclCommMgr::NcclComm4ActorId(int64_t actor_id) const {
+  auto comm_id_it = actor_id2comm_desc_id_.find(actor_id);
+  if (comm_id_it == actor_id2comm_desc_id_.end()) { return nullptr; }
+  auto comm_it = comm_desc_id2comm_.find(comm_id_it->second);
+  if (comm_it == comm_desc_id2comm_.end()) { return nullptr; }
+  return comm_it->second;
 }
 
 }  // namespace oneflow

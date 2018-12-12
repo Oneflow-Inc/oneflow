@@ -14,15 +14,17 @@ message NetTopo {
 message NcclCommDesc {
   required int64 id = 1;
   required int64 global_device_id = 2;
+  required int64 rank_id = 3;
 }
 
 message NcclCommGroup {
-  repeated NcclCommDesc comm = 1;
+  required int64 id = 1;
+  repeated NcclCommDesc comm_desc = 2;
 }
 
 message NcclTopo {
   repeated NcclCommGroup group = 1;
-  map<int64, int64> task_id2comm_id = 2;
+  map<int64, int64> task_id2comm_desc_id = 2;
 }
 
 message Plan {

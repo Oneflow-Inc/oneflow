@@ -101,10 +101,12 @@ void Compiler::GenNcclTopo(Plan* plan) {
       if (it != nccl_group_key2nccl_group.end()) { return it->second; }
     }
     NcclCommGroup* group = nccl_topo->mutable_group()->Add();
-    for (const int64_t device_id : sorted_device_ids) {
-      NcclCommDesc* comm = group->mutable_comm()->Add();
+    group->set_id(nccl_topo->group().size());
+    FOR_RANGE(int32_t, i, 0, sorted_device_ids.size()) {
+      NcclCommDesc* comm = group->mutable_comm_desc()->Add();
       comm->set_id(++next_nccl_comm_id);
-      comm->set_global_device_id(device_id);
+      comm->set_global_device_id(sorted_device_ids[i]);
+      comm->set_rank_id(i);
     }
     nccl_group_key2nccl_group[key] = group;
     return group;
@@ -117,12 +119,12 @@ void Compiler::GenNcclTopo(Plan* plan) {
                      return Global<IDMgr>::Get()->GlobalDeviceId4TaskId(task->task_id());
                    });
     const NcclCommGroup* group = GetOrCreateNcclGroup(device_ids);
-    CHECK_EQ(group->comm_size(), tasks.size());
+    CHECK_EQ(group->comm_desc_size(), tasks.size());
     FOR_RANGE(int32_t, i, 0, tasks.size()) {
-      task_id2comm_id.emplace(tasks[i]->task_id(), group->comm(i).id());
+      task_id2comm_id.emplace(tasks[i]->task_id(), group->comm_desc(i).id());
     }
   }
-  *nccl_topo->mutable_task_id2comm_id() = HashMap2PbMap(task_id2comm_id);
+  *nccl_topo->mutable_task_id2comm_desc_id() = HashMap2PbMap(task_id2comm_id);
 }
 
 void Compiler::GenNetTopo(Plan* plan) {
