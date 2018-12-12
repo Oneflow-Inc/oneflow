@@ -81,6 +81,7 @@ template<typename T>
 void SetValInPbMessage(PbMessage* msg, const std::string& field_name, const T& val);
 
 PbMessage* MutableMessageInPbMessage(PbMessage*, const std::string& field_name);
+PbMessage* MutableMessageInPbMessage(PbMessage*, int field_index);
 
 // Add In PbMessage RepeatedField
 

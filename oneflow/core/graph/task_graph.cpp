@@ -131,7 +131,6 @@ void TaskGraph::MdUpdtDelayedTopoForEachNode(std::function<void(TaskNode* node)>
 }
 
 void TaskGraph::AcyclicTopoForEachNode(std::function<bool(TaskNode* node)> IsAllowedStartNode,
-                                       std::function<bool(TaskNode*, TaskNode*)> IsBackEdge,
                                        std::function<void(TaskNode* node)> Handler) const {
   auto ForEachInNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& Handler) {
     node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
@@ -158,18 +157,8 @@ void TaskGraph::AcyclicTopoForEachNode(std::function<bool(TaskNode* node)> IsAll
   TopoForEachNode(starts, ForEachInNode, ForEachOutNode, Handler);
 }
 
-void TaskGraph::AcyclicTopoForEachNode(std::function<bool(TaskNode* node)> IsAllowedStartNode,
-                                       std::function<void(TaskNode* node)> Handler) const {
-  AcyclicTopoForEachNode(IsAllowedStartNode, &TaskGraph::IsBackEdgeByTaskType, Handler);
-}
-
-void TaskGraph::AcyclicTopoForEachNode(std::function<bool(TaskNode*, TaskNode*)> IsBackEdge,
-                                       std::function<void(TaskNode* node)> Handler) const {
-  AcyclicTopoForEachNode([](TaskNode*) { return true; }, IsBackEdge, Handler);
-}
-
 void TaskGraph::AcyclicTopoForEachNode(std::function<void(TaskNode* node)> Handler) const {
-  AcyclicTopoForEachNode([](TaskNode*) { return true; }, Handler);
+  return AcyclicTopoForEachNode([](TaskNode*) { return true; }, Handler);
 }
 
 void TaskGraph::RemoveEmptyRegsts() {
@@ -655,14 +644,8 @@ void TaskGraph::ConnectWithCopyCommNetIfNeed(TaskNode* src, TaskNode* dst) {
   }
 }
 
-bool TaskGraph::IsBackEdgeByTaskType(TaskNode* src, TaskNode* dst) {
+bool IsBackEdge(TaskNode* src, TaskNode* dst) {
   return src->GetTaskType() == TaskType::kNormalMdUpdt
-         && (dst->GetTaskType() == TaskType::kNormalForward
-             || dst->GetTaskType() == TaskType::kNormalBackward);
-}
-
-bool TaskGraph::IsBackEdgeByAreaType(TaskNode* src, TaskNode* dst) {
-  return src->area_id() == AreaType::kMdUpdtArea
          && (dst->GetTaskType() == TaskType::kNormalForward
              || dst->GetTaskType() == TaskType::kNormalBackward);
 }
