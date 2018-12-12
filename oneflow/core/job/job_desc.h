@@ -80,6 +80,9 @@ class JobDesc final {
   float bias_l2() const;
   int32_t DataPartNum() const;
 
+  // optimization
+  void OptimizeDLNet() { AddIdentityOpIfNeed(); }
+
  private:
   friend class Global<JobDesc>;
   JobDesc(const std::string& job_conf_filepath);
@@ -88,6 +91,7 @@ class JobDesc final {
   void SanityCheck();
   void SplitDecodeOps();
   void AddRecordLoadOps();
+  void AddIdentityOpIfNeed();
 
   JobConf1 job_conf_;
 };

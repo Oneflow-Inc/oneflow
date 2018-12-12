@@ -1,9 +1,44 @@
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/persistence/hadoop/hadoop_file_system.h"
 
 namespace oneflow {
+
+namespace {
+
+std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4OpName(
+    const Placement& placement) {
+  auto op_name2parallel_conf = std::make_shared<HashMap<std::string, const ParallelConf*>>();
+  for (const auto& placement_group : placement.placement_group()) {
+    for (const std::string& op_name : placement_group.op_set().op_name()) {
+      CHECK(op_name2parallel_conf->emplace(op_name, &placement_group.parallel_conf()).second);
+    }
+  }
+  return [op_name2parallel_conf](const std::string& op_name) {
+    return op_name2parallel_conf->at(op_name);
+  };
+}
+
+void GroupOpConfByInputLbiAndParallelDesc(
+    HashMap<std::pair<LogicalBlobId, ParallelDesc>, HashSet<OperatorConf*>>* grouped,
+    DLNetConf* dlnet_conf,
+    const std::function<const ParallelConf*(const std::string&)>& ParallelConf2OpName) {
+  CHECK(grouped->empty());
+  FOR_RANGE(int, idx, 0, dlnet_conf->op_size()) {
+    OperatorConf* op_conf = dlnet_conf->mutable_op(idx);
+    ParallelDesc pr(*ParallelConf2OpName(op_conf->name()));
+    OperatorConf dev_op_conf = *op_conf;
+    dev_op_conf.set_device_type(pr.device_type());
+    std::shared_ptr<Operator> op = ConstructOp(dev_op_conf);
+    for (const auto& ibn : op->input_bns()) {
+      (*grouped)[std::make_pair(op->BnInOp2Lbi(ibn), pr)].insert(op_conf);
+    }
+  }
+}
+
+}  // namespace
 
 float JobDesc::lazy_reduce_ratio() const {
   float ratio = job_conf_.other().lazy_reduce_ratio();
@@ -263,6 +298,35 @@ void JobDesc::AddRecordLoadOps() {
         PbMd message_diff;
         if (!message_diff.Equivalent(*parallel_conf, *(op_parallel_conf_it->second))) { continue; }
         op->mutable_decode_ofrecord_conf()->set_in(record_load_lbi_name);
+      }
+    }
+  }
+}
+
+void JobDesc::AddIdentityOpIfNeed() {
+  auto ParallelConf4OpName = MakeGetterParallelConf4OpName(job_conf_.placement());
+  HashMap<std::pair<LogicalBlobId, ParallelDesc>, HashSet<OperatorConf*>> grouped;
+  GroupOpConfByInputLbiAndParallelDesc(&grouped, job_conf_.mutable_net(), ParallelConf4OpName);
+  for (auto& pair : grouped) {
+    if (pair.second.size() == 1) { continue; }
+    const auto& lbi = pair.first.first;
+    ParallelDesc pr(*ParallelConf4OpName(lbi.op_name()));
+    if (pr.parallel_num() == pair.first.second.parallel_num()) { continue; }
+    OperatorConf* op = job_conf_.mutable_net()->add_op();
+    op->set_name("clone_identity_" + NewUniqueId());
+    IdentityOpConf* identity_op = op->mutable_identity_conf();
+    identity_op->set_in(lbi.op_name() + "/" + lbi.blob_name());
+    identity_op->set_out("out");
+    std::string identity_out_lbn = op->name() + "/out";
+    PlacementGroup* p_group = job_conf_.mutable_placement()->add_placement_group();
+    *(p_group->mutable_op_set()->add_op_name()) = op->name();
+    *(p_group->mutable_parallel_conf()) = *ParallelConf4OpName((*pair.second.cbegin())->name());
+    for (auto* op_conf : pair.second) {
+      PbMessage* op_type_conf = MutableMessageInPbMessage(op_conf, op_conf->op_type_case());
+      std::shared_ptr<Operator> op = ConstructOp(*op_conf);
+      for (const auto& ibn : op->input_bns()) {
+        if (!(op->BnInOp2Lbi(ibn) == lbi)) { continue; }
+        SetValInPbMessage<std::string>(op_type_conf, ibn, identity_out_lbn);
       }
     }
   }

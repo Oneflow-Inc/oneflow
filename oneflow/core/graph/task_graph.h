@@ -28,8 +28,6 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void AddOrderCtrlEdgeBetweenCopyAndMdUpdt();
   void RmUselessConsumeRelationshipBetweenFwBw();
   void AcyclicTopoForEachNode(std::function<void(TaskNode* node)> Handler) const;
-  void AcyclicTopoForEachNode(std::function<bool(TaskNode*, TaskNode*)> IsBackEdge,
-                              std::function<void(TaskNode* node)> Handler) const;
   void MdUpdtDelayedTopoForEachNode(std::function<void(TaskNode* node)> Handler) const;
 
 #define DECLARE_BLD_SUB_TASK_GRAPH_METHOD(method_name) void method_name BLD_SUB_TSK_GPH_MTHD_ARGS();
@@ -41,17 +39,9 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceAdd2ReduceGather);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGather2ReduceGather);
 
-  static bool IsBackEdgeByAreaType(TaskNode* src, TaskNode* dst);
-
  private:
-  static bool IsBackEdgeByTaskType(TaskNode* src, TaskNode* dst);
-
-  void AcyclicTopoForEachNode(std::function<bool(TaskNode* node)> IsAllowedStartNode,
-                              std::function<bool(TaskNode*, TaskNode*)> IsBackEdge,
-                              std::function<void(TaskNode* node)> Handler) const;
   void AcyclicTopoForEachNode(std::function<bool(TaskNode* node)> IsAllowedStartNode,
                               std::function<void(TaskNode* node)> Handler) const;
-
   void BuildTaskPath(
       CompTaskNode* src, CompTaskNode* dst,
       std::function<TaskNode**(CompTaskNode* src, int64_t machine_id, int32_t mem_zone_id)>
@@ -87,6 +77,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   std::unique_ptr<const LogicalGraph> logical_gph_;
   std::vector<TaskNode*> ordered_task_nodes_;
 };
+bool IsBackEdge(TaskNode* src, TaskNode* dst);
 
 }  // namespace oneflow
 
