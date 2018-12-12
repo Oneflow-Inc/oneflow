@@ -20,3 +20,4 @@ class L2NormalizeOp final : public Operator {
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_OPERATOR_L2_NORMALIZE_OP_H_
+

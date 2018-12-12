@@ -77,3 +77,4 @@ ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kL2NormalizeConf, L2NormalizeKernel,
                            FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
+

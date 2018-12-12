@@ -21,3 +21,4 @@ void L2NormalizeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
 REGISTER_OP(OperatorConf::kL2NormalizeConf, L2NormalizeOp);
 
 }  // namespace oneflow
+

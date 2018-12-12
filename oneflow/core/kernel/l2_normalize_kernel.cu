@@ -105,3 +105,4 @@ struct L2NormalizeKernelUtil<DeviceType::kGPU, T> {
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_L2_NORMALIZE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
+
