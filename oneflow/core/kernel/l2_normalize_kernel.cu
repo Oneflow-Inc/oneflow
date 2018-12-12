@@ -83,7 +83,7 @@ struct L2NormalizeKernelUtil<DeviceType::kGPU, T> {
     int32_t axis = conf.axis() >= 0 ? conf.axis() : conf.axis() + in_blob->shape().NumAxes();
     int32_t c = in_blob->shape().At(axis);
     int32_t n = in_blob->shape().elem_cnt() / c;
-    int32_t d = in_blob->shape().elem_cnt() / in_blob->shape().Count(0, axis + 1);
+    int32_t d = in_blob->shape().Count(axis + 1);
     L2NormalizeForward<<<std::min(n, kCudaMaxBlocksNum), kCudaThreadsNumPerBlock, 0,
                          ctx->cuda_stream()>>>(n, c, d, static_cast<T>(conf.epsilon()),
                                                in_blob->dptr<T>(), out_blob->mut_dptr<T>());
@@ -94,7 +94,7 @@ struct L2NormalizeKernelUtil<DeviceType::kGPU, T> {
     int32_t axis = conf.axis() >= 0 ? conf.axis() : conf.axis() + in_blob->shape().NumAxes();
     int32_t c = in_blob->shape().At(axis);
     int32_t n = in_blob->shape().elem_cnt() / c;
-    int32_t d = in_blob->shape().elem_cnt() / in_blob->shape().Count(0, axis + 1);
+    int32_t d = in_blob->shape().Count(axis + 1);
     L2NormalizeBackward<<<std::min(n, kCudaMaxBlocksNum), kCudaThreadsNumPerBlock, 0,
                           ctx->cuda_stream()>>>(n, c, d, static_cast<T>(conf.epsilon()),
                                                 in_blob->dptr<T>(), out_diff_blob->dptr<T>(),

@@ -24,7 +24,7 @@ struct L2NormalizeKernelUtil<DeviceType::kCPU, T> {
     int32_t axis = conf.axis() >= 0 ? conf.axis() : conf.axis() + in_blob->shape().NumAxes();
     int32_t c = in_blob->shape().At(axis);
     int32_t n = in_blob->shape().elem_cnt() / c;
-    int32_t d = in_blob->shape().elem_cnt() / in_blob->shape().Count(0, axis + 1);
+    int32_t d = in_blob->shape().Count(axis + 1);
     const T* in = in_blob->dptr<T>();
     float epsilon = conf.epsilon();
     T* out = out_blob->mut_dptr<T>();
@@ -49,7 +49,7 @@ struct L2NormalizeKernelUtil<DeviceType::kCPU, T> {
     int32_t axis = conf.axis() >= 0 ? conf.axis() : conf.axis() + in_blob->shape().NumAxes();
     int32_t c = in_blob->shape().At(axis);
     int32_t n = in_blob->shape().elem_cnt() / c;
-    int32_t d = in_blob->shape().elem_cnt() / in_blob->shape().Count(0, axis + 1);
+    int32_t d = in_blob->shape().Count(axis + 1);
     const T* out_diff = out_diff_blob->dptr<T>();
     const T* in = in_blob->dptr<T>();
     float epsilon = conf.epsilon();
