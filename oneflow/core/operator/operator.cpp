@@ -95,6 +95,8 @@ void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> Get
   }
   // check only in/out blob has instance shape
   for (const auto& pair : op_attribute_.bn_in_op2lbi()) {
+    BlobDesc* blob_desc = GetBlobDesc4BnInOp(pair.first);
+    if (!blob_desc) { continue; }
     auto it = std::find(input_bns().begin(), input_bns().end(), pair.first);
     if (it != input_bns().end()) { continue; }
     it = std::find(input_diff_bns().begin(), input_diff_bns().end(), pair.first);
@@ -103,7 +105,7 @@ void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> Get
     if (it != output_bns().end()) { continue; }
     it = std::find(output_diff_bns().begin(), output_diff_bns().end(), pair.first);
     if (it != output_diff_bns().end()) { continue; }
-    CHECK(!GetBlobDesc4BnInOp(pair.first)->has_instance_shape_field());
+    CHECK(!blob_desc->has_instance_shape_field());
   }
 }
 

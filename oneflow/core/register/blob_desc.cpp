@@ -156,8 +156,7 @@ void BlobDesc::RecordIdInDevicePieceToProto(StructPodDesc* header_pod_desc) cons
 
 void BlobDesc::InstanceShapeToProto(StructPodDesc* header_pod_desc) const {
   Shape shape({body_field_.shape().NumAxes() - 1});
-  header_pod_desc->AddField(FieldKey::kRecordIdInDevicePiece,
-                            TensorPodDesc(shape, DataType::kInt64));
+  header_pod_desc->AddField(FieldKey::kInstanceShape, TensorPodDesc(shape, DataType::kInt64));
 }
 
 void BlobDesc::HeaderToProto(BlobDescProto* proto) const {

@@ -39,12 +39,14 @@ void AccuracyOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   *accuracy_blob_desc = *pred_blob_desc;
   accuracy_blob_desc->mut_shape() = Shape({1});
   accuracy_blob_desc->set_data_type(pred_blob_desc->data_type());
+  accuracy_blob_desc->set_has_instance_shape_field(false);
 
   // accuracy instance num
   BlobDesc* accuracy_instance_num_blob_desc = GetBlobDesc4BnInOp("accuracy_instance_num");
   accuracy_instance_num_blob_desc->mut_shape() = Shape({1});
   accuracy_instance_num_blob_desc->set_data_type(pred_blob_desc->data_type());
   accuracy_instance_num_blob_desc->set_has_data_id_field(pred_blob_desc->has_data_id_field());
+  accuracy_instance_num_blob_desc->set_has_instance_shape_field(false);
 }
 
 LogicalBlobId AccuracyOp::obn2lbi(const std::string& output_bn) const {
