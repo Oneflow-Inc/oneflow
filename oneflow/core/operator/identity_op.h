@@ -13,7 +13,7 @@ class IdentityOp final : public Operator {
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
-  bool IsElemWiseOp() const override { return true; }
+  bool IsElemWiseOp() const override { return op_conf().identity_conf().in_size() == 1; }
   bool NeedInBlobWhenBackward() const override { return false; }
   bool NeedOutBlobWhenBackward() const override { return false; }
 
