@@ -1,5 +1,6 @@
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
 #include "oneflow/core/control/ctrl_client.h"
+#include <fcntl.h>
 
 #if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
 
@@ -13,6 +14,38 @@ std::string GenTokensMsgKey(int64_t machine_id) {
 
 std::string GenConnInfoKey(int64_t src_machine_id, int64_t dst_machine_id) {
   return "IBVerbsConnInfo/" + std::to_string(src_machine_id) + "/" + std::to_string(dst_machine_id);
+}
+
+int32_t NumOfActivePorts(ibv_device* device) {
+  int32_t active_ports = 0;
+  ibv_device_attr device_attr;
+  ibv_port_attr port_attr;
+  ibv_context* context = ibv_open_device(device);
+  PCHECK(context);
+  PCHECK(ibv_query_device(context, &device_attr) == 0);
+  for (int32_t port_index = 1; port_index <= device_attr.phys_port_cnt; ++port_index) {
+    PCHECK(ibv_query_port(context, port_index, &port_attr) == 0);
+    if (port_attr.state == IBV_PORT_ACTIVE) { active_ports++; }
+  }
+  ibv_close_device(context);
+  return active_ports;
+}
+
+int read_sysfs_file(const char* dir, const char* file, char* buf, size_t size) {
+  char* path;
+  int fd;
+  int len;
+  if (asprintf(&path, "%s/%s", dir, file) < 0) { return -1; }
+  fd = open(path, O_RDONLY);
+  if (fd < 0) {
+    free(path);
+    return -1;
+  }
+  len = read(fd, buf, size);
+  close(fd);
+  free(path);
+  if (len > 0 && buf[len - 1] == '\n') { buf[--len] = '\0'; }
+  return len;
 }
 
 }  // namespace
@@ -53,35 +86,121 @@ void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
   qp_vec_.at(dst_machine_id)->PostSendRequest(msg);
 }
 
+void IBVerbsCommNet::InitContext(const std::string& device_name) {
+  int32_t device_num = 0;
+  int32_t device_index = 0;
+  ibv_device** device_list = ibv_get_device_list(&device_num);
+  PCHECK(device_list);
+  ibv_device* device = nullptr;
+  if (device_name == "") {
+    for (device_index = 0; device_index < device_num; ++device_index) {
+      device = device_list[device_index];
+      if (NumOfActivePorts(device) > 0) { break; }
+    }
+    CHECK_LT(device_index, device_num) << "There is no device with active port in the machine.";
+  } else {
+    for (device_index = 0; device_index < device_num; ++device_index) {
+      device = device_list[device_index];
+      if (std::string(ibv_get_device_name(device)) == device_name) {
+        CHECK(NumOfActivePorts(device)) << "Device " << device_name << " has no active port.";
+        break;
+      }
+    }
+    CHECK_LT(device_index, device_num) << "The device " << device_name << " wasn't found.";
+  }
+  PCHECK(device);
+  context_ = ibv_open_device(device);
+  PCHECK(context_);
+  ibv_free_device_list(device_list);
+}
+
+uint32_t IBVerbsCommNet::QueryPort(uint32_t port_num, ibv_port_attr* port_attr) {
+  ibv_device_attr device_attr;
+  PCHECK(ibv_query_device(context_, &device_attr) == 0);
+  if (port_num == 0) {
+    for (size_t port_index = 1; port_index <= device_attr.phys_port_cnt; ++port_index) {
+      PCHECK(ibv_query_port(context_, port_index, port_attr) == 0);
+      if (port_attr->state == IBV_PORT_ACTIVE) {
+        port_num = port_index;
+        break;
+      }
+    }
+    CHECK_GT(port_num, 0) << "No active ports";
+  } else {
+    CHECK_LE(port_num, device_attr.phys_port_cnt)
+        << "DEVICE_PORT should be less or equal to amount of available ports";
+    PCHECK(ibv_query_port(context_, port_num, port_attr) == 0);
+    CHECK_EQ(port_attr->state, IBV_PORT_ACTIVE) << "Selected DEVICE_PORT is not active";
+  }
+  return port_num;
+}
+
+uint32_t IBVerbsCommNet::QueryGid(uint32_t port_num, uint32_t sgid_index, ibv_port_attr* port_attr,
+                                  ibv_gid* gid) {
+  int32_t gids_num = 0;
+  int32_t v2_ip_num = 0;
+  uint32_t gid_index = 0;
+  for (int32_t i = 0; i < port_attr->gid_tbl_len; i++) {
+    PCHECK(ibv_query_gid(context_, port_num, i, gid) == 0)
+        << "Failed to query gid to port " << (int)port_num << " index " << i;
+    if (gid->global.interface_id) {
+      gids_num++;
+      if (gid->global.subnet_prefix == 0 && is_gid_type_roce_v2(port_num, i)) {
+        if (v2_ip_num == 0) { gid_index = i; }
+        v2_ip_num++;
+      }
+    }
+  }
+  switch (port_attr->link_layer) {
+    case (IBV_LINK_LAYER_ETHERNET):
+      if (sgid_index != 0) {
+        CHECK_LT(sgid_index, gids_num)
+            << "RDMA_GID_INDEX should be less than GIDs amount" << gids_num;
+        gid_index = sgid_index;
+      }
+      // TODO(shiyuan)
+      if (!is_gid_type_roce_v2(port_num, gid_index)) {
+        LOG(INFO) << "RoCE v2 is not configured for GID_INDEX " << (int)gid_index;
+      }
+      break;
+    case (IBV_LINK_LAYER_INFINIBAND): break;
+    default:
+      LOG(INFO) << "Unknown port link layer. Currently supporting Ethernet and InfiniBand only.";
+  }
+  PCHECK(ibv_query_gid(context_, port_num, gid_index, gid) == 0);
+  return gid_index;
+}
+
+bool IBVerbsCommNet::is_gid_type_roce_v2(uint32_t port_num, uint32_t index) {
+  char name[32];
+  char buff[41];
+  snprintf(name, sizeof(name), "ports/%d/gid_attrs/types/%d", port_num, index);
+  if (read_sysfs_file(context_->device->ibdev_path, name, buff, sizeof(buff)) <= 0) {
+    return false;
+  }
+  return !strcmp(buff, "RoCE v2");
+}
+
 IBVerbsCommNet::IBVerbsCommNet(const Plan& plan)
     : CommNetIf(plan),
       token2mem_desc_(Global<JobDesc>::Get()->TotalMachineNum()),
       poll_exit_flag_(ATOMIC_FLAG_INIT) {
-  const auto& ibv_conf = Global<JobDesc>::Get()->ibverbs_conf();
-  int32_t device_num;
-  ibv_device** device_list = ibv_get_device_list(&device_num);
-  PCHECK(device_list);
-  int32_t device_index = 0;
-  ibv_device* device = device_list[device_index];
-  while ((ibv_conf.device_name() != "") && (device_index < device_num)) {
-    if (std::string(ibv_get_device_name(device)) == ibv_conf.device_name()) { break; }
-    device = device_list[++device_index];
-  }
-  CHECK_LT(device_index, device_num);
-  context_ = ibv_open_device(device);
-  PCHECK(context_);
-  ibv_free_device_list(device_list);
+  auto& ibv_conf = Global<JobDesc>::Get()->ibverbs_conf();
+  InitContext(ibv_conf.device_name());
   pd_ = ibv_alloc_pd(context_);
   PCHECK(pd_);
-  ibv_device_attr device_attr;
-  PCHECK(ibv_query_device(context_, &device_attr) == 0);
-  cq_ = ibv_create_cq(context_, device_attr.max_cqe, nullptr, nullptr, 0);
+  cq_ = ibv_create_cq(context_, max_poll_wc_num_, nullptr, nullptr, 0);
   PCHECK(cq_);
   ibv_port_attr port_attr;
-  PCHECK(ibv_query_port(context_, 1, &port_attr) == 0);  // TODO(shiyuan): reuse port_num(1)?
-  // TODO(shiyuan): GID is the global address when sending packets between different subnets/
   ibv_gid gid;
-  PCHECK(ibv_query_gid(context_, 1, 0, &gid) == 0);
+  uint32_t port_num = QueryPort(static_cast<uint32_t>(ibv_conf.port_num()), &port_attr);
+  uint32_t sgid_index =
+      QueryGid(port_num, static_cast<uint32_t>(ibv_conf.sgid_index()), &port_attr, &gid);
+
+  auto mutable_ibv_conf = Global<JobDesc>::Get()->mutable_ibverbs_conf();
+  mutable_ibv_conf->set_port_num(port_num);
+  mutable_ibv_conf->set_sgid_index(sgid_index);
+
   int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
   qp_vec_.assign(Global<JobDesc>::Get()->TotalMachineNum(), nullptr);
   for (int64_t peer_id : peer_machine_id()) {
@@ -106,7 +225,6 @@ IBVerbsCommNet::IBVerbsCommNet(const Plan& plan)
   }
   OF_BARRIER();
   poll_thread_ = std::thread(&IBVerbsCommNet::PollCQ, this);
-  // TODO(shiyuan): PingPeers
   OF_BARRIER();
 }
 
@@ -125,7 +243,9 @@ void IBVerbsCommNet::PollCQ() {
     CHECK_GE(found_wc_num, 0);
     FOR_RANGE(int32_t, i, 0, found_wc_num) {
       const ibv_wc& wc = wc_vec.at(i);
-      CHECK_EQ(wc.status, IBV_WC_SUCCESS) << wc.opcode;
+      CHECK_EQ(wc.status, IBV_WC_SUCCESS) << "Failed status \n"
+                                          << ibv_wc_status_str(wc.status) << " " << wc.status << " "
+                                          << static_cast<int>(wc.wr_id) << " " << wc.vendor_err;
       WorkRequestId* wr_id = reinterpret_cast<WorkRequestId*>(wc.wr_id);
       IBVerbsQP* qp = wr_id->qp;
       switch (wc.opcode) {
@@ -147,7 +267,7 @@ void IBVerbsCommNet::PollCQ() {
   }
 }
 
-const int32_t IBVerbsCommNet::max_poll_wc_num_ = 32;
+const int32_t IBVerbsCommNet::max_poll_wc_num_ = 128;
 
 }  // namespace oneflow
 

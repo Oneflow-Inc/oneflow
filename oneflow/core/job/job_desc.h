@@ -27,6 +27,10 @@ class JobDesc final {
     CHECK(this->use_rdma());
     return this->comm_net_conf().ibverbs_conf();
   }
+  IBVerbsConf* mutable_ibverbs_conf() {
+    CHECK(this->use_rdma());
+    return job_conf_.mutable_other()->mutable_comm_net_conf()->mutable_ibverbs_conf();
+  }
   const std::string& MdLoadSnapshotPath() { return job_conf_.other().model_load_snapshot_path(); }
   DataType DefaultDataType() const { return job_conf_.other().default_data_type(); }
   size_t SizeOfOneDataId() const { return job_conf_.other().max_data_id_length() * sizeof(char); }

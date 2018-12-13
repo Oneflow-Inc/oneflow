@@ -33,6 +33,10 @@ class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
   IBVerbsCommNet(const Plan&);
   void DoRead(void* read_id, int64_t src_machine_id, void* src_token, void* dst_token) override;
   void PollCQ();
+  void InitContext(const std::string&);
+  uint32_t QueryPort(uint32_t, ibv_port_attr*);
+  uint32_t QueryGid(uint32_t, uint32_t, ibv_port_attr*, ibv_gid*);
+  bool is_gid_type_roce_v2(uint32_t port_num, uint32_t index);
 
   static const int32_t max_poll_wc_num_;
 

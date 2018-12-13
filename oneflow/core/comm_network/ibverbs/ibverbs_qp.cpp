@@ -46,8 +46,10 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
   // IBV_QPS_INIT
   memset(&qp_attr, 0, sizeof(ibv_qp_attr));
   qp_attr.qp_state = IBV_QPS_INIT;
+  CHECK_GE(ibv_conf_.pkey_index(), 0);
+  CHECK_LE(ibv_conf_.pkey_index(), MaxVal<uint8_t>());
   qp_attr.pkey_index = ibv_conf_.pkey_index();
-  qp_attr.port_num = 1;
+  qp_attr.port_num = ibv_conf_.port_num();
   qp_attr.qp_access_flags =
       IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ;
   PCHECK(ibv_modify_qp(qp_, &qp_attr,
@@ -59,15 +61,17 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
   qp_attr.ah_attr.grh.dgid.global.subnet_prefix = peer_info.subnet_prefix();
   qp_attr.ah_attr.grh.dgid.global.interface_id = peer_info.interface_id();
   qp_attr.ah_attr.grh.flow_label = 0;
-  qp_attr.ah_attr.grh.sgid_index = 0;  // TODO(shiyuan)
+  qp_attr.ah_attr.grh.sgid_index = ibv_conf_.sgid_index();
   qp_attr.ah_attr.grh.traffic_class = ibv_conf_.traffic_class();
   qp_attr.ah_attr.grh.hop_limit = 255;  // MaxVal<uint8_t>();
   qp_attr.ah_attr.dlid = peer_info.local_id();
+  CHECK_GE(ibv_conf_.sl(), 0);
+  CHECK_LE(ibv_conf_.sl(), 7);
   qp_attr.ah_attr.sl = ibv_conf_.sl();
   qp_attr.ah_attr.src_path_bits = 0;
   qp_attr.ah_attr.static_rate = 0;
   qp_attr.ah_attr.is_global = 1;
-  qp_attr.ah_attr.port_num = 1;
+  qp_attr.ah_attr.port_num = ibv_conf_.port_num();
   qp_attr.path_mtu = port_attr.active_mtu;
   qp_attr.dest_qp_num = peer_info.qp_num();
   qp_attr.rq_psn = 0;
@@ -80,10 +84,14 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
   // IBV_QPS_RTS
   memset(&qp_attr, 0, sizeof(ibv_qp_attr));
   qp_attr.qp_state = IBV_QPS_RTS;
-  qp_attr.sq_psn = 0;
+  qp_attr.sq_psn = 0;  // TODO(shiyuan) static_cast<uint32_t>(random::New64()) & 0xffffff
   qp_attr.max_rd_atomic = 1;
+  CHECK_GE(ibv_conf_.retry_cnt(), 0);
+  CHECK_LE(ibv_conf_.retry_cnt(), MaxVal<uint8_t>());
   qp_attr.retry_cnt = ibv_conf_.retry_cnt();
   qp_attr.rnr_retry = 7;  // infinite
+  CHECK_GE(ibv_conf_.timeout(), 0);
+  CHECK_LE(ibv_conf_.timeout(), MaxVal<uint8_t>());
   qp_attr.timeout = ibv_conf_.timeout();
   PCHECK(ibv_modify_qp(qp_, &qp_attr,
                        IBV_QP_STATE | IBV_QP_SQ_PSN | IBV_QP_MAX_QP_RD_ATOMIC | IBV_QP_RETRY_CNT
