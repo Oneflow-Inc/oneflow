@@ -120,6 +120,11 @@ void Kernel::CheckSameDim0ValidNum(
 
 void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (kernel_conf_.need_do_instance_shape()) {
+    // infer instance shape need do first
+    CHECK(!kernel_conf_.need_do_opaque_header());
+    ForwardInstanceShape(ctx, BnInOp2Blob);
+  }
   if (kernel_conf_.need_do_dim0_valid_num()) {
     CHECK(!kernel_conf_.need_do_opaque_header());
     ForwardDim0ValidNum(ctx, BnInOp2Blob);
@@ -153,12 +158,16 @@ void Kernel::Forward(const KernelCtx& ctx,
   } else {
     if (kernel_conf_.need_do_data_id()) { ForwardDataId(ctx, BnInOp2Blob); }
     if (kernel_conf_.need_do_col_num()) { ForwardColNum(ctx, BnInOp2Blob); }
-    if (kernel_conf_.need_do_instance_shape()) { ForwardInstanceShape(ctx, BnInOp2Blob); }
   }
 }
 
 void Kernel::Backward(const KernelCtx& ctx,
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (kernel_conf_.need_do_instance_shape()) {
+    // infer instance shape need do first
+    CHECK(!kernel_conf_.need_do_opaque_header());
+    BackwardInstanceShape(ctx, BnInOp2Blob);
+  }
   if (op_attribute().model_diff_bns().size() > 0) {
     BackwardModelDiffDim0ValidNum(ctx, BnInOp2Blob);
   }
@@ -196,7 +205,6 @@ void Kernel::Backward(const KernelCtx& ctx,
   }
   if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
   if (kernel_conf_.need_do_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
-  if (kernel_conf_.need_do_instance_shape()) { BackwardInstanceShape(ctx, BnInOp2Blob); }
   if (this->op_attribute().model_diff_bns().size() > 0) {
     SetTotalInstanceNumDiffBlob(ctx, BnInOp2Blob);
   }
