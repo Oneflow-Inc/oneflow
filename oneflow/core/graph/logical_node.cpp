@@ -304,7 +304,7 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
       return &TaskGraph::BldSubTskGphByRecordLoadToTick;
     }
     if (src_node->SoleOp()->op_conf().has_tick_conf()
-        || dst_node->SoleOp()->op_conf().has_log_counter_conf() == false) {
+        && dst_node->SoleOp()->op_conf().has_log_counter_conf() == false) {
       return &TaskGraph::BldSubTskGphByTickToSource;
     }
   }

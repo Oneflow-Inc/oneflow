@@ -413,7 +413,6 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByTickToSource) {
   HashMap<size_t, CompTaskNode*> machine_id2tick_task;
   HashMap<size_t, std::vector<CompTaskNode*>> machine_id2dst_tasks;
   for (CompTaskNode* tick_node : sorted_src_comp_tasks) {
-    CHECK(machine_id2tick_task.find(tick_node->machine_id()) == machine_id2tick_task.end());
     machine_id2tick_task[tick_node->machine_id()] = tick_node;
   }
   for (CompTaskNode* dst_node : sorted_dst_comp_tasks) {
