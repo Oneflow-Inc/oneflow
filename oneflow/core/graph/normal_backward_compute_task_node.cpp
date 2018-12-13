@@ -224,7 +224,7 @@ void NormalBackwardCompTaskNode::RmUselessConsumeRelationshipToFw() {
     if (node->in_edges().empty()) {
       need_in_blob = need_in_blob || node->op()->NeedInBlobWhenBackwardIf();
       has_same_shape_between_in_out_diff =
-          has_same_shape_between_in_out_diff && node->op()->HasSameShapeBetweenInOutDiff();
+          has_same_shape_between_in_out_diff && node->op()->HasSameShapeBetweenInOut();
     }
     if (node->out_edges().empty()) {
       need_out_blob = need_out_blob || node->op()->NeedOutBlobWhenBackwardIf();

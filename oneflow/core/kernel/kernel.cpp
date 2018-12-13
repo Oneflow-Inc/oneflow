@@ -145,6 +145,7 @@ void Kernel::Forward(const KernelCtx& ctx,
   } else {
     if (kernel_conf_.need_do_data_id()) { ForwardDataId(ctx, BnInOp2Blob); }
     if (kernel_conf_.need_do_col_num()) { ForwardColNum(ctx, BnInOp2Blob); }
+    if (kernel_conf_.need_do_instance_shape()) { ForwardInstanceShape(ctx, BnInOp2Blob); }
   }
 }
 
@@ -187,6 +188,7 @@ void Kernel::Backward(const KernelCtx& ctx,
   }
   if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
   if (kernel_conf_.need_do_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
+  if (kernel_conf_.need_do_instance_shape()) { BackwardInstanceShape(ctx, BnInOp2Blob); }
   if (this->op_attribute().model_diff_bns().size() > 0) {
     SetTotalInstanceNumDiffBlob(ctx, BnInOp2Blob);
   }
@@ -224,6 +226,17 @@ void KernelIf<device_type>::ForwardRecordIdInDevicePiece(
   CheckSameRecordIdInDevicePiece(op_attribute().input_bns(), BnInOp2Blob);
   CopyField(ctx.device_ctx, BnInOp2Blob, BnInOp2Blob(op_attribute().input_bns(0)),
             op_attribute().output_bns(), &Blob::CopyRecordIdInDevicePieceFrom);
+}
+
+template<DeviceType device_type>
+void KernelIf<device_type>::ForwardInstanceShape(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (kernel_conf().has_same_shape_between_in_out_blob()) {
+    CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
+              &Blob::CopyInstanceShapeFrom);
+  } else {
+    UNIMPLEMENTED();
+  }
 }
 
 template<DeviceType device_type>
@@ -273,6 +286,17 @@ void KernelIf<device_type>::BackwardColNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().output_diff_bns(),
             op_attribute().input_diff_bns(), &Blob::CopyColNumFrom);
+}
+
+template<DeviceType device_type>
+void KernelIf<device_type>::BackwardInstanceShape(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (kernel_conf().has_same_shape_between_in_out_blob()) {
+    CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().output_diff_bns(),
+              op_attribute().input_diff_bns(), &Blob::CopyInstanceShapeFrom);
+  } else {
+    UNIMPLEMENTED();
+  }
 }
 
 template<DeviceType device_type, typename T>
