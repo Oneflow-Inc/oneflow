@@ -74,7 +74,7 @@ message OtherConf {
   optional bool enable_blob_mem_sharing = 140 [default = true];
   optional bool enable_nccl = 142 [default = true];
   optional bool use_nccl_inter_node_communication = 143 [default = false];
-  optional bool reuse_nccl_communicator = 144 [default = true];
+  optional bool reuse_nccl_communicator = 144 [default = false];
   optional int64 cudnn_buf_limit_mbyte = 145 [default = 1024];  // 1GByte
   optional int64 reduce_group_size = 146 [default = 20];
   optional float lazy_reduce_ratio = 147 [default = 0.0];

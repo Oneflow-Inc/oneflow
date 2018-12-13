@@ -11,13 +11,8 @@ namespace oneflow {
 
 namespace {
 
-std::string GetNcclUniqueIdRpcKey(int64_t group_id) {
+std::string GenNcclUniqueIdRpcKey(int64_t group_id) {
   return "nccl_unique_id_" + std::to_string(group_id);
-}
-
-bool IsNcclTaskType(const TaskType& tt) {
-  return tt == TaskType::kNcclAllGather || tt == TaskType::kNcclAllReduce
-         || tt == TaskType::kNcclReduceScatter;
 }
 
 int32_t GetDeviceId4Task(int64_t task_id) {
@@ -25,8 +20,13 @@ int32_t GetDeviceId4Task(int64_t task_id) {
   return static_cast<int32_t>(Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id));
 }
 
-int64_t GetMachineId(const NcclCommDesc& comm_desc) {
+int64_t GetMachineId4CommDesc(const NcclCommDesc& comm_desc) {
   return Global<IDMgr>::Get()->MachineId4ActorId(comm_desc.global_device_id());
+}
+
+bool IsCommOnThisMachine(const NcclCommDesc& comm_desc) {
+  return Global<IDMgr>::Get()->MachineId4ActorId(comm_desc.global_device_id())
+         == Global<MachineCtx>::Get()->this_machine_id();
 }
 
 void GetOrCreateNcclUniqueId(const std::vector<const NcclCommDesc*>& comm_descs, int64_t group_id,
@@ -34,12 +34,12 @@ void GetOrCreateNcclUniqueId(const std::vector<const NcclCommDesc*>& comm_descs,
   if (comm_descs.front()->rank_id() == 0) {
     NcclCheck(ncclGetUniqueId(unique_id));
     if (comm_descs.size() < num_rank) {
-      Global<CtrlClient>::Get()->PushKV(GetNcclUniqueIdRpcKey(group_id),
+      Global<CtrlClient>::Get()->PushKV(GenNcclUniqueIdRpcKey(group_id),
                                         std::string(unique_id->internal, NCCL_UNIQUE_ID_BYTES));
     }
   } else {
     Global<CtrlClient>::Get()->PullKV(
-        GetNcclUniqueIdRpcKey(group_id), [&unique_id](const std::string& val) {
+        GenNcclUniqueIdRpcKey(group_id), [&unique_id](const std::string& val) {
           memcpy(unique_id->internal, val.data(), NCCL_UNIQUE_ID_BYTES);
         });
   }
@@ -63,12 +63,11 @@ void CreateNcclComms4CommDescs(const std::vector<const NcclCommDesc*>& comm_desc
 }  // namespace
 
 NcclCommMgr::NcclCommMgr(const Plan& plan) {
-  const int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
   const NcclTopo& topo = plan.nccl_topo();
   for (const NcclCommGroup& group : topo.group()) {
     std::vector<const NcclCommDesc*> local_comm_descs;
     for (const NcclCommDesc& comm_desc : group.comm_desc()) {
-      if (GetMachineId(comm_desc) == this_machine_id) { local_comm_descs.push_back(&comm_desc); }
+      if (IsCommOnThisMachine(comm_desc)) { local_comm_descs.push_back(&comm_desc); }
     }
     if (local_comm_descs.empty()) { continue; }
     ncclUniqueId nccl_unique_id{};
