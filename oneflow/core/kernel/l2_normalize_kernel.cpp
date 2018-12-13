@@ -14,7 +14,7 @@ template<DeviceType device_type, typename T>
 void L2NormalizeKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   L2NormalizeKernelUtil<device_type, T>::Backward(
-      ctx.device_ctx, this->op_conf().l2_normalize_conf(), BnInOp2Blob("in"),
+      ctx.device_ctx, this->op_conf().l2_normalize_conf(), BnInOp2Blob("out"),
       BnInOp2Blob(GenDiffBn("out")), BnInOp2Blob("norm"), BnInOp2Blob(GenDiffBn("in")));
 }
 
@@ -45,28 +45,27 @@ struct L2NormalizeKernelUtil<DeviceType::kCPU, T> {
     }
   }
 
-  static void Backward(DeviceCtx* ctx, const L2NormalizeOpConf& conf, const Blob* in_blob,
+  static void Backward(DeviceCtx* ctx, const L2NormalizeOpConf& conf, const Blob* out_blob,
                        const Blob* out_diff_blob, const Blob* norm_blob, Blob* in_diff_blob) {
-    int32_t axis = conf.axis() >= 0 ? conf.axis() : conf.axis() + in_blob->shape().NumAxes();
-    int32_t c = in_blob->shape().At(axis);
-    int32_t n = in_blob->shape().elem_cnt() / c;
-    int32_t d = in_blob->shape().Count(axis + 1);
+    int32_t axis = conf.axis() >= 0 ? conf.axis() : conf.axis() + out_blob->shape().NumAxes();
+    int32_t c = out_blob->shape().At(axis);
+    int32_t n = out_blob->shape().elem_cnt() / c;
+    int32_t d = out_blob->shape().Count(axis + 1);
     const T* out_diff = out_diff_blob->dptr<T>();
-    const T* in = in_blob->dptr<T>();
+    const T* out = out_blob->dptr<T>();
     const T* norm = norm_blob->dptr<T>();
     T* in_diff = in_diff_blob->mut_dptr<T>();
 
     for (int32_t i = 0; i < n; i++) {
-      T x_dy_inner_prod = ZeroVal<T>::value;
+      T y_dy_inner_prod = ZeroVal<T>::value;
       int32_t offset = (i / d) * d * c + (i % d);
       for (int32_t j = 0; j < c; j++) {
         const int32_t index = offset + j * d;
-        x_dy_inner_prod += out_diff[index] * in[index];
+        y_dy_inner_prod += out_diff[index] * out[index];
       }
       for (int32_t j = 0; j < c; j++) {
         const int32_t index = offset + j * d;
-        in_diff[index] =
-            (out_diff[index] / norm[i]) - (x_dy_inner_prod * in[index] / std::pow(norm[i], 3));
+        in_diff[index] = (1 / norm[i]) * (out_diff[index] - y_dy_inner_prod * out[index]);
       }
     }
   }

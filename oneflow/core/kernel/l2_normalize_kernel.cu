@@ -32,28 +32,27 @@ __global__ void L2NormalizeForward(const int32_t n, const int32_t c, const int32
 }
 
 template<typename T>
-__global__ void L2NormalizeBackward(const int32_t n, const int32_t c, const int32_t d, const T* in,
+__global__ void L2NormalizeBackward(const int32_t n, const int32_t c, const int32_t d, const T* out,
                                     const T* out_diff, const T* norm, T* in_diff) {
   using BlockReduce = cub::BlockReduce<T, kCudaThreadsNumPerBlock>;
   __shared__ typename BlockReduce::TempStorage temp_storage_prod_sum;
 
   for (int32_t i = blockIdx.x; i < n; i += gridDim.x) {
-    T x_dy_prod_dum = ZeroVal<T>::value;
+    T y_dy_prod_sum = ZeroVal<T>::value;
     int32_t offset = (i / d) * d * c + (i % d);
     for (int32_t j = threadIdx.x; j < c; j += blockDim.x) {
       const int32_t index = offset + j * d;
-      x_dy_prod_dum += in[index] * out_diff[index];
+      y_dy_prod_sum += out[index] * out_diff[index];
     }
 
-    T reduce_x_dy_prod_sum = BlockReduce(temp_storage_prod_sum).Sum(x_dy_prod_dum);
-    __shared__ T x_dy_inner_prod;
-    if (threadIdx.x == 0) { x_dy_inner_prod = reduce_x_dy_prod_sum; }
+    T reduce_y_dy_prod_sum = BlockReduce(temp_storage_prod_sum).Sum(y_dy_prod_sum);
+    __shared__ T y_dy_inner_prod;
+    if (threadIdx.x == 0) { y_dy_inner_prod = reduce_y_dy_prod_sum; }
     __syncthreads();
 
     for (int32_t j = threadIdx.x; j < c; j += blockDim.x) {
       const int32_t index = offset + j * d;
-      in_diff[index] =
-          (out_diff[index] / norm[i]) - ((in[index] / (std::pow(norm[i], 3))) * x_dy_inner_prod);
+      in_diff[index] = (1 / norm[i]) * (out_diff[index] - y_dy_inner_prod * out[index]);
     }
   }
 }
@@ -74,14 +73,14 @@ struct L2NormalizeKernelUtil<DeviceType::kGPU, T> {
                                                out_blob->mut_dptr<T>());
   }
 
-  static void Backward(DeviceCtx* ctx, const L2NormalizeOpConf& conf, const Blob* in_blob,
+  static void Backward(DeviceCtx* ctx, const L2NormalizeOpConf& conf, const Blob* out_blob,
                        const Blob* out_diff_blob, const Blob* norm_blob, Blob* in_diff_blob) {
-    int32_t axis = conf.axis() >= 0 ? conf.axis() : conf.axis() + in_blob->shape().NumAxes();
-    int32_t c = in_blob->shape().At(axis);
-    int32_t n = in_blob->shape().elem_cnt() / c;
-    int32_t d = in_blob->shape().Count(axis + 1);
+    int32_t axis = conf.axis() >= 0 ? conf.axis() : conf.axis() + out_blob->shape().NumAxes();
+    int32_t c = out_blob->shape().At(axis);
+    int32_t n = out_blob->shape().elem_cnt() / c;
+    int32_t d = out_blob->shape().Count(axis + 1);
     L2NormalizeBackward<<<std::min(n, kCudaMaxBlocksNum), kCudaThreadsNumPerBlock, 0,
-                          ctx->cuda_stream()>>>(n, c, d, in_blob->dptr<T>(),
+                          ctx->cuda_stream()>>>(n, c, d, out_blob->dptr<T>(),
                                                 out_diff_blob->dptr<T>(), norm_blob->dptr<T>(),
                                                 in_diff_blob->mut_dptr<T>());
   }
