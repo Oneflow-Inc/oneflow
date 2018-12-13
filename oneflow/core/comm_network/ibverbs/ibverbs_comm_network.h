@@ -8,9 +8,6 @@
 
 #if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
 
-#include <netdb.h>
-#include <arpa/inet.h>
-
 namespace oneflow {
 
 class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
@@ -36,7 +33,7 @@ class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
   void InitContext(const std::string&);
   uint32_t QueryPort(uint32_t, ibv_port_attr*);
   uint32_t QueryGid(uint32_t, uint32_t, ibv_port_attr*, ibv_gid*);
-  bool is_gid_type_roce_v2(uint32_t port_num, uint32_t index);
+  bool IsGidTypeRoceV2(uint32_t port_num, uint32_t index);
 
   static const int32_t max_poll_wc_num_;
 

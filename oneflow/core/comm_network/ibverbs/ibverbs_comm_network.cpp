@@ -1,8 +1,11 @@
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
 #include "oneflow/core/control/ctrl_client.h"
-#include <fcntl.h>
 
 #if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
+
+#include <fcntl.h>
+#include <netdb.h>
+#include <arpa/inet.h>
 
 namespace oneflow {
 
@@ -31,10 +34,10 @@ int32_t NumOfActivePorts(ibv_device* device) {
   return active_ports;
 }
 
-int read_sysfs_file(const char* dir, const char* file, char* buf, size_t size) {
+int32_t ReadSysfsFile(const char* dir, const char* file, char* buf, size_t size) {
   char* path;
-  int fd;
-  int len;
+  int32_t fd;
+  int32_t len;
   if (asprintf(&path, "%s/%s", dir, file) < 0) { return -1; }
   fd = open(path, O_RDONLY);
   if (fd < 0) {
@@ -137,15 +140,15 @@ uint32_t IBVerbsCommNet::QueryPort(uint32_t port_num, ibv_port_attr* port_attr) 
 
 uint32_t IBVerbsCommNet::QueryGid(uint32_t port_num, uint32_t sgid_index, ibv_port_attr* port_attr,
                                   ibv_gid* gid) {
-  int32_t gids_num = 0;
-  int32_t v2_ip_num = 0;
+  uint32_t gids_num = 0;
+  uint32_t v2_ip_num = 0;
   uint32_t gid_index = 0;
   for (int32_t i = 0; i < port_attr->gid_tbl_len; i++) {
     PCHECK(ibv_query_gid(context_, port_num, i, gid) == 0)
-        << "Failed to query gid to port " << (int)port_num << " index " << i;
+        << "Failed to query gid to port " << port_num << " index " << i;
     if (gid->global.interface_id) {
       gids_num++;
-      if (gid->global.subnet_prefix == 0 && is_gid_type_roce_v2(port_num, i)) {
+      if (gid->global.subnet_prefix == 0 && IsGidTypeRoceV2(port_num, i)) {
         if (v2_ip_num == 0) { gid_index = i; }
         v2_ip_num++;
       }
@@ -158,9 +161,8 @@ uint32_t IBVerbsCommNet::QueryGid(uint32_t port_num, uint32_t sgid_index, ibv_po
             << "RDMA_GID_INDEX should be less than GIDs amount" << gids_num;
         gid_index = sgid_index;
       }
-      // TODO(shiyuan)
-      if (!is_gid_type_roce_v2(port_num, gid_index)) {
-        LOG(INFO) << "RoCE v2 is not configured for GID_INDEX " << (int)gid_index;
+      if (!IsGidTypeRoceV2(port_num, gid_index)) {
+        LOG(INFO) << "RoCE v2 is not configured for GID_INDEX " << gid_index;
       }
       break;
     case (IBV_LINK_LAYER_INFINIBAND): break;
@@ -171,13 +173,11 @@ uint32_t IBVerbsCommNet::QueryGid(uint32_t port_num, uint32_t sgid_index, ibv_po
   return gid_index;
 }
 
-bool IBVerbsCommNet::is_gid_type_roce_v2(uint32_t port_num, uint32_t index) {
+bool IBVerbsCommNet::IsGidTypeRoceV2(uint32_t port_num, uint32_t index) {
   char name[32];
   char buff[41];
   snprintf(name, sizeof(name), "ports/%d/gid_attrs/types/%d", port_num, index);
-  if (read_sysfs_file(context_->device->ibdev_path, name, buff, sizeof(buff)) <= 0) {
-    return false;
-  }
+  if (ReadSysfsFile(context_->device->ibdev_path, name, buff, sizeof(buff)) <= 0) { return false; }
   return !strcmp(buff, "RoCE v2");
 }
 
