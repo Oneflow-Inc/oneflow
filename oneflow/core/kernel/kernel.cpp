@@ -100,6 +100,14 @@ bool Kernel::HasEmptyShapeBlob(const PbRpf<std::string>& bns,
   return false;
 }
 
+bool Kernel::HasBlob(const PbRpf<std::string>& bns,
+                     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+  for (const auto& bn : bns) {
+    if (!BnInOp2Blob(bn)) { return false; }
+  }
+  return true;
+}
+
 void Kernel::CheckSameDim0ValidNum(
     const PbRpf<std::string>& bns,
     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
@@ -231,7 +239,7 @@ void KernelIf<device_type>::ForwardRecordIdInDevicePiece(
 template<DeviceType device_type>
 void KernelIf<device_type>::ForwardInstanceShape(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (kernel_conf().has_same_shape_between_in_out_blob()) {
+  if (HasSameShapeBetweenInOut()) {
     CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
               &Blob::CopyInstanceShapeFrom);
   } else {
@@ -291,11 +299,20 @@ void KernelIf<device_type>::BackwardColNum(
 template<DeviceType device_type>
 void KernelIf<device_type>::BackwardInstanceShape(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (kernel_conf().has_same_shape_between_in_out_blob()) {
-    CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().output_diff_bns(),
-              op_attribute().input_diff_bns(), &Blob::CopyInstanceShapeFrom);
+  if (HasSameShapeBetweenInOut()) {
+    if (HasBlob(op_attribute().input_diff_bns(), BnInOp2Blob)) {
+      CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().output_diff_bns(),
+                op_attribute().input_diff_bns(), &Blob::CopyInstanceShapeFrom);
+    }
   } else {
-    UNIMPLEMENTED();
+    for (const std::string& in_diff_bn : op_attribute().input_diff_bns()) {
+      Blob* in_diff_blob = BnInOp2Blob(in_diff_bn);
+      if (in_diff_blob) {
+        Blob* in_blob = BnInOp2Blob(GenUnDiffBn(in_diff_bn));
+        CHECK(!in_blob);
+        in_diff_blob->CopyInstanceShapeFrom(ctx.device_ctx, in_blob);
+      }
+    }
   }
 }
 

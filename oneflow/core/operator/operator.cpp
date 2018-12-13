@@ -264,7 +264,6 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
     data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, output_diff_bns());
   }
   kernel_conf->set_data_type(data_type);
-  kernel_conf->set_has_same_shape_between_in_out_blob(HasSameShapeBetweenInOut());
 
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf, op_ctx);
 }

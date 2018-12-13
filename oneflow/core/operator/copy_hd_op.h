@@ -13,7 +13,7 @@ class CopyHdOp final : public Operator {
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
-  bool HasSameShapeBetweenInOut() const override { return true; }
+  bool CanInferInDiffDynamicShapeWithoutIn() const override { return true; }
 
  private:
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override { return GenPackedLbi(); }

@@ -219,19 +219,19 @@ void NormalBackwardCompTaskNode::FixPackedBlobDescOfProducedRegst() {
 void NormalBackwardCompTaskNode::RmUselessConsumeRelationshipToFw() {
   bool need_in_blob = false;
   bool need_out_blob = false;
-  bool has_same_shape_between_in_out_diff = true;
+  bool infer_in_diff_shape_without_in = true;
   mut_exec_gph().ForEachNode([&](ExecNode* node) {
     if (node->in_edges().empty()) {
       need_in_blob = need_in_blob || node->op()->NeedInBlobWhenBackwardIf();
-      has_same_shape_between_in_out_diff =
-          has_same_shape_between_in_out_diff && node->op()->HasSameShapeBetweenInOut();
+      infer_in_diff_shape_without_in =
+          infer_in_diff_shape_without_in && node->op()->CanInferInDiffDynamicShapeWithoutIn();
     }
     if (node->out_edges().empty()) {
       need_out_blob = need_out_blob || node->op()->NeedOutBlobWhenBackwardIf();
     }
   });
   if (need_in_blob == false) {
-    if (GetRelatedFwTaskNode() && (!has_same_shape_between_in_out_diff)) {
+    if (GetRelatedFwTaskNode() && (!infer_in_diff_shape_without_in)) {
       for (std::shared_ptr<RegstDesc> regst : GetConsumedRegst("in")) {
         regst->ForEachLbi([&](const LogicalBlobId& lbi) {
           CHECK(!regst->GetBlobDesc(lbi)->has_instance_shape_field());

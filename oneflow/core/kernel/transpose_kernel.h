@@ -18,6 +18,10 @@ class TransposeKernel final : public KernelIf<device_type> {
                           std::function<Blob*(const std::string&)>) const override;
   void BackwardDataContent(const KernelCtx&,
                            std::function<Blob*(const std::string&)>) const override;
+  void ForwardInstanceShape(const KernelCtx& ctx,
+                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void BackwardInstanceShape(const KernelCtx& ctx,
+                             std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
 template<DeviceType device_type, typename T>

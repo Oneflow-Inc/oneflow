@@ -122,6 +122,9 @@ class Kernel {
   virtual const PbMessage& GetCustomizedKernelConf() const { UNIMPLEMENTED(); }
   bool HasEmptyShapeBlob(const PbRpf<std::string>& bns,
                          const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  bool HasBlob(const PbRpf<std::string>& bns,
+               const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  virtual bool HasSameShapeBetweenInOut() const { return false; }
   void CheckSameDim0ValidNum(const PbRpf<std::string>& bns,
                              const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 
