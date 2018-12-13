@@ -930,6 +930,11 @@ message ScalarMulOpConf {
 message ReduceIdentityOpConf {
 }
 
+message TickOpConf {
+  optional string in = 1;
+  required string out = 2;
+}
+
 message IdentityOpConf {
   repeated string in = 1;
   repeated string out = 2;
@@ -967,6 +972,7 @@ message OperatorConf {
     CastOpConf cast_conf = 121;
     VariableOpConf variable_conf = 122;
     ReduceIdentityOpConf reduce_identity_conf = 123;
+    TickOpConf tick_conf = 124;
 
     // domain op
     IdentityOpConf identity_conf = 200;

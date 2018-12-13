@@ -81,8 +81,8 @@ class JobDesc final {
   float bias_l2() const;
   int32_t DataPartNum() const;
 
-  // optimization
-  void OptimizeDLNet() { AddIdentityOpIfNeed(); }
+  // fix and Optimize
+  void FixAndOptimizeDLNet();
 
  private:
   friend class Global<JobDesc>;
@@ -92,6 +92,7 @@ class JobDesc final {
   void SanityCheck();
   void SplitDecodeOps();
   void AddRecordLoadOps();
+  void FixTickOpIfExists();
   void AddIdentityOpIfNeed();
 
   JobConf1 job_conf_;
