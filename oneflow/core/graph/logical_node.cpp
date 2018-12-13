@@ -301,7 +301,8 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
   if (src_node->op_vec().size() == 1 && dst_node->op_vec().size() == 1) {
     if (src_node->SoleOp()->op_conf().has_record_load_conf()
         && dst_node->SoleOp()->op_conf().has_tick_conf()) {
-      return &TaskGraph::BldSubTskGphByRecordLoadToTick;
+      CHECK(src_pd->parallel_num() == dst_pd->parallel_num());
+      CHECK(src_pd->policy() == kDataParallel && dst_pd->policy() == kDataParallel);
     }
     if (src_node->SoleOp()->op_conf().has_tick_conf()
         && dst_node->SoleOp()->op_conf().has_log_counter_conf() == false) {
