@@ -72,8 +72,7 @@ void OFRecordDecoderImpl<EncodeCase::kJpeg, T>::ReadDynamicDataContent(
   ThreadPool thread_pool(std::thread::hardware_concurrency() / 4);
   BlockingCounter decode_cnt(n);
   FOR_RANGE(int32_t, i, 0, n) {
-    thread_pool.AddWork([&]() {
-      RecordBlob<OFRecord> record_blob(in_blob);
+    thread_pool.AddWork([&, i]() {
       std::mt19937 gen(random_seed + i);
       std::uniform_int_distribution<int32_t> distribution;
       const OFRecord& record = record_blob.GetRecord(i);
@@ -84,16 +83,19 @@ void OFRecordDecoderImpl<EncodeCase::kJpeg, T>::ReadDynamicDataContent(
       const std::string& src_data = feature.bytes_list().value(col_id);
       cv::_InputArray image_data(src_data.data(), src_data.size());
       images[i] = cv::imdecode(image_data, cv::IMREAD_ANYCOLOR);
+      cv::Mat a = images[i];
       FOR_RANGE(size_t, j, 0, blob_conf.encode_case().jpeg().preprocess_size()) {
         ImagePreprocessIf* preprocess =
             GetImagePreprocess(blob_conf.encode_case().jpeg().preprocess(j).preprocess_case());
         preprocess->DoPreprocess(&(images[i]), blob_conf.encode_case().jpeg().preprocess(j),
                                  [&]() { return distribution(gen); });
       }
+      cv::Mat b = images[i];
       CHECK_EQ(blob_conf.shape().dim_size(), 3);
       if (blob_conf.shape().dim(2) != images[i].channels()) {
-        ConvertChannel(&images[i], &images[i], images[i].channels(), blob_conf.shape().dim(2));
+        ConvertChannel(&(images[i]), &(images[i]), images[i].channels(), blob_conf.shape().dim(2));
       }
+      cv::Mat c = images[i];
       CHECK_EQ(blob_conf.shape().dim(2), images[i].channels());
       decode_cnt.Decrease();
     });
@@ -116,7 +118,7 @@ void OFRecordDecoderImpl<EncodeCase::kJpeg, T>::ReadDynamicDataContent(
 
   BlockingCounter set_cnt(n);
   FOR_RANGE(int32_t, i, 0, n) {
-    thread_pool.AddWork([&]() {
+    thread_pool.AddWork([&, i]() {
       cv::Mat dst = cv::Mat::zeros(cv::Size(max_cols, max_rows), images[i].type());
       images[i].copyTo(dst(cv::Rect(0, 0, images[i].cols, images[i].rows)));
       CHECK_EQ(one_col_elem_num, dst.total() * dst.channels());

@@ -15,6 +15,7 @@ class CloneOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override;
   bool NeedInBlobWhenBackward() const override { return false; }
   bool NeedOutBlobWhenBackward() const override { return false; }
+  bool HasSameShapeBetweenInOutDiff() const override { return true; }
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
   void InferDiffBlobDescsWithoutFwBlob(

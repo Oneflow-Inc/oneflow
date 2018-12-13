@@ -177,9 +177,17 @@ const Shape& Blob::dynamic_shape() const {
     }
   }
   if (instance_shape_ptr_ != nullptr) {
+    bool print_shape = false;
     for (size_t i = 0; i < static_shape().NumAxes() - 1; ++i) {
       int64_t dim_val = *(instance_shape_ptr_ + i);
       if (dim_val != dynamic_shape_.At(i + 1)) { dynamic_shape_.Set(i + 1, dim_val); }
+      if (dim_val < 0 || dim_val > static_shape().At(i + 1)) { print_shape = true; }
+    }
+    if (print_shape) {
+      for (size_t i = 0; i < static_shape().NumAxes(); ++i) {
+        LOG(INFO) << "dynamic_shape dim = " << i << " val = " << static_shape().At(i);
+      }
+      LOG(FATAL);
     }
   }
   return dynamic_shape_;
