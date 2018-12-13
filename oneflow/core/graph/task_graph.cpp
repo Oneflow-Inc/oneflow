@@ -393,6 +393,31 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne) {
   }
 }
 
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByTickToSource) {
+  CHECK(src_logical->SoleOp()->op_conf().has_tick_conf());
+  HashMap<size_t, CompTaskNode*> machine_id2tick_task;
+  HashMap<size_t, std::vector<CompTaskNode*>> machine_id2dst_tasks;
+  for (CompTaskNode* tick_node : sorted_src_comp_tasks) {
+    machine_id2tick_task[tick_node->machine_id()] = tick_node;
+  }
+  for (CompTaskNode* dst_node : sorted_dst_comp_tasks) {
+    machine_id2dst_tasks[dst_node->machine_id()].push_back(dst_node);
+  }
+
+  CompTaskNode* first_tick = sorted_src_comp_tasks.at(0);
+  for (const auto& pair : machine_id2dst_tasks) {
+    size_t machine_id = pair.first;
+    for (CompTaskNode* dst_node : pair.second) {
+      if (machine_id2tick_task.find(machine_id) != machine_id2tick_task.end()) {
+        Connect<TaskNode>(machine_id2tick_task.at(machine_id), NewEdge(), dst_node);
+      } else {
+        TaskNode* next_node = AddCopyCommNetTaskBetween(first_tick, dst_node);
+        Connect<TaskNode>(first_tick, NewEdge(), next_node);
+      }
+    }
+  }
+}
+
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink) {
   CHECK_EQ(sorted_dst_comp_tasks.size(), 1);
   CompTaskNode* sole_dst_comp_task = sorted_dst_comp_tasks.front();
