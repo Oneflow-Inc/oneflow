@@ -5,8 +5,10 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 void TransposeKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob("in")->shape();
-  BnInOp2Blob("out")->shape();
+  Blob* in_blob = BnInOp2Blob("in");
+  Shape in_shape = in_blob->shape();
+  Blob* out_blob = BnInOp2Blob("out");
+  Shape out_shape = out_blob->shape();
   LOG(INFO) << "cclog: transpose do";
   Transpose<device_type, T>(ctx.device_ctx, BnInOp2Blob("in"), BnInOp2Blob("out"),
                             this->kernel_conf().transpose_conf().perm());
