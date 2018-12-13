@@ -32,14 +32,14 @@ struct L2NormalizeKernelUtil<DeviceType::kCPU, T> {
 
     for (int32_t i = 0; i < n; i++) {
       T square_x_sum = ZeroVal<T>::value;
-      int32_t beg = (i / d) * d * c + (i % d);
+      int32_t offset = (i / d) * d * c + (i % d);
       for (int32_t j = 0; j < c; j++) {
-        const T x = in[beg + j * d];
+        const T x = in[offset + j * d];
         square_x_sum += x * x;
       }
       norm[i] = std::max(static_cast<T>(conf.epsilon()), std::sqrt(square_x_sum));
       for (int32_t j = 0; j < c; j++) {
-        const int32_t index = beg + j * d;
+        const int32_t index = offset + j * d;
         out[index] = in[index] / norm[i];
       }
     }
@@ -58,13 +58,13 @@ struct L2NormalizeKernelUtil<DeviceType::kCPU, T> {
 
     for (int32_t i = 0; i < n; i++) {
       T x_dy_inner_prod = ZeroVal<T>::value;
-      int32_t beg = (i / d) * d * c + (i % d);
+      int32_t offset = (i / d) * d * c + (i % d);
       for (int32_t j = 0; j < c; j++) {
-        const int32_t index = beg + j * d;
+        const int32_t index = offset + j * d;
         x_dy_inner_prod += out_diff[index] * in[index];
       }
       for (int32_t j = 0; j < c; j++) {
-        const int32_t index = beg + j * d;
+        const int32_t index = offset + j * d;
         in_diff[index] =
             (out_diff[index] / norm[i]) - (x_dy_inner_prod * in[index] / std::pow(norm[i], 3));
       }

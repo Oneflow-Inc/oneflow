@@ -14,9 +14,9 @@ __global__ void L2NormalizeForward(const int32_t n, const int32_t c, const int32
 
   for (int32_t i = blockIdx.x; i < n; i += gridDim.x) {
     T sum = ZeroVal<T>::value;
-    int32_t beg = (i / d) * d * c + (i % d);
+    int32_t offset = (i / d) * d * c + (i % d);
     for (int32_t j = threadIdx.x; j < c; j += blockDim.x) {
-      const T x = in[beg + j * d];
+      const T x = in[offset + j * d];
       sum += x * x;
     }
 
@@ -25,7 +25,7 @@ __global__ void L2NormalizeForward(const int32_t n, const int32_t c, const int32
     __syncthreads();
 
     for (int32_t j = threadIdx.x; j < c; j += blockDim.x) {
-      const int32_t index = beg + j * d;
+      const int32_t index = offset + j * d;
       out[index] = in[index] / norm[i];
     }
   }
@@ -39,9 +39,9 @@ __global__ void L2NormalizeBackward(const int32_t n, const int32_t c, const int3
 
   for (int32_t i = blockIdx.x; i < n; i += gridDim.x) {
     T x_dy_prod_dum = ZeroVal<T>::value;
-    int32_t beg = (i / d) * d * c + (i % d);
+    int32_t offset = (i / d) * d * c + (i % d);
     for (int32_t j = threadIdx.x; j < c; j += blockDim.x) {
-      const int32_t index = beg + j * d;
+      const int32_t index = offset + j * d;
       x_dy_prod_dum += in[index] * out_diff[index];
     }
 
@@ -51,7 +51,7 @@ __global__ void L2NormalizeBackward(const int32_t n, const int32_t c, const int3
     __syncthreads();
 
     for (int32_t j = threadIdx.x; j < c; j += blockDim.x) {
-      const int32_t index = beg + j * d;
+      const int32_t index = offset + j * d;
       in_diff[index] =
           (out_diff[index] / norm[i]) - ((in[index] / (std::pow(norm[i], 3))) * x_dy_inner_prod);
     }
