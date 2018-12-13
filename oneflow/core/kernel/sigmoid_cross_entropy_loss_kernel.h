@@ -25,7 +25,7 @@ struct SigmoidCrossEntropyLossKernelUtil {
                       PredType* count);
   static void Backward(DeviceCtx* ctx, const SigmoidCrossEntropyLossOpConf& conf, const int64_t n,
                        const PredType* prediction, const LabelType* label, PredType* pred_diff);
-  static void AddEpsilon(DeviceCtx* ctx, const int64_t n, PredType* x);
+  static void ClipByEpsilon(DeviceCtx* ctx, const int64_t n, PredType* x);
 };
 
 }  // namespace oneflow

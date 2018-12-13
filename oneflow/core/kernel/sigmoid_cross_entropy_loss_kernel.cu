@@ -4,8 +4,8 @@ namespace oneflow {
 
 namespace {
 template<typename PredType>
-__global__ void NoSmallerThan(const int64_t n, PredType* x, const float floor_val) {
-  CUDA_1D_KERNEL_LOOP(index, n) { x[index] = (x[index] > floor_val) ? x[index] : floor_val; }
+__global__ void NoSmallerThan(const int64_t n, PredType* x, const PredType floor_val) {
+  CUDA_1D_KERNEL_LOOP(index, n) { x[index] = max(x[index], floor_val); }
 }
 
 template<typename PredType, typename LabelType>
@@ -55,7 +55,7 @@ struct SigmoidCrossEntropyLossKernelUtil<DeviceType::kGPU, PredType, LabelType> 
             n, prediction, label, pred_diff);
   }
 
-  static void AddEpsilon(DeviceCtx* ctx, const int64_t n, PredType* x) {
+  static void ClipByEpsilon(DeviceCtx* ctx, const int64_t n, PredType* x) {
     NoSmallerThan<PredType>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, 1e-5);
   }

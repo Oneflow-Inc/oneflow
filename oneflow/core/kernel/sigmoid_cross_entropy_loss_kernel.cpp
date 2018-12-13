@@ -17,25 +17,20 @@ void SigmoidCrossEntropyLossKernel<device_type, PredType, LabelType>::VirtualLos
   Blob* prediction_diff = BnInOp2Blob(GenDiffBn("prediction"));
   const int64_t n = prediction->shape().elem_cnt();
   const int64_t dim0 = prediction->shape().At(0);
-  int64_t dim1 = 0;
-  if (prediction->shape().NumAxes() == 1) {
-    dim1 = 1;
-  } else {
-    dim1 = prediction->shape().Count(1);
-  }
+  const int64_t count1 = prediction->shape().Count(1);
   SigmoidCrossEntropyLossKernelUtil<device_type, PredType, LabelType>::Forward(
       ctx.device_ctx, conf, n, prediction->dptr<PredType>(), label->dptr<LabelType>(),
       loss_buf->mut_dptr<PredType>(), count->mut_dptr<PredType>());
   NdarrayUtil<device_type, PredType>::ReduceSum(
       ctx.device_ctx, XpuVarNdarray<PredType>({dim0, 1}, loss->mut_dptr<PredType>()),
-      XpuVarNdarray<const PredType>({dim0, dim1}, loss_buf->dptr<PredType>()),
-      XpuVarNdarray<PredType>({dim0, dim1}, tmp_storage->mut_dptr<PredType>()));
+      XpuVarNdarray<const PredType>({dim0, count1}, loss_buf->dptr<PredType>()),
+      XpuVarNdarray<PredType>({dim0, count1}, tmp_storage->mut_dptr<PredType>()));
   if (conf.normalize()) {
     NdarrayUtil<device_type, PredType>::ReduceSum(
         ctx.device_ctx, XpuVarNdarray<PredType>({dim0, 1}, label_num->mut_dptr<PredType>()),
-        XpuVarNdarray<const PredType>({dim0, dim1}, count->dptr<PredType>()),
-        XpuVarNdarray<PredType>({dim0, dim1}, tmp_storage->mut_dptr<PredType>()));
-    SigmoidCrossEntropyLossKernelUtil<device_type, PredType, LabelType>::AddEpsilon(
+        XpuVarNdarray<const PredType>({dim0, count1}, count->dptr<PredType>()),
+        XpuVarNdarray<PredType>({dim0, count1}, tmp_storage->mut_dptr<PredType>()));
+    SigmoidCrossEntropyLossKernelUtil<device_type, PredType, LabelType>::ClipByEpsilon(
         ctx.device_ctx, dim0, label_num->mut_dptr<PredType>());
     KernelUtil<device_type, PredType>::Div(ctx.device_ctx, dim0, loss->dptr<PredType>(),
                                            label_num->dptr<PredType>(), loss->mut_dptr<PredType>());
@@ -51,8 +46,8 @@ void SigmoidCrossEntropyLossKernel<device_type, PredType, LabelType>::VirtualLos
     if (conf.normalize()) {
       NdarrayUtil<device_type, PredType>::template BroadcastApply<BinaryFuncDiv>(
           ctx.device_ctx,
-          XpuVarNdarray<PredType>({dim0, dim1}, prediction_diff->mut_dptr<PredType>()),
-          XpuVarNdarray<const PredType>({dim0, dim1}, prediction_diff->dptr<PredType>()),
+          XpuVarNdarray<PredType>({dim0, count1}, prediction_diff->mut_dptr<PredType>()),
+          XpuVarNdarray<const PredType>({dim0, count1}, prediction_diff->dptr<PredType>()),
           XpuVarNdarray<const PredType>({dim0, 1}, label_num->dptr<PredType>()));
     }
   }
@@ -94,10 +89,9 @@ struct SigmoidCrossEntropyLossKernelUtil<DeviceType::kCPU, PredType, LabelType> 
     }
   }
 
-  static void AddEpsilon(DeviceCtx* ctx, const int64_t n, PredType* x) {
-    FOR_RANGE(int64_t, index, 0, n) {
-      if (x[index] == 0) { x[index] = 1e-5; }
-    }
+  static void ClipByEpsilon(DeviceCtx* ctx, const int64_t n, PredType* x) {
+    const PredType floor_val = 1e-5;
+    FOR_RANGE(int64_t, index, 0, n) { x[index] = std::max(x[index], floor_val); }
   }
 };
 
