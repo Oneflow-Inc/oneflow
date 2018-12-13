@@ -10,14 +10,14 @@ __global__ void NoSmallerThan(const int64_t n, PredType* x, const PredType floor
 
 template<typename PredType, typename LabelType>
 __global__ void SigmoidCrossEntropyLossForward(const int64_t n, const PredType* prediction,
-                                               const LabelType* label, PredType* loss_buf,
+                                               const LabelType* label, PredType* elementwise_loss,
                                                PredType* count) {
   CUDA_1D_KERNEL_LOOP(index, n) {
     if (label[index] == -1) {
-      loss_buf[index] = 0.f;
+      elementwise_loss[index] = 0.f;
       count[index] = 0.f;
     } else {
-      loss_buf[index] =
+      elementwise_loss[index] =
           -1.f * prediction[index] * (label[index] - (prediction[index] >= 0))
           + logf(1 + expf(prediction[index] - 2 * prediction[index] * (prediction[index] >= 0)));
       count[index] = 1.f;
@@ -41,11 +41,11 @@ __global__ void SigmoidCrossEntropyLossBackward(const int64_t n, const PredType*
 template<typename PredType, typename LabelType>
 struct SigmoidCrossEntropyLossKernelUtil<DeviceType::kGPU, PredType, LabelType> {
   static void Forward(DeviceCtx* ctx, const SigmoidCrossEntropyLossOpConf& conf, const int64_t n,
-                      const PredType* prediction, const LabelType* label, PredType* loss_buf,
-                      PredType* count) {
+                      const PredType* prediction, const LabelType* label,
+                      PredType* elementwise_loss, PredType* count) {
     SigmoidCrossEntropyLossForward<PredType>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            n, prediction, label, loss_buf, count);
+            n, prediction, label, elementwise_loss, count);
   }
 
   static void Backward(DeviceCtx* ctx, const SigmoidCrossEntropyLossOpConf& conf, const int64_t n,

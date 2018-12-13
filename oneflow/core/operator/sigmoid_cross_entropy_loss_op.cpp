@@ -5,7 +5,7 @@ namespace oneflow {
 
 void SigmoidCrossEntropyLossOp::VirtualInitFromOpConf() {
   EnrollDataTmpBn("label_num");
-  EnrollDataTmpBn("loss_buf");
+  EnrollDataTmpBn("elementwise_loss");
   EnrollDataTmpBn("sum_buf");
   EnrollDataTmpBn("count");
 }
@@ -25,7 +25,7 @@ void SigmoidCrossEntropyLossOp::VirtualInferBlobDescs(
   BlobDesc* label_num_blob_desc = GetBlobDesc4BnInOp("label_num");
   label_num_blob_desc->mut_shape() = Shape({pred_blob_desc->shape().At(0)});
   label_num_blob_desc->set_data_type(pred_blob_desc->data_type());
-  *GetBlobDesc4BnInOp("loss_buf") = *pred_blob_desc;
+  *GetBlobDesc4BnInOp("elementwise_loss") = *pred_blob_desc;
   *GetBlobDesc4BnInOp("sum_buf") = *pred_blob_desc;
   *GetBlobDesc4BnInOp("count") = *pred_blob_desc;
 }

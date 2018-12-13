@@ -9,8 +9,8 @@ void SigmoidCrossEntropyLossKernel<device_type, PredType, LabelType>::VirtualLos
   const SigmoidCrossEntropyLossOpConf& conf = this->op_conf().sigmoid_cross_entropy_loss_conf();
   const Blob* prediction = BnInOp2Blob("prediction");
   const Blob* label = BnInOp2Blob("label");
-  Blob* loss_buf = BnInOp2Blob("loss_buf");
-  Blob* tmp_storage = BnInOp2Blob("sum_buf");
+  Blob* elementwise_loss = BnInOp2Blob("elementwise_loss");
+  Blob* sum_buf = BnInOp2Blob("sum_buf");
   Blob* count = BnInOp2Blob("count");
   Blob* label_num = BnInOp2Blob("label_num");
   Blob* loss = BnInOp2Blob("loss");
@@ -21,16 +21,16 @@ void SigmoidCrossEntropyLossKernel<device_type, PredType, LabelType>::VirtualLos
   const Shape& loss_shape = {instance_num, 1};
   SigmoidCrossEntropyLossKernelUtil<device_type, PredType, LabelType>::Forward(
       ctx.device_ctx, conf, n, prediction->dptr<PredType>(), label->dptr<LabelType>(),
-      loss_buf->mut_dptr<PredType>(), count->mut_dptr<PredType>());
+      elementwise_loss->mut_dptr<PredType>(), count->mut_dptr<PredType>());
   NdarrayUtil<device_type, PredType>::ReduceSum(
       ctx.device_ctx, XpuVarNdarray<PredType>(loss_shape, loss->mut_dptr<PredType>()),
-      XpuVarNdarray<const PredType>(prediction_shape, loss_buf->dptr<PredType>()),
-      XpuVarNdarray<PredType>(prediction_shape, tmp_storage->mut_dptr<PredType>()));
+      XpuVarNdarray<const PredType>(prediction_shape, elementwise_loss->dptr<PredType>()),
+      XpuVarNdarray<PredType>(prediction_shape, sum_buf->mut_dptr<PredType>()));
   if (conf.normalize()) {
     NdarrayUtil<device_type, PredType>::ReduceSum(
         ctx.device_ctx, XpuVarNdarray<PredType>(loss_shape, label_num->mut_dptr<PredType>()),
         XpuVarNdarray<const PredType>(prediction_shape, count->dptr<PredType>()),
-        XpuVarNdarray<PredType>(prediction_shape, tmp_storage->mut_dptr<PredType>()));
+        XpuVarNdarray<PredType>(prediction_shape, sum_buf->mut_dptr<PredType>()));
     SigmoidCrossEntropyLossKernelUtil<device_type, PredType, LabelType>::ClipByEpsilon(
         ctx.device_ctx, instance_num, label_num->mut_dptr<PredType>());
     KernelUtil<device_type, PredType>::Div(ctx.device_ctx, instance_num, loss->dptr<PredType>(),
@@ -65,14 +65,14 @@ SigmoidCrossEntropyLossKernel<device_type, PredType, LabelType>::GetLossKernelCo
 template<typename PredType, typename LabelType>
 struct SigmoidCrossEntropyLossKernelUtil<DeviceType::kCPU, PredType, LabelType> {
   static void Forward(DeviceCtx* ctx, const SigmoidCrossEntropyLossOpConf& conf, const int64_t n,
-                      const PredType* prediction, const LabelType* label, PredType* loss_buf,
-                      PredType* count) {
+                      const PredType* prediction, const LabelType* label,
+                      PredType* elementwise_loss, PredType* count) {
     FOR_RANGE(int64_t, index, 0, n) {
       if (label[index] == -1) {
-        loss_buf[index] = 0.f;
+        elementwise_loss[index] = 0.f;
         count[index] = 0.f;
       } else {
-        loss_buf[index] =
+        elementwise_loss[index] =
             -1 * prediction[index] * (label[index] - (prediction[index] >= 0))
             + logf(1 + expf(prediction[index] - 2 * prediction[index] * (prediction[index] >= 0)));
         count[index] = 1.f;

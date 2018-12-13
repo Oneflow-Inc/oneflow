@@ -21,8 +21,8 @@ class SigmoidCrossEntropyLossKernel final : public LossKernel<device_type, PredT
 template<DeviceType device_type, typename PredType, typename LabelType>
 struct SigmoidCrossEntropyLossKernelUtil {
   static void Forward(DeviceCtx* ctx, const SigmoidCrossEntropyLossOpConf& conf, const int64_t n,
-                      const PredType* prediction, const LabelType* label, PredType* loss_buf,
-                      PredType* count);
+                      const PredType* prediction, const LabelType* label,
+                      PredType* elementwise_loss, PredType* count);
   static void Backward(DeviceCtx* ctx, const SigmoidCrossEntropyLossOpConf& conf, const int64_t n,
                        const PredType* prediction, const LabelType* label, PredType* pred_diff);
   static void ClipByEpsilon(DeviceCtx* ctx, const int64_t n, PredType* x);
