@@ -12,6 +12,7 @@ class CastKernel final : public KernelIf<DeviceType::kCPU> {
   ~CastKernel() = default;
 
  private:
+  bool HasSameShapeBetweenInOut() const override { return true; }
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
   void BackwardDataContent(const KernelCtx&,

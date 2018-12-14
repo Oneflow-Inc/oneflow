@@ -29,6 +29,11 @@ void Blob::Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, cha
   record_id_in_device_piece_ptr_ =
       header_pod_ptr_.MutTensorPtr<int64_t>(FieldKey::kRecordIdInDevicePiece, nullptr);
   instance_shape_ptr_ = header_pod_ptr_.MutTensorPtr<int64_t>(FieldKey::kInstanceShape, nullptr);
+  if (instance_shape_ptr_) {
+    use_instance_shape_ = true;
+  } else {
+    use_instance_shape_ = false;
+  }
   dptr_ = body_ptr;
   dynamic_shape_ = blob_desc->shape();
 }
@@ -151,6 +156,7 @@ void Blob::set_instance_shape(const Shape& shape) {
                                 .Cast<TensorPodDesc>()
                                 .shape()
                                 .elem_cnt());
+  use_instance_shape_ = true;
   for (size_t i = 0; i < shape.NumAxes(); ++i) { *(instance_shape_ptr_ + i) = shape.At(i); }
 }
 
@@ -172,6 +178,7 @@ bool Blob::IsShapeEmpty() const {
 }
 
 const Shape& Blob::dynamic_shape() const {
+  dynamic_shape_ = static_shape();
   if (dim0_valid_num_ptr_ != nullptr) {
     size_t contiguous_instance_num = ContiguousDim0ValidNum();
     CHECK_LE(contiguous_instance_num, static_shape().At(0));
@@ -179,7 +186,7 @@ const Shape& Blob::dynamic_shape() const {
       dynamic_shape_.Set(0, contiguous_instance_num);
     }
   }
-  if (instance_shape_ptr_ != nullptr) {
+  if (instance_shape_ptr_ != nullptr && use_instance_shape_) {
     for (size_t i = 0; i < static_shape().NumAxes() - 1; ++i) {
       int64_t dim_val = *(instance_shape_ptr_ + i);
       if (dim_val != dynamic_shape_.At(i + 1)) { dynamic_shape_.Set(i + 1, dim_val); }

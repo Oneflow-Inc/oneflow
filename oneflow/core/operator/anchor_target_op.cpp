@@ -38,6 +38,7 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   // input: gt_boxes (N, G, 4)
   const BlobDesc* gt_boxes_bd = GetBlobDesc4BnInOp("gt_boxes");
   CHECK(gt_boxes_bd->has_dim1_valid_num_field());
+  CHECK(!gt_boxes_bd->has_instance_shape_field());
   int64_t num_ims = gt_boxes_bd->shape().At(0);
   int64_t num_anchors = 0;
   FOR_RANGE(size_t, layer, 0, num_layers) {

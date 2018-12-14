@@ -18,6 +18,8 @@ void EmbeddingLookupAccumulateOp::InferBlobDescs(
   const int64_t num_of_piece_in_batch = Global<JobDesc>::Get()->NumOfPiecesInBatch();
   const BlobDesc* ids_blob_desc = GetBlobDesc4BnInOp("one_ids");
   const BlobDesc* val_blob_desc = GetBlobDesc4BnInOp("one_val");
+  CHECK(!ids_blob_desc->has_instance_shape_field());
+  CHECK(!val_blob_desc->has_instance_shape_field());
 
   // acc_ids
   BlobDesc* acc_ids_blob_desc = GetBlobDesc4BnInOp("acc_ids");

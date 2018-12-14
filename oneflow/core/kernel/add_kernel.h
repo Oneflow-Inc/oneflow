@@ -15,6 +15,7 @@ class AddKernel final
   ~AddKernel() = default;
 
  private:
+  bool HasSameShapeBetweenInOut() const override { return true; }
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 

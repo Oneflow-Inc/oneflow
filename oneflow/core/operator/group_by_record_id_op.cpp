@@ -20,6 +20,7 @@ void GroupByRecordIdOp::InferBlobDescs(
   CHECK_GE(in->shape().NumAxes(), 1);
   CHECK(in->has_record_id_in_device_piece_field());
   CHECK(!in->has_dim2_valid_num_field());
+  CHECK(!in->has_instance_shape_field());
 
   // output: out(N, IN_D0, ...)
   BlobDesc* out = GetBlobDesc4BnInOp("out");

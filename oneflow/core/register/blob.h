@@ -59,6 +59,7 @@ class Blob final {
   Shape instance_shape() const;
   const int64_t* instance_shape_ptr() const { return instance_shape_ptr_; }
   int64_t* mut_instance_shape_ptr() const { return instance_shape_ptr_; }
+  void DisableInstanceShape() { use_instance_shape_ = false; }
 
   const void* header_ptr() const { return header_ptr_; }
   void* mut_header_ptr() { return header_ptr_; }
@@ -170,6 +171,7 @@ class Blob final {
   int64_t* dim2_valid_num_ptr_;
   int64_t* record_id_in_device_piece_ptr_;
   int64_t* instance_shape_ptr_;
+  bool use_instance_shape_;
   void* dptr_;
   const RtBlobDesc* blob_desc_;
   Regst* regst_;

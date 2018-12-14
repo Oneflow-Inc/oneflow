@@ -317,8 +317,11 @@ void KernelIf<device_type>::BackwardInstanceShape(
       Blob* in_diff_blob = BnInOp2Blob(in_diff_bn);
       if (in_diff_blob) {
         Blob* in_blob = BnInOp2Blob(GenUnDiffBn(in_diff_bn));
-        CHECK(!in_blob);
-        in_diff_blob->CopyInstanceShapeFrom(ctx.device_ctx, in_blob);
+        if (in_blob) {
+          in_diff_blob->CopyInstanceShapeFrom(ctx.device_ctx, in_blob);
+        } else {
+          in_diff_blob->DisableInstanceShape();
+        }
       }
     }
   }

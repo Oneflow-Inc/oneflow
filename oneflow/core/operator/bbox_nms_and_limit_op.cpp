@@ -47,6 +47,9 @@ void BboxNmsAndLimitOp::InferBlobDescs(
   CHECK(!bbox_bd->has_data_id_field());
   CHECK(!bbox_pred_bd->has_data_id_field());
   CHECK(!bbox_prob_bd->has_data_id_field());
+  CHECK(!bbox_bd->has_instance_shape_field());
+  CHECK(!bbox_pred_bd->has_instance_shape_field());
+  CHECK(!bbox_prob_bd->has_instance_shape_field());
 
   // output: out_bbox (num_limit, 5)
   BlobDesc* out_bbox_bd = GetBlobDesc4BnInOp("out_bbox");

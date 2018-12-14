@@ -30,6 +30,7 @@ void MatmulOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
   out_blob_desc->mut_shape() = Shape({in_blob_desc->shape().At(0), units});
+  out_blob_desc->set_has_instance_shape_field(false);
   if (conf.has_bias()) {
     // bias_multiplier
     GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() = Shape({in_blob_desc->shape().At(0), 1});

@@ -4,6 +4,27 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
+void ConcatKernel<device_type, T>::ForwardInstanceShape(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  int32_t axis = this->op_conf().concat_conf().axis();
+  const PbRpf<std::string>& in_bns = this->op_attribute().input_bns();
+  const Blob* in_0_blob = BnInOp2Blob(in_bns.Get(0));
+  std::vector<int64_t> out_dim_vec = in_0_blob->shape().dim_vec();
+  if (axis < 0) { axis += out_dim_vec.size(); }
+  for (size_t i = 1; i < in_bns.size(); ++i) {
+    const Blob* in_i_blob = BnInOp2Blob(in_bns.Get(i));
+    for (int64_t j = 0; j < in_i_blob->shape().NumAxes(); ++j) {
+      if (j == axis) {
+        out_dim_vec[j] += in_i_blob->shape().At(j);
+      } else {
+        CHECK_EQ(out_dim_vec[j], in_i_blob->shape().At(j));
+      }
+    }
+  }
+  BnInOp2Blob("out")->set_instance_shape(Shape(out_dim_vec));
+}
+
+template<DeviceType device_type, typename T>
 void ConcatKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const int32_t axis = this->op_conf().concat_conf().axis();

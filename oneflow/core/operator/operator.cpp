@@ -93,6 +93,12 @@ void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> Get
   if (op_attribute_.model_bns().size() > 0) {
     InferTotalInstanceNumDesc(GetBlobDesc4BnInOp, parallel_ctx, EnrollOpCtx);
   }
+  /*
+   * special case in : {
+   *      dot_op : data_tmp_blob "tmp" "diff_multiplier"
+   *      }
+   * has instance shape
+   *
   // check only in/out blob has instance shape
   for (const auto& pair : op_attribute_.bn_in_op2lbi()) {
     BlobDesc* blob_desc = GetBlobDesc4BnInOp(pair.first);
@@ -105,6 +111,18 @@ void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> Get
     if (it != output_bns().end()) { continue; }
     it = std::find(output_diff_bns().begin(), output_diff_bns().end(), pair.first);
     if (it != output_diff_bns().end()) { continue; }
+    CHECK(!blob_desc->has_instance_shape_field());
+  }
+  */
+  // check model blob has not instance shape
+  std::vector<std::string> all_model_bns;
+  all_model_bns.insert(all_model_bns.end(), model_bns().begin(), model_bns().end());
+  all_model_bns.insert(all_model_bns.end(), model_diff_bns().begin(), model_diff_bns().end());
+  all_model_bns.insert(all_model_bns.end(), const_model_bns().begin(), const_model_bns().end());
+  all_model_bns.insert(all_model_bns.end(), forward_model_bns().begin(), forward_model_bns().end());
+  for (const std::string& bn : all_model_bns) {
+    BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);
+    if (!blob_desc) { continue; }
     CHECK(!blob_desc->has_instance_shape_field());
   }
 }
@@ -248,9 +266,11 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
         kernel_conf->set_can_naive_do_record_id_in_device_piece(true);
       }
     }
-    if (is_forward
-        && HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(),
-                                &BlobDesc::has_instance_shape_field)) {
+
+    const PbRpf<std::string>* bns_for_instance_shape = &output_bns();
+    if (IsLossOp() || (!is_forward)) { bns_for_instance_shape = &input_bns(); }
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns_for_instance_shape,
+                             &BlobDesc::has_instance_shape_field)) {
       kernel_conf->set_need_do_instance_shape(true);
     }
   }

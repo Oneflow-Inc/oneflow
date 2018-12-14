@@ -14,6 +14,7 @@ class CopyHdKernel final : public KernelIf<DeviceType::kGPU> {
   ~CopyHdKernel() = default;
 
  private:
+  bool HasSameShapeBetweenInOut() const override { return true; }
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
 };

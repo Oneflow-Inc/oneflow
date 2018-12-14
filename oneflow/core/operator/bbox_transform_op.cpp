@@ -20,6 +20,8 @@ void BboxTransformOp::InferBlobDescs(
   const BlobDesc* bbox_blob_desc = GetBlobDesc4BnInOp("bbox");
   // input: bbox_delta (n, r, 4) or (n, r, 4*c) or (r, 4) or (r, 4*c)
   const BlobDesc* bbox_delta_blob_desc = GetBlobDesc4BnInOp("bbox_delta");
+  CHECK(!bbox_blob_desc->has_instance_shape_field());
+  CHECK(!bbox_delta_blob_desc->has_instance_shape_field());
   int64_t num_axes = bbox_blob_desc->shape().NumAxes();
   CHECK_EQ(bbox_delta_blob_desc->shape().NumAxes(), num_axes);
   FOR_RANGE(int64_t, i, 0, num_axes - 1) {

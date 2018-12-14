@@ -15,6 +15,7 @@ class DropoutKernel final : public KernelIf<device_type> {
   ~DropoutKernel() = default;
 
  private:
+  bool HasSameShapeBetweenInOut() const override { return true; }
   void VirtualKernelInit(const ParallelContext*, DeviceCtx*) override;
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
