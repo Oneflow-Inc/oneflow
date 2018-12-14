@@ -19,8 +19,7 @@ class OFRecordDecoderIf {
   virtual bool HasDim1ValidNumField(const EncodeConf& encode_conf) const = 0;
   virtual bool HasDim2ValidNumField(const EncodeConf& encode_conf) const = 0;
 
-  virtual bool Decode(DeviceCtx*, const PredictParams&, Blob*,
-                      std::function<int32_t(void)> NextRandomInt) const = 0;
+  virtual bool Decode(DeviceCtx*, const PredictParams&, Blob*, const BlobConf&) const = 0;
 
  protected:
   OFRecordDecoderIf() = default;
@@ -40,8 +39,7 @@ class OFRecordDecoder : public OFRecordDecoderIf {
                           int64_t one_col_elem_num,
                           std::function<int32_t(void)> NextRandomInt) const = 0;
 
-  bool Decode(DeviceCtx*, const PredictParams&, Blob*,
-              std::function<int32_t(void)> NextRandomInt) const override;
+  bool Decode(DeviceCtx*, const PredictParams&, Blob*, const BlobConf&) const override;
 
  protected:
   OFRecordDecoder() = default;

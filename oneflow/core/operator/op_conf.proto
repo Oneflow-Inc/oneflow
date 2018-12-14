@@ -582,10 +582,9 @@ message DecodeRandomOpConf {
 
 message DecodeInStreamOpConf {
   required string out = 1;
-  required ShapeProto shape = 2;
-  required DataType data_type = 3;
-  optional ShapeProto dim0_inner_shape = 4;
-  optional int64 dim0_valid_num = 5;
+  repeated BlobConf blob = 2;
+  optional ShapeProto dim0_inner_shape = 3;
+  optional int64 dim0_valid_num = 4;
 }
 
 message DefineTestBlobOpConf {

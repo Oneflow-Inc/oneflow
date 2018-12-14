@@ -9,7 +9,6 @@ void DecodeInStreamKernel::Forward(const KernelCtx& ctx,
                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto& predic_params = *static_cast<PredictParams*>(ctx.other);
 
-  auto conn_id = std::to_string(predic_params.tag_id);
   auto encode_case = static_cast<EncodeCase>(predic_params.encode_case);
   auto data_type = static_cast<DataType>(predic_params.data_type);
 
@@ -22,8 +21,10 @@ void DecodeInStreamKernel::Forward(const KernelCtx& ctx,
   Blob* out_blob = BnInOp2Blob("out");
   out_blob->set_dim0_valid_num(0, buffers.size());
 
+  const auto& conf = op_conf().decode_in_stream_conf().blob(0);
+
   OFRecordDecoderIf* decoder = GetOFRecordDecoder(encode_case, data_type);
-  decoder->Decode(ctx.device_ctx, predic_params, out_blob, nullptr);
+  decoder->Decode(ctx.device_ctx, predic_params, out_blob, conf);
 }
 
 REGISTER_KERNEL(OperatorConf::kDecodeInStreamConf, DecodeInStreamKernel);

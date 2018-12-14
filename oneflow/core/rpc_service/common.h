@@ -15,11 +15,8 @@ struct PredictParams {
   std::string data_name;
   std::vector<std::string> buffers;
   std::string version;
-  int32_t max_col;
-  std::vector<int64_t> dim_vec;
 
-  MSGPACK_DEFINE(tag_id, encode_case, data_type, data_id, data_name, buffers, version, max_col,
-                 dim_vec);
+  MSGPACK_DEFINE(tag_id, encode_case, data_type, data_id, data_name, buffers, version);
 };
 
 namespace rpc_service {

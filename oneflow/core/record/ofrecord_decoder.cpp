@@ -87,13 +87,10 @@ int32_t OFRecordDecoder<encode_case, T>::DecodeOneCol(
 
 template<EncodeCase encode_case, typename T>
 bool OFRecordDecoder<encode_case, T>::Decode(DeviceCtx* ctx, const PredictParams& params,
-                                             Blob* out_blob,
-                                             std::function<int32_t(void)> NextRandomInt) const {
+                                             Blob* out_blob, const BlobConf& blob_conf) const {
   bool ret = false;
 
   const std::vector<std::string>& buffers = params.buffers;
-  int32_t max_col = params.max_col;
-  const std::string& data_id = params.data_id;
   const std::string& data_name = params.data_name;
   int64_t id = params.tag_id;
 
@@ -102,30 +99,35 @@ bool OFRecordDecoder<encode_case, T>::Decode(DeviceCtx* ctx, const PredictParams
 
   try {
     for (int i = 0; i < buffers.size(); ++i) {
-      for (int col_id = 0; col_id < max_col; ++col_id) {
-        OFRecord record;
-        bool r = record.ParseFromArray(buffers[i].data(), buffers[i].size());
-        if (!r) {
-          LOG(ERROR) << "OFRecord parse error at elelemt " << i;
-          return false;
-        }
-        if (out_blob->has_data_id_field()) {
-          const Feature& feature = record.feature().at(data_id);
+      OFRecord record;
+      bool r = record.ParseFromArray(buffers[i].data(), buffers[i].size());
+      if (!r) {
+        LOG(ERROR) << "OFRecord parse error at elelemt " << i;
+        return false;
+      }
+      if (out_blob->has_data_id_field()) {
+        std::string data_id;
+        auto it = record.feature().find(params.data_id);
+        if (it != record.feature().end()) {
+          const Feature& feature = it->second;
           CHECK_EQ(feature.bytes_list().value_size(), 1);
           const std::string& data_id_str = feature.bytes_list().value(0);
           CHECK_LE(data_id_str.size(), max_data_id_size);
-          std::string data_id = data_id_str + "_" + std::to_string(id);
-          memcpy(out_blob->mut_data_id(i), data_id.c_str(), data_id.size());
-          if (data_id_str.size() != max_data_id_size) {
-            *(out_blob->mut_data_id(i) + data_id.size()) = '\0';
-          }
+          data_id = data_id_str + "_" + std::to_string(id);
+        } else {
+          data_id = std::to_string(i) + "_" + std::to_string(id);
         }
 
-        auto it = record.feature().find(data_name);
-        if (it != record.feature().end()) {
-          ReadOneCol(ctx, it->second, {}, col_id, out_blob->mut_dptr<T>() + i * ele_cnt, ele_cnt,
-                     NextRandomInt);
+        memcpy(out_blob->mut_data_id(i), data_id.c_str(), data_id.size());
+        if (data_id.size() != max_data_id_size) {
+          *(out_blob->mut_data_id(i) + data_id.size()) = '\0';
         }
+      }
+
+      auto it = record.feature().find(data_name);
+      if (it != record.feature().end()) {
+        ReadOneCol(ctx, it->second, blob_conf, 0, out_blob->mut_dptr<T>() + i * ele_cnt, ele_cnt,
+                   nullptr);
       }
     }
     ret = true;
