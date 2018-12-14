@@ -42,20 +42,15 @@ class OFServing final : public SinkCompActor {
     in_channel_.Send({});
   }
 
-  void PredictRaw(rpc_service::connection* conn, PredictParams params) {
+  void Predict(rpc_service::connection* conn, PredictParams params) {
     params.tag_id = conn->conn_id();
     in_channel_.Send(params);
-  }
-
-  void PredictJpeg(rpc_service::connection* conn, const PredictParams& params) {
-    // todo
   }
 
   void Init() {
     server_.register_handler("add", &OFServing::Add, this);
     server_.register_handler("translate", &OFServing::Translate, this);
-    server_.register_handler<ExecMode::async>("predict", &OFServing::PredictRaw, this);
-    server_.register_handler<ExecMode::async>("predict_jpeg", &OFServing::PredictJpeg, this);
+    server_.register_handler<ExecMode::async>("predict", &OFServing::Predict, this);
     server_.register_handler("stop", &OFServing::Stop, this);
 
     server_.run();
