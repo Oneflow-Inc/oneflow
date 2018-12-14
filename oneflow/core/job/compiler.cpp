@@ -105,6 +105,7 @@ Plan Compiler::DoCompile() {
   task_gph->ForEachNode(std::bind(&TaskNode::PinConsumedRegst, _1));
   task_gph->MdUpdtDelayedTopoForEachNode(&TaskNode::Build);
   task_gph->AddReduceCtrlEdges();
+  task_gph->AddReduceMdUpdtOverlapCtrlEdges();
   task_gph->RemoveEmptyRegsts();
   task_gph->AddOrderingCtrlEdgeInSameChain();
   if (job_desc->IsTrain() && job_desc->enable_mem_sharing()) {
