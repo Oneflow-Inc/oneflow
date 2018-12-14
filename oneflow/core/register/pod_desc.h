@@ -140,7 +140,7 @@ template<typename T>
 const T& PodDesc::Cast() const {
   static_assert(std::is_same<T, TensorPodDesc>::value || std::is_same<T, StructPodDesc>::value,
                 "only TensorPodDesc and StructPodDesc supported");
-  return *dynamic_cast<T*>(this);
+  return *(dynamic_cast<const T*>(this));
 }
 
 template<typename T>

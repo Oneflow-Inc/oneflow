@@ -146,8 +146,18 @@ void Blob::set_dim2_valid_num(int64_t dim0_idx, int64_t dim1_idx, int64_t val) {
 void Blob::set_instance_shape(const Shape& shape) {
   CHECK_NOTNULL(instance_shape_ptr_);
   CHECK_EQ(shape.NumAxes(), static_shape().NumAxes() - 1);
-  CHECK_EQ(shape.NumAxes() * sizeof(int64_t),
-           header_pod_ptr_.Field(FieldKey::kInstanceShape).pod_desc().ByteSize());
+  /*
+  const StructPodDesc& a = header_pod_ptr_.pod_desc().Cast<StructPodDesc>();
+  const TensorPodDesc& b = a.Field(FieldKey::kInstanceShape).Cast<TensorPodDesc>();
+  CHECK_EQ(shape.NumAxes(), b.shape().elem_cnt());
+
+    CHECK_EQ(shape.NumAxes(), header_pod_ptr_.pod_desc()
+                                  .Cast<StructPodDesc>()
+                                  .Field(FieldKey::kInstanceShape)
+                                  .Cast<TensorPodDesc>()
+                                  .shape()
+                                  .elem_cnt());
+    */
   for (size_t i = 0; i < shape.NumAxes(); ++i) { *(instance_shape_ptr_ + i) = shape.At(i); }
 }
 
