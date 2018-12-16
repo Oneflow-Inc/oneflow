@@ -237,7 +237,7 @@ message CenterLossOpConf {
   required string label = 2;
   required string loss = 3;
   optional float alpha = 4;
-  required int32 num_of_classes = 5;
+  required int32 num_classes = 5;
   optional LossReductionType reduction = 6 [default = kSumOverN];
   optional float weight_scalar = 7 [default = 1.0];
   optional string weight = 8;

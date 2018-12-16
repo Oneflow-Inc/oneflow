@@ -2,21 +2,6 @@
 
 namespace oneflow {
 
-namespace {
-
-template<DeviceType device_type, typename PredType>
-void ReduceMean(DeviceCtx* device_ctx, const int32_t row_num, const int32_t col_num,
-                const PredType* data, PredType* out,
-                std::function<Blob*(const std::string&)> BnInOp2Blob) {
-  const Blob* ones_multipiler_blob = BnInOp2Blob("ones_multiplier");
-  KernelUtil<device_type, PredType>::OFGemm(device_ctx, CblasNoTrans, CblasNoTrans, row_num, 1,
-                                            col_num, 1.0, data,
-                                            ones_multipiler_blob->dptr<PredType>(), 0.0, out);
-  KernelUtil<device_type, PredType>::Scal(device_ctx, row_num, 1.0 / col_num, out, 1);
-}
-
-}  // namespace
-
 template<DeviceType device_type, typename PredType, typename LabelType>
 void CenterLossKernel<device_type, PredType, LabelType>::VirtualLossForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
@@ -24,47 +9,18 @@ void CenterLossKernel<device_type, PredType, LabelType>::VirtualLossForwardDataC
   const Blob* label_blob = BnInOp2Blob("label");
   Blob* centers_blob = BnInOp2Blob("centers");
   Blob* piece_centers_blob = BnInOp2Blob("piece_centers");
-  Blob* forward_tmp_blob = BnInOp2Blob("forward_tmp");
   Blob* loss_blob = BnInOp2Blob("loss");
+  Blob* prediction_diff_blob = BnInOp2Blob("prediction_diff");
   const int32_t n = prediction_blob->shape().At(0);
   const int32_t d = prediction_blob->shape().At(1);
   const auto& center_loss_op_conf = this->kernel_conf().op_attribute().op_conf().center_loss_conf();
-  const int32_t num_of_classes = center_loss_op_conf.num_of_classes();
+  const int32_t num_classes = center_loss_op_conf.num_classes();
+  const float alpha = center_loss_op_conf.alpha();
 
-  // Forward
-  CenterLossKernelUtil<device_type, PredType, LabelType>::Lookup(
-      ctx.device_ctx, centers_blob->dptr<PredType>(), num_of_classes, d,
-      label_blob->dptr<LabelType>(), n, piece_centers_blob->mut_dptr<PredType>());
-  CenterLossKernelUtil<device_type, PredType, LabelType>::CalculateEuclideanDistance(
-      ctx.device_ctx, n * d, prediction_blob->dptr<PredType>(),
-      piece_centers_blob->dptr<PredType>(), forward_tmp_blob->mut_dptr<PredType>());
-  ReduceMean<device_type, PredType>(ctx.device_ctx, n, d, forward_tmp_blob->dptr<PredType>(),
-                                    loss_blob->mut_dptr<PredType>(), BnInOp2Blob);
-
-  // Update Centers
-  KernelUtil<device_type, PredType>::Sub(
-      ctx.device_ctx, n * d, piece_centers_blob->dptr<PredType>(),
-      prediction_blob->dptr<PredType>(), forward_tmp_blob->mut_dptr<PredType>());
-  KernelUtil<device_type, PredType>::Scal(ctx.device_ctx, n * d, (1 - center_loss_op_conf.alpha()),
-                                          forward_tmp_blob->mut_dptr<PredType>(), 1);
-  CenterLossKernelUtil<device_type, PredType, LabelType>::SparseUpdate(
-      ctx.device_ctx, forward_tmp_blob->dptr<PredType>(), n, d, label_blob->dptr<LabelType>(),
-      centers_blob->mut_dptr<PredType>(), num_of_classes);
-
-  // Backward
-  Blob* prediction_diff_blob = BnInOp2Blob("prediction_diff");
-  KernelUtil<device_type, PredType>::Sub(ctx.device_ctx, n * d, prediction_blob->dptr<PredType>(),
-                                         piece_centers_blob->dptr<PredType>(),
-                                         prediction_diff_blob->mut_dptr<PredType>());
-}
-
-template<DeviceType device_type, typename PredType, typename LabelType>
-void CenterLossKernel<device_type, PredType, LabelType>::InitConstBufBlobs(
-    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  InitializerConf ones_multipiler_initializer_conf;
-  ones_multipiler_initializer_conf.mutable_constant_conf()->set_value(1.0f);
-  KernelUtil<device_type, PredType>::InitializeWithConf(ctx, ones_multipiler_initializer_conf, 0,
-                                                        BnInOp2Blob("ones_multiplier"));
+  CenterLossKernelUtil<device_type, PredType, LabelType>::Forward(
+      ctx.device_ctx, prediction_blob->dptr<PredType>(), label_blob->dptr<LabelType>(), num_classes,
+      d, n, alpha, piece_centers_blob->mut_dptr<PredType>(), centers_blob->mut_dptr<PredType>(),
+      loss_blob->mut_dptr<PredType>(), prediction_diff_blob->mut_dptr<PredType>());
 }
 
 template<DeviceType device_type, typename PredType, typename LabelType>
@@ -89,34 +45,29 @@ void CenterLossKernel<device_type, PredType, LabelType>::InitModelBlobsWithDir(
 
 template<typename PredType, typename LabelType>
 struct CenterLossKernelUtil<DeviceType::kCPU, PredType, LabelType> {
-  static void Lookup(DeviceCtx* ctx, const PredType* in, const int32_t table_size,
-                     const int32_t table_dim, const LabelType* indices,
-                     const int32_t num_of_indices, PredType* out) {
-    FOR_RANGE(int32_t, i, 0, num_of_indices) {
-      const int32_t idx = indices[i];
-      CHECK(idx >= 0 && idx < table_size);
-      const PredType* from = in + (idx * table_dim);
-      PredType* to = out + (i * table_dim);
-      std::copy(from, from + table_dim, to);
+  static void Forward(DeviceCtx* ctx, const PredType* prediction, const LabelType* label,
+                      const int32_t num_classes, const int32_t dim, const int32_t num_labels,
+                      const float alpha, PredType* piece_centers, PredType* centers, PredType* loss,
+                      PredType* prediction_diff) {
+    // Lookup
+    FOR_RANGE(int32_t, i, 0, num_labels) {
+      CHECK(label[i] >= 0 && label[i] < num_classes);
+      const PredType* from = centers + (label[i] * dim);
+      PredType* to = piece_centers + (i * dim);
+      std::copy(from, from + dim, to);
     }
-  }
-  static void CalculateEuclideanDistance(DeviceCtx* ctx, const int64_t elem_cnt, const PredType* x,
-                                         const PredType* y, PredType* z) {
-    FOR_RANGE(int64_t, i, 0, elem_cnt) {
-      PredType diff = x[i] - y[i];
-      z[i] = 0.5 * diff * diff;
-    }
-  }
-  static void SparseUpdate(DeviceCtx* ctx, const PredType* diff, const int32_t update_num,
-                           const int32_t table_dim, const LabelType* indices, PredType* model,
-                           const int32_t table_size) {
-    FOR_RANGE(int32_t, i, 0, update_num) {
-      FOR_RANGE(int32_t, j, 0, table_dim) {
-        const int32_t idx = indices[i];
-        CHECK_LT(idx, table_size);
-        const PredType* from = diff + (i * table_dim);
-        PredType* to = model + (idx * table_dim);
-        std::copy(from, from + table_dim, to);
+    FOR_RANGE(int32_t, i, 0, num_labels) {
+      loss[i] = 0;
+      FOR_RANGE(int32_t, j, 0, dim) {
+        // Forward
+        int64_t index = i * dim + j;
+        PredType diff = prediction[index] - piece_centers[index];
+        loss[i] += 0.5 * diff * diff;
+        // Update Centers
+        PredType center_diff = (1 - alpha) * (piece_centers[index] - prediction[index]);
+        centers[index] -= center_diff;
+        // Backward
+        prediction_diff[index] = prediction[index] - piece_centers[index];
       }
     }
   }
