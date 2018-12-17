@@ -16,7 +16,7 @@ class ReduceConcatCompTaskNode final : public CompTaskNode, public ReduceCompTas
   void ConsumeAllRegsts() override;
 
   TaskType GetTaskType() const override { return TaskType::kReduceConcat; }
-  CudaWorkType GetCudaWorkType() const override { return CudaWorkType::kMix; }
+  CudaWorkType GetCudaWorkType() const override { return CudaWorkType::kReduceCtrl; }
 
   void EnableMemSharingInReduce(const ReduceMemSharingCtx& ctx) override;
 

@@ -16,8 +16,11 @@ int64_t IDMgr::GetGpuNcclGatherThrdId(int64_t dev_phy_id) const {
 int64_t IDMgr::GetGpuMixThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ * 5 + dev_phy_id;
 }
-int64_t IDMgr::GetGpuMdUpdtThrdId(int64_t dev_phy_id) const {
+int64_t IDMgr::GetGpuReduceCtrlThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ * 6 + dev_phy_id;
+}
+int64_t IDMgr::GetGpuMdUpdtThrdId(int64_t dev_phy_id) const {
+  return gpu_device_num_ * 7 + dev_phy_id;
 }
 int64_t IDMgr::GetCpuDeviceThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ * GetCudaWorkTypeSize() + dev_phy_id;
@@ -76,7 +79,7 @@ int64_t IDMgr::GlobalWorkStreamId4ActorId(int64_t actor_id) const {
   return GlobalWorkStreamId4TaskId(actor_id);
 }
 
-int64_t IDMgr::GlobalDeviceId4TaskId(int64_t task_id) const {
+int64_t IDMgr::GlobalThrdId4TaskId(int64_t task_id) const {
   int shift = local_work_stream_id_bit_num_ + task_id_bit_num_;
   return (task_id >> shift) << shift;
 }
