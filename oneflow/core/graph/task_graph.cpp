@@ -266,6 +266,33 @@ void TaskGraph::AddReduceSequenceCtrlEdges() {
   }
 }
 
+void TaskGraph::AddMdUpdtCtrlEdgesWithinReduceSplitNode() {
+  auto GetOrderInReduceGroup = [&](NormalMdUpdtCompTaskNode* md_updt_node) {
+    const auto* logical_node =
+        dynamic_cast<const NormalMdUpdtLogicalNode*>(md_updt_node->logical_node());
+    return logical_node->order_in_reduce_group();
+  };
+  for (auto* node : ordered_task_nodes_) {
+    auto* split_node = dynamic_cast<ReduceSplitCompTaskNode*>(node);
+    if (split_node == nullptr) { continue; }
+    std::vector<NormalMdUpdtCompTaskNode*> md_updt_nodes;
+    split_node->ForEachNodeOnOutEdge([&](TaskNode* node) {
+      auto* md_updt_node = dynamic_cast<NormalMdUpdtCompTaskNode*>(node);
+      if (md_updt_node == nullptr) { return; }
+      md_updt_nodes.push_back(md_updt_node);
+    });
+    std::sort(md_updt_nodes.begin(), md_updt_nodes.end(),
+              [&](NormalMdUpdtCompTaskNode* lhs, NormalMdUpdtCompTaskNode* rhs) {
+                return GetOrderInReduceGroup(lhs) < GetOrderInReduceGroup(rhs);
+              });
+    NormalMdUpdtCompTaskNode* prev_md_updt = md_updt_nodes.at(0);
+    for (auto* md_updt_node : md_updt_nodes) {
+      if (md_updt_node != prev_md_updt) { prev_md_updt->BuildCtrlRegstDescIfNeed(md_updt_node); }
+      prev_md_updt = md_updt_node;
+    }
+  }
+}
+
 void TaskGraph::AddReduceMdUpdtOverlapingCtrlEdges() {
   HashMap<int64_t, std::vector<ReduceIdentityCompTaskNode*>> global_thrd_id2identity_nodes;
   HashMap<int64_t, std::vector<ReduceSplitCompTaskNode*>> global_thrd_id2split_nodes;
