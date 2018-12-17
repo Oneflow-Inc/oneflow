@@ -67,19 +67,20 @@ message OtherConf {
   optional bool save_downloaded_file_to_local_fs = 109 [default = false];
   optional uint64 rdma_mem_block_mbyte = 110 [default = 8];
   optional uint64 rdma_recv_msg_buf_mbyte = 111 [default = 6];
+  required FileSystemConf data_fs_conf = 112;
+  required FileSystemConf snapshot_fs_conf = 113;
 
-  optional bool collect_act_event = 113 [default = false];
-  optional bool enable_mem_sharing = 114 [default = true];
+  optional bool collect_act_event = 125 [default = false];
+  optional bool enable_mem_sharing = 126 [default = true];
   optional bool enable_write_snapshot = 130 [default = true];
   optional bool enable_blob_mem_sharing = 140 [default = true];
   optional bool enable_nccl = 142 [default = true];
   optional bool use_nccl_inter_node_communication = 143 [default = false];
   optional int64 cudnn_buf_limit_mbyte = 144 [default = 1024];  // 1GByte
-  optional int64 reduce_group_size = 112 [default = 20];
-  optional float lazy_reduce_ratio = 145 [default = 0.0];
+  optional int64 reduce_group_size = 145 [default = 20];
+  optional float lazy_reduce_ratio = 146 [default = 0.0];
+  optional float reduce_model_update_overlapping_ratio = 147 [default = 0.5];
 
-  required FileSystemConf data_fs_conf = 121;
-  required FileSystemConf snapshot_fs_conf = 122;
 
   oneof JobType {
     TrainConf train_conf = 200;

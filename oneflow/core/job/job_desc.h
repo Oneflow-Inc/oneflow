@@ -60,6 +60,7 @@ class JobDesc final {
   }
   int64_t reduce_group_size() const { return job_conf_.other().reduce_group_size(); }
   float lazy_reduce_ratio() const;
+  float reduce_model_update_overlapping_ratio() const;
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.other().cudnn_buf_limit_mbyte(); }
   int64_t GetMachineId(const std::string& addr) const;
 
@@ -91,8 +92,12 @@ class JobDesc final {
   void SanityCheck();
   void SplitDecodeOps();
   void AddRecordLoadOps();
+  void AddIdentityOpForChainMergeOptimization();
+  void AddIdentityOpForAllReduceOverlapingUntrainble();
+  std::string AddIdentityOp(const std::string& input_op_name,
+                            const HashSet<std::string>& input_lbi_blob_names,
+                            const ParallelConf& parallel_conf);
   void FixTickOpIfExists();
-  void AddIdentityOpIfNeed();
 
   JobConf1 job_conf_;
 };
