@@ -55,6 +55,32 @@ MakeGetterReduceIdentityCtrlOrder(const LogicalGraph& logical_graph) {
   };
 }
 
+void ForEachDeviceSrcUntrainableNode(const std::vector<NormalForwardCompTaskNode*>& fw_nodes,
+                                     const std::function<void(CompTaskNode*)>& Handler) {
+  HashSet<const TaskNode*> fw_nodes_set(fw_nodes.begin(), fw_nodes.end());
+  auto IsSourceTaskNode = [&](NormalForwardCompTaskNode* node) {
+    for (TaskEdge* edge : node->in_edges()) {
+      if (fw_nodes_set.find(edge->src_node()) != fw_nodes_set.end()) { return false; }
+    }
+    return true;
+  };
+  auto HasBwNode = [&](NormalForwardCompTaskNode* node) {
+    const auto* fw_logical_node = dynamic_cast<const ForwardLogicalNode*>(node->logical_node());
+    return fw_logical_node->bw_node() != nullptr;
+  };
+  for (NormalForwardCompTaskNode* fw_node : fw_nodes) {
+    if (IsSourceTaskNode(fw_node) && !HasBwNode(fw_node)) { Handler(fw_node); }
+  }
+}
+
+bool IsTimeShapeContain(const Shape& big_shape, const Shape& small_shape) {
+  if (big_shape.NumAxes() < small_shape.NumAxes()) { return false; }
+  FOR_RANGE(int, i, 0, small_shape.NumAxes()) {
+    if (big_shape.At(i) != small_shape.At(i)) { return false; }
+  }
+  return true;
+}
+
 }  // namespace
 
 TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
@@ -148,13 +174,13 @@ void TaskGraph::AcyclicTopoForEachNode(std::function<bool(TaskNode* node)> IsAll
                                        std::function<void(TaskNode* node)> Handler) const {
   auto ForEachInNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& Handler) {
     node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
-      if (IsBackEdge(node_on_in_edge, node)) return;
+      if (IsBackEdge(node_on_in_edge, node)) { return; }
       Handler(const_cast<TaskNode*>(node_on_in_edge));
     });
   };
   auto ForEachOutNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& Handler) {
     node->ForEachNodeOnOutEdge([&](TaskNode* node_on_out_edge) {
-      if (IsBackEdge(node, node_on_out_edge)) return;
+      if (IsBackEdge(node, node_on_out_edge)) { return; }
       Handler(const_cast<TaskNode*>(node_on_out_edge));
     });
   };
@@ -215,7 +241,7 @@ void TaskGraph::BuildCtrlRegstDescInSameChain() {
   }
 }
 
-void TaskGraph::AddReduceCtrlEdges() {
+void TaskGraph::AddReduceSequenceCtrlEdges() {
   HashMap<int64_t, std::vector<ReduceIdentityCompTaskNode*>> global_thrd_id2identity_nodes;
   for (auto* node : ordered_task_nodes_) {
     auto* identity_node = dynamic_cast<ReduceIdentityCompTaskNode*>(node);
@@ -240,11 +266,12 @@ void TaskGraph::AddReduceCtrlEdges() {
   }
 }
 
-void TaskGraph::AddReduceMdUpdtOverlapCtrlEdges() {
+void TaskGraph::AddReduceMdUpdtOverlapingCtrlEdges() {
   HashMap<int64_t, std::vector<ReduceIdentityCompTaskNode*>> global_thrd_id2identity_nodes;
   HashMap<int64_t, std::vector<ReduceSplitCompTaskNode*>> global_thrd_id2split_nodes;
+  const auto* id_mgr = Global<IDMgr>::Get();
   for (auto* node : ordered_task_nodes_) {
-    int64_t global_thrd_id = Global<IDMgr>::Get()->GlobalThrdId4TaskId(node->task_id());
+    int64_t global_thrd_id = id_mgr->GlobalThrdId4TaskId(node->task_id());
     auto* identity_node = dynamic_cast<ReduceIdentityCompTaskNode*>(node);
     auto* split_node = dynamic_cast<ReduceSplitCompTaskNode*>(node);
     if (identity_node != nullptr) {
@@ -272,11 +299,66 @@ void TaskGraph::AddReduceMdUpdtOverlapCtrlEdges() {
               [&](ReduceIdentityCompTaskNode* lhs, ReduceIdentityCompTaskNode* rhs) {
                 return GetIdentityNodeOrder(lhs) < GetIdentityNodeOrder(rhs);
               });
-    TaskNode* prev_node = identity_nodes.at(0);
+    auto* first_identity_node = identity_nodes.at(0);
+    TaskNode* prev_node = first_identity_node;
+    float overlap_ratio = Global<JobDesc>::Get()->reduce_model_update_overlapping_ratio();
+    int ctrl_edge_num = split_nodes.size() * overlap_ratio;
     for (ReduceSplitCompTaskNode* split_node : split_nodes) {
-      prev_node->BuildCtrlRegstDescIfNeed(split_node);
-      prev_node = split_node;
+      if (ctrl_edge_num-- > 0) {
+        prev_node->BuildCtrlRegstDescIfNeed(split_node);
+        prev_node = split_node;
+      }
     }
+  }
+}
+
+void TaskGraph::AddReduceNoBwForwardNodeOverlapingCtrlEdges() {
+  HashMap<int64_t, std::vector<ReduceIdentityCompTaskNode*>> global_thrd_id2identity_nodes;
+  HashMap<std::pair<int64_t, int64_t>, std::vector<NormalForwardCompTaskNode*>>
+      global_dev_phy_id2fw_nodes;
+  const auto* id_mgr = Global<IDMgr>::Get();
+  for (auto* node : ordered_task_nodes_) {
+    if (id_mgr->GetDeviceTypeFromThrdId(node->thrd_id()) == DeviceType::kCPU) { continue; }
+    int64_t global_thrd_id = id_mgr->GlobalThrdId4TaskId(node->task_id());
+    auto* identity_node = dynamic_cast<ReduceIdentityCompTaskNode*>(node);
+    auto* fw_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
+    if (identity_node != nullptr) {
+      global_thrd_id2identity_nodes[global_thrd_id].push_back(identity_node);
+    } else if (fw_node != nullptr) {
+      int64_t dev_phy_id = id_mgr->GetGpuPhyIdFromThrdId(node->thrd_id());
+      global_dev_phy_id2fw_nodes[std::make_pair(node->machine_id(), dev_phy_id)].push_back(fw_node);
+    } else {
+      // do nothing
+    }
+  }
+  auto GetIdentityNodeOrder = [&](const ReduceIdentityCompTaskNode* id_node) {
+    const auto* id_logical_node =
+        dynamic_cast<const ReduceIdentityLogicalNode*>(id_node->logical_node());
+    return id_logical_node->order_in_logical_graph();
+  };
+  for (auto& pair : global_thrd_id2identity_nodes) {
+    auto& identity_nodes = pair.second;
+    std::sort(identity_nodes.begin(), identity_nodes.end(),
+              [&](ReduceIdentityCompTaskNode* lhs, ReduceIdentityCompTaskNode* rhs) {
+                return GetIdentityNodeOrder(lhs) < GetIdentityNodeOrder(rhs);
+              });
+    auto* first_identity_node = identity_nodes.at(0);
+    int64_t machine_id = first_identity_node->machine_id();
+    int64_t dev_phy_id = id_mgr->GetGpuPhyIdFromThrdId(first_identity_node->thrd_id());
+    const auto& fw_nodes = global_dev_phy_id2fw_nodes.at(std::make_pair(machine_id, dev_phy_id));
+    const Shape& identity_time_shape =
+        *first_identity_node->GetProducedRegst("out")->data_regst_time_shape();
+    ForEachDeviceSrcUntrainableNode(fw_nodes, [&](CompTaskNode* node) {
+      std::shared_ptr<RegstDesc> regst_desc = node->GetProducedRegst("out");
+      if (!regst_desc) { return; }
+      const Shape& time_shape = *regst_desc->data_regst_time_shape();
+      if (!IsTimeShapeContain(time_shape, identity_time_shape)) { return; }
+      CHECK_EQ(time_shape.elem_cnt() % identity_time_shape.elem_cnt(), 0);
+      int regst_desc_num = time_shape.elem_cnt() / identity_time_shape.elem_cnt();
+      RegstDesc* ctrl_regst_desc = node->BuildCtrlRegstDesc(first_identity_node);
+      ctrl_regst_desc->UpdtMinRegstNumIfNeed(regst_desc_num);
+      ctrl_regst_desc->UpdtMaxRegstNumIfNeed(regst_desc_num);
+    });
   }
 }
 

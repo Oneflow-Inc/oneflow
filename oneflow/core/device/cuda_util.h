@@ -54,8 +54,6 @@ enum class CudaWorkType {
   OF_PP_FOR_EACH_TUPLE(DECLARE_CUDA_WORK_TYPE, CUDA_WORK_TYPE_SEQ)
 };
 
-const static int kMdUpdtStreamSize = 5;
-
 inline size_t GetCudaWorkTypeSize() { return OF_PP_SEQ_SIZE(CUDA_WORK_TYPE_SEQ); }
 
 #define CUDA_DATA_TYPE_SEQ                \

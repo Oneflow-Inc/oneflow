@@ -78,6 +78,13 @@ class ChainGraph final : public Graph<ChainNode, ChainEdge> {
   void MergeTaskNodes(const HashMap<int64_t, std::vector<TaskNode*>>& machine2tasks,
                       const HashMap<TaskNode*, HashSet<TaskNode*>>& node2ancestors,
                       std::vector<std::vector<TaskNode*>>* chains) const;
+  void PrioritizeUntrainableTaskNode(std::vector<TaskNode*>* task_nodes) const;
+  void PartialPriorDfsTopoForEachNode(
+      const std::list<TaskNode*> starts,
+      const std::function<void(TaskNode*, const std::function<void(TaskNode*)>&)>& ForEachInNode,
+      const std::function<void(TaskNode*, const std::function<void(TaskNode*)>&)>& ForEachOutNode,
+      const std::function<bool(TaskNode*)>& IsPrior,
+      const std::function<void(TaskNode*)>& Handler) const;
   void InitChainNode(const std::vector<std::vector<TaskNode*>>& chains);
   void InitChainEdge(const std::vector<std::vector<TaskNode*>>& chains);
   void SetChainId4ChainNode();
