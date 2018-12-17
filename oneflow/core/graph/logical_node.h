@@ -239,16 +239,22 @@ DECLARE_NAIVE_LOGICAL_NODE(AccuracyPrintLogicalNode);
 class NormalMdUpdtLogicalNode final : public LogicalNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(NormalMdUpdtLogicalNode);
-  NormalMdUpdtLogicalNode() : random_seed_(NewRandomSeed()) {}
+  NormalMdUpdtLogicalNode() : random_seed_(NewRandomSeed()), order_in_reduce_group_(0) {}
   ~NormalMdUpdtLogicalNode() = default;
 
   OVERRIDE_PURE_VIRTUAL_METHOD();
   bool MayConsumeModelDiff() const override { return true; }
 
+  int order_in_reduce_group() const { return order_in_reduce_group_; }
+  void set_order_in_reduce_group(int order_in_reduce_group) {
+    order_in_reduce_group_ = order_in_reduce_group;
+  }
+
  private:
   void FixCompTaskNode(CompTaskNode*) const override;
 
   uint32_t random_seed_;
+  int order_in_reduce_group_;
 };
 
 DECLARE_NAIVE_LOGICAL_NODE(MdSaveLogicalNode);

@@ -79,7 +79,7 @@ message OtherConf {
   optional int64 cudnn_buf_limit_mbyte = 144 [default = 1024];  // 1GByte
   optional int64 reduce_group_size = 145 [default = 20];
   optional float lazy_reduce_ratio = 146 [default = 0.0];
-  optional float reduce_model_update_overlapping_ratio = 147 [default = 0.5];
+  optional float reduce_model_update_overlapping_ratio = 147 [default = 0.1];
 
 
   oneof JobType {

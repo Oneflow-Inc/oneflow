@@ -23,6 +23,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void AddReduceSequenceCtrlEdges();
   void AddReduceMdUpdtOverlapingCtrlEdges();
   void AddReduceNoBwForwardNodeOverlapingCtrlEdges();
+  void AddMdUpdtCtrlEdgesWithinReduceSplitNode();
 
   void EnableMemSharingInReduceStruct();
   void EnableMemSharingAfterAllManualSetForMdUpdt();
