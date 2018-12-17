@@ -15,6 +15,7 @@ class ReduceIdentityCompTaskNode final : public CompTaskNode, public ReduceCompT
   ~ReduceIdentityCompTaskNode() override = default;
 
   TaskType GetTaskType() const override { return TaskType::kReduceIdentity; }
+  CudaWorkType GetCudaWorkType() const override { return CudaWorkType::kReduceCtrl; }
   void EnableMemSharingInReduce(const ReduceMemSharingCtx& ctx) override;
 
   void ProduceAllRegstsAndBindEdges() override;

@@ -19,6 +19,7 @@ class IDMgr final {
   int64_t GetGpuNcclScatterThrdId(int64_t dev_phy_id) const;
   int64_t GetGpuNcclGatherThrdId(int64_t dev_phy_id) const;
   int64_t GetGpuMixThrdId(int64_t dev_phy_id) const;
+  int64_t GetGpuReduceCtrlThrdId(int64_t dev_phy_id) const;
   int64_t GetGpuMdUpdtThrdId(int64_t dev_phy_id) const;
   int64_t GetCpuDeviceThrdId(int64_t dev_phy_id) const;
   int64_t CommNetThrdId() const;
@@ -53,10 +54,10 @@ class IDMgr final {
   int64_t AllocateLocalWorkStreamId(int64_t machine_id, int64_t thrd_id);
   int64_t LocalWorkStreamId4TaskId(int64_t task_id) const;
   int64_t LocalWorkStreamId4ActorId(int64_t actor_id) const;
-  // global_device_id
+  // global_thread_id
   // sign | machine_id | thrd_id | 0  | 0
   //  1   |     10     |   11    | 21 | 21
-  int64_t GlobalDeviceId4TaskId(int64_t actor_id) const;
+  int64_t GlobalThrdId4TaskId(int64_t task_id) const;
   // global_work_stream_id
   // sign | machine_id | thrd_id | local_work_stream_id | 0
   //  1   |     10     |   11    |          21          | 21

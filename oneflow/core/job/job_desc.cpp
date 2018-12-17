@@ -3,12 +3,33 @@
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/persistence/hadoop/hadoop_file_system.h"
+#include "oneflow/core/graph/graph.h"
 
 namespace oneflow {
 
 namespace {
 
-std::function<ParallelConf*(const std::string&)> MakeGetterParallelConf4OpName(
+std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type) {
+  OperatorConf dev_op_conf = op_conf;
+  dev_op_conf.set_device_type(device_type);
+  return ConstructOp(dev_op_conf);
+}
+
+std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4OpName(
+    const Placement& placement) {
+  auto op_name2parallel_conf = std::make_shared<HashMap<std::string, const ParallelConf*>>();
+  for (const auto& placement_group : placement.placement_group()) {
+    for (const std::string& op_name : placement_group.op_set().op_name()) {
+      const ParallelConf* parallel_conf = &placement_group.parallel_conf();
+      CHECK(op_name2parallel_conf->emplace(op_name, parallel_conf).second);
+    }
+  }
+  return [op_name2parallel_conf](const std::string& op_name) {
+    return op_name2parallel_conf->at(op_name);
+  };
+}
+
+std::function<ParallelConf*(const std::string&)> MakeGetterMutParallelConf4OpName(
     Placement* placement) {
   auto op_name2parallel_conf = std::make_shared<HashMap<std::string, ParallelConf*>>();
   FOR_RANGE(int, idx, 0, placement->placement_group_size()) {
@@ -23,11 +44,108 @@ std::function<ParallelConf*(const std::string&)> MakeGetterParallelConf4OpName(
   };
 }
 
-std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type) {
-  OperatorConf dev_op_conf = op_conf;
-  dev_op_conf.set_device_type(device_type);
-  return ConstructOp(dev_op_conf);
-}
+class OpEdge;
+
+class OpNode final : public Node<OpNode, OpEdge> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(OpNode);
+  explicit OpNode(const OperatorConf& op_conf, DeviceType device_type)
+      : op_(ConstructOp(op_conf, device_type)), has_in_diff_(false) {}
+  ~OpNode() = default;
+
+  const Operator& op() const { return *op_; }
+  bool HasBackward() const { return has_in_diff() || has_model_diff(); }
+  bool has_in_diff() const { return has_in_diff_; }
+  bool has_model_diff() const { return op().model_diff_bns().size() > 0; }
+  void set_has_in_diff(bool has_in_diff) { has_in_diff_ = has_in_diff; }
+
+ private:
+  std::shared_ptr<Operator> op_;
+  bool has_in_diff_;
+};
+
+class OpEdge final : public Edge<OpNode, OpEdge> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(OpEdge);
+  explicit OpEdge(const std::vector<LogicalBlobId>& lbis,
+                  const HashMap<LogicalBlobId, std::vector<std::string>>& lbi2ibns)
+      : lbis_(lbis), lbi2ibns_(lbi2ibns) {}
+  ~OpEdge() = default;
+
+  const LogicalBlobId& SoleLbi() const {
+    CHECK_EQ(lbis_.size(), 1);
+    return lbis_.front();
+  }
+
+  const std::vector<LogicalBlobId>& lbis() const { return lbis_; }
+  const HashMap<LogicalBlobId, std::vector<std::string>>& lbi2ibns() const { return lbi2ibns_; }
+
+ private:
+  std::vector<LogicalBlobId> lbis_;
+  HashMap<LogicalBlobId, std::vector<std::string>> lbi2ibns_;
+};
+
+class OpGraph final : public Graph<OpNode, OpEdge> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(OpGraph);
+  explicit OpGraph(const JobDesc& job_desc) : job_desc_(job_desc) { Init(); }
+  ~OpGraph() = default;
+
+ private:
+  void Init() {
+    InitNodes();
+    ForEachNode(
+        [&](OpNode* node) { CHECK(op_name2op_node_.emplace(node->op().op_name(), node).second); });
+    InitEdges();
+    UpdateOpNodeHasInDiff();
+  }
+  void InitNodes() {
+    auto ParallelConf4OpName = MakeGetterParallelConf4OpName(job_desc_.placement());
+    for (const auto& op_conf : job_desc_.dlnet_conf().op()) {
+      ParallelDesc pr(*ParallelConf4OpName(op_conf.name()));
+      OpNode* node = new OpNode(op_conf, pr.device_type());
+      AddAllocatedNode(node);
+    }
+  }
+  void InitEdges() {
+    HashMap<LogicalBlobId, OpNode*> lbi2producer;
+    ForEachNode([&](OpNode* op_node) {
+      for (const auto& obn : op_node->op().output_bns()) {
+        CHECK(lbi2producer.emplace(op_node->op().BnInOp2Lbi(obn), op_node).second);
+      }
+    });
+    ForEachNode([&](OpNode* op_node) {
+      HashMap<std::string, std::vector<LogicalBlobId>> producer_name2lbis;
+      HashMap<std::string, HashMap<LogicalBlobId, std::vector<std::string>>>
+          consumer_op_name2lbi2ibns;
+      for (const auto& ibn : op_node->op().input_bns()) {
+        const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
+        producer_name2lbis[lbi.op_name()].push_back(lbi);
+        consumer_op_name2lbi2ibns[op_node->op().op_name()][lbi].push_back(ibn);
+      }
+      for (const auto& pair : producer_name2lbis) {
+        const auto& lbis = pair.second;
+        const auto& lbi2ibns = consumer_op_name2lbi2ibns.at(op_node->op().op_name());
+        OpNode* producer = lbi2producer.at(lbis.at(0));
+        Connect(producer, new OpEdge(lbis, lbi2ibns), op_node);
+      }
+    });
+  }
+
+  void UpdateOpNodeHasInDiff() {
+    auto HasIndiff = [&](const OpNode* op_node) -> bool {
+      for (OpEdge* edge : op_node->in_edges()) {
+        if (edge->src_node()->has_in_diff()) { return true; }
+        if (edge->src_node()->has_model_diff()) { return true; }
+      }
+      return false;
+    };
+    TopoForEachNode([&](OpNode* op_node) { op_node->set_has_in_diff(HasIndiff(op_node)); });
+  }
+
+  const JobDesc& job_desc_;
+  HashMap<std::string, OpNode*> op_name2op_node_;
+};
 
 void GroupOpConfByProducerOpNameAndConsumerParallelDesc(
     HashMap<std::pair<std::string, ParallelDesc>, HashSet<OperatorConf*>>* grouped,
@@ -44,24 +162,31 @@ void GroupOpConfByProducerOpNameAndConsumerParallelDesc(
   }
 }
 
-HashSet<LogicalBlobId> CollectInputLbiByProducerOpName(const HashSet<OperatorConf*>& op_confs,
-                                                       DeviceType device_type,
-                                                       const std::string& producer_op_name) {
-  HashSet<LogicalBlobId> ret;
+void CollectInputLbiBlobNamesByProducerOpName(HashSet<std::string>* ret_blob_name,
+                                              const HashSet<OperatorConf*>& op_confs,
+                                              DeviceType device_type,
+                                              const std::string& producer_op_name) {
+  CHECK(ret_blob_name->empty());
   for (const auto* op_conf : op_confs) {
     std::shared_ptr<Operator> op = ConstructOp(*op_conf, device_type);
     for (const auto& ibn : op->input_bns()) {
       LogicalBlobId lbi = op->BnInOp2Lbi(ibn);
-      if (lbi.op_name() == producer_op_name) { ret.insert(lbi); }
+      if (lbi.op_name() == producer_op_name) { ret_blob_name->insert(lbi.blob_name()); }
     }
   }
-  return ret;
 }
 
 }  // namespace
 
 float JobDesc::lazy_reduce_ratio() const {
   float ratio = job_conf_.other().lazy_reduce_ratio();
+  CHECK_GE(ratio, 0.0);
+  CHECK_LE(ratio, 1.0);
+  return ratio;
+}
+
+float JobDesc::reduce_model_update_overlapping_ratio() const {
+  float ratio = job_conf_.other().reduce_model_update_overlapping_ratio();
   CHECK_GE(ratio, 0.0);
   CHECK_LE(ratio, 1.0);
   return ratio;
@@ -325,11 +450,12 @@ void JobDesc::AddRecordLoadOps() {
 
 void JobDesc::FixAndOptimizeDLNet() {
   FixTickOpIfExists();
-  AddIdentityOpIfNeed();
+  AddIdentityOpForChainMergeOptimization();
+  if (IsTrain()) { AddIdentityOpForAllReduceOverlapingUntrainble(); }
 }
 
-void JobDesc::AddIdentityOpIfNeed() {
-  auto ParallelConf4OpName = MakeGetterParallelConf4OpName(job_conf_.mutable_placement());
+void JobDesc::AddIdentityOpForChainMergeOptimization() {
+  auto ParallelConf4OpName = MakeGetterParallelConf4OpName(job_conf_.placement());
   HashMap<std::pair<std::string, ParallelDesc>, HashSet<OperatorConf*>> grouped;
   GroupOpConfByProducerOpNameAndConsumerParallelDesc(&grouped, job_conf_.mutable_net(),
                                                      ParallelConf4OpName);
@@ -338,37 +464,96 @@ void JobDesc::AddIdentityOpIfNeed() {
     const auto& producer_op_name = pair.first.first;
     ParallelDesc producer_pr(*ParallelConf4OpName(producer_op_name));
     if (producer_pr.parallel_num() == pair.first.second.parallel_num()) { continue; }
-    const auto& lbis = CollectInputLbiByProducerOpName(pair.second, pair.first.second.device_type(),
-                                                       producer_op_name);
-    // add identity op
-    OperatorConf* identity_op = job_conf_.mutable_net()->add_op();
-    identity_op->set_name("clone_identity_" + NewUniqueId());
-    IdentityOpConf* identity_op_conf = identity_op->mutable_identity_conf();
-    for (const LogicalBlobId& lbi : lbis) {
-      CHECK_EQ(lbi.op_name(), producer_op_name);
-      identity_op_conf->add_in(GenLogicalBlobName(lbi));
-      identity_op_conf->add_out(lbi.blob_name());
-    }
-    // add placement of identity op
-    PlacementGroup* p_group = job_conf_.mutable_placement()->add_placement_group();
-    *(p_group->mutable_op_set()->add_op_name()) = identity_op->name();
-    *(p_group->mutable_parallel_conf()) = *ParallelConf4OpName((*pair.second.cbegin())->name());
+    HashSet<std::string> input_lbi_blob_names;
+    CollectInputLbiBlobNamesByProducerOpName(&input_lbi_blob_names, pair.second,
+                                             pair.first.second.device_type(), producer_op_name);
+    ParallelDesc consumer_op_pr(*ParallelConf4OpName((*pair.second.cbegin())->name()));
+    std::string id_op_name = AddIdentityOp(producer_op_name, input_lbi_blob_names,
+                                           *ParallelConf4OpName((*pair.second.cbegin())->name()));
     // reconnect to identity op
     for (auto* op_conf : pair.second) {
       PbMessage* op_type_conf = MutableMessageInPbMessage(op_conf, op_conf->op_type_case());
-      std::shared_ptr<Operator> op = ConstructOp(*op_conf, pair.first.second.device_type());
+      std::shared_ptr<Operator> op = ConstructOp(*op_conf, consumer_op_pr.device_type());
       for (const auto& ibn : op->input_bns()) {
         const LogicalBlobId& lbi = op->BnInOp2Lbi(ibn);
         if (lbi.op_name() != producer_op_name) { continue; }
-        std::string identity_out_lbn = identity_op->name() + "/" + lbi.blob_name();
+        std::string identity_out_lbn = id_op_name + "/" + lbi.blob_name();
         SetValInPbMessage<std::string>(op_type_conf, ibn, identity_out_lbn);
       }
     }
   }
 }
 
+void JobDesc::AddIdentityOpForAllReduceOverlapingUntrainble() {
+  HashMap<std::string, OperatorConf*> op_name2op_conf;
+  FOR_RANGE(int, idx, 0, job_conf_.net().op_size()) {
+    OperatorConf* op_conf = job_conf_.mutable_net()->mutable_op(idx);
+    CHECK(op_name2op_conf.emplace(op_conf->name(), op_conf).second);
+  }
+  auto ParallelConf4OpName = MakeGetterParallelConf4OpName(job_conf_.placement());
+  OpGraph(*this).TopoForEachNode([&](OpNode* op_node) {
+    if (op_node->HasBackward()) { return; }
+    HashMap<bool, std::vector<OpEdge*>> has_bw2out_op_edges;
+    for (OpEdge* edge : op_node->out_edges()) {
+      has_bw2out_op_edges[edge->dst_node()->HasBackward()].push_back(edge);
+    }
+    if (has_bw2out_op_edges.size() <= 1) { return; }
+    // only handle op_nodes that:
+    // a) have no backward node;
+    // b) have trainable and untrainble consumers;
+
+    // group out_edge by trainable consumers' ParallelDesc
+    HashMap<ParallelDesc, std::vector<OpEdge*>> consumer_op_pr2edges;
+    for (OpEdge* edge : has_bw2out_op_edges.at(true)) {
+      ParallelDesc pr(*ParallelConf4OpName(edge->dst_node()->op().op_name()));
+      consumer_op_pr2edges[pr].push_back(edge);
+    }
+    for (const auto& pair : consumer_op_pr2edges) {
+      // add identity op
+      HashSet<std::string> blob_names;
+      for (OpEdge* edge : pair.second) {
+        for (const LogicalBlobId& lbi : edge->lbis()) { blob_names.insert(lbi.blob_name()); }
+      }
+      std::string identity_op_name =
+          AddIdentityOp(op_node->op().op_name(), blob_names,
+                        *ParallelConf4OpName(pair.second.at(0)->dst_node()->op().op_name()));
+      // reconnect to identity op
+      for (OpEdge* edge : pair.second) {
+        OperatorConf* op_conf = op_name2op_conf.at(edge->dst_node()->op().op_name());
+        PbMessage* op_type_conf = MutableMessageInPbMessage(op_conf, op_conf->op_type_case());
+        for (const LogicalBlobId& lbi : edge->lbis()) {
+          std::string lbn_check = lbi.op_name() + "/" + lbi.blob_name();
+          std::string identity_out_lbn = identity_op_name + "/" + lbi.blob_name();
+          for (const std::string& ibn : edge->lbi2ibns().at(lbi)) {
+            CHECK_EQ(GetValFromPbMessage<std::string>(*op_type_conf, ibn), lbn_check);
+            SetValInPbMessage<std::string>(op_type_conf, ibn, identity_out_lbn);
+          }
+        }
+      }
+    }
+  });
+}
+
+std::string JobDesc::AddIdentityOp(const std::string& input_op_name,
+                                   const HashSet<std::string>& input_lbi_blob_names,
+                                   const ParallelConf& parallel_conf) {
+  // add tuple identity op
+  OperatorConf* tuple_identity_op = job_conf_.mutable_net()->add_op();
+  tuple_identity_op->set_name("clone_identity_" + NewUniqueId());
+  IdentityOpConf* tuple_identity_op_conf = tuple_identity_op->mutable_identity_conf();
+  for (const std::string& blob_name : input_lbi_blob_names) {
+    tuple_identity_op_conf->add_in(input_op_name + "/" + blob_name);
+    tuple_identity_op_conf->add_out(blob_name);
+  }
+  // add placement of tuple identity op
+  PlacementGroup* p_group = job_conf_.mutable_placement()->add_placement_group();
+  *(p_group->mutable_op_set()->add_op_name()) = tuple_identity_op->name();
+  *(p_group->mutable_parallel_conf()) = parallel_conf;
+  return tuple_identity_op->name();
+}
+
 void JobDesc::FixTickOpIfExists() {
-  auto ParallelConf4OpName = MakeGetterParallelConf4OpName(job_conf_.mutable_placement());
+  auto MutParallelConf4OpName = MakeGetterMutParallelConf4OpName(job_conf_.mutable_placement());
   OperatorConf* tick_op_conf = nullptr;
   FOR_RANGE(int, idx, 0, job_conf_.mutable_net()->op_size()) {
     OperatorConf* op_conf = job_conf_.mutable_net()->mutable_op(idx);
@@ -382,7 +567,7 @@ void JobDesc::FixTickOpIfExists() {
   FOR_RANGE(int, idx, 0, job_conf_.mutable_net()->op_size()) {
     OperatorConf* op_conf = job_conf_.mutable_net()->mutable_op(idx);
     if (op_conf == tick_op_conf) { continue; }
-    DeviceType device_type = ParallelDesc(*ParallelConf4OpName(op_conf->name())).device_type();
+    DeviceType device_type = ParallelDesc(*MutParallelConf4OpName(op_conf->name())).device_type();
     if (ConstructOp(*op_conf, device_type)->input_bns().size() == 0) {
       op_type_case2source_op_confs[op_conf->op_type_case()].push_back(op_conf);
     }
@@ -393,7 +578,7 @@ void JobDesc::FixTickOpIfExists() {
   }
   // set input of tick op
   OperatorConf* source_op_conf = op_type_case2source_op_confs.cbegin()->second.at(0);
-  ParallelConf* source_parallel_conf = ParallelConf4OpName(source_op_conf->name());
+  ParallelConf* source_parallel_conf = MutParallelConf4OpName(source_op_conf->name());
   DeviceType device_type = ParallelDesc(*source_parallel_conf).device_type();
   std::shared_ptr<Operator> source_op = ConstructOp(*source_op_conf, device_type);
   CHECK_GE(source_op->output_bns().size(), 1);
@@ -402,7 +587,7 @@ void JobDesc::FixTickOpIfExists() {
   CHECK_EQ(tick_op_conf->tick_conf().has_in(), false);
   tick_op_conf->mutable_tick_conf()->set_in(source_op_output_lbn);
   // fix tick op placement
-  *ParallelConf4OpName(tick_op_conf->name()) = *source_parallel_conf;
+  *MutParallelConf4OpName(tick_op_conf->name()) = *source_parallel_conf;
   // add log_counter op connecting to tick op, making tick op always consumed
   OperatorConf* tick_log_counter = job_conf_.mutable_net()->add_op();
   tick_log_counter->set_name("tick_log_counter_" + NewUniqueId());

@@ -12,33 +12,73 @@
 #include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/job/thrd_id_generator.h"
 #include "oneflow/core/graph/reduce_identity_task_node.h"
+#include "oneflow/core/operator/variable_op.h"
+#include "oneflow/core/operator/constant_op.h"
 
 namespace oneflow {
 
 namespace {
 
-std::function<int32_t(const LogicalNode*)> MakeGetterReduceIdentityCtrlOrder(
-    const LogicalGraph& logical_graph) {
-  std::vector<const ReduceIdentityLogicalNode*> identity_logical_nodes;
+bool IsConnectToTickOp(const TaskNode* node) {
+  const auto* comp_task_node = dynamic_cast<const CompTaskNode*>(node);
+  if (comp_task_node == nullptr) { return false; }
+  if (comp_task_node->logical_node()->op_vec().size() != 1) { return false; }
+  const Operator* op = comp_task_node->logical_node()->SoleOp().get();
+  if (dynamic_cast<const VariableOp*>(op) != nullptr) { return true; }
+  if (dynamic_cast<const ConstantOp*>(op) != nullptr) { return true; }
+  return false;
+}
+
+template<typename ReduceType = ReduceIdentityLogicalNode>
+typename std::enable_if<std::is_same<ReduceType, ReduceIdentityLogicalNode>::value
+                            || std::is_same<ReduceType, ReduceSplitLogicalNode>::value,
+                        std::function<int32_t(const LogicalNode*)>>::type
+MakeGetterReduceIdentityCtrlOrder(const LogicalGraph& logical_graph) {
+  std::vector<const ReduceType*> logical_nodes;
   logical_graph.ForEachNode([&](LogicalNode* node) {
-    auto* identity_logical_node = dynamic_cast<ReduceIdentityLogicalNode*>(node);
-    if (identity_logical_node == nullptr) { return; }
-    identity_logical_nodes.push_back(identity_logical_node);
+    auto* logical_node = dynamic_cast<ReduceType*>(node);
+    if (logical_node == nullptr) { return; }
+    logical_nodes.push_back(logical_node);
   });
-  std::sort(identity_logical_nodes.begin(), identity_logical_nodes.end(),
-            [](const ReduceIdentityLogicalNode* lhs, const ReduceIdentityLogicalNode* rhs) {
+  std::sort(logical_nodes.begin(), logical_nodes.end(),
+            [](const ReduceType* lhs, const ReduceType* rhs) {
               return lhs->order_in_logical_graph() < rhs->order_in_logical_graph();
             });
-  auto identity_logical_node2ctrl_order = std::make_shared<HashMap<const LogicalNode*, int32_t>>();
-  int32_t eager_count =
-      (1 - Global<JobDesc>::Get()->lazy_reduce_ratio()) * identity_logical_nodes.size();
-  for (int32_t i = 0; i < identity_logical_nodes.size(); ++i) {
+  auto logical_node2ctrl_order = std::make_shared<HashMap<const LogicalNode*, int32_t>>();
+  int32_t eager_count = (1 - Global<JobDesc>::Get()->lazy_reduce_ratio()) * logical_nodes.size();
+  for (int32_t i = 0; i < logical_nodes.size(); ++i) {
     int32_t ctrl_order = (i == 0 || (i > eager_count && i % 2 == 0)) ? i : -i;
-    (*identity_logical_node2ctrl_order)[identity_logical_nodes[i]] = ctrl_order;
+    (*logical_node2ctrl_order)[logical_nodes[i]] = ctrl_order;
   }
-  return [identity_logical_node2ctrl_order](const LogicalNode* identity_node) {
-    return identity_logical_node2ctrl_order->at(identity_node);
+  return [logical_node2ctrl_order](const LogicalNode* identity_node) {
+    return logical_node2ctrl_order->at(identity_node);
   };
+}
+
+void ForEachDeviceSrcUntrainableNode(const std::vector<NormalForwardCompTaskNode*>& fw_nodes,
+                                     const std::function<void(CompTaskNode*)>& Handler) {
+  HashSet<const TaskNode*> fw_nodes_set(fw_nodes.begin(), fw_nodes.end());
+  auto IsSourceTaskNode = [&](NormalForwardCompTaskNode* node) {
+    for (TaskEdge* edge : node->in_edges()) {
+      if (fw_nodes_set.find(edge->src_node()) != fw_nodes_set.end()) { return false; }
+    }
+    return true;
+  };
+  auto HasBwNode = [&](NormalForwardCompTaskNode* node) {
+    const auto* fw_logical_node = dynamic_cast<const ForwardLogicalNode*>(node->logical_node());
+    return fw_logical_node->bw_node() != nullptr;
+  };
+  for (NormalForwardCompTaskNode* fw_node : fw_nodes) {
+    if (IsSourceTaskNode(fw_node) && !HasBwNode(fw_node)) { Handler(fw_node); }
+  }
+}
+
+bool IsTimeShapeContain(const Shape& big_shape, const Shape& small_shape) {
+  if (big_shape.NumAxes() < small_shape.NumAxes()) { return false; }
+  FOR_RANGE(int, i, 0, small_shape.NumAxes()) {
+    if (big_shape.At(i) != small_shape.At(i)) { return false; }
+  }
+  return true;
 }
 
 }  // namespace
@@ -134,13 +174,13 @@ void TaskGraph::AcyclicTopoForEachNode(std::function<bool(TaskNode* node)> IsAll
                                        std::function<void(TaskNode* node)> Handler) const {
   auto ForEachInNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& Handler) {
     node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
-      if (IsBackEdge(node_on_in_edge, node)) return;
+      if (IsBackEdge(node_on_in_edge, node)) { return; }
       Handler(const_cast<TaskNode*>(node_on_in_edge));
     });
   };
   auto ForEachOutNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& Handler) {
     node->ForEachNodeOnOutEdge([&](TaskNode* node_on_out_edge) {
-      if (IsBackEdge(node, node_on_out_edge)) return;
+      if (IsBackEdge(node, node_on_out_edge)) { return; }
       Handler(const_cast<TaskNode*>(node_on_out_edge));
     });
   };
@@ -188,7 +228,8 @@ void TaskGraph::MergeChainAndSetOrderInGraphForEachNode() {
 
 void TaskGraph::BuildCtrlRegstDescInSameChain() {
   HashMap<int64_t, TaskNode*> chain_id2node;
-  for (auto node : ordered_task_nodes_) {
+  for (auto* node : ordered_task_nodes_) {
+    if (IsConnectToTickOp(node)) { continue; }
     int64_t chain_id = node->chain_id();
     auto iter = chain_id2node.find(chain_id);
     if (iter == chain_id2node.end()) {
@@ -200,16 +241,16 @@ void TaskGraph::BuildCtrlRegstDescInSameChain() {
   }
 }
 
-void TaskGraph::AddReduceCtrlEdges() {
-  HashMap<int64_t, std::vector<ReduceIdentityCompTaskNode*>> global_dev_id2identity_nodes;
+void TaskGraph::AddReduceSequenceCtrlEdges() {
+  HashMap<int64_t, std::vector<ReduceIdentityCompTaskNode*>> global_thrd_id2identity_nodes;
   for (auto* node : ordered_task_nodes_) {
     auto* identity_node = dynamic_cast<ReduceIdentityCompTaskNode*>(node);
     if (identity_node == nullptr) { continue; }
-    int64_t global_dev_id = Global<IDMgr>::Get()->GlobalDeviceId4TaskId(identity_node->task_id());
-    global_dev_id2identity_nodes[global_dev_id].push_back(identity_node);
+    int64_t global_thrd_id = Global<IDMgr>::Get()->GlobalThrdId4TaskId(identity_node->task_id());
+    global_thrd_id2identity_nodes[global_thrd_id].push_back(identity_node);
   }
-  auto GetCtrlOrder = MakeGetterReduceIdentityCtrlOrder(*logical_gph_);
-  for (auto& pair : global_dev_id2identity_nodes) {
+  auto GetCtrlOrder = MakeGetterReduceIdentityCtrlOrder<ReduceIdentityLogicalNode>(*logical_gph_);
+  for (auto& pair : global_thrd_id2identity_nodes) {
     auto& identity_nodes = pair.second;
     std::sort(identity_nodes.begin(), identity_nodes.end(),
               [&](ReduceIdentityCompTaskNode* lhs, ReduceIdentityCompTaskNode* rhs) {
@@ -222,6 +263,102 @@ void TaskGraph::AddReduceCtrlEdges() {
       }
       prev_identity_node = identity_node;
     }
+  }
+}
+
+void TaskGraph::AddReduceMdUpdtOverlapingCtrlEdges() {
+  HashMap<int64_t, std::vector<ReduceIdentityCompTaskNode*>> global_thrd_id2identity_nodes;
+  HashMap<int64_t, std::vector<ReduceSplitCompTaskNode*>> global_thrd_id2split_nodes;
+  const auto* id_mgr = Global<IDMgr>::Get();
+  for (auto* node : ordered_task_nodes_) {
+    int64_t global_thrd_id = id_mgr->GlobalThrdId4TaskId(node->task_id());
+    auto* identity_node = dynamic_cast<ReduceIdentityCompTaskNode*>(node);
+    auto* split_node = dynamic_cast<ReduceSplitCompTaskNode*>(node);
+    if (identity_node != nullptr) {
+      global_thrd_id2identity_nodes[global_thrd_id].push_back(identity_node);
+    } else if (split_node != nullptr) {
+      global_thrd_id2split_nodes[global_thrd_id].push_back(split_node);
+    } else {
+      // do nothing
+    }
+  }
+  auto GetIdentityNodeOrder = [&](const ReduceIdentityCompTaskNode* id_node) {
+    const auto* id_logical_node =
+        dynamic_cast<const ReduceIdentityLogicalNode*>(id_node->logical_node());
+    return id_logical_node->order_in_logical_graph();
+  };
+  auto GetCtrlOrder = MakeGetterReduceIdentityCtrlOrder<ReduceSplitLogicalNode>(*logical_gph_);
+  for (auto& pair : global_thrd_id2identity_nodes) {
+    auto& split_nodes = global_thrd_id2split_nodes.at(pair.first);
+    std::sort(split_nodes.begin(), split_nodes.end(),
+              [&](ReduceSplitCompTaskNode* lhs, ReduceSplitCompTaskNode* rhs) {
+                return GetCtrlOrder(lhs->logical_node()) < GetCtrlOrder(rhs->logical_node());
+              });
+    auto& identity_nodes = pair.second;
+    std::sort(identity_nodes.begin(), identity_nodes.end(),
+              [&](ReduceIdentityCompTaskNode* lhs, ReduceIdentityCompTaskNode* rhs) {
+                return GetIdentityNodeOrder(lhs) < GetIdentityNodeOrder(rhs);
+              });
+    auto* first_identity_node = identity_nodes.at(0);
+    TaskNode* prev_node = first_identity_node;
+    float overlap_ratio = Global<JobDesc>::Get()->reduce_model_update_overlapping_ratio();
+    int ctrl_edge_num = split_nodes.size() * overlap_ratio;
+    for (ReduceSplitCompTaskNode* split_node : split_nodes) {
+      if (ctrl_edge_num-- > 0) {
+        prev_node->BuildCtrlRegstDescIfNeed(split_node);
+        prev_node = split_node;
+      }
+    }
+  }
+}
+
+void TaskGraph::AddReduceNoBwForwardNodeOverlapingCtrlEdges() {
+  HashMap<int64_t, std::vector<ReduceIdentityCompTaskNode*>> global_thrd_id2identity_nodes;
+  HashMap<std::pair<int64_t, int64_t>, std::vector<NormalForwardCompTaskNode*>>
+      global_dev_phy_id2fw_nodes;
+  const auto* id_mgr = Global<IDMgr>::Get();
+  for (auto* node : ordered_task_nodes_) {
+    if (id_mgr->GetDeviceTypeFromThrdId(node->thrd_id()) == DeviceType::kCPU) { continue; }
+    int64_t global_thrd_id = id_mgr->GlobalThrdId4TaskId(node->task_id());
+    auto* identity_node = dynamic_cast<ReduceIdentityCompTaskNode*>(node);
+    auto* fw_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
+    if (identity_node != nullptr) {
+      global_thrd_id2identity_nodes[global_thrd_id].push_back(identity_node);
+    } else if (fw_node != nullptr) {
+      int64_t dev_phy_id = id_mgr->GetGpuPhyIdFromThrdId(node->thrd_id());
+      global_dev_phy_id2fw_nodes[std::make_pair(node->machine_id(), dev_phy_id)].push_back(fw_node);
+    } else {
+      // do nothing
+    }
+  }
+  auto GetIdentityNodeOrder = [&](const ReduceIdentityCompTaskNode* id_node) {
+    const auto* id_logical_node =
+        dynamic_cast<const ReduceIdentityLogicalNode*>(id_node->logical_node());
+    return id_logical_node->order_in_logical_graph();
+  };
+  for (auto& pair : global_thrd_id2identity_nodes) {
+    auto& identity_nodes = pair.second;
+    std::sort(identity_nodes.begin(), identity_nodes.end(),
+              [&](ReduceIdentityCompTaskNode* lhs, ReduceIdentityCompTaskNode* rhs) {
+                return GetIdentityNodeOrder(lhs) < GetIdentityNodeOrder(rhs);
+              });
+    auto* first_identity_node = identity_nodes.at(0);
+    int64_t machine_id = first_identity_node->machine_id();
+    int64_t dev_phy_id = id_mgr->GetGpuPhyIdFromThrdId(first_identity_node->thrd_id());
+    const auto& fw_nodes = global_dev_phy_id2fw_nodes.at(std::make_pair(machine_id, dev_phy_id));
+    const Shape& identity_time_shape =
+        *first_identity_node->GetProducedRegst("out")->data_regst_time_shape();
+    ForEachDeviceSrcUntrainableNode(fw_nodes, [&](CompTaskNode* node) {
+      std::shared_ptr<RegstDesc> regst_desc = node->GetProducedRegst("out");
+      if (!regst_desc) { return; }
+      const Shape& time_shape = *regst_desc->data_regst_time_shape();
+      if (!IsTimeShapeContain(time_shape, identity_time_shape)) { return; }
+      CHECK_EQ(time_shape.elem_cnt() % identity_time_shape.elem_cnt(), 0);
+      int regst_desc_num = time_shape.elem_cnt() / identity_time_shape.elem_cnt();
+      RegstDesc* ctrl_regst_desc = node->BuildCtrlRegstDesc(first_identity_node);
+      ctrl_regst_desc->UpdtMinRegstNumIfNeed(regst_desc_num);
+      ctrl_regst_desc->UpdtMaxRegstNumIfNeed(regst_desc_num);
+    });
   }
 }
 

@@ -60,6 +60,7 @@ class RegstDesc final {
 
   const std::shared_ptr<Shape>& data_regst_time_shape() const {
     CHECK(regst_desc_type_.has_data_regst_desc());
+    CHECK(data_regst_time_shape_);
     return data_regst_time_shape_;
   }
   std::shared_ptr<Shape>* mut_data_regst_time_shape() {
