@@ -33,8 +33,8 @@ class LayerNormKernel final : public KernelIfWithModel<device_type, T>,
 template<DeviceType device_type, typename T>
 struct LayerNormKernelUtil {
   static void NormalizeForward(const DeviceCtx* ctx, const Blob* in, const Blob* scale,
-                               const Blob* bias, double epsilon, Blob* out, Blob* mean,
-                               Blob* inv_variance);
+                               const Blob* bias, double epsilon, bool trainable, Blob* out,
+                               Blob* mean, Blob* inv_variance);
   static void NormalizeBackward(const DeviceCtx* ctx, const Blob* in, const Blob* scale,
                                 const Blob* mean, const Blob* inv_variance, const Blob* out_diff,
                                 double epsilon, Blob* in_diff, Blob* scale_diff, Blob* bias_diff);
