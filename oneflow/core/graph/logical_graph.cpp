@@ -506,6 +506,7 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
     auto& fw_node_group = fw_node_groups_[i];
     ReduceCtx group_reduce_ctx;
     group_reduce_ctx.order_in_logical_graph = i;
+    int order_in_reduce_group = 0;
     for (auto& fw_node : fw_node_group) {
       auto reduce_ctx_it = fw_node2reduce_ctx.find(fw_node);
       if (reduce_ctx_it != fw_node2reduce_ctx.end()) {
@@ -514,6 +515,8 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
         group_reduce_ctx.bw_logicals.emplace_back(reduce_ctx.bw_logicals.at(0));
         group_reduce_ctx.md_diff_acc_logicals.emplace_back(reduce_ctx.md_diff_acc_logicals.at(0));
         group_reduce_ctx.md_updt_logicals.emplace_back(reduce_ctx.md_updt_logicals.at(0));
+        auto* md_updt = dynamic_cast<NormalMdUpdtLogicalNode*>(reduce_ctx.md_updt_logicals.at(0));
+        md_updt->set_order_in_reduce_group(order_in_reduce_group++);
       }
     }
     if (group_reduce_ctx.fw_logicals.size() > 0) { BuildReduceStruct(group_reduce_ctx); }

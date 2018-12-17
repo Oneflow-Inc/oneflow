@@ -104,8 +104,11 @@ Plan Compiler::DoCompile() {
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::PinConsumedRegst, _1));
   task_gph->MdUpdtDelayedTopoForEachNode(&TaskNode::Build);
-  if (job_desc->IsTrain()) { task_gph->AddReduceSequenceCtrlEdges(); }
-  if (job_desc->IsTrain()) { task_gph->AddReduceMdUpdtOverlapingCtrlEdges(); }
+  if (job_desc->IsTrain()) {
+    task_gph->AddReduceSequenceCtrlEdges();
+    task_gph->AddMdUpdtCtrlEdgesWithinReduceSplitNode();
+    task_gph->AddReduceMdUpdtOverlapingCtrlEdges();
+  }
   task_gph->RemoveEmptyRegsts();
   task_gph->AddOrderingCtrlEdgeInSameChain();
   if (job_desc->IsTrain() && job_desc->enable_mem_sharing()) {
