@@ -21,7 +21,7 @@ void LayerNormOp::InitFromOpConf() {
   if (conf.center()) { EnrollModelBn("beta"); }
   if (conf.scale()) {
     EnrollModelBn("gamma");
-    if (Global<JobDesc>::Get()->IsTrain()) { EnrollDataTmpBn("normalize_out"); }
+    if (op_conf().trainable()) { EnrollDataTmpBn("normalize_out"); }
   }
   EnrollDataTmpBn("cudnn_bn_mean");
   EnrollDataTmpBn("cudnn_bn_inv_variance");

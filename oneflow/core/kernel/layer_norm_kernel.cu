@@ -1,5 +1,4 @@
 #include "oneflow/core/kernel/layer_norm_kernel.h"
-#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
