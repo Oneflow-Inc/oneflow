@@ -81,8 +81,8 @@ class JobDesc final {
   float bias_l2() const;
   int32_t DataPartNum() const;
 
-  // optimization
-  void OptimizeDLNet();
+  // fix and Optimize
+  void FixAndOptimizeDLNet();
 
  private:
   friend class Global<JobDesc>;
@@ -97,6 +97,7 @@ class JobDesc final {
   std::string AddIdentityOp(const std::string& input_op_name,
                             const HashSet<std::string>& input_lbi_blob_names,
                             const ParallelConf& parallel_conf);
+  void FixTickOpIfExists();
 
   JobConf1 job_conf_;
 };

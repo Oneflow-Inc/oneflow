@@ -20,7 +20,23 @@ std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4Op
   auto op_name2parallel_conf = std::make_shared<HashMap<std::string, const ParallelConf*>>();
   for (const auto& placement_group : placement.placement_group()) {
     for (const std::string& op_name : placement_group.op_set().op_name()) {
-      CHECK(op_name2parallel_conf->emplace(op_name, &placement_group.parallel_conf()).second);
+      const ParallelConf* parallel_conf = &placement_group.parallel_conf();
+      CHECK(op_name2parallel_conf->emplace(op_name, parallel_conf).second);
+    }
+  }
+  return [op_name2parallel_conf](const std::string& op_name) {
+    return op_name2parallel_conf->at(op_name);
+  };
+}
+
+std::function<ParallelConf*(const std::string&)> MakeGetterMutParallelConf4OpName(
+    Placement* placement) {
+  auto op_name2parallel_conf = std::make_shared<HashMap<std::string, ParallelConf*>>();
+  FOR_RANGE(int, idx, 0, placement->placement_group_size()) {
+    auto* placement_group = placement->mutable_placement_group(idx);
+    for (const std::string& op_name : placement_group->op_set().op_name()) {
+      ParallelConf* parallel_conf = placement_group->mutable_parallel_conf();
+      CHECK(op_name2parallel_conf->emplace(op_name, parallel_conf).second);
     }
   }
   return [op_name2parallel_conf](const std::string& op_name) {
@@ -432,7 +448,8 @@ void JobDesc::AddRecordLoadOps() {
   }
 }
 
-void JobDesc::OptimizeDLNet() {
+void JobDesc::FixAndOptimizeDLNet() {
+  FixTickOpIfExists();
   AddIdentityOpForChainMergeOptimization();
   if (IsTrain()) { AddIdentityOpForAllReduceOverlapingUntrainble(); }
 }
@@ -533,6 +550,54 @@ std::string JobDesc::AddIdentityOp(const std::string& input_op_name,
   *(p_group->mutable_op_set()->add_op_name()) = tuple_identity_op->name();
   *(p_group->mutable_parallel_conf()) = parallel_conf;
   return tuple_identity_op->name();
+}
+
+void JobDesc::FixTickOpIfExists() {
+  auto MutParallelConf4OpName = MakeGetterMutParallelConf4OpName(job_conf_.mutable_placement());
+  OperatorConf* tick_op_conf = nullptr;
+  FOR_RANGE(int, idx, 0, job_conf_.mutable_net()->op_size()) {
+    OperatorConf* op_conf = job_conf_.mutable_net()->mutable_op(idx);
+    if (op_conf->has_tick_conf()) {
+      CHECK(tick_op_conf == nullptr);
+      tick_op_conf = op_conf;
+    }
+  }
+  if (tick_op_conf == nullptr) { return; }
+  std::map<OperatorConf::OpTypeCase, std::vector<OperatorConf*>> op_type_case2source_op_confs;
+  FOR_RANGE(int, idx, 0, job_conf_.mutable_net()->op_size()) {
+    OperatorConf* op_conf = job_conf_.mutable_net()->mutable_op(idx);
+    if (op_conf == tick_op_conf) { continue; }
+    DeviceType device_type = ParallelDesc(*MutParallelConf4OpName(op_conf->name())).device_type();
+    if (ConstructOp(*op_conf, device_type)->input_bns().size() == 0) {
+      op_type_case2source_op_confs[op_conf->op_type_case()].push_back(op_conf);
+    }
+  }
+  if (op_type_case2source_op_confs.find(OperatorConf::kRecordLoadConf)
+      != op_type_case2source_op_confs.end()) {
+    CHECK_EQ(op_type_case2source_op_confs.size(), 1);
+  }
+  // set input of tick op
+  OperatorConf* source_op_conf = op_type_case2source_op_confs.cbegin()->second.at(0);
+  ParallelConf* source_parallel_conf = MutParallelConf4OpName(source_op_conf->name());
+  DeviceType device_type = ParallelDesc(*source_parallel_conf).device_type();
+  std::shared_ptr<Operator> source_op = ConstructOp(*source_op_conf, device_type);
+  CHECK_GE(source_op->output_bns().size(), 1);
+  LogicalBlobId src_first_output_lbi = source_op->BnInOp2Lbi(source_op->output_bns().Get(0));
+  std::string source_op_output_lbn = GenLogicalBlobName(src_first_output_lbi);
+  CHECK_EQ(tick_op_conf->tick_conf().has_in(), false);
+  tick_op_conf->mutable_tick_conf()->set_in(source_op_output_lbn);
+  // fix tick op placement
+  *MutParallelConf4OpName(tick_op_conf->name()) = *source_parallel_conf;
+  // add log_counter op connecting to tick op, making tick op always consumed
+  OperatorConf* tick_log_counter = job_conf_.mutable_net()->add_op();
+  tick_log_counter->set_name("tick_log_counter_" + NewUniqueId());
+  LogCounterOpConf* tick_log_counter_conf = tick_log_counter->mutable_log_counter_conf();
+  tick_log_counter_conf->set_in(tick_op_conf->name() + "/" + tick_op_conf->tick_conf().out());
+  tick_log_counter_conf->set_interval(MaxVal<int32_t>::value);
+  // add placement of tick_log_counter op
+  PlacementGroup* p_group = job_conf_.mutable_placement()->add_placement_group();
+  *(p_group->mutable_op_set()->add_op_name()) = tick_log_counter->name();
+  *(p_group->mutable_parallel_conf()) = *source_parallel_conf;
 }
 
 }  // namespace oneflow
