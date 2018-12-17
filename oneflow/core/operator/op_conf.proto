@@ -418,9 +418,21 @@ message WarmupConf {
   }
 }
 
+message ClipByGlobalNormConf {
+  required float clip_norm = 1;
+  optional float global_norm = 2;
+}
+
+message ClipConf {
+  oneof type {
+    ClipByGlobalNormConf clip_by_global_norm = 1;
+  }
+}
+
 message NormalModelUpdateOpUserConf {
   optional LearningRateDecayConf learning_rate_decay = 1;
   optional WarmupConf warmup_conf = 2;
+  optional ClipConf clip_conf = 3;
   oneof normal_mdupdt {
     NaiveModelUpdateConf naive_conf = 1000;
     MomentumModelUpdateConf momentum_conf = 1001;
