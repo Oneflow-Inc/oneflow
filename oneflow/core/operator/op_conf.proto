@@ -885,7 +885,12 @@ message SliceOpConf {
 message LayerNormOpConf {
   required string in = 1;
   required string out = 2;
-  //TODO: support not only the final dim layer norm
+  optional bool center = 3 [default = true];
+  optional bool scale = 4 [default = true];
+  optional ActivationType activation = 5 [default = kNone];
+  optional int64 begin_norm_axis = 6 [default = 1];
+  optional int64 begin_params_axis = 7 [default = -1];
+  optional double epsilon = 8 [default = 1e-5];
 }
 
 message ConstantOpConf {
