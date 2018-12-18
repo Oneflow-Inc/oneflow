@@ -63,7 +63,6 @@ class JobDesc final {
   float reduce_model_update_overlapping_ratio() const;
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.other().cudnn_buf_limit_mbyte(); }
   int64_t GetMachineId(const std::string& addr) const;
-  void InferOpModelSize(HashMap<std::string, size_t>* op_name2model_size) const;
 
   // Train conf
   const std::string& MdSaveSnapshotsPath() const;
@@ -102,6 +101,11 @@ class JobDesc final {
 
   JobConf1 job_conf_;
 };
+
+std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4OpName(
+    const Placement& placement);
+std::function<ParallelConf*(const std::string&)> MakeGetterMutParallelConf4OpName(
+    Placement* placement);
 
 }  // namespace oneflow
 

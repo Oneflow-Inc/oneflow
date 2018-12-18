@@ -1,5 +1,6 @@
 #include "oneflow/core/graph/logical_graph.h"
 #include "oneflow/core/graph/task_graph.h"
+#include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/common/balanced_splitter.h"
@@ -64,11 +65,12 @@ void LogicalGraph::GroupNodesForReduceStruct() {
     if (op_name2model_size.find(op_name) == op_name2model_size.end()) { return 0; }
     return op_name2model_size.at(op_name);
   };
-  Global<JobDesc>::Get()->InferOpModelSize(&op_name2model_size);
+  const JobDesc* global_job_desc = Global<JobDesc>::Get();
+  OpGraph(global_job_desc).InferOpModelSize(&op_name2model_size);
   size_t model_total_size = 0;
   for (const auto& pair : op_name2model_size) { model_total_size += pair.second; }
   HashMap<ParallelDesc, std::list<const LogicalNode*>> parellel_desc2fw_group;
-  size_t avg_size = model_total_size / Global<JobDesc>::Get()->reduce_group_num();
+  size_t avg_size = model_total_size / global_job_desc->reduce_group_num();
   // group fw nodes by parallel desc
   ReverseTopoForEachNode([&](LogicalNode* fw_node) {
     parellel_desc2fw_group[*fw_node->parallel_desc()].push_front(fw_node);

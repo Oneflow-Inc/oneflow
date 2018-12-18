@@ -269,6 +269,12 @@ struct OnlyCpuSupportPredicator {
 
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf);
 
+inline std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type) {
+  OperatorConf dev_op_conf = op_conf;
+  dev_op_conf.set_device_type(device_type);
+  return ConstructOp(dev_op_conf);
+}
+
 void EraseEmptyBnInVec(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                        PbRpf<std::string>* bns);
 
