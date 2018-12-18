@@ -41,13 +41,15 @@ void AffineChannelKernel<device_type, T>::BackwardDataContent(
       ctx.device_ctx, out_diff_blob->shape().elem_cnt(), channel_dim, channel_stride,
       out_diff_blob->dptr<T>(), scale_blob->dptr<T>(), in_diff_blob->mut_dptr<T>());
   if (this->op_conf().trainable()) {
-    AffineChannelKernelUtil<device_type, T>::BackwardScaleDiff(
-        ctx.device_ctx, out_diff_blob->shape().elem_cnt(), channel_dim, channel_stride,
-        in_blob->dptr<T>(), out_diff_blob->dptr<T>(), scale_diff_blob->mut_dptr<T>());
     if (conf.use_bias()) {
-      AffineChannelKernelUtil<device_type, T>::BackwardBiasDiff(
+      AffineChannelKernelUtil<device_type, T>::BackwardScaleBiasDiff(
           ctx.device_ctx, out_diff_blob->shape().elem_cnt(), channel_dim, channel_stride,
-          out_diff_blob->dptr<T>(), bias_diff_blob->mut_dptr<T>());
+          in_blob->dptr<T>(), out_diff_blob->dptr<T>(), scale_diff_blob->mut_dptr<T>(),
+          bias_diff_blob->mut_dptr<T>());
+    } else {
+      AffineChannelKernelUtil<device_type, T>::BackwardScaleDiff(
+          ctx.device_ctx, out_diff_blob->shape().elem_cnt(), channel_dim, channel_stride,
+          in_blob->dptr<T>(), out_diff_blob->dptr<T>(), scale_diff_blob->mut_dptr<T>());
     }
   }
 }
@@ -109,6 +111,19 @@ class AffineChannelKernelUtil<DeviceType::kCPU, T> final {
     }
   }
 
+  static void BackwardScaleBiasDiff(DeviceCtx* ctx, const int64_t elem_cnt,
+                                    const int32_t channel_dim, const int64_t channel_stride,
+                                    const T* in, const T* out_diff, T* scale_diff, T* bias_diff) {
+    for (int32_t i = 0; i < channel_dim; ++i) {
+      for (int64_t j = 0; j < (elem_cnt / channel_dim); ++j) {
+        int64_t index =
+            ((j / channel_stride) * channel_dim + i) * channel_stride + j % channel_stride;
+        scale_diff[i] += out_diff[index] * in[index];
+        bias_diff[i] += out_diff[index];
+      }
+    }
+  }
+
   static void BackwardScaleDiff(DeviceCtx* ctx, const int64_t elem_cnt, const int32_t channel_dim,
                                 const int64_t channel_stride, const T* in, const T* out_diff,
                                 T* scale_diff) {
@@ -117,17 +132,6 @@ class AffineChannelKernelUtil<DeviceType::kCPU, T> final {
         int64_t index =
             ((j / channel_stride) * channel_dim + i) * channel_stride + j % channel_stride;
         scale_diff[i] += out_diff[index] * in[index];
-      }
-    }
-  }
-
-  static void BackwardBiasDiff(DeviceCtx* ctx, const int64_t elem_cnt, const int32_t channel_dim,
-                               const int64_t channel_stride, const T* out_diff, T* bias_diff) {
-    for (int32_t i = 0; i < channel_dim; ++i) {
-      for (int64_t j = 0; j < (elem_cnt / channel_dim); ++j) {
-        int64_t index =
-            ((j / channel_stride) * channel_dim + i) * channel_stride + j % channel_stride;
-        bias_diff[i] += out_diff[index];
       }
     }
   }

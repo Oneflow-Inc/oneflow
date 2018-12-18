@@ -36,11 +36,12 @@ class AffineChannelKernelUtil final {
   static void BackwardInDiff(DeviceCtx* ctx, const int64_t elem_cnt, const int32_t channel_dim,
                              const int64_t channel_stride, const T* out_diff, const T* scale,
                              T* in_diff);
+  static void BackwardScaleBiasDiff(DeviceCtx* ctx, const int64_t elem_cnt,
+                                    const int32_t channel_dim, const int64_t channel_stride,
+                                    const T* in, const T* out_diff, T* scale_diff, T* bias_diff);
   static void BackwardScaleDiff(DeviceCtx* ctx, const int64_t elem_cnt, const int32_t channel_dim,
                                 const int64_t channel_stride, const T* in, const T* out_diff,
                                 T* scale_diff);
-  static void BackwardBiasDiff(DeviceCtx* ctx, const int64_t elem_cnt, const int32_t channel_dim,
-                               const int64_t channel_stride, const T* out_diff, T* bias_diff);
 };
 
 }  // namespace oneflow
