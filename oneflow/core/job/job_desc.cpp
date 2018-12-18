@@ -4,16 +4,9 @@
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/persistence/hadoop/hadoop_file_system.h"
 #include "oneflow/core/graph/graph.h"
+#include "oneflow/core/graph/op_graph.h"
 
 namespace oneflow {
-
-namespace {
-
-std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type) {
-  OperatorConf dev_op_conf = op_conf;
-  dev_op_conf.set_device_type(device_type);
-  return ConstructOp(dev_op_conf);
-}
 
 std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4OpName(
     const Placement& placement) {
@@ -44,108 +37,7 @@ std::function<ParallelConf*(const std::string&)> MakeGetterMutParallelConf4OpNam
   };
 }
 
-class OpEdge;
-
-class OpNode final : public Node<OpNode, OpEdge> {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(OpNode);
-  explicit OpNode(const OperatorConf& op_conf, DeviceType device_type)
-      : op_(ConstructOp(op_conf, device_type)), has_in_diff_(false) {}
-  ~OpNode() = default;
-
-  const Operator& op() const { return *op_; }
-  bool HasBackward() const { return has_in_diff() || has_model_diff(); }
-  bool has_in_diff() const { return has_in_diff_; }
-  bool has_model_diff() const { return op().model_diff_bns().size() > 0; }
-  void set_has_in_diff(bool has_in_diff) { has_in_diff_ = has_in_diff; }
-
- private:
-  std::shared_ptr<Operator> op_;
-  bool has_in_diff_;
-};
-
-class OpEdge final : public Edge<OpNode, OpEdge> {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(OpEdge);
-  explicit OpEdge(const std::vector<LogicalBlobId>& lbis,
-                  const HashMap<LogicalBlobId, std::vector<std::string>>& lbi2ibns)
-      : lbis_(lbis), lbi2ibns_(lbi2ibns) {}
-  ~OpEdge() = default;
-
-  const LogicalBlobId& SoleLbi() const {
-    CHECK_EQ(lbis_.size(), 1);
-    return lbis_.front();
-  }
-
-  const std::vector<LogicalBlobId>& lbis() const { return lbis_; }
-  const HashMap<LogicalBlobId, std::vector<std::string>>& lbi2ibns() const { return lbi2ibns_; }
-
- private:
-  std::vector<LogicalBlobId> lbis_;
-  HashMap<LogicalBlobId, std::vector<std::string>> lbi2ibns_;
-};
-
-class OpGraph final : public Graph<OpNode, OpEdge> {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(OpGraph);
-  explicit OpGraph(const JobDesc& job_desc) : job_desc_(job_desc) { Init(); }
-  ~OpGraph() = default;
-
- private:
-  void Init() {
-    InitNodes();
-    ForEachNode(
-        [&](OpNode* node) { CHECK(op_name2op_node_.emplace(node->op().op_name(), node).second); });
-    InitEdges();
-    UpdateOpNodeHasInDiff();
-  }
-  void InitNodes() {
-    auto ParallelConf4OpName = MakeGetterParallelConf4OpName(job_desc_.placement());
-    for (const auto& op_conf : job_desc_.dlnet_conf().op()) {
-      ParallelDesc pr(*ParallelConf4OpName(op_conf.name()));
-      OpNode* node = new OpNode(op_conf, pr.device_type());
-      AddAllocatedNode(node);
-    }
-  }
-  void InitEdges() {
-    HashMap<LogicalBlobId, OpNode*> lbi2producer;
-    ForEachNode([&](OpNode* op_node) {
-      for (const auto& obn : op_node->op().output_bns()) {
-        CHECK(lbi2producer.emplace(op_node->op().BnInOp2Lbi(obn), op_node).second);
-      }
-    });
-    ForEachNode([&](OpNode* op_node) {
-      HashMap<std::string, std::vector<LogicalBlobId>> producer_name2lbis;
-      HashMap<std::string, HashMap<LogicalBlobId, std::vector<std::string>>>
-          consumer_op_name2lbi2ibns;
-      for (const auto& ibn : op_node->op().input_bns()) {
-        const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
-        producer_name2lbis[lbi.op_name()].push_back(lbi);
-        consumer_op_name2lbi2ibns[op_node->op().op_name()][lbi].push_back(ibn);
-      }
-      for (const auto& pair : producer_name2lbis) {
-        const auto& lbis = pair.second;
-        const auto& lbi2ibns = consumer_op_name2lbi2ibns.at(op_node->op().op_name());
-        OpNode* producer = lbi2producer.at(lbis.at(0));
-        Connect(producer, new OpEdge(lbis, lbi2ibns), op_node);
-      }
-    });
-  }
-
-  void UpdateOpNodeHasInDiff() {
-    auto HasIndiff = [&](const OpNode* op_node) -> bool {
-      for (OpEdge* edge : op_node->in_edges()) {
-        if (edge->src_node()->has_in_diff()) { return true; }
-        if (edge->src_node()->has_model_diff()) { return true; }
-      }
-      return false;
-    };
-    TopoForEachNode([&](OpNode* op_node) { op_node->set_has_in_diff(HasIndiff(op_node)); });
-  }
-
-  const JobDesc& job_desc_;
-  HashMap<std::string, OpNode*> op_name2op_node_;
-};
+namespace {
 
 void GroupOpConfByProducerOpNameAndConsumerParallelDesc(
     HashMap<std::pair<std::string, ParallelDesc>, HashSet<OperatorConf*>>* grouped,
@@ -177,6 +69,12 @@ void CollectInputLbiBlobNamesByProducerOpName(HashSet<std::string>* ret_blob_nam
 }
 
 }  // namespace
+
+int64_t JobDesc::reduce_group_num() const {
+  int64_t ret = job_conf_.other().reduce_group_num();
+  CHECK_GT(ret, 0);
+  return ret;
+}
 
 float JobDesc::lazy_reduce_ratio() const {
   float ratio = job_conf_.other().lazy_reduce_ratio();
@@ -491,7 +389,7 @@ void JobDesc::AddIdentityOpForAllReduceOverlapingUntrainble() {
     CHECK(op_name2op_conf.emplace(op_conf->name(), op_conf).second);
   }
   auto ParallelConf4OpName = MakeGetterParallelConf4OpName(job_conf_.placement());
-  OpGraph(*this).TopoForEachNode([&](OpNode* op_node) {
+  OpGraph(this).TopoForEachNode([&](OpNode* op_node) {
     if (op_node->HasBackward()) { return; }
     HashMap<bool, std::vector<OpEdge*>> has_bw2out_op_edges;
     for (OpEdge* edge : op_node->out_edges()) {
