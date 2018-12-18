@@ -22,16 +22,21 @@ __global__ void ForwardGpu(const int64_t elem_cnt, const int32_t channel_dim,
 }
 
 template<typename T>
-__global__ void BackwardGpu(const int64_t elem_cnt, const int32_t channel_dim,
-                            const int64_t channel_stride, const T* in, const T* out_diff,
-                            const T* scale, T* in_diff, T* scale_diff, T* bias_diff) {
-  using BlockReduce = cub::BlockReduce<T, kCudaThreadsNumPerBlock>;
-
+__global__ void BackwardInDiffGpu(const int64_t elem_cnt, const int32_t channel_dim,
+                                  const int64_t channel_stride, const T* out_diff, const T* scale,
+                                  T* in_diff) {
   // in_diff
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const int32_t channel_i = (i / channel_stride) % channel_dim;
     in_diff[i] = out_diff[i] * scale[channel_i];
   }
+}
+
+template<typename T>
+__global__ void BackwardModelDiffGpu(const int64_t elem_cnt, const int32_t channel_dim,
+                                     const int64_t channel_stride, const T* in, const T* out_diff,
+                                     T* scale_diff, T* bias_diff) {
+  using BlockReduce = cub::BlockReduce<T, kCudaThreadsNumPerBlock>;
 
   // scale_diff
   __shared__ typename BlockReduce::TempStorage scale_diff_temp_storage;
@@ -78,9 +83,14 @@ class AffineChannelKernelUtil<DeviceType::kGPU, T> final {
   static void Backward(DeviceCtx* ctx, const int64_t elem_cnt, const int32_t channel_dim,
                        const int64_t channel_stride, const T* in, const T* out_diff, const T* scale,
                        T* in_diff, T* scale_diff, T* bias_diff) {
-    BackwardGpu<T><<<std::min(channel_dim, kCudaMaxBlocksNum), kCudaThreadsNumPerBlock, 0,
-                     ctx->cuda_stream()>>>(elem_cnt, channel_dim, channel_stride, in, out_diff,
-                                           scale, in_diff, scale_diff, bias_diff);
+    BackwardInDiffGpu<T>
+        <<<std::min(channel_dim, kCudaMaxBlocksNum), kCudaThreadsNumPerBlock, 0,
+           ctx->cuda_stream()>>>(elem_cnt, channel_dim, channel_stride, out_diff, scale, in_diff);
+    if (scale_diff != nullptr) {
+      BackwardModelDiffGpu<T><<<std::min(channel_dim, kCudaMaxBlocksNum), kCudaThreadsNumPerBlock,
+                                0, ctx->cuda_stream()>>>(elem_cnt, channel_dim, channel_stride, in,
+                                                         out_diff, scale_diff, bias_diff);
+    }
   }
 };
 

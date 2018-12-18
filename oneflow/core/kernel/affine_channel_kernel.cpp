@@ -37,11 +37,13 @@ void AffineChannelKernel<device_type, T>::BackwardDataContent(
   const int32_t axis = conf.axis() >= 0 ? conf.axis() : conf.axis() + in_blob->shape().NumAxes();
   const int32_t channel_dim = out_diff_blob->shape().At(axis);
   const int64_t channel_stride = out_diff_blob->shape().Count(axis + 1);
-  T* bias_diff_ptr = conf.use_bias() ? bias_diff_blob->mut_dptr<T>() : nullptr;
+  T* scale_diff_ptr = this->op_conf().trainable() ? scale_diff_blob->mut_dptr<T>() : nullptr;
+  T* bias_diff_ptr =
+      conf.use_bias() && this->op_conf().trainable() ? bias_diff_blob->mut_dptr<T>() : nullptr;
   AffineChannelKernelUtil<device_type, T>::Backward(
       ctx.device_ctx, out_diff_blob->shape().elem_cnt(), channel_dim, channel_stride,
       in_blob->dptr<T>(), out_diff_blob->dptr<T>(), scale_blob->dptr<T>(),
-      in_diff_blob->mut_dptr<T>(), scale_diff_blob->mut_dptr<T>(), bias_diff_ptr);
+      in_diff_blob->mut_dptr<T>(), scale_diff_ptr, bias_diff_ptr);
 }
 
 template<DeviceType device_type, typename T>
@@ -103,12 +105,14 @@ class AffineChannelKernelUtil<DeviceType::kCPU, T> final {
     }
 
     // scale_diff & bias_diff
-    for (int32_t i = 0; i < channel_dim; ++i) {
-      for (int64_t j = 0; j < (elem_cnt / channel_dim); ++j) {
-        int64_t index =
-            ((j / channel_stride) * channel_dim + i) * channel_stride + j % channel_stride;
-        scale_diff[i] += out_diff[index] * in[index];
-        if (bias_diff != nullptr) { bias_diff[i] += out_diff[index]; }
+    if (scale_diff != nullptr) {
+      for (int32_t i = 0; i < channel_dim; ++i) {
+        for (int64_t j = 0; j < (elem_cnt / channel_dim); ++j) {
+          int64_t index =
+              ((j / channel_stride) * channel_dim + i) * channel_stride + j % channel_stride;
+          scale_diff[i] += out_diff[index] * in[index];
+          if (bias_diff != nullptr) { bias_diff[i] += out_diff[index]; }
+        }
       }
     }
   }
