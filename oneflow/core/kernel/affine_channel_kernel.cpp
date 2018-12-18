@@ -37,13 +37,19 @@ void AffineChannelKernel<device_type, T>::BackwardDataContent(
   const int32_t axis = conf.axis() >= 0 ? conf.axis() : conf.axis() + in_blob->shape().NumAxes();
   const int32_t channel_dim = out_diff_blob->shape().At(axis);
   const int64_t channel_stride = out_diff_blob->shape().Count(axis + 1);
-  T* scale_diff_ptr = this->op_conf().trainable() ? scale_diff_blob->mut_dptr<T>() : nullptr;
-  T* bias_diff_ptr =
-      conf.use_bias() && this->op_conf().trainable() ? bias_diff_blob->mut_dptr<T>() : nullptr;
-  AffineChannelKernelUtil<device_type, T>::Backward(
+  AffineChannelKernelUtil<device_type, T>::BackwardInDiff(
       ctx.device_ctx, out_diff_blob->shape().elem_cnt(), channel_dim, channel_stride,
-      in_blob->dptr<T>(), out_diff_blob->dptr<T>(), scale_blob->dptr<T>(),
-      in_diff_blob->mut_dptr<T>(), scale_diff_ptr, bias_diff_ptr);
+      out_diff_blob->dptr<T>(), scale_blob->dptr<T>(), in_diff_blob->mut_dptr<T>());
+  if (this->op_conf().trainable()) {
+    AffineChannelKernelUtil<device_type, T>::BackwardScaleDiff(
+        ctx.device_ctx, out_diff_blob->shape().elem_cnt(), channel_dim, channel_stride,
+        in_blob->dptr<T>(), out_diff_blob->dptr<T>(), scale_diff_blob->mut_dptr<T>());
+    if (conf.use_bias()) {
+      AffineChannelKernelUtil<device_type, T>::BackwardBiasDiff(
+          ctx.device_ctx, out_diff_blob->shape().elem_cnt(), channel_dim, channel_stride,
+          out_diff_blob->dptr<T>(), bias_diff_blob->mut_dptr<T>());
+    }
+  }
 }
 
 template<DeviceType device_type, typename T>
@@ -95,24 +101,33 @@ class AffineChannelKernelUtil<DeviceType::kCPU, T> final {
     }
   }
 
-  static void Backward(DeviceCtx* ctx, const int64_t elem_cnt, const int32_t channel_dim,
-                       const int64_t channel_stride, const T* in, const T* out_diff, const T* scale,
-                       T* in_diff, T* scale_diff, T* bias_diff) {
-    // in_diff
+  static void BackwardInDiff(DeviceCtx* ctx, const int64_t elem_cnt, const int32_t channel_dim,
+                             const int64_t channel_stride, const T* out_diff, const T* scale,
+                             T* in_diff) {
     for (int64_t i = 0; i < elem_cnt; ++i) {
-      const int32_t channel_i = (i / channel_stride) % channel_dim;
-      in_diff[i] = out_diff[i] * scale[channel_i];
+      in_diff[i] = out_diff[i] * scale[(i / channel_stride) % channel_dim];
     }
+  }
 
-    // scale_diff & bias_diff
-    if (scale_diff != nullptr) {
-      for (int32_t i = 0; i < channel_dim; ++i) {
-        for (int64_t j = 0; j < (elem_cnt / channel_dim); ++j) {
-          int64_t index =
-              ((j / channel_stride) * channel_dim + i) * channel_stride + j % channel_stride;
-          scale_diff[i] += out_diff[index] * in[index];
-          if (bias_diff != nullptr) { bias_diff[i] += out_diff[index]; }
-        }
+  static void BackwardScaleDiff(DeviceCtx* ctx, const int64_t elem_cnt, const int32_t channel_dim,
+                                const int64_t channel_stride, const T* in, const T* out_diff,
+                                T* scale_diff) {
+    for (int32_t i = 0; i < channel_dim; ++i) {
+      for (int64_t j = 0; j < (elem_cnt / channel_dim); ++j) {
+        int64_t index =
+            ((j / channel_stride) * channel_dim + i) * channel_stride + j % channel_stride;
+        scale_diff[i] += out_diff[index] * in[index];
+      }
+    }
+  }
+
+  static void BackwardBiasDiff(DeviceCtx* ctx, const int64_t elem_cnt, const int32_t channel_dim,
+                               const int64_t channel_stride, const T* out_diff, T* bias_diff) {
+    for (int32_t i = 0; i < channel_dim; ++i) {
+      for (int64_t j = 0; j < (elem_cnt / channel_dim); ++j) {
+        int64_t index =
+            ((j / channel_stride) * channel_dim + i) * channel_stride + j % channel_stride;
+        bias_diff[i] += out_diff[index];
       }
     }
   }
