@@ -889,7 +889,7 @@ message LayerNormOpConf {
   optional bool scale = 4 [default = true];
   optional ActivationType activation = 5 [default = kNone];
   optional int64 begin_norm_axis = 6 [default = 1];
-  optional int64  begin_params_axis = 7 [default = -1];
+  optional int64 begin_params_axis = 7 [default = -1];
   optional double epsilon = 8 [default = 1e-5];
 }
 
