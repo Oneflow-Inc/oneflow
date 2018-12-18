@@ -16,12 +16,13 @@ int64_t ShiftNegativeAxisIfNeed(const Shape& shape, int64_t axis) {
 void LayerNormOp::InitFromOpConf() {
   CHECK(op_conf().has_layer_norm_conf());
   const LayerNormOpConf& conf = op_conf().layer_norm_conf();
+  if (!(conf.center() || conf.scale())) { mut_op_conf()->set_trainable(false); }
   EnrollInputBn("in");
   EnrollOutputBn("out");
   if (conf.center()) { EnrollModelBn("beta"); }
   if (conf.scale()) {
     EnrollModelBn("gamma");
-    if (Global<JobDesc>::Get()->IsTrain()) { EnrollDataTmpBn("normalize_out"); }
+    EnrollDataTmpBn("normalize_out");
   }
   EnrollDataTmpBn("cudnn_bn_mean");
   EnrollDataTmpBn("cudnn_bn_inv_variance");
@@ -29,7 +30,7 @@ void LayerNormOp::InitFromOpConf() {
   EnrollConstBufBn("cudnn_bn_bias_zeros");
   EnrollBwBufBn("cudnn_bn_scale_diff_buf");
   EnrollBwBufBn("cudnn_bn_bias_diff_buf");
-  if (conf.center() || conf.scale()) { EnrollBwBufBn("reusable_bw_buf"); }
+  if (op_conf().trainable()) { EnrollBwBufBn("bw_reduce_buf"); }
 }
 
 void LayerNormOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -49,7 +50,7 @@ void LayerNormOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
     BlobDesc* gamma = GetBlobDesc4BnInOp("gamma");
     gamma->mut_shape() = param_shape;
     gamma->set_data_type(in->data_type());
-    if (Global<JobDesc>::Get()->IsTrain()) { *GetBlobDesc4BnInOp("normalize_out") = *in; }
+    *GetBlobDesc4BnInOp("normalize_out") = *in;
   }
   const int64_t begin_norm_axis = ShiftNegativeAxisIfNeed(in->shape(), conf.begin_norm_axis());
   const Shape bn_param_shape = Shape({in->shape().Count(0, begin_norm_axis)});
@@ -67,7 +68,7 @@ void LayerNormOp::InferBwBufBlobDescs(
   CHECK(parallel_ctx->policy() != kModelParallel);
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
   const LayerNormOpConf& conf = op_conf().layer_norm_conf();
-  if (conf.center() || conf.scale()) { *GetBlobDesc4BnInOp("reusable_bw_buf") = *in; }
+  if (op_conf().trainable()) { *GetBlobDesc4BnInOp("bw_reduce_buf") = *in; }
   const int64_t begin_norm_axis = ShiftNegativeAxisIfNeed(in->shape(), conf.begin_norm_axis());
   const Shape bn_param_shape = Shape({in->shape().Count(0, begin_norm_axis)});
   BlobDesc* bn_scale_diff = GetBlobDesc4BnInOp("cudnn_bn_scale_diff_buf");

@@ -1,5 +1,4 @@
 #include "oneflow/core/kernel/layer_norm_kernel.h"
-#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
@@ -56,19 +55,11 @@ void LayerNormKernelUtil<DeviceType::kGPU, T>::NormalizeForward(const DeviceCtx*
                                                                 Blob* inv_variance) {
   CHECK_GE(epsilon, CUDNN_BN_MIN_EPSILON);
   LayerNormCudnnBnCtx bn_ctx(in->static_shape(), mean->shape(), in->data_type());
-  if (Global<JobDesc>::Get()->IsTrain()) {
-    CudaCheck(cudnnBatchNormalizationForwardTraining(
-        ctx->cudnn_handle(), bn_ctx.mode(), OnePtr<T>::value, ZeroPtr<T>::value,
-        bn_ctx.data_tensor_desc(), in->dptr<T>(), bn_ctx.data_tensor_desc(), out->mut_dptr<T>(),
-        bn_ctx.param_tensor_desc(), scale->dptr<T>(), bias->dptr<T>(), 1.0, nullptr, nullptr,
-        epsilon, mean->mut_dptr<T>(), inv_variance->mut_dptr<T>()));
-  } else {
-    CudaCheck(cudnnBatchNormalizationForwardInference(
-        ctx->cudnn_handle(), bn_ctx.mode(), OnePtr<T>::value, ZeroPtr<T>::value,
-        bn_ctx.data_tensor_desc(), in->dptr<T>(), bn_ctx.data_tensor_desc(), out->mut_dptr<T>(),
-        bn_ctx.param_tensor_desc(), scale->dptr(), bias->dptr(), mean->mut_dptr<T>(),
-        inv_variance->mut_dptr<T>(), epsilon));
-  }
+  CudaCheck(cudnnBatchNormalizationForwardTraining(
+      ctx->cudnn_handle(), bn_ctx.mode(), OnePtr<T>::value, ZeroPtr<T>::value,
+      bn_ctx.data_tensor_desc(), in->dptr<T>(), bn_ctx.data_tensor_desc(), out->mut_dptr<T>(),
+      bn_ctx.param_tensor_desc(), scale->dptr<T>(), bias->dptr<T>(), 1.0, nullptr, nullptr, epsilon,
+      mean->mut_dptr<T>(), inv_variance->mut_dptr<T>()));
 }
 
 template<typename T>
