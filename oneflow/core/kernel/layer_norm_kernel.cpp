@@ -29,9 +29,8 @@ void LayerNormKernel<device_type, T>::ForwardDataContent(
   Blob* normalize_out = conf.scale() ? BnInOp2Blob("normalize_out") : out;
   Blob* mean = BnInOp2Blob("cudnn_bn_mean");
   Blob* inv_variance = BnInOp2Blob("cudnn_bn_inv_variance");
-  LayerNormKernelUtil<device_type, T>::NormalizeForward(ctx.device_ctx, in, bn_scale, bn_bias,
-                                                        conf.epsilon(), this->op_conf().trainable(),
-                                                        normalize_out, mean, inv_variance);
+  LayerNormKernelUtil<device_type, T>::NormalizeForward(
+      ctx.device_ctx, in, bn_scale, bn_bias, conf.epsilon(), normalize_out, mean, inv_variance);
   if (conf.scale()) {
     const Blob* gamma = BnInOp2Blob("gamma");
     const int64_t m = gamma->shape().elem_cnt();
@@ -156,8 +155,8 @@ void LayerNormKernel<device_type, T>::InitConstBufBlobs(
 template<typename T>
 struct LayerNormKernelUtil<DeviceType::kCPU, T> {
   static void NormalizeForward(const DeviceCtx* ctx, const Blob* in, const Blob* scale,
-                               const Blob* bias, double epsilon, bool trainable, Blob* out,
-                               Blob* mean, Blob* inv_variance) {
+                               const Blob* bias, double epsilon, Blob* out, Blob* mean,
+                               Blob* inv_variance) {
     UNIMPLEMENTED();
   }
   static void NormalizeBackward(const DeviceCtx* ctx, const Blob* in, const Blob* scale,

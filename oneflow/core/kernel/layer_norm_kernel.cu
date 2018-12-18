@@ -40,8 +40,8 @@ class LayerNormCudnnBnCtx final {
 template<typename T>
 struct LayerNormKernelUtil<DeviceType::kGPU, T> {
   static void NormalizeForward(const DeviceCtx* ctx, const Blob* in, const Blob* scale,
-                               const Blob* bias, double epsilon, bool trainable, Blob* out,
-                               Blob* mean, Blob* inv_variance);
+                               const Blob* bias, double epsilon, Blob* out, Blob* mean,
+                               Blob* inv_variance);
   static void NormalizeBackward(const DeviceCtx* ctx, const Blob* in, const Blob* scale,
                                 const Blob* mean, const Blob* inv_variance, const Blob* out_diff,
                                 double epsilon, Blob* in_diff, Blob* scale_diff, Blob* bias_diff);
@@ -51,23 +51,15 @@ template<typename T>
 void LayerNormKernelUtil<DeviceType::kGPU, T>::NormalizeForward(const DeviceCtx* ctx,
                                                                 const Blob* in, const Blob* scale,
                                                                 const Blob* bias, double epsilon,
-                                                                bool trainable, Blob* out,
-                                                                Blob* mean, Blob* inv_variance) {
+                                                                Blob* out, Blob* mean,
+                                                                Blob* inv_variance) {
   CHECK_GE(epsilon, CUDNN_BN_MIN_EPSILON);
   LayerNormCudnnBnCtx bn_ctx(in->static_shape(), mean->shape(), in->data_type());
-  if (trainable) {
-    CudaCheck(cudnnBatchNormalizationForwardTraining(
-        ctx->cudnn_handle(), bn_ctx.mode(), OnePtr<T>::value, ZeroPtr<T>::value,
-        bn_ctx.data_tensor_desc(), in->dptr<T>(), bn_ctx.data_tensor_desc(), out->mut_dptr<T>(),
-        bn_ctx.param_tensor_desc(), scale->dptr<T>(), bias->dptr<T>(), 1.0, nullptr, nullptr,
-        epsilon, mean->mut_dptr<T>(), inv_variance->mut_dptr<T>()));
-  } else {
-    CudaCheck(cudnnBatchNormalizationForwardInference(
-        ctx->cudnn_handle(), bn_ctx.mode(), OnePtr<T>::value, ZeroPtr<T>::value,
-        bn_ctx.data_tensor_desc(), in->dptr<T>(), bn_ctx.data_tensor_desc(), out->mut_dptr<T>(),
-        bn_ctx.param_tensor_desc(), scale->dptr(), bias->dptr(), mean->mut_dptr<T>(),
-        inv_variance->mut_dptr<T>(), epsilon));
-  }
+  CudaCheck(cudnnBatchNormalizationForwardTraining(
+      ctx->cudnn_handle(), bn_ctx.mode(), OnePtr<T>::value, ZeroPtr<T>::value,
+      bn_ctx.data_tensor_desc(), in->dptr<T>(), bn_ctx.data_tensor_desc(), out->mut_dptr<T>(),
+      bn_ctx.param_tensor_desc(), scale->dptr<T>(), bias->dptr<T>(), 1.0, nullptr, nullptr, epsilon,
+      mean->mut_dptr<T>(), inv_variance->mut_dptr<T>()));
 }
 
 template<typename T>
