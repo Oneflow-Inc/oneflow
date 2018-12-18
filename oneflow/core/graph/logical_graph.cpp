@@ -58,18 +58,32 @@ LogicalGraph::LogicalGraph(bool is_train) {
 }
 
 void LogicalGraph::GroupNodesForReduceStruct() {
+  // get op model size
+  HashMap<std::string, size_t> op_name2model_size;
+  auto OpName2ModelSize = [&](const std::string& op_name) -> size_t {
+    if (op_name2model_size.find(op_name) == op_name2model_size.end()) { return 0; }
+    return op_name2model_size.at(op_name);
+  };
+  Global<JobDesc>::Get()->InferOpModelSize(&op_name2model_size);
+  size_t model_total_size = 0;
+  for (const auto& pair : op_name2model_size) { model_total_size += pair.second; }
   HashMap<ParallelDesc, std::list<const LogicalNode*>> parellel_desc2fw_group;
+  size_t avg_size = model_total_size / Global<JobDesc>::Get()->reduce_group_num();
+  // group fw nodes by parallel desc
   ReverseTopoForEachNode([&](LogicalNode* fw_node) {
     parellel_desc2fw_group[*fw_node->parallel_desc()].push_front(fw_node);
   });
   CHECK_GT(parellel_desc2fw_group.size(), 0);
   fw_node_groups_.emplace_back(std::vector<const LogicalNode*>());
+  size_t cur_group_model_size = 0;
   for (auto& pair : parellel_desc2fw_group) {
     auto& fw_node_group = pair.second;
     for (const LogicalNode* fw_node : fw_node_group) {
       fw_node_groups_.back().emplace_back(fw_node);
-      if (fw_node_groups_.back().size() >= Global<JobDesc>::Get()->reduce_group_size()) {
+      cur_group_model_size += OpName2ModelSize(fw_node->SoleOp()->op_name());
+      if (cur_group_model_size >= avg_size) {
         fw_node_groups_.emplace_back(std::vector<const LogicalNode*>());
+        cur_group_model_size = 0;
       }
     }
   }

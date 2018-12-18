@@ -49,8 +49,11 @@ class OpEdge;
 class OpNode final : public Node<OpNode, OpEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpNode);
-  explicit OpNode(const OperatorConf& op_conf, DeviceType device_type)
-      : op_(ConstructOp(op_conf, device_type)), has_in_diff_(false) {}
+  explicit OpNode(const ParallelDesc& parallel_desc, const OperatorConf& op_conf)
+      : parallel_desc_(parallel_desc),
+        op_(ConstructOp(op_conf, parallel_desc.device_type())),
+        ibns_(op_->input_bns().begin(), op_->input_bns().end()),
+        has_in_diff_(false) {}
   ~OpNode() = default;
 
   const Operator& op() const { return *op_; }
@@ -58,10 +61,23 @@ class OpNode final : public Node<OpNode, OpEdge> {
   bool has_in_diff() const { return has_in_diff_; }
   bool has_model_diff() const { return op().model_diff_bns().size() > 0; }
   void set_has_in_diff(bool has_in_diff) { has_in_diff_ = has_in_diff; }
+  const ParallelDesc& parallel_desc() const { return parallel_desc_; }
+
+  BlobDesc* BlobDesc4BnInOp(const std::string& bn_in_op);
 
  private:
+  BlobDesc* MutBlobDesc(const LogicalBlobId& lbi) {
+    if (lbi2blob_desc_.find(lbi) == lbi2blob_desc_.end()) {
+      lbi2blob_desc_.emplace(lbi, std::make_shared<BlobDesc>());
+    }
+    return lbi2blob_desc_.at(lbi).get();
+  }
+
+  ParallelDesc parallel_desc_;
   std::shared_ptr<Operator> op_;
+  HashSet<std::string> ibns_;
   bool has_in_diff_;
+  HashMap<LogicalBlobId, std::shared_ptr<BlobDesc>> lbi2blob_desc_;
 };
 
 class OpEdge final : public Edge<OpNode, OpEdge> {
@@ -85,11 +101,41 @@ class OpEdge final : public Edge<OpNode, OpEdge> {
   HashMap<LogicalBlobId, std::vector<std::string>> lbi2ibns_;
 };
 
+BlobDesc* OpNode::BlobDesc4BnInOp(const std::string& bn_in_op) {
+  const LogicalBlobId& lbi = op().BnInOp2Lbi(bn_in_op);
+  if (ibns_.find(bn_in_op) != ibns_.end()) {
+    for (OpEdge* edge : in_edges()) {
+      for (const LogicalBlobId& edge_lbi : edge->lbis()) {
+        if (lbi == edge_lbi) { return edge->src_node()->MutBlobDesc(lbi); }
+      }
+    }
+    UNIMPLEMENTED();
+  }
+  return MutBlobDesc(lbi);
+}
+
 class OpGraph final : public Graph<OpNode, OpEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpGraph);
   explicit OpGraph(const JobDesc& job_desc) : job_desc_(job_desc) { Init(); }
   ~OpGraph() = default;
+
+  void InferOpModelSize(HashMap<std::string, size_t>* op_name2model_size) {
+    InferNodeBlobDesc();
+    ForEachNode([&](OpNode* op_node) {
+      size_t model_size = 0;
+      for (const std::string& model_bn : op_node->op().model_bns()) {
+        int64_t elem_cnt = op_node->BlobDesc4BnInOp(model_bn)->shape().elem_cnt();
+        model_size += elem_cnt * GetSizeOfDataType(job_desc_.DefaultDataType());
+        model_size = RoundUp(model_size, kCudaAlignSize);
+      }
+      size_t parallel_num = op_node->parallel_desc().parallel_num();
+      if (op_node->parallel_desc().policy() == ParallelPolicy::kModelParallel) {
+        model_size = (model_size + parallel_num - 1) / parallel_num;
+      }
+      CHECK(op_name2model_size->emplace(op_node->op().op_name(), model_size).second);
+    });
+  }
 
  private:
   void Init() {
@@ -102,8 +148,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void InitNodes() {
     auto ParallelConf4OpName = MakeGetterParallelConf4OpName(job_desc_.placement());
     for (const auto& op_conf : job_desc_.dlnet_conf().op()) {
-      ParallelDesc pr(*ParallelConf4OpName(op_conf.name()));
-      OpNode* node = new OpNode(op_conf, pr.device_type());
+      OpNode* node = new OpNode(ParallelDesc(*ParallelConf4OpName(op_conf.name())), op_conf);
       AddAllocatedNode(node);
     }
   }
@@ -131,7 +176,6 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
       }
     });
   }
-
   void UpdateOpNodeHasInDiff() {
     auto HasIndiff = [&](const OpNode* op_node) -> bool {
       for (OpEdge* edge : op_node->in_edges()) {
@@ -142,7 +186,18 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
     };
     TopoForEachNode([&](OpNode* op_node) { op_node->set_has_in_diff(HasIndiff(op_node)); });
   }
-
+  void InferNodeBlobDesc() const {
+    TopoForEachNode([&](OpNode* op_node) {
+      auto GetBlobDesc4BnInOp = [&](const std::string& bn_in_op) -> BlobDesc* {
+        return op_node->BlobDesc4BnInOp(bn_in_op);
+      };
+      ParallelContext parallel_ctx;
+      parallel_ctx.set_parallel_id(0);
+      parallel_ctx.set_parallel_num(1);
+      parallel_ctx.set_policy(op_node->parallel_desc().policy());
+      op_node->op().InferBlobDescsIf(GetBlobDesc4BnInOp, &parallel_ctx, [](OpContext*) {});
+    });
+  }
   const JobDesc& job_desc_;
   HashMap<std::string, OpNode*> op_name2op_node_;
 };
@@ -177,6 +232,16 @@ void CollectInputLbiBlobNamesByProducerOpName(HashSet<std::string>* ret_blob_nam
 }
 
 }  // namespace
+
+void JobDesc::InferOpModelSize(HashMap<std::string, size_t>* op_name2model_size) const {
+  OpGraph(*this).InferOpModelSize(op_name2model_size);
+}
+
+int64_t JobDesc::reduce_group_num() const {
+  int64_t ret = job_conf_.other().reduce_group_num();
+  CHECK_GT(ret, 0);
+  return ret;
+}
 
 float JobDesc::lazy_reduce_ratio() const {
   float ratio = job_conf_.other().lazy_reduce_ratio();
