@@ -58,7 +58,7 @@ class JobDesc final {
   bool use_nccl_inter_node_communication() const {
     return job_conf_.other().use_nccl_inter_node_communication();
   }
-  int64_t reduce_group_size() const { return job_conf_.other().reduce_group_size(); }
+  int64_t reduce_group_num() const;
   float lazy_reduce_ratio() const;
   float reduce_model_update_overlapping_ratio() const;
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.other().cudnn_buf_limit_mbyte(); }
@@ -101,6 +101,11 @@ class JobDesc final {
 
   JobConf1 job_conf_;
 };
+
+std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4OpName(
+    const Placement& placement);
+std::function<ParallelConf*(const std::string&)> MakeGetterMutParallelConf4OpName(
+    Placement* placement);
 
 }  // namespace oneflow
 
