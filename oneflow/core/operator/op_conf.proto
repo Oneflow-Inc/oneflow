@@ -718,7 +718,7 @@ message L2NormalizeOpConf {
   required string in = 1;
   required string out = 2;
   required int32 axis = 3 [default = -1];
-  optional float epsilon = 4 [default = 1e-8];
+  optional float epsilon = 4 [default = 1e-12];
 }
 
 message OperatorConf {

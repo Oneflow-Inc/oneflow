@@ -22,9 +22,10 @@ class L2NormalizeKernel final : public KernelIf<device_type> {
 template<DeviceType device_type, typename T>
 struct L2NormalizeKernelUtil {
   static void Forward(DeviceCtx* ctx, const L2NormalizeOpConf& conf, const Blob* in_blob,
-                      Blob* norm_blob, Blob* out_blob);
+                      Blob* square_x_sum_blob, Blob* out_blob);
   static void Backward(DeviceCtx* ctx, const L2NormalizeOpConf& conf, const Blob* in_blob,
-                       const Blob* out_diff_blob, const Blob* norm_blob, Blob* in_diff_blob);
+                       const Blob* out_diff_blob, const Blob* square_x_sum_blob,
+                       Blob* in_diff_blob);
 };
 
 }  // namespace oneflow

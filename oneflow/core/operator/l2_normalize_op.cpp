@@ -6,7 +6,7 @@ void L2NormalizeOp::InitFromOpConf() {
   CHECK(op_conf().has_l2_normalize_conf());
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  EnrollDataTmpBn("norm");
+  EnrollDataTmpBn("square_x_sum");
 }
 
 const PbMessage& L2NormalizeOp::GetCustomizedConf() const { return op_conf().l2_normalize_conf(); }
@@ -21,9 +21,9 @@ void L2NormalizeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   CHECK_LT(axis, axis_num);
   CHECK_GT(conf.epsilon(), 0);
   *GetBlobDesc4BnInOp("out") = *in_blob_desc;
-  BlobDesc* norm_blob_desc = GetBlobDesc4BnInOp("norm");
-  *norm_blob_desc = *in_blob_desc;
-  norm_blob_desc->mut_shape().Set(axis, 1);
+  BlobDesc* square_x_sum_blob_desc = GetBlobDesc4BnInOp("square_x_sum");
+  *square_x_sum_blob_desc = *in_blob_desc;
+  square_x_sum_blob_desc->mut_shape().Set(axis, 1);
 }
 
 REGISTER_OP(OperatorConf::kL2NormalizeConf, L2NormalizeOp);
