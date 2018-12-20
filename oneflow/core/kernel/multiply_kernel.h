@@ -12,6 +12,7 @@ class MultiplyKernel final : public KernelIfWithModel<device_type, T> {
   ~MultiplyKernel() = default;
 
  private:
+  bool HasSameShapeBetweenInOut() const override { return true; }
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
   void BackwardDataContent(const KernelCtx&,

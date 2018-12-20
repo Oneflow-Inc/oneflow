@@ -93,12 +93,6 @@ void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> Get
   if (op_attribute_.model_bns().size() > 0) {
     InferTotalInstanceNumDesc(GetBlobDesc4BnInOp, parallel_ctx, EnrollOpCtx);
   }
-  /*
-   * special case in : {
-   *      dot_op : data_tmp_blob "tmp" "diff_multiplier"
-   *      }
-   * has instance shape
-   *
   // check only in/out blob has instance shape
   for (const auto& pair : op_attribute_.bn_in_op2lbi()) {
     BlobDesc* blob_desc = GetBlobDesc4BnInOp(pair.first);
@@ -113,7 +107,7 @@ void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> Get
     if (it != output_diff_bns().end()) { continue; }
     CHECK(!blob_desc->has_instance_shape_field());
   }
-  */
+  /*
   // check model blob has not instance shape
   std::vector<std::string> all_model_bns;
   all_model_bns.insert(all_model_bns.end(), model_bns().begin(), model_bns().end());
@@ -125,6 +119,7 @@ void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> Get
     if (!blob_desc) { continue; }
     CHECK(!blob_desc->has_instance_shape_field());
   }
+  */
 }
 
 void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
