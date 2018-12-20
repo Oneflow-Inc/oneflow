@@ -8,8 +8,8 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void ForwardGpu(const int64_t elem_cnt, const int32_t channel_dim,
-                           const int64_t channel_stride, const T* in, const T* scale, const T* bias,
+__global__ void ForwardGpu(const int32_t elem_cnt, const int32_t channel_dim,
+                           const int32_t channel_stride, const T* in, const T* scale, const T* bias,
                            T* out) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const int32_t channel_i = (i / channel_stride) % channel_dim;
@@ -22,8 +22,8 @@ __global__ void ForwardGpu(const int64_t elem_cnt, const int32_t channel_dim,
 }
 
 template<typename T>
-__global__ void BackwardInDiffGpu(const int64_t elem_cnt, const int32_t channel_dim,
-                                  const int64_t channel_stride, const T* out_diff, const T* scale,
+__global__ void BackwardInDiffGpu(const int32_t elem_cnt, const int32_t channel_dim,
+                                  const int32_t channel_stride, const T* out_diff, const T* scale,
                                   T* in_diff) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     in_diff[i] = out_diff[i] * scale[(i / channel_stride) % channel_dim];
@@ -31,8 +31,8 @@ __global__ void BackwardInDiffGpu(const int64_t elem_cnt, const int32_t channel_
 }
 
 template<typename T>
-__global__ void BackwardScaleBiasDiffGpu(const int64_t elem_cnt, const int32_t channel_dim,
-                                         const int64_t channel_stride, const T* in,
+__global__ void BackwardScaleBiasDiffGpu(const int32_t elem_cnt, const int32_t channel_dim,
+                                         const int32_t channel_stride, const T* in,
                                          const T* out_diff, T* scale_diff, T* bias_diff) {
   using BlockReduce = cub::BlockReduce<T, kCudaThreadsNumPerBlock>;
   __shared__ typename BlockReduce::TempStorage scale_diff_temp_storage;
@@ -41,8 +41,8 @@ __global__ void BackwardScaleBiasDiffGpu(const int64_t elem_cnt, const int32_t c
   for (int32_t i = blockIdx.x; i < channel_dim; i += gridDim.x) {
     T scale_diff_sum = ZeroVal<T>::value;
     T bias_diff_sum = ZeroVal<T>::value;
-    for (int64_t j = threadIdx.x; j < (elem_cnt / channel_dim); j += blockDim.x) {
-      int64_t index =
+    for (int32_t j = threadIdx.x; j < (elem_cnt / channel_dim); j += blockDim.x) {
+      int32_t index =
           ((j / channel_stride) * channel_dim + i) * channel_stride + j % channel_stride;
       scale_diff_sum += out_diff[index] * in[index];
       bias_diff_sum += out_diff[index];
@@ -57,16 +57,16 @@ __global__ void BackwardScaleBiasDiffGpu(const int64_t elem_cnt, const int32_t c
 }
 
 template<typename T>
-__global__ void BackwardScaleDiffGpu(const int64_t elem_cnt, const int32_t channel_dim,
-                                     const int64_t channel_stride, const T* in, const T* out_diff,
+__global__ void BackwardScaleDiffGpu(const int32_t elem_cnt, const int32_t channel_dim,
+                                     const int32_t channel_stride, const T* in, const T* out_diff,
                                      T* scale_diff) {
   using BlockReduce = cub::BlockReduce<T, kCudaThreadsNumPerBlock>;
   __shared__ typename BlockReduce::TempStorage scale_diff_temp_storage;
 
   for (int32_t i = blockIdx.x; i < channel_dim; i += gridDim.x) {
     T scale_diff_sum = ZeroVal<T>::value;
-    for (int64_t j = threadIdx.x; j < (elem_cnt / channel_dim); j += blockDim.x) {
-      int64_t index =
+    for (int32_t j = threadIdx.x; j < (elem_cnt / channel_dim); j += blockDim.x) {
+      int32_t index =
           ((j / channel_stride) * channel_dim + i) * channel_stride + j % channel_stride;
       scale_diff_sum += out_diff[index] * in[index];
     }
@@ -80,32 +80,32 @@ __global__ void BackwardScaleDiffGpu(const int64_t elem_cnt, const int32_t chann
 template<typename T>
 class AffineChannelKernelUtil<DeviceType::kGPU, T> final {
  public:
-  static void Forward(DeviceCtx* ctx, const int64_t elem_cnt, const int32_t channel_dim,
-                      const int64_t channel_stride, const T* in, const T* scale, const T* bias,
+  static void Forward(DeviceCtx* ctx, const int32_t elem_cnt, const int32_t channel_dim,
+                      const int32_t channel_stride, const T* in, const T* scale, const T* bias,
                       T* out) {
     ForwardGpu<T>
         <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
             elem_cnt, channel_dim, channel_stride, in, scale, bias, out);
   }
 
-  static void BackwardInDiff(DeviceCtx* ctx, const int64_t elem_cnt, const int32_t channel_dim,
-                             const int64_t channel_stride, const T* out_diff, const T* scale,
+  static void BackwardInDiff(DeviceCtx* ctx, const int32_t elem_cnt, const int32_t channel_dim,
+                             const int32_t channel_stride, const T* out_diff, const T* scale,
                              T* in_diff) {
     BackwardInDiffGpu<T>
         <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
             elem_cnt, channel_dim, channel_stride, out_diff, scale, in_diff);
   }
 
-  static void BackwardScaleBiasDiff(DeviceCtx* ctx, const int64_t elem_cnt,
-                                    const int32_t channel_dim, const int64_t channel_stride,
+  static void BackwardScaleBiasDiff(DeviceCtx* ctx, const int32_t elem_cnt,
+                                    const int32_t channel_dim, const int32_t channel_stride,
                                     const T* in, const T* out_diff, T* scale_diff, T* bias_diff) {
     BackwardScaleBiasDiffGpu<T><<<std::min(channel_dim, kCudaMaxBlocksNum), kCudaThreadsNumPerBlock,
                                   0, ctx->cuda_stream()>>>(elem_cnt, channel_dim, channel_stride,
                                                            in, out_diff, scale_diff, bias_diff);
   }
 
-  static void BackwardScaleDiff(DeviceCtx* ctx, const int64_t elem_cnt, const int32_t channel_dim,
-                                const int64_t channel_stride, const T* in, const T* out_diff,
+  static void BackwardScaleDiff(DeviceCtx* ctx, const int32_t elem_cnt, const int32_t channel_dim,
+                                const int32_t channel_stride, const T* in, const T* out_diff,
                                 T* scale_diff) {
     BackwardScaleDiffGpu<T>
         <<<std::min(channel_dim, kCudaMaxBlocksNum), kCudaThreadsNumPerBlock, 0,

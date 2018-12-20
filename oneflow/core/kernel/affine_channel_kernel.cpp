@@ -17,7 +17,7 @@ void AffineChannelKernel<device_type, T>::ForwardDataContent(
   Blob* out_blob = BnInOp2Blob("out");
   const int32_t axis = conf.axis() >= 0 ? conf.axis() : conf.axis() + in_blob->shape().NumAxes();
   const int32_t channel_dim = in_blob->shape().At(axis);
-  const int64_t channel_stride = in_blob->shape().Count(axis + 1);
+  const int32_t channel_stride = in_blob->shape().Count(axis + 1);
   const T* bias_ptr = conf.use_bias() ? bias_blob->dptr<T>() : nullptr;
   AffineChannelKernelUtil<device_type, T>::Forward(
       ctx.device_ctx, in_blob->shape().elem_cnt(), channel_dim, channel_stride, in_blob->dptr<T>(),
@@ -36,7 +36,7 @@ void AffineChannelKernel<device_type, T>::BackwardDataContent(
   Blob* bias_diff_blob = BnInOp2Blob("bias_diff");
   const int32_t axis = conf.axis() >= 0 ? conf.axis() : conf.axis() + in_blob->shape().NumAxes();
   const int32_t channel_dim = out_diff_blob->shape().At(axis);
-  const int64_t channel_stride = out_diff_blob->shape().Count(axis + 1);
+  const int32_t channel_stride = out_diff_blob->shape().Count(axis + 1);
   AffineChannelKernelUtil<device_type, T>::BackwardInDiff(
       ctx.device_ctx, out_diff_blob->shape().elem_cnt(), channel_dim, channel_stride,
       out_diff_blob->dptr<T>(), scale_blob->dptr<T>(), in_diff_blob->mut_dptr<T>());
@@ -90,10 +90,10 @@ ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAffineChannelConf, AffineChannelKernel
 template<typename T>
 class AffineChannelKernelUtil<DeviceType::kCPU, T> final {
  public:
-  static void Forward(DeviceCtx* ctx, const int64_t elem_cnt, const int32_t channel_dim,
-                      const int64_t channel_stride, const T* in, const T* scale, const T* bias,
+  static void Forward(DeviceCtx* ctx, const int32_t elem_cnt, const int32_t channel_dim,
+                      const int32_t channel_stride, const T* in, const T* scale, const T* bias,
                       T* out) {
-    for (int64_t i = 0; i < elem_cnt; ++i) {
+    for (int32_t i = 0; i < elem_cnt; ++i) {
       const int32_t channel_i = (i / channel_stride) % channel_dim;
       if (bias != nullptr) {
         out[i] = in[i] * scale[channel_i] + bias[channel_i];
@@ -103,20 +103,20 @@ class AffineChannelKernelUtil<DeviceType::kCPU, T> final {
     }
   }
 
-  static void BackwardInDiff(DeviceCtx* ctx, const int64_t elem_cnt, const int32_t channel_dim,
-                             const int64_t channel_stride, const T* out_diff, const T* scale,
+  static void BackwardInDiff(DeviceCtx* ctx, const int32_t elem_cnt, const int32_t channel_dim,
+                             const int32_t channel_stride, const T* out_diff, const T* scale,
                              T* in_diff) {
-    for (int64_t i = 0; i < elem_cnt; ++i) {
+    for (int32_t i = 0; i < elem_cnt; ++i) {
       in_diff[i] = out_diff[i] * scale[(i / channel_stride) % channel_dim];
     }
   }
 
-  static void BackwardScaleBiasDiff(DeviceCtx* ctx, const int64_t elem_cnt,
-                                    const int32_t channel_dim, const int64_t channel_stride,
+  static void BackwardScaleBiasDiff(DeviceCtx* ctx, const int32_t elem_cnt,
+                                    const int32_t channel_dim, const int32_t channel_stride,
                                     const T* in, const T* out_diff, T* scale_diff, T* bias_diff) {
     for (int32_t i = 0; i < channel_dim; ++i) {
-      for (int64_t j = 0; j < (elem_cnt / channel_dim); ++j) {
-        int64_t index =
+      for (int32_t j = 0; j < (elem_cnt / channel_dim); ++j) {
+        int32_t index =
             ((j / channel_stride) * channel_dim + i) * channel_stride + j % channel_stride;
         scale_diff[i] += out_diff[index] * in[index];
         bias_diff[i] += out_diff[index];
@@ -124,12 +124,12 @@ class AffineChannelKernelUtil<DeviceType::kCPU, T> final {
     }
   }
 
-  static void BackwardScaleDiff(DeviceCtx* ctx, const int64_t elem_cnt, const int32_t channel_dim,
-                                const int64_t channel_stride, const T* in, const T* out_diff,
+  static void BackwardScaleDiff(DeviceCtx* ctx, const int32_t elem_cnt, const int32_t channel_dim,
+                                const int32_t channel_stride, const T* in, const T* out_diff,
                                 T* scale_diff) {
     for (int32_t i = 0; i < channel_dim; ++i) {
-      for (int64_t j = 0; j < (elem_cnt / channel_dim); ++j) {
-        int64_t index =
+      for (int32_t j = 0; j < (elem_cnt / channel_dim); ++j) {
+        int32_t index =
             ((j / channel_stride) * channel_dim + i) * channel_stride + j % channel_stride;
         scale_diff[i] += out_diff[index] * in[index];
       }
