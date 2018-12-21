@@ -20,11 +20,13 @@ void NormalizationOp::InitFromOpConf() {
   if (conf.center()) {
     EnrollModelBn("beta");
   } else {
+    EnrollConstBufBn("beta");
     EnrollDataTmpBn("beta_diff");
   }
   if (conf.scale()) {
     EnrollModelBn("gamma");
   } else {
+    EnrollConstBufBn("gamma");
     EnrollDataTmpBn("gamma_diff");
   }
   EnrollDataTmpBn("normalized_in");
@@ -95,11 +97,13 @@ void NormalizationOp::InferParamBlobDescs(
   if (conf.center()) {
     blob_names.push_back("beta");
   } else {
+    blob_names.push_back("beta");
     blob_names.push_back("beta_diff");
   }
   if (conf.scale()) {
     blob_names.push_back("gamma");
   } else {
+    blob_names.push_back("gamma");
     blob_names.push_back("gamma_diff");
   }
   if (Global<JobDesc>::Get()->IsTrain() && !use_cudnn) {
@@ -143,7 +147,7 @@ void NormalizationOp::InferBlobDescsForCudnn(
   const auto& conf = op_conf().normalization_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   const DataType in_data_type = in_blob_desc->data_type();
-  CHECK(conf.scale() && conf.center()) << "Cudnn batch norm must use scale and center";
+  //CHECK(conf.scale() && conf.center()) << "Cudnn batch norm must use scale and center";
   InferParamBlobDescs(GetBlobDesc4BnInOp, conf, in_blob_desc->shape().At(conf.axis()), in_data_type,
                       true);
 }
