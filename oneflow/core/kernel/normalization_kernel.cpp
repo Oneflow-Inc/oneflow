@@ -6,6 +6,15 @@ namespace oneflow {
 
 namespace {
 
+InitializerConf ConstantInitializerConf(float val) {
+  InitializerConf conf;
+  conf.mutable_constant_conf()->set_value(val); 
+  return conf;
+}
+
+InitializerConf OnesInitializerConf() { return ConstantInitializerConf(1.0f); }
+InitializerConf ZerosInitializerConf() { return ConstantInitializerConf(0.0f); }
+
 template<DeviceType device_type, typename T>
 void Rsqrt(DeviceCtx* ctx, const int64_t n, const T* x, const float epsilon, T* y) {
   KernelUtil<device_type, T>::Copy(ctx, n, x, 1, y, 1);
@@ -186,6 +195,19 @@ void NormalizationKernel<device_type, T>::InitModelBlobsWithDir(
   KernelUtil<device_type, T>::InitializeWithDir(
       ctx, part_id, part_num, model_load_dir, variance_blob, "moving_variance",
       variance_blob->shape().At(0), variance_blob->shape().Count(1));
+}
+
+template<DeviceType device_type, typename T>
+void NormalizationKernel<device_type, T>::InitConstBufBlobs(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const auto& conf = this->op_conf().normalization_conf();
+  if (!conf.scale()) {
+    InitializerConf ones_init = OnesInitializerConf();
+    KernelUtil<device_type, T>::InitializeWithConf(ctx, ones_init, 0, BnInOp2Blob("gamma"));
+  }  
+  if (!conf.center()) {
+    InitializerConf zero_init = ZerosInitializerConf();
+    KernelUtil<device_type, T>::InitializeWithConf(ctx, zero_init, 0, BnInOp2Blob("beta"));
+  }
 }
 
 template<DeviceType device_type, typename T>
