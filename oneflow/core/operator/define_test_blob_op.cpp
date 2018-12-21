@@ -4,7 +4,7 @@ namespace oneflow {
 
 void DefineTestBlobOp::InitFromOpConf() {
   CHECK(op_conf().has_define_test_blob_conf());
-  EnrollOutputBn("out", false);
+  EnrollOutputBn("out", op_conf().define_test_blob_conf().has_diff());
 }
 
 const PbMessage& DefineTestBlobOp::GetCustomizedConf() const {
@@ -15,7 +15,7 @@ void DefineTestBlobOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  const DefineTestBlobConf& conf = op_conf().define_test_blob_conf();
+  const DefineTestBlobOpConf& conf = op_conf().define_test_blob_conf();
   Shape shape(conf.shape());
   out_blob_desc->mut_shape() = shape;
   out_blob_desc->set_data_type(conf.data_type());

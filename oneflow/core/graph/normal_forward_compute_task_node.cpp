@@ -1,11 +1,39 @@
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/logical_node.h"
+#include "oneflow/core/operator/variable_op.h"
 
 namespace oneflow {
 
+namespace {
+
+bool IsAllOutputNaive(const LogicalNode* logical_node) {
+  const Operator* op = logical_node->SoleOp().get();
+  if (op->IsAllOutputConst()) {
+    return false;
+  } else if (dynamic_cast<const VariableOp*>(op) != nullptr) {
+    return false;
+  } else {
+    return true;
+  }
+}
+
+}  // namespace
+
+bool NormalForwardCompTaskNode::HasBackwardCompTaskNode() {
+  for (TaskEdge* edge : out_edges()) {
+    const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
+    if (succ_logical->TypeName() == "NormalBackward") { return true; }
+  }
+  return false;
+}
+
 void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  ProduceRegst("out", true);
+  if (IsAllOutputNaive(logical_node())) {
+    ProduceRegst("out", true);
+  } else {
+    ProduceRegst("out", false, 1, 1);
+  }
   ProduceRegst("activation", true);
   ProduceRegst("data_tmp", true);
   ProduceRegst("fw_buf", true, 1, 1);

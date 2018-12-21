@@ -60,6 +60,14 @@ PbMessage* MutableMessageInPbMessage(PbMessage* msg, const std::string& field_na
   return r->MutableMessage(msg, fd);
 }
 
+PbMessage* MutableMessageInPbMessage(PbMessage* msg, int field_index) {
+  const auto* d = const_cast<google::protobuf::Descriptor*>(msg->GetDescriptor());
+  const auto* fd = const_cast<PbFd*>(d->FindFieldByNumber(field_index));
+  CHECK_NOTNULL(fd);
+  const auto* r = const_cast<google::protobuf::Reflection*>(msg->GetReflection());
+  return r->MutableMessage(msg, fd);
+}
+
 #define DEFINE_ADD_VAL_IN_PBRF(cpp_type, pb_type_name)                                    \
   template<>                                                                              \
   void AddValInPbRf(PbMessage* msg, const std::string& field_name, const cpp_type& val) { \

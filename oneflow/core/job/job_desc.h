@@ -60,7 +60,9 @@ class JobDesc final {
   bool use_nccl_inter_node_communication() const {
     return job_conf_.other().use_nccl_inter_node_communication();
   }
-  int64_t reduce_group_size() const { return job_conf_.other().reduce_group_size(); }
+  int64_t reduce_group_num() const;
+  float lazy_reduce_ratio() const;
+  float reduce_model_update_overlapping_ratio() const;
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.other().cudnn_buf_limit_mbyte(); }
   int64_t GetMachineId(const std::string& addr) const;
 
@@ -81,6 +83,9 @@ class JobDesc final {
   float bias_l2() const;
   int32_t DataPartNum() const;
 
+  // fix and Optimize
+  void FixAndOptimizeDLNet();
+
  private:
   friend class Global<JobDesc>;
   JobDesc(const std::string& job_conf_filepath);
@@ -89,9 +94,20 @@ class JobDesc final {
   void SanityCheck();
   void SplitDecodeOps();
   void AddRecordLoadOps();
+  void AddIdentityOpForChainMergeOptimization();
+  void AddIdentityOpForAllReduceOverlapingUntrainble();
+  std::string AddIdentityOp(const std::string& input_op_name,
+                            const HashSet<std::string>& input_lbi_blob_names,
+                            const ParallelConf& parallel_conf);
+  void FixTickOpIfExists();
 
   JobConf1 job_conf_;
 };
+
+std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4OpName(
+    const Placement& placement);
+std::function<ParallelConf*(const std::string&)> MakeGetterMutParallelConf4OpName(
+    Placement* placement);
 
 }  // namespace oneflow
 

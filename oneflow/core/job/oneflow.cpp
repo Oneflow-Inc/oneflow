@@ -160,6 +160,7 @@ class Oneflow final {
 Oneflow::Oneflow(const std::string& job_conf_filepath) {
   // New All Global
   Global<JobDesc>::New(job_conf_filepath);
+  Global<JobDesc>::Get()->FixAndOptimizeDLNet();
   ctrl_server_.reset(new CtrlServer());
   Global<CtrlClient>::New();
   OF_BARRIER();

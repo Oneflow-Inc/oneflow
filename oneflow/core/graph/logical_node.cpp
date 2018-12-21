@@ -23,6 +23,7 @@
 #include "oneflow/core/graph/accuracy_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/accuracy_print_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
+#include "oneflow/core/graph/reduce_identity_task_node.h"
 
 namespace oneflow {
 
@@ -237,6 +238,10 @@ void LogicalNode::GenSortedCompTaskNodes(
             comp_task_node->set_thrd_id(id_mgr->GetGpuMixThrdId(dev_phy_id));
             break;
           }
+          case CudaWorkType::kReduceCtrl: {
+            comp_task_node->set_thrd_id(id_mgr->GetGpuReduceCtrlThrdId(dev_phy_id));
+            break;
+          }
           case CudaWorkType::kMdUpdt: {
             comp_task_node->set_thrd_id(id_mgr->GetGpuMdUpdtThrdId(dev_phy_id));
             break;
@@ -297,6 +302,17 @@ static bool IsModelParallel121(const LogicalNode* src_node, const LogicalNode* d
 BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const LogicalNode* dst_node) {
   std::shared_ptr<const ParallelDesc> src_pd = src_node->parallel_desc();
   std::shared_ptr<const ParallelDesc> dst_pd = dst_node->parallel_desc();
+  if (src_node->op_vec().size() == 1 && dst_node->op_vec().size() == 1) {
+    if (src_node->SoleOp()->op_conf().has_record_load_conf()
+        && dst_node->SoleOp()->op_conf().has_tick_conf()) {
+      CHECK(src_pd->parallel_num() == dst_pd->parallel_num());
+      CHECK(src_pd->policy() == kDataParallel && dst_pd->policy() == kDataParallel);
+    }
+    if (src_node->SoleOp()->op_conf().has_tick_conf()
+        && dst_node->SoleOp()->op_conf().has_log_counter_conf() == false) {
+      return &TaskGraph::BldSubTskGphByTickToSource;
+    }
+  }
   if (src_pd->parallel_num() == 1 && dst_pd->parallel_num() == 1) {
     return &TaskGraph::BldSubTskGphByOneToOne;
   }
@@ -403,6 +419,7 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
   OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc, kDataBackwardArea)      \
   OF_PP_MAKE_TUPLE_SEQ(Print, kPrintArea)                 \
   OF_PP_MAKE_TUPLE_SEQ(ReduceConcat, kMdUpdtArea)         \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceIdentity, kMdUpdtArea)       \
   OF_PP_MAKE_TUPLE_SEQ(ReduceScatter, kMdUpdtArea)        \
   OF_PP_MAKE_TUPLE_SEQ(ReduceAdd, kMdUpdtArea)            \
   OF_PP_MAKE_TUPLE_SEQ(ReduceGather, kMdUpdtArea)         \

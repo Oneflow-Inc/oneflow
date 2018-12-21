@@ -18,6 +18,6 @@ void CastOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   out_blob_desc->set_data_type(op_conf().cast_conf().data_type());
 }
 
-REGISTER_CPU_OP(OperatorConf::kCastConf, CastOp);
+REGISTER_OP(OperatorConf::kCastConf, CastOp);
 
 }  // namespace oneflow

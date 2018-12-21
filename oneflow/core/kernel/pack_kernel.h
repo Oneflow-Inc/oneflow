@@ -31,6 +31,10 @@ class PackKernel final : public KernelIf<device_type> {
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void ForwardDataId(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void BackwardInDiffLossInstanceNum(
+      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    UNIMPLEMENTED();
+  }
 };
 
 }  // namespace oneflow

@@ -55,9 +55,12 @@ class RegstDesc final {
   void set_mem_shared_offset(int64_t val) { mem_shared_offset_ = val; }
   int32_t mem_shared_id() const { return mem_shared_id_; }
   void set_mem_shared_id(int32_t val) { mem_shared_id_ = val; }
+  bool HasSetMemSharedId() { return mem_shared_id_ != -1; }
+  void CopyMemSharedInfoFrom(const RegstDesc*);
 
   const std::shared_ptr<Shape>& data_regst_time_shape() const {
     CHECK(regst_desc_type_.has_data_regst_desc());
+    CHECK(data_regst_time_shape_);
     return data_regst_time_shape_;
   }
   std::shared_ptr<Shape>* mut_data_regst_time_shape() {
@@ -66,6 +69,7 @@ class RegstDesc final {
   }
   RegstDescTypeProto* mut_regst_desc_type() { return &regst_desc_type_; }
   const RegstDescTypeProto& regst_desc_type() const { return regst_desc_type_; }
+  bool HasSameMemSize(const RegstDesc*);
 
   // util
   int32_t MaxColNum() const { return packed_blob_desc_->max_col_num(); }

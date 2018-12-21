@@ -86,9 +86,12 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
                                                                       + "total_instance_num");
     op_conf.mutable_normal_mdupdt_conf()->set_model(lbi.op_name() + '/' + lbi.blob_name());
     if (Global<JobDesc>::Get()->IsTrain()) {
-      *(op_conf.mutable_normal_mdupdt_conf()->mutable_user_conf()) =
-          Global<JobDesc>::Get()->other_conf().train_conf().model_update_conf();
-
+      if (lbi.blob_name() == "total_instance_num") {
+        op_conf.mutable_normal_mdupdt_conf()->mutable_user_conf()->mutable_naive_conf();
+      } else {
+        *(op_conf.mutable_normal_mdupdt_conf()->mutable_user_conf()) =
+            Global<JobDesc>::Get()->other_conf().train_conf().model_update_conf();
+      }
       float primary_lr = Global<JobDesc>::Get()->primary_lr();
       float secondary_lr = Global<JobDesc>::Get()->secondary_lr();
       if (secondary_lr < 0) { secondary_lr = primary_lr; }
@@ -146,6 +149,13 @@ void NormalMdUpdtCompTaskNode::ToProto(TaskProto* task_proto) {
   task_proto->set_related_init_model_task_id(related_init_model_task_id_);
 }
 
+void NormalMdUpdtCompTaskNode::FixPackedBlobDescOfProducedRegst() {
+  std::shared_ptr<RegstDesc> diff_add_out_regst = GetProducedRegst("processed_model_diff");
+  CHECK(diff_add_out_regst->IsLocked());
+  Shape& shape = diff_add_out_regst->MutBlobDesc(GenPackedLbi())->mut_shape();
+  shape = Shape({static_cast<int64_t>(RoundUp(shape.elem_cnt(), parallel_ctx()->parallel_num()))});
+}
+
 void NormalMdUpdtCompTaskNode::InferProducedDataRegstTimeShape() {
   ForEachProducedDataRegst([](const std::string& name, RegstDesc* regst) {
     if (name == "const_model") {
@@ -155,6 +165,22 @@ void NormalMdUpdtCompTaskNode::InferProducedDataRegstTimeShape() {
           new Shape({Global<JobDesc>::Get()->TotalBatchNum()}));
     }
   });
+}
+
+void NormalMdUpdtCompTaskNode::EnableMemSharingBetweenFirstInAndProcessedMdDiffRegst() {
+  ExecNode* diff_add_node = exec_gph().SoleSourceNode();
+  RegstDesc* first_in_regst =
+      diff_add_node->RegstDesc4BnInOp(diff_add_node->op()->input_bns().Get(0));
+  RegstDesc* diff_add_out_regst = diff_add_node->RegstDesc4BnInOp(diff_add_node->op()->SoleObn());
+  CHECK_EQ(diff_add_out_regst, GetProducedRegst("processed_model_diff").get());
+  CHECK(first_in_regst->HasSameMemSize(diff_add_out_regst));
+  if (!first_in_regst->HasSetMemSharedId()) {
+    int64_t mem_shared_id = Global<IDMgr>::Get()->NewMemSharedId();
+    first_in_regst->set_enable_mem_sharing(true);
+    first_in_regst->set_mem_shared_id(mem_shared_id);
+    first_in_regst->set_mem_shared_offset(0);
+  }
+  diff_add_out_regst->CopyMemSharedInfoFrom(first_in_regst);
 }
 
 }  // namespace oneflow

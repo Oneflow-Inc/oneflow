@@ -45,8 +45,8 @@ class Graph {
       const std::function<void(NodeType*)>& Handler) const;
 
   // Getters
-  const std::unordered_set<NodeType*>& source_nodes() const;
-  const std::unordered_set<NodeType*>& sink_nodes() const;
+  std::list<NodeType*> source_nodes() const;
+  std::list<NodeType*> sink_nodes() const;
   NodeType* SoleSourceNode() const;
   NodeType* SoleSinkNode() const;
   NodeType* SoleNode() const;
@@ -79,23 +79,47 @@ void Graph<NodeType, EdgeType>::ForEachNode(std::function<void(NodeType*)> NodeH
 }
 
 template<typename NodeType, typename EdgeType>
-void Graph<NodeType, EdgeType>::TopoForEachNode(std::function<void(NodeType*)> NodeHandler) const {
-  std::list<NodeType*> starts;
+std::list<NodeType*> Graph<NodeType, EdgeType>::source_nodes() const {
+  std::list<NodeType*> ret;
   ForEachNode([&](NodeType* node) {
-    if (node->in_edges().empty()) { starts.push_back(node); }
+    if (node->in_edges().empty()) { ret.push_back(node); }
   });
-  TopoForEachNode(starts, &NodeType::ForEachNodeOnInEdge, &NodeType::ForEachNodeOnOutEdge,
+  return ret;
+}
+
+template<typename NodeType, typename EdgeType>
+std::list<NodeType*> Graph<NodeType, EdgeType>::sink_nodes() const {
+  std::list<NodeType*> ret;
+  ForEachNode([&](NodeType* node) {
+    if (node->out_edges().empty()) { ret.push_back(node); }
+  });
+  return ret;
+}
+
+template<typename NodeType, typename EdgeType>
+NodeType* Graph<NodeType, EdgeType>::SoleSourceNode() const {
+  std::list<NodeType*> source_nodes_list = source_nodes();
+  CHECK_EQ(source_nodes_list.size(), 1);
+  return source_nodes_list.front();
+}
+
+template<typename NodeType, typename EdgeType>
+NodeType* Graph<NodeType, EdgeType>::SoleSinkNode() const {
+  std::list<NodeType*> sink_nodes_list = sink_nodes();
+  CHECK_EQ(sink_nodes_list.size(), 1);
+  return sink_nodes_list.front();
+}
+
+template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::TopoForEachNode(std::function<void(NodeType*)> NodeHandler) const {
+  TopoForEachNode(source_nodes(), &NodeType::ForEachNodeOnInEdge, &NodeType::ForEachNodeOnOutEdge,
                   NodeHandler);
 }
 
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::ReverseTopoForEachNode(
     std::function<void(NodeType*)> NodeHandler) const {
-  std::list<NodeType*> starts;
-  ForEachNode([&](NodeType* node) {
-    if (node->out_edges().empty()) { starts.push_back(node); }
-  });
-  TopoForEachNode(starts, &NodeType::ForEachNodeOnOutEdge, &NodeType::ForEachNodeOnInEdge,
+  TopoForEachNode(sink_nodes(), &NodeType::ForEachNodeOnOutEdge, &NodeType::ForEachNodeOnInEdge,
                   NodeHandler);
 }
 

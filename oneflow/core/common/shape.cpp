@@ -3,6 +3,7 @@
 
 namespace oneflow {
 
+Shape::Shape(const std::initializer_list<int64_t>& dim_vec) : dim_vec_(dim_vec) { UpdateElemCnt(); }
 Shape::Shape(const std::vector<int64_t>& dim_vec) : dim_vec_(dim_vec) { UpdateElemCnt(); }
 
 Shape::Shape(const ShapeProto& shape_proto) {
@@ -54,6 +55,13 @@ void Shape::UpdateElemCnt() {
 std::ostream& operator<<(std::ostream& out, const Shape& shape) {
   out << shape.DebugStr();
   return out;
+}
+
+Shape Shape::CreateLeftExtendedShape(int num_axes) const {
+  CHECK_GE(num_axes, NumAxes());
+  std::vector<int64_t> dim_vec = this->dim_vec();
+  for (int i = 0; i < num_axes - NumAxes(); ++i) { dim_vec.insert(dim_vec.begin(), 1LL); }
+  return Shape(dim_vec);
 }
 
 }  // namespace oneflow

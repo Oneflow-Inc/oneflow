@@ -121,6 +121,16 @@ void Operator::InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> 
   InferBwBufBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
+void Operator::FixInDiffBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                  const ParallelContext* ctx) const {
+  VirtualFixInDiffBlobDescs(GetBlobDesc4BnInOp, ctx);
+  for (const std::string& input_diff_bn : input_diff_bns()) {
+    BlobDesc* blob_desc = GetBlobDesc4BnInOp(input_diff_bn);
+    if (!blob_desc) { continue; }
+    blob_desc->set_has_loss_instance_num_field(true);
+  }
+}
+
 void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
   if (model_bns().empty() && const_model_bns().empty()) {
     pr_desc->set_policy(ParallelPolicy::kDataParallel);

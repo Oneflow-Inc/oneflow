@@ -37,6 +37,7 @@ class Operator {
   virtual bool IsLossOp() const { return false; }
   virtual bool IsRecurrentOp() const { return false; }
   virtual bool IsEmbeddingLookupOp() const { return false; }
+  virtual bool IsAllOutputConst() const { return false; }
 
   bool NeedOutBlobWhenBackwardIf() const {
     return NeedOutBlobWhenBackward() || (GetActivationType() != ActivationType::kNone);
@@ -132,7 +133,10 @@ class Operator {
     UNIMPLEMENTED();
   }
   virtual void FixInDiffBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                  const ParallelContext*) const {}
+                                  const ParallelContext*) const;
+  virtual void VirtualFixInDiffBlobDescs(
+      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext*) const {}
 
   void FixParallelDesc(ParallelDesc* pr_desc) const;
   void FixLbiWhenShareModel(const std::string& shared_op_name);
@@ -265,6 +269,12 @@ struct OnlyCpuSupportPredicator {
 
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf);
 
+inline std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type) {
+  OperatorConf dev_op_conf = op_conf;
+  dev_op_conf.set_device_type(device_type);
+  return ConstructOp(dev_op_conf);
+}
+
 void EraseEmptyBnInVec(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                        PbRpf<std::string>* bns);
 
@@ -281,6 +291,14 @@ inline LogicalBlobId GenLogicalBlobId(const std::string& lbn) {
   lbi.set_op_name(lbn.substr(0, pos));
   lbi.set_blob_name(lbn.substr(pos + 1));
   return lbi;
+}
+
+inline std::string GenLogicalBlobName(const LogicalBlobId& lbi) {
+  CHECK_EQ(lbi.has_op_name(), true);
+  CHECK_EQ(lbi.has_blob_name(), true);
+  CHECK_EQ(lbi.has_clone_id(), false);
+  CHECK_EQ(lbi.is_packed_id(), false);
+  return lbi.op_name() + "/" + lbi.blob_name();
 }
 
 }  // namespace oneflow
