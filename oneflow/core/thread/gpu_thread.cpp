@@ -14,8 +14,10 @@ GpuThread::GpuThread(int64_t thrd_id, int64_t dev_id) {
     ctx.cb_event_chan = &cb_event_chan_;
     PollMsgChannel(ctx);
   });
-  cb_event_poller_ = std::thread([this]() {
+  cb_event_poller_ = std::thread([this, dev_id]() {
     CudaCBEvent cb_event;
+    int cur_dev_id;
+    CudaCheck(cudaGetDevice(&cur_dev_id));
     while (cb_event_chan_.Receive(&cb_event) == kChannelStatusSuccess) {
       CudaCheck(cudaEventSynchronize(cb_event.event));
       cb_event.callback();

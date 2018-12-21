@@ -60,7 +60,6 @@ class JobDesc final {
   }
   int64_t reduce_group_num() const;
   float lazy_reduce_ratio() const;
-  float reduce_model_update_overlapping_ratio() const;
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.other().cudnn_buf_limit_mbyte(); }
   int64_t GetMachineId(const std::string& addr) const;
 

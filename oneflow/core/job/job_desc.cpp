@@ -83,13 +83,6 @@ float JobDesc::lazy_reduce_ratio() const {
   return ratio;
 }
 
-float JobDesc::reduce_model_update_overlapping_ratio() const {
-  float ratio = job_conf_.other().reduce_model_update_overlapping_ratio();
-  CHECK_GE(ratio, 0.0);
-  CHECK_LE(ratio, 1.0);
-  return ratio;
-}
-
 int64_t JobDesc::piece_num_of_experiment_phase() const {
   return job_conf_.other().exp_run_conf().piece_num_of_experiment_phase();
 }

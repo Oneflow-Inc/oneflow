@@ -77,9 +77,8 @@ message OtherConf {
   optional bool enable_nccl = 142 [default = true];
   optional bool use_nccl_inter_node_communication = 143 [default = false];
   optional int64 cudnn_buf_limit_mbyte = 144 [default = 1024];  // 1GByte
-  optional int64 reduce_group_num = 145 [default = 5];
-  optional float lazy_reduce_ratio = 146 [default = 0.0];
-  optional float reduce_model_update_overlapping_ratio = 147 [default = 0.1];
+  optional int64 reduce_group_num = 145 [default = 8];
+  optional float lazy_reduce_ratio = 146 [default = 0.5];
 
   oneof JobType {
     TrainConf train_conf = 200;
