@@ -73,6 +73,7 @@ class NormalizationKernel final : public KernelIfWithModel<device_type, T>,
                                  const std::function<Blob*(const std::string&)>&) const;
   void NormalizationCudnnBackward(const KernelCtx&,
                                   const std::function<Blob*(const std::string&)>&) const;
+  void InitConstBufBlobs(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 };
 
 }  // namespace oneflow
