@@ -234,7 +234,6 @@ message KernelConf {
     IdentityLossKernelConf identity_loss_conf = 405;
     GatherKernelConf gather_conf = 406;
     SmoothL1LossKernelConf smooth_l1_loss_conf = 407;
-    SigmoidCrossEntropyLossKernelConf sigmoid_cross_entropy_loss_conf = 408;
     ResizeNearestNeighborKernelConf resize_nearest_neighbor_conf = 409;
     BboxNmsKernelConf bbox_nms_conf = 410;
   }

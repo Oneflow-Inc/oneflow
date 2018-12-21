@@ -1414,7 +1414,6 @@ message OperatorConf {
     ProposalTargetOpConf proposal_target_conf = 1004;
     BboxNmsAndLimitOpConf bbox_nms_and_limit_conf = 1005;
     AnchorTargetOpConf anchor_target_conf = 1006;
-    SigmoidCrossEntropyLossOpConf sigmoid_cross_entropy_loss_conf = 1007;
     AffineChannelOpConf affine_channel_conf = 1008;
     UpsampleNearestOpConf upsample_nearest_conf = 1009;
     ResizeNearestNeighborOpConf resize_nearest_neighbor_conf = 1010;
