@@ -23,10 +23,10 @@ __global__ void L2NormalizeForward(const int32_t n, const int32_t c, const int32
     if (threadIdx.x == 0) { square_x_sum[i] = reduce_sum; }
     __syncthreads();
 
-    const T reciprocal_norm = rsqrt(fmaxf(square_x_sum[i], epsilon));
+    const T inv_norm = rsqrtf(fmaxf(square_x_sum[i], epsilon));
     for (int32_t j = threadIdx.x; j < c; j += blockDim.x) {
       const int32_t index = offset + j * d;
-      out[index] = reciprocal_norm * in[index];
+      out[index] = inv_norm * in[index];
     }
   }
 }
@@ -36,7 +36,7 @@ __global__ void L2NormalizeBackward(const int32_t n, const int32_t c, const int3
                                     const float epsilon, const T* out, const T* out_diff,
                                     const T* square_x_sum, T* in_diff) {
   for (int32_t i = blockIdx.x; i < n; i += gridDim.x) {
-    const T reciprocal_norm = rsqrt(fmaxf(square_x_sum[i], epsilon));
+    const T inv_norm = rsqrt(fmaxf(square_x_sum[i], epsilon));
     const int32_t offset = (i / d) * d * c + (i % d);
     if (square_x_sum[i] >= epsilon) {
       using BlockReduce = cub::BlockReduce<T, kCudaThreadsNumPerBlock>;
@@ -55,12 +55,12 @@ __global__ void L2NormalizeBackward(const int32_t n, const int32_t c, const int3
 
       for (int32_t j = threadIdx.x; j < c; j += blockDim.x) {
         const int32_t index = offset + j * d;
-        in_diff[index] = reciprocal_norm * (out_diff[index] - y_dy_inner_prod * out[index]);
+        in_diff[index] = inv_norm * (out_diff[index] - y_dy_inner_prod * out[index]);
       }
     } else {
       for (int32_t j = threadIdx.x; j < c; j += blockDim.x) {
         const int32_t index = offset + j * d;
-        in_diff[index] = reciprocal_norm * out_diff[index];
+        in_diff[index] = inv_norm * out_diff[index];
       }
     }
   }
