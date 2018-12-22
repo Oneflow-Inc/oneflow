@@ -58,9 +58,10 @@ class JobDesc final {
   bool use_nccl_inter_node_communication() const {
     return job_conf_.other().use_nccl_inter_node_communication();
   }
-  int64_t reduce_group_num() const;
-  float lazy_reduce_ratio() const;
-  float reduce_model_update_overlapping_ratio() const;
+  int64_t all_reduce_group_num() const;
+  int64_t all_reduce_group_min_byte() const;
+  float all_reduce_group_size_warmup() const;
+  float all_reduce_lazy_ratio() const;
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.other().cudnn_buf_limit_mbyte(); }
   int64_t GetMachineId(const std::string& addr) const;
 

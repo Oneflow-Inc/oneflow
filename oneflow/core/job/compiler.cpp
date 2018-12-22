@@ -107,7 +107,6 @@ Plan Compiler::DoCompile() {
   if (job_desc->IsTrain()) {
     task_gph->AddReduceSequenceCtrlEdges();
     task_gph->AddMdUpdtCtrlEdgesWithinReduceSplitNode();
-    task_gph->AddReduceMdUpdtOverlapingCtrlEdges();
   }
   task_gph->RemoveEmptyRegsts();
   task_gph->AddOrderingCtrlEdgeInSameChain();

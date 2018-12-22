@@ -79,7 +79,7 @@ class ChainGraph final : public Graph<ChainNode, ChainEdge> {
                       const HashMap<TaskNode*, HashSet<TaskNode*>>& node2ancestors,
                       std::vector<std::vector<TaskNode*>>* chains) const;
   void PrioritizeUntrainableTaskNode(std::vector<TaskNode*>* task_nodes) const;
-  void PartialPriorDfsTopoForEachNode(
+  void PartialPriorTopoForEachNode(
       const std::list<TaskNode*> starts,
       const std::function<void(TaskNode*, const std::function<void(TaskNode*)>&)>& ForEachInNode,
       const std::function<void(TaskNode*, const std::function<void(TaskNode*)>&)>& ForEachOutNode,
