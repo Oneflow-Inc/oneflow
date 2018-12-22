@@ -7,69 +7,61 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void L2NormalizeForward(const int32_t n, const int32_t m, const int32_t c,
-                                   const T epsilon, const T* in, T* out) {
+__global__ void L2NormalizeForward(const int32_t n, const int32_t c, const int32_t d,
+                                   const T epsilon, const T* in, T* square_x_sum, T* out) {
   using BlockReduce = cub::BlockReduce<T, kCudaThreadsNumPerBlock>;
   __shared__ typename BlockReduce::TempStorage temp_storage;
 
   for (int32_t i = blockIdx.x; i < n; i += gridDim.x) {
     T sum = ZeroVal<T>::value;
-    int32_t beg = (i / c) * c * m + (i % c);
-    for (int32_t j = threadIdx.x; j < m; j += blockDim.x) {
-      const T x = in[beg + j * c];
+    const int32_t offset = (i / d) * d * c + (i % d);
+    for (int32_t j = threadIdx.x; j < c; j += blockDim.x) {
+      const T x = in[offset + j * d];
       sum += x * x;
     }
-    T reduce_sum = BlockReduce(temp_storage).Sum(sum);
-
-    __shared__ T norm;
-    if (threadIdx.x == 0) {
-      norm = std::sqrt(reduce_sum);
-      norm = fmaxf(norm, epsilon);
-    }
+    const T reduce_sum = BlockReduce(temp_storage).Sum(sum);
+    if (threadIdx.x == 0) { square_x_sum[i] = reduce_sum; }
     __syncthreads();
 
-    for (int32_t j = threadIdx.x; j < m; j += blockDim.x) {
-      const int32_t index = beg + j * c;
-      out[index] = in[index] / norm;
+    const T inv_norm = rsqrtf(fmaxf(square_x_sum[i], epsilon));
+    for (int32_t j = threadIdx.x; j < c; j += blockDim.x) {
+      const int32_t index = offset + j * d;
+      out[index] = inv_norm * in[index];
     }
   }
 }
 
 template<typename T>
-__global__ void L2NormalizeBackward(const int32_t n, const int32_t m, const int32_t c,
-                                    const T epsilon, const T* in, const T* out_diff, T* in_diff) {
-  using BlockReduce = cub::BlockReduce<T, kCudaThreadsNumPerBlock>;
-  __shared__ typename BlockReduce::TempStorage temp_storage_squa_sum;
-  __shared__ typename BlockReduce::TempStorage temp_storage_prod_sum;
-
+__global__ void L2NormalizeBackward(const int32_t n, const int32_t c, const int32_t d,
+                                    const float epsilon, const T* out, const T* out_diff,
+                                    const T* square_x_sum, T* in_diff) {
   for (int32_t i = blockIdx.x; i < n; i += gridDim.x) {
-    T squa_x_sum = ZeroVal<T>::value;
-    T dy_x_prod_sum = ZeroVal<T>::value;
-    int32_t beg = (i / c) * c * m + (i % c);
-    for (int32_t j = threadIdx.x; j < m; j += blockDim.x) {
-      const int32_t index = beg + j * c;
-      squa_x_sum += in[index] * in[index];
-      dy_x_prod_sum += in[index] * out_diff[index];
-    }
-    T reduce_squa_x_sum = BlockReduce(temp_storage_squa_sum).Sum(squa_x_sum);
-    T reduce_dy_x_prod_sum = BlockReduce(temp_storage_prod_sum).Sum(dy_x_prod_sum);
+    const T inv_norm = rsqrt(fmaxf(square_x_sum[i], epsilon));
+    const int32_t offset = (i / d) * d * c + (i % d);
+    if (square_x_sum[i] >= epsilon) {
+      using BlockReduce = cub::BlockReduce<T, kCudaThreadsNumPerBlock>;
+      __shared__ typename BlockReduce::TempStorage temp_storage_prod_sum;
 
-    __shared__ T norm;
-    __shared__ T norm_pow_3;
-    __shared__ T xdy_sum;
-    if (threadIdx.x == 0) {
-      norm = std::sqrt(squa_x_sum);
-      norm = fmaxf(norm, epsilon);
-      norm_pow_3 = std::pow(norm, 3);
-      xdy_sum = reduce_dy_x_prod_sum;
-    }
-    __syncthreads();
+      T y_dy_prod_sum = ZeroVal<T>::value;
+      for (int32_t j = threadIdx.x; j < c; j += blockDim.x) {
+        const int32_t index = offset + j * d;
+        y_dy_prod_sum += out[index] * out_diff[index];
+      }
 
-    for (int32_t j = threadIdx.x; j < m; j += blockDim.x) {
-      const int32_t index = beg + j * c;
-      const float x = in[index];
-      const float dy = out_diff[index];
-      in_diff[index] = (dy / norm) - ((x / norm_pow_3) * xdy_sum);
+      const T reduce_y_dy_prod_sum = BlockReduce(temp_storage_prod_sum).Sum(y_dy_prod_sum);
+      __shared__ T y_dy_inner_prod;
+      if (threadIdx.x == 0) { y_dy_inner_prod = reduce_y_dy_prod_sum; }
+      __syncthreads();
+
+      for (int32_t j = threadIdx.x; j < c; j += blockDim.x) {
+        const int32_t index = offset + j * d;
+        in_diff[index] = inv_norm * (out_diff[index] - y_dy_inner_prod * out[index]);
+      }
+    } else {
+      for (int32_t j = threadIdx.x; j < c; j += blockDim.x) {
+        const int32_t index = offset + j * d;
+        in_diff[index] = inv_norm * out_diff[index];
+      }
     }
   }
 }
@@ -79,25 +71,28 @@ __global__ void L2NormalizeBackward(const int32_t n, const int32_t m, const int3
 template<typename T>
 struct L2NormalizeKernelUtil<DeviceType::kGPU, T> {
   static void Forward(DeviceCtx* ctx, const L2NormalizeOpConf& conf, const Blob* in_blob,
-                      Blob* out_blob) {
-    int32_t dims_axis = in_blob->shape().At(conf.axis());
-    int32_t dims_ex_axis = in_blob->shape().elem_cnt() / dims_axis;
-    int32_t dims_per_axis = dims_ex_axis / in_blob->shape().At(0);
-    L2NormalizeForward<<<BlocksNum4ThreadsNum(dims_ex_axis), kCudaThreadsNumPerBlock, 0,
-                         ctx->cuda_stream()>>>(dims_ex_axis, dims_axis, dims_per_axis,
-                                               static_cast<T>(conf.epsilon()), in_blob->dptr<T>(),
+                      Blob* square_x_sum_blob, Blob* out_blob) {
+    int32_t axis = conf.axis() >= 0 ? conf.axis() : conf.axis() + in_blob->shape().NumAxes();
+    int32_t c = in_blob->shape().At(axis);
+    int32_t n = in_blob->shape().elem_cnt() / c;
+    int32_t d = in_blob->shape().Count(axis + 1);
+    L2NormalizeForward<<<std::min(n, GetCudaMaxBlocksNum()), kCudaThreadsNumPerBlock, 0,
+                         ctx->cuda_stream()>>>(n, c, d, static_cast<T>(conf.epsilon()),
+                                               in_blob->dptr<T>(), square_x_sum_blob->mut_dptr<T>(),
                                                out_blob->mut_dptr<T>());
   }
 
-  static void Backward(DeviceCtx* ctx, const L2NormalizeOpConf& conf, const Blob* in_blob,
-                       const Blob* out_diff_blob, Blob* in_diff_blob) {
-    int32_t dims_axis = in_blob->shape().At(conf.axis());
-    int32_t dims_ex_axis = in_blob->shape().elem_cnt() / dims_axis;
-    int32_t dims_per_axis = dims_ex_axis / in_blob->shape().At(0);
-    L2NormalizeBackward<<<BlocksNum4ThreadsNum(dims_ex_axis), kCudaThreadsNumPerBlock, 0,
+  static void Backward(DeviceCtx* ctx, const L2NormalizeOpConf& conf, const Blob* out_blob,
+                       const Blob* out_diff_blob, const Blob* square_x_sum_blob,
+                       Blob* in_diff_blob) {
+    int32_t axis = conf.axis() >= 0 ? conf.axis() : conf.axis() + out_blob->shape().NumAxes();
+    int32_t c = out_blob->shape().At(axis);
+    int32_t n = out_blob->shape().elem_cnt() / c;
+    int32_t d = out_blob->shape().Count(axis + 1);
+    L2NormalizeBackward<<<std::min(n, GetCudaMaxBlocksNum()), kCudaThreadsNumPerBlock, 0,
                           ctx->cuda_stream()>>>(
-        dims_ex_axis, dims_axis, dims_per_axis, static_cast<T>(conf.epsilon()), in_blob->dptr<T>(),
-        out_diff_blob->dptr<T>(), in_diff_blob->mut_dptr<T>());
+        n, c, d, static_cast<T>(conf.epsilon()), out_blob->dptr<T>(), out_diff_blob->dptr<T>(),
+        square_x_sum_blob->dptr<T>(), in_diff_blob->mut_dptr<T>());
   }
 };
 
