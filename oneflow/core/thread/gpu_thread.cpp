@@ -15,6 +15,7 @@ GpuThread::GpuThread(int64_t thrd_id, int64_t dev_id) {
     PollMsgChannel(ctx);
   });
   cb_event_poller_ = std::thread([this, dev_id]() {
+    CudaCheck(cudaSetDevice(dev_id));
     CudaCBEvent cb_event;
     int cur_dev_id;
     CudaCheck(cudaGetDevice(&cur_dev_id));
