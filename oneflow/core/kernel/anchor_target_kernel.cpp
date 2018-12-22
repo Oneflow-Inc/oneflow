@@ -100,7 +100,7 @@ typename AnchorTargetKernel<T>::GtBoxes AnchorTargetKernel<T>::GetImageGtBoxes(
   const Blob* gt_boxes_blob = BnInOp2Blob("gt_boxes");
   Blob* gt_boxes_inds_blob = BnInOp2Blob("gt_boxes_inds");
   GtBoxes gt_boxes(
-      IndexSequence(gt_boxes_inds_blob->shape().elem_cnt(), gt_boxes_blob->dim1_valid_num(im_index),
+      IndexSequence(gt_boxes_inds_blob->shape().Count(1), gt_boxes_blob->dim1_valid_num(im_index),
                     gt_boxes_inds_blob->mut_dptr<int32_t>(), true),
       gt_boxes_blob->dptr<T>(im_index));
   gt_boxes.Filter([&](int32_t index) { return gt_boxes.bbox(index)->Area() <= 0; });

@@ -78,11 +78,11 @@ struct BBoxIf<ImplT<T, Cat>> {
 
   template<typename U>
   float InterOverUnion(const BBoxIf<U>* other) const {
-    const float iw =
-        std::min<float>(right(), other->right()) - std::max<float>(left(), other->left()) + 1.f;
+    const float iw = std::min<float>(right(), other->right())
+                     - std::max<float>(left(), other->left()) + this->impl()->alignment();
     if (iw <= 0) { return 0.f; }
-    const float ih =
-        std::min<float>(bottom(), other->bottom()) - std::max<float>(top(), other->top()) + 1.f;
+    const float ih = std::min<float>(bottom(), other->bottom())
+                     - std::max<float>(top(), other->top()) + this->impl()->alignment();
     if (ih <= 0) { return 0.f; }
     const float inter = iw * ih;
     return inter / (Area() + other->Area() - inter);
@@ -104,10 +104,10 @@ struct BBoxIf<ImplT<T, Cat>> {
   }
 
   void Clip(const int64_t height, const int64_t width) {
-    T left = std::max<T>(std::min<T>(this->left(), width - 1), 0);
-    T top = std::max<T>(std::min<T>(this->top(), height - 1), 0);
-    T right = std::max<T>(std::min<T>(this->right(), width - 1), 0);
-    T bottom = std::max<T>(std::min<T>(this->bottom(), height - 1), 0);
+    T left = std::max<T>(std::min<T>(this->left(), width - this->impl()->alignment()), 0);
+    T top = std::max<T>(std::min<T>(this->top(), height - this->impl()->alignment()), 0);
+    T right = std::max<T>(std::min<T>(this->right(), width - this->impl()->alignment()), 0);
+    T bottom = std::max<T>(std::min<T>(this->bottom(), height - this->impl()->alignment()), 0);
     set_ltrb(left, top, right, bottom);
   }
 
@@ -119,6 +119,7 @@ struct BBoxIf<ImplT<T, Cat>> {
   T center_y() const { return impl()->center_y(); }
   T width() const { return impl()->width(); }
   T height() const { return impl()->height(); }
+  T alignment() const { return impl()->alignment(); }
 
   void set_xywh(T ctr_x, T ctr_y, T w, T h) { impl()->set_xywh(ctr_x, ctr_y, w, h); }
   void set_ltrb(T left, T top, T right, T bottom) { impl()->set_ltrb(left, top, right, bottom); }
@@ -135,14 +136,18 @@ struct CornerCoordBBoxIf<ImplT<T, Cat>> : public BBoxIf<ImplT<T, Cat>> {
   T bottom() const { return this->impl()->bbox_elem(3); }
   T center_x() const { return this->impl()->left() + 0.5f * this->impl()->width(); }
   T center_y() const { return this->impl()->top() + 0.5f * this->impl()->height(); }
-  T width() const { return this->impl()->right() - this->impl()->left() + OneVal<T>::value; }
-  T height() const { return this->impl()->bottom() - this->impl()->top() + OneVal<T>::value; }
+  T width() const {
+    return this->impl()->right() - this->impl()->left() + this->impl()->alignment();
+  }
+  T height() const {
+    return this->impl()->bottom() - this->impl()->top() + this->impl()->alignment();
+  }
 
   void set_xywh(T ctr_x, T ctr_y, T w, T h) {
     this->impl()->set_bbox_elem(0, static_cast<T>(ctr_x - 0.5f * w));
     this->impl()->set_bbox_elem(1, static_cast<T>(ctr_y - 0.5f * h));
-    this->impl()->set_bbox_elem(2, static_cast<T>(ctr_x + 0.5f * w - 1.f));
-    this->impl()->set_bbox_elem(3, static_cast<T>(ctr_y + 0.5f * h - 1.f));
+    this->impl()->set_bbox_elem(2, static_cast<T>(ctr_x + 0.5f * w - this->impl()->alignment()));
+    this->impl()->set_bbox_elem(3, static_cast<T>(ctr_y + 0.5f * h - this->impl()->alignment()));
   }
   void set_ltrb(T left, T top, T right, T bottom) {
     this->impl()->set_bbox_elem(0, left);
@@ -155,18 +160,9 @@ struct CornerCoordBBoxIf<ImplT<T, Cat>> : public BBoxIf<ImplT<T, Cat>> {
 template<typename T>
 struct BBoxImpl<T, BBoxCategory::kLTRB>
     : public QuadBBoxWrapper<BBoxImpl<T, BBoxCategory::kLTRB>>,
-      public CornerCoordBBoxIf<BBoxImpl<T, BBoxCategory::kLTRB>> {};
-
-// Gt box coordinate should be transformed from xywh to xyxy completely
-// template<typename T>
-// struct BBoxImpl<T, BBoxCategory::kGtCorner>
-//     : public QuadBBoxWrapper<BBoxImpl<T, BBoxCategory::kGtCorner>>,
-//       public CornerCoordBBoxIf<BBoxImpl<T, BBoxCategory::kGtCorner>> {
-//   T right() const { return this->bbox_elem(2) - 1; }
-//   T bottom() const { return this->bbox_elem(3) - 1; }
-//   void set_center_coord(T ctr_x, T ctr_y, T w, T h) = delete;
-//   void set_corner_coord(T left, T top, T right, T bottom) = delete;
-// };
+      public CornerCoordBBoxIf<BBoxImpl<T, BBoxCategory::kLTRB>> {
+  T alignment() const { return OneVal<T>::value; }
+};
 
 template<typename T>
 struct BBoxImpl<T, BBoxCategory::kILTRB>
@@ -175,6 +171,14 @@ struct BBoxImpl<T, BBoxCategory::kILTRB>
   int32_t index() const { return static_cast<int32_t>(this->elem()[0]); }
   void set_index(T index) { this->elem()[0] = index; }
   void set_index(int32_t index) { this->elem()[0] = static_cast<T>(index); }
+  T alignment() const { return OneVal<T>::value; }
+};
+
+template<typename T>
+struct BBoxImpl<T, BBoxCategory::kFloatingLTRB>
+    : public QuadBBoxWrapper<BBoxImpl<T, BBoxCategory::kFloatingLTRB>>,
+      public CornerCoordBBoxIf<BBoxImpl<T, BBoxCategory::kFloatingLTRB>> {
+  T alignment() const { return ZeroVal<T>::value; }
 };
 
 template<typename T>

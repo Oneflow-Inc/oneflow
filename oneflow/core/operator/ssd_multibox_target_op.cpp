@@ -38,6 +38,8 @@ void SSDMultiboxTargetOp::InferBlobDescs(
   int64_t max_num_gt_boxes = gt_boxes_blob_desc->shape().At(1);
   CHECK_EQ(max_num_gt_boxes, gt_labels_blob_desc->shape().At(1));
   CHECK_EQ(bbox_blob_desc->data_type(), gt_boxes_blob_desc->data_type());
+  CHECK(gt_boxes_blob_desc->has_dim1_valid_num_field());
+  CHECK(gt_labels_blob_desc->has_dim1_valid_num_field());
 
   // output: sampled_indices (n, r) int32_t dim1 varying
   BlobDesc* sampled_indices_blob_desc = GetBlobDesc4BnInOp("sampled_indices");
@@ -57,6 +59,12 @@ void SSDMultiboxTargetOp::InferBlobDescs(
   *GetBlobDesc4BnInOp("bbox_inside_weights") = *bbox_deltas_blob_desc;
   // output: bbox_outside_weights (n, r, 4) T
   *GetBlobDesc4BnInOp("bbox_outside_weights") = *bbox_deltas_blob_desc;
+
+  // const buf: gt_boxes_inds (n, g) int32_t dim1 varying
+  BlobDesc* gt_boxes_inds_blob_desc = GetBlobDesc4BnInOp("gt_boxes_inds");
+  gt_boxes_inds_blob_desc->mut_shape() = Shape({num_images, max_num_gt_boxes});
+  gt_boxes_inds_blob_desc->set_data_type(DataType::kInt32);
+  gt_boxes_inds_blob_desc->set_has_dim1_valid_num_field(true);
 }
 
 REGISTER_CPU_OP(OperatorConf::kSsdMultiboxTargetConf, SSDMultiboxTargetOp);
