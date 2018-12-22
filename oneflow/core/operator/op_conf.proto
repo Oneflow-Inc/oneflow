@@ -1301,6 +1301,24 @@ message IdentityOpConf {
   repeated string out = 2;
 }
 
+message SSDMultiBoxTargetOpConf {
+  // in blobs
+  required string bbox = 1;
+  required string gt_boxes = 2;
+  required string gt_labels = 3;
+  // out blobs
+  required string sampled_indices = 4;
+  required string bbox_labels = 5;
+  required string bbox_targets = 6;
+  required string bbox_inside_weights = 7; 
+  required string bbox_outside_weights = 8; 
+  // params
+  optional float positive_overlap_threshold = 9 [default = 0.5];
+  optional float negtive_overlap_threshold = 10 [default = 0.5];
+  optional float negtive_to_positive_ratio = 11 [default = 3.0];
+  required BBoxRegressionWeights bbox_reg_weights = 12;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1429,6 +1447,7 @@ message OperatorConf {
     BboxTransformOpConf bbox_transform_conf = 1100;
     GenerateAnchorsOpConf generate_anchors_conf = 1102;
     BboxNmsOpConf bbox_nms_conf = 1103;
+    SSDMultiBoxTargetOpConf ssd_multibox_target_conf = 1104;
   }
 }
 
