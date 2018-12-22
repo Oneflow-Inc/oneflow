@@ -45,7 +45,7 @@ MakeGetterReduceTaskNodeCtrlOrder(const LogicalGraph& logical_graph) {
               return lhs->order_in_logical_graph() < rhs->order_in_logical_graph();
             });
   auto logical_node2ctrl_order = std::make_shared<HashMap<const LogicalNode*, int32_t>>();
-  int32_t lazy_count = Global<JobDesc>::Get()->lazy_reduce_ratio() * logical_nodes.size();
+  int32_t lazy_count = Global<JobDesc>::Get()->all_reduce_lazy_ratio() * logical_nodes.size();
   for (int32_t i = 0; i < logical_nodes.size(); ++i) {
     int32_t ctrl_order = 0;
     if (i > lazy_count) {

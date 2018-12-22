@@ -70,16 +70,13 @@ void LogicalGraph::GroupNodesForReduceStruct() {
   size_t model_total_size = 0;
   for (const auto& pair : op_name2model_size) { model_total_size += pair.second; }
   HashMap<ParallelDesc, std::list<const LogicalNode*>> parellel_desc2fw_group;
-  size_t avg_size = model_total_size / global_job_desc->reduce_group_num();
+  size_t avg_size = model_total_size / global_job_desc->all_reduce_group_num();
+  const size_t group_min_size = global_job_desc->all_reduce_group_min_byte();
+  const float group_size_warmup = global_job_desc->all_reduce_group_size_warmup();
+  size_t cur_group_size = group_min_size / group_size_warmup;
   auto GetCurGroupSize = [&](int32_t group_id) {
-    const size_t group_min_size = 16 * 1024 * 1024;
-    size_t group_size = 0;
-    if (group_id < global_job_desc->reduce_group_num()) {
-      group_size = avg_size / (global_job_desc->reduce_group_num() - group_id);
-    } else {
-      group_size = avg_size;
-    }
-    return std::max(group_min_size, group_size);
+    if (cur_group_size < avg_size) { cur_group_size *= group_size_warmup; }
+    return std::min(cur_group_size, avg_size);
   };
   // group fw nodes by parallel desc
   ReverseTopoForEachNode([&](LogicalNode* fw_node) {

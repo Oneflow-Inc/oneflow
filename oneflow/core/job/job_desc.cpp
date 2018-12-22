@@ -70,14 +70,26 @@ void CollectInputLbiBlobNamesByProducerOpName(HashSet<std::string>* ret_blob_nam
 
 }  // namespace
 
-int64_t JobDesc::reduce_group_num() const {
-  int64_t ret = job_conf_.other().reduce_group_num();
+int64_t JobDesc::all_reduce_group_min_byte() const {
+  int64_t ret = job_conf_.other().all_reduce_group_min_mbyte() * 1024 * 1024;
   CHECK_GT(ret, 0);
   return ret;
 }
 
-float JobDesc::lazy_reduce_ratio() const {
-  float ratio = job_conf_.other().lazy_reduce_ratio();
+float JobDesc::all_reduce_group_size_warmup() const {
+  float ret = job_conf_.other().all_reduce_group_size_warmup();
+  CHECK_GT(ret, 1);
+  return ret;
+}
+
+int64_t JobDesc::all_reduce_group_num() const {
+  int64_t ret = job_conf_.other().all_reduce_group_num();
+  CHECK_GT(ret, 0);
+  return ret;
+}
+
+float JobDesc::all_reduce_lazy_ratio() const {
+  float ratio = job_conf_.other().all_reduce_lazy_ratio();
   CHECK_GE(ratio, 0.0);
   CHECK_LE(ratio, 1.0);
   return ratio;
