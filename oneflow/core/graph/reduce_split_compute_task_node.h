@@ -19,6 +19,8 @@ class ReduceSplitCompTaskNode final : public CompTaskNode, public ReduceCompTask
   CudaWorkType GetCudaWorkType() const override { return CudaWorkType::kReduceCtrl; }
   void EnableMemSharingInReduce(const ReduceMemSharingCtx& ctx) override;
 
+  TaskNode* GetPrevReduceTaskNode(TaskType task_type);
+
  private:
   void BuildExecGphAndRegst() override;
   void FixPackedBlobDescOfProducedRegst() override;

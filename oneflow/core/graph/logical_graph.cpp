@@ -70,22 +70,31 @@ void LogicalGraph::GroupNodesForReduceStruct() {
   size_t model_total_size = 0;
   for (const auto& pair : op_name2model_size) { model_total_size += pair.second; }
   HashMap<ParallelDesc, std::list<const LogicalNode*>> parellel_desc2fw_group;
-  size_t avg_size = model_total_size / global_job_desc->reduce_group_num();
+  size_t avg_size = model_total_size / global_job_desc->all_reduce_group_num();
+  const size_t group_min_size = global_job_desc->all_reduce_group_min_byte();
+  const float group_size_warmup = global_job_desc->all_reduce_group_size_warmup();
+  size_t cur_group_size = group_min_size / group_size_warmup;
+  auto GetCurGroupSize = [&](int32_t group_id) {
+    if (cur_group_size < avg_size) { cur_group_size *= group_size_warmup; }
+    return std::min(cur_group_size, avg_size);
+  };
   // group fw nodes by parallel desc
   ReverseTopoForEachNode([&](LogicalNode* fw_node) {
     parellel_desc2fw_group[*fw_node->parallel_desc()].push_front(fw_node);
   });
   CHECK_GT(parellel_desc2fw_group.size(), 0);
-  fw_node_groups_.emplace_back(std::vector<const LogicalNode*>());
-  size_t cur_group_model_size = 0;
   for (auto& pair : parellel_desc2fw_group) {
+    fw_node_groups_.emplace_back(std::vector<const LogicalNode*>());
     auto& fw_node_group = pair.second;
+    size_t cur_group_model_size = 0;
+    int32_t group_id = 0;
     for (const LogicalNode* fw_node : fw_node_group) {
       fw_node_groups_.back().emplace_back(fw_node);
       cur_group_model_size += OpName2ModelSize(fw_node->SoleOp()->op_name());
-      if (cur_group_model_size >= avg_size) {
+      if (cur_group_model_size >= GetCurGroupSize(group_id)) {
         fw_node_groups_.emplace_back(std::vector<const LogicalNode*>());
         cur_group_model_size = 0;
+        ++group_id;
       }
     }
   }

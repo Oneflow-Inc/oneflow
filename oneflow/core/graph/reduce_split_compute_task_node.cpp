@@ -45,15 +45,21 @@ void ReduceSplitCompTaskNode::ConsumeAllRegsts() {
   ConsumeRegst("in", this->SoleInEdge()->GetSoleRegst());
 }
 
+TaskNode* ReduceSplitCompTaskNode::GetPrevReduceTaskNode(TaskType task_type) {
+  CHECK(task_type == TaskType::kReduceConcat || task_type == TaskType::kReduceIdentity);
+  TaskNode* task_node =
+      FindPredReduceTaskNodeIf([&](TaskNode* node) { return node->GetTaskType() == task_type; });
+  CHECK_NOTNULL(task_node);
+  return task_node;
+}
+
 void ReduceSplitCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   std::shared_ptr<Operator> reduce_split_op = this->logical_node()->SoleOp();
   node->mut_op() = reduce_split_op;
   node->BindBnWithRegst(reduce_split_op->SoleIbn(), GetSoleConsumedRegst("in"));
 
-  TaskNode* reduce_concat_node = FindPredReduceTaskNodeIf(
-      [](TaskNode* node) { return node->GetTaskType() == TaskType::kReduceConcat; });
-  CHECK(reduce_concat_node);
+  TaskNode* reduce_concat_node = GetPrevReduceTaskNode(TaskType::kReduceConcat);
 
   CHECK_EQ(reduce_concat_node->consumed_regsts().size(), GetDataRegstDescCnt(produced_regsts()));
   FOR_RANGE(size_t, i, 0, reduce_split_op->output_bns().size()) {
