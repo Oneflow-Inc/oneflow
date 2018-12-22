@@ -749,10 +749,11 @@ message FpnCollectOpConf {
 message AffineChannelOpConf {
   required string in = 1;
   required string out = 2;
-  optional int32 channel_axis = 3 [default = 1]; // NCHW = 1, NHWC = 3
-  optional InitializerConf scale_initializer = 4;
-  optional InitializerConf bias_initializer = 5;
-  optional ActivationType activation = 6 [default = kNone];
+  optional int32 axis = 3 [default = 1]; // NCHW = 1, NHWC = 3
+  optional bool use_bias = 4 [default = true];
+  optional InitializerConf scale_initializer = 5;
+  optional InitializerConf bias_initializer = 6;
+  optional ActivationType activation = 7 [default = kNone];
 }
 
 message DropoutOpConf {
