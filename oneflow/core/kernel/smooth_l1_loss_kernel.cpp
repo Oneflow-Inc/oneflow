@@ -15,29 +15,26 @@ void SmoothL1LossKernel<device_type, T>::VirtualLossForwardDataContent(
   auto kernel_conf = this->kernel_conf();
   const float beta = kernel_conf.op_attribute().op_conf().smooth_l1_loss_conf().beta();
   const float scale = kernel_conf.op_attribute().op_conf().smooth_l1_loss_conf().scale();
-  int64_t instance_num = BnInOp2Blob("prediction")->shape().At(0);
-  int64_t instance_dim = BnInOp2Blob("prediction")->shape().Count(1);
+  int32_t elem_cnt = BnInOp2Blob("prediction")->shape().elem_cnt();
 
   Memset<device_type>(ctx.device_ctx, loss->mut_dptr(), 0, loss->ByteSizeOfDataContentField());
   Memset<device_type>(ctx.device_ctx, pred_diff_blob->mut_dptr(), 0,
                       pred_diff_blob->ByteSizeOfDataContentField());
 
   SmoothL1LossKernelUtil<device_type, T>::Forward(
-      ctx.device_ctx, instance_num, instance_dim, prediction->dptr<T>(), label->dptr<T>(),
-      inside_weights->dptr<T>(), outside_weights->dptr<T>(), beta, scale, loss->mut_dptr<T>());
+      ctx.device_ctx, elem_cnt, prediction->dptr<T>(), label->dptr<T>(), inside_weights->dptr<T>(),
+      outside_weights->dptr<T>(), beta, scale, loss->mut_dptr<T>());
 
   SmoothL1LossKernelUtil<device_type, T>::Backward(
-      ctx.device_ctx, instance_num, instance_dim, prediction->dptr<T>(), label->dptr<T>(),
-      inside_weights->dptr<T>(), outside_weights->dptr<T>(), beta, scale,
-      pred_diff_blob->mut_dptr<T>());
+      ctx.device_ctx, elem_cnt, prediction->dptr<T>(), label->dptr<T>(), inside_weights->dptr<T>(),
+      outside_weights->dptr<T>(), beta, scale, pred_diff_blob->mut_dptr<T>());
 }
 
 template<typename T>
 struct SmoothL1LossKernelUtil<DeviceType::kCPU, T> {
-  static void Forward(DeviceCtx* ctx, const int64_t instance_num, const int64_t instance_dim,
-                      const T* prediction, const T* label, const T* inside_weights,
-                      const T* outside_weights, const float beta, const float scale, T* loss) {
-    int64_t elem_cnt = instance_num * instance_dim;
+  static void Forward(DeviceCtx* ctx, const int32_t elem_cnt, const T* prediction, const T* label,
+                      const T* inside_weights, const T* outside_weights, const float beta,
+                      const float scale, T* loss) {
     for (int i = 0; i < elem_cnt; i++) {
       T x = inside_weights[i] * (prediction[i] - label[i]);
       T abs_x = std::abs(x);
@@ -49,10 +46,9 @@ struct SmoothL1LossKernelUtil<DeviceType::kCPU, T> {
       loss[i] *= scale * outside_weights[i];
     }
   }
-  static void Backward(DeviceCtx* ctx, const int64_t instance_num, const int64_t instance_dim,
-                       const T* prediction, const T* label, const T* inside_weights,
-                       const T* outside_weights, const float beta, const float scale, T* in_diff) {
-    int64_t elem_cnt = instance_num * instance_dim;
+  static void Backward(DeviceCtx* ctx, const int32_t elem_cnt, const T* prediction, const T* label,
+                       const T* inside_weights, const T* outside_weights, const float beta,
+                       const float scale, T* in_diff) {
     for (int i = 0; i < elem_cnt; i++) {
       T x = inside_weights[i] * (prediction[i] - label[i]);
       T abs_x = std::abs(x);

@@ -20,12 +20,12 @@ class SmoothL1LossKernel final : public LossKernel<device_type, T> {
 
 template<DeviceType device_type, typename T>
 struct SmoothL1LossKernelUtil {
-  static void Forward(DeviceCtx* ctx, const int64_t instance_num, const int64_t instance_dim,
-                      const T* prediction, const T* label, const T* inside_weights,
-                      const T* outside_weights, const float beta, const float scale, T* loss);
-  static void Backward(DeviceCtx* ctx, const int64_t instance_num, const int64_t instance_dim,
-                       const T* predict, const T* target, const T* inside_weights,
-                       const T* outside_weights, const float beta, const float scale, T* in_diff);
+  static void Forward(DeviceCtx* ctx, const int32_t elem_cnt, const T* prediction, const T* label,
+                      const T* inside_weights, const T* outside_weights, const float beta,
+                      const float scale, T* loss);
+  static void Backward(DeviceCtx* ctx, const int32_t elem_cnt, const T* predict, const T* label,
+                       const T* inside_weights, const T* outside_weights, const float beta,
+                       const float scale, T* in_diff);
 };
 
 }  // namespace oneflow
