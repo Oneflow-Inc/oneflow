@@ -5,7 +5,7 @@ option(BUILD_THIRD_PARTY "Build third party or oneflow" OFF)
 option(BUILD_RDMA "" ON)
 option(BUILD_CUDA "" ON)
 option(RELEASE_VERSION "" OFF)
-option(USE_CLANG_FORMAT "" ON)
+option(USE_CLANG_FORMAT "" OFF)
 
 # Project
 if (BUILD_THIRD_PARTY)
