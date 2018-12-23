@@ -15,7 +15,7 @@ void SmoothL1LossKernel<device_type, T>::VirtualLossForwardDataContent(
   auto kernel_conf = this->kernel_conf();
   const float beta = kernel_conf.op_attribute().op_conf().smooth_l1_loss_conf().beta();
   const float scale = kernel_conf.op_attribute().op_conf().smooth_l1_loss_conf().scale();
-  int32_t elem_cnt = BnInOp2Blob("prediction")->shape().elem_cnt();
+  const int32_t elem_cnt = BnInOp2Blob("prediction")->shape().elem_cnt();
 
   Memset<device_type>(ctx.device_ctx, loss->mut_dptr(), 0, loss->ByteSizeOfDataContentField());
   Memset<device_type>(ctx.device_ctx, pred_diff_blob->mut_dptr(), 0,
