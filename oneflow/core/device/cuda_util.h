@@ -24,17 +24,22 @@ void CudaCheck(T error);
        i += step)
 
 const int32_t kCudaThreadsNumPerBlock = 1024;
+const int32_t kCudaMaxBlocksNum = 4096;
 
-int32_t GetCudaMaxBlocksNum();
+int32_t GetSMCudaMaxBlocksNum();
 void InitGlobalCudaDeviceProp();
 
 inline int32_t BlocksNum4ThreadsNum(const int32_t n) {
-  return std::min((n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock,
-                  GetCudaMaxBlocksNum());
+  return std::min((n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock, kCudaMaxBlocksNum);
 }
 
-#define RUN_CUDA_KERNEL(func, device_ctx_ptr, thread_num, ...)         \
-  func<<<BlocksNum4ThreadsNum(thread_num), kCudaThreadsNumPerBlock, 0, \
+inline int32_t SMBlocksNum4ThreadsNum(const int32_t n) {
+  return std::min((n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock,
+                  GetSMCudaMaxBlocksNum());
+}
+
+#define RUN_CUDA_KERNEL(func, device_ctx_ptr, thread_num, ...)           \
+  func<<<SMBlocksNum4ThreadsNum(thread_num), kCudaThreadsNumPerBlock, 0, \
          (device_ctx_ptr)->cuda_stream()>>>(__VA_ARGS__)
 
 size_t GetAvailableGpuMemSize(int dev_id);
