@@ -53,9 +53,8 @@ __device__ void UpdateModel(const T* batch_instance_num_ptr, T learning_rate, T 
 
 template<bool do_bias_correction, typename T>
 __global__ void UpdateModelGpu(int64_t n, const T* batch_instance_num_ptr, T learning_rate, T l1,
-                               T l2, T beta1, T beta2, T epsilon,
-                               const T* beta1_t, const T* beta2_t,
-                               T* model_diff, T* model, T* m, T* v) {
+                               T l2, T beta1, T beta2, T epsilon, const T* beta1_t,
+                               const T* beta2_t, T* model_diff, T* model, T* m, T* v) {
   CUDA_1D_KERNEL_LOOP(i, n) {
     UpdateMomentEstimate<1, do_bias_correction>(beta1, model_diff + i, beta1_t, m + i);
     UpdateMomentEstimate<2, do_bias_correction>(beta2, model_diff + i, beta2_t, v + i);
@@ -76,13 +75,13 @@ class AdamMdUpdateKernelUtil<DeviceType::kGPU, T> final {
     if (do_bias_correction) {
       UpdateModelGpu<true, T>
           <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-              n, batch_instance_num_ptr, learning_rate, l1, l2, beta1, beta2, epsilon,
-              beta1_t, beta2_t, model_diff, model, m, v);
+              n, batch_instance_num_ptr, learning_rate, l1, l2, beta1, beta2, epsilon, beta1_t,
+              beta2_t, model_diff, model, m, v);
     } else {
       UpdateModelGpu<false, T>
           <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-              n, batch_instance_num_ptr, learning_rate, l1, l2, beta1, beta2, epsilon,
-              beta1_t, beta2_t, model_diff, model, m, v);
+              n, batch_instance_num_ptr, learning_rate, l1, l2, beta1, beta2, epsilon, beta1_t,
+              beta2_t, model_diff, model, m, v);
     }
   }
 };

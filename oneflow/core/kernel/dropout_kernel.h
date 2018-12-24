@@ -23,10 +23,10 @@ class DropoutKernel final : public KernelIf<device_type> {
 
   // random_mask = random_uniform(0, 1)
   // y = dropout(x, random_mask, dropout_rate)
-  void Dropout(DeviceCtx* ctx, const int64_t n, double dropout_rate, const T* x, float* random_mask,
+  void Dropout(DeviceCtx* ctx, const int64_t n, float dropout_rate, const T* x, float* random_mask,
                T* y) const;
   // y = dropout(x, random_mask)
-  void DropoutBackward(DeviceCtx* ctx, const int64_t n, double dropout_rate, const T* dy,
+  void DropoutBackward(DeviceCtx* ctx, const int64_t n, float dropout_rate, const T* dy,
                        const float* random_mask, T* dx) const;
 
   std::unique_ptr<RandomGenerator<device_type>> random_generator_;
@@ -34,7 +34,7 @@ class DropoutKernel final : public KernelIf<device_type> {
 
 template<DeviceType device_type, typename T>
 struct DropoutKernelUtil final {
-  static void MaskAndScale(DeviceCtx* ctx, const int64_t n, double threshold, double scale,
+  static void MaskAndScale(DeviceCtx* ctx, const int64_t n, float threshold, float scale,
                            const T* x, const float* random_mask, T* y);
 };
 
