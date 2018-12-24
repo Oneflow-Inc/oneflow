@@ -8,7 +8,7 @@ namespace {
 
 InitializerConf ConstantInitializerConf(float val) {
   InitializerConf conf;
-  conf.mutable_constant_conf()->set_value(val); 
+  conf.mutable_constant_conf()->set_value(val);
   return conf;
 }
 
@@ -198,12 +198,13 @@ void NormalizationKernel<device_type, T>::InitModelBlobsWithDir(
 }
 
 template<DeviceType device_type, typename T>
-void NormalizationKernel<device_type, T>::InitConstBufBlobs(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+void NormalizationKernel<device_type, T>::InitConstBufBlobs(
+    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const auto& conf = this->op_conf().normalization_conf();
   if (!conf.scale()) {
     InitializerConf ones_init = OnesInitializerConf();
     KernelUtil<device_type, T>::InitializeWithConf(ctx, ones_init, 0, BnInOp2Blob("gamma"));
-  }  
+  }
   if (!conf.center()) {
     InitializerConf zero_init = ZerosInitializerConf();
     KernelUtil<device_type, T>::InitializeWithConf(ctx, zero_init, 0, BnInOp2Blob("beta"));
