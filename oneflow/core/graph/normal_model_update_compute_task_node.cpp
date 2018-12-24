@@ -168,6 +168,7 @@ void NormalMdUpdtCompTaskNode::InferProducedDataRegstTimeShape() {
 }
 
 void NormalMdUpdtCompTaskNode::EnableMemSharingBetweenFirstInAndProcessedMdDiffRegst() {
+  if (!IsTrainable()) { return; }
   ExecNode* diff_add_node = exec_gph().SoleSourceNode();
   RegstDesc* first_in_regst =
       diff_add_node->RegstDesc4BnInOp(diff_add_node->op()->input_bns().Get(0));
