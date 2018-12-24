@@ -24,14 +24,14 @@ template<typename T>
 struct NormKernelUtil<DeviceType::kGPU, T> {
   static void Abs(DeviceCtx* ctx, const int32_t n, const T epsilon, const T* in_dptr,
                   T* abs_tmp_dptr) {
-    AbsGpu<<<n, kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, epsilon, in_dptr,
-                                                                  abs_tmp_dptr);
+    AbsGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        n, epsilon, in_dptr, abs_tmp_dptr);
   }
 
   static void L1NormBackward(DeviceCtx* ctx, const int32_t in_n, const int32_t offset,
                              const T* out_diff_dptr, const T* in_dptr, T* in_diff_dptr) {
-    L1NormBackwardGpu<<<in_n, kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-        in_n, offset, out_diff_dptr, in_dptr, in_diff_dptr);
+    L1NormBackwardGpu<<<BlocksNum4ThreadsNum(in_n), kCudaThreadsNumPerBlock, 0,
+                        ctx->cuda_stream()>>>(in_n, offset, out_diff_dptr, in_dptr, in_diff_dptr);
   }
 };
 
