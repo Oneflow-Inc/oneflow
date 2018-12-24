@@ -408,7 +408,7 @@ void TaskGraph::EnableMemSharingInReduceStruct() {
 void TaskGraph::EnableMemSharingAfterAllManualSetForMdUpdt() {
   ForEachNode([&](TaskNode* node) {
     auto* updt = dynamic_cast<NormalMdUpdtCompTaskNode*>(node);
-    if (!updt) { return; }
+    if (!updt || updt->exec_gph().node_num() == 0) { return; }
     updt->EnableMemSharingBetweenFirstInAndProcessedMdDiffRegst();
   });
 }
