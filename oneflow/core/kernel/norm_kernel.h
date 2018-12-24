@@ -23,7 +23,7 @@ template<DeviceType device_type, typename T>
 struct NormKernelUtil {
   static void Abs(DeviceCtx* ctx, const int32_t n, const T epsilon, const T* in_dptr,
                   T* abs_tmp_dptr);
-  static void L1NormBackward(DeviceCtx* ctx, const int32_t out_n, const int32_t offset,
+  static void L1NormBackward(DeviceCtx* ctx, const int32_t in_n, const int32_t offset,
                              const T* out_diff_dptr, const T* in_dptr, T* in_diff_dptr);
 };
 

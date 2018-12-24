@@ -32,10 +32,10 @@ void NormKernel<device_type, T>::BackwardDataContent(
   const Blob* in_blob = BnInOp2Blob("in");
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   Blob* in_diff_blob = BnInOp2Blob("in_diff");
-  int32_t out_n = out_diff_blob->shape().elem_cnt();
-  NormKernelUtil<device_type, T>::L1NormBackward(
-      ctx.device_ctx, out_n, in_blob->shape().elem_cnt() / out_n, out_diff_blob->dptr<T>(),
-      in_blob->dptr<T>(), in_diff_blob->mut_dptr<T>());
+  int32_t in_n = in_blob->shape().elem_cnt();
+  NormKernelUtil<device_type, T>::L1NormBackward(ctx.device_ctx, in_n, in_blob->shape().Count(1),
+                                                 out_diff_blob->dptr<T>(), in_blob->dptr<T>(),
+                                                 in_diff_blob->mut_dptr<T>());
 }
 
 template<typename T>
@@ -45,13 +45,10 @@ struct NormKernelUtil<DeviceType::kCPU, T> {
     for (int32_t i = 0; i < n; ++i) { abs_tmp_dptr[i] = std::abs(in_dptr[i]) + epsilon; }
   }
 
-  static void L1NormBackward(DeviceCtx* ctx, const int32_t out_n, const int32_t offset,
+  static void L1NormBackward(DeviceCtx* ctx, const int32_t in_n, const int32_t offset,
                              const T* out_diff_dptr, const T* in_dptr, T* in_diff_dptr) {
-    for (int32_t i = 0; i < out_n; ++i) {
-      for (int32_t j = 0; j < offset; ++j) {
-        int32_t index = i * offset + j;
-        in_diff_dptr[index] = L1NormInDiff(out_diff_dptr[i], in_dptr[index]);
-      }
+    FOR_RANGE(int32_t, i, 0, in_n) {
+      in_diff_dptr[i] = L1NormInDiff(out_diff_dptr[i / offset], in_dptr[i]);
     }
   }
 };

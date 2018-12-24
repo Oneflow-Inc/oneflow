@@ -11,13 +11,10 @@ __global__ void AbsGpu(const int32_t n, const T epsilon, const T* in_dptr, T* ab
 }
 
 template<typename T>
-__global__ void L1NormBackwardGpu(const int32_t out_n, const int32_t offset, const T* out_diff_dptr,
+__global__ void L1NormBackwardGpu(const int32_t n, const int32_t offset, const T* out_diff_dptr,
                                   const T* in_dptr, T* in_diff_dptr) {
-  for (int32_t i = blockIdx.x; i < out_n; i += gridDim.x) {
-    for (int32_t j = threadIdx.x; j < offset; j += blockDim.x) {
-      int32_t index = i * offset + j;
-      in_diff_dptr[index] = L1NormInDiff(out_diff_dptr[i], in_dptr[index]);
-    }
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    in_diff_dptr[i] = L1NormInDiff(out_diff_dptr[i / offset], in_dptr[i]);
   }
 }
 
@@ -31,10 +28,10 @@ struct NormKernelUtil<DeviceType::kGPU, T> {
                                                                   abs_tmp_dptr);
   }
 
-  static void L1NormBackward(DeviceCtx* ctx, const int32_t out_n, const int32_t offset,
+  static void L1NormBackward(DeviceCtx* ctx, const int32_t in_n, const int32_t offset,
                              const T* out_diff_dptr, const T* in_dptr, T* in_diff_dptr) {
-    L1NormBackwardGpu<<<out_n * offset, kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-        out_n, offset, out_diff_dptr, in_dptr, in_diff_dptr);
+    L1NormBackwardGpu<<<in_n, kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        in_n, offset, out_diff_dptr, in_dptr, in_diff_dptr);
   }
 };
 
