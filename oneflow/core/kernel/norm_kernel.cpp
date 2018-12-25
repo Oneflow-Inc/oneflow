@@ -9,7 +9,7 @@ void NormKernel<device_type, T>::ForwardDataContent(
   // TODO(shiyuan)
   const NormOpConf& conf = this->op_conf().norm_conf();
   CHECK_EQ(conf.axis(), 0);
-  CHECK_EQ(conf.norm_type(), Norm::kL1);
+  CHECK_EQ(conf.norm_type(), Norm::L1);
 
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* abs_tmp_blob = BnInOp2Blob("abs_tmp");

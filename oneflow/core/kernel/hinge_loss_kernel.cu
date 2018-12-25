@@ -52,12 +52,12 @@ struct HingeLossKernelUtil<DeviceType::kGPU, PredType, LabelType> {
     HingeLossForwardMaxGpu<<<BlocksNum4ThreadsNum(piece_size * pre_dim), kCudaThreadsNumPerBlock, 0,
                              ctx->cuda_stream()>>>(piece_size, pre_dim, tmp_diff);
     switch (op_conf.hinge_loss_conf().norm()) {
-      case kL1:
+      case L1:
         KernelUtil<DeviceType::kGPU, PredType>::RowSum(ctx, piece_size, pre_dim, tmp_diff, loss,
                                                        tmp_storage,
                                                        sizeof(PredType) * piece_size * pre_dim);
         break;
-      case kL2:
+      case L2:
         KernelUtil<DeviceType::kGPU, PredType>::Mul(ctx, piece_size * pre_dim, tmp_diff, tmp_diff,
                                                     tmp);
         KernelUtil<DeviceType::kGPU, PredType>::RowSum(ctx, piece_size, pre_dim, tmp, loss,
@@ -77,8 +77,8 @@ struct HingeLossKernelUtil<DeviceType::kGPU, PredType, LabelType> {
     HingeLossBackwardL1Gpu<<<BlocksNum4ThreadsNum(piece_size), kCudaThreadsNumPerBlock, 0,
                              ctx->cuda_stream()>>>(piece_size, pre_dim, label, pred_diff);
     switch (op_conf.hinge_loss_conf().norm()) {
-      case kL1: break;
-      case kL2:
+      case L1: break;
+      case L2:
         HingeLossBackwardL2Gpu<<<BlocksNum4ThreadsNum(piece_size * pre_dim),
                                  kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
             piece_size, pre_dim, tmp_diff, pred_diff);

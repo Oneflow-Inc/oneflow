@@ -50,10 +50,10 @@ struct HingeLossKernelUtil<DeviceType::kCPU, PredType, LabelType> {
       tmp_diff[i] = (1 + tmp_diff[i]) > 0 ? (1 + tmp_diff[i]) : 0;
     }
     switch (op_conf.hinge_loss_conf().norm()) {
-      case kL1:
+      case L1:
         KernelUtil<DeviceType::kCPU, PredType>::RowSum(ctx, piece_size, pre_dim, tmp_diff, loss);
         break;
-      case kL2:
+      case L2:
         KernelUtil<DeviceType::kCPU, PredType>::Mul(ctx, piece_size * pre_dim, tmp_diff, tmp_diff,
                                                     tmp);
         KernelUtil<DeviceType::kCPU, PredType>::RowSum(ctx, piece_size, pre_dim, tmp, loss);
@@ -70,8 +70,8 @@ struct HingeLossKernelUtil<DeviceType::kCPU, PredType, LabelType> {
       pred_diff[i * pre_dim + static_cast<int64_t>(label[i])] *= -1;
     }
     switch (op_conf.hinge_loss_conf().norm()) {
-      case kL1: break;
-      case kL2:
+      case L1: break;
+      case L2:
         for (int64_t i = 0; i < piece_size * pre_dim; ++i) {
           pred_diff[i] = 2 * tmp_diff[i] * pred_diff[i];
         }
