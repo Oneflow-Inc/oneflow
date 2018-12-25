@@ -240,9 +240,6 @@ message IdentityLossOpConf {
   optional string weight = 5;
 }
 
-
-  
-
 message ConcatOpConf {
   repeated string in = 1;
   required string out = 2;
