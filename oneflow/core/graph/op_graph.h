@@ -20,6 +20,11 @@ class OpNode final : public Node<OpNode, OpEdge> {
         has_in_diff_(false) {}
   ~OpNode() = default;
 
+  // Setters
+  Shape* mut_out_blob_time_shape() { return &out_blob_time_shape_; }
+
+  // Getters
+  const Shape& out_blob_time_shape() const { return out_blob_time_shape_; }
   const Operator& op() const { return *op_; }
   bool HasBackward() const { return has_in_diff() || has_model_diff(); }
   bool has_in_diff() const { return has_in_diff_; }
@@ -28,6 +33,8 @@ class OpNode final : public Node<OpNode, OpEdge> {
   const ParallelDesc& parallel_desc() const { return parallel_desc_; }
 
   BlobDesc* BlobDesc4BnInOp(const std::string& bn_in_op);
+  const Shape& GetInputBlobTimeShape(const std::string& bn_in_op) const;
+  const Shape& GetInputBlobTimeShape() const;
 
  private:
   BlobDesc* MutBlobDesc(const LogicalBlobId& lbi);
@@ -37,6 +44,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   HashSet<std::string> ibns_;
   bool has_in_diff_;
   HashMap<LogicalBlobId, std::shared_ptr<BlobDesc>> lbi2blob_desc_;
+  Shape out_blob_time_shape_;
 };
 
 class OpEdge final : public Edge<OpNode, OpEdge> {
@@ -63,12 +71,28 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
 
   void InferOpModelSize(HashMap<std::string, size_t>* op_name2model_size);
 
+  // a set of nodes is called a pseudo chain if they can merge into a chain regardless of the
+  // connections before their source nodes
+  void ForEachSourceNodesOfPseudoChain(
+      const std::function<void(const std::vector<OpNode*>&)>& Handler) const;
+
  private:
   void Init();
   void InitNodes();
   void InitEdges();
   void UpdateOpNodeHasInDiff();
   void InferNodeBlobDesc() const;
+  void InferTimeShape() const;
+  void ForEachSourceNodesOfPseudoChain(
+      const std::vector<OpNode*>& nodes,
+      const std::function<bool(OpNode* src, OpNode* dst)>& IsReachable,
+      const std::function<void(const std::vector<OpNode*>&)>& Handler) const;
+  std::vector<OpNode*> GetSourceNodesOfPseudoChain(
+      HashSet<OpNode*>* op_nodes,
+      const std::function<bool(OpNode* src, OpNode* dst)>& IsReachable) const;
+  std::function<bool(OpNode* src, OpNode* dst)> MakePredicatorIsReachable() const;
+  void ForEachComponentWithSameDataParallelDescAndTimeShape(
+      const std::function<void(const std::vector<OpNode*>&)>& Handler) const;
 
   const JobDesc* job_desc_;
   HashMap<std::string, OpNode*> op_name2op_node_;
