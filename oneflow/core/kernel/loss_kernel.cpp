@@ -6,7 +6,6 @@ template<DeviceType device_type, typename PredType>
 void LossKernel<device_type, PredType>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   VirtualLossForwardDataContent(ctx, BnInOp2Blob);
-
   const LossKernelConf& conf = GetLossKernelConf(this->kernel_conf());
   int64_t n = BnInOp2Blob("prediction")->shape().At(0);
   Blob* weight_blob = BnInOp2Blob("weight");

@@ -6,7 +6,6 @@ void LossOp::InitFromOpConf() {
   EnrollInputBn("prediction");
   if (HasFieldInCustomizedConf("label")) { EnrollInputBn("label", false); }
   EnrollOutputBn("loss", false);
-  // EnrollOutputBn("loss_instance_num", false);
   if (!GetValFromCustomizedConf<std::string>("weight").empty()) {
     EnrollInputBn("weight", false);
     EnrollOutputBn("reduction_coefficient", false);
