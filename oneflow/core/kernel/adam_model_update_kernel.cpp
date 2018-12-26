@@ -75,16 +75,11 @@ void AdamMdUpdateKernel<device_type, T>::UpdateModel(
   Blob* beta2_t_blob = BnInOp2Blob("beta2_t");
   const AdamModelUpdateConf& adam_conf =
       this->op_conf().normal_mdupdt_conf().user_conf().adam_conf();
-  if (next_model_vid == 1) {
-    Memset<device_type>(ctx, m_blob->mut_dptr<T>(), 0, m_blob->ByteSizeOfDataContentField());
-    Memset<device_type>(ctx, v_blob->mut_dptr<T>(), 0, v_blob->ByteSizeOfDataContentField());
-  } else {
-    if (adam_conf.do_bias_correction()) {
-      KernelUtil<device_type, T>::Scal(ctx, 1, static_cast<T>(adam_conf.beta1()),
-                                       beta1_t_blob->mut_dptr<T>(), 1);
-      KernelUtil<device_type, T>::Scal(ctx, 1, static_cast<T>(adam_conf.beta2()),
-                                       beta2_t_blob->mut_dptr<T>(), 1);
-    }
+  if ((next_model_vid != 1) && adam_conf.do_bias_correction()) {
+    KernelUtil<device_type, T>::Scal(ctx, 1, static_cast<T>(adam_conf.beta1()),
+                                     beta1_t_blob->mut_dptr<T>(), 1);
+    KernelUtil<device_type, T>::Scal(ctx, 1, static_cast<T>(adam_conf.beta2()),
+                                     beta2_t_blob->mut_dptr<T>(), 1);
   }
   AdamMdUpdateKernelUtil<device_type, T>::UpdateModel(
       ctx, model_blob->shape().elem_cnt(), batch_size, learning_rate, l1, l2,
