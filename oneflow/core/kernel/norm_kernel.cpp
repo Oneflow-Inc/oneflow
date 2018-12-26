@@ -8,7 +8,7 @@ void NormKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // TODO(shiyuan)
   const NormOpConf& conf = this->op_conf().norm_conf();
-  CHECK_EQ(conf.axis(), 0);
+  CHECK_EQ(conf.axis(), 1);
   CHECK_EQ(conf.norm_type(), Norm::L1);
 
   const Blob* in_blob = BnInOp2Blob("in");
