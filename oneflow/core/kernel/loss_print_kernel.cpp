@@ -20,7 +20,15 @@ void LossPrintKernel<T>::Forward(const KernelCtx& kernel_ctx,
   }
   loss_reduced /= reduction_coefficient;
   const char* loss_op_name = op_conf().name().c_str() + LossPrintPrefix.length();
-  LOG(INFO) << loss_op_name << ":" << loss_reduced;
+  double* prev_ts = static_cast<double*>(kernel_ctx.other);
+  const double cur_ts = GetCurTime() / 1e9;
+  if (*prev_ts == 0) {
+    LOG(INFO) << loss_op_name << ":" << loss_reduced;
+  } else {
+    LOG(INFO) << loss_op_name << ":" << std::fixed << std::setprecision(3) << loss_reduced << " ("
+              << (cur_ts - *prev_ts) << " sec)";
+  }
+  *prev_ts = cur_ts;
 }
 
 template<typename T>
