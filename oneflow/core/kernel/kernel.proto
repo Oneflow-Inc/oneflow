@@ -42,6 +42,10 @@ message SparseCrossEntropyLossKernelConf {
   required LossKernelConf loss_conf = 1;
 }
 
+message IdentityLossKernelConf {
+  required LossKernelConf loss_conf = 1;
+}
+
 message PoolingKernelConf {
   required ShapeProto in = 1;
   required ShapeProto out = 2;
@@ -177,5 +181,6 @@ message KernelConf {
     ReduceSplitKernelConf reduce_split_conf = 352;
     AccuracyKernelConf accuracy_conf = 401;
     PReluKernelConf prelu_conf = 402;
+    IdentityLossKernelConf identity_loss_conf = 403;
   }
 }

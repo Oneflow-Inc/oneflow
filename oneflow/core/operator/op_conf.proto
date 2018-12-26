@@ -238,6 +238,14 @@ message SparseCrossEntropyLossOpConf {
   optional string weight = 6;
 }
 
+message IdentityLossOpConf {
+  required string prediction = 1;
+  required string loss = 2;
+  optional LossReductionType reduction = 3 [default = kSumOverN];
+  optional float weight_scalar = 4 [default = 1.0];
+  optional string weight = 5;
+}
+
 message ConcatOpConf {
   repeated string in = 1;
   required string out = 2;
@@ -780,6 +788,7 @@ message OperatorConf {
     ScalarMulOpConf scalar_mul_conf = 238;
     L2NormalizeOpConf l2_normalize_conf = 239;
     NormOpConf norm_conf = 240;
+    IdentityLossOpConf identity_loss_conf = 241;
     SparseCrossEntropyOpConf sparse_cross_entropy_conf= 242;
   }
 }
