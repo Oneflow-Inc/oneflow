@@ -29,10 +29,10 @@ class TeePersistentLogStream final {
   void Write(const PbMessage& proto);
 
   static std::unique_ptr<TeePersistentLogStream> Create(const std::string& path);
+  void Flush();
 
  private:
   explicit TeePersistentLogStream(const std::string& path);
-  void Flush();
   std::vector<LogStreamDestination> destinations_;
   std::vector<std::unique_ptr<PersistentOutStream>> branches_;
 };

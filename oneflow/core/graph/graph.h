@@ -57,7 +57,8 @@ class Graph {
   // Setters
   template<typename DerivedNodeType = NodeType>
   DerivedNodeType* NewNode();
-  EdgeType* NewEdge();
+  template<class... Args>
+  EdgeType* NewEdge(Args&&... args);
   void AddAllocatedNode(NodeType*);
   void AddAllocatedEdge(EdgeType*);
   void DeleteNode(NodeType*);
@@ -146,8 +147,9 @@ DerivedNodeType* Graph<NodeType, EdgeType>::NewNode() {
 }
 
 template<typename NodeType, typename EdgeType>
-EdgeType* Graph<NodeType, EdgeType>::NewEdge() {
-  EdgeType* ret = new EdgeType;
+template<class... Args>
+EdgeType* Graph<NodeType, EdgeType>::NewEdge(Args&&... args) {
+  EdgeType* ret = new EdgeType(std::forward<Args>(args)...);
   AddAllocatedEdge(ret);
   return ret;
 }
@@ -187,6 +189,7 @@ template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::ToDotWithFilePath(const std::string& file_path) {
   auto log_stream = TeePersistentLogStream::Create(file_path);
   ToDotWithStream(log_stream);
+  log_stream->Flush();
 }
 
 template<typename NodeType, typename EdgeType>

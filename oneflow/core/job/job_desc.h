@@ -17,6 +17,7 @@ class JobDesc final {
   ~JobDesc() = default;
 
   // Common
+  const JobConf1& job_conf() const { return job_conf_; }
   const DLNetConf& dlnet_conf() const { return job_conf_.net(); }
   const Resource& resource() const { return job_conf_.resource(); }
   const Placement& placement() const { return job_conf_.placement(); }
@@ -93,11 +94,9 @@ class JobDesc final {
   void SanityCheck();
   void SplitDecodeOps();
   void AddRecordLoadOps();
+  void ConvertPseudoChainToChain();
   void AddIdentityOpForChainMergeOptimization();
   void AddIdentityOpForAllReduceOverlapingUntrainble();
-  std::string AddIdentityOp(const std::string& input_op_name,
-                            const HashSet<std::string>& input_lbi_blob_names,
-                            const ParallelConf& parallel_conf);
   void FixTickOpIfExists();
 
   JobConf1 job_conf_;

@@ -2,6 +2,55 @@
 
 namespace oneflow {
 
+std::string OpEdge::VisualStr() const {
+  std::string str;
+  int32_t idx = 0;
+  for (const LogicalBlobId& lbi : lbis_) {
+    if (idx++ > 0) { str += ","; }
+    str += lbi.blob_name();
+  }
+  return str;
+}
+
+std::string OpNode::VisualStr() const {
+  std::string str = op().op_name();
+  {
+    for (int64_t machine_id : parallel_desc().sorted_machine_ids()) {
+      std::string dev_type;
+      if (parallel_desc().device_type() == DeviceType::kCPU) {
+        dev_type = "cpu";
+      } else if (parallel_desc().device_type() == DeviceType::kGPU) {
+        dev_type = "gpu";
+      } else {
+        UNIMPLEMENTED();
+      }
+      std::string parallel_desc_str = std::to_string(machine_id) + ":" + dev_type + ":";
+      const auto& dev_phy_ids = parallel_desc().sorted_dev_phy_ids(machine_id);
+      parallel_desc_str += std::to_string(dev_phy_ids.front());
+      if (dev_phy_ids.back() > dev_phy_ids.front()) {
+        parallel_desc_str += "-" + std::to_string(dev_phy_ids.back());
+      }
+      str += "\\n" + parallel_desc_str;
+    }
+  }
+  auto GetTimeShapeStr = [&](const Shape& shape, const std::string& prefix) {
+    std::string time_shape_str = prefix + ":";
+    time_shape_str += "(";
+    int32_t idx = 0;
+    for (int64_t dim : shape.dim_vec()) {
+      if (idx++ > 0) { time_shape_str += ","; }
+      time_shape_str += std::to_string(dim);
+    }
+    time_shape_str += ")";
+    return time_shape_str;
+  };
+  if (in_edges().empty() == false) {
+    str += "\\n" + GetTimeShapeStr(*GetInputBlobTimeShape(), "in_blob_time_shape");
+  }
+  str += "\\n" + GetTimeShapeStr(out_blob_time_shape(), "out_blob_time_shape");
+  return str;
+}
+
 BlobDesc* OpNode::MutBlobDesc(const LogicalBlobId& lbi) {
   if (lbi2blob_desc_.find(lbi) == lbi2blob_desc_.end()) {
     lbi2blob_desc_.emplace(lbi, std::make_shared<BlobDesc>());
@@ -22,25 +71,26 @@ BlobDesc* OpNode::BlobDesc4BnInOp(const std::string& bn_in_op) {
   return MutBlobDesc(lbi);
 }
 
-const Shape& OpNode::GetInputBlobTimeShape(const std::string& bn_in_op) const {
+const Shape* OpNode::GetInputBlobTimeShape(const std::string& bn_in_op) const {
   const LogicalBlobId& lbi = op().BnInOp2Lbi(bn_in_op);
   if (ibns_.find(bn_in_op) != ibns_.end()) {
     for (OpEdge* edge : in_edges()) {
       for (const LogicalBlobId& edge_lbi : edge->lbis()) {
-        if (lbi == edge_lbi) { return edge->src_node()->out_blob_time_shape(); }
+        if (lbi == edge_lbi) { return &edge->src_node()->out_blob_time_shape(); }
       }
     }
   }
   UNIMPLEMENTED();
+  return nullptr;
 }
 
-const Shape& OpNode::GetInputBlobTimeShape() const {
+const Shape* OpNode::GetInputBlobTimeShape() const {
   if (in_edges().empty()) { UNIMPLEMENTED(); }
   OpNode* first_input = (*in_edges().begin())->src_node();
   for (OpEdge* edge : in_edges()) {
     CHECK_EQ(first_input->out_blob_time_shape(), edge->src_node()->out_blob_time_shape());
   }
-  return first_input->out_blob_time_shape();
+  return &first_input->out_blob_time_shape();
 }
 
 void OpGraph::InferOpModelSize(HashMap<std::string, size_t>* op_name2model_size) {
@@ -97,7 +147,7 @@ void OpGraph::InitEdges() {
       const auto& lbis = pair.second;
       const auto& lbi2ibns = consumer_op_name2lbi2ibns.at(op_node->op().op_name());
       OpNode* producer = lbi2producer.at(lbis.at(0));
-      Connect(producer, new OpEdge(lbis, lbi2ibns), op_node);
+      Connect(producer, NewEdge(lbis, lbi2ibns), op_node);
     }
   });
 }
@@ -139,12 +189,11 @@ void OpGraph::InferTimeShape() const {
   });
 }
 
-void OpGraph::ForEachSourceNodesOfPseudoChain(
-    const std::function<void(const std::vector<OpNode*>&)>& Handler) const {
+void OpGraph::ForEachPseudoChain(
+    const std::function<void(const HashSet<OpNode*>&)>& Handler) const {
   auto IsReachable = MakePredicatorIsReachable();
-  ForEachComponentWithSameDataParallelDescAndTimeShape([&](const std::vector<OpNode*>& nodes) {
-    ForEachSourceNodesOfPseudoChain(nodes, IsReachable, Handler);
-  });
+  ForEachComponentWithSameDataParallelDescAndTimeShape(
+      [&](const std::vector<OpNode*>& nodes) { ForEachPseudoChain(nodes, IsReachable, Handler); });
 }
 
 std::function<bool(OpNode* src, OpNode* dst)> OpGraph::MakePredicatorIsReachable() const {
@@ -152,8 +201,8 @@ std::function<bool(OpNode* src, OpNode* dst)> OpGraph::MakePredicatorIsReachable
   TopoForEachNode([&](OpNode* node) {
     node->ForEachNodeOnInEdge([&](OpNode* in_node) {
       (*node2ancestors_ptr)[node].insert(in_node);
-      (*node2ancestors_ptr)[node].insert(node2ancestors_ptr->at(in_node).begin(),
-                                         node2ancestors_ptr->at(in_node).end());
+      (*node2ancestors_ptr)[node].insert((*node2ancestors_ptr)[in_node].begin(),
+                                         (*node2ancestors_ptr)[in_node].end());
     });
   });
   return [node2ancestors_ptr](OpNode* src, OpNode* dst) -> bool {
@@ -167,8 +216,8 @@ void OpGraph::ForEachComponentWithSameDataParallelDescAndTimeShape(
     if (src->parallel_desc().policy() != ParallelPolicy::kDataParallel) { return false; }
     if (dst->parallel_desc().policy() != ParallelPolicy::kDataParallel) { return false; }
     if (src->in_edges().empty()) { return false; }
-    if (src->GetInputBlobTimeShape() != src->out_blob_time_shape()) { return false; }
-    if (dst->GetInputBlobTimeShape() != dst->out_blob_time_shape()) { return false; }
+    if (*src->GetInputBlobTimeShape() != src->out_blob_time_shape()) { return false; }
+    if (*dst->GetInputBlobTimeShape() != dst->out_blob_time_shape()) { return false; }
     return src->parallel_desc() == dst->parallel_desc()
            && src->out_blob_time_shape() == dst->out_blob_time_shape();
   };
@@ -196,100 +245,77 @@ void OpGraph::ForEachComponentWithSameDataParallelDescAndTimeShape(
   for (const auto& pair : component_id2op_nodes) { Handler(pair.second); }
 }
 
-void OpGraph::ForEachSourceNodesOfPseudoChain(
+void OpGraph::ForEachPseudoChain(
     const std::vector<OpNode*>& nodes,
     const std::function<bool(OpNode* src, OpNode* dst)>& IsReachable,
-    const std::function<void(const std::vector<OpNode*>&)>& Handler) const {
+    const std::function<void(const HashSet<OpNode*>&)>& Handler) const {
   if (nodes.size() <= 1) { return; }
   if (nodes.front()->parallel_desc().device_type() == DeviceType::kCPU) { return; }
   if (nodes.front()->parallel_desc().policy() != ParallelPolicy::kDataParallel) { return; }
   HashSet<OpNode*> all_nodes(nodes.begin(), nodes.end());
   while (all_nodes.size() > 1) {
-    std::vector<OpNode*> sources = GetSourceNodesOfPseudoChain(&all_nodes, IsReachable);
-    if (sources.size() > 1) { Handler(nodes); }
+    HashSet<OpNode*> chain;
+    ReverseTopoGetPseudoChain(all_nodes, &chain, IsReachable);
+    Handler(chain);
+    for (OpNode* node_in_chain : chain) { all_nodes.erase(node_in_chain); }
   }
 }
 
-std::vector<OpNode*> OpGraph::GetSourceNodesOfPseudoChain(
-    HashSet<OpNode*>* op_nodes,
+void OpGraph::ReverseTopoGetPseudoChain(
+    const HashSet<OpNode*>& op_nodes, HashSet<OpNode*>* pseudo_chain_nodes,
     const std::function<bool(OpNode* src, OpNode* dst)>& IsReachable) const {
+  // get sink nodes
   std::list<OpNode*> sinks;
-  {
-    // get sink nodes
-    auto IsSink = [&](OpNode* node) {
-      for (OpNode* inner_node : *op_nodes) {
-        if (IsReachable(node, inner_node)) { return false; }
-      }
-      return true;
-    };
-    for (OpNode* op_node : *op_nodes) {
-      if (IsSink(op_node)) { sinks.push_back(op_node); }
+  auto IsSink = [&](OpNode* node) {
+    for (OpNode* inner_node : op_nodes) {
+      if (IsReachable(node, inner_node)) { return false; }
     }
+    return true;
+  };
+  for (OpNode* op_node : op_nodes) {
+    if (IsSink(op_node)) { sinks.push_back(op_node); }
   }
+  // generate connections of subgraph
   HashMap<OpNode*, std::vector<OpNode*>> node2in_nodes;
   HashMap<OpNode*, std::vector<OpNode*>> node2out_nodes;
-  {
-    // generate connections of subgraph
-    auto IsInSubset = [&](OpNode* node) { return op_nodes->find(node) != op_nodes->end(); };
-    auto AllInputNodesInSubset = [&](OpNode* node) {
-      for (OpEdge* edge : node->in_edges()) {
-        if (!IsInSubset(edge->src_node())) { return false; }
-      }
-      return true;
-    };
-    auto ReachableToAnySink = [&](OpNode* node) {
-      for (OpNode* sink : sinks) {
-        if (node == sink) { return true; }
-        if (IsReachable(node, sink)) { return true; }
-      }
-      return false;
-    };
-    auto AnyOutputNodesNotInSubsetAndReachableIntoSink = [&](OpNode* node) {
-      for (OpEdge* edge : node->out_edges()) {
-        if (!IsInSubset(edge->dst_node()) && ReachableToAnySink(edge->dst_node())) { return true; }
-      }
-      return false;
-    };
-    for (OpNode* node : *op_nodes) {
-      if (AnyOutputNodesNotInSubsetAndReachableIntoSink(node)) { continue; }
-      node->ForEachNodeOnOutEdge([&](OpNode* out_node) {
-        if (IsInSubset(out_node) && AllInputNodesInSubset(out_node)) {
-          node2in_nodes[out_node].push_back(node);
-          node2out_nodes[node].push_back(out_node);
-        }
-      });
+  auto IsInSubset = [&](OpNode* node) { return op_nodes.find(node) != op_nodes.end(); };
+  auto AllInputNodesInSubset = [&](OpNode* node) {
+    for (OpEdge* edge : node->in_edges()) {
+      if (!IsInSubset(edge->src_node())) { return false; }
     }
-  }
-  HashSet<OpNode*> pseudo_chain_nodes;
-  {
-    // get chain nodes
-    auto ForEachInNode = [&](OpNode* node, const std::function<void(OpNode*)>& Handler) {
-      for (OpNode* in_node : node2in_nodes.at(node)) { Handler(in_node); }
-    };
-    auto ForEachOutNode = [&](OpNode* node, const std::function<void(OpNode*)>& Handler) {
-      for (OpNode* out_node : node2out_nodes.at(node)) { Handler(out_node); }
-    };
-    TopoForEachNode(sinks, ForEachOutNode, ForEachInNode,
-                    [&](OpNode* node) { CHECK(pseudo_chain_nodes.emplace(node).second); });
-  }
-  // erase chain nodes
-  for (OpNode* node_in_chain : pseudo_chain_nodes) { op_nodes->erase(node_in_chain); }
-  std::vector<OpNode*> source_nodes_in_pseudo_chain;
-  {
-    // get source nodes of pseudo chain
-    auto IsPseudoChainSourceNode = [&](OpNode* node) {
-      for (OpNode* node_in_chain : pseudo_chain_nodes) {
-        if (IsReachable(node_in_chain, node)) { return false; }
-      }
-      return true;
-    };
-    for (OpNode* node_in_chain : pseudo_chain_nodes) {
-      if (IsPseudoChainSourceNode(node_in_chain)) {
-        source_nodes_in_pseudo_chain.push_back(node_in_chain);
-      }
+    return true;
+  };
+  auto ReachableToAnySink = [&](OpNode* node) {
+    for (OpNode* sink : sinks) {
+      if (node == sink) { return true; }
+      if (IsReachable(node, sink)) { return true; }
     }
+    return false;
+  };
+  auto AnyOutputNodesNotInSubsetAndReachableIntoSink = [&](OpNode* node) {
+    for (OpEdge* edge : node->out_edges()) {
+      if (!IsInSubset(edge->dst_node()) && ReachableToAnySink(edge->dst_node())) { return true; }
+    }
+    return false;
+  };
+  for (OpNode* node : op_nodes) {
+    if (AnyOutputNodesNotInSubsetAndReachableIntoSink(node)) { continue; }
+    node->ForEachNodeOnOutEdge([&](OpNode* out_node) {
+      if (IsInSubset(out_node) && AllInputNodesInSubset(out_node)) {
+        node2in_nodes[out_node].push_back(node);
+        node2out_nodes[node].push_back(out_node);
+      }
+    });
   }
-  return source_nodes_in_pseudo_chain;
+  // get chain nodes
+  auto ForEachInNode = [&](OpNode* node, const std::function<void(OpNode*)>& Handler) {
+    for (OpNode* in_node : node2in_nodes[node]) { Handler(in_node); }
+  };
+  auto ForEachOutNode = [&](OpNode* node, const std::function<void(OpNode*)>& Handler) {
+    for (OpNode* out_node : node2out_nodes[node]) { Handler(out_node); }
+  };
+  TopoForEachNode(sinks, ForEachOutNode, ForEachInNode,
+                  [&](OpNode* node) { CHECK(pseudo_chain_nodes->emplace(node).second); });
 }
 
 }  // namespace oneflow

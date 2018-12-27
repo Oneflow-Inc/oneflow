@@ -102,19 +102,19 @@ void Operator::InferBwBufBlobDescsIf(
 }
 
 void Operator::InferOutBlobTimeShapeIf(
-    std::function<const Shape&(const std::string&)> GetTimeShape4BnInOp,
+    std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
     const ParallelContext* parallel_ctx, Shape* time_shape) const {
-  InferOutBlobTimeShapeIf(GetTimeShape4BnInOp, parallel_ctx, time_shape);
+  InferOutBlobTimeShape(GetTimeShape4BnInOp, parallel_ctx, time_shape);
 }
 
 void Operator::InferOutBlobTimeShape(
-    std::function<const Shape&(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
+    std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
     Shape* time_shape) const {
   for (const std::string& bn : input_bns()) {
-    CHECK_EQ(GetTimeShape4BnInOp(input_bns().Get(0)), GetTimeShape4BnInOp(bn));
+    CHECK_EQ(*GetTimeShape4BnInOp(input_bns().Get(0)), *GetTimeShape4BnInOp(bn));
   }
-  if (input_bns().size() == false) {
-    *time_shape = GetTimeShape4BnInOp(input_bns().Get(0));
+  if (input_bns().empty() == false) {
+    *time_shape = *GetTimeShape4BnInOp(input_bns().Get(0));
   } else {
     *time_shape = Shape(
         {Global<JobDesc>::Get()->TotalBatchNum(), Global<JobDesc>::Get()->NumOfPiecesInBatch()});
