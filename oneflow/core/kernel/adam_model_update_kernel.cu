@@ -15,8 +15,7 @@ __global__ void UpdateModelGpu(int64_t n, int64_t batch_size, T learning_rate, T
     m[i] = beta1 * m[i] + (1 - beta1) * reg_diff;
     v[i] = beta2 * v[i] + (1 - beta2) * reg_diff * reg_diff;
     if (do_bias_correction) {
-      m[i] = m[i] / (1 - *beta1_t);
-      v[i] = v[i] / (1 - *beta2_t);
+      learning_rate = learning_rate * sqrt(1 - (*beta2_t)) / (1 - (*beta1_t));
     }
     reg_diff = m[i] / (sqrt(v[i]) + epsilon);
     model[i] = model[i] - learning_rate * reg_diff;
