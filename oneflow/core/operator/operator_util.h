@@ -7,6 +7,8 @@
 
 namespace oneflow {
 
+const size_t GetChannelDim(const std::string& data_format, int32_t NDims);
+
 const size_t DhwOffset(const std::string& data_format);
 
 std::vector<int32_t> Get3DVecInOpConf(const PbRf<int32_t>& field_vals, int32_t NDims);

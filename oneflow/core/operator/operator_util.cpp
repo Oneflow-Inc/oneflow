@@ -2,6 +2,17 @@
 
 namespace oneflow {
 
+const size_t GetChannelDim(const std::string& data_format, int32_t NDims) {
+  CHECK_GE(NDims, 3);
+  if (data_format == "channels_first") {
+    return 1;
+  } else if (data_format == "channels_last") {
+    return NDims - 1;
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
 const size_t DhwOffset(const std::string& data_format) {
   if (data_format == "channels_first") {
     return 2;

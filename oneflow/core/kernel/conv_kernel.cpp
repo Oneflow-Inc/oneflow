@@ -4,6 +4,33 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
+void ConvKernelIf<device_type, T>::ForwardInstanceShape(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Shape& in_shape = BnInOp2Blob("in")->shape();
+  const Shape& out_static_shape = BnInOp2Blob("out")->static_shape();
+  const std::string& data_format =
+      this->template GetValFromCustomizedOpConf<std::string>("data_format");
+  const std::string& padding = this->template GetValFromCustomizedOpConf<std::string>("padding");
+  const PbRf<int32_t>& dilation_rate =
+      this->template GetPbRfFromCustomizedOpConf<int32_t>("dilation_rate");
+  const PbRf<int32_t>& strides = this->template GetPbRfFromCustomizedOpConf<int32_t>("strides");
+  const PbRf<int32_t>& kernel_size =
+      this->template GetPbRfFromCustomizedOpConf<int32_t>("kernel_size");
+
+  int32_t n = in_shape.NumAxes();
+  int32_t c_dim = GetChannelDim(data_format, n);
+  std::vector<int64_t> out_shape(n, 0);
+  out_shape[0] = out_static_shape.At(0);
+  out_shape[c_dim] = out_static_shape.At(c_dim);
+  size_t dhw_offset = DhwOffset(data_format);
+  FOR_RANGE(int32_t, i, 0, n - 2) {
+    GetWindowedOutputSize(in_shape.At(dhw_offset + i), kernel_size.Get(i), dilation_rate.Get(i),
+                          strides.Get(i), padding, &(out_shape[dhw_offset + i]), nullptr, nullptr);
+  }
+  BnInOp2Blob("out")->set_instance_shape(Shape(out_shape));
+}
+
+template<DeviceType device_type, typename T>
 void ConvKernelIf<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
