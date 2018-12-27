@@ -13,6 +13,22 @@ void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(const ParallelContext* p
 }
 
 template<typename T>
+void ConvKernel<DeviceType::kGPU, T>::UpdateCudnnDescIfNeed(
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (!(this->kernel_conf().need_do_instance_shape())) { return; }
+  if (!(this->EnableCudnn())) { return; }
+
+  const std::string& data_format =
+      this->template GetValFromCustomizedOpConf<std::string>("data_format");
+  this->in_desc_.reset(
+      new CudnnTensorDesc(GetDataType<T>::value, BnInOp2Blob("in")->shape(), data_format));
+  this->out_desc_.reset(
+      new CudnnTensorDesc(GetDataType<T>::value, BnInOp2Blob("out")->shape(), data_format));
+  this->conv_desc_.reset(new CudnnConvDesc(GetDataType<T>::value, BnInOp2Blob("in")->shape(),
+                                           this->GetCustomizedOpConf()));
+}
+
+template<typename T>
 void ConvKernel<DeviceType::kGPU, T>::DoForwardDataContent(
     DeviceCtx* device_ctx, const Blob* in_blob, const Blob* weight_blob, Blob* out_blob,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {

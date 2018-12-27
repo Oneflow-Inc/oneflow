@@ -6,6 +6,7 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 void ConvKernelIf<device_type, T>::ForwardInstanceShape(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  CHECK(device_type == DeviceType::kCPU && this->EnableCudnn());
   const Shape& in_shape = BnInOp2Blob("in")->shape();
   const Shape& out_static_shape = BnInOp2Blob("out")->static_shape();
   const std::string& data_format =
@@ -33,6 +34,7 @@ void ConvKernelIf<device_type, T>::ForwardInstanceShape(
 template<DeviceType device_type, typename T>
 void ConvKernelIf<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  UpdateCudnnDescIfNeed(BnInOp2Blob);
   const Blob* in_blob = BnInOp2Blob("in");
   const Blob* weight_blob = BnInOp2Blob("weight");
   Blob* out_blob = BnInOp2Blob("out");
@@ -42,6 +44,7 @@ void ConvKernelIf<device_type, T>::ForwardDataContent(
 template<DeviceType device_type, typename T>
 void ConvKernelIf<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  UpdateCudnnDescIfNeed(BnInOp2Blob);
   const Blob* conv_out_diff = BnInOp2Blob("out_diff");
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias") && this->op_conf().trainable()) {
     BiasBackward(ctx.device_ctx, conv_out_diff, BnInOp2Blob("bias_diff"), BnInOp2Blob);
