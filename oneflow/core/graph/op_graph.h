@@ -33,8 +33,10 @@ class OpNode final : public Node<OpNode, OpEdge> {
   const ParallelDesc& parallel_desc() const { return parallel_desc_; }
 
   BlobDesc* BlobDesc4BnInOp(const std::string& bn_in_op);
-  const Shape& GetInputBlobTimeShape(const std::string& bn_in_op) const;
-  const Shape& GetInputBlobTimeShape() const;
+  const Shape* GetInputBlobTimeShape(const std::string& bn_in_op) const;
+  const Shape* GetInputBlobTimeShape() const;
+
+  std::string VisualStr() const override;
 
  private:
   BlobDesc* MutBlobDesc(const LogicalBlobId& lbi);
@@ -57,6 +59,7 @@ class OpEdge final : public Edge<OpNode, OpEdge> {
 
   const std::vector<LogicalBlobId>& lbis() const { return lbis_; }
   const HashMap<LogicalBlobId, std::vector<std::string>>& lbi2ibns() const { return lbi2ibns_; }
+  std::string VisualStr() const override;
 
  private:
   std::vector<LogicalBlobId> lbis_;
@@ -73,8 +76,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
 
   // a set of nodes is called a pseudo chain if they can merge into a chain regardless of the
   // connections before their source nodes
-  void ForEachSourceNodesOfPseudoChain(
-      const std::function<void(const std::vector<OpNode*>&)>& Handler) const;
+  void ForEachPseudoChain(const std::function<void(const HashSet<OpNode*>&)>& Handler) const;
 
  private:
   void Init();
@@ -83,12 +85,11 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void UpdateOpNodeHasInDiff();
   void InferNodeBlobDesc() const;
   void InferTimeShape() const;
-  void ForEachSourceNodesOfPseudoChain(
-      const std::vector<OpNode*>& nodes,
-      const std::function<bool(OpNode* src, OpNode* dst)>& IsReachable,
-      const std::function<void(const std::vector<OpNode*>&)>& Handler) const;
-  std::vector<OpNode*> GetSourceNodesOfPseudoChain(
-      HashSet<OpNode*>* op_nodes,
+  void ForEachPseudoChain(const std::vector<OpNode*>& nodes,
+                          const std::function<bool(OpNode* src, OpNode* dst)>& IsReachable,
+                          const std::function<void(const HashSet<OpNode*>&)>& Handler) const;
+  void ReverseTopoGetPseudoChain(
+      const HashSet<OpNode*>& op_nodes, HashSet<OpNode*>* chain,
       const std::function<bool(OpNode* src, OpNode* dst)>& IsReachable) const;
   std::function<bool(OpNode* src, OpNode* dst)> MakePredicatorIsReachable() const;
   void ForEachComponentWithSameDataParallelDescAndTimeShape(

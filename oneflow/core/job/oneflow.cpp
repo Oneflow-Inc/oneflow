@@ -13,6 +13,7 @@
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/actor/act_event_logger.h"
+#include "oneflow/core/graph/op_graph.h"
 
 namespace oneflow {
 
@@ -160,12 +161,17 @@ class Oneflow final {
 Oneflow::Oneflow(const std::string& job_conf_filepath) {
   // New All Global
   Global<JobDesc>::New(job_conf_filepath);
+  const JobDesc* global_job_desc = Global<JobDesc>::Get();
+  OpGraph old_op_graph(global_job_desc);
   Global<JobDesc>::Get()->FixAndOptimizeDLNet();
   ctrl_server_.reset(new CtrlServer());
   Global<CtrlClient>::New();
   OF_BARRIER();
   int64_t this_mchn_id = Global<JobDesc>::Get()->GetMachineId(ctrl_server_->this_machine_addr());
   Global<MachineCtx>::New(this_mchn_id);
+  TeePersistentLogStream::Create("optimized_job_conf")->Write(global_job_desc->job_conf());
+  old_op_graph.ToDotWithFilePath("dlnet_op_graph.dot");
+  OpGraph(global_job_desc).ToDotWithFilePath("optimized_op_graph.dot");
   const MachineCtx* machine_ctx = Global<MachineCtx>::Get();
   bool DoProfile =
       machine_ctx->IsThisMachineMaster() && Global<JobDesc>::Get()->collect_act_event();
