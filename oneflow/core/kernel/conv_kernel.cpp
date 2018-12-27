@@ -6,7 +6,7 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 void ConvKernelIf<device_type, T>::ForwardInstanceShape(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CHECK(device_type == DeviceType::kCPU && this->EnableCudnn());
+  CHECK(device_type == DeviceType::kGPU && this->EnableCudnn());
   const Shape& in_shape = BnInOp2Blob("in")->shape();
   const Shape& out_static_shape = BnInOp2Blob("out")->static_shape();
   const std::string& data_format =
@@ -29,6 +29,12 @@ void ConvKernelIf<device_type, T>::ForwardInstanceShape(
                           strides.Get(i), padding, &(out_shape[dhw_offset + i]), nullptr, nullptr);
   }
   BnInOp2Blob("out")->set_instance_shape(Shape(out_shape));
+}
+
+template<DeviceType device_type, typename T>
+void ConvKernelIf<device_type, T>::UpdateCudnnDescIfNeed(
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  CHECK(this->kernel_conf().need_do_instance_shape() == false);
 }
 
 template<DeviceType device_type, typename T>

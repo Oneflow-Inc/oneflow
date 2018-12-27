@@ -16,7 +16,7 @@ template<typename T>
 void ConvKernel<DeviceType::kGPU, T>::UpdateCudnnDescIfNeed(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (!(this->kernel_conf().need_do_instance_shape())) { return; }
-  if (!(this->EnableCudnn())) { return; }
+  CHECK(this->EnableCudnn());
 
   const std::string& data_format =
       this->template GetValFromCustomizedOpConf<std::string>("data_format");

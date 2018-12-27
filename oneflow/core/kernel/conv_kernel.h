@@ -53,7 +53,7 @@ class ConvKernelIf : public KernelIfWithModel<device_type, T>,
                               std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
   virtual void BiasBackward(DeviceCtx*, const Blob* out_diff_blob, Blob* bias_diff_blob,
                             std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
-  virtual void UpdateCudnnDescIfNeed(std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
+  virtual void UpdateCudnnDescIfNeed(std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
   const PbMessage& GetCustomizedOpConf() const override;
   const ConvKernelConf& GetConvKernelConf() const;
