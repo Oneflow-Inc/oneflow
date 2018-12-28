@@ -171,7 +171,7 @@ Oneflow::Oneflow(const std::string& job_conf_filepath) {
   Global<MachineCtx>::New(this_mchn_id);
   TeePersistentLogStream::Create("optimized_job_conf")->Write(global_job_desc->job_conf());
   old_op_graph.ToDotWithFilePath("dlnet_op_graph.dot");
-  OpGraph(global_job_desc).ToDotWithFilePath("optimized_op_graph.dot");
+  OpGraph(global_job_desc).ToDotWithFilePath("optimized_dlnet_op_graph.dot");
   const MachineCtx* machine_ctx = Global<MachineCtx>::Get();
   bool DoProfile =
       machine_ctx->IsThisMachineMaster() && Global<JobDesc>::Get()->collect_act_event();
