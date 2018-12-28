@@ -75,6 +75,12 @@ const PbRpf<T>& GetPbRpfFromPbMessage(const PbMessage& msg, const std::string& f
   return r->GetRepeatedPtrField<T>(msg, fd);
 }
 
+template<typename T>
+PbRpf<T>* MutPbRpfFromPbMessage(PbMessage* msg, const std::string& field_name) {
+  PROTOBUF_REFLECTION((*msg), field_name);
+  return r->MutableRepeatedPtrField<T>(msg, fd);
+}
+
 // Set In PbMessage
 
 template<typename T>

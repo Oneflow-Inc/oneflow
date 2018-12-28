@@ -4,6 +4,11 @@
 
 namespace oneflow {
 
+int64_t NormalBackwardCompTaskNode::AreaId4ChainMerge() const {
+  CHECK_EQ(area_id(), AreaType::kDataBackwardArea);
+  return AreaType::kDataForwardArea;
+}
+
 void NormalBackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("in_diff", true);
   ProduceRegst("activation_diff", true, 1, 1);
