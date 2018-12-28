@@ -74,14 +74,25 @@ void Kernel::InitModelAndConstBuf(const KernelCtx& ctx, const ParallelContext* p
   }
 }
 
-void Kernel::Launch(const KernelCtx& ctx,
-                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+void Kernel::Launch(const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) {
   if (kernel_conf_.is_forward()) {
     gdb::ForwardEnterBreakPoint(op_attribute(), BnInOp2Blob);
+    if (kernel_conf_.need_do_instance_shape()) {
+      // infer instance shape need do first
+      CHECK(!kernel_conf_.need_do_opaque_header());
+      ForwardInstanceShape(ctx, BnInOp2Blob);
+      UpdtStatusBeforeFwBw(ctx, BnInOp2Blob);
+    }
     Forward(ctx, BnInOp2Blob);
     gdb::ForwardLeaveBreakPoint(op_attribute(), BnInOp2Blob);
   } else {
     gdb::BackwardEnterBreakPoint(op_attribute(), BnInOp2Blob);
+    if (kernel_conf_.need_do_instance_shape()) {
+      // infer instance shape need do first
+      CHECK(!kernel_conf_.need_do_opaque_header());
+      BackwardInstanceShape(ctx, BnInOp2Blob);
+      UpdtStatusBeforeFwBw(ctx, BnInOp2Blob);
+    }
     Backward(ctx, BnInOp2Blob);
     gdb::BackwardLeaveBreakPoint(op_attribute(), BnInOp2Blob);
   }
@@ -120,11 +131,6 @@ void Kernel::CheckSameDim0ValidNum(
 
 void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (kernel_conf_.need_do_instance_shape()) {
-    // infer instance shape need do first
-    CHECK(!kernel_conf_.need_do_opaque_header());
-    ForwardInstanceShape(ctx, BnInOp2Blob);
-  }
   if (kernel_conf_.need_do_dim0_valid_num()) {
     CHECK(!kernel_conf_.need_do_opaque_header());
     ForwardDim0ValidNum(ctx, BnInOp2Blob);
@@ -163,11 +169,6 @@ void Kernel::Forward(const KernelCtx& ctx,
 
 void Kernel::Backward(const KernelCtx& ctx,
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (kernel_conf_.need_do_instance_shape()) {
-    // infer instance shape need do first
-    CHECK(!kernel_conf_.need_do_opaque_header());
-    BackwardInstanceShape(ctx, BnInOp2Blob);
-  }
   if (op_attribute().model_diff_bns().size() > 0) {
     BackwardModelDiffDim0ValidNum(ctx, BnInOp2Blob);
   }
@@ -364,11 +365,11 @@ void KernelIf<device_type>::CopyField(DeviceCtx* ctx,
   }
 }
 
-std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext* parallel_ctx,
-                                              const KernelConf& conf, DeviceCtx* device_ctx) {
+std::unique_ptr<Kernel> ConstructKernel(const ParallelContext* parallel_ctx, const KernelConf& conf,
+                                        DeviceCtx* device_ctx) {
   Kernel* rptr = NewObj<Kernel>(conf.op_attribute().op_conf().op_type_case(), conf);
   rptr->Init(parallel_ctx, conf, device_ctx);
-  return std::unique_ptr<const Kernel>(rptr);
+  return std::unique_ptr<Kernel>(rptr);
 }
 
 template<DeviceType device_type, typename T>

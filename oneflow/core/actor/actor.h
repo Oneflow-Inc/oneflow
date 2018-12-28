@@ -39,7 +39,7 @@ class Actor {
 
  protected:
   struct ExecKernel {
-    std::unique_ptr<const Kernel> kernel;
+    std::unique_ptr<Kernel> kernel;
     HashMap<std::string, int64_t> bn_in_op2regst_desc_id;
   };
   using MsgHandler = int (Actor::*)(const ActorMsg&);

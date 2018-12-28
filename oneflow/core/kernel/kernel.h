@@ -24,7 +24,7 @@ class Kernel {
                             const Snapshot*,
                             std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
-  void Launch(const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+  void Launch(const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob);
 
   const LogicalBlobId& BnInOp2Lbi(const std::string& bn_in_op) const;
   const OperatorConf& op_conf() const { return op_attribute().op_conf(); }
@@ -85,6 +85,9 @@ class Kernel {
     UNIMPLEMENTED();
   }
   virtual void ForwardActivation(const KernelCtx& ctx, Blob* out_blob) const {}
+
+  virtual void UpdtStatusBeforeFwBw(const KernelCtx& ctx,
+                                    std::function<Blob*(const std::string&)> BnInOp2Blob) {}
 
   virtual void Backward(const KernelCtx& ctx,
                         std::function<Blob*(const std::string&)> BnInOp2Blob) const;
@@ -228,8 +231,7 @@ class KernelIfWithActivation : virtual public KernelIf<device_type> {
   REGISTER_CLASS_WITH_ARGS(k, Kernel, KernelType, const KernelConf&)
 #define REGISTER_KERNEL_CREATOR(k, f) REGISTER_CLASS_CREATOR(k, Kernel, f, const KernelConf&)
 
-std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext*, const KernelConf&,
-                                              DeviceCtx*);
+std::unique_ptr<Kernel> ConstructKernel(const ParallelContext*, const KernelConf&, DeviceCtx*);
 
 }  // namespace oneflow
 

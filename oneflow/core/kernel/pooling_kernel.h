@@ -94,7 +94,6 @@ class PoolingKernelIf : public KernelIf<device_type> {
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const Blob* in_blob = BnInOp2Blob("in");
     Blob* out_blob = BnInOp2Blob("out");
-    UpdatePoolCtxIfNeed(in_blob->shape());
     PoolingForward(kernel_ctx, this->pooling_ctx(), in_blob, out_blob);
   }
   void BackwardDataContent(const KernelCtx& kernel_ctx,
@@ -106,7 +105,6 @@ class PoolingKernelIf : public KernelIf<device_type> {
     const Blob* out_diff_blob = BnInOp2Blob("out_diff");
     const Blob* in_blob = BnInOp2Blob("in");
     const Blob* out_blob = BnInOp2Blob("out");
-    UpdatePoolCtxIfNeed(in_blob->shape());
     PoolingBackward(kernel_ctx, this->pooling_ctx(), out_diff_blob, out_blob, in_blob,
                     in_diff_blob);
   }
@@ -115,9 +113,13 @@ class PoolingKernelIf : public KernelIf<device_type> {
   virtual void PoolingBackward(const KernelCtx& kernel_ctx, const PoolingCtx& pooling_ctx,
                                const Blob* out_diff_blob, const Blob* out_blob, const Blob* in_blob,
                                Blob* in_diff_blob) const = 0;
+  void UpdtStatusBeforeFwBw(const KernelCtx& ctx,
+                            std::function<Blob*(const std::string&)> BnInOp2Blob) override {
+    UpdatePoolCtxIfNeed(BnInOp2Blob("in")->shape());
+  }
 
  private:
-  void UpdatePoolCtxIfNeed(const Shape& in_shape) const {
+  void UpdatePoolCtxIfNeed(const Shape& in_shape) {
     if (!(this->kernel_conf().need_do_instance_shape())) { return; }
     pooling_ctx_.reset(new PoolingCtx(
         GenPoolingKernelConfForNewInShape(in_shape, GetPoolingKernelConf())
@@ -128,7 +130,7 @@ class PoolingKernelIf : public KernelIf<device_type> {
         ));
   }
 
-  mutable std::unique_ptr<PoolingCtx> pooling_ctx_;
+  std::unique_ptr<PoolingCtx> pooling_ctx_;
 };
 
 template<DeviceType device_type, typename T>

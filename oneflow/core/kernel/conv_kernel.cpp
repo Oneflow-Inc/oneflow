@@ -34,14 +34,19 @@ void ConvKernelIf<device_type, T>::ForwardInstanceShape(
 
 template<DeviceType device_type, typename T>
 void ConvKernelIf<device_type, T>::UpdateCudnnDescIfNeed(
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    std::function<Blob*(const std::string&)> BnInOp2Blob) {
   CHECK(this->kernel_conf().need_do_instance_shape() == false);
+}
+
+template<DeviceType device_type, typename T>
+void ConvKernelIf<device_type, T>::UpdtStatusBeforeFwBw(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) {
+  UpdateCudnnDescIfNeed(BnInOp2Blob);
 }
 
 template<DeviceType device_type, typename T>
 void ConvKernelIf<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UpdateCudnnDescIfNeed(BnInOp2Blob);
   const Blob* in_blob = BnInOp2Blob("in");
   const Blob* weight_blob = BnInOp2Blob("weight");
   Blob* out_blob = BnInOp2Blob("out");
@@ -51,7 +56,6 @@ void ConvKernelIf<device_type, T>::ForwardDataContent(
 template<DeviceType device_type, typename T>
 void ConvKernelIf<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UpdateCudnnDescIfNeed(BnInOp2Blob);
   const Blob* conv_out_diff = BnInOp2Blob("out_diff");
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias") && this->op_conf().trainable()) {
     BiasBackward(ctx.device_ctx, conv_out_diff, BnInOp2Blob("bias_diff"), BnInOp2Blob);

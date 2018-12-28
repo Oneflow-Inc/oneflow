@@ -14,7 +14,7 @@ void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(const ParallelContext* p
 
 template<typename T>
 void ConvKernel<DeviceType::kGPU, T>::UpdateCudnnDescIfNeed(
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    std::function<Blob*(const std::string&)> BnInOp2Blob) {
   if (!(this->kernel_conf().need_do_instance_shape())) { return; }
   CHECK(this->EnableCudnn());
 
