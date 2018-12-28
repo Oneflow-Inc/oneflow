@@ -67,7 +67,7 @@ void ChainMerger::InitChains() {
     Chain& cur_chain = chain_list_.back();
     cur_chain.nodes = {task_node};
     cur_chain.stream_area_id =
-        std::make_pair(task_node->area_id(), task_node->GlobalWorkStreamId());
+        std::make_pair(task_node->AreaId4ChainMerge(), task_node->GlobalWorkStreamId());
     cur_chain.ancestors.resize(bitset_num);
     cur_chain.ancestors_and_this.resize(bitset_num);
     CarefullySetBitset(&(cur_chain.ancestors_and_this), GetTaskUid(task_node));
@@ -82,7 +82,7 @@ void ChainMerger::InitChains() {
 bool ChainMerger::DoMerge(std::list<ChainIt>& chains, ChainIt rhs) {
   CHECK_EQ(rhs->nodes.size(), 1);
   // rm kMdUpdtArea chain merge
-  if (rhs->nodes.front()->area_id() == kMdUpdtArea) { return false; }
+  if (rhs->nodes.front()->AreaId4ChainMerge() == kMdUpdtArea) { return false; }
   for (auto chains_it = chains.rbegin(); chains_it != chains.rend(); ++chains_it) {
     ChainIt lhs = *chains_it;
     if (IsSubset(lhs, rhs)) {
@@ -176,7 +176,7 @@ void ChainGraph::GroupTaskNodesByMachineAndCollectAncestors(
     (*machine2tasks)[node->machine_id()].emplace_back(node);
     CHECK(node2ancestors->emplace(node, HashSet<TaskNode*>()).second);
     // to reduce memory consumption
-    if (node->area_id() == kMdUpdtArea) { return; }
+    if (node->AreaId4ChainMerge() == kMdUpdtArea) { return; }
     node->ForEachNodeOnInEdge([&](TaskNode* in_node) {
       if (IsBackEdge(in_node, node)) { return; }
       (*node2ancestors)[node].insert(in_node);
@@ -280,21 +280,10 @@ void ChainGraph::PartialPriorTopoForEachNode(
     if (IsTaskNodePrior(start)) { prior_starts.push_back(start); }
   }
   task_gph_.DfsTopoForEachNode(prior_starts, ForEachPriorInNode, ForEachPriorOutNode, Handler);
-  // reverse bfs topo travel other nodes ;
-  auto IsSinkNode = [&](TaskNode* node) {
-    int32_t out_node_num = 0;
-    ForEachOutNode(node, [&](TaskNode* out_node) { ++out_node_num; });
-    return out_node_num == 0;
-  };
-  std::list<TaskNode*> sinks;
-  for (TaskNode* node : nodes) {
-    if (IsSinkNode(node)) { sinks.push_back(node); }
-  }
-  std::list<TaskNode*> remainders;
-  task_gph_.TopoForEachNode(sinks, ForEachOutNode, ForEachInNode, [&](TaskNode* node) {
-    if (prior_nodes.find(node) == prior_nodes.end()) { remainders.push_front(node); }
+  // travel other nodes ;
+  task_gph_.DfsTopoForEachNode(starts, ForEachInNode, ForEachOutNode, [&](TaskNode* node) {
+    if (prior_nodes.find(node) == prior_nodes.end()) { Handler(node); }
   });
-  for (TaskNode* node : remainders) { Handler(node); }
 }
 
 void ChainGraph::InitChainNode(const std::vector<std::vector<TaskNode*>>& chains) {
