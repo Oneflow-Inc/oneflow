@@ -56,7 +56,6 @@ void RegstLifetimeGraph::ForEachSameColoredRegstDescs(
   HashMap<const RegstLifetimeNode*, std::set<int32_t>> node2excluded_color_ids;
   HashMap<const RegstLifetimeNode*, int32_t> node2color_id;
   for (const RegstLifetimeNode* node : nodes) {
-    if (node2color_id.find(node) != node2color_id.end()) { continue; }
     int32_t color_id = 0;
     const auto& excluded_color_ids = node2excluded_color_ids[node];
     for (; excluded_color_ids.find(color_id) != excluded_color_ids.end(); ++color_id) {}
