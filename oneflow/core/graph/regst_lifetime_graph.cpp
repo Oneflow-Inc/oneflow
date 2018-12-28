@@ -47,23 +47,24 @@ void RegstLifetimeGraph::InitEdges(const std::list<RegstLifetimeNode*>& nodes) {
 
 void RegstLifetimeGraph::ForEachSameColoredRegstDescs(
     const std::function<void(const std::list<const RegstDescProto*>&)>& Handler) const {
+  std::vector<const RegstLifetimeNode*> nodes;
+  ForEachNode([&](const RegstLifetimeNode* node) { nodes.push_back(node); });
+  std::sort(nodes.begin(), nodes.end(),
+            [&](const RegstLifetimeNode* lhs, const RegstLifetimeNode* rhs) {
+              return lhs->byte_size() > rhs->byte_size();
+            });
   HashMap<const RegstLifetimeNode*, std::set<int32_t>> node2excluded_color_ids;
   HashMap<const RegstLifetimeNode*, int32_t> node2color_id;
-  auto ForEachIntersected = &RegstLifetimeNode::ForEachNodeOnInOutEdge;
-  ForEachNode([&](const RegstLifetimeNode* start) {
-    if (node2color_id.find(start) != node2color_id.end()) { return; }
-    BfsForEachNode({start}, ForEachIntersected, [&](const RegstLifetimeNode* node) {
-      if (node2color_id.find(node) != node2color_id.end()) { return; }
-      int32_t color_id = 0;
-      const auto& excluded_color_ids = node2excluded_color_ids[node];
-      for (; excluded_color_ids.find(color_id) != excluded_color_ids.end(); ++color_id) {}
-      node2color_id[node] = color_id;
-      (node->*ForEachIntersected)([&](const RegstLifetimeNode* intersected) {
-        if (node2color_id.find(intersected) != node2color_id.end()) { return; }
-        node2excluded_color_ids[intersected].insert(color_id);
-      });
+  for (const RegstLifetimeNode* node : nodes) {
+    int32_t color_id = 0;
+    const auto& excluded_color_ids = node2excluded_color_ids[node];
+    for (; excluded_color_ids.find(color_id) != excluded_color_ids.end(); ++color_id) {}
+    node2color_id[node] = color_id;
+    node->ForEachNodeOnInOutEdge([&](const RegstLifetimeNode* intersected) {
+      if (node2color_id.find(intersected) != node2color_id.end()) { return; }
+      node2excluded_color_ids[intersected].insert(color_id);
     });
-  });
+  }
   HashMap<int32_t, std::list<const RegstDescProto*>> color_id2regst_descs;
   for (const auto& pair : node2color_id) {
     color_id2regst_descs[pair.second].push_back(&pair.first->regst_desc());
