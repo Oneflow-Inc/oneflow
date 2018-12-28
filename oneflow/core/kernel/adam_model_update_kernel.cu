@@ -11,13 +11,12 @@ __global__ void UpdateModelGpu(int64_t n, int64_t batch_size, T learning_rate, T
                                T beta2, T epsilon, bool do_bias_correction, const T* beta1_t,
                                const T* beta2_t, const T* model_diff, T* model, T* m, T* v) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    T reg_diff = RegularizeDiff(model_diff[i], batch_size, l1, l2, model[i]);
-    m[i] = beta1 * m[i] + (1 - beta1) * reg_diff;
-    v[i] = beta2 * v[i] + (1 - beta2) * reg_diff * reg_diff;
+    m[i] = beta1 * m[i] + (1 - beta1) * model_diff[i];
+    v[i] = beta2 * v[i] + (1 - beta2) * model_diff[i] * model_diff[i];
     if (do_bias_correction) {
       learning_rate = learning_rate * sqrt(1 - (*beta2_t)) / (1 - (*beta1_t));
     }
-    reg_diff = m[i] / (sqrt(v[i]) + epsilon);
+    T reg_diff = RegularizeDiff(m[i] / (sqrt(v[i]) + epsilon), batch_size, l1, l2, model[i]);
     model[i] = model[i] - learning_rate * reg_diff;
   }
 }
