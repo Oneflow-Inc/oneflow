@@ -17,7 +17,7 @@ class AveragePoolingKernelIf : public PoolingKernel<device_type, T> {
     return this->kernel_conf().average_pooling_conf().pooling_conf();
   }
 #ifdef WITH_CUDA
-  cudnnPoolingMode_t GetCudnnPoolingMode() override {
+  cudnnPoolingMode_t GetCudnnPoolingMode() const override {
     return CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
   }
 #endif  // WITH_CUDA

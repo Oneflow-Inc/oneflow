@@ -55,6 +55,9 @@ class PoolingCtx final {
 #endif  // WITH_CUDA
 };
 
+PoolingKernelConf GenPoolingKernelConfForNewInShape(const Shape& in_shape,
+                                                    const PoolingKernelConf& conf);
+
 template<DeviceType device_type, typename T>
 class PoolingKernelIf : public KernelIf<device_type> {
  public:
@@ -64,7 +67,7 @@ class PoolingKernelIf : public KernelIf<device_type> {
 
  protected:
 #ifdef WITH_CUDA
-  virtual cudnnPoolingMode_t GetCudnnPoolingMode() = 0;
+  virtual cudnnPoolingMode_t GetCudnnPoolingMode() const = 0;
 #endif  // WITH_CUDA
   const PoolingCtx& pooling_ctx() const { return *pooling_ctx_; }
   void VirtualKernelInit(const ParallelContext*) override {
@@ -91,6 +94,7 @@ class PoolingKernelIf : public KernelIf<device_type> {
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const Blob* in_blob = BnInOp2Blob("in");
     Blob* out_blob = BnInOp2Blob("out");
+    UpdatePoolCtxIfNeed(in_blob->shape());
     PoolingForward(kernel_ctx, this->pooling_ctx(), in_blob, out_blob);
   }
   void BackwardDataContent(const KernelCtx& kernel_ctx,
@@ -102,6 +106,7 @@ class PoolingKernelIf : public KernelIf<device_type> {
     const Blob* out_diff_blob = BnInOp2Blob("out_diff");
     const Blob* in_blob = BnInOp2Blob("in");
     const Blob* out_blob = BnInOp2Blob("out");
+    UpdatePoolCtxIfNeed(in_blob->shape());
     PoolingBackward(kernel_ctx, this->pooling_ctx(), out_diff_blob, out_blob, in_blob,
                     in_diff_blob);
   }
@@ -111,7 +116,19 @@ class PoolingKernelIf : public KernelIf<device_type> {
                                const Blob* out_diff_blob, const Blob* out_blob, const Blob* in_blob,
                                Blob* in_diff_blob) const = 0;
 
-  std::unique_ptr<PoolingCtx> pooling_ctx_;
+ private:
+  void UpdatePoolCtxIfNeed(const Shape& in_shape) const {
+    if (!(this->kernel_conf().need_do_instance_shape())) { return; }
+    pooling_ctx_.reset(new PoolingCtx(
+        GenPoolingKernelConfForNewInShape(in_shape, GetPoolingKernelConf())
+#ifdef WITH_CUDA
+            ,
+        this->GetCudnnPoolingMode(), GetDataType<T>::value
+#endif  // WITH_CUDA
+        ));
+  }
+
+  mutable std::unique_ptr<PoolingCtx> pooling_ctx_;
 };
 
 template<DeviceType device_type, typename T>

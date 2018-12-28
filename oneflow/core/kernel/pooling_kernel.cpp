@@ -97,6 +97,31 @@ const cudnnPoolingDescriptor_t& PoolingCtx::cudnn_pooling_desc() const {
 
 #endif  // WITH_CUDA
 
+PoolingKernelConf GenPoolingKernelConfForNewInShape(const Shape& in_shape,
+                                                    const PoolingKernelConf& conf) {
+  PoolingKernelConf ret = conf;
+#ifdef WITH_CUDA
+  int32_t dim = conf.dim();
+  std::string data_format = conf.data_format();
+  std::vector<int64_t> in = {GetInDim(in_shape, data_format, 0, dim),
+                             GetInDim(in_shape, data_format, 1, dim),
+                             GetInDim(in_shape, data_format, 2, dim)};
+  std::vector<int64_t> out;
+  std::vector<int32_t> padding_before;
+  std::vector<int32_t> padding_after;
+  Get3DOutputSize(in, PbRf2StdVec(conf.pool_size()), PbRf2StdVec(conf.strides()),
+                  conf.padding_type(), &out, &padding_before, &padding_after);
+
+  FOR_RANGE(size_t, i, 0, 3) {
+    ret.mutable_in()->set_dim(i + 2, in.at(i));
+    ret.mutable_out()->set_dim(i + 2, out.at(i));
+    ret.set_padding_before(i, padding_before.at(i));
+    ret.set_padding_after(i, padding_after.at(i));
+  }
+#endif  // WITH_CUDA
+  return ret;
+}
+
 std::vector<int> PoolingCtx::GetStdVecFromShapeInKernelConf(const std::string& field_name) const {
   const PbRf<int64_t>& shape = GetPbRfFromPbMessage<int64_t>(
       GetValFromPbMessage<const PbMessage&>(kernel_conf_, field_name), "dim");

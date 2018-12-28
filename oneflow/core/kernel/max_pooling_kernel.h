@@ -17,7 +17,7 @@ class MaxPoolingKernelIf : public PoolingKernel<device_type, T> {
     return this->kernel_conf().max_pooling_conf().pooling_conf();
   }
 #ifdef WITH_CUDA
-  cudnnPoolingMode_t GetCudnnPoolingMode() override { return CUDNN_POOLING_MAX; }
+  cudnnPoolingMode_t GetCudnnPoolingMode() const override { return CUDNN_POOLING_MAX; }
 #endif
 };
 
