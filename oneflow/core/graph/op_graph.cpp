@@ -279,12 +279,6 @@ void OpGraph::ReverseTopoGetPseudoChain(
   HashMap<OpNode*, std::vector<OpNode*>> node2in_nodes;
   HashMap<OpNode*, std::vector<OpNode*>> node2out_nodes;
   auto IsInSubset = [&](OpNode* node) { return op_nodes.find(node) != op_nodes.end(); };
-  auto AllInputNodesInSubset = [&](OpNode* node) {
-    for (OpEdge* edge : node->in_edges()) {
-      if (!IsInSubset(edge->src_node())) { return false; }
-    }
-    return true;
-  };
   auto ReachableToAnySink = [&](OpNode* node) {
     for (OpNode* sink : sinks) {
       if (node == sink) { return true; }
@@ -301,7 +295,7 @@ void OpGraph::ReverseTopoGetPseudoChain(
   for (OpNode* node : op_nodes) {
     if (AnyOutputNodesNotInSubsetAndReachableIntoSink(node)) { continue; }
     node->ForEachNodeOnOutEdge([&](OpNode* out_node) {
-      if (IsInSubset(out_node) && AllInputNodesInSubset(out_node)) {
+      if (IsInSubset(out_node)) {
         node2in_nodes[out_node].push_back(node);
         node2out_nodes[node].push_back(out_node);
       }
