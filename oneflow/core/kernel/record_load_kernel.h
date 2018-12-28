@@ -3,6 +3,7 @@
 
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
+#include "oneflow/core/record/ofrecord_reader.h"
 
 namespace oneflow {
 
@@ -15,7 +16,7 @@ class RecordLoadKernel final : public KernelIf<DeviceType::kCPU> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RecordLoadKernel);
   RecordLoadKernel() = default;
-  ~RecordLoadKernel() = default;
+  ~RecordLoadKernel() override;
 
  private:
   void VirtualKernelInit(const ParallelContext*) override;
@@ -23,6 +24,7 @@ class RecordLoadKernel final : public KernelIf<DeviceType::kCPU> {
                std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
   std::unique_ptr<PersistentInStream> in_stream_;
+  std::unique_ptr<OFRecordReader> record_reader_;
   int64_t piece_size_in_one_loader_;
 };
 
