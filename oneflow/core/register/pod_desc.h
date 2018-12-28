@@ -81,23 +81,25 @@ class StructPodDesc final : public PodDesc {
   ~StructPodDesc() = default;
 
   StructPodDesc* MutStructField(const FieldId& field_id);
+  StructPodDesc* MutStructField(const FieldId& field_id, int32_t default_alignment);
   const PodDesc& Field(FieldKey field_key) const { return Field(NewFieldId(field_key)); }
   const PodDesc& Field(const FieldId& field_id) const;
   void AddField(FieldKey field_key, const PodDesc& pod_desc);
   void AddField(const FieldId& field_id, const PodDesc& pod_desc);
-  size_t ByteSize() const override;
-  void InitFromProto(const StructPodProto& struct_pod);
-
+  void AddField(const FieldId& field_id, const PodDesc& pod_desc, size_t alignment);
   bool HasField(FieldKey field_key) const { return HasField(NewFieldId(field_key)); }
   bool HasField(const FieldId& field_id) const;
-  StructPodDesc& operator=(const StructPodDesc&);
+
   std::unique_ptr<PodDesc> Clone() const override { return std::make_unique<StructPodDesc>(*this); }
+  void InitFromProto(const StructPodProto& struct_pod);
   void ToProto(PodProto* pod_proto) const override { ToProto(pod_proto->mutable_struct_pod()); }
   void ToProto(StructPodProto* pod_proto) const;
-  StructPodDesc* MutStructField(const FieldId& field_id, int32_t default_alignment);
-  void AddField(const FieldId& field_id, const PodDesc& pod_desc, size_t alignment);
-  bool operator==(const PodDesc& rhs) const override;
+
   size_t ByteOffset4Field(const FieldId& field_name) const;
+  size_t ByteSize() const override;
+
+  StructPodDesc& operator=(const StructPodDesc&);
+  bool operator==(const PodDesc& rhs) const override;
 
  private:
   void Clear();
