@@ -18,6 +18,8 @@ class UnpackOp final : public Operator {
 
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
+  void InferOutBlobTimeShape(std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
+                             const ParallelContext* parallel_ctx, Shape* time_shape) const override;
   bool NeedInBlobWhenBackward() const override { return true; }
   bool NeedOutBlobWhenBackward() const override { return false; }
   int32_t GetUnpackNum(int64_t parallel_num) const;

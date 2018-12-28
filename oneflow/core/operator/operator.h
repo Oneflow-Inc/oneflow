@@ -132,6 +132,12 @@ class Operator {
       const ParallelContext*) const {
     UNIMPLEMENTED();
   }
+  // Infer out blob's time shape
+  void InferOutBlobTimeShapeIf(std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
+                               const ParallelContext*, Shape* time_shape) const;
+  virtual void InferOutBlobTimeShape(
+      std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
+      Shape* time_shape) const;
   virtual void FixInDiffBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                   const ParallelContext*) const;
   virtual void VirtualFixInDiffBlobDescs(

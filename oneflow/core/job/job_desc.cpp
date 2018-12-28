@@ -39,31 +39,77 @@ std::function<ParallelConf*(const std::string&)> MakeGetterMutParallelConf4OpNam
 
 namespace {
 
-void GroupOpConfByProducerOpNameAndConsumerParallelDesc(
-    HashMap<std::pair<std::string, ParallelDesc>, HashSet<OperatorConf*>>* grouped,
-    DLNetConf* dlnet_conf,
-    const std::function<const ParallelConf*(const std::string&)>& ParallelConf2OpName) {
-  CHECK(grouped->empty());
-  FOR_RANGE(int, idx, 0, dlnet_conf->op_size()) {
-    OperatorConf* op_conf = dlnet_conf->mutable_op(idx);
-    ParallelDesc pr(*ParallelConf2OpName(op_conf->name()));
-    std::shared_ptr<Operator> op = ConstructOp(*op_conf, pr.device_type());
-    for (const auto& ibn : op->input_bns()) {
-      (*grouped)[std::make_pair(op->BnInOp2Lbi(ibn).op_name(), pr)].insert(op_conf);
+std::function<OperatorConf*(const std::string&)> MakeMutableOperatorConf4OpName(
+    JobConf1* job_conf) {
+  auto op_name2op_conf = std::make_shared<HashMap<std::string, OperatorConf*>>();
+  FOR_RANGE(int, idx, 0, job_conf->net().op_size()) {
+    OperatorConf* op_conf = job_conf->mutable_net()->mutable_op(idx);
+    CHECK(op_name2op_conf->emplace(op_conf->name(), op_conf).second);
+  }
+  return [op_name2op_conf](const std::string& op_name) { return op_name2op_conf->at(op_name); };
+}
+
+void AddIdentityOp(const std::string& prefix, JobConf1* job_conf,
+                   const HashSet<LogicalBlobId>& input_lbis,
+                   HashMap<LogicalBlobId, LogicalBlobId>* old_lbi2new_lbi,
+                   const ParallelConf& parallel_conf) {
+  // add tuple identity op
+  OperatorConf* tuple_identity_op = job_conf->mutable_net()->add_op();
+  tuple_identity_op->set_name(prefix + NewUniqueId());
+  IdentityOpConf* tuple_identity_op_conf = tuple_identity_op->mutable_identity_conf();
+  int32_t idx = 0;
+  for (const LogicalBlobId& lbi : input_lbis) {
+    std::string blob_name = std::string("out_") + std::to_string(idx++);
+    {
+      LogicalBlobId output_lbi;
+      output_lbi.set_op_name(tuple_identity_op->name());
+      output_lbi.set_blob_name(blob_name);
+      CHECK(old_lbi2new_lbi->emplace(lbi, output_lbi).second);
     }
+    tuple_identity_op_conf->add_in(lbi.op_name() + "/" + lbi.blob_name());
+    tuple_identity_op_conf->add_out(blob_name);
+  }
+  // add placement of tuple identity op
+  PlacementGroup* p_group = job_conf->mutable_placement()->add_placement_group();
+  *(p_group->mutable_op_set()->add_op_name()) = tuple_identity_op->name();
+  *(p_group->mutable_parallel_conf()) = parallel_conf;
+}
+
+void SetPbMessageField(PbMessage* pb_msg, const std::string& field, const std::string& old_val,
+                       const std::string& new_val) {
+  const PbFd* fd = pb_msg->GetDescriptor()->FindFieldByName(field);
+  if (fd) {
+    CHECK_EQ(GetValFromPbMessage<std::string>(*pb_msg, field), old_val);
+    SetValInPbMessage<std::string>(pb_msg, field, new_val);
+  } else {
+    const std::pair<std::string, int32_t> prefix_idx = GenUnRepeatedBn(field);
+    CHECK_EQ(GetPbRpfFromPbMessage<std::string>(*pb_msg, prefix_idx.first).Get(prefix_idx.second),
+             old_val);
+    PbRpf<std::string>* rpf = MutPbRpfFromPbMessage<std::string>(pb_msg, prefix_idx.first);
+    *rpf->Mutable(prefix_idx.second) = new_val;
   }
 }
 
-void CollectInputLbiBlobNamesByProducerOpName(HashSet<std::string>* ret_blob_name,
-                                              const HashSet<OperatorConf*>& op_confs,
-                                              DeviceType device_type,
-                                              const std::string& producer_op_name) {
-  CHECK(ret_blob_name->empty());
-  for (const auto* op_conf : op_confs) {
-    std::shared_ptr<Operator> op = ConstructOp(*op_conf, device_type);
-    for (const auto& ibn : op->input_bns()) {
-      LogicalBlobId lbi = op->BnInOp2Lbi(ibn);
-      if (lbi.op_name() == producer_op_name) { ret_blob_name->insert(lbi.blob_name()); }
+void AddIdentityOpAndReconnect(
+    const std::string& identity_op_name_prefix, JobConf1* job_conf,
+    const std::vector<OpEdge*>& op_edges,
+    const std::function<OperatorConf*(const std::string&)>& MutOperatorConf4OpName,
+    const ParallelConf& parallel_conf) {
+  // add identity op
+  HashSet<LogicalBlobId> lbis;
+  for (OpEdge* edge : op_edges) { lbis.insert(edge->lbis().begin(), edge->lbis().end()); }
+  HashMap<LogicalBlobId, LogicalBlobId> old_lbi2new_lbi;
+  AddIdentityOp(identity_op_name_prefix, job_conf, lbis, &old_lbi2new_lbi, parallel_conf);
+  // reconnect to identity op
+  for (OpEdge* edge : op_edges) {
+    OperatorConf* op_conf = MutOperatorConf4OpName(edge->dst_node()->op().op_name());
+    PbMessage* op_type_conf = MutableMessageInPbMessage(op_conf, op_conf->op_type_case());
+    for (const LogicalBlobId& lbi : edge->lbis()) {
+      std::string lbn_check = GenLogicalBlobName(lbi);
+      std::string identity_out_lbn = GenLogicalBlobName(old_lbi2new_lbi.at(lbi));
+      for (const std::string& ibn : edge->lbi2ibns().at(lbi)) {
+        SetPbMessageField(op_type_conf, ibn, lbn_check, identity_out_lbn);
+      }
     }
   }
 }
@@ -353,46 +399,42 @@ void JobDesc::AddRecordLoadOps() {
 
 void JobDesc::FixAndOptimizeDLNet() {
   FixTickOpIfExists();
-  AddIdentityOpForChainMergeOptimization();
+  ConvertPseudoChainToChain();
   if (IsTrain()) { AddIdentityOpForAllReduceOverlapingUntrainble(); }
 }
 
-void JobDesc::AddIdentityOpForChainMergeOptimization() {
-  auto ParallelConf4OpName = MakeGetterParallelConf4OpName(job_conf_.placement());
-  HashMap<std::pair<std::string, ParallelDesc>, HashSet<OperatorConf*>> grouped;
-  GroupOpConfByProducerOpNameAndConsumerParallelDesc(&grouped, job_conf_.mutable_net(),
-                                                     ParallelConf4OpName);
-  for (auto& pair : grouped) {
-    if (pair.second.size() == 1) { continue; }
-    const auto& producer_op_name = pair.first.first;
-    ParallelDesc producer_pr(*ParallelConf4OpName(producer_op_name));
-    if (producer_pr.parallel_num() == pair.first.second.parallel_num()) { continue; }
-    HashSet<std::string> input_lbi_blob_names;
-    CollectInputLbiBlobNamesByProducerOpName(&input_lbi_blob_names, pair.second,
-                                             pair.first.second.device_type(), producer_op_name);
-    ParallelDesc consumer_op_pr(*ParallelConf4OpName((*pair.second.cbegin())->name()));
-    std::string id_op_name = AddIdentityOp(producer_op_name, input_lbi_blob_names,
-                                           *ParallelConf4OpName((*pair.second.cbegin())->name()));
-    // reconnect to identity op
-    for (auto* op_conf : pair.second) {
-      PbMessage* op_type_conf = MutableMessageInPbMessage(op_conf, op_conf->op_type_case());
-      std::shared_ptr<Operator> op = ConstructOp(*op_conf, consumer_op_pr.device_type());
-      for (const auto& ibn : op->input_bns()) {
-        const LogicalBlobId& lbi = op->BnInOp2Lbi(ibn);
-        if (lbi.op_name() != producer_op_name) { continue; }
-        std::string identity_out_lbn = id_op_name + "/" + lbi.blob_name();
-        SetValInPbMessage<std::string>(op_type_conf, ibn, identity_out_lbn);
+void JobDesc::ConvertPseudoChainToChain() {
+  auto GetSourceNodesAndEdges = [&](const HashSet<OpNode*>& chain_nodes,
+                                    HashSet<OpNode*>* source_nodes,
+                                    std::vector<OpEdge*>* source_edges) {
+    for (OpNode* node : chain_nodes) {
+      for (OpEdge* edge : node->in_edges()) {
+        if (chain_nodes.find(edge->src_node()) == chain_nodes.end()) {
+          source_edges->push_back(edge);
+          source_nodes->insert(node);
+        }
       }
     }
-  }
+  };
+  auto MutOperatorConf4OpName = MakeMutableOperatorConf4OpName(&job_conf_);
+  auto ParallelConf4OpName = MakeGetterParallelConf4OpName(job_conf_.placement());
+  OpGraph(this).ForEachPseudoChain([&](const HashSet<OpNode*>& chain_nodes) {
+    HashSet<OpNode*> source_nodes;
+    std::vector<OpEdge*> source_edges;
+    GetSourceNodesAndEdges(chain_nodes, &source_nodes, &source_edges);
+    if (source_edges.size() <= 1) { return; }
+    if (source_nodes.size() <= 1) { return; }
+    if (chain_nodes.size() - source_nodes.size() <= 2) { return; }
+    const OpNode* first_node = *source_nodes.begin();
+    if (first_node->parallel_desc().device_type() == DeviceType::kCPU) { return; }
+    AddIdentityOpAndReconnect("pseudo_chain_header_", &job_conf_, source_edges,
+                              MutOperatorConf4OpName,
+                              *ParallelConf4OpName(first_node->op().op_name()));
+  });
 }
 
 void JobDesc::AddIdentityOpForAllReduceOverlapingUntrainble() {
-  HashMap<std::string, OperatorConf*> op_name2op_conf;
-  FOR_RANGE(int, idx, 0, job_conf_.net().op_size()) {
-    OperatorConf* op_conf = job_conf_.mutable_net()->mutable_op(idx);
-    CHECK(op_name2op_conf.emplace(op_conf->name(), op_conf).second);
-  }
+  auto MutOperatorConf4OpName = MakeMutableOperatorConf4OpName(&job_conf_);
   auto ParallelConf4OpName = MakeGetterParallelConf4OpName(job_conf_.placement());
   OpGraph(this).TopoForEachNode([&](OpNode* op_node) {
     if (op_node->HasBackward()) { return; }
@@ -412,47 +454,11 @@ void JobDesc::AddIdentityOpForAllReduceOverlapingUntrainble() {
       consumer_op_pr2edges[pr].push_back(edge);
     }
     for (const auto& pair : consumer_op_pr2edges) {
-      // add identity op
-      HashSet<std::string> blob_names;
-      for (OpEdge* edge : pair.second) {
-        for (const LogicalBlobId& lbi : edge->lbis()) { blob_names.insert(lbi.blob_name()); }
-      }
-      std::string identity_op_name =
-          AddIdentityOp(op_node->op().op_name(), blob_names,
-                        *ParallelConf4OpName(pair.second.at(0)->dst_node()->op().op_name()));
-      // reconnect to identity op
-      for (OpEdge* edge : pair.second) {
-        OperatorConf* op_conf = op_name2op_conf.at(edge->dst_node()->op().op_name());
-        PbMessage* op_type_conf = MutableMessageInPbMessage(op_conf, op_conf->op_type_case());
-        for (const LogicalBlobId& lbi : edge->lbis()) {
-          std::string lbn_check = lbi.op_name() + "/" + lbi.blob_name();
-          std::string identity_out_lbn = identity_op_name + "/" + lbi.blob_name();
-          for (const std::string& ibn : edge->lbi2ibns().at(lbi)) {
-            CHECK_EQ(GetValFromPbMessage<std::string>(*op_type_conf, ibn), lbn_check);
-            SetValInPbMessage<std::string>(op_type_conf, ibn, identity_out_lbn);
-          }
-        }
-      }
+      AddIdentityOpAndReconnect(
+          "all_reduce_overlapping_untrainable_", &job_conf_, pair.second, MutOperatorConf4OpName,
+          *ParallelConf4OpName(pair.second.at(0)->dst_node()->op().op_name()));
     }
   });
-}
-
-std::string JobDesc::AddIdentityOp(const std::string& input_op_name,
-                                   const HashSet<std::string>& input_lbi_blob_names,
-                                   const ParallelConf& parallel_conf) {
-  // add tuple identity op
-  OperatorConf* tuple_identity_op = job_conf_.mutable_net()->add_op();
-  tuple_identity_op->set_name("clone_identity_" + NewUniqueId());
-  IdentityOpConf* tuple_identity_op_conf = tuple_identity_op->mutable_identity_conf();
-  for (const std::string& blob_name : input_lbi_blob_names) {
-    tuple_identity_op_conf->add_in(input_op_name + "/" + blob_name);
-    tuple_identity_op_conf->add_out(blob_name);
-  }
-  // add placement of tuple identity op
-  PlacementGroup* p_group = job_conf_.mutable_placement()->add_placement_group();
-  *(p_group->mutable_op_set()->add_op_name()) = tuple_identity_op->name();
-  *(p_group->mutable_parallel_conf()) = parallel_conf;
-  return tuple_identity_op->name();
 }
 
 void JobDesc::FixTickOpIfExists() {
