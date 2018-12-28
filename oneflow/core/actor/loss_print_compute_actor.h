@@ -9,9 +9,13 @@ class LossPrintCompActor final : public SinkCompActor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LossPrintCompActor);
   LossPrintCompActor() = default;
-  ~LossPrintCompActor() = default;
+  ~LossPrintCompActor() override = default;
 
  private:
+  void VirtualSinkCompActorInit(const TaskProto&) override { timestamp_ = 0; }
+  void* NewOther() override { return &timestamp_; }
+
+  double timestamp_ = 0;
 };
 
 }  // namespace oneflow
