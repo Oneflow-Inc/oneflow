@@ -26,6 +26,9 @@ void RecordLoadKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
     int32_t zero_count = std::max(part_name_suffix_length - static_cast<int32_t>(num.length()), 0);
     data_paths.push_back(JoinPath(data_dir, part_name_prefix + std::string(zero_count, '0') + num));
   }
+  int64_t global_piece_size = Global<JobDesc>::Get()->PieceSize();
+  CHECK_EQ(global_piece_size % parallel_ctx->parallel_num(), 0);
+  piece_size_in_one_loader_ = global_piece_size / parallel_ctx->parallel_num();
   if (Global<JobDesc>::Get()->IsTrain()) {
     size_t num_max_read =
         static_cast<size_t>(piece_size_in_one_loader_ * Global<JobDesc>::Get()->TotalBatchNum()
@@ -51,9 +54,6 @@ void RecordLoadKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
       record_reader_.reset(new BasicOFRecordReader(in_stream_.get()));
     }
   }
-  int64_t global_piece_size = Global<JobDesc>::Get()->PieceSize();
-  CHECK_EQ(global_piece_size % parallel_ctx->parallel_num(), 0);
-  piece_size_in_one_loader_ = global_piece_size / parallel_ctx->parallel_num();
 }
 
 void RecordLoadKernel::Forward(const KernelCtx& ctx,
