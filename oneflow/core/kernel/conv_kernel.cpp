@@ -28,6 +28,7 @@ void ConvKernelIf<device_type, T>::ForwardInstanceShape(
     GetWindowedOutputSize(in_shape.At(dhw_offset + i), kernel_size.Get(i), dilation_rate.Get(i),
                           strides.Get(i), padding, &(out_shape[dhw_offset + i]), nullptr, nullptr);
   }
+  out_shape.erase(out_shape.begin());
   BnInOp2Blob("out")->set_instance_shape(Shape(out_shape));
 }
 

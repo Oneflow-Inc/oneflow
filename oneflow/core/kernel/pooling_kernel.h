@@ -4,6 +4,7 @@
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/device/cudnn_util.h"
 #include "oneflow/core/common/eigen_util.h"
+#include "oneflow/core/operator/pooling_op.h"
 
 namespace oneflow {
 
@@ -75,6 +76,17 @@ class PoolingKernelIf : public KernelIf<device_type> {
                                       ));
   }
   virtual const PoolingKernelConf& GetPoolingKernelConf() const = 0;
+  void ForwardInstanceShape(const KernelCtx& ctx,
+                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    const Shape& in_shape = BnInOp2Blob("in")->shape();
+    const PoolingKernelConf& conf = GetPoolingKernelConf();
+    Shape out_shape = GetPoolOutShapeFromInShapeAndPoolConf(
+        in_shape, conf.dim(), conf.data_format(), conf.padding_type(),
+        PbRf2StdVec(conf.pool_size()), PbRf2StdVec(conf.strides()));
+    std::vector<int64_t> out_vec = out_shape.dim_vec();
+    out_vec.erase(out_vec.begin());
+    BnInOp2Blob("out")->set_instance_shape(Shape(out_vec));
+  }
   void ForwardDataContent(const KernelCtx& kernel_ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const Blob* in_blob = BnInOp2Blob("in");

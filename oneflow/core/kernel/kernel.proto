@@ -71,6 +71,7 @@ message PoolingKernelConf {
   repeated int32 pool_size = 6;
   repeated int32 strides = 7;
   required string data_format = 8;
+  required string padding_type = 9;
 }
 
 message AveragePoolingKernelConf {
