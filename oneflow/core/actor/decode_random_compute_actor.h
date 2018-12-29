@@ -16,7 +16,7 @@ class DecodeRandomActor final : public CompActor {
   void Act() override;
   std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName()
       override {
-    return {RegstNameType::kNaive, {}};
+    return std::make_pair(RegstNameType::kNaive, HashSet<std::string>{});
   }
   bool IsCustomizedReadReady() override;
   bool IsCustomizedReadAlwaysUnReadyFromNow() override { return !IsCustomizedReadReady(); }
