@@ -9,7 +9,11 @@ void VariableKernel<device_type, T>::ForwardDataContent(
   Blob* out_blob = BnInOp2Blob("out");
   if ((this->op_conf().trainable() && *tick_ % Global<JobDesc>::Get()->NumOfPiecesInBatch() == 0)
       || (this->op_conf().trainable() == false && *tick_ == 0)) {
-    out_blob->CopyDataContentFrom(ctx.device_ctx, model_blob);
+    if (Global<JobDesc>::Get()->enable_mem_sharing()) {
+      CHECK_EQ(out_blob->dptr(), model_blob->dptr());
+    } else {
+      out_blob->CopyDataContentFrom(ctx.device_ctx, model_blob);
+    }
   } else {
     // do nothing
   }
@@ -20,8 +24,9 @@ template<DeviceType device_type, typename T>
 void VariableKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CHECK(this->op_conf().trainable());
-  BnInOp2Blob(GenDiffBn(ModelName()))
-      ->CopyDataContentFrom(ctx.device_ctx, BnInOp2Blob(GenDiffBn("out")));
+  const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
+  Blob* model_diff_blob = BnInOp2Blob(GenDiffBn(ModelName()));
+  model_diff_blob->CopyDataContentFrom(ctx.device_ctx, out_diff_blob);
 }
 
 template<DeviceType device_type, typename T>
