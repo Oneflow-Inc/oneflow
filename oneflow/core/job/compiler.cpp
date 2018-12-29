@@ -43,9 +43,17 @@ void ToDotFile(const Plan& plan, const std::string& filepath) {
   log_stream << "}\n";
 }
 
-bool IsNcclTaskType(const TaskType& tt) {
-  return tt == TaskType::kNcclAllGather || tt == TaskType::kNcclAllReduce
-         || tt == TaskType::kNcclReduceScatter;
+bool IsNcclTask(const TaskProto& task) {
+  switch (task.task_type()) {
+    case TaskType::kNcclAllGather:
+    case TaskType::kNcclAllReduce:
+    case TaskType::kNcclReduceScatter: return true;
+    default: return false;
+  }
+}
+
+bool CanTaskReuseNcclComm(const TaskProto& task) {
+  return task.task_type() == TaskType::kNcclAllReduce;
 }
 
 std::string GenNcclGroupKey(const std::vector<int64_t>& sorted_thrd_ids) {
@@ -69,10 +77,12 @@ Plan Compiler::Compile() {
 
 void Compiler::GenNcclTopo(Plan* plan) {
   HashMap<int64_t, std::vector<const TaskProto*>> rank_set2nccl_tasks;
-  const bool reuse_nccl_communicator = Global<JobDesc>::Get()->reuse_nccl_communicator();
+  HashMap<int64_t, bool> rank_set2reuse_nccl_comm;
+  const bool enable_reuse_nccl_communicator =
+      Global<JobDesc>::Get()->enable_reuse_nccl_communicator();
   for (const TaskProto& task : plan->task()) {
-    if (!IsNcclTaskType(task.task_type())) { continue; }
-    if (reuse_nccl_communicator) { CHECK(task.task_type() == TaskType::kNcclAllReduce); }
+    if (!IsNcclTask(task)) { continue; }
+    if (enable_reuse_nccl_communicator) { CHECK(task.task_type() == TaskType::kNcclAllReduce); }
     CHECK(IsTaskOnGpuDevice(task));
     CHECK(task.has_parallel_ctx());
     CHECK(task.parallel_ctx().has_rank_ctx());
@@ -82,6 +92,11 @@ void Compiler::GenNcclTopo(Plan* plan) {
       CHECK_EQ(first->task_type(), task.task_type());
       CHECK_EQ(first->parallel_ctx().rank_ctx().rank_num(),
                task.parallel_ctx().rank_ctx().rank_num());
+    }
+    if (rank_set2reuse_nccl_comm.find(rank_set_id) == rank_set2reuse_nccl_comm.end()) {
+      rank_set2reuse_nccl_comm[rank_set_id] = CanTaskReuseNcclComm(task);
+    } else {
+      CHECK_EQ(rank_set2reuse_nccl_comm[rank_set_id], CanTaskReuseNcclComm(task));
     }
     rank_set2nccl_tasks[rank_set_id].push_back(&task);
   }
@@ -100,10 +115,10 @@ void Compiler::GenNcclTopo(Plan* plan) {
   std::map<std::string, const NcclCommGroup*> nccl_group_key2nccl_group;
   NcclTopo* nccl_topo = plan->mutable_nccl_topo();
   int64_t next_nccl_comm_id = 0;
-  auto GetOrCreateNcclGroup =
-      [&](const std::vector<int64_t>& sorted_thrd_ids) -> const NcclCommGroup* {
+  auto GetOrCreateNcclGroup = [&](const std::vector<int64_t>& sorted_thrd_ids,
+                                  const bool reuse) -> const NcclCommGroup* {
     const std::string key = GenNcclGroupKey(sorted_thrd_ids);
-    if (reuse_nccl_communicator) {
+    if (enable_reuse_nccl_communicator && reuse) {
       const auto it = nccl_group_key2nccl_group.find(key);
       if (it != nccl_group_key2nccl_group.end()) { return it->second; }
     }
@@ -125,7 +140,8 @@ void Compiler::GenNcclTopo(Plan* plan) {
                    [](const TaskProto* task) -> int64_t {
                      return Global<IDMgr>::Get()->GlobalThrdId4TaskId(task->task_id());
                    });
-    const NcclCommGroup* group = GetOrCreateNcclGroup(thrd_ids);
+    const NcclCommGroup* group =
+        GetOrCreateNcclGroup(thrd_ids, rank_set2reuse_nccl_comm[pair.first]);
     CHECK_EQ(group->comm_desc_size(), tasks.size());
     FOR_RANGE(int32_t, i, 0, tasks.size()) {
       task_id2comm_desc_id.emplace(tasks[i]->task_id(), group->comm_desc(i).id());

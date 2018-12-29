@@ -91,7 +91,7 @@ message OtherConf {
   // Each nodes' weight size are [16, 32, 64, 128, 128, 128, 128, 128, 128, 128, 16].
   // You can see the actual number of reduce group is slightly bigger than all_reduce_group_num.
   optional float all_reduce_group_size_warmup = 148 [default = 2];
-  optional bool reuse_nccl_communicator = 149 [default = false];
+  optional bool enable_reuse_nccl_communicator = 149 [default = false];
 
   oneof JobType {
     TrainConf train_conf = 200;
