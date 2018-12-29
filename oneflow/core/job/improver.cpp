@@ -86,20 +86,48 @@ void ForEachSameColoredStreamRegstDescWithoutConsumer(
 void ForEachSameColoredChainRegstDescWithConsumer(
     const PlanTaskGraph& plan_task_graph,
     const std::function<void(const std::list<const RegstDescProto*>&)>& Handler) {
+  auto IsAllowedRegstDesc = [](const RegstDescProto* regst_desc) {
+    return regst_desc->register_num() == 1;
+  };
+  HashMap<const RegstDescProto*, std::vector<const RegstDescProto*>> header2members;
+  HashMap<const RegstDescProto*, const RegstDescProto*> member2header;
+  plan_task_graph.ForEachRegstDescsWithSameChainId7HintId(
+      IsAllowedRegstDesc, [&](const std::vector<const RegstDescProto*>& regst_descs) {
+        header2members.emplace(regst_descs.at(0), regst_descs);
+        for (const RegstDescProto* regst_desc : regst_descs) {
+          member2header.emplace(regst_desc, regst_descs.at(0));
+        }
+      });
   auto ComputeLifetimeSameChainActorIds = [&](const RegstDescProto* regst_desc,
                                               HashSet<int64_t>* ret_actor_ids) {
     CHECK(regst_desc->enable_mem_sharing());
     ret_actor_ids->clear();
-    plan_task_graph.ComputeLifetimeSameChainActorIds(regst_desc, ret_actor_ids);
+    for (const RegstDescProto* member : header2members.at(regst_desc)) {
+      plan_task_graph.ComputeLifetimeSameChainActorIds(member, ret_actor_ids);
+    }
   };
   auto ChainId4TaskId = [&](int64_t task_id) {
     return plan_task_graph.TaskProto4TaskId(task_id)->task_set_info().chain_id();
   };
   const Plan& plan = plan_task_graph.plan();
+  auto FilterHeaders = [&](const std::list<const RegstDescProto*>& regst_descs) {
+    HashSet<const RegstDescProto*> headers_set;
+    for (const RegstDescProto* regst_desc : regst_descs) {
+      headers_set.emplace(member2header.at(regst_desc));
+    }
+    return std::list<const RegstDescProto*>(headers_set.begin(), headers_set.end());
+  };
+  auto HandlerAddedHintMembers = [&](const std::list<const RegstDescProto*>& regst_descs) {
+    std::list<const RegstDescProto*> members;
+    for (const auto* header : regst_descs) {
+      for (const auto* member : header2members.at(header)) { members.push_back(member); }
+    }
+    Handler(members);
+  };
   ForEachSharableChainRegstDescsWithConsumer(
       plan, ChainId4TaskId, [&](const std::list<const RegstDescProto*>& regst_descs) {
-        RegstLifetimeGraph(regst_descs, ComputeLifetimeSameChainActorIds)
-            .ForEachSameColoredRegstDescs(Handler);
+        RegstLifetimeGraph(FilterHeaders(regst_descs), ComputeLifetimeSameChainActorIds)
+            .ForEachSameColoredRegstDescs(HandlerAddedHintMembers);
       });
 }
 

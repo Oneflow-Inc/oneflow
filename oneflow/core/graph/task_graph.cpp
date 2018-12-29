@@ -437,6 +437,30 @@ void TaskGraph::EnableMemSharingInVariableOp() {
   });
 }
 
+void TaskGraph::EnableInplaceByMemSharingHintId() {
+  AcyclicTopoForEachNode([&](TaskNode* node) {
+    if (node->exec_gph().node_num() != 1) { return; }
+    const Operator* op = node->exec_gph().SoleNode()->op().get();
+    auto* fw_task_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
+    auto* bw_task_node = dynamic_cast<NormalBackwardCompTaskNode*>(node);
+    RegstDesc* input_regst = nullptr;
+    RegstDesc* output_regst = nullptr;
+    if (op->IsForwardInplace() && fw_task_node) {
+      input_regst = fw_task_node->GetSoleConsumedRegst("in").get();
+      output_regst = fw_task_node->GetProducedRegst("out").get();
+    } else if (op->IsBackwardInplace() && bw_task_node) {
+      input_regst = bw_task_node->GetSoleConsumedRegst(GenDiffBn("out")).get();
+      output_regst = bw_task_node->GetProducedRegst(GenDiffBn("in")).get();
+    } else {
+      // do nothing
+      return;
+    }
+    if (input_regst->NumOfLbi() != 1) { return; }
+    if (output_regst->NumOfLbi() != 1) { return; }
+    output_regst->set_mem_shared_hint_id(input_regst->mem_shared_hint_id());
+  });
+}
+
 void TaskGraph::RmUselessConsumeRelationshipBetweenFwBw() {
   for (TaskNode* task_node : ordered_task_nodes_) {
     auto bw_node = dynamic_cast<NormalBackwardCompTaskNode*>(task_node);
