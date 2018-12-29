@@ -179,6 +179,7 @@ int64_t RegstDesc::ByteOffsetInPackedBlobDescBody(const LogicalBlobId& lbi) cons
     LbiBlobDescPair lbi_blob_desc_pair;
     *lbi_blob_desc_pair.mutable_lbi() = pair.first;
     pair.second->ToProto(lbi_blob_desc_pair.mutable_blob_desc());
+    lbi_blob_desc_pairs.push_back(lbi_blob_desc_pair);
   }
   std::sort(lbi_blob_desc_pairs.begin(), lbi_blob_desc_pairs.end(), CompareLbiBlobDescPair);
 
@@ -189,9 +190,8 @@ int64_t RegstDesc::ByteOffsetInPackedBlobDescBody(const LogicalBlobId& lbi) cons
       [&](const LbiBlobDescPair& lbi_blob_desc_pair, int64_t body_offset, int64_t header_offset) {
         if (found) { return; }
         if (lbi_blob_desc_pair.lbi() == lbi) {
+          offset = body_offset;
           found = true;
-        } else {
-          offset += body_offset;
         }
       });
   CHECK(found);
