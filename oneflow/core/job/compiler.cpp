@@ -118,7 +118,7 @@ void Compiler::GenNcclTopo(Plan* plan) {
   auto GetOrCreateNcclGroup = [&](const std::vector<int64_t>& sorted_thrd_ids,
                                   const bool reuse) -> const NcclCommGroup* {
     const std::string key = GenNcclGroupKey(sorted_thrd_ids);
-    if (enable_reuse_nccl_communicator && reuse) {
+    if (reuse) {
       const auto it = nccl_group_key2nccl_group.find(key);
       if (it != nccl_group_key2nccl_group.end()) { return it->second; }
     }
@@ -130,7 +130,7 @@ void Compiler::GenNcclTopo(Plan* plan) {
       comm->set_global_thrd_id(sorted_thrd_ids[i]);
       comm->set_rank_id(i);
     }
-    nccl_group_key2nccl_group[key] = group;
+    if (reuse) { nccl_group_key2nccl_group[key] = group; }
     return group;
   };
   for (const auto& pair : rank_set2nccl_tasks) {
@@ -140,8 +140,8 @@ void Compiler::GenNcclTopo(Plan* plan) {
                    [](const TaskProto* task) -> int64_t {
                      return Global<IDMgr>::Get()->GlobalThrdId4TaskId(task->task_id());
                    });
-    const NcclCommGroup* group =
-        GetOrCreateNcclGroup(thrd_ids, rank_set2reuse_nccl_comm[pair.first]);
+    const NcclCommGroup* group = GetOrCreateNcclGroup(
+        thrd_ids, enable_reuse_nccl_communicator && rank_set2reuse_nccl_comm[pair.first]);
     CHECK_EQ(group->comm_desc_size(), tasks.size());
     FOR_RANGE(int32_t, i, 0, tasks.size()) {
       task_id2comm_desc_id.emplace(tasks[i]->task_id(), group->comm_desc(i).id());
