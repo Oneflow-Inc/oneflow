@@ -402,6 +402,10 @@ void KernelIfWithActivation<device_type, T>::BackwardActivation(const KernelCtx&
                                                                 const Blob* out_diff_blob,
                                                                 Blob* bw_activation_blob) const {
   int64_t elem_cnt = out_blob->shape().elem_cnt();
+  if (out_blob->has_instance_shape_field()) {
+    CHECK(bw_activation_blob->has_instance_shape_field());
+    bw_activation_blob->CopyInstanceShapeFrom(ctx.device_ctx, out_blob);
+  }
   switch (GetActivationType()) {
 #define DEFINE_ONE_CASE(activation_type)                                    \
   case ActivationType::k##activation_type:                                  \
