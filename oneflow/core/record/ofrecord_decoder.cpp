@@ -141,6 +141,7 @@ void OFRecordDecoder<encode_case, T>::ReadDataContent(
   int32_t thread_num = std::thread::hardware_concurrency() / 4;
   ThreadPool thread_pool(thread_num);
   int32_t part_num = std::min(record_blob.record_num(), thread_num);
+  /*
   if (part_num >= 2) {
     BlockingCounter bc(part_num);
     FOR_RANGE(int32_t, part_id, 0, part_num) {
@@ -153,9 +154,10 @@ void OFRecordDecoder<encode_case, T>::ReadDataContent(
     }
     bc.WaitUntilCntEqualZero();
   } else {
-    ReadPartDataContent(ctx, in_blob, blob_conf, col_id, out_blob, 0, 1, one_col_elem_num,
-                        random_seed);
-  }
+  */
+  ReadPartDataContent(ctx, in_blob, blob_conf, col_id, out_blob, 0, 1, one_col_elem_num,
+                      random_seed);
+  //}
   int64_t left_row_num = out_blob->static_shape().At(0) - record_blob.record_num();
   if (left_row_num > 0) {
     Memset<DeviceType::kCPU>(ctx,
@@ -176,14 +178,15 @@ void OFRecordDecoder<encode_case, T>::ReadPartDataContent(
   FOR_RANGE(int32_t, i, range.begin(), range.end()) {
     const OFRecord& record = record_blob.GetRecord(i);
     int32_t j = 0;
-    LOG(INFO) << " list size = " << record.feature().size();
+    LOG(INFO) << "blob_n = " << i << " list size = " << record.feature().size();
+    LOG(INFO) << " list start and find featue name: " << blob_conf.name();
     for (const auto& pair : record.feature()) {
       LOG(INFO) << "list feature name: " << pair.first << " j = " << j++;
     }
     CHECK(record.feature().find(blob_conf.name()) != record.feature().end())
         << "Field " << blob_conf.name() << " not found";
-    const Feature& feature = record.feature().at(blob_conf.name());
     LOG(INFO) << " list done and find featue name: " << blob_conf.name();
+    const Feature& feature = record.feature().at(blob_conf.name());
     T* out_dptr = out_blob->mut_dptr<T>() + i * one_col_elem_num;
     if (col_id < out_blob->col_num(i)) {
       ReadOneCol(ctx, feature, blob_conf, col_id, out_dptr, one_col_elem_num,

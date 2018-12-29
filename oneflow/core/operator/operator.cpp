@@ -264,7 +264,8 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
     }
 
     const PbRpf<std::string>* bns_for_instance_shape = &output_bns();
-    if (IsLossOp() || (!is_forward)) { bns_for_instance_shape = &input_bns(); }
+    if (IsLossOp()) { bns_for_instance_shape = &input_bns(); }
+    if (!is_forward) { bns_for_instance_shape = &input_diff_bns(); }
     if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns_for_instance_shape,
                              &BlobDesc::has_instance_shape_field)) {
       kernel_conf->set_need_do_instance_shape(true);
