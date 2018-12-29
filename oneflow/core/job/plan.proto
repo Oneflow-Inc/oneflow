@@ -13,7 +13,7 @@ message NetTopo {
 
 message NcclCommDesc {
   required int64 id = 1;
-  required int64 global_device_id = 2;
+  required int64 global_thrd_id = 2;
   required int64 rank_id = 3;
 }
 

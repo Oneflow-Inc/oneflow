@@ -21,12 +21,11 @@ int32_t GetDeviceId4Task(int64_t task_id) {
 }
 
 int64_t GetMachineId4CommDesc(const NcclCommDesc& comm_desc) {
-  return Global<IDMgr>::Get()->MachineId4ActorId(comm_desc.global_device_id());
+  return Global<IDMgr>::Get()->MachineId4ActorId(comm_desc.global_thrd_id());
 }
 
 bool IsCommOnThisMachine(const NcclCommDesc& comm_desc) {
-  return Global<IDMgr>::Get()->MachineId4ActorId(comm_desc.global_device_id())
-         == Global<MachineCtx>::Get()->this_machine_id();
+  return GetMachineId4CommDesc(comm_desc) == Global<MachineCtx>::Get()->this_machine_id();
 }
 
 void GetOrCreateNcclUniqueId(const std::vector<const NcclCommDesc*>& comm_descs, int64_t group_id,
@@ -52,7 +51,7 @@ void CreateNcclComms4CommDescs(const std::vector<const NcclCommDesc*>& comm_desc
   NcclCheck(ncclGroupStart());
   FOR_RANGE(size_t, i, 0, comm_descs.size()) {
     const NcclCommDesc* comm_desc = comm_descs.at(i);
-    const int32_t device_id = GetDeviceId4Task(comm_desc->global_device_id());
+    const int32_t device_id = GetDeviceId4Task(comm_desc->global_thrd_id());
     cudaSetDevice(device_id);
     NcclCheck(ncclCommInitRank(&comms->at(i), num_rank, unique_id,
                                static_cast<int32_t>(comm_desc->rank_id())));

@@ -48,10 +48,10 @@ bool IsNcclTaskType(const TaskType& tt) {
          || tt == TaskType::kNcclReduceScatter;
 }
 
-std::string GenNcclGroupKey(const std::vector<int64_t>& sorted_device_ids) {
+std::string GenNcclGroupKey(const std::vector<int64_t>& sorted_thrd_ids) {
   std::ostringstream oss;
-  for (const int64_t device_id : sorted_device_ids) {
-    oss << std::setfill('0') << std::setw(sizeof(device_id) * 2) << std::hex << device_id;
+  for (const int64_t thrd_id : sorted_thrd_ids) {
+    oss << std::setfill('0') << std::setw(sizeof(thrd_id) * 2) << std::hex << thrd_id;
   }
   return oss.str();
 }
@@ -101,18 +101,18 @@ void Compiler::GenNcclTopo(Plan* plan) {
   NcclTopo* nccl_topo = plan->mutable_nccl_topo();
   int64_t next_nccl_comm_id = 0;
   auto GetOrCreateNcclGroup =
-      [&](const std::vector<int64_t>& sorted_device_ids) -> const NcclCommGroup* {
-    const std::string key = GenNcclGroupKey(sorted_device_ids);
+      [&](const std::vector<int64_t>& sorted_thrd_ids) -> const NcclCommGroup* {
+    const std::string key = GenNcclGroupKey(sorted_thrd_ids);
     if (reuse_nccl_communicator) {
       const auto it = nccl_group_key2nccl_group.find(key);
       if (it != nccl_group_key2nccl_group.end()) { return it->second; }
     }
     NcclCommGroup* group = nccl_topo->mutable_group()->Add();
     group->set_id(nccl_topo->group().size());
-    FOR_RANGE(int32_t, i, 0, sorted_device_ids.size()) {
+    FOR_RANGE(int32_t, i, 0, sorted_thrd_ids.size()) {
       NcclCommDesc* comm = group->mutable_comm_desc()->Add();
       comm->set_id(++next_nccl_comm_id);
-      comm->set_global_device_id(sorted_device_ids[i]);
+      comm->set_global_thrd_id(sorted_thrd_ids[i]);
       comm->set_rank_id(i);
     }
     nccl_group_key2nccl_group[key] = group;
@@ -120,12 +120,12 @@ void Compiler::GenNcclTopo(Plan* plan) {
   };
   for (const auto& pair : rank_set2nccl_tasks) {
     const std::vector<const TaskProto*>& tasks = pair.second;
-    std::vector<int64_t> device_ids(tasks.size());
-    std::transform(tasks.cbegin(), tasks.cend(), device_ids.begin(),
+    std::vector<int64_t> thrd_ids(tasks.size());
+    std::transform(tasks.cbegin(), tasks.cend(), thrd_ids.begin(),
                    [](const TaskProto* task) -> int64_t {
-                     return Global<IDMgr>::Get()->GlobalDeviceId4TaskId(task->task_id());
+                     return Global<IDMgr>::Get()->GlobalThrdId4TaskId(task->task_id());
                    });
-    const NcclCommGroup* group = GetOrCreateNcclGroup(device_ids);
+    const NcclCommGroup* group = GetOrCreateNcclGroup(thrd_ids);
     CHECK_EQ(group->comm_desc_size(), tasks.size());
     FOR_RANGE(int32_t, i, 0, tasks.size()) {
       task_id2comm_desc_id.emplace(tasks[i]->task_id(), group->comm_desc(i).id());
