@@ -18,12 +18,18 @@ void ConvKernel<DeviceType::kGPU, T>::UpdateCudnnDescIfNeed(
   if (!(this->kernel_conf().need_do_instance_shape())) { return; }
   CHECK(this->EnableCudnn());
 
+  Blob* out_or_diff_blob = BnInOp2Blob("out");
+  if (!out_or_diff_blob) {
+    out_or_diff_blob = BnInOp2Blob(GenDiffBn("out"));
+    CHECK(out_or_diff_blob);
+  }
+
   const std::string& data_format =
       this->template GetValFromCustomizedOpConf<std::string>("data_format");
   this->in_desc_.reset(
       new CudnnTensorDesc(GetDataType<T>::value, BnInOp2Blob("in")->shape(), data_format));
   this->out_desc_.reset(
-      new CudnnTensorDesc(GetDataType<T>::value, BnInOp2Blob("out")->shape(), data_format));
+      new CudnnTensorDesc(GetDataType<T>::value, out_or_diff_blob->shape(), data_format));
   this->conv_desc_.reset(new CudnnConvDesc(GetDataType<T>::value, BnInOp2Blob("in")->shape(),
                                            this->GetCustomizedOpConf()));
 }

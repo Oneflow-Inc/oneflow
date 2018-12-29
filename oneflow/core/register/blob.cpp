@@ -275,7 +275,7 @@ void Blob::CopyInstanceShapeFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs || ByteSizeOfInstanceShapeField() == 0) { return; }
   CHECK_EQ(ByteSizeOfInstanceShapeField(), rhs->ByteSizeOfInstanceShapeField());
   Memcpy<DeviceType::kCPU>(device_ctx, mut_instance_shape_ptr(), rhs->instance_shape_ptr(),
-                           ByteSizeOfDim2ValidNumField());
+                           ByteSizeOfInstanceShapeField());
 }
 
 void Blob::CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) {

@@ -175,9 +175,15 @@ void OFRecordDecoder<encode_case, T>::ReadPartDataContent(
   std::uniform_int_distribution<int32_t> distribution;
   FOR_RANGE(int32_t, i, range.begin(), range.end()) {
     const OFRecord& record = record_blob.GetRecord(i);
+    int32_t j = 0;
+    LOG(INFO) << " list size = " << record.feature().size();
+    for (const auto& pair : record.feature()) {
+      LOG(INFO) << "list feature name: " << pair.first << " j = " << j++;
+    }
     CHECK(record.feature().find(blob_conf.name()) != record.feature().end())
         << "Field " << blob_conf.name() << " not found";
     const Feature& feature = record.feature().at(blob_conf.name());
+    LOG(INFO) << " list done and find featue name: " << blob_conf.name();
     T* out_dptr = out_blob->mut_dptr<T>() + i * one_col_elem_num;
     if (col_id < out_blob->col_num(i)) {
       ReadOneCol(ctx, feature, blob_conf, col_id, out_dptr, one_col_elem_num,
