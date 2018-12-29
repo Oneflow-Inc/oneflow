@@ -36,13 +36,21 @@ size_t GetTmpForSumByteSize(Blob* tmp_storage_blob) {
 
 }  // namespace
 
-NormalizationCtx::NormalizationCtx(const KernelConf& kernel_conf, DataType type) {
+NormalizationKernelConf GenBNKernelConfForNewInShape(const Shape& in_shape,
+                                                     const NormalizationKernelConf& conf) {
+  NormalizationKernelConf ret = conf;
 #ifdef WITH_CUDA
-  const NormalizationKernelConf& conf = kernel_conf.normalization_conf();
+  in_shape.ToProto(ret.mutable_in());
+#endif  // WITH_CUDA
+  return ret;
+}
+
+NormalizationCtx::NormalizationCtx(const NormalizationKernelConf& conf, DataType type) {
+#ifdef WITH_CUDA
   mode_ = static_cast<cudnnBatchNormMode_t>(conf.cudnn_bn_mode());
   std::vector<int64_t> in_shape(conf.in().dim().begin(), conf.in().dim().end());
   CHECK(4 <= in_shape.size() && in_shape.size() <= 5) << in_shape.size();
-  int32_t axis = kernel_conf.op_attribute().op_conf().normalization_conf().axis();
+  int32_t axis = conf.axis();
   param_desc_.reset(new CudnnTensorDesc());
   int N = in_shape[0];
   int C = in_shape[axis];

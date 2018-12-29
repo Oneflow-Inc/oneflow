@@ -8,7 +8,7 @@ namespace oneflow {
 
 class NormalizationCtx final {
  public:
-  NormalizationCtx(const KernelConf&, DataType);
+  NormalizationCtx(const NormalizationKernelConf&, DataType);
   ~NormalizationCtx() = default;
 
 #ifdef WITH_CUDA
@@ -23,6 +23,9 @@ class NormalizationCtx final {
 #endif  // WITH_CUDA
 };
 
+NormalizationKernelConf GenBNKernelConfForNewInShape(const Shape& in_shape,
+                                                     const NormalizationKernelConf& conf);
+
 template<DeviceType device_type, typename T>
 class NormalizationKernel final : public KernelIfWithModel<device_type, T>,
                                   public KernelIfWithActivation<device_type, T> {
@@ -36,10 +39,22 @@ class NormalizationKernel final : public KernelIfWithModel<device_type, T>,
 #ifdef WITH_CUDA
   void VirtualKernelInit(const ParallelContext*) override {
     if (this->kernel_conf().normalization_conf().use_cudnn()) {
-      normalization_ctx_.reset(new NormalizationCtx(this->kernel_conf(), GetDataType<T>::value));
+      normalization_ctx_.reset(
+          new NormalizationCtx(this->kernel_conf().normalization_conf(), GetDataType<T>::value));
     }
   }
 #endif  // WITH_CUDA
+  bool HasSameShapeBetweenInOut() const override { return true; }
+  void UpdtStatusBeforeFwBw(const KernelCtx& ctx,
+                            std::function<Blob*(const std::string&)> BnInOp2Blob) override {
+    if (!(this->kernel_conf().need_do_instance_shape())) { return; }
+    CHECK_EQ(device_type, DeviceType::kGPU);
+    CHECK(this->kernel_conf().normalization_conf().use_cudnn());
+    normalization_ctx_.reset(
+        new NormalizationCtx(GenBNKernelConfForNewInShape(BnInOp2Blob("in")->shape(),
+                                                          this->kernel_conf().normalization_conf()),
+                             GetDataType<T>::value));
+  }
   void InitModelBlobsWithRandomSeed(
       DeviceCtx* ctx, std::mt19937* random_seed_gen,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;

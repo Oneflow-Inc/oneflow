@@ -104,7 +104,7 @@ message LocalResponseNormalizationKernelConf {
 }
 
 message NormalizationKernelConf {
-  optional int32 axis = 1;
+  required int32 axis = 1;
   optional int64 transpose_rows = 2;
   optional int64 transpose_cols = 3;
   optional bool need_transpose = 4;

@@ -116,6 +116,7 @@ void NormalizationOp::VirtualGenKernelConf(
   const auto* ctx = dynamic_cast<const NormalizationOpCtx*>(op_ctx);
 #ifdef WITH_CUDA
   if (ctx == nullptr) {
+    conf->set_axis(op_conf().normalization_conf().axis());
     VirtualGenKernelConfForCudnn(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
     return;
   }
