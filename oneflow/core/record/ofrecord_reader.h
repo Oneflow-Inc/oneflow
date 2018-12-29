@@ -52,14 +52,13 @@ class RandomShuffleOFRecordReader final : public OFRecordReader {
   size_t Read(size_t n, OFRecord* allocated_records) override;
 
   PersistentInStream* in_stream_;
-  std::thread filler_thread_;
   const size_t buffer_size_;
   const size_t num_max_read_;
-
+  std::mt19937 random_gen_;
+  std::thread filler_thread_;
   std::mutex mu_;
   std::condition_variable cond_;
   std::vector<OFRecordChunk> buffered_chunks_;
-  std::mt19937 random_gen_;
   bool is_eof_;
 };
 

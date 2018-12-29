@@ -24,7 +24,7 @@ BasicOFRecordReader::BasicOFRecordReader(PersistentInStream* in, size_t num_max_
 
 size_t BasicOFRecordReader::Read(size_t n, OFRecord* allocated_records) {
   OFRecordChunk chunk;
-  size_t can_read = std::min(n, num_max_read_ - num_read_);
+  const size_t can_read = std::min(n, num_max_read_ - num_read_);
   FOR_RANGE(size_t, i, 0, can_read) {
     if (ReadChunk(in_stream_, &chunk)) {
       CHECK(allocated_records[i].ParseFromArray(chunk.data.get(), chunk.size));
