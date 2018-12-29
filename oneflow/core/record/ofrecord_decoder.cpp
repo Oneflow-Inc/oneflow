@@ -141,7 +141,7 @@ void OFRecordDecoder<encode_case, T>::ReadDataContent(
   int32_t thread_num = std::thread::hardware_concurrency() / 4;
   ThreadPool thread_pool(thread_num);
   int32_t part_num = std::min(record_blob.record_num(), thread_num);
-  /*
+
   if (part_num >= 2) {
     BlockingCounter bc(part_num);
     FOR_RANGE(int32_t, part_id, 0, part_num) {
@@ -154,10 +154,9 @@ void OFRecordDecoder<encode_case, T>::ReadDataContent(
     }
     bc.WaitUntilCntEqualZero();
   } else {
-  */
-  ReadPartDataContent(ctx, in_blob, blob_conf, col_id, out_blob, 0, 1, one_col_elem_num,
-                      random_seed);
-  //}
+    ReadPartDataContent(ctx, in_blob, blob_conf, col_id, out_blob, 0, 1, one_col_elem_num,
+                        random_seed);
+  }
   int64_t left_row_num = out_blob->static_shape().At(0) - record_blob.record_num();
   if (left_row_num > 0) {
     Memset<DeviceType::kCPU>(ctx,
@@ -171,21 +170,26 @@ void OFRecordDecoder<encode_case, T>::ReadPartDataContent(
     DeviceCtx* ctx, Blob* in_blob, const BlobConf& blob_conf, int32_t col_id, Blob* out_blob,
     int32_t part_id, int32_t part_num, int64_t one_col_elem_num, int32_t random_seed) const {
   RecordBlob<OFRecord> record_blob(in_blob);
+  LOG(INFO) << " in_blob elem_cnt : " << in_blob->static_shape().elem_cnt()
+            << " record_num : " << record_blob.record_num();
   BalancedSplitter bs(record_blob.record_num(), part_num);
   Range range = bs.At(part_id);
   std::mt19937 gen(random_seed + part_id);
   std::uniform_int_distribution<int32_t> distribution;
   FOR_RANGE(int32_t, i, range.begin(), range.end()) {
     const OFRecord& record = record_blob.GetRecord(i);
+    /*
+    LOG(INFO) << "record_num : " << record_blob.record_num() << " range_begin : " << range.begin()
+              << " range_end: " << range.end();
     int32_t j = 0;
     LOG(INFO) << "blob_n = " << i << " list size = " << record.feature().size();
     LOG(INFO) << " list start and find featue name: " << blob_conf.name();
     for (const auto& pair : record.feature()) {
       LOG(INFO) << "list feature name: " << pair.first << " j = " << j++;
     }
+    */
     CHECK(record.feature().find(blob_conf.name()) != record.feature().end())
         << "Field " << blob_conf.name() << " not found";
-    LOG(INFO) << " list done and find featue name: " << blob_conf.name();
     const Feature& feature = record.feature().at(blob_conf.name());
     T* out_dptr = out_blob->mut_dptr<T>() + i * one_col_elem_num;
     if (col_id < out_blob->col_num(i)) {
@@ -194,7 +198,7 @@ void OFRecordDecoder<encode_case, T>::ReadPartDataContent(
       if (out_blob->dim1_valid_num_ptr()) { SetDim1ValidNum(feature, out_blob, i); }
       if (out_blob->dim2_valid_num_ptr()) { SetDim2ValidNum(feature, out_blob, i); }
       FOR_RANGE(size_t, j, 0, blob_conf.preprocess_size()) {
-        DoPreprocess<T>(blob_conf.preprocess(j), out_dptr, out_blob->shape());
+        DoPreprocess<T>(blob_conf.preprocess(j), out_dptr, out_blob->static_shape());
       }
     } else {
       Memset<DeviceType::kCPU>(ctx, out_dptr, 0, one_col_elem_num * sizeof(T));

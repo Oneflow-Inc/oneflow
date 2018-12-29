@@ -185,7 +185,7 @@ class RecordBlob final {
   OF_DISALLOW_COPY_AND_MOVE(RecordBlob);
   RecordBlob(Blob* records) : records_(records), record_num_(0) {
     CHECK_EQ(records->blob_desc().data_type(), GetDataType<RecordType>::value);
-    record_num_ = records_->shape().elem_cnt();
+    record_num_ = records_->static_shape().elem_cnt();
   }
   ~RecordBlob() = default;
 
