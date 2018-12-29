@@ -16,6 +16,7 @@ void ReshapeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
   BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   *out_blob_desc = *in_blob_desc;
 
+  CHECK(!in_blob_desc->has_instance_shape_field());
   const ReshapeOpConf& conf = op_conf().reshape_conf();
   std::vector<int64_t> dim_vec(1 + conf.shape().dim_size());
   dim_vec[0] = in_blob_desc->shape().At(0);

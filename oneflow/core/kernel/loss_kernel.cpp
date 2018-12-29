@@ -14,6 +14,17 @@ void LossKernel<device_type, PredType, LabelType>::SetLossInstanceNumBlob(
 }
 
 template<DeviceType device_type, typename PredType, typename LabelType>
+void LossKernel<device_type, PredType, LabelType>::ForwardInstanceShape(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  Blob* prediction_diff_blob = BnInOp2Blob(GenDiffBn("prediction"));
+  Blob* prediction_blob = BnInOp2Blob("prediction");
+  CHECK(prediction_blob->has_instance_shape_field());
+  if (prediction_diff_blob != nullptr) {
+    prediction_diff_blob->CopyInstanceShapeFrom(ctx.device_ctx, prediction_blob);
+  }
+}
+
+template<DeviceType device_type, typename PredType, typename LabelType>
 void LossKernel<device_type, PredType, LabelType>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   VirtualLossForwardDataContent(ctx, BnInOp2Blob);

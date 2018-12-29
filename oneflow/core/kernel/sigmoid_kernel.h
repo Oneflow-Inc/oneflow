@@ -14,6 +14,7 @@ class SigmoidKernel final : public KernelIf<device_type> {
   ~SigmoidKernel() = default;
 
  private:
+  bool HasSameShapeBetweenInOut() const override { return true; }
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
   void BackwardDataContent(const KernelCtx&,

@@ -15,6 +15,7 @@ class SigmoidOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override;
   bool IsElemWiseOp() const override { return true; }
   bool NeedInBlobWhenBackward() const override { return false; }
+  bool CanInferInDiffDynamicShapeWithoutIn() const override { return true; }
 
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
