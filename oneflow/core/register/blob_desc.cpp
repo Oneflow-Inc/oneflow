@@ -262,4 +262,9 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
   return ret;
 }
 
+bool CompareLbiBlobDescPair(const LbiBlobDescPair& lhs, const LbiBlobDescPair& rhs) {
+  return (lhs.blob_desc().header().blob_mem_id() < rhs.blob_desc().header().blob_mem_id())
+         || (lhs.lbi() < rhs.lbi());
+}
+
 }  // namespace oneflow
