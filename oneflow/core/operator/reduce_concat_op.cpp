@@ -18,15 +18,23 @@ const PbMessage& ReduceConcatOp::GetCustomizedConf() const {
 
 void ReduceConcatOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                     const ParallelContext* parallel_ctx) const {
-  int32_t in_num = op_conf().reduce_concat_conf().in_num();
+  // int32_t in_num = op_conf().reduce_concat_conf().in_num();
   BlobDesc* first_in_blob = GetBlobDesc4BnInOp(input_bns().Get(0));
   BlobDesc* out_blob = GetBlobDesc4BnInOp(SoleObn());
   *out_blob = *first_in_blob;
-  int64_t out_blob_elem_cnt = first_in_blob->shape().elem_cnt();
-  for (int32_t i = 1; i < in_num; ++i) {
-    out_blob_elem_cnt += GetBlobDesc4BnInOp(input_bns().Get(i))->shape().elem_cnt();
+  // int64_t out_blob_elem_cnt = first_in_blob->shape().elem_cnt();
+  // for (int32_t i = 1; i < in_num; ++i) {
+  //   out_blob_elem_cnt += GetBlobDesc4BnInOp(input_bns().Get(i))->shape().elem_cnt();
+  // }
+  // out_blob->mut_shape() = Shape({out_blob_elem_cnt});
+  int64_t in_blob_body_size_sum = 0;
+  for (int32_t i = 0; i < op_conf().reduce_concat_conf().in_num(); ++i) {
+    in_blob_body_size_sum +=
+        RtBlobDesc(*(GetBlobDesc4BnInOp(input_bns().Get(i)))).ByteSizeOfBlobBody();
   }
-  out_blob->mut_shape() = Shape({out_blob_elem_cnt});
+  out_blob->mut_shape() =
+      Shape({in_blob_body_size_sum
+             / static_cast<int64_t>(GetSizeOfDataType(first_in_blob->data_type()))});
 }
 
 void ReduceConcatOp::VirtualGenKernelConf(
