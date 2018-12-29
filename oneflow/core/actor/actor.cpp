@@ -325,8 +325,9 @@ void Actor::AsyncSendConsumedCtrlRegstMsgToProducer() {
     CHECK_GE(reg_deq.size(), returned_regst_num);
     for (size_t i = 0; i < returned_regst_num; ++i) {
       Regst* regst = reg_deq.at(i);
-      AsyncSendMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, regst->producer_actor_id(), regst));
+      // must access regst before sending it to producer
       regst_desc_ids.push_back(regst->regst_desc_id());
+      AsyncSendMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, regst->producer_actor_id(), regst));
     }
   });
   naive_consumed_rs_.PopFrontRegsts(regst_desc_ids);
@@ -431,8 +432,9 @@ void Actor::HandleConsumedNaiveDataRegstToProducer(std::function<bool(Regst*)> I
   naive_consumed_rs_.ForEachFrontRegst([&](Regst* regst) {
     if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) {
       if (IsAllowedRegst(regst) == false) { return; }
-      AsyncSendRegstMsgToProducer(regst);
+      // must access regst before sending it to producer
       regst_desc_ids.push_back(regst->regst_desc_id());
+      AsyncSendRegstMsgToProducer(regst);
     }
   });
   naive_consumed_rs_.PopFrontRegsts(regst_desc_ids);
