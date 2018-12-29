@@ -117,6 +117,9 @@ Plan Compiler::DoCompile() {
   if (job_desc->IsTrain()) { task_gph->AddOrderCtrlEdgeBetweenCopyAndMdUpdt(); }
   if (job_desc->IsTrain()) { task_gph->RmUselessConsumeRelationshipBetweenFwBw(); }
   task_gph->MdUpdtDelayedTopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
+  if (job_desc->IsTrain() && job_desc->enable_mem_sharing()) {
+    task_gph->EnableMemSharingInVariableOp();
+  }
   if (job_desc->IsTrain()) { task_gph->AddReduceNoBwForwardNodeOverlapingCtrlEdges(); }
 
   Plan plan;
