@@ -37,7 +37,7 @@ void DropoutKernel<device_type, T>::BackwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
-void DropoutKernel<device_type, T>::Dropout(DeviceCtx* ctx, const int64_t n, double dropout_rate,
+void DropoutKernel<device_type, T>::Dropout(DeviceCtx* ctx, const int64_t n, float dropout_rate,
                                             const T* x, float* random_mask, T* y) const {
   random_generator_->Uniform(n, random_mask);
   DropoutKernelUtil<device_type, T>::MaskAndScale(ctx, n, dropout_rate, 1 / (1 - dropout_rate), x,
@@ -46,7 +46,7 @@ void DropoutKernel<device_type, T>::Dropout(DeviceCtx* ctx, const int64_t n, dou
 
 template<DeviceType device_type, typename T>
 void DropoutKernel<device_type, T>::DropoutBackward(DeviceCtx* ctx, const int64_t n,
-                                                    double dropout_rate, const T* dy,
+                                                    float dropout_rate, const T* dy,
                                                     const float* random_mask, T* dx) const {
   DropoutKernelUtil<device_type, T>::MaskAndScale(ctx, n, dropout_rate, 1 / (1 - dropout_rate), dy,
                                                   random_mask, dx);
@@ -54,7 +54,7 @@ void DropoutKernel<device_type, T>::DropoutBackward(DeviceCtx* ctx, const int64_
 
 template<typename T>
 struct DropoutKernelUtil<DeviceType::kCPU, T> final {
-  static void MaskAndScale(DeviceCtx* ctx, const int64_t n, double threshold, double scale,
+  static void MaskAndScale(DeviceCtx* ctx, const int64_t n, float threshold, float scale,
                            const T* x, const float* random_mask, T* y) {
     for (int64_t i = 0; i < n; ++i) { y[i] = x[i] * (random_mask[i] > threshold) * scale; }
   }

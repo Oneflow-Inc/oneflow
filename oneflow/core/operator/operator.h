@@ -132,6 +132,12 @@ class Operator {
       const ParallelContext*) const {
     UNIMPLEMENTED();
   }
+  // Infer out blob's time shape
+  void InferOutBlobTimeShapeIf(std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
+                               const ParallelContext*, Shape* time_shape) const;
+  virtual void InferOutBlobTimeShape(
+      std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
+      Shape* time_shape) const;
   virtual void FixInDiffBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                   const ParallelContext*) const;
   virtual void VirtualFixInDiffBlobDescs(
@@ -268,6 +274,12 @@ struct OnlyCpuSupportPredicator {
   REGISTER_CLASS_CREATOR(op_type_case, Operator, creator, const OperatorConf&)
 
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf);
+
+inline std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type) {
+  OperatorConf dev_op_conf = op_conf;
+  dev_op_conf.set_device_type(device_type);
+  return ConstructOp(dev_op_conf);
+}
 
 void EraseEmptyBnInVec(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                        PbRpf<std::string>* bns);

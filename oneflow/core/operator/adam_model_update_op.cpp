@@ -17,7 +17,7 @@ void AdamModelUpdateOp::MdUpdtVirtualInitFromOpConf() {
   }
 }
 
-void AdamModelUpdateOp::InferBlobDescs(
+void AdamModelUpdateOp::MdUpdtVirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const auto& adam_conf = op_conf().normal_mdupdt_conf().user_conf().adam_conf();

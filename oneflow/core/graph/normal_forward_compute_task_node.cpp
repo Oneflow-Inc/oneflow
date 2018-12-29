@@ -20,6 +20,14 @@ bool IsAllOutputNaive(const LogicalNode* logical_node) {
 
 }  // namespace
 
+bool NormalForwardCompTaskNode::HasBackwardCompTaskNode() {
+  for (TaskEdge* edge : out_edges()) {
+    const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
+    if (succ_logical->TypeName() == "NormalBackward") { return true; }
+  }
+  return false;
+}
+
 void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   if (IsAllOutputNaive(logical_node())) {
     ProduceRegst("out", true);

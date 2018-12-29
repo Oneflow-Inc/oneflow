@@ -17,6 +17,7 @@ class JobDesc final {
   ~JobDesc() = default;
 
   // Common
+  const JobConf1& job_conf() const { return job_conf_; }
   const DLNetConf& dlnet_conf() const { return job_conf_.net(); }
   const Resource& resource() const { return job_conf_.resource(); }
   const Placement& placement() const { return job_conf_.placement(); }
@@ -59,8 +60,10 @@ class JobDesc final {
   bool use_nccl_inter_node_communication() const {
     return job_conf_.other().use_nccl_inter_node_communication();
   }
-  int64_t reduce_group_size() const { return job_conf_.other().reduce_group_size(); }
-  float lazy_reduce_ratio() const;
+  int64_t all_reduce_group_num() const;
+  int64_t all_reduce_group_min_byte() const;
+  float all_reduce_group_size_warmup() const;
+  float all_reduce_lazy_ratio() const;
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.other().cudnn_buf_limit_mbyte(); }
   int64_t GetMachineId(const std::string& addr) const;
 
@@ -92,11 +95,18 @@ class JobDesc final {
   void SanityCheck();
   void SplitDecodeOps();
   void AddRecordLoadOps();
+  void ConvertPseudoChainToChain();
+  void AddIdentityOpForChainMergeOptimization();
+  void AddIdentityOpForAllReduceOverlapingUntrainble();
   void FixTickOpIfExists();
-  void AddIdentityOpIfNeed();
 
   JobConf1 job_conf_;
 };
+
+std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4OpName(
+    const Placement& placement);
+std::function<ParallelConf*(const std::string&)> MakeGetterMutParallelConf4OpName(
+    Placement* placement);
 
 }  // namespace oneflow
 

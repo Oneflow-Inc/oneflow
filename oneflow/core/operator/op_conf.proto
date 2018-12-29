@@ -418,9 +418,21 @@ message WarmupConf {
   }
 }
 
+message ClipByGlobalNormConf {
+  required float clip_norm = 1;
+  optional float global_norm = 2;
+}
+
+message ClipConf {
+  oneof type {
+    ClipByGlobalNormConf clip_by_global_norm = 1;
+  }
+}
+
 message NormalModelUpdateOpUserConf {
   optional LearningRateDecayConf learning_rate_decay = 1;
   optional WarmupConf warmup_conf = 2;
+  optional ClipConf clip_conf = 3;
   oneof normal_mdupdt {
     NaiveModelUpdateConf naive_conf = 1000;
     MomentumModelUpdateConf momentum_conf = 1001;
@@ -873,7 +885,12 @@ message SliceOpConf {
 message LayerNormOpConf {
   required string in = 1;
   required string out = 2;
-  //TODO: support not only the final dim layer norm
+  optional bool center = 3 [default = true];
+  optional bool scale = 4 [default = true];
+  optional ActivationType activation = 5 [default = kNone];
+  optional int64 begin_norm_axis = 6 [default = 1];
+  optional int64 begin_params_axis = 7 [default = -1];
+  optional double epsilon = 8 [default = 1e-5];
 }
 
 message ConstantOpConf {

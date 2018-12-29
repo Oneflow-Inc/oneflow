@@ -24,17 +24,22 @@ void CudaCheck(T error);
        i += step)
 
 const int32_t kCudaThreadsNumPerBlock = 1024;
+const int32_t kCudaMaxBlocksNum = 4096;
 
-int32_t GetCudaMaxBlocksNum();
+int32_t GetSMCudaMaxBlocksNum();
 void InitGlobalCudaDeviceProp();
 
 inline int32_t BlocksNum4ThreadsNum(const int32_t n) {
-  return std::min((n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock,
-                  GetCudaMaxBlocksNum());
+  return std::min((n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock, kCudaMaxBlocksNum);
 }
 
-#define RUN_CUDA_KERNEL(func, device_ctx_ptr, thread_num, ...)         \
-  func<<<BlocksNum4ThreadsNum(thread_num), kCudaThreadsNumPerBlock, 0, \
+inline int32_t SMBlocksNum4ThreadsNum(const int32_t n) {
+  return std::min((n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock,
+                  GetSMCudaMaxBlocksNum());
+}
+
+#define RUN_CUDA_KERNEL(func, device_ctx_ptr, thread_num, ...)           \
+  func<<<SMBlocksNum4ThreadsNum(thread_num), kCudaThreadsNumPerBlock, 0, \
          (device_ctx_ptr)->cuda_stream()>>>(__VA_ARGS__)
 
 size_t GetAvailableGpuMemSize(int dev_id);
@@ -46,12 +51,14 @@ size_t GetAvailableGpuMemSize(int dev_id);
   OF_PP_MAKE_TUPLE_SEQ(kNcclScatter) \
   OF_PP_MAKE_TUPLE_SEQ(kNcclGather)  \
   OF_PP_MAKE_TUPLE_SEQ(kMix)         \
+  OF_PP_MAKE_TUPLE_SEQ(kReduceCtrl)  \
   OF_PP_MAKE_TUPLE_SEQ(kMdUpdt)
 
 enum class CudaWorkType {
 #define DECLARE_CUDA_WORK_TYPE(type) type,
   OF_PP_FOR_EACH_TUPLE(DECLARE_CUDA_WORK_TYPE, CUDA_WORK_TYPE_SEQ)
 };
+
 inline size_t GetCudaWorkTypeSize() { return OF_PP_SEQ_SIZE(CUDA_WORK_TYPE_SEQ); }
 
 #define CUDA_DATA_TYPE_SEQ                \

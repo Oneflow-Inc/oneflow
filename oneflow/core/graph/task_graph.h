@@ -20,10 +20,13 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   const char* TypeName() const override { return "TaskGraph"; }
   void RemoveEmptyRegsts();
   void AddOrderingCtrlEdgeInSameChain();
-  void AddReduceCtrlEdges();
+  void AddReduceSequenceCtrlEdges();
+  void AddMdUpdtCtrlEdgesWithinReduceSplitNode();
+  void AddReduceNoBwForwardNodeOverlapingCtrlEdges();
 
   void EnableMemSharingInReduceStruct();
   void EnableMemSharingAfterAllManualSetForMdUpdt();
+  void EnableMemSharingInVariableOp();
 
   void AddOrderCtrlEdgeBetweenCopyAndMdUpdt();
   void RmUselessConsumeRelationshipBetweenFwBw();
@@ -44,6 +47,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
  private:
   void AcyclicTopoForEachNode(std::function<bool(TaskNode* node)> IsAllowedStartNode,
                               std::function<void(TaskNode* node)> Handler) const;
+
   void BuildTaskPath(
       CompTaskNode* src, CompTaskNode* dst,
       std::function<TaskNode**(CompTaskNode* src, int64_t machine_id, int32_t mem_zone_id)>

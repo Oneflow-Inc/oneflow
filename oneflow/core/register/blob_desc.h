@@ -7,6 +7,7 @@
 #include "oneflow/core/register/blob_desc.pb.h"
 #include "oneflow/core/register/pod_desc.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/register/register_desc.pb.h"
 
 namespace oneflow {
 
@@ -97,6 +98,8 @@ class BlobDesc {
 
 std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     const HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>& lbi2blob_desc);
+
+bool CompareLbiBlobDescPair(const LbiBlobDescPair& lhs, const LbiBlobDescPair& rhs);
 
 }  // namespace oneflow
 

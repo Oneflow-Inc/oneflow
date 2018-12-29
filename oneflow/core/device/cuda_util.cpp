@@ -51,9 +51,7 @@ cudaDeviceProp global_device_prop;
 
 void InitGlobalCudaDeviceProp() { cudaGetDeviceProperties(&global_device_prop, 0); }
 
-int32_t GetCudaThreadsNumPerBlock() { return global_device_prop.maxThreadsPerBlock; }
-
-int32_t GetCudaMaxBlocksNum() {
+int32_t GetSMCudaMaxBlocksNum() {
   return global_device_prop.multiProcessorCount * global_device_prop.maxThreadsPerMultiProcessor
          / kCudaThreadsNumPerBlock;
 }
