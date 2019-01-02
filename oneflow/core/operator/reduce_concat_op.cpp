@@ -31,9 +31,11 @@ void ReduceConcatOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
     in_blob_body_size_sum +=
         RtBlobDesc(*(GetBlobDesc4BnInOp(input_bns().Get(i)))).ByteSizeOfBlobBody();
   }
-  const int64_t out_blob_elem_cnt = RoundUp(
-      in_blob_body_size_sum / static_cast<int64_t>(GetSizeOfDataType(first_in_blob->data_type())),
-      parallel_ctx->parallel_num());
+  const int64_t data_type_byte_size =
+      static_cast<int64_t>(GetSizeOfDataType(first_in_blob->data_type()));
+  CHECK_EQ(in_blob_body_size_sum % data_type_byte_size, 0);
+  const int64_t out_blob_elem_cnt =
+      RoundUp(in_blob_body_size_sum / data_type_byte_size, parallel_ctx->parallel_num());
   out_blob->mut_shape() = Shape({out_blob_elem_cnt});
 }
 
