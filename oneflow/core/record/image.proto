@@ -17,10 +17,16 @@ message ImageCrop {
   required int32 height = 5;
 }
 
+message ImageTargetResize {
+  required int32 target_size = 1;
+  required int32 max_size = 2;
+}
+
 message ImagePreprocess {
   oneof preprocess {
     ImageResize resize = 1;
     ImageCrop crop = 2;
     ImageMirror mirror = 3;
+    ImageTargetResize target_resize = 4;
   }
 }

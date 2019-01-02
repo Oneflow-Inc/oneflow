@@ -46,6 +46,26 @@ void ImagePreprocessImpl<PreprocessCase::kMirror>::DoPreprocess(
   *image = dst;
 }
 
+void ImagePreprocessImpl<PreprocessCase::kTargetResize>::DoPreprocess(
+    cv::Mat* image, const ImagePreprocess& preprocess_conf,
+    std::function<int32_t(void)> NextRandomInt) const {
+  CHECK(preprocess_conf.has_target_resize());
+  const int32_t target_size = preprocess_conf.target_resize().target_size();
+  const int32_t max_size = preprocess_conf.target_resize().max_size();
+  CHECK_GT(target_size, 0);
+  CHECK_GE(max_size, target_size);
+  const int32_t im_size_min = std::min(image->rows, image->cols);
+  const int32_t im_size_max = std::max(image->rows, image->cols);
+  float im_scale = static_cast<float>(target_size) / static_cast<float>(im_size_min);
+  if (std::round(im_scale * im_size_max) > max_size) {
+    im_scale = static_cast<float>(max_size) / static_cast<float>(im_size_max);
+  }
+  cv::resize(*image, *image, cv::Size(), im_scale, im_scale, cv::INTER_LINEAR);
+  CHECK_LE(std::max(image->rows, image->cols), max_size);
+  CHECK(std::max(image->rows, image->cols) == max_size
+        || std::min(image->rows, image->cols) == target_size);
+}
+
 ImagePreprocessIf* GetImagePreprocess(PreprocessCase preprocess_case) {
   static const HashMap<int, ImagePreprocessIf*> obj = {
 
