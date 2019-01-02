@@ -83,19 +83,16 @@ void OFRecordDecoderImpl<EncodeCase::kJpeg, T>::ReadDynamicDataContent(
       const std::string& src_data = feature.bytes_list().value(col_id);
       cv::_InputArray image_data(src_data.data(), src_data.size());
       images[i] = cv::imdecode(image_data, cv::IMREAD_ANYCOLOR);
-      cv::Mat a = images[i];
       FOR_RANGE(size_t, j, 0, blob_conf.encode_case().jpeg().preprocess_size()) {
         ImagePreprocessIf* preprocess =
             GetImagePreprocess(blob_conf.encode_case().jpeg().preprocess(j).preprocess_case());
         preprocess->DoPreprocess(&(images[i]), blob_conf.encode_case().jpeg().preprocess(j),
                                  [&]() { return distribution(gen); });
       }
-      cv::Mat b = images[i];
       CHECK_EQ(blob_conf.shape().dim_size(), 3);
       if (blob_conf.shape().dim(2) != images[i].channels()) {
         ConvertChannel(&(images[i]), &(images[i]), images[i].channels(), blob_conf.shape().dim(2));
       }
-      cv::Mat c = images[i];
       CHECK_EQ(blob_conf.shape().dim(2), images[i].channels());
       decode_cnt.Decrease();
     });
