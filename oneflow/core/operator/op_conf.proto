@@ -631,11 +631,16 @@ message PreprocessConf {
   }
 }
 
+message RandomShuffleConf {
+  optional int32 buffer_size = 1 [default = 1024];
+}
+
 message RecordLoadOpConf {
   required string out = 1;
   required string data_dir = 2;
   optional string part_name_prefix = 3 [default = "part-"];
   optional int32 part_name_suffix_length = 4 [default = -1];
+  optional RandomShuffleConf random_shuffle_conf = 5;
 }
 
 message BlobConf {
@@ -653,6 +658,7 @@ message DecodeOFRecordOpConf {
   optional int32 part_name_suffix_length = 3 [default = -1];
   optional string in = 4;
   repeated BlobConf blob = 5;
+  optional RandomShuffleConf random_shuffle_conf = 6;
 }
 
 message DecodeRandomOpConf {
