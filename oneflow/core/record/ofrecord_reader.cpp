@@ -48,7 +48,6 @@ RandomShuffleOFRecordReader::RandomShuffleOFRecordReader(PersistentInStream* in,
 }
 
 void RandomShuffleOFRecordReader::FillBuffer() {
-  if (is_eof_) { return; }
   for (; num_read_ < num_max_read_ && buffered_chunks_.size() < buffer_size_; ++num_read_) {
     OFRecordChunk chunk;
     if (ReadChunk(in_stream_, &chunk)) {
@@ -64,7 +63,7 @@ void RandomShuffleOFRecordReader::FillBuffer() {
 size_t RandomShuffleOFRecordReader::Read(size_t n, OFRecord* allocated_records) {
   size_t cur_read = 0;
   while (cur_read < n) {
-    FillBuffer();
+    if (!is_eof_) { FillBuffer(); }
     if (buffered_chunks_.empty()) { break; }
     const size_t pos =
         std::uniform_int_distribution<size_t>(0, buffered_chunks_.size() - 1)(random_gen_);
