@@ -21,13 +21,13 @@ class OFRecordReader {
   virtual size_t Read(size_t n, OFRecord* allocated_records) = 0;
 };
 
-class BasicOFRecordReader final : public OFRecordReader {
+class NaiveOFRecordReader final : public OFRecordReader {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BasicOFRecordReader);
-  explicit BasicOFRecordReader(PersistentInStream* in)
-      : BasicOFRecordReader(in, MaxVal<size_t>::value) {}
-  BasicOFRecordReader(PersistentInStream* in, size_t num_max_read);
-  ~BasicOFRecordReader() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(NaiveOFRecordReader);
+  explicit NaiveOFRecordReader(PersistentInStream* in)
+      : NaiveOFRecordReader(in, MaxVal<size_t>::value) {}
+  NaiveOFRecordReader(PersistentInStream* in, size_t num_max_read);
+  ~NaiveOFRecordReader() override = default;
 
  private:
   size_t Read(size_t n, OFRecord* allocated_records) override;

@@ -351,13 +351,13 @@ void JobDesc::AddRecordLoadOps() {
         decode_conf.has_random_shuffle_conf() ? &decode_conf.random_shuffle_conf() : nullptr;
     if (data_info2shuffle_conf.find(data_info) != data_info2shuffle_conf.end()) {
       if (shuffle_conf == nullptr) {
-        CHECK(data_info2shuffle_conf[data_info] == nullptr);
+        CHECK(data_info2shuffle_conf.at(data_info) == nullptr);
       } else {
-        CHECK(data_info2shuffle_conf[data_info] != nullptr);
-        CHECK_EQ(data_info2shuffle_conf[data_info]->buffer_size(), shuffle_conf->buffer_size());
+        CHECK(data_info2shuffle_conf.at(data_info) != nullptr);
+        CHECK_EQ(data_info2shuffle_conf.at(data_info)->buffer_size(), shuffle_conf->buffer_size());
       }
     } else {
-      data_info2shuffle_conf[data_info] = shuffle_conf;
+      CHECK(data_info2shuffle_conf.emplace(data_info, shuffle_conf).second);
     }
   }
 

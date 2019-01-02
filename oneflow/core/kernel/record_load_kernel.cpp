@@ -41,7 +41,7 @@ void RecordLoadKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
       record_reader_.reset(new RandomShuffleOFRecordReader(
           in_stream_.get(), static_cast<size_t>(shuffle_buffer_size), num_max_read));
     } else {
-      record_reader_.reset(new BasicOFRecordReader(in_stream_.get(), num_max_read));
+      record_reader_.reset(new NaiveOFRecordReader(in_stream_.get(), num_max_read));
     }
   } else {
     in_stream_.reset(new PersistentInStream(DataFS(), data_paths, false, false));
@@ -51,7 +51,7 @@ void RecordLoadKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
       record_reader_.reset(new RandomShuffleOFRecordReader(
           in_stream_.get(), static_cast<size_t>(shuffle_buffer_size)));
     } else {
-      record_reader_.reset(new BasicOFRecordReader(in_stream_.get()));
+      record_reader_.reset(new NaiveOFRecordReader(in_stream_.get()));
     }
   }
 }

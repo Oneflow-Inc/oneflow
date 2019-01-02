@@ -19,10 +19,10 @@ bool ReadChunk(PersistentInStream* is, OFRecordChunk* chunk) {
 
 }  // namespace
 
-BasicOFRecordReader::BasicOFRecordReader(PersistentInStream* in, size_t num_max_read)
+NaiveOFRecordReader::NaiveOFRecordReader(PersistentInStream* in, size_t num_max_read)
     : in_stream_(in), num_read_(0), num_max_read_(num_max_read) {}
 
-size_t BasicOFRecordReader::Read(size_t n, OFRecord* allocated_records) {
+size_t NaiveOFRecordReader::Read(size_t n, OFRecord* allocated_records) {
   OFRecordChunk chunk;
   const size_t can_read = std::min(n, num_max_read_ - num_read_);
   FOR_RANGE(size_t, i, 0, can_read) {
