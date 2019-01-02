@@ -16,7 +16,7 @@ class RecordLoadKernel final : public KernelIf<DeviceType::kCPU> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RecordLoadKernel);
   RecordLoadKernel() = default;
-  ~RecordLoadKernel() override;
+  ~RecordLoadKernel() override = default;
 
  private:
   void VirtualKernelInit(const ParallelContext*) override;

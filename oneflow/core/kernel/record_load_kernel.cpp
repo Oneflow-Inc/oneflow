@@ -4,11 +4,6 @@
 
 namespace oneflow {
 
-RecordLoadKernel::~RecordLoadKernel() {
-  record_reader_.reset();
-  in_stream_.reset();
-}
-
 void RecordLoadKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
   const RecordLoadOpConf& record_load_conf = op_conf().record_load_conf();
 

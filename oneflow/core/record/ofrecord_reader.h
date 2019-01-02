@@ -46,18 +46,17 @@ class RandomShuffleOFRecordReader final : public OFRecordReader {
       : RandomShuffleOFRecordReader(in, buffer_size, num_max_read, std::random_device()()) {}
   RandomShuffleOFRecordReader(PersistentInStream* in, size_t buffer_size)
       : RandomShuffleOFRecordReader(in, buffer_size, MaxVal<size_t>::value) {}
-  ~RandomShuffleOFRecordReader() override;
+  ~RandomShuffleOFRecordReader() override = default;
 
  private:
   size_t Read(size_t n, OFRecord* allocated_records) override;
+  void FillBuffer();
 
   PersistentInStream* in_stream_;
   const size_t buffer_size_;
   const size_t num_max_read_;
   std::mt19937 random_gen_;
-  std::thread filler_thread_;
-  std::mutex mu_;
-  std::condition_variable cond_;
+  size_t num_read_;
   std::vector<OFRecordChunk> buffered_chunks_;
   bool is_eof_;
 };
