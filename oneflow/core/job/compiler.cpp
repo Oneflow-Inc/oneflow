@@ -95,7 +95,7 @@ void Compiler::GenNcclTopo(Plan* plan) {
     if (rank_set2reuse_nccl_comm.find(rank_set_id) == rank_set2reuse_nccl_comm.end()) {
       rank_set2reuse_nccl_comm[rank_set_id] = CanTaskReuseNcclComm(task);
     } else {
-      CHECK_EQ(rank_set2reuse_nccl_comm[rank_set_id], CanTaskReuseNcclComm(task));
+      CHECK_EQ(rank_set2reuse_nccl_comm.at(rank_set_id), CanTaskReuseNcclComm(task));
     }
     rank_set2nccl_tasks[rank_set_id].push_back(&task);
   }
