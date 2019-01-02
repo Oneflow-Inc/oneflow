@@ -82,7 +82,6 @@ void Compiler::GenNcclTopo(Plan* plan) {
       Global<JobDesc>::Get()->enable_reuse_nccl_communicator();
   for (const TaskProto& task : plan->task()) {
     if (!IsNcclTask(task)) { continue; }
-    if (enable_reuse_nccl_communicator) { CHECK(task.task_type() == TaskType::kNcclAllReduce); }
     CHECK(IsTaskOnGpuDevice(task));
     CHECK(task.has_parallel_ctx());
     CHECK(task.parallel_ctx().has_rank_ctx());
