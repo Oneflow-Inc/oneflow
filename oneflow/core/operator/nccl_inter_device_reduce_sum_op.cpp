@@ -5,7 +5,7 @@ namespace oneflow {
 
 namespace {
 
-int64_t GetBufferElemCnt(const BlobDesc* in, const ParallelContext* parallel_ctx) {
+int64_t GetRoundUpElemCnt(const BlobDesc* in, const ParallelContext* parallel_ctx) {
   return RoundUp(static_cast<size_t>(in->shape().elem_cnt()),
                  static_cast<size_t>(parallel_ctx->parallel_num()));
 }
@@ -29,20 +29,24 @@ void NcclInterDeviceReduceSumOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
   *GetBlobDesc4BnInOp("out") = *in;
-  const int64_t buffer_elem_cnt = GetBufferElemCnt(in, parallel_ctx);
-  BlobDesc* fw_buf = GetBlobDesc4BnInOp("fw_buf");
-  *fw_buf = *in;
-  fw_buf->mut_shape() = Shape({buffer_elem_cnt});
+  const int64_t round_up_elem_cnt = GetRoundUpElemCnt(in, parallel_ctx);
+  if (in->shape().elem_cnt() != round_up_elem_cnt) {
+    BlobDesc* fw_buf = GetBlobDesc4BnInOp("fw_buf");
+    *fw_buf = *in;
+    fw_buf->mut_shape() = Shape({round_up_elem_cnt});
+  }
 }
 
 void NcclInterDeviceReduceSumOp::InferBwBufBlobDescs(
     std::function<oneflow::BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const oneflow::ParallelContext* parallel_ctx, const oneflow::OpContext*) const {
   const BlobDesc* out_diff = GetBlobDesc4BnInOp(GenDiffBn("out"));
-  const int64_t buffer_elem_cnt = GetBufferElemCnt(out_diff, parallel_ctx);
-  BlobDesc* bw_buf = GetBlobDesc4BnInOp("bw_buf");
-  *bw_buf = *out_diff;
-  bw_buf->mut_shape() = Shape({buffer_elem_cnt});
+  const int64_t round_up_elem_cnt = GetRoundUpElemCnt(out_diff, parallel_ctx);
+  if (out_diff->shape().elem_cnt() != round_up_elem_cnt) {
+    BlobDesc* bw_buf = GetBlobDesc4BnInOp("bw_buf");
+    *bw_buf = *out_diff;
+    bw_buf->mut_shape() = Shape({round_up_elem_cnt});
+  }
 }
 
 void NcclInterDeviceReduceSumOp::InferDiffBlobDescsWithoutFwBlob(
