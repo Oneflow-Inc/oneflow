@@ -11,7 +11,7 @@ void NcclInterDeviceReduceSumForwardCompTaskNode::ProduceAllRegstsAndBindEdges()
   ProduceRegst("fw_buf", true, 1, 1);
   std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", true);
   for (TaskEdge* edge : out_edges()) {
-    if (edge->dst_node()->GetTaskType() == TaskType::kNcclInterDeviceReduceSumBackward) {
+    if (edge->dst_node()->GetTaskType() == TaskType::kNcclInterDeviceReduceBackward) {
       continue;
     }
     edge->AddRegst("out", out_regst);

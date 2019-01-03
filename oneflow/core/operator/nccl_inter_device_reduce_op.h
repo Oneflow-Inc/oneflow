@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_OPERATOR_NCCL_INTER_DEVICE_REDUCE_SUM_OP_H_
-#define ONEFLOW_CORE_OPERATOR_NCCL_INTER_DEVICE_REDUCE_SUM_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_NCCL_INTER_DEVICE_REDUCE_OP_H_
+#define ONEFLOW_CORE_OPERATOR_NCCL_INTER_DEVICE_REDUCE_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-class NcclInterDeviceReduceSumOp final : public Operator {
+class NcclInterDeviceReduceOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(NcclInterDeviceReduceSumOp)
-  NcclInterDeviceReduceSumOp() = default;
-  ~NcclInterDeviceReduceSumOp() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(NcclInterDeviceReduceOp)
+  NcclInterDeviceReduceOp() = default;
+  ~NcclInterDeviceReduceOp() override = default;
 
  private:
   void InitFromOpConf() override;
@@ -28,4 +28,4 @@ class NcclInterDeviceReduceSumOp final : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_NCCL_INTER_DEVICE_REDUCE_SUM_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_NCCL_INTER_DEVICE_REDUCE_OP_H_

@@ -407,33 +407,33 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
                                  "NormalMdUpdt",
                                  &BoxingTaskNode::BldBoxingOpConfWithAddAndClone);
 
-#define LOGICAL_TYPE_SEQ                                                  \
-  OF_PP_MAKE_TUPLE_SEQ(NormalForward, kDataForwardArea)                   \
-  OF_PP_MAKE_TUPLE_SEQ(NormalBackward, kDataBackwardArea)                 \
-  OF_PP_MAKE_TUPLE_SEQ(RecordLoad, kDataPreprocessArea)                   \
-  OF_PP_MAKE_TUPLE_SEQ(Decode, kDataPreprocessArea)                       \
-  OF_PP_MAKE_TUPLE_SEQ(DecodeRandom, kDataPreprocessArea)                 \
-  OF_PP_MAKE_TUPLE_SEQ(Loss, kDataForwardArea)                            \
-  OF_PP_MAKE_TUPLE_SEQ(LossAcc, kDataForwardArea)                         \
-  OF_PP_MAKE_TUPLE_SEQ(LossPrint, kPrintArea)                             \
-  OF_PP_MAKE_TUPLE_SEQ(NormalMdUpdt, kMdUpdtArea)                         \
-  OF_PP_MAKE_TUPLE_SEQ(MdSave, kMdSaveArea)                               \
-  OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc, kDataBackwardArea)                      \
-  OF_PP_MAKE_TUPLE_SEQ(Print, kPrintArea)                                 \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceConcat, kMdUpdtArea)                         \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceIdentity, kMdUpdtArea)                       \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceScatter, kMdUpdtArea)                        \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceAdd, kMdUpdtArea)                            \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceGather, kMdUpdtArea)                         \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceSplit, kMdUpdtArea)                          \
-  OF_PP_MAKE_TUPLE_SEQ(NcclAllReduce, kMdUpdtArea)                        \
-  OF_PP_MAKE_TUPLE_SEQ(NcclReduceScatter, kMdUpdtArea)                    \
-  OF_PP_MAKE_TUPLE_SEQ(NcclAllGather, kMdUpdtArea)                        \
-  OF_PP_MAKE_TUPLE_SEQ(Accuracy, kDataForwardArea)                        \
-  OF_PP_MAKE_TUPLE_SEQ(AccuracyAcc, kDataForwardArea)                     \
-  OF_PP_MAKE_TUPLE_SEQ(AccuracyPrint, kPrintArea)                         \
-  OF_PP_MAKE_TUPLE_SEQ(NcclInterDeviceReduceSumForward, kDataForwardArea) \
-  OF_PP_MAKE_TUPLE_SEQ(NcclInterDeviceReduceSumBackward, kDataBackwardArea)
+#define LOGICAL_TYPE_SEQ                                               \
+  OF_PP_MAKE_TUPLE_SEQ(NormalForward, kDataForwardArea)                \
+  OF_PP_MAKE_TUPLE_SEQ(NormalBackward, kDataBackwardArea)              \
+  OF_PP_MAKE_TUPLE_SEQ(RecordLoad, kDataPreprocessArea)                \
+  OF_PP_MAKE_TUPLE_SEQ(Decode, kDataPreprocessArea)                    \
+  OF_PP_MAKE_TUPLE_SEQ(DecodeRandom, kDataPreprocessArea)              \
+  OF_PP_MAKE_TUPLE_SEQ(Loss, kDataForwardArea)                         \
+  OF_PP_MAKE_TUPLE_SEQ(LossAcc, kDataForwardArea)                      \
+  OF_PP_MAKE_TUPLE_SEQ(LossPrint, kPrintArea)                          \
+  OF_PP_MAKE_TUPLE_SEQ(NormalMdUpdt, kMdUpdtArea)                      \
+  OF_PP_MAKE_TUPLE_SEQ(MdSave, kMdSaveArea)                            \
+  OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc, kDataBackwardArea)                   \
+  OF_PP_MAKE_TUPLE_SEQ(Print, kPrintArea)                              \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceConcat, kMdUpdtArea)                      \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceIdentity, kMdUpdtArea)                    \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceScatter, kMdUpdtArea)                     \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceAdd, kMdUpdtArea)                         \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceGather, kMdUpdtArea)                      \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceSplit, kMdUpdtArea)                       \
+  OF_PP_MAKE_TUPLE_SEQ(NcclAllReduce, kMdUpdtArea)                     \
+  OF_PP_MAKE_TUPLE_SEQ(NcclReduceScatter, kMdUpdtArea)                 \
+  OF_PP_MAKE_TUPLE_SEQ(NcclAllGather, kMdUpdtArea)                     \
+  OF_PP_MAKE_TUPLE_SEQ(Accuracy, kDataForwardArea)                     \
+  OF_PP_MAKE_TUPLE_SEQ(AccuracyAcc, kDataForwardArea)                  \
+  OF_PP_MAKE_TUPLE_SEQ(AccuracyPrint, kPrintArea)                      \
+  OF_PP_MAKE_TUPLE_SEQ(NcclInterDeviceReduceForward, kDataForwardArea) \
+  OF_PP_MAKE_TUPLE_SEQ(NcclInterDeviceReduceBackward, kDataBackwardArea)
 
 #define DEFINE_VIRTUAL_METHOD(x, area_type)                                             \
   std::string x##LogicalNode::TypeName() const { return #x; }                           \
@@ -480,8 +480,8 @@ BackwardLogicalNode* RepeatForwardLogicalNode::NewCorrectBackwardNode() {
   return new RepeatBackwardLogicalNode();
 }
 
-BackwardLogicalNode* NcclInterDeviceReduceSumForwardLogicalNode::NewCorrectBackwardNode() {
-  return new NcclInterDeviceReduceSumBackwardLogicalNode();
+BackwardLogicalNode* NcclInterDeviceReduceForwardLogicalNode::NewCorrectBackwardNode() {
+  return new NcclInterDeviceReduceBackwardLogicalNode();
 }
 
 }  // namespace oneflow

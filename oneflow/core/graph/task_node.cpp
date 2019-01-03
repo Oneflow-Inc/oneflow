@@ -5,13 +5,13 @@ namespace oneflow {
 bool IsForwardTaskType(TaskType tt) {
   return tt == TaskType::kNormalForward || tt == TaskType::kRecurrentForward
          || tt == TaskType::kPackForward || tt == TaskType::kUnpackForward
-         || tt == TaskType::kRepeatForward || tt == TaskType::kNcclInterDeviceReduceSumForward;
+         || tt == TaskType::kRepeatForward || tt == TaskType::kNcclInterDeviceReduceForward;
 }
 
 bool IsBackwardTaskType(TaskType tt) {
   return tt == TaskType::kNormalBackward || tt == TaskType::kRecurrentBackward
          || tt == TaskType::kPackBackward || tt == TaskType::kUnpackBackward
-         || tt == TaskType::kRepeatBackward || tt == TaskType::kNcclInterDeviceReduceSumBackward;
+         || tt == TaskType::kRepeatBackward || tt == TaskType::kNcclInterDeviceReduceBackward;
 }
 
 bool IsMdUpdtTaskType(TaskType tt) { return tt == TaskType::kNormalMdUpdt; }

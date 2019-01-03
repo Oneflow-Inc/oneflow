@@ -42,8 +42,8 @@ enum TaskType {
   kRepeatForward = 34;
   kRepeatBackward = 35;
   kReduceIdentity = 36;
-  kNcclInterDeviceReduceSumForward = 37;
-  kNcclInterDeviceReduceSumBackward = 38;
+  kNcclInterDeviceReduceForward = 37;
+  kNcclInterDeviceReduceBackward = 38;
 };
 
 enum AreaType {

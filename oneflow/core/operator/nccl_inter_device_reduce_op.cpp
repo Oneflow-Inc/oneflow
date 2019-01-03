@@ -1,4 +1,4 @@
-#include "oneflow/core/operator/nccl_inter_device_reduce_sum_op.h"
+#include "oneflow/core/operator/nccl_inter_device_reduce_op.h"
 #include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
@@ -12,19 +12,19 @@ int64_t GetRoundUpElemCnt(const BlobDesc* in, const ParallelContext* parallel_ct
 
 }  // namespace
 
-void NcclInterDeviceReduceSumOp::InitFromOpConf() {
-  CHECK(op_conf().has_nccl_inter_device_reduce_sum_conf());
+void NcclInterDeviceReduceOp::InitFromOpConf() {
+  CHECK(op_conf().has_nccl_inter_device_reduce_conf());
   EnrollInputBn("in");
   EnrollOutputBn("out");
   EnrollFwBufBn("fw_buf");
   EnrollBwBufBn("bw_buf");
 }
 
-const PbMessage& NcclInterDeviceReduceSumOp::GetCustomizedConf() const {
-  return op_conf().nccl_inter_device_reduce_sum_conf();
+const PbMessage& NcclInterDeviceReduceOp::GetCustomizedConf() const {
+  return op_conf().nccl_inter_device_reduce_conf();
 }
 
-void NcclInterDeviceReduceSumOp::InferBlobDescs(
+void NcclInterDeviceReduceOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
@@ -37,7 +37,7 @@ void NcclInterDeviceReduceSumOp::InferBlobDescs(
   }
 }
 
-void NcclInterDeviceReduceSumOp::InferBwBufBlobDescs(
+void NcclInterDeviceReduceOp::InferBwBufBlobDescs(
     std::function<oneflow::BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const oneflow::ParallelContext* parallel_ctx, const oneflow::OpContext*) const {
   const BlobDesc* out_diff = GetBlobDesc4BnInOp(GenDiffBn("out"));
@@ -49,17 +49,17 @@ void NcclInterDeviceReduceSumOp::InferBwBufBlobDescs(
   }
 }
 
-void NcclInterDeviceReduceSumOp::InferDiffBlobDescsWithoutFwBlob(
+void NcclInterDeviceReduceOp::InferDiffBlobDescsWithoutFwBlob(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*) const {
   BlobDesc* in_diff_blob_desc = GetBlobDesc4BnInOp(GenDiffBn("in"));
   BlobDesc* out_diff_blob_desc = GetBlobDesc4BnInOp(GenDiffBn("out"));
   *in_diff_blob_desc = *out_diff_blob_desc;
 }
 
-LogicalNode* NcclInterDeviceReduceSumOp::NewProperLogicalNode() {
+LogicalNode* NcclInterDeviceReduceOp::NewProperLogicalNode() {
   return new NcclInterDeviceReduceSumForwardLogicalNode();
 }
 
-REGISTER_OP(OperatorConf::kNcclInterDeviceReduceSumConf, NcclInterDeviceReduceSumOp);
+REGISTER_OP(OperatorConf::kNcclInterDeviceReduceConf, NcclInterDeviceReduceOp);
 
 }  // namespace oneflow

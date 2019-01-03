@@ -332,9 +332,9 @@ DECLARE_DERIVED_BACKWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatBackward);
 DECLARE_BEFORE_OR_AFTER_ALLREDUCE_REDUCE_NODE(ReduceIdentityLogicalNode, true);
 DECLARE_BEFORE_OR_AFTER_ALLREDUCE_REDUCE_NODE(ReduceSplitLogicalNode, false);
 
-class NcclInterDeviceReduceSumBackwardLogicalNode final : public BackwardLogicalNode {
+class NcclInterDeviceReduceBackwardLogicalNode final : public BackwardLogicalNode {
  public:
-  LOGICAL_NODE_BOILERPLATE(NcclInterDeviceReduceSumBackwardLogicalNode);
+  LOGICAL_NODE_BOILERPLATE(NcclInterDeviceReduceBackwardLogicalNode);
   void FixCompTaskNode(CompTaskNode* task_node) const override {
     ReduceRankCtx rank_ctx =
         ReduceRankCtx().CtxWithScatter(task_node->parallel_ctx()->parallel_num());
@@ -342,9 +342,9 @@ class NcclInterDeviceReduceSumBackwardLogicalNode final : public BackwardLogical
   }
 };
 
-class NcclInterDeviceReduceSumForwardLogicalNode final : public ForwardLogicalNode {
+class NcclInterDeviceReduceForwardLogicalNode final : public ForwardLogicalNode {
  public:
-  LOGICAL_NODE_BOILERPLATE(NcclInterDeviceReduceSumForwardLogicalNode);
+  LOGICAL_NODE_BOILERPLATE(NcclInterDeviceReduceForwardLogicalNode);
   BackwardLogicalNode* NewCorrectBackwardNode() override;
   void FixCompTaskNode(CompTaskNode* task_node) const override {
     ReduceRankCtx rank_ctx =

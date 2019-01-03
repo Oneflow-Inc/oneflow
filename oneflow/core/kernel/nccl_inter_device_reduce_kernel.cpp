@@ -1,4 +1,4 @@
-#include "oneflow/core/kernel/nccl_inter_device_reduce_sum_kernel.h"
+#include "oneflow/core/kernel/nccl_inter_device_reduce_kernel.h"
 #include "oneflow/core/device/nccl_util.h"
 
 namespace oneflow {
@@ -11,7 +11,7 @@ void NcclInterDeviceReduceSum(DeviceCtx* ctx, Blob* send, Blob* recv) {
 
 }  // namespace
 
-void NcclInterDeviceReduceSumKernel::ForwardDataContent(
+void NcclInterDeviceReduceKernel::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* in = BnInOp2Blob("in");
   Blob* out = BnInOp2Blob("out");
@@ -28,7 +28,7 @@ void NcclInterDeviceReduceSumKernel::ForwardDataContent(
   }
 }
 
-void NcclInterDeviceReduceSumKernel::BackwardDataContent(
+void NcclInterDeviceReduceKernel::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* out_diff = BnInOp2Blob(GenDiffBn("out"));
   Blob* in_diff = BnInOp2Blob(GenDiffBn("in"));
@@ -45,6 +45,6 @@ void NcclInterDeviceReduceSumKernel::BackwardDataContent(
   }
 }
 
-REGISTER_KERNEL(OperatorConf::kNcclInterDeviceReduceSumConf, NcclInterDeviceReduceSumKernel);
+REGISTER_KERNEL(OperatorConf::kNcclInterDeviceReduceConf, NcclInterDeviceReduceKernel);
 
 }  // namespace oneflow
