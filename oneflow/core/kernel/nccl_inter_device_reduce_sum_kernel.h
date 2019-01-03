@@ -5,12 +5,11 @@
 
 namespace oneflow {
 
-template<DeviceType device_type>
-class NcclInterDeviceReduceSumKernel final : KernelIf<device_type> {
+class NcclInterDeviceReduceSumKernel final : public KernelIf<DeviceType::kGPU> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(NcclInterDeviceReduceSumKernel);
   NcclInterDeviceReduceSumKernel() = default;
-  ~NcclInterDeviceReduceSumKernel() = default;
+  ~NcclInterDeviceReduceSumKernel() override = default;
 
  private:
   void ForwardDataContent(const KernelCtx& ctx,
@@ -20,11 +19,6 @@ class NcclInterDeviceReduceSumKernel final : KernelIf<device_type> {
   const PbMessage& GetCustomizedOpConf() const override {
     return this->op_conf().nccl_inter_device_reduce_sum_conf();
   }
-};
-
-template<DeviceType device_type>
-struct NcclInterDeviceReduceSumKernelUtil {
-  static void ReduceSum(DeviceCtx* ctx, Blob* send, Blob* recv);
 };
 
 }  // namespace oneflow

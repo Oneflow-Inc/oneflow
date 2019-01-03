@@ -19,6 +19,14 @@ class NcclInterDeviceReduceSumOp final : public Operator {
                       const ParallelContext* parallel_ctx) const override;
   void InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                            const ParallelContext*, const OpContext*) const override;
+  //  void InferOutBlobTimeShape(std::function<const Shape*(const std::string&)>
+  //  GetTimeShape4BnInOp,
+  //                             const ParallelContext* parallel_ctx, Shape* time_shape) const
+  //                             override;
+
+  void InferDiffBlobDescsWithoutFwBlob(
+      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext*) const override;
 };
 
 }  // namespace oneflow

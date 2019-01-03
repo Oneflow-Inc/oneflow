@@ -44,4 +44,13 @@ void NcclInterDeviceReduceSumOp::InferBwBufBlobDescs(
   bw_buf->mut_shape() = Shape({buffer_elem_cnt});
 }
 
+void NcclInterDeviceReduceSumOp::InferDiffBlobDescsWithoutFwBlob(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*) const {
+  BlobDesc* in_diff_blob_desc = GetBlobDesc4BnInOp(GenDiffBn("in"));
+  BlobDesc* out_diff_blob_desc = GetBlobDesc4BnInOp(GenDiffBn("out"));
+  *in_diff_blob_desc = *out_diff_blob_desc;
+}
+
+REGISTER_OP(OperatorConf::kNcclInterDeviceReduceSumConf, NcclInterDeviceReduceSumOp);
+
 }  // namespace oneflow

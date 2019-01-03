@@ -13,6 +13,20 @@
 
 namespace oneflow {
 
+namespace {
+
+void FixCompTaskNodeRankCtx(const ReduceRankCtx& rank_ctx, const int64_t node_id,
+                            CompTaskNode* task_node) {
+  task_node->mut_parallel_ctx()->mutable_rank_ctx()->set_rank_id(
+      rank_ctx.Rank4ParallelId(task_node->parallel_id()));
+  task_node->mut_parallel_ctx()->mutable_rank_ctx()->set_rank_num(rank_ctx.StageSegmentCount());
+  const int64_t rank_set_id =
+      ((node_id << 32) | rank_ctx.RankSet4ParallelId(task_node->parallel_id()));
+  task_node->mut_parallel_ctx()->mutable_rank_ctx()->set_rank_set_id(rank_set_id);
+}
+
+}  // namespace
+
 class LogicalEdge;
 
 class LogicalNode : public Node<LogicalNode, LogicalEdge> {
@@ -279,12 +293,7 @@ class ReduceLogicalNode : public LogicalNode {
  private:
   ReduceRankCtx rank_ctx_;
   void FixCompTaskNode(CompTaskNode* task_node) const override {
-    task_node->mut_parallel_ctx()->mutable_rank_ctx()->set_rank_id(
-        rank_ctx().Rank4ParallelId(task_node->parallel_id()));
-    task_node->mut_parallel_ctx()->mutable_rank_ctx()->set_rank_num(rank_ctx().StageSegmentCount());
-    int64_t rank_set_id =
-        ((node_id() << 32) | rank_ctx().RankSet4ParallelId(task_node->parallel_id()));
-    task_node->mut_parallel_ctx()->mutable_rank_ctx()->set_rank_set_id(rank_set_id);
+    FixCompTaskNodeRankCtx(rank_ctx_, node_id(), task_node);
   }
 };
 
@@ -322,6 +331,25 @@ DECLARE_DERIVED_BACKWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatBackward);
 
 DECLARE_BEFORE_OR_AFTER_ALLREDUCE_REDUCE_NODE(ReduceIdentityLogicalNode, true);
 DECLARE_BEFORE_OR_AFTER_ALLREDUCE_REDUCE_NODE(ReduceSplitLogicalNode, false);
+
+class NcclInterDeviceReduceSumBackwardLogicalNode final : public BackwardLogicalNode {
+ public:
+  LOGICAL_NODE_BOILERPLATE(NcclInterDeviceReduceSumBackwardLogicalNode);
+  void FixCompTaskNode(CompTaskNode* task_node) const override {
+    ReduceRankCtx rank_ctx;
+    FixCompTaskNodeRankCtx(rank_ctx, node_id(), task_node);
+  }
+};
+
+class NcclInterDeviceReduceSumForwardLogicalNode final : public ForwardLogicalNode {
+ public:
+  LOGICAL_NODE_BOILERPLATE(NcclInterDeviceReduceSumForwardLogicalNode);
+  BackwardLogicalNode* NewCorrectBackwardNode() override;
+  void FixCompTaskNode(CompTaskNode* task_node) const override {
+    ReduceRankCtx rank_ctx;
+    FixCompTaskNodeRankCtx(rank_ctx, node_id(), task_node);
+  }
+};
 
 }  // namespace oneflow
 

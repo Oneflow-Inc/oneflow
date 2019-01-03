@@ -19,5 +19,7 @@ void NcclActor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
 REGISTER_ACTOR(TaskType::kNcclAllReduce, NcclActor);
 REGISTER_ACTOR(TaskType::kNcclReduceScatter, NcclActor);
 REGISTER_ACTOR(TaskType::kNcclAllGather, NcclActor);
+REGISTER_ACTOR(TaskType::kNcclInterDeviceReduceSumForward, NcclActor);
+REGISTER_ACTOR(TaskType::kNcclInterDeviceReduceSumBackward, NcclActor);
 
 }  // namespace oneflow
