@@ -38,10 +38,10 @@ void NcclInterDeviceReduceSumOp::InferBlobDescs(
 void NcclInterDeviceReduceSumOp::InferBwBufBlobDescs(
     std::function<oneflow::BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const oneflow::ParallelContext* parallel_ctx, const oneflow::OpContext*) const {
-  const BlobDesc* in = GetBlobDesc4BnInOp("in");
-  const int64_t buffer_elem_cnt = GetBufferElemCnt(in, parallel_ctx);
+  const BlobDesc* out_diff = GetBlobDesc4BnInOp(GenDiffBn("out"));
+  const int64_t buffer_elem_cnt = GetBufferElemCnt(out_diff, parallel_ctx);
   BlobDesc* bw_buf = GetBlobDesc4BnInOp("bw_buf");
-  *bw_buf = *in;
+  *bw_buf = *out_diff;
   bw_buf->mut_shape() = Shape({buffer_elem_cnt});
 }
 
