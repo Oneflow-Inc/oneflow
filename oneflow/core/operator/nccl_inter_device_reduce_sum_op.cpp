@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/nccl_inter_device_reduce_sum_op.h"
+#include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
@@ -49,6 +50,10 @@ void NcclInterDeviceReduceSumOp::InferDiffBlobDescsWithoutFwBlob(
   BlobDesc* in_diff_blob_desc = GetBlobDesc4BnInOp(GenDiffBn("in"));
   BlobDesc* out_diff_blob_desc = GetBlobDesc4BnInOp(GenDiffBn("out"));
   *in_diff_blob_desc = *out_diff_blob_desc;
+}
+
+LogicalNode* NcclInterDeviceReduceSumOp::NewProperLogicalNode() {
+  return new NcclInterDeviceReduceSumForwardLogicalNode();
 }
 
 REGISTER_OP(OperatorConf::kNcclInterDeviceReduceSumConf, NcclInterDeviceReduceSumOp);
