@@ -1,24 +1,22 @@
-#include "oneflow/core/graph/nccl_inter_device_reduce_sum_forward_compute_task_node.h"
+#include "oneflow/core/graph/nccl_inter_device_reduce_forward_compute_task_node.h"
 #include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
-void NcclInterDeviceReduceSumForwardCompTaskNode::ConsumeAllRegsts() {
+void NcclInterDeviceReduceForwardCompTaskNode::ConsumeAllRegsts() {
   ConsumeRegst("in", SoleInEdge()->GetSoleRegst());
 }
 
-void NcclInterDeviceReduceSumForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
+void NcclInterDeviceReduceForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("fw_buf", true, 1, 1);
   std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", true);
   for (TaskEdge* edge : out_edges()) {
-    if (edge->dst_node()->GetTaskType() == TaskType::kNcclInterDeviceReduceBackward) {
-      continue;
-    }
+    if (edge->dst_node()->GetTaskType() == TaskType::kNcclInterDeviceReduceBackward) { continue; }
     edge->AddRegst("out", out_regst);
   }
 }
 
-void NcclInterDeviceReduceSumForwardCompTaskNode::BuildExecGphAndRegst() {
+void NcclInterDeviceReduceForwardCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   std::shared_ptr<Operator> sole_op = this->logical_node()->SoleOp();
   node->mut_op() = sole_op;
@@ -28,7 +26,7 @@ void NcclInterDeviceReduceSumForwardCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(parallel_ctx());
 }
 
-void NcclInterDeviceReduceSumForwardCompTaskNode::InferProducedDataRegstTimeShape() {
+void NcclInterDeviceReduceForwardCompTaskNode::InferProducedDataRegstTimeShape() {
   NaiveInferProducedDataRegstTimeShape();
 }
 

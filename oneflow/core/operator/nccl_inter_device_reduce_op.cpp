@@ -57,7 +57,7 @@ void NcclInterDeviceReduceOp::InferDiffBlobDescsWithoutFwBlob(
 }
 
 LogicalNode* NcclInterDeviceReduceOp::NewProperLogicalNode() {
-  return new NcclInterDeviceReduceSumForwardLogicalNode();
+  return new NcclInterDeviceReduceForwardLogicalNode();
 }
 
 REGISTER_OP(OperatorConf::kNcclInterDeviceReduceConf, NcclInterDeviceReduceOp);

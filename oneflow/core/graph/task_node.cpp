@@ -439,6 +439,6 @@ std::map<TaskType, std::string> task_type2color = {{kInvalid, "0"},
                                                    {kRepeatForward, "2"},
                                                    {kRepeatBackward, "3"},
                                                    {kReduceIdentity, "2"},
-                                                   {kNcclInterDeviceReduceSumForward, "2"},
-                                                   {kNcclInterDeviceReduceSumBackward, "3"}};
+                                                   {kNcclInterDeviceReduceForward, "2"},
+                                                   {kNcclInterDeviceReduceBackward, "3"}};
 }  // namespace oneflow

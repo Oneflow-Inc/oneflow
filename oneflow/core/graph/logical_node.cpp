@@ -24,8 +24,8 @@
 #include "oneflow/core/graph/accuracy_print_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/reduce_identity_task_node.h"
-#include "oneflow/core/graph/nccl_inter_device_reduce_sum_forward_compute_task_node.h"
-#include "oneflow/core/graph/nccl_inter_device_reduce_sum_backward_compute_task_node.h"
+#include "oneflow/core/graph/nccl_inter_device_reduce_forward_compute_task_node.h"
+#include "oneflow/core/graph/nccl_inter_device_reduce_backward_compute_task_node.h"
 
 namespace oneflow {
 
