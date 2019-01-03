@@ -336,7 +336,8 @@ class NcclInterDeviceReduceSumBackwardLogicalNode final : public BackwardLogical
  public:
   LOGICAL_NODE_BOILERPLATE(NcclInterDeviceReduceSumBackwardLogicalNode);
   void FixCompTaskNode(CompTaskNode* task_node) const override {
-    ReduceRankCtx rank_ctx;
+    ReduceRankCtx rank_ctx =
+        ReduceRankCtx().CtxWithScatter(task_node->parallel_ctx()->parallel_num());
     FixCompTaskNodeRankCtx(rank_ctx, node_id(), task_node);
   }
 };
@@ -346,7 +347,8 @@ class NcclInterDeviceReduceSumForwardLogicalNode final : public ForwardLogicalNo
   LOGICAL_NODE_BOILERPLATE(NcclInterDeviceReduceSumForwardLogicalNode);
   BackwardLogicalNode* NewCorrectBackwardNode() override;
   void FixCompTaskNode(CompTaskNode* task_node) const override {
-    ReduceRankCtx rank_ctx;
+    ReduceRankCtx rank_ctx =
+        ReduceRankCtx().CtxWithScatter(task_node->parallel_ctx()->parallel_num());
     FixCompTaskNodeRankCtx(rank_ctx, node_id(), task_node);
   }
 };
