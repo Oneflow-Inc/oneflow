@@ -25,6 +25,7 @@ void NcclInterDeviceReduceSumBackwardCompTaskNode::BuildExecGphAndRegst() {
   node->AddBnToRegstAndBindIt(&Operator::input_diff_bns, GetProducedRegst("in_diff"));
   node->AddBnToRegstAndBindIt(&Operator::bw_buf_bns, GetProducedRegst("bw_buf"));
   node->InferDiffBlobDescsWithoutFwNode(parallel_ctx());
+  node->InferBwBufBlobDescs(parallel_ctx());
 }
 
 void NcclInterDeviceReduceSumBackwardCompTaskNode::InferProducedDataRegstTimeShape() {
