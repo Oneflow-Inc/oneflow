@@ -79,8 +79,8 @@ void NcclInterDeviceReduceKernel<T>::BackwardDataContent(
   REGISTER_KERNEL_CREATOR(op_type_case, CreateKernel);                                  \
   }
 
-ADD_GPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kLayerNormConf, NcclInterDeviceReduceKernel,
-                               FLOATING_DATA_TYPE_SEQ);
+ADD_GPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kNcclInterDeviceReduceConf,
+                               NcclInterDeviceReduceKernel, FLOATING_DATA_TYPE_SEQ);
 #undef ADD_GPU_DEFAULT_KERNEL_CREATOR
 #undef MAKE_GPU_KERNEL_CREATOR_ENTRY
 
