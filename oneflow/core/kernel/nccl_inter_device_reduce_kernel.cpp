@@ -25,6 +25,11 @@ void NcclInterDeviceReduce(DeviceCtx* ctx, const NcclInterDeviceReduceMethod met
 }  // namespace
 
 template<typename T>
+const PbMessage& NcclInterDeviceReduceKernel<T>::GetCustomizedOpConf() const {
+  return this->op_conf().nccl_inter_device_reduce_conf();
+}
+
+template<typename T>
 void NcclInterDeviceReduceKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const NcclInterDeviceReduceOpConf& conf = op_conf().nccl_inter_device_reduce_conf();

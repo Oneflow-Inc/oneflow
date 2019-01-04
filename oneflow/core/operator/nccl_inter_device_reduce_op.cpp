@@ -51,9 +51,9 @@ void NcclInterDeviceReduceOp::InferBwBufBlobDescs(
 
 void NcclInterDeviceReduceOp::InferDiffBlobDescsWithoutFwBlob(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*) const {
-  BlobDesc* in_diff_blob_desc = GetBlobDesc4BnInOp(GenDiffBn("in"));
-  BlobDesc* out_diff_blob_desc = GetBlobDesc4BnInOp(GenDiffBn("out"));
-  *in_diff_blob_desc = *out_diff_blob_desc;
+  const BlobDesc* out_diff = GetBlobDesc4BnInOp(GenDiffBn("out"));
+  BlobDesc* in_diff = GetBlobDesc4BnInOp(GenDiffBn("in"));
+  *in_diff = *out_diff;
 }
 
 LogicalNode* NcclInterDeviceReduceOp::NewProperLogicalNode() {

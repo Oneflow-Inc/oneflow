@@ -17,9 +17,7 @@ class NcclInterDeviceReduceKernel final : public KernelIf<DeviceType::kGPU> {
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void BackwardDataContent(const KernelCtx& ctx,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  const PbMessage& GetCustomizedOpConf() const override {
-    return this->op_conf().nccl_inter_device_reduce_conf();
-  }
+  const PbMessage& GetCustomizedOpConf() const override;
 };
 
 }  // namespace oneflow
