@@ -12,11 +12,11 @@ void NcclInterDeviceReduce(DeviceCtx* ctx, const NcclInterDeviceReduceMethod met
     NcclUtil::AllReduce(ctx, send, recv);
   } else if (method == NcclInterDeviceReduceMethod::kMean) {
     NcclUtil::AllReduce(ctx, send, recv);
-    int32_t num_rank;
-    NcclUtil::GetNumRanks(ctx, &num_rank);
-    KernelUtil<DeviceType::kGPU, T>::MulByScalarPara(ctx, recv->shape().elem_cnt(), recv->dptr<T>(),
-                                                     OneVal<T>::value / static_cast<T>(num_rank),
-                                                     recv->mut_dptr<T>());
+    int32_t num_ranks;
+    NcclUtil::GetNumRanks(ctx, &num_ranks);
+    KernelUtil<DeviceType::kGPU, T>::Scal(ctx, recv->shape().elem_cnt(),
+                                          OneVal<T>::value / static_cast<T>(num_ranks),
+                                          recv->mut_dptr<T>(), 1);
   } else {
     UNIMPLEMENTED();
   }
@@ -59,6 +59,7 @@ void NcclInterDeviceReduceKernel<T>::BackwardDataContent(
 namespace {
 
 Kernel* CreateKernel(const KernelConf& kernel_conf) {
+  CHECK_EQ(kernel_conf.op_attribute().op_conf().device_type(), DeviceType::kGPU);
   static const HashMap<int, std::function<Kernel*()>> creators = {
 #define MAKE_NCCL_INTER_DEVICE_REDUCE_KERNEL_CREATOR_ENTRY(cpp_type, data_type) \
   {data_type, []() { return new NcclInterDeviceReduceKernel<cpp_type>(); }},

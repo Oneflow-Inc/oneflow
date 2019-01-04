@@ -64,9 +64,9 @@ class NcclUtil final {
 #endif  // WITH_CUDA
   }
 
-  static void GetNumRanks(DeviceCtx* ctx, int32_t* num_rank) {
+  static void GetNumRanks(DeviceCtx* ctx, int32_t* num_ranks) {
 #ifdef WITH_CUDA
-    NcclCheck(ncclCommCount(ctx->nccl_handle(), num_rank));
+    NcclCheck(ncclCommCount(ctx->nccl_handle(), num_ranks));
 #else
     UNIMPLEMENTED();
 #endif  // WITH_CUDA
