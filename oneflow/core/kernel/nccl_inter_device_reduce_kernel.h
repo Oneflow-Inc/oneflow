@@ -5,6 +5,7 @@
 
 namespace oneflow {
 
+template<typename T>
 class NcclInterDeviceReduceKernel final : public KernelIf<DeviceType::kGPU> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(NcclInterDeviceReduceKernel);

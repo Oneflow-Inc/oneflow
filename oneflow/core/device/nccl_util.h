@@ -63,6 +63,14 @@ class NcclUtil final {
     UNIMPLEMENTED();
 #endif  // WITH_CUDA
   }
+
+  static void GetNumRanks(DeviceCtx* ctx, int32_t* num_rank) {
+#ifdef WITH_CUDA
+    NcclCheck(ncclCommCount(ctx->nccl_handle(), num_rank));
+#else
+    UNIMPLEMENTED();
+#endif  // WITH_CUDA
+  }
 };
 
 }  // namespace oneflow
