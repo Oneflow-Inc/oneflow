@@ -22,6 +22,18 @@ void NcclInterDeviceReduce(DeviceCtx* ctx, const NcclInterDeviceReduceMethod met
   }
 }
 
+template<typename T>
+void DoDataContent(DeviceCtx* ctx, const NcclInterDeviceReduceOpConf& conf, Blob* in, Blob* out,
+                   Blob* buf) {
+  if (buf) {
+    Memcpy<DeviceType::kGPU>(ctx, buf->mut_dptr(), in->dptr(), in->ByteSizeOfDataContentField());
+    NcclInterDeviceReduce<T>(ctx, conf.method(), buf, buf);
+    Memcpy<DeviceType::kGPU>(ctx, out->mut_dptr(), buf->dptr(), out->ByteSizeOfDataContentField());
+  } else {
+    NcclInterDeviceReduce<T>(ctx, conf.method(), in, out);
+  }
+}
+
 }  // namespace
 
 template<typename T>
@@ -32,61 +44,32 @@ const PbMessage& NcclInterDeviceReduceKernel<T>::GetCustomizedOpConf() const {
 template<typename T>
 void NcclInterDeviceReduceKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const NcclInterDeviceReduceOpConf& conf = op_conf().nccl_inter_device_reduce_conf();
-  Blob* in = BnInOp2Blob("in");
-  Blob* out = BnInOp2Blob("out");
-  const bool use_buf = BnInOp2Blob("fw_buf") != nullptr;
-  if (use_buf) {
-    Blob* fw_buf = BnInOp2Blob("fw_buf");
-    Memcpy<DeviceType::kGPU>(ctx.device_ctx, fw_buf->mut_dptr(), in->dptr(),
-                             in->ByteSizeOfDataContentField());
-    NcclInterDeviceReduce<T>(ctx.device_ctx, conf.method(), fw_buf, fw_buf);
-    Memcpy<DeviceType::kGPU>(ctx.device_ctx, out->mut_dptr(), fw_buf->dptr(),
-                             out->ByteSizeOfDataContentField());
-  } else {
-    NcclInterDeviceReduce<T>(ctx.device_ctx, conf.method(), in, out);
-  }
+  DoDataContent<T>(ctx.device_ctx, op_conf().nccl_inter_device_reduce_conf(), BnInOp2Blob("in"),
+                   BnInOp2Blob("out"), BnInOp2Blob("fw_buf"));
 }
 
 template<typename T>
 void NcclInterDeviceReduceKernel<T>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const NcclInterDeviceReduceOpConf& conf = op_conf().nccl_inter_device_reduce_conf();
-  Blob* out_diff = BnInOp2Blob(GenDiffBn("out"));
-  Blob* in_diff = BnInOp2Blob(GenDiffBn("in"));
-  const bool use_buf = BnInOp2Blob("bw_buf") != nullptr;
-  if (use_buf) {
-    Blob* bw_buf = BnInOp2Blob("bw_buf");
-    Memcpy<DeviceType::kGPU>(ctx.device_ctx, bw_buf->mut_dptr(), out_diff->dptr(),
-                             out_diff->ByteSizeOfDataContentField());
-    NcclInterDeviceReduce<T>(ctx.device_ctx, conf.method(), bw_buf, bw_buf);
-    Memcpy<DeviceType::kGPU>(ctx.device_ctx, in_diff->mut_dptr(), bw_buf->dptr(),
-                             in_diff->ByteSizeOfDataContentField());
-  } else {
-    NcclInterDeviceReduce<T>(ctx.device_ctx, conf.method(), out_diff, in_diff);
-  }
+  DoDataContent<T>(ctx.device_ctx, op_conf().nccl_inter_device_reduce_conf(),
+                   BnInOp2Blob(GenDiffBn("out")), BnInOp2Blob(GenDiffBn("in")),
+                   BnInOp2Blob("bw_buf"));
 }
 
-#define MAKE_GPU_KERNEL_CREATOR_ENTRY(kernel_class, data_type_pair) \
-  {OF_PP_PAIR_SECOND(data_type_pair),                               \
-   []() { return new kernel_class<OF_PP_PAIR_FIRST(data_type_pair)>(); }},
+namespace {
 
-#define ADD_GPU_DEFAULT_KERNEL_CREATOR(op_type_case, kernel_class, data_type_seq)       \
-  namespace {                                                                           \
-                                                                                        \
-  Kernel* CreateKernel(const KernelConf& kernel_conf) {                                 \
-    static const HashMap<int, std::function<Kernel*()>> creators = {                    \
-        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_GPU_KERNEL_CREATOR_ENTRY, (kernel_class), \
-                                         data_type_seq)};                               \
-    return creators.at(kernel_conf.data_type())();                                      \
-  }                                                                                     \
-                                                                                        \
-  REGISTER_KERNEL_CREATOR(op_type_case, CreateKernel);                                  \
-  }
+Kernel* CreateKernel(const KernelConf& kernel_conf) {
+  static const HashMap<int, std::function<Kernel*()>> creators = {
+#define MAKE_NCCL_INTER_DEVICE_REDUCE_KERNEL_CREATOR_ENTRY(cpp_type, data_type) \
+  {data_type, []() { return new NcclInterDeviceReduceKernel<cpp_type>(); }},
+      OF_PP_FOR_EACH_TUPLE(MAKE_NCCL_INTER_DEVICE_REDUCE_KERNEL_CREATOR_ENTRY,
+                           FLOATING_DATA_TYPE_SEQ)};
+#undef MAKE_NCCL_INTER_DEVICE_REDUCE_KERNEL_CREATOR_ENTRY
+  return creators.at(kernel_conf.data_type())();
+}
 
-ADD_GPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kNcclInterDeviceReduceConf,
-                               NcclInterDeviceReduceKernel, FLOATING_DATA_TYPE_SEQ);
-#undef ADD_GPU_DEFAULT_KERNEL_CREATOR
-#undef MAKE_GPU_KERNEL_CREATOR_ENTRY
+REGISTER_KERNEL_CREATOR(OperatorConf::kNcclInterDeviceReduceConf, CreateKernel);
+
+}  // namespace
 
 }  // namespace oneflow
