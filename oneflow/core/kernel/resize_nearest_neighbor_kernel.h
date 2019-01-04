@@ -6,11 +6,11 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class ResizeNearestNeighbor final : public KernelIf<device_type> {
+class ResizeNearestNeighborKernel final : public KernelIf<device_type> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ResizeNearestNeighbor);
-  ResizeNearestNeighbor() = default;
-  ~ResizeNearestNeighbor() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ResizeNearestNeighborKernel);
+  ResizeNearestNeighborKernel() = default;
+  ~ResizeNearestNeighborKernel() = default;
 
  private:
   void ForwardDataContent(const KernelCtx&,
@@ -21,9 +21,9 @@ class ResizeNearestNeighbor final : public KernelIf<device_type> {
 
 template<DeviceType device_type, typename T>
 struct ResizeNearestNeighborUtil {
-  static void Forward(const KernelCtx& ctx, const ResizeNearestNeighborKernelConf& kernel_conf,
+  static void Forward(const KernelCtx& ctx, const float scale_h, const float scale_w,
                       const bool align_corners, const Blob* in_blob, Blob* out_blob);
-  static void Backward(const KernelCtx& ctx, const ResizeNearestNeighborKernelConf& kernel_conf,
+  static void Backward(const KernelCtx& ctx, const float scale_h, const float scale_w,
                        const bool align_corners, const Blob* out_diff_blob, Blob* in_diff_blob);
 };
 

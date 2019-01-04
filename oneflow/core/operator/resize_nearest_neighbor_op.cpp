@@ -12,21 +12,6 @@ const PbMessage& ResizeNearestNeighborOp::GetCustomizedConf() const {
   return op_conf().resize_nearest_neighbor_conf();
 }
 
-void ResizeNearestNeighborOp::VirtualGenKernelConf(
-    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
-  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-  ResizeNearestNeighborKernelConf* conf = kernel_conf->mutable_resize_nearest_neighbor_conf();
-  const bool align_corners = op_conf().resize_nearest_neighbor_conf().align_corners();
-  conf->set_scale_h(GetResizeScale(in_blob_desc->shape().At(2),
-                                   op_conf().resize_nearest_neighbor_conf().new_h(),
-                                   align_corners));
-  conf->set_scale_w(GetResizeScale(in_blob_desc->shape().At(3),
-                                   op_conf().resize_nearest_neighbor_conf().new_w(),
-                                   align_corners));
-  conf->set_align_corners(op_conf().resize_nearest_neighbor_conf().align_corners());
-}
-
 void ResizeNearestNeighborOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
@@ -42,6 +27,7 @@ void ResizeNearestNeighborOp::InferBlobDescs(
   out_blob_desc->mut_shape() = Shape({in_blob_desc->shape().At(0), in_blob_desc->shape().At(1),
                                       op_conf().resize_nearest_neighbor_conf().new_h(),
                                       op_conf().resize_nearest_neighbor_conf().new_w()});
+  out_blob_desc->set_has_instance_shape_field(false);
 }
 
 REGISTER_OP(OperatorConf::kResizeNearestNeighborConf, ResizeNearestNeighborOp);

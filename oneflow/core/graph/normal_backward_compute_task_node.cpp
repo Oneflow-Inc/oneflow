@@ -231,14 +231,15 @@ void NormalBackwardCompTaskNode::RmUselessConsumeRelationshipToFw() {
     }
   });
   if (need_in_blob == false) {
+    bool can_erase_in_resgt = true;
     if (GetRelatedFwTaskNode() && (!infer_in_diff_shape_without_in)) {
       for (std::shared_ptr<RegstDesc> regst : GetConsumedRegst("in")) {
         regst->ForEachLbi([&](const LogicalBlobId& lbi) {
-          CHECK(!regst->GetBlobDesc(lbi)->has_instance_shape_field());
+          if (regst->GetBlobDesc(lbi)->has_instance_shape_field()) { can_erase_in_resgt = false; }
         });
       }
     }
-    EraseConsumedRegstsByName("in");
+    if (can_erase_in_resgt) { EraseConsumedRegstsByName("in"); }
   }
   if (need_out_blob == false) { EraseConsumedRegstsByName("out"); }
 }

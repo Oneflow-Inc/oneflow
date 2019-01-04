@@ -63,26 +63,24 @@ __global__ void ResizeNearestNeighborBackward(const int64_t nthreads, const T* o
 
 template<typename T>
 struct ResizeNearestNeighborUtil<DeviceType::kGPU, T> {
-  static void Forward(const KernelCtx& ctx, const ResizeNearestNeighborKernelConf& kernel_conf,
+  static void Forward(const KernelCtx& ctx, const const float scale_h, const float scale_w,
                       const bool align_corners, const Blob* in_blob, Blob* out_blob) {
     const int64_t elem_cnt = out_blob->shape().elem_cnt();
-
     ResizeNearestNeighborForward<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                                       ctx.device_ctx->cuda_stream()>>>(
         elem_cnt, in_blob->dptr<T>(), in_blob->shape().At(1), in_blob->shape().At(2),
-        in_blob->shape().At(3), out_blob->shape().At(2), out_blob->shape().At(3),
-        kernel_conf.scale_h(), kernel_conf.scale_w(), align_corners, out_blob->mut_dptr<T>());
+        in_blob->shape().At(3), out_blob->shape().At(2), out_blob->shape().At(3), scale_h, scale_w,
+        align_corners, out_blob->mut_dptr<T>());
   }
 
-  static void Backward(const KernelCtx& ctx, const ResizeNearestNeighborKernelConf& kernel_conf,
+  static void Backward(const KernelCtx& ctx, const const float scale_h, const float scale_w,
                        const bool align_corners, const Blob* out_diff_blob, Blob* in_diff_blob) {
     const int64_t elem_cnt = out_diff_blob->shape().elem_cnt();
     ResizeNearestNeighborBackward<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                                        ctx.device_ctx->cuda_stream()>>>(
         elem_cnt, out_diff_blob->dptr<T>(), in_diff_blob->shape().At(1),
         in_diff_blob->shape().At(2), in_diff_blob->shape().At(3), out_diff_blob->shape().At(2),
-        out_diff_blob->shape().At(3), kernel_conf.scale_h(), kernel_conf.scale_w(), align_corners,
-        in_diff_blob->mut_dptr<T>());
+        out_diff_blob->shape().At(3), scale_h, scale_w, align_corners, in_diff_blob->mut_dptr<T>());
   }
 };
 

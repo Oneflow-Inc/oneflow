@@ -164,12 +164,6 @@ message HingeLossKernelConf {
   required LossKernelConf loss_conf = 1;
 }
 
-message ResizeNearestNeighborKernelConf {
-  required float scale_h = 1;
-  required float scale_w = 2;
-  required bool align_corners = 3;
-}
-
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
@@ -209,6 +203,5 @@ message KernelConf {
     AccuracyKernelConf accuracy_conf = 401;
     SmoothL1LossKernelConf smooth_l1_loss_conf = 402;
     SigmoidCrossEntropyLossKernelConf sigmoid_cross_entropy_loss_conf = 403;
-    ResizeNearestNeighborKernelConf resize_nearest_neighbor_conf = 404;
   }
 }

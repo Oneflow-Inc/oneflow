@@ -12,16 +12,6 @@ const PbMessage& UpsampleNearestOp::GetCustomizedConf() const {
   return op_conf().upsample_nearest_conf();
 }
 
-void UpsampleNearestOp::VirtualGenKernelConf(
-    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
-  ResizeNearestNeighborKernelConf* conf = kernel_conf->mutable_resize_nearest_neighbor_conf();
-  const int32_t scale = op_conf().upsample_nearest_conf().scale();
-  conf->set_scale_h(1.f / scale);
-  conf->set_scale_w(1.f / scale);
-  conf->set_align_corners(false);
-}
-
 void UpsampleNearestOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
