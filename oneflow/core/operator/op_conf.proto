@@ -963,6 +963,17 @@ message IdentityOpConf {
   repeated string out = 2;
 }
 
+enum NcclInterDeviceReduceMethod {
+  kSum = 0;
+  kMean = 1;
+}
+
+message NcclInterDeviceReduceOpConf {
+  required string in = 1;
+  required string out = 2;
+  optional NcclInterDeviceReduceMethod method = 3 [default = kSum];
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1052,6 +1063,7 @@ message OperatorConf {
     IdentityLossOpConf identity_loss_conf = 259;
     SparseCrossEntropyOpConf sparse_cross_entropy_conf= 260;
     ReduceMeanOpConf reduce_mean_conf = 261;
+    NcclInterDeviceReduceOpConf nccl_inter_device_reduce_conf = 262;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
