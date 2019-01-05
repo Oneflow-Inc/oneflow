@@ -12,6 +12,7 @@ void AddKernel<device_type, T>::ForwardDataContent(
   if (in_num == 0) return;
   Blob* out_blob = BnInOp2Blob(this->op_attribute().output_bns(0));
   auto in_blob = [&](int32_t idx) { return BnInOp2Blob(this->op_attribute().input_bns(idx)); };
+  for (int32_t i = 1; i < in_num; ++i) { CHECK_EQ(in_blob(0)->shape(), in_blob(i)->shape()); }
   static const int kWidth = 8;
   int r = in_num % kWidth;
   if (r) {
