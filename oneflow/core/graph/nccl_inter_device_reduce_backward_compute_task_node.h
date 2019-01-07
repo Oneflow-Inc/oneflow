@@ -13,7 +13,6 @@ class NcclInterDeviceReduceBackwardCompTaskNode final : public CompTaskNode {
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
-
   TaskType GetTaskType() const override { return TaskType::kNcclInterDeviceReduceBackward; }
   CudaWorkType GetCudaWorkType() const override { return CudaWorkType::kMix; }
 
