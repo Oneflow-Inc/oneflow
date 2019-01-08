@@ -446,9 +446,17 @@ void JobDesc::ConvertPseudoChainToChain() {
     HashMap<bool, std::vector<OpEdge*>> has_diff2source_edges;
     for (OpEdge* edge : source_edges) { has_diff2source_edges[edge->has_diff()].push_back(edge); }
     for (const auto& pair : has_diff2source_edges) {
-      AddIdentityOpAndReconnect("pseudo_chain_header_", &job_conf_, pair.second,
-                                MutOperatorConf4OpName,
-                                *ParallelConf4OpName(first_node->op().op_name()));
+      HashSet<OpNode*> src_nodes;
+      HashSet<OpNode*> dst_nodes;
+      for (OpEdge* edge : pair.second) {
+        src_nodes.emplace(edge->src_node());
+        dst_nodes.emplace(edge->dst_node());
+      }
+      if (src_nodes.size() > 1 && dst_nodes.size() > 1) {
+        AddIdentityOpAndReconnect("pseudo_chain_header_", &job_conf_, pair.second,
+                                  MutOperatorConf4OpName,
+                                  *ParallelConf4OpName(first_node->op().op_name()));
+      }
     }
   });
 }
