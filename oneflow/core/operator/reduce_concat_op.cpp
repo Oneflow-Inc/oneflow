@@ -39,8 +39,8 @@ void ReduceConcatOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
       RoundUp(in_blob_body_size_sum / data_type_byte_size, parallel_ctx->parallel_num());
   out_blob->mut_shape() = Shape({out_blob_elem_cnt});
 
-  ReduceConcatOpCtx* op_ctx = new ReduceConcatOpCtx(data_type_byte_size, out_blob_elem_cnt);
-  EnrollOpCtx(op_ctx);
+  ReduceConcatOpCtx* reduce_concat_op_ctx = new ReduceConcatOpCtx(data_type_byte_size, out_blob_elem_cnt);
+  EnrollOpCtx(reduce_concat_op_ctx);
 }
 
 void ReduceConcatOp::VirtualGenKernelConf(
@@ -52,10 +52,6 @@ void ReduceConcatOp::VirtualGenKernelConf(
     reduce_concat_conf->mutable_data_offset()->Add(offset);
     offset += RtBlobDesc(*(GetBlobDesc4BnInOp(input_bns().Get(i)))).ByteSizeOfBlobBody();
   }
-  // const int64_t data_type_byte_size =
-  //     static_cast<int64_t>(GetSizeOfDataType(GetBlobDesc4BnInOp(input_bns().Get(0))->data_type()));
-  // CHECK_EQ(RoundUp(offset, parallel_ctx->parallel_num() * data_type_byte_size),
-  //          RtBlobDesc(*GetBlobDesc4BnInOp(SoleObn())).ByteSizeOfBlobBody());
   const ReduceConcatOpCtx* reduce_concat_op_ctx = static_cast<const ReduceConcatOpCtx*>(op_ctx);
   CHECK_EQ((reduce_concat_op_ctx->data_type_byte_size) * (reduce_concat_op_ctx->out_blob_elem_cnt),
            RtBlobDesc(*GetBlobDesc4BnInOp(SoleObn())).ByteSizeOfBlobBody());
