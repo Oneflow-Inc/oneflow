@@ -28,13 +28,6 @@ bool IsConsumersAndProducerInSameChain(const RegstDescProto& regst_desc,
   return true;
 }
 
-bool IsSharableRegstWithConsumer(const RegstDescProto& regst_desc,
-                                 const std::function<int64_t(int64_t)>& ChainId4TaskId) {
-  return regst_desc.mem_shared_id() == -1 && regst_desc.consumer_task_id_size() > 0
-         && regst_desc.enable_mem_sharing() && regst_desc.register_num() == 1
-         && IsConsumersAndProducerInSameChain(regst_desc, ChainId4TaskId);
-}
-
 void ForEachSharableStreamRegstDescsWithoutConsumer(
     const Plan& plan, const std::function<void(const std::list<const RegstDescProto*>&)>& Handler) {
   HashMap<int64_t, std::list<const RegstDescProto*>> global_work_stream_id2regst_descs;
@@ -48,27 +41,6 @@ void ForEachSharableStreamRegstDescsWithoutConsumer(
   }
   for (const auto& pair : global_work_stream_id2regst_descs) {
     if (pair.second.size() > 1) { Handler(pair.second); }
-  }
-}
-
-void ForEachSharableChainRegstDescsWithConsumer(
-    const Plan& plan, const std::function<int64_t(int64_t)>& ChainId4TaskId,
-    const std::function<void(const std::list<const RegstDescProto*>&)>& Handler) {
-  HashMap<int64_t, std::list<const TaskProto*>> chain_id2task_proto;
-  for (const TaskProto& task : plan.task()) {
-    chain_id2task_proto[task.task_set_info().chain_id()].push_back(&task);
-  }
-  for (const auto& chain_tasks_pair : chain_id2task_proto) {
-    if (chain_tasks_pair.second.size() == 1) { continue; }
-    std::list<const RegstDescProto*> regst_descs;
-    for (const TaskProto* task : chain_tasks_pair.second) {
-      for (const auto& pair : task->produced_regst_desc()) {
-        if (IsSharableRegstWithConsumer(pair.second, ChainId4TaskId)) {
-          regst_descs.push_back(&pair.second);
-        }
-      }
-    }
-    if (regst_descs.size() > 1) { Handler(regst_descs); }
   }
 }
 
