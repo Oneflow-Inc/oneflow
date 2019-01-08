@@ -194,6 +194,7 @@ void JobDesc::SplitDecodeOps() {
 void JobDesc::AddRecordLoadOps() {
   HashMap<std::pair<std::string, std::string>, std::vector<OperatorConf*>> data_info2decode_ops;
   HashMap<std::pair<std::string, std::string>, int32_t> data_info2suffix_length;
+  HashMap<std::pair<std::string, std::string>, const RandomShuffleConf*> data_info2shuffle_conf;
   size_t op_num = job_conf_.net().op_size();
   FOR_RANGE(size_t, idx, 0, op_num) {
     OperatorConf* op_conf = job_conf_.mutable_net()->mutable_op()->Mutable(idx);
@@ -208,6 +209,18 @@ void JobDesc::AddRecordLoadOps() {
       CHECK_EQ(data_info2suffix_length[data_info], part_name_suffix_length);
     } else {
       data_info2suffix_length[data_info] = part_name_suffix_length;
+    }
+    const RandomShuffleConf* shuffle_conf =
+      decode_conf.has_random_shuffle_conf() ? &decode_conf.random_shuffle_conf() : nullptr;
+    if (data_info2shuffle_conf.find(data_info) != data_info2shuffle_conf.end()) {
+      if (shuffle_conf == nullptr) {
+        CHECK(data_info2shuffle_conf.at(data_info) == nullptr);
+      } else {
+        CHECK(data_info2shuffle_conf.at(data_info) != nullptr);
+        CHECK_EQ(data_info2shuffle_conf.at(data_info)->buffer_size(), shuffle_conf->buffer_size());
+      }
+    } else {
+      CHECK(data_info2shuffle_conf.emplace(data_info, shuffle_conf).second);
     }
   }
 
@@ -245,6 +258,9 @@ void JobDesc::AddRecordLoadOps() {
       record_load_op->set_data_dir(pair.first.first);
       record_load_op->set_part_name_prefix(pair.first.second);
       record_load_op->set_part_name_suffix_length(data_info2suffix_length.at(pair.first));
+      if (data_info2shuffle_conf.at(pair.first) != nullptr) {
+        *record_load_op->mutable_random_shuffle_conf() = *data_info2shuffle_conf.at(pair.first);
+      }
       PlacementGroup* p_group = job_conf_.mutable_placement()->add_placement_group();
       *(p_group->mutable_op_set()->add_op_name()) = record_load_op_name;
       *(p_group->mutable_parallel_conf()) = *parallel_conf;
