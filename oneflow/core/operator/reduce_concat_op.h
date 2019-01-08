@@ -5,6 +5,13 @@
 
 namespace oneflow {
 
+struct ReduceConcatOpCtx : public OpContext {
+  ReduceConcatOpCtx(const int64_t byte_size, const int64_t elem_cnt)
+      : data_type_byte_size(byte_size), out_blob_elem_cnt(elem_cnt) {}
+  int64_t data_type_byte_size;
+  int64_t out_blob_elem_cnt;
+};
+
 class ReduceConcatOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ReduceConcatOp);
@@ -15,11 +22,13 @@ class ReduceConcatOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override;
 
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override;
+                      const ParallelContext* parallel_ctx,
+                      std::function<void(OpContext*)> EnrollOpCtx) const override;
 
  private:
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                            const ParallelContext*, KernelConf*) const override;
+                            const ParallelContext*, KernelConf* kernel_conf,
+                            const OpContext* op_ctx) const override;
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override { return GenPackedLbi(); }
   LogicalBlobId obn2lbi(const std::string& output_bn) const override;
 };
