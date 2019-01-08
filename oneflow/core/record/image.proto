@@ -9,6 +9,11 @@ message ImageResize {
 message ImageMirror {
 }
 
+message ImageFlip {
+  optional float flip_ratio = 1 [default = 0.5];
+  optional int32 flip_code = 2 [default = 0];
+}
+
 message ImageCrop {
   optional bool random_xy = 1 [default = true];
   optional int32 x = 2;
@@ -46,6 +51,7 @@ message ImagePreprocess {
     ImageCenterCrop center_crop = 3;
     ImageCropWithRandomSize crop_with_random_size = 4;
     ImageMirror mirror = 5;
-    ImageBgr2Rgb bgr2rgb = 6;
+    ImageFlip flip = 6;
+    ImageBgr2Rgb bgr2rgb = 7;
   }
 }
