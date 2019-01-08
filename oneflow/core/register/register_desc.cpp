@@ -26,7 +26,7 @@ RegstDesc::RegstDesc() {
   enable_mem_sharing_ = false;
   mem_shared_id_ = -1;
   mem_shared_offset_ = -1;
-  mem_shared_hint_id_ = regst_desc_id_;
+  mem_shared_inplace_group_id_ = -1;
 }
 
 int64_t RegstDesc::mem_shared_offset() const {
@@ -154,7 +154,10 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
   ret->set_enable_mem_sharing(enable_mem_sharing_);
   ret->set_mem_shared_id(mem_shared_id_);
   ret->set_mem_shared_offset(mem_shared_offset_);
-  ret->set_mem_shared_hint_id(mem_shared_hint_id_);
+  ret->add_mem_block_group_hierarchy()->set_group_id(regst_desc_id_);
+  if (mem_shared_inplace_group_id_ != -1) {
+    ret->add_mem_block_group_hierarchy()->set_group_id(mem_shared_inplace_group_id_);
+  }
 }
 
 bool RegstDesc::HasSameMemSize(const RegstDesc* rhs) {
@@ -212,7 +215,6 @@ void InitCtrlRegstDesc(int64_t producer_task_id, RegstDescProto* ctrl_regst_prot
   ctrl_regst_proto->set_enable_mem_sharing(false);
   ctrl_regst_proto->set_mem_shared_id(-1);
   ctrl_regst_proto->set_mem_shared_offset(-1);
-  ctrl_regst_proto->set_mem_shared_hint_id(ctrl_regst_proto->regst_desc_id());
 }
 
 }  // namespace oneflow

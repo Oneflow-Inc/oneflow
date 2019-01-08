@@ -18,7 +18,6 @@ PlanTaskGraph::PlanTaskGraph(const Plan& plan) : plan_(&plan) {
   InitEdges();
   InitNode2Ancestor();
   InitChainId2SortedPlanTaskNode();
-  InitChaindId7HintId2RegstDescs();
 }
 
 void PlanTaskGraph::InitNodes() {
@@ -64,18 +63,6 @@ void PlanTaskGraph::InitChainId2SortedPlanTaskNode() {
   }
 }
 
-void PlanTaskGraph::InitChaindId7HintId2RegstDescs() {
-  for (const auto& task_id_and_plan_task_node : task_id2plan_task_node_) {
-    PlanTaskNode* producer_node = task_id_and_plan_task_node.second;
-    for (const auto& pair : producer_node->task_proto()->produced_regst_desc()) {
-      int64_t hint_id = pair.second.mem_shared_hint_id();
-      if (hint_id == -1) { continue; }
-      const auto& key = std::make_pair(producer_node->chain_id(), hint_id);
-      CHECK(chain_id7hint_id2regst_descs_[key].emplace(&pair.second).second);
-    }
-  }
-}
-
 bool PlanTaskGraph::IsReachableToAncestor(const PlanTaskNode* node,
                                           const PlanTaskNode* ancestor) const {
   return node2ancestors_.at(node).find(ancestor) != node2ancestors_.at(node).end();
@@ -83,18 +70,6 @@ bool PlanTaskGraph::IsReachableToAncestor(const PlanTaskNode* node,
 
 const TaskProto* PlanTaskGraph::TaskProto4TaskId(int64_t task_id) const {
   return task_id2plan_task_node_.at(task_id)->task_proto();
-}
-
-void PlanTaskGraph::ForEachRegstDescsWithSameChainId7HintId(
-    const std::function<bool(const RegstDescProto*)>& IsAllowedRegstDesc,
-    const std::function<void(const std::vector<const RegstDescProto*>&)>& Handler) const {
-  for (const auto& pair : chain_id7hint_id2regst_descs_) {
-    std::vector<const RegstDescProto*> regst_descs;
-    for (const RegstDescProto* regst_desc : pair.second) {
-      if (IsAllowedRegstDesc(regst_desc)) { regst_descs.push_back(regst_desc); }
-    }
-    if (!regst_descs.empty()) { Handler(regst_descs); }
-  }
 }
 
 void PlanTaskGraph::ComputeLifetimeSameChainActorIds(

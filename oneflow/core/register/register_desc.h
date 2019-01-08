@@ -54,8 +54,8 @@ class RegstDesc final {
   void set_enable_mem_sharing(bool enable_mem_sharing) { enable_mem_sharing_ = enable_mem_sharing; }
   int64_t mem_shared_offset() const;
   void set_mem_shared_offset(int64_t val) { mem_shared_offset_ = val; }
-  int64_t mem_shared_hint_id() const { return mem_shared_hint_id_; }
-  void set_mem_shared_hint_id(int64_t val) { mem_shared_hint_id_ = val; }
+  int64_t mem_shared_inplace_group_id() const { return mem_shared_inplace_group_id_; }
+  void set_mem_shared_inplace_group_id(int64_t val) { mem_shared_inplace_group_id_ = val; }
   int32_t mem_shared_id() const { return mem_shared_id_; }
   void set_mem_shared_id(int32_t val) { mem_shared_id_ = val; }
   bool HasSetMemSharedId() { return mem_shared_id_ != -1; }
@@ -97,11 +97,28 @@ class RegstDesc final {
   bool enable_mem_sharing_;
   int32_t mem_shared_id_;
   int64_t mem_shared_offset_;
-  int64_t mem_shared_hint_id_;
+  int64_t mem_shared_inplace_group_id_;
 
   std::shared_ptr<Shape> data_regst_time_shape_;
 };
 
+inline bool operator==(const MemBlockGroup& lhs, const MemBlockGroup& rhs) {
+  bool ret = (lhs.group_id() == rhs.group_id());
+  if (ret) { CHECK_EQ(lhs.mem_reduce_method(), rhs.mem_reduce_method()); }
+  return ret;
+}
+
 }  // namespace oneflow
+
+namespace std {
+
+template<>
+struct hash<oneflow::MemBlockGroup> final {
+  size_t operator()(const oneflow::MemBlockGroup& mem_block_group) const {
+    return hash<int64_t>()(mem_block_group.group_id());
+  }
+};
+
+}  // namespace std
 
 #endif  // ONEFLOW_CORE_REGISTER_REGISTER_DESC_H_

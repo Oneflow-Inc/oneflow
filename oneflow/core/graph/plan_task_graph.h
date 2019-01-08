@@ -44,24 +44,17 @@ class PlanTaskGraph final : public Graph<const PlanTaskNode, PlanTaskEdge> {
   const TaskProto* TaskProto4TaskId(int64_t task_id) const;
   const Plan& plan() const { return *plan_; }
 
-  void ForEachRegstDescsWithSameChainId7HintId(
-      const std::function<bool(const RegstDescProto*)>& IsAllowedRegstDesc,
-      const std::function<void(const std::vector<const RegstDescProto*>&)>& Handler) const;
-
  private:
-  using ChainIdAndMemSharedHintId = std::pair<int64_t, int64_t>;
   void InitNodes();
   void InitEdges();
   void InitNode2Ancestor();
   void InitChainId2SortedPlanTaskNode();
-  void InitChaindId7HintId2RegstDescs();
   bool IsReachableToAncestor(const PlanTaskNode* node, const PlanTaskNode* ancestor) const;
 
   const Plan* plan_;
   HashMap<int64_t, PlanTaskNode*> task_id2plan_task_node_;
   HashMap<const PlanTaskNode*, HashSet<const PlanTaskNode*>> node2ancestors_;
   HashMap<int64_t, std::vector<const PlanTaskNode*>> chain_id2sorted_plan_task_nodes_;
-  HashMap<ChainIdAndMemSharedHintId, HashSet<const RegstDescProto*>> chain_id7hint_id2regst_descs_;
 };
 
 }  // namespace oneflow

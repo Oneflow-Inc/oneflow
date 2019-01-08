@@ -27,7 +27,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void EnableMemSharingInReduceStruct();
   void EnableMemSharingAfterAllManualSetForMdUpdt();
   void EnableMemSharingInVariableOp();
-  void EnableInplaceByMemSharingHintId();
+  void EnableInplaceMemSharing();
 
   void AddOrderCtrlEdgeBetweenCopyAndMdUpdt();
   void RmUselessConsumeRelationshipBetweenFwBw();

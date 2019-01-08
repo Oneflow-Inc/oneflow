@@ -437,7 +437,7 @@ void TaskGraph::EnableMemSharingInVariableOp() {
   });
 }
 
-void TaskGraph::EnableInplaceByMemSharingHintId() {
+void TaskGraph::EnableInplaceMemSharing() {
   AcyclicTopoForEachNode([&](TaskNode* node) {
     if (node->exec_gph().node_num() != 1) { return; }
     const Operator* op = node->exec_gph().SoleNode()->op().get();
@@ -457,7 +457,10 @@ void TaskGraph::EnableInplaceByMemSharingHintId() {
     }
     if (input_regst->NumOfLbi() != 1) { return; }
     if (output_regst->NumOfLbi() != 1) { return; }
-    output_regst->set_mem_shared_hint_id(input_regst->mem_shared_hint_id());
+    if (input_regst->mem_shared_inplace_group_id() == -1) {
+      input_regst->set_mem_shared_inplace_group_id(Global<IDMgr>::Get()->NewMemBlockGroupId());
+    }
+    output_regst->set_mem_shared_inplace_group_id(input_regst->mem_shared_inplace_group_id());
   });
 }
 

@@ -7,6 +7,7 @@
 #include "oneflow/core/job/profiler.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/regst_lifetime_graph.h"
+#include "oneflow/core/graph/sharable_mem_block_graph.h"
 #include "oneflow/core/actor/act_event_logger.h"
 
 namespace oneflow {
@@ -86,18 +87,50 @@ void ForEachSameColoredStreamRegstDescWithoutConsumer(
 void ForEachSameColoredChainRegstDescWithConsumer(
     const PlanTaskGraph& plan_task_graph,
     const std::function<void(const std::list<const RegstDescProto*>&)>& Handler) {
-  auto IsAllowedRegstDesc = [](const RegstDescProto* regst_desc) {
-    return regst_desc->register_num() == 1;
+  // construct SharableMemBlockGraph
+  auto ChainId4TaskId = [&](int64_t task_id) {
+    return plan_task_graph.TaskProto4TaskId(task_id)->task_set_info().chain_id();
   };
+  auto IsSharableRegstWithConsumer = [&](const RegstDescProto& regst_desc) {
+    return regst_desc.mem_shared_id() == -1 && regst_desc.consumer_task_id_size() > 0
+           && regst_desc.enable_mem_sharing() && regst_desc.register_num() == 1
+           && IsConsumersAndProducerInSameChain(regst_desc, ChainId4TaskId);
+  };
+  SharableMemBlockGraph sharable_mem_block_gph(plan_task_graph, IsSharableRegstWithConsumer);
+  sharable_mem_block_gph.ForEachNode([&](const SharableMemBlockNode* sharable_mem_block) {
+    CHECK_EQ(sharable_mem_block->mem_block_group().mem_reduce_method(), MemReduceMethod::kMemMax);
+  });
+  // group regst_descs for pre-colored regst_descs.
+  // example:
+  // given dlnet: A -> B -> C -> D -> E -> F -> H -> I, where D is a inplace op.
+  // Regst(C) and Regst(D) are pre-colored with same color as a group, which
+  // then shares memory with other regsts like A, B, E, ...
   HashMap<const RegstDescProto*, std::vector<const RegstDescProto*>> header2members;
-  HashMap<const RegstDescProto*, const RegstDescProto*> member2header;
-  plan_task_graph.ForEachRegstDescsWithSameChainId7HintId(
-      IsAllowedRegstDesc, [&](const std::vector<const RegstDescProto*>& regst_descs) {
-        header2members.emplace(regst_descs.at(0), regst_descs);
-        for (const RegstDescProto* regst_desc : regst_descs) {
-          member2header.emplace(regst_desc, regst_descs.at(0));
+  for (const SharableMemBlockNode* sharable_mem_block : sharable_mem_block_gph.source_nodes()) {
+    auto regst_descs = sharable_mem_block->regst_descs();
+    HashMap<const RegstDescProto*, size_t> regst_desc2mem_size;
+    for (const RegstDescProto* regst_desc : regst_descs) {
+      size_t size = RtRegstDesc(*regst_desc).TotalMainByteSize4AllRegst();
+      CHECK(regst_desc2mem_size.emplace(regst_desc, size).second);
+    }
+    std::sort(regst_descs.begin(), regst_descs.end(),
+              [&](const RegstDescProto* lhs, const RegstDescProto* rhs) {
+                return regst_desc2mem_size.at(lhs) > regst_desc2mem_size.at(rhs);
+              });
+    header2members.emplace(regst_descs.at(0), regst_descs);
+  }
+  auto GetRegstDescs = [&](const std::vector<const SharableMemBlockNode*>& sharable_mem_blocks) {
+    std::list<const RegstDescProto*> ret;
+    for (const SharableMemBlockNode* sharable_mem_block : sharable_mem_blocks) {
+      for (const RegstDescProto* regst_desc : sharable_mem_block->regst_descs()) {
+        if (header2members.find(regst_desc) != header2members.end()) {
+          ret.push_back(regst_desc);
+          break;
         }
-      });
+      }
+    }
+    return ret;
+  };
   auto ComputeLifetimeSameChainActorIds = [&](const RegstDescProto* regst_desc,
                                               HashSet<int64_t>* ret_actor_ids) {
     CHECK(regst_desc->enable_mem_sharing());
@@ -106,28 +139,18 @@ void ForEachSameColoredChainRegstDescWithConsumer(
       plan_task_graph.ComputeLifetimeSameChainActorIds(member, ret_actor_ids);
     }
   };
-  auto ChainId4TaskId = [&](int64_t task_id) {
-    return plan_task_graph.TaskProto4TaskId(task_id)->task_set_info().chain_id();
-  };
-  const Plan& plan = plan_task_graph.plan();
-  auto FilterHeaders = [&](const std::list<const RegstDescProto*>& regst_descs) {
-    HashSet<const RegstDescProto*> headers_set;
-    for (const RegstDescProto* regst_desc : regst_descs) {
-      headers_set.emplace(member2header.at(regst_desc));
-    }
-    return std::list<const RegstDescProto*>(headers_set.begin(), headers_set.end());
-  };
-  auto HandlerAddedHintMembers = [&](const std::list<const RegstDescProto*>& regst_descs) {
+  auto AppendGroupMembers = [&](const std::list<const RegstDescProto*>& regst_descs) {
     std::list<const RegstDescProto*> members;
     for (const auto* header : regst_descs) {
       for (const auto* member : header2members.at(header)) { members.push_back(member); }
     }
     Handler(members);
   };
-  ForEachSharableChainRegstDescsWithConsumer(
-      plan, ChainId4TaskId, [&](const std::list<const RegstDescProto*>& regst_descs) {
-        RegstLifetimeGraph(FilterHeaders(regst_descs), ComputeLifetimeSameChainActorIds)
-            .ForEachSameColoredRegstDescs(HandlerAddedHintMembers);
+  sharable_mem_block_gph.ForEachSourceNodeGroup(
+      &SharableMemBlockNode::chain_id,
+      [&](const std::vector<const SharableMemBlockNode*>& sharable_mem_blocks) {
+        RegstLifetimeGraph(GetRegstDescs(sharable_mem_blocks), ComputeLifetimeSameChainActorIds)
+            .ForEachSameColoredRegstDescs(AppendGroupMembers);
       });
 }
 

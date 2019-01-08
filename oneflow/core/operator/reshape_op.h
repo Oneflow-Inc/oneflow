@@ -16,8 +16,8 @@ class ReshapeOp final : public Operator {
   bool IsElemWiseOp() const override { return true; }
   bool NeedInBlobWhenBackward() const override { return false; }
   bool NeedOutBlobWhenBackward() const override { return false; }
-  bool IsForwardInplace() const override { return true; }
-  bool IsBackwardInplace() const override { return true; }
+  //  bool IsForwardInplace() const override { return true; }
+  //  bool IsBackwardInplace() const override { return true; }
 
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
