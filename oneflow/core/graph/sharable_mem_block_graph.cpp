@@ -58,12 +58,15 @@ SharableMemBlockGraph::SharableMemBlockGraph(
     AddAllocatedNode(node);
     CHECK(chain_id7mem_block2node.emplace(pair.first, node).second);
   }
-  HashMap<SharableMemBlockNode*, HashSet<SharableMemBlockNode*>> parent2children;
+  HashSet<const SharableMemBlockNode*> connected_children;
   ForEachSharableChainRegstDesc([&](int64_t chain_id, const RegstDescProto& regst_desc) {
     SharableMemBlockNode* child = nullptr;
     for (const auto& mem_block : regst_desc.mem_block_group_hierarchy()) {
       auto* parent = chain_id7mem_block2node.at(std::make_pair(chain_id, mem_block));
-      if (child != nullptr) { Connect(parent, NewEdge(), child); }
+      if (child != nullptr && connected_children.find(child) == connected_children.end()) {
+        Connect(parent, NewEdge(), child);
+        CHECK(connected_children.emplace(child).second);
+      }
       child = parent;
     }
   });
