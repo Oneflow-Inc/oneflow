@@ -4,6 +4,25 @@
 
 namespace oneflow {
 
+// TODO: put gcd() and lcm() to some xxx_util file
+namespace {
+
+const int64_t gcd(int64_t a, int64_t b) {
+  while (true) {
+    if (a == 0) { return b; }
+    b %= a;
+    if (b == 0) { return a; }
+    a %= b;
+  }
+}
+
+const int64_t lcm(int64_t a, int64_t b) {
+  const int64_t tmp = gcd(a, b);
+  return tmp ? (a / tmp * b) : 0;
+}
+
+}  // namespace
+
 void ReduceConcatOp::InitFromOpConf() {
   CHECK(op_conf().has_reduce_concat_conf());
   for (int32_t i = 0; i < op_conf().reduce_concat_conf().in_num(); ++i) {
@@ -32,14 +51,18 @@ void ReduceConcatOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
     in_blob_body_size_sum +=
         RtBlobDesc(*(GetBlobDesc4BnInOp(input_bns().Get(i)))).ByteSizeOfBlobBody();
   }
+  // we don't add data_type_byte_size to round_up_block_size because we assume
+  // kCudaAlignSize % data_type_byte_size == 0
+  const int64_t round_up_block_size = lcm(parallel_ctx->parallel_num(), kCudaAlignSize);
+  const int64_t out_blob_body_size = RoundUp(in_blob_body_size_sum, round_up_block_size);
   const int64_t data_type_byte_size =
       static_cast<int64_t>(GetSizeOfDataType(first_in_blob->data_type()));
-  CHECK_EQ(in_blob_body_size_sum % data_type_byte_size, 0);
-  const int64_t out_blob_elem_cnt =
-      RoundUp(in_blob_body_size_sum / data_type_byte_size, parallel_ctx->parallel_num());
+  CHECK_EQ(out_blob_body_size % data_type_byte_size, 0);
+  const int64_t out_blob_elem_cnt = out_blob_body_size / data_type_byte_size;
   out_blob->mut_shape() = Shape({out_blob_elem_cnt});
 
-  ReduceConcatOpCtx* reduce_concat_op_ctx = new ReduceConcatOpCtx(data_type_byte_size, out_blob_elem_cnt);
+  ReduceConcatOpCtx* reduce_concat_op_ctx =
+      new ReduceConcatOpCtx(data_type_byte_size, out_blob_elem_cnt);
   EnrollOpCtx(reduce_concat_op_ctx);
 }
 
