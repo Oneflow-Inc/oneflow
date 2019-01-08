@@ -443,9 +443,13 @@ void JobDesc::ConvertPseudoChainToChain() {
     if (chain_nodes.size() - source_nodes.size() <= 2) { return; }
     const OpNode* first_node = *source_nodes.begin();
     if (first_node->parallel_desc().device_type() == DeviceType::kCPU) { return; }
-    AddIdentityOpAndReconnect("pseudo_chain_header_", &job_conf_, source_edges,
-                              MutOperatorConf4OpName,
-                              *ParallelConf4OpName(first_node->op().op_name()));
+    HashMap<bool, std::vector<OpEdge*>> has_diff2source_edges;
+    for (OpEdge* edge : source_edges) { has_diff2source_edges[edge->has_diff()].push_back(edge); }
+    for (const auto& pair : has_diff2source_edges) {
+      AddIdentityOpAndReconnect("pseudo_chain_header_", &job_conf_, pair.second,
+                                MutOperatorConf4OpName,
+                                *ParallelConf4OpName(first_node->op().op_name()));
+    }
   });
 }
 
