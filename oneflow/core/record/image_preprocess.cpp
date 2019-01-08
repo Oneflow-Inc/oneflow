@@ -119,6 +119,19 @@ void ImagePreprocessImpl<PreprocessCase::kMirror>::DoPreprocess(
   *image = dst;
 }
 
+void ImagePreprocessImpl<PreprocessCase::kFlip>::DoPreprocess(
+    cv::Mat* image, const ImagePreprocess& preprocess_conf,
+    std::function<int32_t(void)> NextRandomInt) const {
+  CHECK(preprocess_conf.has_flip());
+  auto& flip_conf = preprocess_conf.flip();
+  if (GetRandomFloatValue(0, 1, NextRandomInt) > flip_conf.flip_ratio()) {
+    return;
+  }
+  cv::Mat dst;
+  cv::flip(*image, dst, flip_conf.flip_code());
+  *image = dst;
+}
+
 void ImagePreprocessImpl<PreprocessCase::kBgr2Rgb>::DoPreprocess(
     cv::Mat* image, const ImagePreprocess& preprocess_conf,
     std::function<int32_t(void)> NextRandomInt) const {
