@@ -457,10 +457,10 @@ void TaskGraph::EnableInplaceMemSharing() {
     }
     if (input_regst->NumOfLbi() != 1) { return; }
     if (output_regst->NumOfLbi() != 1) { return; }
-    if (input_regst->mem_shared_inplace_group_id() == -1) {
-      input_regst->set_mem_shared_inplace_group_id(Global<IDMgr>::Get()->NewMemBlockGroupId());
+    if (input_regst->mem_shared_inplace_block_id() == -1) {
+      input_regst->set_mem_shared_inplace_block_id(Global<IDMgr>::Get()->NewMemBlockId());
     }
-    output_regst->set_mem_shared_inplace_group_id(input_regst->mem_shared_inplace_group_id());
+    output_regst->set_mem_shared_inplace_block_id(input_regst->mem_shared_inplace_block_id());
   });
 }
 

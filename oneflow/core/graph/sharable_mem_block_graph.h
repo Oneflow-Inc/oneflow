@@ -12,18 +12,18 @@ class SharableMemBlockEdge;
 class SharableMemBlockNode final : public Node<SharableMemBlockNode, SharableMemBlockEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SharableMemBlockNode);
-  SharableMemBlockNode(int64_t chain_id, const MemBlockGroup& mem_block_group,
+  SharableMemBlockNode(int64_t chain_id, const MemBlock& mem_block,
                        const std::vector<const RegstDescProto*>& regst_descs,
                        const PlanTaskGraph& plan_task_graph);
   ~SharableMemBlockNode() = default;
 
   int64_t chain_id() const { return chain_id_; }
   const std::vector<const RegstDescProto*>& regst_descs() const { return regst_descs_; }
-  const MemBlockGroup& mem_block_group() const { return mem_block_group_; }
+  const MemBlock& mem_block() const { return mem_block_; }
 
  private:
   const int64_t chain_id_;
-  const MemBlockGroup mem_block_group_;
+  const MemBlock mem_block_;
   const std::vector<const RegstDescProto*> regst_descs_;
 };
 

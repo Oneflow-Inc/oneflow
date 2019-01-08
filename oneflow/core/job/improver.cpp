@@ -70,7 +70,7 @@ void ForEachSameColoredChainRegstDescWithConsumer(
   };
   SharableMemBlockGraph sharable_mem_block_gph(plan_task_graph, IsSharableRegstWithConsumer);
   sharable_mem_block_gph.ForEachNode([&](const SharableMemBlockNode* sharable_mem_block) {
-    CHECK_EQ(sharable_mem_block->mem_block_group().mem_reduce_method(), MemReduceMethod::kMemMax);
+    CHECK_EQ(sharable_mem_block->mem_block().mem_reduce_method(), MemReduceMethod::kMemMax);
   });
   // group regst_descs for pre-colored regst_descs.
   // example:

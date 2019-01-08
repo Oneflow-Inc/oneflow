@@ -35,8 +35,8 @@ enum MemReduceMethod {
   kMemMax = 2;
 }
 
-message MemBlockGroup {
-  required int64 group_id = 1;
+message MemBlock {
+  required int64 block_id = 1;
   optional MemReduceMethod mem_reduce_method = 2 [default = kMemMax];
 }
 
@@ -53,5 +53,5 @@ message RegstDescProto {
   required int32 mem_shared_id = 10;
   required int64 mem_shared_offset = 11;
   // from bottom to top
-  repeated MemBlockGroup mem_block_group_hierarchy = 13;
+  repeated MemBlock mem_block_hierarchy = 13;
 }

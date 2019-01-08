@@ -20,10 +20,10 @@ bool IsConsumersAndProducerInSameChain(const RegstDescProto& regst_desc,
 
 }  // namespace
 
-SharableMemBlockNode::SharableMemBlockNode(int64_t chain_id, const MemBlockGroup& mem_block_group,
+SharableMemBlockNode::SharableMemBlockNode(int64_t chain_id, const MemBlock& mem_block,
                                            const std::vector<const RegstDescProto*>& regst_descs,
                                            const PlanTaskGraph& plan_task_graph)
-    : chain_id_(chain_id), mem_block_group_(mem_block_group), regst_descs_(regst_descs) {}
+    : chain_id_(chain_id), mem_block_(mem_block), regst_descs_(regst_descs) {}
 
 SharableMemBlockGraph::SharableMemBlockGraph(
     const PlanTaskGraph& plan_task_gph,
@@ -36,22 +36,22 @@ SharableMemBlockGraph::SharableMemBlockGraph(
             if (IsConsumersAndProducerInSameChain(pair.second, plan_task_gph)
                 && IsSharable(pair.second)) {
               int32_t idx = 0;
-              for (const auto& mem_block : pair.second.mem_block_group_hierarchy()) {
-                if (idx++ == 0) { CHECK(mem_block_ids_check.emplace(mem_block.group_id()).second); }
+              for (const auto& mem_block : pair.second.mem_block_hierarchy()) {
+                if (idx++ == 0) { CHECK(mem_block_ids_check.emplace(mem_block.block_id()).second); }
                 Handler(task.task_set_info().chain_id(), pair.second);
               }
             }
           }
         }
       };
-  HashMap<std::pair<int64_t, MemBlockGroup>, std::vector<const RegstDescProto*>>
+  HashMap<std::pair<int64_t, MemBlock>, std::vector<const RegstDescProto*>>
       chain_id7mem_block2regst_descs;
   ForEachSharableChainRegstDesc([&](int64_t chain_id, const RegstDescProto& regst_desc) {
-    for (const auto& mem_block : regst_desc.mem_block_group_hierarchy()) {
+    for (const auto& mem_block : regst_desc.mem_block_hierarchy()) {
       chain_id7mem_block2regst_descs[std::make_pair(chain_id, mem_block)].push_back(&regst_desc);
     }
   });
-  HashMap<std::pair<int64_t, MemBlockGroup>, SharableMemBlockNode*> chain_id7mem_block2node;
+  HashMap<std::pair<int64_t, MemBlock>, SharableMemBlockNode*> chain_id7mem_block2node;
   for (const auto& pair : chain_id7mem_block2regst_descs) {
     auto* node =
         new SharableMemBlockNode(pair.first.first, pair.first.second, pair.second, plan_task_gph);
@@ -61,7 +61,7 @@ SharableMemBlockGraph::SharableMemBlockGraph(
   HashSet<const SharableMemBlockNode*> connected_children;
   ForEachSharableChainRegstDesc([&](int64_t chain_id, const RegstDescProto& regst_desc) {
     SharableMemBlockNode* child = nullptr;
-    for (const auto& mem_block : regst_desc.mem_block_group_hierarchy()) {
+    for (const auto& mem_block : regst_desc.mem_block_hierarchy()) {
       auto* parent = chain_id7mem_block2node.at(std::make_pair(chain_id, mem_block));
       if (child != nullptr && connected_children.find(child) == connected_children.end()) {
         Connect(parent, NewEdge(), child);
