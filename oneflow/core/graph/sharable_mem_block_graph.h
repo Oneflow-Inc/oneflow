@@ -20,17 +20,11 @@ class SharableMemBlockNode final : public Node<SharableMemBlockNode, SharableMem
   int64_t chain_id() const { return chain_id_; }
   const std::vector<const RegstDescProto*>& regst_descs() const { return regst_descs_; }
   const MemBlockGroup& mem_block_group() const { return mem_block_group_; }
-  const HashSet<int64_t> lifetime_actor_ids() const { return lifetime_actor_ids_; }
-  size_t byte_size() const { return byte_size_; }
 
  private:
-  void InitLifetimeActorIds(const PlanTaskGraph& plan_task_graph);
-  void InitByteSize();
   const int64_t chain_id_;
   const MemBlockGroup mem_block_group_;
   const std::vector<const RegstDescProto*> regst_descs_;
-  HashSet<int64_t> lifetime_actor_ids_;
-  size_t byte_size_;
 };
 
 class SharableMemBlockEdge final : public Edge<SharableMemBlockNode, SharableMemBlockEdge> {

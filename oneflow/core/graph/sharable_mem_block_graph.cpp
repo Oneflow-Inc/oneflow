@@ -23,30 +23,7 @@ bool IsConsumersAndProducerInSameChain(const RegstDescProto& regst_desc,
 SharableMemBlockNode::SharableMemBlockNode(int64_t chain_id, const MemBlockGroup& mem_block_group,
                                            const std::vector<const RegstDescProto*>& regst_descs,
                                            const PlanTaskGraph& plan_task_graph)
-    : chain_id_(chain_id), mem_block_group_(mem_block_group), regst_descs_(regst_descs) {
-  InitLifetimeActorIds(plan_task_graph);
-  InitByteSize();
-}
-
-void SharableMemBlockNode::InitLifetimeActorIds(const PlanTaskGraph& plan_task_graph) {
-  for (const RegstDescProto* regst_desc : regst_descs_) {
-    plan_task_graph.ComputeLifetimeSameChainActorIds(regst_desc, &lifetime_actor_ids_);
-  }
-  for (int64_t task_id : lifetime_actor_ids_) {
-    CHECK_EQ(chain_id_, plan_task_graph.TaskProto4TaskId(task_id)->task_set_info().chain_id());
-  }
-}
-
-void SharableMemBlockNode::InitByteSize() {
-  CHECK(!regst_descs_.empty());
-  for (const RegstDescProto* regst_desc : regst_descs_) {
-    for (const auto& mem_block : regst_desc->mem_block_group_hierarchy()) {
-      if (mem_block.mem_reduce_method() != MemReduceMethod::kMemMax) { TODO(); }
-    }
-    byte_size_ =
-        std::max<size_t>(byte_size_, RtRegstDesc(*regst_desc).TotalMainByteSize4AllRegst());
-  }
-}
+    : chain_id_(chain_id), mem_block_group_(mem_block_group), regst_descs_(regst_descs) {}
 
 SharableMemBlockGraph::SharableMemBlockGraph(
     const PlanTaskGraph& plan_task_gph,
