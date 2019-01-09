@@ -120,7 +120,7 @@ Plan Compiler::DoCompile() {
   if (job_desc->IsTrain() && job_desc->enable_mem_sharing()) {
     task_gph->EnableMemSharingInVariableOp();
   }
-  if (job_desc->IsTrain()) { task_gph->AddReduceNoBwForwardNodeOverlapingCtrlEdges(); }
+  // if (job_desc->IsTrain()) { task_gph->AddReduceNoBwForwardNodeOverlapingCtrlEdges(); }
 
   Plan plan;
   task_gph->ForEachNode([&](TaskNode* task_node) {

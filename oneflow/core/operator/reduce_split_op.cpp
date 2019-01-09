@@ -23,10 +23,10 @@ void ReduceSplitOp::VirtualGenKernelConf(
     reduce_split_conf->mutable_data_offset()->Add(offset);
     offset += RtBlobDesc(*(GetBlobDesc4BnInOp(output_bns().Get(i)))).ByteSizeOfBlobBody();
   }
-  const int64_t data_type_byte_size =
-      static_cast<int64_t>(GetSizeOfDataType(GetBlobDesc4BnInOp(SoleIbn())->data_type()));
-  CHECK_EQ(RoundUp(offset, parallel_ctx->parallel_num() * data_type_byte_size),
-           RtBlobDesc(*GetBlobDesc4BnInOp(SoleIbn())).ByteSizeOfBlobBody());
+  //  const int64_t data_type_byte_size =
+  //      static_cast<int64_t>(GetSizeOfDataType(GetBlobDesc4BnInOp(SoleIbn())->data_type()));
+  //  CHECK_EQ(RoundUp(offset, parallel_ctx->parallel_num() * data_type_byte_size),
+  //           RtBlobDesc(*GetBlobDesc4BnInOp(SoleIbn())).ByteSizeOfBlobBody());
 }
 
 REGISTER_OP(OperatorConf::kReduceSplitConf, ReduceSplitOp);

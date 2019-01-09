@@ -48,10 +48,10 @@ void ReduceConcatOp::VirtualGenKernelConf(
     reduce_concat_conf->mutable_data_offset()->Add(offset);
     offset += RtBlobDesc(*(GetBlobDesc4BnInOp(input_bns().Get(i)))).ByteSizeOfBlobBody();
   }
-  const int64_t data_type_byte_size =
-      static_cast<int64_t>(GetSizeOfDataType(GetBlobDesc4BnInOp(input_bns().Get(0))->data_type()));
-  CHECK_EQ(RoundUp(offset, parallel_ctx->parallel_num() * data_type_byte_size),
-           RtBlobDesc(*GetBlobDesc4BnInOp(SoleObn())).ByteSizeOfBlobBody());
+  //  const int64_t data_type_byte_size =
+  //      static_cast<int64_t>(GetSizeOfDataType(GetBlobDesc4BnInOp(input_bns().Get(0))->data_type()));
+  //  CHECK_EQ(RoundUp(offset, parallel_ctx->parallel_num() * data_type_byte_size),
+  //           RtBlobDesc(*GetBlobDesc4BnInOp(SoleObn())).ByteSizeOfBlobBody());
 }
 
 LogicalBlobId ReduceConcatOp::obn2lbi(const std::string& output_bn) const {
