@@ -26,7 +26,11 @@ void VariableKernel<device_type, T>::BackwardDataContent(
   CHECK(this->op_conf().trainable());
   const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
   Blob* model_diff_blob = BnInOp2Blob(GenDiffBn(ModelName()));
-  model_diff_blob->CopyDataContentFrom(ctx.device_ctx, out_diff_blob);
+  if (Global<JobDesc>::Get()->enable_mem_sharing()) {
+    CHECK_EQ(out_diff_blob->dptr(), model_diff_blob->dptr());
+  } else {
+    model_diff_blob->CopyDataContentFrom(ctx.device_ctx, out_diff_blob);
+  }
 }
 
 template<DeviceType device_type, typename T>
