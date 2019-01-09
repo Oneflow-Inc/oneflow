@@ -54,16 +54,20 @@ class OpEdge final : public Edge<OpNode, OpEdge> {
   OF_DISALLOW_COPY_AND_MOVE(OpEdge);
   explicit OpEdge(const std::vector<LogicalBlobId>& lbis,
                   const HashMap<LogicalBlobId, std::vector<std::string>>& lbi2ibns)
-      : lbis_(lbis), lbi2ibns_(lbi2ibns) {}
+      : lbis_(lbis), lbi2ibns_(lbi2ibns), has_diff_(false) {}
   ~OpEdge() = default;
 
   const std::vector<LogicalBlobId>& lbis() const { return lbis_; }
   const HashMap<LogicalBlobId, std::vector<std::string>>& lbi2ibns() const { return lbi2ibns_; }
+  bool has_diff() const { return has_diff_; }
   std::string VisualStr() const override;
+
+  void set_has_diff(bool val) { has_diff_ = val; }
 
  private:
   std::vector<LogicalBlobId> lbis_;
   HashMap<LogicalBlobId, std::vector<std::string>> lbi2ibns_;
+  bool has_diff_;
 };
 
 class OpGraph final : public Graph<OpNode, OpEdge> {
