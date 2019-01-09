@@ -437,7 +437,7 @@ void TaskGraph::EnableMemSharingInVariableOp() {
       out_regst->set_mem_shared_id(model_regst->mem_shared_id());
       out_regst->set_mem_shared_offset(model_regst->mem_shared_offset()
                                        + model_regst->ByteOffsetInPackedBlobDescBody(lbi));
-
+      variable_op->set_is_fw_inplace(true);
     } else if (bw_task_node != nullptr) {
       const LogicalBlobId& lbi = variable_op->BnInOp2Lbi(GenDiffBn(model_bn));
       RegstDesc* model_diff_regst = bw_task_node->GetProducedRegst("model_diff").get();
@@ -455,7 +455,7 @@ void TaskGraph::EnableMemSharingInVariableOp() {
       out_diff_regst->set_mem_shared_offset(
           model_diff_regst->mem_shared_offset()
           + model_diff_regst->ByteOffsetInPackedBlobDescBody(lbi));
-
+      variable_op->set_is_bw_inplace(true);
     } else {
       // do nothing
     }

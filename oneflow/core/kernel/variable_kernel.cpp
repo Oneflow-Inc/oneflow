@@ -9,7 +9,7 @@ void VariableKernel<device_type, T>::ForwardDataContent(
   Blob* out_blob = BnInOp2Blob("out");
   if ((this->op_conf().trainable() && *tick_ % Global<JobDesc>::Get()->NumOfPiecesInBatch() == 0)
       || (this->op_conf().trainable() == false && *tick_ == 0)) {
-    if (Global<JobDesc>::Get()->enable_mem_sharing()) {
+    if (this->kernel_conf().variable_conf().is_fw_inplace()) {
       CHECK_EQ(out_blob->dptr(), model_blob->dptr());
     } else {
       out_blob->CopyDataContentFrom(ctx.device_ctx, model_blob);
@@ -26,7 +26,7 @@ void VariableKernel<device_type, T>::BackwardDataContent(
   CHECK(this->op_conf().trainable());
   const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
   Blob* model_diff_blob = BnInOp2Blob(GenDiffBn(ModelName()));
-  if (Global<JobDesc>::Get()->enable_mem_sharing()) {
+  if (this->kernel_conf().variable_conf().is_bw_inplace()) {
     CHECK_EQ(out_diff_blob->dptr(), model_diff_blob->dptr());
   } else {
     model_diff_blob->CopyDataContentFrom(ctx.device_ctx, out_diff_blob);
