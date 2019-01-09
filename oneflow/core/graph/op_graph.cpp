@@ -153,14 +153,17 @@ void OpGraph::InitEdges() {
 }
 
 void OpGraph::UpdateOpNodeHasInDiff() {
-  auto HasIndiff = [&](const OpNode* op_node) -> bool {
+  TopoForEachNode([&](OpNode* op_node) {
+    bool has_diff = false;
     for (OpEdge* edge : op_node->in_edges()) {
-      if (edge->src_node()->has_in_diff()) { return true; }
-      if (edge->src_node()->has_model_diff()) { return true; }
+      if (edge->src_node()->has_in_diff() || edge->src_node()->has_model_diff()) {
+        edge->set_has_diff(true);
+        has_diff = true;
+        break;
+      }
     }
-    return false;
-  };
-  TopoForEachNode([&](OpNode* op_node) { op_node->set_has_in_diff(HasIndiff(op_node)); });
+    op_node->set_has_in_diff(has_diff);
+  });
 }
 
 void OpGraph::InferNodeBlobDesc() const {
