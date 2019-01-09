@@ -12,6 +12,7 @@ void VariableKernel<device_type, T>::ForwardDataContent(
     if (this->kernel_conf().variable_conf().is_fw_inplace()) {
       CHECK_EQ(out_blob->dptr(), model_blob->dptr());
     } else {
+      CHECK_NE(out_blob->dptr(), model_blob->dptr());
       out_blob->CopyDataContentFrom(ctx.device_ctx, model_blob);
     }
   } else {
@@ -29,6 +30,7 @@ void VariableKernel<device_type, T>::BackwardDataContent(
   if (this->kernel_conf().variable_conf().is_bw_inplace()) {
     CHECK_EQ(out_diff_blob->dptr(), model_diff_blob->dptr());
   } else {
+    CHECK_NE(out_diff_blob->dptr(), model_diff_blob->dptr());
     model_diff_blob->CopyDataContentFrom(ctx.device_ctx, out_diff_blob);
   }
 }

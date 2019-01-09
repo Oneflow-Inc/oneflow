@@ -8,7 +8,10 @@ namespace oneflow {
 class VariableOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(VariableOp);
-  VariableOp() : Operator(), is_fw_inplace_(false), is_bw_inplace_(false) {}
+  VariableOp()
+      : Operator(),
+        is_fw_inplace_(std::make_unique<bool>(false)),
+        is_bw_inplace_(std::make_unique<bool>(false)) {}
   ~VariableOp() = default;
 
   void InitFromOpConf() override;
@@ -18,15 +21,15 @@ class VariableOp final : public Operator {
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
 
-  void set_is_fw_inplace(bool val) const { is_fw_inplace_ = val; }
-  void set_is_bw_inplace(bool val) const { is_bw_inplace_ = val; }
+  void set_is_fw_inplace(bool val) const { *is_fw_inplace_ = val; }
+  void set_is_bw_inplace(bool val) const { *is_bw_inplace_ = val; }
 
  private:
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext*, KernelConf*) const override;
 
-  mutable bool is_fw_inplace_;
-  mutable bool is_bw_inplace_;
+  std::unique_ptr<bool> is_fw_inplace_;
+  std::unique_ptr<bool> is_bw_inplace_;
 };
 
 }  // namespace oneflow
