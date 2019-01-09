@@ -818,6 +818,12 @@ message GatherOpConf {
   optional int64 axis = 4 [default = 0];
 }
 
+message MultipleGatherOpConf  {
+  required string in = 1;
+  repeated string indices = 2;
+  repeated string out = 3;
+}
+
 message SqrtOpConf {
   required string in = 1;
   required string out = 2;
@@ -1052,6 +1058,7 @@ message OperatorConf {
     IdentityLossOpConf identity_loss_conf = 259;
     SparseCrossEntropyOpConf sparse_cross_entropy_conf= 260;
     ReduceMeanOpConf reduce_mean_conf = 261;
+    MultipleGatherOpConf multiple_gather_conf = 262;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
