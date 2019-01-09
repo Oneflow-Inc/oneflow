@@ -440,7 +440,7 @@ void TaskGraph::EnableMemSharingInVariableOp() {
 
     } else if (bw_task_node != nullptr) {
       const LogicalBlobId& lbi = variable_op->BnInOp2Lbi(GenDiffBn(model_bn));
-      RegstDesc* model_diff_regst = bw_task_node->GetSoleConsumedRegst("model_diff").get();
+      RegstDesc* model_diff_regst = bw_task_node->GetProducedRegst("model_diff").get();
       CHECK_EQ(model_diff_regst->min_register_num(), 1);
       CHECK_EQ(model_diff_regst->max_register_num(), 1);
       if (model_diff_regst->enable_mem_sharing() == false) {
@@ -448,7 +448,7 @@ void TaskGraph::EnableMemSharingInVariableOp() {
         model_diff_regst->set_mem_shared_id(Global<IDMgr>::Get()->NewMemSharedId());
         model_diff_regst->set_mem_shared_offset(0);
       }
-      RegstDesc* out_diff_regst = bw_task_node->GetProducedRegst("out_diff").get();
+      RegstDesc* out_diff_regst = bw_task_node->GetSoleConsumedRegst("out_diff").get();
       if (out_diff_regst->NumOfLbi() != 1) { return; }
       out_diff_regst->set_enable_mem_sharing(true);
       out_diff_regst->set_mem_shared_id(model_diff_regst->mem_shared_id());
