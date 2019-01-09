@@ -349,6 +349,8 @@ void TaskGraph::AddReduceNoBwForwardNodeOverlapingCtrlEdges() {
       RegstDesc* ctrl_regst_desc = node->BuildCtrlRegstDesc(first_identity_node);
       ctrl_regst_desc->UpdtMinRegstNumIfNeed(regst_desc_num);
       ctrl_regst_desc->UpdtMaxRegstNumIfNeed(regst_desc_num);
+      ctrl_regst_desc->mut_regst_desc_type()->mutable_ctrl_regst_desc()->set_returned_regst_num(
+          regst_desc_num);
     });
   }
 }
