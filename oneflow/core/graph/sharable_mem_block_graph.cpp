@@ -20,11 +20,6 @@ bool IsConsumersAndProducerInSameChain(const RegstDescProto& regst_desc,
 
 }  // namespace
 
-SharableMemBlockNode::SharableMemBlockNode(int64_t chain_id, const MemBlock& mem_block,
-                                           const std::vector<const RegstDescProto*>& regst_descs,
-                                           const PlanTaskGraph& plan_task_graph)
-    : chain_id_(chain_id), mem_block_(mem_block), regst_descs_(regst_descs) {}
-
 SharableMemBlockGraph::SharableMemBlockGraph(
     const PlanTaskGraph& plan_task_gph,
     const std::function<bool(const RegstDescProto&)>& IsSharable) {
