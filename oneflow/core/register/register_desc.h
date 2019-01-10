@@ -103,7 +103,7 @@ class RegstDesc final {
 };
 
 inline bool operator==(const MemBlock& lhs, const MemBlock& rhs) {
-  bool ret = (lhs.block_id() == rhs.block_id());
+  bool ret = (lhs.mem_block_id() == rhs.mem_block_id());
   if (ret) { CHECK_EQ(lhs.mem_reduce_method(), rhs.mem_reduce_method()); }
   return ret;
 }
@@ -115,7 +115,7 @@ namespace std {
 template<>
 struct hash<oneflow::MemBlock> final {
   size_t operator()(const oneflow::MemBlock& mem_block) const {
-    return hash<int64_t>()(mem_block.block_id());
+    return hash<int64_t>()(mem_block.mem_block_id());
   }
 };
 

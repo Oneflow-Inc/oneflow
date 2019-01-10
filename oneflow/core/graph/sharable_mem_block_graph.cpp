@@ -40,7 +40,7 @@ SharableMemBlockGraph::SharableMemBlockGraph(
   ForEachSharableChainRegstDesc([&](int64_t chain_id, const RegstDescProto& regst_desc) {
     int32_t idx = 0;
     for (const auto& mem_block : regst_desc.mem_block_hierarchy()) {
-      if (idx++ == 0) { CHECK(mem_block_ids_check.emplace(mem_block.block_id()).second); }
+      if (idx++ == 0) { CHECK(mem_block_ids_check.emplace(mem_block.mem_block_id()).second); }
       auto& regst_descs = chain_id7mem_block2regst_descs[std::make_pair(chain_id, mem_block)];
       CHECK(regst_descs.emplace(&regst_desc).second);
     }

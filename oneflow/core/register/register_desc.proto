@@ -36,7 +36,7 @@ enum MemReduceMethod {
 }
 
 message MemBlock {
-  required int64 block_id = 1;
+  required int64 mem_block_id = 1;
   optional MemReduceMethod mem_reduce_method = 2 [default = kMemMax];
 }
 

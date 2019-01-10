@@ -154,9 +154,9 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
   ret->set_enable_mem_sharing(enable_mem_sharing_);
   ret->set_mem_shared_id(mem_shared_id_);
   ret->set_mem_shared_offset(mem_shared_offset_);
-  ret->add_mem_block_hierarchy()->set_block_id(Global<IDMgr>::Get()->NewMemBlockId());
+  ret->add_mem_block_hierarchy()->set_mem_block_id(Global<IDMgr>::Get()->NewMemBlockId());
   if (mem_shared_inplace_block_id_ != -1) {
-    ret->add_mem_block_hierarchy()->set_block_id(mem_shared_inplace_block_id_);
+    ret->add_mem_block_hierarchy()->set_mem_block_id(mem_shared_inplace_block_id_);
   }
 }
 
