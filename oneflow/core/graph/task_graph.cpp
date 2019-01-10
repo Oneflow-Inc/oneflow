@@ -349,6 +349,8 @@ void TaskGraph::AddReduceNoBwForwardNodeOverlapingCtrlEdges() {
       RegstDesc* ctrl_regst_desc = node->BuildCtrlRegstDesc(first_identity_node);
       ctrl_regst_desc->UpdtMinRegstNumIfNeed(regst_desc_num);
       ctrl_regst_desc->UpdtMaxRegstNumIfNeed(regst_desc_num);
+      ctrl_regst_desc->mut_regst_desc_type()->mutable_ctrl_regst_desc()->set_returned_regst_num(
+          regst_desc_num);
     });
   }
 }
@@ -459,6 +461,33 @@ void TaskGraph::EnableMemSharingInVariableOp() {
     } else {
       // do nothing
     }
+  });
+}
+
+void TaskGraph::EnableInplaceMemSharing() {
+  AcyclicTopoForEachNode([&](TaskNode* node) {
+    if (node->exec_gph().node_num() != 1) { return; }
+    const Operator* op = node->exec_gph().SoleNode()->op().get();
+    auto* fw_task_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
+    auto* bw_task_node = dynamic_cast<NormalBackwardCompTaskNode*>(node);
+    RegstDesc* input_regst = nullptr;
+    RegstDesc* output_regst = nullptr;
+    if (op->IsForwardInplace() && fw_task_node) {
+      input_regst = fw_task_node->GetSoleConsumedRegst("in").get();
+      output_regst = fw_task_node->GetProducedRegst("out").get();
+    } else if (op->IsBackwardInplace() && bw_task_node) {
+      input_regst = bw_task_node->GetSoleConsumedRegst(GenDiffBn("out")).get();
+      output_regst = bw_task_node->GetProducedRegst(GenDiffBn("in")).get();
+    } else {
+      // do nothing
+      return;
+    }
+    if (input_regst->NumOfLbi() != 1) { return; }
+    if (output_regst->NumOfLbi() != 1) { return; }
+    if (input_regst->mem_shared_inplace_block_id() == -1) {
+      input_regst->set_mem_shared_inplace_block_id(Global<IDMgr>::Get()->NewMemBlockId());
+    }
+    output_regst->set_mem_shared_inplace_block_id(input_regst->mem_shared_inplace_block_id());
   });
 }
 
