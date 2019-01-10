@@ -56,8 +56,6 @@ class RegstLifetimeGraph final : public Graph<const RegstLifetimeNode, RegstLife
       const std::function<void(const RegstDescProto*, HashSet<int64_t>*)>& ComputeLifetimeActorIds,
       std::list<RegstLifetimeNode*>* nodes);
   void InitEdges(const std::list<RegstLifetimeNode*>& nodes);
-  HashMap<const RegstLifetimeNode*, HashSet<const RegstLifetimeNode*>>
-      regst_lifetime_node2intersected_nodes_;
 };
 
 }  // namespace oneflow
