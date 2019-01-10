@@ -4,6 +4,11 @@
 
 namespace oneflow {
 
+struct ReduceConcatOpCtx : public OpContext {
+  ReduceConcatOpCtx(const int64_t elem_cnt) : out_blob_elem_cnt(elem_cnt) {}
+  int64_t out_blob_elem_cnt;
+};
+
 void ReduceConcatOp::InitFromOpConf() {
   CHECK(op_conf().has_reduce_concat_conf());
   for (int32_t i = 0; i < op_conf().reduce_concat_conf().in_num(); ++i) {

@@ -5,11 +5,6 @@
 
 namespace oneflow {
 
-struct ReduceConcatOpCtx : public OpContext {
-  ReduceConcatOpCtx(const int64_t elem_cnt) : out_blob_elem_cnt(elem_cnt) {}
-  int64_t out_blob_elem_cnt;
-};
-
 class ReduceConcatOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ReduceConcatOp);
