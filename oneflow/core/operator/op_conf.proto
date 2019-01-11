@@ -969,6 +969,18 @@ message IdentityOpConf {
   repeated string out = 2;
 }
 
+message ResizeReshapeOpConf {
+  required string in = 1;
+  required string out = 2;
+  required ShapeProto shape = 3;
+}
+
+message BoxingAlignBroadcastReshapeOpConf {
+  required string in = 1;
+  required string out = 2;
+  required int64 target_parallel_num = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1059,6 +1071,8 @@ message OperatorConf {
     SparseCrossEntropyOpConf sparse_cross_entropy_conf= 260;
     ReduceMeanOpConf reduce_mean_conf = 261;
     MultipleGatherOpConf multiple_gather_conf = 262;
+    ResizeReshapeOpConf resize_reshape_conf = 263;
+    BoxingAlignBroadcastReshapeOpConf boxing_align_broadcast_reshape_conf = 264;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
