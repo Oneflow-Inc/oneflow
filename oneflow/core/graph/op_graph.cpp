@@ -93,6 +93,11 @@ const Shape* OpNode::GetInputBlobTimeShape() const {
   return &first_input->out_blob_time_shape();
 }
 
+void OpNode::ForEachLbiAndBlobDesc(
+    const std::function<void(const LogicalBlobId&, const BlobDesc&)>& Handler) const {
+  for (const auto& pair : lbi2blob_desc_) { Handler(pair.first, *pair.second); }
+}
+
 void OpGraph::InferOpModelSize(HashMap<std::string, size_t>* op_name2model_size) {
   ForEachNode([&](OpNode* op_node) {
     size_t model_size = 0;

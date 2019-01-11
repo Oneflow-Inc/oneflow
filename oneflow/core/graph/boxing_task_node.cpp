@@ -55,7 +55,7 @@ DEFINE_BLD_BOXING_OP_CONF_METHOD(InBoxingTaskNode, DataConcatAndDataSplit) {
   conf->mutable_concat_box()->set_axis(0);
   BoxSplitConf* split_conf = conf->mutable_split_box();
   split_conf->set_axis(0);
-  BalancedSplitter bs(Global<JobDesc>::Get()->PieceSize(),
+  BalancedSplitter bs(Global<JobDesc>::Get()->LogicalBlobDim04Lbi(lbi),
                       out_logical->parallel_desc()->parallel_num());
   SetBoxSplitPart(sorted_out_edges, bs, split_conf);
 }
@@ -63,11 +63,11 @@ DEFINE_BLD_BOXING_OP_CONF_METHOD(OutBoxingTaskNode, DataConcatAndDataSplit) {
   conf->mutable_concat_box()->set_axis(0);
   BoxSplitConf* split_conf = conf->mutable_split_box();
   split_conf->set_axis(0);
-  BalancedSplitter in_bs(Global<JobDesc>::Get()->PieceSize(),
+  BalancedSplitter in_bs(Global<JobDesc>::Get()->LogicalBlobDim04Lbi(lbi),
                          in_logical->parallel_desc()->parallel_num());
   Range in_range =
       in_bs.At(sorted_in_edges.front().parallel_id_min, sorted_in_edges.back().parallel_id_max);
-  BalancedSplitter out_bs(Global<JobDesc>::Get()->PieceSize(),
+  BalancedSplitter out_bs(Global<JobDesc>::Get()->LogicalBlobDim04Lbi(lbi),
                           out_logical->parallel_desc()->parallel_num());
   for (const EdgeInfo& out_edge : sorted_out_edges) {
     Range out_range = out_bs.At(out_edge.parallel_id_min, out_edge.parallel_id_max);
@@ -91,7 +91,7 @@ DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, ModelConcatAndDataSplit) {
   conf->mutable_concat_box()->set_axis(in_logical->GetModelSplitAxis());
   BoxSplitConf* split_conf = conf->mutable_split_box();
   split_conf->set_axis(0);
-  BalancedSplitter bs(Global<JobDesc>::Get()->PieceSize(),
+  BalancedSplitter bs(Global<JobDesc>::Get()->LogicalBlobDim04Lbi(lbi),
                       out_logical->parallel_desc()->parallel_num());
   SetBoxSplitPart(sorted_out_edges, bs, split_conf);
 }
@@ -103,7 +103,7 @@ DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, AddAndDataSplit) {
   conf->mutable_add_box();
   BoxSplitConf* split_conf = conf->mutable_split_box();
   split_conf->set_axis(0);
-  BalancedSplitter bs(Global<JobDesc>::Get()->PieceSize(),
+  BalancedSplitter bs(Global<JobDesc>::Get()->LogicalBlobDim04Lbi(lbi),
                       out_logical->parallel_desc()->parallel_num());
   SetBoxSplitPart(sorted_out_edges, bs, split_conf);
 }

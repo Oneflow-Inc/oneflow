@@ -116,6 +116,15 @@ void AddIdentityOpAndReconnect(
 
 }  // namespace
 
+int64_t JobDesc::LogicalBlobDim04Lbi(const LogicalBlobId& lbi) const {
+  CHECK(lbi.has_op_name());
+  CHECK(lbi.has_blob_name());
+  LogicalBlobId key;
+  key.set_op_name(lbi.op_name());
+  key.set_blob_name(lbi.blob_name());
+  return lbi2logical_blob_dim0_.at(key);
+}
+
 int64_t JobDesc::all_reduce_group_min_byte() const {
   int64_t ret = job_conf_.other().all_reduce_group_min_mbyte() * 1024 * 1024;
   CHECK_GT(ret, 0);
@@ -417,6 +426,7 @@ void JobDesc::FixAndOptimizeDLNet() {
   FixTickOpIfExists();
   ConvertPseudoChainToChain();
   if (IsTrain()) { AddIdentityOpForAllReduceOverlapingUntrainble(); }
+  InitLbi2LogicalBlobDim0();
 }
 
 void JobDesc::ConvertPseudoChainToChain() {
@@ -486,6 +496,16 @@ void JobDesc::AddIdentityOpForAllReduceOverlapingUntrainble() {
           "all_reduce_overlapping_untrainable_", &job_conf_, pair.second, MutOperatorConf4OpName,
           *ParallelConf4OpName(pair.second.at(0)->dst_node()->op().op_name()));
     }
+  });
+}
+
+void JobDesc::InitLbi2LogicalBlobDim0() {
+  OpGraph(this).ForEachNode([&](OpNode* op_node) {
+    op_node->ForEachLbiAndBlobDesc([&](const LogicalBlobId& lbi, const BlobDesc& blob_desc) {
+      CHECK(lbi.has_op_name());
+      CHECK(lbi.has_blob_name());
+      CHECK(lbi2logical_blob_dim0_.emplace(lbi, blob_desc.shape().At(0)).second);
+    });
   });
 }
 

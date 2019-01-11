@@ -35,6 +35,8 @@ class OpNode final : public Node<OpNode, OpEdge> {
   BlobDesc* BlobDesc4BnInOp(const std::string& bn_in_op);
   const Shape* GetInputBlobTimeShape(const std::string& bn_in_op) const;
   const Shape* GetInputBlobTimeShape() const;
+  void ForEachLbiAndBlobDesc(
+      const std::function<void(const LogicalBlobId&, const BlobDesc&)>& Handler) const;
 
   std::string VisualStr() const override;
 

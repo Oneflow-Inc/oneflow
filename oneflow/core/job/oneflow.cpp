@@ -14,6 +14,7 @@
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/device/cudnn_conv_ctx_cache.h"
 
 namespace oneflow {
 
@@ -159,6 +160,9 @@ class Oneflow final {
 };
 
 Oneflow::Oneflow(const std::string& job_conf_filepath) {
+#ifdef WITH_CUDA
+  Global<CudnnConvCtxCache>::New();
+#endif
   // New All Global
   Global<JobDesc>::New(job_conf_filepath);
   const JobDesc* global_job_desc = Global<JobDesc>::Get();
@@ -198,6 +202,9 @@ Oneflow::Oneflow(const std::string& job_conf_filepath) {
     PullPlan("naive_plan", &naive_plan);
     PullPlan("mem_shared_plan", &mem_shared_plan);
   }
+#ifdef WITH_CUDA
+  Global<CudnnConvCtxCache>::Delete();
+#endif
   OF_BARRIER();
   TeePersistentLogStream::Create("naive_plan")->Write(naive_plan);
   TeePersistentLogStream::Create("mem_shared_plan")->Write(mem_shared_plan);

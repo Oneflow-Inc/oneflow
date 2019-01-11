@@ -7,6 +7,7 @@
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/persistence/file_system.h"
+#include "oneflow/core/register/logical_blob_id.pb.h"
 
 namespace oneflow {
 
@@ -37,6 +38,7 @@ class JobDesc final {
   bool IsTrain() const { return job_conf_.other().has_train_conf(); }
   bool IsPredict() const { return job_conf_.other().has_predict_conf(); }
   int64_t PieceSize() const { return job_conf_.other().piece_size(); }
+  int64_t LogicalBlobDim04Lbi(const LogicalBlobId& lbi) const;
   int64_t piece_num_of_experiment_phase() const;
   bool enable_experiment_run() const;
   float available_zone_mem_ratio() const;
@@ -98,8 +100,10 @@ class JobDesc final {
   void AddIdentityOpForChainMergeOptimization();
   void AddIdentityOpForAllReduceOverlapingUntrainble();
   void FixTickOpIfExists();
+  void InitLbi2LogicalBlobDim0();
 
   JobConf1 job_conf_;
+  HashMap<LogicalBlobId, int64_t> lbi2logical_blob_dim0_;
 };
 
 std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4OpName(

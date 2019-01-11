@@ -11,7 +11,7 @@ class RepeatOp final : public Operator {
   RepeatOp() = default;
   ~RepeatOp() override = default;
 
-  int32_t GetRepeatNum(int64_t parallel_num) const;
+  int32_t GetRepeatNum() const;
 
  private:
   const PbMessage& GetCustomizedConf() const override;

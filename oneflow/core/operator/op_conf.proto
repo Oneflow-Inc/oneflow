@@ -787,28 +787,20 @@ message HingeLossOpConf {
 message PackOpConf {
   required string in = 1;
   required string out = 2;
-  oneof pack_num_conf {
-    int32 pack_num = 3;
-    int32 pack_num_per_record = 4;
-  }
-  required string related_unpack = 5;
+  required int32 pack_num = 3;
+  required string related_unpack = 4;
 }
 
 message UnpackOpConf {
   required string in = 1;
   required string out = 2;
-  oneof unpack_num_conf {
-    int32 unpack_num = 3;
-    int32 unpack_num_per_record = 4;
-  }
+  required int32 unpack_num = 3;
 }
+
 message RepeatOpConf {
   required string in = 1;
   required string out = 2;
-  oneof repeat_num_conf {
-    int32 repeat_num = 3;
-    int32 repeat_num_per_record = 4;
-  }
+  required int32 repeat_num = 3;
 }
 
 message GatherOpConf {

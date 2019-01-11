@@ -1,6 +1,5 @@
 #include "oneflow/core/job/compiler.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
-#include "oneflow/core/device/cudnn_conv_ctx_cache.h"
 
 namespace oneflow {
 
@@ -92,9 +91,6 @@ void Compiler::GenNetTopo(Plan* plan) {
 }
 
 Plan Compiler::DoCompile() {
-#ifdef WITH_CUDA
-  Global<CudnnConvCtxCache>::New();
-#endif
   const JobDesc* job_desc = Global<JobDesc>::Get();
   auto logical_gph = std::make_unique<LogicalGraph>(job_desc->IsTrain());
   int64_t total_mbn_num = logical_gph->total_mbn_num();
@@ -131,9 +127,6 @@ Plan Compiler::DoCompile() {
   plan.set_total_mbn_num(total_mbn_num);
   GenNetTopo(&plan);
   ToDotFile(plan, "/dot/plan.dot");
-#ifdef WITH_CUDA
-  Global<CudnnConvCtxCache>::Delete();
-#endif
   return plan;
 }
 
