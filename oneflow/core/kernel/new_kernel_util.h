@@ -193,8 +193,8 @@ struct SameImplNewKernelUtilIf {
     const int ldb = (trans_b == CblasNoTrans) ? n : k;
     const int ldc = n;
 
-    FloatingNewKernelUtilIf<device_type, T>::Gemm(ctx, CblasRowMajor, trans_a, trans_b, m, n, k,
-                                                  alpha, a, lda, b, ldb, beta, c, ldc);
+    FloatingNewKernelUtilIf<DeviceType::kCPU, T>::Gemm(ctx, CblasRowMajor, trans_a, trans_b, m, n,
+                                                       k, alpha, a, lda, b, ldb, beta, c, ldc);
   }
   static void OFGemmTrans(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
                           enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
