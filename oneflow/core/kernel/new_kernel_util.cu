@@ -176,6 +176,16 @@ struct Int32Array {
   int32_t val[NDIMS];
 };
 
+template<int32_t NDIMS>
+__device__ int32_t GetXIndex(const int32_t* y_shape, const int32_t* x_strides, int32_t y_idx) {
+  int32_t x_idx = 0;
+  for (int32_t i = NDIMS - 1; i >= 0; --i) {
+    x_idx += (y_idx % y_shape[i]) * x_strides[i];
+    y_idx /= y_shape[i];
+  }
+  return x_idx;
+}
+
 template<int32_t NDIMS, typename T>
 __global__ void TransposeGpu(const Int32Array<NDIMS> y_shape, const Int32Array<NDIMS> x_strides,
                              const int32_t elem_cnt, const T* x, T* y) {
