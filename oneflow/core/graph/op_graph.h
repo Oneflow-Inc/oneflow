@@ -33,6 +33,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   const ParallelDesc& parallel_desc() const { return parallel_desc_; }
 
   BlobDesc* BlobDesc4BnInOp(const std::string& bn_in_op);
+  const BlobDesc& BlobDesc4Lbi(const LogicalBlobId& lbi) const { return *lbi2blob_desc_.at(lbi); }
   const Shape* GetInputBlobTimeShape(const std::string& bn_in_op) const;
   const Shape* GetInputBlobTimeShape() const;
   void ForEachLbiAndBlobDesc(

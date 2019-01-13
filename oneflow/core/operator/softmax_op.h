@@ -23,7 +23,7 @@ class SoftmaxOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override;
 
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext*,
+                      const ParallelContext* parallel_ctx, int64_t record_piece_size,
                       std::function<void(OpContext*)> EnrollOpCtx) const override;
   void InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                            const ParallelContext*, const OpContext*) const override;

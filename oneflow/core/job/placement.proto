@@ -3,6 +3,30 @@ package oneflow;
 
 import "oneflow/core/operator/op_conf.proto";
 
+message BlobDataParallel {
+  optional int64 data_split_num = 1 [default = 1];
+  optional int64 clone_num = 2 [default = 1];
+}
+
+message BlobModelParallel {
+  optional int64 clone_num = 1 [default = 1];
+  optional int64 model_split_num = 2 [default = 1];
+}
+
+message BlobGridParallel {
+  required int64 data_split_num = 1;
+  required int64 model_split_num = 2;
+}
+
+message BlobParallelConf {
+  optional int64 model_split_axis = 1 [default = 1];
+  oneof parallel_type {
+    BlobDataParallel data_parallel = 2;
+    BlobModelParallel model_parallel = 3;
+    BlobGridParallel grid_parallel = 4;
+  }
+}
+
 enum ParallelPolicy {
   kInvalidParallel = 0;
   kDataParallel = 1;

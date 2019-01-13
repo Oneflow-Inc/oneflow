@@ -25,7 +25,7 @@ class NormalizationOp final : public Operator {
   bool NeedOutBlobWhenBackward() const override { return false; }
 
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext*,
+                      const ParallelContext* parallel_ctx, int64_t record_piece_size,
                       std::function<void(OpContext*)> EnrollOpCtx) const override;
 
  private:

@@ -37,7 +37,7 @@ class JobDesc final {
   int32_t MaxMdSaveWorkerNum() const { return job_conf_.resource().max_mdsave_worker_num(); }
   bool IsTrain() const { return job_conf_.other().has_train_conf(); }
   bool IsPredict() const { return job_conf_.other().has_predict_conf(); }
-  int64_t PieceSize() const { return job_conf_.other().piece_size(); }
+  int64_t RecordPieceSize() const { return job_conf_.other().piece_size(); }
   int64_t LogicalBlobDim04Lbi(const LogicalBlobId& lbi) const;
   int64_t piece_num_of_experiment_phase() const;
   bool enable_experiment_run() const;
@@ -99,6 +99,7 @@ class JobDesc final {
   void ConvertPseudoChainToChain();
   void AddIdentityOpForChainMergeOptimization();
   void AddIdentityOpForAllReduceOverlapingUntrainble();
+  void FixElemWiseOpParallelConf();
   void FixTickOpIfExists();
   void InitLbi2LogicalBlobDim0();
 

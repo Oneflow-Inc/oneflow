@@ -210,8 +210,8 @@ int64_t JobDesc::BatchSize() const {
 }
 int64_t JobDesc::NumOfPiecesInBatch() const {
   if (IsPredict()) { return 1; }
-  CHECK_EQ(BatchSize() % PieceSize(), 0);
-  return BatchSize() / PieceSize();
+  CHECK_EQ(BatchSize() % RecordPieceSize(), 0);
+  return BatchSize() / RecordPieceSize();
 }
 float JobDesc::primary_lr() const {
   CHECK(IsTrain());
@@ -423,6 +423,7 @@ void JobDesc::AddRecordLoadOps() {
 }
 
 void JobDesc::FixAndOptimizeDLNet() {
+  FixElemWiseOpParallelConf();
   FixTickOpIfExists();
   ConvertPseudoChainToChain();
   if (IsTrain()) { AddIdentityOpForAllReduceOverlapingUntrainble(); }
@@ -555,6 +556,17 @@ void JobDesc::FixTickOpIfExists() {
   PlacementGroup* p_group = job_conf_.mutable_placement()->add_placement_group();
   *(p_group->mutable_op_set()->add_op_name()) = tick_log_counter->name();
   *(p_group->mutable_parallel_conf()) = *source_parallel_conf;
+}
+
+void JobDesc::FixElemWiseOpParallelConf() {
+  auto ParallelConf4OpName = MakeGetterMutParallelConf4OpName(job_conf_.mutable_placement());
+  OpGraph(this).ForEachNode([&](OpNode* node) {
+    OpNode* prev_node = node;
+    while (prev_node->op().IsElemWiseOp()) { prev_node = prev_node->SoleInEdge()->src_node(); }
+    if (prev_node != node && prev_node->parallel_desc().policy() == kModelParallel) {
+      *ParallelConf4OpName(node->op().op_name()) = *ParallelConf4OpName(prev_node->op().op_name());
+    }
+  });
 }
 
 }  // namespace oneflow

@@ -73,17 +73,23 @@ const std::string& Operator::SoleBbbn() const {
 }
 
 void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx,
+                                const ParallelContext* parallel_ctx, int64_t record_piece_size,
                                 std::function<void(OpContext*)> EnrollOpCtx) const {
-  InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, EnrollOpCtx);
+  InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, record_piece_size, EnrollOpCtx);
   if (op_attribute_.model_bns().size() > 0) {
     InferTotalInstanceNumDesc(GetBlobDesc4BnInOp, parallel_ctx, EnrollOpCtx);
   }
 }
 
 void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                              const ParallelContext* parallel_ctx,
+                              const ParallelContext* parallel_ctx, int64_t record_piece_size,
                               std::function<void(OpContext*)> EnrollOpCtx) const {
+  InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, record_piece_size);
+}
+
+void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                              const ParallelContext* parallel_ctx,
+                              int64_t record_piece_size) const {
   InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
@@ -144,8 +150,20 @@ void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
   if (pr_desc->policy() == kModelParallel && MaxModelSplitNum() != -1) {
     pr_desc->RemoveNeedlessDevice(op_name(), MaxModelSplitNum());
   }
+  auto ForEachLbi = [&](const std::function<void(const LogicalBlobId&)>& Handler) {
+    for (const std::string& ibn : input_bns()) { Handler(BnInOp2Lbi(ibn)); }
+    for (const std::string& obn : output_bns()) { Handler(BnInOp2Lbi(obn)); }
+  };
   if (pr_desc->policy() == kDataParallel) {
-    pr_desc->RemoveNeedlessDevice(op_name(), Global<JobDesc>::Get()->PieceSize());
+    int64_t min_logical_blob_dim0 = MaxVal<int64_t>::value;
+    ForEachLbi([&](const LogicalBlobId& lbi) {
+      min_logical_blob_dim0 = std::min<int64_t>(min_logical_blob_dim0,
+                                                Global<JobDesc>::Get()->LogicalBlobDim04Lbi(lbi));
+    });
+    pr_desc->RemoveNeedlessDevice(op_name(), min_logical_blob_dim0);
+    ForEachLbi([&](const LogicalBlobId& lbi) {
+      CHECK_EQ(Global<JobDesc>::Get()->LogicalBlobDim04Lbi(lbi) % min_logical_blob_dim0, 0);
+    });
   }
   VirtualFixParallelDesc(pr_desc);
 }

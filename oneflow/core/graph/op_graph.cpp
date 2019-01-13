@@ -6,8 +6,9 @@ std::string OpEdge::VisualStr() const {
   std::string str;
   int32_t idx = 0;
   for (const LogicalBlobId& lbi : lbis_) {
-    if (idx++ > 0) { str += ","; }
-    str += lbi.blob_name();
+    if (idx++ > 0) { str += "\\n"; }
+    str += lbi.blob_name() + ":";
+    str += src_node()->BlobDesc4Lbi(lbi).shape().ToString();
   }
   return str;
 }
@@ -35,13 +36,7 @@ std::string OpNode::VisualStr() const {
   }
   auto GetTimeShapeStr = [&](const Shape& shape, const std::string& prefix) {
     std::string time_shape_str = prefix + ":";
-    time_shape_str += "(";
-    int32_t idx = 0;
-    for (int64_t dim : shape.dim_vec()) {
-      if (idx++ > 0) { time_shape_str += ","; }
-      time_shape_str += std::to_string(dim);
-    }
-    time_shape_str += ")";
+    time_shape_str += shape.ToString();
     return time_shape_str;
   };
   if (in_edges().empty() == false) {
@@ -177,9 +172,10 @@ void OpGraph::InferNodeBlobDesc() const {
     parallel_ctx.set_parallel_id(0);
     parallel_ctx.set_parallel_num(1);
     parallel_ctx.set_policy(op_node->parallel_desc().policy());
+    CHECK_EQ(job_desc_->RecordPieceSize() % op_node->parallel_desc().parallel_num(), 0);
     op_node->op().InferBlobDescsIf(
         std::bind(&OpNode::BlobDesc4BnInOp, op_node, std::placeholders::_1), &parallel_ctx,
-        [](OpContext*) {});
+        job_desc_->RecordPieceSize(), [](OpContext*) {});
   });
 }
 
