@@ -28,6 +28,9 @@ struct NewKernelUtilIf {
                                 const std::string& model_dir, Blob* blob,
                                 const std::string& bn_in_op, int32_t dim_num,
                                 int64_t num_in_each_dim);
+  static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
+                        const Shape& y_shape, const PbRf<int32_t>& permutation,
+                        const int64_t elem_cnt, const T* x, T* y);
 };
 
 template<typename T, typename U = void>

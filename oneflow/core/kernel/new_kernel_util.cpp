@@ -225,7 +225,6 @@ void CpuInitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
   PersistentInStream in_stream(SnapshotFS(), file_path, begin_pos);
   in_stream.Read(blob->mut_dptr<char>(), blob_size);
 }
-
 }  // namespace
 
 template<typename T>
@@ -261,6 +260,35 @@ struct NewKernelUtilIf<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T
     CpuInitializeWithDir<T>(ctx, part_id, part_num, model_dir, blob, bn_in_op, dim_num,
                             num_in_each_dim);
   }
+  static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
+                        const Shape& y_shape, const PbRf<int32_t>& permutation,
+                        const int64_t elem_cnt, const T* x, T* y) {
+    int64_t block_size = 1;
+    int32_t shared_idxs_num = 0;
+    for (int32_t i = num_axis - 1; i >= 0 && permutation[i] == i; --i) {
+      block_size *= y_shape.At(i);
+      ++shared_idxs_num;
+    }
+    if (num_axis < 2 || shared_idxs_num == num_axis) {
+      memcpy(y, x, elem_cnt * sizeof(T));
+      return;
+    }
+    int32_t trans_axis = num_axis - shared_idxs_num;
+    std::vector<int64_t> x_to_y_offset;
+    ComputeOffset(trans_axis, y_shape.dim_vec().data(), permutation.data(), x_to_y_offset);
+    std::vector<int64_t> x_index_digits(trans_axis, 0);
+    int64_t num_blocks = elem_cnt / block_size;
+    FOR_RANGE(int64_t, x_idx, 0, num_blocks) {
+      int64_t y_idx = std::inner_product(x_to_y_offset.cbegin(), x_to_y_offset.cend(),
+                                         x_index_digits.cbegin(), 0);
+      if (block_size == 1) {
+        y[y_idx] = x[x_idx];
+      } else {
+        memcpy(y + block_size * y_idx, x + block_size * x_idx, block_size * sizeof(T));
+      }
+      IncreaseIndex(x_shape.dim_vec().data(), x_index_digits);
+    }
+  }
 };
 
 template<typename T>
@@ -287,6 +315,35 @@ struct NewKernelUtilIf<DeviceType::kCPU, T, typename std::enable_if<IsIntegral<T
                                 int64_t num_in_each_dim) {
     CpuInitializeWithDir<T>(ctx, part_id, part_num, model_dir, blob, bn_in_op, dim_num,
                             num_in_each_dim);
+  }
+  static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
+                        const Shape& y_shape, const PbRf<int32_t>& permutation,
+                        const int64_t elem_cnt, const T* x, T* y) {
+    int64_t block_size = 1;
+    int32_t shared_idxs_num = 0;
+    for (int32_t i = num_axis - 1; i >= 0 && permutation[i] == i; --i) {
+      block_size *= y_shape.At(i);
+      ++shared_idxs_num;
+    }
+    if (num_axis < 2 || shared_idxs_num == num_axis) {
+      memcpy(y, x, elem_cnt * sizeof(T));
+      return;
+    }
+    int32_t trans_axis = num_axis - shared_idxs_num;
+    std::vector<int64_t> x_to_y_offset;
+    ComputeOffset(trans_axis, y_shape.dim_vec().data(), permutation.data(), x_to_y_offset);
+    std::vector<int64_t> x_index_digits(trans_axis, 0);
+    int64_t num_blocks = elem_cnt / block_size;
+    FOR_RANGE(int64_t, x_idx, 0, num_blocks) {
+      int64_t y_idx = std::inner_product(x_to_y_offset.cbegin(), x_to_y_offset.cend(),
+                                         x_index_digits.cbegin(), 0);
+      if (block_size == 1) {
+        y[y_idx] = x[x_idx];
+      } else {
+        memcpy(y + block_size * y_idx, x + block_size * x_idx, block_size * sizeof(T));
+      }
+      IncreaseIndex(x_shape.dim_vec().data(), x_index_digits);
+    }
   }
 };
 

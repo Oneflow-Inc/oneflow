@@ -26,7 +26,78 @@ void GpuInitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
       ctx, part_id, part_num, model_dir, host_blob.get(), bn_in_op, dim_num, num_in_each_dim);
   AFTER_CPU_INITIALIZE();
 }
+template<int32_t NDIMS>
+struct Int32Array {
+  int32_t val[NDIMS];
+};
 
+template<typename T>
+__global__ void CopyColsRegionGpu(const int64_t row_num, const int64_t col_num, const T* x,
+                                  const int64_t x_col_offset, const int64_t x_lda, T* y,
+                                  const int64_t y_col_offset, const int64_t y_lda) {
+  CUDA_1D_KERNEL_LOOP(index, row_num * col_num) {
+    const int64_t i = index / col_num;
+    const int64_t j = index % col_num;
+    y[i * y_lda + y_col_offset + j] = x[i * x_lda + x_col_offset + j];
+  }
+}
+
+template<int32_t NDIMS>
+__device__ int32_t GetXIndex(const int32_t* y_shape, const int32_t* x_strides, int32_t y_idx) {
+  int32_t x_idx = 0;
+  for (int32_t i = NDIMS - 1; i >= 0; --i) {
+    x_idx += (y_idx % y_shape[i]) * x_strides[i];
+    y_idx /= y_shape[i];
+  }
+  return x_idx;
+}
+
+template<int32_t NDIMS, typename T>
+__global__ void TransposeGpu(const Int32Array<NDIMS> y_shape, const Int32Array<NDIMS> x_strides,
+                             const int32_t elem_cnt, const T* x, T* y) {
+  __shared__ int32_t x_strides_shared[NDIMS];
+  __shared__ int32_t y_dims_shared[NDIMS];
+  const int32_t tid = threadIdx.x;
+  if (tid < NDIMS) {
+    y_dims_shared[tid] = y_shape.val[tid];
+    x_strides_shared[tid] = x_strides.val[tid];
+  }
+  __syncthreads();
+  CUDA_1D_KERNEL_LOOP(y_idx, elem_cnt) {
+    const int32_t x_idx = GetXIndex<NDIMS>(y_dims_shared, x_strides_shared, y_idx);
+#if __CUDA_ARCH__ >= 350
+    y[y_idx] = __ldg(x + x_idx);
+#else
+    y[y_idx] = x[x_idx];
+#endif
+  }
+}
+
+template<int32_t NDIMS, typename T>
+void Transpose(DeviceCtx* ctx, const Shape& x_shape, const Shape& y_shape,
+               const PbRf<int32_t>& permutation, const int64_t elem_cnt, const T* x, T* y) {
+  CHECK_LE(y_shape.elem_cnt(), MaxVal<int32_t>::value);
+  Int32Array<NDIMS> y_shape_struct;
+  FOR_RANGE(int32_t, i, 0, NDIMS) { y_shape_struct.val[i] = y_shape.At(i); }
+  Int32Array<NDIMS> x_strides;
+  int32_t buff[NDIMS];
+  int32_t cur_stride = 1;
+  for (int32_t i = NDIMS - 1; i >= 0; --i) {
+    buff[i] = cur_stride;
+    cur_stride *= x_shape.At(i);
+  }
+  for (int32_t i = 0; i < NDIMS; ++i) { x_strides.val[i] = buff[permutation[i]]; }
+  TransposeGpu<NDIMS, T>
+      <<<SMBlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          y_shape_struct, x_strides, elem_cnt, x, y);
+}
+
+template<typename T>
+struct TransposeUtil final {
+#define MAKE_TRANSPOSE_SWITCH_ENTRY(func_name, NDIMS) func_name<NDIMS, T>
+  DEFINE_STATIC_SWITCH_FUNC(void, Transpose, MAKE_TRANSPOSE_SWITCH_ENTRY,
+                            MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
+};
 }  // namespace
 
 // GPU && Floating
@@ -47,6 +118,15 @@ struct NewKernelUtilIf<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T
     GpuInitializeWithDir<T>(ctx, part_id, part_num, model_dir, blob, bn_in_op, dim_num,
                             num_in_each_dim);
   }
+  static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
+                        const Shape& y_shape, const PbRf<int32_t>& permutation,
+                        const int64_t elem_cnt, const T* x, T* y) {
+    CHECK_LE(y_shape.elem_cnt(), MaxVal<int32_t>::value);
+    CHECK_EQ(num_axis, y_shape.NumAxes());
+    CHECK_EQ(num_axis, x_shape.NumAxes());
+    TransposeUtil<T>::SwitchTranspose(SwitchCase(num_axis), ctx, x_shape, y_shape, permutation,
+                                      elem_cnt, x, y);
+  }
 };
 
 // GPU && Integral
@@ -66,6 +146,15 @@ struct NewKernelUtilIf<DeviceType::kGPU, T, typename std::enable_if<IsIntegral<T
                                 int64_t num_in_each_dim) {
     GpuInitializeWithDir<T>(ctx, part_id, part_num, model_dir, blob, bn_in_op, dim_num,
                             num_in_each_dim);
+  }
+  static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
+                        const Shape& y_shape, const PbRf<int32_t>& permutation,
+                        const int64_t elem_cnt, const T* x, T* y) {
+    CHECK_LE(y_shape.elem_cnt(), MaxVal<int32_t>::value);
+    CHECK_EQ(num_axis, y_shape.NumAxes());
+    CHECK_EQ(num_axis, x_shape.NumAxes());
+    TransposeUtil<T>::SwitchTranspose(SwitchCase(num_axis), ctx, x_shape, y_shape, permutation,
+                                      elem_cnt, x, y);
   }
 };
 
