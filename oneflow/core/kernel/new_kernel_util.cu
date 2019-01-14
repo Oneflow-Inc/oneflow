@@ -31,17 +31,6 @@ struct Int32Array {
   int32_t val[NDIMS];
 };
 
-template<typename T>
-__global__ void CopyColsRegionGpu(const int64_t row_num, const int64_t col_num, const T* x,
-                                  const int64_t x_col_offset, const int64_t x_lda, T* y,
-                                  const int64_t y_col_offset, const int64_t y_lda) {
-  CUDA_1D_KERNEL_LOOP(index, row_num * col_num) {
-    const int64_t i = index / col_num;
-    const int64_t j = index % col_num;
-    y[i * y_lda + y_col_offset + j] = x[i * x_lda + x_col_offset + j];
-  }
-}
-
 template<int32_t NDIMS>
 __device__ int32_t GetXIndex(const int32_t* y_shape, const int32_t* x_strides, int32_t y_idx) {
   int32_t x_idx = 0;
