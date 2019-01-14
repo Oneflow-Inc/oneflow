@@ -226,9 +226,9 @@ void CpuInitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
   in_stream.Read(blob->mut_dptr<char>(), blob_size);
 }
 template<typename T>
-void TransposeOnCpu(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
-                    const Shape& y_shape, const PbRf<int32_t>& permutation, const int64_t elem_cnt,
-                    const T* x, T* y) {
+void CpuTranspose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
+                  const Shape& y_shape, const PbRf<int32_t>& permutation, const int64_t elem_cnt,
+                  const T* x, T* y) {
   int64_t block_size = 1;
   int32_t shared_idxs_num = 0;
   for (int32_t i = num_axis - 1; i >= 0 && permutation[i] == i; --i) {
@@ -293,7 +293,7 @@ struct NewKernelUtilIf<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T
   static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
                         const Shape& y_shape, const PbRf<int32_t>& permutation,
                         const int64_t elem_cnt, const T* x, T* y) {
-    TransposeOnCpu<T>(ctx, num_axis, x_shape, y_shape, permutation, elem_cnt, x, y);
+    CpuTranspose<T>(ctx, num_axis, x_shape, y_shape, permutation, elem_cnt, x, y);
   }
 };
 
@@ -325,7 +325,7 @@ struct NewKernelUtilIf<DeviceType::kCPU, T, typename std::enable_if<IsIntegral<T
   static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
                         const Shape& y_shape, const PbRf<int32_t>& permutation,
                         const int64_t elem_cnt, const T* x, T* y) {
-    TransposeOnCpu<T>(ctx, num_axis, x_shape, y_shape, permutation, elem_cnt, x, y);
+    CpuTranspose<T>(ctx, num_axis, x_shape, y_shape, permutation, elem_cnt, x, y);
   }
 };
 
