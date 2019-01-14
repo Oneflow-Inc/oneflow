@@ -11,7 +11,7 @@ namespace oneflow {
 void ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id, std::string* device_tag,
                          std::string* device_id_str);
 
-class ParallelDesc {
+class ParallelDesc final {
  public:
   // OF_DISALLOW_COPY_AND_MOVE(ParallelDesc);
   ParallelDesc() = delete;

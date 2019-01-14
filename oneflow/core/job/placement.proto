@@ -4,13 +4,13 @@ package oneflow;
 import "oneflow/core/operator/op_conf.proto";
 
 message BlobDataParallel {
-  optional int64 data_split_num = 1 [default = 1];
+  required int64 data_split_num = 1;
   optional int64 clone_num = 2 [default = 1];
 }
 
 message BlobModelParallel {
   optional int64 clone_num = 1 [default = 1];
-  optional int64 model_split_num = 2 [default = 1];
+  required int64 model_split_num = 2;
 }
 
 message BlobGridParallel {

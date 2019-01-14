@@ -6,6 +6,7 @@
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/job/keyword.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/blob_parallel_desc.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/kernel/kernel.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
@@ -143,6 +144,10 @@ class Operator {
   virtual void InferOutBlobTimeShape(
       std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
       Shape* time_shape) const;
+  // Infer blob's parallel desc
+  void InferBlobParallelDesc(
+      std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
+      const ParallelContext* parallel_context);
   virtual void FixInDiffBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                   const ParallelContext*) const;
   virtual void VirtualFixInDiffBlobDescs(
