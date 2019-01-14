@@ -16,118 +16,36 @@
 
 namespace oneflow {
 
-#define NEW_KERNEL_UTIL_IF_FUNCTION_DECLARATIONS                                                   \
-  static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,          \
-                                 uint32_t random_seed, Blob* blob,                                 \
-                                 const std::string& data_format);                                  \
-  static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,          \
-                                 uint32_t random_seed, Blob* blob);                                \
-  static void InitializeWithDir(                                                                   \
-      DeviceCtx* ctx, int32_t part_id, int32_t part_num, const std::string& model_dir, Blob* blob, \
-      const std::string& bn_in_op, int32_t dim_num, int64_t num_in_each_dim);
-
 // Functions with same paras but different imples
 // functions must support both cpu/gpu and floating/integral
 template<DeviceType device_type, typename T, typename U = void>
-struct NewKernelUtilIf;
-
-template<typename T>
-struct NewKernelUtilIf<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T>::value>::type> {
-  NEW_KERNEL_UTIL_IF_FUNCTION_DECLARATIONS
+struct NewKernelUtilIf {
+  static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
+                                 uint32_t random_seed, Blob* blob, const std::string& data_format);
+  static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
+                                 uint32_t random_seed, Blob* blob);
+  static void InitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
+                                const std::string& model_dir, Blob* blob,
+                                const std::string& bn_in_op, int32_t dim_num,
+                                int64_t num_in_each_dim);
 };
-
-template<typename T>
-struct NewKernelUtilIf<DeviceType::kCPU, T, typename std::enable_if<IsIntegral<T>::value>::type> {
-  NEW_KERNEL_UTIL_IF_FUNCTION_DECLARATIONS
-};
-
-template<typename T>
-struct NewKernelUtilIf<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T>::value>::type> {
-  NEW_KERNEL_UTIL_IF_FUNCTION_DECLARATIONS
-};
-
-template<typename T>
-struct NewKernelUtilIf<DeviceType::kGPU, T, typename std::enable_if<IsIntegral<T>::value>::type> {
-  NEW_KERNEL_UTIL_IF_FUNCTION_DECLARATIONS
-};
-
-#undef NEW_KERNEL_UTIL_IF_FUNCTION_DECLARATIONS
-
-#define CPU_NEW_KERNEL_UTIL_IF_FUNCTION_DECLARATIONS static void foo();
 
 template<typename T, typename U = void>
-struct CpuNewKernelUtilIf;
-
-template<typename T>
-struct CpuNewKernelUtilIf<T, typename std::enable_if<IsFloating<T>::value>::type> {
-  CPU_NEW_KERNEL_UTIL_IF_FUNCTION_DECLARATIONS
-};
-
-template<typename T>
-struct CpuNewKernelUtilIf<T, typename std::enable_if<IsIntegral<T>::value>::type> {
-  CPU_NEW_KERNEL_UTIL_IF_FUNCTION_DECLARATIONS
-};
-
-#undef CPU_NEW_KERNEL_UTIL_IF_FUNCTION_DECLARATIONS
-
-#define GPU_NEW_KERNEL_UTIL_IF_FUNCTION_DECLARATIONS static void foo();
+struct CpuNewKernelUtilIf {};
 
 template<typename T, typename U = void>
-struct GpuNewKernelUtilIf;
-
-template<typename T>
-struct GpuNewKernelUtilIf<T, typename std::enable_if<IsFloating<T>::value>::type> {
-  GPU_NEW_KERNEL_UTIL_IF_FUNCTION_DECLARATIONS
-};
-
-template<typename T>
-struct GpuNewKernelUtilIf<T, typename std::enable_if<IsIntegral<T>::value>::type> {
-  GPU_NEW_KERNEL_UTIL_IF_FUNCTION_DECLARATIONS
-};
-
-#undef GPU_NEW_KERNEL_UTIL_IF_FUNCTION_DECLARATIONS
-
-#define FLOATING_NEW_KERNEL_UTIL_IF_FUNCTION_DECLARATIONS                                  \
-  static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,                           \
-                   const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b, \
-                   const int m, const int n, const int k, const T alpha, const T* a,       \
-                   const int lda, const T* b, const int ldb, const T beta, T* c, const int ldc);
+struct GpuNewKernelUtilIf {};
 
 template<DeviceType device_type, typename T>
-struct FloatingNewKernelUtilIf;
-
-template<typename T>
-struct FloatingNewKernelUtilIf<DeviceType::kCPU, T> {
-  FLOATING_NEW_KERNEL_UTIL_IF_FUNCTION_DECLARATIONS
+struct FloatingNewKernelUtilIf {
+  static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE trans_a,
+                   const enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
+                   const T alpha, const T* a, const int lda, const T* b, const int ldb,
+                   const T beta, T* c, const int ldc);
 };
-
-template<typename T>
-struct FloatingNewKernelUtilIf<DeviceType::kGPU, T> {
-  FLOATING_NEW_KERNEL_UTIL_IF_FUNCTION_DECLARATIONS
-};
-
-#undef FLOATING_NEW_KERNEL_UTIL_IF_FUNCTION_DECLARATIONS
-
-#define INTEGRAL_NEW_KERNEL_UTIL_IF_FUNCTION_DECLARATIONS                                  \
-  static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,                           \
-                   const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b, \
-                   const int m, const int n, const int k, const T alpha, const T* a,       \
-                   const int lda, const T* b, const int ldb, const T beta, T* c, const int ldc);
 
 template<DeviceType device_type, typename T>
-struct IntegralNewKernelUtilIf;
-
-template<typename T>
-struct IntegralNewKernelUtilIf<DeviceType::kCPU, T> {
-  INTEGRAL_NEW_KERNEL_UTIL_IF_FUNCTION_DECLARATIONS
-};
-
-template<typename T>
-struct IntegralNewKernelUtilIf<DeviceType::kGPU, T> {
-  INTEGRAL_NEW_KERNEL_UTIL_IF_FUNCTION_DECLARATIONS
-};
-
-#undef INTEGRAL_NEW_KERNEL_UTIL_IF_FUNCTION_DECLARATIONS
+struct IntegralNewKernelUtilIf {};
 
 template<DeviceType device_type, typename T>
 struct SameImplNewKernelUtilIf;

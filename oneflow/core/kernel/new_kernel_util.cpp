@@ -228,87 +228,77 @@ void CpuInitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
 
 }  // namespace
 
-#define NEW_KU_IF_CPU_METHOD(type_category) \
-  template<typename T>                      \
-  void NewKernelUtilIf<DeviceType::kCPU, T, \
-                       typename std::enable_if<type_category<T>::value>::type>::
-
-// CPU && Floating
-NEW_KU_IF_CPU_METHOD(IsFloating)
-InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf, uint32_t random_seed,
-                   Blob* blob, const std::string& data_format) {
-  if (initializer_conf.has_constant_conf()) {
-    ConstantInitializer<T>(static_cast<T>(initializer_conf.constant_conf().value()), blob);
-  } else if (initializer_conf.has_random_uniform_conf()) {
-    RandomUniformInitializer<T>(initializer_conf.random_uniform_conf(), random_seed, blob);
-  } else if (initializer_conf.has_random_normal_conf()) {
-    RandomNormalInitializer<T>(initializer_conf.random_normal_conf(), random_seed, blob);
-  } else if (initializer_conf.has_truncated_normal_conf()) {
-    TruncatedNormalInitializer<T>(initializer_conf.truncated_normal_conf(), random_seed, blob);
-  } else if (initializer_conf.has_xavier_conf()) {
-    XavierInitializer<T>(initializer_conf.xavier_conf(), random_seed, blob, data_format);
-  } else if (initializer_conf.has_msra_conf()) {
-    MsraInitializer<T>(initializer_conf.msra_conf(), random_seed, blob, data_format);
-  } else if (initializer_conf.has_range_conf()) {
-    RangeInitializer<T>(initializer_conf.range_conf(), random_seed, blob);
-  } else {
-    UNIMPLEMENTED();
+template<typename T>
+struct NewKernelUtilIf<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T>::value>::type> {
+  static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
+                                 uint32_t random_seed, Blob* blob, const std::string& data_format) {
+    if (initializer_conf.has_constant_conf()) {
+      ConstantInitializer<T>(static_cast<T>(initializer_conf.constant_conf().value()), blob);
+    } else if (initializer_conf.has_random_uniform_conf()) {
+      RandomUniformInitializer<T>(initializer_conf.random_uniform_conf(), random_seed, blob);
+    } else if (initializer_conf.has_random_normal_conf()) {
+      RandomNormalInitializer<T>(initializer_conf.random_normal_conf(), random_seed, blob);
+    } else if (initializer_conf.has_truncated_normal_conf()) {
+      TruncatedNormalInitializer<T>(initializer_conf.truncated_normal_conf(), random_seed, blob);
+    } else if (initializer_conf.has_xavier_conf()) {
+      XavierInitializer<T>(initializer_conf.xavier_conf(), random_seed, blob, data_format);
+    } else if (initializer_conf.has_msra_conf()) {
+      MsraInitializer<T>(initializer_conf.msra_conf(), random_seed, blob, data_format);
+    } else if (initializer_conf.has_range_conf()) {
+      RangeInitializer<T>(initializer_conf.range_conf(), random_seed, blob);
+    } else {
+      UNIMPLEMENTED();
+    }
   }
-}
-NEW_KU_IF_CPU_METHOD(IsFloating)
-InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf, uint32_t random_seed,
-                   Blob* blob) {
-  InitializeWithConf(ctx, initializer_conf, random_seed, blob, "");
-}
-NEW_KU_IF_CPU_METHOD(IsFloating)
-InitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num, const std::string& model_dir,
-                  Blob* blob, const std::string& bn_in_op, int32_t dim_num,
-                  int64_t num_in_each_dim) {
-  CpuInitializeWithDir<T>(ctx, part_id, part_num, model_dir, blob, bn_in_op, dim_num,
-                          num_in_each_dim);
-}
-
-// CPU && Integral
-NEW_KU_IF_CPU_METHOD(IsIntegral)
-InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf, uint32_t random_seed,
-                   Blob* blob, const std::string& data_format) {
-  if (initializer_conf.has_constant_int_conf()) {
-    ConstantInitializer<T>(static_cast<T>(initializer_conf.constant_int_conf().value()), blob);
-  } else if (initializer_conf.has_random_uniform_int_conf()) {
-    RandomIntUniformInitializer<T>(initializer_conf.random_uniform_int_conf(), random_seed, blob);
-  } else if (initializer_conf.has_int_range_conf()) {
-    IntSequenceInitializer<T>(initializer_conf.int_range_conf(), random_seed, blob);
-  } else {
-    UNIMPLEMENTED();
+  static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
+                                 uint32_t random_seed, Blob* blob) {
+    InitializeWithConf(ctx, initializer_conf, random_seed, blob, "");
   }
-}
-NEW_KU_IF_CPU_METHOD(IsIntegral)
-InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf, uint32_t random_seed,
-                   Blob* blob) {
-  InitializeWithConf(ctx, initializer_conf, random_seed, blob, "");
-}
-NEW_KU_IF_CPU_METHOD(IsIntegral)
-InitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num, const std::string& model_dir,
-                  Blob* blob, const std::string& bn_in_op, int32_t dim_num,
-                  int64_t num_in_each_dim) {
-  CpuInitializeWithDir<T>(ctx, part_id, part_num, model_dir, blob, bn_in_op, dim_num,
-                          num_in_each_dim);
-}
+  static void InitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
+                                const std::string& model_dir, Blob* blob,
+                                const std::string& bn_in_op, int32_t dim_num,
+                                int64_t num_in_each_dim) {
+    CpuInitializeWithDir<T>(ctx, part_id, part_num, model_dir, blob, bn_in_op, dim_num,
+                            num_in_each_dim);
+  }
+};
 
-#undef NEW_KU_IF_CPU_METHOD
+template<typename T>
+struct NewKernelUtilIf<DeviceType::kCPU, T, typename std::enable_if<IsIntegral<T>::value>::type> {
+  static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
+                                 uint32_t random_seed, Blob* blob, const std::string& data_format) {
+    if (initializer_conf.has_constant_int_conf()) {
+      ConstantInitializer<T>(static_cast<T>(initializer_conf.constant_int_conf().value()), blob);
+    } else if (initializer_conf.has_random_uniform_int_conf()) {
+      RandomIntUniformInitializer<T>(initializer_conf.random_uniform_int_conf(), random_seed, blob);
+    } else if (initializer_conf.has_int_range_conf()) {
+      IntSequenceInitializer<T>(initializer_conf.int_range_conf(), random_seed, blob);
+    } else {
+      UNIMPLEMENTED();
+    }
+  }
+  static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
+                                 uint32_t random_seed, Blob* blob) {
+    InitializeWithConf(ctx, initializer_conf, random_seed, blob, "");
+  }
+  static void InitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
+                                const std::string& model_dir, Blob* blob,
+                                const std::string& bn_in_op, int32_t dim_num,
+                                int64_t num_in_each_dim) {
+    CpuInitializeWithDir<T>(ctx, part_id, part_num, model_dir, blob, bn_in_op, dim_num,
+                            num_in_each_dim);
+  }
+};
 
-#define FLOATING_NEW_KU_IF_CPU_METHOD \
-  template<typename T>                \
-  void FloatingNewKernelUtilIf<DeviceType::kCPU, T>::
-
-FLOATING_NEW_KU_IF_CPU_METHOD
-Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE trans_a,
-     const enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k, const T alpha,
-     const T* a, const int lda, const T* b, const int ldb, const T beta, T* c, const int ldc) {
-  cblas_gemm<T>(order, trans_a, trans_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
-}
-
-#undef FLOATING_NEW_KU_IF_CPU_METHOD
+template<typename T>
+struct FloatingNewKernelUtilIf<DeviceType::kCPU, T> {
+  static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE trans_a,
+                   const enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
+                   const T alpha, const T* a, const int lda, const T* b, const int ldb,
+                   const T beta, T* c, const int ldc) {
+    cblas_gemm<T>(order, trans_a, trans_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
+  }
+};
 
 #define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto) \
   template struct NewKernelUtilIf<DeviceType::kCPU, type_cpp>;
