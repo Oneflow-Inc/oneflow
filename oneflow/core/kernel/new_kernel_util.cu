@@ -32,13 +32,19 @@ void GpuInitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
 // GPU && Floating
 template<typename T>
 struct NewKernelUtilIf<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T>::value>::type> {
+  static void OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
+                     const int m, const int n, const int k, const T alpha, const T* a, const T* b,
+                     const T beta, T* c) {
+    const int lda = (trans_a == CblasNoTrans) ? k : m;
+    const int ldb = (trans_b == CblasNoTrans) ? n : k;
+    const int ldc = n;
+
+    FloatingNewKernelUtilIf<DeviceType::kGPU, T>::Gemm(ctx, CblasRowMajor, trans_a, trans_b, m, n,
+                                                       k, alpha, a, lda, b, ldb, beta, c, ldc);
+  }
   static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
                                  uint32_t random_seed, Blob* blob, const std::string& data_format) {
     GpuInitializeWithConf<T>(ctx, initializer_conf, random_seed, blob, data_format);
-  }
-  static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
-                                 uint32_t random_seed, Blob* blob) {
-    InitializeWithConf(ctx, initializer_conf, random_seed, blob, "");
   }
   static void InitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
                                 const std::string& model_dir, Blob* blob,
@@ -56,10 +62,6 @@ struct NewKernelUtilIf<DeviceType::kGPU, T, typename std::enable_if<IsIntegral<T
                                  uint32_t random_seed, Blob* blob, const std::string& data_format) {
     GpuInitializeWithConf<T>(ctx, initializer_conf, random_seed, blob, data_format);
   }
-  static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
-                                 uint32_t random_seed, Blob* blob) {
-    InitializeWithConf(ctx, initializer_conf, random_seed, blob, "");
-  }
   static void InitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
                                 const std::string& model_dir, Blob* blob,
                                 const std::string& bn_in_op, int32_t dim_num,
@@ -72,6 +74,20 @@ struct NewKernelUtilIf<DeviceType::kGPU, T, typename std::enable_if<IsIntegral<T
 template<typename T>
 struct FloatingNewKernelUtilIf<DeviceType::kGPU, T> {
   static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE trans_a,
+                   const enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
+                   const T alpha, const T* a, const int lda, const T* b, const int ldb,
+                   const T beta, T* c,
+                   const int ldc) {  // TODO: wrong CUBLAS_OP_N
+    cublasOperation_t cublas_trans_a = cublasOperation_t::CUBLAS_OP_N;
+    cublasOperation_t cublas_trans_b = cublasOperation_t::CUBLAS_OP_N;
+    cublas_gemm<T>(ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k, &alpha, b,
+                   ldb, a, lda, &beta, c, ldc);
+  }
+};
+
+template<typename T>
+struct Float16NewKernelUtilIf<DeviceType::kGPU, T> {
+  static void HGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE trans_a,
                    const enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
                    const T alpha, const T* a, const int lda, const T* b, const int ldb,
                    const T beta, T* c,

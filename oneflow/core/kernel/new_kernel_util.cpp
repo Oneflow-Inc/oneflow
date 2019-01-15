@@ -230,6 +230,16 @@ void CpuInitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
 
 template<typename T>
 struct NewKernelUtilIf<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T>::value>::type> {
+  static void OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
+                     const int m, const int n, const int k, const T alpha, const T* a, const T* b,
+                     const T beta, T* c) {
+    const int lda = (trans_a == CblasNoTrans) ? k : m;
+    const int ldb = (trans_b == CblasNoTrans) ? n : k;
+    const int ldc = n;
+
+    FloatingNewKernelUtilIf<DeviceType::kCPU, T>::Gemm(ctx, CblasRowMajor, trans_a, trans_b, m, n,
+                                                       k, alpha, a, lda, b, ldb, beta, c, ldc);
+  }
   static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
                                  uint32_t random_seed, Blob* blob, const std::string& data_format) {
     if (initializer_conf.has_constant_conf()) {
@@ -249,10 +259,6 @@ struct NewKernelUtilIf<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T
     } else {
       UNIMPLEMENTED();
     }
-  }
-  static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
-                                 uint32_t random_seed, Blob* blob) {
-    InitializeWithConf(ctx, initializer_conf, random_seed, blob, "");
   }
   static void InitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
                                 const std::string& model_dir, Blob* blob,
@@ -276,10 +282,6 @@ struct NewKernelUtilIf<DeviceType::kCPU, T, typename std::enable_if<IsIntegral<T
     } else {
       UNIMPLEMENTED();
     }
-  }
-  static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
-                                 uint32_t random_seed, Blob* blob) {
-    InitializeWithConf(ctx, initializer_conf, random_seed, blob, "");
   }
   static void InitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
                                 const std::string& model_dir, Blob* blob,
