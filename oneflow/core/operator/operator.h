@@ -181,26 +181,17 @@ class Operator {
       const ParallelContext* parallel_context) const {
     NaiveInferInputBlobParallelDesc(BlobParallelDesc4BnInOp, parallel_context);
   }
-  virtual void InferOutputAndDataTmpBlobParallelDesc(
+  virtual void InferOutputBlobParallelDesc(
       std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
       const ParallelContext* parallel_context) const {
-    NaiveInferOutputAndDataTmpBlobParallelDesc(BlobParallelDesc4BnInOp, parallel_context);
-  }
-  virtual void InferModelBlobParallelDesc(
-      std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
-      const ParallelContext* parallel_context) const {
-    NaiveInferModelBlobParallelDesc(BlobParallelDesc4BnInOp, parallel_context);
+    NaiveInferOutputBlobParallelDesc(BlobParallelDesc4BnInOp, parallel_context);
   }
   void NaiveInferInputBlobParallelDesc(
       std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
       const ParallelContext* parallel_context) const;
-  void NaiveInferOutputAndDataTmpBlobParallelDesc(
+  void NaiveInferOutputBlobParallelDesc(
       std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
       const ParallelContext* parallel_context) const;
-  void NaiveInferModelBlobParallelDesc(
-      std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
-      const ParallelContext* parallel_context) const;
-
   int64_t cudnn_buf_limit_byte() const;
 
   virtual PbMessage* MutableCustomizedKernelConf(KernelConf*) const {

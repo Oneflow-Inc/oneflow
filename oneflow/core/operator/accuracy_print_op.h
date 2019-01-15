@@ -22,10 +22,7 @@ class AccuracyPrintOp final : public Operator {
   void InferInputBlobParallelDesc(
       std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
       const ParallelContext* parallel_context) const override;
-  void InferOutputAndDataTmpBlobParallelDesc(
-      std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
-      const ParallelContext* parallel_context) const override {}
-  void InferModelBlobParallelDesc(
+  void InferOutputBlobParallelDesc(
       std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
       const ParallelContext* parallel_context) const override {}
 
