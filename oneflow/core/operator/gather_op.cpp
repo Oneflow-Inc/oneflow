@@ -54,10 +54,10 @@ void GatherOp::VirtualGenKernelConf(
 }
 
 void GatherOp::InferOutBlobModelSplitAxis(
-    std::function<int64_t*(const std::string&)> ModelSplitAxis4BnInOp,
-    std::function<int64_t(const std::string&)> ShapeNumAxes4BnInOp,
+    std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
+    std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
     const ParallelContext* parallel_context) const {
-  int64_t gather_axis = GetGatherAxis(op_conf().gather_conf(), ShapeNumAxes4BnInOp("in"));
+  int32_t gather_axis = GetGatherAxis(op_conf().gather_conf(), ShapeNumAxes4BnInOp("in"));
   TODO();
 }
 

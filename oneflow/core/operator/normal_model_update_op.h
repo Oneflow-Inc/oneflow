@@ -23,8 +23,8 @@ class NormalModelUpdtOp : public Operator {
       const ParallelContext*) const {}
 
  private:
-  void InferOutBlobModelSplitAxis(std::function<int64_t*(const std::string&)> ModelSplitAxis4BnInOp,
-                                  std::function<int64_t(const std::string&)> ShapeNumAxes4BnInOp,
+  void InferOutBlobModelSplitAxis(std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
+                                  std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
                                   const ParallelContext* parallel_context) const override {
     UNIMPLEMENTED();
   }

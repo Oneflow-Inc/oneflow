@@ -210,8 +210,8 @@ void Operator::NaiveInferModelBlobParallelDesc(
 }
 
 void Operator::InferBlobModelSplitAxisIf(
-    std::function<int64_t*(const std::string&)> ModelSplitAxis4BnInOp,
-    std::function<int64_t(const std::string&)> ShapeNumAxes4BnInOp,
+    std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
+    std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
     const ParallelContext* parallel_context) const {
   if (!output_bns().empty()) {
     InferOutBlobModelSplitAxis(ModelSplitAxis4BnInOp, ShapeNumAxes4BnInOp, parallel_context);
@@ -219,10 +219,10 @@ void Operator::InferBlobModelSplitAxisIf(
 }
 
 void Operator::NaiveInferOutBlobModelSplitAxis(
-    std::function<int64_t*(const std::string&)> ModelSplitAxis4BnInOp,
-    std::function<int64_t(const std::string&)> ShapeNumAxes4BnInOp,
+    std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
+    std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
     const ParallelContext* parallel_context) const {
-  int64_t model_split_axis = ModelSplitAxis();
+  int32_t model_split_axis = ModelSplitAxis();
   for (const std::string& bn : output_bns()) {
     if (!model_bns().empty() || !const_model_bns().empty()) {
       CHECK_NE(model_split_axis, -1);

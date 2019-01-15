@@ -22,13 +22,6 @@ void VariableOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   *GetBlobDesc4BnInOp("out") = *model_blob_desc;
 }
 
-void VariableOp::InferOutBlobModelSplitAxis(
-    std::function<int64_t*(const std::string&)> ModelSplitAxis4BnInOp,
-    std::function<int64_t(const std::string&)> ShapeNumAxes4BnInOp,
-    const ParallelContext* parallel_context) const {
-  *ModelSplitAxis4BnInOp("out") = 0;
-}
-
 void VariableOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
     KernelConf* conf) const {

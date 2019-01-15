@@ -55,8 +55,8 @@ void MatmulOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
 }
 
 void MatmulOp::InferOutBlobModelSplitAxis(
-    std::function<int64_t*(const std::string&)> ModelSplitAxis4BnInOp,
-    std::function<int64_t(const std::string&)> ShapeNumAxes4BnInOp,
+    std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
+    std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
     const ParallelContext* parallel_context) const {
   CHECK_EQ(ShapeNumAxes4BnInOp("a"), ShapeNumAxes4BnInOp("b"));
   if (ShapeNumAxes4BnInOp("b") == 2 && *ModelSplitAxis4BnInOp("b") != -1) {

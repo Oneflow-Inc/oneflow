@@ -145,8 +145,8 @@ class Operator {
       std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
       Shape* time_shape) const;
   // Infer blob's model_split_axis
-  void InferBlobModelSplitAxisIf(std::function<int64_t*(const std::string&)> ModelSplitAxis4BnInOp,
-                                 std::function<int64_t(const std::string&)> ShapeNumAxes4BnInOp,
+  void InferBlobModelSplitAxisIf(std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
+                                 std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
                                  const ParallelContext* parallel_context) const;
   // Infer blob's parallel desc
   void InferBlobParallelDescIf(
@@ -168,12 +168,12 @@ class Operator {
  protected:
   // infer model_split_axis
   virtual void InferOutBlobModelSplitAxis(
-      std::function<int64_t*(const std::string&)> ModelSplitAxis4BnInOp,
-      std::function<int64_t(const std::string&)> ShapeNumAxes4BnInOp,
+      std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
+      std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
       const ParallelContext* parallel_context) const = 0;
   void NaiveInferOutBlobModelSplitAxis(
-      std::function<int64_t*(const std::string&)> ModelSplitAxis4BnInOp,
-      std::function<int64_t(const std::string&)> ShapeNumAxes4BnInOp,
+      std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
+      std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
       const ParallelContext* parallel_context) const;
   // infer blob parallel desc
   virtual void InferInputBlobParallelDesc(

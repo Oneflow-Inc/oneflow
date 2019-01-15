@@ -29,8 +29,8 @@ void BiasAddOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
 }
 
 void BiasAddOp::InferOutBlobModelSplitAxis(
-    std::function<int64_t*(const std::string&)> ModelSplitAxis4BnInOp,
-    std::function<int64_t(const std::string&)> ShapeNumAxes4BnInOp,
+    std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
+    std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
     const ParallelContext* parallel_context) const {
   *ModelSplitAxis4BnInOp("out") = 1;
 }
