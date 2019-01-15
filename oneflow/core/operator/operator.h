@@ -144,10 +144,14 @@ class Operator {
   virtual void InferOutBlobTimeShape(
       std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
       Shape* time_shape) const;
+  // Infer blob's model_split_axis
+  void InferBlobModelSplitAxisIf(std::function<int64_t*(const std::string&)> ModelSplitAxis4BnInOp,
+                                 std::function<int64_t(const std::string&)> ShapeNumAxes4BnInOp,
+                                 const ParallelContext* parallel_context) const;
   // Infer blob's parallel desc
-  void InferBlobParallelDesc(
+  void InferBlobParallelDescIf(
       std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
-      const ParallelContext* parallel_context);
+      const ParallelContext* parallel_context) const;
   virtual void FixInDiffBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                   const ParallelContext*) const;
   virtual void VirtualFixInDiffBlobDescs(
@@ -162,6 +166,41 @@ class Operator {
                      bool is_forward, const ParallelContext*, KernelConf*, const OpContext*) const;
 
  protected:
+  // infer model_split_axis
+  virtual void InferOutBlobModelSplitAxis(
+      std::function<int64_t*(const std::string&)> ModelSplitAxis4BnInOp,
+      std::function<int64_t(const std::string&)> ShapeNumAxes4BnInOp,
+      const ParallelContext* parallel_context) const = 0;
+  void NaiveInferOutBlobModelSplitAxis(
+      std::function<int64_t*(const std::string&)> ModelSplitAxis4BnInOp,
+      std::function<int64_t(const std::string&)> ShapeNumAxes4BnInOp,
+      const ParallelContext* parallel_context) const;
+  // infer blob parallel desc
+  virtual void InferInputBlobParallelDesc(
+      std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
+      const ParallelContext* parallel_context) const {
+    NaiveInferInputBlobParallelDesc(BlobParallelDesc4BnInOp, parallel_context);
+  }
+  virtual void InferOutputAndDataTmpBlobParallelDesc(
+      std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
+      const ParallelContext* parallel_context) const {
+    NaiveInferOutputAndDataTmpBlobParallelDesc(BlobParallelDesc4BnInOp, parallel_context);
+  }
+  virtual void InferModelBlobParallelDesc(
+      std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
+      const ParallelContext* parallel_context) const {
+    NaiveInferModelBlobParallelDesc(BlobParallelDesc4BnInOp, parallel_context);
+  }
+  void NaiveInferInputBlobParallelDesc(
+      std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
+      const ParallelContext* parallel_context) const;
+  void NaiveInferOutputAndDataTmpBlobParallelDesc(
+      std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
+      const ParallelContext* parallel_context) const;
+  void NaiveInferModelBlobParallelDesc(
+      std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
+      const ParallelContext* parallel_context) const;
+
   int64_t cudnn_buf_limit_byte() const;
 
   virtual PbMessage* MutableCustomizedKernelConf(KernelConf*) const {

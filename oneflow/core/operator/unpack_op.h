@@ -23,6 +23,14 @@ class UnpackOp final : public Operator {
   bool NeedInBlobWhenBackward() const override { return true; }
   bool NeedOutBlobWhenBackward() const override { return false; }
   int32_t GetUnpackNum() const;
+
+ private:
+  void InferOutBlobModelSplitAxis(std::function<int64_t*(const std::string&)> ModelSplitAxis4BnInOp,
+                                  std::function<int64_t(const std::string&)> ShapeNumAxes4BnInOp,
+                                  const ParallelContext* parallel_context) const override {
+    CHECK_EQ(parallel_context->policy(), kDataParallel);
+    NaiveInferOutBlobModelSplitAxis(ModelSplitAxis4BnInOp, ShapeNumAxes4BnInOp, parallel_context);
+  }
 };
 
 }  // namespace oneflow

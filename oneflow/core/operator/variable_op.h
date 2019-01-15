@@ -25,6 +25,10 @@ class VariableOp final : public Operator {
   void set_is_bw_inplace(bool val) const { *is_bw_inplace_ = val; }
 
  private:
+  void InferOutBlobModelSplitAxis(std::function<int64_t*(const std::string&)> ModelSplitAxis4BnInOp,
+                                  std::function<int64_t(const std::string&)> ShapeNumAxes4BnInOp,
+                                  const ParallelContext* parallel_context) const override;
+
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext*, KernelConf*) const override;
 

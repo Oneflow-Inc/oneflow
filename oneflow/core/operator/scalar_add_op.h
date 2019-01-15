@@ -18,6 +18,13 @@ class ScalarAddOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override { return op_conf().scalar_add_conf(); }
   bool NeedInBlobWhenBackward() const override { return false; }
   bool NeedOutBlobWhenBackward() const override { return false; }
+
+ private:
+  void InferOutBlobModelSplitAxis(std::function<int64_t*(const std::string&)> ModelSplitAxis4BnInOp,
+                                  std::function<int64_t(const std::string&)> ShapeNumAxes4BnInOp,
+                                  const ParallelContext* parallel_context) const override {
+    NaiveInferOutBlobModelSplitAxis(ModelSplitAxis4BnInOp, ShapeNumAxes4BnInOp, parallel_context);
+  }
 };
 
 }  // namespace oneflow

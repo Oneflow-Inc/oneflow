@@ -29,6 +29,13 @@ class NormalizationOp final : public Operator {
                       std::function<void(OpContext*)> EnrollOpCtx) const override;
 
  private:
+  void InferOutBlobModelSplitAxis(std::function<int64_t*(const std::string&)> ModelSplitAxis4BnInOp,
+                                  std::function<int64_t(const std::string&)> ShapeNumAxes4BnInOp,
+                                  const ParallelContext* parallel_context) const override {
+    CHECK_EQ(parallel_context->policy(), kDataParallel);
+    NaiveInferOutBlobModelSplitAxis(ModelSplitAxis4BnInOp, ShapeNumAxes4BnInOp, parallel_context);
+  }
+
   void InferParamBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                            const NormalizationOpConf&, int64_t norm_part_num, DataType in_data_type,
                            bool use_cudnn) const;

@@ -127,6 +127,116 @@ void Operator::InferOutBlobTimeShape(
   }
 }
 
+void Operator::InferBlobParallelDescIf(
+    std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
+    const ParallelContext* parallel_context) const {
+  if (!input_bns().empty()) {
+    InferInputBlobParallelDesc(BlobParallelDesc4BnInOp, parallel_context);
+  }
+  if (!output_bns().empty() || !data_tmp_bns().empty()) {
+    InferOutputAndDataTmpBlobParallelDesc(BlobParallelDesc4BnInOp, parallel_context);
+  }
+  if (!model_bns().empty() || !const_model_bns().empty() || !forward_model_bns().empty()) {
+    InferModelBlobParallelDesc(BlobParallelDesc4BnInOp, parallel_context);
+  }
+}
+
+void Operator::NaiveInferInputBlobParallelDesc(
+    std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
+    const ParallelContext* parallel_context) const {
+  for (const std::string& ibn : input_bns()) {
+    BlobDataParallel* blob_data_parallel = BlobParallelDesc4BnInOp(ibn)->mut_data_parallel();
+    if (parallel_context->policy() == kDataParallel) {
+      blob_data_parallel->set_data_split_num(parallel_context->parallel_num());
+      blob_data_parallel->set_clone_num(1);
+    } else if (parallel_context->policy() == kModelParallel) {
+      blob_data_parallel->set_data_split_num(1);
+      blob_data_parallel->set_clone_num(parallel_context->parallel_num());
+    } else {
+      UNIMPLEMENTED();
+    }
+  }
+}
+
+void Operator::NaiveInferOutputAndDataTmpBlobParallelDesc(
+    std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
+    const ParallelContext* parallel_context) const {
+  auto Infer = [&](const std::string& bn) {
+    if (parallel_context->policy() == kDataParallel) {
+      BlobDataParallel* blob_data_parallel = BlobParallelDesc4BnInOp(bn)->mut_data_parallel();
+      blob_data_parallel->set_data_split_num(parallel_context->parallel_num());
+      blob_data_parallel->set_clone_num(1);
+    } else if (parallel_context->policy() == kModelParallel) {
+      if (model_bns().empty() == false) {
+        CHECK_NE(ModelSplitAxis(), -1);
+        auto* grid_parallel_desc = BlobParallelDesc4BnInOp(bn)->mut_grid_parallel();
+        grid_parallel_desc->set_data_split_num(1);
+        grid_parallel_desc->set_model_split_num(parallel_context->parallel_num());
+      } else {
+        if (!input_bns().empty()) {
+          CHECK(BlobParallelDesc4BnInOp(input_bns().Get(0))->has_data_parallel());
+        }
+        for (const std::string& ibn : input_bns()) {
+          CHECK(*BlobParallelDesc4BnInOp(ibn) == *BlobParallelDesc4BnInOp(input_bns().Get(0)));
+        }
+        *BlobParallelDesc4BnInOp(bn) = *BlobParallelDesc4BnInOp(input_bns().Get(0));
+      }
+    } else {
+      UNIMPLEMENTED();
+    }
+  };
+  for (const std::string& bn : output_bns()) { Infer(bn); }
+  for (const std::string& bn : data_tmp_bns()) { Infer(bn); }
+}
+
+void Operator::NaiveInferModelBlobParallelDesc(
+    std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
+    const ParallelContext* parallel_context) const {
+  auto Infer = [&](const std::string& bn) {
+    auto* blob_model_parallel = BlobParallelDesc4BnInOp(bn)->mut_model_parallel();
+    if (parallel_context->policy() == kDataParallel) {
+      blob_model_parallel->set_clone_num(parallel_context->parallel_num());
+      blob_model_parallel->set_model_split_num(1);
+    } else if (parallel_context->policy() == kModelParallel) {
+      blob_model_parallel->set_clone_num(1);
+      blob_model_parallel->set_model_split_num(parallel_context->parallel_num());
+    } else {
+      UNIMPLEMENTED();
+    }
+  };
+  for (const std::string& bn : model_bns()) { Infer(bn); }
+  for (const std::string& bn : const_model_bns()) { Infer(bn); }
+  for (const std::string& bn : forward_model_bns()) { Infer(bn); }
+}
+
+void Operator::InferBlobModelSplitAxisIf(
+    std::function<int64_t*(const std::string&)> ModelSplitAxis4BnInOp,
+    std::function<int64_t(const std::string&)> ShapeNumAxes4BnInOp,
+    const ParallelContext* parallel_context) const {
+  if (!output_bns().empty()) {
+    InferOutBlobModelSplitAxis(ModelSplitAxis4BnInOp, ShapeNumAxes4BnInOp, parallel_context);
+  }
+}
+
+void Operator::NaiveInferOutBlobModelSplitAxis(
+    std::function<int64_t*(const std::string&)> ModelSplitAxis4BnInOp,
+    std::function<int64_t(const std::string&)> ShapeNumAxes4BnInOp,
+    const ParallelContext* parallel_context) const {
+  int64_t model_split_axis = ModelSplitAxis();
+  for (const std::string& bn : output_bns()) {
+    if (!model_bns().empty() || !const_model_bns().empty()) {
+      CHECK_NE(model_split_axis, -1);
+      *ModelSplitAxis4BnInOp(bn) = model_split_axis;
+    } else if (IsElemWiseOp()) {
+      *ModelSplitAxis4BnInOp(bn) = *ModelSplitAxis4BnInOp(SoleIbn());
+    } else {
+      CHECK_EQ(parallel_context->policy(), kDataParallel);
+      CHECK_EQ(model_split_axis, -1);
+      *ModelSplitAxis4BnInOp(bn) = model_split_axis;
+    }
+  }
+}
+
 void Operator::InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                    const ParallelContext* parallel_ctx,
                                    const OpContext* op_ctx) const {

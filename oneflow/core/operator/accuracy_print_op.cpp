@@ -22,6 +22,12 @@ const PbMessage& AccuracyPrintOp::GetCustomizedConf() const {
   return op_conf().accuracy_print_conf();
 }
 
+void AccuracyPrintOp::InferInputBlobParallelDesc(
+    std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
+    const ParallelContext* parallel_context) const {
+  NaiveInferInputBlobParallelDesc(BlobParallelDesc4BnInOp, parallel_context);
+}
+
 REGISTER_CPU_OP(OperatorConf::kAccuracyPrintConf, AccuracyPrintOp);
 
 }  // namespace oneflow

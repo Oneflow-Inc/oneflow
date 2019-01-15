@@ -19,6 +19,12 @@ class ReduceConcatOp final : public Operator {
                       std::function<void(OpContext*)> EnrollOpCtx) const override;
 
  private:
+  void InferOutBlobModelSplitAxis(std::function<int64_t*(const std::string&)> ModelSplitAxis4BnInOp,
+                                  std::function<int64_t(const std::string&)> ShapeNumAxes4BnInOp,
+                                  const ParallelContext* parallel_context) const override {
+    UNIMPLEMENTED();
+  }
+
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext*, KernelConf*,
                             const OpContext* op_ctx) const override;

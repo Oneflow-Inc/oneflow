@@ -4,12 +4,15 @@ namespace oneflow {
 
 namespace {
 
-int64_t GetGatherAxis(const GatherOpConf& conf, const BlobDesc* in_blob_desc) {
-  const int64_t axis =
-      conf.axis() < 0 ? in_blob_desc->shape().NumAxes() + conf.axis() : conf.axis();
+int64_t GetGatherAxis(const GatherOpConf& conf, int64_t num_axes) {
+  const int64_t axis = conf.axis() < 0 ? num_axes + conf.axis() : conf.axis();
   CHECK_GE(axis, 0);
-  CHECK_LT(axis, in_blob_desc->shape().NumAxes());
+  CHECK_LT(axis, num_axes);
   return axis;
+}
+
+int64_t GetGatherAxis(const GatherOpConf& conf, const BlobDesc* in_blob_desc) {
+  return GetGatherAxis(conf, in_blob_desc->shape().NumAxes());
 }
 
 }  // namespace
@@ -48,6 +51,14 @@ void GatherOp::VirtualGenKernelConf(
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   const int64_t axis = GetGatherAxis(op_conf().gather_conf(), GetBlobDesc4BnInOp("in"));
   kernel_conf->mutable_gather_conf()->set_axis(axis);
+}
+
+void GatherOp::InferOutBlobModelSplitAxis(
+    std::function<int64_t*(const std::string&)> ModelSplitAxis4BnInOp,
+    std::function<int64_t(const std::string&)> ShapeNumAxes4BnInOp,
+    const ParallelContext* parallel_context) const {
+  int64_t gather_axis = GetGatherAxis(op_conf().gather_conf(), ShapeNumAxes4BnInOp("in"));
+  TODO();
 }
 
 REGISTER_OP(OperatorConf::kGatherConf, GatherOp);

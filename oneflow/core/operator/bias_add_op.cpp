@@ -28,6 +28,13 @@ void BiasAddOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
   GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() = Shape({a_blob_desc->shape().At(0), 1});
 }
 
+void BiasAddOp::InferOutBlobModelSplitAxis(
+    std::function<int64_t*(const std::string&)> ModelSplitAxis4BnInOp,
+    std::function<int64_t(const std::string&)> ShapeNumAxes4BnInOp,
+    const ParallelContext* parallel_context) const {
+  *ModelSplitAxis4BnInOp("out") = 1;
+}
+
 REGISTER_OP(OperatorConf::kBiasAddConf, BiasAddOp);
 
 }  // namespace oneflow

@@ -29,6 +29,13 @@ class SoftmaxOp final : public Operator {
                            const ParallelContext*, const OpContext*) const override;
 
  private:
+  void InferOutBlobModelSplitAxis(std::function<int64_t*(const std::string&)> ModelSplitAxis4BnInOp,
+                                  std::function<int64_t(const std::string&)> ShapeNumAxes4BnInOp,
+                                  const ParallelContext* parallel_context) const override {
+    CHECK_EQ(parallel_context->policy(), kDataParallel);
+    NaiveInferOutBlobModelSplitAxis(ModelSplitAxis4BnInOp, ShapeNumAxes4BnInOp, parallel_context);
+  }
+
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext*, KernelConf*, const OpContext*) const override;
   SoftmaxOpCtx* NewSoftmaxOpCtx(const Shape& in_shape) const;

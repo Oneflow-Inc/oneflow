@@ -9,30 +9,43 @@ namespace oneflow {
 bool operator==(const BlobParallelConf& lhs, const BlobParallelConf& rhs);
 bool operator==(const BlobDataParallel& lhs, const BlobDataParallel& rhs);
 bool operator==(const BlobModelParallel& lhs, const BlobModelParallel& rhs);
+bool operator==(const BlobGridParallel& lhs, const BlobGridParallel& rhs);
 
 class BlobParallelDesc final {
  public:
   BlobParallelDesc() = delete;
   ~BlobParallelDesc() = delete;
 
-  BlobParallelDesc(const BlobParallelDesc&) = default;
-  explicit BlobParallelDesc(const BlobParallelConf& blob_parallel_conf)
-      : blob_parallel_conf_(blob_parallel_conf) {}
+  explicit BlobParallelDesc(const BlobParallelDesc& blob_parallel_desc) = default;
+  explicit BlobParallelDesc(int64_t model_split_axis) : model_split_axis_(model_split_axis) {}
+  BlobParallelDesc& operator=(const BlobParallelDesc& blob_parallel_desc);
 
+  // Getters
+  // for data input blob
   const BlobDataParallel& data_parallel() const;
+  // for model input blob
   const BlobModelParallel& model_parallel() const;
-  int64_t model_split_axis() const;
+  // for output blob or element-wise op's input blob in some cases.
+  const BlobGridParallel& grid_parallel() const;
+  const BlobParallelConf& blob_parallel_conf() const { return blob_parallel_conf_; }
+  int64_t model_split_axis() const { return model_split_axis_; }
+  bool has_data_parallel() const { return blob_parallel_conf_.has_data_parallel(); }
+  bool has_model_parallel() const { return blob_parallel_conf_.has_model_parallel(); }
+  bool has_grid_parallel() const { return blob_parallel_conf_.has_grid_parallel(); }
+  bool has_model_split_axis() const { return model_split_axis_ != -1; }
 
   bool operator==(const BlobParallelDesc& rhs) const {
     return blob_parallel_conf_ == rhs.blob_parallel_conf_;
   }
   bool operator!=(const BlobParallelDesc& rhs) const { return !(*this == rhs); }
 
-  void set_model_split_axis(int64_t val) { blob_parallel_conf_.set_model_split_axis(val); }
+  // Setters
   BlobDataParallel* mut_data_parallel() { return blob_parallel_conf_.mutable_data_parallel(); }
   BlobModelParallel* mut_model_parallel() { return blob_parallel_conf_.mutable_model_parallel(); }
+  BlobGridParallel* mut_grid_parallel() { return blob_parallel_conf_.mutable_grid_parallel(); }
 
  private:
+  const int64_t model_split_axis_;
   BlobParallelConf blob_parallel_conf_;
 };
 

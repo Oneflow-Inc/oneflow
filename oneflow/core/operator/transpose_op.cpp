@@ -38,6 +38,28 @@ void TransposeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   }
 }
 
+void TransposeOp::InferOutBlobModelSplitAxis(
+    std::function<int64_t*(const std::string&)> ModelSplitAxis4BnInOp,
+    std::function<int64_t(const std::string&)> ShapeNumAxes4BnInOp,
+    const ParallelContext* parallel_context) const {
+  int64_t in_blob_model_split_axis = *ModelSplitAxis4BnInOp("in");
+  if (in_blob_model_split_axis == -1) {
+    *ModelSplitAxis4BnInOp("out") = -1;
+  } else {
+    const PbRf<int32_t>& perm = op_conf().transpose_conf().perm();
+    CHECK_GT(perm.size(), 0);
+    int64_t model_split_axis = -1;
+    FOR_RANGE(size_t, i, 0, perm.size()) {
+      if (perm[i] == in_blob_model_split_axis) {
+        model_split_axis = i;
+        break;
+      }
+    }
+    CHECK_NE(model_split_axis, -1);
+    *ModelSplitAxis4BnInOp("out") = model_split_axis;
+  }
+}
+
 void TransposeOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {

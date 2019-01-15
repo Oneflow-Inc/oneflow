@@ -15,6 +15,20 @@ class AccuracyPrintOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override;
 
  private:
+  void InferOutBlobModelSplitAxis(std::function<int64_t*(const std::string&)> ModelSplitAxis4BnInOp,
+                                  std::function<int64_t(const std::string&)> ShapeNumAxes4BnInOp,
+                                  const ParallelContext* parallel_context) const override {}
+
+  void InferInputBlobParallelDesc(
+      std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
+      const ParallelContext* parallel_context) const override;
+  void InferOutputAndDataTmpBlobParallelDesc(
+      std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
+      const ParallelContext* parallel_context) const override {}
+  void InferModelBlobParallelDesc(
+      std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
+      const ParallelContext* parallel_context) const override {}
+
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
 };
 
