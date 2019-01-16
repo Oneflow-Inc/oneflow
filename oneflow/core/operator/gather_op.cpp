@@ -57,8 +57,18 @@ void GatherOp::InferOutBlobModelSplitAxis(
     std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
     std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
     const ParallelContext* parallel_context) const {
-  int32_t gather_axis = GetGatherAxis(op_conf().gather_conf(), ShapeNumAxes4BnInOp("in"));
-  TODO();
+  CHECK_EQ(*ModelSplitAxis4BnInOp("indices"), -1);
+  const int32_t in_model_split_axis = *ModelSplitAxis4BnInOp("in");
+  const int64_t in_num_axes = ShapeNumAxes4BnInOp("in");
+  const int64_t gather_axis = GetGatherAxis(op_conf().gather_conf(), in_num_axes);
+  if (in_model_split_axis != -1) {
+    CHECK_GT(in_model_split_axis, gather_axis);
+    CHECK_LT(in_model_split_axis, in_num_axes);
+    *ModelSplitAxis4BnInOp("out") = in_model_split_axis + ShapeNumAxes4BnInOp("indices") - 1;
+  } else {
+    CHECK_EQ(parallel_context->policy(), ParallelPolicy::kDataParallel);
+    *ModelSplitAxis4BnInOp("out") = -1;
+  }
 }
 
 REGISTER_OP(OperatorConf::kGatherConf, GatherOp);
