@@ -617,6 +617,7 @@ message BlobConf {
   required EncodeConf encode_case = 5;
   repeated PreprocessConf preprocess = 6;
   optional bool use_dynamic_shape = 7 [default = false];
+  optional int32 dynamic_shape_align = 8 [default = 32];
 }
 
 message DecodeOFRecordOpConf {

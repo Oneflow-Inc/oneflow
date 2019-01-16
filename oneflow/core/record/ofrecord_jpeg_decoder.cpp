@@ -107,6 +107,8 @@ void OFRecordDecoderImpl<EncodeCase::kJpeg, T>::ReadDynamicDataContent(
   }
   CHECK_GT(max_rows, 0);
   CHECK_GT(max_cols, 0);
+  max_rows = RoundUp(max_rows, blob_conf.dynamic_shape_align());
+  max_cols = RoundUp(max_cols, blob_conf.dynamic_shape_align());
   CHECK_LE(max_rows, blob_conf.shape().dim(0));
   CHECK_LE(max_cols, blob_conf.shape().dim(1));
   Shape instance_shape({max_rows, max_cols, blob_conf.shape().dim(2)});
