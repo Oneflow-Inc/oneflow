@@ -22,6 +22,21 @@ void VariableOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   *GetBlobDesc4BnInOp("out") = *model_blob_desc;
 }
 
+void VariableOp::InferOutputBlobParallelDesc(
+    std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
+    const ParallelContext* parallel_context) const {
+  BlobModelParallel* blob_model_parallel = BlobParallelDesc4BnInOp("out")->mut_model_parallel();
+  if (parallel_context->policy() == kDataParallel) {
+    blob_model_parallel->set_clone_num(parallel_context->parallel_num());
+    blob_model_parallel->set_model_split_num(1);
+  } else if (parallel_context->policy() == kModelParallel) {
+    blob_model_parallel->set_clone_num(1);
+    blob_model_parallel->set_model_split_num(parallel_context->parallel_num());
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
 void VariableOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
     KernelConf* conf) const {

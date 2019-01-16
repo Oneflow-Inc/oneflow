@@ -19,13 +19,6 @@ class AccuracyPrintOp final : public Operator {
                                   std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
                                   const ParallelContext* parallel_context) const override {}
 
-  void InferInputBlobParallelDesc(
-      std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
-      const ParallelContext* parallel_context) const override;
-  void InferOutputBlobParallelDesc(
-      std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
-      const ParallelContext* parallel_context) const override {}
-
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
 };
 

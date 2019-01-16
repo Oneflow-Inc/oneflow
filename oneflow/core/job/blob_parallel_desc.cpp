@@ -18,6 +18,11 @@ const BlobModelParallel& BlobParallelDesc::model_parallel() const {
   return blob_parallel_conf_.model_parallel();
 }
 
+const BlobGridParallel& BlobParallelDesc::grid_parallel() const {
+  CHECK(blob_parallel_conf_.has_grid_parallel());
+  return blob_parallel_conf_.grid_parallel();
+}
+
 bool operator==(const BlobParallelConf& lhs, const BlobParallelConf& rhs) {
   if (lhs.parallel_type_case() != rhs.parallel_type_case()) { return false; }
   switch (lhs.parallel_type_case()) {

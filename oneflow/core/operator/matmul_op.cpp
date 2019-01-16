@@ -13,6 +13,11 @@ void MatmulOp::InitFromOpConf() {
 
 const PbMessage& MatmulOp::GetCustomizedConf() const { return op_conf().matmul_conf(); }
 
+bool MatmulOp::IsInputBnInOpAllowedModelSplit(const std::string& ibn) const {
+  CHECK(std::find(input_bns().begin(), input_bns().end(), ibn) != input_bns().end());
+  return ibn == "b";
+}
+
 void MatmulOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext* parallel_ctx) const {
   const MatmulOpConf& conf = op_conf().matmul_conf();

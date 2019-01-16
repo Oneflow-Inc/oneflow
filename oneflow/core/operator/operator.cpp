@@ -127,11 +127,17 @@ void Operator::InferOutBlobTimeShape(
   }
 }
 
+bool Operator::IsInputBnInOpAllowedModelSplit(const std::string& ibn) const {
+  return IsElemWiseOp();
+}
+
 void Operator::InferBlobParallelDescIf(
     std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
+    std::function<const BlobParallelDesc&(const std::string&)> ProducerBlobParallelDesc4BnInOp,
     const ParallelContext* parallel_context) const {
   if (!input_bns().empty()) {
-    InferInputBlobParallelDesc(BlobParallelDesc4BnInOp, parallel_context);
+    InferInputBlobParallelDesc(BlobParallelDesc4BnInOp, ProducerBlobParallelDesc4BnInOp,
+                               parallel_context);
   }
   if (!output_bns().empty()) {
     InferOutputBlobParallelDesc(BlobParallelDesc4BnInOp, parallel_context);
@@ -140,17 +146,39 @@ void Operator::InferBlobParallelDescIf(
 
 void Operator::NaiveInferInputBlobParallelDesc(
     std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
+    std::function<const BlobParallelDesc&(const std::string&)> ProducerBlobParallelDesc4BnInOp,
     const ParallelContext* parallel_context) const {
   for (const std::string& ibn : input_bns()) {
-    BlobDataParallel* blob_data_parallel = BlobParallelDesc4BnInOp(ibn)->mut_data_parallel();
-    if (parallel_context->policy() == kDataParallel) {
-      blob_data_parallel->set_data_split_num(parallel_context->parallel_num());
-      blob_data_parallel->set_clone_num(1);
-    } else if (parallel_context->policy() == kModelParallel) {
-      blob_data_parallel->set_data_split_num(1);
-      blob_data_parallel->set_clone_num(parallel_context->parallel_num());
+    BlobParallelDesc* blob_parallel_desc = BlobParallelDesc4BnInOp(ibn);
+    if (IsInputBnInOpAllowedModelSplit(ibn) && blob_parallel_desc->has_model_split_axis()) {
+      const BlobParallelDesc& producer_blob_pr = ProducerBlobParallelDesc4BnInOp(ibn);
+      if (producer_blob_pr.has_model_parallel()) {
+        BlobModelParallel* blob_model_parallel = blob_parallel_desc->mut_model_parallel();
+        CHECK_EQ(producer_blob_pr.model_parallel().model_split_num(),
+                 parallel_context->parallel_num());
+        blob_model_parallel->set_clone_num(1);
+        blob_model_parallel->set_model_split_num(parallel_context->parallel_num());
+      } else if (producer_blob_pr.has_grid_parallel()) {
+        BlobGridParallel* blob_grid_parallel = blob_parallel_desc->mut_grid_parallel();
+        int64_t data_split_num = producer_blob_pr.grid_parallel().data_split_num();
+        int64_t model_split_num = producer_blob_pr.grid_parallel().model_split_num();
+        CHECK_EQ(data_split_num * model_split_num, parallel_context->parallel_num());
+        blob_grid_parallel->set_data_split_num(data_split_num);
+        blob_grid_parallel->set_model_split_num(model_split_num);
+      } else {
+        UNIMPLEMENTED();
+      }
     } else {
-      UNIMPLEMENTED();
+      BlobDataParallel* blob_data_parallel = blob_parallel_desc->mut_data_parallel();
+      if (parallel_context->policy() == kDataParallel) {
+        blob_data_parallel->set_data_split_num(parallel_context->parallel_num());
+        blob_data_parallel->set_clone_num(1);
+      } else if (parallel_context->policy() == kModelParallel) {
+        blob_data_parallel->set_data_split_num(1);
+        blob_data_parallel->set_clone_num(parallel_context->parallel_num());
+      } else {
+        UNIMPLEMENTED();
+      }
     }
   }
 }
@@ -160,16 +188,21 @@ void Operator::NaiveInferOutputBlobParallelDesc(
     const ParallelContext* parallel_context) const {
   for (const std::string& bn : output_bns()) {
     auto* blob_parallel_desc = BlobParallelDesc4BnInOp(bn);
-    BlobGridParallel* blob_grid_parallel = blob_parallel_desc->mut_grid_parallel();
-    if (parallel_context->policy() == kDataParallel) {
-      blob_grid_parallel->set_data_split_num(parallel_context->parallel_num());
-      blob_grid_parallel->set_model_split_num(1);
-    } else if (parallel_context->policy() == kModelParallel) {
-      CHECK(blob_parallel_desc->has_model_split_axis());
-      blob_grid_parallel->set_data_split_num(1);
-      blob_grid_parallel->set_model_split_num(parallel_context->parallel_num());
+    if (input_bns().size() == 1 && IsInputBnInOpAllowedModelSplit(SoleIbn())
+        && BlobParallelDesc4BnInOp(SoleIbn())->has_model_split_axis()) {
+      *blob_parallel_desc = *BlobParallelDesc4BnInOp(SoleIbn());
     } else {
-      UNIMPLEMENTED();
+      BlobGridParallel* blob_grid_parallel = blob_parallel_desc->mut_grid_parallel();
+      if (parallel_context->policy() == kDataParallel) {
+        blob_grid_parallel->set_data_split_num(parallel_context->parallel_num());
+        blob_grid_parallel->set_model_split_num(1);
+      } else if (parallel_context->policy() == kModelParallel) {
+        CHECK(blob_parallel_desc->has_model_split_axis());
+        blob_grid_parallel->set_data_split_num(1);
+        blob_grid_parallel->set_model_split_num(parallel_context->parallel_num());
+      } else {
+        UNIMPLEMENTED();
+      }
     }
   }
 }
@@ -189,15 +222,16 @@ void Operator::NaiveInferOutBlobModelSplitAxis(
     const ParallelContext* parallel_context) const {
   int32_t model_split_axis = ModelSplitAxis();
   for (const std::string& bn : output_bns()) {
-    if (!model_bns().empty() || !const_model_bns().empty()) {
+    if (IsElemWiseOp()) {
+      *ModelSplitAxis4BnInOp(bn) = *ModelSplitAxis4BnInOp(SoleIbn());
+    } else if (parallel_context->policy() == kDataParallel) {
+      *ModelSplitAxis4BnInOp(bn) = -1;
+    } else if (parallel_context->policy() == kModelParallel
+               && (!model_bns().empty() || !const_model_bns().empty())) {
       CHECK_NE(model_split_axis, -1);
       *ModelSplitAxis4BnInOp(bn) = model_split_axis;
-    } else if (IsElemWiseOp()) {
-      *ModelSplitAxis4BnInOp(bn) = *ModelSplitAxis4BnInOp(SoleIbn());
     } else {
-      CHECK_EQ(parallel_context->policy(), kDataParallel);
-      CHECK_EQ(model_split_axis, -1);
-      *ModelSplitAxis4BnInOp(bn) = model_split_axis;
+      UNIMPLEMENTED();
     }
   }
 }

@@ -30,6 +30,7 @@ class Operator {
   void InitFromOpConf(const OperatorConf& op_conf);
   virtual void InitFromOpConf() = 0;
   virtual bool IsElemWiseOp() const { return false; }
+  virtual bool IsInputBnInOpAllowedModelSplit(const std::string& ibn) const;
 
   ActivationType GetActivationType() const;
 
@@ -151,6 +152,7 @@ class Operator {
   // Infer blob's parallel desc
   void InferBlobParallelDescIf(
       std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
+      std::function<const BlobParallelDesc&(const std::string&)> ProducerBlobParallelDesc4BnInOp,
       const ParallelContext* parallel_context) const;
   virtual void FixInDiffBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                   const ParallelContext*) const;
@@ -178,8 +180,10 @@ class Operator {
   // infer blob parallel desc
   virtual void InferInputBlobParallelDesc(
       std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
+      std::function<const BlobParallelDesc&(const std::string&)> ProducerBlobParallelDesc4BnInOp,
       const ParallelContext* parallel_context) const {
-    NaiveInferInputBlobParallelDesc(BlobParallelDesc4BnInOp, parallel_context);
+    NaiveInferInputBlobParallelDesc(BlobParallelDesc4BnInOp, ProducerBlobParallelDesc4BnInOp,
+                                    parallel_context);
   }
   virtual void InferOutputBlobParallelDesc(
       std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
@@ -188,6 +192,7 @@ class Operator {
   }
   void NaiveInferInputBlobParallelDesc(
       std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
+      std::function<const BlobParallelDesc&(const std::string&)> ProducerBlobParallelDesc4BnInOp,
       const ParallelContext* parallel_context) const;
   void NaiveInferOutputBlobParallelDesc(
       std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
