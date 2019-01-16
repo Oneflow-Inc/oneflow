@@ -578,6 +578,7 @@ message VariableOpConf {
   optional DataType data_type = 4;
   optional InitializerConf initializer = 5;
   optional string model_name = 6 [default = "weight"];
+  optional int32 model_split_axis = 7 [default = 0];
 }
 
 message LocalResponseNormalizationOpConf {

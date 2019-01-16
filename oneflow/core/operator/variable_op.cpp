@@ -19,6 +19,17 @@ void VariableOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   model_blob_desc->set_data_type(variable_conf.has_data_type()
                                      ? variable_conf.data_type()
                                      : Global<JobDesc>::Get()->DefaultDataType());
+  if (parallel_ctx->policy() == kModelParallel) {
+    int32_t model_split_axis = variable_conf.model_split_axis();
+    CHECK_GE(model_split_axis, 0);
+    CHECK_LT(model_split_axis, model_blob_desc->shape().NumAxes());
+    int64_t split_dim_num = model_blob_desc->shape().At(model_split_axis);
+    CHECK_EQ(split_dim_num % parallel_ctx->parallel_num(), 0);
+    model_blob_desc->mut_shape().Set(model_split_axis,
+                                     split_dim_num / parallel_ctx->parallel_num());
+  } else {
+    CHECK_EQ(parallel_ctx->policy(), kDataParallel);
+  }
   *GetBlobDesc4BnInOp("out") = *model_blob_desc;
 }
 
