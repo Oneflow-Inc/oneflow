@@ -907,6 +907,14 @@ message ResizeNearestNeighborOpConf {
   optional bool align_corners = 6 [default = false];
 }
 
+message TargetResizeNearestOpConf {
+  required string in = 1;
+  required string target_shape_in = 2;
+  required string out = 3;
+  required string data_format = 4;
+  optional bool align_corners = 6 [default = false];
+}
+
 enum Norm {
   L1 = 1;
   L2 = 2;
@@ -1103,15 +1111,16 @@ message OperatorConf {
     AffineChannelOpConf affine_channel_conf = 1008;
     UpsampleNearestOpConf upsample_nearest_conf = 1009;
     ResizeNearestNeighborOpConf resize_nearest_neighbor_conf = 1010;
-    BatchPermutationOpConf batch_permutation_conf = 1011;
-    FpnCollectOpConf fpn_collect_conf = 1012;
-    FpnDistributeOpConf fpn_distribute_conf = 1013;
-    VStackOpConf vstack_conf = 1014;
-    RedefineDim0OpConf redefine_dim0_conf = 1015;
-    ImageSegmentationMaskOpConf image_segmentation_mask_conf = 1016;
-    RleEncodeOpConf rle_encode_conf = 1017;
-    MaskTargetOpConf mask_target_conf = 1018;
-    GroupByRecordIdOpConf group_by_record_id_conf = 1019;
+    TargetResizeNearestOpConf target_resize_nearest_conf = 1011;
+    BatchPermutationOpConf batch_permutation_conf = 1012;
+    FpnCollectOpConf fpn_collect_conf = 1013;
+    FpnDistributeOpConf fpn_distribute_conf = 1014;
+    VStackOpConf vstack_conf = 1015;
+    RedefineDim0OpConf redefine_dim0_conf = 1016;
+    ImageSegmentationMaskOpConf image_segmentation_mask_conf = 1017;
+    RleEncodeOpConf rle_encode_conf = 1018;
+    MaskTargetOpConf mask_target_conf = 1019;
+    GroupByRecordIdOpConf group_by_record_id_conf = 1020;
     BboxTransformOpConf bbox_transform_conf = 1100;
   }
 }
