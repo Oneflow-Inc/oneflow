@@ -20,18 +20,23 @@ class EpollCommNet final : public CommNetIf<SocketMemDesc> {
 
   void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) override;
   void SendSocketMsg(int64_t dst_machine_id, const SocketMsg& msg);
+  void PartReadDone(void* read_id, int32_t part_num);
 
  private:
   SocketMemDesc* NewMemDesc(void* ptr, size_t byte_size) override;
 
   EpollCommNet(const Plan& plan);
   void InitSockets();
-  SocketHelper* GetSocketHelper(int64_t machine_id);
+  SocketHelper* GetSocketHelper(int64_t machine_id, int32_t link_index);
   void DoRead(void* read_id, int64_t src_machine_id, void* src_token, void* dst_token) override;
 
+  const EpollConf& epoll_conf_;
   std::vector<IOEventPoller*> pollers_;
-  std::vector<int> machine_id2sockfd_;
+  std::vector<int> machine_id2sockfds_;
   HashMap<int, SocketHelper*> sockfd2helper_;
+  std::mt19937 random_gen_;
+  std::mutex part_done_cnt_mtx_;
+  HashMap<void*, int32_t> read_id2part_done_cnt_;
 };
 
 template<>

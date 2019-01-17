@@ -41,6 +41,7 @@ struct RequestReadMsg {
   void* src_token;
   void* dst_token;
   void* read_id;
+  int32_t part_num;
 };
 
 struct SocketMsg {
