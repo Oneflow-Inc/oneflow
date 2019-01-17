@@ -963,6 +963,14 @@ message IdentityOpConf {
   repeated string out = 2;
 }
 
+message TopKOpConf {
+  required string in = 1;
+  optional string values = 2;
+  optional string indices = 3;
+  optional int64 k = 4 [default = 1];
+  optional bool sorted = 5 [default = false];
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1052,6 +1060,7 @@ message OperatorConf {
     IdentityLossOpConf identity_loss_conf = 259;
     SparseCrossEntropyOpConf sparse_cross_entropy_conf= 260;
     ReduceMeanOpConf reduce_mean_conf = 261;
+    TopKOpConf top_k_conf = 262;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
