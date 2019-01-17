@@ -451,6 +451,12 @@ void NormalizationKernel<device_type, T>::UpdateMovingMeanAndMovingVariance(
   Blob* moving_variance_blob = BnInOp2Blob("moving_variance");
   const T momentum = conf.momentum();
   const T one_minus_momentum = 1 - momentum;
+  // Do Bessel's correction for new_variance when updated to moving_variance.
+  const auto& normalization_kernel_conf = this->kernel_conf().normalization_conf();
+  const int64_t norm_elem_num = normalization_kernel_conf.transpose_rows();
+  const float correction_factor = norm_elem_num > 1 ? 1.0 * norm_elem_num / (norm_elem_num-1) : 1.0;
+  const T variance_momentum = static_cast<T>(one_minus_momentum * correction_factor);
+
   KernelUtil<device_type, T>::Scal(ctx.device_ctx, moving_mean_blob->shape().elem_cnt(), momentum,
                                    moving_mean_blob->mut_dptr<T>(), 1);
   KernelUtil<device_type, T>::Axpy(ctx.device_ctx, mean_blob->shape().elem_cnt(),
@@ -459,7 +465,7 @@ void NormalizationKernel<device_type, T>::UpdateMovingMeanAndMovingVariance(
   KernelUtil<device_type, T>::Scal(ctx.device_ctx, moving_variance_blob->shape().elem_cnt(),
                                    momentum, moving_variance_blob->mut_dptr<T>(), 1);
   KernelUtil<device_type, T>::Axpy(ctx.device_ctx, variance_blob->shape().elem_cnt(),
-                                   one_minus_momentum, variance_blob->dptr<T>(), 1,
+                                   variance_momentum, variance_blob->dptr<T>(), 1,
                                    moving_variance_blob->mut_dptr<T>(), 1);
 }
 
