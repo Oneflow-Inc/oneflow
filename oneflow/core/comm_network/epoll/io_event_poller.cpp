@@ -6,7 +6,7 @@
 
 namespace oneflow {
 
-const int IOEventPoller::max_event_num_ = 32;
+const int32_t IOEventPoller::max_event_num_ = 32;
 
 IOEventPoller::IOEventPoller() {
   epfd_ = epoll_create1(0);
@@ -26,12 +26,12 @@ IOEventPoller::~IOEventPoller() {
   PCHECK(close(epfd_) == 0);
 }
 
-void IOEventPoller::AddFd(int fd, std::function<void()> read_handler,
+void IOEventPoller::AddFd(int32_t fd, std::function<void()> read_handler,
                           std::function<void()> write_handler) {
   AddFd(fd, &read_handler, &write_handler);
 }
 
-void IOEventPoller::AddFdWithOnlyReadHandler(int fd, std::function<void()> read_handler) {
+void IOEventPoller::AddFdWithOnlyReadHandler(int32_t fd, std::function<void()> read_handler) {
   AddFd(fd, &read_handler, nullptr);
 }
 
@@ -43,10 +43,10 @@ void IOEventPoller::Stop() {
   thread_.join();
 }
 
-void IOEventPoller::AddFd(int fd, std::function<void()>* read_handler,
+void IOEventPoller::AddFd(int32_t fd, std::function<void()>* read_handler,
                           std::function<void()>* write_handler) {
   // Set Fd NONBLOCK
-  int opt = fcntl(fd, F_GETFL);
+  int32_t opt = fcntl(fd, F_GETFL);
   PCHECK(opt != -1);
   PCHECK(fcntl(fd, F_SETFL, opt | O_NONBLOCK) == 0);
   // Set CLOEXEC
@@ -70,13 +70,13 @@ void IOEventPoller::AddFd(int fd, std::function<void()>* read_handler,
 
 void IOEventPoller::EpollLoop() {
   while (true) {
-    int event_num = epoll_wait(epfd_, ep_events_, max_event_num_, -1);
+    int32_t event_num = epoll_wait(epfd_, ep_events_, max_event_num_, -1);
     if (event_num == -1) {
       PCHECK(errno == EINTR);
       continue;
     }
     const epoll_event* cur_event = ep_events_;
-    for (int event_idx = 0; event_idx < event_num; ++event_idx, ++cur_event) {
+    for (int32_t event_idx = 0; event_idx < event_num; ++event_idx, ++cur_event) {
       auto io_handler = static_cast<IOHandler*>(cur_event->data.ptr);
       PCHECK(!(cur_event->events & EPOLLERR)) << "fd: " << io_handler->fd;
       if (io_handler->fd == break_epoll_loop_fd_) { return; }

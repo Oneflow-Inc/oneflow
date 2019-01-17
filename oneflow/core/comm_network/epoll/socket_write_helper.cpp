@@ -17,7 +17,7 @@ SocketWriteHelper::~SocketWriteHelper() {
   }
 }
 
-SocketWriteHelper::SocketWriteHelper(int sockfd, IOEventPoller* poller) {
+SocketWriteHelper::SocketWriteHelper(int32_t sockfd, IOEventPoller* poller) {
   sockfd_ = sockfd;
   queue_not_empty_fd_ = eventfd(0, 0);
   PCHECK(queue_not_empty_fd_ != -1);
