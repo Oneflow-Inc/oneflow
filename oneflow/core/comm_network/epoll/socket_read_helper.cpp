@@ -82,8 +82,8 @@ void SocketReadHelper::SetStatusWhenRequestWriteMsgHeadDone() {
 
 void SocketReadHelper::SetStatusWhenRequestReadMsgHeadDone() {
   auto mem_desc = static_cast<const SocketMemDesc*>(cur_msg_.request_read_msg.dst_token);
-  read_ptr_ = reinterpret_cast<char*>(mem_desc->mem_ptr);
-  read_size_ = mem_desc->byte_size;
+  read_ptr_ = reinterpret_cast<char*>(mem_desc->mem_ptr) + cur_msg_.request_read_msg.offset;
+  read_size_ = cur_msg_.request_read_msg.byte_size;
   cur_read_handle_ = &SocketReadHelper::MsgBodyReadHandle;
 }
 

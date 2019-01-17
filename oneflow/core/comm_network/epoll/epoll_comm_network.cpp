@@ -71,7 +71,8 @@ void EpollCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& actor_ms
   SocketMsg msg;
   msg.msg_type = SocketMsgType::kActor;
   msg.actor_msg = actor_msg;
-  int32_t link_i = std::uniform_int_distribution<int32_t>(0, epoll_conf_.link_num())(random_gen_);
+  int32_t link_i =
+      std::uniform_int_distribution<int32_t>(0, epoll_conf_.link_num() - 1)(random_gen_);
   GetSocketHelper(dst_machine_id, link_i)->AsyncWrite(msg);
 }
 
@@ -90,8 +91,10 @@ void EpollCommNet::SendSocketMsg(int64_t dst_machine_id, const SocketMsg& total_
     total_byte_size -= offset;
     SocketMsg msg;
     msg.msg_type = total_msg.msg_type;
-    msg.request_read_msg.src_token = NewMemDesc(src_mem_desc->mem_ptr + link_i * offset, byte_size);
-    msg.request_read_msg.dst_token = NewMemDesc(dst_mem_desc->mem_ptr + link_i * offset, byte_size);
+    msg.request_read_msg.src_token = total_msg.request_read_msg.src_token;
+    msg.request_read_msg.dst_token = total_msg.request_read_msg.dst_token;
+    msg.request_read_msg.offset = link_i * offset;
+    msg.request_read_msg.byte_size = byte_size;
     msg.request_read_msg.read_id = total_msg.request_read_msg.read_id;
     msg.request_read_msg.part_num = part_num;
     GetSocketHelper(dst_machine_id, link_i)->AsyncWrite(msg);
@@ -189,7 +192,7 @@ void EpollCommNet::InitSockets() {
 }
 
 SocketHelper* EpollCommNet::GetSocketHelper(int64_t machine_id, int32_t link_index) {
-  int sockfd = machine_id2sockfds_.at(machine_id * epoll_conf_.link_num() + link_index);
+  int sockfd = machine_id2sockfds_[machine_id * epoll_conf_.link_num() + link_index];
   return sockfd2helper_.at(sockfd);
 }
 
@@ -201,13 +204,14 @@ void EpollCommNet::DoRead(void* read_id, int64_t src_machine_id, void* src_token
   msg.request_write_msg.dst_machine_id = Global<MachineCtx>::Get()->this_machine_id();
   msg.request_write_msg.dst_token = dst_token;
   msg.request_write_msg.read_id = read_id;
-  int32_t link_i = std::uniform_int_distribution<int32_t>(0, epoll_conf_.link_num())(random_gen_);
+  int32_t link_i =
+      std::uniform_int_distribution<int32_t>(0, epoll_conf_.link_num() - 1)(random_gen_);
   GetSocketHelper(src_machine_id, link_i)->AsyncWrite(msg);
 }
 
 void EpollCommNet::PartReadDone(void* read_id, int32_t part_num) {
-  int32_t& part_read_done_cnt = read_id2part_done_cnt_.at(read_id);
   std::unique_lock<std::mutex> lck(part_done_cnt_mtx_);
+  int32_t& part_read_done_cnt = read_id2part_done_cnt_.at(read_id);
   part_read_done_cnt++;
   if (part_read_done_cnt == part_num) {
     ReadDone(read_id);
