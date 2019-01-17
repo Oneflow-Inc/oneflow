@@ -8,7 +8,7 @@ std::string OpEdge::VisualStr() const {
   for (const LogicalBlobId& lbi : lbis_) {
     if (idx++ > 0) { str += "\\n"; }
     str += lbi.blob_name() + ":";
-    str += src_node()->BlobDesc4Lbi(lbi).shape().ToString();
+    str += src_node()->NoParallelBlobDesc4Lbi(lbi).shape().ToString();
   }
   return str;
 }
@@ -46,24 +46,24 @@ std::string OpNode::VisualStr() const {
   return str;
 }
 
-BlobDesc* OpNode::MutBlobDesc(const LogicalBlobId& lbi) {
-  if (lbi2blob_desc_.find(lbi) == lbi2blob_desc_.end()) {
-    lbi2blob_desc_.emplace(lbi, std::make_shared<BlobDesc>());
+BlobDesc* OpNode::MutNoParallelBlobDesc(const LogicalBlobId& lbi) {
+  if (lbi2no_parallel_blob_desc_.find(lbi) == lbi2no_parallel_blob_desc_.end()) {
+    lbi2no_parallel_blob_desc_.emplace(lbi, std::make_shared<BlobDesc>());
   }
-  return lbi2blob_desc_.at(lbi).get();
+  return lbi2no_parallel_blob_desc_.at(lbi).get();
 }
 
-BlobDesc* OpNode::BlobDesc4BnInOp(const std::string& bn_in_op) {
+BlobDesc* OpNode::NoParallelBlobDesc4BnInOp(const std::string& bn_in_op) {
   const LogicalBlobId& lbi = op().BnInOp2Lbi(bn_in_op);
   if (ibns_.find(bn_in_op) != ibns_.end()) {
     for (OpEdge* edge : in_edges()) {
       for (const LogicalBlobId& edge_lbi : edge->lbis()) {
-        if (lbi == edge_lbi) { return edge->src_node()->MutBlobDesc(lbi); }
+        if (lbi == edge_lbi) { return edge->src_node()->MutNoParallelBlobDesc(lbi); }
       }
     }
     UNIMPLEMENTED();
   }
-  return MutBlobDesc(lbi);
+  return MutNoParallelBlobDesc(lbi);
 }
 
 const Shape* OpNode::GetInputBlobTimeShape(const std::string& bn_in_op) const {
@@ -88,16 +88,16 @@ const Shape* OpNode::GetInputBlobTimeShape() const {
   return &first_input->out_blob_time_shape();
 }
 
-void OpNode::ForEachLbiAndBlobDesc(
+void OpNode::ForEachLbiAndNoParallelBlobDesc(
     const std::function<void(const LogicalBlobId&, const BlobDesc&)>& Handler) const {
-  for (const auto& pair : lbi2blob_desc_) { Handler(pair.first, *pair.second); }
+  for (const auto& pair : lbi2no_parallel_blob_desc_) { Handler(pair.first, *pair.second); }
 }
 
 void OpGraph::InferOpModelSize(HashMap<std::string, size_t>* op_name2model_size) {
   ForEachNode([&](OpNode* op_node) {
     size_t model_size = 0;
     for (const std::string& model_bn : op_node->op().model_bns()) {
-      int64_t elem_cnt = op_node->BlobDesc4BnInOp(model_bn)->shape().elem_cnt();
+      int64_t elem_cnt = op_node->NoParallelBlobDesc4BnInOp(model_bn)->shape().elem_cnt();
       model_size += elem_cnt * GetSizeOfDataType(job_desc_->DefaultDataType());
       model_size = RoundUp(model_size, kCudaAlignSize);
     }
@@ -116,7 +116,7 @@ void OpGraph::Init() {
   InitEdges();
   UpdateOpNodeHasInDiff();
   InferTimeShape();
-  InferNodeBlobDesc();
+  InferNodeNoParallelBlobDesc();
 }
 
 void OpGraph::InitNodes() {
@@ -166,7 +166,7 @@ void OpGraph::UpdateOpNodeHasInDiff() {
   });
 }
 
-void OpGraph::InferNodeBlobDesc() const {
+void OpGraph::InferNodeNoParallelBlobDesc() const {
   TopoForEachNode([&](OpNode* op_node) {
     ParallelContext parallel_ctx;
     parallel_ctx.set_parallel_id(0);
@@ -174,8 +174,8 @@ void OpGraph::InferNodeBlobDesc() const {
     parallel_ctx.set_policy(op_node->parallel_desc().policy());
     CHECK_EQ(job_desc_->RecordPieceSize() % op_node->parallel_desc().parallel_num(), 0);
     op_node->op().InferBlobDescsIf(
-        std::bind(&OpNode::BlobDesc4BnInOp, op_node, std::placeholders::_1), &parallel_ctx,
-        job_desc_->RecordPieceSize(), [](OpContext*) {});
+        std::bind(&OpNode::NoParallelBlobDesc4BnInOp, op_node, std::placeholders::_1),
+        &parallel_ctx, job_desc_->RecordPieceSize(), [](OpContext*) {});
   });
 }
 

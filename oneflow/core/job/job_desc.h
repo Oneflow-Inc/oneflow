@@ -6,6 +6,7 @@
 #include "oneflow/core/job/job_conf.pb.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/job/resource.pb.h"
+#include "oneflow/core/job/blob_parallel_desc.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/register/logical_blob_id.pb.h"
 
@@ -105,6 +106,8 @@ class JobDesc final {
 
   JobConf1 job_conf_;
   HashMap<LogicalBlobId, int64_t> lbi2logical_blob_dim0_;
+  HashMap<LogicalBlobId, BlobParallelDesc> lbi2produer_blob_parallel_desc_;
+  HashMap<std::pair<LogicalBlobId, std::string>, BlobParallelDesc> lbi2consumer_blob_parallel_desc_;
 };
 
 std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4OpName(

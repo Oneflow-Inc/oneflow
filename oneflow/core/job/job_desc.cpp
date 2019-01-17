@@ -502,11 +502,12 @@ void JobDesc::AddIdentityOpForAllReduceOverlapingUntrainble() {
 
 void JobDesc::InitLbi2LogicalBlobDim0() {
   OpGraph(this).ForEachNode([&](OpNode* op_node) {
-    op_node->ForEachLbiAndBlobDesc([&](const LogicalBlobId& lbi, const BlobDesc& blob_desc) {
-      CHECK(lbi.has_op_name());
-      CHECK(lbi.has_blob_name());
-      CHECK(lbi2logical_blob_dim0_.emplace(lbi, blob_desc.shape().At(0)).second);
-    });
+    op_node->ForEachLbiAndNoParallelBlobDesc(
+        [&](const LogicalBlobId& lbi, const BlobDesc& blob_desc) {
+          CHECK(lbi.has_op_name());
+          CHECK(lbi.has_blob_name());
+          CHECK(lbi2logical_blob_dim0_.emplace(lbi, blob_desc.shape().At(0)).second);
+        });
   });
 }
 

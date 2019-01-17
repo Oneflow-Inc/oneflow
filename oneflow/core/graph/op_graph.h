@@ -32,23 +32,25 @@ class OpNode final : public Node<OpNode, OpEdge> {
   void set_has_in_diff(bool has_in_diff) { has_in_diff_ = has_in_diff; }
   const ParallelDesc& parallel_desc() const { return parallel_desc_; }
 
-  BlobDesc* BlobDesc4BnInOp(const std::string& bn_in_op);
-  const BlobDesc& BlobDesc4Lbi(const LogicalBlobId& lbi) const { return *lbi2blob_desc_.at(lbi); }
+  BlobDesc* NoParallelBlobDesc4BnInOp(const std::string& bn_in_op);
+  const BlobDesc& NoParallelBlobDesc4Lbi(const LogicalBlobId& lbi) const {
+    return *lbi2no_parallel_blob_desc_.at(lbi);
+  }
   const Shape* GetInputBlobTimeShape(const std::string& bn_in_op) const;
   const Shape* GetInputBlobTimeShape() const;
-  void ForEachLbiAndBlobDesc(
+  void ForEachLbiAndNoParallelBlobDesc(
       const std::function<void(const LogicalBlobId&, const BlobDesc&)>& Handler) const;
 
   std::string VisualStr() const override;
 
  private:
-  BlobDesc* MutBlobDesc(const LogicalBlobId& lbi);
+  BlobDesc* MutNoParallelBlobDesc(const LogicalBlobId& lbi);
 
   ParallelDesc parallel_desc_;
   std::shared_ptr<Operator> op_;
   HashSet<std::string> ibns_;
   bool has_in_diff_;
-  HashMap<LogicalBlobId, std::shared_ptr<BlobDesc>> lbi2blob_desc_;
+  HashMap<LogicalBlobId, std::shared_ptr<BlobDesc>> lbi2no_parallel_blob_desc_;
   Shape out_blob_time_shape_;
 };
 
@@ -90,7 +92,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void InitNodes();
   void InitEdges();
   void UpdateOpNodeHasInDiff();
-  void InferNodeBlobDesc() const;
+  void InferNodeNoParallelBlobDesc() const;
   void InferTimeShape() const;
   void ForEachPseudoChain(const std::vector<OpNode*>& nodes,
                           const std::function<bool(OpNode* src, OpNode* dst)>& IsReachable,

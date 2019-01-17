@@ -14,7 +14,7 @@ bool operator==(const BlobGridParallel& lhs, const BlobGridParallel& rhs);
 class BlobParallelDesc final {
  public:
   BlobParallelDesc() = delete;
-  ~BlobParallelDesc() = delete;
+  ~BlobParallelDesc() = default;
 
   explicit BlobParallelDesc(const BlobParallelDesc& blob_parallel_desc) = default;
   explicit BlobParallelDesc(int64_t model_split_axis) : model_split_axis_(model_split_axis) {}
