@@ -16,9 +16,9 @@ sockaddr_in GetSockAddr(const std::string& addr, uint16_t port) {
   return sa;
 }
 
-int SockListen(int listen_sockfd, uint16_t listen_port, int32_t total_machine_num) {
+int32_t SockListen(int32_t listen_sockfd, uint16_t listen_port, int32_t total_machine_num) {
   sockaddr_in sa = GetSockAddr("0.0.0.0", listen_port);
-  int bind_result = bind(listen_sockfd, reinterpret_cast<sockaddr*>(&sa), sizeof(sa));
+  int32_t bind_result = bind(listen_sockfd, reinterpret_cast<sockaddr*>(&sa), sizeof(sa));
   if (bind_result == 0) {
     PCHECK(listen(listen_sockfd, total_machine_num) == 0);
     LOG(INFO) << "CommNet:Epoll listening on "
@@ -79,16 +79,13 @@ void EpollCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& actor_ms
 void EpollCommNet::SendSocketMsg(int64_t dst_machine_id, const SocketMsg& total_msg) {
   const SocketMemDesc* src_mem_desc =
       static_cast<const SocketMemDesc*>(total_msg.request_read_msg.src_token);
-  const SocketMemDesc* dst_mem_desc =
-      static_cast<const SocketMemDesc*>(total_msg.request_read_msg.dst_token);
-  CHECK_EQ(src_mem_desc->byte_size, dst_mem_desc->byte_size);
   int32_t total_byte_size = src_mem_desc->byte_size;
   int32_t offset = (total_byte_size + epoll_conf_.link_num() - 1) / epoll_conf_.link_num();
   offset = RoundUp(offset, kCacheLineSize);
   int32_t part_num = (total_byte_size + offset - 1) / offset;
   for (int32_t link_i = 0; link_i < part_num; ++link_i) {
     int32_t byte_size = (total_byte_size > offset) ? (offset) : (total_byte_size);
-    total_byte_size -= offset;
+    total_byte_size -= byte_size;
     SocketMsg msg;
     msg.msg_type = total_msg.msg_type;
     msg.request_read_msg.src_token = total_msg.request_read_msg.src_token;
@@ -124,14 +121,14 @@ void EpollCommNet::InitSockets() {
   machine_id2sockfds_.assign(total_machine_num * epoll_conf_.link_num(), -1);
   sockfd2helper_.clear();
   size_t poller_idx = 0;
-  auto NewSocketHelper = [&](int sockfd) {
+  auto NewSocketHelper = [&](int32_t sockfd) {
     IOEventPoller* poller = pollers_[poller_idx];
     poller_idx = (poller_idx + 1) % pollers_.size();
     return new SocketHelper(sockfd, poller);
   };
 
   // listen
-  int listen_sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  int32_t listen_sockfd = socket(AF_INET, SOCK_STREAM, 0);
   int32_t this_listen_port = Global<JobDesc>::Get()->resource().data_port();
   if (this_listen_port != -1) {
     CHECK_EQ(SockListen(listen_sockfd, this_listen_port, total_machine_num), 0);
@@ -159,7 +156,7 @@ void EpollCommNet::InitSockets() {
     auto peer_machine = Global<JobDesc>::Get()->resource().machine(peer_mchn_id);
     sockaddr_in peer_sockaddr = GetSockAddr(peer_machine.addr(), peer_port);
     for (int32_t link_i = 0; link_i < epoll_conf_.link_num(); ++link_i) {
-      int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+      int32_t sockfd = socket(AF_INET, SOCK_STREAM, 0);
       PCHECK(connect(sockfd, reinterpret_cast<sockaddr*>(&peer_sockaddr), sizeof(peer_sockaddr))
              == 0);
       CHECK(sockfd2helper_.emplace(sockfd, NewSocketHelper(sockfd)).second);
@@ -172,7 +169,7 @@ void EpollCommNet::InitSockets() {
     sockaddr_in peer_sockaddr;
     socklen_t len = sizeof(peer_sockaddr);
     for (int32_t link_i = 0; link_i < epoll_conf_.link_num(); ++link_i) {
-      int sockfd = accept(listen_sockfd, reinterpret_cast<sockaddr*>(&peer_sockaddr), &len);
+      int32_t sockfd = accept(listen_sockfd, reinterpret_cast<sockaddr*>(&peer_sockaddr), &len);
       PCHECK(sockfd != -1);
       CHECK(sockfd2helper_.emplace(sockfd, NewSocketHelper(sockfd)).second);
       int64_t peer_mchn_id = GetMachineId(peer_sockaddr);
@@ -192,7 +189,7 @@ void EpollCommNet::InitSockets() {
 }
 
 SocketHelper* EpollCommNet::GetSocketHelper(int64_t machine_id, int32_t link_index) {
-  int sockfd = machine_id2sockfds_[machine_id * epoll_conf_.link_num() + link_index];
+  int32_t sockfd = machine_id2sockfds_[machine_id * epoll_conf_.link_num() + link_index];
   return sockfd2helper_.at(sockfd);
 }
 

@@ -10,7 +10,7 @@ SocketReadHelper::~SocketReadHelper() {
   // do nothing
 }
 
-SocketReadHelper::SocketReadHelper(int sockfd) {
+SocketReadHelper::SocketReadHelper(int32_t sockfd) {
   sockfd_ = sockfd;
   SwitchToMsgHeadReadHandle();
 }
