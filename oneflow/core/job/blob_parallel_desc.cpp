@@ -2,6 +2,22 @@
 
 namespace oneflow {
 
+namespace {
+
+int64_t GetParallelNum(const BlobDataParallel& blob_data_parallel) {
+  return blob_data_parallel.data_split_num() * blob_data_parallel.clone_num();
+}
+
+int64_t GetParallelNum(const BlobModelParallel& blob_model_parallel) {
+  return blob_model_parallel.clone_num() * blob_model_parallel.model_split_num();
+}
+
+int64_t GetParallelNum(const BlobGridParallel& blob_grid_parallel) {
+  return blob_grid_parallel.data_split_num() * blob_grid_parallel.model_split_num();
+}
+
+}  // namespace
+
 BlobParallelDesc& BlobParallelDesc::operator=(const BlobParallelDesc& blob_parallel_desc) {
   CHECK_EQ(model_split_axis_, blob_parallel_desc.model_split_axis_);
   blob_parallel_conf_ = blob_parallel_desc.blob_parallel_conf_;
@@ -21,6 +37,19 @@ const BlobModelParallel& BlobParallelDesc::model_parallel() const {
 const BlobGridParallel& BlobParallelDesc::grid_parallel() const {
   CHECK(blob_parallel_conf_.has_grid_parallel());
   return blob_parallel_conf_.grid_parallel();
+}
+
+int64_t BlobParallelDesc::ParallelNum() const {
+  switch (blob_parallel_conf_.parallel_type_case()) {
+    case BlobParallelConf::ParallelTypeCase::kDataParallel:
+      return GetParallelNum(blob_parallel_conf_.data_parallel());
+    case BlobParallelConf::ParallelTypeCase::kModelParallel:
+      return GetParallelNum(blob_parallel_conf_.model_parallel());
+    case BlobParallelConf::ParallelTypeCase::kGridParallel:
+      return GetParallelNum(blob_parallel_conf_.grid_parallel());
+    default: UNIMPLEMENTED();
+  }
+  return true;
 }
 
 bool operator==(const BlobParallelConf& lhs, const BlobParallelConf& rhs) {

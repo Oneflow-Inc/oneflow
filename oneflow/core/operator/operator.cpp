@@ -256,24 +256,6 @@ void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
   if (model_bns().empty() && const_model_bns().empty()) {
     pr_desc->set_policy(ParallelPolicy::kDataParallel);
   }
-  if (pr_desc->policy() == kModelParallel && MaxModelSplitNum() != -1) {
-    pr_desc->RemoveNeedlessDevice(op_name(), MaxModelSplitNum());
-  }
-  auto ForEachLbi = [&](const std::function<void(const LogicalBlobId&)>& Handler) {
-    for (const std::string& ibn : input_bns()) { Handler(BnInOp2Lbi(ibn)); }
-    for (const std::string& obn : output_bns()) { Handler(BnInOp2Lbi(obn)); }
-  };
-  if (pr_desc->policy() == kDataParallel) {
-    int64_t min_logical_blob_dim0 = MaxVal<int64_t>::value;
-    ForEachLbi([&](const LogicalBlobId& lbi) {
-      min_logical_blob_dim0 = std::min<int64_t>(min_logical_blob_dim0,
-                                                Global<JobDesc>::Get()->LogicalBlobDim04Lbi(lbi));
-    });
-    pr_desc->RemoveNeedlessDevice(op_name(), min_logical_blob_dim0);
-    ForEachLbi([&](const LogicalBlobId& lbi) {
-      CHECK_EQ(Global<JobDesc>::Get()->LogicalBlobDim04Lbi(lbi) % min_logical_blob_dim0, 0);
-    });
-  }
   VirtualFixParallelDesc(pr_desc);
 }
 

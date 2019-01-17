@@ -28,6 +28,7 @@ class BlobParallelDesc final {
   // for output blob or element-wise op's input blob in some cases.
   const BlobGridParallel& grid_parallel() const;
   const BlobParallelConf& blob_parallel_conf() const { return blob_parallel_conf_; }
+  int64_t ParallelNum() const;
   int64_t model_split_axis() const { return model_split_axis_; }
   bool has_data_parallel() const { return blob_parallel_conf_.has_data_parallel(); }
   bool has_model_parallel() const { return blob_parallel_conf_.has_model_parallel(); }

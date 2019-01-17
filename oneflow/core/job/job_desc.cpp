@@ -116,15 +116,6 @@ void AddIdentityOpAndReconnect(
 
 }  // namespace
 
-int64_t JobDesc::LogicalBlobDim04Lbi(const LogicalBlobId& lbi) const {
-  CHECK(lbi.has_op_name());
-  CHECK(lbi.has_blob_name());
-  LogicalBlobId key;
-  key.set_op_name(lbi.op_name());
-  key.set_blob_name(lbi.blob_name());
-  return lbi2logical_blob_dim0_.at(key);
-}
-
 int64_t JobDesc::all_reduce_group_min_byte() const {
   int64_t ret = job_conf_.other().all_reduce_group_min_mbyte() * 1024 * 1024;
   CHECK_GT(ret, 0);
@@ -423,11 +414,9 @@ void JobDesc::AddRecordLoadOps() {
 }
 
 void JobDesc::FixAndOptimizeDLNet() {
-  FixElemWiseOpParallelConf();
   FixTickOpIfExists();
   ConvertPseudoChainToChain();
   if (IsTrain()) { AddIdentityOpForAllReduceOverlapingUntrainble(); }
-  InitLbi2LogicalBlobDim0();
 }
 
 void JobDesc::ConvertPseudoChainToChain() {
@@ -500,17 +489,6 @@ void JobDesc::AddIdentityOpForAllReduceOverlapingUntrainble() {
   });
 }
 
-void JobDesc::InitLbi2LogicalBlobDim0() {
-  OpGraph(this).ForEachNode([&](OpNode* op_node) {
-    op_node->ForEachLbiAndNoParallelBlobDesc(
-        [&](const LogicalBlobId& lbi, const BlobDesc& blob_desc) {
-          CHECK(lbi.has_op_name());
-          CHECK(lbi.has_blob_name());
-          CHECK(lbi2logical_blob_dim0_.emplace(lbi, blob_desc.shape().At(0)).second);
-        });
-  });
-}
-
 void JobDesc::FixTickOpIfExists() {
   auto MutParallelConf4OpName = MakeGetterMutParallelConf4OpName(job_conf_.mutable_placement());
   OperatorConf* tick_op_conf = nullptr;
@@ -557,17 +535,6 @@ void JobDesc::FixTickOpIfExists() {
   PlacementGroup* p_group = job_conf_.mutable_placement()->add_placement_group();
   *(p_group->mutable_op_set()->add_op_name()) = tick_log_counter->name();
   *(p_group->mutable_parallel_conf()) = *source_parallel_conf;
-}
-
-void JobDesc::FixElemWiseOpParallelConf() {
-  auto ParallelConf4OpName = MakeGetterMutParallelConf4OpName(job_conf_.mutable_placement());
-  OpGraph(this).ForEachNode([&](OpNode* node) {
-    OpNode* prev_node = node;
-    while (prev_node->op().IsElemWiseOp()) { prev_node = prev_node->SoleInEdge()->src_node(); }
-    if (prev_node != node && prev_node->parallel_desc().policy() == kModelParallel) {
-      *ParallelConf4OpName(node->op().op_name()) = *ParallelConf4OpName(prev_node->op().op_name());
-    }
-  });
 }
 
 }  // namespace oneflow

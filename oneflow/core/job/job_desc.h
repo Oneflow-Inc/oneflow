@@ -6,7 +6,6 @@
 #include "oneflow/core/job/job_conf.pb.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/job/resource.pb.h"
-#include "oneflow/core/job/blob_parallel_desc.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/register/logical_blob_id.pb.h"
 
@@ -39,7 +38,6 @@ class JobDesc final {
   bool IsTrain() const { return job_conf_.other().has_train_conf(); }
   bool IsPredict() const { return job_conf_.other().has_predict_conf(); }
   int64_t RecordPieceSize() const { return job_conf_.other().piece_size(); }
-  int64_t LogicalBlobDim04Lbi(const LogicalBlobId& lbi) const;
   int64_t piece_num_of_experiment_phase() const;
   bool enable_experiment_run() const;
   float available_zone_mem_ratio() const;
@@ -100,14 +98,9 @@ class JobDesc final {
   void ConvertPseudoChainToChain();
   void AddIdentityOpForChainMergeOptimization();
   void AddIdentityOpForAllReduceOverlapingUntrainble();
-  void FixElemWiseOpParallelConf();
   void FixTickOpIfExists();
-  void InitLbi2LogicalBlobDim0();
 
   JobConf1 job_conf_;
-  HashMap<LogicalBlobId, int64_t> lbi2logical_blob_dim0_;
-  HashMap<LogicalBlobId, BlobParallelDesc> lbi2produer_blob_parallel_desc_;
-  HashMap<std::pair<LogicalBlobId, std::string>, BlobParallelDesc> lbi2consumer_blob_parallel_desc_;
 };
 
 std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4OpName(
