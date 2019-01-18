@@ -37,8 +37,8 @@ struct TopKKernelUtil<DeviceType::kCPU, T> {
                   [&](const int32_t lhs, const int32_t rhs) { return in_ptr[lhs] > in_ptr[rhs]; });
       }
       FOR_RANGE(int32_t, j, 0, k) {
-        if (!indices_ptr) { indices_ptr[i * k + j] = indices_buf[j]; }
-        if (!values_ptr) {
+        if (indices_ptr) { indices_ptr[i * k + j] = indices_buf[j]; }
+        if (values_ptr) {
           values_ptr[i * k + j] = in_ptr[i * elem_cnt_per_instance + indices_buf[j]];
         }
       }
