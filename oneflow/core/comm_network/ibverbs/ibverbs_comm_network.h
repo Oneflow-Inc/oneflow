@@ -31,8 +31,7 @@ class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
   }
 
   IBVerbsCommNet(const Plan&);
-  void DoRead(void* read_id, int64_t src_machine_id, void* src_token,
-              void* dst_token) const override;
+  void DoRead(void* read_id, int64_t src_machine_id, void* src_token, void* dst_token) override;
   void PollCQ();
 
   static const int32_t max_poll_wc_num_;
