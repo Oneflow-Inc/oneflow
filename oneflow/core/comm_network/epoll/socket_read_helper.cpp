@@ -70,13 +70,9 @@ void SocketReadHelper::SetStatusWhenMsgBodyDone() {
 }
 
 void SocketReadHelper::SetStatusWhenRequestWriteMsgHeadDone() {
-  SocketMsg msg_to_send;
-  msg_to_send.msg_type = SocketMsgType::kRequestRead;
-  msg_to_send.request_read_msg.src_token = cur_msg_.request_write_msg.src_token;
-  msg_to_send.request_read_msg.dst_token = cur_msg_.request_write_msg.dst_token;
-  msg_to_send.request_read_msg.read_id = cur_msg_.request_write_msg.read_id;
-  Global<EpollCommNet>::Get()->SendSocketMsg(cur_msg_.request_write_msg.dst_machine_id,
-                                             msg_to_send);
+  Global<EpollCommNet>::Get()->RequestRead(
+      cur_msg_.request_write_msg.dst_machine_id, cur_msg_.request_write_msg.src_token,
+      cur_msg_.request_write_msg.dst_token, cur_msg_.request_write_msg.read_id);
   SwitchToMsgHeadReadHandle();
 }
 

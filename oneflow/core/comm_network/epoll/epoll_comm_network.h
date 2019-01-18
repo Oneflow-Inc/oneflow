@@ -19,7 +19,7 @@ class EpollCommNet final : public CommNetIf<SocketMemDesc> {
   void RegisterMemoryDone() override;
 
   void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) override;
-  void SendSocketMsg(int64_t dst_machine_id, const SocketMsg& msg);
+  void RequestRead(int64_t dst_machine_id, void* src_token, void* dst_token, void* read_id);
   void PartReadDone(void* read_id, int32_t part_num);
 
  private:
