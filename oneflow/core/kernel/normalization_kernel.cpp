@@ -454,7 +454,8 @@ void NormalizationKernel<device_type, T>::UpdateMovingMeanAndMovingVariance(
   // Do Bessel's correction for new_variance when updated to moving_variance.
   const auto& normalization_kernel_conf = this->kernel_conf().normalization_conf();
   const int64_t norm_elem_num = normalization_kernel_conf.transpose_rows();
-  const float correction_factor = norm_elem_num > 1 ? 1.0 * norm_elem_num / (norm_elem_num-1) : 1.0;
+  const float correction_factor =
+      norm_elem_num > 1 ? 1.0 * norm_elem_num / (norm_elem_num - 1) : 1.0;
   const T variance_momentum = static_cast<T>(one_minus_momentum * correction_factor);
 
   KernelUtil<device_type, T>::Scal(ctx.device_ctx, moving_mean_blob->shape().elem_cnt(), momentum,
