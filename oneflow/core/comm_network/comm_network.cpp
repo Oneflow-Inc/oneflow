@@ -7,9 +7,9 @@ CommNet::~CommNet() {
   ready_cb_poller_.join();
 }
 
-void* CommNet::NewActorReadId() { return new ActorReadContext; }
+void* CommNet::NewActorReadId() const { return new ActorReadContext; }
 
-void CommNet::DeleteActorReadId(void* actor_read_id) {
+void CommNet::DeleteActorReadId(void* actor_read_id) const {
   auto actor_read_ctx = static_cast<ActorReadContext*>(actor_read_id);
   CHECK(actor_read_ctx->waiting_list.empty());
   delete actor_read_ctx;
