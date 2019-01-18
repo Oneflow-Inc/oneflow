@@ -968,7 +968,7 @@ message TopKOpConf {
   optional string values = 2;
   optional string indices = 3;
   optional int64 k = 4 [default = 1];
-  optional bool sorted = 5 [default = false];
+  // optional bool sorted = 5 [default = false];
 }
 
 message OperatorConf {
