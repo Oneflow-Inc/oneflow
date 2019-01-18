@@ -7,7 +7,7 @@ void TopKOp::InitFromOpConf() {
   const TopKOpConf& conf = op_conf().top_k_conf();
   CHECK(conf.has_values() || conf.has_indices());
   EnrollInputBn("in", false);
-  // EnrollFwBufBn("fw_buf");
+  EnrollFwBufBn("fw_buf");
   if (conf.has_values()) { EnrollOutputBn("values", false); }
   if (conf.has_indices()) { EnrollOutputBn("indices", false); }
 }
@@ -20,9 +20,9 @@ void TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   std::vector<int64_t> out_shape_dim_vec = in_blob_desc->shape().dim_vec();
   CHECK_LE(conf.k(), out_shape_dim_vec.back());
   out_shape_dim_vec.back() = conf.k();
-  // BlobDesc* fw_buf = GetBlobDesc4BnInOp("fw_buf");
-  // fw_buf->mut_shape() = Shape({in->shape().dim_vec().back()});
-  // fw_buf->set_data_type(DataType::kInt64);
+  BlobDesc* fw_buf_blob_desc = GetBlobDesc4BnInOp("fw_buf");
+  fw_buf_blob_desc->mut_shape() = Shape({in_blob_desc->shape().dim_vec().back()});
+  fw_buf_blob_desc->set_data_type(DataType::kInt32);
   if (conf.has_values()) {
     BlobDesc* values_blob_desc = GetBlobDesc4BnInOp("values");
     *values_blob_desc = *in_blob_desc;
@@ -32,7 +32,7 @@ void TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
     BlobDesc* indices_blob_desc = GetBlobDesc4BnInOp("indices");
     *indices_blob_desc = *in_blob_desc;
     indices_blob_desc->mut_shape() = Shape(out_shape_dim_vec);
-    indices_blob_desc->set_data_type(DataType::kInt64);
+    indices_blob_desc->set_data_type(DataType::kInt32);
   }
 }
 
