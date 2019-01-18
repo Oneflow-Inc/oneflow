@@ -52,6 +52,7 @@ message ExperimentalRunConf {
 
 message EpollConf {
   optional int32 link_num = 1 [default = 5];
+  optional int32 msg_segment_kbyte = 2 [default = 256];
 }
 
 message IBVerbsConf {
