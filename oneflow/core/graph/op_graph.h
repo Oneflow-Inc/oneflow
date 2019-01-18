@@ -32,10 +32,13 @@ class OpNode final : public Node<OpNode, OpEdge> {
   const ParallelDesc& parallel_desc() const { return parallel_desc_; }
   const BlobDesc& NoParallelBlobDesc4Lbi(const LogicalBlobId& lbi) const;
   const BlobDesc& LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const;
+  const BlobParallelDesc& BlobParallelDesc4BnInOp(const std::string& bn) const;
   const BlobParallelDesc& BlobParallelDesc4Lbi(const LogicalBlobId& lbi) const;
   const Shape* GetInputBlobTimeShape(const std::string& bn_in_op) const;
   const Shape* GetInputBlobTimeShape() const;
 
+  void SplitLogicalInputBlobDesc(std::vector<HashMap<std::string, BlobDesc>>*);
+  void ConcatLogicalOutputBlobDesc(const std::vector<HashMap<std::string, BlobDesc>>&);
   std::string VisualStr() const override;
 
  private:
@@ -44,12 +47,17 @@ class OpNode final : public Node<OpNode, OpEdge> {
   ParallelDesc* mut_parallel_desc() { return &parallel_desc_; }
   Shape* mut_out_blob_time_shape() { return &out_blob_time_shape_; }
   BlobDesc* NoParallelBlobDesc4BnInOp(const std::string& bn_in_op);
-  BlobDesc* LogicalBlobDesc4BnInOp(const std::string& bn_in_op) { TODO(); }
-  BlobParallelDesc* MutBlobParallelDesc4BnInOp(const std::string& bn_in_op,
-                                               int32_t model_split_axis) {
-    TODO();
-  }
   BlobDesc* MutNoParallelBlobDesc(const LogicalBlobId& lbi);
+  BlobDesc* LogicalBlobDesc4BnInOp(const std::string& bn_in_op);
+  BlobDesc* MutLogicalBlobDesc(const LogicalBlobId& lbi);
+  BlobParallelDesc* MutBlobParallelDesc4BnInOp(const std::string& bn_in_op,
+                                               int32_t model_split_axis);
+  OpNode* SrcNode4InputBnInOp(const std::string& bn_in_op) const;
+  OpNode* ProducerOpNode4BnInOp(const std::string& bn_in_op);
+  void ForEachParallelBlobDesc(
+      const BlobDesc& blob_desc,
+      const std::function<void(bool*, int32_t*, int64_t*)>& GetAxisParallelInfo,
+      const std::function<void(const BlobDesc&)>& Handler) const;
 
   ParallelDesc parallel_desc_;
   std::shared_ptr<Operator> op_;

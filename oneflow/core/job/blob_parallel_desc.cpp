@@ -39,6 +39,88 @@ const BlobGridParallel& BlobParallelDesc::grid_parallel() const {
   return blob_parallel_conf_.grid_parallel();
 }
 
+void BlobParallelDesc::GetDataAxisParallelInfo(bool* is_split, int32_t* axis,
+                                               int64_t* axis_parallel_num) const {
+  switch (blob_parallel_conf_.parallel_type_case()) {
+    case BlobParallelConf::ParallelTypeCase::kDataParallel:
+      return GetDataAxisParallelInfo(blob_parallel_conf_.data_parallel(), is_split, axis,
+                                     axis_parallel_num);
+    case BlobParallelConf::ParallelTypeCase::kModelParallel:
+      return GetDataAxisParallelInfo(blob_parallel_conf_.model_parallel(), is_split, axis,
+                                     axis_parallel_num);
+    case BlobParallelConf::ParallelTypeCase::kGridParallel:
+      return GetDataAxisParallelInfo(blob_parallel_conf_.grid_parallel(), is_split, axis,
+                                     axis_parallel_num);
+    default: UNIMPLEMENTED();
+  }
+}
+
+void BlobParallelDesc::GetModelAxisParallelInfo(bool* is_split, int32_t* axis,
+                                                int64_t* axis_parallel_num) const {
+  switch (blob_parallel_conf_.parallel_type_case()) {
+    case BlobParallelConf::ParallelTypeCase::kDataParallel:
+      return GetModelAxisParallelInfo(blob_parallel_conf_.data_parallel(), is_split, axis,
+                                      axis_parallel_num);
+    case BlobParallelConf::ParallelTypeCase::kModelParallel:
+      return GetModelAxisParallelInfo(blob_parallel_conf_.model_parallel(), is_split, axis,
+                                      axis_parallel_num);
+    case BlobParallelConf::ParallelTypeCase::kGridParallel:
+      return GetModelAxisParallelInfo(blob_parallel_conf_.grid_parallel(), is_split, axis,
+                                      axis_parallel_num);
+    default: UNIMPLEMENTED();
+  }
+}
+
+void BlobParallelDesc::GetDataAxisParallelInfo(const BlobDataParallel& blob_data_parallel,
+                                               bool* is_split, int32_t* axis,
+                                               int64_t* axis_parallel_num) const {
+  *is_split = true;
+  *axis = 0;
+  *axis_parallel_num = blob_data_parallel.data_split_num();
+}
+
+void BlobParallelDesc::GetDataAxisParallelInfo(const BlobModelParallel& blob_model_parallel,
+                                               bool* is_split, int32_t* axis,
+                                               int64_t* axis_parallel_num) const {
+  *is_split = false;
+  *axis = -1;
+  *axis_parallel_num = blob_model_parallel.clone_num();
+}
+
+void BlobParallelDesc::GetDataAxisParallelInfo(const BlobGridParallel& blob_grid_parallel,
+                                               bool* is_split, int32_t* axis,
+                                               int64_t* axis_parallel_num) const {
+  *is_split = true;
+  *axis = 0;
+  *axis_parallel_num = blob_grid_parallel.data_split_num();
+}
+
+void BlobParallelDesc::GetModelAxisParallelInfo(const BlobDataParallel& blob_data_parallel,
+                                                bool* is_split, int32_t* axis,
+                                                int64_t* axis_parallel_num) const {
+  *is_split = false;
+  *axis = -1;
+  *axis_parallel_num = blob_data_parallel.clone_num();
+}
+
+void BlobParallelDesc::GetModelAxisParallelInfo(const BlobModelParallel& blob_model_parallel,
+                                                bool* is_split, int32_t* axis,
+                                                int64_t* axis_parallel_num) const {
+  *is_split = true;
+  CHECK(has_model_split_axis());
+  *axis = model_split_axis();
+  *axis_parallel_num = blob_model_parallel.model_split_num();
+}
+
+void BlobParallelDesc::GetModelAxisParallelInfo(const BlobGridParallel& blob_grid_parallel,
+                                                bool* is_split, int32_t* axis,
+                                                int64_t* axis_parallel_num) const {
+  *is_split = true;
+  CHECK(has_model_split_axis());
+  *axis = model_split_axis();
+  *axis_parallel_num = blob_grid_parallel.model_split_num();
+}
+
 int64_t BlobParallelDesc::ParallelNum() const {
   switch (blob_parallel_conf_.parallel_type_case()) {
     case BlobParallelConf::ParallelTypeCase::kDataParallel:

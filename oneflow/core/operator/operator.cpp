@@ -154,10 +154,15 @@ void Operator::NaiveInferInputBlobParallelDesc(
       const BlobParallelDesc& producer_blob_pr = ProducerBlobParallelDesc4BnInOp(ibn);
       if (producer_blob_pr.has_model_parallel()) {
         BlobModelParallel* blob_model_parallel = blob_parallel_desc->mut_model_parallel();
-        CHECK_EQ(producer_blob_pr.model_parallel().model_split_num(),
-                 parallel_context->parallel_num());
-        blob_model_parallel->set_clone_num(1);
-        blob_model_parallel->set_model_split_num(parallel_context->parallel_num());
+        CHECK_EQ(producer_blob_pr.ParallelNum(), parallel_context->parallel_num());
+        if (parallel_context->policy() == kDataParallel) {
+          CHECK(!producer_blob_pr.has_model_split_axis());
+        } else if (parallel_context->policy() == kModelParallel) {
+          CHECK(producer_blob_pr.has_model_split_axis());
+        } else {
+          UNIMPLEMENTED();
+        }
+        *blob_model_parallel = producer_blob_pr.model_parallel();
       } else if (producer_blob_pr.has_grid_parallel()) {
         BlobGridParallel* blob_grid_parallel = blob_parallel_desc->mut_grid_parallel();
         int64_t data_split_num = producer_blob_pr.grid_parallel().data_split_num();
