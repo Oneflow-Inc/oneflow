@@ -74,10 +74,9 @@ void EpollCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& actor_ms
   GetSocketHelper(dst_machine_id, 0)->AsyncWrite(msg);
 }
 
-void EpollCommNet::SendSocketMsg(int64_t dst_machine_id, const SocketMsg& total_msg) {
-  const SocketMemDesc* src_mem_desc =
-      static_cast<const SocketMemDesc*>(total_msg.request_read_msg.src_token);
-  int32_t total_byte_size = src_mem_desc->byte_size;
+void EpollCommNet::RequestRead(int64_t dst_machine_id, void* src_token, void* dst_token,
+                               void* read_id) {
+  int32_t total_byte_size = static_cast<const SocketMemDesc*>(src_token)->byte_size;
   int32_t offset = (total_byte_size + epoll_conf_.link_num() - 1) / epoll_conf_.link_num();
   offset = RoundUp(offset, epoll_conf_.msg_segment_kbyte() * 1024);
   int32_t part_num = (total_byte_size + offset - 1) / offset;
@@ -85,12 +84,12 @@ void EpollCommNet::SendSocketMsg(int64_t dst_machine_id, const SocketMsg& total_
     int32_t byte_size = (total_byte_size > offset) ? (offset) : (total_byte_size);
     total_byte_size -= byte_size;
     SocketMsg msg;
-    msg.msg_type = total_msg.msg_type;
-    msg.request_read_msg.src_token = total_msg.request_read_msg.src_token;
-    msg.request_read_msg.dst_token = total_msg.request_read_msg.dst_token;
+    msg.msg_type = SocketMsgType::kRequestRead;
+    msg.request_read_msg.src_token = src_token;
+    msg.request_read_msg.dst_token = dst_token;
     msg.request_read_msg.offset = link_i * offset;
     msg.request_read_msg.byte_size = byte_size;
-    msg.request_read_msg.read_id = total_msg.request_read_msg.read_id;
+    msg.request_read_msg.read_id = read_id;
     msg.request_read_msg.part_num = part_num;
     GetSocketHelper(dst_machine_id, link_i)->AsyncWrite(msg);
   }
