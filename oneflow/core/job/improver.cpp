@@ -29,8 +29,9 @@ bool IsConsumersAndProducerInSameChain(const RegstDescProto& regst_desc,
 }
 
 void ForEachSharableStreamRegstDescsWithoutConsumer(
-    const Plan& plan, const std::function<void(const std::list<const RegstDescProto*>&)>& Handler) {
-  HashMap<int64_t, std::list<const RegstDescProto*>> global_work_stream_id2regst_descs;
+    const Plan& plan,
+    const std::function<void(const std::vector<const RegstDescProto*>&)>& Handler) {
+  HashMap<int64_t, std::vector<const RegstDescProto*>> global_work_stream_id2regst_descs;
   for (const auto& task : plan.task()) {
     int64_t global_work_stream_id = Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(task.task_id());
     for (const auto& pair : task.produced_regst_desc()) {
@@ -45,20 +46,21 @@ void ForEachSharableStreamRegstDescsWithoutConsumer(
 }
 
 void ForEachSameColoredStreamRegstDescWithoutConsumer(
-    const Plan& plan, const std::function<void(const std::list<const RegstDescProto*>&)>& Handler) {
+    const Plan& plan,
+    const std::function<void(const std::vector<const RegstDescProto*>&)>& Handler) {
   auto GetProducerTaskId = [](const RegstDescProto* regst_desc, HashSet<int64_t>* ret_actor_ids) {
     CHECK(regst_desc->enable_mem_sharing());
     ret_actor_ids->insert(regst_desc->producer_task_id());
   };
   ForEachSharableStreamRegstDescsWithoutConsumer(
-      plan, [&](const std::list<const RegstDescProto*>& regst_descs) {
+      plan, [&](const std::vector<const RegstDescProto*>& regst_descs) {
         RegstLifetimeGraph(regst_descs, GetProducerTaskId).ForEachSameColoredRegstDescs(Handler);
       });
 }
 
 void ForEachSameColoredChainRegstDescWithConsumer(
     const PlanTaskGraph& plan_task_graph,
-    const std::function<void(const std::list<const RegstDescProto*>&)>& Handler) {
+    const std::function<void(const std::vector<const RegstDescProto*>&)>& Handler) {
   // construct SharableMemBlockGraph
   auto ChainId4TaskId = [&](int64_t task_id) {
     return plan_task_graph.TaskProto4TaskId(task_id)->task_set_info().chain_id();
@@ -92,7 +94,7 @@ void ForEachSameColoredChainRegstDescWithConsumer(
     header2members.emplace(regst_descs.at(0), regst_descs);
   }
   auto GetRegstDescs = [&](const std::vector<const SharableMemBlockNode*>& sharable_mem_blocks) {
-    std::list<const RegstDescProto*> ret;
+    std::vector<const RegstDescProto*> ret;
     for (const SharableMemBlockNode* sharable_mem_block : sharable_mem_blocks) {
       for (const RegstDescProto* regst_desc : sharable_mem_block->regst_descs()) {
         if (header2members.find(regst_desc) != header2members.end()) {
@@ -111,8 +113,8 @@ void ForEachSameColoredChainRegstDescWithConsumer(
       plan_task_graph.ComputeLifetimeSameChainActorIds(member, ret_actor_ids);
     }
   };
-  auto AppendGroupMembers = [&](const std::list<const RegstDescProto*>& regst_descs) {
-    std::list<const RegstDescProto*> members;
+  auto AppendGroupMembers = [&](const std::vector<const RegstDescProto*>& regst_descs) {
+    std::vector<const RegstDescProto*> members;
     for (const auto* header : regst_descs) {
       for (const auto* member : header2members.at(header)) { members.push_back(member); }
     }
@@ -121,6 +123,11 @@ void ForEachSameColoredChainRegstDescWithConsumer(
   sharable_mem_block_gph.ForEachSourceNodeGroup(
       &SharableMemBlockNode::chain_id,
       [&](const std::vector<const SharableMemBlockNode*>& sharable_mem_blocks) {
+        if (sharable_mem_blocks.size() == 1) {
+          const auto& regst_descs = sharable_mem_blocks.at(0)->regst_descs();
+          if (regst_descs.size() > 1) { Handler(regst_descs); }
+          return;
+        }
         RegstLifetimeGraph(GetRegstDescs(sharable_mem_blocks), ComputeLifetimeSameChainActorIds)
             .ForEachSameColoredRegstDescs(AppendGroupMembers);
       });
@@ -128,9 +135,8 @@ void ForEachSameColoredChainRegstDescWithConsumer(
 
 void ForEachImprovedMemSharedId(const PlanTaskGraph& plan_task_graph,
                                 const std::function<void(int64_t, int64_t)>& Handler) {
-  using RegstDescs = std::list<const RegstDescProto*>;
   const Plan& plan = plan_task_graph.plan();
-  auto HandleMemSharedId = [&](const RegstDescs& regst_descs) {
+  auto HandleMemSharedId = [&](const std::vector<const RegstDescProto*>& regst_descs) {
     int64_t mem_shared_id = Global<IDMgr>::Get()->NewMemSharedId();
     for (const RegstDescProto* regst_desc : regst_descs) {
       Handler(regst_desc->regst_desc_id(), mem_shared_id);
