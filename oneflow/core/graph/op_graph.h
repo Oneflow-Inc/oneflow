@@ -37,8 +37,8 @@ class OpNode final : public Node<OpNode, OpEdge> {
   const Shape* GetInputBlobTimeShape(const std::string& bn_in_op) const;
   const Shape* GetInputBlobTimeShape() const;
 
-  void SplitLogicalInputBlobDesc(std::vector<HashMap<std::string, BlobDesc>>*);
-  void ConcatLogicalOutputBlobDesc(const std::vector<HashMap<std::string, BlobDesc>>&);
+  void SplitLogicalInputBlobDesc(HashMap<std::string, std::vector<BlobDesc>>*);
+  void ConcatLogicalOutputBlobDesc(const HashMap<std::string, std::vector<BlobDesc>>&);
   std::string VisualStr() const override;
 
  private:
@@ -58,7 +58,11 @@ class OpNode final : public Node<OpNode, OpEdge> {
       const BlobDesc& blob_desc,
       const std::function<void(bool*, int32_t*, int64_t*)>& GetAxisParallelInfo,
       const std::function<void(const BlobDesc&)>& Handler) const;
-
+  int64_t GetAxisParallelNum(
+      const std::function<void(bool*, int32_t*, int64_t*)>& GetAxisParallelInfo) const;
+  void ConcatBlobDesc(const std::vector<BlobDesc>& blob_descs,
+                      const std::function<void(bool*, int32_t*, int64_t*)>& GetAxisParallelInfo,
+                      BlobDesc* concatenated_blob_desc) const;
   ParallelDesc parallel_desc_;
   std::shared_ptr<Operator> op_;
   HashSet<std::string> ibns_;
