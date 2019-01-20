@@ -15,6 +15,10 @@ class TopKOp final : public Operator {
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
   const PbMessage& GetCustomizedConf() const override { return op_conf().top_k_conf(); }
+
+ private:
+  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                            const ParallelContext*, KernelConf*) const override;
 };
 
 }  // namespace oneflow

@@ -40,6 +40,20 @@ struct TopKKernelUtil<DeviceType::kCPU, T> {
   template struct TopKKernelUtil<DeviceType::kCPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_TOP_K_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kTopKConf, TopKKernel, FLOATING_DATA_TYPE_SEQ);
+namespace {
+
+Kernel* CreateTopKKernel(const KernelConf& kernel_conf) {
+  static const HashMap<std::string, std::function<Kernel*()>> creators = {
+#define TOPK_KERNEL_ENTRY(device_type, data_type_pair)         \
+  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), \
+   []() { return new TopKKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>(); }},
+      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(TOPK_KERNEL_ENTRY, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)};
+  return creators.at(GetHashKey(kernel_conf.op_attribute().op_conf().device_type(),
+                                kernel_conf.top_k_conf().data_type()))();
+}
+
+}  // namespace
+
+REGISTER_KERNEL_CREATOR(OperatorConf::kTopKConf, CreateTopKKernel);
 
 }  // namespace oneflow
