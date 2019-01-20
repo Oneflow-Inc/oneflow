@@ -64,7 +64,7 @@ void ForEachSameColoredChainRegstRegstDescs(
     const SharableMemBlockGraph& sharable_mem_block_gph,
     const std::function<std::vector<const RegstDescProto*>(
         const std::vector<const SharableMemBlockNode*>&)>& GetRegstDescs,
-    const std::function<void(const RegstDescProto* regst_desc, HashSet<int64_t>* ret_actor_ids)>&
+    const std::function<void(const RegstDescProto*, HashSet<int64_t>*)>&
         ComputeLifetimeSameChainActorIds,
     const std::function<void(const std::vector<const RegstDescProto*>&)>& Handler) {
   std::vector<std::vector<const SharableMemBlockNode*>> sharable_mem_blocks_vec;
