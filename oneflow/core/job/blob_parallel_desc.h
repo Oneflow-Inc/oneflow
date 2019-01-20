@@ -7,9 +7,9 @@
 namespace oneflow {
 
 bool operator==(const BlobParallelConf& lhs, const BlobParallelConf& rhs);
-bool operator==(const BlobDataParallel& lhs, const BlobDataParallel& rhs);
-bool operator==(const BlobModelParallel& lhs, const BlobModelParallel& rhs);
-bool operator==(const BlobGridParallel& lhs, const BlobGridParallel& rhs);
+bool operator==(const DataBlobParallel& lhs, const DataBlobParallel& rhs);
+bool operator==(const ModelBlobParallel& lhs, const ModelBlobParallel& rhs);
+bool operator==(const GridBlobParallel& lhs, const GridBlobParallel& rhs);
 
 class BlobParallelDesc final {
  public:
@@ -22,19 +22,19 @@ class BlobParallelDesc final {
 
   // Getters
   // for data input blob
-  const BlobDataParallel& data_parallel() const;
+  const DataBlobParallel& data_blob_parallel() const;
   // for model input blob
-  const BlobModelParallel& model_parallel() const;
+  const ModelBlobParallel& model_blob_parallel() const;
   // for output blob or element-wise op's input blob in some cases.
-  const BlobGridParallel& grid_parallel() const;
+  const GridBlobParallel& grid_blob_parallel() const;
   const BlobParallelConf& blob_parallel_conf() const { return blob_parallel_conf_; }
   void GetDataAxisParallelInfo(bool* is_split, int32_t* axis, int64_t* axis_parallel_num) const;
   void GetModelAxisParallelInfo(bool* is_split, int32_t* axis, int64_t* axis_parallel_num) const;
   int64_t ParallelNum() const;
   int64_t model_split_axis() const { return model_split_axis_; }
-  bool has_data_parallel() const { return blob_parallel_conf_.has_data_parallel(); }
-  bool has_model_parallel() const { return blob_parallel_conf_.has_model_parallel(); }
-  bool has_grid_parallel() const { return blob_parallel_conf_.has_grid_parallel(); }
+  bool has_data_blob_parallel() const { return blob_parallel_conf_.has_data_blob_parallel(); }
+  bool has_model_blob_parallel() const { return blob_parallel_conf_.has_model_blob_parallel(); }
+  bool has_grid_blob_parallel() const { return blob_parallel_conf_.has_grid_blob_parallel(); }
   bool has_model_split_axis() const { return model_split_axis_ != -1; }
 
   bool operator==(const BlobParallelDesc& rhs) const {
@@ -43,22 +43,28 @@ class BlobParallelDesc final {
   bool operator!=(const BlobParallelDesc& rhs) const { return !(*this == rhs); }
 
   // Setters
-  BlobDataParallel* mut_data_parallel() { return blob_parallel_conf_.mutable_data_parallel(); }
-  BlobModelParallel* mut_model_parallel() { return blob_parallel_conf_.mutable_model_parallel(); }
-  BlobGridParallel* mut_grid_parallel() { return blob_parallel_conf_.mutable_grid_parallel(); }
+  DataBlobParallel* mut_data_blob_parallel() {
+    return blob_parallel_conf_.mutable_data_blob_parallel();
+  }
+  ModelBlobParallel* mut_model_blob_parallel() {
+    return blob_parallel_conf_.mutable_model_blob_parallel();
+  }
+  GridBlobParallel* mut_grid_blob_parallel() {
+    return blob_parallel_conf_.mutable_grid_blob_parallel();
+  }
 
  private:
-  void GetDataAxisParallelInfo(const BlobDataParallel& blob_data_parallel, bool* is_split,
+  void GetDataAxisParallelInfo(const DataBlobParallel& data_blob_parallel, bool* is_split,
                                int32_t* axis, int64_t* axis_parallel_num) const;
-  void GetDataAxisParallelInfo(const BlobModelParallel& blob_model_parallel, bool* is_split,
+  void GetDataAxisParallelInfo(const ModelBlobParallel& model_blob_parallel, bool* is_split,
                                int32_t* axis, int64_t* axis_parallel_num) const;
-  void GetDataAxisParallelInfo(const BlobGridParallel& blob_grid_parallel, bool* is_split,
+  void GetDataAxisParallelInfo(const GridBlobParallel& grid_blob_parallel, bool* is_split,
                                int32_t* axis, int64_t* axis_parallel_num) const;
-  void GetModelAxisParallelInfo(const BlobDataParallel& blob_data_parallel, bool* is_split,
+  void GetModelAxisParallelInfo(const DataBlobParallel& data_blob_parallel, bool* is_split,
                                 int32_t* axis, int64_t* axis_parallel_num) const;
-  void GetModelAxisParallelInfo(const BlobModelParallel& blob_model_parallel, bool* is_split,
+  void GetModelAxisParallelInfo(const ModelBlobParallel& model_blob_parallel, bool* is_split,
                                 int32_t* axis, int64_t* axis_parallel_num) const;
-  void GetModelAxisParallelInfo(const BlobGridParallel& blob_grid_parallel, bool* is_split,
+  void GetModelAxisParallelInfo(const GridBlobParallel& grid_blob_parallel, bool* is_split,
                                 int32_t* axis, int64_t* axis_parallel_num) const;
 
   const int64_t model_split_axis_;

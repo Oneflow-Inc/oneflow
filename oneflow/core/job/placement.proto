@@ -4,28 +4,28 @@ package oneflow;
 import "oneflow/core/operator/op_conf.proto";
 
 // for data input blob
-message BlobDataParallel {
+message DataBlobParallel {
   required int64 data_split_num = 1;
   optional int64 clone_num = 2 [default = 1];
 }
 
 // for model input blob
-message BlobModelParallel {
+message ModelBlobParallel {
   optional int64 clone_num = 1 [default = 1];
   required int64 model_split_num = 2;
 }
 
 // for output blob or element-wise op's input blob in some cases
-message BlobGridParallel {
+message GridBlobParallel {
   required int64 data_split_num = 1;
   required int64 model_split_num = 2;
 }
 
 message BlobParallelConf {
   oneof parallel_type {
-    BlobDataParallel data_parallel = 2;
-    BlobModelParallel model_parallel = 3;
-    BlobGridParallel grid_parallel = 4;
+    DataBlobParallel data_blob_parallel = 2;
+    ModelBlobParallel model_blob_parallel = 3;
+    GridBlobParallel grid_blob_parallel = 4;
   }
 }
 

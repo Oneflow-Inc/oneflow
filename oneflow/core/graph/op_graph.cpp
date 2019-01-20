@@ -445,7 +445,7 @@ int64_t OpGraph::GetDataSplitNum(const std::string& op_name, const LogicalBlobId
   OpNode* op_node = op_name2op_node_.at(GetOpNameKey(op_name, lbi));
   const LogicalBlobId& lbi_key = GetLogicalBlobIdKey(op_name, lbi);
   const BlobParallelDesc& blob_parallel_desc = op_node->BlobParallelDesc4Lbi(lbi_key);
-  CHECK(blob_parallel_desc.has_data_parallel());
+  CHECK(blob_parallel_desc.has_data_blob_parallel());
   return op_node->LogicalBlobDesc4Lbi(lbi_key).shape().At(0);
 }
 int64_t OpGraph::GetParallelNum(const std::string& op_name, const LogicalBlobId& lbi) const {

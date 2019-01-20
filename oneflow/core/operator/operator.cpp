@@ -152,8 +152,8 @@ void Operator::NaiveInferInputBlobParallelDesc(
     BlobParallelDesc* blob_parallel_desc = BlobParallelDesc4BnInOp(ibn);
     if (IsInputBnInOpAllowedModelSplit(ibn) && blob_parallel_desc->has_model_split_axis()) {
       const BlobParallelDesc& producer_blob_pr = ProducerBlobParallelDesc4BnInOp(ibn);
-      if (producer_blob_pr.has_model_parallel()) {
-        BlobModelParallel* blob_model_parallel = blob_parallel_desc->mut_model_parallel();
+      if (producer_blob_pr.has_model_blob_parallel()) {
+        ModelBlobParallel* model_blob_parallel = blob_parallel_desc->mut_model_blob_parallel();
         CHECK_EQ(producer_blob_pr.ParallelNum(), parallel_context->parallel_num());
         if (parallel_context->policy() == kDataParallel) {
           CHECK(!producer_blob_pr.has_model_split_axis());
@@ -162,25 +162,25 @@ void Operator::NaiveInferInputBlobParallelDesc(
         } else {
           UNIMPLEMENTED();
         }
-        *blob_model_parallel = producer_blob_pr.model_parallel();
-      } else if (producer_blob_pr.has_grid_parallel()) {
-        BlobGridParallel* blob_grid_parallel = blob_parallel_desc->mut_grid_parallel();
-        int64_t data_split_num = producer_blob_pr.grid_parallel().data_split_num();
-        int64_t model_split_num = producer_blob_pr.grid_parallel().model_split_num();
+        *model_blob_parallel = producer_blob_pr.model_blob_parallel();
+      } else if (producer_blob_pr.has_grid_blob_parallel()) {
+        GridBlobParallel* grid_blob_parallel = blob_parallel_desc->mut_grid_blob_parallel();
+        int64_t data_split_num = producer_blob_pr.grid_blob_parallel().data_split_num();
+        int64_t model_split_num = producer_blob_pr.grid_blob_parallel().model_split_num();
         CHECK_EQ(data_split_num * model_split_num, parallel_context->parallel_num());
-        blob_grid_parallel->set_data_split_num(data_split_num);
-        blob_grid_parallel->set_model_split_num(model_split_num);
+        grid_blob_parallel->set_data_split_num(data_split_num);
+        grid_blob_parallel->set_model_split_num(model_split_num);
       } else {
         UNIMPLEMENTED();
       }
     } else {
-      BlobDataParallel* blob_data_parallel = blob_parallel_desc->mut_data_parallel();
+      DataBlobParallel* data_blob_parallel = blob_parallel_desc->mut_data_blob_parallel();
       if (parallel_context->policy() == kDataParallel) {
-        blob_data_parallel->set_data_split_num(parallel_context->parallel_num());
-        blob_data_parallel->set_clone_num(1);
+        data_blob_parallel->set_data_split_num(parallel_context->parallel_num());
+        data_blob_parallel->set_clone_num(1);
       } else if (parallel_context->policy() == kModelParallel) {
-        blob_data_parallel->set_data_split_num(1);
-        blob_data_parallel->set_clone_num(parallel_context->parallel_num());
+        data_blob_parallel->set_data_split_num(1);
+        data_blob_parallel->set_clone_num(parallel_context->parallel_num());
       } else {
         UNIMPLEMENTED();
       }
@@ -197,14 +197,14 @@ void Operator::NaiveInferOutputBlobParallelDesc(
         && BlobParallelDesc4BnInOp(SoleIbn())->has_model_split_axis()) {
       *blob_parallel_desc = *BlobParallelDesc4BnInOp(SoleIbn());
     } else {
-      BlobGridParallel* blob_grid_parallel = blob_parallel_desc->mut_grid_parallel();
+      GridBlobParallel* grid_blob_parallel = blob_parallel_desc->mut_grid_blob_parallel();
       if (parallel_context->policy() == kDataParallel) {
-        blob_grid_parallel->set_data_split_num(parallel_context->parallel_num());
-        blob_grid_parallel->set_model_split_num(1);
+        grid_blob_parallel->set_data_split_num(parallel_context->parallel_num());
+        grid_blob_parallel->set_model_split_num(1);
       } else if (parallel_context->policy() == kModelParallel) {
         CHECK(blob_parallel_desc->has_model_split_axis());
-        blob_grid_parallel->set_data_split_num(1);
-        blob_grid_parallel->set_model_split_num(parallel_context->parallel_num());
+        grid_blob_parallel->set_data_split_num(1);
+        grid_blob_parallel->set_model_split_num(parallel_context->parallel_num());
       } else {
         UNIMPLEMENTED();
       }
