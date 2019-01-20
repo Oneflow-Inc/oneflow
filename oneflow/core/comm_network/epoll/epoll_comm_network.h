@@ -35,6 +35,9 @@ class EpollCommNet final : public CommNetIf<SocketMemDesc> {
   std::vector<int32_t> machine_id2sockfds_;
   HashMap<int, SocketHelper*> sockfd2helper_;
   HashMap<void*, std::atomic<int32_t>> dst_token2part_done_cnt_;
+  std::mutex read_done_mtx_;
+  std::queue<void*> read_done_order_;
+  HashMap<void*, bool> read_id2done_status_;
 };
 
 template<>
