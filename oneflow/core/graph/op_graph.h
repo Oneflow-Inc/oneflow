@@ -37,8 +37,6 @@ class OpNode final : public Node<OpNode, OpEdge> {
   const Shape* GetInputBlobTimeShape(const std::string& bn_in_op) const;
   const Shape* GetInputBlobTimeShape() const;
 
-  void SplitLogicalInputBlobDesc(HashMap<std::string, std::vector<BlobDesc>>*);
-  void ConcatLogicalOutputBlobDesc(const HashMap<std::string, std::vector<BlobDesc>>&);
   std::string VisualStr() const override;
 
  private:
@@ -46,6 +44,9 @@ class OpNode final : public Node<OpNode, OpEdge> {
   // Setters
   ParallelDesc* mut_parallel_desc() { return &parallel_desc_; }
   Shape* mut_out_blob_time_shape() { return &out_blob_time_shape_; }
+  HashMap<std::string, std::vector<BlobDesc>>* mut_bn2parallel_id2blob_desc() {
+    return &bn2parallel_id2blob_desc_;
+  }
   BlobDesc* NoParallelBlobDesc4BnInOp(const std::string& bn_in_op);
   BlobDesc* MutNoParallelBlobDesc(const LogicalBlobId& lbi);
   BlobDesc* LogicalBlobDesc4BnInOp(const std::string& bn_in_op);
@@ -63,6 +64,11 @@ class OpNode final : public Node<OpNode, OpEdge> {
   void ConcatBlobDesc(const std::vector<BlobDesc>& blob_descs,
                       const std::function<void(bool*, int32_t*, int64_t*)>& GetAxisParallelInfo,
                       BlobDesc* concatenated_blob_desc) const;
+  void SplitLogicalInputBlobDesc();
+  void ConcatLogicalOutputBlobDesc();
+  void CheckBlobDescs(const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+                      const ParallelContext* parallel_ctx) const;
+
   ParallelDesc parallel_desc_;
   std::shared_ptr<Operator> op_;
   HashSet<std::string> ibns_;
@@ -70,6 +76,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   Shape out_blob_time_shape_;
   HashMap<LogicalBlobId, BlobDesc> lbi2no_parallel_blob_desc_;
   HashMap<LogicalBlobId, BlobDesc> lbi2logical_blob_desc_;
+  HashMap<std::string, std::vector<BlobDesc>> bn2parallel_id2blob_desc_;
   HashMap<LogicalBlobId, BlobParallelDesc> lbi2blob_parallel_desc_;
 };
 
@@ -108,6 +115,9 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   int64_t GetParallelNum(const std::string& op_name, const LogicalBlobId& lbi) const;
   const BlobParallelDesc& GetBlobParallelDesc(const std::string& op_name,
                                               const LogicalBlobId& lbi) const;
+  void CheckBlobDescs(const std::string& op_name,
+                      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+                      const ParallelContext* parallel_ctx) const;
 
   // a set of nodes is called a pseudo chain if they can merge into a chain regardless of the
   // connections before their source nodes
