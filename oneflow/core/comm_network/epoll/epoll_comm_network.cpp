@@ -201,20 +201,25 @@ void EpollCommNet::DoRead(void* read_id, int64_t src_machine_id, void* src_token
   msg.request_write_msg.read_id = read_id;
   dst_token2part_done_cnt_.at(dst_token) = 0;
   GetSocketHelper(src_machine_id, 0)->AsyncWrite(msg);
-  std::unique_lock<std::mutex> lck(read_done_mtx_);
-  read_done_order_.push(read_id);
-  read_id2done_status_.emplace(read_id, false);
+  {
+    std::unique_lock<std::mutex> lck(read_done_mtx_);
+    read_done_order_.push(read_id);
+    read_id2done_status_.emplace(read_id, false);
+  }
 }
 
 void EpollCommNet::PartReadDone(void* read_id, void* dst_token, int32_t part_num) {
   if (dst_token2part_done_cnt_.at(dst_token).fetch_add(1, std::memory_order_relaxed)
       == (part_num - 1)) {
-    std::unique_lock<std::mutex> lck(read_done_mtx_);
-    read_id2done_status_.at(read_id) = true;
-    for (void* item = read_done_order_.front(); read_id2done_status_.at(item);
-         read_done_order_.pop()) {
-      ReadDone(item);
-      read_id2done_status_.erase(item);
+    {
+      std::unique_lock<std::mutex> lck(read_done_mtx_);
+      read_id2done_status_.at(read_id) = true;
+      while (read_id2done_status_.at(read_done_order_.front())) {
+        void* item = read_done_order_.front();
+        ReadDone(item);
+        read_id2done_status_.erase(item);
+        read_done_order_.pop();
+      }
     }
   }
 }
