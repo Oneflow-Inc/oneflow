@@ -140,6 +140,7 @@ bool NoOutRegstConsumedByBwNode(TaskNode* node) {
   if (fw_node == nullptr) { return false; }
   for (TaskEdge* edge : fw_node->out_edges()) {
     auto* fw_consumer = dynamic_cast<NormalForwardCompTaskNode*>(edge->dst_node());
+    if (fw_consumer == nullptr) { return false; }
     if (fw_consumer->HasBackwardCompTaskNode()) { return false; }
   }
   return true;

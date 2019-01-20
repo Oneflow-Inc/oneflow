@@ -43,19 +43,19 @@ class RegstLifetimeGraph final : public Graph<const RegstLifetimeNode, RegstLife
  public:
   OF_DISALLOW_COPY_AND_MOVE(RegstLifetimeGraph);
   RegstLifetimeGraph(
-      const std::list<const RegstDescProto*>& regst_descs,
+      const std::vector<const RegstDescProto*>& regst_descs,
       const std::function<void(const RegstDescProto*, HashSet<int64_t>*)>& ComputeLifetimeActorIds);
   ~RegstLifetimeGraph() = default;
 
   void ForEachSameColoredRegstDescs(
-      const std::function<void(const std::list<const RegstDescProto*>&)>& Handler) const;
+      const std::function<void(const std::vector<const RegstDescProto*>&)>& Handler) const;
 
  private:
   void InitNodes(
-      const std::list<const RegstDescProto*>& regst_descs,
+      const std::vector<const RegstDescProto*>& regst_descs,
       const std::function<void(const RegstDescProto*, HashSet<int64_t>*)>& ComputeLifetimeActorIds,
-      std::list<RegstLifetimeNode*>* nodes);
-  void InitEdges(const std::list<RegstLifetimeNode*>& nodes);
+      std::vector<RegstLifetimeNode*>* nodes);
+  void InitEdges(const std::vector<RegstLifetimeNode*>& nodes);
 };
 
 }  // namespace oneflow
