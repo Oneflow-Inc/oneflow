@@ -77,11 +77,13 @@ void EpollCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& actor_ms
 void EpollCommNet::RequestRead(int64_t dst_machine_id, void* src_token, void* dst_token,
                                void* read_id) const {
   int32_t total_byte_size = static_cast<const SocketMemDesc*>(src_token)->byte_size;
+  CHECK_GT(total_byte_size, 0);
   int32_t offset = (total_byte_size + epoll_conf_.link_num() - 1) / epoll_conf_.link_num();
   offset = RoundUp(offset, epoll_conf_.msg_segment_kbyte() * 1024);
   int32_t part_num = (total_byte_size + offset - 1) / offset;
   for (int32_t link_i = 0; link_i < part_num; ++link_i) {
     int32_t byte_size = (total_byte_size > offset) ? (offset) : (total_byte_size);
+    CHECK_GT(byte_size, 0);
     total_byte_size -= byte_size;
     SocketMsg msg;
     msg.msg_type = SocketMsgType::kRequestRead;
