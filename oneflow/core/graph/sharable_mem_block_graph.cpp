@@ -73,7 +73,9 @@ void SharableMemBlockGraph::ForEachSourceNodeGroup(
   for (const SharableMemBlockNode* source : source_nodes()) {
     group_key2source_nodes[GroupBy(source)].push_back(source);
   }
-  for (const auto& pair : group_key2source_nodes) { Handler(pair.second); }
+  for (const auto& pair : group_key2source_nodes) {
+    if (pair.second.size() > 1) { Handler(pair.second); }
+  }
 }
 
 }  // namespace oneflow
