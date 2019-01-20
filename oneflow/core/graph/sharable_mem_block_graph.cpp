@@ -1,6 +1,8 @@
 #include "oneflow/core/graph/sharable_mem_block_graph.h"
 #include "oneflow/core/register/register_desc.h"
 #include "oneflow/core/register/runtime_register_desc.h"
+#include "oneflow/core/thread/thread_pool.h"
+#include "oneflow/core/common/blocking_counter.h"
 
 namespace oneflow {
 
@@ -73,7 +75,18 @@ void SharableMemBlockGraph::ForEachSourceNodeGroup(
   for (const SharableMemBlockNode* source : source_nodes()) {
     group_key2source_nodes[GroupBy(source)].push_back(source);
   }
-  for (const auto& pair : group_key2source_nodes) { Handler(pair.second); }
+  int64_t group_num = group_key2source_nodes.size();
+  int64_t cpu_num = std::thread::hardware_concurrency();
+  int64_t thread_pool_size = std::min(group_num, cpu_num);
+  BlockingCounter counter(group_num);
+  ThreadPool thread_pool(thread_pool_size);
+  for (const auto& pair : group_key2source_nodes) {
+    thread_pool.AddWork([&]() {
+      Handler(pair.second);
+      counter.Decrease();
+    });
+  }
+  counter.WaitUntilCntEqualZero();
 }
 
 }  // namespace oneflow

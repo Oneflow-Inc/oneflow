@@ -12,7 +12,7 @@ include(libjpeg-turbo)
 include(opencv)
 include(eigen)
 include(cocoapi)
-include(half)
+#include(half)
 
 if (BUILD_CUDA)
   set(CUDA_SEPARABLE_COMPILATION ON)
@@ -91,7 +91,7 @@ set(oneflow_third_party_dependencies
   eigen
   cocoapi_copy_headers_to_destination
   cocoapi_copy_libs_to_destination
-  half_copy_headers_to_destination
+#  half_copy_headers_to_destination
 )
 
 include_directories(
