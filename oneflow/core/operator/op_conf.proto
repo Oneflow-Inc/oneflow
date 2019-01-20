@@ -965,10 +965,9 @@ message IdentityOpConf {
 
 message TopKOpConf {
   required string in = 1;
-  optional string values = 2;
-  optional string indices = 3;
-  optional int64 k = 4 [default = 1];
-  optional bool sorted = 5 [default = true];
+  required string out = 2;
+  optional int64 k = 3 [default = 1];
+  optional bool sorted = 4 [default = true];
 }
 
 message OperatorConf {

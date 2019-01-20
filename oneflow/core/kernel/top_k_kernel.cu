@@ -11,8 +11,8 @@ namespace oneflow {
 template<typename T>
 struct TopKKernelUtil<DeviceType::kGPU, T> {
   static void Forward(const T* in_ptr, const bool sorted, const int32_t instance_num,
-                      const int32_t elem_cnt_per_instance, const int32_t k, int32_t* fw_buf,
-                      int32_t* indices_ptr, T* values_ptr) {
+                      const int32_t instance_dim, const int32_t k, int32_t* fw_buf,
+                      int32_t* out_ptr) {
     UNIMPLEMENTED();
   }
 };
