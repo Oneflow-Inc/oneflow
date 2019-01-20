@@ -208,7 +208,7 @@ void OpNode::SplitLogicalInputBlobDesc() {
 }
 
 void OpNode::ConcatLogicalOutputBlobDesc() {
-  for (const std::string& bn : op().input_bns()) {
+  for (const std::string& bn : op().output_bns()) {
     const BlobParallelDesc& blob_parallel_desc = BlobParallelDesc4BnInOp(bn);
     CHECK_EQ(blob_parallel_desc.ParallelNum(), parallel_desc().parallel_num());
     auto GetDataAxisParallel = [&](bool* is_split, int32_t* axis, int64_t* axis_parallel_num) {
@@ -378,8 +378,7 @@ void OpGraph::InferModelSplitAxis(HashMap<LogicalBlobId, int32_t>* lbi2model_spl
       return &lbi2model_split_axis->at(lbi);
     };
     auto ShapeNumAxes4BnInOp = [&](const std::string& bn) -> int32_t {
-      const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(bn);
-      return op_node->NoParallelBlobDesc4Lbi(lbi).shape().NumAxes();
+      return op_node->NoParallelBlobDesc4BnInOp(bn)->shape().NumAxes();
     };
     ParallelContext parallel_ctx;
     parallel_ctx.set_parallel_id(0);

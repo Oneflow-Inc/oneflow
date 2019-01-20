@@ -58,10 +58,10 @@ DEFINE_BLD_BOXING_OP_CONF_METHOD(InBoxingTaskNode, DataConcatAndDataSplit) {
   BoxSplitConf* split_conf = conf->mutable_split_box();
   split_conf->set_axis(0);
   const std::string& op_name = out_logical->SoleOp()->op_name();
-  int64_t data_split_num = Global<OpGraph>::Get()->GetDataSplitNum(op_name, lbi);
+  int64_t data_axis_dim_size = Global<OpGraph>::Get()->GetDataSplitNum(op_name, lbi);
   int64_t parallel_num = Global<OpGraph>::Get()->GetParallelNum(op_name, lbi);
   CHECK_EQ(out_logical->parallel_desc()->parallel_num(), parallel_num);
-  BalancedSplitter bs(data_split_num, parallel_num);
+  BalancedSplitter bs(data_axis_dim_size, parallel_num);
   SetBoxSplitPart(sorted_out_edges, bs, split_conf);
 }
 DEFINE_BLD_BOXING_OP_CONF_METHOD(OutBoxingTaskNode, DataConcatAndDataSplit) {
@@ -69,16 +69,16 @@ DEFINE_BLD_BOXING_OP_CONF_METHOD(OutBoxingTaskNode, DataConcatAndDataSplit) {
   BoxSplitConf* split_conf = conf->mutable_split_box();
   split_conf->set_axis(0);
   const std::string& in_op_name = in_logical->SoleOp()->op_name();
-  int64_t in_data_split_num = Global<OpGraph>::Get()->GetDataSplitNum(in_op_name, lbi);
+  int64_t in_data_axis_dim_size = Global<OpGraph>::Get()->GetDataSplitNum(in_op_name, lbi);
   int64_t in_parallel_num = Global<OpGraph>::Get()->GetParallelNum(in_op_name, lbi);
-  BalancedSplitter in_bs(in_data_split_num, in_parallel_num);
+  BalancedSplitter in_bs(in_data_axis_dim_size, in_parallel_num);
   Range in_range =
       in_bs.At(sorted_in_edges.front().parallel_id_min, sorted_in_edges.back().parallel_id_max);
   const std::string& out_op_name = out_logical->SoleOp()->op_name();
-  int64_t out_data_split_num = Global<OpGraph>::Get()->GetDataSplitNum(out_op_name, lbi);
+  int64_t out_data_axis_dim_size = Global<OpGraph>::Get()->GetDataSplitNum(out_op_name, lbi);
   int64_t out_parallel_num = Global<OpGraph>::Get()->GetParallelNum(out_op_name, lbi);
-  CHECK_EQ(in_data_split_num, out_data_split_num);
-  BalancedSplitter out_bs(out_data_split_num, out_parallel_num);
+  CHECK_EQ(in_data_axis_dim_size, out_data_axis_dim_size);
+  BalancedSplitter out_bs(out_data_axis_dim_size, out_parallel_num);
   for (const EdgeInfo& out_edge : sorted_out_edges) {
     Range out_range = out_bs.At(out_edge.parallel_id_min, out_edge.parallel_id_max);
     Range intersectant_range = FindIntersectant(in_range, out_range);
@@ -93,10 +93,10 @@ DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, DataConcatAndModelSplit) {
   conf->mutable_concat_box()->set_axis(0);
   BoxSplitConf* split_conf = conf->mutable_split_box();
   const std::string& out_op_name = out_logical->SoleOp()->op_name();
-  int64_t out_model_split_num = Global<OpGraph>::Get()->GetModelSplitNum(out_op_name, lbi);
+  int64_t out_model_axis_dim_size = Global<OpGraph>::Get()->GetModelSplitNum(out_op_name, lbi);
   int64_t out_parallel_num = Global<OpGraph>::Get()->GetParallelNum(out_op_name, lbi);
   split_conf->set_axis(Global<OpGraph>::Get()->GetModelSplitAxis(out_op_name, lbi));
-  BalancedSplitter bs(out_model_split_num, out_parallel_num);
+  BalancedSplitter bs(out_model_axis_dim_size, out_parallel_num);
   SetBoxSplitPart(sorted_out_edges, bs, split_conf);
 }
 DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, ModelConcatAndDataSplit) {
@@ -106,9 +106,9 @@ DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, ModelConcatAndDataSplit) {
   split_conf->set_axis(0);
 
   const std::string& out_op_name = out_logical->SoleOp()->op_name();
-  int64_t out_data_split_num = Global<OpGraph>::Get()->GetDataSplitNum(out_op_name, lbi);
+  int64_t out_data_axis_dim_size = Global<OpGraph>::Get()->GetDataSplitNum(out_op_name, lbi);
   int64_t out_parallel_num = Global<OpGraph>::Get()->GetParallelNum(out_op_name, lbi);
-  BalancedSplitter bs(out_data_split_num, out_parallel_num);
+  BalancedSplitter bs(out_data_axis_dim_size, out_parallel_num);
   SetBoxSplitPart(sorted_out_edges, bs, split_conf);
 }
 DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, ModelConcatAndClone) {
@@ -122,9 +122,9 @@ DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, AddAndDataSplit) {
   split_conf->set_axis(0);
 
   const std::string& out_op_name = out_logical->SoleOp()->op_name();
-  int64_t out_data_split_num = Global<OpGraph>::Get()->GetDataSplitNum(out_op_name, lbi);
+  int64_t out_data_axis_dim_size = Global<OpGraph>::Get()->GetDataSplitNum(out_op_name, lbi);
   int64_t out_parallel_num = Global<OpGraph>::Get()->GetParallelNum(out_op_name, lbi);
-  BalancedSplitter bs(out_data_split_num, out_parallel_num);
+  BalancedSplitter bs(out_data_axis_dim_size, out_parallel_num);
   SetBoxSplitPart(sorted_out_edges, bs, split_conf);
 }
 DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, AddAndModelSplit) {
@@ -133,9 +133,9 @@ DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, AddAndModelSplit) {
   const std::string& out_op_name = out_logical->SoleOp()->op_name();
   split_conf->set_axis(Global<OpGraph>::Get()->GetModelSplitAxis(out_op_name, lbi));
 
-  int64_t out_model_split_num = Global<OpGraph>::Get()->GetModelSplitNum(out_op_name, lbi);
+  int64_t out_model_axis_dim_size = Global<OpGraph>::Get()->GetModelSplitNum(out_op_name, lbi);
   int64_t out_parallel_num = Global<OpGraph>::Get()->GetParallelNum(out_op_name, lbi);
-  BalancedSplitter bs(out_model_split_num, out_parallel_num);
+  BalancedSplitter bs(out_model_axis_dim_size, out_parallel_num);
   SetBoxSplitPart(sorted_out_edges, bs, split_conf);
 }
 DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, AddAndClone) {
