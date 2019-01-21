@@ -11,6 +11,8 @@ void VariableOp::InitFromOpConf() {
 
 const PbMessage& VariableOp::GetCustomizedConf() const { return op_conf().variable_conf(); }
 
+int32_t VariableOp::ModelSplitAxis() const { return op_conf().variable_conf().model_split_axis(); }
+
 void VariableOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx) const {
   const VariableOpConf& variable_conf = op_conf().variable_conf();

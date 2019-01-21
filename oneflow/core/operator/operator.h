@@ -140,9 +140,10 @@ class Operator {
     UNIMPLEMENTED();
   }
   // Infer out blob's time shape
-  void InferOutBlobTimeShapeIf(std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
-                               const ParallelContext*, Shape* time_shape) const;
-  virtual void InferOutBlobTimeShape(
+  void InferOutputBlobTimeShapeIf(
+      std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
+      Shape* time_shape) const;
+  virtual void InferOutputBlobTimeShape(
       std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
       Shape* time_shape) const;
   // Infer blob's model_split_axis
@@ -169,11 +170,11 @@ class Operator {
 
  protected:
   // infer model_split_axis
-  virtual void InferOutBlobModelSplitAxis(
+  virtual void InferOutputBlobModelSplitAxis(
       std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
       std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
       const ParallelContext* parallel_context) const = 0;
-  void NaiveInferOutBlobModelSplitAxis(
+  void NaiveInferOutputBlobModelSplitAxis(
       std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
       std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
       const ParallelContext* parallel_context) const;

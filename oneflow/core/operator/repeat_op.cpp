@@ -11,7 +11,7 @@ void oneflow::RepeatOp::InitFromOpConf() {
   EnrollOutputBn("out");
 }
 
-void RepeatOp::InferOutBlobTimeShape(
+void RepeatOp::InferOutputBlobTimeShape(
     std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
     const ParallelContext* parallel_ctx, Shape* time_shape) const {
   std::vector<int64_t> dim_vec(GetTimeShape4BnInOp("in")->dim_vec());

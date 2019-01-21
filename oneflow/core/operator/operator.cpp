@@ -107,13 +107,13 @@ void Operator::InferBwBufBlobDescsIf(
   }
 }
 
-void Operator::InferOutBlobTimeShapeIf(
+void Operator::InferOutputBlobTimeShapeIf(
     std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
     const ParallelContext* parallel_ctx, Shape* time_shape) const {
-  InferOutBlobTimeShape(GetTimeShape4BnInOp, parallel_ctx, time_shape);
+  InferOutputBlobTimeShape(GetTimeShape4BnInOp, parallel_ctx, time_shape);
 }
 
-void Operator::InferOutBlobTimeShape(
+void Operator::InferOutputBlobTimeShape(
     std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
     Shape* time_shape) const {
   for (const std::string& bn : input_bns()) {
@@ -217,11 +217,11 @@ void Operator::InferBlobModelSplitAxisIf(
     std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
     const ParallelContext* parallel_context) const {
   if (!output_bns().empty()) {
-    InferOutBlobModelSplitAxis(ModelSplitAxis4BnInOp, ShapeNumAxes4BnInOp, parallel_context);
+    InferOutputBlobModelSplitAxis(ModelSplitAxis4BnInOp, ShapeNumAxes4BnInOp, parallel_context);
   }
 }
 
-void Operator::NaiveInferOutBlobModelSplitAxis(
+void Operator::NaiveInferOutputBlobModelSplitAxis(
     std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
     std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
     const ParallelContext* parallel_context) const {

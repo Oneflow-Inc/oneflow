@@ -22,9 +22,10 @@ class ReduceIdentityOp final : public Operator {
   bool NeedOutBlobWhenBackward() const override { return false; }
 
  private:
-  void InferOutBlobModelSplitAxis(std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
-                                  std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
-                                  const ParallelContext* parallel_context) const override {
+  void InferOutputBlobModelSplitAxis(
+      std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
+      std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
+      const ParallelContext* parallel_context) const override {
     UNIMPLEMENTED();
   }
 

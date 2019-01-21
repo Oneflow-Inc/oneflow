@@ -20,16 +20,18 @@ class VariableOp final : public Operator {
   bool NeedOutBlobWhenBackward() const override { return false; }
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
-  int32_t ModelSplitAxis() const override { return 0; }
+  int32_t ModelSplitAxis() const override;
 
   void set_is_fw_inplace(bool val) const { *is_fw_inplace_ = val; }
   void set_is_bw_inplace(bool val) const { *is_bw_inplace_ = val; }
 
  private:
-  void InferOutBlobModelSplitAxis(std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
-                                  std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
-                                  const ParallelContext* parallel_context) const override {
-    NaiveInferOutBlobModelSplitAxis(ModelSplitAxis4BnInOp, ShapeNumAxes4BnInOp, parallel_context);
+  void InferOutputBlobModelSplitAxis(
+      std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
+      std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
+      const ParallelContext* parallel_context) const override {
+    NaiveInferOutputBlobModelSplitAxis(ModelSplitAxis4BnInOp, ShapeNumAxes4BnInOp,
+                                       parallel_context);
   }
   void InferOutputBlobParallelDesc(
       std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,

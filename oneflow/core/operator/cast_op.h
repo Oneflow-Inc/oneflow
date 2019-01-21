@@ -18,10 +18,12 @@ class CastOp final : public Operator {
                       const ParallelContext* parallel_ctx) const override;
 
  private:
-  void InferOutBlobModelSplitAxis(std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
-                                  std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
-                                  const ParallelContext* parallel_context) const override {
-    NaiveInferOutBlobModelSplitAxis(ModelSplitAxis4BnInOp, ShapeNumAxes4BnInOp, parallel_context);
+  void InferOutputBlobModelSplitAxis(
+      std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
+      std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
+      const ParallelContext* parallel_context) const override {
+    NaiveInferOutputBlobModelSplitAxis(ModelSplitAxis4BnInOp, ShapeNumAxes4BnInOp,
+                                       parallel_context);
   }
 };
 

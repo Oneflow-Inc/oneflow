@@ -22,9 +22,10 @@ class GatherOp final : public Operator {
                             KernelConf* kernel_conf) const override;
 
  private:
-  void InferOutBlobModelSplitAxis(std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
-                                  std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
-                                  const ParallelContext* parallel_context) const override;
+  void InferOutputBlobModelSplitAxis(
+      std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
+      std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
+      const ParallelContext* parallel_context) const override;
 };
 
 }  // namespace oneflow

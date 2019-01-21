@@ -9,7 +9,7 @@ void PackOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
-void PackOp::InferOutBlobTimeShape(
+void PackOp::InferOutputBlobTimeShape(
     std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
     const ParallelContext* parallel_ctx, Shape* time_shape) const {
   std::vector<int64_t> dim_vec(GetTimeShape4BnInOp("in")->dim_vec());

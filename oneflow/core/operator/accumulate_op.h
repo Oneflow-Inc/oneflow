@@ -16,17 +16,19 @@ class AccumulateOp final : public Operator {
 
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override {}
-  void InferOutBlobTimeShape(std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
-                             const ParallelContext* parallel_ctx,
-                             Shape* time_shape) const override {
+  void InferOutputBlobTimeShape(std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                Shape* time_shape) const override {
     TODO();
   }
 
  private:
-  void InferOutBlobModelSplitAxis(std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
-                                  std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
-                                  const ParallelContext* parallel_context) const override {
-    NaiveInferOutBlobModelSplitAxis(ModelSplitAxis4BnInOp, ShapeNumAxes4BnInOp, parallel_context);
+  void InferOutputBlobModelSplitAxis(
+      std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
+      std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
+      const ParallelContext* parallel_context) const override {
+    NaiveInferOutputBlobModelSplitAxis(ModelSplitAxis4BnInOp, ShapeNumAxes4BnInOp,
+                                       parallel_context);
   }
 
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override { return GenPackedLbi(); }
