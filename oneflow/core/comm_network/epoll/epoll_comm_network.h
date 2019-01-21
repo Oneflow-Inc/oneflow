@@ -20,7 +20,7 @@ class EpollCommNet final : public CommNetIf<SocketMemDesc> {
 
   void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) const override;
   void RequestRead(int64_t dst_machine_id, void* src_token, void* dst_token, void* read_id) const;
-  void PartReadDone(void* read_id, void* dst_token, int32_t part_num);
+  void PartReadDone(void* read_id, int64_t src_machine_id, void* dst_token, int32_t part_num);
 
  private:
   SocketMemDesc* NewMemDesc(void* ptr, size_t byte_size) const override;
@@ -36,7 +36,7 @@ class EpollCommNet final : public CommNetIf<SocketMemDesc> {
   HashMap<int, SocketHelper*> sockfd2helper_;
   HashMap<void*, std::atomic<int32_t>> dst_token2part_done_cnt_;
   std::mutex read_done_mtx_;
-  std::queue<void*> read_done_order_;
+  HashMap<int32_t, std::queue<void*>> machine_id2read_done_order_;
   HashMap<void*, bool> read_id2done_status_;
 };
 

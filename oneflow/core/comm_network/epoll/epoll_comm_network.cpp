@@ -87,6 +87,7 @@ void EpollCommNet::RequestRead(int64_t dst_machine_id, void* src_token, void* ds
     total_byte_size -= byte_size;
     SocketMsg msg;
     msg.msg_type = SocketMsgType::kRequestRead;
+    msg.request_read_msg.src_machine_id = Global<MachineCtx>::Get()->this_machine_id();
     msg.request_read_msg.src_token = src_token;
     msg.request_read_msg.dst_token = dst_token;
     msg.request_read_msg.offset = link_i * offset;
@@ -203,22 +204,24 @@ void EpollCommNet::DoRead(void* read_id, int64_t src_machine_id, void* src_token
   GetSocketHelper(src_machine_id, 0)->AsyncWrite(msg);
   {
     std::unique_lock<std::mutex> lck(read_done_mtx_);
-    read_done_order_.push(read_id);
+    machine_id2read_done_order_[src_machine_id].push(read_id);
     read_id2done_status_.emplace(read_id, false);
   }
 }
 
-void EpollCommNet::PartReadDone(void* read_id, void* dst_token, int32_t part_num) {
+void EpollCommNet::PartReadDone(void* read_id, int64_t src_machine_id, void* dst_token,
+                                int32_t part_num) {
   if (dst_token2part_done_cnt_.at(dst_token).fetch_add(1, std::memory_order_relaxed)
       == (part_num - 1)) {
+    read_id2done_status_.at(read_id) = true;
     {
       std::unique_lock<std::mutex> lck(read_done_mtx_);
-      read_id2done_status_.at(read_id) = true;
-      while (read_id2done_status_.at(read_done_order_.front())) {
-        void* item = read_done_order_.front();
+      auto& read_done_order = machine_id2read_done_order_.at(src_machine_id);
+      while (read_id2done_status_.at(read_done_order.front())) {
+        void* item = read_done_order.front();
         ReadDone(item);
         read_id2done_status_.erase(item);
-        read_done_order_.pop();
+        read_done_order.pop();
       }
     }
   }
