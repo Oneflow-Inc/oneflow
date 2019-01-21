@@ -38,6 +38,7 @@ struct RequestWriteMsg {
 };
 
 struct RequestReadMsg {
+  int64_t src_machine_id;
   void* src_token;
   void* dst_token;
   int64_t offset;
