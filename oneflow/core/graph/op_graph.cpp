@@ -399,13 +399,8 @@ void OpGraph::InferBlobParallelDesc(
       return op_node->MutBlobParallelDesc4BnInOp(bn, lbi2model_split_axis.at(lbi));
     };
     auto ProducerBlobParallelDesc4BnInOp = [&](const std::string& bn) -> const BlobParallelDesc& {
-      const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(bn);
-      for (OpEdge* in_edge : op_node->in_edges()) {
-        if (in_edge->lbi2ibns().find(lbi) != in_edge->lbi2ibns().end()) {
-          return in_edge->src_node()->BlobParallelDesc4Lbi(lbi);
-        }
-      }
-      UNIMPLEMENTED();
+      const LogicalBlobId lbi = op_node->op().BnInOp2Lbi(bn);
+      return op_node->SrcNode4InputBnInOp(bn)->BlobParallelDesc4Lbi(lbi);
     };
     ParallelContext parallel_ctx;
     parallel_ctx.set_parallel_id(0);
