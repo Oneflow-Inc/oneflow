@@ -106,8 +106,12 @@ void BlobParallelDesc::GetModelAxisParallelInfo(const DataBlobParallel& data_blo
 void BlobParallelDesc::GetModelAxisParallelInfo(const ModelBlobParallel& model_blob_parallel,
                                                 bool* is_split, int32_t* axis,
                                                 int64_t* axis_parallel_num) const {
-  *is_split = true;
-  CHECK(has_model_split_axis());
+  *is_split = model_blob_parallel.model_split_num() > 1;
+  if (*is_split) {
+    CHECK(has_model_split_axis());
+  } else {
+    CHECK(!has_model_split_axis());
+  }
   *axis = model_split_axis();
   *axis_parallel_num = model_blob_parallel.model_split_num();
 }
@@ -115,8 +119,12 @@ void BlobParallelDesc::GetModelAxisParallelInfo(const ModelBlobParallel& model_b
 void BlobParallelDesc::GetModelAxisParallelInfo(const GridBlobParallel& grid_blob_parallel,
                                                 bool* is_split, int32_t* axis,
                                                 int64_t* axis_parallel_num) const {
-  *is_split = true;
-  CHECK(has_model_split_axis());
+  *is_split = grid_blob_parallel.model_split_num() > 1;
+  if (*is_split) {
+    CHECK(has_model_split_axis());
+  } else {
+    CHECK(!has_model_split_axis());
+  }
   *axis = model_split_axis();
   *axis_parallel_num = grid_blob_parallel.model_split_num();
 }

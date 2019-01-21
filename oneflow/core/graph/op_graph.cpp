@@ -132,6 +132,7 @@ void OpNode::ForEachParallelBlobDesc(
     // split BlobDesc
     CHECK_GE(axis, 0);
     CHECK_LT(axis, blob_desc.shape().NumAxes());
+    CHECK_GE(blob_desc.shape().At(axis), axis_parallel_num);
     BalancedSplitter bs(blob_desc.shape().At(axis), axis_parallel_num);
     FOR_RANGE(int64_t, axis_parallel_id, 0, axis_parallel_num) {
       BlobDesc sub_blob_desc(blob_desc);
@@ -162,6 +163,7 @@ void OpNode::ConcatBlobDesc(
     for (const BlobDesc& blob_desc : blob_descs) {
       logical_blob_axis_dim += blob_desc.shape().At(axis);
     }
+    CHECK_GE(logical_blob_axis_dim, axis_parallel_num);
     BalancedSplitter bs(logical_blob_axis_dim, axis_parallel_num);
     std::vector<BlobDesc> same_blob_descs(blob_descs);
     FOR_RANGE(int64_t, axis_parallel_id, 0, axis_parallel_num) {
