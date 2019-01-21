@@ -1,5 +1,6 @@
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/logical_node.h"
+#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 

@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/variable_op.h"
+#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 
@@ -26,9 +27,8 @@ void VariableOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
     CHECK_GE(model_split_axis, 0);
     CHECK_LT(model_split_axis, model_blob_desc->shape().NumAxes());
     int64_t split_dim_num = model_blob_desc->shape().At(model_split_axis);
-    CHECK_EQ(split_dim_num % parallel_ctx->parallel_num(), 0);
-    model_blob_desc->mut_shape().Set(model_split_axis,
-                                     split_dim_num / parallel_ctx->parallel_num());
+    BalancedSplitter bs(split_dim_num, parallel_ctx->parallel_num());
+    model_blob_desc->mut_shape().Set(model_split_axis, bs.At(parallel_ctx->parallel_id()).size());
   } else {
     CHECK_EQ(parallel_ctx->policy(), kDataParallel);
   }
