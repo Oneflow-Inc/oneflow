@@ -102,12 +102,21 @@ OpNode* OpNode::ProducerOpNode4BnInOp(const std::string& bn_in_op) {
 OpNode* OpNode::SrcNode4InputBnInOp(const std::string& bn_in_op) const {
   const LogicalBlobId& lbi = op().BnInOp2Lbi(bn_in_op);
   CHECK(ibns_.find(bn_in_op) != ibns_.end());
+  return SrcNode4InputLbi(lbi);
+}
+
+OpNode* OpNode::ProducerOpNode4Lbi(const LogicalBlobId& lbi) {
+  OpNode* producer = SrcNode4InputLbi(lbi);
+  if (producer == nullptr) { producer = this; }
+  return producer;
+}
+
+OpNode* OpNode::SrcNode4InputLbi(const LogicalBlobId& lbi) const {
   for (OpEdge* edge : in_edges()) {
     for (const LogicalBlobId& edge_lbi : edge->lbis()) {
       if (lbi == edge_lbi) { return edge->src_node(); }
     }
   }
-  UNIMPLEMENTED();
   return nullptr;
 }
 
@@ -241,7 +250,7 @@ void OpNode::CheckBlobDescs(const std::function<BlobDesc*(const std::string&)>& 
                             const ParallelContext* parallel_ctx) const {
   int64_t parallel_id = parallel_ctx->parallel_id();
   auto Check = [&](const std::string& bn) {
-    CHECK(bn2parallel_id2blob_desc_.find(bn) != bn2parallel_id2blob_desc_.end());
+    if (bn2parallel_id2blob_desc_.find(bn) == bn2parallel_id2blob_desc_.end()) { return; }
     CHECK_EQ(parallel_ctx->parallel_num(), bn2parallel_id2blob_desc_.at(bn).size());
     CHECK(*GetBlobDesc4BnInOp(bn) == bn2parallel_id2blob_desc_.at(bn).at(parallel_id));
   };
@@ -451,14 +460,15 @@ int64_t OpGraph::GetModelSplitNum(const std::string& op_name, const LogicalBlobI
   const LogicalBlobId& lbi_key = GetLogicalBlobIdKey(op_name, lbi);
   const BlobParallelDesc& blob_parallel_desc = op_node->BlobParallelDesc4Lbi(lbi_key);
   CHECK(blob_parallel_desc.has_model_split_axis());
-  return op_node->LogicalBlobDesc4Lbi(lbi_key).shape().At(blob_parallel_desc.model_split_axis());
+  return op_node->ProducerOpNode4Lbi(lbi)->LogicalBlobDesc4Lbi(lbi_key).shape().At(
+      blob_parallel_desc.model_split_axis());
 }
 int64_t OpGraph::GetDataSplitNum(const std::string& op_name, const LogicalBlobId& lbi) const {
   OpNode* op_node = op_name2op_node_.at(GetOpNameKey(op_name, lbi));
   const LogicalBlobId& lbi_key = GetLogicalBlobIdKey(op_name, lbi);
   const BlobParallelDesc& blob_parallel_desc = op_node->BlobParallelDesc4Lbi(lbi_key);
-  CHECK(blob_parallel_desc.has_data_blob_parallel());
-  return op_node->LogicalBlobDesc4Lbi(lbi_key).shape().At(0);
+  CHECK(blob_parallel_desc.has_data_blob_parallel() || blob_parallel_desc.has_grid_blob_parallel());
+  return op_node->ProducerOpNode4Lbi(lbi)->LogicalBlobDesc4Lbi(lbi_key).shape().At(0);
 }
 int64_t OpGraph::GetParallelNum(const std::string& op_name, const LogicalBlobId& lbi) const {
   return GetBlobParallelDesc(op_name, lbi).ParallelNum();

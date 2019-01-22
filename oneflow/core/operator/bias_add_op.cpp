@@ -37,7 +37,13 @@ void BiasAddOp::InferOutputBlobModelSplitAxis(
     std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
     std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
     const ParallelContext* parallel_context) const {
-  *ModelSplitAxis4BnInOp("out") = 1;
+  if (parallel_context->policy() == kDataParallel) {
+    *ModelSplitAxis4BnInOp("out") = -1;
+  } else if (parallel_context->policy() == kModelParallel) {
+    *ModelSplitAxis4BnInOp("out") = 1;
+  } else {
+    UNIMPLEMENTED();
+  }
 }
 
 REGISTER_OP(OperatorConf::kBiasAddConf, BiasAddOp);

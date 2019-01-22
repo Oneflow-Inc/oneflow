@@ -55,6 +55,8 @@ class OpNode final : public Node<OpNode, OpEdge> {
                                                int32_t model_split_axis);
   OpNode* SrcNode4InputBnInOp(const std::string& bn_in_op) const;
   OpNode* ProducerOpNode4BnInOp(const std::string& bn_in_op);
+  OpNode* SrcNode4InputLbi(const LogicalBlobId& lbi) const;
+  OpNode* ProducerOpNode4Lbi(const LogicalBlobId& lbi);
   void ForEachParallelBlobDesc(
       const BlobDesc& blob_desc,
       const std::function<void(bool*, int32_t*, int64_t*)>& GetAxisParallelInfo,
