@@ -17,13 +17,13 @@ void AccuracyKernel<device_type, PredType, LabelType>::SetAccuracyInstanceNumBlo
                                            static_cast<PredType>(dim0_valid_num_sum),
                                            accuracy_instance_num->mut_dptr<PredType>());
   } else {
-    Blob* weight_reduce_buf = BnInOp2Blob("weight_reduce_buf");
-    CHECK_LE(weight->shape().elem_cnt(), weight_reduce_buf->shape().elem_cnt());
+    Blob* weight_reduce_tmp = BnInOp2Blob("weight_reduce_tmp");
+    CHECK_LE(weight->shape().elem_cnt(), weight_reduce_tmp->shape().elem_cnt());
     const int64_t num_instance = weight->shape().elem_cnt();
     NdarrayUtil<device_type, PredType>::ReduceSum(
         ctx.device_ctx, XpuVarNdarray<PredType>({1}, accuracy_instance_num->mut_dptr<PredType>()),
         XpuVarNdarray<const PredType>({num_instance}, weight->dptr<PredType>()),
-        XpuVarNdarray<PredType>({num_instance}, weight_reduce_buf->mut_dptr<PredType>()));
+        XpuVarNdarray<PredType>({num_instance}, weight_reduce_tmp->mut_dptr<PredType>()));
   }
 }
 

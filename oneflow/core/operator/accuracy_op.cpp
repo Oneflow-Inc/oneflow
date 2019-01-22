@@ -9,7 +9,7 @@ void AccuracyOp::InitFromOpConf() {
   EnrollOutputBn("accuracy_instance_num", false);
   if (op_conf().accuracy_conf().has_weight()) {
     EnrollInputBn("weight", false);
-    EnrollFwBufBn("weight_reduce_buf");
+    EnrollDataTmpBn("weight_reduce_tmp");
   }
 }
 
@@ -47,9 +47,9 @@ void AccuracyOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
     if (label_blob_desc->has_dim0_inner_shape()) {
       CHECK_EQ(weight->dim0_inner_shape(), label_blob_desc->dim0_inner_shape());
     }
-    BlobDesc* weight_reduce_buf = GetBlobDesc4BnInOp("weight_reduce_buf");
-    weight_reduce_buf->mut_shape() = weight->shape();
-    weight_reduce_buf->set_data_type(weight->data_type());
+    BlobDesc* weight_reduce_tmp = GetBlobDesc4BnInOp("weight_reduce_tmp");
+    weight_reduce_tmp->mut_shape() = weight->shape();
+    weight_reduce_tmp->set_data_type(weight->data_type());
   }
 
   // accuracy
