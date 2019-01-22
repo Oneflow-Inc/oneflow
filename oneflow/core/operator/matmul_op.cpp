@@ -13,7 +13,7 @@ void MatmulOp::InitFromOpConf() {
 
 const PbMessage& MatmulOp::GetCustomizedConf() const { return op_conf().matmul_conf(); }
 
-bool MatmulOp::IsInputBnInOpAllowedModelSplit(const std::string& ibn) const {
+bool MatmulOp::IsInputBlobAllowedModelSplit(const std::string& ibn) const {
   CHECK(std::find(input_bns().begin(), input_bns().end(), ibn) != input_bns().end());
   return ibn == "b";
 }

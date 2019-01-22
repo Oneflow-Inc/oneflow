@@ -26,6 +26,7 @@ class VariableOp final : public Operator {
   void set_is_bw_inplace(bool val) const { *is_bw_inplace_ = val; }
 
  private:
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
   void InferOutputBlobModelSplitAxis(
       std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
       std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,

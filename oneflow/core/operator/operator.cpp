@@ -128,9 +128,7 @@ void Operator::InferOutputBlobTimeShape(
   }
 }
 
-bool Operator::IsInputBnInOpAllowedModelSplit(const std::string& ibn) const {
-  return IsElemWiseOp();
-}
+bool Operator::IsInputBlobAllowedModelSplit(const std::string& ibn) const { return IsElemWiseOp(); }
 
 void Operator::InferBlobParallelDescIf(
     std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
@@ -153,7 +151,7 @@ void Operator::NaiveInferInputBlobParallelDesc(
     BlobParallelDesc* blob_parallel_desc = BlobParallelDesc4BnInOp(ibn);
     const BlobParallelDesc& producer_blob_pr = ProducerBlobParallelDesc4BnInOp(ibn);
     if (producer_blob_pr.has_model_blob_parallel()) {
-      CHECK(IsInputBnInOpAllowedModelSplit(ibn));
+      CHECK(IsInputBlobAllowedModelSplit(ibn));
       ModelBlobParallel* model_blob_parallel = blob_parallel_desc->mut_model_blob_parallel();
       CHECK_EQ(producer_blob_pr.ParallelNum(), parallel_context->parallel_num());
       if (parallel_context->policy() == kDataParallel) {
@@ -166,7 +164,7 @@ void Operator::NaiveInferInputBlobParallelDesc(
       *model_blob_parallel = producer_blob_pr.model_blob_parallel();
     } else if (producer_blob_pr.has_grid_blob_parallel()) {
       if (blob_parallel_desc->has_model_split_axis()) {
-        CHECK(IsInputBnInOpAllowedModelSplit(ibn));
+        CHECK(IsInputBlobAllowedModelSplit(ibn));
         GridBlobParallel* grid_blob_parallel = blob_parallel_desc->mut_grid_blob_parallel();
         int64_t data_split_num = producer_blob_pr.grid_blob_parallel().data_split_num();
         int64_t model_split_num = producer_blob_pr.grid_blob_parallel().model_split_num();
@@ -196,7 +194,7 @@ void Operator::NaiveInferOutputBlobParallelDesc(
     const ParallelContext* parallel_context) const {
   for (const std::string& bn : output_bns()) {
     auto* blob_parallel_desc = BlobParallelDesc4BnInOp(bn);
-    if (input_bns().size() == 1 && IsInputBnInOpAllowedModelSplit(SoleIbn())
+    if (input_bns().size() == 1 && IsInputBlobAllowedModelSplit(SoleIbn())
         && BlobParallelDesc4BnInOp(SoleIbn())->has_model_split_axis()) {
       *blob_parallel_desc = *BlobParallelDesc4BnInOp(SoleIbn());
     } else {

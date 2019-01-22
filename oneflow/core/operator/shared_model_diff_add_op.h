@@ -17,6 +17,9 @@ class SharedModelDiffAddOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override;
 
  private:
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override {
+    return UNIMPLEMENTED();
+  }
   void InferOutputBlobModelSplitAxis(
       std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
       std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,

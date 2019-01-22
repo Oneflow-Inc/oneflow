@@ -20,6 +20,7 @@ class ScalarAddOp final : public Operator {
   bool NeedOutBlobWhenBackward() const override { return false; }
 
  private:
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return true; }
   void InferOutputBlobModelSplitAxis(
       std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
       std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,

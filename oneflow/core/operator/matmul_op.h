@@ -11,7 +11,6 @@ class MatmulOp final : public Operator {
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
-  bool IsInputBnInOpAllowedModelSplit(const std::string& ibn) const override;
   bool NeedOutBlobWhenBackward() const override { return false; }
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
@@ -19,6 +18,7 @@ class MatmulOp final : public Operator {
                            const ParallelContext*) const override;
 
  private:
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override;
   void InferOutputBlobModelSplitAxis(
       std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
       std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
