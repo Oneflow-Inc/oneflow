@@ -7,6 +7,10 @@ void AccuracyOp::InitFromOpConf() {
   EnrollInputBn("label", false);
   EnrollOutputBn("accuracy", false);
   EnrollOutputBn("accuracy_instance_num", false);
+  if (op_conf().accuracy_conf().has_weight()) {
+    EnrollInputBn("weight", false);
+    EnrollDataTmpBn("weight_reduce_tmp");
+  }
 }
 
 const PbMessage& AccuracyOp::GetCustomizedConf() const { return op_conf().accuracy_conf(); }
@@ -32,6 +36,20 @@ void AccuracyOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   CHECK(IsIntegralDataType(label_blob_desc->data_type()));
   CHECK_GE(pred_blob_desc->shape().NumAxes(), 2);
   CHECK_EQ(label_blob_desc->shape(), Shape({pred_blob_desc->shape().At(0)}));
+
+  if (op_conf().accuracy_conf().has_weight()) {
+    const BlobDesc* weight = GetBlobDesc4BnInOp("weight");
+    CHECK_EQ(weight->shape(), label_blob_desc->shape());
+    CHECK_EQ(weight->data_type(), pred_blob_desc->data_type());
+    CHECK_EQ(weight->has_dim0_valid_num_field(), label_blob_desc->has_dim0_valid_num_field());
+    CHECK_EQ(weight->has_dim0_inner_shape(), label_blob_desc->has_dim0_inner_shape());
+    if (label_blob_desc->has_dim0_inner_shape()) {
+      CHECK_EQ(weight->dim0_inner_shape(), label_blob_desc->dim0_inner_shape());
+    }
+    BlobDesc* weight_reduce_tmp = GetBlobDesc4BnInOp("weight_reduce_tmp");
+    weight_reduce_tmp->mut_shape() = weight->shape();
+    weight_reduce_tmp->set_data_type(weight->data_type());
+  }
 
   // accuracy
   BlobDesc* accuracy_blob_desc = GetBlobDesc4BnInOp("accuracy");

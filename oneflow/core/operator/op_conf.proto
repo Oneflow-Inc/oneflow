@@ -745,6 +745,7 @@ message AccuracyOpConf {
   required string label = 2;
   optional int32 top_k = 3 [default = 1];
   required string accuracy = 4;
+  optional string weight = 5;
 }
 
 message MatmulOpConf {
