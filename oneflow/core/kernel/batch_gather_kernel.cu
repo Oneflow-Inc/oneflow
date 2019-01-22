@@ -11,9 +11,9 @@ __device__ int64_t get_in_offset(const int64_t out_offset, const K* indices,
                                  const int64_t batch_num, const int64_t indices_num,
                                  const int64_t instance_dim, const int64_t gather_dim_size) {
   const int64_t batch_idx = out_offset / (indices_num * instance_dim);
-  const int64_t indices_idx = (out_offset % batch_num) / instance_dim;
+  const int64_t indices_idx = out_offset % (indices_num * instance_dim) / instance_dim;
   const int64_t inner_idx = out_offset % instance_dim;
-  const int64_t idx = indices[indices_idx];
+  const int64_t idx = indices[batch_idx * indices_num + indices_idx];
   assert(idx >= 0 && idx < gather_dim_size);
   return batch_idx * gather_dim_size * instance_dim + idx * instance_dim + inner_idx;
 }

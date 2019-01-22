@@ -16,7 +16,7 @@ void BatchGatherForward(DeviceCtx* ctx, const Blob* in, const Blob* indices, Blo
   const int64_t axis = indices->shape().NumAxes() - 1;
   const Shape flat_out_shape = GetFlatShape(out->shape(), axis);
   BatchGatherKernelUtil<device_type, T, K>::Forward(ctx, in->dptr<T>(), indices->dptr<K>(),
-                                                    flat_out_shape, out->shape().At(axis),
+                                                    flat_out_shape, in->shape().At(axis),
                                                     out->mut_dptr<T>());
 }
 
@@ -25,9 +25,9 @@ void BatchGatherBackward(DeviceCtx* ctx, const Blob* out_diff, const Blob* indic
   Memset<device_type>(ctx, in_diff->mut_dptr<T>(), 0, in_diff->ByteSizeOfDataContentField());
   const int64_t axis = indices->shape().NumAxes() - 1;
   const Shape flat_out_diff_shape = GetFlatShape(out_diff->shape(), axis);
-  BatchGatherKernelUtil<device_type, T, K>::Backward(
-      ctx, out_diff->dptr<T>(), indices->dptr<K>(), flat_out_diff_shape, out_diff->shape().At(axis),
-      in_diff->mut_dptr<T>());
+  BatchGatherKernelUtil<device_type, T, K>::Backward(ctx, out_diff->dptr<T>(), indices->dptr<K>(),
+                                                     flat_out_diff_shape, in_diff->shape().At(axis),
+                                                     in_diff->mut_dptr<T>());
 }
 
 template<DeviceType device_type, typename T>
@@ -83,9 +83,9 @@ void BatchGatherKernelUtil<DeviceType::kCPU, T, K>::Forward(DeviceCtx* ctx, cons
   const int64_t instance_dim = flat_out_shape.At(2);
   FOR_RANGE(int64_t, batch_idx, 0, batch_num) {
     FOR_RANGE(int64_t, i, 0, indices_num) {
-      const K idx = indices[i];
+      const K idx = indices[batch_idx * indices_num + i];
       CHECK(idx >= 0 && idx < gather_dim_size);
-      const T* from = in + batch_idx * indices_num * instance_dim + idx * instance_dim;
+      const T* from = in + batch_idx * gather_dim_size * instance_dim + idx * instance_dim;
       T* to = out + batch_idx * indices_num * instance_dim + i * instance_dim;
       std::copy(from, from + instance_dim, to);
     }
@@ -103,10 +103,10 @@ void BatchGatherKernelUtil<DeviceType::kCPU, T, K>::Backward(DeviceCtx* ctx, con
   const int64_t instance_dim = flat_out_diff_shape.At(2);
   FOR_RANGE(int64_t, batch_idx, 0, batch_num) {
     FOR_RANGE(int64_t, i, 0, indices_num) {
-      const int64_t idx = indices[i];
+      const int64_t idx = indices[batch_idx * indices_num + i];
       CHECK(idx >= 0 && idx < gather_dim_size);
       const T* from = out_diff + batch_idx * indices_num * instance_dim + i * instance_dim;
-      T* to = in_diff + batch_idx * indices_num * instance_dim + idx * instance_dim;
+      T* to = in_diff + batch_idx * gather_dim_size * instance_dim + idx * instance_dim;
       std::transform(from, from + instance_dim, to, to, std::plus<T>());
     }
   }
