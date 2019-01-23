@@ -164,7 +164,6 @@ class Operator {
   void FixParallelDesc(ParallelDesc* pr_desc) const;
   void FixLbiWhenShareModel(const std::string& shared_op_name);
   virtual int32_t ModelSplitAxis() const { return -1; }
-  virtual int32_t MaxModelSplitNum() const { return -1; }
   void GenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                      bool is_forward, const ParallelContext*, KernelConf*, const OpContext*) const;
 
