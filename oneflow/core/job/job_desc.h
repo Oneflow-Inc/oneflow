@@ -22,8 +22,11 @@ class JobDesc final {
   const Resource& resource() const { return job_conf_.resource(); }
   const Placement& placement() const { return job_conf_.placement(); }
   const OtherConf& other_conf() const { return job_conf_.other(); }
-  const CommNetworkConf& comm_net_conf() const { return job_conf_.other().comm_net_conf(); }
-  bool use_rdma() const { return job_conf_.other().comm_net_conf().has_ibverbs_conf(); }
+  const CommNetworkConf& comm_net_conf() const {
+    CHECK(this->other_conf().has_comm_net_conf());
+    return job_conf_.other().comm_net_conf();
+  }
+  bool use_rdma() const { return this->comm_net_conf().has_ibverbs_conf(); }
   const EpollConf& epoll_conf() const {
     CHECK(!this->use_rdma());
     return this->comm_net_conf().epoll_conf();
