@@ -133,7 +133,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void FixOpParallelDesc() const;
   void UpdateOpNodeHasInDiff() const;
   void InferTimeShape() const;
-  void InferNodeNoParallelBlobDesc() const;
+  void InferNoParallelBlobDesc() const;
   void InferModelSplitAxis(HashMap<LogicalBlobId, int32_t>* lbi2model_split_axis) const;
   void InferBlobParallelDesc(const HashMap<LogicalBlobId, int32_t>& lbi2model_split_axis) const;
   void InferLogicalBlobDesc() const;
