@@ -30,7 +30,6 @@ class Operator {
   void InitFromOpConf(const OperatorConf& op_conf);
   virtual void InitFromOpConf() = 0;
   virtual bool IsElemWiseOp() const { return false; }
-  virtual bool IsInputBlobAllowedModelSplit(const std::string& ibn) const = 0;
 
   ActivationType GetActivationType() const;
 
@@ -275,6 +274,8 @@ class Operator {
   void StrFieldTolower(const std::string& field_name);
 
  private:
+  virtual bool IsInputBlobAllowedModelSplit(const std::string& ibn) const = 0;
+  bool IsSoleInputBlobAllowedModelSplit() const;
   LogicalBlobId dtbn2lbi(const std::string& data_tmp_bn) const;
   LogicalBlobId fbbn2lbi(const std::string& fw_buf_bn) const { return dtbn2lbi(fw_buf_bn); }
   LogicalBlobId bbbn2lbi(const std::string& bw_buf_bn) const { return dtbn2lbi(bw_buf_bn); }

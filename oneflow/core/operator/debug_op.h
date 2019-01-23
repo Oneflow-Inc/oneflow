@@ -13,7 +13,6 @@ class DebugOp final : public Operator {
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override { return op_conf().debug_conf(); }
-  bool IsElemWiseOp() const override { return false; }
   bool NeedInBlobWhenBackward() const override { return false; }
   bool NeedOutBlobWhenBackward() const override { return false; }
 

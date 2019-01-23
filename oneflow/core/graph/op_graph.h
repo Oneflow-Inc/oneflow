@@ -117,7 +117,8 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
                                            const ParallelDesc& parallel_desc) const;
   BalancedSplitter GetModelBalancedSplitter(const std::string& op_name, const LogicalBlobId& lbi,
                                             const ParallelDesc& parallel_desc) const;
-
+  const BlobParallelDesc& GetBlobParallelDesc(const std::string& op_name,
+                                              const LogicalBlobId& lbi) const;
   void CheckBlobDescs(const std::string& op_name,
                       const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const;
@@ -152,8 +153,6 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   int64_t GetModelSplitNum(const std::string& op_name, const LogicalBlobId& lbi) const;
   int64_t GetDataSplitNum(const std::string& op_name, const LogicalBlobId& lbi) const;
   int64_t GetParallelNum(const std::string& op_name, const LogicalBlobId& lbi) const;
-  const BlobParallelDesc& GetBlobParallelDesc(const std::string& op_name,
-                                              const LogicalBlobId& lbi) const;
   const JobDesc* job_desc_;
   HashMap<std::string, OpNode*> op_name2op_node_;
 };

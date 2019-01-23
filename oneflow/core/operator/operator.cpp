@@ -220,6 +220,10 @@ void Operator::InferBlobModelSplitAxisIf(
   }
 }
 
+bool Operator::IsSoleInputBlobAllowedModelSplit() const {
+  return input_bns().size() == 1 && IsInputBlobAllowedModelSplit(SoleIbn());
+}
+
 void Operator::NaiveInferOutputBlobModelSplitAxis(
     std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
     std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
