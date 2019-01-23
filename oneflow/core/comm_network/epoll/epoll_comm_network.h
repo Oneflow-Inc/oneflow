@@ -18,20 +18,24 @@ class EpollCommNet final : public CommNetIf<SocketMemDesc> {
 
   void RegisterMemoryDone() override;
 
-  void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) override;
-  void SendSocketMsg(int64_t dst_machine_id, const SocketMsg& msg);
+  void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) const override;
+  void RequestRead(int64_t dst_machine_id, void* src_token, void* dst_token, void* read_id) const;
+  void PartReadDone(void* read_id, void* dst_token, int32_t part_num);
 
  private:
-  SocketMemDesc* NewMemDesc(void* ptr, size_t byte_size) override;
+  SocketMemDesc* NewMemDesc(void* ptr, size_t byte_size) const override;
 
   EpollCommNet(const Plan& plan);
   void InitSockets();
-  SocketHelper* GetSocketHelper(int64_t machine_id);
+  SocketHelper* GetSocketHelper(int64_t machine_id, int32_t link_index) const;
   void DoRead(void* read_id, int64_t src_machine_id, void* src_token, void* dst_token) override;
 
+  const EpollConf& epoll_conf_;
   std::vector<IOEventPoller*> pollers_;
-  std::vector<int> machine_id2sockfd_;
+  // machine_link_id = machine_id * epoll_conf_.link_num() + link_id
+  std::vector<int64_t> machine_link_id2sockfds_;
   HashMap<int, SocketHelper*> sockfd2helper_;
+  HashMap<void*, std::atomic<int32_t>> dst_token2part_done_cnt_;
 };
 
 template<>

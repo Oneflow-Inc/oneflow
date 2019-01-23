@@ -112,7 +112,7 @@ class Blob final {
   }
   void Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr);
 
-  int32_t record_num_; // FIXME() by dim0
+  int32_t record_num_;  // FIXME() by dim0
   bool is_contiguous_;
   void* header_ptr_;
   char* data_id_ptr_;

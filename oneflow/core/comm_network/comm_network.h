@@ -29,20 +29,20 @@ class CommNet {
   virtual void RegisterMemoryDone() = 0;
 
   // Stream
-  void* NewActorReadId();
-  void DeleteActorReadId(void* actor_read_id);
+  void* NewActorReadId() const;
+  void DeleteActorReadId(void* actor_read_id) const;
   void Read(void* actor_read_id, int64_t src_machine_id, void* src_token, void* dst_token);
   void AddReadCallBack(void* actor_read_id, std::function<void()> callback);
   void ReadDone(void* read_id);
 
   //
-  virtual void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) = 0;
+  virtual void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) const = 0;
 
  protected:
   CommNet(const Plan& plan);
 
   virtual void DoRead(void* read_id, int64_t src_machine_id, void* src_token, void* dst_token) = 0;
-  const HashSet<int64_t>& peer_machine_id() { return peer_machine_id_; }
+  const HashSet<int64_t>& peer_machine_id() const { return peer_machine_id_; }
 
   Channel<std::function<void()>> ready_cbs_;
 
@@ -84,8 +84,8 @@ class CommNetIf : public CommNet {
   }
 
  protected:
-  virtual MemDescType* NewMemDesc(void* ptr, size_t byte_size) = 0;
-  const HashSet<MemDescType*>& mem_descs() { return mem_descs_; }
+  virtual MemDescType* NewMemDesc(void* ptr, size_t byte_size) const = 0;
+  const HashSet<MemDescType*>& mem_descs() const { return mem_descs_; }
 
  private:
   std::mutex mem_descs_mtx_;

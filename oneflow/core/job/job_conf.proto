@@ -46,11 +46,29 @@ message FileSystemConf {
   }
 }
 
-message OtherConf {
-  required int64 piece_size = 2;
-  required int32 data_part_num = 3; // piece_size % data_part_num = 0
+message EpollConf {
+  optional int32 link_num = 1 [default = 5];
+  optional int32 msg_segment_kbyte = 2 [default = 256];
+}
 
-  optional bool use_rdma = 100 [default = false];
+message IBVerbsConf {
+}
+
+message CommNetworkConf {
+  oneof comm_net_type {
+    EpollConf epoll_conf = 1;
+    IBVerbsConf ibverbs_conf = 2;
+  }
+}
+
+message OtherConf {
+  required FileSystemConf data_fs_conf = 1;
+  required FileSystemConf snapshot_fs_conf = 2;
+  optional CommNetworkConf comm_net_conf = 3;
+
+  required int64 piece_size = 4;
+  required int32 data_part_num = 5; // piece_size % data_part_num = 0
+
   optional string model_load_snapshot_path = 101 [default = ""];
   optional int32 max_data_id_length = 102 [default = 0];
   optional bool enable_cudnn = 103 [default = true];
@@ -71,9 +89,6 @@ message OtherConf {
   optional bool enable_nccl = 142 [default = true];
   optional bool use_nccl_inter_node_communication = 143 [default = false];
   optional int64 cudnn_buf_limit_mbyte = 144 [default = 1024];  // 1GByte
-
-  required FileSystemConf data_fs_conf = 121;
-  required FileSystemConf snapshot_fs_conf = 122;
 
   oneof JobType {
     TrainConf train_conf = 200;
