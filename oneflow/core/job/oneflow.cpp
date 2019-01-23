@@ -14,6 +14,7 @@
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/device/cudnn_conv_ctx_cache.h"
 
 namespace oneflow {
 
@@ -159,6 +160,9 @@ class Oneflow final {
 };
 
 Oneflow::Oneflow(const std::string& job_conf_filepath) {
+#ifdef WITH_CUDA
+  Global<CudnnConvCtxCache>::New();
+#endif
   // New All Global
   Global<JobDesc>::New(job_conf_filepath);
   const JobDesc* global_job_desc = Global<JobDesc>::Get();
@@ -171,7 +175,8 @@ Oneflow::Oneflow(const std::string& job_conf_filepath) {
   Global<MachineCtx>::New(this_mchn_id);
   TeePersistentLogStream::Create("optimized_job_conf")->Write(global_job_desc->job_conf());
   old_op_graph.ToDotWithFilePath("dlnet_op_graph.dot");
-  OpGraph(global_job_desc).ToDotWithFilePath("optimized_dlnet_op_graph.dot");
+  Global<OpGraph>::New(Global<JobDesc>::Get());
+  Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_op_graph.dot");
   const MachineCtx* machine_ctx = Global<MachineCtx>::Get();
   bool DoProfile =
       machine_ctx->IsThisMachineMaster() && Global<JobDesc>::Get()->collect_act_event();
@@ -198,6 +203,9 @@ Oneflow::Oneflow(const std::string& job_conf_filepath) {
     PullPlan("naive_plan", &naive_plan);
     PullPlan("mem_shared_plan", &mem_shared_plan);
   }
+#ifdef WITH_CUDA
+  Global<CudnnConvCtxCache>::Delete();
+#endif
   OF_BARRIER();
   TeePersistentLogStream::Create("naive_plan")->Write(naive_plan);
   TeePersistentLogStream::Create("mem_shared_plan")->Write(mem_shared_plan);
@@ -235,6 +243,7 @@ Oneflow::Oneflow(const std::string& job_conf_filepath) {
   Global<Profiler>::Delete();
   Global<MachineCtx>::Delete();
   Global<IDMgr>::Delete();
+  Global<OpGraph>::Delete();
   Global<JobDesc>::Delete();
 }
 

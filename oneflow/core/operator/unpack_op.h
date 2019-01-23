@@ -18,11 +18,23 @@ class UnpackOp final : public Operator {
 
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
-  void InferOutBlobTimeShape(std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
-                             const ParallelContext* parallel_ctx, Shape* time_shape) const override;
+  void InferOutputBlobTimeShape(std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                Shape* time_shape) const override;
   bool NeedInBlobWhenBackward() const override { return true; }
   bool NeedOutBlobWhenBackward() const override { return false; }
-  int32_t GetUnpackNum(int64_t parallel_num) const;
+  int32_t GetUnpackNum() const;
+
+ private:
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
+  void InferOutputBlobModelSplitAxis(
+      std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
+      std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
+      const ParallelContext* parallel_context) const override {
+    CHECK_EQ(parallel_context->policy(), kDataParallel);
+    NaiveInferOutputBlobModelSplitAxis(ModelSplitAxis4BnInOp, ShapeNumAxes4BnInOp,
+                                       parallel_context);
+  }
 };
 
 }  // namespace oneflow
