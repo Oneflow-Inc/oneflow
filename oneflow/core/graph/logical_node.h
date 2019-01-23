@@ -56,7 +56,6 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   LogicalNode* main_model_parallel() const { return main_model_parallel_; }
   void set_main_model_parallel(LogicalNode* val) { main_model_parallel_ = val; }
   int32_t GetModelSplitAxis() const;
-  int32_t GetMaxModelSplitNum() const;
 
   virtual int64_t GetAreaId() const = 0;
   virtual bool MayConsumeModelDiff() const { return false; }
