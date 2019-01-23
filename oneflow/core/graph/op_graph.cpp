@@ -287,7 +287,7 @@ void OpGraph::Init() {
   FixOpParallelDesc();
   UpdateOpNodeHasInDiff();
   InferTimeShape();
-  InferNodeNoParallelBlobDesc();
+  InferNoParallelBlobDesc();
   HashMap<LogicalBlobId, int32_t> lbi2model_split_axis;
   InferModelSplitAxis(&lbi2model_split_axis);
   InferBlobParallelDesc(lbi2model_split_axis);
@@ -366,7 +366,7 @@ void OpGraph::InferTimeShape() const {
   });
 }
 
-void OpGraph::InferNodeNoParallelBlobDesc() const {
+void OpGraph::InferNoParallelBlobDesc() const {
   TopoForEachNode([&](OpNode* op_node) {
     ParallelContext parallel_ctx;
     parallel_ctx.set_parallel_id(0);
@@ -374,7 +374,8 @@ void OpGraph::InferNodeNoParallelBlobDesc() const {
     parallel_ctx.set_policy(op_node->parallel_desc().policy());
     op_node->op().InferBlobDescsIf(
         std::bind(&OpNode::NoParallelBlobDesc4BnInOp, op_node, std::placeholders::_1),
-        &parallel_ctx, job_desc_->RecordPieceSize(), [](OpContext*) {});
+        &parallel_ctx, job_desc_->RecordPieceSize() / op_node->parallel_desc().parallel_num(),
+        [](OpContext*) {});
   });
 }
 
