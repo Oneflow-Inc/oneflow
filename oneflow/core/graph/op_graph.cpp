@@ -331,7 +331,9 @@ void OpGraph::FixOpParallelDesc() const {
   ForEachNode([&](OpNode* node) { node->op().FixParallelDesc(node->mut_parallel_desc()); });
   ForEachNode([&](OpNode* node) {
     OpNode* prev_node = node;
-    while (prev_node->op().IsElemWiseOp()) { prev_node = prev_node->SoleInEdge()->src_node(); }
+    while (prev_node->op().IsSoleInputBlobAllowedModelSplit()) {
+      prev_node = prev_node->SoleInEdge()->src_node();
+    }
     if (prev_node != node && prev_node->parallel_desc().policy() == kModelParallel) {
       *node->mut_parallel_desc() = prev_node->parallel_desc();
     }

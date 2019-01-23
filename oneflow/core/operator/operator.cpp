@@ -230,7 +230,7 @@ void Operator::NaiveInferOutputBlobModelSplitAxis(
     const ParallelContext* parallel_context) const {
   int32_t model_split_axis = ModelSplitAxis();
   for (const std::string& bn : output_bns()) {
-    if (IsElemWiseOp()) {
+    if (IsSoleInputBlobAllowedModelSplit()) {
       *ModelSplitAxis4BnInOp(bn) = *ModelSplitAxis4BnInOp(SoleIbn());
     } else if (parallel_context->policy() == kDataParallel) {
       *ModelSplitAxis4BnInOp(bn) = -1;

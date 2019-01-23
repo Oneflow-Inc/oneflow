@@ -13,7 +13,6 @@ class IdentityOp final : public Operator {
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
-  bool IsElemWiseOp() const override { return op_conf().identity_conf().in_size() == 1; }
   bool NeedInBlobWhenBackward() const override { return false; }
   bool NeedOutBlobWhenBackward() const override { return false; }
 
@@ -28,7 +27,9 @@ class IdentityOp final : public Operator {
       std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
       std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
       const ParallelContext* parallel_context) const override {
-    if (!IsElemWiseOp()) { CHECK_EQ(parallel_context->policy(), kDataParallel); }
+    if (!IsSoleInputBlobAllowedModelSplit()) {
+      CHECK_EQ(parallel_context->policy(), kDataParallel);
+    }
     NaiveInferOutputBlobModelSplitAxis(ModelSplitAxis4BnInOp, ShapeNumAxes4BnInOp,
                                        parallel_context);
   }
