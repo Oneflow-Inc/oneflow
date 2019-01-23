@@ -68,7 +68,8 @@ message CommNetworkConf {
 message OtherConf {
   required FileSystemConf data_fs_conf = 1;
   required FileSystemConf snapshot_fs_conf = 2;
-  required CommNetworkConf comm_net_conf = 3;
+  optional CommNetworkConf comm_net_conf = 3;
+
   required int64 piece_size = 4;
   required int32 data_part_num = 5; // piece_size % data_part_num = 0
   required int64 total_batch_num = 6;
