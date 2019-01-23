@@ -119,7 +119,7 @@ void JobDesc::Init() {
   AddRecordLoadOps();
 #ifndef WITH_RDMA
   if (this->TotalMachineNum() > 1) {
-    CHECK_EQ(job_conf_.other().use_rdma(), false) << "Please compile ONEFLOW with RDMA";
+    CHECK_EQ(this->use_rdma(), false) << "Please compile ONEFLOW with RDMA";
   }
 #endif
 #ifndef WITH_CUDA
