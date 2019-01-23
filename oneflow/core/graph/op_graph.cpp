@@ -1,5 +1,4 @@
 #include "oneflow/core/graph/op_graph.h"
-#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 
@@ -447,6 +446,22 @@ void OpGraph::InferLogicalBlobDesc() const {
     }
     op_node->ConcatLogicalOutputBlobDesc();
   });
+}
+
+BalancedSplitter OpGraph::GetDataBalancedSplitter(const std::string& op_name,
+                                                  const LogicalBlobId& lbi) const {
+  int64_t data_split_num = Global<OpGraph>::Get()->GetDataSplitNum(op_name, lbi);
+  int64_t parallel_num = Global<OpGraph>::Get()->GetParallelNum(op_name, lbi);
+  CHECK_EQ(data_split_num % parallel_num, 0);
+  return BalancedSplitter(data_split_num, parallel_num);
+}
+
+BalancedSplitter OpGraph::GetModelBalancedSplitter(const std::string& op_name,
+                                                   const LogicalBlobId& lbi) const {
+  int64_t model_split_num = Global<OpGraph>::Get()->GetModelSplitNum(op_name, lbi);
+  int64_t parallel_num = Global<OpGraph>::Get()->GetParallelNum(op_name, lbi);
+  CHECK_GE(model_split_num, parallel_num);
+  return BalancedSplitter(model_split_num, parallel_num);
 }
 
 int32_t OpGraph::GetModelSplitAxis(const std::string& op_name, const LogicalBlobId& lbi) const {
