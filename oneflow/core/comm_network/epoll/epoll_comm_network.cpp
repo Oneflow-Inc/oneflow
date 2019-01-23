@@ -218,9 +218,9 @@ void EpollCommNet::PartReadDone(void* read_id, int64_t src_machine_id, void* dst
                                 int32_t part_num) {
   if (dst_token2part_done_cnt_.at(dst_token).fetch_add(1, std::memory_order_relaxed)
       == (part_num - 1)) {
-    read_id2done_status_.at(read_id) = true;
     {
       std::unique_lock<std::mutex> lck(read_done_mtx_);
+      read_id2done_status_.at(read_id) = true;
       auto& read_done_order = machine_id2read_done_order_.at(src_machine_id);
       while (read_id2done_status_.at(read_done_order.front())) {
         void* item = read_done_order.front();
