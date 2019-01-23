@@ -150,7 +150,6 @@ void Operator::NaiveInferInputBlobParallelDesc(
     const BlobParallelDesc& producer_blob_pr = ProducerBlobParallelDesc4BnInOp(ibn);
     if (producer_blob_pr.has_model_blob_parallel()) {
       CHECK(IsInputBlobAllowedModelSplit(ibn));
-      ModelBlobParallel* model_blob_parallel = blob_parallel_desc->mut_model_blob_parallel();
       CHECK_EQ(producer_blob_pr.ParallelNum(), parallel_context->parallel_num());
       if (parallel_context->policy() == kDataParallel) {
         CHECK(!producer_blob_pr.has_model_split_axis());
@@ -159,7 +158,8 @@ void Operator::NaiveInferInputBlobParallelDesc(
       } else {
         UNIMPLEMENTED();
       }
-      *model_blob_parallel = producer_blob_pr.model_blob_parallel();
+      CHECK_EQ(blob_parallel_desc->model_split_axis(), producer_blob_pr.model_split_axis());
+      blob_parallel_desc->CopyBlobParallelConf(producer_blob_pr);
     } else if (producer_blob_pr.has_grid_blob_parallel()) {
       if (blob_parallel_desc->has_model_split_axis()) {
         CHECK(IsInputBlobAllowedModelSplit(ibn));
@@ -194,7 +194,7 @@ void Operator::NaiveInferOutputBlobParallelDesc(
     auto* blob_parallel_desc = BlobParallelDesc4BnInOp(bn);
     if (input_bns().size() == 1 && IsInputBlobAllowedModelSplit(SoleIbn())
         && BlobParallelDesc4BnInOp(SoleIbn())->has_model_split_axis()) {
-      *blob_parallel_desc = *BlobParallelDesc4BnInOp(SoleIbn());
+      blob_parallel_desc->CopyBlobParallelConf(*BlobParallelDesc4BnInOp(SoleIbn()));
     } else {
       GridBlobParallel* grid_blob_parallel = blob_parallel_desc->mut_grid_blob_parallel();
       if (parallel_context->policy() == kDataParallel) {

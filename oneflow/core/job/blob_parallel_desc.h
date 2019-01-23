@@ -18,7 +18,7 @@ class BlobParallelDesc final {
 
   explicit BlobParallelDesc(const BlobParallelDesc& blob_parallel_desc) = default;
   explicit BlobParallelDesc(int64_t model_split_axis) : model_split_axis_(model_split_axis) {}
-  BlobParallelDesc& operator=(const BlobParallelDesc& blob_parallel_desc);
+  void CopyBlobParallelConf(const BlobParallelDesc& blob_parallel_desc);
 
   // Getters
   // for data input blob

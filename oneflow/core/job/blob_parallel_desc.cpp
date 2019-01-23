@@ -18,10 +18,8 @@ int64_t GetParallelNum(const GridBlobParallel& grid_blob_parallel) {
 
 }  // namespace
 
-BlobParallelDesc& BlobParallelDesc::operator=(const BlobParallelDesc& blob_parallel_desc) {
-  CHECK_EQ(model_split_axis_, blob_parallel_desc.model_split_axis_);
+void BlobParallelDesc::CopyBlobParallelConf(const BlobParallelDesc& blob_parallel_desc) {
   blob_parallel_conf_ = blob_parallel_desc.blob_parallel_conf_;
-  return *this;
 }
 
 const DataBlobParallel& BlobParallelDesc::data_blob_parallel() const {
