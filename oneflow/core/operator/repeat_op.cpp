@@ -6,40 +6,24 @@ namespace oneflow {
 void oneflow::RepeatOp::InitFromOpConf() {
   CHECK(op_conf().has_repeat_conf());
   const RepeatOpConf& conf = op_conf().repeat_conf();
-  if (conf.has_repeat_num()) {
-    CHECK_GE(conf.repeat_num(), 1);
-  } else if (conf.has_repeat_num_per_record()) {
-    CHECK_GE(conf.repeat_num_per_record(), 1);
-  } else {
-    UNIMPLEMENTED();
-  }
+  CHECK_GE(conf.repeat_num(), 1);
   EnrollInputBn("in");
   EnrollOutputBn("out");
 }
 
-void RepeatOp::InferOutBlobTimeShape(
+void RepeatOp::InferOutputBlobTimeShape(
     std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
     const ParallelContext* parallel_ctx, Shape* time_shape) const {
   std::vector<int64_t> dim_vec(GetTimeShape4BnInOp("in")->dim_vec());
-  int32_t repeat_num = GetRepeatNum(parallel_ctx->parallel_num());
+  int32_t repeat_num = GetRepeatNum();
   dim_vec.push_back(repeat_num);
   *time_shape = Shape(dim_vec);
 }
 
-int32_t RepeatOp::GetRepeatNum(int64_t parallel_num) const {
+int32_t RepeatOp::GetRepeatNum() const {
   CHECK(op_conf().has_repeat_conf());
   const RepeatOpConf& conf = op_conf().repeat_conf();
-  if (conf.has_repeat_num()) {
-    return conf.repeat_num();
-  } else if (conf.has_repeat_num_per_record()) {
-    CHECK_EQ(Global<JobDesc>::Get()->PieceSize() % parallel_num, 0);
-    int64_t repeat_num =
-        Global<JobDesc>::Get()->PieceSize() / parallel_num * conf.repeat_num_per_record();
-    CHECK_LE(repeat_num, static_cast<int64_t>(GetMaxVal<int32_t>()));
-    return static_cast<int32_t>(repeat_num);
-  } else {
-    UNIMPLEMENTED();
-  }
+  return conf.repeat_num();
 }
 
 const PbMessage& RepeatOp::GetCustomizedConf() const { return op_conf().repeat_conf(); }

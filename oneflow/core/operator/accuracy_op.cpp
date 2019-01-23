@@ -24,8 +24,7 @@ void AccuracyOp::VirtualGenKernelConf(
 }
 
 void AccuracyOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx,
-                                std::function<void(OpContext*)>) const {
+                                const ParallelContext* parallel_ctx) const {
   BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
   BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");
   CHECK_EQ(pred_blob_desc->has_data_id_field(), label_blob_desc->has_data_id_field());

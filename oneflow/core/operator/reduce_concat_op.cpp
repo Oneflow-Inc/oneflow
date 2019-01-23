@@ -22,7 +22,7 @@ const PbMessage& ReduceConcatOp::GetCustomizedConf() const {
 }
 
 void ReduceConcatOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                    const ParallelContext* parallel_ctx,
+                                    const ParallelContext* parallel_ctx, int64_t record_piece_size,
                                     std::function<void(OpContext*)> EnrollOpCtx) const {
   const BlobDesc* first_in_blob = GetBlobDesc4BnInOp(input_bns().Get(0));
   const DataType data_type = first_in_blob->data_type();
