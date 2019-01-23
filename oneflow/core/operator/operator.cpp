@@ -128,8 +128,6 @@ void Operator::InferOutputBlobTimeShape(
   }
 }
 
-bool Operator::IsInputBlobAllowedModelSplit(const std::string& ibn) const { return IsElemWiseOp(); }
-
 void Operator::InferBlobParallelDescIf(
     std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
     std::function<const BlobParallelDesc&(const std::string&)> ProducerBlobParallelDesc4BnInOp,
