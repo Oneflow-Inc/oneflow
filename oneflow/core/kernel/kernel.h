@@ -5,6 +5,7 @@
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/kernel/kernel.pb.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/persistence/snapshot.h"
 #include "oneflow/core/register/blob.h"

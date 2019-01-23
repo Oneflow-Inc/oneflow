@@ -38,10 +38,10 @@ struct IntegralNewKernelUtilIf {};
 
 template<DeviceType device_type, typename T>
 struct Float16NewKernelUtilIf {
-  static void HGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE trans_a,
-                   const enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
-                   const T alpha, const T* a, const int lda, const T* b, const int ldb,
-                   const T beta, T* c, const int ldc);
+  static void HGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
+                    const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
+                    const int m, const int n, const int k, const T alpha, const T* a, const int lda,
+                    const T* b, const int ldb, const T beta, T* c, const int ldc);
 };
 
 template<DeviceType device_type, typename T, typename U = void>
@@ -135,6 +135,16 @@ struct NewKernelUtilIf {
                                 const std::string& model_dir, Blob* blob,
                                 const std::string& bn_in_op, int32_t dim_num,
                                 int64_t num_in_each_dim);
+  static void Sigmoid(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
+  static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
+                              T* dx);
+  static void TanH(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
+  static void TanHBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
+                           T* dx);
+  static void Relu(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
+  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
+                           T* dx);
+  static void Set(DeviceCtx* ctx, const T value, T* addr);
 };
 
 }  // namespace oneflow

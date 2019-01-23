@@ -39,6 +39,20 @@ void RngNormal(const int64_t elem_cnt, const T mean, const T std, uint32_t rando
   for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = random_distribution(generator); }
 }
 
+template<>
+void RngNormal<float16>(const int64_t elem_cnt, const float16 mean, const float16 std,
+                        uint32_t random_seed, float16* dptr) {
+  CHECK_GE(elem_cnt, 0);
+  CHECK(dptr);
+  CHECK_GT(std, 0.0);
+  std::mt19937 generator(random_seed);
+  std::normal_distribution<float> random_distribution(mean, std);
+
+  for (int64_t i = 0; i < elem_cnt; ++i) {
+    dptr[i] = static_cast<float16>(random_distribution(generator));
+  }
+}
+
 template<typename T>
 void RngTruncatedNormal(const int64_t elem_cnt, const T std, uint32_t random_seed, T* dptr) {
   CHECK_GE(elem_cnt, 0);
@@ -212,7 +226,7 @@ void MatrixRowReduce(const int64_t row_num, const int64_t col_num, const T* x, T
 }
 
 template<typename T>
-void CpuInitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
+void InitializeWithDirCpu(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
                           const std::string& model_dir, Blob* blob, const std::string& bn_in_op,
                           int32_t dim_num, int64_t num_in_each_dim) {
   int64_t blob_size = blob->ByteSizeOfDataContentField();
@@ -228,6 +242,7 @@ void CpuInitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
 
 }  // namespace
 
+// CPU && Floating
 template<typename T>
 struct NewKernelUtilIf<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T>::value>::type> {
   static void OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
@@ -264,11 +279,37 @@ struct NewKernelUtilIf<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T
                                 const std::string& model_dir, Blob* blob,
                                 const std::string& bn_in_op, int32_t dim_num,
                                 int64_t num_in_each_dim) {
-    CpuInitializeWithDir<T>(ctx, part_id, part_num, model_dir, blob, bn_in_op, dim_num,
+    InitializeWithDirCpu<T>(ctx, part_id, part_num, model_dir, blob, bn_in_op, dim_num,
                             num_in_each_dim);
   }
+  static void Sigmoid(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+    T half = static_cast<T>(0.5);
+    for (int64_t i = 0; i != n; ++i) { y[i] = half * std::tanh(half * x[i]) + half; }
+  }
+  static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
+                              T* dx) {
+    for (int64_t i = 0; i != n; ++i) { dx[i] = y[i] * (1 - y[i]) * dy[i]; }
+  }
+  static void TanH(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+    for (int64_t i = 0; i != n; ++i) { y[i] = std::tanh(x[i]); }
+  }
+  static void TanHBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
+                           T* dx) {
+    for (int64_t i = 0; i != n; ++i) { dx[i] = (1 - y[i] * y[i]) * dy[i]; }
+  }
+  static void Relu(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+    T zero = ZeroVal<T>::value;
+    for (int64_t i = 0; i != n; ++i) { y[i] = std::max(x[i], zero); }
+  }
+  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
+                           T* dx) {
+    T zero = ZeroVal<T>::value;
+    for (int64_t i = 0; i != n; ++i) { dx[i] = (y[i] > zero) * dy[i]; }
+  }
+  static void Set(DeviceCtx* ctx, const T value, T* addr) { *addr = value; }
 };
 
+// CPU && Integral
 template<typename T>
 struct NewKernelUtilIf<DeviceType::kCPU, T, typename std::enable_if<IsIntegral<T>::value>::type> {
   static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
@@ -287,9 +328,63 @@ struct NewKernelUtilIf<DeviceType::kCPU, T, typename std::enable_if<IsIntegral<T
                                 const std::string& model_dir, Blob* blob,
                                 const std::string& bn_in_op, int32_t dim_num,
                                 int64_t num_in_each_dim) {
-    CpuInitializeWithDir<T>(ctx, part_id, part_num, model_dir, blob, bn_in_op, dim_num,
+    InitializeWithDirCpu<T>(ctx, part_id, part_num, model_dir, blob, bn_in_op, dim_num,
                             num_in_each_dim);
   }
+  static void Set(DeviceCtx* ctx, const T value, T* addr) { *addr = value; }
+};
+
+// CPU && Float16
+template<typename T>
+struct NewKernelUtilIf<DeviceType::kCPU, T, typename std::enable_if<IsFloat16<T>::value>::type> {
+  static void OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
+                     const int m, const int n, const int k, const T alpha, const T* a, const T* b,
+                     const T beta, T* c) {
+    const int lda = (trans_a == CblasNoTrans) ? k : m;
+    const int ldb = (trans_b == CblasNoTrans) ? n : k;
+    const int ldc = n;
+
+    Float16NewKernelUtilIf<DeviceType::kCPU, T>::HGemm(ctx, CblasRowMajor, trans_a, trans_b, m, n,
+                                                       k, alpha, a, lda, b, ldb, beta, c, ldc);
+  }
+  static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
+                                 uint32_t random_seed, Blob* blob, const std::string& data_format) {
+    // TODO: do float16 support all the initializer conf below?
+    if (initializer_conf.has_constant_conf()) {
+      ConstantInitializer<T>(static_cast<T>(initializer_conf.constant_conf().value()), blob);
+    } else if (initializer_conf.has_random_uniform_conf()) {
+      // RandomUniformInitializer<T>(initializer_conf.random_uniform_conf(), random_seed, blob);
+    } else if (initializer_conf.has_random_normal_conf()) {
+      RandomNormalInitializer<T>(initializer_conf.random_normal_conf(), random_seed, blob);
+    } else if (initializer_conf.has_range_conf()) {
+      RangeInitializer<T>(initializer_conf.range_conf(), random_seed, blob);
+    } else {
+      UNIMPLEMENTED();
+    }
+  }
+  static void InitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
+                                const std::string& model_dir, Blob* blob,
+                                const std::string& bn_in_op, int32_t dim_num,
+                                int64_t num_in_each_dim) {
+    InitializeWithDirCpu<T>(ctx, part_id, part_num, model_dir, blob, bn_in_op, dim_num,
+                            num_in_each_dim);
+  }
+  static void Sigmoid(DeviceCtx* ctx, const int64_t n, const T* x, T* y) { UNIMPLEMENTED(); }
+  static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
+                              T* dx) {
+    UNIMPLEMENTED();
+  }
+  static void TanH(DeviceCtx* ctx, const int64_t n, const T* x, T* y) { UNIMPLEMENTED(); }
+  static void TanHBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
+                           T* dx) {
+    UNIMPLEMENTED();
+  }
+  static void Relu(DeviceCtx* ctx, const int64_t n, const T* x, T* y) { UNIMPLEMENTED(); }
+  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
+                           T* dx) {
+    UNIMPLEMENTED();
+  }
+  static void Set(DeviceCtx* ctx, const T value, T* addr) { *addr = value; }
 };
 
 template<typename T>
@@ -302,9 +397,19 @@ struct FloatingNewKernelUtilIf<DeviceType::kCPU, T> {
   }
 };
 
+template<typename T>
+struct Float16NewKernelUtilIf<DeviceType::kCPU, T> {
+  static void HGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
+                    const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
+                    const int m, const int n, const int k, const T alpha, const T* a, const int lda,
+                    const T* b, const int ldb, const T beta, T* c, const int ldc) {
+    UNIMPLEMENTED();
+  }
+};
+
 #define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto) \
   template struct NewKernelUtilIf<DeviceType::kCPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_SEQ);
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
 
 #define INSTANTIATE_FLOATING_KERNEL_UTIL(type_cpp, type_proto) \
   template struct FloatingNewKernelUtilIf<DeviceType::kCPU, type_cpp>;
