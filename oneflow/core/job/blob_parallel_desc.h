@@ -20,6 +20,10 @@ class BlobParallelDesc final {
   explicit BlobParallelDesc(int64_t model_split_axis) : model_split_axis_(model_split_axis) {}
   void CopyBlobParallelConf(const BlobParallelDesc& blob_parallel_desc);
 
+  bool EquivalentTo(const BlobParallelDesc& rhs) const;
+  bool operator==(const BlobParallelDesc& rhs) const;
+  bool operator!=(const BlobParallelDesc& rhs) const { return !(*this == rhs); }
+
   // Getters
   // for data input blob
   const DataBlobParallel& data_blob_parallel() const;
@@ -36,11 +40,6 @@ class BlobParallelDesc final {
   bool has_model_blob_parallel() const { return blob_parallel_conf_.has_model_blob_parallel(); }
   bool has_grid_blob_parallel() const { return blob_parallel_conf_.has_grid_blob_parallel(); }
   bool has_model_split_axis() const { return model_split_axis_ != -1; }
-
-  bool operator==(const BlobParallelDesc& rhs) const {
-    return blob_parallel_conf_ == rhs.blob_parallel_conf_;
-  }
-  bool operator!=(const BlobParallelDesc& rhs) const { return !(*this == rhs); }
 
   // Setters
   DataBlobParallel* mut_data_blob_parallel() {

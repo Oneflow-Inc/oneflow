@@ -130,6 +130,30 @@ int64_t BlobParallelDesc::ParallelNum() const {
   return true;
 }
 
+bool BlobParallelDesc::EquivalentTo(const BlobParallelDesc& rhs) const {
+  if (model_split_axis_ != rhs.model_split_axis_) { return false; }
+  using GetAxisParallelInfoFunc = void (BlobParallelDesc::*)(bool*, int32_t*, int64_t*) const;
+  auto IsParallelEquivalent = [&](GetAxisParallelInfoFunc GetAxisParallelInfo) {
+    bool lhs_is_split = false;
+    int32_t lhs_axis = -1;
+    int64_t lhs_axis_parallel_num = 0;
+    (this->*GetAxisParallelInfo)(&lhs_is_split, &lhs_axis, &lhs_axis_parallel_num);
+    bool rhs_is_split = false;
+    int32_t rhs_axis = -1;
+    int64_t rhs_axis_parallel_num = 0;
+    (rhs.*GetAxisParallelInfo)(&rhs_is_split, &rhs_axis, &rhs_axis_parallel_num);
+    return lhs_is_split == rhs_is_split && lhs_axis == rhs_axis
+           && lhs_axis_parallel_num == rhs_axis_parallel_num;
+  };
+  return IsParallelEquivalent(&BlobParallelDesc::GetDataAxisParallelInfo)
+         && IsParallelEquivalent(&BlobParallelDesc::GetModelAxisParallelInfo);
+};
+
+bool BlobParallelDesc::operator==(const BlobParallelDesc& rhs) const {
+  return model_split_axis_ == rhs.model_split_axis_
+         && blob_parallel_conf_ == rhs.blob_parallel_conf_;
+};
+
 bool operator==(const BlobParallelConf& lhs, const BlobParallelConf& rhs) {
   if (lhs.parallel_type_case() != rhs.parallel_type_case()) { return false; }
   switch (lhs.parallel_type_case()) {
