@@ -298,11 +298,6 @@ int32_t ConvOp<NDims>::ModelSplitAxis() const {
   }
 }
 
-template<int32_t NDims>
-int32_t ConvOp<NDims>::MaxModelSplitNum() const {
-  return GetValFromCustomizedConf<int32_t>("filters");
-}
-
 #ifdef WITH_CUDA
 template<int32_t NDims>
 void ConvOp<NDims>::InferCudnnAlgo(

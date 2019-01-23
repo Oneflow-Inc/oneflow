@@ -47,7 +47,6 @@ class ConvOp : public Operator {
                            const ParallelContext*, const OpContext*) const override;
 
   int32_t ModelSplitAxis() const override;
-  int32_t MaxModelSplitNum() const override;
 
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
