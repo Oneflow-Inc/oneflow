@@ -374,8 +374,7 @@ void OpGraph::InferNoParallelBlobDesc() const {
     parallel_ctx.set_policy(op_node->parallel_desc().policy());
     op_node->op().InferBlobDescsIf(
         std::bind(&OpNode::NoParallelBlobDesc4BnInOp, op_node, std::placeholders::_1),
-        &parallel_ctx, job_desc_->RecordPieceSize() / op_node->parallel_desc().parallel_num(),
-        [](OpContext*) {});
+        &parallel_ctx, 1, [](OpContext*) {});
   });
 }
 
