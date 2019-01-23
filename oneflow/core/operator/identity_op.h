@@ -22,7 +22,7 @@ class IdentityOp final : public Operator {
 
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override {
-    return op_conf().identity_conf().in_size() == 1;
+    return op_conf().identity_conf().in_size() == 1 && ibn == SoleIbn();
   }
   void InferOutputBlobModelSplitAxis(
       std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
