@@ -113,10 +113,10 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void InferOpModelSize(HashMap<std::string, size_t>* op_name2model_size);
 
   int32_t GetModelSplitAxis(const std::string& op_name, const LogicalBlobId& lbi) const;
-  BalancedSplitter GetDataBalancedSplitter(const std::string& op_name,
-                                           const LogicalBlobId& lbi) const;
-  BalancedSplitter GetModelBalancedSplitter(const std::string& op_name,
-                                            const LogicalBlobId& lbi) const;
+  BalancedSplitter GetDataBalancedSplitter(const std::string& op_name, const LogicalBlobId& lbi,
+                                           const ParallelDesc& parallel_desc) const;
+  BalancedSplitter GetModelBalancedSplitter(const std::string& op_name, const LogicalBlobId& lbi,
+                                            const ParallelDesc& parallel_desc) const;
 
   void CheckBlobDescs(const std::string& op_name,
                       const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,

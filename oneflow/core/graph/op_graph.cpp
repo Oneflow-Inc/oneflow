@@ -449,17 +449,21 @@ void OpGraph::InferLogicalBlobDesc() const {
 }
 
 BalancedSplitter OpGraph::GetDataBalancedSplitter(const std::string& op_name,
-                                                  const LogicalBlobId& lbi) const {
+                                                  const LogicalBlobId& lbi,
+                                                  const ParallelDesc& parallel_desc) const {
   int64_t data_split_num = Global<OpGraph>::Get()->GetDataSplitNum(op_name, lbi);
   int64_t parallel_num = Global<OpGraph>::Get()->GetParallelNum(op_name, lbi);
+  CHECK_EQ(parallel_desc.parallel_num(), parallel_num);
   CHECK_EQ(data_split_num % parallel_num, 0);
   return BalancedSplitter(data_split_num, parallel_num);
 }
 
 BalancedSplitter OpGraph::GetModelBalancedSplitter(const std::string& op_name,
-                                                   const LogicalBlobId& lbi) const {
+                                                   const LogicalBlobId& lbi,
+                                                   const ParallelDesc& parallel_desc) const {
   int64_t model_split_num = Global<OpGraph>::Get()->GetModelSplitNum(op_name, lbi);
   int64_t parallel_num = Global<OpGraph>::Get()->GetParallelNum(op_name, lbi);
+  CHECK_EQ(parallel_desc.parallel_num(), parallel_num);
   CHECK_GE(model_split_num, parallel_num);
   return BalancedSplitter(model_split_num, parallel_num);
 }
