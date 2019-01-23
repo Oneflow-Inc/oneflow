@@ -185,8 +185,10 @@ void EpollCommNet::InitSockets() {
   // useful log
   for (int64_t peer_mchn_id : peer_machine_id()) {
     FOR_RANGE(int32_t, link_i, 0, epoll_conf_.link_num()) {
-      LOG(INFO) << "machine: " << peer_mchn_id << ", link index: " << link_i << ", sockfd: "
-                << machine_link_id2sockfds_.at(peer_mchn_id * epoll_conf_.link_num() + link_i);
+      int32_t sockfd = machine_link_id2sockfds_.at(peer_mchn_id * epoll_conf_.link_num() + link_i);
+      CHECK_GT(sockfd, 0);
+      LOG(INFO) << "machine: " << peer_mchn_id << ", link index: " << link_i
+                << ", sockfd: " << sockfd;
     }
   }
 }
