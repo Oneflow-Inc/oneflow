@@ -680,6 +680,13 @@ message ScalarMulOpConf {
   required float scalar = 3;
 }
 
+message L2NormalizeOpConf {
+  required string in = 1;
+  required string out = 2;
+  required int32 axis = 3 [default = -1];
+  optional float epsilon = 4 [default = 1e-12];
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -749,6 +756,7 @@ message OperatorConf {
     DefineTestBlobConf define_test_blob_conf = 236;
     PReluOpConf prelu_conf = 237;
     ScalarMulOpConf scalar_mul_conf = 238;
+    L2NormalizeOpConf l2_normalize_conf = 239;
   }
 }
 
