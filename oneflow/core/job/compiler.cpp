@@ -1,5 +1,7 @@
 #include "oneflow/core/job/compiler.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
+#include "oneflow/core/device/cudnn_conv_ctx_cache.h"
+#include "oneflow/core/graph/op_graph.h"
 
 namespace oneflow {
 
@@ -91,7 +93,14 @@ void Compiler::GenNetTopo(Plan* plan) {
 }
 
 Plan Compiler::DoCompile() {
+#ifdef WITH_CUDA
+  Global<CudnnConvCtxCache>::New();
+#endif
+  Global<JobDesc>::Get()->FixAndOptimizeDLNet();
   const JobDesc* job_desc = Global<JobDesc>::Get();
+  TeePersistentLogStream::Create("optimized_job_conf")->Write(job_desc->job_conf());
+  Global<OpGraph>::New(job_desc);
+  Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_op_graph.dot");
   auto logical_gph = std::make_unique<LogicalGraph>(job_desc->IsTrain());
   int64_t total_mbn_num = logical_gph->total_mbn_num();
   auto task_gph = std::make_unique<TaskGraph>(std::move(logical_gph));
@@ -127,6 +136,10 @@ Plan Compiler::DoCompile() {
   plan.set_total_mbn_num(total_mbn_num);
   GenNetTopo(&plan);
   ToDotFile(plan, "/dot/plan.dot");
+  Global<OpGraph>::Delete();
+#ifdef WITH_CUDA
+  Global<CudnnConvCtxCache>::Delete();
+#endif
   return plan;
 }
 
