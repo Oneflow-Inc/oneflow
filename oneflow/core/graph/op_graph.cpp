@@ -372,6 +372,10 @@ void OpGraph::InferNoParallelBlobDesc() const {
     parallel_ctx.set_parallel_id(0);
     parallel_ctx.set_parallel_num(1);
     parallel_ctx.set_policy(op_node->parallel_desc().policy());
+    // the real important data we want to get is:
+    // a) model blobs' byte size;
+    // b) number of axes of blobs' body shape;
+    // Hence the argument record_piece_size can be any positive number, here it's 1
     op_node->op().InferBlobDescsIf(
         std::bind(&OpNode::NoParallelBlobDesc4BnInOp, op_node, std::placeholders::_1),
         &parallel_ctx, 1, [](OpContext*) {});
