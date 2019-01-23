@@ -11,7 +11,7 @@ namespace oneflow {
 void ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id, std::string* device_tag,
                          std::string* device_id_str);
 
-class ParallelDesc {
+class ParallelDesc final {
  public:
   // OF_DISALLOW_COPY_AND_MOVE(ParallelDesc);
   ParallelDesc() = delete;
@@ -33,8 +33,6 @@ class ParallelDesc {
   // Setters
   void set_policy(ParallelPolicy val) { policy_ = val; }
   void set_device_type(DeviceType device_type) { device_type_ = device_type; }
-  void RemoveNeedlessDevice(const std::string& op_name, int32_t max_device_num);
-  void RemoveNeedlessDevice(int32_t max_device_num) { RemoveNeedlessDevice("", max_device_num); }
   void RandomSelectOneDeviceAndRemoveTheOthers();
   void UseCPUDevicesOnMaster();
 

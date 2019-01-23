@@ -18,6 +18,16 @@ class ScalarMulOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override { return op_conf().scalar_mul_conf(); }
   bool NeedInBlobWhenBackward() const override { return false; }
   bool NeedOutBlobWhenBackward() const override { return false; }
+
+ private:
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return true; }
+  void InferOutputBlobModelSplitAxis(
+      std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
+      std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
+      const ParallelContext* parallel_context) const override {
+    NaiveInferOutputBlobModelSplitAxis(ModelSplitAxis4BnInOp, ShapeNumAxes4BnInOp,
+                                       parallel_context);
+  }
 };
 
 }  // namespace oneflow

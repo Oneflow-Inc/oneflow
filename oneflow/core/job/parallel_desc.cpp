@@ -56,42 +56,6 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
   SanityCheck();
 }
 
-void ParallelDesc::RemoveNeedlessDevice(const std::string& op_name, int32_t max_device_num) {
-  if (max_device_num >= parallel_num_) { return; }
-  LOG_IF(WARNING, op_name != "") << "parallel_num of " << op_name
-                                 << " is greater than max_device_num " << max_device_num;
-  int32_t device_cnt = 0;
-  int64_t max_machine_id = -1;
-  for (int64_t machine_id : sorted_machine_ids_) {
-    auto it = machine_id2sorted_dev_phy_ids_.find(machine_id);
-    int32_t cur_device_num = it->second.size();
-    int32_t cur_device_max_num = max_device_num - device_cnt;
-    if (cur_device_num > cur_device_max_num) {
-      it->second.erase(it->second.begin() + cur_device_max_num, it->second.end());
-      if (it->second.empty()) {
-        max_machine_id = machine_id - 1;
-      } else {
-        max_machine_id = machine_id;
-      }
-      break;
-    } else {
-      device_cnt += cur_device_num;
-    }
-  }
-  CHECK_NE(max_machine_id, -1);
-  FOR_EACH(it, sorted_machine_ids_) {
-    if (*it > max_machine_id) {
-      sorted_machine_ids_.erase(it, sorted_machine_ids_.end());
-      break;
-    }
-  }
-  EraseIf<int64_t, std::vector<int64_t>>(&machine_id2sorted_dev_phy_ids_,
-                                         [&](HashMap<int64_t, std::vector<int64_t>>::iterator it) {
-                                           return it->first > max_machine_id;
-                                         });
-  parallel_num_ = max_device_num;
-}
-
 void ParallelDesc::RandomSelectOneDeviceAndRemoveTheOthers() {
   CHECK_GE(parallel_num_, 1);
   if (parallel_num_ == 1) { return; }
