@@ -24,13 +24,11 @@ struct TopKKernelUtil<DeviceType::kCPU, T> {
                       int32_t* out_ptr) {
     FOR_RANGE(int32_t, i, 0, instance_num) {
       std::iota(fw_buf, fw_buf + instance_dim, 0);
-      std::nth_element(
-          fw_buf, fw_buf + k, fw_buf + instance_dim,
-          [&](const int32_t lhs, const int32_t rhs) { return in_ptr[lhs] > in_ptr[rhs]; });
-      if (sorted) {
-        std::sort(fw_buf, fw_buf + k,
-                  [&](const int32_t lhs, const int32_t rhs) { return in_ptr[lhs] > in_ptr[rhs]; });
-      }
+      auto comp = [&](const int32_t lhs, const int32_t rhs) {
+        return in_ptr[i * instance_dim + lhs] > in_ptr[i * instance_dim + rhs];
+      };
+      std::nth_element(fw_buf, fw_buf + k, fw_buf + instance_dim, comp);
+      if (sorted) { std::sort(fw_buf, fw_buf + k, comp); }
       FOR_RANGE(int32_t, j, 0, k) { out_ptr[i * k + j] = fw_buf[j]; }
     }
   }
