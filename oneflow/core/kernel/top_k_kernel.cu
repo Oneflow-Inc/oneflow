@@ -1,4 +1,3 @@
-
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/device/cuda_util.h"
