@@ -11,15 +11,16 @@ void ConstantOp::InitFromOpConf() {
 const PbMessage& ConstantOp::GetCustomizedConf() const { return op_conf().constant_conf(); }
 
 void ConstantOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx) const {
+                                const ParallelContext* parallel_ctx,
+                                int64_t record_piece_size) const {
   CHECK_EQ(parallel_ctx->policy(), ParallelPolicy::kDataParallel);
   const ConstantOpConf& conf = op_conf().constant_conf();
   const DataType& data_type =
       conf.has_data_type() ? conf.data_type() : Global<JobDesc>::Get()->DefaultDataType();
   std::vector<int64_t> dim_vec;
   if (conf.use_device_piece_size_as_dim0()) {
-    CHECK_EQ(Global<JobDesc>::Get()->PieceSize() % parallel_ctx->parallel_num(), 0);
-    dim_vec.push_back(Global<JobDesc>::Get()->PieceSize() / parallel_ctx->parallel_num());
+    CHECK_EQ(record_piece_size % parallel_ctx->parallel_num(), 0);
+    dim_vec.push_back(record_piece_size / parallel_ctx->parallel_num());
   }
   if (conf.has_shape()) {
     dim_vec.insert(dim_vec.end(), conf.shape().dim().cbegin(), conf.shape().dim().cend());

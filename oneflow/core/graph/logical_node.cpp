@@ -276,18 +276,6 @@ int32_t LogicalNode::GetModelSplitAxis() const {
   }
 }
 
-int32_t LogicalNode::GetMaxModelSplitNum() const {
-  CHECK_EQ(parallel_desc_->policy(), kModelParallel);
-  CHECK_NOTNULL(main_model_parallel_);
-  if (main_model_parallel_ == this) {
-    int32_t ret = SoleOp()->MaxModelSplitNum();
-    CHECK_NE(ret, -1);
-    return ret;
-  } else {
-    return main_model_parallel_->GetMaxModelSplitNum();
-  }
-}
-
 bool LogicalNode::HasOpWithCondition(std::function<bool(const Operator*)> cond) const {
   for (std::shared_ptr<const Operator> op : op_vec_) {
     if (cond(op.get())) { return true; }
