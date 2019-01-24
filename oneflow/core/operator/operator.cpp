@@ -213,8 +213,13 @@ void Operator::NaiveInferOutputBlobParallelDesc(
 
 void Operator::InferBlobModelSplitAxisIf(
     std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
+    std::function<int32_t(const std::string&)> ProducerModelSplitAxis4BnInOp,
     std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
     const ParallelContext* parallel_context) const {
+  if (!input_bns().empty()) {
+    InferInputBlobModelSplitAxis(ModelSplitAxis4BnInOp, ProducerModelSplitAxis4BnInOp,
+                                 ShapeNumAxes4BnInOp, parallel_context);
+  }
   if (!output_bns().empty()) {
     InferOutputBlobModelSplitAxis(ModelSplitAxis4BnInOp, ShapeNumAxes4BnInOp, parallel_context);
   }
@@ -224,20 +229,43 @@ bool Operator::IsSoleInputBlobAllowedModelSplit() const {
   return input_bns().size() == 1 && IsInputBlobAllowedModelSplit(SoleIbn());
 }
 
+void Operator::NaiveInferInputBlobModelSplitAxis(
+    std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
+    std::function<int32_t(const std::string&)> ProducerModelSplitAxis4BnInOp,
+    std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
+    const ParallelContext* parallel_context) const {
+  for (const std::string& bn : input_bns()) {
+    if (parallel_context->policy() == kDataParallel) {
+      *ModelSplitAxis4BnInOp(bn) = -1;
+    } else if (parallel_context->policy() == kModelParallel) {
+      if (IsInputBlobAllowedModelSplit(bn)) {
+        *ModelSplitAxis4BnInOp(bn) = ProducerModelSplitAxis4BnInOp(bn);
+      } else {
+        *ModelSplitAxis4BnInOp(bn) = -1;
+      }
+    } else {
+      UNIMPLEMENTED();
+    }
+  }
+}
+
 void Operator::NaiveInferOutputBlobModelSplitAxis(
     std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
     std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
     const ParallelContext* parallel_context) const {
-  int32_t model_split_axis = ModelSplitAxis();
   for (const std::string& bn : output_bns()) {
-    if (IsSoleInputBlobAllowedModelSplit()) {
-      *ModelSplitAxis4BnInOp(bn) = *ModelSplitAxis4BnInOp(SoleIbn());
-    } else if (parallel_context->policy() == kDataParallel) {
+    if (parallel_context->policy() == kDataParallel) {
       *ModelSplitAxis4BnInOp(bn) = -1;
-    } else if (parallel_context->policy() == kModelParallel
-               && (!model_bns().empty() || !const_model_bns().empty())) {
-      CHECK_NE(model_split_axis, -1);
-      *ModelSplitAxis4BnInOp(bn) = model_split_axis;
+    } else if (parallel_context->policy() == kModelParallel) {
+      if (!model_bns().empty() || !const_model_bns().empty()) {
+        int32_t model_split_axis = ModelSplitAxis();
+        CHECK_NE(model_split_axis, -1);
+        *ModelSplitAxis4BnInOp(bn) = model_split_axis;
+      } else if (IsSoleInputBlobAllowedModelSplit()) {
+        *ModelSplitAxis4BnInOp(bn) = *ModelSplitAxis4BnInOp(SoleIbn());
+      } else {
+        UNIMPLEMENTED();
+      }
     } else {
       UNIMPLEMENTED();
     }

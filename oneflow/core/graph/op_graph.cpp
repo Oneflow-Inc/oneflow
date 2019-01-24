@@ -288,9 +288,9 @@ void OpGraph::Init() {
   UpdateOpNodeHasInDiff();
   InferTimeShape();
   InferNoParallelBlobDesc();
-  HashMap<LogicalBlobId, int32_t> lbi2model_split_axis;
-  InferModelSplitAxis(&lbi2model_split_axis);
-  InferBlobParallelDesc(lbi2model_split_axis);
+  HashMap<OpNode*, HashMap<LogicalBlobId, int32_t>> op_node2lbi2model_split_axis;
+  InferModelSplitAxis(&op_node2lbi2model_split_axis);
+  InferBlobParallelDesc(op_node2lbi2model_split_axis);
   InferLogicalBlobDesc();
 }
 
@@ -384,14 +384,21 @@ void OpGraph::InferNoParallelBlobDesc() const {
   });
 }
 
-void OpGraph::InferModelSplitAxis(HashMap<LogicalBlobId, int32_t>* lbi2model_split_axis) const {
+void OpGraph::InferModelSplitAxis(
+    HashMap<OpNode*, HashMap<LogicalBlobId, int32_t>>* op_node2lbi2model_split_axis) const {
   TopoForEachNode([&](OpNode* op_node) {
     auto ModelSplitAxis4BnInOp = [&](const std::string& bn) -> int32_t* {
       const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(bn);
-      if (lbi2model_split_axis->find(lbi) == lbi2model_split_axis->end()) {
-        lbi2model_split_axis->emplace(lbi, -1);
+      auto& lbi2model_split_axis = (*op_node2lbi2model_split_axis)[op_node];
+      if (lbi2model_split_axis.find(lbi) == lbi2model_split_axis.end()) {
+        lbi2model_split_axis.emplace(lbi, -1);
       }
-      return &lbi2model_split_axis->at(lbi);
+      return &lbi2model_split_axis.at(lbi);
+    };
+    auto ProducerModelSplitAxis4BnInOp = [&](const std::string& bn) -> int32_t {
+      OpNode* producer = op_node->SrcNode4InputBnInOp(bn);
+      const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(bn);
+      return op_node2lbi2model_split_axis->at(producer).at(lbi);
     };
     auto ShapeNumAxes4BnInOp = [&](const std::string& bn) -> int32_t {
       return op_node->NoParallelBlobDesc4BnInOp(bn)->shape().NumAxes();
@@ -400,14 +407,15 @@ void OpGraph::InferModelSplitAxis(HashMap<LogicalBlobId, int32_t>* lbi2model_spl
     parallel_ctx.set_parallel_id(0);
     parallel_ctx.set_parallel_num(op_node->parallel_desc().parallel_num());
     parallel_ctx.set_policy(op_node->parallel_desc().policy());
-    op_node->op().InferBlobModelSplitAxisIf(ModelSplitAxis4BnInOp, ShapeNumAxes4BnInOp,
-                                            &parallel_ctx);
+    op_node->op().InferBlobModelSplitAxisIf(ModelSplitAxis4BnInOp, ProducerModelSplitAxis4BnInOp,
+                                            ShapeNumAxes4BnInOp, &parallel_ctx);
   });
 }
 
 void OpGraph::InferBlobParallelDesc(
-    const HashMap<LogicalBlobId, int32_t>& lbi2model_split_axis) const {
+    const HashMap<OpNode*, HashMap<LogicalBlobId, int32_t>>& op_node2lbi2model_split_axis) const {
   TopoForEachNode([&](OpNode* op_node) {
+    const auto& lbi2model_split_axis = op_node2lbi2model_split_axis.at(op_node);
     auto BlobParallelDesc4BnInOp = [&](const std::string& bn) -> BlobParallelDesc* {
       const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(bn);
       return op_node->MutBlobParallelDesc4BnInOp(bn, lbi2model_split_axis.at(lbi));

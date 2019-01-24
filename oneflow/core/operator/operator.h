@@ -146,9 +146,11 @@ class Operator {
       std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
       Shape* time_shape) const;
   // Infer blob's model_split_axis
-  void InferBlobModelSplitAxisIf(std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
-                                 std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
-                                 const ParallelContext* parallel_context) const;
+  void InferBlobModelSplitAxisIf(
+      std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
+      std::function<int32_t(const std::string&)> ProducerModelSplitAxis4BnInOp,
+      std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
+      const ParallelContext* parallel_context) const;
   // Infer blob's parallel desc
   void InferBlobParallelDescIf(
       std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
@@ -168,6 +170,19 @@ class Operator {
 
  protected:
   // infer model_split_axis
+  virtual void InferInputBlobModelSplitAxis(
+      std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
+      std::function<int32_t(const std::string&)> ProducerModelSplitAxis4BnInOp,
+      std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
+      const ParallelContext* parallel_context) const {
+    NaiveInferInputBlobModelSplitAxis(ModelSplitAxis4BnInOp, ProducerModelSplitAxis4BnInOp,
+                                      ShapeNumAxes4BnInOp, parallel_context);
+  }
+  void NaiveInferInputBlobModelSplitAxis(
+      std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
+      std::function<int32_t(const std::string&)> ProducerModelSplitAxis4BnInOp,
+      std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
+      const ParallelContext* parallel_context) const;
   virtual void InferOutputBlobModelSplitAxis(
       std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
       std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,

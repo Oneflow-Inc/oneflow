@@ -135,8 +135,10 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void UpdateOpNodeHasInDiff() const;
   void InferTimeShape() const;
   void InferNoParallelBlobDesc() const;
-  void InferModelSplitAxis(HashMap<LogicalBlobId, int32_t>* lbi2model_split_axis) const;
-  void InferBlobParallelDesc(const HashMap<LogicalBlobId, int32_t>& lbi2model_split_axis) const;
+  void InferModelSplitAxis(
+      HashMap<OpNode*, HashMap<LogicalBlobId, int32_t>>* op_node2lbi2model_split_axis) const;
+  void InferBlobParallelDesc(
+      const HashMap<OpNode*, HashMap<LogicalBlobId, int32_t>>& op_node2lbi2model_split_axis) const;
   void InferLogicalBlobDesc() const;
   std::string GetOpNameKey(const std::string& op_name, const LogicalBlobId& lbi) const;
   LogicalBlobId GetLogicalBlobIdKey(const std::string& op_name, const LogicalBlobId& lbi) const;
