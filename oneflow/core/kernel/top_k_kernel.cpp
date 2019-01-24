@@ -25,10 +25,10 @@ struct TopKKernelUtil<DeviceType::kCPU, T> {
     FOR_RANGE(int32_t, i, 0, instance_num) {
       std::iota(fw_buf, fw_buf + instance_dim, 0);
       std::nth_element(
-          fw_buf, fw_buf + k - 1, fw_buf + instance_dim,
+          fw_buf, fw_buf + k, fw_buf + instance_dim,
           [&](const int32_t lhs, const int32_t rhs) { return in_ptr[lhs] > in_ptr[rhs]; });
       if (sorted) {
-        std::sort(fw_buf, fw_buf + k - 1,
+        std::sort(fw_buf, fw_buf + k,
                   [&](const int32_t lhs, const int32_t rhs) { return in_ptr[lhs] > in_ptr[rhs]; });
       }
       FOR_RANGE(int32_t, j, 0, k) { out_ptr[i * k + j] = fw_buf[j]; }
@@ -40,20 +40,6 @@ struct TopKKernelUtil<DeviceType::kCPU, T> {
   template struct TopKKernelUtil<DeviceType::kCPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_TOP_K_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
-namespace {
-
-Kernel* CreateTopKKernel(const KernelConf& kernel_conf) {
-  static const HashMap<std::string, std::function<Kernel*()>> creators = {
-#define TOPK_KERNEL_ENTRY(device_type, data_type_pair)         \
-  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), \
-   []() { return new TopKKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>(); }},
-      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(TOPK_KERNEL_ENTRY, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)};
-  return creators.at(GetHashKey(kernel_conf.op_attribute().op_conf().device_type(),
-                                kernel_conf.top_k_conf().data_type()))();
-}
-
-}  // namespace
-
-REGISTER_KERNEL_CREATOR(OperatorConf::kTopKConf, CreateTopKKernel);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kTopKConf, TopKKernel, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

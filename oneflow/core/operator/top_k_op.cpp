@@ -29,8 +29,7 @@ void TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
 void TopKOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
     KernelConf* kernel_conf) const {
-  TopKKernelConf* conf = kernel_conf->mutable_top_k_conf();
-  conf->set_data_type(GetBlobDesc4BnInOp("in")->data_type());
+  kernel_conf->set_data_type(GetBlobDesc4BnInOp("in")->data_type());
 }
 
 REGISTER_OP(OperatorConf::kTopKConf, TopKOp);
