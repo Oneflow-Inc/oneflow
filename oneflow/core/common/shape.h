@@ -19,6 +19,7 @@ class Shape final {
   bool operator==(const Shape& rhs) const;
   bool operator!=(const Shape& rhs) const { return !(*this == rhs); }
   std::string DebugStr() const;
+  std::string ToString() const;
 
   void ToProto(ShapeProto*) const;
 

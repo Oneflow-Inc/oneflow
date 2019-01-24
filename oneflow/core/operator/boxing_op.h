@@ -23,6 +23,14 @@ class BoxingOp final : public Operator {
                             KernelConf* kernel_conf) const override;
 
  private:
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { UNIMPLEMENTED(); }
+  void InferOutputBlobModelSplitAxis(
+      std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
+      std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
+      const ParallelContext* parallel_context) const override {
+    UNIMPLEMENTED();
+  }
+
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
   LogicalBlobId obn2lbi(const std::string& output_bn) const override;
   void InferDataTmpBlobDesc(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

@@ -65,14 +65,13 @@ void LogicalGraph::GroupNodesForReduceStruct() {
     if (op_name2model_size.find(op_name) == op_name2model_size.end()) { return 0; }
     return op_name2model_size.at(op_name);
   };
-  const JobDesc* global_job_desc = Global<JobDesc>::Get();
-  OpGraph(global_job_desc).InferOpModelSize(&op_name2model_size);
+  Global<OpGraph>::Get()->InferOpModelSize(&op_name2model_size);
   size_t model_total_size = 0;
   for (const auto& pair : op_name2model_size) { model_total_size += pair.second; }
   HashMap<ParallelDesc, std::list<const LogicalNode*>> parellel_desc2fw_group;
-  size_t avg_size = model_total_size / global_job_desc->all_reduce_group_num();
-  const size_t group_min_size = global_job_desc->all_reduce_group_min_byte();
-  const float group_size_warmup = global_job_desc->all_reduce_group_size_warmup();
+  size_t avg_size = model_total_size / Global<JobDesc>::Get()->all_reduce_group_num();
+  const size_t group_min_size = Global<JobDesc>::Get()->all_reduce_group_min_byte();
+  const float group_size_warmup = Global<JobDesc>::Get()->all_reduce_group_size_warmup();
   size_t cur_group_size = group_min_size / group_size_warmup;
   auto GetCurGroupSize = [&](int32_t group_id) {
     if (cur_group_size < avg_size) { cur_group_size *= group_size_warmup; }
