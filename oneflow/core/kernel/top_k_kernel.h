@@ -21,7 +21,7 @@ class TopKKernel final : public KernelIf<device_type> {
 template<DeviceType device_type, typename T>
 struct TopKKernelUtil {
   static void Forward(const T* in_ptr, const bool sotred, const int32_t instance_num,
-                      const int32_t instance_dim, const int32_t k, int32_t* fw_buf,
+                      const int32_t instance_size, const int32_t k, int32_t* fw_buf,
                       int32_t* out_ptr);
 };
 

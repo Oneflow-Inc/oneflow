@@ -80,14 +80,14 @@ void BatchGatherKernelUtil<DeviceType::kCPU, T, K>::Forward(DeviceCtx* ctx, cons
                                                             const int64_t gather_dim_size, T* out) {
   const int64_t batch_num = flat_out_shape.At(0);
   const int64_t indices_num = flat_out_shape.At(1);
-  const int64_t instance_dim = flat_out_shape.At(2);
+  const int64_t instance_size = flat_out_shape.At(2);
   FOR_RANGE(int64_t, batch_idx, 0, batch_num) {
     FOR_RANGE(int64_t, i, 0, indices_num) {
       const K idx = indices[batch_idx * indices_num + i];
       CHECK(idx >= 0 && idx < gather_dim_size);
-      const T* from = in + batch_idx * gather_dim_size * instance_dim + idx * instance_dim;
-      T* to = out + batch_idx * indices_num * instance_dim + i * instance_dim;
-      std::copy(from, from + instance_dim, to);
+      const T* from = in + batch_idx * gather_dim_size * instance_size + idx * instance_size;
+      T* to = out + batch_idx * indices_num * instance_size + i * instance_size;
+      std::copy(from, from + instance_size, to);
     }
   }
 }
@@ -100,14 +100,14 @@ void BatchGatherKernelUtil<DeviceType::kCPU, T, K>::Backward(DeviceCtx* ctx, con
                                                              T* in_diff) {
   const int64_t batch_num = flat_out_diff_shape.At(0);
   const int64_t indices_num = flat_out_diff_shape.At(1);
-  const int64_t instance_dim = flat_out_diff_shape.At(2);
+  const int64_t instance_size = flat_out_diff_shape.At(2);
   FOR_RANGE(int64_t, batch_idx, 0, batch_num) {
     FOR_RANGE(int64_t, i, 0, indices_num) {
       const int64_t idx = indices[batch_idx * indices_num + i];
       CHECK(idx >= 0 && idx < gather_dim_size);
-      const T* from = out_diff + batch_idx * indices_num * instance_dim + i * instance_dim;
-      T* to = in_diff + batch_idx * gather_dim_size * instance_dim + idx * instance_dim;
-      std::transform(from, from + instance_dim, to, to, std::plus<T>());
+      const T* from = out_diff + batch_idx * indices_num * instance_size + i * instance_size;
+      T* to = in_diff + batch_idx * gather_dim_size * instance_size + idx * instance_size;
+      std::transform(from, from + instance_size, to, to, std::plus<T>());
     }
   }
 }
