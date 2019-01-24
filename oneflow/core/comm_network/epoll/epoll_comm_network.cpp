@@ -159,6 +159,7 @@ void EpollCommNet::InitSockets() {
     sockaddr_in peer_sockaddr = GetSockAddr(peer_machine.addr(), peer_port);
     for (int32_t link_i = 0; link_i < epoll_conf_.link_num(); ++link_i) {
       int32_t sockfd = socket(AF_INET, SOCK_STREAM, 0);
+      PCHECK(sockfd != -1);
       PCHECK(connect(sockfd, reinterpret_cast<sockaddr*>(&peer_sockaddr), sizeof(peer_sockaddr))
              == 0);
       CHECK(sockfd2helper_.emplace(sockfd, NewSocketHelper(sockfd)).second);
