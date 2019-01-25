@@ -164,6 +164,8 @@ void EpollCommNet::InitSockets() {
              == 0);
       CHECK(sockfd2helper_.emplace(sockfd, NewSocketHelper(sockfd)).second);
       machine_link_id2sockfds_.at(peer_mchn_id * epoll_conf_.link_num() + link_i) = sockfd;
+      std::cout << "Connect to: machine " << peer_mchn_id << " link_index " << link_i << " sockfd "
+                << sockfd << std::endl;
     }
   }
 
@@ -179,6 +181,8 @@ void EpollCommNet::InitSockets() {
     int64_t peer_mchn_id = GetMachineId(peer_sockaddr);
     machine_link_id2sockfds_.at(peer_mchn_id * epoll_conf_.link_num()
                                 + mchn_id2link_index.at(peer_mchn_id)) = sockfd;
+    std::cout << "Connect to: machine " << peer_mchn_id << " link_index "
+              << mchn_id2link_index.at(peer_mchn_id) << " sockfd " << sockfd << std::endl;
     mchn_id2link_index.at(peer_mchn_id)++;
   }
   PCHECK(close(listen_sockfd) == 0);
@@ -188,9 +192,9 @@ void EpollCommNet::InitSockets() {
   for (int64_t peer_mchn_id : peer_machine_id()) {
     FOR_RANGE(int32_t, link_i, 0, epoll_conf_.link_num()) {
       int32_t sockfd = machine_link_id2sockfds_.at(peer_mchn_id * epoll_conf_.link_num() + link_i);
-      CHECK_GT(sockfd, 0);
       LOG(INFO) << "machine: " << peer_mchn_id << ", link index: " << link_i
                 << ", sockfd: " << sockfd;
+      CHECK_GT(sockfd, 0);
     }
   }
 }
