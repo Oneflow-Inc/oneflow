@@ -284,9 +284,22 @@ void Operator::InferInputOutputBlobParallelType(
       UNIMPLEMENTED();
     }
   } else {
-    CHECK_EQ(parallel_ctx->policy(), kDataParallel);
     for (const std::string& ibn : input_bns()) { CHECK(!IsInputBlobAllowedModelSplit(ibn)); }
-    InferDataSplit();
+    if (parallel_ctx->policy() == kDataParallel) {
+      InferDataSplit();
+    } else if (parallel_ctx->policy() == kModelParallel) {
+      for (const std::string& ibn : input_bns()) {
+        BlobParallelType4BnInOp(ibn)->mutable_clone_parallel();
+      }
+      for (const std::string& obn : output_bns()) {
+        CHECK(!(model_bns().empty() && const_model_bns().empty()));
+        int32_t out_split_axis = ModelSplitAxis4BnInOp(obn);
+        CHECK_NE(out_split_axis, -1);
+        BlobParallelType4BnInOp(obn)->mutable_split_parallel()->set_axis(out_split_axis);
+      }
+    } else {
+      UNIMPLEMENTED();
+    }
   }
 }
 
