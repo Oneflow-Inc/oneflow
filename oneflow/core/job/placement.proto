@@ -21,11 +21,33 @@ message GridBlobParallel {
   required int64 model_split_num = 2;
 }
 
+// for input and output blob
+message SplitParallel {
+  required int32 axis = 1;
+}
+
+// for input blob
+message CloneParallel {
+}
+
+// for output blob
+message PartialSumParallel {
+}
+
+message BlobParallelType {
+  required int32 parallel_num = 1;
+  oneof parallel_type {
+    SplitParallel split_parallel = 2;
+    CloneParallel clone_parallel = 3;
+    PartialSumParallel partial_sum_parallel = 4;
+  }
+}
+
 message BlobParallelConf {
   oneof parallel_type {
-    DataBlobParallel data_blob_parallel = 2;
-    ModelBlobParallel model_blob_parallel = 3;
-    GridBlobParallel grid_blob_parallel = 4;
+    DataBlobParallel data_blob_parallel = 1;
+    ModelBlobParallel model_blob_parallel = 2;
+    GridBlobParallel grid_blob_parallel = 3;
   }
 }
 

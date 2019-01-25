@@ -225,6 +225,71 @@ void Operator::InferBlobModelSplitAxisIf(
   }
 }
 
+void Operator::InferInputOutputBlobParallelTypeIf(
+    std::function<BlobParallelType*(const std::string&)> BlobParallelType4BnInOp,
+    std::function<const BlobParallelType&(const std::string&)> ProducerBlobParallelType4Ibn,
+    std::function<int32_t(const std::string&)> ModelSplitAxis4BnInOp,
+    const ParallelContext* parallel_ctx) const {
+  InferInputOutputBlobParallelType(BlobParallelType4BnInOp, ProducerBlobParallelType4Ibn,
+                                   ModelSplitAxis4BnInOp, parallel_ctx);
+  auto SetParallelNum = [&](const std::string& bn) {
+    BlobParallelType4BnInOp(bn)->set_parallel_num(parallel_ctx->parallel_num());
+  };
+  for (const auto& bn : input_bns()) { SetParallelNum(bn); }
+  for (const auto& bn : output_bns()) { SetParallelNum(bn); }
+}
+
+void Operator::InferInputOutputBlobParallelType(
+    std::function<BlobParallelType*(const std::string&)> BlobParallelType4BnInOp,
+    std::function<const BlobParallelType&(const std::string&)> ProducerBlobParallelType4Ibn,
+    std::function<int32_t(const std::string&)> ModelSplitAxis4BnInOp,
+    const ParallelContext* parallel_ctx) const {
+  auto InferDataSplit = [&]() {
+    for (const std::string& ibn : input_bns()) {
+      BlobParallelType4BnInOp(ibn)->mutable_split_parallel()->set_axis(0);
+    }
+    for (const std::string& obn : output_bns()) {
+      BlobParallelType4BnInOp(obn)->mutable_split_parallel()->set_axis(0);
+    }
+  };
+  if (IsSoleInputBlobAllowedModelSplit()) {
+    const auto& producer_blob_pt = ProducerBlobParallelType4Ibn(SoleIbn());
+    if (producer_blob_pt.has_clone_parallel()) {
+      CHECK_EQ(parallel_ctx->parallel_num(), producer_blob_pt.parallel_num());
+      BlobParallelType4BnInOp(SoleIbn())->mutable_clone_parallel();
+      for (const std::string& obn : output_bns()) {
+        BlobParallelType4BnInOp(obn)->mutable_clone_parallel();
+      }
+    } else if (producer_blob_pt.has_partial_sum_parallel()) {
+      CHECK_EQ(parallel_ctx->policy(), kDataParallel);
+      InferDataSplit();
+    } else if (producer_blob_pt.has_split_parallel()) {
+      if (parallel_ctx->policy() == kDataParallel) {
+        CHECK_EQ(producer_blob_pt.split_parallel().axis(), 0);
+        InferDataSplit();
+      } else if (parallel_ctx->policy() == kModelParallel) {
+        CHECK_EQ(parallel_ctx->parallel_num(), producer_blob_pt.parallel_num());
+        int32_t in_split_axis = producer_blob_pt.split_parallel().axis();
+        CHECK_EQ(ModelSplitAxis4BnInOp(SoleIbn()), in_split_axis);
+        BlobParallelType4BnInOp(SoleIbn())->mutable_split_parallel()->set_axis(in_split_axis);
+        for (const std::string& obn : output_bns()) {
+          int32_t out_split_axis = ModelSplitAxis4BnInOp(obn);
+          CHECK_NE(out_split_axis, -1);
+          BlobParallelType4BnInOp(obn)->mutable_split_parallel()->set_axis(out_split_axis);
+        }
+      } else {
+        UNIMPLEMENTED();
+      }
+    } else {
+      UNIMPLEMENTED();
+    }
+  } else {
+    CHECK_EQ(parallel_ctx->policy(), kDataParallel);
+    for (const std::string& ibn : input_bns()) { CHECK(!IsInputBlobAllowedModelSplit(ibn)); }
+    InferDataSplit();
+  }
+}
+
 bool Operator::IsSoleInputBlobAllowedModelSplit() const {
   return input_bns().size() == 1 && IsInputBlobAllowedModelSplit(SoleIbn());
 }

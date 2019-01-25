@@ -156,6 +156,11 @@ class Operator {
       std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
       std::function<const BlobParallelDesc&(const std::string&)> ProducerBlobParallelDesc4BnInOp,
       const ParallelContext* parallel_context) const;
+  void InferInputOutputBlobParallelTypeIf(
+      std::function<BlobParallelType*(const std::string&)> BlobParallelType4BnInOp,
+      std::function<const BlobParallelType&(const std::string&)> ProducerBlobParallelType4Ibn,
+      std::function<int32_t(const std::string&)> ModelSplitAxis4BnInOp,
+      const ParallelContext* parallel_ctx) const;
   virtual void FixInDiffBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                   const ParallelContext*) const;
   virtual void VirtualFixInDiffBlobDescs(
@@ -211,6 +216,11 @@ class Operator {
   void NaiveInferOutputBlobParallelDesc(
       std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
       const ParallelContext* parallel_context) const;
+  virtual void InferInputOutputBlobParallelType(
+      std::function<BlobParallelType*(const std::string&)> BlobParallelType4BnInOp,
+      std::function<const BlobParallelType&(const std::string&)> ProducerBlobParallelType4Ibn,
+      std::function<int32_t(const std::string&)> ModelSplitAxis4BnInOp,
+      const ParallelContext* parallel_ctx) const;
   int64_t cudnn_buf_limit_byte() const;
 
   virtual PbMessage* MutableCustomizedKernelConf(KernelConf*) const {
