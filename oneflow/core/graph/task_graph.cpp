@@ -266,9 +266,9 @@ void TaskGraph::AddReduceSequenceCtrlEdges() {
       if (prev_split_node != split_node) {
         auto* to_node = split_node->GetPrevReduceTaskNode(TaskType::kReduceIdentity);
         TaskNode* from_node = prev_split_node;
-        if (GetCtrlOrder(split_node->logical_node()) < 0) {
-          from_node = prev_split_node->GetPrevReduceTaskNode(TaskType::kReduceIdentity);
-        }
+        //        if (GetCtrlOrder(split_node->logical_node()) < 0) {
+        //          from_node = prev_split_node->GetPrevReduceTaskNode(TaskType::kReduceIdentity);
+        //        }
         from_node->BuildCtrlRegstDescIfNeed(to_node);
       }
       prev_split_node = split_node;
