@@ -25,7 +25,6 @@ void DoNormByChannelPreprocess(const NormByChannelPreprocessConf& conf, T* dptr,
 
   if (valid_h != -1 && valid_w != -1) {
     // norm for dynamic shape
-    T* dd = dptr;
     CHECK_EQ(shape.NumAxes(), 4);
     CHECK_EQ(conf.data_format(), "channels_last");
     size_t max_h = shape.At(1);
@@ -38,13 +37,8 @@ void DoNormByChannelPreprocess(const NormByChannelPreprocessConf& conf, T* dptr,
           if (h < valid_h && w < valid_w) {
             (*val) = ((*val) - conf.mean_value(c)) / std_value[c];
           } else {
-            // CHECK_EQ(*dptr, 0);
-            if ((*val) != 0 || (*dd) != 0) {
-              LOG(INFO) << " val =  " << (*val) << " dd =  " << (*dd) << " h = " << h
-                        << " w = " << w << " c =  " << c;
-            }
+            CHECK_EQ((*val), 0);
           }
-          ++dd;
         }
       }
     }

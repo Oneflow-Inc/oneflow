@@ -24,15 +24,11 @@ void DecodeOFRecordKernel::Forward(const KernelCtx& ctx,
   FOR_RANGE(int32_t, i, 0, op_attribute().output_bns_size()) {
     Blob* out_blob = BnInOp2Blob(op_attribute().output_bns(i));
     const BlobConf& blob_conf = decode_conf.blob(i);
-    LOG(INFO) << "out_blob name: " << blob_conf.name()
-              << " static_shape elem_cnt: " << out_blob->static_shape().elem_cnt();
     OFRecordDecoderIf* decoder =
         GetOFRecordDecoder(blob_conf.encode_case().encode_case(), blob_conf.data_type());
     int32_t max_col_id =
         decoder->DecodeOneCol(ctx.device_ctx, in_blob, blob_conf, status->cur_col_id_, out_blob,
                               std::bind(&DecodeOFRecordKernel::NextRandomInt, this));
-    LOG(INFO) << "out_blob name: " << blob_conf.name()
-              << " dynamic_shape elem_cnt: " << out_blob->shape().elem_cnt();
 
     if (status->max_col_id_ == -1) {
       status->max_col_id_ = max_col_id;

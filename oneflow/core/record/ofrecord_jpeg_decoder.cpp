@@ -122,22 +122,16 @@ void OFRecordDecoderImpl<EncodeCase::kJpeg, T>::ReadDynamicDataContent(
     cv::Mat img = images[i];
     // thread_pool_norm.AddWork([img, one_col_elem_num, &out_blob, &blob_conf, max_cols, max_rows,
     //                           channels, i, &set_cnt]() {
-    // std::string i_str = std::to_string(i);
-    // LOG(INFO) << "decode " + i_str + " img";
-    // cv::imwrite(i_str + ".jpg", img);
     /*
     cv::Mat dst = cv::Mat::zeros(cv::Size(max_cols, max_rows), img.type());
-    // cv::imwrite(i_str + "_dst_0.jpg", dst);
     cv::Mat roi = dst(cv::Rect(0, 0, img.cols, img.rows));
     cv::Mat mask(roi.rows, roi.cols, roi.depth(), cv::Scalar(1));
     img.copyTo(roi, mask);
-    // cv::imwrite(i_str + "_dst_copy.jpg", dst);
     CHECK_EQ(one_col_elem_num, max_rows * max_cols * channels);
     CHECK(dst.isContinuous());
+    CopyElem(dst.data, out_dptr, one_col_elem_num);
     */
     T* out_dptr = out_blob->mut_dptr<T>() + i * one_col_elem_num;
-    // T* last_val = out_dptr + one_col_elem_num - 1;
-    // LOG(INFO) << "cclog: last_val = " << (*last_val);
     FOR_RANGE(int32_t, h, 0, max_rows) {
       FOR_RANGE(int32_t, w, 0, max_cols) {
         FOR_RANGE(int32_t, c, 0, channels) {
@@ -150,7 +144,6 @@ void OFRecordDecoderImpl<EncodeCase::kJpeg, T>::ReadDynamicDataContent(
         }
       }
     }
-    // CopyElem(dst.data, out_dptr, one_col_elem_num);
     FOR_RANGE(size_t, j, 0, blob_conf.preprocess_size()) {
       DoPreprocess<T>(blob_conf.preprocess(j), out_dptr, out_blob->shape(), img.rows, img.cols);
     }
