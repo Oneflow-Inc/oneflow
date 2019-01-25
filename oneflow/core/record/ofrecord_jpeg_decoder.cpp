@@ -69,10 +69,10 @@ void OFRecordDecoderImpl<EncodeCase::kJpeg, T>::ReadDynamicDataContent(
   int32_t n = record_blob.record_num();
   // read images
   std::vector<cv::Mat> images(n, cv::Mat());
-  ThreadPool thread_pool(std::thread::hardware_concurrency() / 4);
+  ThreadPool thread_pool_decode(std::thread::hardware_concurrency() / 4);
   BlockingCounter decode_cnt(n);
   FOR_RANGE(int32_t, i, 0, n) {
-    thread_pool.AddWork([&, i]() {
+    thread_pool_decode.AddWork([&, i]() {
       std::mt19937 gen(random_seed + i);
       std::uniform_int_distribution<int32_t> distribution;
       const OFRecord& record = record_blob.GetRecord(i);
@@ -101,6 +101,7 @@ void OFRecordDecoderImpl<EncodeCase::kJpeg, T>::ReadDynamicDataContent(
   // cal dynamic shape
   int64_t max_rows = -1;
   int64_t max_cols = -1;
+  int64_t channels = blob_conf.shape().dim(2);
   FOR_RANGE(int32_t, i, 0, n) {
     max_rows = std::max(max_rows, static_cast<int64_t>(images[i].rows));
     max_cols = std::max(max_cols, static_cast<int64_t>(images[i].cols));
@@ -111,26 +112,52 @@ void OFRecordDecoderImpl<EncodeCase::kJpeg, T>::ReadDynamicDataContent(
   max_cols = RoundUp(max_cols, blob_conf.dynamic_shape_align());
   CHECK_LE(max_rows, blob_conf.shape().dim(0));
   CHECK_LE(max_cols, blob_conf.shape().dim(1));
-  Shape instance_shape({max_rows, max_cols, blob_conf.shape().dim(2)});
+  Shape instance_shape({max_rows, max_cols, channels});
   out_blob->set_instance_shape(instance_shape);
   int64_t one_col_elem_num = instance_shape.elem_cnt();
 
-  BlockingCounter set_cnt(n);
+  // ThreadPool thread_pool_norm(std::thread::hardware_concurrency() / 4);
+  // BlockingCounter set_cnt(n);
   FOR_RANGE(int32_t, i, 0, n) {
-    thread_pool.AddWork([&, i]() {
-      cv::Mat dst = cv::Mat::zeros(cv::Size(max_cols, max_rows), images[i].type());
-      images[i].copyTo(dst(cv::Rect(0, 0, images[i].cols, images[i].rows)));
-      CHECK_EQ(one_col_elem_num, dst.total() * dst.channels());
-      CHECK(dst.isContinuous());
-      T* out_dptr = out_blob->mut_dptr<T>() + i * one_col_elem_num;
-      CopyElem(dst.data, out_dptr, one_col_elem_num);
-      FOR_RANGE(size_t, j, 0, blob_conf.preprocess_size()) {
-        DoPreprocess<T>(blob_conf.preprocess(j), out_dptr, out_blob->shape());
+    cv::Mat img = images[i];
+    // thread_pool_norm.AddWork([img, one_col_elem_num, &out_blob, &blob_conf, max_cols, max_rows,
+    //                           channels, i, &set_cnt]() {
+    // std::string i_str = std::to_string(i);
+    // LOG(INFO) << "decode " + i_str + " img";
+    // cv::imwrite(i_str + ".jpg", img);
+    /*
+    cv::Mat dst = cv::Mat::zeros(cv::Size(max_cols, max_rows), img.type());
+    // cv::imwrite(i_str + "_dst_0.jpg", dst);
+    cv::Mat roi = dst(cv::Rect(0, 0, img.cols, img.rows));
+    cv::Mat mask(roi.rows, roi.cols, roi.depth(), cv::Scalar(1));
+    img.copyTo(roi, mask);
+    // cv::imwrite(i_str + "_dst_copy.jpg", dst);
+    CHECK_EQ(one_col_elem_num, max_rows * max_cols * channels);
+    CHECK(dst.isContinuous());
+    */
+    T* out_dptr = out_blob->mut_dptr<T>() + i * one_col_elem_num;
+    // T* last_val = out_dptr + one_col_elem_num - 1;
+    // LOG(INFO) << "cclog: last_val = " << (*last_val);
+    FOR_RANGE(int32_t, h, 0, max_rows) {
+      FOR_RANGE(int32_t, w, 0, max_cols) {
+        FOR_RANGE(int32_t, c, 0, channels) {
+          T* val = out_dptr + h * (max_cols * channels) + w * channels + c;
+          if (h < img.rows && w < img.cols) {
+            (*val) = static_cast<T>(img.at<cv::Vec3b>(h, w)[c]);
+          } else {
+            (*val) = 0;
+          }
+        }
       }
-      set_cnt.Decrease();
-    });
+    }
+    // CopyElem(dst.data, out_dptr, one_col_elem_num);
+    FOR_RANGE(size_t, j, 0, blob_conf.preprocess_size()) {
+      DoPreprocess<T>(blob_conf.preprocess(j), out_dptr, out_blob->shape(), img.rows, img.cols);
+    }
+    // set_cnt.Decrease();
+    // });
   }
-  set_cnt.WaitUntilCntEqualZero();
+  // set_cnt.WaitUntilCntEqualZero();
 
   int64_t used_elem_cnt = one_col_elem_num * n;
   int64_t left_elem_cnt = out_blob->static_shape().elem_cnt() - used_elem_cnt;

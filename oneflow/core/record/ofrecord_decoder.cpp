@@ -15,12 +15,40 @@ void DoSubtractPreprocess(const SubtractPreprocessConf& conf, T* dptr, int64_t n
 }
 
 template<typename T>
-void DoNormByChannelPreprocess(const NormByChannelPreprocessConf& conf, T* dptr,
-                               const Shape& shape) {
+void DoNormByChannelPreprocess(const NormByChannelPreprocessConf& conf, T* dptr, const Shape& shape,
+                               const int64_t valid_h, const int64_t valid_w) {
   std::vector<float> std_value(conf.mean_value_size(), 1.0);
   if (conf.std_value_size() > 0) {
     CHECK_EQ(conf.mean_value_size(), conf.std_value_size());
     FOR_RANGE(size_t, i, 0, conf.std_value_size()) { std_value[i] = conf.std_value(i); }
+  }
+
+  if (valid_h != -1 && valid_w != -1) {
+    // norm for dynamic shape
+    T* dd = dptr;
+    CHECK_EQ(shape.NumAxes(), 4);
+    CHECK_EQ(conf.data_format(), "channels_last");
+    size_t max_h = shape.At(1);
+    size_t max_w = shape.At(2);
+    size_t max_c = shape.At(3);
+    FOR_RANGE(size_t, h, 0, max_h) {
+      FOR_RANGE(size_t, w, 0, max_w) {
+        FOR_RANGE(size_t, c, 0, max_c) {
+          T* val = dptr + h * (max_w * max_c) + w * max_c + c;
+          if (h < valid_h && w < valid_w) {
+            (*val) = ((*val) - conf.mean_value(c)) / std_value[c];
+          } else {
+            // CHECK_EQ(*dptr, 0);
+            if ((*val) != 0 || (*dd) != 0) {
+              LOG(INFO) << " val =  " << (*val) << " dd =  " << (*dd) << " h = " << h
+                        << " w = " << w << " c =  " << c;
+            }
+          }
+          ++dd;
+        }
+      }
+    }
+    return;
   }
 
   if (conf.data_format() == "channels_last") {
@@ -59,17 +87,23 @@ void DoScalePreprocess(const ScalePreprocessConf& conf, T* dptr, int64_t n) {
 }  // namespace
 
 template<typename T>
-void DoPreprocess(const PreprocessConf& conf, T* dptr, const Shape& shape) {
+void DoPreprocess(const PreprocessConf& conf, T* dptr, const Shape& shape, const int64_t valid_h,
+                  const int64_t valid_w) {
   int64_t n = shape.Count(1);
   if (conf.has_subtract_conf()) {
     DoSubtractPreprocess<T>(conf.subtract_conf(), dptr, n);
   } else if (conf.has_norm_by_channel_conf()) {
-    DoNormByChannelPreprocess<T>(conf.norm_by_channel_conf(), dptr, shape);
+    DoNormByChannelPreprocess<T>(conf.norm_by_channel_conf(), dptr, shape, valid_h, valid_w);
   } else if (conf.has_scale_conf()) {
     DoScalePreprocess<T>(conf.scale_conf(), dptr, n);
   } else {
     UNIMPLEMENTED();
   }
+}
+
+template<typename T>
+void DoPreprocess(const PreprocessConf& conf, T* dptr, const Shape& shape) {
+  DoPreprocess<T>(conf, dptr, shape, -1, -1);
 }
 
 template<EncodeCase encode_case, typename T>
@@ -170,24 +204,12 @@ void OFRecordDecoder<encode_case, T>::ReadPartDataContent(
     DeviceCtx* ctx, Blob* in_blob, const BlobConf& blob_conf, int32_t col_id, Blob* out_blob,
     int32_t part_id, int32_t part_num, int64_t one_col_elem_num, int32_t random_seed) const {
   RecordBlob<OFRecord> record_blob(in_blob);
-  LOG(INFO) << " in_blob elem_cnt : " << in_blob->static_shape().elem_cnt()
-            << " record_num : " << record_blob.record_num();
   BalancedSplitter bs(record_blob.record_num(), part_num);
   Range range = bs.At(part_id);
   std::mt19937 gen(random_seed + part_id);
   std::uniform_int_distribution<int32_t> distribution;
   FOR_RANGE(int32_t, i, range.begin(), range.end()) {
     const OFRecord& record = record_blob.GetRecord(i);
-    /*
-    LOG(INFO) << "record_num : " << record_blob.record_num() << " range_begin : " << range.begin()
-              << " range_end: " << range.end();
-    int32_t j = 0;
-    LOG(INFO) << "blob_n = " << i << " list size = " << record.feature().size();
-    LOG(INFO) << " list start and find featue name: " << blob_conf.name();
-    for (const auto& pair : record.feature()) {
-      LOG(INFO) << "list feature name: " << pair.first << " j = " << j++;
-    }
-    */
     CHECK(record.feature().find(blob_conf.name()) != record.feature().end())
         << "Field " << blob_conf.name() << " not found";
     const Feature& feature = record.feature().at(blob_conf.name());

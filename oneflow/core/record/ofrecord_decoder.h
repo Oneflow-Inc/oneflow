@@ -70,6 +70,10 @@ OFRecordDecoderIf* GetOFRecordDecoder(EncodeCase, DataType);
 template<typename T>
 void DoPreprocess(const PreprocessConf& conf, T* dptr, const Shape& shape);
 
+template<typename T>
+void DoPreprocess(const PreprocessConf& conf, T* dptr, const Shape& shape, const int64_t valid_h,
+                  const int64_t valid_w);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_RECORD_OFRECORD_DECODER_H_
