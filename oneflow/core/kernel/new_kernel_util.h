@@ -16,8 +16,6 @@
 
 namespace oneflow {
 
-// Functions with same paras but different imples
-// functions must support both cpu/gpu and floating/integral
 template<DeviceType device_type, typename T, typename U = void>
 struct NewKernelUtilIf {
   static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
@@ -32,6 +30,7 @@ struct NewKernelUtilIf {
                         const Shape& y_shape, const PbRf<int32_t>& permutation,
                         const int64_t elem_cnt, const T* x, T* y);
 };
+struct NewKernelUtilIf;
 
 template<typename T, typename U = void>
 struct CpuNewKernelUtilIf {};
@@ -51,7 +50,12 @@ template<DeviceType device_type, typename T>
 struct IntegralNewKernelUtilIf {};
 
 template<DeviceType device_type, typename T>
-struct SameImplNewKernelUtilIf;
+struct Float16NewKernelUtilIf {
+  static void HGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
+                    const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
+                    const int m, const int n, const int k, const T alpha, const T* a, const int lda,
+                    const T* b, const int ldb, const T beta, T* c, const int ldc);
+};
 
 template<DeviceType device_type, typename T, typename U = void>
 struct NewKernelUtil;
@@ -59,39 +63,48 @@ struct NewKernelUtil;
 // CPU && Floating
 template<typename T>
 struct NewKernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T>::value>::type>
-    : public SameImplNewKernelUtilIf<DeviceType::kCPU, T>,
-      public NewKernelUtilIf<DeviceType::kCPU, T>,
+    : public NewKernelUtilIf<DeviceType::kCPU, T>,
       public CpuNewKernelUtilIf<T>,
       public FloatingNewKernelUtilIf<DeviceType::kCPU, T> {};
 
 // CPU && Integral
 template<typename T>
 struct NewKernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsIntegral<T>::value>::type>
-    : public SameImplNewKernelUtilIf<DeviceType::kCPU, T>,
-      public NewKernelUtilIf<DeviceType::kCPU, T>,
+    : public NewKernelUtilIf<DeviceType::kCPU, T>,
       public CpuNewKernelUtilIf<T>,
       public IntegralNewKernelUtilIf<DeviceType::kCPU, T> {};
+
+// CPU && Float16
+template<typename T>
+struct NewKernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsFloat16<T>::value>::type>
+    : public NewKernelUtilIf<DeviceType::kCPU, T>,
+      public CpuNewKernelUtilIf<T>,
+      public Float16NewKernelUtilIf<DeviceType::kCPU, T> {};
 
 // GPU && Floating
 template<typename T>
 struct NewKernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T>::value>::type>
-    : public SameImplNewKernelUtilIf<DeviceType::kGPU, T>,
-      public NewKernelUtilIf<DeviceType::kGPU, T>,
+    : public NewKernelUtilIf<DeviceType::kGPU, T>,
       public GpuNewKernelUtilIf<T>,
       public FloatingNewKernelUtilIf<DeviceType::kGPU, T> {};
 
 // GPU && Integral
 template<typename T>
 struct NewKernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsIntegral<T>::value>::type>
-    : public SameImplNewKernelUtilIf<DeviceType::kGPU, T>,
-      public NewKernelUtilIf<DeviceType::kGPU, T>,
+    : public NewKernelUtilIf<DeviceType::kGPU, T>,
       public GpuNewKernelUtilIf<T>,
       public IntegralNewKernelUtilIf<DeviceType::kGPU, T> {};
 
-// Functions with same paras and same imples
-// there is no need for functions here to support both cpu/gpu and floating/integral
-template<DeviceType device_type, typename T>
-struct SameImplNewKernelUtilIf {
+// GPU && Float16
+template<typename T>
+struct NewKernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloat16<T>::value>::type>
+    : public NewKernelUtilIf<DeviceType::kGPU, T>,
+      public CpuNewKernelUtilIf<T>,
+      public Float16NewKernelUtilIf<DeviceType::kGPU, T> {};
+
+// Functions that do not fit other classes stay here
+template<DeviceType device_type, typename T, typename U>
+struct NewKernelUtilIf {
   static void BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
                        T alpha, T beta, const Blob* a, const Blob* b, Blob* c) {
     const int m = c->shape().At(0);
@@ -100,16 +113,6 @@ struct SameImplNewKernelUtilIf {
 
     OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a->dptr<T>(), b->dptr<T>(), beta,
            c->mut_dptr<T>());
-  }
-  static void OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-                     const int m, const int n, const int k, const T alpha, const T* a, const T* b,
-                     const T beta, T* c) {
-    const int lda = (trans_a == CblasNoTrans) ? k : m;
-    const int ldb = (trans_b == CblasNoTrans) ? n : k;
-    const int ldc = n;
-
-    FloatingNewKernelUtilIf<device_type, T>::Gemm(ctx, CblasRowMajor, trans_a, trans_b, m, n, k,
-                                                  alpha, a, lda, b, ldb, beta, c, ldc);
   }
   static void OFGemmTrans(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
                           enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
@@ -124,8 +127,7 @@ struct SameImplNewKernelUtilIf {
     if (initializer_conf == nullptr) {
       initializer_conf = Global<JobDesc>::Get()->DefaultInitializerConf();
     }
-    NewKernelUtilIf<device_type, T>::InitializeWithConf(ctx, *initializer_conf, random_seed, blob,
-                                                        data_format);
+    InitializeWithConf(ctx, *initializer_conf, random_seed, blob, data_format);
   }
   static void InitializeWithProperConf(DeviceCtx* ctx, const PbMessage* initializer_conf,
                                        uint32_t random_seed, Blob* blob,
@@ -133,6 +135,29 @@ struct SameImplNewKernelUtilIf {
     InitializeWithProperConf(ctx, static_cast<const InitializerConf*>(initializer_conf),
                              random_seed, blob, data_format);
   }
+  static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
+                                 uint32_t random_seed, Blob* blob) {
+    InitializeWithConf(ctx, initializer_conf, random_seed, blob, "");
+  }
+  static void OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
+                     const int m, const int n, const int k, const T alpha, const T* a, const T* b,
+                     const T beta, T* c);
+  static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
+                                 uint32_t random_seed, Blob* blob, const std::string& data_format);
+  static void InitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
+                                const std::string& model_dir, Blob* blob,
+                                const std::string& bn_in_op, int32_t dim_num,
+                                int64_t num_in_each_dim);
+  static void Sigmoid(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
+  static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
+                              T* dx);
+  static void TanH(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
+  static void TanHBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
+                           T* dx);
+  static void Relu(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
+  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
+                           T* dx);
+  static void Set(DeviceCtx* ctx, const T value, T* addr);
 };
 
 }  // namespace oneflow

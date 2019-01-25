@@ -107,6 +107,6 @@ const PbMessage& FullyConnectedKernel<device_type, T>::GetCustomizedOpConf() con
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kFullyConnectedConf, FullyConnectedKernel,
-                           FLOATING_DATA_TYPE_SEQ);
+                           FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_COMMON_DATA_TYPE_H_
 #define ONEFLOW_CORE_COMMON_DATA_TYPE_H_
 
+#include <half.hpp>
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/common/preprocessor.h"
@@ -11,6 +12,8 @@ namespace oneflow {
 class OFRecord;
 // SEQ
 
+typedef half_float::half float16;
+
 #define FLOATING_DATA_TYPE_SEQ                  \
   OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat) \
   OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)
@@ -19,8 +22,6 @@ class OFRecord;
   OF_PP_MAKE_TUPLE_SEQ(int8_t, DataType::kInt8)   \
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \
   OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
-
-#define UNSIGNED_INT_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(uint8_t, DataType::kUInt8)
 
 #define INT_DATA_TYPE_SEQ SIGNED_INT_DATA_TYPE_SEQ
 
@@ -33,6 +34,10 @@ class OFRecord;
 #define POD_DATA_TYPE_SEQ ARITHMETIC_DATA_TYPE_SEQ CHAR_DATA_TYPE_SEQ
 #define PB_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(OFRecord, DataType::kOFRecord)
 #define ALL_DATA_TYPE_SEQ POD_DATA_TYPE_SEQ PB_DATA_TYPE_SEQ
+
+#define FLOAT16_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(float16, DataType::kFloat16)
+
+#define UNSIGNED_INT_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(uint8_t, DataType::kUInt8)
 
 // Type Trait: IsFloating
 
@@ -56,6 +61,16 @@ struct IsIntegral : std::integral_constant<bool, false> {};
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_INTEGRAL, INT_DATA_TYPE_SEQ);
 #undef SPECIALIZE_TRUE_INTEGRAL
 
+// Type Trait: IsFloat16
+template<typename T>
+struct IsFloat16 : std::integral_constant<bool, false> {};
+
+#define SPECIALIZE_TRUE_FLOAT16(type_cpp, type_proto) \
+  template<>                                          \
+  struct IsFloat16<type_cpp> : std::integral_constant<bool, true> {};
+OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_FLOAT16, FLOAT16_DATA_TYPE_SEQ);
+#undef SPECIALIZE_TRUE_FLOAT16
+
 // Type Trait: GetDataType
 
 template<typename T>
@@ -68,7 +83,8 @@ struct GetDataType<void> : std::integral_constant<DataType, DataType::kChar> {};
   template<>                                                                      \
   struct GetDataType<type_cpp> : std::integral_constant<DataType, type_proto> {}; \
   inline type_cpp GetTypeByDataType(std::integral_constant<DataType, type_proto>) { return {}; }
-OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_DATA_TYPE, ALL_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ);
+OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_DATA_TYPE,
+                     ALL_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
 #undef SPECIALIZE_GET_DATA_TYPE
 
 template<DataType type>

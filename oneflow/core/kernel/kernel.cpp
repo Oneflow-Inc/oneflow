@@ -322,8 +322,8 @@ void KernelIfWithModel<device_type, T>::SetTotalInstanceNumDiffBlob(
   const float loss_instance_num =
       BnInOp2Blob(this->op_attribute().output_diff_bns(0))->loss_instance_num();
   Blob* total_instance_num_diff_blob = BnInOp2Blob("total_instance_num_diff");
-  KernelUtil<device_type, T>::Set(ctx.device_ctx, static_cast<T>(loss_instance_num),
-                                  total_instance_num_diff_blob->mut_dptr<T>());
+  NewKernelUtil<device_type, T>::Set(ctx.device_ctx, static_cast<T>(loss_instance_num),
+                                     total_instance_num_diff_blob->mut_dptr<T>());
 }
 
 template<DeviceType device_type>
@@ -376,9 +376,9 @@ void KernelIfWithActivation<device_type, T>::ForwardActivation(const KernelCtx& 
   int64_t elem_cnt = out_blob->shape().elem_cnt();
 
   switch (GetActivationType()) {
-#define DEFINE_ONE_CASE(activation_type)                                                       \
-  case ActivationType::k##activation_type:                                                     \
-    KernelUtil<device_type, T>::activation_type(ctx.device_ctx, elem_cnt, out_dptr, out_dptr); \
+#define DEFINE_ONE_CASE(activation_type)                                                          \
+  case ActivationType::k##activation_type:                                                        \
+    NewKernelUtil<device_type, T>::activation_type(ctx.device_ctx, elem_cnt, out_dptr, out_dptr); \
     break;
     DEFINE_ONE_CASE(TanH)
     DEFINE_ONE_CASE(Sigmoid)
@@ -397,7 +397,7 @@ void KernelIfWithActivation<device_type, T>::BackwardActivation(const KernelCtx&
   switch (GetActivationType()) {
 #define DEFINE_ONE_CASE(activation_type)                                    \
   case ActivationType::k##activation_type:                                  \
-    KernelUtil<device_type, T>::activation_type##Backward(                  \
+    NewKernelUtil<device_type, T>::activation_type##Backward(               \
         ctx.device_ctx, elem_cnt, out_blob->dptr<T>(), out_blob->dptr<T>(), \
         out_diff_blob->dptr<T>(), bw_activation_blob->mut_dptr<T>());       \
     break
@@ -418,6 +418,6 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_IF, DEVICE_TYPE_SEQ);
   template class KernelIfWithActivation<device_type, OF_PP_PAIR_FIRST(data_type_pair)>;
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_IF_SUBCLASS, DEVICE_TYPE_SEQ,
-                                 FLOATING_DATA_TYPE_SEQ);
+                                 FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
