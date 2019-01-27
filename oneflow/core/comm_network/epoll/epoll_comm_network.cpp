@@ -169,16 +169,18 @@ void EpollCommNet::InitSockets() {
   }
 
   // accept
-  FOR_RANGE(int32_t, idx, 0, src_machine_count) {
+  HashMap<int32_t, int32_t> mchn_id2link_index;
+  for (int64_t peer_mchn_id : peer_machine_id()) { mchn_id2link_index.emplace(peer_mchn_id, 0); }
+  FOR_RANGE(int32_t, idx, 0, src_machine_count * epoll_conf_.link_num()) {
     sockaddr_in peer_sockaddr;
     socklen_t len = sizeof(peer_sockaddr);
-    for (int32_t link_i = 0; link_i < epoll_conf_.link_num(); ++link_i) {
-      int32_t sockfd = accept(listen_sockfd, reinterpret_cast<sockaddr*>(&peer_sockaddr), &len);
-      PCHECK(sockfd != -1);
-      CHECK(sockfd2helper_.emplace(sockfd, NewSocketHelper(sockfd)).second);
-      int64_t peer_mchn_id = GetMachineId(peer_sockaddr);
-      machine_link_id2sockfds_.at(peer_mchn_id * epoll_conf_.link_num() + link_i) = sockfd;
-    }
+    int32_t sockfd = accept(listen_sockfd, reinterpret_cast<sockaddr*>(&peer_sockaddr), &len);
+    PCHECK(sockfd != -1);
+    CHECK(sockfd2helper_.emplace(sockfd, NewSocketHelper(sockfd)).second);
+    int64_t peer_mchn_id = GetMachineId(peer_sockaddr);
+    machine_link_id2sockfds_.at(peer_mchn_id * epoll_conf_.link_num()
+                                + mchn_id2link_index.at(peer_mchn_id)) = sockfd;
+    mchn_id2link_index.at(peer_mchn_id)++;
   }
   PCHECK(close(listen_sockfd) == 0);
   ClearPort(this_machine_id);
