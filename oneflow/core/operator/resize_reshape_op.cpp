@@ -30,7 +30,8 @@ void ResizeReshapeOp::InferOutputBlobModelSplitAxis(
     std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
     std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
     const ParallelContext* parallel_context) const {
-  UNIMPLEMENTED();
+  CHECK_EQ(parallel_context->policy(), kDataParallel);
+  NaiveInferOutputBlobModelSplitAxis(ModelSplitAxis4BnInOp, ShapeNumAxes4BnInOp, parallel_context);
 }
 
 REGISTER_OP(OperatorConf::kResizeReshapeConf, ResizeReshapeOp);
