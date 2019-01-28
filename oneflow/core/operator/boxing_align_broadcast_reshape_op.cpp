@@ -23,7 +23,7 @@ void BoxingAlignBroadcastReshapeOp::InferBlobDescs(
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   *out = *in;
-  const int64_t piece_size = Global<JobDesc>::Get()->PieceSize();
+  const int64_t piece_size = Global<JobDesc>::Get()->RecordPieceSize();
   CHECK_EQ(piece_size % conf.target_parallel_num(), 0);
   const int64_t target_piece_size = piece_size / conf.target_parallel_num();
   const int64_t aligned_elem_cnt = RoundUp(in->shape().elem_cnt(), target_piece_size);
@@ -41,6 +41,18 @@ void BoxingAlignBroadcastReshapeOp::InferBwBufBlobDescs(
   CHECK_EQ(out->shape().elem_cnt() % conf.target_parallel_num(), 0);
   bw_buf->mut_shape() = Shape({out->shape().elem_cnt() / conf.target_parallel_num()});
   bw_buf->set_data_type(out->data_type());
+}
+
+bool BoxingAlignBroadcastReshapeOp::IsInputBlobAllowedModelSplit(const std::string& ibn) const {
+  CHECK(std::find(input_bns().begin(), input_bns().end(), ibn) != input_bns().end());
+  return false;
+}
+
+void BoxingAlignBroadcastReshapeOp::InferOutputBlobModelSplitAxis(
+    std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
+    std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
+    const ParallelContext* parallel_context) const {
+  UNIMPLEMENTED();
 }
 
 REGISTER_OP(OperatorConf::kBoxingAlignBroadcastReshapeConf, BoxingAlignBroadcastReshapeOp);

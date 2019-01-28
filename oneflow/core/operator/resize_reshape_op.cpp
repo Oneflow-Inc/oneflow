@@ -21,6 +21,18 @@ void ResizeReshapeOp::InferBlobDescs(
   out->mut_shape() = Shape(op_conf().resize_reshape_conf().shape());
 }
 
+bool ResizeReshapeOp::IsInputBlobAllowedModelSplit(const std::string& ibn) const {
+  CHECK(std::find(input_bns().begin(), input_bns().end(), ibn) != input_bns().end());
+  return false;
+}
+
+void ResizeReshapeOp::InferOutputBlobModelSplitAxis(
+    std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
+    std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
+    const ParallelContext* parallel_context) const {
+  UNIMPLEMENTED();
+}
+
 REGISTER_OP(OperatorConf::kResizeReshapeConf, ResizeReshapeOp);
 
 }  // namespace oneflow
