@@ -972,7 +972,7 @@ message IdentityOpConf {
 message TopKOpConf {
   required string in = 1;
   required string out = 2;
-  optional int64 k = 3 [default = 1];
+  optional int32 k = 3 [default = 1];
   optional bool sorted = 4 [default = true];
 }
 

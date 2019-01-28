@@ -9,6 +9,7 @@ void TopKKernel<device_type, T>::ForwardDataContent(
   Blob* fw_buf_blob = BnInOp2Blob("fw_buf");
   Blob* out_blob = BnInOp2Blob("out");
 
+  CHECK_LE(in_blob->shape().elem_cnt(), GetMaxVal<int32_t>());
   const int32_t instance_size = in_blob->shape().dim_vec().back();
   const int32_t instance_num = in_blob->shape().elem_cnt() / instance_size;
   const auto& conf = this->op_conf().top_k_conf();
