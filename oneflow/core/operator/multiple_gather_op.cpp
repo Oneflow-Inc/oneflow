@@ -37,7 +37,7 @@ void MultipleGatherOp::InferBlobDescs(
 
 bool MultipleGatherOp::IsInputBlobAllowedModelSplit(const std::string& ibn) const {
   CHECK(std::find(input_bns().begin(), input_bns().end(), ibn) != input_bns().end());
-  return false;
+  return ibn == "in";
 }
 
 void MultipleGatherOp::InferOutputBlobModelSplitAxis(
