@@ -10,8 +10,8 @@ void TopKKernel<device_type, T>::ForwardDataContent(
   Blob* out_blob = BnInOp2Blob("out");
 
   CHECK_LE(in_blob->shape().elem_cnt(), GetMaxVal<int32_t>());
-  const int32_t instance_size = in_blob->shape().dim_vec().back();
-  const int32_t instance_num = in_blob->shape().elem_cnt() / instance_size;
+  const int32_t instance_size = static_cast<int32_t>(in_blob->shape().dim_vec().back());
+  const int32_t instance_num = static_cast<int32_t>(in_blob->shape().elem_cnt() / instance_size);
   const auto& conf = this->op_conf().top_k_conf();
   TopKKernelUtil<device_type, T>::Forward(in_blob->dptr<T>(), instance_num, instance_size, conf.k(),
                                           conf.sorted(), fw_buf_blob->mut_dptr<int32_t>(),
@@ -38,6 +38,7 @@ struct TopKKernelUtil<DeviceType::kCPU, T> {
 #define INSTANTIATE_TOP_K_KERNEL_UTIL(type_cpp, type_proto) \
   template struct TopKKernelUtil<DeviceType::kCPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_TOP_K_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
+#undef INSTANTIATE_TOP_K_KERNEL_UTIL
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kTopKConf, TopKKernel, FLOATING_DATA_TYPE_SEQ);
 

@@ -18,5 +18,6 @@ struct TopKKernelUtil<DeviceType::kGPU, T> {
 #define INSTANTIATE_TOP_K_KERNEL_UTIL(type_cpp, type_proto) \
   template struct TopKKernelUtil<DeviceType::kGPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_TOP_K_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
+#undef INSTANTIATE_TOP_K_KERNEL_UTIL
 
 }  // namespace oneflow
