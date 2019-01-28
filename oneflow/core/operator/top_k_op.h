@@ -19,6 +19,14 @@ class TopKOp final : public Operator {
  private:
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext*, KernelConf*) const override;
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
+  void InferOutputBlobModelSplitAxis(
+      std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
+      std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
+      const ParallelContext* parallel_context) const override {
+    NaiveInferOutputBlobModelSplitAxis(ModelSplitAxis4BnInOp, ShapeNumAxes4BnInOp,
+                                       parallel_context);
+  }
 };
 
 }  // namespace oneflow
