@@ -201,8 +201,8 @@ int64_t JobDesc::BatchSize() const {
 }
 int64_t JobDesc::NumOfPiecesInBatch() const {
   if (IsPredict()) { return 1; }
-  CHECK_EQ(BatchSize() % PieceSize(), 0);
-  return BatchSize() / PieceSize();
+  CHECK_EQ(BatchSize() % RecordPieceSize(), 0);
+  return BatchSize() / RecordPieceSize();
 }
 float JobDesc::primary_lr() const {
   CHECK(IsTrain());

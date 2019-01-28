@@ -23,6 +23,14 @@ class NormalModelUpdtOp : public Operator {
       const ParallelContext*) const {}
 
  private:
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { UNIMPLEMENTED(); }
+  void InferOutputBlobModelSplitAxis(
+      std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
+      std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
+      const ParallelContext* parallel_context) const override {
+    UNIMPLEMENTED();
+  }
+
   LogicalBlobId obn2lbi(const std::string& output_bn) const override;
 };
 
