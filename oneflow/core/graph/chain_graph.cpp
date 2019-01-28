@@ -280,11 +280,13 @@ void ChainGraph::PartialPriorTopoForEachNode(
   for (TaskNode* start : starts) {
     if (IsTaskNodePrior(start)) { prior_starts.push_back(start); }
   }
-  task_gph_.DfsTopoForEachNode(prior_starts, ForEachPriorInNode, ForEachPriorOutNode, Handler);
+  task_gph_.DfsTopoForEachNodeSortByDistanceToSink(prior_starts, ForEachPriorInNode,
+                                                   ForEachPriorOutNode, Handler);
   // travel other nodes ;
-  task_gph_.DfsTopoForEachNode(starts, ForEachInNode, ForEachOutNode, [&](TaskNode* node) {
-    if (prior_nodes.find(node) == prior_nodes.end()) { Handler(node); }
-  });
+  task_gph_.DfsTopoForEachNodeSortByDistanceToSink(
+      starts, ForEachInNode, ForEachOutNode, [&](TaskNode* node) {
+        if (prior_nodes.find(node) == prior_nodes.end()) { Handler(node); }
+      });
 }
 
 void ChainGraph::InitChainNode(const std::vector<std::vector<TaskNode*>>& chains) {
