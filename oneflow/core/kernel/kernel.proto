@@ -168,6 +168,10 @@ message VariableKernelConf {
   required bool is_bw_inplace = 2;
 }
 
+message RecordLoadKernelConf {
+  required int64 device_piece_size = 1;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
@@ -209,5 +213,6 @@ message KernelConf {
     IdentityLossKernelConf identity_loss_conf = 405;
     GatherKernelConf gather_conf = 406;
     VariableKernelConf variable_conf = 407;
+    RecordLoadKernelConf record_load_conf = 408;
   }
 }

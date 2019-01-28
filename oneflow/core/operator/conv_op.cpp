@@ -94,7 +94,7 @@ void ConvOp<NDims>::InitFromOpConf() {
 
 template<int32_t NDims>
 void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                   const ParallelContext* parallel_ctx,
+                                   const ParallelContext* parallel_ctx, int64_t record_piece_size,
                                    std::function<void(OpContext*)> EnrollOpCtx) const {
   const std::string& data_format = GetValFromCustomizedConf<std::string>("data_format");
 
@@ -296,11 +296,6 @@ int32_t ConvOp<NDims>::ModelSplitAxis() const {
   } else {
     UNIMPLEMENTED();
   }
-}
-
-template<int32_t NDims>
-int32_t ConvOp<NDims>::MaxModelSplitNum() const {
-  return GetValFromCustomizedConf<int32_t>("filters");
 }
 
 #ifdef WITH_CUDA
