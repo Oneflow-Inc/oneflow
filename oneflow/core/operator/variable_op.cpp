@@ -3,6 +3,60 @@
 
 namespace oneflow {
 
+namespace {
+
+// S(0) -> C
+const OpParallelSignature MakeVariableOpDataSplitParallelSignature(const Operator* op) {
+  std::string desc = op->op_name() + ": S(0) -> C";
+  auto IsMatched =
+      [op](
+          const std::function<const LogicalBlobParallelDesc&(const std::string&)>& ProducerLbpd4Ibn,
+          const std::function<int32_t(const std::string&)>& ModelSplitAxis4BnInOp,
+          const ParallelContext* parallel_ctx) {
+        OpParallelMatchResult default_ret;
+        if (parallel_ctx->policy() == kDataParallel) {
+          return MakeOpParallelMatchSuccess();
+        } else {
+          return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kDataParallel);
+        }
+      };
+  auto GenSignature = [op](const std::function<int32_t(const std::string&)>& ModelSplitAxis4BnInOp,
+                           HashMap<std::string, LogicalBlobParallelDesc>* signature) {
+    CHECK_EQ(ModelSplitAxis4BnInOp("tick"), -1);
+    CHECK_EQ(ModelSplitAxis4BnInOp("out"), -1);
+    (*signature)["tick"].mutable_split_parallel()->set_axis(0);
+    (*signature)["out"].mutable_clone_parallel();
+  };
+  return OpParallelSignature(desc, IsMatched, GenSignature);
+}
+
+// S(0) -> S
+const OpParallelSignature MakeVariableOpModelSplitParallelSignature(const Operator* op) {
+  std::string desc = op->op_name() + ": S(0) -> S";
+  auto IsMatched =
+      [op](
+          const std::function<const LogicalBlobParallelDesc&(const std::string&)>& ProducerLbpd4Ibn,
+          const std::function<int32_t(const std::string&)>& ModelSplitAxis4BnInOp,
+          const ParallelContext* parallel_ctx) {
+        OpParallelMatchResult default_ret;
+        if (parallel_ctx->policy() == kModelParallel) {
+          return MakeOpParallelMatchSuccess();
+        } else {
+          return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kModelParallel);
+        }
+      };
+  auto GenSignature = [op](const std::function<int32_t(const std::string&)>& ModelSplitAxis4BnInOp,
+                           HashMap<std::string, LogicalBlobParallelDesc>* signature) {
+    CHECK_EQ(ModelSplitAxis4BnInOp("tick"), -1);
+    CHECK_NE(ModelSplitAxis4BnInOp("out"), -1);
+    (*signature)["tick"].mutable_split_parallel()->set_axis(0);
+    (*signature)["out"].mutable_split_parallel()->set_axis(ModelSplitAxis4BnInOp("out"));
+  };
+  return OpParallelSignature(desc, IsMatched, GenSignature);
+}
+
+}  // namespace
+
 void VariableOp::InitFromOpConf() {
   CHECK(op_conf().has_variable_conf());
   EnrollInputBn("tick", false);
@@ -51,6 +105,11 @@ ModelSplitAxis4BnInOp, const ParallelContext* parallel_ctx) const {
   }
 }
 */
+
+void VariableOp::InitOpParallelSignatures() {
+  mut_op_parallel_signatures()->push_back(MakeVariableOpDataSplitParallelSignature(this));
+  mut_op_parallel_signatures()->push_back(MakeVariableOpModelSplitParallelSignature(this));
+}
 
 void VariableOp::InferOutputBlobParallelDesc(
     std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
