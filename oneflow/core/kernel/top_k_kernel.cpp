@@ -26,7 +26,13 @@ struct TopKKernelUtil<DeviceType::kCPU, T> {
       std::iota(fw_buf, fw_buf + instance_size, 0);
       const int32_t offset = i * instance_size;
       auto comp = [&](const int32_t lhs, const int32_t rhs) {
-        return in[offset + lhs] > in[offset + rhs];
+        const T l = in[offset + lhs];
+        const T r = in[offset + rhs];
+        if (l == r) {
+          return lhs < rhs;
+        } else {
+          return l > r;
+        }
       };
       std::nth_element(fw_buf, fw_buf + k, fw_buf + instance_size, comp);
       if (k > 1 && sorted) { std::sort(fw_buf, fw_buf + k, comp); }

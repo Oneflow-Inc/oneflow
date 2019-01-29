@@ -23,6 +23,7 @@ class BatchGatherOp final : public Operator {
       std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
       std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
       const ParallelContext* parallel_context) const override {
+    CHECK_EQ(parallel_context->policy(), kDataParallel);
     NaiveInferOutputBlobModelSplitAxis(ModelSplitAxis4BnInOp, ShapeNumAxes4BnInOp,
                                        parallel_context);
   }
