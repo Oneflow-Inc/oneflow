@@ -116,12 +116,11 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void InferOpModelSize(HashMap<std::string, size_t>* op_name2model_size);
 
   int32_t GetModelSplitAxis(const std::string& op_name, const LogicalBlobId& lbi) const;
-  BalancedSplitter GetDataBalancedSplitter(const std::string& op_name, const LogicalBlobId& lbi,
-                                           const ParallelDesc& parallel_desc) const;
-  BalancedSplitter GetModelBalancedSplitter(const std::string& op_name, const LogicalBlobId& lbi,
-                                            const ParallelDesc& parallel_desc) const;
+  BalancedSplitter GetBalancedSplitter(const std::string& op_name, const LogicalBlobId& lbi) const;
   const BlobParallelDesc& GetBlobParallelDesc(const std::string& op_name,
                                               const LogicalBlobId& lbi) const;
+  const LogicalBlobParallelDesc& GetLbpd(const std::string& op_name,
+                                         const LogicalBlobId& lbi) const;
   void CheckBlobDescs(const std::string& op_name,
                       const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const;
@@ -153,9 +152,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void ForEachComponentWithSameDataParallelDescAndTimeShape(
       const std::function<void(const std::vector<OpNode*>&)>& Handler) const;
 
-  int64_t GetModelSplitNum(const std::string& op_name, const LogicalBlobId& lbi) const;
-  int64_t GetDataSplitNum(const std::string& op_name, const LogicalBlobId& lbi) const;
-  int64_t GetParallelNum(const std::string& op_name, const LogicalBlobId& lbi) const;
+  int64_t GetSplitNum(const std::string& op_name, const LogicalBlobId& lbi) const;
   const JobDesc* job_desc_;
   HashMap<std::string, OpNode*> op_name2op_node_;
 };

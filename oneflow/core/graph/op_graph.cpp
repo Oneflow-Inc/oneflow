@@ -430,56 +430,45 @@ void OpGraph::InferLogicalBlobDesc() const {
   });
 }
 
-BalancedSplitter OpGraph::GetDataBalancedSplitter(const std::string& op_name,
-                                                  const LogicalBlobId& lbi,
-                                                  const ParallelDesc& parallel_desc) const {
-  int64_t data_split_num = Global<OpGraph>::Get()->GetDataSplitNum(op_name, lbi);
-  int64_t parallel_num = Global<OpGraph>::Get()->GetParallelNum(op_name, lbi);
-  CHECK_EQ(parallel_desc.parallel_num(), parallel_num);
-  CHECK_EQ(data_split_num % parallel_num, 0);
-  return BalancedSplitter(data_split_num, parallel_num);
-}
-
-BalancedSplitter OpGraph::GetModelBalancedSplitter(const std::string& op_name,
-                                                   const LogicalBlobId& lbi,
-                                                   const ParallelDesc& parallel_desc) const {
-  int64_t model_split_num = Global<OpGraph>::Get()->GetModelSplitNum(op_name, lbi);
-  int64_t parallel_num = Global<OpGraph>::Get()->GetParallelNum(op_name, lbi);
-  CHECK_EQ(parallel_desc.parallel_num(), parallel_num);
-  CHECK_GE(model_split_num, parallel_num);
-  return BalancedSplitter(model_split_num, parallel_num);
+BalancedSplitter OpGraph::GetBalancedSplitter(const std::string& op_name,
+                                              const LogicalBlobId& lbi) const {
+  OpNode* op_node = op_name2op_node_.at(GetOpNameKey(op_name, lbi));
+  const LogicalBlobParallelDesc& lbpd = GetLbpd(op_name, lbi);
+  CHECK_EQ(op_node->parallel_desc().parallel_num(), lbpd.parallel_num());
+  CHECK(lbpd.has_split_parallel());
+  int64_t split_num = GetSplitNum(op_name, lbi);
+  int64_t model_split_axis = GetModelSplitAxis(op_name, lbi);
+  if (model_split_axis == -1) {
+    CHECK_EQ(split_num % lbpd.parallel_num(), 0);
+  } else {
+    CHECK_GE(split_num, lbpd.parallel_num());
+  }
+  return BalancedSplitter(split_num, lbpd.parallel_num());
 }
 
 int32_t OpGraph::GetModelSplitAxis(const std::string& op_name, const LogicalBlobId& lbi) const {
-  const auto& blob_parallel_desc = GetBlobParallelDesc(op_name, lbi);
-  CHECK(blob_parallel_desc.has_model_split_axis());
-  return blob_parallel_desc.model_split_axis();
+  OpNode* op_node = op_name2op_node_.at(GetOpNameKey(op_name, lbi));
+  return op_node->ModelSplitAxis4Lbi(GetLogicalBlobIdKey(op_name, lbi));
 }
 
-int64_t OpGraph::GetModelSplitNum(const std::string& op_name, const LogicalBlobId& lbi) const {
+int64_t OpGraph::GetSplitNum(const std::string& op_name, const LogicalBlobId& lbi) const {
   OpNode* op_node = op_name2op_node_.at(GetOpNameKey(op_name, lbi));
   const LogicalBlobId& lbi_key = GetLogicalBlobIdKey(op_name, lbi);
-  const BlobParallelDesc& blob_parallel_desc = op_node->BlobParallelDesc4Lbi(lbi_key);
-  CHECK(blob_parallel_desc.has_model_split_axis());
+  const LogicalBlobParallelDesc& lbpd = op_node->Lbpd4Lbi(lbi_key);
+  CHECK(lbpd.has_split_parallel());
   return op_node->ProducerOpNode4Lbi(lbi)->LogicalBlobDesc4Lbi(lbi_key).shape().At(
-      blob_parallel_desc.model_split_axis());
-}
-int64_t OpGraph::GetDataSplitNum(const std::string& op_name, const LogicalBlobId& lbi) const {
-  OpNode* op_node = op_name2op_node_.at(GetOpNameKey(op_name, lbi));
-  const LogicalBlobId& lbi_key = GetLogicalBlobIdKey(op_name, lbi);
-  const BlobParallelDesc& blob_parallel_desc = op_node->BlobParallelDesc4Lbi(lbi_key);
-  CHECK(blob_parallel_desc.has_data_blob_parallel() || blob_parallel_desc.has_grid_blob_parallel());
-  return op_node->ProducerOpNode4Lbi(lbi)->LogicalBlobDesc4Lbi(lbi_key).shape().At(0);
-}
-int64_t OpGraph::GetParallelNum(const std::string& op_name, const LogicalBlobId& lbi) const {
-  return GetBlobParallelDesc(op_name, lbi).ParallelNum();
+      lbpd.split_parallel().axis());
 }
 const BlobParallelDesc& OpGraph::GetBlobParallelDesc(const std::string& op_name,
                                                      const LogicalBlobId& lbi) const {
   return op_name2op_node_.at(GetOpNameKey(op_name, lbi))
       ->BlobParallelDesc4Lbi(GetLogicalBlobIdKey(op_name, lbi));
 }
-
+const LogicalBlobParallelDesc& OpGraph::GetLbpd(const std::string& op_name,
+                                                const LogicalBlobId& lbi) const {
+  return op_name2op_node_.at(GetOpNameKey(op_name, lbi))
+      ->Lbpd4Lbi(GetLogicalBlobIdKey(op_name, lbi));
+}
 void OpGraph::CheckBlobDescs(const std::string& op_name,
                              const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const {
