@@ -60,10 +60,8 @@ class OpNode final : public Node<OpNode, OpEdge> {
   OpNode* ProducerOpNode4BnInOp(const std::string& bn_in_op);
   OpNode* SrcNode4InputLbi(const LogicalBlobId& lbi) const;
   OpNode* ProducerOpNode4Lbi(const LogicalBlobId& lbi);
-  void ForEachParallelBlobDesc(
-      const BlobDesc& blob_desc,
-      const std::function<void(bool*, int32_t*, int64_t*)>& GetAxisParallelInfo,
-      const std::function<void(const BlobDesc&)>& Handler) const;
+  void ForEachParallelBlobDesc(const BlobDesc& blob_desc, const LogicalBlobParallelDesc& lbpd,
+                               const std::function<void(const BlobDesc&)>& Handler) const;
   int64_t GetAxisParallelNum(
       const std::function<void(bool*, int32_t*, int64_t*)>& GetAxisParallelInfo) const;
   void ConcatBlobDesc(const std::vector<BlobDesc>& blob_descs,
