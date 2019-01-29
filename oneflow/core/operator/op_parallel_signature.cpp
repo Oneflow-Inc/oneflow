@@ -140,7 +140,8 @@ const OpParallelSignature MakeModelSplitOpParallelSignature(const Operator* op) 
           auto* err = ret.mutable_fail()->mutable_conf_error()->mutable_parallel_policy_error();
           err->set_configured(parallel_ctx->policy());
           err->set_expected(kModelParallel);
-        } else {
+        }
+        if (!parallel_num_matched) {
           auto* err = ret.mutable_fail()->mutable_conf_error()->mutable_parallel_num_error();
           err->set_configured(parallel_ctx->parallel_num());
           err->set_expected(parallel_num_matched);
@@ -183,6 +184,66 @@ const OpParallelSignature MakeModelSplitOpParallelSignature(const Operator* op) 
         };
     return OpParallelSignature(desc, IsModelSplit, GenModelSplitSignature);
   }
+}
+
+const OpParallelSignature MakeOpParallelSignature_DS_MC_2_DS(const Operator* op) {
+  std::string desc = op->op_name() + ": (C, S(0), ...) -> (S(0), ...)";
+  std::vector<std::string> data_input_bns;
+  std::vector<std::string> model_input_bns;
+  for (const auto& bn : op->input_bns()) {
+    if (op->IsInputBlobAllowedModelSplit(bn)) {
+      model_input_bns.push_back(bn);
+    } else {
+      data_input_bns.push_back(bn);
+    }
+  }
+  CHECK_GT(data_input_bns.size(), 0);
+  CHECK_GT(model_input_bns.size(), 0);
+  auto GetMatchResult =
+      [op, data_input_bns, model_input_bns](
+          const std::function<const LogicalBlobParallelDesc&(const std::string&)>& ProducerLbpd4Ibn,
+          const std::function<int32_t(const std::string&)>&, const ParallelContext* parallel_ctx) {
+        bool is_model_input_blob_all_cloned = true;
+        for (const auto& bn : op->input_bns()) {
+          const auto& lbpd = ProducerLbpd4Ibn(bn);
+          if (op->IsInputBlobAllowedModelSplit(bn) && !lbpd.has_clone_parallel()) {
+            is_model_input_blob_all_cloned = false;
+          }
+        }
+        if (!is_model_input_blob_all_cloned) { return MakeOpParallelMatchSignatureMismatch(); }
+        for (const auto& bn : model_input_bns) {
+          const auto& lbpd = ProducerLbpd4Ibn(bn);
+          bool parallel_policy_matched = (parallel_ctx->policy() == kDataParallel);
+          bool parallel_num_matched = (parallel_ctx->parallel_num() == lbpd.parallel_num());
+          if (!parallel_policy_matched || !parallel_num_matched) {
+            OpParallelMatchResult ret;
+            if (!parallel_policy_matched) {
+              auto* err = ret.mutable_fail()->mutable_conf_error()->mutable_parallel_policy_error();
+              err->set_configured(parallel_ctx->policy());
+              err->set_expected(kDataParallel);
+            }
+            if (!parallel_num_matched) {
+              auto* err = ret.mutable_fail()->mutable_conf_error()->mutable_parallel_num_error();
+              err->set_configured(parallel_ctx->parallel_num());
+              err->set_expected(parallel_num_matched);
+            }
+            return ret;
+          }
+        }
+        return MakeOpParallelMatchSuccess();
+      };
+  auto GenSignature = [op, data_input_bns, model_input_bns](
+                          const std::function<int32_t(const std::string&)>&,
+                          HashMap<std::string, LogicalBlobParallelDesc>* signature) {
+    for (const auto& bn : data_input_bns) {
+      (*signature)[bn].mutable_split_parallel()->set_axis(0);
+    }
+    for (const auto& bn : model_input_bns) { (*signature)[bn].mutable_clone_parallel(); }
+    for (const auto& bn : op->output_bns()) {
+      (*signature)[bn].mutable_split_parallel()->set_axis(0);
+    }
+  };
+  return OpParallelSignature(desc, GetMatchResult, GenSignature);
 }
 
 }  // namespace oneflow

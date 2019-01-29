@@ -34,12 +34,23 @@ const OpParallelMatchResult MakeOpParallelMatchParallelNumError(int64_t configur
                                                                 int64_t expected);
 
 class Operator;
+
 // (S(0), ...) -> (S(0), ...)
 const OpParallelSignature MakeDataSplitOpParallelSignature(const Operator* op);
+
 // (S,) -> (S, ...) or (C, ...) -> (S, ...)
 const OpParallelSignature MakeModelSplitOpParallelSignature(const Operator* op);
+
 // (C,) -> (C, ...)
 const OpParallelSignature MakeCloneOpParallelSignature(const Operator* op);
+
+// (C, S(0), ...) -> (S(0), ...)
+// split data input blob and clone model input blob
+const OpParallelSignature MakeOpParallelSignature_DS_MC_2_DS(const Operator* op);
+
+// (C, S, ...) -> (S, ...)
+// clone data input blob and split model input blob
+const OpParallelSignature MakeOpParallelSignature_DC_MS_2_MS(const Operator* op);
 
 }  // namespace oneflow
 
