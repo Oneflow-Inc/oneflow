@@ -11,6 +11,7 @@
 #include "oneflow/core/kernel/kernel.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/register/blob_desc.h"
+#include "oneflow/core/operator/op_parallel_signature.h"
 
 namespace oneflow {
 
@@ -30,6 +31,7 @@ class Operator {
   void InitFromOpConf(const OperatorConf& op_conf);
   virtual void InitFromOpConf() = 0;
   bool IsSoleInputBlobAllowedModelSplit() const;
+  virtual bool IsInputBlobAllowedModelSplit(const std::string& ibn) const = 0;
 
   ActivationType GetActivationType() const;
 
@@ -216,11 +218,7 @@ class Operator {
   void NaiveInferOutputBlobParallelDesc(
       std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
       const ParallelContext* parallel_context) const;
-  virtual void InferInputOutputBlobParallelType(
-      std::function<BlobParallelType*(const std::string&)> BlobParallelType4BnInOp,
-      std::function<const BlobParallelType&(const std::string&)> ProducerBlobParallelType4Ibn,
-      std::function<int32_t(const std::string&)> ModelSplitAxis4BnInOp,
-      const ParallelContext* parallel_ctx) const;
+
   int64_t cudnn_buf_limit_byte() const;
 
   virtual PbMessage* MutableCustomizedKernelConf(KernelConf*) const {
@@ -298,8 +296,13 @@ class Operator {
 
   void StrFieldTolower(const std::string& field_name);
 
+  std::vector<OpParallelSignature>* mut_op_parallel_signatures() {
+    return &op_parallel_signatures_;
+  }
+
  private:
-  virtual bool IsInputBlobAllowedModelSplit(const std::string& ibn) const = 0;
+  virtual void InitOpParallelSignatures() { NaiveInitOpParallelSignatures(); }
+  void NaiveInitOpParallelSignatures();
   LogicalBlobId dtbn2lbi(const std::string& data_tmp_bn) const;
   LogicalBlobId fbbn2lbi(const std::string& fw_buf_bn) const { return dtbn2lbi(fw_buf_bn); }
   LogicalBlobId bbbn2lbi(const std::string& bw_buf_bn) const { return dtbn2lbi(bw_buf_bn); }
@@ -312,6 +315,7 @@ class Operator {
   }
 
   OpAttribute op_attribute_;
+  std::vector<OpParallelSignature> op_parallel_signatures_;
 };
 
 std::string GenDiffBn(const std::string& bn);

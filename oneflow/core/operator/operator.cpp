@@ -27,6 +27,7 @@ void Operator::InitFromOpConf(const OperatorConf& op_conf) {
   }
   if (GetActivationType() != ActivationType::kNone) { EnrollBwBufBn("bw_activation"); }
   InitFromOpConf();
+  InitOpParallelSignatures();
 }
 
 LogicalNode* Operator::NewProperLogicalNode() { return new NormalForwardLogicalNode; }
@@ -225,81 +226,72 @@ void Operator::InferBlobModelSplitAxisIf(
   }
 }
 
-void Operator::InferInputOutputBlobParallelTypeIf(
-    std::function<BlobParallelType*(const std::string&)> BlobParallelType4BnInOp,
-    std::function<const BlobParallelType&(const std::string&)> ProducerBlobParallelType4Ibn,
-    std::function<int32_t(const std::string&)> ModelSplitAxis4BnInOp,
-    const ParallelContext* parallel_ctx) const {
-  InferInputOutputBlobParallelType(BlobParallelType4BnInOp, ProducerBlobParallelType4Ibn,
-                                   ModelSplitAxis4BnInOp, parallel_ctx);
-  auto SetParallelNum = [&](const std::string& bn) {
-    BlobParallelType4BnInOp(bn)->set_parallel_num(parallel_ctx->parallel_num());
-  };
-  for (const auto& bn : input_bns()) { SetParallelNum(bn); }
-  for (const auto& bn : output_bns()) { SetParallelNum(bn); }
+void Operator::NaiveInitOpParallelSignatures() {
+  if (IsSoleInputBlobAllowedModelSplit()) {
+    CHECK(model_bns().empty() && const_model_bns().empty());
+    op_parallel_signatures_.push_back(MakeOpDataSplitParallelSignature(this));
+    op_parallel_signatures_.push_back(MakeOpModelSplitParallelSignature(this));
+    op_parallel_signatures_.push_back(MakeOpCloneParallelSignature(this));
+  } else {
+    CHECK(!model_bns().empty() || !const_model_bns().empty());
+    for (const auto& ibn : input_bns()) { CHECK(!IsInputBlobAllowedModelSplit(ibn)); }
+    op_parallel_signatures_.push_back(MakeOpDataSplitParallelSignature(this));
+    op_parallel_signatures_.push_back(MakeOpModelSplitParallelSignature(this));
+  }
 }
 
-void Operator::InferInputOutputBlobParallelType(
+void Operator::InferInputOutputBlobParallelTypeIf(
     std::function<BlobParallelType*(const std::string&)> BlobParallelType4BnInOp,
-    std::function<const BlobParallelType&(const std::string&)> ProducerBlobParallelType4Ibn,
+    std::function<const BlobParallelType&(const std::string&)> ProducerLbpd4Ibn,
     std::function<int32_t(const std::string&)> ModelSplitAxis4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  auto InferDataSplit = [&]() {
-    for (const std::string& ibn : input_bns()) {
-      BlobParallelType4BnInOp(ibn)->mutable_split_parallel()->set_axis(0);
+  std::vector<OpParallelMatchResult> match_results;
+  for (const auto& signature : op_parallel_signatures_) {
+    match_results.push_back(
+        signature.get_match_result(ProducerLbpd4Ibn, ModelSplitAxis4BnInOp, parallel_ctx));
+  }
+  int32_t match_success_cnt = 0;
+  for (const auto& result : match_results) {
+    if (result.has_success()) { ++match_success_cnt; }
+  }
+  if (match_success_cnt == 1) {
+    const OpParallelSignature* match_signature = nullptr;
+    FOR_RANGE(int32_t, i, 0, op_parallel_signatures_.size()) {
+      if (match_results.at(i).has_success()) { match_signature = &op_parallel_signatures_.at(i); }
     }
-    for (const std::string& obn : output_bns()) {
-      BlobParallelType4BnInOp(obn)->mutable_split_parallel()->set_axis(0);
-    }
-  };
-  if (IsSoleInputBlobAllowedModelSplit()) {
-    const auto& producer_blob_pt = ProducerBlobParallelType4Ibn(SoleIbn());
-    if (producer_blob_pt.has_clone_parallel()) {
-      CHECK_EQ(parallel_ctx->parallel_num(), producer_blob_pt.parallel_num());
-      BlobParallelType4BnInOp(SoleIbn())->mutable_clone_parallel();
-      for (const std::string& obn : output_bns()) {
-        BlobParallelType4BnInOp(obn)->mutable_clone_parallel();
-      }
-    } else if (producer_blob_pt.has_partial_sum_parallel()) {
-      CHECK_EQ(parallel_ctx->policy(), kDataParallel);
-      InferDataSplit();
-    } else if (producer_blob_pt.has_split_parallel()) {
-      if (parallel_ctx->policy() == kDataParallel) {
-        CHECK_EQ(producer_blob_pt.split_parallel().axis(), 0);
-        InferDataSplit();
-      } else if (parallel_ctx->policy() == kModelParallel) {
-        CHECK_EQ(parallel_ctx->parallel_num(), producer_blob_pt.parallel_num());
-        int32_t in_split_axis = producer_blob_pt.split_parallel().axis();
-        CHECK_EQ(ModelSplitAxis4BnInOp(SoleIbn()), in_split_axis);
-        BlobParallelType4BnInOp(SoleIbn())->mutable_split_parallel()->set_axis(in_split_axis);
-        for (const std::string& obn : output_bns()) {
-          int32_t out_split_axis = ModelSplitAxis4BnInOp(obn);
-          CHECK_NE(out_split_axis, -1);
-          BlobParallelType4BnInOp(obn)->mutable_split_parallel()->set_axis(out_split_axis);
-        }
+    HashMap<std::string, BlobParallelType> bn2lbpd;
+    match_signature->signature_generator(ModelSplitAxis4BnInOp, &bn2lbpd);
+    for (const auto& pair : bn2lbpd) { *BlobParallelType4BnInOp(pair.first) = pair.second; }
+  } else if (match_success_cnt == 0) {
+    std::stringstream ss;
+    FOR_RANGE(int32_t, i, 0, op_parallel_signatures_.size()) {
+      CHECK(match_results.at(i).has_fail());
+      const auto& failed_msg = match_results.at(i).fail();
+      ss << op_parallel_signatures_.at(i).description << ":\n";
+      if (failed_msg.has_signature_mismatch()) {
+        ss << "\t"
+           << "signature mismatch"
+           << "\n";
       } else {
-        UNIMPLEMENTED();
+        CHECK(failed_msg.has_conf_error());
+        if (failed_msg.conf_error().has_parallel_policy_error()) {
+          const auto& policy_error_msg = failed_msg.conf_error().parallel_policy_error();
+          ss << "\t"
+             << "parallel_policy conf error, configured: "
+             << ParallelPolicy_Name(policy_error_msg.configured())
+             << ", expected: " << ParallelPolicy_Name(policy_error_msg.expected()) << "\n";
+        }
+        if (failed_msg.conf_error().has_parallel_num_error()) {
+          const auto& parallel_num_error_msg = failed_msg.conf_error().parallel_num_error();
+          ss << "\t"
+             << "parallel_num conf error, configured: " << parallel_num_error_msg.configured()
+             << ", expected: " << parallel_num_error_msg.expected() << "\n";
+        }
       }
-    } else {
-      UNIMPLEMENTED();
+      LOG(FATAL) << ss.str();
     }
   } else {
-    for (const std::string& ibn : input_bns()) { CHECK(!IsInputBlobAllowedModelSplit(ibn)); }
-    if (parallel_ctx->policy() == kDataParallel) {
-      InferDataSplit();
-    } else if (parallel_ctx->policy() == kModelParallel) {
-      for (const std::string& ibn : input_bns()) {
-        BlobParallelType4BnInOp(ibn)->mutable_clone_parallel();
-      }
-      for (const std::string& obn : output_bns()) {
-        CHECK(!(model_bns().empty() && const_model_bns().empty()));
-        int32_t out_split_axis = ModelSplitAxis4BnInOp(obn);
-        CHECK_NE(out_split_axis, -1);
-        BlobParallelType4BnInOp(obn)->mutable_split_parallel()->set_axis(out_split_axis);
-      }
-    } else {
-      UNIMPLEMENTED();
-    }
+    UNIMPLEMENTED();
   }
 }
 

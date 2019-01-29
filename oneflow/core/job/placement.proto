@@ -23,7 +23,7 @@ message GridBlobParallel {
 
 // for input and output blob
 message SplitParallel {
-  required int32 axis = 1;
+  required int64 axis = 1;
 }
 
 // for input blob
@@ -35,7 +35,7 @@ message PartialSumParallel {
 }
 
 message BlobParallelType {
-  required int32 parallel_num = 1;
+  required int64 parallel_num = 1;
   oneof parallel_type {
     SplitParallel split_parallel = 2;
     CloneParallel clone_parallel = 3;

@@ -34,6 +34,7 @@ class VariableOp final : public Operator {
     NaiveInferOutputBlobModelSplitAxis(ModelSplitAxis4BnInOp, ShapeNumAxes4BnInOp,
                                        parallel_context);
   }
+
   void InferOutputBlobParallelDesc(
       std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
       const ParallelContext* parallel_context) const override;
