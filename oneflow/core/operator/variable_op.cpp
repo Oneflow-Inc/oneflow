@@ -111,22 +111,6 @@ void VariableOp::InitOpParallelSignatures() {
   mut_op_parallel_signatures()->push_back(MakeVariableOpModelSplitParallelSignature(this));
 }
 
-void VariableOp::InferOutputBlobParallelDesc(
-    std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
-    const ParallelContext* parallel_context) const {
-  ModelBlobParallel* model_blob_parallel =
-      BlobParallelDesc4BnInOp("out")->mut_model_blob_parallel();
-  if (parallel_context->policy() == kDataParallel) {
-    model_blob_parallel->set_clone_num(parallel_context->parallel_num());
-    model_blob_parallel->set_model_split_num(1);
-  } else if (parallel_context->policy() == kModelParallel) {
-    model_blob_parallel->set_clone_num(1);
-    model_blob_parallel->set_model_split_num(parallel_context->parallel_num());
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
 void VariableOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
     KernelConf* conf) const {

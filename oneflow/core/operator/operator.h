@@ -6,7 +6,6 @@
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/job/keyword.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/job/blob_parallel_desc.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/kernel/kernel.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
@@ -154,10 +153,6 @@ class Operator {
       std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
       const ParallelContext* parallel_context) const;
   // Infer blob's parallel desc
-  void InferBlobParallelDescIf(
-      std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
-      std::function<const BlobParallelDesc&(const std::string&)> ProducerBlobParallelDesc4BnInOp,
-      const ParallelContext* parallel_context) const;
   void InferInputOutputLogicalBlobParallelDescIf(
       std::function<LogicalBlobParallelDesc*(const std::string&)> LogicalBlobParallelDesc4BnInOp,
       std::function<const LogicalBlobParallelDesc&(const std::string&)>
@@ -198,26 +193,6 @@ class Operator {
   void NaiveInferOutputBlobModelSplitAxis(
       std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
       std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
-      const ParallelContext* parallel_context) const;
-  // infer blob parallel desc
-  virtual void InferInputBlobParallelDesc(
-      std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
-      std::function<const BlobParallelDesc&(const std::string&)> ProducerBlobParallelDesc4BnInOp,
-      const ParallelContext* parallel_context) const {
-    NaiveInferInputBlobParallelDesc(BlobParallelDesc4BnInOp, ProducerBlobParallelDesc4BnInOp,
-                                    parallel_context);
-  }
-  virtual void InferOutputBlobParallelDesc(
-      std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
-      const ParallelContext* parallel_context) const {
-    NaiveInferOutputBlobParallelDesc(BlobParallelDesc4BnInOp, parallel_context);
-  }
-  void NaiveInferInputBlobParallelDesc(
-      std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
-      std::function<const BlobParallelDesc&(const std::string&)> ProducerBlobParallelDesc4BnInOp,
-      const ParallelContext* parallel_context) const;
-  void NaiveInferOutputBlobParallelDesc(
-      std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
       const ParallelContext* parallel_context) const;
 
   int64_t cudnn_buf_limit_byte() const;

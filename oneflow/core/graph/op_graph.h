@@ -4,7 +4,6 @@
 #include "oneflow/core/graph/graph.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/job/blob_parallel_desc.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/balanced_splitter.h"
 

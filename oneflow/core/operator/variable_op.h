@@ -37,10 +37,6 @@ class VariableOp final : public Operator {
                                        parallel_context);
   }
 
-  void InferOutputBlobParallelDesc(
-      std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
-      const ParallelContext* parallel_context) const override;
-
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext*, KernelConf*) const override;
 

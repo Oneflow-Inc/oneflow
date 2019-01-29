@@ -4,7 +4,6 @@
 #include "oneflow/core/graph/logical_graph.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/job/blob_parallel_desc.h"
 
 namespace oneflow {
 
