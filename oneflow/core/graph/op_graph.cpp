@@ -188,21 +188,23 @@ int64_t OpNode::GetAxisParallelNum(
 
 void OpNode::SplitLogicalInputBlobDesc() {
   for (const std::string& bn : op().input_bns()) {
+    const LogicalBlobId& lbi = op().BnInOp2Lbi(bn);
     const BlobDesc& logical_blob_desc = *LogicalBlobDesc4BnInOp(bn);
-    const LogicalBlobParallelDesc& lbpd = Lbpd4Lbi(op().BnInOp2Lbi(bn));
+    const LogicalBlobParallelDesc& lbpd = Lbpd4Lbi(lbi);
     CHECK_EQ(lbpd.parallel_num(), parallel_desc().parallel_num());
     ForEachParallelBlobDesc(logical_blob_desc, lbpd, [&](const BlobDesc& blob_desc) {
-      bn2parallel_id2blob_desc_[bn].push_back(blob_desc);
+      lbi2parallel_id2blob_desc_[lbi].push_back(blob_desc);
     });
-    CHECK_EQ(bn2parallel_id2blob_desc_.at(bn).size(), parallel_desc().parallel_num());
+    CHECK_EQ(lbi2parallel_id2blob_desc_.at(lbi).size(), parallel_desc().parallel_num());
   }
 }
 
 void OpNode::ConcatLogicalOutputBlobDesc() {
   for (const std::string& bn : op().output_bns()) {
-    const LogicalBlobParallelDesc& lbpd = Lbpd4Lbi(op().BnInOp2Lbi(bn));
+    const LogicalBlobId& lbi = op().BnInOp2Lbi(bn);
+    const LogicalBlobParallelDesc& lbpd = Lbpd4Lbi(lbi);
     CHECK_EQ(lbpd.parallel_num(), parallel_desc().parallel_num());
-    ConcatBlobDesc(bn2parallel_id2blob_desc_.at(bn), lbpd, LogicalBlobDesc4BnInOp(bn));
+    ConcatBlobDesc(lbi2parallel_id2blob_desc_.at(lbi), lbpd, LogicalBlobDesc4BnInOp(bn));
   }
 }
 
@@ -210,9 +212,10 @@ void OpNode::CheckBlobDescs(const std::function<BlobDesc*(const std::string&)>& 
                             const ParallelContext* parallel_ctx) const {
   int64_t parallel_id = parallel_ctx->parallel_id();
   auto Check = [&](const std::string& bn) {
-    if (bn2parallel_id2blob_desc_.find(bn) == bn2parallel_id2blob_desc_.end()) { return; }
-    CHECK_EQ(parallel_ctx->parallel_num(), bn2parallel_id2blob_desc_.at(bn).size());
-    CHECK(*GetBlobDesc4BnInOp(bn) == bn2parallel_id2blob_desc_.at(bn).at(parallel_id));
+    const LogicalBlobId& lbi = op().BnInOp2Lbi(bn);
+    if (lbi2parallel_id2blob_desc_.find(lbi) == lbi2parallel_id2blob_desc_.end()) { return; }
+    CHECK_EQ(parallel_ctx->parallel_num(), lbi2parallel_id2blob_desc_.at(lbi).size());
+    CHECK(*GetBlobDesc4BnInOp(bn) == lbi2parallel_id2blob_desc_.at(lbi).at(parallel_id));
   };
   for (const std::string& bn : op().data_tmp_bns()) { Check(bn); }
   for (const std::string& bn : op().fw_buf_bns()) { Check(bn); }
@@ -386,21 +389,22 @@ void OpGraph::InferLogicalBlobParallelDesc() const {
 
 void OpGraph::InferLogicalBlobDesc() const {
   TopoForEachNode([&](OpNode* op_node) {
-    auto* bn2parallel_id2blob_desc = op_node->mut_bn2parallel_id2blob_desc();
+    auto* lbi2parallel_id2blob_desc = op_node->mut_lbi2parallel_id2blob_desc();
     op_node->SplitLogicalInputBlobDesc();
     int64_t parallel_num = op_node->parallel_desc().parallel_num();
     const auto& input_bns = op_node->op().input_bns();
     FOR_RANGE(int64_t, parallel_id, 0, parallel_num) {
       auto BlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
+        const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(bn);
         if (std::find(input_bns.begin(), input_bns.end(), bn) != input_bns.end()) {
-          CHECK(bn2parallel_id2blob_desc->find(bn) != bn2parallel_id2blob_desc->end());
-          CHECK_EQ(bn2parallel_id2blob_desc->at(bn).size(), parallel_num);
-        } else if (bn2parallel_id2blob_desc->find(bn) == bn2parallel_id2blob_desc->end()) {
-          (*bn2parallel_id2blob_desc)[bn].resize(parallel_num);
+          CHECK(lbi2parallel_id2blob_desc->find(lbi) != lbi2parallel_id2blob_desc->end());
+          CHECK_EQ(lbi2parallel_id2blob_desc->at(lbi).size(), parallel_num);
+        } else if (lbi2parallel_id2blob_desc->find(lbi) == lbi2parallel_id2blob_desc->end()) {
+          (*lbi2parallel_id2blob_desc)[lbi].resize(parallel_num);
         } else {
-          CHECK_EQ(bn2parallel_id2blob_desc->at(bn).size(), parallel_num);
+          CHECK_EQ(lbi2parallel_id2blob_desc->at(lbi).size(), parallel_num);
         }
-        return &(*bn2parallel_id2blob_desc)[bn][parallel_id];
+        return &(*lbi2parallel_id2blob_desc)[lbi][parallel_id];
       };
       ParallelContext parallel_ctx;
       parallel_ctx.set_parallel_id(parallel_id);
