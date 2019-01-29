@@ -44,16 +44,22 @@ void MultipleGatherOp::InferOutputBlobModelSplitAxis(
     std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
     std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
     const ParallelContext* parallel_context) const {
-  CHECK_EQ(*ModelSplitAxis4BnInOp("indices"), -1);
+  const MultipleGatherOpConf& conf = op_conf().multiple_gather_conf();
   const int32_t in_model_split_axis = *ModelSplitAxis4BnInOp("in");
   const int64_t in_num_axes = ShapeNumAxes4BnInOp("in");
   if (in_model_split_axis != -1) {
     CHECK_GT(in_model_split_axis, 0);
     CHECK_LT(in_model_split_axis, in_num_axes);
-    *ModelSplitAxis4BnInOp("out") = in_model_split_axis + ShapeNumAxes4BnInOp("indices") - 1;
+    FOR_RANGE(int32_t, i, 0, conf.indices().size()) {
+      CHECK_EQ(*ModelSplitAxis4BnInOp(GenRepeatedBn("indices", i)), -1);
+      *ModelSplitAxis4BnInOp(GenRepeatedBn("out", i)) =
+          in_model_split_axis + ShapeNumAxes4BnInOp(GenRepeatedBn("indices", i)) - 1;
+    }
   } else {
     CHECK_EQ(parallel_context->policy(), ParallelPolicy::kDataParallel);
-    *ModelSplitAxis4BnInOp("out") = -1;
+    FOR_RANGE(int32_t, i, 0, conf.indices().size()) {
+      *ModelSplitAxis4BnInOp(GenRepeatedBn("out", i)) = -1;
+    }
   }
 }
 
