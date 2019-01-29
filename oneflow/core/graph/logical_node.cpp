@@ -282,9 +282,9 @@ static bool IsModelParallel121(const LogicalNode* src_node, const LogicalNode* d
   const std::string& src_op_name = src_node->SoleOp()->op_name();
   const std::string& dst_op_name = dst_node->SoleOp()->op_name();
   for (const LogicalBlobId& lbi : connect_edge->lbis()) {
-    const auto& src_blob_pd = Global<OpGraph>::Get()->GetBlobParallelDesc(src_op_name, lbi);
-    const auto& dst_blob_pd = Global<OpGraph>::Get()->GetBlobParallelDesc(dst_op_name, lbi);
-    if (!src_blob_pd.EquivalentTo(dst_blob_pd)) { return false; }
+    const auto& src_lbpd = Global<OpGraph>::Get()->GetLbpd(src_op_name, lbi);
+    const auto& dst_lbpd = Global<OpGraph>::Get()->GetLbpd(dst_op_name, lbi);
+    if (src_lbpd != dst_lbpd) { return false; }
   }
   return true;
 }

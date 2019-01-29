@@ -459,11 +459,6 @@ int64_t OpGraph::GetSplitNum(const std::string& op_name, const LogicalBlobId& lb
   return op_node->ProducerOpNode4Lbi(lbi)->LogicalBlobDesc4Lbi(lbi_key).shape().At(
       lbpd.split_parallel().axis());
 }
-const BlobParallelDesc& OpGraph::GetBlobParallelDesc(const std::string& op_name,
-                                                     const LogicalBlobId& lbi) const {
-  return op_name2op_node_.at(GetOpNameKey(op_name, lbi))
-      ->BlobParallelDesc4Lbi(GetLogicalBlobIdKey(op_name, lbi));
-}
 const LogicalBlobParallelDesc& OpGraph::GetLbpd(const std::string& op_name,
                                                 const LogicalBlobId& lbi) const {
   return op_name2op_node_.at(GetOpNameKey(op_name, lbi))
