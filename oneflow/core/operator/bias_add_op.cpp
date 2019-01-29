@@ -18,6 +18,11 @@ bool BiasAddOp::IsInputBlobAllowedModelSplit(const std::string& ibn) const {
   return ibn == "b";
 }
 
+void BiasAddOp::InitOpParallelSignatures() {
+  mut_op_parallel_signatures()->push_back(MakeOpParallelSignature_DS_MC_2_DS(this));
+  mut_op_parallel_signatures()->push_back(MakeOpParallelSignature_DC_MS_2_MS(this));
+}
+
 void BiasAddOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                const ParallelContext* parallel_ctx) const {
   const BlobDesc* a_blob_desc = GetBlobDesc4BnInOp("a");
