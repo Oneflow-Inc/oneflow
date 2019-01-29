@@ -64,8 +64,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
                                const std::function<void(const BlobDesc&)>& Handler) const;
   int64_t GetAxisParallelNum(
       const std::function<void(bool*, int32_t*, int64_t*)>& GetAxisParallelInfo) const;
-  void ConcatBlobDesc(const std::vector<BlobDesc>& blob_descs,
-                      const std::function<void(bool*, int32_t*, int64_t*)>& GetAxisParallelInfo,
+  void ConcatBlobDesc(const std::vector<BlobDesc>& blob_descs, const LogicalBlobParallelDesc& lbpd,
                       BlobDesc* concatenated_blob_desc) const;
   void SplitLogicalInputBlobDesc();
   void ConcatLogicalOutputBlobDesc();

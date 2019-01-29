@@ -155,16 +155,12 @@ void OpNode::ForEachParallelBlobDesc(const BlobDesc& blob_desc, const LogicalBlo
   }
 }
 
-void OpNode::ConcatBlobDesc(
-    const std::vector<BlobDesc>& blob_descs,
-    const std::function<void(bool*, int32_t*, int64_t*)>& GetAxisParallelInfo,
-    BlobDesc* concatenated_blob_desc) const {
-  bool is_split = false;
-  int32_t axis = -1;
-  int64_t axis_parallel_num = 0;
-  GetAxisParallelInfo(&is_split, &axis, &axis_parallel_num);
-  CHECK_EQ(blob_descs.size(), axis_parallel_num);
-  if (is_split) {
+void OpNode::ConcatBlobDesc(const std::vector<BlobDesc>& blob_descs,
+                            const LogicalBlobParallelDesc& lbpd,
+                            BlobDesc* concatenated_blob_desc) const {
+  CHECK_EQ(blob_descs.size(), lbpd.parallel_num());
+  if (lbpd.has_split_parallel()) {
+    int32_t axis = lbpd.split_parallel().axis();
     // concat BlobDesc
     CHECK_GE(axis, 0);
     CHECK_LT(axis, blob_descs.at(0).shape().NumAxes());
@@ -172,10 +168,10 @@ void OpNode::ConcatBlobDesc(
     for (const BlobDesc& blob_desc : blob_descs) {
       logical_blob_axis_dim += blob_desc.shape().At(axis);
     }
-    CHECK_GE(logical_blob_axis_dim, axis_parallel_num);
-    BalancedSplitter bs(logical_blob_axis_dim, axis_parallel_num);
+    CHECK_GE(logical_blob_axis_dim, lbpd.parallel_num());
+    BalancedSplitter bs(logical_blob_axis_dim, lbpd.parallel_num());
     std::vector<BlobDesc> same_blob_descs(blob_descs);
-    FOR_RANGE(int64_t, axis_parallel_id, 0, axis_parallel_num) {
+    FOR_RANGE(int64_t, axis_parallel_id, 0, lbpd.parallel_num()) {
       CHECK_EQ(bs.At(axis_parallel_id).size(), blob_descs.at(axis_parallel_id).shape().At(axis));
       same_blob_descs.at(axis_parallel_id).mut_shape().Set(axis, logical_blob_axis_dim);
     }
@@ -183,7 +179,6 @@ void OpNode::ConcatBlobDesc(
     *concatenated_blob_desc = same_blob_descs.at(0);
   } else {
     // select first BlobDesc
-    CHECK_EQ(axis, -1);
     for (const BlobDesc& blob_desc : blob_descs) { CHECK(blob_desc == blob_descs.at(0)); }
     *concatenated_blob_desc = blob_descs.at(0);
   }
@@ -212,29 +207,9 @@ void OpNode::SplitLogicalInputBlobDesc() {
 
 void OpNode::ConcatLogicalOutputBlobDesc() {
   for (const std::string& bn : op().output_bns()) {
-    const BlobParallelDesc& blob_parallel_desc = BlobParallelDesc4BnInOp(bn);
-    CHECK_EQ(blob_parallel_desc.ParallelNum(), parallel_desc().parallel_num());
-    auto GetDataAxisParallel = [&](bool* is_split, int32_t* axis, int64_t* axis_parallel_num) {
-      return blob_parallel_desc.GetDataAxisParallelInfo(is_split, axis, axis_parallel_num);
-    };
-    auto GetModelAxisParallel = [&](bool* is_split, int32_t* axis, int64_t* axis_parallel_num) {
-      return blob_parallel_desc.GetModelAxisParallelInfo(is_split, axis, axis_parallel_num);
-    };
-    std::vector<std::vector<BlobDesc>> blob_desc_matrix;
-    int64_t idx = 0;
-    FOR_RANGE(int64_t, data_parallel_id, 0, GetAxisParallelNum(GetDataAxisParallel)) {
-      blob_desc_matrix.push_back(std::vector<BlobDesc>());
-      FOR_RANGE(int64_t, model_parallel_id, 0, GetAxisParallelNum(GetModelAxisParallel)) {
-        blob_desc_matrix.back().push_back(bn2parallel_id2blob_desc_.at(bn).at(idx++));
-      }
-    }
-    CHECK_EQ(idx, parallel_desc().parallel_num());
-    std::vector<BlobDesc> data_blob_descs(GetAxisParallelNum(GetDataAxisParallel));
-    FOR_RANGE(int64_t, data_parallel_id, 0, GetAxisParallelNum(GetDataAxisParallel)) {
-      ConcatBlobDesc(blob_desc_matrix.at(data_parallel_id), GetModelAxisParallel,
-                     &data_blob_descs.at(data_parallel_id));
-    }
-    ConcatBlobDesc(data_blob_descs, GetDataAxisParallel, LogicalBlobDesc4BnInOp(bn));
+    const LogicalBlobParallelDesc& lbpd = Lbpd4Lbi(op().BnInOp2Lbi(bn));
+    CHECK_EQ(lbpd.parallel_num(), parallel_desc().parallel_num());
+    ConcatBlobDesc(bn2parallel_id2blob_desc_.at(bn), lbpd, LogicalBlobDesc4BnInOp(bn));
   }
 }
 
