@@ -2,6 +2,33 @@
 #include "oneflow/core/common/balanced_splitter.h"
 namespace oneflow {
 
+namespace {
+
+const OpParallelSignature MakeMatmulOpParallelSignature_DMS_MS_2_P(const MatmulOp* op) {
+  std::string desc = op->op_name() + ": (S, S) -> P";
+  auto GetMatchResult =
+      [op](const std::function<const LogicalBlobParallelDesc&(const std::string&)>&,
+           const std::function<int32_t(const std::string&)>& ModelSplitAxis4BnInOp,
+           const ParallelContext* parallel_ctx) {
+        int32_t b_expected_split_axis = (op->op_conf().matmul_conf().transpose_b() ? 1 : 0);
+        if (ModelSplitAxis4BnInOp("b") != b_expected_split_axis) {
+          return MakeOpParallelMatchSignatureMismatch();
+        }
+        if (parallel_ctx->policy() == kModelParallel) { return MakeOpParallelMatchSuccess(); }
+        return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kModelParallel);
+      };
+  auto GenSignature = [op](const std::function<int32_t(const std::string&)>& ModelSplitAxis4BnInOp,
+                           HashMap<std::string, LogicalBlobParallelDesc>* signature) {
+    int32_t a_split_axis = (op->op_conf().matmul_conf().transpose_a() ? 0 : 1);
+    (*signature)["a"].mutable_split_parallel()->set_axis(a_split_axis);
+    (*signature)["b"].mutable_split_parallel()->set_axis(ModelSplitAxis4BnInOp("b"));
+    (*signature)["out"].mutable_partial_sum_parallel();
+  };
+  return OpParallelSignature(desc, GetMatchResult, GenSignature);
+}
+
+}  // namespace
+
 void MatmulOp::InitFromOpConf() {
   CHECK(op_conf().has_matmul_conf());
   EnrollInputBn("a");
@@ -16,6 +43,16 @@ const PbMessage& MatmulOp::GetCustomizedConf() const { return op_conf().matmul_c
 bool MatmulOp::IsInputBlobAllowedModelSplit(const std::string& ibn) const {
   CHECK(std::find(input_bns().begin(), input_bns().end(), ibn) != input_bns().end());
   return ibn == "b";
+}
+
+void MatmulOp::InitOpParallelSignatures() {
+  mut_op_parallel_signatures()->push_back(MakeOpParallelSignature_DS_MC_2_DS(this));
+  auto IsValidSplit = [this](int32_t axis) {
+    int32_t b_expected_split_axis = (op_conf().matmul_conf().transpose_b() ? 0 : 1);
+    return axis == b_expected_split_axis;
+  };
+  mut_op_parallel_signatures()->push_back(MakeOpParallelSignature_DC_MS_2_MS(this, IsValidSplit));
+  mut_op_parallel_signatures()->push_back(MakeMatmulOpParallelSignature_DMS_MS_2_P(this));
 }
 
 void MatmulOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -64,52 +101,30 @@ void MatmulOp::InferOutputBlobModelSplitAxis(
     std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
     const ParallelContext* parallel_context) const {
   CHECK_EQ(ShapeNumAxes4BnInOp("a"), ShapeNumAxes4BnInOp("b"));
-  if (ShapeNumAxes4BnInOp("b") == 2 && *ModelSplitAxis4BnInOp("b") != -1) {
-    *ModelSplitAxis4BnInOp("out") = 1;
+  int32_t b_model_split_axis = *ModelSplitAxis4BnInOp("b");
+  if (ShapeNumAxes4BnInOp("b") == 2 && b_model_split_axis != -1) {
+    if (op_conf().matmul_conf().transpose_b()) {
+      if (b_model_split_axis == 0) {
+        *ModelSplitAxis4BnInOp("out") = 1;
+      } else if (b_model_split_axis == 1) {
+        *ModelSplitAxis4BnInOp("out") = -1;
+      } else {
+        UNIMPLEMENTED();
+      }
+    } else {
+      if (b_model_split_axis == 0) {
+        *ModelSplitAxis4BnInOp("out") = -1;
+      } else if (b_model_split_axis == 1) {
+        *ModelSplitAxis4BnInOp("out") = 1;
+      } else {
+        UNIMPLEMENTED();
+      }
+    }
   } else {
     CHECK_EQ(parallel_context->policy(), kDataParallel);
     *ModelSplitAxis4BnInOp("out") = -1;
   }
 }
-
-/*
-void MatmulOp::InferInputOutputLogicalBlobParallelDesc(
-    std::function<LogicalBlobParallelDesc*(const std::string&)> LogicalBlobParallelDesc4BnInOp,
-    std::function<const LogicalBlobParallelDesc&(const std::string&)>
-ProducerLogicalBlobParallelDesc4Ibn, std::function<int32_t(const std::string&)>
-ModelSplitAxis4BnInOp, const ParallelContext* parallel_ctx) const { const auto& producer_a_blob_pt =
-ProducerLogicalBlobParallelDesc4Ibn("a"); const auto& producer_b_blob_pt =
-ProducerLogicalBlobParallelDesc4Ibn("b"); if (parallel_ctx->policy() == kDataParallel) {
-    LogicalBlobParallelDesc4BnInOp("a")->mutable_split_parallel()->set_axis(0);
-    LogicalBlobParallelDesc4BnInOp("out")->mutable_split_parallel()->set_axis(0);
-    if (parallel_b_blob_pt.has_clone_parallel()) {
-      LogicalBlobParallelDesc4BnInOp("b")->mutable_clone_parallel();
-    } else {
-      LogicalBlobParallelDesc4BnInOp("b")->mutable_split_parallel()->set_axis(0);
-    }
-  } else if (parallel_ctx->policy() == kModelParallel) {
-    CHECK(producer_b_blob_pt.has_split_parallel());
-    int32_t model_split_axis = ModelSplitAxis4BnInOp("b");
-    CHECK_NE(model_split_axis, -1);
-    CHECK_EQ(model_split_axis, producer_b_blob_pt.split_parallel().axis());
-    bool transpose_b = op_conf().matmul_conf().transpose_b();
-    LogicalBlobParallelDesc4BnInOp("b")->mutable_split_parallel()->set_axis(model_split_axis);
-    if ((transpose_b == true && model_split_axis == 1)
-        || (transpose_b == false && model_split_axis == 0)) {
-      bool transpose_a = op_conf().matmul_conf().transpose_a();
-      LogicalBlobParallelDesc4BnInOp("a")->mutable_split_parallel()->set_axis(transpose_a ? 0 : 1);
-      LogicalBlobParallelDesc4BnInOp("out")->mutable_partial_sum_parallel();
-    } else {
-      LogicalBlobParallelDesc4BnInOp("a")->mutable_clone_parallel();
-      int32_t out_split_axis = ModelSplitAxis4BnInOp("out");
-      CHECK_NE(out_split_axis, -1);
-      LogicalBlobParallelDesc4BnInOp("out")->mutable_split_parallel()->set_axis(out_split_axis);
-    }
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-*/
 
 void MatmulOp::InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                    const ParallelContext*) const {
