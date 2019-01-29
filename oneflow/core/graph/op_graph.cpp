@@ -13,10 +13,6 @@ std::string OpEdge::VisualStr() const {
   return str;
 }
 
-const BlobParallelDesc& OpNode::BlobParallelDesc4Lbi(const LogicalBlobId& lbi) const {
-  return lbi2blob_parallel_desc_.at(lbi);
-}
-
 int32_t OpNode::ModelSplitAxis4Lbi(const LogicalBlobId& lbi) const {
   return lbi2model_split_axis_.at(lbi);
 }
@@ -29,19 +25,6 @@ int32_t* OpNode::MutModelSplitAxis4Lbi(const LogicalBlobId& lbi) {
 
 const LogicalBlobParallelDesc& OpNode::Lbpd4Lbi(const LogicalBlobId& lbi) const {
   return lbi2lbpd_.at(lbi);
-}
-
-const BlobParallelDesc& OpNode::BlobParallelDesc4BnInOp(const std::string& bn) const {
-  return BlobParallelDesc4Lbi(op().BnInOp2Lbi(bn));
-}
-
-BlobParallelDesc* OpNode::MutBlobParallelDesc4BnInOp(const std::string& bn_in_op,
-                                                     int32_t model_split_axis) {
-  const LogicalBlobId& lbi = op().BnInOp2Lbi(bn_in_op);
-  if (lbi2blob_parallel_desc_.find(lbi) == lbi2blob_parallel_desc_.end()) {
-    lbi2blob_parallel_desc_.emplace(lbi, BlobParallelDesc(model_split_axis));
-  }
-  return &lbi2blob_parallel_desc_.at(lbi);
 }
 
 LogicalBlobParallelDesc* OpNode::MutLbpd4Lbi(const LogicalBlobId& lbi) { return &lbi2lbpd_[lbi]; }

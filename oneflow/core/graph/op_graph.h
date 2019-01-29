@@ -33,8 +33,6 @@ class OpNode final : public Node<OpNode, OpEdge> {
   const ParallelDesc& parallel_desc() const { return parallel_desc_; }
   const BlobDesc& NoParallelBlobDesc4Lbi(const LogicalBlobId& lbi) const;
   const BlobDesc& LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const;
-  const BlobParallelDesc& BlobParallelDesc4BnInOp(const std::string& bn) const;
-  const BlobParallelDesc& BlobParallelDesc4Lbi(const LogicalBlobId& lbi) const;
   const LogicalBlobParallelDesc& Lbpd4Lbi(const LogicalBlobId& lbi) const;
   const Shape* GetInputBlobTimeShape(const std::string& bn_in_op) const;
   const Shape* GetInputBlobTimeShape() const;
@@ -55,8 +53,6 @@ class OpNode final : public Node<OpNode, OpEdge> {
   BlobDesc* MutNoParallelBlobDesc(const LogicalBlobId& lbi);
   BlobDesc* LogicalBlobDesc4BnInOp(const std::string& bn_in_op);
   BlobDesc* MutLogicalBlobDesc(const LogicalBlobId& lbi);
-  BlobParallelDesc* MutBlobParallelDesc4BnInOp(const std::string& bn_in_op,
-                                               int32_t model_split_axis);
   LogicalBlobParallelDesc* MutLbpd4Lbi(const LogicalBlobId& lbi);
   OpNode* SrcNode4InputBnInOp(const std::string& bn_in_op) const;
   OpNode* ProducerOpNode4BnInOp(const std::string& bn_in_op);
@@ -81,7 +77,6 @@ class OpNode final : public Node<OpNode, OpEdge> {
   HashMap<LogicalBlobId, BlobDesc> lbi2no_parallel_blob_desc_;
   HashMap<LogicalBlobId, BlobDesc> lbi2logical_blob_desc_;
   HashMap<std::string, std::vector<BlobDesc>> bn2parallel_id2blob_desc_;
-  HashMap<LogicalBlobId, BlobParallelDesc> lbi2blob_parallel_desc_;
   HashMap<LogicalBlobId, int32_t> lbi2model_split_axis_;
   HashMap<LogicalBlobId, LogicalBlobParallelDesc> lbi2lbpd_;
 };
