@@ -242,7 +242,8 @@ const OpParallelSignature MakeOpParallelSignature_DS_MC_2_DS(const Operator* op)
   return OpParallelSignature(desc, GetMatchResult, GenSignature);
 }
 
-const OpParallelSignature MakeOpParallelSignature_DC_MS_2_MS(const Operator* op) {
+const OpParallelSignature MakeOpParallelSignature_DC_MS_2_MS(
+    const Operator* op, std::function<bool(int32_t)> IsValidSplit) {
   std::string desc = op->op_name() + ": (C, S(0), ...) -> (S(0), ...)";
   std::vector<std::string> data_input_bns;
   std::vector<std::string> model_input_bns;
@@ -256,13 +257,13 @@ const OpParallelSignature MakeOpParallelSignature_DC_MS_2_MS(const Operator* op)
   CHECK_GT(data_input_bns.size(), 0);
   CHECK_GT(model_input_bns.size(), 0);
   auto GetMatchResult =
-      [op, data_input_bns, model_input_bns](
+      [op, data_input_bns, model_input_bns, IsValidSplit](
           const std::function<const LogicalBlobParallelDesc&(const std::string&)>&,
           const std::function<int32_t(const std::string&)>& ModelSplitAxis4BnInOp,
           const ParallelContext* parallel_ctx) {
         bool is_model_input_blob_all_splitted = true;
         for (const auto& bn : op->input_bns()) {
-          if (op->IsInputBlobAllowedModelSplit(bn) && ModelSplitAxis4BnInOp(bn) == -1) {
+          if (op->IsInputBlobAllowedModelSplit(bn) && !IsValidSplit(ModelSplitAxis4BnInOp(bn))) {
             is_model_input_blob_all_splitted = false;
           }
         }

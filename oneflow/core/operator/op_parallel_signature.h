@@ -45,13 +45,15 @@ const OpParallelSignature MakeModelSplitOpParallelSignature(const Operator* op);
 const OpParallelSignature MakeCloneOpParallelSignature(const Operator* op);
 
 // (C, S(0), ...) -> (S(0), ...)
-// split data input blob and clone model input blob
+// return blobs: data splitted
+// intput blobs: split data input blobs and clone model input blobs
 const OpParallelSignature MakeOpParallelSignature_DS_MC_2_DS(const Operator* op);
 
 // (C, S, ...) -> (S, ...)
-// clone data input blob and split model input blob
-const OpParallelSignature MakeOpParallelSignature_DC_MS_2_MS(const Operator* op);
-
+// return blobs: model splitted
+// input blobs: clone data input blobs and split model input blobs
+const OpParallelSignature MakeOpParallelSignature_DC_MS_2_MS(
+    const Operator* op, std::function<bool(int32_t)> IsValidSplit);
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_OPERATOR_OP_PARALLEL_SIGNATURE_H_

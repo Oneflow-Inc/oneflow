@@ -22,6 +22,7 @@ class GatherOp final : public Operator {
 
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override;
+  void InitOpParallelSignatures() override;
   void InferOutputBlobModelSplitAxis(
       std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
       std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,

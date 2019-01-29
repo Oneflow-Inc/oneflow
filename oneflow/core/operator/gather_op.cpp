@@ -75,6 +75,9 @@ void GatherOp::InferOutputBlobModelSplitAxis(
     *ModelSplitAxis4BnInOp("out") = -1;
   }
 }
+
+void GatherOp::InitOpParallelSignatures() { TODO(); }
+
 /*
 void GatherOp::InferInputOutputLogicalBlobParallelDesc(
     std::function<LogicalBlobParallelDesc*(const std::string&)> LogicalBlobParallelDesc4BnInOp,
