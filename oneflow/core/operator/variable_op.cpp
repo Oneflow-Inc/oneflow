@@ -6,7 +6,7 @@ namespace oneflow {
 namespace {
 
 // S(0) -> C
-const OpParallelSignature MakeVariableOpDataSplitParallelSignature(const Operator* op) {
+const OpParallelSignature MakeVariableOpDataSplitOpParallelSignature(const Operator* op) {
   std::string desc = op->op_name() + ": S(0) -> C";
   auto IsMatched =
       [op](
@@ -31,7 +31,7 @@ const OpParallelSignature MakeVariableOpDataSplitParallelSignature(const Operato
 }
 
 // S(0) -> S
-const OpParallelSignature MakeVariableOpModelSplitParallelSignature(const Operator* op) {
+const OpParallelSignature MakeVariableOpModelSplitOpParallelSignature(const Operator* op) {
   std::string desc = op->op_name() + ": S(0) -> S";
   auto IsMatched =
       [op](
@@ -107,8 +107,8 @@ ModelSplitAxis4BnInOp, const ParallelContext* parallel_ctx) const {
 */
 
 void VariableOp::InitOpParallelSignatures() {
-  mut_op_parallel_signatures()->push_back(MakeVariableOpDataSplitParallelSignature(this));
-  mut_op_parallel_signatures()->push_back(MakeVariableOpModelSplitParallelSignature(this));
+  mut_op_parallel_signatures()->push_back(MakeVariableOpDataSplitOpParallelSignature(this));
+  mut_op_parallel_signatures()->push_back(MakeVariableOpModelSplitOpParallelSignature(this));
 }
 
 void VariableOp::VirtualGenKernelConf(

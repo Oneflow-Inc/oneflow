@@ -146,14 +146,14 @@ void Operator::InferBlobModelSplitAxisIf(
 void Operator::NaiveInitOpParallelSignatures() {
   if (IsSoleInputBlobAllowedModelSplit()) {
     CHECK(model_bns().empty() && const_model_bns().empty());
-    op_parallel_signatures_.push_back(MakeOpDataSplitParallelSignature(this));
-    op_parallel_signatures_.push_back(MakeOpModelSplitParallelSignature(this));
-    op_parallel_signatures_.push_back(MakeOpCloneParallelSignature(this));
+    op_parallel_signatures_.push_back(MakeDataSplitOpParallelSignature(this));
+    op_parallel_signatures_.push_back(MakeModelSplitOpParallelSignature(this));
+    op_parallel_signatures_.push_back(MakeCloneOpParallelSignature(this));
   } else {
     CHECK(!model_bns().empty() || !const_model_bns().empty());
     for (const auto& ibn : input_bns()) { CHECK(!IsInputBlobAllowedModelSplit(ibn)); }
-    op_parallel_signatures_.push_back(MakeOpDataSplitParallelSignature(this));
-    op_parallel_signatures_.push_back(MakeOpModelSplitParallelSignature(this));
+    op_parallel_signatures_.push_back(MakeDataSplitOpParallelSignature(this));
+    op_parallel_signatures_.push_back(MakeModelSplitOpParallelSignature(this));
   }
 }
 

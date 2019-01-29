@@ -35,11 +35,11 @@ const OpParallelMatchResult MakeOpParallelMatchParallelNumError(int64_t configur
 
 class Operator;
 // (S(0), ...) -> (S(0), ...)
-const OpParallelSignature MakeOpDataSplitParallelSignature(const Operator* op);
+const OpParallelSignature MakeDataSplitOpParallelSignature(const Operator* op);
 // (S,) -> (S, ...) or (C, ...) -> (S, ...)
-const OpParallelSignature MakeOpModelSplitParallelSignature(const Operator* op);
+const OpParallelSignature MakeModelSplitOpParallelSignature(const Operator* op);
 // (C,) -> (C, ...)
-const OpParallelSignature MakeOpCloneParallelSignature(const Operator* op);
+const OpParallelSignature MakeCloneOpParallelSignature(const Operator* op);
 
 }  // namespace oneflow
 

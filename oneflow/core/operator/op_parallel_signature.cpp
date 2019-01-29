@@ -33,7 +33,7 @@ const OpParallelMatchResult MakeOpParallelMatchParallelNumError(int64_t configur
   return parallel_num_error;
 }
 
-const OpParallelSignature MakeOpDataSplitParallelSignature(const Operator* op) {
+const OpParallelSignature MakeDataSplitOpParallelSignature(const Operator* op) {
   std::string data_split_desc = op->op_name() + ": (S(0), ...) -> (S(0), ...)";
   auto IsMatched =
       [op](
@@ -77,7 +77,7 @@ const OpParallelSignature MakeOpDataSplitParallelSignature(const Operator* op) {
   return OpParallelSignature(data_split_desc, IsMatched, GenDataSplitSignature);
 }
 
-const OpParallelSignature MakeOpCloneParallelSignature(const Operator* op) {
+const OpParallelSignature MakeCloneOpParallelSignature(const Operator* op) {
   std::string clone_desc = op->op_name() + ": (C,) -> (C, ...)";
   auto IsSoleIbnCloned =
       [op](
@@ -116,7 +116,7 @@ const OpParallelSignature MakeOpCloneParallelSignature(const Operator* op) {
   return OpParallelSignature(clone_desc, IsSoleIbnCloned, GenCloneSignature);
 }
 
-const OpParallelSignature MakeOpModelSplitParallelSignature(const Operator* op) {
+const OpParallelSignature MakeModelSplitOpParallelSignature(const Operator* op) {
   if (op->IsSoleInputBlobAllowedModelSplit()) {
     std::string desc = op->op_name() + ": (S,) -> (S, ...)";
     auto IsModelSplit = [op](
