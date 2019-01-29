@@ -15,6 +15,25 @@ int64_t GetGatherAxis(const GatherOpConf& conf, const BlobDesc* in_blob_desc) {
   return GetGatherAxis(conf, in_blob_desc->shape().NumAxes());
 }
 
+const OpParallelSignature MakeGatherOpParallelSignature_DC_MS_2_P(const GatherOp* op) {
+  std::string desc = op->op_name() + ": (C, S) -> P";
+  auto GetMatchResult =
+      [op](const std::function<const LogicalBlobParallelDesc&(const std::string&)>&,
+           const std::function<int32_t(const std::string&)>& ModelSplitAxis4BnInOp,
+           const ParallelContext* parallel_ctx) {
+        if (ModelSplitAxis4BnInOp("in") != 0) { return MakeOpParallelMatchSignatureMismatch(); }
+        if (parallel_ctx->policy() == kModelParallel) { return MakeOpParallelMatchSuccess(); }
+        return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kModelParallel);
+      };
+  auto GenSignature = [op](const std::function<int32_t(const std::string&)>& ModelSplitAxis4BnInOp,
+                           HashMap<std::string, LogicalBlobParallelDesc>* signature) {
+    (*signature)["indices"].mutable_clone_parallel();
+    (*signature)["in"].mutable_split_parallel()->set_axis(ModelSplitAxis4BnInOp("in"));
+    (*signature)["out"].mutable_partial_sum_parallel();
+  };
+  return OpParallelSignature(desc, GetMatchResult, GenSignature);
+}
+
 }  // namespace
 
 void GatherOp::InitFromOpConf() {
@@ -58,6 +77,13 @@ void GatherOp::VirtualGenKernelConf(
   kernel_conf->mutable_gather_conf()->set_axis(axis);
 }
 
+void GatherOp::InitOpParallelSignatures() {
+  mut_op_parallel_signatures()->push_back(MakeOpParallelSignature_DS_MC_2_DS(this));
+  auto NeZero = [](int32_t axis) { return axis != 0; };
+  mut_op_parallel_signatures()->push_back(MakeOpParallelSignature_DC_MS_2_MS(this, NeZero));
+  mut_op_parallel_signatures()->push_back(MakeGatherOpParallelSignature_DC_MS_2_P(this));
+}
+
 void GatherOp::InferOutputBlobModelSplitAxis(
     std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
     std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
@@ -66,7 +92,9 @@ void GatherOp::InferOutputBlobModelSplitAxis(
   const int32_t in_model_split_axis = *ModelSplitAxis4BnInOp("in");
   const int64_t in_num_axes = ShapeNumAxes4BnInOp("in");
   const int64_t gather_axis = GetGatherAxis(op_conf().gather_conf(), in_num_axes);
-  if (in_model_split_axis != -1) {
+  if (in_model_split_axis == 0) {
+    *ModelSplitAxis4BnInOp("out") = -1;
+  } else if (in_model_split_axis != -1) {
     CHECK_GT(in_model_split_axis, gather_axis);
     CHECK_LT(in_model_split_axis, in_num_axes);
     *ModelSplitAxis4BnInOp("out") = in_model_split_axis + ShapeNumAxes4BnInOp("indices") - 1;
@@ -76,44 +104,6 @@ void GatherOp::InferOutputBlobModelSplitAxis(
   }
 }
 
-void GatherOp::InitOpParallelSignatures() { TODO(); }
-
-/*
-void GatherOp::InferInputOutputLogicalBlobParallelDesc(
-    std::function<LogicalBlobParallelDesc*(const std::string&)> LogicalBlobParallelDesc4BnInOp,
-    std::function<const LogicalBlobParallelDesc&(const std::string&)>
-ProducerLogicalBlobParallelDesc4Ibn, std::function<int32_t(const std::string&)>
-ModelSplitAxis4BnInOp, const ParallelContext* parallel_ctx) const { const auto& producer_in_blob_pt
-= ProducerLogicalBlobParallelDesc4Ibn("in"); const auto& producer_indices_blob_pt =
-ProducerLogicalBlobParallelDesc4Ibn("indices"); if (parallel_ctx->policy() == kDataParallel) {
-    CHECK(producer_in_blob_pt->has_clone_parallel());
-    CHECK(producer_indices_blob_pt->has_split_parallel());
-    CHECK_EQ(producer_indices_blob_pt->split_parallel().axis(), 0);
-    LogicalBlobParallelDesc4BnInOp("in")->mutable_clone_parallel();
-    LogicalBlobParallelDesc4BnInOp("indices")->mutable_split_parallel()->set_axis(0);
-    LogicalBlobParallelDesc4BnInOp("out")->mutable_split_parallel()->set_axis(0);
-  } else if (parallel_ctx->policy() == kModelParallel) {
-    CHECK(producer_indices_blob_pt->has_clone_parallel());
-    LogicalBlobParallelDesc4BnInOp("indices")->mutable_clone_parallel();
-    CHECK(producer_in_blob_pt->has_split_parallel());
-    int32_t model_split_axis = ModelSplitAxis4BnInOp("in");
-    CHECK_EQ(producer_in_blob_pt.split_parallel().axis(), model_split_axis);
-    LogicalBlobParallelDesc4BnInOp("in")->mutable_split_parallel()->set_axis(model_split_axis);
-    if (model_split_axis == 0) {
-      LogicalBlobParallelDesc4BnInOp("out")->mutable_partial_sum_parallel();
-    } else if (model_split_axis == 1) {
-      int32_t out_split_axis = ModelSplitAxis4BnInOp("out");
-      CHECK_NE(out_split_axis, -1);
-      CHECK_NE(out_split_axis, 0);
-      LogicalBlobParallelDesc4BnInOp("out")->mutable_split_parallel()->set_axis(out_split_axis);
-    } else {
-      UNIMPLEMENTED();
-    }
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-*/
 REGISTER_OP(OperatorConf::kGatherConf, GatherOp);
 
 }  // namespace oneflow
