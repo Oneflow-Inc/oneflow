@@ -158,9 +158,10 @@ class Operator {
       std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
       std::function<const BlobParallelDesc&(const std::string&)> ProducerBlobParallelDesc4BnInOp,
       const ParallelContext* parallel_context) const;
-  void InferInputOutputBlobParallelTypeIf(
-      std::function<BlobParallelType*(const std::string&)> BlobParallelType4BnInOp,
-      std::function<const BlobParallelType&(const std::string&)> ProducerBlobParallelType4Ibn,
+  void InferInputOutputLogicalBlobParallelDescIf(
+      std::function<LogicalBlobParallelDesc*(const std::string&)> LogicalBlobParallelDesc4BnInOp,
+      std::function<const LogicalBlobParallelDesc&(const std::string&)>
+          ProducerLogicalBlobParallelDesc4Ibn,
       std::function<int32_t(const std::string&)> ModelSplitAxis4BnInOp,
       const ParallelContext* parallel_ctx) const;
   virtual void FixInDiffBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

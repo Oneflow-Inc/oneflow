@@ -73,20 +73,19 @@ void MatmulOp::InferOutputBlobModelSplitAxis(
 }
 
 /*
-void MatmulOp::InferInputOutputBlobParallelType(
-    std::function<BlobParallelType*(const std::string&)> BlobParallelType4BnInOp,
-    std::function<const BlobParallelType&(const std::string&)> ProducerBlobParallelType4Ibn,
-    std::function<int32_t(const std::string&)> ModelSplitAxis4BnInOp,
-    const ParallelContext* parallel_ctx) const {
-  const auto& producer_a_blob_pt = ProducerBlobParallelType4Ibn("a");
-  const auto& producer_b_blob_pt = ProducerBlobParallelType4Ibn("b");
-  if (parallel_ctx->policy() == kDataParallel) {
-    BlobParallelType4BnInOp("a")->mutable_split_parallel()->set_axis(0);
-    BlobParallelType4BnInOp("out")->mutable_split_parallel()->set_axis(0);
+void MatmulOp::InferInputOutputLogicalBlobParallelDesc(
+    std::function<LogicalBlobParallelDesc*(const std::string&)> LogicalBlobParallelDesc4BnInOp,
+    std::function<const LogicalBlobParallelDesc&(const std::string&)>
+ProducerLogicalBlobParallelDesc4Ibn, std::function<int32_t(const std::string&)>
+ModelSplitAxis4BnInOp, const ParallelContext* parallel_ctx) const { const auto& producer_a_blob_pt =
+ProducerLogicalBlobParallelDesc4Ibn("a"); const auto& producer_b_blob_pt =
+ProducerLogicalBlobParallelDesc4Ibn("b"); if (parallel_ctx->policy() == kDataParallel) {
+    LogicalBlobParallelDesc4BnInOp("a")->mutable_split_parallel()->set_axis(0);
+    LogicalBlobParallelDesc4BnInOp("out")->mutable_split_parallel()->set_axis(0);
     if (parallel_b_blob_pt.has_clone_parallel()) {
-      BlobParallelType4BnInOp("b")->mutable_clone_parallel();
+      LogicalBlobParallelDesc4BnInOp("b")->mutable_clone_parallel();
     } else {
-      BlobParallelType4BnInOp("b")->mutable_split_parallel()->set_axis(0);
+      LogicalBlobParallelDesc4BnInOp("b")->mutable_split_parallel()->set_axis(0);
     }
   } else if (parallel_ctx->policy() == kModelParallel) {
     CHECK(producer_b_blob_pt.has_split_parallel());
@@ -94,17 +93,17 @@ void MatmulOp::InferInputOutputBlobParallelType(
     CHECK_NE(model_split_axis, -1);
     CHECK_EQ(model_split_axis, producer_b_blob_pt.split_parallel().axis());
     bool transpose_b = op_conf().matmul_conf().transpose_b();
-    BlobParallelType4BnInOp("b")->mutable_split_parallel()->set_axis(model_split_axis);
+    LogicalBlobParallelDesc4BnInOp("b")->mutable_split_parallel()->set_axis(model_split_axis);
     if ((transpose_b == true && model_split_axis == 1)
         || (transpose_b == false && model_split_axis == 0)) {
       bool transpose_a = op_conf().matmul_conf().transpose_a();
-      BlobParallelType4BnInOp("a")->mutable_split_parallel()->set_axis(transpose_a ? 0 : 1);
-      BlobParallelType4BnInOp("out")->mutable_partial_sum_parallel();
+      LogicalBlobParallelDesc4BnInOp("a")->mutable_split_parallel()->set_axis(transpose_a ? 0 : 1);
+      LogicalBlobParallelDesc4BnInOp("out")->mutable_partial_sum_parallel();
     } else {
-      BlobParallelType4BnInOp("a")->mutable_clone_parallel();
+      LogicalBlobParallelDesc4BnInOp("a")->mutable_clone_parallel();
       int32_t out_split_axis = ModelSplitAxis4BnInOp("out");
       CHECK_NE(out_split_axis, -1);
-      BlobParallelType4BnInOp("out")->mutable_split_parallel()->set_axis(out_split_axis);
+      LogicalBlobParallelDesc4BnInOp("out")->mutable_split_parallel()->set_axis(out_split_axis);
     }
   } else {
     UNIMPLEMENTED();

@@ -36,16 +36,16 @@ void VariableOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
 }
 
 /*
-void VariableOp::InferInputOutputBlobParallelType(
-    std::function<BlobParallelType*(const std::string&)> BlobParallelType4BnInOp,
-    std::function<const BlobParallelType&(const std::string&)> ProducerBlobParallelType4Ibn,
-    std::function<int32_t(const std::string&)> ModelSplitAxis4BnInOp,
-    const ParallelContext* parallel_ctx) const {
-  BlobParallelType4BnInOp("tick")->mutable_clone_parallel();
+void VariableOp::InferInputOutputLogicalBlobParallelDesc(
+    std::function<LogicalBlobParallelDesc*(const std::string&)> LogicalBlobParallelDesc4BnInOp,
+    std::function<const LogicalBlobParallelDesc&(const std::string&)>
+ProducerLogicalBlobParallelDesc4Ibn, std::function<int32_t(const std::string&)>
+ModelSplitAxis4BnInOp, const ParallelContext* parallel_ctx) const {
+  LogicalBlobParallelDesc4BnInOp("tick")->mutable_clone_parallel();
   if (parallel_ctx->policy() == kDataParallel) {
-    BlobParallelType4BnInOp("out")->mutable_clone_parallel();
+    LogicalBlobParallelDesc4BnInOp("out")->mutable_clone_parallel();
   } else if (parallel_ctx->policy() == kModelParallel) {
-    BlobParallelType4BnInOp("out")->mutable_split_parallel(ModelSplitAxis4BnInOp("out"));
+    LogicalBlobParallelDesc4BnInOp("out")->mutable_split_parallel(ModelSplitAxis4BnInOp("out"));
   } else {
     UNIMPLEMENTED();
   }

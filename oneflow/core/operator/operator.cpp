@@ -240,9 +240,9 @@ void Operator::NaiveInitOpParallelSignatures() {
   }
 }
 
-void Operator::InferInputOutputBlobParallelTypeIf(
-    std::function<BlobParallelType*(const std::string&)> BlobParallelType4BnInOp,
-    std::function<const BlobParallelType&(const std::string&)> ProducerLbpd4Ibn,
+void Operator::InferInputOutputLogicalBlobParallelDescIf(
+    std::function<LogicalBlobParallelDesc*(const std::string&)> LogicalBlobParallelDesc4BnInOp,
+    std::function<const LogicalBlobParallelDesc&(const std::string&)> ProducerLbpd4Ibn,
     std::function<int32_t(const std::string&)> ModelSplitAxis4BnInOp,
     const ParallelContext* parallel_ctx) const {
   std::vector<OpParallelMatchResult> match_results;
@@ -259,9 +259,9 @@ void Operator::InferInputOutputBlobParallelTypeIf(
     FOR_RANGE(int32_t, i, 0, op_parallel_signatures_.size()) {
       if (match_results.at(i).has_success()) { match_signature = &op_parallel_signatures_.at(i); }
     }
-    HashMap<std::string, BlobParallelType> bn2lbpd;
+    HashMap<std::string, LogicalBlobParallelDesc> bn2lbpd;
     match_signature->signature_generator(ModelSplitAxis4BnInOp, &bn2lbpd);
-    for (const auto& pair : bn2lbpd) { *BlobParallelType4BnInOp(pair.first) = pair.second; }
+    for (const auto& pair : bn2lbpd) { *LogicalBlobParallelDesc4BnInOp(pair.first) = pair.second; }
   } else if (match_success_cnt == 0) {
     std::stringstream ss;
     FOR_RANGE(int32_t, i, 0, op_parallel_signatures_.size()) {

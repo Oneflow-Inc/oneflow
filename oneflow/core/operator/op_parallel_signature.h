@@ -8,12 +8,13 @@
 namespace oneflow {
 
 struct OpParallelSignature final {
-  using FnProducerLbParallelDesc4Ibn = std::function<const BlobParallelType&(const std::string&)>;
+  using FnProducerLbParallelDesc4Ibn =
+      std::function<const LogicalBlobParallelDesc&(const std::string&)>;
   using FnModelSplitAxis4BnInOp = std::function<int32_t(const std::string&)>;
   using FnGetMathResult = std::function<const OpParallelMatchResult(
       const FnProducerLbParallelDesc4Ibn&, const FnModelSplitAxis4BnInOp&, const ParallelContext*)>;
-  using FnSignatureGeneratorFunc =
-      std::function<void(const FnModelSplitAxis4BnInOp&, HashMap<std::string, BlobParallelType>*)>;
+  using FnSignatureGeneratorFunc = std::function<void(
+      const FnModelSplitAxis4BnInOp&, HashMap<std::string, LogicalBlobParallelDesc>*)>;
   OpParallelSignature(const std::string& desc, const FnGetMathResult& match_result,
                       const FnSignatureGeneratorFunc& gen_signature)
       : description(desc), get_match_result(match_result), signature_generator(gen_signature) {}
