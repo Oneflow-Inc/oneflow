@@ -79,8 +79,8 @@ void GatherOp::VirtualGenKernelConf(
 
 void GatherOp::InitOpParallelSignatures() {
   mut_op_parallel_signatures()->push_back(MakeOpParallelSignature_DS_MC_2_DS(this));
-  auto NeZero = [](int32_t axis) { return axis != 0; };
-  mut_op_parallel_signatures()->push_back(MakeOpParallelSignature_DC_MS_2_MS(this, NeZero));
+  auto GtZero = [](int32_t axis) { return axis > 0; };
+  mut_op_parallel_signatures()->push_back(MakeOpParallelSignature_DC_MS_2_MS(this, GtZero));
   mut_op_parallel_signatures()->push_back(MakeGatherOpParallelSignature_DC_MS_2_P(this));
 }
 

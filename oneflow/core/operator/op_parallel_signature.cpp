@@ -243,7 +243,8 @@ const OpParallelSignature MakeOpParallelSignature_DS_MC_2_DS(const Operator* op)
 }
 
 const OpParallelSignature MakeOpParallelSignature_DC_MS_2_MS(
-    const Operator* op, std::function<bool(int32_t)> IsValidSplit) {
+    const Operator* op, std::function<bool(int32_t)> IsExpectedAxis) {
+  auto IsValidSplit = [IsExpectedAxis](int32_t x) { return x != -1 && IsExpectedAxis(x); };
   std::string desc = op->op_name() + ": (C, S, ...) -> (S, ...)";
   std::vector<std::string> data_input_bns;
   std::vector<std::string> model_input_bns;
