@@ -75,17 +75,13 @@ BlobDesc* OpNode::MutNoParallelBlobDesc(const LogicalBlobId& lbi) {
   return &lbi2no_parallel_blob_desc_[lbi];
 }
 
-BlobDesc* OpNode::MutLogicalBlobDesc(const LogicalBlobId& lbi) {
+BlobDesc* OpNode::MutLogicalBlobDesc4Lbi(const LogicalBlobId& lbi) {
   CHECK_EQ(lbi.op_name(), op().op_name());
   return &lbi2logical_blob_desc_[lbi];
 }
 
 BlobDesc* OpNode::NoParallelBlobDesc4BnInOp(const std::string& bn_in_op) {
   return ProducerOpNode4BnInOp(bn_in_op)->MutNoParallelBlobDesc(op().BnInOp2Lbi(bn_in_op));
-}
-
-BlobDesc* OpNode::LogicalBlobDesc4BnInOp(const std::string& bn_in_op) {
-  return ProducerOpNode4BnInOp(bn_in_op)->MutLogicalBlobDesc(op().BnInOp2Lbi(bn_in_op));
 }
 
 const Shape* OpNode::GetInputBlobTimeShape(const std::string& bn_in_op) const {
@@ -189,7 +185,7 @@ int64_t OpNode::GetAxisParallelNum(
 void OpNode::SplitLogicalInputBlobDesc() {
   for (const std::string& bn : op().input_bns()) {
     const LogicalBlobId& lbi = op().BnInOp2Lbi(bn);
-    const BlobDesc& logical_blob_desc = *LogicalBlobDesc4BnInOp(bn);
+    const BlobDesc& logical_blob_desc = ProducerOpNode4BnInOp(bn)->LogicalBlobDesc4Lbi(lbi);
     const LogicalBlobParallelDesc& lbpd = Lbpd4Lbi(lbi);
     CHECK_EQ(lbpd.parallel_num(), parallel_desc().parallel_num());
     ForEachParallelBlobDesc(logical_blob_desc, lbpd, [&](const BlobDesc& blob_desc) {
@@ -204,7 +200,7 @@ void OpNode::ConcatLogicalOutputBlobDesc() {
     const LogicalBlobId& lbi = op().BnInOp2Lbi(bn);
     const LogicalBlobParallelDesc& lbpd = Lbpd4Lbi(lbi);
     CHECK_EQ(lbpd.parallel_num(), parallel_desc().parallel_num());
-    ConcatBlobDesc(lbi2parallel_id2blob_desc_.at(lbi), lbpd, LogicalBlobDesc4BnInOp(bn));
+    ConcatBlobDesc(lbi2parallel_id2blob_desc_.at(lbi), lbpd, MutLogicalBlobDesc4Lbi(lbi));
   }
 }
 

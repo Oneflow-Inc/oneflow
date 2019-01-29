@@ -30,6 +30,13 @@ class OpNode final : public Node<OpNode, OpEdge> {
   bool has_model_diff() const { return op().model_diff_bns().size() > 0; }
   void set_has_in_diff(bool has_in_diff) { has_in_diff_ = has_in_diff; }
   const ParallelDesc& parallel_desc() const { return parallel_desc_; }
+
+  std::string VisualStr() const override;
+
+ private:
+  friend class OpGraph;
+  friend class OpEdge;
+  // Getters
   const BlobDesc& NoParallelBlobDesc4Lbi(const LogicalBlobId& lbi) const;
   const BlobDesc& LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const;
   const LogicalBlobParallelDesc& Lbpd4Lbi(const LogicalBlobId& lbi) const;
@@ -37,10 +44,6 @@ class OpNode final : public Node<OpNode, OpEdge> {
   const Shape* GetInputBlobTimeShape() const;
   int32_t ModelSplitAxis4Lbi(const LogicalBlobId& lbi) const;
 
-  std::string VisualStr() const override;
-
- private:
-  friend class OpGraph;
   // Setters
   ParallelDesc* mut_parallel_desc() { return &parallel_desc_; }
   Shape* mut_out_blob_time_shape() { return &out_blob_time_shape_; }
@@ -50,13 +53,13 @@ class OpNode final : public Node<OpNode, OpEdge> {
   int32_t* MutModelSplitAxis4Lbi(const LogicalBlobId& lbi);
   BlobDesc* NoParallelBlobDesc4BnInOp(const std::string& bn_in_op);
   BlobDesc* MutNoParallelBlobDesc(const LogicalBlobId& lbi);
-  BlobDesc* LogicalBlobDesc4BnInOp(const std::string& bn_in_op);
-  BlobDesc* MutLogicalBlobDesc(const LogicalBlobId& lbi);
+  BlobDesc* MutLogicalBlobDesc4Lbi(const LogicalBlobId& lbi);
   LogicalBlobParallelDesc* MutLbpd4Lbi(const LogicalBlobId& lbi);
   OpNode* SrcNode4InputBnInOp(const std::string& bn_in_op) const;
   OpNode* ProducerOpNode4BnInOp(const std::string& bn_in_op);
   OpNode* SrcNode4InputLbi(const LogicalBlobId& lbi) const;
   OpNode* ProducerOpNode4Lbi(const LogicalBlobId& lbi);
+
   void ForEachParallelBlobDesc(const BlobDesc& blob_desc, const LogicalBlobParallelDesc& lbpd,
                                const std::function<void(const BlobDesc&)>& Handler) const;
   int64_t GetAxisParallelNum(
