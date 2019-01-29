@@ -55,7 +55,6 @@ void MultipleGatherOp::InferOutputBlobModelSplitAxis(
     CHECK_EQ(parallel_context->policy(), ParallelPolicy::kDataParallel);
     *ModelSplitAxis4BnInOp("out") = -1;
   }
-  NaiveInferOutputBlobModelSplitAxis(ModelSplitAxis4BnInOp, ShapeNumAxes4BnInOp, parallel_context);
 }
 
 REGISTER_OP(OperatorConf::kMultipleGatherConf, MultipleGatherOp);
