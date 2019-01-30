@@ -8,6 +8,23 @@ int64_t LogicalBlobParallelDesc::parallel_num() const {
   return parallel_num_;
 }
 
+//  S -> S
+//  P -> C
+//  C -> P
+LogicalBlobParallelDesc LogicalBlobParallelDesc::DualLbpd() const {
+  LogicalBlobParallelDesc ret(*this);
+  if (has_split_parallel()) {
+    //  do nothing
+  } else if (has_clone_parallel()) {
+    ret.mutable_partial_sum_parallel();
+  } else if (has_partial_sum_parallel()) {
+    ret.mutable_clone_parallel();
+  } else {
+    UNIMPLEMENTED();
+  }
+  return ret;
+}
+
 bool LogicalBlobParallelDesc::operator==(const LogicalBlobParallelDesc& rhs) const {
   PbMd message_diff;
   return parallel_num_ == rhs.parallel_num_

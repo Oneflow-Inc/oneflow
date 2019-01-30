@@ -8,6 +8,7 @@ namespace oneflow {
 class LogicalBlobParallelDesc final {
  public:
   LogicalBlobParallelDesc() : parallel_num_(0) {}
+  LogicalBlobParallelDesc(const LogicalBlobParallelDesc&) = default;
   ~LogicalBlobParallelDesc() = default;
 
   // Getters;
@@ -25,6 +26,7 @@ class LogicalBlobParallelDesc final {
     return lb_parallel_conf_.mutable_partial_sum_parallel();
   }
 
+  LogicalBlobParallelDesc DualLbpd() const;
   bool operator==(const LogicalBlobParallelDesc& rhs) const;
   bool operator!=(const LogicalBlobParallelDesc& rhs) const { return !(*this == rhs); }
 
