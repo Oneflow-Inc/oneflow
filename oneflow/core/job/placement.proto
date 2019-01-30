@@ -3,54 +3,6 @@ package oneflow;
 
 import "oneflow/core/operator/op_conf.proto";
 
-// for data input blob
-message DataBlobParallel {
-  required int64 data_split_num = 1;
-  optional int64 clone_num = 2 [default = 1];
-}
-
-// for model input blob
-message ModelBlobParallel {
-  optional int64 clone_num = 1 [default = 1];
-  required int64 model_split_num = 2;
-}
-
-// for output blob or element-wise op's input blob in some cases
-message GridBlobParallel {
-  required int64 data_split_num = 1;
-  required int64 model_split_num = 2;
-}
-
-// for input and output blob
-message SplitParallel {
-  required int64 axis = 1;
-}
-
-// for input blob
-message CloneParallel {
-}
-
-// for output blob
-message PartialSumParallel {
-}
-
-message LogicalBlobParallelDesc {
-  required int64 parallel_num = 1;
-  oneof parallel_type {
-    SplitParallel split_parallel = 2;
-    CloneParallel clone_parallel = 3;
-    PartialSumParallel partial_sum_parallel = 4;
-  }
-}
-
-message BlobParallelConf {
-  oneof parallel_type {
-    DataBlobParallel data_blob_parallel = 1;
-    ModelBlobParallel model_blob_parallel = 2;
-    GridBlobParallel grid_blob_parallel = 3;
-  }
-}
-
 enum ParallelPolicy {
   kInvalidParallel = 0;
   kDataParallel = 1;

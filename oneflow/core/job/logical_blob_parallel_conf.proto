@@ -1,0 +1,25 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/job/placement.proto";
+
+// for input and output blob
+message SplitParallel {
+  required int64 axis = 1;
+}
+
+// for input blob
+message CloneParallel {
+}
+
+// for output blob
+message PartialSumParallel {
+}
+
+message LogicalBlobParallelConf {
+  oneof parallel_type {
+    SplitParallel split_parallel = 2;
+    CloneParallel clone_parallel = 3;
+    PartialSumParallel partial_sum_parallel = 4;
+  }
+}

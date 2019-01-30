@@ -11,7 +11,6 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
 
 namespace oneflow {
@@ -162,14 +161,6 @@ inline bool operator<(const LogicalBlobId& lhs, const LogicalBlobId& rhs) {
 inline bool operator==(const LogicalBlobId& lhs, const LogicalBlobId& rhs) {
   PbMd message_diff;
   return message_diff.Equivalent(lhs, rhs);
-}
-
-inline bool operator==(const LogicalBlobParallelDesc& lhs, const LogicalBlobParallelDesc& rhs) {
-  PbMd message_diff;
-  return message_diff.Equivalent(lhs, rhs);
-}
-inline bool operator!=(const LogicalBlobParallelDesc& lhs, const LogicalBlobParallelDesc& rhs) {
-  return !(lhs == rhs);
 }
 
 // Persistent
