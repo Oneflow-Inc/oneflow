@@ -8,7 +8,10 @@ namespace oneflow {
 class VariableOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(VariableOp);
-  VariableOp() = default;
+  VariableOp()
+      : Operator(),
+        is_fw_inplace_(std::make_unique<bool>(false)),
+        is_bw_inplace_(std::make_unique<bool>(false)) {}
   ~VariableOp() = default;
 
   void InitFromOpConf() override;
@@ -17,6 +20,29 @@ class VariableOp final : public Operator {
   bool NeedOutBlobWhenBackward() const override { return false; }
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
+  int32_t ModelSplitAxis() const override;
+
+  void set_is_fw_inplace(bool val) const { *is_fw_inplace_ = val; }
+  void set_is_bw_inplace(bool val) const { *is_bw_inplace_ = val; }
+
+ private:
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
+  void InferOutputBlobModelSplitAxis(
+      std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
+      std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
+      const ParallelContext* parallel_context) const override {
+    NaiveInferOutputBlobModelSplitAxis(ModelSplitAxis4BnInOp, ShapeNumAxes4BnInOp,
+                                       parallel_context);
+  }
+  void InferOutputBlobParallelDesc(
+      std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
+      const ParallelContext* parallel_context) const override;
+
+  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                            const ParallelContext*, KernelConf*) const override;
+
+  std::unique_ptr<bool> is_fw_inplace_;
+  std::unique_ptr<bool> is_bw_inplace_;
 };
 
 }  // namespace oneflow

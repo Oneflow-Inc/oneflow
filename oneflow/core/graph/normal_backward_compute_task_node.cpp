@@ -16,7 +16,7 @@ void NormalBackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   for (TaskEdge* edge : out_edges()) {
     const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
     if (succ_logical->MayConsumeModelDiff()) {
-      edge->AddRegst("model_diff", ProduceRegst("model_diff", true));
+      edge->AddRegst("model_diff", ProduceRegst("model_diff", true, 1, 1));
       type_name4model_related_logical_node_ = succ_logical->TypeName();
     } else {
       BindEdgeWithProducedRegst(edge, "in_diff");

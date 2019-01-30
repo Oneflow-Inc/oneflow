@@ -349,6 +349,8 @@ void TaskGraph::AddReduceNoBwForwardNodeOverlapingCtrlEdges() {
       RegstDesc* ctrl_regst_desc = node->BuildCtrlRegstDesc(first_identity_node);
       ctrl_regst_desc->UpdtMinRegstNumIfNeed(regst_desc_num);
       ctrl_regst_desc->UpdtMaxRegstNumIfNeed(regst_desc_num);
+      ctrl_regst_desc->mut_regst_desc_type()->mutable_ctrl_regst_desc()->set_returned_regst_num(
+          regst_desc_num);
     });
   }
 }
@@ -420,20 +422,72 @@ void TaskGraph::EnableMemSharingInVariableOp() {
     if (variable_op == nullptr) { return; }
     std::string model_bn = variable_op->op_conf().variable_conf().model_name();
     auto* fw_task_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
-    if (fw_task_node == nullptr) { return; }
-    const LogicalBlobId& lbi = variable_op->BnInOp2Lbi(model_bn);
-    RegstDesc* model_regst = fw_task_node->GetSoleConsumedRegst("model").get();
-    if (model_regst->enable_mem_sharing() == false) {
+    auto* bw_task_node = dynamic_cast<NormalBackwardCompTaskNode*>(node);
+    if (fw_task_node != nullptr) {
+      const LogicalBlobId& lbi = variable_op->BnInOp2Lbi(model_bn);
+      RegstDesc* model_regst = fw_task_node->GetSoleConsumedRegst("model").get();
+      CHECK_EQ(model_regst->min_register_num(), 1);
+      CHECK_EQ(model_regst->max_register_num(), 1);
       model_regst->set_enable_mem_sharing(true);
-      model_regst->set_mem_shared_id(Global<IDMgr>::Get()->NewMemSharedId());
-      model_regst->set_mem_shared_offset(0);
+      if (model_regst->mem_shared_id() == -1) {
+        model_regst->set_mem_shared_id(Global<IDMgr>::Get()->NewMemSharedId());
+        model_regst->set_mem_shared_offset(0);
+      }
+      RegstDesc* out_regst = fw_task_node->GetProducedRegst("out").get();
+      CHECK_EQ(out_regst->NumOfLbi(), 1);
+      out_regst->set_enable_mem_sharing(true);
+      out_regst->set_mem_shared_id(model_regst->mem_shared_id());
+      out_regst->set_mem_shared_offset(model_regst->mem_shared_offset()
+                                       + model_regst->ByteOffsetInPackedBlobDescBody(lbi));
+      variable_op->set_is_fw_inplace(true);
+    } else if (bw_task_node != nullptr) {
+      const LogicalBlobId& lbi = variable_op->BnInOp2Lbi(GenDiffBn(model_bn));
+      RegstDesc* model_diff_regst = bw_task_node->GetProducedRegst("model_diff").get();
+      CHECK_EQ(model_diff_regst->min_register_num(), 1);
+      CHECK_EQ(model_diff_regst->max_register_num(), 1);
+      model_diff_regst->set_enable_mem_sharing(true);
+      if (model_diff_regst->mem_shared_id() == -1) {
+        model_diff_regst->set_mem_shared_id(Global<IDMgr>::Get()->NewMemSharedId());
+        model_diff_regst->set_mem_shared_offset(0);
+      }
+      RegstDesc* out_diff_regst = bw_task_node->GetSoleConsumedRegst("out_diff").get();
+      if (out_diff_regst->NumOfLbi() != 1) { return; }
+      out_diff_regst->set_enable_mem_sharing(true);
+      out_diff_regst->set_mem_shared_id(model_diff_regst->mem_shared_id());
+      out_diff_regst->set_mem_shared_offset(
+          model_diff_regst->mem_shared_offset()
+          + model_diff_regst->ByteOffsetInPackedBlobDescBody(lbi));
+      variable_op->set_is_bw_inplace(true);
+    } else {
+      // do nothing
     }
-    RegstDesc* out_regst = fw_task_node->GetProducedRegst("out").get();
-    CHECK_EQ(out_regst->NumOfLbi(), 1);
-    out_regst->set_enable_mem_sharing(true);
-    out_regst->set_mem_shared_id(model_regst->mem_shared_id());
-    out_regst->set_mem_shared_offset(model_regst->mem_shared_offset()
-                                     + model_regst->ByteOffsetInPackedBlobDescBody(lbi));
+  });
+}
+
+void TaskGraph::EnableInplaceMemSharing() {
+  AcyclicTopoForEachNode([&](TaskNode* node) {
+    if (node->exec_gph().node_num() != 1) { return; }
+    const Operator* op = node->exec_gph().SoleNode()->op().get();
+    auto* fw_task_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
+    auto* bw_task_node = dynamic_cast<NormalBackwardCompTaskNode*>(node);
+    RegstDesc* input_regst = nullptr;
+    RegstDesc* output_regst = nullptr;
+    if (op->IsForwardInplace() && fw_task_node) {
+      input_regst = fw_task_node->GetSoleConsumedRegst("in").get();
+      output_regst = fw_task_node->GetProducedRegst("out").get();
+    } else if (op->IsBackwardInplace() && bw_task_node) {
+      input_regst = bw_task_node->GetSoleConsumedRegst(GenDiffBn("out")).get();
+      output_regst = bw_task_node->GetProducedRegst(GenDiffBn("in")).get();
+    } else {
+      // do nothing
+      return;
+    }
+    if (input_regst->NumOfLbi() != 1) { return; }
+    if (output_regst->NumOfLbi() != 1) { return; }
+    if (input_regst->mem_shared_inplace_block_id() == -1) {
+      input_regst->set_mem_shared_inplace_block_id(Global<IDMgr>::Get()->NewMemBlockId());
+    }
+    output_regst->set_mem_shared_inplace_block_id(input_regst->mem_shared_inplace_block_id());
   });
 }
 

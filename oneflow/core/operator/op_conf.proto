@@ -578,6 +578,7 @@ message VariableOpConf {
   optional DataType data_type = 4;
   optional InitializerConf initializer = 5;
   optional string model_name = 6 [default = "weight"];
+  optional int32 model_split_axis = 7 [default = 0];
 }
 
 message LocalResponseNormalizationOpConf {
@@ -744,6 +745,7 @@ message AccuracyOpConf {
   required string label = 2;
   optional int32 top_k = 3 [default = 1];
   required string accuracy = 4;
+  optional string weight = 5;
 }
 
 message MatmulOpConf {
@@ -787,28 +789,20 @@ message HingeLossOpConf {
 message PackOpConf {
   required string in = 1;
   required string out = 2;
-  oneof pack_num_conf {
-    int32 pack_num = 3;
-    int32 pack_num_per_record = 4;
-  }
-  required string related_unpack = 5;
+  required int32 pack_num = 3;
+  required string related_unpack = 4;
 }
 
 message UnpackOpConf {
   required string in = 1;
   required string out = 2;
-  oneof unpack_num_conf {
-    int32 unpack_num = 3;
-    int32 unpack_num_per_record = 4;
-  }
+  required int32 unpack_num = 3;
 }
+
 message RepeatOpConf {
   required string in = 1;
   required string out = 2;
-  oneof repeat_num_conf {
-    int32 repeat_num = 3;
-    int32 repeat_num_per_record = 4;
-  }
+  required int32 repeat_num = 3;
 }
 
 message GatherOpConf {
@@ -816,6 +810,12 @@ message GatherOpConf {
   required string indices = 2;
   required string out = 3;
   optional int64 axis = 4 [default = 0];
+}
+
+message BatchGatherOpConf {
+  required string in = 1;
+  required string indices = 2;
+  required string out = 3;
 }
 
 message SqrtOpConf {
@@ -963,6 +963,7 @@ message IdentityOpConf {
   repeated string out = 2;
 }
 
+<<<<<<< HEAD
 message FloatToHalfOpConf {
   required string in = 1;
   required string out = 2;
@@ -971,6 +972,13 @@ message FloatToHalfOpConf {
 message HalfToFloatOpConf {
   required string in = 1;
   required string out = 2;
+=======
+message TopKOpConf {
+  required string in = 1;
+  required string out = 2;
+  optional int32 k = 3 [default = 1];
+  optional bool sorted = 4 [default = true];
+>>>>>>> 67ade80ed5d7e6ef3f3e1ca4edc541686e15d8f2
 }
 
 message OperatorConf {
@@ -1051,6 +1059,7 @@ message OperatorConf {
     LogCounterOpConf log_counter_conf = 240;
     GeluOpConf gelu_conf = 241;
     GatherOpConf gather_conf = 242;
+    BatchGatherOpConf batch_gather_conf = 243;
     MeanOpConf mean_conf = 251;
     SliceOpConf slice_conf = 252;
     BiasAddOpConf bias_add_conf = 253;
@@ -1062,8 +1071,9 @@ message OperatorConf {
     IdentityLossOpConf identity_loss_conf = 259;
     SparseCrossEntropyOpConf sparse_cross_entropy_conf= 260;
     ReduceMeanOpConf reduce_mean_conf = 261;
-    FloatToHalfOpConf float_to_half_conf = 262;
-    HalfToFloatOpConf half_to_float_conf = 263;
+    TopKOpConf top_k_conf = 262;
+    FloatToHalfOpConf float_to_half_conf = 263;
+    HalfToFloatOpConf half_to_float_conf = 264;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

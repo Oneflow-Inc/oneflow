@@ -1,4 +1,5 @@
 #include "oneflow/core/graph/exec_graph.h"
+#include "oneflow/core/graph/op_graph.h"
 
 namespace oneflow {
 
@@ -51,8 +52,10 @@ void ExecNode::ToProto(bool is_forward, const ParallelContext* parallel_ctx,
 }
 
 void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx) {
-  op_->InferBlobDescsIf(GetBlobDesc4BnInOpFunc(), parallel_ctx,
+  auto GetBlobDesc4BnInOp = GetBlobDesc4BnInOpFunc();
+  op_->InferBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx, Global<JobDesc>::Get()->RecordPieceSize(),
                         [this](OpContext* op_ctx) { op_ctx_.reset(op_ctx); });
+  Global<OpGraph>::Get()->CheckBlobDescs(op_->op_name(), GetBlobDesc4BnInOp, parallel_ctx);
 }
 
 void ExecNode::InferBwBufBlobDescs(const ParallelContext* parallel_ctx) {

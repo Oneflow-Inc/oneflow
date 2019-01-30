@@ -140,6 +140,7 @@ bool NoOutRegstConsumedByBwNode(TaskNode* node) {
   if (fw_node == nullptr) { return false; }
   for (TaskEdge* edge : fw_node->out_edges()) {
     auto* fw_consumer = dynamic_cast<NormalForwardCompTaskNode*>(edge->dst_node());
+    if (fw_consumer == nullptr) { return false; }
     if (fw_consumer->HasBackwardCompTaskNode()) { return false; }
   }
   return true;
@@ -279,11 +280,13 @@ void ChainGraph::PartialPriorTopoForEachNode(
   for (TaskNode* start : starts) {
     if (IsTaskNodePrior(start)) { prior_starts.push_back(start); }
   }
-  task_gph_.DfsTopoForEachNode(prior_starts, ForEachPriorInNode, ForEachPriorOutNode, Handler);
+  task_gph_.DfsTopoForEachNodeSortByDistanceToSink(prior_starts, ForEachPriorInNode,
+                                                   ForEachPriorOutNode, Handler);
   // travel other nodes ;
-  task_gph_.DfsTopoForEachNode(starts, ForEachInNode, ForEachOutNode, [&](TaskNode* node) {
-    if (prior_nodes.find(node) == prior_nodes.end()) { Handler(node); }
-  });
+  task_gph_.DfsTopoForEachNodeSortByDistanceToSink(
+      starts, ForEachInNode, ForEachOutNode, [&](TaskNode* node) {
+        if (prior_nodes.find(node) == prior_nodes.end()) { Handler(node); }
+      });
 }
 
 void ChainGraph::InitChainNode(const std::vector<std::vector<TaskNode*>>& chains) {

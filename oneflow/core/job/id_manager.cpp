@@ -108,6 +108,7 @@ IDMgr::IDMgr() {
   CHECK_LT(gpu_device_num_ + cpu_device_num_, (static_cast<int64_t>(1) << thread_id_bit_num_) - 3);
   regst_desc_id_count_ = 0;
   mem_shared_id_count_ = 0;
+  mem_block_id_count_ = 0;
 }
 
 int64_t IDMgr::GetMachineThrdId(int64_t machine_id, int64_t thrd_id) {
