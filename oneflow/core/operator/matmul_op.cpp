@@ -46,6 +46,7 @@ bool MatmulOp::IsInputBlobAllowedModelSplit(const std::string& ibn) const {
 }
 
 void MatmulOp::InitOpParallelSignatures() {
+  mut_op_parallel_signatures()->push_back(MakeDataSplitOpParallelSignature(this));
   mut_op_parallel_signatures()->push_back(MakeOpParallelSignature_DS_MC_2_DS(this));
   auto IsValidSplit = [this](int32_t axis) {
     int32_t b_expected_split_axis = (op_conf().matmul_conf().transpose_b() ? 0 : 1);

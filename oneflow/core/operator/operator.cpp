@@ -145,15 +145,16 @@ void Operator::InferBlobModelSplitAxisIf(
 
 void Operator::NaiveInitOpParallelSignatures() {
   bool has_model = !(model_bns().empty() && const_model_bns().empty());
+  op_parallel_signatures_.push_back(MakeDataSplitOpParallelSignature(this));
   if (IsSoleInputBlobAllowedModelSplit()) {
     CHECK(!has_model);
-    op_parallel_signatures_.push_back(MakeDataSplitOpParallelSignature(this));
     op_parallel_signatures_.push_back(MakeModelSplitOpParallelSignature(this));
     op_parallel_signatures_.push_back(MakeCloneOpParallelSignature(this));
-  } else {
+  } else if (has_model) {
     for (const auto& ibn : input_bns()) { CHECK(!IsInputBlobAllowedModelSplit(ibn)); }
-    op_parallel_signatures_.push_back(MakeDataSplitOpParallelSignature(this));
-    if (has_model) { op_parallel_signatures_.push_back(MakeModelSplitOpParallelSignature(this)); }
+    op_parallel_signatures_.push_back(MakeModelSplitOpParallelSignature(this));
+  } else {
+    // do nothing
   }
 }
 
@@ -188,7 +189,8 @@ void Operator::InferInputOutputLogicalBlobParallelDescIf(
     FOR_RANGE(int32_t, i, 0, op_parallel_signatures_.size()) {
       CHECK(match_results.at(i).has_fail());
       const auto& failed_msg = match_results.at(i).fail();
-      ss << op_parallel_signatures_.at(i).description << ":\n";
+      ss << "op_parallel_signature match failed\n"
+         << op_parallel_signatures_.at(i).description << ":\n";
       if (failed_msg.has_signature_mismatch()) {
         ss << "\t"
            << "signature mismatch"
@@ -209,8 +211,8 @@ void Operator::InferInputOutputLogicalBlobParallelDescIf(
              << ", expected: " << parallel_num_error_msg.expected() << "\n";
         }
       }
-      LOG(FATAL) << ss.str();
     }
+    LOG(FATAL) << ss.str();
   } else {
     UNIMPLEMENTED();
   }

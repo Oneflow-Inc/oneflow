@@ -47,22 +47,28 @@ const OpParallelSignature MakeDataSplitOpParallelSignature(const Operator* op) {
           default_ret =
               MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kDataParallel);
         }
-        if (op->IsSoleInputBlobAllowedModelSplit()) {
-          const auto& producer_lbpd = ProducerLbpd4Ibn(op->SoleIbn());
-          if (producer_lbpd.has_partial_sum_parallel()) { return default_ret; }
-          if (producer_lbpd.has_split_parallel() && ModelSplitAxis4BnInOp(op->SoleIbn()) == -1) {
-            return default_ret;
+        bool is_data_split = true;
+        for (const auto& bn : op->input_bns()) {
+          const auto& producer_lbpd = ProducerLbpd4Ibn(bn);
+          if (op->IsInputBlobAllowedModelSplit(bn)) {
+            if (producer_lbpd.has_clone_parallel()) {
+              is_data_split = false;
+              break;
+            }
+            if (producer_lbpd.has_split_parallel() && ModelSplitAxis4BnInOp(bn) != -1) {
+              is_data_split = false;
+              break;
+            }
+          } else {
+            if (producer_lbpd.has_clone_parallel()) {
+              is_data_split = false;
+              break;
+            }
           }
-          return MakeOpParallelMatchSignatureMismatch();
-        } else {
-          CHECK(op->model_bns().empty());
-          CHECK(op->const_model_bns().empty());
-          CHECK(op->forward_model_bns().empty());
-          for (const std::string ibn : op->input_bns()) {
-            if (op->IsInputBlobAllowedModelSplit(ibn)) { UNIMPLEMENTED(); }
-          }
-          return default_ret;
         }
+        if (!is_data_split) { return MakeOpParallelMatchSignatureMismatch(); }
+        if (parallel_ctx->policy() == kDataParallel) { return MakeOpParallelMatchSuccess(); }
+        return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kDataParallel);
       };
   auto GenDataSplitSignature =
       [op](const std::function<int32_t(const std::string&)>& ModelSplitAxis4BnInOp,
