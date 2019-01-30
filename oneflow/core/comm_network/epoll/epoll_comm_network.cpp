@@ -110,7 +110,14 @@ SocketMemDesc* EpollCommNet::NewMemDesc(void* ptr, size_t byte_size) const {
 
 EpollCommNet::EpollCommNet(const Plan& plan)
     : CommNetIf(plan), epoll_conf_(Global<JobDesc>::Get()->epoll_conf()) {
-  pollers_.resize(Global<JobDesc>::Get()->CommNetWorkerNum(), nullptr);
+  int64_t poller_num = Global<JobDesc>::Get()->CommNetWorkerNum();
+  int64_t peer_mchn_num = peer_machine_id().size();
+  if (poller_num < epoll_conf_.link_num()) {
+    poller_num = epoll_conf_.link_num();
+  } else if (poller_num > (peer_mchn_num * epoll_conf_.link_num())) {
+    poller_num = peer_mchn_num * epoll_conf_.link_num();
+  }
+  pollers_.resize(poller_num, nullptr);
   for (size_t i = 0; i < pollers_.size(); ++i) { pollers_.at(i) = new IOEventPoller; }
   InitSockets();
   for (IOEventPoller* poller : pollers_) { poller->Start(); }
