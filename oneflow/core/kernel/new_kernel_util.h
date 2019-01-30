@@ -42,6 +42,8 @@ struct Float16NewKernelUtilIf {
                     const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
                     const int m, const int n, const int k, const T alpha, const T* a, const int lda,
                     const T* b, const int ldb, const T beta, T* c, const int ldc);
+  static void Half2Float(DeviceCtx* ctx, const int n, const T* src, float* dst);
+  static void Float2Half(DeviceCtx* ctx, const int n, const float* src, T* dst);
 };
 
 template<DeviceType device_type, typename T, typename U = void>

@@ -405,6 +405,12 @@ struct Float16NewKernelUtilIf<DeviceType::kCPU, T> {
                     const T* b, const int ldb, const T beta, T* c, const int ldc) {
     UNIMPLEMENTED();
   }
+  static void Half2Float(DeviceCtx* ctx, const int n, const T* src, float* dst) {
+    for (size_t i = 0; i < n; ++i) { dst[i] = static_cast<float>(src[i]); }
+  }
+  static void Float2Half(DeviceCtx* ctx, const int n, const float* src, T* dst) {
+    for (size_t i = 0; i < n; ++i) { dst[i] = static_cast<float16>(src[i]); }
+  }
 };
 
 #define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto) \
@@ -414,5 +420,9 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_SEQ FLOAT16_D
 #define INSTANTIATE_FLOATING_KERNEL_UTIL(type_cpp, type_proto) \
   template struct FloatingNewKernelUtilIf<DeviceType::kCPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_FLOATING_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ);
+
+#define INSTANTIATE_FLOAT16_KERNEL_UTIL(type_cpp, type_proto) \
+  template struct Float16NewKernelUtilIf<DeviceType::kCPU, type_cpp>;
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_FLOAT16_KERNEL_UTIL, FLOAT16_DATA_TYPE_SEQ);
 
 }  //  namespace oneflow

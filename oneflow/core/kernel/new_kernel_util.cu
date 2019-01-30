@@ -42,6 +42,14 @@ __global__ void ReluBackwardGpu(const int n, const T* y, const T* dy, T* dx) {
   CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = y[i] > 0 ? dy[i] : 0; }
 }
 
+__global__ void Float2HalfGpu(const int n, const float* src, half* dst) {
+  CUDA_1D_KERNEL_LOOP(i, n) { dst[i] = __float2half(src[i]); }
+}
+
+__global__ void Half2FloatGpu(const int n, const half* src, float* dst) {
+  CUDA_1D_KERNEL_LOOP(i, n) { dst[i] = __half2float(src[i]); }
+}
+
 cublasOperation_t CblasTrans2CublasTrans(CBLAS_TRANSPOSE trans) {
   cublasOperation_t cublas_trans;
   if (trans == CBLAS_TRANSPOSE::CblasNoTrans) {
@@ -225,6 +233,14 @@ struct Float16NewKernelUtilIf<DeviceType::kGPU, T> {
                           ldb, reinterpret_cast<const half*>(a), lda,
                           reinterpret_cast<const half*>(&beta), reinterpret_cast<half*>(c), ldc));
   }
+  static void Half2Float(DeviceCtx* ctx, const int n, const T* src, float* dst) {
+    Half2FloatGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        n, reinterpret_cast<const half*>(src), dst);
+  }
+  static void Float2Half(DeviceCtx* ctx, const int n, const float* src, T* dst) {
+    Float2HalfGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        n, src, reinterpret_cast<half*>(dst));
+  }
 };
 
 #define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto) \
@@ -234,5 +250,9 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_SEQ FLOAT16_D
 #define INSTANTIATE_FLOATING_KERNEL_UTIL(type_cpp, type_proto) \
   template struct FloatingNewKernelUtilIf<DeviceType::kGPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_FLOATING_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ);
+
+#define INSTANTIATE_FLOAT16_KERNEL_UTIL(type_cpp, type_proto) \
+  template struct Float16NewKernelUtilIf<DeviceType::kGPU, type_cpp>;
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_FLOAT16_KERNEL_UTIL, FLOAT16_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
