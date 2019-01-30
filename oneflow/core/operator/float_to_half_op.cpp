@@ -12,6 +12,7 @@ void FloatToHalfOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   CHECK(in->data_type() == DataType::kFloat);
+  *out = *in;
   out->set_data_type(DataType::kFloat16);
 }
 
