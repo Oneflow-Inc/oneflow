@@ -45,15 +45,16 @@ bool MatmulOp::IsInputBlobAllowedModelSplit(const std::string& ibn) const {
   return ibn == "b";
 }
 
-void MatmulOp::InitOpParallelSignatures() {
-  mut_op_parallel_signatures()->push_back(MakeDataSplitOpParallelSignature(this));
-  mut_op_parallel_signatures()->push_back(MakeOpParallelSignature_DS_MC_2_DS(this));
+void MatmulOp::GetOpParallelSignatures(
+    std::vector<OpParallelSignature>* op_parallel_signatures) const {
+  op_parallel_signatures->push_back(MakeDataSplitOpParallelSignature(this));
+  op_parallel_signatures->push_back(MakeOpParallelSignature_DS_MC_2_DS(this));
   auto IsValidSplit = [this](int32_t axis) {
     int32_t b_expected_split_axis = (op_conf().matmul_conf().transpose_b() ? 0 : 1);
     return axis == b_expected_split_axis;
   };
-  mut_op_parallel_signatures()->push_back(MakeOpParallelSignature_DC_MS_2_MS(this, IsValidSplit));
-  mut_op_parallel_signatures()->push_back(MakeMatmulOpParallelSignature_DMS_MS_2_P(this));
+  op_parallel_signatures->push_back(MakeOpParallelSignature_DC_MS_2_MS(this, IsValidSplit));
+  op_parallel_signatures->push_back(MakeMatmulOpParallelSignature_DMS_MS_2_P(this));
 }
 
 void MatmulOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

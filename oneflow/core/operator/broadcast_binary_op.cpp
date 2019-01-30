@@ -94,11 +94,12 @@ void BroadcastBinaryOp::InferBwBufBlobDescs(
   bw_buf->set_data_type(out->data_type());
 }
 
-void BroadcastBinaryOp::InitOpParallelSignatures() {
-  mut_op_parallel_signatures()->push_back(MakeBroadcastBinaryOpParallelSignature(this, {}));
-  mut_op_parallel_signatures()->push_back(MakeBroadcastBinaryOpParallelSignature(this, {"a"}));
-  mut_op_parallel_signatures()->push_back(MakeBroadcastBinaryOpParallelSignature(this, {"b"}));
-  mut_op_parallel_signatures()->push_back(MakeBroadcastBinaryOpParallelSignature(this, {"a", "b"}));
+void BroadcastBinaryOp::GetOpParallelSignatures(
+    std::vector<OpParallelSignature>* op_parallel_signatures) const {
+  op_parallel_signatures->push_back(MakeBroadcastBinaryOpParallelSignature(this, {}));
+  op_parallel_signatures->push_back(MakeBroadcastBinaryOpParallelSignature(this, {"a"}));
+  op_parallel_signatures->push_back(MakeBroadcastBinaryOpParallelSignature(this, {"b"}));
+  op_parallel_signatures->push_back(MakeBroadcastBinaryOpParallelSignature(this, {"a", "b"}));
 }
 
 }  // namespace oneflow

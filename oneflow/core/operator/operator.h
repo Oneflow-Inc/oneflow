@@ -272,13 +272,8 @@ class Operator {
 
   void StrFieldTolower(const std::string& field_name);
 
-  std::vector<OpParallelSignature>* mut_op_parallel_signatures() {
-    return &op_parallel_signatures_;
-  }
-
  private:
-  virtual void InitOpParallelSignatures() { NaiveInitOpParallelSignatures(); }
-  void NaiveInitOpParallelSignatures();
+  virtual void GetOpParallelSignatures(std::vector<OpParallelSignature>*) const;
   LogicalBlobId dtbn2lbi(const std::string& data_tmp_bn) const;
   LogicalBlobId fbbn2lbi(const std::string& fw_buf_bn) const { return dtbn2lbi(fw_buf_bn); }
   LogicalBlobId bbbn2lbi(const std::string& bw_buf_bn) const { return dtbn2lbi(bw_buf_bn); }
@@ -291,7 +286,6 @@ class Operator {
   }
 
   OpAttribute op_attribute_;
-  std::vector<OpParallelSignature> op_parallel_signatures_;
 };
 
 std::string GenDiffBn(const std::string& bn);

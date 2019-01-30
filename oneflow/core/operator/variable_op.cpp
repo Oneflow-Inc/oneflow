@@ -89,9 +89,10 @@ void VariableOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   *GetBlobDesc4BnInOp("out") = *model_blob_desc;
 }
 
-void VariableOp::InitOpParallelSignatures() {
-  mut_op_parallel_signatures()->push_back(MakeVariableOpDataSplitOpParallelSignature(this));
-  mut_op_parallel_signatures()->push_back(MakeVariableOpModelSplitOpParallelSignature(this));
+void VariableOp::GetOpParallelSignatures(
+    std::vector<OpParallelSignature>* op_parallel_signatures) const {
+  op_parallel_signatures->push_back(MakeVariableOpDataSplitOpParallelSignature(this));
+  op_parallel_signatures->push_back(MakeVariableOpModelSplitOpParallelSignature(this));
 }
 
 void VariableOp::VirtualGenKernelConf(

@@ -77,12 +77,13 @@ void GatherOp::VirtualGenKernelConf(
   kernel_conf->mutable_gather_conf()->set_axis(axis);
 }
 
-void GatherOp::InitOpParallelSignatures() {
-  mut_op_parallel_signatures()->push_back(MakeDataSplitOpParallelSignature(this));
-  mut_op_parallel_signatures()->push_back(MakeOpParallelSignature_DS_MC_2_DS(this));
+void GatherOp::GetOpParallelSignatures(
+    std::vector<OpParallelSignature>* op_parallel_signatures) const {
+  op_parallel_signatures->push_back(MakeDataSplitOpParallelSignature(this));
+  op_parallel_signatures->push_back(MakeOpParallelSignature_DS_MC_2_DS(this));
   auto GtZero = [](int32_t axis) { return axis > 0; };
-  mut_op_parallel_signatures()->push_back(MakeOpParallelSignature_DC_MS_2_MS(this, GtZero));
-  mut_op_parallel_signatures()->push_back(MakeGatherOpParallelSignature_DC_MS_2_P(this));
+  op_parallel_signatures->push_back(MakeOpParallelSignature_DC_MS_2_MS(this, GtZero));
+  op_parallel_signatures->push_back(MakeGatherOpParallelSignature_DC_MS_2_P(this));
 }
 
 void GatherOp::InferOutputBlobModelSplitAxis(
