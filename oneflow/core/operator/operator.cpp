@@ -144,16 +144,16 @@ void Operator::InferBlobModelSplitAxisIf(
 }
 
 void Operator::NaiveInitOpParallelSignatures() {
+  bool has_model = !(model_bns().empty() && const_model_bns().empty());
   if (IsSoleInputBlobAllowedModelSplit()) {
-    CHECK(model_bns().empty() && const_model_bns().empty());
+    CHECK(!has_model);
     op_parallel_signatures_.push_back(MakeDataSplitOpParallelSignature(this));
     op_parallel_signatures_.push_back(MakeModelSplitOpParallelSignature(this));
     op_parallel_signatures_.push_back(MakeCloneOpParallelSignature(this));
   } else {
-    CHECK(!model_bns().empty() || !const_model_bns().empty());
     for (const auto& ibn : input_bns()) { CHECK(!IsInputBlobAllowedModelSplit(ibn)); }
     op_parallel_signatures_.push_back(MakeDataSplitOpParallelSignature(this));
-    op_parallel_signatures_.push_back(MakeModelSplitOpParallelSignature(this));
+    if (has_model) { op_parallel_signatures_.push_back(MakeModelSplitOpParallelSignature(this)); }
   }
 }
 
@@ -178,7 +178,11 @@ void Operator::InferInputOutputLogicalBlobParallelDescIf(
     }
     HashMap<std::string, LogicalBlobParallelDesc> bn2lbpd;
     match_signature->signature_generator(ModelSplitAxis4BnInOp, &bn2lbpd);
-    for (const auto& pair : bn2lbpd) { *LogicalBlobParallelDesc4BnInOp(pair.first) = pair.second; }
+    for (const auto& pair : bn2lbpd) {
+      auto* lbpd = LogicalBlobParallelDesc4BnInOp(pair.first);
+      *lbpd = pair.second;
+      lbpd->set_parallel_num(parallel_ctx->parallel_num());
+    }
   } else if (match_success_cnt == 0) {
     std::stringstream ss;
     FOR_RANGE(int32_t, i, 0, op_parallel_signatures_.size()) {
