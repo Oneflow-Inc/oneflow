@@ -1,8 +1,6 @@
 syntax = "proto2";
 package oneflow;
 
-import "oneflow/core/job/placement.proto";
-
 // for input and output blob
 message SplitParallel {
   required int64 axis = 1;
