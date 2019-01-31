@@ -36,23 +36,23 @@ const OpParallelMatchResult MakeOpParallelMatchParallelNumError(int64_t configur
 class Operator;
 
 // (S(0), ...) -> (S(0), ...)
-const OpParallelSignature MakeDataSplitOpParallelSignature(const Operator* op);
+std::unique_ptr<const OpParallelSignature> MakeDataSplitOpParallelSignature(const Operator* op);
 
 // (S,) -> (S, ...) or (C, ...) -> (S, ...)
-const OpParallelSignature MakeModelSplitOpParallelSignature(const Operator* op);
+std::unique_ptr<const OpParallelSignature> MakeModelSplitOpParallelSignature(const Operator* op);
 
 // (C,) -> (C, ...)
-const OpParallelSignature MakeCloneOpParallelSignature(const Operator* op);
+std::unique_ptr<const OpParallelSignature> MakeCloneOpParallelSignature(const Operator* op);
 
 // (C, S(0), ...) -> (S(0), ...)
 // return blobs: data splitted
 // intput blobs: split data input blobs and clone model input blobs
-const OpParallelSignature MakeOpParallelSignature_DS_MC_2_DS(const Operator* op);
+std::unique_ptr<const OpParallelSignature> MakeOpParallelSignature_DS_MC_2_DS(const Operator* op);
 
 // (C, S, ...) -> (S, ...)
 // return blobs: model splitted
 // input blobs: clone data input blobs and split model input blobs
-const OpParallelSignature MakeOpParallelSignature_DC_MS_2_MS(
+std::unique_ptr<const OpParallelSignature> MakeOpParallelSignature_DC_MS_2_MS(
     const Operator* op, std::function<bool(int32_t)> IsExpectedAxis);
 
 }  // namespace oneflow

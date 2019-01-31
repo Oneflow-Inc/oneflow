@@ -8,7 +8,7 @@ bool IsScalarBlob(const BlobDesc* blob) {
   return blob->shape().NumAxes() == 1 && blob->shape().At(0) == 1;
 }
 
-const OpParallelSignature MakeBroadcastBinaryOpParallelSignature(
+std::unique_ptr<const OpParallelSignature> MakeBroadcastBinaryOpParallelSignature(
     const Operator* op, const HashSet<std::string>& model_input_bns) {
   std::string data_split_desc = op->op_name() + ": (C, ..., S(0), ...) -> (S(0), ...)";
   auto IsMatched =
@@ -49,7 +49,7 @@ const OpParallelSignature MakeBroadcastBinaryOpParallelSignature(
           (*signature)[bn].mutable_split_parallel()->set_axis(0);
         }
       };
-  return OpParallelSignature(data_split_desc, IsMatched, GenDataSplitSignature);
+  return std::make_unique<OpParallelSignature>(data_split_desc, IsMatched, GenDataSplitSignature);
 }
 
 }  // namespace
@@ -95,11 +95,11 @@ void BroadcastBinaryOp::InferBwBufBlobDescs(
 }
 
 void BroadcastBinaryOp::GetOpParallelSignatures(
-    std::vector<OpParallelSignature>* op_parallel_signatures) const {
-  op_parallel_signatures->push_back(MakeBroadcastBinaryOpParallelSignature(this, {}));
-  op_parallel_signatures->push_back(MakeBroadcastBinaryOpParallelSignature(this, {"a"}));
-  op_parallel_signatures->push_back(MakeBroadcastBinaryOpParallelSignature(this, {"b"}));
-  op_parallel_signatures->push_back(MakeBroadcastBinaryOpParallelSignature(this, {"a", "b"}));
+    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
+  op_parallel_signatures->emplace_back(MakeBroadcastBinaryOpParallelSignature(this, {}));
+  op_parallel_signatures->emplace_back(MakeBroadcastBinaryOpParallelSignature(this, {"a"}));
+  op_parallel_signatures->emplace_back(MakeBroadcastBinaryOpParallelSignature(this, {"b"}));
+  op_parallel_signatures->emplace_back(MakeBroadcastBinaryOpParallelSignature(this, {"a", "b"}));
 }
 
 }  // namespace oneflow

@@ -143,16 +143,16 @@ void Operator::InferBlobModelSplitAxisIf(
 }
 
 void Operator::GetOpParallelSignatures(
-    std::vector<OpParallelSignature>* op_parallel_signatures) const {
+    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
   bool has_model = !(model_bns().empty() && const_model_bns().empty());
-  op_parallel_signatures->push_back(MakeDataSplitOpParallelSignature(this));
+  op_parallel_signatures->emplace_back(MakeDataSplitOpParallelSignature(this));
   if (IsSoleInputBlobAllowedModelSplit()) {
     CHECK(!has_model);
-    op_parallel_signatures->push_back(MakeModelSplitOpParallelSignature(this));
-    op_parallel_signatures->push_back(MakeCloneOpParallelSignature(this));
+    op_parallel_signatures->emplace_back(MakeModelSplitOpParallelSignature(this));
+    op_parallel_signatures->emplace_back(MakeCloneOpParallelSignature(this));
   } else if (has_model) {
     for (const auto& ibn : input_bns()) { CHECK(!IsInputBlobAllowedModelSplit(ibn)); }
-    op_parallel_signatures->push_back(MakeModelSplitOpParallelSignature(this));
+    op_parallel_signatures->emplace_back(MakeModelSplitOpParallelSignature(this));
   } else {
     // do nothing
   }
@@ -163,12 +163,12 @@ void Operator::InferInputOutputLogicalBlobParallelDescIf(
     std::function<const LogicalBlobParallelDesc&(const std::string&)> ProducerLbpd4Ibn,
     std::function<int32_t(const std::string&)> ModelSplitAxis4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  std::vector<OpParallelSignature> op_parallel_signatures;
+  std::vector<std::unique_ptr<const OpParallelSignature>> op_parallel_signatures;
   GetOpParallelSignatures(&op_parallel_signatures);
   std::vector<OpParallelMatchResult> match_results;
   for (const auto& signature : op_parallel_signatures) {
     match_results.push_back(
-        signature.get_match_result(ProducerLbpd4Ibn, ModelSplitAxis4BnInOp, parallel_ctx));
+        signature->get_match_result(ProducerLbpd4Ibn, ModelSplitAxis4BnInOp, parallel_ctx));
   }
   int32_t match_success_cnt = 0;
   for (const auto& result : match_results) {
@@ -177,7 +177,9 @@ void Operator::InferInputOutputLogicalBlobParallelDescIf(
   if (match_success_cnt == 1) {
     const OpParallelSignature* match_signature = nullptr;
     FOR_RANGE(int32_t, i, 0, op_parallel_signatures.size()) {
-      if (match_results.at(i).has_success()) { match_signature = &op_parallel_signatures.at(i); }
+      if (match_results.at(i).has_success()) {
+        match_signature = op_parallel_signatures.at(i).get();
+      }
     }
     HashMap<std::string, LogicalBlobParallelDesc> bn2lbpd;
     match_signature->signature_generator(ModelSplitAxis4BnInOp, &bn2lbpd);
@@ -192,7 +194,7 @@ void Operator::InferInputOutputLogicalBlobParallelDescIf(
       CHECK(match_results.at(i).has_fail());
       const auto& failed_msg = match_results.at(i).fail();
       ss << "op_parallel_signature match failed\n"
-         << op_parallel_signatures.at(i).description << ":\n";
+         << op_parallel_signatures.at(i)->description << ":\n";
       if (failed_msg.has_signature_mismatch()) {
         ss << "\t"
            << "signature mismatch"

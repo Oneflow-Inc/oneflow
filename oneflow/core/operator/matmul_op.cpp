@@ -4,7 +4,8 @@ namespace oneflow {
 
 namespace {
 
-const OpParallelSignature MakeMatmulOpParallelSignature_DMS_MS_2_P(const MatmulOp* op) {
+std::unique_ptr<const OpParallelSignature> MakeMatmulOpParallelSignature_DMS_MS_2_P(
+    const MatmulOp* op) {
   std::string desc = op->op_name() + ": (S, S) -> P";
   auto GetMatchResult =
       [op](const std::function<const LogicalBlobParallelDesc&(const std::string&)>&,
@@ -24,7 +25,7 @@ const OpParallelSignature MakeMatmulOpParallelSignature_DMS_MS_2_P(const MatmulO
     (*signature)["b"].mutable_split_parallel()->set_axis(ModelSplitAxis4BnInOp("b"));
     (*signature)["out"].mutable_partial_sum_parallel();
   };
-  return OpParallelSignature(desc, GetMatchResult, GenSignature);
+  return std::make_unique<OpParallelSignature>(desc, GetMatchResult, GenSignature);
 }
 
 }  // namespace
@@ -46,15 +47,15 @@ bool MatmulOp::IsInputBlobAllowedModelSplit(const std::string& ibn) const {
 }
 
 void MatmulOp::GetOpParallelSignatures(
-    std::vector<OpParallelSignature>* op_parallel_signatures) const {
-  op_parallel_signatures->push_back(MakeDataSplitOpParallelSignature(this));
-  op_parallel_signatures->push_back(MakeOpParallelSignature_DS_MC_2_DS(this));
+    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
+  op_parallel_signatures->emplace_back(MakeDataSplitOpParallelSignature(this));
+  op_parallel_signatures->emplace_back(MakeOpParallelSignature_DS_MC_2_DS(this));
   auto IsValidSplit = [this](int32_t axis) {
     int32_t b_expected_split_axis = (op_conf().matmul_conf().transpose_b() ? 0 : 1);
     return axis == b_expected_split_axis;
   };
-  op_parallel_signatures->push_back(MakeOpParallelSignature_DC_MS_2_MS(this, IsValidSplit));
-  op_parallel_signatures->push_back(MakeMatmulOpParallelSignature_DMS_MS_2_P(this));
+  op_parallel_signatures->emplace_back(MakeOpParallelSignature_DC_MS_2_MS(this, IsValidSplit));
+  op_parallel_signatures->emplace_back(MakeMatmulOpParallelSignature_DMS_MS_2_P(this));
 }
 
 void MatmulOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

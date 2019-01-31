@@ -273,7 +273,8 @@ class Operator {
   void StrFieldTolower(const std::string& field_name);
 
  private:
-  virtual void GetOpParallelSignatures(std::vector<OpParallelSignature>*) const;
+  virtual void GetOpParallelSignatures(
+      std::vector<std::unique_ptr<const OpParallelSignature>>*) const;
   LogicalBlobId dtbn2lbi(const std::string& data_tmp_bn) const;
   LogicalBlobId fbbn2lbi(const std::string& fw_buf_bn) const { return dtbn2lbi(fw_buf_bn); }
   LogicalBlobId bbbn2lbi(const std::string& bw_buf_bn) const { return dtbn2lbi(bw_buf_bn); }

@@ -6,7 +6,8 @@ namespace oneflow {
 namespace {
 
 // S(0) -> C
-const OpParallelSignature MakeVariableOpDataSplitOpParallelSignature(const Operator* op) {
+std::unique_ptr<const OpParallelSignature> MakeVariableOpDataSplitOpParallelSignature(
+    const Operator* op) {
   std::string desc = op->op_name() + ": S(0) -> C";
   auto IsMatched =
       [op](
@@ -27,11 +28,12 @@ const OpParallelSignature MakeVariableOpDataSplitOpParallelSignature(const Opera
     (*signature)["tick"].mutable_split_parallel()->set_axis(0);
     (*signature)["out"].mutable_clone_parallel();
   };
-  return OpParallelSignature(desc, IsMatched, GenSignature);
+  return std::make_unique<OpParallelSignature>(desc, IsMatched, GenSignature);
 }
 
 // S(0) -> S
-const OpParallelSignature MakeVariableOpModelSplitOpParallelSignature(const Operator* op) {
+std::unique_ptr<const OpParallelSignature> MakeVariableOpModelSplitOpParallelSignature(
+    const Operator* op) {
   std::string desc = op->op_name() + ": S(0) -> S";
   auto IsMatched =
       [op](
@@ -52,7 +54,7 @@ const OpParallelSignature MakeVariableOpModelSplitOpParallelSignature(const Oper
     (*signature)["tick"].mutable_split_parallel()->set_axis(0);
     (*signature)["out"].mutable_split_parallel()->set_axis(ModelSplitAxis4BnInOp("out"));
   };
-  return OpParallelSignature(desc, IsMatched, GenSignature);
+  return std::make_unique<OpParallelSignature>(desc, IsMatched, GenSignature);
 }
 
 }  // namespace
@@ -90,9 +92,9 @@ void VariableOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
 }
 
 void VariableOp::GetOpParallelSignatures(
-    std::vector<OpParallelSignature>* op_parallel_signatures) const {
-  op_parallel_signatures->push_back(MakeVariableOpDataSplitOpParallelSignature(this));
-  op_parallel_signatures->push_back(MakeVariableOpModelSplitOpParallelSignature(this));
+    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
+  op_parallel_signatures->emplace_back(MakeVariableOpDataSplitOpParallelSignature(this));
+  op_parallel_signatures->emplace_back(MakeVariableOpModelSplitOpParallelSignature(this));
 }
 
 void VariableOp::VirtualGenKernelConf(

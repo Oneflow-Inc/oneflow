@@ -33,7 +33,7 @@ const OpParallelMatchResult MakeOpParallelMatchParallelNumError(int64_t configur
   return parallel_num_error;
 }
 
-const OpParallelSignature MakeDataSplitOpParallelSignature(const Operator* op) {
+std::unique_ptr<const OpParallelSignature> MakeDataSplitOpParallelSignature(const Operator* op) {
   std::string data_split_desc = op->op_name() + ": (S(0), ...) -> (S(0), ...)";
   auto IsMatched =
       [op](
@@ -80,10 +80,10 @@ const OpParallelSignature MakeDataSplitOpParallelSignature(const Operator* op) {
           (*signature)[bn].mutable_split_parallel()->set_axis(0);
         }
       };
-  return OpParallelSignature(data_split_desc, IsMatched, GenDataSplitSignature);
+  return std::make_unique<OpParallelSignature>(data_split_desc, IsMatched, GenDataSplitSignature);
 }
 
-const OpParallelSignature MakeCloneOpParallelSignature(const Operator* op) {
+std::unique_ptr<const OpParallelSignature> MakeCloneOpParallelSignature(const Operator* op) {
   std::string clone_desc = op->op_name() + ": (C,) -> (C, ...)";
   auto IsSoleIbnCloned =
       [op](
@@ -119,10 +119,10 @@ const OpParallelSignature MakeCloneOpParallelSignature(const Operator* op) {
     for (const auto& bn : op->input_bns()) { (*signature)[bn].mutable_clone_parallel(); }
     for (const auto& bn : op->output_bns()) { (*signature)[bn].mutable_clone_parallel(); }
   };
-  return OpParallelSignature(clone_desc, IsSoleIbnCloned, GenCloneSignature);
+  return std::make_unique<OpParallelSignature>(clone_desc, IsSoleIbnCloned, GenCloneSignature);
 }
 
-const OpParallelSignature MakeModelSplitOpParallelSignature(const Operator* op) {
+std::unique_ptr<const OpParallelSignature> MakeModelSplitOpParallelSignature(const Operator* op) {
   if (op->IsSoleInputBlobAllowedModelSplit()) {
     std::string desc = op->op_name() + ": (S,) -> (S, ...)";
     auto IsModelSplit = [op](
@@ -165,7 +165,7 @@ const OpParallelSignature MakeModelSplitOpParallelSignature(const Operator* op) 
             (*signature)[bn].mutable_split_parallel()->set_axis(ModelSplitAxis4BnInOp(bn));
           }
         };
-    return OpParallelSignature(desc, IsModelSplit, GenModelSplitSignature);
+    return std::make_unique<OpParallelSignature>(desc, IsModelSplit, GenModelSplitSignature);
   } else {
     CHECK(!op->model_bns().empty() || !op->const_model_bns().empty());
     std::string desc = op->op_name() + ": (C, ...) -> (S, ...)";
@@ -184,11 +184,11 @@ const OpParallelSignature MakeModelSplitOpParallelSignature(const Operator* op) 
             (*signature)[bn].mutable_split_parallel()->set_axis(ModelSplitAxis4BnInOp(bn));
           }
         };
-    return OpParallelSignature(desc, IsModelSplit, GenModelSplitSignature);
+    return std::make_unique<OpParallelSignature>(desc, IsModelSplit, GenModelSplitSignature);
   }
 }
 
-const OpParallelSignature MakeOpParallelSignature_DS_MC_2_DS(const Operator* op) {
+std::unique_ptr<const OpParallelSignature> MakeOpParallelSignature_DS_MC_2_DS(const Operator* op) {
   std::string desc = op->op_name() + ": (C, S(0), ...) -> (S(0), ...)";
   std::vector<std::string> data_input_bns;
   std::vector<std::string> model_input_bns;
@@ -245,10 +245,10 @@ const OpParallelSignature MakeOpParallelSignature_DS_MC_2_DS(const Operator* op)
       (*signature)[bn].mutable_split_parallel()->set_axis(0);
     }
   };
-  return OpParallelSignature(desc, GetMatchResult, GenSignature);
+  return std::make_unique<OpParallelSignature>(desc, GetMatchResult, GenSignature);
 }
 
-const OpParallelSignature MakeOpParallelSignature_DC_MS_2_MS(
+std::unique_ptr<const OpParallelSignature> MakeOpParallelSignature_DC_MS_2_MS(
     const Operator* op, std::function<bool(int32_t)> IsExpectedAxis) {
   auto IsValidSplit = [IsExpectedAxis](int32_t x) { return x != -1 && IsExpectedAxis(x); };
   std::string desc = op->op_name() + ": (C, S, ...) -> (S, ...)";
@@ -289,7 +289,7 @@ const OpParallelSignature MakeOpParallelSignature_DC_MS_2_MS(
       (*signature)[bn].mutable_split_parallel()->set_axis(ModelSplitAxis4BnInOp(bn));
     }
   };
-  return OpParallelSignature(desc, GetMatchResult, GenSignature);
+  return std::make_unique<OpParallelSignature>(desc, GetMatchResult, GenSignature);
 }
 
 }  // namespace oneflow
