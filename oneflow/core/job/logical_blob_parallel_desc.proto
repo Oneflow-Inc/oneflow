@@ -14,7 +14,8 @@ message CloneParallel {
 message PartialSumParallel {
 }
 
-message LogicalBlobParallelConf {
+message LogicalBlobParallelDesc {
+  required int64 parallel_num = 1;
   oneof parallel_type {
     SplitParallel split_parallel = 2;
     CloneParallel clone_parallel = 3;
