@@ -35,23 +35,20 @@ const OpParallelMatchResult MakeOpParallelMatchParallelNumError(int64_t configur
 
 std::unique_ptr<const OpParallelSignature> MakeDataSplitOpParallelSignature(const Operator* op) {
   std::string data_split_desc = op->op_name() + ": (S(0), ...) -> (S(0), ...)";
-  auto IsMatched =
-      [op](
-          const std::function<const LogicalBlobParallelDesc&(const std::string&)>& ProducerLbpd4Ibn,
-          const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
-          const ParallelContext* parallel_ctx) {
-        bool is_data_split = true;
-        for (const auto& bn : op->input_bns()) {
-          const LbpdHint& lbpd_hint = LbpdHint4BnInOp(bn);
-          if (!lbpd_hint.is_data_blob()) {
-            is_data_split = false;
-            break;
-          }
-        }
-        if (!is_data_split) { return MakeOpParallelMatchSignatureMismatch(); }
-        if (parallel_ctx->policy() == kDataParallel) { return MakeOpParallelMatchSuccess(); }
-        return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kDataParallel);
-      };
+  auto IsMatched = [op](const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
+                        const ParallelContext* parallel_ctx) {
+    bool is_data_split = true;
+    for (const auto& bn : op->input_bns()) {
+      const LbpdHint& lbpd_hint = LbpdHint4BnInOp(bn);
+      if (!lbpd_hint.is_data_blob()) {
+        is_data_split = false;
+        break;
+      }
+    }
+    if (!is_data_split) { return MakeOpParallelMatchSignatureMismatch(); }
+    if (parallel_ctx->policy() == kDataParallel) { return MakeOpParallelMatchSuccess(); }
+    return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kDataParallel);
+  };
   auto GenDataSplitSignature =
       [op](const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
            HashMap<std::string, LogicalBlobParallelDesc>* signature) {
@@ -68,8 +65,7 @@ std::unique_ptr<const OpParallelSignature> MakeDataSplitOpParallelSignature(cons
 std::unique_ptr<const OpParallelSignature> MakeCloneOpParallelSignature(const Operator* op) {
   std::string clone_desc = op->op_name() + ": (C,) -> (C, ...)";
   auto IsSoleIbnCloned =
-      [op](const std::function<const LogicalBlobParallelDesc&(const std::string&)>&,
-           const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
+      [op](const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
            const ParallelContext* parallel_ctx) {
         if (!op->IsSoleInputBlobAllowedModelSplit()) {
           return MakeOpParallelMatchSignatureMismatch();
@@ -108,9 +104,7 @@ std::unique_ptr<const OpParallelSignature> MakeModelSplitOpParallelSignature(con
   if (op->IsSoleInputBlobAllowedModelSplit()) {
     std::string desc = op->op_name() + ": (S,) -> (S, ...)";
     auto IsModelSplit =
-        [op](const std::function<const LogicalBlobParallelDesc&(const std::string&)>&
-                 ProducerLbpd4Ibn,
-             const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
+        [op](const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
              const ParallelContext* parallel_ctx) {
           const LbpdHint& lbpd_hint = LbpdHint4BnInOp(op->SoleIbn());
           if (!(lbpd_hint.has_model_split()
@@ -157,13 +151,11 @@ std::unique_ptr<const OpParallelSignature> MakeModelSplitOpParallelSignature(con
   } else {
     CHECK(!op->model_bns().empty() || !op->const_model_bns().empty());
     std::string desc = op->op_name() + ": (C, ...) -> (S, ...)";
-    auto IsModelSplit =
-        [op](const std::function<const LogicalBlobParallelDesc&(const std::string&)>&,
-             const std::function<const LbpdHint&(const std::string&)>&,
-             const ParallelContext* parallel_ctx) {
-          if (parallel_ctx->policy() == kModelParallel) { return MakeOpParallelMatchSuccess(); }
-          return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kModelParallel);
-        };
+    auto IsModelSplit = [op](const std::function<const LbpdHint&(const std::string&)>&,
+                             const ParallelContext* parallel_ctx) {
+      if (parallel_ctx->policy() == kModelParallel) { return MakeOpParallelMatchSuccess(); }
+      return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kModelParallel);
+    };
     auto GenModelSplitSignature =
         [op](const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
              HashMap<std::string, LogicalBlobParallelDesc>* signature) {
@@ -192,7 +184,6 @@ std::unique_ptr<const OpParallelSignature> MakeOpParallelSignature_DS_MC_2_DS(co
   std::string model_input_bn = model_input_bns.at(0);
   auto GetMatchResult =
       [op, data_input_bns, model_input_bn](
-          const std::function<const LogicalBlobParallelDesc&(const std::string&)>&,
           const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
           const ParallelContext* parallel_ctx) {
         const auto& lbpd_hint = LbpdHint4BnInOp(model_input_bn);
@@ -247,7 +238,6 @@ std::unique_ptr<const OpParallelSignature> MakeOpParallelSignature_DC_MS_2_MS(
   std::string model_input_bn = model_input_bns.at(0);
   auto GetMatchResult =
       [op, data_input_bns, model_input_bn, IsValidSplit](
-          const std::function<const LogicalBlobParallelDesc&(const std::string&)>&,
           const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
           const ParallelContext* parallel_ctx) {
         const LbpdHint& model_lbpd_hint = LbpdHint4BnInOp(model_input_bn);

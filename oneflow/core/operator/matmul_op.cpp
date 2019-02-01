@@ -8,8 +8,7 @@ std::unique_ptr<const OpParallelSignature> MakeMatmulOpParallelSignature_DMS_MS_
     const MatmulOp* op) {
   std::string desc = op->op_name() + ": (S, S) -> P";
   auto GetMatchResult =
-      [op](const std::function<const LogicalBlobParallelDesc&(const std::string&)>&,
-           const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
+      [op](const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
            const ParallelContext* parallel_ctx) {
         const auto& b_lbpd_hint = LbpdHint4BnInOp("b");
         if (!b_lbpd_hint.has_model_split()) { return MakeOpParallelMatchSignatureMismatch(); }

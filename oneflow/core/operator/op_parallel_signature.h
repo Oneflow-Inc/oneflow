@@ -8,23 +8,35 @@
 
 namespace oneflow {
 
-struct OpParallelSignature final {
-  using FnProducerLbParallelDesc4Ibn =
-      std::function<const LogicalBlobParallelDesc&(const std::string&)>;
+class OpParallelSignature final {
+ public:
   using FnLbpdHint4BnInOp = std::function<const LbpdHint&(const std::string&)>;
-  using FnGetMathResult = std::function<const OpParallelMatchResult(
-      const FnProducerLbParallelDesc4Ibn&, const FnLbpdHint4BnInOp&, const ParallelContext*)>;
+  using FnGetMathResult =
+      std::function<const OpParallelMatchResult(const FnLbpdHint4BnInOp&, const ParallelContext*)>;
   using FnSignatureGeneratorFunc =
       std::function<void(const FnLbpdHint4BnInOp&, HashMap<std::string, LogicalBlobParallelDesc>*)>;
-  OpParallelSignature(const std::string& desc, const FnGetMathResult& match_result,
-                      const FnSignatureGeneratorFunc& gen_signature)
-      : description(desc), get_match_result(match_result), signature_generator(gen_signature) {}
+  OpParallelSignature(const std::string& description, const FnGetMathResult& get_match_result,
+                      const FnSignatureGeneratorFunc& signature_generator)
+      : description_(description),
+        get_match_result_(get_match_result),
+        signature_generator_(signature_generator) {}
   OpParallelSignature(const OpParallelSignature&) = default;
   ~OpParallelSignature() = default;
 
-  const std::string description;
-  const FnGetMathResult get_match_result;
-  const FnSignatureGeneratorFunc signature_generator;
+  const std::string Description() const { return description_; }
+  const OpParallelMatchResult GetMatchResult(const FnLbpdHint4BnInOp& LbpdHint4BnInOp,
+                                             const ParallelContext* parallel_ctx) const {
+    return get_match_result_(LbpdHint4BnInOp, parallel_ctx);
+  }
+  void GenerateSignature(const FnLbpdHint4BnInOp& LbpdHint4BnInOp,
+                         HashMap<std::string, LogicalBlobParallelDesc>* bn2lbpd) const {
+    signature_generator_(LbpdHint4BnInOp, bn2lbpd);
+  }
+
+ private:
+  const std::string description_;
+  const FnGetMathResult get_match_result_;
+  const FnSignatureGeneratorFunc signature_generator_;
 };
 
 const OpParallelMatchResult MakeOpParallelMatchSuccess();

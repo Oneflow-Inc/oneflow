@@ -9,18 +9,15 @@ namespace {
 std::unique_ptr<const OpParallelSignature> MakeVariableOpDataSplitOpParallelSignature(
     const Operator* op) {
   std::string desc = op->op_name() + ": S(0) -> C";
-  auto IsMatched =
-      [op](
-          const std::function<const LogicalBlobParallelDesc&(const std::string&)>& ProducerLbpd4Ibn,
-          const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
-          const ParallelContext* parallel_ctx) {
-        OpParallelMatchResult default_ret;
-        if (parallel_ctx->policy() == kDataParallel) {
-          return MakeOpParallelMatchSuccess();
-        } else {
-          return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kDataParallel);
-        }
-      };
+  auto IsMatched = [op](const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
+                        const ParallelContext* parallel_ctx) {
+    OpParallelMatchResult default_ret;
+    if (parallel_ctx->policy() == kDataParallel) {
+      return MakeOpParallelMatchSuccess();
+    } else {
+      return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kDataParallel);
+    }
+  };
   auto GenSignature = [op](
                           const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
                           HashMap<std::string, LogicalBlobParallelDesc>* signature) {
@@ -36,18 +33,15 @@ std::unique_ptr<const OpParallelSignature> MakeVariableOpDataSplitOpParallelSign
 std::unique_ptr<const OpParallelSignature> MakeVariableOpModelSplitOpParallelSignature(
     const Operator* op) {
   std::string desc = op->op_name() + ": S(0) -> S";
-  auto IsMatched =
-      [op](
-          const std::function<const LogicalBlobParallelDesc&(const std::string&)>& ProducerLbpd4Ibn,
-          const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
-          const ParallelContext* parallel_ctx) {
-        OpParallelMatchResult default_ret;
-        if (parallel_ctx->policy() == kModelParallel) {
-          return MakeOpParallelMatchSuccess();
-        } else {
-          return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kModelParallel);
-        }
-      };
+  auto IsMatched = [op](const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
+                        const ParallelContext* parallel_ctx) {
+    OpParallelMatchResult default_ret;
+    if (parallel_ctx->policy() == kModelParallel) {
+      return MakeOpParallelMatchSuccess();
+    } else {
+      return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kModelParallel);
+    }
+  };
   auto GenSignature = [op](
                           const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
                           HashMap<std::string, LogicalBlobParallelDesc>* signature) {

@@ -19,8 +19,7 @@ std::unique_ptr<const OpParallelSignature> MakeGatherOpParallelSignature_DC_MS_2
     const GatherOp* op) {
   std::string desc = op->op_name() + ": (C, S) -> P";
   auto GetMatchResult =
-      [op](const std::function<const LogicalBlobParallelDesc&(const std::string&)>&,
-           const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
+      [op](const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
            const ParallelContext* parallel_ctx) {
         const LbpdHint& in_lbpd_hint = LbpdHint4BnInOp("in");
         if (!in_lbpd_hint.has_model_split()) { return MakeOpParallelMatchSignatureMismatch(); }

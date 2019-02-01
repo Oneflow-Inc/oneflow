@@ -146,17 +146,13 @@ class Operator {
   virtual void InferOutputBlobTimeShape(
       std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
       Shape* time_shape) const;
-  // Infer blob's model_split_axis
-  void InferBlobLbpdHintIf(
-      std::function<LbpdHint*(const std::string&)> LbpdHint4BnInOp,
-      std::function<const LbpdHint&(const std::string&)> ProducerLbpdHint4BnInOp,
-      std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
-      const ParallelContext* parallel_context) const;
+  // Infer logical blob parallel descriptor's hint info
+  void InferBlobLbpdHintIf(std::function<LbpdHint*(const std::string&)> LbpdHint4BnInOp,
+                           std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
+                           const ParallelContext* parallel_context) const;
   // Infer blob's parallel desc
   void InferInputOutputLogicalBlobParallelDescIf(
-      std::function<LogicalBlobParallelDesc*(const std::string&)> LogicalBlobParallelDesc4BnInOp,
-      std::function<const LogicalBlobParallelDesc&(const std::string&)>
-          ProducerLogicalBlobParallelDesc4Ibn,
+      std::function<LogicalBlobParallelDesc*(const std::string&)> Lbpd4BnInOp,
       std::function<const LbpdHint&(const std::string&)> LbpdHint4BnInOp,
       const ParallelContext* parallel_ctx) const;
   virtual void FixInDiffBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

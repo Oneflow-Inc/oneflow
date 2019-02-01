@@ -128,11 +128,9 @@ void Operator::InferOutputBlobTimeShape(
   }
 }
 
-void Operator::InferBlobLbpdHintIf(
-    std::function<LbpdHint*(const std::string&)> LbpdHint4BnInOp,
-    std::function<const LbpdHint&(const std::string&)> ProducerLbpdHint4BnInOp,
-    std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
-    const ParallelContext* parallel_context) const {
+void Operator::InferBlobLbpdHintIf(std::function<LbpdHint*(const std::string&)> LbpdHint4BnInOp,
+                                   std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
+                                   const ParallelContext* parallel_context) const {
   if (!output_bns().empty()) {
     InferOutputBlobLbpdHint(LbpdHint4BnInOp, ShapeNumAxes4BnInOp, parallel_context);
     for (const std::string& bn : output_bns()) {
@@ -160,15 +158,13 @@ void Operator::GetOpParallelSignatures(
 
 void Operator::InferInputOutputLogicalBlobParallelDescIf(
     std::function<LogicalBlobParallelDesc*(const std::string&)> LogicalBlobParallelDesc4BnInOp,
-    std::function<const LogicalBlobParallelDesc&(const std::string&)> ProducerLbpd4Ibn,
     std::function<const LbpdHint&(const std::string&)> LbpdHint4BnInOp,
     const ParallelContext* parallel_ctx) const {
   std::vector<std::unique_ptr<const OpParallelSignature>> op_parallel_signatures;
   GetOpParallelSignatures(&op_parallel_signatures);
   std::vector<OpParallelMatchResult> match_results;
   for (const auto& signature : op_parallel_signatures) {
-    match_results.push_back(
-        signature->get_match_result(ProducerLbpd4Ibn, LbpdHint4BnInOp, parallel_ctx));
+    match_results.push_back(signature->GetMatchResult(LbpdHint4BnInOp, parallel_ctx));
   }
   int32_t match_success_cnt = 0;
   for (const auto& result : match_results) {
@@ -182,7 +178,7 @@ void Operator::InferInputOutputLogicalBlobParallelDescIf(
       }
     }
     HashMap<std::string, LogicalBlobParallelDesc> bn2lbpd;
-    match_signature->signature_generator(LbpdHint4BnInOp, &bn2lbpd);
+    match_signature->GenerateSignature(LbpdHint4BnInOp, &bn2lbpd);
     for (const auto& pair : bn2lbpd) {
       auto* lbpd = LogicalBlobParallelDesc4BnInOp(pair.first);
       *lbpd = pair.second;
@@ -194,7 +190,7 @@ void Operator::InferInputOutputLogicalBlobParallelDescIf(
       CHECK(match_results.at(i).has_fail());
       const auto& failed_msg = match_results.at(i).fail();
       ss << "op_parallel_signature match failed\n"
-         << op_parallel_signatures.at(i)->description << ":\n";
+         << op_parallel_signatures.at(i)->Description() << ":\n";
       if (failed_msg.has_signature_mismatch()) {
         ss << "\t"
            << "signature mismatch"

@@ -349,9 +349,6 @@ void OpGraph::InferLbpdHint() const {
     auto LbpdHint4BnInOp = [&](const std::string& bn) -> LbpdHint* {
       return op_node->ProducerOpNode4BnInOp(bn)->MutLbpdHint4Lbi(op_node->op().BnInOp2Lbi(bn));
     };
-    auto ProducerLbpdHint4BnInOp = [&](const std::string& bn) -> const LbpdHint& {
-      return op_node->SrcNode4InputBnInOp(bn)->LbpdHint4Lbi(op_node->op().BnInOp2Lbi(bn));
-    };
     auto ShapeNumAxes4BnInOp = [&](const std::string& bn) -> int32_t {
       return op_node->NoParallelBlobDesc4BnInOp(bn)->shape().NumAxes();
     };
@@ -359,8 +356,7 @@ void OpGraph::InferLbpdHint() const {
     parallel_ctx.set_parallel_id(0);
     parallel_ctx.set_parallel_num(op_node->parallel_desc().parallel_num());
     parallel_ctx.set_policy(op_node->parallel_desc().policy());
-    op_node->op().InferBlobLbpdHintIf(LbpdHint4BnInOp, ProducerLbpdHint4BnInOp, ShapeNumAxes4BnInOp,
-                                      &parallel_ctx);
+    op_node->op().InferBlobLbpdHintIf(LbpdHint4BnInOp, ShapeNumAxes4BnInOp, &parallel_ctx);
   });
 }
 
@@ -369,9 +365,6 @@ void OpGraph::InferLogicalBlobParallelDesc() const {
     auto Lbpd4BnInOp = [&](const std::string& bn) -> LogicalBlobParallelDesc* {
       return op_node->MutLbpd4Lbi(op_node->op().BnInOp2Lbi(bn));
     };
-    auto ProducerLbpd4BnInOp = [&](const std::string& bn) -> const LogicalBlobParallelDesc& {
-      return op_node->SrcNode4InputBnInOp(bn)->Lbpd4Lbi(op_node->op().BnInOp2Lbi(bn));
-    };
     auto LbpdHint4BnInOp = [&](const std::string& bn) -> const LbpdHint& {
       return op_node->LbpdHint4Lbi(op_node->op().BnInOp2Lbi(bn));
     };
@@ -379,8 +372,8 @@ void OpGraph::InferLogicalBlobParallelDesc() const {
     parallel_ctx.set_parallel_id(0);
     parallel_ctx.set_parallel_num(op_node->parallel_desc().parallel_num());
     parallel_ctx.set_policy(op_node->parallel_desc().policy());
-    op_node->op().InferInputOutputLogicalBlobParallelDescIf(Lbpd4BnInOp, ProducerLbpd4BnInOp,
-                                                            LbpdHint4BnInOp, &parallel_ctx);
+    op_node->op().InferInputOutputLogicalBlobParallelDescIf(Lbpd4BnInOp, LbpdHint4BnInOp,
+                                                            &parallel_ctx);
   });
 }
 
