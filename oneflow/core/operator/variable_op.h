@@ -31,9 +31,7 @@ class VariableOp final : public Operator {
       std::vector<std::unique_ptr<const OpParallelSignature>>*) const override;
   void InferOutputBlobLbpdHint(std::function<LbpdHint*(const std::string&)> LbpdHint4BnInOp,
                                std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
-                               const ParallelContext* parallel_context) const override {
-    NaiveInferOutputBlobLbpdHint(LbpdHint4BnInOp, ShapeNumAxes4BnInOp, parallel_context);
-  }
+                               const ParallelContext* parallel_context) const override;
 
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext*, KernelConf*) const override;

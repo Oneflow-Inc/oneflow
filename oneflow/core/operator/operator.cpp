@@ -231,20 +231,22 @@ void Operator::NaiveInferOutputBlobLbpdHint(
     std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
     const ParallelContext* parallel_context) const {
   for (const std::string& bn : output_bns()) {
-    if (parallel_context->policy() == kDataParallel) {
-      LbpdHint4BnInOp(bn)->mutable_data_split()->set_axis(0);
-    } else if (parallel_context->policy() == kModelParallel) {
-      if (!model_bns().empty() || !const_model_bns().empty()) {
-        int32_t model_split_axis = ModelSplitAxis();
-        CHECK_NE(model_split_axis, -1);
-        LbpdHint4BnInOp(bn)->mutable_model_split()->set_axis(model_split_axis);
-      } else if (IsSoleInputBlobAllowedModelSplit()) {
-        *LbpdHint4BnInOp(bn) = *LbpdHint4BnInOp(SoleIbn());
+    if (IsSoleInputBlobAllowedModelSplit()) {
+      *LbpdHint4BnInOp(bn) = *LbpdHint4BnInOp(SoleIbn());
+    } else {
+      if (parallel_context->policy() == kDataParallel) {
+        LbpdHint4BnInOp(bn)->mutable_data_split()->set_axis(0);
+      } else if (parallel_context->policy() == kModelParallel) {
+        if (!model_bns().empty() || !const_model_bns().empty()) {
+          int32_t model_split_axis = ModelSplitAxis();
+          CHECK_NE(model_split_axis, -1);
+          LbpdHint4BnInOp(bn)->mutable_model_split()->set_axis(model_split_axis);
+        } else {
+          UNIMPLEMENTED();
+        }
       } else {
         UNIMPLEMENTED();
       }
-    } else {
-      UNIMPLEMENTED();
     }
   }
 }

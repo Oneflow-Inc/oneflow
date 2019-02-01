@@ -14,7 +14,7 @@ std::string OpEdge::VisualStr() const {
 }
 
 const LbpdHint& OpNode::LbpdHint4Lbi(const LogicalBlobId& lbi) const {
-  return lbi2lbpd_hint_.at(lbi);
+  return ProducerOpNode4Lbi(lbi)->lbi2lbpd_hint_.at(lbi);
 }
 LbpdHint* OpNode::MutLbpdHint4Lbi(const LogicalBlobId& lbi) { return &lbi2lbpd_hint_[lbi]; }
 
@@ -96,6 +96,12 @@ OpNode* OpNode::SrcNode4InputBnInOp(const std::string& bn_in_op) const {
 
 OpNode* OpNode::ProducerOpNode4Lbi(const LogicalBlobId& lbi) {
   OpNode* producer = SrcNode4InputLbi(lbi);
+  if (producer == nullptr) { producer = this; }
+  return producer;
+}
+
+const OpNode* OpNode::ProducerOpNode4Lbi(const LogicalBlobId& lbi) const {
+  const OpNode* producer = SrcNode4InputLbi(lbi);
   if (producer == nullptr) { producer = this; }
   return producer;
 }
@@ -415,11 +421,13 @@ BalancedSplitter OpGraph::GetBalancedSplitter(const std::string& op_name,
   CHECK_EQ(op_node->parallel_desc().parallel_num(), lbpd.parallel_num());
   CHECK(lbpd.has_split_parallel());
   int64_t split_num = GetSplitNum(op_name, lbi);
-  int64_t model_split_axis = GetModelSplitAxis(op_name, lbi);
-  if (model_split_axis == -1) {
+  const auto& lbpd_hint = op_node->LbpdHint4Lbi(GetLogicalBlobIdKey(op_name, lbi));
+  if (lbpd_hint.has_data_split()) {
     CHECK_EQ(split_num % lbpd.parallel_num(), 0);
-  } else {
+  } else if (lbpd_hint.has_model_split()) {
     CHECK_GE(split_num, lbpd.parallel_num());
+  } else {
+    UNIMPLEMENTED();
   }
   return BalancedSplitter(split_num, lbpd.parallel_num());
 }

@@ -129,7 +129,6 @@ void MatmulOp::InferOutputBlobLbpdHint(
       }
     }
   } else {
-    CHECK_GT(ShapeNumAxes4BnInOp("b"), 2);
     CHECK_EQ(parallel_context->policy(), kDataParallel);
     LbpdHint4BnInOp("out")->mutable_data_split()->set_axis(0);
   }
