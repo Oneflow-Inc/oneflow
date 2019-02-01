@@ -23,15 +23,13 @@ class IdentityOp final : public Operator {
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override {
     return op_conf().identity_conf().in_size() == 1 && ibn == SoleIbn();
   }
-  void InferOutputBlobModelSplitAxis(
-      std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
-      std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
-      const ParallelContext* parallel_context) const override {
+  void InferOutputBlobLbpdHint(std::function<LbpdHint*(const std::string&)> LbpdHint4BnInOp,
+                               std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
+                               const ParallelContext* parallel_context) const override {
     if (!IsSoleInputBlobAllowedModelSplit()) {
       CHECK_EQ(parallel_context->policy(), kDataParallel);
     }
-    NaiveInferOutputBlobModelSplitAxis(ModelSplitAxis4BnInOp, ShapeNumAxes4BnInOp,
-                                       parallel_context);
+    NaiveInferOutputBlobLbpdHint(LbpdHint4BnInOp, ShapeNumAxes4BnInOp, parallel_context);
   }
 };
 

@@ -12,7 +12,7 @@ std::unique_ptr<const OpParallelSignature> MakeVariableOpDataSplitOpParallelSign
   auto IsMatched =
       [op](
           const std::function<const LogicalBlobParallelDesc&(const std::string&)>& ProducerLbpd4Ibn,
-          const std::function<int32_t(const std::string&)>& ModelSplitAxis4BnInOp,
+          const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
           const ParallelContext* parallel_ctx) {
         OpParallelMatchResult default_ret;
         if (parallel_ctx->policy() == kDataParallel) {
@@ -21,10 +21,11 @@ std::unique_ptr<const OpParallelSignature> MakeVariableOpDataSplitOpParallelSign
           return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kDataParallel);
         }
       };
-  auto GenSignature = [op](const std::function<int32_t(const std::string&)>& ModelSplitAxis4BnInOp,
-                           HashMap<std::string, LogicalBlobParallelDesc>* signature) {
-    CHECK_EQ(ModelSplitAxis4BnInOp("tick"), -1);
-    CHECK_EQ(ModelSplitAxis4BnInOp("out"), -1);
+  auto GenSignature = [op](
+                          const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
+                          HashMap<std::string, LogicalBlobParallelDesc>* signature) {
+    CHECK(LbpdHint4BnInOp("tick").has_data_split());
+    CHECK(LbpdHint4BnInOp("out").has_model_clone());
     (*signature)["tick"].mutable_split_parallel()->set_axis(0);
     (*signature)["out"].mutable_clone_parallel();
   };
@@ -38,7 +39,7 @@ std::unique_ptr<const OpParallelSignature> MakeVariableOpModelSplitOpParallelSig
   auto IsMatched =
       [op](
           const std::function<const LogicalBlobParallelDesc&(const std::string&)>& ProducerLbpd4Ibn,
-          const std::function<int32_t(const std::string&)>& ModelSplitAxis4BnInOp,
+          const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
           const ParallelContext* parallel_ctx) {
         OpParallelMatchResult default_ret;
         if (parallel_ctx->policy() == kModelParallel) {
@@ -47,12 +48,14 @@ std::unique_ptr<const OpParallelSignature> MakeVariableOpModelSplitOpParallelSig
           return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kModelParallel);
         }
       };
-  auto GenSignature = [op](const std::function<int32_t(const std::string&)>& ModelSplitAxis4BnInOp,
-                           HashMap<std::string, LogicalBlobParallelDesc>* signature) {
-    CHECK_EQ(ModelSplitAxis4BnInOp("tick"), -1);
-    CHECK_NE(ModelSplitAxis4BnInOp("out"), -1);
+  auto GenSignature = [op](
+                          const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
+                          HashMap<std::string, LogicalBlobParallelDesc>* signature) {
+    CHECK(LbpdHint4BnInOp("tick").has_data_split());
+    CHECK(LbpdHint4BnInOp("out").has_model_split());
+    int32_t axis = LbpdHint4BnInOp("out").model_split().axis();
     (*signature)["tick"].mutable_split_parallel()->set_axis(0);
-    (*signature)["out"].mutable_split_parallel()->set_axis(ModelSplitAxis4BnInOp("out"));
+    (*signature)["out"].mutable_split_parallel()->set_axis(axis);
   };
   return std::make_unique<OpParallelSignature>(desc, IsMatched, GenSignature);
 }

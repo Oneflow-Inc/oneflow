@@ -128,17 +128,17 @@ void Operator::InferOutputBlobTimeShape(
   }
 }
 
-void Operator::InferBlobModelSplitAxisIf(
-    std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
-    std::function<int32_t(const std::string&)> ProducerModelSplitAxis4BnInOp,
+void Operator::InferBlobLbpdHintIf(
+    std::function<LbpdHint*(const std::string&)> LbpdHint4BnInOp,
+    std::function<const LbpdHint&(const std::string&)> ProducerLbpdHint4BnInOp,
     std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
     const ParallelContext* parallel_context) const {
-  if (!input_bns().empty()) {
-    InferInputBlobModelSplitAxis(ModelSplitAxis4BnInOp, ProducerModelSplitAxis4BnInOp,
-                                 ShapeNumAxes4BnInOp, parallel_context);
-  }
   if (!output_bns().empty()) {
-    InferOutputBlobModelSplitAxis(ModelSplitAxis4BnInOp, ShapeNumAxes4BnInOp, parallel_context);
+    InferOutputBlobLbpdHint(LbpdHint4BnInOp, ShapeNumAxes4BnInOp, parallel_context);
+    for (const std::string& bn : output_bns()) {
+      LbpdHint4BnInOp(bn)->set_parallel_num(parallel_context->parallel_num());
+      LbpdHint4BnInOp(bn)->set_num_axes(ShapeNumAxes4BnInOp(bn));
+    }
   }
 }
 
@@ -161,14 +161,14 @@ void Operator::GetOpParallelSignatures(
 void Operator::InferInputOutputLogicalBlobParallelDescIf(
     std::function<LogicalBlobParallelDesc*(const std::string&)> LogicalBlobParallelDesc4BnInOp,
     std::function<const LogicalBlobParallelDesc&(const std::string&)> ProducerLbpd4Ibn,
-    std::function<int32_t(const std::string&)> ModelSplitAxis4BnInOp,
+    std::function<const LbpdHint&(const std::string&)> LbpdHint4BnInOp,
     const ParallelContext* parallel_ctx) const {
   std::vector<std::unique_ptr<const OpParallelSignature>> op_parallel_signatures;
   GetOpParallelSignatures(&op_parallel_signatures);
   std::vector<OpParallelMatchResult> match_results;
   for (const auto& signature : op_parallel_signatures) {
     match_results.push_back(
-        signature->get_match_result(ProducerLbpd4Ibn, ModelSplitAxis4BnInOp, parallel_ctx));
+        signature->get_match_result(ProducerLbpd4Ibn, LbpdHint4BnInOp, parallel_ctx));
   }
   int32_t match_success_cnt = 0;
   for (const auto& result : match_results) {
@@ -182,7 +182,7 @@ void Operator::InferInputOutputLogicalBlobParallelDescIf(
       }
     }
     HashMap<std::string, LogicalBlobParallelDesc> bn2lbpd;
-    match_signature->signature_generator(ModelSplitAxis4BnInOp, &bn2lbpd);
+    match_signature->signature_generator(LbpdHint4BnInOp, &bn2lbpd);
     for (const auto& pair : bn2lbpd) {
       auto* lbpd = LogicalBlobParallelDesc4BnInOp(pair.first);
       *lbpd = pair.second;
@@ -226,40 +226,20 @@ bool Operator::IsSoleInputBlobAllowedModelSplit() const {
   return input_bns().size() == 1 && IsInputBlobAllowedModelSplit(SoleIbn());
 }
 
-void Operator::NaiveInferInputBlobModelSplitAxis(
-    std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
-    std::function<int32_t(const std::string&)> ProducerModelSplitAxis4BnInOp,
-    std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
-    const ParallelContext* parallel_context) const {
-  for (const std::string& bn : input_bns()) {
-    if (parallel_context->policy() == kDataParallel) {
-      *ModelSplitAxis4BnInOp(bn) = -1;
-    } else if (parallel_context->policy() == kModelParallel) {
-      if (IsInputBlobAllowedModelSplit(bn)) {
-        *ModelSplitAxis4BnInOp(bn) = ProducerModelSplitAxis4BnInOp(bn);
-      } else {
-        *ModelSplitAxis4BnInOp(bn) = -1;
-      }
-    } else {
-      UNIMPLEMENTED();
-    }
-  }
-}
-
-void Operator::NaiveInferOutputBlobModelSplitAxis(
-    std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
+void Operator::NaiveInferOutputBlobLbpdHint(
+    std::function<LbpdHint*(const std::string&)> LbpdHint4BnInOp,
     std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
     const ParallelContext* parallel_context) const {
   for (const std::string& bn : output_bns()) {
     if (parallel_context->policy() == kDataParallel) {
-      *ModelSplitAxis4BnInOp(bn) = -1;
+      LbpdHint4BnInOp(bn)->mutable_data_split()->set_axis(0);
     } else if (parallel_context->policy() == kModelParallel) {
       if (!model_bns().empty() || !const_model_bns().empty()) {
         int32_t model_split_axis = ModelSplitAxis();
         CHECK_NE(model_split_axis, -1);
-        *ModelSplitAxis4BnInOp(bn) = model_split_axis;
+        LbpdHint4BnInOp(bn)->mutable_model_split()->set_axis(model_split_axis);
       } else if (IsSoleInputBlobAllowedModelSplit()) {
-        *ModelSplitAxis4BnInOp(bn) = *ModelSplitAxis4BnInOp(SoleIbn());
+        *LbpdHint4BnInOp(bn) = *LbpdHint4BnInOp(SoleIbn());
       } else {
         UNIMPLEMENTED();
       }

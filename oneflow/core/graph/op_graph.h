@@ -42,7 +42,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   const LogicalBlobParallelDesc& Lbpd4Lbi(const LogicalBlobId& lbi) const;
   const Shape* GetInputBlobTimeShape(const std::string& bn_in_op) const;
   const Shape* GetInputBlobTimeShape() const;
-  int32_t ModelSplitAxis4Lbi(const LogicalBlobId& lbi) const;
+  const LbpdHint& LbpdHint4Lbi(const LogicalBlobId& lbi) const;
 
   // Setters
   ParallelDesc* mut_parallel_desc() { return &parallel_desc_; }
@@ -50,7 +50,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   HashMap<LogicalBlobId, std::vector<BlobDesc>>* mut_lbi2parallel_id2blob_desc() {
     return &lbi2parallel_id2blob_desc_;
   }
-  int32_t* MutModelSplitAxis4Lbi(const LogicalBlobId& lbi);
+  LbpdHint* MutLbpdHint4Lbi(const LogicalBlobId& lbi);
   BlobDesc* NoParallelBlobDesc4BnInOp(const std::string& bn_in_op);
   BlobDesc* MutNoParallelBlobDesc(const LogicalBlobId& lbi);
   BlobDesc* MutLogicalBlobDesc4Lbi(const LogicalBlobId& lbi);
@@ -77,7 +77,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   bool has_in_diff_;
   Shape out_blob_time_shape_;
   HashMap<LogicalBlobId, BlobDesc> lbi2no_parallel_blob_desc_;
-  HashMap<LogicalBlobId, int32_t> lbi2model_split_axis_;
+  HashMap<LogicalBlobId, LbpdHint> lbi2lbpd_hint_;
   HashMap<LogicalBlobId, LogicalBlobParallelDesc> lbi2lbpd_;
   HashMap<LogicalBlobId, std::vector<BlobDesc>> lbi2parallel_id2blob_desc_;
   HashMap<LogicalBlobId, BlobDesc> lbi2logical_blob_desc_;
@@ -132,7 +132,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void UpdateOpNodeHasInDiff() const;
   void InferTimeShape() const;
   void InferNoParallelBlobDesc() const;
-  void InferModelSplitAxis() const;
+  void InferLbpdHint() const;
   void InferLogicalBlobParallelDesc() const;
   void InferLogicalBlobDesc() const;
   std::string GetOpNameKey(const std::string& op_name, const LogicalBlobId& lbi) const;

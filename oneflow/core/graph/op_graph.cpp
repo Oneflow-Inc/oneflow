@@ -13,15 +13,10 @@ std::string OpEdge::VisualStr() const {
   return str;
 }
 
-int32_t OpNode::ModelSplitAxis4Lbi(const LogicalBlobId& lbi) const {
-  return lbi2model_split_axis_.at(lbi);
+const LbpdHint& OpNode::LbpdHint4Lbi(const LogicalBlobId& lbi) const {
+  return lbi2lbpd_hint_.at(lbi);
 }
-int32_t* OpNode::MutModelSplitAxis4Lbi(const LogicalBlobId& lbi) {
-  if (lbi2model_split_axis_.find(lbi) == lbi2model_split_axis_.end()) {
-    lbi2model_split_axis_.emplace(lbi, -1);
-  }
-  return &lbi2model_split_axis_.at(lbi);
-}
+LbpdHint* OpNode::MutLbpdHint4Lbi(const LogicalBlobId& lbi) { return &lbi2lbpd_hint_[lbi]; }
 
 const LogicalBlobParallelDesc& OpNode::Lbpd4Lbi(const LogicalBlobId& lbi) const {
   return lbi2lbpd_.at(lbi);
@@ -248,7 +243,7 @@ void OpGraph::Init() {
   UpdateOpNodeHasInDiff();
   InferTimeShape();
   InferNoParallelBlobDesc();
-  InferModelSplitAxis();
+  InferLbpdHint();
   InferLogicalBlobParallelDesc();
   InferLogicalBlobDesc();
 }
@@ -343,13 +338,13 @@ void OpGraph::InferNoParallelBlobDesc() const {
   });
 }
 
-void OpGraph::InferModelSplitAxis() const {
+void OpGraph::InferLbpdHint() const {
   TopoForEachNode([&](OpNode* op_node) {
-    auto ModelSplitAxis4BnInOp = [&](const std::string& bn) -> int32_t* {
-      return op_node->MutModelSplitAxis4Lbi(op_node->op().BnInOp2Lbi(bn));
+    auto LbpdHint4BnInOp = [&](const std::string& bn) -> LbpdHint* {
+      return op_node->ProducerOpNode4BnInOp(bn)->MutLbpdHint4Lbi(op_node->op().BnInOp2Lbi(bn));
     };
-    auto ProducerModelSplitAxis4BnInOp = [&](const std::string& bn) -> int32_t {
-      return op_node->SrcNode4InputBnInOp(bn)->ModelSplitAxis4Lbi(op_node->op().BnInOp2Lbi(bn));
+    auto ProducerLbpdHint4BnInOp = [&](const std::string& bn) -> const LbpdHint& {
+      return op_node->SrcNode4InputBnInOp(bn)->LbpdHint4Lbi(op_node->op().BnInOp2Lbi(bn));
     };
     auto ShapeNumAxes4BnInOp = [&](const std::string& bn) -> int32_t {
       return op_node->NoParallelBlobDesc4BnInOp(bn)->shape().NumAxes();
@@ -358,8 +353,8 @@ void OpGraph::InferModelSplitAxis() const {
     parallel_ctx.set_parallel_id(0);
     parallel_ctx.set_parallel_num(op_node->parallel_desc().parallel_num());
     parallel_ctx.set_policy(op_node->parallel_desc().policy());
-    op_node->op().InferBlobModelSplitAxisIf(ModelSplitAxis4BnInOp, ProducerModelSplitAxis4BnInOp,
-                                            ShapeNumAxes4BnInOp, &parallel_ctx);
+    op_node->op().InferBlobLbpdHintIf(LbpdHint4BnInOp, ProducerLbpdHint4BnInOp, ShapeNumAxes4BnInOp,
+                                      &parallel_ctx);
   });
 }
 
@@ -371,15 +366,15 @@ void OpGraph::InferLogicalBlobParallelDesc() const {
     auto ProducerLbpd4BnInOp = [&](const std::string& bn) -> const LogicalBlobParallelDesc& {
       return op_node->SrcNode4InputBnInOp(bn)->Lbpd4Lbi(op_node->op().BnInOp2Lbi(bn));
     };
-    auto ModelSplitAxis4BnInOp = [&](const std::string& bn) -> int32_t {
-      return op_node->ModelSplitAxis4Lbi(op_node->op().BnInOp2Lbi(bn));
+    auto LbpdHint4BnInOp = [&](const std::string& bn) -> const LbpdHint& {
+      return op_node->LbpdHint4Lbi(op_node->op().BnInOp2Lbi(bn));
     };
     ParallelContext parallel_ctx;
     parallel_ctx.set_parallel_id(0);
     parallel_ctx.set_parallel_num(op_node->parallel_desc().parallel_num());
     parallel_ctx.set_policy(op_node->parallel_desc().policy());
     op_node->op().InferInputOutputLogicalBlobParallelDescIf(Lbpd4BnInOp, ProducerLbpd4BnInOp,
-                                                            ModelSplitAxis4BnInOp, &parallel_ctx);
+                                                            LbpdHint4BnInOp, &parallel_ctx);
   });
 }
 
@@ -431,7 +426,9 @@ BalancedSplitter OpGraph::GetBalancedSplitter(const std::string& op_name,
 
 int32_t OpGraph::GetModelSplitAxis(const std::string& op_name, const LogicalBlobId& lbi) const {
   OpNode* op_node = op_name2op_node_.at(GetOpNameKey(op_name, lbi));
-  return op_node->ModelSplitAxis4Lbi(GetLogicalBlobIdKey(op_name, lbi));
+  const LbpdHint& lbpd_hint = op_node->LbpdHint4Lbi(GetLogicalBlobIdKey(op_name, lbi));
+  CHECK(lbpd_hint.has_model_split());
+  return lbpd_hint.model_split().axis();
 }
 
 int64_t OpGraph::GetSplitNum(const std::string& op_name, const LogicalBlobId& lbi) const {

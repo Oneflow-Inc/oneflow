@@ -4,17 +4,18 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/logical_blob_parallel_desc.h"
 #include "oneflow/core/operator/op_parallel_match_result.pb.h"
+#include "oneflow/core/job/lbpd_hint.h"
 
 namespace oneflow {
 
 struct OpParallelSignature final {
   using FnProducerLbParallelDesc4Ibn =
       std::function<const LogicalBlobParallelDesc&(const std::string&)>;
-  using FnModelSplitAxis4BnInOp = std::function<int32_t(const std::string&)>;
+  using FnLbpdHint4BnInOp = std::function<const LbpdHint&(const std::string&)>;
   using FnGetMathResult = std::function<const OpParallelMatchResult(
-      const FnProducerLbParallelDesc4Ibn&, const FnModelSplitAxis4BnInOp&, const ParallelContext*)>;
-  using FnSignatureGeneratorFunc = std::function<void(
-      const FnModelSplitAxis4BnInOp&, HashMap<std::string, LogicalBlobParallelDesc>*)>;
+      const FnProducerLbParallelDesc4Ibn&, const FnLbpdHint4BnInOp&, const ParallelContext*)>;
+  using FnSignatureGeneratorFunc =
+      std::function<void(const FnLbpdHint4BnInOp&, HashMap<std::string, LogicalBlobParallelDesc>*)>;
   OpParallelSignature(const std::string& desc, const FnGetMathResult& match_result,
                       const FnSignatureGeneratorFunc& gen_signature)
       : description(desc), get_match_result(match_result), signature_generator(gen_signature) {}

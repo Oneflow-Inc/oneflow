@@ -40,14 +40,15 @@ void BiasAddOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
   GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() = Shape({a_blob_desc->shape().At(0), 1});
 }
 
-void BiasAddOp::InferOutputBlobModelSplitAxis(
-    std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
+void BiasAddOp::InferOutputBlobLbpdHint(
+    std::function<LbpdHint*(const std::string&)> LbpdHint4BnInOp,
     std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
     const ParallelContext* parallel_context) const {
-  if (parallel_context->policy() == kDataParallel) {
-    *ModelSplitAxis4BnInOp("out") = -1;
-  } else if (parallel_context->policy() == kModelParallel) {
-    *ModelSplitAxis4BnInOp("out") = 1;
+  const LbpdHint& b_lbpd_hint = *LbpdHint4BnInOp("b");
+  if (b_lbpd_hint.has_model_clone()) {
+    LbpdHint4BnInOp("out")->mutable_data_split()->set_axis(0);
+  } else if (b_lbpd_hint.has_model_split()) {
+    LbpdHint4BnInOp("out")->mutable_data_split()->set_axis(1);
   } else {
     UNIMPLEMENTED();
   }

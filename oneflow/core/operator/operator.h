@@ -147,9 +147,9 @@ class Operator {
       std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
       Shape* time_shape) const;
   // Infer blob's model_split_axis
-  void InferBlobModelSplitAxisIf(
-      std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
-      std::function<int32_t(const std::string&)> ProducerModelSplitAxis4BnInOp,
+  void InferBlobLbpdHintIf(
+      std::function<LbpdHint*(const std::string&)> LbpdHint4BnInOp,
+      std::function<const LbpdHint&(const std::string&)> ProducerLbpdHint4BnInOp,
       std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
       const ParallelContext* parallel_context) const;
   // Infer blob's parallel desc
@@ -157,7 +157,7 @@ class Operator {
       std::function<LogicalBlobParallelDesc*(const std::string&)> LogicalBlobParallelDesc4BnInOp,
       std::function<const LogicalBlobParallelDesc&(const std::string&)>
           ProducerLogicalBlobParallelDesc4Ibn,
-      std::function<int32_t(const std::string&)> ModelSplitAxis4BnInOp,
+      std::function<const LbpdHint&(const std::string&)> LbpdHint4BnInOp,
       const ParallelContext* parallel_ctx) const;
   virtual void FixInDiffBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                   const ParallelContext*) const;
@@ -172,28 +172,13 @@ class Operator {
                      bool is_forward, const ParallelContext*, KernelConf*, const OpContext*) const;
 
  protected:
-  // infer model_split_axis
-  virtual void InferInputBlobModelSplitAxis(
-      std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
-      std::function<int32_t(const std::string&)> ProducerModelSplitAxis4BnInOp,
-      std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
-      const ParallelContext* parallel_context) const {
-    NaiveInferInputBlobModelSplitAxis(ModelSplitAxis4BnInOp, ProducerModelSplitAxis4BnInOp,
-                                      ShapeNumAxes4BnInOp, parallel_context);
-  }
-  void NaiveInferInputBlobModelSplitAxis(
-      std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
-      std::function<int32_t(const std::string&)> ProducerModelSplitAxis4BnInOp,
-      std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
-      const ParallelContext* parallel_context) const;
-  virtual void InferOutputBlobModelSplitAxis(
-      std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
+  virtual void InferOutputBlobLbpdHint(
+      std::function<LbpdHint*(const std::string&)> LbpdHint4BnInOp,
       std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
       const ParallelContext* parallel_context) const = 0;
-  void NaiveInferOutputBlobModelSplitAxis(
-      std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
-      std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
-      const ParallelContext* parallel_context) const;
+  void NaiveInferOutputBlobLbpdHint(std::function<LbpdHint*(const std::string&)> LbpdHint4BnInOp,
+                                    std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
+                                    const ParallelContext* parallel_context) const;
 
   int64_t cudnn_buf_limit_byte() const;
 

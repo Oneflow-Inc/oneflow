@@ -14,7 +14,7 @@ std::unique_ptr<const OpParallelSignature> MakeBroadcastBinaryOpParallelSignatur
   auto IsMatched =
       [op, model_input_bns](
           const std::function<const LogicalBlobParallelDesc&(const std::string&)>& ProducerLbpd4Ibn,
-          const std::function<int32_t(const std::string&)>& ModelSplitAxis4BnInOp,
+          const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
           const ParallelContext* parallel_ctx) {
         OpParallelMatchResult default_ret;
         if (parallel_ctx->policy() == kDataParallel) {
@@ -24,10 +24,9 @@ std::unique_ptr<const OpParallelSignature> MakeBroadcastBinaryOpParallelSignatur
               MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kDataParallel);
         }
         for (const auto& bn : op->input_bns()) {
-          const auto& producer_lbpd = ProducerLbpd4Ibn(bn);
+          const auto& lbpd_hint = LbpdHint4BnInOp(bn);
           bool is_model_input_bns = (model_input_bns.find(bn) != model_input_bns.end());
-          bool has_actual_model_input =
-              (producer_lbpd.has_clone_parallel() || ModelSplitAxis4BnInOp(bn) != -1);
+          bool has_actual_model_input = lbpd_hint.is_model_blob();
           if (is_model_input_bns ^ has_actual_model_input) {
             return MakeOpParallelMatchSignatureMismatch();
           }
@@ -36,8 +35,9 @@ std::unique_ptr<const OpParallelSignature> MakeBroadcastBinaryOpParallelSignatur
         return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kDataParallel);
       };
   auto GenDataSplitSignature =
-      [op, model_input_bns](const std::function<int32_t(const std::string&)>& ModelSplitAxis4BnInOp,
-                            HashMap<std::string, LogicalBlobParallelDesc>* signature) {
+      [op, model_input_bns](
+          const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
+          HashMap<std::string, LogicalBlobParallelDesc>* signature) {
         for (const auto& bn : op->input_bns()) {
           if (model_input_bns.find(bn) != model_input_bns.end()) {
             (*signature)[bn].mutable_clone_parallel();

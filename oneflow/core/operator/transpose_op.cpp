@@ -47,14 +47,11 @@ void TransposeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   }
 }
 
-void TransposeOp::InferOutputBlobModelSplitAxis(
-    std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
+void TransposeOp::InferOutputBlobLbpdHint(
+    std::function<LbpdHint*(const std::string&)> LbpdHint4BnInOp,
     std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
     const ParallelContext* parallel_context) const {
-  int32_t in_blob_model_split_axis = *ModelSplitAxis4BnInOp("in");
-  if (in_blob_model_split_axis == -1) {
-    *ModelSplitAxis4BnInOp("out") = -1;
-  } else {
+  auto GetOutputLogicalBlobSplitAxis = [&](int32_t in_blob_model_split_axis) {
     const PbRf<int32_t>& perm = op_conf().transpose_conf().perm();
     CHECK_GT(perm.size(), 0);
     int32_t model_split_axis = -1;
@@ -65,7 +62,19 @@ void TransposeOp::InferOutputBlobModelSplitAxis(
       }
     }
     CHECK_NE(model_split_axis, -1);
-    *ModelSplitAxis4BnInOp("out") = model_split_axis;
+    return model_split_axis;
+  };
+  const auto& in_lbpd_hint = *LbpdHint4BnInOp("in");
+  if (in_lbpd_hint.has_data_split()) {
+    int32_t axis = GetOutputLogicalBlobSplitAxis(in_lbpd_hint.data_split().axis());
+    CHECK_EQ(axis, 0);
+    LbpdHint4BnInOp("out")->mutable_data_split()->set_axis(0);
+  } else if (in_lbpd_hint.has_model_split()) {
+    int32_t axis = GetOutputLogicalBlobSplitAxis(in_lbpd_hint.model_split().axis());
+    LbpdHint4BnInOp("out")->mutable_model_split()->set_axis(axis);
+  } else {
+    CHECK(in_lbpd_hint.has_model_clone() || in_lbpd_hint.has_data_partial_sum());
+    *LbpdHint4BnInOp("out") = in_lbpd_hint;
   }
 }
 
