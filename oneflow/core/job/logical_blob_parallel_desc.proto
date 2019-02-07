@@ -15,7 +15,7 @@ message LogicalBlobParallelDesc {
   required int64 parallel_num = 1;
   oneof parallel_type {
     SplitParallel split_parallel = 2;
-    BroadcastParallel clone_parallel = 3;
+    BroadcastParallel broadcast_parallel = 3;
     PartialSumParallel partial_sum_parallel = 4;
   }
 }

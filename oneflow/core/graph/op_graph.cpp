@@ -139,7 +139,7 @@ void OpNode::ForEachParallelBlobDesc(const BlobDesc& blob_desc, const LogicalBlo
       Handler(sub_blob_desc);
     }
   } else {
-    CHECK(lbpd.has_clone_parallel() || lbpd.has_partial_sum_parallel());
+    CHECK(lbpd.has_broadcast_parallel() || lbpd.has_partial_sum_parallel());
     // broadcast BlobDesc
     FOR_RANGE(int64_t, axis_parallel_id, 0, lbpd.parallel_num()) { Handler(blob_desc); }
   }

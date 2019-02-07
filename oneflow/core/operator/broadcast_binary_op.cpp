@@ -37,7 +37,7 @@ std::unique_ptr<const OpParallelSignature> MakeBroadcastBinaryOpParallelSignatur
           HashMap<std::string, LogicalBlobParallelDesc>* signature) {
         for (const auto& bn : op->input_bns()) {
           if (model_input_bns.find(bn) != model_input_bns.end()) {
-            (*signature)[bn].mutable_clone_parallel();
+            (*signature)[bn].mutable_broadcast_parallel();
           } else {
             (*signature)[bn].mutable_split_parallel()->set_axis(0);
           }

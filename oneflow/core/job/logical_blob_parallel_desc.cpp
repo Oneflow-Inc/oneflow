@@ -18,10 +18,10 @@ LogicalBlobParallelDesc GetDualLbpd(const LogicalBlobParallelDesc& lbpd) {
   LogicalBlobParallelDesc ret(lbpd);
   if (lbpd.has_split_parallel()) {
     //  do nothing
-  } else if (lbpd.has_clone_parallel()) {
+  } else if (lbpd.has_broadcast_parallel()) {
     ret.mutable_partial_sum_parallel();
   } else if (lbpd.has_partial_sum_parallel()) {
-    ret.mutable_clone_parallel();
+    ret.mutable_broadcast_parallel();
   } else {
     UNIMPLEMENTED();
   }

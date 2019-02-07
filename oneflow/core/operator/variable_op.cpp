@@ -24,7 +24,7 @@ std::unique_ptr<const OpParallelSignature> MakeVariableOpDataSplitOpParallelSign
     CHECK(LbpdHint4BnInOp("tick").has_data_split());
     CHECK(LbpdHint4BnInOp("out").has_model_clone());
     (*signature)["tick"].mutable_split_parallel()->set_axis(0);
-    (*signature)["out"].mutable_clone_parallel();
+    (*signature)["out"].mutable_broadcast_parallel();
   };
   return std::make_unique<OpParallelSignature>(desc, IsMatched, GenSignature);
 }
