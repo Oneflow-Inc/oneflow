@@ -18,7 +18,7 @@ const SplitParallel& LbpdHint::model_split() const {
   CHECK(lbpd_hint_conf_.has_model_split());
   return lbpd_hint_conf_.model_split();
 }
-const CloneParallel& LbpdHint::model_clone() const {
+const BroadcastParallel& LbpdHint::model_clone() const {
   CHECK(lbpd_hint_conf_.has_model_clone());
   return lbpd_hint_conf_.model_clone();
 }

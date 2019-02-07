@@ -15,7 +15,7 @@ class LbpdHint final {
   int64_t parallel_num() const;
   int64_t num_axes() const;
   const SplitParallel& model_split() const;
-  const CloneParallel& model_clone() const;
+  const BroadcastParallel& model_clone() const;
   const SplitParallel& data_split() const;
   const PartialSumParallel& data_partial_sum() const;
   bool has_model_split() const { return lbpd_hint_conf_.has_model_split(); }
@@ -29,7 +29,7 @@ class LbpdHint final {
   void set_parallel_num(int64_t val) { parallel_num_ = val; }
   void set_num_axes(int64_t val) { num_axes_ = val; }
   SplitParallel* mutable_model_split() { return lbpd_hint_conf_.mutable_model_split(); }
-  CloneParallel* mutable_model_clone() { return lbpd_hint_conf_.mutable_model_clone(); }
+  BroadcastParallel* mutable_model_clone() { return lbpd_hint_conf_.mutable_model_clone(); }
   SplitParallel* mutable_data_split() { return lbpd_hint_conf_.mutable_data_split(); }
   PartialSumParallel* mutable_data_partial_sum() {
     return lbpd_hint_conf_.mutable_data_partial_sum();

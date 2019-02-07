@@ -6,7 +6,7 @@ import "oneflow/core/job/logical_blob_parallel_desc.proto";
 message LbpdHintConf {
   oneof parallel_type {
     SplitParallel model_split = 1;
-    CloneParallel model_clone = 2;
+    BroadcastParallel model_clone = 2;
     SplitParallel data_split = 3;
     PartialSumParallel data_partial_sum = 4;
   }

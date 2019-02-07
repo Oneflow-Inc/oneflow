@@ -1,16 +1,13 @@
 syntax = "proto2";
 package oneflow;
 
-// for input and output blob
 message SplitParallel {
   required int64 axis = 1;
 }
 
-// for input blob
-message CloneParallel {
+message BroadcastParallel {
 }
 
-// for output blob
 message PartialSumParallel {
 }
 
@@ -18,7 +15,7 @@ message LogicalBlobParallelDesc {
   required int64 parallel_num = 1;
   oneof parallel_type {
     SplitParallel split_parallel = 2;
-    CloneParallel clone_parallel = 3;
+    BroadcastParallel clone_parallel = 3;
     PartialSumParallel partial_sum_parallel = 4;
   }
 }
