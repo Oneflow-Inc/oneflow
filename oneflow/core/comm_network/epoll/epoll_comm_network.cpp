@@ -76,6 +76,8 @@ void EpollCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& actor_ms
 
 void EpollCommNet::RequestRead(int64_t dst_machine_id, void* src_token, void* dst_token,
                                void* read_id) const {
+  CHECK(src_token);
+  CHECK(dst_token);
   int32_t total_byte_size = static_cast<const SocketMemDesc*>(src_token)->byte_size;
   CHECK_GT(total_byte_size, 0);
 
