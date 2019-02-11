@@ -1,13 +1,9 @@
 syntax = "proto2";
 package oneflow;
 
-import "oneflow/core/job/logical_blob_parallel_desc.proto";
+import "oneflow/core/job/sbp_parallel.proto";
 
 message LbpdHintConf {
-  oneof parallel_type {
-    SplitParallel model_split = 1;
-    BroadcastParallel model_clone = 2;
-    SplitParallel data_split = 3;
-    PartialSumParallel data_partial_sum = 4;
-  }
+  required bool is_model_blob = 1;
+  required SbpParallel sbp_parallel = 2;
 }

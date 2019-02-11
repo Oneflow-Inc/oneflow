@@ -1,0 +1,20 @@
+syntax = "proto2";
+package oneflow;
+
+message SplitParallel {
+  required int64 axis = 1;
+}
+
+message BroadcastParallel {
+}
+
+message PartialSumParallel {
+}
+
+message SbpParallel {
+  oneof parallel_type {
+    SplitParallel split = 1;
+    BroadcastParallel broadcast = 2;
+    PartialSumParallel partial_sum = 3;
+  }
+}

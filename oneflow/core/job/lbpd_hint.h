@@ -18,22 +18,20 @@ class LbpdHint final {
   const BroadcastParallel& model_clone() const;
   const SplitParallel& data_split() const;
   const PartialSumParallel& data_partial_sum() const;
-  bool has_model_split() const { return lbpd_hint_conf_.has_model_split(); }
-  bool has_model_clone() const { return lbpd_hint_conf_.has_model_clone(); }
-  bool has_data_split() const { return lbpd_hint_conf_.has_data_split(); }
-  bool has_data_partial_sum() const { return lbpd_hint_conf_.has_data_partial_sum(); }
-  bool is_model_blob() const { return has_model_split() || has_model_clone(); }
-  bool is_data_blob() const { return has_data_split() || has_data_partial_sum(); }
+  bool has_model_split() const;
+  bool has_model_clone() const;
+  bool has_data_split() const;
+  bool has_data_partial_sum() const;
+  bool is_model_blob() const { return lbpd_hint_conf_.is_model_blob(); }
+  bool is_data_blob() const { return !is_model_blob(); }
 
   // Setters
   void set_parallel_num(int64_t val) { parallel_num_ = val; }
   void set_num_axes(int64_t val) { num_axes_ = val; }
-  SplitParallel* mutable_model_split() { return lbpd_hint_conf_.mutable_model_split(); }
-  BroadcastParallel* mutable_model_clone() { return lbpd_hint_conf_.mutable_model_clone(); }
-  SplitParallel* mutable_data_split() { return lbpd_hint_conf_.mutable_data_split(); }
-  PartialSumParallel* mutable_data_partial_sum() {
-    return lbpd_hint_conf_.mutable_data_partial_sum();
-  }
+  SplitParallel* mutable_model_split();
+  BroadcastParallel* mutable_model_clone();
+  SplitParallel* mutable_data_split();
+  PartialSumParallel* mutable_data_partial_sum();
 
   bool operator==(const LbpdHint& rhs) const;
   bool operator!=(const LbpdHint& rhs) const { return !(*this == rhs); }

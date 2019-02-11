@@ -1,15 +1,7 @@
 syntax = "proto2";
 package oneflow;
 
-message SplitParallel {
-  required int64 axis = 1;
-}
-
-message BroadcastParallel {
-}
-
-message PartialSumParallel {
-}
+import "oneflow/core/job/sbp_parallel.proto";
 
 message LogicalBlobParallelDesc {
   required int64 parallel_num = 1;
