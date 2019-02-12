@@ -182,7 +182,6 @@ void Operator::InferInputOutputLogicalBlobParallelDescIf(
     for (const auto& pair : bn2lbpd) {
       auto* lbpd = LogicalBlobParallelDesc4BnInOp(pair.first);
       *lbpd = pair.second;
-      lbpd->set_parallel_num(parallel_ctx->parallel_num());
     }
   } else if (match_success_cnt == 0) {
     std::stringstream ss;

@@ -4,7 +4,6 @@ package oneflow;
 import "oneflow/core/job/sbp_parallel.proto";
 
 message LogicalBlobParallelDesc {
-  required int64 parallel_num = 1;
   oneof parallel_type {
     SplitParallel split_parallel = 2;
     BroadcastParallel broadcast_parallel = 3;
