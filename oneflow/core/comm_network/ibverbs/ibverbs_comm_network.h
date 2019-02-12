@@ -23,7 +23,7 @@ class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
 
   void RegisterMemoryDone() override;
 
-  void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) const override;
+  void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) override;
 
  private:
   IBVerbsMemDesc* NewMemDesc(void* ptr, size_t byte_size) const override {

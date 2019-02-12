@@ -67,15 +67,15 @@ void EpollCommNet::RegisterMemoryDone() {
   for (void* dst_token : mem_descs()) { dst_token2part_done_cnt_[dst_token] = 0; }
 }
 
-void EpollCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& actor_msg) const {
+void EpollCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& actor_msg) {
   SocketMsg msg;
   msg.msg_type = SocketMsgType::kActor;
   msg.actor_msg = actor_msg;
-  GetSocketHelper(dst_machine_id, epoll_conf_.link_num() - 1)->AsyncWrite(msg);
+  GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
 }
 
 void EpollCommNet::RequestRead(int64_t dst_machine_id, void* src_token, void* dst_token,
-                               void* read_id) const {
+                               void* read_id) {
   CHECK(src_token);
   CHECK(dst_token);
   int32_t total_byte_size = static_cast<const SocketMemDesc*>(src_token)->byte_size;
@@ -86,19 +86,20 @@ void EpollCommNet::RequestRead(int64_t dst_machine_id, void* src_token, void* ds
   int32_t part_num = (total_byte_size + part_length - 1) / part_length;
   CHECK_LE(part_num, epoll_conf_.link_num());
 
-  for (int32_t link_i = 0; link_i < part_num; ++link_i) {
+  FOR_RANGE(int32_t, i, 0, part_num) {
     int32_t byte_size = (total_byte_size > part_length) ? (part_length) : (total_byte_size);
     CHECK_GT(byte_size, 0);
     total_byte_size -= byte_size;
+    CHECK_GE(total_byte_size, 0);
     SocketMsg msg;
     msg.msg_type = SocketMsgType::kRequestRead;
     msg.request_read_msg.src_token = src_token;
     msg.request_read_msg.dst_token = dst_token;
-    msg.request_read_msg.offset = link_i * part_length;
+    msg.request_read_msg.offset = i * part_length;
     msg.request_read_msg.byte_size = byte_size;
     msg.request_read_msg.read_id = read_id;
     msg.request_read_msg.part_num = part_num;
-    GetSocketHelper(dst_machine_id, link_i)->AsyncWrite(msg);
+    GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
   }
   CHECK_EQ(total_byte_size, 0);
 }
@@ -111,7 +112,7 @@ SocketMemDesc* EpollCommNet::NewMemDesc(void* ptr, size_t byte_size) const {
 }
 
 EpollCommNet::EpollCommNet(const Plan& plan)
-    : CommNetIf(plan), epoll_conf_(Global<JobDesc>::Get()->epoll_conf()) {
+    : CommNetIf(plan), epoll_conf_(Global<JobDesc>::Get()->epoll_conf()), poller_idx_(0) {
   int64_t poller_num = Global<JobDesc>::Get()->CommNetWorkerNum();
   int64_t peer_mchn_num = peer_machine_id().size();
   if (poller_num < epoll_conf_.link_num()) {
@@ -120,6 +121,10 @@ EpollCommNet::EpollCommNet(const Plan& plan)
     poller_num = peer_mchn_num * epoll_conf_.link_num();
   }
   pollers_.resize(poller_num, nullptr);
+  for (auto peer_mchn_id : peer_machine_id()) {
+    machine_id2sockfds_[peer_mchn_id].resize(epoll_conf_.link_num(), -1);
+    machine_id2link_index_[peer_mchn_id] = 0;
+  }
   for (size_t i = 0; i < pollers_.size(); ++i) { pollers_.at(i) = new IOEventPoller; }
   InitSockets();
   for (IOEventPoller* poller : pollers_) { poller->Start(); }
@@ -129,14 +134,7 @@ void EpollCommNet::InitSockets() {
   int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
   auto this_machine = Global<JobDesc>::Get()->resource().machine(this_machine_id);
   int64_t total_machine_num = Global<JobDesc>::Get()->TotalMachineNum();
-  machine_link_id2sockfds_.assign(total_machine_num * epoll_conf_.link_num(), -1);
   sockfd2helper_.clear();
-  size_t poller_idx = 0;
-  auto NewSocketHelper = [&](int32_t sockfd) {
-    IOEventPoller* poller = pollers_.at(poller_idx);
-    poller_idx = (poller_idx + 1) % pollers_.size();
-    return new SocketHelper(sockfd, poller);
-  };
 
   // listen
   int32_t listen_sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -166,46 +164,53 @@ void EpollCommNet::InitSockets() {
     uint16_t peer_port = PullPort(peer_mchn_id);
     auto peer_machine = Global<JobDesc>::Get()->resource().machine(peer_mchn_id);
     sockaddr_in peer_sockaddr = GetSockAddr(peer_machine.addr(), peer_port);
-    for (int32_t link_i = 0; link_i < epoll_conf_.link_num(); ++link_i) {
+    FOR_RANGE(int32_t, i, 0, epoll_conf_.link_num()) {
       int32_t sockfd = socket(AF_INET, SOCK_STREAM, 0);
       PCHECK(sockfd != -1);
       PCHECK(connect(sockfd, reinterpret_cast<sockaddr*>(&peer_sockaddr), sizeof(peer_sockaddr))
              == 0);
-      CHECK(sockfd2helper_.emplace(sockfd, NewSocketHelper(sockfd)).second);
-      machine_link_id2sockfds_.at(peer_mchn_id * epoll_conf_.link_num() + link_i) = sockfd;
+      SetSocketHelper(peer_mchn_id, sockfd);
     }
   }
 
   // accept
-  HashMap<int32_t, int32_t> mchn_id2link_index;
-  for (int64_t peer_mchn_id : peer_machine_id()) { mchn_id2link_index.emplace(peer_mchn_id, 0); }
   FOR_RANGE(int32_t, idx, 0, src_machine_count * epoll_conf_.link_num()) {
     sockaddr_in peer_sockaddr;
     socklen_t len = sizeof(peer_sockaddr);
     int32_t sockfd = accept(listen_sockfd, reinterpret_cast<sockaddr*>(&peer_sockaddr), &len);
     PCHECK(sockfd != -1);
-    CHECK(sockfd2helper_.emplace(sockfd, NewSocketHelper(sockfd)).second);
     int64_t peer_mchn_id = GetMachineId(peer_sockaddr);
-    machine_link_id2sockfds_.at(peer_mchn_id * epoll_conf_.link_num()
-                                + mchn_id2link_index.at(peer_mchn_id)) = sockfd;
-    mchn_id2link_index.at(peer_mchn_id)++;
+    SetSocketHelper(peer_mchn_id, sockfd);
   }
   PCHECK(close(listen_sockfd) == 0);
   ClearPort(this_machine_id);
 
   // useful log
   for (int64_t peer_mchn_id : peer_machine_id()) {
-    FOR_RANGE(int32_t, link_i, 0, epoll_conf_.link_num()) {
-      int32_t sockfd = machine_link_id2sockfds_.at(peer_mchn_id * epoll_conf_.link_num() + link_i);
+    auto& sockfds = machine_id2sockfds_.at(peer_mchn_id);
+    FOR_RANGE(int32_t, link_index, 0, epoll_conf_.link_num()) {
+      int32_t sockfd = sockfds.at(link_index);
       CHECK_GT(sockfd, 0);
-      LOG(INFO) << "machine: " << peer_mchn_id << ", link index: " << link_i
+      LOG(INFO) << "machine: " << peer_mchn_id << ", link index: " << link_index
                 << ", sockfd: " << sockfd;
     }
   }
 }
 
-SocketHelper* EpollCommNet::GetSocketHelper(int64_t machine_id, int32_t link_index) const {
-  int32_t sockfd = machine_link_id2sockfds_.at(machine_id * epoll_conf_.link_num() + link_index);
+void EpollCommNet::SetSocketHelper(int64_t machine_id, int32_t sockfd) {
+  poller_idx_ = (poller_idx_) % pollers_.size();
+  CHECK(
+      sockfd2helper_.emplace(sockfd, new SocketHelper(sockfd, pollers_.at(poller_idx_++))).second);
+  int32_t link_index =
+      machine_id2link_index_.at(machine_id).fetch_add(1, std::memory_order_relaxed);
+  machine_id2sockfds_.at(machine_id).at(link_index) = sockfd;
+  if (link_index == epoll_conf_.link_num() - 1) { machine_id2link_index_.at(machine_id) = 0; }
+}
+
+SocketHelper* EpollCommNet::GetSocketHelper(int64_t machine_id) {
+  int32_t link_index = machine_id2link_index_.at(machine_id).fetch_add(1, std::memory_order_relaxed)
+                       % epoll_conf_.link_num();
+  int32_t sockfd = machine_id2sockfds_.at(machine_id).at(link_index);
   return sockfd2helper_.at(sockfd);
 }
 
@@ -217,7 +222,7 @@ void EpollCommNet::DoRead(void* read_id, int64_t src_machine_id, void* src_token
   msg.request_write_msg.dst_token = dst_token;
   msg.request_write_msg.read_id = read_id;
   dst_token2part_done_cnt_.at(dst_token) = 0;
-  GetSocketHelper(src_machine_id, epoll_conf_.link_num() - 1)->AsyncWrite(msg);
+  GetSocketHelper(src_machine_id)->AsyncWrite(msg);
 }
 
 void EpollCommNet::PartReadDone(void* read_id, void* dst_token, int32_t part_num) {
