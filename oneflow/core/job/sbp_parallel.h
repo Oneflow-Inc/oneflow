@@ -1,7 +1,7 @@
-#ifndef ONEFLOW_CORE_JOB_LOGICAL_BLOB_PARALLEL_DESC_H_
-#define ONEFLOW_CORE_JOB_LOGICAL_BLOB_PARALLEL_DESC_H_
+#ifndef ONEFLOW_CORE_JOB_SBP_PARALLEL_H_
+#define ONEFLOW_CORE_JOB_SBP_PARALLEL_H_
 
-#include "oneflow/core/job/logical_blob_parallel_desc.pb.h"
+#include "oneflow/core/job/sbp_parallel.pb.h"
 
 namespace oneflow {
 
@@ -11,4 +11,4 @@ SbpParallel GetDualSbpParallel(const SbpParallel&);
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_LOGICAL_BLOB_PARALLEL_DESC_H_
+#endif  // ONEFLOW_CORE_JOB_SBP_PARALLEL_H_

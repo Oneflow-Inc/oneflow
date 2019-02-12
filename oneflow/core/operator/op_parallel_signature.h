@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_OPERATOR_OP_PARALLEL_SIGNATURE_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/job/logical_blob_parallel_desc.h"
+#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/operator/op_parallel_match_result.pb.h"
 #include "oneflow/core/job/lbpd_hint.h"
 

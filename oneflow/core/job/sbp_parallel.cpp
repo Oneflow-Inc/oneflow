@@ -1,4 +1,4 @@
-#include "oneflow/core/job/logical_blob_parallel_desc.h"
+#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
