@@ -33,8 +33,9 @@ void ForwardPartDataContent(const T* in, const Range range, const int32_t instan
 
 template<typename T>
 struct TopKKernelUtil<DeviceType::kCPU, T> {
-  static void Forward(const T* in, const int32_t instance_num, const int32_t instance_size,
-                      const int32_t k, const bool sorted, int32_t* fw_buf, int32_t* out) {
+  static void Forward(DeviceCtx* ctx, const T* in, const int32_t instance_num,
+                      const int32_t instance_size, const int32_t k, const bool sorted,
+                      int32_t* fw_buf, int32_t* out) {
     const int32_t part_num =
         std::min(instance_num, Global<ThreadMgr>::Get()->compute_thread_pool()->thread_num());
     const BalancedSplitter bs(instance_num, part_num);
@@ -64,8 +65,8 @@ void TopKKernel<device_type, T>::ForwardDataContent(
   int32_t* fw_buf = fw_buf_blob->mut_dptr<int32_t>();
   int32_t* out = out_blob->mut_dptr<int32_t>();
   const auto& conf = this->op_conf().top_k_conf();
-  TopKKernelUtil<device_type, T>::Forward(in, instance_num, instance_size, conf.k(), conf.sorted(),
-                                          fw_buf, out);
+  TopKKernelUtil<device_type, T>::Forward(ctx.device_ctx, in, instance_num, instance_size, conf.k(),
+                                          conf.sorted(), fw_buf, out);
 }
 
 #define INSTANTIATE_TOP_K_KERNEL_UTIL(type_cpp, type_proto) \
