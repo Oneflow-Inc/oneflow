@@ -11,29 +11,31 @@ bool IsScalarBlob(const BlobDesc* blob) {
 std::unique_ptr<const OpParallelSignature> MakeBroadcastBinaryOpParallelSignature(
     const Operator* op, const HashSet<std::string>& model_input_bns) {
   std::string data_split_desc = op->op_name() + ": (C, ..., S(0), ...) -> (S(0), ...)";
-  auto IsMatched = [op, model_input_bns](
-                       const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
-                       const ParallelContext* parallel_ctx) {
-    OpParallelMatchResult default_ret;
-    if (parallel_ctx->policy() == kDataParallel) {
-      default_ret = MakeOpParallelMatchSuccess();
-    } else {
-      default_ret = MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kDataParallel);
-    }
-    for (const auto& bn : op->input_bns()) {
-      const auto& lbpd_hint = LbpdHint4BnInOp(bn);
-      bool is_model_input_bns = (model_input_bns.find(bn) != model_input_bns.end());
-      bool has_actual_model_input = lbpd_hint.is_model_blob();
-      if (is_model_input_bns ^ has_actual_model_input) {
-        return MakeOpParallelMatchSignatureMismatch();
-      }
-    }
-    if (parallel_ctx->policy() == kDataParallel) { return MakeOpParallelMatchSuccess(); }
-    return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kDataParallel);
-  };
+  auto IsMatched =
+      [op, model_input_bns](
+          const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+          const ParallelContext* parallel_ctx) {
+        OpParallelMatchResult default_ret;
+        if (parallel_ctx->policy() == kDataParallel) {
+          default_ret = MakeOpParallelMatchSuccess();
+        } else {
+          default_ret =
+              MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kDataParallel);
+        }
+        for (const auto& bn : op->input_bns()) {
+          const auto& sbp_infer_hint = SbpInferHint4BnInOp(bn);
+          bool is_model_input_bns = (model_input_bns.find(bn) != model_input_bns.end());
+          bool has_actual_model_input = sbp_infer_hint.is_model_blob();
+          if (is_model_input_bns ^ has_actual_model_input) {
+            return MakeOpParallelMatchSignatureMismatch();
+          }
+        }
+        if (parallel_ctx->policy() == kDataParallel) { return MakeOpParallelMatchSuccess(); }
+        return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kDataParallel);
+      };
   auto GenDataSplitSignature =
       [op, model_input_bns](
-          const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
+          const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
           HashMap<std::string, SbpParallel>* signature) {
         for (const auto& bn : op->input_bns()) {
           if (model_input_bns.find(bn) != model_input_bns.end()) {

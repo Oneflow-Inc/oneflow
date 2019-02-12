@@ -128,14 +128,15 @@ void Operator::InferOutputBlobTimeShape(
   }
 }
 
-void Operator::InferBlobLbpdHintIf(std::function<LbpdHint*(const std::string&)> LbpdHint4BnInOp,
-                                   std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
-                                   const ParallelContext* parallel_context) const {
+void Operator::InferBlobSbpInferHintIf(
+    std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
+    std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
+    const ParallelContext* parallel_context) const {
   if (!output_bns().empty()) {
-    InferOutputBlobLbpdHint(LbpdHint4BnInOp, ShapeNumAxes4BnInOp, parallel_context);
+    InferOutputBlobSbpInferHint(SbpInferHint4BnInOp, ShapeNumAxes4BnInOp, parallel_context);
     for (const std::string& bn : output_bns()) {
-      LbpdHint4BnInOp(bn)->set_parallel_num(parallel_context->parallel_num());
-      LbpdHint4BnInOp(bn)->set_num_axes(ShapeNumAxes4BnInOp(bn));
+      SbpInferHint4BnInOp(bn)->set_parallel_num(parallel_context->parallel_num());
+      SbpInferHint4BnInOp(bn)->set_num_axes(ShapeNumAxes4BnInOp(bn));
     }
   }
 }
@@ -158,13 +159,13 @@ void Operator::GetOpParallelSignatures(
 
 void Operator::InferInputOutputSbpParallelIf(
     std::function<SbpParallel*(const std::string&)> SbpParallel4BnInOp,
-    std::function<const LbpdHint&(const std::string&)> LbpdHint4BnInOp,
+    std::function<const SbpInferHint&(const std::string&)> SbpInferHint4BnInOp,
     const ParallelContext* parallel_ctx) const {
   std::vector<std::unique_ptr<const OpParallelSignature>> op_parallel_signatures;
   GetOpParallelSignatures(&op_parallel_signatures);
   std::vector<OpParallelMatchResult> match_results;
   for (const auto& signature : op_parallel_signatures) {
-    match_results.push_back(signature->GetMatchResult(LbpdHint4BnInOp, parallel_ctx));
+    match_results.push_back(signature->GetMatchResult(SbpInferHint4BnInOp, parallel_ctx));
   }
   int32_t match_success_cnt = 0;
   for (const auto& result : match_results) {
@@ -177,11 +178,11 @@ void Operator::InferInputOutputSbpParallelIf(
         match_signature = op_parallel_signatures.at(i).get();
       }
     }
-    HashMap<std::string, SbpParallel> bn2lbpd;
-    match_signature->GenerateSignature(LbpdHint4BnInOp, &bn2lbpd);
-    for (const auto& pair : bn2lbpd) {
-      auto* lbpd = SbpParallel4BnInOp(pair.first);
-      *lbpd = pair.second;
+    HashMap<std::string, SbpParallel> bn2sbp;
+    match_signature->GenerateSignature(SbpInferHint4BnInOp, &bn2sbp);
+    for (const auto& pair : bn2sbp) {
+      auto* sbp_parallel = SbpParallel4BnInOp(pair.first);
+      *sbp_parallel = pair.second;
     }
   } else if (match_success_cnt == 0) {
     std::stringstream ss;
@@ -221,21 +222,21 @@ bool Operator::IsSoleInputBlobAllowedModelSplit() const {
   return input_bns().size() == 1 && IsInputBlobAllowedModelSplit(SoleIbn());
 }
 
-void Operator::NaiveInferOutputBlobLbpdHint(
-    std::function<LbpdHint*(const std::string&)> LbpdHint4BnInOp,
+void Operator::NaiveInferOutputBlobSbpInferHint(
+    std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
     std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
     const ParallelContext* parallel_context) const {
   for (const std::string& bn : output_bns()) {
     if (IsSoleInputBlobAllowedModelSplit()) {
-      *LbpdHint4BnInOp(bn) = *LbpdHint4BnInOp(SoleIbn());
+      *SbpInferHint4BnInOp(bn) = *SbpInferHint4BnInOp(SoleIbn());
     } else {
       if (parallel_context->policy() == kDataParallel) {
-        LbpdHint4BnInOp(bn)->mutable_data_split()->set_axis(0);
+        SbpInferHint4BnInOp(bn)->mutable_data_split()->set_axis(0);
       } else if (parallel_context->policy() == kModelParallel) {
         if (!model_bns().empty() || !const_model_bns().empty()) {
           int32_t model_split_axis = ModelSplitAxis();
           CHECK_NE(model_split_axis, -1);
-          LbpdHint4BnInOp(bn)->mutable_model_split()->set_axis(model_split_axis);
+          SbpInferHint4BnInOp(bn)->mutable_model_split()->set_axis(model_split_axis);
         } else {
           UNIMPLEMENTED();
         }

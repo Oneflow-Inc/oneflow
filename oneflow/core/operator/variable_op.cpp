@@ -9,23 +9,24 @@ namespace {
 std::unique_ptr<const OpParallelSignature> MakeVariableOpDataSplitOpParallelSignature(
     const Operator* op) {
   std::string desc = op->op_name() + ": S(0) -> C";
-  auto IsMatched = [op](const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
-                        const ParallelContext* parallel_ctx) {
-    OpParallelMatchResult default_ret;
-    if (parallel_ctx->policy() == kDataParallel) {
-      return MakeOpParallelMatchSuccess();
-    } else {
-      return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kDataParallel);
-    }
-  };
-  auto GenSignature = [op](
-                          const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
-                          HashMap<std::string, SbpParallel>* signature) {
-    CHECK(LbpdHint4BnInOp("tick").has_data_split());
-    CHECK(LbpdHint4BnInOp("out").has_model_clone());
-    (*signature)["tick"].mutable_split_parallel()->set_axis(0);
-    (*signature)["out"].mutable_broadcast_parallel();
-  };
+  auto IsMatched =
+      [op](const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+           const ParallelContext* parallel_ctx) {
+        OpParallelMatchResult default_ret;
+        if (parallel_ctx->policy() == kDataParallel) {
+          return MakeOpParallelMatchSuccess();
+        } else {
+          return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kDataParallel);
+        }
+      };
+  auto GenSignature =
+      [op](const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+           HashMap<std::string, SbpParallel>* signature) {
+        CHECK(SbpInferHint4BnInOp("tick").has_data_split());
+        CHECK(SbpInferHint4BnInOp("out").has_model_clone());
+        (*signature)["tick"].mutable_split_parallel()->set_axis(0);
+        (*signature)["out"].mutable_broadcast_parallel();
+      };
   return std::make_unique<OpParallelSignature>(desc, IsMatched, GenSignature);
 }
 
@@ -33,24 +34,25 @@ std::unique_ptr<const OpParallelSignature> MakeVariableOpDataSplitOpParallelSign
 std::unique_ptr<const OpParallelSignature> MakeVariableOpModelSplitOpParallelSignature(
     const Operator* op) {
   std::string desc = op->op_name() + ": S(0) -> S";
-  auto IsMatched = [op](const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
-                        const ParallelContext* parallel_ctx) {
-    OpParallelMatchResult default_ret;
-    if (parallel_ctx->policy() == kModelParallel) {
-      return MakeOpParallelMatchSuccess();
-    } else {
-      return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kModelParallel);
-    }
-  };
-  auto GenSignature = [op](
-                          const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
-                          HashMap<std::string, SbpParallel>* signature) {
-    CHECK(LbpdHint4BnInOp("tick").has_data_split());
-    CHECK(LbpdHint4BnInOp("out").has_model_split());
-    int32_t axis = LbpdHint4BnInOp("out").model_split().axis();
-    (*signature)["tick"].mutable_split_parallel()->set_axis(0);
-    (*signature)["out"].mutable_split_parallel()->set_axis(axis);
-  };
+  auto IsMatched =
+      [op](const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+           const ParallelContext* parallel_ctx) {
+        OpParallelMatchResult default_ret;
+        if (parallel_ctx->policy() == kModelParallel) {
+          return MakeOpParallelMatchSuccess();
+        } else {
+          return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kModelParallel);
+        }
+      };
+  auto GenSignature =
+      [op](const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+           HashMap<std::string, SbpParallel>* signature) {
+        CHECK(SbpInferHint4BnInOp("tick").has_data_split());
+        CHECK(SbpInferHint4BnInOp("out").has_model_split());
+        int32_t axis = SbpInferHint4BnInOp("out").model_split().axis();
+        (*signature)["tick"].mutable_split_parallel()->set_axis(0);
+        (*signature)["out"].mutable_split_parallel()->set_axis(axis);
+      };
   return std::make_unique<OpParallelSignature>(desc, IsMatched, GenSignature);
 }
 
@@ -94,14 +96,14 @@ void VariableOp::GetOpParallelSignatures(
   op_parallel_signatures->emplace_back(MakeVariableOpModelSplitOpParallelSignature(this));
 }
 
-void VariableOp::InferOutputBlobLbpdHint(
-    std::function<LbpdHint*(const std::string&)> LbpdHint4BnInOp,
+void VariableOp::InferOutputBlobSbpInferHint(
+    std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
     std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
     const ParallelContext* parallel_context) const {
   if (parallel_context->policy() == kDataParallel) {
-    LbpdHint4BnInOp("out")->mutable_model_clone();
+    SbpInferHint4BnInOp("out")->mutable_model_clone();
   } else if (parallel_context->policy() == kModelParallel) {
-    LbpdHint4BnInOp("out")->mutable_model_split()->set_axis(ModelSplitAxis());
+    SbpInferHint4BnInOp("out")->mutable_model_split()->set_axis(ModelSplitAxis());
   } else {
     UNIMPLEMENTED();
   }

@@ -19,23 +19,23 @@ std::unique_ptr<const OpParallelSignature> MakeGatherOpParallelSignature_DC_MS_2
     const GatherOp* op) {
   std::string desc = op->op_name() + ": (C, S) -> P";
   auto GetMatchResult =
-      [op](const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
+      [op](const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
            const ParallelContext* parallel_ctx) {
-        const LbpdHint& in_lbpd_hint = LbpdHint4BnInOp("in");
-        if (!in_lbpd_hint.has_model_split()) { return MakeOpParallelMatchSignatureMismatch(); }
-        if (in_lbpd_hint.model_split().axis() != 0) {
+        const SbpInferHint& in_sbp_infer_hint = SbpInferHint4BnInOp("in");
+        if (!in_sbp_infer_hint.has_model_split()) { return MakeOpParallelMatchSignatureMismatch(); }
+        if (in_sbp_infer_hint.model_split().axis() != 0) {
           return MakeOpParallelMatchSignatureMismatch();
         }
         if (parallel_ctx->policy() == kModelParallel) { return MakeOpParallelMatchSuccess(); }
         return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kModelParallel);
       };
-  auto GenSignature = [op](
-                          const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
-                          HashMap<std::string, SbpParallel>* signature) {
-    (*signature)["indices"].mutable_broadcast_parallel();
-    (*signature)["in"].mutable_split_parallel()->set_axis(0);
-    (*signature)["out"].mutable_partial_sum_parallel();
-  };
+  auto GenSignature =
+      [op](const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+           HashMap<std::string, SbpParallel>* signature) {
+        (*signature)["indices"].mutable_broadcast_parallel();
+        (*signature)["in"].mutable_split_parallel()->set_axis(0);
+        (*signature)["out"].mutable_partial_sum_parallel();
+      };
   return std::make_unique<OpParallelSignature>(desc, GetMatchResult, GenSignature);
 }
 
@@ -91,27 +91,27 @@ void GatherOp::GetOpParallelSignatures(
   op_parallel_signatures->emplace_back(MakeGatherOpParallelSignature_DC_MS_2_P(this));
 }
 
-void GatherOp::InferOutputBlobLbpdHint(
-    std::function<LbpdHint*(const std::string&)> LbpdHint4BnInOp,
+void GatherOp::InferOutputBlobSbpInferHint(
+    std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
     std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
     const ParallelContext* parallel_context) const {
-  CHECK(LbpdHint4BnInOp("indices")->is_data_blob());
-  const LbpdHint& in_lbpd_hint = *LbpdHint4BnInOp("in");
+  CHECK(SbpInferHint4BnInOp("indices")->is_data_blob());
+  const SbpInferHint& in_sbp_infer_hint = *SbpInferHint4BnInOp("in");
   const int64_t in_num_axes = ShapeNumAxes4BnInOp("in");
   const int64_t gather_axis = GetGatherAxis(op_conf().gather_conf(), in_num_axes);
-  if (in_lbpd_hint.has_model_split()) {
-    if (in_lbpd_hint.model_split().axis() == 0) {
-      LbpdHint4BnInOp("out")->mutable_data_partial_sum();
+  if (in_sbp_infer_hint.has_model_split()) {
+    if (in_sbp_infer_hint.model_split().axis() == 0) {
+      SbpInferHint4BnInOp("out")->mutable_data_partial_sum();
     } else {
-      CHECK_GT(in_lbpd_hint.model_split().axis(), gather_axis);
-      CHECK_LT(in_lbpd_hint.model_split().axis(), in_num_axes);
-      int32_t axis = in_lbpd_hint.model_split().axis() + ShapeNumAxes4BnInOp("indices") - 1;
-      LbpdHint4BnInOp("out")->mutable_data_split()->set_axis(axis);
+      CHECK_GT(in_sbp_infer_hint.model_split().axis(), gather_axis);
+      CHECK_LT(in_sbp_infer_hint.model_split().axis(), in_num_axes);
+      int32_t axis = in_sbp_infer_hint.model_split().axis() + ShapeNumAxes4BnInOp("indices") - 1;
+      SbpInferHint4BnInOp("out")->mutable_data_split()->set_axis(axis);
     }
   } else {
-    CHECK(in_lbpd_hint.has_model_clone() || in_lbpd_hint.has_data_split()
-          || in_lbpd_hint.has_data_partial_sum());
-    LbpdHint4BnInOp("out")->mutable_data_split()->set_axis(0);
+    CHECK(in_sbp_infer_hint.has_model_clone() || in_sbp_infer_hint.has_data_split()
+          || in_sbp_infer_hint.has_data_partial_sum());
+    SbpInferHint4BnInOp("out")->mutable_data_split()->set_axis(0);
   }
 }
 

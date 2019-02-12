@@ -24,9 +24,10 @@ class GatherOp final : public Operator {
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override;
   void GetOpParallelSignatures(
       std::vector<std::unique_ptr<const OpParallelSignature>>*) const override;
-  void InferOutputBlobLbpdHint(std::function<LbpdHint*(const std::string&)> LbpdHint4BnInOp,
-                               std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
-                               const ParallelContext* parallel_context) const override;
+  void InferOutputBlobSbpInferHint(
+      std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
+      std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
+      const ParallelContext* parallel_context) const override;
 };
 
 }  // namespace oneflow

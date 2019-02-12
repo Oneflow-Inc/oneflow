@@ -4,65 +4,65 @@
 
 namespace oneflow {
 
-int64_t LbpdHint::parallel_num() const {
+int64_t SbpInferHint::parallel_num() const {
   CHECK_GT(parallel_num_, 0);
   return parallel_num_;
 }
 
-int64_t LbpdHint::num_axes() const {
+int64_t SbpInferHint::num_axes() const {
   CHECK_GT(num_axes_, 0);
   return num_axes_;
 }
 
-const SplitParallel& LbpdHint::model_split() const {
+const SplitParallel& SbpInferHint::model_split() const {
   CHECK(is_model_blob());
-  return lbpd_hint_conf_.sbp_parallel().split_parallel();
+  return sbp_infer_hint_conf_.sbp_parallel().split_parallel();
 }
-const BroadcastParallel& LbpdHint::model_clone() const {
+const BroadcastParallel& SbpInferHint::model_clone() const {
   CHECK(is_model_blob());
-  return lbpd_hint_conf_.sbp_parallel().broadcast_parallel();
+  return sbp_infer_hint_conf_.sbp_parallel().broadcast_parallel();
 }
-const SplitParallel& LbpdHint::data_split() const {
+const SplitParallel& SbpInferHint::data_split() const {
   CHECK(is_data_blob());
-  return lbpd_hint_conf_.sbp_parallel().split_parallel();
+  return sbp_infer_hint_conf_.sbp_parallel().split_parallel();
 }
-const PartialSumParallel& LbpdHint::data_partial_sum() const {
+const PartialSumParallel& SbpInferHint::data_partial_sum() const {
   CHECK(is_data_blob());
-  return lbpd_hint_conf_.sbp_parallel().partial_sum_parallel();
+  return sbp_infer_hint_conf_.sbp_parallel().partial_sum_parallel();
 }
-bool LbpdHint::has_model_split() const {
-  return is_model_blob() && lbpd_hint_conf_.sbp_parallel().has_split_parallel();
+bool SbpInferHint::has_model_split() const {
+  return is_model_blob() && sbp_infer_hint_conf_.sbp_parallel().has_split_parallel();
 }
-bool LbpdHint::has_model_clone() const {
-  return is_model_blob() && lbpd_hint_conf_.sbp_parallel().has_broadcast_parallel();
+bool SbpInferHint::has_model_clone() const {
+  return is_model_blob() && sbp_infer_hint_conf_.sbp_parallel().has_broadcast_parallel();
 }
-bool LbpdHint::has_data_split() const {
-  return is_data_blob() && lbpd_hint_conf_.sbp_parallel().has_split_parallel();
+bool SbpInferHint::has_data_split() const {
+  return is_data_blob() && sbp_infer_hint_conf_.sbp_parallel().has_split_parallel();
 }
-bool LbpdHint::has_data_partial_sum() const {
-  return is_data_blob() && lbpd_hint_conf_.sbp_parallel().has_partial_sum_parallel();
+bool SbpInferHint::has_data_partial_sum() const {
+  return is_data_blob() && sbp_infer_hint_conf_.sbp_parallel().has_partial_sum_parallel();
 }
 
-SplitParallel* LbpdHint::mutable_model_split() {
-  lbpd_hint_conf_.set_is_model_blob(true);
-  return lbpd_hint_conf_.mutable_sbp_parallel()->mutable_split_parallel();
+SplitParallel* SbpInferHint::mutable_model_split() {
+  sbp_infer_hint_conf_.set_is_model_blob(true);
+  return sbp_infer_hint_conf_.mutable_sbp_parallel()->mutable_split_parallel();
 }
-BroadcastParallel* LbpdHint::mutable_model_clone() {
-  lbpd_hint_conf_.set_is_model_blob(true);
-  return lbpd_hint_conf_.mutable_sbp_parallel()->mutable_broadcast_parallel();
+BroadcastParallel* SbpInferHint::mutable_model_clone() {
+  sbp_infer_hint_conf_.set_is_model_blob(true);
+  return sbp_infer_hint_conf_.mutable_sbp_parallel()->mutable_broadcast_parallel();
 }
-SplitParallel* LbpdHint::mutable_data_split() {
-  lbpd_hint_conf_.set_is_model_blob(false);
-  return lbpd_hint_conf_.mutable_sbp_parallel()->mutable_split_parallel();
+SplitParallel* SbpInferHint::mutable_data_split() {
+  sbp_infer_hint_conf_.set_is_model_blob(false);
+  return sbp_infer_hint_conf_.mutable_sbp_parallel()->mutable_split_parallel();
 }
-PartialSumParallel* LbpdHint::mutable_data_partial_sum() {
-  lbpd_hint_conf_.set_is_model_blob(false);
-  return lbpd_hint_conf_.mutable_sbp_parallel()->mutable_partial_sum_parallel();
+PartialSumParallel* SbpInferHint::mutable_data_partial_sum() {
+  sbp_infer_hint_conf_.set_is_model_blob(false);
+  return sbp_infer_hint_conf_.mutable_sbp_parallel()->mutable_partial_sum_parallel();
 }
 
-bool LbpdHint::operator==(const LbpdHint& rhs) const {
+bool SbpInferHint::operator==(const SbpInferHint& rhs) const {
   return parallel_num_ == rhs.parallel_num_ && num_axes_ == rhs.num_axes_
-         && PbMd().Equivalent(lbpd_hint_conf_, rhs.lbpd_hint_conf_);
+         && PbMd().Equivalent(sbp_infer_hint_conf_, rhs.sbp_infer_hint_conf_);
 }
 
 }  // namespace oneflow

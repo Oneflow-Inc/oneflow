@@ -18,10 +18,11 @@ class CastOp final : public Operator {
 
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return true; }
-  void InferOutputBlobLbpdHint(std::function<LbpdHint*(const std::string&)> LbpdHint4BnInOp,
-                               std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
-                               const ParallelContext* parallel_context) const override {
-    NaiveInferOutputBlobLbpdHint(LbpdHint4BnInOp, ShapeNumAxes4BnInOp, parallel_context);
+  void InferOutputBlobSbpInferHint(
+      std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
+      std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
+      const ParallelContext* parallel_context) const override {
+    NaiveInferOutputBlobSbpInferHint(SbpInferHint4BnInOp, ShapeNumAxes4BnInOp, parallel_context);
   }
 };
 

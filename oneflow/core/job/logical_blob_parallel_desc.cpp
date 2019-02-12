@@ -12,13 +12,13 @@ bool operator!=(const SbpParallel& lhs, const SbpParallel& rhs) { return !(lhs =
 //  S -> S
 //  P -> C
 //  C -> P
-SbpParallel GetDualLbpd(const SbpParallel& lbpd) {
-  SbpParallel ret(lbpd);
-  if (lbpd.has_split_parallel()) {
+SbpParallel GetDualSbpParallel(const SbpParallel& sbp_parallel) {
+  SbpParallel ret(sbp_parallel);
+  if (sbp_parallel.has_split_parallel()) {
     //  do nothing
-  } else if (lbpd.has_broadcast_parallel()) {
+  } else if (sbp_parallel.has_broadcast_parallel()) {
     ret.mutable_partial_sum_parallel();
-  } else if (lbpd.has_partial_sum_parallel()) {
+  } else if (sbp_parallel.has_partial_sum_parallel()) {
     ret.mutable_broadcast_parallel();
   } else {
     UNIMPLEMENTED();

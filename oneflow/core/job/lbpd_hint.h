@@ -5,11 +5,11 @@
 
 namespace oneflow {
 
-class LbpdHint final {
+class SbpInferHint final {
  public:
-  LbpdHint() : parallel_num_(-1), num_axes_(-1) {}
-  LbpdHint(const LbpdHint&) = default;
-  ~LbpdHint() = default;
+  SbpInferHint() : parallel_num_(-1), num_axes_(-1) {}
+  SbpInferHint(const SbpInferHint&) = default;
+  ~SbpInferHint() = default;
 
   // Getters
   int64_t parallel_num() const;
@@ -22,9 +22,9 @@ class LbpdHint final {
   bool has_model_clone() const;
   bool has_data_split() const;
   bool has_data_partial_sum() const;
-  bool is_model_blob() const { return lbpd_hint_conf_.is_model_blob(); }
+  bool is_model_blob() const { return sbp_infer_hint_conf_.is_model_blob(); }
   bool is_data_blob() const { return !is_model_blob(); }
-  const SbpParallel& sbp_parallel() const { return lbpd_hint_conf_.sbp_parallel(); }
+  const SbpParallel& sbp_parallel() const { return sbp_infer_hint_conf_.sbp_parallel(); }
 
   // Setters
   void set_parallel_num(int64_t val) { parallel_num_ = val; }
@@ -34,13 +34,13 @@ class LbpdHint final {
   SplitParallel* mutable_data_split();
   PartialSumParallel* mutable_data_partial_sum();
 
-  bool operator==(const LbpdHint& rhs) const;
-  bool operator!=(const LbpdHint& rhs) const { return !(*this == rhs); }
+  bool operator==(const SbpInferHint& rhs) const;
+  bool operator!=(const SbpInferHint& rhs) const { return !(*this == rhs); }
 
  private:
   int64_t parallel_num_;
   int64_t num_axes_;
-  LbpdHintConf lbpd_hint_conf_;
+  SbpInferHintConf sbp_infer_hint_conf_;
 };
 
 }  // namespace oneflow
