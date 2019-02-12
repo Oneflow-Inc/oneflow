@@ -428,7 +428,7 @@ BalancedSplitter OpGraph::GetBalancedSplitter(const std::string& op_name,
   const auto& sbp_infer_hint = op_node->SbpInferHint4Lbi(GetLogicalBlobIdKey(op_name, lbi));
   if (sbp_infer_hint.is_data_split()) {
     CHECK_EQ(split_num % op_node->parallel_desc().parallel_num(), 0);
-  } else if (sbp_infer_hint.has_model_split()) {
+  } else if (sbp_infer_hint.is_model_split()) {
     CHECK_GE(split_num, op_node->parallel_desc().parallel_num());
   } else {
     UNIMPLEMENTED();
@@ -439,7 +439,7 @@ BalancedSplitter OpGraph::GetBalancedSplitter(const std::string& op_name,
 int32_t OpGraph::GetModelSplitAxis(const std::string& op_name, const LogicalBlobId& lbi) const {
   OpNode* op_node = op_name2op_node_.at(GetOpNameKey(op_name, lbi));
   const SbpInferHint& sbp_infer_hint = op_node->SbpInferHint4Lbi(GetLogicalBlobIdKey(op_name, lbi));
-  CHECK(sbp_infer_hint.has_model_split());
+  CHECK(sbp_infer_hint.is_model_split());
   return sbp_infer_hint.model_split().axis();
 }
 

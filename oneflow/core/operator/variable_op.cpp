@@ -23,7 +23,7 @@ std::unique_ptr<const OpParallelSignature> MakeVariableOpDataSplitOpParallelSign
       [op](const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
            HashMap<std::string, SbpParallel>* signature) {
         CHECK(SbpInferHint4BnInOp("tick").is_data_split());
-        CHECK(SbpInferHint4BnInOp("out").has_model_clone());
+        CHECK(SbpInferHint4BnInOp("out").is_model_broadcast());
         (*signature)["tick"].mutable_split_parallel()->set_axis(0);
         (*signature)["out"].mutable_broadcast_parallel();
       };
@@ -48,7 +48,7 @@ std::unique_ptr<const OpParallelSignature> MakeVariableOpModelSplitOpParallelSig
       [op](const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
            HashMap<std::string, SbpParallel>* signature) {
         CHECK(SbpInferHint4BnInOp("tick").is_data_split());
-        CHECK(SbpInferHint4BnInOp("out").has_model_split());
+        CHECK(SbpInferHint4BnInOp("out").is_model_split());
         int32_t axis = SbpInferHint4BnInOp("out").model_split().axis();
         (*signature)["tick"].mutable_split_parallel()->set_axis(0);
         (*signature)["out"].mutable_split_parallel()->set_axis(axis);

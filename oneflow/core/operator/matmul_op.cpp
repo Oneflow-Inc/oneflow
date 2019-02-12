@@ -11,7 +11,7 @@ std::unique_ptr<const OpParallelSignature> MakeMatmulOpParallelSignature_DMS_MS_
       [op](const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
            const ParallelContext* parallel_ctx) {
         const auto& b_sbp_infer_hint = SbpInferHint4BnInOp("b");
-        if (!b_sbp_infer_hint.has_model_split()) { return MakeOpParallelMatchSignatureMismatch(); }
+        if (!b_sbp_infer_hint.is_model_split()) { return MakeOpParallelMatchSignatureMismatch(); }
         int32_t b_expected_split_axis = (op->op_conf().matmul_conf().transpose_b() ? 1 : 0);
         if (b_sbp_infer_hint.model_split().axis() != b_expected_split_axis) {
           return MakeOpParallelMatchSignatureMismatch();
@@ -107,7 +107,7 @@ void MatmulOp::InferOutputBlobSbpInferHint(
     const ParallelContext* parallel_context) const {
   CHECK_EQ(SbpInferHint4BnInOp("a")->num_axes(), SbpInferHint4BnInOp("b")->num_axes());
   const auto& b_sbp_infer_hint = *SbpInferHint4BnInOp("b");
-  if (SbpInferHint4BnInOp("b")->num_axes() == 2 && b_sbp_infer_hint.has_model_split()) {
+  if (SbpInferHint4BnInOp("b")->num_axes() == 2 && b_sbp_infer_hint.is_model_split()) {
     int32_t b_model_split_axis = b_sbp_infer_hint.model_split().axis();
     if (op_conf().matmul_conf().transpose_b()) {
       if (b_model_split_axis == 0) {

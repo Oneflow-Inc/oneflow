@@ -15,13 +15,11 @@ class SbpInferHint final {
   int64_t parallel_num() const;
   int64_t num_axes() const;
   const SplitParallel& model_split() const;
-  const BroadcastParallel& model_clone() const;
   const SplitParallel& data_split() const;
-  const PartialSumParallel& data_partial_sum() const;
-  bool has_model_split() const;
-  bool has_model_clone() const;
+  bool is_model_split() const;
+  bool is_model_broadcast() const;
   bool is_data_split() const;
-  bool has_data_partial_sum() const;
+  bool is_data_partial_sum() const;
   bool is_model_blob() const { return sbp_infer_hint_conf_.is_model_blob(); }
   bool is_data_blob() const { return !is_model_blob(); }
   const SbpParallel& sbp_parallel() const { return sbp_infer_hint_conf_.sbp_parallel(); }

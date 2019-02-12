@@ -71,7 +71,7 @@ std::unique_ptr<const OpParallelSignature> MakeCloneOpParallelSignature(const Op
         if (!op->IsSoleInputBlobAllowedModelSplit()) {
           return MakeOpParallelMatchSignatureMismatch();
         }
-        if (!SbpInferHint4BnInOp(op->SoleIbn()).has_model_clone()) {
+        if (!SbpInferHint4BnInOp(op->SoleIbn()).is_model_broadcast()) {
           return MakeOpParallelMatchSignatureMismatch();
         }
         int64_t expected_parallel_num = SbpInferHint4BnInOp(op->SoleIbn()).parallel_num();
@@ -108,7 +108,7 @@ std::unique_ptr<const OpParallelSignature> MakeModelSplitOpParallelSignature(con
         [op](const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
              const ParallelContext* parallel_ctx) {
           const SbpInferHint& sbp_infer_hint = SbpInferHint4BnInOp(op->SoleIbn());
-          if (!(sbp_infer_hint.has_model_split()
+          if (!(sbp_infer_hint.is_model_split()
                 || (sbp_infer_hint.is_data_split() && sbp_infer_hint.data_split().axis() > 0))) {
             return MakeOpParallelMatchSignatureMismatch();
           }
@@ -135,7 +135,7 @@ std::unique_ptr<const OpParallelSignature> MakeModelSplitOpParallelSignature(con
         [op](const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
              HashMap<std::string, SbpParallel>* signature) {
           auto GetSplitParallel = [&](const std::string& bn) -> const SplitParallel& {
-            if (SbpInferHint4BnInOp(op->SoleIbn()).has_model_split()) {
+            if (SbpInferHint4BnInOp(op->SoleIbn()).is_model_split()) {
               return SbpInferHint4BnInOp(bn).model_split();
             } else if (SbpInferHint4BnInOp(op->SoleIbn()).is_data_split()) {
               return SbpInferHint4BnInOp(bn).data_split();
@@ -188,7 +188,7 @@ std::unique_ptr<const OpParallelSignature> MakeOpParallelSignature_DS_MC_2_DS(co
           const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
           const ParallelContext* parallel_ctx) {
         const auto& sbp_infer_hint = SbpInferHint4BnInOp(model_input_bn);
-        if (!sbp_infer_hint.has_model_clone()) { return MakeOpParallelMatchSignatureMismatch(); }
+        if (!sbp_infer_hint.is_model_broadcast()) { return MakeOpParallelMatchSignatureMismatch(); }
         bool parallel_policy_matched = (parallel_ctx->policy() == kDataParallel);
         bool parallel_num_matched = (parallel_ctx->parallel_num() == sbp_infer_hint.parallel_num());
         if (!parallel_policy_matched || !parallel_num_matched) {
@@ -242,7 +242,7 @@ std::unique_ptr<const OpParallelSignature> MakeOpParallelSignature_DC_MS_2_MS(
           const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
           const ParallelContext* parallel_ctx) {
         const SbpInferHint& model_sbp_infer_hint = SbpInferHint4BnInOp(model_input_bn);
-        if (!(model_sbp_infer_hint.has_model_split()
+        if (!(model_sbp_infer_hint.is_model_split()
               && IsValidSplit(model_sbp_infer_hint.model_split().axis()))) {
           return MakeOpParallelMatchSignatureMismatch();
         }

@@ -22,7 +22,7 @@ std::unique_ptr<const OpParallelSignature> MakeGatherOpParallelSignature_DC_MS_2
       [op](const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
            const ParallelContext* parallel_ctx) {
         const SbpInferHint& in_sbp_infer_hint = SbpInferHint4BnInOp("in");
-        if (!in_sbp_infer_hint.has_model_split()) { return MakeOpParallelMatchSignatureMismatch(); }
+        if (!in_sbp_infer_hint.is_model_split()) { return MakeOpParallelMatchSignatureMismatch(); }
         if (in_sbp_infer_hint.model_split().axis() != 0) {
           return MakeOpParallelMatchSignatureMismatch();
         }
@@ -99,7 +99,7 @@ void GatherOp::InferOutputBlobSbpInferHint(
   const SbpInferHint& in_sbp_infer_hint = *SbpInferHint4BnInOp("in");
   const int64_t in_num_axes = in_sbp_infer_hint.num_axes();
   const int64_t gather_axis = GetGatherAxis(op_conf().gather_conf(), in_num_axes);
-  if (in_sbp_infer_hint.has_model_split()) {
+  if (in_sbp_infer_hint.is_model_split()) {
     if (in_sbp_infer_hint.model_split().axis() == 0) {
       SbpInferHint4BnInOp("out")->mutable_data_partial_sum();
     } else {
@@ -109,8 +109,8 @@ void GatherOp::InferOutputBlobSbpInferHint(
       SbpInferHint4BnInOp("out")->mutable_data_split()->set_axis(axis);
     }
   } else {
-    CHECK(in_sbp_infer_hint.has_model_clone() || in_sbp_infer_hint.is_data_split()
-          || in_sbp_infer_hint.has_data_partial_sum());
+    CHECK(in_sbp_infer_hint.is_model_broadcast() || in_sbp_infer_hint.is_data_split()
+          || in_sbp_infer_hint.is_data_partial_sum());
     SbpInferHint4BnInOp("out")->mutable_data_split()->set_axis(0);
   }
 }

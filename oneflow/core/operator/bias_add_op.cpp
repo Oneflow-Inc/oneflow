@@ -44,9 +44,9 @@ void BiasAddOp::InferOutputBlobSbpInferHint(
     std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
     const ParallelContext* parallel_context) const {
   const SbpInferHint& b_sbp_infer_hint = *SbpInferHint4BnInOp("b");
-  if (b_sbp_infer_hint.has_model_clone()) {
+  if (b_sbp_infer_hint.is_model_broadcast()) {
     SbpInferHint4BnInOp("out")->mutable_data_split()->set_axis(0);
-  } else if (b_sbp_infer_hint.has_model_split()) {
+  } else if (b_sbp_infer_hint.is_model_split()) {
     SbpInferHint4BnInOp("out")->mutable_data_split()->set_axis(1);
   } else {
     UNIMPLEMENTED();

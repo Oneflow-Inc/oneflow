@@ -18,28 +18,20 @@ const SplitParallel& SbpInferHint::model_split() const {
   CHECK(is_model_blob());
   return sbp_infer_hint_conf_.sbp_parallel().split_parallel();
 }
-const BroadcastParallel& SbpInferHint::model_clone() const {
-  CHECK(is_model_blob());
-  return sbp_infer_hint_conf_.sbp_parallel().broadcast_parallel();
-}
 const SplitParallel& SbpInferHint::data_split() const {
   CHECK(is_data_blob());
   return sbp_infer_hint_conf_.sbp_parallel().split_parallel();
 }
-const PartialSumParallel& SbpInferHint::data_partial_sum() const {
-  CHECK(is_data_blob());
-  return sbp_infer_hint_conf_.sbp_parallel().partial_sum_parallel();
-}
-bool SbpInferHint::has_model_split() const {
+bool SbpInferHint::is_model_split() const {
   return is_model_blob() && sbp_infer_hint_conf_.sbp_parallel().has_split_parallel();
 }
-bool SbpInferHint::has_model_clone() const {
+bool SbpInferHint::is_model_broadcast() const {
   return is_model_blob() && sbp_infer_hint_conf_.sbp_parallel().has_broadcast_parallel();
 }
 bool SbpInferHint::is_data_split() const {
   return is_data_blob() && sbp_infer_hint_conf_.sbp_parallel().has_split_parallel();
 }
-bool SbpInferHint::has_data_partial_sum() const {
+bool SbpInferHint::is_data_partial_sum() const {
   return is_data_blob() && sbp_infer_hint_conf_.sbp_parallel().has_partial_sum_parallel();
 }
 
