@@ -14,7 +14,7 @@ __global__ void ForwardGpu(const T* in, const int32_t instance_num, const int32_
   CUDA_1D_KERNEL_LOOP(i, instance_num) {
     T max_val = in[i * instance_size];
     int32_t max_idx = 0;
-    FOR_RANGE(int32_t, j, 1, instance_size) {
+    FOR_RANGE(int32_t, j, 0, instance_size) {
       T cur_val = in[i * instance_size + j];
       if (cur_val > max_val) {
         max_val = cur_val;
