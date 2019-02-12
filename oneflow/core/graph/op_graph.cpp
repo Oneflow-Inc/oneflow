@@ -440,7 +440,7 @@ int32_t OpGraph::GetModelSplitAxis(const std::string& op_name, const LogicalBlob
   OpNode* op_node = op_name2op_node_.at(GetOpNameKey(op_name, lbi));
   const SbpInferHint& sbp_infer_hint = op_node->SbpInferHint4Lbi(GetLogicalBlobIdKey(op_name, lbi));
   CHECK(sbp_infer_hint.is_model_split());
-  return sbp_infer_hint.model_split().axis();
+  return sbp_infer_hint.split_axis();
 }
 
 int64_t OpGraph::GetSplitNum(const std::string& op_name, const LogicalBlobId& lbi) const {

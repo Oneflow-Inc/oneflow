@@ -13,7 +13,7 @@ std::unique_ptr<const OpParallelSignature> MakeMatmulOpParallelSignature_DMS_MS_
         const auto& b_sbp_infer_hint = SbpInferHint4BnInOp("b");
         if (!b_sbp_infer_hint.is_model_split()) { return MakeOpParallelMatchSignatureMismatch(); }
         int32_t b_expected_split_axis = (op->op_conf().matmul_conf().transpose_b() ? 1 : 0);
-        if (b_sbp_infer_hint.model_split().axis() != b_expected_split_axis) {
+        if (b_sbp_infer_hint.split_axis() != b_expected_split_axis) {
           return MakeOpParallelMatchSignatureMismatch();
         }
         if (parallel_ctx->policy() == kModelParallel) { return MakeOpParallelMatchSuccess(); }
@@ -25,7 +25,7 @@ std::unique_ptr<const OpParallelSignature> MakeMatmulOpParallelSignature_DMS_MS_
         int32_t a_split_axis = (op->op_conf().matmul_conf().transpose_a() ? 0 : 1);
         const auto& b_sbp_infer_hint = SbpInferHint4BnInOp("b");
         (*signature)["a"].mutable_split_parallel()->set_axis(a_split_axis);
-        (*signature)["b"].mutable_split_parallel()->set_axis(b_sbp_infer_hint.model_split().axis());
+        (*signature)["b"].mutable_split_parallel()->set_axis(b_sbp_infer_hint.split_axis());
         (*signature)["out"].mutable_partial_sum_parallel();
       };
   return std::make_unique<OpParallelSignature>(desc, GetMatchResult, GenSignature);
@@ -108,7 +108,7 @@ void MatmulOp::InferOutputBlobSbpInferHint(
   CHECK_EQ(SbpInferHint4BnInOp("a")->num_axes(), SbpInferHint4BnInOp("b")->num_axes());
   const auto& b_sbp_infer_hint = *SbpInferHint4BnInOp("b");
   if (SbpInferHint4BnInOp("b")->num_axes() == 2 && b_sbp_infer_hint.is_model_split()) {
-    int32_t b_model_split_axis = b_sbp_infer_hint.model_split().axis();
+    int32_t b_model_split_axis = b_sbp_infer_hint.split_axis();
     if (op_conf().matmul_conf().transpose_b()) {
       if (b_model_split_axis == 0) {
         SbpInferHint4BnInOp("out")->mutable_data_split()->set_axis(1);

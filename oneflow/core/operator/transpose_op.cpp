@@ -65,11 +65,11 @@ void TransposeOp::InferOutputBlobSbpInferHint(
   };
   const auto& in_sbp_infer_hint = *SbpInferHint4BnInOp("in");
   if (in_sbp_infer_hint.is_data_split()) {
-    int32_t axis = GetOutputLogicalBlobSplitAxis(in_sbp_infer_hint.data_split().axis());
+    int32_t axis = GetOutputLogicalBlobSplitAxis(in_sbp_infer_hint.split_axis());
     CHECK_EQ(axis, 0);
     SbpInferHint4BnInOp("out")->mutable_data_split()->set_axis(0);
   } else if (in_sbp_infer_hint.is_model_split()) {
-    int32_t axis = GetOutputLogicalBlobSplitAxis(in_sbp_infer_hint.model_split().axis());
+    int32_t axis = GetOutputLogicalBlobSplitAxis(in_sbp_infer_hint.split_axis());
     SbpInferHint4BnInOp("out")->mutable_model_split()->set_axis(axis);
   } else {
     CHECK(in_sbp_infer_hint.is_model_broadcast() || in_sbp_infer_hint.is_data_partial_sum());

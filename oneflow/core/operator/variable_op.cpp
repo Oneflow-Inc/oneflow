@@ -49,7 +49,7 @@ std::unique_ptr<const OpParallelSignature> MakeVariableOpModelSplitOpParallelSig
            HashMap<std::string, SbpParallel>* signature) {
         CHECK(SbpInferHint4BnInOp("tick").is_data_split());
         CHECK(SbpInferHint4BnInOp("out").is_model_split());
-        int32_t axis = SbpInferHint4BnInOp("out").model_split().axis();
+        int32_t axis = SbpInferHint4BnInOp("out").split_axis();
         (*signature)["tick"].mutable_split_parallel()->set_axis(0);
         (*signature)["out"].mutable_split_parallel()->set_axis(axis);
       };

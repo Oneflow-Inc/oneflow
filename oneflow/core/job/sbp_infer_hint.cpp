@@ -14,14 +14,11 @@ int64_t SbpInferHint::num_axes() const {
   return num_axes_;
 }
 
-const SplitParallel& SbpInferHint::model_split() const {
-  CHECK(is_model_blob());
-  return sbp_infer_hint_conf_.sbp_parallel().split_parallel();
+int64_t SbpInferHint::split_axis() const {
+  CHECK_GT(split_axis_, 0);
+  return split_axis_;
 }
-const SplitParallel& SbpInferHint::data_split() const {
-  CHECK(is_data_blob());
-  return sbp_infer_hint_conf_.sbp_parallel().split_parallel();
-}
+
 bool SbpInferHint::is_model_split() const {
   return is_model_blob() && sbp_infer_hint_conf_.sbp_parallel().has_split_parallel();
 }
