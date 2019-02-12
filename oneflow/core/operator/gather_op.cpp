@@ -31,7 +31,7 @@ std::unique_ptr<const OpParallelSignature> MakeGatherOpParallelSignature_DC_MS_2
       };
   auto GenSignature = [op](
                           const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
-                          HashMap<std::string, LogicalBlobParallelDesc>* signature) {
+                          HashMap<std::string, SbpParallel>* signature) {
     (*signature)["indices"].mutable_broadcast_parallel();
     (*signature)["in"].mutable_split_parallel()->set_axis(0);
     (*signature)["out"].mutable_partial_sum_parallel();

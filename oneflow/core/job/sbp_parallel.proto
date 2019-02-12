@@ -13,8 +13,8 @@ message PartialSumParallel {
 
 message SbpParallel {
   oneof parallel_type {
-    SplitParallel split = 1;
-    BroadcastParallel broadcast = 2;
-    PartialSumParallel partial_sum = 3;
+    SplitParallel split_parallel = 1;
+    BroadcastParallel broadcast_parallel = 2;
+    PartialSumParallel partial_sum_parallel = 3;
   }
 }

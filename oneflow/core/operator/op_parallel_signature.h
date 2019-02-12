@@ -14,7 +14,7 @@ class OpParallelSignature final {
   using FnGetMathResult =
       std::function<const OpParallelMatchResult(const FnLbpdHint4BnInOp&, const ParallelContext*)>;
   using FnSignatureGeneratorFunc =
-      std::function<void(const FnLbpdHint4BnInOp&, HashMap<std::string, LogicalBlobParallelDesc>*)>;
+      std::function<void(const FnLbpdHint4BnInOp&, HashMap<std::string, SbpParallel>*)>;
   OpParallelSignature(const std::string& description, const FnGetMathResult& get_match_result,
                       const FnSignatureGeneratorFunc& signature_generator)
       : description_(description),
@@ -29,7 +29,7 @@ class OpParallelSignature final {
     return get_match_result_(LbpdHint4BnInOp, parallel_ctx);
   }
   void GenerateSignature(const FnLbpdHint4BnInOp& LbpdHint4BnInOp,
-                         HashMap<std::string, LogicalBlobParallelDesc>* bn2lbpd) const {
+                         HashMap<std::string, SbpParallel>* bn2lbpd) const {
     signature_generator_(LbpdHint4BnInOp, bn2lbpd);
   }
 

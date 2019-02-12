@@ -156,8 +156,8 @@ void Operator::GetOpParallelSignatures(
   }
 }
 
-void Operator::InferInputOutputLogicalBlobParallelDescIf(
-    std::function<LogicalBlobParallelDesc*(const std::string&)> LogicalBlobParallelDesc4BnInOp,
+void Operator::InferInputOutputSbpParallelIf(
+    std::function<SbpParallel*(const std::string&)> SbpParallel4BnInOp,
     std::function<const LbpdHint&(const std::string&)> LbpdHint4BnInOp,
     const ParallelContext* parallel_ctx) const {
   std::vector<std::unique_ptr<const OpParallelSignature>> op_parallel_signatures;
@@ -177,10 +177,10 @@ void Operator::InferInputOutputLogicalBlobParallelDescIf(
         match_signature = op_parallel_signatures.at(i).get();
       }
     }
-    HashMap<std::string, LogicalBlobParallelDesc> bn2lbpd;
+    HashMap<std::string, SbpParallel> bn2lbpd;
     match_signature->GenerateSignature(LbpdHint4BnInOp, &bn2lbpd);
     for (const auto& pair : bn2lbpd) {
-      auto* lbpd = LogicalBlobParallelDesc4BnInOp(pair.first);
+      auto* lbpd = SbpParallel4BnInOp(pair.first);
       *lbpd = pair.second;
     }
   } else if (match_success_cnt == 0) {

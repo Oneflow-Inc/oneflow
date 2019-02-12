@@ -20,7 +20,7 @@ std::unique_ptr<const OpParallelSignature> MakeVariableOpDataSplitOpParallelSign
   };
   auto GenSignature = [op](
                           const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
-                          HashMap<std::string, LogicalBlobParallelDesc>* signature) {
+                          HashMap<std::string, SbpParallel>* signature) {
     CHECK(LbpdHint4BnInOp("tick").has_data_split());
     CHECK(LbpdHint4BnInOp("out").has_model_clone());
     (*signature)["tick"].mutable_split_parallel()->set_axis(0);
@@ -44,7 +44,7 @@ std::unique_ptr<const OpParallelSignature> MakeVariableOpModelSplitOpParallelSig
   };
   auto GenSignature = [op](
                           const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
-                          HashMap<std::string, LogicalBlobParallelDesc>* signature) {
+                          HashMap<std::string, SbpParallel>* signature) {
     CHECK(LbpdHint4BnInOp("tick").has_data_split());
     CHECK(LbpdHint4BnInOp("out").has_model_split());
     int32_t axis = LbpdHint4BnInOp("out").model_split().axis();

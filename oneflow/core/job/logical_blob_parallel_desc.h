@@ -5,9 +5,9 @@
 
 namespace oneflow {
 
-bool operator==(const LogicalBlobParallelDesc& lhs, const LogicalBlobParallelDesc& rhs);
-bool operator!=(const LogicalBlobParallelDesc& lhs, const LogicalBlobParallelDesc& rhs);
-LogicalBlobParallelDesc GetDualLbpd(const LogicalBlobParallelDesc&);
+bool operator==(const SbpParallel& lhs, const SbpParallel& rhs);
+bool operator!=(const SbpParallel& lhs, const SbpParallel& rhs);
+SbpParallel GetDualLbpd(const SbpParallel&);
 
 }  // namespace oneflow
 

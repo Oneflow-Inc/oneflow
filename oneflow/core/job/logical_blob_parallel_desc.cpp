@@ -3,19 +3,17 @@
 
 namespace oneflow {
 
-bool operator==(const LogicalBlobParallelDesc& lhs, const LogicalBlobParallelDesc& rhs) {
+bool operator==(const SbpParallel& lhs, const SbpParallel& rhs) {
   return PbMd().Equivalent(lhs, rhs);
 }
 
-bool operator!=(const LogicalBlobParallelDesc& lhs, const LogicalBlobParallelDesc& rhs) {
-  return !(lhs == rhs);
-}
+bool operator!=(const SbpParallel& lhs, const SbpParallel& rhs) { return !(lhs == rhs); }
 
 //  S -> S
 //  P -> C
 //  C -> P
-LogicalBlobParallelDesc GetDualLbpd(const LogicalBlobParallelDesc& lbpd) {
-  LogicalBlobParallelDesc ret(lbpd);
+SbpParallel GetDualLbpd(const SbpParallel& lbpd) {
+  SbpParallel ret(lbpd);
   if (lbpd.has_split_parallel()) {
     //  do nothing
   } else if (lbpd.has_broadcast_parallel()) {

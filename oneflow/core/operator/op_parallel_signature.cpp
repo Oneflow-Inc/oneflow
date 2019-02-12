@@ -51,7 +51,7 @@ std::unique_ptr<const OpParallelSignature> MakeDataSplitOpParallelSignature(cons
   };
   auto GenDataSplitSignature =
       [op](const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
-           HashMap<std::string, LogicalBlobParallelDesc>* signature) {
+           HashMap<std::string, SbpParallel>* signature) {
         for (const auto& bn : op->input_bns()) {
           (*signature)[bn].mutable_split_parallel()->set_axis(0);
         }
@@ -93,7 +93,7 @@ std::unique_ptr<const OpParallelSignature> MakeCloneOpParallelSignature(const Op
         }
       };
   auto GenCloneSignature = [op](const std::function<const LbpdHint&(const std::string&)>&,
-                                HashMap<std::string, LogicalBlobParallelDesc>* signature) {
+                                HashMap<std::string, SbpParallel>* signature) {
     for (const auto& bn : op->input_bns()) { (*signature)[bn].mutable_broadcast_parallel(); }
     for (const auto& bn : op->output_bns()) { (*signature)[bn].mutable_broadcast_parallel(); }
   };
@@ -132,7 +132,7 @@ std::unique_ptr<const OpParallelSignature> MakeModelSplitOpParallelSignature(con
         };
     auto GenModelSplitSignature =
         [op](const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
-             HashMap<std::string, LogicalBlobParallelDesc>* signature) {
+             HashMap<std::string, SbpParallel>* signature) {
           auto GetSplitParallel = [&](const std::string& bn) -> const SplitParallel& {
             if (LbpdHint4BnInOp(op->SoleIbn()).has_model_split()) {
               return LbpdHint4BnInOp(bn).model_split();
@@ -158,7 +158,7 @@ std::unique_ptr<const OpParallelSignature> MakeModelSplitOpParallelSignature(con
     };
     auto GenModelSplitSignature =
         [op](const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
-             HashMap<std::string, LogicalBlobParallelDesc>* signature) {
+             HashMap<std::string, SbpParallel>* signature) {
           for (const auto& bn : op->input_bns()) { (*signature)[bn].mutable_broadcast_parallel(); }
           for (const auto& bn : op->output_bns()) {
             *((*signature)[bn].mutable_split_parallel()) = LbpdHint4BnInOp(bn).data_split();
@@ -208,7 +208,7 @@ std::unique_ptr<const OpParallelSignature> MakeOpParallelSignature_DS_MC_2_DS(co
       };
   auto GenSignature = [op, data_input_bns, model_input_bn](
                           const std::function<const LbpdHint&(const std::string&)>&,
-                          HashMap<std::string, LogicalBlobParallelDesc>* signature) {
+                          HashMap<std::string, SbpParallel>* signature) {
     for (const auto& bn : data_input_bns) {
       (*signature)[bn].mutable_split_parallel()->set_axis(0);
     }
@@ -250,7 +250,7 @@ std::unique_ptr<const OpParallelSignature> MakeOpParallelSignature_DC_MS_2_MS(
       };
   auto GenSignature = [op, data_input_bns, model_input_bn](
                           const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
-                          HashMap<std::string, LogicalBlobParallelDesc>* signature) {
+                          HashMap<std::string, SbpParallel>* signature) {
     for (const auto& bn : data_input_bns) { (*signature)[bn].mutable_broadcast_parallel(); }
     *((*signature)[model_input_bn].mutable_split_parallel()) =
         LbpdHint4BnInOp(model_input_bn).model_split();

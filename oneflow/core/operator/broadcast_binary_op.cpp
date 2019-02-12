@@ -34,7 +34,7 @@ std::unique_ptr<const OpParallelSignature> MakeBroadcastBinaryOpParallelSignatur
   auto GenDataSplitSignature =
       [op, model_input_bns](
           const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
-          HashMap<std::string, LogicalBlobParallelDesc>* signature) {
+          HashMap<std::string, SbpParallel>* signature) {
         for (const auto& bn : op->input_bns()) {
           if (model_input_bns.find(bn) != model_input_bns.end()) {
             (*signature)[bn].mutable_broadcast_parallel();

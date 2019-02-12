@@ -21,7 +21,7 @@ std::unique_ptr<const OpParallelSignature> MakeMatmulOpParallelSignature_DMS_MS_
       };
   auto GenSignature = [op](
                           const std::function<const LbpdHint&(const std::string&)>& LbpdHint4BnInOp,
-                          HashMap<std::string, LogicalBlobParallelDesc>* signature) {
+                          HashMap<std::string, SbpParallel>* signature) {
     int32_t a_split_axis = (op->op_conf().matmul_conf().transpose_a() ? 0 : 1);
     const auto& b_lbpd_hint = LbpdHint4BnInOp("b");
     (*signature)["a"].mutable_split_parallel()->set_axis(a_split_axis);

@@ -151,8 +151,8 @@ class Operator {
                            std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
                            const ParallelContext* parallel_context) const;
   // Infer blob's parallel desc
-  void InferInputOutputLogicalBlobParallelDescIf(
-      std::function<LogicalBlobParallelDesc*(const std::string&)> Lbpd4BnInOp,
+  void InferInputOutputSbpParallelIf(
+      std::function<SbpParallel*(const std::string&)> Lbpd4BnInOp,
       std::function<const LbpdHint&(const std::string&)> LbpdHint4BnInOp,
       const ParallelContext* parallel_ctx) const;
   // Infer is_model_blob
