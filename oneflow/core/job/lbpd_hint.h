@@ -24,6 +24,7 @@ class LbpdHint final {
   bool has_data_partial_sum() const;
   bool is_model_blob() const { return lbpd_hint_conf_.is_model_blob(); }
   bool is_data_blob() const { return !is_model_blob(); }
+  const SbpParallel& sbp_parallel() const { return lbpd_hint_conf_.sbp_parallel(); }
 
   // Setters
   void set_parallel_num(int64_t val) { parallel_num_ = val; }

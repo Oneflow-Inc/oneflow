@@ -155,6 +155,9 @@ class Operator {
       std::function<LogicalBlobParallelDesc*(const std::string&)> Lbpd4BnInOp,
       std::function<const LbpdHint&(const std::string&)> LbpdHint4BnInOp,
       const ParallelContext* parallel_ctx) const;
+  // Infer is_model_blob
+  void InferIsModelBlob4OutputBlobsIf(
+      std::function<bool*(const std::string&)> IsModelBlob4BnInOp) const;
   virtual void FixInDiffBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                   const ParallelContext*) const;
   virtual void VirtualFixInDiffBlobDescs(
@@ -168,6 +171,8 @@ class Operator {
                      bool is_forward, const ParallelContext*, KernelConf*, const OpContext*) const;
 
  protected:
+  virtual void InferIsModelBlob4OutputBlobs(
+      std::function<bool*(const std::string&)> IsModelBlob4BnInOp) const;
   virtual void InferOutputBlobLbpdHint(
       std::function<LbpdHint*(const std::string&)> LbpdHint4BnInOp,
       std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,

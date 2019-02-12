@@ -247,6 +247,17 @@ void Operator::NaiveInferOutputBlobLbpdHint(
   }
 }
 
+void Operator::InferIsModelBlob4OutputBlobsIf(
+    std::function<bool*(const std::string&)> IsModelBlob4BnInOp) const {
+  InferIsModelBlob4OutputBlobs(IsModelBlob4BnInOp);
+}
+
+void Operator::InferIsModelBlob4OutputBlobs(
+    std::function<bool*(const std::string&)> IsModelBlob4BnInOp) const {
+  bool is_model_blob = (IsSoleInputBlobAllowedModelSplit() && *IsModelBlob4BnInOp(SoleIbn()));
+  for (const std::string& obn : output_bns()) { *IsModelBlob4BnInOp(obn) = is_model_blob; }
+}
+
 void Operator::InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                    const ParallelContext* parallel_ctx,
                                    const OpContext* op_ctx) const {
