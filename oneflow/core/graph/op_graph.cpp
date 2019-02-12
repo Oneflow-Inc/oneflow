@@ -356,7 +356,7 @@ void OpGraph::InferSbpInferHint() const {
     parallel_ctx.set_parallel_id(0);
     parallel_ctx.set_parallel_num(op_node->parallel_desc().parallel_num());
     parallel_ctx.set_policy(op_node->parallel_desc().policy());
-    op_node->op().InferBlobSbpInferHintIf(SbpInferHint4BnInOp, ShapeNumAxes4BnInOp, &parallel_ctx);
+    op_node->op().InferOuputBlobsSbpInferHintIf(SbpInferHint4BnInOp, ShapeNumAxes4BnInOp, &parallel_ctx);
   });
 }
 
