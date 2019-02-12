@@ -13,6 +13,8 @@ std::string OpEdge::VisualStr() const {
   return str;
 }
 
+bool* OpNode::MutIsModelBlob4Lbi(const LogicalBlobId& lbi) { return &lbi2is_model_blob_[lbi]; }
+
 const SbpInferHint& OpNode::SbpInferHint4Lbi(const LogicalBlobId& lbi) const {
   return ProducerOpNode4Lbi(lbi)->lbi2sbp_infer_hint_.at(lbi);
 }
@@ -249,6 +251,7 @@ void OpGraph::Init() {
   UpdateOpNodeHasInDiff();
   InferTimeShape();
   InferNoParallelBlobDesc();
+  InferIsModelBlob();
   InferSbpInferHint();
   InferSbpParallel();
   InferLogicalBlobDesc();
@@ -344,6 +347,14 @@ void OpGraph::InferNoParallelBlobDesc() const {
   });
 }
 
+void OpGraph::InferIsModelBlob() const {
+  TopoForEachNode([&](OpNode* op_node) {
+    op_node->op().InferIsModelBlob4OutputBlobsIf([&](const std::string& bn) -> bool* {
+      return op_node->ProducerOpNode4BnInOp(bn)->MutIsModelBlob4Lbi(op_node->op().BnInOp2Lbi(bn));
+    });
+  });
+}
+
 void OpGraph::InferSbpInferHint() const {
   TopoForEachNode([&](OpNode* op_node) {
     auto SbpInferHint4BnInOp = [&](const std::string& bn) -> SbpInferHint* {
@@ -356,7 +367,8 @@ void OpGraph::InferSbpInferHint() const {
     parallel_ctx.set_parallel_id(0);
     parallel_ctx.set_parallel_num(op_node->parallel_desc().parallel_num());
     parallel_ctx.set_policy(op_node->parallel_desc().policy());
-    op_node->op().InferOuputBlobsSbpInferHintIf(SbpInferHint4BnInOp, ShapeNumAxes4BnInOp, &parallel_ctx);
+    op_node->op().InferOuputBlobsSbpInferHintIf(SbpInferHint4BnInOp, ShapeNumAxes4BnInOp,
+                                                &parallel_ctx);
   });
 }
 

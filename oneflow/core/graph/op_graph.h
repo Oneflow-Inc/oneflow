@@ -50,6 +50,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   HashMap<LogicalBlobId, std::vector<BlobDesc>>* mut_lbi2parallel_id2blob_desc() {
     return &lbi2parallel_id2blob_desc_;
   }
+  bool* MutIsModelBlob4Lbi(const LogicalBlobId& lbi);
   SbpInferHint* MutSbpInferHint4Lbi(const LogicalBlobId& lbi);
   BlobDesc* NoParallelBlobDesc4BnInOp(const std::string& bn_in_op);
   BlobDesc* MutNoParallelBlobDesc(const LogicalBlobId& lbi);
@@ -78,6 +79,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   bool has_in_diff_;
   Shape out_blob_time_shape_;
   HashMap<LogicalBlobId, BlobDesc> lbi2no_parallel_blob_desc_;
+  HashMap<LogicalBlobId, bool> lbi2is_model_blob_;
   HashMap<LogicalBlobId, SbpInferHint> lbi2sbp_infer_hint_;
   HashMap<LogicalBlobId, SbpParallel> lbi2lbpd_;
   HashMap<LogicalBlobId, std::vector<BlobDesc>> lbi2parallel_id2blob_desc_;
@@ -132,6 +134,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void UpdateOpNodeHasInDiff() const;
   void InferTimeShape() const;
   void InferNoParallelBlobDesc() const;
+  void InferIsModelBlob() const;
   void InferSbpInferHint() const;
   void InferSbpParallel() const;
   void InferLogicalBlobDesc() const;
