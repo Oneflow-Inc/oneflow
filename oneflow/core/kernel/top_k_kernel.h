@@ -6,8 +6,8 @@
 
 namespace oneflow {
 
-template<typename T>
-class TopKKernel final : public KernelIf<DeviceType::kCPU> {
+template<DeviceType device_type, typename T>
+class TopKKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TopKKernel);
   TopKKernel() = default;
@@ -16,6 +16,12 @@ class TopKKernel final : public KernelIf<DeviceType::kCPU> {
  private:
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
+};
+
+template<DeviceType device_type, typename T>
+struct TopKKernelUtil {
+  static void Forward(const T* in, const int32_t instance_num, const int32_t instance_size,
+                      const int32_t k, const bool sorted, int32_t* fw_buf, int32_t* out);
 };
 
 }  // namespace oneflow

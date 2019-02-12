@@ -33,6 +33,6 @@ void TopKOp::VirtualGenKernelConf(
   kernel_conf->set_data_type(GetBlobDesc4BnInOp("in")->data_type());
 }
 
-REGISTER_CPU_OP(OperatorConf::kTopKConf, TopKOp);
+REGISTER_OP(OperatorConf::kTopKConf, TopKOp);
 
 }  // namespace oneflow
