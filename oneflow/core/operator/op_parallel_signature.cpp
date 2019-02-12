@@ -109,7 +109,7 @@ std::unique_ptr<const OpParallelSignature> MakeModelSplitOpParallelSignature(con
              const ParallelContext* parallel_ctx) {
           const SbpInferHint& sbp_infer_hint = SbpInferHint4BnInOp(op->SoleIbn());
           if (!(sbp_infer_hint.has_model_split()
-                || (sbp_infer_hint.has_data_split() && sbp_infer_hint.data_split().axis() > 0))) {
+                || (sbp_infer_hint.is_data_split() && sbp_infer_hint.data_split().axis() > 0))) {
             return MakeOpParallelMatchSignatureMismatch();
           }
           int64_t expected_parallel_num = sbp_infer_hint.parallel_num();
@@ -137,7 +137,7 @@ std::unique_ptr<const OpParallelSignature> MakeModelSplitOpParallelSignature(con
           auto GetSplitParallel = [&](const std::string& bn) -> const SplitParallel& {
             if (SbpInferHint4BnInOp(op->SoleIbn()).has_model_split()) {
               return SbpInferHint4BnInOp(bn).model_split();
-            } else if (SbpInferHint4BnInOp(op->SoleIbn()).has_data_split()) {
+            } else if (SbpInferHint4BnInOp(op->SoleIbn()).is_data_split()) {
               return SbpInferHint4BnInOp(bn).data_split();
             } else {
               UNIMPLEMENTED();

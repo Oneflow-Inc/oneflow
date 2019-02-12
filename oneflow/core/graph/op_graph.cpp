@@ -426,7 +426,7 @@ BalancedSplitter OpGraph::GetBalancedSplitter(const std::string& op_name,
   CHECK(sbp_parallel.has_split_parallel());
   int64_t split_num = GetSplitNum(op_name, lbi);
   const auto& sbp_infer_hint = op_node->SbpInferHint4Lbi(GetLogicalBlobIdKey(op_name, lbi));
-  if (sbp_infer_hint.has_data_split()) {
+  if (sbp_infer_hint.is_data_split()) {
     CHECK_EQ(split_num % op_node->parallel_desc().parallel_num(), 0);
   } else if (sbp_infer_hint.has_model_split()) {
     CHECK_GE(split_num, op_node->parallel_desc().parallel_num());

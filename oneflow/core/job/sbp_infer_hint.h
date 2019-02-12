@@ -20,7 +20,7 @@ class SbpInferHint final {
   const PartialSumParallel& data_partial_sum() const;
   bool has_model_split() const;
   bool has_model_clone() const;
-  bool has_data_split() const;
+  bool is_data_split() const;
   bool has_data_partial_sum() const;
   bool is_model_blob() const { return sbp_infer_hint_conf_.is_model_blob(); }
   bool is_data_blob() const { return !is_model_blob(); }
@@ -33,9 +33,6 @@ class SbpInferHint final {
   BroadcastParallel* mutable_model_clone();
   SplitParallel* mutable_data_split();
   PartialSumParallel* mutable_data_partial_sum();
-
-  bool operator==(const SbpInferHint& rhs) const;
-  bool operator!=(const SbpInferHint& rhs) const { return !(*this == rhs); }
 
  private:
   int64_t parallel_num_;

@@ -109,7 +109,7 @@ void GatherOp::InferOutputBlobSbpInferHint(
       SbpInferHint4BnInOp("out")->mutable_data_split()->set_axis(axis);
     }
   } else {
-    CHECK(in_sbp_infer_hint.has_model_clone() || in_sbp_infer_hint.has_data_split()
+    CHECK(in_sbp_infer_hint.has_model_clone() || in_sbp_infer_hint.is_data_split()
           || in_sbp_infer_hint.has_data_partial_sum());
     SbpInferHint4BnInOp("out")->mutable_data_split()->set_axis(0);
   }

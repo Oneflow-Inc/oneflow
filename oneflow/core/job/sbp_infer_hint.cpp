@@ -36,7 +36,7 @@ bool SbpInferHint::has_model_split() const {
 bool SbpInferHint::has_model_clone() const {
   return is_model_blob() && sbp_infer_hint_conf_.sbp_parallel().has_broadcast_parallel();
 }
-bool SbpInferHint::has_data_split() const {
+bool SbpInferHint::is_data_split() const {
   return is_data_blob() && sbp_infer_hint_conf_.sbp_parallel().has_split_parallel();
 }
 bool SbpInferHint::has_data_partial_sum() const {
@@ -58,11 +58,6 @@ SplitParallel* SbpInferHint::mutable_data_split() {
 PartialSumParallel* SbpInferHint::mutable_data_partial_sum() {
   sbp_infer_hint_conf_.set_is_model_blob(false);
   return sbp_infer_hint_conf_.mutable_sbp_parallel()->mutable_partial_sum_parallel();
-}
-
-bool SbpInferHint::operator==(const SbpInferHint& rhs) const {
-  return parallel_num_ == rhs.parallel_num_ && num_axes_ == rhs.num_axes_
-         && PbMd().Equivalent(sbp_infer_hint_conf_, rhs.sbp_infer_hint_conf_);
 }
 
 }  // namespace oneflow
