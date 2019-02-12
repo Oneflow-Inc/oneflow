@@ -21,7 +21,6 @@ class NcclReduceScatterOp final : public Operator {
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { UNIMPLEMENTED(); }
   void InferOutputBlobSbpInferHint(
       std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
-      std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
       const ParallelContext* parallel_context) const override {
     UNIMPLEMENTED();
   }

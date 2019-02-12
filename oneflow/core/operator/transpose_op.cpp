@@ -49,7 +49,6 @@ void TransposeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
 
 void TransposeOp::InferOutputBlobSbpInferHint(
     std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
-    std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
     const ParallelContext* parallel_context) const {
   auto GetOutputLogicalBlobSplitAxis = [&](int32_t in_blob_model_split_axis) {
     const PbRf<int32_t>& perm = op_conf().transpose_conf().perm();

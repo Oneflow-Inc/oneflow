@@ -133,7 +133,7 @@ void Operator::InferBlobSbpInferHintIf(
     std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
     const ParallelContext* parallel_context) const {
   if (!output_bns().empty()) {
-    InferOutputBlobSbpInferHint(SbpInferHint4BnInOp, ShapeNumAxes4BnInOp, parallel_context);
+    InferOutputBlobSbpInferHint(SbpInferHint4BnInOp, parallel_context);
     for (const std::string& bn : output_bns()) {
       SbpInferHint4BnInOp(bn)->set_parallel_num(parallel_context->parallel_num());
       SbpInferHint4BnInOp(bn)->set_num_axes(ShapeNumAxes4BnInOp(bn));
@@ -224,7 +224,6 @@ bool Operator::IsSoleInputBlobAllowedModelSplit() const {
 
 void Operator::NaiveInferOutputBlobSbpInferHint(
     std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
-    std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
     const ParallelContext* parallel_context) const {
   for (const std::string& bn : output_bns()) {
     if (IsSoleInputBlobAllowedModelSplit()) {

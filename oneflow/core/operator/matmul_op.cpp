@@ -104,11 +104,10 @@ void MatmulOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
 
 void MatmulOp::InferOutputBlobSbpInferHint(
     std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
-    std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
     const ParallelContext* parallel_context) const {
-  CHECK_EQ(ShapeNumAxes4BnInOp("a"), ShapeNumAxes4BnInOp("b"));
+  CHECK_EQ(SbpInferHint4BnInOp("a")->num_axes(), SbpInferHint4BnInOp("b")->num_axes());
   const auto& b_sbp_infer_hint = *SbpInferHint4BnInOp("b");
-  if (ShapeNumAxes4BnInOp("b") == 2 && b_sbp_infer_hint.has_model_split()) {
+  if (SbpInferHint4BnInOp("b")->num_axes() == 2 && b_sbp_infer_hint.has_model_split()) {
     int32_t b_model_split_axis = b_sbp_infer_hint.model_split().axis();
     if (op_conf().matmul_conf().transpose_b()) {
       if (b_model_split_axis == 0) {

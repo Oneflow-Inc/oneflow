@@ -26,10 +26,9 @@ class RecordLoadOp final : public Operator {
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
   void InferOutputBlobSbpInferHint(
       std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
-      std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
       const ParallelContext* parallel_context) const override {
     CHECK_EQ(parallel_context->policy(), kDataParallel);
-    NaiveInferOutputBlobSbpInferHint(SbpInferHint4BnInOp, ShapeNumAxes4BnInOp, parallel_context);
+    NaiveInferOutputBlobSbpInferHint(SbpInferHint4BnInOp, parallel_context);
   }
 };
 

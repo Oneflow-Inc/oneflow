@@ -98,7 +98,6 @@ void VariableOp::GetOpParallelSignatures(
 
 void VariableOp::InferOutputBlobSbpInferHint(
     std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
-    std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
     const ParallelContext* parallel_context) const {
   if (parallel_context->policy() == kDataParallel) {
     SbpInferHint4BnInOp("out")->mutable_model_clone();

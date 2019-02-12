@@ -175,11 +175,9 @@ class Operator {
       std::function<bool*(const std::string&)> IsModelBlob4BnInOp) const;
   virtual void InferOutputBlobSbpInferHint(
       std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
-      std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
       const ParallelContext* parallel_context) const = 0;
   void NaiveInferOutputBlobSbpInferHint(
       std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
-      std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
       const ParallelContext* parallel_context) const;
 
   int64_t cudnn_buf_limit_byte() const;

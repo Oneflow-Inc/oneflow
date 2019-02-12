@@ -93,11 +93,11 @@ void GatherOp::GetOpParallelSignatures(
 
 void GatherOp::InferOutputBlobSbpInferHint(
     std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
-    std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
     const ParallelContext* parallel_context) const {
-  CHECK(SbpInferHint4BnInOp("indices")->is_data_blob());
+  const SbpInferHint& indices_sbp_infer_hint = *SbpInferHint4BnInOp("indices");
+  CHECK(indices_sbp_infer_hint.is_data_blob());
   const SbpInferHint& in_sbp_infer_hint = *SbpInferHint4BnInOp("in");
-  const int64_t in_num_axes = ShapeNumAxes4BnInOp("in");
+  const int64_t in_num_axes = in_sbp_infer_hint.num_axes();
   const int64_t gather_axis = GetGatherAxis(op_conf().gather_conf(), in_num_axes);
   if (in_sbp_infer_hint.has_model_split()) {
     if (in_sbp_infer_hint.model_split().axis() == 0) {
@@ -105,7 +105,7 @@ void GatherOp::InferOutputBlobSbpInferHint(
     } else {
       CHECK_GT(in_sbp_infer_hint.model_split().axis(), gather_axis);
       CHECK_LT(in_sbp_infer_hint.model_split().axis(), in_num_axes);
-      int32_t axis = in_sbp_infer_hint.model_split().axis() + ShapeNumAxes4BnInOp("indices") - 1;
+      int32_t axis = in_sbp_infer_hint.model_split().axis() + indices_sbp_infer_hint.num_axes() - 1;
       SbpInferHint4BnInOp("out")->mutable_data_split()->set_axis(axis);
     }
   } else {

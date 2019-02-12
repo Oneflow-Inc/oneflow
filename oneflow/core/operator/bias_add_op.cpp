@@ -42,7 +42,6 @@ void BiasAddOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
 
 void BiasAddOp::InferOutputBlobSbpInferHint(
     std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
-    std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
     const ParallelContext* parallel_context) const {
   const SbpInferHint& b_sbp_infer_hint = *SbpInferHint4BnInOp("b");
   if (b_sbp_infer_hint.has_model_clone()) {
