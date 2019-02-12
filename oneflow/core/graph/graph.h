@@ -269,17 +269,18 @@ void Graph<NodeType, EdgeType>::DfsTopoForEachNodeSortByDistanceToSink(
   }
   HashMap<NodeType*, int64_t> node2distance_to_sink;
   TopoForEachNode(sinks, ForEachOutNode, ForEachInNode, [&](NodeType* node) {
-    int64_t distince_to_sink = -1;
+    int64_t distance_to_sink = -1;
     ForEachOutNode(node, [&](NodeType* out_node) {
-      distince_to_sink = std::max(distince_to_sink, node2distance_to_sink[out_node]);
+      distance_to_sink = std::max(distance_to_sink, node2distance_to_sink[out_node]);
     });
-    node2distance_to_sink[node] = distince_to_sink + 1;
+    node2distance_to_sink[node] = distance_to_sink + 1;
   });
   auto ForEachOutNodeSortedByDistanceToSink = [&](NodeType* node,
                                                   const std::function<void(NodeType*)>& Handler) {
     std::vector<NodeType*> out_nodes;
     ForEachOutNode(node, [&](NodeType* out_node) { out_nodes.push_back(out_node); });
     std::sort(out_nodes.begin(), out_nodes.end(), [&](NodeType* lhs, NodeType* rhs) {
+      // DfsTopoForEachNode use stack, so sort desc
       return node2distance_to_sink.at(lhs) > node2distance_to_sink.at(rhs);
     });
     for (NodeType* out_node : out_nodes) { Handler(out_node); }
