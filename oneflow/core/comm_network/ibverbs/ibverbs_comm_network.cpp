@@ -49,7 +49,7 @@ void IBVerbsCommNet::RegisterMemoryDone() {
   Global<CtrlClient>::Get()->ClearKV(GenTokensMsgKey(this_machine_id));
 }
 
-void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) const {
+void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
   qp_vec_.at(dst_machine_id)->PostSendRequest(msg);
 }
 

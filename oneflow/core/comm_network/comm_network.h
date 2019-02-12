@@ -36,7 +36,7 @@ class CommNet {
   void ReadDone(void* read_id);
 
   //
-  virtual void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) const = 0;
+  virtual void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) = 0;
 
  protected:
   CommNet(const Plan& plan);
