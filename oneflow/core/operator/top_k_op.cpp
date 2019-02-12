@@ -14,6 +14,7 @@ void TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
   CHECK_LE(in->shape().elem_cnt(), GetMaxVal<int32_t>());
   const TopKOpConf& conf = op_conf().top_k_conf();
+  // GPU version top_k op only support "k == 1" for now
   CHECK_GE(conf.k(), 1);
   CHECK_LE(conf.k(), in->shape().dim_vec().back());
   // fw_buf
