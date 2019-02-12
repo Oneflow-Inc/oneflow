@@ -4,7 +4,7 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/operator/op_parallel_match_result.pb.h"
-#include "oneflow/core/job/lbpd_hint.h"
+#include "oneflow/core/job/sbp_infer_hint.h"
 
 namespace oneflow {
 

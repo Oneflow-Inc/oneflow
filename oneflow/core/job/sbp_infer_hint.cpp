@@ -1,4 +1,4 @@
-#include "oneflow/core/job/lbpd_hint.h"
+#include "oneflow/core/job/sbp_infer_hint.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/protobuf.h"
 

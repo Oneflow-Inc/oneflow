@@ -1,7 +1,7 @@
-#ifndef ONEFLOW_CORE_JOB_LBPD_HINT_H_
-#define ONEFLOW_CORE_JOB_LBPD_HINT_H_
+#ifndef ONEFLOW_CORE_JOB_SBP_INFER_HINT_H_
+#define ONEFLOW_CORE_JOB_SBP_INFER_HINT_H_
 
-#include "oneflow/core/job/lbpd_hint_conf.pb.h"
+#include "oneflow/core/job/sbp_infer_hint_conf.pb.h"
 
 namespace oneflow {
 
@@ -45,4 +45,4 @@ class SbpInferHint final {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_LBPD_HINT_H_
+#endif  // ONEFLOW_CORE_JOB_SBP_INFER_HINT_H_
