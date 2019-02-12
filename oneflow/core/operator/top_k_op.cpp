@@ -18,7 +18,7 @@ void TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   CHECK_LE(conf.k(), in->shape().dim_vec().back());
   // fw_buf
   BlobDesc* fw_buf = GetBlobDesc4BnInOp("fw_buf");
-  fw_buf->mut_shape() = Shape({in->shape().dim_vec().back()});
+  fw_buf->mut_shape() = Shape({in->shape()});
   fw_buf->set_data_type(DataType::kInt32);
   // out
   BlobDesc* out = GetBlobDesc4BnInOp("out");
