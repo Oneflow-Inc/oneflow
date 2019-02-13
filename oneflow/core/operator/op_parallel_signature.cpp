@@ -75,6 +75,53 @@ class DataSplitOpParallelSignature final : public OpParallelSignature {
   const Operator* op_;
 };
 
+class ModelBroadcastOpParallelSignature final : public OpParallelSignature {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ModelBroadcastOpParallelSignature);
+  ~ModelBroadcastOpParallelSignature() override = default;
+
+  ModelBroadcastOpParallelSignature(const Operator* op) : OpParallelSignature(), op_(op) {}
+
+  const std::string Description() const override { return op_->op_name() + ": (C,) -> (C, ...)"; }
+
+  const OpParallelMatchResult GetMatchResult(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      const ParallelContext* parallel_ctx) const override {
+    if (!op_->IsSoleInputBlobAllowedModelSplit()) { return MakeOpParallelMatchSignatureMismatch(); }
+    if (!SbpInferHint4BnInOp(op_->SoleIbn()).is_model_broadcast()) {
+      return MakeOpParallelMatchSignatureMismatch();
+    }
+    int64_t expected_parallel_num = SbpInferHint4BnInOp(op_->SoleIbn()).parallel_num();
+    bool parallel_policy_matched = (parallel_ctx->policy() == kDataParallel);
+    bool parallel_num_matched = (parallel_ctx->parallel_num() == expected_parallel_num);
+    if (parallel_policy_matched && parallel_num_matched) {
+      return MakeOpParallelMatchSuccess();
+    } else {
+      OpParallelMatchResult ret;
+      if (!parallel_policy_matched) {
+        auto* err = ret.mutable_fail()->mutable_conf_error()->mutable_parallel_policy_error();
+        err->set_configured(parallel_ctx->policy());
+        err->set_expected(kDataParallel);
+      } else {
+        auto* err = ret.mutable_fail()->mutable_conf_error()->mutable_parallel_num_error();
+        err->set_configured(parallel_ctx->parallel_num());
+        err->set_expected(parallel_num_matched);
+      }
+      return ret;
+    }
+  }
+
+  void GenerateSignature(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+    for (const auto& bn : op_->input_bns()) { (*bn2sbp)[bn].mutable_broadcast_parallel(); }
+    for (const auto& bn : op_->output_bns()) { (*bn2sbp)[bn].mutable_broadcast_parallel(); }
+  }
+
+ private:
+  const Operator* op_;
+};
+
 }  // namespace
 
 std::unique_ptr<const OpParallelSignature> MakeDataSplitOpParallelSignature(const Operator* op) {
@@ -82,42 +129,7 @@ std::unique_ptr<const OpParallelSignature> MakeDataSplitOpParallelSignature(cons
 }
 
 std::unique_ptr<const OpParallelSignature> MakeCloneOpParallelSignature(const Operator* op) {
-  std::string clone_desc = op->op_name() + ": (C,) -> (C, ...)";
-  auto IsSoleIbnCloned =
-      [op](const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-           const ParallelContext* parallel_ctx) {
-        if (!op->IsSoleInputBlobAllowedModelSplit()) {
-          return MakeOpParallelMatchSignatureMismatch();
-        }
-        if (!SbpInferHint4BnInOp(op->SoleIbn()).is_model_broadcast()) {
-          return MakeOpParallelMatchSignatureMismatch();
-        }
-        int64_t expected_parallel_num = SbpInferHint4BnInOp(op->SoleIbn()).parallel_num();
-        bool parallel_policy_matched = (parallel_ctx->policy() == kDataParallel);
-        bool parallel_num_matched = (parallel_ctx->parallel_num() == expected_parallel_num);
-        if (parallel_policy_matched && parallel_num_matched) {
-          return MakeOpParallelMatchSuccess();
-        } else {
-          OpParallelMatchResult ret;
-          if (!parallel_policy_matched) {
-            auto* err = ret.mutable_fail()->mutable_conf_error()->mutable_parallel_policy_error();
-            err->set_configured(parallel_ctx->policy());
-            err->set_expected(kDataParallel);
-          } else {
-            auto* err = ret.mutable_fail()->mutable_conf_error()->mutable_parallel_num_error();
-            err->set_configured(parallel_ctx->parallel_num());
-            err->set_expected(parallel_num_matched);
-          }
-          return ret;
-        }
-      };
-  auto GenCloneSignature = [op](const std::function<const SbpInferHint&(const std::string&)>&,
-                                HashMap<std::string, SbpParallel>* signature) {
-    for (const auto& bn : op->input_bns()) { (*signature)[bn].mutable_broadcast_parallel(); }
-    for (const auto& bn : op->output_bns()) { (*signature)[bn].mutable_broadcast_parallel(); }
-  };
-  return std::unique_ptr<const OpParallelSignature>(
-      new LambdaOpParallelSignature(clone_desc, IsSoleIbnCloned, GenCloneSignature));
+  return std::unique_ptr<const OpParallelSignature>(new ModelBroadcastOpParallelSignature(op));
 }
 
 std::unique_ptr<const OpParallelSignature> MakeModelSplitOpParallelSignature(const Operator* op) {
