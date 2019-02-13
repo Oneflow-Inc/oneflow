@@ -40,21 +40,6 @@ void BiasAddOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
   GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() = Shape({a_blob_desc->shape().At(0), 1});
 }
 
-/*
-void BiasAddOp::InferOutputBlobSbpInferHint(
-    std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
-    const ParallelContext* parallel_context) const {
-  const SbpInferHint& b_sbp_infer_hint = *SbpInferHint4BnInOp("b");
-  if (b_sbp_infer_hint.is_model_broadcast()) {
-    SbpInferHint4BnInOp("out")->mutable_data_split()->set_axis(0);
-  } else if (b_sbp_infer_hint.is_model_split()) {
-    SbpInferHint4BnInOp("out")->mutable_data_split()->set_axis(1);
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-*/
-
 REGISTER_OP(OperatorConf::kBiasAddConf, BiasAddOp);
 
 }  // namespace oneflow
