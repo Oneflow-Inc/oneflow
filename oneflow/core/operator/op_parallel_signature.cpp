@@ -79,7 +79,7 @@ class ModelBroadcastOpParallelSignature final : public OpParallelSignature {
 
   ModelBroadcastOpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
 
-  const std::string Description() const override { return op().op_name() + ": (C,) -> (C, ...)"; }
+  const std::string Description() const override { return op().op_name() + ": (B,) -> (B, ...)"; }
 
   const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
@@ -116,12 +116,12 @@ class ModelBroadcastOpParallelSignature final : public OpParallelSignature {
   }
 };
 
-class DS_MC_2_DS_OpParallelSignature final : public OpParallelSignature {
+class DS_MB_2_DS_OpParallelSignature final : public OpParallelSignature {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(DS_MC_2_DS_OpParallelSignature);
-  ~DS_MC_2_DS_OpParallelSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(DS_MB_2_DS_OpParallelSignature);
+  ~DS_MB_2_DS_OpParallelSignature() override = default;
 
-  DS_MC_2_DS_OpParallelSignature(const Operator* op) : OpParallelSignature(op) {
+  DS_MB_2_DS_OpParallelSignature(const Operator* op) : OpParallelSignature(op) {
     std::vector<std::string> model_input_bns;
     for (const auto& bn : op->input_bns()) {
       if (op->IsInputBlobAllowedModelSplit(bn)) {
@@ -136,7 +136,7 @@ class DS_MC_2_DS_OpParallelSignature final : public OpParallelSignature {
   }
 
   const std::string Description() const override {
-    return op().op_name() + ": (C, S(0), ...) -> (S(0), ...)";
+    return op().op_name() + ": (B, S(0), ...) -> (S(0), ...)";
   }
 
   const OpParallelMatchResult GetMatchResult(
@@ -235,7 +235,7 @@ class ModelBnOpModelSplitOpParallelSignature final : public OpParallelSignature 
   ModelBnOpModelSplitOpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
 
   const std::string Description() const override {
-    return op().op_name() + ": (C, ...) -> (S, ...)";
+    return op().op_name() + ": (B, ...) -> (S, ...)";
   }
 
   const OpParallelMatchResult GetMatchResult(
@@ -256,12 +256,12 @@ class ModelBnOpModelSplitOpParallelSignature final : public OpParallelSignature 
   }
 };
 
-class DC_MS_2_MS_OpParallelSignature final : public OpParallelSignature {
+class DB_MS_2_MS_OpParallelSignature final : public OpParallelSignature {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(DC_MS_2_MS_OpParallelSignature);
-  ~DC_MS_2_MS_OpParallelSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(DB_MS_2_MS_OpParallelSignature);
+  ~DB_MS_2_MS_OpParallelSignature() override = default;
 
-  DC_MS_2_MS_OpParallelSignature(const Operator* op, std::function<bool(int32_t)> IsExpectedAxis)
+  DB_MS_2_MS_OpParallelSignature(const Operator* op, std::function<bool(int32_t)> IsExpectedAxis)
       : OpParallelSignature(op), IsExpectedAxis_(IsExpectedAxis) {
     std::vector<std::string> model_input_bns;
     for (const auto& bn : op->input_bns()) {
@@ -277,7 +277,7 @@ class DC_MS_2_MS_OpParallelSignature final : public OpParallelSignature {
   }
 
   const std::string Description() const override {
-    return op().op_name() + ": (C, S, ...) -> (S, ...)";
+    return op().op_name() + ": (B, S, ...) -> (S, ...)";
   }
 
   const OpParallelMatchResult GetMatchResult(
@@ -334,14 +334,14 @@ std::unique_ptr<const OpParallelSignature> MakeModelSplitOpParallelSignature(con
   }
 }
 
-std::unique_ptr<const OpParallelSignature> Make_DS_MC_2_DS_OpParallelSignature(const Operator* op) {
-  return std::unique_ptr<const OpParallelSignature>(new DS_MC_2_DS_OpParallelSignature(op));
+std::unique_ptr<const OpParallelSignature> Make_DS_MB_2_DS_OpParallelSignature(const Operator* op) {
+  return std::unique_ptr<const OpParallelSignature>(new DS_MB_2_DS_OpParallelSignature(op));
 }
 
-std::unique_ptr<const OpParallelSignature> Make_DC_MS_2_MS_OpParallelSignature(
+std::unique_ptr<const OpParallelSignature> Make_DB_MS_2_MS_OpParallelSignature(
     const Operator* op, std::function<bool(int32_t)> IsExpectedAxis) {
   return std::unique_ptr<const OpParallelSignature>(
-      new DC_MS_2_MS_OpParallelSignature(op, IsExpectedAxis));
+      new DB_MS_2_MS_OpParallelSignature(op, IsExpectedAxis));
 }
 
 }  // namespace oneflow

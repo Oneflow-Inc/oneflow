@@ -15,12 +15,12 @@ int64_t GetGatherAxis(const GatherOpConf& conf, const BlobDesc* in_blob_desc) {
   return GetGatherAxis(conf, in_blob_desc->shape().NumAxes());
 }
 
-class Gather_DC_MS_2_P_OpParallelSignature final : public OpParallelSignature {
+class Gather_DB_MS_2_P_OpParallelSignature final : public OpParallelSignature {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(Gather_DC_MS_2_P_OpParallelSignature);
-  ~Gather_DC_MS_2_P_OpParallelSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(Gather_DB_MS_2_P_OpParallelSignature);
+  ~Gather_DB_MS_2_P_OpParallelSignature() override = default;
 
-  Gather_DC_MS_2_P_OpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
+  Gather_DB_MS_2_P_OpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
 
   const std::string Description() const override { return op().op_name() + ": (C, S) -> P"; }
 
@@ -89,10 +89,10 @@ void GatherOp::VirtualGenKernelConf(
 void GatherOp::GetOpParallelSignatures(
     std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
   op_parallel_signatures->emplace_back(MakeDataSplitOpParallelSignature(this));
-  op_parallel_signatures->emplace_back(Make_DS_MC_2_DS_OpParallelSignature(this));
+  op_parallel_signatures->emplace_back(Make_DS_MB_2_DS_OpParallelSignature(this));
   auto GtZero = [](int32_t axis) { return axis > 0; };
-  op_parallel_signatures->emplace_back(Make_DC_MS_2_MS_OpParallelSignature(this, GtZero));
-  op_parallel_signatures->emplace_back(new Gather_DC_MS_2_P_OpParallelSignature(this));
+  op_parallel_signatures->emplace_back(Make_DB_MS_2_MS_OpParallelSignature(this, GtZero));
+  op_parallel_signatures->emplace_back(new Gather_DB_MS_2_P_OpParallelSignature(this));
 }
 
 int32_t GatherOp::OutputBlobModelSplitAxis(

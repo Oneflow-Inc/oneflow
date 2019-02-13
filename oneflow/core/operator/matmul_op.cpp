@@ -4,12 +4,12 @@ namespace oneflow {
 
 namespace {
 
-class Matmul_DMS_MS_2_P_OpParallelSignature final : public OpParallelSignature {
+class Matmul_MS_MS_2_P_OpParallelSignature final : public OpParallelSignature {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(Matmul_DMS_MS_2_P_OpParallelSignature);
-  ~Matmul_DMS_MS_2_P_OpParallelSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(Matmul_MS_MS_2_P_OpParallelSignature);
+  ~Matmul_MS_MS_2_P_OpParallelSignature() override = default;
 
-  Matmul_DMS_MS_2_P_OpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
+  Matmul_MS_MS_2_P_OpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
 
   const std::string Description() const override { return op().op_name() + ": (S, S) -> P"; }
 
@@ -58,13 +58,13 @@ bool MatmulOp::IsInputBlobAllowedModelSplit(const std::string& ibn) const {
 void MatmulOp::GetOpParallelSignatures(
     std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
   op_parallel_signatures->emplace_back(MakeDataSplitOpParallelSignature(this));
-  op_parallel_signatures->emplace_back(Make_DS_MC_2_DS_OpParallelSignature(this));
+  op_parallel_signatures->emplace_back(Make_DS_MB_2_DS_OpParallelSignature(this));
   auto IsValidSplit = [this](int32_t axis) {
     int32_t b_expected_split_axis = (op_conf().matmul_conf().transpose_b() ? 0 : 1);
     return axis == b_expected_split_axis;
   };
-  op_parallel_signatures->emplace_back(Make_DC_MS_2_MS_OpParallelSignature(this, IsValidSplit));
-  op_parallel_signatures->emplace_back(new Matmul_DMS_MS_2_P_OpParallelSignature(this));
+  op_parallel_signatures->emplace_back(Make_DB_MS_2_MS_OpParallelSignature(this, IsValidSplit));
+  op_parallel_signatures->emplace_back(new Matmul_MS_MS_2_P_OpParallelSignature(this));
 }
 
 void MatmulOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

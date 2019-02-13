@@ -29,37 +29,6 @@ class OpParallelSignature {
   const Operator* op_;
 };
 
-class LambdaOpParallelSignature final : public OpParallelSignature {
- public:
-  using FnSbpInferHint4Ibn = std::function<const SbpInferHint&(const std::string&)>;
-  using FnGetMathResult =
-      std::function<const OpParallelMatchResult(const FnSbpInferHint4Ibn&, const ParallelContext*)>;
-  using FnSignatureGeneratorFunc =
-      std::function<void(const FnSbpInferHint4Ibn&, HashMap<std::string, SbpParallel>*)>;
-  LambdaOpParallelSignature(const std::string& description, const FnGetMathResult& get_match_result,
-                            const FnSignatureGeneratorFunc& signature_generator)
-      : OpParallelSignature(nullptr),
-        description_(description),
-        get_match_result_(get_match_result),
-        signature_generator_(signature_generator) {}
-  ~LambdaOpParallelSignature() override = default;
-
-  const std::string Description() const override { return description_; }
-  const OpParallelMatchResult GetMatchResult(const FnSbpInferHint4Ibn& SbpInferHint4Ibn,
-                                             const ParallelContext* parallel_ctx) const override {
-    return get_match_result_(SbpInferHint4Ibn, parallel_ctx);
-  }
-  void GenerateSignature(const FnSbpInferHint4Ibn& SbpInferHint4Ibn,
-                         HashMap<std::string, SbpParallel>* bn2sbp) const override {
-    signature_generator_(SbpInferHint4Ibn, bn2sbp);
-  }
-
- private:
-  const std::string description_;
-  const FnGetMathResult get_match_result_;
-  const FnSignatureGeneratorFunc signature_generator_;
-};
-
 const OpParallelMatchResult MakeOpParallelMatchSuccess();
 const OpParallelMatchResult MakeOpParallelMatchSignatureMismatch();
 const OpParallelMatchResult MakeOpParallelMatchParallelPolicyError(ParallelPolicy configured,
@@ -72,22 +41,22 @@ class Operator;
 // (S(0), ...) -> (S(0), ...)
 std::unique_ptr<const OpParallelSignature> MakeDataSplitOpParallelSignature(const Operator* op);
 
-// (S,) -> (S, ...) or (C, ...) -> (S, ...)
+// (S,) -> (S, ...) or (B, ...) -> (S, ...)
 std::unique_ptr<const OpParallelSignature> MakeModelSplitOpParallelSignature(const Operator* op);
 
-// (C,) -> (C, ...)
+// (B,) -> (B, ...)
 std::unique_ptr<const OpParallelSignature> MakeModelBroadcastOpParallelSignature(
     const Operator* op);
 
-// (C, S(0), ...) -> (S(0), ...)
+// (B, S(0), ...) -> (S(0), ...)
 // return blobs: data splitted
-// intput blobs: split data input blobs and clone model input blobs
-std::unique_ptr<const OpParallelSignature> Make_DS_MC_2_DS_OpParallelSignature(const Operator* op);
+// intput blobs: split data input blobs and broadcast model input blobs
+std::unique_ptr<const OpParallelSignature> Make_DS_MB_2_DS_OpParallelSignature(const Operator* op);
 
-// (C, S, ...) -> (S, ...)
+// (B, S, ...) -> (S, ...)
 // return blobs: model splitted
-// input blobs: clone data input blobs and split model input blobs
-std::unique_ptr<const OpParallelSignature> Make_DC_MS_2_MS_OpParallelSignature(
+// input blobs: broadcast data input blobs and split model input blobs
+std::unique_ptr<const OpParallelSignature> Make_DB_MS_2_MS_OpParallelSignature(
     const Operator* op, std::function<bool(int32_t)> IsExpectedAxis);
 
 }  // namespace oneflow
