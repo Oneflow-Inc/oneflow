@@ -108,37 +108,22 @@ void MatmulOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
   }
 }
 
-/*
-void MatmulOp::InferOutputBlobSbpInferHint(
-    std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
-    const ParallelContext* parallel_context) const {
-  CHECK_EQ(SbpInferHint4BnInOp("a")->num_axes(), SbpInferHint4BnInOp("b")->num_axes());
-  const auto& b_sbp_infer_hint = *SbpInferHint4BnInOp("b");
-  if (SbpInferHint4BnInOp("b")->num_axes() == 2 && b_sbp_infer_hint.is_model_split()) {
-    int32_t b_model_split_axis = b_sbp_infer_hint.split_axis();
-    if (op_conf().matmul_conf().transpose_b()) {
-      if (b_model_split_axis == 0) {
-        SbpInferHint4BnInOp("out")->mutable_data_split()->set_axis(1);
-      } else if (b_model_split_axis == 1) {
-        SbpInferHint4BnInOp("out")->mutable_data_partial_sum();
-      } else {
-        UNIMPLEMENTED();
-      }
-    } else {
-      if (b_model_split_axis == 0) {
-        SbpInferHint4BnInOp("out")->mutable_data_partial_sum();
-      } else if (b_model_split_axis == 1) {
-        SbpInferHint4BnInOp("out")->mutable_data_split()->set_axis(1);
-      } else {
-        UNIMPLEMENTED();
-      }
-    }
+int32_t MatmulOp::OutputBlobModelSplitAxis(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+    const std::string& obn) const {
+  CHECK_EQ(SbpInferHint4Ibn("a").num_axes(), SbpInferHint4Ibn("b").num_axes());
+  const auto& b_sbp_infer_hint = SbpInferHint4Ibn("b");
+  CHECK_EQ(SbpInferHint4Ibn("b").num_axes(), 2);
+  CHECK(b_sbp_infer_hint.is_model_split());
+  int32_t b_model_split_axis = b_sbp_infer_hint.split_axis();
+  if (op_conf().matmul_conf().transpose_b()) {
+    if (b_model_split_axis == 0) { return 1; }
   } else {
-    CHECK_EQ(parallel_context->policy(), kDataParallel);
-    SbpInferHint4BnInOp("out")->mutable_data_split()->set_axis(0);
+    if (b_model_split_axis == 1) { return 1; }
   }
+  UNIMPLEMENTED();
+  return -1;
 }
-*/
 
 void MatmulOp::InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                    const ParallelContext*) const {
