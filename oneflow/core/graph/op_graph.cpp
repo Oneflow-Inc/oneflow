@@ -318,8 +318,8 @@ void OpGraph::InferTimeShape() const {
     auto GetInputBlobTimeShape = [&](const std::string& bn_in_op) {
       return op_node->GetInputBlobTimeShape(bn_in_op);
     };
-    op_node->op().InferOutputBlobTimeShape(GetInputBlobTimeShape, &parallel_ctx,
-                                           op_node->mut_out_blob_time_shape());
+    op_node->op().InferOutputBlobTimeShapeIf(GetInputBlobTimeShape, &parallel_ctx,
+                                             op_node->mut_out_blob_time_shape());
   });
 }
 

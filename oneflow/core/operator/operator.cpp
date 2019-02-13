@@ -108,6 +108,12 @@ void Operator::InferBwBufBlobDescsIf(
   }
 }
 
+void Operator::InferOutputBlobTimeShapeIf(
+    std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
+    const ParallelContext* parallel_ctx, Shape* time_shape) const {
+  InferOutputBlobTimeShape(GetTimeShape4BnInOp, parallel_ctx, time_shape);
+}
+
 void Operator::InferOutputBlobTimeShape(
     std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
     Shape* time_shape) const {
@@ -125,8 +131,12 @@ void Operator::InferOutputBlobTimeShape(
 int32_t Operator::OutputBlobModelSplitAxis(
     const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     const std::string& obn) const {
-  UNIMPLEMENTED();
-  return -1;
+  if (IsSoleInputBlobAllowedModelSplit()) {
+    return SbpInferHint4Ibn(SoleIbn()).split_axis();
+  } else {
+    UNIMPLEMENTED();
+    return -1;
+  }
 }
 
 void Operator::GetOpParallelSignatures(
