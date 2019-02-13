@@ -147,13 +147,13 @@ void Operator::GetOpParallelSignatures(
 
 void Operator::InferInputOutputSbpParallelIf(
     std::function<SbpParallel*(const std::string&)> SbpParallel4BnInOp,
-    std::function<const SbpInferHint&(const std::string&)> SbpInferHint4BnInOp,
+    std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
     const ParallelContext* parallel_ctx) const {
   std::vector<std::unique_ptr<const OpParallelSignature>> op_parallel_signatures;
   GetOpParallelSignatures(&op_parallel_signatures);
   std::vector<OpParallelMatchResult> match_results;
   for (const auto& signature : op_parallel_signatures) {
-    match_results.push_back(signature->GetMatchResult(SbpInferHint4BnInOp, parallel_ctx));
+    match_results.push_back(signature->GetMatchResult(SbpInferHint4Ibn, parallel_ctx));
   }
   int32_t match_success_cnt = 0;
   for (const auto& result : match_results) {
@@ -167,7 +167,7 @@ void Operator::InferInputOutputSbpParallelIf(
       }
     }
     HashMap<std::string, SbpParallel> bn2sbp;
-    match_signature->GenerateSignature(SbpInferHint4BnInOp, &bn2sbp);
+    match_signature->GenerateSignature(SbpInferHint4Ibn, &bn2sbp);
     for (const auto& pair : bn2sbp) {
       auto* sbp_parallel = SbpParallel4BnInOp(pair.first);
       *sbp_parallel = pair.second;

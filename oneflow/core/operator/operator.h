@@ -149,7 +149,7 @@ class Operator {
   // Infer blob's SbpParallel
   void InferInputOutputSbpParallelIf(
       std::function<SbpParallel*(const std::string&)> SbpParallel4BnInOp,
-      std::function<const SbpInferHint&(const std::string&)> SbpInferHint4BnInOp,
+      std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
       const ParallelContext* parallel_ctx) const;
   // Infer is_model_blob
   void InferIsModelBlob4OutputBlobsIf(

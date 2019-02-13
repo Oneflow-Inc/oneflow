@@ -14,9 +14,9 @@ class Matmul_DMS_MS_2_P_OpParallelSignature final : public OpParallelSignature {
   const std::string Description() const override { return op().op_name() + ": (S, S) -> P"; }
 
   const OpParallelMatchResult GetMatchResult(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelContext* parallel_ctx) const override {
-    const auto& b_sbp_infer_hint = SbpInferHint4BnInOp("b");
+    const auto& b_sbp_infer_hint = SbpInferHint4Ibn("b");
     if (!b_sbp_infer_hint.is_model_split()) { return MakeOpParallelMatchSignatureMismatch(); }
     int32_t b_expected_split_axis = (op().op_conf().matmul_conf().transpose_b() ? 1 : 0);
     if (b_sbp_infer_hint.split_axis() != b_expected_split_axis) {
@@ -27,10 +27,10 @@ class Matmul_DMS_MS_2_P_OpParallelSignature final : public OpParallelSignature {
   }
 
   void GenerateSignature(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       HashMap<std::string, SbpParallel>* bn2sbp) const override {
     int32_t a_split_axis = (op().op_conf().matmul_conf().transpose_a() ? 0 : 1);
-    const auto& b_sbp_infer_hint = SbpInferHint4BnInOp("b");
+    const auto& b_sbp_infer_hint = SbpInferHint4Ibn("b");
     (*bn2sbp)["a"].mutable_split_parallel()->set_axis(a_split_axis);
     (*bn2sbp)["b"].mutable_split_parallel()->set_axis(b_sbp_infer_hint.split_axis());
     (*bn2sbp)["out"].mutable_partial_sum_parallel();

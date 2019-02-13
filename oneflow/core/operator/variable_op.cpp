@@ -16,7 +16,7 @@ class VariableOpDataSplitOpParallelSignature final : public OpParallelSignature 
   const std::string Description() const override { return op().op_name() + ": S(0) -> C"; }
 
   const OpParallelMatchResult GetMatchResult(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelContext* parallel_ctx) const override {
     if (parallel_ctx->policy() == kDataParallel) {
       return MakeOpParallelMatchSuccess();
@@ -26,9 +26,9 @@ class VariableOpDataSplitOpParallelSignature final : public OpParallelSignature 
   }
 
   void GenerateSignature(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       HashMap<std::string, SbpParallel>* bn2sbp) const override {
-    CHECK(SbpInferHint4BnInOp("tick").is_data_split());
+    CHECK(SbpInferHint4Ibn("tick").is_data_split());
     (*bn2sbp)["tick"].mutable_split_parallel()->set_axis(0);
     (*bn2sbp)["out"].mutable_broadcast_parallel();
   }
@@ -45,7 +45,7 @@ class VariableOpModelSplitOpParallelSignature final : public OpParallelSignature
   const std::string Description() const override { return op().op_name() + ": S(0) -> S"; }
 
   const OpParallelMatchResult GetMatchResult(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelContext* parallel_ctx) const override {
     if (parallel_ctx->policy() == kModelParallel) {
       return MakeOpParallelMatchSuccess();
@@ -55,12 +55,12 @@ class VariableOpModelSplitOpParallelSignature final : public OpParallelSignature
   }
 
   void GenerateSignature(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       HashMap<std::string, SbpParallel>* bn2sbp) const override {
-    CHECK(SbpInferHint4BnInOp("tick").is_data_split());
+    CHECK(SbpInferHint4Ibn("tick").is_data_split());
     (*bn2sbp)["tick"].mutable_split_parallel()->set_axis(0);
     (*bn2sbp)["out"].mutable_split_parallel()->set_axis(
-        (op().OutputBlobModelSplitAxis(SbpInferHint4BnInOp, "out")));
+        (op().OutputBlobModelSplitAxis(SbpInferHint4Ibn, "out")));
   }
 };
 
