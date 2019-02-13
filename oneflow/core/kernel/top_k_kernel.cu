@@ -10,7 +10,7 @@ namespace oneflow {
 
 template<typename T>
 __global__ void ForwardGpu(const T* in, const int32_t instance_num, const int32_t instance_size,
-                           const int32_t k, const bool sorted, int32_t* fw_buf, int32_t* out) {
+                           int32_t* out) {
   CUDA_1D_KERNEL_LOOP(i, instance_num) {
     T max_val = in[i * instance_size];
     int32_t max_idx = 0;
@@ -33,7 +33,7 @@ struct TopKKernelUtil<DeviceType::kGPU, T> {
     // GPU version top_k op only support "k == 1" for now
     CHECK_EQ(k, 1);
     ForwardGpu<<<BlocksNum4ThreadsNum(instance_num), kCudaThreadsNumPerBlock, 0,
-                 ctx->cuda_stream()>>>(in, instance_num, instance_size, k, sorted, fw_buf, out);
+                 ctx->cuda_stream()>>>(in, instance_num, instance_size, out);
   }
 };
 
