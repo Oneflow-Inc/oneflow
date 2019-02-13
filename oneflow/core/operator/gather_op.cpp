@@ -95,31 +95,20 @@ void GatherOp::GetOpParallelSignatures(
   op_parallel_signatures->emplace_back(new Gather_DC_MS_2_P_OpParallelSignature(this));
 }
 
-/*
-void GatherOp::InferOutputBlobSbpInferHint(
-    std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
-    const ParallelContext* parallel_context) const {
-  const SbpInferHint& indices_sbp_infer_hint = *SbpInferHint4BnInOp("indices");
+int32_t GatherOp::OutputBlobModelSplitAxis(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+    const std::string& obn) const {
+  const SbpInferHint& indices_sbp_infer_hint = SbpInferHint4Ibn("indices");
   CHECK(indices_sbp_infer_hint.is_data_blob());
-  const SbpInferHint& in_sbp_infer_hint = *SbpInferHint4BnInOp("in");
+  const SbpInferHint& in_sbp_infer_hint = SbpInferHint4Ibn("in");
   const int64_t in_num_axes = in_sbp_infer_hint.num_axes();
   const int64_t gather_axis = GetGatherAxis(op_conf().gather_conf(), in_num_axes);
-  if (in_sbp_infer_hint.is_model_split()) {
-    if (in_sbp_infer_hint.split_axis() == 0) {
-      SbpInferHint4BnInOp("out")->mutable_data_partial_sum();
-    } else {
-      CHECK_GT(in_sbp_infer_hint.split_axis(), gather_axis);
-      CHECK_LT(in_sbp_infer_hint.split_axis(), in_num_axes);
-      int32_t axis = in_sbp_infer_hint.split_axis() + indices_sbp_infer_hint.num_axes() - 1;
-      SbpInferHint4BnInOp("out")->mutable_data_split()->set_axis(axis);
-    }
-  } else {
-    CHECK(in_sbp_infer_hint.is_model_broadcast() || in_sbp_infer_hint.is_data_split()
-          || in_sbp_infer_hint.is_data_partial_sum());
-    SbpInferHint4BnInOp("out")->mutable_data_split()->set_axis(0);
-  }
+  CHECK(in_sbp_infer_hint.is_model_split());
+  CHECK_GT(in_sbp_infer_hint.split_axis(), 0);
+  CHECK_GT(in_sbp_infer_hint.split_axis(), gather_axis);
+  CHECK_LT(in_sbp_infer_hint.split_axis(), in_num_axes);
+  return in_sbp_infer_hint.split_axis() + indices_sbp_infer_hint.num_axes() - 1;
 }
-*/
 
 REGISTER_OP(OperatorConf::kGatherConf, GatherOp);
 
