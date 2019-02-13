@@ -11,9 +11,9 @@ class VariableOpDataSplitOpParallelSignature final : public OpParallelSignature 
   OF_DISALLOW_COPY_AND_MOVE(VariableOpDataSplitOpParallelSignature);
   ~VariableOpDataSplitOpParallelSignature() override = default;
 
-  VariableOpDataSplitOpParallelSignature(const Operator* op) : OpParallelSignature(), op_(op) {}
+  VariableOpDataSplitOpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
 
-  const std::string Description() const override { return op_->op_name() + ": S(0) -> C"; }
+  const std::string Description() const override { return op().op_name() + ": S(0) -> C"; }
 
   const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
@@ -32,9 +32,6 @@ class VariableOpDataSplitOpParallelSignature final : public OpParallelSignature 
     (*bn2sbp)["tick"].mutable_split_parallel()->set_axis(0);
     (*bn2sbp)["out"].mutable_broadcast_parallel();
   }
-
- private:
-  const Operator* op_;
 };
 
 // S(0) -> S
@@ -43,9 +40,9 @@ class VariableOpModelSplitOpParallelSignature final : public OpParallelSignature
   OF_DISALLOW_COPY_AND_MOVE(VariableOpModelSplitOpParallelSignature);
   ~VariableOpModelSplitOpParallelSignature() override = default;
 
-  VariableOpModelSplitOpParallelSignature(const Operator* op) : OpParallelSignature(), op_(op) {}
+  VariableOpModelSplitOpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
 
-  const std::string Description() const override { return op_->op_name() + ": S(0) -> S"; }
+  const std::string Description() const override { return op().op_name() + ": S(0) -> S"; }
 
   const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
@@ -62,11 +59,8 @@ class VariableOpModelSplitOpParallelSignature final : public OpParallelSignature
       HashMap<std::string, SbpParallel>* bn2sbp) const override {
     CHECK(SbpInferHint4BnInOp("tick").is_data_split());
     (*bn2sbp)["tick"].mutable_split_parallel()->set_axis(0);
-    (*bn2sbp)["out"].mutable_split_parallel()->set_axis((op_->ModelSplitAxis()));
+    (*bn2sbp)["out"].mutable_split_parallel()->set_axis((op().ModelSplitAxis()));
   }
-
- private:
-  const Operator* op_;
 };
 
 }  // namespace

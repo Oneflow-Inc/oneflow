@@ -8,6 +8,8 @@
 
 namespace oneflow {
 
+class Operator;
+
 class OpParallelSignature {
  public:
   virtual ~OpParallelSignature() = default;
@@ -20,7 +22,11 @@ class OpParallelSignature {
       HashMap<std::string, SbpParallel>* bn2sbp) const = 0;
 
  protected:
-  OpParallelSignature() = default;
+  OpParallelSignature(const Operator* op) : op_(op) {}
+  const Operator& op() const { return *op_; }
+
+ private:
+  const Operator* op_;
 };
 
 class LambdaOpParallelSignature final : public OpParallelSignature {
@@ -32,7 +38,7 @@ class LambdaOpParallelSignature final : public OpParallelSignature {
       std::function<void(const FnSbpInferHint4BnInOp&, HashMap<std::string, SbpParallel>*)>;
   LambdaOpParallelSignature(const std::string& description, const FnGetMathResult& get_match_result,
                             const FnSignatureGeneratorFunc& signature_generator)
-      : OpParallelSignature(),
+      : OpParallelSignature(nullptr),
         description_(description),
         get_match_result_(get_match_result),
         signature_generator_(signature_generator) {}

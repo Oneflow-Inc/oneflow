@@ -20,9 +20,9 @@ class Gather_DC_MS_2_P_OpParallelSignature final : public OpParallelSignature {
   OF_DISALLOW_COPY_AND_MOVE(Gather_DC_MS_2_P_OpParallelSignature);
   ~Gather_DC_MS_2_P_OpParallelSignature() override = default;
 
-  Gather_DC_MS_2_P_OpParallelSignature(const Operator* op) : OpParallelSignature(), op_(op) {}
+  Gather_DC_MS_2_P_OpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
 
-  const std::string Description() const override { return op_->op_name() + ": (C, S) -> P"; }
+  const std::string Description() const override { return op().op_name() + ": (C, S) -> P"; }
 
   const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
@@ -41,9 +41,6 @@ class Gather_DC_MS_2_P_OpParallelSignature final : public OpParallelSignature {
     (*bn2sbp)["in"].mutable_split_parallel()->set_axis(0);
     (*bn2sbp)["out"].mutable_partial_sum_parallel();
   }
-
- private:
-  const Operator* op_;
 };
 
 }  // namespace

@@ -40,17 +40,17 @@ class DataSplitOpParallelSignature final : public OpParallelSignature {
   OF_DISALLOW_COPY_AND_MOVE(DataSplitOpParallelSignature);
   ~DataSplitOpParallelSignature() override = default;
 
-  DataSplitOpParallelSignature(const Operator* op) : OpParallelSignature(), op_(op) {}
+  DataSplitOpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
 
   const std::string Description() const override {
-    return op_->op_name() + ": (S(0), ...) -> (S(0), ...)";
+    return op().op_name() + ": (S(0), ...) -> (S(0), ...)";
   }
 
   const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelContext* parallel_ctx) const override {
     bool is_data_split = true;
-    for (const auto& bn : op_->input_bns()) {
+    for (const auto& bn : op().input_bns()) {
       const SbpInferHint& sbp_infer_hint = SbpInferHint4BnInOp(bn);
       if (!sbp_infer_hint.is_data_blob()) {
         is_data_split = false;
@@ -65,14 +65,11 @@ class DataSplitOpParallelSignature final : public OpParallelSignature {
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       HashMap<std::string, SbpParallel>* bn2sbp) const override {
-    for (const auto& bn : op_->input_bns()) { (*bn2sbp)[bn].mutable_split_parallel()->set_axis(0); }
-    for (const auto& bn : op_->output_bns()) {
+    for (const auto& bn : op().input_bns()) { (*bn2sbp)[bn].mutable_split_parallel()->set_axis(0); }
+    for (const auto& bn : op().output_bns()) {
       (*bn2sbp)[bn].mutable_split_parallel()->set_axis(0);
     }
   }
-
- private:
-  const Operator* op_;
 };
 
 class ModelBroadcastOpParallelSignature final : public OpParallelSignature {
@@ -80,18 +77,18 @@ class ModelBroadcastOpParallelSignature final : public OpParallelSignature {
   OF_DISALLOW_COPY_AND_MOVE(ModelBroadcastOpParallelSignature);
   ~ModelBroadcastOpParallelSignature() override = default;
 
-  ModelBroadcastOpParallelSignature(const Operator* op) : OpParallelSignature(), op_(op) {}
+  ModelBroadcastOpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
 
-  const std::string Description() const override { return op_->op_name() + ": (C,) -> (C, ...)"; }
+  const std::string Description() const override { return op().op_name() + ": (C,) -> (C, ...)"; }
 
   const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelContext* parallel_ctx) const override {
-    if (!op_->IsSoleInputBlobAllowedModelSplit()) { return MakeOpParallelMatchSignatureMismatch(); }
-    if (!SbpInferHint4BnInOp(op_->SoleIbn()).is_model_broadcast()) {
+    if (!op().IsSoleInputBlobAllowedModelSplit()) { return MakeOpParallelMatchSignatureMismatch(); }
+    if (!SbpInferHint4BnInOp(op().SoleIbn()).is_model_broadcast()) {
       return MakeOpParallelMatchSignatureMismatch();
     }
-    int64_t expected_parallel_num = SbpInferHint4BnInOp(op_->SoleIbn()).parallel_num();
+    int64_t expected_parallel_num = SbpInferHint4BnInOp(op().SoleIbn()).parallel_num();
     bool parallel_policy_matched = (parallel_ctx->policy() == kDataParallel);
     bool parallel_num_matched = (parallel_ctx->parallel_num() == expected_parallel_num);
     if (parallel_policy_matched && parallel_num_matched) {
@@ -114,12 +111,9 @@ class ModelBroadcastOpParallelSignature final : public OpParallelSignature {
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       HashMap<std::string, SbpParallel>* bn2sbp) const override {
-    for (const auto& bn : op_->input_bns()) { (*bn2sbp)[bn].mutable_broadcast_parallel(); }
-    for (const auto& bn : op_->output_bns()) { (*bn2sbp)[bn].mutable_broadcast_parallel(); }
+    for (const auto& bn : op().input_bns()) { (*bn2sbp)[bn].mutable_broadcast_parallel(); }
+    for (const auto& bn : op().output_bns()) { (*bn2sbp)[bn].mutable_broadcast_parallel(); }
   }
-
- private:
-  const Operator* op_;
 };
 
 class DS_MC_2_DS_OpParallelSignature final : public OpParallelSignature {
@@ -127,7 +121,7 @@ class DS_MC_2_DS_OpParallelSignature final : public OpParallelSignature {
   OF_DISALLOW_COPY_AND_MOVE(DS_MC_2_DS_OpParallelSignature);
   ~DS_MC_2_DS_OpParallelSignature() override = default;
 
-  DS_MC_2_DS_OpParallelSignature(const Operator* op) : OpParallelSignature(), op_(op) {
+  DS_MC_2_DS_OpParallelSignature(const Operator* op) : OpParallelSignature(op) {
     std::vector<std::string> model_input_bns;
     for (const auto& bn : op->input_bns()) {
       if (op->IsInputBlobAllowedModelSplit(bn)) {
@@ -142,7 +136,7 @@ class DS_MC_2_DS_OpParallelSignature final : public OpParallelSignature {
   }
 
   const std::string Description() const override {
-    return op_->op_name() + ": (C, S(0), ...) -> (S(0), ...)";
+    return op().op_name() + ": (C, S(0), ...) -> (S(0), ...)";
   }
 
   const OpParallelMatchResult GetMatchResult(
@@ -174,13 +168,12 @@ class DS_MC_2_DS_OpParallelSignature final : public OpParallelSignature {
       HashMap<std::string, SbpParallel>* bn2sbp) const override {
     for (const auto& bn : data_input_bns_) { (*bn2sbp)[bn].mutable_split_parallel()->set_axis(0); }
     (*bn2sbp)[model_input_bn_].mutable_broadcast_parallel();
-    for (const auto& bn : op_->output_bns()) {
+    for (const auto& bn : op().output_bns()) {
       (*bn2sbp)[bn].mutable_split_parallel()->set_axis(0);
     }
   }
 
  private:
-  const Operator* op_;
   std::vector<std::string> data_input_bns_;
   std::string model_input_bn_;
 };

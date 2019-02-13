@@ -9,16 +9,16 @@ class Matmul_DMS_MS_2_P_OpParallelSignature final : public OpParallelSignature {
   OF_DISALLOW_COPY_AND_MOVE(Matmul_DMS_MS_2_P_OpParallelSignature);
   ~Matmul_DMS_MS_2_P_OpParallelSignature() override = default;
 
-  Matmul_DMS_MS_2_P_OpParallelSignature(const Operator* op) : OpParallelSignature(), op_(op) {}
+  Matmul_DMS_MS_2_P_OpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
 
-  const std::string Description() const override { return op_->op_name() + ": (S, S) -> P"; }
+  const std::string Description() const override { return op().op_name() + ": (S, S) -> P"; }
 
   const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelContext* parallel_ctx) const override {
     const auto& b_sbp_infer_hint = SbpInferHint4BnInOp("b");
     if (!b_sbp_infer_hint.is_model_split()) { return MakeOpParallelMatchSignatureMismatch(); }
-    int32_t b_expected_split_axis = (op_->op_conf().matmul_conf().transpose_b() ? 1 : 0);
+    int32_t b_expected_split_axis = (op().op_conf().matmul_conf().transpose_b() ? 1 : 0);
     if (b_sbp_infer_hint.split_axis() != b_expected_split_axis) {
       return MakeOpParallelMatchSignatureMismatch();
     }
@@ -29,15 +29,12 @@ class Matmul_DMS_MS_2_P_OpParallelSignature final : public OpParallelSignature {
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       HashMap<std::string, SbpParallel>* bn2sbp) const override {
-    int32_t a_split_axis = (op_->op_conf().matmul_conf().transpose_a() ? 0 : 1);
+    int32_t a_split_axis = (op().op_conf().matmul_conf().transpose_a() ? 0 : 1);
     const auto& b_sbp_infer_hint = SbpInferHint4BnInOp("b");
     (*bn2sbp)["a"].mutable_split_parallel()->set_axis(a_split_axis);
     (*bn2sbp)["b"].mutable_split_parallel()->set_axis(b_sbp_infer_hint.split_axis());
     (*bn2sbp)["out"].mutable_partial_sum_parallel();
   }
-
- private:
-  const Operator* op_;
 };
 
 }  // namespace

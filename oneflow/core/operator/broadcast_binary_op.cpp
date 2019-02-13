@@ -15,16 +15,16 @@ class BroadcastBinaryOpParallelSignature final : public OpParallelSignature {
 
   BroadcastBinaryOpParallelSignature(const Operator* op,
                                      const HashSet<std::string>& model_input_bns)
-      : OpParallelSignature(), op_(op), model_input_bns_(model_input_bns) {}
+      : OpParallelSignature(op), model_input_bns_(model_input_bns) {}
 
   const std::string Description() const override {
-    return op_->op_name() + ": (C, ..., S(0), ...) -> (S(0), ...)";
+    return op().op_name() + ": (C, ..., S(0), ...) -> (S(0), ...)";
   }
 
   const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelContext* parallel_ctx) const override {
-    for (const auto& bn : op_->input_bns()) {
+    for (const auto& bn : op().input_bns()) {
       const auto& sbp_infer_hint = SbpInferHint4BnInOp(bn);
       bool is_model_input_bns = (model_input_bns_.find(bn) != model_input_bns_.end());
       bool has_actual_model_input = sbp_infer_hint.is_model_blob();
@@ -39,20 +39,19 @@ class BroadcastBinaryOpParallelSignature final : public OpParallelSignature {
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       HashMap<std::string, SbpParallel>* bn2sbp) const override {
-    for (const auto& bn : op_->input_bns()) {
+    for (const auto& bn : op().input_bns()) {
       if (model_input_bns_.find(bn) != model_input_bns_.end()) {
         (*bn2sbp)[bn].mutable_broadcast_parallel();
       } else {
         (*bn2sbp)[bn].mutable_split_parallel()->set_axis(0);
       }
     }
-    for (const auto& bn : op_->output_bns()) {
+    for (const auto& bn : op().output_bns()) {
       (*bn2sbp)[bn].mutable_split_parallel()->set_axis(0);
     }
   }
 
  private:
-  const Operator* op_;
   HashSet<std::string> model_input_bns_;
 };
 
