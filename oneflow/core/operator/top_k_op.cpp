@@ -28,6 +28,8 @@ void TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
       fw_buf->mut_shape() = Shape({in->shape()});
       fw_buf->set_data_type(DataType::kInt32);
     }
+  } else {
+    UNIMPLEMENTED();
   }
   // out
   BlobDesc* out = GetBlobDesc4BnInOp("out");
