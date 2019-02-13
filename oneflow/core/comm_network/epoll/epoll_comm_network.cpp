@@ -71,7 +71,7 @@ void EpollCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& actor_ms
   SocketMsg msg;
   msg.msg_type = SocketMsgType::kActor;
   msg.actor_msg = actor_msg;
-  GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
+  GetSocketHelper(dst_machine_id, epoll_conf_.link_num() - 1)->AsyncWrite(msg);
 }
 
 void EpollCommNet::RequestRead(int64_t dst_machine_id, void* src_token, void* dst_token,
@@ -86,7 +86,7 @@ void EpollCommNet::RequestRead(int64_t dst_machine_id, void* src_token, void* ds
   int32_t part_num = (total_byte_size + part_length - 1) / part_length;
   CHECK_LE(part_num, epoll_conf_.link_num());
 
-  FOR_RANGE(int32_t, i, 0, part_num) {
+  FOR_RANGE(int32_t, link_index, 0, part_num) {
     int32_t byte_size = (total_byte_size > part_length) ? (part_length) : (total_byte_size);
     CHECK_GT(byte_size, 0);
     total_byte_size -= byte_size;
@@ -95,11 +95,11 @@ void EpollCommNet::RequestRead(int64_t dst_machine_id, void* src_token, void* ds
     msg.msg_type = SocketMsgType::kRequestRead;
     msg.request_read_msg.src_token = src_token;
     msg.request_read_msg.dst_token = dst_token;
-    msg.request_read_msg.offset = i * part_length;
+    msg.request_read_msg.offset = link_index * part_length;
     msg.request_read_msg.byte_size = byte_size;
     msg.request_read_msg.read_id = read_id;
     msg.request_read_msg.part_num = part_num;
-    GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
+    GetSocketHelper(dst_machine_id, link_index)->AsyncWrite(msg);
   }
   CHECK_EQ(total_byte_size, 0);
 }
@@ -120,11 +120,8 @@ EpollCommNet::EpollCommNet(const Plan& plan)
   } else if (poller_num > (peer_mchn_num * epoll_conf_.link_num())) {
     poller_num = peer_mchn_num * epoll_conf_.link_num();
   }
+  for (auto peer_mchn_id : peer_machine_id()) { CHECK(machine_id2sockfds_[peer_mchn_id].empty()); }
   pollers_.resize(poller_num, nullptr);
-  for (auto peer_mchn_id : peer_machine_id()) {
-    machine_id2sockfds_[peer_mchn_id].resize(epoll_conf_.link_num(), -1);
-    machine_id2link_index_[peer_mchn_id] = 0;
-  }
   for (size_t i = 0; i < pollers_.size(); ++i) { pollers_.at(i) = new IOEventPoller; }
   InitSockets();
   for (IOEventPoller* poller : pollers_) { poller->Start(); }
@@ -188,6 +185,7 @@ void EpollCommNet::InitSockets() {
   // useful log
   for (int64_t peer_mchn_id : peer_machine_id()) {
     auto& sockfds = machine_id2sockfds_.at(peer_mchn_id);
+    CHECK_EQ(machine_id2sockfds_.at(peer_mchn_id).size(), epoll_conf_.link_num());
     FOR_RANGE(int32_t, link_index, 0, epoll_conf_.link_num()) {
       int32_t sockfd = sockfds.at(link_index);
       CHECK_GT(sockfd, 0);
@@ -201,15 +199,10 @@ void EpollCommNet::SetSocketHelper(int64_t machine_id, int32_t sockfd) {
   poller_idx_ = (poller_idx_) % pollers_.size();
   CHECK(
       sockfd2helper_.emplace(sockfd, new SocketHelper(sockfd, pollers_.at(poller_idx_++))).second);
-  int32_t link_index =
-      machine_id2link_index_.at(machine_id).fetch_add(1, std::memory_order_relaxed);
-  machine_id2sockfds_.at(machine_id).at(link_index) = sockfd;
-  if (link_index == epoll_conf_.link_num() - 1) { machine_id2link_index_.at(machine_id) = 0; }
+  machine_id2sockfds_.at(machine_id).push_back(sockfd);
 }
 
-SocketHelper* EpollCommNet::GetSocketHelper(int64_t machine_id) {
-  int32_t link_index = machine_id2link_index_.at(machine_id).fetch_add(1, std::memory_order_relaxed)
-                       % epoll_conf_.link_num();
+SocketHelper* EpollCommNet::GetSocketHelper(int64_t machine_id, int32_t link_index) const {
   int32_t sockfd = machine_id2sockfds_.at(machine_id).at(link_index);
   return sockfd2helper_.at(sockfd);
 }
@@ -222,7 +215,7 @@ void EpollCommNet::DoRead(void* read_id, int64_t src_machine_id, void* src_token
   msg.request_write_msg.dst_token = dst_token;
   msg.request_write_msg.read_id = read_id;
   dst_token2part_done_cnt_.at(dst_token) = 0;
-  GetSocketHelper(src_machine_id)->AsyncWrite(msg);
+  GetSocketHelper(src_machine_id, epoll_conf_.link_num() - 1)->AsyncWrite(msg);
 }
 
 void EpollCommNet::PartReadDone(void* read_id, void* dst_token, int32_t part_num) {
