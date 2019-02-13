@@ -15,28 +15,36 @@ int64_t GetGatherAxis(const GatherOpConf& conf, const BlobDesc* in_blob_desc) {
   return GetGatherAxis(conf, in_blob_desc->shape().NumAxes());
 }
 
-std::unique_ptr<const OpParallelSignature> MakeGatherOpParallelSignature_DC_MS_2_P(
-    const GatherOp* op) {
-  std::string desc = op->op_name() + ": (C, S) -> P";
-  auto GetMatchResult =
-      [op](const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-           const ParallelContext* parallel_ctx) {
-        const SbpInferHint& in_sbp_infer_hint = SbpInferHint4BnInOp("in");
-        if (!in_sbp_infer_hint.is_model_split()) { return MakeOpParallelMatchSignatureMismatch(); }
-        if (in_sbp_infer_hint.split_axis() != 0) { return MakeOpParallelMatchSignatureMismatch(); }
-        if (parallel_ctx->policy() == kModelParallel) { return MakeOpParallelMatchSuccess(); }
-        return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kModelParallel);
-      };
-  auto GenSignature =
-      [op](const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-           HashMap<std::string, SbpParallel>* signature) {
-        (*signature)["indices"].mutable_broadcast_parallel();
-        (*signature)["in"].mutable_split_parallel()->set_axis(0);
-        (*signature)["out"].mutable_partial_sum_parallel();
-      };
-  return std::unique_ptr<const OpParallelSignature>(
-      new LambdaOpParallelSignature(desc, GetMatchResult, GenSignature));
-}
+class Gather_DC_MS_2_P_OpParallelSignature final : public OpParallelSignature {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(Gather_DC_MS_2_P_OpParallelSignature);
+  ~Gather_DC_MS_2_P_OpParallelSignature() override = default;
+
+  Gather_DC_MS_2_P_OpParallelSignature(const Operator* op) : OpParallelSignature(), op_(op) {}
+
+  const std::string Description() const override { return op_->op_name() + ": (C, S) -> P"; }
+
+  const OpParallelMatchResult GetMatchResult(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      const ParallelContext* parallel_ctx) const override {
+    const SbpInferHint& in_sbp_infer_hint = SbpInferHint4BnInOp("in");
+    if (!in_sbp_infer_hint.is_model_split()) { return MakeOpParallelMatchSignatureMismatch(); }
+    if (in_sbp_infer_hint.split_axis() != 0) { return MakeOpParallelMatchSignatureMismatch(); }
+    if (parallel_ctx->policy() == kModelParallel) { return MakeOpParallelMatchSuccess(); }
+    return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kModelParallel);
+  }
+
+  void GenerateSignature(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+    (*bn2sbp)["indices"].mutable_broadcast_parallel();
+    (*bn2sbp)["in"].mutable_split_parallel()->set_axis(0);
+    (*bn2sbp)["out"].mutable_partial_sum_parallel();
+  }
+
+ private:
+  const Operator* op_;
+};
 
 }  // namespace
 
@@ -87,7 +95,7 @@ void GatherOp::GetOpParallelSignatures(
   op_parallel_signatures->emplace_back(MakeOpParallelSignature_DS_MC_2_DS(this));
   auto GtZero = [](int32_t axis) { return axis > 0; };
   op_parallel_signatures->emplace_back(MakeOpParallelSignature_DC_MS_2_MS(this, GtZero));
-  op_parallel_signatures->emplace_back(MakeGatherOpParallelSignature_DC_MS_2_P(this));
+  op_parallel_signatures->emplace_back(new Gather_DC_MS_2_P_OpParallelSignature(this));
 }
 
 void GatherOp::InferOutputBlobSbpInferHint(
