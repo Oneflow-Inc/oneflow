@@ -19,6 +19,12 @@ void CommNet::Read(void* actor_read_id, int64_t src_machine_id, void* src_token,
   auto actor_read_ctx = static_cast<ActorReadContext*>(actor_read_id);
   ReadContext* read_ctx = new ReadContext;
   read_ctx->actor_read_ctx = actor_read_ctx;
+  read_ctx->src_machine_id = src_machine_id;
+  read_ctx->read_done = false;
+  {
+    std::unique_lock<std::mutex> lck(read_order_mtx_);
+    src_machine_id2read_order_.at(src_machine_id).push(read_ctx);
+  }
   auto do_read = [this, read_ctx, src_machine_id, src_token, dst_token]() {
     DoRead(read_ctx, src_machine_id, src_token, dst_token);
   };
@@ -31,6 +37,15 @@ void CommNet::AddReadCallBack(void* actor_read_id, std::function<void()> callbac
 
 void CommNet::ReadDone(void* read_id) {
   ReadContext* read_ctx = static_cast<ReadContext*>(read_id);
+  read_ctx->read_done = true;
+  auto read_order = src_machine_id2read_order_.at(read_ctx->src_machine_id);
+  while (!read_order.empty() && read_order.front()->read_done == true) {
+    DoCallBack(read_order.front());
+    read_order.pop();
+  }
+}
+
+void CommNet::DoCallBack(ReadContext* read_ctx) {
   ActorReadContext* actor_read_ctx = read_ctx->actor_read_ctx;
   CommNetItem item;
   {
