@@ -6,30 +6,38 @@ namespace oneflow {
 namespace {
 
 // S(0) -> C
-std::unique_ptr<const OpParallelSignature> MakeVariableOpDataSplitOpParallelSignature(
-    const Operator* op) {
-  std::string desc = op->op_name() + ": S(0) -> C";
-  auto IsMatched =
-      [op](const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-           const ParallelContext* parallel_ctx) {
-        OpParallelMatchResult default_ret;
-        if (parallel_ctx->policy() == kDataParallel) {
-          return MakeOpParallelMatchSuccess();
-        } else {
-          return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kDataParallel);
-        }
-      };
-  auto GenSignature =
-      [op](const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-           HashMap<std::string, SbpParallel>* signature) {
-        CHECK(SbpInferHint4BnInOp("tick").is_data_split());
-        CHECK(SbpInferHint4BnInOp("out").is_model_broadcast());
-        (*signature)["tick"].mutable_split_parallel()->set_axis(0);
-        (*signature)["out"].mutable_broadcast_parallel();
-      };
-  return std::unique_ptr<const OpParallelSignature>(
-      new LambdaOpParallelSignature(desc, IsMatched, GenSignature));
-}
+class VariableOpDataSplitOpParallelSignature final : public OpParallelSignature {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(VariableOpDataSplitOpParallelSignature);
+  ~VariableOpDataSplitOpParallelSignature() override = default;
+
+  VariableOpDataSplitOpParallelSignature(const Operator* op) : op_(op) {}
+
+  const std::string Description() const override { return op_->op_name() + ": S(0) -> C"; }
+
+  const OpParallelMatchResult GetMatchResult(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      const ParallelContext* parallel_ctx) const override {
+    OpParallelMatchResult default_ret;
+    if (parallel_ctx->policy() == kDataParallel) {
+      return MakeOpParallelMatchSuccess();
+    } else {
+      return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kDataParallel);
+    }
+  }
+
+  void GenerateSignature(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+    CHECK(SbpInferHint4BnInOp("tick").is_data_split());
+    CHECK(SbpInferHint4BnInOp("out").is_model_broadcast());
+    (*bn2sbp)["tick"].mutable_split_parallel()->set_axis(0);
+    (*bn2sbp)["out"].mutable_broadcast_parallel();
+  }
+
+ private:
+  const Operator* op_;
+};
 
 // S(0) -> S
 std::unique_ptr<const OpParallelSignature> MakeVariableOpModelSplitOpParallelSignature(
@@ -93,7 +101,7 @@ void VariableOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
 
 void VariableOp::GetOpParallelSignatures(
     std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(MakeVariableOpDataSplitOpParallelSignature(this));
+  op_parallel_signatures->emplace_back(new VariableOpDataSplitOpParallelSignature(this));
   op_parallel_signatures->emplace_back(MakeVariableOpModelSplitOpParallelSignature(this));
 }
 
