@@ -28,14 +28,13 @@ class EpollCommNet final : public CommNetIf<SocketMemDesc> {
   EpollCommNet(const Plan& plan);
   void InitSockets();
   void SetSocketHelper(int64_t machine_id, int32_t sockfd);
-  SocketHelper* GetSocketHelper(int64_t machine_id);
+  SocketHelper* GetSocketHelper(int64_t machine_id, int32_t link_index) const;
   void DoRead(void* read_id, int64_t src_machine_id, void* src_token, void* dst_token) override;
 
   const EpollConf& epoll_conf_;
   size_t poller_idx_;
   std::vector<IOEventPoller*> pollers_;
-  HashMap<int64_t, std::vector<int64_t>> machine_id2sockfds_;
-  HashMap<int64_t, std::atomic<int32_t>> machine_id2link_index_;
+  HashMap<int64_t, std::vector<int32_t>> machine_id2sockfds_;
   HashMap<int32_t, SocketHelper*> sockfd2helper_;
   HashMap<void*, std::atomic<int32_t>> dst_token2part_done_cnt_;
 };
