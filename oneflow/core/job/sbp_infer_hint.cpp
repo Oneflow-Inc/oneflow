@@ -19,34 +19,9 @@ int64_t SbpInferHint::split_axis() const {
   return split_axis_;
 }
 
-bool SbpInferHint::is_model_split() const {
-  return is_model_blob() && sbp_infer_hint_conf_.sbp_parallel().has_split_parallel();
-}
-bool SbpInferHint::is_model_broadcast() const {
-  return is_model_blob() && sbp_infer_hint_conf_.sbp_parallel().has_broadcast_parallel();
-}
-bool SbpInferHint::is_data_split() const {
-  return is_data_blob() && sbp_infer_hint_conf_.sbp_parallel().has_split_parallel();
-}
-bool SbpInferHint::is_data_partial_sum() const {
-  return is_data_blob() && sbp_infer_hint_conf_.sbp_parallel().has_partial_sum_parallel();
-}
-
-SplitParallel* SbpInferHint::mutable_model_split() {
-  sbp_infer_hint_conf_.set_is_model_blob(true);
-  return sbp_infer_hint_conf_.mutable_sbp_parallel()->mutable_split_parallel();
-}
-BroadcastParallel* SbpInferHint::mutable_model_clone() {
-  sbp_infer_hint_conf_.set_is_model_blob(true);
-  return sbp_infer_hint_conf_.mutable_sbp_parallel()->mutable_broadcast_parallel();
-}
-SplitParallel* SbpInferHint::mutable_data_split() {
-  sbp_infer_hint_conf_.set_is_model_blob(false);
-  return sbp_infer_hint_conf_.mutable_sbp_parallel()->mutable_split_parallel();
-}
-PartialSumParallel* SbpInferHint::mutable_data_partial_sum() {
-  sbp_infer_hint_conf_.set_is_model_blob(false);
-  return sbp_infer_hint_conf_.mutable_sbp_parallel()->mutable_partial_sum_parallel();
-}
+bool SbpInferHint::is_model_split() const { return is_model_blob() && has_split_axis(); }
+bool SbpInferHint::is_model_broadcast() const { return is_model_blob() && !has_split_axis(); }
+bool SbpInferHint::is_data_split() const { return is_data_blob() && has_split_axis(); }
+bool SbpInferHint::is_data_partial_sum() const { return is_data_blob() && !has_split_axis(); }
 
 }  // namespace oneflow

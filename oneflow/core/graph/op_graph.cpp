@@ -15,13 +15,6 @@ std::string OpEdge::VisualStr() const {
 
 bool* OpNode::MutIsModelBlob4Lbi(const LogicalBlobId& lbi) { return &lbi2is_model_blob_[lbi]; }
 
-const SbpInferHint& OpNode::SbpInferHint4Lbi(const LogicalBlobId& lbi) const {
-  return ProducerOpNode4Lbi(lbi)->lbi2sbp_infer_hint_.at(lbi);
-}
-SbpInferHint* OpNode::MutSbpInferHint4Lbi(const LogicalBlobId& lbi) {
-  return &lbi2sbp_infer_hint_[lbi];
-}
-
 const SbpParallel& OpNode::SbpParallel4Lbi(const LogicalBlobId& lbi) const {
   return lbi2lbpd_.at(lbi);
 }
