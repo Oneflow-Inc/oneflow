@@ -40,6 +40,7 @@ void BiasAddOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
   GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() = Shape({a_blob_desc->shape().At(0), 1});
 }
 
+/*
 void BiasAddOp::InferOutputBlobSbpInferHint(
     std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
     const ParallelContext* parallel_context) const {
@@ -52,6 +53,7 @@ void BiasAddOp::InferOutputBlobSbpInferHint(
     UNIMPLEMENTED();
   }
 }
+*/
 
 REGISTER_OP(OperatorConf::kBiasAddConf, BiasAddOp);
 

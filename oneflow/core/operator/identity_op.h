@@ -23,14 +23,6 @@ class IdentityOp final : public Operator {
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override {
     return op_conf().identity_conf().in_size() == 1 && ibn == SoleIbn();
   }
-  void InferOutputBlobSbpInferHint(
-      std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
-      const ParallelContext* parallel_context) const override {
-    if (!IsSoleInputBlobAllowedModelSplit()) {
-      CHECK_EQ(parallel_context->policy(), kDataParallel);
-    }
-    NaiveInferOutputBlobSbpInferHint(SbpInferHint4BnInOp, parallel_context);
-  }
 };
 
 }  // namespace oneflow

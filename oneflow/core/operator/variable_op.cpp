@@ -108,20 +108,6 @@ void VariableOp::GetOpParallelSignatures(
   op_parallel_signatures->emplace_back(new VariableOpModelSplitOpParallelSignature(this));
 }
 
-void VariableOp::InferOutputBlobSbpInferHint(
-    std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
-    const ParallelContext* parallel_context) const {
-  if (parallel_context->policy() == kDataParallel) {
-    SbpInferHint4BnInOp("out")->mutable_model_clone();
-  } else if (parallel_context->policy() == kModelParallel) {
-    TODO();
-    // SbpInferHint4BnInOp("out")->mutable_model_split()->set_axis(
-    //    OutputBlobModelSplitAxis(SbpInferHint4BnInOp, "out"));
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
 void VariableOp::InferIsModelBlob4OutputBlobs(
     std::function<bool*(const std::string&)> IsModelBlob4BnInOp) const {
   *IsModelBlob4BnInOp("out") = true;

@@ -52,11 +52,6 @@ class ConvOp : public Operator {
 
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
-  void InferOutputBlobSbpInferHint(
-      std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
-      const ParallelContext* parallel_context) const override {
-    NaiveInferOutputBlobSbpInferHint(SbpInferHint4BnInOp, parallel_context);
-  }
 
   PbMessage* MutableCustomizedKernelConf(KernelConf*) const override;
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

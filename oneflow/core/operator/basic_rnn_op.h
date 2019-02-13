@@ -14,11 +14,6 @@ class BasicRnnOp final : public RecurrentOp {
 
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { UNIMPLEMENTED(); }
-  void InferOutputBlobSbpInferHint(
-      std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
-      const ParallelContext* parallel_context) const override {
-    UNIMPLEMENTED();
-  }
 
   void VirtualInitFromOpConf();
   void VirtualInferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

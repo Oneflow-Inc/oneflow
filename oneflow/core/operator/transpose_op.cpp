@@ -47,6 +47,7 @@ void TransposeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   }
 }
 
+/*
 void TransposeOp::InferOutputBlobSbpInferHint(
     std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
     const ParallelContext* parallel_context) const {
@@ -76,7 +77,7 @@ void TransposeOp::InferOutputBlobSbpInferHint(
     *SbpInferHint4BnInOp("out") = in_sbp_infer_hint;
   }
 }
-
+*/
 void TransposeOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {

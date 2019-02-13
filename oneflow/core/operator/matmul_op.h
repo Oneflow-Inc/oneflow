@@ -21,9 +21,6 @@ class MatmulOp final : public Operator {
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override;
   void GetOpParallelSignatures(
       std::vector<std::unique_ptr<const OpParallelSignature>>*) const override;
-  void InferOutputBlobSbpInferHint(
-      std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
-      const ParallelContext* parallel_context) const override;
 };
 
 }  // namespace oneflow

@@ -16,11 +16,6 @@ class ModelSaveOp final : public Operator {
 
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { UNIMPLEMENTED(); }
-  void InferOutputBlobSbpInferHint(
-      std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
-      const ParallelContext* parallel_context) const override {
-    UNIMPLEMENTED();
-  }
 };
 
 }  // namespace oneflow

@@ -252,7 +252,6 @@ void OpGraph::Init() {
   InferTimeShape();
   InferNoParallelBlobDesc();
   InferIsModelBlob();
-  InferSbpInferHint();
   InferSbpParallel();
   InferLogicalBlobDesc();
 }
@@ -352,23 +351,6 @@ void OpGraph::InferIsModelBlob() const {
     op_node->op().InferIsModelBlob4OutputBlobsIf([&](const std::string& bn) -> bool* {
       return op_node->ProducerOpNode4BnInOp(bn)->MutIsModelBlob4Lbi(op_node->op().BnInOp2Lbi(bn));
     });
-  });
-}
-
-void OpGraph::InferSbpInferHint() const {
-  TopoForEachNode([&](OpNode* op_node) {
-    auto SbpInferHint4BnInOp = [&](const std::string& bn) -> SbpInferHint* {
-      return op_node->ProducerOpNode4BnInOp(bn)->MutSbpInferHint4Lbi(op_node->op().BnInOp2Lbi(bn));
-    };
-    auto ShapeNumAxes4BnInOp = [&](const std::string& bn) -> int32_t {
-      return op_node->NoParallelBlobDesc4BnInOp(bn)->shape().NumAxes();
-    };
-    ParallelContext parallel_ctx;
-    parallel_ctx.set_parallel_id(0);
-    parallel_ctx.set_parallel_num(op_node->parallel_desc().parallel_num());
-    parallel_ctx.set_policy(op_node->parallel_desc().policy());
-    op_node->op().InferOuputBlobsSbpInferHintIf(SbpInferHint4BnInOp, ShapeNumAxes4BnInOp,
-                                                &parallel_ctx);
   });
 }
 

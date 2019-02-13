@@ -24,11 +24,6 @@ class RecurrentOp : public Operator {
 
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { UNIMPLEMENTED(); }
-  void InferOutputBlobSbpInferHint(
-      std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
-      const ParallelContext* parallel_context) const override {
-    UNIMPLEMENTED();
-  }
   virtual void VirtualInitFromOpConf() { UNIMPLEMENTED(); }
   virtual void VirtualInferBlobDescs(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

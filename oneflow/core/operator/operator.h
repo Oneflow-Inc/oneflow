@@ -146,11 +146,6 @@ class Operator {
   virtual void InferOutputBlobTimeShape(
       std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
       Shape* time_shape) const;
-  // Infer output logical blob parallel descriptor's hint info
-  void InferOuputBlobsSbpInferHintIf(
-      std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
-      std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
-      const ParallelContext* parallel_context) const;
   // Infer blob's SbpParallel
   void InferInputOutputSbpParallelIf(
       std::function<SbpParallel*(const std::string&)> SbpParallel4BnInOp,
@@ -176,12 +171,6 @@ class Operator {
  protected:
   virtual void InferIsModelBlob4OutputBlobs(
       std::function<bool*(const std::string&)> IsModelBlob4BnInOp) const;
-  virtual void InferOutputBlobSbpInferHint(
-      std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
-      const ParallelContext* parallel_context) const = 0;
-  void NaiveInferOutputBlobSbpInferHint(
-      std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
-      const ParallelContext* parallel_context) const;
 
   int64_t cudnn_buf_limit_byte() const;
 

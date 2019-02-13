@@ -226,7 +226,7 @@ std::unique_ptr<const OpParallelSignature> MakeModelSplitOpParallelSignature(con
               SbpInferHint4BnInOp(op->SoleIbn()).split_axis());
           for (const auto& bn : op->output_bns()) {
             (*signature)[bn].mutable_split_parallel()->set_axis(
-                SbpInferHint4BnInOp(bn).split_axis());
+                op->OutputBlobModelSplitAxis(SbpInferHint4BnInOp, bn));
           }
         };
     return std::unique_ptr<const OpParallelSignature>(
@@ -245,7 +245,7 @@ std::unique_ptr<const OpParallelSignature> MakeModelSplitOpParallelSignature(con
           for (const auto& bn : op->input_bns()) { (*signature)[bn].mutable_broadcast_parallel(); }
           for (const auto& bn : op->output_bns()) {
             (*signature)[bn].mutable_split_parallel()->set_axis(
-                SbpInferHint4BnInOp(bn).split_axis());
+                op->OutputBlobModelSplitAxis(SbpInferHint4BnInOp, bn));
           }
         };
     return std::unique_ptr<const OpParallelSignature>(
@@ -293,7 +293,8 @@ std::unique_ptr<const OpParallelSignature> MakeOpParallelSignature_DC_MS_2_MS(
         (*signature)[model_input_bn].mutable_split_parallel()->set_axis(
             SbpInferHint4BnInOp(model_input_bn).split_axis());
         for (const auto& bn : op->output_bns()) {
-          (*signature)[bn].mutable_split_parallel()->set_axis(SbpInferHint4BnInOp(bn).split_axis());
+          (*signature)[bn].mutable_split_parallel()->set_axis(
+              op->OutputBlobModelSplitAxis(SbpInferHint4BnInOp, bn));
         }
       };
   return std::unique_ptr<const OpParallelSignature>(

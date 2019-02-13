@@ -22,12 +22,6 @@ class BroadcastBinaryOp : public Operator {
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return true; }
   void GetOpParallelSignatures(
       std::vector<std::unique_ptr<const OpParallelSignature>>*) const override;
-  void InferOutputBlobSbpInferHint(
-      std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
-      const ParallelContext* parallel_context) const override {
-    CHECK_EQ(parallel_context->policy(), kDataParallel);
-    NaiveInferOutputBlobSbpInferHint(SbpInferHint4BnInOp, parallel_context);
-  }
 };
 
 }  // namespace oneflow

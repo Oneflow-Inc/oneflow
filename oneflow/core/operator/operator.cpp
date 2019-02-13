@@ -108,12 +108,6 @@ void Operator::InferBwBufBlobDescsIf(
   }
 }
 
-void Operator::InferOutputBlobTimeShapeIf(
-    std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
-    const ParallelContext* parallel_ctx, Shape* time_shape) const {
-  InferOutputBlobTimeShape(GetTimeShape4BnInOp, parallel_ctx, time_shape);
-}
-
 void Operator::InferOutputBlobTimeShape(
     std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
     Shape* time_shape) const {
@@ -133,19 +127,6 @@ int32_t Operator::OutputBlobModelSplitAxis(
     const std::string& obn) const {
   UNIMPLEMENTED();
   return -1;
-}
-
-void Operator::InferOuputBlobsSbpInferHintIf(
-    std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
-    std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
-    const ParallelContext* parallel_context) const {
-  if (!output_bns().empty()) {
-    InferOutputBlobSbpInferHint(SbpInferHint4BnInOp, parallel_context);
-    for (const std::string& bn : output_bns()) {
-      SbpInferHint4BnInOp(bn)->set_parallel_num(parallel_context->parallel_num());
-      SbpInferHint4BnInOp(bn)->set_num_axes(ShapeNumAxes4BnInOp(bn));
-    }
-  }
 }
 
 void Operator::GetOpParallelSignatures(
@@ -227,32 +208,6 @@ void Operator::InferInputOutputSbpParallelIf(
 
 bool Operator::IsSoleInputBlobAllowedModelSplit() const {
   return input_bns().size() == 1 && IsInputBlobAllowedModelSplit(SoleIbn());
-}
-
-void Operator::NaiveInferOutputBlobSbpInferHint(
-    std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
-    const ParallelContext* parallel_context) const {
-  for (const std::string& bn : output_bns()) {
-    if (IsSoleInputBlobAllowedModelSplit()) {
-      *SbpInferHint4BnInOp(bn) = *SbpInferHint4BnInOp(SoleIbn());
-    } else {
-      if (parallel_context->policy() == kDataParallel) {
-        SbpInferHint4BnInOp(bn)->mutable_data_split()->set_axis(0);
-      } else if (parallel_context->policy() == kModelParallel) {
-        if (!model_bns().empty() || !const_model_bns().empty()) {
-          int32_t model_split_axis = -1;
-          TODO();
-          // int32_t model_split_axis = OutputBlobModelSplitAxis(SbpInferHint4BnInOp, bn);
-          CHECK_NE(model_split_axis, -1);
-          SbpInferHint4BnInOp(bn)->mutable_model_split()->set_axis(model_split_axis);
-        } else {
-          UNIMPLEMENTED();
-        }
-      } else {
-        UNIMPLEMENTED();
-      }
-    }
-  }
 }
 
 void Operator::InferIsModelBlob4OutputBlobsIf(

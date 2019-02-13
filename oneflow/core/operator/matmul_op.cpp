@@ -108,6 +108,7 @@ void MatmulOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
   }
 }
 
+/*
 void MatmulOp::InferOutputBlobSbpInferHint(
     std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
     const ParallelContext* parallel_context) const {
@@ -137,6 +138,7 @@ void MatmulOp::InferOutputBlobSbpInferHint(
     SbpInferHint4BnInOp("out")->mutable_data_split()->set_axis(0);
   }
 }
+*/
 
 void MatmulOp::InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                    const ParallelContext*) const {

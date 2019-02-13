@@ -21,9 +21,6 @@ class PrintOp final : public Operator {
 
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return true; }
-  void InferOutputBlobSbpInferHint(
-      std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
-      const ParallelContext* parallel_context) const override {}
 
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
 };

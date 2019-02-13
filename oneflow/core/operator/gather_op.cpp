@@ -95,6 +95,7 @@ void GatherOp::GetOpParallelSignatures(
   op_parallel_signatures->emplace_back(new Gather_DC_MS_2_P_OpParallelSignature(this));
 }
 
+/*
 void GatherOp::InferOutputBlobSbpInferHint(
     std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
     const ParallelContext* parallel_context) const {
@@ -118,6 +119,7 @@ void GatherOp::InferOutputBlobSbpInferHint(
     SbpInferHint4BnInOp("out")->mutable_data_split()->set_axis(0);
   }
 }
+*/
 
 REGISTER_OP(OperatorConf::kGatherConf, GatherOp);
 
