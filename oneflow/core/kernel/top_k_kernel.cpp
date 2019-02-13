@@ -11,15 +11,7 @@ void ForwardPartDataContentTopOne(const T* in, const Range& range, const int32_t
                                   int32_t* out) {
   FOR_RANGE(int32_t, i, range.begin(), range.end()) {
     const T* values = in + i * instance_size;
-    T max_val = values[0];
-    int32_t max_idx = 0;
-    FOR_RANGE(int32_t, j, 0, instance_size) {
-      if (values[j] > max_val) {
-        max_val = values[j];
-        max_idx = j;
-      }
-    }
-    out[i] = max_idx;
+    out[i] = std::distance(values, std::max_element(values, values + instance_size));
   }
 }
 

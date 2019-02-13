@@ -14,7 +14,7 @@ __global__ void ForwardGpuTopOne(const T* in, const int32_t instance_num,
     const T* values = in + i * instance_size;
     T max_val = values[0];
     int32_t max_idx = 0;
-    FOR_RANGE(int32_t, j, 0, instance_size) {
+    FOR_RANGE(int32_t, j, 1, instance_size) {
       if (values[j] > max_val) {
         max_val = values[j];
         max_idx = j;
