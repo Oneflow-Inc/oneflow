@@ -128,6 +128,13 @@ void Operator::InferOutputBlobTimeShape(
   }
 }
 
+int32_t Operator::OutputBlobModelSplitAxis(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+    const std::string& obn) const {
+  UNIMPLEMENTED();
+  return -1;
+}
+
 void Operator::InferOuputBlobsSbpInferHintIf(
     std::function<SbpInferHint*(const std::string&)> SbpInferHint4BnInOp,
     std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
@@ -148,7 +155,7 @@ void Operator::GetOpParallelSignatures(
   if (IsSoleInputBlobAllowedModelSplit()) {
     CHECK(!has_model);
     op_parallel_signatures->emplace_back(MakeModelSplitOpParallelSignature(this));
-    op_parallel_signatures->emplace_back(MakeCloneOpParallelSignature(this));
+    op_parallel_signatures->emplace_back(MakeModelBroadcastOpParallelSignature(this));
   } else if (has_model) {
     for (const auto& ibn : input_bns()) { CHECK(!IsInputBlobAllowedModelSplit(ibn)); }
     op_parallel_signatures->emplace_back(MakeModelSplitOpParallelSignature(this));
@@ -233,7 +240,9 @@ void Operator::NaiveInferOutputBlobSbpInferHint(
         SbpInferHint4BnInOp(bn)->mutable_data_split()->set_axis(0);
       } else if (parallel_context->policy() == kModelParallel) {
         if (!model_bns().empty() || !const_model_bns().empty()) {
-          int32_t model_split_axis = ModelSplitAxis();
+          int32_t model_split_axis = -1;
+          TODO();
+          // int32_t model_split_axis = OutputBlobModelSplitAxis(SbpInferHint4BnInOp, bn);
           CHECK_NE(model_split_axis, -1);
           SbpInferHint4BnInOp(bn)->mutable_model_split()->set_axis(model_split_axis);
         } else {

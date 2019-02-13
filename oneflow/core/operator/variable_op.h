@@ -20,7 +20,9 @@ class VariableOp final : public Operator {
   bool NeedOutBlobWhenBackward() const override { return false; }
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
-  int32_t ModelSplitAxis() const override;
+  int32_t OutputBlobModelSplitAxis(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      const std::string& obn) const override;
 
   void set_is_fw_inplace(bool val) const { *is_fw_inplace_ = val; }
   void set_is_bw_inplace(bool val) const { *is_bw_inplace_ = val; }

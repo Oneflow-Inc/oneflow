@@ -59,7 +59,8 @@ class VariableOpModelSplitOpParallelSignature final : public OpParallelSignature
       HashMap<std::string, SbpParallel>* bn2sbp) const override {
     CHECK(SbpInferHint4BnInOp("tick").is_data_split());
     (*bn2sbp)["tick"].mutable_split_parallel()->set_axis(0);
-    (*bn2sbp)["out"].mutable_split_parallel()->set_axis((op().ModelSplitAxis()));
+    (*bn2sbp)["out"].mutable_split_parallel()->set_axis(
+        (op().OutputBlobModelSplitAxis(SbpInferHint4BnInOp, "out")));
   }
 };
 
@@ -74,7 +75,11 @@ void VariableOp::InitFromOpConf() {
 
 const PbMessage& VariableOp::GetCustomizedConf() const { return op_conf().variable_conf(); }
 
-int32_t VariableOp::ModelSplitAxis() const { return op_conf().variable_conf().model_split_axis(); }
+int32_t VariableOp::OutputBlobModelSplitAxis(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+    const std::string& obn) const {
+  return op_conf().variable_conf().model_split_axis();
+}
 
 void VariableOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx) const {
@@ -109,7 +114,9 @@ void VariableOp::InferOutputBlobSbpInferHint(
   if (parallel_context->policy() == kDataParallel) {
     SbpInferHint4BnInOp("out")->mutable_model_clone();
   } else if (parallel_context->policy() == kModelParallel) {
-    SbpInferHint4BnInOp("out")->mutable_model_split()->set_axis(ModelSplitAxis());
+    TODO();
+    // SbpInferHint4BnInOp("out")->mutable_model_split()->set_axis(
+    //    OutputBlobModelSplitAxis(SbpInferHint4BnInOp, "out"));
   } else {
     UNIMPLEMENTED();
   }

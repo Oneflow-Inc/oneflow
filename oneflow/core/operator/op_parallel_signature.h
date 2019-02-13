@@ -76,12 +76,13 @@ std::unique_ptr<const OpParallelSignature> MakeDataSplitOpParallelSignature(cons
 std::unique_ptr<const OpParallelSignature> MakeModelSplitOpParallelSignature(const Operator* op);
 
 // (C,) -> (C, ...)
-std::unique_ptr<const OpParallelSignature> MakeCloneOpParallelSignature(const Operator* op);
+std::unique_ptr<const OpParallelSignature> MakeModelBroadcastOpParallelSignature(
+    const Operator* op);
 
 // (C, S(0), ...) -> (S(0), ...)
 // return blobs: data splitted
 // intput blobs: split data input blobs and clone model input blobs
-std::unique_ptr<const OpParallelSignature> MakeOpParallelSignature_DS_MC_2_DS(const Operator* op);
+std::unique_ptr<const OpParallelSignature> Make_DS_MC_2_DS_OpParallelSignature(const Operator* op);
 
 // (C, S, ...) -> (S, ...)
 // return blobs: model splitted

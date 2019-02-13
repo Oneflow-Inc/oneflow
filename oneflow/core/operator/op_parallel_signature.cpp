@@ -184,7 +184,8 @@ std::unique_ptr<const OpParallelSignature> MakeDataSplitOpParallelSignature(cons
   return std::unique_ptr<const OpParallelSignature>(new DataSplitOpParallelSignature(op));
 }
 
-std::unique_ptr<const OpParallelSignature> MakeCloneOpParallelSignature(const Operator* op) {
+std::unique_ptr<const OpParallelSignature> MakeModelBroadcastOpParallelSignature(
+    const Operator* op) {
   return std::unique_ptr<const OpParallelSignature>(new ModelBroadcastOpParallelSignature(op));
 }
 
@@ -252,7 +253,7 @@ std::unique_ptr<const OpParallelSignature> MakeModelSplitOpParallelSignature(con
   }
 }
 
-std::unique_ptr<const OpParallelSignature> MakeOpParallelSignature_DS_MC_2_DS(const Operator* op) {
+std::unique_ptr<const OpParallelSignature> Make_DS_MC_2_DS_OpParallelSignature(const Operator* op) {
   return std::unique_ptr<const OpParallelSignature>(new DS_MC_2_DS_OpParallelSignature(op));
 }
 
