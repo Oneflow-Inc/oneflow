@@ -8,48 +8,58 @@ bool IsScalarBlob(const BlobDesc* blob) {
   return blob->shape().NumAxes() == 1 && blob->shape().At(0) == 1;
 }
 
+class BroadcastBinaryOpParallelSignature final : public OpParallelSignature {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(BroadcastBinaryOpParallelSignature);
+  ~BroadcastBinaryOpParallelSignature() override = default;
+
+  BroadcastBinaryOpParallelSignature(const Operator* op,
+                                     const HashSet<std::string>& model_input_bns)
+      : op_(op), model_input_bns_(model_input_bns) {}
+
+  const std::string Description() const override {
+    return op_->op_name() + ": (C, ..., S(0), ...) -> (S(0), ...)";
+  }
+
+  const OpParallelMatchResult GetMatchResult(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      const ParallelContext* parallel_ctx) const override {
+    for (const auto& bn : op_->input_bns()) {
+      const auto& sbp_infer_hint = SbpInferHint4BnInOp(bn);
+      bool is_model_input_bns = (model_input_bns_.find(bn) != model_input_bns_.end());
+      bool has_actual_model_input = sbp_infer_hint.is_model_blob();
+      if (is_model_input_bns ^ has_actual_model_input) {
+        return MakeOpParallelMatchSignatureMismatch();
+      }
+    }
+    if (parallel_ctx->policy() == kDataParallel) { return MakeOpParallelMatchSuccess(); }
+    return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kDataParallel);
+  }
+
+  void GenerateSignature(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+    for (const auto& bn : op_->input_bns()) {
+      if (model_input_bns_.find(bn) != model_input_bns_.end()) {
+        (*bn2sbp)[bn].mutable_broadcast_parallel();
+      } else {
+        (*bn2sbp)[bn].mutable_split_parallel()->set_axis(0);
+      }
+    }
+    for (const auto& bn : op_->output_bns()) {
+      (*bn2sbp)[bn].mutable_split_parallel()->set_axis(0);
+    }
+  }
+
+ private:
+  const Operator* op_;
+  HashSet<std::string> model_input_bns_;
+};
+
 std::unique_ptr<const OpParallelSignature> MakeBroadcastBinaryOpParallelSignature(
     const Operator* op, const HashSet<std::string>& model_input_bns) {
-  std::string data_split_desc = op->op_name() + ": (C, ..., S(0), ...) -> (S(0), ...)";
-  auto IsMatched =
-      [op, model_input_bns](
-          const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-          const ParallelContext* parallel_ctx) {
-        OpParallelMatchResult default_ret;
-        if (parallel_ctx->policy() == kDataParallel) {
-          default_ret = MakeOpParallelMatchSuccess();
-        } else {
-          default_ret =
-              MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kDataParallel);
-        }
-        for (const auto& bn : op->input_bns()) {
-          const auto& sbp_infer_hint = SbpInferHint4BnInOp(bn);
-          bool is_model_input_bns = (model_input_bns.find(bn) != model_input_bns.end());
-          bool has_actual_model_input = sbp_infer_hint.is_model_blob();
-          if (is_model_input_bns ^ has_actual_model_input) {
-            return MakeOpParallelMatchSignatureMismatch();
-          }
-        }
-        if (parallel_ctx->policy() == kDataParallel) { return MakeOpParallelMatchSuccess(); }
-        return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kDataParallel);
-      };
-  auto GenDataSplitSignature =
-      [op, model_input_bns](
-          const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-          HashMap<std::string, SbpParallel>* signature) {
-        for (const auto& bn : op->input_bns()) {
-          if (model_input_bns.find(bn) != model_input_bns.end()) {
-            (*signature)[bn].mutable_broadcast_parallel();
-          } else {
-            (*signature)[bn].mutable_split_parallel()->set_axis(0);
-          }
-        }
-        for (const auto& bn : op->output_bns()) {
-          (*signature)[bn].mutable_split_parallel()->set_axis(0);
-        }
-      };
   return std::unique_ptr<const OpParallelSignature>(
-      new LambdaOpParallelSignature(data_split_desc, IsMatched, GenDataSplitSignature));
+      new BroadcastBinaryOpParallelSignature(op, model_input_bns));
 }
 
 }  // namespace
