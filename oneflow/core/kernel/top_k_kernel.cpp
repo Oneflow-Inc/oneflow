@@ -7,13 +7,12 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-void ForwardPartDataContentTopOne(const T* in, const Range range, const int32_t instance_size,
+void ForwardPartDataContentTopOne(const T* in, const Range& range, const int32_t instance_size,
                                   int32_t* out) {
   FOR_RANGE(int32_t, i, range.begin(), range.end()) {
-    const int32_t offset = i * instance_size;
-    const T* values = in + offset;
-    T max_val = GetMinVal<T>();
-    int32_t max_idx = -1;
+    const T* values = in + i * instance_size;
+    T max_val = values[0];
+    int32_t max_idx = 0;
     FOR_RANGE(int32_t, j, 0, instance_size) {
       if (values[j] > max_val) {
         max_val = values[j];
@@ -25,7 +24,7 @@ void ForwardPartDataContentTopOne(const T* in, const Range range, const int32_t 
 }
 
 template<typename T>
-void ForwardPartDataContentTopK(const T* in, const Range range, const int32_t instance_size,
+void ForwardPartDataContentTopK(const T* in, const Range& range, const int32_t instance_size,
                                 const int32_t k, const bool sorted, int32_t* fw_buf, int32_t* out) {
   CHECK_NOTNULL(fw_buf);
   FOR_RANGE(int32_t, i, range.begin(), range.end()) {
@@ -60,7 +59,7 @@ struct TopKKernelUtil<DeviceType::kCPU, T> {
     const BalancedSplitter bs(instance_num, part_num);
     BlockingCounter bc(part_num);
     FOR_RANGE(int32_t, part_id, 0, part_num) {
-      Range range = bs.At(part_id);
+      const Range range = bs.At(part_id);
       Global<ThreadMgr>::Get()->compute_thread_pool()->AddWork([=, &bc]() {
         if (k == 1) {
           ForwardPartDataContentTopOne(in, range, instance_size, out);
