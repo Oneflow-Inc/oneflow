@@ -28,7 +28,8 @@ std::unique_ptr<const OpParallelSignature> MakeMatmulOpParallelSignature_DMS_MS_
         (*signature)["b"].mutable_split_parallel()->set_axis(b_sbp_infer_hint.split_axis());
         (*signature)["out"].mutable_partial_sum_parallel();
       };
-  return std::make_unique<OpParallelSignature>(desc, GetMatchResult, GenSignature);
+  return std::unique_ptr<const OpParallelSignature>(
+      new LambdaOpParallelSignature(desc, GetMatchResult, GenSignature));
 }
 
 }  // namespace

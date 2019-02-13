@@ -27,7 +27,8 @@ std::unique_ptr<const OpParallelSignature> MakeVariableOpDataSplitOpParallelSign
         (*signature)["tick"].mutable_split_parallel()->set_axis(0);
         (*signature)["out"].mutable_broadcast_parallel();
       };
-  return std::make_unique<OpParallelSignature>(desc, IsMatched, GenSignature);
+  return std::unique_ptr<const OpParallelSignature>(
+      new LambdaOpParallelSignature(desc, IsMatched, GenSignature));
 }
 
 // S(0) -> S
@@ -49,11 +50,11 @@ std::unique_ptr<const OpParallelSignature> MakeVariableOpModelSplitOpParallelSig
            HashMap<std::string, SbpParallel>* signature) {
         CHECK(SbpInferHint4BnInOp("tick").is_data_split());
         CHECK(SbpInferHint4BnInOp("out").is_model_split());
-        int32_t axis = SbpInferHint4BnInOp("out").split_axis();
         (*signature)["tick"].mutable_split_parallel()->set_axis(0);
-        (*signature)["out"].mutable_split_parallel()->set_axis(axis);
+        (*signature)["out"].mutable_split_parallel()->set_axis((op->ModelSplitAxis()));
       };
-  return std::make_unique<OpParallelSignature>(desc, IsMatched, GenSignature);
+  return std::unique_ptr<const OpParallelSignature>(
+      new LambdaOpParallelSignature(desc, IsMatched, GenSignature));
 }
 
 }  // namespace

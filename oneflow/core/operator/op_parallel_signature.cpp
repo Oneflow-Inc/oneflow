@@ -60,7 +60,8 @@ std::unique_ptr<const OpParallelSignature> MakeDataSplitOpParallelSignature(cons
           (*signature)[bn].mutable_split_parallel()->set_axis(0);
         }
       };
-  return std::make_unique<OpParallelSignature>(data_split_desc, IsMatched, GenDataSplitSignature);
+  return std::unique_ptr<const OpParallelSignature>(
+      new LambdaOpParallelSignature(data_split_desc, IsMatched, GenDataSplitSignature));
 }
 
 std::unique_ptr<const OpParallelSignature> MakeCloneOpParallelSignature(const Operator* op) {
@@ -98,7 +99,8 @@ std::unique_ptr<const OpParallelSignature> MakeCloneOpParallelSignature(const Op
     for (const auto& bn : op->input_bns()) { (*signature)[bn].mutable_broadcast_parallel(); }
     for (const auto& bn : op->output_bns()) { (*signature)[bn].mutable_broadcast_parallel(); }
   };
-  return std::make_unique<OpParallelSignature>(clone_desc, IsSoleIbnCloned, GenCloneSignature);
+  return std::unique_ptr<const OpParallelSignature>(
+      new LambdaOpParallelSignature(clone_desc, IsSoleIbnCloned, GenCloneSignature));
 }
 
 std::unique_ptr<const OpParallelSignature> MakeModelSplitOpParallelSignature(const Operator* op) {
@@ -141,7 +143,8 @@ std::unique_ptr<const OpParallelSignature> MakeModelSplitOpParallelSignature(con
                 SbpInferHint4BnInOp(bn).split_axis());
           }
         };
-    return std::make_unique<OpParallelSignature>(desc, IsModelSplit, GenModelSplitSignature);
+    return std::unique_ptr<const OpParallelSignature>(
+        new LambdaOpParallelSignature(desc, IsModelSplit, GenModelSplitSignature));
   } else {
     CHECK(!op->model_bns().empty() || !op->const_model_bns().empty());
     std::string desc = op->op_name() + ": (C, ...) -> (S, ...)";
@@ -159,7 +162,8 @@ std::unique_ptr<const OpParallelSignature> MakeModelSplitOpParallelSignature(con
                 SbpInferHint4BnInOp(bn).split_axis());
           }
         };
-    return std::make_unique<OpParallelSignature>(desc, IsModelSplit, GenModelSplitSignature);
+    return std::unique_ptr<const OpParallelSignature>(
+        new LambdaOpParallelSignature(desc, IsModelSplit, GenModelSplitSignature));
   }
 }
 
@@ -212,7 +216,8 @@ std::unique_ptr<const OpParallelSignature> MakeOpParallelSignature_DS_MC_2_DS(co
       (*signature)[bn].mutable_split_parallel()->set_axis(0);
     }
   };
-  return std::make_unique<OpParallelSignature>(desc, GetMatchResult, GenSignature);
+  return std::unique_ptr<const OpParallelSignature>(
+      new LambdaOpParallelSignature(desc, GetMatchResult, GenSignature));
 }
 
 std::unique_ptr<const OpParallelSignature> MakeOpParallelSignature_DC_MS_2_MS(
@@ -254,7 +259,8 @@ std::unique_ptr<const OpParallelSignature> MakeOpParallelSignature_DC_MS_2_MS(
           (*signature)[bn].mutable_split_parallel()->set_axis(SbpInferHint4BnInOp(bn).split_axis());
         }
       };
-  return std::make_unique<OpParallelSignature>(desc, GetMatchResult, GenSignature);
+  return std::unique_ptr<const OpParallelSignature>(
+      new LambdaOpParallelSignature(desc, GetMatchResult, GenSignature));
 }
 
 }  // namespace oneflow

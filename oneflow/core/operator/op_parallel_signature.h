@@ -8,28 +8,43 @@
 
 namespace oneflow {
 
-class OpParallelSignature final {
+class OpParallelSignature {
+ public:
+  virtual ~OpParallelSignature() = default;
+  virtual const std::string Description() const = 0;
+  virtual const OpParallelMatchResult GetMatchResult(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      const ParallelContext* parallel_ctx) const = 0;
+  virtual void GenerateSignature(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      HashMap<std::string, SbpParallel>* bn2sbp) const = 0;
+
+ protected:
+  OpParallelSignature() = default;
+};
+
+class LambdaOpParallelSignature final : public OpParallelSignature {
  public:
   using FnSbpInferHint4BnInOp = std::function<const SbpInferHint&(const std::string&)>;
   using FnGetMathResult = std::function<const OpParallelMatchResult(const FnSbpInferHint4BnInOp&,
                                                                     const ParallelContext*)>;
   using FnSignatureGeneratorFunc =
       std::function<void(const FnSbpInferHint4BnInOp&, HashMap<std::string, SbpParallel>*)>;
-  OpParallelSignature(const std::string& description, const FnGetMathResult& get_match_result,
-                      const FnSignatureGeneratorFunc& signature_generator)
-      : description_(description),
+  LambdaOpParallelSignature(const std::string& description, const FnGetMathResult& get_match_result,
+                            const FnSignatureGeneratorFunc& signature_generator)
+      : OpParallelSignature(),
+        description_(description),
         get_match_result_(get_match_result),
         signature_generator_(signature_generator) {}
-  OpParallelSignature(const OpParallelSignature&) = default;
-  ~OpParallelSignature() = default;
+  ~LambdaOpParallelSignature() override = default;
 
-  const std::string Description() const { return description_; }
+  const std::string Description() const override { return description_; }
   const OpParallelMatchResult GetMatchResult(const FnSbpInferHint4BnInOp& SbpInferHint4BnInOp,
-                                             const ParallelContext* parallel_ctx) const {
+                                             const ParallelContext* parallel_ctx) const override {
     return get_match_result_(SbpInferHint4BnInOp, parallel_ctx);
   }
   void GenerateSignature(const FnSbpInferHint4BnInOp& SbpInferHint4BnInOp,
-                         HashMap<std::string, SbpParallel>* bn2sbp) const {
+                         HashMap<std::string, SbpParallel>* bn2sbp) const override {
     signature_generator_(SbpInferHint4BnInOp, bn2sbp);
   }
 

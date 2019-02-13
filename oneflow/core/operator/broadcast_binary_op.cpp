@@ -48,7 +48,8 @@ std::unique_ptr<const OpParallelSignature> MakeBroadcastBinaryOpParallelSignatur
           (*signature)[bn].mutable_split_parallel()->set_axis(0);
         }
       };
-  return std::make_unique<OpParallelSignature>(data_split_desc, IsMatched, GenDataSplitSignature);
+  return std::unique_ptr<const OpParallelSignature>(
+      new LambdaOpParallelSignature(data_split_desc, IsMatched, GenDataSplitSignature));
 }
 
 }  // namespace
