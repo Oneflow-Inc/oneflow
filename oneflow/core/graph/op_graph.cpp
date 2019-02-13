@@ -356,17 +356,30 @@ void OpGraph::InferIsModelBlob() const {
 
 void OpGraph::InferSbpParallel() const {
   TopoForEachNode([&](OpNode* op_node) {
+    HashMap<std::string, SbpInferHint> ibn2sbp_infer_hint;
+    for (const std::string& ibn : op_node->op().input_bns()) {
+      const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
+      OpNode* producer = op_node->SrcNode4InputBnInOp(ibn);
+      bool is_model_blob = producer->IsModelBlob4Lbi(lbi);
+      int64_t parallel_num = op_node->parallel_desc().parallel_num();
+      int64_t num_axes = producer->NoParallelBlobDesc4Lbi(lbi).shape().NumAxes();
+      int64_t split_axis = -1;
+      const auto& sbp = producer->SbpParallel4Lbi(lbi);
+      if (sbp.has_split_parallel()) { split_axis = sbp.split_parallel().axis(); }
+      ibn2sbp_infer_hint.emplace(ibn,
+                                 SbpInferHint(is_model_blob, parallel_num, num_axes, split_axis));
+    }
     auto SbpParallel4BnInOp = [&](const std::string& bn) -> SbpParallel* {
       return op_node->MutSbpParallel4Lbi(op_node->op().BnInOp2Lbi(bn));
     };
-    auto SbpInferHint4BnInOp = [&](const std::string& bn) -> const SbpInferHint& {
-      return op_node->SbpInferHint4Lbi(op_node->op().BnInOp2Lbi(bn));
+    auto SbpInferHint4Ibn = [&](const std::string& ibn) -> const SbpInferHint& {
+      return ibn2sbp_infer_hint.at(ibn);
     };
     ParallelContext parallel_ctx;
     parallel_ctx.set_parallel_id(0);
     parallel_ctx.set_parallel_num(op_node->parallel_desc().parallel_num());
     parallel_ctx.set_policy(op_node->parallel_desc().policy());
-    op_node->op().InferInputOutputSbpParallelIf(SbpParallel4BnInOp, SbpInferHint4BnInOp,
+    op_node->op().InferInputOutputSbpParallelIf(SbpParallel4BnInOp, SbpInferHint4Ibn,
                                                 &parallel_ctx);
   });
 }

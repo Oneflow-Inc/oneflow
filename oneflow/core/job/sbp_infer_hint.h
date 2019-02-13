@@ -8,6 +8,11 @@ namespace oneflow {
 class SbpInferHint final {
  public:
   SbpInferHint() : is_model_blob_(false), parallel_num_(-1), num_axes_(-1), split_axis_(-1) {}
+  SbpInferHint(bool is_model_blob, int64_t parallel_num, int64_t num_axes, int64_t split_axis)
+      : is_model_blob_(is_model_blob),
+        parallel_num_(parallel_num),
+        num_axes_(num_axes),
+        split_axis_(split_axis) {}
   SbpInferHint(const SbpInferHint&) = default;
   ~SbpInferHint() = default;
 
