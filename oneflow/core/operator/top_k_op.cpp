@@ -16,12 +16,12 @@ void TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
   CHECK_LE(in->shape().elem_cnt(), GetMaxVal<int32_t>());
   const TopKOpConf& conf = op_conf().top_k_conf();
-  CHECK_GE(conf.k(), 1);
-  CHECK_LE(conf.k(), in->shape().dim_vec().back());
   if (device_type() == DeviceType::kGPU) {
     // GPU version top_k op only support "k == 1" for now
     CHECK_EQ(conf.k(), 1);
   } else if (device_type() == DeviceType::kCPU) {
+    CHECK_GE(conf.k(), 1);
+    CHECK_LE(conf.k(), in->shape().dim_vec().back());
     if (conf.k() > 1) {
       // fw_buf
       BlobDesc* fw_buf = GetBlobDesc4BnInOp("fw_buf");
