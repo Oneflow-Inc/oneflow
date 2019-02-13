@@ -11,7 +11,7 @@ class VariableOpDataSplitOpParallelSignature final : public OpParallelSignature 
   OF_DISALLOW_COPY_AND_MOVE(VariableOpDataSplitOpParallelSignature);
   ~VariableOpDataSplitOpParallelSignature() override = default;
 
-  VariableOpDataSplitOpParallelSignature(const Operator* op) : op_(op) {}
+  VariableOpDataSplitOpParallelSignature(const Operator* op) : OpParallelSignature(), op_(op) {}
 
   const std::string Description() const override { return op_->op_name() + ": S(0) -> C"; }
 
@@ -43,7 +43,7 @@ class VariableOpModelSplitOpParallelSignature final : public OpParallelSignature
   OF_DISALLOW_COPY_AND_MOVE(VariableOpModelSplitOpParallelSignature);
   ~VariableOpModelSplitOpParallelSignature() override = default;
 
-  VariableOpModelSplitOpParallelSignature(const Operator* op) : op_(op) {}
+  VariableOpModelSplitOpParallelSignature(const Operator* op) : OpParallelSignature(), op_(op) {}
 
   const std::string Description() const override { return op_->op_name() + ": S(0) -> S"; }
 

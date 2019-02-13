@@ -15,7 +15,7 @@ class BroadcastBinaryOpParallelSignature final : public OpParallelSignature {
 
   BroadcastBinaryOpParallelSignature(const Operator* op,
                                      const HashSet<std::string>& model_input_bns)
-      : op_(op), model_input_bns_(model_input_bns) {}
+      : OpParallelSignature(), op_(op), model_input_bns_(model_input_bns) {}
 
   const std::string Description() const override {
     return op_->op_name() + ": (C, ..., S(0), ...) -> (S(0), ...)";

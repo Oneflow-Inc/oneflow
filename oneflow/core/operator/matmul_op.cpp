@@ -4,33 +4,41 @@ namespace oneflow {
 
 namespace {
 
-std::unique_ptr<const OpParallelSignature> MakeMatmulOpParallelSignature_DMS_MS_2_P(
-    const MatmulOp* op) {
-  std::string desc = op->op_name() + ": (S, S) -> P";
-  auto GetMatchResult =
-      [op](const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-           const ParallelContext* parallel_ctx) {
-        const auto& b_sbp_infer_hint = SbpInferHint4BnInOp("b");
-        if (!b_sbp_infer_hint.is_model_split()) { return MakeOpParallelMatchSignatureMismatch(); }
-        int32_t b_expected_split_axis = (op->op_conf().matmul_conf().transpose_b() ? 1 : 0);
-        if (b_sbp_infer_hint.split_axis() != b_expected_split_axis) {
-          return MakeOpParallelMatchSignatureMismatch();
-        }
-        if (parallel_ctx->policy() == kModelParallel) { return MakeOpParallelMatchSuccess(); }
-        return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kModelParallel);
-      };
-  auto GenSignature =
-      [op](const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-           HashMap<std::string, SbpParallel>* signature) {
-        int32_t a_split_axis = (op->op_conf().matmul_conf().transpose_a() ? 0 : 1);
-        const auto& b_sbp_infer_hint = SbpInferHint4BnInOp("b");
-        (*signature)["a"].mutable_split_parallel()->set_axis(a_split_axis);
-        (*signature)["b"].mutable_split_parallel()->set_axis(b_sbp_infer_hint.split_axis());
-        (*signature)["out"].mutable_partial_sum_parallel();
-      };
-  return std::unique_ptr<const OpParallelSignature>(
-      new LambdaOpParallelSignature(desc, GetMatchResult, GenSignature));
-}
+class Matmul_DMS_MS_2_P_OpParallelSignature final : public OpParallelSignature {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(Matmul_DMS_MS_2_P_OpParallelSignature);
+  ~Matmul_DMS_MS_2_P_OpParallelSignature() override = default;
+
+  Matmul_DMS_MS_2_P_OpParallelSignature(const Operator* op) : OpParallelSignature(), op_(op) {}
+
+  const std::string Description() const override { return op_->op_name() + ": (S, S) -> P"; }
+
+  const OpParallelMatchResult GetMatchResult(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      const ParallelContext* parallel_ctx) const override {
+    const auto& b_sbp_infer_hint = SbpInferHint4BnInOp("b");
+    if (!b_sbp_infer_hint.is_model_split()) { return MakeOpParallelMatchSignatureMismatch(); }
+    int32_t b_expected_split_axis = (op_->op_conf().matmul_conf().transpose_b() ? 1 : 0);
+    if (b_sbp_infer_hint.split_axis() != b_expected_split_axis) {
+      return MakeOpParallelMatchSignatureMismatch();
+    }
+    if (parallel_ctx->policy() == kModelParallel) { return MakeOpParallelMatchSuccess(); }
+    return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kModelParallel);
+  }
+
+  void GenerateSignature(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+    int32_t a_split_axis = (op_->op_conf().matmul_conf().transpose_a() ? 0 : 1);
+    const auto& b_sbp_infer_hint = SbpInferHint4BnInOp("b");
+    (*bn2sbp)["a"].mutable_split_parallel()->set_axis(a_split_axis);
+    (*bn2sbp)["b"].mutable_split_parallel()->set_axis(b_sbp_infer_hint.split_axis());
+    (*bn2sbp)["out"].mutable_partial_sum_parallel();
+  }
+
+ private:
+  const Operator* op_;
+};
 
 }  // namespace
 
@@ -59,7 +67,7 @@ void MatmulOp::GetOpParallelSignatures(
     return axis == b_expected_split_axis;
   };
   op_parallel_signatures->emplace_back(MakeOpParallelSignature_DC_MS_2_MS(this, IsValidSplit));
-  op_parallel_signatures->emplace_back(MakeMatmulOpParallelSignature_DMS_MS_2_P(this));
+  op_parallel_signatures->emplace_back(new Matmul_DMS_MS_2_P_OpParallelSignature(this));
 }
 
 void MatmulOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
