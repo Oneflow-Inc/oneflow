@@ -50,6 +50,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   HashMap<LogicalBlobId, std::vector<BlobDesc>>* mut_lbi2parallel_id2blob_desc() {
     return &lbi2parallel_id2blob_desc_;
   }
+  bool IsModelBlob4Lbi(const LogicalBlobId& lbi) const { return lbi2is_model_blob_.at(lbi); }
   bool* MutIsModelBlob4Lbi(const LogicalBlobId& lbi);
   SbpInferHint* MutSbpInferHint4Lbi(const LogicalBlobId& lbi);
   BlobDesc* NoParallelBlobDesc4BnInOp(const std::string& bn_in_op);
@@ -137,6 +138,8 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void InferIsModelBlob() const;
   void InferSbpParallel() const;
   void InferLogicalBlobDesc() const;
+  bool IsModelBlob(const std::string& op_name, const LogicalBlobId& lbi) const;
+  bool IsDataBlob(const std::string& op_name, const LogicalBlobId& lbi) const;
   std::string GetOpNameKey(const std::string& op_name, const LogicalBlobId& lbi) const;
   LogicalBlobId GetLogicalBlobIdKey(const std::string& op_name, const LogicalBlobId& lbi) const;
   void ForEachPseudoChain(const std::vector<OpNode*>& nodes,
