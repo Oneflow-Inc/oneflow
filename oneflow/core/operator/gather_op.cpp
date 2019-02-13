@@ -91,7 +91,7 @@ void GatherOp::GetOpParallelSignatures(
   op_parallel_signatures->emplace_back(MakeDataSplitOpParallelSignature(this));
   op_parallel_signatures->emplace_back(Make_DS_MC_2_DS_OpParallelSignature(this));
   auto GtZero = [](int32_t axis) { return axis > 0; };
-  op_parallel_signatures->emplace_back(MakeOpParallelSignature_DC_MS_2_MS(this, GtZero));
+  op_parallel_signatures->emplace_back(Make_DC_MS_2_MS_OpParallelSignature(this, GtZero));
   op_parallel_signatures->emplace_back(new Gather_DC_MS_2_P_OpParallelSignature(this));
 }
 

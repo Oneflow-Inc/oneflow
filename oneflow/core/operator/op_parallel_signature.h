@@ -87,7 +87,7 @@ std::unique_ptr<const OpParallelSignature> Make_DS_MC_2_DS_OpParallelSignature(c
 // (C, S, ...) -> (S, ...)
 // return blobs: model splitted
 // input blobs: clone data input blobs and split model input blobs
-std::unique_ptr<const OpParallelSignature> MakeOpParallelSignature_DC_MS_2_MS(
+std::unique_ptr<const OpParallelSignature> Make_DC_MS_2_MS_OpParallelSignature(
     const Operator* op, std::function<bool(int32_t)> IsExpectedAxis);
 
 }  // namespace oneflow

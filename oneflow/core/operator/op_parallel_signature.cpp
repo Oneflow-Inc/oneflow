@@ -256,6 +256,62 @@ class ModelBnOpModelSplitOpParallelSignature final : public OpParallelSignature 
   }
 };
 
+class DC_MS_2_MS_OpParallelSignature final : public OpParallelSignature {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DC_MS_2_MS_OpParallelSignature);
+  ~DC_MS_2_MS_OpParallelSignature() override = default;
+
+  DC_MS_2_MS_OpParallelSignature(const Operator* op, std::function<bool(int32_t)> IsExpectedAxis)
+      : OpParallelSignature(op), IsExpectedAxis_(IsExpectedAxis) {
+    std::vector<std::string> model_input_bns;
+    for (const auto& bn : op->input_bns()) {
+      if (op->IsInputBlobAllowedModelSplit(bn)) {
+        model_input_bns.push_back(bn);
+      } else {
+        data_input_bns_.push_back(bn);
+      }
+    }
+    CHECK_GT(data_input_bns_.size(), 0);
+    CHECK_EQ(model_input_bns.size(), 1);
+    model_input_bn_ = model_input_bns.at(0);
+  }
+
+  const std::string Description() const override {
+    return op().op_name() + ": (C, S, ...) -> (S, ...)";
+  }
+
+  const OpParallelMatchResult GetMatchResult(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      const ParallelContext* parallel_ctx) const override {
+    const SbpInferHint& model_sbp_infer_hint = SbpInferHint4Ibn(model_input_bn_);
+    if (!(model_sbp_infer_hint.is_model_split()
+          && IsValidSplit(model_sbp_infer_hint.split_axis()))) {
+      return MakeOpParallelMatchSignatureMismatch();
+    }
+    if (parallel_ctx->policy() == kModelParallel) { return MakeOpParallelMatchSuccess(); }
+    return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kModelParallel);
+  }
+
+  void GenerateSignature(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+    for (const auto& bn : data_input_bns_) { (*bn2sbp)[bn].mutable_broadcast_parallel(); }
+    (*bn2sbp)[model_input_bn_].mutable_split_parallel()->set_axis(
+        SbpInferHint4Ibn(model_input_bn_).split_axis());
+    for (const auto& bn : op().output_bns()) {
+      (*bn2sbp)[bn].mutable_split_parallel()->set_axis(
+          op().OutputBlobModelSplitAxis(SbpInferHint4Ibn, bn));
+    }
+  }
+
+ private:
+  bool IsValidSplit(int32_t axis) const { return axis != -1 && IsExpectedAxis_(axis); }
+
+  const std::function<bool(int32_t)> IsExpectedAxis_;
+  std::vector<std::string> data_input_bns_;
+  std::string model_input_bn_;
+};
+
 }  // namespace
 
 std::unique_ptr<const OpParallelSignature> MakeDataSplitOpParallelSignature(const Operator* op) {
@@ -282,48 +338,10 @@ std::unique_ptr<const OpParallelSignature> Make_DS_MC_2_DS_OpParallelSignature(c
   return std::unique_ptr<const OpParallelSignature>(new DS_MC_2_DS_OpParallelSignature(op));
 }
 
-std::unique_ptr<const OpParallelSignature> MakeOpParallelSignature_DC_MS_2_MS(
+std::unique_ptr<const OpParallelSignature> Make_DC_MS_2_MS_OpParallelSignature(
     const Operator* op, std::function<bool(int32_t)> IsExpectedAxis) {
-  auto IsValidSplit = [IsExpectedAxis](int32_t x) { return x != -1 && IsExpectedAxis(x); };
-  std::string desc = op->op_name() + ": (C, S, ...) -> (S, ...)";
-  std::vector<std::string> data_input_bns;
-  std::vector<std::string> model_input_bns;
-  for (const auto& bn : op->input_bns()) {
-    if (op->IsInputBlobAllowedModelSplit(bn)) {
-      model_input_bns.push_back(bn);
-    } else {
-      data_input_bns.push_back(bn);
-    }
-  }
-  CHECK_GT(data_input_bns.size(), 0);
-  CHECK_EQ(model_input_bns.size(), 1);
-  std::string model_input_bn = model_input_bns.at(0);
-  auto GetMatchResult =
-      [op, data_input_bns, model_input_bn, IsValidSplit](
-          const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-          const ParallelContext* parallel_ctx) {
-        const SbpInferHint& model_sbp_infer_hint = SbpInferHint4Ibn(model_input_bn);
-        if (!(model_sbp_infer_hint.is_model_split()
-              && IsValidSplit(model_sbp_infer_hint.split_axis()))) {
-          return MakeOpParallelMatchSignatureMismatch();
-        }
-        if (parallel_ctx->policy() == kModelParallel) { return MakeOpParallelMatchSuccess(); }
-        return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kModelParallel);
-      };
-  auto GenSignature =
-      [op, data_input_bns, model_input_bn](
-          const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-          HashMap<std::string, SbpParallel>* signature) {
-        for (const auto& bn : data_input_bns) { (*signature)[bn].mutable_broadcast_parallel(); }
-        (*signature)[model_input_bn].mutable_split_parallel()->set_axis(
-            SbpInferHint4Ibn(model_input_bn).split_axis());
-        for (const auto& bn : op->output_bns()) {
-          (*signature)[bn].mutable_split_parallel()->set_axis(
-              op->OutputBlobModelSplitAxis(SbpInferHint4Ibn, bn));
-        }
-      };
   return std::unique_ptr<const OpParallelSignature>(
-      new LambdaOpParallelSignature(desc, GetMatchResult, GenSignature));
+      new DC_MS_2_MS_OpParallelSignature(op, IsExpectedAxis));
 }
 
 }  // namespace oneflow

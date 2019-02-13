@@ -63,7 +63,7 @@ void MatmulOp::GetOpParallelSignatures(
     int32_t b_expected_split_axis = (op_conf().matmul_conf().transpose_b() ? 0 : 1);
     return axis == b_expected_split_axis;
   };
-  op_parallel_signatures->emplace_back(MakeOpParallelSignature_DC_MS_2_MS(this, IsValidSplit));
+  op_parallel_signatures->emplace_back(Make_DC_MS_2_MS_OpParallelSignature(this, IsValidSplit));
   op_parallel_signatures->emplace_back(new Matmul_DMS_MS_2_P_OpParallelSignature(this));
 }
 
