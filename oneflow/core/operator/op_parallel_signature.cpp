@@ -33,35 +33,52 @@ const OpParallelMatchResult MakeOpParallelMatchParallelNumError(int64_t configur
   return parallel_num_error;
 }
 
+namespace {
+
+class DataSplitOpParallelSignature final : public OpParallelSignature {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DataSplitOpParallelSignature);
+  ~DataSplitOpParallelSignature() override = default;
+
+  DataSplitOpParallelSignature(const Operator* op) : OpParallelSignature(), op_(op) {}
+
+  const std::string Description() const override {
+    return op_->op_name() + ": (S(0), ...) -> (S(0), ...)";
+  }
+
+  const OpParallelMatchResult GetMatchResult(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      const ParallelContext* parallel_ctx) const override {
+    bool is_data_split = true;
+    for (const auto& bn : op_->input_bns()) {
+      const SbpInferHint& sbp_infer_hint = SbpInferHint4BnInOp(bn);
+      if (!sbp_infer_hint.is_data_blob()) {
+        is_data_split = false;
+        break;
+      }
+    }
+    if (!is_data_split) { return MakeOpParallelMatchSignatureMismatch(); }
+    if (parallel_ctx->policy() == kDataParallel) { return MakeOpParallelMatchSuccess(); }
+    return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kDataParallel);
+  }
+
+  void GenerateSignature(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+    for (const auto& bn : op_->input_bns()) { (*bn2sbp)[bn].mutable_split_parallel()->set_axis(0); }
+    for (const auto& bn : op_->output_bns()) {
+      (*bn2sbp)[bn].mutable_split_parallel()->set_axis(0);
+    }
+  }
+
+ private:
+  const Operator* op_;
+};
+
+}  // namespace
+
 std::unique_ptr<const OpParallelSignature> MakeDataSplitOpParallelSignature(const Operator* op) {
-  std::string data_split_desc = op->op_name() + ": (S(0), ...) -> (S(0), ...)";
-  auto IsMatched =
-      [op](const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-           const ParallelContext* parallel_ctx) {
-        bool is_data_split = true;
-        for (const auto& bn : op->input_bns()) {
-          const SbpInferHint& sbp_infer_hint = SbpInferHint4BnInOp(bn);
-          if (!sbp_infer_hint.is_data_blob()) {
-            is_data_split = false;
-            break;
-          }
-        }
-        if (!is_data_split) { return MakeOpParallelMatchSignatureMismatch(); }
-        if (parallel_ctx->policy() == kDataParallel) { return MakeOpParallelMatchSuccess(); }
-        return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kDataParallel);
-      };
-  auto GenDataSplitSignature =
-      [op](const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-           HashMap<std::string, SbpParallel>* signature) {
-        for (const auto& bn : op->input_bns()) {
-          (*signature)[bn].mutable_split_parallel()->set_axis(0);
-        }
-        for (const auto& bn : op->output_bns()) {
-          (*signature)[bn].mutable_split_parallel()->set_axis(0);
-        }
-      };
-  return std::unique_ptr<const OpParallelSignature>(
-      new LambdaOpParallelSignature(data_split_desc, IsMatched, GenDataSplitSignature));
+  return std::unique_ptr<const OpParallelSignature>(new DataSplitOpParallelSignature(op));
 }
 
 std::unique_ptr<const OpParallelSignature> MakeCloneOpParallelSignature(const Operator* op) {
