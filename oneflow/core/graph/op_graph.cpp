@@ -13,7 +13,13 @@ std::string OpEdge::VisualStr() const {
   return str;
 }
 
-bool* OpNode::MutIsModelBlob4Lbi(const LogicalBlobId& lbi) { return &lbi2is_model_blob_[lbi]; }
+bool* OpNode::MutIsModelBlob4Lbi(const LogicalBlobId& lbi) {
+  CHECK_EQ(ProducerOpNode4Lbi(lbi), this);
+  return &lbi2is_model_blob_[lbi];
+}
+bool OpNode::IsModelBlob4Lbi(const LogicalBlobId& lbi) const {
+  return ProducerOpNode4Lbi(lbi)->lbi2is_model_blob_.at(lbi);
+}
 
 const SbpParallel& OpNode::SbpParallel4Lbi(const LogicalBlobId& lbi) const {
   return lbi2lbpd_.at(lbi);

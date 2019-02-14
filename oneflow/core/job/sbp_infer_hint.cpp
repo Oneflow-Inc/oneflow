@@ -14,8 +14,10 @@ int64_t SbpInferHint::num_axes() const {
   return num_axes_;
 }
 
+bool SbpInferHint::has_split_axis() const { return split_axis_ >= 0 && split_axis_ < num_axes(); }
+
 int64_t SbpInferHint::split_axis() const {
-  CHECK_GT(split_axis_, 0);
+  CHECK(has_split_axis());
   return split_axis_;
 }
 

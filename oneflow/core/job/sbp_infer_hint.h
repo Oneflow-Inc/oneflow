@@ -20,7 +20,7 @@ class SbpInferHint final {
   int64_t parallel_num() const;
   int64_t num_axes() const;
   int64_t split_axis() const;
-  bool has_split_axis() const { return split_axis_ == -1; }
+  bool has_split_axis() const;
   bool is_model_split() const;
   bool is_model_broadcast() const;
   bool is_data_split() const;

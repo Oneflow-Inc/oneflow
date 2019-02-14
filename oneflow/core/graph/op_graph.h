@@ -49,7 +49,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   HashMap<LogicalBlobId, std::vector<BlobDesc>>* mut_lbi2parallel_id2blob_desc() {
     return &lbi2parallel_id2blob_desc_;
   }
-  bool IsModelBlob4Lbi(const LogicalBlobId& lbi) const { return lbi2is_model_blob_.at(lbi); }
+  bool IsModelBlob4Lbi(const LogicalBlobId& lbi) const;
   bool* MutIsModelBlob4Lbi(const LogicalBlobId& lbi);
   BlobDesc* NoParallelBlobDesc4BnInOp(const std::string& bn_in_op);
   BlobDesc* MutNoParallelBlobDesc(const LogicalBlobId& lbi);
