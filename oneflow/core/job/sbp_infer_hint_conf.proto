@@ -1,9 +1,0 @@
-syntax = "proto2";
-package oneflow;
-
-import "oneflow/core/job/sbp_parallel.proto";
-
-message SbpInferHintConf {
-  required bool is_model_blob = 1;
-  required SbpParallel sbp_parallel = 2;
-}

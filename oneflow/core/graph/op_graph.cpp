@@ -22,10 +22,12 @@ bool OpNode::IsModelBlob4Lbi(const LogicalBlobId& lbi) const {
 }
 
 const SbpParallel& OpNode::SbpParallel4Lbi(const LogicalBlobId& lbi) const {
-  return lbi2lbpd_.at(lbi);
+  return lbi2sbp_parallel_.at(lbi);
 }
 
-SbpParallel* OpNode::MutSbpParallel4Lbi(const LogicalBlobId& lbi) { return &lbi2lbpd_[lbi]; }
+SbpParallel* OpNode::MutSbpParallel4Lbi(const LogicalBlobId& lbi) {
+  return &lbi2sbp_parallel_[lbi];
+}
 
 std::string OpNode::VisualStr() const {
   std::string str = op().op_name();
