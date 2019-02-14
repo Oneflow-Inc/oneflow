@@ -218,8 +218,7 @@ class SoleIbnOpModelSplitOpParallelSignature final : public OpParallelSignature 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       HashMap<std::string, SbpParallel>* bn2sbp) const override {
-    (*bn2sbp)[op().SoleIbn()].mutable_split_parallel()->set_axis(
-        SbpInferHint4Ibn(op().SoleIbn()).split_axis());
+    (*bn2sbp)[op().SoleIbn()] = SbpInferHint4Ibn(op().SoleIbn()).sbp_parallel();
     for (const auto& bn : op().output_bns()) {
       (*bn2sbp)[bn].mutable_split_parallel()->set_axis(
           op().OutputBlobModelSplitAxis(SbpInferHint4Ibn, bn));
@@ -296,8 +295,7 @@ class DB_MS_2_MS_OpParallelSignature final : public OpParallelSignature {
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       HashMap<std::string, SbpParallel>* bn2sbp) const override {
     for (const auto& bn : data_input_bns_) { (*bn2sbp)[bn].mutable_broadcast_parallel(); }
-    (*bn2sbp)[model_input_bn_].mutable_split_parallel()->set_axis(
-        SbpInferHint4Ibn(model_input_bn_).split_axis());
+    (*bn2sbp)[model_input_bn_] = SbpInferHint4Ibn(model_input_bn_).sbp_parallel();
     for (const auto& bn : op().output_bns()) {
       (*bn2sbp)[bn].mutable_split_parallel()->set_axis(
           op().OutputBlobModelSplitAxis(SbpInferHint4Ibn, bn));

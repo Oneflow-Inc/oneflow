@@ -30,9 +30,8 @@ class Matmul_MS_MS_2_P_OpParallelSignature final : public OpParallelSignature {
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       HashMap<std::string, SbpParallel>* bn2sbp) const override {
     int32_t a_split_axis = (op().op_conf().matmul_conf().transpose_a() ? 0 : 1);
-    const auto& b_sbp_infer_hint = SbpInferHint4Ibn("b");
     (*bn2sbp)["a"].mutable_split_parallel()->set_axis(a_split_axis);
-    (*bn2sbp)["b"].mutable_split_parallel()->set_axis(b_sbp_infer_hint.split_axis());
+    (*bn2sbp)["b"] = SbpInferHint4Ibn("b").sbp_parallel();
     (*bn2sbp)["out"].mutable_partial_sum_parallel();
   }
 };
