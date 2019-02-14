@@ -1,0 +1,39 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/job/placement.proto";
+
+message OpParallelMatchSucess {
+}
+
+message OpParallelSignatureMismatch {
+}
+
+message ParallelPolicyError {
+  required ParallelPolicy configured = 1;
+  required ParallelPolicy expected = 2;
+}
+
+message ParallelNumError {
+  required int64 configured = 1;
+  required int64 expected = 2;
+}
+
+message OpParallelConfError {
+  optional ParallelPolicyError parallel_policy_error = 1;
+  optional ParallelNumError parallel_num_error = 2;
+}
+
+message OpParallelMatchFail {
+  oneof fail_type {
+    OpParallelSignatureMismatch signature_mismatch = 1;
+    OpParallelConfError conf_error = 2;
+  }
+}
+
+message OpParallelMatchResult {
+  oneof result_type {
+    OpParallelMatchSucess success = 1;
+    OpParallelMatchFail fail = 2;
+  }
+}

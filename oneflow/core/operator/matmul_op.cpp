@@ -2,6 +2,42 @@
 #include "oneflow/core/common/balanced_splitter.h"
 namespace oneflow {
 
+namespace {
+
+class Matmul_MS_MS_2_P_OpParallelSignature final : public OpParallelSignature {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(Matmul_MS_MS_2_P_OpParallelSignature);
+  ~Matmul_MS_MS_2_P_OpParallelSignature() override = default;
+
+  Matmul_MS_MS_2_P_OpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
+
+  const std::string Description() const override { return op().op_name() + ": (S, S) -> P"; }
+
+  const OpParallelMatchResult GetMatchResult(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      const ParallelContext* parallel_ctx) const override {
+    const auto& b_sbp_infer_hint = SbpInferHint4Ibn("b");
+    if (!b_sbp_infer_hint.is_model_split()) { return MakeOpParallelMatchSignatureMismatch(); }
+    int32_t b_expected_split_axis = (op().op_conf().matmul_conf().transpose_b() ? 1 : 0);
+    if (b_sbp_infer_hint.split_axis() != b_expected_split_axis) {
+      return MakeOpParallelMatchSignatureMismatch();
+    }
+    if (parallel_ctx->policy() == kModelParallel) { return MakeOpParallelMatchSuccess(); }
+    return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kModelParallel);
+  }
+
+  void GenerateSignature(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+    int32_t a_split_axis = (op().op_conf().matmul_conf().transpose_a() ? 0 : 1);
+    (*bn2sbp)["a"].mutable_split_parallel()->set_axis(a_split_axis);
+    (*bn2sbp)["b"] = SbpInferHint4Ibn("b").sbp_parallel();
+    (*bn2sbp)["out"].mutable_partial_sum_parallel();
+  }
+};
+
+}  // namespace
+
 void MatmulOp::InitFromOpConf() {
   CHECK(op_conf().has_matmul_conf());
   EnrollInputBn("a");
@@ -16,6 +52,18 @@ const PbMessage& MatmulOp::GetCustomizedConf() const { return op_conf().matmul_c
 bool MatmulOp::IsInputBlobAllowedModelSplit(const std::string& ibn) const {
   CHECK(std::find(input_bns().begin(), input_bns().end(), ibn) != input_bns().end());
   return ibn == "b";
+}
+
+void MatmulOp::GetOpParallelSignatures(
+    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
+  op_parallel_signatures->emplace_back(MakeDataSplitOpParallelSignature(this));
+  op_parallel_signatures->emplace_back(Make_DS_MB_2_DS_OpParallelSignature(this));
+  auto IsValidSplit = [this](int32_t axis) {
+    int32_t b_expected_split_axis = (op_conf().matmul_conf().transpose_b() ? 0 : 1);
+    return axis == b_expected_split_axis;
+  };
+  op_parallel_signatures->emplace_back(Make_DB_MS_2_MS_OpParallelSignature(this, IsValidSplit));
+  op_parallel_signatures->emplace_back(new Matmul_MS_MS_2_P_OpParallelSignature(this));
 }
 
 void MatmulOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -59,17 +107,21 @@ void MatmulOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
   }
 }
 
-void MatmulOp::InferOutputBlobModelSplitAxis(
-    std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
-    std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
-    const ParallelContext* parallel_context) const {
-  CHECK_EQ(ShapeNumAxes4BnInOp("a"), ShapeNumAxes4BnInOp("b"));
-  if (ShapeNumAxes4BnInOp("b") == 2 && *ModelSplitAxis4BnInOp("b") != -1) {
-    *ModelSplitAxis4BnInOp("out") = 1;
+int32_t MatmulOp::OutputBlobModelSplitAxis(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+    const std::string& obn) const {
+  CHECK_EQ(SbpInferHint4Ibn("a").num_axes(), SbpInferHint4Ibn("b").num_axes());
+  const auto& b_sbp_infer_hint = SbpInferHint4Ibn("b");
+  CHECK_EQ(SbpInferHint4Ibn("b").num_axes(), 2);
+  CHECK(b_sbp_infer_hint.is_model_split());
+  int32_t b_model_split_axis = b_sbp_infer_hint.split_axis();
+  if (op_conf().matmul_conf().transpose_b()) {
+    if (b_model_split_axis == 0) { return 1; }
   } else {
-    CHECK_EQ(parallel_context->policy(), kDataParallel);
-    *ModelSplitAxis4BnInOp("out") = -1;
+    if (b_model_split_axis == 1) { return 1; }
   }
+  UNIMPLEMENTED();
+  return -1;
 }
 
 void MatmulOp::InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

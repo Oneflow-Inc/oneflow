@@ -13,7 +13,6 @@ class DebugOp final : public Operator {
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override { return op_conf().debug_conf(); }
-  bool IsElemWiseOp() const override { return false; }
   bool NeedInBlobWhenBackward() const override { return false; }
   bool NeedOutBlobWhenBackward() const override { return false; }
 
@@ -22,14 +21,6 @@ class DebugOp final : public Operator {
 
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
-  void InferOutputBlobModelSplitAxis(
-      std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
-      std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
-      const ParallelContext* parallel_context) const override {
-    CHECK_EQ(parallel_context->parallel_num(), 1);
-    NaiveInferOutputBlobModelSplitAxis(ModelSplitAxis4BnInOp, ShapeNumAxes4BnInOp,
-                                       parallel_context);
-  }
 };
 
 }  // namespace oneflow

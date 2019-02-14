@@ -46,17 +46,12 @@ class ConvOp : public Operator {
   void InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                            const ParallelContext*, const OpContext*) const override;
 
-  int32_t ModelSplitAxis() const override;
+  int32_t OutputBlobModelSplitAxis(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      const std::string& obn) const override;
 
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
-  void InferOutputBlobModelSplitAxis(
-      std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
-      std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
-      const ParallelContext* parallel_context) const override {
-    NaiveInferOutputBlobModelSplitAxis(ModelSplitAxis4BnInOp, ShapeNumAxes4BnInOp,
-                                       parallel_context);
-  }
 
   PbMessage* MutableCustomizedKernelConf(KernelConf*) const override;
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

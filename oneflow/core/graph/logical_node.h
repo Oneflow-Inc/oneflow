@@ -52,16 +52,11 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
                               std::vector<std::pair<int64_t, CompTaskNode*>>* nodes,
                               std::function<void(CompTaskNode*)>) const;
 
-  // model split
-  LogicalNode* main_model_parallel() const { return main_model_parallel_; }
-  void set_main_model_parallel(LogicalNode* val) { main_model_parallel_ = val; }
-  int32_t GetModelSplitAxis() const;
-
   virtual int64_t GetAreaId() const = 0;
   virtual bool MayConsumeModelDiff() const { return false; }
 
  protected:
-  LogicalNode() : main_model_parallel_(nullptr) {}
+  LogicalNode() {}
   virtual CompTaskNode* NewCompTaskNode() const = 0;
   virtual void FixCompTaskNode(CompTaskNode*) const {}
 
@@ -71,7 +66,6 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   std::vector<std::shared_ptr<Operator>> op_vec_;
   std::shared_ptr<const ParallelDesc> parallel_desc_;
   std::shared_ptr<const std::vector<LogicalNode*>> shared_model_nodes_;
-  LogicalNode* main_model_parallel_;
 
   HashMap<const LogicalNode*, std::vector<LogicalBlobId>> dst2data_lbis_;
 };

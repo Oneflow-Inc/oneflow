@@ -8,6 +8,59 @@ bool IsScalarBlob(const BlobDesc* blob) {
   return blob->shape().NumAxes() == 1 && blob->shape().At(0) == 1;
 }
 
+class BroadcastBinaryOpParallelSignature final : public OpParallelSignature {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(BroadcastBinaryOpParallelSignature);
+  ~BroadcastBinaryOpParallelSignature() override = default;
+
+  BroadcastBinaryOpParallelSignature(const Operator* op,
+                                     const HashSet<std::string>& model_input_bns)
+      : OpParallelSignature(op), model_input_bns_(model_input_bns) {}
+
+  const std::string Description() const override {
+    return op().op_name() + ": (C, ..., S(0), ...) -> (S(0), ...)";
+  }
+
+  const OpParallelMatchResult GetMatchResult(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      const ParallelContext* parallel_ctx) const override {
+    for (const auto& bn : op().input_bns()) {
+      const auto& sbp_infer_hint = SbpInferHint4Ibn(bn);
+      bool is_model_input_bns = (model_input_bns_.find(bn) != model_input_bns_.end());
+      bool has_actual_model_input = sbp_infer_hint.is_model_blob();
+      if (is_model_input_bns ^ has_actual_model_input) {
+        return MakeOpParallelMatchSignatureMismatch();
+      }
+    }
+    if (parallel_ctx->policy() == kDataParallel) { return MakeOpParallelMatchSuccess(); }
+    return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kDataParallel);
+  }
+
+  void GenerateSignature(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+    for (const auto& bn : op().input_bns()) {
+      if (model_input_bns_.find(bn) != model_input_bns_.end()) {
+        (*bn2sbp)[bn].mutable_broadcast_parallel();
+      } else {
+        (*bn2sbp)[bn].mutable_split_parallel()->set_axis(0);
+      }
+    }
+    for (const auto& bn : op().output_bns()) {
+      (*bn2sbp)[bn].mutable_split_parallel()->set_axis(0);
+    }
+  }
+
+ private:
+  HashSet<std::string> model_input_bns_;
+};
+
+std::unique_ptr<const OpParallelSignature> MakeBroadcastBinaryOpParallelSignature(
+    const Operator* op, const HashSet<std::string>& model_input_bns) {
+  return std::unique_ptr<const OpParallelSignature>(
+      new BroadcastBinaryOpParallelSignature(op, model_input_bns));
+}
+
 }  // namespace
 
 void BroadcastBinaryOp::InitFromOpConf() {
@@ -48,6 +101,14 @@ void BroadcastBinaryOp::InferBwBufBlobDescs(
   BlobDesc* bw_buf = GetBlobDesc4BnInOp("bw_buf");
   bw_buf->mut_shape() = Shape({out->shape().elem_cnt()});
   bw_buf->set_data_type(out->data_type());
+}
+
+void BroadcastBinaryOp::GetOpParallelSignatures(
+    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
+  op_parallel_signatures->emplace_back(MakeBroadcastBinaryOpParallelSignature(this, {}));
+  op_parallel_signatures->emplace_back(MakeBroadcastBinaryOpParallelSignature(this, {"a"}));
+  op_parallel_signatures->emplace_back(MakeBroadcastBinaryOpParallelSignature(this, {"b"}));
+  op_parallel_signatures->emplace_back(MakeBroadcastBinaryOpParallelSignature(this, {"a", "b"}));
 }
 
 }  // namespace oneflow

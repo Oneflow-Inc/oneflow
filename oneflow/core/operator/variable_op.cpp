@@ -3,6 +3,69 @@
 
 namespace oneflow {
 
+namespace {
+
+// S(0) -> C
+class VariableOpDataSplitOpParallelSignature final : public OpParallelSignature {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(VariableOpDataSplitOpParallelSignature);
+  ~VariableOpDataSplitOpParallelSignature() override = default;
+
+  VariableOpDataSplitOpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
+
+  const std::string Description() const override { return op().op_name() + ": S(0) -> C"; }
+
+  const OpParallelMatchResult GetMatchResult(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      const ParallelContext* parallel_ctx) const override {
+    if (parallel_ctx->policy() == kDataParallel) {
+      return MakeOpParallelMatchSuccess();
+    } else {
+      return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kDataParallel);
+    }
+  }
+
+  void GenerateSignature(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+    CHECK(SbpInferHint4Ibn("tick").is_data_split());
+    (*bn2sbp)["tick"].mutable_split_parallel()->set_axis(0);
+    (*bn2sbp)["out"].mutable_broadcast_parallel();
+  }
+};
+
+// S(0) -> S
+class VariableOpModelSplitOpParallelSignature final : public OpParallelSignature {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(VariableOpModelSplitOpParallelSignature);
+  ~VariableOpModelSplitOpParallelSignature() override = default;
+
+  VariableOpModelSplitOpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
+
+  const std::string Description() const override { return op().op_name() + ": S(0) -> S"; }
+
+  const OpParallelMatchResult GetMatchResult(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      const ParallelContext* parallel_ctx) const override {
+    if (parallel_ctx->policy() == kModelParallel) {
+      return MakeOpParallelMatchSuccess();
+    } else {
+      return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kModelParallel);
+    }
+  }
+
+  void GenerateSignature(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+    CHECK(SbpInferHint4Ibn("tick").is_data_split());
+    (*bn2sbp)["tick"].mutable_split_parallel()->set_axis(0);
+    (*bn2sbp)["out"].mutable_split_parallel()->set_axis(
+        (op().OutputBlobModelSplitAxis(SbpInferHint4Ibn, "out")));
+  }
+};
+
+}  // namespace
+
 void VariableOp::InitFromOpConf() {
   CHECK(op_conf().has_variable_conf());
   EnrollInputBn("tick", false);
@@ -12,7 +75,11 @@ void VariableOp::InitFromOpConf() {
 
 const PbMessage& VariableOp::GetCustomizedConf() const { return op_conf().variable_conf(); }
 
-int32_t VariableOp::ModelSplitAxis() const { return op_conf().variable_conf().model_split_axis(); }
+int32_t VariableOp::OutputBlobModelSplitAxis(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+    const std::string& obn) const {
+  return op_conf().variable_conf().model_split_axis();
+}
 
 void VariableOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx) const {
@@ -35,20 +102,15 @@ void VariableOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   *GetBlobDesc4BnInOp("out") = *model_blob_desc;
 }
 
-void VariableOp::InferOutputBlobParallelDesc(
-    std::function<BlobParallelDesc*(const std::string&)> BlobParallelDesc4BnInOp,
-    const ParallelContext* parallel_context) const {
-  ModelBlobParallel* model_blob_parallel =
-      BlobParallelDesc4BnInOp("out")->mut_model_blob_parallel();
-  if (parallel_context->policy() == kDataParallel) {
-    model_blob_parallel->set_clone_num(parallel_context->parallel_num());
-    model_blob_parallel->set_model_split_num(1);
-  } else if (parallel_context->policy() == kModelParallel) {
-    model_blob_parallel->set_clone_num(1);
-    model_blob_parallel->set_model_split_num(parallel_context->parallel_num());
-  } else {
-    UNIMPLEMENTED();
-  }
+void VariableOp::GetOpParallelSignatures(
+    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
+  op_parallel_signatures->emplace_back(new VariableOpDataSplitOpParallelSignature(this));
+  op_parallel_signatures->emplace_back(new VariableOpModelSplitOpParallelSignature(this));
+}
+
+void VariableOp::InferIsModelBlob4OutputBlobs(
+    std::function<bool*(const std::string&)> IsModelBlob4BnInOp) const {
+  *IsModelBlob4BnInOp("out") = true;
 }
 
 void VariableOp::VirtualGenKernelConf(
