@@ -82,6 +82,64 @@ size_t GetAvailableGpuMemSize(int dev_id) {
   return prop.totalGlobalMem;
 }
 
+#ifdef PLATFORM_POSIX
+
+namespace {
+
+int32_t HexCharToInt(int32_t c) {
+  if (c >= '0' && c <= '9') {
+    return c - '0';
+  } else if (c >= 'a' && c <= 'f') {
+    return c - 'a';
+  } else if (c >= 'A' && c <= 'F') {
+    return c - 'A';
+  } else {
+    return -1;
+  }
+}
+
+void MaskToCpuSet(const std::string& str, cpu_set_t* set) {
+  int32_t cpu = 0;
+  for (size_t pos = str.size() - 1; pos >= 0; --pos) {
+    if (str.at(pos) == ',') { continue; }
+    int32_t val = HexCharToInt(str.at(pos));
+    CHECK_NE(val, -1);
+    if (val & 1) { CPU_SET_S(cpu, sizeof(cpu_set_t), set); }
+    if (val & 2) { CPU_SET_S(cpu + 1, sizeof(cpu_set_t), set); }
+    if (val & 4) { CPU_SET_S(cpu + 2, sizeof(cpu_set_t), set); }
+    if (val & 8) { CPU_SET_S(cpu + 3, sizeof(cpu_set_t), set); }
+    cpu += 4;
+  }
+}
+
+}  // namespace
+
+void NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size) {
+  std::vector<char> pci_bus_id_buf(sizeof("0000:00:00.0"));
+  CudaCheck(
+      cudaDeviceGetPCIBusId(pci_bus_id_buf.data(), static_cast<int>(pci_bus_id_buf.size()), dev));
+  const std::string pci_bus_id(pci_bus_id_buf.data(), pci_bus_id_buf.size());
+  const std::string pci_bus_id_short = pci_bus_id.substr(0, sizeof("0000:00"));
+  const std::string local_cpus_file =
+      "/sys/class/pci_bus/" + pci_bus_id_short + "/../../" + pci_bus_id + "/local_cpus";
+  char* path = realpath(local_cpus_file.c_str(), nullptr);
+  CHECK_NOTNULL(path);
+  std::ifstream is(path);
+  std::string cpu_mask;
+  CHECK(std::getline(is, cpu_mask).good());
+  is.close();
+  free(path);
+  cpu_set_t new_cpu_set;
+  MaskToCpuSet(cpu_mask, &new_cpu_set);
+  cpu_set_t saved_cpu_set;
+  sched_getaffinity(0, sizeof(cpu_set_t), &saved_cpu_set);
+  sched_setaffinity(0, sizeof(cpu_set_t), &new_cpu_set);
+  CudaCheck(cudaMallocHost(ptr, size));
+  sched_setaffinity(0, sizeof(cpu_set_t), &saved_cpu_set);
+}
+
+#endif
+
 cudaDataType_t GetCudaDataType(DataType val) {
 #define MAKE_ENTRY(type_cpp, type_cuda) \
   if (val == GetDataType<type_cpp>::value) { return type_cuda; }

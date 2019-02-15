@@ -1,6 +1,7 @@
 #include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/common/platform.h"
 
 namespace oneflow {
 
@@ -13,7 +14,12 @@ char* MemoryAllocator::Allocate(MemoryCase mem_case, std::size_t size) {
   char* dptr = nullptr;
   if (mem_case.has_host_mem()) {
     if (mem_case.host_mem().used_by_device_id() != -1) {
+#ifdef PLATFORM_POSIX
+      NumaAwareCudaMallocHost(static_cast<int32_t>(mem_case.host_mem().used_by_device_id()), (void**)&dptr,
+                              size);
+#else
       CudaCheck(cudaMallocHost(&dptr, size));
+#endif
     } else {
       dptr = reinterpret_cast<char*>(malloc(size));
       CHECK_NOTNULL(dptr);
