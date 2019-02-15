@@ -273,6 +273,9 @@ bool LogicalNode::HasOpWithCondition(std::function<bool(const Operator*)> cond) 
 }
 
 static bool IsModelParallel121(const LogicalNode* src_node, const LogicalNode* dst_node) {
+  if (src_node->parallel_desc()->parallel_num() != dst_node->parallel_desc()->parallel_num()) {
+    return false;
+  }
   LogicalEdge* connect_edge = nullptr;
   for (LogicalEdge* edge : src_node->out_edges()) {
     if (edge->dst_node() == dst_node) { connect_edge = edge; }
