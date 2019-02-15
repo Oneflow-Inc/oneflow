@@ -21,7 +21,7 @@ void CloneKernel<device_type, T>::BackwardDataContent(
   size_t out_num = odbns.size();
   if (out_num == 0) return;
   Blob* in_diff_blob = BnInOp2Blob(this->op_attribute().input_diff_bns(0));
-  auto out_diff = [&](int32_t idx) {
+  auto out_diff = [=](int32_t idx) {
     return BnInOp2Blob(this->op_attribute().output_diff_bns(idx));
   };
   static const int kWidth = 8;
