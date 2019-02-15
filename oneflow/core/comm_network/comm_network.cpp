@@ -19,11 +19,11 @@ void CommNet::Read(void* actor_read_id, int64_t src_machine_id, void* src_token,
   auto actor_read_ctx = static_cast<ActorReadContext*>(actor_read_id);
   ReadContext* read_ctx = new ReadContext;
   read_ctx->actor_read_ctx = actor_read_ctx;
-  read_ctx->src_machine_id = src_machine_id;
+  read_ctx->peer_mchn_id = src_machine_id;
   read_ctx->read_done = false;
   {
-    std::unique_lock<std::mutex> lck(read_order_mtx_);
-    src_machine_id2read_order_.at(src_machine_id).push(read_ctx);
+    std::unique_lock<std::mutex> lck(cq_mtx_);
+    peer_mchn_id2cq_.at(src_machine_id).push(read_ctx);
   }
   auto do_read = [this, read_ctx, src_machine_id, src_token, dst_token]() {
     DoRead(read_ctx, src_machine_id, src_token, dst_token);
@@ -38,10 +38,10 @@ void CommNet::AddReadCallBack(void* actor_read_id, std::function<void()> callbac
 void CommNet::ReadDone(void* read_id) {
   ReadContext* read_ctx = static_cast<ReadContext*>(read_id);
   read_ctx->read_done = true;
-  auto read_order = src_machine_id2read_order_.at(read_ctx->src_machine_id);
-  while (!read_order.empty() && read_order.front()->read_done == true) {
-    DoCallBack(read_order.front());
-    read_order.pop();
+  auto completion_queue = peer_mchn_id2cq_.at(read_ctx->peer_mchn_id);
+  while (!completion_queue.empty() && completion_queue.front()->read_done == true) {
+    DoCallBack(completion_queue.front());
+    completion_queue.pop();
   }
 }
 
@@ -91,6 +91,7 @@ CommNet::CommNet(const Plan& plan) {
   CHECK(machine_ids_it != net_topo.end());
   std::vector<int64_t> peer_machine_ids = PbRf2StdVec(machine_ids_it->second.machine_id());
   peer_machine_id_.insert(peer_machine_ids.begin(), peer_machine_ids.end());
+  for (auto peer_mchn_id : peer_machine_id_) { CHECK(peer_mchn_id2cq_.at(peer_mchn_id).empty()); }
 
   ready_cb_poller_ = std::thread([this]() {
     std::function<void()> cb;
