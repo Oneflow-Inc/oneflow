@@ -958,7 +958,7 @@ message TickOpConf {
   required string out = 2;
 }
 
-message IdentityOpConf {
+message TupleIdentityOpConf {
   repeated string in = 1;
   repeated string out = 2;
 }
@@ -1005,7 +1005,7 @@ message OperatorConf {
     TickOpConf tick_conf = 124;
 
     // domain op
-    IdentityOpConf identity_conf = 200;
+    TupleIdentityOpConf tuple_identity_conf = 200;
     TransposeOpConf transpose_conf = 201;
     ReshapeOpConf reshape_conf = 202;
     BasicRnnOpConf basic_rnn_conf = 203;

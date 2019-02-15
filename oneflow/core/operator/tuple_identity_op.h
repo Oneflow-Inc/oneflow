@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_OPERATOR_IDENTITY_OP_H_
-#define ONEFLOW_CORE_OPERATOR_IDENTITY_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_TUPLE_IDENTITY_OP_H_
+#define ONEFLOW_CORE_OPERATOR_TUPLE_IDENTITY_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-class IdentityOp final : public Operator {
+class TupleIdentityOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(IdentityOp);
-  IdentityOp() = default;
-  ~IdentityOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(TupleIdentityOp);
+  TupleIdentityOp() = default;
+  ~TupleIdentityOp() = default;
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
@@ -21,10 +21,10 @@ class IdentityOp final : public Operator {
 
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override {
-    return op_conf().identity_conf().in_size() == 1 && ibn == SoleIbn();
+    return op_conf().tuple_identity_conf().in_size() == 1 && ibn == SoleIbn();
   }
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_IDENTITY_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_TUPLE_IDENTITY_OP_H_

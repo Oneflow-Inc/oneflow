@@ -1,9 +1,9 @@
-#include "oneflow/core/kernel/identity_kernel.h"
+#include "oneflow/core/kernel/tuple_identity_kernel.h"
 
 namespace oneflow {
 
 template<DeviceType device_type>
-void IdentityKernel<device_type>::ForwardDataContent(
+void TupleIdentityKernel<device_type>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const auto& input_bns = this->op_attribute().input_bns();
   const auto& output_bns = this->op_attribute().output_bns();
@@ -15,7 +15,7 @@ void IdentityKernel<device_type>::ForwardDataContent(
 }
 
 template<DeviceType device_type>
-void IdentityKernel<device_type>::BackwardDataContent(
+void TupleIdentityKernel<device_type>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const auto& input_diff_bns = this->op_attribute().input_diff_bns();
   const auto& output_diff_bns = this->op_attribute().output_diff_bns();
@@ -26,6 +26,6 @@ void IdentityKernel<device_type>::BackwardDataContent(
   }
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kIdentityConf, IdentityKernel);
+ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kTupleIdentityConf, TupleIdentityKernel);
 
 }  // namespace oneflow
