@@ -38,7 +38,7 @@ T* MemoryAllocator::PlacementNew(T* mem_ptr) {
 
 inline bool operator==(const MemoryCase& lhs, const MemoryCase& rhs) {
   if (lhs.has_host_mem() && rhs.has_host_mem()) {
-    return lhs.host_mem().used_by_device() == rhs.host_mem().used_by_device();
+    return lhs.host_mem().used_by_device_id() == rhs.host_mem().used_by_device_id();
   }
   if (lhs.has_device_cuda_mem() && rhs.has_device_cuda_mem()) {
     return lhs.device_cuda_mem().device_id() == rhs.device_cuda_mem().device_id();
@@ -54,7 +54,7 @@ template<>
 struct hash<oneflow::MemoryCase> {
   size_t operator()(const oneflow::MemoryCase& val) const {
     if (val.has_host_mem()) {
-      return val.host_mem().used_by_device() + 1024;
+      return val.host_mem().used_by_device_id() + 1024;
     } else {
       return val.device_cuda_mem().device_id();
     }

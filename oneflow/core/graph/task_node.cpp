@@ -287,8 +287,10 @@ void TaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
 }
 
 void TaskNode::PinConsumedRegstMemCase(MemoryCase* mem_case) {
-  if (mem_case->has_host_mem() && device_type() == DeviceType::kGPU) {
-    mem_case->mutable_host_mem()->set_used_by_device(true);
+  if (mem_case->has_host_mem() && device_type() == DeviceType::kGPU
+      && mem_case->host_mem().used_by_device_id() == -1) {
+    const int64_t dev_phy_id = Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id());
+    mem_case->mutable_host_mem()->set_used_by_device_id(dev_phy_id);
   }
 }
 

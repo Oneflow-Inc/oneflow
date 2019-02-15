@@ -2,7 +2,7 @@ syntax = "proto2";
 package oneflow;
 
 message HostMemory {
-  optional bool used_by_device = 1 [default = false];
+  optional int64 used_by_device_id = 1 [default = -1];
   optional bool used_by_network = 2 [default = false];
 }
 
