@@ -116,10 +116,10 @@ void MaskToCpuSet(const std::string& str, cpu_set_t* set) {
 }  // namespace
 
 void NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size) {
-  std::vector<char> pci_bus_id_buf(sizeof("0000:00:00.0") - 1);
+  std::vector<char> pci_bus_id_buf(sizeof("0000:00:00.0"));
   CudaCheck(
       cudaDeviceGetPCIBusId(pci_bus_id_buf.data(), static_cast<int>(pci_bus_id_buf.size()), dev));
-  const std::string pci_bus_id(pci_bus_id_buf.data(), pci_bus_id_buf.size());
+  const std::string pci_bus_id(pci_bus_id_buf.data(), pci_bus_id_buf.size() - 1);
   const std::string pci_bus_id_short = pci_bus_id.substr(0, sizeof("0000:00") - 1);
   const std::string local_cpus_file =
       "/sys/class/pci_bus/" + pci_bus_id_short + "/../../" + pci_bus_id + "/local_cpus";
