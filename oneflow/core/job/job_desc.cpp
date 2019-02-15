@@ -56,7 +56,7 @@ void AddIdentityOp(const std::string& prefix, JobConf1* job_conf,
   // add tuple identity op
   OperatorConf* tuple_identity_op = job_conf->mutable_net()->add_op();
   tuple_identity_op->set_name(prefix + NewUniqueId());
-  IdentityOpConf* tuple_identity_op_conf = tuple_identity_op->mutable_identity_conf();
+  TupleIdentityOpConf* tuple_identity_op_conf = tuple_identity_op->mutable_tuple_identity_conf();
   int32_t idx = 0;
   for (const LogicalBlobId& lbi : input_lbis) {
     std::string blob_name = std::string("out_") + std::to_string(idx++);
