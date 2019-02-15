@@ -116,6 +116,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   int32_t GetModelSplitAxis(const std::string& op_name, const LogicalBlobId& lbi) const;
   BalancedSplitter GetBalancedSplitter(const std::string& op_name, const LogicalBlobId& lbi) const;
   const SbpParallel& GetSbpParallel(const std::string& op_name, const LogicalBlobId& lbi) const;
+  DataType GetBlobDataType(const std::string& op_name, const LogicalBlobId& lbi) const;
   void CheckBlobDescs(const std::string& op_name,
                       const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const;
