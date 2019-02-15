@@ -15,8 +15,8 @@ char* MemoryAllocator::Allocate(MemoryCase mem_case, std::size_t size) {
   if (mem_case.has_host_mem()) {
     if (mem_case.host_mem().used_by_device_id() != -1) {
 #ifdef PLATFORM_POSIX
-      NumaAwareCudaMallocHost(static_cast<int32_t>(mem_case.host_mem().used_by_device_id()), (void**)&dptr,
-                              size);
+      NumaAwareCudaMallocHost(static_cast<int32_t>(mem_case.host_mem().used_by_device_id()),
+                              (void**)&dptr, size);
 #else
       CudaCheck(cudaMallocHost(&dptr, size));
 #endif

@@ -99,6 +99,7 @@ int32_t HexCharToInt(int32_t c) {
 }
 
 void MaskToCpuSet(const std::string& str, cpu_set_t* set) {
+  CPU_ZERO_S(sizeof(cpu_set_t), set);
   int32_t cpu = 0;
   for (size_t pos = str.size() - 1; pos >= 0; --pos) {
     if (str.at(pos) == ',') { continue; }
