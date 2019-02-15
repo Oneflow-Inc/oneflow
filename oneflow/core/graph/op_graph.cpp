@@ -448,9 +448,9 @@ const SbpParallel& OpGraph::GetSbpParallel(const std::string& op_name,
       ->SbpParallel4Lbi(GetLogicalBlobIdKey(op_name, lbi));
 }
 
-DataType OpGraph::GetBlobDataType(const std::string& op_name, const LogicalBlobId& lbi) const {
-  return op_name2op_node_.at(GetOpNameKey(op_name, lbi))
-      ->NoParallelBlobDesc4Lbi(GetLogicalBlobIdKey(op_name, lbi))
+DataType OpGraph::GetBlobDataType(const LogicalBlobId& lbi) const {
+  return op_name2op_node_.at(lbi.op_name())
+      ->NoParallelBlobDesc4Lbi(GetLogicalBlobIdKey(lbi.op_name(), lbi))
       .data_type();
 }
 
