@@ -61,7 +61,7 @@ class CommNet {
   };
   void DoCallBack(ReadContext* read_ctx);
   HashSet<int64_t> peer_machine_id_;
-  std::mutex cq_mtx_;
+  HashMap<int64_t, std::mutex> peer_mchn_id2cq_mtx_;
   HashMap<int64_t, std::queue<ReadContext*>> peer_mchn_id2cq_;
   std::thread ready_cb_poller_;
 };
