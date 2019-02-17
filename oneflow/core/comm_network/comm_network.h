@@ -9,13 +9,6 @@
 
 namespace oneflow {
 
-struct CommNetItem {
-  bool is_read;
-  std::function<void()> callback;
-  CommNetItem() : CommNetItem(false, nullptr) {}
-  CommNetItem(bool read, const std::function<void()>& cb) : is_read(read), callback(cb) {}
-};
-
 class CommNet {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CommNet);
@@ -48,20 +41,22 @@ class CommNet {
 
  private:
   friend class Global<CommNet>;
-  void AddWorkToStream(void* actor_read_id, const std::function<void()>& cb, bool is_read);
   struct ActorReadContext;
   struct ReadContext {
     ActorReadContext* actor_read_ctx;
+    std::function<void()> do_read;
     int64_t peer_mchn_id;
     std::atomic<bool> read_done;
   };
   struct ActorReadContext {
+    std::mutex read_ctx_list_mtx;
+    std::list<ReadContext*> read_ctx_list;
     std::mutex waiting_list_mtx;
-    std::list<CommNetItem> waiting_list;
+    std::list<std::pair<ReadContext*, std::function<void()>>> waiting_list;
   };
   void DoCallBack(ReadContext* read_ctx);
   HashSet<int64_t> peer_machine_id_;
-  std::mutex cq_mtx_;
+  HashMap<int64_t, std::mutex> peer_mchn_id2cq_mtx_;
   HashMap<int64_t, std::queue<ReadContext*>> peer_mchn_id2cq_;
   std::thread ready_cb_poller_;
 };
