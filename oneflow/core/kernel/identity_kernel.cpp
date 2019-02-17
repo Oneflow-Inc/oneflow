@@ -14,6 +14,6 @@ void IdentityKernel<device_type>::BackwardDataContent(
   BnInOp2Blob(GenDiffBn("in"))->CopyDataContentFrom(ctx.device_ctx, BnInOp2Blob(GenDiffBn("out")));
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kSbpParallelCastConf, IdentityKernel);
+ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kParallelCastConf, IdentityKernel);
 
 }  // namespace oneflow
