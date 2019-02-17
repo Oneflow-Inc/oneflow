@@ -971,10 +971,13 @@ message TopKOpConf {
   optional bool sorted = 4 [default = true];
 }
 
-message SbpParallelCastConf {
+message SbpParallelCastOpConf {
   required string in = 1;
   required string out = 2;
-  required SbpParallel sbp = 3;
+  oneof parallel_type {
+    SplitParallel split_parallel = 3;
+    BroadcastParallel broadcast_parallel = 4;
+  }
 }
 
 message OperatorConf {
@@ -1068,7 +1071,7 @@ message OperatorConf {
     SparseCrossEntropyOpConf sparse_cross_entropy_conf= 260;
     ReduceMeanOpConf reduce_mean_conf = 261;
     TopKOpConf top_k_conf = 262;
-    SbpParallelCastConf sbp_parallel_cast_conf = 263;
+    SbpParallelCastOpConf sbp_parallel_cast_conf = 263;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
