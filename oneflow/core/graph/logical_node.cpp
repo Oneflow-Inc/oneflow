@@ -30,8 +30,16 @@ namespace oneflow {
 
 namespace {
 
+bool HasSoleParallelCastOp(const LogicalNode* logical_node) {
+  return logical_node->op_vec().size() == 1
+         && logical_node->SoleOp()->op_conf().has_parallel_cast_conf();
+}
+
 BldBoxingOpConfMthd GetBldBoxingOpConfMethodByFwParallelPolicy(const LogicalNode* in_logical,
                                                                const LogicalNode* out_logical) {
+  if (HasSoleParallelCastOp(in_logical) || HasSoleParallelCastOp(out_logical)) {
+    return &BoxingTaskNode::BldBoxingOpConfWithFwSbpParallel;
+  }
   ParallelPolicy in_policy = in_logical->parallel_desc()->policy();
   ParallelPolicy out_policy = out_logical->parallel_desc()->policy();
   if (in_policy == kDataParallel && out_policy == kDataParallel) {
@@ -49,6 +57,9 @@ BldBoxingOpConfMthd GetBldBoxingOpConfMethodByFwParallelPolicy(const LogicalNode
 }
 BldBoxingOpConfMthd GetBldBoxingOpConfMethodByBwParallelPolicy(const LogicalNode* in_logical,
                                                                const LogicalNode* out_logical) {
+  if (HasSoleParallelCastOp(in_logical) || HasSoleParallelCastOp(out_logical)) {
+    return &BoxingTaskNode::BldBoxingOpConfWithBwSbpParallel;
+  }
   ParallelPolicy in_policy = in_logical->parallel_desc()->policy();
   ParallelPolicy out_policy = out_logical->parallel_desc()->policy();
   if (in_policy == kDataParallel && out_policy == kDataParallel) {

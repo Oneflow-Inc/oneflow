@@ -125,6 +125,47 @@ DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, AddAndClone) {
   conf->mutable_clone_box();
 }
 
+void SetBoxingOpConfBySbpParallel(
+    BoxingOpConf* conf, const LogicalBlobId& lbi, const Operator& in_op, const Operator& out_op,
+    const std::vector<BoxingTaskNode::EdgeInfo>& sorted_edges,
+    const std::function<SbpParallel(const std::string&, const LogicalBlobId&)>& GetSbpParallel) {
+  SbpParallel in_sbp = GetSbpParallel(in_op.op_name(), lbi);
+  if (in_sbp.has_split_parallel()) {
+    conf->mutable_concat_box()->set_axis(in_sbp.split_parallel().axis());
+  } else if (in_sbp.has_partial_sum_parallel()) {
+    conf->mutable_add_box();
+  } else {
+    UNIMPLEMENTED();
+  }
+  SbpParallel out_sbp = GetSbpParallel(out_op.op_name(), lbi);
+  if (out_sbp.has_split_parallel()) {
+    BoxSplitConf* split_conf = conf->mutable_split_box();
+    split_conf->set_axis(out_sbp.split_parallel().axis());
+    const auto& bs = Global<OpGraph>::Get()->GetBalancedSplitter(out_op.op_name(), lbi);
+    SetBoxSplitPart(sorted_edges, bs, split_conf);
+  } else if (out_sbp.has_broadcast_parallel()) {
+    conf->mutable_clone_box();
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, FwSbpParallel) {
+  SetBoxingOpConfBySbpParallel(conf, lbi, *in_logical->SoleOp(), *out_logical->SoleOp(),
+                               sorted_out_edges,
+                               [&](const std::string& op_name, const LogicalBlobId& lbi) {
+                                 return Global<OpGraph>::Get()->GetSbpParallel(op_name, lbi);
+                               });
+}
+
+DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, BwSbpParallel) {
+  SetBoxingOpConfBySbpParallel(
+      conf, lbi, *in_logical->SoleOp(), *out_logical->SoleOp(), sorted_out_edges,
+      [&](const std::string& op_name, const LogicalBlobId& lbi) {
+        return GetDualSbpParallel(Global<OpGraph>::Get()->GetSbpParallel(op_name, lbi));
+      });
+}
+
 void BoxingTaskNode::InitLogical2SortedEdgeInfo(
     const std::unordered_set<TaskEdge*>& (TaskNode::*GetEdges)() const,
     TaskEdge* (TaskNode::*SoleEdge)() const, TaskNode* (TaskEdge::*SoleNode)() const,
