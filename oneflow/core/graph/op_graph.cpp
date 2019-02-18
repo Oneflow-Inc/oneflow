@@ -215,7 +215,8 @@ void OpNode::CheckBlobDescs(const std::function<BlobDesc*(const std::string&)>& 
     const LogicalBlobId& lbi = op().BnInOp2Lbi(bn);
     if (lbi2parallel_id2blob_desc_.find(lbi) == lbi2parallel_id2blob_desc_.end()) { return; }
     CHECK_EQ(parallel_ctx->parallel_num(), lbi2parallel_id2blob_desc_.at(lbi).size());
-    CHECK(*GetBlobDesc4BnInOp(bn) == lbi2parallel_id2blob_desc_.at(lbi).at(parallel_id));
+    const BlobDesc& blob_desc = *GetBlobDesc4BnInOp(bn);
+    CHECK(blob_desc == lbi2parallel_id2blob_desc_.at(lbi).at(parallel_id));
   };
   for (const std::string& bn : op().data_tmp_bns()) { Check(bn); }
   for (const std::string& bn : op().fw_buf_bns()) { Check(bn); }
@@ -292,15 +293,6 @@ void OpGraph::InitEdges() {
 
 void OpGraph::FixOpParallelDesc() const {
   ForEachNode([&](OpNode* node) { node->op().FixParallelDesc(node->mut_parallel_desc()); });
-  ForEachNode([&](OpNode* node) {
-    OpNode* prev_node = node;
-    while (prev_node->op().IsSoleInputBlobAllowedModelSplit()) {
-      prev_node = prev_node->SoleInEdge()->src_node();
-    }
-    if (prev_node != node && prev_node->parallel_desc().policy() == kModelParallel) {
-      *node->mut_parallel_desc() = prev_node->parallel_desc();
-    }
-  });
 }
 
 void OpGraph::UpdateOpNodeHasInDiff() const {

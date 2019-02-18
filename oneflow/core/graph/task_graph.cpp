@@ -434,6 +434,8 @@ void TaskGraph::EnableMemSharingInVariableOp() {
         model_regst->set_mem_shared_offset(0);
       }
       RegstDesc* out_regst = fw_task_node->GetProducedRegst("out").get();
+      CHECK_EQ(out_regst->min_register_num(), 1);
+      CHECK_EQ(out_regst->max_register_num(), 1);
       CHECK_EQ(out_regst->NumOfLbi(), 1);
       out_regst->set_enable_mem_sharing(true);
       out_regst->set_mem_shared_id(model_regst->mem_shared_id());
@@ -451,6 +453,8 @@ void TaskGraph::EnableMemSharingInVariableOp() {
         model_diff_regst->set_mem_shared_offset(0);
       }
       RegstDesc* out_diff_regst = bw_task_node->GetSoleConsumedRegst("out_diff").get();
+      if (out_diff_regst->min_register_num() != 1) { return; }
+      if (out_diff_regst->max_register_num() != 1) { return; }
       if (out_diff_regst->NumOfLbi() != 1) { return; }
       out_diff_regst->set_enable_mem_sharing(true);
       out_diff_regst->set_mem_shared_id(model_diff_regst->mem_shared_id());

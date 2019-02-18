@@ -30,8 +30,17 @@ namespace oneflow {
 
 namespace {
 
+bool HasSoleIdentityOp(const LogicalNode* logical_node) {
+  const auto& op_conf = logical_node->SoleOp()->op_conf();
+  return logical_node->op_vec().size() == 1
+         && (op_conf.has_parallel_cast_conf() || op_conf.has_tuple_identity_conf());
+}
+
 BldBoxingOpConfMthd GetBldBoxingOpConfMethodByFwParallelPolicy(const LogicalNode* in_logical,
                                                                const LogicalNode* out_logical) {
+  if (HasSoleIdentityOp(in_logical) || HasSoleIdentityOp(out_logical)) {
+    return &BoxingTaskNode::BldBoxingOpConfWithFwSbpParallel;
+  }
   ParallelPolicy in_policy = in_logical->parallel_desc()->policy();
   ParallelPolicy out_policy = out_logical->parallel_desc()->policy();
   if (in_policy == kDataParallel && out_policy == kDataParallel) {
@@ -49,6 +58,9 @@ BldBoxingOpConfMthd GetBldBoxingOpConfMethodByFwParallelPolicy(const LogicalNode
 }
 BldBoxingOpConfMthd GetBldBoxingOpConfMethodByBwParallelPolicy(const LogicalNode* in_logical,
                                                                const LogicalNode* out_logical) {
+  if (HasSoleIdentityOp(in_logical) || HasSoleIdentityOp(out_logical)) {
+    return &BoxingTaskNode::BldBoxingOpConfWithBwSbpParallel;
+  }
   ParallelPolicy in_policy = in_logical->parallel_desc()->policy();
   ParallelPolicy out_policy = out_logical->parallel_desc()->policy();
   if (in_policy == kDataParallel && out_policy == kDataParallel) {

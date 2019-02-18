@@ -42,6 +42,8 @@ class BoxingTaskNode : public TaskNode {
   DECLARE_BLD_BOXING_OP_CONF_METHOD(AddAndDataSplit);
   DECLARE_BLD_BOXING_OP_CONF_METHOD(AddAndModelSplit);
   DECLARE_BLD_BOXING_OP_CONF_METHOD(AddAndClone);
+  DECLARE_BLD_BOXING_OP_CONF_METHOD(FwSbpParallel);
+  DECLARE_BLD_BOXING_OP_CONF_METHOD(BwSbpParallel);
 
  private:
   void InitLogical2SortedEdgeInfo(const std::unordered_set<TaskEdge*>& (TaskNode::*GetEdges)()

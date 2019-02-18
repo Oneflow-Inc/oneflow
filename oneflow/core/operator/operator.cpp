@@ -146,10 +146,12 @@ void Operator::GetOpParallelSignatures(
   if (IsSoleInputBlobAllowedModelSplit()) {
     CHECK(!has_model);
     op_parallel_signatures->emplace_back(MakeModelSplitOpParallelSignature(this));
-    op_parallel_signatures->emplace_back(MakeModelBroadcastOpParallelSignature(this));
+    op_parallel_signatures->emplace_back(MakeBroadcastOpParallelSignature(this));
   } else if (has_model) {
     for (const auto& ibn : input_bns()) { CHECK(!IsInputBlobAllowedModelSplit(ibn)); }
     op_parallel_signatures->emplace_back(MakeModelSplitOpParallelSignature(this));
+  } else if (input_bns().size() == 1) {
+    op_parallel_signatures->emplace_back(MakeBroadcastOpParallelSignature(this));
   } else {
     // do nothing
   }
