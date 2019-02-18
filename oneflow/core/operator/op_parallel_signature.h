@@ -45,8 +45,7 @@ std::unique_ptr<const OpParallelSignature> MakeDataSplitOpParallelSignature(cons
 std::unique_ptr<const OpParallelSignature> MakeModelSplitOpParallelSignature(const Operator* op);
 
 // (B,) -> (B, ...)
-std::unique_ptr<const OpParallelSignature> MakeModelBroadcastOpParallelSignature(
-    const Operator* op);
+std::unique_ptr<const OpParallelSignature> MakeBroadcastOpParallelSignature(const Operator* op);
 
 // (B, S(0), ...) -> (S(0), ...)
 // return blobs: data splitted
