@@ -963,7 +963,6 @@ message IdentityOpConf {
   repeated string out = 2;
 }
 
-<<<<<<< HEAD
 message FloatToHalfOpConf {
   required string in = 1;
   required string out = 2;
@@ -972,13 +971,13 @@ message FloatToHalfOpConf {
 message HalfToFloatOpConf {
   required string in = 1;
   required string out = 2;
-=======
+}
+
 message TopKOpConf {
   required string in = 1;
   required string out = 2;
   optional int32 k = 3 [default = 1];
   optional bool sorted = 4 [default = true];
->>>>>>> 67ade80ed5d7e6ef3f3e1ca4edc541686e15d8f2
 }
 
 message OperatorConf {

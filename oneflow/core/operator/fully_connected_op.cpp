@@ -39,13 +39,16 @@ void FullyConnectedOp::InferBlobDescs(
 
   // weight
   GetBlobDesc4BnInOp("weight")->mut_shape() = Shape({units, in_blob_desc->shape().Count(1)});
+  GetBlobDesc4BnInOp("weight")->set_data_type(in_blob_desc->data_type());
 
   if (conf.use_bias()) {
     // bias
     GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({1, units});
+    GetBlobDesc4BnInOp("bias")->set_data_type(in_blob_desc->data_type());
 
     // bias_multiplier
     GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() = Shape({in_blob_desc->shape().At(0), 1});
+    GetBlobDesc4BnInOp("bias_multiplier")->set_data_type(in_blob_desc->data_type());
   }
 }
 

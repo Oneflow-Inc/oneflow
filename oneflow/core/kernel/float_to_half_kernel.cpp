@@ -29,6 +29,6 @@ void FloatToHalfKernel<device_type, T>::BackwardDataContent(
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kFloatToHalfConf, FloatToHalfKernel,
-                           OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat));
+                           FLOAT16_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
