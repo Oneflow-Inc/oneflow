@@ -60,10 +60,7 @@ void CommNet::DoCallBack(ReadContext* read_ctx) {
   while (true) {
     {
       std::unique_lock<std::mutex> lck(actor_read_ctx->waiting_list_mtx);
-      if (actor_read_ctx->waiting_list.empty()
-          || (actor_read_ctx->waiting_list.front().callback == nullptr)) {
-        break;
-      }
+      if (actor_read_ctx->waiting_list.empty()) { break; }
       item = actor_read_ctx->waiting_list.front();
       actor_read_ctx->waiting_list.pop_front();
     }
