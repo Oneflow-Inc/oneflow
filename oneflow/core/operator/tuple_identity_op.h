@@ -1,18 +1,17 @@
-#ifndef ONEFLOW_CORE_OPERATOR_CONCAT_OP_H_
-#define ONEFLOW_CORE_OPERATOR_CONCAT_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_TUPLE_IDENTITY_OP_H_
+#define ONEFLOW_CORE_OPERATOR_TUPLE_IDENTITY_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-class ConcatOp final : public Operator {
+class TupleIdentityOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ConcatOp);
-  ConcatOp() = default;
-  ~ConcatOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(TupleIdentityOp);
+  TupleIdentityOp() = default;
+  ~TupleIdentityOp() = default;
 
   void InitFromOpConf() override;
-
   const PbMessage& GetCustomizedConf() const override;
   bool NeedInBlobWhenBackward() const override { return false; }
   bool NeedOutBlobWhenBackward() const override { return false; }
@@ -21,9 +20,11 @@ class ConcatOp final : public Operator {
                       const ParallelContext* parallel_ctx) const override;
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override {
+    return op_conf().tuple_identity_conf().in_size() == 1 && ibn == SoleIbn();
+  }
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_CONCAT_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_TUPLE_IDENTITY_OP_H_

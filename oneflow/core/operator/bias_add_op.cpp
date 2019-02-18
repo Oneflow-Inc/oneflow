@@ -18,6 +18,13 @@ bool BiasAddOp::IsInputBlobAllowedModelSplit(const std::string& ibn) const {
   return ibn == "b";
 }
 
+void BiasAddOp::GetOpParallelSignatures(
+    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
+  op_parallel_signatures->emplace_back(Make_DS_MB_2_DS_OpParallelSignature(this));
+  auto EqZero = [](int32_t axis) { return axis == 0; };
+  op_parallel_signatures->emplace_back(Make_DB_MS_2_MS_OpParallelSignature(this, EqZero));
+}
+
 void BiasAddOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                const ParallelContext* parallel_ctx) const {
   const BlobDesc* a_blob_desc = GetBlobDesc4BnInOp("a");
@@ -31,19 +38,6 @@ void BiasAddOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
 
   *GetBlobDesc4BnInOp("out") = *a_blob_desc;
   GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() = Shape({a_blob_desc->shape().At(0), 1});
-}
-
-void BiasAddOp::InferOutputBlobModelSplitAxis(
-    std::function<int32_t*(const std::string&)> ModelSplitAxis4BnInOp,
-    std::function<int32_t(const std::string&)> ShapeNumAxes4BnInOp,
-    const ParallelContext* parallel_context) const {
-  if (parallel_context->policy() == kDataParallel) {
-    *ModelSplitAxis4BnInOp("out") = -1;
-  } else if (parallel_context->policy() == kModelParallel) {
-    *ModelSplitAxis4BnInOp("out") = 1;
-  } else {
-    UNIMPLEMENTED();
-  }
 }
 
 REGISTER_OP(OperatorConf::kBiasAddConf, BiasAddOp);

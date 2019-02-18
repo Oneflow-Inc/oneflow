@@ -45,7 +45,6 @@ std::function<bool(const LogicalNode*)> MakePredicatorHasActualOutDiff(const Log
 LogicalGraph::LogicalGraph(bool is_train) {
   BuildFwStruct();
   if (is_train) { GroupNodesForReduceStruct(); }
-  SetMainModelParallel();
   if (is_train) { BuildBwStruct(); }
   MergeEdge();
   SetNodeDataLbi();
@@ -214,20 +213,6 @@ void LogicalGraph::LinkUnpackFw2PackFw(
         dynamic_cast<UnpackForwardLogicalNode*>(it->second.front());
     CHECK(unpack_fw);
     pack_fw->set_related_unpack(unpack_fw);
-  });
-}
-
-void LogicalGraph::SetMainModelParallel() {
-  ForEachNode([](LogicalNode* node) {
-    if (node->parallel_desc()->policy() == kModelParallel) { node->set_main_model_parallel(node); }
-  });
-  ForEachNode([](LogicalNode* node) {
-    LogicalNode* pred_node = node;
-    while (pred_node->SoleOp()->IsElemWiseOp()) { pred_node = pred_node->SoleInEdge()->src_node(); }
-    if (pred_node != node && pred_node->parallel_desc()->policy() == kModelParallel) {
-      node->mut_parallel_desc() = pred_node->parallel_desc();
-      node->set_main_model_parallel(pred_node);
-    }
   });
 }
 

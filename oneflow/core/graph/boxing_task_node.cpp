@@ -4,7 +4,6 @@
 #include "oneflow/core/graph/logical_graph.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/job/blob_parallel_desc.h"
 
 namespace oneflow {
 
@@ -58,9 +57,7 @@ DEFINE_BLD_BOXING_OP_CONF_METHOD(InBoxingTaskNode, DataConcatAndDataSplit) {
   BoxSplitConf* split_conf = conf->mutable_split_box();
   split_conf->set_axis(0);
   const std::string& out_op_name = out_logical->op_vec().at(0)->op_name();
-  SetBoxSplitPart(sorted_out_edges,
-                  Global<OpGraph>::Get()->GetDataBalancedSplitter(out_op_name, lbi,
-                                                                  *out_logical->parallel_desc()),
+  SetBoxSplitPart(sorted_out_edges, Global<OpGraph>::Get()->GetBalancedSplitter(out_op_name, lbi),
                   split_conf);
 }
 DEFINE_BLD_BOXING_OP_CONF_METHOD(OutBoxingTaskNode, DataConcatAndDataSplit) {
@@ -68,13 +65,11 @@ DEFINE_BLD_BOXING_OP_CONF_METHOD(OutBoxingTaskNode, DataConcatAndDataSplit) {
   BoxSplitConf* split_conf = conf->mutable_split_box();
   split_conf->set_axis(0);
   const std::string& in_op_name = in_logical->op_vec().at(0)->op_name();
-  BalancedSplitter in_bs = Global<OpGraph>::Get()->GetDataBalancedSplitter(
-      in_op_name, lbi, *in_logical->parallel_desc());
+  BalancedSplitter in_bs = Global<OpGraph>::Get()->GetBalancedSplitter(in_op_name, lbi);
   Range in_range =
       in_bs.At(sorted_in_edges.front().parallel_id_min, sorted_in_edges.back().parallel_id_max);
   const std::string& out_op_name = out_logical->op_vec().at(0)->op_name();
-  BalancedSplitter out_bs = Global<OpGraph>::Get()->GetDataBalancedSplitter(
-      out_op_name, lbi, *out_logical->parallel_desc());
+  BalancedSplitter out_bs = Global<OpGraph>::Get()->GetBalancedSplitter(out_op_name, lbi);
   for (const EdgeInfo& out_edge : sorted_out_edges) {
     Range out_range = out_bs.At(out_edge.parallel_id_min, out_edge.parallel_id_max);
     Range intersectant_range = FindIntersectant(in_range, out_range);
@@ -90,9 +85,7 @@ DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, DataConcatAndModelSplit) {
   BoxSplitConf* split_conf = conf->mutable_split_box();
   const std::string& out_op_name = out_logical->op_vec().at(0)->op_name();
   split_conf->set_axis(Global<OpGraph>::Get()->GetModelSplitAxis(out_op_name, lbi));
-  SetBoxSplitPart(sorted_out_edges,
-                  Global<OpGraph>::Get()->GetModelBalancedSplitter(out_op_name, lbi,
-                                                                   *out_logical->parallel_desc()),
+  SetBoxSplitPart(sorted_out_edges, Global<OpGraph>::Get()->GetBalancedSplitter(out_op_name, lbi),
                   split_conf);
 }
 DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, ModelConcatAndDataSplit) {
@@ -102,9 +95,7 @@ DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, ModelConcatAndDataSplit) {
   split_conf->set_axis(0);
 
   const std::string& out_op_name = out_logical->op_vec().at(0)->op_name();
-  SetBoxSplitPart(sorted_out_edges,
-                  Global<OpGraph>::Get()->GetDataBalancedSplitter(out_op_name, lbi,
-                                                                  *out_logical->parallel_desc()),
+  SetBoxSplitPart(sorted_out_edges, Global<OpGraph>::Get()->GetBalancedSplitter(out_op_name, lbi),
                   split_conf);
 }
 DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, ModelConcatAndClone) {
@@ -118,9 +109,7 @@ DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, AddAndDataSplit) {
   split_conf->set_axis(0);
 
   const std::string& out_op_name = out_logical->op_vec().at(0)->op_name();
-  SetBoxSplitPart(sorted_out_edges,
-                  Global<OpGraph>::Get()->GetDataBalancedSplitter(out_op_name, lbi,
-                                                                  *out_logical->parallel_desc()),
+  SetBoxSplitPart(sorted_out_edges, Global<OpGraph>::Get()->GetBalancedSplitter(out_op_name, lbi),
                   split_conf);
 }
 DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, AddAndModelSplit) {
@@ -128,9 +117,7 @@ DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, AddAndModelSplit) {
   BoxSplitConf* split_conf = conf->mutable_split_box();
   const std::string& out_op_name = out_logical->op_vec().at(0)->op_name();
   split_conf->set_axis(Global<OpGraph>::Get()->GetModelSplitAxis(out_op_name, lbi));
-  SetBoxSplitPart(sorted_out_edges,
-                  Global<OpGraph>::Get()->GetModelBalancedSplitter(out_op_name, lbi,
-                                                                   *out_logical->parallel_desc()),
+  SetBoxSplitPart(sorted_out_edges, Global<OpGraph>::Get()->GetBalancedSplitter(out_op_name, lbi),
                   split_conf);
 }
 DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, AddAndClone) {

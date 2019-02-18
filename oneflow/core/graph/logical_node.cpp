@@ -24,6 +24,7 @@
 #include "oneflow/core/graph/accuracy_print_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/reduce_identity_task_node.h"
+#include "oneflow/core/graph/op_graph.h"
 
 namespace oneflow {
 
@@ -264,18 +265,6 @@ void LogicalNode::GenSortedCompTaskNodes(
   }
 }
 
-int32_t LogicalNode::GetModelSplitAxis() const {
-  CHECK_EQ(parallel_desc_->policy(), kModelParallel);
-  CHECK_NOTNULL(main_model_parallel_);
-  if (main_model_parallel_ == this) {
-    int32_t ret = SoleOp()->ModelSplitAxis();
-    CHECK_NE(ret, -1);
-    return ret;
-  } else {
-    return main_model_parallel_->GetModelSplitAxis();
-  }
-}
-
 bool LogicalNode::HasOpWithCondition(std::function<bool(const Operator*)> cond) const {
   for (std::shared_ptr<const Operator> op : op_vec_) {
     if (cond(op.get())) { return true; }
@@ -284,7 +273,20 @@ bool LogicalNode::HasOpWithCondition(std::function<bool(const Operator*)> cond) 
 }
 
 static bool IsModelParallel121(const LogicalNode* src_node, const LogicalNode* dst_node) {
-  return src_node->main_model_parallel() == dst_node->main_model_parallel();
+  LogicalEdge* connect_edge = nullptr;
+  for (LogicalEdge* edge : src_node->out_edges()) {
+    if (edge->dst_node() == dst_node) { connect_edge = edge; }
+  }
+  CHECK_NOTNULL(connect_edge);
+  CHECK_GT(connect_edge->lbis().size(), 0);
+  const std::string& src_op_name = src_node->SoleOp()->op_name();
+  const std::string& dst_op_name = dst_node->SoleOp()->op_name();
+  for (const LogicalBlobId& lbi : connect_edge->lbis()) {
+    const auto& src_sbp = Global<OpGraph>::Get()->GetSbpParallel(src_op_name, lbi);
+    const auto& dst_sbp = Global<OpGraph>::Get()->GetSbpParallel(dst_op_name, lbi);
+    if (src_sbp != dst_sbp) { return false; }
+  }
+  return true;
 }
 
 BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const LogicalNode* dst_node) {
@@ -430,7 +432,6 @@ BackwardLogicalNode* ForwardLogicalNode::NewBackwardNode() {
   bw_node_->mut_op_vec() = op_vec();
   bw_node_->mut_parallel_desc() = parallel_desc();
   bw_node_->fw_node_ = this;
-  bw_node_->set_main_model_parallel(main_model_parallel());
   return bw_node_;
 }
 
