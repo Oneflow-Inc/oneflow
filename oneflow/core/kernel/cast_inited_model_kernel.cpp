@@ -5,6 +5,8 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 void CastInitedModelKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  int64_t next_model_version_id = *static_cast<int64_t*>(ctx.other);
+  if (next_model_version_id > 0) { return; }
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
   CHECK(in_blob->shape() == out_blob->shape());

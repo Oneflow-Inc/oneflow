@@ -14,7 +14,7 @@ const NormalForwardCompTaskNode* NormalMdUpdtCompTaskNode::GetForwardTaskNode() 
   UNIMPLEMENTED();
 }
 
-bool NormalMdUpdtCompTaskNode::IfUpdateHalfModel() const {
+void NormalMdUpdtCompTaskNode::SetIfUpdateHalfModel() {
   std::shared_ptr<Operator> fw_op = GetForwardTaskNode()->logical_node()->SoleOp();
   DataType dtype = DataType::kInvalidDataType;
   for (std::string obn : fw_op->output_bns()) {
@@ -25,7 +25,7 @@ bool NormalMdUpdtCompTaskNode::IfUpdateHalfModel() const {
       CHECK(dtype == output_blob_type);
     }
   }
-  return dtype == DataType::kFloat16;
+  if_update_half_model_ = (dtype == DataType::kFloat16);
 }
 
 bool NormalMdUpdtCompTaskNode::IsTrainable() const {
@@ -34,12 +34,14 @@ bool NormalMdUpdtCompTaskNode::IsTrainable() const {
 }
 
 void NormalMdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
+  SetIfUpdateHalfModel();
   int32_t max_model_regst = 1;
   auto model_regst = ProduceRegst("model", false, 1, max_model_regst);
   auto const_model_regst = ProduceRegst("const_model", false, 1, 1);
   auto forward_model_regst = ProduceRegst("forward_model", false, 1, 1);
   ProduceRegst("processed_model_diff", false, 1, 1);
   ProduceRegst("data_tmp", false, 1, 1);
+  if (if_update_half_model_) { ProduceRegst("float_model", false, 1, 1); }
   related_init_model_task_id_ = -1;
   std::list<std::pair<std::string, std::shared_ptr<RegstDesc>>> model_to_save{
       {"model", model_regst}, {"forward_model", forward_model_regst}};
@@ -89,6 +91,16 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
   // "model" regst is already bound with lbis and locked by the corresponding
   // NormalForwardCompTaskNode
   processed_model_diff_regst->CopyBlobDescFrom(GetProducedRegst("model").get());
+
+  std::shared_ptr<RegstDesc> float_model_regst = GetProducedRegst("float_model");
+  if (if_update_half_model_) {
+    float_model_regst->CopyBlobDescFrom(GetProducedRegst("model").get());
+    float_model_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
+      BlobDesc* blob = float_model_regst->MutBlobDesc(lbi);
+      CHECK(blob->data_type() == DataType::kFloat16);
+      blob->set_data_type(DataType::kFloat);
+    });
+  }
 
   ExecNode* model_update_node = nullptr;
   ExecEdge* exec_edge = nullptr;
@@ -141,6 +153,23 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
     model_update_node->AddBnToRegstAndBindIt(&Operator::forward_model_bns,
                                              GetProducedRegst("forward_model"));
   });
+
+  if (if_update_half_model_) {
+    OperatorConf op_conf;
+    op_conf.set_name("cast_inited_model_kernel" + NewUniqueId());
+    op_conf.set_device_type(logical_node()->parallel_desc()->device_type());
+    op_conf.mutable_cast_inited_model_conf();
+    std::shared_ptr<Operator> cast_inited_model_op = ConstructOp(op_conf);
+    ExecNode* cast_inited_model_node = mut_exec_gph().NewNode();
+    cast_inited_model_node->mut_op() = cast_inited_model_op;
+    ExecEdge* edge = mut_exec_gph().NewEdge();
+    Connect(cast_inited_model_node, edge, shared_model_diff_add_node);
+
+    cast_inited_model_node->BindBnWithRegst(cast_inited_model_op->SoleIbn(),
+                                            GetProducedRegst("model"));
+    cast_inited_model_node->BindBnWithRegst(cast_inited_model_op->SoleObn(),
+                                            GetProducedRegst("float_model"));
+  }
   mut_exec_gph().TopoForEachNode([this](ExecNode* node) { node->InferBlobDescs(parallel_ctx()); });
 }
 

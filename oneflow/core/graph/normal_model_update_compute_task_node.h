@@ -26,12 +26,13 @@ class NormalMdUpdtCompTaskNode final : public CompTaskNode {
 
  private:
   const NormalForwardCompTaskNode* GetForwardTaskNode() const;
-  bool IfUpdateHalfModel() const;
+  void SetIfUpdateHalfModel();
   bool IsTrainable() const;
   void FixPackedBlobDescOfProducedRegst() override;
   void InferProducedDataRegstTimeShape() override;
   uint32_t random_seed_;
   int64_t related_init_model_task_id_;
+  bool if_update_half_model_;
 };
 
 }  // namespace oneflow
