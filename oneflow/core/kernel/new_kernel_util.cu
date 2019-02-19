@@ -228,10 +228,11 @@ struct Float16NewKernelUtilIf<DeviceType::kGPU, T> {
                     const T* b, const int ldb, const T beta, T* c, const int ldc) {
     cublasOperation_t cublas_trans_a = CblasTrans2CublasTrans(trans_a);
     cublasOperation_t cublas_trans_b = CblasTrans2CublasTrans(trans_b);
-    CudaCheck(cublasHgemm(ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
-                          reinterpret_cast<const half*>(&alpha), reinterpret_cast<const half*>(b),
-                          ldb, reinterpret_cast<const half*>(a), lda,
-                          reinterpret_cast<const half*>(&beta), reinterpret_cast<half*>(c), ldc));
+    CudaCheck(cublasHgemm(ctx->cublas_tensor_op_math_handle(), cublas_trans_b, cublas_trans_a, n, m,
+                          k, reinterpret_cast<const half*>(&alpha),
+                          reinterpret_cast<const half*>(b), ldb, reinterpret_cast<const half*>(a),
+                          lda, reinterpret_cast<const half*>(&beta), reinterpret_cast<half*>(c),
+                          ldc));
   }
   static void Half2Float(DeviceCtx* ctx, const int n, const T* src, float* dst) {
     Half2FloatGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(

@@ -24,6 +24,9 @@ class CudaDeviceCtx : public DeviceCtx {
   const cublasHandle_t& cublas_pmd_handle() const override {
     return *(cuda_handler_->cublas_pmd_handle());
   }
+  const cublasHandle_t& cublas_tensor_op_math_handle() const override {
+    return *(cuda_handler_->cublas_tensor_op_math_handle());
+  }
   const cudnnHandle_t& cudnn_handle() const override { return *(cuda_handler_->cudnn_handle()); }
 
   void AddCallBack(std::function<void()> callback) const override {

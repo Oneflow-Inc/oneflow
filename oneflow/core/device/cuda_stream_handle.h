@@ -22,6 +22,7 @@ class CudaStreamHandle final {
   const cudaStream_t* cuda_stream();
   const cublasHandle_t* cublas_pmh_handle();
   const cublasHandle_t* cublas_pmd_handle();
+  const cublasHandle_t* cublas_tensor_op_math_handle();
   const cudnnHandle_t* cudnn_handle();
 
   void AddCallBack(std::function<void()> callback);
@@ -33,6 +34,7 @@ class CudaStreamHandle final {
   std::unique_ptr<cudaStream_t> cuda_stream_;
   std::unique_ptr<cublasHandle_t> cublas_pmh_handle_;
   std::unique_ptr<cublasHandle_t> cublas_pmd_handle_;
+  std::unique_ptr<cublasHandle_t> cublas_tensor_op_math_handle_;
   std::unique_ptr<cudnnHandle_t> cudnn_handle_;
 };
 
