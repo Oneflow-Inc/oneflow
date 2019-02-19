@@ -11,6 +11,7 @@ void* CommNet::NewActorReadId() const { return new ActorReadContext; }
 
 void CommNet::DeleteActorReadId(void* actor_read_id) const {
   auto actor_read_ctx = static_cast<ActorReadContext*>(actor_read_id);
+  while (!actor_read_ctx->waiting_list.empty()) {}
   CHECK(actor_read_ctx->waiting_list.empty());
   delete actor_read_ctx;
 }
