@@ -28,6 +28,7 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
     std::vector<LogicalEdge*> edges;
   };
   struct ReduceCtx {
+    int32_t order_in_logical_graph;
     std::vector<LogicalNode*> fw_logicals;
     std::vector<LogicalNode*> bw_logicals;
     std::vector<LogicalNode*> md_diff_acc_logicals;
@@ -43,7 +44,6 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   void LinkUnpackFw2PackFw(const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes);
   void ReConnectToFwClone(LogicalNode* clone_node, const LogicalBlobId& lbi,
                           const std::vector<LogicalEdge*>& edges, const std::string& obn);
-  void SetMainModelParallel();
   void BuildBwStruct();
   void NaiveBuildBwStruct();
   void AddBackwardClone();

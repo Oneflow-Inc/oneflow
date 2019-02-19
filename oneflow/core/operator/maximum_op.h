@@ -14,9 +14,11 @@ class MaximumOp final : public CWiseOp {
   void VirtualInitFromOpConf() override;
 
   const PbMessage& GetCustomizedConf() const override;
-
   void VirtualInferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override;
+
+ private:
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
 };
 
 }  // namespace oneflow

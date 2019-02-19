@@ -19,13 +19,19 @@ Shape& Shape::operator=(const Shape& shape) {
 
 bool Shape::operator==(const Shape& rhs) const { return dim_vec_ == rhs.dim_vec_; }
 
-std::string Shape::DebugStr() const {
+std::string Shape::ToString() const {
   std::stringstream ss;
-  ss << "{";
-  for (int64_t dim : dim_vec_) { ss << dim << ","; }
-  ss << "(" << elem_cnt_ << ")}";
+  int32_t idx = 0;
+  ss << "(";
+  for (int64_t dim : dim_vec_) {
+    ss << dim;
+    if (++idx != dim_vec_.size() || dim_vec_.size() == 1) { ss << ","; }
+  }
+  ss << ")";
   return ss.str();
 }
+
+std::string Shape::DebugStr() const { return ToString(); }
 
 void Shape::ToProto(ShapeProto* ret) const {
   *(ret->mutable_dim()) = PbRf<int64_t>(dim_vec_.begin(), dim_vec_.end());
@@ -55,6 +61,13 @@ void Shape::UpdateElemCnt() {
 std::ostream& operator<<(std::ostream& out, const Shape& shape) {
   out << shape.DebugStr();
   return out;
+}
+
+Shape Shape::CreateLeftExtendedShape(int num_axes) const {
+  CHECK_GE(num_axes, NumAxes());
+  std::vector<int64_t> dim_vec = this->dim_vec();
+  for (int i = 0; i < num_axes - NumAxes(); ++i) { dim_vec.insert(dim_vec.begin(), 1LL); }
+  return Shape(dim_vec);
 }
 
 }  // namespace oneflow

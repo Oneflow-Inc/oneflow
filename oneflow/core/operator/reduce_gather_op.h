@@ -18,6 +18,8 @@ class ReduceGatherOp final : public Operator {
                       const ParallelContext* parallel_ctx) const override;
 
  private:
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { UNIMPLEMENTED(); }
+
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext*, KernelConf*) const override;
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override { return GenPackedLbi(); }

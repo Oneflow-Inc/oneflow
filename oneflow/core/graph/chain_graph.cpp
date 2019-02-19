@@ -1,6 +1,7 @@
 #include "oneflow/core/graph/chain_graph.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/common/blocking_counter.h"
 
@@ -66,7 +67,7 @@ void ChainMerger::InitChains() {
     Chain& cur_chain = chain_list_.back();
     cur_chain.nodes = {task_node};
     cur_chain.stream_area_id =
-        std::make_pair(task_node->area_id(), task_node->GlobalWorkStreamId());
+        std::make_pair(task_node->AreaId4ChainMerge(), task_node->GlobalWorkStreamId());
     cur_chain.ancestors.resize(bitset_num);
     cur_chain.ancestors_and_this.resize(bitset_num);
     CarefullySetBitset(&(cur_chain.ancestors_and_this), GetTaskUid(task_node));
@@ -81,7 +82,7 @@ void ChainMerger::InitChains() {
 bool ChainMerger::DoMerge(std::list<ChainIt>& chains, ChainIt rhs) {
   CHECK_EQ(rhs->nodes.size(), 1);
   // rm kMdUpdtArea chain merge
-  if (rhs->nodes.front()->area_id() == kMdUpdtArea) { return false; }
+  if (rhs->nodes.front()->AreaId4ChainMerge() == kMdUpdtArea) { return false; }
   for (auto chains_it = chains.rbegin(); chains_it != chains.rend(); ++chains_it) {
     ChainIt lhs = *chains_it;
     if (IsSubset(lhs, rhs)) {
@@ -128,6 +129,23 @@ bool ChainMerger::IsSubset(const ChainIt& lhs, const ChainIt& rhs) const {
   return true;
 }
 
+bool IsForwardOnlyTaskNode(TaskNode* node) {
+  auto* fw_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
+  if (fw_node == nullptr) { return true; }
+  return fw_node->HasBackwardCompTaskNode() == false;
+};
+
+bool NoOutRegstConsumedByBwNode(TaskNode* node) {
+  auto* fw_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
+  if (fw_node == nullptr) { return false; }
+  for (TaskEdge* edge : fw_node->out_edges()) {
+    auto* fw_consumer = dynamic_cast<NormalForwardCompTaskNode*>(edge->dst_node());
+    if (fw_consumer == nullptr) { return false; }
+    if (fw_consumer->HasBackwardCompTaskNode()) { return false; }
+  }
+  return true;
+};
+
 }  // namespace
 
 std::string ChainNode::VisualStr() const {
@@ -145,6 +163,7 @@ ChainGraph::ChainGraph(const TaskGraph& task_gph) : task_gph_(task_gph) {
   std::vector<std::vector<TaskNode*>> chains;
   GroupTaskNodesByMachineAndCollectAncestors(task_gph, &machine2tasks, &node2ancestors);
   MergeTaskNodes(machine2tasks, node2ancestors, &chains);
+  for (auto& task_nodes : chains) { PrioritizeUntrainableTaskNode(&task_nodes); }
   InitChainNode(chains);
   InitChainEdge(chains);
   SetChainId4ChainNode();
@@ -158,7 +177,7 @@ void ChainGraph::GroupTaskNodesByMachineAndCollectAncestors(
     (*machine2tasks)[node->machine_id()].emplace_back(node);
     CHECK(node2ancestors->emplace(node, HashSet<TaskNode*>()).second);
     // to reduce memory consumption
-    if (node->area_id() == kMdUpdtArea) { return; }
+    if (node->AreaId4ChainMerge() == kMdUpdtArea) { return; }
     node->ForEachNodeOnInEdge([&](TaskNode* in_node) {
       if (IsBackEdge(in_node, node)) { return; }
       (*node2ancestors)[node].insert(in_node);
@@ -189,6 +208,85 @@ void ChainGraph::MergeTaskNodes(const HashMap<int64_t, std::vector<TaskNode*>>& 
     });
   }
   counter.WaitUntilCntEqualZero();
+}
+
+void ChainGraph::PrioritizeUntrainableTaskNode(std::vector<TaskNode*>* task_nodes) const {
+  HashSet<TaskNode*> task_nodes_set(task_nodes->begin(), task_nodes->end());
+  auto IsInSubset = [&](TaskNode* node) {
+    return task_nodes_set.find(node) != task_nodes_set.end();
+  };
+  auto ForEachInNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& Handler) {
+    node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
+      if (IsInSubset(node_on_in_edge)) { Handler(node_on_in_edge); }
+    });
+  };
+  auto ForEachOutNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& Handler) {
+    node->ForEachNodeOnOutEdge([&](TaskNode* node_on_out_edge) {
+      if (IsInSubset(node_on_out_edge)) { Handler(node_on_out_edge); }
+    });
+  };
+  auto IsSourceNode = [&](TaskNode* node) {
+    int32_t in_node_num = 0;
+    ForEachInNode(node, [&](TaskNode* in_node) { ++in_node_num; });
+    return in_node_num == 0;
+  };
+  std::list<TaskNode*> starts;
+  for (TaskNode* node : task_nodes_set) {
+    if (IsSourceNode(node)) { starts.push_back(node); }
+  }
+  task_nodes->clear();
+  auto IsPrior = [&](TaskNode* node) {
+    return IsForwardOnlyTaskNode(node) && NoOutRegstConsumedByBwNode(node);
+  };
+  PartialPriorTopoForEachNode(starts, ForEachInNode, ForEachOutNode, IsPrior,
+                              [&](TaskNode* node) { task_nodes->push_back(node); });
+  HashSet<TaskNode*> task_nodes_set_check(task_nodes->begin(), task_nodes->end());
+  CHECK(task_nodes_set == task_nodes_set_check);
+}
+
+void ChainGraph::PartialPriorTopoForEachNode(
+    const std::list<TaskNode*> starts,
+    const std::function<void(TaskNode*, const std::function<void(TaskNode*)>&)>& ForEachInNode,
+    const std::function<void(TaskNode*, const std::function<void(TaskNode*)>&)>& ForEachOutNode,
+    const std::function<bool(TaskNode*)>& IsPrior,
+    const std::function<void(TaskNode*)>& Handler) const {
+  // collect prior nodes
+  HashSet<TaskNode*> prior_nodes;
+  auto IsTaskNodePrior = [&](TaskNode* node) {
+    if (!IsPrior(node)) { return false; }
+    bool is_prior = true;
+    ForEachInNode(node, [&](TaskNode* in_node) {
+      is_prior = is_prior && (prior_nodes.find(in_node) != prior_nodes.end());
+    });
+    return is_prior;
+  };
+  std::list<TaskNode*> nodes;
+  task_gph_.TopoForEachNode(starts, ForEachInNode, ForEachOutNode, [&](TaskNode* node) {
+    if (IsTaskNodePrior(node)) { CHECK(prior_nodes.emplace(node).second); }
+    nodes.push_back(node);
+  });
+  // travel prior nodes;
+  auto ForEachPriorInNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& Handler) {
+    ForEachInNode(node, [&](TaskNode* in_node) {
+      if (prior_nodes.find(in_node) != prior_nodes.end()) { Handler(in_node); }
+    });
+  };
+  auto ForEachPriorOutNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& Handler) {
+    ForEachOutNode(node, [&](TaskNode* out_node) {
+      if (prior_nodes.find(out_node) != prior_nodes.end()) { Handler(out_node); }
+    });
+  };
+  std::list<TaskNode*> prior_starts;
+  for (TaskNode* start : starts) {
+    if (IsTaskNodePrior(start)) { prior_starts.push_back(start); }
+  }
+  task_gph_.DfsTopoForEachNodeSortByDistanceToSink(prior_starts, ForEachPriorInNode,
+                                                   ForEachPriorOutNode, Handler);
+  // travel other nodes ;
+  task_gph_.DfsTopoForEachNodeSortByDistanceToSink(
+      starts, ForEachInNode, ForEachOutNode, [&](TaskNode* node) {
+        if (prior_nodes.find(node) == prior_nodes.end()) { Handler(node); }
+      });
 }
 
 void ChainGraph::InitChainNode(const std::vector<std::vector<TaskNode*>>& chains) {

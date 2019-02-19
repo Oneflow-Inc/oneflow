@@ -15,10 +15,16 @@ class PackOp final : public Operator {
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override { return op_conf().pack_conf(); }
   LogicalNode* NewProperLogicalNode() { return new PackForwardLogicalNode; }
+  void InferOutputBlobTimeShape(std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                Shape* time_shape) const override;
 
   bool NeedInBlobWhenBackward() const override { return true; }
   bool NeedOutBlobWhenBackward() const override { return false; }
-  int32_t GetPackNum(int64_t parallel_num) const;
+  int32_t GetPackNum() const;
+
+ private:
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
 };
 
 }  // namespace oneflow

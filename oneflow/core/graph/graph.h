@@ -45,8 +45,8 @@ class Graph {
       const std::function<void(NodeType*)>& Handler) const;
 
   // Getters
-  const std::unordered_set<NodeType*>& source_nodes() const;
-  const std::unordered_set<NodeType*>& sink_nodes() const;
+  std::list<NodeType*> source_nodes() const;
+  std::list<NodeType*> sink_nodes() const;
   NodeType* SoleSourceNode() const;
   NodeType* SoleSinkNode() const;
   NodeType* SoleNode() const;
@@ -57,7 +57,8 @@ class Graph {
   // Setters
   template<typename DerivedNodeType = NodeType>
   DerivedNodeType* NewNode();
-  EdgeType* NewEdge();
+  template<class... Args>
+  EdgeType* NewEdge(Args&&... args);
   void AddAllocatedNode(NodeType*);
   void AddAllocatedEdge(EdgeType*);
   void DeleteNode(NodeType*);
@@ -79,23 +80,47 @@ void Graph<NodeType, EdgeType>::ForEachNode(std::function<void(NodeType*)> NodeH
 }
 
 template<typename NodeType, typename EdgeType>
-void Graph<NodeType, EdgeType>::TopoForEachNode(std::function<void(NodeType*)> NodeHandler) const {
-  std::list<NodeType*> starts;
+std::list<NodeType*> Graph<NodeType, EdgeType>::source_nodes() const {
+  std::list<NodeType*> ret;
   ForEachNode([&](NodeType* node) {
-    if (node->in_edges().empty()) { starts.push_back(node); }
+    if (node->in_edges().empty()) { ret.push_back(node); }
   });
-  TopoForEachNode(starts, &NodeType::ForEachNodeOnInEdge, &NodeType::ForEachNodeOnOutEdge,
+  return ret;
+}
+
+template<typename NodeType, typename EdgeType>
+std::list<NodeType*> Graph<NodeType, EdgeType>::sink_nodes() const {
+  std::list<NodeType*> ret;
+  ForEachNode([&](NodeType* node) {
+    if (node->out_edges().empty()) { ret.push_back(node); }
+  });
+  return ret;
+}
+
+template<typename NodeType, typename EdgeType>
+NodeType* Graph<NodeType, EdgeType>::SoleSourceNode() const {
+  std::list<NodeType*> source_nodes_list = source_nodes();
+  CHECK_EQ(source_nodes_list.size(), 1);
+  return source_nodes_list.front();
+}
+
+template<typename NodeType, typename EdgeType>
+NodeType* Graph<NodeType, EdgeType>::SoleSinkNode() const {
+  std::list<NodeType*> sink_nodes_list = sink_nodes();
+  CHECK_EQ(sink_nodes_list.size(), 1);
+  return sink_nodes_list.front();
+}
+
+template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::TopoForEachNode(std::function<void(NodeType*)> NodeHandler) const {
+  TopoForEachNode(source_nodes(), &NodeType::ForEachNodeOnInEdge, &NodeType::ForEachNodeOnOutEdge,
                   NodeHandler);
 }
 
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::ReverseTopoForEachNode(
     std::function<void(NodeType*)> NodeHandler) const {
-  std::list<NodeType*> starts;
-  ForEachNode([&](NodeType* node) {
-    if (node->out_edges().empty()) { starts.push_back(node); }
-  });
-  TopoForEachNode(starts, &NodeType::ForEachNodeOnOutEdge, &NodeType::ForEachNodeOnInEdge,
+  TopoForEachNode(sink_nodes(), &NodeType::ForEachNodeOnOutEdge, &NodeType::ForEachNodeOnInEdge,
                   NodeHandler);
 }
 
@@ -122,8 +147,9 @@ DerivedNodeType* Graph<NodeType, EdgeType>::NewNode() {
 }
 
 template<typename NodeType, typename EdgeType>
-EdgeType* Graph<NodeType, EdgeType>::NewEdge() {
-  EdgeType* ret = new EdgeType;
+template<class... Args>
+EdgeType* Graph<NodeType, EdgeType>::NewEdge(Args&&... args) {
+  EdgeType* ret = new EdgeType(std::forward<Args>(args)...);
   AddAllocatedEdge(ret);
   return ret;
 }
@@ -163,6 +189,7 @@ template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::ToDotWithFilePath(const std::string& file_path) {
   auto log_stream = TeePersistentLogStream::Create(file_path);
   ToDotWithStream(log_stream);
+  log_stream->Flush();
 }
 
 template<typename NodeType, typename EdgeType>
@@ -242,17 +269,18 @@ void Graph<NodeType, EdgeType>::DfsTopoForEachNodeSortByDistanceToSink(
   }
   HashMap<NodeType*, int64_t> node2distance_to_sink;
   TopoForEachNode(sinks, ForEachOutNode, ForEachInNode, [&](NodeType* node) {
-    int64_t distince_to_sink = -1;
+    int64_t distance_to_sink = -1;
     ForEachOutNode(node, [&](NodeType* out_node) {
-      distince_to_sink = std::max(distince_to_sink, node2distance_to_sink[out_node]);
+      distance_to_sink = std::max(distance_to_sink, node2distance_to_sink[out_node]);
     });
-    node2distance_to_sink[node] = distince_to_sink + 1;
+    node2distance_to_sink[node] = distance_to_sink + 1;
   });
   auto ForEachOutNodeSortedByDistanceToSink = [&](NodeType* node,
                                                   const std::function<void(NodeType*)>& Handler) {
     std::vector<NodeType*> out_nodes;
     ForEachOutNode(node, [&](NodeType* out_node) { out_nodes.push_back(out_node); });
     std::sort(out_nodes.begin(), out_nodes.end(), [&](NodeType* lhs, NodeType* rhs) {
+      // DfsTopoForEachNode use stack, so sort desc
       return node2distance_to_sink.at(lhs) > node2distance_to_sink.at(rhs);
     });
     for (NodeType* out_node : out_nodes) { Handler(out_node); }

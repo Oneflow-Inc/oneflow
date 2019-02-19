@@ -41,7 +41,7 @@ template<DeviceType device_type>
 void Memset(DeviceCtx*, void* dst, const char value, size_t sz);
 
 #if defined(__CUDACC__)
-#define OF_DEVICE_FUNC __device__
+#define OF_DEVICE_FUNC __device__ __host__ __forceinline__
 #else
 #define OF_DEVICE_FUNC
 #endif
@@ -86,6 +86,14 @@ struct KernelUtilIf {
 
     OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a->dptr<T>(), b->dptr<T>(), beta,
            c->mut_dptr<T>());
+  }
+
+  static void OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
+                            enum CBLAS_TRANSPOSE trans_b, const int batch_size, const int m,
+                            const int n, const int k, const T alpha, const T* a, const T* b,
+                            const T beta, T* c, T** buf) {
+    Derived::BatchedGemm(ctx, CblasRowMajor, trans_a, trans_b, batch_size, m, n, k, alpha, a, b,
+                         beta, c, buf);
   }
 
   static void InitializeWithProperConf(DeviceCtx* ctx, const InitializerConf* initializer_conf,
@@ -141,6 +149,9 @@ struct CpuKernelUtilIf {
                                 const std::string& bn_in_op, int32_t dim_num,
                                 int64_t num_in_each_dim);
   static void Set(DeviceCtx* ctx, const T value, T* addr);
+  static void Replicate(DeviceCtx* ctx, const int64_t n, T* y, const T* x);
+  static void AddByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z);
+  static void MulByScalarPara(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z);
 };
 
 // CPU, Floating
@@ -162,11 +173,20 @@ struct KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T>::va
                    const enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
                    const T alpha, const T* a, const int lda, const T* b, const int ldb,
                    const T beta, T* c, const int ldc);
+  static void BatchedGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
+                          const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
+                          int batch_size, int m, int n, int k, const T alpha, const T* a,
+                          const T* b, const T beta, T* c, T** buf);
 
   static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha);
+  static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T alpha);
   static void Div(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
   static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
+  static void MulByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
+  static void Reciprocal(DeviceCtx* ctx, const int n, const T* x, T* y);
+  static void Square(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
+  static void Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsilon);
   static void Powx(DeviceCtx* ctx, const int64_t n, const T* x, const float power, T* y);
 
@@ -247,6 +267,9 @@ struct GpuKernelUtilIf {
                                 const std::string& bn_in_op, int32_t dim_num,
                                 int64_t num_in_each_dim);
   static void Set(DeviceCtx* ctx, const T value, T* addr);
+  static void Replicate(DeviceCtx* ctx, const int64_t n, T* y, const T* x);
+  static void AddByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z);
+  static void MulByScalarPara(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z);
 };
 
 // GPU, Floating
@@ -270,10 +293,20 @@ struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T>::va
                    const enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
                    const T alpha, const T* a, const int lda, const T* b, const int ldb,
                    const T beta, T* c, const int ldc);
+  static void BatchedGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
+                          const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
+                          int batch_size, int m, int n, int k, const T alpha, const T* a,
+                          const T* b, const T beta, T* c, T** buf);
 
   static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha);
+  static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T alpha);
+  static void Div(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
   static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
+  static void MulByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
+  static void Reciprocal(DeviceCtx* ctx, const int n, const T* x, T* y);
+  static void Square(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
+  static void Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsilon);
 
   static void Sigmoid(DeviceCtx* ctx, int64_t n, const T* x, T* y);
@@ -494,6 +527,24 @@ typename std::enable_if<!std::is_same<T, U>::value>::type CopyElem(const T* in_d
                                                                    int64_t elem_num) {
   FOR_RANGE(int64_t, i, 0, elem_num) { *(out_dptr++) = static_cast<U>(*(in_dptr++)); }
 }
+
+template<typename T, typename U>
+void CopyElemOnGpu(DeviceCtx* ctx, const T* in_dptr, U* out_dptr, int64_t elem_num);
+
+// create temporary host blob store initializer result
+#define BEFORE_CPU_INITIALIZE()                                     \
+  RtBlobDesc blob_desc(blob->blob_desc().blob_desc_proto());        \
+  char* host_raw_dptr = nullptr;                                    \
+  CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize())); \
+  std::unique_ptr<Blob> host_blob;                                  \
+  host_blob.reset(new Blob(nullptr, &blob_desc, host_raw_dptr));
+
+// asynchronous copy to device
+#define AFTER_CPU_INITIALIZE()                                                          \
+  Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob->dptr(),                    \
+                           blob->ByteSizeOfDataContentField(), cudaMemcpyHostToDevice); \
+  CudaCheck(cudaStreamSynchronize(ctx->cuda_stream()));                                 \
+  CudaCheck(cudaFreeHost(host_raw_dptr));
 
 }  // namespace oneflow
 

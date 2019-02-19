@@ -16,8 +16,15 @@ class AccumulateOp final : public Operator {
 
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override {}
+  void InferOutputBlobTimeShape(std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                Shape* time_shape) const override {
+    TODO();
+  }
 
  private:
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
+
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override { return GenPackedLbi(); }
   LogicalBlobId obn2lbi(const std::string& output_bn) const override { return GenPackedLbi(); }
 };

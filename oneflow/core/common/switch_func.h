@@ -29,19 +29,19 @@ auto SwitchCase(Args&&... args) -> decltype(std::make_tuple(std::forward<Args>(a
 // CTRV example: (float, DataType::kFloat)
 // TYPED_CTRV_SEQ example: (DataType, ((float, DataType::kFloat)))
 
-#define MAKE_TYPED_CTRV_SEQ(runtime_value_type, ctrv_pair_seq) (runtime_value_type, ctrv_pair_seq)
-
 #define MAKE_DATA_TYPE_CTRV_SEQ(data_type_seq) MAKE_TYPED_CTRV_SEQ(DataType, data_type_seq)
 #define MAKE_DEVICE_TYPE_CTRV_SEQ(device_type_seq) \
   MAKE_TYPED_CTRV_SEQ(DeviceType,                  \
-                      OF_PP_FOR_EACH_TUPLE(OF_PP_I_MAKE_REPLICATE_TUPE_SEQ, device_type_seq))
+                      OF_PP_FOR_EACH_TUPLE(OF_PP_I_MAKE_REPLICATE_TUPLE_SEQ, device_type_seq))
 #define MAKE_NDIM_CTRV_SEQ(ndim_seq) \
-  MAKE_TYPED_CTRV_SEQ(int32_t, OF_PP_FOR_EACH_TUPLE(OF_PP_I_MAKE_REPLICATE_TUPE_SEQ, ndim_seq))
+  MAKE_TYPED_CTRV_SEQ(int32_t, OF_PP_FOR_EACH_TUPLE(OF_PP_I_MAKE_REPLICATE_TUPLE_SEQ, ndim_seq))
 
 #define MAKE_STRINGIZED_DATA_TYPE_CTRV(data_type_pair) \
   (OF_PP_PAIR_FIRST(data_type_pair), OF_PP_STRINGIZE(OF_PP_PAIR_FIRST(data_type_pair)))
 #define MAKE_STRINGIZED_DATA_TYPE_CTRV_SEQ(data_type_seq) \
   (std::string, OF_PP_SEQ_MAP(MAKE_STRINGIZED_DATA_TYPE_CTRV, data_type_seq))
+
+#define MAKE_TYPED_CTRV_SEQ(runtime_value_type, ctrv_pair_seq) (runtime_value_type, ctrv_pair_seq)
 
 //  internal preprocessor macros
 
@@ -49,7 +49,7 @@ auto SwitchCase(Args&&... args) -> decltype(std::make_tuple(std::forward<Args>(a
   {switch_case,                                                               \
    [](func_args_type&&... args) { return func(std::forward<func_args_type>(args)...); }},
 
-#define OF_PP_I_MAKE_REPLICATE_TUPE_SEQ(x) OF_PP_MAKE_TUPLE_SEQ(x, x)
+#define OF_PP_I_MAKE_REPLICATE_TUPLE_SEQ(x) OF_PP_MAKE_TUPLE_SEQ(x, x)
 
 #define OF_PP_I_MAKE_SWITCH_FUNC_ENTRY_1(make_template_func, func_name, func_args_type, \
                                          switch_case_pair0)                             \

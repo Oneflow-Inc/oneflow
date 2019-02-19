@@ -4,7 +4,7 @@ namespace oneflow {
 
 void LossOp::InitFromOpConf() {
   EnrollInputBn("prediction");
-  EnrollInputBn("label", false);
+  if (HasFieldInCustomizedConf("label")) { EnrollInputBn("label", false); }
   EnrollOutputBn("loss", false);
   EnrollOutputBn("loss_instance_num", false);
   if (!GetValFromCustomizedConf<std::string>("weight").empty()) {
@@ -20,23 +20,29 @@ void LossOp::VirtualGenKernelConf(
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   LossKernelConf* conf = GetMutLossKernelConf(kernel_conf);
   conf->set_prediction_type(GetBlobDesc4BnInOp("prediction")->data_type());
-  conf->set_label_type(GetBlobDesc4BnInOp("label")->data_type());
+  if (HasFieldInCustomizedConf("label")) {
+    conf->set_label_type(GetBlobDesc4BnInOp("label")->data_type());
+  } else {
+    conf->set_label_type(DataType::kInvalidDataType);
+  }
   conf->set_weight_scalar(GetValFromCustomizedConf<float>("weight_scalar"));
   conf->set_reduction(static_cast<LossReductionType>(GetEnumFromCustomizedConf("reduction")));
 }
 
 void LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                            const ParallelContext* parallel_ctx,
-                            std::function<void(OpContext*)>) const {
+                            const ParallelContext* parallel_ctx) const {
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
-  const BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");
-  CHECK_EQ(pred_blob_desc->has_data_id_field(), label_blob_desc->has_data_id_field());
-  CHECK_EQ(pred_blob_desc->has_dim0_valid_num_field(), label_blob_desc->has_dim0_valid_num_field());
-  CHECK_EQ(pred_blob_desc->has_dim0_inner_shape(), label_blob_desc->has_dim0_inner_shape());
+  if (HasFieldInCustomizedConf("label")) {
+    const BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");
+    CHECK_EQ(pred_blob_desc->has_data_id_field(), label_blob_desc->has_data_id_field());
+    CHECK_EQ(pred_blob_desc->has_dim0_valid_num_field(),
+             label_blob_desc->has_dim0_valid_num_field());
+    CHECK_EQ(pred_blob_desc->has_dim0_inner_shape(), label_blob_desc->has_dim0_inner_shape());
+  }
   if (pred_blob_desc->has_dim0_inner_shape()) {
     CHECK_EQ(pred_blob_desc->dim0_inner_shape().At(0), 1);
   }
-  CHECK_GE(pred_blob_desc->shape().NumAxes(), 2);
+  CHECK_GT(pred_blob_desc->shape().NumAxes(), 0);
   // loss
   BlobDesc* loss_blob_desc = GetBlobDesc4BnInOp("loss");
   *loss_blob_desc = *pred_blob_desc;

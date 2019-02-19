@@ -20,13 +20,58 @@ __global__ void ExpGpu(const int64_t n, const T* x, T* y) {
 }
 
 template<typename T>
-__global__ void DivGpu(const int64_t n, T* x, const T* alpha_ptr) {
+__global__ void DivByConstParaPtrGpu(const int64_t n, T* x, const T* alpha_ptr) {
   CUDA_1D_KERNEL_LOOP(i, n) { x[i] = x[i] / (*alpha_ptr); }
+}
+
+template<typename T>
+__global__ void DivGpu(const int64_t n, const T* x, const T* y, T* z) {
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] / y[i]; }
+}
+
+template<typename T>
+__global__ void DivByConstParaGpu(const int64_t n, T* x, const T alpha) {
+  CUDA_1D_KERNEL_LOOP(i, n) { x[i] = x[i] / alpha; }
+}
+
+template<typename T>
+__global__ void ReplicateGpu(const int64_t n, T* y, const T* x) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = *x; }
 }
 
 template<typename T>
 __global__ void MulGpu(const int64_t n, const T* x, const T* y, T* z) {
   CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y[i]; }
+}
+
+template<typename T>
+__global__ void MulByScalarGpu(const int64_t n, const T* x, const T* y, T* z) {
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y[0]; }
+}
+
+template<typename T>
+__global__ void AddByScalarGpu(const int64_t n, const T* x, const T y, T* z) {
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] + y; }
+}
+
+template<typename T>
+__global__ void MulByScalarParaGpu(const int64_t n, const T* x, const T y, T* z) {
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y; }
+}
+
+template<typename T>
+__global__ void ReciprocalGpu(const int64_t n, const T* x, T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = static_cast<T>(1.0) / x[i]; }
+}
+
+template<typename T>
+__global__ void SquareGpu(const int64_t n, const T* x, T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = x[i] * x[i]; }
+}
+
+template<typename T>
+__global__ void SqrtGpu(const int64_t n, const T* x, T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = std::sqrt(x[i]); }
 }
 
 template<typename T>
@@ -142,36 +187,10 @@ cublasOperation_t CblasTrans2CublasTrans(CBLAS_TRANSPOSE trans) {
   return cublas_trans;
 }
 
-const int32_t kMaxDim = OF_PP_SEQ_SIZE(DIM_SEQ);
-
+template<int32_t NDIMS>
 struct Int32Array {
-  int32_t val[kMaxDim];
+  int32_t val[NDIMS];
 };
-
-struct Int64Array {
-  int64_t val[kMaxDim];
-};
-
-__device__ void ComputeOffset(const int32_t num_axis, const int64_t* x_dims,
-                              const int32_t* permutation, int64_t* x_strides) {
-  int64_t buff[kMaxDim];
-  int64_t cur_stride = 1;
-  for (int32_t i = num_axis - 1; i >= 0; --i) {
-    buff[i] = cur_stride;
-#if __CUDA_ARCH__ >= 350
-    cur_stride *= __ldg(x_dims + i);
-#else
-    cur_stride *= x_dims[i];
-#endif
-  }
-  for (int32_t i = 0; i < num_axis; ++i) {
-#if __CUDA_ARCH__ >= 350
-    x_strides[i] = buff[__ldg(permutation + i)];
-#else
-    x_strides[i] = buff[permutation[i]];
-#endif
-  }
-}
 
 template<typename T>
 __global__ void CopyColsRegionGpu(const int64_t row_num, const int64_t col_num, const T* x,
@@ -184,35 +203,29 @@ __global__ void CopyColsRegionGpu(const int64_t row_num, const int64_t col_num, 
   }
 }
 
-__device__ int64_t GetXIndex(const int32_t num_axis, const int64_t* y_shape,
-                             const int64_t* x_strides, int64_t y_idx) {
-  int64_t x_idx = 0;
-  for (int32_t i = num_axis - 1; i >= 0 && y_idx > 0; --i) {
+template<int32_t NDIMS>
+__device__ int32_t GetXIndex(const int32_t* y_shape, const int32_t* x_strides, int32_t y_idx) {
+  int32_t x_idx = 0;
+  for (int32_t i = NDIMS - 1; i >= 0; --i) {
     x_idx += (y_idx % y_shape[i]) * x_strides[i];
     y_idx /= y_shape[i];
   }
   return x_idx;
 }
 
-template<typename T>
-__global__ void TransposeGpu(const int32_t num_axis, const Int64Array x_shape,
-                             const Int64Array y_shape, const Int32Array permutation,
-                             const int64_t elem_cnt, const T* x, T* y) {
-  __shared__ int64_t x_strides[kMaxDim];
-  __shared__ int64_t x_dims_shared[kMaxDim];
-  __shared__ int64_t y_dims_shared[kMaxDim];
-  __shared__ int32_t perm_shared[kMaxDim];
+template<int32_t NDIMS, typename T>
+__global__ void TransposeGpu(const Int32Array<NDIMS> y_shape, const Int32Array<NDIMS> x_strides,
+                             const int32_t elem_cnt, const T* x, T* y) {
+  __shared__ int32_t x_strides_shared[NDIMS];
+  __shared__ int32_t y_dims_shared[NDIMS];
   const int32_t tid = threadIdx.x;
-  if (tid < num_axis) {
-    x_dims_shared[tid] = x_shape.val[tid];
+  if (tid < NDIMS) {
     y_dims_shared[tid] = y_shape.val[tid];
-    perm_shared[tid] = permutation.val[tid];
+    x_strides_shared[tid] = x_strides.val[tid];
   }
   __syncthreads();
-  if (tid == 0) { ComputeOffset(num_axis, x_dims_shared, perm_shared, x_strides); }
-  __syncthreads();
   CUDA_1D_KERNEL_LOOP(y_idx, elem_cnt) {
-    const int64_t x_idx = GetXIndex(num_axis, y_dims_shared, x_strides, y_idx);
+    const int32_t x_idx = GetXIndex<NDIMS>(y_dims_shared, x_strides_shared, y_idx);
 #if __CUDA_ARCH__ >= 350
     y[y_idx] = __ldg(x + x_idx);
 #else
@@ -220,6 +233,32 @@ __global__ void TransposeGpu(const int32_t num_axis, const Int64Array x_shape,
 #endif
   }
 }
+
+template<int32_t NDIMS, typename T>
+void Transpose(DeviceCtx* ctx, const Shape& x_shape, const Shape& y_shape,
+               const PbRf<int32_t>& permutation, const int64_t elem_cnt, const T* x, T* y) {
+  CHECK_LE(y_shape.elem_cnt(), MaxVal<int32_t>::value);
+  Int32Array<NDIMS> y_shape_struct;
+  FOR_RANGE(int32_t, i, 0, NDIMS) { y_shape_struct.val[i] = y_shape.At(i); }
+  Int32Array<NDIMS> x_strides;
+  int32_t buff[NDIMS];
+  int32_t cur_stride = 1;
+  for (int32_t i = NDIMS - 1; i >= 0; --i) {
+    buff[i] = cur_stride;
+    cur_stride *= x_shape.At(i);
+  }
+  for (int32_t i = 0; i < NDIMS; ++i) { x_strides.val[i] = buff[permutation[i]]; }
+  TransposeGpu<NDIMS, T>
+      <<<SMBlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          y_shape_struct, x_strides, elem_cnt, x, y);
+}
+
+template<typename T>
+struct TransposeUtil final {
+#define MAKE_TRANSPOSE_SWITCH_ENTRY(func_name, NDIMS) func_name<NDIMS, T>
+  DEFINE_STATIC_SWITCH_FUNC(void, Transpose, MAKE_TRANSPOSE_SWITCH_ENTRY,
+                            MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
+};
 
 template<typename T, T (*reduce_core_func)(const T, const T)>
 __device__ void MatrixShrinkCols(const size_t row_num, const size_t thread_col_num, const T* x,
@@ -274,11 +313,25 @@ void MatrixRowReduce(DeviceCtx* ctx, const size_t row_num, const size_t col_num,
          ctx->cuda_stream()>>>(row_num, col_num, x, y, static_cast<T*>(temp_storage), temp_col_num);
 }
 
+template<typename T>
+__global__ void AssignStridedAddrGpu(T** dev_ptrs, T* start_ptr, int32_t stride_len,
+                                     int32_t stride_num) {
+  CUDA_1D_KERNEL_LOOP(i, stride_num) { dev_ptrs[i] = start_ptr + i * stride_len; }
+}
+
+template<typename T>
+void AssignStridedAddr(DeviceCtx* ctx, T** dev_ptrs, T* start_ptr, int stride_len, int stride_num) {
+  AssignStridedAddrGpu<T>
+      <<<BlocksNum4ThreadsNum(stride_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          dev_ptrs, start_ptr, stride_len, stride_num);
+}
+
 }  // namespace
 
 template<>
 void Memcpy<DeviceType::kGPU>(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
                               cudaMemcpyKind kind) {
+  if (dst == src) { return; }
   CudaCheck(cudaMemcpyAsync(dst, src, sz, kind, ctx->cuda_stream()));
 }
 
@@ -298,21 +351,6 @@ size_t GetTmpSizeForReduceSum(DataType data_type, int64_t sum_elem_num) {
 }
 
 #undef MAKE_CUB_DEVICE_REDUCE_SWITCH_ENTRY
-
-// create temporary host blob store initializer result
-#define BEFORE_CPU_INITIALIZE()                                     \
-  RtBlobDesc blob_desc(blob->blob_desc().blob_desc_proto());        \
-  char* host_raw_dptr = nullptr;                                    \
-  CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize())); \
-  std::unique_ptr<Blob> host_blob;                                  \
-  host_blob.reset(new Blob(nullptr, &blob_desc, host_raw_dptr));
-
-// asynchronous copy to device
-#define AFTER_CPU_INITIALIZE()                                                          \
-  Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob->dptr(),                    \
-                           blob->ByteSizeOfDataContentField(), cudaMemcpyHostToDevice); \
-  CudaCheck(cudaStreamSynchronize(ctx->cuda_stream()));                                 \
-  CudaCheck(cudaFreeHost(host_raw_dptr));
 
 #define KU_IF_METHOD                     \
   template<typename T, typename Derived> \
@@ -343,21 +381,15 @@ KU_IF_METHOD RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num
                     void* temp_storage, const size_t temp_storage_bytes) {
   MatrixRowReduce<T, ReduceCoreAdd>(ctx, row_num, col_num, x, y, temp_storage, temp_storage_bytes);
 }
+
 KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
                        const Shape& y_shape, const PbRf<int32_t>& permutation,
                        const int64_t elem_cnt, const T* x, T* y) {
-  CHECK_LE(num_axis, kMaxDim);
-  Int64Array x_shape_struct;
-  Int64Array y_shape_struct;
-  Int32Array perm_struct;
-  FOR_RANGE(int32_t, i, 0, num_axis) {
-    x_shape_struct.val[i] = x_shape.At(i);
-    y_shape_struct.val[i] = y_shape.At(i);
-    perm_struct.val[i] = permutation[i];
-  }
-  TransposeGpu<T>
-      <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          num_axis, x_shape_struct, y_shape_struct, perm_struct, elem_cnt, x, y);
+  CHECK_LE(y_shape.elem_cnt(), MaxVal<int32_t>::value);
+  CHECK_EQ(num_axis, y_shape.NumAxes());
+  CHECK_EQ(num_axis, x_shape.NumAxes());
+  TransposeUtil<T>::SwitchTranspose(SwitchCase(num_axis), ctx, x_shape, y_shape, permutation,
+                                    elem_cnt, x, y);
 }
 
 KU_IF_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
@@ -387,6 +419,18 @@ KU_IF_METHOD InitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num
 }
 KU_IF_METHOD Set(DeviceCtx* ctx, const T value, T* addr) {
   gpu_set<T><<<1, 1, 0, ctx->cuda_stream()>>>(value, addr);
+}
+KU_IF_METHOD Replicate(DeviceCtx* ctx, const int64_t n, T* y, const T* x) {
+  ReplicateGpu<T>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y, x);
+}
+KU_IF_METHOD AddByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z) {
+  AddByScalarGpu<T>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z);
+}
+KU_IF_METHOD MulByScalarPara(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z) {
+  MulByScalarParaGpu<T>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z);
 }
 
 #define KU_FLOATING_METHOD \
@@ -432,17 +476,74 @@ KU_FLOATING_METHOD Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
   cublas_gemm<T>(ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k, &alpha, b, ldb,
                  a, lda, &beta, c, ldc);
 }
+KU_FLOATING_METHOD BatchedGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
+                               const enum CBLAS_TRANSPOSE trans_a,
+                               const enum CBLAS_TRANSPOSE trans_b, int batch_size, int m, int n,
+                               int k, const T alpha, const T* a, const T* b, const T beta, T* c,
+                               T** buf) {
+  const int a_stride = m * k;
+  const int b_stride = k * n;
+  const int c_stride = m * n;
+  const int lda = (trans_a == CblasNoTrans) ? k : m;
+  const int ldb = (trans_b == CblasNoTrans) ? n : k;
+  const int ldc = n;
+  cublasOperation_t cublas_trans_a = CblasTrans2CublasTrans(trans_a);
+  cublasOperation_t cublas_trans_b = CblasTrans2CublasTrans(trans_b);
+  T** dev_a_ptrs = buf;
+  T** dev_b_ptrs = buf + batch_size;
+  T** dev_c_ptrs = buf + 2 * batch_size;
+  AssignStridedAddr<T>(ctx, dev_a_ptrs, const_cast<T*>(a), a_stride, batch_size);
+  AssignStridedAddr<T>(ctx, dev_b_ptrs, const_cast<T*>(b), b_stride, batch_size);
+  AssignStridedAddr<T>(ctx, dev_c_ptrs, c, c_stride, batch_size);
+#if CUDA_VERSION >= 9010
+  cudaDataType_t data_type = CudaDataType<T>::value;
+  cublasGemmBatchedEx(ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
+                      reinterpret_cast<const void*>(&alpha),
+                      reinterpret_cast<const void**>(const_cast<const T**>(dev_b_ptrs)), data_type,
+                      ldb, reinterpret_cast<const void**>(const_cast<const T**>(dev_a_ptrs)),
+                      data_type, lda, reinterpret_cast<const void*>(&beta),
+                      reinterpret_cast<void**>(dev_c_ptrs), data_type, ldc, batch_size, data_type,
+                      CUBLAS_GEMM_DEFAULT);
+#else
+  cublas_gemmBatched<T>(ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k, &alpha,
+                        const_cast<const T**>(dev_b_ptrs), ldb, const_cast<const T**>(dev_a_ptrs),
+                        lda, &beta, dev_c_ptrs, ldc, batch_size);
+#endif
+}
 
 KU_FLOATING_METHOD Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
   ExpGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
 }
 KU_FLOATING_METHOD Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha) {
-  DivGpu<T>
+  DivByConstParaPtrGpu<T>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, alpha);
+}
+KU_FLOATING_METHOD Div(DeviceCtx* ctx, const int64_t n, T* x, const T alpha) {
+  DivByConstParaGpu<T>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, alpha);
+}
+KU_FLOATING_METHOD Div(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
+  DivGpu<T>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z);
 }
 KU_FLOATING_METHOD Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
   MulGpu<T>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z);
+}
+KU_FLOATING_METHOD MulByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
+  MulByScalarGpu<T>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z);
+}
+KU_FLOATING_METHOD Reciprocal(DeviceCtx* ctx, const int n, const T* x, T* y) {
+  ReciprocalGpu<T>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
+}
+KU_FLOATING_METHOD Square(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+  SquareGpu<T>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
+}
+KU_FLOATING_METHOD Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+  SqrtGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
 }
 KU_FLOATING_METHOD Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsilon) {
   RsqrtGpu<T>
@@ -593,5 +694,29 @@ __device__ double gpu_atomic_max(double* address, const double val) {
   } while (assumed != old);
   return __longlong_as_double(old);
 }
+
+template<typename T, typename U>
+__global__ void CastOnGpu(const T* in, U* out, int64_t elem_num) {
+  CUDA_1D_KERNEL_LOOP(i, elem_num) { out[i] = static_cast<U>(in[i]); }
+}
+
+template<typename T, typename U>
+void CopyElemOnGpu(DeviceCtx* ctx, const T* in_dptr, U* out_dptr, int64_t elem_num) {
+  if (std::is_same<T, U>::value) {
+    Memcpy<DeviceType::kGPU>(ctx, out_dptr, in_dptr, elem_num * sizeof(T));
+  } else {
+    CastOnGpu<T, U>
+        <<<BlocksNum4ThreadsNum(elem_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+            in_dptr, out_dptr, elem_num);
+  }
+}
+
+#define INSTANTIATE_COPY_ELEM_ON_GPU(T, U) \
+  template void CopyElemOnGpu(DeviceCtx* ctx, const T* in_dptr, U* out_dptr, int64_t elem_num);
+
+#define MAKE_COPY_ELEM_ON_GPU_ENTRY(TPair, UPair) \
+  INSTANTIATE_COPY_ELEM_ON_GPU(OF_PP_PAIR_FIRST(TPair), OF_PP_PAIR_FIRST(UPair))
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_COPY_ELEM_ON_GPU_ENTRY, POD_DATA_TYPE_SEQ, POD_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

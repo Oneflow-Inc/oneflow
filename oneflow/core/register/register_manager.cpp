@@ -75,12 +75,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     for (const LbiBlobDescPair& pair : regst_desc_type.data_regst_desc().lbi2blob_desc()) {
       lbi_pairs.push_back(pair);
     }
-    std::sort(lbi_pairs.begin(), lbi_pairs.end(),
-              [&](const LbiBlobDescPair& lhs, const LbiBlobDescPair& rhs) {
-                return lhs.blob_desc().header().blob_mem_id()
-                           < rhs.blob_desc().header().blob_mem_id()
-                       || lhs.lbi() < rhs.lbi();
-              });
+    std::sort(lbi_pairs.begin(), lbi_pairs.end(), &CompareLbiBlobDescPair);
     CHECK(!lbi_pairs.empty());
     CHECK(main_mem_ptr != nullptr);
   }
@@ -126,23 +121,14 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
     cur_header_pointer = main_mem_ptr;
     cur_body_pointer = main_mem_ptr + packed_blob_desc->ByteSizeOfBlobHeader();
   }
-  int32_t last_blob_mem_id = -1;
-  size_t last_size = 0;
-  for (const LbiBlobDescPair& lbi : lbis) {
-    const RtBlobDesc* blob_desc = rt_regst_desc->GetRtBlobDescFromLbi(lbi.lbi());
-    int32_t cur_blob_mem_id = lbi.blob_desc().header().blob_mem_id();
-    if (cur_blob_mem_id == -1 || cur_blob_mem_id != last_blob_mem_id) {
-      cur_body_pointer += last_size;
-    }
-    std::unique_ptr<Blob> blob_ptr(
-        new Blob(regst, blob_desc, cur_header_pointer, cur_body_pointer));
-    InitOFRecordBlobIfNeed(blob_ptr.get());
-    CHECK(regst->lbi2blob_.emplace(lbi.lbi(), std::move(blob_ptr)).second);
-    cur_header_pointer += blob_desc->ByteSizeOfBlobHeader();
-
-    last_blob_mem_id = cur_blob_mem_id;
-    last_size = blob_desc->ByteSizeOfBlobBody();
-  }
+  rt_regst_desc->ForEachBlobDescOffsetInOnRegst(
+      lbis, [&](const LbiBlobDescPair& lbi, int64_t body_offset, int64_t header_offset) {
+        const RtBlobDesc* blob_desc = rt_regst_desc->GetRtBlobDescFromLbi(lbi.lbi());
+        std::unique_ptr<Blob> blob_ptr(new Blob(
+            regst, blob_desc, cur_header_pointer + header_offset, cur_body_pointer + body_offset));
+        InitOFRecordBlobIfNeed(blob_ptr.get());
+        CHECK(regst->lbi2blob_.emplace(lbi.lbi(), std::move(blob_ptr)).second);
+      });
 }
 
 void RegstMgr::InitOFRecordBlobIfNeed(Blob* blob_ptr) {

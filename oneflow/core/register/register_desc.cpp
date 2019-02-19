@@ -3,6 +3,7 @@
 #include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
+#include "oneflow/core/register/runtime_register_desc.h"
 
 namespace oneflow {
 
@@ -25,6 +26,12 @@ RegstDesc::RegstDesc() {
   enable_mem_sharing_ = false;
   mem_shared_id_ = -1;
   mem_shared_offset_ = -1;
+  mem_shared_inplace_block_id_ = -1;
+}
+
+int64_t RegstDesc::mem_shared_offset() const {
+  CHECK_GE(mem_shared_offset_, 0);
+  return mem_shared_offset_;
 }
 
 void RegstDesc::AddConsumer(const TaskNode* new_consumer) {
@@ -58,6 +65,12 @@ void RegstDesc::CopyBlobDescFrom(const RegstDesc* rhs) {
     AddLbi(lbi);
   }
   CopyBlobDescWithoutAddLbi(rhs);
+}
+
+void RegstDesc::CopyMemSharedInfoFrom(const RegstDesc* rhs) {
+  enable_mem_sharing_ = rhs->enable_mem_sharing_;
+  mem_shared_id_ = rhs->mem_shared_id_;
+  mem_shared_offset_ = rhs->mem_shared_offset_;
 }
 
 void RegstDesc::CopyBlobDescWithoutAddLbi(const RegstDesc* rhs) {
@@ -141,6 +154,15 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
   ret->set_enable_mem_sharing(enable_mem_sharing_);
   ret->set_mem_shared_id(mem_shared_id_);
   ret->set_mem_shared_offset(mem_shared_offset_);
+  ret->add_mem_block_hierarchy()->set_mem_block_id(Global<IDMgr>::Get()->NewMemBlockId());
+  if (mem_shared_inplace_block_id_ != -1) {
+    ret->add_mem_block_hierarchy()->set_mem_block_id(mem_shared_inplace_block_id_);
+  }
+}
+
+bool RegstDesc::HasSameMemSize(const RegstDesc* rhs) {
+  return RtBlobDesc(*(packed_blob_desc_.get())).TotalByteSize()
+         == RtBlobDesc(*(rhs->packed_blob_desc_.get())).TotalByteSize();
 }
 
 bool RegstDesc::HasSameBlobDescs(const RegstDesc* rhs) {
@@ -151,6 +173,34 @@ bool RegstDesc::HasSameBlobDescs(const RegstDesc* rhs) {
     if (!(*(pair.second.get()) == *(iter->second.get()))) { return false; }
   }
   return true;
+}
+
+int64_t RegstDesc::ByteOffsetInPackedBlobDescBody(const LogicalBlobId& lbi) const {
+  RegstDescProto regst_desc_proto;
+  ToProto(&regst_desc_proto);
+  RtRegstDesc rt_regst_desc(regst_desc_proto);
+  std::vector<LbiBlobDescPair> lbi_blob_desc_pairs;
+  for (const auto& pair : lbi2blob_desc_) {
+    LbiBlobDescPair lbi_blob_desc_pair;
+    *lbi_blob_desc_pair.mutable_lbi() = pair.first;
+    pair.second->ToProto(lbi_blob_desc_pair.mutable_blob_desc());
+    lbi_blob_desc_pairs.push_back(lbi_blob_desc_pair);
+  }
+  std::sort(lbi_blob_desc_pairs.begin(), lbi_blob_desc_pairs.end(), CompareLbiBlobDescPair);
+
+  bool found = false;
+  int64_t offset = 0;
+  rt_regst_desc.ForEachBlobDescOffsetInOnRegst(
+      lbi_blob_desc_pairs,
+      [&](const LbiBlobDescPair& lbi_blob_desc_pair, int64_t body_offset, int64_t header_offset) {
+        if (found) { return; }
+        if (lbi_blob_desc_pair.lbi() == lbi) {
+          offset = body_offset;
+          found = true;
+        }
+      });
+  CHECK(found);
+  return offset;
 }
 
 void InitCtrlRegstDesc(int64_t producer_task_id, RegstDescProto* ctrl_regst_proto) {
