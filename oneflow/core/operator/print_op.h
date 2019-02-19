@@ -20,6 +20,8 @@ class PrintOp final : public Operator {
                       const ParallelContext* parallel_ctx) const override {}
 
  private:
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return true; }
+
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
 };
 

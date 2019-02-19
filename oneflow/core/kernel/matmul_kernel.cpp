@@ -6,59 +6,98 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 void MatmulKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* in_blob = BnInOp2Blob("in");
-  const Blob* weight_blob = BnInOp2Blob("weight");
+  const Blob* a_blob = BnInOp2Blob("a");
+  const Blob* b_blob = BnInOp2Blob("b");
+  Blob* fw_buf_blob = BnInOp2Blob("fw_buf");
   Blob* out_blob = BnInOp2Blob("out");
-  // out = in * weight'
-  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTrans, OneVal<T>::value,
-                                       ZeroVal<T>::value, in_blob, weight_blob, out_blob);
-  if (this->op_conf().matmul_conf().has_bias()) {
-    const Blob* bias_blob = BnInOp2Blob("bias");
-    const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
-    // out = bias_multiplier * bias + out
-    KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasNoTrans,
-                                         OneVal<T>::value, OneVal<T>::value, bias_mul_blob,
-                                         bias_blob, out_blob);
+  bool transpose_a = this->op_conf().matmul_conf().transpose_a();
+  bool transpose_b = this->op_conf().matmul_conf().transpose_b();
+  if (a_blob->static_shape().dim_vec().size() == 2) {
+    Calc2DMatMul(ctx.device_ctx, a_blob, transpose_a, b_blob, transpose_b, out_blob, false);
+  } else {
+    CalcBatchMatMul(ctx.device_ctx, a_blob, transpose_a, b_blob, transpose_b, out_blob, fw_buf_blob,
+                    false);
   }
 }
 
 template<DeviceType device_type, typename T>
 void MatmulKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* a_blob = BnInOp2Blob("a");
+  const Blob* b_blob = BnInOp2Blob("b");
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
-  const Blob* in_blob = BnInOp2Blob("in");
-  Blob* in_diff_blob = BnInOp2Blob("in_diff");
-  const Blob* weight_blob = BnInOp2Blob("weight");
-  Blob* weight_diff_blob = BnInOp2Blob("weight_diff");
-  // weight_diff = out_diff * in'
-  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans, OneVal<T>::value,
-                                       ZeroVal<T>::value, out_diff_blob, in_blob, weight_diff_blob);
-  // in_diff = out_diff * weight
-  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasNoTrans, OneVal<T>::value,
-                                       ZeroVal<T>::value, out_diff_blob, weight_blob, in_diff_blob);
-  if (this->op_conf().matmul_conf().has_bias()) {
-    const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
-    Blob* bias_diff_blob = BnInOp2Blob("bias_diff");
-    // bias_diff = bias_multiplier' * out_diff
-    KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans, OneVal<T>::value,
-                                         ZeroVal<T>::value, bias_mul_blob, out_diff_blob,
-                                         bias_diff_blob);
+  Blob* a_diff_blob = BnInOp2Blob("a_diff");
+  Blob* b_diff_blob = BnInOp2Blob("b_diff");
+  Blob* bw_buf_blob = BnInOp2Blob("bw_buf");
+  bool transpose_a = this->op_conf().matmul_conf().transpose_a();
+  bool transpose_b = this->op_conf().matmul_conf().transpose_b();
+  // trans_a  trans_b  a_diff  b_diff
+  //   T        T       b'g'    g'a'
+  //   T        F       bg'     ag
+  //   F        T       gb      g'a
+  //   F        F       gb'     a'g
+  if (a_blob->static_shape().dim_vec().size() == 2) {
+    Calc2DMatMul(ctx.device_ctx, b_blob, !(transpose_a ^ transpose_b), out_diff_blob, transpose_a,
+                 a_diff_blob, !transpose_a);
+    Calc2DMatMul(ctx.device_ctx, a_blob, !(transpose_a ^ transpose_b), out_diff_blob, transpose_b,
+                 b_diff_blob, transpose_b);
+  } else {
+    CalcBatchMatMul(ctx.device_ctx, b_blob, !(transpose_a ^ transpose_b), out_diff_blob,
+                    transpose_a, a_diff_blob, bw_buf_blob, !transpose_a);
+    CalcBatchMatMul(ctx.device_ctx, a_blob, !(transpose_a ^ transpose_b), out_diff_blob,
+                    transpose_b, b_diff_blob, bw_buf_blob, transpose_b);
   }
-}
-
-template<DeviceType device_type, typename T>
-void MatmulKernel<device_type, T>::InitConstBufBlobs(
-    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (!this->op_conf().matmul_conf().has_bias()) { return; }
-  InitializerConf bias_multiplier_initializer_conf;
-  bias_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
-  KernelUtil<device_type, T>::InitializeWithConf(ctx, bias_multiplier_initializer_conf, 0,
-                                                 BnInOp2Blob("bias_multiplier"));
 }
 
 template<DeviceType device_type, typename T>
 const PbMessage& MatmulKernel<device_type, T>::GetCustomizedOpConf() const {
   return this->op_conf().matmul_conf();
+}
+
+template<DeviceType device_type, typename T>
+void MatmulKernel<device_type, T>::Calc2DMatMul(DeviceCtx* ctx, const Blob* a, bool trans_a,
+                                                const Blob* b, bool trans_b, Blob* c,
+                                                bool swap_in) const {
+  CBLAS_TRANSPOSE blas_trans_a = trans_a ? CblasTrans : CblasNoTrans;
+  CBLAS_TRANSPOSE blas_trans_b = trans_b ? CblasTrans : CblasNoTrans;
+  if (swap_in) {
+    KernelUtil<device_type, T>::BlobGemm(ctx, blas_trans_b, blas_trans_a, OneVal<T>::value,
+                                         ZeroVal<T>::value, b, a, c);
+  } else {
+    KernelUtil<device_type, T>::BlobGemm(ctx, blas_trans_a, blas_trans_b, OneVal<T>::value,
+                                         ZeroVal<T>::value, a, b, c);
+  }
+}
+
+template<DeviceType device_type, typename T>
+void MatmulKernel<device_type, T>::CalcBatchMatMul(DeviceCtx* ctx, const Blob* a, bool trans_a,
+                                                   const Blob* b, bool trans_b, Blob* c, Blob* buf,
+                                                   bool swap_in) const {
+  if (swap_in) {
+    CalcBatchMatMul(ctx, b, trans_b, a, trans_a, c, buf);
+  } else {
+    CalcBatchMatMul(ctx, a, trans_a, b, trans_b, c, buf);
+  }
+}
+
+template<DeviceType device_type, typename T>
+void MatmulKernel<device_type, T>::CalcBatchMatMul(DeviceCtx* ctx, const Blob* a, bool trans_a,
+                                                   const Blob* b, bool trans_b, Blob* c,
+                                                   Blob* buf) const {
+  CBLAS_TRANSPOSE blas_trans_a = trans_a ? CblasTrans : CblasNoTrans;
+  CBLAS_TRANSPOSE blas_trans_b = trans_b ? CblasTrans : CblasNoTrans;
+  int32_t dim_num = a->shape().dim_vec().size();
+  int32_t batch_size = a->shape().Count(0, dim_num - 2);
+  int m = trans_a ? a->shape().At(dim_num - 1) : a->shape().At(dim_num - 2);
+  int k = trans_a ? a->shape().At(dim_num - 2) : a->shape().At(dim_num - 1);
+  int n = trans_b ? b->shape().At(dim_num - 2) : b->shape().At(dim_num - 1);
+  const T* a_dptr = a->dptr<T>();
+  const T* b_dptr = b->dptr<T>();
+  T* c_dptr = c->mut_dptr<T>();
+  T** buf_dptr = reinterpret_cast<T**>(buf->mut_dptr<int64_t>());
+  KernelUtil<device_type, T>::OFBatchedGemm(ctx, blas_trans_a, blas_trans_b, batch_size, m, n, k,
+                                            OneVal<T>::value, a_dptr, b_dptr, ZeroVal<T>::value,
+                                            c_dptr, buf_dptr);
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMatmulConf, MatmulKernel, FLOATING_DATA_TYPE_SEQ);

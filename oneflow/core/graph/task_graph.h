@@ -20,8 +20,14 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   const char* TypeName() const override { return "TaskGraph"; }
   void RemoveEmptyRegsts();
   void AddOrderingCtrlEdgeInSameChain();
+  void AddReduceSequenceCtrlEdges();
+  void AddMdUpdtCtrlEdgesWithinReduceSplitNode();
+  void AddReduceNoBwForwardNodeOverlapingCtrlEdges();
 
   void EnableMemSharingInReduceStruct();
+  void EnableMemSharingAfterAllManualSetForMdUpdt();
+  void EnableMemSharingInVariableOp();
+  void EnableInplaceMemSharing();
 
   void AddOrderCtrlEdgeBetweenCopyAndMdUpdt();
   void RmUselessConsumeRelationshipBetweenFwBw();
@@ -32,6 +38,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByRecordLoadToTick);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByTickToSource);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceAdd);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceAdd2ReduceGather);
@@ -40,6 +48,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
  private:
   void AcyclicTopoForEachNode(std::function<bool(TaskNode* node)> IsAllowedStartNode,
                               std::function<void(TaskNode* node)> Handler) const;
+
   void BuildTaskPath(
       CompTaskNode* src, CompTaskNode* dst,
       std::function<TaskNode**(CompTaskNode* src, int64_t machine_id, int32_t mem_zone_id)>

@@ -11,8 +11,82 @@
 #include "oneflow/core/graph/reduce_split_compute_task_node.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/job/thrd_id_generator.h"
+#include "oneflow/core/graph/reduce_identity_task_node.h"
+#include "oneflow/core/operator/variable_op.h"
+#include "oneflow/core/operator/constant_op.h"
 
 namespace oneflow {
+
+namespace {
+
+bool IsConnectToTickOp(const TaskNode* node) {
+  const auto* comp_task_node = dynamic_cast<const CompTaskNode*>(node);
+  if (comp_task_node == nullptr) { return false; }
+  if (comp_task_node->logical_node()->op_vec().size() != 1) { return false; }
+  const Operator* op = comp_task_node->logical_node()->SoleOp().get();
+  if (dynamic_cast<const VariableOp*>(op) != nullptr) { return true; }
+  if (dynamic_cast<const ConstantOp*>(op) != nullptr) { return true; }
+  return false;
+}
+
+template<typename ReduceType = ReduceIdentityLogicalNode>
+typename std::enable_if<std::is_same<ReduceType, ReduceIdentityLogicalNode>::value
+                            || std::is_same<ReduceType, ReduceSplitLogicalNode>::value,
+                        std::function<int32_t(const LogicalNode*)>>::type
+MakeGetterReduceTaskNodeCtrlOrder(const LogicalGraph& logical_graph) {
+  std::vector<const ReduceType*> logical_nodes;
+  logical_graph.ForEachNode([&](LogicalNode* node) {
+    auto* logical_node = dynamic_cast<ReduceType*>(node);
+    if (logical_node == nullptr) { return; }
+    logical_nodes.push_back(logical_node);
+  });
+  std::sort(logical_nodes.begin(), logical_nodes.end(),
+            [](const ReduceType* lhs, const ReduceType* rhs) {
+              return lhs->order_in_logical_graph() < rhs->order_in_logical_graph();
+            });
+  auto logical_node2ctrl_order = std::make_shared<HashMap<const LogicalNode*, int32_t>>();
+  int32_t lazy_count = Global<JobDesc>::Get()->all_reduce_lazy_ratio() * logical_nodes.size();
+  for (int32_t i = 0; i < logical_nodes.size(); ++i) {
+    int32_t ctrl_order = 0;
+    if (i > lazy_count) {
+      ctrl_order = -i;
+    } else {
+      ctrl_order = i;
+    }
+    (*logical_node2ctrl_order)[logical_nodes[i]] = ctrl_order;
+  }
+  return [logical_node2ctrl_order](const LogicalNode* identity_node) {
+    return logical_node2ctrl_order->at(identity_node);
+  };
+}
+
+void ForEachDeviceSrcUntrainableNode(const std::vector<NormalForwardCompTaskNode*>& fw_nodes,
+                                     const std::function<void(CompTaskNode*)>& Handler) {
+  HashSet<const TaskNode*> fw_nodes_set(fw_nodes.begin(), fw_nodes.end());
+  auto IsSourceTaskNode = [&](NormalForwardCompTaskNode* node) {
+    for (TaskEdge* edge : node->in_edges()) {
+      if (fw_nodes_set.find(edge->src_node()) != fw_nodes_set.end()) { return false; }
+    }
+    return true;
+  };
+  auto HasBwNode = [&](NormalForwardCompTaskNode* node) {
+    const auto* fw_logical_node = dynamic_cast<const ForwardLogicalNode*>(node->logical_node());
+    return fw_logical_node->bw_node() != nullptr;
+  };
+  for (NormalForwardCompTaskNode* fw_node : fw_nodes) {
+    if (IsSourceTaskNode(fw_node) && !HasBwNode(fw_node)) { Handler(fw_node); }
+  }
+}
+
+bool IsTimeShapeContain(const Shape& big_shape, const Shape& small_shape) {
+  if (big_shape.NumAxes() < small_shape.NumAxes()) { return false; }
+  FOR_RANGE(int, i, 0, small_shape.NumAxes()) {
+    if (big_shape.At(i) != small_shape.At(i)) { return false; }
+  }
+  return true;
+}
+
+}  // namespace
 
 TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   logical_gph_ = std::move(logical_gph);
@@ -105,13 +179,13 @@ void TaskGraph::AcyclicTopoForEachNode(std::function<bool(TaskNode* node)> IsAll
                                        std::function<void(TaskNode* node)> Handler) const {
   auto ForEachInNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& Handler) {
     node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
-      if (IsBackEdge(node_on_in_edge, node)) return;
+      if (IsBackEdge(node_on_in_edge, node)) { return; }
       Handler(const_cast<TaskNode*>(node_on_in_edge));
     });
   };
   auto ForEachOutNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& Handler) {
     node->ForEachNodeOnOutEdge([&](TaskNode* node_on_out_edge) {
-      if (IsBackEdge(node, node_on_out_edge)) return;
+      if (IsBackEdge(node, node_on_out_edge)) { return; }
       Handler(const_cast<TaskNode*>(node_on_out_edge));
     });
   };
@@ -159,7 +233,8 @@ void TaskGraph::MergeChainAndSetOrderInGraphForEachNode() {
 
 void TaskGraph::BuildCtrlRegstDescInSameChain() {
   HashMap<int64_t, TaskNode*> chain_id2node;
-  for (auto node : ordered_task_nodes_) {
+  for (auto* node : ordered_task_nodes_) {
+    if (IsConnectToTickOp(node)) { continue; }
     int64_t chain_id = node->chain_id();
     auto iter = chain_id2node.find(chain_id);
     if (iter == chain_id2node.end()) {
@@ -168,6 +243,115 @@ void TaskGraph::BuildCtrlRegstDescInSameChain() {
       iter->second->BuildCtrlRegstDescIfNeed(node);
       iter->second = node;
     }
+  }
+}
+
+void TaskGraph::AddReduceSequenceCtrlEdges() {
+  HashMap<int64_t, std::vector<ReduceSplitCompTaskNode*>> global_thrd_id2split_nodes;
+  for (auto* node : ordered_task_nodes_) {
+    auto* split_node = dynamic_cast<ReduceSplitCompTaskNode*>(node);
+    if (split_node == nullptr) { continue; }
+    int64_t global_thrd_id = Global<IDMgr>::Get()->GlobalThrdId4TaskId(split_node->task_id());
+    global_thrd_id2split_nodes[global_thrd_id].push_back(split_node);
+  }
+  auto GetCtrlOrder = MakeGetterReduceTaskNodeCtrlOrder<ReduceSplitLogicalNode>(*logical_gph_);
+  for (auto& pair : global_thrd_id2split_nodes) {
+    auto& split_nodes = pair.second;
+    std::sort(split_nodes.begin(), split_nodes.end(),
+              [&](ReduceSplitCompTaskNode* lhs, ReduceSplitCompTaskNode* rhs) {
+                return GetCtrlOrder(lhs->logical_node()) < GetCtrlOrder(rhs->logical_node());
+              });
+    ReduceSplitCompTaskNode* prev_split_node = split_nodes.at(0);
+    for (auto* split_node : split_nodes) {
+      if (prev_split_node != split_node) {
+        auto* to_node = split_node->GetPrevReduceTaskNode(TaskType::kReduceIdentity);
+        TaskNode* from_node = prev_split_node;
+        if (GetCtrlOrder(split_node->logical_node()) < 0) {
+          from_node = prev_split_node->GetPrevReduceTaskNode(TaskType::kReduceIdentity);
+        }
+        from_node->BuildCtrlRegstDescIfNeed(to_node);
+      }
+      prev_split_node = split_node;
+    }
+  }
+}
+
+void TaskGraph::AddMdUpdtCtrlEdgesWithinReduceSplitNode() {
+  auto GetOrderInReduceGroup = [&](NormalMdUpdtCompTaskNode* md_updt_node) {
+    const auto* logical_node =
+        dynamic_cast<const NormalMdUpdtLogicalNode*>(md_updt_node->logical_node());
+    return logical_node->order_in_reduce_group();
+  };
+  for (auto* node : ordered_task_nodes_) {
+    auto* split_node = dynamic_cast<ReduceSplitCompTaskNode*>(node);
+    if (split_node == nullptr) { continue; }
+    std::vector<NormalMdUpdtCompTaskNode*> md_updt_nodes;
+    split_node->ForEachNodeOnOutEdge([&](TaskNode* node) {
+      auto* md_updt_node = dynamic_cast<NormalMdUpdtCompTaskNode*>(node);
+      if (md_updt_node == nullptr) { return; }
+      md_updt_nodes.push_back(md_updt_node);
+    });
+    std::sort(md_updt_nodes.begin(), md_updt_nodes.end(),
+              [&](NormalMdUpdtCompTaskNode* lhs, NormalMdUpdtCompTaskNode* rhs) {
+                return GetOrderInReduceGroup(lhs) < GetOrderInReduceGroup(rhs);
+              });
+    NormalMdUpdtCompTaskNode* prev_md_updt = md_updt_nodes.at(0);
+    for (auto* md_updt_node : md_updt_nodes) {
+      if (md_updt_node != prev_md_updt) { prev_md_updt->BuildCtrlRegstDescIfNeed(md_updt_node); }
+      prev_md_updt = md_updt_node;
+    }
+  }
+}
+
+void TaskGraph::AddReduceNoBwForwardNodeOverlapingCtrlEdges() {
+  HashMap<int64_t, std::vector<ReduceIdentityCompTaskNode*>> global_thrd_id2identity_nodes;
+  HashMap<std::pair<int64_t, int64_t>, std::vector<NormalForwardCompTaskNode*>>
+      global_dev_phy_id2fw_nodes;
+  const auto* id_mgr = Global<IDMgr>::Get();
+  for (auto* node : ordered_task_nodes_) {
+    if (id_mgr->GetDeviceTypeFromThrdId(node->thrd_id()) == DeviceType::kCPU) { continue; }
+    int64_t global_thrd_id = id_mgr->GlobalThrdId4TaskId(node->task_id());
+    auto* identity_node = dynamic_cast<ReduceIdentityCompTaskNode*>(node);
+    auto* fw_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
+    if (identity_node != nullptr) {
+      global_thrd_id2identity_nodes[global_thrd_id].push_back(identity_node);
+    } else if (fw_node != nullptr) {
+      int64_t dev_phy_id = id_mgr->GetGpuPhyIdFromThrdId(node->thrd_id());
+      global_dev_phy_id2fw_nodes[std::make_pair(node->machine_id(), dev_phy_id)].push_back(fw_node);
+    } else {
+      // do nothing
+    }
+  }
+  auto GetIdentityNodeOrder = [&](const ReduceIdentityCompTaskNode* id_node) {
+    const auto* id_logical_node =
+        dynamic_cast<const ReduceIdentityLogicalNode*>(id_node->logical_node());
+    return id_logical_node->order_in_logical_graph();
+  };
+  for (auto& pair : global_thrd_id2identity_nodes) {
+    auto& identity_nodes = pair.second;
+    std::sort(identity_nodes.begin(), identity_nodes.end(),
+              [&](ReduceIdentityCompTaskNode* lhs, ReduceIdentityCompTaskNode* rhs) {
+                return GetIdentityNodeOrder(lhs) < GetIdentityNodeOrder(rhs);
+              });
+    auto* first_identity_node = identity_nodes.at(0);
+    int64_t machine_id = first_identity_node->machine_id();
+    int64_t dev_phy_id = id_mgr->GetGpuPhyIdFromThrdId(first_identity_node->thrd_id());
+    const auto& fw_nodes = global_dev_phy_id2fw_nodes.at(std::make_pair(machine_id, dev_phy_id));
+    const Shape& identity_time_shape =
+        *first_identity_node->GetProducedRegst("out")->data_regst_time_shape();
+    ForEachDeviceSrcUntrainableNode(fw_nodes, [&](CompTaskNode* node) {
+      std::shared_ptr<RegstDesc> regst_desc = node->GetProducedRegst("out");
+      if (!regst_desc) { return; }
+      const Shape& time_shape = *regst_desc->data_regst_time_shape();
+      if (!IsTimeShapeContain(time_shape, identity_time_shape)) { return; }
+      CHECK_EQ(time_shape.elem_cnt() % identity_time_shape.elem_cnt(), 0);
+      int regst_desc_num = time_shape.elem_cnt() / identity_time_shape.elem_cnt();
+      RegstDesc* ctrl_regst_desc = node->BuildCtrlRegstDesc(first_identity_node);
+      ctrl_regst_desc->UpdtMinRegstNumIfNeed(regst_desc_num);
+      ctrl_regst_desc->UpdtMaxRegstNumIfNeed(regst_desc_num);
+      ctrl_regst_desc->mut_regst_desc_type()->mutable_ctrl_regst_desc()->set_returned_regst_num(
+          regst_desc_num);
+    });
   }
 }
 
@@ -220,6 +404,94 @@ void TaskGraph::EnableMemSharingInReduceStruct() {
       reduce_task_node_if->EnableMemSharingInReduce(ctx);
       has_enabled_nodes.insert(reduce_node);
     }
+  });
+}
+
+void TaskGraph::EnableMemSharingAfterAllManualSetForMdUpdt() {
+  ForEachNode([&](TaskNode* node) {
+    auto* updt = dynamic_cast<NormalMdUpdtCompTaskNode*>(node);
+    if (!updt) { return; }
+    updt->EnableMemSharingBetweenFirstInAndProcessedMdDiffRegst();
+  });
+}
+
+void TaskGraph::EnableMemSharingInVariableOp() {
+  ForEachNode([&](TaskNode* node) {
+    if (node->exec_gph().node_num() != 1) { return; }
+    auto* variable_op = dynamic_cast<const VariableOp*>(node->exec_gph().SoleNode()->op().get());
+    if (variable_op == nullptr) { return; }
+    std::string model_bn = variable_op->op_conf().variable_conf().model_name();
+    auto* fw_task_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
+    auto* bw_task_node = dynamic_cast<NormalBackwardCompTaskNode*>(node);
+    if (fw_task_node != nullptr) {
+      const LogicalBlobId& lbi = variable_op->BnInOp2Lbi(model_bn);
+      RegstDesc* model_regst = fw_task_node->GetSoleConsumedRegst("model").get();
+      CHECK_EQ(model_regst->min_register_num(), 1);
+      CHECK_EQ(model_regst->max_register_num(), 1);
+      model_regst->set_enable_mem_sharing(true);
+      if (model_regst->mem_shared_id() == -1) {
+        model_regst->set_mem_shared_id(Global<IDMgr>::Get()->NewMemSharedId());
+        model_regst->set_mem_shared_offset(0);
+      }
+      RegstDesc* out_regst = fw_task_node->GetProducedRegst("out").get();
+      CHECK_EQ(out_regst->min_register_num(), 1);
+      CHECK_EQ(out_regst->max_register_num(), 1);
+      CHECK_EQ(out_regst->NumOfLbi(), 1);
+      out_regst->set_enable_mem_sharing(true);
+      out_regst->set_mem_shared_id(model_regst->mem_shared_id());
+      out_regst->set_mem_shared_offset(model_regst->mem_shared_offset()
+                                       + model_regst->ByteOffsetInPackedBlobDescBody(lbi));
+      variable_op->set_is_fw_inplace(true);
+    } else if (bw_task_node != nullptr) {
+      const LogicalBlobId& lbi = variable_op->BnInOp2Lbi(GenDiffBn(model_bn));
+      RegstDesc* model_diff_regst = bw_task_node->GetProducedRegst("model_diff").get();
+      CHECK_EQ(model_diff_regst->min_register_num(), 1);
+      CHECK_EQ(model_diff_regst->max_register_num(), 1);
+      model_diff_regst->set_enable_mem_sharing(true);
+      if (model_diff_regst->mem_shared_id() == -1) {
+        model_diff_regst->set_mem_shared_id(Global<IDMgr>::Get()->NewMemSharedId());
+        model_diff_regst->set_mem_shared_offset(0);
+      }
+      RegstDesc* out_diff_regst = bw_task_node->GetSoleConsumedRegst("out_diff").get();
+      if (out_diff_regst->min_register_num() != 1) { return; }
+      if (out_diff_regst->max_register_num() != 1) { return; }
+      if (out_diff_regst->NumOfLbi() != 1) { return; }
+      out_diff_regst->set_enable_mem_sharing(true);
+      out_diff_regst->set_mem_shared_id(model_diff_regst->mem_shared_id());
+      out_diff_regst->set_mem_shared_offset(
+          model_diff_regst->mem_shared_offset()
+          + model_diff_regst->ByteOffsetInPackedBlobDescBody(lbi));
+      variable_op->set_is_bw_inplace(true);
+    } else {
+      // do nothing
+    }
+  });
+}
+
+void TaskGraph::EnableInplaceMemSharing() {
+  AcyclicTopoForEachNode([&](TaskNode* node) {
+    if (node->exec_gph().node_num() != 1) { return; }
+    const Operator* op = node->exec_gph().SoleNode()->op().get();
+    auto* fw_task_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
+    auto* bw_task_node = dynamic_cast<NormalBackwardCompTaskNode*>(node);
+    RegstDesc* input_regst = nullptr;
+    RegstDesc* output_regst = nullptr;
+    if (op->IsForwardInplace() && fw_task_node) {
+      input_regst = fw_task_node->GetSoleConsumedRegst("in").get();
+      output_regst = fw_task_node->GetProducedRegst("out").get();
+    } else if (op->IsBackwardInplace() && bw_task_node) {
+      input_regst = bw_task_node->GetSoleConsumedRegst(GenDiffBn("out")).get();
+      output_regst = bw_task_node->GetProducedRegst(GenDiffBn("in")).get();
+    } else {
+      // do nothing
+      return;
+    }
+    if (input_regst->NumOfLbi() != 1) { return; }
+    if (output_regst->NumOfLbi() != 1) { return; }
+    if (input_regst->mem_shared_inplace_block_id() == -1) {
+      input_regst->set_mem_shared_inplace_block_id(Global<IDMgr>::Get()->NewMemBlockId());
+    }
+    output_regst->set_mem_shared_inplace_block_id(input_regst->mem_shared_inplace_block_id());
   });
 }
 
@@ -328,6 +600,31 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne) {
     CompTaskNode* src = sorted_src_comp_tasks[i];
     CompTaskNode* dst = sorted_dst_comp_tasks[i];
     BuildTaskPath(src, dst, MutBufTask, (dst->GetTaskType() != TaskType::kMdSave));
+  }
+}
+
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByTickToSource) {
+  CHECK(src_logical->SoleOp()->op_conf().has_tick_conf());
+  HashMap<size_t, CompTaskNode*> machine_id2tick_task;
+  HashMap<size_t, std::vector<CompTaskNode*>> machine_id2dst_tasks;
+  for (CompTaskNode* tick_node : sorted_src_comp_tasks) {
+    machine_id2tick_task[tick_node->machine_id()] = tick_node;
+  }
+  for (CompTaskNode* dst_node : sorted_dst_comp_tasks) {
+    machine_id2dst_tasks[dst_node->machine_id()].push_back(dst_node);
+  }
+
+  CompTaskNode* first_tick = sorted_src_comp_tasks.at(0);
+  for (const auto& pair : machine_id2dst_tasks) {
+    size_t machine_id = pair.first;
+    for (CompTaskNode* dst_node : pair.second) {
+      if (machine_id2tick_task.find(machine_id) != machine_id2tick_task.end()) {
+        Connect<TaskNode>(machine_id2tick_task.at(machine_id), NewEdge(), dst_node);
+      } else {
+        TaskNode* next_node = AddCopyCommNetTaskBetween(first_tick, dst_node);
+        Connect<TaskNode>(first_tick, NewEdge(), next_node);
+      }
+    }
   }
 }
 

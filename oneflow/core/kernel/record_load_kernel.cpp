@@ -21,24 +21,39 @@ void RecordLoadKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
     int32_t zero_count = std::max(part_name_suffix_length - static_cast<int32_t>(num.length()), 0);
     data_paths.push_back(JoinPath(data_dir, part_name_prefix + std::string(zero_count, '0') + num));
   }
+  piece_size_in_one_loader_ = kernel_conf().record_load_conf().device_piece_size();
   if (Global<JobDesc>::Get()->IsTrain()) {
+    const size_t num_max_read =
+        static_cast<size_t>(piece_size_in_one_loader_ * Global<JobDesc>::Get()->TotalBatchNum()
+                            * Global<JobDesc>::Get()->NumOfPiecesInBatch());
     in_stream_.reset(new PersistentInStream(
         DataFS(), data_paths, true, Global<JobDesc>::Get()->save_downloaded_file_to_local_fs()));
+    if (record_load_conf.has_random_shuffle_conf()) {
+      const int32_t shuffle_buffer_size = record_load_conf.random_shuffle_conf().buffer_size();
+      CHECK_GT(shuffle_buffer_size, 0);
+      record_reader_.reset(new RandomShuffleOFRecordReader(
+          in_stream_.get(), static_cast<size_t>(shuffle_buffer_size), num_max_read));
+    } else {
+      record_reader_.reset(new NaiveOFRecordReader(in_stream_.get(), num_max_read));
+    }
   } else {
     in_stream_.reset(new PersistentInStream(DataFS(), data_paths, false, false));
+    if (record_load_conf.has_random_shuffle_conf()) {
+      const int32_t shuffle_buffer_size = record_load_conf.random_shuffle_conf().buffer_size();
+      CHECK_GT(shuffle_buffer_size, 0);
+      record_reader_.reset(new RandomShuffleOFRecordReader(
+          in_stream_.get(), static_cast<size_t>(shuffle_buffer_size)));
+    } else {
+      record_reader_.reset(new NaiveOFRecordReader(in_stream_.get()));
+    }
   }
-  int64_t global_piece_size = Global<JobDesc>::Get()->PieceSize();
-  CHECK_EQ(global_piece_size % parallel_ctx->parallel_num(), 0);
-  piece_size_in_one_loader_ = global_piece_size / parallel_ctx->parallel_num();
 }
 
 void RecordLoadKernel::Forward(const KernelCtx& ctx,
                                std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto status = static_cast<RecordLoadStatus*>(ctx.other);
-  Blob* out_blob = BnInOp2Blob("out");
-  RecordBlob<OFRecord> record_blob(out_blob);
-  record_blob.ReadFrom(in_stream_.get());
-  status->record_num = record_blob.record_num();
+  status->record_num = record_reader_->Read(static_cast<size_t>(piece_size_in_one_loader_),
+                                            BnInOp2Blob("out")->mut_dptr<OFRecord>());
   if (status->record_num < piece_size_in_one_loader_) { status->is_eof = true; }
 }
 

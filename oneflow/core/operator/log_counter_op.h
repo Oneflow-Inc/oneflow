@@ -15,6 +15,9 @@ class LogCounterOp final : public Operator {
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
   virtual LogicalNode* NewProperLogicalNode() { return new PrintLogicalNode; }
+
+ private:
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return true; }
 };
 
 }  // namespace oneflow

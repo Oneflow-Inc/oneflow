@@ -6,7 +6,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename PredType, typename LabelType>
-class SparseCrossEntropyLossKernel final : public LossKernel<device_type, PredType, LabelType> {
+class SparseCrossEntropyLossKernel final : public LossKernel<device_type, PredType> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SparseCrossEntropyLossKernel);
   SparseCrossEntropyLossKernel() = default;

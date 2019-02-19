@@ -17,12 +17,13 @@ class AccuracyOp final : public Operator {
 
   const PbMessage& GetCustomizedConf() const override;
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx,
-                      std::function<void(OpContext*)> EnrollOpCtx) const override;
+                      const ParallelContext* parallel_ctx) const override;
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const;
 
  private:
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
+
   LogicalBlobId obn2lbi(const std::string& output_bn) const override;
 };
 

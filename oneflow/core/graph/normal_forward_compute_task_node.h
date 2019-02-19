@@ -16,6 +16,7 @@ class NormalForwardCompTaskNode final : public CompTaskNode {
   bool IsReadyForBuild() override;
 
   TaskType GetTaskType() const override { return TaskType::kNormalForward; }
+  bool HasBackwardCompTaskNode();
   virtual void ToProto(TaskProto*) override;
 
   void set_random_seed(int64_t random_seed) { random_seed_ = random_seed; }

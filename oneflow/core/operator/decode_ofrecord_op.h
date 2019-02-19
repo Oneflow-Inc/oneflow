@@ -24,6 +24,8 @@ class DecodeOFRecordOp final : public Operator {
                             KernelConf* kernel_conf) const override;
 
  private:
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
+
   LogicalBlobId obn2lbi(const std::string& output_bn) const override;
 };
 

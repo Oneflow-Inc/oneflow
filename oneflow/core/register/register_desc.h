@@ -50,14 +50,20 @@ class RegstDesc final {
   // mem
   const MemoryCase& mem_case() const { return mem_case_; }
   MemoryCase* mut_mem_case() { return &mem_case_; }
+  bool enable_mem_sharing() { return enable_mem_sharing_; }
   void set_enable_mem_sharing(bool enable_mem_sharing) { enable_mem_sharing_ = enable_mem_sharing; }
-  int64_t mem_shared_offset() const { return mem_shared_offset_; }
+  int64_t mem_shared_offset() const;
   void set_mem_shared_offset(int64_t val) { mem_shared_offset_ = val; }
+  int64_t mem_shared_inplace_block_id() const { return mem_shared_inplace_block_id_; }
+  void set_mem_shared_inplace_block_id(int64_t val) { mem_shared_inplace_block_id_ = val; }
   int32_t mem_shared_id() const { return mem_shared_id_; }
   void set_mem_shared_id(int32_t val) { mem_shared_id_ = val; }
+  bool HasSetMemSharedId() { return mem_shared_id_ != -1; }
+  void CopyMemSharedInfoFrom(const RegstDesc*);
 
   const std::shared_ptr<Shape>& data_regst_time_shape() const {
     CHECK(regst_desc_type_.has_data_regst_desc());
+    CHECK(data_regst_time_shape_);
     return data_regst_time_shape_;
   }
   std::shared_ptr<Shape>* mut_data_regst_time_shape() {
@@ -66,12 +72,14 @@ class RegstDesc final {
   }
   RegstDescTypeProto* mut_regst_desc_type() { return &regst_desc_type_; }
   const RegstDescTypeProto& regst_desc_type() const { return regst_desc_type_; }
+  bool HasSameMemSize(const RegstDesc*);
 
   // util
   int32_t MaxColNum() const { return packed_blob_desc_->max_col_num(); }
   void EraseZeroSizeBlob();
   void ToProto(RegstDescProto*) const;
   bool HasSameBlobDescs(const RegstDesc*);
+  int64_t ByteOffsetInPackedBlobDescBody(const LogicalBlobId& lbi) const;
 
  private:
   int64_t regst_desc_id_;
@@ -89,10 +97,28 @@ class RegstDesc final {
   bool enable_mem_sharing_;
   int32_t mem_shared_id_;
   int64_t mem_shared_offset_;
+  int64_t mem_shared_inplace_block_id_;
 
   std::shared_ptr<Shape> data_regst_time_shape_;
 };
 
+inline bool operator==(const MemBlock& lhs, const MemBlock& rhs) {
+  bool ret = (lhs.mem_block_id() == rhs.mem_block_id());
+  if (ret) { CHECK_EQ(lhs.mem_reduce_method(), rhs.mem_reduce_method()); }
+  return ret;
+}
+
 }  // namespace oneflow
+
+namespace std {
+
+template<>
+struct hash<oneflow::MemBlock> final {
+  size_t operator()(const oneflow::MemBlock& mem_block) const {
+    return hash<int64_t>()(mem_block.mem_block_id());
+  }
+};
+
+}  // namespace std
 
 #endif  // ONEFLOW_CORE_REGISTER_REGISTER_DESC_H_

@@ -13,7 +13,7 @@ void RngUniform(const int64_t elem_cnt, const T min, const T max, uint32_t rando
   CHECK(dptr);
   CHECK_LE(min, max);
   std::mt19937 generator(random_seed);
-  std::uniform_real_distribution<T> random_distribution(min, std::nextafter(max, MaxVal<T>()));
+  std::uniform_real_distribution<T> random_distribution(min, std::nextafter(max, GetMaxVal<T>()));
   for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = random_distribution(generator); }
 }
 
@@ -24,7 +24,7 @@ void RngIntUniform(const int64_t elem_cnt, const T min, const T max, uint32_t ra
   CHECK(dptr);
   CHECK_LE(min, max);
   std::mt19937 generator(random_seed);
-  std::uniform_int_distribution<T> random_distribution(min, std::nextafter(max, MaxVal<T>()));
+  std::uniform_int_distribution<T> random_distribution(min, std::nextafter(max, GetMaxVal<T>()));
   for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = random_distribution(generator); }
 }
 
@@ -37,6 +37,24 @@ void RngNormal(const int64_t elem_cnt, const T mean, const T std, uint32_t rando
   std::normal_distribution<T> random_distribution(mean, std);
 
   for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = random_distribution(generator); }
+}
+
+template<typename T>
+void RngTruncatedNormal(const int64_t elem_cnt, const T std, uint32_t random_seed, T* dptr) {
+  CHECK_GE(elem_cnt, 0);
+  CHECK(dptr);
+  CHECK_GT(std, 0.0);
+  T truncated_value = 2 * std;
+  std::mt19937 generator(random_seed);
+  std::normal_distribution<T> random_distribution(0, std);
+  int64_t index = 0;
+  while (true) {
+    T val = random_distribution(generator);
+    if (std::abs(val) < truncated_value) {
+      dptr[index++] = val;
+      if (index >= elem_cnt) { break; }
+    }
+  }
 }
 
 template<typename T>
@@ -69,6 +87,14 @@ void RandomNormalInitializer(const RandomNormalInitializerConf& initializer_conf
   CHECK(blob->shape().elem_cnt());
   RngNormal<T>(blob->shape().elem_cnt(), static_cast<T>(initializer_conf.mean()),
                static_cast<T>(initializer_conf.std()), random_seed, blob->mut_dptr<T>());
+}
+
+template<typename T>
+void TruncatedNormalInitializer(const TruncatedNormalInitializerConf& initializer_conf,
+                                uint32_t random_seed, Blob* blob) {
+  CHECK(blob->shape().elem_cnt());
+  RngTruncatedNormal<T>(blob->shape().elem_cnt(), static_cast<T>(initializer_conf.std()),
+                        random_seed, blob->mut_dptr<T>());
 }
 
 template<typename T>
@@ -116,6 +142,44 @@ void MsraInitializer(const MsraInitializerConf& initializer_conf, uint32_t rando
                blob->mut_dptr<T>());
 }
 
+template<typename T>
+void RangeInitializer(int64_t outer_size, int64_t idx_dim_size, int64_t inner_size, T start,
+                      T stride, T* out) {
+  FOR_RANGE(int64_t, i, 0, outer_size) {
+    FOR_RANGE(int64_t, j, 0, idx_dim_size) {
+      FOR_RANGE(int64_t, k, 0, inner_size) {
+        *(out + i * idx_dim_size * inner_size + j * inner_size + k) = start + j * stride;
+      }
+    }
+  }
+}
+
+template<typename T, typename RangeInitializerConfT>
+void RangeInitializer(const RangeInitializerConfT& initializer_conf, uint32_t random_seed,
+                      Blob* blob) {
+  CHECK_GT(blob->shape().NumAxes(), 0);
+  const int64_t axis = initializer_conf.axis() < 0
+                           ? blob->shape().NumAxes() + initializer_conf.axis()
+                           : initializer_conf.axis();
+  CHECK_GE(axis, 0);
+  CHECK_LT(axis, blob->shape().NumAxes());
+  RangeInitializer<T>(blob->shape().Count(0, axis), blob->shape().At(axis),
+                      blob->shape().Count(axis + 1), static_cast<T>(initializer_conf.start()),
+                      static_cast<T>(initializer_conf.stride()), blob->mut_dptr<T>());
+}
+
+template<typename T>
+void RangeInitializer(const RangeInitializerConf& initializer_conf, uint32_t random_seed,
+                      Blob* blob) {
+  RangeInitializer<T, RangeInitializerConf>(initializer_conf, random_seed, blob);
+}
+
+template<typename T>
+void IntSequenceInitializer(const IntRangeInitializerConf& initializer_conf, uint32_t random_seed,
+                            Blob* blob) {
+  RangeInitializer<T, IntRangeInitializerConf>(initializer_conf, random_seed, blob);
+}
+
 void ComputeOffset(const int32_t num_axes, const int64_t* shape, const int32_t* permutation,
                    std::vector<int64_t>& offset) {
   offset.resize(num_axes);
@@ -157,6 +221,7 @@ void Memcpy<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const void* src, size_t
 #endif
 
 ) {
+  if (dst == src) { return; }
   memcpy(dst, src, sz);
 }
 
@@ -271,6 +336,15 @@ KU_IF_METHOD InitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num
   in_stream.Read(blob->mut_dptr<char>(), blob_size);
 }
 KU_IF_METHOD Set(DeviceCtx* ctx, const T value, T* addr) { *addr = value; }
+KU_IF_METHOD Replicate(DeviceCtx* ctx, const int64_t n, T* y, const T* x) {
+  for (int64_t i = 0; i < n; ++i) { y[i] = *x; }
+}
+KU_IF_METHOD AddByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z) {
+  for (int64_t i = 0; i < n; ++i) { z[i] = x[i] + y; }
+}
+KU_IF_METHOD MulByScalarPara(DeviceCtx* ctx, const int64_t n, const T* x, const T y, T* z) {
+  for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y; }
+}
 
 #define KU_FLOATING_METHOD \
   template<typename T>     \
@@ -307,6 +381,19 @@ KU_FLOATING_METHOD Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
                         const int ldc) {
   cblas_gemm<T>(order, trans_a, trans_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
 }
+KU_FLOATING_METHOD BatchedGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
+                               const enum CBLAS_TRANSPOSE trans_a,
+                               const enum CBLAS_TRANSPOSE trans_b, int batch_size, int m, int n,
+                               int k, const T alpha, const T* a, const T* b, const T beta, T* c,
+                               T** buf) {
+  const int a_stride = m * k;
+  const int b_stride = k * n;
+  const int c_stride = m * n;
+  FOR_RANGE(int32_t, i, 0, batch_size) {
+    KernelUtil<DeviceType::kCPU, T>::OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a + i * a_stride,
+                                            b + i * b_stride, beta, c + i * c_stride);
+  }
+}
 
 KU_FLOATING_METHOD Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
   for (int64_t i = 0; i < n; ++i) { y[i] = std::exp(x[i]); }
@@ -314,11 +401,26 @@ KU_FLOATING_METHOD Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
 KU_FLOATING_METHOD Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha) {
   for (int64_t i = 0; i < n; ++i) { x[i] = x[i] / (*alpha); }
 }
-KU_FLOATING_METHOD Div(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
-  for (int64_t i = 0; i < n; ++i) { z[i] = x[i] / y[i]; }
+KU_FLOATING_METHOD Div(DeviceCtx* ctx, const int64_t n, T* x, const T alpha) {
+  for (int64_t i = 0; i < n; ++i) { x[i] = x[i] / alpha; }
 }
 KU_FLOATING_METHOD Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
   for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[i]; }
+}
+KU_FLOATING_METHOD Div(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
+  for (int64_t i = 0; i < n; ++i) { z[i] = x[i] / y[i]; }
+}
+KU_FLOATING_METHOD Square(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+  for (int64_t i = 0; i < n; ++i) { y[i] = x[i] * x[i]; }
+}
+KU_FLOATING_METHOD Sqrt(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+  for (int64_t i = 0; i < n; ++i) { y[i] = std::sqrt(x[i]); }
+}
+KU_FLOATING_METHOD MulByScalar(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
+  for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[0]; }
+}
+KU_FLOATING_METHOD Reciprocal(DeviceCtx* ctx, const int n, const T* x, T* y) {
+  for (int64_t i = 0; i < n; ++i) { y[i] = static_cast<T>(1.0) / x[i]; }
 }
 KU_FLOATING_METHOD Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsilon) {
   for (int64_t i = 0; i < n; ++i) { x[i] = 1.0 / std::sqrt(x[i] + epsilon); }
@@ -411,10 +513,14 @@ KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& ini
     RandomUniformInitializer<T>(initializer_conf.random_uniform_conf(), random_seed, blob);
   } else if (initializer_conf.has_random_normal_conf()) {
     RandomNormalInitializer<T>(initializer_conf.random_normal_conf(), random_seed, blob);
+  } else if (initializer_conf.has_truncated_normal_conf()) {
+    TruncatedNormalInitializer<T>(initializer_conf.truncated_normal_conf(), random_seed, blob);
   } else if (initializer_conf.has_xavier_conf()) {
     XavierInitializer<T>(initializer_conf.xavier_conf(), random_seed, blob, data_format);
   } else if (initializer_conf.has_msra_conf()) {
     MsraInitializer<T>(initializer_conf.msra_conf(), random_seed, blob, data_format);
+  } else if (initializer_conf.has_range_conf()) {
+    RangeInitializer<T>(initializer_conf.range_conf(), random_seed, blob);
   } else {
     UNIMPLEMENTED();
   }
@@ -438,6 +544,8 @@ KU_INTEGRAL_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& ini
     ConstantInitializer<T>(static_cast<T>(initializer_conf.constant_int_conf().value()), blob);
   } else if (initializer_conf.has_random_uniform_int_conf()) {
     RandomIntUniformInitializer<T>(initializer_conf.random_uniform_int_conf(), random_seed, blob);
+  } else if (initializer_conf.has_int_range_conf()) {
+    IntSequenceInitializer<T>(initializer_conf.int_range_conf(), random_seed, blob);
   } else {
     UNIMPLEMENTED();
   }

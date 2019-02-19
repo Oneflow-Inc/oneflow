@@ -19,7 +19,7 @@ void DotKernel<device_type, T>::ForwardDataContent(
   KernelUtil<device_type, T>::RowSum(ctx.device_ctx, piece_size, dim, tmp_blob->dptr<T>(),
                                      out_blob->mut_dptr<T>(), tmp_storage_blob->mut_dptr<T>(),
                                      sizeof(T) * piece_size * dim);
-  if (this->op_conf().matmul_conf().has_bias()) {
+  if (this->op_conf().dot_conf().has_bias()) {
     const Blob* bias_blob = BnInOp2Blob("bias");
     // out += bias
     KernelUtil<device_type, T>::Axpy(ctx.device_ctx, piece_size, OneVal<T>::value,
@@ -49,7 +49,7 @@ void DotKernel<device_type, T>::BackwardDataContent(
                                   tmp_blob->dptr<T>(), weight_blob->dptr<T>(),
                                   in_diff_blob->mut_dptr<T>());
 
-  if (this->op_conf().matmul_conf().has_bias()) {
+  if (this->op_conf().dot_conf().has_bias()) {
     Blob* bias_diff_blob = BnInOp2Blob("bias_diff");
     // bias_diff = out_diff
     KernelUtil<device_type, T>::Copy(ctx.device_ctx, out_diff_blob->shape().elem_cnt(),

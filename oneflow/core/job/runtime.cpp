@@ -7,6 +7,7 @@
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 
@@ -103,6 +104,9 @@ void Runtime::NewAllGlobal(const Plan& plan, bool is_experiment_phase) {
     }
 #endif
   }
+#ifdef WITH_CUDA
+  InitGlobalCudaDeviceProp();
+#endif
   Global<SnapshotMgr>::New(plan);
   Global<MemoryAllocator>::New();
   Global<RegstMgr>::New(plan);

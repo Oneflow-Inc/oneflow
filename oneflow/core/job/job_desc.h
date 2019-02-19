@@ -7,6 +7,7 @@
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/persistence/file_system.h"
+#include "oneflow/core/register/logical_blob_id.pb.h"
 
 namespace oneflow {
 
@@ -17,6 +18,7 @@ class JobDesc final {
   ~JobDesc() = default;
 
   // Common
+  const JobConf1& job_conf() const { return job_conf_; }
   const DLNetConf& dlnet_conf() const { return job_conf_.net(); }
   const Resource& resource() const { return job_conf_.resource(); }
   const Placement& placement() const { return job_conf_.placement(); }
@@ -35,7 +37,7 @@ class JobDesc final {
   int32_t MaxMdSaveWorkerNum() const { return job_conf_.resource().max_mdsave_worker_num(); }
   bool IsTrain() const { return job_conf_.other().has_train_conf(); }
   bool IsPredict() const { return job_conf_.other().has_predict_conf(); }
-  int64_t PieceSize() const { return job_conf_.other().piece_size(); }
+  int64_t RecordPieceSize() const { return job_conf_.other().piece_size(); }
   int64_t piece_num_of_experiment_phase() const;
   bool enable_experiment_run() const;
   float available_zone_mem_ratio() const;
@@ -58,7 +60,10 @@ class JobDesc final {
   bool use_nccl_inter_node_communication() const {
     return job_conf_.other().use_nccl_inter_node_communication();
   }
-  int64_t reduce_group_size() const { return job_conf_.other().reduce_group_size(); }
+  int64_t all_reduce_group_num() const;
+  int64_t all_reduce_group_min_byte() const;
+  float all_reduce_group_size_warmup() const;
+  float all_reduce_lazy_ratio() const;
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.other().cudnn_buf_limit_mbyte(); }
   int64_t GetMachineId(const std::string& addr) const;
 
@@ -79,6 +84,9 @@ class JobDesc final {
   float bias_l2() const;
   int32_t DataPartNum() const;
 
+  // fix and Optimize
+  void FixAndOptimizeDLNet();
+
  private:
   friend class Global<JobDesc>;
   JobDesc(const std::string& job_conf_filepath);
@@ -87,9 +95,18 @@ class JobDesc final {
   void SanityCheck();
   void SplitDecodeOps();
   void AddRecordLoadOps();
+  void ConvertPseudoChainToChain();
+  void AddIdentityOpForChainMergeOptimization();
+  void AddIdentityOpForAllReduceOverlapingUntrainble();
+  void FixTickOpIfExists();
 
   JobConf1 job_conf_;
 };
+
+std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4OpName(
+    const Placement& placement);
+std::function<ParallelConf*(const std::string&)> MakeGetterMutParallelConf4OpName(
+    Placement* placement);
 
 }  // namespace oneflow
 
