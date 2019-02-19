@@ -420,8 +420,8 @@ void OpKernelTestCase::InferBlobDesc(std::shared_ptr<Operator>* op, OpContext** 
   op_conf_.set_device_type(default_device_type_);
   *op = ConstructOp(op_conf_);
   if (NeedInferBlobDescs(op->get())) {
-    (*op)->InferBlobDescs(MakeGetterBnInOp2BlobDesc(), &parallel_ctx_,
-                          [&](OpContext* op_ctx) { *op_context = op_ctx; });
+    (*op)->InferBlobDescsIf(MakeGetterBnInOp2BlobDesc(), &parallel_ctx_, 1,
+                            [&](OpContext* op_ctx) { *op_context = op_ctx; });
   }
 }
 

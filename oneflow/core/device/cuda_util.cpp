@@ -45,7 +45,16 @@ const char* CurandGetErrorString(curandStatus_t error) {
   return "Unknown curand status";
 }
 
+cudaDeviceProp global_device_prop;
+
 }  // namespace
+
+void InitGlobalCudaDeviceProp() { cudaGetDeviceProperties(&global_device_prop, 0); }
+
+int32_t GetSMCudaMaxBlocksNum() {
+  return global_device_prop.multiProcessorCount * global_device_prop.maxThreadsPerMultiProcessor
+         / kCudaThreadsNumPerBlock;
+}
 
 template<>
 void CudaCheck(cudaError_t error) {
@@ -71,6 +80,14 @@ size_t GetAvailableGpuMemSize(int dev_id) {
   cudaDeviceProp prop;
   cudaGetDeviceProperties(&prop, dev_id);
   return prop.totalGlobalMem;
+}
+
+cudaDataType_t GetCudaDataType(DataType val) {
+#define MAKE_ENTRY(type_cpp, type_cuda) \
+  if (val == GetDataType<type_cpp>::value) { return type_cuda; }
+  OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, CUDA_DATA_TYPE_SEQ);
+#undef MAKE_ENTRY
+  UNIMPLEMENTED();
 }
 
 #endif  // WITH_CUDA

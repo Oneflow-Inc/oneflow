@@ -5,7 +5,8 @@
 
 namespace oneflow {
 
-class CastKernel final : public KernelIf<DeviceType::kCPU> {
+template<DeviceType device_type>
+class CastKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CastKernel);
   CastKernel() = default;
@@ -16,9 +17,7 @@ class CastKernel final : public KernelIf<DeviceType::kCPU> {
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
   void BackwardDataContent(const KernelCtx&,
-                           std::function<Blob*(const std::string&)>) const override {
-    TODO();
-  }
+                           std::function<Blob*(const std::string&)>) const override;
 };
 
 }  // namespace oneflow

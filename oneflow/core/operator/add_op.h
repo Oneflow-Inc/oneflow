@@ -16,9 +16,13 @@ class AddOp final : public CWiseOp {
   bool NeedInBlobWhenBackward() const override { return false; }
   bool NeedOutBlobWhenBackward() const override { return false; }
   bool CanInferInDiffDynamicShapeWithoutIn() const override { return true; }
-  virtual void FixInDiffBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                  const ParallelContext*) const override;
+  void VirtualFixInDiffBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                 const ParallelContext*) const override;
+
+ private:
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
 };
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_OPERATOR_ADD_OP_H_

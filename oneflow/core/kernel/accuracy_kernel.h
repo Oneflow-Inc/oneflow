@@ -27,7 +27,8 @@ class AccuracyKernel final : public KernelIf<device_type> {
 template<DeviceType device_type, typename PredType, typename LabelType>
 struct AccuracyKernelUtil {
   static void Forward(DeviceCtx* ctx, const int32_t N, const int32_t D, int32_t top_k,
-                      const PredType* XData, const LabelType* labelData, PredType* accuracyData);
+                      const PredType* XData, const LabelType* labelData, const PredType* weight,
+                      PredType* accuracyData);
 };
 
 }  // namespace oneflow

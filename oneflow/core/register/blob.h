@@ -54,6 +54,10 @@ class Blob final {
   void set_record_id_in_device_piece(int64_t no, int64_t val);
   const int64_t* record_id_in_device_piece_ptr() const { return record_id_in_device_piece_ptr_; }
   int64_t* mut_record_id_in_device_piece_ptr() { return record_id_in_device_piece_ptr_; }
+  float loss_instance_num() const;
+  void set_loss_instance_num(float val);
+  const float* loss_instance_num_ptr() const { return loss_instance_num_ptr_; }
+  float* mut_loss_instance_num_ptr() { return loss_instance_num_ptr_; }
 
   void set_instance_shape(const Shape& shape);
   Shape instance_shape() const;
@@ -106,6 +110,7 @@ class Blob final {
     return blob_desc_->has_record_id_in_device_piece_field();
   }
   bool has_instance_shape_field() const { return blob_desc_->has_instance_shape_field(); }
+  bool has_loss_instance_num_field() const { return blob_desc_->has_loss_instance_num_field(); }
   int32_t max_col_num() const { return blob_desc_->max_col_num(); }
   size_t ByteSizeOfBlobHeader() const { return blob_desc_->ByteSizeOfBlobHeader(); }
   size_t ByteSizeOfDataIdField() const { return blob_desc_->ByteSizeOfDataIdField(); }
@@ -170,6 +175,7 @@ class Blob final {
   int64_t* dim1_valid_num_ptr_;
   int64_t* dim2_valid_num_ptr_;
   int64_t* record_id_in_device_piece_ptr_;
+  float* loss_instance_num_ptr_;
   int64_t* instance_shape_ptr_;
   bool use_instance_shape_;
   void* dptr_;

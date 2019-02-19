@@ -3,17 +3,17 @@
 namespace oneflow {
 
 RegstLifetimeGraph::RegstLifetimeGraph(
-    const std::list<const RegstDescProto*>& regst_descs,
+    const std::vector<const RegstDescProto*>& regst_descs,
     const std::function<void(const RegstDescProto*, HashSet<int64_t>*)>& ComputeLifetimeActorIds) {
-  std::list<RegstLifetimeNode*> nodes;
+  std::vector<RegstLifetimeNode*> nodes;
   InitNodes(regst_descs, ComputeLifetimeActorIds, &nodes);
   InitEdges(nodes);
 }
 
 void RegstLifetimeGraph::InitNodes(
-    const std::list<const RegstDescProto*>& regst_descs,
+    const std::vector<const RegstDescProto*>& regst_descs,
     const std::function<void(const RegstDescProto*, HashSet<int64_t>*)>& ComputeLifetimeActorIds,
-    std::list<RegstLifetimeNode*>* nodes) {
+    std::vector<RegstLifetimeNode*>* nodes) {
   for (const RegstDescProto* regst_desc : regst_descs) {
     auto lifetime_actor_ids = std::make_unique<HashSet<int64_t>>();
     ComputeLifetimeActorIds(regst_desc, lifetime_actor_ids.get());
@@ -23,7 +23,7 @@ void RegstLifetimeGraph::InitNodes(
   }
 }
 
-void RegstLifetimeGraph::InitEdges(const std::list<RegstLifetimeNode*>& nodes) {
+void RegstLifetimeGraph::InitEdges(const std::vector<RegstLifetimeNode*>& nodes) {
   HashMap<int64_t, HashSet<RegstLifetimeNode*>> task_id2intersected_nodes;
   for (RegstLifetimeNode* node : nodes) {
     for (int64_t task_id : node->lifetime_actor_ids()) {
@@ -46,25 +46,26 @@ void RegstLifetimeGraph::InitEdges(const std::list<RegstLifetimeNode*>& nodes) {
 }
 
 void RegstLifetimeGraph::ForEachSameColoredRegstDescs(
-    const std::function<void(const std::list<const RegstDescProto*>&)>& Handler) const {
+    const std::function<void(const std::vector<const RegstDescProto*>&)>& Handler) const {
+  std::vector<const RegstLifetimeNode*> nodes;
+  ForEachNode([&](const RegstLifetimeNode* node) { nodes.push_back(node); });
+  std::sort(nodes.begin(), nodes.end(),
+            [&](const RegstLifetimeNode* lhs, const RegstLifetimeNode* rhs) {
+              return lhs->byte_size() > rhs->byte_size();
+            });
   HashMap<const RegstLifetimeNode*, std::set<int32_t>> node2excluded_color_ids;
   HashMap<const RegstLifetimeNode*, int32_t> node2color_id;
-  auto ForEachIntersected = &RegstLifetimeNode::ForEachNodeOnInOutEdge;
-  ForEachNode([&](const RegstLifetimeNode* start) {
-    if (node2color_id.find(start) != node2color_id.end()) { return; }
-    BfsForEachNode({start}, ForEachIntersected, [&](const RegstLifetimeNode* node) {
-      if (node2color_id.find(node) != node2color_id.end()) { return; }
-      int32_t color_id = 0;
-      const auto& excluded_color_ids = node2excluded_color_ids[node];
-      for (; excluded_color_ids.find(color_id) != excluded_color_ids.end(); ++color_id) {}
-      node2color_id[node] = color_id;
-      (node->*ForEachIntersected)([&](const RegstLifetimeNode* intersected) {
-        if (node2color_id.find(intersected) != node2color_id.end()) { return; }
-        node2excluded_color_ids[intersected].insert(color_id);
-      });
+  for (const RegstLifetimeNode* node : nodes) {
+    int32_t color_id = 0;
+    const auto& excluded_color_ids = node2excluded_color_ids[node];
+    for (; excluded_color_ids.find(color_id) != excluded_color_ids.end(); ++color_id) {}
+    node2color_id[node] = color_id;
+    node->ForEachNodeOnInOutEdge([&](const RegstLifetimeNode* intersected) {
+      if (node2color_id.find(intersected) != node2color_id.end()) { return; }
+      node2excluded_color_ids[intersected].insert(color_id);
     });
-  });
-  HashMap<int32_t, std::list<const RegstDescProto*>> color_id2regst_descs;
+  }
+  HashMap<int32_t, std::vector<const RegstDescProto*>> color_id2regst_descs;
   for (const auto& pair : node2color_id) {
     color_id2regst_descs[pair.second].push_back(&pair.first->regst_desc());
   }

@@ -16,6 +16,8 @@ class CopyHdOp final : public Operator {
   bool CanInferInDiffDynamicShapeWithoutIn() const override { return true; }
 
  private:
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { UNIMPLEMENTED(); }
+
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override { return GenPackedLbi(); }
   LogicalBlobId obn2lbi(const std::string& output_bn) const override { return GenPackedLbi(); }
 };

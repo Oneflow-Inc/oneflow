@@ -42,6 +42,10 @@ bool RtBlobDesc::has_dim2_valid_num_field() const {
 bool RtBlobDesc::has_record_id_in_device_piece_field() const {
   return header_pod_desc_.HasField(FieldKey::kRecordIdInDevicePiece);
 }
+s
+bool RtBlobDesc::has_loss_instance_num_field() const {
+  return header_pod_desc_.HasField(FieldKey::kLossInstanceNum);
+}
 
 bool RtBlobDesc::has_instance_shape_field() const {
   return header_pod_desc_.HasField(FieldKey::kInstanceShape);

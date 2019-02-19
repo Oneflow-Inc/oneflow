@@ -3,6 +3,7 @@
 #include "oneflow/core/kernel/momentum_model_update_kernel.h"
 #include "oneflow/core/kernel/rmsprop_model_update_kernel.h"
 #include "oneflow/core/kernel/lars_model_update_kernel.h"
+#include "oneflow/core/kernel/adam_model_update_kernel.h"
 
 namespace oneflow {
 
@@ -13,13 +14,17 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
   int64_t cur_batch_num = next_model_vid - 1;
   const NormalModelUpdateOpUserConf& conf = this->op_conf().normal_mdupdt_conf().user_conf();
   float learning_rate = this->op_conf().normal_mdupdt_conf().learning_rate();
+  const T* batch_instance_num_ptr = BnInOp2Blob("total_instance_num_diff")->dptr<T>();
+  if (conf.has_clip_conf()) {
+    ClipGradient(ctx.device_ctx, cur_batch_num, conf.clip_conf(), batch_instance_num_ptr,
+                 BnInOp2Blob);
+  }
   if (TriggerWarmup(conf, learning_rate, cur_batch_num)) {
     learning_rate = GetWarmupLearningRate(conf.warmup_conf(), learning_rate, cur_batch_num);
   } else if (conf.has_learning_rate_decay()) {
     learning_rate =
         GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, cur_batch_num);
   }
-  const T* batch_instance_num_ptr = BnInOp2Blob("total_instance_num_diff")->dptr<T>();
   float l1 = this->op_conf().normal_mdupdt_conf().l1();
   float l2 = this->op_conf().normal_mdupdt_conf().l2();
   UpdateModel(ctx.device_ctx, batch_instance_num_ptr, static_cast<T>(learning_rate),
@@ -43,6 +48,8 @@ Kernel* CreateMdUpdtKernel(const KernelConf& kernel_conf) {
     return CreateRMSPropMdUpdtKernel(kernel_conf);
   } else if (user_conf.has_lars_conf()) {
     return CreateLARSMdUpdtKernel(kernel_conf);
+  } else if (user_conf.has_adam_conf()) {
+    return CreateAdamMdUpdtKernel(kernel_conf);
   } else {
     UNIMPLEMENTED();
   }
@@ -149,9 +156,32 @@ double LinearWarmupLearningRate(const LinearWarmupConf& conf, double lr, int64_t
   return lr * multiplier;
 }
 
+template<DeviceType device_type, typename T>
+void ClipByGlobalNorm(DeviceCtx* ctx, const int64_t cur_batch_num, const ClipByGlobalNormConf& conf,
+                      const T* batch_instance_num_ptr,
+                      std::function<Blob*(const std::string&)> BnInOp2Blob) {
+  int64_t n = BnInOp2Blob("model_diff")->shape().elem_cnt();
+  T* model_diff = BnInOp2Blob("model_diff")->mut_dptr<T>();
+  T* global_norm_ptr = BnInOp2Blob("data_tmp")->mut_dptr<T>();
+  if (conf.has_global_norm()) {
+    KernelUtil<device_type, T>::Set(ctx, static_cast<T>(conf.global_norm()), global_norm_ptr);
+  } else {
+    // The Dot does not read the result, so the global_norm need not be initialized.
+    KernelUtil<device_type, T>::Dot(ctx, n, model_diff, 1, model_diff, 1, global_norm_ptr);
+    KernelUtil<device_type, T>::Sqrt(ctx, 1, global_norm_ptr, global_norm_ptr);
+    KernelUtil<device_type, T>::Div(ctx, 1, global_norm_ptr, batch_instance_num_ptr);
+  }
+  T* ratio_ptr = BnInOp2Blob("data_tmp")->mut_dptr<T>();
+  NormalMdUpdateKernelUtil<device_type, T>::CmptClipRatioByGlobalNorm(
+      ctx, global_norm_ptr, static_cast<T>(conf.clip_norm()), ratio_ptr);
+  KernelUtil<device_type, T>::Scal(ctx, n, ratio_ptr, model_diff, 1);
+}
+
 }  // namespace
 
-bool TriggerWarmup(const NormalModelUpdateOpUserConf& conf, double lr, int64_t cur_batch_num) {
+template<DeviceType device_type, typename T>
+bool NormalMdUpdateKernel<device_type, T>::TriggerWarmup(const NormalModelUpdateOpUserConf& conf,
+                                                         double lr, int64_t cur_batch_num) const {
   if (!conf.has_warmup_conf()) { return false; }
   const WarmupConf& warmup_conf = conf.warmup_conf();
   if (warmup_conf.has_constant_conf()) {
@@ -163,7 +193,10 @@ bool TriggerWarmup(const NormalModelUpdateOpUserConf& conf, double lr, int64_t c
   }
 }
 
-double GetWarmupLearningRate(const WarmupConf& conf, double lr, int64_t cur_batch_num) {
+template<DeviceType device_type, typename T>
+double NormalMdUpdateKernel<device_type, T>::GetWarmupLearningRate(const WarmupConf& conf,
+                                                                   double lr,
+                                                                   int64_t cur_batch_num) const {
   if (conf.has_constant_conf()) {
     return ConstantWarmupLearningRate(conf.constant_conf(), lr, cur_batch_num);
   } else if (conf.has_linear_conf()) {
@@ -173,7 +206,21 @@ double GetWarmupLearningRate(const WarmupConf& conf, double lr, int64_t cur_batc
   }
 }
 
-double GetDecayedLearningRate(const LearningRateDecayConf& conf, double lr, int64_t cur_batch_num) {
+template<DeviceType device_type, typename T>
+void NormalMdUpdateKernel<device_type, T>::ClipGradient(
+    DeviceCtx* ctx, const int64_t cur_batch_num, const ClipConf& conf,
+    const T* batch_instance_num_ptr, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (conf.has_clip_by_global_norm()) {
+    ClipByGlobalNorm<device_type, T>(ctx, cur_batch_num, conf.clip_by_global_norm(),
+                                     batch_instance_num_ptr, BnInOp2Blob);
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+template<DeviceType device_type, typename T>
+double NormalMdUpdateKernel<device_type, T>::GetDecayedLearningRate(
+    const LearningRateDecayConf& conf, double lr, int64_t cur_batch_num) const {
   if (conf.has_exponential_conf()) {
     return ExponentialDecayedLearningRate(conf.exponential_conf(), lr, cur_batch_num);
   } else if (conf.has_inverse_time_conf()) {
@@ -192,6 +239,15 @@ double GetDecayedLearningRate(const LearningRateDecayConf& conf, double lr, int6
     UNIMPLEMENTED();
   }
 }
+
+template<typename T>
+class NormalMdUpdateKernelUtil<DeviceType::kCPU, T> final {
+ public:
+  static void CmptClipRatioByGlobalNorm(DeviceCtx* ctx, const T* global_norm_ptr, T clip_norm,
+                                        T* ratio_ptr) {
+    *ratio_ptr = clip_norm / std::max(*global_norm_ptr, clip_norm);
+  }
+};
 
 REGISTER_KERNEL_CREATOR(OperatorConf::kNormalMdupdtConf, CreateMdUpdtKernel);
 

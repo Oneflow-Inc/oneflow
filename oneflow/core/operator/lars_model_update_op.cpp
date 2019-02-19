@@ -7,7 +7,7 @@ void LARSModelUpdateOp::MdUpdtVirtualInitFromOpConf() {
   EnrollDataTmpBn("data_tmp");
 }
 
-void LARSModelUpdateOp::InferBlobDescs(
+void LARSModelUpdateOp::MdUpdtVirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* model_blob_desc = GetBlobDesc4BnInOp("model");

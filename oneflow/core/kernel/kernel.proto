@@ -62,6 +62,10 @@ message SigmoidCrossEntropyLossKernelConf {
   required LossKernelConf loss_conf = 1;
 }
 
+message IdentityLossKernelConf {
+  required LossKernelConf loss_conf = 1;
+}
+
 message PoolingKernelConf {
   required ShapeProto in = 1;
   required ShapeProto out = 2;
@@ -83,7 +87,7 @@ message MaxPoolingKernelConf {
 }
 
 message ReduceSumKernelConf {
-  optional int32 axis = 1;
+  required ShapeProto kept_dims_shape = 1;
 }
 
 message SoftmaxKernelConf {
@@ -164,6 +168,28 @@ message HingeLossKernelConf {
   required LossKernelConf loss_conf = 1;
 }
 
+message SliceKernelConf {
+  required ShapeProto in_shape = 1;
+}
+
+message ConstantKernelConf {
+  required InitializerConf initializer = 1;
+  required uint32 random_seed = 2;
+}
+
+message GatherKernelConf {
+  required int64 axis = 1;
+}
+
+message VariableKernelConf {
+  required bool is_fw_inplace = 1;
+  required bool is_bw_inplace = 2;
+}
+
+message RecordLoadKernelConf {
+  required int64 device_piece_size = 1;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
@@ -201,7 +227,13 @@ message KernelConf {
     ReduceConcatKernelConf reduce_concat_conf = 351;
     ReduceSplitKernelConf reduce_split_conf = 352;
     AccuracyKernelConf accuracy_conf = 401;
-    SmoothL1LossKernelConf smooth_l1_loss_conf = 402;
-    SigmoidCrossEntropyLossKernelConf sigmoid_cross_entropy_loss_conf = 403;
+    SliceKernelConf slice_conf = 402;
+    ConstantKernelConf constant_conf = 403;
+    SigmoidCrossEntropyLossKernelConf sigmoid_cross_entropy_loss_conf = 404;
+    IdentityLossKernelConf identity_loss_conf = 405;
+    GatherKernelConf gather_conf = 406;
+    VariableKernelConf variable_conf = 407;
+    RecordLoadKernelConf record_load_conf = 408;
+    SmoothL1LossKernelConf smooth_l1_loss_conf = 409;
   }
 }

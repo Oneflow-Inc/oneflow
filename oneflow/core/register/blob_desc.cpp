@@ -16,6 +16,7 @@ BlobDesc::BlobDesc(const Shape& shape, DataType data_type, bool has_data_id, boo
       has_dim1_valid_num_(false),
       has_dim2_valid_num_(false),
       has_record_id_in_device_piece_(false),
+      has_loss_instance_num_(false),
       has_instance_shape_(false),
       max_col_num_(max_col_num),
       blob_mem_id_(-1),
@@ -36,6 +37,7 @@ void BlobDesc::InitFromProto(const BlobDescProto& proto) {
     has_dim1_valid_num_ = false;
     has_dim2_valid_num_ = false;
     has_record_id_in_device_piece_ = false;
+    has_loss_instance_num_ = false;
     has_instance_shape_ = false;
     opaque_header_ = FieldDesc(proto.header().opaque_header());
   } else {
@@ -47,6 +49,7 @@ void BlobDesc::InitFromProto(const BlobDescProto& proto) {
     has_dim1_valid_num_ = header_pod_desc_.HasField(FieldKey::kDim1ValidNum);
     has_dim2_valid_num_ = header_pod_desc_.HasField(FieldKey::kDim2ValidNum);
     has_record_id_in_device_piece_ = header_pod_desc_.HasField(FieldKey::kRecordIdInDevicePiece);
+    has_loss_instance_num_ = header_pod_desc_.HasField(FieldKey::kLossInstanceNum);
     has_instance_shape_ = header_pod_desc_.HasField(FieldKey::kInstanceShape);
   }
   if (proto.has_dim0_inner_shape()) {
@@ -62,6 +65,7 @@ BlobDesc::BlobDesc(const StructPodDesc& header_pod_desc, int64_t header_byte_siz
       has_dim1_valid_num_(false),
       has_dim2_valid_num_(false),
       has_record_id_in_device_piece_(false),
+      has_loss_instance_num_(false),
       has_instance_shape_(false),
       max_col_num_(max_col_num),
       blob_mem_id_(-1),
@@ -104,6 +108,11 @@ void BlobDesc::set_has_dim2_valid_num_field(bool val) {
 void BlobDesc::set_has_record_id_in_device_piece_field(bool val) {
   CHECK(!header_is_opaque_);
   has_record_id_in_device_piece_ = val;
+}
+
+void BlobDesc::set_has_loss_instance_num_field(bool val) {
+  CHECK(!header_is_opaque_);
+  has_loss_instance_num_ = val;
 }
 
 void BlobDesc::set_has_instance_shape_field(bool val) {
@@ -154,6 +163,10 @@ void BlobDesc::RecordIdInDevicePieceToProto(StructPodDesc* header_pod_desc) cons
                             TensorPodDesc(shape, DataType::kInt64));
 }
 
+void BlobDesc::LossInstanceNumToProto(StructPodDesc* header_pod_desc) const {
+  header_pod_desc->AddField(FieldKey::kLossInstanceNum, TensorPodDesc({1}, DataType::kFloat));
+}
+
 void BlobDesc::InstanceShapeToProto(StructPodDesc* header_pod_desc) const {
   Shape shape({body_field_.shape().NumAxes() - 1});
   header_pod_desc->AddField(FieldKey::kInstanceShape, TensorPodDesc(shape, DataType::kInt64));
@@ -171,6 +184,7 @@ void BlobDesc::HeaderToProto(BlobDescProto* proto) const {
     if (has_dim1_valid_num_field()) { Dim1ValidNumToProto(&header_pod_desc); }
     if (has_dim2_valid_num_field()) { Dim2ValidNumToProto(&header_pod_desc); }
     if (has_record_id_in_device_piece_field()) { RecordIdInDevicePieceToProto(&header_pod_desc); }
+    if (has_loss_instance_num_field()) { LossInstanceNumToProto(&header_pod_desc); }
     if (has_instance_shape_field()) { InstanceShapeToProto(&header_pod_desc); }
     header_pod_desc.ToProto(proto->mutable_header()->mutable_header_pod_desc());
   } else {
@@ -192,6 +206,7 @@ bool BlobDesc::operator==(const BlobDesc& rhs) const {
          && has_dim1_valid_num_ == rhs.has_dim1_valid_num_
          && has_dim2_valid_num_ == rhs.has_dim2_valid_num_
          && has_record_id_in_device_piece_ == rhs.has_record_id_in_device_piece_
+         && has_loss_instance_num_ == rhs.has_loss_instance_num_
          && has_instance_shape_ == rhs.has_instance_shape_ && max_col_num_ == rhs.max_col_num_
          && blob_mem_id_ == rhs.blob_mem_id_ && body_field_ == rhs.body_field_;
 }
@@ -261,6 +276,11 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
                            DataType::kChar, max_col_num));
   }
   return ret;
+}
+
+bool CompareLbiBlobDescPair(const LbiBlobDescPair& lhs, const LbiBlobDescPair& rhs) {
+  return (lhs.blob_desc().header().blob_mem_id() < rhs.blob_desc().header().blob_mem_id())
+         || (lhs.lbi() < rhs.lbi());
 }
 
 }  // namespace oneflow

@@ -1,8 +1,8 @@
 #include "oneflow/core/graph/logical_graph.h"
 #include "oneflow/core/graph/task_graph.h"
+#include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/core/graph/chain_logical_graph.h"
 #include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
@@ -45,7 +45,6 @@ std::function<bool(const LogicalNode*)> MakePredicatorHasActualOutDiff(const Log
 LogicalGraph::LogicalGraph(bool is_train) {
   BuildFwStruct();
   if (is_train) { GroupNodesForReduceStruct(); }
-  SetMainModelParallel();
   if (is_train) { BuildBwStruct(); }
   MergeEdge();
   SetNodeDataLbi();
@@ -59,24 +58,41 @@ LogicalGraph::LogicalGraph(bool is_train) {
 }
 
 void LogicalGraph::GroupNodesForReduceStruct() {
-  ChainLogicalGraph chain_logical_graph(*this);
-  std::vector<std::vector<const LogicalNode*>> fw_node_groups;
-  chain_logical_graph.ForEachNode(
-      [&](ChainLogicalNode* node) { fw_node_groups.emplace_back(node->logical_nodes()); });
-  for (auto& fw_node_group : fw_node_groups) {
-    if (fw_node_group.size() < Global<JobDesc>::Get()->reduce_group_size()) {
-      fw_node_groups_.emplace_back(std::move(fw_node_group));
-    } else {
-      int64_t fw_node_group_size = fw_node_group.size();
-      int64_t seg_num = fw_node_group_size / Global<JobDesc>::Get()->reduce_group_size() + 1;
-      BalancedSplitter bs(fw_node_group_size, seg_num);
-      FOR_RANGE(int64_t, idx, 0, seg_num) {
-        std::vector<const LogicalNode*> sub_fw_node_group;
-        Range range = bs.At(idx);
-        FOR_RANGE(int64_t, nid, range.begin(), range.end()) {
-          sub_fw_node_group.emplace_back(fw_node_group[nid]);
-        }
-        fw_node_groups_.emplace_back(std::move(sub_fw_node_group));
+  // get op model size
+  HashMap<std::string, size_t> op_name2model_size;
+  auto OpName2ModelSize = [&](const std::string& op_name) -> size_t {
+    if (op_name2model_size.find(op_name) == op_name2model_size.end()) { return 0; }
+    return op_name2model_size.at(op_name);
+  };
+  Global<OpGraph>::Get()->InferOpModelSize(&op_name2model_size);
+  size_t model_total_size = 0;
+  for (const auto& pair : op_name2model_size) { model_total_size += pair.second; }
+  HashMap<ParallelDesc, std::list<const LogicalNode*>> parellel_desc2fw_group;
+  size_t avg_size = model_total_size / Global<JobDesc>::Get()->all_reduce_group_num();
+  const size_t group_min_size = Global<JobDesc>::Get()->all_reduce_group_min_byte();
+  const float group_size_warmup = Global<JobDesc>::Get()->all_reduce_group_size_warmup();
+  size_t cur_group_size = group_min_size / group_size_warmup;
+  auto GetCurGroupSize = [&](int32_t group_id) {
+    if (cur_group_size < avg_size) { cur_group_size *= group_size_warmup; }
+    return std::min(cur_group_size, avg_size);
+  };
+  // group fw nodes by parallel desc
+  ReverseTopoForEachNode([&](LogicalNode* fw_node) {
+    parellel_desc2fw_group[*fw_node->parallel_desc()].push_front(fw_node);
+  });
+  CHECK_GT(parellel_desc2fw_group.size(), 0);
+  for (auto& pair : parellel_desc2fw_group) {
+    fw_node_groups_.emplace_back(std::vector<const LogicalNode*>());
+    auto& fw_node_group = pair.second;
+    size_t cur_group_model_size = 0;
+    int32_t group_id = 0;
+    for (const LogicalNode* fw_node : fw_node_group) {
+      fw_node_groups_.back().emplace_back(fw_node);
+      cur_group_model_size += OpName2ModelSize(fw_node->SoleOp()->op_name());
+      if (cur_group_model_size >= GetCurGroupSize(group_id)) {
+        fw_node_groups_.emplace_back(std::vector<const LogicalNode*>());
+        cur_group_model_size = 0;
+        ++group_id;
       }
     }
   }
@@ -197,20 +213,6 @@ void LogicalGraph::LinkUnpackFw2PackFw(
         dynamic_cast<UnpackForwardLogicalNode*>(it->second.front());
     CHECK(unpack_fw);
     pack_fw->set_related_unpack(unpack_fw);
-  });
-}
-
-void LogicalGraph::SetMainModelParallel() {
-  ForEachNode([](LogicalNode* node) {
-    if (node->parallel_desc()->policy() == kModelParallel) { node->set_main_model_parallel(node); }
-  });
-  ForEachNode([](LogicalNode* node) {
-    LogicalNode* pred_node = node;
-    while (pred_node->SoleOp()->IsElemWiseOp()) { pred_node = pred_node->SoleInEdge()->src_node(); }
-    if (pred_node != node && pred_node->parallel_desc()->policy() == kModelParallel) {
-      node->mut_parallel_desc() = pred_node->parallel_desc();
-      node->set_main_model_parallel(pred_node);
-    }
   });
 }
 
@@ -356,6 +358,7 @@ void LogicalGraph::BuildLossPrintStruct() {
     reduce_loss_op_conf.set_device_type(loss_op->device_type());
     auto reduce_sum_conf = reduce_loss_op_conf.mutable_reduce_sum_conf();
     *(reduce_sum_conf->mutable_in_sys()) = loss_op->BnInOp2Lbi("loss");
+    reduce_sum_conf->add_axis(0);
     reduce_sum_conf->set_out("out");
     std::shared_ptr<Operator> reduce_loss_op = ConstructOp(reduce_loss_op_conf);
     loss_logical->mut_op_vec().push_back(reduce_loss_op);
@@ -508,8 +511,11 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
       }
     }
   });
-  for (auto& fw_node_group : fw_node_groups_) {
+  for (int i = 0; i < fw_node_groups_.size(); ++i) {
+    auto& fw_node_group = fw_node_groups_[i];
     ReduceCtx group_reduce_ctx;
+    group_reduce_ctx.order_in_logical_graph = i;
+    int order_in_reduce_group = 0;
     for (auto& fw_node : fw_node_group) {
       auto reduce_ctx_it = fw_node2reduce_ctx.find(fw_node);
       if (reduce_ctx_it != fw_node2reduce_ctx.end()) {
@@ -518,42 +524,55 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
         group_reduce_ctx.bw_logicals.emplace_back(reduce_ctx.bw_logicals.at(0));
         group_reduce_ctx.md_diff_acc_logicals.emplace_back(reduce_ctx.md_diff_acc_logicals.at(0));
         group_reduce_ctx.md_updt_logicals.emplace_back(reduce_ctx.md_updt_logicals.at(0));
+        auto* md_updt = dynamic_cast<NormalMdUpdtLogicalNode*>(reduce_ctx.md_updt_logicals.at(0));
+        md_updt->set_order_in_reduce_group(order_in_reduce_group++);
       }
     }
-    BuildReduceStruct(group_reduce_ctx);
+    if (group_reduce_ctx.fw_logicals.size() > 0) { BuildReduceStruct(group_reduce_ctx); }
   }
   SetupNormalMdUpdtOp();
 }
 
 void LogicalGraph::BuildReduceStruct(const ReduceCtx& reduce_ctx) {
-  if (reduce_ctx.fw_logicals.size() > 1) {
-    std::shared_ptr<const ParallelDesc> src_pd = reduce_ctx.fw_logicals[0]->parallel_desc();
+  CHECK_GT(reduce_ctx.fw_logicals.size(), 0);
+  std::shared_ptr<const ParallelDesc> src_pd = reduce_ctx.fw_logicals[0]->parallel_desc();
 
-    OperatorConf reduce_concat_op_conf;
-    reduce_concat_op_conf.set_name("reduce_concat_" + NewUniqueId());
-    reduce_concat_op_conf.set_device_type(src_pd->device_type());
-    reduce_concat_op_conf.mutable_reduce_concat_conf()->set_in_num(reduce_ctx.fw_logicals.size());
-    LogicalNode* reduce_concat_node = NewNode<ReduceConcatLogicalNode>();
-    reduce_concat_node->mut_op_vec() = {ConstructOp(reduce_concat_op_conf)};
-    reduce_concat_node->mut_parallel_desc() = src_pd;
+  OperatorConf reduce_concat_op_conf;
+  reduce_concat_op_conf.set_name("reduce_concat_" + NewUniqueId());
+  reduce_concat_op_conf.set_device_type(src_pd->device_type());
+  reduce_concat_op_conf.mutable_reduce_concat_conf()->set_in_num(reduce_ctx.fw_logicals.size());
+  LogicalNode* reduce_concat_node = NewNode<ReduceConcatLogicalNode>();
+  reduce_concat_node->mut_op_vec() = {ConstructOp(reduce_concat_op_conf)};
+  reduce_concat_node->mut_parallel_desc() = src_pd;
 
-    OperatorConf reduce_split_op_conf;
-    reduce_split_op_conf.set_name("reduce_split_" + NewUniqueId());
-    reduce_split_op_conf.set_device_type(src_pd->device_type());
-    reduce_split_op_conf.mutable_reduce_split_conf()->set_out_num(reduce_ctx.fw_logicals.size());
-    LogicalNode* reduce_split_node = NewNode<ReduceSplitLogicalNode>();
-    reduce_split_node->mut_op_vec() = {ConstructOp(reduce_split_op_conf)};
-    reduce_split_node->mut_parallel_desc() = src_pd;
+  // We can not add ctrl edges between all_reduce nodes due to the implementation of nccl.
+  // So we add ctrl edges between ReduceIdentityTaskNodes which are followed by
+  // all_reduce nodes;
+  OperatorConf reduce_identity_conf;
+  reduce_identity_conf.set_name("reduce_identity_" + NewUniqueId());
+  reduce_identity_conf.set_device_type(src_pd->device_type());
+  reduce_identity_conf.mutable_reduce_identity_conf();
+  auto* reduce_identity_node = NewNode<ReduceIdentityLogicalNode>();
+  reduce_identity_node->mut_op_vec() = {ConstructOp(reduce_identity_conf)};
+  reduce_identity_node->mut_parallel_desc() = src_pd;
+  reduce_identity_node->set_order_in_logical_graph(reduce_ctx.order_in_logical_graph);
 
-    for (auto& md_diff_acc_node : reduce_ctx.md_diff_acc_logicals) {
-      Connect(md_diff_acc_node, NewEdge(), reduce_concat_node);
-    }
-    for (auto& md_updt_node : reduce_ctx.md_updt_logicals) {
-      Connect(reduce_split_node, NewEdge(), md_updt_node);
-    }
-    AddAllReduce(reduce_concat_node, reduce_split_node);
-  } else if (reduce_ctx.fw_logicals.size() == 1) {
-    AddAllReduce(reduce_ctx.md_diff_acc_logicals.at(0), reduce_ctx.md_updt_logicals.at(0));
+  OperatorConf reduce_split_op_conf;
+  reduce_split_op_conf.set_name("reduce_split_" + NewUniqueId());
+  reduce_split_op_conf.set_device_type(src_pd->device_type());
+  reduce_split_op_conf.mutable_reduce_split_conf()->set_out_num(reduce_ctx.fw_logicals.size());
+  auto* reduce_split_node = NewNode<ReduceSplitLogicalNode>();
+  reduce_split_node->mut_op_vec() = {ConstructOp(reduce_split_op_conf)};
+  reduce_split_node->mut_parallel_desc() = src_pd;
+  reduce_split_node->set_order_in_logical_graph(reduce_ctx.order_in_logical_graph);
+
+  for (auto& md_diff_acc_node : reduce_ctx.md_diff_acc_logicals) {
+    Connect(md_diff_acc_node, NewEdge(), reduce_concat_node);
+  }
+  Connect(reduce_concat_node, NewEdge(), static_cast<LogicalNode*>(reduce_identity_node));
+  AddAllReduce(reduce_identity_node, reduce_split_node);
+  for (auto& md_updt_node : reduce_ctx.md_updt_logicals) {
+    Connect(static_cast<LogicalNode*>(reduce_split_node), NewEdge(), md_updt_node);
   }
 }
 
@@ -562,7 +581,8 @@ void LogicalGraph::AddAllReduce(LogicalNode* src, LogicalNode* dst) {
   std::shared_ptr<const ParallelDesc> dst_pd = dst->parallel_desc();
   CHECK_EQ(src_pd->parallel_num(), dst_pd->parallel_num());
   CHECK_EQ(src_pd->device_type(), dst_pd->device_type());
-  if (Global<JobDesc>::Get()->enable_nccl()) {
+
+  if (Global<JobDesc>::Get()->enable_nccl() && src_pd->device_type() == DeviceType::kGPU) {
     if (src_pd->sorted_machine_ids().size() == 1
         || Global<JobDesc>::Get()->use_nccl_inter_node_communication()) {
       AddNcclAllReduce(src, dst);
@@ -694,7 +714,8 @@ NormalMdUpdtLogicalNode* LogicalGraph::BuildNormalMdUpdtAndMdSaveStruct(
     // for model
     BuildMdSaveStruct(fw_logical, md_updt_logical);
     // TODO: remove the following ugly hard coded `if'
-    if (Global<JobDesc>::Get()->other_conf().train_conf().model_update_conf().has_momentum_conf()) {
+    if (Global<JobDesc>::Get()->other_conf().train_conf().model_update_conf().has_momentum_conf()
+        || Global<JobDesc>::Get()->other_conf().train_conf().model_update_conf().has_adam_conf()) {
       // for forward_model
       BuildMdSaveStruct(fw_logical, md_updt_logical);
     }

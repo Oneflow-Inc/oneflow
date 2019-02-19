@@ -94,7 +94,7 @@ void ConvOp<NDims>::InitFromOpConf() {
 
 template<int32_t NDims>
 void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                   const ParallelContext* parallel_ctx,
+                                   const ParallelContext* parallel_ctx, int64_t record_piece_size,
                                    std::function<void(OpContext*)> EnrollOpCtx) const {
   const std::string& data_format = GetValFromCustomizedConf<std::string>("data_format");
 
@@ -288,7 +288,9 @@ PbMessage* ConvOp<NDims>::MutableCustomizedKernelConf(KernelConf* kernel_conf) c
 }
 
 template<int32_t NDims>
-int32_t ConvOp<NDims>::ModelSplitAxis() const {
+int32_t ConvOp<NDims>::OutputBlobModelSplitAxis(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+    const std::string& obn) const {
   if (GetValFromCustomizedConf<std::string>("data_format") == "channels_first") {
     return 1;
   } else if (GetValFromCustomizedConf<std::string>("data_format") == "channels_last") {
@@ -296,11 +298,6 @@ int32_t ConvOp<NDims>::ModelSplitAxis() const {
   } else {
     UNIMPLEMENTED();
   }
-}
-
-template<int32_t NDims>
-int32_t ConvOp<NDims>::MaxModelSplitNum() const {
-  return GetValFromCustomizedConf<int32_t>("filters");
 }
 
 #ifdef WITH_CUDA

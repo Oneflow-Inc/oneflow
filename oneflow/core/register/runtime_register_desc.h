@@ -31,6 +31,11 @@ class RtRegstDesc {
   size_t MainByteSize4OneRegst() const;
   const Shape& data_regst_time_shape() const;
 
+  void ForEachBlobDescOffsetInOnRegst(
+      const std::vector<LbiBlobDescPair>& lbis,
+      const std::function<void(const LbiBlobDescPair&, int64_t body_offset, int64_t header_offset)>&
+          Handler) const;
+
  private:
   int64_t regst_desc_id_;
   int64_t producer_actor_id_;

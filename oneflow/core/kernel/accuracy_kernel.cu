@@ -17,10 +17,10 @@ __global__ void AccuracySetZeroKernel(PredType* accuracy) {
 template<typename PredType, typename LabelType>
 __global__ void AccuracyComputeKernel(const int32_t N, const int32_t D, const int32_t top_k,
                                       const PredType* Xdata, const LabelType* labelData,
-                                      PredType* accuracy) {
+                                      const PredType* weight, PredType* accuracy) {
   typedef cub::BlockReduce<int32_t, kCudaThreadsNumPerBlock> BlockReduce;
   __shared__ typename BlockReduce::TempStorage temp_storage;
-  int32_t correct = 0;
+  PredType correct = 0;
   for (int32_t row = blockIdx.x; row < N; row += gridDim.x) {
     const LabelType label = labelData[row];
     const PredType label_pred = Xdata[row * D + label];
@@ -30,20 +30,22 @@ __global__ void AccuracyComputeKernel(const int32_t N, const int32_t D, const in
       if (pred > label_pred || (pred == label_pred && col <= label)) { ++ngt; }
     }
     ngt = BlockReduce(temp_storage).Sum(ngt);
-    if (ngt <= top_k) { ++correct; }
+    if (ngt <= top_k) { correct += weight ? weight[row] : OneVal<PredType>::value; }
     __syncthreads();
   }
-  if (threadIdx.x == 0) { gpu_atomic_add(accuracy, static_cast<PredType>(correct)); }
+  if (threadIdx.x == 0) { gpu_atomic_add(accuracy, correct); }
 }
 }  // namespace
 
 template<typename PredType, typename LabelType>
 struct AccuracyKernelUtil<DeviceType::kGPU, PredType, LabelType> {
   static void Forward(DeviceCtx* ctx, const int32_t N, const int32_t D, int32_t top_k,
-                      const PredType* XData, const LabelType* labelData, PredType* accuracyData) {
+                      const PredType* XData, const LabelType* labelData, const PredType* weight,
+                      PredType* accuracyData) {
     AccuracySetZeroKernel<<<1, 1, 0, ctx->cuda_stream()>>>(accuracyData);
     AccuracyComputeKernel<<<BlocksNum4ThreadsNum(N), kCudaThreadsNumPerBlock, 0,
-                            ctx->cuda_stream()>>>(N, D, top_k, XData, labelData, accuracyData);
+                            ctx->cuda_stream()>>>(N, D, top_k, XData, labelData, weight,
+                                                  accuracyData);
   };
 };
 #define MAKE_ENTRY(data_type_pair, label_type_pair)                                      \

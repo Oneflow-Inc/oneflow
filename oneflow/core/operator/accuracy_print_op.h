@@ -15,6 +15,8 @@ class AccuracyPrintOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override;
 
  private:
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
+
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
 };
 

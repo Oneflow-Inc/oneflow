@@ -23,13 +23,24 @@
 #include "oneflow/core/graph/accuracy_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/accuracy_print_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
+#include "oneflow/core/graph/reduce_identity_task_node.h"
+#include "oneflow/core/graph/op_graph.h"
 
 namespace oneflow {
 
 namespace {
 
+bool HasSoleIdentityOp(const LogicalNode* logical_node) {
+  const auto& op_conf = logical_node->SoleOp()->op_conf();
+  return logical_node->op_vec().size() == 1
+         && (op_conf.has_parallel_cast_conf() || op_conf.has_tuple_identity_conf());
+}
+
 BldBoxingOpConfMthd GetBldBoxingOpConfMethodByFwParallelPolicy(const LogicalNode* in_logical,
                                                                const LogicalNode* out_logical) {
+  if (HasSoleIdentityOp(in_logical) || HasSoleIdentityOp(out_logical)) {
+    return &BoxingTaskNode::BldBoxingOpConfWithFwSbpParallel;
+  }
   ParallelPolicy in_policy = in_logical->parallel_desc()->policy();
   ParallelPolicy out_policy = out_logical->parallel_desc()->policy();
   if (in_policy == kDataParallel && out_policy == kDataParallel) {
@@ -47,6 +58,9 @@ BldBoxingOpConfMthd GetBldBoxingOpConfMethodByFwParallelPolicy(const LogicalNode
 }
 BldBoxingOpConfMthd GetBldBoxingOpConfMethodByBwParallelPolicy(const LogicalNode* in_logical,
                                                                const LogicalNode* out_logical) {
+  if (HasSoleIdentityOp(in_logical) || HasSoleIdentityOp(out_logical)) {
+    return &BoxingTaskNode::BldBoxingOpConfWithBwSbpParallel;
+  }
   ParallelPolicy in_policy = in_logical->parallel_desc()->policy();
   ParallelPolicy out_policy = out_logical->parallel_desc()->policy();
   if (in_policy == kDataParallel && out_policy == kDataParallel) {
@@ -237,6 +251,10 @@ void LogicalNode::GenSortedCompTaskNodes(
             comp_task_node->set_thrd_id(id_mgr->GetGpuMixThrdId(dev_phy_id));
             break;
           }
+          case CudaWorkType::kReduceCtrl: {
+            comp_task_node->set_thrd_id(id_mgr->GetGpuReduceCtrlThrdId(dev_phy_id));
+            break;
+          }
           case CudaWorkType::kMdUpdt: {
             comp_task_node->set_thrd_id(id_mgr->GetGpuMdUpdtThrdId(dev_phy_id));
             break;
@@ -259,30 +277,6 @@ void LogicalNode::GenSortedCompTaskNodes(
   }
 }
 
-int32_t LogicalNode::GetModelSplitAxis() const {
-  CHECK_EQ(parallel_desc_->policy(), kModelParallel);
-  CHECK_NOTNULL(main_model_parallel_);
-  if (main_model_parallel_ == this) {
-    int32_t ret = SoleOp()->ModelSplitAxis();
-    CHECK_NE(ret, -1);
-    return ret;
-  } else {
-    return main_model_parallel_->GetModelSplitAxis();
-  }
-}
-
-int32_t LogicalNode::GetMaxModelSplitNum() const {
-  CHECK_EQ(parallel_desc_->policy(), kModelParallel);
-  CHECK_NOTNULL(main_model_parallel_);
-  if (main_model_parallel_ == this) {
-    int32_t ret = SoleOp()->MaxModelSplitNum();
-    CHECK_NE(ret, -1);
-    return ret;
-  } else {
-    return main_model_parallel_->GetMaxModelSplitNum();
-  }
-}
-
 bool LogicalNode::HasOpWithCondition(std::function<bool(const Operator*)> cond) const {
   for (std::shared_ptr<const Operator> op : op_vec_) {
     if (cond(op.get())) { return true; }
@@ -291,12 +285,39 @@ bool LogicalNode::HasOpWithCondition(std::function<bool(const Operator*)> cond) 
 }
 
 static bool IsModelParallel121(const LogicalNode* src_node, const LogicalNode* dst_node) {
-  return src_node->main_model_parallel() == dst_node->main_model_parallel();
+  if (src_node->parallel_desc()->parallel_num() != dst_node->parallel_desc()->parallel_num()) {
+    return false;
+  }
+  LogicalEdge* connect_edge = nullptr;
+  for (LogicalEdge* edge : src_node->out_edges()) {
+    if (edge->dst_node() == dst_node) { connect_edge = edge; }
+  }
+  CHECK_NOTNULL(connect_edge);
+  CHECK_GT(connect_edge->lbis().size(), 0);
+  const std::string& src_op_name = src_node->SoleOp()->op_name();
+  const std::string& dst_op_name = dst_node->SoleOp()->op_name();
+  for (const LogicalBlobId& lbi : connect_edge->lbis()) {
+    const auto& src_sbp = Global<OpGraph>::Get()->GetSbpParallel(src_op_name, lbi);
+    const auto& dst_sbp = Global<OpGraph>::Get()->GetSbpParallel(dst_op_name, lbi);
+    if (src_sbp != dst_sbp) { return false; }
+  }
+  return true;
 }
 
 BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const LogicalNode* dst_node) {
   std::shared_ptr<const ParallelDesc> src_pd = src_node->parallel_desc();
   std::shared_ptr<const ParallelDesc> dst_pd = dst_node->parallel_desc();
+  if (src_node->op_vec().size() == 1 && dst_node->op_vec().size() == 1) {
+    if (src_node->SoleOp()->op_conf().has_record_load_conf()
+        && dst_node->SoleOp()->op_conf().has_tick_conf()) {
+      CHECK(src_pd->parallel_num() == dst_pd->parallel_num());
+      CHECK(src_pd->policy() == kDataParallel && dst_pd->policy() == kDataParallel);
+    }
+    if (src_node->SoleOp()->op_conf().has_tick_conf()
+        && dst_node->SoleOp()->op_conf().has_log_counter_conf() == false) {
+      return &TaskGraph::BldSubTskGphByTickToSource;
+    }
+  }
   if (src_pd->parallel_num() == 1 && dst_pd->parallel_num() == 1) {
     return &TaskGraph::BldSubTskGphByOneToOne;
   }
@@ -403,6 +424,7 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
   OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc, kDataBackwardArea)      \
   OF_PP_MAKE_TUPLE_SEQ(Print, kPrintArea)                 \
   OF_PP_MAKE_TUPLE_SEQ(ReduceConcat, kMdUpdtArea)         \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceIdentity, kMdUpdtArea)       \
   OF_PP_MAKE_TUPLE_SEQ(ReduceScatter, kMdUpdtArea)        \
   OF_PP_MAKE_TUPLE_SEQ(ReduceAdd, kMdUpdtArea)            \
   OF_PP_MAKE_TUPLE_SEQ(ReduceGather, kMdUpdtArea)         \
@@ -425,7 +447,6 @@ BackwardLogicalNode* ForwardLogicalNode::NewBackwardNode() {
   bw_node_->mut_op_vec() = op_vec();
   bw_node_->mut_parallel_desc() = parallel_desc();
   bw_node_->fw_node_ = this;
-  bw_node_->set_main_model_parallel(main_model_parallel());
   return bw_node_;
 }
 

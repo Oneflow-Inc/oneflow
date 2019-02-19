@@ -13,7 +13,6 @@ class SigmoidOp final : public Operator {
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
-  bool IsElemWiseOp() const override { return true; }
   bool NeedInBlobWhenBackward() const override { return false; }
   bool CanInferInDiffDynamicShapeWithoutIn() const override { return true; }
 
@@ -21,6 +20,7 @@ class SigmoidOp final : public Operator {
                       const ParallelContext* parallel_ctx) const override;
 
  private:
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return true; }
 };
 
 }  // namespace oneflow

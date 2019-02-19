@@ -128,7 +128,7 @@ class Actor {
 
   // Process Msg
   virtual void NormalProcessCustomizedEordMsg(const ActorMsg&) {}
-  virtual void NormalProcessNaiveReadableRegstMsg(const std::deque<Regst*>&) {}
+  virtual void NormalProcessNaiveReadableDataRegstMsg(const std::deque<Regst*>&) {}
   virtual void NormalProcessCustomizedReadableRegstMsg(const ActorMsg&) { UNIMPLEMENTED(); }
   virtual bool NormalTryProcessReadableMsgFromOtherMachine(const ActorMsg&) { return false; }
   int TryUpdtStateAsProducedRegst(Regst* regst);

@@ -24,6 +24,8 @@ class PoolingOp : public Operator {
                             KernelConf* kernel_conf) const override;
 
  private:
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
+
   void CheckPoolSizeAndStrides() const;
 };
 

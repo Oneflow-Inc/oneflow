@@ -1,6 +1,7 @@
 #include "oneflow/core/job/compiler.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/device/cudnn_conv_ctx_cache.h"
+#include "oneflow/core/graph/op_graph.h"
 
 namespace oneflow {
 
@@ -95,7 +96,11 @@ Plan Compiler::DoCompile() {
 #ifdef WITH_CUDA
   Global<CudnnConvCtxCache>::New();
 #endif
+  Global<JobDesc>::Get()->FixAndOptimizeDLNet();
   const JobDesc* job_desc = Global<JobDesc>::Get();
+  TeePersistentLogStream::Create("optimized_job_conf")->Write(job_desc->job_conf());
+  Global<OpGraph>::New(job_desc);
+  Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_op_graph.dot");
   auto logical_gph = std::make_unique<LogicalGraph>(job_desc->IsTrain());
   int64_t total_mbn_num = logical_gph->total_mbn_num();
   auto task_gph = std::make_unique<TaskGraph>(std::move(logical_gph));
@@ -104,14 +109,24 @@ Plan Compiler::DoCompile() {
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::PinConsumedRegst, _1));
   task_gph->MdUpdtDelayedTopoForEachNode(&TaskNode::Build);
+  if (job_desc->IsTrain()) {
+    task_gph->AddReduceSequenceCtrlEdges();
+    task_gph->AddMdUpdtCtrlEdgesWithinReduceSplitNode();
+  }
   task_gph->RemoveEmptyRegsts();
   task_gph->AddOrderingCtrlEdgeInSameChain();
   if (job_desc->IsTrain() && job_desc->enable_mem_sharing()) {
     task_gph->EnableMemSharingInReduceStruct();
+    task_gph->EnableMemSharingAfterAllManualSetForMdUpdt();  // must last mem shared manual set
   }
+  task_gph->EnableInplaceMemSharing();
   if (job_desc->IsTrain()) { task_gph->AddOrderCtrlEdgeBetweenCopyAndMdUpdt(); }
   if (job_desc->IsTrain()) { task_gph->RmUselessConsumeRelationshipBetweenFwBw(); }
   task_gph->MdUpdtDelayedTopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
+  if (job_desc->IsTrain() && job_desc->enable_mem_sharing()) {
+    task_gph->EnableMemSharingInVariableOp();
+  }
+  if (job_desc->IsTrain()) { task_gph->AddReduceNoBwForwardNodeOverlapingCtrlEdges(); }
 
   Plan plan;
   task_gph->ForEachNode([&](TaskNode* task_node) {
@@ -121,6 +136,7 @@ Plan Compiler::DoCompile() {
   plan.set_total_mbn_num(total_mbn_num);
   GenNetTopo(&plan);
   ToDotFile(plan, "/dot/plan.dot");
+  Global<OpGraph>::Delete();
 #ifdef WITH_CUDA
   Global<CudnnConvCtxCache>::Delete();
 #endif
