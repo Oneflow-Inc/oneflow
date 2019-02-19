@@ -82,6 +82,7 @@ class JobDesc final {
   float bias_l1() const;
   float weight_l2() const;
   float bias_l2() const;
+  float loss_scale() const;
   int32_t DataPartNum() const;
 
   // fix and Optimize

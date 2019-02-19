@@ -45,6 +45,11 @@ void LossKernel<device_type, PredType>::ForwardDataContent(
       KernelUtil<device_type, PredType>::Scal(
           ctx.device_ctx, n, static_cast<PredType>(conf.weight_scalar()), prediction_diff, 1);
     }
+    float loss_scale = Global<JobDesc>::Get()->loss_scale();
+    if (loss_scale > 1.0 || loss_scale < 1.0) {
+      KernelUtil<device_type, PredType>::Scal(ctx.device_ctx, n, static_cast<PredType>(loss_scale),
+                                              prediction_diff, 1);
+    }
   }
 
   // compute reduction_coefficient
