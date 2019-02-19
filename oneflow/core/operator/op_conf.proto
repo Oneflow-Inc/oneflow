@@ -984,13 +984,6 @@ message TupleIdentityOpConf {
   repeated string out = 2;
 }
 
-message TopKOpConf {
-  required string in = 1;
-  required string out = 2;
-  optional int32 k = 3 [default = 1];
-  optional bool sorted = 4 [default = true];
-}
-
 message ParallelCastOpConf {
   required string in = 1;
   required string out = 2;
