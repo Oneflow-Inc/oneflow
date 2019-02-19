@@ -6,6 +6,7 @@ import "oneflow/core/common/data_type.proto";
 import "oneflow/core/record/image.proto";
 import "oneflow/core/record/record.proto";
 import "oneflow/core/job/resource.proto";
+import "oneflow/core/job/sbp_parallel.proto";
 import "oneflow/core/register/logical_blob_id.proto";
 
 enum ActivationType {
@@ -925,6 +926,26 @@ message DebugOpConf {
   }
 }
 
+message FloatToHalfOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
+message HalfToFloatOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
+message TopKOpConf {
+  required string in = 1;
+  required string out = 2;
+  optional int32 k = 3 [default = 1];
+  optional bool sorted = 4 [default = true];
+}
+
+message CastInitedModelOpConf {
+}
+
 message OneHotOpConf {
   required string indices = 1;
   required string out = 2;
@@ -963,16 +984,6 @@ message TupleIdentityOpConf {
   repeated string out = 2;
 }
 
-message FloatToHalfOpConf {
-  required string in = 1;
-  required string out = 2;
-}
-
-message HalfToFloatOpConf {
-  required string in = 1;
-  required string out = 2;
-}
-
 message TopKOpConf {
   required string in = 1;
   required string out = 2;
@@ -980,7 +991,20 @@ message TopKOpConf {
   optional bool sorted = 4 [default = true];
 }
 
-message CastInitedModelOpConf {
+message ParallelCastOpConf {
+  required string in = 1;
+  required string out = 2;
+  oneof parallel_type {
+    SplitParallel split_parallel = 3;
+    BroadcastParallel broadcast_parallel = 4;
+  }
+}
+
+message L2NormalizeOpConf {
+  required string in = 1;
+  required string out = 2;
+  required int32 axis = 3 [default = -1];
+  optional float epsilon = 4 [default = 1e-12];
 }
 
 message OperatorConf {
@@ -1075,8 +1099,10 @@ message OperatorConf {
     SparseCrossEntropyOpConf sparse_cross_entropy_conf= 260;
     ReduceMeanOpConf reduce_mean_conf = 261;
     TopKOpConf top_k_conf = 262;
-    FloatToHalfOpConf float_to_half_conf = 263;
-    HalfToFloatOpConf half_to_float_conf = 264;
+    ParallelCastOpConf parallel_cast_conf = 263;
+    L2NormalizeOpConf l2_normalize_conf = 264;
+    FloatToHalfOpConf float_to_half_conf = 265;
+    HalfToFloatOpConf half_to_float_conf = 266;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

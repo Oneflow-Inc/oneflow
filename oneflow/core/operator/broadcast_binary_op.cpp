@@ -43,7 +43,12 @@ class BroadcastBinaryOpParallelSignature final : public OpParallelSignature {
       if (model_input_bns_.find(bn) != model_input_bns_.end()) {
         (*bn2sbp)[bn].mutable_broadcast_parallel();
       } else {
-        (*bn2sbp)[bn].mutable_split_parallel()->set_axis(0);
+        const auto& in_sbp = SbpInferHint4Ibn(bn).sbp_parallel();
+        if (in_sbp.has_broadcast_parallel()) {
+          (*bn2sbp)[bn].mutable_broadcast_parallel();
+        } else {
+          (*bn2sbp)[bn].mutable_split_parallel()->set_axis(0);
+        }
       }
     }
     for (const auto& bn : op().output_bns()) {

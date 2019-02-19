@@ -72,20 +72,23 @@ class DataSplitOpParallelSignature final : public OpParallelSignature {
   }
 };
 
-class ModelBroadcastOpParallelSignature final : public OpParallelSignature {
+class BroadcastOpParallelSignature final : public OpParallelSignature {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ModelBroadcastOpParallelSignature);
-  ~ModelBroadcastOpParallelSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(BroadcastOpParallelSignature);
+  ~BroadcastOpParallelSignature() override = default;
 
-  ModelBroadcastOpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
+  BroadcastOpParallelSignature(const Operator* op) : OpParallelSignature(op) {
+    CHECK_EQ(op->input_bns().size(), 1);
+    CHECK(op->model_bns().empty());
+    CHECK(op->const_model_bns().empty());
+  }
 
   const std::string Description() const override { return op().op_name() + ": (B,) -> (B, ...)"; }
 
   const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelContext* parallel_ctx) const override {
-    if (!op().IsSoleInputBlobAllowedModelSplit()) { return MakeOpParallelMatchSignatureMismatch(); }
-    if (!SbpInferHint4Ibn(op().SoleIbn()).is_model_broadcast()) {
+    if (!SbpInferHint4Ibn(op().SoleIbn()).sbp_parallel().has_broadcast_parallel()) {
       return MakeOpParallelMatchSignatureMismatch();
     }
     int64_t expected_parallel_num = SbpInferHint4Ibn(op().SoleIbn()).parallel_num();
@@ -316,9 +319,8 @@ std::unique_ptr<const OpParallelSignature> MakeDataSplitOpParallelSignature(cons
   return std::unique_ptr<const OpParallelSignature>(new DataSplitOpParallelSignature(op));
 }
 
-std::unique_ptr<const OpParallelSignature> MakeModelBroadcastOpParallelSignature(
-    const Operator* op) {
-  return std::unique_ptr<const OpParallelSignature>(new ModelBroadcastOpParallelSignature(op));
+std::unique_ptr<const OpParallelSignature> MakeBroadcastOpParallelSignature(const Operator* op) {
+  return std::unique_ptr<const OpParallelSignature>(new BroadcastOpParallelSignature(op));
 }
 
 std::unique_ptr<const OpParallelSignature> MakeModelSplitOpParallelSignature(const Operator* op) {
