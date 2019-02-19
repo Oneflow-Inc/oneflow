@@ -1,5 +1,6 @@
 #include "oneflow/core/graph/normal_model_update_compute_task_node.h"
 #include "oneflow/core/graph/logical_node.h"
+#include "oneflow/core/graph/op_graph.h"
 
 namespace oneflow {
 
@@ -11,6 +12,20 @@ const NormalForwardCompTaskNode* NormalMdUpdtCompTaskNode::GetForwardTaskNode() 
     }
   }
   UNIMPLEMENTED();
+}
+
+bool NormalMdUpdtCompTaskNode::IfUpdateHalfModel() const {
+  std::shared_ptr<Operator> fw_op = GetForwardTaskNode()->logical_node()->SoleOp();
+  DataType dtype = DataType::kInvalidDataType;
+  for (std::string obn : fw_op->output_bns()) {
+    DataType output_blob_type = Global<OpGraph>::Get()->GetBlobDataType(fw_op->BnInOp2Lbi(obn));
+    if (dtype == DataType::kInvalidDataType) {
+      dtype = output_blob_type;
+    } else {
+      CHECK(dtype == output_blob_type);
+    }
+  }
+  return dtype == DataType::kFloat16;
 }
 
 bool NormalMdUpdtCompTaskNode::IsTrainable() const {

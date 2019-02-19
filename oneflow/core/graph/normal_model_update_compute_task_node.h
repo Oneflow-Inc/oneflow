@@ -26,6 +26,7 @@ class NormalMdUpdtCompTaskNode final : public CompTaskNode {
 
  private:
   const NormalForwardCompTaskNode* GetForwardTaskNode() const;
+  bool IfUpdateHalfModel() const;
   bool IsTrainable() const;
   void FixPackedBlobDescOfProducedRegst() override;
   void InferProducedDataRegstTimeShape() override;
