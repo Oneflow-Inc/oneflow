@@ -17,6 +17,7 @@ class ActorMsgBus final {
   void SendMsgWithoutCommNet(const ActorMsg& msg);
 
  private:
+  friend Global<ActorMsgBus>;
   ActorMsgBus() = default;
 };
 
