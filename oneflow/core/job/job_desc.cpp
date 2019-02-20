@@ -228,6 +228,10 @@ float JobDesc::bias_l2() const {
   CHECK(IsTrain());
   return job_conf_.other().train_conf().bias_l2();
 }
+float JobDesc::loss_scale() const {
+  CHECK(IsTrain());
+  return job_conf_.other().train_conf().loss_scale();
+}
 
 int32_t JobDesc::DataPartNum() const { return job_conf_.other().data_part_num(); }
 

@@ -25,6 +25,16 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
     learning_rate =
         GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, cur_batch_num);
   }
+
+  // multiply the weight gradients by 1 / loss_scale
+  float loss_scale = Global<JobDesc>::Get()->loss_scale();
+  if (loss_scale > 1.0 || loss_scale < 1.0) {
+    int64_t n = BnInOp2Blob("model_diff")->shape().elem_cnt();
+    T* model_diff = BnInOp2Blob("model_diff")->mut_dptr<T>();
+    KernelUtil<device_type, T>::Scal(ctx.device_ctx, n, static_cast<T>(1.0 / loss_scale),
+                                     model_diff, 1);
+  }
+
   float l1 = this->op_conf().normal_mdupdt_conf().l1();
   float l2 = this->op_conf().normal_mdupdt_conf().l2();
 
