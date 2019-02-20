@@ -100,6 +100,15 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
       CHECK(blob->data_type() == DataType::kFloat16);
       blob->set_data_type(DataType::kFloat);
     });
+
+    processed_model_diff_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
+      BlobDesc* blob = processed_model_diff_regst->MutBlobDesc(lbi);
+      CHECK(blob->data_type() == DataType::kFloat16);
+      blob->set_data_type(DataType::kFloat);
+    });
+
+    shared_model_diff_add_node->BindBnWithRegst(shared_model_diff_add_node->op()->SoleDtbn(),
+                                                GetProducedRegst("data_tmp"));
   }
 
   ExecNode* model_update_node = nullptr;
