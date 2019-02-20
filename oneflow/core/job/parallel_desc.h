@@ -33,8 +33,8 @@ class ParallelDesc final {
   // Setters
   void set_policy(ParallelPolicy val) { policy_ = val; }
   void set_device_type(DeviceType device_type) { device_type_ = device_type; }
-  void RandomSelectOneDeviceAndRemoveTheOthers();
-  void UseCPUDevicesOnMaster();
+  void RemoveNeedlessDevice(const std::string& op_name, int32_t max_device_num);
+  void RemoveNeedlessDevice(int32_t max_device_num) { RemoveNeedlessDevice("", max_device_num); }
 
   //
   bool Equal(const ParallelDesc& rhs) const;

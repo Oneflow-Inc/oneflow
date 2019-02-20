@@ -26,13 +26,13 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
     ParseDeviceNameConf(device_name, &mchn_id, &device_tag, &device_id_str);
     machine_id_set.insert(mchn_id);
     if (device_tag == "cpu") {
-      CHECK_STREQ(device_tag.c_str(), "cpu");
       CHECK(device_type_ == DeviceType::kInvalidDevice || device_type_ == DeviceType::kCPU);
       device_type_ = DeviceType::kCPU;
-    } else {
-      CHECK_STREQ(device_tag.c_str(), "gpu");
+    } else if (device_tag == "gpu") {
       CHECK(device_type_ == DeviceType::kInvalidDevice || device_type_ == DeviceType::kGPU);
       device_type_ = DeviceType::kGPU;
+    } else {
+      UNIMPLEMENTED();
     }
     if (machine_id_set.find(mchn_id) == machine_id_set.end()) {
       sorted_machine_ids_.push_back(mchn_id);
@@ -56,25 +56,40 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
   SanityCheck();
 }
 
-void ParallelDesc::RandomSelectOneDeviceAndRemoveTheOthers() {
-  CHECK_GE(parallel_num_, 1);
-  if (parallel_num_ == 1) { return; }
-  std::mt19937 gen(NewRandomSeed());
-  std::uniform_int_distribution<> machine_selector(0, sorted_machine_ids_.size() - 1);
-  int64_t selected_machine_id = sorted_machine_ids_.at(machine_selector(gen));
-  const auto& devs_on_selected_machine = machine_id2sorted_dev_phy_ids_.at(selected_machine_id);
-  std::uniform_int_distribution<> device_selector(0, devs_on_selected_machine.size() - 1);
-  int64_t selected_dev_id = devs_on_selected_machine.at(device_selector(gen));
-  sorted_machine_ids_ = {selected_machine_id};
-  machine_id2sorted_dev_phy_ids_ = {{selected_machine_id, {selected_dev_id}}};
-  parallel_num_ = 1;
-}
-
-void ParallelDesc::UseCPUDevicesOnMaster() {
-  sorted_machine_ids_ = {0};
-  std::vector<int64_t> sorted_dev_phy_ids(parallel_num_);
-  std::iota(sorted_dev_phy_ids.begin(), sorted_dev_phy_ids.end(), 0);
-  machine_id2sorted_dev_phy_ids_ = {{0, sorted_dev_phy_ids}};
+void ParallelDesc::RemoveNeedlessDevice(const std::string& op_name, int32_t max_device_num) {
+  if (max_device_num >= parallel_num_) { return; }
+  LOG_IF(WARNING, op_name != "") << "parallel_num of " << op_name
+                                 << " is greater than max_device_num " << max_device_num;
+  int32_t device_cnt = 0;
+  int64_t max_machine_id = -1;
+  for (int64_t machine_id : sorted_machine_ids_) {
+    auto it = machine_id2sorted_dev_phy_ids_.find(machine_id);
+    int32_t cur_device_num = it->second.size();
+    int32_t cur_device_max_num = max_device_num - device_cnt;
+    if (cur_device_num > cur_device_max_num) {
+      it->second.erase(it->second.begin() + cur_device_max_num, it->second.end());
+      if (it->second.empty()) {
+        max_machine_id = machine_id - 1;
+      } else {
+        max_machine_id = machine_id;
+      }
+      break;
+    } else {
+      device_cnt += cur_device_num;
+    }
+  }
+  CHECK_NE(max_machine_id, -1);
+  FOR_EACH(it, sorted_machine_ids_) {
+    if (*it > max_machine_id) {
+      sorted_machine_ids_.erase(it, sorted_machine_ids_.end());
+      break;
+    }
+  }
+  EraseIf<int64_t, std::vector<int64_t>>(&machine_id2sorted_dev_phy_ids_,
+                                         [&](HashMap<int64_t, std::vector<int64_t>>::iterator it) {
+                                           return it->first > max_machine_id;
+                                         });
+  parallel_num_ = max_device_num;
 }
 
 bool ParallelDesc::Equal(const ParallelDesc& rhs) const {
