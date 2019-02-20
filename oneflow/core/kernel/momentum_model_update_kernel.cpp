@@ -26,9 +26,9 @@ void MomentumMdUpdateKernel<device_type, T>::InitModelBlobsWithDir(
 template<DeviceType device_type, typename T>
 void MomentumMdUpdateKernel<device_type, T>::UpdateModel(
     DeviceCtx* ctx, const T* batch_instance_num_ptr, T learning_rate, T l1, T l2,
-    int64_t next_model_vid, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    int64_t next_model_vid, Blob* model_blob,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* model_diff_blob = BnInOp2Blob("model_diff");
-  Blob* model_blob = BnInOp2Blob("model");
   Blob* momentum_blob = BnInOp2Blob("momentum");
   float beta = this->op_conf().normal_mdupdt_conf().user_conf().momentum_conf().beta();
   if (next_model_vid == 1) { beta = 0.0f; }

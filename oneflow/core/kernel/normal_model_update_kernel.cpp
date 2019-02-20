@@ -27,8 +27,24 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
   }
   float l1 = this->op_conf().normal_mdupdt_conf().l1();
   float l2 = this->op_conf().normal_mdupdt_conf().l2();
+
+  Blob* updated_blob = nullptr;
+  Blob* model_blob = BnInOp2Blob("model");
+  if (model_blob->data_type() == DataType::kFloat16) {
+    Blob* float_tmp_blob = BnInOp2Blob("float_tmp");
+    CHECK(float_tmp_blob->shape() == model_blob->shape());
+    CHECK(float_tmp_blob->data_type() == DataType::kFloat);
+    updated_blob = float_tmp_blob;
+  } else {
+    updated_blob = model_blob;
+  }
   UpdateModel(ctx.device_ctx, batch_instance_num_ptr, static_cast<T>(learning_rate),
-              static_cast<T>(l1), static_cast<T>(l2), next_model_vid, BnInOp2Blob);
+              static_cast<T>(l1), static_cast<T>(l2), next_model_vid, updated_blob, BnInOp2Blob);
+  if (model_blob->data_type() == DataType::kFloat16) {
+    NewKernelUtil<device_type, float16>::Float2Half(ctx.device_ctx, model_blob->shape().elem_cnt(),
+                                                    updated_blob->dptr<float>(),
+                                                    model_blob->mut_dptr<float16>());
+  }
 }
 
 #define INSTANTIATE_KERNEL(device_type, data_type_pair) \

@@ -14,6 +14,7 @@ void NormalModelUpdtOp::InitFromOpConf() {
       && op_conf().normal_mdupdt_conf().user_conf().clip_conf().has_clip_by_global_norm()) {
     EnrollDataTmpBn("data_tmp");
   }
+  EnrollDataTmpBn("float_tmp");
   MdUpdtVirtualInitFromOpConf();
 }
 
@@ -24,6 +25,12 @@ void NormalModelUpdtOp::InferBlobDescs(
       && op_conf().normal_mdupdt_conf().user_conf().clip_conf().has_clip_by_global_norm()) {
     *GetBlobDesc4BnInOp("data_tmp") = *GetBlobDesc4BnInOp("model_diff");
     GetBlobDesc4BnInOp("data_tmp")->mut_shape() = Shape({1});
+  }
+  const BlobDesc* model_blob = GetBlobDesc4BnInOp("model");
+  if (model_blob->data_type() == DataType::kFloat16) {
+    BlobDesc* float_tmp_blob = GetBlobDesc4BnInOp("float_tmp");
+    *float_tmp_blob = *model_blob;
+    float_tmp_blob->set_data_type(DataType::kFloat);
   }
   MdUpdtVirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
@@ -37,6 +44,14 @@ LogicalBlobId NormalModelUpdtOp::obn2lbi(const std::string& output_bn) const {
   const google::protobuf::FieldDescriptor* fd = desc->FindFieldByName(output_bn);
   CHECK(fd);
   return GenLogicalBlobId(GetValFromCustomizedConf<std::string>(output_bn));
+}
+
+void NormalModelUpdtOp::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
+    KernelConf* kernel_conf) const {
+  if (kernel_conf->data_type() == DataType::kFloat16) {
+    kernel_conf->set_data_type(DataType::kFloat);
+  }
 }
 
 REGISTER_OP_CREATOR(OperatorConf::kNormalMdupdtConf, [](const OperatorConf& op_conf) -> Operator* {

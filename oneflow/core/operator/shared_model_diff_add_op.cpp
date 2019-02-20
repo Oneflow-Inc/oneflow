@@ -22,9 +22,9 @@ void SharedModelDiffAddOp::InferBlobDescs(
     CHECK(*in_0_blob_desc == *GetBlobDesc4BnInOp(input_bns().Get(i)));
   }
   if (in_0_blob_desc->data_type() == DataType::kFloat16) {
-    BlobDesc* dt_blob_desc = GetBlobDesc4BnInOp(SoleDtbn());
-    *dt_blob_desc = *in_0_blob_desc;
-    dt_blob_desc->set_data_type(DataType::kFloat);
+    BlobDesc* float_tmp_blob_desc = GetBlobDesc4BnInOp("float_tmp");
+    *float_tmp_blob_desc = *in_0_blob_desc;
+    float_tmp_blob_desc->set_data_type(DataType::kFloat);
   }
 }
 
