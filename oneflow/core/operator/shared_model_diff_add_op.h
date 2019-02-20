@@ -17,9 +17,7 @@ class SharedModelDiffAddOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override;
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override {
-    return UNIMPLEMENTED();
-  }
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { UNIMPLEMENTED(); }
 
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override { return GenPackedLbi(); }
   LogicalBlobId obn2lbi(const std::string& output_bn) const override { return GenPackedLbi(); }

@@ -17,7 +17,7 @@ class BoxingKernel final : public KernelIf<DeviceType::kCPU> {
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
   template<typename Iter>
-  void ForwardField(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
+  void ForwardField(const KernelCtx&, std::function<Blob*(const std::string&)>) const;
   void ForwardDataId(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
   void ForwardColNum(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
   void ForwardDim0ValidNum(const KernelCtx& ctx,

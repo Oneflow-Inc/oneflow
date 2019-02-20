@@ -248,7 +248,7 @@ struct OpKernelTestUtil final {
     test_case->MultiRunThenCheck();                                        \
   }
 
-}  // namespace oneflow
+}  // namespace test
 
 }  // namespace oneflow
 
