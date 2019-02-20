@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_KERNEL_FLOAT_TO_HALF_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 
@@ -13,6 +14,11 @@ class FloatToHalfKernel final : public KernelIf<device_type> {
   ~FloatToHalfKernel() = default;
 
  private:
+  void VirtualKernelInit(const ParallelContext*) override {
+#if !(__CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__))
+    LOG(FATAL) << "use half need nvcc arch >= 530";
+#endif  // !(__CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__))
+  }
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void BackwardDataContent(const KernelCtx& ctx,

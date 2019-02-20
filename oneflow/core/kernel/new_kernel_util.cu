@@ -22,6 +22,16 @@ __global__ void SigmoidBackwardGpu(const int n, const T* y, const T* dy, T* dx) 
   CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = dy[i] * y[i] * (1.0 - y[i]); }
 }
 
+__global__ void SigmoidForwardGpu(const int n, const half* x, half* y) {
+  half one = __float2half(1.0);
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = __hdiv(one, __hadd(one, hexp(__hneg(x[i])))); }
+}
+
+__global__ void SigmoidBackwardGpu(const int n, const half* y, const half* dy, half* dx) {
+  half one = __float2half(1.0);
+  CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = __hmul(dy[i], __hmul(y[i], __hsub(one, y[i]))); }
+}
+
 template<typename T>
 __global__ void TanHForwardGpu(const int n, const T* x, T* y) {
   CUDA_1D_KERNEL_LOOP(i, n) { y[i] = std::tanh(x[i]); }
@@ -40,6 +50,28 @@ __global__ void ReluForwardGpu(const int n, const T* x, T* y) {
 template<typename T>
 __global__ void ReluBackwardGpu(const int n, const T* y, const T* dy, T* dx) {
   CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = y[i] > 0 ? dy[i] : 0; }
+}
+
+__global__ void ReluForwardGpu(const int n, const half* x, half* y) {
+  half zero = __float2half(0.0);
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    if (__hgt(x[i], zero)) {
+      y[i] = x[i];
+    } else {
+      y[i] = zero;
+    }
+  }
+}
+
+__global__ void ReluBackwardGpu(const int n, const half* y, const half* dy, half* dx) {
+  half zero = __float2half(0.0);
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    if (__hgt(y[i], zero)) {
+      dx[i] = dy[i];
+    } else {
+      dx[i] = zero;
+    }
+  }
 }
 
 __global__ void Float2HalfGpu(const int n, const float* src, half* dst) {
@@ -195,10 +227,15 @@ struct NewKernelUtilIf<DeviceType::kGPU, T, typename std::enable_if<IsFloat16<T>
                            T* dx) {
     UNIMPLEMENTED();
   }
-  static void Relu(DeviceCtx* ctx, const int64_t n, const T* x, T* y) { UNIMPLEMENTED(); }
+  static void Relu(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+    ReluForwardGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        n, reinterpret_cast<const half*>(x), reinterpret_cast<half*>(y));
+  }
   static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
                            T* dx) {
-    UNIMPLEMENTED();
+    ReluBackwardGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        n, reinterpret_cast<const half*>(y), reinterpret_cast<const half*>(dy),
+        reinterpret_cast<half*>(dx));
   }
   static void Set(DeviceCtx* ctx, const T value, T* addr) {
     gpu_set<half>
