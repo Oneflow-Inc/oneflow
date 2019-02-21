@@ -107,8 +107,8 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
       blob->set_data_type(DataType::kFloat);
     });
 
-    shared_model_diff_add_node->BindBnWithRegst(shared_model_diff_add_node->op()->SoleDtbn(),
-                                                GetProducedRegst("data_tmp"));
+    shared_model_diff_add_node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns,
+                                                      GetProducedRegst("data_tmp"));
   }
 
   ExecNode* model_update_node = nullptr;
@@ -186,6 +186,7 @@ void NormalMdUpdtCompTaskNode::LockRegsts() {
   GetProducedRegst("processed_model_diff")->Lock();
   GetProducedRegst("data_tmp")->Lock();
   GetProducedRegst("forward_model")->Lock();
+  if (if_update_half_model_) { GetProducedRegst("float_model")->Lock(); }
 }
 
 void NormalMdUpdtCompTaskNode::ToProto(TaskProto* task_proto) {
