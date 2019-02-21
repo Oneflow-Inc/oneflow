@@ -206,6 +206,14 @@ message ReluOpConf {
   required string out = 2;
 }
 
+message PReluOpConf {
+  required string in = 1;
+  required string out = 2;
+  required string data_format = 3;
+  optional bool channel_shared = 4 [default = false];
+  optional float alpha_init = 5 [default = 0.25];
+}
+
 message SigmoidOpConf {
   required string in = 1;
   required string out = 2;
@@ -1080,6 +1088,7 @@ message OperatorConf {
     TopKOpConf top_k_conf = 262;
     ParallelCastOpConf parallel_cast_conf = 263;
     L2NormalizeOpConf l2_normalize_conf = 264;
+    PReluOpConf prelu_conf = 265;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
