@@ -31,6 +31,7 @@ void Blob::Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, cha
   loss_instance_num_ptr_ = header_pod_ptr_.MutTensorPtr<float>(FieldKey::kLossInstanceNum, nullptr);
   dptr_ = body_ptr;
   dynamic_shape_ = blob_desc->shape();
+  record_num_ = -1;
 }
 
 const char* Blob::data_id(int32_t no) const {
@@ -182,6 +183,8 @@ const Shape& Blob::dynamic_shape() const {
   return dynamic_shape_;
 }
 
+const int32_t& Blob::record_num() const { return record_num_; }
+void Blob::set_record_num(int32_t val) { record_num_ = val; }
 int32_t Blob::col_id() const { return regst_->col_id(); }
 void Blob::set_col_id(int32_t val) { regst_->set_col_id(val); }
 int32_t Blob::max_col_id() const { return regst_->max_col_id(); }

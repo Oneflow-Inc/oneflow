@@ -16,7 +16,7 @@ class NormalMdUpdtCompActor final : public CompActor {
   void Act() override;
   std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedProducedRegstDescName()
       override {
-    return {RegstNameType::kCustomized, {"const_model"}};
+    return std::make_pair(RegstNameType::kCustomized, HashSet<std::string>{"const_model"});
   }
   void AsyncSendCustomizedProducedRegstMsgToConsumer() override {}
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
