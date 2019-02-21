@@ -215,8 +215,10 @@ void OpNode::CheckBlobDescs(const std::function<BlobDesc*(const std::string&)>& 
     const LogicalBlobId& lbi = op().BnInOp2Lbi(bn);
     if (lbi2parallel_id2blob_desc_.find(lbi) == lbi2parallel_id2blob_desc_.end()) { return; }
     CHECK_EQ(parallel_ctx->parallel_num(), lbi2parallel_id2blob_desc_.at(lbi).size());
-    const BlobDesc& blob_desc = *GetBlobDesc4BnInOp(bn);
-    CHECK(blob_desc == lbi2parallel_id2blob_desc_.at(lbi).at(parallel_id));
+    const BlobDesc& blob_desc_from_exec_graph = *GetBlobDesc4BnInOp(bn);
+    const BlobDesc& blob_desc_from_op_graph = lbi2parallel_id2blob_desc_.at(lbi).at(parallel_id);
+    CHECK_EQ(blob_desc_from_exec_graph.shape(), blob_desc_from_op_graph.shape());
+    CHECK_EQ(blob_desc_from_exec_graph.data_type(), blob_desc_from_op_graph.data_type());
   };
   for (const std::string& bn : op().data_tmp_bns()) { Check(bn); }
   for (const std::string& bn : op().fw_buf_bns()) { Check(bn); }
