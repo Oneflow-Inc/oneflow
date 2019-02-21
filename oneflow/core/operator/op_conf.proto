@@ -818,6 +818,12 @@ message MultipleGatherOpConf  {
   repeated string out = 3;
 }
 
+message BatchGatherOpConf {
+  required string in = 1;
+  required string indices = 2;
+  required string out = 3;
+}
+
 message SqrtOpConf {
   required string in = 1;
   required string out = 2;
@@ -975,6 +981,13 @@ message BoxingAlignBroadcastReshapeOpConf {
   required int64 target_parallel_num = 3;
 }
 
+message TopKOpConf {
+  required string in = 1;
+  required string out = 2;
+  optional int32 k = 3 [default = 1];
+  optional bool sorted = 4 [default = true];
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1053,6 +1066,7 @@ message OperatorConf {
     LogCounterOpConf log_counter_conf = 240;
     GeluOpConf gelu_conf = 241;
     GatherOpConf gather_conf = 242;
+    BatchGatherOpConf batch_gather_conf = 243;
     MeanOpConf mean_conf = 251;
     SliceOpConf slice_conf = 252;
     BiasAddOpConf bias_add_conf = 253;
@@ -1067,6 +1081,7 @@ message OperatorConf {
     MultipleGatherOpConf multiple_gather_conf = 262;
     ResizeReshapeOpConf resize_reshape_conf = 263;
     BoxingAlignBroadcastReshapeOpConf boxing_align_broadcast_reshape_conf = 264;
+    TopKOpConf top_k_conf = 265;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
