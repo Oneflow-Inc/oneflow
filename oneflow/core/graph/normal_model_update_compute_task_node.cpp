@@ -222,6 +222,7 @@ void NormalMdUpdtCompTaskNode::InferProducedDataRegstTimeShape() {
 }
 
 void NormalMdUpdtCompTaskNode::EnableMemSharingBetweenFirstInAndProcessedMdDiffRegst() {
+  if (if_update_half_model_) { return; }
   if (!IsTrainable()) { return; }
   ExecNode* diff_add_node = exec_gph().SoleSourceNode();
   RegstDesc* first_in_regst =
