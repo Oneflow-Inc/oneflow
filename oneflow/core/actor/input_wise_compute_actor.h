@@ -36,7 +36,7 @@ class InputWiseCompActor : public CompActor {
   void AsyncReturnAllCustomizedReadableRegst() override;
   std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName()
       override {
-    return {RegstNameType::kNaive, {}};
+    return std::make_pair(RegstNameType::kNaive, HashSet<std::string>{});
   }
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
   void AsyncSendCustomizedConsumedRegstMsgToProducer() override;
