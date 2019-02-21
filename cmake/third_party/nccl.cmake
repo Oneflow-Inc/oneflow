@@ -3,8 +3,7 @@ include (ExternalProject)
 set(NCCL_INCLUDE_DIR ${THIRD_PARTY_DIR}/nccl/include)
 set(NCCL_LIBRARY_DIR ${THIRD_PARTY_DIR}/nccl/lib)
 
-set(NCCL_URL https://github.com/NVIDIA/nccl.git)
-set(NCCL_TAG f93fe9bfd94884cec2ba711897222e0df5569a53)
+set(NCCL_URL ${CMAKE_CURRENT_BINARY_DIR}/third_party/nccl/src/nccl)
 set(NCCL_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/nccl/src/nccl/build)
 
 if(WIN32)
@@ -27,12 +26,11 @@ set(NCCL_HEADERS
     "${NCCL_BUILD_DIR}/include/nccl.h"
 )
 
-if(BUILD_THIRD_PARTY)
+if(THIRD_PARTY)
 
 ExternalProject_Add(nccl
     PREFIX nccl
-    GIT_REPOSITORY ${NCCL_URL}
-    GIT_TAG ${NCCL_TAG}
+    URL ${NCCL_URL}
     UPDATE_COMMAND ""
     CONFIGURE_COMMAND ""
     BUILD_IN_SOURCE 1
@@ -62,4 +60,4 @@ add_custom_target(nccl_copy_libs_to_destination
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${NCCL_BUILD_STATIC_LIBRARIES} ${NCCL_LIBRARY_DIR}
     DEPENDS nccl_create_library_dir)
 
-endif(BUILD_THIRD_PARTY)
+endif(THIRD_PARTY)

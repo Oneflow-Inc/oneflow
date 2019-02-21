@@ -3,8 +3,7 @@ include (ExternalProject)
 set(GLOG_INCLUDE_DIR ${THIRD_PARTY_DIR}/glog/include)
 set(GLOG_LIBRARY_DIR ${THIRD_PARTY_DIR}/glog/lib)
 
-set(glog_URL https://github.com/google/glog.git)
-set(glog_TAG da816ea70645e463aa04f9564544939fa327d5a7)
+set(glog_URL ${CMAKE_CURRENT_BINARY_DIR}/third_party/glog/src/glog)
 
 if(WIN32)
     set(GLOG_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/glog/src/glog/${CMAKE_BUILD_TYPE})
@@ -31,13 +30,12 @@ set (GLOG_PUBLIC_H
   ${CMAKE_CURRENT_BINARY_DIR}/glog/src/glog/src/glog/log_severity.h
 )
 
-if(BUILD_THIRD_PARTY)
+if(THIRD_PARTY)
 
 ExternalProject_Add(glog
     DEPENDS gflags_copy_headers_to_destination gflags_copy_libs_to_destination
     PREFIX glog
-    GIT_REPOSITORY ${glog_URL}
-    GIT_TAG ${glog_TAG}
+    URL ${glog_URL}
     UPDATE_COMMAND ""
     BUILD_IN_SOURCE 1
     INSTALL_COMMAND ""
@@ -74,4 +72,4 @@ add_custom_target(glog_copy_libs_to_destination
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${GLOG_BUILD_STATIC_LIBRARIES} ${GLOG_LIBRARY_DIR}
   DEPENDS glog_create_library_dir)
 
-endif(BUILD_THIRD_PARTY)
+endif(THIRD_PARTY)

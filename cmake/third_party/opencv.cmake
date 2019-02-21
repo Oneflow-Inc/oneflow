@@ -5,8 +5,7 @@ set(OPENCV_LIBRARY_DIR ${THIRD_PARTY_DIR}/opencv/lib)
 set(OPENCV_INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/build/install)
 
 set(OPENCV_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/src)
-set(OPENCV_URL https://github.com/Oneflow-Inc/opencv.git)
-set(OPENCV_TAG 51cef2651e91003e6a6760f496719dbb325cfc61)
+set(OPENCV_URL ${CMAKE_CURRENT_BINARY_DIR}/third_party/opencv/src/opencv)
 
 if(WIN32)
 elseif(APPLE AND ("${CMAKE_GENERATOR}" STREQUAL "Xcode"))
@@ -29,13 +28,12 @@ foreach(LIBRARY_NAME ${OPENCV_3RDPARTY_LIBRARY_NAMES})
 endforeach()
 
 
-if (BUILD_THIRD_PARTY)
+if (THIRD_PARTY)
 
 ExternalProject_Add(opencv
     DEPENDS libjpeg_copy_headers_to_destination libjpeg_copy_libs_to_destination
     PREFIX opencv
-    GIT_REPOSITORY ${OPENCV_URL}
-    GIT_TAG ${OPENCV_TAG}
+    URL ${OPENCV_URL}
     UPDATE_COMMAND ""
     PATCH_COMMAND cmake -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/build
     BUILD_IN_SOURCE 0
@@ -124,4 +122,4 @@ add_custom_target(opencv_copy_libs_to_destination
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${OPENCV_BUILD_STATIC_LIBRARIES} ${OPENCV_LIBRARY_DIR}
   DEPENDS opencv_create_library_dir)
 
-endif(BUILD_THIRD_PARTY)
+endif(THIRD_PARTY)
