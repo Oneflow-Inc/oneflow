@@ -5,7 +5,34 @@
 
 namespace oneflow {
 
+#define HALF_CHECK_LOG                      \
+  printf("use half need nvcc arch >= 530"); \
+  assert(false);
+
+/*
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+#else
+  HALF_CHECK_LOG
+#endif // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+*/
+
 namespace {
+
+__inline__ __device__ half hone() { return __float2half(1.0); }
+
+__inline__ __device__ half hzero() { return __float2half(0.0); }
+
+__inline__ half float16_2half(float16 x) {
+  // TODO: Potential loss of accuracy
+  half* ret = reinterpret_cast<half*>(&x);
+  return *ret;
+}
+
+__inline__ float16 half2float16(half x) {
+  // TODO: Potential loss of accuracy
+  float16* ret = reinterpret_cast<float16*>(&x);
+  return *ret;
+}
 
 template<typename T>
 __global__ void gpu_set(const T value, T* addr) {
@@ -20,16 +47,6 @@ __global__ void SigmoidForwardGpu(const int n, const T* x, T* y) {
 template<typename T>
 __global__ void SigmoidBackwardGpu(const int n, const T* y, const T* dy, T* dx) {
   CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = dy[i] * y[i] * (1.0 - y[i]); }
-}
-
-__global__ void SigmoidForwardGpu(const int n, const half* x, half* y) {
-  half one = __float2half(1.0);
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = __hdiv(one, __hadd(one, hexp(__hneg(x[i])))); }
-}
-
-__global__ void SigmoidBackwardGpu(const int n, const half* y, const half* dy, half* dx) {
-  half one = __float2half(1.0);
-  CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = __hmul(dy[i], __hmul(y[i], __hsub(one, y[i]))); }
 }
 
 template<typename T>
@@ -52,18 +69,58 @@ __global__ void ReluBackwardGpu(const int n, const T* y, const T* dy, T* dx) {
   CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = y[i] > 0 ? dy[i] : 0; }
 }
 
-__global__ void ReluForwardGpu(const int n, const half* x, half* y) {
-  half zero = __float2half(0.0);
+__global__ void SigmoidForwardGpu(const int n, const half* x, half* y) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = __hdiv(hone(), __hadd(hone(), hexp(__hneg(x[i])))); }
+#else
+  HALF_CHECK_LOG
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) */
+}
+
+__global__ void SigmoidBackwardGpu(const int n, const half* y, const half* dy, half* dx) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+  CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = __hmul(dy[i], __hmul(y[i], __hsub(hone(), y[i]))); }
+#else
+  HALF_CHECK_LOG
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) */
+}
+
+__global__ void TanHForwardGpu(const int n, const half* x, half* y) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   CUDA_1D_KERNEL_LOOP(i, n) {
-    if (__hgt(x[i], zero)) {
+    half ex = hexp(x[i]);
+    half e_x = hexp(__hneg(x[i]));
+    y[i] = __hdiv(__hsub(ex, e_x), __hadd(ex, e_x));
+  }
+#else
+  HALF_CHECK_LOG
+#endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+}
+
+__global__ void TanHBackwardGpu(const int n, const half* y, const half* dy, half* dx) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+  CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = __hmul(dy[i], __hsub(hone(), __hmul(y[i], y[i]))); }
+#else
+  HALF_CHECK_LOG
+#endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+}
+
+__global__ void ReluForwardGpu(const int n, const half* x, half* y) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    if (__hgt(x[i], hzero())) {
       y[i] = x[i];
     } else {
-      y[i] = zero;
+      y[i] = hzero();
     }
   }
+#else
+  HALF_CHECK_LOG
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) */
 }
 
 __global__ void ReluBackwardGpu(const int n, const half* y, const half* dy, half* dx) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   half zero = __float2half(0.0);
   CUDA_1D_KERNEL_LOOP(i, n) {
     if (__hgt(y[i], zero)) {
@@ -72,6 +129,26 @@ __global__ void ReluBackwardGpu(const int n, const half* y, const half* dy, half
       dx[i] = zero;
     }
   }
+#else
+  HALF_CHECK_LOG
+#endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+}
+
+__global__ void AxpyHalfGpu(const int n, const half alpha, const half* x, const int incx, half* y,
+                            const int incy) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i * incy] = __hfma(alpha, x[i * incx], y[i * incy]); }
+#else
+  HALF_CHECK_LOG
+#endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+}
+
+__global__ void ScalHalfGpu(const int n, const half alpha, half* x, const int incx) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+  CUDA_1D_KERNEL_LOOP(i, n) { x[i * incx] = __hmul(alpha, x[i * incx]); }
+#else
+  HALF_CHECK_LOG
+#endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
 }
 
 __global__ void Float2HalfGpu(const int n, const float* src, half* dst) {
@@ -172,6 +249,13 @@ struct NewKernelUtilIf<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T
   static void Set(DeviceCtx* ctx, const T value, T* addr) {
     gpu_set<T><<<1, 1, 0, ctx->cuda_stream()>>>(value, addr);
   }
+  static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, T* y,
+                   const int incy) {
+    cublas_axpy<T>(ctx->cublas_pmh_handle(), n, &alpha, x, incx, y, incy);
+  }
+  static void Scal(DeviceCtx* ctx, const int n, const T alpha, T* x, const int incx) {
+    cublas_scal<T>(ctx->cublas_pmh_handle(), n, &alpha, x, incx);
+  }
 };
 
 // GPU && Integral
@@ -217,15 +301,25 @@ struct NewKernelUtilIf<DeviceType::kGPU, T, typename std::enable_if<IsFloat16<T>
     InitializeWithDirGpu<T>(ctx, part_id, part_num, model_dir, blob, bn_in_op, dim_num,
                             num_in_each_dim);
   }
-  static void Sigmoid(DeviceCtx* ctx, const int64_t n, const T* x, T* y) { UNIMPLEMENTED(); }
+  static void Sigmoid(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+    SigmoidForwardGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        n, reinterpret_cast<const half*>(x), reinterpret_cast<half*>(y));
+  }
   static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
                               T* dx) {
-    UNIMPLEMENTED();
+    SigmoidBackwardGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        n, reinterpret_cast<const half*>(y), reinterpret_cast<const half*>(dy),
+        reinterpret_cast<half*>(dx));
   }
-  static void TanH(DeviceCtx* ctx, const int64_t n, const T* x, T* y) { UNIMPLEMENTED(); }
+  static void TanH(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+    TanHForwardGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        n, reinterpret_cast<const half*>(x), reinterpret_cast<half*>(y));
+  }
   static void TanHBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
                            T* dx) {
-    UNIMPLEMENTED();
+    TanHBackwardGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        n, reinterpret_cast<const half*>(y), reinterpret_cast<const half*>(dy),
+        reinterpret_cast<half*>(dx));
   }
   static void Relu(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
     ReluForwardGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
@@ -240,6 +334,20 @@ struct NewKernelUtilIf<DeviceType::kGPU, T, typename std::enable_if<IsFloat16<T>
   static void Set(DeviceCtx* ctx, const T value, T* addr) {
     gpu_set<half>
         <<<1, 1, 0, ctx->cuda_stream()>>>(static_cast<half>(value), reinterpret_cast<half*>(addr));
+  }
+  static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, T* y,
+                   const int incy) {
+    // half ha;
+    // ha.setx(alpha.getx());
+    AxpyHalfGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        n, float16_2half(alpha), reinterpret_cast<const half*>(x), incx, reinterpret_cast<half*>(y),
+        incy);
+  }
+  static void Scal(DeviceCtx* ctx, const int n, const T alpha, T* x, const int incx) {
+    // half ha;
+    // ha.setx(alpha.getx());
+    ScalHalfGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        n, float16_2half(alpha), reinterpret_cast<half*>(x), incx);
   }
 };
 

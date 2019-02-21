@@ -307,6 +307,13 @@ struct NewKernelUtilIf<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T
     for (int64_t i = 0; i != n; ++i) { dx[i] = (y[i] > zero) * dy[i]; }
   }
   static void Set(DeviceCtx* ctx, const T value, T* addr) { *addr = value; }
+  static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, T* y,
+                   const int incy) {
+    cblas_axpy<T>(n, alpha, x, incx, y, incy);
+  }
+  static void Scal(DeviceCtx* ctx, const int n, const T alpha, T* x, const int incx) {
+    cblas_scal<T>(n, alpha, x, incx);
+  }
 };
 
 // CPU && Integral
@@ -385,6 +392,13 @@ struct NewKernelUtilIf<DeviceType::kCPU, T, typename std::enable_if<IsFloat16<T>
     UNIMPLEMENTED();
   }
   static void Set(DeviceCtx* ctx, const T value, T* addr) { *addr = value; }
+  static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, T* y,
+                   const int incy) {
+    UNIMPLEMENTED();
+  }
+  static void Scal(DeviceCtx* ctx, const int n, const T alpha, T* x, const int incx) {
+    UNIMPLEMENTED();
+  }
 };
 
 template<typename T>
