@@ -244,6 +244,9 @@ void ConvOp<NDims>::GenKernelConfWithCudnn(
   GetBlobDesc4BnInOp("in")->shape().ToProto(conv_conf->mutable_in());
   GetBlobDesc4BnInOp("out")->shape().ToProto(conv_conf->mutable_out());
   GetBlobDesc4BnInOp("weight")->shape().ToProto(conv_conf->mutable_weight());
+  if (GetValFromCustomizedConf<bool>("use_bias")) {
+    GetBlobDesc4BnInOp("bias")->shape().ToProto(conv_conf->mutable_bias());
+  }
 
   std::vector<int32_t> pad_small_side;
   std::vector<int32_t> pad_large_side;

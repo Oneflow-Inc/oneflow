@@ -62,8 +62,6 @@ set(oneflow_third_party_libs
     ${COCOAPI_STATIC_LIBRARIES}
 )
 
-message(STATUS "oneflow_third_party_libs: " ${oneflow_third_party_libs})
-
 if(WIN32)
   # static gflags lib requires "PathMatchSpecA" defined in "ShLwApi.Lib"
   list(APPEND oneflow_third_party_libs "ShLwApi.Lib")
@@ -73,6 +71,9 @@ endif()
 set(oneflow_third_party_dependencies
   zlib_copy_headers_to_destination
   zlib_copy_libs_to_destination
+  protobuf_copy_headers_to_destination
+  protobuf_copy_libs_to_destination
+  protobuf_copy_binary_to_destination
   gflags_copy_headers_to_destination
   gflags_copy_libs_to_destination
   glog_copy_headers_to_destination
@@ -81,9 +82,6 @@ set(oneflow_third_party_dependencies
   googletest_copy_libs_to_destination
   googlemock_copy_headers_to_destination
   googlemock_copy_libs_to_destination
-  protobuf_copy_headers_to_destination
-  protobuf_copy_libs_to_destination
-  protobuf_copy_binary_to_destination
   grpc_copy_headers_to_destination
   grpc_copy_libs_to_destination
   opencv_copy_headers_to_destination
@@ -127,5 +125,28 @@ if (BUILD_CUDA)
     ${NCCL_INCLUDE_DIR}
 )
 endif()
+
+if(BUILD_RDMA)
+  if(UNIX)
+    include(CheckIncludeFiles)
+    include(CheckLibraryExists)
+    CHECK_INCLUDE_FILES(infiniband/verbs.h HAVE_VERBS_H)
+    CHECK_LIBRARY_EXISTS(ibverbs ibv_create_qp "" HAVE_IBVERBS)
+    if(HAVE_VERBS_H AND HAVE_IBVERBS)
+      list(APPEND oneflow_third_party_libs -libverbs)
+      add_definitions(-DWITH_RDMA)
+    elseif(HAVE_VERBS_H)
+      message(FATAL_ERROR "RDMA library not found")
+    elseif(HAVE_IBVERBS)
+      message(FATAL_ERROR "RDMA head file not found")
+    else()
+      message(FATAL_ERROR "RDMA library and head file not found")
+    endif()
+  else()
+    message(FATAL_ERROR "UNIMPLEMENTED")
+  endif()
+endif()
+
+message(STATUS "oneflow_third_party_libs: " ${oneflow_third_party_libs})
 
 add_definitions(-DHALF_ENABLE_CPP11_USER_LITERALS=0)
