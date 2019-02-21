@@ -17,7 +17,7 @@ class NormalMdUpdateKernel : public KernelIf<device_type> {
  protected:
   NormalMdUpdateKernel() = default;
   virtual void UpdateModel(DeviceCtx* ctx, const T* batch_instance_num_ptr, T learning_rate, T l1,
-                           T l2, int64_t next_model_vid,
+                           T l2, int64_t next_model_vid, Blob* model_blob,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
 
  private:

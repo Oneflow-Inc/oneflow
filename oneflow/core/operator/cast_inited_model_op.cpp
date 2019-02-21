@@ -9,11 +9,7 @@ void CastInitedModelOp::InitFromOpConf() {
 
 void CastInitedModelOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
-  BlobDesc tmp(*GetBlobDesc4BnInOp("half_model"));
-  tmp.set_data_type(DataType::kFloat);
-  CHECK(tmp == *GetBlobDesc4BnInOp("float_model"));
-}
+    const ParallelContext* parallel_ctx) const {}
 
 REGISTER_OP(OperatorConf::kCastInitedModelConf, CastInitedModelOp);
 

@@ -100,6 +100,15 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
       CHECK(blob->data_type() == DataType::kFloat16);
       blob->set_data_type(DataType::kFloat);
     });
+
+    processed_model_diff_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
+      BlobDesc* blob = processed_model_diff_regst->MutBlobDesc(lbi);
+      CHECK(blob->data_type() == DataType::kFloat16);
+      blob->set_data_type(DataType::kFloat);
+    });
+
+    shared_model_diff_add_node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns,
+                                                      GetProducedRegst("data_tmp"));
   }
 
   ExecNode* model_update_node = nullptr;
@@ -177,6 +186,7 @@ void NormalMdUpdtCompTaskNode::LockRegsts() {
   GetProducedRegst("processed_model_diff")->Lock();
   GetProducedRegst("data_tmp")->Lock();
   GetProducedRegst("forward_model")->Lock();
+  if (if_update_half_model_) { GetProducedRegst("float_model")->Lock(); }
 }
 
 void NormalMdUpdtCompTaskNode::ToProto(TaskProto* task_proto) {
@@ -212,6 +222,7 @@ void NormalMdUpdtCompTaskNode::InferProducedDataRegstTimeShape() {
 }
 
 void NormalMdUpdtCompTaskNode::EnableMemSharingBetweenFirstInAndProcessedMdDiffRegst() {
+  if (if_update_half_model_) { return; }
   if (!IsTrainable()) { return; }
   ExecNode* diff_add_node = exec_gph().SoleSourceNode();
   RegstDesc* first_in_regst =

@@ -20,7 +20,7 @@ class AdamMdUpdateKernel final : public NormalMdUpdateKernel<device_type, T> {
                              const std::string& model_load_dir,
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void UpdateModel(DeviceCtx* ctx, const T* batch_instance_num_ptr, T learning_rate, T l1, T l2,
-                   int64_t next_model_vid,
+                   int64_t next_model_vid, Blob* model_blob,
                    std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 

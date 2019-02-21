@@ -24,6 +24,8 @@ class NormalModelUpdtOp : public Operator {
 
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { UNIMPLEMENTED(); }
+  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                            const ParallelContext*, KernelConf* kernel_conf) const override;
 
   LogicalBlobId obn2lbi(const std::string& output_bn) const override;
 };

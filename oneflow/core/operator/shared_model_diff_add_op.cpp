@@ -8,7 +8,7 @@ void SharedModelDiffAddOp::InitFromOpConf() {
     EnrollInputBn("in_" + std::to_string(i), false);
   }
   EnrollOutputBn("processed_model_diff", false);
-  EnrollOutputBn("processed_float_model_diff", false);
+  EnrollDataTmpBn("float_tmp");
 }
 const PbMessage& SharedModelDiffAddOp::GetCustomizedConf() const {
   return op_conf().shared_model_diff_add_conf();
@@ -20,6 +20,11 @@ void SharedModelDiffAddOp::InferBlobDescs(
   const BlobDesc* in_0_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(0));
   FOR_RANGE(int32_t, i, 1, input_bns().size()) {
     CHECK(*in_0_blob_desc == *GetBlobDesc4BnInOp(input_bns().Get(i)));
+  }
+  if (in_0_blob_desc->data_type() == DataType::kFloat16) {
+    BlobDesc* float_tmp_blob_desc = GetBlobDesc4BnInOp("float_tmp");
+    *float_tmp_blob_desc = *in_0_blob_desc;
+    float_tmp_blob_desc->set_data_type(DataType::kFloat);
   }
 }
 

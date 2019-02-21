@@ -25,10 +25,36 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
     learning_rate =
         GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, cur_batch_num);
   }
+
+  // multiply the weight gradients by 1 / loss_scale
+  float loss_scale = Global<JobDesc>::Get()->loss_scale();
+  if (loss_scale > 1.0 || loss_scale < 1.0) {
+    int64_t n = BnInOp2Blob("model_diff")->shape().elem_cnt();
+    T* model_diff = BnInOp2Blob("model_diff")->mut_dptr<T>();
+    KernelUtil<device_type, T>::Scal(ctx.device_ctx, n, static_cast<T>(1.0 / loss_scale),
+                                     model_diff, 1);
+  }
+
   float l1 = this->op_conf().normal_mdupdt_conf().l1();
   float l2 = this->op_conf().normal_mdupdt_conf().l2();
+
+  Blob* updated_blob = nullptr;
+  Blob* model_blob = BnInOp2Blob("model");
+  if (model_blob->data_type() == DataType::kFloat16) {
+    Blob* float_tmp_blob = BnInOp2Blob("float_tmp");
+    CHECK(float_tmp_blob->shape() == model_blob->shape());
+    CHECK(float_tmp_blob->data_type() == DataType::kFloat);
+    updated_blob = float_tmp_blob;
+  } else {
+    updated_blob = model_blob;
+  }
   UpdateModel(ctx.device_ctx, batch_instance_num_ptr, static_cast<T>(learning_rate),
-              static_cast<T>(l1), static_cast<T>(l2), next_model_vid, BnInOp2Blob);
+              static_cast<T>(l1), static_cast<T>(l2), next_model_vid, updated_blob, BnInOp2Blob);
+  if (model_blob->data_type() == DataType::kFloat16) {
+    NewKernelUtil<device_type, float16>::Float2Half(ctx.device_ctx, model_blob->shape().elem_cnt(),
+                                                    updated_blob->dptr<float>(),
+                                                    model_blob->mut_dptr<float16>());
+  }
 }
 
 #define INSTANTIATE_KERNEL(device_type, data_type_pair) \
