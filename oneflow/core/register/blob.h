@@ -127,7 +127,8 @@ class Blob final {
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
 
   size_t CalcDim0ValidNumSum() const;
-
+  const int32_t& record_num() const;
+  void set_record_num(int32_t val);
   int32_t col_id() const;
   void set_col_id(int32_t val);
   int32_t max_col_id() const;
@@ -158,6 +159,7 @@ class Blob final {
   }
   void Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr);
 
+  int32_t record_num_; // FIXME() by dim0
   bool is_contiguous_;
   void* header_ptr_;
   char* data_id_ptr_;
@@ -180,7 +182,7 @@ class RecordBlob final {
   OF_DISALLOW_COPY_AND_MOVE(RecordBlob);
   RecordBlob(Blob* records) : records_(records), record_num_(0) {
     CHECK_EQ(records->blob_desc().data_type(), GetDataType<RecordType>::value);
-    record_num_ = records_->shape().elem_cnt();
+    record_num_ = records_->record_num();
   }
   ~RecordBlob() = default;
 
@@ -195,7 +197,10 @@ class RecordBlob final {
 
   int32_t record_num() { return record_num_; }
 
-  void ReadFrom(PersistentInStream* in_stream) { record_num_ = ReadRecord(in_stream, records_); }
+  void ReadFrom(PersistentInStream* in_stream) {
+    record_num_ = ReadRecord(in_stream, records_);
+    records_->set_record_num(record_num_);
+  }
 
  private:
   Blob* records_;
