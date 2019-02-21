@@ -296,6 +296,7 @@ void KernelIf<device_type>::ForwardInstanceShape(
   }
 }
 
+template<DeviceType device_type>
 void KernelIf<device_type>::ForwardLossInstanceNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   NaiveCopyLossInstanceNum(op_attribute().input_bns(), op_attribute().output_bns(), BnInOp2Blob);

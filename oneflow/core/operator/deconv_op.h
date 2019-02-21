@@ -41,12 +41,13 @@ class DeconvOp : public Operator {
 
   void InitFromOpConf() override;
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext*,
+                      const ParallelContext*, int64_t record_piece_size,
                       std::function<void(OpContext*)> EnrollOpCtx) const override;
   void InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                            const ParallelContext*, const OpContext*) const override;
-  int32_t ModelSplitAxis() const override;
-  int32_t MaxModelSplitNum() const override;
+  int32_t OutputBlobModelSplitAxis(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      const std::string& obn) const override;
 
  private:
   PbMessage* MutableCustomizedKernelConf(KernelConf*) const override;
@@ -58,7 +59,8 @@ class DeconvOp : public Operator {
 #ifdef WITH_CUDA
   void InferCudnnAlgo(std::function<const BlobDesc*(const std::string)> GetBlobDesc4BnInop,
                       CudnnConvAlgoCtx* deconv_ctx, const int64_t device_id) const;
-#endif  //  WITH_CUDA
+#endif  // WITH_CUDA
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
 };
 
 }  //  namespace oneflow

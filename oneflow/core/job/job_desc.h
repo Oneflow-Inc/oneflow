@@ -39,6 +39,7 @@ class JobDesc final {
   bool IsTrain() const { return job_conf_.other().has_train_conf(); }
   bool IsPredict() const { return job_conf_.other().has_predict_conf(); }
   int64_t RecordPieceSize() const { return job_conf_.other().piece_size(); }
+  int64_t DevicePieceSize4ParallelCtx(const ParallelContext& ctx) const;
   int64_t piece_num_of_experiment_phase() const;
   bool enable_experiment_run() const;
   float available_zone_mem_ratio() const;

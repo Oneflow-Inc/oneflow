@@ -16,7 +16,7 @@ const PbMessage& AffineChannelOp::GetCustomizedConf() const {
 
 void AffineChannelOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, std::function<void(OpContext*)> EnrollOpCtx) const {
+    const ParallelContext* parallel_ctx) const {
   CHECK(op_conf().has_model_load_dir());
   const auto& conf = op_conf().affine_channel_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");

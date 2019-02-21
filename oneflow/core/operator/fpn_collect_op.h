@@ -19,6 +19,7 @@ class FpnCollectOp final : public Operator {
                       const ParallelContext* parallel_ctx) const override;
 
  private:
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
 };
 
 }  // namespace oneflow

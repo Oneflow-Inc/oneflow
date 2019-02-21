@@ -6,7 +6,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class SmoothL1LossKernel final : public LossKernel<device_type, T, T> {
+class SmoothL1LossKernel final : public LossKernel<device_type, T> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SmoothL1LossKernel);
   SmoothL1LossKernel() = default;

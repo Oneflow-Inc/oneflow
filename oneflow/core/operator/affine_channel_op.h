@@ -16,8 +16,10 @@ class AffineChannelOp final : public Operator {
   bool NeedOutBlobWhenBackward() const override { return false; }
 
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext*,
-                      std::function<void(OpContext*)> EnrollOpCtx) const override;
+                      const ParallelContext*) const override;
+
+ private:
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
 };
 
 }  // namespace oneflow

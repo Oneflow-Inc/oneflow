@@ -18,6 +18,9 @@ class ImageSegmentationMaskOp final : public Operator {
                             KernelConf* kernel_conf) const override;
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext*) const override;
+
+ private:
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
 };
 
 }  // namespace oneflow
