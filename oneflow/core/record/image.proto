@@ -36,6 +36,9 @@ message ImageCropWithRandomSize {
   optional int32 max_attempts = 3 [default = 100];
 }
 
+message ImageBgr2Rgb {
+}
+
 message ImagePreprocess {
   oneof preprocess {
     ImageResize resize = 1;
@@ -43,5 +46,6 @@ message ImagePreprocess {
     ImageCenterCrop center_crop = 3;
     ImageCropWithRandomSize crop_with_random_size = 4;
     ImageMirror mirror = 5;
+    ImageBgr2Rgb bgr2rgb = 6;
   }
 }
