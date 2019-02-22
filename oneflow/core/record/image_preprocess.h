@@ -66,6 +66,7 @@ class ImagePreprocessImpl<PreprocessCase::kMirror> final : public ImagePreproces
                     std::function<int32_t(void)> NextRandomInt) const override;
 };
 
+template<>
 class ImagePreprocessImpl<PreprocessCase::kBgr2Rgb> final : public ImagePreprocessIf {
  public:
  private:
