@@ -154,11 +154,11 @@ class Actor {
   // NaiveOrCustomized
   virtual std::pair<RegstNameType, HashSet<std::string>>
   GetNaiveOrCustomizedConsumedRegstDescName() {
-    return {RegstNameType::kCustomized, {}};
+    return std::make_pair(RegstNameType::kCustomized, HashSet<std::string>{});
   }
   virtual std::pair<RegstNameType, HashSet<std::string>>
   GetNaiveOrCustomizedProducedRegstDescName() {
-    return {RegstNameType::kCustomized, {}};
+    return std::make_pair(RegstNameType::kCustomized, HashSet<std::string>{});
   }
   void TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids);
   void TakeOverNaiveProduced(const PbMap<std::string, RegstDescProto>& produced_ids);

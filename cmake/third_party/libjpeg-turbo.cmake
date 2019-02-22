@@ -3,8 +3,7 @@ include (ExternalProject)
 set(LIBJPEG_INCLUDE_DIR ${THIRD_PARTY_DIR}/libjpeg-turbo/include)
 set(LIBJPEG_LIBRARY_DIR ${THIRD_PARTY_DIR}/libjpeg-turbo/lib)
 
-set(LIBJPEG_URL https://github.com/libjpeg-turbo/libjpeg-turbo.git)
-set(LIBJPEG_TAG 3041cf67ffdc7230e377802cba0e5c325d6d01c6)
+set(LIBJPEG_URL ${CMAKE_CURRENT_BINARY_DIR}/third_party/libjpeg-turbo/src/libjpeg-turbo)
 
 if(WIN32)
 elseif(APPLE AND ("${CMAKE_GENERATOR}" STREQUAL "Xcode"))
@@ -46,12 +45,11 @@ set(LIBJPEG_HEADERS
      "${LIBJPEG_BUILD_LIBRARY_DIR}/turbojpeg.h"
 )
 
-if(BUILD_THIRD_PARTY)
+if(THIRD_PARTY)
 
 ExternalProject_Add(libjpeg-turbo
     PREFIX libjpeg-turbo
-    GIT_REPOSITORY ${LIBJPEG_URL}
-    GIT_TAG ${LIBJPEG_TAG}
+    URL ${LIBJPEG_URL}
     UPDATE_COMMAND ""
     INSTALL_COMMAND ""
     BUILD_IN_SOURCE 1
@@ -83,4 +81,4 @@ add_custom_target(libjpeg_copy_libs_to_destination
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LIBJPEG_BUILD_STATIC_LIBRARIES} ${LIBJPEG_LIBRARY_DIR}
     DEPENDS libjpeg_create_library_dir)
 
-endif(BUILD_THIRD_PARTY)
+endif(THIRD_PARTY)

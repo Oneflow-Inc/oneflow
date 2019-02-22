@@ -87,7 +87,7 @@ void ConvKernel<DeviceType::kGPU, T>::KernelInitWithCudnn(const ParallelContext*
       new CudnnConvDesc(GetDataType<T>::value, in_shape, this->GetCustomizedOpConf()));
 
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
-    int32_t filters = this->template GetValFromCustomizedOpConf<int32_t>("filters");
+    int32_t filters = Shape(this->GetConvKernelConf().bias()).At(0);
     if ((this->OpKernelDim() == 1) || (this->OpKernelDim() == 2)) {
       if (data_format == "channels_first") {
         this->bias_desc_.reset(

@@ -9,7 +9,7 @@ set(HALF_HEADERS
     "${HALF_BASE_DIR}/include/half.hpp"
 )
 
-if(BUILD_THIRD_PARTY)
+if(THIRD_PARTY)
 
 ExternalProject_Add(half
     PREFIX half
@@ -32,4 +32,4 @@ foreach(header_file ${HALF_HEADERS})
     add_custom_command(TARGET half_copy_headers_to_destination PRE_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${header_file} ${HALF_INCLUDE_DIR})
 endforeach()
-endif(BUILD_THIRD_PARTY)
+endif(THIRD_PARTY)

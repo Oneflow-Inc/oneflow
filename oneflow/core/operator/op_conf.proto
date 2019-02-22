@@ -235,6 +235,14 @@ message ReluOpConf {
   required string out = 2;
 }
 
+message PReluOpConf {
+  required string in = 1;
+  required string out = 2;
+  required string data_format = 3;
+  optional bool channel_shared = 4 [default = false];
+  optional float alpha_init = 5 [default = 0.25];
+}
+
 message SigmoidOpConf {
   required string in = 1;
   required string out = 2;
@@ -1380,27 +1388,28 @@ message OperatorConf {
     TopKOpConf top_k_conf = 262;
     ParallelCastOpConf parallel_cast_conf = 263;
     L2NormalizeOpConf l2_normalize_conf = 264;
-    Deconv2DOpConf deconv_2d_conf = 265;
-    Deconv3DOpConf deconv_3d_conf = 266;
-    RoIPoolingOpConf roi_pooling_conf = 267;
-    RoIAlignOpConf roi_align_conf = 268;
-    SmoothL1LossOpConf smooth_l1_loss_conf = 269;
-    BboxTransformOpConf bbox_transform_conf = 270;
-    ProposalOpConf proposal_conf = 271;
-    ProposalTargetOpConf proposal_target_conf = 272;
-    AnchorTargetOpConf anchor_target_conf = 273;
-    BboxNmsAndLimitOpConf bbox_nms_and_limit_conf = 274;
-    UpsampleNearestOpConf upsample_nearest_conf = 275;
-    ResizeNearestNeighborOpConf resize_nearest_neighbor_conf = 276;
-    TargetResizeNearestOpConf target_resize_nearest_conf = 277;
-    FpnCollectOpConf fpn_collect_conf = 278;
-    FpnDistributeOpConf fpn_distribute_conf = 279;
-    BatchPermutationOpConf batch_permutation_conf = 280;
-    VStackOpConf vstack_conf = 281;
-    ImageSegmentationMaskOpConf image_segmentation_mask_conf = 282;
-    RleEncodeOpConf rle_encode_conf = 283;
-    MaskTargetOpConf mask_target_conf = 284;
-    GroupByRecordIdOpConf group_by_record_id_conf = 285;
+    PReluOpConf prelu_conf = 265;
+    Deconv2DOpConf deconv_2d_conf = 266;
+    Deconv3DOpConf deconv_3d_conf = 267;
+    RoIPoolingOpConf roi_pooling_conf = 268;
+    RoIAlignOpConf roi_align_conf = 269;
+    SmoothL1LossOpConf smooth_l1_loss_conf = 270;
+    BboxTransformOpConf bbox_transform_conf = 271;
+    ProposalOpConf proposal_conf = 272;
+    ProposalTargetOpConf proposal_target_conf = 273;
+    AnchorTargetOpConf anchor_target_conf = 274;
+    BboxNmsAndLimitOpConf bbox_nms_and_limit_conf = 275;
+    UpsampleNearestOpConf upsample_nearest_conf = 276;
+    ResizeNearestNeighborOpConf resize_nearest_neighbor_conf = 277;
+    TargetResizeNearestOpConf target_resize_nearest_conf = 278;
+    FpnCollectOpConf fpn_collect_conf = 279;
+    FpnDistributeOpConf fpn_distribute_conf = 280;
+    BatchPermutationOpConf batch_permutation_conf = 281;
+    VStackOpConf vstack_conf = 282;
+    ImageSegmentationMaskOpConf image_segmentation_mask_conf = 283;
+    RleEncodeOpConf rle_encode_conf = 284;
+    MaskTargetOpConf mask_target_conf = 285;
+    GroupByRecordIdOpConf group_by_record_id_conf = 286;
 
     // Maybe not needed
     RedefineDim0OpConf redefine_dim0_conf = 400;
