@@ -8,7 +8,6 @@
 #include "oneflow/core/common/range.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/record/record.pb.h"
-#include "oneflow/core/record/record_io.h"
 #include "oneflow/core/register/pod_ptr.h"
 
 namespace oneflow {
@@ -196,11 +195,6 @@ class RecordBlob final {
   }
 
   int32_t record_num() { return record_num_; }
-
-  void ReadFrom(PersistentInStream* in_stream) {
-    record_num_ = ReadRecord(in_stream, records_);
-    records_->set_record_num(record_num_);
-  }
 
  private:
   Blob* records_;
