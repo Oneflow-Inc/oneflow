@@ -11,7 +11,7 @@ TEST(SliceNdArray, one_elem_assign) {
   NdArrayHelper<int32_t, 1> ndarray;
   auto&& data_ndarray = ndarray.Var({1LL}, data.data());
   auto&& buffer_ndarray = ndarray.Var({1LL}, buffer.data());
-  buffer_ndarray(0).Assign(data_ndarray(0));
+  buffer_ndarray(0).CopyFrom(data_ndarray(0));
   ASSERT_EQ(data[0], buffer[0]);
 }
 
@@ -21,7 +21,7 @@ TEST(SliceNdArray, one_elem_assign_slice_on_slice) {
   NdArrayHelper<int32_t, 1> ndarray;
   auto&& data_ndarray = ndarray.Var({1LL}, data.data());
   auto&& buffer_ndarray = ndarray.Var({1LL}, buffer.data());
-  buffer_ndarray(0)(0).Assign(data_ndarray(0)(0));
+  buffer_ndarray(0)(0).CopyFrom(data_ndarray(0)(0));
   ASSERT_EQ(data[0], buffer[0]);
 }
 
@@ -31,7 +31,7 @@ TEST(SliceNdArray, 1d_assign) {
   NdArrayHelper<int32_t, 1> ndarray;
   auto&& data_ndarray = ndarray.Var({10LL}, data.data());
   auto&& buffer_ndarray = ndarray.Var({10LL}, buffer.data());
-  buffer_ndarray({}).Assign(data_ndarray({}));
+  buffer_ndarray({}).CopyFrom(data_ndarray({}));
   ASSERT_EQ(memcmp(data.data(), buffer.data(), sizeof(int32_t) * 10), 0);
 }
 
@@ -43,7 +43,7 @@ TEST(SliceNdArray, 1d_slice_assign) {
   auto&& data_ndarray = ndarray.Var({static_cast<int64_t>(data.size())}, data.data());
   auto&& buffer_ndarray = ndarray.Var({10LL}, buffer.data());
   ASSERT_EQ(buffer_ndarray({1, -1}).shape(), Shape({8}));
-  buffer_ndarray({1, -1}).Assign(data_ndarray({}));
+  buffer_ndarray({1, -1}).CopyFrom(data_ndarray({}));
   ASSERT_EQ(memcmp(expected.data(), buffer.data(), sizeof(int32_t) * 10), 0);
 }
 
@@ -54,7 +54,7 @@ TEST(SliceNdArray, 1d_slice) {
   NdArrayHelper<int32_t, 1> ndarray;
   auto&& data_ndarray = ndarray.Var({static_cast<int64_t>(data.size())}, data.data());
   auto&& buffer_ndarray = ndarray.Var({static_cast<int64_t>(buffer.size())}, buffer.data());
-  buffer_ndarray({}).Assign(data_ndarray({1, -1}));
+  buffer_ndarray({}).CopyFrom(data_ndarray({1, -1}));
   ASSERT_EQ(memcmp(expected.data(), buffer.data(), sizeof(int32_t) * buffer.size()), 0);
 }
 
@@ -72,7 +72,7 @@ TEST(SliceNdArray, 2d_slice) {
   NdArrayHelper<int32_t, 2> ndarray;
   auto&& data_ndarray = ndarray.Var({4LL, 4LL}, data.data());
   auto&& buffer_ndarray = ndarray.Var({2LL, 2LL}, buffer.data());
-  buffer_ndarray({}, {}).Assign(data_ndarray({1, -1}, {1, -1}));
+  buffer_ndarray({}, {}).CopyFrom(data_ndarray({1, -1}, {1, -1}));
   ASSERT_EQ(memcmp(expected.data(), buffer.data(), sizeof(int32_t) * buffer.size()), 0);
 }
 
@@ -90,7 +90,7 @@ TEST(SliceNdArray, 2d_slice_assign) {
   NdArrayHelper<int32_t, 2> ndarray;
   auto&& data_ndarray = ndarray.Var({2LL, 2LL}, data.data());
   auto&& buffer_ndarray = ndarray.Var({4LL, 4LL}, buffer.data());
-  buffer_ndarray({1, -1}, {1, -1}).Assign(data_ndarray({}, {}));
+  buffer_ndarray({1, -1}, {1, -1}).CopyFrom(data_ndarray({}, {}));
   ASSERT_EQ(memcmp(expected.data(), buffer.data(), sizeof(int32_t) * buffer.size()), 0);
 }
 
@@ -113,7 +113,7 @@ TEST(SliceNdArray, 2d_slice_reverse) {
   NdArrayHelper<int32_t, 2> ndarray;
   auto&& data_ndarray = ndarray.Var({4LL, 4LL}, data.data());
   auto&& buffer_ndarray = ndarray.Var({4LL, 4LL}, buffer.data());
-  buffer_ndarray({1, -1}, {1, -1}).Assign(data_ndarray({-2, 0, -1}, {1, -1}));
+  buffer_ndarray({1, -1}, {1, -1}).CopyFrom(data_ndarray({-2, 0, -1}, {1, -1}));
   ASSERT_EQ(memcmp(expected.data(), buffer.data(), sizeof(int32_t) * buffer.size()), 0);
 }
 
@@ -142,7 +142,7 @@ TEST(SliceNdArray, 3d_slice) {
   NdArrayHelper<int32_t, 3> ndarray;
   auto&& data_ndarray = ndarray.Var({2LL, 4LL, 4LL}, data.data());
   auto&& buffer_ndarray = ndarray.Var({2LL, 2LL, 2LL}, buffer.data());
-  buffer_ndarray.Assign(data_ndarray({}, {1, -1}, {1, -1}));
+  buffer_ndarray.CopyFrom(data_ndarray({}, {1, -1}, {1, -1}));
   ASSERT_EQ(memcmp(expected.data(), buffer.data(), sizeof(int32_t) * buffer.size()), 0);
 }
 
@@ -171,7 +171,7 @@ TEST(SliceNdArray, 3d_slice_assign) {
   NdArrayHelper<int32_t, 3> ndarray;
   auto&& data_ndarray = ndarray.Var({2LL, 2LL, 2LL}, data.data());
   auto&& buffer_ndarray = ndarray.Var({2LL, 4LL, 4LL}, buffer.data());
-  buffer_ndarray({}, {1, -1}, {1, -1}).Assign(data_ndarray);
+  buffer_ndarray({}, {1, -1}, {1, -1}).CopyFrom(data_ndarray);
   ASSERT_EQ(memcmp(expected.data(), buffer.data(), sizeof(int32_t) * buffer.size()), 0);
 }
 

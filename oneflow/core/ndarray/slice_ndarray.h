@@ -22,7 +22,7 @@ class SliceNdArrayBase : public NdArray<typename XT::dtype, XT::ndims> {
   virtual ~SliceNdArrayBase() = default;
 
   template<typename AT>
-  void Assign(const AT& ndarray) {
+  void CopyFrom(const AT& ndarray) {
     NdArrayAssign(dynamic_cast<Derived*>(this), ndarray);
   }
 

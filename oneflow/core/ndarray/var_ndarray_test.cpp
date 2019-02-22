@@ -11,7 +11,7 @@ TEST(VarNdArray, one_elem_assign) {
   NdArrayHelper<int32_t, 1> ndarray;
   auto&& data_ndarray = ndarray.Var({1LL}, data.data());
   auto&& buffer_ndarray = ndarray.Var({1LL}, buffer.data());
-  buffer_ndarray.Assign(data_ndarray);
+  buffer_ndarray.CopyFrom(data_ndarray);
   ASSERT_EQ(data[0], buffer[0]);
 }
 
@@ -21,7 +21,7 @@ TEST(VarNdArray, 1d_assign) {
   NdArrayHelper<int32_t, 1> ndarray;
   auto&& data_ndarray = ndarray.Var({10LL}, data.data());
   auto&& buffer_ndarray = ndarray.Var({10LL}, buffer.data());
-  buffer_ndarray.Assign(data_ndarray);
+  buffer_ndarray.CopyFrom(data_ndarray);
   ASSERT_EQ(memcmp(data.data(), buffer.data(), sizeof(int32_t) * 10), 0);
 }
 

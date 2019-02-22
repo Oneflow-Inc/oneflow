@@ -20,7 +20,7 @@ class ConcatVarNdArrayBase : public NdArray<T, NDIMS> {
   virtual ~ConcatVarNdArrayBase() = default;
 
   template<typename XT>
-  void Assign(const XT& ndarray) {
+  void CopyFrom(const XT& ndarray) {
     NdArrayAssign(dynamic_cast<Derived*>(this), ndarray);
   }
 

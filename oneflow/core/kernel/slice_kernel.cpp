@@ -79,8 +79,9 @@ struct NdArraySliceUtil<T, 2> final {
     NdArrayHelper<T, 2> ndarray;
     auto&& in_ndarray = ndarray.Var(in_blob->shape(), const_cast<T*>(in_blob->dptr<T>()));
     auto&& out_ndarray = ndarray.Var(out_blob->shape(), out_blob->mut_dptr<T>());
-    out_ndarray.Assign(in_ndarray({}, {GetStart(rep_dim_slice.Get(0)), GetEnd(rep_dim_slice.Get(0)),
-                                       GetStride(rep_dim_slice.Get(0))}));
+    out_ndarray.CopyFrom(
+        in_ndarray({}, {GetStart(rep_dim_slice.Get(0)), GetEnd(rep_dim_slice.Get(0)),
+                        GetStride(rep_dim_slice.Get(0))}));
   }
 
   static void Backward(DeviceCtx* device_ctx, const PbRpf<DimSliceConf>& rep_dim_slice,
@@ -91,7 +92,7 @@ struct NdArraySliceUtil<T, 2> final {
     auto&& in_diff_ndarray = ndarray.Var(in_diff_blob->shape(), in_diff_blob->mut_dptr<T>());
     in_diff_ndarray({}, {GetStart(rep_dim_slice.Get(0)), GetEnd(rep_dim_slice.Get(0)),
                          GetStride(rep_dim_slice.Get(0))})
-        .Assign(out_diff_ndarray({}, {}));
+        .CopyFrom(out_diff_ndarray({}, {}));
   }
 };
 
@@ -102,11 +103,11 @@ struct NdArraySliceUtil<T, 3> final {
     NdArrayHelper<T, 3> ndarray;
     auto&& in_ndarray = ndarray.Var(in_blob->shape(), const_cast<T*>(in_blob->dptr<T>()));
     auto&& out_ndarray = ndarray.Var(out_blob->shape(), out_blob->mut_dptr<T>());
-    out_ndarray.Assign(in_ndarray({},
-                                  {GetStart(rep_dim_slice.Get(0)), GetEnd(rep_dim_slice.Get(0)),
-                                   GetStride(rep_dim_slice.Get(0))},
-                                  {GetStart(rep_dim_slice.Get(1)), GetEnd(rep_dim_slice.Get(1)),
-                                   GetStride(rep_dim_slice.Get(1))}));
+    out_ndarray.CopyFrom(in_ndarray({},
+                                    {GetStart(rep_dim_slice.Get(0)), GetEnd(rep_dim_slice.Get(0)),
+                                     GetStride(rep_dim_slice.Get(0))},
+                                    {GetStart(rep_dim_slice.Get(1)), GetEnd(rep_dim_slice.Get(1)),
+                                     GetStride(rep_dim_slice.Get(1))}));
   }
 
   static void Backward(DeviceCtx* device_ctx, const PbRpf<DimSliceConf>& rep_dim_slice,
@@ -120,7 +121,7 @@ struct NdArraySliceUtil<T, 3> final {
                      GetStride(rep_dim_slice.Get(0))},
                     {GetStart(rep_dim_slice.Get(1)), GetEnd(rep_dim_slice.Get(1)),
                      GetStride(rep_dim_slice.Get(1))})
-        .Assign(out_diff_ndarray({}, {}, {}));
+        .CopyFrom(out_diff_ndarray({}, {}, {}));
   }
 };
 
