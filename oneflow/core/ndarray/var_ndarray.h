@@ -49,8 +49,6 @@ class VarNdArray<T, 1> final : public VarNdArrayBase<VarNdArray<T, 1>, T, 1> {
   VarNdArray(const Shape& shape, T* ptr) : VarNdArrayBase<VarNdArray<T, 1>, T, 1>(shape, ptr) {}
   ~VarNdArray() = default;
 
-  ALWAYS_INLINE T Get(int64_t dim0) const { return this->ptr()[dim0]; }
-  ALWAYS_INLINE T* Mut(int64_t dim0) const { return this->ptr() + dim0; }
   SliceNdArray<VarNdArray<T, 1>> operator()(Slice&& slice0) {
     return SliceNdArray<VarNdArray<T, 1>>(std::move(*this), std::move(slice0));
   }
@@ -62,12 +60,6 @@ class VarNdArray<T, 2> final : public VarNdArrayBase<VarNdArray<T, 2>, T, 2> {
   VarNdArray(const Shape& shape, T* ptr) : VarNdArrayBase<VarNdArray<T, 2>, T, 2>(shape, ptr) {}
   ~VarNdArray() = default;
 
-  ALWAYS_INLINE T Get(int64_t dim0, int64_t dim1) const {
-    return this->ptr()[this->Dims2Offset(dim0, dim1)];
-  }
-  ALWAYS_INLINE T* Mut(int64_t dim0, int64_t dim1) const {
-    return this->ptr() + this->Dims2Offset(dim0, dim1);
-  }
   SliceNdArray<VarNdArray<T, 2>> operator()(Slice&& slice0, Slice&& slice1) {
     return SliceNdArray<VarNdArray<T, 2>>(std::move(*this), std::move(slice0), std::move(slice1));
   }
@@ -79,12 +71,6 @@ class VarNdArray<T, 3> final : public VarNdArrayBase<VarNdArray<T, 3>, T, 3> {
   VarNdArray(const Shape& shape, T* ptr) : VarNdArrayBase<VarNdArray<T, 3>, T, 3>(shape, ptr) {}
   ~VarNdArray() = default;
 
-  ALWAYS_INLINE T Get(int64_t dim0, int64_t dim1, int64_t dim2) const {
-    return this->ptr()[this->Dims2Offset(dim0, dim1, dim2)];
-  }
-  ALWAYS_INLINE T* Mut(int64_t dim0, int64_t dim1, int64_t dim2) const {
-    return this->ptr() + this->Dims2Offset(dim0, dim1, dim2);
-  }
   SliceNdArray<VarNdArray<T, 3>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2) {
     return SliceNdArray<VarNdArray<T, 3>>(std::move(*this), std::move(slice0), std::move(slice1),
                                           std::move(slice2));
@@ -97,12 +83,6 @@ class VarNdArray<T, 4> final : public VarNdArrayBase<VarNdArray<T, 4>, T, 4> {
   VarNdArray(const Shape& shape, T* ptr) : VarNdArrayBase<VarNdArray<T, 4>, T, 4>(shape, ptr) {}
   ~VarNdArray() = default;
 
-  ALWAYS_INLINE T Get(int64_t dim0, int64_t dim1, int64_t dim2, int64_t dim3) const {
-    return *this->Mut(dim0, dim1, dim2, dim3);
-  }
-  ALWAYS_INLINE T* Mut(int64_t dim0, int64_t dim1, int64_t dim2, int64_t dim3) const {
-    return this->ptr() + this->Dims2Offset(dim0, dim1, dim2, dim3);
-  }
   SliceNdArray<VarNdArray<T, 4>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2,
                                             Slice&& slice3) {
     return SliceNdArray<VarNdArray<T, 4>>(std::move(*this), std::move(slice0), std::move(slice1),
@@ -116,12 +96,6 @@ class VarNdArray<T, 5> final : public VarNdArrayBase<VarNdArray<T, 5>, T, 5> {
   VarNdArray(const Shape& shape, T* ptr) : VarNdArrayBase<VarNdArray<T, 5>, T, 5>(shape, ptr) {}
   ~VarNdArray() = default;
 
-  ALWAYS_INLINE T Get(int64_t dim0, int64_t dim1, int64_t dim2, int64_t dim3, int64_t dim4) const {
-    return this->ptr()[this->Dims2Offset(dim0, dim1, dim2, dim3, dim4)];
-  }
-  ALWAYS_INLINE T* Mut(int64_t dim0, int64_t dim1, int64_t dim2, int64_t dim3, int64_t dim4) const {
-    return this->ptr() + this->Dims2Offset(dim0, dim1, dim2, dim3, dim4);
-  }
   SliceNdArray<VarNdArray<T, 5>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2,
                                             Slice&& slice3, Slice&& slice4) {
     return SliceNdArray<VarNdArray<T, 5>>(std::move(*this), std::move(slice0), std::move(slice1),

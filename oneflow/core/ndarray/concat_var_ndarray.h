@@ -103,16 +103,6 @@ class ConcatVarNdArray<T, 1, 0> final
  public:
   DEFINE_CONCAT_VAR_NDARRAY_CTOR_DTOR(1, 0);
 
-  ALWAYS_INLINE T Get(int64_t dim0) const {
-    int32_t var_index = 0;
-    this->GetVarNdArrayIndexAndInputDim(dim0, &var_index, &dim0);
-    return this->var_ndarray(var_index).Get(dim0);
-  }
-  ALWAYS_INLINE T* Mut(int64_t dim0) const {
-    int32_t var_index = 0;
-    this->GetVarNdArrayIndexAndInputDim(dim0, &var_index, &dim0);
-    return this->var_ndarray(var_index).Mut(dim0);
-  }
   ALWAYS_INLINE void GetMutPtrAndContiguousSize(int64_t offset, T** ptr, size_t* size) const {
     int32_t var_index = 0;
     int64_t dim0 = 0;
@@ -121,20 +111,12 @@ class ConcatVarNdArray<T, 1, 0> final
   }
 };
 
-#define DEFINE_ACCESS_FUNC_BODY(func, axes)                                 \
-  func(int64_t dim0, int64_t dim1) const {                                  \
-    int32_t var_index = 0;                                                  \
-    this->GetVarNdArrayIndexAndInputDim(dim##axes, &var_index, &dim##axes); \
-    return this->var_ndarray(var_index).func(dim0, dim1);                   \
-  }
 #define DEFINE_CONCAT_VAR_NDARRAY(axes)                                            \
   template<typename T>                                                             \
   class ConcatVarNdArray<T, 2, axes> final                                         \
       : public ConcatVarNdArrayBase<ConcatVarNdArray<T, 2, axes>, T, 2, axes> {    \
    public:                                                                         \
     DEFINE_CONCAT_VAR_NDARRAY_CTOR_DTOR(2, axes);                                  \
-    T DEFINE_ACCESS_FUNC_BODY(Get, axes);                                          \
-    T* DEFINE_ACCESS_FUNC_BODY(Mut, axes);                                         \
     void GetMutPtrAndContiguousSize(int64_t offset, T** ptr, size_t* size) const { \
       int64_t dim0 = 0;                                                            \
       int64_t dim1 = 0;                                                            \
@@ -148,22 +130,13 @@ class ConcatVarNdArray<T, 1, 0> final
 DEFINE_CONCAT_VAR_NDARRAY(0);
 DEFINE_CONCAT_VAR_NDARRAY(1);
 #undef DEFINE_CONCAT_VAR_NDARRAY
-#undef DEFINE_ACCESS_FUNC_BODY
 
-#define DEFINE_ACCESS_FUNC_BODY(func, axes)                                 \
-  func(int64_t dim0, int64_t dim1, int64_t dim2) const {                    \
-    int32_t var_index = 0;                                                  \
-    this->GetVarNdArrayIndexAndInputDim(dim##axes, &var_index, &dim##axes); \
-    return this->var_ndarray(var_index).func(dim0, dim1, dim2);             \
-  }
 #define DEFINE_CONCAT_VAR_NDARRAY(axes)                                                  \
   template<typename T>                                                                   \
   class ConcatVarNdArray<T, 3, axes> final                                               \
       : public ConcatVarNdArrayBase<ConcatVarNdArray<T, 3, axes>, T, 3, axes> {          \
    public:                                                                               \
     DEFINE_CONCAT_VAR_NDARRAY_CTOR_DTOR(3, axes);                                        \
-    T DEFINE_ACCESS_FUNC_BODY(Get, axes);                                                \
-    T* DEFINE_ACCESS_FUNC_BODY(Mut, axes);                                               \
     void GetMutPtrAndContiguousSize(int64_t offset, T** ptr, size_t* size) const {       \
       int64_t dim0 = 0;                                                                  \
       int64_t dim1 = 0;                                                                  \
@@ -179,22 +152,13 @@ DEFINE_CONCAT_VAR_NDARRAY(0);
 DEFINE_CONCAT_VAR_NDARRAY(1);
 DEFINE_CONCAT_VAR_NDARRAY(2);
 #undef DEFINE_CONCAT_VAR_NDARRAY
-#undef DEFINE_ACCESS_FUNC_BODY
 
-#define DEFINE_ACCESS_FUNC_BODY(func, axes)                                 \
-  func(int64_t dim0, int64_t dim1, int64_t dim2, int64_t dim3) const {      \
-    int32_t var_index = 0;                                                  \
-    this->GetVarNdArrayIndexAndInputDim(dim##axes, &var_index, &dim##axes); \
-    return this->var_ndarray(var_index).func(dim0, dim1, dim2, dim3);       \
-  }
 #define DEFINE_CONCAT_VAR_NDARRAY(axes)                                                        \
   template<typename T>                                                                         \
   class ConcatVarNdArray<T, 4, axes> final                                                     \
       : public ConcatVarNdArrayBase<ConcatVarNdArray<T, 4, axes>, T, 4, axes> {                \
    public:                                                                                     \
     DEFINE_CONCAT_VAR_NDARRAY_CTOR_DTOR(4, axes);                                              \
-    T DEFINE_ACCESS_FUNC_BODY(Get, axes);                                                      \
-    T* DEFINE_ACCESS_FUNC_BODY(Mut, axes);                                                     \
     void GetMutPtrAndContiguousSize(int64_t offset, T** ptr, size_t* size) const {             \
       int64_t dim0 = 0;                                                                        \
       int64_t dim1 = 0;                                                                        \
@@ -212,22 +176,13 @@ DEFINE_CONCAT_VAR_NDARRAY(1);
 DEFINE_CONCAT_VAR_NDARRAY(2);
 DEFINE_CONCAT_VAR_NDARRAY(3);
 #undef DEFINE_CONCAT_VAR_NDARRAY
-#undef DEFINE_ACCESS_FUNC_BODY
 
-#define DEFINE_ACCESS_FUNC_BODY(func, axes)                                          \
-  func(int64_t dim0, int64_t dim1, int64_t dim2, int64_t dim3, int64_t dim4) const { \
-    int32_t var_index = 0;                                                           \
-    this->GetVarNdArrayIndexAndInputDim(dim##axes, &var_index, &dim##axes);          \
-    return this->var_ndarray(var_index).func(dim0, dim1, dim2, dim3, dim4);          \
-  }
 #define DEFINE_CONCAT_VAR_NDARRAY(axes)                                            \
   template<typename T>                                                             \
   class ConcatVarNdArray<T, 5, axes> final                                         \
       : public ConcatVarNdArrayBase<ConcatVarNdArray<T, 5, axes>, T, 5, axes> {    \
    public:                                                                         \
     DEFINE_CONCAT_VAR_NDARRAY_CTOR_DTOR(5, axes);                                  \
-    T DEFINE_ACCESS_FUNC_BODY(Get, axes);                                          \
-    T* DEFINE_ACCESS_FUNC_BODY(Mut, axes);                                         \
     void GetMutPtrAndContiguousSize(int64_t offset, T** ptr, size_t* size) const { \
       int64_t dim0 = 0;                                                            \
       int64_t dim1 = 0;                                                            \
@@ -248,7 +203,6 @@ DEFINE_CONCAT_VAR_NDARRAY(2);
 DEFINE_CONCAT_VAR_NDARRAY(3);
 DEFINE_CONCAT_VAR_NDARRAY(4);
 #undef DEFINE_CONCAT_VAR_NDARRAY
-#undef DEFINE_ACCESS_FUNC_BODY
 
 }  // namespace oneflow
 

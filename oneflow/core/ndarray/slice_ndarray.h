@@ -71,10 +71,6 @@ class SliceNdArray<XT, typename std::enable_if<XT::ndims == 1>::type> final
   ~SliceNdArray() = default;
 
   using dtype = typename XT::dtype;
-  ALWAYS_INLINE dtype Get(int64_t dim0) const { return this->x().Get(this->slice(0).Get(dim0)); }
-  ALWAYS_INLINE typename std::enable_if<!XT::immutable, dtype*>::type Mut(int64_t dim0) const {
-    return this->x().Mut(this->slice(0).Get(dim0));
-  }
   ALWAYS_INLINE typename std::enable_if<!XT::immutable>::type GetMutPtrAndContiguousSize(
       int64_t offset, dtype** ptr, size_t* size) const {
     size_t dim0 = offset;
@@ -95,13 +91,6 @@ class SliceNdArray<XT, typename std::enable_if<XT::ndims == 2>::type> final
   ~SliceNdArray() = default;
 
   using dtype = typename XT::dtype;
-  ALWAYS_INLINE dtype Get(int64_t dim0, int64_t dim1) const {
-    return this->x().Get(this->slice(0).Get(dim0), this->slice(1).Get(dim1));
-  }
-  ALWAYS_INLINE typename std::enable_if<!XT::immutable, dtype*>::type Mut(int64_t dim0,
-                                                                          int64_t dim1) const {
-    return this->x().Mut(this->slice(0).Get(dim0), this->slice(1).Get(dim1));
-  }
   ALWAYS_INLINE typename std::enable_if<!XT::immutable>::type GetMutPtrAndContiguousSize(
       int64_t offset, dtype** ptr, size_t* size) const {
     int64_t dim0 = 0;
@@ -124,16 +113,6 @@ class SliceNdArray<XT, typename std::enable_if<XT::ndims == 3>::type> final
   ~SliceNdArray() = default;
 
   using dtype = typename XT::dtype;
-  ALWAYS_INLINE dtype Get(int64_t dim0, int64_t dim1, int64_t dim2) const {
-    return this->x().Get(this->slice(0).Get(dim0), this->slice(1).Get(dim1),
-                         this->slice(2).Get(dim2));
-  }
-  ALWAYS_INLINE typename std::enable_if<!XT::immutable, dtype*>::type Mut(int64_t dim0,
-                                                                          int64_t dim1,
-                                                                          int64_t dim2) const {
-    return this->x().Mut(this->slice(0).Get(dim0), this->slice(1).Get(dim1),
-                         this->slice(2).Get(dim2));
-  }
   ALWAYS_INLINE typename std::enable_if<!XT::immutable>::type GetMutPtrAndContiguousSize(
       int64_t offset, dtype** ptr, size_t* size) const {
     int64_t dim0 = 0;
@@ -160,17 +139,6 @@ class SliceNdArray<XT, typename std::enable_if<XT::ndims == 4>::type> final
   ~SliceNdArray() = default;
 
   using dtype = typename XT::dtype;
-  ALWAYS_INLINE dtype Get(int64_t dim0, int64_t dim1, int64_t dim2, int64_t dim3) const {
-    return this->x().Get(this->slice(0).Get(dim0), this->slice(1).Get(dim1),
-                         this->slice(2).Get(dim2), this->slice(3).Get(dim3));
-  }
-  ALWAYS_INLINE typename std::enable_if<!XT::immutable, dtype*>::type Mut(int64_t dim0,
-                                                                          int64_t dim1,
-                                                                          int64_t dim2,
-                                                                          int64_t dim3) const {
-    return this->x().Mut(this->slice(0).Get(dim0), this->slice(1).Get(dim1),
-                         this->slice(2).Get(dim2), this->slice(3).Get(dim3));
-  }
   ALWAYS_INLINE typename std::enable_if<!XT::immutable>::type GetMutPtrAndContiguousSize(
       int64_t offset, dtype** ptr, size_t* size) const {
     int64_t dim0 = 0;
@@ -200,18 +168,6 @@ class SliceNdArray<XT, typename std::enable_if<XT::ndims == 5>::type> final
   ~SliceNdArray() = default;
 
   using dtype = typename XT::dtype;
-  ALWAYS_INLINE dtype Get(int64_t dim0, int64_t dim1, int64_t dim2, int64_t dim3,
-                          int64_t dim4) const {
-    return this->x().Get(this->slice(0).Get(dim0), this->slice(1).Get(dim1),
-                         this->slice(2).Get(dim2), this->slice(3).Get(dim3),
-                         this->slice(4).Get(dim4));
-  }
-  ALWAYS_INLINE typename std::enable_if<!XT::immutable, dtype*>::type Mut(
-      int64_t dim0, int64_t dim1, int64_t dim2, int64_t dim3, int64_t dim4) const {
-    return this->x().Mut(this->slice(0).Get(dim0), this->slice(1).Get(dim1),
-                         this->slice(2).Get(dim2), this->slice(3).Get(dim3),
-                         this->slice(4).Get(dim4));
-  }
   ALWAYS_INLINE typename std::enable_if<!XT::immutable>::type GetMutPtrAndContiguousSize(
       int64_t offset, dtype** ptr, size_t* size) const {
     int64_t dim0 = 0;
