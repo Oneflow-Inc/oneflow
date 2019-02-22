@@ -54,6 +54,7 @@ void RecordLoadKernel::Forward(const KernelCtx& ctx,
   auto status = static_cast<RecordLoadStatus*>(ctx.other);
   status->record_num = record_reader_->Read(static_cast<size_t>(piece_size_in_one_loader_),
                                             BnInOp2Blob("out")->mut_dptr<OFRecord>());
+  BnInOp2Blob("out")->set_record_num(status->record_num);
   if (status->record_num < piece_size_in_one_loader_) { status->is_eof = true; }
 }
 
