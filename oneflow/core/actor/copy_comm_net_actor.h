@@ -26,7 +26,7 @@ class CopyCommNetActor final : public Actor {
 
   std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName()
       override {
-    return {RegstNameType::kNaive, {}};
+    return std::make_pair(RegstNameType::kNaive, HashSet<std::string>{});
   }
   void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const override;
   void NormalProcessCustomizedEordMsg(const ActorMsg&) override { is_in_eord_ = true; }

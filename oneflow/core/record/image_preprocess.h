@@ -43,6 +43,22 @@ class ImagePreprocessImpl<PreprocessCase::kCrop> final : public ImagePreprocessI
 };
 
 template<>
+class ImagePreprocessImpl<PreprocessCase::kCenterCrop> final : public ImagePreprocessIf {
+ public:
+ private:
+  void DoPreprocess(cv::Mat* image, const ImagePreprocess& preprocess_conf,
+                    std::function<int32_t(void)> NextRandomInt) const override;
+};
+
+template<>
+class ImagePreprocessImpl<PreprocessCase::kCropWithRandomSize> final : public ImagePreprocessIf {
+ public:
+ private:
+  void DoPreprocess(cv::Mat* image, const ImagePreprocess& preprocess_conf,
+                    std::function<int32_t(void)> NextRandomInt) const override;
+};
+
+template<>
 class ImagePreprocessImpl<PreprocessCase::kMirror> final : public ImagePreprocessIf {
  public:
  private:
@@ -50,10 +66,12 @@ class ImagePreprocessImpl<PreprocessCase::kMirror> final : public ImagePreproces
                     std::function<int32_t(void)> NextRandomInt) const override;
 };
 
-#define PREPROCESS_CASE_SEQ                     \
-  OF_PP_MAKE_TUPLE_SEQ(PreprocessCase::kResize) \
-  OF_PP_MAKE_TUPLE_SEQ(PreprocessCase::kMirror) \
-  OF_PP_MAKE_TUPLE_SEQ(PreprocessCase::kCrop)
+#define PREPROCESS_CASE_SEQ                         \
+  OF_PP_MAKE_TUPLE_SEQ(PreprocessCase::kResize)     \
+  OF_PP_MAKE_TUPLE_SEQ(PreprocessCase::kMirror)     \
+  OF_PP_MAKE_TUPLE_SEQ(PreprocessCase::kCrop)       \
+  OF_PP_MAKE_TUPLE_SEQ(PreprocessCase::kCenterCrop) \
+  OF_PP_MAKE_TUPLE_SEQ(PreprocessCase::kCropWithRandomSize)
 
 ImagePreprocessIf* GetImagePreprocess(PreprocessCase);
 
