@@ -9,6 +9,8 @@ namespace oneflow {
 template<typename Derived, typename T, int NDIMS>
 class VarNdArrayBase : public NdArray<T, NDIMS> {
  public:
+  using dtype = T;
+  static const int ndims = NDIMS;
   static const bool immutable = false;
   VarNdArrayBase(const VarNdArrayBase&) = default;
   VarNdArrayBase(const Shape& shape, T* ptr)

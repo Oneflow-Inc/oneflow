@@ -4,6 +4,7 @@
 #include <climits>
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/ndarray/xpu_shape.h"
 
 namespace oneflow {
 
@@ -15,9 +16,10 @@ class NdArrayBase {
   static const bool immutable = true;
 
   ALWAYS_INLINE const Shape& shape() const { return shape_; }
+  ALWAYS_INLINE const XpuShape& xpu_shape() const { return xpu_shape_; }
 
  protected:
-  explicit NdArrayBase(const Shape& shape) : shape_(shape) {
+  explicit NdArrayBase(const Shape& shape) : shape_(shape), xpu_shape_(shape) {
     FOR_RANGE(int, i, 0, NDIMS) { dim_elem_cnt_[i] = shape.Count(i + 1); }
   }
   virtual ~NdArrayBase() = default;
@@ -26,6 +28,7 @@ class NdArrayBase {
 
  private:
   Shape shape_;
+  XpuShape xpu_shape_;
   std::array<int64_t, NDIMS> dim_elem_cnt_;
 };
 
