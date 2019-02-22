@@ -119,6 +119,13 @@ void ImagePreprocessImpl<PreprocessCase::kMirror>::DoPreprocess(
   *image = dst;
 }
 
+void ImagePreprocessImpl<PreprocessCase::kBgr2Rgb>::DoPreprocess(
+    cv::Mat* image, const ImagePreprocess& preprocess_conf,
+    std::function<int32_t(void)> NextRandomInt) const {
+  CHECK(preprocess_conf.has_bgr2rgb());
+  cv::cvtColor(*image, *image, cv::COLOR_BGR2RGB);
+}
+
 ImagePreprocessIf* GetImagePreprocess(PreprocessCase preprocess_case) {
   static const HashMap<int, ImagePreprocessIf*> obj = {
 
