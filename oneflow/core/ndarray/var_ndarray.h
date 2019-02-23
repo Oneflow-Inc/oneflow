@@ -6,22 +6,50 @@
 
 namespace oneflow {
 
-template<typename Derived, typename T, int NDIMS>
-class VarNdArrayBase : public NdArray<T, NDIMS> {
+class Slice;
+template<typename XT>
+class SliceNdArray;
+
+template<typename T, int NDIMS>
+class VarNdArray : public NdArray<T, NDIMS> {
  public:
   using dtype = T;
   static const int ndims = NDIMS;
   static const bool immutable = false;
-  VarNdArrayBase(const VarNdArrayBase&) = default;
-  VarNdArrayBase(const Shape& shape, T* ptr)
+  VarNdArray(const VarNdArray&) = default;
+  VarNdArray(const Shape& shape, T* ptr)
       : NdArray<T, NDIMS>(shape), ptr_(ptr), len_(shape.elem_cnt()) {
     CHECK_GT(len_, 0);
   }
-  virtual ~VarNdArrayBase() = default;
+  virtual ~VarNdArray() = default;
+
+  SliceNdArray<VarNdArray<T, NDIMS>> operator()(Slice&& slice0) {
+    static_assert(NDIMS == 1, "NDIMS error");
+    return SliceNdArray<VarNdArray<T, NDIMS>>(std::move(*this), {slice0});
+  }
+  SliceNdArray<VarNdArray<T, NDIMS>> operator()(Slice&& slice0, Slice&& slice1) {
+    static_assert(NDIMS == 2, "NDIMS error");
+    return SliceNdArray<VarNdArray<T, NDIMS>>(std::move(*this), {slice0, slice1});
+  }
+  SliceNdArray<VarNdArray<T, NDIMS>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2) {
+    static_assert(NDIMS == 3, "NDIMS error");
+    return SliceNdArray<VarNdArray<T, NDIMS>>(std::move(*this), {slice0, slice1, slice2});
+  }
+  SliceNdArray<VarNdArray<T, NDIMS>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2,
+                                                Slice&& slice3) {
+    static_assert(NDIMS == 4, "NDIMS error");
+    return SliceNdArray<VarNdArray<T, NDIMS>>(std::move(*this), {slice0, slice1, slice2, slice3});
+  }
+  SliceNdArray<VarNdArray<T, NDIMS>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2,
+                                                Slice&& slice3, Slice&& slice4) {
+    static_assert(NDIMS == 5, "NDIMS error");
+    return SliceNdArray<VarNdArray<T, NDIMS>>(std::move(*this),
+                                              {slice0, slice1, slice2, slice3, slice4});
+  }
 
   template<typename XT>
   void CopyFrom(const XT& ndarray) {
-    NdArrayAssign(dynamic_cast<Derived*>(this), ndarray);
+    NdArrayAssign(this, ndarray);
   }
 
   ALWAYS_INLINE void GetMutPtrAndContiguousSize(int64_t offset, T** ptr, size_t* size) const {
@@ -36,73 +64,6 @@ class VarNdArrayBase : public NdArray<T, NDIMS> {
  private:
   T* const ptr_;
   size_t len_;
-};
-
-class Slice;
-template<typename XT, typename Enable = void>
-class SliceNdArray;
-
-template<typename T, int NDIMS>
-class VarNdArray;
-
-template<typename T>
-class VarNdArray<T, 1> final : public VarNdArrayBase<VarNdArray<T, 1>, T, 1> {
- public:
-  VarNdArray(const Shape& shape, T* ptr) : VarNdArrayBase<VarNdArray<T, 1>, T, 1>(shape, ptr) {}
-  ~VarNdArray() = default;
-
-  SliceNdArray<VarNdArray<T, 1>> operator()(Slice&& slice0) {
-    return SliceNdArray<VarNdArray<T, 1>>(std::move(*this), std::move(slice0));
-  }
-};
-
-template<typename T>
-class VarNdArray<T, 2> final : public VarNdArrayBase<VarNdArray<T, 2>, T, 2> {
- public:
-  VarNdArray(const Shape& shape, T* ptr) : VarNdArrayBase<VarNdArray<T, 2>, T, 2>(shape, ptr) {}
-  ~VarNdArray() = default;
-
-  SliceNdArray<VarNdArray<T, 2>> operator()(Slice&& slice0, Slice&& slice1) {
-    return SliceNdArray<VarNdArray<T, 2>>(std::move(*this), std::move(slice0), std::move(slice1));
-  }
-};
-
-template<typename T>
-class VarNdArray<T, 3> final : public VarNdArrayBase<VarNdArray<T, 3>, T, 3> {
- public:
-  VarNdArray(const Shape& shape, T* ptr) : VarNdArrayBase<VarNdArray<T, 3>, T, 3>(shape, ptr) {}
-  ~VarNdArray() = default;
-
-  SliceNdArray<VarNdArray<T, 3>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2) {
-    return SliceNdArray<VarNdArray<T, 3>>(std::move(*this), std::move(slice0), std::move(slice1),
-                                          std::move(slice2));
-  }
-};
-
-template<typename T>
-class VarNdArray<T, 4> final : public VarNdArrayBase<VarNdArray<T, 4>, T, 4> {
- public:
-  VarNdArray(const Shape& shape, T* ptr) : VarNdArrayBase<VarNdArray<T, 4>, T, 4>(shape, ptr) {}
-  ~VarNdArray() = default;
-
-  SliceNdArray<VarNdArray<T, 4>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2,
-                                            Slice&& slice3) {
-    return SliceNdArray<VarNdArray<T, 4>>(std::move(*this), std::move(slice0), std::move(slice1),
-                                          std::move(slice2), std::move(slice3));
-  }
-};
-
-template<typename T>
-class VarNdArray<T, 5> final : public VarNdArrayBase<VarNdArray<T, 5>, T, 5> {
- public:
-  VarNdArray(const Shape& shape, T* ptr) : VarNdArrayBase<VarNdArray<T, 5>, T, 5>(shape, ptr) {}
-  ~VarNdArray() = default;
-
-  SliceNdArray<VarNdArray<T, 5>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2,
-                                            Slice&& slice3, Slice&& slice4) {
-    return SliceNdArray<VarNdArray<T, 5>>(std::move(*this), std::move(slice0), std::move(slice1),
-                                          std::move(slice2), std::move(slice3), std::move(slice4));
-  }
 };
 
 }  // namespace oneflow
