@@ -21,7 +21,7 @@ class ConcatVarNdArray : public NdArray<T, NDIMS> {
 
   template<typename XT>
   void CopyFrom(const XT& ndarray) {
-    NdArrayAssign(this, ndarray);
+    NdArrayCopy(this, ndarray);
   }
   void GetMutPtrAndContiguousSize(int64_t offset, T** ptr, size_t* size) const {
     int64_t dim[NDIMS] = {0};

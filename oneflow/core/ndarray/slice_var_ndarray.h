@@ -3,7 +3,7 @@
 
 #include "oneflow/core/ndarray/slice.h"
 #include "oneflow/core/ndarray/ndarray.h"
-#include "oneflow/core/ndarray/ndarray_assign.h"
+#include "oneflow/core/ndarray/ndarray_copy.h"
 
 namespace oneflow {
 
@@ -47,7 +47,7 @@ class SliceVarNdArray : public NdArray<typename XT::dtype, XT::ndims> {
 
   template<typename AT>
   void CopyFrom(const AT& ndarray) {
-    NdArrayAssign(this, ndarray);
+    NdArrayCopy(this, ndarray);
   }
 
   using dtype = typename XT::dtype;

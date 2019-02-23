@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_NDARRAY_VAR_NDARRAY_H_
 
 #include "oneflow/core/ndarray/ndarray.h"
-#include "oneflow/core/ndarray/ndarray_assign.h"
+#include "oneflow/core/ndarray/ndarray_copy.h"
 
 namespace oneflow {
 
@@ -50,7 +50,7 @@ class VarNdArray : public NdArray<T, NDIMS> {
 
   template<typename XT>
   void CopyFrom(const XT& ndarray) {
-    NdArrayAssign(this, ndarray);
+    NdArrayCopy(this, ndarray);
   }
 
   ALWAYS_INLINE void GetMutPtrAndContiguousSize(int64_t offset, T** ptr, size_t* size) const {
