@@ -8,41 +8,41 @@
 namespace oneflow {
 
 template<typename XT>
-class SliceNdArray : public NdArray<typename XT::dtype, XT::ndims> {
+class SliceVarNdArray : public NdArray<typename XT::dtype, XT::ndims> {
  public:
   static const int ndims = XT::ndims;
   static const bool immutable = XT::immutable;
-  SliceNdArray(XT&& x, std::array<Slice, ndims>&& slices)
+  SliceVarNdArray(XT&& x, std::array<Slice, ndims>&& slices)
       : NdArray<typename XT::dtype, XT::ndims>(
             BoundedSlices2Shape(BoundSlices(x, std::move(slices)))),
         x_(x),
         slices_(std::move(slices)) {
     SetContiguousLength(slices);
   }
-  virtual ~SliceNdArray() = default;
+  virtual ~SliceVarNdArray() = default;
 
-  SliceNdArray<SliceNdArray<XT>> operator()(Slice&& slice0) {
+  SliceVarNdArray<SliceVarNdArray<XT>> operator()(Slice&& slice0) {
     static_assert(ndims == 1, "NDIMS error");
-    return SliceNdArray<SliceNdArray<XT>>(std::move(*this), {slice0});
+    return SliceVarNdArray<SliceVarNdArray<XT>>(std::move(*this), {slice0});
   }
-  SliceNdArray<SliceNdArray<XT>> operator()(Slice&& slice0, Slice&& slice1) {
+  SliceVarNdArray<SliceVarNdArray<XT>> operator()(Slice&& slice0, Slice&& slice1) {
     static_assert(ndims == 2, "NDIMS error");
-    return SliceNdArray<SliceNdArray<XT>>(std::move(*this), {slice0, slice1});
+    return SliceVarNdArray<SliceVarNdArray<XT>>(std::move(*this), {slice0, slice1});
   }
-  SliceNdArray<SliceNdArray<XT>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2) {
+  SliceVarNdArray<SliceVarNdArray<XT>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2) {
     static_assert(ndims == 3, "NDIMS error");
-    return SliceNdArray<SliceNdArray<XT>>(std::move(*this), {slice0, slice1, slice2});
+    return SliceVarNdArray<SliceVarNdArray<XT>>(std::move(*this), {slice0, slice1, slice2});
   }
-  SliceNdArray<SliceNdArray<XT>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2,
-                                            Slice&& slice3) {
+  SliceVarNdArray<SliceVarNdArray<XT>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2,
+                                                  Slice&& slice3) {
     static_assert(ndims == 4, "NDIMS error");
-    return SliceNdArray<SliceNdArray<XT>>(std::move(*this), {slice0, slice1, slice2, slice3});
+    return SliceVarNdArray<SliceVarNdArray<XT>>(std::move(*this), {slice0, slice1, slice2, slice3});
   }
-  SliceNdArray<SliceNdArray<XT>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2,
-                                            Slice&& slice3, Slice&& slice4) {
+  SliceVarNdArray<SliceVarNdArray<XT>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2,
+                                                  Slice&& slice3, Slice&& slice4) {
     static_assert(ndims == 5, "NDIMS error");
-    return SliceNdArray<SliceNdArray<XT>>(std::move(*this),
-                                          {slice0, slice1, slice2, slice3, slice4});
+    return SliceVarNdArray<SliceVarNdArray<XT>>(std::move(*this),
+                                                {slice0, slice1, slice2, slice3, slice4});
   }
 
   template<typename AT>
