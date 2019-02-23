@@ -5,16 +5,9 @@
 
 namespace oneflow {
 
-#define HALF_CHECK_LOG                      \
+#define HALF_CHECK_FAILED                   \
   printf("use half need nvcc arch >= 530"); \
-  assert(false);
-
-/*
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-#else
-  HALF_CHECK_LOG
-#endif // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-*/
+  assert(false)
 
 namespace {
 
@@ -73,7 +66,7 @@ __global__ void SigmoidForwardGpu(const int n, const half* x, half* y) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   CUDA_1D_KERNEL_LOOP(i, n) { y[i] = __hdiv(hone(), __hadd(hone(), hexp(__hneg(x[i])))); }
 #else
-  HALF_CHECK_LOG
+  HALF_CHECK_FAILED;
 #endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) */
 }
 
@@ -81,7 +74,7 @@ __global__ void SigmoidBackwardGpu(const int n, const half* y, const half* dy, h
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = __hmul(dy[i], __hmul(y[i], __hsub(hone(), y[i]))); }
 #else
-  HALF_CHECK_LOG
+  HALF_CHECK_FAILED;
 #endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) */
 }
 
@@ -93,7 +86,7 @@ __global__ void TanHForwardGpu(const int n, const half* x, half* y) {
     y[i] = __hdiv(__hsub(ex, e_x), __hadd(ex, e_x));
   }
 #else
-  HALF_CHECK_LOG
+  HALF_CHECK_FAILED;
 #endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
 }
 
@@ -101,7 +94,7 @@ __global__ void TanHBackwardGpu(const int n, const half* y, const half* dy, half
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = __hmul(dy[i], __hsub(hone(), __hmul(y[i], y[i]))); }
 #else
-  HALF_CHECK_LOG
+  HALF_CHECK_FAILED;
 #endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
 }
 
@@ -115,7 +108,7 @@ __global__ void ReluForwardGpu(const int n, const half* x, half* y) {
     }
   }
 #else
-  HALF_CHECK_LOG
+  HALF_CHECK_FAILED;
 #endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) */
 }
 
@@ -130,7 +123,7 @@ __global__ void ReluBackwardGpu(const int n, const half* y, const half* dy, half
     }
   }
 #else
-  HALF_CHECK_LOG
+  HALF_CHECK_FAILED;
 #endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
 }
 
@@ -139,7 +132,7 @@ __global__ void AxpyHalfGpu(const int n, const half alpha, const half* x, const 
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   CUDA_1D_KERNEL_LOOP(i, n) { y[i * incy] = __hfma(alpha, x[i * incx], y[i * incy]); }
 #else
-  HALF_CHECK_LOG
+  HALF_CHECK_FAILED;
 #endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
 }
 
@@ -147,7 +140,7 @@ __global__ void ScalHalfGpu(const int n, const half alpha, half* x, const int in
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   CUDA_1D_KERNEL_LOOP(i, n) { x[i * incx] = __hmul(alpha, x[i * incx]); }
 #else
-  HALF_CHECK_LOG
+  HALF_CHECK_FAILED;
 #endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
 }
 
@@ -337,15 +330,11 @@ struct NewKernelUtilIf<DeviceType::kGPU, T, typename std::enable_if<IsFloat16<T>
   }
   static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, T* y,
                    const int incy) {
-    // half ha;
-    // ha.setx(alpha.getx());
     AxpyHalfGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
         n, float16_2half(alpha), reinterpret_cast<const half*>(x), incx, reinterpret_cast<half*>(y),
         incy);
   }
   static void Scal(DeviceCtx* ctx, const int n, const T alpha, T* x, const int incx) {
-    // half ha;
-    // ha.setx(alpha.getx());
     ScalHalfGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
         n, float16_2half(alpha), reinterpret_cast<half*>(x), incx);
   }
