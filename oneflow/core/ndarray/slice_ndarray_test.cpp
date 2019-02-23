@@ -42,7 +42,7 @@ TEST(SliceNdArray, 1d_slice_assign) {
   NdArrayHelper<int32_t, 1> ndarray;
   auto&& data_ndarray = ndarray.Var({static_cast<int64_t>(data.size())}, data.data());
   auto&& buffer_ndarray = ndarray.Var({10LL}, buffer.data());
-  ASSERT_EQ(buffer_ndarray({1, -1}).shape(), Shape({8}));
+  ASSERT_EQ(buffer_ndarray({1, -1}).xpu_shape(), XpuShape(Shape({8})));
   buffer_ndarray({1, -1}).CopyFrom(data_ndarray({}));
   ASSERT_EQ(memcmp(expected.data(), buffer.data(), sizeof(int32_t) * 10), 0);
 }

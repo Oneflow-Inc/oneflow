@@ -73,7 +73,7 @@ class SliceNdArray : public NdArray<typename XT::dtype, XT::ndims> {
 
  private:
   static std::array<Slice, ndims>&& BoundSlices(const XT& x, std::array<Slice, ndims>&& slices) {
-    FOR_RANGE(int32_t, i, 0, ndims) { slices[i].Bound(x.shape().At(i)); }
+    FOR_RANGE(int32_t, i, 0, ndims) { slices[i].Bound(x.xpu_shape().At(i)); }
     return std::move(slices);
   }
   static Shape BoundedSlices2Shape(const std::array<Slice, ndims>& bounded_slices) {
