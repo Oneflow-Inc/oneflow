@@ -28,12 +28,12 @@ struct NdarrayNoReduce final {
   }
   static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
                      const XpuVarNdarray<T>& tmp_storage) {
-    XpuNdArrayAssign<device_type, T>::Assign(ctx, y, x);
+    XpuNdarrayAssign<device_type, T>::Assign(ctx, y, x);
   }
 };
 
 template<DeviceType device_type, typename T, int NDIMS, const T (*binary_func)(const T, const T)>
-struct NdArrayReduceCoreWrapper final {
+struct NdarrayReduceCoreWrapper final {
   static void ReduceAxis(DeviceCtx* ctx, const XpuReducedNdarray<T, NDIMS>& dst_reduced,
                          const XpuReducedNdarray<T, NDIMS>& x, int axis);
 };
@@ -57,7 +57,7 @@ struct NdarrayDefaultReduce final {
     XpuShape cur_shape(x.shape());
     CHECK_EQ(y.shape().NumAxes(), x.shape().NumAxes());
     CHECK(x.shape() != y.shape());
-    XpuNdArrayAssign<device_type, T>::Assign(ctx, storage, x);
+    XpuNdarrayAssign<device_type, T>::Assign(ctx, storage, x);
     for (int i = 0; i < x.shape().NumAxes(); ++i) {
       if (y.shape().At(i) == x.shape().At(i)) { continue; }
       CHECK_EQ(y.shape().At(i), 1);
@@ -65,7 +65,7 @@ struct NdarrayDefaultReduce final {
       ImplaceReduceAxis<NDIMS>(ctx, i, storage, &cur_shape);
     }
     XpuReducedNdarray<T, NDIMS> reduced(y.shape(), storage);
-    XpuNdArrayAssign<device_type, T>::template Assign<NDIMS>(ctx, y, reduced);
+    XpuNdarrayAssign<device_type, T>::template Assign<NDIMS>(ctx, y, reduced);
   }
 
   template<int NDIMS>
@@ -78,13 +78,13 @@ struct NdarrayDefaultReduce final {
       int64_t new_dim_value = (cur_shape->At(axis) + (shrink - 1)) / shrink;
       cur_shape->Set(axis, new_dim_value);
       XpuReducedNdarray<T, NDIMS> to(*cur_shape, implace);
-      NdArrayReduceCoreWrapper<device_type, T, NDIMS, binary_func>::ReduceAxis(ctx, to, from, axis);
+      NdarrayReduceCoreWrapper<device_type, T, NDIMS, binary_func>::ReduceAxis(ctx, to, from, axis);
     }
   }
 };
 
 template<typename T, int NDIMS, const T (*binary_func)(const T, const T)>
-struct NdArrayReduceCore final {
+struct NdarrayReduceCore final {
   template<typename X>
   OF_DEVICE_FUNC static void ReduceAxis(const XpuReducedNdarray<T, NDIMS>& dst_reduced, const X& x,
                                         int axis) {

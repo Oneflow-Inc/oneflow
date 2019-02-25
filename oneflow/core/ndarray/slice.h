@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_NDARRAY_SLICE_H_
 #define ONEFLOW_CORE_NDARRAY_SLICE_H_
 
-#include "oneflow/core/ndarray/ndarray.h"
+#include "oneflow/core/ndarray/cpu_ndarray.h"
 
 namespace oneflow {
 

@@ -41,7 +41,7 @@ class SliceKernel<DeviceType::kGPU, T> final : public KernelIf<DeviceType::kGPU>
 };
 
 template<typename T, size_t NDIMS>
-struct NdArraySliceUtil;
+struct NdarraySliceUtil;
 
 }  // namespace oneflow
 
