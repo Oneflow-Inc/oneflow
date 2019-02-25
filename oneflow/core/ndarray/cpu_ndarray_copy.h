@@ -1,12 +1,12 @@
-#ifndef ONEFLOW_CORE_NDARRAY_NDARRAY_COPY_H_
-#define ONEFLOW_CORE_NDARRAY_NDARRAY_COPY_H_
+#ifndef ONEFLOW_CORE_NDARRAY_CPU_NDARRAY_COPY_H_
+#define ONEFLOW_CORE_NDARRAY_CPU_NDARRAY_COPY_H_
 
 #include "oneflow/core/ndarray/cpu_ndarray.h"
 
 namespace oneflow {
 
 template<typename YT, typename XT, typename T = typename YT::dtype>
-void NdarrayCopy(YT* y_ndarray, const XT& x_ndarray) {
+void CpuNdarrayCopy(YT* y_ndarray, const XT& x_ndarray) {
   CHECK_EQ(y_ndarray->xpu_shape().ElemNum(), x_ndarray.xpu_shape().ElemNum());
   T* dst_ptr = nullptr;
   size_t dst_size = 0;
@@ -37,4 +37,4 @@ void NdarrayCopy(YT* y_ndarray, const XT& x_ndarray) {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_NDARRAY_NDARRAY_COPY_H_
+#endif  // ONEFLOW_CORE_NDARRAY_CPU_NDARRAY_COPY_H_

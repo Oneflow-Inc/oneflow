@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_CPU_NDARRAY_NDARRAY_H_
-#define ONEFLOW_CORE_CPU_NDARRAY_NDARRAY_H_
+#ifndef ONEFLOW_CORE_NDARRAY_CPU_NDARRAY_H_
+#define ONEFLOW_CORE_NDARRAY_CPU_NDARRAY_H_
 
 #include <climits>
 #include "oneflow/core/common/shape.h"
@@ -27,4 +27,4 @@ class CpuNdarray {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_CPU_NDARRAY_NDARRAY_H_
+#endif  // ONEFLOW_CORE_NDARRAY_CPU_NDARRAY_H_

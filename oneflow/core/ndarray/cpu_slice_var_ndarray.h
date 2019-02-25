@@ -1,9 +1,9 @@
-#ifndef ONEFLOW_CORE_CPU_NDARRAY_SLICE_NDARRAY_H_
-#define ONEFLOW_CORE_CPU_NDARRAY_SLICE_NDARRAY_H_
+#ifndef ONEFLOW_CORE_NDARRAY_CPU_SLICE_NDARRAY_H_
+#define ONEFLOW_CORE_NDARRAY_CPU_SLICE_NDARRAY_H_
 
 #include "oneflow/core/ndarray/slice.h"
 #include "oneflow/core/ndarray/cpu_ndarray.h"
-#include "oneflow/core/ndarray/ndarray_copy.h"
+#include "oneflow/core/ndarray/cpu_ndarray_copy.h"
 
 namespace oneflow {
 
@@ -48,7 +48,7 @@ class CpuSliceVarNdarray : public CpuNdarray<typename XT::dtype, XT::ndims> {
 
   template<typename AT>
   void CopyFrom(const AT& ndarray) {
-    NdarrayCopy(this, ndarray);
+    CpuNdarrayCopy(this, ndarray);
   }
 
   ALWAYS_INLINE void GetMutPtrAndContiguousSize(int64_t offset, typename XT::dtype** ptr,
@@ -99,4 +99,4 @@ class CpuSliceVarNdarray : public CpuNdarray<typename XT::dtype, XT::ndims> {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_CPU_NDARRAY_SLICE_NDARRAY_H_
+#endif  // ONEFLOW_CORE_NDARRAY_CPU_SLICE_NDARRAY_H_

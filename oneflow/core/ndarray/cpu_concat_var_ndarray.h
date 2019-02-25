@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_CPU_NDARRAY_CONCAT_VAR_NDARRAY_H_
-#define ONEFLOW_CORE_CPU_NDARRAY_CONCAT_VAR_NDARRAY_H_
+#ifndef ONEFLOW_CORE_NDARRAY_CPU_CONCAT_VAR_NDARRAY_H_
+#define ONEFLOW_CORE_NDARRAY_CPU_CONCAT_VAR_NDARRAY_H_
 
 #include "oneflow/core/ndarray/cpu_ndarray.h"
 #include "oneflow/core/ndarray/cpu_var_ndarray.h"
@@ -21,7 +21,7 @@ class CpuConcatVarNdarray : public CpuNdarray<T, NDIMS> {
 
   template<typename XT>
   void CopyFrom(const XT& ndarray) {
-    NdarrayCopy(this, ndarray);
+    CpuNdarrayCopy(this, ndarray);
   }
   void GetMutPtrAndContiguousSize(int64_t offset, T** ptr, size_t* size) const {
     int64_t dim[NDIMS] = {0};
@@ -101,4 +101,4 @@ class CpuConcatVarNdarray : public CpuNdarray<T, NDIMS> {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_CPU_NDARRAY_CONCAT_VAR_NDARRAY_H_
+#endif  // ONEFLOW_CORE_NDARRAY_CPU_CONCAT_VAR_NDARRAY_H_
