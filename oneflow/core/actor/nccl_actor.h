@@ -17,9 +17,10 @@ class NcclActor final : public Actor {
 
  private:
   void InitDeviceCtx(const ThreadCtx& thread_ctx) override;
-  void Act() override final;
+  void Act() override;
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
   void LaunchKernel(const KernelCtx& kernel_ctx, std::function<Regst*(int64_t)> Regst4RegstDescId);
+  bool IsKernelLaunchSynchronized() override { return false; }
 };
 
 }  // namespace oneflow

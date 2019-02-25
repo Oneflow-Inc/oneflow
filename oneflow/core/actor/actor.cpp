@@ -492,8 +492,9 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
 
 void Actor::AsyncSendMsg(const ActorMsg& msg) {
   std::function<void()> callback = [msg]() { Global<ActorMsgBus>::Get()->SendMsg(msg); };
-  if (GetGlobalWorkStreamId()
-      == Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(msg.dst_actor_id())) {
+  if (IsKernelLaunchSynchronized()
+      && GetGlobalWorkStreamId()
+             == Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(msg.dst_actor_id())) {
     callback();
   } else {
     device_ctx_->AddCallBack(callback);

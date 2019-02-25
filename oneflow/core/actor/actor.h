@@ -174,6 +174,7 @@ class Actor {
   void AsyncSendProducedCtrlRegstMsgToConsumer();
   int64_t HandleRegstToConsumer(Regst* regst, std::function<bool(int64_t)> IsAllowedActor);
   virtual void AsyncReturnAllCustomizedReadableRegst() {}
+  virtual bool IsKernelLaunchSynchronized() { return true; }
 
   int64_t actor_id_;
   int64_t act_id_;
