@@ -15,7 +15,6 @@ class CpuVarNdArray : public NdArray<T, NDIMS> {
  public:
   using dtype = T;
   static const int ndims = NDIMS;
-  static const bool immutable = false;
   CpuVarNdArray(const CpuVarNdArray&) = default;
   CpuVarNdArray(const Shape& shape, T* ptr)
       : NdArray<T, NDIMS>(shape), ptr_(ptr), len_(shape.elem_cnt()) {

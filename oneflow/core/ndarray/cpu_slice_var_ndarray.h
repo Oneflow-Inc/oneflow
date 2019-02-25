@@ -10,8 +10,8 @@ namespace oneflow {
 template<typename XT>
 class CpuSliceVarNdArray : public NdArray<typename XT::dtype, XT::ndims> {
  public:
+  using dtype = typename XT::dtype;
   static const int ndims = XT::ndims;
-  static const bool immutable = XT::immutable;
   CpuSliceVarNdArray(XT&& x, std::array<Slice, ndims>&& slices)
       : NdArray<typename XT::dtype, XT::ndims>(
             BoundedSlices2Shape(BoundSlices(x, std::move(slices)))),
@@ -53,9 +53,7 @@ class CpuSliceVarNdArray : public NdArray<typename XT::dtype, XT::ndims> {
     NdArrayCopy(this, ndarray);
   }
 
-  using dtype = typename XT::dtype;
-  ALWAYS_INLINE typename std::enable_if<!XT::immutable>::type GetMutPtrAndContiguousSize(
-      int64_t offset, dtype** ptr, size_t* size) const {
+  ALWAYS_INLINE void GetMutPtrAndContiguousSize(int64_t offset, dtype** ptr, size_t* size) const {
     int64_t dim[ndims] = {0};
     this->xpu_shape().template Offset2Coordinate<ndims>(offset, dim);
     for (int i = 0; i < ndims; ++i) { dim[i] = this->slice(i).Get(dim[i]); }
@@ -66,8 +64,8 @@ class CpuSliceVarNdArray : public NdArray<typename XT::dtype, XT::ndims> {
  protected:
   ALWAYS_INLINE const XT& x() const { return x_; }
   ALWAYS_INLINE const Slice& slice(int32_t dim) const { return slices_[dim]; }
-  ALWAYS_INLINE typename std::enable_if<!XT::immutable>::type GetMutPtrAndMinContiguousSize(
-      int64_t offset, int64_t x_offset, typename XT::dtype** ptr, size_t* size) const {
+  ALWAYS_INLINE void GetMutPtrAndMinContiguousSize(int64_t offset, int64_t x_offset,
+                                                   typename XT::dtype** ptr, size_t* size) const {
     size_t x_contiguous_size;
     this->x().GetMutPtrAndContiguousSize(x_offset, ptr, &x_contiguous_size);
     size_t slice_contiguous_size = (contiguous_len_ - offset % contiguous_len_);
