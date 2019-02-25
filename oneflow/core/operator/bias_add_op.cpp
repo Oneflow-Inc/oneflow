@@ -20,6 +20,7 @@ bool BiasAddOp::IsInputBlobAllowedModelSplit(const std::string& ibn) const {
 
 void BiasAddOp::GetOpParallelSignatures(
     std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
+  op_parallel_signatures->emplace_back(MakeDataSplitOpParallelSignature(this));
   op_parallel_signatures->emplace_back(Make_DS_MB_2_DS_OpParallelSignature(this));
   auto EqZero = [](int32_t axis) { return axis == 0; };
   op_parallel_signatures->emplace_back(Make_DB_MS_2_MS_OpParallelSignature(this, EqZero));
