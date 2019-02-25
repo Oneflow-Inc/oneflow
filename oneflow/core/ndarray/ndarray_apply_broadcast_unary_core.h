@@ -11,12 +11,12 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T, int NDIMS, const T (*unary_func)(const T)>
-struct NdArrayApplyBroadcastUnaryCoreWrapper final {
+struct NdarrayApplyBroadcastUnaryCoreWrapper final {
   static void Apply(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x);
 };
 
 template<typename T, int NDIMS, const T (*unary_func)(const T)>
-struct NdArrayApplyBroadcastUnaryCore final {
+struct NdarrayApplyBroadcastUnaryCore final {
   OF_DEVICE_FUNC static void Apply(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
     y.template Assign<NDIMS>(x.Broadcast(y.shape()).template UnaryFunc<unary_func>());
   }

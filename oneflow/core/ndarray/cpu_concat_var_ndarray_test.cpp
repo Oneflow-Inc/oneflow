@@ -1,35 +1,35 @@
-#include "oneflow/core/ndarray/ndarray_helper.h"
+#include "oneflow/core/ndarray/cpu_ndarray_builder.h"
 #include <gtest/gtest.h>
 
 namespace oneflow {
 
 namespace test {
 
-TEST(ConcatVarNdArray, two_elem_concat) {
+TEST(CpuConcatVarNdarray, two_elem_concat) {
   std::vector<int32_t> x0_data{0};
   std::vector<int32_t> x1_data{1};
   std::vector<int32_t> buffer{-1, -1};
   std::vector<int32_t> expected{0, 1};
-  NdArrayHelper<int32_t, 1> ndarray;
+  CpuNdarrayBuilder<int32_t, 1> ndarray;
   auto x0 = ndarray.Var({1LL}, x0_data.data());
   auto x1 = ndarray.Var({1LL}, x1_data.data());
-  ndarray.Var({2LL}, buffer.data()).Assign(ndarray.Concatenate({x0, x1}));
+  ndarray.Var({2LL}, buffer.data()).CopyFrom(ndarray.Concatenate({x0, x1}));
   ASSERT_EQ(memcmp(buffer.data(), expected.data(), sizeof(int32_t) * 2), 0);
 }
 
-TEST(ConcatVarNdArray, two_elem_concat_assign) {
+TEST(CpuConcatVarNdarray, two_elem_concat_assign) {
   std::vector<int32_t> x0_data{-1};
   std::vector<int32_t> x1_data{-1};
   std::vector<int32_t> buffer{0, 1};
-  NdArrayHelper<int32_t, 1> ndarray;
+  CpuNdarrayBuilder<int32_t, 1> ndarray;
   auto x0 = ndarray.Var({1LL}, x0_data.data());
   auto x1 = ndarray.Var({1LL}, x1_data.data());
-  ndarray.Concatenate({x0, x1}).Assign(ndarray.Var({2LL}, buffer.data()));
+  ndarray.Concatenate({x0, x1}).CopyFrom(ndarray.Var({2LL}, buffer.data()));
   ASSERT_EQ(x0_data[0], 0);
   ASSERT_EQ(x1_data[0], 1);
 }
 
-TEST(ConcatVarNdArray, 2d_concat) {
+TEST(CpuConcatVarNdarray, 2d_concat) {
   // clang-format off
  std::vector<int32_t> x0_data{
    0, 1, 2,
@@ -45,14 +45,14 @@ TEST(ConcatVarNdArray, 2d_concat) {
  };
  std::vector<int32_t> buffer(10, -1);
   // clang-format on
-  NdArrayHelper<int32_t, 2> ndarray;
+  CpuNdarrayBuilder<int32_t, 2> ndarray;
   auto x0 = ndarray.Var({2LL, 3LL}, x0_data.data());
   auto x1 = ndarray.Var({2LL, 2LL}, x1_data.data());
-  ndarray.Var({2LL, 5LL}, buffer.data()).Assign(ndarray.Concatenate<1>({x0, x1}));
+  ndarray.Var({2LL, 5LL}, buffer.data()).CopyFrom(ndarray.Concatenate<1>({x0, x1}));
   ASSERT_EQ(memcmp(buffer.data(), expected.data(), sizeof(int32_t) * 10), 0);
 }
 
-TEST(ConcatVarNdArray, 2d_concat_assign) {
+TEST(CpuConcatVarNdarray, 2d_concat_assign) {
   // clang-format off
  std::vector<int32_t> x_data{
    0, 1, 2, 3, 4,
@@ -69,16 +69,16 @@ TEST(ConcatVarNdArray, 2d_concat_assign) {
             8, 9,
  };
   // clang-format on
-  NdArrayHelper<int32_t, 2> ndarray;
+  CpuNdarrayBuilder<int32_t, 2> ndarray;
   auto x = ndarray.Var({2LL, 5LL}, x_data.data());
   auto y0 = ndarray.Var({2LL, 3LL}, y0_buffer.data());
   auto y1 = ndarray.Var({2LL, 2LL}, y1_buffer.data());
-  ndarray.Concatenate<1>({y0, y1}).Assign(x);
+  ndarray.Concatenate<1>({y0, y1}).CopyFrom(x);
   ASSERT_EQ(memcmp(y0_buffer.data(), y0_expected.data(), sizeof(int32_t) * 6), 0);
   ASSERT_EQ(memcmp(y1_buffer.data(), y1_expected.data(), sizeof(int32_t) * 4), 0);
 }
 
-TEST(ConcatVarNdArray, 3d_concat) {
+TEST(CpuConcatVarNdarray, 3d_concat) {
   // clang-format off
  std::vector<int32_t> x0_data{
    0, 1, 2,
@@ -103,14 +103,14 @@ TEST(ConcatVarNdArray, 3d_concat) {
  };
  std::vector<int32_t> buffer(20, -1);
   // clang-format on
-  NdArrayHelper<int32_t, 3> ndarray;
+  CpuNdarrayBuilder<int32_t, 3> ndarray;
   auto x0 = ndarray.Var({2LL, 2LL, 3LL}, x0_data.data());
   auto x1 = ndarray.Var({2LL, 2LL, 2LL}, x1_data.data());
-  ndarray.Var({2LL, 2LL, 5LL}, buffer.data()).Assign(ndarray.Concatenate<2>({x0, x1}));
+  ndarray.Var({2LL, 2LL, 5LL}, buffer.data()).CopyFrom(ndarray.Concatenate<2>({x0, x1}));
   ASSERT_EQ(memcmp(buffer.data(), expected.data(), sizeof(int32_t) * 20), 0);
 }
 
-TEST(ConcatVarNdArray, 3d_concat_assign) {
+TEST(CpuConcatVarNdarray, 3d_concat_assign) {
   // clang-format off
  std::vector<int32_t> x_data{
    0, 1, 2, 3, 4,
@@ -136,11 +136,11 @@ TEST(ConcatVarNdArray, 3d_concat_assign) {
  std::vector<int32_t> y0_buffer(2*2*3, -1);
  std::vector<int32_t> y1_buffer(2*2*2, -1);
   // clang-format on
-  NdArrayHelper<int32_t, 3> ndarray;
+  CpuNdarrayBuilder<int32_t, 3> ndarray;
   auto x = ndarray.Var({2LL, 2LL, 5LL}, x_data.data());
   auto y0 = ndarray.Var({2LL, 2LL, 3LL}, y0_buffer.data());
   auto y1 = ndarray.Var({2LL, 2LL, 2LL}, y1_buffer.data());
-  ndarray.Concatenate<2>({y0, y1}).Assign(x);
+  ndarray.Concatenate<2>({y0, y1}).CopyFrom(x);
   ASSERT_EQ(memcmp(y0_buffer.data(), y0_expected.data(), sizeof(int32_t) * y0_expected.size()), 0);
   ASSERT_EQ(memcmp(y1_buffer.data(), y1_expected.data(), sizeof(int32_t) * y1_expected.size()), 0);
 }
