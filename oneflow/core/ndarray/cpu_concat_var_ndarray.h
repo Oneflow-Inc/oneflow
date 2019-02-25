@@ -8,38 +8,38 @@
 namespace oneflow {
 
 template<typename T, int NDIMS, int CONCAT_AXES>
-class CpuConcatVarNdArray : public CpuNdArray<T, NDIMS> {
+class CpuConcatVarNdarray : public CpuNdarray<T, NDIMS> {
  public:
   static const bool immutable = false;
   static_assert(CONCAT_AXES >= 0 && CONCAT_AXES < NDIMS, "CONCAT_AXES should be a valid dim");
-  CpuConcatVarNdArray(const std::vector<CpuVarNdArray<T, NDIMS>>& var_ndarrays)
-      : CpuNdArray<T, NDIMS>(CalcConcatenatedShape(var_ndarrays)),
+  CpuConcatVarNdarray(const std::vector<CpuVarNdarray<T, NDIMS>>& var_ndarrays)
+      : CpuNdarray<T, NDIMS>(CalcConcatenatedShape(var_ndarrays)),
         var_ndarrays_(var_ndarrays),
         dim_ranges_(CalcDimRanges(var_ndarrays)),
         contiguous_lens_(CalcContiguousLens(var_ndarrays)) {}
-  ~CpuConcatVarNdArray() = default;
+  ~CpuConcatVarNdarray() = default;
 
   template<typename XT>
   void CopyFrom(const XT& ndarray) {
-    NdArrayCopy(this, ndarray);
+    NdarrayCopy(this, ndarray);
   }
   void GetMutPtrAndContiguousSize(int64_t offset, T** ptr, size_t* size) const {
     int64_t dim[NDIMS] = {0};
     this->xpu_shape().template Offset2Coordinate<NDIMS>(offset, dim);
     int32_t var_index = 0;
-    this->GetVarNdArrayIndexAndInputDim(dim[CONCAT_AXES], &var_index, &dim[CONCAT_AXES]);
+    this->GetVarNdarrayIndexAndInputDim(dim[CONCAT_AXES], &var_index, &dim[CONCAT_AXES]);
     int64_t input_offset =
         this->var_ndarray(var_index).xpu_shape().template Coordinate2Offset<NDIMS>(dim);
     this->GetMutPtrAndMinContiguousSize(var_index, input_offset, ptr, size);
   }
 
  protected:
-  ALWAYS_INLINE void GetVarNdArrayIndexAndInputDim(int64_t output_dim, int32_t* var_index,
+  ALWAYS_INLINE void GetVarNdarrayIndexAndInputDim(int64_t output_dim, int32_t* var_index,
                                                    int64_t* input_dim) const {
-    *var_index = CpuVarNdArrayIndex4OutputDim(output_dim);
+    *var_index = CpuVarNdarrayIndex4OutputDim(output_dim);
     *input_dim = output_dim - dim_ranges_[*var_index].begin();
   }
-  ALWAYS_INLINE const CpuVarNdArray<T, NDIMS> var_ndarray(int32_t var_index) const {
+  ALWAYS_INLINE const CpuVarNdarray<T, NDIMS> var_ndarray(int32_t var_index) const {
     return var_ndarrays_[var_index];
   }
   ALWAYS_INLINE void GetMutPtrAndMinContiguousSize(int32_t var_index, int64_t var_offset, T** ptr,
@@ -51,14 +51,14 @@ class CpuConcatVarNdArray : public CpuNdArray<T, NDIMS> {
   }
 
  private:
-  ALWAYS_INLINE int32_t CpuVarNdArrayIndex4OutputDim(int64_t output_dim) const {
+  ALWAYS_INLINE int32_t CpuVarNdarrayIndex4OutputDim(int64_t output_dim) const {
     // TODO change to bianry search
     FOR_RANGE(int32_t, i, 0, dim_ranges_.size()) {
       if (output_dim >= dim_ranges_[i].begin() && output_dim < dim_ranges_[i].end()) { return i; }
     }
     UNIMPLEMENTED();
   }
-  XpuShape CalcConcatenatedShape(const std::vector<CpuVarNdArray<T, NDIMS>>& var_ndarrays) const {
+  XpuShape CalcConcatenatedShape(const std::vector<CpuVarNdarray<T, NDIMS>>& var_ndarrays) const {
     CheckInputShape(var_ndarrays);
     XpuShape xpu_shape(var_ndarrays[0].xpu_shape());
     int64_t axes_dim_num = 0;
@@ -68,7 +68,7 @@ class CpuConcatVarNdArray : public CpuNdArray<T, NDIMS> {
     xpu_shape.Set(CONCAT_AXES, axes_dim_num);
     return xpu_shape;
   }
-  void CheckInputShape(const std::vector<CpuVarNdArray<T, NDIMS>>& var_ndarrays) const {
+  void CheckInputShape(const std::vector<CpuVarNdarray<T, NDIMS>>& var_ndarrays) const {
     FOR_RANGE(int32_t, i, 1, var_ndarrays.size()) {
       FOR_RANGE(int32_t, j, 0, NDIMS) {
         if (j == CONCAT_AXES) { continue; }
@@ -76,7 +76,7 @@ class CpuConcatVarNdArray : public CpuNdArray<T, NDIMS> {
       }
     }
   }
-  std::vector<Range> CalcDimRanges(const std::vector<CpuVarNdArray<T, NDIMS>>& var_ndarrays) const {
+  std::vector<Range> CalcDimRanges(const std::vector<CpuVarNdarray<T, NDIMS>>& var_ndarrays) const {
     int64_t axes_dim_num = 0;
     std::vector<Range> ret;
     FOR_RANGE(int32_t, i, 0, var_ndarrays.size()) {
@@ -87,14 +87,14 @@ class CpuConcatVarNdArray : public CpuNdArray<T, NDIMS> {
     return ret;
   }
   std::vector<size_t> CalcContiguousLens(
-      const std::vector<CpuVarNdArray<T, NDIMS>>& var_ndarrays) const {
+      const std::vector<CpuVarNdarray<T, NDIMS>>& var_ndarrays) const {
     std::vector<size_t> ret(var_ndarrays.size(), 0);
     FOR_RANGE(int32_t, i, 0, var_ndarrays.size()) {
       ret[i] = var_ndarrays[i].xpu_shape().Count(CONCAT_AXES);
     }
     return ret;
   }
-  const std::vector<CpuVarNdArray<T, NDIMS>> var_ndarrays_;
+  const std::vector<CpuVarNdarray<T, NDIMS>> var_ndarrays_;
   const std::vector<Range> dim_ranges_;
   const std::vector<size_t> contiguous_lens_;
 };

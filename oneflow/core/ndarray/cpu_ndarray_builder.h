@@ -8,20 +8,20 @@
 namespace oneflow {
 
 template<typename default_data_type, int default_ndims>
-class CpuNdArrayBuilder final {
+class CpuNdarrayBuilder final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CpuNdArrayBuilder);
-  CpuNdArrayBuilder() = default;
-  ~CpuNdArrayBuilder() = default;
+  OF_DISALLOW_COPY_AND_MOVE(CpuNdarrayBuilder);
+  CpuNdarrayBuilder() = default;
+  ~CpuNdarrayBuilder() = default;
 
   template<typename T = default_data_type, int NDIMS = default_ndims>
-  CpuVarNdArray<T, NDIMS> Var(const Shape& shape, T* ptr) const {
-    return CpuVarNdArray<T, NDIMS>(shape, ptr);
+  CpuVarNdarray<T, NDIMS> Var(const Shape& shape, T* ptr) const {
+    return CpuVarNdarray<T, NDIMS>(shape, ptr);
   }
   template<int CONCAT_AXES = 0, typename T = default_data_type, int NDIMS = default_ndims>
-  CpuConcatVarNdArray<T, NDIMS, CONCAT_AXES> Concatenate(
-      const std::vector<CpuVarNdArray<T, NDIMS>>& var_ndarrays) const {
-    return CpuConcatVarNdArray<T, NDIMS, CONCAT_AXES>(var_ndarrays);
+  CpuConcatVarNdarray<T, NDIMS, CONCAT_AXES> Concatenate(
+      const std::vector<CpuVarNdarray<T, NDIMS>>& var_ndarrays) const {
+    return CpuConcatVarNdarray<T, NDIMS, CONCAT_AXES>(var_ndarrays);
   }
 };
 

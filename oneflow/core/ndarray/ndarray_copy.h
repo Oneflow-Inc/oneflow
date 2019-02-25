@@ -6,7 +6,7 @@
 namespace oneflow {
 
 template<typename YT, typename XT, typename T = typename YT::dtype>
-void NdArrayCopy(YT* y_ndarray, const XT& x_ndarray) {
+void NdarrayCopy(YT* y_ndarray, const XT& x_ndarray) {
   CHECK_EQ(y_ndarray->xpu_shape().ElemNum(), x_ndarray.xpu_shape().ElemNum());
   T* dst_ptr = nullptr;
   size_t dst_size = 0;

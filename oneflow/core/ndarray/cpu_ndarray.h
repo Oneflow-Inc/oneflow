@@ -9,7 +9,7 @@
 namespace oneflow {
 
 template<typename T, int NDIMS>
-class CpuNdArray {
+class CpuNdarray {
  public:
   using dtype = T;
   static const int ndims = NDIMS;
@@ -17,9 +17,9 @@ class CpuNdArray {
   ALWAYS_INLINE const XpuShape& xpu_shape() const { return xpu_shape_; }
 
  protected:
-  explicit CpuNdArray(const Shape& shape) : xpu_shape_(shape) {}
-  explicit CpuNdArray(const XpuShape& xpu_shape) : xpu_shape_(xpu_shape) {}
-  virtual ~CpuNdArray() = default;
+  explicit CpuNdarray(const Shape& shape) : xpu_shape_(shape) {}
+  explicit CpuNdarray(const XpuShape& xpu_shape) : xpu_shape_(xpu_shape) {}
+  virtual ~CpuNdarray() = default;
 
  private:
   XpuShape xpu_shape_;

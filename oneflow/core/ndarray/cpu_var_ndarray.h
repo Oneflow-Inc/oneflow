@@ -8,48 +8,48 @@ namespace oneflow {
 
 class Slice;
 template<typename XT>
-class CpuSliceVarNdArray;
+class CpuSliceVarNdarray;
 
 template<typename T, int NDIMS>
-class CpuVarNdArray : public CpuNdArray<T, NDIMS> {
+class CpuVarNdarray : public CpuNdarray<T, NDIMS> {
  public:
-  CpuVarNdArray(const CpuVarNdArray&) = default;
-  CpuVarNdArray(const Shape& shape, T* ptr)
-      : CpuNdArray<T, NDIMS>(shape), ptr_(ptr), len_(shape.elem_cnt()) {
+  CpuVarNdarray(const CpuVarNdarray&) = default;
+  CpuVarNdarray(const Shape& shape, T* ptr)
+      : CpuNdarray<T, NDIMS>(shape), ptr_(ptr), len_(shape.elem_cnt()) {
     CHECK_GT(len_, 0);
   }
-  virtual ~CpuVarNdArray() = default;
+  virtual ~CpuVarNdarray() = default;
 
-  CpuSliceVarNdArray<CpuVarNdArray<T, NDIMS>> operator()(Slice&& slice0) {
+  CpuSliceVarNdarray<CpuVarNdarray<T, NDIMS>> operator()(Slice&& slice0) {
     static_assert(NDIMS == 1, "NDIMS error");
-    return CpuSliceVarNdArray<CpuVarNdArray<T, NDIMS>>(std::move(*this), {slice0});
+    return CpuSliceVarNdarray<CpuVarNdarray<T, NDIMS>>(std::move(*this), {slice0});
   }
-  CpuSliceVarNdArray<CpuVarNdArray<T, NDIMS>> operator()(Slice&& slice0, Slice&& slice1) {
+  CpuSliceVarNdarray<CpuVarNdarray<T, NDIMS>> operator()(Slice&& slice0, Slice&& slice1) {
     static_assert(NDIMS == 2, "NDIMS error");
-    return CpuSliceVarNdArray<CpuVarNdArray<T, NDIMS>>(std::move(*this), {slice0, slice1});
+    return CpuSliceVarNdarray<CpuVarNdarray<T, NDIMS>>(std::move(*this), {slice0, slice1});
   }
-  CpuSliceVarNdArray<CpuVarNdArray<T, NDIMS>> operator()(Slice&& slice0, Slice&& slice1,
+  CpuSliceVarNdarray<CpuVarNdarray<T, NDIMS>> operator()(Slice&& slice0, Slice&& slice1,
                                                          Slice&& slice2) {
     static_assert(NDIMS == 3, "NDIMS error");
-    return CpuSliceVarNdArray<CpuVarNdArray<T, NDIMS>>(std::move(*this), {slice0, slice1, slice2});
+    return CpuSliceVarNdarray<CpuVarNdarray<T, NDIMS>>(std::move(*this), {slice0, slice1, slice2});
   }
-  CpuSliceVarNdArray<CpuVarNdArray<T, NDIMS>> operator()(Slice&& slice0, Slice&& slice1,
+  CpuSliceVarNdarray<CpuVarNdarray<T, NDIMS>> operator()(Slice&& slice0, Slice&& slice1,
                                                          Slice&& slice2, Slice&& slice3) {
     static_assert(NDIMS == 4, "NDIMS error");
-    return CpuSliceVarNdArray<CpuVarNdArray<T, NDIMS>>(std::move(*this),
+    return CpuSliceVarNdarray<CpuVarNdarray<T, NDIMS>>(std::move(*this),
                                                        {slice0, slice1, slice2, slice3});
   }
-  CpuSliceVarNdArray<CpuVarNdArray<T, NDIMS>> operator()(Slice&& slice0, Slice&& slice1,
+  CpuSliceVarNdarray<CpuVarNdarray<T, NDIMS>> operator()(Slice&& slice0, Slice&& slice1,
                                                          Slice&& slice2, Slice&& slice3,
                                                          Slice&& slice4) {
     static_assert(NDIMS == 5, "NDIMS error");
-    return CpuSliceVarNdArray<CpuVarNdArray<T, NDIMS>>(std::move(*this),
+    return CpuSliceVarNdarray<CpuVarNdarray<T, NDIMS>>(std::move(*this),
                                                        {slice0, slice1, slice2, slice3, slice4});
   }
 
   template<typename XT>
   void CopyFrom(const XT& ndarray) {
-    NdArrayCopy(this, ndarray);
+    NdarrayCopy(this, ndarray);
   }
 
   ALWAYS_INLINE void GetMutPtrAndContiguousSize(int64_t offset, T** ptr, size_t* size) const {
