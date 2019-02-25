@@ -13,7 +13,6 @@ class CpuNdArray {
  public:
   using dtype = T;
   static const int ndims = NDIMS;
-  static const bool immutable = true;
 
   ALWAYS_INLINE const XpuShape& xpu_shape() const { return xpu_shape_; }
 

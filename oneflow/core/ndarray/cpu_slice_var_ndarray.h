@@ -10,9 +10,7 @@ namespace oneflow {
 template<typename XT>
 class CpuSliceVarNdArray : public CpuNdArray<typename XT::dtype, XT::ndims> {
  public:
-  using dtype = typename XT::dtype;
-  static const int ndims = XT::ndims;
-  CpuSliceVarNdArray(XT&& x, std::array<Slice, ndims>&& slices)
+  CpuSliceVarNdArray(XT&& x, std::array<Slice, XT::ndims>&& slices)
       : CpuNdArray<typename XT::dtype, XT::ndims>(
             BoundedSlices2Shape(BoundSlices(x, std::move(slices)))),
         x_(x),
@@ -22,28 +20,28 @@ class CpuSliceVarNdArray : public CpuNdArray<typename XT::dtype, XT::ndims> {
   virtual ~CpuSliceVarNdArray() = default;
 
   CpuSliceVarNdArray<CpuSliceVarNdArray<XT>> operator()(Slice&& slice0) {
-    static_assert(ndims == 1, "NDIMS error");
+    static_assert(XT::ndims == 1, "NDIMS error");
     return CpuSliceVarNdArray<CpuSliceVarNdArray<XT>>(std::move(*this), {slice0});
   }
   CpuSliceVarNdArray<CpuSliceVarNdArray<XT>> operator()(Slice&& slice0, Slice&& slice1) {
-    static_assert(ndims == 2, "NDIMS error");
+    static_assert(XT::ndims == 2, "NDIMS error");
     return CpuSliceVarNdArray<CpuSliceVarNdArray<XT>>(std::move(*this), {slice0, slice1});
   }
   CpuSliceVarNdArray<CpuSliceVarNdArray<XT>> operator()(Slice&& slice0, Slice&& slice1,
                                                         Slice&& slice2) {
-    static_assert(ndims == 3, "NDIMS error");
+    static_assert(XT::ndims == 3, "NDIMS error");
     return CpuSliceVarNdArray<CpuSliceVarNdArray<XT>>(std::move(*this), {slice0, slice1, slice2});
   }
   CpuSliceVarNdArray<CpuSliceVarNdArray<XT>> operator()(Slice&& slice0, Slice&& slice1,
                                                         Slice&& slice2, Slice&& slice3) {
-    static_assert(ndims == 4, "NDIMS error");
+    static_assert(XT::ndims == 4, "NDIMS error");
     return CpuSliceVarNdArray<CpuSliceVarNdArray<XT>>(std::move(*this),
                                                       {slice0, slice1, slice2, slice3});
   }
   CpuSliceVarNdArray<CpuSliceVarNdArray<XT>> operator()(Slice&& slice0, Slice&& slice1,
                                                         Slice&& slice2, Slice&& slice3,
                                                         Slice&& slice4) {
-    static_assert(ndims == 5, "NDIMS error");
+    static_assert(XT::ndims == 5, "NDIMS error");
     return CpuSliceVarNdArray<CpuSliceVarNdArray<XT>>(std::move(*this),
                                                       {slice0, slice1, slice2, slice3, slice4});
   }
@@ -53,11 +51,12 @@ class CpuSliceVarNdArray : public CpuNdArray<typename XT::dtype, XT::ndims> {
     NdArrayCopy(this, ndarray);
   }
 
-  ALWAYS_INLINE void GetMutPtrAndContiguousSize(int64_t offset, dtype** ptr, size_t* size) const {
-    int64_t dim[ndims] = {0};
-    this->xpu_shape().template Offset2Coordinate<ndims>(offset, dim);
-    for (int i = 0; i < ndims; ++i) { dim[i] = this->slice(i).Get(dim[i]); }
-    size_t x_offset = this->x().xpu_shape().template Coordinate2Offset<ndims>(dim);
+  ALWAYS_INLINE void GetMutPtrAndContiguousSize(int64_t offset, typename XT::dtype** ptr,
+                                                size_t* size) const {
+    int64_t dim[XT::ndims] = {0};
+    this->xpu_shape().template Offset2Coordinate<XT::ndims>(offset, dim);
+    for (int i = 0; i < XT::ndims; ++i) { dim[i] = this->slice(i).Get(dim[i]); }
+    size_t x_offset = this->x().xpu_shape().template Coordinate2Offset<XT::ndims>(dim);
     this->GetMutPtrAndMinContiguousSize(offset, x_offset, ptr, size);
   }
 
@@ -73,11 +72,12 @@ class CpuSliceVarNdArray : public CpuNdArray<typename XT::dtype, XT::ndims> {
   }
 
  private:
-  static std::array<Slice, ndims>&& BoundSlices(const XT& x, std::array<Slice, ndims>&& slices) {
-    FOR_RANGE(int32_t, i, 0, ndims) { slices[i].Bound(x.xpu_shape().At(i)); }
+  static std::array<Slice, XT::ndims>&& BoundSlices(const XT& x,
+                                                    std::array<Slice, XT::ndims>&& slices) {
+    FOR_RANGE(int32_t, i, 0, XT::ndims) { slices[i].Bound(x.xpu_shape().At(i)); }
     return std::move(slices);
   }
-  static Shape BoundedSlices2Shape(const std::array<Slice, ndims>& bounded_slices) {
+  static Shape BoundedSlices2Shape(const std::array<Slice, XT::ndims>& bounded_slices) {
     std::vector<int64_t> dim_vec;
     for (const Slice& slice : bounded_slices) {
       CHECK_GT(slice.Size(), 0);
@@ -85,15 +85,15 @@ class CpuSliceVarNdArray : public CpuNdArray<typename XT::dtype, XT::ndims> {
     }
     return Shape(dim_vec);
   }
-  void SetContiguousLength(const std::array<Slice, ndims>& bounded_slices) {
+  void SetContiguousLength(const std::array<Slice, XT::ndims>& bounded_slices) {
     contiguous_len_ = 1;
-    for (int i = ndims - 1; i >= 0; --i) {
+    for (int i = XT::ndims - 1; i >= 0; --i) {
       if (bounded_slices[i].IsContiguous()) { contiguous_len_ *= bounded_slices[i].Size(); }
       if (!(bounded_slices[i].IsContiguous() && bounded_slices[i].IsCoveringAll())) { break; }
     }
   }
   const XT& x_;
-  std::array<Slice, ndims> slices_;
+  std::array<Slice, XT::ndims> slices_;
   size_t contiguous_len_;
 };
 

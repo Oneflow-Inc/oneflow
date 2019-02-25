@@ -13,8 +13,6 @@ class CpuSliceVarNdArray;
 template<typename T, int NDIMS>
 class CpuVarNdArray : public CpuNdArray<T, NDIMS> {
  public:
-  using dtype = T;
-  static const int ndims = NDIMS;
   CpuVarNdArray(const CpuVarNdArray&) = default;
   CpuVarNdArray(const Shape& shape, T* ptr)
       : CpuNdArray<T, NDIMS>(shape), ptr_(ptr), len_(shape.elem_cnt()) {
