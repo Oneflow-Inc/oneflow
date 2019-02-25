@@ -19,6 +19,7 @@ class NdArray {
 
  protected:
   explicit NdArray(const Shape& shape) : xpu_shape_(shape) {}
+  explicit NdArray(const XpuShape& xpu_shape) : xpu_shape_(xpu_shape) {}
   virtual ~NdArray() = default;
 
  private:

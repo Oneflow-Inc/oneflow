@@ -58,21 +58,21 @@ class CpuConcatVarNdArray : public NdArray<T, NDIMS> {
     }
     UNIMPLEMENTED();
   }
-  Shape CalcConcatenatedShape(const std::vector<VarNdArray<T, NDIMS>>& var_ndarrays) const {
+  XpuShape CalcConcatenatedShape(const std::vector<VarNdArray<T, NDIMS>>& var_ndarrays) const {
     CheckInputShape(var_ndarrays);
-    Shape shape(var_ndarrays[0].shape());
+    XpuShape xpu_shape(var_ndarrays[0].xpu_shape());
     int64_t axes_dim_num = 0;
     FOR_RANGE(int32_t, i, 0, var_ndarrays.size()) {
-      axes_dim_num += var_ndarrays[i].shape().At(CONCAT_AXES);
+      axes_dim_num += var_ndarrays[i].xpu_shape().At(CONCAT_AXES);
     }
-    shape.Set(CONCAT_AXES, axes_dim_num);
-    return shape;
+    xpu_shape.Set(CONCAT_AXES, axes_dim_num);
+    return xpu_shape;
   }
   void CheckInputShape(const std::vector<VarNdArray<T, NDIMS>>& var_ndarrays) const {
     FOR_RANGE(int32_t, i, 1, var_ndarrays.size()) {
       FOR_RANGE(int32_t, j, 0, NDIMS) {
         if (j == CONCAT_AXES) { continue; }
-        CHECK_EQ(var_ndarrays[0].shape().At(j), var_ndarrays[i].shape().At(j));
+        CHECK_EQ(var_ndarrays[0].xpu_shape().At(j), var_ndarrays[i].xpu_shape().At(j));
       }
     }
   }
@@ -80,8 +80,9 @@ class CpuConcatVarNdArray : public NdArray<T, NDIMS> {
     int64_t axes_dim_num = 0;
     std::vector<Range> ret;
     FOR_RANGE(int32_t, i, 0, var_ndarrays.size()) {
-      ret.push_back(Range(axes_dim_num, axes_dim_num + var_ndarrays[i].shape().At(CONCAT_AXES)));
-      axes_dim_num += var_ndarrays[i].shape().At(CONCAT_AXES);
+      ret.push_back(
+          Range(axes_dim_num, axes_dim_num + var_ndarrays[i].xpu_shape().At(CONCAT_AXES)));
+      axes_dim_num += var_ndarrays[i].xpu_shape().At(CONCAT_AXES);
     }
     return ret;
   }
@@ -89,7 +90,7 @@ class CpuConcatVarNdArray : public NdArray<T, NDIMS> {
       const std::vector<VarNdArray<T, NDIMS>>& var_ndarrays) const {
     std::vector<size_t> ret(var_ndarrays.size(), 0);
     FOR_RANGE(int32_t, i, 0, var_ndarrays.size()) {
-      ret[i] = var_ndarrays[i].shape().Count(CONCAT_AXES);
+      ret[i] = var_ndarrays[i].xpu_shape().Count(CONCAT_AXES);
     }
     return ret;
   }
