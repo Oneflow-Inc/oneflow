@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_NDARRAY_CONCAT_VAR_NDARRAY_H_
-#define ONEFLOW_CORE_NDARRAY_CONCAT_VAR_NDARRAY_H_
+#ifndef ONEFLOW_CORE_CPU_NDARRAY_CONCAT_VAR_NDARRAY_H_
+#define ONEFLOW_CORE_CPU_NDARRAY_CONCAT_VAR_NDARRAY_H_
 
 #include "oneflow/core/ndarray/cpu_ndarray.h"
 #include "oneflow/core/ndarray/cpu_var_ndarray.h"
@@ -101,4 +101,4 @@ class CpuConcatVarNdArray : public CpuNdArray<T, NDIMS> {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_NDARRAY_CONCAT_VAR_NDARRAY_H_
+#endif  // ONEFLOW_CORE_CPU_NDARRAY_CONCAT_VAR_NDARRAY_H_

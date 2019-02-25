@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_NDARRAY_VAR_NDARRAY_H_
-#define ONEFLOW_CORE_NDARRAY_VAR_NDARRAY_H_
+#ifndef ONEFLOW_CORE_CPU_NDARRAY_VAR_NDARRAY_H_
+#define ONEFLOW_CORE_CPU_NDARRAY_VAR_NDARRAY_H_
 
 #include "oneflow/core/ndarray/cpu_ndarray.h"
 #include "oneflow/core/ndarray/ndarray_copy.h"
@@ -68,4 +68,4 @@ class CpuVarNdArray : public CpuNdArray<T, NDIMS> {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_NDARRAY_VAR_NDARRAY_H_
+#endif  // ONEFLOW_CORE_CPU_NDARRAY_VAR_NDARRAY_H_

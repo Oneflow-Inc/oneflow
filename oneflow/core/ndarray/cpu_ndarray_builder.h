@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_NDARRAY_NDARRAY_HELPER_H_
-#define ONEFLOW_CORE_NDARRAY_NDARRAY_HELPER_H_
+#ifndef ONEFLOW_CORE_CPU_NDARRAY_NDARRAY_HELPER_H_
+#define ONEFLOW_CORE_CPU_NDARRAY_NDARRAY_HELPER_H_
 
 #include "oneflow/core/ndarray/cpu_var_ndarray.h"
 #include "oneflow/core/ndarray/cpu_slice_var_ndarray.h"
@@ -27,4 +27,4 @@ class CpuNdArrayBuilder final {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_NDARRAY_NDARRAY_HELPER_H_
+#endif  // ONEFLOW_CORE_CPU_NDARRAY_NDARRAY_HELPER_H_
