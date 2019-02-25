@@ -11,16 +11,17 @@ class NcclActor final : public Actor {
   NcclActor() = default;
   ~NcclActor() override = default;
 
-  void VirtualActorInit(const TaskProto&) override {
-    OF_SET_MSG_HANDLER(&NcclActor::HandlerNormal);
-  }
-
  private:
+  void VirtualActorInit(const TaskProto&) override;
   void InitDeviceCtx(const ThreadCtx& thread_ctx) override;
   void Act() override;
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
   void LaunchKernel(const KernelCtx& kernel_ctx, std::function<Regst*(int64_t)> Regst4RegstDescId);
-  bool IsKernelLaunchSynchronized() override { return false; }
+  bool IsKernelLaunchSynchronized() const override { return false; }
+  std::function<Regst*(int64_t)> GetNaiveCurReadableWriteableRegst4RegstDescId();
+
+  std::vector<int64_t> consumed_regst_desc_ids_;
+  std::vector<int64_t> produced_regst_desc_ids_;
 };
 
 }  // namespace oneflow

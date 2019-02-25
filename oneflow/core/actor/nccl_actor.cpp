@@ -4,6 +4,18 @@
 
 namespace oneflow {
 
+void NcclActor::VirtualActorInit(const TaskProto& task_proto) {
+  for (const auto& pair : task_proto.consumed_regst_desc_id()) {
+    consumed_regst_desc_ids_.insert(consumed_regst_desc_ids_.end(),
+                                    pair.second.regst_desc_id().cbegin(),
+                                    pair.second.regst_desc_id().cend());
+  }
+  for (const auto& pair : task_proto.produced_regst_desc()) {
+    produced_regst_desc_ids_.push_back(pair.second.regst_desc_id());
+  }
+  OF_SET_MSG_HANDLER(&NcclActor::HandlerNormal);
+}
+
 void NcclActor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
 #ifdef WITH_CUDA
   CHECK_EQ(GetDeviceType(), DeviceType::kGPU);
@@ -18,19 +30,8 @@ void NcclActor::Act() {
   NcclDeviceCtx* nccl_device_ctx = dynamic_cast<NcclDeviceCtx*>(mut_device_ctx().get());
   CHECK_NOTNULL(nccl_device_ctx);
   const KernelCtx kernel_ctx = GenDefaultKernelCtx();
-  const int64_t in_regst_desc_id = Name2SoleRegstDescId("in");
-  const int64_t out_regst_desc_id = Name2SoleRegstDescId("out");
-  Regst* in_regst = GetNaiveCurReadable(in_regst_desc_id);
-  Regst* out_regst = GetNaiveCurWriteable(out_regst_desc_id);
-  std::function<Regst*(int64_t)> Regst4RegstDescId = [=](int64_t regst_desc_id) -> Regst* {
-    if (regst_desc_id == in_regst_desc_id) {
-      return in_regst;
-    } else if (regst_desc_id == out_regst_desc_id) {
-      return out_regst;
-    } else {
-      return nullptr;
-    }
-  };
+  std::function<Regst*(int64_t)> Regst4RegstDescId =
+      GetNaiveCurReadableWriteableRegst4RegstDescId();
   nccl_device_ctx->Enqueue(
       [this, kernel_ctx, Regst4RegstDescId]() { LaunchKernel(kernel_ctx, Regst4RegstDescId); });
 }
@@ -57,6 +58,24 @@ void NcclActor::LaunchKernel(const KernelCtx& kernel_ctx,
       return blob;
     });
   }
+}
+
+std::function<Regst*(int64_t)> NcclActor::GetNaiveCurReadableWriteableRegst4RegstDescId() {
+  HashMap<int64_t, Regst*> regst_desc_id2regst;
+  for (const int64_t regst_desc_id : consumed_regst_desc_ids_) {
+    regst_desc_id2regst.emplace(regst_desc_id, GetNaiveCurReadable(regst_desc_id));
+  }
+  for (const int64_t regst_desc_id : produced_regst_desc_ids_) {
+    regst_desc_id2regst.emplace(regst_desc_id, GetNaiveCurWriteable(regst_desc_id));
+  }
+  return [regst_desc_id2regst](int64_t regst_desc_id) -> Regst* {
+    auto it = regst_desc_id2regst.find(regst_desc_id);
+    if (it == regst_desc_id2regst.end()) {
+      return nullptr;
+    } else {
+      return it->second;
+    }
+  };
 }
 
 REGISTER_ACTOR(TaskType::kNcclAllReduce, NcclActor);
