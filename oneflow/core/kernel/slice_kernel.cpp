@@ -1,5 +1,5 @@
 #include "oneflow/core/kernel/slice_kernel.h"
-#include "oneflow/core/ndarray/cpu_ndarray_helper.h"
+#include "oneflow/core/ndarray/cpu_ndarray_builder.h"
 
 namespace oneflow {
 
