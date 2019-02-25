@@ -8,16 +8,16 @@
 namespace oneflow {
 
 template<typename T, int NDIMS, int CONCAT_AXES>
-class ConcatVarNdArray : public NdArray<T, NDIMS> {
+class CpuConcatVarNdArray : public NdArray<T, NDIMS> {
  public:
   static const bool immutable = false;
   static_assert(CONCAT_AXES >= 0 && CONCAT_AXES < NDIMS, "CONCAT_AXES should be a valid dim");
-  ConcatVarNdArray(const std::vector<VarNdArray<T, NDIMS>>& var_ndarrays)
+  CpuConcatVarNdArray(const std::vector<VarNdArray<T, NDIMS>>& var_ndarrays)
       : NdArray<T, NDIMS>(CalcConcatenatedShape(var_ndarrays)),
         var_ndarrays_(var_ndarrays),
         dim_ranges_(CalcDimRanges(var_ndarrays)),
         contiguous_lens_(CalcContiguousLens(var_ndarrays)) {}
-  ~ConcatVarNdArray() = default;
+  ~CpuConcatVarNdArray() = default;
 
   template<typename XT>
   void CopyFrom(const XT& ndarray) {

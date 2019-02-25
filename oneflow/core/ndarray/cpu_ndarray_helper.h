@@ -3,7 +3,7 @@
 
 #include "oneflow/core/ndarray/var_ndarray.h"
 #include "oneflow/core/ndarray/slice_var_ndarray.h"
-#include "oneflow/core/ndarray/concat_var_ndarray.h"
+#include "oneflow/core/ndarray/cpu_concat_var_ndarray.h"
 
 namespace oneflow {
 
@@ -19,9 +19,9 @@ class CpuNdArrayBuilder final {
     return VarNdArray<T, NDIMS>(shape, ptr);
   }
   template<int CONCAT_AXES = 0, typename T = default_data_type, int NDIMS = default_ndims>
-  ConcatVarNdArray<T, NDIMS, CONCAT_AXES> Concatenate(
+  CpuConcatVarNdArray<T, NDIMS, CONCAT_AXES> Concatenate(
       const std::vector<VarNdArray<T, NDIMS>>& var_ndarrays) const {
-    return ConcatVarNdArray<T, NDIMS, CONCAT_AXES>(var_ndarrays);
+    return CpuConcatVarNdArray<T, NDIMS, CONCAT_AXES>(var_ndarrays);
   }
 };
 

@@ -5,7 +5,7 @@ namespace oneflow {
 
 namespace test {
 
-TEST(ConcatVarNdArray, two_elem_concat) {
+TEST(CpuConcatVarNdArray, two_elem_concat) {
   std::vector<int32_t> x0_data{0};
   std::vector<int32_t> x1_data{1};
   std::vector<int32_t> buffer{-1, -1};
@@ -17,7 +17,7 @@ TEST(ConcatVarNdArray, two_elem_concat) {
   ASSERT_EQ(memcmp(buffer.data(), expected.data(), sizeof(int32_t) * 2), 0);
 }
 
-TEST(ConcatVarNdArray, two_elem_concat_assign) {
+TEST(CpuConcatVarNdArray, two_elem_concat_assign) {
   std::vector<int32_t> x0_data{-1};
   std::vector<int32_t> x1_data{-1};
   std::vector<int32_t> buffer{0, 1};
@@ -29,7 +29,7 @@ TEST(ConcatVarNdArray, two_elem_concat_assign) {
   ASSERT_EQ(x1_data[0], 1);
 }
 
-TEST(ConcatVarNdArray, 2d_concat) {
+TEST(CpuConcatVarNdArray, 2d_concat) {
   // clang-format off
  std::vector<int32_t> x0_data{
    0, 1, 2,
@@ -52,7 +52,7 @@ TEST(ConcatVarNdArray, 2d_concat) {
   ASSERT_EQ(memcmp(buffer.data(), expected.data(), sizeof(int32_t) * 10), 0);
 }
 
-TEST(ConcatVarNdArray, 2d_concat_assign) {
+TEST(CpuConcatVarNdArray, 2d_concat_assign) {
   // clang-format off
  std::vector<int32_t> x_data{
    0, 1, 2, 3, 4,
@@ -78,7 +78,7 @@ TEST(ConcatVarNdArray, 2d_concat_assign) {
   ASSERT_EQ(memcmp(y1_buffer.data(), y1_expected.data(), sizeof(int32_t) * 4), 0);
 }
 
-TEST(ConcatVarNdArray, 3d_concat) {
+TEST(CpuConcatVarNdArray, 3d_concat) {
   // clang-format off
  std::vector<int32_t> x0_data{
    0, 1, 2,
@@ -110,7 +110,7 @@ TEST(ConcatVarNdArray, 3d_concat) {
   ASSERT_EQ(memcmp(buffer.data(), expected.data(), sizeof(int32_t) * 20), 0);
 }
 
-TEST(ConcatVarNdArray, 3d_concat_assign) {
+TEST(CpuConcatVarNdArray, 3d_concat_assign) {
   // clang-format off
  std::vector<int32_t> x_data{
    0, 1, 2, 3, 4,
