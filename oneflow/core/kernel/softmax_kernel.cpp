@@ -20,7 +20,9 @@ void SoftmaxComputeDiff(DeviceCtx* ctx, const int64_t n, const int64_t w, const 
       XpuVarNdarray<T>({static_cast<int64_t>(temp_storage_bytes / sizeof(T))},
                        reinterpret_cast<T*>(temp_storage)));
   // copy out_diff to in_diff
-  KernelUtil<device_type, T>::Copy(ctx, n * w, out_diff, 1, in_diff, 1);
+  // KernelUtil<device_type, T>::Copy(ctx, n * w, out_diff, 1, in_diff, 1);
+  Memcpy<device_type>(ctx, static_cast<void*>(in_diff), static_cast<const void*>(out_diff),
+                      static_cast<size_t>(n * w * sizeof(T)));
   // sub | in_diff[i][j] -= sum_vec[i]
   SoftmaxKernelUtil<device_type, T>::Sub(ctx, n, w, in_diff, sum_vec);
   // elementwise multiplication | in_diff[i][j] *= out[i][j]
@@ -33,7 +35,9 @@ template<DeviceType device_type, typename T>
 void SoftmaxComputeProb(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* in, T* tmp,
                         T* prob, void* temp_storage, const size_t temp_storage_bytes) {
   // copy in blob to prob blob
-  KernelUtil<device_type, T>::Copy(ctx, n * w, in, 1, prob, 1);
+  // KernelUtil<device_type, T>::Copy(ctx, n * w, in, 1, prob, 1);
+  Memcpy<device_type>(ctx, static_cast<void*>(prob), static_cast<const void*>(in),
+                      static_cast<size_t>(n * w * sizeof(T)));
   // max | calculate max of every sample vector prob[i], store in tmp[i]
   //       the prob[i] now is store the data of in[i]
   NdarrayUtil<device_type, T>::ReduceMax(

@@ -30,7 +30,8 @@ void SparseSoftmaxCrossEntropyLossKernel<device_type, PredType, LabelType>::
   Blob* prediction_diff_blob = BnInOp2Blob(GenDiffBn("prediction"));
   if (prediction_diff_blob != nullptr) {
     PredType* in_diff = prediction_diff_blob->mut_dptr<PredType>();
-    KernelUtil<device_type, PredType>::Copy(ctx.device_ctx, n * w, prob, 1, in_diff, 1);
+    Memcpy<device_type>(ctx.device_ctx, static_cast<void*>(in_diff), static_cast<const void*>(prob),
+                        prediction_blob->ByteSizeOfDataContentField());
     SparseSoftmaxCrossEntropyLossKernelUtil<device_type, PredType, LabelType>::BackwardSub(
         ctx.device_ctx, n, w, label, in_diff);
   }
