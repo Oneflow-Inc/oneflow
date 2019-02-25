@@ -8,7 +8,7 @@ namespace oneflow {
 
 class Slice;
 template<typename XT>
-class SliceVarNdArray;
+class CpuSliceVarNdArray;
 
 template<typename T, int NDIMS>
 class VarNdArray : public NdArray<T, NDIMS> {
@@ -23,29 +23,31 @@ class VarNdArray : public NdArray<T, NDIMS> {
   }
   virtual ~VarNdArray() = default;
 
-  SliceVarNdArray<VarNdArray<T, NDIMS>> operator()(Slice&& slice0) {
+  CpuSliceVarNdArray<VarNdArray<T, NDIMS>> operator()(Slice&& slice0) {
     static_assert(NDIMS == 1, "NDIMS error");
-    return SliceVarNdArray<VarNdArray<T, NDIMS>>(std::move(*this), {slice0});
+    return CpuSliceVarNdArray<VarNdArray<T, NDIMS>>(std::move(*this), {slice0});
   }
-  SliceVarNdArray<VarNdArray<T, NDIMS>> operator()(Slice&& slice0, Slice&& slice1) {
+  CpuSliceVarNdArray<VarNdArray<T, NDIMS>> operator()(Slice&& slice0, Slice&& slice1) {
     static_assert(NDIMS == 2, "NDIMS error");
-    return SliceVarNdArray<VarNdArray<T, NDIMS>>(std::move(*this), {slice0, slice1});
+    return CpuSliceVarNdArray<VarNdArray<T, NDIMS>>(std::move(*this), {slice0, slice1});
   }
-  SliceVarNdArray<VarNdArray<T, NDIMS>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2) {
+  CpuSliceVarNdArray<VarNdArray<T, NDIMS>> operator()(Slice&& slice0, Slice&& slice1,
+                                                      Slice&& slice2) {
     static_assert(NDIMS == 3, "NDIMS error");
-    return SliceVarNdArray<VarNdArray<T, NDIMS>>(std::move(*this), {slice0, slice1, slice2});
+    return CpuSliceVarNdArray<VarNdArray<T, NDIMS>>(std::move(*this), {slice0, slice1, slice2});
   }
-  SliceVarNdArray<VarNdArray<T, NDIMS>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2,
-                                                   Slice&& slice3) {
+  CpuSliceVarNdArray<VarNdArray<T, NDIMS>> operator()(Slice&& slice0, Slice&& slice1,
+                                                      Slice&& slice2, Slice&& slice3) {
     static_assert(NDIMS == 4, "NDIMS error");
-    return SliceVarNdArray<VarNdArray<T, NDIMS>>(std::move(*this),
-                                                 {slice0, slice1, slice2, slice3});
+    return CpuSliceVarNdArray<VarNdArray<T, NDIMS>>(std::move(*this),
+                                                    {slice0, slice1, slice2, slice3});
   }
-  SliceVarNdArray<VarNdArray<T, NDIMS>> operator()(Slice&& slice0, Slice&& slice1, Slice&& slice2,
-                                                   Slice&& slice3, Slice&& slice4) {
+  CpuSliceVarNdArray<VarNdArray<T, NDIMS>> operator()(Slice&& slice0, Slice&& slice1,
+                                                      Slice&& slice2, Slice&& slice3,
+                                                      Slice&& slice4) {
     static_assert(NDIMS == 5, "NDIMS error");
-    return SliceVarNdArray<VarNdArray<T, NDIMS>>(std::move(*this),
-                                                 {slice0, slice1, slice2, slice3, slice4});
+    return CpuSliceVarNdArray<VarNdArray<T, NDIMS>>(std::move(*this),
+                                                    {slice0, slice1, slice2, slice3, slice4});
   }
 
   template<typename XT>

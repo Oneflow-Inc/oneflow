@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_NDARRAY_NDARRAY_HELPER_H_
 
 #include "oneflow/core/ndarray/var_ndarray.h"
-#include "oneflow/core/ndarray/slice_var_ndarray.h"
+#include "oneflow/core/ndarray/cpu_slice_var_ndarray.h"
 #include "oneflow/core/ndarray/cpu_concat_var_ndarray.h"
 
 namespace oneflow {

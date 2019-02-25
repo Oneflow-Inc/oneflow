@@ -5,7 +5,7 @@ namespace oneflow {
 
 namespace test {
 
-TEST(SliceVarNdArray, one_elem_assign) {
+TEST(CpuSliceVarNdArray, one_elem_assign) {
   std::vector<int32_t> data({1});
   std::vector<int32_t> buffer({0});
   CpuNdArrayBuilder<int32_t, 1> ndarray;
@@ -15,7 +15,7 @@ TEST(SliceVarNdArray, one_elem_assign) {
   ASSERT_EQ(data[0], buffer[0]);
 }
 
-TEST(SliceVarNdArray, one_elem_assign_slice_on_slice) {
+TEST(CpuSliceVarNdArray, one_elem_assign_slice_on_slice) {
   std::vector<int32_t> data({1});
   std::vector<int32_t> buffer({0});
   CpuNdArrayBuilder<int32_t, 1> ndarray;
@@ -25,7 +25,7 @@ TEST(SliceVarNdArray, one_elem_assign_slice_on_slice) {
   ASSERT_EQ(data[0], buffer[0]);
 }
 
-TEST(SliceVarNdArray, 1d_assign) {
+TEST(CpuSliceVarNdArray, 1d_assign) {
   std::vector<int32_t> data({0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
   std::vector<int32_t> buffer(10, 0);
   CpuNdArrayBuilder<int32_t, 1> ndarray;
@@ -35,7 +35,7 @@ TEST(SliceVarNdArray, 1d_assign) {
   ASSERT_EQ(memcmp(data.data(), buffer.data(), sizeof(int32_t) * 10), 0);
 }
 
-TEST(SliceVarNdArray, 1d_slice_assign) {
+TEST(CpuSliceVarNdArray, 1d_slice_assign) {
   std::vector<int32_t> data({1, 2, 3, 4, 5, 6, 7, 8});
   std::vector<int32_t> buffer(10, 100);
   std::vector<int32_t> expected({100, 1, 2, 3, 4, 5, 6, 7, 8, 100});
@@ -47,7 +47,7 @@ TEST(SliceVarNdArray, 1d_slice_assign) {
   ASSERT_EQ(memcmp(expected.data(), buffer.data(), sizeof(int32_t) * 10), 0);
 }
 
-TEST(SliceVarNdArray, 1d_slice) {
+TEST(CpuSliceVarNdArray, 1d_slice) {
   std::vector<int32_t> data({100, 1, 2, 3, 4, 5, 6, 7, 8, 100});
   std::vector<int32_t> buffer(8, 100);
   std::vector<int32_t> expected({1, 2, 3, 4, 5, 6, 7, 8});
@@ -58,7 +58,7 @@ TEST(SliceVarNdArray, 1d_slice) {
   ASSERT_EQ(memcmp(expected.data(), buffer.data(), sizeof(int32_t) * buffer.size()), 0);
 }
 
-TEST(SliceVarNdArray, 2d_slice) {
+TEST(CpuSliceVarNdArray, 2d_slice) {
   // clang-format off
   std::vector<int32_t> data({
       100, 100, 100, 100,
@@ -76,7 +76,7 @@ TEST(SliceVarNdArray, 2d_slice) {
   ASSERT_EQ(memcmp(expected.data(), buffer.data(), sizeof(int32_t) * buffer.size()), 0);
 }
 
-TEST(SliceVarNdArray, 2d_slice_assign) {
+TEST(CpuSliceVarNdArray, 2d_slice_assign) {
   std::vector<int32_t> data({0, 1, 2, 3});
   std::vector<int32_t> buffer(16, 100);
   // clang-format off
@@ -94,7 +94,7 @@ TEST(SliceVarNdArray, 2d_slice_assign) {
   ASSERT_EQ(memcmp(expected.data(), buffer.data(), sizeof(int32_t) * buffer.size()), 0);
 }
 
-TEST(SliceVarNdArray, 2d_slice_reverse) {
+TEST(CpuSliceVarNdArray, 2d_slice_reverse) {
   // clang-format off
   std::vector<int32_t> data({
       100, 100, 100, 100,
@@ -117,7 +117,7 @@ TEST(SliceVarNdArray, 2d_slice_reverse) {
   ASSERT_EQ(memcmp(expected.data(), buffer.data(), sizeof(int32_t) * buffer.size()), 0);
 }
 
-TEST(SliceVarNdArray, 3d_slice) {
+TEST(CpuSliceVarNdArray, 3d_slice) {
   // clang-format off
   std::vector<int32_t> data({
       100, 100, 100, 100,
@@ -146,7 +146,7 @@ TEST(SliceVarNdArray, 3d_slice) {
   ASSERT_EQ(memcmp(expected.data(), buffer.data(), sizeof(int32_t) * buffer.size()), 0);
 }
 
-TEST(SliceVarNdArray, 3d_slice_assign) {
+TEST(CpuSliceVarNdArray, 3d_slice_assign) {
   // clang-format off
   std::vector<int32_t> data({
       0, 1,
