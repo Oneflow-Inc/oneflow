@@ -26,6 +26,46 @@ void TupleIdentityKernel<device_type>::BackwardDataContent(
   }
 }
 
+template<DeviceType device_type>
+void TupleIdentityKernel<device_type>::ForwardDim0ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const auto& input_bns = this->op_attribute().input_bns();
+  const auto& output_bns = this->op_attribute().output_bns();
+  FOR_RANGE(int, i, 0, output_bns.size()) {
+    BnInOp2Blob(output_bns.Get(i))->CopyDim0ValidNumFrom(ctx.device_ctx, BnInOp2Blob(input_bns.Get(i)));
+  }
+}
+
+template<DeviceType device_type>
+void TupleIdentityKernel<device_type>::ForwardDim1ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const auto& input_bns = this->op_attribute().input_bns();
+  const auto& output_bns = this->op_attribute().output_bns();
+  FOR_RANGE(int, i, 0, output_bns.size()) {
+    BnInOp2Blob(output_bns.Get(i))->CopyDim1ValidNumFrom(ctx.device_ctx, BnInOp2Blob(input_bns.Get(i)));
+  }
+}
+
+template<DeviceType device_type>
+void TupleIdentityKernel<device_type>::ForwardDim2ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const auto& input_bns = this->op_attribute().input_bns();
+  const auto& output_bns = this->op_attribute().output_bns();
+  FOR_RANGE(int, i, 0, output_bns.size()) {
+    BnInOp2Blob(output_bns.Get(i))->CopyDim2ValidNumFrom(ctx.device_ctx, BnInOp2Blob(input_bns.Get(i)));
+  }
+}
+
+template<DeviceType device_type>
+void TupleIdentityKernel<device_type>::ForwardInstanceShape(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const auto& input_bns = this->op_attribute().input_bns();
+  const auto& output_bns = this->op_attribute().output_bns();
+  FOR_RANGE(int, i, 0, output_bns.size()) {
+    BnInOp2Blob(output_bns.Get(i))->CopyInstanceShapeFrom(ctx.device_ctx, BnInOp2Blob(input_bns.Get(i)));
+  }
+}
+
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kTupleIdentityConf, TupleIdentityKernel);
 
 }  // namespace oneflow
