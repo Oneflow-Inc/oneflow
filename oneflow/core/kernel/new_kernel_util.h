@@ -147,6 +147,9 @@ struct NewKernelUtilIf {
   static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
                            T* dx);
   static void Set(DeviceCtx* ctx, const T value, T* addr);
+  static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, T* y,
+                   const int incy);
+  static void Scal(DeviceCtx* ctx, const int n, const T alpha, T* x, const int incx);
 };
 
 }  // namespace oneflow
