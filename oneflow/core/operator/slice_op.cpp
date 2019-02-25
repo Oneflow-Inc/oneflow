@@ -49,8 +49,8 @@ void SliceOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlo
   *out_blob_desc = *in_blob_desc;
   out_blob_desc->mut_shape() = Shape(shape_vec);
 
-  BlobDesc* offset_blob_desc = GetBlobDesc4BnInOp("out_to_in_offset");
-  if (offset_blob_desc) {
+  if (op_conf().device_type() == DeviceType::kGPU) {
+    BlobDesc* offset_blob_desc = GetBlobDesc4BnInOp("out_to_in_offset");
     *offset_blob_desc = *out_blob_desc;
     offset_blob_desc->set_data_type(DataType::kInt64);
   }
