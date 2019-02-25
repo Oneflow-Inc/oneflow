@@ -17,7 +17,6 @@ void SharedModelDiffAddKernel<device_type, T>::ForwardDataContent(
   if (is_half) {
     Blob* data_tmp_blob = BnInOp2Blob("float_tmp");
     CHECK(data_tmp_blob->data_type() == DataType::kFloat);
-    CHECK(data_tmp_blob->shape() == out_blob->shape());
     for (size_t i = 0; i < in_num; ++i) {
       const Blob* in = in_blob(i);
       CHECK(in->shape() == data_tmp_blob->shape());

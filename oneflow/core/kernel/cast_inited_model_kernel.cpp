@@ -2,8 +2,8 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
-void CastInitedModelKernel<device_type, T>::ForwardDataContent(
+template<DeviceType device_type>
+void CastInitedModelKernel<device_type>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   int64_t next_model_version_id = *static_cast<int64_t*>(ctx.other);
   if (next_model_version_id > 0) { return; }
@@ -17,7 +17,6 @@ void CastInitedModelKernel<device_type, T>::ForwardDataContent(
                                                   out_blob->mut_dptr<float>());
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kCastInitedModelConf, CastInitedModelKernel,
-                           OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat));
+ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kCastInitedModelConf, CastInitedModelKernel);
 
 }  // namespace oneflow

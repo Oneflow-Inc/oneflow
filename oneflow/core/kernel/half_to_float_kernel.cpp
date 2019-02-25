@@ -3,8 +3,8 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
-void HalfToFloatKernel<device_type, T>::ForwardDataContent(
+template<DeviceType device_type>
+void HalfToFloatKernel<device_type>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
@@ -16,8 +16,8 @@ void HalfToFloatKernel<device_type, T>::ForwardDataContent(
                                                   out_blob->mut_dptr<float>());
 }
 
-template<DeviceType device_type, typename T>
-void HalfToFloatKernel<device_type, T>::BackwardDataContent(
+template<DeviceType device_type>
+void HalfToFloatKernel<device_type>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
   Blob* in_diff_blob = BnInOp2Blob(GenDiffBn("in"));
@@ -29,7 +29,6 @@ void HalfToFloatKernel<device_type, T>::BackwardDataContent(
                                                   in_diff_blob->mut_dptr<float16>());
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kHalfToFloatConf, HalfToFloatKernel,
-                           OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat));
+ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kHalfToFloatConf, HalfToFloatKernel);
 
 }  // namespace oneflow
