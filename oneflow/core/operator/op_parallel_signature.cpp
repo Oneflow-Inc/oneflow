@@ -51,8 +51,8 @@ class DataSplitOpParallelSignature final : public OpParallelSignature {
       const ParallelContext* parallel_ctx) const override {
     bool is_data_split = true;
     auto IsDataSplit = [&](const SbpInferHint& sbp_infer_hint) {
-      return sbp_infer_hint.is_data_split()
-             || (sbp_infer_hint.is_data_blob() && sbp_infer_hint.parallel_num() == 1);
+      return !sbp_infer_hint.sbp_parallel().has_broadcast_parallel()
+             || sbp_infer_hint.parallel_num() == 1;
     };
     for (const auto& bn : op().input_bns()) {
       const SbpInferHint& sbp_infer_hint = SbpInferHint4Ibn(bn);
@@ -153,7 +153,8 @@ class DS_MB_2_DS_OpParallelSignature final : public OpParallelSignature {
     const auto& sbp_infer_hint = SbpInferHint4Ibn(model_input_bn_);
     if (!sbp_infer_hint.is_model_broadcast()) { return MakeOpParallelMatchSignatureMismatch(); }
     bool parallel_policy_matched = (parallel_ctx->policy() == kDataParallel);
-    bool parallel_num_matched = (parallel_ctx->parallel_num() == sbp_infer_hint.parallel_num());
+    bool parallel_num_matched = (parallel_ctx->parallel_num() == sbp_infer_hint.parallel_num()
+                                 && parallel_ctx->parallel_num() > 1);
     if (!parallel_policy_matched || !parallel_num_matched) {
       OpParallelMatchResult ret;
       if (!parallel_policy_matched) {
@@ -164,7 +165,7 @@ class DS_MB_2_DS_OpParallelSignature final : public OpParallelSignature {
       if (!parallel_num_matched) {
         auto* err = ret.mutable_fail()->mutable_conf_error()->mutable_parallel_num_error();
         err->set_configured(parallel_ctx->parallel_num());
-        err->set_expected(parallel_num_matched);
+        err->set_expected(sbp_infer_hint.parallel_num());
       }
       return ret;
     }
