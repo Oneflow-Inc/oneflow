@@ -8,11 +8,11 @@
 namespace oneflow {
 
 template<typename default_data_type, int default_ndims>
-class NdArrayHelper final {
+class CpuNdArrayBuilder final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(NdArrayHelper);
-  NdArrayHelper() = default;
-  ~NdArrayHelper() = default;
+  OF_DISALLOW_COPY_AND_MOVE(CpuNdArrayBuilder);
+  CpuNdArrayBuilder() = default;
+  ~CpuNdArrayBuilder() = default;
 
   template<typename T = default_data_type, int NDIMS = default_ndims>
   VarNdArray<T, NDIMS> Var(const Shape& shape, T* ptr) const {

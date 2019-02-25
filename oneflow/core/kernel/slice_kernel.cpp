@@ -1,5 +1,5 @@
 #include "oneflow/core/kernel/slice_kernel.h"
-#include "oneflow/core/ndarray/ndarray_helper.h"
+#include "oneflow/core/ndarray/cpu_ndarray_helper.h"
 
 namespace oneflow {
 
@@ -76,7 +76,7 @@ template<typename T>
 struct NdArraySliceUtil<T, 2> final {
   static void Forward(DeviceCtx* device_ctx, const PbRpf<DimSliceConf>& rep_dim_slice,
                       const Blob* in_blob, Blob* out_blob) {
-    NdArrayHelper<T, 2> ndarray;
+    CpuNdArrayBuilder<T, 2> ndarray;
     auto&& in_ndarray = ndarray.Var(in_blob->shape(), const_cast<T*>(in_blob->dptr<T>()));
     auto&& out_ndarray = ndarray.Var(out_blob->shape(), out_blob->mut_dptr<T>());
     out_ndarray.CopyFrom(
@@ -86,7 +86,7 @@ struct NdArraySliceUtil<T, 2> final {
 
   static void Backward(DeviceCtx* device_ctx, const PbRpf<DimSliceConf>& rep_dim_slice,
                        const Blob* out_diff_blob, Blob* in_diff_blob) {
-    NdArrayHelper<T, 2> ndarray;
+    CpuNdArrayBuilder<T, 2> ndarray;
     auto&& out_diff_ndarray =
         ndarray.Var(out_diff_blob->shape(), const_cast<T*>(out_diff_blob->dptr<T>()));
     auto&& in_diff_ndarray = ndarray.Var(in_diff_blob->shape(), in_diff_blob->mut_dptr<T>());
@@ -100,7 +100,7 @@ template<typename T>
 struct NdArraySliceUtil<T, 3> final {
   static void Forward(DeviceCtx* device_ctx, const PbRpf<DimSliceConf>& rep_dim_slice,
                       const Blob* in_blob, Blob* out_blob) {
-    NdArrayHelper<T, 3> ndarray;
+    CpuNdArrayBuilder<T, 3> ndarray;
     auto&& in_ndarray = ndarray.Var(in_blob->shape(), const_cast<T*>(in_blob->dptr<T>()));
     auto&& out_ndarray = ndarray.Var(out_blob->shape(), out_blob->mut_dptr<T>());
     out_ndarray.CopyFrom(in_ndarray({},
@@ -112,7 +112,7 @@ struct NdArraySliceUtil<T, 3> final {
 
   static void Backward(DeviceCtx* device_ctx, const PbRpf<DimSliceConf>& rep_dim_slice,
                        const Blob* out_diff_blob, Blob* in_diff_blob) {
-    NdArrayHelper<T, 3> ndarray;
+    CpuNdArrayBuilder<T, 3> ndarray;
     auto&& out_diff_ndarray =
         ndarray.Var(out_diff_blob->shape(), const_cast<T*>(out_diff_blob->dptr<T>()));
     auto&& in_diff_ndarray = ndarray.Var(in_diff_blob->shape(), in_diff_blob->mut_dptr<T>());

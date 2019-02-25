@@ -1,4 +1,4 @@
-#include "oneflow/core/ndarray/ndarray_helper.h"
+#include "oneflow/core/ndarray/cpu_ndarray_helper.h"
 #include <gtest/gtest.h>
 
 namespace oneflow {
@@ -10,7 +10,7 @@ TEST(ConcatVarNdArray, two_elem_concat) {
   std::vector<int32_t> x1_data{1};
   std::vector<int32_t> buffer{-1, -1};
   std::vector<int32_t> expected{0, 1};
-  NdArrayHelper<int32_t, 1> ndarray;
+  CpuNdArrayBuilder<int32_t, 1> ndarray;
   auto x0 = ndarray.Var({1LL}, x0_data.data());
   auto x1 = ndarray.Var({1LL}, x1_data.data());
   ndarray.Var({2LL}, buffer.data()).CopyFrom(ndarray.Concatenate({x0, x1}));
@@ -21,7 +21,7 @@ TEST(ConcatVarNdArray, two_elem_concat_assign) {
   std::vector<int32_t> x0_data{-1};
   std::vector<int32_t> x1_data{-1};
   std::vector<int32_t> buffer{0, 1};
-  NdArrayHelper<int32_t, 1> ndarray;
+  CpuNdArrayBuilder<int32_t, 1> ndarray;
   auto x0 = ndarray.Var({1LL}, x0_data.data());
   auto x1 = ndarray.Var({1LL}, x1_data.data());
   ndarray.Concatenate({x0, x1}).CopyFrom(ndarray.Var({2LL}, buffer.data()));
@@ -45,7 +45,7 @@ TEST(ConcatVarNdArray, 2d_concat) {
  };
  std::vector<int32_t> buffer(10, -1);
   // clang-format on
-  NdArrayHelper<int32_t, 2> ndarray;
+  CpuNdArrayBuilder<int32_t, 2> ndarray;
   auto x0 = ndarray.Var({2LL, 3LL}, x0_data.data());
   auto x1 = ndarray.Var({2LL, 2LL}, x1_data.data());
   ndarray.Var({2LL, 5LL}, buffer.data()).CopyFrom(ndarray.Concatenate<1>({x0, x1}));
@@ -69,7 +69,7 @@ TEST(ConcatVarNdArray, 2d_concat_assign) {
             8, 9,
  };
   // clang-format on
-  NdArrayHelper<int32_t, 2> ndarray;
+  CpuNdArrayBuilder<int32_t, 2> ndarray;
   auto x = ndarray.Var({2LL, 5LL}, x_data.data());
   auto y0 = ndarray.Var({2LL, 3LL}, y0_buffer.data());
   auto y1 = ndarray.Var({2LL, 2LL}, y1_buffer.data());
@@ -103,7 +103,7 @@ TEST(ConcatVarNdArray, 3d_concat) {
  };
  std::vector<int32_t> buffer(20, -1);
   // clang-format on
-  NdArrayHelper<int32_t, 3> ndarray;
+  CpuNdArrayBuilder<int32_t, 3> ndarray;
   auto x0 = ndarray.Var({2LL, 2LL, 3LL}, x0_data.data());
   auto x1 = ndarray.Var({2LL, 2LL, 2LL}, x1_data.data());
   ndarray.Var({2LL, 2LL, 5LL}, buffer.data()).CopyFrom(ndarray.Concatenate<2>({x0, x1}));
@@ -136,7 +136,7 @@ TEST(ConcatVarNdArray, 3d_concat_assign) {
  std::vector<int32_t> y0_buffer(2*2*3, -1);
  std::vector<int32_t> y1_buffer(2*2*2, -1);
   // clang-format on
-  NdArrayHelper<int32_t, 3> ndarray;
+  CpuNdArrayBuilder<int32_t, 3> ndarray;
   auto x = ndarray.Var({2LL, 2LL, 5LL}, x_data.data());
   auto y0 = ndarray.Var({2LL, 2LL, 3LL}, y0_buffer.data());
   auto y1 = ndarray.Var({2LL, 2LL, 2LL}, y1_buffer.data());
