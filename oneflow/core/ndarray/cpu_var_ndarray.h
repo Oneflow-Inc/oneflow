@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_NDARRAY_VAR_NDARRAY_H_
 #define ONEFLOW_CORE_NDARRAY_VAR_NDARRAY_H_
 
-#include "oneflow/core/ndarray/ndarray.h"
+#include "oneflow/core/ndarray/cpu_ndarray.h"
 #include "oneflow/core/ndarray/ndarray_copy.h"
 
 namespace oneflow {
@@ -11,13 +11,13 @@ template<typename XT>
 class CpuSliceVarNdArray;
 
 template<typename T, int NDIMS>
-class CpuVarNdArray : public NdArray<T, NDIMS> {
+class CpuVarNdArray : public CpuNdArray<T, NDIMS> {
  public:
   using dtype = T;
   static const int ndims = NDIMS;
   CpuVarNdArray(const CpuVarNdArray&) = default;
   CpuVarNdArray(const Shape& shape, T* ptr)
-      : NdArray<T, NDIMS>(shape), ptr_(ptr), len_(shape.elem_cnt()) {
+      : CpuNdArray<T, NDIMS>(shape), ptr_(ptr), len_(shape.elem_cnt()) {
     CHECK_GT(len_, 0);
   }
   virtual ~CpuVarNdArray() = default;

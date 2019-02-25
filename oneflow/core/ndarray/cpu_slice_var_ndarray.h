@@ -2,18 +2,18 @@
 #define ONEFLOW_CORE_NDARRAY_SLICE_NDARRAY_H_
 
 #include "oneflow/core/ndarray/slice.h"
-#include "oneflow/core/ndarray/ndarray.h"
+#include "oneflow/core/ndarray/cpu_ndarray.h"
 #include "oneflow/core/ndarray/ndarray_copy.h"
 
 namespace oneflow {
 
 template<typename XT>
-class CpuSliceVarNdArray : public NdArray<typename XT::dtype, XT::ndims> {
+class CpuSliceVarNdArray : public CpuNdArray<typename XT::dtype, XT::ndims> {
  public:
   using dtype = typename XT::dtype;
   static const int ndims = XT::ndims;
   CpuSliceVarNdArray(XT&& x, std::array<Slice, ndims>&& slices)
-      : NdArray<typename XT::dtype, XT::ndims>(
+      : CpuNdArray<typename XT::dtype, XT::ndims>(
             BoundedSlices2Shape(BoundSlices(x, std::move(slices)))),
         x_(x),
         slices_(std::move(slices)) {

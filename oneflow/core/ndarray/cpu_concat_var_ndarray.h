@@ -1,19 +1,19 @@
 #ifndef ONEFLOW_CORE_NDARRAY_CONCAT_VAR_NDARRAY_H_
 #define ONEFLOW_CORE_NDARRAY_CONCAT_VAR_NDARRAY_H_
 
-#include "oneflow/core/ndarray/ndarray.h"
+#include "oneflow/core/ndarray/cpu_ndarray.h"
 #include "oneflow/core/ndarray/cpu_var_ndarray.h"
 #include "oneflow/core/common/range.h"
 
 namespace oneflow {
 
 template<typename T, int NDIMS, int CONCAT_AXES>
-class CpuConcatVarNdArray : public NdArray<T, NDIMS> {
+class CpuConcatVarNdArray : public CpuNdArray<T, NDIMS> {
  public:
   static const bool immutable = false;
   static_assert(CONCAT_AXES >= 0 && CONCAT_AXES < NDIMS, "CONCAT_AXES should be a valid dim");
   CpuConcatVarNdArray(const std::vector<CpuVarNdArray<T, NDIMS>>& var_ndarrays)
-      : NdArray<T, NDIMS>(CalcConcatenatedShape(var_ndarrays)),
+      : CpuNdArray<T, NDIMS>(CalcConcatenatedShape(var_ndarrays)),
         var_ndarrays_(var_ndarrays),
         dim_ranges_(CalcDimRanges(var_ndarrays)),
         contiguous_lens_(CalcContiguousLens(var_ndarrays)) {}
