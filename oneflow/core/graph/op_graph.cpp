@@ -71,7 +71,7 @@ const BlobDesc& OpNode::LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const {
 }
 
 BlobDesc* OpNode::MutNoParallelBlobDesc(const LogicalBlobId& lbi) {
-  CHECK_EQ(lbi.op_name(), op().op_name());
+  if (lbi.op_name() != op().op_name()) { return nullptr; }
   return &lbi2no_parallel_blob_desc_[lbi];
 }
 

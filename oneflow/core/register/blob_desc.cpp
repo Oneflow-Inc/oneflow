@@ -142,7 +142,7 @@ void BlobDesc::ColNumFieldToProto(FieldHeaderDesc* proto, StructPodDesc* header_
 }
 void BlobDesc::Dim0ValidNumToProto(StructPodDesc* header_pod_desc) const {
   CHECK(dim0_inner_shape_);
-  CHECK_EQ(dim0_inner_shape_->elem_cnt(), body_field_.shape().At(0));
+  // CHECK_EQ(dim0_inner_shape_->elem_cnt(), body_field_.shape().At(0));
   Shape shape({dim0_inner_shape_->At(0)});
   header_pod_desc->AddField(FieldKey::kDim0ValidNum, TensorPodDesc(shape, DataType::kInt64));
 }

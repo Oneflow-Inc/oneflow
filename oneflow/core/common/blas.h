@@ -3,6 +3,7 @@
 
 #include <type_traits>
 #include <utility>
+#include <cublas_v2.h>
 #include "oneflow/core/common/cblas.h"
 #include "oneflow/core/common/preprocessor.h"
 
@@ -42,7 +43,10 @@ OF_PP_FOR_EACH_TUPLE(CBLAS_TEMPLATE, BLAS_NAME_SEQ);
 #define CUBLAS_TEMPLATE(name)                                                                   \
   template<typename T, typename... Args>                                                        \
   typename std::enable_if<std::is_same<T, float>::value>::type cublas_##name(Args&&... args) {  \
-    CudaCheck(cublasS##name(std::forward<Args>(args)...));                                      \
+    auto ret = cublasS##name(std::forward<Args>(args)...);                                      \
+    if (ret != CUBLAS_STATUS_SUCCESS) {                                                         \
+      CudaCheck(cublasS##name(std::forward<Args>(args)...));                                    \
+    }                                                                                           \
   }                                                                                             \
   template<typename T, typename... Args>                                                        \
   typename std::enable_if<std::is_same<T, double>::value>::type cublas_##name(Args&&... args) { \

@@ -416,8 +416,8 @@ void JobDesc::AddRecordLoadOps() {
 
 void JobDesc::FixAndOptimizeDLNet() {
   FixTickOpIfExists();
-  ConvertPseudoChainToChain();
-  if (IsTrain()) { AddIdentityOpForAllReduceOverlapingUntrainble(); }
+  // ConvertPseudoChainToChain();
+  // if (IsTrain()) { AddIdentityOpForAllReduceOverlapingUntrainble(); }
 }
 
 void JobDesc::ConvertPseudoChainToChain() {

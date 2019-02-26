@@ -93,6 +93,9 @@ void OFRecordDecoderImpl<EncodeCase::kRaw, T>::ReadOneCol(
     }                                                                                 \
     FixInDptrThenCopyElem<CppT, T>(ctx, in_dptr, col_id, one_col_elem_num, out_dptr); \
   }
+  // if (in_dptr) {
+  //   FixInDptrThenCopyElem<CppT, T>(ctx, in_dptr, col_id, one_col_elem_num, out_dptr);
+  // }
   DEFINE_ONE_ELIF(float, float)
   DEFINE_ONE_ELIF(double, double)
   DEFINE_ONE_ELIF(int32, int32_t)

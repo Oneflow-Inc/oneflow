@@ -390,6 +390,7 @@ void TaskGraph::EnableMemSharingInReduceStruct() {
   ForEachNode([&](TaskNode* node) {
     auto* updt = dynamic_cast<NormalMdUpdtCompTaskNode*>(node);
     if (!updt) { return; }
+    if (updt->exec_gph().node_num() == 0) { return; }
     if (updt->parallel_ctx()->policy() != ParallelPolicy::kDataParallel) { return; }
     if (updt->device_type() != DeviceType::kGPU) { return; }
     if (updt->parallel_ctx()->parallel_num() < 2) { return; }

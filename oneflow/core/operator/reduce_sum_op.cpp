@@ -50,7 +50,10 @@ void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
                                  const ParallelContext*) const {
   const ReduceSumOpConf& conf = op_conf().reduce_sum_conf();
   const BlobDesc* in_blob = GetBlobDesc4BnInOp("in");
-  *GetBlobDesc4BnInOp("fw_tmp") = *in_blob;
+  BlobDesc* fw_tmp_blob_desc = GetBlobDesc4BnInOp("fw_tmp");
+  fw_tmp_blob_desc->mut_shape() = in_blob->shape();
+  fw_tmp_blob_desc->set_data_type(in_blob->data_type());
+  // *GetBlobDesc4BnInOp("fw_tmp") = *in_blob;
   std::vector<int64_t> out_dim_vec;
   if (conf.axis().empty()) {
     if (conf.keep_dims() == true) {

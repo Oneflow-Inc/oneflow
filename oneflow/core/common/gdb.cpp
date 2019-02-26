@@ -32,9 +32,6 @@ void LoadFromStrFile(T* buf, const std::string& file_name) {
 
 }  // namespace
 
-// used by passing std::string param
-static std::string param0;
-
 static void CudaMemCpyH2DThenFreeCpuPtr(uint64_t gpu_dst, uint64_t cpu_src, size_t size) {
   CpyH2DThenFree(reinterpret_cast<char*>(gpu_dst), reinterpret_cast<char*>(cpu_src), size);
 }
@@ -94,3 +91,14 @@ void BackwardLeaveBreakPoint(const OpAttribute& op_attribute,
 }  // namespace gdb
 
 }  // namespace oneflow
+
+extern "C" {
+
+// used by passing std::string param
+static std::string of_gdb_str_arg_var0;
+
+const std::string& gdb_str_arg0(const char* str) {
+  of_gdb_str_arg_var0 = str;
+  return of_gdb_str_arg_var0;
+}
+}
