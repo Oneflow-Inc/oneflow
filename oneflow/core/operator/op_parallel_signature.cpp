@@ -96,7 +96,8 @@ class BroadcastOpParallelSignature final : public OpParallelSignature {
     }
     int64_t expected_parallel_num = SbpInferHint4Ibn(op().SoleIbn()).parallel_num();
     bool parallel_policy_matched = (parallel_ctx->policy() == kDataParallel);
-    bool parallel_num_matched = (parallel_ctx->parallel_num() == expected_parallel_num && parallel_ctx->parallel_num()> 1);
+    bool parallel_num_matched =
+        (parallel_ctx->parallel_num() == expected_parallel_num && parallel_ctx->parallel_num() > 1);
     if (parallel_policy_matched && parallel_num_matched) {
       return MakeOpParallelMatchSuccess();
     } else {

@@ -23,9 +23,9 @@ class TupleIdentityKernel final : public KernelIf<device_type> {
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void ForwardDim1ValidNum(const KernelCtx& ctx,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void ForwardDim2ValidNum(const KernelCtx& ctx, 
+  void ForwardDim2ValidNum(const KernelCtx& ctx,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void ForwardInstanceShape(const KernelCtx& ctx, 
+  void ForwardInstanceShape(const KernelCtx& ctx,
                             std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
