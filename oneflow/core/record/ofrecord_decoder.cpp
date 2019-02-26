@@ -230,4 +230,13 @@ OFRecordDecoderIf* GetOFRecordDecoder(EncodeCase encode_case, DataType data_type
   return obj.at(GetHashKey(encode_case, data_type));
 }
 
+#define INSTANTIATE_DO_PREPROCESS(type_cpp, type_proto)                            \
+  template void DoPreprocess<type_cpp>(const PreprocessConf& conf, type_cpp* dptr, \
+                                       const Shape& shape);                        \
+  template void DoPreprocess<type_cpp>(const PreprocessConf& conf, type_cpp* dptr, \
+                                       const Shape& shape, const int64_t valid_h,  \
+                                       const int64_t valid_w);
+
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_DO_PREPROCESS, ARITHMETIC_DATA_TYPE_SEQ);
+
 }  // namespace oneflow

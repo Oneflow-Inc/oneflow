@@ -46,6 +46,11 @@ struct ResizeNearestNeighborUtil<DeviceType::kCPU, T> {
   }
 };
 
+#define INSTANTIATE_CPU_RESIZE_NEAREST_NEIGHBOR_UTIL(type_cpp, type_proto) \
+  template class ResizeNearestNeighborUtil<DeviceType::kCPU, type_cpp>;
+
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CPU_RESIZE_NEAREST_NEIGHBOR_UTIL, FLOATING_DATA_TYPE_SEQ);
+
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kResizeNearestNeighborConf, ResizeNearestNeighborKernel,
                            FLOATING_DATA_TYPE_SEQ);
 
