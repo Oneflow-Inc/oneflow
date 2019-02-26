@@ -8,7 +8,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T, const T (*binary_func)(const T, const T)>
-struct NdArrayReduce final {
+struct NdarrayReduce final {
   static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
                      const XpuVarNdarray<T>& tmp_storage) {
     CHECK_EQ(y.shape().NumAxes(), x.shape().NumAxes());

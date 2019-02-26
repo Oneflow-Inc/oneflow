@@ -7,11 +7,11 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-struct XpuNdArrayAssign final {
+struct XpuNdarrayAssign final {
   template<int NDIMS>
   static void Assign(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
                      const XpuReducedNdarray<T, NDIMS>& reduced) {
-    NdArrayAssignCoreWrapper<device_type, T, NDIMS>::Assign(ctx, y, reduced);
+    NdarrayAssignCoreWrapper<device_type, T, NDIMS>::Assign(ctx, y, reduced);
   }
   static void Assign(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
     CHECK(y.shape() == x.shape());

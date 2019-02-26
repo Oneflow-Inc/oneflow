@@ -7,17 +7,17 @@ namespace {
 template<typename T, int NDIMS, const T (*binary_func)(const T, const T)>
 __global__ void GpuBroadcastBinaryFunc(const XpuVarNdarray<T> y, const XpuVarNdarray<const T> a,
                                        const XpuVarNdarray<const T> b) {
-  NdArrayApplyBroadcastBinaryCore<T, NDIMS, binary_func>::Apply(y, a, b);
+  NdarrayApplyBroadcastBinaryCore<T, NDIMS, binary_func>::Apply(y, a, b);
 }
 template<typename T, int NDIMS, const T (*binary_func)(const T, const T)>
 __global__ void GpuBroadcastBinaryFunc(const XpuVarNdarray<T> y, const XpuVarNdarray<const T> x) {
-  NdArrayApplyBroadcastBinaryCore<T, NDIMS, binary_func>::ImplaceApply(y, x);
+  NdarrayApplyBroadcastBinaryCore<T, NDIMS, binary_func>::ImplaceApply(y, x);
 }
 
 }  // namespace
 
 template<typename T, int NDIMS, const T (*binary_func)(const T, const T)>
-struct NdArrayApplyBroadcastBinaryCoreWrapper<DeviceType::kGPU, T, NDIMS, binary_func> final {
+struct NdarrayApplyBroadcastBinaryCoreWrapper<DeviceType::kGPU, T, NDIMS, binary_func> final {
   static void Apply(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& a,
                     const XpuVarNdarray<const T>& b) {
     size_t n = y.host_shape().HostElemNum();
@@ -31,7 +31,7 @@ struct NdArrayApplyBroadcastBinaryCoreWrapper<DeviceType::kGPU, T, NDIMS, binary
 };
 
 #define INSTANTIATE_BROADCAST_BINARY_FUNC(dtype_pair, NDIMS, binary_func) \
-  template struct NdArrayApplyBroadcastBinaryCoreWrapper<                 \
+  template struct NdarrayApplyBroadcastBinaryCoreWrapper<                 \
       DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype_pair), NDIMS, binary_func>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BROADCAST_BINARY_FUNC, ARITHMETIC_DATA_TYPE_SEQ,
                                  DIM_SEQ, ARITHMETIC_BINARY_FUNC_SEQ)

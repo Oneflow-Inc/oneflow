@@ -34,19 +34,19 @@ struct NdarrayUtil final {
   }
   static void ReduceSum(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
                         const XpuVarNdarray<T>& tmp_storage) {
-    return NdArrayReduce<device_type, T, BinaryFuncAdd>::Reduce(ctx, y, x, tmp_storage);
+    return NdarrayReduce<device_type, T, BinaryFuncAdd>::Reduce(ctx, y, x, tmp_storage);
   }
   static void ReduceMax(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
                         const XpuVarNdarray<T>& tmp_storage) {
-    return NdArrayReduce<device_type, T, BinaryFuncMax>::Reduce(ctx, y, x, tmp_storage);
+    return NdarrayReduce<device_type, T, BinaryFuncMax>::Reduce(ctx, y, x, tmp_storage);
   }
   static void ReduceMin(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
                         const XpuVarNdarray<T>& tmp_storage) {
-    return NdArrayReduce<device_type, T, BinaryFuncMin>::Reduce(ctx, y, x, tmp_storage);
+    return NdarrayReduce<device_type, T, BinaryFuncMin>::Reduce(ctx, y, x, tmp_storage);
   }
   template<const T (*unary_func)(const T)>
   static void ImplaceApplyUnary(DeviceCtx* ctx, const XpuVarNdarray<T>& y) {
-    return NdArrayApplyUnary<device_type, T, unary_func>::ImplaceApply(ctx, y);
+    return NdarrayApplyUnary<device_type, T, unary_func>::ImplaceApply(ctx, y);
   }
 
  private:
@@ -55,7 +55,7 @@ struct NdarrayUtil final {
     template<int NDIMS>
     static void BroadcastApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
                                const XpuVarNdarray<const T>& x) {
-      return NdArrayApplyBroadcastUnary<device_type, T, NDIMS, unary_func>::Apply(ctx, y, x);
+      return NdarrayApplyBroadcastUnary<device_type, T, NDIMS, unary_func>::Apply(ctx, y, x);
     }
 #define DEFINE_NDARRAY_BROADCAST_UNARY(func_name, NDIMS) \
   NdarrayUtil<device_type, T>::Unary<unary_func>::func_name<NDIMS>
@@ -69,7 +69,7 @@ struct NdarrayUtil final {
     template<int NDIMS>
     static void BroadcastApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
                                const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
-      return NdArrayApplyBroadcastBinary<device_type, T, NDIMS, binary_func>::Apply(ctx, y, a, b);
+      return NdarrayApplyBroadcastBinary<device_type, T, NDIMS, binary_func>::Apply(ctx, y, a, b);
     }
 #define DEFINE_NDARRAY_BROADCAST_BINARY(func_name, NDIMS) \
   NdarrayUtil<device_type, T>::Binary<binary_func>::func_name<NDIMS>

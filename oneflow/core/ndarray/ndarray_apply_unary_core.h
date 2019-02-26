@@ -9,12 +9,12 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T, const T (*unary_func)(const T)>
-struct NdArrayApplyUnaryCoreWrapper final {
+struct NdarrayApplyUnaryCoreWrapper final {
   static void ImplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y);
 };
 
 template<typename T, const T (*unary_func)(const T)>
-struct NdArrayApplyUnaryCore final {
+struct NdarrayApplyUnaryCore final {
   OF_DEVICE_FUNC static void ImplaceApply(T* y, size_t n) {
     XPU_1D_KERNEL_LOOP(i, n) { y[i] = unary_func(y[i]); }
   }

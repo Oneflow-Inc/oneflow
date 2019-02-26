@@ -18,6 +18,8 @@ class XpuShape final {
   OF_DEVICE_FUNC XpuShape(const XpuShape&) = default;
 
   OF_DEVICE_FUNC int64_t At(int64_t dim) const { return dim_[dim]; }
+  OF_DEVICE_FUNC int64_t DimElemNum(int64_t dim) const { return dim_elem_num_[dim]; }
+  OF_DEVICE_FUNC int64_t Count(int64_t dim) const { return At(dim) * DimElemNum(dim); }
 
   OF_DEVICE_FUNC size_t ElemNum() const { return elem_num_; }
   OF_DEVICE_FUNC size_t NumAxes() const { return num_axes_; }
@@ -47,6 +49,7 @@ class XpuShape final {
     }
   }
 
+ private:
   size_t num_axes_;
   size_t elem_num_;
   int64_t dim_[OF_PP_SEQ_SIZE(DIM_SEQ)];
@@ -64,10 +67,10 @@ struct XpuShapeUtil<1> final {
   }
 };
 
-#define COORD_MUL_STRIDE(i) coord[i] * shape.dim_elem_num_[i] +
-#define EXTRACT_COORD(i)                      \
-  coord[i] = offset / shape.dim_elem_num_[i]; \
-  offset %= shape.dim_elem_num_[i];
+#define COORD_MUL_STRIDE(i) coord[i] * shape.DimElemNum(i) +
+#define EXTRACT_COORD(i)                   \
+  coord[i] = offset / shape.DimElemNum(i); \
+  offset %= shape.DimElemNum(i);
 
 #define SPECIALIZE_XPU_SHAPE_UTIL(n)                                                    \
   template<>                                                                            \

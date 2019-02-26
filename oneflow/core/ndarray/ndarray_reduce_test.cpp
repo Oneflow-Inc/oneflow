@@ -14,7 +14,7 @@ void TestMiddleAxis(int num) {
   XpuVarNdarray<int32_t> tmp(XpuShape(Shape({num, num, num})), tmp_storage.data());
   std::vector<int32_t> ret(num * num, -999);
   XpuVarNdarray<int32_t> y(XpuShape(Shape({num, 1, num})), ret.data());
-  NdArrayReduce<DeviceType::kCPU, int32_t, BinaryFuncAdd>::Reduce(nullptr, y, x, tmp);
+  NdarrayReduce<DeviceType::kCPU, int32_t, BinaryFuncAdd>::Reduce(nullptr, y, x, tmp);
   for (int i = 0; i < num; ++i) {
     for (int j = 0; j < num; ++j) { ASSERT_EQ(ret[i * num + j], num); }
   }
@@ -22,20 +22,20 @@ void TestMiddleAxis(int num) {
 
 }  // namespace
 
-TEST(NdArrayReduce, sum) {
+TEST(NdarrayReduce, sum) {
   std::vector<int32_t> data(100, 1);
   std::vector<int32_t> tmp_storage(100, -1);
   XpuVarNdarray<const int32_t> x(XpuShape(Shape({100})), data.data());
   XpuVarNdarray<int32_t> tmp(XpuShape(Shape({100})), tmp_storage.data());
   int32_t ret = -100;
   XpuVarNdarray<int32_t> y(XpuShape(Shape({1})), &ret);
-  NdArrayReduce<DeviceType::kCPU, int32_t, BinaryFuncAdd>::Reduce(nullptr, y, x, tmp);
+  NdarrayReduce<DeviceType::kCPU, int32_t, BinaryFuncAdd>::Reduce(nullptr, y, x, tmp);
   ASSERT_EQ(ret, 100);
 }
 
-TEST(NdArrayReduce, middle_axis_2) { TestMiddleAxis(10); }
+TEST(NdarrayReduce, middle_axis_2) { TestMiddleAxis(10); }
 
-TEST(NdArrayReduce, middle_axis_10) { TestMiddleAxis(125); }
+TEST(NdarrayReduce, middle_axis_10) { TestMiddleAxis(125); }
 
 }  // namespace test
 
