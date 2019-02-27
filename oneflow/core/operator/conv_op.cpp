@@ -101,7 +101,7 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   CHECK_EQ(in_blob_desc->shape().NumAxes(), NDims + 2);
-  CHECK_EQ(in_blob_desc->data_type(), Global<JobDesc>::Get()->DefaultDataType());
+  // CHECK_EQ(in_blob_desc->data_type(), Global<JobDesc>::Get()->DefaultDataType());
 
   // out
   int64_t data_num = in_blob_desc->shape().At(0);
@@ -128,14 +128,17 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
     weight_shape[dhw_offset + i] = GetPbRfFromCustomizedConf<int32_t>("kernel_size").Get(i);
   }
   GetBlobDesc4BnInOp("weight")->mut_shape() = Shape(weight_shape);
+  GetBlobDesc4BnInOp("weight")->set_data_type(in_blob_desc->data_type());
 
   if (GetValFromCustomizedConf<bool>("use_bias")) {
     // bias and bias_multiplier
     GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({filters, 1});
+    GetBlobDesc4BnInOp("bias")->set_data_type(in_blob_desc->data_type());
     if (DevIsGpuAndEnableCudnn() == false) {
       std::vector<int64_t> bias_mul_shape(NDims + 1, 1);
       for (size_t i = 0; i != NDims; ++i) { bias_mul_shape[i + 1] = out_shape[dhw_offset + i]; }
       GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() = Shape(bias_mul_shape);
+      GetBlobDesc4BnInOp("bias_multiplier")->set_data_type(in_blob_desc->data_type());
     }
   }
 
