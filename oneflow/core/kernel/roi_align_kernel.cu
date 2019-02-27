@@ -87,11 +87,11 @@ __device__ bool BilinearInterpolateDiff(const T bin_diff_avg, const int64_t heig
 }
 
 template<typename T>
-__global__ void RoIAlignForward(const int64_t nthreads, const T* in_dptr, const T* rois_dptr,
-                                const float spatial_scale, const int32_t sampling_ratio,
-                                const int64_t channel_num, const int64_t height,
-                                const int64_t width, const int64_t pooled_height,
-                                const int64_t pooled_width, T* out_dptr) {
+__launch_bounds__(kCudaThreadsNumPerBlock) __global__
+    void RoIAlignForward(const int64_t nthreads, const T* in_dptr, const T* rois_dptr,
+                         const float spatial_scale, const int32_t sampling_ratio,
+                         const int64_t channel_num, const int64_t height, const int64_t width,
+                         const int64_t pooled_height, const int64_t pooled_width, T* out_dptr) {
   const int64_t pooled_area = pooled_height * pooled_width;
   const int64_t channel_pooled_area = channel_num * pooled_height * pooled_width;
   CUDA_1D_KERNEL_LOOP(index, nthreads) {
@@ -131,11 +131,12 @@ __global__ void RoIAlignForward(const int64_t nthreads, const T* in_dptr, const 
 }
 
 template<typename T>
-__global__ void RoIAlignBackward(const int64_t nthreads, const T* out_diff_dptr, const T* rois_dptr,
-                                 const float spatial_scale, const int32_t sampling_ratio,
-                                 const int64_t channel_num, const int64_t height,
-                                 const int64_t width, const int64_t pooled_height,
-                                 const int64_t pooled_width, T* in_diff_dptr) {
+__launch_bounds__(kCudaThreadsNumPerBlock) __global__
+    void RoIAlignBackward(const int64_t nthreads, const T* out_diff_dptr, const T* rois_dptr,
+                          const float spatial_scale, const int32_t sampling_ratio,
+                          const int64_t channel_num, const int64_t height, const int64_t width,
+                          const int64_t pooled_height, const int64_t pooled_width,
+                          T* in_diff_dptr) {
   const int64_t pooled_area = pooled_height * pooled_width;
   const int64_t channel_pooled_area = channel_num * pooled_height * pooled_width;
   CUDA_1D_KERNEL_LOOP(index, nthreads) {
@@ -197,11 +198,9 @@ template<typename T>
 struct RoIAlignKernelUtil<DeviceType::kGPU, T> {
   static void Forward(const KernelCtx& ctx, const RoIAlignOpConf& conf, const Blob* in_blob,
                       const Blob* rois_blob, Blob* out_blob) {
-    const int32_t elem_cnt = out_blob->shape().elem_cnt();
-    const int32_t thread_num_per_block = 512;
-    const int32_t block_num =
-        std::min((elem_cnt + thread_num_per_block - 1) / thread_num_per_block, kCudaMaxBlocksNum);
-    RoIAlignForward<T><<<block_num, thread_num_per_block, 0, ctx.device_ctx->cuda_stream()>>>(
+    const int64_t elem_cnt = out_blob->shape().elem_cnt();
+    RoIAlignForward<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                         ctx.device_ctx->cuda_stream()>>>(
         elem_cnt, in_blob->dptr<T>(), rois_blob->dptr<T>(), conf.spatial_scale(),
         conf.sampling_ratio(), in_blob->shape().At(1), in_blob->shape().At(2),
         in_blob->shape().At(3), conf.pooled_h(), conf.pooled_w(), out_blob->mut_dptr<T>());
@@ -209,11 +208,9 @@ struct RoIAlignKernelUtil<DeviceType::kGPU, T> {
 
   static void Backward(const KernelCtx& ctx, const RoIAlignOpConf& conf, const Blob* out_diff_blob,
                        const Blob* rois_blob, Blob* in_diff_blob) {
-    const int32_t elem_cnt = out_diff_blob->shape().elem_cnt();
-    const int32_t thread_num_per_block = 512;
-    const int32_t block_num =
-        std::min((elem_cnt + thread_num_per_block - 1) / thread_num_per_block, kCudaMaxBlocksNum);
-    RoIAlignBackward<T><<<block_num, thread_num_per_block, 0, ctx.device_ctx->cuda_stream()>>>(
+    const int64_t elem_cnt = out_diff_blob->shape().elem_cnt();
+    RoIAlignBackward<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                          ctx.device_ctx->cuda_stream()>>>(
         elem_cnt, out_diff_blob->dptr<T>(), rois_blob->dptr<T>(), conf.spatial_scale(),
         conf.sampling_ratio(), in_diff_blob->shape().At(1), in_diff_blob->shape().At(2),
         in_diff_blob->shape().At(3), conf.pooled_h(), conf.pooled_w(), in_diff_blob->mut_dptr<T>());
