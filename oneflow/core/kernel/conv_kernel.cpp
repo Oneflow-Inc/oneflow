@@ -216,9 +216,12 @@ void ConvKernelImplByIm2Col<device_type, T>::BiasBackward(
   }
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv1DConf, ConvKernel, FLOATING_DATA_TYPE_SEQ);
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv2DConf, ConvKernel, FLOATING_DATA_TYPE_SEQ);
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv3DConf, ConvKernel, FLOATING_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv1DConf, ConvKernel,
+                           FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv2DConf, ConvKernel,
+                           FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv3DConf, ConvKernel,
+                           FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
 
 template<typename T>
 ColBufWriter<T>::ColBufWriter(const T* src_ptr, T* dst_ptr, int64_t c_size, int64_t id_size,

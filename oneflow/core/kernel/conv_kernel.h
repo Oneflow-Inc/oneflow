@@ -182,6 +182,16 @@ class ConvKernel<DeviceType::kGPU, float16> final : public ConvKernelIf<DeviceTy
   std::unique_ptr<CudnnConvDesc> conv_desc_;
   std::unique_ptr<CudnnTensorDesc> bias_desc_;
 };
+
+// ConvKernel<kCPU, Float16> is not used
+template<>
+class ConvKernel<DeviceType::kCPU, float16> final : public Kernel {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ConvKernel);
+  ConvKernel() = default;
+  ~ConvKernel() = default;
+};
+
 template<typename T>
 class ColBufWriter {
  public:
