@@ -48,7 +48,7 @@ class DataSplitOpParallelSignature final : public OpParallelSignature {
 
   const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelContext* parallel_ctx) const override {
+      const ParallelDesc& parallel_desc) const override {
     bool is_data_split = true;
     auto IsDataSplit = [&](const SbpInferHint& sbp_infer_hint) {
       return !sbp_infer_hint.sbp_parallel().has_broadcast_parallel()
@@ -62,8 +62,8 @@ class DataSplitOpParallelSignature final : public OpParallelSignature {
       }
     }
     if (!is_data_split) { return MakeOpParallelMatchSignatureMismatch(); }
-    if (parallel_ctx->policy() == kDataParallel) { return MakeOpParallelMatchSuccess(); }
-    return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kDataParallel);
+    if (parallel_desc.policy() == kDataParallel) { return MakeOpParallelMatchSuccess(); }
+    return MakeOpParallelMatchParallelPolicyError(parallel_desc.policy(), kDataParallel);
   }
 
   void GenerateSignature(
@@ -91,25 +91,25 @@ class BroadcastOpParallelSignature final : public OpParallelSignature {
 
   const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelContext* parallel_ctx) const override {
+      const ParallelDesc& parallel_desc) const override {
     if (!SbpInferHint4Ibn(op().SoleIbn()).sbp_parallel().has_broadcast_parallel()) {
       return MakeOpParallelMatchSignatureMismatch();
     }
     int64_t expected_parallel_num = SbpInferHint4Ibn(op().SoleIbn()).parallel_num();
-    bool parallel_policy_matched = (parallel_ctx->policy() == kDataParallel);
+    bool parallel_policy_matched = (parallel_desc.policy() == kDataParallel);
     bool parallel_num_matched =
-        (parallel_ctx->parallel_num() == expected_parallel_num && parallel_ctx->parallel_num() > 1);
+        (parallel_desc.parallel_num() == expected_parallel_num && parallel_desc.parallel_num() > 1);
     if (parallel_policy_matched && parallel_num_matched) {
       return MakeOpParallelMatchSuccess();
     } else {
       OpParallelMatchResult ret;
       if (!parallel_policy_matched) {
         auto* err = ret.mutable_fail()->mutable_conf_error()->mutable_parallel_policy_error();
-        err->set_configured(parallel_ctx->policy());
+        err->set_configured(parallel_desc.policy());
         err->set_expected(kDataParallel);
       } else {
         auto* err = ret.mutable_fail()->mutable_conf_error()->mutable_parallel_num_error();
-        err->set_configured(parallel_ctx->parallel_num());
+        err->set_configured(parallel_desc.parallel_num());
         err->set_expected(expected_parallel_num);
       }
       return ret;
@@ -149,22 +149,22 @@ class DS_MB_2_DS_OpParallelSignature final : public OpParallelSignature {
 
   const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelContext* parallel_ctx) const override {
+      const ParallelDesc& parallel_desc) const override {
     const auto& sbp_infer_hint = SbpInferHint4Ibn(model_input_bn_);
     if (!sbp_infer_hint.is_model_broadcast()) { return MakeOpParallelMatchSignatureMismatch(); }
-    bool parallel_policy_matched = (parallel_ctx->policy() == kDataParallel);
-    bool parallel_num_matched = (parallel_ctx->parallel_num() == sbp_infer_hint.parallel_num()
-                                 && parallel_ctx->parallel_num() > 1);
+    bool parallel_policy_matched = (parallel_desc.policy() == kDataParallel);
+    bool parallel_num_matched = (parallel_desc.parallel_num() == sbp_infer_hint.parallel_num()
+                                 && parallel_desc.parallel_num() > 1);
     if (!parallel_policy_matched || !parallel_num_matched) {
       OpParallelMatchResult ret;
       if (!parallel_policy_matched) {
         auto* err = ret.mutable_fail()->mutable_conf_error()->mutable_parallel_policy_error();
-        err->set_configured(parallel_ctx->policy());
+        err->set_configured(parallel_desc.policy());
         err->set_expected(kDataParallel);
       }
       if (!parallel_num_matched) {
         auto* err = ret.mutable_fail()->mutable_conf_error()->mutable_parallel_num_error();
-        err->set_configured(parallel_ctx->parallel_num());
+        err->set_configured(parallel_desc.parallel_num());
         err->set_expected(sbp_infer_hint.parallel_num());
       }
       return ret;
@@ -198,25 +198,25 @@ class SoleIbnOpModelSplitOpParallelSignature final : public OpParallelSignature 
 
   const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelContext* parallel_ctx) const override {
+      const ParallelDesc& parallel_desc) const override {
     const SbpInferHint& sbp_infer_hint = SbpInferHint4Ibn(op().SoleIbn());
     if (!(sbp_infer_hint.is_model_split()
           || (sbp_infer_hint.is_data_split() && sbp_infer_hint.split_axis() > 0))) {
       return MakeOpParallelMatchSignatureMismatch();
     }
     int64_t expected_parallel_num = sbp_infer_hint.parallel_num();
-    bool parallel_policy_matched = (parallel_ctx->policy() == kModelParallel);
-    bool parallel_num_matched = (parallel_ctx->parallel_num() == expected_parallel_num);
+    bool parallel_policy_matched = (parallel_desc.policy() == kModelParallel);
+    bool parallel_num_matched = (parallel_desc.parallel_num() == expected_parallel_num);
     if (!(parallel_policy_matched && parallel_num_matched)) {
       OpParallelMatchResult ret;
       if (!parallel_policy_matched) {
         auto* err = ret.mutable_fail()->mutable_conf_error()->mutable_parallel_policy_error();
-        err->set_configured(parallel_ctx->policy());
+        err->set_configured(parallel_desc.policy());
         err->set_expected(kModelParallel);
       }
       if (!parallel_num_matched) {
         auto* err = ret.mutable_fail()->mutable_conf_error()->mutable_parallel_num_error();
-        err->set_configured(parallel_ctx->parallel_num());
+        err->set_configured(parallel_desc.parallel_num());
         err->set_expected(parallel_num_matched);
       }
       return ret;
@@ -248,9 +248,9 @@ class ModelBnOpModelSplitOpParallelSignature final : public OpParallelSignature 
 
   const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelContext* parallel_ctx) const override {
-    if (parallel_ctx->policy() == kModelParallel) { return MakeOpParallelMatchSuccess(); }
-    return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kModelParallel);
+      const ParallelDesc& parallel_desc) const override {
+    if (parallel_desc.policy() == kModelParallel) { return MakeOpParallelMatchSuccess(); }
+    return MakeOpParallelMatchParallelPolicyError(parallel_desc.policy(), kModelParallel);
   }
 
   void GenerateSignature(
@@ -290,14 +290,14 @@ class DB_MS_2_MS_OpParallelSignature final : public OpParallelSignature {
 
   const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelContext* parallel_ctx) const override {
+      const ParallelDesc& parallel_desc) const override {
     const SbpInferHint& model_sbp_infer_hint = SbpInferHint4Ibn(model_input_bn_);
     if (!(model_sbp_infer_hint.is_model_split()
           && IsValidSplit(model_sbp_infer_hint.split_axis()))) {
       return MakeOpParallelMatchSignatureMismatch();
     }
-    if (parallel_ctx->policy() == kModelParallel) { return MakeOpParallelMatchSuccess(); }
-    return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kModelParallel);
+    if (parallel_desc.policy() == kModelParallel) { return MakeOpParallelMatchSuccess(); }
+    return MakeOpParallelMatchParallelPolicyError(parallel_desc.policy(), kModelParallel);
   }
 
   void GenerateSignature(

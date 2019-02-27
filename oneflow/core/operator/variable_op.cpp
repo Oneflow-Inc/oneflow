@@ -17,11 +17,11 @@ class VariableOpDataSplitOpParallelSignature final : public OpParallelSignature 
 
   const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelContext* parallel_ctx) const override {
-    if (parallel_ctx->policy() == kDataParallel) {
+      const ParallelDesc& parallel_desc) const override {
+    if (parallel_desc.policy() == kDataParallel) {
       return MakeOpParallelMatchSuccess();
     } else {
-      return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kDataParallel);
+      return MakeOpParallelMatchParallelPolicyError(parallel_desc.policy(), kDataParallel);
     }
   }
 
@@ -46,11 +46,11 @@ class VariableOpModelSplitOpParallelSignature final : public OpParallelSignature
 
   const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelContext* parallel_ctx) const override {
-    if (parallel_ctx->policy() == kModelParallel) {
+      const ParallelDesc& parallel_desc) const override {
+    if (parallel_desc.policy() == kModelParallel) {
       return MakeOpParallelMatchSuccess();
     } else {
-      return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kModelParallel);
+      return MakeOpParallelMatchParallelPolicyError(parallel_desc.policy(), kModelParallel);
     }
   }
 

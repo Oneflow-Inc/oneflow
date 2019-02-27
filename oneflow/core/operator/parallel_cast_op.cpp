@@ -27,11 +27,11 @@ class ParallelCastOpParallelSignature final : public OpParallelSignature {
 
   const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      const ParallelContext* parallel_ctx) const override {
+      const ParallelDesc& parallel_desc) const override {
     const auto& configured_sbp_parallel = GetSbpParallel(op().op_conf().parallel_cast_conf());
     if (SbpInferHint4BnInOp("in").sbp_parallel() == configured_sbp_parallel
-        && parallel_ctx->parallel_num() != SbpInferHint4BnInOp("in").parallel_num()) {
-      return MakeOpParallelMatchParallelNumError(parallel_ctx->parallel_num(),
+        && parallel_desc.parallel_num() != SbpInferHint4BnInOp("in").parallel_num()) {
+      return MakeOpParallelMatchParallelNumError(parallel_desc.parallel_num(),
                                                  SbpInferHint4BnInOp("in").parallel_num());
     }
     return MakeOpParallelMatchSuccess();
