@@ -356,10 +356,10 @@ void OpGraph::InferSbpParallel() const {
       const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
       OpNode* producer = op_node->SrcNode4InputBnInOp(ibn);
       bool is_model_blob = producer->IsModelBlob4Lbi(lbi);
-      int64_t parallel_num = op_node->parallel_desc().parallel_num();
+      const ParallelDesc& parallel_desc = op_node->parallel_desc();
       int64_t num_axes = producer->NoParallelBlobDesc4Lbi(lbi).shape().NumAxes();
       const auto& sbp = producer->SbpParallel4Lbi(lbi);
-      ibn2sbp_infer_hint.emplace(ibn, SbpInferHint(is_model_blob, parallel_num, num_axes, sbp));
+      ibn2sbp_infer_hint.emplace(ibn, SbpInferHint(is_model_blob, parallel_desc, num_axes, sbp));
     }
     auto SbpParallel4BnInOp = [&](const std::string& bn) -> SbpParallel* {
       return op_node->MutSbpParallel4Lbi(op_node->op().BnInOp2Lbi(bn));
