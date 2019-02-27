@@ -1,28 +1,9 @@
 #include "oneflow/core/actor/copy_comm_net_actor.h"
-#include "oneflow/core/comm_network/comm_network.h"
-#include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/register/register.h"
+#include "oneflow/core/device/comm_net_device_context.h"
+#include "oneflow/core/job/machine_context.h"
 
 namespace oneflow {
-
-CopyCommNetActor::~CopyCommNetActor() { Global<CommNet>::Get()->DeleteActorReadId(actor_read_id_); }
-
-class CopyCommNetActor::CommNetDeviceCtx final : public DeviceCtx {
- public:
-  // OF_DISALLOW_COPY_AND_MOVE(CommNetDeviceCtx);
-  CommNetDeviceCtx() = delete;
-  ~CommNetDeviceCtx() = default;
-
-  CommNetDeviceCtx(void* actor_read_id) : actor_read_id_(actor_read_id) {}
-  std::unique_ptr<DeviceCtx> Copy() const { UNIMPLEMENTED(); }
-
-  void AddCallBack(std::function<void()> callback) const override {
-    Global<CommNet>::Get()->AddReadCallBack(actor_read_id_, callback);
-  }
-
- private:
-  void* actor_read_id_;
-};
 
 void CopyCommNetActor::VirtualActorInit(const TaskProto& task_proto) {
   is_in_eord_ = false;
@@ -32,9 +13,7 @@ void CopyCommNetActor::VirtualActorInit(const TaskProto& task_proto) {
 }
 
 void CopyCommNetActor::InitDeviceCtx(const ThreadCtx&) {
-  actor_read_id_ = Global<CommNet>::Get()->NewActorReadId();
-  comm_net_device_ctx_ = new CommNetDeviceCtx(actor_read_id_);
-  mut_device_ctx().reset(comm_net_device_ctx_);
+  mut_device_ctx().reset(new CommNetDeviceCtx());
 }
 
 void CopyCommNetActor::ForEachCurCustomizedReadableRegst(
@@ -68,7 +47,7 @@ void CopyCommNetActor::Act() {
   // writeable
   void* writeable_token = GetNaiveCurWriteable("copy_out")->comm_net_token();
   // Async
-  Global<CommNet>::Get()->Read(actor_read_id_, src_machine_id, readable_token, writeable_token);
+  Global<CommNet>::Get()->Read(src_machine_id, readable_token, writeable_token);
 }
 
 void CopyCommNetActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {

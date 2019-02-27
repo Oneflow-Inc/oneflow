@@ -2,19 +2,11 @@
 #define ONEFLOW_CORE_COMM_NETWORK_COMM_NETWORK_H_
 
 #include "oneflow/core/actor/actor_message.h"
-#include "oneflow/core/common/platform.h"
+#include "oneflow/core/common/channel.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/machine_context.h"
-#include "oneflow/core/common/channel.h"
 
 namespace oneflow {
-
-struct CommNetItem {
-  bool is_read;
-  std::function<void()> callback;
-  CommNetItem() : CommNetItem(false, nullptr) {}
-  CommNetItem(bool read, const std::function<void()>& cb) : is_read(read), callback(cb) {}
-};
 
 class CommNet {
  public:
@@ -29,10 +21,8 @@ class CommNet {
   virtual void RegisterMemoryDone() = 0;
 
   // Stream
-  void* NewActorReadId();
-  void DeleteActorReadId(void* actor_read_id);
-  void Read(void* actor_read_id, int64_t src_machine_id, void* src_token, void* dst_token);
-  void AddReadCallBack(void* actor_read_id, std::function<void()> callback);
+  void Read(int64_t src_machine_id, void* src_token, void* dst_token);
+  void AddReadCallBack(std::function<void()> callback);
   void ReadDone(void* read_id);
 
   //
@@ -48,16 +38,24 @@ class CommNet {
 
  private:
   friend class Global<CommNet>;
-  void AddWorkToStream(void* actor_read_id, const std::function<void()>& cb, bool is_read);
-  struct ActorReadContext;
   struct ReadContext {
-    ActorReadContext* actor_read_ctx;
+    int64_t peer_mchn_id;
+    std::atomic<bool> read_done;
+    ReadContext(int64_t peer_mchn_id) : peer_mchn_id(peer_mchn_id), read_done(false) {}
   };
-  struct ActorReadContext {
-    std::mutex waiting_list_mtx;
-    std::list<CommNetItem> waiting_list;
+  struct CommNetItem {
+    ReadContext* read_ctx;
+    std::function<void()> callback;
+    bool is_read;
+    CommNetItem(ReadContext* read_ctx, const std::function<void()>& callback, bool is_read)
+        : read_ctx(read_ctx), callback(callback), is_read(is_read) {}
   };
+  void DoCallBack(const std::function<void()>& cb);
+  void AddWorkToStream(ReadContext* read_ctx, const std::function<void()>& cb, bool is_read);
   HashSet<int64_t> peer_machine_id_;
+  HashMap<int64_t, std::mutex> peer_mchn_id2wq_mtx_;
+  HashMap<int64_t, std::queue<CommNetItem>> peer_mchn_id2wq_;
+  ReadContext* last_read_ctx_;
   std::thread ready_cb_poller_;
 };
 
