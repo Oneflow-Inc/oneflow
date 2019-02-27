@@ -197,8 +197,10 @@ template<typename T>
 struct RoIAlignKernelUtil<DeviceType::kGPU, T> {
   static void Forward(const KernelCtx& ctx, const RoIAlignOpConf& conf, const Blob* in_blob,
                       const Blob* rois_blob, Blob* out_blob) {
-    const int64_t elem_cnt = out_blob->shape().elem_cnt();
-    RoIAlignForward<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+    const int32_t elem_cnt = out_blob->shape().elem_cnt();
+    const int32_t tmp_kCudaThreadsNumPerBlock = 512;
+    const int32_t block_num = std::min((elem_cnt + tmp_kCudaThreadsNumPerBlock - 1) / tmp_kCudaThreadsNumPerBlock, kCudaMaxBlocksNum);
+    RoIAlignForward<T><<<block_num, tmp_kCudaThreadsNumPerBlock, 0,
                          ctx.device_ctx->cuda_stream()>>>(
         elem_cnt, in_blob->dptr<T>(), rois_blob->dptr<T>(), conf.spatial_scale(),
         conf.sampling_ratio(), in_blob->shape().At(1), in_blob->shape().At(2),
@@ -207,8 +209,10 @@ struct RoIAlignKernelUtil<DeviceType::kGPU, T> {
 
   static void Backward(const KernelCtx& ctx, const RoIAlignOpConf& conf, const Blob* out_diff_blob,
                        const Blob* rois_blob, Blob* in_diff_blob) {
-    const int64_t elem_cnt = out_diff_blob->shape().elem_cnt();
-    RoIAlignBackward<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+    const int32_t elem_cnt = out_diff_blob->shape().elem_cnt();
+    const int32_t tmp_kCudaThreadsNumPerBlock = 512;
+    const int32_t block_num = std::min((elem_cnt + tmp_kCudaThreadsNumPerBlock - 1) / tmp_kCudaThreadsNumPerBlock, kCudaMaxBlocksNum);
+    RoIAlignBackward<T><<<block_num, tmp_kCudaThreadsNumPerBlock, 0,
                           ctx.device_ctx->cuda_stream()>>>(
         elem_cnt, out_diff_blob->dptr<T>(), rois_blob->dptr<T>(), conf.spatial_scale(),
         conf.sampling_ratio(), in_diff_blob->shape().At(1), in_diff_blob->shape().At(2),
