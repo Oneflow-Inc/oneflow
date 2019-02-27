@@ -70,6 +70,10 @@ message IntRangeInitializerConf {
   optional int64 axis = 3 [default = -1];
 }
 
+message VarianceScalingInitializerConf {
+  optional int64 scale = 1 [default = 1];
+  optional VarianceNorm variance_norm = 2 [default = kFanIn];
+}
 
 message InitializerConf {
   oneof type {
@@ -83,6 +87,7 @@ message InitializerConf {
     MsraInitializerConf msra_conf = 8;
     RangeInitializerConf range_conf = 9;
     IntRangeInitializerConf int_range_conf = 10;
+    VarianceScalingInitializerConf variance_scaling_conf = 11;
   }
 }
 

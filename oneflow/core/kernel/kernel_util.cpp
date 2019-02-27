@@ -143,6 +143,17 @@ void MsraInitializer(const MsraInitializerConf& initializer_conf, uint32_t rando
 }
 
 template<typename T>
+void VarianceScalingInitializer(const VarianceScalingInitializerConf& initializer_conf,
+                                uint32_t random_seed, Blob* blob, const std::string& data_format) {
+  CHECK(blob->shape().elem_cnt());
+  VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
+  T scale = std::sqrt(static_cast<T>(initializer_conf.scale()) / GenInitialFan<T>(variance_norm, blob, data_format));
+  T stddev = scale / static_cast<T>(0.87962566103423978);
+  RngTruncatedNormal<T>(blob->shape().elem_cnt(), static_cast<T>(stddev),
+                        random_seed, blob->mut_dptr<T>());
+}
+
+template<typename T>
 void RangeInitializer(int64_t outer_size, int64_t idx_dim_size, int64_t inner_size, T start,
                       T stride, T* out) {
   FOR_RANGE(int64_t, i, 0, outer_size) {
@@ -521,7 +532,9 @@ KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& ini
     MsraInitializer<T>(initializer_conf.msra_conf(), random_seed, blob, data_format);
   } else if (initializer_conf.has_range_conf()) {
     RangeInitializer<T>(initializer_conf.range_conf(), random_seed, blob);
-  } else {
+  } else if (initializer_conf.has_variance_scaling_conf()) {
+    VarianceScalingInitializer<T>(initializer_conf.variance_scaling_conf(), random_seed, blob, data_format);
+  }else {
     UNIMPLEMENTED();
   }
 }

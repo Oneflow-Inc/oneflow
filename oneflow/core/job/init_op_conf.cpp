@@ -251,6 +251,13 @@ void InitInitializerConf(InitializerConf* initializer, const InitializerConf::Ty
       initializer->set_allocated_int_range_conf(int_range_conf);
       break;
     }
+    case InitializerConf::kVarianceScalingConf: {
+      VarianceScalingInitializerConf* variance_scaling_conf = new VarianceScalingInitializerConf();
+      variance_scaling_conf->set_scale(param1);
+      variance_scaling_conf->set_variance_norm(static_cast<VarianceNorm>(static_cast<int>(param2)));
+      initializer->set_allocated_variance_scaling_conf(variance_scaling_conf);
+      break;
+    }
     case InitializerConf::TYPE_NOT_SET: {
       LOG(INFO) << "InitializerConf::TYPE_NOT_SET";
       break;
