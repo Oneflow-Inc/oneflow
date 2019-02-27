@@ -4,11 +4,6 @@
 
 namespace oneflow {
 
-int64_t SbpInferHint::parallel_num() const {
-  CHECK_GT(parallel_num_, 0);
-  return parallel_num_;
-}
-
 int64_t SbpInferHint::num_axes() const {
   CHECK_GT(num_axes_, 0);
   return num_axes_;
