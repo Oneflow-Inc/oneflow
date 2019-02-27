@@ -23,7 +23,7 @@ class BroadcastBinaryOpParallelSignature final : public OpParallelSignature {
 
   const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelContext* parallel_ctx) const override {
+      const ParallelDesc& parallel_desc) const override {
     for (const auto& bn : op().input_bns()) {
       const auto& sbp_infer_hint = SbpInferHint4Ibn(bn);
       bool is_model_input_bns = (model_input_bns_.find(bn) != model_input_bns_.end());
@@ -32,8 +32,8 @@ class BroadcastBinaryOpParallelSignature final : public OpParallelSignature {
         return MakeOpParallelMatchSignatureMismatch();
       }
     }
-    if (parallel_ctx->policy() == kDataParallel) { return MakeOpParallelMatchSuccess(); }
-    return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kDataParallel);
+    if (parallel_desc.policy() == kDataParallel) { return MakeOpParallelMatchSuccess(); }
+    return MakeOpParallelMatchParallelPolicyError(parallel_desc.policy(), kDataParallel);
   }
 
   void GenerateSignature(

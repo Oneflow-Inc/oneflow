@@ -15,10 +15,10 @@ class TupleIdentityOpParallelSignature final : public OpParallelSignature {
 
   const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      const ParallelContext* parallel_ctx) const override {
+      const ParallelDesc& parallel_desc) const override {
     const auto& ibn = op().input_bns().Get(0);
-    if (parallel_ctx->parallel_num() != SbpInferHint4BnInOp(ibn).parallel_num()) {
-      return MakeOpParallelMatchParallelNumError(parallel_ctx->parallel_num(),
+    if (parallel_desc.parallel_num() != SbpInferHint4BnInOp(ibn).parallel_num()) {
+      return MakeOpParallelMatchParallelNumError(parallel_desc.parallel_num(),
                                                  SbpInferHint4BnInOp(ibn).parallel_num());
     }
     return MakeOpParallelMatchSuccess();

@@ -3,6 +3,7 @@
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/operator/op_parallel_match_result.pb.h"
 #include "oneflow/core/job/sbp_infer_hint.h"
 
@@ -16,7 +17,7 @@ class OpParallelSignature {
   virtual const std::string Description() const = 0;
   virtual const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelContext* parallel_ctx) const = 0;
+      const ParallelDesc& parallel_desc) const = 0;
   virtual void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       HashMap<std::string, SbpParallel>* bn2sbp) const = 0;
