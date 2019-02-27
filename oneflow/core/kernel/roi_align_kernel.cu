@@ -198,10 +198,10 @@ struct RoIAlignKernelUtil<DeviceType::kGPU, T> {
   static void Forward(const KernelCtx& ctx, const RoIAlignOpConf& conf, const Blob* in_blob,
                       const Blob* rois_blob, Blob* out_blob) {
     const int32_t elem_cnt = out_blob->shape().elem_cnt();
-    const int32_t tmp_kCudaThreadsNumPerBlock = 512;
-    const int32_t block_num = std::min((elem_cnt + tmp_kCudaThreadsNumPerBlock - 1) / tmp_kCudaThreadsNumPerBlock, kCudaMaxBlocksNum);
-    RoIAlignForward<T><<<block_num, tmp_kCudaThreadsNumPerBlock, 0,
-                         ctx.device_ctx->cuda_stream()>>>(
+    const int32_t thread_num_per_block = 512;
+    const int32_t block_num =
+        std::min((elem_cnt + thread_num_per_block - 1) / thread_num_per_block, kCudaMaxBlocksNum);
+    RoIAlignForward<T><<<block_num, thread_num_per_block, 0, ctx.device_ctx->cuda_stream()>>>(
         elem_cnt, in_blob->dptr<T>(), rois_blob->dptr<T>(), conf.spatial_scale(),
         conf.sampling_ratio(), in_blob->shape().At(1), in_blob->shape().At(2),
         in_blob->shape().At(3), conf.pooled_h(), conf.pooled_w(), out_blob->mut_dptr<T>());
@@ -210,10 +210,10 @@ struct RoIAlignKernelUtil<DeviceType::kGPU, T> {
   static void Backward(const KernelCtx& ctx, const RoIAlignOpConf& conf, const Blob* out_diff_blob,
                        const Blob* rois_blob, Blob* in_diff_blob) {
     const int32_t elem_cnt = out_diff_blob->shape().elem_cnt();
-    const int32_t tmp_kCudaThreadsNumPerBlock = 512;
-    const int32_t block_num = std::min((elem_cnt + tmp_kCudaThreadsNumPerBlock - 1) / tmp_kCudaThreadsNumPerBlock, kCudaMaxBlocksNum);
-    RoIAlignBackward<T><<<block_num, tmp_kCudaThreadsNumPerBlock, 0,
-                          ctx.device_ctx->cuda_stream()>>>(
+    const int32_t thread_num_per_block = 512;
+    const int32_t block_num =
+        std::min((elem_cnt + thread_num_per_block - 1) / thread_num_per_block, kCudaMaxBlocksNum);
+    RoIAlignBackward<T><<<block_num, thread_num_per_block, 0, ctx.device_ctx->cuda_stream()>>>(
         elem_cnt, out_diff_blob->dptr<T>(), rois_blob->dptr<T>(), conf.spatial_scale(),
         conf.sampling_ratio(), in_diff_blob->shape().At(1), in_diff_blob->shape().At(2),
         in_diff_blob->shape().At(3), conf.pooled_h(), conf.pooled_w(), in_diff_blob->mut_dptr<T>());
