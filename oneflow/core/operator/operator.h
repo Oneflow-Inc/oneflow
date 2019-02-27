@@ -31,6 +31,7 @@ class Operator {
   virtual void InitFromOpConf() = 0;
   bool IsSoleInputBlobAllowedModelSplit() const;
   virtual bool IsInputBlobAllowedModelSplit(const std::string& ibn) const = 0;
+  bool IsIbnMutable(const std::string& ibn) const;
 
   ActivationType GetActivationType() const;
 
@@ -227,6 +228,7 @@ class Operator {
   void EnrollBwBufBn(const std::string& bbbn);
   void EnrollInputBn(const std::string& ibn, bool has_diff);
   void EnrollInputBn(const std::string& ibn) { EnrollInputBn(ibn, true); }
+  void EnrollMutableInputBn(const std::string& ibn);
   void EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num, bool has_diff);
   void EnrollRepeatedInputBn(const std::string& ibn_prefix, bool has_diff);
   void EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num);
@@ -264,6 +266,7 @@ class Operator {
   }
 
   OpAttribute op_attribute_;
+  HashSet<std::string> mutable_input_bns_;
 };
 
 std::string GenDiffBn(const std::string& bn);

@@ -111,6 +111,9 @@ void Operator::InferBwBufBlobDescsIf(
 void Operator::InferOutputBlobTimeShapeIf(
     std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
     const ParallelContext* parallel_ctx, Shape* time_shape) const {
+  for (const std::string& ibn : input_bns()) {
+    CHECK_EQ(*GetTimeShape4BnInOp(ibn), *GetTimeShape4BnInOp(input_bns().Get(0)));
+  }
   InferOutputBlobTimeShape(GetTimeShape4BnInOp, parallel_ctx, time_shape);
 }
 
@@ -450,6 +453,15 @@ void Operator::EnrollInputBn(const std::string& ibn, bool has_diff) {
     *(mut_input_diff_bns()->Add()) = idbn;
     CHECK(mut_bn_in_op2lbi()->insert({idbn, lbi}).second);
   }
+}
+
+bool Operator::IsIbnMutable(const std::string& ibn) const {
+  return mutable_input_bns_.find(ibn) != mutable_input_bns_.end();
+}
+
+void Operator::EnrollMutableInputBn(const std::string& ibn) {
+  EnrollInputBn(ibn, false);
+  mutable_input_bns_.emplace(ibn);
 }
 
 void Operator::EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num, bool has_diff) {
