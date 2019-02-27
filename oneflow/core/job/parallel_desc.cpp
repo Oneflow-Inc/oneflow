@@ -19,7 +19,10 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
   policy_ = user_conf.policy();
   HashSet<int64_t> machine_id_set;
   device_type_ = DeviceType::kInvalidDevice;
+  int i = 0;
   for (const std::string& device_name : user_conf.device_name()) {
+    if (i++ > 0) { device_names_ += ","; }
+    device_names_ += device_name;
     int64_t mchn_id;
     std::string device_tag;
     std::string device_id_str;

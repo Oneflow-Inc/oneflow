@@ -213,6 +213,12 @@ void Operator::InferInputOutputSbpParallelIf(
              << "parallel_num conf error, configured: " << parallel_num_error_msg.configured()
              << ", expected: " << parallel_num_error_msg.expected() << "\n";
         }
+        if (failed_msg.conf_error().has_device_set_error()) {
+          const auto& device_set_error_msg = failed_msg.conf_error().device_set_error();
+          ss << "\t"
+             << "device_set conf error, configured: " << device_set_error_msg.configured()
+             << ", expected: " << device_set_error_msg.expected() << "\n";
+        }
       }
     }
     LOG(FATAL) << ss.str();

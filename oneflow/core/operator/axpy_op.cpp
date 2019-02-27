@@ -15,10 +15,14 @@ class AxpyOpParallelSignature final : public OpParallelSignature {
 
   const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelContext* parallel_ctx) const override {
-    if (parallel_ctx->parallel_num() != SbpInferHint4Ibn("y").parallel_num()) {
-      return MakeOpParallelMatchParallelNumError(parallel_ctx->parallel_num(),
+      const ParallelDesc& parallel_desc) const override {
+    if (parallel_desc.parallel_num() != SbpInferHint4Ibn("y").parallel_num()) {
+      return MakeOpParallelMatchParallelNumError(parallel_desc.parallel_num(),
                                                  SbpInferHint4Ibn("y").parallel_num());
+    }
+    if (parallel_desc != SbpInferHint4Ibn("y").parallel_desc()) {
+      return MakeOpParallelMatchDeviceSetError(
+          parallel_desc.device_names(), SbpInferHint4Ibn("y").parallel_desc().device_names());
     }
     return MakeOpParallelMatchSuccess();
   }
