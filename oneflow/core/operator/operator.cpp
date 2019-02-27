@@ -160,12 +160,12 @@ void Operator::GetOpParallelSignatures(
 void Operator::InferInputOutputSbpParallelIf(
     std::function<SbpParallel*(const std::string&)> SbpParallel4BnInOp,
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
-    const ParallelContext* parallel_ctx) const {
+    const ParallelDesc& parallel_desc) const {
   std::vector<std::unique_ptr<const OpParallelSignature>> op_parallel_signatures;
   GetOpParallelSignatures(&op_parallel_signatures);
   std::vector<OpParallelMatchResult> match_results;
   for (const auto& signature : op_parallel_signatures) {
-    match_results.push_back(signature->GetMatchResult(SbpInferHint4Ibn, parallel_ctx));
+    match_results.push_back(signature->GetMatchResult(SbpInferHint4Ibn, parallel_desc));
   }
   int32_t match_success_cnt = 0;
   for (const auto& result : match_results) {

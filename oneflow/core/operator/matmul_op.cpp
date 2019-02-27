@@ -15,15 +15,15 @@ class Matmul_MS_MS_2_P_OpParallelSignature final : public OpParallelSignature {
 
   const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelContext* parallel_ctx) const override {
+      const ParallelDesc& parallel_desc) const override {
     const auto& b_sbp_infer_hint = SbpInferHint4Ibn("b");
     if (!b_sbp_infer_hint.is_model_split()) { return MakeOpParallelMatchSignatureMismatch(); }
     int32_t b_expected_split_axis = (op().op_conf().matmul_conf().transpose_b() ? 1 : 0);
     if (b_sbp_infer_hint.split_axis() != b_expected_split_axis) {
       return MakeOpParallelMatchSignatureMismatch();
     }
-    if (parallel_ctx->policy() == kModelParallel) { return MakeOpParallelMatchSuccess(); }
-    return MakeOpParallelMatchParallelPolicyError(parallel_ctx->policy(), kModelParallel);
+    if (parallel_desc.policy() == kModelParallel) { return MakeOpParallelMatchSuccess(); }
+    return MakeOpParallelMatchParallelPolicyError(parallel_desc.policy(), kModelParallel);
   }
 
   void GenerateSignature(
