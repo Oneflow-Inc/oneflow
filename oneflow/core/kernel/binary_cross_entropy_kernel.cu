@@ -1,4 +1,4 @@
-#include "oneflow/core/kernel/binary_cross_entropy_kernel_util.h"
+#include "oneflow/core/kernel/binary_cross_entropy_kernel.h"
 #include "oneflow/core/kernel/kernel_util.cuh"
 
 namespace oneflow {
