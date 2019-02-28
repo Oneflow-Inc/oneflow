@@ -1295,6 +1295,16 @@ message L2NormalizeOpConf {
   optional float epsilon = 4 [default = 1e-12];
 }
 
+message SmoothL1OpConf {
+  required string prediction = 1;
+  required string label = 2;
+  required string inside_weights = 3;
+  required string outside_weights = 4;
+  optional float beta = 5 [default = 1] ;
+  optional float scale = 6 [default = 1];
+  required string out = 7;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1410,6 +1420,7 @@ message OperatorConf {
     RleEncodeOpConf rle_encode_conf = 284;
     MaskTargetOpConf mask_target_conf = 285;
     GroupByRecordIdOpConf group_by_record_id_conf = 286;
+    SmoothL1OpConf smooth_l1_conf = 287;
 
     // Maybe not needed
     RedefineDim0OpConf redefine_dim0_conf = 400;
