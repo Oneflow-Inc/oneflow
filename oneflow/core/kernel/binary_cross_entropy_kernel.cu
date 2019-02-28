@@ -15,7 +15,8 @@ __global__ void ComputeEntropyGpu(int64_t num_instances, const T* x, const K* la
 }
 
 template<typename T, typename K>
-__global__ void ComputeDiffGpu(int64_t num_instances, const T* x, const K* labels, T* dx) {
+__global__ void ComputeDiffGpu(int64_t num_instances, const T* x, const K* labels, const T* dy,
+                               T* dx) {
   CUDA_1D_KERNEL_LOOP(i, num_instances) {
     const K label = labels[i];
     assert(label == 0 || label == 1);
