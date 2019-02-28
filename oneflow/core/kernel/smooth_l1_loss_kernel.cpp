@@ -39,14 +39,13 @@ struct SmoothL1LossKernelUtil<DeviceType::kCPU, T> {
                       const T* outside_weights, const float beta, const float scale, T* loss) {
     int64_t elem_cnt = instance_num * instance_dim;
     for (int i = 0; i < elem_cnt; i++) {
-      T x = inside_weights[i] * (prediction[i] - label[i]);
-      T abs_x = std::abs(x);
+      T abs_x = std::abs(prediction[i] - label[i]);
       if (abs_x < beta) {
-        loss[i] = 0.5 * x * x / beta;
+        loss[i] = 0.5 * abs_x * abs_x / beta;
       } else {
         loss[i] = abs_x - 0.5 * beta;
       }
-      loss[i] *= scale * outside_weights[i];
+      loss[i] *= scale * outside_weights[i] * inside_weights[i];
     }
   }
   static void Backward(DeviceCtx* ctx, const int64_t instance_num, const int64_t instance_dim,

@@ -123,20 +123,12 @@ void ConvKernel<DeviceType::kGPU, T>::DoForwardDataContentWithCudnn(
   Blob* fw_cudnn_buf = BnInOp2Blob("fw_cudnn_buf");
   void* fw_cudnn_buf_ptr = fw_cudnn_buf ? fw_cudnn_buf->mut_dptr() : nullptr;
   size_t fw_cudnn_buf_size = fw_cudnn_buf ? fw_cudnn_buf->ByteSizeOfDataContentField() : 0;
-  auto ret = cudnnConvolutionForward(
+  CudaCheck(cudnnConvolutionForward(
       device_ctx->cudnn_handle(), OnePtr<T>::value, this->in_desc_->Get(), in_blob->dptr<T>(),
       this->filter_desc_->Get(), weight_blob->dptr<T>(), this->conv_desc_->Get(),
       static_cast<cudnnConvolutionFwdAlgo_t>(this->GetConvKernelConf().cudnn_fwd_algo()),
       fw_cudnn_buf_ptr, fw_cudnn_buf_size, ZeroPtr<T>::value, this->out_desc_->Get(),
-      out_blob->mut_dptr<T>());
-  if (ret != CUDNN_STATUS_SUCCESS) {
-    CudaCheck(cudnnConvolutionForward(
-        device_ctx->cudnn_handle(), OnePtr<T>::value, this->in_desc_->Get(), in_blob->dptr<T>(),
-        this->filter_desc_->Get(), weight_blob->dptr<T>(), this->conv_desc_->Get(),
-        static_cast<cudnnConvolutionFwdAlgo_t>(this->GetConvKernelConf().cudnn_fwd_algo()),
-        fw_cudnn_buf_ptr, fw_cudnn_buf_size, ZeroPtr<T>::value, this->out_desc_->Get(),
-        out_blob->mut_dptr<T>()));
-  }
+      out_blob->mut_dptr<T>()));
 
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
     const Blob* bias = BnInOp2Blob("bias");
