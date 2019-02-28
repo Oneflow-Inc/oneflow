@@ -30,14 +30,16 @@ template<typename T, typename K>
 struct BinaryCrossEntropyKernelUtil<DeviceType::kGPU, T, K> {
   static void ComputeEntropy(DeviceCtx* ctx, int64_t num_instances, const T* x, const K* labels,
                              T* y) {
-    ComputeEntropyGpu<<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,
-                        ctx->cuda_stream()>>>(num_instances, x, labels, y);
+    ComputeEntropyGpu<T, K>
+        <<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+            num_instances, x, labels, y);
   }
 
   static void ComputeDiff(DeviceCtx* ctx, int64_t num_instances, const T* x, const K* labels,
                           const T* dy, T* dx) {
-    ComputeDiffGpu<<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0,
-                     ctx->cuda_stream()>>>(num_instances, x, labels, dy, dx);
+    ComputeDiffGpu<T, K>
+        <<<BlocksNum4ThreadsNum(num_instances), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+            num_instances, x, labels, dy, dx);
   }
 };
 
