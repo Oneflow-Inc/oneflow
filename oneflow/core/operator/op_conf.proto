@@ -1298,11 +1298,9 @@ message L2NormalizeOpConf {
 message SmoothL1OpConf {
   required string prediction = 1;
   required string label = 2;
-  required string inside_weights = 3;
-  required string outside_weights = 4;
-  optional float beta = 5 [default = 1] ;
-  optional float scale = 6 [default = 1];
-  required string out = 7;
+  optional float beta = 3 [default = 1.0];
+  optional float scale = 4 [default = 1.0];
+  required string out = 5;
 }
 
 message OperatorConf {
