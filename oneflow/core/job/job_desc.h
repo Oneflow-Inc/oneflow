@@ -23,10 +23,26 @@ class JobDesc final {
   const Resource& resource() const { return job_conf_.resource(); }
   const Placement& placement() const { return job_conf_.placement(); }
   const OtherConf& other_conf() const { return job_conf_.other(); }
+  const CommNetworkConf& comm_net_conf() const {
+    CHECK(this->other_conf().has_comm_net_conf());
+    return job_conf_.other().comm_net_conf();
+  }
+  bool use_rdma() const { return this->comm_net_conf().has_ibverbs_conf(); }
+  const EpollConf& epoll_conf() const {
+    CHECK(!this->use_rdma());
+    return this->comm_net_conf().epoll_conf();
+  }
+  const IBVerbsConf& ibverbs_conf() const {
+    CHECK(this->use_rdma());
+    return this->comm_net_conf().ibverbs_conf();
+  }
+  IBVerbsConf* mutable_ibverbs_conf() {
+    CHECK(this->use_rdma());
+    return job_conf_.mutable_other()->mutable_comm_net_conf()->mutable_ibverbs_conf();
+  }
   const std::string& MdLoadSnapshotPath() { return job_conf_.other().model_load_snapshot_path(); }
   DataType DefaultDataType() const { return job_conf_.other().default_data_type(); }
   size_t SizeOfOneDataId() const { return job_conf_.other().max_data_id_length() * sizeof(char); }
-  bool use_rdma() const { return job_conf_.other().use_rdma(); }
   bool EnableCudnn() const { return job_conf_.other().enable_cudnn(); }
   int64_t TotalMachineNum() const { return job_conf_.resource().machine().size(); }
   int32_t CpuDeviceNum() const { return job_conf_.resource().cpu_device_num(); }
@@ -45,8 +61,6 @@ class JobDesc final {
   size_t reserved_host_mem_byte() const;
   size_t reserved_device_mem_byte() const;
   bool save_downloaded_file_to_local_fs() const;
-  size_t rdma_mem_block_byte() const;
-  size_t rdma_recv_msg_buf_byte() const;
   bool collect_act_event() const { return job_conf_.other().collect_act_event(); }
   bool enable_mem_sharing() const { return job_conf_.other().enable_mem_sharing(); }
   const FileSystemConf& data_fs_conf() const;
