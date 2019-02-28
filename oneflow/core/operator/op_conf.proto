@@ -1305,6 +1305,12 @@ message SmoothL1OpConf {
   required string out = 7;
 }
 
+message BinaryCrossEntropyOpConf {
+  required string prediction = 1;
+  required string label = 2;
+  required string out = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1421,6 +1427,7 @@ message OperatorConf {
     MaskTargetOpConf mask_target_conf = 285;
     GroupByRecordIdOpConf group_by_record_id_conf = 286;
     SmoothL1OpConf smooth_l1_conf = 287;
+    BinaryCrossEntropyOpConf binary_cross_entropy_conf = 288;
 
     // Maybe not needed
     RedefineDim0OpConf redefine_dim0_conf = 400;
