@@ -1,7 +1,7 @@
 #include "oneflow/core/actor/copy_comm_net_actor.h"
-#include "oneflow/core/register/register.h"
 #include "oneflow/core/device/comm_net_device_context.h"
 #include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/register/register.h"
 
 namespace oneflow {
 

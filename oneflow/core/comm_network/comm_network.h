@@ -2,9 +2,9 @@
 #define ONEFLOW_CORE_COMM_NETWORK_COMM_NETWORK_H_
 
 #include "oneflow/core/actor/actor_message.h"
-#include "oneflow/core/common/channel.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/common/channel.h"
 
 namespace oneflow {
 
