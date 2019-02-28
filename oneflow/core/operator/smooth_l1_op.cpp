@@ -7,7 +7,7 @@ void SmoothL1Op::InitFromOpConf() {
   EnrollInputBn("prediction");
   EnrollInputBn("label");
   EnrollInputBn("inside_weights");
-  EnrollInputBn("out_weights");
+  EnrollInputBn("outside_weights");
   EnrollOutputBn("out");
 }
 

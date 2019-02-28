@@ -65,5 +65,6 @@ struct SmoothL1KernelUtil<DeviceType::kGPU, T> {
 #define INSTANTIATE_SMOOTH_L1_KERNEL_UTIL(type_cpp, type_proto) \
   template struct SmoothL1KernelUtil<DeviceType::kGPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_SMOOTH_L1_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
+#undef INSTANTIATE_SMOOTH_L1_KERNEL_UTIL
 
 }  // namespace oneflow

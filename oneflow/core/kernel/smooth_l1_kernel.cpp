@@ -10,7 +10,6 @@ void SmoothL1Kernel<device_type, T>::ForwardDataContent(
   const Blob* inside_weights = BnInOp2Blob("inside_weights");
   const Blob* outside_weights = BnInOp2Blob("outside_weights");
   Blob* out = BnInOp2Blob("out");
-  Blob* pred_diff_blob = BnInOp2Blob(GenDiffBn("prediction"));
   auto kernel_conf = this->kernel_conf();
   const float beta = kernel_conf.op_attribute().op_conf().smooth_l1_conf().beta();
   const float scale = kernel_conf.op_attribute().op_conf().smooth_l1_conf().scale();
@@ -29,18 +28,17 @@ void SmoothL1Kernel<device_type, T>::BackwardDataContent(
   const Blob* label = BnInOp2Blob("label");
   const Blob* inside_weights = BnInOp2Blob("inside_weights");
   const Blob* outside_weights = BnInOp2Blob("outside_weights");
-  Blob* out = BnInOp2Blob("out");
-  Blob* pred_diff_blob = BnInOp2Blob(GenDiffBn("prediction"));
+  Blob* prediction_diff_blob = BnInOp2Blob(GenDiffBn("prediction"));
   auto kernel_conf = this->kernel_conf();
   const float beta = kernel_conf.op_attribute().op_conf().smooth_l1_conf().beta();
   const float scale = kernel_conf.op_attribute().op_conf().smooth_l1_conf().scale();
   const int64_t elem_cnt = BnInOp2Blob("prediction")->shape().elem_cnt();
 
-  Memset<device_type>(ctx.device_ctx, pred_diff_blob->mut_dptr(), 0, pred_diff_blob->ByteSizeOfDataContentField());
+  Memset<device_type>(ctx.device_ctx, prediction_diff_blob->mut_dptr(), 0, prediction_diff_blob->ByteSizeOfDataContentField());
   SmoothL1KernelUtil<device_type, T>::Backward(
       ctx.device_ctx, elem_cnt, prediction->dptr<T>(), label->dptr<T>(),
       inside_weights->dptr<T>(), outside_weights->dptr<T>(), beta, scale,
-      pred_diff_blob->mut_dptr<T>());
+      prediction_diff_blob->mut_dptr<T>());
 }
 
 template<typename T>
