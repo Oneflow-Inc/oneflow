@@ -38,12 +38,12 @@ void MaxPoolingKernel<DeviceType::kCPU, T>::NDHWCProcessGrad(
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMaxPooling1DConf, MaxPoolingKernel,
-                           ARITHMETIC_DATA_TYPE_SEQ);
+                           ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMaxPooling2DConf, MaxPoolingKernel,
-                           ARITHMETIC_DATA_TYPE_SEQ);
+                           ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMaxPooling3DConf, MaxPoolingKernel,
-                           ARITHMETIC_DATA_TYPE_SEQ);
+                           ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

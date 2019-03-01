@@ -52,6 +52,9 @@ class MaxPoolingKernel<DeviceType::kCPU, T> final : public MaxPoolingKernelIf<De
                         EigenArrayMap<T>& in_diff_arr) const override;
 };
 
+template<>
+class MaxPoolingKernel<DeviceType::kCPU, float16> final : public Kernel {};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_MAX_POOLING_KERNEL_H_
