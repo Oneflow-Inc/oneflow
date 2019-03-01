@@ -1309,6 +1309,14 @@ message BinaryCrossEntropyOpConf {
   required string out = 3;
 }
 
+message CalculateScaleOpConf {
+  required string height = 1;
+  required string weight = 2;
+  required int32 target_size = 3;
+  required int32 max_size = 4;
+  required string scale = 5;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1426,6 +1434,7 @@ message OperatorConf {
     GroupByRecordIdOpConf group_by_record_id_conf = 286;
     SmoothL1OpConf smooth_l1_conf = 287;
     BinaryCrossEntropyOpConf binary_cross_entropy_conf = 288;
+    CalculateScaleOpConf calculate_scale_conf = 289;
 
     // Maybe not needed
     RedefineDim0OpConf redefine_dim0_conf = 400;
