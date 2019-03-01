@@ -32,7 +32,7 @@ class DropoutKernel final : public KernelIf<device_type> {
   std::unique_ptr<RandomGenerator<device_type>> random_generator_;
 };
 
-template<DeviceType device_type, typename T>
+template<DeviceType device_type, typename T, typename Enable = void>
 struct DropoutKernelUtil final {
   static void MaskAndScale(DeviceCtx* ctx, const int64_t n, float threshold, float scale,
                            const T* x, const float* random_mask, T* y);

@@ -30,7 +30,9 @@ __global__ void MaskAndScaleHalfGpu(const int64_t n, float threshold, float scal
 }  // namespace
 
 template<typename T>
-struct DropoutKernelUtil<DeviceType::kGPU, T> final {
+struct DropoutKernelUtil<DeviceType::kGPU, T,
+                         typename std::enable_if<!std::is_same<T, float16>::value>::type>
+    final {
   static void MaskAndScale(DeviceCtx* ctx, const int64_t n, float threshold, float scale,
                            const T* x, const float* random_mask, T* y) {
     MaskAndScaleGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
@@ -38,8 +40,10 @@ struct DropoutKernelUtil<DeviceType::kGPU, T> final {
   }
 };
 
-template<>
-struct DropoutKernelUtil<DeviceType::kGPU, float16> final {
+template<typename T>
+struct DropoutKernelUtil<DeviceType::kGPU, T,
+                         typename std::enable_if<std::is_same<T, float16>::value>::type>
+    final {
   static void MaskAndScale(DeviceCtx* ctx, const int64_t n, float threshold, float scale,
                            const float16* x, const float* random_mask, float16* y) {
     MaskAndScaleHalfGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
