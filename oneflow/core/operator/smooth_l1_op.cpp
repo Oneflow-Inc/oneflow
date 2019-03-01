@@ -18,7 +18,7 @@ void SmoothL1Op::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   CHECK_EQ(prediction->shape(), label->shape());
   CHECK_EQ(prediction->data_type(), label->data_type());
   CHECK_GE(prediction->shape().NumAxes(), 2);
-  CHECK_GT(op_conf().smooth_l1_conf().beta(), 0);
+  CHECK_GE(op_conf().smooth_l1_conf().beta(), 0);
 
   // out
   *GetBlobDesc4BnInOp("out") = *prediction;
