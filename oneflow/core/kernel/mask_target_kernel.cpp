@@ -5,6 +5,25 @@
 
 namespace oneflow {
 
+namespace {
+
+template<typename T>
+void ScaleSegmPolygonLists(const Blob* scale_blob, std::vector<std::vector<PolygonList>>* segms) {
+  FOR_RANGE(size_t, n, 0, segms->size()) {
+    const T scale = *scale_blob->dptr<T>(n);
+    FOR_RANGE(size_t, g, 0, segms->at(n).size()) {
+      FOR_RANGE(size_t, p, 0, segms->at(n).at(g).polygons_size()) {
+        FOR_RANGE(size_t, i, 0, segms->at(n).at(g).polygons(p).value().size()) {
+          segms->at(n).at(g).mutable_polygons(p)->set_value(
+              i, scale * segms->at(n).at(g).polygons(p).value(i));
+        }
+      }
+    }
+  }
+}
+
+}  // namespace
+
 template<typename T>
 void MaskTargetKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
@@ -15,20 +34,21 @@ void MaskTargetKernel<T>::ForwardDataContent(
   const Blob* rois_blob = BnInOp2Blob("rois");
   const Blob* labels_blob = BnInOp2Blob("labels");
   const Blob* gt_segms_blob = BnInOp2Blob("gt_segm_polygon_lists");
+  const Blob* im_scale_blob = BnInOp2Blob("im_scale");
   // output blobs
   Blob* masks_blob = BnInOp2Blob("masks");
   Blob* mask_rois_blob = BnInOp2Blob("mask_rois");
+  Blob* mask_labels_blob = BnInOp2Blob("mask_labels");
   // data tmp blobs
   Blob* gt_bboxes_blob = BnInOp2Blob("gt_segm_bboxes");
   // const buf blobs
-  const Blob* mask_ignore_labels_blob = BnInOp2Blob("mask_ignore_labels");
-  const auto num_classes = static_cast<size_t>(masks_blob->static_shape().At(1));
-  const auto mask_h = static_cast<size_t>(masks_blob->static_shape().At(2));
-  const auto mask_w = static_cast<size_t>(masks_blob->static_shape().At(3));
+  const auto mask_h = static_cast<size_t>(masks_blob->static_shape().At(1));
+  const auto mask_w = static_cast<size_t>(masks_blob->static_shape().At(2));
   const bool input_blob_has_record_id = rois_blob->has_record_id_in_device_piece_field();
   CHECK_EQ(labels_blob->has_record_id_in_device_piece_field(), input_blob_has_record_id);
 
   ParseSegmPolygonLists(gt_segms_blob, &segms);
+  ScaleSegmPolygonLists<T>(im_scale_blob, &segms);
   ComputeSegmBBoxes(segms, gt_bboxes_blob);
 
   const int64_t num_rois = rois_blob->shape().At(0);
@@ -50,7 +70,6 @@ void MaskTargetKernel<T>::ForwardDataContent(
   FOR_RANGE(int64_t, roi_idx, 0, num_rois) {
     const int32_t label = *labels_blob->dptr<int32_t>(roi_idx);
     CHECK_GE(label, 0);
-    CHECK_LT(label, num_classes);
     if (label == 0) { continue; }
     const RoiBBox& fg_roi = roi_bboxes[roi_idx];
     const int32_t img_idx = fg_roi.index();
@@ -58,30 +77,20 @@ void MaskTargetKernel<T>::ForwardDataContent(
     CHECK_LT(img_idx, gt_bboxes_blob->shape().At(0));
     CHECK_GE(gt_bboxes_blob->dim1_valid_num(img_idx), 1);
     mask_roi_bboxes[mask_idx].elem() = fg_roi.elem();
-    Memcpy<kCPU>(ctx.device_ctx, masks_blob->mut_dptr<int32_t>(mask_idx),
-                 mask_ignore_labels_blob->dptr<int32_t>(),
-                 mask_ignore_labels_blob->ByteSizeOfDataContentField());
+
     const size_t max_iou_gt_idx =
         GetMaxOverlapIndex(fg_roi, SegmBBox::Cast(gt_bboxes_blob->mut_dptr<float>(img_idx)),
                            static_cast<size_t>(gt_bboxes_blob->dim1_valid_num(img_idx)));
     Segm2Mask(segms.at(static_cast<size_t>(img_idx)).at(max_iou_gt_idx), fg_roi, mask_h, mask_w,
-              masks_blob->mut_dptr<int32_t>(mask_idx, label));
+              masks_blob->mut_dptr<int32_t>(mask_idx));
+    *mask_labels_blob->mut_dptr<int32_t>(mask_idx) = label;
     CopyRecordIdIfNeed(roi_idx, mask_idx);
-    mask_idx += 1;
-  }
-
-  // handle empty output
-  if (mask_idx == 0) {
-    mask_roi_bboxes[mask_idx].elem() = roi_bboxes[0].elem();
-    Memcpy<kCPU>(ctx.device_ctx, masks_blob->mut_dptr<int32_t>(mask_idx),
-                 mask_ignore_labels_blob->dptr<int32_t>(),
-                 mask_ignore_labels_blob->ByteSizeOfDataContentField());
-    CopyRecordIdIfNeed(0, mask_idx);
     mask_idx += 1;
   }
 
   masks_blob->set_dim0_valid_num(0, mask_idx);
   mask_rois_blob->set_dim0_valid_num(0, mask_idx);
+  mask_labels_blob->set_dim0_valid_num(0, mask_idx);
 }
 
 template<typename T>
@@ -94,14 +103,6 @@ template<typename T>
 void MaskTargetKernel<T>::ForwardRecordIdInDevicePiece(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // do nothing here because it will be set in ForwardDataContent
-}
-
-template<typename T>
-void MaskTargetKernel<T>::InitConstBufBlobs(
-    DeviceCtx*, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* mask_ignore_labels = BnInOp2Blob("mask_ignore_labels");
-  std::fill(mask_ignore_labels->mut_dptr<int32_t>(),
-            mask_ignore_labels->mut_dptr<int32_t>() + mask_ignore_labels->shape().elem_cnt(), -1);
 }
 
 template<typename T>
