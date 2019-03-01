@@ -43,12 +43,6 @@ void RoIAlignKernel<device_type, T>::ForwardRecordIdInDevicePiece(
   BnInOp2Blob("out")->CopyRecordIdInDevicePieceFrom(ctx.device_ctx, BnInOp2Blob("rois"));
 }
 
-template<DeviceType device_type, typename T>
-void RoIAlignKernel<device_type, T>::ForwardInstanceShape(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob("out")->DisableInstanceShape();
-}
-
 template<typename T>
 struct RoIAlignKernelUtil<DeviceType::kCPU, T> {
   static void Forward(const KernelCtx& ctx, const RoIAlignOpConf& conf, const Blob* in_blob,
