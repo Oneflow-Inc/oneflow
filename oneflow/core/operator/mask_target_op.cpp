@@ -75,7 +75,7 @@ void MaskTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   masks->set_has_dim0_valid_num_field(true);
   masks->mut_dim0_inner_shape() = Shape({1, R});
   masks->set_has_record_id_in_device_piece_field(input_has_record_id);
-  // output: mask_labels (R, mask_h, mask_w) T
+  // output: mask_labels (R) int32_t
   BlobDesc* mask_labels = GetBlobDesc4BnInOp("mask_labels");
   mask_labels->mut_shape() = Shape({R});
   mask_labels->set_data_type(DataType::kInt32);

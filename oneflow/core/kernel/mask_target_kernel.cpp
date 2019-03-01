@@ -13,7 +13,7 @@ void ScaleSegmPolygonLists(const Blob* scale_blob, std::vector<std::vector<Polyg
     const T scale = *scale_blob->dptr<T>(n);
     FOR_RANGE(size_t, g, 0, segms->at(n).size()) {
       FOR_RANGE(size_t, p, 0, segms->at(n).at(g).polygons_size()) {
-        FOR_RANGE(size_t, i, 0, segms->at(n).at(g).polygons(p).value().size()) {
+        FOR_RANGE(size_t, i, 0, segms->at(n).at(g).polygons(p).value_size()) {
           segms->at(n).at(g).mutable_polygons(p)->set_value(
               i, scale * segms->at(n).at(g).polygons(p).value(i));
         }
