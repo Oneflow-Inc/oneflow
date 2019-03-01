@@ -317,6 +317,25 @@ struct NewKernelUtilIf<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T
   static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
     for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[i]; }
   }
+  static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+    for (int64_t i = 0; i < n; ++i) { y[i] = std::exp(x[i]); }
+  }
+  static void RowMax(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x, T* y,
+                     void* temp_storage, const size_t temp_storage_bytes) {
+    FOR_RANGE(int64_t, i, 0, row_num) {
+      y[i] = x[i * col_num];
+      FOR_RANGE(int64_t, j, 1, col_num) {
+        if (y[i] < x[i * col_num + j]) { y[i] = x[i * col_num + j]; }
+      }
+    }
+  }
+  static void RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x, T* y,
+                     void* temp_storage, const size_t temp_storage_bytes) {
+    FOR_RANGE(int64_t, i, 0, row_num) {
+      y[i] = x[i * col_num];
+      FOR_RANGE(int64_t, j, 1, col_num) { y[i] += x[i * col_num + j]; }
+    }
+  }
 };
 
 // CPU && Integral
@@ -404,6 +423,25 @@ struct NewKernelUtilIf<DeviceType::kCPU, T, typename std::enable_if<IsFloat16<T>
   }
   static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
     for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[i]; }
+  }
+  static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+    for (int64_t i = 0; i < n; ++i) { y[i] = std::exp(x[i]); }
+  }
+  static void RowMax(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x, T* y,
+                     void* temp_storage, const size_t temp_storage_bytes) {
+    FOR_RANGE(int64_t, i, 0, row_num) {
+      y[i] = x[i * col_num];
+      FOR_RANGE(int64_t, j, 1, col_num) {
+        if (y[i] < x[i * col_num + j]) { y[i] = x[i * col_num + j]; }
+      }
+    }
+  }
+  static void RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x, T* y,
+                     void* temp_storage, const size_t temp_storage_bytes) {
+    FOR_RANGE(int64_t, i, 0, row_num) {
+      y[i] = x[i * col_num];
+      FOR_RANGE(int64_t, j, 1, col_num) { y[i] += x[i * col_num + j]; }
+    }
   }
 };
 

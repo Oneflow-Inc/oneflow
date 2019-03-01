@@ -47,7 +47,7 @@ void SoftmaxComputeProb(DeviceCtx* ctx, const int64_t n, const int64_t w, const 
   // sub | every element of prob blob subract the max value of the same sample
   SoftmaxKernelUtil<device_type, T>::Sub(ctx, n, w, prob, tmp);
   // exp | exponentiation every element
-  KernelUtil<device_type, T>::Exp(ctx, n * w, prob, prob);
+  NewKernelUtil<device_type, T>::Exp(ctx, n * w, prob, prob);
   // sum | calculate sum of every sample vector prob[i], store in tmp[i]
   //       the prob[i] now is store the tmp data after exp
   NdarrayUtil<device_type, T>::ReduceSum(

@@ -151,6 +151,11 @@ struct NewKernelUtilIf {
                    const int incy);
   static void Scal(DeviceCtx* ctx, const int n, const T alpha, T* x, const int incx);
   static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
+  static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
+  static void RowMax(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x, T* y,
+                     void* temp_storage, const size_t temp_storage_bytes);
+  static void RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x, T* y,
+                     void* temp_storage, const size_t temp_storage_bytes);
 };
 
 }  // namespace oneflow

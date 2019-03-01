@@ -67,6 +67,11 @@ __global__ void MulGpu(const int64_t n, const T* x, const T* y, T* z) {
   CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y[i]; }
 }
 
+template<typename T>
+__global__ void ExpGpu(const int64_t n, const T* x, T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = std::exp(x[i]); }
+}
+
 __global__ void SigmoidForwardGpu(const int n, const half* x, half* y) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   CUDA_1D_KERNEL_LOOP(i, n) { y[i] = __hdiv(hone(), __hadd(hone(), hexp(__hneg(x[i])))); }
@@ -155,6 +160,97 @@ __global__ void MulHalfGpu(const int64_t n, const half* x, const half* y, half* 
 #else
   HALF_CHECK_FAILED;
 #endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+}
+
+__global__ void ExpHalfGpu(const int64_t n, const half* x, half* y) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = hexp(x[i]); }
+#else
+  HALF_CHECK_FAILED;
+#endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+}
+
+template<typename T>
+__device__ __forceinline__ T NewReduceCoreAdd(const T x, const T y) {
+  return x + y;
+}
+
+template<typename T>
+__device__ __forceinline__ T NewReduceCoreMax(const T x, const T y) {
+  return x > y ? x : y;
+}
+
+template<>
+__device__ __forceinline__ half NewReduceCoreAdd<half>(const half x, const half y) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+  return __hadd(x, y);
+#else
+  HALF_CHECK_FAILED;
+  return x;
+#endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+}
+
+template<>
+__device__ __forceinline__ half NewReduceCoreMax<half>(const half x, const half y) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+  return __hgt(x, y) ? x : y;
+#else
+  HALF_CHECK_FAILED;
+  return x;
+#endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+}
+
+template<typename T, T (*reduce_core_func)(const T, const T)>
+__device__ void MatrixShrinkCols(const size_t row_num, const size_t thread_col_num, const T* x,
+                                 const size_t x_col_num, const size_t x_lda, T* y,
+                                 const size_t y_col_num, const size_t y_lda) {
+  const size_t thread_num = blockDim.x * gridDim.x;
+  const size_t total_shrink_scale = thread_col_num / y_col_num;
+  CUDA_1D_KERNEL_LOOP(index, row_num * thread_col_num) {
+    const int32_t thread_col = index % thread_col_num;
+    if (((index / thread_num) % total_shrink_scale) != thread_col / y_col_num) { continue; }
+    const int32_t row = index / thread_col_num;
+    const int32_t col = thread_col % y_col_num;
+    const int32_t x_start = row * x_lda + col;
+    const int32_t x_end = row * x_lda + x_col_num;
+    T reduced = x[x_start];
+    for (int32_t x_index = x_start + y_col_num; x_index < x_end; x_index += y_col_num) {
+      reduced = reduce_core_func(reduced, x[x_index]);
+    }
+    y[row * y_lda + col] = reduced;
+  }
+}
+
+template<typename T, T (*reduce_core_func)(const T, const T), size_t shift_size = 2>
+__global__ void MatrixRowReduceGpu(const size_t row_num, const size_t col_num, const T* x, T* y,
+                                   T* temp_storage, size_t temp_col_num) {
+  const size_t temp_lda = temp_col_num;
+  MatrixShrinkCols<T, reduce_core_func>(row_num, temp_lda, x, col_num, col_num, temp_storage,
+                                        temp_col_num, temp_lda);
+  __syncthreads();
+  while (temp_col_num > (1 << shift_size)) {
+    size_t new_temp_col_num = temp_col_num >> shift_size;
+    MatrixShrinkCols<T, reduce_core_func>(row_num, temp_lda, temp_storage, temp_col_num, temp_lda,
+                                          temp_storage, new_temp_col_num, temp_lda);
+    temp_col_num = new_temp_col_num;
+    __syncthreads();
+  }
+  MatrixShrinkCols<T, reduce_core_func>(row_num, temp_lda, temp_storage, temp_col_num, temp_lda, y,
+                                        1, 1);
+}
+
+template<typename T, T (*reduce_core_func)(const T, const T), size_t shift_size = 2>
+void MatrixRowReduce(DeviceCtx* ctx, const size_t row_num, const size_t col_num, const T* x, T* y,
+                     void* temp_storage, const size_t temp_storage_bytes) {
+  CHECK_NOTNULL(temp_storage);
+  CHECK_GT(temp_storage_bytes / sizeof(T), row_num);
+  const size_t temp_col_num_shift =
+      std::floor(std::log2(std::min(temp_storage_bytes / sizeof(T) / row_num, col_num)));
+  const size_t temp_col_num = std::min(static_cast<size_t>(kCudaThreadsNumPerBlock),
+                                       static_cast<size_t>(1 << temp_col_num_shift));
+  MatrixRowReduceGpu<T, reduce_core_func>
+      <<<BlocksNum4ThreadsNum(row_num * temp_col_num), kCudaThreadsNumPerBlock, 0,
+         ctx->cuda_stream()>>>(row_num, col_num, x, y, static_cast<T*>(temp_storage), temp_col_num);
 }
 
 __global__ void Float2HalfGpu(const int n, const float* src, half* dst) {
@@ -266,6 +362,19 @@ struct NewKernelUtilIf<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T
     MulGpu<T>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z);
   }
+  static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+    ExpGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
+  }
+  static void RowMax(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x, T* y,
+                     void* temp_storage, const size_t temp_storage_bytes) {
+    MatrixRowReduce<T, NewReduceCoreMax>(ctx, row_num, col_num, x, y, temp_storage,
+                                         temp_storage_bytes);
+  }
+  static void RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x, T* y,
+                     void* temp_storage, const size_t temp_storage_bytes) {
+    MatrixRowReduce<T, NewReduceCoreAdd>(ctx, row_num, col_num, x, y, temp_storage,
+                                         temp_storage_bytes);
+  }
 };
 
 // GPU && Integral
@@ -359,6 +468,22 @@ struct NewKernelUtilIf<DeviceType::kGPU, T, typename std::enable_if<IsFloat16<T>
     MulHalfGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
         n, reinterpret_cast<const half*>(x), reinterpret_cast<const half*>(y),
         reinterpret_cast<half*>(z));
+  }
+  static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+    ExpHalfGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        n, reinterpret_cast<const half*>(x), reinterpret_cast<half*>(y));
+  }
+  static void RowMax(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x, T* y,
+                     void* temp_storage, const size_t temp_storage_bytes) {
+    MatrixRowReduce<half, NewReduceCoreMax>(ctx, row_num, col_num, reinterpret_cast<const half*>(x),
+                                            reinterpret_cast<half*>(y), temp_storage,
+                                            temp_storage_bytes);
+  }
+  static void RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x, T* y,
+                     void* temp_storage, const size_t temp_storage_bytes) {
+    MatrixRowReduce<half, NewReduceCoreMax>(ctx, row_num, col_num, reinterpret_cast<const half*>(x),
+                                            reinterpret_cast<half*>(y), temp_storage,
+                                            temp_storage_bytes);
   }
 };
 
