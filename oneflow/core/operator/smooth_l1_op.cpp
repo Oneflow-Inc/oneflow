@@ -5,7 +5,7 @@ namespace oneflow {
 void SmoothL1Op::InitFromOpConf() {
   CHECK(op_conf().has_smooth_l1_conf());
   EnrollInputBn("prediction");
-  EnrollInputBn("label");
+  EnrollInputBn("label", false);
   EnrollOutputBn("out");
 }
 
@@ -17,7 +17,6 @@ void SmoothL1Op::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   const BlobDesc* label = GetBlobDesc4BnInOp("label");
   CHECK_EQ(prediction->shape(), label->shape());
   CHECK_EQ(prediction->data_type(), label->data_type());
-  CHECK_GE(prediction->shape().NumAxes(), 2);
   CHECK_GE(op_conf().smooth_l1_conf().beta(), 0);
 
   // out
