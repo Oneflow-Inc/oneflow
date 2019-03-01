@@ -25,7 +25,6 @@ void MaskTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   const MaskTargetOpConf& conf = op_conf().mask_target_conf();
   CHECK_GT(conf.mask_height(), 0);
   CHECK_GT(conf.mask_width(), 0);
-  CHECK_GT(conf.num_classes(), 0);
   // input: rois (R, 5) T
   const BlobDesc* rois = GetBlobDesc4BnInOp("rois");
   // input: labels (R) int32_t
