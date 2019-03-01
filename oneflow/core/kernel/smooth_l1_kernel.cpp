@@ -11,7 +11,7 @@ void SmoothL1Kernel<device_type, T>::ForwardDataContent(
   const SmoothL1OpConf& conf = this->op_conf().smooth_l1_conf();
   const float beta = conf.beta();
   const float scale = conf.scale();
-  const int64_t elem_cnt = BnInOp2Blob("prediction")->shape().elem_cnt();
+  const int64_t elem_cnt = prediction->shape().elem_cnt();
 
   SmoothL1KernelUtil<device_type, T>::Forward(ctx.device_ctx, elem_cnt, prediction->dptr<T>(),
                                               label->dptr<T>(), beta, scale, out->mut_dptr<T>());
@@ -27,7 +27,7 @@ void SmoothL1Kernel<device_type, T>::BackwardDataContent(
   const SmoothL1OpConf& conf = this->op_conf().smooth_l1_conf();
   const float beta = conf.beta();
   const float scale = conf.scale();
-  const int64_t elem_cnt = BnInOp2Blob("prediction")->shape().elem_cnt();
+  const int64_t elem_cnt = prediction->shape().elem_cnt();
 
   SmoothL1KernelUtil<device_type, T>::Backward(ctx.device_ctx, elem_cnt, out_diff->dptr<T>(),
                                                prediction->dptr<T>(), label->dptr<T>(), beta, scale,
@@ -38,7 +38,7 @@ template<typename T>
 struct SmoothL1KernelUtil<DeviceType::kCPU, T> {
   static void Forward(DeviceCtx* ctx, const int64_t elem_cnt, const T* prediction, const T* label,
                       const float beta, const float scale, T* out) {
-    for (int i = 0; i < elem_cnt; i++) {
+    for (int64_t i = 0; i < elem_cnt; i++) {
       const T abs_x = std::abs(prediction[i] - label[i]);
       if (abs_x < beta) {
         out[i] = 0.5 * abs_x * abs_x / beta;
@@ -51,7 +51,7 @@ struct SmoothL1KernelUtil<DeviceType::kCPU, T> {
   static void Backward(DeviceCtx* ctx, const int64_t elem_cnt, const T* out_diff,
                        const T* prediction, const T* label, const float beta, const float scale,
                        T* prediction_diff) {
-    for (int i = 0; i < elem_cnt; i++) {
+    for (int64_t i = 0; i < elem_cnt; i++) {
       const T x = prediction[i] - label[i];
       const T abs_x = std::abs(x);
       if (abs_x < beta) {
