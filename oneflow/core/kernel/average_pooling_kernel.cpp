@@ -48,12 +48,12 @@ void AveragePoolingKernel<DeviceType::kCPU, T>::NDHWCProcessGrad(
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAveragePooling1DConf, AveragePoolingKernel,
-                           ARITHMETIC_DATA_TYPE_SEQ);
+                           ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAveragePooling2DConf, AveragePoolingKernel,
-                           ARITHMETIC_DATA_TYPE_SEQ);
+                           ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAveragePooling3DConf, AveragePoolingKernel,
-                           ARITHMETIC_DATA_TYPE_SEQ);
+                           ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

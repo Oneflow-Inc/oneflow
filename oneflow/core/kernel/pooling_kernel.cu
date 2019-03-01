@@ -28,6 +28,6 @@ void PoolingKernel<DeviceType::kGPU, T>::PoolingBackward(const KernelCtx& kernel
 
 #define INSTANTIATE_POOLING_KERNEL(type_cpp, type_proto) \
   template class PoolingKernel<DeviceType::kGPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_POOLING_KERNEL, ARITHMETIC_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_POOLING_KERNEL, ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

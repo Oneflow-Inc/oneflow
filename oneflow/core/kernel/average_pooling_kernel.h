@@ -55,6 +55,9 @@ class AveragePoolingKernel<DeviceType::kCPU, T> final
                         EigenArrayMap<T>& in_diff_arr) const override;
 };
 
+template<>
+class AveragePoolingKernel<DeviceType::kCPU, float16> final : public Kernel {};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_AVERAGE_POOLING_KERNEL_H_
