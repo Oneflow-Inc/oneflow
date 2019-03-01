@@ -150,6 +150,7 @@ struct NewKernelUtilIf {
   static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, T* y,
                    const int incy);
   static void Scal(DeviceCtx* ctx, const int n, const T alpha, T* x, const int incx);
+  static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
 };
 
 }  // namespace oneflow

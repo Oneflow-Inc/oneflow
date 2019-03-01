@@ -314,6 +314,9 @@ struct NewKernelUtilIf<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T
   static void Scal(DeviceCtx* ctx, const int n, const T alpha, T* x, const int incx) {
     cblas_scal<T>(n, alpha, x, incx);
   }
+  static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
+    for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[i]; }
+  }
 };
 
 // CPU && Integral
@@ -398,6 +401,9 @@ struct NewKernelUtilIf<DeviceType::kCPU, T, typename std::enable_if<IsFloat16<T>
   }
   static void Scal(DeviceCtx* ctx, const int n, const T alpha, T* x, const int incx) {
     UNIMPLEMENTED();
+  }
+  static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
+    for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[i]; }
   }
 };
 

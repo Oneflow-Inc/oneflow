@@ -62,6 +62,11 @@ __global__ void ReluBackwardGpu(const int n, const T* y, const T* dy, T* dx) {
   CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = y[i] > 0 ? dy[i] : 0; }
 }
 
+template<typename T>
+__global__ void MulGpu(const int64_t n, const T* x, const T* y, T* z) {
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y[i]; }
+}
+
 __global__ void SigmoidForwardGpu(const int n, const half* x, half* y) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   CUDA_1D_KERNEL_LOOP(i, n) { y[i] = __hdiv(hone(), __hadd(hone(), hexp(__hneg(x[i])))); }
@@ -139,6 +144,14 @@ __global__ void AxpyHalfGpu(const int n, const half alpha, const half* x, const 
 __global__ void ScalHalfGpu(const int n, const half alpha, half* x, const int incx) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   CUDA_1D_KERNEL_LOOP(i, n) { x[i * incx] = __hmul(alpha, x[i * incx]); }
+#else
+  HALF_CHECK_FAILED;
+#endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+}
+
+__global__ void MulHalfGpu(const int64_t n, const half* x, const half* y, half* z) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = __hmul(x[i], y[i]); }
 #else
   HALF_CHECK_FAILED;
 #endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
@@ -249,6 +262,10 @@ struct NewKernelUtilIf<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T
   static void Scal(DeviceCtx* ctx, const int n, const T alpha, T* x, const int incx) {
     cublas_scal<T>(ctx->cublas_pmh_handle(), n, &alpha, x, incx);
   }
+  static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
+    MulGpu<T>
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z);
+  }
 };
 
 // GPU && Integral
@@ -337,6 +354,11 @@ struct NewKernelUtilIf<DeviceType::kGPU, T, typename std::enable_if<IsFloat16<T>
   static void Scal(DeviceCtx* ctx, const int n, const T alpha, T* x, const int incx) {
     ScalHalfGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
         n, float16_2half(alpha), reinterpret_cast<half*>(x), incx);
+  }
+  static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
+    MulHalfGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        n, reinterpret_cast<const half*>(x), reinterpret_cast<const half*>(y),
+        reinterpret_cast<half*>(z));
   }
 };
 
