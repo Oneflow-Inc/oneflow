@@ -16,11 +16,10 @@ void CalculateScaleKernel<T>::ForwardDataContent(
   FOR_RANGE(int32_t, i, 0, height_blob->shape().elem_cnt()) {
     const int32_t im_size_min = std::min(height[i], weight[i]);
     const int32_t im_size_max = std::max(height[i], weight[i]);
-    T im_scale = static_cast<T>(target_size) / static_cast<T>(im_size_min);
-    if (std::round(im_scale * im_size_max) > max_size) {
-      im_scale = static_cast<T>(max_size) / static_cast<T>(im_size_max);
+    scale[i] = static_cast<T>(target_size) / static_cast<T>(im_size_min);
+    if (std::round(scale[i] * im_size_max) > max_size) {
+      scale[i] = static_cast<T>(max_size) / static_cast<T>(im_size_max);
     }
-    scale[i] = im_scale;
   }
 }
 
