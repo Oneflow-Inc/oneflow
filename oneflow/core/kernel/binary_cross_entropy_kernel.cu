@@ -20,7 +20,8 @@ __global__ void ComputeDiffGpu(int64_t num_instances, const T* x, const K* label
   CUDA_1D_KERNEL_LOOP(i, num_instances) {
     const K label = labels[i];
     assert(label == 0 || label == 1);
-    dx[i] = -dy[i] / MaxWithLogThreshold(label == 0 ? OneVal<T>::value - x[i] : x[i]);
+    dx[i] = (label == 0 ? 1 : -1) * dy[i]
+            / MaxWithLogThreshold(label == 0 ? OneVal<T>::value - x[i] : x[i]);
   }
 }
 

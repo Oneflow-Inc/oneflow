@@ -72,7 +72,8 @@ struct BinaryCrossEntropyKernelUtil<DeviceType::kCPU, T, K> {
     FOR_RANGE(int64_t, i, 0, num_instances) {
       const K label = labels[i];
       CHECK(label == 0 || label == 1);
-      dx[i] = -dy[i] / MaxWithLogThreshold(label == 0 ? OneVal<T>::value - x[i] : x[i]);
+      dx[i] = (label == 0 ? 1 : -1) * dy[i]
+              / MaxWithLogThreshold(label == 0 ? OneVal<T>::value - x[i] : x[i]);
     }
   }
 };
