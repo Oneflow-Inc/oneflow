@@ -39,10 +39,10 @@ typename ProposalTargetKernel<T>::LabeledGtBox ProposalTargetKernel<T>::GetImage
   const ProposalTargetOpConf& conf = op_conf().proposal_target_conf();
   const Blob* gt_boxes_blob = BnInOp2Blob("gt_boxes");
   Blob* gt_labels_blob = BnInOp2Blob("gt_labels");
-  Blob* gt_box_indices_blob = BnInOp2Blob("gt_box_indices");
+  Blob* gt_box_inds_blob = BnInOp2Blob("gt_box_inds");
 
-  LabeledGtBox gt_boxes(GtBoxIndices(IndexSequence(gt_box_indices_blob->shape().elem_cnt(), 0,
-                                                   gt_box_indices_blob->mut_dptr<int32_t>(), false),
+  LabeledGtBox gt_boxes(GtBoxIndices(IndexSequence(gt_box_inds_blob->shape().elem_cnt(), 0,
+                                                   gt_box_inds_blob->mut_dptr<int32_t>(), false),
                                      gt_boxes_blob->dptr<T>()),
                         gt_labels_blob->mut_dptr<int32_t>());
   FOR_RANGE(int32_t, i, 0, gt_boxes_blob->shape().At(0)) {

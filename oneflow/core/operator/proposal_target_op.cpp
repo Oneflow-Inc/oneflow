@@ -16,11 +16,9 @@ void ProposalTargetOp::InitFromOpConf() {
   EnrollOutputBn("regression_targets", false);
   EnrollOutputBn("regression_weights", false);
   // Enroll data tmp
-  EnrollDataTmpBn("gt_boxes_inds");
-  EnrollDataTmpBn("rois_inds");
+  EnrollDataTmpBn("gt_box_inds");
   EnrollDataTmpBn("max_overlaps");
   EnrollDataTmpBn("max_overlaps_with_gt_index");
-  EnrollDataTmpBn("sampled_inds");
 }
 
 const PbMessage& ProposalTargetOp::GetCustomizedConf() const {
@@ -72,10 +70,10 @@ void ProposalTargetOp::InferBlobDescs(
   // output: regression_weights (R`, 4) T
   *GetBlobDesc4BnInOp("regression_weights") = *regression_targets_blob_desc;
 
-  // data tmp: gt_boxes_inds (N * B) int32_t
-  BlobDesc* gt_boxes_inds_blob_desc = GetBlobDesc4BnInOp("gt_boxes_inds");
-  gt_boxes_inds_blob_desc->mut_shape() = Shape({num_gt_boxes});
-  gt_boxes_inds_blob_desc->set_data_type(DataType::kInt32);
+  // data tmp: gt_box_inds (N * B) int32_t
+  BlobDesc* gt_box_inds_blob_desc = GetBlobDesc4BnInOp("gt_box_inds");
+  gt_box_inds_blob_desc->mut_shape() = Shape({num_gt_boxes});
+  gt_box_inds_blob_desc->set_data_type(DataType::kInt32);
   // data tmp: max_overlaps (R) float
   BlobDesc* max_overlaps_blob_desc = GetBlobDesc4BnInOp("max_overlaps");
   max_overlaps_blob_desc->mut_shape() = Shape({num_rois});
