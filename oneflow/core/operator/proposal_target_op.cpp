@@ -69,6 +69,7 @@ void ProposalTargetOp::InferBlobDescs(
   regression_targets_blob_desc->mut_shape() = Shape({total_num_sampled_rois, 4});
   // output: regression_weights (R`, 4) T
   *GetBlobDesc4BnInOp("regression_weights") = *regression_targets_blob_desc;
+  // TODO: Convert regression_weights to sampled_pos_inds_subset for less calculation of loss
 
   // data tmp: gt_box_inds (N * B) int32_t
   BlobDesc* gt_box_inds_blob_desc = GetBlobDesc4BnInOp("gt_box_inds");
