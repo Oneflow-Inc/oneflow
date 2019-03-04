@@ -831,7 +831,7 @@ message ProposalTargetOpConf {
   required string gt_labels = 3;
   // out
   required string sampled_rois = 4;
-  required string sampled_roi_indices = 5;
+  required string sampled_roi_inds = 5;
   required string class_labels = 6;
   required string regression_targets = 7;
   required string regression_weights = 8;

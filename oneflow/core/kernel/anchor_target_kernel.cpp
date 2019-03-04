@@ -102,7 +102,7 @@ void AnchorTargetKernel<T>::GenerateAnchorBoxes(
 template<typename T>
 void AnchorTargetKernel<T>::FilterOutsideAnchorBoxes(
     DeviceCtx* ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  const Blob* images_blob = BnInOp2Blob("image");
+  const Blob* images_blob = BnInOp2Blob("images");
   const Blob* anchors_blob = BnInOp2Blob("anchors");
   Blob* anchor_inds_blob = BnInOp2Blob("anchor_inds");
   const size_t num_anchors = anchors_blob->shape().At(0);

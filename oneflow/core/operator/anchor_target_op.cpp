@@ -88,14 +88,18 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   anchors_blob_desc->set_has_dim0_valid_num_field(true);
   // data_tmp: anchors_inds (H1 * W1 + H2 * W2 + ...) * A) int32_t
   BlobDesc* anchor_inds_blob_desc = GetBlobDesc4BnInOp("anchor_inds");
+  *anchor_inds_blob_desc = *anchors_blob_desc;
+  anchor_inds_blob_desc->mut_shape() = Shape({total_num_anchors});
   anchor_inds_blob_desc->set_data_type(DataType::kInt32);
-  // data_tmp: anchor_labels has the same shape as anchors
+  // data_tmp: anchor_labels has the same shape as anchors_inds
   *GetBlobDesc4BnInOp("anchor_labels") = *anchor_inds_blob_desc;
-  // data_tmp: anchor_max_overlaps has the same shape as anchors
+  // data_tmp: anchor_max_overlaps has the same shape as anchors_inds
   BlobDesc* anchor_max_overlaps_blob_desc = GetBlobDesc4BnInOp("anchor_max_overlaps");
+  *anchor_max_overlaps_blob_desc = *anchor_inds_blob_desc;
   anchor_max_overlaps_blob_desc->set_data_type(DataType::kFloat);
-  // data_tmp: anchor_best_match_gt has the same shape as anchors
+  // data_tmp: anchor_best_match_gt has the same shape as anchors_inds
   BlobDesc* anchor_best_match_gt_blob_desc = GetBlobDesc4BnInOp("anchor_best_match_gt");
+  *anchor_best_match_gt_blob_desc = *anchor_inds_blob_desc;
   anchor_best_match_gt_blob_desc->set_data_type(DataType::kInt32);
 }
 
