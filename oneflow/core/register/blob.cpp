@@ -160,6 +160,14 @@ void Blob::set_dim2_valid_num(int64_t dim0_idx, int64_t dim1_idx, int64_t val) {
   *(dim2_valid_num_ptr_ + dim0_idx * blob_desc_->shape().At(1) + dim1_idx) = val;
 }
 
+Shape Blob::instance_shape() const {
+  CHECK_NOTNULL(instance_shape_ptr_);
+  std::vector<int64_t> dim_vec;
+  dim_vec.insert(dim_vec.end(), instance_shape_ptr_,
+                 instance_shape_ptr_ + static_shape().NumAxes() - 1);
+  return Shape(dim_vec);
+}
+
 void Blob::set_instance_shape(const Shape& shape) {
   CHECK_NOTNULL(instance_shape_ptr_);
   CHECK_EQ(shape.NumAxes(), static_shape().NumAxes() - 1);
