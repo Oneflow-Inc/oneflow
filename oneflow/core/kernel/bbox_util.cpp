@@ -45,13 +45,11 @@ size_t BBoxUtil<BBox>::GenerateAnchors(const AnchorGeneratorConf& conf, T* ancho
 }
 
 template<typename BBox>
-size_t BBoxUtil<BBox>::GenerateAnchorsEx(int32_t image_height, int32_t image_width,
-                                         float feature_map_stride,
+size_t BBoxUtil<BBox>::GenerateAnchorsEx(float feature_map_stride, int32_t feature_map_height,
+                                         int32_t feature_map_width,
                                          const std::vector<float>& scales_vec,
                                          const std::vector<float>& ratios_vec, T* anchors_ptr) {
   CHECK_EQ(BBox::ElemCnt, 4);
-  const int32_t height = std::ceil(image_height / feature_map_stride);
-  const int32_t width = std::ceil(image_width / feature_map_stride);
   const float base_ctr = 0.5 * (feature_map_stride - 1);
   const size_t num_anchors = scales_vec.size() * ratios_vec.size();
   std::vector<T> base_anchors_vec(num_anchors * BBox::ElemCnt);
@@ -75,9 +73,9 @@ size_t BBoxUtil<BBox>::GenerateAnchorsEx(int32_t image_height, int32_t image_wid
   std::fesetround(save_round_way);
 
   const auto* base_anchors = BBox::Cast(base_anchors_vec.data());
-  FOR_RANGE(int32_t, h, 0, height) {
-    FOR_RANGE(int32_t, w, 0, width) {
-      auto* anchor_bbox = BBox::Cast(anchors_ptr) + (h * width + w) * num_anchors;
+  FOR_RANGE(int32_t, h, 0, feature_map_height) {
+    FOR_RANGE(int32_t, w, 0, feature_map_width) {
+      auto* anchor_bbox = BBox::Cast(anchors_ptr) + (h * feature_map_width + w) * num_anchors;
       FOR_RANGE(int32_t, i, 0, num_anchors) {
         anchor_bbox[i].set_ltrb(base_anchors[i].left() + w * feature_map_stride,
                                 base_anchors[i].top() + h * feature_map_stride,
@@ -86,7 +84,17 @@ size_t BBoxUtil<BBox>::GenerateAnchorsEx(int32_t image_height, int32_t image_wid
       }
     }
   }
-  return num_anchors * height * width;
+  return num_anchors * feature_map_height * feature_map_width;
+}
+
+template<typename BBox>
+size_t BBoxUtil<BBox>::GenerateAnchorsEx(int32_t image_height, int32_t image_width,
+                                         float feature_map_stride,
+                                         const std::vector<float>& scales_vec,
+                                         const std::vector<float>& ratios_vec, T* anchors_ptr) {
+  const int32_t height = std::ceil(image_height / feature_map_stride);
+  const int32_t width = std::ceil(image_width / feature_map_stride);
+  return GenerateAnchorsEx(feature_map_stride, height, width, scales_vec, ratios_vec, anchors_ptr);
 }
 
 template<typename BBox>

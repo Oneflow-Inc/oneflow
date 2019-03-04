@@ -4,15 +4,9 @@
 namespace oneflow {
 
 template<typename T>
-void ProposalKernel<T>::InitConstBufBlobs(
-    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BBoxUtil<MutBBox>::GenerateAnchors(op_conf().proposal_conf().anchor_generator_conf(),
-                                     BnInOp2Blob("anchors")->mut_dptr<T>());
-}
-
-template<typename T>
 void ProposalKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  GenerateAnchors(ctx.device_ctx, BnInOp2Blob);
   MultiThreadLoop(BnInOp2Blob("class_prob")->shape().At(0), [&](int64_t im_i) {
     RegionProposal(im_i, BnInOp2Blob);
     ApplyNms(im_i, BnInOp2Blob);
@@ -21,32 +15,56 @@ void ProposalKernel<T>::ForwardDataContent(
 }
 
 template<typename T>
+void ProposalKernel<T>::GenerateAnchors(
+    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* bbox_pred_blob = BnInOp2Blob("bbox_pred");
+  const Blob* class_prob_blob = BnInOp2Blob("class_prob");
+  Blob* anchors_blob = BnInOp2Blob("anchors");
+  const int32_t fm_height = bbox_pred_blob->shape().At(1);
+  const int32_t fm_width = bbox_pred_blob->shape().At(2);
+  CHECK_EQ(class_prob_blob->shape().At(1), fm_height);
+  CHECK_EQ(class_prob_blob->shape().At(2), fm_width);
+
+  const AnchorGeneratorConf& anchor_generator_conf =
+      op_conf().proposal_conf().anchor_generator_conf();
+  auto scales_vec = PbRf2StdVec(anchor_generator_conf.anchor_scales());
+  auto ratios_vec = PbRf2StdVec(anchor_generator_conf.aspect_ratios());
+  const float fm_stride = anchor_generator_conf.feature_map_stride();
+  size_t num_anchors = BBoxUtil<MutBBox>::GenerateAnchorsEx(
+      fm_stride, fm_height, fm_width, scales_vec, scales_vec, anchors_blob->mut_dptr<T>());
+  CHECK_LE(num_anchors, anchors_blob->static_shape().At(0));
+  anchors_blob->set_dim0_valid_num(0, num_anchors);
+}
+
+template<typename T>
 void ProposalKernel<T>::RegionProposal(
     const int64_t im_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const ProposalOpConf& conf = op_conf().proposal_conf();
+  const Blob* class_prob_blob = BnInOp2Blob("class_prob");
   Blob* proposals_blob = BnInOp2Blob("proposals");
-  Blob* score_slice_blob = BnInOp2Blob("score_slice");
+  Blob* proposal_inds_blob = BnInOp2Blob("proposal_inds");
 
-  size_t num_proposals = proposals_blob->shape().At(1);
-  ScoreSlice score_slice(IndexSequence(score_slice_blob->shape().Count(1),
-                                       score_slice_blob->mut_dptr<int32_t>(im_index), true),
-                         BnInOp2Blob("class_prob")->dptr<T>(im_index));
-  score_slice.NthElem(num_proposals, [&](int32_t lhs_index, int32_t rhs_index) {
-    return score_slice.score(lhs_index) > score_slice.score(rhs_index);
+  size_t num_proposals = class_prob_blob->shape().Count(1);
+  ScoreSlice proposal_slice(IndexSequence(proposal_inds_blob->shape().Count(1),
+                                          proposal_inds_blob->mut_dptr<int32_t>(im_index), true),
+                            class_prob_blob->dptr<T>(im_index));
+  proposal_slice.NthElem(num_proposals, [&](int32_t lhs_index, int32_t rhs_index) {
+    return proposal_slice.score(lhs_index) > proposal_slice.score(rhs_index);
   });
-  score_slice.Truncate(num_proposals);
-  score_slice.Sort([&](int32_t lhs_index, int32_t rhs_index) {
-    return score_slice.score(lhs_index) > score_slice.score(rhs_index);
-  });
+  proposal_slice.Truncate(num_proposals);
+  // proposal_slice.Sort([&](int32_t lhs_index, int32_t rhs_index) {
+  //   return proposal_slice.score(lhs_index) > proposal_slice.score(rhs_index);
+  // });
   const auto* bbox_delta = BBoxDelta<T>::Cast(BnInOp2Blob("bbox_pred")->dptr<T>(im_index));
   const auto* anchor_bbox = BBox::Cast(BnInOp2Blob("anchors")->dptr<T>());
   auto* prop_bbox = MutBBox::Cast(proposals_blob->mut_dptr<T>(im_index));
-  FOR_RANGE(size_t, i, 0, score_slice.size()) {
-    int32_t index = score_slice.GetIndex(i);
+  FOR_RANGE(size_t, i, 0, proposal_slice.size()) {
+    int32_t index = proposal_slice.GetIndex(i);
     prop_bbox[i].Transform(anchor_bbox + index, bbox_delta + index, conf.bbox_reg_weights());
     prop_bbox[i].Clip(conf.anchor_generator_conf().image_height(),
                       conf.anchor_generator_conf().image_width());
   }
+  proposals_blob->set_dim1_valid_num(im_index, num_proposals);
 }
 
 template<typename T>
@@ -56,7 +74,7 @@ void ProposalKernel<T>::ApplyNms(
   const Blob* proposals_blob = BnInOp2Blob("proposals");
   Blob* pre_nms_inds_blob = BnInOp2Blob("pre_nms_slice");
   Blob* post_nms_inds_blob = BnInOp2Blob("post_nms_slice");
-  BoxesSlice pre_nms_slice(IndexSequence(pre_nms_inds_blob->shape().Count(1),
+  BoxesSlice pre_nms_slice(IndexSequence(proposals_blob->dim1_valid_num(im_index),
                                          pre_nms_inds_blob->mut_dptr<int32_t>(im_index), true),
                            proposals_blob->dptr<T>(im_index));
   BoxesSlice post_nms_slice(IndexSequence(post_nms_inds_blob->shape().Count(1),
@@ -71,7 +89,7 @@ void ProposalKernel<T>::WriteRoisToOutput(
     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const Blob* score_blob = BnInOp2Blob("class_prob");
   const Blob* proposals_blob = BnInOp2Blob("proposals");
-  const Blob* score_slice_blob = BnInOp2Blob("score_slice");
+  const Blob* proposal_inds_blob = BnInOp2Blob("proposal_inds");
   const Blob* post_nms_inds_blob = BnInOp2Blob("post_nms_slice");
   Blob* rois_blob = BnInOp2Blob("rois");
   Blob* rois_prob_blob = BnInOp2Blob("roi_probs");
@@ -83,7 +101,7 @@ void ProposalKernel<T>::WriteRoisToOutput(
     const auto* prop_bbox = BBox::Cast(proposals_blob->dptr<T>(i));
     auto* roi_bbox = RoiBBox::Cast(rois_blob->mut_dptr<T>(num_output));
     const T* score_ptr = score_blob->dptr<T>(i);
-    const int32_t* score_inds_ptr = score_slice_blob->dptr<int32_t>(i);
+    const int32_t* score_inds_ptr = proposal_inds_blob->dptr<int32_t>(i);
     T* roi_probs_ptr = rois_prob_blob->mut_dptr<T>(num_output);
     FOR_RANGE(size_t, j, 0, post_nms_inds_size) {
       int32_t index = post_nms_inds_ptr[j];
