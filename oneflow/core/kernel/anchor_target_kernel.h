@@ -15,33 +15,26 @@ class AnchorTargetKernel final : public KernelIf<DeviceType::kCPU> {
 
   using BBox = BBoxT<const T>;
   using MutBBox = BBoxT<T>;
-  using AnchorBoxes = BBoxIndices<IndexSequence, BBox>;
-  using MaxOverlapOfBoxesWithGt = MaxOverlapIndices<AnchorBoxes>;
-  using MaxOverlapOfLabeledBoxesWithGt = LabelIndices<MaxOverlapOfBoxesWithGt>;
-  using GtBoxes = BBoxIndices<IndexSequence, BBox>;
 
  private:
-  void InitConstBufBlobs(DeviceCtx*,
-                         std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
+  void ForwardInstanceShape(const KernelCtx& ctx,
+                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
-  MaxOverlapOfLabeledBoxesWithGt GetImageAnchorBoxes(
-      const KernelCtx& ctx, size_t im_index,
+  void GenerateAnchorBoxes(DeviceCtx* ctx,
+                           const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  void FilterOutsideAnchorBoxes(DeviceCtx* ctx,
+                                const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  void CalcMaxOverlapAndSetPositiveLabels(
+      DeviceCtx* ctx, size_t im_index,
       const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  GtBoxes GetImageGtBoxes(size_t im_index,
-                          const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-
-  void CalcMaxOverlapAndSetPositiveLabels(const GtBoxes& gt_boxes,
-                                          MaxOverlapOfLabeledBoxesWithGt& anchor_boxes) const;
-  size_t SubsampleForeground(MaxOverlapOfLabeledBoxesWithGt& boxes) const;
-  size_t SubsampleBackground(size_t fg_cnt, MaxOverlapOfLabeledBoxesWithGt& boxes) const;
-  size_t ChoiceForeground(MaxOverlapOfLabeledBoxesWithGt& boxes) const;
-  size_t ChoiceBackground(size_t fg_cnt, MaxOverlapOfLabeledBoxesWithGt& boxes) const;
-  void OutputForEachImage(size_t im_index, size_t total_sample_cnt, const GtBoxes& gt_boxes,
-                          const MaxOverlapOfLabeledBoxesWithGt& boxes,
+  size_t Subsample(DeviceCtx* ctx, size_t im_index,
+                   const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  void OutputForEachImage(DeviceCtx* ctx, size_t im_index,
                           const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 };
 
 }  // namespace oneflow
+
 #endif  // ONEFLOW_CORE_OPERATOR_ANCHOR_TARGET_KERNEL_OP_H_
