@@ -825,14 +825,17 @@ message AccuracyOpConf {
 }
 
 message ProposalTargetOpConf {
+  // in
   required string rois = 1;
   required string gt_boxes = 2;
   required string gt_labels = 3;
-  required string out_rois = 4;
-  required string labels = 5;
-  required string bbox_targets = 6;
-  required string bbox_inside_weights = 7;
-  required string bbox_outside_weights = 8;
+  // out
+  required string sampled_rois = 4;
+  required string sampled_roi_indices = 5;
+  required string class_labels = 6;
+  required string regression_targets = 7;
+  required string regression_weights = 8;
+  // conf
   required float foreground_threshold = 9;
   required float background_threshold_low = 10;
   required float background_threshold_high = 11;

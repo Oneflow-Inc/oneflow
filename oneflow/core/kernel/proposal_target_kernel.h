@@ -29,6 +29,8 @@ class ProposalTargetKernel final : public KernelIf<DeviceType::kCPU> {
   void ForwardRecordIdInDevicePiece(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
+  void InitializeOutputBlob(DeviceCtx* ctx,
+                            const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   auto GetImageGtBoxes(const std::function<Blob*(const std::string&)>& BnInOp2Blob) const
       -> LabeledGtBox;
   auto GetImageRoiBoxes(const std::function<Blob*(const std::string&)>& BnInOp2Blob) const
@@ -36,8 +38,6 @@ class ProposalTargetKernel final : public KernelIf<DeviceType::kCPU> {
   void FindNearestGtBoxForEachRoiBox(const std::function<Blob*(const std::string&)>& BnInOp2Blob,
                                      const LabeledGtBox& gt_boxes,
                                      MaxOverlapOfRoiBoxWithGt& roi_boxes) const;
-  void ConcatGtBoxesToRoiBoxesHead(const LabeledGtBox& gt_boxes,
-                                   MaxOverlapOfRoiBoxWithGt& roi_boxes) const;
   void SubsampleForegroundAndBackground(const std::function<Blob*(const std::string&)>& BnInOp2Blob,
                                         const LabeledGtBox& gt_boxes,
                                         MaxOverlapOfRoiBoxWithGt& boxes) const;
