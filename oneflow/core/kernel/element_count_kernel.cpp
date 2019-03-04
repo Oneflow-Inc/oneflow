@@ -17,8 +17,7 @@ void ElementCountKernel<device_type, T>::ForwardDataContent(
   CHECK_GT(end_axis, begin_axis);
   CHECK_LE(end_axis, num_axes);
   const int64_t cnt = in->shape().Count(begin_axis, end_axis);
-  KernelUtil<device_type, T>::Set(ctx.device_ctx, static_cast<T>(cnt),
-                                         out->mut_dptr<T>());
+  KernelUtil<device_type, T>::Set(ctx.device_ctx, static_cast<T>(cnt), out->mut_dptr<T>());
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kElementCountConf, ElementCountKernel,
