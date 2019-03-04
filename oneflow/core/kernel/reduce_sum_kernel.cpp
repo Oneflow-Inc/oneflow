@@ -28,6 +28,14 @@ void ReduceSumKernel<device_type, T>::BackwardDataContent(
                              out_diff_blob->dptr<T>()));
 }
 
+template<DeviceType device_type, typename T>
+void ReduceSumKernel<device_type, T>::BackwardInDiffDim0ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* in = BnInOp2Blob("in");
+  Blob* in_diff = BnInOp2Blob(GenDiffBn("in"));
+  in_diff->CopyDim0ValidNumFrom(ctx.device_ctx, in);
+}
+
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReduceSumConf, ReduceSumKernel, ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

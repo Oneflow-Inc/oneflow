@@ -31,9 +31,7 @@ void ReshapeInstanceShapeToDim0Kernel<device_type>::BackwardInstanceShape(
   Blob* in_diff = BnInOp2Blob(GenDiffBn("in"));
   in_diff->set_instance_shape(in->instance_shape());
   if (in->has_dim0_valid_num_field()) {
-    CHECK_EQ(in->dim0_inner_shape().NumAxes(), 2);
-    CHECK_EQ(in->dim0_inner_shape().At(0), 1);
-    in_diff->set_dim0_valid_num(0, in->dim0_valid_num(0));
+    in_diff->CopyDim0ValidNumFrom(ctx.device_ctx, in);
   }
 }
 

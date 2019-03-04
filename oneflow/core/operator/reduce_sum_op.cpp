@@ -97,6 +97,9 @@ void ReduceSumOp::VirtualGenKernelConf(
                          ShiftAxisIfNegative(axis_vec, in_blob->shape().NumAxes()));
   }
   Shape(kept_dims).ToProto(kernel_conf->mutable_reduce_sum_conf()->mutable_kept_dims_shape());
+  if (in_blob->has_dim0_valid_num_field() && !kernel_conf->is_forward()) {
+    kernel_conf->set_need_do_dim0_valid_num(true);
+  }
 }
 
 REGISTER_OP(OperatorConf::kReduceSumConf, ReduceSumOp);
