@@ -8,9 +8,13 @@ void ReshapeInstanceShapeToDim0Kernel<device_type>::ForwardDim0ValidNum(
   const Blob* in = BnInOp2Blob("in");
   Blob* out = BnInOp2Blob("out");
   const Shape out_instance_shape(this->op_conf().reshape_instance_shape_to_dim0_conf().shape());
-  CHECK_EQ(in->shape().elem_cnt() % out_instance_shape.elem_cnt(), 0);
-  const int64_t out_dim0_valid_num = in->shape().elem_cnt() / out_instance_shape.elem_cnt();
-  out->set_dim0_valid_num(0, out_dim0_valid_num);
+  if (out_instance_shape.elem_cnt() > 0) {
+    CHECK_EQ(in->shape().elem_cnt() % out_instance_shape.elem_cnt(), 0);
+    const int64_t out_dim0_valid_num = in->shape().elem_cnt() / out_instance_shape.elem_cnt();
+    out->set_dim0_valid_num(0, out_dim0_valid_num);
+  } else {
+    out->set_dim0_valid_num(0, in->shape().elem_cnt());
+  }
 }
 
 template<DeviceType device_type>
