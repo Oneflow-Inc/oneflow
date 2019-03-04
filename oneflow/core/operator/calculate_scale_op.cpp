@@ -5,7 +5,7 @@ namespace oneflow {
 void CalculateScaleOp::InitFromOpConf() {
   CHECK(op_conf().has_calculate_scale_conf());
   EnrollInputBn("height", false);
-  EnrollInputBn("weight", false);
+  EnrollInputBn("width", false);
   EnrollOutputBn("scale", false);
 }
 
@@ -18,11 +18,11 @@ void CalculateScaleOp::InferBlobDescs(
   CHECK_GT(target_size, 0);
   CHECK_GE(max_size, target_size);
   const BlobDesc* height = GetBlobDesc4BnInOp("height");
-  const BlobDesc* weight = GetBlobDesc4BnInOp("weight");
+  const BlobDesc* width = GetBlobDesc4BnInOp("width");
   CHECK_EQ(height->shape().NumAxes(), 1);
-  CHECK_EQ(height->shape(), weight->shape());
+  CHECK_EQ(height->shape(), width->shape());
   CHECK_EQ(height->data_type(), DataType::kInt32);
-  CHECK_EQ(weight->data_type(), weight->data_type());
+  CHECK_EQ(width->data_type(), width->data_type());
 
   // scale
   BlobDesc* scale = GetBlobDesc4BnInOp("scale");
