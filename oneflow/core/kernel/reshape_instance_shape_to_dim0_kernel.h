@@ -24,7 +24,7 @@ class ReshapeInstanceShapeToDim0Kernel final : public KernelIf<device_type> {
   }
   void ForwardInstanceShape(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override {}
-  void BackwardDim0ValidNum(
+  void BackwardInDiffDim0ValidNum(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
   }
   void BackwardInstanceShape(
