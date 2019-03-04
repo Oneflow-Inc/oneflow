@@ -1079,14 +1079,15 @@ message MaskTargetOpConf {
   required string rois = 1;
   required string labels = 2;
   required string gt_segm_polygon_lists = 3;
+  required string im_scale = 4;
 
   //outputs
-  required string mask_rois = 4;
-  required string masks = 5;
+  required string mask_rois = 5;
+  required string masks = 6;
+  required string mask_labels = 7;
 
-  required int32 num_classes = 6;
-  required int32 mask_height = 7;
-  required int32 mask_width = 8;
+  required int32 mask_height = 8;
+  required int32 mask_width = 9;
 }
 
 message PackOpConf {

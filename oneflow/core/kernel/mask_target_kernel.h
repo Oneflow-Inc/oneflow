@@ -24,8 +24,6 @@ class MaskTargetKernel final : public KernelIf<DeviceType::kCPU> {
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void ForwardRecordIdInDevicePiece(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void InitConstBufBlobs(DeviceCtx*,
-                         std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
   void ParseSegmPolygonLists(const Blob* gt_segms,
                              std::vector<std::vector<PolygonList>>* segms) const;
