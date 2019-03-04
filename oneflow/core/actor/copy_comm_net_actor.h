@@ -41,6 +41,7 @@ class CopyCommNetActor final : public Actor {
   HashMap<int64_t, RegstCtx> piece_id2regst_ctx_;
   int64_t next_piece_id_;
   int64_t in_regst_desc_id_;
+  int64_t local_stream_id_;
 };
 
 }  // namespace oneflow

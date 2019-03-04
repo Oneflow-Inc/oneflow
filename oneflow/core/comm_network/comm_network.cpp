@@ -3,62 +3,61 @@
 namespace oneflow {
 
 CommNet::~CommNet() {
-  for (auto peer_mchn_id : peer_machine_id()) { CHECK(peer_mchn_id2wq_.at(peer_mchn_id).empty()); }
+  for (int64_t stream_id = 0; stream_id < peer_machine_id_.size(); ++stream_id) {
+    CHECK(stream_id2stream_.at(stream_id).empty());
+  }
   ready_cbs_.Close();
   ready_cb_poller_.join();
 }
 
-void CommNet::Read(int64_t src_machine_id, void* src_token, void* dst_token) {
-  ReadContext* read_ctx = new ReadContext(src_machine_id);
+void CommNet::Read(int64_t stream_id, int64_t src_machine_id, void* src_token, void* dst_token) {
+  ReadContext* read_ctx = new ReadContext(stream_id);
   auto do_read = [this, read_ctx, src_machine_id, src_token, dst_token]() {
     DoRead(read_ctx, src_machine_id, src_token, dst_token);
   };
-  AddWorkToStream(read_ctx, do_read, true);
-  last_read_ctx_ = read_ctx;
+  AddWorkToStream(stream_id, do_read, true);
 }
 
-void CommNet::AddReadCallBack(std::function<void()> callback) {
-  AddWorkToStream(last_read_ctx_, callback, false);
+void CommNet::AddReadCallBack(int64_t stream_id, std::function<void()> callback) {
+  AddWorkToStream(stream_id, callback, false);
 }
 
 void CommNet::ReadDone(void* read_id) {
   ReadContext* read_ctx = static_cast<ReadContext*>(read_id);
-  read_ctx->read_done = true;
   {
-    auto& waiting_queue = peer_mchn_id2wq_.at(read_ctx->peer_mchn_id);
-    std::unique_lock<std::mutex> lck(peer_mchn_id2wq_mtx_.at(read_ctx->peer_mchn_id));
-    CHECK(!waiting_queue.empty() && waiting_queue.front().read_ctx->read_done);
-    waiting_queue.pop();
-    while (!waiting_queue.empty() && waiting_queue.front().read_ctx->read_done) {
-      DoCallBack(waiting_queue.front().callback);
-      waiting_queue.pop();
+    auto& local_stream = stream_id2stream_.at(read_ctx->stream_id);
+    std::unique_lock<std::mutex> lck(stream_id2stream_mtx_.at(read_ctx->stream_id));
+    CHECK(!local_stream.empty() && local_stream.front().is_read);
+    local_stream.pop();
+    while (!local_stream.empty() && !local_stream.front().is_read) {
+      IssueCallBack(local_stream.front().callback);
+      local_stream.pop();
     }
-    if (!waiting_queue.empty()) {
-      auto waiting_item = waiting_queue.front();
-      CHECK(waiting_item.is_read);
-      CHECK_EQ(waiting_item.read_ctx->read_done, false);
-      DoCallBack(waiting_item.callback);
-      delete read_ctx;
+    if (!local_stream.empty()) {
+      auto item = local_stream.front();
+      CHECK(item.is_read);
+      IssueCallBack(item.callback);
     }
   }
+  delete read_ctx;
 }
 
-void CommNet::DoCallBack(const std::function<void()>& cb) {
+void CommNet::IssueCallBack(const std::function<void()>& cb) {
   CHECK(cb);
   ready_cbs_.Send(cb);
 }
 
-void CommNet::AddWorkToStream(ReadContext* read_ctx, const std::function<void()>& cb,
-                              bool is_read) {
-  std::unique_lock<std::mutex> lck(peer_mchn_id2wq_mtx_.at(read_ctx->peer_mchn_id));
-  bool is_wq_empty = peer_mchn_id2wq_.at(read_ctx->peer_mchn_id).empty();
-  if (is_wq_empty) { DoCallBack(cb); }
-  if (!is_wq_empty || is_read) {
-    peer_mchn_id2wq_.at(read_ctx->peer_mchn_id).push(CommNetItem(read_ctx, cb, is_read));
+void CommNet::AddWorkToStream(int64_t stream_id, const std::function<void()>& cb, bool is_read) {
+  CHECK_LT(stream_id, peer_machine_id_.size());
+  std::unique_lock<std::mutex> lck(stream_id2stream_mtx_.at(stream_id));
+  bool is_stream_empty = stream_id2stream_.at(stream_id).empty();
+  if (is_stream_empty) { IssueCallBack(cb); }
+  if (!is_stream_empty || is_read) {
+    stream_id2stream_.at(stream_id).push(CommNetItem(cb, is_read));
   }
 }
 
-CommNet::CommNet(const Plan& plan) : last_read_ctx_(nullptr) {
+CommNet::CommNet(const Plan& plan) {
   int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
   HashMap<int64_t, MachineIds> net_topo;
   net_topo = PbMap2HashMap(plan.net_topo().peer_machine_ids());
@@ -66,9 +65,9 @@ CommNet::CommNet(const Plan& plan) : last_read_ctx_(nullptr) {
   CHECK(machine_ids_it != net_topo.end());
   std::vector<int64_t> peer_machine_ids = PbRf2StdVec(machine_ids_it->second.machine_id());
   peer_machine_id_.insert(peer_machine_ids.begin(), peer_machine_ids.end());
-  for (auto peer_mchn_id : peer_machine_id_) {
-    peer_mchn_id2wq_mtx_[peer_mchn_id];
-    CHECK(peer_mchn_id2wq_[peer_mchn_id].empty());
+  for (int64_t stream_id = 0; stream_id < peer_machine_id_.size(); ++stream_id) {
+    stream_id2stream_mtx_[stream_id];
+    CHECK(stream_id2stream_[stream_id].empty());
   }
 
   ready_cb_poller_ = std::thread([this]() {

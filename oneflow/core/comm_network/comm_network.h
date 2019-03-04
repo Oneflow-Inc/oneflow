@@ -21,8 +21,8 @@ class CommNet {
   virtual void RegisterMemoryDone() = 0;
 
   // Stream
-  void Read(int64_t src_machine_id, void* src_token, void* dst_token);
-  void AddReadCallBack(std::function<void()> callback);
+  void Read(int64_t stream_id, int64_t src_machine_id, void* src_token, void* dst_token);
+  void AddReadCallBack(int64_t stream_id, std::function<void()> callback);
   void ReadDone(void* read_id);
 
   //
@@ -39,23 +39,20 @@ class CommNet {
  private:
   friend class Global<CommNet>;
   struct ReadContext {
-    int64_t peer_mchn_id;
-    std::atomic<bool> read_done;
-    ReadContext(int64_t peer_mchn_id) : peer_mchn_id(peer_mchn_id), read_done(false) {}
+    int64_t stream_id;
+    ReadContext(int64_t stream_id) : stream_id(stream_id) {}
   };
   struct CommNetItem {
-    ReadContext* read_ctx;
     std::function<void()> callback;
     bool is_read;
-    CommNetItem(ReadContext* read_ctx, const std::function<void()>& callback, bool is_read)
-        : read_ctx(read_ctx), callback(callback), is_read(is_read) {}
+    CommNetItem(const std::function<void()>& callback, bool is_read)
+        : callback(callback), is_read(is_read) {}
   };
-  void DoCallBack(const std::function<void()>& cb);
-  void AddWorkToStream(ReadContext* read_ctx, const std::function<void()>& cb, bool is_read);
+  void IssueCallBack(const std::function<void()>& cb);
+  void AddWorkToStream(int64_t stream_id, const std::function<void()>& cb, bool is_read);
   HashSet<int64_t> peer_machine_id_;
-  HashMap<int64_t, std::mutex> peer_mchn_id2wq_mtx_;
-  HashMap<int64_t, std::queue<CommNetItem>> peer_mchn_id2wq_;
-  ReadContext* last_read_ctx_;
+  HashMap<int64_t, std::mutex> stream_id2stream_mtx_;
+  HashMap<int64_t, std::queue<CommNetItem>> stream_id2stream_;
   std::thread ready_cb_poller_;
 };
 
