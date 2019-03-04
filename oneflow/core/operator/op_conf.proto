@@ -1317,6 +1317,14 @@ message CalculateScaleOpConf {
   required string scale = 5;
 }
 
+message ElementCountOpConf {
+  required string in = 1;
+  required string out = 2;
+  optional int64 begin_axis = 3;
+  optional int64 end_axis = 4;
+  optional DataType data_type = 5;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1435,6 +1443,7 @@ message OperatorConf {
     SmoothL1OpConf smooth_l1_conf = 287;
     BinaryCrossEntropyOpConf binary_cross_entropy_conf = 288;
     CalculateScaleOpConf calculate_scale_conf = 289;
+    ElementCountOpConf element_count_conf = 290;
 
     // Maybe not needed
     RedefineDim0OpConf redefine_dim0_conf = 400;
