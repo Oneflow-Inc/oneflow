@@ -21,16 +21,25 @@ void ReshapeInstanceShapeToDim0Op::InferBlobDescs(
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   CHECK(in->has_instance_shape_field());
   const Shape out_instance_shape(conf.shape());
-  CHECK_EQ(in->shape().elem_cnt() % out_instance_shape.elem_cnt(), 0);
-  const int64_t out_dim0 = in->shape().elem_cnt() / out_instance_shape.elem_cnt();
-  std::vector<int64_t> out_shape_dim_vec;
-  out_shape_dim_vec.push_back(out_dim0);
-  out_shape_dim_vec.insert(out_shape_dim_vec.end(), out_instance_shape.dim_vec().cbegin(),
-                           out_instance_shape.dim_vec().cend());
-  out->mut_shape() = Shape(out_shape_dim_vec);
+  if (out_instance_shape.elem_cnt() > 0) {
+    CHECK_EQ(in->shape().elem_cnt() % out_instance_shape.elem_cnt(), 0);
+    const int64_t out_dim0 = in->shape().elem_cnt() / out_instance_shape.elem_cnt();
+    std::vector<int64_t> out_shape_dim_vec;
+    out_shape_dim_vec.push_back(out_dim0);
+    out_shape_dim_vec.insert(out_shape_dim_vec.end(), out_instance_shape.dim_vec().cbegin(),
+                             out_instance_shape.dim_vec().cend());
+    out->mut_shape() = Shape(out_shape_dim_vec);
+    out->set_has_dim0_valid_num_field(true);
+    out->mut_dim0_inner_shape() = Shape({1, out_dim0});
+  } else {
+    const int64_t out_dim0 = in->shape().elem_cnt();
+    std::vector<int64_t> out_shape_dim_vec;
+    out_shape_dim_vec.push_back(out_dim0);
+    out->mut_shape() = Shape(out_shape_dim_vec);
+    out->set_has_dim0_valid_num_field(true);
+    out->mut_dim0_inner_shape() = Shape({1, out_dim0});
+  }
   out->set_data_type(in->data_type());
-  out->set_has_dim0_valid_num_field(true);
-  out->mut_dim0_inner_shape() = Shape({1, out_dim0});
 }
 
 REGISTER_OP(OperatorConf::kReshapeInstanceShapeToDim0Conf, ReshapeInstanceShapeToDim0Op);
