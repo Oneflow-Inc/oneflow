@@ -45,19 +45,23 @@ size_t BBoxUtil<BBox>::GenerateAnchors(const AnchorGeneratorConf& conf, T* ancho
 }
 
 template<typename BBox>
-size_t BBoxUtil<BBox>::GenerateAnchorsEx(int32_t image_height, int32_t image_width, float feature_map_stride, const std::vector<float>& scales_vec, 
+size_t BBoxUtil<BBox>::GenerateAnchorsEx(int32_t image_height, int32_t image_width,
+                                         float feature_map_stride,
+                                         const std::vector<float>& scales_vec,
                                          const std::vector<float>& ratios_vec, T* anchors_ptr) {
   CHECK_EQ(BBox::ElemCnt, 4);
   const int32_t height = std::ceil(image_height / feature_map_stride);
   const int32_t width = std::ceil(image_width / feature_map_stride);
   const float base_ctr = 0.5 * (feature_map_stride - 1);
-  std::vector<T> base_anchors_vec(scales_vec.size() * ratios_vec.size() * BBox::ElemCnt);
+  const size_t num_anchors = scales_vec.size() * ratios_vec.size();
+  std::vector<T> base_anchors_vec(num_anchors * BBox::ElemCnt);
 
   int save_round_way = std::fegetround();
   CHECK_EQ(std::fesetround(FE_TONEAREST), 0);
   // scale first, ratio last
   FOR_RANGE(int32_t, i, 0, ratios_vec.size()) {
-    const int32_t wr = std::nearbyint(std::sqrt(feature_map_stride * feature_map_stride / ratios_vec.at(i)));
+    const int32_t wr =
+        std::nearbyint(std::sqrt(feature_map_stride * feature_map_stride / ratios_vec.at(i)));
     const int32_t hr = std::nearbyint(wr * ratios_vec.at(i));
     FOR_RANGE(int32_t, j, 0, scales_vec.size()) {
       const float scale = scales_vec.at(j) / feature_map_stride;
@@ -75,9 +79,10 @@ size_t BBoxUtil<BBox>::GenerateAnchorsEx(int32_t image_height, int32_t image_wid
     FOR_RANGE(int32_t, w, 0, width) {
       auto* anchor_bbox = BBox::Cast(anchors_ptr) + (h * width + w) * num_anchors;
       FOR_RANGE(int32_t, i, 0, num_anchors) {
-        anchor_bbox[i].set_ltrb(
-            base_anchors[i].left() + w * feature_map_stride, base_anchors[i].top() + h * feature_map_stride,
-            base_anchors[i].right() + w * feature_map_stride, base_anchors[i].bottom() + h * feature_map_stride);
+        anchor_bbox[i].set_ltrb(base_anchors[i].left() + w * feature_map_stride,
+                                base_anchors[i].top() + h * feature_map_stride,
+                                base_anchors[i].right() + w * feature_map_stride,
+                                base_anchors[i].bottom() + h * feature_map_stride);
       }
     }
   }
