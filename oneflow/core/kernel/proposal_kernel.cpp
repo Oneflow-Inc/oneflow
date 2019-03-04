@@ -101,14 +101,14 @@ void ProposalKernel<T>::WriteRoisToOutput(
     const auto* prop_bbox = BBox::Cast(proposals_blob->dptr<T>(i));
     auto* roi_bbox = RoiBBox::Cast(rois_blob->mut_dptr<T>(num_output));
     const T* score_ptr = score_blob->dptr<T>(i);
-    const int32_t* score_inds_ptr = proposal_inds_blob->dptr<int32_t>(i);
+    const int32_t* proposal_inds_ptr = proposal_inds_blob->dptr<int32_t>(i);
     T* roi_probs_ptr = rois_prob_blob->mut_dptr<T>(num_output);
     FOR_RANGE(size_t, j, 0, post_nms_inds_size) {
       int32_t index = post_nms_inds_ptr[j];
       roi_bbox[j].set_ltrb(prop_bbox[index].left(), prop_bbox[index].top(),
                            prop_bbox[index].right(), prop_bbox[index].bottom());
       roi_bbox[j].set_index(i);
-      roi_probs_ptr[j] = score_ptr[score_inds_ptr[index]];
+      roi_probs_ptr[j] = score_ptr[proposal_inds_ptr[index]];
       rois_blob->set_record_id_in_device_piece(num_output + j, i);
       rois_prob_blob->set_record_id_in_device_piece(num_output + j, i);
     }
