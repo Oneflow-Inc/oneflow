@@ -15,14 +15,11 @@ void ReshapeInstanceShapeToDim0Kernel<device_type>::ForwardDim0ValidNum(
 
 template<DeviceType device_type>
 void ReshapeInstanceShapeToDim0Kernel<device_type>::ForwardInstanceShape(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-
-}
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
 
 template<DeviceType device_type>
 void ReshapeInstanceShapeToDim0Kernel<device_type>::BackwardInDiffDim0ValidNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-}
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
 
 template<DeviceType device_type>
 void ReshapeInstanceShapeToDim0Kernel<device_type>::BackwardInstanceShape(
@@ -30,9 +27,7 @@ void ReshapeInstanceShapeToDim0Kernel<device_type>::BackwardInstanceShape(
   const Blob* in = BnInOp2Blob("in");
   Blob* in_diff = BnInOp2Blob(GenDiffBn("in"));
   in_diff->set_instance_shape(in->instance_shape());
-  if (in->has_dim0_valid_num_field()) {
-    in_diff->CopyDim0ValidNumFrom(ctx.device_ctx, in);
-  }
+  if (in->has_dim0_valid_num_field()) { in_diff->CopyDim0ValidNumFrom(ctx.device_ctx, in); }
 }
 
 template<DeviceType device_type>
@@ -53,6 +48,7 @@ void ReshapeInstanceShapeToDim0Kernel<device_type>::BackwardDataContent(
   in_diff->CopyDataContentFrom(ctx.device_ctx, out_diff);
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kReshapeInstanceShapeToDim0Conf, ReshapeInstanceShapeToDim0Kernel);
+ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kReshapeInstanceShapeToDim0Conf,
+                               ReshapeInstanceShapeToDim0Kernel);
 
 }  // namespace oneflow
