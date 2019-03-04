@@ -26,9 +26,8 @@ class ProposalKernel final : public KernelIf<DeviceType::kCPU> {
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void ForwardRecordIdInDevicePiece(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void InitConstBufBlobs(DeviceCtx*,
-                         std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
+  void GenerateAnchors(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   void RegionProposal(const int64_t im_index,
                       const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   void ApplyNms(const int64_t im_index,

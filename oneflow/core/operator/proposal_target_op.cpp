@@ -10,17 +10,15 @@ void ProposalTargetOp::InitFromOpConf() {
   EnrollInputBn("gt_boxes", false);
   EnrollInputBn("gt_labels", false);
   // Enroll output
-  EnrollOutputBn("out_rois", false);
-  EnrollOutputBn("labels", false);
-  EnrollOutputBn("bbox_targets", false);
-  EnrollOutputBn("bbox_inside_weights", false);
-  EnrollOutputBn("bbox_outside_weights", false);
+  EnrollOutputBn("sampled_rois", false);
+  EnrollOutputBn("sampled_roi_inds", false);
+  EnrollOutputBn("class_labels", false);
+  EnrollOutputBn("regression_targets", false);
+  EnrollOutputBn("regression_weights", false);
   // Enroll data tmp
-  EnrollDataTmpBn("gt_boxes_inds");
-  EnrollDataTmpBn("rois_inds");
+  EnrollDataTmpBn("gt_box_inds");
   EnrollDataTmpBn("max_overlaps");
   EnrollDataTmpBn("max_overlaps_with_gt_index");
-  EnrollDataTmpBn("sampled_inds");
 }
 
 const PbMessage& ProposalTargetOp::GetCustomizedConf() const {
@@ -34,72 +32,57 @@ void ProposalTargetOp::InferBlobDescs(
   CHECK_GE(conf.foreground_threshold(), conf.background_threshold_high());
   CHECK_GE(conf.background_threshold_high(), conf.background_threshold_low());
   CHECK_GE(conf.background_threshold_low(), 0.f);
-  // input: rois (r, 5) T
+  // input: rois (R, 5) T
   const BlobDesc* rois_blob_desc = GetBlobDesc4BnInOp("rois");
-  // input: gt_boxes (n, g, 4)
+  // input: gt_boxes (N, B, 4)
   const BlobDesc* gt_boxes_blob_desc = GetBlobDesc4BnInOp("gt_boxes");
-  // input: gt_labels (n, g)
+  // input: gt_labels (N, B)
   const BlobDesc* gt_labels_blob_desc = GetBlobDesc4BnInOp("gt_labels");
   CHECK_EQ(rois_blob_desc->data_type(), gt_boxes_blob_desc->data_type());
   CHECK(gt_boxes_blob_desc->has_dim1_valid_num_field());
   CHECK(gt_labels_blob_desc->has_dim1_valid_num_field());
   const int64_t num_images = gt_boxes_blob_desc->shape().At(0);
-  const int64_t num_gt = gt_boxes_blob_desc->shape().Count(0, 2);
+  const int64_t num_gt_boxes = gt_boxes_blob_desc->shape().Count(0, 2);
   CHECK_EQ(gt_labels_blob_desc->shape().At(0), num_images);
   const int64_t num_rois = rois_blob_desc->shape().At(0);
   const int64_t total_num_sampled_rois = conf.num_sampled_rois_per_image() * num_images;
   CHECK_LE(total_num_sampled_rois, num_rois);
-  const int64_t num_classes = conf.num_classes();
 
-  // output: rois (total_num_sampled_rois, 5) T
-  BlobDesc* out_rois_blob_desc = GetBlobDesc4BnInOp("out_rois");
-  out_rois_blob_desc->mut_shape() = Shape({total_num_sampled_rois, 5});
-  out_rois_blob_desc->set_data_type(rois_blob_desc->data_type());
-  out_rois_blob_desc->mut_dim0_inner_shape() = Shape({1, total_num_sampled_rois});
-  out_rois_blob_desc->set_has_dim0_valid_num_field(true);
-  out_rois_blob_desc->set_has_record_id_in_device_piece_field(
+  // output: sampled_rois (R`, 5) T
+  BlobDesc* sampled_rois_blob_desc = GetBlobDesc4BnInOp("sampled_rois");
+  sampled_rois_blob_desc->mut_shape() = Shape({total_num_sampled_rois, 5});
+  sampled_rois_blob_desc->set_data_type(rois_blob_desc->data_type());
+  sampled_rois_blob_desc->mut_dim0_inner_shape() = Shape({1, total_num_sampled_rois});
+  sampled_rois_blob_desc->set_has_dim0_valid_num_field(true);
+  sampled_rois_blob_desc->set_has_record_id_in_device_piece_field(
       rois_blob_desc->has_record_id_in_device_piece_field());
-  // output: labels (total_num_sampled_rois) int32_t
-  BlobDesc* labels_blob_desc = GetBlobDesc4BnInOp("labels");
-  labels_blob_desc->mut_shape() = Shape({total_num_sampled_rois});
-  labels_blob_desc->set_data_type(DataType::kInt32);
-  labels_blob_desc->mut_dim0_inner_shape() = Shape({1, total_num_sampled_rois});
-  labels_blob_desc->set_has_dim0_valid_num_field(true);
-  labels_blob_desc->set_has_record_id_in_device_piece_field(
-      rois_blob_desc->has_record_id_in_device_piece_field());
-  // output: bbox_targets (total_num_sampled_rois, num_classes * 4) T
-  BlobDesc* bbox_targets_blob_desc = GetBlobDesc4BnInOp("bbox_targets");
-  bbox_targets_blob_desc->mut_shape() = Shape({total_num_sampled_rois, num_classes * 4});
-  bbox_targets_blob_desc->set_data_type(rois_blob_desc->data_type());
-  bbox_targets_blob_desc->mut_dim0_inner_shape() = Shape({1, total_num_sampled_rois});
-  bbox_targets_blob_desc->set_has_dim0_valid_num_field(true);
-  bbox_targets_blob_desc->set_has_record_id_in_device_piece_field(
-      rois_blob_desc->has_record_id_in_device_piece_field());
-  // output: bbox_inside_weights (total_num_sampled_rois, num_classes * 4) T
-  *GetBlobDesc4BnInOp("bbox_inside_weights") = *bbox_targets_blob_desc;
-  // output: bbox_outside_weights (total_num_sampled_rois, num_classes * 4) T
-  *GetBlobDesc4BnInOp("bbox_outside_weights") = *bbox_targets_blob_desc;
+  // output: sampled_roi_inds (R`) int32_t
+  BlobDesc* sampled_roi_inds_blob_desc = GetBlobDesc4BnInOp("sampled_roi_inds");
+  *sampled_roi_inds_blob_desc = *sampled_rois_blob_desc;
+  sampled_roi_inds_blob_desc->mut_shape() = Shape({total_num_sampled_rois});
+  sampled_roi_inds_blob_desc->set_data_type(DataType::kInt32);
+  // output: labels (R`) int32_t
+  *GetBlobDesc4BnInOp("class_labels") = *sampled_roi_inds_blob_desc;
+  // output: regression_targets (R`, 4) T
+  BlobDesc* regression_targets_blob_desc = GetBlobDesc4BnInOp("regression_targets");
+  *regression_targets_blob_desc = *sampled_rois_blob_desc;
+  regression_targets_blob_desc->mut_shape() = Shape({total_num_sampled_rois, 4});
+  // output: regression_weights (R`, 4) T
+  *GetBlobDesc4BnInOp("regression_weights") = *regression_targets_blob_desc;
+  // TODO: Convert regression_weights to sampled_pos_inds_subset for less calculation of loss
 
-  // data tmp: gt_boxes_inds (n * g) int32_t
-  BlobDesc* gt_boxes_inds_blob_desc = GetBlobDesc4BnInOp("gt_boxes_inds");
-  gt_boxes_inds_blob_desc->mut_shape() = Shape({num_gt});
-  gt_boxes_inds_blob_desc->set_data_type(DataType::kInt32);
-  // data tmp: rois_inds (r + n * g) int32_t
-  BlobDesc* rois_inds_blob_desc = GetBlobDesc4BnInOp("rois_inds");
-  rois_inds_blob_desc->mut_shape() = Shape({num_rois + num_gt});
-  rois_inds_blob_desc->set_data_type(DataType::kInt32);
-  // data tmp: max_overlaps (r + n * g) float
+  // data tmp: gt_box_inds (N * B) int32_t
+  BlobDesc* gt_box_inds_blob_desc = GetBlobDesc4BnInOp("gt_box_inds");
+  gt_box_inds_blob_desc->mut_shape() = Shape({num_gt_boxes});
+  gt_box_inds_blob_desc->set_data_type(DataType::kInt32);
+  // data tmp: max_overlaps (R) float
   BlobDesc* max_overlaps_blob_desc = GetBlobDesc4BnInOp("max_overlaps");
-  max_overlaps_blob_desc->mut_shape() = Shape({num_rois + num_gt});
+  max_overlaps_blob_desc->mut_shape() = Shape({num_rois});
   max_overlaps_blob_desc->set_data_type(DataType::kFloat);
-  // data tmp: max_overlaps_gt_boxes_index (r + n * g) int32_t
+  // data tmp: max_overlaps_gt_boxes_index (R) int32_t
   BlobDesc* max_overlaps_gt_index_bd = GetBlobDesc4BnInOp("max_overlaps_with_gt_index");
-  max_overlaps_gt_index_bd->mut_shape() = Shape({num_rois + num_gt});
+  max_overlaps_gt_index_bd->mut_shape() = Shape({num_rois});
   max_overlaps_gt_index_bd->set_data_type(DataType::kInt32);
-  // data tmp: sampled_inds (total_num_sampled_rois) int32_t
-  BlobDesc* sampled_inds_blob_desc = GetBlobDesc4BnInOp("sampled_inds");
-  sampled_inds_blob_desc->mut_shape() = Shape({total_num_sampled_rois});
-  sampled_inds_blob_desc->set_data_type(DataType::kInt32);
 }
 
 REGISTER_CPU_OP(OperatorConf::kProposalTargetConf, ProposalTargetOp);

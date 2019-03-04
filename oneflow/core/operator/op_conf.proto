@@ -825,14 +825,17 @@ message AccuracyOpConf {
 }
 
 message ProposalTargetOpConf {
+  // in
   required string rois = 1;
   required string gt_boxes = 2;
   required string gt_labels = 3;
-  required string out_rois = 4;
-  required string labels = 5;
-  required string bbox_targets = 6;
-  required string bbox_inside_weights = 7;
-  required string bbox_outside_weights = 8;
+  // out
+  required string sampled_rois = 4;
+  required string sampled_roi_indices = 5;
+  required string class_labels = 6;
+  required string regression_targets = 7;
+  required string regression_weights = 8;
+  // conf
   required float foreground_threshold = 9;
   required float background_threshold_low = 10;
   required float background_threshold_high = 11;
@@ -879,9 +882,9 @@ message BboxNmsAndLimitOpConf {
 message AnchorGeneratorConf {
   required int32 feature_map_stride = 1 [default = 16];
   repeated float aspect_ratios = 2;
-  repeated int32 anchor_scales = 3;
-  required int32 image_height = 4;
-  required int32 image_width = 5;
+  repeated float anchor_scales = 3;
+  optional int32 image_height = 4;
+  optional int32 image_width = 5;
 }
 
 message ProposalOpConf {
@@ -951,19 +954,23 @@ message RoIAlignOpConf {
 }
 
 message AnchorTargetOpConf {
+  // in
   required string gt_boxes = 1;
-  repeated string rpn_labels = 2;
-  repeated string rpn_bbox_targets = 3;
-  repeated string rpn_bbox_inside_weights = 4;
-  repeated string rpn_bbox_outside_weights = 5;
-  repeated AnchorGeneratorConf anchor_generator_conf = 6;
-  required float positive_overlap_threshold = 7 [default = 0.7];
-  required float negative_overlap_threshold = 8 [default = 0.3];
-  required int32 total_subsample_num = 9 [default = 256];
-  required float foreground_fraction = 10 [default = 0.5];
-  required BBoxRegressionWeights bbox_reg_weights = 11;
-  optional float straddle_thresh = 12 [default = 0.0];
-  optional bool random_subsample = 13 [default = true];
+  required string images = 2;
+  // out
+  repeated string regression_targets = 3;
+  repeated string regression_weights = 4;
+  repeated string class_labels = 5;
+  repeated string class_weights = 6;
+  // conf
+  repeated AnchorGeneratorConf anchor_generator_conf = 7;
+  required float positive_overlap_threshold = 8 [default = 0.7];
+  required float negative_overlap_threshold = 9 [default = 0.3];
+  required int32 total_subsample_num = 10 [default = 256];
+  required float foreground_fraction = 11 [default = 0.5];
+  required BBoxRegressionWeights bbox_reg_weights = 12;
+  optional float straddle_thresh = 13 [default = 0.0];
+  optional bool random_subsample = 14 [default = true];
 }
 
 message MatmulOpConf {
@@ -1079,14 +1086,15 @@ message MaskTargetOpConf {
   required string rois = 1;
   required string labels = 2;
   required string gt_segm_polygon_lists = 3;
+  required string im_scale = 4;
 
   //outputs
-  required string mask_rois = 4;
-  required string masks = 5;
+  required string mask_rois = 5;
+  required string masks = 6;
+  required string mask_labels = 7;
 
-  required int32 num_classes = 6;
-  required int32 mask_height = 7;
-  required int32 mask_width = 8;
+  required int32 mask_height = 8;
+  required int32 mask_width = 9;
 }
 
 message PackOpConf {
@@ -1317,6 +1325,12 @@ message CalculateScaleOpConf {
   required string scale = 5;
 }
 
+message ReshapeInstanceShapeToDim0OpConf {
+  required string in = 1;
+  required string out = 2;
+  required ShapeProto shape = 3;
+}
+
 message ElementCountOpConf {
   required string in = 1;
   required string out = 2;
@@ -1443,7 +1457,8 @@ message OperatorConf {
     SmoothL1OpConf smooth_l1_conf = 287;
     BinaryCrossEntropyOpConf binary_cross_entropy_conf = 288;
     CalculateScaleOpConf calculate_scale_conf = 289;
-    ElementCountOpConf element_count_conf = 290;
+    ReshapeInstanceShapeToDim0OpConf reshape_instance_shape_to_dim0_conf = 290;
+    ElementCountOpConf element_count_conf = 291;
 
     // Maybe not needed
     RedefineDim0OpConf redefine_dim0_conf = 400;
