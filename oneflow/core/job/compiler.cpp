@@ -2,6 +2,7 @@
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/device/cudnn_conv_ctx_cache.h"
 #include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/job/autograd.h"
 
 namespace oneflow {
 
@@ -92,10 +93,18 @@ void Compiler::GenNetTopo(Plan* plan) {
   *(pb_net_topo.mutable_peer_machine_ids()) = HashMap2PbMap(std_net_topo);
 }
 
+DEFINE_bool(split_fw_bw, false, "experimental feature: split forward and backward");
+
 Plan Compiler::DoCompile() {
 #ifdef WITH_CUDA
   Global<CudnnConvCtxCache>::New();
 #endif
+  if (FLAGS_split_fw_bw) {
+    const JobDesc* job_desc = Global<JobDesc>::Get();
+    const auto& job_conf = AutoGrad(*job_desc);
+    Global<JobDesc>::Delete();
+    Global<JobDesc>::New(job_conf);
+  }
   Global<JobDesc>::Get()->FixAndOptimizeDLNet();
   const JobDesc* job_desc = Global<JobDesc>::Get();
   TeePersistentLogStream::Create("optimized_job_conf")->Write(job_desc->job_conf());

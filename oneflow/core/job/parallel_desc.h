@@ -22,19 +22,18 @@ class ParallelDesc final {
 
   // Getters
   DeviceType device_type() const { return device_type_; }
-  ParallelPolicy policy() const { return policy_; }
+  ParallelPolicy policy() const { return parallel_conf_.policy(); }
   const std::vector<int64_t>& sorted_machine_ids() const { return sorted_machine_ids_; }
   const std::vector<int64_t>& sorted_dev_phy_ids(int64_t machine_id) const {
     return machine_id2sorted_dev_phy_ids_.at(machine_id);
   }
   int64_t parallel_num() const { return parallel_num_; }
   int64_t device_num_of_each_machine() const { return device_num_of_each_machine_; }
+  const ParallelConf& parallel_conf() const { return parallel_conf_; }
 
   // Setters
-  void set_policy(ParallelPolicy val) { policy_ = val; }
-  void set_device_type(DeviceType device_type) { device_type_ = device_type; }
+  void set_policy(ParallelPolicy val) { parallel_conf_.set_policy(val); }
 
-  //
   bool Equal(const ParallelDesc& rhs) const;
   bool operator==(const ParallelDesc& rhs) const { return Equal(rhs); }
   bool Equal(const ParallelDesc* rhs) const { return Equal(*rhs); }
@@ -44,7 +43,7 @@ class ParallelDesc final {
   void SanityCheck();
 
   DeviceType device_type_;
-  ParallelPolicy policy_;
+  ParallelConf parallel_conf_;
   std::vector<int64_t> sorted_machine_ids_;
   HashMap<int64_t, std::vector<int64_t>> machine_id2sorted_dev_phy_ids_;
   int64_t parallel_num_;
