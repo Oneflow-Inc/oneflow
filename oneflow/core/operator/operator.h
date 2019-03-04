@@ -11,6 +11,7 @@
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/operator/op_parallel_signature.h"
+#include "oneflow/core/job/job_conf_builder.h"
 
 namespace oneflow {
 
@@ -116,6 +117,15 @@ class Operator {
   DEFINE_BLOB_NAMES_GETTER(forward_model_bns);
 
 #undef DEFINE_BLOB_NAMES_GETTER
+
+  void GenerateBackwardOpConfIf(
+      JobConfBuilder*, const ParallelConf&,
+      std::function<LogicalBlobId*(const std::string&)> DiffLbi4BnInOp) const;
+  virtual void GenerateBackwardOpConf(
+      JobConfBuilder*, const ParallelConf&,
+      const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) const {
+    UNIMPLEMENTED();
+  }
 
   // Read: shape of input_blobs
   // Write: shape of output_blobs, model_blobs, data_tmp_blobs, const_model_blobs, const_buf_blobs

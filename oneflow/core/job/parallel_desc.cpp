@@ -15,12 +15,11 @@ void ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id, std::
   *device_id_str = device_name.substr(second_delimiter_pos + 1);
 }
 
-ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
-  policy_ = user_conf.policy();
+ParallelDesc::ParallelDesc(const ParallelConf& user_conf) : parallel_conf_(user_conf) {
   HashSet<int64_t> machine_id_set;
   device_type_ = DeviceType::kInvalidDevice;
   int i = 0;
-  for (const std::string& device_name : user_conf.device_name()) {
+  for (const std::string& device_name : parallel_conf_.device_name()) {
     if (i++ > 0) { device_names_ += ","; }
     device_names_ += device_name;
     int64_t mchn_id;
@@ -60,7 +59,7 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
 }
 
 bool ParallelDesc::Equal(const ParallelDesc& rhs) const {
-  return device_type_ == rhs.device_type_ && policy_ == rhs.policy_
+  return device_type_ == rhs.device_type_ && policy() == rhs.policy()
          && sorted_machine_ids_ == rhs.sorted_machine_ids_
          && machine_id2sorted_dev_phy_ids_ == rhs.machine_id2sorted_dev_phy_ids_;
 }
