@@ -18,7 +18,10 @@ void ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id, std::
 ParallelDesc::ParallelDesc(const ParallelConf& user_conf) : parallel_conf_(user_conf) {
   HashSet<int64_t> machine_id_set;
   device_type_ = DeviceType::kInvalidDevice;
+  int i = 0;
   for (const std::string& device_name : parallel_conf_.device_name()) {
+    if (i++ > 0) { device_names_ += ","; }
+    device_names_ += device_name;
     int64_t mchn_id;
     std::string device_tag;
     std::string device_id_str;

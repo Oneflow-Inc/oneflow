@@ -29,6 +29,7 @@ class ParallelDesc final {
   }
   int64_t parallel_num() const { return parallel_num_; }
   int64_t device_num_of_each_machine() const { return device_num_of_each_machine_; }
+  std::string device_names() const { return device_names_; }
   const ParallelConf& parallel_conf() const { return parallel_conf_; }
 
   // Setters
@@ -36,6 +37,7 @@ class ParallelDesc final {
 
   bool Equal(const ParallelDesc& rhs) const;
   bool operator==(const ParallelDesc& rhs) const { return Equal(rhs); }
+  bool operator!=(const ParallelDesc& rhs) const { return !(*this == rhs); }
   bool Equal(const ParallelDesc* rhs) const { return Equal(*rhs); }
 
  private:
@@ -48,6 +50,7 @@ class ParallelDesc final {
   HashMap<int64_t, std::vector<int64_t>> machine_id2sorted_dev_phy_ids_;
   int64_t parallel_num_;
   int64_t device_num_of_each_machine_;
+  std::string device_names_;
 };
 
 std::tuple<int32_t, int32_t> GetPartIdAndPartNumFromParallelCtx(
