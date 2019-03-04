@@ -119,10 +119,10 @@ class Operator {
 
   void GenerateBackwardOpConfIf(
       JobConfBuilder*, const ParallelConf&,
-      std::function<LogicalBlobId*(const std::string&)> DiffLbi4Ibn) const;
+      std::function<LogicalBlobId*(const std::string&)> DiffLbi4BnInOp) const;
   virtual void GenerateBackwardOpConf(
       JobConfBuilder*, const ParallelConf&,
-      const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4Ibn) const {
+      const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) const {
     UNIMPLEMENTED();
   }
 

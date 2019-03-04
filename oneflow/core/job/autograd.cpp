@@ -25,28 +25,6 @@ void ForEachOutOpNode(OpNode* op_node, const std::function<void(OpNode*)>& Handl
   });
 }
 
-std::function<void(OpNode*)> GenerateBackwardOpConf(JobConf1* job_conf) {
-  auto job_conf_builder = std::make_shared<JobConfBuilder>(job_conf);
-  auto lbi2grad_lbi = std::make_shared<HashMap<LogicalBlobId, LogicalBlobId>>();
-  return [job_conf_builder, lbi2grad_lbi](OpNode* op_node) {
-    auto DiffLbi4BnInOp = [&](const std::string& bn) -> LogicalBlobId* {
-      const auto& input_bns = op_node->op().input_bns();
-      const auto& output_bns = op_node->op().output_bns();
-      const auto& lbi = op_node->op().BnInOp2Lbi(bn);
-      if (std::find(input_bns.begin(), input_bns.end(), bn) != input_bns.end()) {
-        return &lbi2grad_lbi->at(lbi);
-      } else if (std::find(output_bns.begin(), output_bns.end(), bn) != output_bns.end()) {
-        if (lbi2grad_lbi->find(lbi) == lbi2grad_lbi->end()) { return nullptr; }
-        return &lbi2grad_lbi->at(lbi);
-      } else {
-        UNIMPLEMENTED();
-      }
-    };
-    op_node->op().GenerateBackwardOpConfIf(
-        job_conf_builder.get(), op_node->parallel_desc().parallel_conf(), DiffLbi4BnInOp);
-  };
-}
-
 }  // namespace
 
 JobConf1 AutoGrad(const JobDesc& job_desc) {
@@ -57,24 +35,25 @@ JobConf1 AutoGrad(const JobDesc& job_desc) {
   JobConfBuilder job_conf_builder(&job_conf);
   HashMap<LogicalBlobId, LogicalBlobId> lbi2grad_lbi;
 
-  op_graph.TopoForEachNode(
-      loss_op_nodes, &ForEachOutOpNode, &ForEachInOpNode, [&](OpNode* op_node) {
-        auto DiffLbi4BnInOp = [&](const std::string& bn) -> LogicalBlobId* {
-          const auto& input_bns = op_node->op().input_bns();
-          const auto& output_bns = op_node->op().output_bns();
-          const auto& lbi = op_node->op().BnInOp2Lbi(bn);
-          if (std::find(input_bns.begin(), input_bns.end(), bn) != input_bns.end()) {
-            return &lbi2grad_lbi.at(lbi);
-          } else if (std::find(output_bns.begin(), output_bns.end(), bn) != output_bns.end()) {
-            if (lbi2grad_lbi.find(lbi) == lbi2grad_lbi.end()) { return nullptr; }
-            return &lbi2grad_lbi.at(lbi);
-          } else {
-            UNIMPLEMENTED();
-          }
-        };
-        op_node->op().GenerateBackwardOpConfIf(
-            &job_conf_builder, op_node->parallel_desc().parallel_conf(), DiffLbi4BnInOp);
-      });
+  auto GenerateBackwardOpConf = [&](OpNode* op_node) {
+    auto DiffLbi4BnInOp = [&](const std::string& bn) -> LogicalBlobId* {
+      const auto& input_bns = op_node->op().input_bns();
+      const auto& output_bns = op_node->op().output_bns();
+      const auto& lbi = op_node->op().BnInOp2Lbi(bn);
+      if (std::find(input_bns.begin(), input_bns.end(), bn) != input_bns.end()) {
+        return &lbi2grad_lbi.at(lbi);
+      } else if (std::find(output_bns.begin(), output_bns.end(), bn) != output_bns.end()) {
+        if (lbi2grad_lbi.find(lbi) == lbi2grad_lbi.end()) { return nullptr; }
+        return &lbi2grad_lbi.at(lbi);
+      } else {
+        UNIMPLEMENTED();
+      }
+    };
+    op_node->op().GenerateBackwardOpConfIf(
+        &job_conf_builder, op_node->parallel_desc().parallel_conf(), DiffLbi4BnInOp);
+  };
+  op_graph.TopoForEachNode(loss_op_nodes, &ForEachOutOpNode, &ForEachInOpNode,
+                           GenerateBackwardOpConf);
   return job_conf;
 }
 

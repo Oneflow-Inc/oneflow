@@ -75,8 +75,8 @@ const std::string& Operator::SoleBbbn() const {
 
 void Operator::GenerateBackwardOpConfIf(
     JobConfBuilder* job_conf_builder, const ParallelConf& parallel_conf,
-    std::function<LogicalBlobId*(const std::string&)> DiffLbi4Ibn) const {
-  GenerateBackwardOpConf(job_conf_builder, parallel_conf, DiffLbi4Ibn);
+    std::function<LogicalBlobId*(const std::string&)> DiffLbi4BnInOp) const {
+  GenerateBackwardOpConf(job_conf_builder, parallel_conf, DiffLbi4BnInOp);
 }
 
 void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
