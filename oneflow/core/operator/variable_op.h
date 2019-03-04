@@ -28,6 +28,10 @@ class VariableOp final : public Operator {
   void set_is_bw_inplace(bool val) const { *is_bw_inplace_ = val; }
 
  private:
+  void GenerateBackwardOpConf(
+      JobConfBuilder*, const ParallelConf&,
+      const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) const override;
+
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
   void GetOpParallelSignatures(
       std::vector<std::unique_ptr<const OpParallelSignature>>*) const override;

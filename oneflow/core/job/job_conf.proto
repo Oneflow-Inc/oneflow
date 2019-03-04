@@ -25,6 +25,7 @@ message TrainConf {
 }
 
 message PredictConf {
+  optional TrainConf split_fw_bw_train_conf = 1;
 }
 
 message LocalFsConf {
@@ -96,6 +97,7 @@ message OtherConf {
     TrainConf train_conf = 200;
     PredictConf predict_conf = 201;
   }
+  
 }
 
 message JobConf1 {

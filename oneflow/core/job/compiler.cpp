@@ -93,13 +93,12 @@ void Compiler::GenNetTopo(Plan* plan) {
   *(pb_net_topo.mutable_peer_machine_ids()) = HashMap2PbMap(std_net_topo);
 }
 
-DEFINE_bool(split_fw_bw, false, "experimental feature: split forward and backward");
-
 Plan Compiler::DoCompile() {
 #ifdef WITH_CUDA
   Global<CudnnConvCtxCache>::New();
 #endif
-  if (FLAGS_split_fw_bw) {
+  if (Global<JobDesc>::Get()->IsPredict()
+      && Global<JobDesc>::Get()->other_conf().predict_conf().has_split_fw_bw_train_conf()) {
     const JobDesc* job_desc = Global<JobDesc>::Get();
     const auto& job_conf = AutoGrad(*job_desc);
     Global<JobDesc>::Delete();

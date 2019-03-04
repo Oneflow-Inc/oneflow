@@ -120,6 +120,14 @@ void VariableOp::VirtualGenKernelConf(
   conf->mutable_variable_conf()->set_is_bw_inplace(*is_bw_inplace_);
 }
 
+void VariableOp::GenerateBackwardOpConf(
+    JobConfBuilder*, const ParallelConf&,
+    const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) const {
+  // TODO: support optimizers other than SGD
+  const auto& train_conf =
+      Global<JobDesc>::Get()->other_conf().predict_conf().split_fw_bw_train_conf();
+}
+
 REGISTER_OP(OperatorConf::kVariableConf, VariableOp);
 
 }  // namespace oneflow
