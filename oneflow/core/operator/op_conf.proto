@@ -1311,7 +1311,7 @@ message BinaryCrossEntropyOpConf {
 
 message CalculateScaleOpConf {
   required string height = 1;
-  required string weight = 2;
+  required string width = 2;
   required int32 target_size = 3;
   required int32 max_size = 4;
   required string scale = 5;
