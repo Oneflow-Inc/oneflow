@@ -158,6 +158,10 @@ struct NewKernelUtilIf {
                      void* temp_storage, const size_t temp_storage_bytes);
 };
 
+#define HALF_CHECK_FAILED                   \
+  printf("use half need nvcc arch >= 530"); \
+  assert(false)
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_KERNEL_UTIL_H_

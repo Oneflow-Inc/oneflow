@@ -128,19 +128,21 @@ template<typename T>
 struct SoftmaxKernelUtil<DeviceType::kCPU, T> {
   static void Sub(DeviceCtx* ctx, const int64_t n, const int64_t w, T* matrix, const T* vector) {
     for (int64_t i = 0; i < w; ++i) {
-      KernelUtil<DeviceType::kCPU, T>::Axpy(ctx, n, static_cast<T>(-1.0), vector, 1, matrix + i, w);
+      NewKernelUtil<DeviceType::kCPU, T>::Axpy(ctx, n, static_cast<T>(-1.0), vector, 1, matrix + i,
+                                               w);
     }
   }
 
   static void Div(DeviceCtx* ctx, const int64_t n, const int64_t w, T* matrix, const T* vector) {
     for (int64_t i = 0; i < n; ++i) {
-      KernelUtil<DeviceType::kCPU, T>::Div(ctx, w, matrix + i * w, vector + i);
+      // KernelUtil<DeviceType::kCPU, T>::Div(ctx, w, matrix + i * w, vector + i);
+      for (int64_t j = 0; j < w; ++j) { matrix[i * w + j] /= vector[i]; }
     }
   }
 };
 #define INSTANTIATE_SOFTMAX_KERNEL_UTIL(type_cpp, type_proto) \
   template struct SoftmaxKernelUtil<DeviceType::kCPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_SOFTMAX_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_SOFTMAX_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSoftmaxConf, SoftmaxKernel, FLOATING_DATA_TYPE_SEQ);
 

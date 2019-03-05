@@ -5,10 +5,6 @@
 
 namespace oneflow {
 
-#define HALF_CHECK_FAILED                   \
-  printf("use half need nvcc arch >= 530"); \
-  assert(false)
-
 namespace {
 
 __inline__ __device__ half hone() { return __float2half(1.0); }
