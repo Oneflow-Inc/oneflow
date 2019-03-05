@@ -174,60 +174,44 @@ size_t JobDesc::rdma_recv_msg_buf_byte() const {
 }
 
 const std::string& JobDesc::MdSaveSnapshotsPath() const {
-  CHECK(IsTrain());
   return job_conf_.other().train_conf().model_save_snapshots_path();
 }
+
+const TrainConf& GetTrainConf(const JobConf1& job_conf) {
+  if (job_conf.other().has_predict_conf()
+      && job_conf.other().predict_conf().has_split_fw_bw_train_conf()) {
+    return job_conf.other().predict_conf().split_fw_bw_train_conf();
+  }
+  CHECK(job_conf.other().has_train_conf());
+  return job_conf.other().train_conf();
+}
+
 int32_t JobDesc::NumOfBatchesInSnapshot() const {
-  CHECK(IsTrain());
-  return job_conf_.other().train_conf().num_of_batches_in_snapshot();
+  return GetTrainConf(job_conf_).num_of_batches_in_snapshot();
 }
 int64_t JobDesc::TotalBatchNum() const { return job_conf_.other().total_batch_num(); }
 const InitializerConf* JobDesc::DefaultInitializerConf() const {
-  CHECK(IsTrain() || job_conf_.other().predict_conf().has_split_fw_bw_train_conf());
-  return GetMsgPtrFromPbMessage<InitializerConf>(job_conf_.other().train_conf(),
+  return GetMsgPtrFromPbMessage<InitializerConf>(GetTrainConf(job_conf_),
                                                  "default_initializer_conf");
 }
 int32_t JobDesc::PieceNumOfPrintLoss() const {
-  CHECK(IsTrain());
   return job_conf_.other().train_conf().piece_num_of_print_loss();
 }
 int32_t JobDesc::PieceNumOfPrintAccuracy() const {
-  CHECK(IsTrain());
   return job_conf_.other().train_conf().piece_num_of_print_accuracy();
 }
-int64_t JobDesc::BatchSize() const {
-  CHECK(IsTrain());
-  return job_conf_.other().train_conf().batch_size();
-}
+int64_t JobDesc::BatchSize() const { return GetTrainConf(job_conf_).batch_size(); }
 int64_t JobDesc::NumOfPiecesInBatch() const {
   if (IsPredict()) { return 1; }
   CHECK_EQ(BatchSize() % RecordPieceSize(), 0);
   return BatchSize() / RecordPieceSize();
 }
-float JobDesc::primary_lr() const {
-  CHECK(IsTrain());
-  return job_conf_.other().train_conf().primary_lr();
-}
-float JobDesc::secondary_lr() const {
-  CHECK(IsTrain());
-  return job_conf_.other().train_conf().secondary_lr();
-}
-float JobDesc::weight_l1() const {
-  CHECK(IsTrain());
-  return job_conf_.other().train_conf().weight_l1();
-}
-float JobDesc::bias_l1() const {
-  CHECK(IsTrain());
-  return job_conf_.other().train_conf().bias_l1();
-}
-float JobDesc::weight_l2() const {
-  CHECK(IsTrain());
-  return job_conf_.other().train_conf().weight_l2();
-}
-float JobDesc::bias_l2() const {
-  CHECK(IsTrain());
-  return job_conf_.other().train_conf().bias_l2();
-}
+float JobDesc::primary_lr() const { return GetTrainConf(job_conf_).primary_lr(); }
+float JobDesc::secondary_lr() const { return GetTrainConf(job_conf_).secondary_lr(); }
+float JobDesc::weight_l1() const { return GetTrainConf(job_conf_).weight_l1(); }
+float JobDesc::bias_l1() const { return GetTrainConf(job_conf_).bias_l1(); }
+float JobDesc::weight_l2() const { return GetTrainConf(job_conf_).weight_l2(); }
+float JobDesc::bias_l2() const { return GetTrainConf(job_conf_).bias_l2(); }
 
 int32_t JobDesc::DataPartNum() const { return job_conf_.other().data_part_num(); }
 

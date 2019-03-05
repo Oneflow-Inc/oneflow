@@ -10,7 +10,7 @@ void GetVariableOpNodesAndDescendants(const OpGraph& op_graph, HashSet<OpNode*>*
   std::list<OpNode*> starts;
   op_graph.ForEachNode([&](OpNode* op_node) {
     const auto& op_conf = op_node->op().op_conf();
-    if (op_conf.has_variable_conf() && op_conf.trainable()) { starts.push_back(op_node); }
+    if (op_conf.has_variable_conf()) { starts.push_back(op_node); }
   });
   op_graph.BfsForEachNode(starts, &OpNode::ForEachNodeOnOutEdge,
                           [&](OpNode* op_node) { op_nodes->emplace(op_node); });
