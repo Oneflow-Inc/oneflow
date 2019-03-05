@@ -22,7 +22,7 @@ void IdentityLossOp::VirtualInferBlobDescs(
 }
 
 void IdentityLossOp::GenerateBackwardOpConf(
-    JobConfBuilder* job_conf_builder, const ParallelConf& parallel_conf,
+    std::vector<OperatorConf>* ops,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) const {
   OperatorConf mul_zero_op;
   mul_zero_op.set_name(op_name() + "_grad_stage0");
@@ -30,6 +30,7 @@ void IdentityLossOp::GenerateBackwardOpConf(
   mul_zero_op_conf->set_in(GenLogicalBlobName(BnInOp2Lbi("prediction")));
   mul_zero_op_conf->set_out("out");
   mul_zero_op_conf->set_int_operand(0);
+  ops->push_back(mul_zero_op);
 
   OperatorConf add_one_op;
   add_one_op.set_name(op_name() + "_grad_stage1");
@@ -37,8 +38,7 @@ void IdentityLossOp::GenerateBackwardOpConf(
   add_one_op_conf->set_in(mul_zero_op.name() + "/out");
   add_one_op_conf->set_out("out");
   add_one_op_conf->set_int_operand(1);
-
-  job_conf_builder->AddOps(parallel_conf, {mul_zero_op, add_one_op});
+  ops->push_back(add_one_op);
 
   auto* diff_lbi = DiffLbi4BnInOp("out");
   diff_lbi->set_op_name(add_one_op.name());

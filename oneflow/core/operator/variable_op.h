@@ -29,7 +29,7 @@ class VariableOp final : public Operator {
 
  private:
   void GenerateBackwardOpConf(
-      JobConfBuilder*, const ParallelConf&,
+      std::vector<OperatorConf>* ops,
       const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) const override;
 
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }

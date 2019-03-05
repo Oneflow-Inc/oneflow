@@ -49,8 +49,9 @@ JobConf1 AutoGrad(const JobDesc& job_desc) {
         UNIMPLEMENTED();
       }
     };
-    op_node->op().GenerateBackwardOpConfIf(
-        &job_conf_builder, op_node->parallel_desc().parallel_conf(), DiffLbi4BnInOp);
+    std::vector<OperatorConf> ops;
+    op_node->op().GenerateBackwardOpConfIf(&ops, DiffLbi4BnInOp);
+    job_conf_builder.AddOps(op_node->parallel_desc().parallel_conf(), ops);
   };
   op_graph.TopoForEachNode(loss_op_nodes, &ForEachOutOpNode, &ForEachInOpNode,
                            GenerateBackwardOpConf);
