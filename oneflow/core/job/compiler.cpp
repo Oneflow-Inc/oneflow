@@ -98,7 +98,7 @@ Plan Compiler::DoCompile() {
   Global<CudnnConvCtxCache>::New();
 #endif
   if (Global<JobDesc>::Get()->IsPredict()
-      && Global<JobDesc>::Get()->other_conf().predict_conf().has_split_fw_bw_train_conf()) {
+      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     const JobDesc* job_desc = Global<JobDesc>::Get();
     const auto& job_conf = AutoGrad(*job_desc);
     Global<JobDesc>::Delete();

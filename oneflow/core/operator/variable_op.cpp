@@ -125,7 +125,7 @@ void VariableOp::GenerateBackwardOpConf(
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) const {
   // TODO: support optimizers other than SGD
   const auto& train_conf =
-      Global<JobDesc>::Get()->other_conf().predict_conf().split_fw_bw_train_conf();
+      Global<JobDesc>::Get()->other_conf().predict_conf().tmp_split_fw_bw_train_conf();
   const auto& model_update_conf = train_conf.model_update_conf();
   if (model_update_conf.has_naive_conf()) {
     // TODO complete regularization

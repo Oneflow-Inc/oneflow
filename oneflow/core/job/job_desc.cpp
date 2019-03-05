@@ -179,8 +179,8 @@ const std::string& JobDesc::MdSaveSnapshotsPath() const {
 
 const TrainConf& GetTrainConf(const JobConf1& job_conf) {
   if (job_conf.other().has_predict_conf()
-      && job_conf.other().predict_conf().has_split_fw_bw_train_conf()) {
-    return job_conf.other().predict_conf().split_fw_bw_train_conf();
+      && job_conf.other().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+    return job_conf.other().predict_conf().tmp_split_fw_bw_train_conf();
   }
   CHECK(job_conf.other().has_train_conf());
   return job_conf.other().train_conf();

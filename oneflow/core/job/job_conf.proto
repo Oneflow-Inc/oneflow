@@ -25,7 +25,7 @@ message TrainConf {
 }
 
 message PredictConf {
-  optional TrainConf split_fw_bw_train_conf = 1;
+  optional TrainConf tmp_split_fw_bw_train_conf = 1;
 }
 
 message LocalFsConf {

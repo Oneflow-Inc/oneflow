@@ -2,7 +2,6 @@ syntax = "proto2";
 package oneflow;
 
 import "oneflow/core/operator/op_conf.proto";
-import "oneflow/core/register/logical_blob_id.proto";
 
 message DLNetConf {
   repeated OperatorConf op = 1;
