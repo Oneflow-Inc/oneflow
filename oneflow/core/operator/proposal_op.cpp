@@ -61,6 +61,8 @@ void ProposalOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   BlobDesc* anchors_blob_desc = GetBlobDesc4BnInOp("anchors");
   anchors_blob_desc->mut_shape() = Shape({num_anchors, 4});
   anchors_blob_desc->set_data_type(bbox_pred_blob_desc->data_type());
+  anchors_blob_desc->mut_dim0_inner_shape() = Shape({1, num_anchors});
+  anchors_blob_desc->set_has_dim0_valid_num_field(true);
   // datatmp: score_slice (N, H * W * A) int32_t
   BlobDesc* proposal_inds_blob_desc = GetBlobDesc4BnInOp("proposal_inds");
   proposal_inds_blob_desc->mut_shape() = Shape({num_images, num_anchors});

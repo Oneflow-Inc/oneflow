@@ -44,7 +44,9 @@ void ProposalKernel<T>::RegionProposal(
   Blob* proposals_blob = BnInOp2Blob("proposals");
   Blob* proposal_inds_blob = BnInOp2Blob("proposal_inds");
 
-  size_t num_proposals = class_prob_blob->shape().Count(1);
+  size_t num_proposals = proposals_blob->static_shape().At(1);
+  size_t max_num_proposals = class_prob_blob->shape().Count(1);
+  if (num_proposals > max_num_proposals) { num_proposals = max_num_proposals; }
   ScoreSlice proposal_slice(IndexSequence(proposal_inds_blob->shape().Count(1),
                                           proposal_inds_blob->mut_dptr<int32_t>(im_index), true),
                             class_prob_blob->dptr<T>(im_index));
