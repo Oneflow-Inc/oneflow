@@ -46,34 +46,6 @@ void FindBestConvAlgo(
 
 }  // namespace
 
-#ifdef WITH_CUDA
-CudnnConvDesc::~CudnnConvDesc() { CudaCheck(cudnnDestroyConvolutionDescriptor(val_)); }
-
-CudnnConvDesc::CudnnConvDesc(const DataType& data_type, const Shape& in_blob_shape,
-                             const PbMessage& conv_conf) {
-  int32_t opkernel_dim = in_blob_shape.NumAxes() - 2;
-  CudaCheck(cudnnCreateConvolutionDescriptor(&val_));
-  std::vector<int32_t> pad_large_side;
-  GetOutAndPad(in_blob_shape, conv_conf, nullptr, nullptr, &pad_large_side);
-  const PbRf<int32_t>& strides = GetPbRfFromPbMessage<int32_t>(conv_conf, "strides");
-  const PbRf<int32_t>& dilation_rate = GetPbRfFromPbMessage<int32_t>(conv_conf, "dilation_rate");
-  if (opkernel_dim == 2) {
-    CudaCheck(cudnnSetConvolution2dDescriptor(val_, pad_large_side[0], pad_large_side[1],
-                                              strides.Get(0), strides.Get(1), dilation_rate.Get(0),
-                                              dilation_rate.Get(1), CUDNN_CROSS_CORRELATION,
-                                              GetCudnnDataType(data_type)));
-  } else if (opkernel_dim == 1) {
-    CudaCheck(cudnnSetConvolution2dDescriptor(val_, pad_large_side[0], 0, strides.Get(0), 1,
-                                              dilation_rate.Get(0), 1, CUDNN_CROSS_CORRELATION,
-                                              GetCudnnDataType(data_type)));
-  } else {
-    CudaCheck(cudnnSetConvolutionNdDescriptor(
-        val_, opkernel_dim, pad_large_side.data(), strides.data(), dilation_rate.data(),
-        CUDNN_CROSS_CORRELATION, GetCudnnDataType(data_type)));
-  }
-}
-#endif  // WITH_CUDA
-
 template<int32_t NDims>
 void ConvV2Op<NDims>::InitFromOpConf() {
   StrFieldTolower("data_format");
