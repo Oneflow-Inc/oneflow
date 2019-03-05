@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_OPERATOR_CONV_OP_H_
-#define ONEFLOW_CORE_OPERATOR_CONV_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_CONV_V2_OP_H_
+#define ONEFLOW_CORE_OPERATOR_CONV_V2_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/operator_util.h"
@@ -32,11 +32,11 @@ struct ConvOpCtx : public OpContext {
 };
 
 template<int32_t NDims>
-class ConvOp : public Operator {
+class ConvV2Op : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ConvOp);
-  ConvOp() = default;
-  virtual ~ConvOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ConvV2Op);
+  ConvV2Op() = default;
+  virtual ~ConvV2Op() = default;
 
   void InitFromOpConf() override;
   bool NeedOutBlobWhenBackward() const override { return false; }
@@ -70,4 +70,4 @@ class ConvOp : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_CONV_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_CONV_V2_OP_H_

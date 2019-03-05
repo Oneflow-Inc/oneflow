@@ -1,4 +1,4 @@
-#include "oneflow/core/operator/conv_op.h"
+#include "oneflow/core/operator/conv_v2_op.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/device/cuda_stream_handle.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
@@ -75,27 +75,28 @@ CudnnConvDesc::CudnnConvDesc(const DataType& data_type, const Shape& in_blob_sha
 #endif  // WITH_CUDA
 
 template<int32_t NDims>
-void ConvOp<NDims>::InitFromOpConf() {
+void ConvV2Op<NDims>::InitFromOpConf() {
   StrFieldTolower("data_format");
   StrFieldTolower("padding");
 
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  EnrollModelBn("weight");
+  EnrollInputBn("weight");
   EnrollFwBufBn("fw_cudnn_buf");
   EnrollBwBufBn("bw_cudnn_buf");
   EnrollFwBufBn("fw_col_buf");
   EnrollBwBufBn("bw_col_buf");
   if (GetValFromCustomizedConf<bool>("use_bias")) {
-    EnrollModelBn("bias");
+    EnrollInputBn("bias");
     EnrollConstBufBn("bias_multiplier");
   }
 }
 
 template<int32_t NDims>
-void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                   const ParallelContext* parallel_ctx, int64_t record_piece_size,
-                                   std::function<void(OpContext*)> EnrollOpCtx) const {
+void ConvV2Op<NDims>::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, int64_t record_piece_size,
+    std::function<void(OpContext*)> EnrollOpCtx) const {
   const std::string& data_format = GetValFromCustomizedConf<std::string>("data_format");
 
   // in
@@ -127,11 +128,11 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   for (size_t i = 0; i < NDims; ++i) {
     weight_shape[dhw_offset + i] = GetPbRfFromCustomizedConf<int32_t>("kernel_size").Get(i);
   }
-  GetBlobDesc4BnInOp("weight")->mut_shape() = Shape(weight_shape);
+  CHECK_EQ(GetBlobDesc4BnInOp("weight")->shape(), Shape(weight_shape));
 
   if (GetValFromCustomizedConf<bool>("use_bias")) {
     // bias and bias_multiplier
-    GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({filters, 1});
+    CHECK_EQ(GetBlobDesc4BnInOp("bias")->shape(), Shape({filters, 1}));
     if (DevIsGpuAndEnableCudnn() == false) {
       std::vector<int64_t> bias_mul_shape(NDims + 1, 1);
       for (size_t i = 0; i != NDims; ++i) { bias_mul_shape[i + 1] = out_shape[dhw_offset + i]; }
@@ -166,7 +167,7 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
 }
 
 template<int32_t NDims>
-void ConvOp<NDims>::InferBwBufBlobDescs(
+void ConvV2Op<NDims>::InferBwBufBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
     const OpContext* op_ctx) const {
   const ConvOpCtx* conv_op_ctx = static_cast<const ConvOpCtx*>(op_ctx);
@@ -190,7 +191,7 @@ void ConvOp<NDims>::InferBwBufBlobDescs(
 }
 
 template<int32_t NDims>
-void ConvOp<NDims>::GenKernelConfWithoutCudnn(
+void ConvV2Op<NDims>::GenKernelConfWithoutCudnn(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     ConvKernelConf* conv_conf) const {
   const Shape& in_shape = GetBlobDesc4BnInOp("in")->shape();
@@ -238,7 +239,7 @@ void ConvOp<NDims>::GenKernelConfWithoutCudnn(
 }
 
 template<int32_t NDims>
-void ConvOp<NDims>::GenKernelConfWithCudnn(
+void ConvV2Op<NDims>::GenKernelConfWithCudnn(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, KernelConf* kernel_conf,
     ConvKernelConf* conv_conf, const OpContext* op_ctx) const {
   GetBlobDesc4BnInOp("in")->shape().ToProto(conv_conf->mutable_in());
@@ -273,7 +274,7 @@ void ConvOp<NDims>::GenKernelConfWithCudnn(
 }
 
 template<int32_t NDims>
-void ConvOp<NDims>::VirtualGenKernelConf(
+void ConvV2Op<NDims>::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx) const {
   ConvKernelConf* conv_conf = kernel_conf->mutable_conv_conf();
@@ -286,12 +287,12 @@ void ConvOp<NDims>::VirtualGenKernelConf(
 }
 
 template<int32_t NDims>
-PbMessage* ConvOp<NDims>::MutableCustomizedKernelConf(KernelConf* kernel_conf) const {
+PbMessage* ConvV2Op<NDims>::MutableCustomizedKernelConf(KernelConf* kernel_conf) const {
   return kernel_conf->mutable_conv_conf();
 }
 
 template<int32_t NDims>
-int32_t ConvOp<NDims>::OutputBlobModelSplitAxis(
+int32_t ConvV2Op<NDims>::OutputBlobModelSplitAxis(
     const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     const std::string& obn) const {
   if (GetValFromCustomizedConf<std::string>("data_format") == "channels_first") {
@@ -305,7 +306,7 @@ int32_t ConvOp<NDims>::OutputBlobModelSplitAxis(
 
 #ifdef WITH_CUDA
 template<int32_t NDims>
-void ConvOp<NDims>::InferCudnnAlgo(
+void ConvV2Op<NDims>::InferCudnnAlgo(
     std::function<const BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     CudnnConvAlgoCtx* conv_ctx, const int64_t device_id) const {
   CudaStreamHandle cuda_handle(nullptr);
@@ -400,8 +401,8 @@ void ConvOp<NDims>::InferCudnnAlgo(
 }
 #endif  // WITH_CUDA
 
-template class ConvOp<1>;
-template class ConvOp<2>;
-template class ConvOp<3>;
+template class ConvV2Op<1>;
+template class ConvV2Op<2>;
+template class ConvV2Op<3>;
 
 }  // namespace oneflow

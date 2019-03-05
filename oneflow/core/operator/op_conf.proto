@@ -131,6 +131,57 @@ message Conv3DOpConf {
   optional InitializerConf bias_initializer = 12;
 }
 
+message Conv1DV2OpConf {
+  required string in = 1;
+  required string out = 2;
+  required int32 filters = 3;
+  optional string padding = 4 [default = "valid"];
+  required string data_format = 5;
+  repeated int32 kernel_size = 6;
+  repeated int32 strides = 7;
+  repeated int32 dilation_rate = 8;
+  optional ActivationType activation = 9 [default = kNone];
+  optional bool use_bias = 10 [default = true];
+  optional InitializerConf weight_initializer = 11;
+  optional InitializerConf bias_initializer = 12;
+  required string weight = 13;
+  required string bias = 14;
+}
+
+message Conv2DV2OpConf {
+  required string in = 1;
+  required string out = 2;
+  required int32 filters = 3;
+  optional string padding = 4 [default = "valid"];
+  required string data_format = 5;
+  repeated int32 kernel_size = 6;
+  repeated int32 strides = 7;
+  repeated int32 dilation_rate = 8;
+  optional ActivationType activation = 9 [default = kNone];
+  optional bool use_bias = 10 [default = true];
+  optional InitializerConf weight_initializer = 11;
+  optional InitializerConf bias_initializer = 12;
+  required string weight = 13;
+  required string bias = 14;
+}
+
+message Conv3DV2OpConf {
+  required string in = 1;
+  required string out = 2;
+  required int32 filters = 3;
+  optional string padding = 4 [default = "valid"];
+  required string data_format = 5;
+  repeated int32 kernel_size = 6;
+  repeated int32 strides = 7;
+  repeated int32 dilation_rate = 8;
+  optional ActivationType activation = 9 [default = kNone];
+  optional bool use_bias = 10 [default = true];
+  optional InitializerConf weight_initializer = 11;
+  optional InitializerConf bias_initializer = 12;
+  required string weight = 13;
+  required string bias = 14;
+}
+
 message Deconv2DOpConf {
   required string in = 1;
   required string out = 2;
@@ -1459,12 +1510,15 @@ message OperatorConf {
     CalculateScaleOpConf calculate_scale_conf = 289;
     ReshapeInstanceShapeToDim0OpConf reshape_instance_shape_to_dim0_conf = 290;
     ElementCountOpConf element_count_conf = 291;
+    Conv1DV2OpConf conv_1d_v2_conf = 292;
+    Conv2DV2OpConf conv_2d_v2_conf = 293;
+    Conv3DV2OpConf conv_3d_v2_conf = 294;
+
 
     // Maybe not needed
     RedefineDim0OpConf redefine_dim0_conf = 400;
     AffineChannelOpConf affine_channel_conf = 401;
     BlobDumpOpConf blob_dump_conf = 402;
-
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
     BroadcastSubOpConf broadcast_sub_conf = 501;

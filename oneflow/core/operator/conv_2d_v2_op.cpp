@@ -1,9 +1,9 @@
-#include "oneflow/core/operator/conv_2d_op.h"
+#include "oneflow/core/operator/conv_2d_v2_op.h"
 
 namespace oneflow {
 
-const PbMessage& Conv2DOp::GetCustomizedConf() const { return op_conf().conv_2d_conf(); }
+const PbMessage& Conv2DV2Op::GetCustomizedConf() const { return op_conf().conv_2d_v2_conf(); }
 
-REGISTER_OP(OperatorConf::kConv2DConf, Conv2DOp);
+REGISTER_OP(OperatorConf::kConv2DConf, Conv2DV2Op);
 
 }  // namespace oneflow

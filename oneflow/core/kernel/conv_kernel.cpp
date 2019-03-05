@@ -57,11 +57,14 @@ template<DeviceType device_type, typename T>
 void ConvKernelIf<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* conv_out_diff = BnInOp2Blob("out_diff");
-  if (this->template GetValFromCustomizedOpConf<bool>("use_bias") && this->op_conf().trainable()) {
+  if (this->template GetValFromCustomizedOpConf<bool>("use_bias") && this->op_conf().trainable()
+      && BnInOp2Blob("bias_diff")) {
     BiasBackward(ctx.device_ctx, conv_out_diff, BnInOp2Blob("bias_diff"), BnInOp2Blob);
   }
-  WeightBackward(ctx.device_ctx, conv_out_diff, BnInOp2Blob("in"), BnInOp2Blob("weight_diff"),
-                 BnInOp2Blob("in_diff"), BnInOp2Blob);
+  if (BnInOp2Blob("weight_diff")) {
+    WeightBackward(ctx.device_ctx, conv_out_diff, BnInOp2Blob("in"), BnInOp2Blob("weight_diff"),
+                   BnInOp2Blob("in_diff"), BnInOp2Blob);
+  }
 }
 
 template<DeviceType device_type, typename T>
@@ -80,6 +83,10 @@ template<DeviceType device_type, typename T>
 void ConvKernelIf<device_type, T>::InitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937* random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (this->op_conf().has_conv_1d_v2_conf() || this->op_conf().has_conv_2d_v2_conf()
+      || this->op_conf().has_conv_3d_v2_conf()) {
+    return;
+  }
   KernelUtil<device_type, T>::InitializeWithProperConf(
       ctx, GetMsgPtrFromPbMessage(this->GetCustomizedOpConf(), "weight_initializer"),
       (*random_seed_gen)(), BnInOp2Blob("weight"),
@@ -95,6 +102,10 @@ template<DeviceType device_type, typename T>
 void ConvKernelIf<device_type, T>::InitModelBlobsWithDir(
     DeviceCtx* ctx, int32_t part_id, int32_t part_num, const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (this->op_conf().has_conv_1d_v2_conf() || this->op_conf().has_conv_2d_v2_conf()
+      || this->op_conf().has_conv_3d_v2_conf()) {
+    return;
+  }
   Blob* weight_blob = BnInOp2Blob("weight");
   int32_t dim_num = this->template GetValFromCustomizedOpConf<int32_t>("filters");
   KernelUtil<device_type, T>::InitializeWithDir(ctx, part_id, part_num, model_load_dir, weight_blob,
@@ -109,9 +120,30 @@ template<DeviceType device_type, typename T>
 const PbMessage& ConvKernelIf<device_type, T>::GetCustomizedOpConf() const {
   CHECK(this->kernel_conf().has_conv_conf());
   switch (this->OpKernelDim()) {
-    case 1: return this->op_conf().conv_1d_conf();
-    case 2: return this->op_conf().conv_2d_conf();
-    case 3: return this->op_conf().conv_3d_conf();
+    case 1:
+      if (this->op_conf().has_conv_1d_conf()) {
+        return this->op_conf().conv_1d_conf();
+      } else if (this->op_conf().has_conv_1d_v2_conf()) {
+        return this->op_conf().conv_1d_v2_conf();
+      } else {
+        UNIMPLEMENTED();
+      }
+    case 2:
+      if (this->op_conf().has_conv_2d_conf()) {
+        return this->op_conf().conv_2d_conf();
+      } else if (this->op_conf().has_conv_2d_v2_conf()) {
+        return this->op_conf().conv_2d_v2_conf();
+      } else {
+        UNIMPLEMENTED();
+      }
+    case 3:
+      if (this->op_conf().has_conv_3d_conf()) {
+        return this->op_conf().conv_3d_conf();
+      } else if (this->op_conf().has_conv_3d_v2_conf()) {
+        return this->op_conf().conv_3d_v2_conf();
+      } else {
+        UNIMPLEMENTED();
+      }
     default: UNIMPLEMENTED();
   }
 }
@@ -259,6 +291,10 @@ void ConvKernelImplByIm2Col<device_type, T>::BiasBackward(
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv1DConf, ConvKernel, FLOATING_DATA_TYPE_SEQ);
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv2DConf, ConvKernel, FLOATING_DATA_TYPE_SEQ);
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv3DConf, ConvKernel, FLOATING_DATA_TYPE_SEQ);
+
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv1DV2Conf, ConvKernel, FLOATING_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv2DV2Conf, ConvKernel, FLOATING_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv3DV2Conf, ConvKernel, FLOATING_DATA_TYPE_SEQ);
 
 template<typename T>
 ColBufWriter<T>::ColBufWriter(const T* src_ptr, T* dst_ptr, int64_t c_size, int64_t id_size,
