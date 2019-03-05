@@ -8,6 +8,7 @@ void AnchorTargetOp::InitFromOpConf() {
 
   EnrollInputBn("images", false);
   EnrollInputBn("gt_boxes", false);
+  EnrollInputBn("im_scale", false);
 
   EnrollRepeatedOutputBn("regression_targets", false);
   EnrollRepeatedOutputBn("regression_weights", false);
@@ -19,6 +20,7 @@ void AnchorTargetOp::InitFromOpConf() {
   EnrollDataTmpBn("anchor_labels");
   EnrollDataTmpBn("anchor_max_overlaps");
   EnrollDataTmpBn("anchor_best_match_gt");
+  EnrollDataTmpBn("gt_boxes_scaled");
 }
 
 const PbMessage& AnchorTargetOp::GetCustomizedConf() const {
@@ -33,21 +35,25 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   CHECK_EQ(conf.regression_weights_size(), num_layers);
   CHECK_EQ(conf.class_labels_size(), num_layers);
   CHECK_EQ(conf.class_weights_size(), num_layers);
+  // input: images (N, H, W, C)
+  const BlobDesc* images_blob_desc = GetBlobDesc4BnInOp("images");
+  CHECK(!images_blob_desc->has_dim0_valid_num_field());
+  const int64_t num_images = images_blob_desc->shape().At(0);
+  DataType data_type = images_blob_desc->data_type();
   // input: gt_boxes (N, G, 4)
   const BlobDesc* gt_boxes_blob_desc = GetBlobDesc4BnInOp("gt_boxes");
   CHECK(!gt_boxes_blob_desc->has_dim0_valid_num_field());
   CHECK(gt_boxes_blob_desc->has_dim1_valid_num_field());
   CHECK(!gt_boxes_blob_desc->has_instance_shape_field());
-  // input: images (N, H, W, C)
-  const BlobDesc* images_blob_desc = GetBlobDesc4BnInOp("images");
-  const int64_t num_images = images_blob_desc->shape().At(0);
-  DataType data_type = images_blob_desc->data_type();
-  CHECK(!images_blob_desc->has_dim0_valid_num_field());
   CHECK_EQ(gt_boxes_blob_desc->shape().At(0), num_images);
   CHECK_EQ(gt_boxes_blob_desc->data_type(), data_type);
+  // input: im_scale (N)
+  const BlobDesc* im_scale_blob_descs = GetBlobDesc4BnInOp("im_scale");
+  CHECK_EQ(im_scale_blob_descs->shape().At(0), num_images);
+  CHECK_EQ(im_scale_blob_descs->data_type(), data_type);
+
   const int64_t batch_height = images_blob_desc->shape().At(1);
   const int64_t batch_width = images_blob_desc->shape().At(2);
-
   int64_t total_num_anchors = 0;
   FOR_RANGE(size_t, layer, 0, num_layers) {
     const AnchorGeneratorConf& anchor_generator_conf = conf.anchor_generator_conf(layer);
@@ -101,6 +107,8 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   BlobDesc* anchor_best_match_gt_blob_desc = GetBlobDesc4BnInOp("anchor_best_match_gt");
   *anchor_best_match_gt_blob_desc = *anchor_inds_blob_desc;
   anchor_best_match_gt_blob_desc->set_data_type(DataType::kInt32);
+  // data_tmp: gt_boxes_scaled has the same shape as gt_boxes
+  *GetBlobDesc4BnInOp("gt_boxes_scaled") = *gt_boxes_blob_desc;
 }
 
 REGISTER_CPU_OP(OperatorConf::kAnchorTargetConf, AnchorTargetOp);
