@@ -883,8 +883,8 @@ message AnchorGeneratorConf {
   required int32 feature_map_stride = 1 [default = 16];
   repeated float aspect_ratios = 2;
   repeated float anchor_scales = 3;
-  optional int32 image_height = 4;
-  optional int32 image_width = 5;
+  // optional int32 image_height = 4;
+  // optional int32 image_width = 5;
 }
 
 message ProposalOpConf {

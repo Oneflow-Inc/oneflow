@@ -4,51 +4,10 @@
 namespace oneflow {
 
 template<typename BBox>
-size_t BBoxUtil<BBox>::GenerateAnchors(const AnchorGeneratorConf& conf, T* anchors_ptr) {
-  CHECK_EQ(BBox::ElemCnt, 4);
-  const float fm_stride = conf.feature_map_stride();
-  const int32_t height = std::ceil(conf.image_height() / fm_stride);
-  const int32_t width = std::ceil(conf.image_width() / fm_stride);
-  const int32_t scales_size = conf.anchor_scales_size();
-  const int32_t ratios_size = conf.aspect_ratios_size();
-  const int32_t num_anchors = scales_size * ratios_size;
-
-  const float base_ctr = 0.5 * (fm_stride - 1);
-  std::vector<T> base_anchors_vec(num_anchors * BBox::ElemCnt);
-  // scale first, ratio last
-  std::fesetround(FE_TONEAREST);
-  FOR_RANGE(int32_t, i, 0, ratios_size) {
-    const int32_t wr = std::nearbyint(std::sqrt(fm_stride * fm_stride / conf.aspect_ratios(i)));
-    const int32_t hr = std::nearbyint(wr * conf.aspect_ratios(i));
-    FOR_RANGE(int32_t, j, 0, scales_size) {
-      const float scale = conf.anchor_scales(j) / fm_stride;
-      const int32_t ws = wr * scale;
-      const int32_t hs = hr * scale;
-      auto* base_anchor_bbox = BBox::Cast(base_anchors_vec.data()) + i * scales_size + j;
-      base_anchor_bbox->set_ltrb(base_ctr - 0.5 * (ws - 1), base_ctr - 0.5 * (hs - 1),
-                                 base_ctr + 0.5 * (ws - 1), base_ctr + 0.5 * (hs - 1));
-    }
-  }
-
-  const auto* base_anchors = BBox::Cast(base_anchors_vec.data());
-  FOR_RANGE(int32_t, h, 0, height) {
-    FOR_RANGE(int32_t, w, 0, width) {
-      auto* anchor_bbox = BBox::Cast(anchors_ptr) + (h * width + w) * num_anchors;
-      FOR_RANGE(int32_t, i, 0, num_anchors) {
-        anchor_bbox[i].set_ltrb(
-            base_anchors[i].left() + w * fm_stride, base_anchors[i].top() + h * fm_stride,
-            base_anchors[i].right() + w * fm_stride, base_anchors[i].bottom() + h * fm_stride);
-      }
-    }
-  }
-  return num_anchors * height * width;
-}
-
-template<typename BBox>
-size_t BBoxUtil<BBox>::GenerateAnchorsEx(float feature_map_stride, int32_t feature_map_height,
-                                         int32_t feature_map_width,
-                                         const std::vector<float>& scales_vec,
-                                         const std::vector<float>& ratios_vec, T* anchors_ptr) {
+size_t BBoxUtil<BBox>::GenerateAnchors(float feature_map_stride, int32_t feature_map_height,
+                                       int32_t feature_map_width,
+                                       const std::vector<float>& scales_vec,
+                                       const std::vector<float>& ratios_vec, T* anchors_ptr) {
   CHECK_EQ(BBox::ElemCnt, 4);
   const float base_ctr = 0.5 * (feature_map_stride - 1);
   const size_t num_anchors = scales_vec.size() * ratios_vec.size();
@@ -88,13 +47,13 @@ size_t BBoxUtil<BBox>::GenerateAnchorsEx(float feature_map_stride, int32_t featu
 }
 
 template<typename BBox>
-size_t BBoxUtil<BBox>::GenerateAnchorsEx(int32_t image_height, int32_t image_width,
-                                         float feature_map_stride,
-                                         const std::vector<float>& scales_vec,
-                                         const std::vector<float>& ratios_vec, T* anchors_ptr) {
+size_t BBoxUtil<BBox>::GenerateAnchors(int32_t image_height, int32_t image_width,
+                                       float feature_map_stride,
+                                       const std::vector<float>& scales_vec,
+                                       const std::vector<float>& ratios_vec, T* anchors_ptr) {
   const int32_t height = std::ceil(image_height / feature_map_stride);
   const int32_t width = std::ceil(image_width / feature_map_stride);
-  return GenerateAnchorsEx(feature_map_stride, height, width, scales_vec, ratios_vec, anchors_ptr);
+  return GenerateAnchors(feature_map_stride, height, width, scales_vec, ratios_vec, anchors_ptr);
 }
 
 template<typename BBox>

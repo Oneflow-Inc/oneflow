@@ -30,7 +30,7 @@ void ProposalKernel<T>::GenerateAnchors(
   auto scales_vec = PbRf2StdVec(anchor_generator_conf.anchor_scales());
   auto ratios_vec = PbRf2StdVec(anchor_generator_conf.aspect_ratios());
   const float fm_stride = anchor_generator_conf.feature_map_stride();
-  size_t num_anchors = BBoxUtil<MutBBox>::GenerateAnchorsEx(
+  size_t num_anchors = BBoxUtil<MutBBox>::GenerateAnchors(
       fm_stride, fm_height, fm_width, scales_vec, scales_vec, anchors_blob->mut_dptr<T>());
   CHECK_LE(num_anchors, anchors_blob->static_shape().At(0));
   anchors_blob->set_dim0_valid_num(0, num_anchors);
@@ -43,10 +43,15 @@ void ProposalKernel<T>::RegionProposal(
   const Blob* class_prob_blob = BnInOp2Blob("class_prob");
   Blob* proposals_blob = BnInOp2Blob("proposals");
   Blob* proposal_inds_blob = BnInOp2Blob("proposal_inds");
+  int64_t fm_height = class_prob_blob->shape().At(1);
+  int64_t fm_width = class_prob_blob->shape().At(2);
+  int64_t num_anchors_per_fm = class_prob_blob->shape().At(3);
+  int64_t fm_stride = conf.anchor_generator_conf().feature_map_stride();
+  int64_t im_height = fm_stride * fm_height;
+  int64_t im_width = fm_stride * fm_width;
 
-  size_t num_proposals = proposals_blob->static_shape().At(1);
-  size_t max_num_proposals = class_prob_blob->shape().Count(1);
-  if (num_proposals > max_num_proposals) { num_proposals = max_num_proposals; }
+  size_t num_proposals = std::min<size_t>(proposals_blob->static_shape().At(1),
+                                          fm_height * fm_width * num_anchors_per_fm);
   ScoreSlice proposal_slice(IndexSequence(proposal_inds_blob->shape().Count(1),
                                           proposal_inds_blob->mut_dptr<int32_t>(im_index), true),
                             class_prob_blob->dptr<T>(im_index));
@@ -63,8 +68,7 @@ void ProposalKernel<T>::RegionProposal(
   FOR_RANGE(size_t, i, 0, proposal_slice.size()) {
     int32_t index = proposal_slice.GetIndex(i);
     prop_bbox[i].Transform(anchor_bbox + index, bbox_delta + index, conf.bbox_reg_weights());
-    prop_bbox[i].Clip(conf.anchor_generator_conf().image_height(),
-                      conf.anchor_generator_conf().image_width());
+    prop_bbox[i].Clip(im_height, im_width);
   }
   proposals_blob->set_dim1_valid_num(im_index, num_proposals);
 }

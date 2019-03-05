@@ -48,6 +48,7 @@ void FpnCollectKernel<T>::ForwardDataContent(
     std::tie(layer, index_in_layer) = GlobalIndex2LayerAndIndexInLayer(index);
     return index_in_layer >= rois_fpn_blobs[layer]->shape().At(0);
   });
+  num_out_rois = std::min(num_out_rois, roi_inds.size());
   roi_inds.NthElem(num_out_rois, Compare);
   roi_inds.Truncate(num_out_rois);
   roi_inds.Sort(Compare);
