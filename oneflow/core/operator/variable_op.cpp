@@ -134,7 +134,7 @@ void VariableOp::GenerateBackwardOpConf(
     AxpyOpConf* axpy_op_conf = axpy_op.mutable_axpy_conf();
     axpy_op_conf->set_x(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     axpy_op_conf->set_y(GenLogicalBlobName(BnInOp2Lbi("out")));
-    axpy_op_conf->set_alpha(-op_conf().normal_mdupdt_conf().learning_rate());
+    axpy_op_conf->set_alpha(-train_conf.primary_lr());
     ops->push_back(axpy_op);
   } else if (model_update_conf.has_momentum_conf()) {
     TODO();
