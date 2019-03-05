@@ -21,7 +21,10 @@ DataType GetDataTypeFromBnInOpVec(
 void Operator::InitFromOpConf(const OperatorConf& op_conf) {
   OperatorConf* this_op_conf = op_attribute_.mutable_op_conf();
   *this_op_conf = op_conf;
-  if (Global<JobDesc>::Get()->IsPredict()) { this_op_conf->set_trainable(false); }
+  if (Global<JobDesc>::Get()->IsPredict()) {
+    this_op_conf->set_trainable(
+        Global<JobDesc>::Get()->other_conf().predict_conf().has_split_fw_bw_train_conf());
+  }
   if (this_op_conf->has_enable_cudnn() == false) {
     this_op_conf->set_enable_cudnn(Global<JobDesc>::Get()->EnableCudnn());
   }

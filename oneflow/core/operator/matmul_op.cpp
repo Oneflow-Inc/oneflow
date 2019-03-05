@@ -142,7 +142,7 @@ void MatmulOp::GenerateBackwardOpConf(
     std::vector<OperatorConf>* ops,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) const {
   const MatmulOpConf& conf = op_conf().matmul_conf();
-  {
+  if (DiffLbi4BnInOp("a") != nullptr) {
     OperatorConf matmul_a_op;
     matmul_a_op.set_name(op_name() + "_grad_a");
     MatmulOpConf* matmul_a_op_conf = matmul_a_op.mutable_matmul_conf();
@@ -162,7 +162,7 @@ void MatmulOp::GenerateBackwardOpConf(
     DiffLbi4BnInOp("a")->set_op_name(matmul_a_op.name());
     DiffLbi4BnInOp("a")->set_blob_name("out");
   }
-  {
+  if (DiffLbi4BnInOp("b") != nullptr) {
     OperatorConf matmul_b_op;
     matmul_b_op.set_name(op_name() + "_grad_b");
     MatmulOpConf* matmul_b_op_conf = matmul_b_op.mutable_matmul_conf();

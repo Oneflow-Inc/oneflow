@@ -183,7 +183,7 @@ int32_t JobDesc::NumOfBatchesInSnapshot() const {
 }
 int64_t JobDesc::TotalBatchNum() const { return job_conf_.other().total_batch_num(); }
 const InitializerConf* JobDesc::DefaultInitializerConf() const {
-  CHECK(IsTrain());
+  CHECK(IsTrain() || job_conf_.other().predict_conf().has_split_fw_bw_train_conf());
   return GetMsgPtrFromPbMessage<InitializerConf>(job_conf_.other().train_conf(),
                                                  "default_initializer_conf");
 }
