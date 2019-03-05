@@ -126,6 +126,20 @@ void BroadcastDivKernel<device_type, T>::ForwardDim0ValidNum(
   }
 }
 
+template<DeviceType device_type, typename T>
+void BroadcastDivKernel<device_type, T>::BackwardInDiffDim0ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* out_diff = BnInOp2Blob(GenDiffBn("out"));
+  Blob* a_diff = BnInOp2Blob(GenDiffBn("a"));
+  Blob* b_diff = BnInOp2Blob(GenDiffBn("b"));
+  if (a_diff && a_diff->has_dim0_valid_num_field()) {
+    a_diff->CopyDim0ValidNumFrom(ctx.device_ctx, out_diff);
+  }
+  if (b_diff && b_diff->has_dim0_valid_num_field()) {
+    b_diff->CopyDim0ValidNumFrom(ctx.device_ctx, out_diff);
+  }
+}
+
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBroadcastDivConf, BroadcastDivKernel,
                            FLOATING_DATA_TYPE_SEQ);
 }  // namespace oneflow
