@@ -55,6 +55,7 @@ void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   fw_tmp_blob_desc->set_data_type(in_blob->data_type());
   // *GetBlobDesc4BnInOp("fw_tmp") = *in_blob;
   std::vector<int64_t> out_dim_vec;
+  bool reduce_dim0 = false;
   if (conf.axis().empty()) {
     if (conf.keep_dims() == true) {
       out_dim_vec.resize(in_blob->shape().NumAxes());
@@ -62,11 +63,13 @@ void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
     } else {
       out_dim_vec = {1};
     }
+    reduce_dim0 = true;
   } else {
     const PbRf<int32_t>& axis_repeated = conf.axis();
     std::vector<int64_t> axis_vec = {axis_repeated.begin(), axis_repeated.end()};
     axis_vec = ShiftAxisIfNegative(axis_vec, in_blob->shape().NumAxes());
     std::sort(axis_vec.begin(), axis_vec.end());
+    if (axis_vec.size() > 0 && axis_vec.at(0) == 0) { reduce_dim0 = true; }
     CHECK(std::unique(axis_vec.begin(), axis_vec.end()) == axis_vec.end())
         << "duplicate found in axis";
     if (conf.keep_dims() == true) {
@@ -79,6 +82,7 @@ void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   BlobDesc* out_blob = GetBlobDesc4BnInOp("out");
   out_blob->set_data_type(in_blob->data_type());
   out_blob->mut_shape() = Shape(out_dim_vec);
+  if (!reduce_dim0 && in_blob->has_dim0_valid_num_field()) { UNIMPLEMENTED(); }
 }
 
 void ReduceSumOp::VirtualGenKernelConf(

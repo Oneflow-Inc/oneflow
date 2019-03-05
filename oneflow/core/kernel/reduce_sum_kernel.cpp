@@ -9,10 +9,18 @@ void ReduceSumKernel<device_type, T>::ForwardDataContent(
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
   Blob* fw_tmp_blob = BnInOp2Blob("fw_tmp");
+  const ReduceSumKernelConf& conf = this->kernel_conf().reduce_sum_conf();
+  if (in_blob->has_dim0_valid_num_field()) {
+    CHECK(!out_blob->has_dim0_valid_num_field());
+    CHECK_EQ(conf.kept_dims_shape().dim(0), 1);
+    if (in_blob->shape().elem_cnt() == 0) {
+      Memset<device_type>(ctx.device_ctx, out_blob->mut_dptr(), 0,
+                          out_blob->ByteSizeOfDataContentField());
+    }
+    return;
+  }
   NdarrayUtil<device_type, T>::ReduceSum(
-      ctx.device_ctx,
-      XpuVarNdarray<T>(Shape(this->kernel_conf().reduce_sum_conf().kept_dims_shape()),
-                       out_blob->mut_dptr<T>()),
+      ctx.device_ctx, XpuVarNdarray<T>(Shape(conf.kept_dims_shape()), out_blob->mut_dptr<T>()),
       XpuVarNdarray<const T>(in_blob, in_blob->shape().NumAxes()),
       XpuVarNdarray<T>(fw_tmp_blob, in_blob->shape().NumAxes()));
 }
@@ -22,10 +30,17 @@ void ReduceSumKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   Blob* in_diff_blob = BnInOp2Blob("in_diff");
+  if (in_diff_blob->shape().elem_cnt() == 0) { return; }
   NdarrayUtil<device_type, T>::BroadcastTo(
       ctx.device_ctx, XpuVarNdarray<T>(in_diff_blob, in_diff_blob->shape().NumAxes()),
       XpuVarNdarray<const T>(Shape(this->kernel_conf().reduce_sum_conf().kept_dims_shape()),
                              out_diff_blob->dptr<T>()));
+}
+
+template<DeviceType device_type, typename T>
+void ReduceSumKernel<device_type, T>::ForwardDim0ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  UNIMPLEMENTED();
 }
 
 template<DeviceType device_type, typename T>
