@@ -15,10 +15,13 @@ void SoftmaxComputeDiff(DeviceCtx* ctx, const int64_t n, const int64_t w, const 
   // dot product | get dot product sum_vec[i] from out[i] * out_diff[i]
   T* tmp = in_diff;
   NewKernelUtil<device_type, T>::Mul(ctx, n * w, out, out_diff, tmp);
+  /* ndarray reduce sum
   NdarrayUtil<device_type, T>::ReduceSum(
       ctx, XpuVarNdarray<T>({n, 1}, sum_vec), XpuVarNdarray<const T>({n, w}, tmp),
       XpuVarNdarray<T>({static_cast<int64_t>(temp_storage_bytes / sizeof(T))},
                        reinterpret_cast<T*>(temp_storage)));
+                       */
+  NewKernelUtil<device_type, T>::RowSum(ctx, n, w, tmp, sum_vec, temp_storage, temp_storage_bytes);
   // copy out_diff to in_diff
   // KernelUtil<device_type, T>::Copy(ctx, n * w, out_diff, 1, in_diff, 1);
   Memcpy<device_type>(ctx, static_cast<void*>(in_diff), static_cast<const void*>(out_diff),
@@ -40,20 +43,27 @@ void SoftmaxComputeProb(DeviceCtx* ctx, const int64_t n, const int64_t w, const 
                       static_cast<size_t>(n * w * sizeof(T)));
   // max | calculate max of every sample vector prob[i], store in tmp[i]
   //       the prob[i] now is store the data of in[i]
+  /* ndarray reduce max
   NdarrayUtil<device_type, T>::ReduceMax(
       ctx, XpuVarNdarray<T>({n, 1}, tmp), XpuVarNdarray<const T>({n, w}, prob),
       XpuVarNdarray<T>({static_cast<int64_t>(temp_storage_bytes / sizeof(T))},
                        reinterpret_cast<T*>(temp_storage)));
+  */
+  NewKernelUtil<device_type, T>::RowMax(ctx, n, w, prob, tmp, temp_storage, temp_storage_bytes);
+
   // sub | every element of prob blob subract the max value of the same sample
   SoftmaxKernelUtil<device_type, T>::Sub(ctx, n, w, prob, tmp);
   // exp | exponentiation every element
   NewKernelUtil<device_type, T>::Exp(ctx, n * w, prob, prob);
   // sum | calculate sum of every sample vector prob[i], store in tmp[i]
   //       the prob[i] now is store the tmp data after exp
+  /* ndarray reduce sum
   NdarrayUtil<device_type, T>::ReduceSum(
       ctx, XpuVarNdarray<T>({n, 1}, tmp), XpuVarNdarray<const T>({n, w}, prob),
       XpuVarNdarray<T>({static_cast<int64_t>(temp_storage_bytes / sizeof(T))},
                        reinterpret_cast<T*>(temp_storage)));
+  */
+  NewKernelUtil<device_type, T>::RowSum(ctx, n, w, prob, tmp, temp_storage, temp_storage_bytes);
   // div | every element of prob[i] divided by the data of tmp[i] (the sum
   // value)
   SoftmaxKernelUtil<device_type, T>::Div(ctx, n, w, prob, tmp);
