@@ -50,7 +50,7 @@ struct SparseCrossEntropyLossKernelUtil<DeviceType::kCPU, PredType, LabelType> {
     for (int64_t i = 0; i < instance_num; ++i) {
       int64_t label = static_cast<int64_t>(labels[i]);
       PredType prob = MaxWithLogThreshold(prediction[i * num_of_classes + label]);
-      prediction_diff[i * num_of_classes + label] = -1 / prob;
+      prediction_diff[i * num_of_classes + label] = -1.0 / prob;
     }
   }
 };
@@ -81,6 +81,6 @@ REGISTER_KERNEL_CREATOR(OperatorConf::kSparseCrossEntropyLossConf,
 #define MAKE_ENTRY(data_type_pair, label_type_pair) \
   template struct SparseCrossEntropyLossKernelUtil< \
       DeviceType::kCPU, OF_PP_PAIR_FIRST(data_type_pair), OF_PP_PAIR_FIRST(label_type_pair)>;
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, FLOATING_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

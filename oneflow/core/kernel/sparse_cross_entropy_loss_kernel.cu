@@ -55,9 +55,27 @@ struct SparseCrossEntropyLossKernelUtil<DeviceType::kGPU, PredType, LabelType> {
   }
 };
 
+template<typename LabelType>
+struct SparseCrossEntropyLossKernelUtil<DeviceType::kGPU, float16, LabelType> {
+  static void Forward(DeviceCtx* ctx, const int64_t instance_num, const int64_t num_of_classes,
+                      const float16* prediction, const LabelType* labels, float16* loss) {
+    SparseCrossEntropyLossForwardHalfGpu
+        <<<BlocksNum4ThreadsNum(instance_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+            instance_num, num_of_classes, reinterpret_cast<const half*>(prediction), labels, reinterpret_cast<half*>(loss));
+  }
+
+  static void Backward(DeviceCtx* ctx, const int64_t instance_num, const int64_t num_of_classes,
+                       const float16* prediction, const LabelType* labels,
+                       float16* prediction_diff) {
+    SparseCrossEntropyLossBackwardHalfGpu
+        <<<BlocksNum4ThreadsNum(instance_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+            instance_num, num_of_classes, reinterpret_cast<const half*>(prediction), labels, reinterpret_cast<half*>(prediction_diff));
+  }
+};
+
 #define MAKE_ENTRY(data_type_pair, label_type_pair) \
   template struct SparseCrossEntropyLossKernelUtil< \
       DeviceType::kGPU, OF_PP_PAIR_FIRST(data_type_pair), OF_PP_PAIR_FIRST(label_type_pair)>;
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, FLOATING_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

@@ -55,22 +55,6 @@ double oneflow_cast(const std::string& s) {
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(DEFINE_ONEFLOW_ARITHMETIC_CAST, ARITHMETIC_DATA_TYPE_SEQ, ARITHMETIC_DATA_TYPE_SEQ)
 
-#define DEFINE_ONEFLOW_HALF2ARITHMETIC_CAST(out_type) \
-  template<>                                             \
-  out_type oneflow_cast(const float16& s) {          \
-    return half_float::half_cast<out_type>(s);                                          \
-  }
-
-OF_PP_FOR_EACH_TUPLE(DEFINE_ONEFLOW_HALF2ARITHMETIC_CAST, ARITHMETIC_DATA_TYPE_SEQ)
-
-#define DEFINE_ONEFLOW_ARITHMETIC2HALF_CAST(in_type) \
-  template<>                                             \
-  float16 oneflow_cast(const in_type& s) {          \
-    return half_float::half_cast<float16>(s);                                          \
-  }
-
-OF_PP_FOR_EACH_TUPLE(DEFINE_ONEFLOW_ARITHMETIC2HALF_CAST, ARITHMETIC_DATA_TYPE_SEQ)
-
 #ifdef PLATFORM_POSIX
 COMMAND(feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW));
 #endif

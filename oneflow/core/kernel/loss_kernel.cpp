@@ -7,7 +7,7 @@ template<DeviceType device_type, typename PredType>
 void LossKernel<device_type, PredType>::SetLossInstanceNum(
     const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const int64_t loss_instance_num = CalcLossInstanceNum(ctx, BnInOp2Blob);
-  KernelUtil<device_type, PredType>::Set(ctx.device_ctx, static_cast<PredType>(loss_instance_num),
+  NewKernelUtil<device_type, PredType>::Set(ctx.device_ctx, static_cast<PredType>(loss_instance_num),
                                          BnInOp2Blob("loss_instance_num")->mut_dptr<PredType>());
   CHECK(BnInOp2Blob(GenDiffBn("prediction"))->has_loss_instance_num_field());
   BnInOp2Blob(GenDiffBn("prediction"))
@@ -37,17 +37,17 @@ void LossKernel<device_type, PredType>::ForwardDataContent(
             XpuVarNdarray<const PredType>({n, 1}, weight),
             XpuVarNdarray<const PredType>({n, m}, prediction_diff));
       } else if (weight_blob->shape().elem_cnt() == 1) {
-        KernelUtil<device_type, PredType>::Scal(ctx.device_ctx, n, weight, prediction_diff, 1);
+        NewKernelUtil<device_type, PredType>::Scal(ctx.device_ctx, n, weight, prediction_diff, 1);
       } else {
         UNIMPLEMENTED();
       }
     } else if (conf.weight_scalar() > 1.0 || conf.weight_scalar() < 1.0) {
-      KernelUtil<device_type, PredType>::Scal(
+      NewKernelUtil<device_type, PredType>::Scal(
           ctx.device_ctx, n, static_cast<PredType>(conf.weight_scalar()), prediction_diff, 1);
     }
     float loss_scale = Global<JobDesc>::Get()->loss_scale();
     if (loss_scale > 1.0 || loss_scale < 1.0) {
-      KernelUtil<device_type, PredType>::Scal(ctx.device_ctx, n, static_cast<PredType>(loss_scale),
+      NewKernelUtil<device_type, PredType>::Scal(ctx.device_ctx, n, static_cast<PredType>(loss_scale),
                                               prediction_diff, 1);
     }
   }
@@ -133,11 +133,11 @@ struct LossKernelUtil<DeviceType::kCPU, T> {
 #define MAKE_LOSS_KERNEL_UTIL_ENTRY(type_cpp, type_proto) \
   template struct LossKernelUtil<DeviceType::kCPU, type_cpp>;
 
-OF_PP_FOR_EACH_TUPLE(MAKE_LOSS_KERNEL_UTIL_ENTRY, FLOATING_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(MAKE_LOSS_KERNEL_UTIL_ENTRY, FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
 
 #define MAKE_LOSS_ENTRY(device_type, data_type_pair) \
   template class LossKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>;
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_LOSS_ENTRY, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_LOSS_ENTRY, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

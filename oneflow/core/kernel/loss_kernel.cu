@@ -67,6 +67,6 @@ struct LossKernelUtil<DeviceType::kGPU, T> {
 #define MAKE_LOSS_KERNEL_UTIL_ENTRY(type_cpp, type_proto) \
   template struct LossKernelUtil<DeviceType::kGPU, type_cpp>;
 
-OF_PP_FOR_EACH_TUPLE(MAKE_LOSS_KERNEL_UTIL_ENTRY, FLOATING_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(MAKE_LOSS_KERNEL_UTIL_ENTRY, FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
