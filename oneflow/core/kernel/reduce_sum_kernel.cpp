@@ -10,13 +10,10 @@ void ReduceSumKernel<device_type, T>::ForwardDataContent(
   Blob* out_blob = BnInOp2Blob("out");
   Blob* fw_tmp_blob = BnInOp2Blob("fw_tmp");
   const ReduceSumKernelConf& conf = this->kernel_conf().reduce_sum_conf();
-  if (in_blob->has_dim0_valid_num_field()) {
-    CHECK(!out_blob->has_dim0_valid_num_field());
-    CHECK_EQ(conf.kept_dims_shape().dim(0), 1);
-    if (in_blob->shape().elem_cnt() == 0) {
-      Memset<device_type>(ctx.device_ctx, out_blob->mut_dptr(), 0,
-                          out_blob->ByteSizeOfDataContentField());
-    }
+  if (in_blob->has_dim0_valid_num_field() && in_blob->shape().elem_cnt() == 0) {
+    CHECK_EQ(out_blob->shape().elem_cnt(), 1);
+    Memset<device_type>(ctx.device_ctx, out_blob->mut_dptr(), 0,
+                        out_blob->ByteSizeOfDataContentField());
     return;
   }
   NdarrayUtil<device_type, T>::ReduceSum(
