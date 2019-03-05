@@ -16,6 +16,7 @@ void ProposalTargetOp::InitFromOpConf() {
   EnrollOutputBn("regression_targets", false);
   EnrollOutputBn("regression_weights", false);
   // Enroll data tmp
+  EnrollDataTmpBn("roi_inds");
   EnrollDataTmpBn("gt_box_inds");
   EnrollDataTmpBn("max_overlaps");
   EnrollDataTmpBn("max_overlaps_with_gt_index");
@@ -83,6 +84,10 @@ void ProposalTargetOp::InferBlobDescs(
   BlobDesc* max_overlaps_gt_index_bd = GetBlobDesc4BnInOp("max_overlaps_with_gt_index");
   max_overlaps_gt_index_bd->mut_shape() = Shape({num_rois});
   max_overlaps_gt_index_bd->set_data_type(DataType::kInt32);
+  // data tmp: roi_inds (R) int32_t
+  BlobDesc* roi_inds_blob_desc = GetBlobDesc4BnInOp("roi_inds");
+  roi_inds_blob_desc->mut_shape() = Shape({num_rois});
+  roi_inds_blob_desc->set_data_type(DataType::kInt32);
 }
 
 REGISTER_CPU_OP(OperatorConf::kProposalTargetConf, ProposalTargetOp);
