@@ -995,6 +995,11 @@ message L2NormalizeOpConf {
   optional float epsilon = 4 [default = 1e-12];
 }
 
+message KeepHeaderOnlyOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1028,6 +1033,7 @@ message OperatorConf {
     VariableOpConf variable_conf = 122;
     ReduceIdentityOpConf reduce_identity_conf = 123;
     TickOpConf tick_conf = 124;
+    KeepHeaderOnlyOpConf keep_header_only_conf = 125;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
