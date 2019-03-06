@@ -9,14 +9,17 @@ namespace oneflow {
 class CommNetDeviceCtx final : public DeviceCtx {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CommNetDeviceCtx);
-  CommNetDeviceCtx() = default;
+  CommNetDeviceCtx(int64_t local_stream_id) : local_stream_id_(local_stream_id){};
   ~CommNetDeviceCtx() = default;
 
   std::unique_ptr<DeviceCtx> Copy() const { UNIMPLEMENTED(); }
 
   void AddCallBack(std::function<void()> callback) const override {
-    Global<CommNet>::Get()->AddReadCallBack(callback);
+    Global<CommNet>::Get()->AddReadCallBack(local_stream_id_, callback);
   }
+
+ private:
+  int64_t local_stream_id_;
 };
 
 }  // namespace oneflow
