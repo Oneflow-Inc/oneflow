@@ -516,13 +516,12 @@ struct BBoxUtil final {
   using T = typename BBox::ElemType;
   using BBoxIndicesT = BBoxIndices<IndexSequence, BBox>;
 
-  static size_t GenerateAnchors(const AnchorGeneratorConf& conf, T* anchors_ptr);
-  static size_t GenerateAnchorsEx(int32_t image_height, int32_t image_width,
-                                  float feature_map_stride, const std::vector<float>& scales_vec,
-                                  const std::vector<float>& ratios_vec, T* anchors_ptr);
-  static size_t GenerateAnchorsEx(float feature_map_stride, int32_t feature_map_height,
-                                  int32_t feature_map_width, const std::vector<float>& scales_vec,
-                                  const std::vector<float>& ratios_vec, T* anchors_ptr);
+  static size_t GenerateAnchors(int32_t image_height, int32_t image_width, float feature_map_stride,
+                                const std::vector<float>& scales_vec,
+                                const std::vector<float>& ratios_vec, T* anchors_ptr);
+  static size_t GenerateAnchors(float feature_map_stride, int32_t feature_map_height,
+                                int32_t feature_map_width, const std::vector<float>& scales_vec,
+                                const std::vector<float>& ratios_vec, T* anchors_ptr);
   static void Nms(float thresh, const BBoxIndicesT& pre_nms_bbox_inds,
                   BBoxIndicesT& post_nms_bbox_inds);
 };

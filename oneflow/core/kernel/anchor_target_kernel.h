@@ -22,6 +22,8 @@ class AnchorTargetKernel final : public KernelIf<DeviceType::kCPU> {
   void ForwardInstanceShape(const KernelCtx& ctx,
                             std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
+  void GenerateScaledGtBoxes(DeviceCtx* ctx,
+                             const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   void GenerateAnchorBoxes(DeviceCtx* ctx,
                            const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   void FilterOutsideAnchorBoxes(DeviceCtx* ctx,
