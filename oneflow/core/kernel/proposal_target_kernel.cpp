@@ -39,24 +39,34 @@ typename ProposalTargetKernel<T>::LabeledGtBox ProposalTargetKernel<T>::GetImage
   const ProposalTargetOpConf& conf = op_conf().proposal_target_conf();
   const Blob* gt_boxes_blob = BnInOp2Blob("gt_boxes");
   Blob* gt_labels_blob = BnInOp2Blob("gt_labels");
+  const Blob* im_scale_blob = BnInOp2Blob("im_scale");
   Blob* gt_box_inds_blob = BnInOp2Blob("gt_box_inds");
+  Blob* gt_boxes_scaled_blob = BnInOp2Blob("gt_boxes_scaled");
 
-  LabeledGtBox gt_boxes(GtBoxIndices(IndexSequence(gt_box_inds_blob->shape().elem_cnt(), 0,
-                                                   gt_box_inds_blob->mut_dptr<int32_t>(), false),
-                                     gt_boxes_blob->dptr<T>()),
-                        gt_labels_blob->mut_dptr<int32_t>());
+  std::memset(gt_boxes_scaled_blob->mut_dptr(), 0,
+              gt_boxes_scaled_blob->static_shape().elem_cnt() * sizeof(T));
+
+  IndexSequence gt_inds(gt_box_inds_blob->shape().elem_cnt(), 0,
+                        gt_box_inds_blob->mut_dptr<int32_t>(), false);
+
   FOR_RANGE(int32_t, i, 0, gt_boxes_blob->shape().At(0)) {
     int32_t dim1_num = gt_boxes_blob->shape().At(1);
     int32_t dim1_valid_num = gt_boxes_blob->dim1_valid_num(i);
     CHECK_EQ(dim1_valid_num, gt_labels_blob->dim1_valid_num(i));
+    auto* gt_boxes = BBox::Cast(gt_boxes_blob->dptr<T>(i));
+    auto* gt_scaled_boxes = BBox::Cast(gt_boxes_scaled_blob->mut_dptr<T>(i));
+    int32_t* gt_labels_ptr = gt_labels_blob->mut_dptr<int32_t>(i);
+    const T scale = im_scale_blob->dptr<T>()[i];
     FOR_RANGE(int32_t, j, 0, dim1_valid_num) {
-      if (GtBBox::Cast(gt_boxes_blob->dptr<T>(i, j))->Area() > 0
-          && *(gt_labels_blob->dptr<int32_t>(i, j)) <= conf.num_classes()) {
-        gt_boxes.PushBack(i * dim1_num + j);
+      if (gt_boxes[j].Area() > 0 && gt_labels_ptr[j] <= conf.num_classes()) {
+        gt_inds.PushBack(i * dim1_num + j);
+        gt_scaled_boxes[j].set_ltrb(gt_boxes[j].left() * scale, gt_boxes[j].top() * scale,
+                                    gt_boxes[j].right() * scale, gt_boxes[j].bottom() * scale);
       }
     }
   }
-  return gt_boxes;
+  return LabeledGtBox(GtBoxIndices(gt_inds, gt_boxes_scaled_blob->dptr<T>()),
+                      gt_labels_blob->mut_dptr<int32_t>());
 }
 
 template<typename T>
@@ -82,7 +92,7 @@ void ProposalTargetKernel<T>::FindNearestGtBoxForEachRoiBox(
     const auto* bbox = roi_boxes.GetBBox(i);
     FOR_RANGE(size_t, j, 0, gt_boxes.size()) {
       int32_t gt_index = gt_boxes.GetIndex(j);
-      int32_t gt_im_index = gt_index / BnInOp2Blob("gt_boxes")->shape().At(1);
+      int32_t gt_im_index = gt_index / BnInOp2Blob("gt_boxes")->static_shape().At(1);
       if (gt_im_index == bbox->index()) {
         float overlap = bbox->InterOverUnion(gt_boxes.GetBBox(j));
         roi_boxes.TryUpdateMaxOverlap(roi_boxes.GetIndex(i), gt_index, overlap);

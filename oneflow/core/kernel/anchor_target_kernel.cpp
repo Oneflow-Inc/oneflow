@@ -69,9 +69,10 @@ void AnchorTargetKernel<T>::ForwardInstanceShape(
 template<typename T>
 void AnchorTargetKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  GenerateScaledGtBoxes(ctx.device_ctx, BnInOp2Blob);
   GenerateAnchorBoxes(ctx.device_ctx, BnInOp2Blob);
   FilterOutsideAnchorBoxes(ctx.device_ctx, BnInOp2Blob);
-  FOR_RANGE(size_t, im_index, 0, BnInOp2Blob("gt_boxes")->shape().At(0)) {
+  FOR_RANGE(size_t, im_index, 0, BnInOp2Blob("images")->shape().At(0)) {
     CalcMaxOverlapAndSetPositiveLabels(ctx.device_ctx, im_index, BnInOp2Blob);
     Subsample(ctx.device_ctx, im_index, BnInOp2Blob);
     OutputForEachImage(ctx.device_ctx, im_index, BnInOp2Blob);
@@ -125,10 +126,34 @@ void AnchorTargetKernel<T>::FilterOutsideAnchorBoxes(
 }
 
 template<typename T>
+void AnchorTargetKernel<T>::GenerateScaledGtBoxes(
+    DeviceCtx* ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+  const Blob* gt_boxes_blob = BnInOp2Blob("gt_boxes");
+  const Blob* im_scale_blob = BnInOp2Blob("im_scale");
+  Blob* gt_boxes_scaled_blob = BnInOp2Blob("gt_boxes_scaled");
+
+  FOR_RANGE(size_t, i, 0, gt_boxes_blob->shape().At(0)) {
+    size_t valid_gt_boxes_cnt_per_im = 0;
+    auto* gt_boxes = BBox::Cast(gt_boxes_blob->dptr<T>(i));
+    auto* gt_scaled_boxes = BBox::Cast(gt_boxes_scaled_blob->mut_dptr<T>(i));
+    const T scale = im_scale_blob->dptr<T>()[i];
+    FOR_RANGE(size_t, j, 0, gt_boxes_blob->dim1_valid_num(i)) {
+      if (gt_boxes[j].Area() > 0) {
+        gt_scaled_boxes[valid_gt_boxes_cnt_per_im].set_ltrb(
+            gt_boxes[j].left() * scale, gt_boxes[j].top() * scale, gt_boxes[j].right() * scale,
+            gt_boxes[j].bottom() * scale);
+        valid_gt_boxes_cnt_per_im += 1;
+      }
+    }
+    gt_boxes_scaled_blob->set_dim1_valid_num(i, valid_gt_boxes_cnt_per_im);
+  }
+}
+
+template<typename T>
 void AnchorTargetKernel<T>::CalcMaxOverlapAndSetPositiveLabels(
     DeviceCtx* ctx, size_t im_index,
     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  const Blob* gt_boxes_blob = BnInOp2Blob("gt_boxes");
+  const Blob* gt_boxes_blob = BnInOp2Blob("gt_boxes_scaled");
   size_t num_gt_boxes = gt_boxes_blob->dim1_valid_num(im_index);
   std::vector<float> gt_max_overlaps(num_gt_boxes, 0);
   std::vector<int32_t> gt_nearest_anchor_inds;
@@ -160,7 +185,6 @@ void AnchorTargetKernel<T>::CalcMaxOverlapAndSetPositiveLabels(
   float* anchor_max_overlaps_blob_ptr = BnInOp2Blob("anchor_max_overlaps")->mut_dptr<float>();
   int32_t* anchor_best_match_gt_ptr = BnInOp2Blob("anchor_best_match_gt")->mut_dptr<int32_t>();
   FOR_RANGE(size_t, i, 0, num_gt_boxes) {
-    if (gt_boxes[i].Area() <= 0) { continue; }
     FOR_RANGE(size_t, j, 0, anchor_inds_blob->dim0_valid_num(0)) {
       int32_t anchor_idx = anchor_inds_ptr[j];
       float overlap = anchor_boxes[anchor_idx].InterOverUnion(gt_boxes + i);
@@ -209,7 +233,7 @@ void AnchorTargetKernel<T>::OutputForEachImage(
     DeviceCtx* ctx, size_t im_index,
     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const AnchorTargetOpConf& conf = op_conf().anchor_target_conf();
-  const T* gt_boxes_ptr = BnInOp2Blob("gt_boxes")->dptr<T>(im_index);
+  const T* gt_boxes_ptr = BnInOp2Blob("gt_boxes_scaled")->dptr<T>(im_index);
   const T* anchors_ptr = BnInOp2Blob("anchors")->dptr<T>(im_index);
   const int32_t* cur_image_anchor_labels_ptr =
       BnInOp2Blob("anchor_labels")->dptr<int32_t>(im_index);
