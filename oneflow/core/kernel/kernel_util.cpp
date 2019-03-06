@@ -147,10 +147,12 @@ void VarianceScalingInitializer(const VarianceScalingInitializerConf& initialize
                                 uint32_t random_seed, Blob* blob, const std::string& data_format) {
   CHECK(blob->shape().elem_cnt());
   VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
-  T scale = std::sqrt(static_cast<T>(initializer_conf.scale()) / GenInitialFan<T>(variance_norm, blob, data_format));
+  T scale = std::sqrt(static_cast<T>(initializer_conf.scale())
+                      / GenInitialFan<T>(variance_norm, blob, data_format));
+  // constant taken from scipy.stats.truncnorm.std(a=-2, b=2, loc=0., scale=1.)
   T stddev = scale / static_cast<T>(0.87962566103423978);
-  RngTruncatedNormal<T>(blob->shape().elem_cnt(), static_cast<T>(stddev),
-                        random_seed, blob->mut_dptr<T>());
+  RngTruncatedNormal<T>(blob->shape().elem_cnt(), static_cast<T>(stddev), random_seed,
+                        blob->mut_dptr<T>());
 }
 
 template<typename T>
@@ -533,8 +535,9 @@ KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& ini
   } else if (initializer_conf.has_range_conf()) {
     RangeInitializer<T>(initializer_conf.range_conf(), random_seed, blob);
   } else if (initializer_conf.has_variance_scaling_conf()) {
-    VarianceScalingInitializer<T>(initializer_conf.variance_scaling_conf(), random_seed, blob, data_format);
-  }else {
+    VarianceScalingInitializer<T>(initializer_conf.variance_scaling_conf(), random_seed, blob,
+                                  data_format);
+  } else {
     UNIMPLEMENTED();
   }
 }
