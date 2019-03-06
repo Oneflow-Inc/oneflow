@@ -1,11 +1,11 @@
 #ifndef ONEFLOW_CORE_OPERATOR_CONV_3D_V2_OP_H_
 #define ONEFLOW_CORE_OPERATOR_CONV_3D_V2_OP_H_
 
-#include "oneflow/core/operator/conv_op.h"
+#include "oneflow/core/operator/conv_v2_op.h"
 
 namespace oneflow {
 
-class Conv3DV2Op final : public ConvOp<3> {
+class Conv3DV2Op final : public ConvV2Op<3> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Conv3DV2Op);
   Conv3DV2Op() = default;
