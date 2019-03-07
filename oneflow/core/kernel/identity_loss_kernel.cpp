@@ -18,7 +18,7 @@ void IdentityLossKernel<device_type, PredType>::VirtualLossForwardDataContent(
   Blob* loss = BnInOp2Blob("loss");
   Blob* prediction_diff = BnInOp2Blob(GenDiffBn("prediction"));
   loss->CopyDataContentFrom(ctx.device_ctx, prediction);
-  prediction_diff->CopyDataContentFrom(ctx.device_ctx, ones);
+  if (prediction_diff != nullptr) { prediction_diff->CopyDataContentFrom(ctx.device_ctx, ones); }
 }
 
 template<DeviceType device_type, typename PredType>
