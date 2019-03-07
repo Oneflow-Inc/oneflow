@@ -70,6 +70,17 @@ void TupleIdentityKernel<device_type>::ForwardInstanceShape(
   }
 }
 
+template<DeviceType device_type>
+void TupleIdentityKernel<device_type>::ForwardRecordIdInDevicePiece(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const auto& input_bns = this->op_attribute().input_bns();
+  const auto& output_bns = this->op_attribute().output_bns();
+  FOR_RANGE(int, i, 0, output_bns.size()) {
+    BnInOp2Blob(output_bns.Get(i))
+        ->CopyRecordIdInDevicePieceFrom(ctx.device_ctx, BnInOp2Blob(input_bns.Get(i)));
+  }
+}
+
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kTupleIdentityConf, TupleIdentityKernel);
 
 }  // namespace oneflow
