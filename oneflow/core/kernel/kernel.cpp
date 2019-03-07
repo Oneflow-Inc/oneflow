@@ -14,7 +14,6 @@ void CheckSameRecordIdInDevicePiece(const PbRpf<std::string>& bns,
                          first_blob->record_id_in_device_piece_ptr() + dim0_offset,
                          sizeof(*first_blob->record_id_in_device_piece_ptr()) * dim0_cnt),
              0);
-
   };
   if (first_blob->has_dim0_valid_num_field()) {
     FOR_RANGE(int, i, 1, bns.size()) {
@@ -144,7 +143,12 @@ bool Kernel::HasEmptyShapeBlob(const PbRpf<std::string>& bns,
                                const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   for (const auto& bn : bns) {
     Blob* blob = BnInOp2Blob(bn);
-    if (blob && blob->IsShapeEmpty()) { return true; }
+    if (blob && blob->IsShapeEmpty()) {
+      const LogicalBlobId& lbi = BnInOp2Lbi(bn);
+      LOG(WARNING) << "Blob " << bn << "(" << lbi.op_name() << "/" << lbi.blob_name()
+                   << ") of " + this->op_conf().name() << " is empty";
+      return true;
+    }
   }
   return false;
 }
@@ -174,9 +178,13 @@ void Kernel::Forward(const KernelCtx& ctx,
     ForwardDim0ValidNum(ctx, BnInOp2Blob);
   }
   if (NeedForwardLossInstanceNum(ctx, BnInOp2Blob)) { ForwardLossInstanceNum(ctx, BnInOp2Blob); }
-  if (HasEmptyShapeBlob(op_attribute().input_bns(), BnInOp2Blob) && !NeedForwardIfBlobEmpty()) {
-    ClearBlobDim0ValidNumIfNeed(op_attribute().output_bns(), BnInOp2Blob);
-    return;
+  if (HasEmptyShapeBlob(op_attribute().input_bns(), BnInOp2Blob)) {
+    LOG(WARNING) << "Op " << this->op_conf().name() << " have empty blob";
+    if (!NeedForwardIfBlobEmpty()) {
+      LOG(WARNING) << "Skip kernel launch: " << this->op_conf().name();
+      ClearBlobDim0ValidNumIfNeed(op_attribute().output_bns(), BnInOp2Blob);
+      return;
+    }
   }
   if (kernel_conf_.need_do_dim1_valid_num()) {
     CHECK(!kernel_conf_.need_do_opaque_header());
