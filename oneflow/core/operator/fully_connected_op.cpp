@@ -49,13 +49,6 @@ void FullyConnectedOp::InferBlobDescs(
   }
 }
 
-void FullyConnectedOp::GenerateBackwardOpConf(
-    std::vector<OperatorConf>* ops,
-    const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) const {
-  const FullyConnectedOpConf& conf = op_conf().fully_connected_conf();
-  TODO();
-}
-
 REGISTER_OP(OperatorConf::kFullyConnectedConf, FullyConnectedOp);
 
 }  // namespace oneflow

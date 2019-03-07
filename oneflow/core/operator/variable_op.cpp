@@ -120,33 +120,6 @@ void VariableOp::VirtualGenKernelConf(
   conf->mutable_variable_conf()->set_is_bw_inplace(*is_bw_inplace_);
 }
 
-void VariableOp::GenerateBackwardOpConf(
-    std::vector<OperatorConf>* ops,
-    const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) const {
-  // TODO: support optimizers other than SGD
-  const auto& train_conf =
-      Global<JobDesc>::Get()->other_conf().predict_conf().tmp_split_fw_bw_train_conf();
-  const auto& model_update_conf = train_conf.model_update_conf();
-  if (model_update_conf.has_naive_conf()) {
-    // TODO complete regularization
-    OperatorConf axpy_op;
-    axpy_op.set_name(op_name() + "_grad");
-    AxpyOpConf* axpy_op_conf = axpy_op.mutable_axpy_conf();
-    axpy_op_conf->set_x(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
-    axpy_op_conf->set_y(GenLogicalBlobName(BnInOp2Lbi("out")));
-    axpy_op_conf->set_alpha(-train_conf.primary_lr());
-    ops->push_back(axpy_op);
-  } else if (model_update_conf.has_momentum_conf()) {
-    TODO();
-  } else if (model_update_conf.has_rmsprop_conf()) {
-    TODO();
-  } else if (model_update_conf.has_adam_conf()) {
-    TODO();
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
 REGISTER_OP(OperatorConf::kVariableConf, VariableOp);
 
 }  // namespace oneflow

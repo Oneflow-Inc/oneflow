@@ -21,9 +21,6 @@ class FullyConnectedOp final : public Operator {
       const std::string& obn) const override {
     return 1;
   }
-  void GenerateBackwardOpConf(
-      std::vector<OperatorConf>* ops,
-      const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) const override;
 
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }

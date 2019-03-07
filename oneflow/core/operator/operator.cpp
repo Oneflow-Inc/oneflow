@@ -73,12 +73,6 @@ const std::string& Operator::SoleBbbn() const {
   return bw_buf_bns().Get(0);
 }
 
-void Operator::GenerateBackwardOpConfIf(
-    std::vector<OperatorConf>* ops,
-    std::function<LogicalBlobId*(const std::string&)> DiffLbi4BnInOp) const {
-  GenerateBackwardOpConf(ops, DiffLbi4BnInOp);
-}
-
 void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx, int64_t record_piece_size,
                                 std::function<void(OpContext*)> EnrollOpCtx) const {

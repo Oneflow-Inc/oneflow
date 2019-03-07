@@ -118,15 +118,6 @@ class Operator {
 
 #undef DEFINE_BLOB_NAMES_GETTER
 
-  void GenerateBackwardOpConfIf(
-      std::vector<OperatorConf>* ops,
-      std::function<LogicalBlobId*(const std::string&)> DiffLbi4BnInOp) const;
-  virtual void GenerateBackwardOpConf(
-      std::vector<OperatorConf>* ops,
-      const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) const {
-    UNIMPLEMENTED();
-  }
-
   // Read: shape of input_blobs
   // Write: shape of output_blobs, model_blobs, data_tmp_blobs, const_model_blobs, const_buf_blobs
   void InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

@@ -1,4 +1,4 @@
-#include "oneflow/core/job/autograd.h"
+#include "oneflow/core/autograd/autograd.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_conf_builder.h"
 
@@ -56,6 +56,13 @@ std::function<bool(const LogicalBlobId&)> MakePredicatorHasDiff4Lbi(
 
 }  // namespace
 
+void GenerateBackwardOpConfIf(
+    const Operator& op, std::vector<OperatorConf>* op_confs,
+    const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) {
+  auto* obj = NewObj<GenerateBackwardOpConfWrapperStruct>(op.op_conf().op_type_case());
+  obj->func(op, op_confs, DiffLbi4BnInOp);
+}
+
 JobConf1 AutoGrad(const JobDesc& job_desc) {
   JobConf1 job_conf(job_desc.job_conf());
   OpGraph op_graph(&job_desc);
@@ -100,9 +107,8 @@ JobConf1 AutoGrad(const JobDesc& job_desc) {
       }
     };
     std::vector<OperatorConf> ops;
-    op_node->op().GenerateBackwardOpConfIf(&ops, DiffLbi4BnInOp);
+    GenerateBackwardOpConfIf(op_node->op(), &ops, DiffLbi4BnInOp);
     job_conf_builder.AddOps(op_node->parallel_desc().parallel_conf(), ops);
-    LOG(INFO) << op_node->op().op_name();
   });
   return job_conf;
 }

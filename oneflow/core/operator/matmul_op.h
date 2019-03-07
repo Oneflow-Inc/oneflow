@@ -21,10 +21,6 @@ class MatmulOp final : public Operator {
       const std::string& obn) const override;
 
  private:
-  void GenerateBackwardOpConf(
-      std::vector<OperatorConf>* ops,
-      const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) const override;
-
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override;
   void GetOpParallelSignatures(
       std::vector<std::unique_ptr<const OpParallelSignature>>*) const override;
