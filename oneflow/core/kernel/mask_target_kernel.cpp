@@ -65,6 +65,7 @@ void MaskTargetKernel<T>::ForwardDataContent(
       const int64_t record_id = rois_blob->record_id_in_device_piece(roi_idx);
       masks_blob->set_record_id_in_device_piece(mask_idx, record_id);
       mask_rois_blob->set_record_id_in_device_piece(mask_idx, record_id);
+      mask_labels_blob->set_record_id_in_device_piece(mask_idx, record_id);
     }
   };
   FOR_RANGE(int64_t, roi_idx, 0, num_rois) {
