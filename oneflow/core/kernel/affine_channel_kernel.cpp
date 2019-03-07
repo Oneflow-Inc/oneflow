@@ -17,6 +17,7 @@ void AffineChannelKernel<device_type, T>::ForwardDataContent(
   Blob* out_blob = BnInOp2Blob("out");
   const int32_t axis = conf.axis() >= 0 ? conf.axis() : conf.axis() + in_blob->shape().NumAxes();
   const int32_t channel_dim = in_blob->shape().At(axis);
+  CHECK_EQ(channel_dim, in_blob->static_shape().At(axis));
   const int32_t channel_stride = in_blob->shape().Count(axis + 1);
   const T* bias_ptr = conf.use_bias() ? bias_blob->dptr<T>() : nullptr;
   AffineChannelKernelUtil<device_type, T>::Forward(
@@ -37,9 +38,11 @@ void AffineChannelKernel<device_type, T>::BackwardDataContent(
   const int32_t axis = conf.axis() >= 0 ? conf.axis() : conf.axis() + in_blob->shape().NumAxes();
   const int32_t channel_dim = out_diff_blob->shape().At(axis);
   const int32_t channel_stride = out_diff_blob->shape().Count(axis + 1);
-  AffineChannelKernelUtil<device_type, T>::BackwardInDiff(
+  if (in_diff_blob != nullptr) {
+    AffineChannelKernelUtil<device_type, T>::BackwardInDiff(
       ctx.device_ctx, out_diff_blob->shape().elem_cnt(), channel_dim, channel_stride,
       out_diff_blob->dptr<T>(), scale_blob->dptr<T>(), in_diff_blob->mut_dptr<T>());
+  }
   if (this->op_conf().trainable()) {
     if (conf.use_bias()) {
       AffineChannelKernelUtil<device_type, T>::BackwardScaleBiasDiff(
