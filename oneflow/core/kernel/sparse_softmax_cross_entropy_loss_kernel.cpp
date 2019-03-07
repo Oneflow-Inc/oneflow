@@ -63,8 +63,9 @@ Kernel* CreateSparseSoftmaxCrossEntropyLossKernel(const KernelConf& kernel_conf)
      return new SparseSoftmaxCrossEntropyLossKernel<device_type, OF_PP_PAIR_FIRST(pred_type_pair), \
                                                     OF_PP_PAIR_FIRST(label_type_pair)>();          \
    }},
-      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(SPARSE_SOFTMAX_CROSS_ENTROPY_LOSS_KERNEL_ENTRY,
-                                       DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)};
+      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+          SPARSE_SOFTMAX_CROSS_ENTROPY_LOSS_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
+          FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)};
   return creators.at(
       GetHashKey(kernel_conf.op_attribute().op_conf().device_type(),
                  kernel_conf.sparse_softmax_cross_entropy_loss_conf().loss_conf().prediction_type(),

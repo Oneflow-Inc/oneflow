@@ -150,8 +150,12 @@ struct NewKernelUtilIf {
   static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, T* y,
                    const int incy);
   static void Scal(DeviceCtx* ctx, const int n, const T alpha, T* x, const int incx);
+  static void Scal(DeviceCtx* ctx, const int n, const T* alpha, T* x, const int incx);
   static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
   static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
+  static void Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr);
+  static void Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr, T* temp_storage,
+                  size_t temp_storage_bytes);
   static void RowMax(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x, T* y,
                      void* temp_storage, const size_t temp_storage_bytes);
   static void RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x, T* y,

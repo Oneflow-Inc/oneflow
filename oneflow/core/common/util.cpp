@@ -47,26 +47,28 @@ double oneflow_cast(const std::string& s) {
   return ret;
 }
 
-#define DEFINE_ONEFLOW_ARITHMETIC_CAST(in_type, out_type) \
-  template<>                                             \
-  out_type oneflow_cast(const in_type& s) {          \
-    return static_cast<out_type>(s);                                          \
+#define DEFINE_ONEFLOW_ARITHMETIC_CAST(in_type_pair, out_type_pair) \
+  template<>                                                        \
+  OF_PP_PAIR_FIRST(out_type_pair)                                   \
+  oneflow_cast(const OF_PP_PAIR_FIRST(in_type_pair) & s) {          \
+    return static_cast<OF_PP_PAIR_FIRST(out_type_pair)>(s);         \
   }
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(DEFINE_ONEFLOW_ARITHMETIC_CAST, ARITHMETIC_DATA_TYPE_SEQ, ARITHMETIC_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(DEFINE_ONEFLOW_ARITHMETIC_CAST, ARITHMETIC_DATA_TYPE_SEQ,
+                                 ARITHMETIC_DATA_TYPE_SEQ)
 
-#define DEFINE_ONEFLOW_HALF2ARITHMETIC_CAST(out_type) \
-  template<>                                             \
-  out_type oneflow_cast(const float16& s) {          \
-    return half_float::half_cast<out_type>(s);                                          \
+#define DEFINE_ONEFLOW_HALF2ARITHMETIC_CAST(out_type, out_type_enum) \
+  template<>                                                         \
+  out_type oneflow_cast(const float16& s) {                          \
+    return half_float::half_cast<out_type>(s);                       \
   }
 
 OF_PP_FOR_EACH_TUPLE(DEFINE_ONEFLOW_HALF2ARITHMETIC_CAST, ARITHMETIC_DATA_TYPE_SEQ)
 
-#define DEFINE_ONEFLOW_ARITHMETIC2HALF_CAST(in_type) \
-  template<>                                             \
-  float16 oneflow_cast(const in_type& s) {          \
-    return half_float::half_cast<float16>(s);                                          \
+#define DEFINE_ONEFLOW_ARITHMETIC2HALF_CAST(in_type, in_type_enum) \
+  template<>                                                       \
+  float16 oneflow_cast(const in_type& s) {                         \
+    return half_float::half_cast<float16>(s);                      \
   }
 
 OF_PP_FOR_EACH_TUPLE(DEFINE_ONEFLOW_ARITHMETIC2HALF_CAST, ARITHMETIC_DATA_TYPE_SEQ)

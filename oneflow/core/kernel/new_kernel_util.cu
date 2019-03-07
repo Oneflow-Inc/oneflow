@@ -2,6 +2,7 @@
 #include <math.h>
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/kernel/kernel_util.cuh"
 
 namespace oneflow {
 
@@ -66,6 +67,12 @@ __global__ void MulGpu(const int64_t n, const T* x, const T* y, T* z) {
 template<typename T>
 __global__ void ExpGpu(const int64_t n, const T* x, T* y) {
   CUDA_1D_KERNEL_LOOP(i, n) { y[i] = std::exp(x[i]); }
+}
+
+template<typename T>
+__global__ void SumGpu(const int64_t n, const T* x, T* sum_ptr) {
+  *sum_ptr = 0;
+  for (int64_t i = 0; i < n; ++i) { *sum_ptr += x[i]; }
 }
 
 __global__ void SigmoidForwardGpu(const int n, const half* x, half* y) {
@@ -150,6 +157,14 @@ __global__ void ScalHalfGpu(const int n, const half alpha, half* x, const int in
 #endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
 }
 
+__global__ void ScalHalfGpu(const int n, const half* alpha, half* x, const int incx) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+  CUDA_1D_KERNEL_LOOP(i, n) { x[i * incx] = __hmul(*alpha, x[i * incx]); }
+#else
+  HALF_CHECK_FAILED;
+#endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+}
+
 __global__ void MulHalfGpu(const int64_t n, const half* x, const half* y, half* z) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   CUDA_1D_KERNEL_LOOP(i, n) { z[i] = __hmul(x[i], y[i]); }
@@ -164,6 +179,11 @@ __global__ void ExpHalfGpu(const int64_t n, const half* x, half* y) {
 #else
   HALF_CHECK_FAILED;
 #endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+}
+
+__global__ void SumHalfGpu(const int64_t n, const half* x, half* sum_ptr) {
+  *sum_ptr = hzero();
+  for (int64_t i = 0; i < n; ++i) { *sum_ptr = __hadd(*sum_ptr, x[i]); }
 }
 
 template<typename T>
@@ -293,6 +313,28 @@ void InitializeWithDirGpu(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
 
 }  // namespace
 
+inline __device__ half MaxWithLogThresholdHalf(const half x) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+  half threshold = hexp2(__float2half(-14.0));
+  if (__hgt(x, threshold)) { return x; }
+  return threshold;
+#else
+  HALF_CHECK_FAILED;
+  half ret;
+  return ret;
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) */
+}
+
+inline __device__ half SafeLogHalf(const half x) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+  return hlog(MaxWithLogThresholdHalf(x));
+#else
+  HALF_CHECK_FAILED;
+  half ret;
+  return ret;
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) */
+}
+
 // GPU && Floating
 template<typename T>
 struct NewKernelUtilIf<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T>::value>::type> {
@@ -354,6 +396,9 @@ struct NewKernelUtilIf<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T
   static void Scal(DeviceCtx* ctx, const int n, const T alpha, T* x, const int incx) {
     cublas_scal<T>(ctx->cublas_pmh_handle(), n, &alpha, x, incx);
   }
+  static void Scal(DeviceCtx* ctx, const int n, const T* alpha, T* x, const int incx) {
+    cublas_scal<T>(ctx->cublas_pmh_handle(), n, alpha, x, incx);
+  }
   static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
     MulGpu<T>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y, z);
@@ -361,17 +406,68 @@ struct NewKernelUtilIf<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T
   static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
     ExpGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
   }
+  static void Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr) {
+    SumGpu<T><<<1, 1, 0, ctx->cuda_stream()>>>(n, x, sum_ptr);
+  }
+  static void Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr, T* temp_storage,
+                  size_t temp_storage_bytes) {
+    if (temp_storage == nullptr || temp_storage_bytes == 0) {
+      Sum(ctx, n, x, sum_ptr);
+    } else {
+      CudaCheck(cub::DeviceReduce::Sum(temp_storage, temp_storage_bytes, x, sum_ptr, n,
+                                       ctx->cuda_stream()));
+    }
+  }
   static void RowMax(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x, T* y,
                      void* temp_storage, const size_t temp_storage_bytes) {
-    MatrixRowReduce<T, NewReduceCoreMax>(ctx, row_num, col_num, x, y, temp_storage,
-                                         temp_storage_bytes);
+    FOR_RANGE(int64_t, i, 0, row_num) {
+      y[i] = x[i * col_num];
+      FOR_RANGE(int64_t, j, 1, col_num) {
+        if (y[i] < x[i * col_num + j]) { y[i] = x[i * col_num + j]; }
+      }
+    }
   }
   static void RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x, T* y,
                      void* temp_storage, const size_t temp_storage_bytes) {
-    MatrixRowReduce<T, NewReduceCoreAdd>(ctx, row_num, col_num, x, y, temp_storage,
-                                         temp_storage_bytes);
+    FOR_RANGE(int64_t, i, 0, row_num) {
+      y[i] = x[i * col_num];
+      FOR_RANGE(int64_t, j, 1, col_num) { y[i] += x[i * col_num + j]; }
+    }
   }
 };
+
+template<typename T>
+struct FloatingNewKernelUtilIf<DeviceType::kCPU, T> {
+  static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE trans_a,
+                   const enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
+                   const T alpha, const T* a, const int lda, const T* b, const int ldb,
+                   const T beta, T* c, const int ldc) {
+    cblas_gemm<T>(order, trans_a, trans_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
+  }
+};
+
+template<typename T>
+struct Float16NewKernelUtilIf<DeviceType::kCPU, T> {
+  static void HGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
+                    const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
+                    const int m, const int n, const int k, const T alpha, const T* a, const int lda,
+                    const T* b, const int ldb, const T beta, T* c, const int ldc) {
+    UNIMPLEMENTED();
+  }
+  static void Half2Float(DeviceCtx* ctx, const int n, const T* src, float* dst) {
+    for (size_t i = 0; i < n; ++i) { dst[i] = static_cast<float>(src[i]); }
+  }
+  static void Float2Half(DeviceCtx* ctx, const int n, const float* src, T* dst) {
+    for (size_t i = 0; i < n; ++i) { dst[i] = static_cast<float16>(src[i]); }
+  }
+};
+
+#define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto) \
+  template struct NewKernelUtilIf<DeviceType::kCPU, type_cpp>;
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
+
+#define INSTANTIATE_FLOATING_KERNEL_UTIL(type_cpp, type_proto) \
+  template struct FloatingNewKernelUtilIf<DeviceType::kCPU, type_cpp>;
 
 // GPU && Integral
 template<typename T>
@@ -460,6 +556,10 @@ struct NewKernelUtilIf<DeviceType::kGPU, T, typename std::enable_if<IsFloat16<T>
     ScalHalfGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
         n, float16_2half(alpha), reinterpret_cast<half*>(x), incx);
   }
+  static void Scal(DeviceCtx* ctx, const int n, const T* alpha, T* x, const int incx) {
+    ScalHalfGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        n, reinterpret_cast<const half*>(alpha), reinterpret_cast<half*>(x), incx);
+  }
   static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
     MulHalfGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
         n, reinterpret_cast<const half*>(x), reinterpret_cast<const half*>(y),
@@ -468,6 +568,23 @@ struct NewKernelUtilIf<DeviceType::kGPU, T, typename std::enable_if<IsFloat16<T>
   static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
     ExpHalfGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
         n, reinterpret_cast<const half*>(x), reinterpret_cast<half*>(y));
+  }
+  static void Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr) {
+    SumHalfGpu<<<1, 1, 0, ctx->cuda_stream()>>>(n, reinterpret_cast<const half*>(x),
+                                                reinterpret_cast<half*>(sum_ptr));
+  }
+  static void Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr, T* temp_storage,
+                  size_t temp_storage_bytes) {
+    if (temp_storage == nullptr || temp_storage_bytes == 0) {
+      Sum(ctx, n, x, sum_ptr);
+    } else {
+      /*
+      CudaCheck(cub::DeviceReduce::Sum(reinterpret_cast<half*>(temp_storage), temp_storage_bytes,
+                                       reinterpret_cast<const half*>(x),
+                                       reinterpret_cast<half*>(sum_ptr), n, ctx->cuda_stream()));
+      */
+      Sum(ctx, n, x, sum_ptr);
+    }
   }
   static void RowMax(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x, T* y,
                      void* temp_storage, const size_t temp_storage_bytes) {

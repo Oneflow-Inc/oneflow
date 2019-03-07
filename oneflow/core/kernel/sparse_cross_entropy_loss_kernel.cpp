@@ -55,6 +55,20 @@ struct SparseCrossEntropyLossKernelUtil<DeviceType::kCPU, PredType, LabelType> {
   }
 };
 
+template<typename LabelType>
+struct SparseCrossEntropyLossKernelUtil<DeviceType::kCPU, float16, LabelType> {
+  static void Forward(DeviceCtx* ctx, const int64_t instance_num, const int64_t num_of_classes,
+                      const float16* prediction, const LabelType* labels, float16* loss) {
+    UNIMPLEMENTED();
+  }
+
+  static void Backward(DeviceCtx* ctx, const int64_t instance_num, const int64_t num_of_classes,
+                       const float16* prediction, const LabelType* labels,
+                       float16* prediction_diff) {
+    UNIMPLEMENTED();
+  }
+};
+
 namespace {
 
 Kernel* CreateSparseCrossEntropyLossKernel(const KernelConf& kernel_conf) {
@@ -81,6 +95,7 @@ REGISTER_KERNEL_CREATOR(OperatorConf::kSparseCrossEntropyLossConf,
 #define MAKE_ENTRY(data_type_pair, label_type_pair) \
   template struct SparseCrossEntropyLossKernelUtil< \
       DeviceType::kCPU, OF_PP_PAIR_FIRST(data_type_pair), OF_PP_PAIR_FIRST(label_type_pair)>;
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ,
+                                 INT_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

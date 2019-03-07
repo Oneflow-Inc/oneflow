@@ -7,8 +7,9 @@ template<DeviceType device_type, typename PredType>
 void LossKernel<device_type, PredType>::SetLossInstanceNum(
     const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const int64_t loss_instance_num = CalcLossInstanceNum(ctx, BnInOp2Blob);
-  NewKernelUtil<device_type, PredType>::Set(ctx.device_ctx, static_cast<PredType>(loss_instance_num),
-                                         BnInOp2Blob("loss_instance_num")->mut_dptr<PredType>());
+  NewKernelUtil<device_type, PredType>::Set(ctx.device_ctx,
+                                            oneflow_cast<PredType>(loss_instance_num),
+                                            BnInOp2Blob("loss_instance_num")->mut_dptr<PredType>());
   CHECK(BnInOp2Blob(GenDiffBn("prediction"))->has_loss_instance_num_field());
   BnInOp2Blob(GenDiffBn("prediction"))
       ->set_loss_instance_num(static_cast<float>(loss_instance_num));
@@ -31,11 +32,15 @@ void LossKernel<device_type, PredType>::ForwardDataContent(
     if (weight_blob != nullptr) {
       PredType* weight = weight_blob->mut_dptr<PredType>();
       if (weight_blob->shape().elem_cnt() == n) {
+        NewKernelUtil<device_type, PredType>::Mul(ctx.device_ctx, n, weight, prediction_diff,
+                                                  prediction_diff);
+        /*
         const int64_t m = prediction_diff_blob->shape().Count(1);
         NdarrayUtil<device_type, PredType>::template BroadcastApply<BinaryFuncMul>(
             ctx.device_ctx, XpuVarNdarray<PredType>({n, m}, prediction_diff),
             XpuVarNdarray<const PredType>({n, 1}, weight),
             XpuVarNdarray<const PredType>({n, m}, prediction_diff));
+        */
       } else if (weight_blob->shape().elem_cnt() == 1) {
         NewKernelUtil<device_type, PredType>::Scal(ctx.device_ctx, n, weight, prediction_diff, 1);
       } else {
@@ -43,12 +48,12 @@ void LossKernel<device_type, PredType>::ForwardDataContent(
       }
     } else if (conf.weight_scalar() > 1.0 || conf.weight_scalar() < 1.0) {
       NewKernelUtil<device_type, PredType>::Scal(
-          ctx.device_ctx, n, static_cast<PredType>(conf.weight_scalar()), prediction_diff, 1);
+          ctx.device_ctx, n, oneflow_cast<PredType>(conf.weight_scalar()), prediction_diff, 1);
     }
     float loss_scale = Global<JobDesc>::Get()->loss_scale();
     if (loss_scale > 1.0 || loss_scale < 1.0) {
-      NewKernelUtil<device_type, PredType>::Scal(ctx.device_ctx, n, static_cast<PredType>(loss_scale),
-                                              prediction_diff, 1);
+      NewKernelUtil<device_type, PredType>::Scal(
+          ctx.device_ctx, n, oneflow_cast<PredType>(loss_scale), prediction_diff, 1);
     }
   }
 
@@ -138,6 +143,7 @@ OF_PP_FOR_EACH_TUPLE(MAKE_LOSS_KERNEL_UTIL_ENTRY, FLOATING_DATA_TYPE_SEQ FLOAT16
 #define MAKE_LOSS_ENTRY(device_type, data_type_pair) \
   template class LossKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>;
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_LOSS_ENTRY, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_LOSS_ENTRY, DEVICE_TYPE_SEQ,
+                                 FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
