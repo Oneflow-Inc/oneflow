@@ -19,7 +19,7 @@ void GetOutAndPad(const Shape& in_blob_shape, const PbMessage& deconv_conf,
   const auto& strides = GetPbRfFromPbMessage<int32_t>(deconv_conf, "strides");
   const PbRf<int32_t>& kernel_size = GetPbRfFromPbMessage<int32_t>(deconv_conf, "kernel_size");
   FOR_RANGE(int32_t, i, 0, opkernel_dim) {
-    GetDewindowedOutputSize(in_blob_shape.At(DhwOffset(data_format) + 1), kernel_size.Get(i),
+    GetDewindowedOutputSize(in_blob_shape.At(DhwOffset(data_format) + i), kernel_size.Get(i),
                             strides.Get(i), padding, out ? &(out->at(i)) : nullptr,
                             pad_small_side ? &(pad_small_side->at(i)) : nullptr,
                             pad_large_side ? &(pad_large_side->at(i)) : nullptr);

@@ -20,6 +20,8 @@ class DeconvKernelIf : public KernelIfWithActivation<device_type, T>,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void BackwardDataContent(const KernelCtx&,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardInstanceShape(const KernelCtx& ctx,
+                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void InitConstBufBlobs(DeviceCtx*,
                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void InitModelBlobsWithRandomSeed(
@@ -36,6 +38,9 @@ class DeconvKernelIf : public KernelIfWithActivation<device_type, T>,
                               std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
   virtual void BiasBackward(DeviceCtx*, const Blob* out_diff_blob, Blob* bias_diff_blob,
                             std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
+  virtual void UpdateCudnnDescIfNeed(std::function<Blob*(const std::string&)> BnInOp2Blob);
+  void UpdtStatusBeforeFwBw(const KernelCtx& ctx,
+                            std::function<Blob*(const std::string&)> BnInOp2Blob) override;
 
   const PbMessage& GetCustomizedOpConf() const override;
   const DeconvKernelConf& GetDeconvKernelConf() const;
@@ -81,6 +86,7 @@ class DeconvKernel<DeviceType::kGPU, T> final : public DeconvKernelIf<DeviceType
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void BiasBackward(DeviceCtx*, const Blob* out_diff_blob, Blob* bias_diff_blob,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void UpdateCudnnDescIfNeed(std::function<Blob*(const std::string&)> BnInOp2Blob) override;
 
   std::unique_ptr<CudnnTensorDesc> in_desc_;
   std::unique_ptr<CudnnTensorDesc> out_desc_;
