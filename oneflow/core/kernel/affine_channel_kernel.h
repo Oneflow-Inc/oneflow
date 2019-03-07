@@ -15,7 +15,6 @@ class AffineChannelKernel final : public KernelIfWithModel<device_type, T>,
 
  private:
   const PbMessage& GetCustomizedOpConf() const override;
-  bool HasSameShapeBetweenInOut() const override { return true; }
   void InitModelBlobsWithRandomSeed(
       DeviceCtx* ctx, std::mt19937* random_seed_gen,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
@@ -31,10 +30,18 @@ class AffineChannelKernel final : public KernelIfWithModel<device_type, T>,
 template<DeviceType device_type, typename T>
 class AffineChannelKernelUtil final {
  public:
-  static void Forward(DeviceCtx* ctx, int64_t n, int64_t channel_dim, int64_t per_channel_dim,
-                      const T* in, const T* scale, const T* bias, T* out);
-  static void Backward(DeviceCtx* ctx, int64_t n, int64_t channel_dim, int64_t per_channel_dim,
-                       const T* out_diff, const T* scale, T* in_diff);
+  static void Forward(DeviceCtx* ctx, const int32_t elem_cnt, const int32_t channel_dim,
+                      const int32_t channel_stride, const T* in, const T* scale, const T* bias,
+                      T* out);
+  static void BackwardInDiff(DeviceCtx* ctx, const int32_t elem_cnt, const int32_t channel_dim,
+                             const int32_t channel_stride, const T* out_diff, const T* scale,
+                             T* in_diff);
+  static void BackwardScaleBiasDiff(DeviceCtx* ctx, const int32_t elem_cnt,
+                                    const int32_t channel_dim, const int32_t channel_stride,
+                                    const T* in, const T* out_diff, T* scale_diff, T* bias_diff);
+  static void BackwardScaleDiff(DeviceCtx* ctx, const int32_t elem_cnt, const int32_t channel_dim,
+                                const int32_t channel_stride, const T* in, const T* out_diff,
+                                T* scale_diff);
 };
 
 }  // namespace oneflow
