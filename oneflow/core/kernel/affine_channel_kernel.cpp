@@ -40,8 +40,8 @@ void AffineChannelKernel<device_type, T>::BackwardDataContent(
   const int32_t channel_stride = out_diff_blob->shape().Count(axis + 1);
   if (in_diff_blob != nullptr) {
     AffineChannelKernelUtil<device_type, T>::BackwardInDiff(
-      ctx.device_ctx, out_diff_blob->shape().elem_cnt(), channel_dim, channel_stride,
-      out_diff_blob->dptr<T>(), scale_blob->dptr<T>(), in_diff_blob->mut_dptr<T>());
+        ctx.device_ctx, out_diff_blob->shape().elem_cnt(), channel_dim, channel_stride,
+        out_diff_blob->dptr<T>(), scale_blob->dptr<T>(), in_diff_blob->mut_dptr<T>());
   }
   if (this->op_conf().trainable()) {
     if (conf.use_bias()) {
