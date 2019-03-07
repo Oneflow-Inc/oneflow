@@ -33,6 +33,15 @@ const OpParallelMatchResult MakeOpParallelMatchParallelNumError(int64_t configur
   return parallel_num_error;
 }
 
+const OpParallelMatchResult MakeOpParallelMatchDeviceSetError(const std::string& configured,
+                                                              const std::string& expected) {
+  OpParallelMatchResult parallel_num_error;
+  auto* err = parallel_num_error.mutable_fail()->mutable_conf_error()->mutable_device_set_error();
+  err->set_configured(configured);
+  err->set_expected(expected);
+  return parallel_num_error;
+}
+
 namespace {
 
 class DataSplitOpParallelSignature final : public OpParallelSignature {

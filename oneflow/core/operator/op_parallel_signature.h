@@ -36,6 +36,8 @@ const OpParallelMatchResult MakeOpParallelMatchParallelPolicyError(ParallelPolic
                                                                    ParallelPolicy expected);
 const OpParallelMatchResult MakeOpParallelMatchParallelNumError(int64_t configured,
                                                                 int64_t expected);
+const OpParallelMatchResult MakeOpParallelMatchDeviceSetError(const std::string& configured,
+                                                              const std::string& expected);
 
 class Operator;
 
