@@ -15,7 +15,7 @@ class AffineChannelKernel final : public KernelIfWithModel<device_type, T>,
 
  private:
   const PbMessage& GetCustomizedOpConf() const override;
-  bool HasSameShapeBetweenInOut() const { return false; }
+  bool HasSameShapeBetweenInOut() const { return true; }
   void InitModelBlobsWithRandomSeed(
       DeviceCtx* ctx, std::mt19937* random_seed_gen,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
