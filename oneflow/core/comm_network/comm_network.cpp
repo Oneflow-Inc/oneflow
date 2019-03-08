@@ -24,8 +24,8 @@ void CommNet::AddReadCallBack(int64_t stream_id, std::function<void()> callback)
 
 void CommNet::ReadDone(void* read_id) {
   ReadContext* read_ctx = static_cast<ReadContext*>(read_id);
+  auto& local_stream = stream_id2stream_.at(read_ctx->stream_id);
   {
-    auto& local_stream = stream_id2stream_.at(read_ctx->stream_id);
     std::unique_lock<std::mutex> lck(stream_id2stream_mtx_.at(read_ctx->stream_id));
     CHECK(!local_stream.empty() && local_stream.front().is_read);
     local_stream.pop();
@@ -65,7 +65,13 @@ CommNet::CommNet(const Plan& plan) {
   CHECK(machine_ids_it != net_topo.end());
   std::vector<int64_t> peer_machine_ids = PbRf2StdVec(machine_ids_it->second.machine_id());
   peer_machine_id_.insert(peer_machine_ids.begin(), peer_machine_ids.end());
-  for (int64_t stream_id = 0; stream_id < peer_machine_id_.size(); ++stream_id) {
+  HashSet<int64_t> stream_ids;
+  for (const auto& task : plan.task()) {
+    if (task.machine_id() != this_machine_id) { continue; }
+    if (task.task_type() != TaskType::kCopyCommNet) { continue; }
+    stream_ids.emplace(Global<IDMgr>::Get()->LocalWorkStreamId4TaskId(task.task_id()));
+  }
+  for (int64_t stream_id : stream_ids) {
     stream_id2stream_mtx_[stream_id];
     CHECK(stream_id2stream_[stream_id].empty());
   }
