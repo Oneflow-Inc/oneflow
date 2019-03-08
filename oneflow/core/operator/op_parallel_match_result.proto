@@ -19,9 +19,15 @@ message ParallelNumError {
   required int64 expected = 2;
 }
 
+message DeviceSetError {
+  required string configured = 1;
+  required string expected = 2;
+}
+
 message OpParallelConfError {
   optional ParallelPolicyError parallel_policy_error = 1;
   optional ParallelNumError parallel_num_error = 2;
+  optional DeviceSetError device_set_error = 3;
 }
 
 message OpParallelMatchFail {

@@ -369,6 +369,9 @@ void OpGraph::InferSbpParallel() const {
     };
     op_node->op().InferInputOutputSbpParallelIf(SbpParallel4BnInOp, SbpInferHint4Ibn,
                                                 op_node->parallel_desc());
+    for (const std::string& ibn : op_node->op().input_bns()) {
+      CHECK(!SbpParallel4BnInOp(ibn)->has_partial_sum_parallel());
+    }
   });
 }
 

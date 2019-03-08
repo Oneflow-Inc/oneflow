@@ -15,7 +15,7 @@ class KeepHeaderOnlyKernel final : public KernelIf<device_type> {
 
  private:
   void ForwardDataContent(const KernelCtx&,
-			  std::function<Blob*(const std::string&)>) const override {}
+                          std::function<Blob*(const std::string&)>) const override {}
 };
 
 }  // namespace oneflow

@@ -1000,6 +1000,12 @@ message KeepHeaderOnlyOpConf {
   required string out = 2;
 }
 
+message AxpyOpConf {
+  required string x = 1;
+  required string y = 2;
+  required double alpha = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1106,6 +1112,9 @@ message OperatorConf {
     RsqrtOpConf rsqrt_conf = 506;
     ScalarAddOpConf scalar_add_conf = 507;
     ScalarMulOpConf scalar_mul_conf = 508;
+
+    // mutable input op
+    AxpyOpConf axpy_conf = 752;
   }
 }
 
