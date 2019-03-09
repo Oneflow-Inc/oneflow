@@ -52,33 +52,35 @@ void ProposalTargetKernel<T>::ResizeAndFilterGtBoxes(
   const Blob* gt_labels_blob = BnInOp2Blob("gt_labels");
   const Blob* im_scale_blob = BnInOp2Blob("im_scale");
   Blob* actual_gt_boxes_blob = BnInOp2Blob("actual_gt_boxes");
+  Blob* gt_box_inds_blob = BnInOp2Blob("gt_box_inds");
   const int32_t* gt_labels_ptr = gt_labels_blob->dptr<int32_t>();
   const T* im_scale_ptr = im_scale_blob->dptr<T>();
+  int32_t* gt_box_inds_ptr = gt_box_inds_blob->mut_dptr<int32_t>();
   T* actual_gt_boxes_ptr = actual_gt_boxes_blob->mut_dptr<T>();
   std::memset(actual_gt_boxes_ptr, 0, actual_gt_boxes_blob->static_shape().elem_cnt() * sizeof(T));
 
   auto* gt_bbox_ptr = GtBBox::Cast(gt_boxes_blob->dptr<T>());
   auto* actual_gt_bbox_ptr = MutGtBBox::Cast(actual_gt_boxes_ptr);
 
+  size_t num_actual_gt_boxes = 0;
   FOR_RANGE(int32_t, im_index, 0, gt_boxes_blob->shape().At(0)) {
     int32_t max_num_gt_boxes_per_im = gt_boxes_blob->shape().At(1);
     int32_t num_gt_boxes_cur_im = gt_boxes_blob->dim1_valid_num(im_index);
     CHECK_EQ(num_gt_boxes_cur_im, gt_labels_blob->dim1_valid_num(im_index));
     const T scale = im_scale_ptr[im_index];
-    size_t num_actual_gt_boxes_cur_im = 0;
     FOR_RANGE(int32_t, i, 0, num_gt_boxes_cur_im) {
       int32_t gt_index = im_index * max_num_gt_boxes_per_im + i;
       auto* gt_bbox = gt_bbox_ptr + gt_index;
       if (gt_bbox->Area() > 0 && gt_labels_ptr[gt_index] <= conf.num_classes()) {
-        int32_t actual_gt_index = im_index * max_num_gt_boxes_per_im + num_actual_gt_boxes_cur_im;
-        actual_gt_bbox_ptr[actual_gt_index].set_ltrb(
-            gt_bbox->left() * scale, gt_bbox->top() * scale, gt_bbox->right() * scale,
-            gt_bbox->bottom() * scale);
-        num_actual_gt_boxes_cur_im += 1;
+        actual_gt_bbox_ptr[gt_index].set_ltrb(gt_bbox->left() * scale, gt_bbox->top() * scale,
+                                              gt_bbox->right() * scale, gt_bbox->bottom() * scale);
+        gt_box_inds_ptr[num_actual_gt_boxes] = gt_index;
+        num_actual_gt_boxes += 1;
       }
     }
-    actual_gt_boxes_blob->set_dim1_valid_num(im_index, num_actual_gt_boxes_cur_im);
+    actual_gt_boxes_blob->set_dim1_valid_num(im_index, num_gt_boxes_cur_im);
   }
+  gt_box_inds_blob->set_dim0_valid_num(0, num_actual_gt_boxes);
 }
 
 template<typename T>
@@ -86,23 +88,29 @@ void ProposalTargetKernel<T>::GenMatchMatrixBetweenRoiAndGtBoxes(
     DeviceCtx* ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const Blob* rois_blob = BnInOp2Blob("rois");
   const Blob* gt_boxes_blob = BnInOp2Blob("actual_gt_boxes");
+  const Blob* gt_box_inds_blob = BnInOp2Blob("gt_box_inds");
   Blob* max_overlaps_blob = BnInOp2Blob("max_overlaps");
   Blob* best_match_gt_indices_blob = BnInOp2Blob("max_overlaps_with_gt_index");
+
   const T* rois_ptr = rois_blob->dptr<T>();
+  const T* gt_boxes_ptr = gt_boxes_blob->dptr<T>();
+  const int32_t* gt_box_inds_ptr = gt_box_inds_blob->dptr<int32_t>();
   float* max_overlaps_ptr = max_overlaps_blob->mut_dptr<float>();
   int32_t* best_match_gt_indices_ptr = best_match_gt_indices_blob->mut_dptr<int32_t>();
-  const T* gt_boxes_ptr = gt_boxes_blob->dptr<T>();
-  const size_t max_num_gt_boxes_per_im = gt_boxes_blob->static_shape().At(1);
   Memset<DeviceType::kCPU>(ctx, max_overlaps_ptr, 0,
                            max_overlaps_blob->ByteSizeOfDataContentField());
   std::fill(best_match_gt_indices_ptr,
             best_match_gt_indices_ptr + best_match_gt_indices_blob->static_shape().elem_cnt(), -1);
 
-  MultiThreadLoop(rois_blob->shape().At(0), [&](int32_t roi_index) {
+  const size_t num_rois = rois_blob->shape().At(0);
+  const size_t max_num_gt_boxes_per_im = gt_boxes_blob->static_shape().At(1);
+  const size_t num_gt_boxes = gt_box_inds_blob->shape().elem_cnt();
+  MultiThreadLoop(num_rois, [&](int32_t roi_index) {
     auto* roi_bbox = BBox::Cast(rois_ptr) + roi_index;
     const int32_t im_index = roi_bbox->index();
-    FOR_RANGE(int32_t, i, 0, gt_boxes_blob->dim1_valid_num(im_index)) {
-      int32_t gt_index = im_index * max_num_gt_boxes_per_im + i;
+    FOR_RANGE(int32_t, i, 0, num_gt_boxes) {
+      int32_t gt_index = gt_box_inds_ptr[i];
+      if (im_index != gt_index / max_num_gt_boxes_per_im) { continue; }
       auto* gt_bbox = GtBBox::Cast(gt_boxes_ptr) + gt_index;
       float overlap = roi_bbox->InterOverUnion(gt_bbox);
       if (overlap > max_overlaps_ptr[roi_index]) {

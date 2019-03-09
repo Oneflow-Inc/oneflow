@@ -18,6 +18,7 @@ void ProposalTargetOp::InitFromOpConf() {
   EnrollOutputBn("regression_weights", false);
   // Enroll data tmp
   EnrollDataTmpBn("actual_gt_boxes");
+  EnrollDataTmpBn("gt_box_inds");
   EnrollDataTmpBn("max_overlaps");
   EnrollDataTmpBn("max_overlaps_with_gt_index");
 }
@@ -45,6 +46,7 @@ void ProposalTargetOp::InferBlobDescs(
   CHECK(gt_boxes_blob_desc->has_dim1_valid_num_field());
   CHECK(gt_labels_blob_desc->has_dim1_valid_num_field());
   const int64_t num_images = gt_boxes_blob_desc->shape().At(0);
+  const int64_t max_num_gt_boxes = gt_boxes_blob_desc->shape().Count(0, 2);
   CHECK_EQ(gt_labels_blob_desc->shape().At(0), num_images);
   CHECK_EQ(im_scale_blob_desc->shape().At(0), num_images);
   const int64_t num_rois = rois_blob_desc->shape().At(0);
@@ -76,6 +78,12 @@ void ProposalTargetOp::InferBlobDescs(
 
   // data tmp: actual_gt_boxes (N, B, 4) int32_t
   *GetBlobDesc4BnInOp("actual_gt_boxes") = *gt_boxes_blob_desc;
+  // data tmp: gt_box_inds (N * B) int32_t
+  BlobDesc* gt_box_inds_blob_desc = GetBlobDesc4BnInOp("gt_box_inds");
+  gt_box_inds_blob_desc->mut_shape() = Shape({max_num_gt_boxes});
+  gt_box_inds_blob_desc->set_data_type(DataType::kInt32);
+  gt_box_inds_blob_desc->mut_dim0_inner_shape() = Shape({1, max_num_gt_boxes});
+  gt_box_inds_blob_desc->set_has_dim0_valid_num_field(true);
   // data tmp: max_overlaps (R) float
   BlobDesc* max_overlaps_blob_desc = GetBlobDesc4BnInOp("max_overlaps");
   max_overlaps_blob_desc->mut_shape() = Shape({num_rois});
