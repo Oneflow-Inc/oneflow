@@ -78,16 +78,20 @@ void MaskTargetKernel<T>::ForwardDataContent(
     CHECK_LT(img_idx, gt_bboxes_blob->shape().At(0));
     CHECK_GE(gt_bboxes_blob->dim1_valid_num(img_idx), 1);
     mask_roi_bboxes[mask_idx].elem() = fg_roi.elem();
-
-    const size_t max_iou_gt_idx =
-        GetMaxOverlapIndex(fg_roi, SegmBBox::Cast(gt_bboxes_blob->mut_dptr<float>(img_idx)),
-                           static_cast<size_t>(gt_bboxes_blob->dim1_valid_num(img_idx)));
-    Segm2Mask(segms.at(static_cast<size_t>(img_idx)).at(max_iou_gt_idx), fg_roi, mask_h, mask_w,
-              masks_blob->mut_dptr<int32_t>(mask_idx));
     *mask_labels_blob->mut_dptr<int32_t>(mask_idx) = label;
     CopyRecordIdIfNeed(roi_idx, mask_idx);
     mask_idx += 1;
   }
+
+  MultiThreadLoop(mask_idx, [&](const int64_t idx) {
+    const RoiBBox& roi = mask_roi_bboxes[idx];
+    const int32_t img_idx = roi.index();
+    const size_t max_iou_gt_idx =
+        GetMaxOverlapIndex(roi, SegmBBox::Cast(gt_bboxes_blob->mut_dptr<float>(img_idx)),
+                           static_cast<size_t>(gt_bboxes_blob->dim1_valid_num(img_idx)));
+    Segm2Mask(segms.at(static_cast<size_t>(img_idx)).at(max_iou_gt_idx), roi, mask_h, mask_w,
+              masks_blob->mut_dptr<int32_t>(idx));
+  });
 
   masks_blob->set_dim0_valid_num(0, mask_idx);
   mask_rois_blob->set_dim0_valid_num(0, mask_idx);
