@@ -26,7 +26,7 @@ void CommNet::ReadDone(void* read_id) {
   ReadContext* read_ctx = static_cast<ReadContext*>(read_id);
   auto& local_stream = stream_id2stream_.at(read_ctx->stream_id);
   {
-    std::unique_lock<std::mutex> lck(stream_id2stream_mtx_.at(read_ctx->stream_id));
+    std::unique_lock<std::mutex> lck(*(stream_id2stream_mtx_ptr_.at(read_ctx->stream_id)));
     CHECK(!local_stream.empty() && local_stream.front().is_read);
     local_stream.pop();
     while (!local_stream.empty() && !local_stream.front().is_read) {
@@ -49,7 +49,7 @@ void CommNet::IssueCallBack(const std::function<void()>& cb) {
 
 void CommNet::AddWorkToStream(int64_t stream_id, const std::function<void()>& cb, bool is_read) {
   CHECK_LT(stream_id, peer_machine_id_.size());
-  std::unique_lock<std::mutex> lck(stream_id2stream_mtx_.at(stream_id));
+  std::unique_lock<std::mutex> lck(*(stream_id2stream_mtx_ptr_.at(stream_id)));
   bool is_stream_empty = stream_id2stream_.at(stream_id).empty();
   if (is_stream_empty) { IssueCallBack(cb); }
   if (!is_stream_empty || is_read) {
@@ -72,8 +72,9 @@ CommNet::CommNet(const Plan& plan) {
     stream_ids.emplace(Global<IDMgr>::Get()->LocalWorkStreamId4TaskId(task.task_id()));
   }
   for (int64_t stream_id : stream_ids) {
-    stream_id2stream_mtx_[stream_id];
-    CHECK(stream_id2stream_[stream_id].empty());
+    CHECK(stream_id2stream_mtx_ptr_.emplace(stream_id, std::make_unique<std::mutex>()).second);
+    CHECK(stream_id2stream_.emplace(stream_id, std::queue<CommNetItem>()).second);
+    CHECK(stream_id2stream_.at(stream_id).empty());
   }
 
   ready_cb_poller_ = std::thread([this]() {
