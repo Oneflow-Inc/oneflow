@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_KERNEL_PROPOSAL_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_PROPOSAL_KERNEL_H_
+#ifndef ONEFLOW_CORE_KERNEL_CONCAT_GT_PROPOSALS_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_CONCAT_GT_PROPOSALS_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/bbox_util.h"
@@ -14,6 +14,7 @@ class ConcatGtProposalsKernel final : public KernelIf<DeviceType::kCPU> {
   ~ConcatGtProposalsKernel() = default;
 
   using BBox = IndexedBBoxT<T>;
+  using GtBBox = BBoxT<const T>;
 
  private:
   void ForwardDataContent(const KernelCtx&,
@@ -28,4 +29,4 @@ class ConcatGtProposalsKernel final : public KernelIf<DeviceType::kCPU> {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_PROPOSAL_KERNEL_H_
+#endif  // ONEFLOW_CORE_KERNEL_CONCAT_GT_PROPOSALS_KERNEL_H_

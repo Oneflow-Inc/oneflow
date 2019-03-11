@@ -1396,7 +1396,8 @@ message ElementCountOpConf {
 message ConcatGtProposalsOpConf {
   required string in = 1;
   required string gt_boxes = 2;
-  required string out = 3;
+  required string im_scale = 3;
+  required string out = 4;
 }
 
 message OperatorConf {
