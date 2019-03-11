@@ -35,41 +35,6 @@ void SoftmaxComputeDiff(DeviceCtx* ctx, const int64_t n, const int64_t w, const 
 }  // namespace
 
 template<DeviceType device_type, typename T>
-void SoftmaxComputeProb(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* in, T* tmp,
-                        T* prob, void* temp_storage, const size_t temp_storage_bytes) {
-  // copy in blob to prob blob
-  // KernelUtil<device_type, T>::Copy(ctx, n * w, in, 1, prob, 1);
-  Memcpy<device_type>(ctx, static_cast<void*>(prob), static_cast<const void*>(in),
-                      static_cast<size_t>(n * w * sizeof(T)));
-  // max | calculate max of every sample vector prob[i], store in tmp[i]
-  //       the prob[i] now is store the data of in[i]
-  /* ndarray reduce max
-  NdarrayUtil<device_type, T>::ReduceMax(
-      ctx, XpuVarNdarray<T>({n, 1}, tmp), XpuVarNdarray<const T>({n, w}, prob),
-      XpuVarNdarray<T>({static_cast<int64_t>(temp_storage_bytes / sizeof(T))},
-                       reinterpret_cast<T*>(temp_storage)));
-  */
-  NewKernelUtil<device_type, T>::RowMax(ctx, n, w, prob, tmp, temp_storage, temp_storage_bytes);
-
-  // sub | every element of prob blob subract the max value of the same sample
-  SoftmaxKernelUtil<device_type, T>::Sub(ctx, n, w, prob, tmp);
-  // exp | exponentiation every element
-  NewKernelUtil<device_type, T>::Exp(ctx, n * w, prob, prob);
-  // sum | calculate sum of every sample vector prob[i], store in tmp[i]
-  //       the prob[i] now is store the tmp data after exp
-  /* ndarray reduce sum
-  NdarrayUtil<device_type, T>::ReduceSum(
-      ctx, XpuVarNdarray<T>({n, 1}, tmp), XpuVarNdarray<const T>({n, w}, prob),
-      XpuVarNdarray<T>({static_cast<int64_t>(temp_storage_bytes / sizeof(T))},
-                       reinterpret_cast<T*>(temp_storage)));
-  */
-  NewKernelUtil<device_type, T>::RowSum(ctx, n, w, prob, tmp, temp_storage, temp_storage_bytes);
-  // div | every element of prob[i] divided by the data of tmp[i] (the sum
-  // value)
-  SoftmaxKernelUtil<device_type, T>::Div(ctx, n, w, prob, tmp);
-}
-
-template<DeviceType device_type, typename T>
 void SoftmaxKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob(this->op_attribute().input_bns(0));

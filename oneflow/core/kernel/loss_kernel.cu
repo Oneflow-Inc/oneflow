@@ -47,7 +47,7 @@ __global__ void LossReductionCountNonZeroHalf(half* reduction, const half* weigh
 }  // namespace
 
 template<typename T>
-struct LossKernelUtil<DeviceType::kGPU, T> {
+struct LossKernelUtil<DeviceType::kGPU, T, typename std::enable_if<!IsFloat16<T>::value>::type> {
   static void ComputeReductionCoefficient(DeviceCtx* ctx, int64_t data_num, int64_t weight_length,
                                           const T* weight, T* reduction, LossReductionType type) {
     switch (type) {
@@ -85,23 +85,22 @@ struct LossKernelUtil<DeviceType::kGPU, T> {
   }
 };
 
-template<>
-struct LossKernelUtil<DeviceType::kGPU, float16> {
+template<typename T>
+struct LossKernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloat16<T>::value>::type> {
   static void ComputeReductionCoefficient(DeviceCtx* ctx, int64_t data_num, int64_t weight_length,
-                                          const float16* weight, float16* reduction,
-                                          LossReductionType type) {
+                                          const T* weight, T* reduction, LossReductionType type) {
     const half* weight_h = reinterpret_cast<const half*>(weight);
     half* reduction_h = reinterpret_cast<half*>(reduction);
     switch (type) {
       case kSumOverOne: {
-        float16 hone = oneflow_cast<float16>(1.0);
+        T hone = oneflow_cast<T>(1.0);
         LossReductionAssign<half>
             <<<1, 1, 0, ctx->cuda_stream()>>>(reduction_h, *(reinterpret_cast<half*>(&hone)));
         break;
       }
       case kSumOverWeight: {
         if (weight_length == data_num) {
-          NewKernelUtil<DeviceType::kGPU, float16>::Sum(ctx, weight_length, weight, reduction);
+          NewKernelUtil<DeviceType::kGPU, T>::Sum(ctx, weight_length, weight, reduction);
         } else if (weight_length == 1) {
           LossReductionAssignNHalf<<<1, 1, 0, ctx->cuda_stream()>>>(reduction_h, weight_h,
                                                                     data_num);
@@ -111,7 +110,7 @@ struct LossKernelUtil<DeviceType::kGPU, float16> {
         break;
       }
       case kSumOverN: {
-        float16 ret = oneflow_cast<float16>(data_num * 1.0);
+        T ret = oneflow_cast<T>(data_num * 1.0);
         LossReductionAssign<half>
             <<<1, 1, 0, ctx->cuda_stream()>>>(reduction_h, *(reinterpret_cast<half*>(&ret)));
         break;
@@ -121,7 +120,7 @@ struct LossKernelUtil<DeviceType::kGPU, float16> {
           LossReductionCountNonZeroHalf<<<1, 1, 0, ctx->cuda_stream()>>>(reduction_h, weight_h,
                                                                          data_num);
         } else if (weight_length == 1) {
-          float16 ret = oneflow_cast<float16>(data_num * 1.0);
+          T ret = oneflow_cast<T>(data_num * 1.0);
           LossReductionAssign<half>
               <<<1, 1, 0, ctx->cuda_stream()>>>(reduction_h, *(reinterpret_cast<half*>(&ret)));
         } else {

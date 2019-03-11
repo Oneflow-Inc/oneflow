@@ -34,7 +34,7 @@ class LossKernel : public KernelIf<device_type> {
                           const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 };
 
-template<DeviceType device_type, typename T>
+template<DeviceType device_type, typename T, typename U = void>
 struct LossKernelUtil {
   static void ComputeReductionCoefficient(DeviceCtx* ctx, int64_t data_num, int64_t weight_length,
                                           const T* weight, T* reduction, LossReductionType type);

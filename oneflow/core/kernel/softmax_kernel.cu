@@ -36,7 +36,7 @@ __global__ void SoftmaxDivHalfGpu(const int64_t n, const int64_t w, half* matrix
 }  // namespace
 
 template<typename T>
-struct SoftmaxKernelUtil<DeviceType::kGPU, T> {
+struct SoftmaxKernelUtil<DeviceType::kGPU, T, typename std::enable_if<!IsFloat16<T>::value>::type> {
   static void Sub(DeviceCtx* ctx, const int64_t n, const int64_t w, T* matrix, const T* vector) {
     SoftmaxSubGpu<T>
         <<<BlocksNum4ThreadsNum(n * w), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
@@ -50,17 +50,15 @@ struct SoftmaxKernelUtil<DeviceType::kGPU, T> {
   }
 };
 
-template<>
-struct SoftmaxKernelUtil<DeviceType::kGPU, float16> {
-  static void Sub(DeviceCtx* ctx, const int64_t n, const int64_t w, float16* matrix,
-                  const float16* vector) {
+template<typename T>
+struct SoftmaxKernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloat16<T>::value>::type> {
+  static void Sub(DeviceCtx* ctx, const int64_t n, const int64_t w, T* matrix, const T* vector) {
     SoftmaxSubHalfGpu<<<BlocksNum4ThreadsNum(n * w), kCudaThreadsNumPerBlock, 0,
                         ctx->cuda_stream()>>>(n, w, reinterpret_cast<half*>(matrix),
                                               reinterpret_cast<const half*>(vector));
   }
 
-  static void Div(DeviceCtx* ctx, const int64_t n, const int64_t w, float16* matrix,
-                  const float16* vector) {
+  static void Div(DeviceCtx* ctx, const int64_t n, const int64_t w, T* matrix, const T* vector) {
     SoftmaxDivHalfGpu<<<BlocksNum4ThreadsNum(n * w), kCudaThreadsNumPerBlock, 0,
                         ctx->cuda_stream()>>>(n, w, reinterpret_cast<half*>(matrix),
                                               reinterpret_cast<const half*>(vector));
