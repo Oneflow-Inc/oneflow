@@ -13,13 +13,10 @@ class ProposalTargetKernel final : public KernelIf<DeviceType::kCPU> {
   ProposalTargetKernel() = default;
   ~ProposalTargetKernel() = default;
 
-  using BBox = IndexedBBoxT<T>;
-  using RoiBBox = IndexedBBoxT<const T>;
+  using BBox = IndexedBBoxT<const T>;
+  using MutBBox = IndexedBBoxT<T>;
   using GtBBox = BBoxT<const T>;
-  using RoiBoxIndices = BBoxIndices<IndexSequence, RoiBBox>;
-  using MaxOverlapOfRoiBoxWithGt = MaxOverlapIndices<RoiBoxIndices>;
-  using GtBoxIndices = BBoxIndices<IndexSequence, GtBBox>;
-  using LabeledGtBox = LabelIndices<GtBoxIndices>;
+  using MutGtBBox = BBoxT<T>;
 
  private:
   void ForwardDataContent(const KernelCtx&,
@@ -31,18 +28,12 @@ class ProposalTargetKernel final : public KernelIf<DeviceType::kCPU> {
 
   void InitializeOutputBlob(DeviceCtx* ctx,
                             const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  auto GetImageGtBoxes(const std::function<Blob*(const std::string&)>& BnInOp2Blob) const
-      -> LabeledGtBox;
-  auto GetImageRoiBoxes(const std::function<Blob*(const std::string&)>& BnInOp2Blob) const
-      -> MaxOverlapOfRoiBoxWithGt;
-  void FindNearestGtBoxForEachRoiBox(const std::function<Blob*(const std::string&)>& BnInOp2Blob,
-                                     const LabeledGtBox& gt_boxes,
-                                     MaxOverlapOfRoiBoxWithGt& roi_boxes) const;
-  void SubsampleForegroundAndBackground(const std::function<Blob*(const std::string&)>& BnInOp2Blob,
-                                        const LabeledGtBox& gt_boxes,
-                                        MaxOverlapOfRoiBoxWithGt& boxes) const;
-  void Output(const std::function<Blob*(const std::string&)>& BnInOp2Blob,
-              const LabeledGtBox& gt_boxes, const MaxOverlapOfRoiBoxWithGt& boxes) const;
+  void ResizeAndFilterGtBoxes(DeviceCtx* ctx,
+                              const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  void GenMatchMatrixBetweenRoiAndGtBoxes(
+      DeviceCtx* ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  void Subsample(DeviceCtx* ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  void Output(DeviceCtx* ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 };
 
 }  // namespace oneflow
