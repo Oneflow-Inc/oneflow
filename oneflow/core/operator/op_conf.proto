@@ -1393,6 +1393,12 @@ message ElementCountOpConf {
   optional DataType data_type = 5;
 }
 
+message ConcatGtProposalsOpConf {
+  required string in = 1;
+  required string gt_boxes = 2;
+  required string out = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1516,7 +1522,7 @@ message OperatorConf {
     Conv1DV2OpConf conv_1d_v2_conf = 292;
     Conv2DV2OpConf conv_2d_v2_conf = 293;
     Conv3DV2OpConf conv_3d_v2_conf = 294;
-
+    ConcatGtProposalsOpConf concat_gt_proposals_conf = 295;
 
     // Maybe not needed
     RedefineDim0OpConf redefine_dim0_conf = 400;
