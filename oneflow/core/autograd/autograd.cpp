@@ -63,11 +63,25 @@ std::function<bool(const LogicalBlobId&, const std::string&)> MakePredicatorHasD
 
 }  // namespace
 
+void GenerateBackwardOpConfWrapperStruct::Call(
+    const Operator& op, std::vector<OperatorConf>* op_confs,
+    const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
+    const std::function<DataType(const std::string&)>& DateType4BnInOp) const {
+  if (func_) {
+    (*func_)(op, op_confs, DiffLbi4BnInOp, DateType4BnInOp);
+  } else if (naive_func_) {
+    (*naive_func_)(op, op_confs, DiffLbi4BnInOp);
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
 void GenerateBackwardOpConfIf(
     const Operator& op, std::vector<OperatorConf>* op_confs,
-    const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) {
+    const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
+    const std::function<DataType(const std::string&)>& DateType4BnInOp) {
   auto* obj = NewObj<GenerateBackwardOpConfWrapperStruct>(op.op_conf().op_type_case());
-  obj->func(op, op_confs, DiffLbi4BnInOp);
+  obj->Call(op, op_confs, DiffLbi4BnInOp, DateType4BnInOp);
 }
 
 JobConf1 AutoGrad(const JobDesc& job_desc) {
@@ -112,9 +126,13 @@ JobConf1 AutoGrad(const JobDesc& job_desc) {
         UNIMPLEMENTED();
       }
     };
+    auto DataType4BnInOp = [&](const std::string& bn) -> DataType {
+      const auto& lbi = op_node->op().BnInOp2Lbi(bn);
+      return op_graph.GetBlobDataType(lbi);
+    };
     std::vector<OperatorConf> ops;
     GenerateCloneGradOpIfNeed(op_node->op(), &ops, lbi2op_name2in_diff_lbi, &lbi2out_diff_lbi);
-    GenerateBackwardOpConfIf(op_node->op(), &ops, DiffLbi4BnInOp);
+    GenerateBackwardOpConfIf(op_node->op(), &ops, DiffLbi4BnInOp, DataType4BnInOp);
     job_conf_builder.AddOps(op_node->parallel_desc().parallel_conf(), ops);
   });
   return job_conf;
