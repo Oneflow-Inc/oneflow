@@ -31,7 +31,7 @@ void ProposalKernel<T>::GenerateAnchors(
   auto ratios_vec = PbRf2StdVec(anchor_generator_conf.aspect_ratios());
   const float fm_stride = anchor_generator_conf.feature_map_stride();
   size_t num_anchors = BBoxUtil<MutBBox>::GenerateAnchors(
-      fm_stride, fm_height, fm_width, scales_vec, scales_vec, anchors_blob->mut_dptr<T>());
+      fm_stride, fm_height, fm_width, scales_vec, ratios_vec, anchors_blob->mut_dptr<T>());
   CHECK_LE(num_anchors, anchors_blob->static_shape().At(0));
   anchors_blob->set_dim0_valid_num(0, num_anchors);
 }
