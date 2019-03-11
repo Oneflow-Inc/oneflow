@@ -33,6 +33,7 @@ class Operator {
   bool IsSoleInputBlobAllowedModelSplit() const;
   virtual bool IsInputBlobAllowedModelSplit(const std::string& ibn) const = 0;
   bool IsIbnMutable(const std::string& ibn) const;
+  bool HasOutDiff4Lbi(const LogicalBlobId& lbi) const;
 
   ActivationType GetActivationType() const;
 

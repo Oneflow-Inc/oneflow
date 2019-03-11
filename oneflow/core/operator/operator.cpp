@@ -227,6 +227,12 @@ void Operator::InferInputOutputSbpParallelIf(
   }
 }
 
+bool Operator::HasOutDiff4Lbi(const LogicalBlobId& lbi) const {
+  CHECK_EQ(lbi.op_name(), op_name());
+  return std::find(output_diff_bns().begin(), output_diff_bns().end(), GenDiffBn(lbi.blob_name()))
+         != output_diff_bns().end();
+}
+
 bool Operator::IsSoleInputBlobAllowedModelSplit() const {
   return input_bns().size() == 1 && IsInputBlobAllowedModelSplit(SoleIbn());
 }
