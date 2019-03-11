@@ -12,11 +12,23 @@ JobConf1 AutoGrad(const JobDesc& job_desc);
 void GenerateBackwardOpConfIf(const Operator&, std::vector<OperatorConf>*,
                               const std::function<LogicalBlobId*(const std::string&)>&);
 
-struct GenerateBackwardOpConfWrapperStruct final {
+class GenerateBackwardOpConfWrapperStruct final {
+ public:
+  using NaiveFunc = std::function<void(const Operator&, std::vector<OperatorConf>*,
+                                       const std::function<LogicalBlobId*(const std::string&)>&)>;
   using Func = std::function<void(const Operator&, std::vector<OperatorConf>*,
-                                  const std::function<LogicalBlobId*(const std::string&)>&)>;
-  GenerateBackwardOpConfWrapperStruct(const Func& f) : func(f) {}
-  Func func;
+                                  const std::function<LogicalBlobId*(const std::string&)>&,
+                                  const std::function<DataType(const std::string&)>&)>;
+  GenerateBackwardOpConfWrapperStruct(const NaiveFunc& f)
+      : naive_func_(std::make_unique<NaiveFunc>(f)) {}
+  GenerateBackwardOpConfWrapperStruct(const Func& f) : func_(std::make_unique<Func>(f)) {}
+  void Call(const Operator&, std::vector<OperatorConf>*,
+            const std::function<LogicalBlobId*(const std::string&)>&,
+            const std::function<DataType(const std::string&)>&) const;
+
+ private:
+  const std::unique_ptr<const NaiveFunc> naive_func_;
+  const std::unique_ptr<const Func> func_;
 };
 
 #define REGISTER_OP_GRAD(op_type_case, gen_grad_func)                       \
