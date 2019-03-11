@@ -93,7 +93,7 @@ void AnchorTargetKernel<T>::GenerateAnchorBoxes(
     auto scales_vec = PbRf2StdVec(anchor_generator_conf.anchor_scales());
     auto ratios_vec = PbRf2StdVec(anchor_generator_conf.aspect_ratios());
     num_anchors +=
-        BBoxUtil<MutBBox>::GenerateAnchors(im_height, im_width, fm_stride, scales_vec, scales_vec,
+        BBoxUtil<MutBBox>::GenerateAnchors(im_height, im_width, fm_stride, scales_vec, ratios_vec,
                                            anchors_blob->mut_dptr<T>(num_anchors));
   }
   CHECK_LE(num_anchors, anchors_blob->static_shape().At(0));
