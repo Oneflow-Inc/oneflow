@@ -23,7 +23,32 @@ void ConcatGtProposalsKernel<T>::ForwardRecordIdInDevicePiece(
 
 template<typename T>
 void ConcatGtProposalsKernel<T>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* in_proposals_blob = BnInOp2Blob("in");
+  const Blob* gt_boxes_blob = BnInOp2Blob("gt_boxes");
+  Blob* out_proposals_blob = BnInOp2Blob("out");
+  const T* gt_boxes_ptr = gt_boxes_blob->dptr<T>();
+  const bool has_record_id_header = out_proposals_blob->has_record_id_in_device_piece_field();
+
+  out_proposals_blob->CopyFrom(ctx.device_ctx, in_proposals_blob);
+  size_t num_proposals = out_proposals_blob->shape().At(0);
+  auto* out_proposals_bbox_ptr = BBox::Cast(out_proposals_blob->mut_dptr<T>());
+  FOR_RANGE(int32_t, i, 0, gt_boxes_blob->static_shape().At(0)) {
+    const size_t max_num_gt_boxes_per_im = gt_boxes_blob->static_shape().At(1);
+    FOR_RANGE(int32_t, j, 0, gt_boxes_blob->dim1_valid_num(i)) {
+      const T* cur_gt_box_ptr = gt_boxes_ptr + i * max_num_gt_boxes_per_im + j;
+      out_proposals_bbox_ptr[num_proposals].set_ltrb(cur_gt_box_ptr[0], cur_gt_box_ptr[1],
+                                                     cur_gt_box_ptr[2], cur_gt_box_ptr[3]);
+      out_proposals_bbox_ptr[num_proposals].set_index(i);
+      if (has_record_id_header) {
+        out_proposals_blob->set_record_id_in_device_piece(num_proposals, i);
+      }
+      num_proposals += 1;
+    }
+  }
+  CHECK_LE(num_proposals, out_proposals_blob->static_shape().At(0));
+  out_proposals_blob->set_dim0_valid_num(0, num_proposals);
+}
 
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kConcatGtProposalsConf, ConcatGtProposalsKernel,
                                FLOATING_DATA_TYPE_SEQ);

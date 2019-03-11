@@ -13,11 +13,7 @@ class ConcatGtProposalsKernel final : public KernelIf<DeviceType::kCPU> {
   ConcatGtProposalsKernel() = default;
   ~ConcatGtProposalsKernel() = default;
 
-  // using BBox = BBoxT<const T>;
-  // using MutBBox = BBoxT<T>;
-  // using RoiBBox = IndexedBBoxT<T>;
-  // using BoxesSlice = BBoxIndices<IndexSequence, BBox>;
-  // using ScoreSlice = ScoreIndices<IndexSequence, const T>;
+  using BBox = IndexedBBoxT<T>;
 
  private:
   void ForwardDataContent(const KernelCtx&,
