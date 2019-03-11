@@ -2,7 +2,6 @@
 #include <math.h>
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/core/kernel/kernel_util.cuh"
 
 namespace oneflow {
 
@@ -313,28 +312,6 @@ void InitializeWithDirGpu(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
 
 }  // namespace
 
-inline __device__ half MaxWithLogThresholdHalf(const half x) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-  half threshold = hexp2(__float2half(-14.0));
-  if (__hgt(x, threshold)) { return x; }
-  return threshold;
-#else
-  HALF_CHECK_FAILED;
-  half ret;
-  return ret;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) */
-}
-
-inline __device__ half SafeLogHalf(const half x) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-  return hlog(MaxWithLogThresholdHalf(x));
-#else
-  HALF_CHECK_FAILED;
-  half ret;
-  return ret;
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) */
-}
-
 // GPU && Floating
 template<typename T>
 struct NewKernelUtilIf<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T>::value>::type> {
@@ -435,39 +412,6 @@ struct NewKernelUtilIf<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T
     }
   }
 };
-
-template<typename T>
-struct FloatingNewKernelUtilIf<DeviceType::kCPU, T> {
-  static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE trans_a,
-                   const enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
-                   const T alpha, const T* a, const int lda, const T* b, const int ldb,
-                   const T beta, T* c, const int ldc) {
-    cblas_gemm<T>(order, trans_a, trans_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
-  }
-};
-
-template<typename T>
-struct Float16NewKernelUtilIf<DeviceType::kCPU, T> {
-  static void HGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
-                    const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
-                    const int m, const int n, const int k, const T alpha, const T* a, const int lda,
-                    const T* b, const int ldb, const T beta, T* c, const int ldc) {
-    UNIMPLEMENTED();
-  }
-  static void Half2Float(DeviceCtx* ctx, const int n, const T* src, float* dst) {
-    for (size_t i = 0; i < n; ++i) { dst[i] = static_cast<float>(src[i]); }
-  }
-  static void Float2Half(DeviceCtx* ctx, const int n, const float* src, T* dst) {
-    for (size_t i = 0; i < n; ++i) { dst[i] = static_cast<float16>(src[i]); }
-  }
-};
-
-#define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto) \
-  template struct NewKernelUtilIf<DeviceType::kCPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
-
-#define INSTANTIATE_FLOATING_KERNEL_UTIL(type_cpp, type_proto) \
-  template struct FloatingNewKernelUtilIf<DeviceType::kCPU, type_cpp>;
 
 // GPU && Integral
 template<typename T>
