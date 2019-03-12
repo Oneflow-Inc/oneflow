@@ -18,12 +18,15 @@ void GenerateBackwardOpConf(
     clone_op.set_name(op.op_name() + "_grad");
     CloneOpConf* clone_op_conf = clone_op.mutable_clone_conf();
     clone_op_conf->set_out_num(out_num);
+    int32_t out_count = 0;
     FOR_RANGE(int32_t, i, 0, conf.in_size()) {
       const std::string ibn = "in_" + std::to_string(i);
       if (DiffLbi4BnInOp(ibn) != nullptr) {
-        DiffLbi4BnInOp(ibn)->set_blob_name("out_" + std::to_string(i));
+        DiffLbi4BnInOp(ibn)->set_blob_name("out_" + std::to_string(out_count));
+        out_count = out_count + 1;
       }
     }
+    CHECK_EQ(out_count, out_num);
   }
 }
 
