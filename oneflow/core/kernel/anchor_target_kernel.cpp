@@ -118,7 +118,7 @@ void AnchorTargetKernel<T>::FilterOutsideAnchorBoxes(
     if (anchor_box[i].left() >= -straddle_thresh && anchor_box[i].top() >= -straddle_thresh
         && anchor_box[i].right() < im_width + straddle_thresh
         && anchor_box[i].bottom() < im_height + straddle_thresh) {
-      anchor_inds_ptr[i] = valid_anchors_cnt;
+      anchor_inds_ptr[valid_anchors_cnt] = i;
       valid_anchors_cnt += 1;
     }
   }
@@ -174,12 +174,14 @@ void AnchorTargetKernel<T>::CalcMaxOverlapAndSetPositiveLabels(
   // threshold to positive label
   const float positive_overlap_threshold =
       op_conf().anchor_target_conf().positive_overlap_threshold();
+  const Blob* anchors_blob = BnInOp2Blob("anchors");
   Blob* anchor_labels_blob = BnInOp2Blob("anchor_labels");
+  anchor_labels_blob->set_dim0_valid_num(0, anchors_blob->dim0_valid_num(0));
   int32_t* anchor_labels_ptr = anchor_labels_blob->mut_dptr<int32_t>();
   std::fill(anchor_labels_ptr, anchor_labels_ptr + anchor_labels_blob->shape().elem_cnt(), -1);
 
   auto* gt_boxes = BBox::Cast(gt_boxes_blob->dptr<T>());
-  auto* anchor_boxes = BBox::Cast(BnInOp2Blob("anchors")->dptr<T>());
+  auto* anchor_boxes = BBox::Cast(anchors_blob->dptr<T>());
   const Blob* anchor_inds_blob = BnInOp2Blob("anchor_inds");
   const int32_t* anchor_inds_ptr = anchor_inds_blob->dptr<int32_t>();
   float* anchor_max_overlaps_blob_ptr = BnInOp2Blob("anchor_max_overlaps")->mut_dptr<float>();

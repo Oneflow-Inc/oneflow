@@ -32,12 +32,13 @@ void ConcatGtProposalsOp::InferBlobDescs(
   CHECK_EQ(im_scale_blob_desc->shape().elem_cnt(), gt_boxes_blob_desc->shape().At(0));
   CHECK_EQ(im_scale_blob_desc->data_type(), gt_boxes_blob_desc->data_type());
 
-  const size_t num_proposals =
+  const int64_t num_proposals =
       in_proposals_blob_desc->shape().At(0) + gt_boxes_blob_desc->shape().Count(0, 2);
   // out: out_proposals (R`, 5) T
   BlobDesc* out_proposals_blob_desc = GetBlobDesc4BnInOp("out");
   *out_proposals_blob_desc = *in_proposals_blob_desc;
   out_proposals_blob_desc->mut_shape().Set(0, num_proposals);
+  out_proposals_blob_desc->mut_dim0_inner_shape() = Shape({1, num_proposals});
 }
 
 REGISTER_CPU_OP(OperatorConf::kConcatGtProposalsConf, ConcatGtProposalsOp);
