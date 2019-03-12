@@ -32,7 +32,6 @@ class Operator {
   virtual void InitFromOpConf() = 0;
   bool IsSoleInputBlobAllowedModelSplit() const;
   virtual bool IsInputBlobAllowedModelSplit(const std::string& ibn) const = 0;
-  bool IsIbnMutable(const std::string& ibn) const;
   bool HasOutDiff4Lbi(const LogicalBlobId& lbi) const;
 
   ActivationType GetActivationType() const;
@@ -228,15 +227,14 @@ class Operator {
   void EnrollDataTmpBn(const std::string& dtbn);
   void EnrollFwBufBn(const std::string& fbbn);
   void EnrollBwBufBn(const std::string& bbbn);
-  void EnrollInputBn(const std::string& ibn, bool has_diff);
-  void EnrollInputBn(const std::string& ibn) { EnrollInputBn(ibn, true); }
-  void EnrollMutableInputBn(const std::string& ibn);
+  InputBlobModifier* EnrollInputBn(const std::string& ibn, bool has_diff);
+  InputBlobModifier* EnrollInputBn(const std::string& ibn) { return EnrollInputBn(ibn, true); }
   void EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num, bool has_diff);
   void EnrollRepeatedInputBn(const std::string& ibn_prefix, bool has_diff);
   void EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num);
   void EnrollRepeatedInputBn(const std::string& ibn_prefix);
-  void EnrollOutputBn(const std::string& obn, bool has_diff);
-  void EnrollOutputBn(const std::string& obn) { EnrollOutputBn(obn, true); }
+  OutputBlobModifier* EnrollOutputBn(const std::string& obn, bool has_diff);
+  OutputBlobModifier* EnrollOutputBn(const std::string& obn) { return EnrollOutputBn(obn, true); }
   void EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num, bool has_diff);
   void EnrollRepeatedOutputBn(const std::string& obn_prefix, bool has_diff);
   void EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num);
@@ -253,6 +251,9 @@ class Operator {
 
   void StrFieldTolower(const std::string& field_name);
 
+  InputBlobModifier* MutInputBlobModifier4Ibn(const std::string& ibn);
+  OutputBlobModifier* MutOutputBlobModifier4Obn(const std::string& obn);
+
  private:
   virtual void GetOpParallelSignatures(
       std::vector<std::unique_ptr<const OpParallelSignature>>*) const;
@@ -268,7 +269,6 @@ class Operator {
   }
 
   OpAttribute op_attribute_;
-  HashSet<std::string> mutable_input_bns_;
 };
 
 std::string GenDiffBn(const std::string& bn);

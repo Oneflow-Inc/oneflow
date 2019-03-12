@@ -456,8 +456,9 @@ void Operator::EnrollBwBufBn(const std::string& bbbn) {
   CHECK(mut_bn_in_op2lbi()->insert({bbbn, bbbn2lbi(bbbn)}).second);
 }
 
-void Operator::EnrollInputBn(const std::string& ibn, bool has_diff) {
+InputBlobModifier* Operator::EnrollInputBn(const std::string& ibn, bool has_diff) {
   LogicalBlobId lbi = ibn2lbi(ibn);
+  CHECK(op_attribute_.mutable_ibn2input_blob_modifier()->insert({ibn, InputBlobModifier()}).second);
   *(mut_input_bns()->Add()) = ibn;
   CHECK(mut_bn_in_op2lbi()->insert({ibn, lbi}).second);
   if (has_diff) {
@@ -465,15 +466,15 @@ void Operator::EnrollInputBn(const std::string& ibn, bool has_diff) {
     *(mut_input_diff_bns()->Add()) = idbn;
     CHECK(mut_bn_in_op2lbi()->insert({idbn, lbi}).second);
   }
+  return MutInputBlobModifier4Ibn(ibn);
 }
 
-bool Operator::IsIbnMutable(const std::string& ibn) const {
-  return mutable_input_bns_.find(ibn) != mutable_input_bns_.end();
+InputBlobModifier* Operator::MutInputBlobModifier4Ibn(const std::string& ibn) {
+  return &op_attribute_.mutable_ibn2input_blob_modifier()->at(ibn);
 }
 
-void Operator::EnrollMutableInputBn(const std::string& ibn) {
-  EnrollInputBn(ibn, false);
-  mutable_input_bns_.emplace(ibn);
+OutputBlobModifier* Operator::MutOutputBlobModifier4Obn(const std::string& obn) {
+  return &op_attribute_.mutable_obn2output_blob_modifier()->at(obn);
 }
 
 void Operator::EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num, bool has_diff) {
@@ -493,8 +494,10 @@ void Operator::EnrollRepeatedInputBn(const std::string& ibn_prefix) {
   EnrollRepeatedInputBn(ibn_prefix, true);
 }
 
-void Operator::EnrollOutputBn(const std::string& obn, bool has_diff) {
+OutputBlobModifier* Operator::EnrollOutputBn(const std::string& obn, bool has_diff) {
   LogicalBlobId lbi = obn2lbi(obn);
+  CHECK(
+      op_attribute_.mutable_obn2output_blob_modifier()->insert({obn, OutputBlobModifier()}).second);
   *(mut_output_bns()->Add()) = obn;
   CHECK(mut_bn_in_op2lbi()->insert({obn, lbi}).second);
   if (has_diff) {
@@ -502,6 +505,7 @@ void Operator::EnrollOutputBn(const std::string& obn, bool has_diff) {
     *(mut_output_diff_bns()->Add()) = odbn;
     CHECK(mut_bn_in_op2lbi()->insert({odbn, lbi}).second);
   }
+  return MutOutputBlobModifier4Obn(obn);
 }
 
 void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num, bool has_diff) {

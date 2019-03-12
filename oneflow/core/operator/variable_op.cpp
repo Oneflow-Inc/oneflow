@@ -69,10 +69,10 @@ class VariableOpModelSplitOpParallelSignature final : public OpParallelSignature
 void VariableOp::InitFromOpConf() {
   CHECK(op_conf().has_variable_conf());
   EnrollInputBn("tick", false);
-  EnrollOutputBn(
-      "out",
+  bool has_diff =
       (Global<JobDesc>::Get()->IsTrain() && op_conf().trainable())
-          || Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf());
+      || Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf();
+  EnrollOutputBn("out", has_diff)->set_is_mutable(true);
   EnrollModelBn(op_conf().variable_conf().model_name());
 }
 
