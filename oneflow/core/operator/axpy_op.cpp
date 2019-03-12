@@ -38,7 +38,8 @@ class AxpyOpParallelSignature final : public OpParallelSignature {
 }  // namespace
 
 void AxpyOp::InitFromOpConf() {
-  EnrollMutableInputBn("y");
+  EnrollInputBn("y");
+  MutInputBlobModifier4Ibn("y")->set_is_mutable(true);
   EnrollInputBn("x", false);
 }
 
