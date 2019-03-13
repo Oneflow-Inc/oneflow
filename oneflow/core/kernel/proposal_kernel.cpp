@@ -41,35 +41,38 @@ void ProposalKernel<T>::RegionProposal(
     const int64_t im_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const ProposalOpConf& conf = op_conf().proposal_conf();
   const Blob* class_prob_blob = BnInOp2Blob("class_prob");
+  const Blob* bbox_pred_blob = BnInOp2Blob("bbox_pred");
+  const Blob* anchors_blob = BnInOp2Blob("anchors");
   Blob* proposals_blob = BnInOp2Blob("proposals");
   Blob* proposal_inds_blob = BnInOp2Blob("proposal_inds");
-  int64_t fm_height = class_prob_blob->shape().At(1);
-  int64_t fm_width = class_prob_blob->shape().At(2);
-  int64_t num_anchors_per_fm = class_prob_blob->shape().At(3);
-  int64_t fm_stride = conf.anchor_generator_conf().feature_map_stride();
-  int64_t im_height = fm_stride * fm_height;
-  int64_t im_width = fm_stride * fm_width;
+  const int64_t fm_height = class_prob_blob->shape().At(1);
+  const int64_t fm_width = class_prob_blob->shape().At(2);
+  const int64_t num_anchors_per_fm = class_prob_blob->shape().At(3);
+  const int64_t im_height = BnInOp2Blob("image_height")->dptr<int32_t>()[im_index];
+  const int64_t im_width = BnInOp2Blob("image_width")->dptr<int32_t>()[im_index];
 
-  size_t num_proposals = std::min<size_t>(proposals_blob->static_shape().At(1),
-                                          fm_height * fm_width * num_anchors_per_fm);
-  ScoreSlice proposal_slice(IndexSequence(proposal_inds_blob->shape().Count(1),
-                                          proposal_inds_blob->mut_dptr<int32_t>(im_index), true),
-                            class_prob_blob->dptr<T>(im_index));
-  proposal_slice.NthElem(num_proposals, [&](int32_t lhs_index, int32_t rhs_index) {
-    return proposal_slice.score(lhs_index) > proposal_slice.score(rhs_index);
-  });
-  proposal_slice.Truncate(num_proposals);
-  // proposal_slice.Sort([&](int32_t lhs_index, int32_t rhs_index) {
-  //   return proposal_slice.score(lhs_index) > proposal_slice.score(rhs_index);
-  // });
-  const auto* bbox_delta = BBoxDelta<T>::Cast(BnInOp2Blob("bbox_pred")->dptr<T>(im_index));
-  const auto* anchor_bbox = BBox::Cast(BnInOp2Blob("anchors")->dptr<T>());
-  auto* prop_bbox = MutBBox::Cast(proposals_blob->mut_dptr<T>(im_index));
-  FOR_RANGE(size_t, i, 0, proposal_slice.size()) {
-    int32_t index = proposal_slice.GetIndex(i);
-    prop_bbox[i].Transform(anchor_bbox + index, bbox_delta + index, conf.bbox_reg_weights());
-    prop_bbox[i].Clip(im_height, im_width);
+  const T* score_ptr = class_prob_blob->dptr<T>(im_index);
+  size_t num_anchors = fm_height * fm_width * num_anchors_per_fm;
+  std::vector<int32_t> proposal_inds_vec(num_anchors);
+  std::iota(proposal_inds_vec.begin(), proposal_inds_vec.end(), 0);
+  std::sort(
+      proposal_inds_vec.begin(), proposal_inds_vec.end(),
+      [=](int32_t lhs_idx, int32_t rhs_idx) { return score_ptr[lhs_idx] > score_ptr[rhs_idx]; });
+  size_t num_proposals = std::min<size_t>(proposals_blob->static_shape().At(1), num_anchors);
+  proposal_inds_vec.resize(num_proposals);
+
+  auto* reg_ptr = BBoxDelta<T>::Cast(bbox_pred_blob->dptr<T>(im_index));
+  auto* anchor_ptr = BBox::Cast(anchors_blob->dptr<T>());
+  auto* proposal_ptr = MutBBox::Cast(proposals_blob->mut_dptr<T>(im_index));
+  for (size_t i = 0; i < proposal_inds_vec.size(); ++i) {
+    int32_t idx = proposal_inds_vec.at(i);
+    proposal_ptr[i].Transform(anchor_ptr + idx, reg_ptr + idx, conf.bbox_reg_weights());
+    proposal_ptr[i].Clip(im_height, im_width);
   }
+
+  std::copy(proposal_inds_vec.begin(), proposal_inds_vec.end(),
+            proposal_inds_blob->mut_dptr<int32_t>(im_index));
+  proposal_inds_blob->set_dim1_valid_num(im_index, num_proposals);
   proposals_blob->set_dim1_valid_num(im_index, num_proposals);
 }
 

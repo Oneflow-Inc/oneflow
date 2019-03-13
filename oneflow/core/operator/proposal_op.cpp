@@ -8,6 +8,9 @@ void ProposalOp::InitFromOpConf() {
 
   EnrollInputBn("class_prob", false);
   EnrollInputBn("bbox_pred", false);
+  EnrollInputBn("image_height", false);
+  EnrollInputBn("image_width", false);
+
   EnrollOutputBn("rois", false);
   EnrollOutputBn("roi_probs", false);
 
@@ -28,9 +31,21 @@ void ProposalOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   const BlobDesc* bbox_pred_blob_desc = GetBlobDesc4BnInOp("bbox_pred");
   // in: class_prob (N, H, W, A) T
   const BlobDesc* class_prob_blob_desc = GetBlobDesc4BnInOp("class_prob");
+  // in: image_height (N) int32_t
+  const BlobDesc* image_height_blob_desc = GetBlobDesc4BnInOp("image_height");
+  // in: image_width (N) int32_t
+  const BlobDesc* image_width_blob_desc = GetBlobDesc4BnInOp("image_width");
   CHECK_EQ(bbox_pred_blob_desc->data_type(), class_prob_blob_desc->data_type());
+  CHECK_EQ(image_height_blob_desc->data_type(), DataType::kInt32);
+  CHECK_EQ(image_width_blob_desc->data_type(), DataType::kInt32);
+  // CHECK_EQ(bbox_pred_blob_desc->shape().NumAxes(), 4);
+  // CHECK_EQ(class_prob_blob_desc->shape().NumAxes(), 4);
+  CHECK_EQ(image_height_blob_desc->shape().NumAxes(), 1);
+  CHECK_EQ(image_width_blob_desc->shape().NumAxes(), 1);
   const int64_t num_images = bbox_pred_blob_desc->shape().At(0);
   CHECK_EQ(num_images, class_prob_blob_desc->shape().At(0));
+  CHECK_EQ(num_images, image_height_blob_desc->shape().At(0));
+  CHECK_EQ(num_images, image_width_blob_desc->shape().At(0));
   const int64_t num_anchors_per_cell =
       anchor_generator_conf.aspect_ratios_size() * anchor_generator_conf.anchor_scales_size();
   CHECK_EQ(num_anchors_per_cell, class_prob_blob_desc->shape().At(3));
@@ -67,6 +82,7 @@ void ProposalOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   BlobDesc* proposal_inds_blob_desc = GetBlobDesc4BnInOp("proposal_inds");
   proposal_inds_blob_desc->mut_shape() = Shape({num_images, num_anchors});
   proposal_inds_blob_desc->set_data_type(DataType::kInt32);
+  proposal_inds_blob_desc->set_has_dim1_valid_num_field(true);
   // datatmp: proposals (N, pre_nms_top_n, 4) T
   BlobDesc* proposal_blob_desc = GetBlobDesc4BnInOp("proposals");
   proposal_blob_desc->mut_shape() = Shape({num_images, pre_nms_top_n, 4});

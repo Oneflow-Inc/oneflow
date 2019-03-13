@@ -51,7 +51,8 @@ void FpnCollectKernel<T>::ForwardDataContent(
   num_out_rois = std::min(num_out_rois, roi_inds.size());
   roi_inds.NthElem(num_out_rois, Compare);
   roi_inds.Truncate(num_out_rois);
-  roi_inds.Sort(Compare);
+  // roi_inds.Sort(Compare);
+  roi_inds.Sort([&](int32_t lhs_idx, int32_t rhs_idx) { return lhs_idx < rhs_idx; });
 
   FOR_RANGE(size_t, i, 0, roi_inds.size()) {
     const auto* roi_bbox = GetRoiBBox(roi_inds.GetIndex(i));
