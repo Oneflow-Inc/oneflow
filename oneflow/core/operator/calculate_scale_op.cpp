@@ -4,9 +4,11 @@ namespace oneflow {
 
 void CalculateScaleOp::InitFromOpConf() {
   CHECK(op_conf().has_calculate_scale_conf());
-  EnrollInputBn("height", false);
-  EnrollInputBn("width", false);
+  EnrollInputBn("origin_height", false);
+  EnrollInputBn("origin_width", false);
   EnrollOutputBn("scale", false);
+  EnrollOutputBn("height", false);
+  EnrollOutputBn("width", false);
 }
 
 void CalculateScaleOp::InferBlobDescs(
@@ -17,17 +19,27 @@ void CalculateScaleOp::InferBlobDescs(
   const int32_t max_size = conf.max_size();
   CHECK_GT(target_size, 0);
   CHECK_GE(max_size, target_size);
-  const BlobDesc* height = GetBlobDesc4BnInOp("height");
-  const BlobDesc* width = GetBlobDesc4BnInOp("width");
-  CHECK_EQ(height->shape().NumAxes(), 1);
-  CHECK_EQ(height->shape(), width->shape());
-  CHECK_EQ(height->data_type(), DataType::kInt32);
-  CHECK_EQ(width->data_type(), width->data_type());
+  const BlobDesc* origin_height = GetBlobDesc4BnInOp("origin_height");
+  const BlobDesc* origin_width = GetBlobDesc4BnInOp("origin_width");
+  CHECK_EQ(origin_height->shape().NumAxes(), 1);
+  CHECK_EQ(origin_height->shape(), origin_width->shape());
+  CHECK_EQ(origin_height->data_type(), DataType::kInt32);
+  CHECK_EQ(origin_height->data_type(), origin_width->data_type());
 
   // scale
   BlobDesc* scale = GetBlobDesc4BnInOp("scale");
-  scale->mut_shape() = height->shape();
+  scale->mut_shape() = origin_height->shape();
   scale->set_data_type(Global<JobDesc>::Get()->DefaultDataType());
+
+  // height & width
+  *GetBlobDesc4BnInOp("height") = *origin_height;
+  *GetBlobDesc4BnInOp("width") = *origin_width;
+}
+
+void CalculateScaleOp::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
+    KernelConf* kernel_conf) const {
+  kernel_conf->set_data_type(GetBlobDesc4BnInOp("scale")->data_type());
 }
 
 REGISTER_CPU_OP(OperatorConf::kCalculateScaleConf, CalculateScaleOp);
