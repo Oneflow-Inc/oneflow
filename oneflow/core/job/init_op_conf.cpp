@@ -146,12 +146,6 @@ std::string BatchNorm(const std::string& name, const std::string& in, Activation
   return name + "/" + "out";
 }
 
-std::string Relu(const std::string& name, const std::string& in) {
-  INIT_OP_CONF(ReluOpConf, mutable_relu_conf)
-  AddOpToPlacementGroup(name);
-  return name + "/" + "out";
-}
-
 std::string Softmax(const std::string& name, const std::string& in, const int axis) {
   INIT_OP_CONF(SoftmaxOpConf, mutable_softmax_conf)
   op_conf->set_axis(axis);
