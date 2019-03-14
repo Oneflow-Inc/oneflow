@@ -153,6 +153,8 @@ class Operator {
       std::function<SbpParallel*(const std::string&)> SbpParallel4BnInOp,
       std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const;
+  virtual void FixInputOutputSbpParallel(
+      const std::function<SbpParallel*(const std::string&)>& SbpParallel4BnInOp) const {}
   // Infer is_model_blob
   void InferIsModelBlob4OutputBlobsIf(
       std::function<bool*(const std::string&)> IsModelBlob4BnInOp) const;
