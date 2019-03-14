@@ -554,7 +554,7 @@ message ReshapeOpConf {
 message ReshapeGradOpConf {
   required string in = 1;
   required string out = 2;
-  required string fw_in = 3;
+  required string like = 3;
 }
 
 message EmbeddingLookupOpConf {

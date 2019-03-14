@@ -2,11 +2,10 @@
 #define ONEFLOW_CORE_OPERATOR_RESHAPE_GRAD_OP_H_
 
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/operator/reshape_op.h"
 
 namespace oneflow {
 
-class ReshapeGradOp final : public ReshapeOp {
+class ReshapeGradOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ReshapeGradOp);
   ReshapeGradOp() = default;
@@ -20,6 +19,9 @@ class ReshapeGradOp final : public ReshapeOp {
 
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
+
+ private:
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
 };
 
 }  // namespace oneflow
