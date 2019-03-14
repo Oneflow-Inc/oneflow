@@ -557,9 +557,9 @@ message ReshapeOpConf {
   optional bool has_dim0_in_shape = 4;
 }
 
-message ReshapeGradOpConf {
-  required string in = 1;
-  required string out = 2;
+message ReshapeLikeOpConf {
+  required string x = 1;
+  required string y = 2;
   required string like = 3;
 }
 
@@ -1114,7 +1114,7 @@ message OperatorConf {
     L2NormalizeOpConf l2_normalize_conf = 264;
     PReluOpConf prelu_conf = 265;
     ReluGradOpConf relu_grad_conf = 266;
-    ReshapeGradOpConf reshape_grad_conf = 267;
+    ReshapeLikeOpConf reshape_like_conf = 267;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

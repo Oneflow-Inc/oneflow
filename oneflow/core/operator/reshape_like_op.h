@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_OPERATOR_RESHAPE_GRAD_OP_H_
-#define ONEFLOW_CORE_OPERATOR_RESHAPE_GRAD_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_RESHAPE_LIKE_OP_H_
+#define ONEFLOW_CORE_OPERATOR_RESHAPE_LIKE_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-class ReshapeGradOp final : public Operator {
+class ReshapeLikeOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ReshapeGradOp);
-  ReshapeGradOp() = default;
-  ~ReshapeGradOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ReshapeLikeOp);
+  ReshapeLikeOp() = default;
+  ~ReshapeLikeOp() = default;
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
@@ -26,4 +26,4 @@ class ReshapeGradOp final : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_RESHAPE_GRAD_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_RESHAPE_LIKE_OP_H_
