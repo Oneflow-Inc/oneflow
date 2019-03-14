@@ -14,6 +14,12 @@ void GeluGradKernel<device_type, T>::ForwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
+void GeluGradKernel<device_type, T>::ForwardDim0ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  BnInOp2Blob("dx")->CopyDim0ValidNumFrom(ctx.device_ctx, BnInOp2Blob("x"));
+}
+
+template<DeviceType device_type, typename T>
 const PbMessage& GeluGradKernel<device_type, T>::GetCustomizedOpConf() const {
   return this->op_conf().gelu_grad_conf();
 }
