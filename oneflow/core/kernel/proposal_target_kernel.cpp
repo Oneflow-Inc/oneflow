@@ -150,12 +150,15 @@ void ProposalTargetKernel<T>::Subsample(
       std::random_device rd;
       std::mt19937 gen(rd());
       std::shuffle(rois_index_vec.begin(), fg_low_it, gen);
+    } else {
+      std::sort(rois_index_vec.begin(), fg_low_it, std::less<int32_t>());
     }
   } else {
     fg_cnt = fg_end;
   }
-  std::copy(rois_index_vec.begin(), rois_index_vec.begin() + fg_cnt, sampled_roi_inds_blob_ptr);
-  sampled_roi_inds_blob_ptr += fg_cnt;
+  int32_t* cur_sampled_inds_ptr = sampled_roi_inds_blob_ptr;
+  std::copy(rois_index_vec.begin(), rois_index_vec.begin() + fg_cnt, cur_sampled_inds_ptr);
+  cur_sampled_inds_ptr += fg_cnt;
 
   // Backgroud sample
   rois_index_vec.erase(rois_index_vec.begin(), fg_low_it);
@@ -173,6 +176,8 @@ void ProposalTargetKernel<T>::Subsample(
       std::random_device rd;
       std::mt19937 gen(rd());
       std::shuffle(rois_index_vec.begin(), rois_index_vec.end(), gen);
+    } else {
+      std::sort(rois_index_vec.begin(), rois_index_vec.end(), std::less<int32_t>());
     }
   } else {
     bg_cnt = rois_index_vec.size();
@@ -180,11 +185,13 @@ void ProposalTargetKernel<T>::Subsample(
   rois_index_vec.resize(bg_cnt);
   // Set negative matching gt box index to -1
   for (int32_t index : rois_index_vec) { best_match_gt_indices_ptr[index] = -1; }
-  std::copy(rois_index_vec.begin(), rois_index_vec.end(), sampled_roi_inds_blob_ptr);
-  sampled_roi_inds_blob_ptr += bg_cnt;
+  std::copy(rois_index_vec.begin(), rois_index_vec.end(), cur_sampled_inds_ptr);
+  size_t total_sampled_cnt = fg_cnt + bg_cnt;
 
-  CHECK_LE(fg_cnt + bg_cnt, num_sampled_rois);
-  sampled_roi_inds_blob->set_dim0_valid_num(0, fg_cnt + bg_cnt);
+  CHECK_LE(total_sampled_cnt, num_sampled_rois);
+  std::sort(sampled_roi_inds_blob_ptr, sampled_roi_inds_blob_ptr + total_sampled_cnt,
+            [](int32_t lhs_idx, int32_t rhs_idx) { return lhs_idx < rhs_idx; });
+  sampled_roi_inds_blob->set_dim0_valid_num(0, total_sampled_cnt);
 }
 
 template<typename T>
