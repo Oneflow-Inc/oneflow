@@ -712,7 +712,8 @@ message DropoutOpConf {
   required double rate = 3;
   optional ShapeProto noise_shape = 4;
   optional int64 seed = 5;
-  optional string random_mask = 6 [default = "random_mask"]; // for fw bw split only
+  // TODO tmp_split_fw_bw_train_conf
+  optional string random_mask = 6 [default = "random_mask"];
 }
 
 message DropoutGradOpConf {
