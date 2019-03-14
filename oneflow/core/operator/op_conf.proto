@@ -563,6 +563,12 @@ message ReshapeOpConf {
   optional bool has_dim0_in_shape = 4;
 }
 
+message ReshapeLikeOpConf {
+  required string x = 1;
+  required string y = 2;
+  required string like = 3;
+}
+
 message EmbeddingLookupOpConf {
   required string ids = 1;
   required string out = 2;
@@ -1115,6 +1121,7 @@ message OperatorConf {
     PReluOpConf prelu_conf = 265;
     ReluGradOpConf relu_grad_conf = 266;
     GeluGradOpConf gelu_grad_conf = 267;
+    ReshapeLikeOpConf reshape_like_conf = 268;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
