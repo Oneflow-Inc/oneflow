@@ -486,6 +486,7 @@ void TaskGraph::EnableInplaceMemSharing() {
       // do nothing
       return;
     }
+    if (input_regst->consumers().size() != 1) { return; }
     if (input_regst->NumOfLbi() != 1) { return; }
     if (output_regst->NumOfLbi() != 1) { return; }
     if (input_regst->mem_shared_inplace_block_id() == -1) {

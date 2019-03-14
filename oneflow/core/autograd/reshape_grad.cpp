@@ -12,12 +12,12 @@ void GenerateBackwardOpConf(const Operator& op, std::vector<OperatorConf>* op_co
     OperatorConf reverse_reshape_op;
     reverse_reshape_op.set_name(op.op_name() + "_grad");
     ReshapeLikeOpConf* reshape_like_op_conf = reverse_reshape_op.mutable_reshape_like_conf();
-    reshape_like_op_conf->set_y("y");
     reshape_like_op_conf->set_x(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     reshape_like_op_conf->set_like(GenLogicalBlobName(op.BnInOp2Lbi("in")));
+    reshape_like_op_conf->set_y("y");
     op_confs->push_back(reverse_reshape_op);
     DiffLbi4BnInOp("in")->set_op_name(reverse_reshape_op.name());
-    DiffLbi4BnInOp("in")->set_blob_name("out");
+    DiffLbi4BnInOp("in")->set_blob_name("y");
   }
 }
 
