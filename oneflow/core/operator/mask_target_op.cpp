@@ -8,6 +8,7 @@ void MaskTargetOp::InitFromOpConf() {
   // Enroll input
   EnrollInputBn("rois", false);
   EnrollInputBn("labels", false);
+  EnrollInputBn("gt_boxes", false);
   EnrollInputBn("gt_segm_polygon_lists", false);
   EnrollInputBn("im_scale", false);
   // Enroll output
@@ -15,7 +16,7 @@ void MaskTargetOp::InitFromOpConf() {
   EnrollOutputBn("masks", false);
   EnrollOutputBn("mask_labels", false);
   // Enroll data tmp
-  EnrollDataTmpBn("gt_segm_bboxes");
+  EnrollDataTmpBn("gt_boxes_scaled");
 }
 
 const PbMessage& MaskTargetOp::GetCustomizedConf() const { return op_conf().mask_target_conf(); }
@@ -29,18 +30,26 @@ void MaskTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   const BlobDesc* rois = GetBlobDesc4BnInOp("rois");
   // input: labels (R) int32_t
   const BlobDesc* labels = GetBlobDesc4BnInOp("labels");
+  // input: gt_boxes (N,G,B) byte
+  const BlobDesc* gt_boxes = GetBlobDesc4BnInOp("gt_boxes");
   // input: gt_segm_polygon_lists (N,G,B) byte
   const BlobDesc* gt_segm_polygon_lists = GetBlobDesc4BnInOp("gt_segm_polygon_lists");
   // input: im_scale (N) T
   const BlobDesc* im_scale = GetBlobDesc4BnInOp("im_scale");
   CHECK_EQ(rois->shape().NumAxes(), 2);
   CHECK_EQ(labels->shape().NumAxes(), 1);
+  CHECK_EQ(gt_boxes->shape().NumAxes(), 3);
   CHECK_EQ(gt_segm_polygon_lists->shape().NumAxes(), 3);
   CHECK_EQ(im_scale->shape().NumAxes(), 1);
   int64_t R = rois->shape().At(0);
   int64_t N = gt_segm_polygon_lists->shape().At(0);
   int64_t G = gt_segm_polygon_lists->shape().At(1);
   DataType data_type = rois->data_type();
+  CHECK_EQ(gt_boxes->shape().At(0), N);
+  CHECK_EQ(gt_boxes->shape().At(1), G);
+  CHECK_EQ(gt_boxes->shape().At(2), 4);
+  CHECK_EQ(gt_boxes->data_type(), data_type);
+  CHECK(gt_boxes->has_dim1_valid_num_field());
 
   const bool input_has_record_id = rois->has_record_id_in_device_piece_field();
   CHECK_EQ(rois->has_dim0_valid_num_field(), labels->has_dim0_valid_num_field());
@@ -83,10 +92,8 @@ void MaskTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   mask_labels->mut_dim0_inner_shape() = Shape({1, R});
   mask_labels->set_has_record_id_in_device_piece_field(input_has_record_id);
   // data tmp: mask_boxes (N,G,4) float
-  BlobDesc* gt_segm_bboxes = GetBlobDesc4BnInOp("gt_segm_bboxes");
-  gt_segm_bboxes->mut_shape() = Shape({N, G, 4});
-  gt_segm_bboxes->set_data_type(DataType::kFloat);
-  gt_segm_bboxes->set_has_dim1_valid_num_field(true);
+  BlobDesc* gt_boxes_scaled = GetBlobDesc4BnInOp("gt_boxes_scaled");
+  *gt_boxes_scaled = *gt_boxes;
 }
 
 void MaskTargetOp::VirtualGenKernelConf(
