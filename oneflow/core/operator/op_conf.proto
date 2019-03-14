@@ -202,8 +202,8 @@ message MaxPooling3DOpConf {
 }
 
 message ReluOpConf {
-  required string x = 1;
-  required string y = 2;
+  required string in = 1;
+  required string out = 2;
 }
 
 message ReluGradOpConf {
