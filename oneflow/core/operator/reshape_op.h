@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class ReshapeOp final : public Operator {
+class ReshapeOp : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ReshapeOp);
   ReshapeOp() = default;
