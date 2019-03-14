@@ -206,6 +206,12 @@ message ReluOpConf {
   required string out = 2;
 }
 
+message ReluGradOpConf {
+  required string y = 1;
+  required string dy = 2;
+  required string dx = 3;
+}
+
 message PReluOpConf {
   required string in = 1;
   required string out = 2;
@@ -494,6 +500,12 @@ message GeluOpConf {
   required string out = 2;
 }
 
+message GeluGradOpConf {
+  required string x = 1;
+  required string dy = 2;
+  required string dx = 3;
+}
+
 message LossPrintOpConf {
   required LogicalBlobId loss_lbi = 1;
   required LogicalBlobId loss_instance_num_lbi = 2;
@@ -549,6 +561,12 @@ message ReshapeOpConf {
   required string out = 2;
   required ShapeProto shape = 3;
   optional bool has_dim0_in_shape = 4;
+}
+
+message ReshapeLikeOpConf {
+  required string x = 1;
+  required string y = 2;
+  required string like = 3;
 }
 
 message EmbeddingLookupOpConf {
@@ -1110,7 +1128,10 @@ message OperatorConf {
     ParallelCastOpConf parallel_cast_conf = 263;
     L2NormalizeOpConf l2_normalize_conf = 264;
     PReluOpConf prelu_conf = 265;
-    DropoutGradOpConf dropout_grad_conf = 266;
+    ReluGradOpConf relu_grad_conf = 266;
+    GeluGradOpConf gelu_grad_conf = 267;
+    ReshapeLikeOpConf reshape_like_conf = 268;
+    DropoutGradOpConf dropout_grad_conf = 269;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
