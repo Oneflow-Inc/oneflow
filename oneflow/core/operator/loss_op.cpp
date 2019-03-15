@@ -31,6 +31,7 @@ class LossOpParallelSignature final : public OpParallelSignature {
       (*bn2sbp)[obn].mutable_split_parallel()->set_axis(0);
     }
     (*bn2sbp)["loss_instance_num"].mutable_partial_sum_parallel();
+    (*bn2sbp)["reduction_coefficient"].mutable_partial_sum_parallel();
   }
 };
 
