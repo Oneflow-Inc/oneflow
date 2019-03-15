@@ -4,9 +4,9 @@ namespace oneflow {
 
 namespace {
 
-void GenerateBackwardOpConf(const Operator& op, std::vector<OperatorConf>* op_confs,
-                            const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
-                            const std::function<DataType(const std::string&)>& DataType4BnInOp) {
+void GenerateBackwardOpConf(
+    const Operator& op, std::vector<OperatorConf>* op_confs,
+    const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) {
   CHECK(op.op_conf().has_reshape_conf());
   if (DiffLbi4BnInOp("in") != nullptr) {
     OperatorConf reverse_reshape_op;
