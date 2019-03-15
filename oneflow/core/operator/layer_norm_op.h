@@ -14,7 +14,7 @@ class LayerNormOp final : public Operator {
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override { return op_conf().layer_norm_conf(); }
   bool NeedInBlobWhenBackward() const override { return true; }
-  bool NeedOutBlobWhenBackward() const override { return false; }
+  bool NeedOutBlobWhenBackward() const override { return op_conf().layer_norm_conf().has_gamma() || op_conf().layer_norm_conf().has_beta(); }
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext*) const override;
   void InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

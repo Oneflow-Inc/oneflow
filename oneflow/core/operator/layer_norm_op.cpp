@@ -29,7 +29,7 @@ void LayerNormOp::InitFromOpConf() {
   if (conf.scale()) {
     if (conf.has_gamma()) {
       EnrollInputBn("gamma");
-      EnrollOutputBn("normalized");
+      EnrollOutputBn("normalized", false);
     } else {
       EnrollModelBn("gamma");
       EnrollDataTmpBn("normalized");
@@ -38,8 +38,8 @@ void LayerNormOp::InitFromOpConf() {
   if (conf.has_beta() || conf.has_gamma()) {
     CHECK_EQ(conf.has_beta(), conf.center());
     CHECK_EQ(conf.has_gamma(), conf.scale());
-    EnrollOutputBn("mean");
-    EnrollOutputBn("inv_variance");
+    EnrollOutputBn("mean", false);
+    EnrollOutputBn("inv_variance", false);
   } else {
     EnrollDataTmpBn("mean");
     EnrollDataTmpBn("inv_variance");
@@ -85,7 +85,6 @@ void LayerNormOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
       gamma->mut_shape() = param_shape;
       gamma->set_data_type(in->data_type());
     }
-
     *GetBlobDesc4BnInOp("normalized") = *in;
   }
   const int64_t begin_norm_axis = ShiftNegativeAxisIfNeed(in->shape(), conf.begin_norm_axis());
