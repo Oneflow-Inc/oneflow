@@ -19,13 +19,31 @@ void LayerNormOp::InitFromOpConf() {
   if (!(conf.center() || conf.scale())) { mut_op_conf()->set_trainable(false); }
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  if (conf.center()) { EnrollModelBn("beta"); }
-  if (conf.scale()) {
-    EnrollModelBn("gamma");
-    EnrollDataTmpBn("normalize_out");
+  if (conf.center()) {
+    if (conf.has_beta()) {
+      EnrollInputBn("beta");
+    } else {
+      EnrollModelBn("beta");
+    }
   }
-  EnrollDataTmpBn("cudnn_bn_mean");
-  EnrollDataTmpBn("cudnn_bn_inv_variance");
+  if (conf.scale()) {
+    if (conf.has_gamma()) {
+      EnrollInputBn("gamma");
+      EnrollOutputBn("normalized");
+    } else {
+      EnrollModelBn("gamma");
+      EnrollDataTmpBn("normalized");
+    }
+  }
+  if (conf.has_beta() || conf.has_gamma()) {
+    CHECK_EQ(conf.has_beta(), conf.center());
+    CHECK_EQ(conf.has_gamma(), conf.scale());
+    EnrollOutputBn("mean");
+    EnrollOutputBn("inv_variance");
+  } else {
+    EnrollDataTmpBn("mean");
+    EnrollDataTmpBn("inv_variance");
+  }
   EnrollConstBufBn("cudnn_bn_scale_ones");
   EnrollConstBufBn("cudnn_bn_bias_zeros");
   EnrollBwBufBn("cudnn_bn_scale_diff_buf");
@@ -40,24 +58,45 @@ void LayerNormOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   *GetBlobDesc4BnInOp("out") = *in;
   const LayerNormOpConf& conf = op_conf().layer_norm_conf();
   const int64_t begin_params_axis = ShiftNegativeAxisIfNeed(in->shape(), conf.begin_params_axis());
-  const Shape param_shape = Shape({in->shape().Count(begin_params_axis)});
+  std::vector<int64_t> param_shape_dim_vec;
+  param_shape_dim_vec.insert(param_shape_dim_vec.end(),
+                             in->shape().dim_vec().cbegin() + begin_params_axis,
+                             in->shape().dim_vec().cend());
+  if (param_shape_dim_vec.empty()) { param_shape_dim_vec.push_back(1); }
+  const Shape param_shape(param_shape_dim_vec);
   if (conf.center()) {
-    BlobDesc* beta = GetBlobDesc4BnInOp("beta");
-    beta->mut_shape() = param_shape;
-    beta->set_data_type(in->data_type());
+    if (conf.has_beta()) {
+      const BlobDesc* beta = GetBlobDesc4BnInOp("beta");
+      CHECK_EQ(beta->shape(), param_shape);
+      CHECK_EQ(beta->data_type(), in->data_type());
+    } else {
+      BlobDesc* beta = GetBlobDesc4BnInOp("beta");
+      beta->mut_shape() = param_shape;
+      beta->set_data_type(in->data_type());
+    }
   }
   if (conf.scale()) {
-    BlobDesc* gamma = GetBlobDesc4BnInOp("gamma");
-    gamma->mut_shape() = param_shape;
-    gamma->set_data_type(in->data_type());
-    *GetBlobDesc4BnInOp("normalize_out") = *in;
+    if (conf.has_gamma()) {
+      const BlobDesc* gamma = GetBlobDesc4BnInOp("gamma");
+      CHECK_EQ(gamma->shape(), param_shape);
+      CHECK_EQ(gamma->data_type(), in->data_type());
+    } else {
+      BlobDesc* gamma = GetBlobDesc4BnInOp("gamma");
+      gamma->mut_shape() = param_shape;
+      gamma->set_data_type(in->data_type());
+    }
+
+    *GetBlobDesc4BnInOp("normalized") = *in;
   }
   const int64_t begin_norm_axis = ShiftNegativeAxisIfNeed(in->shape(), conf.begin_norm_axis());
-  const Shape bn_param_shape = Shape({in->shape().Count(0, begin_norm_axis)});
-  BlobDesc* cudnn_bn_mean = GetBlobDesc4BnInOp("cudnn_bn_mean");
+  std::vector<int64_t> bn_param_shape_dim_vec;
+  bn_param_shape_dim_vec.insert(bn_param_shape_dim_vec.end(), in->shape().dim_vec().cbegin(),
+                                in->shape().dim_vec().cbegin() + begin_norm_axis);
+  const Shape bn_param_shape(bn_param_shape_dim_vec);
+  BlobDesc* cudnn_bn_mean = GetBlobDesc4BnInOp("mean");
   cudnn_bn_mean->mut_shape() = bn_param_shape;
   cudnn_bn_mean->set_data_type(in->data_type());
-  *GetBlobDesc4BnInOp("cudnn_bn_inv_variance") = *cudnn_bn_mean;
+  *GetBlobDesc4BnInOp("inv_variance") = *cudnn_bn_mean;
   *GetBlobDesc4BnInOp("cudnn_bn_scale_ones") = *cudnn_bn_mean;
   *GetBlobDesc4BnInOp("cudnn_bn_bias_zeros") = *cudnn_bn_mean;
 }

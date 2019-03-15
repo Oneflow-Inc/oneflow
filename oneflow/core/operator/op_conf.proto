@@ -912,6 +912,31 @@ message LayerNormOpConf {
   optional int64 begin_norm_axis = 6 [default = 1];
   optional int64 begin_params_axis = 7 [default = -1];
   optional double epsilon = 8 [default = 1e-5];
+  optional string beta = 9;
+  optional string gamma = 10;
+  optional string normalized = 11;
+  optional string mean = 12;
+  optional string inv_variance = 13;
+}
+
+message LayerNormGradOpConf {
+  required string dy = 1;
+  required string x = 2;
+  optional string mean = 3;
+  optional string inv_variance = 4;
+  required string dx = 5;
+  required int64 begin_norm_axis = 6;
+  required double epsilon = 7;
+}
+
+message LayerNormParamGradOpConf {
+  required string dy = 1;
+  optional string normalized = 2;
+  optional string gamma = 3;
+  optional string dx = 4;
+  optional string beta_diff = 5;
+  optional string gamma_diff = 6;
+  required int64 begin_params_axis = 7;
 }
 
 message ConstantOpConf {
@@ -1108,6 +1133,8 @@ message OperatorConf {
     L2NormalizeOpConf l2_normalize_conf = 264;
     PReluOpConf prelu_conf = 265;
     ReluGradOpConf relu_grad_conf = 266;
+    LayerNormGradOpConf layer_norm_grad_conf = 267;
+    LayerNormParamGradOpConf layer_norm_param_grad_conf = 268;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
