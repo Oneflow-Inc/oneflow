@@ -5,10 +5,8 @@ namespace oneflow {
 
 void SoftmaxOp::InitFromOpConf() {
   CHECK(op_conf().has_softmax_conf());
-
   EnrollInputBn("x");
   EnrollOutputBn("y");
-
   if (Global<JobDesc>::Get()->IsPredict()
       && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     EnrollOutputBn("transpose_x");
