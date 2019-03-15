@@ -8,15 +8,21 @@ void SoftmaxGradOp::InitFromOpConf() {
   CHECK(op_conf().has_softmax_grad_conf());
   EnrollInputBn("y");
   EnrollInputBn("dy");
-  EnrollInputBn("transpose_x");
-  EnrollInputBn("transpose_y");
+  if (op_conf().softmax_grad_conf().has_transpose_x()
+      && op_conf().softmax_grad_conf().has_transpose_y()) {
+    EnrollInputBn("transpose_x");
+    EnrollInputBn("transpose_y");
+  } else {
+    CHECK(!op_conf().softmax_grad_conf().has_transpose_x());
+    CHECK(!op_conf().softmax_grad_conf().has_transpose_y());
+  }
   EnrollFwBufBn("transpose_dy");
   EnrollFwBufBn("bw_buf");
   EnrollFwBufBn("bw_softmax_num");
   EnrollOutputBn("dx");
 }
 
-const PbMessage& SoftmaxGradOp::GetCustomizedConf() const { return op_conf().softmax_conf(); }
+const PbMessage& SoftmaxGradOp::GetCustomizedConf() const { return op_conf().softmax_grad_conf(); }
 
 void SoftmaxGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                    const ParallelContext* parallel_ctx, int64_t record_piece_size,
@@ -26,16 +32,18 @@ void SoftmaxGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   // dx
   BlobDesc* dx_blob_desc = GetBlobDesc4BnInOp("dx");
   *dx_blob_desc = *dy_blob_desc;
+  if (op_conf().softmax_grad_conf().has_transpose_y()) {
+    *GetBlobDesc4BnInOp("transpose_dy") = *GetBlobDesc4BnInOp("transpose_y");
+  }
   SoftmaxGradOpCtx* op_ctx = NewSoftmaxGradOpCtx(dx_blob_desc->shape());
-  const BlobDesc* x_blob_desc = GetBlobDesc4BnInOp("x");
   // 1D blob store tmp calculate result
   BlobDesc* bw_tmp_blob_desc = GetBlobDesc4BnInOp("bw_softmax_num");
   bw_tmp_blob_desc->mut_shape() = Shape({op_ctx->transpose_rows});
-  bw_tmp_blob_desc->set_data_type(x_blob_desc->data_type());
+  bw_tmp_blob_desc->set_data_type(dx_blob_desc->data_type());
   // temp storage for RowMax etc.
   BlobDesc* bw_buf_blob_desc = GetBlobDesc4BnInOp("bw_buf");
   bw_buf_blob_desc->mut_shape() =
-      Shape({static_cast<int64_t>(RtBlobDesc(*x_blob_desc).ByteSizeOfDataContentField())});
+      Shape({static_cast<int64_t>(RtBlobDesc(*dx_blob_desc).ByteSizeOfDataContentField())});
   bw_buf_blob_desc->set_data_type(DataType::kChar);
   EnrollOpCtx(op_ctx);
 }
@@ -60,7 +68,7 @@ void SoftmaxGradOp::VirtualGenKernelConf(
 
 SoftmaxGradOpCtx* SoftmaxGradOp::NewSoftmaxGradOpCtx(const Shape& dx_shape) const {
   SoftmaxGradOpCtx* op_ctx = new SoftmaxGradOpCtx();
-  op_ctx->axis = op_conf().softmax_conf().axis();
+  op_ctx->axis = op_conf().softmax_grad_conf().axis();
   op_ctx->dims = dx_shape.NumAxes();
   if (op_ctx->axis < 0) { op_ctx->axis += op_ctx->dims; }
   CHECK_GE(op_ctx->dims, 2);

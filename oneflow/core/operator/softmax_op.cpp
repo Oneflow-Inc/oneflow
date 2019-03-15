@@ -7,8 +7,10 @@ void SoftmaxOp::InitFromOpConf() {
   CHECK(op_conf().has_softmax_conf());
   EnrollInputBn("x");
   EnrollOutputBn("y");
+  // TODO: fix when axis is not -1 but (NumAxes -1) of x
   if (Global<JobDesc>::Get()->IsPredict()
-      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()
+      && op_conf().softmax_conf().axis() != -1) {
     EnrollOutputBn("transpose_x");
     EnrollOutputBn("transpose_y");
   } else {
@@ -51,12 +53,12 @@ void SoftmaxOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
     transpose_blob_desc->mut_shape().Set(op_ctx->dims - 1, op_ctx->transpose_cols);
     transpose_blob_desc->set_data_type(in_blob_desc->data_type());
     *GetBlobDesc4BnInOp("transpose_y") = *transpose_blob_desc;
-    *GetBlobDesc4BnInOp("transpose_dy") = *transpose_blob_desc;
   }
 }
 
 void SoftmaxOp::InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                     const ParallelContext*, const OpContext* op_ctx) const {
+  *GetBlobDesc4BnInOp("transpose_dy") = *GetBlobDesc4BnInOp("transpose_x");
   const SoftmaxOpCtx* softmax_op_ctx = static_cast<const SoftmaxOpCtx*>(op_ctx);
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("x");
   // 1D blob store tmp calculate result
@@ -92,6 +94,12 @@ SoftmaxOpCtx* SoftmaxOp::NewSoftmaxOpCtx(const Shape& x_shape) const {
   SoftmaxOpCtx* op_ctx = new SoftmaxOpCtx();
   op_ctx->axis = op_conf().softmax_conf().axis();
   op_ctx->dims = x_shape.NumAxes();
+  // workaround before output issue got fixed
+  if (Global<JobDesc>::Get()->IsPredict()
+      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()
+      && op_ctx->axis == op_ctx->dims - 1) {
+    LOG(FATAL) << "please set axis to -1 to represent last dim";
+  }
   if (op_ctx->axis < 0) { op_ctx->axis += op_ctx->dims; }
   CHECK_GE(op_ctx->dims, 2);
   CHECK_GE(op_ctx->axis, 1);
