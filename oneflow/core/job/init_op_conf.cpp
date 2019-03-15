@@ -146,13 +146,6 @@ std::string BatchNorm(const std::string& name, const std::string& in, Activation
   return name + "/" + "out";
 }
 
-std::string Softmax(const std::string& name, const std::string& in, const int axis) {
-  INIT_OP_CONF(SoftmaxOpConf, mutable_softmax_conf)
-  op_conf->set_axis(axis);
-  AddOpToPlacementGroup(name);
-  return name + "/" + "out";
-}
-
 std::string Add(const std::string& name, const std::vector<std::string>& ins,
                 ActivationType activation) {
   OperatorConf* op = Global<JobConf1>::Get()->mutable_net()->add_op();

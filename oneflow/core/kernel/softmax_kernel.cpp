@@ -8,34 +8,33 @@ namespace oneflow {
 namespace {
 
 template<DeviceType device_type, typename T>
-void SoftmaxComputeDiff(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* out_diff,
-                        const T* out, T* sum_vec, T* in_diff, void* temp_storage,
-                        const size_t temp_storage_bytes) {
-  // it's safe to use in_diff as tmp
-  // dot product | get dot product sum_vec[i] from out[i] * out_diff[i]
-  T* tmp = in_diff;
-  KernelUtil<device_type, T>::Mul(ctx, n * w, out, out_diff, tmp);
+void SoftmaxComputeDiff(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* dy, const T* out,
+                        T* sum_vec, T* dx, void* temp_storage, const size_t temp_storage_bytes) {
+  // it's safe to use dx as tmp
+  // dot product | get dot product sum_vec[i] from out[i] * dy[i]
+  T* tmp = dx;
+  KernelUtil<device_type, T>::Mul(ctx, n * w, out, dy, tmp);
   NdarrayUtil<device_type, T>::ReduceSum(
       ctx, XpuVarNdarray<T>({n, 1}, sum_vec), XpuVarNdarray<const T>({n, w}, tmp),
       XpuVarNdarray<T>({static_cast<int64_t>(temp_storage_bytes / sizeof(T))},
                        reinterpret_cast<T*>(temp_storage)));
-  // copy out_diff to in_diff
-  KernelUtil<device_type, T>::Copy(ctx, n * w, out_diff, 1, in_diff, 1);
-  // sub | in_diff[i][j] -= sum_vec[i]
-  SoftmaxKernelUtil<device_type, T>::Sub(ctx, n, w, in_diff, sum_vec);
-  // elementwise multiplication | in_diff[i][j] *= out[i][j]
-  KernelUtil<device_type, T>::Mul(ctx, n * w, in_diff, out, in_diff);
+  // copy dy to dx
+  KernelUtil<device_type, T>::Copy(ctx, n * w, dy, 1, dx, 1);
+  // sub | dx[i][j] -= sum_vec[i]
+  SoftmaxKernelUtil<device_type, T>::Sub(ctx, n, w, dx, sum_vec);
+  // elementwise multiplication | dx[i][j] *= out[i][j]
+  KernelUtil<device_type, T>::Mul(ctx, n * w, dx, out, dx);
 }
 
 }  // namespace
 
 template<DeviceType device_type, typename T>
-void SoftmaxComputeProb(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* in, T* tmp,
+void SoftmaxComputeProb(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* x, T* tmp,
                         T* prob, void* temp_storage, const size_t temp_storage_bytes) {
-  // copy in blob to prob blob
-  KernelUtil<device_type, T>::Copy(ctx, n * w, in, 1, prob, 1);
+  // copy x blob to prob blob
+  KernelUtil<device_type, T>::Copy(ctx, n * w, x, 1, prob, 1);
   // max | calculate max of every sample vector prob[i], store in tmp[i]
-  //       the prob[i] now is store the data of in[i]
+  //       the prob[i] now is store the data of x[i]
   NdarrayUtil<device_type, T>::ReduceMax(
       ctx, XpuVarNdarray<T>({n, 1}, tmp), XpuVarNdarray<const T>({n, w}, prob),
       XpuVarNdarray<T>({static_cast<int64_t>(temp_storage_bytes / sizeof(T))},
@@ -58,8 +57,8 @@ void SoftmaxComputeProb(DeviceCtx* ctx, const int64_t n, const int64_t w, const 
 template<DeviceType device_type, typename T>
 void SoftmaxKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* in_blob = BnInOp2Blob(this->op_attribute().input_bns(0));
-  Blob* out_blob = BnInOp2Blob(this->op_attribute().output_bns(0));
+  const Blob* x_blob = BnInOp2Blob(this->op_attribute().input_bns(0));
+  Blob* y_blob = BnInOp2Blob(this->op_attribute().output_bns(0));
   Blob* tmp_blob = BnInOp2Blob("fw_softmax_num");
   Blob* buf_blob = BnInOp2Blob("fw_buf");
   auto conf = this->kernel_conf().softmax_conf();
@@ -67,16 +66,16 @@ void SoftmaxKernel<device_type, T>::ForwardDataContent(
   const int64_t w = conf.transpose_cols();
   T* tmp = tmp_blob->mut_dptr<T>();
   if (conf.need_transpose()) {
-    Blob* transpose_in_blob = BnInOp2Blob("transpose_in");
-    Blob* transpose_out_blob = BnInOp2Blob("transpose_out");
-    Transpose<device_type, T>(ctx.device_ctx, in_blob, transpose_in_blob, conf.perm());
-    SoftmaxComputeProb<device_type, T>(ctx.device_ctx, n, w, transpose_in_blob->dptr<T>(), tmp,
-                                       transpose_out_blob->mut_dptr<T>(), buf_blob->mut_dptr(),
+    Blob* transpose_x_blob = BnInOp2Blob("transpose_x");
+    Blob* transpose_y_blob = BnInOp2Blob("transpose_y");
+    Transpose<device_type, T>(ctx.device_ctx, x_blob, transpose_x_blob, conf.perm());
+    SoftmaxComputeProb<device_type, T>(ctx.device_ctx, n, w, transpose_x_blob->dptr<T>(), tmp,
+                                       transpose_y_blob->mut_dptr<T>(), buf_blob->mut_dptr(),
                                        buf_blob->ByteSizeOfDataContentField());
-    Transpose<device_type, T>(ctx.device_ctx, transpose_out_blob, out_blob, conf.perm());
+    Transpose<device_type, T>(ctx.device_ctx, transpose_y_blob, y_blob, conf.perm());
   } else {
-    SoftmaxComputeProb<device_type, T>(ctx.device_ctx, n, w, in_blob->dptr<T>(), tmp,
-                                       out_blob->mut_dptr<T>(), buf_blob->mut_dptr(),
+    SoftmaxComputeProb<device_type, T>(ctx.device_ctx, n, w, x_blob->dptr<T>(), tmp,
+                                       y_blob->mut_dptr<T>(), buf_blob->mut_dptr(),
                                        buf_blob->ByteSizeOfDataContentField());
   }
 }
@@ -84,9 +83,9 @@ void SoftmaxKernel<device_type, T>::ForwardDataContent(
 template<DeviceType device_type, typename T>
 void SoftmaxKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* out_blob = BnInOp2Blob(this->op_attribute().output_bns(0));
-  const Blob* out_diff_blob = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
-  Blob* in_diff_blob = BnInOp2Blob(this->op_attribute().input_diff_bns(0));
+  const Blob* y_blob = BnInOp2Blob(this->op_attribute().output_bns(0));
+  const Blob* dy_blob = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
+  Blob* dx_blob = BnInOp2Blob(this->op_attribute().input_diff_bns(0));
   Blob* tmp_blob = BnInOp2Blob("bw_softmax_num");
   Blob* buf_blob = BnInOp2Blob("bw_buf");
   auto conf = this->kernel_conf().softmax_conf();
@@ -94,19 +93,19 @@ void SoftmaxKernel<device_type, T>::BackwardDataContent(
   const int64_t w = conf.transpose_cols();
   T* tmp = tmp_blob->mut_dptr<T>();
   if (conf.need_transpose()) {
-    Blob* transpose_in_diff_blob = BnInOp2Blob("transpose_in");
-    Blob* transpose_out_blob = BnInOp2Blob("transpose_out");
-    Blob* transpose_out_diff_blob = BnInOp2Blob("transpose_out_diff");
-    Transpose<device_type, T>(ctx.device_ctx, out_diff_blob, transpose_out_diff_blob, conf.perm());
-    SoftmaxComputeDiff<device_type, T>(ctx.device_ctx, n, w, transpose_out_diff_blob->dptr<T>(),
-                                       transpose_out_blob->dptr<T>(), tmp,
-                                       transpose_in_diff_blob->mut_dptr<T>(), buf_blob->mut_dptr(),
+    Blob* transpose_dx_blob = BnInOp2Blob("transpose_x");
+    Blob* transpose_y_blob = BnInOp2Blob("transpose_y");
+    Blob* transpose_dy_blob = BnInOp2Blob("transpose_dy");
+    Transpose<device_type, T>(ctx.device_ctx, dy_blob, transpose_dy_blob, conf.perm());
+    SoftmaxComputeDiff<device_type, T>(ctx.device_ctx, n, w, transpose_dy_blob->dptr<T>(),
+                                       transpose_y_blob->dptr<T>(), tmp,
+                                       transpose_dx_blob->mut_dptr<T>(), buf_blob->mut_dptr(),
                                        buf_blob->ByteSizeOfDataContentField());
-    Transpose<device_type, T>(ctx.device_ctx, transpose_in_diff_blob, in_diff_blob, conf.perm());
+    Transpose<device_type, T>(ctx.device_ctx, transpose_dx_blob, dx_blob, conf.perm());
   } else {
-    SoftmaxComputeDiff<device_type, T>(
-        ctx.device_ctx, n, w, out_diff_blob->dptr<T>(), out_blob->dptr<T>(), tmp,
-        in_diff_blob->mut_dptr<T>(), buf_blob->mut_dptr(), buf_blob->ByteSizeOfDataContentField());
+    SoftmaxComputeDiff<device_type, T>(ctx.device_ctx, n, w, dy_blob->dptr<T>(), y_blob->dptr<T>(),
+                                       tmp, dx_blob->mut_dptr<T>(), buf_blob->mut_dptr(),
+                                       buf_blob->ByteSizeOfDataContentField());
   }
 }
 
