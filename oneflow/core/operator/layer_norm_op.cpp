@@ -17,17 +17,25 @@ void LayerNormOp::InitFromOpConf() {
   CHECK(op_conf().has_layer_norm_conf());
   const LayerNormOpConf& conf = op_conf().layer_norm_conf();
   if (!(conf.center() || conf.scale())) { mut_op_conf()->set_trainable(false); }
+  const bool fw_bw_split = IsFwBwSplit();
+  if (fw_bw_split) {
+    CHECK_EQ(conf.center(), conf.has_beta());
+    CHECK_EQ(conf.scale(), conf.has_gamma());
+  } else {
+    CHECK(!conf.has_beta());
+    CHECK(!conf.has_gamma());
+  }
   EnrollInputBn("in");
   EnrollOutputBn("out");
   if (conf.center()) {
-    if (conf.has_beta()) {
+    if (fw_bw_split) {
       EnrollInputBn("beta");
     } else {
       EnrollModelBn("beta");
     }
   }
   if (conf.scale()) {
-    if (conf.has_gamma()) {
+    if (fw_bw_split) {
       EnrollInputBn("gamma");
       EnrollOutputBn("normalized", false);
     } else {
@@ -35,9 +43,7 @@ void LayerNormOp::InitFromOpConf() {
       EnrollDataTmpBn("normalized");
     }
   }
-  if (conf.has_beta() || conf.has_gamma()) {
-    CHECK_EQ(conf.has_beta(), conf.center());
-    CHECK_EQ(conf.has_gamma(), conf.scale());
+  if (fw_bw_split) {
     EnrollOutputBn("mean", false);
     EnrollOutputBn("inv_variance", false);
   } else {
