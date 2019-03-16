@@ -29,7 +29,7 @@ void GenerateBackwardOpConf(
     }
     if (DiffLbi4BnInOp("gamma")) {
       param_grad_conf->set_normalized(GenLogicalBlobName(op.BnInOp2Lbi("normalized")));
-      param_grad_conf->set_beta_diff("gamma_diff");
+      param_grad_conf->set_gamma_diff("gamma_diff");
       DiffLbi4BnInOp("gamma")->set_op_name(param_grad_op.name());
       DiffLbi4BnInOp("gamma")->set_blob_name("gamma_diff");
     }
