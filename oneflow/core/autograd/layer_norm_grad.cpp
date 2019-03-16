@@ -4,9 +4,9 @@ namespace oneflow {
 
 namespace {
 
-void GenerateBackwardOpConf(const Operator& op, std::vector<OperatorConf>* op_confs,
-                            const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
-                            const std::function<DataType(const std::string&)>& DataType4BnInOp) {
+void GenerateBackwardOpConf(
+    const Operator& op, std::vector<OperatorConf>* op_confs,
+    const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) {
   CHECK(op.op_conf().has_layer_norm_conf());
   const LayerNormOpConf& conf = op.op_conf().layer_norm_conf();
   if (conf.center()) { CHECK(conf.has_beta()); }
