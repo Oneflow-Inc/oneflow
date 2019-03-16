@@ -6,16 +6,16 @@ void LayerNormParamGradOp::InitFromOpConf() {
   CHECK(op_conf().has_layer_norm_param_grad_conf());
   const LayerNormParamGradOpConf& conf = op_conf().layer_norm_param_grad_conf();
   CHECK(conf.has_beta_diff() || conf.has_gamma_diff() || conf.has_dx());
-  EnrollInputBn("dy");
-  if (conf.has_beta_diff()) { EnrollOutputBn("beta_diff"); }
+  EnrollInputBn("dy", false);
+  if (conf.has_beta_diff()) { EnrollOutputBn("beta_diff", false); }
   if (conf.has_gamma_diff()) {
-    EnrollInputBn("normalized");
-    EnrollOutputBn("gamma_diff");
+    EnrollInputBn("normalized", false);
+    EnrollOutputBn("gamma_diff", false);
   }
   if (conf.has_beta_diff() || conf.has_gamma_diff()) { EnrollFwBufBn("reduce_buf"); }
-  if (conf.has_dx()) { EnrollOutputBn("dx"); }
+  if (conf.has_dx()) { EnrollOutputBn("dx", false); }
   if (conf.has_dx() && conf.has_gamma_diff()) { CHECK(conf.has_gamma()); }
-  if (conf.has_gamma()) { EnrollInputBn("gamma"); }
+  if (conf.has_gamma()) { EnrollInputBn("gamma", false); }
 }
 
 void LayerNormParamGradOp::InferBlobDescs(

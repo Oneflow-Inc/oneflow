@@ -5,14 +5,14 @@ namespace oneflow {
 void LayerNormGradOp::InitFromOpConf() {
   CHECK(op_conf().has_layer_norm_grad_conf());
   const LayerNormGradOpConf& conf = op_conf().layer_norm_grad_conf();
-  EnrollInputBn("dy");
-  EnrollInputBn("x");
+  EnrollInputBn("dy", false);
+  EnrollInputBn("x", false);
   CHECK_EQ(conf.has_mean(), conf.has_inv_variance());
   if (conf.has_mean() && conf.has_inv_variance()) {
-    EnrollInputBn("mean");
-    EnrollInputBn("inv_variance");
+    EnrollInputBn("mean", false);
+    EnrollInputBn("inv_variance", false);
   }
-  EnrollOutputBn("dx");
+  EnrollOutputBn("dx", false);
   EnrollConstBufBn("cudnn_bn_scale_ones");
   EnrollFwBufBn("cudnn_bn_scale_diff_buf");
   EnrollFwBufBn("cudnn_bn_bias_diff_buf");
