@@ -86,8 +86,15 @@ void NormalBackwardCompTaskNode::BuildExecGphAndBindOutDiffRegst() {
   if (fw_task) {
     std::shared_ptr<RegstDesc> out_regst = GetSoleConsumedRegst("out");
     mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
-      for (const std::string& obn : cur_node->op()->output_bns()) {
-        cur_node->BindBnWithRegst(obn, out_regst);
+      for (const std::string& odbn : cur_node->op()->output_diff_bns()) {
+        const LogicalBlobId& lbi = cur_node->op()->BnInOp2Lbi(odbn);
+        if (lbi2producer.find(lbi) == lbi2producer.end()) {
+          std::string obn =
+              GenUnDiffBn(odbn);  // the lbis of obn and odbn may be different, use obn directly
+          LogicalBlobId obn_lbi = cur_node->op()->BnInOp2Lbi(obn);
+          CHECK(fw_task->logical_node()->IsDataLbiOnOutEdge(obn_lbi) == true);
+          cur_node->BindBnWithRegst(GenUnDiffBn(odbn), out_regst);
+        }
       }
     });
   }
