@@ -7,6 +7,23 @@ bool IsScalarBlob(const BlobDesc* blob) {
   return blob->shape().NumAxes() == 1 && blob->shape().At(0) == 1;
 }
 
+class BroadcastLikeOpParallelSignature final : public OpParallelSignature {
+ public:
+  ~BroadcastLikeOpParallelSignature() override = default;
+
+  const std::string Description() const override { return std::string(); }
+
+  const OpParallelMatchResult GetMatchResult(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const override {
+    return OpParallelMatchResult();
+  }
+
+  void GenerateSignature(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      HashMap<std::string, SbpParallel>* bn2sbp) const override {}
+};
+
 }  // namespace
 
 void BroadcastLikeOp::InitFromOpConf() {
@@ -45,6 +62,9 @@ void BroadcastLikeOp::InferBlobDescs(
     out_blob_desc->mut_shape() = out_shape;
   }
 }
+
+void BroadcastLikeOp::GetOpParallelSignatures(
+    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {}
 
 REGISTER_OP(OperatorConf::kBroadcastLikeConf, BroadcastLikeOp);
 
