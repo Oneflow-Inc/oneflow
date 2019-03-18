@@ -107,7 +107,8 @@ void LayerNormParamGradOp::InferBlobDescs(
 
 void LayerNormParamGradOp::GetOpParallelSignatures(
     std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(LayerNormParamGrad_DS_MB_2_P_S_OpParallelSignature(this));
+  op_parallel_signatures->emplace_back(
+      new LayerNormParamGrad_DS_MB_2_P_S_OpParallelSignature(this));
 }
 
 REGISTER_OP(OperatorConf::kLayerNormParamGradConf, LayerNormParamGradOp);

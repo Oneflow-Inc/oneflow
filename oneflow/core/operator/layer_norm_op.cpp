@@ -165,7 +165,7 @@ void LayerNormOp::GetOpParallelSignatures(
     std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
   const LayerNormOpConf& conf = op_conf().layer_norm_conf();
   if (conf.has_beta() || conf.has_gamma()) {
-    op_parallel_signatures->emplace_back(LayerNorm_DS_MB_2_S_OpParallelSignature(this));
+    op_parallel_signatures->emplace_back(new LayerNorm_DS_MB_2_S_OpParallelSignature(this));
   } else {
     op_parallel_signatures->emplace_back(MakeDataSplitOpParallelSignature(this));
   }
