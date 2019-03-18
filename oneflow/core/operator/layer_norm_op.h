@@ -14,7 +14,7 @@ class LayerNormOp final : public Operator {
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override { return op_conf().layer_norm_conf(); }
   bool NeedInBlobWhenBackward() const override { return true; }
-  bool NeedOutBlobWhenBackward() const override { return IsFwBwSplit(); }
+  bool NeedOutBlobWhenBackward() const override { return false; }
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext*) const override;
   void InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -23,9 +23,6 @@ class LayerNormOp final : public Operator {
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
   void VirtualFixParallelDesc(ParallelDesc* pr_desc) const override;
-  bool IsFwBwSplit() const {
-    return Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf();
-  }
 };
 
 }  // namespace oneflow

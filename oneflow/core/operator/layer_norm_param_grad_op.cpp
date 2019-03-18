@@ -14,7 +14,7 @@ void LayerNormParamGradOp::InitFromOpConf() {
   }
   if (conf.has_beta_diff() || conf.has_gamma_diff()) { EnrollFwBufBn("reduce_buf"); }
   if (conf.has_dx()) { EnrollOutputBn("dx", false); }
-  if (conf.has_dx() && conf.has_gamma_diff()) { CHECK(conf.has_gamma()); }
+  if (conf.has_dx() || conf.has_gamma_diff()) { CHECK(conf.has_gamma()); }
   if (conf.has_gamma()) { EnrollInputBn("gamma", false); }
 }
 
