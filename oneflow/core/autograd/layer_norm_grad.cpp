@@ -12,9 +12,9 @@ void GenerateBackwardOpConf(
   if (conf.center()) { CHECK(conf.has_beta()); }
   if (conf.scale()) { CHECK(conf.has_gamma()); }
   LogicalBlobId grad_dy_lbi = *DiffLbi4BnInOp("out");
-  const bool has_beta_diff = conf.has_beta() && DiffLbi4BnInOp("beta");
-  const bool has_gamma_diff = conf.has_gamma() && DiffLbi4BnInOp("gamma");
-  const bool need_scale_out_diff = conf.has_gamma() && DiffLbi4BnInOp("in");
+  const bool has_beta_diff = conf.has_beta() && (DiffLbi4BnInOp("beta") != nullptr);
+  const bool has_gamma_diff = conf.has_gamma() && (DiffLbi4BnInOp("gamma") != nullptr);
+  const bool need_scale_out_diff = conf.has_gamma() && (DiffLbi4BnInOp("in") != nullptr);
   if (has_beta_diff || has_gamma_diff || need_scale_out_diff) {
     OperatorConf param_grad_op;
     param_grad_op.set_name(op.op_name() + "_param_grad");
@@ -42,7 +42,7 @@ void GenerateBackwardOpConf(
     }
     op_confs->push_back(param_grad_op);
   }
-  if (DiffLbi4BnInOp("in")) {
+  if (DiffLbi4BnInOp("in") != nullptr) {
     OperatorConf grad_op;
     grad_op.set_name(op.op_name() + "_grad");
     LayerNormGradOpConf* grad_conf = grad_op.mutable_layer_norm_grad_conf();
