@@ -893,6 +893,7 @@ message BroadcastLikeOpConf {
   required string b = 2;
   required string out = 3;
   optional bool is_const = 4 [default = false];
+  optional ShapeProto kept_dims_shape = 5;
 }
 
 message BiasAddOpConf {
