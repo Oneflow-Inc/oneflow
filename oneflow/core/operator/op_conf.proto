@@ -888,6 +888,12 @@ message BroadcastDivOpConf {
   optional bool is_const = 4 [default = false];
 }
 
+message BroadcastLikeOpConf {
+  required string a = 1;
+  required string b = 2;
+  required string out = 3;
+  optional bool is_const = 4 [default = false];
+}
 
 message BiasAddOpConf {
   // inputs
@@ -1122,6 +1128,7 @@ message OperatorConf {
     ReluGradOpConf relu_grad_conf = 266;
     GeluGradOpConf gelu_grad_conf = 267;
     ReshapeLikeOpConf reshape_like_conf = 268;
+    BroadcastLikeOpConf broadcast_like_conf = 269;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
