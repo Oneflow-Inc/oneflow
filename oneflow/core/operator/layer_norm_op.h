@@ -23,6 +23,8 @@ class LayerNormOp final : public Operator {
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
   void VirtualFixParallelDesc(ParallelDesc* pr_desc) const override;
+  void GetOpParallelSignatures(
+      std::vector<std::unique_ptr<const OpParallelSignature>>*) const override;
 };
 
 }  // namespace oneflow

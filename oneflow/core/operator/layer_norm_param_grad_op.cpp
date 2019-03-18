@@ -2,6 +2,50 @@
 
 namespace oneflow {
 
+namespace {
+
+class LayerNormParamGrad_DS_MB_2_P_S_OpParallelSignature final : public OpParallelSignature {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(LayerNormParamGrad_DS_MB_2_P_S_OpParallelSignature);
+  ~LayerNormParamGrad_DS_MB_2_P_S_OpParallelSignature() override = default;
+
+  explicit LayerNormParamGrad_DS_MB_2_P_S_OpParallelSignature(const Operator* op)
+      : OpParallelSignature(op) {}
+
+  const std::string Description() const override { return op().op_name() + ": (C, S) -> (P, S)"; }
+
+  const OpParallelMatchResult GetMatchResult(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      const ParallelDesc& parallel_desc) const override {
+    if (parallel_desc.policy() == kDataParallel) {
+      return MakeOpParallelMatchSuccess();
+    } else {
+      return MakeOpParallelMatchSignatureMismatch();
+    }
+  }
+
+  void GenerateSignature(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+    for (const std::string& ibn : op().input_bns()) {
+      if (ibn == "gamma") {
+        (*bn2sbp)[ibn].mutable_broadcast_parallel();
+      } else {
+        (*bn2sbp)[ibn].mutable_split_parallel()->set_axis(0);
+      }
+    }
+    for (const std::string& obn : op().output_bns()) {
+      if (obn == "beta_diff" || obn == "gamma_diff") {
+        (*bn2sbp)[obn].mutable_partial_sum_parallel();
+      } else {
+        (*bn2sbp)[obn].mutable_split_parallel()->set_axis(0);
+      }
+    }
+  }
+};
+
+}  // namespace
+
 void LayerNormParamGradOp::InitFromOpConf() {
   CHECK(op_conf().has_layer_norm_param_grad_conf());
   const LayerNormParamGradOpConf& conf = op_conf().layer_norm_param_grad_conf();
@@ -59,6 +103,11 @@ void LayerNormParamGradOp::InferBlobDescs(
     CHECK_EQ(gamma->data_type(), dy->data_type());
     CHECK_EQ(gamma->shape(), param_shape);
   }
+}
+
+void LayerNormParamGradOp::GetOpParallelSignatures(
+    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
+  op_parallel_signatures->emplace_back(LayerNormParamGrad_DS_MB_2_P_S_OpParallelSignature(this));
 }
 
 REGISTER_OP(OperatorConf::kLayerNormParamGradConf, LayerNormParamGradOp);
