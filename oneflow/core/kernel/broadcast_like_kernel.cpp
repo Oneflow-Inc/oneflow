@@ -18,7 +18,7 @@ void BroadcastLikeKernel<device_type, T>::ForwardDataContent(
     KernelUtil<device_type, T>::Replicate(ctx.device_ctx, n, out->mut_dptr<T>(), b->dptr<T>());
   } else {
     size_t num_axes = out->shape().NumAxes();
-    if (!this->op_conf().broadcast_like_conf().has_kept_dims_shape()) {
+    if (this->op_conf().broadcast_like_conf().has_kept_dims_shape()) {
       NdarrayUtil<device_type, T>::template BroadcastApply<BinaryFuncDiv>(
           ctx.device_ctx, XpuVarNdarray<T>(out, num_axes),
           XpuVarNdarray<const T>(Shape(this->op_conf().broadcast_like_conf().kept_dims_shape()),

@@ -32,7 +32,8 @@ void GenerateBackwardOpConf(
     broadcast_like_op_conf->set_a(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     broadcast_like_op_conf->set_b(GenLogicalBlobName(op.BnInOp2Lbi("in")));
     broadcast_like_op_conf->set_out("out");
-    if (op.op_conf().reduce_sum_conf().axis().empty()) {
+    if (op.op_conf().reduce_sum_conf().axis().empty() == false
+        && op.op_conf().reduce_sum_conf().keep_dims() == false) {
       std::vector<int64_t> kept_dims;
       const PbRf<int32_t>& axis_repeated = op.op_conf().reduce_mean_conf().axis();
       std::vector<int64_t> axis_vec = {axis_repeated.begin(), axis_repeated.end()};

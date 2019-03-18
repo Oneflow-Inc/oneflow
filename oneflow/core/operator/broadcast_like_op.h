@@ -13,6 +13,8 @@ class BroadcastLikeOp final : public BroadcastBinaryOp {
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
+  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                      const ParallelContext* parallel_ctx) const override;
 };
 
 }  // namespace oneflow
