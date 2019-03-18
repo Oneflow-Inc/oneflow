@@ -10,9 +10,9 @@ bool IsScalarBlob(const BlobDesc* blob) {
 }  // namespace
 
 void BroadcastLikeOp::InitFromOpConf() {
-  EnrollInputBn("a");
-  EnrollInputBn("b")->set_use_header_only(true);
-  EnrollOutputBn("out");
+  EnrollInputBn("x");
+  EnrollInputBn("like")->set_use_header_only(true);
+  EnrollOutputBn("y");
 }
 
 const PbMessage& BroadcastLikeOp::GetCustomizedConf() const {
@@ -22,10 +22,10 @@ const PbMessage& BroadcastLikeOp::GetCustomizedConf() const {
 void BroadcastLikeOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  const BlobDesc* a_blob_desc = GetBlobDesc4BnInOp("a");
-  const BlobDesc* b_blob_desc = GetBlobDesc4BnInOp("b");
+  const BlobDesc* a_blob_desc = GetBlobDesc4BnInOp("x");
+  const BlobDesc* b_blob_desc = GetBlobDesc4BnInOp("like");
   CHECK_EQ(a_blob_desc->data_type(), b_blob_desc->data_type());
-  BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+  BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("y");
   size_t output_num_axes = std::max(a_blob_desc->shape().NumAxes(), b_blob_desc->shape().NumAxes());
   if (IsScalarBlob(a_blob_desc)) {
     *out_blob_desc = *b_blob_desc;
