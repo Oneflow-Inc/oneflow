@@ -137,24 +137,27 @@ message Conv3DOpConf {
   optional string bias = 14;
 }
 
+message ConvConf {
+  required int32 n_dims = 1;
+  required string padding = 2;
+  required string data_format = 3;
+  repeated int32 strides = 4;
+  repeated int32 dilation_rate = 5;
+}
+
 message ConvDataGradOpConf {
   required string dy = 1;
   required string filter = 2;
-  required string dx = 3;
-  required string padding = 4;
-  required string data_format = 5;
-  repeated int32 strides = 7;
-  repeated int32 dilation_rate = 8;
+  required string x_like = 3;
+  required string dx = 4;
+  required ConvConf conf_conf = 5;
 }
 
 message ConvFilterGradOpConf {
   required string dy = 1;
   required string x = 2;
   required string filter_diff = 3;
-  required string padding = 4;
-  required string data_format = 5;
-  repeated int32 strides = 7;
-  repeated int32 dilation_rate = 8;
+  required ConvConf conf_conf = 4;
 }
 
 message ConvBiasGradOpConf {
@@ -1156,6 +1159,7 @@ message OperatorConf {
     GeluGradOpConf gelu_grad_conf = 267;
     ReshapeLikeOpConf reshape_like_conf = 268;
     ConvBiasGradOpConf conv_bias_grad_conf = 269;
+    ConvFilterGradOpConf conv_filter_grad_conf = 270;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
