@@ -17,8 +17,8 @@ struct ConvBiasGradKernelUtil<DeviceType::kGPU, T> final {
                                         static_cast<int32_t>(bias_diff->shape().At(0)), 1, 1));
     } else if (format == "channels_last") {
       CHECK_EQ(dy->shape().At(dy->shape().NumAxes() - 1), bias_diff->shape().At(0));
-      dy_desc.reset(new CudnnTensorDesc(CUDNN_TENSOR_NHWC, bias_diff->data_type(), 1, 1, 1,
-                                        static_cast<int32_t>(bias_diff->shape().At(0))));
+      dy_desc.reset(new CudnnTensorDesc(CUDNN_TENSOR_NHWC, bias_diff->data_type(), 1,
+                                        static_cast<int32_t>(bias_diff->shape().At(0)), 1, 1));
     } else {
       UNIMPLEMENTED();
     }

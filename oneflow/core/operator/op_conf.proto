@@ -137,6 +137,26 @@ message Conv3DOpConf {
   optional string bias = 14;
 }
 
+message ConvDataGradOpConf {
+  required string dy = 1;
+  required string filter = 2;
+  required string dx = 3;
+  required string padding = 4;
+  required string data_format = 5;
+  repeated int32 strides = 7;
+  repeated int32 dilation_rate = 8;
+}
+
+message ConvFilterGradOpConf {
+  required string dy = 1;
+  required string x = 2;
+  required string filter_diff = 3;
+  required string padding = 4;
+  required string data_format = 5;
+  repeated int32 strides = 7;
+  repeated int32 dilation_rate = 8;
+}
+
 message ConvBiasGradOpConf {
   required string dy = 1;
   required string bias_diff = 2;
