@@ -12,7 +12,9 @@ class LayerNormParamGrad_DS_MB_2_P_S_OpParallelSignature final : public OpParall
   explicit LayerNormParamGrad_DS_MB_2_P_S_OpParallelSignature(const Operator* op)
       : OpParallelSignature(op) {}
 
-  const std::string Description() const override { return op().op_name() + ": (C, S) -> (P, S)"; }
+  const std::string Description() const override {
+    return op().op_name() + ": (C, S(0)) -> (P, S(0))";
+  }
 
   const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
