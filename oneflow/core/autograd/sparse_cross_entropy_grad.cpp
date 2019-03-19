@@ -13,8 +13,8 @@ void GenerateBackwardOpConf(
     sparse_cross_entropy_grad_op.set_name(op.op_name() + "_grad");
     SparseCrossEntropyGradOpConf* sparse_cross_entropy_grad_op_conf =
         sparse_cross_entropy_grad_op.mutable_sparse_cross_entropy_grad_conf();
-    sparse_cross_entropy_grad_op_conf->set_dy(GenLogicalBlobName(op.BnInOp2Lbi("y")));
-    sparse_cross_entropy_grad_op_conf->set_label(GenLogicalBlobName(op.BnInOp2Lbi("y")));
+    sparse_cross_entropy_grad_op_conf->set_dy(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
+    sparse_cross_entropy_grad_op_conf->set_label(GenLogicalBlobName(op.BnInOp2Lbi("label")));
     sparse_cross_entropy_grad_op_conf->set_prediction(
         GenLogicalBlobName(op.BnInOp2Lbi("prediction")));
     sparse_cross_entropy_grad_op_conf->set_prediction_grad("prediction_grad");
