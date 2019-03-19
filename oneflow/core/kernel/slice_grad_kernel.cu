@@ -23,9 +23,8 @@ void SliceGradKernel<DeviceType::kGPU, T>::ForwardDataContent(
   Memset<DeviceType::kGPU>(ctx.device_ctx, dx_blob->mut_dptr<T>(), 0,
                            dx_blob->ByteSizeOfDataContentField());
   SliceBackwardGpu<T><<<BlocksNum4ThreadsNum(num_output), kCudaThreadsNumPerBlock, 0,
-                        ctx.device_ctx->cuda_stream()>>>(num_output, offset_blob->dptr<int64_t>(),
-                                                         dy_blob->dptr<T>(),
-                                                         dx_blob->mut_dptr<T>());
+                        ctx.device_ctx->cuda_stream()>>>(
+      num_output, offset_blob->dptr<int64_t>(), dy_blob->dptr<T>(), dx_blob->mut_dptr<T>());
 }
 
 template<typename T>
@@ -37,8 +36,8 @@ void SliceGradKernel<DeviceType::kGPU, T>::InitConstBufBlobs(
 
 template<typename T>
 void SliceGradKernel<DeviceType::kGPU, T>::InitOut2InOffsetFromHost(DeviceCtx* ctx,
-                                                                const Shape& in_shape,
-                                                                Blob* blob) const {
+                                                                    const Shape& in_shape,
+                                                                    Blob* blob) const {
   const SliceGradOpConf& conf = op_conf().slice_grad_conf();
   BEFORE_CPU_INITIALIZE();
   int64_t* host_blob_ptr = host_blob->mut_dptr<int64_t>();
