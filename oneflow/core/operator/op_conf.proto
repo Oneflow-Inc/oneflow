@@ -99,6 +99,8 @@ message Conv1DOpConf {
   optional bool use_bias = 10 [default = true];
   optional InitializerConf weight_initializer = 11;
   optional InitializerConf bias_initializer = 12;
+  optional string weight = 13;
+  optional string bias = 14;
 }
 
 message Conv2DOpConf {
@@ -114,6 +116,8 @@ message Conv2DOpConf {
   optional bool use_bias = 10 [default = true];
   optional InitializerConf weight_initializer = 11;
   optional InitializerConf bias_initializer = 12;
+  optional string weight = 13;
+  optional string bias = 14;
 }
 
 message Conv3DOpConf {
@@ -129,6 +133,14 @@ message Conv3DOpConf {
   optional bool use_bias = 10 [default = true];
   optional InitializerConf weight_initializer = 11;
   optional InitializerConf bias_initializer = 12;
+  optional string weight = 13;
+  optional string bias = 14;
+}
+
+message ConvBiasGradOpConf {
+  required string dy = 1;
+  required string bias_diff = 2;
+  required string data_format = 3;
 }
 
 message FullyConnectedOpConf {
