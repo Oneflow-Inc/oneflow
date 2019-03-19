@@ -39,46 +39,14 @@ class Conv_DB_2_S_OpParallelSignature final : public OpParallelSignature {
   }
 };
 
-class ConvDatalParallelOpParallelSignature final : public OpParallelSignature {
+class ConvDataParallelOpParallelSignature final : public OpParallelSignature {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ConvDatalParallelOpParallelSignature);
-  ~ConvDatalParallelOpParallelSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(ConvDataParallelOpParallelSignature);
+  ~ConvDataParallelOpParallelSignature() override = default;
 
-  explicit ConvDatalParallelOpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
+  explicit ConvDataParallelOpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
 
   const std::string Description() const override { return op().op_name() + ": (DS, MB) -> S"; }
-
-  const OpParallelMatchResult GetMatchResult(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc) const override {
-    if (!SbpInferHint4Ibn("weight").is_model_split()) {
-      return MakeOpParallelMatchSignatureMismatch();
-    }
-    if (SbpInferHint4Ibn("weight").split_axis()
-        != op().OutputBlobModelSplitAxis(SbpInferHint4Ibn, "out")) {
-      return MakeOpParallelMatchSignatureMismatch();
-    }
-    if (parallel_desc.policy() == kModelParallel) { return MakeOpParallelMatchSuccess(); }
-    return MakeOpParallelMatchParallelPolicyError(parallel_desc.policy(), kModelParallel);
-  }
-
-  void GenerateSignature(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
-    (*bn2sbp)["in"].mutable_broadcast_parallel();
-    (*bn2sbp)["out"].mutable_split_parallel()->set_axis(
-        op().OutputBlobModelSplitAxis(SbpInferHint4Ibn, "out"));
-  }
-};
-
-class ConvModelParallelOpParallelSignature final : public OpParallelSignature {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(ConvModelParallelOpParallelSignature);
-  ~ConvModelParallelOpParallelSignature() override = default;
-
-  explicit ConvModelParallelOpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
-
-  const std::string Description() const override { return op().op_name() + ": (DB, MS) -> S"; }
 
   const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
@@ -96,6 +64,41 @@ class ConvModelParallelOpParallelSignature final : public OpParallelSignature {
       (*bn2sbp)["bias"].mutable_broadcast_parallel();
     }
     (*bn2sbp)["out"].mutable_split_parallel()->set_axis(0);
+  }
+};
+
+class ConvModelParallelOpParallelSignature final : public OpParallelSignature {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ConvModelParallelOpParallelSignature);
+  ~ConvModelParallelOpParallelSignature() override = default;
+
+  explicit ConvModelParallelOpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
+
+  const std::string Description() const override { return op().op_name() + ": (DB, MS) -> S"; }
+
+  const OpParallelMatchResult GetMatchResult(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const override {
+    if (!SbpInferHint4Ibn("weight").is_model_split()) {
+      return MakeOpParallelMatchSignatureMismatch();
+    }
+    if (SbpInferHint4Ibn("weight").split_axis() != 0) {
+      return MakeOpParallelMatchSignatureMismatch();
+    }
+    if (parallel_desc.policy() == kModelParallel) { return MakeOpParallelMatchSuccess(); }
+    return MakeOpParallelMatchParallelPolicyError(parallel_desc.policy(), kModelParallel);
+  }
+
+  void GenerateSignature(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+    (*bn2sbp)["in"].mutable_broadcast_parallel();
+    (*bn2sbp)["weight"].mutable_split_parallel()->set_axis(0);
+    if (op().GetValFromCustomizedConf<bool>("use_bias")) {
+      (*bn2sbp)["bias"].mutable_split_parallel()->set_axis(0);
+    }
+    (*bn2sbp)["out"].mutable_split_parallel()->set_axis(
+        op().OutputBlobModelSplitAxis(SbpInferHint4Ibn, "out"));
   }
 };
 
@@ -515,7 +518,7 @@ template<int32_t NDims>
 void ConvOp<NDims>::GetOpParallelSignatures(
     std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
   if (IsFwBwSplit()) {
-    op_parallel_signatures->emplace_back((new ConvDatalParallelOpParallelSignature(this)));
+    op_parallel_signatures->emplace_back((new ConvDataParallelOpParallelSignature(this)));
     op_parallel_signatures->emplace_back((new ConvModelParallelOpParallelSignature(this)));
   } else {
     op_parallel_signatures->emplace_back(MakeDataSplitOpParallelSignature(this));

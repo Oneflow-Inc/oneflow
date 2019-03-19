@@ -141,6 +141,7 @@ message ConvBiasGradOpConf {
   required string dy = 1;
   required string bias_diff = 2;
   required string data_format = 3;
+  required int64 num_dims = 4;
 }
 
 message FullyConnectedOpConf {
@@ -1134,6 +1135,7 @@ message OperatorConf {
     ReluGradOpConf relu_grad_conf = 266;
     GeluGradOpConf gelu_grad_conf = 267;
     ReshapeLikeOpConf reshape_like_conf = 268;
+    ConvBiasGradOpConf conv_bias_grad_conf = 269;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
