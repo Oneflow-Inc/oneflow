@@ -32,6 +32,6 @@ void SliceGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   }
 }
 
-REGISTER_OP(OperatorConf::kSliceConf, SliceGradOp);
+REGISTER_OP(OperatorConf::kSliceGradConf, SliceGradOp);
 
 }  // namespace oneflow
