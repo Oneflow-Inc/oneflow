@@ -15,7 +15,8 @@ void GenerateBackwardOpConf(
     slice_grad_op_conf->set_like(GenLogicalBlobName(op.BnInOp2Lbi("in")));
     slice_grad_op_conf->set_dy(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     slice_grad_op_conf->set_dx("dx");
-    slice_grad_op_conf->mutable_dim_slice_conf()->CopyFrom(op.op_conf().slice_conf().dim_slice_conf());
+    slice_grad_op_conf->mutable_dim_slice_conf()->CopyFrom(
+        op.op_conf().slice_conf().dim_slice_conf());
     op_confs->push_back(slice_grad_op);
     DiffLbi4BnInOp("in")->set_op_name(slice_grad_op.name());
     DiffLbi4BnInOp("in")->set_blob_name("dx");

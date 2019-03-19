@@ -36,6 +36,9 @@ class SliceGradKernel<DeviceType::kGPU, T> final : public KernelIf<DeviceType::k
   void InitOut2InOffsetFromHost(DeviceCtx* ctx, const Shape& in_shape, Blob* blob) const;
 };
 
+template<typename T, size_t NDIMS>
+struct NdarraySliceUtil;
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_SLICE_GRAD_KERNEL_H_
