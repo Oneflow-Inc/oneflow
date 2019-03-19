@@ -234,7 +234,7 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
     weight_shape[dhw_offset + i] = GetPbRfFromCustomizedConf<int32_t>("kernel_size").Get(i);
   }
   if (fw_bw_split) {
-    CHECK_EQ(GetBlobDesc4BnInOp("weight")->shape(), weight_shape);
+    CHECK_EQ(GetBlobDesc4BnInOp("weight")->shape(), Shape(weight_shape));
   } else {
     GetBlobDesc4BnInOp("weight")->mut_shape() = Shape(weight_shape);
   }
