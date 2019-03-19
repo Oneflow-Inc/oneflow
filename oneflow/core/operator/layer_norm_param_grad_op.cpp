@@ -4,16 +4,16 @@ namespace oneflow {
 
 namespace {
 
-class LayerNormParamGrad_DS_MB_2_P_S_OpParallelSignature final : public OpParallelSignature {
+class LayerNormParamGradDataParallelOpParallelSignature final : public OpParallelSignature {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(LayerNormParamGrad_DS_MB_2_P_S_OpParallelSignature);
-  ~LayerNormParamGrad_DS_MB_2_P_S_OpParallelSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(LayerNormParamGradDataParallelOpParallelSignature);
+  ~LayerNormParamGradDataParallelOpParallelSignature() override = default;
 
-  explicit LayerNormParamGrad_DS_MB_2_P_S_OpParallelSignature(const Operator* op)
+  explicit LayerNormParamGradDataParallelOpParallelSignature(const Operator* op)
       : OpParallelSignature(op) {}
 
   const std::string Description() const override {
-    return op().op_name() + ": (C, S(0)) -> (P, S(0))";
+    return op().op_name() + ": (S(0), C) -> (S(0), P)";
   }
 
   const OpParallelMatchResult GetMatchResult(
@@ -21,9 +21,8 @@ class LayerNormParamGrad_DS_MB_2_P_S_OpParallelSignature final : public OpParall
       const ParallelDesc& parallel_desc) const override {
     if (parallel_desc.policy() == kDataParallel) {
       return MakeOpParallelMatchSuccess();
-    } else {
-      return MakeOpParallelMatchSignatureMismatch();
     }
+    return MakeOpParallelMatchParallelPolicyError(parallel_desc.policy(), kDataParallel);
   }
 
   void GenerateSignature(
@@ -110,7 +109,7 @@ void LayerNormParamGradOp::InferBlobDescs(
 void LayerNormParamGradOp::GetOpParallelSignatures(
     std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
   op_parallel_signatures->emplace_back(
-      new LayerNormParamGrad_DS_MB_2_P_S_OpParallelSignature(this));
+      new LayerNormParamGradDataParallelOpParallelSignature(this));
 }
 
 REGISTER_OP(OperatorConf::kLayerNormParamGradConf, LayerNormParamGradOp);

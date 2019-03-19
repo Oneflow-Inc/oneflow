@@ -11,23 +11,20 @@ int64_t ShiftNegativeAxisIfNeed(const Shape& shape, int64_t axis) {
   return shifted;
 }
 
-class LayerNorm_DS_MB_2_S_OpParallelSignature final : public OpParallelSignature {
+class LayerNormDataParallelOpParallelSignature final : public OpParallelSignature {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(LayerNorm_DS_MB_2_S_OpParallelSignature);
-  ~LayerNorm_DS_MB_2_S_OpParallelSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(LayerNormDataParallelOpParallelSignature);
+  ~LayerNormDataParallelOpParallelSignature() override = default;
 
-  explicit LayerNorm_DS_MB_2_S_OpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
+  explicit LayerNormDataParallelOpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
 
-  const std::string Description() const override { return op().op_name() + ": (C, S(0)) -> S(0)"; }
+  const std::string Description() const override { return op().op_name() + ": (S(0), B) -> S(0)"; }
 
   const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelDesc& parallel_desc) const override {
-    if (parallel_desc.policy() == kDataParallel) {
-      return MakeOpParallelMatchSuccess();
-    } else {
-      return MakeOpParallelMatchSignatureMismatch();
-    }
+    if (parallel_desc.policy() == kDataParallel) { return MakeOpParallelMatchSuccess(); }
+    return MakeOpParallelMatchParallelPolicyError(parallel_desc.policy(), kDataParallel);
   }
 
   void GenerateSignature(
@@ -165,7 +162,7 @@ void LayerNormOp::GetOpParallelSignatures(
     std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
   const LayerNormOpConf& conf = op_conf().layer_norm_conf();
   if (conf.has_beta() || conf.has_gamma()) {
-    op_parallel_signatures->emplace_back(new LayerNorm_DS_MB_2_S_OpParallelSignature(this));
+    op_parallel_signatures->emplace_back(new LayerNormDataParallelOpParallelSignature(this));
   } else {
     op_parallel_signatures->emplace_back(MakeDataSplitOpParallelSignature(this));
   }
