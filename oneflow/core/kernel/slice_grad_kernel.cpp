@@ -43,9 +43,7 @@ void SliceGradKernel<DeviceType::kCPU, T>::ForwardDataContent(
     MAKE_CASE(3);
 #undef MAKE_CASE
     // clang-format on
-    default: {
-      UNIMPLEMENTED();
-    }
+    default: { UNIMPLEMENTED(); }
   }
 }
 
