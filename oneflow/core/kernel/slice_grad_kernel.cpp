@@ -49,7 +49,7 @@ void SliceGradKernel<DeviceType::kCPU, T>::ForwardDataContent(
   }
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSliceConf, SliceGradKernel, ARITHMETIC_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSliceGradConf, SliceGradKernel, ARITHMETIC_DATA_TYPE_SEQ);
 
 template<typename T>
 struct NdarraySliceUtil<T, 2> final {
