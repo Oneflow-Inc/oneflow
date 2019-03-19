@@ -7,9 +7,14 @@ template<DeviceType device_type, typename PredType>
 void LossKernel<device_type, PredType>::SetLossInstanceNum(
     const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const int64_t loss_instance_num = CalcLossInstanceNum(ctx, BnInOp2Blob);
-  NewKernelUtil<device_type, PredType>::Set(ctx.device_ctx,
-                                            oneflow_cast<PredType>(loss_instance_num),
-                                            BnInOp2Blob("loss_instance_num")->mut_dptr<PredType>());
+  if (GetDataType<PredType>::value == DataType::kFloat16) {
+    NewKernelUtil<device_type, float>::Set(ctx.device_ctx, oneflow_cast<float>(loss_instance_num),
+                                           BnInOp2Blob("loss_instance_num")->mut_dptr<float>());
+  } else {
+    NewKernelUtil<device_type, PredType>::Set(
+        ctx.device_ctx, oneflow_cast<PredType>(loss_instance_num),
+        BnInOp2Blob("loss_instance_num")->mut_dptr<PredType>());
+  }
   CHECK(BnInOp2Blob(GenDiffBn("prediction"))->has_loss_instance_num_field());
   BnInOp2Blob(GenDiffBn("prediction"))
       ->set_loss_instance_num(static_cast<float>(loss_instance_num));

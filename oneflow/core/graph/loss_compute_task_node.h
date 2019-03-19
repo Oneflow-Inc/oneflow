@@ -19,6 +19,9 @@ class LossCompTaskNode final : public CompTaskNode {
  private:
   void BuildRegstWhenTraining();
   void InferProducedDataRegstTimeShape() override;
+  void SetIfComputeHalfLoss();
+
+  bool if_comp_half_loss_;
 };
 
 }  // namespace oneflow

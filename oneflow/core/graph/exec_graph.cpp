@@ -18,6 +18,11 @@ void ExecNode::AddBnToRegstAndBindIt(const PbRpf<std::string>& (Operator::*bns_g
   BindBnsWithRegst(bns_getter, regst);
 }
 
+void ExecNode::AddBnToRegstAndBindIt(const std::string& bn, std::shared_ptr<RegstDesc> regst) {
+  regst->AddLbi(op_->BnInOp2Lbi(bn));
+  BindBnWithRegst(bn, regst);
+}
+
 void ExecNode::BindBnWithOneOfTheRegsts(const std::string& bn,
                                         const std::list<std::shared_ptr<RegstDesc>>& regsts) {
   const LogicalBlobId& lbi = op()->BnInOp2Lbi(bn);

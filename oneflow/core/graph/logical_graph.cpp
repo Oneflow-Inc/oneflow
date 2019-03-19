@@ -352,12 +352,28 @@ void LogicalGraph::SetNodeDataLbi() {
 void LogicalGraph::BuildLossPrintStruct() {
   ForEachLogicalNode<LossLogicalNode>([&](LossLogicalNode* loss_logical) {
     std::shared_ptr<const Operator> loss_op = loss_logical->SoleOp();
+    const LogicalBlobId& loss_lbi = loss_op->BnInOp2Lbi("loss");
+
     // Reduce Sum op
     OperatorConf reduce_loss_op_conf;
     reduce_loss_op_conf.set_name("reduce_loss_" + loss_op->op_name());
     reduce_loss_op_conf.set_device_type(loss_op->device_type());
     auto reduce_sum_conf = reduce_loss_op_conf.mutable_reduce_sum_conf();
-    *(reduce_sum_conf->mutable_in_sys()) = loss_op->BnInOp2Lbi("loss");
+
+    if (Global<OpGraph>::Get()->GetBlobDataType(loss_lbi) == DataType::kFloat16) {
+      // Half to float op
+      OperatorConf cast_loss_op_conf;
+      cast_loss_op_conf.set_name("cast_loss_half2float" + loss_op->op_name());
+      cast_loss_op_conf.set_device_type(loss_op->device_type());
+      auto half2float_conf = cast_loss_op_conf.mutable_half_to_float_conf();
+      half2float_conf->set_in(GenLogicalBlobName(loss_lbi));
+      half2float_conf->set_out("out");
+      std::shared_ptr<Operator> cast_loss_op = ConstructOp(cast_loss_op_conf);
+      loss_logical->mut_op_vec().push_back(cast_loss_op);
+      *(reduce_sum_conf->mutable_in_sys()) = cast_loss_op->BnInOp2Lbi("out");
+    } else {
+      *(reduce_sum_conf->mutable_in_sys()) = loss_op->BnInOp2Lbi("loss");
+    }
     reduce_sum_conf->add_axis(0);
     reduce_sum_conf->set_out("out");
     std::shared_ptr<Operator> reduce_loss_op = ConstructOp(reduce_loss_op_conf);

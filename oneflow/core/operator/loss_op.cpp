@@ -51,7 +51,11 @@ void LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   // loss instance num
   BlobDesc* loss_instance_num_blob_desc = GetBlobDesc4BnInOp("loss_instance_num");
   loss_instance_num_blob_desc->mut_shape() = Shape({1});
-  loss_instance_num_blob_desc->set_data_type(pred_blob_desc->data_type());
+  if (pred_blob_desc->data_type() == DataType::kFloat16) {
+    loss_instance_num_blob_desc->set_data_type(DataType::kFloat);
+  } else {
+    loss_instance_num_blob_desc->set_data_type(pred_blob_desc->data_type());
+  }
   loss_instance_num_blob_desc->set_has_data_id_field(pred_blob_desc->has_data_id_field());
 
   if (!GetValFromCustomizedConf<std::string>("weight").empty()) {
