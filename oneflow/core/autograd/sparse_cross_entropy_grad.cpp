@@ -7,7 +7,7 @@ namespace {
 void GenerateBackwardOpConf(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) {
-  CHECK(op.op_conf().has_softmax_conf());
+  CHECK(op.op_conf().has_sparse_cross_entropy_conf());
   if (DiffLbi4BnInOp("prediction") != nullptr) {
     OperatorConf sparse_cross_entropy_grad_op;
     sparse_cross_entropy_grad_op.set_name(op.op_name() + "_grad");
