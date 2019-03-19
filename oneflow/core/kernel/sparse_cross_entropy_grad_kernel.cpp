@@ -7,16 +7,16 @@ namespace oneflow {
 namespace {
 
 template<DeviceType device_type, typename T, typename K>
-void Backward(DeviceCtx* ctx, const Blob* prediction, const Blob* label, const Blob* out_diff,
-              Blob* prediction_diff) {
+void Backward(DeviceCtx* ctx, const Blob* prediction, const Blob* label, const Blob* dy,
+              Blob* prediction_grad) {
   const int64_t num_instances = label->shape().elem_cnt();
   CHECK_EQ(prediction->shape().elem_cnt() % num_instances, 0);
   const int64_t num_classes = prediction->shape().elem_cnt() / num_instances;
-  Memset<device_type>(ctx, prediction_diff->mut_dptr<T>(), 0,
-                      prediction_diff->ByteSizeOfDataContentField());
+  Memset<device_type>(ctx, prediction_grad->mut_dptr<T>(), 0,
+                      prediction_grad->ByteSizeOfDataContentField());
   SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeDiff(
-      ctx, num_instances, num_classes, prediction->dptr<T>(), label->dptr<K>(), out_diff->dptr<T>(),
-      prediction_diff->mut_dptr<T>());
+      ctx, num_instances, num_classes, prediction->dptr<T>(), label->dptr<K>(), dy->dptr<T>(),
+      prediction_grad->mut_dptr<T>());
 }
 
 template<DeviceType device_type, typename T>
@@ -34,10 +34,10 @@ void SparseCrossEntropyGradKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* prediction = BnInOp2Blob("prediction");
   const Blob* label = BnInOp2Blob("label");
-  const Blob* out_diff = BnInOp2Blob("dy");
-  Blob* prediction_diff = BnInOp2Blob("prediction_grad");
+  const Blob* dy = BnInOp2Blob("dy");
+  Blob* prediction_grad = BnInOp2Blob("prediction_grad");
   SparseCrossEntropyUntil<device_type, T>::SwitchBackward(
-      SwitchCase(label->data_type()), ctx.device_ctx, prediction, label, out_diff, prediction_diff);
+      SwitchCase(label->data_type()), ctx.device_ctx, prediction, label, dy, prediction_grad);
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSparseCrossEntropyGradConf, SparseCrossEntropyGradKernel,
