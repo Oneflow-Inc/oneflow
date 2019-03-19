@@ -10,7 +10,7 @@ void SparseCrossEntropyOp::InitFromOpConf() {
 }
 
 const PbMessage& SparseCrossEntropyOp::GetCustomizedConf() const {
-  return op_conf().sparse_cross_entropy_grad_conf();
+  return op_conf().sparse_cross_entropy_conf();
 }
 
 void SparseCrossEntropyOp::InferBlobDescs(

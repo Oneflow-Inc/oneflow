@@ -3,7 +3,7 @@
 namespace oneflow {
 
 void SparseCrossEntropyGradOp::InitFromOpConf() {
-  CHECK(op_conf().has_sparse_cross_entropy_conf());
+  CHECK(op_conf().has_sparse_cross_entropy_grad_conf());
   EnrollInputBn("prediction");
   EnrollInputBn("label");
   EnrollInputBn("dy");
