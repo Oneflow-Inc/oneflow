@@ -122,10 +122,6 @@ void LayerNormOp::InferBwBufBlobDescs(
   *GetBlobDesc4BnInOp("cudnn_bn_bias_diff_buf") = *bn_scale_diff;
 }
 
-void LayerNormOp::VirtualFixParallelDesc(ParallelDesc* pr_desc) const {
-  pr_desc->set_policy(ParallelPolicy::kDataParallel);
-}
-
 bool LayerNormOp::IsInputBlobAllowedModelSplit(const std::string& ibn) const {
   return ibn == "beta" || ibn == "gamma";
 }
