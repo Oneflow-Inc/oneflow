@@ -69,6 +69,7 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
 }
 
 void CopyCommNetTaskNode::Init(int64_t machine_id, int64_t src_machine_id) {
+  // FIXME(): peer_machine_id_ should be set before set_machine_id and set_thrd_id
   peer_machine_id_ = src_machine_id;
   set_machine_id(machine_id);
   set_thrd_id(Global<IDMgr>::Get()->CommNetThrdId());
