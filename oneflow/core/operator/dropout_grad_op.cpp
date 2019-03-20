@@ -15,7 +15,9 @@ const PbMessage& DropoutGradOp::GetCustomizedConf() const { return op_conf().dro
 
 void DropoutGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                    const ParallelContext* parallel_ctx) const {
-  *GetBlobDesc4BnInOp("dx") = *GetBlobDesc4BnInOp("dy");
+  BlobDesc* dy_desc = GetBlobDesc4BnInOp("dy");
+  *GetBlobDesc4BnInOp("dx") = *dy_desc;
+  CHECK_EQ(dy_desc->shape(), GetBlobDesc4BnInOp("random_mask")->shape());
 }
 
 REGISTER_OP(OperatorConf::kDropoutGradConf, DropoutGradOp);
