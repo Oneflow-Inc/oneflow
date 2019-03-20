@@ -3,10 +3,6 @@
 namespace oneflow {
 namespace {
 
-bool IsScalarBlob(const BlobDesc* blob) {
-  return blob->shape().NumAxes() == 1 && blob->shape().At(0) == 1;
-}
-
 class BroadcastLikeOpParallelSignature final : public OpParallelSignature {
  public:
   ~BroadcastLikeOpParallelSignature() override = default;
