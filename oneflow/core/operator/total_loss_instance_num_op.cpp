@@ -1,4 +1,4 @@
-#include "oneflow/core/operator/check_loss_instance_num_op.h"
+#include "oneflow/core/operator/total_loss_instance_num_op.h"
 
 namespace oneflow {
 
@@ -34,11 +34,11 @@ class CheckLossInstanceOpParallelSignature final : public OpParallelSignature {
 
 }  // namespace
 
-void CheckLossInstanceNumOp::VirtualInitFromOpConf() {
-  CHECK(op_conf().has_check_loss_instance_num_conf());
+void TotalLossInstanceNumOp::VirtualInitFromOpConf() {
+  CHECK(op_conf().has_total_loss_instance_num_conf());
 }
 
-void CheckLossInstanceNumOp::VirtualInferBlobDescs(
+void TotalLossInstanceNumOp::VirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   for (const std::string& ibn : input_bns()) {
@@ -46,15 +46,15 @@ void CheckLossInstanceNumOp::VirtualInferBlobDescs(
   }
 }
 
-const PbMessage& CheckLossInstanceNumOp::GetCustomizedConf() const {
-  return op_conf().check_loss_instance_num_conf();
+const PbMessage& TotalLossInstanceNumOp::GetCustomizedConf() const {
+  return op_conf().total_loss_instance_num_conf();
 }
 
-void CheckLossInstanceNumOp::GetOpParallelSignatures(
+void TotalLossInstanceNumOp::GetOpParallelSignatures(
     std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
   op_parallel_signatures->emplace_back(new CheckLossInstanceOpParallelSignature(this));
 }
 
-REGISTER_CPU_OP(OperatorConf::kCheckLossInstanceNumConf, CheckLossInstanceNumOp);
+REGISTER_CPU_OP(OperatorConf::kTotalLossInstanceNumConf, TotalLossInstanceNumOp);
 
 }  // namespace oneflow

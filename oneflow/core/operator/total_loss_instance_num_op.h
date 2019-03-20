@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_OPERATOR_CHECK_LOSS_INSTANCE_NUM_OP_H_
-#define ONEFLOW_CORE_OPERATOR_CHECK_LOSS_INSTANCE_NUM_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_TOTAL_LOSS_INSTANCE_NUM_OP_H_
+#define ONEFLOW_CORE_OPERATOR_TOTAL_LOSS_INSTANCE_NUM_OP_H_
 
 #include "oneflow/core/operator/cwise_op.h"
 
 namespace oneflow {
 
-class CheckLossInstanceNumOp final : public CWiseOp {
+class TotalLossInstanceNumOp final : public CWiseOp {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CheckLossInstanceNumOp);
-  CheckLossInstanceNumOp() = default;
-  ~CheckLossInstanceNumOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(TotalLossInstanceNumOp);
+  TotalLossInstanceNumOp() = default;
+  ~TotalLossInstanceNumOp() = default;
 
   void VirtualInitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
@@ -26,4 +26,4 @@ class CheckLossInstanceNumOp final : public CWiseOp {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_CHECK_LOSS_INSTANCE_NUM_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_TOTAL_LOSS_INSTANCE_NUM_OP_H_
