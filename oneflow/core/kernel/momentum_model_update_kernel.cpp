@@ -45,8 +45,8 @@ class MomentumMdUpdateKernelUtil<DeviceType::kCPU, T> final {
                           T learning_rate, T l1, T l2, const T* model_diff, T* model, T* momentum) {
     for (int64_t i = 0; i != n; ++i) {
       T reg_diff = RegularizeDiff(model_diff[i], *batch_instance_num_ptr, l1, l2, model[i]);
-      momentum[i] = beta * momentum[i] - learning_rate * reg_diff;
-      model[i] = model[i] + momentum[i];
+      momentum[i] = beta * momentum[i] + reg_diff;
+      model[i] = model[i] - learning_rate * momentum[i];
     }
   }
 };
