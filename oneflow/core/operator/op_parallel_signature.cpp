@@ -147,7 +147,7 @@ class DS_MB_2_DS_OpParallelSignature final : public OpParallelSignature {
       }
     }
     CHECK_GT(data_input_bns_.size(), 0);
-    CHECK_EQ(model_input_bns_.size(), 1);
+    CHECK_GT(model_input_bns_.size(), 0);
   }
 
   const std::string Description() const override {
@@ -293,7 +293,11 @@ class DB_MS_2_MS_OpParallelSignature final : public OpParallelSignature {
       }
     }
     CHECK_GT(data_input_bns_.size(), 0);
+<<<<<<< HEAD
     CHECK_EQ(model_input_bns_.size(), 1);
+=======
+    CHECK_GT(model_input_bns_.size(), 0);
+>>>>>>> origin/dev_multi_model_ibn_sbp_signature
   }
 
   const std::string Description() const override {
