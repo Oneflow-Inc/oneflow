@@ -18,7 +18,6 @@ class BroadcastLikeOp final : public Operator {
 
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
-
 };
 
 }  // namespace oneflow
