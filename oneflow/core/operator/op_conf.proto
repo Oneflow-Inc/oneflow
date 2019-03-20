@@ -138,11 +138,12 @@ message Conv3DOpConf {
 }
 
 message ConvConf {
-  required int32 n_dims = 1;
+  required int32 num_dims = 1;
   required string padding = 2;
   required string data_format = 3;
-  repeated int32 strides = 4;
-  repeated int32 dilation_rate = 5;
+  repeated int32 kernel_size = 4;
+  repeated int32 strides = 5;
+  repeated int32 dilation_rate = 6;
 }
 
 message ConvDataGradOpConf {
@@ -150,14 +151,14 @@ message ConvDataGradOpConf {
   required string filter = 2;
   required string x_like = 3;
   required string dx = 4;
-  required ConvConf conf_conf = 5;
+  required ConvConf conv_conf = 5;
 }
 
 message ConvFilterGradOpConf {
   required string dy = 1;
   required string x = 2;
   required string filter_diff = 3;
-  required ConvConf conf_conf = 4;
+  required ConvConf conv_conf = 4;
 }
 
 message ConvBiasGradOpConf {

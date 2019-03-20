@@ -66,7 +66,7 @@ class ConvOp : public Operator {
       std::vector<std::unique_ptr<const OpParallelSignature>>*) const override;
 #ifdef WITH_CUDA
   void InferCudnnAlgo(std::function<const BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-                      CudnnConvAlgoCtx* conv_ctx, const int64_t device_id) const;
+                      CudnnConvAlgoCtx* conv_ctx) const;
 #endif  // WITH_CUDA
 };
 
