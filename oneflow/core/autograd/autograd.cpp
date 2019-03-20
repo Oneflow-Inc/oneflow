@@ -66,9 +66,9 @@ std::function<bool(const LogicalBlobId&, const std::string&)> MakePredicatorHasD
 void GenerateBackwardOpConfWrapperStruct::Call(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
-    const std::function<DataType(const std::string&)>& DateType4BnInOp) const {
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) const {
   if (func_) {
-    (*func_)(op, op_confs, DiffLbi4BnInOp, DateType4BnInOp);
+    (*func_)(op, op_confs, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp);
   } else if (naive_func_) {
     (*naive_func_)(op, op_confs, DiffLbi4BnInOp);
   } else {
@@ -79,9 +79,9 @@ void GenerateBackwardOpConfWrapperStruct::Call(
 void GenerateBackwardOpConfIf(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
-    const std::function<DataType(const std::string&)>& DateType4BnInOp) {
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
   auto* obj = NewObj<GenerateBackwardOpConfWrapperStruct>(op.op_conf().op_type_case());
-  obj->Call(op, op_confs, DiffLbi4BnInOp, DateType4BnInOp);
+  obj->Call(op, op_confs, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp);
 }
 
 void AutoGrad(const OpGraph& op_graph, JobConf1* job_conf,
@@ -121,13 +121,12 @@ void AutoGrad(const OpGraph& op_graph, JobConf1* job_conf,
         UNIMPLEMENTED();
       }
     };
-    auto DataType4BnInOp = [&](const std::string& bn) -> DataType {
-      const auto& lbi = op_node->op().BnInOp2Lbi(bn);
-      return op_graph.GetBlobDataType(lbi);
+    auto LogicalBlobDesc4BnInOp = [&](const std::string& bn) -> const BlobDesc& {
+      return op_graph.GetLogicalBlobDesc(op_node->op().BnInOp2Lbi(bn));
     };
     std::vector<OperatorConf> ops;
     GenerateCloneGradOpIfNeed(op_node->op(), &ops, lbi2op_name2in_diff_lbi, lbi2out_diff_lbi);
-    GenerateBackwardOpConfIf(op_node->op(), &ops, DiffLbi4BnInOp, DataType4BnInOp);
+    GenerateBackwardOpConfIf(op_node->op(), &ops, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp);
     job_conf_builder.AddOps(op_node->parallel_desc().parallel_conf(), ops);
   });
 }
