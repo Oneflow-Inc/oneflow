@@ -11,38 +11,6 @@ int64_t ShiftNegativeAxisIfNeed(const Shape& shape, int64_t axis) {
   return shifted;
 }
 
-class LayerNormDataParallelOpParallelSignature final : public OpParallelSignature {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(LayerNormDataParallelOpParallelSignature);
-  ~LayerNormDataParallelOpParallelSignature() override = default;
-
-  explicit LayerNormDataParallelOpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
-
-  const std::string Description() const override { return op().op_name() + ": (S(0), B) -> S(0)"; }
-
-  const OpParallelMatchResult GetMatchResult(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      const ParallelDesc& parallel_desc) const override {
-    if (parallel_desc.policy() == kDataParallel) { return MakeOpParallelMatchSuccess(); }
-    return MakeOpParallelMatchParallelPolicyError(parallel_desc.policy(), kDataParallel);
-  }
-
-  void GenerateSignature(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
-    for (const std::string& ibn : op().input_bns()) {
-      if (ibn == "beta" || ibn == "gamma") {
-        (*bn2sbp)[ibn].mutable_broadcast_parallel();
-      } else {
-        (*bn2sbp)[ibn].mutable_split_parallel()->set_axis(0);
-      }
-    }
-    for (const std::string& obn : op().output_bns()) {
-      (*bn2sbp)[obn].mutable_split_parallel()->set_axis(0);
-    }
-  }
-};
-
 }  // namespace
 
 void LayerNormOp::InitFromOpConf() {
@@ -158,11 +126,15 @@ void LayerNormOp::VirtualFixParallelDesc(ParallelDesc* pr_desc) const {
   pr_desc->set_policy(ParallelPolicy::kDataParallel);
 }
 
+bool LayerNormOp::IsInputBlobAllowedModelSplit(const std::string& ibn) const {
+  return ibn == "beta" || ibn == "gamma";
+}
+
 void LayerNormOp::GetOpParallelSignatures(
     std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
   const LayerNormOpConf& conf = op_conf().layer_norm_conf();
   if (conf.has_beta() || conf.has_gamma()) {
-    op_parallel_signatures->emplace_back(new LayerNormDataParallelOpParallelSignature(this));
+    op_parallel_signatures->emplace_back(Make_DS_MB_2_DS_OpParallelSignature(this));
   } else {
     op_parallel_signatures->emplace_back(MakeDataSplitOpParallelSignature(this));
   }

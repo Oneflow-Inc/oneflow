@@ -21,7 +21,7 @@ class LayerNormOp final : public Operator {
                            const ParallelContext* parallel_ctx) const override;
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override;
   void VirtualFixParallelDesc(ParallelDesc* pr_desc) const override;
   void GetOpParallelSignatures(
       std::vector<std::unique_ptr<const OpParallelSignature>>*) const override;

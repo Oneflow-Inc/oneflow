@@ -940,7 +940,6 @@ message LayerNormGradOpConf {
   required string x = 2;
   optional string mean = 3;
   optional string inv_variance = 4;
-
   // out
   required string dx = 5;
 
@@ -951,10 +950,9 @@ message LayerNormGradOpConf {
 message LayerNormParamGradOpConf {
   // in
   required string dy = 1;
-
-  // out
   optional string normalized = 2;
   optional string gamma = 3;
+  // out
   optional string dx = 4;
   optional string beta_diff = 5;
   optional string gamma_diff = 6;
