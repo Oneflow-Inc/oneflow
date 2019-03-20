@@ -7,7 +7,8 @@
 
 namespace oneflow {
 
-JobConf1 AutoGrad(const JobDesc& job_desc);
+void AutoGrad(const JobDesc& job_desc, JobConf1* job_conf,
+              HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
 
 void GenerateBackwardOpConfIf(const Operator&, std::vector<OperatorConf>*,
                               const std::function<LogicalBlobId*(const std::string&)>&);

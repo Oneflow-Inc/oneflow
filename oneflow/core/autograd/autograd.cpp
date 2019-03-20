@@ -84,8 +84,9 @@ void GenerateBackwardOpConfIf(
   obj->Call(op, op_confs, DiffLbi4BnInOp, DateType4BnInOp);
 }
 
-JobConf1 AutoGrad(const JobDesc& job_desc) {
-  JobConf1 job_conf(job_desc.job_conf());
+void AutoGrad(const JobDesc& job_desc, JobConf1* job_conf,
+              HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi) {
+  CHECK(lbi2diff_lbi->empty());
   OpGraph op_graph(&job_desc);
   auto NeedBackwardOp = MakePredicatorNeedBackwardOp(op_graph);
   std::list<OpNode*> start_nodes;
@@ -109,8 +110,8 @@ JobConf1 AutoGrad(const JobDesc& job_desc) {
   };
   auto HasDiff4LbiOpName = MakePredicatorHasDiff4LbiOpName(op_graph, NeedBackwardOp);
   HashMap<LogicalBlobId, HashMap<std::string, LogicalBlobId>> lbi2op_name2in_diff_lbi;
-  HashMap<LogicalBlobId, LogicalBlobId> lbi2out_diff_lbi;
-  JobConfBuilder job_conf_builder(&job_conf);
+  HashMap<LogicalBlobId, LogicalBlobId>* lbi2out_diff_lbi = lbi2diff_lbi;
+  JobConfBuilder job_conf_builder(job_conf);
   op_graph.TopoForEachNode(start_nodes, ForEachOutNode, ForEachInNode, [&](OpNode* op_node) {
     const auto& op_name = op_node->op().op_name();
     auto DiffLbi4BnInOp = [&](const std::string& bn) -> LogicalBlobId* {
@@ -120,8 +121,8 @@ JobConf1 AutoGrad(const JobDesc& job_desc) {
       if (std::find(input_bns.begin(), input_bns.end(), bn) != input_bns.end()) {
         return HasDiff4LbiOpName(lbi, op_name) ? &lbi2op_name2in_diff_lbi[lbi][op_name] : nullptr;
       } else if (std::find(output_bns.begin(), output_bns.end(), bn) != output_bns.end()) {
-        if (lbi2out_diff_lbi.find(lbi) == lbi2out_diff_lbi.end()) { return nullptr; }
-        return &lbi2out_diff_lbi.at(lbi);
+        if (lbi2out_diff_lbi->find(lbi) == lbi2out_diff_lbi->end()) { return nullptr; }
+        return &lbi2out_diff_lbi->at(lbi);
       } else {
         UNIMPLEMENTED();
       }
@@ -131,11 +132,10 @@ JobConf1 AutoGrad(const JobDesc& job_desc) {
       return op_graph.GetBlobDataType(lbi);
     };
     std::vector<OperatorConf> ops;
-    GenerateCloneGradOpIfNeed(op_node->op(), &ops, lbi2op_name2in_diff_lbi, &lbi2out_diff_lbi);
+    GenerateCloneGradOpIfNeed(op_node->op(), &ops, lbi2op_name2in_diff_lbi, lbi2out_diff_lbi);
     GenerateBackwardOpConfIf(op_node->op(), &ops, DiffLbi4BnInOp, DataType4BnInOp);
     job_conf_builder.AddOps(op_node->parallel_desc().parallel_conf(), ops);
   });
-  return job_conf;
 }
 
 }  // namespace oneflow

@@ -45,6 +45,18 @@ void ToDotFile(const Plan& plan, const std::string& filepath) {
   log_stream << "}\n";
 }
 
+void UpdateJobDescbyAutoGrad() {
+  if (Global<JobDesc>::Get()->IsPredict()
+      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+    const JobDesc* job_desc = Global<JobDesc>::Get();
+    JobConf1 job_conf(job_desc->job_conf());
+    HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
+    AutoGrad(*job_desc, &job_conf, &lbi2diff_lbi);
+    Global<JobDesc>::Delete();
+    Global<JobDesc>::New(job_conf);
+  }
+}
+
 }  // namespace
 
 Plan Compiler::Compile() {
@@ -97,13 +109,7 @@ Plan Compiler::DoCompile() {
 #ifdef WITH_CUDA
   Global<CudnnConvCtxCache>::New();
 #endif
-  if (Global<JobDesc>::Get()->IsPredict()
-      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
-    const JobDesc* job_desc = Global<JobDesc>::Get();
-    const auto& job_conf = AutoGrad(*job_desc);
-    Global<JobDesc>::Delete();
-    Global<JobDesc>::New(job_conf);
-  }
+  UpdateJobDescbyAutoGrad();
   Global<JobDesc>::Get()->FixAndOptimizeDLNet();
   const JobDesc* job_desc = Global<JobDesc>::Get();
   TeePersistentLogStream::Create("optimized_job_conf")->Write(job_desc->job_conf());
