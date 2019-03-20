@@ -139,17 +139,15 @@ class DS_MB_2_DS_OpParallelSignature final : public OpParallelSignature {
   ~DS_MB_2_DS_OpParallelSignature() override = default;
 
   DS_MB_2_DS_OpParallelSignature(const Operator* op) : OpParallelSignature(op) {
-    std::vector<std::string> model_input_bns;
     for (const auto& bn : op->input_bns()) {
       if (op->IsInputBlobAllowedModelSplit(bn)) {
-        model_input_bns.push_back(bn);
+        model_input_bns_.push_back(bn);
       } else {
         data_input_bns_.push_back(bn);
       }
     }
     CHECK_GT(data_input_bns_.size(), 0);
-    CHECK_EQ(model_input_bns.size(), 1);
-    model_input_bn_ = model_input_bns.at(0);
+    CHECK_EQ(model_input_bns_.size(), 1);
   }
 
   const std::string Description() const override {
@@ -159,10 +157,17 @@ class DS_MB_2_DS_OpParallelSignature final : public OpParallelSignature {
   const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
-    const auto& sbp_infer_hint = SbpInferHint4Ibn(model_input_bn_);
-    if (!sbp_infer_hint.is_model_broadcast()) { return MakeOpParallelMatchSignatureMismatch(); }
+    const auto& model_sbp_infer_hint = SbpInferHint4Ibn(model_input_bns_.at(0));
+    for (const auto& bn : model_input_bns_) {
+      if (model_sbp_infer_hint.parallel_desc() != SbpInferHint4Ibn(bn).parallel_desc()) {
+        return MakeOpParallelMatchSignatureMismatch();
+      }
+      if (!SbpInferHint4Ibn(bn).sbp_parallel().has_broadcast_parallel()) {
+        return MakeOpParallelMatchSignatureMismatch();
+      }
+    }
     bool parallel_policy_matched = (parallel_desc.policy() == kDataParallel);
-    bool parallel_num_matched = (parallel_desc.parallel_num() == sbp_infer_hint.parallel_num()
+    bool parallel_num_matched = (parallel_desc.parallel_num() == model_sbp_infer_hint.parallel_num()
                                  && parallel_desc.parallel_num() > 1);
     if (!parallel_policy_matched || !parallel_num_matched) {
       OpParallelMatchResult ret;
@@ -174,7 +179,7 @@ class DS_MB_2_DS_OpParallelSignature final : public OpParallelSignature {
       if (!parallel_num_matched) {
         auto* err = ret.mutable_fail()->mutable_conf_error()->mutable_parallel_num_error();
         err->set_configured(parallel_desc.parallel_num());
-        err->set_expected(sbp_infer_hint.parallel_num());
+        err->set_expected(model_sbp_infer_hint.parallel_num());
       }
       return ret;
     }
@@ -185,7 +190,7 @@ class DS_MB_2_DS_OpParallelSignature final : public OpParallelSignature {
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       HashMap<std::string, SbpParallel>* bn2sbp) const override {
     for (const auto& bn : data_input_bns_) { (*bn2sbp)[bn].mutable_split_parallel()->set_axis(0); }
-    (*bn2sbp)[model_input_bn_].mutable_broadcast_parallel();
+    for (const auto& bn : model_input_bns_) { (*bn2sbp)[bn].mutable_broadcast_parallel(); }
     for (const auto& bn : op().output_bns()) {
       (*bn2sbp)[bn].mutable_split_parallel()->set_axis(0);
     }
@@ -193,7 +198,7 @@ class DS_MB_2_DS_OpParallelSignature final : public OpParallelSignature {
 
  private:
   std::vector<std::string> data_input_bns_;
-  std::string model_input_bn_;
+  std::vector<std::string> model_input_bns_;
 };
 
 class SoleIbnOpModelSplitOpParallelSignature final : public OpParallelSignature {
@@ -280,17 +285,15 @@ class DB_MS_2_MS_OpParallelSignature final : public OpParallelSignature {
 
   DB_MS_2_MS_OpParallelSignature(const Operator* op, std::function<bool(int32_t)> IsExpectedAxis)
       : OpParallelSignature(op), IsExpectedAxis_(IsExpectedAxis) {
-    std::vector<std::string> model_input_bns;
     for (const auto& bn : op->input_bns()) {
       if (op->IsInputBlobAllowedModelSplit(bn)) {
-        model_input_bns.push_back(bn);
+        model_input_bns_.push_back(bn);
       } else {
         data_input_bns_.push_back(bn);
       }
     }
     CHECK_GT(data_input_bns_.size(), 0);
-    CHECK_EQ(model_input_bns.size(), 1);
-    model_input_bn_ = model_input_bns.at(0);
+    CHECK_EQ(model_input_bns_.size(), 1);
   }
 
   const std::string Description() const override {
@@ -300,7 +303,15 @@ class DB_MS_2_MS_OpParallelSignature final : public OpParallelSignature {
   const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
-    const SbpInferHint& model_sbp_infer_hint = SbpInferHint4Ibn(model_input_bn_);
+    const SbpInferHint& model_sbp_infer_hint = SbpInferHint4Ibn(model_input_bns_.at(0));
+    for (const auto& bn : model_input_bns_) {
+      if (model_sbp_infer_hint.parallel_desc() != SbpInferHint4Ibn(bn).parallel_desc()) {
+        return MakeOpParallelMatchSignatureMismatch();
+      }
+      if (model_sbp_infer_hint.sbp_parallel() != SbpInferHint4Ibn(bn).sbp_parallel()) {
+        return MakeOpParallelMatchSignatureMismatch();
+      }
+    }
     if (!(model_sbp_infer_hint.is_model_split()
           && IsValidSplit(model_sbp_infer_hint.split_axis()))) {
       return MakeOpParallelMatchSignatureMismatch();
@@ -313,7 +324,7 @@ class DB_MS_2_MS_OpParallelSignature final : public OpParallelSignature {
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       HashMap<std::string, SbpParallel>* bn2sbp) const override {
     for (const auto& bn : data_input_bns_) { (*bn2sbp)[bn].mutable_broadcast_parallel(); }
-    (*bn2sbp)[model_input_bn_] = SbpInferHint4Ibn(model_input_bn_).sbp_parallel();
+    for (const auto& bn : model_input_bns_) { (*bn2sbp)[bn] = SbpInferHint4Ibn(bn).sbp_parallel(); }
     for (const auto& bn : op().output_bns()) {
       (*bn2sbp)[bn].mutable_split_parallel()->set_axis(
           op().OutputBlobModelSplitAxis(SbpInferHint4Ibn, bn));
@@ -325,7 +336,7 @@ class DB_MS_2_MS_OpParallelSignature final : public OpParallelSignature {
 
   const std::function<bool(int32_t)> IsExpectedAxis_;
   std::vector<std::string> data_input_bns_;
-  std::string model_input_bn_;
+  std::vector<std::string> model_input_bns_;
 };
 
 }  // namespace
