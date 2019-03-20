@@ -1,26 +1,6 @@
 #include "oneflow/core/operator/broadcast_like_op.h"
 
 namespace oneflow {
-namespace {
-
-class BroadcastLikeOpParallelSignature final : public OpParallelSignature {
- public:
-  ~BroadcastLikeOpParallelSignature() override = default;
-
-  const std::string Description() const override { return std::string(); }
-
-  const OpParallelMatchResult GetMatchResult(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc) const override {
-    return OpParallelMatchResult();
-  }
-
-  void GenerateSignature(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {}
-};
-
-}  // namespace
 
 void BroadcastLikeOp::InitFromOpConf() {
   EnrollInputBn("x");
@@ -47,9 +27,6 @@ void BroadcastLikeOp::InferBlobDescs(
   }
   *GetBlobDesc4BnInOp("y") = *like_blob_desc;
 }
-
-void BroadcastLikeOp::GetOpParallelSignatures(
-    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {}
 
 REGISTER_OP(OperatorConf::kBroadcastLikeConf, BroadcastLikeOp);
 
