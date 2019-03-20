@@ -916,38 +916,49 @@ message SliceOpConf {
 }
 
 message LayerNormOpConf {
+  // in
   required string in = 1;
   required string out = 2;
-  optional bool center = 3 [default = true];
-  optional bool scale = 4 [default = true];
-  optional ActivationType activation = 5 [default = kNone];
-  optional int64 begin_norm_axis = 6 [default = 1];
-  optional int64 begin_params_axis = 7 [default = -1];
-  optional double epsilon = 8 [default = 1e-5];
-  optional string beta = 9;
-  optional string gamma = 10;
-  optional string normalized = 11;
-  optional string mean = 12;
-  optional string inv_variance = 13;
+  optional string beta = 3;
+  optional string gamma = 4;
+  // out
+  optional string normalized = 5;
+  optional string mean = 6;
+  optional string inv_variance = 7;
+
+  optional bool center = 8 [default = true];
+  optional bool scale = 9 [default = true];
+  optional ActivationType activation = 10 [default = kNone];
+  optional int64 begin_norm_axis = 11 [default = 1];
+  optional int64 begin_params_axis = 12 [default = -1];
+  optional double epsilon = 13 [default = 1e-5];
 }
 
 message LayerNormGradOpConf {
+  // in
   required string dy = 1;
   required string x = 2;
   optional string mean = 3;
   optional string inv_variance = 4;
+
+  // out
   required string dx = 5;
+
   required int64 begin_norm_axis = 6;
   required double epsilon = 7;
 }
 
 message LayerNormParamGradOpConf {
+  // in
   required string dy = 1;
+
+  // out
   optional string normalized = 2;
   optional string gamma = 3;
   optional string dx = 4;
   optional string beta_diff = 5;
   optional string gamma_diff = 6;
+
   required int64 begin_params_axis = 7;
 }
 

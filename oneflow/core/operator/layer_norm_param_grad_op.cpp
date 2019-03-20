@@ -13,15 +13,13 @@ class LayerNormParamGradDataParallelOpParallelSignature final : public OpParalle
       : OpParallelSignature(op) {}
 
   const std::string Description() const override {
-    return op().op_name() + ": (S(0), C) -> (S(0), P)";
+    return op().op_name() + ": (S(0), B) -> (S(0), P)";
   }
 
   const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelDesc& parallel_desc) const override {
-    if (parallel_desc.policy() == kDataParallel) {
-      return MakeOpParallelMatchSuccess();
-    }
+    if (parallel_desc.policy() == kDataParallel) { return MakeOpParallelMatchSuccess(); }
     return MakeOpParallelMatchParallelPolicyError(parallel_desc.policy(), kDataParallel);
   }
 
@@ -108,8 +106,7 @@ void LayerNormParamGradOp::InferBlobDescs(
 
 void LayerNormParamGradOp::GetOpParallelSignatures(
     std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(
-      new LayerNormParamGradDataParallelOpParallelSignature(this));
+  op_parallel_signatures->emplace_back(new LayerNormParamGradDataParallelOpParallelSignature(this));
 }
 
 REGISTER_OP(OperatorConf::kLayerNormParamGradConf, LayerNormParamGradOp);
