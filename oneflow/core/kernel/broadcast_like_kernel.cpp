@@ -15,9 +15,8 @@ void BroadcastLikeKernel<device_type, T>::ForwardDataContent(
         XpuVarNdarray<const T>(Shape(this->op_conf().broadcast_like_conf().kept_dims_shape()),
                                x->dptr<T>()));
   } else {
-    NdarrayUtil<device_type, T>::BroadcastTo(
-        ctx.device_ctx, XpuVarNdarray<T>(y, num_axes),
-        XpuVarNdarray<const T>(x, num_axes));
+    NdarrayUtil<device_type, T>::BroadcastTo(ctx.device_ctx, XpuVarNdarray<T>(y, num_axes),
+                                             XpuVarNdarray<const T>(x, num_axes));
   }
 }
 
