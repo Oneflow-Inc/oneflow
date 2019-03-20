@@ -114,12 +114,12 @@ class PoolingKernelIf : public KernelIf<device_type> {
                                const Blob* out_diff_blob, const Blob* out_blob, const Blob* in_blob,
                                Blob* in_diff_blob) const = 0;
   void UpdtStatusBeforeFwBw(const KernelCtx& ctx,
-                            std::function<Blob*(const std::string&)> BnInOp2Blob) override {
+                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     UpdatePoolCtxIfNeed(BnInOp2Blob("in")->shape());
   }
 
  private:
-  void UpdatePoolCtxIfNeed(const Shape& in_shape) {
+  void UpdatePoolCtxIfNeed(const Shape& in_shape) const {
     if (!(this->kernel_conf().need_do_instance_shape())) { return; }
     pooling_ctx_.reset(new PoolingCtx(
         GenPoolingKernelConfForNewInShape(in_shape, GetPoolingKernelConf())
@@ -130,7 +130,7 @@ class PoolingKernelIf : public KernelIf<device_type> {
         ));
   }
 
-  std::unique_ptr<PoolingCtx> pooling_ctx_;
+  mutable std::unique_ptr<PoolingCtx> pooling_ctx_;
 };
 
 template<DeviceType device_type, typename T>

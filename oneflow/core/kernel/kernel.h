@@ -95,7 +95,7 @@ class Kernel {
   virtual void ForwardActivation(const KernelCtx& ctx, Blob* out_blob) const {}
 
   virtual void UpdtStatusBeforeFwBw(const KernelCtx& ctx,
-                                    std::function<Blob*(const std::string&)> BnInOp2Blob) {}
+                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
 
   virtual void Backward(const KernelCtx& ctx,
                         std::function<Blob*(const std::string&)> BnInOp2Blob) const;

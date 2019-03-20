@@ -49,8 +49,8 @@ void DeconvKernel<DeviceType::kGPU, T>::VirtualKernelInit(const ParallelContext*
 
 template<typename T>
 void DeconvKernel<DeviceType::kGPU, T>::UpdateCudnnDescIfNeed(
-    std::function<Blob*(const std::string&)> BnInOp2Blob) {
-  if (!(this->kernel_conf().need_do_instance_shape())) { return; }
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  // if (!(this->kernel_conf().need_do_instance_shape())) { return; }
   CHECK(this->EnableCudnn());
 
   Blob* out_or_diff_blob = BnInOp2Blob("out");

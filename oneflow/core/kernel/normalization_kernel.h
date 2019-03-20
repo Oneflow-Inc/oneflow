@@ -35,7 +35,7 @@ class NormalizationKernel final : public KernelIfWithModel<device_type, T>,
   ~NormalizationKernel() = default;
 
  private:
-  std::unique_ptr<NormalizationCtx> normalization_ctx_;
+  mutable std::unique_ptr<NormalizationCtx> normalization_ctx_;
 #ifdef WITH_CUDA
   void VirtualKernelInit(const ParallelContext*) override {
     if (this->kernel_conf().normalization_conf().use_cudnn()) {
@@ -46,7 +46,7 @@ class NormalizationKernel final : public KernelIfWithModel<device_type, T>,
 #endif  // WITH_CUDA
   bool HasSameShapeBetweenInOut() const override { return true; }
   void UpdtStatusBeforeFwBw(const KernelCtx& ctx,
-                            std::function<Blob*(const std::string&)> BnInOp2Blob) override {
+                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     if (!(this->kernel_conf().need_do_instance_shape())) { return; }
     CHECK_EQ(device_type, DeviceType::kGPU);
     CHECK(this->kernel_conf().normalization_conf().use_cudnn());

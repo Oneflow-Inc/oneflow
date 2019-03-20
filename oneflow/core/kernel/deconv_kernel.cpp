@@ -34,13 +34,13 @@ void DeconvKernelIf<device_type, T>::ForwardInstanceShape(
 
 template<DeviceType device_type, typename T>
 void DeconvKernelIf<device_type, T>::UpdateCudnnDescIfNeed(
-    std::function<Blob*(const std::string&)> BnInOp2Blob) {
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   UNIMPLEMENTED();
 }
 
 template<DeviceType device_type, typename T>
 void DeconvKernelIf<device_type, T>::UpdtStatusBeforeFwBw(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) {
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   UpdateCudnnDescIfNeed(BnInOp2Blob);
 }
 
