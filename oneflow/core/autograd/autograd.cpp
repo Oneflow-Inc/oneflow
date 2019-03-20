@@ -84,19 +84,13 @@ void GenerateBackwardOpConfIf(
   obj->Call(op, op_confs, DiffLbi4BnInOp, DateType4BnInOp);
 }
 
-void AutoGrad(const JobDesc& job_desc, JobConf1* job_conf,
+void AutoGrad(const OpGraph& op_graph, JobConf1* job_conf,
               HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi) {
   CHECK(lbi2diff_lbi->empty());
-  OpGraph op_graph(&job_desc);
   auto NeedBackwardOp = MakePredicatorNeedBackwardOp(op_graph);
-  std::list<OpNode*> start_nodes;
-  {
-    std::list<OpNode*> loss_nodes;
-    GetLossOpNodes(op_graph, &loss_nodes);
-    for (OpNode* loss_node : loss_nodes) {
-      if (NeedBackwardOp(loss_node)) { start_nodes.push_back(loss_node); }
-    }
-  }
+  std::list<OpNode*> loss_nodes;
+  GetLossOpNodes(op_graph, &loss_nodes);
+  for (OpNode* loss_node : loss_nodes) { CHECK(NeedBackwardOp(loss_node)); }
 
   auto ForEachInNode = [&](OpNode* op_node, const std::function<void(OpNode*)>& Handler) {
     op_node->ForEachNodeOnInEdge([&](OpNode* in_node) {
@@ -112,7 +106,7 @@ void AutoGrad(const JobDesc& job_desc, JobConf1* job_conf,
   HashMap<LogicalBlobId, HashMap<std::string, LogicalBlobId>> lbi2op_name2in_diff_lbi;
   HashMap<LogicalBlobId, LogicalBlobId>* lbi2out_diff_lbi = lbi2diff_lbi;
   JobConfBuilder job_conf_builder(job_conf);
-  op_graph.TopoForEachNode(start_nodes, ForEachOutNode, ForEachInNode, [&](OpNode* op_node) {
+  op_graph.TopoForEachNode(loss_nodes, ForEachOutNode, ForEachInNode, [&](OpNode* op_node) {
     const auto& op_name = op_node->op().op_name();
     auto DiffLbi4BnInOp = [&](const std::string& bn) -> LogicalBlobId* {
       const auto& input_bns = op_node->op().input_bns();
@@ -136,6 +130,32 @@ void AutoGrad(const JobDesc& job_desc, JobConf1* job_conf,
     GenerateBackwardOpConfIf(op_node->op(), &ops, DiffLbi4BnInOp, DataType4BnInOp);
     job_conf_builder.AddOps(op_node->parallel_desc().parallel_conf(), ops);
   });
+}
+
+void AddTotalLossInstanceNumOpConf(const OpGraph& op_graph, JobConf1* job_conf,
+                                   LogicalBlobId* total_loss_instance_num_lbi) {
+  JobConfBuilder job_conf_builder(job_conf);
+  std::list<OpNode*> loss_nodes;
+  GetLossOpNodes(op_graph, &loss_nodes);
+  OperatorConf op_conf;
+  op_conf.set_name("system-autograd-total_loss_instance_num");
+  TotalLossInstanceNumOpConf* conf = op_conf.mutable_total_loss_instance_num_conf();
+  std::vector<LogicalBlobId> loss_instance_num_lbis;
+  for (const OpNode* op_node : loss_nodes) {
+    LogicalBlobId lbi;
+    lbi.set_op_name(op_node->op().op_name());
+    lbi.set_blob_name("loss_instance_num");
+    conf->add_in(GenLogicalBlobName(lbi));
+  }
+  conf->set_out("out");
+
+  ParallelConf parallel_conf;
+  parallel_conf.set_policy(kDataParallel);
+  parallel_conf.add_device_name("0:cpu:0");
+  job_conf_builder.AddOps(parallel_conf, {op_conf});
+
+  total_loss_instance_num_lbi->set_op_name(op_conf.name());
+  total_loss_instance_num_lbi->set_blob_name("out");
 }
 
 }  // namespace oneflow

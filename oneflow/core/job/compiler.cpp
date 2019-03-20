@@ -49,9 +49,12 @@ void UpdateJobDescbyAutoGrad() {
   if (Global<JobDesc>::Get()->IsPredict()
       && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     const JobDesc* job_desc = Global<JobDesc>::Get();
+    OpGraph op_graph(job_desc);
     JobConf1 job_conf(job_desc->job_conf());
+    LogicalBlobId total_loss_instance_num;
+    AddTotalLossInstanceNumOpConf(op_graph, &job_conf, &total_loss_instance_num);
     HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
-    AutoGrad(*job_desc, &job_conf, &lbi2diff_lbi);
+    AutoGrad(op_graph, &job_conf, &lbi2diff_lbi);
     Global<JobDesc>::Delete();
     Global<JobDesc>::New(job_conf);
   }

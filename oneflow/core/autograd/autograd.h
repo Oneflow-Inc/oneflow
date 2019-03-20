@@ -3,12 +3,14 @@
 
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/register/logical_blob_id.pb.h"
+#include "oneflow/core/graph/op_graph.h"
 
 namespace oneflow {
 
-void AutoGrad(const JobDesc& job_desc, JobConf1* job_conf,
+void AutoGrad(const OpGraph& op_graph, JobConf1* job_conf,
               HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
+void AddTotalLossInstanceNumOpConf(const OpGraph& op_graph, JobConf1* job_conf,
+                                   LogicalBlobId* total_loss_instance_num_lbi);
 
 void GenerateBackwardOpConfIf(const Operator&, std::vector<OperatorConf>*,
                               const std::function<LogicalBlobId*(const std::string&)>&);
