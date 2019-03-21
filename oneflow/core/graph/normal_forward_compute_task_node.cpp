@@ -127,13 +127,8 @@ void NormalForwardCompTaskNode::BuildOutRegst() {
     HashSet<LogicalBlobId> found_lbis;
     for (ExecEdge* out_edge : cur_node->out_edges()) { found_lbis.insert(out_edge->lbi()); }
     for (const std::string& obn : cur_node->op()->output_bns()) {
-      const LogicalBlobId& lbi = cur_node->op()->BnInOp2Lbi(obn);
-      if (logical_node()->IsDataLbiOnOutEdge(lbi)) {
-        out_regst->AddLbi(lbi);
-        cur_node->BindBnWithRegst(obn, out_regst);
-      } else {
-        CHECK(found_lbis.empty() || found_lbis.find(lbi) != found_lbis.end());
-      }
+      out_regst->AddLbi(cur_node->op()->BnInOp2Lbi(obn));
+      cur_node->BindBnWithRegst(obn, out_regst);
     }
   });
 }
