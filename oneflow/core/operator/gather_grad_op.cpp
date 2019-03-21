@@ -18,6 +18,7 @@ class GatherGradDataParallelOpParallelSignature final : public OpParallelSignatu
   const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelDesc& parallel_desc) const override {
+    if (parallel_desc.parallel_num() == 1) { return MakeOpParallelMatchSignatureMismatch(); }
     if (parallel_desc.policy() == kDataParallel) { return MakeOpParallelMatchSuccess(); }
     return MakeOpParallelMatchParallelPolicyError(parallel_desc.policy(), kDataParallel);
   }
