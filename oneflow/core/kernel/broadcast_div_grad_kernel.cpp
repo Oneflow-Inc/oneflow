@@ -8,7 +8,7 @@ void BroadcastDivGradKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* b = BnInOp2Blob("b");
   const Blob* out_diff = BnInOp2Blob(GenDiffBn("out"));
-  const Blob* out_blob = BnInOp2Blob("out");
+  const Blob* y_blob = BnInOp2Blob("y");
   Blob* tmp_blob = BnInOp2Blob("temp_storage");
   Blob* b_diff = BnInOp2Blob(GenDiffBn("b"));
 
@@ -22,7 +22,7 @@ void BroadcastDivGradKernel<device_type, T>::ForwardDataContent(
 
 
   NdarrayUtil<device_type, T>::template BroadcastApply<BinaryFuncDiv>(
-      ctx.device_ctx, tmp, XpuVarNdarray<const T>(out_blob, num_axes),
+      ctx.device_ctx, tmp, XpuVarNdarray<const T>(y_blob, num_axes),
       XpuVarNdarray<const T>(b, num_axes));
   NdarrayUtil<device_type, T>::template BroadcastApply<BinaryFuncMul>(
       ctx.device_ctx, tmp, out_diff_tensor, const_tmp);
