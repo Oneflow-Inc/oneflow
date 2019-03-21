@@ -162,7 +162,7 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   if (GetValFromCustomizedConf<bool>("use_bias")) {
     // bias and bias_multiplier
     if (fw_bw_split) {
-      CHECK_EQ(GetBlobDesc4BnInOp("bias")->shape(), Shape({filters, 1}));
+      CHECK_EQ(GetBlobDesc4BnInOp("bias")->shape(), Shape({filters}));
     } else {
       GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({filters, 1});
     }
