@@ -855,6 +855,14 @@ message GatherOpConf {
   optional int64 axis = 4 [default = 0];
 }
 
+message GatherGradOpConf {
+  required string out_diff = 1;
+  required string indices = 2;
+  required string in_diff = 3;
+  required int64 axis = 4;
+  required int64 gather_dim_size = 5;
+}
+
 message BatchGatherOpConf {
   required string in = 1;
   required string indices = 2;
@@ -1154,6 +1162,7 @@ message OperatorConf {
     SliceGradOpConf slice_grad_conf = 269;
     ReduceSumLikeOpConf reduce_sum_like_conf = 270;
     DropoutGradOpConf dropout_grad_conf = 271;
+    GatherGradOpConf gather_grad_conf = 272;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
