@@ -140,4 +140,6 @@ void ConvDataGradOp::GetOpParallelSignatures(
   op_parallel_signatures->emplace_back(new ConvDataGradModelParallelOpParallelSignature(this));
 }
 
+REGISTER_OP(OperatorConf::kConvDataGradConf, ConvDataGradOp);
+
 }  // namespace oneflow

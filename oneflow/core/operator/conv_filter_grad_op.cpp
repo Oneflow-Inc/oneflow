@@ -158,4 +158,6 @@ void ConvFilterGradOp::GetOpParallelSignatures(
   op_parallel_signatures->emplace_back(new ConvFilterGradModelParallelOpParallelSignature(this));
 }
 
+REGISTER_OP(OperatorConf::kConvFilterGradConf, ConvFilterGradOp);
+
 }  // namespace oneflow

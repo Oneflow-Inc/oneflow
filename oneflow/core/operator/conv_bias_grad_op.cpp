@@ -99,4 +99,6 @@ void ConvBiasGradOp::GetOpParallelSignatures(
   op_parallel_signatures->emplace_back(new ConvBiasGradModelParallelOpParallelSignature(this));
 }
 
+REGISTER_OP(OperatorConf::kConvBiasGradConf, ConvBiasGradOp);
+
 }  // namespace oneflow
