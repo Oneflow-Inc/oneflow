@@ -249,6 +249,13 @@ message SparseCrossEntropyOpConf {
   required string out = 3;
 }
 
+message SparseCrossEntropyGradOpConf {
+  required string prediction = 1;
+  required string label = 2;
+  required string dy = 3;
+  required string prediction_diff = 4;
+}
+
 message SparseSoftmaxCrossEntropyLossOpConf {
   required string prediction = 1;
   required string label = 2;
@@ -947,14 +954,48 @@ message SliceGradOpConf {
 }
 
 message LayerNormOpConf {
+  // in
   required string in = 1;
   required string out = 2;
-  optional bool center = 3 [default = true];
-  optional bool scale = 4 [default = true];
-  optional ActivationType activation = 5 [default = kNone];
-  optional int64 begin_norm_axis = 6 [default = 1];
-  optional int64 begin_params_axis = 7 [default = -1];
-  optional double epsilon = 8 [default = 1e-5];
+  optional string beta = 3;
+  optional string gamma = 4;
+  // out
+  optional string normalized = 5;
+  optional string mean = 6;
+  optional string inv_variance = 7;
+
+  optional bool center = 8 [default = true];
+  optional bool scale = 9 [default = true];
+  optional ActivationType activation = 10 [default = kNone];
+  optional int64 begin_norm_axis = 11 [default = 1];
+  optional int64 begin_params_axis = 12 [default = -1];
+  optional double epsilon = 13 [default = 1e-5];
+}
+
+message LayerNormGradOpConf {
+  // in
+  required string dy = 1;
+  required string x = 2;
+  optional string mean = 3;
+  optional string inv_variance = 4;
+  // out
+  required string dx = 5;
+
+  required int64 begin_norm_axis = 6;
+  required double epsilon = 7;
+}
+
+message LayerNormParamGradOpConf {
+  // in
+  required string dy = 1;
+  optional string normalized = 2;
+  optional string gamma = 3;
+  // out
+  optional string normalized_diff = 4;
+  optional string beta_diff = 5;
+  optional string gamma_diff = 6;
+
+  required int64 begin_params_axis = 7;
 }
 
 message ConstantOpConf {
@@ -1162,7 +1203,10 @@ message OperatorConf {
     SliceGradOpConf slice_grad_conf = 269;
     ReduceSumLikeOpConf reduce_sum_like_conf = 270;
     DropoutGradOpConf dropout_grad_conf = 271;
-    GatherGradOpConf gather_grad_conf = 272;
+    LayerNormGradOpConf layer_norm_grad_conf = 272;
+    LayerNormParamGradOpConf layer_norm_param_grad_conf = 273;
+    SparseCrossEntropyGradOpConf sparse_cross_entropy_grad_conf= 274;
+    GatherGradOpConf gather_grad_conf = 275;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
