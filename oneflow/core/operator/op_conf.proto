@@ -915,6 +915,13 @@ message SliceOpConf {
   repeated DimSliceConf dim_slice_conf = 3;
 }
 
+message SliceGradOpConf {
+  required string dy = 1;
+  required string dx = 2;
+  required string like = 3;
+  repeated DimSliceConf dim_slice_conf = 4;
+}
+
 message LayerNormOpConf {
   required string in = 1;
   required string out = 2;
@@ -1128,6 +1135,7 @@ message OperatorConf {
     ReluGradOpConf relu_grad_conf = 266;
     GeluGradOpConf gelu_grad_conf = 267;
     ReshapeLikeOpConf reshape_like_conf = 268;
+    SliceGradOpConf slice_grad_conf = 269;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
