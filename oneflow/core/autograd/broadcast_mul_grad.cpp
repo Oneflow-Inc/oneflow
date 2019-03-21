@@ -18,7 +18,8 @@ void GenerateBackwardOpConf(
 
     OperatorConf reduce_sum_like_a;
     reduce_sum_like_a.set_name(op.op_name() + "_grad_a_reduce");
-    ReduceSumLikeOpConf* reduce_sum_like_a_op_conf = broadcast_mul_a.mutable_reduce_sum_like_conf();
+    ReduceSumLikeOpConf* reduce_sum_like_a_op_conf =
+        reduce_sum_like_a.mutable_reduce_sum_like_conf();
     reduce_sum_like_a_op_conf->set_like(GenLogicalBlobName(op.BnInOp2Lbi("a")));
     reduce_sum_like_a_op_conf->set_x(broadcast_mul_a.name() + "/out");
     reduce_sum_like_a_op_conf->set_y("y");
@@ -38,7 +39,8 @@ void GenerateBackwardOpConf(
 
     OperatorConf reduce_sum_like_b;
     reduce_sum_like_b.set_name(op.op_name() + "_grad_b_reduce");
-    ReduceSumLikeOpConf* reduce_sum_like_b_op_conf = broadcast_mul_b.mutable_reduce_sum_like_conf();
+    ReduceSumLikeOpConf* reduce_sum_like_b_op_conf =
+        reduce_sum_like_b.mutable_reduce_sum_like_conf();
     reduce_sum_like_b_op_conf->set_like(GenLogicalBlobName(op.BnInOp2Lbi("b")));
     reduce_sum_like_b_op_conf->set_x(broadcast_mul_b.name() + "/out");
     reduce_sum_like_b_op_conf->set_y("y");
