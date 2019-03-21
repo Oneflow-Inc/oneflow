@@ -32,7 +32,8 @@ ConvConf GenConvConfFromConvOpConf(const OperatorConf& op_conf) {
 void GenerateBackwardOpConf(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) {
-  CHECK(op.op_conf().has_conv_1d_conf() || op.op_conf().has_conv_2d_conf() || op.op_conf().has_conv_2d_conf());
+  CHECK(op.op_conf().has_conv_1d_conf() || op.op_conf().has_conv_2d_conf()
+        || op.op_conf().has_conv_2d_conf());
   const ConvConf conv_conf = GenConvConfFromConvOpConf(op.op_conf());
   if (op.GetValFromCustomizedConf<bool>("use_bias") && DiffLbi4BnInOp("bias") != nullptr) {
     OperatorConf bias_grad_op;
