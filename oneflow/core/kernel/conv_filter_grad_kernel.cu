@@ -5,9 +5,9 @@ namespace oneflow {
 
 template<typename T>
 struct ConvFilterGradKernelUtil<DeviceType::kGPU, T> final {
-  static void Compute(DeviceCtx* ctx, const ConvFilterGradKernelConf& kernel_conf,
-                      const ConvConf& conf, const Blob* x, const Blob* dy, Blob* filter_diff,
-                      Blob* buf) {
+  static void Compute(DeviceCtx *ctx, const ConvFilterGradKernelConf &kernel_conf,
+                      const ConvConf &conf, const Blob *x, const Blob *dy, Blob *filter_diff,
+                      Blob *buf) {
     CudnnTensorDesc x_desc(x->data_type(), x->shape(), conf.data_format());
     CudnnTensorDesc dy_desc(dy->data_type(), dy->shape(), conf.data_format());
     CudnnFilterDesc filter_diff_desc(filter_diff->data_type(), filter_diff->shape(),
@@ -20,9 +20,10 @@ struct ConvFilterGradKernelUtil<DeviceType::kGPU, T> final {
         buf->dptr(), buf->ByteSizeOfDataContentField(), ZeroPtr<T>::value, filter_diff_desc->Get(),
         filter_diff_desc->mut_dptr<T>()));
   };
+}
 
 #define INSTANTIATE_CONV_FILTER_GRAD_KERNEL_UTIL(type_cpp, type_proto) \
   template struct ConvFilterGradKernelUtil<DeviceType::kGPU, type_cpp>;
-  OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CONV_FILTER_GRAD_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CONV_FILTER_GRAD_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
