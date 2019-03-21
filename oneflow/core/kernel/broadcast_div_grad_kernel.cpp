@@ -10,7 +10,7 @@ void BroadcastDivGradKernel<device_type, T>::ForwardDataContent(
   const Blob* dy_blob = BnInOp2Blob("dy");
   const Blob* y_blob = BnInOp2Blob("y");
   Blob* tmp_blob = BnInOp2Blob("temp_storage");
-  Blob* b_diff = BnInOp2Blob(GenDiffBn("b"));
+  Blob* b_diff_blob = BnInOp2Blob("db");
 
   KernelUtil<device_type, T>::Reciprocal(ctx.device_ctx, b->shape().elem_cnt(), b->dptr<T>(),
                                          tmp_blob->mut_dptr<T>());
@@ -26,10 +26,10 @@ void BroadcastDivGradKernel<device_type, T>::ForwardDataContent(
       XpuVarNdarray<const T>(b, num_axes));
   NdarrayUtil<device_type, T>::template BroadcastApply<BinaryFuncMul>(
       ctx.device_ctx, tmp, out_diff, const_tmp);
-  NdarrayUtil<device_type, T>::ReduceSum(ctx.device_ctx, XpuVarNdarray<T>(b_diff, num_axes),
+  NdarrayUtil<device_type, T>::ReduceSum(ctx.device_ctx, XpuVarNdarray<T>(b_diff_blob, num_axes),
                                          const_tmp, tmp);
   NdarrayUtil<device_type, T>::template ImplaceApplyUnary<UnaryFuncMinus>(
-      ctx.device_ctx, XpuVarNdarray<T>(b_diff, num_axes));
+      ctx.device_ctx, XpuVarNdarray<T>(b_diff_blob, num_axes));
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBroadcastDivGradConf, BroadcastDivGradKernel,
