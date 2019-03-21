@@ -17,8 +17,8 @@ struct ConvFilterGradKernelUtil<DeviceType::kGPU, T> final {
         ctx->cudnn_handle(), OnePtr<T>::value, x_desc->Get(), x->dptr<T>(), dy_desc->Get(),
         dy->dptr<T>(), this->conv_desc_->Get(),
         static_cast<cudnnConvolutionBwdFilterAlgo_t>(kernel_conf.cudnn_bwd_filter_algo()),
-        buf->mut_dptr(), buf->ByteSizeOfDataContentField(), ZeroPtr<T>::value, filter_diff_desc->Get(),
-        filter_diff_desc->mut_dptr<T>()));
+        buf->mut_dptr(), buf->ByteSizeOfDataContentField(), ZeroPtr<T>::value,
+        filter_diff_desc->Get(), filter_diff_desc->mut_dptr<T>()));
   };
 }
 
