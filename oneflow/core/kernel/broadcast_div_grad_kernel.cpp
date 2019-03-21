@@ -11,10 +11,7 @@ void BroadcastDivGradKernel<device_type, T>::ForwardDataContent(
   const Blob* y_blob = BnInOp2Blob("y");
   Blob* tmp_blob = BnInOp2Blob("temp_storage");
   Blob* b_diff_blob = BnInOp2Blob("db");
-
-  KernelUtil<device_type, T>::Reciprocal(ctx.device_ctx, b->shape().elem_cnt(), b->dptr<T>(),
-                                         tmp_blob->mut_dptr<T>());
-
+  
   const int64_t num_axes = dy_blob->shape().NumAxes();
   XpuVarNdarray<const T> dy(dy_blob, num_axes);
   XpuVarNdarray<const T> const_tmp(dy.shape(), tmp_blob->dptr<T>());
