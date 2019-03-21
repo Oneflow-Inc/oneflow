@@ -253,7 +253,7 @@ message SparseCrossEntropyGradOpConf {
   required string prediction = 1;
   required string label = 2;
   required string dy = 3;
-  required string prediction_grad = 4;
+  required string prediction_diff = 4;
 }
 
 message SparseSoftmaxCrossEntropyLossOpConf {

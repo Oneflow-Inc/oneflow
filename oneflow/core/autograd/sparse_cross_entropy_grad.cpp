@@ -17,10 +17,10 @@ void GenerateBackwardOpConf(
     sparse_cross_entropy_grad_op_conf->set_label(GenLogicalBlobName(op.BnInOp2Lbi("label")));
     sparse_cross_entropy_grad_op_conf->set_prediction(
         GenLogicalBlobName(op.BnInOp2Lbi("prediction")));
-    sparse_cross_entropy_grad_op_conf->set_prediction_grad("prediction_grad");
+    sparse_cross_entropy_grad_op_conf->set_prediction_diff("prediction_diff");
     op_confs->push_back(sparse_cross_entropy_grad_op);
     DiffLbi4BnInOp("prediction")->set_op_name(sparse_cross_entropy_grad_op.name());
-    DiffLbi4BnInOp("prediction")->set_blob_name("prediction_grad");
+    DiffLbi4BnInOp("prediction")->set_blob_name("prediction_diff");
   }
 }
 
