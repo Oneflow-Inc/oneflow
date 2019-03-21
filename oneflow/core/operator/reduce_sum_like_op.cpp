@@ -8,7 +8,7 @@ void ReduceSumLikeOp::InitFromOpConf() {
   EnrollInputBn("x");
   EnrollInputBn("like")->set_use_header_only(true);
   EnrollOutputBn("y");
-  EnrollFwBufBn("fw_tmp");
+  EnrollOutputBn("temp_storage");
 }
 
 const PbMessage& ReduceSumLikeOp::GetCustomizedConf() const {
@@ -17,7 +17,7 @@ const PbMessage& ReduceSumLikeOp::GetCustomizedConf() const {
 
 void ReduceSumLikeOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*) const {
-  *GetBlobDesc4BnInOp("fw_tmp") = *GetBlobDesc4BnInOp("x");
+  *GetBlobDesc4BnInOp("temp_storage") = *GetBlobDesc4BnInOp("x");
   *GetBlobDesc4BnInOp("y") = *GetBlobDesc4BnInOp("like");
 }
 
