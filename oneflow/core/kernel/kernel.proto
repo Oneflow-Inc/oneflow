@@ -161,6 +161,10 @@ message ConvFilterGradKernelConf {
   optional int32 cudnn_bwd_filter_algo = 1 [default = -1];
 }
 
+message ConvDataGradKernelConf {
+  optional int32 cudnn_bwd_data_algo = 1 [default = -1];
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
@@ -205,5 +209,6 @@ message KernelConf {
     RecordLoadKernelConf record_load_conf = 408;
     PReluKernelConf prelu_conf = 409;
     ConvFilterGradKernelConf conv_filter_grad_conf = 410;
+    ConvDataGradKernelConf conv_data_grad_conf = 411;
   }
 }

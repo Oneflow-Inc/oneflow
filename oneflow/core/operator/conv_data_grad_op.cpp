@@ -82,10 +82,9 @@ void ConvDataGradOp::InitFromOpConf() {
   }
 }
 
-void ConvDataGradOp::InferBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, int64_t record_piece_size,
-    std::function<void(OpContext*)> EnrollOpCtx) const {
+void ConvDataGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                    const ParallelContext* parallel_ctx, int64_t record_piece_size,
+                                    std::function<void(OpContext*)> EnrollOpCtx) const {
   const ConvDataGradOpConf& conf = this->op_conf().conv_data_grad_conf();
   const ConvConf& conv_conf = conf.conv_conf();
   const BlobDesc* dy = GetBlobDesc4BnInOp("dy");
