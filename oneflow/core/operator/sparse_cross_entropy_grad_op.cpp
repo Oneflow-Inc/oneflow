@@ -7,7 +7,7 @@ void SparseCrossEntropyGradOp::InitFromOpConf() {
   EnrollInputBn("prediction");
   EnrollInputBn("label");
   EnrollInputBn("dy");
-  EnrollOutputBn("prediction_grad");
+  EnrollOutputBn("prediction_diff");
 }
 
 const PbMessage& SparseCrossEntropyGradOp::GetCustomizedConf() const {
@@ -18,7 +18,7 @@ void SparseCrossEntropyGradOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, int64_t record_piece_size,
     std::function<void(OpContext*)> EnrollOpCtx) const {
-  *GetBlobDesc4BnInOp("prediction_grad") = *GetBlobDesc4BnInOp("prediction");
+  *GetBlobDesc4BnInOp("prediction_diff") = *GetBlobDesc4BnInOp("prediction");
 }
 
 REGISTER_OP(OperatorConf::kSparseCrossEntropyGradConf, SparseCrossEntropyGradOp);
