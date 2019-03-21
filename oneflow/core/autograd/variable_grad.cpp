@@ -12,18 +12,19 @@ void GenerateBackwardOpConf(
   const auto& model_update_conf = train_conf.model_update_conf();
   OperatorConf mdupdt_op;
   mdupdt_op.set_name(op.op_name() + "_grad");
-  mdupdt_op.mutable_normal_mdupdt_conf()->set_model_diff(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
+  mdupdt_op.mutable_normal_mdupdt_conf()->set_model_diff(
+      GenLogicalBlobName(*DiffLbi4BnInOp("out")));
   mdupdt_op.mutable_normal_mdupdt_conf()->set_model(GenLogicalBlobName(op.BnInOp2Lbi("out")));
   *(mdupdt_op.mutable_normal_mdupdt_conf()->mutable_user_conf()) =
       Global<JobDesc>::Get()->other_conf().train_conf().model_update_conf();
   float primary_lr = Global<JobDesc>::Get()->primary_lr();
   float secondary_lr = Global<JobDesc>::Get()->secondary_lr();
   if (secondary_lr < 0) { secondary_lr = primary_lr; }
-  if (op.op_conf().variable_conf().ModelName() == "weight") {
+  if (op.op_conf().variable_conf().model_name() == "weight") {
     mdupdt_op.mutable_normal_mdupdt_conf()->set_learning_rate(primary_lr);
     mdupdt_op.mutable_normal_mdupdt_conf()->set_l1(Global<JobDesc>::Get()->weight_l1());
     mdupdt_op.mutable_normal_mdupdt_conf()->set_l2(Global<JobDesc>::Get()->weight_l2());
-  } else if (op.op_conf().variable_conf().ModelName() == "bias") {
+  } else if (op.op_conf().variable_conf().model_name() == "bias") {
     mdupdt_op.mutable_normal_mdupdt_conf()->set_learning_rate(secondary_lr);
     mdupdt_op.mutable_normal_mdupdt_conf()->set_l1(Global<JobDesc>::Get()->bias_l1());
     mdupdt_op.mutable_normal_mdupdt_conf()->set_l2(Global<JobDesc>::Get()->bias_l2());
