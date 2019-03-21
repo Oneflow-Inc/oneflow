@@ -26,9 +26,9 @@ void LayerNormKernel<device_type, T>::ForwardDataContent(
   const Blob* bn_scale = BnInOp2Blob("cudnn_bn_scale_ones");
   const Blob* bn_bias = BnInOp2Blob("cudnn_bn_bias_zeros");
   Blob* out = BnInOp2Blob("out");
-  Blob* normalize_out = conf.scale() ? BnInOp2Blob("normalize_out") : out;
-  Blob* mean = BnInOp2Blob("cudnn_bn_mean");
-  Blob* inv_variance = BnInOp2Blob("cudnn_bn_inv_variance");
+  Blob* normalize_out = conf.scale() ? BnInOp2Blob("normalized") : out;
+  Blob* mean = BnInOp2Blob("mean");
+  Blob* inv_variance = BnInOp2Blob("inv_variance");
   LayerNormKernelUtil<device_type, T>::NormalizeForward(
       ctx.device_ctx, in, bn_scale, bn_bias, conf.epsilon(), normalize_out, mean, inv_variance);
   if (conf.scale()) {
@@ -71,7 +71,7 @@ void LayerNormKernel<device_type, T>::BackwardDataContent(
                                            XpuVarNdarray<T>({n, m}, bw_buf->mut_dptr<T>()));
   }
   if (conf.scale()) {
-    Blob* normalize_out = BnInOp2Blob("normalize_out");
+    Blob* normalize_out = BnInOp2Blob("normalized");
     const Blob* gamma = BnInOp2Blob("gamma");
     Blob* gamma_diff = BnInOp2Blob(GenDiffBn("gamma"));
     const int64_t m = gamma_diff->shape().elem_cnt();
@@ -96,10 +96,10 @@ void LayerNormKernel<device_type, T>::BackwardDataContent(
   }
   if (in_diff) {
     const Blob* in = BnInOp2Blob("in");
-    const Blob* normalize_out_diff = conf.scale() ? BnInOp2Blob("normalize_out") : out_diff;
+    const Blob* normalize_out_diff = conf.scale() ? BnInOp2Blob("normalized") : out_diff;
     const Blob* bn_scale = BnInOp2Blob("cudnn_bn_scale_ones");
-    const Blob* mean = BnInOp2Blob("cudnn_bn_mean");
-    const Blob* inv_variance = BnInOp2Blob("cudnn_bn_inv_variance");
+    const Blob* mean = BnInOp2Blob("mean");
+    const Blob* inv_variance = BnInOp2Blob("inv_variance");
     Blob* bn_scale_diff = BnInOp2Blob("cudnn_bn_scale_diff_buf");
     Blob* bn_bias_diff = BnInOp2Blob("cudnn_bn_bias_diff_buf");
     LayerNormKernelUtil<device_type, T>::NormalizeBackward(
@@ -112,11 +112,11 @@ template<DeviceType device_type, typename T>
 void LayerNormKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937*, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const LayerNormOpConf& conf = this->op_conf().layer_norm_conf();
-  if (conf.scale()) {
+  if (conf.scale() && !conf.has_gamma()) {
     InitializerConf ones_initializer = OnesInitializerConf();
     KernelUtil<device_type, T>::InitializeWithConf(ctx, ones_initializer, 0, BnInOp2Blob("gamma"));
   }
-  if (conf.center()) {
+  if (conf.center() && !conf.has_beta()) {
     InitializerConf zeros_initializer = ZerosInitializerConf();
     KernelUtil<device_type, T>::InitializeWithConf(ctx, zeros_initializer, 0, BnInOp2Blob("beta"));
   }
@@ -127,13 +127,13 @@ void LayerNormKernel<device_type, T>::InitModelBlobsWithDir(
     DeviceCtx* ctx, int32_t part_id, int32_t part_num, const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const LayerNormOpConf& conf = this->op_conf().layer_norm_conf();
-  if (conf.scale()) {
+  if (conf.scale() && !conf.has_gamma()) {
     Blob* gamma = BnInOp2Blob("gamma");
     KernelUtil<device_type, T>::InitializeWithDir(ctx, part_id, part_num, model_load_dir, gamma,
                                                   "gamma", gamma->shape().At(0),
                                                   gamma->shape().Count(1));
   }
-  if (conf.center()) {
+  if (conf.center() && !conf.has_beta()) {
     Blob* beta = BnInOp2Blob("beta");
     KernelUtil<device_type, T>::InitializeWithDir(ctx, part_id, part_num, model_load_dir, beta,
                                                   "beta", beta->shape().At(0),
