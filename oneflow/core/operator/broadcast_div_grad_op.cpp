@@ -3,7 +3,7 @@
 namespace oneflow {
 
 void BroadcastDivGradOp::InitFromOpConf() {
-  CHECK(op_conf().has_broadcast_div_grad_conf();
+  CHECK(op_conf().has_broadcast_div_grad_conf());
   EnrollInputBn("b");
   EnrollInputBn("y");
   EnrollInputBn("dy");
