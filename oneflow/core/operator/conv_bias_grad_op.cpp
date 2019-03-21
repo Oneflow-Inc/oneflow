@@ -63,6 +63,10 @@ class ConvBiasGradModelParallelOpParallelSignature final : public OpParallelSign
 
 }  // namespace
 
+const PbMessage& ConvBiasGradOp::GetCustomizedConf() const {
+  return op_conf().conv_bias_grad_conf();
+}
+
 void ConvBiasGradOp::InitFromOpConf() {
   CHECK(op_conf().has_conv_bias_grad_conf());
   EnrollInputBn("dy", false);

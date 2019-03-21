@@ -69,6 +69,10 @@ class ConvDataGradModelParallelOpParallelSignature final : public OpParallelSign
 
 }  // namespace
 
+const PbMessage& ConvDataGradOp::GetCustomizedConf() const {
+  return op_conf().conv_data_grad_conf();
+}
+
 void ConvDataGradOp::InitFromOpConf() {
   CHECK(op_conf().has_conv_data_grad_conf());
   EnrollInputBn("dy", false);

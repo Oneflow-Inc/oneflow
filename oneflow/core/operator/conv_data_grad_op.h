@@ -17,6 +17,7 @@ class ConvDataGradOp : public Operator {
                       std::function<void(OpContext*)> EnrollOpCtx) const override;
 
  private:
+  const PbMessage& GetCustomizedConf() const override;
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext*, KernelConf*, const OpContext*) const override;

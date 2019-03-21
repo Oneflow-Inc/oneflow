@@ -66,6 +66,10 @@ class ConvFilterGradModelParallelOpParallelSignature final : public OpParallelSi
 
 }  // namespace
 
+const PbMessage& ConvFilterGradOp::GetCustomizedConf() const {
+  return op_conf().conv_filter_grad_conf();
+}
+
 void ConvFilterGradOp::InitFromOpConf() {
   CHECK(op_conf().has_conv_filter_grad_conf());
   EnrollInputBn("dy", false);

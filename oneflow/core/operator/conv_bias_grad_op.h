@@ -19,6 +19,7 @@ class ConvBiasGradOp : public Operator {
       const std::string& obn) const override;
 
  private:
+  const PbMessage& GetCustomizedConf() const override;
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
   void GetOpParallelSignatures(
       std::vector<std::unique_ptr<const OpParallelSignature>>*) const override;
