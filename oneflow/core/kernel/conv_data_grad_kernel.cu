@@ -4,7 +4,7 @@
 namespace oneflow {
 
 template<typename T>
-struct ConvFilterGradKernelUtil<DeviceType::kGPU, T> final {
+struct ConvDataGradKernelUtil<DeviceType::kGPU, T> final {
   static void Compute(DeviceCtx* ctx, const ConvDataGradKernelConf& kernel_conf,
                       const ConvConf& conf, const Blob* dy, const Blob* filter, Blob* dx,
                       Blob* buf) {
