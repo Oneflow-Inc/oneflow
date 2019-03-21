@@ -3,7 +3,7 @@
 namespace oneflow {
 
 void BroadcastDivGradOp::InitFromOpConf() {
-  CHECK(op_conf().has_reduce_sum_like_conf());
+  CHECK(op_conf().has_broadcast_div_grad_conf();
   EnrollInputBn("b");
   EnrollInputBn("y");
   EnrollInputBn("dy");
@@ -12,7 +12,7 @@ void BroadcastDivGradOp::InitFromOpConf() {
 }
 
 const PbMessage& BroadcastDivGradOp::GetCustomizedConf() const {
-  return op_conf().broadcast_div_conf();
+  return op_conf().broadcast_div_grad_conf();
 }
 
 void BroadcastDivGradOp::InferBlobDescs(
