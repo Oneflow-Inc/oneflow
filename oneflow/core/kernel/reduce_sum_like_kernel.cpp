@@ -12,7 +12,7 @@ void ReduceSumLikeKernel<device_type, T>::ForwardDataContent(
   NdarrayUtil<device_type, T>::ReduceSum(
       ctx.device_ctx,
       XpuVarNdarray<T>(
-          Shape(BnInOp2Blob("like")->shape())->CreateLeftExtendedShape(x_blob->shape().NumAxes()),
+          Shape(BnInOp2Blob("like")->shape()).CreateLeftExtendedShape(x_blob->shape().NumAxes()),
           y_blob->mut_dptr<T>()),
       XpuVarNdarray<const T>(x_blob, x_blob->shape().NumAxes()),
       XpuVarNdarray<T>(fw_tmp_blob, x_blob->shape().NumAxes()));
