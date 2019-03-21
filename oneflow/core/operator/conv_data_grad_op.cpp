@@ -1,4 +1,4 @@
-#include "oneflow/core/operator/conv_filter_grad_op.h"
+#include "oneflow/core/operator/conv_data_grad_op.h"
 #include "oneflow/core/operator/conv_op.h"
 #include "oneflow/core/device/cudnn_conv_ctx_cache.h"
 
@@ -6,15 +6,15 @@ namespace oneflow {
 
 namespace {
 
-class ConvFilterGradDataParallelOpParallelSignature final : public OpParallelSignature {
+class ConvDataGradDataParallelOpParallelSignature final : public OpParallelSignature {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ConvFilterGradDataParallelOpParallelSignature);
-  ~ConvFilterGradDataParallelOpParallelSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(ConvDataGradDataParallelOpParallelSignature);
+  ~ConvDataGradDataParallelOpParallelSignature() override = default;
 
-  explicit ConvFilterGradDataParallelOpParallelSignature(const Operator* op)
+  explicit ConvDataGradDataParallelOpParallelSignature(const Operator* op)
       : OpParallelSignature(op) {}
 
-  const std::string Description() const override { return op().op_name() + ": (MB, DS) -> P"; }
+  const std::string Description() const override { return op().op_name() + ": (MB, DS) -> DS"; }
 
   const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
@@ -27,20 +27,21 @@ class ConvFilterGradDataParallelOpParallelSignature final : public OpParallelSig
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       HashMap<std::string, SbpParallel>* bn2sbp) const override {
     (*bn2sbp)["dy"].mutable_split_parallel()->set_axis(0);
-    (*bn2sbp)["x"].mutable_split_parallel()->set_axis(0);
-    (*bn2sbp)["filter_diff"].mutable_partial_sum_parallel();
+    (*bn2sbp)["x_like"].mutable_split_parallel()->set_axis(0);
+    (*bn2sbp)["filter"].mutable_broadcast_parallel();
+    (*bn2sbp)["dx"].mutable_split_parallel()->set_axis(0);
   }
 };
 
-class ConvFilterGradModelParallelOpParallelSignature final : public OpParallelSignature {
+class ConvDataGradModelParallelOpParallelSignature final : public OpParallelSignature {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ConvFilterGradModelParallelOpParallelSignature);
-  ~ConvFilterGradModelParallelOpParallelSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(ConvDataGradModelParallelOpParallelSignature);
+  ~ConvDataGradModelParallelOpParallelSignature() override = default;
 
-  explicit ConvFilterGradModelParallelOpParallelSignature(const Operator* op)
+  explicit ConvDataGradModelParallelOpParallelSignature(const Operator* op)
       : OpParallelSignature(op) {}
 
-  const std::string Description() const override { return op().op_name() + ": (MS, DB) -> S"; }
+  const std::string Description() const override { return op().op_name() + ": (DS, MS) -> P"; }
 
   const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
@@ -60,17 +61,20 @@ class ConvFilterGradModelParallelOpParallelSignature final : public OpParallelSi
     } else {
       UNIMPLEMENTED();
     }
-    (*bn2sbp)["filter_diff"].mutable_split_parallel()->set_axis(0);
+    (*bn2sbp)["filter"].mutable_split_parallel()->set_axis(0);
+    (*bn2sbp)["x_like"].mutable_broadcast_parallel();
+    (*bn2sbp)["dx"].mutable_partial_sum_parallel();
   }
 };
 
 }  // namespace
 
-void ConvFilterGradOp::InitFromOpConf() {
-  CHECK(op_conf().has_conv_filter_grad_conf());
+void ConvDataGradOp::InitFromOpConf() {
+  CHECK(op_conf().has_conv_data_grad_conf());
   EnrollInputBn("dy", false);
-  EnrollInputBn("x", false);
-  EnrollOutputBn("filter_diff", false);
+  EnrollInputBn("filter", false);
+  EnrollInputBn("x_like", false)->set_use_header_only(true);
+  EnrollOutputBn("dx", false);
   if (DevIsGpuAndEnableCudnn()) {
     EnrollFwBufBn("buf");
   } else {
@@ -78,50 +82,35 @@ void ConvFilterGradOp::InitFromOpConf() {
   }
 }
 
-void ConvFilterGradOp::InferBlobDescs(
+void ConvDataGradOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, int64_t record_piece_size,
     std::function<void(OpContext*)> EnrollOpCtx) const {
-  const ConvFilterGradOpConf& conf = this->op_conf().conv_filter_grad_conf();
+  const ConvDataGradOpConf& conf = this->op_conf().conv_data_grad_conf();
   const ConvConf& conv_conf = conf.conv_conf();
   const BlobDesc* dy = GetBlobDesc4BnInOp("dy");
-  const BlobDesc* x = GetBlobDesc4BnInOp("x");
-  BlobDesc* filter_diff = GetBlobDesc4BnInOp("filter_diff");
+  const BlobDesc* filter = GetBlobDesc4BnInOp("filter");
+  const BlobDesc* x_like = GetBlobDesc4BnInOp("x_like");
   const int32_t num_dims = conf.conv_conf().num_dims();
   CHECK_GE(num_dims, 1);
   CHECK_LE(num_dims, 3);
   CHECK_EQ(dy->shape().NumAxes(), num_dims + 2);
-  CHECK_EQ(x->shape().NumAxes(), num_dims + 2);
-  CHECK_EQ(x->data_type(), dy->data_type());
-  std::vector<int64_t> filter_diff_dim_vec;
-  if (conv_conf.data_format() == "channels_first") {
-    filter_diff_dim_vec.push_back(dy->shape().At(1));
-    filter_diff_dim_vec.push_back(x->shape().At(1));
-    filter_diff_dim_vec.insert(filter_diff_dim_vec.end(), conv_conf.kernel_size().cbegin(),
-                               conv_conf.kernel_size().cend());
-  } else if (conv_conf.data_format() == "channels_last") {
-    filter_diff_dim_vec.push_back(dy->shape().dim_vec().back());
-    filter_diff_dim_vec.insert(filter_diff_dim_vec.end(), conv_conf.kernel_size().cbegin(),
-                               conv_conf.kernel_size().cend());
-    filter_diff_dim_vec.push_back(x->shape().dim_vec().back());
-  } else {
-    UNIMPLEMENTED();
-  }
-  filter_diff->mut_shape() = Shape(filter_diff_dim_vec);
-  filter_diff->set_data_type(x->data_type());
-
+  CHECK_EQ(x_like->shape().NumAxes(), num_dims + 2);
+  CHECK_EQ(x_like->data_type(), dy->data_type());
+  BlobDesc* dx = GetBlobDesc4BnInOp("dx");
+  *dx = *x_like;
   if (DevIsGpuAndEnableCudnn()) {
 #ifdef WITH_CUDA
     ConvOpCtx* conv_op_ctx = new ConvOpCtx();
     EnrollOpCtx(conv_op_ctx);
     CHECK(Global<CudnnConvCtxCache>::Get()->FindCudnnConvAlgoCtxWithConfig(
-        *x, *dy, *filter_diff, conv_conf, cudnn_buf_limit_byte(),
+        *x_like, *dy, *filter, conv_conf, cudnn_buf_limit_byte(),
         &conv_op_ctx->cudnn_conv_algo_ctx));
-    CHECK(conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_algo_found);
+    CHECK(conv_op_ctx->cudnn_conv_algo_ctx.bwd_data_algo_found);
     BlobDesc* cudnn_buf = GetBlobDesc4BnInOp("buf");
     cudnn_buf->set_data_type(DataType::kChar);
     cudnn_buf->mut_shape() =
-        Shape({static_cast<int64_t>(conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_ws_size)});
+        Shape({static_cast<int64_t>(conv_op_ctx->cudnn_conv_algo_ctx.bwd_data_ws_size)});
 #else
     UNIMPLEMENTED();
 #endif
@@ -130,20 +119,14 @@ void ConvFilterGradOp::InferBlobDescs(
   }
 }
 
-int32_t ConvFilterGradOp::OutputBlobModelSplitAxis(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    const std::string& obn) const {
-  return 0;
-}
-
-void ConvFilterGradOp::VirtualGenKernelConf(
+void ConvDataGradOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx) const {
   if (DevIsGpuAndEnableCudnn()) {
 #ifdef WITH_CUDA
     const ConvOpCtx* conv_op_ctx = dynamic_cast<const ConvOpCtx*>(op_ctx);
-    kernel_conf->mutable_conv_filter_grad_conf()->set_cudnn_bwd_filter_algo(
-        conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_algo);
+    kernel_conf->mutable_conv_data_grad_conf()->set_cudnn_bwd_data_algo(
+        conv_op_ctx->cudnn_conv_algo_ctx.bwd_data_algo);
 #else
     UNIMPLEMENTED();
 #endif  // WITH_CUDA
@@ -152,10 +135,10 @@ void ConvFilterGradOp::VirtualGenKernelConf(
   }
 }
 
-void ConvFilterGradOp::GetOpParallelSignatures(
+void ConvDataGradOp::GetOpParallelSignatures(
     std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new ConvFilterGradDataParallelOpParallelSignature(this));
-  op_parallel_signatures->emplace_back(new ConvFilterGradModelParallelOpParallelSignature(this));
+  op_parallel_signatures->emplace_back(new ConvDataGradDataParallelOpParallelSignature(this));
+  op_parallel_signatures->emplace_back(new ConvDataGradModelParallelOpParallelSignature(this));
 }
 
 }  // namespace oneflow

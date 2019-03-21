@@ -1161,6 +1161,7 @@ message OperatorConf {
     ReshapeLikeOpConf reshape_like_conf = 268;
     ConvBiasGradOpConf conv_bias_grad_conf = 269;
     ConvFilterGradOpConf conv_filter_grad_conf = 270;
+    ConvDataGradOpConf conv_data_grad_conf = 271;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
