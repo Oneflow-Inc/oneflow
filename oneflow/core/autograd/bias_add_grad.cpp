@@ -8,7 +8,6 @@ void GenerateBackwardOpConf(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) {
   CHECK(op.op_conf().has_bias_add_conf());
-  const MatmulOpConf& conf = op.op_conf().matmul_conf();
   if (DiffLbi4BnInOp("a") != nullptr) {
     *DiffLbi4BnInOp("a") = *DiffLbi4BnInOp("out");
   }
