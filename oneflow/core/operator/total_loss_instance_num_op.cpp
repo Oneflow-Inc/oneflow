@@ -4,12 +4,12 @@ namespace oneflow {
 
 namespace {
 
-class CheckLossInstanceOpParallelSignature final : public OpParallelSignature {
+class TotalLossInstanceOpParallelSignature final : public OpParallelSignature {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CheckLossInstanceOpParallelSignature);
-  ~CheckLossInstanceOpParallelSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(TotalLossInstanceOpParallelSignature);
+  ~TotalLossInstanceOpParallelSignature() override = default;
 
-  CheckLossInstanceOpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
+  TotalLossInstanceOpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
 
   const std::string Description() const override { return op().op_name() + ": (U, ...) -> (U,)"; }
 
@@ -21,7 +21,9 @@ class CheckLossInstanceOpParallelSignature final : public OpParallelSignature {
         return MakeOpParallelMatchSignatureMismatch();
       }
     }
-    if (parallel_desc.parallel_num() != 1) { return MakeOpParallelMatchSignatureMismatch(); }
+    if (parallel_desc.parallel_num() != 1) {
+      return MakeOpParallelMatchParallelNumError(parallel_desc.parallel_num(), 1);
+    }
     return MakeOpParallelMatchSuccess();
   }
 
@@ -55,7 +57,7 @@ const PbMessage& TotalLossInstanceNumOp::GetCustomizedConf() const {
 
 void TotalLossInstanceNumOp::GetOpParallelSignatures(
     std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new CheckLossInstanceOpParallelSignature(this));
+  op_parallel_signatures->emplace_back(new TotalLossInstanceOpParallelSignature(this));
 }
 
 REGISTER_CPU_OP(OperatorConf::kTotalLossInstanceNumConf, TotalLossInstanceNumOp);
