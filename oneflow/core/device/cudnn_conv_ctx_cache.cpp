@@ -30,7 +30,7 @@ std::string CudnnConvCtxCache::GetKey(const BlobDesc& in_blob_desc, const BlobDe
   key << GetValFromPbMessage<std::string>(conf, "data_format");
   key << "/" << max_buf_size;
   key << "/" << FormatPbRf<int32_t>(GetPbRfFromPbMessage<int32_t>(conf, "kernel_size"));
-  key << "/" << FormatPbRf<int32_t>(GetPbRfFromPbMessage<int32_t>(conf, "padding"));
+  key << "/" << GetValFromPbMessage<std::string>(conf, "padding");
   key << "/" << FormatPbRf<int32_t>(GetPbRfFromPbMessage<int32_t>(conf, "strides"));
   key << "/" << FormatPbRf<int32_t>(GetPbRfFromPbMessage<int32_t>(conf, "dilation_rate"));
   key << "/" << in_blob_desc.shape().DebugStr() + std::to_string(in_blob_desc.data_type());
