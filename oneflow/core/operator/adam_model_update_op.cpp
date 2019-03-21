@@ -9,11 +9,20 @@ void AdamModelUpdateOp::MdUpdtVirtualInitFromOpConf() {
   CHECK_GE(adam_conf.beta2(), 0);
   CHECK_LT(adam_conf.beta2(), 1);
 
-  EnrollForwardModelBn("m");
-  EnrollForwardModelBn("v");
-  if (adam_conf.do_bias_correction()) {
-    EnrollForwardModelBn("beta1_t");
-    EnrollForwardModelBn("beta2_t");
+  if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+    EnrollInputBn("m", false)->set_is_mutable(true);
+    EnrollInputBn("v", false)->set_is_mutable(true);
+    if (adam_conf.do_bias_correction()) {
+      EnrollInputBn("beta1_t", false)->set_is_mutable(true);
+      EnrollInputBn("beta2_t", false)->set_is_mutable(true);
+    }
+  } else {
+    EnrollForwardModelBn("m");
+    EnrollForwardModelBn("v");
+    if (adam_conf.do_bias_correction()) {
+      EnrollForwardModelBn("beta1_t");
+      EnrollForwardModelBn("beta2_t");
+    }
   }
 }
 

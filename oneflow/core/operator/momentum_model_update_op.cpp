@@ -2,7 +2,13 @@
 
 namespace oneflow {
 
-void MomentumModelUpdateOp::MdUpdtVirtualInitFromOpConf() { EnrollForwardModelBn("momentum"); }
+void MomentumModelUpdateOp::MdUpdtVirtualInitFromOpConf() {
+  if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+    EnrollInputBn("momentum", false)->set_is_mutable(true);
+  } else {
+    EnrollForwardModelBn("momentum");
+  }
+}
 
 void MomentumModelUpdateOp::MdUpdtVirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

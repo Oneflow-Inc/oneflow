@@ -3,7 +3,11 @@
 namespace oneflow {
 
 void LARSModelUpdateOp::MdUpdtVirtualInitFromOpConf() {
-  EnrollDataTmpBn("momentum");
+  if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+    EnrollInputBn("momentum", false)->set_is_mutable(true);
+  } else {
+    EnrollDataTmpBn("momentum");
+  }
   EnrollDataTmpBn("data_tmp");
 }
 
