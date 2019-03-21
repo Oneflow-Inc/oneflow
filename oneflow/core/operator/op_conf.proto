@@ -976,7 +976,7 @@ message LayerNormParamGradOpConf {
   optional string normalized = 2;
   optional string gamma = 3;
   // out
-  optional string dx = 4;
+  optional string normalized_diff = 4;
   optional string beta_diff = 5;
   optional string gamma_diff = 6;
 

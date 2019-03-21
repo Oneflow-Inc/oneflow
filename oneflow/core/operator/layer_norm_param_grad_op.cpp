@@ -48,7 +48,7 @@ class LayerNormParamGradDataParallelOpParallelSignature final : public OpParalle
 void LayerNormParamGradOp::InitFromOpConf() {
   CHECK(op_conf().has_layer_norm_param_grad_conf());
   const LayerNormParamGradOpConf& conf = op_conf().layer_norm_param_grad_conf();
-  CHECK(conf.has_beta_diff() || conf.has_gamma_diff() || conf.has_dx());
+  CHECK(conf.has_beta_diff() || conf.has_gamma_diff() || conf.has_normalized_diff());
   EnrollInputBn("dy", false);
   if (conf.has_beta_diff()) { EnrollOutputBn("beta_diff", false); }
   if (conf.has_gamma_diff()) {
@@ -56,8 +56,8 @@ void LayerNormParamGradOp::InitFromOpConf() {
     EnrollOutputBn("gamma_diff", false);
   }
   if (conf.has_beta_diff() || conf.has_gamma_diff()) { EnrollFwBufBn("reduce_buf"); }
-  if (conf.has_dx()) { EnrollOutputBn("dx", false); }
-  if (conf.has_dx() || conf.has_gamma_diff()) { CHECK(conf.has_gamma()); }
+  if (conf.has_normalized_diff()) { EnrollOutputBn("normalized_diff", false); }
+  if (conf.has_normalized_diff() || conf.has_gamma_diff()) { CHECK(conf.has_gamma()); }
   if (conf.has_gamma()) { EnrollInputBn("gamma", false); }
 }
 
@@ -96,7 +96,7 @@ void LayerNormParamGradOp::InferBlobDescs(
     gamma_diff->mut_shape() = param_shape;
     gamma_diff->set_data_type(dy->data_type());
   }
-  if (conf.has_dx()) { *GetBlobDesc4BnInOp("dx") = *dy; }
+  if (conf.has_normalized_diff()) { *GetBlobDesc4BnInOp("normalized_diff") = *dy; }
   if (conf.has_gamma()) {
     const BlobDesc* gamma = GetBlobDesc4BnInOp("gamma");
     CHECK_EQ(gamma->data_type(), dy->data_type());

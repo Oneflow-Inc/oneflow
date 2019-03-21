@@ -36,9 +36,9 @@ void GenerateBackwardOpConf(
       DiffLbi4BnInOp("gamma")->set_blob_name("gamma_diff");
     }
     if (need_scale_out_diff) {
-      param_grad_conf->set_dx("dx");
+      param_grad_conf->set_normalized_diff("normalized_diff");
       grad_dy_lbi.set_op_name(param_grad_op.name());
-      grad_dy_lbi.set_blob_name("dx");
+      grad_dy_lbi.set_blob_name("normalized_diff");
     }
     op_confs->push_back(param_grad_op);
   }

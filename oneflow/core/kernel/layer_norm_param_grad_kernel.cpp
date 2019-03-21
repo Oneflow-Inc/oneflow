@@ -36,19 +36,19 @@ void LayerNormParamGradKernel<device_type, T>::ForwardDataContent(
                                            XpuVarNdarray<const T>({n, m}, reduce_buf->dptr<T>()),
                                            XpuVarNdarray<T>({n, m}, reduce_buf->mut_dptr<T>()));
   }
-  if (conf.has_dx()) {
-    Blob* dx = BnInOp2Blob("dx");
+  if (conf.has_normalized_diff()) {
+    Blob* normalized_diff = BnInOp2Blob("normalized_diff");
     if (conf.has_gamma()) {
       const Blob* gamma = BnInOp2Blob("gamma");
       const int64_t m = gamma->shape().elem_cnt();
       CHECK_EQ(dy->shape().elem_cnt() % m, 0);
       const int64_t n = dy->shape().elem_cnt() / m;
       NdarrayUtil<device_type, T>::template BroadcastApply<BinaryFuncMul>(
-          ctx.device_ctx, XpuVarNdarray<T>({n, m}, dx->mut_dptr<T>()),
+          ctx.device_ctx, XpuVarNdarray<T>({n, m}, normalized_diff->mut_dptr<T>()),
           XpuVarNdarray<const T>({n, m}, dy->dptr<T>()),
           XpuVarNdarray<const T>({1, m}, gamma->dptr<T>()));
     } else {
-      dx->CopyDataContentFrom(ctx.device_ctx, dy);
+      normalized_diff->CopyDataContentFrom(ctx.device_ctx, dy);
     }
   }
 }
