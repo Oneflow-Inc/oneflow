@@ -9,9 +9,7 @@ void GenerateBackwardOpConf(
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) {
   CHECK(op.op_conf().has_bias_add_conf());
   const MatmulOpConf& conf = op.op_conf().matmul_conf();
-  if (DiffLbi4BnInOp("a") != nullptr) {
-    *DiffLbi4BnInOp("a") = *DiffLbi4BnInOp("out");
-  }
+  if (DiffLbi4BnInOp("a") != nullptr) { *DiffLbi4BnInOp("a") = *DiffLbi4BnInOp("out"); }
   if (DiffLbi4BnInOp("b") != nullptr) {
     OperatorConf reduce_sum_op;
     reduce_sum_op.set_name(op.op_name() + "_grad_b");
