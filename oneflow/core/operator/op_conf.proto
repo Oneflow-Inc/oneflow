@@ -534,7 +534,7 @@ message ReduceSumLikeOpConf {
   required string x = 1;
   required string y = 2;
   required string like = 3;
-  required string temp_storage = 4 [default = "temp_storage"];
+  optional string temp_storage = 4 [default = "temp_storage"];
 }
 
 message ReduceMeanOpConf {
