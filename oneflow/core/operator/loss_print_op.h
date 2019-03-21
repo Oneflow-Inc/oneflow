@@ -16,6 +16,8 @@ class LossPrintOp final : public Operator {
 
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
+  void GetOpParallelSignatures(
+      std::vector<std::unique_ptr<const OpParallelSignature>>*) const override;
 
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
 };
