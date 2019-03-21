@@ -530,6 +530,13 @@ message ReduceSumOpConf {
   optional bool keep_dims = 5 [default = false];
 }
 
+message ReduceSumLikeOpConf {
+  required string x = 1;
+  required string y = 2;
+  required string like = 3;
+  optional string temp_storage = 4 [default = "temp_storage"];
+}
+
 message ReduceMeanOpConf {
   required string in = 1;
   required string out = 2;
@@ -1136,6 +1143,7 @@ message OperatorConf {
     GeluGradOpConf gelu_grad_conf = 267;
     ReshapeLikeOpConf reshape_like_conf = 268;
     SliceGradOpConf slice_grad_conf = 269;
+    ReduceSumLikeOpConf reduce_sum_like_conf = 270;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
