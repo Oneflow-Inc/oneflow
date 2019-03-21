@@ -18,7 +18,6 @@ class GatherGradDataParallelOpParallelSignature final : public OpParallelSignatu
   const OpParallelMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelDesc& parallel_desc) const override {
-    if (parallel_desc.parallel_num() == 1) { return MakeOpParallelMatchSignatureMismatch(); }
     if (parallel_desc.policy() == kDataParallel) { return MakeOpParallelMatchSuccess(); }
     return MakeOpParallelMatchParallelPolicyError(parallel_desc.policy(), kDataParallel);
   }
@@ -67,7 +66,6 @@ void GatherGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
 void GatherGradOp::GetOpParallelSignatures(
     std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
   // TODO: support model parallel
-  op_parallel_signatures->emplace_back(MakeDataSplitOpParallelSignature(this));
   op_parallel_signatures->emplace_back(new GatherGradDataParallelOpParallelSignature(this));
 }
 
