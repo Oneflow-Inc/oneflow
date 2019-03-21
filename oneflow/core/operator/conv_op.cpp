@@ -388,6 +388,11 @@ PbMessage* ConvOp<NDims>::MutableCustomizedKernelConf(KernelConf* kernel_conf) c
 }
 
 template<int32_t NDims>
+bool ConvOp<NDims>::IsInputBlobAllowedModelSplit(const std::string& ibn) const {
+  return ibn == "weight" || ibn == "bias";
+}
+
+template<int32_t NDims>
 int32_t ConvOp<NDims>::OutputBlobModelSplitAxis(
     const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     const std::string& obn) const {

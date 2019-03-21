@@ -51,7 +51,7 @@ class ConvOp : public Operator {
       const std::string& obn) const override;
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override;
 
   PbMessage* MutableCustomizedKernelConf(KernelConf*) const override;
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
