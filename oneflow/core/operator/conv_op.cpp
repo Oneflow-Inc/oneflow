@@ -356,12 +356,12 @@ void ConvOp<NDims>::InferCudnnAlgo(
 template<int32_t NDims>
 void ConvOp<NDims>::GetOpParallelSignatures(
     std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
+  op_parallel_signatures->emplace_back((MakeDataSplitOpParallelSignature(this)));
   if (IsFwBwSplit()) {
     op_parallel_signatures->emplace_back((Make_DS_MB_2_DS_OpParallelSignature(this)));
     op_parallel_signatures->emplace_back(
         (Make_DB_MS_2_MS_OpParallelSignature(this, [](const int32_t axis) { return axis == 0; })));
   } else {
-    op_parallel_signatures->emplace_back(MakeDataSplitOpParallelSignature(this));
     op_parallel_signatures->emplace_back(new Conv_DB_2_S_OpParallelSignature(this));
   }
 }
