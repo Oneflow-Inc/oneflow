@@ -17,12 +17,11 @@ void BroadcastDivGradKernel<device_type, T>::ForwardDataContent(
   XpuVarNdarray<const T> const_tmp(dy.shape(), tmp_blob->dptr<T>());
   XpuVarNdarray<T> tmp(dy.shape(), tmp_blob->mut_dptr<T>());
 
-
   NdarrayUtil<device_type, T>::template BroadcastApply<BinaryFuncDiv>(
       ctx.device_ctx, tmp, XpuVarNdarray<const T>(y_blob, num_axes),
       XpuVarNdarray<const T>(b_blob, num_axes));
-  NdarrayUtil<device_type, T>::template BroadcastApply<BinaryFuncMul>(
-      ctx.device_ctx, tmp, dy, const_tmp);
+  NdarrayUtil<device_type, T>::template BroadcastApply<BinaryFuncMul>(ctx.device_ctx, tmp, dy,
+                                                                      const_tmp);
   NdarrayUtil<device_type, T>::ReduceSum(ctx.device_ctx, XpuVarNdarray<T>(b_diff_blob, num_axes),
                                          const_tmp, tmp);
   NdarrayUtil<device_type, T>::template ImplaceApplyUnary<UnaryFuncMinus>(
