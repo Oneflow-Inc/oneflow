@@ -19,8 +19,8 @@ struct ConvFilterGradKernelUtil<DeviceType::kGPU, T> final {
         static_cast<cudnnConvolutionBwdFilterAlgo_t>(kernel_conf.cudnn_bwd_filter_algo()),
         buf->mut_dptr(), buf->ByteSizeOfDataContentField(), ZeroPtr<T>::value,
         filter_diff_desc.Get(), filter_diff->mut_dptr<T>()));
-  };
-}
+  }
+};
 
 #define INSTANTIATE_CONV_FILTER_GRAD_KERNEL_UTIL(type_cpp, type_proto) \
   template struct ConvFilterGradKernelUtil<DeviceType::kGPU, type_cpp>;
