@@ -2,6 +2,42 @@
 
 namespace oneflow {
 
+namespace {
+
+class LossOpParallelSignature final : public OpParallelSignature {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(LossOpParallelSignature);
+  ~LossOpParallelSignature() override = default;
+
+  LossOpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
+
+  const std::string Description() const override {
+    return op().op_name() + ": (S(0), S(0)) -> S(0)";
+  }
+
+  const OpParallelMatchResult GetMatchResult(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      const ParallelDesc& parallel_desc) const override {
+    return MakeOpParallelMatchSuccess();
+  }
+
+  void GenerateSignature(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+    for (const auto& ibn : op().input_bns()) {
+      (*bn2sbp)[ibn].mutable_split_parallel()->set_axis(0);
+    }
+    for (const auto& obn : op().output_bns()) {
+      (*bn2sbp)[obn].mutable_split_parallel()->set_axis(0);
+    }
+    (*bn2sbp)["loss_instance_num"].mutable_partial_sum_parallel();
+    if (!op().GetValFromCustomizedConf<std::string>("weight").empty()) {
+      (*bn2sbp)["reduction_coefficient"].mutable_partial_sum_parallel();
+    }
+  }
+};
+
+}  // namespace
 void LossOp::InitFromOpConf() {
   EnrollInputBn("prediction");
   if (HasFieldInCustomizedConf("label")) { EnrollInputBn("label", false); }
@@ -61,6 +97,11 @@ void LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
     reduction_blob_desc->set_data_type(pred_blob_desc->data_type());
   }
   VirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
+}
+
+void LossOp::GetOpParallelSignatures(
+    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
+  op_parallel_signatures->emplace_back(new LossOpParallelSignature(this));
 }
 
 LogicalBlobId LossOp::obn2lbi(const std::string& output_bn) const {

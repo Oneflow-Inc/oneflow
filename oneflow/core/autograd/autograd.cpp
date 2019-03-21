@@ -66,9 +66,9 @@ std::function<bool(const LogicalBlobId&, const std::string&)> MakePredicatorHasD
 void GenerateBackwardOpConfWrapperStruct::Call(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
-    const std::function<DataType(const std::string&)>& DateType4BnInOp) const {
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) const {
   if (func_) {
-    (*func_)(op, op_confs, DiffLbi4BnInOp, DateType4BnInOp);
+    (*func_)(op, op_confs, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp);
   } else if (naive_func_) {
     (*naive_func_)(op, op_confs, DiffLbi4BnInOp);
   } else {
@@ -79,23 +79,18 @@ void GenerateBackwardOpConfWrapperStruct::Call(
 void GenerateBackwardOpConfIf(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
-    const std::function<DataType(const std::string&)>& DateType4BnInOp) {
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
   auto* obj = NewObj<GenerateBackwardOpConfWrapperStruct>(op.op_conf().op_type_case());
-  obj->Call(op, op_confs, DiffLbi4BnInOp, DateType4BnInOp);
+  obj->Call(op, op_confs, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp);
 }
 
-JobConf1 AutoGrad(const JobDesc& job_desc) {
-  JobConf1 job_conf(job_desc.job_conf());
-  OpGraph op_graph(&job_desc);
+void AutoGrad(const OpGraph& op_graph, JobConf1* job_conf,
+              HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi) {
+  CHECK(lbi2diff_lbi->empty());
   auto NeedBackwardOp = MakePredicatorNeedBackwardOp(op_graph);
-  std::list<OpNode*> start_nodes;
-  {
-    std::list<OpNode*> loss_nodes;
-    GetLossOpNodes(op_graph, &loss_nodes);
-    for (OpNode* loss_node : loss_nodes) {
-      if (NeedBackwardOp(loss_node)) { start_nodes.push_back(loss_node); }
-    }
-  }
+  std::list<OpNode*> loss_nodes;
+  GetLossOpNodes(op_graph, &loss_nodes);
+  for (OpNode* loss_node : loss_nodes) { CHECK(NeedBackwardOp(loss_node)); }
 
   auto ForEachInNode = [&](OpNode* op_node, const std::function<void(OpNode*)>& Handler) {
     op_node->ForEachNodeOnInEdge([&](OpNode* in_node) {
@@ -109,9 +104,9 @@ JobConf1 AutoGrad(const JobDesc& job_desc) {
   };
   auto HasDiff4LbiOpName = MakePredicatorHasDiff4LbiOpName(op_graph, NeedBackwardOp);
   HashMap<LogicalBlobId, HashMap<std::string, LogicalBlobId>> lbi2op_name2in_diff_lbi;
-  HashMap<LogicalBlobId, LogicalBlobId> lbi2out_diff_lbi;
-  JobConfBuilder job_conf_builder(&job_conf);
-  op_graph.TopoForEachNode(start_nodes, ForEachOutNode, ForEachInNode, [&](OpNode* op_node) {
+  HashMap<LogicalBlobId, LogicalBlobId>* lbi2out_diff_lbi = lbi2diff_lbi;
+  JobConfBuilder job_conf_builder(job_conf);
+  op_graph.TopoForEachNode(loss_nodes, ForEachOutNode, ForEachInNode, [&](OpNode* op_node) {
     const auto& op_name = op_node->op().op_name();
     auto DiffLbi4BnInOp = [&](const std::string& bn) -> LogicalBlobId* {
       const auto& input_bns = op_node->op().input_bns();
@@ -120,22 +115,46 @@ JobConf1 AutoGrad(const JobDesc& job_desc) {
       if (std::find(input_bns.begin(), input_bns.end(), bn) != input_bns.end()) {
         return HasDiff4LbiOpName(lbi, op_name) ? &lbi2op_name2in_diff_lbi[lbi][op_name] : nullptr;
       } else if (std::find(output_bns.begin(), output_bns.end(), bn) != output_bns.end()) {
-        if (lbi2out_diff_lbi.find(lbi) == lbi2out_diff_lbi.end()) { return nullptr; }
-        return &lbi2out_diff_lbi.at(lbi);
+        if (lbi2out_diff_lbi->find(lbi) == lbi2out_diff_lbi->end()) { return nullptr; }
+        return &lbi2out_diff_lbi->at(lbi);
       } else {
         UNIMPLEMENTED();
       }
     };
-    auto DataType4BnInOp = [&](const std::string& bn) -> DataType {
-      const auto& lbi = op_node->op().BnInOp2Lbi(bn);
-      return op_graph.GetBlobDataType(lbi);
+    auto LogicalBlobDesc4BnInOp = [&](const std::string& bn) -> const BlobDesc& {
+      return op_graph.GetLogicalBlobDesc(op_node->op().BnInOp2Lbi(bn));
     };
     std::vector<OperatorConf> ops;
-    GenerateCloneGradOpIfNeed(op_node->op(), &ops, lbi2op_name2in_diff_lbi, &lbi2out_diff_lbi);
-    GenerateBackwardOpConfIf(op_node->op(), &ops, DiffLbi4BnInOp, DataType4BnInOp);
+    GenerateCloneGradOpIfNeed(op_node->op(), &ops, lbi2op_name2in_diff_lbi, lbi2out_diff_lbi);
+    GenerateBackwardOpConfIf(op_node->op(), &ops, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp);
     job_conf_builder.AddOps(op_node->parallel_desc().parallel_conf(), ops);
   });
-  return job_conf;
+}
+
+void AddTotalLossInstanceNumOpConf(const OpGraph& op_graph, JobConf1* job_conf,
+                                   LogicalBlobId* total_loss_instance_num_lbi) {
+  JobConfBuilder job_conf_builder(job_conf);
+  std::list<OpNode*> loss_nodes;
+  GetLossOpNodes(op_graph, &loss_nodes);
+  OperatorConf op_conf;
+  op_conf.set_name("system-autograd-total_loss_instance_num");
+  TotalLossInstanceNumOpConf* conf = op_conf.mutable_total_loss_instance_num_conf();
+  std::vector<LogicalBlobId> loss_instance_num_lbis;
+  for (const OpNode* op_node : loss_nodes) {
+    LogicalBlobId lbi;
+    lbi.set_op_name(op_node->op().op_name());
+    lbi.set_blob_name("loss_instance_num");
+    conf->add_in(GenLogicalBlobName(lbi));
+  }
+  conf->set_out("out");
+
+  ParallelConf parallel_conf;
+  parallel_conf.set_policy(kDataParallel);
+  parallel_conf.add_device_name("0:cpu:0");
+  job_conf_builder.AddOps(parallel_conf, {op_conf});
+
+  total_loss_instance_num_lbi->set_op_name(op_conf.name());
+  total_loss_instance_num_lbi->set_blob_name("out");
 }
 
 }  // namespace oneflow
