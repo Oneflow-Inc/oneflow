@@ -732,11 +732,20 @@ message NormalizationOpConf {
 }
 
 message DropoutOpConf {
-  required string in = 1;
-  required string out = 2;
+  required string x = 1;
+  required string y = 2;
   required double rate = 3;
   optional ShapeProto noise_shape = 4;
   optional int64 seed = 5;
+  // TODO tmp_split_fw_bw_train_conf
+  optional string random_mask = 6 [default = "random_mask"];
+}
+
+message DropoutGradOpConf {
+  required string random_mask = 1;
+  required string dy = 2;
+  required string dx = 3;
+  required double rate = 4;
 }
 
 message TransposeOpConf {
@@ -1178,8 +1187,9 @@ message OperatorConf {
     ReshapeLikeOpConf reshape_like_conf = 268;
     SliceGradOpConf slice_grad_conf = 269;
     ReduceSumLikeOpConf reduce_sum_like_conf = 270;
-    LayerNormGradOpConf layer_norm_grad_conf = 271;
-    LayerNormParamGradOpConf layer_norm_param_grad_conf = 272;
+    DropoutGradOpConf dropout_grad_conf = 271;
+    LayerNormGradOpConf layer_norm_grad_conf = 272;
+    LayerNormParamGradOpConf layer_norm_param_grad_conf = 273;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
