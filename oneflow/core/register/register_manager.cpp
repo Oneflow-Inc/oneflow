@@ -32,8 +32,9 @@ void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& re
   }
   auto GetMemSize4Regst = [&](const RegstDescProto* regst_desc) {
     if (regst_desc->mem_shared_id() == -1) {
-      return regst_desc_id2rt_regst_desc_.at(regst_desc->regst_desc_id())
-          ->TotalMainByteSize4AllRegst();
+      const auto& rt_regst_desc = regst_desc_id2rt_regst_desc_.at(regst_desc->regst_desc_id());
+      if (rt_regst_desc->decouple_header_and_body()) { return size_t(0); }
+      return rt_regst_desc->TotalMainByteSize4AllRegst();
     } else {
       return regst_desc_id2rt_regst_desc_.at(regst_desc->regst_desc_id())
                  ->TotalMainByteSize4AllRegst()

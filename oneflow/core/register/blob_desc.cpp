@@ -17,6 +17,7 @@ BlobDesc::BlobDesc(const Shape& shape, DataType data_type, bool has_data_id, boo
       has_dim2_valid_num_(false),
       has_record_id_in_device_piece_(false),
       has_loss_instance_num_(false),
+      decouple_header_and_body_(false),
       max_col_num_(max_col_num),
       blob_mem_id_(-1),
       body_field_(shape, data_type) {}
@@ -182,6 +183,7 @@ void BlobDesc::ToProto(BlobDescProto* proto) const {
   HeaderToProto(proto);
   body_field_.ToProto(proto->mutable_body());
   if (dim0_inner_shape_) { dim0_inner_shape_->ToProto(proto->mutable_dim0_inner_shape()); }
+  proto->set_decouple_header_and_body(decouple_header_and_body_);
 }
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
@@ -213,6 +215,7 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
   const BlobDesc* last_blob_desc = nullptr;
   HashMap<int32_t, size_t> blob_mem_id2size;
   StructPodDesc opaque_header_pod_desc;
+  bool decouple_header_and_body = false;
   for (auto& pair : lbi2blob_desc) {
     BlobDesc* blob_desc = pair.second.get();
     RtBlobDesc rt_blob_desc(*blob_desc);
@@ -238,6 +241,7 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     }
     blob_desc_cnt += 1;
     last_blob_desc = blob_desc;
+    decouple_header_and_body = decouple_header_and_body || blob_desc->decouple_header_and_body();
   }
   for (auto& pair : blob_mem_id2size) { body_byte_size += pair.second; }
   if (blob_desc_cnt == 0) {
@@ -245,6 +249,7 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
   } else if (blob_desc_cnt == 1) {
     ret.reset(new BlobDesc(*last_blob_desc));
   } else if (data_type_set.size() == 1) {
+    CHECK_EQ(false, decouple_header_and_body);
     DataType sole_data_type = static_cast<DataType>(*(data_type_set.begin()));
     int64_t size_of_one_elem = GetSizeOfDataType(sole_data_type);
     CHECK_EQ(body_byte_size % size_of_one_elem, 0);
@@ -256,6 +261,7 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
                              sole_data_type, max_col_num));
     }
   } else {
+    CHECK_EQ(false, decouple_header_and_body);
     ret.reset(new BlobDesc(opaque_header_pod_desc, header_byte_size, Shape({body_byte_size}),
                            DataType::kChar, max_col_num));
   }

@@ -57,6 +57,9 @@ class BlobDesc {
   bool has_col_num_field() const { return has_col_num_; }
   void set_has_col_num_field(bool val);
 
+  bool decouple_header_and_body() const { return decouple_header_and_body_; }
+  void set_decouple_header_and_body(bool val) { decouple_header_and_body_ = val; }
+
   int32_t max_col_num() const { return max_col_num_; }
   void set_max_col_num(int32_t val) { max_col_num_ = val; }
 
@@ -89,6 +92,7 @@ class BlobDesc {
   bool has_dim2_valid_num_;
   bool has_record_id_in_device_piece_;
   bool has_loss_instance_num_;
+  bool decouple_header_and_body_;
   int64_t max_col_num_;
   int32_t blob_mem_id_;
 

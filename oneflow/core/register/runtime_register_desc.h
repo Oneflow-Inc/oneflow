@@ -30,6 +30,7 @@ class RtRegstDesc {
   size_t SeparatedByteSize4OneRegst() const;
   size_t MainByteSize4OneRegst() const;
   const Shape& data_regst_time_shape() const;
+  bool decouple_header_and_body() const { return packed_blob_desc_->decouple_header_and_body(); }
 
   void ForEachBlobDescOffsetInOnRegst(
       const std::vector<LbiBlobDescPair>& lbis,
