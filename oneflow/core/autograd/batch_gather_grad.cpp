@@ -19,7 +19,8 @@ void GenerateBackwardOpConf(
     const Shape& in_shape = LogicalBlobDesc4BnInOp("in").shape();
     const Shape& indices_shape = LogicalBlobDesc4BnInOp("indices").shape();
     CHECK_GE(in_shape.NumAxes(), indices_shape.NumAxes());
-    conf->set_gather_dim_size(in_shape.At(indices_shape.NumAxes()));
+    CHECK_GE(indices_shape.NumAxes(), 1);
+    conf->set_gather_dim_size(in_shape.At(indices_shape.NumAxes() - 1));
     op_confs->push_back(batch_gather_grad);
     DiffLbi4BnInOp("in")->set_op_name(batch_gather_grad.name());
     DiffLbi4BnInOp("in")->set_blob_name("in_diff");
