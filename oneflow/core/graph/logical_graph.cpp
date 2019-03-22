@@ -112,6 +112,7 @@ void LogicalGraph::ForEachLogicalNode(std::function<void(LogicalNodeType*)> func
 void LogicalGraph::BuildFwStruct() {
   HashMap<std::string, std::vector<LogicalNode*>> op_name2nodes;
   NaiveBuildFwStruct(&op_name2nodes);
+  SetDepth4Nodes(op_name2nodes);
   FixSharedModelNodes(op_name2nodes);
   LinkUnpackFw2PackFw(op_name2nodes);
   total_mbn_num_ = 0;
@@ -171,6 +172,9 @@ void LogicalGraph::NaiveBuildFwStruct(
     }
   });
 }
+
+void LogicalGraph::SetDepth4Nodes(
+    const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes) {}
 
 void LogicalGraph::FixSharedModelNodes(
     const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes) {
