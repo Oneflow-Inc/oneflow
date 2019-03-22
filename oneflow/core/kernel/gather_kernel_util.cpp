@@ -102,11 +102,16 @@ void GatherKernelUtilImpl<DeviceType::kCPU, T, K>::Backward(DeviceCtx* ctx, cons
   }
 }
 
-#define MAKE_GATHER_KERNEL_UTIL_CPU_IMPL_ENTRY(in_type_pair, index_type_pair)            \
+#define INITIATE_GATHER_KERNEL_UTIL_CPU_IMPL(in_type_pair, index_type_pair)              \
   template struct GatherKernelUtilImpl<DeviceType::kCPU, OF_PP_PAIR_FIRST(in_type_pair), \
                                        OF_PP_PAIR_FIRST(index_type_pair)>;
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_GATHER_KERNEL_UTIL_CPU_IMPL_ENTRY, FLOATING_DATA_TYPE_SEQ,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL_CPU_IMPL, FLOATING_DATA_TYPE_SEQ,
                                  INT_DATA_TYPE_SEQ);
-#undef MAKE_GATHER_KERNEL_UTIL_CPU_IMPL_ENTRY
+#undef INITIATE_GATHER_KERNEL_UTIL_CPU_IMPL
+
+#define INITIATE_GATHER_KERNEL_UTIL(device_type, in_type_pair) \
+  template struct GatherKernelUtil<device_type, OF_PP_PAIR_FIRST(in_type_pair)>;
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL, DEVICE_TYPE_SEQ, INT_DATA_TYPE_SEQ);
+#undef INITIATE_GATHER_KERNEL_UTIL
 
 }  // namespace oneflow

@@ -70,11 +70,11 @@ void GatherKernelUtilImpl<DeviceType::kGPU, T, K>::Backward(DeviceCtx* ctx, cons
           in_diff);
 }
 
-#define MAKE_GATHER_KERNEL_UTIL_GPU_IMPL_ENTRY(in_type_pair, index_type_pair)            \
+#define INITIATE_GATHER_KERNEL_UTIL_GPU_IMPL(in_type_pair, index_type_pair)              \
   template struct GatherKernelUtilImpl<DeviceType::kGPU, OF_PP_PAIR_FIRST(in_type_pair), \
                                        OF_PP_PAIR_FIRST(index_type_pair)>;
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_GATHER_KERNEL_UTIL_GPU_IMPL_ENTRY, FLOATING_DATA_TYPE_SEQ,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL_GPU_IMPL, FLOATING_DATA_TYPE_SEQ,
                                  INT_DATA_TYPE_SEQ);
-#undef MAKE_GATHER_KERNEL_UTIL_GPU_IMPL_ENTRY
+#undef INITIATE_GATHER_KERNEL_UTIL_GPU_IMPL
 
 }  // namespace oneflow
