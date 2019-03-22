@@ -28,7 +28,7 @@ void BatchGatherGradOp::InferBlobDescs(
                          indices->shape().dim_vec().cend() - 1);
   in_diff_dim_vec.push_back(gather_dim_size);
   in_diff_dim_vec.insert(in_diff_dim_vec.end(),
-                         out_diff->shape().dim_vec().cend() - indices->shape().NumAxes(),
+                         out_diff->shape().dim_vec().cbegin() + indices->shape().NumAxes(),
                          out_diff->shape().dim_vec().cend());
   BlobDesc* in_diff = GetBlobDesc4BnInOp("in_diff");
   *in_diff = *out_diff;
