@@ -10,7 +10,7 @@ void BroadcastDivGradKernel<device_type, T>::ForwardDataContent(
   const Blob* y_blob = BnInOp2Blob("y");
   const Blob* dy_blob = BnInOp2Blob("dy");
   Blob* tmp_blob = BnInOp2Blob("temp_storage");
-  Blob* b_diff_blob = BnInOp2Blob("db");
+  Blob* db_blob = BnInOp2Blob("db");
 
   const int64_t num_axes = dy_blob->shape().NumAxes();
   XpuVarNdarray<const T> dy(dy_blob, num_axes);
@@ -22,10 +22,10 @@ void BroadcastDivGradKernel<device_type, T>::ForwardDataContent(
       XpuVarNdarray<const T>(b_blob, num_axes));
   NdarrayUtil<device_type, T>::template BroadcastApply<BinaryFuncMul>(ctx.device_ctx, tmp, dy,
                                                                       const_tmp);
-  NdarrayUtil<device_type, T>::ReduceSum(ctx.device_ctx, XpuVarNdarray<T>(b_diff_blob, num_axes),
+  NdarrayUtil<device_type, T>::ReduceSum(ctx.device_ctx, XpuVarNdarray<T>(db_blob, num_axes),
                                          const_tmp, tmp);
   NdarrayUtil<device_type, T>::template ImplaceApplyUnary<UnaryFuncMinus>(
-      ctx.device_ctx, XpuVarNdarray<T>(b_diff_blob, num_axes));
+      ctx.device_ctx, XpuVarNdarray<T>(db_blob, num_axes));
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBroadcastDivGradConf, BroadcastDivGradKernel,
