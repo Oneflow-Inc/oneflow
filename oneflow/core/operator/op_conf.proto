@@ -234,6 +234,17 @@ message SoftmaxOpConf {
   required string in = 1;
   required string out = 2;
   optional int32 axis = 3 [default = -1];
+  optional string transpose_in = 4 [default = "transpose_in"];
+  optional string transpose_out = 5 [default = "transpose_out"];
+}
+
+message SoftmaxGradOpConf {
+  required string y = 1;
+  required string dy = 2;
+  required string dx = 3;
+  optional string transpose_x = 4;
+  optional string transpose_y = 5;
+  optional int32 axis = 6 [default = -1];
 }
 
 enum LossReductionType {
@@ -1286,6 +1297,7 @@ message OperatorConf {
     GatherGradOpConf gather_grad_conf = 275;
     BroadcastDivGradOpConf broadcast_div_grad_conf= 276;
     BroadcastLikeOpConf broadcast_like_conf = 277;
+    SoftmaxGradOpConf softmax_grad_conf = 278;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
