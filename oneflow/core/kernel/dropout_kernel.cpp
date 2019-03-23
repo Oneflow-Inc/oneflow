@@ -38,10 +38,10 @@ void DropoutKernel<device_type, T>::BackwardDataContent(
 
 template<DeviceType device_type, typename T>
 void DropoutKernel<device_type, T>::Dropout(DeviceCtx* ctx, const int64_t n, float dropout_rate,
-                                            const T* x, float* random_mask, T* y) const {
+                                            const T* in, float* random_mask, T* out) const {
   random_generator_->Uniform(n, random_mask);
-  DropoutKernelUtil<device_type, T>::MaskAndScale(ctx, n, dropout_rate, 1 / (1 - dropout_rate), x,
-                                                  random_mask, y);
+  DropoutKernelUtil<device_type, T>::MaskAndScale(ctx, n, dropout_rate, 1 / (1 - dropout_rate), in,
+                                                  random_mask, out);
 }
 
 template<DeviceType device_type, typename T>

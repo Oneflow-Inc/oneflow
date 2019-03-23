@@ -68,13 +68,14 @@ void LayerNormKernelUtil<DeviceType::kGPU, T>::NormalizeBackward(
     const Blob* inv_variance, const Blob* out_diff, double epsilon, Blob* in_diff, Blob* scale_diff,
     Blob* bias_diff) {
   CHECK_GE(epsilon, CUDNN_BN_MIN_EPSILON);
-  LayerNormCudnnBnCtx bn_ctx(in->static_shape(), mean->shape(), in->data_type());
+  LayerNormCudnnBnCtx bn_ctx(in->static_shape(), scale_diff->shape(), in->data_type());
   CudaCheck(cudnnBatchNormalizationBackward(
       ctx->cudnn_handle(), bn_ctx.mode(), OnePtr<T>::value, ZeroPtr<T>::value, OnePtr<T>::value,
       ZeroPtr<T>::value, bn_ctx.data_tensor_desc(), in->dptr<T>(), bn_ctx.data_tensor_desc(),
       out_diff->dptr<T>(), bn_ctx.data_tensor_desc(), in_diff->mut_dptr<T>(),
       bn_ctx.param_tensor_desc(), scale->dptr<T>(), scale_diff->mut_dptr<T>(),
-      bias_diff->mut_dptr<T>(), epsilon, mean->dptr<T>(), inv_variance->dptr<T>()));
+      bias_diff->mut_dptr<T>(), epsilon, mean ? mean->dptr<T>() : nullptr,
+      inv_variance ? inv_variance->dptr<T>() : nullptr));
 }
 
 #define INSTANTIATE_LAYER_NORM_KERNEL_UTIL_GPU(type_cpp, type_proto) \

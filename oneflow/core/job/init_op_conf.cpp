@@ -77,13 +77,6 @@ std::string MaxPooling2D(const std::string& name, const std::string& in, const i
   return name + "/" + "out";
 }
 
-std::string Dropout(const std::string& name, const std::string& in, const double rate) {
-  INIT_OP_CONF(DropoutOpConf, mutable_dropout_conf)
-  op_conf->set_rate(rate);
-  AddOpToPlacementGroup(name);
-  return name + "/" + "out";
-}
-
 std::string LocalResponseNormalization(const std::string& name, const std::string& in,
                                        const int depth_radius, const double bias,
                                        const double alpha, const double beta) {
