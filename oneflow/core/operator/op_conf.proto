@@ -975,14 +975,13 @@ message BroadcastDivOpConf {
   optional bool is_const = 4 [default = false];
 }
 
-<<<<<<< HEAD
 message BroadcastLikeOpConf {
   required string x = 1;
   required string like = 2;
   required string y = 3;
   optional ShapeProto kept_dims_shape = 4;
 }
-=======
+
 message BroadcastDivGradOpConf {
   //  input
   required string b = 1; // denominator in fw
@@ -992,8 +991,6 @@ message BroadcastDivGradOpConf {
   required string db = 4;
   optional string temp_storage = 5 [default = "temp_storage"];
 }
-
->>>>>>> dev_split_fw_bw
 
 message BiasAddOpConf {
   // inputs
