@@ -5,9 +5,8 @@ namespace oneflow {
 
 void SoftmaxOp::InitFromOpConf() {
   CHECK(op_conf().has_softmax_conf());
-  EnrollInputBn("x");
-  EnrollOutputBn("y");
-  // TODO: fix when axis is not -1 but (NumAxes -1) of x
+  EnrollInputBn("in");
+  EnrollOutputBn("out");
   if (Global<JobDesc>::Get()->IsPredict()
       && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()
       && op_conf().softmax_conf().axis() != -1) {
@@ -30,9 +29,9 @@ void SoftmaxOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
                                const ParallelContext* parallel_ctx, int64_t record_piece_size,
                                std::function<void(OpContext*)> EnrollOpCtx) const {
   // x
-  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("x");
+  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   // y
-  *GetBlobDesc4BnInOp("y") = *in_blob_desc;
+  *GetBlobDesc4BnInOp("out") = *in_blob_desc;
   SoftmaxOpCtx* op_ctx = NewSoftmaxOpCtx(in_blob_desc->shape());
   EnrollOpCtx(op_ctx);
 
@@ -60,7 +59,7 @@ void SoftmaxOp::InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)>
                                     const ParallelContext*, const OpContext* op_ctx) const {
   *GetBlobDesc4BnInOp("transpose_dy") = *GetBlobDesc4BnInOp("transpose_x");
   const SoftmaxOpCtx* softmax_op_ctx = static_cast<const SoftmaxOpCtx*>(op_ctx);
-  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("x");
+  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   // 1D blob store tmp calculate result
   BlobDesc* bw_tmp_blob_desc = GetBlobDesc4BnInOp("bw_softmax_num");
   bw_tmp_blob_desc->mut_shape() = Shape({softmax_op_ctx->transpose_rows});
@@ -94,12 +93,6 @@ SoftmaxOpCtx* SoftmaxOp::NewSoftmaxOpCtx(const Shape& x_shape) const {
   SoftmaxOpCtx* op_ctx = new SoftmaxOpCtx();
   op_ctx->axis = op_conf().softmax_conf().axis();
   op_ctx->dims = x_shape.NumAxes();
-  // workaround before output issue got fixed
-  if (Global<JobDesc>::Get()->IsPredict()
-      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()
-      && op_ctx->axis == op_ctx->dims - 1) {
-    LOG(FATAL) << "please set axis to -1 to represent last dim";
-  }
   if (op_ctx->axis < 0) { op_ctx->axis += op_ctx->dims; }
   CHECK_GE(op_ctx->dims, 2);
   CHECK_GE(op_ctx->axis, 1);
