@@ -348,8 +348,7 @@ message NaiveModelUpdateConf {
 }
 
 message MomentumModelUpdateConf {
-  optional string momentum = 1;
-  optional float beta = 2 [default = 0.9];
+  optional float beta = 1 [default = 0.9];
 }
 
 message RMSPropModelUpdateConf {
@@ -358,21 +357,16 @@ message RMSPropModelUpdateConf {
 }
 
 message LARSModelUpdateConf {
-  optional string momentum = 1;
-  optional float momentum_beta = 2 [default = 0.9];
-  optional float epsilon = 3 [default = 1e-9];
-  optional float lars_coefficient = 4 [default = 0.0001];
+  optional float momentum_beta = 1 [default = 0.9];
+  optional float epsilon = 2 [default = 1e-9];
+  optional float lars_coefficient = 3 [default = 0.0001];
 }
 
 message AdamModelUpdateConf {
-  optional string m = 1;
-  optional string v = 2;
-  optional string beta1_t = 3;
-  optional string beta2_t = 4;
-  optional float beta1 = 5 [default = 0.9];
-  optional float beta2 = 6 [default = 0.999];
-  optional float epsilon = 7 [default = 1e-8];
-  optional bool do_bias_correction = 8 [default = false];
+  optional float beta1 = 1 [default = 0.9];
+  optional float beta2 = 2 [default = 0.999];
+  optional float epsilon = 3 [default = 1e-8];
+  optional bool do_bias_correction = 4 [default = false];
 }
 
 message ExponentialDecayConf {
@@ -478,6 +472,62 @@ message NormalModelUpdateOpConf {
   required float learning_rate = 5;
   required float l1 = 6;
   required float l2 = 7;
+}
+
+message NaiveModelUpdateOpConf {
+  required NaiveModelUpdateConf naive_conf = 1;
+  required string model_diff = 2;
+  required string total_instance_num_diff = 3;
+  required string model = 4;
+  required float learning_rate = 5;
+  required float l1 = 6;
+  required float l2 = 7;
+}
+
+message MomentumModelUpdateOpConf {
+  required MomentumModelUpdateConf momentum_conf = 1;
+  required string momentum = 2;
+  required string model_diff = 3;
+  required string total_instance_num_diff = 4;
+  required string model = 5;
+  required float learning_rate = 6;
+  required float l1 = 7;
+  required float l2 = 8;
+}
+
+message RMSPropModelUpdateOpConf {
+  required RMSPropModelUpdateConf rmsprop_conf = 1;
+  required string model_diff = 2;
+  required string total_instance_num_diff = 3;
+  required string model = 4;
+  required float learning_rate = 5;
+  required float l1 = 6;
+  required float l2 = 7;
+}
+
+message LARSModelUpdateOpConf {
+  required LARSModelUpdateConf lars_conf = 1;
+  required string momentum = 2;
+  required string model_diff = 3;
+  required string total_instance_num_diff = 4;
+  required string model = 5;
+  required float learning_rate = 6;
+  required float l1 = 7;
+  required float l2 = 8;
+}
+
+message AdamModelUpdateOpConf {
+  required AdamModelUpdateConf adam_conf = 1;
+  required string m = 2;
+  required string v = 3;
+  required string beta1_t = 4;
+  required string beta2_t = 5;
+  required string model_diff = 6;
+  required string total_instance_num_diff = 7;
+  required string model = 8;
+  required float learning_rate = 9;
+  required float l1 = 10;
+  required float l2 = 11;
 }
 
 message AccumulateOpConf {
@@ -1144,7 +1194,12 @@ message OperatorConf {
     TickOpConf tick_conf = 124;
     KeepHeaderOnlyOpConf keep_header_only_conf = 125;
     TotalLossInstanceNumOpConf total_loss_instance_num_conf = 126;
-
+    NaiveModelUpdateOpConf naive_model_update_conf = 127;
+    MomentumModelUpdateOpConf momentum_model_update_conf = 128;
+    RMSPropModelUpdateOpConf rmsprop_model_update_conf = 129;
+    LARSModelUpdateOpConf lars_model_update_conf = 130;
+    AdamModelUpdateOpConf adam_model_update_conf = 131;
+      
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
     TransposeOpConf transpose_conf = 201;

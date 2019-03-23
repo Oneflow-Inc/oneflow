@@ -3,6 +3,20 @@
 
 namespace oneflow {
 
+namespace {
+
+const RMSPropModelUpdateConf& GetRMSPropModelUpdateConf(const OperatorConf& op_conf) {
+  if (Global<JobDesc>::Get()->IsTrain()) {
+    return op_conf.normal_mdupdt_conf().user_conf().rmsprop_conf();
+  } else if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+    return op_conf.rmsprop_model_update_conf().rmsprop_conf();
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+}  // namespace
+
 template<DeviceType device_type, typename T>
 void RMSPropMdUpdateKernel<device_type, T>::UpdateModel(
     DeviceCtx* ctx, const T* batch_instance_num_ptr, T learning_rate, T l1, T l2,
@@ -10,8 +24,7 @@ void RMSPropMdUpdateKernel<device_type, T>::UpdateModel(
   const Blob* model_diff_blob = BnInOp2Blob("model_diff");
   Blob* model_blob = BnInOp2Blob("model");
   Blob* mean_square_blob = BnInOp2Blob("mean_square");
-  const RMSPropModelUpdateConf& conf =
-      this->op_conf().normal_mdupdt_conf().user_conf().rmsprop_conf();
+  const RMSPropModelUpdateConf& conf = GetRMSPropModelUpdateConf(this->op_conf());
   float decay_rate = conf.decay_rate();
   if (next_model_vid == 1) { decay_rate = 0.0f; }
 

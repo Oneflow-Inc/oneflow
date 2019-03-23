@@ -3,6 +3,20 @@
 
 namespace oneflow {
 
+namespace {
+
+const MomentumModelUpdateConf& GetMomentumModelUpdateConf(const OperatorConf& op_conf) {
+  if (Global<JobDesc>::Get()->IsTrain()) {
+    return op_conf.normal_mdupdt_conf().user_conf().momentum_conf();
+  } else if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+    return op_conf.momentum_model_update_conf().momentum_conf();
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+}  // namespace
+
 template<DeviceType device_type, typename T>
 void MomentumMdUpdateKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937* random_seed_gen,
@@ -30,7 +44,7 @@ void MomentumMdUpdateKernel<device_type, T>::UpdateModel(
   const Blob* model_diff_blob = BnInOp2Blob("model_diff");
   Blob* model_blob = BnInOp2Blob("model");
   Blob* momentum_blob = BnInOp2Blob("momentum");
-  float beta = this->op_conf().normal_mdupdt_conf().user_conf().momentum_conf().beta();
+  float beta = GetMomentumModelUpdateConf(this->op_conf()).beta();
   if (next_model_vid == 1) { beta = 0.0f; }
 
   MomentumMdUpdateKernelUtil<device_type, T>::UpdateModel(

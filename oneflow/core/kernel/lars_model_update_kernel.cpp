@@ -3,6 +3,20 @@
 
 namespace oneflow {
 
+namespace {
+
+const LARSModelUpdateConf& GetLARSModelUpdateConf(const OperatorConf& op_conf) {
+  if (Global<JobDesc>::Get()->IsTrain()) {
+    return op_conf.normal_mdupdt_conf().user_conf().lars_conf();
+  } else if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+    return op_conf.lars_model_update_conf().lars_conf();
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+}  // namespace
+
 template<DeviceType device_type, typename T>
 void LARSMdUpdateKernel<device_type, T>::UpdateModel(
     DeviceCtx* ctx, const T* batch_instance_num_ptr, T learning_rate, T l1, T l2,
@@ -11,8 +25,7 @@ void LARSMdUpdateKernel<device_type, T>::UpdateModel(
   Blob* model_blob = BnInOp2Blob("model");
   Blob* momentum_blob = BnInOp2Blob("momentum");
   Blob* data_tmp_blob = BnInOp2Blob("data_tmp");
-  const LARSModelUpdateConf& lars_conf =
-      this->op_conf().normal_mdupdt_conf().user_conf().lars_conf();
+  const LARSModelUpdateConf& lars_conf = GetLARSModelUpdateConf(this->op_conf());
   if (next_model_vid == 1) {
     Memset<device_type>(ctx, momentum_blob->mut_dptr<T>(), 0,
                         momentum_blob->ByteSizeOfDataContentField());

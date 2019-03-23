@@ -10,10 +10,11 @@ void AddOptimizerOpConf(const OpGraph& op_graph, JobConf1* job_conf,
                         const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
                         const LogicalBlobId& total_loss_instance_num_lbi);
 
-OperatorConf ConstructMdUpdtOpConf(
+template<typename T>
+void ConstructMdUpdtOpConf(
     const VariableOp& op,
     const std::function<const LogicalBlobId&(const std::string&)>& DiffLbi4BnInOp,
-    const LogicalBlobId& total_loss_instance_num_lbi);
+    const LogicalBlobId& total_loss_instance_num_lbi, T*);
 
 void GenerateOptimizerOpConfIf(
     const VariableOp& var_op, std::vector<OperatorConf>* op_confs,

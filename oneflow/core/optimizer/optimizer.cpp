@@ -29,19 +29,14 @@ void AddOptimizerOpConf(const OpGraph& op_graph, JobConf1* job_conf,
   });
 }
 
-OperatorConf ConstructMdUpdtOpConf(
+template<typename T>
+void ConstructMdUpdtOpConf(
     const VariableOp& op,
     const std::function<const LogicalBlobId&(const std::string&)>& DiffLbi4BnInOp,
-    const LogicalBlobId& total_loss_instance_num_lbi) {
-  const auto& train_conf =
-      Global<JobDesc>::Get()->other_conf().predict_conf().tmp_split_fw_bw_train_conf();
-  OperatorConf mdupdt_op;
-  mdupdt_op.set_name(op.op_name() + "_optimizer");
-  auto* mdupdt_op_conf = mdupdt_op.mutable_normal_mdupdt_conf();
+    const LogicalBlobId& total_loss_instance_num_lbi, T* mdupdt_op_conf) {
   mdupdt_op_conf->set_model_diff(GenLogicalBlobName(DiffLbi4BnInOp("out")));
   mdupdt_op_conf->set_total_instance_num_diff(GenLogicalBlobName(total_loss_instance_num_lbi));
   mdupdt_op_conf->set_model(GenLogicalBlobName(op.BnInOp2Lbi("out")));
-  *(mdupdt_op_conf->mutable_user_conf()) = train_conf.model_update_conf();
   float primary_lr = Global<JobDesc>::Get()->primary_lr();
   float secondary_lr = Global<JobDesc>::Get()->secondary_lr();
   if (secondary_lr < 0) { secondary_lr = primary_lr; }
@@ -58,7 +53,18 @@ OperatorConf ConstructMdUpdtOpConf(
     mdupdt_op_conf->set_l1(0);
     mdupdt_op_conf->set_l2(0);
   }
-  return mdupdt_op;
 }
+
+#define INSTANTIATE_CONSTRUCTOR_MDUPDT_OP_CONF(T)                                    \
+  template void ConstructMdUpdtOpConf<T>(                                            \
+      const VariableOp& op,                                                          \
+      const std::function<const LogicalBlobId&(const std::string&)>& DiffLbi4BnInOp, \
+      const LogicalBlobId& total_loss_instance_num_lbi, T* mdupdt_op_conf)
+
+INSTANTIATE_CONSTRUCTOR_MDUPDT_OP_CONF(NaiveModelUpdateOpConf);
+INSTANTIATE_CONSTRUCTOR_MDUPDT_OP_CONF(MomentumModelUpdateOpConf);
+INSTANTIATE_CONSTRUCTOR_MDUPDT_OP_CONF(RMSPropModelUpdateOpConf);
+INSTANTIATE_CONSTRUCTOR_MDUPDT_OP_CONF(LARSModelUpdateOpConf);
+INSTANTIATE_CONSTRUCTOR_MDUPDT_OP_CONF(AdamModelUpdateOpConf);
 
 }  // namespace oneflow
