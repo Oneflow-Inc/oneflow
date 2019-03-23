@@ -114,7 +114,7 @@ void LogicalGraph::BuildFwStruct() {
   NaiveBuildFwStruct(&op_name2nodes);
   FixSharedModelNodes(op_name2nodes);
   LinkUnpackFw2PackFw(op_name2nodes);
-  SetDepth4Nodes(op_name2nodes);
+  SetDepth4Nodes();
   total_mbn_num_ = 0;
   ForEachNode([&](LogicalNode* node) {
     total_mbn_num_ +=
@@ -173,9 +173,9 @@ void LogicalGraph::NaiveBuildFwStruct(
   });
 }
 
-void LogicalGraph::SetDepth4Nodes(
-    const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes) {
+void LogicalGraph::SetDepth4Nodes() {
   HashMap<LogicalNode*, bool> has_handled;
+  HashMap<LogicalNode*, bool> has_queued;
   std::queue<LogicalNode*> queue;
 
   std::list<LogicalNode*> starts;
@@ -185,6 +185,7 @@ void LogicalGraph::SetDepth4Nodes(
 
   for (LogicalNode* start : starts) {
     queue.push(start);
+    has_queued[start] = true;
     has_handled[start] = false;
   }
 
@@ -214,8 +215,11 @@ void LogicalGraph::SetDepth4Nodes(
 
     if (has_handled[cur_node]) {
       ForEachOutNode(cur_node, [&](LogicalNode* out_node) {
-        queue.push(out_node);
-        // has_handled[out_node] = false;
+        if (!has_queued[out_node]) {
+          queue.push(out_node);
+          has_queued[out_node] = true;
+          // has_handled[out_node] = false;
+        }
       });
     }
   }
