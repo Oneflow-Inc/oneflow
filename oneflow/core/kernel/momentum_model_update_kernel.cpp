@@ -9,13 +9,24 @@ const MomentumModelUpdateConf& GetMomentumModelUpdateConf(const OperatorConf& op
   if (Global<JobDesc>::Get()->IsTrain()) {
     return op_conf.normal_mdupdt_conf().user_conf().momentum_conf();
   } else if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
-    return op_conf.momentum_model_update_conf().momentum_conf();
+    return op_conf.momentum_model_update_conf().user_conf().momentum_conf();
   } else {
     UNIMPLEMENTED();
   }
 }
 
 }  // namespace
+
+template<DeviceType device_type, typename T>
+const PbMessage& MomentumMdUpdateKernel<device_type, T>::GetCustomizedOpConf() const {
+  if (Global<JobDesc>::Get()->IsTrain()) {
+    return this->op_conf().normal_mdupdt_conf();
+  } else if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+    return this->op_conf().momentum_model_update_conf();
+  } else {
+    UNIMPLEMENTED();
+  }
+}
 
 template<DeviceType device_type, typename T>
 void MomentumMdUpdateKernel<device_type, T>::InitModelBlobsWithRandomSeed(
@@ -67,5 +78,8 @@ class MomentumMdUpdateKernelUtil<DeviceType::kCPU, T> final {
 };
 
 DEFINE_MDUPDT_KERNEL_CREATOR(Momentum);
+
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMomentumModelUpdateConf, MomentumMdUpdateKernel,
+                           FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

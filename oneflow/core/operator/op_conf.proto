@@ -475,7 +475,7 @@ message NormalModelUpdateOpConf {
 }
 
 message NaiveModelUpdateOpConf {
-  required NaiveModelUpdateConf naive_conf = 1;
+  required NormalModelUpdateOpUserConf user_conf = 1;
   required string model_diff = 2;
   required string total_instance_num_diff = 3;
   required string model = 4;
@@ -485,7 +485,7 @@ message NaiveModelUpdateOpConf {
 }
 
 message MomentumModelUpdateOpConf {
-  required MomentumModelUpdateConf momentum_conf = 1;
+  required NormalModelUpdateOpUserConf user_conf = 1;
   required string momentum = 2;
   required string model_diff = 3;
   required string total_instance_num_diff = 4;
@@ -496,7 +496,7 @@ message MomentumModelUpdateOpConf {
 }
 
 message RMSPropModelUpdateOpConf {
-  required RMSPropModelUpdateConf rmsprop_conf = 1;
+  required NormalModelUpdateOpUserConf user_conf = 1;
   required string model_diff = 2;
   required string total_instance_num_diff = 3;
   required string model = 4;
@@ -506,7 +506,7 @@ message RMSPropModelUpdateOpConf {
 }
 
 message LARSModelUpdateOpConf {
-  required LARSModelUpdateConf lars_conf = 1;
+  required NormalModelUpdateOpUserConf user_conf = 1;
   required string momentum = 2;
   required string model_diff = 3;
   required string total_instance_num_diff = 4;
@@ -517,7 +517,7 @@ message LARSModelUpdateOpConf {
 }
 
 message AdamModelUpdateOpConf {
-  required AdamModelUpdateConf adam_conf = 1;
+  required NormalModelUpdateOpUserConf user_conf = 1;
   required string m = 2;
   required string v = 3;
   required string beta1_t = 4;

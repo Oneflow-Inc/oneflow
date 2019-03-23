@@ -16,7 +16,7 @@ void AdamModelUpdateOp::MdUpdtVirtualInitFromOpConf() {
       EnrollForwardModelBn("beta2_t");
     }
   } else if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
-    const auto& adam_conf = op_conf().adam_model_update_conf().adam_conf();
+    const auto& adam_conf = op_conf().adam_model_update_conf().user_conf().adam_conf();
     CHECK_GE(adam_conf.beta1(), 0);
     CHECK_LT(adam_conf.beta1(), 1);
     CHECK_GE(adam_conf.beta2(), 0);
@@ -51,7 +51,7 @@ void AdamModelUpdateOp::MdUpdtVirtualInferBlobDescs(
       GetBlobDesc4BnInOp("beta2_t")->mut_shape() = Shape({1});
     }
   } else if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
-    const auto& adam_conf = op_conf().adam_model_update_conf().adam_conf();
+    const auto& adam_conf = op_conf().adam_model_update_conf().user_conf().adam_conf();
     const BlobDesc* model_blob_desc = GetBlobDesc4BnInOp("model");
     CHECK_EQ(model_blob_desc->data_type(), Global<JobDesc>::Get()->DefaultDataType());
     CHECK_EQ(model_blob_desc->has_data_id_field(), false);

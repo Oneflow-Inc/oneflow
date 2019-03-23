@@ -9,13 +9,24 @@ const RMSPropModelUpdateConf& GetRMSPropModelUpdateConf(const OperatorConf& op_c
   if (Global<JobDesc>::Get()->IsTrain()) {
     return op_conf.normal_mdupdt_conf().user_conf().rmsprop_conf();
   } else if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
-    return op_conf.rmsprop_model_update_conf().rmsprop_conf();
+    return op_conf.rmsprop_model_update_conf().user_conf().rmsprop_conf();
   } else {
     UNIMPLEMENTED();
   }
 }
 
 }  // namespace
+
+template<DeviceType device_type, typename T>
+const PbMessage& RMSPropMdUpdateKernel<device_type, T>::GetCustomizedOpConf() const {
+  if (Global<JobDesc>::Get()->IsTrain()) {
+    return this->op_conf().normal_mdupdt_conf();
+  } else if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+    return this->op_conf().rmsprop_model_update_conf();
+  } else {
+    UNIMPLEMENTED();
+  }
+}
 
 template<DeviceType device_type, typename T>
 void RMSPropMdUpdateKernel<device_type, T>::UpdateModel(
@@ -49,5 +60,8 @@ class RMSPropMdUpdateKernelUtil<DeviceType::kCPU, T> final {
 };
 
 DEFINE_MDUPDT_KERNEL_CREATOR(RMSProp);
+
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kRmspropModelUpdateConf, RMSPropMdUpdateKernel,
+                           FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

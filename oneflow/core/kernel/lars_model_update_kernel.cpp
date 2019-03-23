@@ -9,13 +9,24 @@ const LARSModelUpdateConf& GetLARSModelUpdateConf(const OperatorConf& op_conf) {
   if (Global<JobDesc>::Get()->IsTrain()) {
     return op_conf.normal_mdupdt_conf().user_conf().lars_conf();
   } else if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
-    return op_conf.lars_model_update_conf().lars_conf();
+    return op_conf.lars_model_update_conf().user_conf().lars_conf();
   } else {
     UNIMPLEMENTED();
   }
 }
 
 }  // namespace
+
+template<DeviceType device_type, typename T>
+const PbMessage& LARSMdUpdateKernel<device_type, T>::GetCustomizedOpConf() const {
+  if (Global<JobDesc>::Get()->IsTrain()) {
+    return this->op_conf().normal_mdupdt_conf();
+  } else if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+    return this->op_conf().lars_model_update_conf();
+  } else {
+    UNIMPLEMENTED();
+  }
+}
 
 template<DeviceType device_type, typename T>
 void LARSMdUpdateKernel<device_type, T>::UpdateModel(
@@ -71,5 +82,8 @@ class LARSMdUpdateKernelUtil<DeviceType::kCPU, T> final {
 };
 
 DEFINE_MDUPDT_KERNEL_CREATOR(LARS);
+
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kLarsModelUpdateConf, LARSMdUpdateKernel,
+                           FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

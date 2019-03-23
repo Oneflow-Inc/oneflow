@@ -12,7 +12,6 @@ void GenerateOptimizerOpConf(
   mdupdt_op.set_name(op.op_name() + "_optimizer");
   ConstructMdUpdtOpConf(op, DiffLbi4BnInOp, total_loss_instance_num_lbi,
                         mdupdt_op.mutable_naive_model_update_conf());
-  mdupdt_op.mutable_naive_model_update_conf()->mutable_naive_conf();
   op_confs->push_back(mdupdt_op);
 }
 
