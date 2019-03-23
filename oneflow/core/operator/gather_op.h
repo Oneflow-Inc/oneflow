@@ -5,6 +5,8 @@
 
 namespace oneflow {
 
+Shape GatherGetOutShape(const Shape& in, const Shape& indices, int64_t axis);
+
 class GatherOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GatherOp);

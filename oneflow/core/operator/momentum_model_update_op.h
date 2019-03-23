@@ -11,6 +11,8 @@ class MomentumModelUpdateOp final : public NormalModelUpdtOp {
   MomentumModelUpdateOp() = default;
   ~MomentumModelUpdateOp() = default;
 
+  const PbMessage& GetCustomizedConf() const override;
+
  private:
   void MdUpdtVirtualInitFromOpConf() override;
   void MdUpdtVirtualInferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
