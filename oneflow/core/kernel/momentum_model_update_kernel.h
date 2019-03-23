@@ -13,6 +13,7 @@ class MomentumMdUpdateKernel final : public NormalMdUpdateKernel<device_type, T>
   ~MomentumMdUpdateKernel() = default;
 
  protected:
+  const PbMessage& GetCustomizedOpConf() const override;
   void InitModelBlobsWithRandomSeed(
       DeviceCtx* ctx, std::mt19937* random_seed_gen,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
