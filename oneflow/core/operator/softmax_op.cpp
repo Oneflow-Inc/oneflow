@@ -11,7 +11,7 @@ void SoftmaxOp::InitFromOpConf() {
       && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()
       && op_conf().softmax_conf().axis() != -1) {
     EnrollOutputBn("transpose_in");
-    EnrollOutputBn("transpose_out");
+    EnrollOutputBn("transpose_out", false);
   } else {
     EnrollDataTmpBn("transpose_in");
     EnrollDataTmpBn("transpose_out");
