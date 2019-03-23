@@ -918,6 +918,14 @@ message GatherOpConf {
   optional int64 axis = 4 [default = 0];
 }
 
+message GatherGradOpConf {
+  required string out_diff = 1;
+  required string indices = 2;
+  required string in_diff = 3;
+  required int64 axis = 4;
+  required int64 gather_dim_size = 5;
+}
+
 message BatchGatherOpConf {
   required string in = 1;
   required string indices = 2;
@@ -1269,7 +1277,8 @@ message OperatorConf {
     LayerNormGradOpConf layer_norm_grad_conf = 272;
     LayerNormParamGradOpConf layer_norm_param_grad_conf = 273;
     SparseCrossEntropyGradOpConf sparse_cross_entropy_grad_conf= 274;
-    BroadcastDivGradOpConf broadcast_div_grad_conf= 275;
+    GatherGradOpConf gather_grad_conf = 275;
+    BroadcastDivGradOpConf broadcast_div_grad_conf= 276;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
