@@ -19,6 +19,7 @@ void AddOptimizerOpConf(const OpGraph& op_graph, JobConf1* job_conf,
   op_graph.ForEachNode([&](OpNode* op_node) {
     const VariableOp* var_op = dynamic_cast<const VariableOp*>(&op_node->op());
     if (var_op == nullptr) { return; }
+    if (lbi2diff_lbi.find(var_op->BnInOp2Lbi(var_op->SoleObn())) == lbi2diff_lbi.end()) { return; }
     std::vector<OperatorConf> optimizer_op_confs;
     auto DiffLbi4BnInOp = [&](const std::string& bn) -> const LogicalBlobId& {
       return lbi2diff_lbi.at(var_op->BnInOp2Lbi(bn));
