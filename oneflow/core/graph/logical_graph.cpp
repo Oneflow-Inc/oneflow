@@ -174,29 +174,27 @@ void LogicalGraph::NaiveBuildFwStruct(
 }
 
 void LogicalGraph::SetDepth4Nodes() {
-  HashMap<LogicalNode*, bool> has_handled;
-  HashMap<LogicalNode*, bool> has_queued;
-  std::queue<LogicalNode*> queue;
-
-  std::list<LogicalNode*> starts;
-
-  ForEachLogicalNode<RecordLoadLogicalNode>(
-      [&](RecordLoadLogicalNode* node) { starts.push_back(node); });
-
-  for (LogicalNode* start : starts) {
-    queue.push(start);
-    has_queued[start] = true;
-    has_handled[start] = false;
-  }
-
-  // int depth = 0;
-
   auto ForEachInNode = [&](LogicalNode* node, const std::function<void(LogicalNode*)>& Handler) {
     node->ForEachNodeOnInEdge([&](LogicalNode* node_on_in_edge) { Handler(node_on_in_edge); });
   };
   auto ForEachOutNode = [&](LogicalNode* node, const std::function<void(LogicalNode*)>& Handler) {
     node->ForEachNodeOnOutEdge([&](LogicalNode* node_on_out_edge) { Handler(node_on_out_edge); });
   };
+
+  HashMap<LogicalNode*, bool> has_handled;
+  HashMap<LogicalNode*, bool> has_queued;
+  std::queue<LogicalNode*> queue;
+
+  std::list<LogicalNode*> starts;
+
+  ForEachLogicalNode<LogicalNode>([&](LogicalNode* node) {
+    if (node->in_edges().size() < 1) starts.push_back(node);
+  });
+  for (LogicalNode* start : starts) {
+    queue.push(start);
+    has_queued[start] = true;
+    has_handled[start] = false;
+  }
 
   while (!queue.empty()) {
     LogicalNode* cur_node = queue.front();
@@ -218,11 +216,13 @@ void LogicalGraph::SetDepth4Nodes() {
         if (!has_queued[out_node]) {
           queue.push(out_node);
           has_queued[out_node] = true;
-          // has_handled[out_node] = false;
         }
       });
     }
   }
+  // ForEachLogicalNode<LogicalNode>([&](LogicalNode* node) {
+  //   LOG(INFO) << node->op_vec().at(0)->op_name() << " " << node->depth();
+  // });
 }
 
 void LogicalGraph::FixSharedModelNodes(
