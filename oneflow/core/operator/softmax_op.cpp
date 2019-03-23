@@ -10,15 +10,15 @@ void SoftmaxOp::InitFromOpConf() {
   if (Global<JobDesc>::Get()->IsPredict()
       && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()
       && op_conf().softmax_conf().axis() != -1) {
-    EnrollOutputBn("transpose_x");
-    EnrollOutputBn("transpose_y");
+    EnrollOutputBn("transpose_in");
+    EnrollOutputBn("transpose_out");
   } else {
-    EnrollDataTmpBn("transpose_x");
-    EnrollDataTmpBn("transpose_y");
+    EnrollDataTmpBn("transpose_in");
+    EnrollDataTmpBn("transpose_out");
   }
   EnrollFwBufBn("fw_softmax_num");
   EnrollFwBufBn("fw_buf");
-  EnrollBwBufBn("transpose_dy");
+  EnrollBwBufBn("transpose_out_diff");
   EnrollBwBufBn("bw_buf");
   EnrollBwBufBn("bw_softmax_num");
 }
@@ -46,18 +46,18 @@ void SoftmaxOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
   fw_buf_blob_desc->set_data_type(DataType::kChar);
   if (op_ctx->need_transpose) {
     // transpose blob
-    BlobDesc* transpose_blob_desc = GetBlobDesc4BnInOp("transpose_x");
+    BlobDesc* transpose_blob_desc = GetBlobDesc4BnInOp("transpose_in");
     transpose_blob_desc->mut_shape() = in_blob_desc->shape();
     transpose_blob_desc->mut_shape().Set(op_ctx->axis, in_blob_desc->shape().At(op_ctx->dims - 1));
     transpose_blob_desc->mut_shape().Set(op_ctx->dims - 1, op_ctx->transpose_cols);
     transpose_blob_desc->set_data_type(in_blob_desc->data_type());
-    *GetBlobDesc4BnInOp("transpose_y") = *transpose_blob_desc;
+    *GetBlobDesc4BnInOp("transpose_out") = *transpose_blob_desc;
   }
 }
 
 void SoftmaxOp::InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                     const ParallelContext*, const OpContext* op_ctx) const {
-  *GetBlobDesc4BnInOp("transpose_dy") = *GetBlobDesc4BnInOp("transpose_x");
+  *GetBlobDesc4BnInOp("transpose_out_diff") = *GetBlobDesc4BnInOp("transpose_in");
   const SoftmaxOpCtx* softmax_op_ctx = static_cast<const SoftmaxOpCtx*>(op_ctx);
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   // 1D blob store tmp calculate result

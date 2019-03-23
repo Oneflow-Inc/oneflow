@@ -234,8 +234,8 @@ message SoftmaxOpConf {
   required string in = 1;
   required string out = 2;
   optional int32 axis = 3 [default = -1];
-  optional string transpose_x = 4 [default = "transpose_x"];
-  optional string transpose_y = 5 [default = "transpose_y"];
+  optional string transpose_in = 4 [default = "transpose_in"];
+  optional string transpose_out = 5 [default = "transpose_out"];
 }
 
 message SoftmaxGradOpConf {

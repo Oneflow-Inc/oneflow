@@ -17,8 +17,8 @@ void GenerateBackwardOpConf(
     softmax_grad_op_conf->set_y(GenLogicalBlobName(op.BnInOp2Lbi("out")));
     softmax_grad_op_conf->set_dy(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     if (axis != -1 && axis != (LogicalBlobDesc4BnInOp("out").shape().NumAxes() - 1)) {
-      softmax_grad_op_conf->set_transpose_x(GenLogicalBlobName(op.BnInOp2Lbi("transpose_x")));
-      softmax_grad_op_conf->set_transpose_y(GenLogicalBlobName(op.BnInOp2Lbi("transpose_y")));
+      softmax_grad_op_conf->set_transpose_x(GenLogicalBlobName(op.BnInOp2Lbi("transpose_in")));
+      softmax_grad_op_conf->set_transpose_y(GenLogicalBlobName(op.BnInOp2Lbi("transpose_out")));
     }
     softmax_grad_op_conf->set_dx("dx");
     softmax_grad_op_conf->set_axis(axis);

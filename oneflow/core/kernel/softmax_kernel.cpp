@@ -30,12 +30,12 @@ void SoftmaxComputeDiff(DeviceCtx* ctx, const int64_t n, const int64_t w, const 
 }  // namespace
 
 template<DeviceType device_type, typename T>
-void SoftmaxComputeProb(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* x, T* tmp,
+void SoftmaxComputeProb(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* in, T* tmp,
                         T* prob, void* temp_storage, const size_t temp_storage_bytes) {
-  // copy x blob to prob blob
-  KernelUtil<device_type, T>::Copy(ctx, n * w, x, 1, prob, 1);
+  // copy in blob to prob blob
+  KernelUtil<device_type, T>::Copy(ctx, n * w, in, 1, prob, 1);
   // max | calculate max of every sample vector prob[i], store in tmp[i]
-  //       the prob[i] now is store the data of x[i]
+  //       the prob[i] now is store the data of in[i]
   NdarrayUtil<device_type, T>::ReduceMax(
       ctx, XpuVarNdarray<T>({n, 1}, tmp), XpuVarNdarray<const T>({n, w}, prob),
       XpuVarNdarray<T>({static_cast<int64_t>(temp_storage_bytes / sizeof(T))},
