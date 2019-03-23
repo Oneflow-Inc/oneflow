@@ -15,6 +15,17 @@ void NaiveMdUpdateKernel<device_type, T>::UpdateModel(
       model_diff_blob->dptr<T>(), model_blob->mut_dptr<T>());
 }
 
+template<DeviceType device_type, typename T>
+const PbMessage& NaiveMdUpdateKernel<device_type, T>::GetCustomizedOpConf() const {
+  if (Global<JobDesc>::Get()->IsTrain()) {
+    return this->op_conf().normal_mdupdt_conf();
+  } else if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+    return this->op_conf().naive_model_update_conf();
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
 template<typename T>
 class NaiveMdUpdateKernelUtil<DeviceType::kCPU, T> final {
  public:
@@ -28,5 +39,8 @@ class NaiveMdUpdateKernelUtil<DeviceType::kCPU, T> final {
 };
 
 DEFINE_MDUPDT_KERNEL_CREATOR(Naive);
+
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kNaiveModelUpdateConf, NaiveMdUpdateKernel,
+                           FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
