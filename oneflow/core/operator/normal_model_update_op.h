@@ -23,7 +23,7 @@ class NormalModelUpdtOp : public Operator {
       const ParallelContext*) const {}
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { UNIMPLEMENTED(); }
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return true; }
 
   LogicalBlobId obn2lbi(const std::string& output_bn) const override;
 };

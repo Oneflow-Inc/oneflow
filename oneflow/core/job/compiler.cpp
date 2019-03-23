@@ -3,6 +3,7 @@
 #include "oneflow/core/device/cudnn_conv_ctx_cache.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/autograd/autograd.h"
+#include "oneflow/core/optimizer/optimizer.h"
 
 namespace oneflow {
 
@@ -55,6 +56,7 @@ void UpdateJobDescbyAutoGrad() {
     AddTotalLossInstanceNumOpConf(op_graph, &job_conf, &total_loss_instance_num);
     HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
     AutoGrad(op_graph, &job_conf, &lbi2diff_lbi);
+    AddOptimizerOpConf(op_graph, &job_conf, lbi2diff_lbi, total_loss_instance_num);
     Global<JobDesc>::Delete();
     Global<JobDesc>::New(job_conf);
   }
