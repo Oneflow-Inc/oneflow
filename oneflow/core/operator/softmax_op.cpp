@@ -28,9 +28,9 @@ const PbMessage& SoftmaxOp::GetCustomizedConf() const { return op_conf().softmax
 void SoftmaxOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                const ParallelContext* parallel_ctx, int64_t record_piece_size,
                                std::function<void(OpContext*)> EnrollOpCtx) const {
-  // x
+  // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-  // y
+  // out
   *GetBlobDesc4BnInOp("out") = *in_blob_desc;
   SoftmaxOpCtx* op_ctx = NewSoftmaxOpCtx(in_blob_desc->shape());
   EnrollOpCtx(op_ctx);
@@ -89,16 +89,16 @@ void SoftmaxOp::VirtualGenKernelConf(
   }
 }
 
-SoftmaxOpCtx* SoftmaxOp::NewSoftmaxOpCtx(const Shape& x_shape) const {
+SoftmaxOpCtx* SoftmaxOp::NewSoftmaxOpCtx(const Shape& in_shape) const {
   SoftmaxOpCtx* op_ctx = new SoftmaxOpCtx();
   op_ctx->axis = op_conf().softmax_conf().axis();
-  op_ctx->dims = x_shape.NumAxes();
+  op_ctx->dims = in_shape.NumAxes();
   if (op_ctx->axis < 0) { op_ctx->axis += op_ctx->dims; }
   CHECK_GE(op_ctx->dims, 2);
   CHECK_GE(op_ctx->axis, 1);
   CHECK_LT(op_ctx->axis, op_ctx->dims);
-  op_ctx->transpose_cols = x_shape.At(op_ctx->axis);
-  op_ctx->transpose_rows = x_shape.elem_cnt() / op_ctx->transpose_cols;
+  op_ctx->transpose_cols = in_shape.At(op_ctx->axis);
+  op_ctx->transpose_rows = in_shape.elem_cnt() / op_ctx->transpose_cols;
   if (op_ctx->axis == op_ctx->dims - 1) {
     op_ctx->need_transpose = false;
   } else {
