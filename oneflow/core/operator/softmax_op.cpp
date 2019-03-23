@@ -5,14 +5,20 @@ namespace oneflow {
 
 void SoftmaxOp::InitFromOpConf() {
   CHECK(op_conf().has_softmax_conf());
-
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  EnrollDataTmpBn("transpose_in");
-  EnrollDataTmpBn("transpose_out");
-  EnrollDataTmpBn("transpose_out_diff");
+  if (Global<JobDesc>::Get()->IsPredict()
+      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()
+      && op_conf().softmax_conf().axis() != -1) {
+    EnrollOutputBn("transpose_in");
+    EnrollOutputBn("transpose_out", false);
+  } else {
+    EnrollDataTmpBn("transpose_in");
+    EnrollDataTmpBn("transpose_out");
+  }
   EnrollFwBufBn("fw_softmax_num");
   EnrollFwBufBn("fw_buf");
+  EnrollBwBufBn("transpose_out_diff");
   EnrollBwBufBn("bw_buf");
   EnrollBwBufBn("bw_softmax_num");
 }
@@ -46,12 +52,12 @@ void SoftmaxOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
     transpose_blob_desc->mut_shape().Set(op_ctx->dims - 1, op_ctx->transpose_cols);
     transpose_blob_desc->set_data_type(in_blob_desc->data_type());
     *GetBlobDesc4BnInOp("transpose_out") = *transpose_blob_desc;
-    *GetBlobDesc4BnInOp("transpose_out_diff") = *transpose_blob_desc;
   }
 }
 
 void SoftmaxOp::InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                     const ParallelContext*, const OpContext* op_ctx) const {
+  *GetBlobDesc4BnInOp("transpose_out_diff") = *GetBlobDesc4BnInOp("transpose_in");
   const SoftmaxOpCtx* softmax_op_ctx = static_cast<const SoftmaxOpCtx*>(op_ctx);
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   // 1D blob store tmp calculate result
