@@ -97,7 +97,9 @@ class Node {
   virtual std::string VisualStr() const { return ""; }
 
   int depth() const { return depth_; }
-  void set_depth(const int val) { depth_ = val; }
+  void set_depth(const int val) {
+    if (val > depth_) depth_ = val;
+  }
 
  private:
   friend void Connect<NodeType, EdgeType>(NodeType* src_node, EdgeType* edge, NodeType* dst_node);
@@ -107,7 +109,7 @@ class Node {
   HashSet<EdgeType*> in_edges_;
   HashSet<EdgeType*> out_edges_;
 
-  int depth_;  // 4 visualization
+  int depth_ = 0;  // 4 visualization
 };
 
 }  // namespace oneflow
