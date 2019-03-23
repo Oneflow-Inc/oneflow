@@ -745,8 +745,8 @@ message NormalizationOpConf {
 }
 
 message DropoutOpConf {
-  required string x = 1;
-  required string y = 2;
+  required string in = 1;
+  required string out = 2;
   required double rate = 3;
   optional ShapeProto noise_shape = 4;
   optional int64 seed = 5;
