@@ -975,6 +975,13 @@ message BroadcastDivOpConf {
   optional bool is_const = 4 [default = false];
 }
 
+message BroadcastLikeOpConf {
+  required string x = 1;
+  required string like = 2;
+  required string y = 3;
+  optional ShapeProto kept_dims_shape = 4;
+}
+
 message BroadcastDivGradOpConf {
   //  input
   required string b = 1; // denominator in fw
@@ -984,7 +991,6 @@ message BroadcastDivGradOpConf {
   required string db = 4;
   optional string temp_storage = 5 [default = "temp_storage"];
 }
-
 
 message BiasAddOpConf {
   // inputs
@@ -1279,6 +1285,7 @@ message OperatorConf {
     SparseCrossEntropyGradOpConf sparse_cross_entropy_grad_conf= 274;
     GatherGradOpConf gather_grad_conf = 275;
     BroadcastDivGradOpConf broadcast_div_grad_conf= 276;
+    BroadcastLikeOpConf broadcast_like_conf = 277;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
