@@ -17,14 +17,14 @@ void DropoutKernel<device_type, T>::VirtualKernelInit(const ParallelContext* par
 template<DeviceType device_type, typename T>
 void DropoutKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  int64_t elem_cnt = BnInOp2Blob("x")->shape().elem_cnt();
+  int64_t elem_cnt = BnInOp2Blob("in")->shape().elem_cnt();
   if (Global<JobDesc>::Get()->IsTrain()) {
     Dropout(ctx.device_ctx, elem_cnt, this->op_conf().dropout_conf().rate(),
-            BnInOp2Blob("x")->dptr<T>(), BnInOp2Blob("random_mask")->mut_dptr<float>(),
-            BnInOp2Blob("y")->mut_dptr<T>());
+            BnInOp2Blob("in")->dptr<T>(), BnInOp2Blob("random_mask")->mut_dptr<float>(),
+            BnInOp2Blob("out")->mut_dptr<T>());
   } else {
-    Memcpy<device_type>(ctx.device_ctx, BnInOp2Blob("y")->mut_dptr<void>(),
-                        BnInOp2Blob("x")->dptr<void>(), elem_cnt * sizeof(T));
+    Memcpy<device_type>(ctx.device_ctx, BnInOp2Blob("out")->mut_dptr<void>(),
+                        BnInOp2Blob("in")->dptr<void>(), elem_cnt * sizeof(T));
   }
 }
 
@@ -38,10 +38,10 @@ void DropoutKernel<device_type, T>::BackwardDataContent(
 
 template<DeviceType device_type, typename T>
 void DropoutKernel<device_type, T>::Dropout(DeviceCtx* ctx, const int64_t n, float dropout_rate,
-                                            const T* x, float* random_mask, T* y) const {
+                                            const T* in, float* random_mask, T* out) const {
   random_generator_->Uniform(n, random_mask);
-  DropoutKernelUtil<device_type, T>::MaskAndScale(ctx, n, dropout_rate, 1 / (1 - dropout_rate), x,
-                                                  random_mask, y);
+  DropoutKernelUtil<device_type, T>::MaskAndScale(ctx, n, dropout_rate, 1 / (1 - dropout_rate), in,
+                                                  random_mask, out);
 }
 
 template<DeviceType device_type, typename T>
