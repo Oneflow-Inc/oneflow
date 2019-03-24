@@ -45,6 +45,7 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   // util
   virtual std::string TypeName() const = 0;
   std::string VisualStr() const;
+  std::string JsonStr() const;
   bool HasOpWithModelOrConstModelBlob() const;
   bool HasOpWithModelBlob() const;
   bool HasOpWithForwardModelBlob() const;

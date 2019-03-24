@@ -182,6 +182,14 @@ std::string LogicalNode::VisualStr() const {
   return ss.str();
 }
 
+std::string LogicalNode::JsonStr() const {
+  std::stringstream ss;
+  ss << "{\"type\": \"" << TypeName() << "\", \"op_names\": \"";
+  for (std::shared_ptr<Operator> op : op_vec_) { ss << " " << op->op_name(); }
+  ss << "\", \"depth\": " << depth() << ", \"branch\": " << branch_id() << " }";
+  return ss.str();
+}
+
 bool LogicalNode::HasOpWithModelOrConstModelBlob() const {
   return HasOpWithCondition([](const Operator* op) {
     return op->model_bns().empty() == false || op->const_model_bns().empty() == false;

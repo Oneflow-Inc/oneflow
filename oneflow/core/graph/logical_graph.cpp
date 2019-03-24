@@ -275,8 +275,9 @@ void LogicalGraph::SetDepthAndBranchId4Nodes() {
 
   // print depth for check
   ForEachLogicalNode<LogicalNode>([&](LogicalNode* node) {
-    LOG(INFO) << node->op_vec().at(0)->op_name() << " " << node->depth() << " "
-              << node->branch_id();
+    // LOG(INFO) << node->op_vec().at(0)->op_name() << " " << node->depth() << " "
+    //           << node->branch_id();
+    LOG(INFO) << node->JsonStr();
   });
 }
 
