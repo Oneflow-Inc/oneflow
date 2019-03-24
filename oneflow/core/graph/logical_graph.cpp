@@ -279,6 +279,9 @@ void LogicalGraph::SetDepthAndBranchId4Nodes() {
     //           << node->branch_id();
     LOG(INFO) << node->JsonStr();
   });
+
+  ForEachEdge([&](LogicalEdge* edge) { LOG(INFO) << edge->JsonStr(); });
+  ToJsonWithAutoFilePath();
 }
 
 template<typename NodeType>

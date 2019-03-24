@@ -69,6 +69,12 @@ class Graph {
   void ToDotWithFilePath(const std::string& file_path);
   void ToDotWithAutoFilePath();
 
+  // ToJson
+  template<typename StreamT>
+  void ToJsonWithStream(StreamT& out_stream);
+  void ToJsonWithFilePath(const std::string& file_path);
+  void ToJsonWithAutoFilePath();
+
  private:
   std::vector<std::unique_ptr<NodeType>> nodes_;
   std::vector<std::unique_ptr<EdgeType>> edges_;
@@ -198,6 +204,32 @@ void Graph<NodeType, EdgeType>::ToDotWithAutoFilePath() {
   ToDotWithFilePath(file_path);
 }
 
+template<typename NodeType, typename EdgeType>
+template<typename StreamT>
+void Graph<NodeType, EdgeType>::ToJsonWithStream(StreamT& out_stream) {
+  out_stream << "{\n\"nodes\": [\n";
+  this->ForEachNode([&](NodeType* node) { out_stream << node->JsonStr() << ",\n"; });
+  // out_stream.seekp(-2, std::ios_base::end);
+  // out_stream << "\n";
+  out_stream << "],\n\"edges\": [\n";
+  this->ForEachEdge([&](const EdgeType* edge) { out_stream << edge->JsonStr() << ",\n"; });
+  // out_stream.seekp(-2, std::ios_base::end);
+  // out_stream << "\n";
+  out_stream << "]\n}\n";
+}
+
+template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::ToJsonWithFilePath(const std::string& file_path) {
+  auto log_stream = TeePersistentLogStream::Create(file_path);
+  ToJsonWithStream(log_stream);
+  log_stream->Flush();
+}
+
+template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::ToJsonWithAutoFilePath() {
+  std::string file_path = JoinPath("dot", TypeName(), NewUniqueId() + ".json");
+  ToJsonWithFilePath(file_path);
+}
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::BfsForEachNode(
     const std::list<NodeType*>& starts,

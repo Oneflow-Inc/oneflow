@@ -185,8 +185,15 @@ std::string LogicalNode::VisualStr() const {
 std::string LogicalNode::JsonStr() const {
   std::stringstream ss;
   ss << "{\"type\": \"" << TypeName() << "\", \"op_names\": \"";
-  for (std::shared_ptr<Operator> op : op_vec_) { ss << " " << op->op_name(); }
+  for (std::shared_ptr<Operator> op : op_vec_) { ss << op->op_name() << " "; }
   ss << "\", \"depth\": " << depth() << ", \"branch\": " << branch_id() << " }";
+  return ss.str();
+}
+
+std::string LogicalEdge::JsonStr() const {
+  std::stringstream ss;
+  ss << "[[" << src_node()->branch_id() << ", 0, " << src_node()->depth() << "],";
+  ss << " [" << dst_node()->branch_id() << ", 0, " << dst_node()->depth() << "]]";
   return ss.str();
 }
 

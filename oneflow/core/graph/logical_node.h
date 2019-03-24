@@ -104,6 +104,8 @@ class LogicalEdge final : public Edge<LogicalNode, LogicalEdge> {
   const std::vector<LogicalBlobId>& lbis() const { return lbis_; }
   std::vector<LogicalBlobId>& mut_lbis() { return lbis_; }
 
+  std::string JsonStr() const;
+
  private:
   std::vector<LogicalBlobId> lbis_;
 };
