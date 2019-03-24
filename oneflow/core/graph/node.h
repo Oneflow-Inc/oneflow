@@ -101,6 +101,9 @@ class Node {
     if (val > depth_) depth_ = val;
   }
 
+  int branch_id() const { return branch_id_; }
+  void set_branch_id(const int val) { branch_id_ = val; }
+
  private:
   friend void Connect<NodeType, EdgeType>(NodeType* src_node, EdgeType* edge, NodeType* dst_node);
   friend void DisConnect<EdgeType>(EdgeType* edge);
@@ -110,6 +113,7 @@ class Node {
   HashSet<EdgeType*> out_edges_;
 
   int depth_ = 0;  // 4 visualization
+  int branch_id_ = 0; // 4 visualization
 };
 
 }  // namespace oneflow
