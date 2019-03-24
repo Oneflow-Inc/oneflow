@@ -40,8 +40,6 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
 
   void BuildFwStruct();
   void NaiveBuildFwStruct(HashMap<std::string, std::vector<LogicalNode*>>* op_name2nodes);
-  void SetDepth4Nodes();
-  void SetBranchId4Nodes();
   void FixSharedModelNodes(const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes);
   void LinkUnpackFw2PackFw(const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes);
   void ReConnectToFwClone(LogicalNode* clone_node, const LogicalBlobId& lbi,
@@ -74,6 +72,12 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
 
   bool MustHaveModelDiffAcc();
 
+  void SetDepthAndBranchId4Nodes();
+
+  template<typename NodeType>
+  bool GetLongestPath(
+      LogicalNode* start, int max_depth, std::stack<NodeType*>& longest_path_stack,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode);
   int64_t total_mbn_num_;
 
   std::vector<std::vector<const LogicalNode*>> fw_node_groups_;

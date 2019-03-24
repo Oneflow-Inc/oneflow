@@ -112,8 +112,8 @@ class Node {
   HashSet<EdgeType*> in_edges_;
   HashSet<EdgeType*> out_edges_;
 
-  int depth_ = 0;  // 4 visualization
-  int branch_id_ = 0; // 4 visualization
+  int depth_ = 0;      // 4 visualization
+  int branch_id_ = 0;  // 4 visualization
 };
 
 }  // namespace oneflow
