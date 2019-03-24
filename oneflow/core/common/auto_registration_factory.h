@@ -30,6 +30,8 @@ struct AutoRegistrationFactory {
     return creators_it->second(std::forward<Args>(args)...);
   }
 
+  bool IsClassRegistered(int32_t k, Args&&... args) { return creators_.find(k) != creators_.end(); }
+
   static AutoRegistrationFactory<Base, Args...>& Get() {
     static AutoRegistrationFactory<Base, Args...> obj;
     return obj;
@@ -51,6 +53,12 @@ struct AutoRegistrationFactory {
 template<typename Base, typename... Args>
 inline Base* NewObj(int32_t k, Args&&... args) {
   return AutoRegistrationFactory<Base, Args...>::Get().New(k, std::forward<Args>(args)...);
+}
+
+template<typename Base, typename... Args>
+inline bool IsClassRegistered(int32_t k, Args&&... args) {
+  return AutoRegistrationFactory<Base, Args...>::Get().IsClassRegistered(
+      k, std::forward<Args>(args)...);
 }
 
 }  // namespace oneflow

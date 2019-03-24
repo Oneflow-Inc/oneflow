@@ -1,5 +1,4 @@
 #include "oneflow/core/autograd/autograd.h"
-#include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_conf_builder.h"
 #include "oneflow/core/autograd/clone_grad.h"
 
@@ -105,6 +104,7 @@ void AutoGrad(const OpGraph& op_graph, JobConf1* job_conf,
   auto HasDiff4LbiOpName = MakePredicatorHasDiff4LbiOpName(op_graph, NeedBackwardOp);
   HashMap<LogicalBlobId, HashMap<std::string, LogicalBlobId>> lbi2op_name2in_diff_lbi;
   HashMap<LogicalBlobId, LogicalBlobId>* lbi2out_diff_lbi = lbi2diff_lbi;
+  JobConfBuilder job_conf_builder(job_conf);
   op_graph.TopoForEachNode(loss_nodes, ForEachOutNode, ForEachInNode, [&](OpNode* op_node) {
     const auto& op_name = op_node->op().op_name();
     auto DiffLbi4BnInOp = [&](const std::string& bn) -> LogicalBlobId* {
@@ -126,7 +126,7 @@ void AutoGrad(const OpGraph& op_graph, JobConf1* job_conf,
     std::vector<OperatorConf> ops;
     GenerateCloneGradOpIfNeed(op_node->op(), &ops, lbi2op_name2in_diff_lbi, lbi2out_diff_lbi);
     GenerateBackwardOpConfIf(op_node->op(), &ops, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp);
-    JobConfBuilder(job_conf).AddOps(op_node->parallel_desc().parallel_conf(), ops);
+    job_conf_builder.AddOps(op_node->parallel_desc().parallel_conf(), ops);
   });
 }
 

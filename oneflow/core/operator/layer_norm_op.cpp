@@ -18,25 +18,23 @@ void LayerNormOp::InitFromOpConf() {
   const LayerNormOpConf& conf = op_conf().layer_norm_conf();
   if (!(conf.center() || conf.scale())) { mut_op_conf()->set_trainable(false); }
   const bool fw_bw_split =
-      Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf();
-  if (fw_bw_split) {
-    CHECK_EQ(conf.center(), conf.has_beta());
-    CHECK_EQ(conf.scale(), conf.has_gamma());
-  } else {
+      Global<JobDesc>::Get()->IsPredict()
+      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf();
+  if (!fw_bw_split) {
     CHECK(!conf.has_beta());
     CHECK(!conf.has_gamma());
   }
   EnrollInputBn("in");
   EnrollOutputBn("out");
   if (conf.center()) {
-    if (fw_bw_split) {
+    if (fw_bw_split && conf.has_beta()) {
       EnrollInputBn("beta");
     } else {
       EnrollModelBn("beta");
     }
   }
   if (conf.scale()) {
-    if (fw_bw_split) {
+    if (fw_bw_split && conf.has_gamma()) {
       EnrollInputBn("gamma");
       EnrollOutputBn("normalized", false);
     } else {
