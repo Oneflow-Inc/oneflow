@@ -5,6 +5,7 @@
 #include "oneflow/core/autograd/autograd.h"
 #include "oneflow/core/autograd/autovar.h"
 #include "oneflow/core/optimizer/optimizer.h"
+#include "oneflow/core/graph/op_graph_optimize_func.h"
 
 namespace oneflow {
 
@@ -69,6 +70,15 @@ void AutoComplete() {
       HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
       AutoGrad(op_graph, &job_conf, &lbi2diff_lbi);
       AddOptimizerOpConf(op_graph, &job_conf, lbi2diff_lbi, total_loss_instance_num);
+      Global<JobDesc>::Delete();
+      Global<JobDesc>::New(job_conf);
+    }
+    // add keep_header_only_op
+    {
+      const JobDesc* job_desc = Global<JobDesc>::Get();
+      OpGraph op_graph(job_desc);
+      JobConf1 job_conf(job_desc->job_conf());
+      AddKeepHeaderOnlyOp(op_graph, &job_conf);
       Global<JobDesc>::Delete();
       Global<JobDesc>::New(job_conf);
     }
