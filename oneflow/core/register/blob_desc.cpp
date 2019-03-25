@@ -181,7 +181,13 @@ void BlobDesc::HeaderToProto(BlobDescProto* proto) const {
 
 void BlobDesc::ToProto(BlobDescProto* proto) const {
   HeaderToProto(proto);
-  body_field_.ToProto(proto->mutable_body());
+  if (decouple_header_and_body_) {
+    FieldDesc empty_body_field = body_field_;
+    empty_body_field.mut_shape() = Shape();
+    empty_body_field.ToProto(proto->mutable_body());
+  } else {
+    body_field_.ToProto(proto->mutable_body());
+  }
   if (dim0_inner_shape_) { dim0_inner_shape_->ToProto(proto->mutable_dim0_inner_shape()); }
   proto->set_decouple_header_and_body(decouple_header_and_body_);
 }

@@ -12,6 +12,8 @@ class KeepHeaderOnlyOp final : public IdentityOp {
   ~KeepHeaderOnlyOp() override = default;
 
   const PbMessage& GetCustomizedConf() const override { return op_conf().keep_header_only_conf(); }
+  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                      const ParallelContext* parallel_ctx) const override;
 
  private:
 };
