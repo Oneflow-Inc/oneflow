@@ -198,7 +198,9 @@ void Kernel::Forward(const KernelCtx& ctx,
     CHECK(!kernel_conf_.need_do_opaque_header());
     ForwardRecordIdInDevicePiece(ctx, BnInOp2Blob);
   }
-  UpdtStatusBeforeFwBw(ctx, BnInOp2Blob);
+  if (kernel_conf_.need_do_dim0_valid_num() || kernel_conf_.need_do_instance_shape()) {
+    UpdtStatusBeforeFwBw(ctx, BnInOp2Blob);
+  }
   ForwardDataContent(ctx, BnInOp2Blob);
   if (GetActivationType() != ActivationType::kNone) {
     const PbRpf<std::string> obns = this->op_attribute().output_bns();
@@ -231,7 +233,9 @@ void Kernel::Backward(const KernelCtx& ctx,
     return;
   }
   CHECK_EQ(false, HasEmptyShapeBlob(op_attribute().model_diff_bns(), BnInOp2Blob));
-  UpdtStatusBeforeFwBw(ctx, BnInOp2Blob);
+  if (kernel_conf_.need_do_dim0_valid_num() || kernel_conf_.need_do_instance_shape()) {
+    UpdtStatusBeforeFwBw(ctx, BnInOp2Blob);
+  }
   ActivationType activation = GetActivationType();
   if (activation != ActivationType::kNone) {
     const PbRpf<std::string> obns = this->op_attribute().output_bns();
