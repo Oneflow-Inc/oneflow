@@ -51,7 +51,7 @@ class CommNet {
   void IssueCallBack(const std::function<void()>& cb);
   void AddWorkToStream(int64_t stream_id, const std::function<void()>& cb, bool is_read);
   HashSet<int64_t> peer_machine_id_;
-  HashMap<int64_t, std::mutex> stream_id2stream_mtx_;
+  HashMap<int64_t, std::unique_ptr<std::mutex>> stream_id2stream_mtx_ptr_;
   HashMap<int64_t, std::queue<CommNetItem>> stream_id2stream_;
   std::thread ready_cb_poller_;
 };
