@@ -17,7 +17,7 @@ void GatherGradKernel<device_type, T>::ForwardDataContent(
   Memset<device_type>(ctx.device_ctx, in_diff->mut_dptr<T>(), 0,
                       in_diff->ByteSizeOfDataContentField());
   GatherKernelUtil<device_type, T>::Backward(ctx.device_ctx, indices, out_diff,
-                                             this->kernel_conf().gather_conf().axis(), in_diff);
+                                             this->op_conf().gather_grad_conf().axis(), in_diff);
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kGatherGradConf, GatherGradKernel, FLOATING_DATA_TYPE_SEQ);
