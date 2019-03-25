@@ -1039,13 +1039,14 @@ message SliceGradOpConf {
 message LayerNormOpConf {
   // in
   required string in = 1;
-  required string out = 2;
-  optional string beta = 3;
-  optional string gamma = 4;
+  optional string beta = 2;
+  optional string gamma = 3;
+
   // out
-  optional string normalized = 5;
-  optional string mean = 6;
-  optional string inv_variance = 7;
+  required string out = 4;
+  optional string normalized = 5 [default = "normalized"];
+  optional string mean = 6 [default = "mean"];
+  optional string inv_variance = 7 [default = "inv_variance"];
 
   optional bool center = 8 [default = true];
   optional bool scale = 9 [default = true];
