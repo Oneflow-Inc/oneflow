@@ -11,7 +11,7 @@ void GenerateBackwardOpConf(
   CHECK(op.op_conf().has_batch_gather_conf());
   if (DiffLbi4BnInOp("in") != nullptr) {
     OperatorConf batch_gather_grad;
-    batch_gather_grad.set_name(op.op_name() + "_grad");
+    batch_gather_grad.set_name("System-AutoGrad-" + op.op_name());
     BatchGatherGradOpConf* conf = batch_gather_grad.mutable_batch_gather_grad_conf();
     conf->set_out_diff(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     conf->set_indices(GenLogicalBlobName(op.BnInOp2Lbi("indices")));
