@@ -38,9 +38,9 @@ class DeconvKernelIf : public KernelIfWithActivation<device_type, T>,
                               std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
   virtual void BiasBackward(DeviceCtx*, const Blob* out_diff_blob, Blob* bias_diff_blob,
                             std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
-  virtual void UpdateCudnnDescIfNeed(std::function<Blob*(const std::string&)> BnInOp2Blob);
+  virtual void UpdateCudnnDescIfNeed(std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   void UpdtStatusBeforeFwBw(const KernelCtx& ctx,
-                            std::function<Blob*(const std::string&)> BnInOp2Blob) override;
+                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
   const PbMessage& GetCustomizedOpConf() const override;
   const DeconvKernelConf& GetDeconvKernelConf() const;
@@ -86,13 +86,13 @@ class DeconvKernel<DeviceType::kGPU, T> final : public DeconvKernelIf<DeviceType
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void BiasBackward(DeviceCtx*, const Blob* out_diff_blob, Blob* bias_diff_blob,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void UpdateCudnnDescIfNeed(std::function<Blob*(const std::string&)> BnInOp2Blob) override;
+  void UpdateCudnnDescIfNeed(std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
-  std::unique_ptr<CudnnTensorDesc> in_desc_;
-  std::unique_ptr<CudnnTensorDesc> out_desc_;
-  std::unique_ptr<CudnnFilterDesc> filter_desc_;
-  std::unique_ptr<CudnnDeconvDesc> deconv_desc_;
-  std::unique_ptr<CudnnTensorDesc> bias_desc_;
+  mutable std::unique_ptr<CudnnTensorDesc> in_desc_;
+  mutable std::unique_ptr<CudnnTensorDesc> out_desc_;
+  mutable std::unique_ptr<CudnnFilterDesc> filter_desc_;
+  mutable std::unique_ptr<CudnnDeconvDesc> deconv_desc_;
+  mutable std::unique_ptr<CudnnTensorDesc> bias_desc_;
 };
 
 }  //  namespace oneflow
