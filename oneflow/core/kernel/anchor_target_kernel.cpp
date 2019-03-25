@@ -175,23 +175,29 @@ void AnchorTargetKernel<T>::CalcMaxOverlapAndSetPositiveLabels(
   const float positive_overlap_threshold =
       op_conf().anchor_target_conf().positive_overlap_threshold();
   const Blob* anchors_blob = BnInOp2Blob("anchors");
+  const Blob* anchor_inds_blob = BnInOp2Blob("anchor_inds");
   Blob* anchor_labels_blob = BnInOp2Blob("anchor_labels");
+  Blob* anchor_max_overlaps_blob = BnInOp2Blob("anchor_max_overlaps");
+  Blob* anchor_best_match_gt_blob = BnInOp2Blob("anchor_best_match_gt");
   anchor_labels_blob->set_dim0_valid_num(0, anchors_blob->dim0_valid_num(0));
+  const int32_t* anchor_inds_ptr = anchor_inds_blob->dptr<int32_t>();
   int32_t* anchor_labels_ptr = anchor_labels_blob->mut_dptr<int32_t>();
+  float* anchor_max_overlaps_ptr = anchor_max_overlaps_blob->mut_dptr<float>();
+  int32_t* anchor_best_match_gt_ptr = anchor_best_match_gt_blob->mut_dptr<int32_t>();
+  Memset<DeviceType::kCPU>(ctx, anchor_max_overlaps_ptr, 0,
+                           anchor_max_overlaps_blob->ByteSizeOfDataContentField());
   std::fill(anchor_labels_ptr, anchor_labels_ptr + anchor_labels_blob->shape().elem_cnt(), -1);
+  std::fill(anchor_best_match_gt_ptr,
+            anchor_best_match_gt_ptr + anchor_max_overlaps_blob->shape().elem_cnt(), -1);
 
   auto* gt_boxes = BBox::Cast(gt_boxes_blob->dptr<T>());
   auto* anchor_boxes = BBox::Cast(anchors_blob->dptr<T>());
-  const Blob* anchor_inds_blob = BnInOp2Blob("anchor_inds");
-  const int32_t* anchor_inds_ptr = anchor_inds_blob->dptr<int32_t>();
-  float* anchor_max_overlaps_blob_ptr = BnInOp2Blob("anchor_max_overlaps")->mut_dptr<float>();
-  int32_t* anchor_best_match_gt_ptr = BnInOp2Blob("anchor_best_match_gt")->mut_dptr<int32_t>();
   FOR_RANGE(size_t, i, 0, num_gt_boxes) {
     FOR_RANGE(size_t, j, 0, anchor_inds_blob->dim0_valid_num(0)) {
       int32_t anchor_idx = anchor_inds_ptr[j];
       float overlap = anchor_boxes[anchor_idx].InterOverUnion(gt_boxes + i);
-      if (overlap > anchor_max_overlaps_blob_ptr[anchor_idx]) {
-        anchor_max_overlaps_blob_ptr[anchor_idx] = overlap;
+      if (overlap > anchor_max_overlaps_ptr[anchor_idx]) {
+        anchor_max_overlaps_ptr[anchor_idx] = overlap;
         anchor_best_match_gt_ptr[anchor_idx] = i;
         if (overlap >= positive_overlap_threshold) { anchor_labels_ptr[anchor_idx] = 1; }
       }
