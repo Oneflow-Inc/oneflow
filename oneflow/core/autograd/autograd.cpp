@@ -1,5 +1,4 @@
 #include "oneflow/core/autograd/autograd.h"
-#include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_conf_builder.h"
 #include "oneflow/core/autograd/clone_grad.h"
 
@@ -133,7 +132,6 @@ void AutoGrad(const OpGraph& op_graph, JobConf1* job_conf,
 
 void AddTotalLossInstanceNumOpConf(const OpGraph& op_graph, JobConf1* job_conf,
                                    LogicalBlobId* total_loss_instance_num_lbi) {
-  JobConfBuilder job_conf_builder(job_conf);
   std::list<OpNode*> loss_nodes;
   GetLossOpNodes(op_graph, &loss_nodes);
   OperatorConf op_conf;
@@ -151,7 +149,7 @@ void AddTotalLossInstanceNumOpConf(const OpGraph& op_graph, JobConf1* job_conf,
   ParallelConf parallel_conf;
   parallel_conf.set_policy(kDataParallel);
   parallel_conf.add_device_name("0:cpu:0");
-  job_conf_builder.AddOps(parallel_conf, {op_conf});
+  JobConfBuilder(job_conf).AddOps(parallel_conf, {op_conf});
 
   total_loss_instance_num_lbi->set_op_name(op_conf.name());
   total_loss_instance_num_lbi->set_blob_name("out");

@@ -10,6 +10,7 @@ class NaiveModelUpdateOp final : public NormalModelUpdtOp {
   OF_DISALLOW_COPY_AND_MOVE(NaiveModelUpdateOp);
   NaiveModelUpdateOp() = default;
   ~NaiveModelUpdateOp() = default;
+  const PbMessage& GetCustomizedConf() const override;
 };
 
 }  // namespace oneflow
