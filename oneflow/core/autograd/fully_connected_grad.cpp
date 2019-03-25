@@ -40,6 +40,6 @@ void GenerateBackwardOpConf(
 
 }  // namespace
 
-REGISTER_OP_GRAD(OperatorConf::kFullyConnectedConf, &GenerateInputVarOpConf);
+REGISTER_OP_GRAD(OperatorConf::kFullyConnectedConf, &GenerateBackwardOpConf);
 
 }  // namespace oneflow
