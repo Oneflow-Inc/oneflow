@@ -24,7 +24,7 @@ void GenerateBackwardOpConf(
     conf->set_axis(axis);
     conf->set_gather_dim_size(gather_dim_size);
     conf->set_indices(GenLogicalBlobName(op.BnInOp2Lbi("indices")));
-    conf->set_out_diff(GenLogicalBlobName(op.BnInOp2Lbi("out")));
+    conf->set_out_diff(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     conf->set_in_diff("in_diff");
     op_confs->push_back(gather_grad_op);
     DiffLbi4BnInOp("in")->set_op_name(gather_grad_op.name());
