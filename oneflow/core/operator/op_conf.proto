@@ -234,6 +234,17 @@ message SoftmaxOpConf {
   required string in = 1;
   required string out = 2;
   optional int32 axis = 3 [default = -1];
+  optional string transpose_in = 4 [default = "transpose_in"];
+  optional string transpose_out = 5 [default = "transpose_out"];
+}
+
+message SoftmaxGradOpConf {
+  required string y = 1;
+  required string dy = 2;
+  required string dx = 3;
+  optional string transpose_x = 4;
+  optional string transpose_y = 5;
+  optional int32 axis = 6 [default = -1];
 }
 
 enum LossReductionType {
@@ -472,6 +483,62 @@ message NormalModelUpdateOpConf {
   required float learning_rate = 5;
   required float l1 = 6;
   required float l2 = 7;
+}
+
+message NaiveModelUpdateOpConf {
+  required NormalModelUpdateOpUserConf user_conf = 1;
+  required string model_diff = 2;
+  required string total_instance_num_diff = 3;
+  required string model = 4;
+  required float learning_rate = 5;
+  required float l1 = 6;
+  required float l2 = 7;
+}
+
+message MomentumModelUpdateOpConf {
+  required NormalModelUpdateOpUserConf user_conf = 1;
+  required string momentum = 2;
+  required string model_diff = 3;
+  required string total_instance_num_diff = 4;
+  required string model = 5;
+  required float learning_rate = 6;
+  required float l1 = 7;
+  required float l2 = 8;
+}
+
+message RMSPropModelUpdateOpConf {
+  required NormalModelUpdateOpUserConf user_conf = 1;
+  required string model_diff = 2;
+  required string total_instance_num_diff = 3;
+  required string model = 4;
+  required float learning_rate = 5;
+  required float l1 = 6;
+  required float l2 = 7;
+}
+
+message LARSModelUpdateOpConf {
+  required NormalModelUpdateOpUserConf user_conf = 1;
+  required string momentum = 2;
+  required string model_diff = 3;
+  required string total_instance_num_diff = 4;
+  required string model = 5;
+  required float learning_rate = 6;
+  required float l1 = 7;
+  required float l2 = 8;
+}
+
+message AdamModelUpdateOpConf {
+  required NormalModelUpdateOpUserConf user_conf = 1;
+  required string m = 2;
+  required string v = 3;
+  required string beta1_t = 4;
+  required string beta2_t = 5;
+  required string model_diff = 6;
+  required string total_instance_num_diff = 7;
+  required string model = 8;
+  required float learning_rate = 9;
+  required float l1 = 10;
+  required float l2 = 11;
 }
 
 message AccumulateOpConf {
@@ -739,8 +806,8 @@ message NormalizationOpConf {
 }
 
 message DropoutOpConf {
-  required string x = 1;
-  required string y = 2;
+  required string in = 1;
+  required string out = 2;
   required double rate = 3;
   optional ShapeProto noise_shape = 4;
   optional int64 seed = 5;
@@ -919,6 +986,22 @@ message BroadcastDivOpConf {
   optional bool is_const = 4 [default = false];
 }
 
+message BroadcastLikeOpConf {
+  required string x = 1;
+  required string like = 2;
+  required string y = 3;
+  optional ShapeProto kept_dims_shape = 4;
+}
+
+message BroadcastDivGradOpConf {
+  //  input
+  required string b = 1; // denominator in fw
+  required string y = 2;
+  required string dy = 3;
+  //  output
+  required string db = 4;
+  optional string temp_storage = 5 [default = "temp_storage"];
+}
 
 message BiasAddOpConf {
   // inputs
@@ -1136,7 +1219,12 @@ message OperatorConf {
     TickOpConf tick_conf = 124;
     KeepHeaderOnlyOpConf keep_header_only_conf = 125;
     TotalLossInstanceNumOpConf total_loss_instance_num_conf = 126;
-
+    NaiveModelUpdateOpConf naive_model_update_conf = 127;
+    MomentumModelUpdateOpConf momentum_model_update_conf = 128;
+    RMSPropModelUpdateOpConf rmsprop_model_update_conf = 129;
+    LARSModelUpdateOpConf lars_model_update_conf = 130;
+    AdamModelUpdateOpConf adam_model_update_conf = 131;
+      
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
     TransposeOpConf transpose_conf = 201;
@@ -1207,6 +1295,9 @@ message OperatorConf {
     LayerNormParamGradOpConf layer_norm_param_grad_conf = 273;
     SparseCrossEntropyGradOpConf sparse_cross_entropy_grad_conf= 274;
     GatherGradOpConf gather_grad_conf = 275;
+    BroadcastDivGradOpConf broadcast_div_grad_conf= 276;
+    BroadcastLikeOpConf broadcast_like_conf = 277;
+    SoftmaxGradOpConf softmax_grad_conf = 278;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

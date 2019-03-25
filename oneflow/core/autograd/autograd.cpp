@@ -105,7 +105,6 @@ void AutoGrad(const OpGraph& op_graph, JobConf1* job_conf,
   auto HasDiff4LbiOpName = MakePredicatorHasDiff4LbiOpName(op_graph, NeedBackwardOp);
   HashMap<LogicalBlobId, HashMap<std::string, LogicalBlobId>> lbi2op_name2in_diff_lbi;
   HashMap<LogicalBlobId, LogicalBlobId>* lbi2out_diff_lbi = lbi2diff_lbi;
-  JobConfBuilder job_conf_builder(job_conf);
   op_graph.TopoForEachNode(loss_nodes, ForEachOutNode, ForEachInNode, [&](OpNode* op_node) {
     const auto& op_name = op_node->op().op_name();
     auto DiffLbi4BnInOp = [&](const std::string& bn) -> LogicalBlobId* {
@@ -127,13 +126,12 @@ void AutoGrad(const OpGraph& op_graph, JobConf1* job_conf,
     std::vector<OperatorConf> ops;
     GenerateCloneGradOpIfNeed(op_node->op(), &ops, lbi2op_name2in_diff_lbi, lbi2out_diff_lbi);
     GenerateBackwardOpConfIf(op_node->op(), &ops, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp);
-    job_conf_builder.AddOps(op_node->parallel_desc().parallel_conf(), ops);
+    JobConfBuilder(job_conf).AddOps(op_node->parallel_desc().parallel_conf(), ops);
   });
 }
 
 void AddTotalLossInstanceNumOpConf(const OpGraph& op_graph, JobConf1* job_conf,
                                    LogicalBlobId* total_loss_instance_num_lbi) {
-  JobConfBuilder job_conf_builder(job_conf);
   std::list<OpNode*> loss_nodes;
   GetLossOpNodes(op_graph, &loss_nodes);
   OperatorConf op_conf;
@@ -151,7 +149,7 @@ void AddTotalLossInstanceNumOpConf(const OpGraph& op_graph, JobConf1* job_conf,
   ParallelConf parallel_conf;
   parallel_conf.set_policy(kDataParallel);
   parallel_conf.add_device_name("0:cpu:0");
-  job_conf_builder.AddOps(parallel_conf, {op_conf});
+  JobConfBuilder(job_conf).AddOps(parallel_conf, {op_conf});
 
   total_loss_instance_num_lbi->set_op_name(op_conf.name());
   total_loss_instance_num_lbi->set_blob_name("out");
