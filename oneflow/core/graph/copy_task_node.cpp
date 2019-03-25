@@ -69,9 +69,9 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
 }
 
 void CopyCommNetTaskNode::Init(int64_t machine_id, int64_t src_machine_id) {
+  peer_machine_id_ = src_machine_id;
   set_machine_id(machine_id);
   set_thrd_id(Global<IDMgr>::Get()->CommNetThrdId());
-  peer_machine_id_ = src_machine_id;
 }
 
 namespace {
@@ -93,7 +93,8 @@ int64_t GetLocalStreamId4Connection(int64_t this_machine_id, int64_t peer_machin
 
 void InsertLocalStreamId4Connection(int64_t this_machine_id, int64_t peer_machine_id) {
   auto& dict = *GetConnection2LocalStreamIdMap();
-  dict[this_machine_id][peer_machine_id] = dict[this_machine_id].size();
+  int64_t local_stream_id = dict[this_machine_id].size();
+  CHECK(dict[this_machine_id].emplace(peer_machine_id, local_stream_id).second);
 }
 
 }  // namespace

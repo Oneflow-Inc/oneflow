@@ -1,7 +1,7 @@
 #include "oneflow/core/actor/copy_comm_net_actor.h"
-#include "oneflow/core/register/register.h"
 #include "oneflow/core/device/comm_net_device_context.h"
 #include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/register/register.h"
 
 namespace oneflow {
 
@@ -13,7 +13,8 @@ void CopyCommNetActor::VirtualActorInit(const TaskProto& task_proto) {
 }
 
 void CopyCommNetActor::InitDeviceCtx(const ThreadCtx&) {
-  mut_device_ctx().reset(new CommNetDeviceCtx());
+  local_stream_id_ = Global<IDMgr>::Get()->LocalWorkStreamId4ActorId(actor_id());
+  mut_device_ctx().reset(new CommNetDeviceCtx(local_stream_id_));
 }
 
 void CopyCommNetActor::ForEachCurCustomizedReadableRegst(
@@ -47,7 +48,7 @@ void CopyCommNetActor::Act() {
   // writeable
   void* writeable_token = GetNaiveCurWriteable("copy_out")->comm_net_token();
   // Async
-  Global<CommNet>::Get()->Read(src_machine_id, readable_token, writeable_token);
+  Global<CommNet>::Get()->Read(local_stream_id_, src_machine_id, readable_token, writeable_token);
 }
 
 void CopyCommNetActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
