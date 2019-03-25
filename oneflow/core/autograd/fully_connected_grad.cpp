@@ -15,9 +15,9 @@ void GenerateBackwardOpConf(
     matmul_b_op.set_name(op.op_name() + "_grad_weight");
     MatmulOpConf* matmul_b_op_conf = matmul_b_op.mutable_matmul_conf();
     matmul_b_op_conf->set_out("out");
-    matmul_b_op_conf->set_a(GenLogicalBlobName(op.BnInOp2Lbi("in")));
-    matmul_b_op_conf->set_b(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
-    matmul_b_op_conf->set_transpose_a(false);
+    matmul_b_op_conf->set_a(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
+    matmul_b_op_conf->set_b(GenLogicalBlobName(op.BnInOp2Lbi("in")));
+    matmul_b_op_conf->set_transpose_a(true);
     matmul_b_op_conf->set_transpose_b(false);
     op_confs->push_back(matmul_b_op);
     DiffLbi4BnInOp("weight")->set_op_name(matmul_b_op.name());
