@@ -12,20 +12,20 @@ void GenerateBackwardOpConf(
   const auto& conf = op.op_conf().fully_connected_conf();
   if (DiffLbi4BnInOp("weight") != nullptr) {
     OperatorConf matmul_b_op;
-    matmul_b_op.set_name(op.op_name() + "_grad_weight");
-    MatmulOpConf* matmul_b_op_conf = matmul_b_op.mutable_matmul_conf();
-    matmul_b_op_conf->set_out("out");
-    matmul_b_op_conf->set_a(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
-    matmul_b_op_conf->set_b(GenLogicalBlobName(op.BnInOp2Lbi("in")));
-    matmul_b_op_conf->set_transpose_a(true);
-    matmul_b_op_conf->set_transpose_b(false);
+    matmul_b_op.set_name(op.op_name() + "_weight_grad");
+    MatmulOpConf* matmul_op_conf = matmul_b_op.mutable_matmul_conf();
+    matmul_op_conf->set_out("out");
+    matmul_op_conf->set_a(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
+    matmul_op_conf->set_b(GenLogicalBlobName(op.BnInOp2Lbi("in")));
+    matmul_op_conf->set_transpose_a(true);
+    matmul_op_conf->set_transpose_b(false);
     op_confs->push_back(matmul_b_op);
     DiffLbi4BnInOp("weight")->set_op_name(matmul_b_op.name());
     DiffLbi4BnInOp("weight")->set_blob_name("out");
   }
   if (conf.use_bias() && (DiffLbi4BnInOp("in") != nullptr)) {
     OperatorConf reduce_sum_op;
-    reduce_sum_op.set_name(op.op_name() + "_grad_bias");
+    reduce_sum_op.set_name(op.op_name() + "_bias_grad");
     ReduceSumOpConf* reduce_sum_op_conf = reduce_sum_op.mutable_reduce_sum_conf();
     reduce_sum_op_conf->set_in(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     reduce_sum_op_conf->set_out("out");
