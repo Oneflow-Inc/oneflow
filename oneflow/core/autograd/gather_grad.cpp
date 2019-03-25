@@ -15,11 +15,11 @@ void GenerateBackwardOpConf(
         op.op_conf().gather_conf().axis() < 0
             ? in_logical_blob_desc.shape().NumAxes() + op.op_conf().gather_conf().axis()
             : op.op_conf().gather_conf().axis();
-    // TODO: support all axis
-    CHECK_EQ(axis, 0);
+    CHECK_GE(axis, 0);
+    CHECK_LT(axis, in_logical_blob_desc.shape().NumAxes());
     const int64_t gather_dim_size = in_logical_blob_desc.shape().At(axis);
     OperatorConf gather_grad_op;
-    gather_grad_op.set_name(op.op_name() + "_grad");
+    gather_grad_op.set_name("System-AutoGrad-" + op.op_name());
     GatherGradOpConf* conf = gather_grad_op.mutable_gather_grad_conf();
     conf->set_axis(axis);
     conf->set_gather_dim_size(gather_dim_size);
