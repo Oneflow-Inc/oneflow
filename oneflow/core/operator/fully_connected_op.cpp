@@ -80,7 +80,7 @@ void FullyConnectedOp::GetOpParallelSignatures(
   } else {
     if (conf.use_bias()) { CHECK(!conf.has_bias()); }
     op_parallel_signatures->emplace_back(MakeDataSplitOpParallelSignature(this));
-    op_parallel_signatures->emplace_back(MakeBroadcastOpParallelSignature(this));
+    op_parallel_signatures->emplace_back(MakeModelSplitOpParallelSignature(this));
   }
 }
 
