@@ -257,8 +257,9 @@ class Operator {
   OutputBlobModifier* MutOutputBlobModifier4Obn(const std::string& obn);
 
  private:
-  virtual void GetOpParallelSignatures(
-      std::vector<std::unique_ptr<const OpParallelSignature>>*) const;
+  void GetSbpSignaturesIf(std::vector<std::unique_ptr<const SbpSignature>>*) const;
+
+  virtual void GetSbpSignatures(std::vector<std::unique_ptr<const SbpSignature>>*) const;
   LogicalBlobId dtbn2lbi(const std::string& data_tmp_bn) const;
   LogicalBlobId fbbn2lbi(const std::string& fw_buf_bn) const { return dtbn2lbi(fw_buf_bn); }
   LogicalBlobId bbbn2lbi(const std::string& bw_buf_bn) const { return dtbn2lbi(bw_buf_bn); }

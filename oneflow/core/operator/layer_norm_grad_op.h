@@ -18,8 +18,7 @@ class LayerNormGradOp final : public Operator {
 
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
-  void GetOpParallelSignatures(
-      std::vector<std::unique_ptr<const OpParallelSignature>>*) const override;
+  void GetSbpSignatures(std::vector<std::unique_ptr<const SbpSignature>>*) const override;
 };
 
 }  // namespace oneflow
