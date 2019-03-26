@@ -6,7 +6,7 @@ void KeepHeaderOnlyOp::InferBlobDescs(std::function<BlobDesc*(const std::string&
                                 const ParallelContext* parallel_ctx) const {
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   *out = *GetBlobDesc4BnInOp("in");
-  out->set_decouple_header_and_body(true);
+  out->set_is_body_disabled(true);
 }
 
 REGISTER_OP(OperatorConf::kKeepHeaderOnlyConf, KeepHeaderOnlyOp);

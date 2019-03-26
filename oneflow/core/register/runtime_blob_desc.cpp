@@ -47,8 +47,8 @@ bool RtBlobDesc::has_loss_instance_num_field() const {
   return header_pod_desc_.HasField(FieldKey::kLossInstanceNum);
 }
 
-bool RtBlobDesc::decouple_header_and_body() const {
-  return blob_desc_proto_.decouple_header_and_body();
+bool RtBlobDesc::is_body_disabled() const {
+  return blob_desc_proto_.is_body_disabled();
 }
 
 size_t RtBlobDesc::ByteSizeOfBlobHeader() const { return header_pod_desc_.ByteSize(); }
