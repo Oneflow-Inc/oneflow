@@ -7,7 +7,7 @@ void ConvDataGradKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   ConvDataGradKernelUtil<device_type, T>::Compute(
       ctx.device_ctx, this->kernel_conf().conv_data_grad_conf(),
-      this->op_conf().conv_data_grad_conf().conv_conf(), BnInOp2Blob("dx"), BnInOp2Blob("filter"),
+      this->op_conf().conv_data_grad_conf().conv_conf(), BnInOp2Blob("dy"), BnInOp2Blob("filter"),
       BnInOp2Blob("dx"), BnInOp2Blob("buf"));
 }
 
