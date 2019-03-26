@@ -7,21 +7,20 @@
 
 namespace oneflow {
 
-void AutoVar(const OpGraph& op_graph, JobConf1* job_conf, const LogicalBlobId& tick_lbi);
+void AutoVar(const OpGraph& op_graph, JobConf1* job_conf);
 
-OperatorConf GenerateVariableOpConf(const LogicalBlobId& tick_lbi, const BlobDesc& blob_desc,
-                                    const std::string& name, const std::string& model_name);
+OperatorConf GenerateVariableOpConf(const BlobDesc& blob_desc, const std::string& name,
+                                    const std::string& model_name);
 
 class GenerateInputVarOpConfWrapperStruct final {
  public:
   using Func = std::function<void(const Operator&, std::vector<OperatorConf>*,
-                                  const std::function<const BlobDesc&(const std::string&)>&,
-                                  const LogicalBlobId&)>;
+                                  const std::function<const BlobDesc&(const std::string&)>&)>;
   GenerateInputVarOpConfWrapperStruct(const Func& f) : func_(std::make_unique<Func>(f)) {}
   void Call(const Operator& op, std::vector<OperatorConf>* op_confs,
-            const std::function<const BlobDesc&(const std::string&)>& UnitBatchSizeBlobDesc4BnInOp,
-            const LogicalBlobId& tick_lbi) const {
-    (*func_)(op, op_confs, UnitBatchSizeBlobDesc4BnInOp, tick_lbi);
+            const std::function<const BlobDesc&(const std::string&)>& UnitBatchSizeBlobDesc4BnInOp)
+      const {
+    (*func_)(op, op_confs, UnitBatchSizeBlobDesc4BnInOp);
   }
 
  private:

@@ -12,25 +12,6 @@ JobConfBuilder::JobConfBuilder(JobConf1* job_conf) : job_conf_(job_conf) {
   }
 }
 
-LogicalBlobId JobConfBuilder::FindOrCreateTickLbi() const {
-  LogicalBlobId ret;
-  for (const auto& pair : op_name2op_conf_) {
-    if (pair.second->has_tick_conf()) {
-      CHECK(ret == LogicalBlobId());
-      GenLogicalBlobId(pair.second->name() + "/out");
-    }
-  }
-  if (ret != LogicalBlobId()) { return ret; }
-  OperatorConf op_conf;
-  op_conf.set_name("tick_" + NewUniqueId());
-  op_conf.mutable_tick_conf()->set_out("out");
-  ParallelConf parallel_conf;
-  parallel_conf.set_policy(kDataParallel);
-  parallel_conf.add_device_name("0:cpu:0");
-  AddOps(parallel_conf, {op_conf});
-  return GenLogicalBlobId(op_conf.name() + "/out");
-}
-
 void JobConfBuilder::AddOps(const ParallelConf& parallel_conf,
                             const std::vector<OperatorConf>& op_confs) const {
   auto* placemnt_group = job_conf_->mutable_placement()->add_placement_group();
