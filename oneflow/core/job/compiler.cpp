@@ -55,7 +55,8 @@ void AutoComplete() {
       const JobDesc* job_desc = Global<JobDesc>::Get();
       OpGraph op_graph(job_desc);
       JobConf1 job_conf(job_desc->job_conf());
-      AutoVar(op_graph, &job_conf);
+      LogicalBlobId tick_lbi = JobConfBuilder(&job_conf).FindOrCreateTickLbi();
+      AutoVar(op_graph, &job_conf, tick_lbi);
       Global<JobDesc>::Delete();
       Global<JobDesc>::New(job_conf);
     }

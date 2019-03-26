@@ -11,6 +11,7 @@ class JobConfBuilder final {
   explicit JobConfBuilder(JobConf1* job_conf);
   ~JobConfBuilder() = default;
 
+  LogicalBlobId FindOrCreateTickLbi() const;
   void AddOps(const ParallelConf& parallel_conf, const std::vector<OperatorConf>& op_confs) const;
   void AddOrMutOps(const ParallelConf& parallel_conf,
                    const std::vector<OperatorConf>& op_confs) const;

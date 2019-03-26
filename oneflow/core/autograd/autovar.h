@@ -7,23 +7,21 @@
 
 namespace oneflow {
 
-void AutoVar(const OpGraph& op_graph, JobConf1* job_conf);
+void AutoVar(const OpGraph& op_graph, JobConf1* job_conf, const LogicalBlobId& tick_lbi);
 
-OperatorConf GenerateVariableOpConf(const BlobDesc& blob_desc, const std::string& name,
-                                    const std::string& model_name);
-
-void GenerateInputVarOpConfIf(const Operator&, std::vector<OperatorConf>*,
-                              const std::function<const BlobDesc&(const std::string&)>&);
+OperatorConf GenerateVariableOpConf(const LogicalBlobId& tick_lbi, const BlobDesc& blob_desc,
+                                    const std::string& name, const std::string& model_name);
 
 class GenerateInputVarOpConfWrapperStruct final {
  public:
   using Func = std::function<void(const Operator&, std::vector<OperatorConf>*,
-                                  const std::function<const BlobDesc&(const std::string&)>&)>;
+                                  const std::function<const BlobDesc&(const std::string&)>&,
+                                  const LogicalBlobId&)>;
   GenerateInputVarOpConfWrapperStruct(const Func& f) : func_(std::make_unique<Func>(f)) {}
   void Call(const Operator& op, std::vector<OperatorConf>* op_confs,
-            const std::function<const BlobDesc&(const std::string&)>& UnitBatchSizeBlobDesc4BnInOp)
-      const {
-    (*func_)(op, op_confs, UnitBatchSizeBlobDesc4BnInOp);
+            const std::function<const BlobDesc&(const std::string&)>& UnitBatchSizeBlobDesc4BnInOp,
+            const LogicalBlobId& tick_lbi) const {
+    (*func_)(op, op_confs, UnitBatchSizeBlobDesc4BnInOp, tick_lbi);
   }
 
  private:

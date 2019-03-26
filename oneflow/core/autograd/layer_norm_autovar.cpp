@@ -6,15 +6,16 @@ namespace {
 
 void GenerateInputVarOpConf(
     const Operator& op, std::vector<OperatorConf>* op_confs,
-    const std::function<const BlobDesc&(const std::string&)>& UnitBatchSizeBlobDesc4BnInOp) {
+    const std::function<const BlobDesc&(const std::string&)>& UnitBatchSizeBlobDesc4BnInOp,
+    const LogicalBlobId& tick_lbi) {
   CHECK(op.op_conf().has_layer_norm_conf());
   OperatorConf layer_norm_op_conf(op.op_conf());
   auto* mut_conf = layer_norm_op_conf.mutable_layer_norm_conf();
   const auto& conf = op.op_conf().layer_norm_conf();
   if (conf.center()) {
     if (!conf.has_beta()) {
-      const OperatorConf& beta_var_op = GenerateVariableOpConf(UnitBatchSizeBlobDesc4BnInOp("beta"),
-                                                               op.op_name() + "-beta", "beta");
+      const OperatorConf& beta_var_op = GenerateVariableOpConf(
+          tick_lbi, UnitBatchSizeBlobDesc4BnInOp("beta"), op.op_name() + "-beta", "beta");
       op_confs->push_back(beta_var_op);
       mut_conf->set_beta(beta_var_op.name() + "/out");
     }
@@ -22,7 +23,7 @@ void GenerateInputVarOpConf(
   if (conf.scale()) {
     if (!conf.has_gamma()) {
       const OperatorConf& gamma_var_op = GenerateVariableOpConf(
-          UnitBatchSizeBlobDesc4BnInOp("gamma"), op.op_name() + "-gamma", "gamma");
+          tick_lbi, UnitBatchSizeBlobDesc4BnInOp("gamma"), op.op_name() + "-gamma", "gamma");
       op_confs->push_back(gamma_var_op);
       mut_conf->set_gamma(gamma_var_op.name() + "/out");
     }
