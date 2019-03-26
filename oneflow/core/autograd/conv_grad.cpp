@@ -37,7 +37,7 @@ void GenerateBackwardOpConf(
   const ConvConf conv_conf = GenConvConfFromConvOpConf(op.op_conf());
   if (op.GetValFromCustomizedConf<bool>("use_bias") && DiffLbi4BnInOp("bias") != nullptr) {
     OperatorConf bias_grad_op;
-    bias_grad_op.set_name(op.op_name() + "_bias_grad");
+    bias_grad_op.set_name("System-AutoGrad-" + op.op_name() + "-BiasGrad");
     ConvBiasGradOpConf* conf = bias_grad_op.mutable_conv_bias_grad_conf();
     conf->set_data_format(conv_conf.data_format());
     conf->set_num_dims(conv_conf.num_dims());
@@ -49,7 +49,7 @@ void GenerateBackwardOpConf(
   }
   if (DiffLbi4BnInOp("weight") != nullptr) {
     OperatorConf filter_grad_op;
-    filter_grad_op.set_name(op.op_name() + "_filter_grad");
+    filter_grad_op.set_name("System-AutoGrad-" + op.op_name() + "-FilterGrad");
     ConvFilterGradOpConf* conf = filter_grad_op.mutable_conv_filter_grad_conf();
     *conf->mutable_conv_conf() = conv_conf;
     conf->set_dy(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
@@ -61,7 +61,7 @@ void GenerateBackwardOpConf(
   }
   if (DiffLbi4BnInOp("in") != nullptr) {
     OperatorConf data_grad_op;
-    data_grad_op.set_name(op.op_name() + "_data_grad");
+    data_grad_op.set_name("System-AutoGrad-" + op.op_name() + "DataGrad");
     ConvDataGradOpConf* conf = data_grad_op.mutable_conv_data_grad_conf();
     *conf->mutable_conv_conf() = conv_conf;
     conf->set_dy(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
