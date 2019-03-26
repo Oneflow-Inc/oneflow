@@ -7,8 +7,7 @@ void CalculateScaleOp::InitFromOpConf() {
   EnrollInputBn("origin_height", false);
   EnrollInputBn("origin_width", false);
   EnrollOutputBn("scale", false);
-  EnrollOutputBn("height", false);
-  EnrollOutputBn("width", false);
+  EnrollOutputBn("image_size", false);
 }
 
 void CalculateScaleOp::InferBlobDescs(
@@ -28,12 +27,13 @@ void CalculateScaleOp::InferBlobDescs(
 
   // scale
   BlobDesc* scale = GetBlobDesc4BnInOp("scale");
-  scale->mut_shape() = origin_height->shape();
+  scale->mut_shape() = Shape({origin_height->shape().At(0), 2});
   scale->set_data_type(Global<JobDesc>::Get()->DefaultDataType());
 
-  // height & width
-  *GetBlobDesc4BnInOp("height") = *origin_height;
-  *GetBlobDesc4BnInOp("width") = *origin_width;
+  // image_size
+  BlobDesc* image_size = GetBlobDesc4BnInOp("image_size");
+  image_size->mut_shape() = Shape({origin_height->shape().At(0), 2});
+  image_size->set_data_type(origin_height->data_type());
 }
 
 void CalculateScaleOp::VirtualGenKernelConf(

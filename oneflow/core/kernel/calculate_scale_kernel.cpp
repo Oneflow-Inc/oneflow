@@ -9,8 +9,7 @@ void CalculateScaleKernel<T>::ForwardDataContent(
   const int32_t* origin_height = origin_height_blob->dptr<int32_t>();
   const int32_t* origin_width = BnInOp2Blob("origin_width")->dptr<int32_t>();
   T* scale = BnInOp2Blob("scale")->mut_dptr<T>();
-  int32_t* height = BnInOp2Blob("height")->mut_dptr<int32_t>();
-  int32_t* width = BnInOp2Blob("width")->mut_dptr<int32_t>();
+  int32_t* image_size = BnInOp2Blob("image_size")->mut_dptr<int32_t>();
   const auto& conf = this->op_conf().calculate_scale_conf();
   const int32_t target_size = conf.target_size();
   const int32_t max_size = conf.max_size();
@@ -22,8 +21,13 @@ void CalculateScaleKernel<T>::ForwardDataContent(
     if (std::round(scale[i] * im_size_max) > max_size) {
       scale[i] = static_cast<T>(max_size) / static_cast<T>(im_size_max);
     }
-    height[i] = static_cast<int32_t>(origin_height[i] * scale[i]);
-    width[i] = static_cast<int32_t>(origin_width[i] * scale[i]);
+    image_size[2 * i] = static_cast<int32_t>(origin_height[i] * scale[i]);
+    image_size[2 * i + 1] = static_cast<int32_t>(origin_width[i] * scale[i]);
+
+    // recalculate scales in y-direction and x-direction
+    scale[2 * i] = static_cast<float>(image_size[2 * i]) / static_cast<float>(origin_height[i]);
+    scale[2 * i + 1] =
+        static_cast<float>(image_size[2 * i + 1]) / static_cast<float>(origin_width[i]);
   }
 }
 

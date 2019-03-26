@@ -1383,11 +1383,10 @@ message CalculateScaleOpConf {
   required string origin_width = 2;
   // out
   required string scale = 3;
-  required string height = 4;
-  required string width = 5;
+  required string image_size = 4;
   // conf
-  required int32 target_size = 6;
-  required int32 max_size = 7;
+  required int32 target_size = 5;
+  required int32 max_size = 6;
 }
 
 message ReshapeInstanceShapeToDim0OpConf {
