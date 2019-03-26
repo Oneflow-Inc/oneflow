@@ -41,7 +41,7 @@ void GenerateBackwardOpConf(
     ConvBiasGradOpConf* conf = bias_grad_op.mutable_conv_bias_grad_conf();
     conf->set_data_format(conv_conf.data_format());
     conf->set_num_dims(conv_conf.num_dims());
-    conf->set_dy(GenLogicalBlobName(op.BnInOp2Lbi("out")));
+    conf->set_dy(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     conf->set_bias_diff("bias_diff");
     op_confs->push_back(bias_grad_op);
     DiffLbi4BnInOp("bias")->set_op_name(bias_grad_op.name());
@@ -64,7 +64,7 @@ void GenerateBackwardOpConf(
     data_grad_op.set_name(op.op_name() + "_data_grad");
     ConvDataGradOpConf* conf = data_grad_op.mutable_conv_data_grad_conf();
     *conf->mutable_conv_conf() = conv_conf;
-    conf->set_dy(GenLogicalBlobName(op.BnInOp2Lbi("out")));
+    conf->set_dy(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     conf->set_filter(GenLogicalBlobName(op.BnInOp2Lbi("weight")));
     conf->set_x_like(GenLogicalBlobName(op.BnInOp2Lbi("in")));
     conf->set_dy("dx");
