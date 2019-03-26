@@ -52,7 +52,7 @@ void GenerateBackwardOpConf(
     filter_grad_op.set_name(op.op_name() + "_filter_grad");
     ConvFilterGradOpConf* conf = filter_grad_op.mutable_conv_filter_grad_conf();
     *conf->mutable_conv_conf() = conv_conf;
-    conf->set_dy(GenLogicalBlobName(op.BnInOp2Lbi("out")));
+    conf->set_dy(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     conf->set_x(GenLogicalBlobName(op.BnInOp2Lbi("in")));
     conf->set_filter_diff("filter_diff");
     op_confs->push_back(filter_grad_op);
