@@ -15,23 +15,23 @@ int64_t GetGatherAxis(const GatherOpConf& conf, const BlobDesc* in_blob_desc) {
   return GetGatherAxis(conf, in_blob_desc->shape().NumAxes());
 }
 
-class Gather_DB_MS_2_P_OpParallelSignature final : public OpParallelSignature {
+class Gather_DB_MS_2_P_SbpSignature final : public ParallelSbpSignature {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(Gather_DB_MS_2_P_OpParallelSignature);
-  ~Gather_DB_MS_2_P_OpParallelSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(Gather_DB_MS_2_P_SbpSignature);
+  ~Gather_DB_MS_2_P_SbpSignature() override = default;
 
-  Gather_DB_MS_2_P_OpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
+  Gather_DB_MS_2_P_SbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
 
   const std::string Description() const override { return op().op_name() + ": (C, S) -> P"; }
 
-  const OpParallelMatchResult GetMatchResult(
+  const SbpSigMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelDesc& parallel_desc) const override {
     const SbpInferHint& in_sbp_infer_hint = SbpInferHint4BnInOp("in");
-    if (!in_sbp_infer_hint.is_model_split()) { return MakeOpParallelMatchSignatureMismatch(); }
-    if (in_sbp_infer_hint.split_axis() != 0) { return MakeOpParallelMatchSignatureMismatch(); }
-    if (parallel_desc.policy() == kModelParallel) { return MakeOpParallelMatchSuccess(); }
-    return MakeOpParallelMatchParallelPolicyError(parallel_desc.policy(), kModelParallel);
+    if (!in_sbp_infer_hint.is_model_split()) { return MakeSbpSigMatchSignatureMismatch(); }
+    if (in_sbp_infer_hint.split_axis() != 0) { return MakeSbpSigMatchSignatureMismatch(); }
+    if (parallel_desc.policy() == kModelParallel) { return MakeSbpSigMatchSuccess(); }
+    return MakeSbpSigMatchParallelPolicyError(parallel_desc.policy(), kModelParallel);
   }
 
   void GenerateSignature(
@@ -87,16 +87,16 @@ void GatherOp::VirtualGenKernelConf(
   kernel_conf->mutable_gather_conf()->set_axis(axis);
 }
 
-void GatherOp::GetOpParallelSignatures(
-    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(MakeDataSplitOpParallelSignature(this));
-  op_parallel_signatures->emplace_back(Make_DS_MB_2_DS_OpParallelSignature(this));
+void GatherOp::GetSbpSignatures(
+    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
+  op_parallel_signatures->emplace_back(MakeDataSplitSbpSignature(this));
+  op_parallel_signatures->emplace_back(Make_DS_MB_2_DS_SbpSignature(this));
   const int64_t gather_axis = op_conf().gather_conf().axis();
   if (gather_axis >= 0) {
-    op_parallel_signatures->emplace_back(Make_DB_MS_2_MS_OpParallelSignature(
+    op_parallel_signatures->emplace_back(Make_DB_MS_2_MS_SbpSignature(
         this, [gather_axis](const int32_t axis) { return axis != gather_axis; }));
   }
-  op_parallel_signatures->emplace_back(new Gather_DB_MS_2_P_OpParallelSignature(this));
+  op_parallel_signatures->emplace_back(new Gather_DB_MS_2_P_SbpSignature(this));
 }
 
 int32_t GatherOp::OutputBlobModelSplitAxis(
