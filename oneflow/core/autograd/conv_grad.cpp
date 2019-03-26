@@ -67,7 +67,7 @@ void GenerateBackwardOpConf(
   LogicalBlobId* in_diff_lbi = DiffLbi4BnInOp("in");
   if (in_diff_lbi != nullptr) {
     OperatorConf data_grad_op;
-    data_grad_op.set_name("System-AutoGrad-" + op.op_name() + "DataGrad");
+    data_grad_op.set_name("System-AutoGrad-" + op.op_name() + "-DataGrad");
     ConvDataGradOpConf* conf = data_grad_op.mutable_conv_data_grad_conf();
     *conf->mutable_conv_conf() = conv_conf;
     conf->set_dy(out_diff_lbn);
