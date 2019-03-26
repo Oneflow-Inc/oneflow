@@ -480,4 +480,6 @@ BackwardLogicalNode* RepeatForwardLogicalNode::NewCorrectBackwardNode() {
   return new RepeatBackwardLogicalNode();
 }
 
+BackwardLogicalNode* KeepHeaderOnlyLogicalNode::NewCorrectBackwardNode() { UNIMPLEMENTED(); }
+
 }  // namespace oneflow
