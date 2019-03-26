@@ -8,7 +8,6 @@ void GenerateBackwardOpConf(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) {
   CHECK(op.op_conf().has_fully_connected_conf());
-  OperatorConf fully_connected_conf(op.op_conf());
   const auto& conf = op.op_conf().fully_connected_conf();
   if (DiffLbi4BnInOp("in") != nullptr) {
     OperatorConf matmul_in_op;
