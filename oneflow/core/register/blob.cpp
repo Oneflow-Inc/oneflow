@@ -207,11 +207,14 @@ const Shape& Blob::dynamic_shape() const {
     }
   }
   if (instance_shape_ptr_ != nullptr && use_instance_shape_) {
+    int64_t total_dim_val = 1;
     for (size_t i = 0; i < static_shape().NumAxes() - 1; ++i) {
       int64_t dim_val = *(instance_shape_ptr_ + i);
       if (dim_val != dynamic_shape_.At(i + 1)) { dynamic_shape_.Set(i + 1, dim_val); }
-      CHECK(dim_val > 0 && dim_val <= static_shape().At(i + 1));
+      CHECK_GT(dim_val, 0);
+      total_dim_val *= dim_val;
     }
+    CHECK_LE(total_dim_val, static_shape().elem_cnt());
   }
   return dynamic_shape_;
 }
