@@ -11,6 +11,8 @@ class LARSModelUpdateOp final : public NormalModelUpdtOp {
   LARSModelUpdateOp() = default;
   ~LARSModelUpdateOp() = default;
 
+  const PbMessage& GetCustomizedConf() const override;
+
  private:
   void MdUpdtVirtualInitFromOpConf() override;
   void MdUpdtVirtualInferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

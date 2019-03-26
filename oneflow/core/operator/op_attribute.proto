@@ -31,7 +31,7 @@ message OpAttribute {
 
   repeated string forward_model_bns = 13;
   repeated string const_buf_bns = 14;
-  
+
   map<string, InputBlobModifier> ibn2input_blob_modifier = 15;
   map<string, OutputBlobModifier> obn2output_blob_modifier = 16;
 }

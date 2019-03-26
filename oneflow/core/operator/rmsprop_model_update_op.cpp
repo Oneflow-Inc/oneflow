@@ -13,6 +13,18 @@ void RMSPropModelUpdateOp::MdUpdtVirtualInferBlobDescs(
   *GetBlobDesc4BnInOp("mean_square") = *model_blob_desc;
 }
 
+const PbMessage& RMSPropModelUpdateOp::GetCustomizedConf() const {
+  if (Global<JobDesc>::Get()->IsTrain()) {
+    return op_conf().normal_mdupdt_conf();
+  } else if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+    return op_conf().rmsprop_model_update_conf();
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
 REGISTER_CLASS(NormalModelUpdateOpUserConf::kRmspropConf, NormalModelUpdtOp, RMSPropModelUpdateOp);
+
+REGISTER_OP(OperatorConf::kRmspropModelUpdateConf, RMSPropModelUpdateOp);
 
 }  // namespace oneflow

@@ -45,6 +45,14 @@ class Gather_DB_MS_2_P_OpParallelSignature final : public OpParallelSignature {
 
 }  // namespace
 
+Shape GatherGetOutShape(const Shape& in, const Shape& indices, const int64_t axis) {
+  std::vector<int64_t> dim_vec;
+  dim_vec.insert(dim_vec.end(), in.dim_vec().cbegin(), in.dim_vec().cbegin() + axis);
+  dim_vec.insert(dim_vec.end(), indices.dim_vec().cbegin(), indices.dim_vec().cend());
+  dim_vec.insert(dim_vec.end(), in.dim_vec().cbegin() + axis + 1, in.dim_vec().end());
+  return Shape(dim_vec);
+}
+
 void GatherOp::InitFromOpConf() {
   CHECK(op_conf().has_gather_conf());
   EnrollInputBn("indices", false);
@@ -69,14 +77,7 @@ void GatherOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
   const int64_t axis = GetGatherAxis(op_conf().gather_conf(), in);
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   *out = *in;
-  std::vector<int64_t> dim_vec;
-  dim_vec.insert(dim_vec.end(), in->shape().dim_vec().cbegin(),
-                 in->shape().dim_vec().cbegin() + axis);
-  dim_vec.insert(dim_vec.end(), indices->shape().dim_vec().cbegin(),
-                 indices->shape().dim_vec().cend());
-  dim_vec.insert(dim_vec.end(), in->shape().dim_vec().cbegin() + axis + 1,
-                 in->shape().dim_vec().end());
-  out->mut_shape() = Shape(dim_vec);
+  out->mut_shape() = Shape(GatherGetOutShape(in->shape(), indices->shape(), axis));
 }
 
 void GatherOp::VirtualGenKernelConf(
@@ -90,8 +91,11 @@ void GatherOp::GetOpParallelSignatures(
     std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
   op_parallel_signatures->emplace_back(MakeDataSplitOpParallelSignature(this));
   op_parallel_signatures->emplace_back(Make_DS_MB_2_DS_OpParallelSignature(this));
-  auto GtZero = [](int32_t axis) { return axis > 0; };
-  op_parallel_signatures->emplace_back(Make_DB_MS_2_MS_OpParallelSignature(this, GtZero));
+  const int64_t gather_axis = op_conf().gather_conf().axis();
+  if (gather_axis >= 0) {
+    op_parallel_signatures->emplace_back(Make_DB_MS_2_MS_OpParallelSignature(
+        this, [gather_axis](const int32_t axis) { return axis != gather_axis; }));
+  }
   op_parallel_signatures->emplace_back(new Gather_DB_MS_2_P_OpParallelSignature(this));
 }
 
