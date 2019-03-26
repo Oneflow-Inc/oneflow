@@ -12,7 +12,7 @@ void AddKeepHeaderOnlyOp(const OpGraph& op_graph, JobConf1* job_conf) {
     std::vector<std::string> ibns = node->op().GetHeaderOnlyIbns();
     if (ibns.empty()) { return; }
 
-    auto lbi2op_edge = [node](const LogicalBlobId& lbi) -> OpEdge* {
+    auto OpEdge4Lbi = [node](const LogicalBlobId& lbi) -> OpEdge* {
       for (OpEdge* edge : node->in_edges()) {
         for (const LogicalBlobId& edge_lbi : edge->lbis()) {
           if (lbi == edge_lbi) { return edge; }
@@ -21,7 +21,7 @@ void AddKeepHeaderOnlyOp(const OpGraph& op_graph, JobConf1* job_conf) {
     };
     for (const std::string& ibn : ibns) {
       const LogicalBlobId& lbi = node->op().BnInOp2Lbi(ibn);
-      OpEdge* edge = lbi2op_edge(lbi);
+      OpEdge* edge = OpEdge4Lbi(lbi);
 
       OperatorConf kho_conf;
       kho_conf.set_name(node->op().op_name() + "-" + ibn + "-keep_header_only");
@@ -34,7 +34,7 @@ void AddKeepHeaderOnlyOp(const OpGraph& op_graph, JobConf1* job_conf) {
       PbMessage* op_type_conf = MutableMessageInPbMessage(&dst_op_conf, dst_op_conf.op_type_case());
       std::string lbn = kho_conf.name() + "/out";
       SetBnValInOpTypeConf(op_type_conf, ibn, kho_conf.keep_header_only_conf().in(), lbn);
-      job_conf_builder.AddOrMutOps(edge->dst_node()->parallel_desc().parallel_conf(), std::vector<OperatorConf>{dst_op_conf});
+      job_conf_builder.MutOps(std::vector<OperatorConf>{dst_op_conf});
     }
   });
 }

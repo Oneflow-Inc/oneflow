@@ -65,7 +65,7 @@ BlobDesc::BlobDesc(const StructPodDesc& header_pod_desc, int64_t header_byte_siz
       has_dim2_valid_num_(false),
       has_record_id_in_device_piece_(false),
       has_loss_instance_num_(false),
-      decouple_header_and_body_(false);
+      decouple_header_and_body_(false),
       max_col_num_(max_col_num),
       blob_mem_id_(-1),
       body_field_(shape, data_type) {

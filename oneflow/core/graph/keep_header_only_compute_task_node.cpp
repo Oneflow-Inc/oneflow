@@ -5,7 +5,7 @@
 namespace oneflow {
 
 void KeepHeaderOnlyCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  ProduceRegst("out", false, 2, 2);
+  ProduceRegst("out", false, 100, 100);
   BindEdgeWithProducedRegst(SoleOutEdge(), "out");
 }
 
