@@ -5,21 +5,20 @@ namespace oneflow {
 
 namespace {
 
-class GatherGradDataParallelOpParallelSignature final : public OpParallelSignature {
+class GatherGradDataParallelSbpSignature final : public ParallelSbpSignature {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(GatherGradDataParallelOpParallelSignature);
-  ~GatherGradDataParallelOpParallelSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(GatherGradDataParallelSbpSignature);
+  ~GatherGradDataParallelSbpSignature() override = default;
 
-  explicit GatherGradDataParallelOpParallelSignature(const Operator* op)
-      : OpParallelSignature(op) {}
+  explicit GatherGradDataParallelSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
 
   const std::string Description() const override { return op().op_name() + ": S -> P"; }
 
-  const OpParallelMatchResult GetMatchResult(
+  const SbpSigMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelDesc& parallel_desc) const override {
-    if (parallel_desc.policy() == kDataParallel) { return MakeOpParallelMatchSuccess(); }
-    return MakeOpParallelMatchParallelPolicyError(parallel_desc.policy(), kDataParallel);
+    if (parallel_desc.policy() == kDataParallel) { return MakeSbpSigMatchSuccess(); }
+    return MakeSbpSigMatchParallelPolicyError(parallel_desc.policy(), kDataParallel);
   }
 
   void GenerateSignature(
@@ -63,10 +62,10 @@ void GatherGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   in_diff->mut_shape() = Shape(in_diff_dim_vec);
 }
 
-void GatherGradOp::GetOpParallelSignatures(
-    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
+void GatherGradOp::GetSbpSignatures(
+    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
   // TODO: support model parallel
-  op_parallel_signatures->emplace_back(new GatherGradDataParallelOpParallelSignature(this));
+  op_parallel_signatures->emplace_back(new GatherGradDataParallelSbpSignature(this));
 }
 
 REGISTER_OP(OperatorConf::kGatherGradConf, GatherGradOp);

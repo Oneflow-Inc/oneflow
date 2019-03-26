@@ -4,24 +4,24 @@ namespace oneflow {
 
 namespace {
 
-class TupleIdentityOpParallelSignature final : public OpParallelSignature {
+class TupleIdentitySbpSignature final : public ParallelSbpSignature {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(TupleIdentityOpParallelSignature);
-  ~TupleIdentityOpParallelSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(TupleIdentitySbpSignature);
+  ~TupleIdentitySbpSignature() override = default;
 
-  TupleIdentityOpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
+  TupleIdentitySbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
 
   const std::string Description() const override { return op().op_name() + ": A -> A"; }
 
-  const OpParallelMatchResult GetMatchResult(
+  const SbpSigMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelDesc& parallel_desc) const override {
     const auto& ibn = op().input_bns().Get(0);
     if (parallel_desc.parallel_num() != SbpInferHint4BnInOp(ibn).parallel_num()) {
-      return MakeOpParallelMatchParallelNumError(parallel_desc.parallel_num(),
-                                                 SbpInferHint4BnInOp(ibn).parallel_num());
+      return MakeSbpSigMatchParallelNumError(parallel_desc.parallel_num(),
+                                             SbpInferHint4BnInOp(ibn).parallel_num());
     }
-    return MakeOpParallelMatchSuccess();
+    return MakeSbpSigMatchSuccess();
   }
 
   void GenerateSignature(
@@ -60,9 +60,9 @@ void TupleIdentityOp::InferBlobDescs(
   }
 }
 
-void TupleIdentityOp::GetOpParallelSignatures(
-    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new TupleIdentityOpParallelSignature(this));
+void TupleIdentityOp::GetSbpSignatures(
+    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
+  op_parallel_signatures->emplace_back(new TupleIdentitySbpSignature(this));
 }
 
 REGISTER_OP(OperatorConf::kTupleIdentityConf, TupleIdentityOp);

@@ -33,9 +33,9 @@ void BatchGatherOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   out->mut_shape() = Shape(out_dim_vec);
 }
 
-void BatchGatherOp::GetOpParallelSignatures(
-    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(MakeDataSplitOpParallelSignature(this));
+void BatchGatherOp::GetSbpSignatures(
+    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
+  op_parallel_signatures->emplace_back(MakeDataSplitSbpSignature(this));
 }
 
 REGISTER_OP(OperatorConf::kBatchGatherConf, BatchGatherOp);
