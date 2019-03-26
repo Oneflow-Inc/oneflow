@@ -29,6 +29,7 @@ void BlobDesc::InitFromProto(const BlobDescProto& proto) {
   max_col_num_ = proto.header().max_col_num();
   blob_mem_id_ = proto.header().blob_mem_id();
   header_pod_desc_.InitFromProto(proto.header().header_pod_desc());
+  decouple_header_and_body_ = proto.decouple_header_and_body();
   if (proto.header().has_opaque_header()) {
     header_is_opaque_ = true;
     has_data_id_ = false;
@@ -64,6 +65,7 @@ BlobDesc::BlobDesc(const StructPodDesc& header_pod_desc, int64_t header_byte_siz
       has_dim2_valid_num_(false),
       has_record_id_in_device_piece_(false),
       has_loss_instance_num_(false),
+      decouple_header_and_body_(false);
       max_col_num_(max_col_num),
       blob_mem_id_(-1),
       body_field_(shape, data_type) {
@@ -200,7 +202,8 @@ bool BlobDesc::operator==(const BlobDesc& rhs) const {
          && has_dim2_valid_num_ == rhs.has_dim2_valid_num_
          && has_record_id_in_device_piece_ == rhs.has_record_id_in_device_piece_
          && has_loss_instance_num_ == rhs.has_loss_instance_num_ && max_col_num_ == rhs.max_col_num_
-         && blob_mem_id_ == rhs.blob_mem_id_ && body_field_ == rhs.body_field_;
+         && blob_mem_id_ == rhs.blob_mem_id_ && body_field_ == rhs.body_field_
+         && decouple_header_and_body_ == rhs.decouple_header_and_body_;
 }
 
 BlobDesc& BlobDesc::operator=(const BlobDesc& blob_desc) {
