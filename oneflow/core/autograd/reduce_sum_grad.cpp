@@ -32,16 +32,8 @@ void GenerateBackwardOpConf(
     broadcast_like_op_conf->set_x(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     broadcast_like_op_conf->set_like(GenLogicalBlobName(op.BnInOp2Lbi("in")));
     broadcast_like_op_conf->set_y("y");
-    if (op.op_conf().reduce_sum_conf().axis().empty() == false
-        && op.op_conf().reduce_sum_conf().keep_dims() == false) {
-      std::vector<int64_t> kept_dims;
-      const PbRf<int32_t>& axis_repeated = op.op_conf().reduce_mean_conf().axis();
-      std::vector<int64_t> axis_vec = {axis_repeated.begin(), axis_repeated.end()};
-      const BlobDesc& in_blob = LogicalBlobDesc4BnInOp("in");
-      kept_dims = KeepDims(in_blob.shape().dim_vec(),
-                           ShiftAxisIfNegative(axis_vec, in_blob.shape().NumAxes()));
-      Shape(kept_dims).ToProto(broadcast_like_op_conf->mutable_kept_dims_shape());
-    }
+    const ReduceSumOpConf& reduce_sum_op_conf = op.op_conf().reduce_sum_conf();
+    broadcast_like_op_conf->mutable_axis()->CopyFrom(reduce_sum_op_conf.axis());
     op_confs->push_back(broadcast_like_op);
     DiffLbi4BnInOp("in")->set_op_name(broadcast_like_op.name());
     DiffLbi4BnInOp("in")->set_blob_name("y");

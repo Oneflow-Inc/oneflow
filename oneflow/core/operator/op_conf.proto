@@ -1002,7 +1002,7 @@ message BroadcastLikeOpConf {
   required string x = 1;
   required string like = 2;
   required string y = 3;
-  optional ShapeProto kept_dims_shape = 4;
+  repeated int32 axis = 4;
 }
 
 message BroadcastDivGradOpConf {
