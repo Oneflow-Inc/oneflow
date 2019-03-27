@@ -10,8 +10,8 @@ namespace {
 template<typename T>
 void ScaleSegmPolygonLists(const Blob* scale_blob, std::vector<std::vector<PolygonList>>* segms) {
   FOR_RANGE(size_t, n, 0, segms->size()) {
-    const T y_scale = *scale_blob->dptr<T>(2 * n);
-    const T x_scale = *scale_blob->dptr<T>(2 * n + 1);
+    const T y_scale = scale_blob->dptr<T>(n)[0];
+    const T x_scale = scale_blob->dptr<T>(n)[1];
     FOR_RANGE(size_t, g, 0, segms->at(n).size()) {
       FOR_RANGE(size_t, p, 0, segms->at(n).at(g).polygons_size()) {
         FOR_RANGE(size_t, i, 0, segms->at(n).at(g).polygons(p).value_size()) {

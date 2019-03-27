@@ -32,7 +32,7 @@ void ProposalKernel<T>::RegionProposal(
   const size_t num_anchors = anchors_blob->dim0_valid_num(0);
   CHECK_EQ(fm_height, bbox_pred_blob->shape().At(1));
   CHECK_EQ(fm_width, bbox_pred_blob->shape().At(2));
-  CHECK_EQ(num_anchors_per_fm, bbox_pred_blob->shape().At(3));
+  CHECK_EQ(num_anchors_per_fm * 4, bbox_pred_blob->shape().At(3));
   CHECK_EQ(num_anchors, fm_height * fm_width * num_anchors_per_fm);
 
   const T* score_ptr = class_prob_blob->dptr<T>(im_index);

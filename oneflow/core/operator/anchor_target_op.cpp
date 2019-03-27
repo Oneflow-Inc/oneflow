@@ -46,10 +46,6 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   CHECK(!gt_boxes_blob_desc->has_instance_shape_field());
   CHECK_EQ(gt_boxes_blob_desc->shape().At(0), num_images);
   CHECK_EQ(gt_boxes_blob_desc->data_type(), data_type);
-  // input: im_scale (N)
-  const BlobDesc* im_scale_blob_descs = GetBlobDesc4BnInOp("im_scale");
-  CHECK_EQ(im_scale_blob_descs->shape().At(0), num_images);
-  CHECK_EQ(im_scale_blob_descs->data_type(), data_type);
 
   const int64_t batch_height = images_blob_desc->shape().At(1);
   const int64_t batch_width = images_blob_desc->shape().At(2);
@@ -65,7 +61,7 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
     CHECK_GT(height, 0);
     CHECK_GT(width, 0);
     int64_t num_anchors_per_layer = height * width * num_anchors_per_cell;
-    // repeat output: class_labels (N, h_i, w_i, A) int32_t
+    // repeat output: anchors (h_i * w_i * A, 4) int32_t
     BlobDesc* anchors_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn("anchors", layer));
     anchors_blob_desc->set_data_type(data_type);
     anchors_blob_desc->mut_shape() = Shape({num_anchors_per_layer, 4});
@@ -114,8 +110,6 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   BlobDesc* anchor_best_match_gt_blob_desc = GetBlobDesc4BnInOp("anchor_best_match_gt");
   *anchor_best_match_gt_blob_desc = *anchor_inds_blob_desc;
   anchor_best_match_gt_blob_desc->set_data_type(DataType::kInt32);
-  // data_tmp: gt_boxes_scaled has the same shape as gt_boxes
-  *GetBlobDesc4BnInOp("gt_boxes_scaled") = *gt_boxes_blob_desc;
 }
 
 REGISTER_CPU_OP(OperatorConf::kAnchorTargetConf, AnchorTargetOp);
