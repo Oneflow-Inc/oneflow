@@ -8,6 +8,15 @@
 
 namespace oneflow {
 
+namespace {
+
+void CheckBlobInRegstNotDisabled(const RegstDescProto& regst_desc) {
+  CHECK(regst_desc.regst_desc_type().has_data_regst_desc());
+  CHECK(regst_desc.regst_desc_type().data_regst_desc().packed_blob_desc().is_body_disabled() == false);
+}
+
+} // namespace
+
 RegstMgr::RegstMgr(const Plan& plan) {
   std::list<const RegstDescProto*> regst_protos;
   for (const TaskProto& task : plan.task()) {
@@ -34,6 +43,7 @@ void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& re
     if (regst_desc->mem_shared_id() == -1) {
       return regst_desc_id2rt_regst_desc_.at(regst_desc->regst_desc_id())->TotalMainByteSize4AllRegst();
     } else {
+      CheckBlobInRegstNotDisabled(*regst_desc);
       return regst_desc_id2rt_regst_desc_.at(regst_desc->regst_desc_id())
                  ->TotalMainByteSize4AllRegst()
              + regst_desc->mem_shared_offset();
@@ -49,11 +59,15 @@ void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& re
   char* main_mem_ptr = nullptr;
   for (const RegstDescProto* regst_desc : sorted_regst_protos) {
     if (regst_desc->regst_desc_type().has_data_regst_desc() == false) { continue; }
-    CHECK_GT(GetMemSize4Regst(regst_desc), 0);
+    size_t mem_size = GetMemSize4Regst(regst_desc);
     int32_t current_mem_shared_id = regst_desc->mem_shared_id();
     if (current_mem_shared_id == -1 || (current_mem_shared_id != last_mem_shared_id)) {
-      main_mem_ptr = Global<MemoryAllocator>::Get()->Allocate(regst_desc->mem_case(),
-                                                              GetMemSize4Regst(regst_desc));
+      if (mem_size == 0) {
+        main_mem_ptr = nullptr;
+      } else {
+        main_mem_ptr = Global<MemoryAllocator>::Get()->Allocate(regst_desc->mem_case(),
+                                                                GetMemSize4Regst(regst_desc));
+      }
     }
     CHECK(regst_desc_id2main_mem_ptr_.emplace(regst_desc->regst_desc_id(), main_mem_ptr).second);
     last_mem_shared_id = current_mem_shared_id;
@@ -76,9 +90,9 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     }
     std::sort(lbi_pairs.begin(), lbi_pairs.end(), &CompareLbiBlobDescPair);
     CHECK(!lbi_pairs.empty());
-    CHECK(main_mem_ptr != nullptr);
   }
   if (regst_desc_proto.mem_shared_id() != -1) {
+    CheckBlobInRegstNotDisabled(regst_desc_proto);
     main_mem_ptr += regst_desc_proto.mem_shared_offset();
   }
   for (int64_t i = 0; i < rt_regst_desc->register_num(); ++i) {
@@ -88,6 +102,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
       NewBlobsInOneRegst(lbi_pairs, regst, rt_regst_desc, main_mem_ptr);
       if (rt_regst_desc->mem_case().has_host_mem()
           && rt_regst_desc->mem_case().host_mem().used_by_network()) {
+        CheckBlobInRegstNotDisabled(regst_desc_proto);
         regst->comm_net_token_ = Global<CommNet>::Get()->RegisterMemory(
             main_mem_ptr, rt_regst_desc->MainByteSize4OneRegst());
       }
@@ -116,6 +131,7 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
     cur_header_pointer = separated_mem_ptr;
     cur_body_pointer = main_mem_ptr;
   } else {
+    CHECK_NOTNULL(main_mem_ptr);
     regst->packed_blob_.reset(new Blob(regst, packed_blob_desc, main_mem_ptr));
     cur_header_pointer = main_mem_ptr;
     cur_body_pointer = main_mem_ptr + packed_blob_desc->ByteSizeOfBlobHeader();
@@ -123,9 +139,17 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
   rt_regst_desc->ForEachBlobDescOffsetInOnRegst(
       lbis, [&](const LbiBlobDescPair& lbi, int64_t body_offset, int64_t header_offset) {
         const RtBlobDesc* blob_desc = rt_regst_desc->GetRtBlobDescFromLbi(lbi.lbi());
-        std::unique_ptr<Blob> blob_ptr(new Blob(
-            regst, blob_desc, cur_header_pointer + header_offset, cur_body_pointer + body_offset));
-        InitOFRecordBlobIfNeed(blob_ptr.get());
+        std::unique_ptr<Blob> blob_ptr;
+        if (cur_body_pointer == nullptr) {
+          CHECK(rt_regst_desc->is_body_disabled());
+          blob_ptr = std::move(std::make_unique<Blob>(
+              regst, blob_desc, cur_header_pointer + header_offset, nullptr));
+        } else {
+          CHECK(rt_regst_desc->is_body_disabled() == false);
+          blob_ptr = std::move(std::make_unique<Blob>(
+              regst, blob_desc, cur_header_pointer + header_offset, cur_body_pointer + body_offset));
+          InitOFRecordBlobIfNeed(blob_ptr.get());
+        }
         CHECK(regst->lbi2blob_.emplace(lbi.lbi(), std::move(blob_ptr)).second);
       });
 }
