@@ -22,8 +22,7 @@ std::vector<int64_t> ShiftAxisIfNegative(std::vector<int64_t> axis_vec, const in
 
 void GenerateBackwardOpConf(
     const Operator& op, std::vector<OperatorConf>* op_confs,
-    const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
-    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
+    const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp) {
   CHECK(op.op_conf().has_reduce_mean_conf());
   if (DiffLbi4BnInOp("in") != nullptr) {
     OperatorConf reduce_mean_grad_op;
