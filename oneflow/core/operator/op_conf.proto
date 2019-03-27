@@ -942,20 +942,19 @@ message AnchorGeneratorConf {
 
 message ProposalOpConf {
   // in
-  required string class_prob = 1;
-  required string bbox_pred = 2;
-  required string image_height = 3;
-  required string image_width = 4;
+  required string image_size = 1;
+  required string class_prob = 2;
+  required string bbox_pred = 3;
+  required string anchors = 4;
   // out
   required string rois = 5;
   required string roi_probs = 6;
   // conf
-  required AnchorGeneratorConf anchor_generator_conf = 7;
-  required BBoxRegressionWeights bbox_reg_weights = 8;
-  required int32 pre_nms_top_n = 9;
-  required int32 post_nms_top_n = 10;
-  required float nms_threshold = 11;
-  optional int32 min_size = 12 [default = 0];
+  required BBoxRegressionWeights bbox_reg_weights = 7;
+  required int32 pre_nms_top_n = 8;
+  required int32 post_nms_top_n = 9;
+  required float nms_threshold = 10;
+  optional int32 min_size = 11 [default = 0];
 }
 
 message BBoxRegressionWeights {

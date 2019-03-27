@@ -6,34 +6,11 @@ namespace oneflow {
 template<typename T>
 void ProposalKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  GenerateAnchors(ctx.device_ctx, BnInOp2Blob);
   MultiThreadLoop(BnInOp2Blob("class_prob")->shape().At(0), [&](int64_t im_i) {
     RegionProposal(im_i, BnInOp2Blob);
     ApplyNms(im_i, BnInOp2Blob);
   });
-  WriteRoisToOutput(BnInOp2Blob);
-}
-
-template<typename T>
-void ProposalKernel<T>::GenerateAnchors(
-    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* bbox_pred_blob = BnInOp2Blob("bbox_pred");
-  const Blob* class_prob_blob = BnInOp2Blob("class_prob");
-  Blob* anchors_blob = BnInOp2Blob("anchors");
-  const int32_t fm_height = bbox_pred_blob->shape().At(1);
-  const int32_t fm_width = bbox_pred_blob->shape().At(2);
-  CHECK_EQ(class_prob_blob->shape().At(1), fm_height);
-  CHECK_EQ(class_prob_blob->shape().At(2), fm_width);
-
-  const AnchorGeneratorConf& anchor_generator_conf =
-      op_conf().proposal_conf().anchor_generator_conf();
-  auto scales_vec = PbRf2StdVec(anchor_generator_conf.anchor_scales());
-  auto ratios_vec = PbRf2StdVec(anchor_generator_conf.aspect_ratios());
-  const float fm_stride = anchor_generator_conf.feature_map_stride();
-  size_t num_anchors = BBoxUtil<MutBBox>::GenerateAnchors(
-      fm_stride, fm_height, fm_width, scales_vec, ratios_vec, anchors_blob->mut_dptr<T>());
-  CHECK_LE(num_anchors, anchors_blob->static_shape().At(0));
-  anchors_blob->set_dim0_valid_num(0, num_anchors);
+  Output(BnInOp2Blob);
 }
 
 template<typename T>
@@ -43,16 +20,22 @@ void ProposalKernel<T>::RegionProposal(
   const Blob* class_prob_blob = BnInOp2Blob("class_prob");
   const Blob* bbox_pred_blob = BnInOp2Blob("bbox_pred");
   const Blob* anchors_blob = BnInOp2Blob("anchors");
+  const Blob* image_size_blob = BnInOp2Blob("image_size");
   Blob* proposals_blob = BnInOp2Blob("proposals");
   Blob* proposal_inds_blob = BnInOp2Blob("proposal_inds");
+
   const int64_t fm_height = class_prob_blob->shape().At(1);
   const int64_t fm_width = class_prob_blob->shape().At(2);
   const int64_t num_anchors_per_fm = class_prob_blob->shape().At(3);
-  const int64_t im_height = BnInOp2Blob("image_height")->dptr<int32_t>()[im_index];
-  const int64_t im_width = BnInOp2Blob("image_width")->dptr<int32_t>()[im_index];
+  const int64_t im_height = image_size_blob->dptr<int32_t>(im_index)[0];
+  const int64_t im_width = image_size_blob->dptr<int32_t>(im_index)[1];
+  const size_t num_anchors = anchors_blob->dim0_valid_num(0);
+  CHECK_EQ(fm_height, bbox_pred_blob->shape().At(1));
+  CHECK_EQ(fm_width, bbox_pred_blob->shape().At(2));
+  CHECK_EQ(num_anchors_per_fm, bbox_pred_blob->shape().At(3));
+  CHECK_EQ(num_anchors, fm_height * fm_width * num_anchors_per_fm);
 
   const T* score_ptr = class_prob_blob->dptr<T>(im_index);
-  size_t num_anchors = fm_height * fm_width * num_anchors_per_fm;
   std::vector<int32_t> proposal_inds_vec(num_anchors);
   std::iota(proposal_inds_vec.begin(), proposal_inds_vec.end(), 0);
   std::sort(
@@ -94,8 +77,7 @@ void ProposalKernel<T>::ApplyNms(
 }
 
 template<typename T>
-void ProposalKernel<T>::WriteRoisToOutput(
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+void ProposalKernel<T>::Output(const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const Blob* score_blob = BnInOp2Blob("class_prob");
   const Blob* proposals_blob = BnInOp2Blob("proposals");
   const Blob* proposal_inds_blob = BnInOp2Blob("proposal_inds");
