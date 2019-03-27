@@ -2,6 +2,6 @@
 
 namespace oneflow {
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kTickConf, TickKernel, ARITHMETIC_DATA_TYPE_SEQ);
+ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kTickConf, TickKernel);
 
 }  // namespace oneflow
