@@ -15,20 +15,20 @@ void GenerateBackwardOpConf(
         op.op_conf().gather_conf().axis() < 0
             ? in_logical_blob_desc.shape().NumAxes() + op.op_conf().gather_conf().axis()
             : op.op_conf().gather_conf().axis();
-    // TODO: support all axis
-    CHECK_EQ(axis, 0);
+    CHECK_GE(axis, 0);
+    CHECK_LT(axis, in_logical_blob_desc.shape().NumAxes());
     const int64_t gather_dim_size = in_logical_blob_desc.shape().At(axis);
     OperatorConf gather_grad_op;
-    gather_grad_op.set_name(op.op_name() + "_grad");
+    gather_grad_op.set_name("System-AutoGrad-" + op.op_name());
     GatherGradOpConf* conf = gather_grad_op.mutable_gather_grad_conf();
     conf->set_axis(axis);
     conf->set_gather_dim_size(gather_dim_size);
     conf->set_indices(GenLogicalBlobName(op.BnInOp2Lbi("indices")));
-    conf->set_out_diff(GenLogicalBlobName(op.BnInOp2Lbi("out")));
+    conf->set_out_diff(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     conf->set_in_diff("in_diff");
     op_confs->push_back(gather_grad_op);
     DiffLbi4BnInOp("in")->set_op_name(gather_grad_op.name());
-    DiffLbi4BnInOp("in")->set_blob_name("in_diff");
+    DiffLbi4BnInOp("in")->set_blob_name(conf->in_diff());
   }
 }
 
