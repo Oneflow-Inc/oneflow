@@ -1,5 +1,6 @@
 #include "oneflow/core/job/job_conf_builder.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 

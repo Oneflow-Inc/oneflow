@@ -12,12 +12,11 @@ class JobConfBuilder final {
   ~JobConfBuilder() = default;
 
   void AddOps(const ParallelConf& parallel_conf, const std::vector<OperatorConf>& op_confs) const;
+  void MutOps(const std::vector<OperatorConf>& op_confs) const;
   void AddOrMutOps(const ParallelConf& parallel_conf,
                    const std::vector<OperatorConf>& op_confs) const;
 
  private:
-  void MutOps(const std::vector<OperatorConf>& op_confs) const;
-
   JobConf1* job_conf_;
   HashMap<std::string, OperatorConf*> op_name2op_conf_;
 };

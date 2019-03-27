@@ -484,6 +484,7 @@ void JobDesc::FixTickOpIfExists() {
     }
   }
   if (tick_op_conf == nullptr) { return; }
+  if (tick_op_conf->tick_conf().has_in()) { return; }
   std::map<OperatorConf::OpTypeCase, std::vector<OperatorConf*>> op_type_case2source_op_confs;
   FOR_RANGE(int, idx, 0, job_conf_.mutable_net()->op_size()) {
     OperatorConf* op_conf = job_conf_.mutable_net()->mutable_op(idx);
