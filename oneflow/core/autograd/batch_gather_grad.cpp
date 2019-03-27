@@ -23,7 +23,7 @@ void GenerateBackwardOpConf(
     conf->set_gather_dim_size(in_shape.At(indices_shape.NumAxes() - 1));
     op_confs->push_back(batch_gather_grad);
     DiffLbi4BnInOp("in")->set_op_name(batch_gather_grad.name());
-    DiffLbi4BnInOp("in")->set_blob_name("in_diff");
+    DiffLbi4BnInOp("in")->set_blob_name(conf->in_diff());
   }
 }
 
