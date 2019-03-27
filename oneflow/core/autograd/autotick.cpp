@@ -26,7 +26,7 @@ void AddAutoTick4VariableOp(const OpGraph& op_graph, JobConf1* job_conf) {
       new_var_op.mutable_variable_conf()->set_tick(tick_op.name() + "/out");
       var_ops.push_back(new_var_op);
     }
-    job_conf_builder.MutOps({tick_op});
+    job_conf_builder.MutOps(var_ops);
   }
 }
 
