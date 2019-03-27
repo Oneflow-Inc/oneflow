@@ -1147,12 +1147,11 @@ message MaskTargetOpConf {
   required string gt_boxes = 3;
   required string gt_segm_polygon_lists = 4;
   required string im_scale = 5;
-
   //outputs
   required string mask_rois = 6;
   required string masks = 7;
   required string mask_labels = 8;
-
+  // conf
   required int32 mask_height = 9;
   required int32 mask_width = 10;
 }

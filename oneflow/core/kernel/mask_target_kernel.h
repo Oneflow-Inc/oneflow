@@ -27,7 +27,6 @@ class MaskTargetKernel final : public KernelIf<DeviceType::kCPU> {
 
   void ParseSegmPolygonLists(const Blob* gt_segms,
                              std::vector<std::vector<PolygonList>>* segms) const;
-  void ComputeSegmBBoxes(const std::vector<std::vector<PolygonList>>& segms, Blob* bboxes) const;
   void Segm2BBox(const PolygonList& segm, SegmBBox* bbox) const;
   void Segm2Mask(const PolygonList& segm, const RoiBBox& fg_roi, size_t mask_h, size_t mask_w,
                  int32_t* mask) const;
