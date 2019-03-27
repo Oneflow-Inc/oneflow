@@ -1,5 +1,6 @@
 #include "oneflow/core/kernel/reduce_mean_grad_kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/ndarray/ndarray_util.h"
 
 namespace oneflow {
 
