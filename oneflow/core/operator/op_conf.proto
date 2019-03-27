@@ -1013,10 +1013,10 @@ message RoIAlignOpConf {
 
 message AnchorTargetOpConf {
   // in
-  required string gt_boxes = 1;
-  required string images = 2;
-  required string im_scale = 3;
+  required string images = 1;
+  required string gt_boxes = 2;
   // out
+  repeated string anchors = 3;
   repeated string regression_targets = 4;
   repeated string regression_weights = 5;
   repeated string class_labels = 6;
