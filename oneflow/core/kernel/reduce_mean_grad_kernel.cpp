@@ -26,7 +26,7 @@ void ReduceMeanGradKernel<device_type, T>::ForwardDataContent(
     NdarrayUtil<device_type, T>::BroadcastTo(
         ctx.device_ctx, XpuVarNdarray<T>(dx_blob, num_axes),
         XpuVarNdarray<const T>(
-            x_blob->shape().CreateReducedShape({conf.axis().begin(), conf.axis().end()}, true),
+            x_blob->shape().CreateReducedShape({conf.axis().begin(), conf.axis().end()}),
             tmp_blob->dptr<T>()));
   }
 }

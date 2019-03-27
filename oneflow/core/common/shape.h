@@ -37,7 +37,7 @@ class Shape final {
 
   Shape CreateLeftExtendedShape(int num_axes) const;
   std::vector<int64_t> ShiftNegativeAxis(const std::vector<int64_t>& axis_vec) const;
-  Shape CreateReducedShape(const std::vector<int64_t>& axis_vec, bool keep_dims) const;
+  Shape CreateReducedShape(const std::vector<int64_t>& axis_vec) const;
 
  private:
   void UpdateElemCnt();
