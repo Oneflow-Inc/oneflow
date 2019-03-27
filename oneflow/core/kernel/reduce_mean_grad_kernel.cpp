@@ -11,8 +11,7 @@ void ReduceMeanGradKernel<device_type, T>::ForwardDataContent(
   const Blob* x_blob = BnInOp2Blob("x");
   Blob* dx_blob = BnInOp2Blob("dx");
   Blob* tmp_blob = BnInOp2Blob("temp_storage");
-  const Blob* const_tmp_blob = tmp_blob;
-  size_t count = dx_blob->shape().elem_cnt() / dy_blob->shape().elem_cnt();
+  int64_t count = dx_blob->shape().elem_cnt() / dy_blob->shape().elem_cnt();
   Memcpy<device_type>(ctx.device_ctx, tmp_blob->mut_dptr(), dy_blob->dptr(),
                       dy_blob->ByteSizeOfDataContentField());
   KernelUtil<device_type, T>::Div(ctx.device_ctx, tmp_blob->shape().elem_cnt(),
