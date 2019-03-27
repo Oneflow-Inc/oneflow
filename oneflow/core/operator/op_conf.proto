@@ -1174,8 +1174,8 @@ message L2NormalizeOpConf {
 }
 
 message KeepHeaderOnlyOpConf {
-  required string in = 1;
-  required string out = 2;
+  repeated string in = 1;
+  repeated string out = 2;
 }
 
 message AxpyOpConf {

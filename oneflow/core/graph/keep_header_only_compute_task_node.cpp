@@ -6,9 +6,7 @@ namespace oneflow {
 
 void KeepHeaderOnlyCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("out", false, 100, 100);
-  for (TaskEdge* edge : out_edges()) {
-    BindEdgeWithProducedRegst(edge, "out");
-  }
+  BindEdgeWithProducedRegst(SoleOutEdge(), "out");
 }
 
 void KeepHeaderOnlyCompTaskNode::ConsumeAllRegsts() {
@@ -19,11 +17,13 @@ void KeepHeaderOnlyCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<const Operator> op = logical_node()->SoleOp();
   ExecNode* exec_node = mut_exec_gph().NewNode();
   exec_node->mut_op() = op;
-  exec_node->BindBnWithRegst(op->SoleIbn(), GetSoleConsumedRegst("in"));
+  exec_node->BindBnsWithRegst(&Operator::input_bns, GetSoleConsumedRegst("in"));
 
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
-  out_regst->AddLbi(op->BnInOp2Lbi(op->SoleObn()));
-  exec_node->BindBnWithRegst(op->SoleObn(), out_regst);
+  for (const std::string& obn : op->output_bns()) {
+    out_regst->AddLbi(op->BnInOp2Lbi(obn));
+  }
+  exec_node->BindBnsWithRegst(&Operator::output_bns, out_regst);
   exec_node->InferBlobDescs(parallel_ctx());
 }
 
