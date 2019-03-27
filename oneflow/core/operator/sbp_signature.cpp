@@ -405,7 +405,6 @@ class BroadcastSbpSignature final : public ParallelSbpSignature {
       if (!SbpInferHint4Ibn(ibn).sbp_parallel().has_broadcast_parallel()) {
         return MakeSbpSigMatchSignatureMismatch();
       }
-
       if (SbpInferHint4Ibn(ibn).parallel_num() != SbpInferHint4Ibn(ibn0).parallel_num()) {
         return MakeSbpSigMatchSignatureMismatch();
       }
@@ -442,6 +441,23 @@ class PartialSumSbpSignature final : public ParallelSbpSignature {
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
     CHECK_EQ(op().output_bns().size(), 1);
+    const std::string& ibn0 = op().input_bns().Get(0);
+    for (const auto& ibn : op().input_bns()) {
+      if (!SbpInferHint4Ibn(ibn).sbp_parallel().has_partial_sum_parallel()) {
+        return MakeSbpSigMatchSignatureMismatch();
+      }
+      if (SbpInferHint4Ibn(ibn).parallel_num() != SbpInferHint4Ibn(ibn0).parallel_num()) {
+        return MakeSbpSigMatchSignatureMismatch();
+      }
+    }
+    int64_t expected_parallel_num = SbpInferHint4Ibn(ibn0).parallel_num();
+    if (parallel_desc.parallel_num() != expected_parallel_num) {
+      SbpSigMatchResult ret;
+      auto* err = ret.mutable_fail()->mutable_conf_error()->mutable_parallel_num_error();
+      err->set_configured(parallel_desc.parallel_num());
+      err->set_expected(expected_parallel_num);
+      return ret;
+    }
     return MakeSbpSigMatchSuccess();
   }
 
