@@ -262,7 +262,7 @@ void AnchorTargetKernel<T>::OutputForEachImage(
   const AnchorTargetOpConf& conf = op_conf().anchor_target_conf();
   const T* gt_boxes_ptr = BnInOp2Blob("gt_boxes")->dptr<T>(im_index);
   const T* anchor_boxes_ptr = BnInOp2Blob("anchor_boxes")->dptr<T>();
-  const int32_t* cur_image_anchor_labels_ptr = BnInOp2Blob("anchor_labels")->dptr<int32_t>();
+  const int32_t* anchor_labels_ptr = BnInOp2Blob("anchor_labels")->dptr<int32_t>();
   const int32_t* anchor_best_match_gt_ptr = BnInOp2Blob("anchor_best_match_gt")->dptr<int32_t>();
 
   size_t bbox_cnt = 0;
@@ -274,6 +274,10 @@ void AnchorTargetKernel<T>::OutputForEachImage(
     Blob* class_weights_i_blob = BnInOp2Blob("class_weights_" + std::to_string(i));
 
     const size_t num_bbox = anchors_i_blob->dim0_valid_num(0);
+    CHECK_EQ(num_bbox, class_labels_i_blob->shape().Count(1, 4));
+    CHECK_EQ(num_bbox, class_weights_i_blob->shape().Count(1, 4));
+    CHECK_EQ(num_bbox * 4, regression_targets_i_blob->shape().Count(1, 4));
+    CHECK_EQ(num_bbox * 4, regression_weights_i_blob->shape().Count(1, 4));
     Memcpy<DeviceType::kCPU>(ctx, anchors_i_blob->mut_dptr<T>(), anchor_boxes_ptr + bbox_cnt * 4,
                              num_bbox * 4 * sizeof(T));
 
@@ -286,7 +290,7 @@ void AnchorTargetKernel<T>::OutputForEachImage(
 
     FOR_RANGE(size_t, j, 0, num_bbox) {
       int32_t anchor_idx = bbox_cnt + j;
-      int32_t anchor_label = cur_image_anchor_labels_ptr[anchor_idx];
+      int32_t anchor_label = anchor_labels_ptr[anchor_idx];
       if (anchor_label == 1) {
         int32_t gt_idx = anchor_best_match_gt_ptr[anchor_idx];
         CHECK_GE(gt_idx, 0);
