@@ -15,8 +15,6 @@ void MaskTargetOp::InitFromOpConf() {
   EnrollOutputBn("mask_rois", false);
   EnrollOutputBn("masks", false);
   EnrollOutputBn("mask_labels", false);
-  // Enroll data tmp
-  EnrollDataTmpBn("gt_boxes_scaled");
 }
 
 const PbMessage& MaskTargetOp::GetCustomizedConf() const { return op_conf().mask_target_conf(); }
@@ -30,17 +28,18 @@ void MaskTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   const BlobDesc* rois = GetBlobDesc4BnInOp("rois");
   // input: labels (R) int32_t
   const BlobDesc* labels = GetBlobDesc4BnInOp("labels");
-  // input: gt_boxes (N,G,B) byte
+  // input: gt_boxes (N,G,4) byte
   const BlobDesc* gt_boxes = GetBlobDesc4BnInOp("gt_boxes");
   // input: gt_segm_polygon_lists (N,G,B) byte
   const BlobDesc* gt_segm_polygon_lists = GetBlobDesc4BnInOp("gt_segm_polygon_lists");
-  // input: im_scale (N) T
+  // input: im_scale (N, 2) T
   const BlobDesc* im_scale = GetBlobDesc4BnInOp("im_scale");
   CHECK_EQ(rois->shape().NumAxes(), 2);
   CHECK_EQ(labels->shape().NumAxes(), 1);
   CHECK_EQ(gt_boxes->shape().NumAxes(), 3);
   CHECK_EQ(gt_segm_polygon_lists->shape().NumAxes(), 3);
-  CHECK_EQ(im_scale->shape().NumAxes(), 1);
+  CHECK_EQ(im_scale->shape().NumAxes(), 2);
+  CHECK_EQ(im_scale->shape().At(1), 2);
   int64_t R = rois->shape().At(0);
   int64_t N = gt_segm_polygon_lists->shape().At(0);
   int64_t G = gt_segm_polygon_lists->shape().At(1);
@@ -91,9 +90,6 @@ void MaskTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   mask_labels->set_has_dim0_valid_num_field(true);
   mask_labels->mut_dim0_inner_shape() = Shape({1, R});
   mask_labels->set_has_record_id_in_device_piece_field(input_has_record_id);
-  // data tmp: mask_boxes (N,G,4) float
-  BlobDesc* gt_boxes_scaled = GetBlobDesc4BnInOp("gt_boxes_scaled");
-  *gt_boxes_scaled = *gt_boxes;
 }
 
 void MaskTargetOp::VirtualGenKernelConf(
