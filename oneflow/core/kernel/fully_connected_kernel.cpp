@@ -74,13 +74,15 @@ template<DeviceType device_type, typename T>
 void FullyConnectedKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937* random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const FullyConnectedOpConf& op_conf = this->op_conf().fully_connected_conf();
+  if (op_conf.has_weight()) { return; }
   KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx, GetMsgPtrFromPbMessage(this->op_conf().fully_connected_conf(), "weight_initializer"),
-      (*random_seed_gen)(), BnInOp2Blob("weight"));
-  if (this->op_conf().fully_connected_conf().use_bias()) {
+      ctx, GetMsgPtrFromPbMessage(op_conf, "weight_initializer"), (*random_seed_gen)(),
+      BnInOp2Blob("weight"));
+  if (op_conf.use_bias()) {
     KernelUtil<device_type, T>::InitializeWithProperConf(
-        ctx, GetMsgPtrFromPbMessage(this->op_conf().fully_connected_conf(), "bias_initializer"),
-        (*random_seed_gen)(), BnInOp2Blob("bias"));
+        ctx, GetMsgPtrFromPbMessage(op_conf, "bias_initializer"), (*random_seed_gen)(),
+        BnInOp2Blob("bias"));
   }
 }
 
