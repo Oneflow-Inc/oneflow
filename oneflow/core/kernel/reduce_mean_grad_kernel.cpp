@@ -18,10 +18,11 @@ void ReduceMeanGradKernel<device_type, T>::ForwardDataContent(
                                   tmp_blob->mut_dptr<T>(), static_cast<T>(count));
   const int64_t num_axes = dx_blob->shape().NumAxes();
   const ReduceMeanGradOpConf& conf = this->op_conf().reduce_mean_grad_conf();
-  const auto& new_shape =
-      x_blob->shape().CreateReducedShape({conf.axis().begin(), conf.axis().end()});
-  NdarrayUtil<device_type, T>::BroadcastTo(ctx.device_ctx, XpuVarNdarray<T>(dx_blob, num_axes),
-                                           XpuVarNdarray<const T>(new_shape, tmp_blob->dptr<T>()));
+  NdarrayUtil<device_type, T>::BroadcastTo(
+      ctx.device_ctx, XpuVarNdarray<T>(dx_blob, num_axes),
+      XpuVarNdarray<const T>(
+          x_blob->shape().CreateReducedShape({conf.axis().begin(), conf.axis().end()}),
+          tmp_blob->dptr<T>()));
 }
 
 template<DeviceType device_type, typename T>

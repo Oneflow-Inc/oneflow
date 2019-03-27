@@ -627,8 +627,7 @@ message ReduceMeanGradOpConf {
   required string x = 2; // like
   required string dx = 3;
   repeated int32 axis = 4;
-  optional bool keep_dims = 5 [default = false];
-  optional string temp_storage = 6 [default = "temp_storage"];
+  optional string temp_storage = 5 [default = "temp_storage"];
 }
 
 message BasicRnnOpConf {
