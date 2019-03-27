@@ -215,13 +215,6 @@ message PReluOpConf {
   optional float alpha_init = 5 [default = 0.25];
 }
 
-message LeakyReluOpConf {
-  required string in = 1;
-  required string out = 2;
-  optional float alpha = 3 [default = 0.1];
-  optional string act_type = 4;
-}
-
 message SigmoidOpConf {
   required string in = 1;
   required string out = 2;
