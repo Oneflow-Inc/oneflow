@@ -18,13 +18,9 @@ class GatherGradDataParallelSbpSignature final : public ParallelSbpSignature {
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelDesc& parallel_desc) const override {
     const SbpParallel& indices_sbp_parallel = SbpInferHint4BnInOp("indices").sbp_parallel();
-    if (!indices_sbp_parallel.has_split_parallel()) {
-      return MakeSbpSigMatchSignatureMismatch();
-    }
+    if (!indices_sbp_parallel.has_split_parallel()) { return MakeSbpSigMatchSignatureMismatch(); }
     const SbpParallel& out_diff_sbp_parallel = SbpInferHint4BnInOp("out_diff").sbp_parallel();
-    if (!out_diff_sbp_parallel.has_split_parallel()) {
-      return MakeSbpSigMatchSignatureMismatch();
-    }
+    if (!out_diff_sbp_parallel.has_split_parallel()) { return MakeSbpSigMatchSignatureMismatch(); }
     if (out_diff_sbp_parallel.split_parallel().axis()
         != indices_sbp_parallel.split_parallel().axis()
                + op().op_conf().gather_grad_conf().axis()) {
@@ -51,8 +47,7 @@ class GatherGradModelParallelSbpSignature final : public ParallelSbpSignature {
   OF_DISALLOW_COPY_AND_MOVE(GatherGradModelParallelSbpSignature);
   ~GatherGradModelParallelSbpSignature() override = default;
 
-  explicit GatherGradModelParallelSbpSignature(const Operator* op)
-      : ParallelSbpSignature(op) {}
+  explicit GatherGradModelParallelSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
 
   const std::string Description() const override { return op().op_name() + ": (B, S) -> S"; }
 
@@ -64,9 +59,7 @@ class GatherGradModelParallelSbpSignature final : public ParallelSbpSignature {
       return MakeSbpSigMatchSignatureMismatch();
     }
     const SbpParallel& out_diff_sbp_parallel = SbpInferHint4BnInOp("out_diff").sbp_parallel();
-    if (!out_diff_sbp_parallel.has_split_parallel()) {
-      return MakeSbpSigMatchSignatureMismatch();
-    }
+    if (!out_diff_sbp_parallel.has_split_parallel()) { return MakeSbpSigMatchSignatureMismatch(); }
     const int64_t gather_axis = op().op_conf().gather_grad_conf().axis();
     if (out_diff_sbp_parallel.split_parallel().axis() >= gather_axis
         && out_diff_sbp_parallel.split_parallel().axis()
