@@ -15,7 +15,7 @@ struct NormalizationKernelUtil<kGPU, T> {
     CHECK_LT(axis, x->shape().NumAxes());
     CudnnTensorDesc x_desc(CUDNN_TENSOR_NCHW, x->data_type(), x->shape().Count(0, axis), x->shape().At(axis), x->shape().Count(axis), 1);
     CudnnTensorDesc y_desc(CUDNN_TENSOR_NCHW, y->data_type(), x->shape().Count(0, axis), x->shape().At(axis), x->shape().Count(axis), 1);
-    
+
     CudnnTensorDesc(cudnnTensorFormat_t, DataType, int n, int c, int h, int w);
 
     CudnnTensorDesc in_out_tensor_desc(CUDNN_TENSOR_NCHW, )
