@@ -33,16 +33,9 @@ void GenerateBackwardOpConf(
     reduce_mean_grad_op_conf->set_dy(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     reduce_mean_grad_op_conf->set_x(GenLogicalBlobName(op.BnInOp2Lbi("in")));
     reduce_mean_grad_op_conf->set_dx("dx");
-    if (op.op_conf().reduce_mean_conf().axis().empty() == false
-        && op.op_conf().reduce_mean_conf().keep_dims() == false) {
-      std::vector<int64_t> kept_dims;
-      const PbRf<int32_t>& axis_repeated = op.op_conf().reduce_mean_conf().axis();
-      std::vector<int64_t> axis_vec = {axis_repeated.begin(), axis_repeated.end()};
-      const BlobDesc& in_blob = LogicalBlobDesc4BnInOp("in");
-      kept_dims = KeepDims(in_blob.shape().dim_vec(),
-                           ShiftAxisIfNegative(axis_vec, in_blob.shape().NumAxes()));
-      Shape(kept_dims).ToProto(reduce_mean_grad_op_conf->mutable_kept_dims_shape());
-    }
+    const ReduceMeanOpConf& reduce_mean_op_conf = op.op_conf().reduce_mean_conf();
+    reduce_mean_grad_op_conf->mutable_axis()->CopyFrom(reduce_mean_op_conf.axis());
+    reduce_mean_grad_op_conf->set_keep_dims(reduce_mean_op_conf.keep_dims());
     op_confs->push_back(reduce_mean_grad_op);
     DiffLbi4BnInOp("in")->set_op_name(reduce_mean_grad_op.name());
     DiffLbi4BnInOp("in")->set_blob_name("dx");

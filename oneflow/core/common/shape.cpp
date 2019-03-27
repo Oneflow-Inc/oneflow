@@ -70,4 +70,32 @@ Shape Shape::CreateLeftExtendedShape(int num_axes) const {
   return Shape(dim_vec);
 }
 
+std::vector<int64_t> Shape::ShiftNegativeAxis(const std::vector<int64_t>& axis_vec) const {
+  const int64_t num_axes = this->NumAxes();
+  std::vector<int32_t> ret = axis_vec;
+  for (int64_t i = 0; i < axis_vec.size(); i++) {
+    if (axis_vec[i] < 0) { ret[i] += num_axes; }
+    CHECK_LT(ret[i], num_axes);
+    CHECK_GE(ret[i], 0);
+  }
+  return ret;
+}
+
+Shape Shape::CreateReducedShape(const std::vector<int64_t>& axis_vec, bool keep_dims) const {
+  if (keep_dims) {
+    std::vector<int64_t> dim_vec = ShiftNegativeAxis(axis_vec);
+    for (const int64_t& axis : axis_vec) { dim_vec[axis] = 1; }
+    return Shape(dim_vec);
+  } else {
+    std::vector<int64_t> dim_vec;
+    std::vector<int64_t> dim2is_reduced(this->dim_vec().size());
+    for (const auto& axis : axis_vec) { dim2is_reduced[axis] = 1; }
+    FOR_RANGE(int64_t, i, 0, this->NumAxes()) {
+      if (dim2is_reduced[i] != 1) { dim_vec.push_back(this->dim_vec()[i]); }
+    }
+    if (dim_vec.empty()) { dim_vec.push_back(1); }
+    return Shape(dim_vec);
+  }
+}
+
 }  // namespace oneflow

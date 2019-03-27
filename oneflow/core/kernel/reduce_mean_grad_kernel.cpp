@@ -8,6 +8,7 @@ template<DeviceType device_type, typename T>
 void ReduceMeanGradKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* dy_blob = BnInOp2Blob("dy");
+  const Blob* x_blob = BnInOp2Blob("x");
   Blob* dx_blob = BnInOp2Blob("dx");
   Blob* tmp_blob = BnInOp2Blob("temp_storage");
   const Blob* const_tmp_blob = tmp_blob;
@@ -17,14 +18,16 @@ void ReduceMeanGradKernel<device_type, T>::ForwardDataContent(
   KernelUtil<device_type, T>::Div(ctx.device_ctx, tmp_blob->shape().elem_cnt(),
                                   tmp_blob->mut_dptr<T>(), static_cast<T>(count));
   const int64_t num_axes = dx_blob->shape().NumAxes();
-  if (this->op_conf().reduce_mean_grad_conf().has_kept_dims_shape()) {
-    NdarrayUtil<device_type, T>::BroadcastTo(
-        ctx.device_ctx, XpuVarNdarray<T>(dx_blob, num_axes),
-        XpuVarNdarray<const T>(Shape(this->op_conf().reduce_mean_grad_conf().kept_dims_shape()),
-                               tmp_blob->dptr<T>()));
-  } else {
+  const ReduceMeanGradOpConf& conf = this->op_conf().reduce_mean_grad_conf();
+  if (conf.keep_dims()) {
     NdarrayUtil<device_type, T>::BroadcastTo(ctx.device_ctx, XpuVarNdarray<T>(dx_blob, num_axes),
                                              XpuVarNdarray<const T>(const_tmp_blob, num_axes));
+  } else {
+    NdarrayUtil<device_type, T>::BroadcastTo(
+        ctx.device_ctx, XpuVarNdarray<T>(dx_blob, num_axes),
+        XpuVarNdarray<const T>(
+            x_blob->shape().CreateReducedShape({conf.axis().begin(), conf.axis().end()}, true),
+            tmp_blob->dptr<T>()));
   }
 }
 
