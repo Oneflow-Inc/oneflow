@@ -105,15 +105,16 @@ message Conv2DOpConf {
   required string in = 1;
   required string out = 2;
   required int32 filters = 3;
-  optional string padding = 4 [default = "valid"];
-  required string data_format = 5;
-  repeated int32 kernel_size = 6;
-  repeated int32 strides = 7;
-  repeated int32 dilation_rate = 8;
-  optional ActivationType activation = 9 [default = kNone];
-  optional bool use_bias = 10 [default = true];
-  optional InitializerConf weight_initializer = 11;
-  optional InitializerConf bias_initializer = 12;
+  optional int32 group_num = 4;
+  optional string padding = 5 [default = "valid"];
+  required string data_format = 6;
+  repeated int32 kernel_size = 7;
+  repeated int32 strides = 8;
+  repeated int32 dilation_rate = 9;
+  optional ActivationType activation = 10 [default = kNone];
+  optional bool use_bias = 11 [default = true];
+  optional InitializerConf weight_initializer = 12;
+  optional InitializerConf bias_initializer = 13;
 }
 
 message Conv3DOpConf {
@@ -212,6 +213,13 @@ message PReluOpConf {
   required string data_format = 3;
   optional bool channel_shared = 4 [default = false];
   optional float alpha_init = 5 [default = 0.25];
+}
+
+message LeakyReluOpConf {
+  required string in = 1;
+  required string out = 2;
+  optional float alpha = 3 [default = 0.1];
+  optional string act_type = 4;
 }
 
 message SigmoidOpConf {
