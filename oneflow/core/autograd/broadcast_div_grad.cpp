@@ -20,7 +20,7 @@ void GenerateBackwardOpConf(
 
     if (LogicalBlobDesc4BnInOp("out").shape() == LogicalBlobDesc4BnInOp("a").shape()) {
       DiffLbi4BnInOp("a")->set_op_name(broadcast_div_a.name());
-      DiffLbi4BnInOp("a")->set_blob_name("y");
+      DiffLbi4BnInOp("a")->set_blob_name("out");
     } else {
       OperatorConf reduce_sum_like_a;
       reduce_sum_like_a.set_name(op.op_name() + "_grad_a_reduce");
