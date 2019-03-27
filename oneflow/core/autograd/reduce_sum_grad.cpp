@@ -4,22 +4,6 @@ namespace oneflow {
 
 namespace {
 
-std::vector<int64_t> KeepDims(const std::vector<int64_t> dim_vec,
-                              const std::vector<int64_t> axis_vec) {
-  std::vector<int64_t> ret = dim_vec;
-  for (const auto& axis : axis_vec) { ret[axis] = 1; }
-  return ret;
-}
-
-std::vector<int64_t> ShiftAxisIfNegative(std::vector<int64_t> axis_vec, const int64_t num_axes) {
-  FOR_RANGE(size_t, i, 0, axis_vec.size()) {
-    if (axis_vec[i] < 0) { axis_vec[i] += num_axes; }
-    CHECK_LT(axis_vec[i], num_axes);
-    CHECK_GE(axis_vec[i], 0);
-  }
-  return axis_vec;
-}
-
 void GenerateBackwardOpConf(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
