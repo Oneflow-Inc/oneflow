@@ -10,23 +10,30 @@ struct NormalizationKernelUtil<kGPU, T> {
                               double momentum) {
     const DataType data_type = x->data_type();
     CHECK_EQ(x->shape(), y->shape());
-    CHECK_EQ(x->data_type(), y->data_type());
+    CHECK_EQ(y->data_type(), data_type);
     CHECK_GE(axis, 0);
     CHECK_LT(axis, x->shape().NumAxes());
-    CudnnTensorDesc x_desc(CUDNN_TENSOR_NCHW, x->data_type(), x->shape().Count(0, axis), x->shape().At(axis), x->shape().Count(axis), 1);
-    CudnnTensorDesc y_desc(CUDNN_TENSOR_NCHW, y->data_type(), x->shape().Count(0, axis), x->shape().At(axis), x->shape().Count(axis), 1);
-
-    CudnnTensorDesc(cudnnTensorFormat_t, DataType, int n, int c, int h, int w);
-
-    CudnnTensorDesc in_out_tensor_desc(CUDNN_TENSOR_NCHW, )
+    CudnnTensorDesc xy_desc(CUDNN_TENSOR_NCHW, data_type, x->shape().Count(0, axis),
+                            x->shape().At(axis), x->shape().Count(axis), 1);
+    const int64_t param_dim_size = x->shape().At(axis);
+    const auto CheckParamBlob = [&](const Blob* blob) {
+      CHECK_EQ(blob->shape().NumAxes(), 1);
+      CHECK_EQ(blob->shape().At(0), param_dim_size);
+      CHECK_EQ(blob->data_type(), data_type);
+    };
+    CheckParamBlob(gamma);
+    CheckParamBlob(beta);
+    CheckParamBlob(moving_mean);
+    CheckParamBlob(moving_variance);
+    CheckParamBlob(mean);
+    CheckParamBlob(inv_variance);
+    CudnnTensorDesc param_desc(CUDNN_TENSOR_NCHW, data_type, 1, param_dim_size, 1, 1);
     CudaCheck(cudnnBatchNormalizationForwardTraining(
-        ctx->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT,
-        OnePtr<T>::value, ZeroPtr<T>::value, normalization_ctx_->cudnn_in_tensor_desc(), in,
-        normalization_ctx_->cudnn_in_tensor_desc(), out,
-        normalization_ctx_->cudnn_param_tensor_desc(), gamma, beta, 1 - momentum, moving_mean,
-        moving_variance, epsilon, mean->mut_dptr<T>(),
+        ctx->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL_PERSISTENT, OnePtr<T>::value,
+        ZeroPtr<T>::value, xy_desc.Get(), x->dptr<T>(), xy_desc.Get(), y->mut_dptr<T>(),
+        param_desc.Get(), gamma->dptr<T>(), beta->dptr<T>(), 1.0 - momentum,
+        moving_mean->mut_dptr<T>(), moving_variance->mut_dptr<T>(), epsilon, mean->mut_dptr<T>(),
         inv_variance->mut_dptr<T>()));
-
   }
   static void ForwardInference(DeviceCtx* ctx, const Blob* x, const Blob* gamma, const Blob* beta,
                                const Blob* moving_mean, const Blob* moving_variance, Blob* out,
