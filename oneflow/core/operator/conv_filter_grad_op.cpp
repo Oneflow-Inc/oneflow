@@ -59,6 +59,7 @@ class ConvFilterGradModelParallelSbpSignature final : public ParallelSbpSignatur
       UNIMPLEMENTED();
     }
     (*bn2sbp)["filter_diff"].mutable_split_parallel()->set_axis(0);
+    (*bn2sbp)["x"].mutable_broadcast_parallel();
   }
 };
 
