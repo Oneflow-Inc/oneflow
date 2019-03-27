@@ -16,25 +16,25 @@ SbpParallel GetSbpParallel(const ParallelCastOpConf& conf) {
   return ret;
 }
 
-class ParallelCastOpParallelSignature final : public OpParallelSignature {
+class ParallelCastSbpSignature final : public ParallelSbpSignature {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ParallelCastOpParallelSignature);
-  ~ParallelCastOpParallelSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(ParallelCastSbpSignature);
+  ~ParallelCastSbpSignature() override = default;
 
-  ParallelCastOpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
+  ParallelCastSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
 
   const std::string Description() const override { return op().op_name() + ": A -> A"; }
 
-  const OpParallelMatchResult GetMatchResult(
+  const SbpSigMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelDesc& parallel_desc) const override {
     const auto& configured_sbp_parallel = GetSbpParallel(op().op_conf().parallel_cast_conf());
     if (SbpInferHint4BnInOp("in").sbp_parallel() == configured_sbp_parallel
         && parallel_desc.parallel_num() != SbpInferHint4BnInOp("in").parallel_num()) {
-      return MakeOpParallelMatchParallelNumError(parallel_desc.parallel_num(),
-                                                 SbpInferHint4BnInOp("in").parallel_num());
+      return MakeSbpSigMatchParallelNumError(parallel_desc.parallel_num(),
+                                             SbpInferHint4BnInOp("in").parallel_num());
     }
-    return MakeOpParallelMatchSuccess();
+    return MakeSbpSigMatchSuccess();
   }
 
   void GenerateSignature(
@@ -48,9 +48,9 @@ class ParallelCastOpParallelSignature final : public OpParallelSignature {
 
 }  // namespace
 
-void ParallelCastOp::GetOpParallelSignatures(
-    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new ParallelCastOpParallelSignature(this));
+void ParallelCastOp::GetSbpSignatures(
+    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
+  op_parallel_signatures->emplace_back(new ParallelCastSbpSignature(this));
 }
 
 REGISTER_OP(OperatorConf::kParallelCastConf, ParallelCastOp);

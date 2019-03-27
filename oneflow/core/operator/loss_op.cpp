@@ -4,21 +4,21 @@ namespace oneflow {
 
 namespace {
 
-class LossOpParallelSignature final : public OpParallelSignature {
+class LossSbpSignature final : public ParallelSbpSignature {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(LossOpParallelSignature);
-  ~LossOpParallelSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(LossSbpSignature);
+  ~LossSbpSignature() override = default;
 
-  LossOpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
+  LossSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
 
   const std::string Description() const override {
     return op().op_name() + ": (S(0), S(0)) -> S(0)";
   }
 
-  const OpParallelMatchResult GetMatchResult(
+  const SbpSigMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelDesc& parallel_desc) const override {
-    return MakeOpParallelMatchSuccess();
+    return MakeSbpSigMatchSuccess();
   }
 
   void GenerateSignature(
@@ -99,9 +99,9 @@ void LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   VirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
-void LossOp::GetOpParallelSignatures(
-    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new LossOpParallelSignature(this));
+void LossOp::GetSbpSignatures(
+    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
+  op_parallel_signatures->emplace_back(new LossSbpSignature(this));
 }
 
 LogicalBlobId LossOp::obn2lbi(const std::string& output_bn) const {
