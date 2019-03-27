@@ -28,7 +28,8 @@ void GenerateBackwardOpConf(
   if (DiffLbi4BnInOp("in") != nullptr) {
     OperatorConf reduce_mean_grad_op;
     reduce_mean_grad_op.set_name(op.op_name() + "_grad");
-    ReduceMeanGradOpConf* reduce_mean_grad_op_conf = reduce_mean_grad_op.mutable_reduce_mean_grad_conf();
+    ReduceMeanGradOpConf* reduce_mean_grad_op_conf =
+        reduce_mean_grad_op.mutable_reduce_mean_grad_conf();
     reduce_mean_grad_op_conf->set_dy(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     reduce_mean_grad_op_conf->set_x(GenLogicalBlobName(op.BnInOp2Lbi("in")));
     reduce_mean_grad_op_conf->set_dx("dx");
