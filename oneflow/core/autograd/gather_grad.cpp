@@ -28,7 +28,7 @@ void GenerateBackwardOpConf(
     conf->set_in_diff("in_diff");
     op_confs->push_back(gather_grad_op);
     DiffLbi4BnInOp("in")->set_op_name(gather_grad_op.name());
-    DiffLbi4BnInOp("in")->set_blob_name("in_diff");
+    DiffLbi4BnInOp("in")->set_blob_name(conf->in_diff());
   }
 }
 
