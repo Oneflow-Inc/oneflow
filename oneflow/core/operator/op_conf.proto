@@ -1226,6 +1226,13 @@ message TotalLossInstanceNumOpConf {
   required string out = 2;
 }
 
+message BatchGatherGradOpConf {
+  required string out_diff = 1;
+  required string indices = 2;
+  required string in_diff = 3;
+  required int64 gather_dim_size = 4;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1340,9 +1347,10 @@ message OperatorConf {
     BroadcastDivGradOpConf broadcast_div_grad_conf= 276;
     BroadcastLikeOpConf broadcast_like_conf = 277;
     SoftmaxGradOpConf softmax_grad_conf = 278;
-    ConvBiasGradOpConf conv_bias_grad_conf = 279;
-    ConvFilterGradOpConf conv_filter_grad_conf = 280;
-    ConvDataGradOpConf conv_data_grad_conf = 281;
+    BatchGatherGradOpConf batch_gather_grad_conf = 279;
+    ConvBiasGradOpConf conv_bias_grad_conf = 280;
+    ConvFilterGradOpConf conv_filter_grad_conf = 281;
+    ConvDataGradOpConf conv_data_grad_conf = 282;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

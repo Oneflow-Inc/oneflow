@@ -1,16 +1,16 @@
-#ifndef ONEFLOW_CORE_KERNEL_BATCH_GATHER_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_BATCH_GATHER_KERNEL_H_
+#ifndef ONEFLOW_CORE_KERNEL_BATCH_GATHER_GRAD_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_BATCH_GATHER_GRAD_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class BatchGatherKernel final : public KernelIf<device_type> {
+class BatchGatherGradKernel final : public KernelIf<device_type> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BatchGatherKernel);
-  BatchGatherKernel() = default;
-  ~BatchGatherKernel() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(BatchGatherGradKernel);
+  BatchGatherGradKernel() = default;
+  ~BatchGatherGradKernel() override = default;
 
  private:
   const PbMessage& GetCustomizedOpConf() const override;
@@ -22,4 +22,4 @@ class BatchGatherKernel final : public KernelIf<device_type> {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_BATCH_GATHER_KERNEL_H_
+#endif  // ONEFLOW_CORE_KERNEL_BATCH_GATHER_GRAD_KERNEL_H_

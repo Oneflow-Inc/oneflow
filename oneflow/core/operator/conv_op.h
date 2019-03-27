@@ -62,8 +62,7 @@ class ConvOp : public Operator {
   void GenKernelConfWithCudnn(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               KernelConf* kernel_conf, ConvKernelConf* conv_conf,
                               const OpContext*) const;
-  void GetOpParallelSignatures(
-      std::vector<std::unique_ptr<const OpParallelSignature>>*) const override;
+  void GetSbpSignatures(std::vector<std::unique_ptr<const SbpSignature>>*) const override;
 #ifdef WITH_CUDA
   void InferCudnnAlgo(std::function<const BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
                       CudnnConvAlgoCtx* conv_ctx) const;

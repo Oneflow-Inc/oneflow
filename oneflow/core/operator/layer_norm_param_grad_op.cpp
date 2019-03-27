@@ -4,23 +4,23 @@ namespace oneflow {
 
 namespace {
 
-class LayerNormParamGradDataParallelOpParallelSignature final : public OpParallelSignature {
+class LayerNormParamGradDataParallelSbpSignature final : public ParallelSbpSignature {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(LayerNormParamGradDataParallelOpParallelSignature);
-  ~LayerNormParamGradDataParallelOpParallelSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(LayerNormParamGradDataParallelSbpSignature);
+  ~LayerNormParamGradDataParallelSbpSignature() override = default;
 
-  explicit LayerNormParamGradDataParallelOpParallelSignature(const Operator* op)
-      : OpParallelSignature(op) {}
+  explicit LayerNormParamGradDataParallelSbpSignature(const Operator* op)
+      : ParallelSbpSignature(op) {}
 
   const std::string Description() const override {
     return op().op_name() + ": (S(0), B) -> (S(0), P)";
   }
 
-  const OpParallelMatchResult GetMatchResult(
+  const SbpSigMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelDesc& parallel_desc) const override {
-    if (parallel_desc.policy() == kDataParallel) { return MakeOpParallelMatchSuccess(); }
-    return MakeOpParallelMatchParallelPolicyError(parallel_desc.policy(), kDataParallel);
+    if (parallel_desc.policy() == kDataParallel) { return MakeSbpSigMatchSuccess(); }
+    return MakeSbpSigMatchParallelPolicyError(parallel_desc.policy(), kDataParallel);
   }
 
   void GenerateSignature(
@@ -104,9 +104,9 @@ void LayerNormParamGradOp::InferBlobDescs(
   }
 }
 
-void LayerNormParamGradOp::GetOpParallelSignatures(
-    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new LayerNormParamGradDataParallelOpParallelSignature(this));
+void LayerNormParamGradOp::GetSbpSignatures(
+    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
+  op_parallel_signatures->emplace_back(new LayerNormParamGradDataParallelSbpSignature(this));
 }
 
 REGISTER_OP(OperatorConf::kLayerNormParamGradConf, LayerNormParamGradOp);

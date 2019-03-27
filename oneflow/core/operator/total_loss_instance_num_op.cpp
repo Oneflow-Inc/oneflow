@@ -4,27 +4,27 @@ namespace oneflow {
 
 namespace {
 
-class TotalLossInstanceOpParallelSignature final : public OpParallelSignature {
+class TotalLossInstanceSbpSignature final : public ParallelSbpSignature {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(TotalLossInstanceOpParallelSignature);
-  ~TotalLossInstanceOpParallelSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(TotalLossInstanceSbpSignature);
+  ~TotalLossInstanceSbpSignature() override = default;
 
-  TotalLossInstanceOpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
+  TotalLossInstanceSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
 
   const std::string Description() const override { return op().op_name() + ": (U, ...) -> (U,)"; }
 
-  const OpParallelMatchResult GetMatchResult(
+  const SbpSigMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
     for (const std::string& ibn : op().input_bns()) {
       if (!SbpInferHint4Ibn(ibn).sbp_parallel().has_partial_sum_parallel()) {
-        return MakeOpParallelMatchSignatureMismatch();
+        return MakeSbpSigMatchSignatureMismatch();
       }
     }
     if (parallel_desc.parallel_num() != 1) {
-      return MakeOpParallelMatchParallelNumError(parallel_desc.parallel_num(), 1);
+      return MakeSbpSigMatchParallelNumError(parallel_desc.parallel_num(), 1);
     }
-    return MakeOpParallelMatchSuccess();
+    return MakeSbpSigMatchSuccess();
   }
 
   void GenerateSignature(
@@ -55,9 +55,9 @@ const PbMessage& TotalLossInstanceNumOp::GetCustomizedConf() const {
   return op_conf().total_loss_instance_num_conf();
 }
 
-void TotalLossInstanceNumOp::GetOpParallelSignatures(
-    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new TotalLossInstanceOpParallelSignature(this));
+void TotalLossInstanceNumOp::GetSbpSignatures(
+    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
+  op_parallel_signatures->emplace_back(new TotalLossInstanceSbpSignature(this));
 }
 
 REGISTER_CPU_OP(OperatorConf::kTotalLossInstanceNumConf, TotalLossInstanceNumOp);

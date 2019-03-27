@@ -142,40 +142,46 @@ int32_t Operator::OutputBlobModelSplitAxis(
   }
 }
 
-void Operator::GetOpParallelSignatures(
-    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
+void Operator::GetSbpSignatures(
+    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
   bool has_model = !(model_bns().empty() && const_model_bns().empty());
-  op_parallel_signatures->emplace_back(MakeDataSplitOpParallelSignature(this));
+  op_parallel_signatures->emplace_back(MakeDataSplitSbpSignature(this));
   if (IsSoleInputBlobAllowedModelSplit()) {
     CHECK(!has_model);
-    op_parallel_signatures->emplace_back(MakeModelSplitOpParallelSignature(this));
-    op_parallel_signatures->emplace_back(MakeBroadcastOpParallelSignature(this));
+    op_parallel_signatures->emplace_back(MakeModelSplitSbpSignature(this));
+    op_parallel_signatures->emplace_back(MakeBroadcastSbpSignature(this));
   } else if (has_model) {
     for (const auto& ibn : input_bns()) { CHECK(!IsInputBlobAllowedModelSplit(ibn)); }
-    op_parallel_signatures->emplace_back(MakeModelSplitOpParallelSignature(this));
+    op_parallel_signatures->emplace_back(MakeModelSplitSbpSignature(this));
   } else if (input_bns().size() == 1) {
-    op_parallel_signatures->emplace_back(MakeBroadcastOpParallelSignature(this));
+    op_parallel_signatures->emplace_back(MakeBroadcastSbpSignature(this));
   } else {
     // do nothing
   }
+}
+
+void Operator::GetSbpSignaturesIf(
+    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
+  op_parallel_signatures->emplace_back(MakeUnparallelSbpSignature(this));
+  GetSbpSignatures(op_parallel_signatures);
 }
 
 void Operator::InferInputOutputSbpParallelIf(
     std::function<SbpParallel*(const std::string&)> SbpParallel4BnInOp,
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
-  std::vector<std::unique_ptr<const OpParallelSignature>> op_parallel_signatures;
-  GetOpParallelSignatures(&op_parallel_signatures);
-  std::vector<OpParallelMatchResult> match_results;
+  std::vector<std::unique_ptr<const SbpSignature>> op_parallel_signatures;
+  GetSbpSignaturesIf(&op_parallel_signatures);
+  std::vector<SbpSigMatchResult> match_results;
   for (const auto& signature : op_parallel_signatures) {
-    match_results.push_back(signature->GetMatchResult(SbpInferHint4Ibn, parallel_desc));
+    match_results.push_back(signature->GetMatchResultIf(SbpInferHint4Ibn, parallel_desc));
   }
   int32_t match_success_cnt = 0;
   for (const auto& result : match_results) {
     if (result.has_success()) { ++match_success_cnt; }
   }
   if (match_success_cnt == 1) {
-    const OpParallelSignature* match_signature = nullptr;
+    const SbpSignature* match_signature = nullptr;
     FOR_RANGE(int32_t, i, 0, op_parallel_signatures.size()) {
       if (match_results.at(i).has_success()) {
         match_signature = op_parallel_signatures.at(i).get();

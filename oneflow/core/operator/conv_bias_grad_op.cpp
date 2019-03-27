@@ -4,21 +4,20 @@ namespace oneflow {
 
 namespace {
 
-class ConvBiasGradDataParallelOpParallelSignature final : public OpParallelSignature {
+class ConvBiasGradDataParallelSbpSignature final : public ParallelSbpSignature {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ConvBiasGradDataParallelOpParallelSignature);
-  ~ConvBiasGradDataParallelOpParallelSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(ConvBiasGradDataParallelSbpSignature);
+  ~ConvBiasGradDataParallelSbpSignature() override = default;
 
-  explicit ConvBiasGradDataParallelOpParallelSignature(const Operator* op)
-      : OpParallelSignature(op) {}
+  explicit ConvBiasGradDataParallelSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
 
   const std::string Description() const override { return op().op_name() + ": S(0) -> P"; }
 
-  const OpParallelMatchResult GetMatchResult(
+  const SbpSigMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
-    if (parallel_desc.policy() == kDataParallel) { return MakeOpParallelMatchSuccess(); }
-    return MakeOpParallelMatchParallelPolicyError(parallel_desc.policy(), kDataParallel);
+    if (parallel_desc.policy() == kDataParallel) { return MakeSbpSigMatchSuccess(); }
+    return MakeSbpSigMatchParallelPolicyError(parallel_desc.policy(), kDataParallel);
   }
 
   void GenerateSignature(
@@ -29,21 +28,20 @@ class ConvBiasGradDataParallelOpParallelSignature final : public OpParallelSigna
   }
 };
 
-class ConvBiasGradModelParallelOpParallelSignature final : public OpParallelSignature {
+class ConvBiasGradModelParallelSbpSignature final : public ParallelSbpSignature {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ConvBiasGradModelParallelOpParallelSignature);
-  ~ConvBiasGradModelParallelOpParallelSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(ConvBiasGradModelParallelSbpSignature);
+  ~ConvBiasGradModelParallelSbpSignature() override = default;
 
-  explicit ConvBiasGradModelParallelOpParallelSignature(const Operator* op)
-      : OpParallelSignature(op) {}
+  explicit ConvBiasGradModelParallelSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
 
   const std::string Description() const override { return op().op_name() + ": S(chan) -> S"; }
 
-  const OpParallelMatchResult GetMatchResult(
+  const SbpSigMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
-    if (parallel_desc.policy() == kModelParallel) { return MakeOpParallelMatchSuccess(); }
-    return MakeOpParallelMatchParallelPolicyError(parallel_desc.policy(), kModelParallel);
+    if (parallel_desc.policy() == kModelParallel) { return MakeSbpSigMatchSuccess(); }
+    return MakeSbpSigMatchParallelPolicyError(parallel_desc.policy(), kModelParallel);
   }
 
   void GenerateSignature(
@@ -97,10 +95,10 @@ int32_t ConvBiasGradOp::OutputBlobModelSplitAxis(
   return 0;
 }
 
-void ConvBiasGradOp::GetOpParallelSignatures(
-    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new ConvBiasGradDataParallelOpParallelSignature(this));
-  op_parallel_signatures->emplace_back(new ConvBiasGradModelParallelOpParallelSignature(this));
+void ConvBiasGradOp::GetSbpSignatures(
+    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
+  op_parallel_signatures->emplace_back(new ConvBiasGradDataParallelSbpSignature(this));
+  op_parallel_signatures->emplace_back(new ConvBiasGradModelParallelSbpSignature(this));
 }
 
 REGISTER_OP(OperatorConf::kConvBiasGradConf, ConvBiasGradOp);

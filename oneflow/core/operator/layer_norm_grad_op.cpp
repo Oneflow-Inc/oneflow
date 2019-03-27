@@ -59,9 +59,9 @@ void LayerNormGradOp::InferBlobDescs(
   *bn_bias_diff = *bn_scale;
 }
 
-void LayerNormGradOp::GetOpParallelSignatures(
-    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(MakeDataSplitOpParallelSignature(this));
+void LayerNormGradOp::GetSbpSignatures(
+    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
+  op_parallel_signatures->emplace_back(MakeDataSplitSbpSignature(this));
 }
 
 REGISTER_OP(OperatorConf::kLayerNormGradConf, LayerNormGradOp);

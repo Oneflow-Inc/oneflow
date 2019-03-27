@@ -24,8 +24,7 @@ class ConvFilterGradOp : public Operator {
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext*, KernelConf*, const OpContext*) const override;
-  void GetOpParallelSignatures(
-      std::vector<std::unique_ptr<const OpParallelSignature>>*) const override;
+  void GetSbpSignatures(std::vector<std::unique_ptr<const SbpSignature>>*) const override;
 };
 
 }  // namespace oneflow
