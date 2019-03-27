@@ -881,22 +881,21 @@ message ProposalTargetOpConf {
   required string rois = 1;
   required string gt_boxes = 2;
   required string gt_labels = 3;
-  required string im_scale = 4;
   // out
-  required string sampled_rois = 5;
-  required string sampled_roi_inds = 6;
-  required string class_labels = 7;
-  required string regression_targets = 8;
-  required string regression_weights = 9;
+  required string sampled_rois = 4;
+  required string sampled_roi_inds = 5;
+  required string class_labels = 6;
+  required string regression_targets = 7;
+  required string regression_weights = 8;
   // conf
-  required float foreground_threshold = 10;
-  required float background_threshold_low = 11;
-  required float background_threshold_high = 12;
-  required float foreground_fraction = 13 [default = 0.5];
-  required BBoxRegressionWeights bbox_reg_weights = 14;
-  required int32 num_classes = 15;
-  required int32 num_sampled_rois_per_image = 16 [default = 256];
-  optional bool random_subsample = 17 [default = true];
+  required float foreground_threshold = 9;
+  required float background_threshold_low = 10;
+  required float background_threshold_high = 11;
+  required float foreground_fraction = 12 [default = 0.5];
+  required BBoxRegressionWeights bbox_reg_weights = 13;
+  required int32 num_classes = 14;
+  required int32 num_sampled_rois_per_image = 15 [default = 256];
+  optional bool random_subsample = 16 [default = true];
 }
 
 enum ScoringMethod {
