@@ -8,7 +8,6 @@ void ConcatGtProposalsOp::InitFromOpConf() {
   // input
   EnrollInputBn("in", false);
   EnrollInputBn("gt_boxes", false);
-  EnrollInputBn("im_scale", false);
   // output
   EnrollOutputBn("out", false);
 }
@@ -27,10 +26,6 @@ void ConcatGtProposalsOp::InferBlobDescs(
   const BlobDesc* gt_boxes_blob_desc = GetBlobDesc4BnInOp("gt_boxes");
   CHECK_EQ(in_proposals_blob_desc->data_type(), gt_boxes_blob_desc->data_type());
   CHECK(gt_boxes_blob_desc->has_dim1_valid_num_field());
-  // in: im_scale (N) T
-  const BlobDesc* im_scale_blob_desc = GetBlobDesc4BnInOp("im_scale");
-  CHECK_EQ(im_scale_blob_desc->shape().elem_cnt(), gt_boxes_blob_desc->shape().At(0));
-  CHECK_EQ(im_scale_blob_desc->data_type(), gt_boxes_blob_desc->data_type());
 
   const int64_t num_proposals =
       in_proposals_blob_desc->shape().At(0) + gt_boxes_blob_desc->shape().Count(0, 2);

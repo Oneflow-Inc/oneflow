@@ -1403,8 +1403,7 @@ message ElementCountOpConf {
 message ConcatGtProposalsOpConf {
   required string in = 1;
   required string gt_boxes = 2;
-  required string im_scale = 3;
-  required string out = 4;
+  required string out = 3;
 }
 
 message GtBboxScaleOpConf {
