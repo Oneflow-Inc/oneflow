@@ -149,12 +149,12 @@ void Operator::GetSbpSignatures(
   if (IsSoleInputBlobAllowedModelSplit()) {
     CHECK(!has_model);
     op_parallel_signatures->emplace_back(MakeModelSplitSbpSignature(this));
-    op_parallel_signatures->emplace_back(MakeBroadcastSbpSignature(this));
+    op_parallel_signatures->emplace_back(MakeDataBroadcastSbpSignature(this));
   } else if (has_model) {
     for (const auto& ibn : input_bns()) { CHECK(!IsInputBlobAllowedModelSplit(ibn)); }
     op_parallel_signatures->emplace_back(MakeModelSplitSbpSignature(this));
   } else if (input_bns().size() == 1) {
-    op_parallel_signatures->emplace_back(MakeBroadcastSbpSignature(this));
+    op_parallel_signatures->emplace_back(MakeDataBroadcastSbpSignature(this));
   } else {
     // do nothing
   }

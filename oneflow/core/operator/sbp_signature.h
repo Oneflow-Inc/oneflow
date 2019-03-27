@@ -62,7 +62,7 @@ std::unique_ptr<const SbpSignature> MakeDataSplitSbpSignature(const Operator* op
 std::unique_ptr<const SbpSignature> MakeModelSplitSbpSignature(const Operator* op);
 
 // (B,) -> (B, ...)
-std::unique_ptr<const SbpSignature> MakeBroadcastSbpSignature(const Operator* op);
+std::unique_ptr<const SbpSignature> MakeDataBroadcastSbpSignature(const Operator* op);
 
 // (B, S(0), ...) -> (S(0), ...)
 // return blobs: data splitted
@@ -74,6 +74,16 @@ std::unique_ptr<const SbpSignature> Make_DS_MB_2_DS_SbpSignature(const Operator*
 // input blobs: broadcast data input blobs and split model input blobs
 std::unique_ptr<const SbpSignature> Make_DB_MS_2_MS_SbpSignature(
     const Operator* op, std::function<bool(int32_t)> IsExpectedAxis);
+
+// (B, ...) -> (B)
+// return blobs: broadcast
+// input blobs: broadcast
+std::unique_ptr<const SbpSignature> MakeBroadcastSbpSignature(const Operator* op);
+
+// (P, ...) -> (P)
+// return blobs: partial sum
+// input blobs: partial sum
+std::unique_ptr<const SbpSignature> MakePartialSumSbpSignature(const Operator* op);
 
 }  // namespace oneflow
 

@@ -14,6 +14,13 @@ void AddOp::VirtualFixInDiffBlobDescs(
   }
 }
 
+void AddOp::GetSbpSignatures(
+    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
+  op_parallel_signatures->emplace_back(MakeDataSplitSbpSignature(this));
+  op_parallel_signatures->emplace_back(MakeBroadcastSbpSignature(this));
+  op_parallel_signatures->emplace_back(MakePartialSumSbpSignature(this));
+}
+
 REGISTER_OP(OperatorConf::kAddConf, AddOp);
 
 }  // namespace oneflow
