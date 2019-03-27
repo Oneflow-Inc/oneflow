@@ -4,27 +4,27 @@ namespace oneflow {
 
 namespace {
 
-class AxpyOpParallelSignature final : public OpParallelSignature {
+class AxpySbpSignature final : public ParallelSbpSignature {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(AxpyOpParallelSignature);
-  ~AxpyOpParallelSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(AxpySbpSignature);
+  ~AxpySbpSignature() override = default;
 
-  AxpyOpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
+  AxpySbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
 
   const std::string Description() const override { return op().op_name() + ": (A, A) -> ()"; }
 
-  const OpParallelMatchResult GetMatchResult(
+  const SbpSigMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
     if (parallel_desc.parallel_num() != SbpInferHint4Ibn("y").parallel_num()) {
-      return MakeOpParallelMatchParallelNumError(parallel_desc.parallel_num(),
-                                                 SbpInferHint4Ibn("y").parallel_num());
+      return MakeSbpSigMatchParallelNumError(parallel_desc.parallel_num(),
+                                             SbpInferHint4Ibn("y").parallel_num());
     }
     if (parallel_desc != SbpInferHint4Ibn("y").parallel_desc()) {
-      return MakeOpParallelMatchDeviceSetError(
-          parallel_desc.device_names(), SbpInferHint4Ibn("y").parallel_desc().device_names());
+      return MakeSbpSigMatchDeviceSetError(parallel_desc.device_names(),
+                                           SbpInferHint4Ibn("y").parallel_desc().device_names());
     }
-    return MakeOpParallelMatchSuccess();
+    return MakeSbpSigMatchSuccess();
   }
 
   void GenerateSignature(
@@ -49,9 +49,9 @@ void AxpyOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
 
 const PbMessage& AxpyOp::GetCustomizedConf() const { return op_conf().axpy_conf(); }
 
-void AxpyOp::GetOpParallelSignatures(
-    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new AxpyOpParallelSignature(this));
+void AxpyOp::GetSbpSignatures(
+    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
+  op_parallel_signatures->emplace_back(new AxpySbpSignature(this));
 }
 
 REGISTER_OP(OperatorConf::kAxpyConf, AxpyOp);

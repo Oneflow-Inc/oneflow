@@ -5,34 +5,33 @@ namespace oneflow {
 
 namespace {
 
-class GatherGradDataParallelOpParallelSignature final : public OpParallelSignature {
+class GatherGradDataParallelSbpSignature final : public ParallelSbpSignature {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(GatherGradDataParallelOpParallelSignature);
-  ~GatherGradDataParallelOpParallelSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(GatherGradDataParallelSbpSignature);
+  ~GatherGradDataParallelSbpSignature() override = default;
 
-  explicit GatherGradDataParallelOpParallelSignature(const Operator* op)
-      : OpParallelSignature(op) {}
+  explicit GatherGradDataParallelSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
 
   const std::string Description() const override { return op().op_name() + ": S -> P"; }
 
-  const OpParallelMatchResult GetMatchResult(
+  const SbpSigMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelDesc& parallel_desc) const override {
     const SbpParallel& indices_sbp_parallel = SbpInferHint4BnInOp("indices").sbp_parallel();
     if (!indices_sbp_parallel.has_split_parallel()) {
-      return MakeOpParallelMatchSignatureMismatch();
+      return MakeSbpSigMatchSignatureMismatch();
     }
     const SbpParallel& out_diff_sbp_parallel = SbpInferHint4BnInOp("out_diff").sbp_parallel();
     if (!out_diff_sbp_parallel.has_split_parallel()) {
-      return MakeOpParallelMatchSignatureMismatch();
+      return MakeSbpSigMatchSignatureMismatch();
     }
     if (out_diff_sbp_parallel.split_parallel().axis()
         != indices_sbp_parallel.split_parallel().axis()
                + op().op_conf().gather_grad_conf().axis()) {
-      return MakeOpParallelMatchSignatureMismatch();
+      return MakeSbpSigMatchSignatureMismatch();
     }
-    if (parallel_desc.policy() == kDataParallel) { return MakeOpParallelMatchSuccess(); }
-    return MakeOpParallelMatchParallelPolicyError(parallel_desc.policy(), kDataParallel);
+    if (parallel_desc.policy() == kDataParallel) { return MakeSbpSigMatchSuccess(); }
+    return MakeSbpSigMatchParallelPolicyError(parallel_desc.policy(), kDataParallel);
   }
 
   void GenerateSignature(
@@ -47,35 +46,35 @@ class GatherGradDataParallelOpParallelSignature final : public OpParallelSignatu
   }
 };
 
-class GatherGradModelParallelOpParallelSignature final : public OpParallelSignature {
+class GatherGradModelParallelSbpSignature final : public ParallelSbpSignature {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(GatherGradModelParallelOpParallelSignature);
-  ~GatherGradModelParallelOpParallelSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(GatherGradModelParallelSbpSignature);
+  ~GatherGradModelParallelSbpSignature() override = default;
 
-  explicit GatherGradModelParallelOpParallelSignature(const Operator* op)
-      : OpParallelSignature(op) {}
+  explicit GatherGradModelParallelSbpSignature(const Operator* op)
+      : ParallelSbpSignature(op) {}
 
   const std::string Description() const override { return op().op_name() + ": (B, S) -> S"; }
 
-  const OpParallelMatchResult GetMatchResult(
+  const SbpSigMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelDesc& parallel_desc) const override {
     const SbpParallel& indices_sbp_parallel = SbpInferHint4BnInOp("indices").sbp_parallel();
     if (!indices_sbp_parallel.has_broadcast_parallel()) {
-      return MakeOpParallelMatchSignatureMismatch();
+      return MakeSbpSigMatchSignatureMismatch();
     }
     const SbpParallel& out_diff_sbp_parallel = SbpInferHint4BnInOp("out_diff").sbp_parallel();
     if (!out_diff_sbp_parallel.has_split_parallel()) {
-      return MakeOpParallelMatchSignatureMismatch();
+      return MakeSbpSigMatchSignatureMismatch();
     }
     const int64_t gather_axis = op().op_conf().gather_grad_conf().axis();
     if (out_diff_sbp_parallel.split_parallel().axis() >= gather_axis
         && out_diff_sbp_parallel.split_parallel().axis()
                < gather_axis + SbpInferHint4BnInOp("indices").num_axes()) {
-      return MakeOpParallelMatchSignatureMismatch();
+      return MakeSbpSigMatchSignatureMismatch();
     }
-    if (parallel_desc.policy() == kModelParallel) { return MakeOpParallelMatchSuccess(); }
-    return MakeOpParallelMatchParallelPolicyError(parallel_desc.policy(), kModelParallel);
+    if (parallel_desc.policy() == kModelParallel) { return MakeSbpSigMatchSuccess(); }
+    return MakeSbpSigMatchParallelPolicyError(parallel_desc.policy(), kModelParallel);
   }
 
   void GenerateSignature(
@@ -127,10 +126,10 @@ void GatherGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   in_diff->mut_shape() = Shape(in_diff_dim_vec);
 }
 
-void GatherGradOp::GetOpParallelSignatures(
-    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new GatherGradDataParallelOpParallelSignature(this));
-  op_parallel_signatures->emplace_back(new GatherGradModelParallelOpParallelSignature(this));
+void GatherGradOp::GetSbpSignatures(
+    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
+  op_parallel_signatures->emplace_back(new GatherGradDataParallelSbpSignature(this));
+  op_parallel_signatures->emplace_back(new GatherGradModelParallelSbpSignature(this));
 }
 
 REGISTER_OP(OperatorConf::kGatherGradConf, GatherGradOp);

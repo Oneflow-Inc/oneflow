@@ -18,12 +18,12 @@ bool BiasAddOp::IsInputBlobAllowedModelSplit(const std::string& ibn) const {
   return ibn == "b";
 }
 
-void BiasAddOp::GetOpParallelSignatures(
-    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(MakeDataSplitOpParallelSignature(this));
-  op_parallel_signatures->emplace_back(Make_DS_MB_2_DS_OpParallelSignature(this));
+void BiasAddOp::GetSbpSignatures(
+    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
+  op_parallel_signatures->emplace_back(MakeDataSplitSbpSignature(this));
+  op_parallel_signatures->emplace_back(Make_DS_MB_2_DS_SbpSignature(this));
   auto EqZero = [](int32_t axis) { return axis == 0; };
-  op_parallel_signatures->emplace_back(Make_DB_MS_2_MS_OpParallelSignature(this, EqZero));
+  op_parallel_signatures->emplace_back(Make_DB_MS_2_MS_SbpSignature(this, EqZero));
 }
 
 void BiasAddOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
