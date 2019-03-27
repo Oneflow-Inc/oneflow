@@ -9,7 +9,7 @@ void ReduceMeanGradOp::InitFromOpConf() {
   EnrollInputBn("dy");
   EnrollInputBn("x")->set_use_header_only(true);
   EnrollOutputBn("dx");
-  EnrollOutputBn("tmp_storage");
+  EnrollOutputBn("temp_storage");
 }
 
 const PbMessage& ReduceMeanGradOp::GetCustomizedConf() const {
@@ -28,7 +28,7 @@ void ReduceMeanGradOp::InferBlobDescs(
   FOR_RANGE(int64_t, i, 0, x_shape.NumAxes()) {
     CHECK(x_shape.At(i) == 1 || like_shape.At(i) == 1 || x_shape.At(i) == like_shape.At(i));
   }
-  *GetBlobDesc4BnInOp("tmp_storage") = *dy_blob_desc;
+  *GetBlobDesc4BnInOp("temp_storage") = *dy_blob_desc;
   *GetBlobDesc4BnInOp("dx") = *x_blob_desc;
 }
 
