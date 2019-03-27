@@ -2,7 +2,6 @@
 #define ONEFLOW_CORE_OPERATOR_NORMALIZATION_OP_H_
 
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/device/cudnn_util.h"
 
 namespace oneflow {
 

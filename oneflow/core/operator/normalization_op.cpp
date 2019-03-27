@@ -4,11 +4,10 @@
 namespace oneflow {
 
 void NormalizationOp::InitFromOpConf() {
-  const auto& conf = op_conf().normalization_conf();
-  float min_epsilon = CUDNN_BN_MIN_EPSILON + 1e-8;
-  if (conf.epsilon() < min_epsilon) {
-    this->mut_op_conf()->mutable_normalization_conf()->set_epsilon(min_epsilon);
-  }
+  const NormalizationOpConf& conf = op_conf().normalization_conf();
+#ifdef WITH_CUDA
+  if (DevIsGpuAndEnableCudnn()) { CHECK_GE(conf.epsilon(), CUDNN_BN_MIN_EPSILON); }
+#endif
   CHECK_GE(conf.momentum(), 0);
   CHECK_LE(conf.momentum(), 1);
   EnrollInputBn("in");

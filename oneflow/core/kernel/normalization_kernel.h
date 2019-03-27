@@ -50,23 +50,6 @@ class NormalizationKernel final : public KernelIfWithModel<device_type, T>,
                           std::function<Blob*(const std::string&)>) const override;
   void BackwardDataContent(const KernelCtx&,
                            std::function<Blob*(const std::string&)>) const override;
-
-  void CalcAboutGammaDiff(const KernelCtx&, const std::function<Blob*(const std::string&)>,
-                          const Blob* out_diff_blob, bool need_comp_in_diff) const;
-  void CalcAboutBetaDiff(const KernelCtx&, const std::function<Blob*(const std::string&)>,
-                         const Blob* out_diff_blob, bool need_comp_in_diff) const;
-  void CalcInDiff(const KernelCtx&, const std::function<Blob*(const std::string&)>,
-                  const Blob* out_diff_blob, Blob* in_diff_blob) const;
-  void Normalize(const KernelCtx&, const std::function<Blob*(const std::string&)>&,
-                 const Blob* mean_blob, const Blob* variance_blob, const Blob* in_blob,
-                 Blob* out_blob) const;
-  void CalcMeanAndVariance(const KernelCtx&, const std::function<Blob*(const std::string&)>&,
-                           const Blob* in_blob) const;
-  void UpdateMovingMeanAndMovingVariance(const KernelCtx&,
-                                         const std::function<Blob*(const std::string&)>&) const;
-  void InitMovingMeanAndMovingVariance(const KernelCtx& ctx,
-                                       const std::function<Blob*(const std::string&)>& BnInOp2Blob,
-                                       bool use_new) const;
   const PbMessage& GetCustomizedOpConf() const override;
 
   void NormalizationCudnnForward(const KernelCtx&,
