@@ -72,7 +72,7 @@ Shape Shape::CreateLeftExtendedShape(int num_axes) const {
 
 std::vector<int64_t> Shape::ShiftNegativeAxis(const std::vector<int64_t>& axis_vec) const {
   const int64_t num_axes = this->NumAxes();
-  std::vector<int32_t> ret = axis_vec;
+  std::vector<int64_t> ret = axis_vec;
   for (int64_t i = 0; i < axis_vec.size(); i++) {
     if (axis_vec[i] < 0) { ret[i] += num_axes; }
     CHECK_LT(ret[i], num_axes);
