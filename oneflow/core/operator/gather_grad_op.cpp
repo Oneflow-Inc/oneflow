@@ -17,6 +17,19 @@ class GatherGradDataParallelSbpSignature final : public ParallelSbpSignature {
   const SbpSigMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelDesc& parallel_desc) const override {
+    const SbpParallel& indices_sbp_parallel = SbpInferHint4BnInOp("indices").sbp_parallel();
+    if (!indices_sbp_parallel.has_split_parallel()) {
+      return MakeSbpSigMatchSignatureMismatch();
+    }
+    const SbpParallel& out_diff_sbp_parallel = SbpInferHint4BnInOp("out_diff").sbp_parallel();
+    if (!out_diff_sbp_parallel.has_split_parallel()) {
+      return MakeSbpSigMatchSignatureMismatch();
+    }
+    if (out_diff_sbp_parallel.split_parallel().axis()
+        != indices_sbp_parallel.split_parallel().axis()
+               + op().op_conf().gather_grad_conf().axis()) {
+      return MakeSbpSigMatchSignatureMismatch();
+    }
     if (parallel_desc.policy() == kDataParallel) { return MakeSbpSigMatchSuccess(); }
     return MakeSbpSigMatchParallelPolicyError(parallel_desc.policy(), kDataParallel);
   }
@@ -24,9 +37,60 @@ class GatherGradDataParallelSbpSignature final : public ParallelSbpSignature {
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       HashMap<std::string, SbpParallel>* bn2sbp) const override {
-    (*bn2sbp)["indices"].mutable_split_parallel()->set_axis(0);
-    (*bn2sbp)["out_diff"].mutable_split_parallel()->set_axis(0);
+    const int64_t indices_split_axis =
+        SbpInferHint4BnInOp("indices").sbp_parallel().split_parallel().axis();
+    (*bn2sbp)["indices"].mutable_split_parallel()->set_axis(indices_split_axis);
+    (*bn2sbp)["out_diff"].mutable_split_parallel()->set_axis(
+        indices_split_axis + op().op_conf().gather_grad_conf().axis());
     (*bn2sbp)["in_diff"].mutable_partial_sum_parallel();
+  }
+};
+
+class GatherGradModelParallelSbpSignature final : public ParallelSbpSignature {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(GatherGradModelParallelSbpSignature);
+  ~GatherGradModelParallelSbpSignature() override = default;
+
+  explicit GatherGradModelParallelSbpSignature(const Operator* op)
+      : ParallelSbpSignature(op) {}
+
+  const std::string Description() const override { return op().op_name() + ": (B, S) -> S"; }
+
+  const SbpSigMatchResult GetMatchResult(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      const ParallelDesc& parallel_desc) const override {
+    const SbpParallel& indices_sbp_parallel = SbpInferHint4BnInOp("indices").sbp_parallel();
+    if (!indices_sbp_parallel.has_broadcast_parallel()) {
+      return MakeSbpSigMatchSignatureMismatch();
+    }
+    const SbpParallel& out_diff_sbp_parallel = SbpInferHint4BnInOp("out_diff").sbp_parallel();
+    if (!out_diff_sbp_parallel.has_split_parallel()) {
+      return MakeSbpSigMatchSignatureMismatch();
+    }
+    const int64_t gather_axis = op().op_conf().gather_grad_conf().axis();
+    if (out_diff_sbp_parallel.split_parallel().axis() >= gather_axis
+        && out_diff_sbp_parallel.split_parallel().axis()
+               < gather_axis + SbpInferHint4BnInOp("indices").num_axes()) {
+      return MakeSbpSigMatchSignatureMismatch();
+    }
+    if (parallel_desc.policy() == kModelParallel) { return MakeSbpSigMatchSuccess(); }
+    return MakeSbpSigMatchParallelPolicyError(parallel_desc.policy(), kModelParallel);
+  }
+
+  void GenerateSignature(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+    const int64_t out_diff_split_axis =
+        SbpInferHint4BnInOp("out_diff").sbp_parallel().split_parallel().axis();
+    (*bn2sbp)["indices"].mutable_broadcast_parallel();
+    (*bn2sbp)["out_diff"].mutable_split_parallel()->set_axis(out_diff_split_axis);
+    const int64_t gather_axis = op().op_conf().gather_grad_conf().axis();
+    const int64_t in_diff_split_axis =
+        (out_diff_split_axis < gather_axis)
+            ? out_diff_split_axis
+            : out_diff_split_axis - SbpInferHint4BnInOp("indices").num_axes() + 1;
+    CHECK_NE(gather_axis, in_diff_split_axis);
+    (*bn2sbp)["in_diff"].mutable_split_parallel()->set_axis(in_diff_split_axis);
   }
 };
 
@@ -64,8 +128,8 @@ void GatherGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
 
 void GatherGradOp::GetSbpSignatures(
     std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
-  // TODO: support model parallel
   op_parallel_signatures->emplace_back(new GatherGradDataParallelSbpSignature(this));
+  op_parallel_signatures->emplace_back(new GatherGradModelParallelSbpSignature(this));
 }
 
 REGISTER_OP(OperatorConf::kGatherGradConf, GatherGradOp);
