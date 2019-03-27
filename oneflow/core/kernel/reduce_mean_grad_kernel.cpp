@@ -15,11 +15,6 @@ void ReduceMeanGradKernel<device_type, T>::ForwardDataContent(
                       dy_blob->ByteSizeOfDataContentField());
   KernelUtil<device_type, T>::Div(ctx.device_ctx, tmp_blob->shape().elem_cnt(),
                                   tmp_blob->mut_dptr<T>(), static_cast<T>(count));
-  NdarrayUtil<device_type, T>::BroadcastTo(
-      ctx.device_ctx, XpuVarNdarray<T>(dx_blob, dx_blob->shape().NumAxes()),
-      XpuVarNdarray<const T>(Shape(this->kernel_conf().reduce_sum_conf().kept_dims_shape()),
-                             tmp_blob->dptr<T>()));
-
   const int64_t num_axes = dx_blob->shape().NumAxes();
   if (this->op_conf().reduce_mean_grad_conf().has_kept_dims_shape()) {
     NdarrayUtil<device_type, T>::BroadcastTo(
