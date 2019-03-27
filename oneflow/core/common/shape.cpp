@@ -70,4 +70,21 @@ Shape Shape::CreateLeftExtendedShape(int num_axes) const {
   return Shape(dim_vec);
 }
 
+std::vector<int64_t> Shape::ShiftNegativeAxis(const std::vector<int64_t>& axis_vec) const {
+  const int64_t num_axes = this->NumAxes();
+  std::vector<int64_t> ret = axis_vec;
+  for (int64_t i = 0; i < axis_vec.size(); i++) {
+    if (axis_vec[i] < 0) { ret[i] += num_axes; }
+    CHECK_LT(ret[i], num_axes);
+    CHECK_GE(ret[i], 0);
+  }
+  return ret;
+}
+
+Shape Shape::CreateReducedShape(const std::vector<int64_t>& axis_vec) const {
+  std::vector<int64_t> dim_vec = this->dim_vec();
+  for (const int64_t& axis : ShiftNegativeAxis(axis_vec)) { dim_vec[axis] = 1; }
+  return Shape(dim_vec);
+}
+
 }  // namespace oneflow

@@ -28,8 +28,10 @@ class VariableOpDataSplitSbpSignature final : public ParallelSbpSignature {
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       HashMap<std::string, SbpParallel>* bn2sbp) const override {
-    CHECK(SbpInferHint4Ibn("tick").is_data_split());
-    (*bn2sbp)["tick"].mutable_split_parallel()->set_axis(0);
+    if (op().op_conf().variable_conf().has_tick()) {
+      CHECK(SbpInferHint4Ibn("tick").is_data_split());
+      (*bn2sbp)["tick"].mutable_split_parallel()->set_axis(0);
+    }
     (*bn2sbp)["out"].mutable_broadcast_parallel();
   }
 };
@@ -57,8 +59,10 @@ class VariableOpModelSplitSbpSignature final : public ParallelSbpSignature {
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       HashMap<std::string, SbpParallel>* bn2sbp) const override {
-    CHECK(SbpInferHint4Ibn("tick").is_data_split());
-    (*bn2sbp)["tick"].mutable_split_parallel()->set_axis(0);
+    if (op().op_conf().variable_conf().has_tick()) {
+      CHECK(SbpInferHint4Ibn("tick").is_data_split());
+      (*bn2sbp)["tick"].mutable_split_parallel()->set_axis(0);
+    }
     (*bn2sbp)["out"].mutable_split_parallel()->set_axis(
         (op().OutputBlobModelSplitAxis(SbpInferHint4Ibn, "out")));
   }
@@ -68,7 +72,7 @@ class VariableOpModelSplitSbpSignature final : public ParallelSbpSignature {
 
 void VariableOp::InitFromOpConf() {
   CHECK(op_conf().has_variable_conf());
-  EnrollInputBn("tick", false);
+  if (op_conf().variable_conf().has_tick()) { EnrollInputBn("tick", false); }
   bool has_diff =
       (Global<JobDesc>::Get()->IsTrain() && op_conf().trainable())
       || Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf();
