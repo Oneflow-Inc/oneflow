@@ -805,22 +805,29 @@ message NormalizationOpConf {
   optional float gamma_init = 9 [default = 1.0];
   optional float mean_init = 10 [default = 0.0];
   optional float variance_init = 11 [default = 1.0];
-  optional bool use_first_piece_init_moving = 12 [default = false];
   optional ActivationType activation = 13 [default = kNone];
+  optional string moving_mean = 14;
+  optional string moving_variance = 15;
+  optional string beta = 16;
+  optional string gamma = 17;
+  optional string mean = 18 [default = "mean"];
+  optional string inv_variance = 19 [default = "inv_variance"];
 }
 
 message NormalizationGradOpConf {
   //in
   required string dy = 1;
-  optional string mean = 2;
-  optional string inv_variance = 3;
-  optional string gamma = 4;
+  required string x = 2;
+  optional string mean = 3;
+  optional string inv_variance = 4;
+  optional string gamma = 5;
   //out
-  optional string dx = 5;
-  optional string beta_diff = 6;
-  optional string gamma_diff = 7;
-  required int32 axis = 8; // NCHW = 1, NHWC = 3, TODO: axis list
-  required float epsilon = 9;
+  optional string dx = 6;
+  optional string beta_diff = 7;
+  optional string gamma_diff = 8;
+
+  required int32 axis = 9;
+  required float epsilon = 10;
 }
 
 message DropoutOpConf {

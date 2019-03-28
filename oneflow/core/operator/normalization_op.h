@@ -17,6 +17,8 @@ class NormalizationOp final : public Operator {
 
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
+  void InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                           const ParallelContext* parallel_ctx) const override;
 
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
