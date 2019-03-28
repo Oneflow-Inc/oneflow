@@ -23,12 +23,12 @@ void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   *GetBlobDesc4BnInOp("fw_tmp") = *in_blob;
   BlobDesc* out_blob = GetBlobDesc4BnInOp("out");
   out_blob->set_data_type(in_blob->data_type());
+  const Shape& reduced_shape =
+      in_blob->shape().CreateReducedShape({conf.axis().begin(), conf.axis().end()});
   if (conf.keep_dims()) {
-    out_blob->mut_shape() =
-        in_blob->shape().CreateReducedShape({conf.axis().begin(), conf.axis().end()});
+    out_blob->mut_shape() = reduced_shape;
   } else {
-    out_blob->mut_shape() =
-        in_blob->shape().CreateReducedShape7DropDims({conf.axis().begin(), conf.axis().end()});
+    out_blob->mut_shape() = reduced_shape.Squeeze();
   }
 }
 
