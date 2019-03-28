@@ -12,7 +12,7 @@ struct NormalizationKernelUtil {
                               Blob* inv_variance, Blob* buf, int32_t axis, double epsilon,
                               double momentum);
   static void ForwardInference(DeviceCtx* ctx, const Blob* x, const Blob* gamma, const Blob* beta,
-                               const Blob* moving_mean, const Blob* moving_variance, Blob* out,
+                               const Blob* moving_mean, const Blob* moving_variance, Blob* y,
                                Blob* buf, int32_t axis, double epsilon);
   static void Backward(DeviceCtx* ctx, const Blob* x, const Blob* gamma, const Blob* mean,
                        const Blob* inv_variance, const Blob* dy, Blob* dx, Blob* gamma_diff,

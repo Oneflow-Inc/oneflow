@@ -11,7 +11,7 @@ struct NormalizationKernelUtil<kCPU, T> {
     UNIMPLEMENTED();
   }
   static void ForwardInference(DeviceCtx* ctx, const Blob* x, const Blob* gamma, const Blob* beta,
-                               const Blob* moving_mean, const Blob* moving_variance, Blob* out,
+                               const Blob* moving_mean, const Blob* moving_variance, Blob* y,
                                Blob* buf, int32_t axis, double epsilon) {
     UNIMPLEMENTED();
   }
@@ -21,5 +21,10 @@ struct NormalizationKernelUtil<kCPU, T> {
     UNIMPLEMENTED();
   }
 };
+
+#define INSTANTIATE_NORMALIZATION_KERNEL_UTIL_CPU(type_cpp, type_proto) \
+  template struct NormalizationKernelUtil<DeviceType::kCPU, type_cpp>;
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_NORMALIZATION_KERNEL_UTIL_CPU, FLOATING_DATA_TYPE_SEQ)
+#undef INSTANTIATE_NORMALIZATION_KERNEL_UTIL_CPU
 
 }  // namespace oneflow
