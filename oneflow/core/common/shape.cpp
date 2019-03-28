@@ -83,7 +83,11 @@ std::vector<int64_t> Shape::ShiftNegativeAxis(const std::vector<int64_t>& axis_v
 
 Shape Shape::CreateReducedShape(const std::vector<int64_t>& axis_vec) const {
   std::vector<int64_t> dim_vec = this->dim_vec();
-  for (const int64_t& axis : ShiftNegativeAxis(axis_vec)) { dim_vec[axis] = 1; }
+  if (axis_vec.empty()) {
+    std::fill(dim_vec.begin(), dim_vec.end(), 1);
+  } else {
+    for (const int64_t& axis : ShiftNegativeAxis(axis_vec)) { dim_vec[axis] = 1; }
+  }
   return Shape(dim_vec);
 }
 

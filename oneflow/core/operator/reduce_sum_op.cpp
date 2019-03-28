@@ -23,12 +23,24 @@ void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   *GetBlobDesc4BnInOp("fw_tmp") = *in_blob;
   BlobDesc* out_blob = GetBlobDesc4BnInOp("out");
   out_blob->set_data_type(in_blob->data_type());
-  const Shape& reduced_shape =
-      in_blob->shape().CreateReducedShape({conf.axis().begin(), conf.axis().end()});
-  if (conf.keep_dims()) {
-    out_blob->mut_shape() = reduced_shape;
+  if (conf.axis().empty()) {
+    if (conf.keep_dims()) {
+      std::vector<int64_t> out_dim_vec;
+      out_dim_vec.resize(in_blob->shape().NumAxes());
+      std::fill(out_dim_vec.begin(), out_dim_vec.end(), 1);
+      out_blob->mut_shape() = Shape(out_dim_vec);
+    } else {
+      out_blob->mut_shape() = Shape({1});
+    }
   } else {
-    out_blob->mut_shape() = reduced_shape.Squeeze();
+    std::vector<int64_t> axis_vec = {conf.axis().begin(), conf.axis().end()};
+    std::vector<int64_t> out_dim_vec;
+    const Shape& reduced_shape = in_blob->shape().CreateReducedShape(axis_vec);
+    if (conf.keep_dims()) {
+      out_blob->mut_shape() = reduced_shape;
+    } else {
+      out_blob->mut_shape() = reduced_shape.Squeeze();
+    }
   }
 }
 
