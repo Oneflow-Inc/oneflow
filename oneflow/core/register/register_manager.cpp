@@ -106,7 +106,9 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
         regst->comm_net_token_ = Global<CommNet>::Get()->RegisterMemory(
             main_mem_ptr, rt_regst_desc->MainByteSize4OneRegst());
       }
-      main_mem_ptr += rt_regst_desc->MainByteSize4OneRegst();
+      if (main_mem_ptr != nullptr) {
+        main_mem_ptr += rt_regst_desc->MainByteSize4OneRegst();
+      }
     } else if (regst_desc_type.has_ctrl_regst_desc()) {
       // do nothing
     } else {
@@ -131,10 +133,13 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
     cur_header_pointer = separated_mem_ptr;
     cur_body_pointer = main_mem_ptr;
   } else {
-    CHECK_NOTNULL(main_mem_ptr);
     regst->packed_blob_.reset(new Blob(regst, packed_blob_desc, main_mem_ptr));
     cur_header_pointer = main_mem_ptr;
-    cur_body_pointer = main_mem_ptr + packed_blob_desc->ByteSizeOfBlobHeader();
+    if (main_mem_ptr == nullptr) {
+      cur_body_pointer = nullptr;
+    } else {
+      cur_body_pointer = main_mem_ptr + packed_blob_desc->ByteSizeOfBlobHeader();
+    }
   }
   rt_regst_desc->ForEachBlobDescOffsetInOnRegst(
       lbis, [&](const LbiBlobDescPair& lbi, int64_t body_offset, int64_t header_offset) {
