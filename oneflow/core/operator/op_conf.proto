@@ -622,6 +622,14 @@ message ReduceMeanOpConf {
   optional bool keep_dims = 4 [default = false];
 }
 
+message ReduceMeanGradOpConf {
+  required string dy = 1;
+  required string x = 2; // like
+  required string dx = 3;
+  repeated int32 reduced_axis = 4;
+  optional string temp_storage = 5 [default = "temp_storage"];
+}
+
 message BasicRnnOpConf {
   required string in = 1;
   optional string init_hidden = 2;
@@ -1015,7 +1023,7 @@ message BroadcastLikeOpConf {
   required string x = 1;
   required string like = 2;
   required string y = 3;
-  optional ShapeProto kept_dims_shape = 4;
+  repeated int32 reduced_axis = 4;
 }
 
 message BroadcastDivGradOpConf {
@@ -1332,7 +1340,8 @@ message OperatorConf {
     BroadcastLikeOpConf broadcast_like_conf = 277;
     SoftmaxGradOpConf softmax_grad_conf = 278;
     BatchGatherGradOpConf batch_gather_grad_conf = 279;
-    NormalizationGradOpConf normalization_grad_conf = 280;
+    ReduceMeanGradOpConf reduce_mean_grad_conf = 280;
+    NormalizationGradOpConf normalization_grad_conf = 281;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

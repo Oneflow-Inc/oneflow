@@ -12,9 +12,6 @@ void AutoVar(const OpGraph& op_graph, JobConf1* job_conf);
 OperatorConf GenerateVariableOpConf(const BlobDesc& blob_desc, const std::string& name,
                                     const std::string& model_name);
 
-void GenerateInputVarOpConfIf(const Operator&, std::vector<OperatorConf>*,
-                              const std::function<const BlobDesc&(const std::string&)>&);
-
 class GenerateInputVarOpConfWrapperStruct final {
  public:
   using Func = std::function<void(const Operator&, std::vector<OperatorConf>*,
