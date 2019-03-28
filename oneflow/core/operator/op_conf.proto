@@ -626,7 +626,7 @@ message ReduceMeanGradOpConf {
   required string dy = 1;
   required string x = 2; // like
   required string dx = 3;
-  repeated int32 axis = 4;
+  repeated int32 reduced_axis = 4;
   optional string temp_storage = 5 [default = "temp_storage"];
 }
 
@@ -1002,7 +1002,7 @@ message BroadcastLikeOpConf {
   required string x = 1;
   required string like = 2;
   required string y = 3;
-  optional ShapeProto kept_dims_shape = 4;
+  repeated int32 reduced_axis = 4;
 }
 
 message BroadcastDivGradOpConf {

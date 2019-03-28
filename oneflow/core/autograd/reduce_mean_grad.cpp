@@ -33,7 +33,7 @@ void GenerateBackwardOpConf(
     reduce_mean_grad_op_conf->set_x(GenLogicalBlobName(op.BnInOp2Lbi("in")));
     reduce_mean_grad_op_conf->set_dx("dx");
     const ReduceMeanOpConf& reduce_mean_op_conf = op.op_conf().reduce_mean_conf();
-    reduce_mean_grad_op_conf->mutable_axis()->CopyFrom(reduce_mean_op_conf.axis());
+    reduce_mean_grad_op_conf->mutable_reduced_axis()->CopyFrom(reduce_mean_op_conf.axis());
     op_confs->push_back(reduce_mean_grad_op);
     DiffLbi4BnInOp("in")->set_op_name(reduce_mean_grad_op.name());
     DiffLbi4BnInOp("in")->set_blob_name("dx");
