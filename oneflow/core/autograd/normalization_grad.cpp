@@ -16,6 +16,8 @@ void GenerateBackwardOpConf(
   OperatorConf normalization_grad_op;
   normalization_grad_op.set_name("System-AutoGrad-" + op.op_name());
   NormalizationGradOpConf* grad_conf = normalization_grad_op.mutable_normalization_grad_conf();
+  grad_conf->set_axis(conf.axis());
+  grad_conf->set_epsilon(conf.epsilon());
   grad_conf->set_dy(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
   grad_conf->set_x(GenLogicalBlobName(op.BnInOp2Lbi("in")));
   grad_conf->set_mean(GenLogicalBlobName(op.BnInOp2Lbi("mean")));
