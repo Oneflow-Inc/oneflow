@@ -34,7 +34,7 @@ void GenerateBackwardOpConf(
     gamma_diff_lbi->set_blob_name(grad_conf->gamma_diff());
   }
   if (beta_diff_lbi != nullptr) {
-    grad_conf->set_gamma_diff("beta_diff");
+    grad_conf->set_beta_diff("beta_diff");
     beta_diff_lbi->set_op_name(normalization_grad_op.name());
     beta_diff_lbi->set_blob_name(grad_conf->beta_diff());
   }
