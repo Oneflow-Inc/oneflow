@@ -82,21 +82,9 @@ std::vector<int64_t> Shape::ShiftNegativeAxis(const std::vector<int64_t>& axis_v
 }
 
 Shape Shape::CreateReducedShape(const std::vector<int64_t>& axis_vec) const {
+  CHECK_EQ(axis_vec.empty(), false);
   std::vector<int64_t> dim_vec = this->dim_vec();
-  if (axis_vec.empty()) {
-    std::fill(dim_vec.begin(), dim_vec.end(), 1);
-  } else {
-    for (const int64_t& axis : ShiftNegativeAxis(axis_vec)) { dim_vec[axis] = 1; }
-  }
-  return Shape(dim_vec);
-}
-
-Shape Shape::Squeeze() const {
-  std::vector<int64_t> dim_vec;
-  for (const int64_t& dim : this->dim_vec()) {
-    if (dim != 1) { dim_vec.push_back(dim); }
-  }
-  if (dim_vec.empty()) { dim_vec.push_back(1); }
+  for (const int64_t& axis : ShiftNegativeAxis(axis_vec)) { dim_vec[axis] = 1; }
   return Shape(dim_vec);
 }
 
@@ -109,6 +97,12 @@ Shape Shape::Squeeze(const std::vector<int64_t>& axis_vec) const {
     }
   }
   if (dim_vec.empty()) { dim_vec.push_back(1); }
+  return Shape(dim_vec);
+}
+
+Shape Shape::Fill(const int64_t dim) const {
+  std::vector<int64_t> dim_vec = this->dim_vec();
+  std::fill(dim_vec.begin(), dim_vec.end(), dim);
   return Shape(dim_vec);
 }
 

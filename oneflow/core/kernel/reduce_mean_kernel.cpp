@@ -12,11 +12,12 @@ void ReduceMeanKernel<device_type, T>::ForwardDataContent(
   Blob* fw_tmp_blob = BnInOp2Blob("fw_tmp");
   size_t count = in_blob->shape().elem_cnt() / out_blob->shape().elem_cnt();
   const ReduceMeanOpConf& conf = this->op_conf().reduce_mean_conf();
+  const Shape& reduced_shape =
+      conf.axis().empty()
+          ? in_blob->shape().Fill(1)
+          : in_blob->shape().CreateReducedShape({conf.axis().begin(), conf.axis().end()});
   NdarrayUtil<device_type, T>::ReduceSum(
-      ctx.device_ctx,
-      XpuVarNdarray<T>(
-          in_blob->shape().CreateReducedShape({conf.axis().begin(), conf.axis().end()}),
-          out_blob->mut_dptr<T>()),
+      ctx.device_ctx, XpuVarNdarray<T>(reduced_shape, out_blob->mut_dptr<T>()),
       XpuVarNdarray<const T>(in_blob, in_blob->shape().NumAxes()),
       XpuVarNdarray<T>(fw_tmp_blob, in_blob->shape().NumAxes()));
   KernelUtil<device_type, T>::Div(ctx.device_ctx, out_blob->shape().elem_cnt(),
@@ -35,11 +36,13 @@ void ReduceMeanKernel<device_type, T>::BackwardDataContent(
                       out_diff_blob->ByteSizeOfDataContentField());
   KernelUtil<device_type, T>::Div(ctx.device_ctx, bw_tmp_blob->shape().elem_cnt(),
                                   bw_tmp_blob->mut_dptr<T>(), static_cast<T>(count));
+  const Shape& reduced_shape =
+      conf.axis().empty()
+          ? in_diff_blob->shape().Fill(1)
+          : in_diff_blob->shape().CreateReducedShape({conf.axis().begin(), conf.axis().end()});
   NdarrayUtil<device_type, T>::BroadcastTo(
       ctx.device_ctx, XpuVarNdarray<T>(in_diff_blob, in_diff_blob->shape().NumAxes()),
-      XpuVarNdarray<const T>(
-          in_diff_blob->shape().CreateReducedShape({conf.axis().begin(), conf.axis().end()}),
-          bw_tmp_blob->dptr<T>()));
+      XpuVarNdarray<const T>(reduced_shape, bw_tmp_blob->dptr<T>()));
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReduceMeanConf, ReduceMeanKernel, FLOATING_DATA_TYPE_SEQ);

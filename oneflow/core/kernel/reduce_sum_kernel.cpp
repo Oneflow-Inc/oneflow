@@ -10,11 +10,12 @@ void ReduceSumKernel<device_type, T>::ForwardDataContent(
   Blob* out_blob = BnInOp2Blob("out");
   Blob* fw_tmp_blob = BnInOp2Blob("fw_tmp");
   const ReduceSumOpConf& conf = this->op_conf().reduce_sum_conf();
+  const Shape& reduced_shape =
+      conf.axis().empty()
+          ? in_blob->shape().Fill(1)
+          : in_blob->shape().CreateReducedShape({conf.axis().begin(), conf.axis().end()});
   NdarrayUtil<device_type, T>::ReduceSum(
-      ctx.device_ctx,
-      XpuVarNdarray<T>(
-          in_blob->shape().CreateReducedShape({conf.axis().begin(), conf.axis().end()}),
-          out_blob->mut_dptr<T>()),
+      ctx.device_ctx, XpuVarNdarray<T>(reduced_shape, out_blob->mut_dptr<T>()),
       XpuVarNdarray<const T>(in_blob, in_blob->shape().NumAxes()),
       XpuVarNdarray<T>(fw_tmp_blob, in_blob->shape().NumAxes()));
 }
@@ -25,11 +26,13 @@ void ReduceSumKernel<device_type, T>::BackwardDataContent(
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   Blob* in_diff_blob = BnInOp2Blob("in_diff");
   const ReduceSumOpConf& conf = this->op_conf().reduce_sum_conf();
+  const Shape& reduced_shape =
+      conf.axis().empty()
+          ? in_diff_blob->shape().Fill(1)
+          : in_diff_blob->shape().CreateReducedShape({conf.axis().begin(), conf.axis().end()});
   NdarrayUtil<device_type, T>::BroadcastTo(
       ctx.device_ctx, XpuVarNdarray<T>(in_diff_blob, in_diff_blob->shape().NumAxes()),
-      XpuVarNdarray<const T>(
-          in_diff_blob->shape().CreateReducedShape({conf.axis().begin(), conf.axis().end()}),
-          out_diff_blob->dptr<T>()));
+      XpuVarNdarray<const T>(reduced_shape, out_diff_blob->dptr<T>()));
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReduceSumConf, ReduceSumKernel, ARITHMETIC_DATA_TYPE_SEQ);

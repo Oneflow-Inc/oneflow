@@ -38,8 +38,8 @@ class Shape final {
   Shape CreateLeftExtendedShape(int num_axes) const;
   std::vector<int64_t> ShiftNegativeAxis(const std::vector<int64_t>& axis_vec) const;
   Shape CreateReducedShape(const std::vector<int64_t>& axis_vec) const;
-  Shape Squeeze() const;
   Shape Squeeze(const std::vector<int64_t>& axis_vec) const;
+  Shape Fill(const int64_t dim) const;
 
  private:
   void UpdateElemCnt();
