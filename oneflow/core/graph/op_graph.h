@@ -46,8 +46,8 @@ class OpNode final : public Node<OpNode, OpEdge> {
   // Setters
   ParallelDesc* mut_parallel_desc() { return &parallel_desc_; }
   Shape* mut_out_blob_time_shape() { return &out_blob_time_shape_; }
-  HashMap<LogicalBlobId, std::vector<BlobDesc>>* mut_lbi2parallel_id2blob_desc() {
-    return &lbi2parallel_id2blob_desc_;
+  HashMap<std::string, std::vector<BlobDesc>>* mut_bn2parallel_id2blob_desc() {
+    return &bn2parallel_id2blob_desc_;
   }
   bool IsModelBlob4Lbi(const LogicalBlobId& lbi) const;
   bool* MutIsModelBlob4Lbi(const LogicalBlobId& lbi);
@@ -80,7 +80,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   HashMap<LogicalBlobId, BlobDesc> lbi2no_parallel_blob_desc_;
   HashMap<LogicalBlobId, bool> lbi2is_model_blob_;
   HashMap<LogicalBlobId, SbpParallel> lbi2sbp_parallel_;
-  HashMap<LogicalBlobId, std::vector<BlobDesc>> lbi2parallel_id2blob_desc_;
+  HashMap<std::string, std::vector<BlobDesc>> bn2parallel_id2blob_desc_;
   HashMap<LogicalBlobId, BlobDesc> lbi2logical_blob_desc_;
 };
 
