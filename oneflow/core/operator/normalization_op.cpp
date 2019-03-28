@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/normalization_op.h"
+#include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
 
