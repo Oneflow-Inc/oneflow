@@ -622,6 +622,14 @@ message ReduceMeanOpConf {
   optional bool keep_dims = 4 [default = false];
 }
 
+message ReduceMeanGradOpConf {
+  required string dy = 1;
+  required string x = 2; // like
+  required string dx = 3;
+  repeated int32 axis = 4;
+  optional string temp_storage = 5 [default = "temp_storage"];
+}
+
 message BasicRnnOpConf {
   required string in = 1;
   optional string init_hidden = 2;
@@ -1189,6 +1197,13 @@ message TotalLossInstanceNumOpConf {
   required string out = 2;
 }
 
+message BatchGatherGradOpConf {
+  required string out_diff = 1;
+  required string indices = 2;
+  required string in_diff = 3;
+  required int64 gather_dim_size = 4;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1303,6 +1318,8 @@ message OperatorConf {
     BroadcastDivGradOpConf broadcast_div_grad_conf= 276;
     BroadcastLikeOpConf broadcast_like_conf = 277;
     SoftmaxGradOpConf softmax_grad_conf = 278;
+    BatchGatherGradOpConf batch_gather_grad_conf = 279;
+    ReduceMeanGradOpConf reduce_mean_grad_conf = 280;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

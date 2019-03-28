@@ -6,59 +6,63 @@ namespace oneflow {
 namespace {
 
 // S(0) -> C
-class VariableOpDataSplitOpParallelSignature final : public OpParallelSignature {
+class VariableOpDataSplitSbpSignature final : public ParallelSbpSignature {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(VariableOpDataSplitOpParallelSignature);
-  ~VariableOpDataSplitOpParallelSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(VariableOpDataSplitSbpSignature);
+  ~VariableOpDataSplitSbpSignature() override = default;
 
-  VariableOpDataSplitOpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
+  VariableOpDataSplitSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
 
   const std::string Description() const override { return op().op_name() + ": S(0) -> C"; }
 
-  const OpParallelMatchResult GetMatchResult(
+  const SbpSigMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
     if (parallel_desc.policy() == kDataParallel) {
-      return MakeOpParallelMatchSuccess();
+      return MakeSbpSigMatchSuccess();
     } else {
-      return MakeOpParallelMatchParallelPolicyError(parallel_desc.policy(), kDataParallel);
+      return MakeSbpSigMatchParallelPolicyError(parallel_desc.policy(), kDataParallel);
     }
   }
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       HashMap<std::string, SbpParallel>* bn2sbp) const override {
-    CHECK(SbpInferHint4Ibn("tick").is_data_split());
-    (*bn2sbp)["tick"].mutable_split_parallel()->set_axis(0);
+    if (op().op_conf().variable_conf().has_tick()) {
+      CHECK(SbpInferHint4Ibn("tick").is_data_split());
+      (*bn2sbp)["tick"].mutable_split_parallel()->set_axis(0);
+    }
     (*bn2sbp)["out"].mutable_broadcast_parallel();
   }
 };
 
 // S(0) -> S
-class VariableOpModelSplitOpParallelSignature final : public OpParallelSignature {
+class VariableOpModelSplitSbpSignature final : public ParallelSbpSignature {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(VariableOpModelSplitOpParallelSignature);
-  ~VariableOpModelSplitOpParallelSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(VariableOpModelSplitSbpSignature);
+  ~VariableOpModelSplitSbpSignature() override = default;
 
-  VariableOpModelSplitOpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
+  VariableOpModelSplitSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
 
   const std::string Description() const override { return op().op_name() + ": S(0) -> S"; }
 
-  const OpParallelMatchResult GetMatchResult(
+  const SbpSigMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
     if (parallel_desc.policy() == kModelParallel) {
-      return MakeOpParallelMatchSuccess();
+      return MakeSbpSigMatchSuccess();
     } else {
-      return MakeOpParallelMatchParallelPolicyError(parallel_desc.policy(), kModelParallel);
+      return MakeSbpSigMatchParallelPolicyError(parallel_desc.policy(), kModelParallel);
     }
   }
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       HashMap<std::string, SbpParallel>* bn2sbp) const override {
-    CHECK(SbpInferHint4Ibn("tick").is_data_split());
-    (*bn2sbp)["tick"].mutable_split_parallel()->set_axis(0);
+    if (op().op_conf().variable_conf().has_tick()) {
+      CHECK(SbpInferHint4Ibn("tick").is_data_split());
+      (*bn2sbp)["tick"].mutable_split_parallel()->set_axis(0);
+    }
     (*bn2sbp)["out"].mutable_split_parallel()->set_axis(
         (op().OutputBlobModelSplitAxis(SbpInferHint4Ibn, "out")));
   }
@@ -68,7 +72,7 @@ class VariableOpModelSplitOpParallelSignature final : public OpParallelSignature
 
 void VariableOp::InitFromOpConf() {
   CHECK(op_conf().has_variable_conf());
-  EnrollInputBn("tick", false);
+  if (op_conf().variable_conf().has_tick()) { EnrollInputBn("tick", false); }
   bool has_diff =
       (Global<JobDesc>::Get()->IsTrain() && op_conf().trainable())
       || Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf();
@@ -105,10 +109,10 @@ void VariableOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   *GetBlobDesc4BnInOp("out") = *model_blob_desc;
 }
 
-void VariableOp::GetOpParallelSignatures(
-    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new VariableOpDataSplitOpParallelSignature(this));
-  op_parallel_signatures->emplace_back(new VariableOpModelSplitOpParallelSignature(this));
+void VariableOp::GetSbpSignatures(
+    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
+  op_parallel_signatures->emplace_back(new VariableOpDataSplitSbpSignature(this));
+  op_parallel_signatures->emplace_back(new VariableOpModelSplitSbpSignature(this));
 }
 
 void VariableOp::InferIsModelBlob4OutputBlobs(

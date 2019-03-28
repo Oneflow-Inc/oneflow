@@ -4,25 +4,25 @@ namespace oneflow {
 
 namespace {
 
-class CastOpParallelSignature final : public OpParallelSignature {
+class CastSbpSignature final : public ParallelSbpSignature {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CastOpParallelSignature);
-  ~CastOpParallelSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(CastSbpSignature);
+  ~CastSbpSignature() override = default;
 
-  CastOpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
+  CastSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
 
   const std::string Description() const override { return op().op_name() + ": (A, A) -> A"; }
 
-  const OpParallelMatchResult GetMatchResult(
+  const SbpSigMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelDesc& parallel_desc) const override {
     const SbpInferHint& in_sbp_infer_hint = SbpInferHint4BnInOp("in");
     if (in_sbp_infer_hint.sbp_parallel().has_split_parallel() == false
         && in_sbp_infer_hint.parallel_num() != parallel_desc.parallel_num()) {
-      return MakeOpParallelMatchParallelNumError(parallel_desc.parallel_num(),
-                                                 in_sbp_infer_hint.parallel_num());
+      return MakeSbpSigMatchParallelNumError(parallel_desc.parallel_num(),
+                                             in_sbp_infer_hint.parallel_num());
     }
-    return MakeOpParallelMatchSuccess();
+    return MakeSbpSigMatchSuccess();
   }
 
   void GenerateSignature(
@@ -59,9 +59,9 @@ void CastOp::FixInputOutputSbpParallel(
   }
 }
 
-void CastOp::GetOpParallelSignatures(
-    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new CastOpParallelSignature(this));
+void CastOp::GetSbpSignatures(
+    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
+  op_parallel_signatures->emplace_back(new CastSbpSignature(this));
 }
 
 REGISTER_OP(OperatorConf::kCastConf, CastOp);

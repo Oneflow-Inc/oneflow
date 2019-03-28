@@ -3,10 +3,10 @@ package oneflow;
 
 import "oneflow/core/job/placement.proto";
 
-message OpParallelMatchSucess {
+message SbpSigMatchSucess {
 }
 
-message OpParallelSignatureMismatch {
+message SbpSignatureMismatch {
 }
 
 message ParallelPolicyError {
@@ -30,16 +30,16 @@ message OpParallelConfError {
   optional DeviceSetError device_set_error = 3;
 }
 
-message OpParallelMatchFail {
+message SbpSigMatchFail {
   oneof fail_type {
-    OpParallelSignatureMismatch signature_mismatch = 1;
+    SbpSignatureMismatch signature_mismatch = 1;
     OpParallelConfError conf_error = 2;
   }
 }
 
-message OpParallelMatchResult {
+message SbpSigMatchResult {
   oneof result_type {
-    OpParallelMatchSucess success = 1;
-    OpParallelMatchFail fail = 2;
+    SbpSigMatchSucess success = 1;
+    SbpSigMatchFail fail = 2;
   }
 }
