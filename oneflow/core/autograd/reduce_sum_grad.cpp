@@ -16,7 +16,7 @@ void GenerateBackwardOpConf(
     broadcast_like_op_conf->set_like(GenLogicalBlobName(op.BnInOp2Lbi("in")));
     broadcast_like_op_conf->set_y("y");
     const ReduceSumOpConf& reduce_sum_op_conf = op.op_conf().reduce_sum_conf();
-    broadcast_like_op_conf->mutable_axis()->CopyFrom(reduce_sum_op_conf.axis());
+    broadcast_like_op_conf->mutable_reduced_axis()->CopyFrom(reduce_sum_op_conf.axis());
     op_confs->push_back(broadcast_like_op);
     DiffLbi4BnInOp("in")->set_op_name(broadcast_like_op.name());
     DiffLbi4BnInOp("in")->set_blob_name("y");
