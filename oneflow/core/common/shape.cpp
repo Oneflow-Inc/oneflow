@@ -87,4 +87,15 @@ Shape Shape::CreateReducedShape(const std::vector<int64_t>& axis_vec) const {
   return Shape(dim_vec);
 }
 
+Shape Shape::CreateReducedShape7DropDims(const std::vector<int64_t>& axis_vec) const {
+  std::vector<int64_t> dim_vec;
+  std::vector<int64_t> dim2is_reduced(this->dim_vec().size());
+  for (const auto& axis : axis_vec) { dim2is_reduced[axis] = 1; }
+  FOR_RANGE(int64_t, i, 0, this->NumAxes()) {
+    if (dim2is_reduced[i] != 1) { dim_vec.push_back(this->dim_vec()[i]); }
+  }
+  if (dim_vec.empty()) { dim_vec.push_back(1); }
+  return Shape(dim_vec);
+}
+
 }  // namespace oneflow
