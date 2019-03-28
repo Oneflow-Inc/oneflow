@@ -27,7 +27,7 @@ void ReduceMeanOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
       out_blob->mut_shape() = Shape({1});
     }
   } else {
-    std::vector<int64_t> axis_vec = {conf.axis().begin(), conf.axis().end()};
+    const std::vector<int64_t> axis_vec = {conf.axis().begin(), conf.axis().end()};
     const Shape& reduced_shape = in_blob->shape().CreateReducedShape(axis_vec);
     if (conf.keep_dims()) {
       out_blob->mut_shape() = reduced_shape;
