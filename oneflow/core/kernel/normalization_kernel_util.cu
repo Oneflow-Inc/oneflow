@@ -26,7 +26,7 @@ struct NormalizationKernelUtil<kGPU, T> {
     CHECK_GE(axis, 0);
     CHECK_LT(axis, x->shape().NumAxes());
     CudnnTensorDesc xy_desc(CUDNN_TENSOR_NCHW, data_type, x->shape().Count(0, axis),
-                            x->shape().At(axis), x->shape().Count(axis), 1);
+                            x->shape().At(axis), x->shape().Count(axis + 1), 1);
     const int64_t param_dim_size = x->shape().At(axis);
     const auto CheckParamBlob = [&](const Blob* blob) {
       CHECK_EQ(blob->shape().NumAxes(), 1);
@@ -55,7 +55,7 @@ struct NormalizationKernelUtil<kGPU, T> {
     CHECK_GE(axis, 0);
     CHECK_LT(axis, x->shape().NumAxes());
     CudnnTensorDesc xy_desc(CUDNN_TENSOR_NCHW, data_type, x->shape().Count(0, axis),
-                            x->shape().At(axis), x->shape().Count(axis), 1);
+                            x->shape().At(axis), x->shape().Count(axis + 1), 1);
     const int64_t param_dim_size = x->shape().At(axis);
     const auto CheckParamBlob = [&](const Blob* blob) {
       CHECK_EQ(blob->shape().NumAxes(), 1);
@@ -84,7 +84,7 @@ struct NormalizationKernelUtil<kGPU, T> {
     CHECK_GE(axis, 0);
     CHECK_LT(axis, x->shape().NumAxes());
     CudnnTensorDesc xy_desc(CUDNN_TENSOR_NCHW, data_type, x->shape().Count(0, axis),
-                            x->shape().At(axis), x->shape().Count(axis), 1);
+                            x->shape().At(axis), x->shape().Count(axis + 1), 1);
     const auto CheckParamBlob = [&](const Blob* blob) {
       CHECK_EQ(blob->shape().NumAxes(), 1);
       CHECK_EQ(blob->shape().At(0), param_dim_size);
