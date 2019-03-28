@@ -22,7 +22,7 @@ void GenerateBackwardOpConf(
   grad_conf->set_x(GenLogicalBlobName(op.BnInOp2Lbi("in")));
   grad_conf->set_mean(GenLogicalBlobName(op.BnInOp2Lbi("mean")));
   grad_conf->set_inv_variance(GenLogicalBlobName(op.BnInOp2Lbi("inv_variance")));
-  if (conf.has_gamma()) { grad_conf->set_inv_variance(GenLogicalBlobName(op.BnInOp2Lbi("gamma"))); }
+  if (conf.has_gamma()) { grad_conf->set_gamma(GenLogicalBlobName(op.BnInOp2Lbi("gamma"))); }
   if (dx_lbi != nullptr) {
     grad_conf->set_dx("dx");
     dx_lbi->set_op_name(normalization_grad_op.name());
