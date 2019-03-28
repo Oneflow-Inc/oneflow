@@ -90,18 +90,6 @@ message LocalResponseNormalizationKernelConf {
   required ShapeProto batch = 1;
 }
 
-message NormalizationKernelConf {
-  optional int32 axis = 1;
-  optional int64 transpose_rows = 2;
-  optional int64 transpose_cols = 3;
-  optional bool need_transpose = 4;
-  repeated int32 perm = 5;
-
-  required bool use_cudnn = 6;
-  optional ShapeProto in = 7;
-  optional int32 cudnn_bn_mode = 8;
-}
-
 message DecodeRandomKernelConf {
   required uint32 random_seed = 1;
 }
@@ -186,7 +174,6 @@ message KernelConf {
     DropoutKernelConf dropout_conf = 140;
     AveragePoolingKernelConf average_pooling_conf = 204;
     MaxPoolingKernelConf max_pooling_conf = 205;
-    NormalizationKernelConf normalization_conf = 250;
     LocalResponseNormalizationKernelConf local_response_normalization_conf = 300;
     ReduceGatherKernelConf reduce_gather_conf = 350;
     ReduceConcatKernelConf reduce_concat_conf = 351;
