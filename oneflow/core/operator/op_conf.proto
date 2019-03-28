@@ -822,9 +822,9 @@ message NormalizationGradOpConf {
   optional string inv_variance = 4;
   optional string gamma = 5;
   //out
-  optional string dx = 6;
-  optional string beta_diff = 7;
-  optional string gamma_diff = 8;
+  optional string dx = 6 [default = "dx"];
+  optional string beta_diff = 7 [default = "beta_diff"];
+  optional string gamma_diff = 8 [default = "gamma_diff"];
 
   required int32 axis = 9;
   required float epsilon = 10;
@@ -1332,6 +1332,7 @@ message OperatorConf {
     BroadcastLikeOpConf broadcast_like_conf = 277;
     SoftmaxGradOpConf softmax_grad_conf = 278;
     BatchGatherGradOpConf batch_gather_grad_conf = 279;
+    NormalizationGradOpConf normalization_grad_conf = 280;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
