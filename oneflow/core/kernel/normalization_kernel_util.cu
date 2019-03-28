@@ -58,7 +58,7 @@ struct NormalizationKernelUtil<kGPU, T> {
     CudaCheck(cudnnBatchNormalizationForwardInference(
         ctx->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL, OnePtr<T>::value, ZeroPtr<T>::value,
         xy_desc.Get(), x->dptr(), xy_desc.Get(), y->mut_dptr(), param_desc.Get(), gamma->dptr(),
-        beta->dptr(), moving_mean->mut_dptr(), moving_variance->mut_dptr(), epsilon));
+        beta->dptr(), moving_mean->dptr(), moving_variance->dptr(), epsilon));
   }
   static void Backward(DeviceCtx* ctx, const Blob* x, const Blob* gamma, const Blob* mean,
                        const Blob* inv_variance, const Blob* dy, Blob* dx, Blob* gamma_diff,
