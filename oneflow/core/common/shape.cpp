@@ -100,4 +100,16 @@ Shape Shape::Squeeze() const {
   return Shape(dim_vec);
 }
 
+Shape Shape::Squeeze(const std::vector<int64_t>& axis_vec) const {
+  std::vector<int64_t> dim_vec;
+  const std::vector<int64_t> axis_vec_shifted = ShiftNegativeAxis(axis_vec);
+  for (int64_t i = 0; i < this->dim_vec().size(); i++) {
+    if (std::find(axis_vec_shifted.begin(), axis_vec_shifted.end(), i) == axis_vec_shifted.end()) {
+      dim_vec.push_back(this->dim_vec()[i]);
+    }
+  }
+  if (dim_vec.empty()) { dim_vec.push_back(1); }
+  return Shape(dim_vec);
+}
+
 }  // namespace oneflow

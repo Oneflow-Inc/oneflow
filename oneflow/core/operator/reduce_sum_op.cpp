@@ -34,12 +34,11 @@ void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
     }
   } else {
     std::vector<int64_t> axis_vec = {conf.axis().begin(), conf.axis().end()};
-    std::vector<int64_t> out_dim_vec;
     const Shape& reduced_shape = in_blob->shape().CreateReducedShape(axis_vec);
     if (conf.keep_dims()) {
       out_blob->mut_shape() = reduced_shape;
     } else {
-      out_blob->mut_shape() = reduced_shape.Squeeze();
+      out_blob->mut_shape() = reduced_shape.Squeeze(axis_vec);
     }
   }
 }
