@@ -105,7 +105,7 @@ message Conv2DOpConf {
   required string in = 1;
   required string out = 2;
   required int32 filters = 3;
-  optional int32 group_num = 4;
+  optional int32 group_num = 4 [default = 1];
   optional string padding = 5 [default = "valid"];
   required string data_format = 6;
   repeated int32 kernel_size = 7;
