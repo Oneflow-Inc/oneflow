@@ -16,7 +16,7 @@ void NormalizationGradOp::InitFromOpConf() {
     EnrollInputBn("inv_variance", false);
   }
   if (conf.has_gamma()) {
-    EnrollInputBn("gamma");
+    EnrollInputBn("gamma", false);
   } else {
     if (DevIsGpuAndEnableCudnn()) {
       EnrollConstBufBn("gamma");
@@ -25,28 +25,28 @@ void NormalizationGradOp::InitFromOpConf() {
     }
   }
   if (conf.has_dx()) {
-    EnrollOutputBn("dx");
+    EnrollOutputBn("dx", false);
   } else {
     if (DevIsGpuAndEnableCudnn()) {
-      EnrollOutputBn("dx");
+      EnrollOutputBn("dx", false);
     } else {
       UNIMPLEMENTED();
     }
   }
   if (conf.has_gamma_diff()) {
-    EnrollOutputBn("gamma_diff");
+    EnrollOutputBn("gamma_diff", false);
   } else {
     if (DevIsGpuAndEnableCudnn()) {
-      EnrollOutputBn("gamma_diff");
+      EnrollOutputBn("gamma_diff", false);
     } else {
       UNIMPLEMENTED();
     }
   }
   if (conf.has_beta_diff()) {
-    EnrollOutputBn("beta_diff");
+    EnrollOutputBn("beta_diff", false);
   } else {
     if (DevIsGpuAndEnableCudnn()) {
-      EnrollOutputBn("beta_diff");
+      EnrollOutputBn("beta_diff", false);
     } else {
       UNIMPLEMENTED();
     }
