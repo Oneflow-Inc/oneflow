@@ -220,24 +220,31 @@ void AutoGrad(const OpGraph& op_graph, JobConf1* job_conf,
 
 void AddTotalLossInstanceNumOpConf(const OpGraph& op_graph, JobConf1* job_conf,
                                    LogicalBlobId* total_loss_instance_num_lbi) {
+  JobConfBuilder job_conf_builder(job_conf);
   std::list<OpNode*> loss_nodes;
   GetLossOpNodes(op_graph, &loss_nodes);
   OperatorConf op_conf;
-  op_conf.set_name("system-autograd-total_loss_instance_num");
-  TotalLossInstanceNumOpConf* conf = op_conf.mutable_total_loss_instance_num_conf();
+  op_conf.set_name("System-Autograd-total_loss_instance_num");
+  TotalLossInstanceNumOpConf* total_losss_instance_num_conf =
+      op_conf.mutable_total_loss_instance_num_conf();
   std::vector<LogicalBlobId> loss_instance_num_lbis;
   for (const OpNode* op_node : loss_nodes) {
-    LogicalBlobId lbi;
-    lbi.set_op_name(op_node->op().op_name());
-    lbi.set_blob_name("loss_instance_num");
-    conf->add_in(GenLogicalBlobName(lbi));
+    OperatorConf instance_num_op;
+    instance_num_op.set_name("System-Autograd-" + op_node->op().op_name() + "_loss_instance_num");
+    auto* instance_num_op_conf = instance_num_op.mutable_shape_elem_cnt_conf();
+    instance_num_op_conf->set_x(op_node->op().op_name() + "/loss");
+    instance_num_op_conf->set_y("y");
+    instance_num_op_conf->set_begin_axis(0);
+    instance_num_op_conf->set_end_axis(0);
+    job_conf_builder.AddOps(op_node->parallel_desc().parallel_conf(), {instance_num_op});
+    total_losss_instance_num_conf->add_in(instance_num_op.name() + "/y");
   }
-  conf->set_out("out");
+  total_losss_instance_num_conf->set_out("out");
 
   ParallelConf parallel_conf;
   parallel_conf.set_policy(kDataParallel);
   parallel_conf.add_device_name("0:cpu:0");
-  JobConfBuilder(job_conf).AddOps(parallel_conf, {op_conf});
+  job_conf_builder.AddOps(parallel_conf, {op_conf});
 
   total_loss_instance_num_lbi->set_op_name(op_conf.name());
   total_loss_instance_num_lbi->set_blob_name("out");
