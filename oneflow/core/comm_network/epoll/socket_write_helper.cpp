@@ -17,7 +17,7 @@ SocketWriteHelper::~SocketWriteHelper() {
   }
 }
 
-SocketWriteHelper::SocketWriteHelper(int sockfd, IOEventPoller* poller) {
+SocketWriteHelper::SocketWriteHelper(int32_t sockfd, IOEventPoller* poller) {
   sockfd_ = sockfd;
   queue_not_empty_fd_ = eventfd(0, 0);
   PCHECK(queue_not_empty_fd_ != -1);
@@ -116,8 +116,9 @@ void SocketWriteHelper::SetStatusWhenRequestWriteMsgHeadDone() {
 void SocketWriteHelper::SetStatusWhenRequestReadMsgHeadDone() {
   const void* src_token = cur_msg_.request_read_msg.src_token;
   auto src_mem_desc = static_cast<const SocketMemDesc*>(src_token);
-  write_ptr_ = reinterpret_cast<const char*>(src_mem_desc->mem_ptr);
-  write_size_ = src_mem_desc->byte_size;
+  write_ptr_ =
+      reinterpret_cast<const char*>(src_mem_desc->mem_ptr) + cur_msg_.request_read_msg.offset;
+  write_size_ = cur_msg_.request_read_msg.byte_size;
   cur_write_handle_ = &SocketWriteHelper::MsgBodyWriteHandle;
 }
 

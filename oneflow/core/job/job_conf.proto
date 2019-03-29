@@ -50,12 +50,40 @@ message ExperimentalRunConf {
   optional bool enable_experiment_run = 2 [default = false];
 }
 
-message OtherConf {
-  required int64 piece_size = 2;
-  required int32 data_part_num = 3; // piece_size % data_part_num = 0
-  required int64 total_batch_num = 4;
+message EpollConf {
+  optional int32 link_num = 1 [default = 5];
+  optional int32 msg_segment_kbyte = 2 [default = 256];
+}
 
-  optional bool use_rdma = 100 [default = false];
+message IBVerbsConf {
+  optional string device_name = 1 [default = ""];
+  optional uint32 port_num = 2 [default = 0];
+  optional uint32 sgid_index = 3 [default = 0];
+  optional uint32 pkey_index = 4 [default = 0];
+  optional uint32 queue_depth = 5 [default = 1024];
+  optional uint32 timeout = 6 [default = 14];
+  optional uint32 retry_cnt = 7 [default = 7];
+  optional uint32 sl = 8 [default = 0];
+  optional uint32 traffic_class = 9 [default = 0];
+  optional uint64 mem_block_mbyte = 10 [default = 8];
+}
+
+message CommNetworkConf {
+  oneof comm_net_type {
+    EpollConf epoll_conf = 1;
+    IBVerbsConf ibverbs_conf = 2;
+  }
+}
+
+message OtherConf {
+  required FileSystemConf data_fs_conf = 1;
+  required FileSystemConf snapshot_fs_conf = 2;
+  optional CommNetworkConf comm_net_conf = 3;
+
+  required int64 piece_size = 4;
+  required int32 data_part_num = 5; // piece_size % data_part_num = 0
+  required int64 total_batch_num = 6;
+
   optional string model_load_snapshot_path = 101 [default = ""];
   optional int32 max_data_id_length = 102 [default = 0];
   optional bool enable_cudnn = 103 [default = true];
@@ -67,8 +95,6 @@ message OtherConf {
   optional bool save_downloaded_file_to_local_fs = 109 [default = false];
   optional uint64 rdma_mem_block_mbyte = 110 [default = 8];
   optional uint64 rdma_recv_msg_buf_mbyte = 111 [default = 6];
-  required FileSystemConf data_fs_conf = 112;
-  required FileSystemConf snapshot_fs_conf = 113;
 
   optional bool collect_act_event = 125 [default = false];
   optional bool enable_mem_sharing = 126 [default = true];

@@ -4,7 +4,7 @@
 
 namespace oneflow {
 
-SocketHelper::SocketHelper(int sockfd, IOEventPoller* poller) {
+SocketHelper::SocketHelper(int32_t sockfd, IOEventPoller* poller) {
   read_helper_ = new SocketReadHelper(sockfd);
   write_helper_ = new SocketWriteHelper(sockfd, poller);
   poller->AddFd(sockfd, [this]() { read_helper_->NotifyMeSocketReadable(); },
