@@ -78,7 +78,6 @@ message CommNetworkConf {
 message OtherConf {
   required FileSystemConf data_fs_conf = 1;
   required FileSystemConf snapshot_fs_conf = 2;
-
   optional CommNetworkConf comm_net_conf = 3;
 
   required int64 piece_size = 4;
@@ -94,6 +93,8 @@ message OtherConf {
   optional uint64 reserved_host_mem_mbyte = 107 [default = 500];
   optional uint64 reserved_device_mem_mbyte = 108 [default = 500];
   optional bool save_downloaded_file_to_local_fs = 109 [default = false];
+  optional uint64 rdma_mem_block_mbyte = 110 [default = 8];
+  optional uint64 rdma_recv_msg_buf_mbyte = 111 [default = 6];
 
   optional bool collect_act_event = 125 [default = false];
   optional bool enable_mem_sharing = 126 [default = true];

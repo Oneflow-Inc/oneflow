@@ -14,7 +14,7 @@ class SocketWriteHelper final {
   SocketWriteHelper() = delete;
   ~SocketWriteHelper();
 
-  SocketWriteHelper(int sockfd, IOEventPoller* poller);
+  SocketWriteHelper(int32_t sockfd, IOEventPoller* poller);
 
   void AsyncWrite(const SocketMsg& msg);
 
@@ -37,8 +37,8 @@ class SocketWriteHelper final {
   OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SOCKET_MSG_TYPE_SEQ);
 #undef MAKE_ENTRY
 
-  int sockfd_;
-  int queue_not_empty_fd_;
+  int32_t sockfd_;
+  int32_t queue_not_empty_fd_;
 
   std::queue<SocketMsg>* cur_msg_queue_;
 

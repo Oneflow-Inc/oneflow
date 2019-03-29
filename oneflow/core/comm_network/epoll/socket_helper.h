@@ -15,7 +15,7 @@ class SocketHelper final {
   SocketHelper() = delete;
   ~SocketHelper();
 
-  SocketHelper(int sockfd, IOEventPoller* poller);
+  SocketHelper(int32_t sockfd, IOEventPoller* poller);
 
   void AsyncWrite(const SocketMsg& msg);
 
