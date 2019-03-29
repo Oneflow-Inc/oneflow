@@ -23,8 +23,8 @@ void NormalizationOp::InitFromOpConf() {
   if (IsFwBwSplit()) {
     CHECK(conf.has_moving_mean());
     CHECK(conf.has_moving_variance());
-    EnrollInputBn("moving_mean")->set_is_mutable(op_conf().trainable());
-    EnrollInputBn("moving_variance")->set_is_mutable(op_conf().trainable());
+    EnrollInputBn("moving_mean")->set_is_mutable(conf.is_training());
+    EnrollInputBn("moving_variance")->set_is_mutable(conf.is_training());
     if (conf.has_gamma()) {
       EnrollInputBn("gamma");
     } else {
@@ -117,28 +117,31 @@ void NormalizationOp::InferBlobDescs(
     SetParamBlobDesc("beta");
     SetParamBlobDesc("gamma");
   }
-  SetParamBlobDesc("mean");
-  SetParamBlobDesc("inv_variance");
+  if (conf.is_training()) {
+    SetParamBlobDesc("mean");
+    SetParamBlobDesc("inv_variance");
+  }
 }
 
 void NormalizationOp::InferBwBufBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
+  const NormalizationOpConf& conf = op_conf().normalization_conf();
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
   const Shape param_shape({in->shape().At(op_conf().normalization_conf().axis())});
   const DataType data_type = in->data_type();
-  BlobDesc* beta_diff = GetBlobDesc4BnInOp("beta_diff");
-  if (beta_diff != nullptr) {
+  if (!conf.center() && DevIsGpuAndEnableCudnn()) {
+    BlobDesc* beta_diff = GetBlobDesc4BnInOp("beta_diff");
     beta_diff->set_data_type(data_type);
     beta_diff->mut_shape() = param_shape;
   }
-  BlobDesc* gamma_diff = GetBlobDesc4BnInOp("gamma_diff");
-  if (gamma_diff != nullptr) {
+  if (!conf.scale() && DevIsGpuAndEnableCudnn()) {
+    BlobDesc* gamma_diff = GetBlobDesc4BnInOp("gamma_diff");
     gamma_diff->set_data_type(data_type);
     gamma_diff->mut_shape() = param_shape;
   }
-  BlobDesc* inv_variance = GetBlobDesc4BnInOp("inv_variance");
-  if (inv_variance != nullptr) {
+  if (!conf.is_training()) {
+    BlobDesc* inv_variance = GetBlobDesc4BnInOp("inv_variance");
     inv_variance->set_data_type(data_type);
     inv_variance->mut_shape() = param_shape;
   }
