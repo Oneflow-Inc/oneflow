@@ -53,12 +53,10 @@ void CommNet::ReadDone(void* read_id) {
     CHECK(!local_stream.empty() && local_stream.front().is_read);
     local_stream.pop();
   }
-  while(true) {
+  while (true) {
     {
       std::unique_lock<std::mutex> lck(*stream_id2stream_mtx_ptr_.at(stream_id));
-      if (local_stream.empty() || local_stream.front().is_read) {
-        break;
-      }
+      if (local_stream.empty() || local_stream.front().is_read) { break; }
     }
     IssueCallBack(local_stream.front().callback);
     {
@@ -69,9 +67,7 @@ void CommNet::ReadDone(void* read_id) {
   delete read_ctx;
   {
     std::unique_lock<std::mutex> lck(*stream_id2stream_mtx_ptr_.at(stream_id));
-    if (local_stream.empty()) {
-      return;
-    }
+    if (local_stream.empty()) { return; }
   }
   auto item = local_stream.front();
   CHECK(item.is_read);

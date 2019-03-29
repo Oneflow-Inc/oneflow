@@ -7,7 +7,7 @@ message IBVerbsMemDescProto {
 }
 
 message IBVerbsConnectionInfo {
-  required uint32 lid = 1;
+  required uint32 local_id = 1;
   required uint32 qp_num = 2;
   required uint64 subnet_prefix = 3;
   required uint64 interface_id = 4;
@@ -16,4 +16,3 @@ message IBVerbsConnectionInfo {
 message IBVerbsTokensMsg {
   map<uint64, IBVerbsMemDescProto> token2mem_desc = 1;
 }
-

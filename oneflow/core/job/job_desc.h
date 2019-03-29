@@ -36,6 +36,10 @@ class JobDesc final {
     CHECK(this->use_rdma());
     return this->comm_net_conf().ibverbs_conf();
   }
+  IBVerbsConf* mutable_ibverbs_conf() {
+    CHECK(this->use_rdma());
+    return job_conf_.mutable_other()->mutable_comm_net_conf()->mutable_ibverbs_conf();
+  }
   const std::string& MdLoadSnapshotPath() { return job_conf_.other().model_load_snapshot_path(); }
   DataType DefaultDataType() const { return job_conf_.other().default_data_type(); }
   size_t SizeOfOneDataId() const { return job_conf_.other().max_data_id_length() * sizeof(char); }
@@ -57,8 +61,6 @@ class JobDesc final {
   size_t reserved_host_mem_byte() const;
   size_t reserved_device_mem_byte() const;
   bool save_downloaded_file_to_local_fs() const;
-  size_t rdma_mem_block_byte() const;
-  size_t rdma_recv_msg_buf_byte() const;
   bool collect_act_event() const { return job_conf_.other().collect_act_event(); }
   bool enable_mem_sharing() const { return job_conf_.other().enable_mem_sharing(); }
   const FileSystemConf& data_fs_conf() const;

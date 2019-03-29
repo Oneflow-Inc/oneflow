@@ -165,14 +165,6 @@ bool JobDesc::save_downloaded_file_to_local_fs() const {
   return job_conf_.other().save_downloaded_file_to_local_fs();
 }
 
-size_t JobDesc::rdma_mem_block_byte() const {
-  return job_conf_.other().rdma_mem_block_mbyte() * 1024 * 1024;
-}
-
-size_t JobDesc::rdma_recv_msg_buf_byte() const {
-  return job_conf_.other().rdma_recv_msg_buf_mbyte() * 1024 * 1024;
-}
-
 const std::string& JobDesc::MdSaveSnapshotsPath() const {
   CHECK(IsTrain());
   return job_conf_.other().train_conf().model_save_snapshots_path();
