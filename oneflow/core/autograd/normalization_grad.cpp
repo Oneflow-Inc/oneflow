@@ -31,6 +31,7 @@ void GenerateBackwardOpConf(
     rsqrt_conf->set_in(GenLogicalBlobName(op.BnInOp2Lbi("moving_variance")));
     rsqrt_conf->set_out("out");
     rsqrt_conf->set_epsilon(conf.epsilon());
+    op_confs->push_back(rsqrt_op);
     LogicalBlobId inv_variance;
     inv_variance.set_op_name(rsqrt_op.name());
     inv_variance.set_blob_name(rsqrt_conf->out());
