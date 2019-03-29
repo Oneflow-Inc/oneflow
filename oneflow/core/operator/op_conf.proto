@@ -820,6 +820,7 @@ message NormalizationOpConf {
   optional string gamma = 17;
   optional string mean = 18 [default = "mean"];
   optional string inv_variance = 19 [default = "inv_variance"];
+  optional bool is_training = 20 [default = true];
 }
 
 message NormalizationGradOpConf {
@@ -984,6 +985,7 @@ message SqrtOpConf {
 message RsqrtOpConf {
   required string in = 1;
   required string out = 2;
+  optional double epsilon = 3 [default = 1e-5];
 }
 
 message SquareOpConf {

@@ -43,8 +43,10 @@ void NormalizationOp::InitFromOpConf() {
         UNIMPLEMENTED();
       }
     }
-    EnrollOutputBn("mean", false);
-    EnrollOutputBn("inv_variance", false);
+    if (conf.is_training()) {
+      EnrollOutputBn("mean", false);
+      EnrollOutputBn("inv_variance", false);
+    }
   } else {
     EnrollForwardModelBn("moving_mean");
     EnrollForwardModelBn("moving_variance");
@@ -68,8 +70,12 @@ void NormalizationOp::InitFromOpConf() {
         UNIMPLEMENTED();
       }
     }
-    EnrollDataTmpBn("mean");
-    EnrollDataTmpBn("inv_variance");
+    if (conf.is_training()) {
+      EnrollDataTmpBn("mean");
+      EnrollDataTmpBn("inv_variance");
+    } else {
+      EnrollBwBufBn("inv_variance");
+    }
   }
 }
 
@@ -130,6 +136,11 @@ void NormalizationOp::InferBwBufBlobDescs(
   if (gamma_diff != nullptr) {
     gamma_diff->set_data_type(data_type);
     gamma_diff->mut_shape() = param_shape;
+  }
+  BlobDesc* inv_variance = GetBlobDesc4BnInOp("inv_variance");
+  if (inv_variance != nullptr) {
+    inv_variance->set_data_type(data_type);
+    inv_variance->mut_shape() = param_shape;
   }
 }
 

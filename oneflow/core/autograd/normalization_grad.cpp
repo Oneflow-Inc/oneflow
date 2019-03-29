@@ -20,8 +20,22 @@ void GenerateBackwardOpConf(
   grad_conf->set_epsilon(conf.epsilon());
   grad_conf->set_dy(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
   grad_conf->set_x(GenLogicalBlobName(op.BnInOp2Lbi("in")));
-  grad_conf->set_mean(GenLogicalBlobName(op.BnInOp2Lbi("mean")));
-  grad_conf->set_inv_variance(GenLogicalBlobName(op.BnInOp2Lbi("inv_variance")));
+  if (conf.is_training()) {
+    grad_conf->set_mean(GenLogicalBlobName(op.BnInOp2Lbi("mean")));
+    grad_conf->set_inv_variance(GenLogicalBlobName(op.BnInOp2Lbi("inv_variance")));
+  } else {
+    grad_conf->set_mean(GenLogicalBlobName(op.BnInOp2Lbi("moving_mean")));
+    OperatorConf rsqrt_op;
+    rsqrt_op.set_name("System-AutoGrad-" + op.op_name() + "-InvVarianceRsqrt");
+    RsqrtOpConf* rsqrt_conf = rsqrt_op.mutable_rsqrt_conf();
+    rsqrt_conf->set_in(GenLogicalBlobName(op.BnInOp2Lbi("moving_variance")));
+    rsqrt_conf->set_out("out");
+    rsqrt_conf->set_epsilon(conf.epsilon());
+    LogicalBlobId inv_variance;
+    inv_variance.set_op_name(rsqrt_op.name());
+    inv_variance.set_blob_name(rsqrt_conf->out());
+    grad_conf->set_inv_variance(GenLogicalBlobName(inv_variance));
+  }
   if (conf.has_gamma()) { grad_conf->set_gamma(GenLogicalBlobName(op.BnInOp2Lbi("gamma"))); }
   if (dx_lbi != nullptr) {
     grad_conf->set_dx("dx");
