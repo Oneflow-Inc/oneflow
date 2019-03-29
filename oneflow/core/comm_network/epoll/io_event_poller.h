@@ -13,8 +13,8 @@ class IOEventPoller final {
   IOEventPoller();
   ~IOEventPoller();
 
-  void AddFd(int fd, std::function<void()> read_handler, std::function<void()> write_handler);
-  void AddFdWithOnlyReadHandler(int fd, std::function<void()> read_handler);
+  void AddFd(int32_t fd, std::function<void()> read_handler, std::function<void()> write_handler);
+  void AddFdWithOnlyReadHandler(int32_t fd, std::function<void()> read_handler);
 
   void Start();
   void Stop();
@@ -28,18 +28,18 @@ class IOEventPoller final {
     }
     std::function<void()> read_handler;
     std::function<void()> write_handler;
-    int fd;
+    int32_t fd;
   };
 
-  void AddFd(int fd, std::function<void()>* read_handler, std::function<void()>* write_handler);
+  void AddFd(int32_t fd, std::function<void()>* read_handler, std::function<void()>* write_handler);
 
   void EpollLoop();
-  static const int max_event_num_;
+  static const int32_t max_event_num_;
 
-  int epfd_;
+  int32_t epfd_;
   epoll_event* ep_events_;
   std::forward_list<IOHandler*> io_handlers_;
-  int break_epoll_loop_fd_;
+  int32_t break_epoll_loop_fd_;
   std::thread thread_;
 };
 

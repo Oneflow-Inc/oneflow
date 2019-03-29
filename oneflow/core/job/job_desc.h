@@ -23,10 +23,22 @@ class JobDesc final {
   const Resource& resource() const { return job_conf_.resource(); }
   const Placement& placement() const { return job_conf_.placement(); }
   const OtherConf& other_conf() const { return job_conf_.other(); }
+  const CommNetworkConf& comm_net_conf() const {
+    CHECK(this->other_conf().has_comm_net_conf());
+    return job_conf_.other().comm_net_conf();
+  }
+  bool use_rdma() const { return this->comm_net_conf().has_ibverbs_conf(); }
+  const EpollConf& epoll_conf() const {
+    CHECK(!this->use_rdma());
+    return this->comm_net_conf().epoll_conf();
+  }
+  const IBVerbsConf& ibverbs_conf() const {
+    CHECK(this->use_rdma());
+    return this->comm_net_conf().ibverbs_conf();
+  }
   const std::string& MdLoadSnapshotPath() { return job_conf_.other().model_load_snapshot_path(); }
   DataType DefaultDataType() const { return job_conf_.other().default_data_type(); }
   size_t SizeOfOneDataId() const { return job_conf_.other().max_data_id_length() * sizeof(char); }
-  bool use_rdma() const { return job_conf_.other().use_rdma(); }
   bool EnableCudnn() const { return job_conf_.other().enable_cudnn(); }
   int64_t TotalMachineNum() const { return job_conf_.resource().machine().size(); }
   int32_t CpuDeviceNum() const { return job_conf_.resource().cpu_device_num(); }

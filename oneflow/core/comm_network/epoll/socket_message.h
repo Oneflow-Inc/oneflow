@@ -40,7 +40,10 @@ struct RequestWriteMsg {
 struct RequestReadMsg {
   void* src_token;
   void* dst_token;
+  int64_t offset;
+  int64_t byte_size;
   void* read_id;
+  int32_t part_num;
 };
 
 struct SocketMsg {

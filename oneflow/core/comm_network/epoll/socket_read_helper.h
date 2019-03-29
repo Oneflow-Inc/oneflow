@@ -13,7 +13,7 @@ class SocketReadHelper final {
   SocketReadHelper() = delete;
   ~SocketReadHelper();
 
-  SocketReadHelper(int sockfd);
+  SocketReadHelper(int32_t sockfd);
 
   void NotifyMeSocketReadable();
 
@@ -32,7 +32,7 @@ class SocketReadHelper final {
   OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SOCKET_MSG_TYPE_SEQ);
 #undef MAKE_ENTRY
 
-  int sockfd_;
+  int32_t sockfd_;
 
   SocketMsg cur_msg_;
   bool (SocketReadHelper::*cur_read_handle_)();

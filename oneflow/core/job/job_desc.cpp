@@ -255,7 +255,9 @@ void JobDesc::Init() {
   SplitDecodeOps();
   AddRecordLoadOps();
 #ifndef WITH_RDMA
-  CHECK_EQ(job_conf_.other().use_rdma(), false) << "Please compile ONEFLOW with RDMA";
+  if (this->TotalMachineNum() > 1) {
+    CHECK_EQ(this->use_rdma(), false) << "Please compile ONEFLOW with RDMA";
+  }
 #endif
 #ifndef WITH_CUDA
   CHECK_EQ(job_conf_.other().enable_nccl(), false) << "Please compile ONEFLOW with NCCL";
