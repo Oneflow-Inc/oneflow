@@ -225,7 +225,7 @@ void AddTotalLossInstanceNumOpConf(const OpGraph& op_graph, JobConf1* job_conf,
   GetLossOpNodes(op_graph, &loss_nodes);
   OperatorConf op_conf;
   op_conf.set_name("System-Autograd-total_loss_instance_num");
-  TotalLossInstanceNumOpConf* total_losss_instance_num_conf =
+  TotalLossInstanceNumOpConf* total_loss_instance_num_conf =
       op_conf.mutable_total_loss_instance_num_conf();
   std::vector<LogicalBlobId> loss_instance_num_lbis;
   for (const OpNode* op_node : loss_nodes) {
@@ -237,9 +237,21 @@ void AddTotalLossInstanceNumOpConf(const OpGraph& op_graph, JobConf1* job_conf,
     instance_num_op_conf->set_begin_axis(0);
     instance_num_op_conf->set_end_axis(0);
     job_conf_builder.AddOps(op_node->parallel_desc().parallel_conf(), {instance_num_op});
-    total_losss_instance_num_conf->add_in(instance_num_op.name() + "/y");
+    std::string loss_instance_num_lbn;
+    if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+      OperatorConf cast_op;
+      cast_op.set_name("System-Autograd-" + op_node->op().op_name() + "_loss_instance_num_cast");
+      cast_op.mutable_cast_conf()->set_in(instance_num_op.name() + "/y");
+      cast_op.mutable_cast_conf()->set_out("out");
+      cast_op.mutable_cast_conf()->set_data_type(DataType::kFloat);
+      job_conf_builder.AddOps(op_node->parallel_desc().parallel_conf(), {cast_op});
+      loss_instance_num_lbn = cast_op.name() + "/out";
+    } else {
+      loss_instance_num_lbn = instance_num_op.name() + "/y";
+    }
+    total_loss_instance_num_conf->add_in(loss_instance_num_lbn);
   }
-  total_losss_instance_num_conf->set_out("out");
+  total_loss_instance_num_conf->set_out("out");
 
   ParallelConf parallel_conf;
   parallel_conf.set_policy(kDataParallel);
