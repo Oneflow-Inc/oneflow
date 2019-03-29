@@ -1204,13 +1204,9 @@ message BatchGatherGradOpConf {
   required int64 gather_dim_size = 4;
 }
 
-message ScalarSummarizeOpConf {
+message PrintScalarSummaryOpConf {
   required string x = 1;
-  message SummarizeType {
-  }
-  oneof summarize_type {
-    SummarizeType mean = 2;
-  }
+  required ScalarReductionType reduction_type = 2;
 }
 
 message OperatorConf {
@@ -1329,7 +1325,7 @@ message OperatorConf {
     SoftmaxGradOpConf softmax_grad_conf = 278;
     BatchGatherGradOpConf batch_gather_grad_conf = 279;
     ReduceMeanGradOpConf reduce_mean_grad_conf = 280;
-    ScalarSummarizeOpConf scalar_summarize_conf = 281;
+    PrintScalarSummaryOpConf print_scalar_summary_conf = 281;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

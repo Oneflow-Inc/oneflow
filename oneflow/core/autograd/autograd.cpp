@@ -6,6 +6,18 @@ namespace oneflow {
 
 namespace {
 
+const TrainConf& GetTrainConf() {
+  const JobDesc* job_desc = Global<JobDesc>::Get();
+  if (job_desc->IsTrain()) {
+    return job_desc->other_conf().train_conf();
+  } else if (job_desc->IsPredict()
+             && job_desc->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+    return job_desc->other_conf().predict_conf().tmp_split_fw_bw_train_conf();
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
 void GetVariableOpNodesAndDescendants(const OpGraph& op_graph, HashSet<OpNode*>* op_nodes) {
   std::list<OpNode*> starts;
   op_graph.ForEachNode([&](OpNode* op_node) {
@@ -16,10 +28,42 @@ void GetVariableOpNodesAndDescendants(const OpGraph& op_graph, HashSet<OpNode*>*
                           [&](OpNode* op_node) { op_nodes->emplace(op_node); });
 }
 
-void GetLossOpNodes(const OpGraph& op_graph, std::list<OpNode*>* loss_op_nodes) {
-  op_graph.ForEachNode([&](OpNode* op_node) {
-    if (op_node->op().IsLossOp()) { loss_op_nodes->push_back(op_node); }
+std::function<bool(const OpNode*, const OpNode*)> MakeOpNodeIsReachable(const OpGraph& op_graph) {
+  auto node2ancestor = std::make_shared<HashMap<const OpNode*, HashSet<const OpNode*>>>();
+  op_graph.TopoForEachNode([&](OpNode* op_node) {
+    op_node->ForEachNodeOnInEdge([&](OpNode* in_node) {
+      (*node2ancestor)[op_node].insert(in_node);
+      (*node2ancestor)[op_node].insert((*node2ancestor)[in_node].begin(),
+                                       (*node2ancestor)[in_node].end());
+    });
   });
+  return [node2ancestor](const OpNode* node, const OpNode* ancestor) -> bool {
+    return node2ancestor->at(node).find(ancestor) != node2ancestor->at(node).end();
+  };
+}
+
+void CheckNotReachableAmongOpNodes(const OpGraph& op_graph, const std::list<OpNode*>& op_nodes) {
+  auto IsReachable = MakeOpNodeIsReachable(op_graph);
+  for (const OpNode* src_node : op_nodes) {
+    for (const OpNode* dst_node : op_nodes) {
+      if (src_node == dst_node) { continue; }
+      CHECK(!IsReachable(src_node, dst_node));
+    }
+  }
+}
+
+void GetLossOpNodes(const OpGraph& op_graph, std::list<OpNode*>* loss_op_nodes) {
+  const auto& train_conf = GetTrainConf();
+  HashSet<std::string> loss_op_names;
+  for (const std::string& loss_lbn : train_conf.loss_lbn()) {
+    loss_op_names.emplace(GenLogicalBlobId(loss_lbn).op_name());
+  }
+  op_graph.ForEachNode([&](OpNode* op_node) {
+    if (loss_op_names.find(op_node->op().op_name()) != loss_op_names.end()) {
+      loss_op_nodes->push_back(op_node);
+    }
+  });
+  CHECK_GT(loss_op_nodes->size(), 0);
 }
 
 void GetLossOpNodesAndAscendants(const OpGraph& op_graph, HashSet<OpNode*>* op_nodes) {
@@ -60,6 +104,29 @@ std::function<bool(const LogicalBlobId&, const std::string&)> MakePredicatorHasD
   };
 }
 
+void GenerateOnesAsDiffLbi(
+    const LogicalBlobId& lbi, std::vector<OperatorConf>* op_confs,
+    const std::function<LogicalBlobId*(const std::string&)>& OutDiffLbi4BnInOp) {
+  OperatorConf mul_zero_op;
+  mul_zero_op.set_name(lbi.op_name() + "_" + lbi.blob_name() + "_grad_stage0");
+  ScalarMulOpConf* mul_zero_op_conf = mul_zero_op.mutable_scalar_mul_conf();
+  mul_zero_op_conf->set_in(GenLogicalBlobName(lbi));
+  mul_zero_op_conf->set_out("out");
+  mul_zero_op_conf->set_int_operand(0);
+  op_confs->push_back(mul_zero_op);
+
+  OperatorConf add_one_op;
+  add_one_op.set_name(lbi.op_name() + "_" + lbi.blob_name() + "_grad_stage1");
+  ScalarAddOpConf* add_one_op_conf = add_one_op.mutable_scalar_add_conf();
+  add_one_op_conf->set_in(mul_zero_op.name() + "/out");
+  add_one_op_conf->set_out("out");
+  add_one_op_conf->set_int_operand(1);
+  op_confs->push_back(add_one_op);
+
+  OutDiffLbi4BnInOp(lbi.blob_name())->set_op_name(add_one_op.name());
+  OutDiffLbi4BnInOp(lbi.blob_name())->set_blob_name("out");
+}
+
 }  // namespace
 
 void GenerateBackwardOpConfWrapperStruct::Call(
@@ -89,8 +156,31 @@ void AutoGrad(const OpGraph& op_graph, JobConf1* job_conf,
   auto NeedBackwardOp = MakePredicatorNeedBackwardOp(op_graph);
   std::list<OpNode*> loss_nodes;
   GetLossOpNodes(op_graph, &loss_nodes);
+  CheckNotReachableAmongOpNodes(op_graph, loss_nodes);
   for (OpNode* loss_node : loss_nodes) { CHECK(NeedBackwardOp(loss_node)); }
+  JobConfBuilder job_conf_builder(job_conf);
 
+  // generate ones lbi as loss's diff
+  HashMap<LogicalBlobId, LogicalBlobId>* lbi2out_diff_lbi = lbi2diff_lbi;
+  for (OpNode* loss_op_node : loss_nodes) {
+    std::vector<OperatorConf> ops;
+    auto OutDiffLbi4BnInOp = [&](const std::string& bn) -> LogicalBlobId* {
+      const auto& output_bns = loss_op_node->op().output_bns();
+      CHECK(std::find(output_bns.begin(), output_bns.end(), bn) != output_bns.end());
+      const auto& lbi = loss_op_node->op().BnInOp2Lbi(bn);
+      return &(*lbi2out_diff_lbi)[lbi];
+    };
+    const auto& train_conf = GetTrainConf();
+    for (const std::string& loss_lbn : train_conf.loss_lbn()) {
+      const LogicalBlobId lbi = GenLogicalBlobId(loss_lbn);
+      if (lbi.op_name() != loss_op_node->op().op_name()) { continue; }
+      CHECK_EQ(op_graph.GetLogicalBlobDesc(lbi).shape().NumAxes(), 1);
+      GenerateOnesAsDiffLbi(lbi, &ops, OutDiffLbi4BnInOp);
+    }
+    job_conf_builder.AddOps(loss_op_node->parallel_desc().parallel_conf(), ops);
+  }
+
+  // generate backward ops
   auto ForEachInNode = [&](OpNode* op_node, const std::function<void(OpNode*)>& Handler) {
     op_node->ForEachNodeOnInEdge([&](OpNode* in_node) {
       if (NeedBackwardOp(in_node)) { Handler(in_node); }
@@ -103,8 +193,6 @@ void AutoGrad(const OpGraph& op_graph, JobConf1* job_conf,
   };
   auto HasDiff4LbiOpName = MakePredicatorHasDiff4LbiOpName(op_graph, NeedBackwardOp);
   HashMap<LogicalBlobId, HashMap<std::string, LogicalBlobId>> lbi2op_name2in_diff_lbi;
-  HashMap<LogicalBlobId, LogicalBlobId>* lbi2out_diff_lbi = lbi2diff_lbi;
-  JobConfBuilder job_conf_builder(job_conf);
   op_graph.TopoForEachNode(loss_nodes, ForEachOutNode, ForEachInNode, [&](OpNode* op_node) {
     const auto& op_name = op_node->op().op_name();
     auto DiffLbi4BnInOp = [&](const std::string& bn) -> LogicalBlobId* {

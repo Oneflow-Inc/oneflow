@@ -21,6 +21,6 @@ class PrintScalarSummaryOp final : public Operator {
   void GetSbpSignatures(std::vector<std::unique_ptr<const SbpSignature>>*) const;
 };
 
-}
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_OPERATOR_PRINT_SCALAR_SUMMARY_OP_H_

@@ -32,7 +32,7 @@ void LossPrintKernel<T>::Forward(const KernelCtx& kernel_ctx,
 }
 
 template<typename T>
-T LossPrintKernel<T>::GetReductionCoefficient(T weight_scalar, LossReductionType type,
+T LossPrintKernel<T>::GetReductionCoefficient(T weight_scalar, ScalarReductionType type,
                                               int32_t n) const {
   switch (type) {
     case kSumOverOne: return 1.0;
