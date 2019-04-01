@@ -4,20 +4,29 @@
 namespace oneflow {
 
 template<typename T>
-void PoolingGradKernel<DeviceType::kGPU, T>::PoolingBackward(const KernelCtx& kernel_ctx,
-                                                             const PoolingCtx& pooling_ctx,
-                                                             const Blob* dy_blob,
-                                                             const Blob* y_blob, const Blob* x_blob,
-                                                             Blob* dx_blob) const {
-  CudaCheck(cudnnPoolingBackward(
-      kernel_ctx.device_ctx->cudnn_handle(), pooling_ctx.cudnn_pooling_desc(), OnePtr<T>::value,
-      pooling_ctx.cudnn_out_tensor_desc(), y_blob->dptr(), pooling_ctx.cudnn_out_tensor_desc(),
-      dy_blob->dptr(), pooling_ctx.cudnn_in_tensor_desc(), x_blob->dptr(), ZeroPtr<T>::value,
-      pooling_ctx.cudnn_in_tensor_desc(), dx_blob->mut_dptr()));
-}
+struct PoolingGradKernelUtil<DeviceType::kGPU, T> final {
+  static void Compute(DeviceCtx* ctx, const PoolingConf& pooling_conf, const Blob* dy_blob,
+                      const Blob* y_blob, const Blob* x_blob, Blob* dx_blob) {
+    cudnnPoolingMode_t pooling_mode;
+    CudnnTensorDesc x_desc(x_blob->data_type(), x_blob->shape(), pooling_conf.data_format());
+    CudnnTensorDesc y_desc(y_blob->data_type(), y_blob->shape(), pooling_conf.data_format());
+    std::unique_ptr<CudnnPoolingDesc> pooling_desc;
 
-#define INSTANTIATE_POOLING_GRAD_KERNEL(type_cpp, type_proto) \
-  template class PoolingGradKernel<DeviceType::kGPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_POOLING_GRAD_KERNEL, ARITHMETIC_DATA_TYPE_SEQ)
+    if (pooling_conf.pool_mode() == "avg") {
+      pooling_mode = CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
+    } else if (pooling_conf.pool_mode() == "max") {
+      pooling_mode = CUDNN_POOLING_MAX;
+    }
+
+    CudaCheck(cudnnPoolingBackward(ctx->cudnn_handle(), pooling_desc->Get(), OnePtr<T>::value,
+                                   y_desc.Get(), y_blob->dptr(), y_desc.Get(), dy_blob->dptr(),
+                                   x_desc.Get(), x_blob->dptr(), ZeroPtr<T>::value, x_desc.Get(),
+                                   dx_blob->mut_dptr()));
+  }
+};
+
+#define INSTANTIATE_POOLING_GRAD_KERNEL_UTIL(type_cpp, type_proto) \
+  template struct PoolingGradKernelUtil<DeviceType::kGPU, type_cpp>;
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_POOLING_GRAD_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

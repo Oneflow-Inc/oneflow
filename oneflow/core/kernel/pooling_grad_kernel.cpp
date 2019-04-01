@@ -2,125 +2,35 @@
 
 namespace oneflow {
 
+template<DeviceType device_type, typename T>
+void PoolingGradKernel<device_type, T>::ForwardDataContent(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  Blob* in_diff_blob = BnInOp2Blob("in_diff");
+  if (in_diff_blob == nullptr) { return; }
+  const PoolingConf& pooling_conf = this->op_conf().pooling_grad_conf().pooling_conf();
+  if (pooling_conf.pool_mode() == "max") {
+    Memset<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
+                        in_diff_blob->ByteSizeOfDataContentField());
+  }
+  PoolingGradKernelUtil<device_type, T>::Compute(ctx.device_ctx, pooling_conf,
+                                                 BnInOp2Blob("out_diff"), BnInOp2Blob("out"),
+                                                 BnInOp2Blob("in"), in_diff_blob);
+}
+
+template<DeviceType device_type, typename T>
+const PbMessage& PoolingGradKernel<device_type, T>::GetCustomizedOpConf() const {
+  return this->op_conf().pooling_grad_conf();
+}
+
 template<typename T>
-void PoolingGradKernel<DeviceType::kCPU, T>::PoolingBackward(const KernelCtx& kernel_ctx,
-                                                             const PoolingCtx& pooling_ctx,
-                                                             const Blob* dy_blob,
-                                                             const Blob* y_blob, const Blob* x_blob,
-                                                             Blob* dx_blob) const {
-  const std::string& data_format = pooling_ctx.kernel_conf().data_format();
-  if (data_format == "channels_first") {
-    this->BackwardNCDHW(pooling_ctx, dy_blob, y_blob, x_blob, dx_blob);
-  } else if (data_format == "channels_last") {
-    this->BackwardNDHWC(pooling_ctx, dy_blob, y_blob, x_blob, dx_blob);
-  } else {
+struct PoolingGradKernelUtil<DeviceType::kCPU, T> final {
+  static void Compute(DeviceCtx* ctx, const PoolingConf& pooling_conf, const Blob* dy_blob,
+                      const Blob* y_blob, const Blob* x_blob, Blob* dx_blob) {
     UNIMPLEMENTED();
   }
-}
+};
 
-template<typename T>
-void PoolingGradKernel<DeviceType::kCPU, T>::BackwardNCDHW(const PoolingCtx& ctx,
-                                                           const Blob* dy_blob, const Blob* y_blob,
-                                                           const Blob* x_blob,
-                                                           Blob* dx_blob) const {
-  Shape x_shape(ctx.kernel_conf().in());
-  Shape y_shape(ctx.kernel_conf().out());
-  const PbRf<int32_t>& pool_size = ctx.kernel_conf().pool_size();
-  const PbRf<int32_t>& strides = ctx.kernel_conf().strides();
-  const PbRf<int32_t>& padding_before = ctx.kernel_conf().padding_before();
-
-  const T* dy = dy_blob->dptr<T>();
-  const T* y = y_blob->dptr<T>();
-  const T* x = x_blob->dptr<T>();
-  T* dx = dx_blob->mut_dptr<T>();
-  FOR_RANGE(int64_t, n, 0, x_shape.At(0)) {
-    FOR_RANGE(int64_t, c, 0, x_shape.At(1)) {
-      FOR_RANGE(int64_t, pd, 0, y_shape.At(2)) {
-        int64_t dstart = pd * strides.Get(0) - padding_before.Get(0);
-        int64_t dend = std::min(dstart + pool_size.Get(0), x_shape.At(2));
-        dstart = std::max(dstart, static_cast<int64_t>(0));
-        FOR_RANGE(int64_t, ph, 0, y_shape.At(3)) {
-          int64_t hstart = ph * strides.Get(1) - padding_before.Get(1);
-          int64_t hend = std::min(hstart + pool_size.Get(1), x_shape.At(3));
-          hstart = std::max(hstart, static_cast<int64_t>(0));
-          FOR_RANGE(int64_t, pw, 0, y_shape.At(4)) {
-            int64_t wstart = pw * strides.Get(2) - padding_before.Get(2);
-            int64_t wend = std::min(wstart + pool_size.Get(2), x_shape.At(4));
-            wstart = std::max(wstart, static_cast<int64_t>(0));
-
-            const int64_t size = (dend - dstart) * (hend - hstart) * (wend - wstart);
-            const int64_t pool_index = pd * y_shape.Count(3) + ph * y_shape.At(4) + pw;
-            FOR_RANGE(int64_t, d, dstart, dend) {
-              FOR_RANGE(int64_t, h, hstart, hend) {
-                FOR_RANGE(int64_t, w, wstart, wend) {
-                  const int64_t index = d * x_shape.Count(3) + h * x_shape.At(4) + w;
-                  NCDHWProcessGrad(x[index], y[pool_index], dy[pool_index], size, dx[index]);
-                }
-              }
-            }
-          }
-        }
-      }
-      // offset
-      x += x_shape.Count(2);
-      dx += x_shape.Count(2);
-      y += y_shape.Count(2);
-      dy += y_shape.Count(2);
-    }
-  }
-}
-
-template<typename T>
-void PoolingGradKernel<DeviceType::kCPU, T>::BackwardNDHWC(const PoolingCtx& ctx,
-                                                           const Blob* dy_blob, const Blob* y_blob,
-                                                           const Blob* x_blob,
-                                                           Blob* dx_blob) const {
-  Shape x_shape(ctx.kernel_conf().in());
-  Shape y_shape(ctx.kernel_conf().out());
-  const PbRf<int32_t>& pool_size = ctx.kernel_conf().pool_size();
-  const PbRf<int32_t>& strides = ctx.kernel_conf().strides();
-  const PbRf<int32_t>& padding_before = ctx.kernel_conf().padding_before();
-
-  // caffe2 implementation: need check
-  ConstEigenArrayMap<T> y_mat(y_blob->dptr<T>(), y_shape.At(1), y_shape.elem_cnt() / y_shape.At(1));
-  ConstEigenArrayMap<T> x_mat(x_blob->dptr<T>(), x_shape.At(1), x_shape.elem_cnt() / x_shape.At(1));
-  ConstEigenArrayMap<T> dy_mat(dy_blob->dptr<T>(), y_shape.At(1),
-                               y_shape.elem_cnt() / y_shape.At(1));
-  EigenArrayMap<T> dx_mat(dx_blob->mut_dptr<T>(), x_shape.At(1),
-                          x_shape.elem_cnt() / x_shape.At(1));
-  FOR_RANGE(int64_t, n, 0, x_shape.At(0)) {
-    FOR_RANGE(int64_t, pd, 0, y_shape.At(2)) {
-      int64_t dstart = pd * strides.Get(0) - padding_before.Get(0);
-      int64_t dend = std::min(dstart + pool_size.Get(0), x_shape.At(2));
-      dstart = std::max(dstart, static_cast<int64_t>(0));
-      FOR_RANGE(int64_t, ph, 0, y_shape.At(3)) {
-        int64_t hstart = ph * strides.Get(1) - padding_before.Get(1);
-        int64_t hend = std::min(hstart + pool_size.Get(1), x_shape.At(3));
-        hstart = std::max(hstart, static_cast<int64_t>(0));
-        FOR_RANGE(int64_t, pw, 0, y_shape.At(4)) {
-          int64_t wstart = pw * strides.Get(2) - padding_before.Get(2);
-          int64_t wend = std::min(wstart + pool_size.Get(2), x_shape.At(4));
-          wstart = std::max(wstart, static_cast<int64_t>(0));
-          const int64_t pool_index =
-              ((n * y_shape.At(2) + pd) * y_shape.At(3) + ph) * y_shape.At(4) + pw;
-          const int64_t size = (dend - dstart) * (hend - hstart) * (wend - wstart);
-          FOR_RANGE(int64_t, d, dstart, dend) {
-            FOR_RANGE(int64_t, h, hstart, hend) {
-              FOR_RANGE(int64_t, w, wstart, wend) {
-                const int64_t input_index =
-                    ((n * x_shape.At(2) + d) * x_shape.At(3) + h) * x_shape.At(4) + w;
-                NDHWCProcessGrad(pool_index, input_index, size, y_mat, x_mat, dy_mat, dx_mat);
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
-#define INSTANTIATE_POOLING_GRAD_KERNEL(type_cpp, type_proto) \
-  template class PoolingGradKernel<DeviceType::kCPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_POOLING_GRAD_KERNEL, ARITHMETIC_DATA_TYPE_SEQ)
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kPoolingGradConf, PoolingGradKernel,
+                           FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

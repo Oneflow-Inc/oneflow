@@ -165,20 +165,6 @@ message MaxPooling1DOpConf {
   repeated int32 strides = 6;
 }
 
-message MaxPooling1DGradOpConf {
-  // input
-  required string x = 1;
-  required string y = 2;
-  required string dy = 3;
-  // output
-  required string dx = 4;
-
-  optional string padding = 5 [default = "valid"];
-  required string data_format = 6;
-  repeated int32 pool_size = 7;
-  repeated int32 strides = 8;
-}
-
 message AveragePooling2DOpConf {
   required string in = 1;
   required string out = 2;
@@ -197,20 +183,6 @@ message MaxPooling2DOpConf {
   required string data_format = 4;
   repeated int32 pool_size = 5;
   repeated int32 strides = 6;
-}
-
-message MaxPooling2DGradOpConf {
-  // input
-  required string x = 1;
-  required string y = 2;
-  required string dy = 3;
-  // output
-  required string dx = 4;
-
-  optional string padding = 5 [default = "valid"];
-  required string data_format = 6;
-  repeated int32 pool_size = 7;
-  repeated int32 strides = 8;
 }
 
 message AveragePooling3DOpConf {
@@ -233,18 +205,25 @@ message MaxPooling3DOpConf {
   repeated int32 strides = 6;
 }
 
-message MaxPooling3DGradOpConf {
+
+message PoolingConf {
+  required int32 num_dims = 1;
+  // "avg" or "max"
+  required string pool_mode = 2;
+  required string data_format = 3;
+  repeated int32 pool_size = 4;
+  repeated int32 strides = 5;
+  optional string padding = 6 [default = "valid"];
+}
+
+message PoolingGradOpConf {
   // input
   required string x = 1;
   required string y = 2;
   required string dy = 3;
   // output
   required string dx = 4;
-
-  optional string padding = 5 [default = "valid"];
-  required string data_format = 6;
-  repeated int32 pool_size = 7;
-  repeated int32 strides = 8;
+  required PoolingConf pooling_conf = 5;
 }
 
 message ReluOpConf {
@@ -1362,9 +1341,7 @@ message OperatorConf {
     SoftmaxGradOpConf softmax_grad_conf = 278;
     BatchGatherGradOpConf batch_gather_grad_conf = 279;
     ReduceMeanGradOpConf reduce_mean_grad_conf = 280;
-    MaxPooling1DGradOpConf max_pooling_1d_grad_conf = 281;
-    MaxPooling2DGradOpConf max_pooling_2d_grad_conf = 282;
-    MaxPooling3DGradOpConf max_pooling_3d_grad_conf = 283;
+    PoolingGradOpConf pooling_grad_conf = 281;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
