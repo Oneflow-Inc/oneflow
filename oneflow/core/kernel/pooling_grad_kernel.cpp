@@ -23,38 +23,38 @@ void PoolingGradKernel<DeviceType::kCPU, T>::BackwardNCDHW(const PoolingCtx& ctx
                                                            const Blob* dy_blob, const Blob* y_blob,
                                                            const Blob* x_blob,
                                                            Blob* dx_blob) const {
-  Shape in(ctx.kernel_conf().in());
-  Shape out(ctx.kernel_conf().out());
+  Shape x_shape(ctx.kernel_conf().in());
+  Shape y_shape(ctx.kernel_conf().out());
   const PbRf<int32_t>& pool_size = ctx.kernel_conf().pool_size();
   const PbRf<int32_t>& strides = ctx.kernel_conf().strides();
   const PbRf<int32_t>& padding_before = ctx.kernel_conf().padding_before();
 
   const T* dy = dy_blob->dptr<T>();
-  const T* output = y_blob->dptr<T>();
-  const T* input = x_blob->dptr<T>();
+  const T* y = y_blob->dptr<T>();
+  const T* x = x_blob->dptr<T>();
   T* dx = dx_blob->mut_dptr<T>();
-  FOR_RANGE(int64_t, n, 0, in.At(0)) {
-    FOR_RANGE(int64_t, c, 0, in.At(1)) {
-      FOR_RANGE(int64_t, pd, 0, out.At(2)) {
+  FOR_RANGE(int64_t, n, 0, x_shape.At(0)) {
+    FOR_RANGE(int64_t, c, 0, x_shape.At(1)) {
+      FOR_RANGE(int64_t, pd, 0, y_shape.At(2)) {
         int64_t dstart = pd * strides.Get(0) - padding_before.Get(0);
-        int64_t dend = std::min(dstart + pool_size.Get(0), in.At(2));
+        int64_t dend = std::min(dstart + pool_size.Get(0), x_shape.At(2));
         dstart = std::max(dstart, static_cast<int64_t>(0));
-        FOR_RANGE(int64_t, ph, 0, out.At(3)) {
+        FOR_RANGE(int64_t, ph, 0, y_shape.At(3)) {
           int64_t hstart = ph * strides.Get(1) - padding_before.Get(1);
-          int64_t hend = std::min(hstart + pool_size.Get(1), in.At(3));
+          int64_t hend = std::min(hstart + pool_size.Get(1), x_shape.At(3));
           hstart = std::max(hstart, static_cast<int64_t>(0));
-          FOR_RANGE(int64_t, pw, 0, out.At(4)) {
+          FOR_RANGE(int64_t, pw, 0, y_shape.At(4)) {
             int64_t wstart = pw * strides.Get(2) - padding_before.Get(2);
-            int64_t wend = std::min(wstart + pool_size.Get(2), in.At(4));
+            int64_t wend = std::min(wstart + pool_size.Get(2), x_shape.At(4));
             wstart = std::max(wstart, static_cast<int64_t>(0));
 
             const int64_t size = (dend - dstart) * (hend - hstart) * (wend - wstart);
-            const int64_t pool_index = pd * out.Count(3) + ph * out.At(4) + pw;
+            const int64_t pool_index = pd * y_shape.Count(3) + ph * y_shape.At(4) + pw;
             FOR_RANGE(int64_t, d, dstart, dend) {
               FOR_RANGE(int64_t, h, hstart, hend) {
                 FOR_RANGE(int64_t, w, wstart, wend) {
-                  const int64_t index = d * in.Count(3) + h * in.At(4) + w;
-                  NCDHWProcessGrad(input[index], output[pool_index], dy[pool_index], size,
+                  const int64_t index = d * x_shape.Count(3) + h * x_shape.At(4) + w;
+                  NCDHWProcessGrad(x[index], y[pool_index], dy[pool_index], size,
                                    dx[index]);
                 }
               }
@@ -63,10 +63,10 @@ void PoolingGradKernel<DeviceType::kCPU, T>::BackwardNCDHW(const PoolingCtx& ctx
         }
       }
       // offset
-      input += in.Count(2);
-      dx += in.Count(2);
-      output += out.Count(2);
-      dy += out.Count(2);
+      x += x_shape.Count(2);
+      dx += x_shape.Count(2);
+      y += y_shape.Count(2);
+      dy += y_shape.Count(2);
     }
   }
 }
