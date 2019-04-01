@@ -1,5 +1,7 @@
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/kernel/pooling_grad_kernel.h"
+#include "oneflow/core/operator/operator_util.h"
+#include "oneflow/core/kernel/pooling_kernel.h"
 
 namespace oneflow {
 
@@ -7,17 +9,37 @@ template<typename T>
 struct PoolingGradKernelUtil<DeviceType::kGPU, T> final {
   static void Compute(DeviceCtx* ctx, const PoolingConf& pooling_conf, const Blob* dy_blob,
                       const Blob* y_blob, const Blob* x_blob, Blob* dx_blob) {
+    std::string data_format = pooling_conf.data_format();
+    CudnnTensorDesc x_desc(x_blob->data_type(), x_blob->shape(), data_format);
+    CudnnTensorDesc y_desc(y_blob->data_type(), y_blob->shape(), data_format);
     cudnnPoolingMode_t pooling_mode;
-    CudnnTensorDesc x_desc(x_blob->data_type(), x_blob->shape(), pooling_conf.data_format());
-    CudnnTensorDesc y_desc(y_blob->data_type(), y_blob->shape(), pooling_conf.data_format());
-    std::unique_ptr<CudnnPoolingDesc> pooling_desc;
-
     if (pooling_conf.pool_mode() == "avg") {
       pooling_mode = CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
     } else if (pooling_conf.pool_mode() == "max") {
       pooling_mode = CUDNN_POOLING_MAX;
     }
-
+    const int32_t dim = pooling_conf.num_dims();
+    std::vector<int> pool_size(dim);
+    std::vector<int> padding(dim);
+    std::vector<int> strides(dim);
+    const Shape& x_shape = x_blob->shape();
+    std::vector<int64_t> x_shape_vec = {GetInDim(x_shape, data_format, 0, dim),
+                                        GetInDim(x_shape, data_format, 1, dim),
+                                        GetInDim(x_shape, data_format, 2, dim)};
+    std::vector<int64_t> y_shape_vec;
+    std::vector<int32_t> padding_before;
+    std::vector<int32_t> padding_after;
+    Get3DOutputSize(x_shape_vec, pool_size, strides, pooling_conf.padding(), &y_shape_vec,
+                    &padding_before, &padding_after);
+    FOR_RANGE(int, i, 0, dim) {
+      int32_t index_in_3d = i + 3 - dim;
+      pool_size[i] = pooling_conf.pool_size().Get(index_in_3d);
+      padding[i] = std::max(padding_before[index_in_3d], padding_after[index_in_3d]);
+      strides[i] = pooling_conf.strides().Get(index_in_3d);
+    }
+    std::unique_ptr<CudnnPoolingDesc> pooling_desc;
+    pooling_desc.reset(
+        new CudnnPoolingDesc(pooling_mode, dim, pool_size.data(), padding.data(), strides.data()));
     CudaCheck(cudnnPoolingBackward(ctx->cudnn_handle(), pooling_desc->Get(), OnePtr<T>::value,
                                    y_desc.Get(), y_blob->dptr(), y_desc.Get(), dy_blob->dptr(),
                                    x_desc.Get(), x_blob->dptr(), ZeroPtr<T>::value, x_desc.Get(),
