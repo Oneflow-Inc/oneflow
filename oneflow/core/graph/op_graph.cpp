@@ -380,7 +380,6 @@ void OpGraph::InferLogicalBlobDesc() const {
     const auto& input_bns = op_node->op().input_bns();
     FOR_RANGE(int64_t, parallel_id, 0, parallel_num) {
       auto BlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
-        const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(bn);
         if (std::find(input_bns.begin(), input_bns.end(), bn) != input_bns.end()) {
           CHECK(bn2parallel_id2blob_desc->find(bn) != bn2parallel_id2blob_desc->end());
           CHECK_EQ(bn2parallel_id2blob_desc->at(bn).size(), parallel_num);

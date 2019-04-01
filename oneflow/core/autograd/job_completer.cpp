@@ -17,7 +17,7 @@ void WithOpGraphAndMutJobConf(const std::function<void(const OpGraph&, JobConf1*
   Global<JobDesc>::New(job_conf);
 }
 
-void GenerateFascadeImplOpConfIf(const OpNode& op_node, const JobConfBuilder& job_conf_builder) {
+void GenerateFacadeImplOpConfIf(const OpNode& op_node, const JobConfBuilder& job_conf_builder) {
   auto op_type_case = op_node.op().op_conf().op_type_case();
   if (IsClassRegistered<GenerateFacadeImplOpConfWrapperStruct>(op_type_case)) {
     auto* obj = NewObj<GenerateFacadeImplOpConfWrapperStruct>(op_type_case);
@@ -28,7 +28,7 @@ void GenerateFascadeImplOpConfIf(const OpNode& op_node, const JobConfBuilder& jo
 void ReplaceFacade(const OpGraph& op_graph, JobConf1* job_conf) {
   JobConfBuilder job_conf_builder(job_conf);
   op_graph.ForEachNode(
-      [&](OpNode* op_node) { GenerateFascadeImplOpConfIf(*op_node, job_conf_builder); });
+      [&](OpNode* op_node) { GenerateFacadeImplOpConfIf(*op_node, job_conf_builder); });
 }
 
 }  // namespace

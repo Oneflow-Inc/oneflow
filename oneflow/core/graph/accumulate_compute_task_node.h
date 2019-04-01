@@ -5,11 +5,11 @@
 
 namespace oneflow {
 
-class AccCompTaskNode : public CompTaskNode {
+class AccumulateCompTaskNode : public CompTaskNode {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(AccCompTaskNode);
-  AccCompTaskNode() = default;
-  virtual ~AccCompTaskNode() = default;
+  OF_DISALLOW_COPY_AND_MOVE(AccumulateCompTaskNode);
+  AccumulateCompTaskNode() = default;
+  virtual ~AccumulateCompTaskNode() = default;
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
