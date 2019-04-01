@@ -19,7 +19,10 @@ void LossPrintKernel<T>::Forward(const KernelCtx& kernel_ctx,
                                                     BnInOp2Blob("loss_instance_num")->dptr<T>()[0]);
   }
   loss_reduced /= reduction_coefficient;
-  const char* loss_op_name = op_conf().name().c_str() + LossPrintPrefix.length();
+  bool tmp_split =
+      Global<JobDesc>::Get()->IsPredict()
+      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf();
+  const char* loss_op_name = op_conf().name().c_str() + (tmp_split ? 0 : LossPrintPrefix.length());
   double* prev_ts = static_cast<double*>(kernel_ctx.other);
   const double cur_ts = GetCurTime() / 1e9;
   if (*prev_ts == 0) {

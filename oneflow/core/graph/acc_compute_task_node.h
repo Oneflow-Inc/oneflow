@@ -11,6 +11,7 @@ class AccCompTaskNode final : public AccumulateCompTaskNode {
   AccCompTaskNode() = default;
   ~AccCompTaskNode() = default;
   TaskType GetTaskType() const override { return TaskType::kAcc; }
+  void BuildExecGphAndRegst() override;
 
  private:
   void InferProducedDataRegstTimeShape() override;

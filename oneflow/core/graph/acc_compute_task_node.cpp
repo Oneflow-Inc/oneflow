@@ -15,4 +15,21 @@ void AccCompTaskNode::InferProducedDataRegstTimeShape() {
   });
 }
 
+void AccCompTaskNode::BuildExecGphAndRegst() {
+  std::shared_ptr<RegstDesc> one_regst = GetSoleConsumedRegst("one");
+  std::shared_ptr<RegstDesc> acc_regst = GetProducedRegst("acc");
+  std::shared_ptr<const Operator> op = logical_node()->SoleOp();
+  ExecNode* exec_node = mut_exec_gph().NewNode();
+  exec_node->mut_op() = op;
+  exec_node->BindBnWithRegst(op->SoleIbn(), one_regst);
+  acc_regst->AddLbi(op->BnInOp2Lbi(op->SoleObn()));
+  exec_node->BindBnWithRegst(op->SoleObn(), acc_regst);
+  exec_node->InferBlobDescs(parallel_ctx());
+  acc_regst->ForEachLbi([acc_regst](const LogicalBlobId& lbi) {
+    BlobDesc* blob_desc = acc_regst->MutBlobDesc(lbi);
+    blob_desc->set_has_dim0_valid_num_field(false);
+    blob_desc->clear_dim0_inner_shape();
+  });
+}
+
 }  // namespace oneflow
