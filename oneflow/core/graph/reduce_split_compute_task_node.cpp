@@ -69,6 +69,7 @@ void ReduceSplitCompTaskNode::BuildExecGphAndRegst() {
         reduce_concat_node->GetSoleConsumedRegst("in_" + std::to_string(i)).get());
     node->BindBnWithRegst(reduce_split_op->output_bns().Get(i), out_regst);
   }
+  node->InferBlobDescs(parallel_ctx());
 }
 
 void ReduceSplitCompTaskNode::FixPackedBlobDescOfProducedRegst() {
