@@ -3,6 +3,41 @@
 
 namespace oneflow {
 
+namespace {
+
+class NormalizationGradDataParallelSbpSignature final : public ParallelSbpSignature {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(NormalizationGradDataParallelSbpSignature);
+  ~NormalizationGradDataParallelSbpSignature() override = default;
+
+  explicit NormalizationGradDataParallelSbpSignature(const Operator* op)
+      : ParallelSbpSignature(op) {}
+
+  const std::string Description() const override { return op().op_name() + ": (S, B) -> (S, P)"; }
+
+  const SbpSigMatchResult GetMatchResult(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      const ParallelDesc& parallel_desc) const override {
+    if (parallel_desc.policy() == kDataParallel) { return MakeSbpSigMatchSuccess(); }
+    return MakeSbpSigMatchParallelPolicyError(parallel_desc.policy(), kDataParallel);
+  }
+
+  void GenerateSignature(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+    const NormalizationGradOpConf& conf = op().op_conf().normalization_grad_conf();
+    (*bn2sbp)["dy"].mutable_split_parallel()->set_axis(0);
+    if (conf.has_dx()) { (*bn2sbp)["dx"].mutable_split_parallel()->set_axis(0); }
+    if (conf.has_gamma()) { (*bn2sbp)["gamma"].mutable_broadcast_parallel(); }
+    if (conf.has_mean()) { (*bn2sbp)["mean"].mutable_broadcast_parallel(); }
+    if (conf.has_inv_variance()) { (*bn2sbp)["inv_variance"].mutable_broadcast_parallel(); }
+    if (conf.has_gamma_diff()) { (*bn2sbp)["gamma_diff"].mutable_partial_sum_parallel(); }
+    if (conf.has_beta_diff()) { (*bn2sbp)["beta_diff"].mutable_partial_sum_parallel(); }
+  }
+};
+
+}  // namespace
+
 void NormalizationGradOp::InitFromOpConf() {
   const NormalizationGradOpConf& conf = op_conf().normalization_grad_conf();
 #ifdef WITH_CUDA
@@ -88,6 +123,11 @@ void NormalizationGradOp::InferBlobDescs(
   CheckParamBlobDesc("gamma");
   SetParamBlobDesc("gamma_diff");
   SetParamBlobDesc("beta_diff");
+}
+
+void NormalizationGradOp::GetSbpSignatures(
+    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
+  op_parallel_signatures->emplace_back(new NormalizationGradDataParallelSbpSignature(this));
 }
 
 REGISTER_OP(OperatorConf::kNormalizationGradConf, NormalizationGradOp);

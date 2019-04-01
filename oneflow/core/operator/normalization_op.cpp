@@ -9,6 +9,37 @@ inline bool IsFwBwSplit() {
   return Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf();
 }
 
+class NormalizationDataParallelSbpSignature final : public ParallelSbpSignature {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(NormalizationDataParallelSbpSignature);
+  ~NormalizationDataParallelSbpSignature() override = default;
+
+  explicit NormalizationDataParallelSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
+
+  const std::string Description() const override { return op().op_name() + ": (S, B) -> (S, B)"; }
+
+  const SbpSigMatchResult GetMatchResult(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      const ParallelDesc& parallel_desc) const override {
+    if (parallel_desc.policy() == kDataParallel) { return MakeSbpSigMatchSuccess(); }
+    return MakeSbpSigMatchParallelPolicyError(parallel_desc.policy(), kDataParallel);
+  }
+
+  void GenerateSignature(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+    const NormalizationOpConf& conf = op().op_conf().normalization_conf();
+    (*bn2sbp)["in"].mutable_split_parallel()->set_axis(0);
+    (*bn2sbp)["out"].mutable_split_parallel()->set_axis(0);
+    if (conf.has_gamma()) { (*bn2sbp)["gamma"].mutable_broadcast_parallel(); }
+    if (conf.has_beta()) { (*bn2sbp)["beta"].mutable_broadcast_parallel(); }
+    if (conf.has_mean()) { (*bn2sbp)["mean"].mutable_broadcast_parallel(); }
+    if (conf.has_inv_variance()) { (*bn2sbp)["inv_variance"].mutable_broadcast_parallel(); }
+    if (conf.has_moving_mean()) { (*bn2sbp)["moving_mean"].mutable_broadcast_parallel(); }
+    if (conf.has_moving_variance()) { (*bn2sbp)["moving_variance"].mutable_broadcast_parallel(); }
+  }
+};
+
 }  // namespace
 
 void NormalizationOp::InitFromOpConf() {
@@ -145,6 +176,11 @@ void NormalizationOp::InferBwBufBlobDescs(
     inv_variance->set_data_type(data_type);
     inv_variance->mut_shape() = param_shape;
   }
+}
+
+void NormalizationOp::GetSbpSignatures(
+    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
+  op_parallel_signatures->emplace_back(new NormalizationDataParallelSbpSignature(this));
 }
 
 REGISTER_OP(OperatorConf::kNormalizationConf, NormalizationOp);
