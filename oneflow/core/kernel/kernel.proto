@@ -31,7 +31,7 @@ message LossKernelConf {
   required DataType prediction_type = 1;
   required DataType label_type = 2;
   required float weight_scalar = 3;
-  required LossReductionType reduction = 4;
+  required ScalarReductionType reduction = 4;
 }
 
 message SparseSoftmaxCrossEntropyLossKernelConf {

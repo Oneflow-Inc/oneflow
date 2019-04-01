@@ -11,7 +11,7 @@ class CastSbpSignature final : public ParallelSbpSignature {
 
   CastSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
 
-  const std::string Description() const override { return op().op_name() + ": (A, A) -> A"; }
+  const std::string Description() const override { return op().op_name() + ": (A,) -> (A,)"; }
 
   const SbpSigMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
