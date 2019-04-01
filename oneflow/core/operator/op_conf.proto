@@ -272,7 +272,7 @@ message SoftmaxGradOpConf {
   optional int32 axis = 6 [default = -1];
 }
 
-enum LossReductionType {
+enum ScalarReductionType {
   kSumOverOne = 0;
   kSumOverWeight = 1;
   kSumOverN = 2;
@@ -296,7 +296,7 @@ message SparseSoftmaxCrossEntropyLossOpConf {
   required string prediction = 1;
   required string label = 2;
   required string loss = 3;
-  optional LossReductionType reduction = 4 [default = kSumOverN];
+  optional ScalarReductionType reduction = 4 [default = kSumOverN];
   optional float weight_scalar = 5 [default = 1.0];
   optional string weight = 6;
 }
@@ -305,7 +305,7 @@ message SparseCrossEntropyLossOpConf {
   required string prediction = 1;
   required string label = 2;
   required string loss = 3;
-  optional LossReductionType reduction = 4 [default = kSumOverN];
+  optional ScalarReductionType reduction = 4 [default = kSumOverN];
   optional float weight_scalar = 5 [default = 1.0];
   optional string weight = 6;
 }
@@ -316,7 +316,7 @@ message SigmoidCrossEntropyLossOpConf {
   required string loss = 3;
   optional bool normalize = 4 [default = true];
   optional float scale = 5 [default = 1.0];
-  optional LossReductionType reduction = 6 [default = kSumOverN];
+  optional ScalarReductionType reduction = 6 [default = kSumOverN];
   optional float weight_scalar = 7 [default = 1.0];
   optional string weight = 8;
 }
@@ -324,7 +324,7 @@ message SigmoidCrossEntropyLossOpConf {
 message IdentityLossOpConf {
   required string prediction = 1;
   required string loss = 2;
-  optional LossReductionType reduction = 3 [default = kSumOverN];
+  optional ScalarReductionType reduction = 3 [default = kSumOverN];
   optional float weight_scalar = 4 [default = 1.0];
   optional string weight = 5;
 }
@@ -610,7 +610,7 @@ message LossPrintOpConf {
   required LogicalBlobId loss_instance_num_lbi = 2;
   optional LogicalBlobId reduction_lbi = 3;
   optional float weight_scalar = 4 [default = 1.0];
-  optional LossReductionType reduction_type = 5 [default = kSumOverN];
+  optional ScalarReductionType reduction_type = 5 [default = kSumOverN];
 }
 
 message AccuracyPrintOpConf {
@@ -930,7 +930,7 @@ message HingeLossOpConf {
   required string prediction = 1;
   required string label = 2;
   required string loss = 3;
-  optional LossReductionType reduction = 4 [default = kSumOverN];
+  optional ScalarReductionType reduction = 4 [default = kSumOverN];
   optional float weight_scalar = 5 [default = 1.0];
   optional string weight = 6;
   optional Norm norm = 7[default = L1];
@@ -1225,6 +1225,30 @@ message BatchGatherGradOpConf {
   required int64 gather_dim_size = 4;
 }
 
+message PrintScalarSummaryOpConf {
+  required string x = 1;
+  optional ScalarReductionType reduction_type = 2 [default = kSumOverN];
+  optional float weight_scalar = 3 [default = 1.0];
+  optional string weight = 4;
+  optional int32 interval = 5 [default = 1];
+}
+
+message ShapeElemCntOpConf {
+  required string x = 1;
+  required string y = 2;
+  // closed interval: [begin_axis, end_axis]
+  optional int32 begin_axis = 3 [default = 0];
+  optional int32 end_axis = 4 [default = -1];
+}
+
+message AccOpConf {
+  // in
+  required string one = 1;
+  // out
+  required string acc = 2;
+  optional int32 max_acc_num = 3 [default = 1];   
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1265,6 +1289,8 @@ message OperatorConf {
     RMSPropModelUpdateOpConf rmsprop_model_update_conf = 129;
     LARSModelUpdateOpConf lars_model_update_conf = 130;
     AdamModelUpdateOpConf adam_model_update_conf = 131;
+    ShapeElemCntOpConf shape_elem_cnt_conf = 132;
+    AccOpConf acc_conf = 133;
       
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
@@ -1341,7 +1367,8 @@ message OperatorConf {
     SoftmaxGradOpConf softmax_grad_conf = 278;
     BatchGatherGradOpConf batch_gather_grad_conf = 279;
     ReduceMeanGradOpConf reduce_mean_grad_conf = 280;
-    PoolingGradOpConf pooling_grad_conf = 281;
+    PrintScalarSummaryOpConf print_scalar_summary_conf = 281;
+    PoolingGradOpConf pooling_grad_conf = 282;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
