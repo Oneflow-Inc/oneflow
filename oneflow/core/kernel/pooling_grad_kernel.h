@@ -31,19 +31,18 @@ class PoolingGradKernelIf : public KernelIf<device_type> {
   virtual const PoolingKernelConf& GetPoolingKernelConf() const = 0;
   void ForwardDataContent(const KernelCtx& kernel_ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    Blob* in_diff_blob = BnInOp2Blob("in_diff");
-    if (in_diff_blob == nullptr) { return; }
-    Memset<device_type>(kernel_ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
-                        in_diff_blob->ByteSizeOfDataContentField());
-    const Blob* out_diff_blob = BnInOp2Blob("out_diff");
-    const Blob* in_blob = BnInOp2Blob("in");
-    const Blob* out_blob = BnInOp2Blob("out");
-    PoolingBackward(kernel_ctx, this->pooling_ctx(), out_diff_blob, out_blob, in_blob,
-                    in_diff_blob);
+    Blob* dx_blob = BnInOp2Blob("dx");
+    if (dx_blob == nullptr) { return; }
+    Memset<device_type>(kernel_ctx.device_ctx, dx_blob->mut_dptr(), 0,
+                        dx_blob->ByteSizeOfDataContentField());
+    const Blob* dy_blob = BnInOp2Blob("dy");
+    const Blob* x_blob = BnInOp2Blob("x");
+    const Blob* y_blob = BnInOp2Blob("y");
+    PoolingBackward(kernel_ctx, this->pooling_ctx(), dy_blob, y_blob, x_blob, dx_blob);
   }
   virtual void PoolingBackward(const KernelCtx& kernel_ctx, const PoolingCtx& pooling_ctx,
-                               const Blob* out_diff_blob, const Blob* out_blob, const Blob* in_blob,
-                               Blob* in_diff_blob) const = 0;
+                               const Blob* dy_blob, const Blob* y_blob, const Blob* x_blob,
+                               Blob* dx_blob) const = 0;
 
   std::unique_ptr<PoolingCtx> pooling_ctx_;
 };
@@ -60,18 +59,17 @@ class PoolingGradKernel<DeviceType::kCPU, T> : public PoolingGradKernelIf<Device
 
  protected:
   void PoolingBackward(const KernelCtx& kernel_ctx, const PoolingCtx& pooling_ctx,
-                       const Blob* out_diff_blob, const Blob* out_blob, const Blob* in_blob,
-                       Blob* in_diff_blob) const override;
-  virtual void NCDHWProcessGrad(const T& in, const T& out, const T& out_diff, const int64_t size,
-                                T& in_diff) const = 0;
-  virtual void NDHWCProcessGrad(const int64_t out_col, const int64_t in_col, const int64_t size,
-                                ConstEigenArrayMap<T>& out_arr, ConstEigenArrayMap<T>& in_arr,
-                                ConstEigenArrayMap<T>& out_diff_arr,
-                                EigenArrayMap<T>& in_diff_arr) const = 0;
-  void BackwardNCDHW(const PoolingCtx& pooling_ctx, const Blob* out_diff_blob, const Blob* out_blob,
-                     const Blob* in_blob, Blob* in_diff_blob) const;
-  void BackwardNDHWC(const PoolingCtx& pooling_ctx, const Blob* out_diff_blob, const Blob* out_blob,
-                     const Blob* in_blob, Blob* in_diff_blob) const;
+                       const Blob* dy_blob, const Blob* y_blob, const Blob* x_blob,
+                       Blob* dx_blob) const override;
+  virtual void NCDHWProcessGrad(const T& x, const T& y, const T& dy, const int64_t size,
+                                T& dx) const = 0;
+  virtual void NDHWCProcessGrad(const int64_t y_col, const int64_t x_col, const int64_t size,
+                                ConstEigenArrayMap<T>& y_arr, ConstEigenArrayMap<T>& x_arr,
+                                ConstEigenArrayMap<T>& dy_arr, EigenArrayMap<T>& dx_arr) const = 0;
+  void BackwardNCDHW(const PoolingCtx& pooling_ctx, const Blob* dy_blob, const Blob* y_blob,
+                     const Blob* x_blob, Blob* dx_blob) const;
+  void BackwardNDHWC(const PoolingCtx& pooling_ctx, const Blob* dy_blob, const Blob* y_blob,
+                     const Blob* x_blob, Blob* dx_blob) const;
 };
 
 template<typename T>
@@ -83,8 +81,8 @@ class PoolingGradKernel<DeviceType::kGPU, T> : public PoolingGradKernelIf<Device
 
  protected:
   void PoolingBackward(const KernelCtx& kernel_ctx, const PoolingCtx& pooling_ctx,
-                       const Blob* out_diff_blob, const Blob* out_blob, const Blob* in_blob,
-                       Blob* in_diff_blob) const override;
+                       const Blob* dy_blob, const Blob* y_blob, const Blob* x_blob,
+                       Blob* dx_blob) const override;
 };
 
 }  // namespace oneflow

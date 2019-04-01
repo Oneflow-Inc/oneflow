@@ -3,14 +3,16 @@
 namespace oneflow {
 
 template<typename T>
-void PoolingGradKernel<DeviceType::kCPU, T>::PoolingBackward(
-    const KernelCtx& kernel_ctx, const PoolingCtx& pooling_ctx, const Blob* out_diff_blob,
-    const Blob* out_blob, const Blob* in_blob, Blob* in_diff_blob) const {
+void PoolingGradKernel<DeviceType::kCPU, T>::PoolingBackward(const KernelCtx& kernel_ctx,
+                                                             const PoolingCtx& pooling_ctx,
+                                                             const Blob* dy_blob,
+                                                             const Blob* y_blob, const Blob* x_blob,
+                                                             Blob* dx_blob) const {
   const std::string& data_format = pooling_ctx.kernel_conf().data_format();
   if (data_format == "channels_first") {
-    this->BackwardNCDHW(pooling_ctx, out_diff_blob, out_blob, in_blob, in_diff_blob);
+    this->BackwardNCDHW(pooling_ctx, dy_blob, y_blob, x_blob, dx_blob);
   } else if (data_format == "channels_last") {
-    this->BackwardNDHWC(pooling_ctx, out_diff_blob, out_blob, in_blob, in_diff_blob);
+    this->BackwardNDHWC(pooling_ctx, dy_blob, y_blob, x_blob, dx_blob);
   } else {
     UNIMPLEMENTED();
   }
@@ -18,20 +20,19 @@ void PoolingGradKernel<DeviceType::kCPU, T>::PoolingBackward(
 
 template<typename T>
 void PoolingGradKernel<DeviceType::kCPU, T>::BackwardNCDHW(const PoolingCtx& ctx,
-                                                           const Blob* out_diff_blob,
-                                                           const Blob* out_blob,
-                                                           const Blob* in_blob,
-                                                           Blob* in_diff_blob) const {
+                                                           const Blob* dy_blob, const Blob* y_blob,
+                                                           const Blob* x_blob,
+                                                           Blob* dx_blob) const {
   Shape in(ctx.kernel_conf().in());
   Shape out(ctx.kernel_conf().out());
   const PbRf<int32_t>& pool_size = ctx.kernel_conf().pool_size();
   const PbRf<int32_t>& strides = ctx.kernel_conf().strides();
   const PbRf<int32_t>& padding_before = ctx.kernel_conf().padding_before();
 
-  const T* output_diff = out_diff_blob->dptr<T>();
-  const T* output = out_blob->dptr<T>();
-  const T* input = in_blob->dptr<T>();
-  T* input_diff = in_diff_blob->mut_dptr<T>();
+  const T* dy = dy_blob->dptr<T>();
+  const T* output = y_blob->dptr<T>();
+  const T* input = x_blob->dptr<T>();
+  T* dx = dx_blob->mut_dptr<T>();
   FOR_RANGE(int64_t, n, 0, in.At(0)) {
     FOR_RANGE(int64_t, c, 0, in.At(1)) {
       FOR_RANGE(int64_t, pd, 0, out.At(2)) {
@@ -53,8 +54,8 @@ void PoolingGradKernel<DeviceType::kCPU, T>::BackwardNCDHW(const PoolingCtx& ctx
               FOR_RANGE(int64_t, h, hstart, hend) {
                 FOR_RANGE(int64_t, w, wstart, wend) {
                   const int64_t index = d * in.Count(3) + h * in.At(4) + w;
-                  NCDHWProcessGrad(input[index], output[pool_index], output_diff[pool_index], size,
-                                   input_diff[index]);
+                  NCDHWProcessGrad(input[index], output[pool_index], dy[pool_index], size,
+                                   dx[index]);
                 }
               }
             }
@@ -63,19 +64,18 @@ void PoolingGradKernel<DeviceType::kCPU, T>::BackwardNCDHW(const PoolingCtx& ctx
       }
       // offset
       input += in.Count(2);
-      input_diff += in.Count(2);
+      dx += in.Count(2);
       output += out.Count(2);
-      output_diff += out.Count(2);
+      dy += out.Count(2);
     }
   }
 }
 
 template<typename T>
 void PoolingGradKernel<DeviceType::kCPU, T>::BackwardNDHWC(const PoolingCtx& ctx,
-                                                           const Blob* out_diff_blob,
-                                                           const Blob* out_blob,
-                                                           const Blob* in_blob,
-                                                           Blob* in_diff_blob) const {
+                                                           const Blob* dy_blob, const Blob* y_blob,
+                                                           const Blob* x_blob,
+                                                           Blob* dx_blob) const {
   Shape in(ctx.kernel_conf().in());
   Shape out(ctx.kernel_conf().out());
   const PbRf<int32_t>& pool_size = ctx.kernel_conf().pool_size();
@@ -83,11 +83,10 @@ void PoolingGradKernel<DeviceType::kCPU, T>::BackwardNDHWC(const PoolingCtx& ctx
   const PbRf<int32_t>& padding_before = ctx.kernel_conf().padding_before();
 
   // caffe2 implementation: need check
-  ConstEigenArrayMap<T> out_mat(out_blob->dptr<T>(), out.At(1), out.elem_cnt() / out.At(1));
-  ConstEigenArrayMap<T> in_mat(in_blob->dptr<T>(), in.At(1), in.elem_cnt() / in.At(1));
-  ConstEigenArrayMap<T> out_diff_mat(out_diff_blob->dptr<T>(), out.At(1),
-                                     out.elem_cnt() / out.At(1));
-  EigenArrayMap<T> in_diff_mat(in_diff_blob->mut_dptr<T>(), in.At(1), in.elem_cnt() / in.At(1));
+  ConstEigenArrayMap<T> out_mat(y_blob->dptr<T>(), out.At(1), out.elem_cnt() / out.At(1));
+  ConstEigenArrayMap<T> in_mat(x_blob->dptr<T>(), in.At(1), in.elem_cnt() / in.At(1));
+  ConstEigenArrayMap<T> out_diff_mat(dy_blob->dptr<T>(), out.At(1), out.elem_cnt() / out.At(1));
+  EigenArrayMap<T> in_diff_mat(dx_blob->mut_dptr<T>(), in.At(1), in.elem_cnt() / in.At(1));
   FOR_RANGE(int64_t, n, 0, in.At(0)) {
     FOR_RANGE(int64_t, pd, 0, out.At(2)) {
       int64_t dstart = pd * strides.Get(0) - padding_before.Get(0);
