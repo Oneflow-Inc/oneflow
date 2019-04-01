@@ -16,6 +16,8 @@ void PoolingGradOp::InitFromOpConf() {
   EnrollOutputBn("dx");
 }
 
+const PbMessage& PoolingGradOp::GetCustomizedConf() const { return op_conf().pooling_grad_conf(); }
+
 void PoolingGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                    const ParallelContext* parallel_ctx) const {
   // in
@@ -37,5 +39,7 @@ void PoolingGradOp::CheckPoolSizeAndStrides() const {
   CHECK_EQ(strides.size(), num_dims);
   for (int32_t stride_dim : strides) { CHECK_GT(stride_dim, 0); }
 }
+
+REGISTER_OP(OperatorConf::kPoolingGradConf, PoolingGradOp);
 
 }  // namespace oneflow

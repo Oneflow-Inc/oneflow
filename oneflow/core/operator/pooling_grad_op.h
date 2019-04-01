@@ -18,6 +18,7 @@ class PoolingGradOp : public Operator {
                       const ParallelContext* parallel_ctx) const override;
 
  private:
+  const PbMessage& GetCustomizedConf() const override;
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
 
   void CheckPoolSizeAndStrides() const;

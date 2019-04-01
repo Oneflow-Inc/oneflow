@@ -19,9 +19,11 @@ struct PoolingGradKernelUtil<DeviceType::kGPU, T> final {
       pooling_mode = CUDNN_POOLING_MAX;
     }
     const int32_t dim = pooling_conf.num_dims();
-    std::vector<int> pool_size(dim);
-    std::vector<int> padding(dim);
-    std::vector<int> strides(dim);
+    std::vector<int> padding(pooling_conf.num_dims());
+    std::vector<int32_t> pool_size =
+        Get3DVecInOpConf(pooling_conf.pool_size(), pooling_conf.num_dims());
+    std::vector<int32_t> strides =
+        Get3DVecInOpConf(pooling_conf.strides(), pooling_conf.num_dims());
     const Shape& x_shape = x_blob->shape();
     std::vector<int64_t> x_shape_vec = {GetInDim(x_shape, data_format, 0, dim),
                                         GetInDim(x_shape, data_format, 1, dim),
@@ -33,9 +35,7 @@ struct PoolingGradKernelUtil<DeviceType::kGPU, T> final {
                     &padding_before, &padding_after);
     FOR_RANGE(int, i, 0, dim) {
       int32_t index_in_3d = i + 3 - dim;
-      pool_size[i] = pooling_conf.pool_size().Get(index_in_3d);
       padding[i] = std::max(padding_before[index_in_3d], padding_after[index_in_3d]);
-      strides[i] = pooling_conf.strides().Get(index_in_3d);
     }
     std::unique_ptr<CudnnPoolingDesc> pooling_desc;
     pooling_desc.reset(

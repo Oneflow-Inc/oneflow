@@ -16,9 +16,9 @@ class PoolingGradKernel final : public KernelIf<device_type> {
   ~PoolingGradKernel() = default;
 
  private:
+  const PbMessage& GetCustomizedOpConf() const override;
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
-  const PbMessage& GetCustomizedOpConf() const override;
 };
 
 template<DeviceType device_type, typename T>
