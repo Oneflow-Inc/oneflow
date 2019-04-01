@@ -165,6 +165,20 @@ message MaxPooling1DOpConf {
   repeated int32 strides = 6;
 }
 
+message MaxPooling1DGradOpConf {
+  // input
+  required string x = 1;
+  required string y = 2;
+  required string dy = 3;
+  // output
+  required string dx = 4;
+
+  optional string padding = 5 [default = "valid"];
+  required string data_format = 6;
+  repeated int32 pool_size = 7;
+  repeated int32 strides = 8;
+}
+
 message AveragePooling2DOpConf {
   required string in = 1;
   required string out = 2;
@@ -185,6 +199,20 @@ message MaxPooling2DOpConf {
   repeated int32 strides = 6;
 }
 
+message MaxPooling2DGradOpConf {
+  // input
+  required string x = 1;
+  required string y = 2;
+  required string dy = 3;
+  // output
+  required string dx = 4;
+
+  optional string padding = 5 [default = "valid"];
+  required string data_format = 6;
+  repeated int32 pool_size = 7;
+  repeated int32 strides = 8;
+}
+
 message AveragePooling3DOpConf {
   required string in = 1;
   required string out = 2;
@@ -203,6 +231,20 @@ message MaxPooling3DOpConf {
   required string data_format = 4;
   repeated int32 pool_size = 5;
   repeated int32 strides = 6;
+}
+
+message MaxPooling3DGradOpConf {
+  // input
+  required string x = 1;
+  required string y = 2;
+  required string dy = 3;
+  // output
+  required string dx = 4;
+
+  optional string padding = 5 [default = "valid"];
+  required string data_format = 6;
+  repeated int32 pool_size = 7;
+  repeated int32 strides = 8;
 }
 
 message ReluOpConf {
@@ -1320,6 +1362,9 @@ message OperatorConf {
     SoftmaxGradOpConf softmax_grad_conf = 278;
     BatchGatherGradOpConf batch_gather_grad_conf = 279;
     ReduceMeanGradOpConf reduce_mean_grad_conf = 280;
+    MaxPooling1DGradOpConf max_pooling_1d_grad_conf = 281;
+    MaxPooling2DGradOpConf max_pooling_2d_grad_conf = 282;
+    MaxPooling3DGradOpConf max_pooling_3d_grad_conf = 283;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
