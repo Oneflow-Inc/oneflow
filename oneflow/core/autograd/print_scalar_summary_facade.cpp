@@ -49,8 +49,7 @@ void GenerateFacadeImplOpConf(const OpNode& op_node, const JobConfBuilder& job_c
     scalar_value_lbi4print = GenLogicalBlobId(reduce_sum_op_conf.name() + "/out");
     instance_num_lbi4print = GenLogicalBlobId(instance_num_op_conf.name() + "/y");
   }
-  if (Global<JobDesc>::Get()->IsPredict()
-      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+  {
     OperatorConf instance_num_cast_op_conf;
     instance_num_cast_op_conf.set_name("System-Facade-instance_num_cast_" + op_node.op().op_name());
     auto* instance_num_cast_conf = instance_num_cast_op_conf.mutable_cast_conf();

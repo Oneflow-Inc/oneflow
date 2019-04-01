@@ -36,18 +36,21 @@ void ReplaceFacade(const OpGraph& op_graph, JobConf1* job_conf) {
 void JobCompleter::CompleteGlobalJobDesc() const {
   // replace facade op
   WithOpGraphAndMutJobConf(&ReplaceFacade);
-  // complete variable ops
-  WithOpGraphAndMutJobConf(&AutoVar);
-  // complete ops for trainning
-  WithOpGraphAndMutJobConf([](const OpGraph& op_graph, JobConf1* job_conf) {
-    LogicalBlobId total_loss_instance_num;
-    AddTotalLossInstanceNumOpConf(op_graph, job_conf, &total_loss_instance_num);
-    HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
-    AutoGrad(op_graph, job_conf, &lbi2diff_lbi);
-    AddOptimizerOpConf(op_graph, job_conf, lbi2diff_lbi, total_loss_instance_num);
-  });
-  // complete tick ops
-  WithOpGraphAndMutJobConf(&AutoTick);
+  if (Global<JobDesc>::Get()->IsPredict()
+      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+    // complete variable ops
+    WithOpGraphAndMutJobConf(&AutoVar);
+    // complete ops for trainning
+    WithOpGraphAndMutJobConf([](const OpGraph& op_graph, JobConf1* job_conf) {
+      LogicalBlobId total_loss_instance_num;
+      AddTotalLossInstanceNumOpConf(op_graph, job_conf, &total_loss_instance_num);
+      HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
+      AutoGrad(op_graph, job_conf, &lbi2diff_lbi);
+      AddOptimizerOpConf(op_graph, job_conf, lbi2diff_lbi, total_loss_instance_num);
+    });
+    // complete tick ops
+    WithOpGraphAndMutJobConf(&AutoTick);
+  }
 }
 
 }  // namespace oneflow
