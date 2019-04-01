@@ -54,8 +54,7 @@ void PoolingGradKernel<DeviceType::kCPU, T>::BackwardNCDHW(const PoolingCtx& ctx
               FOR_RANGE(int64_t, h, hstart, hend) {
                 FOR_RANGE(int64_t, w, wstart, wend) {
                   const int64_t index = d * x_shape.Count(3) + h * x_shape.At(4) + w;
-                  NCDHWProcessGrad(x[index], y[pool_index], dy[pool_index], size,
-                                   dx[index]);
+                  NCDHWProcessGrad(x[index], y[pool_index], dy[pool_index], size, dx[index]);
                 }
               }
             }
@@ -76,38 +75,41 @@ void PoolingGradKernel<DeviceType::kCPU, T>::BackwardNDHWC(const PoolingCtx& ctx
                                                            const Blob* dy_blob, const Blob* y_blob,
                                                            const Blob* x_blob,
                                                            Blob* dx_blob) const {
-  Shape in(ctx.kernel_conf().in());
-  Shape out(ctx.kernel_conf().out());
+  Shape x_shape(ctx.kernel_conf().in());
+  Shape y_shape(ctx.kernel_conf().out());
   const PbRf<int32_t>& pool_size = ctx.kernel_conf().pool_size();
   const PbRf<int32_t>& strides = ctx.kernel_conf().strides();
   const PbRf<int32_t>& padding_before = ctx.kernel_conf().padding_before();
 
   // caffe2 implementation: need check
-  ConstEigenArrayMap<T> out_mat(y_blob->dptr<T>(), out.At(1), out.elem_cnt() / out.At(1));
-  ConstEigenArrayMap<T> in_mat(x_blob->dptr<T>(), in.At(1), in.elem_cnt() / in.At(1));
-  ConstEigenArrayMap<T> out_diff_mat(dy_blob->dptr<T>(), out.At(1), out.elem_cnt() / out.At(1));
-  EigenArrayMap<T> in_diff_mat(dx_blob->mut_dptr<T>(), in.At(1), in.elem_cnt() / in.At(1));
-  FOR_RANGE(int64_t, n, 0, in.At(0)) {
-    FOR_RANGE(int64_t, pd, 0, out.At(2)) {
+  ConstEigenArrayMap<T> y_mat(y_blob->dptr<T>(), y_shape.At(1), y_shape.elem_cnt() / y_shape.At(1));
+  ConstEigenArrayMap<T> x_mat(x_blob->dptr<T>(), x_shape.At(1), x_shape.elem_cnt() / x_shape.At(1));
+  ConstEigenArrayMap<T> dy_mat(dy_blob->dptr<T>(), y_shape.At(1),
+                               y_shape.elem_cnt() / y_shape.At(1));
+  EigenArrayMap<T> dx_mat(dx_blob->mut_dptr<T>(), x_shape.At(1),
+                          x_shape.elem_cnt() / x_shape.At(1));
+  FOR_RANGE(int64_t, n, 0, x_shape.At(0)) {
+    FOR_RANGE(int64_t, pd, 0, y_shape.At(2)) {
       int64_t dstart = pd * strides.Get(0) - padding_before.Get(0);
-      int64_t dend = std::min(dstart + pool_size.Get(0), in.At(2));
+      int64_t dend = std::min(dstart + pool_size.Get(0), x_shape.At(2));
       dstart = std::max(dstart, static_cast<int64_t>(0));
-      FOR_RANGE(int64_t, ph, 0, out.At(3)) {
+      FOR_RANGE(int64_t, ph, 0, y_shape.At(3)) {
         int64_t hstart = ph * strides.Get(1) - padding_before.Get(1);
-        int64_t hend = std::min(hstart + pool_size.Get(1), in.At(3));
+        int64_t hend = std::min(hstart + pool_size.Get(1), x_shape.At(3));
         hstart = std::max(hstart, static_cast<int64_t>(0));
-        FOR_RANGE(int64_t, pw, 0, out.At(4)) {
+        FOR_RANGE(int64_t, pw, 0, y_shape.At(4)) {
           int64_t wstart = pw * strides.Get(2) - padding_before.Get(2);
-          int64_t wend = std::min(wstart + pool_size.Get(2), in.At(4));
+          int64_t wend = std::min(wstart + pool_size.Get(2), x_shape.At(4));
           wstart = std::max(wstart, static_cast<int64_t>(0));
-          const int64_t pool_index = ((n * out.At(2) + pd) * out.At(3) + ph) * out.At(4) + pw;
+          const int64_t pool_index =
+              ((n * y_shape.At(2) + pd) * y_shape.At(3) + ph) * y_shape.At(4) + pw;
           const int64_t size = (dend - dstart) * (hend - hstart) * (wend - wstart);
           FOR_RANGE(int64_t, d, dstart, dend) {
             FOR_RANGE(int64_t, h, hstart, hend) {
               FOR_RANGE(int64_t, w, wstart, wend) {
-                const int64_t input_index = ((n * in.At(2) + d) * in.At(3) + h) * in.At(4) + w;
-                NDHWCProcessGrad(pool_index, input_index, size, out_mat, in_mat, out_diff_mat,
-                                 in_diff_mat);
+                const int64_t input_index =
+                    ((n * x_shape.At(2) + d) * x_shape.At(3) + h) * x_shape.At(4) + w;
+                NDHWCProcessGrad(pool_index, input_index, size, y_mat, x_mat, dy_mat, dx_mat);
               }
             }
           }
