@@ -24,7 +24,7 @@ void JobConfBuilder::AddOps(const ParallelConf& parallel_conf,
 }
 
 void JobConfBuilder::MutOps(const std::vector<OperatorConf>& op_confs) const {
-  for (const auto& op_conf : op_confs) { *op_name2op_conf_.at(op_conf.name()) = op_conf; }
+  for (const auto& op_conf : op_confs) { op_name2op_conf_.at(op_conf.name())->CopyFrom(op_conf); }
 }
 
 void JobConfBuilder::AddOrMutOps(const ParallelConf& parallel_conf,

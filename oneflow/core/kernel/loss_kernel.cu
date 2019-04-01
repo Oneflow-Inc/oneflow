@@ -28,7 +28,7 @@ __global__ void LossReductionCountNonZero(T* reduction, const T* weight, int64_t
 template<typename T>
 struct LossKernelUtil<DeviceType::kGPU, T> {
   static void ComputeReductionCoefficient(DeviceCtx* ctx, int64_t data_num, int64_t weight_length,
-                                          const T* weight, T* reduction, LossReductionType type) {
+                                          const T* weight, T* reduction, ScalarReductionType type) {
     switch (type) {
       case kSumOverOne: {
         LossReductionAssign<T><<<1, 1, 0, ctx->cuda_stream()>>>(reduction, 1.0);

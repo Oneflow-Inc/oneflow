@@ -386,7 +386,7 @@ void LogicalGraph::BuildLossPrintStruct() {
     }
     loss_print_conf->set_weight_scalar(loss_op->GetValFromCustomizedConf<float>("weight_scalar"));
     loss_print_conf->set_reduction_type(
-        static_cast<LossReductionType>(loss_op->GetEnumFromCustomizedConf("reduction")));
+        static_cast<ScalarReductionType>(loss_op->GetEnumFromCustomizedConf("reduction")));
 
     std::shared_ptr<Operator> loss_print_op = ConstructOp(loss_print_op_conf);
     ParallelConf loss_print_pr_conf;

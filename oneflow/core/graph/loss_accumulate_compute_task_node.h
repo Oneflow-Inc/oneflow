@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class LossAccCompTaskNode final : public AccCompTaskNode {
+class LossAccCompTaskNode final : public AccumulateCompTaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LossAccCompTaskNode);
   LossAccCompTaskNode() = default;
