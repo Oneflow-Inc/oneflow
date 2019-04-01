@@ -9,6 +9,11 @@ void AccOp::InitFromOpConf() {
   EnrollOutputBn("acc", false);
 }
 
+void AccOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                           const ParallelContext* parallel_ctx) const {
+  *GetBlobDesc4BnInOp("acc") = *GetBlobDesc4BnInOp("one");
+}
+
 void AccOp::InferOutputBlobTimeShape(
     std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
     const ParallelContext* parallel_ctx, Shape* time_shape) const {
