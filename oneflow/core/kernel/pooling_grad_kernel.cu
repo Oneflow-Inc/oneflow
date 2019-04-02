@@ -18,12 +18,12 @@ struct PoolingGradKernelUtil<DeviceType::kGPU, T> final {
     } else if (pooling_conf.pool_mode() == "max") {
       pooling_mode = CUDNN_POOLING_MAX;
     }
-    const int32_t dim = pooling_conf.num_dims();
-    std::vector<int> padding(pooling_conf.num_dims());
+    const int32_t dim = pooling_conf.num_spatial_dims();
+    std::vector<int> padding(pooling_conf.num_spatial_dims());
     std::vector<int32_t> pool_size =
-        Get3DVecInOpConf(pooling_conf.pool_size(), pooling_conf.num_dims());
+        Get3DVecInOpConf(pooling_conf.pool_size(), pooling_conf.num_spatial_dims());
     std::vector<int32_t> strides =
-        Get3DVecInOpConf(pooling_conf.strides(), pooling_conf.num_dims());
+        Get3DVecInOpConf(pooling_conf.strides(), pooling_conf.num_spatial_dims());
     const Shape& x_shape = x_blob->shape();
     std::vector<int64_t> x_shape_vec = {GetInDim(x_shape, data_format, 0, dim),
                                         GetInDim(x_shape, data_format, 1, dim),

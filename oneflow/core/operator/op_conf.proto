@@ -207,7 +207,7 @@ message MaxPooling3DOpConf {
 
 
 message PoolingConf {
-  required int32 num_dims = 1;
+  required int32 num_spatial_dims = 1;
   // "avg" or "max"
   required string pool_mode = 2;
   required string data_format = 3;
