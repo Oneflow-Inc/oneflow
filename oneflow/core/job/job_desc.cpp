@@ -321,6 +321,7 @@ void JobDesc::AddRecordLoadOps() {
     OperatorConf* op_conf = job_conf_.mutable_net()->mutable_op()->Mutable(idx);
     if (op_conf->has_decode_ofrecord_conf() == false) { continue; }
     const DecodeOFRecordOpConf& decode_conf = op_conf->decode_ofrecord_conf();
+    if (decode_conf.has_in()) { continue; }
     if (decode_conf.blob_size() == 0) { continue; }
     std::pair<std::string, std::string> data_info = {decode_conf.data_dir(),
                                                      decode_conf.part_name_prefix()};
