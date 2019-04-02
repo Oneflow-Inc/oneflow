@@ -10,7 +10,7 @@ void GenerateFacadeImplOpConf(const OpNode& op_node, const JobConfBuilder& job_c
   std::vector<OperatorConf> new_ops;
   // reduce sum
   OperatorConf reduce_sum_op_conf;
-  reduce_sum_op_conf.set_name("System-Facade-reduce_scalar_summary_" + op_node.op().op_name());
+  reduce_sum_op_conf.set_name("System-Facade-" + op_node.op().op_name() + "_reduce_sum");
   auto* reduce_sum_conf = reduce_sum_op_conf.mutable_reduce_sum_conf();
   reduce_sum_conf->set_in(GenLogicalBlobName(vector_lbi));
   reduce_sum_conf->add_axis(0);
@@ -18,7 +18,7 @@ void GenerateFacadeImplOpConf(const OpNode& op_node, const JobConfBuilder& job_c
   new_ops.push_back(reduce_sum_op_conf);
   // get instance num by ShapeElemCntOp
   OperatorConf instance_num_op_conf;
-  instance_num_op_conf.set_name("System-Facade-instance_num_" + op_node.op().op_name());
+  instance_num_op_conf.set_name("System-Facade-" + op_node.op().op_name() + "_instance_num");
   auto* instance_num_conf = instance_num_op_conf.mutable_shape_elem_cnt_conf();
   instance_num_conf->set_x(GenLogicalBlobName(vector_lbi));
   instance_num_conf->set_y("y");
@@ -28,7 +28,8 @@ void GenerateFacadeImplOpConf(const OpNode& op_node, const JobConfBuilder& job_c
   if (print_scalar_summary_conf.interval() > 1) {
     // accumulate scalar value
     OperatorConf scalar_value_acc_op_conf;
-    scalar_value_acc_op_conf.set_name("System-Facade-scalar_value_acc_" + op_node.op().op_name());
+    scalar_value_acc_op_conf.set_name("System-Facade-" + op_node.op().op_name()
+                                      + "_scalar_value_acc");
     auto* scalar_value_acc_sum_conf = scalar_value_acc_op_conf.mutable_acc_conf();
     scalar_value_acc_sum_conf->set_one(reduce_sum_op_conf.name() + "/out");
     scalar_value_acc_sum_conf->set_acc("acc");
@@ -36,8 +37,8 @@ void GenerateFacadeImplOpConf(const OpNode& op_node, const JobConfBuilder& job_c
     new_ops.push_back(scalar_value_acc_op_conf);
     // accumulate instance_num
     OperatorConf instance_num_acc_op_conf;
-    instance_num_acc_op_conf.set_name("System-Facade-instance_num_acc_sum_"
-                                      + op_node.op().op_name());
+    instance_num_acc_op_conf.set_name("System-Facade-" + op_node.op().op_name()
+                                      + "_instance_num_acc");
     auto* instance_num_acc_conf = instance_num_acc_op_conf.mutable_acc_conf();
     instance_num_acc_conf->set_one(instance_num_op_conf.name() + "/y");
     instance_num_acc_conf->set_acc("acc");
@@ -51,7 +52,8 @@ void GenerateFacadeImplOpConf(const OpNode& op_node, const JobConfBuilder& job_c
   }
   {
     OperatorConf instance_num_cast_op_conf;
-    instance_num_cast_op_conf.set_name("System-Facade-instance_num_cast_" + op_node.op().op_name());
+    instance_num_cast_op_conf.set_name("System-Facade-" + op_node.op().op_name()
+                                       + "_instance_num_cast");
     auto* instance_num_cast_conf = instance_num_cast_op_conf.mutable_cast_conf();
     instance_num_cast_conf->set_in(GenLogicalBlobName(instance_num_lbi4print));
     instance_num_cast_conf->set_out("out");
