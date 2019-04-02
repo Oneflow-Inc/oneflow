@@ -399,8 +399,8 @@ void JobDesc::AddRecordLoadOps() {
 }
 
 void JobDesc::FixAndOptimizeDLNet() {
-  FixTickOpIfExists();
   if (!(IsPredict() && other_conf().predict_conf().has_tmp_split_fw_bw_train_conf())) {
+    FixTickOpIfExists();
     ConvertPseudoChainToChain();
   }
   if (IsTrain()) { AddIdentityOpForAllReduceOverlapingUntrainble(); }
