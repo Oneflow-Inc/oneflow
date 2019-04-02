@@ -11,11 +11,11 @@ void EveryNthCompActor::VirtualCompActorInit(const TaskProto& proto) {
 }
 
 void EveryNthCompActor::Act() {
+  if (current_nth_ == every_nth_) { current_nth_ = 0; }
   current_nth_ += 1;
   if (current_nth_ == every_nth_) {
     KernelCtx kernel_ctx = GenDefaultKernelCtx();
     AsyncLaunchKernel(kernel_ctx);
-    current_nth_ = 0;
   }
 }
 
