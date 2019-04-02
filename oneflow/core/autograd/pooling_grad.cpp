@@ -52,7 +52,6 @@ void GenerateBackwardOpConf(
         || op.op_conf().has_average_pooling_3d_conf() || op.op_conf().has_max_pooling_1d_conf()
         || op.op_conf().has_max_pooling_2d_conf() || op.op_conf().has_max_pooling_3d_conf());
   const PoolingConf pooling_conf = PoolingConfFromPoolingOpConf(op.op_conf());
-  const std::string out_diff_lbn = GenLogicalBlobName(*DiffLbi4BnInOp("out"));
   LogicalBlobId* in_diff_lbi = DiffLbi4BnInOp("in");
   if (in_diff_lbi != nullptr) {
     OperatorConf pooling_grad_op;
