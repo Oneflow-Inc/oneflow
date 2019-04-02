@@ -5,38 +5,38 @@ namespace oneflow {
 namespace {
 
 PoolingConf PoolingConfFromPoolingOpConf(const OperatorConf& op_conf) {
-  int32_t n_dims = 0;
+  int32_t num_spatial_dims = 0;
   std::string pool_mode = "";
   const PbMessage* msg = nullptr;
   if (op_conf.has_average_pooling_1d_conf()) {
-    n_dims = 1;
+    num_spatial_dims = 1;
     pool_mode = "avg";
     msg = &op_conf.average_pooling_1d_conf();
   } else if (op_conf.has_average_pooling_2d_conf()) {
-    n_dims = 2;
+    num_spatial_dims = 2;
     pool_mode = "avg";
     msg = &op_conf.average_pooling_2d_conf();
   } else if (op_conf.has_average_pooling_3d_conf()) {
-    n_dims = 3;
+    num_spatial_dims = 3;
     pool_mode = "avg";
     msg = &op_conf.average_pooling_3d_conf();
   } else if (op_conf.has_max_pooling_1d_conf()) {
-    n_dims = 1;
+    num_spatial_dims = 1;
     pool_mode = "max";
     msg = &op_conf.max_pooling_1d_conf();
   } else if (op_conf.has_max_pooling_2d_conf()) {
-    n_dims = 2;
+    num_spatial_dims = 2;
     pool_mode = "max";
     msg = &op_conf.max_pooling_2d_conf();
   } else if (op_conf.has_max_pooling_3d_conf()) {
-    n_dims = 3;
+    num_spatial_dims = 3;
     pool_mode = "max";
     msg = &op_conf.max_pooling_3d_conf();
   } else {
     UNIMPLEMENTED();
   }
   PoolingConf pooling_conf;
-  pooling_conf.set_num_dims(n_dims);
+  pooling_conf.set_num_spatial_dims(num_spatial_dims);
   pooling_conf.set_pool_mode(pool_mode);
   pooling_conf.set_data_format(GetValFromPbMessage<std::string>(*msg, "data_format"));
   pooling_conf.set_padding(GetValFromPbMessage<std::string>(*msg, "padding"));

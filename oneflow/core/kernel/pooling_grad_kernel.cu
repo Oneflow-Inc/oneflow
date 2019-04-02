@@ -18,28 +18,28 @@ struct PoolingGradKernelUtil<DeviceType::kGPU, T> final {
     } else if (pooling_conf.pool_mode() == "max") {
       pooling_mode = CUDNN_POOLING_MAX;
     }
-    const int32_t dim = pooling_conf.num_spatial_dims();
+    const int32_t num_spatial_dims = pooling_conf.num_spatial_dims();
     std::vector<int> padding(pooling_conf.num_spatial_dims());
     std::vector<int32_t> pool_size =
         Get3DVecInOpConf(pooling_conf.pool_size(), pooling_conf.num_spatial_dims());
     std::vector<int32_t> strides =
         Get3DVecInOpConf(pooling_conf.strides(), pooling_conf.num_spatial_dims());
     const Shape& x_shape = x_blob->shape();
-    std::vector<int64_t> x_shape_vec = {GetInDim(x_shape, data_format, 0, dim),
-                                        GetInDim(x_shape, data_format, 1, dim),
-                                        GetInDim(x_shape, data_format, 2, dim)};
+    std::vector<int64_t> x_shape_vec = {GetInDim(x_shape, data_format, 0, num_spatial_dims),
+                                        GetInDim(x_shape, data_format, 1, num_spatial_dims),
+                                        GetInDim(x_shape, data_format, 2, num_spatial_dims)};
     std::vector<int64_t> y_shape_vec;
     std::vector<int32_t> padding_before;
     std::vector<int32_t> padding_after;
     Get3DOutputSize(x_shape_vec, pool_size, strides, pooling_conf.padding(), &y_shape_vec,
                     &padding_before, &padding_after);
-    FOR_RANGE(int, i, 0, dim) {
-      int32_t index_in_3d = i + 3 - dim;
+    FOR_RANGE(int, i, 0, num_spatial_dims) {
+      int32_t index_in_3d = i + 3 - num_spatial_dims;
       padding[i] = std::max(padding_before[index_in_3d], padding_after[index_in_3d]);
     }
     std::unique_ptr<CudnnPoolingDesc> pooling_desc;
-    pooling_desc.reset(
-        new CudnnPoolingDesc(pooling_mode, dim, pool_size.data(), padding.data(), strides.data()));
+    pooling_desc.reset(new CudnnPoolingDesc(pooling_mode, num_spatial_dims, pool_size.data(),
+                                            padding.data(), strides.data()));
     CudaCheck(cudnnPoolingBackward(ctx->cudnn_handle(), pooling_desc->Get(), OnePtr<T>::value,
                                    y_desc.Get(), y_blob->dptr(), y_desc.Get(), dy_blob->dptr(),
                                    x_desc.Get(), x_blob->dptr(), ZeroPtr<T>::value, x_desc.Get(),
