@@ -863,9 +863,13 @@ message TransposeOpConf {
 
 message ReduceConcatOpConf {
   required int32 in_num = 1;
+  repeated string in = 2;
+  optional string out = 3;
 }
 
 message NcclAllReduceOpConf {
+  optional string in = 1;
+  optional string out = 2;
 }
 
 message NcclReduceScatterOpConf {
@@ -876,6 +880,10 @@ message NcclAllGatherOpConf {
 
 message ReduceSplitOpConf {
   required int32 out_num = 1;
+  optional string in = 2;
+  repeated string out = 3;
+  repeated ShapeProto out_shape = 4;
+  optional int32 order_in_graph = 5;
 }
 
 message ReduceScatterOpConf {
@@ -1167,6 +1175,9 @@ message ScalarMulOpConf {
 }
 
 message ReduceIdentityOpConf {
+  optional string in = 1;
+  optional string out = 2;
+  optional int32 order_in_graph = 3;
 }
 
 message TickOpConf {
