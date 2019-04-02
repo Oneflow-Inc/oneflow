@@ -15,6 +15,7 @@ class EveryNthCompActor final : public CompActor {
   void VirtualCompActorInit(const TaskProto& proto) override;
   void Act() override;
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
+  int64_t ActNumForEachOutput(int64_t regst_desc_id) const override { return every_nth_; };
 
   int64_t every_nth_;
   int64_t current_nth_;
