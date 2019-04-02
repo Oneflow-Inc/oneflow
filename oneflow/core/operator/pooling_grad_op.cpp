@@ -31,12 +31,12 @@ void PoolingGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
 
 void PoolingGradOp::CheckPoolSizeAndStrides() const {
   const PoolingConf& pooling_conf = this->op_conf().pooling_grad_conf().pooling_conf();
-  const int32_t num_dims = pooling_conf.num_dims();
+  const int32_t num_spatial_dims = pooling_conf.num_spatial_dims();
   const PbRf<int32_t>& pool_size = pooling_conf.pool_size();
-  CHECK_EQ(pool_size.size(), num_dims);
+  CHECK_EQ(pool_size.size(), num_spatial_dims);
   for (int32_t pool_dim : pool_size) { CHECK_GT(pool_dim, 0); }
   const PbRf<int32_t>& strides = pooling_conf.strides();
-  CHECK_EQ(strides.size(), num_dims);
+  CHECK_EQ(strides.size(), num_spatial_dims);
   for (int32_t stride_dim : strides) { CHECK_GT(stride_dim, 0); }
 }
 
