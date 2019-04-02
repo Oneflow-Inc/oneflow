@@ -35,7 +35,7 @@ void EveryNthOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
 }
 
-LogicalNode* EveryNthOp::NewProperLogicalNode() { return new RepeatForwardLogicalNode(); }
+LogicalNode* EveryNthOp::NewProperLogicalNode() { return new EveryNthLogicalNode(); }
 
 REGISTER_OP(OperatorConf::kEveryNthConf, EveryNthOp);
 
