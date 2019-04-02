@@ -25,8 +25,8 @@ void EveryNthCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
       regst->set_piece_id(cur_piece_id_);
       return true;
     });
+    cur_piece_id_ += 1;
   }
-  cur_piece_id_ += 1;
 }
 
 REGISTER_ACTOR(kEveryNth, EveryNthCompActor);
