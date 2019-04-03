@@ -92,9 +92,10 @@ Shape Shape::RemoveOnes(const std::vector<int64_t>& axis_vec) const {
   std::vector<int64_t> dim_vec;
   const std::vector<int64_t> axis_vec_shifted = ShiftNegativeAxis(axis_vec);
   for (int64_t i = 0; i < this->dim_vec().size(); i++) {
-    CHECK_EQ(this->dim_vec()[i], 1);
     if (std::find(axis_vec_shifted.begin(), axis_vec_shifted.end(), i) == axis_vec_shifted.end()) {
       dim_vec.push_back(this->dim_vec()[i]);
+    } else {
+      CHECK_EQ(this->dim_vec()[i], 1);
     }
   }
   if (dim_vec.empty()) { dim_vec.push_back(1); }
