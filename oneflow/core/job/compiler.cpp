@@ -84,7 +84,7 @@ void AutoComplete() {
       Global<JobDesc>::New(job_conf);
     }
     // add saver ops
-    if (Global<JobDesc>::Get()->enable_write_snapshot()) {
+    if (Global<JobDesc>::Get()->job_conf().other().enable_write_snapshot()) {
       const JobDesc* job_desc = Global<JobDesc>::Get();
       OpGraph op_graph(job_desc);
       JobConf1 job_conf(job_desc->job_conf());
