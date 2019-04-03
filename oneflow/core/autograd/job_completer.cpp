@@ -48,11 +48,10 @@ void JobCompleter::CompleteGlobalJobDesc() const {
       AutoGrad(op_graph, job_conf, &lbi2diff_lbi);
       AddOptimizerOpConf(op_graph, job_conf, lbi2diff_lbi, total_loss_instance_num);
       AutoSaver(op_graph, job_conf);
-    }
-  });
-  // complete tick ops
-  WithOpGraphAndMutJobConf(&AutoTick);
+    });
+    // complete tick ops
+    WithOpGraphAndMutJobConf(&AutoTick);
+  }
 }
-}  // namespace oneflow
 
 }  // namespace oneflow
