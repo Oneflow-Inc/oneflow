@@ -18,7 +18,6 @@ SnapshotMgr::SnapshotMgr(const Plan& plan) {
 }
 
 Snapshot* SnapshotMgr::GetWriteableSnapshot(int64_t snapshot_id) {
-  CHECK(Global<JobDesc>::Get()->enable_write_snapshot());
   std::unique_lock<std::mutex> lck(snapshot_id2writeable_snapshot_mtx_);
   auto it = snapshot_id2writeable_snapshot_.find(snapshot_id);
   if (it == snapshot_id2writeable_snapshot_.end()) {
