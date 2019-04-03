@@ -1,6 +1,5 @@
 #include "oneflow/core/kernel/model_save_kernel.h"
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/job/job_conf.pb.h"
 
 namespace oneflow {
 

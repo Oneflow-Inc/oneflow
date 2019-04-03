@@ -100,7 +100,7 @@ Plan Compiler::DoCompile() {
   JobCompleter().CompleteGlobalJobDesc();
   Global<JobDesc>::Get()->FixAndOptimizeDLNet();
   const JobDesc* job_desc = Global<JobDesc>::Get();
-  TeePersistentLogStream::Create("optimized_job_conf")->Write(job_desc->job_conf());
+  TeePersistentLogStream::Create("optimized_job")->Write(job_desc->job());
   Global<OpGraph>::New(job_desc);
   Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_op_graph.dot");
   auto logical_gph = std::make_unique<LogicalGraph>(job_desc->IsTrain());
