@@ -931,14 +931,6 @@ message BboxNmsAndLimitOpConf {
   optional BboxVoteConf bbox_vote = 15;
 }
 
-message AnchorGeneratorConf {
-  required int32 feature_map_stride = 1 [default = 16];
-  repeated float aspect_ratios = 2;
-  repeated float anchor_scales = 3;
-  // optional int32 image_height = 4;
-  // optional int32 image_width = 5;
-}
-
 message ProposalOpConf {
   // in
   required string image_size = 1;
@@ -1412,6 +1404,21 @@ message GtBboxScaleOpConf {
   required string out = 3;
 }
 
+message AnchorGeneratorConf {
+  required int32 feature_map_stride = 1;
+  repeated float aspect_ratios = 2;
+  repeated float anchor_scales = 3;
+}
+
+message AnchorGenerateOpConf {
+  // in
+  required string images = 1;
+  // conf
+  repeated AnchorGeneratorConf anchor_generator_conf = 2;
+  // out
+  repeated string anchors = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1537,6 +1544,7 @@ message OperatorConf {
     Conv3DV2OpConf conv_3d_v2_conf = 294;
     ConcatGtProposalsOpConf concat_gt_proposals_conf = 295;
     GtBboxScaleOpConf gt_bbox_scale_conf = 296;
+    AnchorGenerateOpConf anchor_generate_conf = 297;
 
     // Maybe not needed
     RedefineDim0OpConf redefine_dim0_conf = 400;
