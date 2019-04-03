@@ -25,7 +25,7 @@ void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   out_blob->set_data_type(in_blob->data_type());
   if (conf.axis().empty()) {
     if (conf.keep_dims()) {
-      out_blob->mut_shape() = in_blob->shape().Fill(1);
+      out_blob->mut_shape() = Shape::Ones(in_blob->shape().NumAxes());
     } else {
       out_blob->mut_shape() = Shape({1});
     }
@@ -35,7 +35,7 @@ void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
     if (conf.keep_dims()) {
       out_blob->mut_shape() = reduced_shape;
     } else {
-      out_blob->mut_shape() = reduced_shape.Squeeze(axis_vec);
+      out_blob->mut_shape() = reduced_shape.RemoveOnes(axis_vec);
     }
   }
 }

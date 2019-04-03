@@ -12,7 +12,7 @@ void ReduceSumKernel<device_type, T>::ForwardDataContent(
   const ReduceSumOpConf& conf = this->op_conf().reduce_sum_conf();
   const Shape& reduced_shape =
       conf.axis().empty()
-          ? in_blob->shape().Fill(1)
+          ? Shape::Ones(in_blob->shape().NumAxes())
           : in_blob->shape().CreateReducedShape({conf.axis().begin(), conf.axis().end()});
   NdarrayUtil<device_type, T>::ReduceSum(
       ctx.device_ctx, XpuVarNdarray<T>(reduced_shape, out_blob->mut_dptr<T>()),
@@ -28,7 +28,7 @@ void ReduceSumKernel<device_type, T>::BackwardDataContent(
   const ReduceSumOpConf& conf = this->op_conf().reduce_sum_conf();
   const Shape& reduced_shape =
       conf.axis().empty()
-          ? in_diff_blob->shape().Fill(1)
+          ? Shape::Ones(in_diff_blob->shape().NumAxes())
           : in_diff_blob->shape().CreateReducedShape({conf.axis().begin(), conf.axis().end()});
   NdarrayUtil<device_type, T>::BroadcastTo(
       ctx.device_ctx, XpuVarNdarray<T>(in_diff_blob, in_diff_blob->shape().NumAxes()),

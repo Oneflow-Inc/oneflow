@@ -88,10 +88,11 @@ Shape Shape::CreateReducedShape(const std::vector<int64_t>& axis_vec) const {
   return Shape(dim_vec);
 }
 
-Shape Shape::Squeeze(const std::vector<int64_t>& axis_vec) const {
+Shape Shape::RemoveOnes(const std::vector<int64_t>& axis_vec) const {
   std::vector<int64_t> dim_vec;
   const std::vector<int64_t> axis_vec_shifted = ShiftNegativeAxis(axis_vec);
   for (int64_t i = 0; i < this->dim_vec().size(); i++) {
+    CHECK_EQ(this->dim_vec()[i], 1);
     if (std::find(axis_vec_shifted.begin(), axis_vec_shifted.end(), i) == axis_vec_shifted.end()) {
       dim_vec.push_back(this->dim_vec()[i]);
     }
@@ -100,9 +101,9 @@ Shape Shape::Squeeze(const std::vector<int64_t>& axis_vec) const {
   return Shape(dim_vec);
 }
 
-Shape Shape::Fill(const int64_t dim) const {
-  std::vector<int64_t> dim_vec = this->dim_vec();
-  std::fill(dim_vec.begin(), dim_vec.end(), dim);
+Shape Shape::Ones(const int64_t num_axes) {
+  std::vector<int64_t> dim_vec(num_axes);
+  std::fill(dim_vec.begin(), dim_vec.end(), 1);
   return Shape(dim_vec);
 }
 
