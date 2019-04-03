@@ -14,6 +14,8 @@ class ModelSaveV2Kernel final : public KernelIf<DeviceType::kCPU> {
  private:
   void VirtualKernelInit(const ParallelContext*) override;
   void Forward(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
+
+  std::unique_ptr<int64_t> next_snapshot_id_;
 };
 
 }  // namespace oneflow
