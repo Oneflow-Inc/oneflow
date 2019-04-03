@@ -12,6 +12,7 @@ message TrainConf {
   required NormalModelUpdateOpUserConf model_update_conf = 3;
   required string model_save_snapshots_path = 4;
   required int32 num_of_batches_in_snapshot = 5;
+  repeated string loss_lbn = 6;
 
   optional InitializerConf default_initializer_conf = 100;
   required float primary_lr = 101;
