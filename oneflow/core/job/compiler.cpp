@@ -2,11 +2,6 @@
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/device/cudnn_conv_ctx_cache.h"
 #include "oneflow/core/graph/op_graph.h"
-#include "oneflow/core/autograd/autovar.h"
-#include "oneflow/core/autograd/autograd.h"
-#include "oneflow/core/autograd/autotick.h"
-#include "oneflow/core/autograd/auto_saver.h"
-#include "oneflow/core/optimizer/optimizer.h"
 #include "oneflow/core/autograd/job_completer.h"
 
 namespace oneflow {
