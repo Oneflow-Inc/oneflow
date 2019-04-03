@@ -2,6 +2,7 @@
 #include "oneflow/core/autograd/autovar.h"
 #include "oneflow/core/autograd/autograd.h"
 #include "oneflow/core/autograd/autotick.h"
+#include "oneflow/core/autograd/auto_saver.h"
 #include "oneflow/core/optimizer/optimizer.h"
 
 namespace oneflow {
