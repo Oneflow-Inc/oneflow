@@ -1210,6 +1210,11 @@ message EveryNthOpConf {
   required int64 n = 3;
 }
 
+message ModelSaveV2OpConf {
+  required string in = 1;
+  required string lbn = 2;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1250,8 +1255,7 @@ message OperatorConf {
     RMSPropModelUpdateOpConf rmsprop_model_update_conf = 129;
     LARSModelUpdateOpConf lars_model_update_conf = 130;
     AdamModelUpdateOpConf adam_model_update_conf = 131;
-    EveryNthOpConf every_nth_conf = 132;
-      
+
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
     TransposeOpConf transpose_conf = 201;
@@ -1327,6 +1331,8 @@ message OperatorConf {
     SoftmaxGradOpConf softmax_grad_conf = 278;
     BatchGatherGradOpConf batch_gather_grad_conf = 279;
     ReduceMeanGradOpConf reduce_mean_grad_conf = 280;
+    EveryNthOpConf every_nth_conf = 281;
+    ModelSaveV2OpConf model_save_v2_conf = 282;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

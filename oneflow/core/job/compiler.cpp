@@ -5,6 +5,7 @@
 #include "oneflow/core/autograd/autovar.h"
 #include "oneflow/core/autograd/autograd.h"
 #include "oneflow/core/autograd/autotick.h"
+#include "oneflow/core/autograd/auto_saver.h"
 #include "oneflow/core/optimizer/optimizer.h"
 
 namespace oneflow {
@@ -79,6 +80,15 @@ void AutoComplete() {
       OpGraph op_graph(job_desc);
       JobConf1 job_conf(job_desc->job_conf());
       AutoTick(op_graph, &job_conf);
+      Global<JobDesc>::Delete();
+      Global<JobDesc>::New(job_conf);
+    }
+    // add saver ops
+    if (Global<JobDesc>::Get()->enable_write_snapshot()) {
+      const JobDesc* job_desc = Global<JobDesc>::Get();
+      OpGraph op_graph(job_desc);
+      JobConf1 job_conf(job_desc->job_conf());
+      AutoSaver(op_graph, &job_conf);
       Global<JobDesc>::Delete();
       Global<JobDesc>::New(job_conf);
     }
