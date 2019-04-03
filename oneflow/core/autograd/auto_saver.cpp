@@ -6,7 +6,7 @@ void AutoSaver(const OpGraph& op_graph, JobConf1* job_conf) {
   JobConfBuilder builder(job_conf);
   ParallelConf md_save_parallel_conf;
   // only save on master
-  md_save_parallel_conf.add_device_name("0:CPU:0");
+  md_save_parallel_conf.add_device_name("0:cpu:0");
   op_graph.ForEachNode([&](const OpNode* node) {
     if (!node->op().op_conf().has_variable_conf()) { return; }
     OperatorConf every_nth_op_conf;
