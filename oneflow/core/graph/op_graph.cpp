@@ -212,7 +212,6 @@ void OpNode::CheckBlobDescs(const std::function<BlobDesc*(const std::string&)>& 
                             const ParallelContext* parallel_ctx) const {
   int64_t parallel_id = parallel_ctx->parallel_id();
   auto Check = [&](const std::string& bn) {
-    const LogicalBlobId& lbi = op().BnInOp2Lbi(bn);
     if (bn2parallel_id2blob_desc_.find(bn) == bn2parallel_id2blob_desc_.end()) { return; }
     CHECK_EQ(parallel_ctx->parallel_num(), bn2parallel_id2blob_desc_.at(bn).size());
     const BlobDesc& blob_desc_from_exec_graph = *GetBlobDesc4BnInOp(bn);
@@ -381,7 +380,6 @@ void OpGraph::InferLogicalBlobDesc() const {
     const auto& input_bns = op_node->op().input_bns();
     FOR_RANGE(int64_t, parallel_id, 0, parallel_num) {
       auto BlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
-        const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(bn);
         if (std::find(input_bns.begin(), input_bns.end(), bn) != input_bns.end()) {
           CHECK(bn2parallel_id2blob_desc->find(bn) != bn2parallel_id2blob_desc->end());
           CHECK_EQ(bn2parallel_id2blob_desc->at(bn).size(), parallel_num);

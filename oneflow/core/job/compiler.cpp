@@ -7,6 +7,7 @@
 #include "oneflow/core/autograd/autotick.h"
 #include "oneflow/core/autograd/auto_saver.h"
 #include "oneflow/core/optimizer/optimizer.h"
+#include "oneflow/core/autograd/job_completer.h"
 
 namespace oneflow {
 
@@ -47,52 +48,6 @@ void ToDotFile(const Plan& plan, const std::string& filepath) {
     }
   }
   log_stream << "}\n";
-}
-
-void AutoComplete() {
-  if (Global<JobDesc>::Get()->IsPredict()
-      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
-    // auto var
-    {
-      const JobDesc* job_desc = Global<JobDesc>::Get();
-      OpGraph op_graph(job_desc);
-      JobConf1 job_conf(job_desc->job_conf());
-      AutoVar(op_graph, &job_conf);
-      Global<JobDesc>::Delete();
-      Global<JobDesc>::New(job_conf);
-    }
-    // add ops for trainning
-    {
-      const JobDesc* job_desc = Global<JobDesc>::Get();
-      OpGraph op_graph(job_desc);
-      JobConf1 job_conf(job_desc->job_conf());
-      LogicalBlobId total_loss_instance_num;
-      AddTotalLossInstanceNumOpConf(op_graph, &job_conf, &total_loss_instance_num);
-      HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
-      AutoGrad(op_graph, &job_conf, &lbi2diff_lbi);
-      AddOptimizerOpConf(op_graph, &job_conf, lbi2diff_lbi, total_loss_instance_num);
-      Global<JobDesc>::Delete();
-      Global<JobDesc>::New(job_conf);
-    }
-    // add tick ops
-    {
-      const JobDesc* job_desc = Global<JobDesc>::Get();
-      OpGraph op_graph(job_desc);
-      JobConf1 job_conf(job_desc->job_conf());
-      AutoTick(op_graph, &job_conf);
-      Global<JobDesc>::Delete();
-      Global<JobDesc>::New(job_conf);
-    }
-    // add saver ops
-    if (Global<JobDesc>::Get()->job_conf().other().enable_write_snapshot()) {
-      const JobDesc* job_desc = Global<JobDesc>::Get();
-      OpGraph op_graph(job_desc);
-      JobConf1 job_conf(job_desc->job_conf());
-      AutoSaver(op_graph, &job_conf);
-      Global<JobDesc>::Delete();
-      Global<JobDesc>::New(job_conf);
-    }
-  }
 }
 
 }  // namespace
@@ -147,7 +102,7 @@ Plan Compiler::DoCompile() {
 #ifdef WITH_CUDA
   Global<CudnnConvCtxCache>::New();
 #endif
-  AutoComplete();
+  JobCompleter().CompleteGlobalJobDesc();
   Global<JobDesc>::Get()->FixAndOptimizeDLNet();
   const JobDesc* job_desc = Global<JobDesc>::Get();
   TeePersistentLogStream::Create("optimized_job_conf")->Write(job_desc->job_conf());

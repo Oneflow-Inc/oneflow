@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class MdDiffAccCompTaskNode final : public AccCompTaskNode {
+class MdDiffAccCompTaskNode final : public AccumulateCompTaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MdDiffAccCompTaskNode);
   MdDiffAccCompTaskNode() = default;

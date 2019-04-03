@@ -3,14 +3,16 @@
 
 namespace oneflow {
 
-void AccCompTaskNode::ProduceAllRegstsAndBindEdges() {
+void AccumulateCompTaskNode::ProduceAllRegstsAndBindEdges() {
   auto acc_regst = ProduceRegst("acc", false);
   SoleOutEdge()->AddRegst("acc", acc_regst);
 }
 
-void AccCompTaskNode::ConsumeAllRegsts() { ConsumeRegst("one", SoleInEdge()->GetSoleRegst()); }
+void AccumulateCompTaskNode::ConsumeAllRegsts() {
+  ConsumeRegst("one", SoleInEdge()->GetSoleRegst());
+}
 
-void AccCompTaskNode::BuildExecGphAndRegst() {
+void AccumulateCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> one_regst = GetSoleConsumedRegst("one");
   std::shared_ptr<RegstDesc> acc_regst = GetProducedRegst("acc");
   acc_regst->CopyBlobDescFrom(one_regst.get());

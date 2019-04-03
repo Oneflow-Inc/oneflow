@@ -35,6 +35,6 @@ namespace oneflow {
 #define GET_SEQ_3 GET_SEQ_2 OF_PP_MAKE_TUPLE_SEQ(3)
 #define GET_SEQ_4 GET_SEQ_3 OF_PP_MAKE_TUPLE_SEQ(4)
 #define GET_SEQ_5 GET_SEQ_5 OF_PP_MAKE_TUPLE_SEQ(5)
-}
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_NDARRAY_XPU_UTIL_H_
