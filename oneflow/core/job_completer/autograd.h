@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_AUTOGRAD_AUTOGRAD_H_
-#define ONEFLOW_CORE_AUTOGRAD_AUTOGRAD_H_
+#ifndef ONEFLOW_CORE_JOB_COMPLETER_AUTOGRAD_H_
+#define ONEFLOW_CORE_JOB_COMPLETER_AUTOGRAD_H_
 
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/operator/operator.h"
@@ -40,4 +40,4 @@ class GenerateBackwardOpConfWrapperStruct final {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_AUTOGRAD_AUTOGRAD_H_
+#endif  // ONEFLOW_CORE_JOB_COMPLETER_AUTOGRAD_H_

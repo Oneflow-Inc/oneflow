@@ -1,7 +1,7 @@
-#include "oneflow/core/autograd/job_completer.h"
-#include "oneflow/core/autograd/autovar.h"
-#include "oneflow/core/autograd/autograd.h"
-#include "oneflow/core/autograd/autotick.h"
+#include "oneflow/core/job_completer/job_completer.h"
+#include "oneflow/core/job_completer/autovar.h"
+#include "oneflow/core/job_completer/autograd.h"
+#include "oneflow/core/job_completer/autotick.h"
 #include "oneflow/core/optimizer/optimizer.h"
 
 namespace oneflow {

@@ -1,7 +1,7 @@
-#ifndef ONEFLOW_CORE_AUTOGRAD_CLONE_GRAD_H_
-#define ONEFLOW_CORE_AUTOGRAD_CLONE_GRAD_H_
+#ifndef ONEFLOW_CORE_JOB_COMPLETER_CLONE_GRAD_H_
+#define ONEFLOW_CORE_JOB_COMPLETER_CLONE_GRAD_H_
 
-#include "oneflow/core/autograd/autograd.h"
+#include "oneflow/core/job_completer/autograd.h"
 
 namespace oneflow {
 
@@ -11,4 +11,4 @@ void GenerateCloneGradOpIfNeed(
     HashMap<LogicalBlobId, LogicalBlobId>* lbi2out_diff_lbi);
 }
 
-#endif  // ONEFLOW_CORE_AUTOGRAD_CLONE_GRAD_H_
+#endif  // ONEFLOW_CORE_JOB_COMPLETER_CLONE_GRAD_H_

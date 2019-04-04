@@ -1,6 +1,6 @@
-#include "oneflow/core/autograd/autograd.h"
+#include "oneflow/core/job_completer/autograd.h"
 #include "oneflow/core/job/job_builder.h"
-#include "oneflow/core/autograd/clone_grad.h"
+#include "oneflow/core/job_completer/clone_grad.h"
 
 namespace oneflow {
 
