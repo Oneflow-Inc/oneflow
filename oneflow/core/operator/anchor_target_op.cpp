@@ -17,7 +17,6 @@ void AnchorTargetOp::InitFromOpConf() {
   EnrollRepeatedOutputBn("class_weights", false);
 
   EnrollDataTmpBn("anchor_boxes");
-  EnrollDataTmpBn("anchor_inds");
   EnrollDataTmpBn("anchor_labels");
   EnrollDataTmpBn("anchor_max_overlaps");
   EnrollDataTmpBn("anchor_best_match_gt");
@@ -114,11 +113,6 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   BlobDesc* anchor_best_match_gt_blob_desc = GetBlobDesc4BnInOp("anchor_best_match_gt");
   anchor_best_match_gt_blob_desc->mut_shape() = Shape({num_images, total_num_anchors});
   anchor_best_match_gt_blob_desc->set_data_type(DataType::kInt32);
-  // data_tmp: anchors_inds (N, (H1 * W1 + H2 * W2 + ...) * A) int32_t
-  BlobDesc* anchor_inds_blob_desc = GetBlobDesc4BnInOp("anchor_inds");
-  anchor_inds_blob_desc->mut_shape() = Shape({num_images, total_num_anchors});
-  anchor_inds_blob_desc->set_data_type(DataType::kInt32);
-  anchor_inds_blob_desc->set_has_dim1_valid_num_field(true);
 }
 
 REGISTER_CPU_OP(OperatorConf::kAnchorTargetConf, AnchorTargetOp);

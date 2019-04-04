@@ -28,8 +28,8 @@ class AnchorTargetKernel final : public KernelIf<DeviceType::kCPU> {
                         const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   void GenerateAnchorBoxes(DeviceCtx* ctx,
                            const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  void FilterOutsideAnchorBoxes(DeviceCtx* ctx, int64_t im_index,
-                                const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  void ExcludeOutsideAnchorBoxes(DeviceCtx* ctx, int64_t im_index,
+                                 const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   void CalcMaxOverlapAndSetPositiveLabels(
       DeviceCtx* ctx, int64_t im_index,
       const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
