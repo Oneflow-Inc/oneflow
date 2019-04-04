@@ -51,7 +51,7 @@ class ConvOp : public Operator {
       const std::string& obn) const override;
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override;
 
   PbMessage* MutableCustomizedKernelConf(KernelConf*) const override;
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -62,9 +62,10 @@ class ConvOp : public Operator {
   void GenKernelConfWithCudnn(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               KernelConf* kernel_conf, ConvKernelConf* conv_conf,
                               const OpContext*) const;
+  void GetSbpSignatures(std::vector<std::unique_ptr<const SbpSignature>>*) const override;
 #ifdef WITH_CUDA
   void InferCudnnAlgo(std::function<const BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-                      CudnnConvAlgoCtx* conv_ctx, const int64_t device_id) const;
+                      CudnnConvAlgoCtx* conv_ctx) const;
 #endif  // WITH_CUDA
 };
 
