@@ -7,9 +7,9 @@
 
 namespace oneflow {
 
-void AutoGrad(const OpGraph& op_graph, JobConf1* job_conf,
+void AutoGrad(const OpGraph& op_graph, Job* job,
               HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
-void AddTotalLossInstanceNumOpConf(const OpGraph& op_graph, JobConf1* job_conf,
+void AddTotalLossInstanceNumOpConf(const OpGraph& op_graph, Job* job,
                                    LogicalBlobId* total_loss_instance_num_lbi);
 
 void GenerateBackwardOpConfIf(const Operator&, std::vector<OperatorConf>*,

@@ -1,5 +1,5 @@
 #include "oneflow/core/autograd/autograd.h"
-#include "oneflow/core/job/job_conf_builder.h"
+#include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/autograd/clone_grad.h"
 
 namespace oneflow {
@@ -149,7 +149,7 @@ void GenerateBackwardOpConfIf(
   obj->Call(op, op_confs, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp);
 }
 
-void AutoGrad(const OpGraph& op_graph, JobConf1* job_conf,
+void AutoGrad(const OpGraph& op_graph, Job* job,
               HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi) {
   CHECK(lbi2diff_lbi->empty());
   auto NeedBackwardOp = MakePredicatorNeedBackwardOp(op_graph);
@@ -157,7 +157,7 @@ void AutoGrad(const OpGraph& op_graph, JobConf1* job_conf,
   GetLossOpNodes(op_graph, &loss_nodes);
   CheckNotReachableAmongOpNodes(op_graph, loss_nodes);
   for (OpNode* loss_node : loss_nodes) { CHECK(NeedBackwardOp(loss_node)); }
-  JobConfBuilder job_conf_builder(job_conf);
+  JobBuilder job_builder(job);
 
   // generate ones lbi as loss's diff
   HashMap<LogicalBlobId, LogicalBlobId>* lbi2out_diff_lbi = lbi2diff_lbi;
@@ -171,7 +171,7 @@ void AutoGrad(const OpGraph& op_graph, JobConf1* job_conf,
     LogicalBlobId* out_diff_lbi = &(*lbi2out_diff_lbi)[loss_lbi];
     std::vector<OperatorConf> ops;
     GenerateOnesAsDiffLbi(loss_lbi, &ops, out_diff_lbi);
-    job_conf_builder.AddOps(loss_op_node->parallel_desc().parallel_conf(), ops);
+    job_builder.AddOps(loss_op_node->parallel_desc().parallel_conf(), ops);
   }
 
   // generate backward ops
@@ -208,13 +208,13 @@ void AutoGrad(const OpGraph& op_graph, JobConf1* job_conf,
     std::vector<OperatorConf> ops;
     GenerateCloneGradOpIfNeed(op_node->op(), &ops, lbi2op_name2in_diff_lbi, lbi2out_diff_lbi);
     GenerateBackwardOpConfIf(op_node->op(), &ops, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp);
-    job_conf_builder.AddOps(op_node->parallel_desc().parallel_conf(), ops);
+    job_builder.AddOps(op_node->parallel_desc().parallel_conf(), ops);
   });
 }
 
-void AddTotalLossInstanceNumOpConf(const OpGraph& op_graph, JobConf1* job_conf,
+void AddTotalLossInstanceNumOpConf(const OpGraph& op_graph, Job* job,
                                    LogicalBlobId* total_loss_instance_num_lbi) {
-  JobConfBuilder job_conf_builder(job_conf);
+  JobBuilder job_builder(job);
   std::list<OpNode*> loss_nodes;
   GetLossOpNodes(op_graph, &loss_nodes);
   OperatorConf op_conf;
@@ -236,7 +236,7 @@ void AddTotalLossInstanceNumOpConf(const OpGraph& op_graph, JobConf1* job_conf,
     instance_num_op_conf->set_y("y");
     instance_num_op_conf->set_begin_axis(0);
     instance_num_op_conf->set_end_axis(0);
-    job_conf_builder.AddOps(op_node->parallel_desc().parallel_conf(), {instance_num_op});
+    job_builder.AddOps(op_node->parallel_desc().parallel_conf(), {instance_num_op});
     std::string loss_instance_num_lbn;
     if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
       OperatorConf cast_op;
@@ -245,7 +245,7 @@ void AddTotalLossInstanceNumOpConf(const OpGraph& op_graph, JobConf1* job_conf,
       cast_op.mutable_cast_conf()->set_in(instance_num_op.name() + "/y");
       cast_op.mutable_cast_conf()->set_out("out");
       cast_op.mutable_cast_conf()->set_data_type(DataType::kFloat);
-      job_conf_builder.AddOps(op_node->parallel_desc().parallel_conf(), {cast_op});
+      job_builder.AddOps(op_node->parallel_desc().parallel_conf(), {cast_op});
       loss_instance_num_lbn = cast_op.name() + "/out";
     } else {
       loss_instance_num_lbn = instance_num_op.name() + "/y";
@@ -257,7 +257,7 @@ void AddTotalLossInstanceNumOpConf(const OpGraph& op_graph, JobConf1* job_conf,
   ParallelConf parallel_conf;
   parallel_conf.set_policy(kDataParallel);
   parallel_conf.add_device_name("0:cpu:0");
-  job_conf_builder.AddOps(parallel_conf, {op_conf});
+  job_builder.AddOps(parallel_conf, {op_conf});
 
   total_loss_instance_num_lbi->set_op_name(op_conf.name());
   total_loss_instance_num_lbi->set_blob_name("out");
