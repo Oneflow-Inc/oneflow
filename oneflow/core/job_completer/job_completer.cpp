@@ -30,6 +30,25 @@ void ReplaceFacade(const OpGraph& op_graph, Job* job) {
   op_graph.ForEachNode([&](OpNode* op_node) { GenerateFacadeImplOpConfIf(*op_node, job_builder); });
 }
 
+void UpdateJobHelperConfLbi2DiffLbi(const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
+                                    Job* job) {
+  auto& mut_pairs = (*job->mutable_helper()->mutable_tag2lbi_relations())["lbi2diff_lbi"];
+  for (const auto& pair : lbi2diff_lbi) {
+    auto* mut_pair = mut_pairs.add_pair();
+    *mut_pair->mutable_first() = pair.first;
+    *mut_pair->mutable_second() = pair.second;
+  }
+}
+
+void GenerateOpConf4Trainning(const OpGraph& op_graph, Job* job) {
+  LogicalBlobId total_loss_instance_num;
+  AddTotalLossInstanceNumOpConf(op_graph, job, &total_loss_instance_num);
+  HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
+  AutoGrad(op_graph, job, &lbi2diff_lbi);
+  UpdateJobHelperConfLbi2DiffLbi(lbi2diff_lbi, job);
+  AddOptimizerOpConf(op_graph, job, lbi2diff_lbi, total_loss_instance_num);
+}
+
 }  // namespace
 
 void JobCompleter::CompleteGlobalJobDesc() const {
@@ -40,13 +59,7 @@ void JobCompleter::CompleteGlobalJobDesc() const {
     // complete variable ops
     WithOpGraphAndMutJob(&AutoVar);
     // complete ops for trainning
-    WithOpGraphAndMutJob([](const OpGraph& op_graph, Job* job) {
-      LogicalBlobId total_loss_instance_num;
-      AddTotalLossInstanceNumOpConf(op_graph, job, &total_loss_instance_num);
-      HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
-      AutoGrad(op_graph, job, &lbi2diff_lbi);
-      AddOptimizerOpConf(op_graph, job, lbi2diff_lbi, total_loss_instance_num);
-    });
+    WithOpGraphAndMutJob(&GenerateOpConf4Trainning);
     // complete tick ops
     WithOpGraphAndMutJob(&AutoTick);
   }
