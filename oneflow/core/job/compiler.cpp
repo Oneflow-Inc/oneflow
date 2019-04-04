@@ -2,7 +2,7 @@
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/device/cudnn_conv_ctx_cache.h"
 #include "oneflow/core/graph/op_graph.h"
-#include "oneflow/core/autograd/job_completer.h"
+#include "oneflow/core/job_completer/job_completer.h"
 
 namespace oneflow {
 
