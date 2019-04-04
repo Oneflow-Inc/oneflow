@@ -1,9 +1,9 @@
-#include "oneflow/core/kernel/calculate_scale_kernel.h"
+#include "oneflow/core/kernel/calculate_image_size_kernel.h"
 
 namespace oneflow {
 
 template<typename T>
-void CalculateScaleKernel<T>::ForwardDataContent(
+void CalculateImageSizeKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* origin_height_blob = BnInOp2Blob("origin_height");
   const int32_t* origin_height = origin_height_blob->dptr<int32_t>();
@@ -11,7 +11,7 @@ void CalculateScaleKernel<T>::ForwardDataContent(
   T* scale = BnInOp2Blob("scale")->mut_dptr<T>();
   int32_t* resized_image_size = BnInOp2Blob("resized_image_size")->mut_dptr<int32_t>();
   int32_t* aligned_image_size = BnInOp2Blob("aligned_image_size")->mut_dptr<int32_t>();
-  const auto& conf = this->op_conf().calculate_scale_conf();
+  const auto& conf = this->op_conf().calculate_image_size_conf();
   const int32_t target_size = conf.target_size();
   const int32_t max_size = conf.max_size();
   const int32_t dynamic_shape_align = conf.dynamic_shape_align();
@@ -28,7 +28,8 @@ void CalculateScaleKernel<T>::ForwardDataContent(
     resized_image_size[2 * i + 1] = static_cast<int32_t>(origin_width[i] * scale[i]);
 
     // recalculate scales in y-direction and x-direction
-    scale[2 * i] = static_cast<float>(resized_image_size[2 * i]) / static_cast<float>(origin_height[i]);
+    scale[2 * i] =
+        static_cast<float>(resized_image_size[2 * i]) / static_cast<float>(origin_height[i]);
     scale[2 * i + 1] =
         static_cast<float>(resized_image_size[2 * i + 1]) / static_cast<float>(origin_width[i]);
   }
@@ -44,7 +45,7 @@ void CalculateScaleKernel<T>::ForwardDataContent(
   aligned_image_size[1] = RoundUp(batch_width, dynamic_shape_align);
 }
 
-ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kCalculateScaleConf, CalculateScaleKernel,
+ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kCalculateImageSizeConf, CalculateImageSizeKernel,
                                FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

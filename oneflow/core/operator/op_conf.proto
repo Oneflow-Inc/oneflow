@@ -1366,7 +1366,7 @@ message BinaryCrossEntropyOpConf {
   required string out = 3;
 }
 
-message CalculateScaleOpConf {
+message CalculateImageSizeOpConf {
   // in
   required string origin_height = 1;
   required string origin_width = 2;
@@ -1538,7 +1538,7 @@ message OperatorConf {
     GroupByRecordIdOpConf group_by_record_id_conf = 286;
     SmoothL1OpConf smooth_l1_conf = 287;
     BinaryCrossEntropyOpConf binary_cross_entropy_conf = 288;
-    CalculateScaleOpConf calculate_scale_conf = 289;
+    CalculateImageSizeOpConf calculate_image_size_conf = 289;
     ReshapeInstanceShapeToDim0OpConf reshape_instance_shape_to_dim0_conf = 290;
     ElementCountOpConf element_count_conf = 291;
     Conv1DV2OpConf conv_1d_v2_conf = 292;

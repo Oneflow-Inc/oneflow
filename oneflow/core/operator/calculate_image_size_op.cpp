@@ -1,9 +1,9 @@
-#include "oneflow/core/operator/calculate_scale_op.h"
+#include "oneflow/core/operator/calculate_image_size_op.h"
 
 namespace oneflow {
 
-void CalculateScaleOp::InitFromOpConf() {
-  CHECK(op_conf().has_calculate_scale_conf());
+void CalculateImageSizeOp::InitFromOpConf() {
+  CHECK(op_conf().has_calculate_image_size_conf());
   EnrollInputBn("origin_height", false);
   EnrollInputBn("origin_width", false);
   EnrollOutputBn("scale", false);
@@ -11,10 +11,10 @@ void CalculateScaleOp::InitFromOpConf() {
   EnrollOutputBn("aligned_image_size", false);
 }
 
-void CalculateScaleOp::InferBlobDescs(
+void CalculateImageSizeOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  const auto& conf = op_conf().calculate_scale_conf();
+  const auto& conf = op_conf().calculate_image_size_conf();
   const int32_t target_size = conf.target_size();
   const int32_t max_size = conf.max_size();
   CHECK_GT(target_size, 0);
@@ -42,12 +42,12 @@ void CalculateScaleOp::InferBlobDescs(
   aligned_image_size->set_data_type(origin_height->data_type());
 }
 
-void CalculateScaleOp::VirtualGenKernelConf(
+void CalculateImageSizeOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
     KernelConf* kernel_conf) const {
   kernel_conf->set_data_type(GetBlobDesc4BnInOp("scale")->data_type());
 }
 
-REGISTER_CPU_OP(OperatorConf::kCalculateScaleConf, CalculateScaleOp);
+REGISTER_CPU_OP(OperatorConf::kCalculateImageSizeConf, CalculateImageSizeOp);
 
 }  // namespace oneflow
