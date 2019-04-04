@@ -5,6 +5,9 @@
 
 namespace oneflow {
 
+void SetBnValInOpTypeConf(PbMessage* pb_msg, const std::string& bn, const std::string& old_val,
+                     const std::string& new_val);
+
 class JobBuilder final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(JobBuilder);
@@ -15,7 +18,6 @@ class JobBuilder final {
   void MutOps(const std::vector<OperatorConf>& op_confs) const;
   void AddOrMutOps(const ParallelConf& parallel_conf,
                    const std::vector<OperatorConf>& op_confs) const;
-
  private:
   Job* job_;
   HashMap<std::string, OperatorConf*> op_name2op_conf_;

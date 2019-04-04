@@ -45,10 +45,18 @@ size_t RtRegstDesc::TotalMainByteSize4AllRegst() const {
 }
 
 size_t RtRegstDesc::MainByteSize4OneRegst() const {
-  if (mem_case_.has_device_cuda_mem()) {
-    return packed_blob_desc_->ByteSizeOfBlobBody();
+  if (packed_blob_desc_->is_body_disabled()) {
+    if (mem_case_.has_device_cuda_mem()) {
+      return 0;
+    } else {
+      return packed_blob_desc_->ByteSizeOfBlobHeader();
+    }
   } else {
-    return packed_blob_desc_->TotalByteSize();
+    if (mem_case_.has_device_cuda_mem()) {
+      return packed_blob_desc_->ByteSizeOfBlobBody();
+    } else {
+      return packed_blob_desc_->TotalByteSize();
+    }
   }
 }
 

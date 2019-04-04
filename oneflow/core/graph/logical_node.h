@@ -11,6 +11,7 @@
 #include "oneflow/core/graph/repeat_forward_compute_task_node.h"
 #include "oneflow/core/graph/repeat_backward_compute_task_node.h"
 #include "oneflow/core/graph/acc_compute_task_node.h"
+#include "oneflow/core/graph/keep_header_only_compute_task_node.h"
 
 namespace oneflow {
 
@@ -300,6 +301,7 @@ DECLARE_REDUCE_LOGICAL_NODE(NcclReduceScatterLogicalNode, true);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatForward);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Acc);
 DECLARE_DERIVED_BACKWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatBackward);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(KeepHeaderOnly);
 
 #define DECLARE_BEFORE_OR_AFTER_ALLREDUCE_REDUCE_NODE(class_name, may_consume_md_diff) \
   class class_name final : public ReduceLogicalNode {                                  \
