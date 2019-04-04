@@ -27,7 +27,7 @@ void GenerateOptimizerOpConf(
   op_confs->push_back(v_var);
 
   const auto& adam_conf = GetAdamModelUpdateConf();
-  if (!adam_conf.do_bias_correction()) {
+  if (adam_conf.do_bias_correction()) {
     OperatorConf beta1_t_var = GenerateAdamHelperVariableOpConf(op, "beta1_t");
     SetScalarShape(&beta1_t_var);
     op_confs->push_back(beta1_t_var);
@@ -42,7 +42,7 @@ void GenerateOptimizerOpConf(
   ConstructMdUpdtOpConf(op, DiffLbi4BnInOp, total_loss_instance_num_lbi, mdupdt_op_conf);
   mdupdt_op_conf->set_m(m_var.name() + "/out");
   mdupdt_op_conf->set_v(v_var.name() + "/out");
-  if (!adam_conf.do_bias_correction()) {
+  if (adam_conf.do_bias_correction()) {
     mdupdt_op_conf->set_beta1_t(beta1_t_var.name() + "/out");
     mdupdt_op_conf->set_beta2_t(beta2_t_var.name() + "/out");
   }
