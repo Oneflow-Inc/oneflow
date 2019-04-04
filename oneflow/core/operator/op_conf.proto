@@ -850,8 +850,30 @@ message NormalizationOpConf {
   optional float gamma_init = 9 [default = 1.0];
   optional float mean_init = 10 [default = 0.0];
   optional float variance_init = 11 [default = 1.0];
-  optional bool use_first_piece_init_moving = 12 [default = false];
   optional ActivationType activation = 13 [default = kNone];
+  optional string moving_mean = 14;
+  optional string moving_variance = 15;
+  optional string beta = 16;
+  optional string gamma = 17;
+  optional string mean = 18 [default = "mean"];
+  optional string inv_variance = 19 [default = "inv_variance"];
+  optional bool is_training = 20 [default = true];
+}
+
+message NormalizationGradOpConf {
+  //in
+  required string dy = 1;
+  required string x = 2;
+  optional string mean = 3;
+  optional string inv_variance = 4;
+  optional string gamma = 5;
+  //out
+  optional string dx = 6 [default = "dx"];
+  optional string beta_diff = 7 [default = "beta_diff"];
+  optional string gamma_diff = 8 [default = "gamma_diff"];
+
+  required int32 axis = 9;
+  required float epsilon = 10;
 }
 
 message DropoutOpConf {
@@ -1008,6 +1030,7 @@ message SqrtOpConf {
 message RsqrtOpConf {
   required string in = 1;
   required string out = 2;
+  optional double epsilon = 3 [default = 1e-5];
 }
 
 message SquareOpConf {
@@ -1395,9 +1418,10 @@ message OperatorConf {
     BatchGatherGradOpConf batch_gather_grad_conf = 279;
     ReduceMeanGradOpConf reduce_mean_grad_conf = 280;
     PrintScalarSummaryOpConf print_scalar_summary_conf = 281;
-    ConvBiasGradOpConf conv_bias_grad_conf = 282;
-    ConvFilterGradOpConf conv_filter_grad_conf = 283;
-    ConvDataGradOpConf conv_data_grad_conf = 284;
+    NormalizationGradOpConf normalization_grad_conf = 282;
+    ConvBiasGradOpConf conv_bias_grad_conf = 283;
+    ConvFilterGradOpConf conv_filter_grad_conf = 284;
+    ConvDataGradOpConf conv_data_grad_conf = 285;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
