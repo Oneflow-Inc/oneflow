@@ -17,8 +17,9 @@ void NormalModelUpdtOp::InitFromOpConf() {
   } else {
     UNIMPLEMENTED();
   }
-  if (op_conf().normal_mdupdt_conf().user_conf().has_clip_conf()
-      && op_conf().normal_mdupdt_conf().user_conf().clip_conf().has_clip_by_global_norm()) {
+  const PbMessage& conf = this->GetCustomizedConf();
+  const auto& user_conf = *GetMsgPtrFromPbMessage<NormalModelUpdateOpUserConf>(conf, "user_conf");
+  if (user_conf.has_clip_conf() && user_conf.clip_conf().has_clip_by_global_norm()) {
     EnrollDataTmpBn("data_tmp");
   }
   MdUpdtVirtualInitFromOpConf();
@@ -27,8 +28,9 @@ void NormalModelUpdtOp::InitFromOpConf() {
 void NormalModelUpdtOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  if (op_conf().normal_mdupdt_conf().user_conf().has_clip_conf()
-      && op_conf().normal_mdupdt_conf().user_conf().clip_conf().has_clip_by_global_norm()) {
+  const PbMessage& conf = this->GetCustomizedConf();
+  const auto& user_conf = *GetMsgPtrFromPbMessage<NormalModelUpdateOpUserConf>(conf, "user_conf");
+  if (user_conf.has_clip_conf() && user_conf.clip_conf().has_clip_by_global_norm()) {
     *GetBlobDesc4BnInOp("data_tmp") = *GetBlobDesc4BnInOp("model_diff");
     GetBlobDesc4BnInOp("data_tmp")->mut_shape() = Shape({1});
   }

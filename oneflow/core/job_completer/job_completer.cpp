@@ -2,6 +2,7 @@
 #include "oneflow/core/job_completer/autovar.h"
 #include "oneflow/core/job_completer/autograd.h"
 #include "oneflow/core/job_completer/autotick.h"
+#include "oneflow/core/job_completer/add_keep_header_only_op_conf.h"
 #include "oneflow/core/optimizer/optimizer.h"
 
 namespace oneflow {
@@ -45,8 +46,8 @@ void GenerateOpConf4Trainning(const OpGraph& op_graph, Job* job) {
   AddTotalLossInstanceNumOpConf(op_graph, job, &total_loss_instance_num);
   HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
   AutoGrad(op_graph, job, &lbi2diff_lbi);
-  UpdateJobHelperConfLbi2DiffLbi(lbi2diff_lbi, job);
   AddOptimizerOpConf(op_graph, job, lbi2diff_lbi, total_loss_instance_num);
+  UpdateJobHelperConfLbi2DiffLbi(lbi2diff_lbi, job);
 }
 
 }  // namespace
@@ -62,6 +63,8 @@ void JobCompleter::CompleteGlobalJobDesc() const {
     WithOpGraphAndMutJob(&GenerateOpConf4Trainning);
     // complete tick ops
     WithOpGraphAndMutJob(&AutoTick);
+    // add keep_header_only op
+    WithOpGraphAndMutJob(&AddKeepHeaderOnlyOp);
   }
 }
 

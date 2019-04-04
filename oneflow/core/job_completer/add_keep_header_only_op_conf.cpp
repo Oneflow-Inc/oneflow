@@ -1,0 +1,60 @@
+#include "oneflow/core/job_completer/add_keep_header_only_op_conf.h"f
+#include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/job/job_desc.h"
+
+namespace oneflow {
+
+void AddKeepHeaderOnlyOp(const OpGraph& op_graph, Job* job) {
+  JobBuilder job_builder(job);
+
+  std::vector<OperatorConf> op_confs;
+  op_graph.TopoForEachNode([&](OpNode* node) {
+    std::vector<std::string> ibns = node->op().GetHeaderOnlyIbns();
+    if (ibns.empty()) { return; }
+
+    auto OpEdge4Lbi = [node](const LogicalBlobId& lbi) -> OpEdge* {
+      for (OpEdge* edge : node->in_edges()) {
+        for (const LogicalBlobId& edge_lbi : edge->lbis()) {
+          if (lbi == edge_lbi) { return edge; }
+        }
+      }
+    };
+    HashMap<OpNode*, std::vector<std::string>> src_node2ibns;
+    for (const std::string& ibn : ibns) {
+      const LogicalBlobId& lbi = node->op().BnInOp2Lbi(ibn);
+      src_node2ibns[OpEdge4Lbi(lbi)->src_node()].push_back(ibn);
+    }
+
+    OperatorConf dst_op_conf = node->op().op_conf();
+    PbMessage* dst_op_type_conf =
+        MutableMessageInPbMessage(&dst_op_conf, dst_op_conf.op_type_case());
+    for (const auto& pair : src_node2ibns) {
+      OpNode* src_node = pair.first;
+      const std::vector<std::string>& ibns = pair.second;
+      const LogicalBlobId& lbi = node->op().BnInOp2Lbi(ibns.at(0));
+      OpEdge* edge = OpEdge4Lbi(lbi);
+
+      OperatorConf op_conf;
+      op_conf.set_name(node->op().op_name() + "-" + src_node->op().op_name() + "-keep_header_only");
+      KeepHeaderOnlyOpConf* kho_conf = op_conf.mutable_keep_header_only_conf();
+      for (const std::string ibn : ibns) {
+        const LogicalBlobId& cur_lbi = node->op().BnInOp2Lbi(ibn);
+        OpEdge* cur_edge = OpEdge4Lbi(cur_lbi);
+        CHECK(lbi.op_name() == cur_lbi.op_name());
+        CHECK(edge == cur_edge);
+
+        *(kho_conf->mutable_in()->Add()) = GenLogicalBlobName(cur_lbi);
+        *(kho_conf->mutable_out()->Add()) = cur_lbi.blob_name();
+
+        std::string lbn = op_conf.name() + cur_lbi.blob_name();
+        SetBnValInOpTypeConf(dst_op_type_conf, ibn, GenLogicalBlobName(cur_lbi), lbn);
+      }
+      job_builder.AddOps(src_node->parallel_desc().parallel_conf(),
+                         std::vector<OperatorConf>{op_conf});
+    }
+    // make sure an op_conf can only be udpated once
+    job_builder.MutOps(std::vector<OperatorConf>{dst_op_conf});
+  });
+}
+
+}  // namespace oneflow
