@@ -1,0 +1,24 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/job/dlnet_conf.proto";
+import "oneflow/core/job/resource.proto";
+import "oneflow/core/job/placement.proto";
+import "oneflow/core/job/job_conf.proto";
+import "oneflow/core/register/logical_blob_id.proto";
+import "oneflow/core/operator/op_conf.proto";
+
+message JobHelperConf {
+  map<string, LogicalBlobIdPairs> tag2lbi_relations = 1;
+  map<string, OpNameRelations> tag2op_name_relations = 2;
+  map<string, LogicalBlobIdGroups> tag2lbi_groups = 3;
+  map<string, OpNameGroups> tag2op_name_groups = 4;
+}
+
+message Job {
+  required DLNetConf net = 1;
+  required Resource resource = 2;
+  required Placement placement = 3;
+  required Config other = 4;
+  required JobHelperConf helper = 5;
+}

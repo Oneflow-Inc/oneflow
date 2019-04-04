@@ -99,6 +99,8 @@ message Conv1DOpConf {
   optional bool use_bias = 10 [default = true];
   optional InitializerConf weight_initializer = 11;
   optional InitializerConf bias_initializer = 12;
+  optional string weight = 13;
+  optional string bias = 14;
 }
 
 message Conv2DOpConf {
@@ -114,6 +116,8 @@ message Conv2DOpConf {
   optional bool use_bias = 10 [default = true];
   optional InitializerConf weight_initializer = 11;
   optional InitializerConf bias_initializer = 12;
+  optional string weight = 13;
+  optional string bias = 14;
 }
 
 message Conv3DOpConf {
@@ -129,6 +133,39 @@ message Conv3DOpConf {
   optional bool use_bias = 10 [default = true];
   optional InitializerConf weight_initializer = 11;
   optional InitializerConf bias_initializer = 12;
+  optional string weight = 13;
+  optional string bias = 14;
+}
+
+message ConvConf {
+  required int32 num_spatial_dims = 1;
+  required string padding = 2;
+  required string data_format = 3;
+  repeated int32 kernel_size = 4;
+  repeated int32 strides = 5;
+  repeated int32 dilation_rate = 6;
+}
+
+message ConvDataGradOpConf {
+  required string dy = 1;
+  required string filter = 2;
+  required string x_like = 3;
+  required string dx = 4;
+  required ConvConf conv_conf = 5;
+}
+
+message ConvFilterGradOpConf {
+  required string dy = 1;
+  required string x = 2;
+  required string filter_diff = 3;
+  required ConvConf conv_conf = 4;
+}
+
+message ConvBiasGradOpConf {
+  required string dy = 1;
+  required string bias_diff = 2;
+  required string data_format = 3;
+  required int64 num_spatial_dims = 4;
 }
 
 message FullyConnectedOpConf {
@@ -251,7 +288,7 @@ message SoftmaxGradOpConf {
   optional int32 axis = 6 [default = -1];
 }
 
-enum LossReductionType {
+enum ScalarReductionType {
   kSumOverOne = 0;
   kSumOverWeight = 1;
   kSumOverN = 2;
@@ -275,7 +312,7 @@ message SparseSoftmaxCrossEntropyLossOpConf {
   required string prediction = 1;
   required string label = 2;
   required string loss = 3;
-  optional LossReductionType reduction = 4 [default = kSumOverN];
+  optional ScalarReductionType reduction = 4 [default = kSumOverN];
   optional float weight_scalar = 5 [default = 1.0];
   optional string weight = 6;
 }
@@ -284,7 +321,7 @@ message SparseCrossEntropyLossOpConf {
   required string prediction = 1;
   required string label = 2;
   required string loss = 3;
-  optional LossReductionType reduction = 4 [default = kSumOverN];
+  optional ScalarReductionType reduction = 4 [default = kSumOverN];
   optional float weight_scalar = 5 [default = 1.0];
   optional string weight = 6;
 }
@@ -295,7 +332,7 @@ message SigmoidCrossEntropyLossOpConf {
   required string loss = 3;
   optional bool normalize = 4 [default = true];
   optional float scale = 5 [default = 1.0];
-  optional LossReductionType reduction = 6 [default = kSumOverN];
+  optional ScalarReductionType reduction = 6 [default = kSumOverN];
   optional float weight_scalar = 7 [default = 1.0];
   optional string weight = 8;
 }
@@ -303,7 +340,7 @@ message SigmoidCrossEntropyLossOpConf {
 message IdentityLossOpConf {
   required string prediction = 1;
   required string loss = 2;
-  optional LossReductionType reduction = 3 [default = kSumOverN];
+  optional ScalarReductionType reduction = 3 [default = kSumOverN];
   optional float weight_scalar = 4 [default = 1.0];
   optional string weight = 5;
 }
@@ -535,8 +572,8 @@ message AdamModelUpdateOpConf {
   required NormalModelUpdateOpUserConf user_conf = 1;
   required string m = 2;
   required string v = 3;
-  required string beta1_t = 4;
-  required string beta2_t = 5;
+  optional string beta1_t = 4;
+  optional string beta2_t = 5;
   required string model_diff = 6;
   required string total_instance_num_diff = 7;
   required string model = 8;
@@ -589,7 +626,7 @@ message LossPrintOpConf {
   required LogicalBlobId loss_instance_num_lbi = 2;
   optional LogicalBlobId reduction_lbi = 3;
   optional float weight_scalar = 4 [default = 1.0];
-  optional LossReductionType reduction_type = 5 [default = kSumOverN];
+  optional ScalarReductionType reduction_type = 5 [default = kSumOverN];
 }
 
 message AccuracyPrintOpConf {
@@ -626,7 +663,7 @@ message ReduceMeanGradOpConf {
   required string dy = 1;
   required string x = 2; // like
   required string dx = 3;
-  repeated int32 axis = 4;
+  repeated int32 reduced_axis = 4;
   optional string temp_storage = 5 [default = "temp_storage"];
 }
 
@@ -813,8 +850,30 @@ message NormalizationOpConf {
   optional float gamma_init = 9 [default = 1.0];
   optional float mean_init = 10 [default = 0.0];
   optional float variance_init = 11 [default = 1.0];
-  optional bool use_first_piece_init_moving = 12 [default = false];
   optional ActivationType activation = 13 [default = kNone];
+  optional string moving_mean = 14;
+  optional string moving_variance = 15;
+  optional string beta = 16;
+  optional string gamma = 17;
+  optional string mean = 18 [default = "mean"];
+  optional string inv_variance = 19 [default = "inv_variance"];
+  optional bool is_training = 20 [default = true];
+}
+
+message NormalizationGradOpConf {
+  //in
+  required string dy = 1;
+  required string x = 2;
+  optional string mean = 3;
+  optional string inv_variance = 4;
+  optional string gamma = 5;
+  //out
+  optional string dx = 6 [default = "dx"];
+  optional string beta_diff = 7 [default = "beta_diff"];
+  optional string gamma_diff = 8 [default = "gamma_diff"];
+
+  required int32 axis = 9;
+  required float epsilon = 10;
 }
 
 message DropoutOpConf {
@@ -842,9 +901,13 @@ message TransposeOpConf {
 
 message ReduceConcatOpConf {
   required int32 in_num = 1;
+  repeated string in = 2;
+  optional string out = 3;
 }
 
 message NcclAllReduceOpConf {
+  optional string in = 1;
+  optional string out = 2;
 }
 
 message NcclReduceScatterOpConf {
@@ -855,6 +918,10 @@ message NcclAllGatherOpConf {
 
 message ReduceSplitOpConf {
   required int32 out_num = 1;
+  optional string in = 2;
+  repeated string out = 3;
+  repeated ShapeProto out_shape = 4;
+  optional int32 order_in_graph = 5;
 }
 
 message ReduceScatterOpConf {
@@ -909,7 +976,7 @@ message HingeLossOpConf {
   required string prediction = 1;
   required string label = 2;
   required string loss = 3;
-  optional LossReductionType reduction = 4 [default = kSumOverN];
+  optional ScalarReductionType reduction = 4 [default = kSumOverN];
   optional float weight_scalar = 5 [default = 1.0];
   optional string weight = 6;
   optional Norm norm = 7[default = L1];
@@ -963,6 +1030,7 @@ message SqrtOpConf {
 message RsqrtOpConf {
   required string in = 1;
   required string out = 2;
+  optional double epsilon = 3 [default = 1e-5];
 }
 
 message SquareOpConf {
@@ -1002,7 +1070,7 @@ message BroadcastLikeOpConf {
   required string x = 1;
   required string like = 2;
   required string y = 3;
-  optional ShapeProto kept_dims_shape = 4;
+  repeated int32 reduced_axis = 4;
 }
 
 message BroadcastDivGradOpConf {
@@ -1146,6 +1214,9 @@ message ScalarMulOpConf {
 }
 
 message ReduceIdentityOpConf {
+  optional string in = 1;
+  optional string out = 2;
+  optional int32 order_in_graph = 3;
 }
 
 message TickOpConf {
@@ -1204,6 +1275,30 @@ message BatchGatherGradOpConf {
   required int64 gather_dim_size = 4;
 }
 
+message PrintScalarSummaryOpConf {
+  required string x = 1;
+  optional ScalarReductionType reduction_type = 2 [default = kSumOverN];
+  optional float weight_scalar = 3 [default = 1.0];
+  optional string weight = 4;
+  optional int32 interval = 5 [default = 1];
+}
+
+message ShapeElemCntOpConf {
+  required string x = 1;
+  required string y = 2;
+  // closed interval: [begin_axis, end_axis]
+  optional int32 begin_axis = 3 [default = 0];
+  optional int32 end_axis = 4 [default = -1];
+}
+
+message AccOpConf {
+  // in
+  required string one = 1;
+  // out
+  required string acc = 2;
+  optional int32 max_acc_num = 3 [default = 1];   
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1244,6 +1339,8 @@ message OperatorConf {
     RMSPropModelUpdateOpConf rmsprop_model_update_conf = 129;
     LARSModelUpdateOpConf lars_model_update_conf = 130;
     AdamModelUpdateOpConf adam_model_update_conf = 131;
+    ShapeElemCntOpConf shape_elem_cnt_conf = 132;
+    AccOpConf acc_conf = 133;
       
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
@@ -1320,6 +1417,11 @@ message OperatorConf {
     SoftmaxGradOpConf softmax_grad_conf = 278;
     BatchGatherGradOpConf batch_gather_grad_conf = 279;
     ReduceMeanGradOpConf reduce_mean_grad_conf = 280;
+    PrintScalarSummaryOpConf print_scalar_summary_conf = 281;
+    NormalizationGradOpConf normalization_grad_conf = 282;
+    ConvBiasGradOpConf conv_bias_grad_conf = 283;
+    ConvFilterGradOpConf conv_filter_grad_conf = 284;
+    ConvDataGradOpConf conv_data_grad_conf = 285;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
@@ -1339,4 +1441,15 @@ message OperatorConf {
 
 message OpNameSet {
   repeated string op_name = 1;
+}
+
+message OpNameRelations {
+  map<string, string> src_op_name2dst_op_name = 1;
+}
+
+message OpNameGroups {
+  message OpNameGroup {
+    repeated string op_name = 1;
+  }
+  repeated OpNameGroup op_name_group = 2;
 }

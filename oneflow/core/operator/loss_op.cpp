@@ -62,7 +62,7 @@ void LossOp::VirtualGenKernelConf(
     conf->set_label_type(DataType::kInvalidDataType);
   }
   conf->set_weight_scalar(GetValFromCustomizedConf<float>("weight_scalar"));
-  conf->set_reduction(static_cast<LossReductionType>(GetEnumFromCustomizedConf("reduction")));
+  conf->set_reduction(static_cast<ScalarReductionType>(GetEnumFromCustomizedConf("reduction")));
 }
 
 void LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

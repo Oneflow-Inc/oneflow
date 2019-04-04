@@ -1,17 +1,17 @@
 #include "oneflow/core/job/init_op_conf.h"
 
-#define INIT_OP_CONF(op_conf_type, mutable_op_conf_obj)                \
-  OperatorConf* op = Global<JobConf1>::Get()->mutable_net()->add_op(); \
-  op->set_name(name);                                                  \
-  op_conf_type* op_conf = op->mutable_op_conf_obj();                   \
-  op_conf->set_in(in);                                                 \
+#define INIT_OP_CONF(op_conf_type, mutable_op_conf_obj)               \
+  OperatorConf* op = Global<JobConf>::Get()->mutable_net()->add_op(); \
+  op->set_name(name);                                                 \
+  op_conf_type* op_conf = op->mutable_op_conf_obj();                  \
+  op_conf->set_in(in);                                                \
   op_conf->set_out("out");
 
 namespace oneflow {
 void InitPlacementGroup() {
   PlacementGroup* placement_group =
-      Global<JobConf1>::Get()->mutable_placement()->add_placement_group();
-  CHECK_EQ(Global<JobConf1>::Get()->placement().placement_group_size(), 1);
+      Global<JobConf>::Get()->mutable_placement()->add_placement_group();
+  CHECK_EQ(Global<JobConf>::Get()->placement().placement_group_size(), 1);
 
   ParallelConf* parallel_conf = new ParallelConf();
   parallel_conf->set_policy(ParallelPolicy::kDataParallel);
@@ -20,7 +20,7 @@ void InitPlacementGroup() {
 }
 
 void AddOpToPlacementGroup(const std::string& name) {
-  PlacementGroup* pg = Global<JobConf1>::Get()->mutable_placement()->mutable_placement_group(0);
+  PlacementGroup* pg = Global<JobConf>::Get()->mutable_placement()->mutable_placement_group(0);
   pg->mutable_op_set()->add_op_name(name);
 }
 // TBD: support 1D, 2D, 3D with macro
@@ -141,7 +141,7 @@ std::string BatchNorm(const std::string& name, const std::string& in, Activation
 
 std::string Add(const std::string& name, const std::vector<std::string>& ins,
                 ActivationType activation) {
-  OperatorConf* op = Global<JobConf1>::Get()->mutable_net()->add_op();
+  OperatorConf* op = Global<JobConf>::Get()->mutable_net()->add_op();
   op->set_name(name);
   AddOpConf* op_conf = op->mutable_add_conf();
   for (auto it = ins.begin(); it != ins.end(); ++it) { op_conf->add_in(*it); }
@@ -152,7 +152,7 @@ std::string Add(const std::string& name, const std::vector<std::string>& ins,
 }
 
 std::string Concat(const std::string& name, const std::vector<std::string>& ins, const int axis) {
-  OperatorConf* op = Global<JobConf1>::Get()->mutable_net()->add_op();
+  OperatorConf* op = Global<JobConf>::Get()->mutable_net()->add_op();
   op->set_name(name);
   ConcatOpConf* op_conf = op->mutable_concat_conf();
   for (auto it = ins.begin(); it != ins.end(); ++it) { op_conf->add_in(*it); }

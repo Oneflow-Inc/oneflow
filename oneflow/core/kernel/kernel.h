@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_KERNEL_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_KERNEL_H_
 
-#include "oneflow/core/job/job_conf.pb.h"
+#include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/kernel/kernel.pb.h"
 #include "oneflow/core/kernel/kernel_util.h"

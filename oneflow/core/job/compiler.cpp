@@ -2,11 +2,7 @@
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/device/cudnn_conv_ctx_cache.h"
 #include "oneflow/core/graph/op_graph.h"
-#include "oneflow/core/autograd/autovar.h"
-#include "oneflow/core/autograd/autograd.h"
-#include "oneflow/core/autograd/autotick.h"
-#include "oneflow/core/optimizer/optimizer.h"
-#include "oneflow/core/graph/op_graph_optimize_func.h"
+#include "oneflow/core/job_completer/job_completer.h"
 
 namespace oneflow {
 
@@ -47,52 +43,6 @@ void ToDotFile(const Plan& plan, const std::string& filepath) {
     }
   }
   log_stream << "}\n";
-}
-
-void AutoComplete() {
-  if (Global<JobDesc>::Get()->IsPredict()
-      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
-    // auto var
-    {
-      const JobDesc* job_desc = Global<JobDesc>::Get();
-      OpGraph op_graph(job_desc);
-      JobConf1 job_conf(job_desc->job_conf());
-      AutoVar(op_graph, &job_conf);
-      Global<JobDesc>::Delete();
-      Global<JobDesc>::New(job_conf);
-    }
-    // add ops for trainning
-    {
-      const JobDesc* job_desc = Global<JobDesc>::Get();
-      OpGraph op_graph(job_desc);
-      JobConf1 job_conf(job_desc->job_conf());
-      LogicalBlobId total_loss_instance_num;
-      AddTotalLossInstanceNumOpConf(op_graph, &job_conf, &total_loss_instance_num);
-      HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
-      AutoGrad(op_graph, &job_conf, &lbi2diff_lbi);
-      AddOptimizerOpConf(op_graph, &job_conf, lbi2diff_lbi, total_loss_instance_num);
-      Global<JobDesc>::Delete();
-      Global<JobDesc>::New(job_conf);
-    }
-    // add tick ops
-    {
-      const JobDesc* job_desc = Global<JobDesc>::Get();
-      OpGraph op_graph(job_desc);
-      JobConf1 job_conf(job_desc->job_conf());
-      AutoTick(op_graph, &job_conf);
-      Global<JobDesc>::Delete();
-      Global<JobDesc>::New(job_conf);
-    }
-    // add keep_header_only_op
-    {
-      const JobDesc* job_desc = Global<JobDesc>::Get();
-      OpGraph op_graph(job_desc);
-      JobConf1 job_conf(job_desc->job_conf());
-      AddKeepHeaderOnlyOp(op_graph, &job_conf);
-      Global<JobDesc>::Delete();
-      Global<JobDesc>::New(job_conf);
-    }
-  }
 }
 
 }  // namespace
@@ -147,10 +97,10 @@ Plan Compiler::DoCompile() {
 #ifdef WITH_CUDA
   Global<CudnnConvCtxCache>::New();
 #endif
-  AutoComplete();
+  JobCompleter().CompleteGlobalJobDesc();
   Global<JobDesc>::Get()->FixAndOptimizeDLNet();
   const JobDesc* job_desc = Global<JobDesc>::Get();
-  TeePersistentLogStream::Create("optimized_job_conf")->Write(job_desc->job_conf());
+  TeePersistentLogStream::Create("optimized_job")->Write(job_desc->job());
   Global<OpGraph>::New(job_desc);
   Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_op_graph.dot");
   auto logical_gph = std::make_unique<LogicalGraph>(job_desc->IsTrain());

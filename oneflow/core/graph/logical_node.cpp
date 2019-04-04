@@ -481,5 +481,6 @@ BackwardLogicalNode* RepeatForwardLogicalNode::NewCorrectBackwardNode() {
 }
 
 BackwardLogicalNode* KeepHeaderOnlyLogicalNode::NewCorrectBackwardNode() { UNIMPLEMENTED(); }
+BackwardLogicalNode* AccLogicalNode::NewCorrectBackwardNode() { UNIMPLEMENTED(); }
 
 }  // namespace oneflow

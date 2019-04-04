@@ -15,6 +15,9 @@ struct CudnnConvAlgoCtx final {
   size_t fwd_ws_size;
   size_t bwd_filter_ws_size;
   size_t bwd_data_ws_size;
+  bool fwd_algo_found;
+  bool bwd_filter_algo_found;
+  bool bwd_data_algo_found;
 };
 
 class CudnnConvCtxCache final {
@@ -23,17 +26,21 @@ class CudnnConvCtxCache final {
   CudnnConvCtxCache() = default;
   ~CudnnConvCtxCache() = default;
 
-  bool FindCudnnConvAlgoCtxWithConfig(const BlobDesc& in_desc, const BlobDesc& out_desc,
-                                      const BlobDesc& filter_desc, const std::string& format,
-                                      CudnnConvAlgoCtx* conv_algo_ctx) const;
-  void AddCudnnConvAlgoCtxWithConfig(const BlobDesc& in_desc, const BlobDesc& out_desc,
-                                     const BlobDesc& filter_desc, const std::string& format,
-                                     const CudnnConvAlgoCtx& conv_algo_ctx);
+  bool FindCudnnConvAlgoCtxWithConfig(const BlobDesc& in_blob_desc, const BlobDesc& out_blob_desc,
+                                      const BlobDesc& filter_blob_desc, const PbMessage& conf,
+                                      size_t max_buf_size, CudnnConvAlgoCtx* conv_algo_ctx);
+  bool InferCudnnConvAlgoCtxWithConfig(const BlobDesc& in_blob_desc, const BlobDesc& out_blob_desc,
+                                       const BlobDesc& filter_blob_desc, const PbMessage& conf,
+                                       size_t max_buf_size, CudnnConvAlgoCtx* conv_algo_ctx) const;
+  void AddCudnnConvAlgoCtxWithConfig(const BlobDesc& in_blob_desc, const BlobDesc& out_blob_desc,
+                                     const BlobDesc& filter_blob_desc, const PbMessage& conf,
+                                     size_t max_buf_size, const CudnnConvAlgoCtx& conv_algo_ctx);
 
  private:
   friend class Global<CudnnConvCtxCache>;
-  std::string GetKey(const BlobDesc& in_desc, const BlobDesc& out_desc, const BlobDesc& filter_desc,
-                     const std::string& format) const;
+  std::string GetKey(const BlobDesc& in_blob_desc, const BlobDesc& out_blob_desc,
+                     const BlobDesc& filter_blob_desc, const PbMessage& conf,
+                     size_t max_buf_size) const;
 
   HashMap<std::string, CudnnConvAlgoCtx> conv_config2algo_ctx_;
 };
