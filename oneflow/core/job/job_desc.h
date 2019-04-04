@@ -4,6 +4,7 @@
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/dlnet_conf.pb.h"
 #include "oneflow/core/job/job_conf.pb.h"
+#include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/persistence/file_system.h"
@@ -18,26 +19,26 @@ class JobDesc final {
   ~JobDesc() = default;
 
   // Common
-  const JobConf1& job_conf() const { return job_conf_; }
-  const DLNetConf& dlnet_conf() const { return job_conf_.net(); }
-  const Resource& resource() const { return job_conf_.resource(); }
-  const Placement& placement() const { return job_conf_.placement(); }
-  const OtherConf& other_conf() const { return job_conf_.other(); }
-  const std::string& MdLoadSnapshotPath() { return job_conf_.other().model_load_snapshot_path(); }
-  DataType DefaultDataType() const { return job_conf_.other().default_data_type(); }
-  size_t SizeOfOneDataId() const { return job_conf_.other().max_data_id_length() * sizeof(char); }
-  bool use_rdma() const { return job_conf_.other().use_rdma(); }
-  bool EnableCudnn() const { return job_conf_.other().enable_cudnn(); }
-  int64_t TotalMachineNum() const { return job_conf_.resource().machine().size(); }
-  int32_t CpuDeviceNum() const { return job_conf_.resource().cpu_device_num(); }
-  void SetCpuDeviceNum(int32_t val) { job_conf_.mutable_resource()->set_cpu_device_num(val); }
-  int32_t GpuDeviceNum() const { return job_conf_.resource().gpu_device_num(); }
+  const Job& job() const { return job_; }
+  const DLNetConf& dlnet_conf() const { return job_.net(); }
+  const Resource& resource() const { return job_.resource(); }
+  const Placement& placement() const { return job_.placement(); }
+  const Config& other_conf() const { return job_.other(); }
+  const std::string& MdLoadSnapshotPath() { return job_.other().model_load_snapshot_path(); }
+  DataType DefaultDataType() const { return job_.other().default_data_type(); }
+  size_t SizeOfOneDataId() const { return job_.other().max_data_id_length() * sizeof(char); }
+  bool use_rdma() const { return job_.other().use_rdma(); }
+  bool EnableCudnn() const { return job_.other().enable_cudnn(); }
+  int64_t TotalMachineNum() const { return job_.resource().machine().size(); }
+  int32_t CpuDeviceNum() const { return job_.resource().cpu_device_num(); }
+  void SetCpuDeviceNum(int32_t val) { job_.mutable_resource()->set_cpu_device_num(val); }
+  int32_t GpuDeviceNum() const { return job_.resource().gpu_device_num(); }
   int32_t MemZoneNum() const { return GpuDeviceNum() + 1; }
-  int32_t CommNetWorkerNum() const { return job_conf_.resource().comm_net_worker_num(); }
-  int32_t MaxMdSaveWorkerNum() const { return job_conf_.resource().max_mdsave_worker_num(); }
-  bool IsTrain() const { return job_conf_.other().has_train_conf(); }
-  bool IsPredict() const { return job_conf_.other().has_predict_conf(); }
-  int64_t RecordPieceSize() const { return job_conf_.other().piece_size(); }
+  int32_t CommNetWorkerNum() const { return job_.resource().comm_net_worker_num(); }
+  int32_t MaxMdSaveWorkerNum() const { return job_.resource().max_mdsave_worker_num(); }
+  bool IsTrain() const { return job_.other().has_train_conf(); }
+  bool IsPredict() const { return job_.other().has_predict_conf(); }
+  int64_t RecordPieceSize() const { return job_.other().piece_size(); }
   int64_t piece_num_of_experiment_phase() const;
   bool enable_experiment_run() const;
   float available_zone_mem_ratio() const;
@@ -47,24 +48,22 @@ class JobDesc final {
   bool save_downloaded_file_to_local_fs() const;
   size_t rdma_mem_block_byte() const;
   size_t rdma_recv_msg_buf_byte() const;
-  bool collect_act_event() const { return job_conf_.other().collect_act_event(); }
-  bool enable_mem_sharing() const { return job_conf_.other().enable_mem_sharing(); }
+  bool collect_act_event() const { return job_.other().collect_act_event(); }
+  bool enable_mem_sharing() const { return job_.other().enable_mem_sharing(); }
   const FileSystemConf& data_fs_conf() const;
   const FileSystemConf& snapshot_fs_conf() const;
-  bool enable_write_snapshot() const {
-    return IsTrain() && job_conf_.other().enable_write_snapshot();
-  }
+  bool enable_write_snapshot() const { return IsTrain() && job_.other().enable_write_snapshot(); }
   bool write_snapshot_to_master() const { return snapshot_fs_conf().has_localfs_conf(); }
-  bool enable_blob_mem_sharing() const { return job_conf_.other().enable_blob_mem_sharing(); }
-  bool enable_nccl() const { return job_conf_.other().enable_nccl(); }
+  bool enable_blob_mem_sharing() const { return job_.other().enable_blob_mem_sharing(); }
+  bool enable_nccl() const { return job_.other().enable_nccl(); }
   bool use_nccl_inter_node_communication() const {
-    return job_conf_.other().use_nccl_inter_node_communication();
+    return job_.other().use_nccl_inter_node_communication();
   }
   int64_t all_reduce_group_num() const;
   int64_t all_reduce_group_min_byte() const;
   float all_reduce_group_size_warmup() const;
   float all_reduce_lazy_ratio() const;
-  int64_t cudnn_buf_limit_mbyte() const { return job_conf_.other().cudnn_buf_limit_mbyte(); }
+  int64_t cudnn_buf_limit_mbyte() const { return job_.other().cudnn_buf_limit_mbyte(); }
   int64_t GetMachineId(const std::string& addr) const;
 
   // Train conf
@@ -90,8 +89,11 @@ class JobDesc final {
  private:
   friend class Global<JobDesc>;
   JobDesc(const std::string& job_conf_filepath);
-  JobDesc(const JobConf1& job_conf_);
+  JobDesc(const JobConf& job_conf);
+  JobDesc(const Job& job);
   void Init();
+  void Init(const JobConf&);
+  void Init(const Job&);
   void SanityCheck();
   void SplitDecodeOps();
   void AddRecordLoadOps();
@@ -100,7 +102,7 @@ class JobDesc final {
   void AddIdentityOpForAllReduceOverlapingUntrainble();
   void FixTickOpIfExists();
 
-  JobConf1 job_conf_;
+  Job job_;
 };
 
 std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4OpName(
