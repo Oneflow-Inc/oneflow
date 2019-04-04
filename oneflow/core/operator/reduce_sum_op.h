@@ -20,10 +20,6 @@ class ReduceSumOp final : public Operator {
 
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
-
-  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                            const ParallelContext* parallel_ctx,
-                            KernelConf* kernel_conf) const override;
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override {
     const ReduceSumOpConf& conf = op_conf().reduce_sum_conf();
     if (conf.has_in_sys()) {

@@ -45,6 +45,9 @@ template<DeviceType device_type, typename T>
 void AdamMdUpdateKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937* random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+    return;
+  }
   const auto& adam_conf = GetAdamModelUpdateConf(this->op_conf());
   InitializerConf m_init_conf;
   InitializerConf v_init_conf;
@@ -67,6 +70,9 @@ template<DeviceType device_type, typename T>
 void AdamMdUpdateKernel<device_type, T>::InitModelBlobsWithDir(
     DeviceCtx* ctx, int32_t part_id, int32_t part_num, const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+    return;
+  }
   const auto& adam_conf = GetAdamModelUpdateConf(this->op_conf());
   Blob* m_blob = BnInOp2Blob("m");
   Blob* v_blob = BnInOp2Blob("v");

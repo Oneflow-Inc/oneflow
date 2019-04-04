@@ -535,8 +535,8 @@ message AdamModelUpdateOpConf {
   required NormalModelUpdateOpUserConf user_conf = 1;
   required string m = 2;
   required string v = 3;
-  required string beta1_t = 4;
-  required string beta2_t = 5;
+  optional string beta1_t = 4;
+  optional string beta2_t = 5;
   required string model_diff = 6;
   required string total_instance_num_diff = 7;
   required string model = 8;

@@ -48,24 +48,23 @@ OpNode* FindSourceOpNode(const OpGraph& op_graph) {
   return ret;
 }
 
-void ConnectSrcAndTickIfNeed(const OpGraph& op_graph, const OpNode& src_node, Job* job) {
+void ConnectSrcAndTickIfNeed(const OpNode& src_node, Job* job) {
   JobBuilder job_builder(job);
-  std::vector<const OperatorConf*> tick_ops;
-  op_graph.ForEachNode([&](OpNode* op_node) {
-    if (!op_node->op().op_conf().has_tick_conf()) { return; }
-    const auto& conf = op_node->op().op_conf().tick_conf();
-    if (conf.has_in()) { return; }
-    tick_ops.push_back(&op_node->op().op_conf());
-  });
-  if (tick_ops.empty()) { return; }
+  std::vector<const OperatorConf*> no_in_tick_ops;
+  for (const OperatorConf& op_conf : job->net().op()) {
+    if (!op_conf.has_tick_conf()) { continue; }
+    if (op_conf.tick_conf().has_in()) { continue; }
+    no_in_tick_ops.push_back(&op_conf);
+  }
+  if (no_in_tick_ops.empty()) { return; }
   OperatorConf src_tick_op;
-  if (tick_ops.size() == 1) {
-    src_tick_op = *tick_ops.at(0);
+  if (no_in_tick_ops.size() == 1) {
+    src_tick_op = *no_in_tick_ops.at(0);
   } else {
     src_tick_op.set_name("tick_" + NewUniqueId());
     src_tick_op.mutable_tick_conf()->set_out("out");
     std::vector<OperatorConf> mut_ops;
-    for (const auto* dst_tick_op : tick_ops) {
+    for (const auto* dst_tick_op : no_in_tick_ops) {
       OperatorConf mut_tick_op(*dst_tick_op);
       mut_tick_op.mutable_tick_conf()->set_in(src_tick_op.name() + "/out");
       mut_ops.push_back(mut_tick_op);
@@ -82,7 +81,7 @@ void ConnectSrcAndTickIfNeed(const OpGraph& op_graph, const OpNode& src_node, Jo
 void AutoTick(const OpGraph& op_graph, Job* job) {
   AddAutoTick4VariableOp(op_graph, job);
   OpNode* src_op_node = FindSourceOpNode(op_graph);
-  if (src_op_node != nullptr) { ConnectSrcAndTickIfNeed(op_graph, *src_op_node, job); }
+  if (src_op_node != nullptr) { ConnectSrcAndTickIfNeed(*src_op_node, job); }
 }
 
 }  // namespace oneflow

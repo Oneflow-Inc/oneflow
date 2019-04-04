@@ -104,9 +104,8 @@ std::function<bool(const LogicalBlobId&, const std::string&)> MakePredicatorHasD
   };
 }
 
-void GenerateOnesAsDiffLbi(
-    const LogicalBlobId& lbi, std::vector<OperatorConf>* op_confs,
-    const std::function<LogicalBlobId*(const std::string&)>& OutDiffLbi4BnInOp) {
+void GenerateOnesAsDiffLbi(const LogicalBlobId& lbi, std::vector<OperatorConf>* op_confs,
+                           LogicalBlobId* out_diff_lbi) {
   OperatorConf mul_zero_op;
   mul_zero_op.set_name(lbi.op_name() + "_" + lbi.blob_name() + "_grad_stage0");
   ScalarMulOpConf* mul_zero_op_conf = mul_zero_op.mutable_scalar_mul_conf();
@@ -123,8 +122,8 @@ void GenerateOnesAsDiffLbi(
   add_one_op_conf->set_int_operand(1);
   op_confs->push_back(add_one_op);
 
-  OutDiffLbi4BnInOp(lbi.blob_name())->set_op_name(add_one_op.name());
-  OutDiffLbi4BnInOp(lbi.blob_name())->set_blob_name("out");
+  out_diff_lbi->set_op_name(add_one_op.name());
+  out_diff_lbi->set_blob_name("out");
 }
 
 }  // namespace
@@ -162,21 +161,16 @@ void AutoGrad(const OpGraph& op_graph, Job* job,
 
   // generate ones lbi as loss's diff
   HashMap<LogicalBlobId, LogicalBlobId>* lbi2out_diff_lbi = lbi2diff_lbi;
-  for (OpNode* loss_op_node : loss_nodes) {
+  for (const std::string& loss_lbn : GetTrainConf().loss_lbn()) {
+    const LogicalBlobId loss_lbi = GenLogicalBlobId(loss_lbn);
+    const auto loss_node_it = std::find_if(
+        loss_nodes.cbegin(), loss_nodes.cend(),
+        [&](const OpNode* node) { return node->op().op_name() == loss_lbi.op_name(); });
+    CHECK(loss_node_it != loss_nodes.cend());
+    const OpNode* loss_op_node = *loss_node_it;
+    LogicalBlobId* out_diff_lbi = &(*lbi2out_diff_lbi)[loss_lbi];
     std::vector<OperatorConf> ops;
-    auto OutDiffLbi4BnInOp = [&](const std::string& bn) -> LogicalBlobId* {
-      const auto& output_bns = loss_op_node->op().output_bns();
-      CHECK(std::find(output_bns.begin(), output_bns.end(), bn) != output_bns.end());
-      const auto& lbi = loss_op_node->op().BnInOp2Lbi(bn);
-      return &(*lbi2out_diff_lbi)[lbi];
-    };
-    const auto& train_conf = GetTrainConf();
-    for (const std::string& loss_lbn : train_conf.loss_lbn()) {
-      const LogicalBlobId lbi = GenLogicalBlobId(loss_lbn);
-      if (lbi.op_name() != loss_op_node->op().op_name()) { continue; }
-      CHECK_EQ(op_graph.GetLogicalBlobDesc(lbi).shape().NumAxes(), 1);
-      GenerateOnesAsDiffLbi(lbi, &ops, OutDiffLbi4BnInOp);
-    }
+    GenerateOnesAsDiffLbi(loss_lbi, &ops, out_diff_lbi);
     job_builder.AddOps(loss_op_node->parallel_desc().parallel_conf(), ops);
   }
 
@@ -227,12 +221,18 @@ void AddTotalLossInstanceNumOpConf(const OpGraph& op_graph, Job* job,
   op_conf.set_name("System-Autograd-total_loss_instance_num");
   TotalLossInstanceNumOpConf* total_loss_instance_num_conf =
       op_conf.mutable_total_loss_instance_num_conf();
-  std::vector<LogicalBlobId> loss_instance_num_lbis;
-  for (const OpNode* op_node : loss_nodes) {
+  for (const std::string& loss_lbn : GetTrainConf().loss_lbn()) {
+    const LogicalBlobId loss_lbi = GenLogicalBlobId(loss_lbn);
+    const auto loss_node_it = std::find_if(
+        loss_nodes.cbegin(), loss_nodes.cend(),
+        [&](const OpNode* node) { return node->op().op_name() == loss_lbi.op_name(); });
+    CHECK(loss_node_it != loss_nodes.cend());
+    const OpNode* op_node = *loss_node_it;
     OperatorConf instance_num_op;
-    instance_num_op.set_name("System-Autograd-" + op_node->op().op_name() + "_loss_instance_num");
+    instance_num_op.set_name("System-Autograd-" + loss_lbi.op_name() + "-" + loss_lbi.blob_name()
+                             + "-LossInstanceNum");
     auto* instance_num_op_conf = instance_num_op.mutable_shape_elem_cnt_conf();
-    instance_num_op_conf->set_x(op_node->op().op_name() + "/loss");
+    instance_num_op_conf->set_x(GenLogicalBlobName(loss_lbi));
     instance_num_op_conf->set_y("y");
     instance_num_op_conf->set_begin_axis(0);
     instance_num_op_conf->set_end_axis(0);
@@ -240,7 +240,8 @@ void AddTotalLossInstanceNumOpConf(const OpGraph& op_graph, Job* job,
     std::string loss_instance_num_lbn;
     if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
       OperatorConf cast_op;
-      cast_op.set_name("System-Autograd-" + op_node->op().op_name() + "_loss_instance_num_cast");
+      cast_op.set_name("System-Autograd-" + loss_lbi.op_name() + "-" + loss_lbi.blob_name()
+                       + "-LossInstanceNum-Cast");
       cast_op.mutable_cast_conf()->set_in(instance_num_op.name() + "/y");
       cast_op.mutable_cast_conf()->set_out("out");
       cast_op.mutable_cast_conf()->set_data_type(DataType::kFloat);
