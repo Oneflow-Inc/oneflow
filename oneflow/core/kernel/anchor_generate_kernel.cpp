@@ -41,9 +41,9 @@ void AnchorGenerateKernel<T>::ForwardDim0ValidNum(
 
   const int64_t num_anchors_per_cell = conf.anchor_scales_size() * conf.aspect_ratios_size();
   const float fm_stride = conf.feature_map_stride();
-  const int64_t height = std::ceil(batch_height / fm_stride);
-  const int64_t width = std::ceil(batch_width / fm_stride);
-  BnInOp2Blob("anchors")->set_dim0_valid_num(0, height * width * num_anchors_per_cell);
+  const int64_t fm_height = std::ceil(batch_height / fm_stride);
+  const int64_t fm_width = std::ceil(batch_width / fm_stride);
+  BnInOp2Blob("anchors")->set_dim0_valid_num(0, fm_height * fm_width * num_anchors_per_cell);
 }
 
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kAnchorGenerateConf, AnchorGenerateKernel,
