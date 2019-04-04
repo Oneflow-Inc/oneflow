@@ -5,6 +5,7 @@
 #include "oneflow/core/persistence/hadoop/hadoop_file_system.h"
 #include "oneflow/core/graph/graph.h"
 #include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/job/job_builder.h"
 
 namespace oneflow {
 
@@ -73,21 +74,6 @@ void AddIdentityOp(const std::string& prefix, Job* job, const HashSet<LogicalBlo
   *(p_group->mutable_parallel_conf()) = parallel_conf;
 }
 
-void SetPbMessageField(PbMessage* pb_msg, const std::string& field, const std::string& old_val,
-                       const std::string& new_val) {
-  const PbFd* fd = pb_msg->GetDescriptor()->FindFieldByName(field);
-  if (fd) {
-    CHECK_EQ(GetValFromPbMessage<std::string>(*pb_msg, field), old_val);
-    SetValInPbMessage<std::string>(pb_msg, field, new_val);
-  } else {
-    const std::pair<std::string, int32_t> prefix_idx = GenUnRepeatedBn(field);
-    CHECK_EQ(GetPbRpfFromPbMessage<std::string>(*pb_msg, prefix_idx.first).Get(prefix_idx.second),
-             old_val);
-    PbRpf<std::string>* rpf = MutPbRpfFromPbMessage<std::string>(pb_msg, prefix_idx.first);
-    *rpf->Mutable(prefix_idx.second) = new_val;
-  }
-}
-
 void AddIdentityOpAndReconnect(
     const std::string& identity_op_name_prefix, Job* job, const std::vector<OpEdge*>& op_edges,
     const std::function<OperatorConf*(const std::string&)>& MutOperatorConf4OpName,
@@ -105,7 +91,7 @@ void AddIdentityOpAndReconnect(
       std::string lbn_check = GenLogicalBlobName(lbi);
       std::string identity_out_lbn = GenLogicalBlobName(old_lbi2new_lbi.at(lbi));
       for (const std::string& ibn : edge->lbi2ibns().at(lbi)) {
-        SetPbMessageField(op_type_conf, ibn, lbn_check, identity_out_lbn);
+        SetBnValInOpTypeConf(op_type_conf, ibn, lbn_check, identity_out_lbn);
       }
     }
   }

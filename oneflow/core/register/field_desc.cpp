@@ -10,6 +10,11 @@ FieldDesc::FieldDesc(const Shape& shape, DataType data_type)
 
 FieldDesc::FieldDesc(const FieldDescProto& proto) { InitFromProto(proto); }
 
+FieldDesc::FieldDesc(const FieldDesc& other) {
+  shape_ = other.shape_;
+  data_type_ = other.data_type_;
+}
+
 void FieldDesc::InitFromProto(const FieldDescProto& proto) {
   shape_ = Shape(proto.shape());
   data_type_ = proto.data_type();

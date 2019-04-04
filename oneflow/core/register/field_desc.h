@@ -12,6 +12,7 @@ class FieldDesc {
   ~FieldDesc() = default;
 
   FieldDesc();
+  FieldDesc(const FieldDesc& other);
   FieldDesc(const Shape& shape, DataType data_type);
   FieldDesc(const Shape& shape) : FieldDesc() { shape_ = shape; }
   FieldDesc(const FieldDescProto& proto);

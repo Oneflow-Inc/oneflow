@@ -2,6 +2,7 @@
 #include "oneflow/core/job_completer/autovar.h"
 #include "oneflow/core/job_completer/autograd.h"
 #include "oneflow/core/job_completer/autotick.h"
+#include "oneflow/core/job_completer/add_keep_header_only_op_conf.h"
 #include "oneflow/core/job_completer/auto_saver.h"
 #include "oneflow/core/optimizer/optimizer.h"
 
@@ -51,6 +52,8 @@ void JobCompleter::CompleteGlobalJobDesc() const {
     });
     // complete tick ops
     WithOpGraphAndMutJob(&AutoTick);
+    // add keep_header_only op
+    WithOpGraphAndMutJob(&AddKeepHeaderOnlyOp);
   }
 }
 
