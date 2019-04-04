@@ -344,6 +344,16 @@ static bool HaveSameDim0InnerShape(
   return ret;
 }
 
+static size_t GetValidBlobDescCount(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const PbRpf<std::string>& bn_in_ops) {
+  size_t valid_cnt = 0;
+  for (const std::string& bn_in_op : bn_in_ops) {
+    if (GetBlobDesc4BnInOp(bn_in_op)) { valid_cnt += 1; }
+  }
+  return valid_cnt;
+}
+
 ActivationType Operator::GetActivationType() const {
   if (HasFieldInCustomizedConf("activation")) {
     return static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"));
@@ -396,7 +406,9 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
 
     const PbRpf<std::string>* bns_for_instance_shape = &output_bns();
     if (IsLossOp()) { bns_for_instance_shape = &input_bns(); }
-    if (!is_forward) { bns_for_instance_shape = &input_diff_bns(); }
+    if (!is_forward && GetValidBlobDescCount(GetBlobDesc4BnInOp, input_diff_bns()) != 0) {
+      bns_for_instance_shape = &input_diff_bns();
+    }
     if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns_for_instance_shape,
                              &BlobDesc::has_instance_shape_field)) {
       kernel_conf->set_need_do_instance_shape(true);
