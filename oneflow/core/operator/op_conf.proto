@@ -1459,3 +1459,10 @@ message OpNameSet {
 message OpNameRelations {
   map<string, string> src_op_name2dst_op_name = 1;
 }
+
+message OpNameGroups {
+  message OpNameGroup {
+    repeated string op_name = 1;
+  }
+  repeated OpNameGroup op_name_group = 2;
+}
