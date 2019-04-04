@@ -7,7 +7,8 @@ void CalculateScaleOp::InitFromOpConf() {
   EnrollInputBn("origin_height", false);
   EnrollInputBn("origin_width", false);
   EnrollOutputBn("scale", false);
-  EnrollOutputBn("image_size", false);
+  EnrollOutputBn("resized_image_size", false);
+  EnrollOutputBn("aligned_image_size", false);
 }
 
 void CalculateScaleOp::InferBlobDescs(
@@ -25,15 +26,20 @@ void CalculateScaleOp::InferBlobDescs(
   CHECK_EQ(origin_height->data_type(), DataType::kInt32);
   CHECK_EQ(origin_height->data_type(), origin_width->data_type());
 
-  // scale
+  // out: scale (num_imgs, 2)
   BlobDesc* scale = GetBlobDesc4BnInOp("scale");
   scale->mut_shape() = Shape({origin_height->shape().At(0), 2});
   scale->set_data_type(Global<JobDesc>::Get()->DefaultDataType());
 
-  // image_size
-  BlobDesc* image_size = GetBlobDesc4BnInOp("image_size");
-  image_size->mut_shape() = Shape({origin_height->shape().At(0), 2});
-  image_size->set_data_type(origin_height->data_type());
+  // out: resized_image_size (num_imgs, 2)
+  BlobDesc* resized_image_size = GetBlobDesc4BnInOp("resized_image_size");
+  resized_image_size->mut_shape() = Shape({origin_height->shape().At(0), 2});
+  resized_image_size->set_data_type(origin_height->data_type());
+
+  // out: aligned_image_size (2)
+  BlobDesc* aligned_image_size = GetBlobDesc4BnInOp("aligned_image_size");
+  aligned_image_size->mut_shape() = Shape({2});
+  aligned_image_size->set_data_type(origin_height->data_type());
 }
 
 void CalculateScaleOp::VirtualGenKernelConf(
