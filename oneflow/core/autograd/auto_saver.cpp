@@ -2,8 +2,8 @@
 
 namespace oneflow {
 
-void AutoSaver(const OpGraph& op_graph, JobConf1* job_conf) {
-  JobConfBuilder builder(job_conf);
+void AutoSaver(const OpGraph& op_graph, Job* job_conf) {
+  JobBuilder builder(job_conf);
   ParallelConf md_save_parallel_conf;
   // only save on master
   md_save_parallel_conf.add_device_name("0:cpu:0");

@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-void AutoSaver(const OpGraph& op_graph, JobConf1* job_conf);
+void AutoSaver(const OpGraph& op_graph, Job* job_conf);
 
 }
 

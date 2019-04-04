@@ -45,8 +45,6 @@ void JobCompleter::CompleteGlobalJobDesc() const {
       LogicalBlobId total_loss_instance_num;
       AddTotalLossInstanceNumOpConf(op_graph, job, &total_loss_instance_num);
       HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
-      AutoGrad(op_graph, job_conf, &lbi2diff_lbi);
-      AddOptimizerOpConf(op_graph, job_conf, lbi2diff_lbi, total_loss_instance_num);
       AutoGrad(op_graph, job, &lbi2diff_lbi);
       AddOptimizerOpConf(op_graph, job, lbi2diff_lbi, total_loss_instance_num);
       AutoSaver(op_graph, job);
