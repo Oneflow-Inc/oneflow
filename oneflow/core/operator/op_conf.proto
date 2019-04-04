@@ -1012,22 +1012,23 @@ message RoIAlignOpConf {
 message AnchorTargetOpConf {
   // in
   required string images = 1;
-  required string gt_boxes = 2;
+  required string image_size = 2;
+  required string gt_boxes = 3;
   // out
-  repeated string anchors = 3;
-  repeated string regression_targets = 4;
-  repeated string regression_weights = 5;
-  repeated string class_labels = 6;
-  repeated string class_weights = 7;
+  repeated string anchors = 4;
+  repeated string regression_targets = 5;
+  repeated string regression_weights = 6;
+  repeated string class_labels = 7;
+  repeated string class_weights = 8;
   // conf
-  repeated AnchorGeneratorConf anchor_generator_conf = 8;
-  required float positive_overlap_threshold = 9 [default = 0.7];
-  required float negative_overlap_threshold = 10 [default = 0.3];
-  required int32 total_subsample_num = 11 [default = 256];
-  required float foreground_fraction = 12 [default = 0.5];
-  required BBoxRegressionWeights bbox_reg_weights = 13;
-  optional float straddle_thresh = 14 [default = 0.0];
-  optional bool random_subsample = 15 [default = true];
+  repeated AnchorGeneratorConf anchor_generator_conf = 9;
+  required float positive_overlap_threshold = 10 [default = 0.7];
+  required float negative_overlap_threshold = 11 [default = 0.3];
+  required int32 total_subsample_num = 12 [default = 256];
+  required float foreground_fraction = 13 [default = 0.5];
+  required BBoxRegressionWeights bbox_reg_weights = 14;
+  optional float straddle_thresh = 15 [default = 0.0];
+  optional bool random_subsample = 16 [default = true];
 }
 
 message MatmulOpConf {

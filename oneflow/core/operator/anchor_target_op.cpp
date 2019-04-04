@@ -7,6 +7,7 @@ void AnchorTargetOp::InitFromOpConf() {
   CHECK(op_conf().has_anchor_target_conf());
 
   EnrollInputBn("images", false);
+  EnrollInputBn("image_size", false);
   EnrollInputBn("gt_boxes", false);
 
   EnrollRepeatedOutputBn("anchors", false);
@@ -39,6 +40,12 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   CHECK(!images_blob_desc->has_dim0_valid_num_field());
   const int64_t num_images = images_blob_desc->shape().At(0);
   DataType data_type = images_blob_desc->data_type();
+  // input: image_size (N, 2)
+  const BlobDesc* image_size_blob_desc = GetBlobDesc4BnInOp("image_size");
+  CHECK_EQ(num_images, image_size_blob_desc->shape().At(0));
+  CHECK_EQ(image_size_blob_desc->shape().NumAxes(), 2);
+  CHECK_EQ(image_size_blob_desc->shape().At(1), 2);
+  CHECK_EQ(image_size_blob_desc->data_type(), DataType::kInt32);
   // input: gt_boxes (N, G, 4)
   const BlobDesc* gt_boxes_blob_desc = GetBlobDesc4BnInOp("gt_boxes");
   CHECK(!gt_boxes_blob_desc->has_dim0_valid_num_field());
@@ -95,21 +102,23 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   anchor_boxes_blob_desc->mut_shape() = Shape({total_num_anchors, 4});
   anchor_boxes_blob_desc->mut_dim0_inner_shape() = Shape({1, total_num_anchors});
   anchor_boxes_blob_desc->set_has_dim0_valid_num_field(true);
-  // data_tmp: anchors_inds (H1 * W1 + H2 * W2 + ...) * A) int32_t
-  BlobDesc* anchor_inds_blob_desc = GetBlobDesc4BnInOp("anchor_inds");
-  *anchor_inds_blob_desc = *anchor_boxes_blob_desc;
-  anchor_inds_blob_desc->mut_shape() = Shape({total_num_anchors});
-  anchor_inds_blob_desc->set_data_type(DataType::kInt32);
-  // data_tmp: anchor_labels has the same shape as anchors_inds
-  *GetBlobDesc4BnInOp("anchor_labels") = *anchor_inds_blob_desc;
-  // data_tmp: anchor_max_overlaps has the same shape as anchors_inds
+  // data_tmp: anchor_labels (N, (H1 * W1 + H2 * W2 + ...) * A) int32_t
+  BlobDesc* anchor_labels_blob_desc = GetBlobDesc4BnInOp("anchor_labels");
+  anchor_labels_blob_desc->mut_shape() = Shape({num_images, total_num_anchors});
+  anchor_labels_blob_desc->set_data_type(DataType::kInt32);
+  // data_tmp: anchor_max_overlaps (N, (H1 * W1 + H2 * W2 + ...) * A) float
   BlobDesc* anchor_max_overlaps_blob_desc = GetBlobDesc4BnInOp("anchor_max_overlaps");
-  *anchor_max_overlaps_blob_desc = *anchor_inds_blob_desc;
+  anchor_max_overlaps_blob_desc->mut_shape() = Shape({num_images, total_num_anchors});
   anchor_max_overlaps_blob_desc->set_data_type(DataType::kFloat);
-  // data_tmp: anchor_best_match_gt has the same shape as anchors_inds
+  // data_tmp: anchor_best_match_gt (N, (H1 * W1 + H2 * W2 + ...) * A) int32_t
   BlobDesc* anchor_best_match_gt_blob_desc = GetBlobDesc4BnInOp("anchor_best_match_gt");
-  *anchor_best_match_gt_blob_desc = *anchor_inds_blob_desc;
+  anchor_best_match_gt_blob_desc->mut_shape() = Shape({num_images, total_num_anchors});
   anchor_best_match_gt_blob_desc->set_data_type(DataType::kInt32);
+  // data_tmp: anchors_inds (N, (H1 * W1 + H2 * W2 + ...) * A) int32_t
+  BlobDesc* anchor_inds_blob_desc = GetBlobDesc4BnInOp("anchor_inds");
+  anchor_inds_blob_desc->mut_shape() = Shape({num_images, total_num_anchors});
+  anchor_inds_blob_desc->set_data_type(DataType::kInt32);
+  anchor_inds_blob_desc->set_has_dim1_valid_num_field(true);
 }
 
 REGISTER_CPU_OP(OperatorConf::kAnchorTargetConf, AnchorTargetOp);
