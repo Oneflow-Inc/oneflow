@@ -1,5 +1,5 @@
 #include "oneflow/core/autograd/autovar.h"
-#include "oneflow/core/job/job_conf_builder.h"
+#include "oneflow/core/job/job_builder.h"
 
 namespace oneflow {
 
@@ -24,17 +24,15 @@ void GenerateInputVarOpConfIf(
   }
 }
 
-void AutoVar(const OpGraph& op_graph, JobConf1* job_conf) {
-  JobConfBuilder job_conf_builder(job_conf);
+void AutoVar(const OpGraph& op_graph, Job* job) {
+  JobBuilder job_builder(job);
   op_graph.ForEachNode([&](OpNode* op_node) {
     std::vector<OperatorConf> ops;
     auto UnitBatchSizeBlobDesc4BnInOp = [&](const std::string& bn) -> const BlobDesc& {
       return op_graph.GetUnitBatchSizeBlobDesc(op_node->op().BnInOp2Lbi(bn));
     };
     GenerateInputVarOpConfIf(op_node->op(), &ops, UnitBatchSizeBlobDesc4BnInOp);
-    if (!ops.empty()) {
-      job_conf_builder.AddOrMutOps(op_node->parallel_desc().parallel_conf(), ops);
-    }
+    if (!ops.empty()) { job_builder.AddOrMutOps(op_node->parallel_desc().parallel_conf(), ops); }
   });
 }
 
