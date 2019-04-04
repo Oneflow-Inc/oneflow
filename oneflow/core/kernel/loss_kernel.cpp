@@ -93,7 +93,7 @@ int64_t LossKernel<device_type, PredType>::CalcLossInstanceNum(
 template<typename T>
 struct LossKernelUtil<DeviceType::kCPU, T> {
   static void ComputeReductionCoefficient(DeviceCtx* ctx, int64_t data_num, int64_t weight_length,
-                                          const T* weight, T* reduction, LossReductionType type) {
+                                          const T* weight, T* reduction, ScalarReductionType type) {
     switch (type) {
       case kSumOverOne: *reduction = 1.0; break;
       case kSumOverWeight: {

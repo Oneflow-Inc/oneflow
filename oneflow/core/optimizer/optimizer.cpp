@@ -13,10 +13,10 @@ void GenerateOptimizerOpConfIf(
   obj->Call(var_op, op_confs, DiffLbi4BnInOp, total_loss_instance_num_lbi);
 }
 
-void AddOptimizerOpConf(const OpGraph& op_graph, JobConf1* job_conf,
+void AddOptimizerOpConf(const OpGraph& op_graph, Job* job,
                         const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
                         const LogicalBlobId& total_loss_instance_num_lbi) {
-  JobConfBuilder job_conf_builder(job_conf);
+  JobBuilder job_builder(job);
   op_graph.ForEachNode([&](OpNode* op_node) {
     const VariableOp* var_op = dynamic_cast<const VariableOp*>(&op_node->op());
     if (var_op == nullptr) { return; }
@@ -27,7 +27,7 @@ void AddOptimizerOpConf(const OpGraph& op_graph, JobConf1* job_conf,
     };
     GenerateOptimizerOpConfIf(*var_op, &optimizer_op_confs, DiffLbi4BnInOp,
                               total_loss_instance_num_lbi);
-    job_conf_builder.AddOps(op_node->parallel_desc().parallel_conf(), optimizer_op_confs);
+    job_builder.AddOps(op_node->parallel_desc().parallel_conf(), optimizer_op_confs);
   });
 }
 

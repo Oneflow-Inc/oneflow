@@ -7,7 +7,7 @@
 
 namespace oneflow {
 
-void AutoTick(const OpGraph& op_graph, JobConf1* job_conf);
+void AutoTick(const OpGraph& op_graph, Job* job);
 }
 
 #endif  // ONEFLOW_CORE_AUTOGRAD_AUTOTICK_H_

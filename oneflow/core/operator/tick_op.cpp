@@ -15,6 +15,6 @@ void TickOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   out->mut_shape() = Shape({1});
 }
 
-REGISTER_CPU_OP(OperatorConf::kTickConf, TickOp);
+REGISTER_OP(OperatorConf::kTickConf, TickOp);
 
 }  // namespace oneflow
