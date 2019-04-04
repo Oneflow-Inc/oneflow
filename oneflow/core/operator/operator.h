@@ -51,6 +51,7 @@ class Operator {
   virtual bool NeedInBlobWhenBackward() const { return true; }
   virtual bool IsForwardInplace() const { return false; }
   virtual bool IsBackwardInplace() const { return false; }
+  virtual std::vector<std::string> GetHeaderOnlyIbns() const { return std::vector<std::string>(); }
 
   // bn_in_op <-> lbi
   const LogicalBlobId& BnInOp2Lbi(const std::string& bn_in_op) const;
