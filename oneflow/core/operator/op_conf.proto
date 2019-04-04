@@ -138,7 +138,7 @@ message Conv3DOpConf {
 }
 
 message ConvConf {
-  required int32 num_dims = 1;
+  required int32 num_spatial_dims = 1;
   required string padding = 2;
   required string data_format = 3;
   repeated int32 kernel_size = 4;
@@ -165,7 +165,7 @@ message ConvBiasGradOpConf {
   required string dy = 1;
   required string bias_diff = 2;
   required string data_format = 3;
-  required int64 num_dims = 4;
+  required int64 num_spatial_dims = 4;
 }
 
 message FullyConnectedOpConf {

@@ -51,7 +51,7 @@ class ConvBiasGradModelParallelSbpSignature final : public ParallelSbpSignature 
     if (conf.data_format() == "channels_first") {
       (*bn2sbp)["dy"].mutable_split_parallel()->set_axis(1);
     } else if (conf.data_format() == "channels_last") {
-      (*bn2sbp)["dy"].mutable_split_parallel()->set_axis(1 + conf.num_dims());
+      (*bn2sbp)["dy"].mutable_split_parallel()->set_axis(1 + conf.num_spatial_dims());
     } else {
       UNIMPLEMENTED();
     }
@@ -76,9 +76,9 @@ void ConvBiasGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   const ConvBiasGradOpConf& conf = this->op_conf().conv_bias_grad_conf();
   const BlobDesc* dy = GetBlobDesc4BnInOp("dy");
   BlobDesc* bias_diff = GetBlobDesc4BnInOp("bias_diff");
-  CHECK_GE(conf.num_dims(), 1);
-  CHECK_LE(conf.num_dims(), 3);
-  CHECK_EQ(dy->shape().NumAxes(), conf.num_dims() + 2);
+  CHECK_GE(conf.num_spatial_dims(), 1);
+  CHECK_LE(conf.num_spatial_dims(), 3);
+  CHECK_EQ(dy->shape().NumAxes(), conf.num_spatial_dims() + 2);
   bias_diff->set_data_type(dy->data_type());
   if (conf.data_format() == "channels_first") {
     bias_diff->mut_shape() = Shape({dy->shape().At(1)});

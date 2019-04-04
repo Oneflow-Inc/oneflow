@@ -55,7 +55,7 @@ class ConvDataGradModelParallelSbpSignature final : public ParallelSbpSignature 
     if (conf.data_format() == "channels_first") {
       (*bn2sbp)["dy"].mutable_split_parallel()->set_axis(1);
     } else if (conf.data_format() == "channels_last") {
-      (*bn2sbp)["dy"].mutable_split_parallel()->set_axis(1 + conf.num_dims());
+      (*bn2sbp)["dy"].mutable_split_parallel()->set_axis(1 + conf.num_spatial_dims());
     } else {
       UNIMPLEMENTED();
     }
@@ -92,11 +92,11 @@ void ConvDataGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   const BlobDesc* dy = GetBlobDesc4BnInOp("dy");
   const BlobDesc* filter = GetBlobDesc4BnInOp("filter");
   const BlobDesc* x_like = GetBlobDesc4BnInOp("x_like");
-  const int32_t num_dims = conf.conv_conf().num_dims();
-  CHECK_GE(num_dims, 1);
-  CHECK_LE(num_dims, 3);
-  CHECK_EQ(dy->shape().NumAxes(), num_dims + 2);
-  CHECK_EQ(x_like->shape().NumAxes(), num_dims + 2);
+  const int32_t num_spatial_dims = conf.conv_conf().num_spatial_dims();
+  CHECK_GE(num_spatial_dims, 1);
+  CHECK_LE(num_spatial_dims, 3);
+  CHECK_EQ(dy->shape().NumAxes(), num_spatial_dims + 2);
+  CHECK_EQ(x_like->shape().NumAxes(), num_spatial_dims + 2);
   CHECK_EQ(x_like->data_type(), dy->data_type());
   BlobDesc* dx = GetBlobDesc4BnInOp("dx");
   *dx = *x_like;

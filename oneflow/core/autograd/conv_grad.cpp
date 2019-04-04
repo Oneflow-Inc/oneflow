@@ -5,22 +5,22 @@ namespace oneflow {
 namespace {
 
 ConvConf ConvConfFromConvOpConf(const OperatorConf& op_conf) {
-  int32_t n_dims = 0;
+  int32_t n_spatial_dims = 0;
   const PbMessage* msg = nullptr;
   if (op_conf.has_conv_1d_conf()) {
-    n_dims = 1;
+    n_spatial_dims = 1;
     msg = &op_conf.conv_1d_conf();
   } else if (op_conf.has_conv_2d_conf()) {
-    n_dims = 2;
+    n_spatial_dims = 2;
     msg = &op_conf.conv_2d_conf();
   } else if (op_conf.has_conv_3d_conf()) {
-    n_dims = 3;
+    n_spatial_dims = 3;
     msg = &op_conf.conv_3d_conf();
   } else {
     UNIMPLEMENTED();
   }
   ConvConf conv_conf;
-  conv_conf.set_num_dims(n_dims);
+  conv_conf.set_num_spatial_dims(n_spatial_dims);
   conv_conf.set_data_format(GetValFromPbMessage<std::string>(*msg, "data_format"));
   conv_conf.set_padding(GetValFromPbMessage<std::string>(*msg, "padding"));
   *conv_conf.mutable_kernel_size() = GetPbRfFromPbMessage<int32_t>(*msg, "kernel_size");
@@ -43,7 +43,7 @@ void GenerateBackwardOpConf(
       bias_grad_op.set_name("System-AutoGrad-" + op.op_name() + "-BiasGrad");
       ConvBiasGradOpConf* conf = bias_grad_op.mutable_conv_bias_grad_conf();
       conf->set_data_format(conv_conf.data_format());
-      conf->set_num_dims(conv_conf.num_dims());
+      conf->set_num_spatial_dims(conv_conf.num_spatial_dims());
       conf->set_dy(out_diff_lbn);
       conf->set_bias_diff("bias_diff");
       op_confs->push_back(bias_grad_op);

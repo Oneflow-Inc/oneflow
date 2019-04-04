@@ -54,7 +54,7 @@ class ConvFilterGradModelParallelSbpSignature final : public ParallelSbpSignatur
     if (conf.data_format() == "channels_first") {
       (*bn2sbp)["dy"].mutable_split_parallel()->set_axis(1);
     } else if (conf.data_format() == "channels_last") {
-      (*bn2sbp)["dy"].mutable_split_parallel()->set_axis(1 + conf.num_dims());
+      (*bn2sbp)["dy"].mutable_split_parallel()->set_axis(1 + conf.num_spatial_dims());
     } else {
       UNIMPLEMENTED();
     }
@@ -90,11 +90,11 @@ void ConvFilterGradOp::InferBlobDescs(
   const BlobDesc* dy = GetBlobDesc4BnInOp("dy");
   const BlobDesc* x = GetBlobDesc4BnInOp("x");
   BlobDesc* filter_diff = GetBlobDesc4BnInOp("filter_diff");
-  const int32_t num_dims = conf.conv_conf().num_dims();
-  CHECK_GE(num_dims, 1);
-  CHECK_LE(num_dims, 3);
-  CHECK_EQ(dy->shape().NumAxes(), num_dims + 2);
-  CHECK_EQ(x->shape().NumAxes(), num_dims + 2);
+  const int32_t num_spatial_dims = conf.conv_conf().num_spatial_dims();
+  CHECK_GE(num_spatial_dims, 1);
+  CHECK_LE(num_spatial_dims, 3);
+  CHECK_EQ(dy->shape().NumAxes(), num_spatial_dims + 2);
+  CHECK_EQ(x->shape().NumAxes(), num_spatial_dims + 2);
   CHECK_EQ(x->data_type(), dy->data_type());
   std::vector<int64_t> filter_diff_dim_vec;
   if (conv_conf.data_format() == "channels_first") {
