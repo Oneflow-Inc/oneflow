@@ -26,22 +26,26 @@ void GenerateOptimizerOpConf(
   const OperatorConf& v_var = GenerateAdamHelperVariableOpConf(op, "v");
   op_confs->push_back(v_var);
 
-  OperatorConf beta1_t_var = GenerateAdamHelperVariableOpConf(op, "beta1_t");
-  SetScalarShape(&beta1_t_var);
-  op_confs->push_back(beta1_t_var);
+  const auto& adam_conf = GetAdamModelUpdateConf();
+  if (!adam_conf.do_bias_correction()) {
+    OperatorConf beta1_t_var = GenerateAdamHelperVariableOpConf(op, "beta1_t");
+    SetScalarShape(&beta1_t_var);
+    op_confs->push_back(beta1_t_var);
 
-  OperatorConf beta2_t_var = GenerateAdamHelperVariableOpConf(op, "beta2_t");
-  SetScalarShape(&beta2_t_var);
-  op_confs->push_back(beta2_t_var);
-
+    OperatorConf beta2_t_var = GenerateAdamHelperVariableOpConf(op, "beta2_t");
+    SetScalarShape(&beta2_t_var);
+    op_confs->push_back(beta2_t_var);
+  }
   OperatorConf mdupdt_op;
   mdupdt_op.set_name(op.op_name() + "_optimizer");
   auto* mdupdt_op_conf = mdupdt_op.mutable_adam_model_update_conf();
   ConstructMdUpdtOpConf(op, DiffLbi4BnInOp, total_loss_instance_num_lbi, mdupdt_op_conf);
   mdupdt_op_conf->set_m(m_var.name() + "/out");
   mdupdt_op_conf->set_v(v_var.name() + "/out");
-  mdupdt_op_conf->set_beta1_t(beta1_t_var.name() + "/out");
-  mdupdt_op_conf->set_beta2_t(beta2_t_var.name() + "/out");
+  if (!adam_conf.do_bias_correction()) {
+    mdupdt_op_conf->set_beta1_t(beta1_t_var.name() + "/out");
+    mdupdt_op_conf->set_beta2_t(beta2_t_var.name() + "/out");
+  }
   op_confs->push_back(mdupdt_op);
 }
 
