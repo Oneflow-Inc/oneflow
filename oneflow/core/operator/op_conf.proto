@@ -1406,19 +1406,16 @@ message GtBboxScaleOpConf {
   required string out = 3;
 }
 
-message AnchorGeneratorConf {
-  required int32 feature_map_stride = 1;
-  repeated float aspect_ratios = 2;
-  repeated float anchor_scales = 3;
-}
-
 message AnchorGenerateOpConf {
   // in
   required string images = 1;
   // conf
-  repeated AnchorGeneratorConf anchor_generator_conf = 2;
+  required int32 feature_map_stride = 2;
+  repeated float aspect_ratios = 3;
+  repeated float anchor_scales = 4;
   // out
-  repeated string anchors = 3;
+  required string anchors = 5;
+  required string anchors_info = 6;
 }
 
 message OperatorConf {
