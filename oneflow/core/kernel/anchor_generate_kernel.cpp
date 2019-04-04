@@ -10,15 +10,25 @@ void AnchorGenerateKernel<T>::ForwardDataContent(
   const int64_t batch_height = images_blob->shape().At(1);
   const int64_t batch_width = images_blob->shape().At(2);
 
+  // output: anchors
   Blob* anchors = BnInOp2Blob("anchors");
   Memset<DeviceType::kCPU>(ctx.device_ctx, anchors->mut_dptr<T>(), 0,
                            anchors->ByteSizeOfDataContentField());
-  float fm_stride = conf.feature_map_stride();
+  const float fm_stride = conf.feature_map_stride();
+  const int32_t feature_map_height = std::ceil(batch_height / fm_stride);
+  const int32_t feature_map_width = std::ceil(batch_width / fm_stride);
   auto scales_vec = PbRf2StdVec(conf.anchor_scales());
   auto ratios_vec = PbRf2StdVec(conf.aspect_ratios());
-  const size_t num_anchors = BBoxUtil<MutBBox>::GenerateAnchors(
-      batch_height, batch_width, fm_stride, scales_vec, ratios_vec, anchors->mut_dptr<T>());
+  const size_t num_anchors =
+      BBoxUtil<MutBBox>::GenerateAnchors(fm_stride, feature_map_height, feature_map_width,
+                                         scales_vec, ratios_vec, anchors->mut_dptr<T>());
   CHECK_LE(num_anchors, anchors->static_shape().At(0));
+
+  // output: anchors_info
+  int32_t* anchors_info_ptr = BnInOp2Blob("anchors_info")->mut_dptr<int32_t>();
+  anchors_info_ptr[0] = feature_map_height;
+  anchors_info_ptr[1] = feature_map_width;
+  anchors_info_ptr[2] = conf.anchor_scales_size() * conf.aspect_ratios_size();
 }
 
 template<typename T>

@@ -1406,6 +1406,13 @@ message GtBboxScaleOpConf {
   required string out = 3;
 }
 
+// TODO: delete it!!!
+message AnchorGeneratorConf {
+  required int32 feature_map_stride = 2;
+  repeated float aspect_ratios = 3;
+  repeated float anchor_scales = 4;
+}
+
 message AnchorGenerateOpConf {
   // in
   required string images = 1;

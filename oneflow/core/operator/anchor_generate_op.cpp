@@ -7,6 +7,7 @@ void AnchorGenerateOp::InitFromOpConf() {
   CHECK(op_conf().has_anchor_generate_conf());
   EnrollInputBn("images", false);
   EnrollOutputBn("anchors", false);
+  EnrollOutputBn("anchors_info", false);
 }
 
 const PbMessage& AnchorGenerateOp::GetCustomizedConf() const {
@@ -38,6 +39,11 @@ void AnchorGenerateOp::InferBlobDescs(
   anchors->mut_shape() = Shape({num_anchors, 4});
   anchors->set_has_dim0_valid_num_field(true);
   anchors->mut_dim0_inner_shape() = Shape({1, num_anchors});
+
+  // output: anchors_info, (3,) fm_height, fm_width, num_anchors_per_cell
+  BlobDesc* anchors_info = GetBlobDesc4BnInOp("anchors_info");
+  anchors_info->set_data_type(DataType::kInt32);
+  anchors_info->mut_shape() = Shape({3});
 }
 
 REGISTER_CPU_OP(OperatorConf::kAnchorGenerateConf, AnchorGenerateOp);
