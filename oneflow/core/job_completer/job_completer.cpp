@@ -2,7 +2,7 @@
 #include "oneflow/core/job_completer/autovar.h"
 #include "oneflow/core/job_completer/autograd.h"
 #include "oneflow/core/job_completer/autotick.h"
-#include "oneflow/core/job_completer/add_keep_header_only_op.h"
+#include "oneflow/core/job_completer/add_keep_header_only_op_conf.h"
 #include "oneflow/core/optimizer/optimizer.h"
 
 namespace oneflow {
