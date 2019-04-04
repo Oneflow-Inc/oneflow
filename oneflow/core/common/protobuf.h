@@ -163,6 +163,8 @@ inline bool operator==(const LogicalBlobId& lhs, const LogicalBlobId& rhs) {
   return message_diff.Equivalent(lhs, rhs);
 }
 
+inline bool operator!=(const LogicalBlobId& lhs, const LogicalBlobId& rhs) { return !(lhs == rhs); }
+
 // Persistent
 
 PersistentOutStream& operator<<(PersistentOutStream&, const PbMessage&);

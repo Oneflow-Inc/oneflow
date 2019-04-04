@@ -6,7 +6,7 @@
 
 namespace oneflow {
 
-void AddOptimizerOpConf(const OpGraph& op_graph, JobConf1* job_conf,
+void AddOptimizerOpConf(const OpGraph& op_graph, Job* job,
                         const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
                         const LogicalBlobId& total_loss_instance_num_lbi);
 

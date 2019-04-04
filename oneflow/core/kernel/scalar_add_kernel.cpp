@@ -9,9 +9,9 @@ void ScalarAddKernel<device_type, T>::ForwardDataContent(
   Blob* out_blob = BnInOp2Blob("out");
   T scalar_operand = 0;
   const auto& conf = this->op_conf().scalar_add_conf();
-  if (IsIntegral<T>::value) {
+  if (conf.has_int_operand()) {
     scalar_operand = static_cast<T>(conf.int_operand());
-  } else if (IsFloating<T>::value) {
+  } else if (conf.has_float_operand()) {
     scalar_operand = static_cast<T>(conf.float_operand());
   } else {
     UNIMPLEMENTED();

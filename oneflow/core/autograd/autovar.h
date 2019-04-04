@@ -7,13 +7,10 @@
 
 namespace oneflow {
 
-void AutoVar(const OpGraph& op_graph, JobConf1* job_conf);
+void AutoVar(const OpGraph& op_graph, Job* job);
 
 OperatorConf GenerateVariableOpConf(const BlobDesc& blob_desc, const std::string& name,
                                     const std::string& model_name);
-
-void GenerateInputVarOpConfIf(const Operator&, std::vector<OperatorConf>*,
-                              const std::function<const BlobDesc&(const std::string&)>&);
 
 class GenerateInputVarOpConfWrapperStruct final {
  public:
