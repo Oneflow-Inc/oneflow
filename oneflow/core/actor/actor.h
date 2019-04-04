@@ -151,6 +151,7 @@ class Actor {
   // Send Msgs
   void AsyncSendNaiveProducedRegstMsgToConsumer();
   virtual void VirtualAsyncSendNaiveProducedRegstMsgToConsumer();
+  void AsyncSendInplaceProducedRegstMsgToConsumer();
   void AsyncSendNaiveConsumedRegstMsgToProducer();
   virtual void VirtualAsyncSendNaiveConsumedRegstMsgToProducer();
   void AsyncSendConsumedCtrlRegstMsgToProducer();
@@ -201,6 +202,11 @@ class Actor {
 
   HashSet<int64_t> produced_ctrl_regst_desc_ids_;
   HashSet<int64_t> consumed_ctrl_regst_desc_ids_;
+
+  RegstSlot inplace_consumed_rs_;
+  RegstSlot inplace_produced_rs_;
+  bool is_inplace_consumed_eord_;
+  HashMap<int64_t, int64_t> inplace_out2in_;
 };
 
 class ScopedActEventRecorder;
