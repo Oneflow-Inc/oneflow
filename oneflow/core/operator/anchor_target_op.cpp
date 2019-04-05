@@ -7,20 +7,19 @@ void AnchorTargetOp::InitFromOpConf() {
   CHECK(op_conf().has_anchor_target_conf());
 
   EnrollInputBn("images", false);
+  EnrollInputBn("image_size", false);
   EnrollInputBn("gt_boxes", false);
-  EnrollInputBn("im_scale", false);
 
+  EnrollRepeatedOutputBn("anchors", false);
   EnrollRepeatedOutputBn("regression_targets", false);
   EnrollRepeatedOutputBn("regression_weights", false);
   EnrollRepeatedOutputBn("class_labels", false);
   EnrollRepeatedOutputBn("class_weights", false);
 
-  EnrollDataTmpBn("anchors");
-  EnrollDataTmpBn("anchor_inds");
+  EnrollDataTmpBn("anchor_boxes");
   EnrollDataTmpBn("anchor_labels");
   EnrollDataTmpBn("anchor_max_overlaps");
   EnrollDataTmpBn("anchor_best_match_gt");
-  EnrollDataTmpBn("gt_boxes_scaled");
 }
 
 const PbMessage& AnchorTargetOp::GetCustomizedConf() const {
@@ -40,6 +39,12 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   CHECK(!images_blob_desc->has_dim0_valid_num_field());
   const int64_t num_images = images_blob_desc->shape().At(0);
   DataType data_type = images_blob_desc->data_type();
+  // input: image_size (N, 2)
+  const BlobDesc* image_size_blob_desc = GetBlobDesc4BnInOp("image_size");
+  CHECK_EQ(num_images, image_size_blob_desc->shape().At(0));
+  CHECK_EQ(image_size_blob_desc->shape().NumAxes(), 2);
+  CHECK_EQ(image_size_blob_desc->shape().At(1), 2);
+  CHECK_EQ(image_size_blob_desc->data_type(), DataType::kInt32);
   // input: gt_boxes (N, G, 4)
   const BlobDesc* gt_boxes_blob_desc = GetBlobDesc4BnInOp("gt_boxes");
   CHECK(!gt_boxes_blob_desc->has_dim0_valid_num_field());
@@ -47,10 +52,6 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   CHECK(!gt_boxes_blob_desc->has_instance_shape_field());
   CHECK_EQ(gt_boxes_blob_desc->shape().At(0), num_images);
   CHECK_EQ(gt_boxes_blob_desc->data_type(), data_type);
-  // input: im_scale (N)
-  const BlobDesc* im_scale_blob_descs = GetBlobDesc4BnInOp("im_scale");
-  CHECK_EQ(im_scale_blob_descs->shape().At(0), num_images);
-  CHECK_EQ(im_scale_blob_descs->data_type(), data_type);
 
   const int64_t batch_height = images_blob_desc->shape().At(1);
   const int64_t batch_width = images_blob_desc->shape().At(2);
@@ -65,7 +66,13 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
     const int64_t width = std::ceil(batch_width / fm_stride);
     CHECK_GT(height, 0);
     CHECK_GT(width, 0);
-    total_num_anchors += height * width * num_anchors_per_cell;
+    int64_t num_anchors_per_layer = height * width * num_anchors_per_cell;
+    // repeat output: anchors (h_i * w_i * A, 4) int32_t
+    BlobDesc* anchors_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn("anchors", layer));
+    anchors_blob_desc->set_data_type(data_type);
+    anchors_blob_desc->mut_shape() = Shape({num_anchors_per_layer, 4});
+    anchors_blob_desc->set_has_dim0_valid_num_field(true);
+    anchors_blob_desc->mut_dim0_inner_shape() = Shape({1, num_anchors_per_layer});
     // repeat output: class_labels (N, h_i, w_i, A) int32_t
     BlobDesc* class_labels_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn("class_labels", layer));
     class_labels_blob_desc->set_data_type(DataType::kInt32);
@@ -76,7 +83,7 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
     BlobDesc* class_weights_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn("class_weights", layer));
     *class_weights_blob_desc = *class_labels_blob_desc;
     class_weights_blob_desc->set_data_type(data_type);
-    // repeat output: regression_targets (N, H, W, 4 * A) T
+    // repeat output: regression_targets (N, h_i, w_i, 4 * A) T
     BlobDesc* regression_targets_blob_desc =
         GetBlobDesc4BnInOp(GenRepeatedBn("regression_targets", layer));
     *regression_targets_blob_desc = *class_weights_blob_desc;
@@ -84,31 +91,28 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
         Shape({num_images, height, width, num_anchors_per_cell * 4});
     // repeat output: regression_weights same as regression_targets
     *GetBlobDesc4BnInOp(GenRepeatedBn("regression_weights", layer)) = *regression_targets_blob_desc;
+
+    total_num_anchors += num_anchors_per_layer;
   }
 
   // data_tmp: anchors ((H1 * W1 + H2 * W2 + ...) * A, 4) T
-  BlobDesc* anchors_blob_desc = GetBlobDesc4BnInOp("anchors");
-  anchors_blob_desc->set_data_type(gt_boxes_blob_desc->data_type());
-  anchors_blob_desc->mut_shape() = Shape({total_num_anchors, 4});
-  anchors_blob_desc->mut_dim0_inner_shape() = Shape({1, total_num_anchors});
-  anchors_blob_desc->set_has_dim0_valid_num_field(true);
-  // data_tmp: anchors_inds (H1 * W1 + H2 * W2 + ...) * A) int32_t
-  BlobDesc* anchor_inds_blob_desc = GetBlobDesc4BnInOp("anchor_inds");
-  *anchor_inds_blob_desc = *anchors_blob_desc;
-  anchor_inds_blob_desc->mut_shape() = Shape({total_num_anchors});
-  anchor_inds_blob_desc->set_data_type(DataType::kInt32);
-  // data_tmp: anchor_labels has the same shape as anchors_inds
-  *GetBlobDesc4BnInOp("anchor_labels") = *anchor_inds_blob_desc;
-  // data_tmp: anchor_max_overlaps has the same shape as anchors_inds
+  BlobDesc* anchor_boxes_blob_desc = GetBlobDesc4BnInOp("anchor_boxes");
+  anchor_boxes_blob_desc->set_data_type(gt_boxes_blob_desc->data_type());
+  anchor_boxes_blob_desc->mut_shape() = Shape({total_num_anchors, 4});
+  anchor_boxes_blob_desc->mut_dim0_inner_shape() = Shape({1, total_num_anchors});
+  anchor_boxes_blob_desc->set_has_dim0_valid_num_field(true);
+  // data_tmp: anchor_labels (N, (H1 * W1 + H2 * W2 + ...) * A) int32_t
+  BlobDesc* anchor_labels_blob_desc = GetBlobDesc4BnInOp("anchor_labels");
+  anchor_labels_blob_desc->mut_shape() = Shape({num_images, total_num_anchors});
+  anchor_labels_blob_desc->set_data_type(DataType::kInt32);
+  // data_tmp: anchor_max_overlaps (N, (H1 * W1 + H2 * W2 + ...) * A) float
   BlobDesc* anchor_max_overlaps_blob_desc = GetBlobDesc4BnInOp("anchor_max_overlaps");
-  *anchor_max_overlaps_blob_desc = *anchor_inds_blob_desc;
+  anchor_max_overlaps_blob_desc->mut_shape() = Shape({num_images, total_num_anchors});
   anchor_max_overlaps_blob_desc->set_data_type(DataType::kFloat);
-  // data_tmp: anchor_best_match_gt has the same shape as anchors_inds
+  // data_tmp: anchor_best_match_gt (N, (H1 * W1 + H2 * W2 + ...) * A) int32_t
   BlobDesc* anchor_best_match_gt_blob_desc = GetBlobDesc4BnInOp("anchor_best_match_gt");
-  *anchor_best_match_gt_blob_desc = *anchor_inds_blob_desc;
+  anchor_best_match_gt_blob_desc->mut_shape() = Shape({num_images, total_num_anchors});
   anchor_best_match_gt_blob_desc->set_data_type(DataType::kInt32);
-  // data_tmp: gt_boxes_scaled has the same shape as gt_boxes
-  *GetBlobDesc4BnInOp("gt_boxes_scaled") = *gt_boxes_blob_desc;
 }
 
 REGISTER_CPU_OP(OperatorConf::kAnchorTargetConf, AnchorTargetOp);

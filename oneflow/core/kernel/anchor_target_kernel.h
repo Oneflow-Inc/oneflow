@@ -19,21 +19,23 @@ class AnchorTargetKernel final : public KernelIf<DeviceType::kCPU> {
  private:
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
+  void ForwardDim0ValidNum(const KernelCtx&,
+                           std::function<Blob*(const std::string&)>) const override;
   void ForwardInstanceShape(const KernelCtx& ctx,
                             std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
-  void GenerateScaledGtBoxes(DeviceCtx* ctx,
-                             const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  void ClearOutputBlobs(DeviceCtx* ctx,
+                        const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   void GenerateAnchorBoxes(DeviceCtx* ctx,
                            const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  void FilterOutsideAnchorBoxes(DeviceCtx* ctx,
-                                const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  void ExcludeOutsideAnchorBoxes(DeviceCtx* ctx, int64_t im_index,
+                                 const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   void CalcMaxOverlapAndSetPositiveLabels(
-      DeviceCtx* ctx, size_t im_index,
+      DeviceCtx* ctx, int64_t im_index,
       const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  size_t Subsample(DeviceCtx* ctx, size_t im_index,
+  size_t Subsample(DeviceCtx* ctx, int64_t im_index,
                    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  void OutputForEachImage(DeviceCtx* ctx, size_t im_index,
+  void OutputForEachImage(DeviceCtx* ctx, int64_t im_index,
                           const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 };
 

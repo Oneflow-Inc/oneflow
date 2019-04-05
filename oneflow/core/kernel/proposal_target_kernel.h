@@ -28,8 +28,6 @@ class ProposalTargetKernel final : public KernelIf<DeviceType::kCPU> {
 
   void InitializeOutputBlob(DeviceCtx* ctx,
                             const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  void ResizeAndFilterGtBoxes(DeviceCtx* ctx,
-                              const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   void GenMatchMatrixBetweenRoiAndGtBoxes(
       DeviceCtx* ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   void Subsample(DeviceCtx* ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;

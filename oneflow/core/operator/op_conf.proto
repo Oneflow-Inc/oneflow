@@ -881,22 +881,21 @@ message ProposalTargetOpConf {
   required string rois = 1;
   required string gt_boxes = 2;
   required string gt_labels = 3;
-  required string im_scale = 4;
   // out
-  required string sampled_rois = 5;
-  required string sampled_roi_inds = 6;
-  required string class_labels = 7;
-  required string regression_targets = 8;
-  required string regression_weights = 9;
+  required string sampled_rois = 4;
+  required string sampled_roi_inds = 5;
+  required string class_labels = 6;
+  required string regression_targets = 7;
+  required string regression_weights = 8;
   // conf
-  required float foreground_threshold = 10;
-  required float background_threshold_low = 11;
-  required float background_threshold_high = 12;
-  required float foreground_fraction = 13 [default = 0.5];
-  required BBoxRegressionWeights bbox_reg_weights = 14;
-  required int32 num_classes = 15;
-  required int32 num_sampled_rois_per_image = 16 [default = 256];
-  optional bool random_subsample = 17 [default = true];
+  required float foreground_threshold = 9;
+  required float background_threshold_low = 10;
+  required float background_threshold_high = 11;
+  required float foreground_fraction = 12 [default = 0.5];
+  required BBoxRegressionWeights bbox_reg_weights = 13;
+  required int32 num_classes = 14;
+  required int32 num_sampled_rois_per_image = 15 [default = 256];
+  optional bool random_subsample = 16 [default = true];
 }
 
 enum ScoringMethod {
@@ -942,20 +941,19 @@ message AnchorGeneratorConf {
 
 message ProposalOpConf {
   // in
-  required string class_prob = 1;
-  required string bbox_pred = 2;
-  required string image_height = 3;
-  required string image_width = 4;
+  required string image_size = 1;
+  required string class_prob = 2;
+  required string bbox_pred = 3;
+  required string anchors = 4;
   // out
   required string rois = 5;
   required string roi_probs = 6;
   // conf
-  required AnchorGeneratorConf anchor_generator_conf = 7;
-  required BBoxRegressionWeights bbox_reg_weights = 8;
-  required int32 pre_nms_top_n = 9;
-  required int32 post_nms_top_n = 10;
-  required float nms_threshold = 11;
-  optional int32 min_size = 12 [default = 0];
+  required BBoxRegressionWeights bbox_reg_weights = 7;
+  required int32 pre_nms_top_n = 8;
+  required int32 post_nms_top_n = 9;
+  required float nms_threshold = 10;
+  optional int32 min_size = 11 [default = 0];
 }
 
 message BBoxRegressionWeights {
@@ -1013,23 +1011,24 @@ message RoIAlignOpConf {
 
 message AnchorTargetOpConf {
   // in
-  required string gt_boxes = 1;
-  required string images = 2;
-  required string im_scale = 3;
+  required string images = 1;
+  required string image_size = 2;
+  required string gt_boxes = 3;
   // out
-  repeated string regression_targets = 4;
-  repeated string regression_weights = 5;
-  repeated string class_labels = 6;
-  repeated string class_weights = 7;
+  repeated string anchors = 4;
+  repeated string regression_targets = 5;
+  repeated string regression_weights = 6;
+  repeated string class_labels = 7;
+  repeated string class_weights = 8;
   // conf
-  repeated AnchorGeneratorConf anchor_generator_conf = 8;
-  required float positive_overlap_threshold = 9 [default = 0.7];
-  required float negative_overlap_threshold = 10 [default = 0.3];
-  required int32 total_subsample_num = 11 [default = 256];
-  required float foreground_fraction = 12 [default = 0.5];
-  required BBoxRegressionWeights bbox_reg_weights = 13;
-  optional float straddle_thresh = 14 [default = 0.0];
-  optional bool random_subsample = 15 [default = true];
+  repeated AnchorGeneratorConf anchor_generator_conf = 9;
+  required float positive_overlap_threshold = 10 [default = 0.7];
+  required float negative_overlap_threshold = 11 [default = 0.3];
+  required int32 total_subsample_num = 12 [default = 256];
+  required float foreground_fraction = 13 [default = 0.5];
+  required BBoxRegressionWeights bbox_reg_weights = 14;
+  optional float straddle_thresh = 15 [default = 0.0];
+  optional bool random_subsample = 16 [default = true];
 }
 
 message MatmulOpConf {
@@ -1147,12 +1146,11 @@ message MaskTargetOpConf {
   required string gt_boxes = 3;
   required string gt_segm_polygon_lists = 4;
   required string im_scale = 5;
-
   //outputs
   required string mask_rois = 6;
   required string masks = 7;
   required string mask_labels = 8;
-
+  // conf
   required int32 mask_height = 9;
   required int32 mask_width = 10;
 }
@@ -1383,11 +1381,10 @@ message CalculateScaleOpConf {
   required string origin_width = 2;
   // out
   required string scale = 3;
-  required string height = 4;
-  required string width = 5;
+  required string image_size = 4;
   // conf
-  required int32 target_size = 6;
-  required int32 max_size = 7;
+  required int32 target_size = 5;
+  required int32 max_size = 6;
 }
 
 message ReshapeInstanceShapeToDim0OpConf {
@@ -1407,8 +1404,13 @@ message ElementCountOpConf {
 message ConcatGtProposalsOpConf {
   required string in = 1;
   required string gt_boxes = 2;
-  required string im_scale = 3;
-  required string out = 4;
+  required string out = 3;
+}
+
+message GtBboxScaleOpConf {
+  required string in = 1;
+  required string scale = 2;
+  required string out = 3;
 }
 
 message OperatorConf {
@@ -1535,6 +1537,7 @@ message OperatorConf {
     Conv2DV2OpConf conv_2d_v2_conf = 293;
     Conv3DV2OpConf conv_3d_v2_conf = 294;
     ConcatGtProposalsOpConf concat_gt_proposals_conf = 295;
+    GtBboxScaleOpConf gt_bbox_scale_conf = 296;
 
     // Maybe not needed
     RedefineDim0OpConf redefine_dim0_conf = 400;

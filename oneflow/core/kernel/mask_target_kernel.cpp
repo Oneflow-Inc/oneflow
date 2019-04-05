@@ -10,33 +10,17 @@ namespace {
 template<typename T>
 void ScaleSegmPolygonLists(const Blob* scale_blob, std::vector<std::vector<PolygonList>>* segms) {
   FOR_RANGE(size_t, n, 0, segms->size()) {
-    const T scale = *scale_blob->dptr<T>(n);
+    const T y_scale = scale_blob->dptr<T>(n)[0];
+    const T x_scale = scale_blob->dptr<T>(n)[1];
     FOR_RANGE(size_t, g, 0, segms->at(n).size()) {
       FOR_RANGE(size_t, p, 0, segms->at(n).at(g).polygons_size()) {
         FOR_RANGE(size_t, i, 0, segms->at(n).at(g).polygons(p).value_size()) {
+          const T scale = i % 2 == 0 ? x_scale : y_scale;
           segms->at(n).at(g).mutable_polygons(p)->set_value(
               i, scale * segms->at(n).at(g).polygons(p).value(i));
         }
       }
     }
-  }
-}
-
-template<typename T>
-void ScaleGtBoxes(const Blob* gt_boxes_blob, const Blob* scale_blob, Blob* gt_boxes_scaled_blob) {
-  const T* gt_boxes_ptr = gt_boxes_blob->dptr<T>();
-  T* gt_boxes_scaled_ptr = gt_boxes_scaled_blob->mut_dptr<T>();
-  FOR_RANGE(int32_t, i, 0, gt_boxes_blob->shape().At(0)) {
-    const T scale = scale_blob->dptr<T>()[i];
-    const int32_t num_gt_boxes = gt_boxes_blob->dim1_valid_num(i);
-    const int32_t max_num_gt_boxes = gt_boxes_blob->static_shape().At(1);
-    FOR_RANGE(int32_t, j, 0, num_gt_boxes) {
-      FOR_RANGE(int32_t, k, 0, 4) {
-        int32_t offset = (i * max_num_gt_boxes + j) * 4 + k;
-        gt_boxes_scaled_ptr[offset] = gt_boxes_ptr[offset] * scale;
-      }
-    }
-    gt_boxes_scaled_blob->set_dim1_valid_num(i, num_gt_boxes);
   }
 }
 
@@ -58,8 +42,6 @@ void MaskTargetKernel<T>::ForwardDataContent(
   Blob* masks_blob = BnInOp2Blob("masks");
   Blob* mask_rois_blob = BnInOp2Blob("mask_rois");
   Blob* mask_labels_blob = BnInOp2Blob("mask_labels");
-  // data tmp blobs
-  Blob* gt_boxes_scaled_blob = BnInOp2Blob("gt_boxes_scaled");
   // const buf blobs
   const auto mask_h = static_cast<size_t>(masks_blob->static_shape().At(1));
   const auto mask_w = static_cast<size_t>(masks_blob->static_shape().At(2));
@@ -68,8 +50,6 @@ void MaskTargetKernel<T>::ForwardDataContent(
 
   ParseSegmPolygonLists(gt_segms_blob, &segms);
   ScaleSegmPolygonLists<T>(im_scale_blob, &segms);
-  // ComputeSegmBBoxes(segms, gt_bboxes_blob);
-  ScaleGtBoxes<T>(gt_boxes_blob, im_scale_blob, gt_boxes_scaled_blob);
 
   const int64_t num_rois = rois_blob->shape().At(0);
   CHECK_GT(num_rois, 0);
@@ -95,8 +75,8 @@ void MaskTargetKernel<T>::ForwardDataContent(
     const RoiBBox& fg_roi = roi_bboxes[roi_idx];
     const int32_t img_idx = fg_roi.index();
     CHECK_GE(img_idx, 0);
-    CHECK_LT(img_idx, gt_boxes_scaled_blob->shape().At(0));
-    CHECK_GE(gt_boxes_scaled_blob->dim1_valid_num(img_idx), 1);
+    CHECK_LT(img_idx, gt_boxes_blob->shape().At(0));
+    CHECK_GE(gt_boxes_blob->dim1_valid_num(img_idx), 1);
     mask_roi_bboxes[mask_idx].elem() = fg_roi.elem();
     *mask_labels_blob->mut_dptr<int32_t>(mask_idx) = label;
     CopyRecordIdIfNeed(roi_idx, mask_idx);
@@ -107,8 +87,8 @@ void MaskTargetKernel<T>::ForwardDataContent(
     const RoiBBox& roi = mask_roi_bboxes[idx];
     const int32_t img_idx = roi.index();
     const size_t max_iou_gt_idx =
-        GetMaxOverlapIndex(roi, SegmBBox::Cast(gt_boxes_scaled_blob->mut_dptr<float>(img_idx)),
-                           static_cast<size_t>(gt_boxes_scaled_blob->dim1_valid_num(img_idx)));
+        GetMaxOverlapIndex(roi, SegmBBox::Cast(gt_boxes_blob->dptr<float>(img_idx)),
+                           static_cast<size_t>(gt_boxes_blob->dim1_valid_num(img_idx)));
     Segm2Mask(segms.at(static_cast<size_t>(img_idx)).at(max_iou_gt_idx), roi, mask_h, mask_w,
               masks_blob->mut_dptr<int32_t>(idx));
   });
@@ -128,16 +108,6 @@ template<typename T>
 void MaskTargetKernel<T>::ForwardRecordIdInDevicePiece(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // do nothing here because it will be set in ForwardDataContent
-}
-
-template<typename T>
-void MaskTargetKernel<T>::ComputeSegmBBoxes(const std::vector<std::vector<PolygonList>>& segms,
-                                            Blob* bboxes) const {
-  FOR_RANGE(size_t, n, 0, segms.size()) {
-    bboxes->set_dim1_valid_num(n, segms.at(n).size());
-    SegmBBox* bboxes_ptr = SegmBBox::Cast(bboxes->mut_dptr<float>(n));
-    FOR_RANGE(size_t, g, 0, segms.at(n).size()) { Segm2BBox(segms.at(n).at(g), &bboxes_ptr[g]); }
-  }
 }
 
 template<typename T>
