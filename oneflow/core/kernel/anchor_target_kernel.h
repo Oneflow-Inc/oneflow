@@ -19,15 +19,17 @@ class AnchorTargetKernel final : public KernelIf<DeviceType::kCPU> {
  private:
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
-  void ForwardDim0ValidNum(const KernelCtx&,
-                           std::function<Blob*(const std::string&)>) const override;
+  //   void ForwardDim0ValidNum(const KernelCtx&,
+  //                            std::function<Blob*(const std::string&)>) const override;
   void ForwardInstanceShape(const KernelCtx& ctx,
                             std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
   void ClearOutputBlobs(DeviceCtx* ctx,
                         const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  void GenerateAnchorBoxes(DeviceCtx* ctx,
-                           const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  void ConcatAnchors(DeviceCtx* ctx,
+                     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  //   void GenerateAnchorBoxes(DeviceCtx* ctx,
+  //                            const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   void ExcludeOutsideAnchorBoxes(DeviceCtx* ctx, int64_t im_index,
                                  const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   void CalcMaxOverlapAndSetPositiveLabels(

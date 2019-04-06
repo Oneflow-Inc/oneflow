@@ -9,8 +9,9 @@ void AnchorTargetOp::InitFromOpConf() {
   EnrollInputBn("images", false);
   EnrollInputBn("image_size", false);
   EnrollInputBn("gt_boxes", false);
+  EnrollRepeatedInputBn("anchors", false);
+  EnrollRepeatedInputBn("anchors_info", false);
 
-  EnrollRepeatedOutputBn("anchors", false);
   EnrollRepeatedOutputBn("regression_targets", false);
   EnrollRepeatedOutputBn("regression_weights", false);
   EnrollRepeatedOutputBn("class_labels", false);
@@ -30,10 +31,13 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
                                     const ParallelContext* parallel_ctx) const {
   const AnchorTargetOpConf& conf = op_conf().anchor_target_conf();
   const size_t num_layers = conf.anchor_generator_conf_size();
+  CHECK_EQ(conf.anchors_size(), num_layers);
+  CHECK_EQ(conf.anchors_info_size(), num_layers);
   CHECK_EQ(conf.regression_targets_size(), num_layers);
   CHECK_EQ(conf.regression_weights_size(), num_layers);
   CHECK_EQ(conf.class_labels_size(), num_layers);
   CHECK_EQ(conf.class_weights_size(), num_layers);
+
   // input: images (N, H, W, C)
   const BlobDesc* images_blob_desc = GetBlobDesc4BnInOp("images");
   CHECK(!images_blob_desc->has_dim0_valid_num_field());
@@ -53,6 +57,18 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   CHECK_EQ(gt_boxes_blob_desc->shape().At(0), num_images);
   CHECK_EQ(gt_boxes_blob_desc->data_type(), data_type);
 
+  std::vector<size_t> anchors_dim0_static_num(num_layers, 0);
+  FOR_RANGE(size_t, layer, 0, num_layers) {
+    // repeated input: anchors (num_anchors_per_layer, 4)
+    const BlobDesc* anchors_i_blob = GetBlobDesc4BnInOp(GenRepeatedBn("anchors", layer));
+    anchors_dim0_static_num[layer] = anchors_i_blob->shape().At(0);
+    CHECK_EQ(anchors_i_blob->data_type(), data_type);
+    // repeated input: anchors_info (3,)
+    const BlobDesc* anchors_info_i_blob = GetBlobDesc4BnInOp(GenRepeatedBn("anchors_info", layer));
+    CHECK_EQ(anchors_info_i_blob->shape(), Shape({3}));
+    CHECK_EQ(anchors_info_i_blob->data_type(), DataType::kInt32);
+  }
+
   const int64_t batch_height = images_blob_desc->shape().At(1);
   const int64_t batch_width = images_blob_desc->shape().At(2);
   int64_t total_num_anchors = 0;
@@ -62,34 +78,31 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
         anchor_generator_conf.anchor_scales_size() * anchor_generator_conf.aspect_ratios_size();
     const float fm_stride = anchor_generator_conf.feature_map_stride();
     CHECK_GT(fm_stride, 0);
-    const int64_t height = std::ceil(batch_height / fm_stride);
-    const int64_t width = std::ceil(batch_width / fm_stride);
-    CHECK_GT(height, 0);
-    CHECK_GT(width, 0);
-    int64_t num_anchors_per_layer = height * width * num_anchors_per_cell;
-    // repeat output: anchors (h_i * w_i * A, 4) int32_t
-    BlobDesc* anchors_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn("anchors", layer));
-    anchors_blob_desc->set_data_type(data_type);
-    anchors_blob_desc->mut_shape() = Shape({num_anchors_per_layer, 4});
-    anchors_blob_desc->set_has_dim0_valid_num_field(true);
-    anchors_blob_desc->mut_dim0_inner_shape() = Shape({1, num_anchors_per_layer});
-    // repeat output: class_labels (N, h_i, w_i, A) int32_t
+    const int64_t fm_height = std::ceil(batch_height / fm_stride);
+    const int64_t fm_width = std::ceil(batch_width / fm_stride);
+    CHECK_GT(fm_height, 0);
+    CHECK_GT(fm_width, 0);
+    int64_t num_anchors_per_layer = fm_height * fm_width * num_anchors_per_cell;
+    CHECK_LE(num_anchors_per_layer, anchors_dim0_static_num[layer]);
+
+    // repeated output: class_labels (N, h_i, w_i, A) int32_t
     BlobDesc* class_labels_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn("class_labels", layer));
     class_labels_blob_desc->set_data_type(DataType::kInt32);
-    class_labels_blob_desc->mut_shape() = Shape({num_images, height, width, num_anchors_per_cell});
+    class_labels_blob_desc->mut_shape() =
+        Shape({num_images, fm_height, fm_width, num_anchors_per_cell});
     class_labels_blob_desc->set_has_instance_shape_field(
         images_blob_desc->has_instance_shape_field());
-    // repeat output: class_weights (N, h_i, w_i, A) T
+    // repeated output: class_weights (N, h_i, w_i, A) T
     BlobDesc* class_weights_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn("class_weights", layer));
     *class_weights_blob_desc = *class_labels_blob_desc;
     class_weights_blob_desc->set_data_type(data_type);
-    // repeat output: regression_targets (N, h_i, w_i, 4 * A) T
+    // repeated output: regression_targets (N, h_i, w_i, 4 * A) T
     BlobDesc* regression_targets_blob_desc =
         GetBlobDesc4BnInOp(GenRepeatedBn("regression_targets", layer));
     *regression_targets_blob_desc = *class_weights_blob_desc;
     regression_targets_blob_desc->mut_shape() =
-        Shape({num_images, height, width, num_anchors_per_cell * 4});
-    // repeat output: regression_weights same as regression_targets
+        Shape({num_images, fm_height, fm_width, num_anchors_per_cell * 4});
+    // repeated output: regression_weights same as regression_targets
     *GetBlobDesc4BnInOp(GenRepeatedBn("regression_weights", layer)) = *regression_targets_blob_desc;
 
     total_num_anchors += num_anchors_per_layer;

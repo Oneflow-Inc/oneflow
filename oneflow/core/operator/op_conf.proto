@@ -931,15 +931,6 @@ message BboxNmsAndLimitOpConf {
   optional BboxVoteConf bbox_vote = 15;
 }
 
-// TODO: remove later
-message AnchorGeneratorConf {
-  required int32 feature_map_stride = 1 [default = 16];
-  repeated float aspect_ratios = 2;
-  repeated float anchor_scales = 3;
-  // optional int32 image_height = 4;
-  // optional int32 image_width = 5;
-}
-
 message ProposalOpConf {
   // in
   required string image_size = 1;
@@ -1022,26 +1013,33 @@ message AnchorGenerateOpConf {
   required string anchors_info = 6;
 }
 
+message AnchorGeneratorConf {
+  required int32 feature_map_stride = 1 [default = 16];
+  repeated float aspect_ratios = 2;
+  repeated float anchor_scales = 3;
+}
+
 message AnchorTargetOpConf {
   // in
   required string images = 1;
   required string image_size = 2;
   required string gt_boxes = 3;
-  // out
   repeated string anchors = 4;
-  repeated string regression_targets = 5;
-  repeated string regression_weights = 6;
-  repeated string class_labels = 7;
-  repeated string class_weights = 8;
+  repeated string anchors_info = 5;
+  // out
+  repeated string regression_targets = 6;
+  repeated string regression_weights = 7;
+  repeated string class_labels = 8;
+  repeated string class_weights = 9;
   // conf
-  repeated AnchorGeneratorConf anchor_generator_conf = 9;
-  required float positive_overlap_threshold = 10 [default = 0.7];
-  required float negative_overlap_threshold = 11 [default = 0.3];
-  required int32 total_subsample_num = 12 [default = 256];
-  required float foreground_fraction = 13 [default = 0.5];
-  required BBoxRegressionWeights bbox_reg_weights = 14;
-  optional float straddle_thresh = 15 [default = 0.0];
-  optional bool random_subsample = 16 [default = true];
+  repeated AnchorGeneratorConf anchor_generator_conf = 10;
+  required float positive_overlap_threshold = 11 [default = 0.7];
+  required float negative_overlap_threshold = 12 [default = 0.3];
+  required int32 total_subsample_num = 13 [default = 256];
+  required float foreground_fraction = 14 [default = 0.5];
+  required BBoxRegressionWeights bbox_reg_weights = 15;
+  optional float straddle_thresh = 16 [default = 0.0];
+  optional bool random_subsample = 17 [default = true];
 }
 
 message MatmulOpConf {

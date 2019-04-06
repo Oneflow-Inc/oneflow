@@ -46,19 +46,13 @@ size_t SubsampleNegative(size_t neg_cnt, std::vector<int32_t>& neg_inds, float t
 template<typename T>
 void AnchorTargetKernel<T>::ForwardInstanceShape(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const AnchorTargetOpConf& conf = op_conf().anchor_target_conf();
-  const Blob* images_blob = BnInOp2Blob("images");
-  const int32_t image_height = images_blob->shape().At(1);
-  const int32_t image_width = images_blob->shape().At(2);
-  FOR_RANGE(size_t, i, 0, conf.anchor_generator_conf_size()) {
-    const auto& anchor_generator_conf = conf.anchor_generator_conf(i);
-    const int64_t num_anchors_per_cell =
-        anchor_generator_conf.anchor_scales_size() * anchor_generator_conf.aspect_ratios_size();
-    const float fm_stride = anchor_generator_conf.feature_map_stride();
-    const int64_t height = std::ceil(image_height / fm_stride);
-    const int64_t width = std::ceil(image_width / fm_stride);
-    Shape class_shape({height, width, num_anchors_per_cell});
-    Shape regression_shape({height, width, num_anchors_per_cell * 4});
+  FOR_RANGE(size_t, i, 0, op_conf().anchor_target_conf().anchors_info_size()) {
+    Blob* anchors_info_i_blob = BnInOp2Blob("anchors_info_" + std::to_string(i));
+    const int32_t fm_height = anchors_info_i_blob->dptr<int32_t>()[0];
+    const int32_t fm_width = anchors_info_i_blob->dptr<int32_t>()[1];
+    const int32_t num_anchors_per_cell = anchors_info_i_blob->dptr<int32_t>()[2];
+    Shape class_shape({fm_height, fm_width, num_anchors_per_cell});
+    Shape regression_shape({fm_height, fm_width, num_anchors_per_cell * 4});
     BnInOp2Blob("regression_targets_" + std::to_string(i))->set_instance_shape(regression_shape);
     BnInOp2Blob("regression_weights_" + std::to_string(i))->set_instance_shape(regression_shape);
     BnInOp2Blob("class_labels_" + std::to_string(i))->set_instance_shape(class_shape);
@@ -67,29 +61,10 @@ void AnchorTargetKernel<T>::ForwardInstanceShape(
 }
 
 template<typename T>
-void AnchorTargetKernel<T>::ForwardDim0ValidNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const AnchorTargetOpConf& conf = op_conf().anchor_target_conf();
-  const Blob* images_blob = BnInOp2Blob("images");
-  const int32_t image_height = images_blob->shape().At(1);
-  const int32_t image_width = images_blob->shape().At(2);
-  FOR_RANGE(int32_t, i, 0, conf.anchor_generator_conf_size()) {
-    const auto& anchor_generator_conf = conf.anchor_generator_conf(i);
-    const int64_t num_anchors_per_cell =
-        anchor_generator_conf.anchor_scales_size() * anchor_generator_conf.aspect_ratios_size();
-    const float fm_stride = anchor_generator_conf.feature_map_stride();
-    const int64_t height = std::ceil(image_height / fm_stride);
-    const int64_t width = std::ceil(image_width / fm_stride);
-    BnInOp2Blob("anchors_" + std::to_string(i))
-        ->set_dim0_valid_num(0, height * width * num_anchors_per_cell);
-  }
-}
-
-template<typename T>
 void AnchorTargetKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   ClearOutputBlobs(ctx.device_ctx, BnInOp2Blob);
-  GenerateAnchorBoxes(ctx.device_ctx, BnInOp2Blob);
+  ConcatAnchors(ctx.device_ctx, BnInOp2Blob);
   FOR_RANGE(int64_t, im_index, 0, BnInOp2Blob("images")->shape().At(0)) {
     CalcMaxOverlapAndSetPositiveLabels(ctx.device_ctx, im_index, BnInOp2Blob);
     ExcludeOutsideAnchorBoxes(ctx.device_ctx, im_index, BnInOp2Blob);
@@ -101,16 +76,12 @@ void AnchorTargetKernel<T>::ForwardDataContent(
 template<typename T>
 void AnchorTargetKernel<T>::ClearOutputBlobs(
     DeviceCtx* ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  const AnchorTargetOpConf& conf = op_conf().anchor_target_conf();
-  FOR_RANGE(size_t, i, 0, conf.anchor_generator_conf_size()) {
-    Blob* anchors_i_blob = BnInOp2Blob("anchors_" + std::to_string(i));
+  FOR_RANGE(size_t, i, 0, op_conf().anchor_target_conf().anchor_generator_conf_size()) {
     Blob* regression_targets_i_blob = BnInOp2Blob("regression_targets_" + std::to_string(i));
     Blob* regression_weights_i_blob = BnInOp2Blob("regression_weights_" + std::to_string(i));
     Blob* class_labels_i_blob = BnInOp2Blob("class_labels_" + std::to_string(i));
     Blob* class_weights_i_blob = BnInOp2Blob("class_weights_" + std::to_string(i));
 
-    Memset<DeviceType::kCPU>(ctx, anchors_i_blob->mut_dptr<T>(), 0,
-                             anchors_i_blob->ByteSizeOfDataContentField());
     Memset<DeviceType::kCPU>(ctx, regression_targets_i_blob->mut_dptr<T>(), 0,
                              regression_targets_i_blob->ByteSizeOfDataContentField());
     Memset<DeviceType::kCPU>(ctx, regression_weights_i_blob->mut_dptr<T>(), 0,
@@ -123,22 +94,16 @@ void AnchorTargetKernel<T>::ClearOutputBlobs(
 }
 
 template<typename T>
-void AnchorTargetKernel<T>::GenerateAnchorBoxes(
+void AnchorTargetKernel<T>::ConcatAnchors(
     DeviceCtx* ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  const Blob* images_blob = BnInOp2Blob("images");  // shape (N, H, W, C)
   Blob* anchor_boxes_blob = BnInOp2Blob("anchor_boxes");
-
-  const int64_t im_height = images_blob->shape().At(1);
-  const int64_t im_width = images_blob->shape().At(2);
   size_t num_anchors = 0;
-  for (const AnchorGeneratorConf& anchor_generator_conf :
-       op_conf().anchor_target_conf().anchor_generator_conf()) {
-    float fm_stride = anchor_generator_conf.feature_map_stride();
-    auto scales_vec = PbRf2StdVec(anchor_generator_conf.anchor_scales());
-    auto ratios_vec = PbRf2StdVec(anchor_generator_conf.aspect_ratios());
-    num_anchors +=
-        BBoxUtil<MutBBox>::GenerateAnchors(im_height, im_width, fm_stride, scales_vec, ratios_vec,
-                                           anchor_boxes_blob->mut_dptr<T>(num_anchors));
+  FOR_RANGE(size_t, i, 0, op_conf().anchor_target_conf().anchors_size()) {
+    Blob* anchors_i_blob = BnInOp2Blob("anchors_" + std::to_string(i));
+    const size_t num_anchors_per_layer = anchors_i_blob->dim0_valid_num(0);
+    Memcpy<DeviceType::kCPU>(ctx, anchor_boxes_blob->mut_dptr<T>() + num_anchors * 4,
+                             anchors_i_blob->dptr<T>(), num_anchors_per_layer * 4 * sizeof(T));
+    num_anchors += num_anchors_per_layer;
   }
   CHECK_LE(num_anchors, anchor_boxes_blob->static_shape().At(0));
   anchor_boxes_blob->set_dim0_valid_num(0, num_anchors);
@@ -270,19 +235,10 @@ void AnchorTargetKernel<T>::OutputForEachImage(
 
   size_t bbox_cnt = 0;
   FOR_RANGE(size_t, i, 0, conf.anchor_generator_conf_size()) {
-    Blob* anchors_i_blob = BnInOp2Blob("anchors_" + std::to_string(i));
     Blob* regression_targets_i_blob = BnInOp2Blob("regression_targets_" + std::to_string(i));
     Blob* regression_weights_i_blob = BnInOp2Blob("regression_weights_" + std::to_string(i));
     Blob* class_labels_i_blob = BnInOp2Blob("class_labels_" + std::to_string(i));
     Blob* class_weights_i_blob = BnInOp2Blob("class_weights_" + std::to_string(i));
-
-    const size_t num_bbox = anchors_i_blob->dim0_valid_num(0);
-    CHECK_EQ(num_bbox, class_labels_i_blob->shape().Count(1, 4));
-    CHECK_EQ(num_bbox, class_weights_i_blob->shape().Count(1, 4));
-    CHECK_EQ(num_bbox * 4, regression_targets_i_blob->shape().Count(1, 4));
-    CHECK_EQ(num_bbox * 4, regression_weights_i_blob->shape().Count(1, 4));
-    Memcpy<DeviceType::kCPU>(ctx, anchors_i_blob->mut_dptr<T>(), anchor_boxes_ptr + bbox_cnt * 4,
-                             num_bbox * 4 * sizeof(T));
 
     int32_t* cur_layer_class_labels_ptr = class_labels_i_blob->mut_dptr<int32_t>(im_index);
     T* cur_layer_class_weights_ptr = class_weights_i_blob->mut_dptr<T>(im_index);
@@ -291,6 +247,7 @@ void AnchorTargetKernel<T>::OutputForEachImage(
     auto* cur_layer_reg_weights =
         BBoxWeights<T>::Cast(regression_weights_i_blob->mut_dptr<T>(im_index));
 
+    const size_t num_bbox = BnInOp2Blob("anchors_" + std::to_string(i))->dim0_valid_num(0);
     FOR_RANGE(size_t, j, 0, num_bbox) {
       int32_t anchor_idx = bbox_cnt + j;
       int32_t anchor_label = anchor_labels_ptr[anchor_idx];
