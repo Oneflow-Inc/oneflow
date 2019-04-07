@@ -28,7 +28,8 @@ class Matmul_MS_MS_2_P_SbpSignatureRule final : public ParallelSbpSignatureRule 
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     int32_t a_split_axis = (op().op_conf().matmul_conf().transpose_a() ? 0 : 1);
     (*bn2sbp)["a"].mutable_split_parallel()->set_axis(a_split_axis);
     (*bn2sbp)["b"] = SbpInferHint4Ibn("b").sbp_parallel();

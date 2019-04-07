@@ -37,7 +37,8 @@ class BroadcastBinarySbpSignatureRule final : public ParallelSbpSignatureRule {
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     for (const auto& bn : op().input_bns()) {
       if (model_input_bns_.find(bn) != model_input_bns_.end()) {
         (*bn2sbp)[bn].mutable_broadcast_parallel();

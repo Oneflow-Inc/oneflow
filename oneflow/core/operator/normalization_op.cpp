@@ -28,7 +28,8 @@ class NormalizationDataParallelSbpSignatureRule final : public ParallelSbpSignat
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     const NormalizationOpConf& conf = op().op_conf().normalization_conf();
     (*bn2sbp)["in"].mutable_split_parallel()->set_axis(0);
     (*bn2sbp)["out"].mutable_split_parallel()->set_axis(0);

@@ -34,7 +34,8 @@ class ShapeElemCntOpSplitSbpSignatureRule final : public ParallelSbpSignatureRul
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     (*bn2sbp)["x"] = SbpInferHint4BnInOp("x").sbp_parallel();
     (*bn2sbp)["y"].mutable_partial_sum_parallel();
   }
@@ -69,7 +70,8 @@ class ShapeElemCntOpBroadcastSbpSignatureRule final : public ParallelSbpSignatur
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     (*bn2sbp)["x"].mutable_broadcast_parallel();
     (*bn2sbp)["y"].mutable_broadcast_parallel();
   }

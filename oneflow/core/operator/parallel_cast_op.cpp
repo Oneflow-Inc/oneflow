@@ -39,7 +39,8 @@ class ParallelCastSbpSignatureRule final : public ParallelSbpSignatureRule {
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     const auto& sbp_parallel = GetSbpParallel(op().op_conf().parallel_cast_conf());
     (*bn2sbp)["in"] = sbp_parallel;
     (*bn2sbp)["out"] = sbp_parallel;

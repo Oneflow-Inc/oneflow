@@ -21,7 +21,8 @@ class LossPrintSbpSignatureRule final : public ParallelSbpSignatureRule {
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     (*bn2sbp)["loss_acc"].mutable_broadcast_parallel();
     (*bn2sbp)["loss_instance_num"].mutable_broadcast_parallel();
     if (op().op_conf().loss_print_conf().has_reduction_lbi()) {

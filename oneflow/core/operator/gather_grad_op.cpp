@@ -33,7 +33,8 @@ class GatherGradDataParallelSbpSignatureRule final : public ParallelSbpSignature
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     const int64_t indices_split_axis =
         SbpInferHint4BnInOp("indices").sbp_parallel().split_parallel().axis();
     (*bn2sbp)["indices"].mutable_split_parallel()->set_axis(indices_split_axis);
@@ -74,7 +75,8 @@ class GatherGradModelParallelSbpSignatureRule final : public ParallelSbpSignatur
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     const int64_t out_diff_split_axis =
         SbpInferHint4BnInOp("out_diff").sbp_parallel().split_parallel().axis();
     (*bn2sbp)["indices"].mutable_broadcast_parallel();

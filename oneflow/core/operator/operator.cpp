@@ -166,8 +166,8 @@ void Operator::GetSbpSignatureRulesIf(
   GetSbpSignatureRules(rules);
 }
 
-void Operator::InferInputOutputSbpParallelIf(
-    std::function<SbpParallel*(const std::string&)> SbpParallel4BnInOp,
+void Operator::InferSbpSignatureIf(
+    SbpSignature* sbp_signature,
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   std::vector<std::unique_ptr<const SbpSignatureRule>> rules;
@@ -185,12 +185,7 @@ void Operator::InferInputOutputSbpParallelIf(
     FOR_RANGE(int32_t, i, 0, rules.size()) {
       if (match_results.at(i).has_success()) { match_signature = rules.at(i).get(); }
     }
-    HashMap<std::string, SbpParallel> bn2sbp;
-    match_signature->GenerateSignature(SbpInferHint4Ibn, &bn2sbp);
-    for (const auto& pair : bn2sbp) {
-      auto* sbp_parallel = SbpParallel4BnInOp(pair.first);
-      *sbp_parallel = pair.second;
-    }
+    match_signature->GenerateSignature(SbpInferHint4Ibn, sbp_signature);
   } else if (match_success_cnt == 0) {
     std::stringstream ss;
     FOR_RANGE(int32_t, i, 0, rules.size()) {

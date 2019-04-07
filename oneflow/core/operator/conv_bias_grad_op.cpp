@@ -23,7 +23,8 @@ class ConvBiasGradDataParallelSbpSignatureRule final : public ParallelSbpSignatu
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     (*bn2sbp)["dy"].mutable_split_parallel()->set_axis(0);
     (*bn2sbp)["bias_diff"].mutable_partial_sum_parallel();
   }
@@ -48,7 +49,8 @@ class ConvBiasGradModelParallelSbpSignatureRule final : public ParallelSbpSignat
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     const ConvBiasGradOpConf& conf = op().op_conf().conv_bias_grad_conf();
     if (conf.data_format() == "channels_first") {
       (*bn2sbp)["dy"].mutable_split_parallel()->set_axis(1);

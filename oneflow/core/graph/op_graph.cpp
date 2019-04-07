@@ -22,11 +22,13 @@ bool OpNode::IsModelBlob4Lbi(const LogicalBlobId& lbi) const {
 }
 
 const SbpParallel& OpNode::SbpParallel4Lbi(const LogicalBlobId& lbi) const {
-  return lbi2sbp_parallel_.at(lbi);
-}
-
-SbpParallel* OpNode::MutSbpParallel4Lbi(const LogicalBlobId& lbi) {
-  return &lbi2sbp_parallel_[lbi];
+  for (const auto& ibn : op().input_bns()) {
+    if (op().BnInOp2Lbi(ibn) == lbi) { return sbp_signature_.bn_in_op2sbp_parallel().at(ibn); }
+  }
+  for (const auto& obn : op().input_bns()) {
+    if (op().BnInOp2Lbi(obn) == lbi) { return sbp_signature_.bn_in_op2sbp_parallel().at(obn); }
+  }
+  UNIMPLEMENTED();
 }
 
 std::string OpNode::VisualStr() const {
@@ -255,7 +257,7 @@ void OpGraph::Init(const Job& job) {
   InferTimeShape();
   InferNoParallelBlobDesc();
   InferIsModelBlob();
-  InferSbpParallel();
+  InferSbpSignature();
   InferLogicalBlobDesc();
 }
 
@@ -348,7 +350,7 @@ void OpGraph::InferIsModelBlob() const {
   });
 }
 
-void OpGraph::InferSbpParallel() const {
+void OpGraph::InferSbpSignature() const {
   TopoForEachNode([&](OpNode* op_node) {
     HashMap<std::string, SbpInferHint> ibn2sbp_infer_hint;
     for (const std::string& ibn : op_node->op().input_bns()) {
@@ -360,15 +362,12 @@ void OpGraph::InferSbpParallel() const {
       const auto& sbp = producer->SbpParallel4Lbi(lbi);
       ibn2sbp_infer_hint.emplace(ibn, SbpInferHint(is_model_blob, parallel_desc, num_axes, sbp));
     }
-    auto SbpParallel4BnInOp = [&](const std::string& bn) -> SbpParallel* {
-      return op_node->MutSbpParallel4Lbi(op_node->op().BnInOp2Lbi(bn));
-    };
+    SbpSignature* sbp_signature = op_node->mut_sbp_signature();
     auto SbpInferHint4Ibn = [&](const std::string& ibn) -> const SbpInferHint& {
       return ibn2sbp_infer_hint.at(ibn);
     };
-    op_node->op().InferInputOutputSbpParallelIf(SbpParallel4BnInOp, SbpInferHint4Ibn,
-                                                op_node->parallel_desc());
-    op_node->op().FixInputOutputSbpParallel(SbpParallel4BnInOp);
+    op_node->op().InferSbpSignatureIf(sbp_signature, SbpInferHint4Ibn, op_node->parallel_desc());
+    op_node->op().FixSbpSignature(sbp_signature);
   });
 }
 

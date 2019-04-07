@@ -32,7 +32,8 @@ class Conv_DB_2_S_SbpSignatureRule final : public ParallelSbpSignatureRule {
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     (*bn2sbp)["in"].mutable_broadcast_parallel();
     (*bn2sbp)["out"].mutable_split_parallel()->set_axis(
         op().OutputBlobModelSplitAxis(SbpInferHint4Ibn, "out"));

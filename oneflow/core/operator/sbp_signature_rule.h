@@ -20,7 +20,7 @@ class SbpSignatureRule {
       const ParallelDesc& parallel_desc) const = 0;
   virtual void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      HashMap<std::string, SbpParallel>* bn2sbp) const = 0;
+      SbpSignature* sbp_signature) const = 0;
 
  protected:
   SbpSignatureRule(const Operator* op) : op_(op) {}

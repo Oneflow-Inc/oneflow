@@ -24,7 +24,8 @@ class NormalizationGradDataParallelSbpSignatureRule final : public ParallelSbpSi
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     const NormalizationGradOpConf& conf = op().op_conf().normalization_grad_conf();
     (*bn2sbp)["dy"].mutable_split_parallel()->set_axis(0);
     if (conf.has_dx()) { (*bn2sbp)["dx"].mutable_split_parallel()->set_axis(0); }

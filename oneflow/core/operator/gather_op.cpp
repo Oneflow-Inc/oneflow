@@ -41,7 +41,8 @@ class GatherDataParallelSbpSignatureRule final : public ParallelSbpSignatureRule
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     const int64_t gather_axis =
         GetGatherAxis(op().op_conf().gather_conf(), SbpInferHint4BnInOp("in").num_axes());
     const int64_t indices_split_axis =
@@ -83,7 +84,8 @@ class GatherModelParallelSbpSignatureRule final : public ParallelSbpSignatureRul
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     const int64_t gather_axis =
         GetGatherAxis(op().op_conf().gather_conf(), SbpInferHint4BnInOp("in").num_axes());
     const int64_t in_split_axis = SbpInferHint4BnInOp("in").sbp_parallel().split_parallel().axis();

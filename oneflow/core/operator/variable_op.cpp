@@ -27,7 +27,8 @@ class VariableOpDataSplitSbpSignatureRule final : public ParallelSbpSignatureRul
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     if (op().op_conf().variable_conf().has_tick()) {
       CHECK(SbpInferHint4Ibn("tick").is_data_split());
       (*bn2sbp)["tick"].mutable_split_parallel()->set_axis(0);
@@ -58,7 +59,8 @@ class VariableOpModelSplitSbpSignatureRule final : public ParallelSbpSignatureRu
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     if (op().op_conf().variable_conf().has_tick()) {
       CHECK(SbpInferHint4Ibn("tick").is_data_split());
       (*bn2sbp)["tick"].mutable_split_parallel()->set_axis(0);

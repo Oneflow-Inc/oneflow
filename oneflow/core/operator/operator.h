@@ -149,13 +149,11 @@ class Operator {
   virtual void InferOutputBlobTimeShape(
       std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
       Shape* time_shape) const;
-  // Infer blob's SbpParallel
-  void InferInputOutputSbpParallelIf(
-      std::function<SbpParallel*(const std::string&)> SbpParallel4BnInOp,
-      std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc) const;
-  virtual void FixInputOutputSbpParallel(
-      const std::function<SbpParallel*(const std::string&)>& SbpParallel4BnInOp) const {}
+  // Infer blob's SbpSignature
+  void InferSbpSignatureIf(SbpSignature* sbp_signature,
+                           std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+                           const ParallelDesc& parallel_desc) const;
+  virtual void FixSbpSignature(SbpSignature* sbp_signature) const {}
   // Infer is_model_blob
   void InferIsModelBlob4OutputBlobsIf(
       std::function<bool*(const std::string&)> IsModelBlob4BnInOp) const;

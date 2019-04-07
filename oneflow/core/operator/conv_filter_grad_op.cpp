@@ -25,7 +25,8 @@ class ConvFilterGradDataParallelSbpSignatureRule final : public ParallelSbpSigna
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     (*bn2sbp)["dy"].mutable_split_parallel()->set_axis(0);
     (*bn2sbp)["x"].mutable_split_parallel()->set_axis(0);
     (*bn2sbp)["filter_diff"].mutable_partial_sum_parallel();
@@ -51,7 +52,8 @@ class ConvFilterGradModelParallelSbpSignatureRule final : public ParallelSbpSign
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     const ConvConf& conf = op().op_conf().conv_filter_grad_conf().conv_conf();
     if (conf.data_format() == "channels_first") {
       (*bn2sbp)["dy"].mutable_split_parallel()->set_axis(1);

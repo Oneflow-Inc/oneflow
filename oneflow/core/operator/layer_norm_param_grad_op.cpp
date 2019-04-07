@@ -25,7 +25,8 @@ class LayerNormParamGradDataParallelSbpSignatureRule final : public ParallelSbpS
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     for (const std::string& ibn : op().input_bns()) {
       if (ibn == "gamma") {
         (*bn2sbp)[ibn].mutable_broadcast_parallel();
