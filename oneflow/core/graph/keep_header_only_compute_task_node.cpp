@@ -20,9 +20,7 @@ void KeepHeaderOnlyCompTaskNode::BuildExecGphAndRegst() {
   exec_node->BindBnsWithRegst(&Operator::input_bns, GetSoleConsumedRegst("in"));
 
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
-  for (const std::string& obn : op->output_bns()) {
-    out_regst->AddLbi(op->BnInOp2Lbi(obn));
-  }
+  for (const std::string& obn : op->output_bns()) { out_regst->AddLbi(op->BnInOp2Lbi(obn)); }
   exec_node->BindBnsWithRegst(&Operator::output_bns, out_regst);
   exec_node->InferBlobDescs(parallel_ctx());
 }
@@ -32,4 +30,3 @@ void KeepHeaderOnlyCompTaskNode::InferProducedDataRegstTimeShape() {
 }
 
 }  // namespace oneflow
-

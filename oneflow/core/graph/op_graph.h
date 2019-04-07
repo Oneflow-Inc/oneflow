@@ -108,7 +108,7 @@ class OpEdge final : public Edge<OpNode, OpEdge> {
 class OpGraph final : public Graph<OpNode, OpEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpGraph);
-  explicit OpGraph(const JobDesc* job_desc) : job_desc_(job_desc) { Init(); }
+  explicit OpGraph(const Job& job) { Init(job); }
   ~OpGraph() = default;
 
   void InferOpModelSize(HashMap<std::string, size_t>* op_name2model_size);
@@ -128,8 +128,8 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void ForEachPseudoChain(const std::function<void(const HashSet<OpNode*>&)>& Handler) const;
 
  private:
-  void Init();
-  void InitNodes();
+  void Init(const Job& job);
+  void InitNodes(const Job& job);
   void InitEdges();
   void FixOpParallelDesc() const;
   void UpdateOpNodeHasInDiff() const;
@@ -153,7 +153,6 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
       const std::function<void(const std::vector<OpNode*>&)>& Handler) const;
 
   int64_t GetSplitNum(const std::string& op_name, const LogicalBlobId& lbi) const;
-  const JobDesc* job_desc_;
   HashMap<std::string, OpNode*> op_name2op_node_;
 };
 

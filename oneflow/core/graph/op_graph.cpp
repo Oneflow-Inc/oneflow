@@ -234,7 +234,7 @@ void OpGraph::InferOpModelSize(HashMap<std::string, size_t>* op_name2model_size)
     size_t model_size = 0;
     for (const std::string& model_bn : op_node->op().model_bns()) {
       int64_t elem_cnt = op_node->NoParallelBlobDesc4BnInOp(model_bn)->shape().elem_cnt();
-      model_size += elem_cnt * GetSizeOfDataType(job_desc_->DefaultDataType());
+      model_size += elem_cnt * GetSizeOfDataType(Global<JobDesc>::Get()->DefaultDataType());
       model_size = RoundUp(model_size, kCudaAlignSize);
     }
     size_t parallel_num = op_node->parallel_desc().parallel_num();
@@ -245,8 +245,8 @@ void OpGraph::InferOpModelSize(HashMap<std::string, size_t>* op_name2model_size)
   });
 }
 
-void OpGraph::Init() {
-  InitNodes();
+void OpGraph::Init(const Job& job) {
+  InitNodes(job);
   ForEachNode(
       [&](OpNode* node) { CHECK(op_name2op_node_.emplace(node->op().op_name(), node).second); });
   InitEdges();
@@ -259,9 +259,9 @@ void OpGraph::Init() {
   InferLogicalBlobDesc();
 }
 
-void OpGraph::InitNodes() {
-  auto ParallelConf4OpName = MakeGetterParallelConf4OpName(job_desc_->placement());
-  for (const auto& op_conf : job_desc_->dlnet_conf().op()) {
+void OpGraph::InitNodes(const Job& job) {
+  auto ParallelConf4OpName = MakeGetterParallelConf4OpName(job.placement());
+  for (const auto& op_conf : job.net().op()) {
     OpNode* node = new OpNode(ParallelDesc(*ParallelConf4OpName(op_conf.name())), op_conf);
     AddAllocatedNode(node);
   }
@@ -394,8 +394,8 @@ void OpGraph::InferLogicalBlobDesc() const {
       parallel_ctx.set_parallel_id(parallel_id);
       parallel_ctx.set_parallel_num(parallel_num);
       parallel_ctx.set_policy(op_node->parallel_desc().policy());
-      op_node->op().InferBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx, job_desc_->RecordPieceSize(),
-                                     [](OpContext*) {});
+      op_node->op().InferBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx,
+                                     Global<JobDesc>::Get()->RecordPieceSize(), [](OpContext*) {});
     }
     op_node->ConcatLogicalOutputBlobDesc();
   });

@@ -5,7 +5,7 @@
 namespace oneflow {
 
 void SetBnValInOpTypeConf(PbMessage* pb_msg, const std::string& bn, const std::string& old_val,
-                       const std::string& new_val) {
+                          const std::string& new_val) {
   const PbFd* fd = pb_msg->GetDescriptor()->FindFieldByName(bn);
   if (fd) {
     CHECK_EQ(GetValFromPbMessage<std::string>(*pb_msg, bn), old_val);
