@@ -142,38 +142,38 @@ int32_t Operator::OutputBlobModelSplitAxis(
   }
 }
 
-void Operator::GetSbpSignatures(
-    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
+void Operator::GetSbpSignatureRules(
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   bool has_model = !(model_bns().empty() && const_model_bns().empty());
-  op_parallel_signatures->emplace_back(MakeDataSplitSbpSignature(this));
+  rules->emplace_back(MakeDataSplitSbpSignatureRule(this));
   if (IsSoleInputBlobAllowedModelSplit()) {
     CHECK(!has_model);
-    op_parallel_signatures->emplace_back(MakeModelSplitSbpSignature(this));
-    op_parallel_signatures->emplace_back(MakeBroadcastSbpSignature(this));
+    rules->emplace_back(MakeModelSplitSbpSignatureRule(this));
+    rules->emplace_back(MakeBroadcastSbpSignatureRule(this));
   } else if (has_model) {
     for (const auto& ibn : input_bns()) { CHECK(!IsInputBlobAllowedModelSplit(ibn)); }
-    op_parallel_signatures->emplace_back(MakeModelSplitSbpSignature(this));
+    rules->emplace_back(MakeModelSplitSbpSignatureRule(this));
   } else if (input_bns().size() == 1) {
-    op_parallel_signatures->emplace_back(MakeBroadcastSbpSignature(this));
+    rules->emplace_back(MakeBroadcastSbpSignatureRule(this));
   } else {
     // do nothing
   }
 }
 
-void Operator::GetSbpSignaturesIf(
-    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(MakeUnparallelSbpSignature(this));
-  GetSbpSignatures(op_parallel_signatures);
+void Operator::GetSbpSignatureRulesIf(
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  rules->emplace_back(MakeUnparallelSbpSignatureRule(this));
+  GetSbpSignatureRules(rules);
 }
 
-void Operator::InferInputOutputSbpParallelIf(
-    std::function<SbpParallel*(const std::string&)> SbpParallel4BnInOp,
+void Operator::InferSbpSignatureIf(
+    SbpSignature* sbp_signature,
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
-  std::vector<std::unique_ptr<const SbpSignature>> op_parallel_signatures;
-  GetSbpSignaturesIf(&op_parallel_signatures);
+  std::vector<std::unique_ptr<const SbpSignatureRule>> rules;
+  GetSbpSignatureRules(&rules);
   std::vector<SbpSigMatchResult> match_results;
-  for (const auto& signature : op_parallel_signatures) {
+  for (const auto& signature : rules) {
     match_results.push_back(signature->GetMatchResultIf(SbpInferHint4Ibn, parallel_desc));
   }
   int32_t match_success_cnt = 0;
@@ -181,25 +181,17 @@ void Operator::InferInputOutputSbpParallelIf(
     if (result.has_success()) { ++match_success_cnt; }
   }
   if (match_success_cnt == 1) {
-    const SbpSignature* match_signature = nullptr;
-    FOR_RANGE(int32_t, i, 0, op_parallel_signatures.size()) {
-      if (match_results.at(i).has_success()) {
-        match_signature = op_parallel_signatures.at(i).get();
-      }
+    const SbpSignatureRule* match_signature = nullptr;
+    FOR_RANGE(int32_t, i, 0, rules.size()) {
+      if (match_results.at(i).has_success()) { match_signature = rules.at(i).get(); }
     }
-    HashMap<std::string, SbpParallel> bn2sbp;
-    match_signature->GenerateSignature(SbpInferHint4Ibn, &bn2sbp);
-    for (const auto& pair : bn2sbp) {
-      auto* sbp_parallel = SbpParallel4BnInOp(pair.first);
-      *sbp_parallel = pair.second;
-    }
+    match_signature->GenerateSignature(SbpInferHint4Ibn, sbp_signature);
   } else if (match_success_cnt == 0) {
     std::stringstream ss;
-    FOR_RANGE(int32_t, i, 0, op_parallel_signatures.size()) {
+    FOR_RANGE(int32_t, i, 0, rules.size()) {
       CHECK(match_results.at(i).has_fail());
       const auto& failed_msg = match_results.at(i).fail();
-      ss << "op_parallel_signature match failed\n"
-         << op_parallel_signatures.at(i)->Description() << ":\n";
+      ss << "rule match failed\n" << rules.at(i)->Description() << ":\n";
       if (failed_msg.has_signature_mismatch()) {
         ss << "\t"
            << "signature mismatch"

@@ -18,3 +18,7 @@ message SbpParallel {
     PartialSumParallel partial_sum_parallel = 3;
   }
 }
+
+message SbpSignature {
+  map<string, SbpParallel> bn_in_op2sbp_parallel = 1;
+}

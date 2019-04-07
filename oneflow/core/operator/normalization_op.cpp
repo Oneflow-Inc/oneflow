@@ -9,12 +9,13 @@ inline bool IsFwBwSplit() {
   return Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf();
 }
 
-class NormalizationDataParallelSbpSignature final : public ParallelSbpSignature {
+class NormalizationDataParallelSbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(NormalizationDataParallelSbpSignature);
-  ~NormalizationDataParallelSbpSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(NormalizationDataParallelSbpSignatureRule);
+  ~NormalizationDataParallelSbpSignatureRule() override = default;
 
-  explicit NormalizationDataParallelSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
+  explicit NormalizationDataParallelSbpSignatureRule(const Operator* op)
+      : ParallelSbpSignatureRule(op) {}
 
   const std::string Description() const override { return op().op_name() + ": (S, B) -> (S, B)"; }
 
@@ -27,7 +28,8 @@ class NormalizationDataParallelSbpSignature final : public ParallelSbpSignature 
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     const NormalizationOpConf& conf = op().op_conf().normalization_conf();
     (*bn2sbp)["in"].mutable_split_parallel()->set_axis(0);
     (*bn2sbp)["out"].mutable_split_parallel()->set_axis(0);
@@ -178,9 +180,9 @@ void NormalizationOp::InferBwBufBlobDescs(
   }
 }
 
-void NormalizationOp::GetSbpSignatures(
-    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new NormalizationDataParallelSbpSignature(this));
+void NormalizationOp::GetSbpSignatureRules(
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  rules->emplace_back(new NormalizationDataParallelSbpSignatureRule(this));
 }
 
 REGISTER_OP(OperatorConf::kNormalizationConf, NormalizationOp);

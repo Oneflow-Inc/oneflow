@@ -69,18 +69,18 @@ bool FullyConnectedOp::IsInputBlobAllowedModelSplit(const std::string& ibn) cons
   return ibn == "weight" || ibn == "bias";
 }
 
-void FullyConnectedOp::GetSbpSignatures(
-    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
+void FullyConnectedOp::GetSbpSignatureRules(
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   const FullyConnectedOpConf& conf = op_conf().fully_connected_conf();
   if (conf.has_weight()) {
     if (conf.use_bias()) { CHECK(conf.has_bias()); }
-    op_parallel_signatures->emplace_back(Make_DS_MB_2_DS_SbpSignature(this));
+    rules->emplace_back(Make_DS_MB_2_DS_SbpSignatureRule(this));
     auto EqZero = [](int32_t x) { return x == 0; };
-    op_parallel_signatures->emplace_back(Make_DB_MS_2_MS_SbpSignature(this, EqZero));
+    rules->emplace_back(Make_DB_MS_2_MS_SbpSignatureRule(this, EqZero));
   } else {
     if (conf.use_bias()) { CHECK(!conf.has_bias()); }
-    op_parallel_signatures->emplace_back(MakeDataSplitSbpSignature(this));
-    op_parallel_signatures->emplace_back(MakeModelSplitSbpSignature(this));
+    rules->emplace_back(MakeDataSplitSbpSignatureRule(this));
+    rules->emplace_back(MakeModelSplitSbpSignatureRule(this));
   }
 }
 

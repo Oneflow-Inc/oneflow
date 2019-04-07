@@ -22,7 +22,7 @@ class NormalizationOp final : public Operator {
 
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
-  void GetSbpSignatures(std::vector<std::unique_ptr<const SbpSignature>>*) const override;
+  void GetSbpSignatureRules(std::vector<std::unique_ptr<const SbpSignatureRule>>*) const override;
 };
 
 }  // namespace oneflow

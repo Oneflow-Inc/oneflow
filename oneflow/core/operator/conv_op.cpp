@@ -11,12 +11,12 @@ bool IsFwBwSplit() {
   return Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf();
 }
 
-class Conv_DB_2_S_SbpSignature final : public ParallelSbpSignature {
+class Conv_DB_2_S_SbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(Conv_DB_2_S_SbpSignature);
-  ~Conv_DB_2_S_SbpSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(Conv_DB_2_S_SbpSignatureRule);
+  ~Conv_DB_2_S_SbpSignatureRule() override = default;
 
-  explicit Conv_DB_2_S_SbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
+  explicit Conv_DB_2_S_SbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
 
   const std::string Description() const override { return op().op_name() + ": DB -> S"; }
 
@@ -32,7 +32,8 @@ class Conv_DB_2_S_SbpSignature final : public ParallelSbpSignature {
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     (*bn2sbp)["in"].mutable_broadcast_parallel();
     (*bn2sbp)["out"].mutable_split_parallel()->set_axis(
         op().OutputBlobModelSplitAxis(SbpInferHint4Ibn, "out"));
@@ -354,15 +355,15 @@ void ConvOp<NDims>::InferCudnnAlgo(
 #endif  // WITH_CUDA
 
 template<int32_t NDims>
-void ConvOp<NDims>::GetSbpSignatures(
-    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back((MakeDataSplitSbpSignature(this)));
+void ConvOp<NDims>::GetSbpSignatureRules(
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  rules->emplace_back((MakeDataSplitSbpSignatureRule(this)));
   if (IsFwBwSplit()) {
-    op_parallel_signatures->emplace_back((Make_DS_MB_2_DS_SbpSignature(this)));
-    op_parallel_signatures->emplace_back(
-        (Make_DB_MS_2_MS_SbpSignature(this, [](const int32_t axis) { return axis == 0; })));
+    rules->emplace_back((Make_DS_MB_2_DS_SbpSignatureRule(this)));
+    rules->emplace_back(
+        (Make_DB_MS_2_MS_SbpSignatureRule(this, [](const int32_t axis) { return axis == 0; })));
   } else {
-    op_parallel_signatures->emplace_back(new Conv_DB_2_S_SbpSignature(this));
+    rules->emplace_back(new Conv_DB_2_S_SbpSignatureRule(this));
   }
 }
 
