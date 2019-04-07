@@ -124,13 +124,13 @@ bool LayerNormOp::IsInputBlobAllowedModelSplit(const std::string& ibn) const {
   return ibn == "beta" || ibn == "gamma";
 }
 
-void LayerNormOp::GetSbpSignatures(
-    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
+void LayerNormOp::GetSbpSignatureRules(
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   const LayerNormOpConf& conf = op_conf().layer_norm_conf();
   if (conf.has_beta() || conf.has_gamma()) {
-    op_parallel_signatures->emplace_back(Make_DS_MB_2_DS_SbpSignature(this));
+    rules->emplace_back(Make_DS_MB_2_DS_SbpSignatureRule(this));
   } else {
-    op_parallel_signatures->emplace_back(MakeDataSplitSbpSignature(this));
+    rules->emplace_back(MakeDataSplitSbpSignatureRule(this));
   }
 }
 

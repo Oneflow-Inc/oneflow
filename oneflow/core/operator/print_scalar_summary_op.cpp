@@ -14,8 +14,8 @@ const PbMessage& PrintScalarSummaryOp::GetCustomizedConf() const {
   return op_conf().print_scalar_summary_conf();
 }
 
-void PrintScalarSummaryOp::GetSbpSignatures(
-    std::vector<std::unique_ptr<const SbpSignature>>*) const {
+void PrintScalarSummaryOp::GetSbpSignatureRules(
+    std::vector<std::unique_ptr<const SbpSignatureRule>>*) const {
   // do nothing. only unparalleled sbp signature supported
 }
 

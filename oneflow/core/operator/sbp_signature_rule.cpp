@@ -1,4 +1,4 @@
-#include "oneflow/core/operator/sbp_signature.h"
+#include "oneflow/core/operator/sbp_signature_rule.h"
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
@@ -41,7 +41,7 @@ const SbpSigMatchResult MakeSbpSigMatchDeviceSetError(const std::string& configu
   return parallel_num_error;
 }
 
-const SbpSigMatchResult ParallelSbpSignature::GetMatchResultIf(
+const SbpSigMatchResult ParallelSbpSignatureRule::GetMatchResultIf(
     const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   if (parallel_desc.parallel_num() == 1) {
@@ -55,12 +55,12 @@ const SbpSigMatchResult ParallelSbpSignature::GetMatchResultIf(
 
 namespace {
 
-class UnparallelSbpSignature final : public SbpSignature {
+class UnparallelSbpSignatureRule final : public SbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(UnparallelSbpSignature);
-  ~UnparallelSbpSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(UnparallelSbpSignatureRule);
+  ~UnparallelSbpSignatureRule() override = default;
 
-  UnparallelSbpSignature(const Operator* op) : SbpSignature(op) {}
+  UnparallelSbpSignatureRule(const Operator* op) : SbpSignatureRule(op) {}
 
   const std::string Description() const override {
     return op().op_name() + ": (U, ...) -> (U, ...)";
@@ -86,7 +86,8 @@ class UnparallelSbpSignature final : public SbpSignature {
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     for (const auto& bn : op().input_bns()) { (*bn2sbp)[bn].mutable_split_parallel()->set_axis(0); }
     for (const auto& bn : op().output_bns()) {
       (*bn2sbp)[bn].mutable_split_parallel()->set_axis(0);
@@ -94,12 +95,12 @@ class UnparallelSbpSignature final : public SbpSignature {
   }
 };
 
-class DataSplitSbpSignature final : public ParallelSbpSignature {
+class DataSplitSbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(DataSplitSbpSignature);
-  ~DataSplitSbpSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(DataSplitSbpSignatureRule);
+  ~DataSplitSbpSignatureRule() override = default;
 
-  DataSplitSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
+  DataSplitSbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
 
   const std::string Description() const override {
     return op().op_name() + ": (S(0), ...) -> (S(0), ...)";
@@ -126,7 +127,8 @@ class DataSplitSbpSignature final : public ParallelSbpSignature {
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     for (const auto& bn : op().input_bns()) { (*bn2sbp)[bn].mutable_split_parallel()->set_axis(0); }
     for (const auto& bn : op().output_bns()) {
       (*bn2sbp)[bn].mutable_split_parallel()->set_axis(0);
@@ -134,12 +136,12 @@ class DataSplitSbpSignature final : public ParallelSbpSignature {
   }
 };
 
-class BroadcastSbpSignature final : public ParallelSbpSignature {
+class BroadcastSbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BroadcastSbpSignature);
-  ~BroadcastSbpSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(BroadcastSbpSignatureRule);
+  ~BroadcastSbpSignatureRule() override = default;
 
-  BroadcastSbpSignature(const Operator* op) : ParallelSbpSignature(op) {
+  BroadcastSbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {
     CHECK_EQ(op->input_bns().size(), 1);
     CHECK(op->model_bns().empty());
     CHECK(op->const_model_bns().empty());
@@ -175,18 +177,19 @@ class BroadcastSbpSignature final : public ParallelSbpSignature {
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     for (const auto& bn : op().input_bns()) { (*bn2sbp)[bn].mutable_broadcast_parallel(); }
     for (const auto& bn : op().output_bns()) { (*bn2sbp)[bn].mutable_broadcast_parallel(); }
   }
 };
 
-class DS_MB_2_DS_SbpSignature final : public ParallelSbpSignature {
+class DS_MB_2_DS_SbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(DS_MB_2_DS_SbpSignature);
-  ~DS_MB_2_DS_SbpSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(DS_MB_2_DS_SbpSignatureRule);
+  ~DS_MB_2_DS_SbpSignatureRule() override = default;
 
-  DS_MB_2_DS_SbpSignature(const Operator* op) : ParallelSbpSignature(op) {
+  DS_MB_2_DS_SbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {
     for (const auto& bn : op->input_bns()) {
       if (op->IsInputBlobAllowedModelSplit(bn)) {
         model_input_bns_.push_back(bn);
@@ -235,7 +238,8 @@ class DS_MB_2_DS_SbpSignature final : public ParallelSbpSignature {
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     for (const auto& bn : data_input_bns_) { (*bn2sbp)[bn].mutable_split_parallel()->set_axis(0); }
     for (const auto& bn : model_input_bns_) { (*bn2sbp)[bn].mutable_broadcast_parallel(); }
     for (const auto& bn : op().output_bns()) {
@@ -248,12 +252,12 @@ class DS_MB_2_DS_SbpSignature final : public ParallelSbpSignature {
   std::vector<std::string> model_input_bns_;
 };
 
-class SoleIbnOpModelSplitSbpSignature final : public ParallelSbpSignature {
+class SoleIbnOpModelSplitSbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(SoleIbnOpModelSplitSbpSignature);
-  ~SoleIbnOpModelSplitSbpSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(SoleIbnOpModelSplitSbpSignatureRule);
+  ~SoleIbnOpModelSplitSbpSignatureRule() override = default;
 
-  SoleIbnOpModelSplitSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
+  SoleIbnOpModelSplitSbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
 
   const std::string Description() const override { return op().op_name() + ": (S,) -> (S, ...)"; }
 
@@ -287,7 +291,8 @@ class SoleIbnOpModelSplitSbpSignature final : public ParallelSbpSignature {
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     (*bn2sbp)[op().SoleIbn()] = SbpInferHint4Ibn(op().SoleIbn()).sbp_parallel();
     for (const auto& bn : op().output_bns()) {
       (*bn2sbp)[bn].mutable_split_parallel()->set_axis(
@@ -296,12 +301,12 @@ class SoleIbnOpModelSplitSbpSignature final : public ParallelSbpSignature {
   }
 };
 
-class ModelBnOpModelSplitSbpSignature final : public ParallelSbpSignature {
+class ModelBnOpModelSplitSbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ModelBnOpModelSplitSbpSignature);
-  ~ModelBnOpModelSplitSbpSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(ModelBnOpModelSplitSbpSignatureRule);
+  ~ModelBnOpModelSplitSbpSignatureRule() override = default;
 
-  ModelBnOpModelSplitSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
+  ModelBnOpModelSplitSbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
 
   const std::string Description() const override {
     return op().op_name() + ": (B, ...) -> (S, ...)";
@@ -316,7 +321,8 @@ class ModelBnOpModelSplitSbpSignature final : public ParallelSbpSignature {
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     for (const auto& bn : op().input_bns()) { (*bn2sbp)[bn].mutable_broadcast_parallel(); }
     for (const auto& bn : op().output_bns()) {
       (*bn2sbp)[bn].mutable_split_parallel()->set_axis(
@@ -325,13 +331,13 @@ class ModelBnOpModelSplitSbpSignature final : public ParallelSbpSignature {
   }
 };
 
-class DB_MS_2_MS_SbpSignature final : public ParallelSbpSignature {
+class DB_MS_2_MS_SbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(DB_MS_2_MS_SbpSignature);
-  ~DB_MS_2_MS_SbpSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(DB_MS_2_MS_SbpSignatureRule);
+  ~DB_MS_2_MS_SbpSignatureRule() override = default;
 
-  DB_MS_2_MS_SbpSignature(const Operator* op, std::function<bool(int32_t)> IsExpectedAxis)
-      : ParallelSbpSignature(op), IsExpectedAxis_(IsExpectedAxis) {
+  DB_MS_2_MS_SbpSignatureRule(const Operator* op, std::function<bool(int32_t)> IsExpectedAxis)
+      : ParallelSbpSignatureRule(op), IsExpectedAxis_(IsExpectedAxis) {
     for (const auto& bn : op->input_bns()) {
       if (op->IsInputBlobAllowedModelSplit(bn)) {
         model_input_bns_.push_back(bn);
@@ -369,7 +375,8 @@ class DB_MS_2_MS_SbpSignature final : public ParallelSbpSignature {
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     for (const auto& bn : data_input_bns_) { (*bn2sbp)[bn].mutable_broadcast_parallel(); }
     for (const auto& bn : model_input_bns_) { (*bn2sbp)[bn] = SbpInferHint4Ibn(bn).sbp_parallel(); }
     for (const auto& bn : op().output_bns()) {
@@ -388,34 +395,35 @@ class DB_MS_2_MS_SbpSignature final : public ParallelSbpSignature {
 
 }  // namespace
 
-std::unique_ptr<const SbpSignature> MakeUnparallelSbpSignature(const Operator* op) {
-  return std::unique_ptr<const SbpSignature>(new UnparallelSbpSignature(op));
+std::unique_ptr<const SbpSignatureRule> MakeUnparallelSbpSignatureRule(const Operator* op) {
+  return std::unique_ptr<const SbpSignatureRule>(new UnparallelSbpSignatureRule(op));
 }
 
-std::unique_ptr<const SbpSignature> MakeDataSplitSbpSignature(const Operator* op) {
-  return std::unique_ptr<const SbpSignature>(new DataSplitSbpSignature(op));
+std::unique_ptr<const SbpSignatureRule> MakeDataSplitSbpSignatureRule(const Operator* op) {
+  return std::unique_ptr<const SbpSignatureRule>(new DataSplitSbpSignatureRule(op));
 }
 
-std::unique_ptr<const SbpSignature> MakeBroadcastSbpSignature(const Operator* op) {
-  return std::unique_ptr<const SbpSignature>(new BroadcastSbpSignature(op));
+std::unique_ptr<const SbpSignatureRule> MakeBroadcastSbpSignatureRule(const Operator* op) {
+  return std::unique_ptr<const SbpSignatureRule>(new BroadcastSbpSignatureRule(op));
 }
 
-std::unique_ptr<const SbpSignature> MakeModelSplitSbpSignature(const Operator* op) {
+std::unique_ptr<const SbpSignatureRule> MakeModelSplitSbpSignatureRule(const Operator* op) {
   if (op->IsSoleInputBlobAllowedModelSplit()) {
-    return std::unique_ptr<const SbpSignature>(new SoleIbnOpModelSplitSbpSignature(op));
+    return std::unique_ptr<const SbpSignatureRule>(new SoleIbnOpModelSplitSbpSignatureRule(op));
   } else {
     CHECK(!op->model_bns().empty() || !op->const_model_bns().empty());
-    return std::unique_ptr<const SbpSignature>(new ModelBnOpModelSplitSbpSignature(op));
+    return std::unique_ptr<const SbpSignatureRule>(new ModelBnOpModelSplitSbpSignatureRule(op));
   }
 }
 
-std::unique_ptr<const SbpSignature> Make_DS_MB_2_DS_SbpSignature(const Operator* op) {
-  return std::unique_ptr<const SbpSignature>(new DS_MB_2_DS_SbpSignature(op));
+std::unique_ptr<const SbpSignatureRule> Make_DS_MB_2_DS_SbpSignatureRule(const Operator* op) {
+  return std::unique_ptr<const SbpSignatureRule>(new DS_MB_2_DS_SbpSignatureRule(op));
 }
 
-std::unique_ptr<const SbpSignature> Make_DB_MS_2_MS_SbpSignature(
+std::unique_ptr<const SbpSignatureRule> Make_DB_MS_2_MS_SbpSignatureRule(
     const Operator* op, std::function<bool(int32_t)> IsExpectedAxis) {
-  return std::unique_ptr<const SbpSignature>(new DB_MS_2_MS_SbpSignature(op, IsExpectedAxis));
+  return std::unique_ptr<const SbpSignatureRule>(
+      new DB_MS_2_MS_SbpSignatureRule(op, IsExpectedAxis));
 }
 
 }  // namespace oneflow

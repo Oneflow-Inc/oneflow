@@ -23,7 +23,7 @@ class TupleIdentityOp final : public Operator {
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override {
     return op_conf().tuple_identity_conf().in_size() == 1 && ibn == SoleIbn();
   }
-  void GetSbpSignatures(std::vector<std::unique_ptr<const SbpSignature>>*) const override;
+  void GetSbpSignatureRules(std::vector<std::unique_ptr<const SbpSignatureRule>>*) const override;
 };
 
 }  // namespace oneflow

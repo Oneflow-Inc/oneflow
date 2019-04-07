@@ -35,9 +35,9 @@ void BatchGatherGradOp::InferBlobDescs(
   in_diff->mut_shape() = Shape(in_diff_dim_vec);
 }
 
-void BatchGatherGradOp::GetSbpSignatures(
-    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(MakeDataSplitSbpSignature(this));
+void BatchGatherGradOp::GetSbpSignatureRules(
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  rules->emplace_back(MakeDataSplitSbpSignatureRule(this));
 }
 
 REGISTER_OP(OperatorConf::kBatchGatherGradConf, BatchGatherGradOp);

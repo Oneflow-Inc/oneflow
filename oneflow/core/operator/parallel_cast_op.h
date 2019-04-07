@@ -14,7 +14,7 @@ class ParallelCastOp final : public IdentityOp {
   const PbMessage& GetCustomizedConf() const override { return op_conf().parallel_cast_conf(); }
 
  private:
-  void GetSbpSignatures(std::vector<std::unique_ptr<const SbpSignature>>*) const override;
+  void GetSbpSignatureRules(std::vector<std::unique_ptr<const SbpSignatureRule>>*) const override;
 };
 
 }  // namespace oneflow

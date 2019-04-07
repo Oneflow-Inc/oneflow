@@ -4,12 +4,12 @@ namespace oneflow {
 
 namespace {
 
-class TotalLossInstanceSbpSignature final : public ParallelSbpSignature {
+class TotalLossInstanceSbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(TotalLossInstanceSbpSignature);
-  ~TotalLossInstanceSbpSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(TotalLossInstanceSbpSignatureRule);
+  ~TotalLossInstanceSbpSignatureRule() override = default;
 
-  TotalLossInstanceSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
+  TotalLossInstanceSbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
 
   const std::string Description() const override { return op().op_name() + ": (U, ...) -> (U,)"; }
 
@@ -29,7 +29,8 @@ class TotalLossInstanceSbpSignature final : public ParallelSbpSignature {
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     for (const auto& bn : op().input_bns()) { (*bn2sbp)[bn].mutable_split_parallel()->set_axis(0); }
     for (const auto& bn : op().output_bns()) {
       (*bn2sbp)[bn].mutable_split_parallel()->set_axis(0);
@@ -55,9 +56,9 @@ const PbMessage& TotalLossInstanceNumOp::GetCustomizedConf() const {
   return op_conf().total_loss_instance_num_conf();
 }
 
-void TotalLossInstanceNumOp::GetSbpSignatures(
-    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new TotalLossInstanceSbpSignature(this));
+void TotalLossInstanceNumOp::GetSbpSignatureRules(
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  rules->emplace_back(new TotalLossInstanceSbpSignatureRule(this));
 }
 
 REGISTER_CPU_OP(OperatorConf::kTotalLossInstanceNumConf, TotalLossInstanceNumOp);

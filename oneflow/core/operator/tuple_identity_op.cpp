@@ -4,12 +4,12 @@ namespace oneflow {
 
 namespace {
 
-class TupleIdentitySbpSignature final : public ParallelSbpSignature {
+class TupleIdentitySbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(TupleIdentitySbpSignature);
-  ~TupleIdentitySbpSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(TupleIdentitySbpSignatureRule);
+  ~TupleIdentitySbpSignatureRule() override = default;
 
-  TupleIdentitySbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
+  TupleIdentitySbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
 
   const std::string Description() const override { return op().op_name() + ": A -> A"; }
 
@@ -26,7 +26,8 @@ class TupleIdentitySbpSignature final : public ParallelSbpSignature {
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     FOR_RANGE(int32_t, i, 0, op().input_bns().size()) {
       const auto& sbp_parallel = SbpInferHint4BnInOp(op().input_bns().Get(i)).sbp_parallel();
       (*bn2sbp)[op().input_bns().Get(i)] = sbp_parallel;
@@ -60,9 +61,9 @@ void TupleIdentityOp::InferBlobDescs(
   }
 }
 
-void TupleIdentityOp::GetSbpSignatures(
-    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new TupleIdentitySbpSignature(this));
+void TupleIdentityOp::GetSbpSignatureRules(
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  rules->emplace_back(new TupleIdentitySbpSignatureRule(this));
 }
 
 REGISTER_OP(OperatorConf::kTupleIdentityConf, TupleIdentityOp);
