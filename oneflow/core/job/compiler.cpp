@@ -108,7 +108,7 @@ Plan Compiler::DoCompile() {
 #endif
   const JobDesc* job_desc = Global<JobDesc>::Get();
   Job job = ConvertJobConf2Job(job_desc->job_conf());
-  JobCompleter().Complete4Correctness(&job);
+  JobCompleter().Complete(&job);
   TeePersistentLogStream::Create("optimized_job")->Write(job);
   Global<OpGraph>::New(job);
   Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_op_graph.dot");

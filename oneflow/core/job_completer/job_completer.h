@@ -13,7 +13,7 @@ class JobCompleter final {
   JobCompleter() = default;
   ~JobCompleter() = default;
 
-  void Complete4Correctness(Job* job) const;
+  void Complete(Job* job) const;
 };
 
 class GenerateFacadeImplOpConfWrapperStruct final {

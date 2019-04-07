@@ -250,7 +250,7 @@ void FixAndOptimizeDLNet(Job* job) {
 
 }  // namespace
 
-void JobCompleter::Complete4Correctness(Job* job) const {
+void JobCompleter::Complete(Job* job) const {
   // replace facade op
   WithOpGraphAndMutJob(job, &ReplaceFacade);
   if (Global<JobDesc>::Get()->IsPredict()
