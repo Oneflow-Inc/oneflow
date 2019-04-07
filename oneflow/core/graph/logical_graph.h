@@ -7,6 +7,7 @@
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/logical_node.h"
+#include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 
@@ -16,7 +17,7 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   LogicalGraph() = delete;
   ~LogicalGraph() = default;
 
-  LogicalGraph(bool is_train);
+  LogicalGraph(const Job& job);
 
   const char* TypeName() const override { return "LogicalGraph"; }
   int64_t total_mbn_num() const { return total_mbn_num_; }
@@ -70,6 +71,7 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
 
   bool MustHaveModelDiffAcc();
 
+  Job job_;
   int64_t total_mbn_num_;
 
   std::vector<std::vector<const LogicalNode*>> fw_node_groups_;

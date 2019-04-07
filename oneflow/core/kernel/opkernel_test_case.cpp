@@ -371,7 +371,8 @@ void OpKernelTestCase::set_default_data_type(DataType default_data_type) {
 
 void OpKernelTestCase::UpdateGlobalJobDesc() {
   if (Global<JobDesc>::Get()) { Global<JobDesc>::Delete(); }
-  Global<JobDesc>::New(job_conf_);
+  TODO();
+  // Global<JobDesc>::New(job_conf_);
 }
 
 void OpKernelTestCase::InitBeforeRun() {

@@ -23,9 +23,8 @@ class KeepHeaderOnlyKernel final : public KernelIf<device_type> {
   void ForwardDim2ValidNum(const KernelCtx& ctx,
                            std::function<Blob*(const std::string&)>) const override;
   void ForwardRecordIdInDevicePiece(const KernelCtx& ctx,
-                           std::function<Blob*(const std::string&)>) const override;
-  void Backward(const KernelCtx& ctx,
-                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+                                    std::function<Blob*(const std::string&)>) const override;
+  void Backward(const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
 };

@@ -26,7 +26,8 @@ void AddKeepHeaderOnlyOp(const OpGraph& op_graph, Job* job) {
     }
 
     OperatorConf dst_op_conf = node->op().op_conf();
-    PbMessage* dst_op_type_conf = MutableMessageInPbMessage(&dst_op_conf, dst_op_conf.op_type_case());
+    PbMessage* dst_op_type_conf =
+        MutableMessageInPbMessage(&dst_op_conf, dst_op_conf.op_type_case());
     for (const auto& pair : src_node2ibns) {
       OpNode* src_node = pair.first;
       const std::vector<std::string>& ibns = pair.second;
@@ -34,8 +35,7 @@ void AddKeepHeaderOnlyOp(const OpGraph& op_graph, Job* job) {
       OpEdge* edge = OpEdge4Lbi(lbi);
 
       OperatorConf op_conf;
-      op_conf.set_name(node->op().op_name() + "-" + src_node->op().op_name() 
-          + "-keep_header_only");
+      op_conf.set_name(node->op().op_name() + "-" + src_node->op().op_name() + "-keep_header_only");
       KeepHeaderOnlyOpConf* kho_conf = op_conf.mutable_keep_header_only_conf();
       for (const std::string ibn : ibns) {
         const LogicalBlobId& cur_lbi = node->op().BnInOp2Lbi(ibn);
@@ -49,12 +49,12 @@ void AddKeepHeaderOnlyOp(const OpGraph& op_graph, Job* job) {
         std::string lbn = op_conf.name() + cur_lbi.blob_name();
         SetBnValInOpTypeConf(dst_op_type_conf, ibn, GenLogicalBlobName(cur_lbi), lbn);
       }
-      job_builder.AddOps(
-          src_node->parallel_desc().parallel_conf(), std::vector<OperatorConf>{op_conf});
+      job_builder.AddOps(src_node->parallel_desc().parallel_conf(),
+                         std::vector<OperatorConf>{op_conf});
     }
     // make sure an op_conf can only be udpated once
     job_builder.MutOps(std::vector<OperatorConf>{dst_op_conf});
   });
 }
 
-} // namespace oneflow
+}  // namespace oneflow
