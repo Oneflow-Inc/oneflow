@@ -10,10 +10,10 @@ namespace oneflow {
 class JobCompleter final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(JobCompleter);
-  JobCompleter() {}
+  JobCompleter() = default;
   ~JobCompleter() = default;
 
-  void CompleteGlobalJobDesc() const;
+  void Complete4Correctness(Job* job) const;
 };
 
 class GenerateFacadeImplOpConfWrapperStruct final {

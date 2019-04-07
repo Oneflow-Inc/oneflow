@@ -45,6 +45,15 @@ void ToDotFile(const Plan& plan, const std::string& filepath) {
   log_stream << "}\n";
 }
 
+Job ConvertJobConf2Job(const JobConf& job_conf) {
+  Job job;
+  *job.mutable_net() = job_conf.net();
+  *job.mutable_resource() = job_conf.resource();
+  *job.mutable_placement() = job_conf.placement();
+  *job.mutable_other() = job_conf.other();
+  return job;
+}
+
 }  // namespace
 
 Plan Compiler::Compile() {
@@ -97,13 +106,13 @@ Plan Compiler::DoCompile() {
 #ifdef WITH_CUDA
   Global<CudnnConvCtxCache>::New();
 #endif
-  JobCompleter().CompleteGlobalJobDesc();
-  Global<JobDesc>::Get()->FixAndOptimizeDLNet();
   const JobDesc* job_desc = Global<JobDesc>::Get();
-  TeePersistentLogStream::Create("optimized_job")->Write(job_desc->job());
-  Global<OpGraph>::New(job_desc);
+  Job job = ConvertJobConf2Job(job_desc->job_conf());
+  JobCompleter().Complete4Correctness(&job);
+  TeePersistentLogStream::Create("optimized_job")->Write(job);
+  Global<OpGraph>::New(job);
   Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_op_graph.dot");
-  auto logical_gph = std::make_unique<LogicalGraph>(job_desc->IsTrain());
+  auto logical_gph = std::make_unique<LogicalGraph>(job);
   int64_t total_mbn_num = logical_gph->total_mbn_num();
   auto task_gph = std::make_unique<TaskGraph>(std::move(logical_gph));
   using std::placeholders::_1;

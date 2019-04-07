@@ -42,7 +42,8 @@ std::function<bool(const LogicalNode*)> MakePredicatorHasActualOutDiff(const Log
 
 }  // namespace
 
-LogicalGraph::LogicalGraph(bool is_train) {
+LogicalGraph::LogicalGraph(const Job& job) : job_(job) {
+  bool is_train = Global<JobDesc>::Get()->IsTrain();
   BuildFwStruct();
   if (is_train) { GroupNodesForReduceStruct(); }
   if (is_train) { BuildBwStruct(); }
@@ -122,8 +123,8 @@ void LogicalGraph::BuildFwStruct() {
 
 void LogicalGraph::NaiveBuildFwStruct(
     HashMap<std::string, std::vector<LogicalNode*>>* op_name2nodes) {
-  const DLNetConf& dlnet_conf = Global<JobDesc>::Get()->dlnet_conf();
-  const Placement& placement = Global<JobDesc>::Get()->placement();
+  const DLNetConf& dlnet_conf = job_.net();
+  const Placement& placement = job_.placement();
   HashMap<std::string, std::shared_ptr<ParallelDesc>> name2parallel_desc;
   for (const PlacementGroup& p_group : placement.placement_group()) {
     for (const std::string& op_name : p_group.op_set().op_name()) {
@@ -174,7 +175,7 @@ void LogicalGraph::NaiveBuildFwStruct(
 void LogicalGraph::FixSharedModelNodes(
     const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes) {
   HashSet<std::string> all_shared_model_op_names;
-  const DLNetConf& dlnet_conf = Global<JobDesc>::Get()->dlnet_conf();
+  const DLNetConf& dlnet_conf = job_.net();
   for (const OpNameSet& op_name_set : dlnet_conf.shared_model_group()) {
     std::vector<std::string> shared_model_op_names(op_name_set.op_name().begin(),
                                                    op_name_set.op_name().end());
