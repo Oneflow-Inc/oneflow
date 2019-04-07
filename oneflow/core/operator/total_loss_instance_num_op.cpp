@@ -4,12 +4,12 @@ namespace oneflow {
 
 namespace {
 
-class TotalLossInstanceSbpSignature final : public ParallelSbpSignature {
+class TotalLossInstanceSbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(TotalLossInstanceSbpSignature);
-  ~TotalLossInstanceSbpSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(TotalLossInstanceSbpSignatureRule);
+  ~TotalLossInstanceSbpSignatureRule() override = default;
 
-  TotalLossInstanceSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
+  TotalLossInstanceSbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
 
   const std::string Description() const override { return op().op_name() + ": (U, ...) -> (U,)"; }
 
@@ -55,9 +55,9 @@ const PbMessage& TotalLossInstanceNumOp::GetCustomizedConf() const {
   return op_conf().total_loss_instance_num_conf();
 }
 
-void TotalLossInstanceNumOp::GetSbpSignatures(
-    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new TotalLossInstanceSbpSignature(this));
+void TotalLossInstanceNumOp::GetSbpSignatureRules(
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  rules->emplace_back(new TotalLossInstanceSbpSignatureRule(this));
 }
 
 REGISTER_CPU_OP(OperatorConf::kTotalLossInstanceNumConf, TotalLossInstanceNumOp);

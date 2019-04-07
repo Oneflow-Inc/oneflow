@@ -5,13 +5,13 @@ namespace oneflow {
 
 namespace {
 
-class NormalizationGradDataParallelSbpSignature final : public ParallelSbpSignature {
+class NormalizationGradDataParallelSbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(NormalizationGradDataParallelSbpSignature);
-  ~NormalizationGradDataParallelSbpSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(NormalizationGradDataParallelSbpSignatureRule);
+  ~NormalizationGradDataParallelSbpSignatureRule() override = default;
 
-  explicit NormalizationGradDataParallelSbpSignature(const Operator* op)
-      : ParallelSbpSignature(op) {}
+  explicit NormalizationGradDataParallelSbpSignatureRule(const Operator* op)
+      : ParallelSbpSignatureRule(op) {}
 
   const std::string Description() const override { return op().op_name() + ": (S, B) -> (S, P)"; }
 
@@ -125,9 +125,9 @@ void NormalizationGradOp::InferBlobDescs(
   SetParamBlobDesc("beta_diff");
 }
 
-void NormalizationGradOp::GetSbpSignatures(
-    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new NormalizationGradDataParallelSbpSignature(this));
+void NormalizationGradOp::GetSbpSignatureRules(
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  rules->emplace_back(new NormalizationGradDataParallelSbpSignatureRule(this));
 }
 
 REGISTER_OP(OperatorConf::kNormalizationGradConf, NormalizationGradOp);

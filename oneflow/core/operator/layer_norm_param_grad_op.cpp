@@ -4,13 +4,13 @@ namespace oneflow {
 
 namespace {
 
-class LayerNormParamGradDataParallelSbpSignature final : public ParallelSbpSignature {
+class LayerNormParamGradDataParallelSbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(LayerNormParamGradDataParallelSbpSignature);
-  ~LayerNormParamGradDataParallelSbpSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(LayerNormParamGradDataParallelSbpSignatureRule);
+  ~LayerNormParamGradDataParallelSbpSignatureRule() override = default;
 
-  explicit LayerNormParamGradDataParallelSbpSignature(const Operator* op)
-      : ParallelSbpSignature(op) {}
+  explicit LayerNormParamGradDataParallelSbpSignatureRule(const Operator* op)
+      : ParallelSbpSignatureRule(op) {}
 
   const std::string Description() const override {
     return op().op_name() + ": (S(0), B) -> (S(0), P)";
@@ -104,9 +104,9 @@ void LayerNormParamGradOp::InferBlobDescs(
   }
 }
 
-void LayerNormParamGradOp::GetSbpSignatures(
-    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new LayerNormParamGradDataParallelSbpSignature(this));
+void LayerNormParamGradOp::GetSbpSignatureRules(
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  rules->emplace_back(new LayerNormParamGradDataParallelSbpSignatureRule(this));
 }
 
 REGISTER_OP(OperatorConf::kLayerNormParamGradConf, LayerNormParamGradOp);

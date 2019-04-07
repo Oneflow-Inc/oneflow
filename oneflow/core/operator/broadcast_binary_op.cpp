@@ -8,13 +8,13 @@ bool IsScalarBlob(const BlobDesc* blob) {
   return blob->shape().NumAxes() == 1 && blob->shape().At(0) == 1;
 }
 
-class BroadcastBinarySbpSignature final : public ParallelSbpSignature {
+class BroadcastBinarySbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BroadcastBinarySbpSignature);
-  ~BroadcastBinarySbpSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(BroadcastBinarySbpSignatureRule);
+  ~BroadcastBinarySbpSignatureRule() override = default;
 
-  BroadcastBinarySbpSignature(const Operator* op, const HashSet<std::string>& model_input_bns)
-      : ParallelSbpSignature(op), model_input_bns_(model_input_bns) {}
+  BroadcastBinarySbpSignatureRule(const Operator* op, const HashSet<std::string>& model_input_bns)
+      : ParallelSbpSignatureRule(op), model_input_bns_(model_input_bns) {}
 
   const std::string Description() const override {
     return op().op_name() + ": (C, ..., S(0), ...) -> (S(0), ...)";
@@ -59,9 +59,10 @@ class BroadcastBinarySbpSignature final : public ParallelSbpSignature {
   HashSet<std::string> model_input_bns_;
 };
 
-std::unique_ptr<const SbpSignature> MakeBroadcastBinarySbpSignature(
+std::unique_ptr<const SbpSignatureRule> MakeBroadcastBinarySbpSignatureRule(
     const Operator* op, const HashSet<std::string>& model_input_bns) {
-  return std::unique_ptr<const SbpSignature>(new BroadcastBinarySbpSignature(op, model_input_bns));
+  return std::unique_ptr<const SbpSignatureRule>(
+      new BroadcastBinarySbpSignatureRule(op, model_input_bns));
 }
 
 }  // namespace
@@ -106,12 +107,12 @@ void BroadcastBinaryOp::InferBwBufBlobDescs(
   bw_buf->set_data_type(out->data_type());
 }
 
-void BroadcastBinaryOp::GetSbpSignatures(
-    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(MakeBroadcastBinarySbpSignature(this, {}));
-  op_parallel_signatures->emplace_back(MakeBroadcastBinarySbpSignature(this, {"a"}));
-  op_parallel_signatures->emplace_back(MakeBroadcastBinarySbpSignature(this, {"b"}));
-  op_parallel_signatures->emplace_back(MakeBroadcastBinarySbpSignature(this, {"a", "b"}));
+void BroadcastBinaryOp::GetSbpSignatureRules(
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  rules->emplace_back(MakeBroadcastBinarySbpSignatureRule(this, {}));
+  rules->emplace_back(MakeBroadcastBinarySbpSignatureRule(this, {"a"}));
+  rules->emplace_back(MakeBroadcastBinarySbpSignatureRule(this, {"b"}));
+  rules->emplace_back(MakeBroadcastBinarySbpSignatureRule(this, {"a", "b"}));
 }
 
 }  // namespace oneflow

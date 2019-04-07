@@ -4,12 +4,12 @@ namespace oneflow {
 
 namespace {
 
-class CastSbpSignature final : public ParallelSbpSignature {
+class CastSbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CastSbpSignature);
-  ~CastSbpSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(CastSbpSignatureRule);
+  ~CastSbpSignatureRule() override = default;
 
-  CastSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
+  CastSbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
 
   const std::string Description() const override { return op().op_name() + ": (A,) -> (A,)"; }
 
@@ -59,9 +59,9 @@ void CastOp::FixInputOutputSbpParallel(
   }
 }
 
-void CastOp::GetSbpSignatures(
-    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new CastSbpSignature(this));
+void CastOp::GetSbpSignatureRules(
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  rules->emplace_back(new CastSbpSignatureRule(this));
 }
 
 REGISTER_OP(OperatorConf::kCastConf, CastOp);

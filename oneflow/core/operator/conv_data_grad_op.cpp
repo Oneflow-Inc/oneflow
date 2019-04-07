@@ -6,12 +6,13 @@ namespace oneflow {
 
 namespace {
 
-class ConvDataGradDataParallelSbpSignature final : public ParallelSbpSignature {
+class ConvDataGradDataParallelSbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ConvDataGradDataParallelSbpSignature);
-  ~ConvDataGradDataParallelSbpSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(ConvDataGradDataParallelSbpSignatureRule);
+  ~ConvDataGradDataParallelSbpSignatureRule() override = default;
 
-  explicit ConvDataGradDataParallelSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
+  explicit ConvDataGradDataParallelSbpSignatureRule(const Operator* op)
+      : ParallelSbpSignatureRule(op) {}
 
   const std::string Description() const override { return op().op_name() + ": (MB, DS) -> DS"; }
 
@@ -32,12 +33,13 @@ class ConvDataGradDataParallelSbpSignature final : public ParallelSbpSignature {
   }
 };
 
-class ConvDataGradModelParallelSbpSignature final : public ParallelSbpSignature {
+class ConvDataGradModelParallelSbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ConvDataGradModelParallelSbpSignature);
-  ~ConvDataGradModelParallelSbpSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(ConvDataGradModelParallelSbpSignatureRule);
+  ~ConvDataGradModelParallelSbpSignatureRule() override = default;
 
-  explicit ConvDataGradModelParallelSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
+  explicit ConvDataGradModelParallelSbpSignatureRule(const Operator* op)
+      : ParallelSbpSignatureRule(op) {}
 
   const std::string Description() const override { return op().op_name() + ": (DS, MS) -> P"; }
 
@@ -136,10 +138,10 @@ void ConvDataGradOp::VirtualGenKernelConf(
   }
 }
 
-void ConvDataGradOp::GetSbpSignatures(
-    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new ConvDataGradDataParallelSbpSignature(this));
-  op_parallel_signatures->emplace_back(new ConvDataGradModelParallelSbpSignature(this));
+void ConvDataGradOp::GetSbpSignatureRules(
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  rules->emplace_back(new ConvDataGradDataParallelSbpSignatureRule(this));
+  rules->emplace_back(new ConvDataGradModelParallelSbpSignatureRule(this));
 }
 
 REGISTER_OP(OperatorConf::kConvDataGradConf, ConvDataGradOp);

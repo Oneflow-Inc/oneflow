@@ -4,12 +4,12 @@ namespace oneflow {
 
 namespace {
 
-class AxpySbpSignature final : public ParallelSbpSignature {
+class AxpySbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(AxpySbpSignature);
-  ~AxpySbpSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(AxpySbpSignatureRule);
+  ~AxpySbpSignatureRule() override = default;
 
-  AxpySbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
+  AxpySbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
 
   const std::string Description() const override { return op().op_name() + ": (A, A) -> ()"; }
 
@@ -49,9 +49,9 @@ void AxpyOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
 
 const PbMessage& AxpyOp::GetCustomizedConf() const { return op_conf().axpy_conf(); }
 
-void AxpyOp::GetSbpSignatures(
-    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new AxpySbpSignature(this));
+void AxpyOp::GetSbpSignatureRules(
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  rules->emplace_back(new AxpySbpSignatureRule(this));
 }
 
 REGISTER_OP(OperatorConf::kAxpyConf, AxpyOp);

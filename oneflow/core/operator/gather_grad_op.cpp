@@ -5,12 +5,13 @@ namespace oneflow {
 
 namespace {
 
-class GatherGradDataParallelSbpSignature final : public ParallelSbpSignature {
+class GatherGradDataParallelSbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(GatherGradDataParallelSbpSignature);
-  ~GatherGradDataParallelSbpSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(GatherGradDataParallelSbpSignatureRule);
+  ~GatherGradDataParallelSbpSignatureRule() override = default;
 
-  explicit GatherGradDataParallelSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
+  explicit GatherGradDataParallelSbpSignatureRule(const Operator* op)
+      : ParallelSbpSignatureRule(op) {}
 
   const std::string Description() const override { return op().op_name() + ": S -> P"; }
 
@@ -42,12 +43,13 @@ class GatherGradDataParallelSbpSignature final : public ParallelSbpSignature {
   }
 };
 
-class GatherGradModelParallelSbpSignature final : public ParallelSbpSignature {
+class GatherGradModelParallelSbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(GatherGradModelParallelSbpSignature);
-  ~GatherGradModelParallelSbpSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(GatherGradModelParallelSbpSignatureRule);
+  ~GatherGradModelParallelSbpSignatureRule() override = default;
 
-  explicit GatherGradModelParallelSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
+  explicit GatherGradModelParallelSbpSignatureRule(const Operator* op)
+      : ParallelSbpSignatureRule(op) {}
 
   const std::string Description() const override { return op().op_name() + ": (B, S) -> S"; }
 
@@ -119,10 +121,10 @@ void GatherGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   in_diff->mut_shape() = Shape(in_diff_dim_vec);
 }
 
-void GatherGradOp::GetSbpSignatures(
-    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new GatherGradDataParallelSbpSignature(this));
-  op_parallel_signatures->emplace_back(new GatherGradModelParallelSbpSignature(this));
+void GatherGradOp::GetSbpSignatureRules(
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  rules->emplace_back(new GatherGradDataParallelSbpSignatureRule(this));
+  rules->emplace_back(new GatherGradModelParallelSbpSignatureRule(this));
 }
 
 REGISTER_OP(OperatorConf::kGatherGradConf, GatherGradOp);

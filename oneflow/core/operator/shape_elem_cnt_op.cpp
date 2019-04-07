@@ -4,12 +4,12 @@ namespace oneflow {
 
 namespace {
 
-class ShapeElemCntOpSplitSbpSignature final : public ParallelSbpSignature {
+class ShapeElemCntOpSplitSbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ShapeElemCntOpSplitSbpSignature);
-  ~ShapeElemCntOpSplitSbpSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(ShapeElemCntOpSplitSbpSignatureRule);
+  ~ShapeElemCntOpSplitSbpSignatureRule() override = default;
 
-  explicit ShapeElemCntOpSplitSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
+  explicit ShapeElemCntOpSplitSbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
 
   const std::string Description() const override { return op().op_name() + ": (S,) -> (P,)"; }
 
@@ -40,12 +40,13 @@ class ShapeElemCntOpSplitSbpSignature final : public ParallelSbpSignature {
   }
 };
 
-class ShapeElemCntOpBroadcastSbpSignature final : public ParallelSbpSignature {
+class ShapeElemCntOpBroadcastSbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ShapeElemCntOpBroadcastSbpSignature);
-  ~ShapeElemCntOpBroadcastSbpSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(ShapeElemCntOpBroadcastSbpSignatureRule);
+  ~ShapeElemCntOpBroadcastSbpSignatureRule() override = default;
 
-  explicit ShapeElemCntOpBroadcastSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
+  explicit ShapeElemCntOpBroadcastSbpSignatureRule(const Operator* op)
+      : ParallelSbpSignatureRule(op) {}
 
   const std::string Description() const override { return op().op_name() + ": (S,) -> (B | P)"; }
 
@@ -99,11 +100,11 @@ void ShapeElemCntOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   CHECK_LT(end_axis, num_axes);
 }
 
-void ShapeElemCntOp::GetSbpSignatures(
-    std::vector<std::unique_ptr<const SbpSignature>>* sbp_signature) const {
-  sbp_signature->emplace_back(MakeBroadcastSbpSignature(this));
-  sbp_signature->emplace_back(new ShapeElemCntOpSplitSbpSignature(this));
-  sbp_signature->emplace_back(new ShapeElemCntOpBroadcastSbpSignature(this));
+void ShapeElemCntOp::GetSbpSignatureRules(
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  rules->emplace_back(MakeBroadcastSbpSignatureRule(this));
+  rules->emplace_back(new ShapeElemCntOpSplitSbpSignatureRule(this));
+  rules->emplace_back(new ShapeElemCntOpBroadcastSbpSignatureRule(this));
 }
 
 REGISTER_OP(OperatorConf::kShapeElemCntConf, ShapeElemCntOp);
