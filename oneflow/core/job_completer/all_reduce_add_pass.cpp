@@ -34,7 +34,7 @@ std::function<const OpNode*(const LogicalBlobId&)> MakeGetterSoleConsumerOpNode4
   };
 }
 
-LogicalBlobId FindPartialSum2BroadcastSoleConsumerLbi(
+LogicalBlobId FindP2BLbiWithSoleConsumer(
     const LogicalBlobId& lbi,
     const std::function<const OpNode*(const LogicalBlobId&)>& ProducerOpNode4Lbi,
     const std::function<const OpNode*(const LogicalBlobId&)>& SoleConsumerOpNode4Lbi) {
@@ -47,14 +47,17 @@ void FindAllReducedLbis(
     const std::function<const OpNode*(const LogicalBlobId&)>& ProducerOpNode4Lbi,
     std::vector<LogicalBlobId>* lbis) {
   auto SoleConsumerOpNode4Lbi = MakeGetterSoleConsumerOpNode4Lbi(ProducerOpNode4Lbi);
-  TODO();
+  const auto& lbi2diff_lbi = job.helper().tag2lbi_relations().at(kProducedLbi2ConsumedDiffLbi);
+  for (const auto& pair : lbi2diff_lbi) {
+    if (!ProducerOpNode4Lbi(pair.first)->op().op_conf().has_variable_conf()) { continue; }
+    lbis->push_back(FindP2BLbiWithSoleConsumer(lbi, ProducerOpNode4Lbi, SoleConsumerOpNode4Lbi));
+  }
 }
 
 void SortAllReducedLbis(
     const OpGraph& op_graph,
     const std::function<const OpNode*(const LogicalBlobId&)>& ProducerOpNode4Lbi,
     std::vector<LogicalBlobId>* lbis) {
-  TODO();
 }
 
 void GroupAllReducedLbisByStrategy(const OpGraph& op_graph,
@@ -76,19 +79,22 @@ void GroupAllReducedLbis(
 void AddReduceConcatAndReduceIdentityOpConf(
     const JobBuilder& job_builder,
     const std::function<const OpNode*(const LogicalBlobId&)>& ProducerOpNode4Lbi,
-    const std::vector<LogicalBlobId>& lbi_groups, LogicalBlobId* grouped_lbi) {
+    const std::vector<LogicalBlobId>& lbi_groups,
+    LogicalBlobId* grouped_lbi) {
   TODO();
 }
 
-void AddAllReduceOpConf(const JobBuilder& job_builder, const LogicalBlobId& grouped_lbi,
-                        LogicalBlobId* all_reduced_lbi) {
-  TODO();  // juncheng
+void AddAllReduceOpConf(
+			const JobBuilder& job_builder, const LogicalBlobId& grouped_lbi,
+			LogicalBlobId* all_reduced_lbi) {
+  TODO(); // juncheng
 }
 
 void AddReduceSplitOpConf(
     const JobBuilder& job_builder,
     const std::function<const OpNode*(const LogicalBlobId&)>& ProducerOpNode4Lbi,
-    const std::vector<LogicalBlobId>& lbi_groups, const LogicalBlobId& all_reduced_lbi) {
+    const std::vector<LogicalBlobId>& lbi_groups,
+    const LogicalBlobId& all_reduced_lbi) {
   TODO();
 }
 
