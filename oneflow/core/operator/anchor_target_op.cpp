@@ -12,7 +12,6 @@ void AnchorTargetOp::InitFromOpConf() {
   EnrollRepeatedInputBn("anchors", false);
   EnrollRepeatedInputBn("anchors_info", false);
 
-  EnrollRepeatedOutputBn("anchors", false);
   EnrollRepeatedOutputBn("regression_targets", false);
   EnrollRepeatedOutputBn("regression_weights", false);
   EnrollRepeatedOutputBn("class_labels", false);

@@ -48,16 +48,16 @@ void AnchorTargetKernel<T>::ForwardInstanceShape(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const AnchorTargetOpConf& conf = op_conf().anchor_target_conf();
   const Blob* images_blob = BnInOp2Blob("images");
-  const int64_t batch_height = images_blob->shape().At(1);
-  const int64_t batch_width = images_blob->shape().At(2);
+  const int32_t batch_height = images_blob->shape().At(1);
+  const int32_t batch_width = images_blob->shape().At(2);
   FOR_RANGE(size_t, i, 0, conf.anchor_generator_conf_size()) {
     const AnchorGeneratorConf& anchor_generator_conf = conf.anchor_generator_conf(i);
-    const int32_t fm_stride = anchor_generator_conf.feature_map_stride();
+    const float fm_stride = static_cast<float>(anchor_generator_conf.feature_map_stride());
     Blob* anchors_info_i_blob = BnInOp2Blob("anchors_info_" + std::to_string(i));
     const int32_t fm_height = anchors_info_i_blob->dptr<int32_t>()[0];
-    CHECK_EQ(std::ceil(batch_height / fm_stride), fm_height);
+    CHECK_EQ(std::ceil(static_cast<float>(batch_height) / fm_stride), fm_height);
     const int32_t fm_width = anchors_info_i_blob->dptr<int32_t>()[1];
-    CHECK_EQ(std::ceil(batch_width / fm_stride), fm_width);
+    CHECK_EQ(std::ceil(static_cast<float>(batch_width) / fm_stride), fm_width);
     const int32_t num_anchors_per_cell = anchors_info_i_blob->dptr<int32_t>()[2];
     CHECK_EQ(
         anchor_generator_conf.anchor_scales_size() * anchor_generator_conf.aspect_ratios_size(),

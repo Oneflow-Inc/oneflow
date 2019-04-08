@@ -14,9 +14,9 @@ void AnchorGenerateKernel<T>::ForwardDataContent(
   Blob* anchors = BnInOp2Blob("anchors");
   Memset<DeviceType::kCPU>(ctx.device_ctx, anchors->mut_dptr<T>(), 0,
                            anchors->ByteSizeOfDataContentField());
-  const float fm_stride = conf.feature_map_stride();
-  const int32_t feature_map_height = std::ceil(batch_height / fm_stride);
-  const int32_t feature_map_width = std::ceil(batch_width / fm_stride);
+  const float fm_stride = static_cast<float>(conf.feature_map_stride());
+  const int32_t feature_map_height = std::ceil(static_cast<float>(batch_height) / fm_stride);
+  const int32_t feature_map_width = std::ceil(static_cast<float>(batch_width) / fm_stride);
   auto scales_vec = PbRf2StdVec(conf.anchor_scales());
   auto ratios_vec = PbRf2StdVec(conf.aspect_ratios());
   const size_t num_anchors =
