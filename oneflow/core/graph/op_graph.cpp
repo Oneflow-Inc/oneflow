@@ -25,7 +25,7 @@ const SbpParallel& OpNode::SbpParallel4Lbi(const LogicalBlobId& lbi) const {
   for (const auto& ibn : op().input_bns()) {
     if (op().BnInOp2Lbi(ibn) == lbi) { return sbp_signature_.bn_in_op2sbp_parallel().at(ibn); }
   }
-  for (const auto& obn : op().input_bns()) {
+  for (const auto& obn : op().output_bns()) {
     if (op().BnInOp2Lbi(obn) == lbi) { return sbp_signature_.bn_in_op2sbp_parallel().at(obn); }
   }
   UNIMPLEMENTED();
