@@ -22,11 +22,13 @@ bool OpNode::IsModelBlob4Lbi(const LogicalBlobId& lbi) const {
 }
 
 const SbpParallel& OpNode::SbpParallel4Lbi(const LogicalBlobId& lbi) const {
-  return lbi2sbp_parallel_.at(lbi);
-}
-
-SbpParallel* OpNode::MutSbpParallel4Lbi(const LogicalBlobId& lbi) {
-  return &lbi2sbp_parallel_[lbi];
+  for (const auto& ibn : op().input_bns()) {
+    if (op().BnInOp2Lbi(ibn) == lbi) { return sbp_signature_.bn_in_op2sbp_parallel().at(ibn); }
+  }
+  for (const auto& obn : op().input_bns()) {
+    if (op().BnInOp2Lbi(obn) == lbi) { return sbp_signature_.bn_in_op2sbp_parallel().at(obn); }
+  }
+  UNIMPLEMENTED();
 }
 
 std::string OpNode::VisualStr() const {
@@ -234,7 +236,7 @@ void OpGraph::InferOpModelSize(HashMap<std::string, size_t>* op_name2model_size)
     size_t model_size = 0;
     for (const std::string& model_bn : op_node->op().model_bns()) {
       int64_t elem_cnt = op_node->NoParallelBlobDesc4BnInOp(model_bn)->shape().elem_cnt();
-      model_size += elem_cnt * GetSizeOfDataType(job_desc_->DefaultDataType());
+      model_size += elem_cnt * GetSizeOfDataType(Global<JobDesc>::Get()->DefaultDataType());
       model_size = RoundUp(model_size, kCudaAlignSize);
     }
     size_t parallel_num = op_node->parallel_desc().parallel_num();
@@ -245,8 +247,8 @@ void OpGraph::InferOpModelSize(HashMap<std::string, size_t>* op_name2model_size)
   });
 }
 
-void OpGraph::Init() {
-  InitNodes();
+void OpGraph::Init(const Job& job) {
+  InitNodes(job);
   ForEachNode(
       [&](OpNode* node) { CHECK(op_name2op_node_.emplace(node->op().op_name(), node).second); });
   InitEdges();
@@ -255,13 +257,13 @@ void OpGraph::Init() {
   InferTimeShape();
   InferNoParallelBlobDesc();
   InferIsModelBlob();
-  InferSbpParallel();
+  InferSbpSignature();
   InferLogicalBlobDesc();
 }
 
-void OpGraph::InitNodes() {
-  auto ParallelConf4OpName = MakeGetterParallelConf4OpName(job_desc_->placement());
-  for (const auto& op_conf : job_desc_->dlnet_conf().op()) {
+void OpGraph::InitNodes(const Job& job) {
+  auto ParallelConf4OpName = MakeGetterParallelConf4OpName(job.placement());
+  for (const auto& op_conf : job.net().op()) {
     OpNode* node = new OpNode(ParallelDesc(*ParallelConf4OpName(op_conf.name())), op_conf);
     AddAllocatedNode(node);
   }
@@ -348,7 +350,7 @@ void OpGraph::InferIsModelBlob() const {
   });
 }
 
-void OpGraph::InferSbpParallel() const {
+void OpGraph::InferSbpSignature() const {
   TopoForEachNode([&](OpNode* op_node) {
     HashMap<std::string, SbpInferHint> ibn2sbp_infer_hint;
     for (const std::string& ibn : op_node->op().input_bns()) {
@@ -360,15 +362,12 @@ void OpGraph::InferSbpParallel() const {
       const auto& sbp = producer->SbpParallel4Lbi(lbi);
       ibn2sbp_infer_hint.emplace(ibn, SbpInferHint(is_model_blob, parallel_desc, num_axes, sbp));
     }
-    auto SbpParallel4BnInOp = [&](const std::string& bn) -> SbpParallel* {
-      return op_node->MutSbpParallel4Lbi(op_node->op().BnInOp2Lbi(bn));
-    };
+    SbpSignature* sbp_signature = op_node->mut_sbp_signature();
     auto SbpInferHint4Ibn = [&](const std::string& ibn) -> const SbpInferHint& {
       return ibn2sbp_infer_hint.at(ibn);
     };
-    op_node->op().InferInputOutputSbpParallelIf(SbpParallel4BnInOp, SbpInferHint4Ibn,
-                                                op_node->parallel_desc());
-    op_node->op().FixInputOutputSbpParallel(SbpParallel4BnInOp);
+    op_node->op().InferSbpSignatureIf(sbp_signature, SbpInferHint4Ibn, op_node->parallel_desc());
+    op_node->op().FixSbpSignature(sbp_signature);
   });
 }
 
@@ -394,8 +393,8 @@ void OpGraph::InferLogicalBlobDesc() const {
       parallel_ctx.set_parallel_id(parallel_id);
       parallel_ctx.set_parallel_num(parallel_num);
       parallel_ctx.set_policy(op_node->parallel_desc().policy());
-      op_node->op().InferBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx, job_desc_->RecordPieceSize(),
-                                     [](OpContext*) {});
+      op_node->op().InferBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx,
+                                     Global<JobDesc>::Get()->RecordPieceSize(), [](OpContext*) {});
     }
     op_node->ConcatLogicalOutputBlobDesc();
   });

@@ -1,8 +1,8 @@
-#include "oneflow/core/job_completer/auto_saver.h"
+#include "oneflow/core/job_completer/add_saver.h"
 
 namespace oneflow {
 
-void AutoSaver(const OpGraph& op_graph, Job* job_conf) {
+void AddSaver(const OpGraph &op_graph, Job *job_conf) {
   JobBuilder builder(job_conf);
   ParallelConf md_save_parallel_conf;
   // only save on master

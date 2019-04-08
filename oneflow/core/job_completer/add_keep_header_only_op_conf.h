@@ -8,6 +8,6 @@ class Job;
 
 void AddKeepHeaderOnlyOp(const OpGraph& op_graph, Job* job);
 
-} // namespace oneflow
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_JOB_COMPLETER_ADD_KEEP_HEADER_ONLY_H_

@@ -5,13 +5,13 @@ namespace oneflow {
 
 namespace {
 
-class NormalizationGradDataParallelSbpSignature final : public ParallelSbpSignature {
+class NormalizationGradDataParallelSbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(NormalizationGradDataParallelSbpSignature);
-  ~NormalizationGradDataParallelSbpSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(NormalizationGradDataParallelSbpSignatureRule);
+  ~NormalizationGradDataParallelSbpSignatureRule() override = default;
 
-  explicit NormalizationGradDataParallelSbpSignature(const Operator* op)
-      : ParallelSbpSignature(op) {}
+  explicit NormalizationGradDataParallelSbpSignatureRule(const Operator* op)
+      : ParallelSbpSignatureRule(op) {}
 
   const std::string Description() const override { return op().op_name() + ": (S, B) -> (S, P)"; }
 
@@ -24,7 +24,8 @@ class NormalizationGradDataParallelSbpSignature final : public ParallelSbpSignat
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     const NormalizationGradOpConf& conf = op().op_conf().normalization_grad_conf();
     (*bn2sbp)["dy"].mutable_split_parallel()->set_axis(0);
     if (conf.has_dx()) { (*bn2sbp)["dx"].mutable_split_parallel()->set_axis(0); }
@@ -125,9 +126,9 @@ void NormalizationGradOp::InferBlobDescs(
   SetParamBlobDesc("beta_diff");
 }
 
-void NormalizationGradOp::GetSbpSignatures(
-    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new NormalizationGradDataParallelSbpSignature(this));
+void NormalizationGradOp::GetSbpSignatureRules(
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  rules->emplace_back(new NormalizationGradDataParallelSbpSignatureRule(this));
 }
 
 REGISTER_OP(OperatorConf::kNormalizationGradConf, NormalizationGradOp);

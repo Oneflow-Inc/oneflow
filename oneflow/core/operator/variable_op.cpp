@@ -6,12 +6,12 @@ namespace oneflow {
 namespace {
 
 // S(0) -> C
-class VariableOpDataSplitSbpSignature final : public ParallelSbpSignature {
+class VariableOpDataSplitSbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(VariableOpDataSplitSbpSignature);
-  ~VariableOpDataSplitSbpSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(VariableOpDataSplitSbpSignatureRule);
+  ~VariableOpDataSplitSbpSignatureRule() override = default;
 
-  VariableOpDataSplitSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
+  VariableOpDataSplitSbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
 
   const std::string Description() const override { return op().op_name() + ": S(0) -> C"; }
 
@@ -27,7 +27,8 @@ class VariableOpDataSplitSbpSignature final : public ParallelSbpSignature {
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     if (op().op_conf().variable_conf().has_tick()) {
       CHECK(SbpInferHint4Ibn("tick").is_data_split());
       (*bn2sbp)["tick"].mutable_split_parallel()->set_axis(0);
@@ -37,12 +38,12 @@ class VariableOpDataSplitSbpSignature final : public ParallelSbpSignature {
 };
 
 // S(0) -> S
-class VariableOpModelSplitSbpSignature final : public ParallelSbpSignature {
+class VariableOpModelSplitSbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(VariableOpModelSplitSbpSignature);
-  ~VariableOpModelSplitSbpSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(VariableOpModelSplitSbpSignatureRule);
+  ~VariableOpModelSplitSbpSignatureRule() override = default;
 
-  VariableOpModelSplitSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
+  VariableOpModelSplitSbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
 
   const std::string Description() const override { return op().op_name() + ": S(0) -> S"; }
 
@@ -58,7 +59,8 @@ class VariableOpModelSplitSbpSignature final : public ParallelSbpSignature {
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     if (op().op_conf().variable_conf().has_tick()) {
       CHECK(SbpInferHint4Ibn("tick").is_data_split());
       (*bn2sbp)["tick"].mutable_split_parallel()->set_axis(0);
@@ -109,10 +111,10 @@ void VariableOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   *GetBlobDesc4BnInOp("out") = *model_blob_desc;
 }
 
-void VariableOp::GetSbpSignatures(
-    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new VariableOpDataSplitSbpSignature(this));
-  op_parallel_signatures->emplace_back(new VariableOpModelSplitSbpSignature(this));
+void VariableOp::GetSbpSignatureRules(
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  rules->emplace_back(new VariableOpDataSplitSbpSignatureRule(this));
+  rules->emplace_back(new VariableOpModelSplitSbpSignatureRule(this));
 }
 
 void VariableOp::InferIsModelBlob4OutputBlobs(

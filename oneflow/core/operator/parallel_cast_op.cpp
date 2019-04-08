@@ -16,12 +16,12 @@ SbpParallel GetSbpParallel(const ParallelCastOpConf& conf) {
   return ret;
 }
 
-class ParallelCastSbpSignature final : public ParallelSbpSignature {
+class ParallelCastSbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ParallelCastSbpSignature);
-  ~ParallelCastSbpSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(ParallelCastSbpSignatureRule);
+  ~ParallelCastSbpSignatureRule() override = default;
 
-  ParallelCastSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
+  ParallelCastSbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
 
   const std::string Description() const override { return op().op_name() + ": A -> A"; }
 
@@ -39,7 +39,8 @@ class ParallelCastSbpSignature final : public ParallelSbpSignature {
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     const auto& sbp_parallel = GetSbpParallel(op().op_conf().parallel_cast_conf());
     (*bn2sbp)["in"] = sbp_parallel;
     (*bn2sbp)["out"] = sbp_parallel;
@@ -48,9 +49,9 @@ class ParallelCastSbpSignature final : public ParallelSbpSignature {
 
 }  // namespace
 
-void ParallelCastOp::GetSbpSignatures(
-    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new ParallelCastSbpSignature(this));
+void ParallelCastOp::GetSbpSignatureRules(
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  rules->emplace_back(new ParallelCastSbpSignatureRule(this));
 }
 
 REGISTER_OP(OperatorConf::kParallelCastConf, ParallelCastOp);

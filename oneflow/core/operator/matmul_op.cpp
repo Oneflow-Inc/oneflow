@@ -4,12 +4,12 @@ namespace oneflow {
 
 namespace {
 
-class Matmul_MS_MS_2_P_SbpSignature final : public ParallelSbpSignature {
+class Matmul_MS_MS_2_P_SbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(Matmul_MS_MS_2_P_SbpSignature);
-  ~Matmul_MS_MS_2_P_SbpSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(Matmul_MS_MS_2_P_SbpSignatureRule);
+  ~Matmul_MS_MS_2_P_SbpSignatureRule() override = default;
 
-  Matmul_MS_MS_2_P_SbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
+  Matmul_MS_MS_2_P_SbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
 
   const std::string Description() const override { return op().op_name() + ": (S, S) -> P"; }
 
@@ -28,7 +28,8 @@ class Matmul_MS_MS_2_P_SbpSignature final : public ParallelSbpSignature {
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     int32_t a_split_axis = (op().op_conf().matmul_conf().transpose_a() ? 0 : 1);
     (*bn2sbp)["a"].mutable_split_parallel()->set_axis(a_split_axis);
     (*bn2sbp)["b"] = SbpInferHint4Ibn("b").sbp_parallel();
@@ -54,16 +55,16 @@ bool MatmulOp::IsInputBlobAllowedModelSplit(const std::string& ibn) const {
   return ibn == "b";
 }
 
-void MatmulOp::GetSbpSignatures(
-    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(MakeDataSplitSbpSignature(this));
-  op_parallel_signatures->emplace_back(Make_DS_MB_2_DS_SbpSignature(this));
+void MatmulOp::GetSbpSignatureRules(
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  rules->emplace_back(MakeDataSplitSbpSignatureRule(this));
+  rules->emplace_back(Make_DS_MB_2_DS_SbpSignatureRule(this));
   auto IsValidSplit = [this](int32_t axis) {
     int32_t b_expected_split_axis = (op_conf().matmul_conf().transpose_b() ? 0 : 1);
     return axis == b_expected_split_axis;
   };
-  op_parallel_signatures->emplace_back(Make_DB_MS_2_MS_SbpSignature(this, IsValidSplit));
-  op_parallel_signatures->emplace_back(new Matmul_MS_MS_2_P_SbpSignature(this));
+  rules->emplace_back(Make_DB_MS_2_MS_SbpSignatureRule(this, IsValidSplit));
+  rules->emplace_back(new Matmul_MS_MS_2_P_SbpSignatureRule(this));
 }
 
 void MatmulOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

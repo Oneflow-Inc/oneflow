@@ -18,11 +18,11 @@ void CastOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   out_blob_desc->set_data_type(op_conf().cast_conf().data_type());
 }
 
-void CastOp::FixInputOutputSbpParallel(
-    const std::function<SbpParallel*(const std::string&)>& SbpParallel4BnInOp) const {
-  if (SbpParallel4BnInOp("out")->has_partial_sum_parallel()) {
-    SbpParallel4BnInOp("in")->mutable_broadcast_parallel();
-    SbpParallel4BnInOp("out")->mutable_broadcast_parallel();
+void CastOp::FixSbpSignature(SbpSignature* sbp_signature) const {
+  auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
+  if (bn2sbp->at("out").has_partial_sum_parallel()) {
+    bn2sbp->at("in").mutable_broadcast_parallel();
+    bn2sbp->at("out").mutable_broadcast_parallel();
   }
 }
 

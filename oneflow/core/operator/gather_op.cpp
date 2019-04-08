@@ -15,12 +15,12 @@ int64_t GetGatherAxis(const GatherOpConf& conf, const BlobDesc* in_blob_desc) {
   return GetGatherAxis(conf, in_blob_desc->shape().NumAxes());
 }
 
-class GatherDataParallelSbpSignature final : public ParallelSbpSignature {
+class GatherDataParallelSbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(GatherDataParallelSbpSignature);
-  ~GatherDataParallelSbpSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(GatherDataParallelSbpSignatureRule);
+  ~GatherDataParallelSbpSignatureRule() override = default;
 
-  explicit GatherDataParallelSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
+  explicit GatherDataParallelSbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
 
   const std::string Description() const override { return op().op_name() + ": (S, B) -> S"; }
 
@@ -41,7 +41,8 @@ class GatherDataParallelSbpSignature final : public ParallelSbpSignature {
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     const int64_t gather_axis =
         GetGatherAxis(op().op_conf().gather_conf(), SbpInferHint4BnInOp("in").num_axes());
     const int64_t indices_split_axis =
@@ -52,12 +53,12 @@ class GatherDataParallelSbpSignature final : public ParallelSbpSignature {
   }
 };
 
-class GatherModelParallelSbpSignature final : public ParallelSbpSignature {
+class GatherModelParallelSbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(GatherModelParallelSbpSignature);
-  ~GatherModelParallelSbpSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(GatherModelParallelSbpSignatureRule);
+  ~GatherModelParallelSbpSignatureRule() override = default;
 
-  explicit GatherModelParallelSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
+  explicit GatherModelParallelSbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
 
   const std::string Description() const override { return op().op_name() + ": (B, S) -> S"; }
 
@@ -83,7 +84,8 @@ class GatherModelParallelSbpSignature final : public ParallelSbpSignature {
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     const int64_t gather_axis =
         GetGatherAxis(op().op_conf().gather_conf(), SbpInferHint4BnInOp("in").num_axes());
     const int64_t in_split_axis = SbpInferHint4BnInOp("in").sbp_parallel().split_parallel().axis();
@@ -140,10 +142,10 @@ void GatherOp::VirtualGenKernelConf(
   kernel_conf->mutable_gather_conf()->set_axis(axis);
 }
 
-void GatherOp::GetSbpSignatures(
-    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new GatherDataParallelSbpSignature(this));
-  op_parallel_signatures->emplace_back(new GatherModelParallelSbpSignature(this));
+void GatherOp::GetSbpSignatureRules(
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  rules->emplace_back(new GatherDataParallelSbpSignatureRule(this));
+  rules->emplace_back(new GatherModelParallelSbpSignatureRule(this));
 }
 
 int32_t GatherOp::OutputBlobModelSplitAxis(
