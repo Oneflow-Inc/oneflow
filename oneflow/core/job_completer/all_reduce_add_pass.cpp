@@ -73,11 +73,34 @@ void GroupAllReducedLbis(
   GroupAllReducedLbisByStrategy(op_graph, lbis, lbi_groups);
 }
 
+void AddReduceConcatAndReduceIdentityOpConf(
+    const JobBuilder& job_builder,
+    const std::function<const OpNode*(const LogicalBlobId&)>& ProducerOpNode4Lbi,
+    const std::vector<LogicalBlobId>& lbi_groups, LogicalBlobId* grouped_lbi) {
+  TODO();
+}
+
+void AddAllReduceOpConf(const JobBuilder& job_builder, const LogicalBlobId& grouped_lbi,
+                        LogicalBlobId* all_reduced_lbi) {
+  TODO();  // juncheng
+}
+
+void AddReduceSplitOpConf(
+    const JobBuilder& job_builder,
+    const std::function<const OpNode*(const LogicalBlobId&)>& ProducerOpNode4Lbi,
+    const std::vector<LogicalBlobId>& lbi_groups, const LogicalBlobId& all_reduced_lbi) {
+  TODO();
+}
+
 void BuildAllReduceStruct(
     const JobBuilder& job_builder,
     const std::function<const OpNode*(const LogicalBlobId&)>& ProducerOpNode4Lbi,
     const std::vector<LogicalBlobId>& lbi_groups) {
-  TODO();
+  LogicalBlobId grouped_lbi;
+  AddReduceConcatAndReduceIdentityOpConf(job_builder, ProducerOpNode4Lbi, lbi_groups, &grouped_lbi);
+  LogicalBlobId all_reduced_lbi;
+  AddAllReduceOpConf(job_builder, grouped_lbi, &all_reduced_lbi);
+  AddReduceSplitOpConf(job_builder, ProducerOpNode4Lbi, lbi_groups, all_reduced_lbi);
 }
 
 }  // namespace
