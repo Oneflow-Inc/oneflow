@@ -996,6 +996,13 @@ message L2NormalizeOpConf {
   optional float epsilon = 4 [default = 1e-12];
 }
 
+message WhereOpConf {
+  required string condition = 1;
+  required string x = 2;
+  required string y = 3;
+  required string out = 4;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1090,6 +1097,7 @@ message OperatorConf {
     ParallelCastOpConf parallel_cast_conf = 263;
     L2NormalizeOpConf l2_normalize_conf = 264;
     PReluOpConf prelu_conf = 265;
+    WhereOpConf where_conf = 266;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
