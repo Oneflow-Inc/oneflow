@@ -171,7 +171,7 @@ void Operator::InferSbpSignatureIf(
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   std::vector<std::unique_ptr<const SbpSignatureRule>> rules;
-  GetSbpSignatureRules(&rules);
+  GetSbpSignatureRulesIf(&rules);
   std::vector<SbpSigMatchResult> match_results;
   for (const auto& signature : rules) {
     match_results.push_back(signature->GetMatchResultIf(SbpInferHint4Ibn, parallel_desc));
