@@ -4,6 +4,7 @@
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/dlnet_conf.pb.h"
 #include "oneflow/core/job/job_conf.pb.h"
+#include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/persistence/file_system.h"
@@ -18,11 +19,9 @@ class JobDesc final {
   ~JobDesc() = default;
 
   // Common
-  const JobConf1& job_conf() const { return job_conf_; }
-  const DLNetConf& dlnet_conf() const { return job_conf_.net(); }
+  const JobConf& job_conf() const { return job_conf_; }
   const Resource& resource() const { return job_conf_.resource(); }
-  const Placement& placement() const { return job_conf_.placement(); }
-  const OtherConf& other_conf() const { return job_conf_.other(); }
+  const Config& other_conf() const { return job_conf_.other(); }
   const std::string& MdLoadSnapshotPath() { return job_conf_.other().model_load_snapshot_path(); }
   DataType DefaultDataType() const { return job_conf_.other().default_data_type(); }
   size_t SizeOfOneDataId() const { return job_conf_.other().max_data_id_length() * sizeof(char); }
@@ -84,29 +83,21 @@ class JobDesc final {
   float bias_l2() const;
   int32_t DataPartNum() const;
 
-  // fix and Optimize
-  void FixAndOptimizeDLNet();
-
  private:
   friend class Global<JobDesc>;
   JobDesc(const std::string& job_conf_filepath);
-  JobDesc(const JobConf1& job_conf_);
   void Init();
   void SanityCheck();
   void SplitDecodeOps();
   void AddRecordLoadOps();
-  void ConvertPseudoChainToChain();
-  void AddIdentityOpForChainMergeOptimization();
-  void AddIdentityOpForAllReduceOverlapingUntrainble();
-  void FixTickOpIfExists();
 
-  JobConf1 job_conf_;
+  JobConf job_conf_;
 };
+
+const static std::string kProducedLbi2ConsumedDiffLbi = "produced_lbi2consumed_diff_lbi";
 
 std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4OpName(
     const Placement& placement);
-std::function<ParallelConf*(const std::string&)> MakeGetterMutParallelConf4OpName(
-    Placement* placement);
 
 }  // namespace oneflow
 

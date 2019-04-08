@@ -8,20 +8,19 @@ bool IsScalarBlob(const BlobDesc* blob) {
   return blob->shape().NumAxes() == 1 && blob->shape().At(0) == 1;
 }
 
-class BroadcastBinaryOpParallelSignature final : public OpParallelSignature {
+class BroadcastBinarySbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BroadcastBinaryOpParallelSignature);
-  ~BroadcastBinaryOpParallelSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(BroadcastBinarySbpSignatureRule);
+  ~BroadcastBinarySbpSignatureRule() override = default;
 
-  BroadcastBinaryOpParallelSignature(const Operator* op,
-                                     const HashSet<std::string>& model_input_bns)
-      : OpParallelSignature(op), model_input_bns_(model_input_bns) {}
+  BroadcastBinarySbpSignatureRule(const Operator* op, const HashSet<std::string>& model_input_bns)
+      : ParallelSbpSignatureRule(op), model_input_bns_(model_input_bns) {}
 
   const std::string Description() const override {
     return op().op_name() + ": (C, ..., S(0), ...) -> (S(0), ...)";
   }
 
-  const OpParallelMatchResult GetMatchResult(
+  const SbpSigMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
     for (const auto& bn : op().input_bns()) {
@@ -29,16 +28,17 @@ class BroadcastBinaryOpParallelSignature final : public OpParallelSignature {
       bool is_model_input_bns = (model_input_bns_.find(bn) != model_input_bns_.end());
       bool has_actual_model_input = sbp_infer_hint.is_model_blob();
       if (is_model_input_bns ^ has_actual_model_input) {
-        return MakeOpParallelMatchSignatureMismatch();
+        return MakeSbpSigMatchSignatureMismatch();
       }
     }
-    if (parallel_desc.policy() == kDataParallel) { return MakeOpParallelMatchSuccess(); }
-    return MakeOpParallelMatchParallelPolicyError(parallel_desc.policy(), kDataParallel);
+    if (parallel_desc.policy() == kDataParallel) { return MakeSbpSigMatchSuccess(); }
+    return MakeSbpSigMatchParallelPolicyError(parallel_desc.policy(), kDataParallel);
   }
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     for (const auto& bn : op().input_bns()) {
       if (model_input_bns_.find(bn) != model_input_bns_.end()) {
         (*bn2sbp)[bn].mutable_broadcast_parallel();
@@ -60,10 +60,10 @@ class BroadcastBinaryOpParallelSignature final : public OpParallelSignature {
   HashSet<std::string> model_input_bns_;
 };
 
-std::unique_ptr<const OpParallelSignature> MakeBroadcastBinaryOpParallelSignature(
+std::unique_ptr<const SbpSignatureRule> MakeBroadcastBinarySbpSignatureRule(
     const Operator* op, const HashSet<std::string>& model_input_bns) {
-  return std::unique_ptr<const OpParallelSignature>(
-      new BroadcastBinaryOpParallelSignature(op, model_input_bns));
+  return std::unique_ptr<const SbpSignatureRule>(
+      new BroadcastBinarySbpSignatureRule(op, model_input_bns));
 }
 
 }  // namespace
@@ -108,12 +108,12 @@ void BroadcastBinaryOp::InferBwBufBlobDescs(
   bw_buf->set_data_type(out->data_type());
 }
 
-void BroadcastBinaryOp::GetOpParallelSignatures(
-    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(MakeBroadcastBinaryOpParallelSignature(this, {}));
-  op_parallel_signatures->emplace_back(MakeBroadcastBinaryOpParallelSignature(this, {"a"}));
-  op_parallel_signatures->emplace_back(MakeBroadcastBinaryOpParallelSignature(this, {"b"}));
-  op_parallel_signatures->emplace_back(MakeBroadcastBinaryOpParallelSignature(this, {"a", "b"}));
+void BroadcastBinaryOp::GetSbpSignatureRules(
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  rules->emplace_back(MakeBroadcastBinarySbpSignatureRule(this, {}));
+  rules->emplace_back(MakeBroadcastBinarySbpSignatureRule(this, {"a"}));
+  rules->emplace_back(MakeBroadcastBinarySbpSignatureRule(this, {"b"}));
+  rules->emplace_back(MakeBroadcastBinarySbpSignatureRule(this, {"a", "b"}));
 }
 
 }  // namespace oneflow

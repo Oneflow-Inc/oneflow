@@ -4,26 +4,27 @@ namespace oneflow {
 
 namespace {
 
-class LossOpParallelSignature final : public OpParallelSignature {
+class LossSbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(LossOpParallelSignature);
-  ~LossOpParallelSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(LossSbpSignatureRule);
+  ~LossSbpSignatureRule() override = default;
 
-  LossOpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
+  LossSbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
 
   const std::string Description() const override {
     return op().op_name() + ": (S(0), S(0)) -> S(0)";
   }
 
-  const OpParallelMatchResult GetMatchResult(
+  const SbpSigMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelDesc& parallel_desc) const override {
-    return MakeOpParallelMatchSuccess();
+    return MakeSbpSigMatchSuccess();
   }
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     for (const auto& ibn : op().input_bns()) {
       (*bn2sbp)[ibn].mutable_split_parallel()->set_axis(0);
     }
@@ -62,7 +63,7 @@ void LossOp::VirtualGenKernelConf(
     conf->set_label_type(DataType::kInvalidDataType);
   }
   conf->set_weight_scalar(GetValFromCustomizedConf<float>("weight_scalar"));
-  conf->set_reduction(static_cast<LossReductionType>(GetEnumFromCustomizedConf("reduction")));
+  conf->set_reduction(static_cast<ScalarReductionType>(GetEnumFromCustomizedConf("reduction")));
 }
 
 void LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -99,9 +100,9 @@ void LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   VirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
-void LossOp::GetOpParallelSignatures(
-    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new LossOpParallelSignature(this));
+void LossOp::GetSbpSignatureRules(
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  rules->emplace_back(new LossSbpSignatureRule(this));
 }
 
 LogicalBlobId LossOp::obn2lbi(const std::string& output_bn) const {

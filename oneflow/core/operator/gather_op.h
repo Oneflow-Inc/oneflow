@@ -27,8 +27,7 @@ class GatherOp final : public Operator {
 
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override;
-  void GetOpParallelSignatures(
-      std::vector<std::unique_ptr<const OpParallelSignature>>*) const override;
+  void GetSbpSignatureRules(std::vector<std::unique_ptr<const SbpSignatureRule>>*) const override;
 };
 
 }  // namespace oneflow

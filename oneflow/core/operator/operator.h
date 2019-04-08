@@ -10,8 +10,8 @@
 #include "oneflow/core/kernel/kernel.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/register/blob_desc.h"
-#include "oneflow/core/operator/op_parallel_signature.h"
-#include "oneflow/core/job/job_conf_builder.h"
+#include "oneflow/core/operator/sbp_signature_rule.h"
+#include "oneflow/core/job/job_builder.h"
 
 namespace oneflow {
 
@@ -51,6 +51,7 @@ class Operator {
   virtual bool NeedInBlobWhenBackward() const { return true; }
   virtual bool IsForwardInplace() const { return false; }
   virtual bool IsBackwardInplace() const { return false; }
+  virtual std::vector<std::string> GetHeaderOnlyIbns() const { return std::vector<std::string>(); }
 
   // bn_in_op <-> lbi
   const LogicalBlobId& BnInOp2Lbi(const std::string& bn_in_op) const;
@@ -148,13 +149,11 @@ class Operator {
   virtual void InferOutputBlobTimeShape(
       std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
       Shape* time_shape) const;
-  // Infer blob's SbpParallel
-  void InferInputOutputSbpParallelIf(
-      std::function<SbpParallel*(const std::string&)> SbpParallel4BnInOp,
-      std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc) const;
-  virtual void FixInputOutputSbpParallel(
-      const std::function<SbpParallel*(const std::string&)>& SbpParallel4BnInOp) const {}
+  // Infer blob's SbpSignature
+  void InferSbpSignatureIf(SbpSignature* sbp_signature,
+                           std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+                           const ParallelDesc& parallel_desc) const;
+  virtual void FixSbpSignature(SbpSignature* sbp_signature) const {}
   // Infer is_model_blob
   void InferIsModelBlob4OutputBlobsIf(
       std::function<bool*(const std::string&)> IsModelBlob4BnInOp) const;
@@ -257,8 +256,9 @@ class Operator {
   OutputBlobModifier* MutOutputBlobModifier4Obn(const std::string& obn);
 
  private:
-  virtual void GetOpParallelSignatures(
-      std::vector<std::unique_ptr<const OpParallelSignature>>*) const;
+  void GetSbpSignatureRulesIf(std::vector<std::unique_ptr<const SbpSignatureRule>>*) const;
+
+  virtual void GetSbpSignatureRules(std::vector<std::unique_ptr<const SbpSignatureRule>>*) const;
   LogicalBlobId dtbn2lbi(const std::string& data_tmp_bn) const;
   LogicalBlobId fbbn2lbi(const std::string& fw_buf_bn) const { return dtbn2lbi(fw_buf_bn); }
   LogicalBlobId bbbn2lbi(const std::string& bw_buf_bn) const { return dtbn2lbi(bw_buf_bn); }

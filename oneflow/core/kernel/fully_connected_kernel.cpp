@@ -74,13 +74,15 @@ template<DeviceType device_type, typename T>
 void FullyConnectedKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937* random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const FullyConnectedOpConf& op_conf = this->op_conf().fully_connected_conf();
+  if (op_conf.has_weight()) { return; }
   KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx, GetMsgPtrFromPbMessage(this->op_conf().fully_connected_conf(), "weight_initializer"),
-      (*random_seed_gen)(), BnInOp2Blob("weight"));
-  if (this->op_conf().fully_connected_conf().use_bias()) {
+      ctx, GetMsgPtrFromPbMessage(op_conf, "weight_initializer"), (*random_seed_gen)(),
+      BnInOp2Blob("weight"));
+  if (op_conf.use_bias()) {
     KernelUtil<device_type, T>::InitializeWithProperConf(
-        ctx, GetMsgPtrFromPbMessage(this->op_conf().fully_connected_conf(), "bias_initializer"),
-        (*random_seed_gen)(), BnInOp2Blob("bias"));
+        ctx, GetMsgPtrFromPbMessage(op_conf, "bias_initializer"), (*random_seed_gen)(),
+        BnInOp2Blob("bias"));
   }
 }
 
@@ -88,11 +90,13 @@ template<DeviceType device_type, typename T>
 void FullyConnectedKernel<device_type, T>::InitModelBlobsWithDir(
     DeviceCtx* ctx, int32_t part_id, int32_t part_num, const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const FullyConnectedOpConf& op_conf = this->op_conf().fully_connected_conf();
+  if (op_conf.has_weight()) { return; }
   Blob* weight_blob = BnInOp2Blob("weight");
   int32_t dim_num = this->op_conf().fully_connected_conf().units();
   KernelUtil<device_type, T>::InitializeWithDir(ctx, part_id, part_num, model_load_dir, weight_blob,
                                                 "weight", dim_num, weight_blob->shape().Count(1));
-  if (this->op_conf().fully_connected_conf().use_bias()) {
+  if (op_conf.use_bias()) {
     KernelUtil<device_type, T>::InitializeWithDir(ctx, part_id, part_num, model_load_dir,
                                                   BnInOp2Blob("bias"), "bias", dim_num, 1);
   }

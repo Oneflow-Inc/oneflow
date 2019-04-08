@@ -15,31 +15,86 @@ int64_t GetGatherAxis(const GatherOpConf& conf, const BlobDesc* in_blob_desc) {
   return GetGatherAxis(conf, in_blob_desc->shape().NumAxes());
 }
 
-class Gather_DB_MS_2_P_OpParallelSignature final : public OpParallelSignature {
+class GatherDataParallelSbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(Gather_DB_MS_2_P_OpParallelSignature);
-  ~Gather_DB_MS_2_P_OpParallelSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(GatherDataParallelSbpSignatureRule);
+  ~GatherDataParallelSbpSignatureRule() override = default;
 
-  Gather_DB_MS_2_P_OpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
+  explicit GatherDataParallelSbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
 
-  const std::string Description() const override { return op().op_name() + ": (C, S) -> P"; }
+  const std::string Description() const override { return op().op_name() + ": (S, B) -> S"; }
 
-  const OpParallelMatchResult GetMatchResult(
+  const SbpSigMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelDesc& parallel_desc) const override {
     const SbpInferHint& in_sbp_infer_hint = SbpInferHint4BnInOp("in");
-    if (!in_sbp_infer_hint.is_model_split()) { return MakeOpParallelMatchSignatureMismatch(); }
-    if (in_sbp_infer_hint.split_axis() != 0) { return MakeOpParallelMatchSignatureMismatch(); }
-    if (parallel_desc.policy() == kModelParallel) { return MakeOpParallelMatchSuccess(); }
-    return MakeOpParallelMatchParallelPolicyError(parallel_desc.policy(), kModelParallel);
+    if (!in_sbp_infer_hint.sbp_parallel().has_broadcast_parallel()) {
+      return MakeSbpSigMatchSignatureMismatch();
+    }
+    const SbpInferHint& indices_sbp_infer_hint = SbpInferHint4BnInOp("indices");
+    if (!indices_sbp_infer_hint.sbp_parallel().has_split_parallel()) {
+      return MakeSbpSigMatchSignatureMismatch();
+    }
+    if (parallel_desc.policy() == kDataParallel) { return MakeSbpSigMatchSuccess(); }
+    return MakeSbpSigMatchParallelPolicyError(parallel_desc.policy(), kDataParallel);
   }
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
+    const int64_t gather_axis =
+        GetGatherAxis(op().op_conf().gather_conf(), SbpInferHint4BnInOp("in").num_axes());
+    const int64_t indices_split_axis =
+        SbpInferHint4BnInOp("indices").sbp_parallel().split_parallel().axis();
+    (*bn2sbp)["indices"].mutable_split_parallel()->set_axis(indices_split_axis);
+    (*bn2sbp)["in"].mutable_broadcast_parallel();
+    (*bn2sbp)["out"].mutable_split_parallel()->set_axis(gather_axis + indices_split_axis);
+  }
+};
+
+class GatherModelParallelSbpSignatureRule final : public ParallelSbpSignatureRule {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(GatherModelParallelSbpSignatureRule);
+  ~GatherModelParallelSbpSignatureRule() override = default;
+
+  explicit GatherModelParallelSbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
+
+  const std::string Description() const override { return op().op_name() + ": (B, S) -> S"; }
+
+  const SbpSigMatchResult GetMatchResult(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      const ParallelDesc& parallel_desc) const override {
+    const SbpInferHint& in_sbp_infer_hint = SbpInferHint4BnInOp("in");
+    if (!in_sbp_infer_hint.sbp_parallel().has_split_parallel()) {
+      return MakeSbpSigMatchSignatureMismatch();
+    }
+    const int64_t gather_axis =
+        GetGatherAxis(op().op_conf().gather_conf(), SbpInferHint4BnInOp("in").num_axes());
+    if (in_sbp_infer_hint.sbp_parallel().split_parallel().axis() == gather_axis) {
+      return MakeSbpSigMatchSignatureMismatch();
+    }
+    const SbpInferHint& indices_sbp_infer_hint = SbpInferHint4BnInOp("indices");
+    if (!indices_sbp_infer_hint.sbp_parallel().has_broadcast_parallel()) {
+      return MakeSbpSigMatchSignatureMismatch();
+    }
+    if (parallel_desc.policy() == kModelParallel) { return MakeSbpSigMatchSuccess(); }
+    return MakeSbpSigMatchParallelPolicyError(parallel_desc.policy(), kModelParallel);
+  }
+
+  void GenerateSignature(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
+    const int64_t gather_axis =
+        GetGatherAxis(op().op_conf().gather_conf(), SbpInferHint4BnInOp("in").num_axes());
+    const int64_t in_split_axis = SbpInferHint4BnInOp("in").sbp_parallel().split_parallel().axis();
     (*bn2sbp)["indices"].mutable_broadcast_parallel();
-    (*bn2sbp)["in"].mutable_split_parallel()->set_axis(0);
-    (*bn2sbp)["out"].mutable_partial_sum_parallel();
+    (*bn2sbp)["in"].mutable_split_parallel()->set_axis(in_split_axis);
+    (*bn2sbp)["out"].mutable_split_parallel()->set_axis(
+        in_split_axis < gather_axis
+            ? in_split_axis
+            : in_split_axis + SbpInferHint4BnInOp("indices").num_axes() - 1);
   }
 };
 
@@ -87,31 +142,16 @@ void GatherOp::VirtualGenKernelConf(
   kernel_conf->mutable_gather_conf()->set_axis(axis);
 }
 
-void GatherOp::GetOpParallelSignatures(
-    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(MakeDataSplitOpParallelSignature(this));
-  op_parallel_signatures->emplace_back(Make_DS_MB_2_DS_OpParallelSignature(this));
-  const int64_t gather_axis = op_conf().gather_conf().axis();
-  if (gather_axis >= 0) {
-    op_parallel_signatures->emplace_back(Make_DB_MS_2_MS_OpParallelSignature(
-        this, [gather_axis](const int32_t axis) { return axis != gather_axis; }));
-  }
-  op_parallel_signatures->emplace_back(new Gather_DB_MS_2_P_OpParallelSignature(this));
+void GatherOp::GetSbpSignatureRules(
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  rules->emplace_back(new GatherDataParallelSbpSignatureRule(this));
+  rules->emplace_back(new GatherModelParallelSbpSignatureRule(this));
 }
 
 int32_t GatherOp::OutputBlobModelSplitAxis(
     const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     const std::string& obn) const {
-  const SbpInferHint& indices_sbp_infer_hint = SbpInferHint4Ibn("indices");
-  CHECK(indices_sbp_infer_hint.is_data_blob());
-  const SbpInferHint& in_sbp_infer_hint = SbpInferHint4Ibn("in");
-  const int64_t in_num_axes = in_sbp_infer_hint.num_axes();
-  const int64_t gather_axis = GetGatherAxis(op_conf().gather_conf(), in_num_axes);
-  CHECK(in_sbp_infer_hint.is_model_split());
-  CHECK_GT(in_sbp_infer_hint.split_axis(), 0);
-  CHECK_GT(in_sbp_infer_hint.split_axis(), gather_axis);
-  CHECK_LT(in_sbp_infer_hint.split_axis(), in_num_axes);
-  return in_sbp_infer_hint.split_axis() + indices_sbp_infer_hint.num_axes() - 1;
+  UNIMPLEMENTED();
 }
 
 REGISTER_OP(OperatorConf::kGatherConf, GatherOp);

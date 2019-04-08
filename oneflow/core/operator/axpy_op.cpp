@@ -4,32 +4,33 @@ namespace oneflow {
 
 namespace {
 
-class AxpyOpParallelSignature final : public OpParallelSignature {
+class AxpySbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(AxpyOpParallelSignature);
-  ~AxpyOpParallelSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(AxpySbpSignatureRule);
+  ~AxpySbpSignatureRule() override = default;
 
-  AxpyOpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
+  AxpySbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
 
   const std::string Description() const override { return op().op_name() + ": (A, A) -> ()"; }
 
-  const OpParallelMatchResult GetMatchResult(
+  const SbpSigMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
     if (parallel_desc.parallel_num() != SbpInferHint4Ibn("y").parallel_num()) {
-      return MakeOpParallelMatchParallelNumError(parallel_desc.parallel_num(),
-                                                 SbpInferHint4Ibn("y").parallel_num());
+      return MakeSbpSigMatchParallelNumError(parallel_desc.parallel_num(),
+                                             SbpInferHint4Ibn("y").parallel_num());
     }
     if (parallel_desc != SbpInferHint4Ibn("y").parallel_desc()) {
-      return MakeOpParallelMatchDeviceSetError(
-          parallel_desc.device_names(), SbpInferHint4Ibn("y").parallel_desc().device_names());
+      return MakeSbpSigMatchDeviceSetError(parallel_desc.device_names(),
+                                           SbpInferHint4Ibn("y").parallel_desc().device_names());
     }
-    return MakeOpParallelMatchSuccess();
+    return MakeSbpSigMatchSuccess();
   }
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     (*bn2sbp)["y"] = SbpInferHint4Ibn("y").sbp_parallel();
     (*bn2sbp)["x"] = SbpInferHint4Ibn("y").sbp_parallel();
   }
@@ -49,9 +50,9 @@ void AxpyOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
 
 const PbMessage& AxpyOp::GetCustomizedConf() const { return op_conf().axpy_conf(); }
 
-void AxpyOp::GetOpParallelSignatures(
-    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new AxpyOpParallelSignature(this));
+void AxpyOp::GetSbpSignatureRules(
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  rules->emplace_back(new AxpySbpSignatureRule(this));
 }
 
 REGISTER_OP(OperatorConf::kAxpyConf, AxpyOp);

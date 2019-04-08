@@ -358,20 +358,21 @@ OpKernelTestCase::OpKernelTestCase()
   job_conf_.mutable_other()->set_piece_size(1);
 }
 
-void OpKernelTestCase::InitJobConf(const std::function<void(JobConf1*)>& Init) {
+void OpKernelTestCase::InitJobConf(const std::function<void(JobConf*)>& Init) {
   Init(&job_conf_);
   UpdateGlobalJobDesc();
 }
 
 void OpKernelTestCase::set_default_data_type(DataType default_data_type) {
-  InitJobConf([=](JobConf1* job_conf) {
+  InitJobConf([=](JobConf* job_conf) {
     job_conf->mutable_other()->set_default_data_type(default_data_type);
   });
 }
 
 void OpKernelTestCase::UpdateGlobalJobDesc() {
   if (Global<JobDesc>::Get()) { Global<JobDesc>::Delete(); }
-  Global<JobDesc>::New(job_conf_);
+  TODO();
+  // Global<JobDesc>::New(job_conf_);
 }
 
 void OpKernelTestCase::InitBeforeRun() {

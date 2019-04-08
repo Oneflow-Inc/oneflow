@@ -5,13 +5,21 @@ namespace oneflow {
 
 void FullyConnectedOp::InitFromOpConf() {
   CHECK(op_conf().has_fully_connected_conf());
-
+  const auto& conf = op_conf().fully_connected_conf();
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  EnrollModelBn("weight");
+  if (conf.has_weight()) {
+    EnrollInputBn("weight");
+  } else {
+    EnrollModelBn("weight");
+  }
 
   if (op_conf().fully_connected_conf().use_bias()) {
-    EnrollModelBn("bias");
+    if (conf.has_bias()) {
+      EnrollInputBn("bias");
+    } else {
+      EnrollModelBn("bias");
+    }
     EnrollConstBufBn("bias_multiplier");
   }
 }
@@ -38,14 +46,41 @@ void FullyConnectedOp::InferBlobDescs(
   out_blob_desc->mut_shape() = Shape({in_blob_desc->shape().At(0), units});
 
   // weight
-  GetBlobDesc4BnInOp("weight")->mut_shape() = Shape({units, in_blob_desc->shape().Count(1)});
+  if (conf.has_weight()) {
+    CHECK_EQ(GetBlobDesc4BnInOp("weight")->shape(), Shape({units, in_blob_desc->shape().Count(1)}));
+  } else {
+    GetBlobDesc4BnInOp("weight")->mut_shape() = Shape({units, in_blob_desc->shape().Count(1)});
+  }
 
   if (conf.use_bias()) {
     // bias
-    GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({1, units});
+    if (conf.has_bias()) {
+      CHECK_EQ(GetBlobDesc4BnInOp("bias")->shape(), Shape({1, units}));
+    } else {
+      GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({1, units});
+    }
 
     // bias_multiplier
     GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() = Shape({in_blob_desc->shape().At(0), 1});
+  }
+}
+
+bool FullyConnectedOp::IsInputBlobAllowedModelSplit(const std::string& ibn) const {
+  return ibn == "weight" || ibn == "bias";
+}
+
+void FullyConnectedOp::GetSbpSignatureRules(
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  const FullyConnectedOpConf& conf = op_conf().fully_connected_conf();
+  if (conf.has_weight()) {
+    if (conf.use_bias()) { CHECK(conf.has_bias()); }
+    rules->emplace_back(Make_DS_MB_2_DS_SbpSignatureRule(this));
+    auto EqZero = [](int32_t x) { return x == 0; };
+    rules->emplace_back(Make_DB_MS_2_MS_SbpSignatureRule(this, EqZero));
+  } else {
+    if (conf.use_bias()) { CHECK(!conf.has_bias()); }
+    rules->emplace_back(MakeDataSplitSbpSignatureRule(this));
+    rules->emplace_back(MakeModelSplitSbpSignatureRule(this));
   }
 }
 

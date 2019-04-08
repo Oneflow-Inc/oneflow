@@ -4,24 +4,25 @@ namespace oneflow {
 
 namespace {
 
-class LossPrintOpParallelSignature final : public OpParallelSignature {
+class LossPrintSbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(LossPrintOpParallelSignature);
-  ~LossPrintOpParallelSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(LossPrintSbpSignatureRule);
+  ~LossPrintSbpSignatureRule() override = default;
 
-  LossPrintOpParallelSignature(const Operator* op) : OpParallelSignature(op) {}
+  LossPrintSbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
 
   const std::string Description() const override { return op().op_name() + ": (B, B) -> B"; }
 
-  const OpParallelMatchResult GetMatchResult(
+  const SbpSigMatchResult GetMatchResult(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelDesc& parallel_desc) const override {
-    return MakeOpParallelMatchSuccess();
+    return MakeSbpSigMatchSuccess();
   }
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     (*bn2sbp)["loss_acc"].mutable_broadcast_parallel();
     (*bn2sbp)["loss_instance_num"].mutable_broadcast_parallel();
     if (op().op_conf().loss_print_conf().has_reduction_lbi()) {
@@ -39,6 +40,15 @@ void LossPrintOp::InitFromOpConf() {
   if (op_conf().loss_print_conf().has_reduction_lbi()) { EnrollInputBn("reduction_acc"); }
 }
 
+void LossPrintOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                 const ParallelContext* parallel_ctx) const {
+  CHECK_EQ(GetBlobDesc4BnInOp("loss_acc")->shape().NumAxes(), 1);
+  CHECK_EQ(GetBlobDesc4BnInOp("loss_instance_num")->shape().NumAxes(), 1);
+  if (op_conf().loss_print_conf().has_reduction_lbi()) {
+    CHECK_EQ(GetBlobDesc4BnInOp("reduction_acc")->shape().NumAxes(), 1);
+  }
+}
+
 LogicalBlobId LossPrintOp::ibn2lbi(const std::string& input_bn) const {
   if (input_bn == "loss_acc") {
     return op_conf().loss_print_conf().loss_lbi();
@@ -53,9 +63,9 @@ LogicalBlobId LossPrintOp::ibn2lbi(const std::string& input_bn) const {
 
 const PbMessage& LossPrintOp::GetCustomizedConf() const { return op_conf().loss_print_conf(); }
 
-void LossPrintOp::GetOpParallelSignatures(
-    std::vector<std::unique_ptr<const OpParallelSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new LossPrintOpParallelSignature(this));
+void LossPrintOp::GetSbpSignatureRules(
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  rules->emplace_back(new LossPrintSbpSignatureRule(this));
 }
 
 REGISTER_CPU_OP(OperatorConf::kLossPrintConf, LossPrintOp);

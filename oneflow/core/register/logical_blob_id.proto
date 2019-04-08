@@ -7,3 +7,19 @@ message LogicalBlobId {
   optional int32 clone_id = 3 [default = -1];
   optional bool is_packed_id = 4 [default = false];
 }
+
+message LogicalBlobIdPair {
+  required LogicalBlobId first = 1;
+  required LogicalBlobId second = 2;
+}
+
+message LogicalBlobIdPairs {
+  repeated LogicalBlobIdPair pair = 1;
+}
+
+message LogicalBlobIdGroups {
+  message LogicalBlobIdGroup {
+    repeated LogicalBlobId lbi = 1;
+  }
+  repeated LogicalBlobIdGroup lbi_group = 2;
+}

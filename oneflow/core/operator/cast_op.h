@@ -15,13 +15,11 @@ class CastOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override;
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
-  void FixInputOutputSbpParallel(
-      const std::function<SbpParallel*(const std::string&)>& SbpParallel4BnInOp) const override;
+  void FixSbpSignature(SbpSignature* sbp_signature) const override;
 
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return true; }
-  void GetOpParallelSignatures(
-      std::vector<std::unique_ptr<const OpParallelSignature>>*) const override;
+  void GetSbpSignatureRules(std::vector<std::unique_ptr<const SbpSignatureRule>>*) const override;
 };
 
 }  // namespace oneflow

@@ -2,8 +2,7 @@
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/device/cudnn_conv_ctx_cache.h"
 #include "oneflow/core/graph/op_graph.h"
-#include "oneflow/core/autograd/autograd.h"
-#include "oneflow/core/optimizer/optimizer.h"
+#include "oneflow/core/job_completer/job_completer.h"
 
 namespace oneflow {
 
@@ -46,20 +45,13 @@ void ToDotFile(const Plan& plan, const std::string& filepath) {
   log_stream << "}\n";
 }
 
-void UpdateJobDescbyAutoGrad() {
-  if (Global<JobDesc>::Get()->IsPredict()
-      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
-    const JobDesc* job_desc = Global<JobDesc>::Get();
-    OpGraph op_graph(job_desc);
-    JobConf1 job_conf(job_desc->job_conf());
-    LogicalBlobId total_loss_instance_num;
-    AddTotalLossInstanceNumOpConf(op_graph, &job_conf, &total_loss_instance_num);
-    HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
-    AutoGrad(op_graph, &job_conf, &lbi2diff_lbi);
-    AddOptimizerOpConf(op_graph, &job_conf, lbi2diff_lbi, total_loss_instance_num);
-    Global<JobDesc>::Delete();
-    Global<JobDesc>::New(job_conf);
-  }
+Job ConvertJobConf2Job(const JobConf& job_conf) {
+  Job job;
+  *job.mutable_net() = job_conf.net();
+  *job.mutable_resource() = job_conf.resource();
+  *job.mutable_placement() = job_conf.placement();
+  *job.mutable_other() = job_conf.other();
+  return job;
 }
 
 }  // namespace
@@ -114,13 +106,13 @@ Plan Compiler::DoCompile() {
 #ifdef WITH_CUDA
   Global<CudnnConvCtxCache>::New();
 #endif
-  UpdateJobDescbyAutoGrad();
-  Global<JobDesc>::Get()->FixAndOptimizeDLNet();
   const JobDesc* job_desc = Global<JobDesc>::Get();
-  TeePersistentLogStream::Create("optimized_job_conf")->Write(job_desc->job_conf());
-  Global<OpGraph>::New(job_desc);
+  Job job = ConvertJobConf2Job(job_desc->job_conf());
+  JobCompleter().Complete(&job);
+  TeePersistentLogStream::Create("optimized_job")->Write(job);
+  Global<OpGraph>::New(job);
   Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_op_graph.dot");
-  auto logical_gph = std::make_unique<LogicalGraph>(job_desc->IsTrain());
+  auto logical_gph = std::make_unique<LogicalGraph>(job);
   int64_t total_mbn_num = logical_gph->total_mbn_num();
   auto task_gph = std::make_unique<TaskGraph>(std::move(logical_gph));
   using std::placeholders::_1;

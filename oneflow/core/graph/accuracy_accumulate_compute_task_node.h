@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class AccuracyAccCompTaskNode final : public AccCompTaskNode {
+class AccuracyAccCompTaskNode final : public AccumulateCompTaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AccuracyAccCompTaskNode);
   AccuracyAccCompTaskNode() = default;
