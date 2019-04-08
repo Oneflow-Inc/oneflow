@@ -5,7 +5,7 @@ namespace oneflow {
 
 void ModelSaveV2Kernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
   CHECK_EQ(parallel_ctx->parallel_num(), 1);
-  next_snapshot_id_.reset(new int64_t(0));
+  next_snapshot_id_.reset(new int64_t(1));
 }
 
 void ModelSaveV2Kernel::Forward(const KernelCtx& ctx,
