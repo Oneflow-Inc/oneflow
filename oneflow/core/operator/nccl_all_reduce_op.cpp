@@ -1,5 +1,6 @@
 #include "oneflow/core/operator/nccl_all_reduce_op.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
+#include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
@@ -27,6 +28,8 @@ LogicalBlobId NcclAllReduceOp::obn2lbi(const std::string& output_bn) const {
   ret.set_blob_name("out");
   return ret;
 }
+
+LogicalNode* NcclAllReduceOp::NewProperLogicalNode() { return new NcclAllReduceLogicalNode(); }
 
 REGISTER_OP(OperatorConf::kNcclAllReduceConf, NcclAllReduceOp);
 

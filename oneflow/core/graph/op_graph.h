@@ -31,6 +31,8 @@ class OpNode final : public Node<OpNode, OpEdge> {
   void set_has_in_diff(bool has_in_diff) { has_in_diff_ = has_in_diff; }
   const ParallelDesc& parallel_desc() const { return parallel_desc_; }
   const SbpSignature& sbp_signature() const { return sbp_signature_; }
+  const SbpParallel& SbpParallel4Lbi(const LogicalBlobId& lbi) const;
+  const BlobDesc& LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const;
 
   std::string VisualStr() const override;
 
@@ -39,10 +41,8 @@ class OpNode final : public Node<OpNode, OpEdge> {
   friend class OpEdge;
   // Getters
   const BlobDesc& NoParallelBlobDesc4Lbi(const LogicalBlobId& lbi) const;
-  const BlobDesc& LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const;
   const Shape* GetInputBlobTimeShape(const std::string& bn_in_op) const;
   const Shape* GetInputBlobTimeShape() const;
-  const SbpParallel& SbpParallel4Lbi(const LogicalBlobId& lbi) const;
 
   // Setters
   ParallelDesc* mut_parallel_desc() { return &parallel_desc_; }
