@@ -144,6 +144,7 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
                     &logical2sorted_out_box, MutBufTask, AllocateCpuThrdIdEvenly);
     SetAreaIdForNewNodes(logical_edge->src_node(), logical_edge->dst_node());
   });
+  AddOrderCtrlEdgeBetweenVariableMutableConsumerAndEveryNth();
   MergeChainAndSetOrderInGraphForEachNode();
   ToDotWithAutoFilePath();
 }
@@ -557,6 +558,55 @@ void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {
       }
     }
   }
+}
+
+void TaskGraph::AddOrderCtrlEdgeBetweenVariableMutableConsumerAndEveryNth() {
+  const auto GetProducedVariableLbi = [](const TaskNode* node) -> const LogicalBlobId* {
+    const LogicalBlobId* variable_lbi = nullptr;
+    node->exec_gph().ForEachNode([&](const ExecNode* exec_node) {
+      if (exec_node->op()->op_conf().has_variable_conf()) {
+        CHECK_EQ(node->exec_gph().node_num(), 1);
+        variable_lbi = &exec_node->op()->BnInOp2Lbi("out");
+      }
+    });
+    return variable_lbi;
+  };
+  const auto IsMutableConsumedLbi = [](const TaskNode* node, const LogicalBlobId* lbi) -> bool {
+    bool is_mutable_consumed_lbi = false;
+    node->exec_gph().ForEachNode([&](const ExecNode* exec_node) {
+      const Operator* op = exec_node->op().get();
+      for (const std::string& bn : op->input_bns()) {
+        if (op->BnInOp2Lbi(bn) == *lbi && op->InputBlobModifier4Ibn(bn).is_mutable()) {
+          is_mutable_consumed_lbi = true;
+        }
+      }
+    });
+    return is_mutable_consumed_lbi;
+  };
+  const auto IsEveryNthTaskNode = [](const TaskNode* node) -> bool {
+    return dynamic_cast<const EveryNthCompTaskNode*>(node) != nullptr;
+  };
+  ForEachNode([&](TaskNode* node) {
+    const LogicalBlobId* variable_lbi = GetProducedVariableLbi(node);
+    if (variable_lbi == nullptr) { return; }
+    TaskNode* mutable_consumer = nullptr;
+    TaskNode* every_nth = nullptr;
+    node->ForEachNodeOnOutEdge([&](TaskNode* consumer) {
+      if (IsMutableConsumedLbi(consumer, variable_lbi)) {
+        CHECK(mutable_consumer == nullptr);
+        mutable_consumer = consumer;
+        return;
+      }
+      if (IsEveryNthTaskNode(consumer)) {
+        CHECK(every_nth == nullptr);
+        every_nth = consumer;
+        return;
+      }
+    });
+    if (mutable_consumer != nullptr && every_nth != nullptr) {
+      mutable_consumer->BuildCtrlRegstDescIfNeed(every_nth);
+    }
+  });
 }
 
 void TaskGraph::SetAreaIdForNewNodes(const LogicalNode* src_logical,

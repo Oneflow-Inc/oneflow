@@ -467,6 +467,14 @@ InputBlobModifier* Operator::EnrollInputBn(const std::string& ibn, bool has_diff
   return MutInputBlobModifier4Ibn(ibn);
 }
 
+const InputBlobModifier& Operator::InputBlobModifier4Ibn(const std::string& ibn) const {
+  return op_attribute_.ibn2input_blob_modifier().at(ibn);
+}
+
+const OutputBlobModifier& Operator::OutputBlobModifier4Obn(const std::string& obn) const {
+  return op_attribute_.obn2output_blob_modifier().at(obn);
+}
+
 InputBlobModifier* Operator::MutInputBlobModifier4Ibn(const std::string& ibn) {
   return &op_attribute_.mutable_ibn2input_blob_modifier()->at(ibn);
 }
