@@ -82,7 +82,16 @@ void AddReduceConcatAndReduceIdentityOpConf(
 
 void AddAllReduceOpConf(const JobBuilder& job_builder, const LogicalBlobId& grouped_lbi,
                         LogicalBlobId* all_reduced_lbi) {
-  TODO();  // juncheng
+  // TODO: support all type all reduce
+  OperatorConf all_reduce_op;
+  all_reduce_op.set_name("System-Boxing-AllReduce-" + grouped_lbi.op_name() + "-"
+                         + grouped_lbi.blob_name());
+  NcclAllReduceOpConf* nccl_all_reduce_op_conf = all_reduce_op.mutable_nccl_all_reduce_conf();
+  nccl_all_reduce_op_conf->set_in(GenLogicalBlobName(grouped_lbi));
+  nccl_all_reduce_op_conf->set_out("out");
+  all_reduced_lbi->set_op_name(all_reduce_op.name());
+  all_reduced_lbi->set_blob_name(nccl_all_reduce_op_conf->out());
+  // TODO: all all reduce op to job_builder, need `parallel_desc`
 }
 
 void AddReduceSplitOpConf(
