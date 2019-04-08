@@ -72,6 +72,25 @@ void AnchorTargetKernel<T>::ForwardInstanceShape(
 }
 
 template<typename T>
+void AnchorTargetKernel<T>::ForwardDim0ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const AnchorTargetOpConf& conf = op_conf().anchor_target_conf();
+  const Blob* images_blob = BnInOp2Blob("images");
+  const int32_t image_height = images_blob->shape().At(1);
+  const int32_t image_width = images_blob->shape().At(2);
+  FOR_RANGE(int32_t, i, 0, conf.anchor_generator_conf_size()) {
+    const auto& anchor_generator_conf = conf.anchor_generator_conf(i);
+    const int64_t num_anchors_per_cell =
+        anchor_generator_conf.anchor_scales_size() * anchor_generator_conf.aspect_ratios_size();
+    const float fm_stride = anchor_generator_conf.feature_map_stride();
+    const int64_t height = std::ceil(image_height / fm_stride);
+    const int64_t width = std::ceil(image_width / fm_stride);
+    BnInOp2Blob("anchors_" + std::to_string(i))
+        ->set_dim0_valid_num(0, height * width * num_anchors_per_cell);
+  }
+}
+
+template<typename T>
 void AnchorTargetKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   ClearOutputBlobs(ctx.device_ctx, BnInOp2Blob);
