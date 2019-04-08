@@ -46,11 +46,22 @@ size_t SubsampleNegative(size_t neg_cnt, std::vector<int32_t>& neg_inds, float t
 template<typename T>
 void AnchorTargetKernel<T>::ForwardInstanceShape(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  FOR_RANGE(size_t, i, 0, op_conf().anchor_target_conf().anchors_info_size()) {
+  const AnchorTargetOpConf& conf = op_conf().anchor_target_conf();
+  const Blob* images_blob = BnInOp2Blob("images");
+  const int64_t batch_height = images_blob->shape().At(1);
+  const int64_t batch_width = images_blob->shape().At(2);
+  FOR_RANGE(size_t, i, 0, conf.anchor_generator_conf_size()) {
+    const AnchorGeneratorConf& anchor_generator_conf = conf.anchor_generator_conf(i);
+    const int32_t fm_stride = anchor_generator_conf.feature_map_stride();
     Blob* anchors_info_i_blob = BnInOp2Blob("anchors_info_" + std::to_string(i));
     const int32_t fm_height = anchors_info_i_blob->dptr<int32_t>()[0];
+    CHECK_EQ(std::ceil(batch_height / fm_stride), fm_height);
     const int32_t fm_width = anchors_info_i_blob->dptr<int32_t>()[1];
+    CHECK_EQ(std::ceil(batch_width / fm_stride), fm_width);
     const int32_t num_anchors_per_cell = anchors_info_i_blob->dptr<int32_t>()[2];
+    CHECK_EQ(
+        anchor_generator_conf.anchor_scales_size() * anchor_generator_conf.aspect_ratios_size(),
+        num_anchors_per_cell);
     Shape class_shape({fm_height, fm_width, num_anchors_per_cell});
     Shape regression_shape({fm_height, fm_width, num_anchors_per_cell * 4});
     BnInOp2Blob("regression_targets_" + std::to_string(i))->set_instance_shape(regression_shape);
@@ -101,7 +112,7 @@ void AnchorTargetKernel<T>::ConcatAnchors(
   FOR_RANGE(size_t, i, 0, op_conf().anchor_target_conf().anchors_size()) {
     Blob* anchors_i_blob = BnInOp2Blob("anchors_" + std::to_string(i));
     const size_t num_anchors_per_layer = anchors_i_blob->dim0_valid_num(0);
-    Memcpy<DeviceType::kCPU>(ctx, anchor_boxes_blob->mut_dptr<T>() + num_anchors * 4,
+    Memcpy<DeviceType::kCPU>(ctx, anchor_boxes_blob->mut_dptr<T>() + num_anchors * 4 * sizeof(T),
                              anchors_i_blob->dptr<T>(), num_anchors_per_layer * 4 * sizeof(T));
     num_anchors += num_anchors_per_layer;
   }

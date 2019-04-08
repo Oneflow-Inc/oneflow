@@ -57,6 +57,7 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   CHECK_EQ(gt_boxes_blob_desc->shape().At(0), num_images);
   CHECK_EQ(gt_boxes_blob_desc->data_type(), data_type);
 
+  // TODO: reserve?
   std::vector<size_t> anchors_dim0_static_num(num_layers, 0);
   FOR_RANGE(size_t, layer, 0, num_layers) {
     // repeated input: anchors (num_anchors_per_layer, 4)
