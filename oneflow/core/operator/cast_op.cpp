@@ -26,9 +26,9 @@ void CastOp::FixSbpSignature(SbpSignature* sbp_signature) const {
   }
 }
 
-void CastOp::GetSbpSignatures(
-    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(MakeIdentitySbpSignature(this));
+void CastOp::GetSbpSignatureRules(
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  rules->emplace_back(MakeIdentitySbpSignatureRule(this));
 }
 
 REGISTER_OP(OperatorConf::kCastConf, CastOp);

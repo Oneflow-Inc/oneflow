@@ -393,12 +393,12 @@ class DB_MS_2_MS_SbpSignatureRule final : public ParallelSbpSignatureRule {
   std::vector<std::string> model_input_bns_;
 };
 
-class IdentitySbpSignature final : public ParallelSbpSignature {
+class IdentitySbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(IdentitySbpSignature);
-  ~IdentitySbpSignature() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(IdentitySbpSignatureRule);
+  ~IdentitySbpSignatureRule() override = default;
 
-  IdentitySbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
+  explicit IdentitySbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
 
   const std::string Description() const override { return op().op_name() + ": (A,) -> (A,)"; }
 
@@ -416,9 +416,10 @@ class IdentitySbpSignature final : public ParallelSbpSignature {
   }
 
   void GenerateSignature(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
-    const SbpParallel& sbp_parallel = SbpInferHint4BnInOp(op().input_bns().Get(0)).sbp_parallel();
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
+    const SbpParallel& sbp_parallel = SbpInferHint4Ibn(op().input_bns().Get(0)).sbp_parallel();
     (*bn2sbp)[op().input_bns().Get(0)] = sbp_parallel;
     (*bn2sbp)[op().output_bns().Get(0)] = sbp_parallel;
   }
@@ -457,8 +458,8 @@ std::unique_ptr<const SbpSignatureRule> Make_DB_MS_2_MS_SbpSignatureRule(
       new DB_MS_2_MS_SbpSignatureRule(op, IsExpectedAxis));
 }
 
-std::unique_ptr<const SbpSignature> MakeIdentitySbpSignature(const Operator* op) {
-  return std::unique_ptr<const SbpSignature>(new IdentitySbpSignature(op));
+std::unique_ptr<const SbpSignatureRule> MakeIdentitySbpSignatureRule(const Operator* op) {
+  return std::unique_ptr<const SbpSignatureRule>(new IdentitySbpSignatureRule(op));
 }
 
 }  // namespace oneflow

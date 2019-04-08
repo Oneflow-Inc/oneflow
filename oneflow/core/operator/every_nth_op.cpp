@@ -37,9 +37,9 @@ void EveryNthOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
 
 LogicalNode* EveryNthOp::NewProperLogicalNode() { return new EveryNthLogicalNode(); }
 
-void EveryNthOp::GetSbpSignatures(
-    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(MakeIdentitySbpSignature(this));
+void EveryNthOp::GetSbpSignatureRules(
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  rules->emplace_back(MakeIdentitySbpSignatureRule(this));
 }
 
 REGISTER_OP(OperatorConf::kEveryNthConf, EveryNthOp);
