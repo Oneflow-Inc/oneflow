@@ -71,6 +71,12 @@ static HashMap<std::string, std::vector<std::string>> GetAllBlobNames(
   return ret;
 }
 
+const std::string& PbMsgSerializeToString(google::protobuf::Message* msg) {
+  static std::string serialized_string;
+  msg->SerializeToString(&serialized_string);
+  return serialized_string;
+}
+
 void ForwardEnterBreakPoint(const OpAttribute& op_attribute,
                             const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
   // do nothing
