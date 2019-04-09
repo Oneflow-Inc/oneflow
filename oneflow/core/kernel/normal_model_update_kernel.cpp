@@ -91,6 +91,16 @@ double PiecewiseConstantLearningRate(const PiecewiseConstantConf& conf, double l
   return values[i];
 }
 
+double PiecewiseExponentialDecayedLearningRate(const PiecewiseExponentialDecayConf& conf, double lr,
+                                               int64_t cur_batch_num) {
+  const PbRf<int64_t>& boundaries = conf.boundaries();
+  size_t i = 0;
+  for (; i < boundaries.size(); ++i) {
+    if (cur_batch_num <= boundaries[i]) { break; }
+  }
+  return lr * std::pow(conf.decay_rate(), i);
+}
+
 double PolynomialDecayedLearningRate(const PolynomialDecayConf& conf, double lr,
                                      int64_t cur_batch_num) {
   CHECK_GT(conf.decay_batches(), 0);
@@ -229,6 +239,9 @@ double NormalMdUpdateKernel<device_type, T>::GetDecayedLearningRate(
     return NaturalExpDecayedLearningRate(conf.natural_exp_conf(), lr, cur_batch_num);
   } else if (conf.has_piecewise_constant_conf()) {
     return PiecewiseConstantLearningRate(conf.piecewise_constant_conf(), lr, cur_batch_num);
+  } else if (conf.has_piecewise_exponential_conf()) {
+    return PiecewiseExponentialDecayedLearningRate(conf.piecewise_exponential_conf(), lr,
+                                                   cur_batch_num);
   } else if (conf.has_polynomial_conf()) {
     return PolynomialDecayedLearningRate(conf.polynomial_conf(), lr, cur_batch_num);
   } else if (conf.has_cosine_conf()) {
