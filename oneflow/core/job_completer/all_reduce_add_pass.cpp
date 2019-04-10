@@ -236,7 +236,6 @@ void BuildAllReduceStruct(
 void AllReduceAddPass::Apply(Job* job) const {
   OpGraph op_graph(*job);
   auto ProducerOpNode4Lbi = MakeGetterProducerOpNode4Lbi(op_graph);
-  std::vector<std::vector<LogicalBlobId>> lbi_groups;
 
   std::vector<LogicalBlobId> lbis;
   FindAllReducedLbis(*job, op_graph, ProducerOpNode4Lbi, &lbis);
@@ -244,6 +243,7 @@ void AllReduceAddPass::Apply(Job* job) const {
   HashMap<LogicalBlobId, int32_t> lbi2order_in_graph;
   FOR_RANGE(int32_t, i, 0, lbis.size()) { CHECK(lbi2order_in_graph.emplace(lbis.at(i), i).second); }
 
+  std::vector<std::vector<LogicalBlobId>> lbi_groups;
   GroupAllReducedLbisByStrategy(ProducerOpNode4Lbi, lbis, &lbi_groups);
   JobBuilder job_builder(job);
   FOR_RANGE(int32_t, i, 0, lbi_groups.size()) {
