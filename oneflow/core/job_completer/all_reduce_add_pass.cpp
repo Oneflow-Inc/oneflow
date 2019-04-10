@@ -139,16 +139,6 @@ void GroupAllReducedLbisByStrategy(
       });
 }
 
-void GroupAllReducedLbis(
-    const Job& job, const OpGraph& op_graph,
-    const std::function<const OpNode*(const LogicalBlobId&)>& ProducerOpNode4Lbi,
-    std::vector<std::vector<LogicalBlobId>>* lbi_groups) {
-  std::vector<LogicalBlobId> lbis;
-  FindAllReducedLbis(job, op_graph, ProducerOpNode4Lbi, &lbis);
-  SortAllReducedLbis(op_graph, ProducerOpNode4Lbi, &lbis);
-  GroupAllReducedLbisByStrategy(ProducerOpNode4Lbi, lbis, lbi_groups);
-}
-
 void AddReduceConcatAndReduceIdentityOpConf(const JobBuilder& job_builder,
                                             const ParallelConf& parallel_conf,
                                             const std::vector<LogicalBlobId>& lbi_groups,
@@ -247,11 +237,19 @@ void AllReduceAddPass::Apply(Job* job) const {
   OpGraph op_graph(*job);
   auto ProducerOpNode4Lbi = MakeGetterProducerOpNode4Lbi(op_graph);
   std::vector<std::vector<LogicalBlobId>> lbi_groups;
-  GroupAllReducedLbis(*job, op_graph, ProducerOpNode4Lbi, &lbi_groups);
+
+  std::vector<LogicalBlobId> lbis;
+  FindAllReducedLbis(*job, op_graph, ProducerOpNode4Lbi, &lbis);
+  SortAllReducedLbis(op_graph, ProducerOpNode4Lbi, &lbis);
+  HashMap<LogicalBlobId, int32_t> lbi2order_in_graph;
+  FOR_RANGE(int32_t, i, 0, lbis.size()) { CHECK(lbi2order_in_graph.emplace(lbis.at(i), i).second); }
+
+  GroupAllReducedLbisByStrategy(ProducerOpNode4Lbi, lbis, &lbi_groups);
   JobBuilder job_builder(job);
   FOR_RANGE(int32_t, i, 0, lbi_groups.size()) {
     const auto& lbi_group = lbi_groups.at(i);
-    BuildAllReduceStruct(job_builder, ProducerOpNode4Lbi, lbi_group, i);
+    BuildAllReduceStruct(job_builder, ProducerOpNode4Lbi, lbi_group,
+                         lbi2order_in_graph.at(lbi_group.at(0)));
   }
 }
 
