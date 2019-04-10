@@ -13,16 +13,24 @@ void GenerateInputVarOpConf(
   const auto& conf = op.op_conf().layer_norm_conf();
   if (conf.center()) {
     if (!conf.has_beta()) {
-      const OperatorConf& beta_var_op = GenerateVariableOpConf(UnitBatchSizeBlobDesc4BnInOp("beta"),
-                                                               op.op_name() + "-beta", "beta");
+      OperatorConf beta_var_op = GenerateVariableOpConf(UnitBatchSizeBlobDesc4BnInOp("beta"),
+                                                        op.op_name() + "-beta", "beta");
+      beta_var_op.mutable_variable_conf()
+          ->mutable_initializer()
+          ->mutable_constant_conf()
+          ->set_value(0.0);
       op_confs->push_back(beta_var_op);
       mut_conf->set_beta(beta_var_op.name() + "/out");
     }
   }
   if (conf.scale()) {
     if (!conf.has_gamma()) {
-      const OperatorConf& gamma_var_op = GenerateVariableOpConf(
-          UnitBatchSizeBlobDesc4BnInOp("gamma"), op.op_name() + "-gamma", "gamma");
+      OperatorConf gamma_var_op = GenerateVariableOpConf(UnitBatchSizeBlobDesc4BnInOp("gamma"),
+                                                         op.op_name() + "-gamma", "gamma");
+      gamma_var_op.mutable_variable_conf()
+          ->mutable_initializer()
+          ->mutable_constant_conf()
+          ->set_value(1.0);
       op_confs->push_back(gamma_var_op);
       mut_conf->set_gamma(gamma_var_op.name() + "/out");
     }
