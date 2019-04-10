@@ -13,7 +13,7 @@ class TupleIdentitySbpSignatureRule final : public ParallelSbpSignatureRule {
 
   const std::string Description() const override { return op().op_name() + ": A -> A"; }
 
-  const SbpSigMatchResult GetMatchResult(
+  const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelDesc& parallel_desc) const override {
     const auto& ibn = op().input_bns().Get(0);

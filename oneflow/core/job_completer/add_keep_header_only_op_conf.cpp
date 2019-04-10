@@ -18,6 +18,8 @@ void AddKeepHeaderOnlyOp(const OpGraph& op_graph, Job* job) {
           if (lbi == edge_lbi) { return edge; }
         }
       }
+      UNIMPLEMENTED();
+      return nullptr;
     };
     HashMap<OpNode*, std::vector<std::string>> src_node2ibns;
     for (const std::string& ibn : ibns) {

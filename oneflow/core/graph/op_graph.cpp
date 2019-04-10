@@ -257,7 +257,7 @@ void OpGraph::Init(const Job& job) {
   InferTimeShape();
   InferNoParallelBlobDesc();
   InferIsModelBlob();
-  InferSbpSignature();
+  InferSbpSignature(job);
   InferLogicalBlobDesc();
 }
 
@@ -350,7 +350,7 @@ void OpGraph::InferIsModelBlob() const {
   });
 }
 
-void OpGraph::InferSbpSignature() const {
+void OpGraph::InferSbpSignature(const Job& job) const {
   TopoForEachNode([&](OpNode* op_node) {
     HashMap<std::string, SbpInferHint> ibn2sbp_infer_hint;
     for (const std::string& ibn : op_node->op().input_bns()) {
@@ -366,7 +366,11 @@ void OpGraph::InferSbpSignature() const {
     auto SbpInferHint4Ibn = [&](const std::string& ibn) -> const SbpInferHint& {
       return ibn2sbp_infer_hint.at(ibn);
     };
-    op_node->op().InferSbpSignatureIf(sbp_signature, SbpInferHint4Ibn, op_node->parallel_desc());
+    const auto& op_name2sbp_sig = job.helper().op_name2obn_sbp_signature_hint();
+    const auto& iter = op_name2sbp_sig.find(op_node->op().op_name());
+    const auto& conf_sbp_sig_hint = (iter == op_name2sbp_sig.end()) ? SbpSignature() : iter->second;
+    op_node->op().InferSbpSignatureIf(sbp_signature, conf_sbp_sig_hint, SbpInferHint4Ibn,
+                                      op_node->parallel_desc());
     op_node->op().FixSbpSignature(sbp_signature);
   });
 }

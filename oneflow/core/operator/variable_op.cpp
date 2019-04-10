@@ -15,7 +15,7 @@ class VariableOpDataSplitSbpSignatureRule final : public ParallelSbpSignatureRul
 
   const std::string Description() const override { return op().op_name() + ": S(0) -> C"; }
 
-  const SbpSigMatchResult GetMatchResult(
+  const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
     if (parallel_desc.policy() == kDataParallel) {
@@ -47,7 +47,7 @@ class VariableOpModelSplitSbpSignatureRule final : public ParallelSbpSignatureRu
 
   const std::string Description() const override { return op().op_name() + ": S(0) -> S"; }
 
-  const SbpSigMatchResult GetMatchResult(
+  const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
     if (parallel_desc.policy() == kModelParallel) {

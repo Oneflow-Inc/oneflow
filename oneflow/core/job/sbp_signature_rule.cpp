@@ -41,16 +41,39 @@ const SbpSigMatchResult MakeSbpSigMatchDeviceSetError(const std::string& configu
   return parallel_num_error;
 }
 
-const SbpSigMatchResult ParallelSbpSignatureRule::GetMatchResultIf(
+const SbpSigMatchResult SbpSignatureRule::MatchIf(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+    const SbpSignature& conf_obn_sbp_sig_hint, const ParallelDesc& parallel_desc) const {
+  if (conf_obn_sbp_sig_hint.bn_in_op2sbp_parallel().size() > 0) {
+    const auto& result = MatchByObnSbpSigHint(SbpInferHint4Ibn, conf_obn_sbp_sig_hint);
+    if (result.has_success()) { return result; }
+  }
+  return MatchByIbnHintIf(SbpInferHint4Ibn, parallel_desc);
+}
+
+const SbpSigMatchResult ParallelSbpSignatureRule::MatchByIbnHintIf(
     const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   if (parallel_desc.parallel_num() == 1) {
     return MakeSbpSigMatchSignatureMismatch();
   } else if (parallel_desc.parallel_num() > 1) {
-    return GetMatchResult(SbpInferHint4Ibn, parallel_desc);
+    return MatchByIbnHint(SbpInferHint4Ibn, parallel_desc);
   } else {
     UNIMPLEMENTED();
   }
+}
+
+const SbpSigMatchResult ParallelSbpSignatureRule::MatchByObnSbpSigHint(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+    const SbpSignature& conf_obn_sbp_sig_hint) const {
+  SbpSignature generated_sbp_signature;
+  GenerateSignature(SbpInferHint4Ibn, &generated_sbp_signature);
+  auto& bn2sbp = generated_sbp_signature.bn_in_op2sbp_parallel();
+  for (const auto& pair : conf_obn_sbp_sig_hint.bn_in_op2sbp_parallel()) {
+    CHECK(bn2sbp.find(pair.first) != bn2sbp.end());
+    if (bn2sbp.at(pair.first) != pair.second) { return MakeSbpSigMatchSignatureMismatch(); }
+  }
+  return MakeSbpSigMatchSuccess();
 }
 
 namespace {
@@ -66,22 +89,28 @@ class UnparallelSbpSignatureRule final : public SbpSignatureRule {
     return op().op_name() + ": (U, ...) -> (U, ...)";
   }
 
-  const SbpSigMatchResult GetMatchResult(
+  const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
     return MakeSbpSigMatchSuccess();
   }
 
-  const SbpSigMatchResult GetMatchResultIf(
+  const SbpSigMatchResult MatchByIbnHintIf(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
     if (parallel_desc.parallel_num() == 1) {
-      return GetMatchResult(SbpInferHint4Ibn, parallel_desc);
+      return MatchByIbnHint(SbpInferHint4Ibn, parallel_desc);
     } else if (parallel_desc.parallel_num() > 1) {
       return MakeSbpSigMatchSignatureMismatch();
     } else {
       UNIMPLEMENTED();
     }
+  }
+
+  const SbpSigMatchResult MatchByObnSbpSigHint(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      const SbpSignature& conf_obn_sbp_sig_hint) const {
+    return MakeSbpSigMatchSuccess();
   }
 
   void GenerateSignature(
@@ -106,7 +135,7 @@ class DataSplitSbpSignatureRule final : public ParallelSbpSignatureRule {
     return op().op_name() + ": (S(0), ...) -> (S(0), ...)";
   }
 
-  const SbpSigMatchResult GetMatchResult(
+  const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
     bool is_data_split = true;
@@ -149,7 +178,7 @@ class BroadcastSbpSignatureRule final : public ParallelSbpSignatureRule {
 
   const std::string Description() const override { return op().op_name() + ": (B,) -> (B, ...)"; }
 
-  const SbpSigMatchResult GetMatchResult(
+  const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
     if (!SbpInferHint4Ibn(op().SoleIbn()).sbp_parallel().has_broadcast_parallel()) {
@@ -205,7 +234,7 @@ class DS_MB_2_DS_SbpSignatureRule final : public ParallelSbpSignatureRule {
     return op().op_name() + ": (B, S(0), ...) -> (S(0), ...)";
   }
 
-  const SbpSigMatchResult GetMatchResult(
+  const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
     const auto& model_sbp_infer_hint = SbpInferHint4Ibn(model_input_bns_.at(0));
@@ -261,7 +290,7 @@ class SoleIbnOpModelSplitSbpSignatureRule final : public ParallelSbpSignatureRul
 
   const std::string Description() const override { return op().op_name() + ": (S,) -> (S, ...)"; }
 
-  const SbpSigMatchResult GetMatchResult(
+  const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
     const SbpInferHint& sbp_infer_hint = SbpInferHint4Ibn(op().SoleIbn());
@@ -312,7 +341,7 @@ class ModelBnOpModelSplitSbpSignatureRule final : public ParallelSbpSignatureRul
     return op().op_name() + ": (B, ...) -> (S, ...)";
   }
 
-  const SbpSigMatchResult GetMatchResult(
+  const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
     if (parallel_desc.policy() == kModelParallel) { return MakeSbpSigMatchSuccess(); }
@@ -353,7 +382,7 @@ class DB_MS_2_MS_SbpSignatureRule final : public ParallelSbpSignatureRule {
     return op().op_name() + ": (B, S, ...) -> (S, ...)";
   }
 
-  const SbpSigMatchResult GetMatchResult(
+  const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
     const SbpInferHint& model_sbp_infer_hint = SbpInferHint4Ibn(model_input_bns_.at(0));

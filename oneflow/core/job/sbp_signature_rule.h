@@ -4,7 +4,7 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/operator/op_parallel_match_result.pb.h"
+#include "oneflow/core/job/sbp_sig_match_result.pb.h"
 #include "oneflow/core/job/sbp_infer_hint.h"
 
 namespace oneflow {
@@ -15,9 +15,11 @@ class SbpSignatureRule {
  public:
   virtual ~SbpSignatureRule() = default;
   virtual const std::string Description() const = 0;
-  virtual const SbpSigMatchResult GetMatchResultIf(
+
+  const SbpSigMatchResult MatchIf(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc) const = 0;
+      const SbpSignature& conf_obn_sbp_sig_hint, const ParallelDesc& parallel_desc) const;
+
   virtual void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       SbpSignature* sbp_signature) const = 0;
@@ -25,9 +27,16 @@ class SbpSignatureRule {
  protected:
   SbpSignatureRule(const Operator* op) : op_(op) {}
   const Operator& op() const { return *op_; }
-  virtual const SbpSigMatchResult GetMatchResult(
+  virtual const SbpSigMatchResult MatchByIbnHintIf(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const = 0;
+
+  virtual const SbpSigMatchResult MatchByIbnHint(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const = 0;
+  virtual const SbpSigMatchResult MatchByObnSbpSigHint(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      const SbpSignature& conf_obn_sbp_signature) const = 0;
 
  private:
   const Operator* op_;
@@ -37,9 +46,12 @@ class ParallelSbpSignatureRule : public SbpSignatureRule {
  protected:
   ParallelSbpSignatureRule(const Operator* op) : SbpSignatureRule(op) {}
   virtual ~ParallelSbpSignatureRule() = default;
-  virtual const SbpSigMatchResult GetMatchResultIf(
+  const SbpSigMatchResult MatchByIbnHintIf(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override;
+  const SbpSigMatchResult MatchByObnSbpSigHint(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      const SbpSignature& conf_obn_sbp_signature) const override;
 };
 
 const SbpSigMatchResult MakeSbpSigMatchSuccess();

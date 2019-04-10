@@ -15,7 +15,7 @@ class LossSbpSignatureRule final : public ParallelSbpSignatureRule {
     return op().op_name() + ": (S(0), S(0)) -> S(0)";
   }
 
-  const SbpSigMatchResult GetMatchResult(
+  const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelDesc& parallel_desc) const override {
     return MakeSbpSigMatchSuccess();

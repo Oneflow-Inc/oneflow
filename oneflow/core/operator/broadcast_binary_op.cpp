@@ -20,7 +20,7 @@ class BroadcastBinarySbpSignatureRule final : public ParallelSbpSignatureRule {
     return op().op_name() + ": (C, ..., S(0), ...) -> (S(0), ...)";
   }
 
-  const SbpSigMatchResult GetMatchResult(
+  const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
     for (const auto& bn : op().input_bns()) {

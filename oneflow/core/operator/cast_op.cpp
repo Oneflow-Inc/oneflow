@@ -13,7 +13,7 @@ class CastSbpSignatureRule final : public ParallelSbpSignatureRule {
 
   const std::string Description() const override { return op().op_name() + ": (A,) -> (A,)"; }
 
-  const SbpSigMatchResult GetMatchResult(
+  const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelDesc& parallel_desc) const override {
     const SbpInferHint& in_sbp_infer_hint = SbpInferHint4BnInOp("in");

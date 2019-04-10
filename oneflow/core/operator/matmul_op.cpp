@@ -13,7 +13,7 @@ class Matmul_MS_MS_2_P_SbpSignatureRule final : public ParallelSbpSignatureRule 
 
   const std::string Description() const override { return op().op_name() + ": (S, S) -> P"; }
 
-  const SbpSigMatchResult GetMatchResult(
+  const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
     const auto& b_sbp_infer_hint = SbpInferHint4Ibn("b");

@@ -137,7 +137,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void InferTimeShape() const;
   void InferNoParallelBlobDesc() const;
   void InferIsModelBlob() const;
-  void InferSbpSignature() const;
+  void InferSbpSignature(const Job& job) const;
   void InferLogicalBlobDesc() const;
   bool IsModelBlob(const std::string& op_name, const LogicalBlobId& lbi) const;
   bool IsDataBlob(const std::string& op_name, const LogicalBlobId& lbi) const;
