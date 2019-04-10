@@ -464,7 +464,9 @@ InputBlobModifier* Operator::EnrollInputBn(const std::string& ibn, bool has_diff
     *(mut_input_diff_bns()->Add()) = idbn;
     CHECK(mut_bn_in_op2lbi()->insert({idbn, lbi}).second);
   }
-  return MutInputBlobModifier4Ibn(ibn);
+  auto* ret = MutInputBlobModifier4Ibn(ibn);
+  ret->set_requires_grad(has_diff);
+  return ret;
 }
 
 InputBlobModifier* Operator::MutInputBlobModifier4Ibn(const std::string& ibn) {
@@ -503,7 +505,9 @@ OutputBlobModifier* Operator::EnrollOutputBn(const std::string& obn, bool has_di
     *(mut_output_diff_bns()->Add()) = odbn;
     CHECK(mut_bn_in_op2lbi()->insert({odbn, lbi}).second);
   }
-  return MutOutputBlobModifier4Obn(obn);
+  auto* ret = MutOutputBlobModifier4Obn(obn);
+  ret->set_requires_grad(has_diff);
+  return ret;
 }
 
 void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num, bool has_diff) {
