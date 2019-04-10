@@ -8,6 +8,7 @@
 namespace oneflow {
 
 void AutoGrad(const OpGraph& op_graph, Job* job,
+              HashMap<std::string, HashMap<std::string, LogicalBlobId>>* op_name2ibn2in_diff_lbi,
               HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
 void AddTotalLossInstanceNumOpConf(const OpGraph& op_graph, Job* job,
                                    LogicalBlobId* total_loss_instance_num_lbi);

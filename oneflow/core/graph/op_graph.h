@@ -32,6 +32,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   const ParallelDesc& parallel_desc() const { return parallel_desc_; }
   const SbpSignature& sbp_signature() const { return sbp_signature_; }
   const SbpParallel& SbpParallel4Lbi(const LogicalBlobId& lbi) const;
+  const SbpParallel& SbpParallel4BnInOp(const std::string& bn_in_op) const;
   const BlobDesc& LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const;
 
   std::string VisualStr() const override;

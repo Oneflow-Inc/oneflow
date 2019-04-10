@@ -44,8 +44,11 @@ LogicalBlobId* Operator::MutBnInOp2Lbi(const std::string& bn_in_op) {
   }
 }
 
-InputBlobModifier Operator::InputBlobModifier4Ibn(const std::string& ibn) const {
+const InputBlobModifier& Operator::InputBlobModifier4Ibn(const std::string& ibn) const {
   return op_attribute_.ibn2input_blob_modifier().at(ibn);
+}
+const OutputBlobModifier& Operator::OutputBlobModifier4Obn(const std::string& obn) const {
+  return op_attribute_.obn2output_blob_modifier().at(obn);
 }
 
 const std::string& Operator::SoleIbn() const {

@@ -39,13 +39,34 @@ void UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(
   }
 }
 
+void UpdateJobHelperConfSbpSignatureHint(
+    const OpGraph& op_graph,
+    const HashMap<std::string, HashMap<std::string, LogicalBlobId>>& op_name2ibn2in_diff_lbi,
+    Job* job) {
+  op_graph.ForEachNode([&](OpNode* op_node) {
+    const auto& op_name = (op_node->op().op_name());
+    const auto& op_iter = op_name2ibn2in_diff_lbi.find(op_name);
+    if (op_iter == op_name2ibn2in_diff_lbi.end()) { return; }
+    for (const auto& ibn : op_node->op().input_bns()) {
+      const auto& in_diff_lbi_iter = op_iter->second.find(ibn);
+      if (in_diff_lbi_iter == op_iter->second.end()) { continue; }
+      const auto& lbi = op_node->op().BnInOp2Lbi(ibn);
+      const auto& in_diff_lbn = GenLogicalBlobName(in_diff_lbi_iter->second);
+      const auto& in_diff_sbp = GetDualSbpParallel(op_node->SbpParallel4Lbi(lbi));
+      (*job->mutable_helper()->mutable_lbn2sbp_parallel_hint())[in_diff_lbn] = in_diff_sbp;
+    }
+  });
+}
+
 void GenerateOpConf4Trainning(const OpGraph& op_graph, Job* job) {
   LogicalBlobId total_loss_instance_num;
   AddTotalLossInstanceNumOpConf(op_graph, job, &total_loss_instance_num);
+  HashMap<std::string, HashMap<std::string, LogicalBlobId>> op_name2ibn2in_diff_lbi;
   HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
-  AutoGrad(op_graph, job, &lbi2diff_lbi);
+  AutoGrad(op_graph, job, &op_name2ibn2in_diff_lbi, &lbi2diff_lbi);
   AddOptimizerOpConf(op_graph, job, lbi2diff_lbi, total_loss_instance_num);
   UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(lbi2diff_lbi, job);
+  UpdateJobHelperConfSbpSignatureHint(op_graph, op_name2ibn2in_diff_lbi, job);
 }
 
 std::function<ParallelConf*(const std::string&)> MakeGetterMutParallelConf4OpName(

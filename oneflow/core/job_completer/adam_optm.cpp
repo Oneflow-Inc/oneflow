@@ -16,8 +16,8 @@ void SetScalarShape(OperatorConf* op_conf, JobHelperConf* job_helper_conf) {
   op_conf->mutable_variable_conf()->mutable_shape()->add_dim(1);
   const auto& op_name = op_conf->name();
   CHECK_NE(op_name, "");
-  auto* sbp_sig_hint = &(*job_helper_conf->mutable_op_name2obn_sbp_signature_hint())[op_name];
-  (*sbp_sig_hint->mutable_bn_in_op2sbp_parallel())["out"].mutable_broadcast_parallel();
+  (*job_helper_conf->mutable_lbn2sbp_parallel_hint())[op_name + "/out"]
+      .mutable_broadcast_parallel();
 }
 
 void GenerateOptimizerOpConf(

@@ -21,12 +21,22 @@ bool OpNode::IsModelBlob4Lbi(const LogicalBlobId& lbi) const {
   return ProducerOpNode4Lbi(lbi)->lbi2is_model_blob_.at(lbi);
 }
 
+const SbpParallel& OpNode::SbpParallel4BnInOp(const std::string& bn_in_op) const {
+  return sbp_signature_.bn_in_op2sbp_parallel().at(bn_in_op);
+}
+
 const SbpParallel& OpNode::SbpParallel4Lbi(const LogicalBlobId& lbi) const {
+  const SbpParallel* ret = nullptr;
   for (const auto& ibn : op().input_bns()) {
-    if (op().BnInOp2Lbi(ibn) == lbi) { return sbp_signature_.bn_in_op2sbp_parallel().at(ibn); }
+    if (op().BnInOp2Lbi(ibn) == lbi) {
+      const auto* sbp_parallel = &SbpParallel4BnInOp(ibn);
+      if (ret != nullptr) { CHECK(*ret == *sbp_parallel); }
+      ret = sbp_parallel;
+    }
   }
+  if (ret != nullptr) { return *ret; }
   for (const auto& obn : op().output_bns()) {
-    if (op().BnInOp2Lbi(obn) == lbi) { return sbp_signature_.bn_in_op2sbp_parallel().at(obn); }
+    if (op().BnInOp2Lbi(obn) == lbi) { return SbpParallel4BnInOp(obn); }
   }
   UNIMPLEMENTED();
 }
@@ -194,7 +204,7 @@ void OpNode::SplitLogicalInputBlobDesc() {
   for (const std::string& bn : op().input_bns()) {
     const LogicalBlobId& lbi = op().BnInOp2Lbi(bn);
     const BlobDesc& logical_blob_desc = ProducerOpNode4BnInOp(bn)->LogicalBlobDesc4Lbi(lbi);
-    const SbpParallel& sbp_parallel = SbpParallel4Lbi(lbi);
+    const SbpParallel& sbp_parallel = SbpParallel4BnInOp(bn);
     ForEachParallelBlobDesc(logical_blob_desc, sbp_parallel, [&](const BlobDesc& blob_desc) {
       bn2parallel_id2blob_desc_[bn].push_back(blob_desc);
     });
@@ -205,7 +215,7 @@ void OpNode::SplitLogicalInputBlobDesc() {
 void OpNode::ConcatLogicalOutputBlobDesc() {
   for (const std::string& bn : op().output_bns()) {
     const LogicalBlobId& lbi = op().BnInOp2Lbi(bn);
-    const SbpParallel& sbp_parallel = SbpParallel4Lbi(lbi);
+    const SbpParallel& sbp_parallel = SbpParallel4BnInOp(bn);
     ConcatBlobDesc(bn2parallel_id2blob_desc_.at(bn), sbp_parallel, MutLogicalBlobDesc4Lbi(lbi));
   }
 }
@@ -366,10 +376,14 @@ void OpGraph::InferSbpSignature(const Job& job) const {
     auto SbpInferHint4Ibn = [&](const std::string& ibn) -> const SbpInferHint& {
       return ibn2sbp_infer_hint.at(ibn);
     };
-    const auto& op_name2sbp_sig = job.helper().op_name2obn_sbp_signature_hint();
-    const auto& iter = op_name2sbp_sig.find(op_node->op().op_name());
-    const auto& conf_sbp_sig_hint = (iter == op_name2sbp_sig.end()) ? SbpSignature() : iter->second;
-    op_node->op().InferSbpSignatureIf(sbp_signature, conf_sbp_sig_hint, SbpInferHint4Ibn,
+    SbpSignature obn_sbp_sig_hint;
+    for (const auto& obn : op_node->op().output_bns()) {
+      const auto& lbn = GenLogicalBlobName(op_node->op().BnInOp2Lbi(obn));
+      const auto& sbp_parallel_hint_iter = job.helper().lbn2sbp_parallel_hint().find(lbn);
+      if (sbp_parallel_hint_iter == job.helper().lbn2sbp_parallel_hint().end()) { continue; }
+      (*obn_sbp_sig_hint.mutable_bn_in_op2sbp_parallel())[obn] = sbp_parallel_hint_iter->second;
+    }
+    op_node->op().InferSbpSignatureIf(sbp_signature, obn_sbp_sig_hint, SbpInferHint4Ibn,
                                       op_node->parallel_desc());
     op_node->op().FixSbpSignature(sbp_signature);
   });
