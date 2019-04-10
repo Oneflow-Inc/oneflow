@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_OPTIMIZER_OPTIMIZER_H_
-#define ONEFLOW_CORE_OPTIMIZER_OPTIMIZER_H_
+#ifndef ONEFLOW_CORE_JOB_COMPLETER_OPTIMIZER_H_
+#define ONEFLOW_CORE_JOB_COMPLETER_OPTIMIZER_H_
 
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/operator/variable_op.h"
@@ -43,4 +43,4 @@ class GenerateOptimizerOpConfWrapperStruct final {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPTIMIZER_OPTIMIZER_H_
+#endif  // ONEFLOW_CORE_JOB_COMPLETER_OPTIMIZER_H_

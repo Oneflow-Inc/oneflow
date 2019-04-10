@@ -113,7 +113,10 @@ int32_t JobDesc::PieceNumOfPrintAccuracy() const {
 }
 int64_t JobDesc::BatchSize() const { return GetTrainConf(job_conf_).batch_size(); }
 int64_t JobDesc::NumOfPiecesInBatch() const {
-  if (IsPredict()) { return 1; }
+  if (IsPredict()
+      && !Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+    return 1;
+  }
   CHECK_EQ(BatchSize() % RecordPieceSize(), 0);
   return BatchSize() / RecordPieceSize();
 }
