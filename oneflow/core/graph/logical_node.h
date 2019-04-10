@@ -310,7 +310,7 @@ DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(KeepHeaderOnly);
     void set_order_in_logical_graph(int32_t order_in_logical_graph) {                  \
       order_in_logical_graph_ = order_in_logical_graph;                                \
     }                                                                                  \
-    int32_t order_in_logical_graph() const { return order_in_logical_graph_; }         \
+    int32_t order_in_logical_graph() const;                                            \
     bool MayConsumeModelDiff() const override { return may_consume_md_diff; }          \
                                                                                        \
    private:                                                                            \

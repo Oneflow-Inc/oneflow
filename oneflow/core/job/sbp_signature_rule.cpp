@@ -1,4 +1,4 @@
-#include "oneflow/core/operator/sbp_signature_rule.h"
+#include "oneflow/core/job/sbp_signature_rule.h"
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {

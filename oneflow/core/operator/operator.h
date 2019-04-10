@@ -10,7 +10,7 @@
 #include "oneflow/core/kernel/kernel.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/register/blob_desc.h"
-#include "oneflow/core/operator/sbp_signature_rule.h"
+#include "oneflow/core/job/sbp_signature_rule.h"
 #include "oneflow/core/job/job_builder.h"
 
 namespace oneflow {

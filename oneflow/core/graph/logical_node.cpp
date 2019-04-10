@@ -483,4 +483,24 @@ BackwardLogicalNode* RepeatForwardLogicalNode::NewCorrectBackwardNode() {
 BackwardLogicalNode* KeepHeaderOnlyLogicalNode::NewCorrectBackwardNode() { UNIMPLEMENTED(); }
 BackwardLogicalNode* AccLogicalNode::NewCorrectBackwardNode() { UNIMPLEMENTED(); }
 
+int32_t ReduceIdentityLogicalNode::order_in_logical_graph() const {
+  const auto& op_conf = SoleOp()->op_conf();
+  CHECK(op_conf.has_reduce_identity_conf());
+  if (op_conf.reduce_identity_conf().has_order_in_graph()) {
+    return op_conf.reduce_identity_conf().order_in_graph();
+  } else {
+    return order_in_logical_graph_;
+  }
+}
+
+int32_t ReduceSplitLogicalNode::order_in_logical_graph() const {
+  const auto& op_conf = SoleOp()->op_conf();
+  CHECK(op_conf.has_reduce_split_conf());
+  if (op_conf.reduce_split_conf().has_order_in_graph()) {
+    return op_conf.reduce_split_conf().order_in_graph();
+  } else {
+    return order_in_logical_graph_;
+  }
+}
+
 }  // namespace oneflow

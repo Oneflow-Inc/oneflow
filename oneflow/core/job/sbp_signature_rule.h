@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_OPERATOR_SBP_SIGNATURE_RULE_H_
-#define ONEFLOW_CORE_OPERATOR_SBP_SIGNATURE_RULE_H_
+#ifndef ONEFLOW_CORE_JOB_SBP_SIGNATURE_RULE_H_
+#define ONEFLOW_CORE_JOB_SBP_SIGNATURE_RULE_H_
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/sbp_parallel.h"
@@ -77,4 +77,4 @@ std::unique_ptr<const SbpSignatureRule> Make_DB_MS_2_MS_SbpSignatureRule(
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_SBP_SIGNATURE_RULE_H_
+#endif  // ONEFLOW_CORE_JOB_SBP_SIGNATURE_RULE_H_
