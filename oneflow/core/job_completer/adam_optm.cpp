@@ -11,13 +11,17 @@ OperatorConf GenerateAdamHelperVariableOpConf(const VariableOp& op, const std::s
   return helper_variable_op;
 }
 
-void SetScalarShape(OperatorConf* op_conf) {
+void SetScalarShape(OperatorConf* op_conf, JobHelperConf* job_helper_conf) {
   op_conf->mutable_variable_conf()->mutable_shape()->clear_dim();
   op_conf->mutable_variable_conf()->mutable_shape()->add_dim(1);
+  const auto& op_name = op_conf->name();
+  CHECK_NE(op_name, "");
+  auto* sbp_sig_hint = &(*job_helper_conf->mutable_op_name2obn_sbp_signature_hint())[op_name];
+  (*sbp_sig_hint->mutable_bn_in_op2sbp_parallel())["out"].mutable_broadcast_parallel();
 }
 
 void GenerateOptimizerOpConf(
-    const VariableOp& op, std::vector<OperatorConf>* op_confs,
+    const VariableOp& op, std::vector<OperatorConf>* op_confs, JobHelperConf* job_helper_conf,
     const std::function<const LogicalBlobId&(const std::string&)>& DiffLbi4BnInOp,
     const LogicalBlobId& total_loss_instance_num_lbi) {
   const OperatorConf& m_var = GenerateAdamHelperVariableOpConf(op, "m");
@@ -38,11 +42,11 @@ void GenerateOptimizerOpConf(
   OperatorConf beta2_t_var;
   if (mdupdt_op_conf->user_conf().adam_conf().do_bias_correction()) {
     beta1_t_var = GenerateAdamHelperVariableOpConf(op, "beta1_t");
-    SetScalarShape(&beta1_t_var);
+    SetScalarShape(&beta1_t_var, job_helper_conf);
     op_confs->push_back(beta1_t_var);
 
     beta2_t_var = GenerateAdamHelperVariableOpConf(op, "beta2_t");
-    SetScalarShape(&beta2_t_var);
+    SetScalarShape(&beta2_t_var, job_helper_conf);
     op_confs->push_back(beta2_t_var);
   }
   ConstructMdUpdtOpConf(op, DiffLbi4BnInOp, total_loss_instance_num_lbi, mdupdt_op_conf);

@@ -186,7 +186,7 @@ void AutoGrad(const OpGraph& op_graph, Job* job,
     });
   };
   auto HasDiff4LbiOpName = MakePredicatorHasDiff4LbiOpName(op_graph, NeedBackwardOp);
-  HashMap<LogicalBlobId, HashMap<std::string, LogicalBlobId>> lbi2op_name2in_diff_lbi;
+  HashMap<std::string, HashMap<std::string, LogicalBlobId>> op_name2ibn2in_diff_lbi;
   op_graph.TopoForEachNode(loss_nodes, ForEachOutNode, ForEachInNode, [&](OpNode* op_node) {
     const auto& op_name = op_node->op().op_name();
     auto DiffLbi4BnInOp = [&](const std::string& bn) -> LogicalBlobId* {
@@ -194,7 +194,7 @@ void AutoGrad(const OpGraph& op_graph, Job* job,
       const auto& output_bns = op_node->op().output_bns();
       const auto& lbi = op_node->op().BnInOp2Lbi(bn);
       if (std::find(input_bns.begin(), input_bns.end(), bn) != input_bns.end()) {
-        return HasDiff4LbiOpName(lbi, op_name) ? &lbi2op_name2in_diff_lbi[lbi][op_name] : nullptr;
+        return HasDiff4LbiOpName(lbi, op_name) ? &op_name2ibn2in_diff_lbi[op_name][bn] : nullptr;
       } else if (std::find(output_bns.begin(), output_bns.end(), bn) != output_bns.end()) {
         if (lbi2out_diff_lbi->find(lbi) == lbi2out_diff_lbi->end()) { return nullptr; }
         return &lbi2out_diff_lbi->at(lbi);
@@ -206,7 +206,7 @@ void AutoGrad(const OpGraph& op_graph, Job* job,
       return op_graph.GetLogicalBlobDesc(op_node->op().BnInOp2Lbi(bn));
     };
     std::vector<OperatorConf> ops;
-    GenerateCloneGradOpIfNeed(op_node->op(), &ops, lbi2op_name2in_diff_lbi, lbi2out_diff_lbi);
+    GenerateCloneGradOpIfNeed(*op_node, &ops, op_name2ibn2in_diff_lbi, lbi2out_diff_lbi);
     GenerateBackwardOpConfIf(op_node->op(), &ops, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp);
     job_builder.AddOps(op_node->parallel_desc().parallel_conf(), ops);
   });
