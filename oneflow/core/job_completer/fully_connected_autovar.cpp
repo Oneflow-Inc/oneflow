@@ -12,15 +12,21 @@ void GenerateInputVarOpConf(
   auto* mut_conf = fully_connected_conf.mutable_fully_connected_conf();
   const auto& conf = op.op_conf().fully_connected_conf();
   if (!conf.has_weight()) {
-    const OperatorConf& weight_var_op = GenerateVariableOpConf(
-        UnitBatchSizeBlobDesc4BnInOp("weight"), op.op_name() + "-weight", "weight");
+    OperatorConf weight_var_op = GenerateVariableOpConf(UnitBatchSizeBlobDesc4BnInOp("weight"),
+                                                        op.op_name() + "-weight", "weight");
+    if (conf.has_weight_initializer()) {
+      *(weight_var_op.mutable_variable_conf()->mutable_initializer()) = conf.weight_initializer();
+    }
     op_confs->push_back(weight_var_op);
     mut_conf->set_weight(weight_var_op.name() + "/out");
   }
   if (conf.use_bias()) {
     if (!conf.has_bias()) {
-      const OperatorConf& bias_var_op = GenerateVariableOpConf(UnitBatchSizeBlobDesc4BnInOp("bias"),
-                                                               op.op_name() + "-bias", "bias");
+      OperatorConf bias_var_op = GenerateVariableOpConf(UnitBatchSizeBlobDesc4BnInOp("bias"),
+                                                        op.op_name() + "-bias", "bias");
+      if (conf.has_bias_initializer()) {
+        *(bias_var_op.mutable_variable_conf()->mutable_initializer()) = conf.bias_initializer();
+      }
       op_confs->push_back(bias_var_op);
       mut_conf->set_bias(bias_var_op.name() + "/out");
     }
