@@ -169,7 +169,6 @@ class Operator {
       const std::string& obn) const;
   void GenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                      bool is_forward, const ParallelContext*, KernelConf*, const OpContext*) const;
-  InputBlobModifier InputBlobModifier4Ibn(const std::string& ibn) const;
 
   const InputBlobModifier& InputBlobModifier4Ibn(const std::string& ibn) const;
   const OutputBlobModifier& OutputBlobModifier4Obn(const std::string& obn) const;
