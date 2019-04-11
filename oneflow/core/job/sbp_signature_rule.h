@@ -27,10 +27,8 @@ class SbpSignatureRule {
  protected:
   SbpSignatureRule(const Operator* op) : op_(op) {}
   const Operator& op() const { return *op_; }
-  virtual const SbpSigMatchResult MatchByIbnHintIf(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc) const = 0;
 
+  virtual const SbpSigMatchResult MatchByParallelNum(int32_t parallel_num) const = 0;
   virtual const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const = 0;
@@ -46,9 +44,7 @@ class ParallelSbpSignatureRule : public SbpSignatureRule {
  protected:
   ParallelSbpSignatureRule(const Operator* op) : SbpSignatureRule(op) {}
   virtual ~ParallelSbpSignatureRule() = default;
-  const SbpSigMatchResult MatchByIbnHintIf(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc) const override;
+  const SbpSigMatchResult MatchByParallelNum(int32_t parallel_num) const override;
   const SbpSigMatchResult MatchByObnSbpSigHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const SbpSignature& conf_obn_sbp_signature) const override;

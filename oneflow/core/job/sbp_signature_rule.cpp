@@ -44,20 +44,20 @@ const SbpSigMatchResult MakeSbpSigMatchDeviceSetError(const std::string& configu
 const SbpSigMatchResult SbpSignatureRule::MatchIf(
     const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     const SbpSignature& conf_obn_sbp_sig_hint, const ParallelDesc& parallel_desc) const {
+  const auto& parallel_res = MatchByParallelNum(parallel_desc.parallel_num());
+  if (parallel_res.has_success() == false) { return parallel_res; }
   if (conf_obn_sbp_sig_hint.bn_in_op2sbp_parallel().size() > 0) {
     const auto& result = MatchByObnSbpSigHint(SbpInferHint4Ibn, conf_obn_sbp_sig_hint);
     if (result.has_success()) { return result; }
   }
-  return MatchByIbnHintIf(SbpInferHint4Ibn, parallel_desc);
+  return MatchByIbnHint(SbpInferHint4Ibn, parallel_desc);
 }
 
-const SbpSigMatchResult ParallelSbpSignatureRule::MatchByIbnHintIf(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    const ParallelDesc& parallel_desc) const {
-  if (parallel_desc.parallel_num() == 1) {
+const SbpSigMatchResult ParallelSbpSignatureRule::MatchByParallelNum(int32_t parallel_num) const {
+  if (parallel_num == 1) {
     return MakeSbpSigMatchSignatureMismatch();
-  } else if (parallel_desc.parallel_num() > 1) {
-    return MatchByIbnHint(SbpInferHint4Ibn, parallel_desc);
+  } else if (parallel_num > 1) {
+    return MakeSbpSigMatchSuccess();
   } else {
     UNIMPLEMENTED();
   }
@@ -89,22 +89,20 @@ class UnparallelSbpSignatureRule final : public SbpSignatureRule {
     return op().op_name() + ": (U, ...) -> (U, ...)";
   }
 
-  const SbpSigMatchResult MatchByIbnHint(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc) const override {
-    return MakeSbpSigMatchSuccess();
-  }
-
-  const SbpSigMatchResult MatchByIbnHintIf(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc) const override {
-    if (parallel_desc.parallel_num() == 1) {
-      return MatchByIbnHint(SbpInferHint4Ibn, parallel_desc);
-    } else if (parallel_desc.parallel_num() > 1) {
+  const SbpSigMatchResult MatchByParallelNum(int32_t parallel_num) const override {
+    if (parallel_num == 1) {
+      return MakeSbpSigMatchSuccess();
+    } else if (parallel_num > 1) {
       return MakeSbpSigMatchSignatureMismatch();
     } else {
       UNIMPLEMENTED();
     }
+  }
+
+  const SbpSigMatchResult MatchByIbnHint(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const override {
+    return MakeSbpSigMatchSuccess();
   }
 
   const SbpSigMatchResult MatchByObnSbpSigHint(

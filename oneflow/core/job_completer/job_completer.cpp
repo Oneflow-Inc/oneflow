@@ -283,7 +283,7 @@ void JobCompleter::Complete(Job* job) const {
     // complete tick ops
     WithOpGraphAndMutJob(job, &AutoTick);
     // add keep_header_only op
-    WithOpGraphAndMutJob(job, &AddKeepHeaderOnlyOp);
+    // WithOpGraphAndMutJob(job, &AddKeepHeaderOnlyOp);
   }
   // TODO: refine
   FixAndOptimizeDLNet(job);
