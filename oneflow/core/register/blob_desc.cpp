@@ -201,7 +201,7 @@ bool BlobDesc::operator==(const BlobDesc& rhs) const {
 }
 
 BlobDesc& BlobDesc::operator=(const BlobDesc& blob_desc) {
-  CHECK(blob_desc.is_body_disabled_ == false); // prevent from misusing
+  CHECK(blob_desc.is_body_disabled_ == false);  // prevent from misusing
   BlobDescProto proto;
   blob_desc.ToProto(&proto);
   InitFromProto(proto);
