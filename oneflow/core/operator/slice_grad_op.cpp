@@ -24,7 +24,7 @@ void SliceGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   const SliceGradOpConf& conf = op_conf().slice_grad_conf();
   const BlobDesc* like_blob_desc = GetBlobDesc4BnInOp("like");
   CHECK_EQ(conf.dim_slice_conf_size(), like_blob_desc->shape().NumAxes() - 1);
-  *GetBlobDesc4BnInOp("dx") = *like_blob_desc;
+  GetBlobDesc4BnInOp("dx")->CopyMetaFrom(*like_blob_desc);
   if (op_conf().device_type() == DeviceType::kGPU) {
     BlobDesc* offset_blob_desc = GetBlobDesc4BnInOp("y_to_x_offset");
     *offset_blob_desc = *GetBlobDesc4BnInOp("dy");

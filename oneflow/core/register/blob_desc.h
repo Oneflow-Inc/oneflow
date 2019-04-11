@@ -69,6 +69,9 @@ class BlobDesc {
   bool operator==(const BlobDesc& rhs) const;
   void ToProto(BlobDescProto* proto) const;
   BlobDesc& operator=(const BlobDesc& blob_desc);
+  void CopyMetaFrom(const BlobDesc& rhs);
+  void CopyNonMetaFrom(const BlobDesc& rhs);
+  void CopyAllFrom(const BlobDesc& rhs);
 
  private:
   void InitFromProto(const BlobDescProto& proto);
@@ -81,6 +84,7 @@ class BlobDesc {
   void RecordIdInDevicePieceToProto(StructPodDesc* header_pod_desc) const;
   void LossInstanceNumToProto(StructPodDesc* header_pod_desc) const;
 
+  // meta
   bool header_is_opaque_;
   FieldDesc opaque_header_;
   StructPodDesc header_pod_desc_;
@@ -92,12 +96,14 @@ class BlobDesc {
   bool has_dim2_valid_num_;
   bool has_record_id_in_device_piece_;
   bool has_loss_instance_num_;
-  bool is_body_disabled_;
   int64_t max_col_num_;
   int32_t blob_mem_id_;
 
   FieldDesc body_field_;
   std::unique_ptr<Shape> dim0_inner_shape_;
+
+  // meta
+  bool is_body_disabled_;
 };
 
 std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
