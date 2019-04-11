@@ -183,11 +183,11 @@ void OpNode::ConcatBlobDesc(const std::vector<BlobDesc>& blob_descs,
       same_blob_descs.at(axis_parallel_id).mut_shape().Set(axis, logical_blob_axis_dim);
     }
     for (const BlobDesc& blob_desc : same_blob_descs) { CHECK(blob_desc == same_blob_descs.at(0)); }
-    *concatenated_blob_desc = same_blob_descs.at(0);
+    concatenated_blob_desc->CopyAllFrom(same_blob_descs.at(0));
   } else {
     // select first BlobDesc
     for (const BlobDesc& blob_desc : blob_descs) { CHECK(blob_desc == blob_descs.at(0)); }
-    *concatenated_blob_desc = blob_descs.at(0);
+    concatenated_blob_desc->CopyAllFrom(blob_descs.at(0));
   }
 }
 

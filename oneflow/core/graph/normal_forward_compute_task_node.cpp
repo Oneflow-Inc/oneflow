@@ -5,21 +5,6 @@
 
 namespace oneflow {
 
-namespace {
-
-bool IsAllOutputNaive(const LogicalNode* logical_node) {
-  const Operator* op = logical_node->SoleOp().get();
-  if (op->IsAllOutputConst()) {
-    return false;
-  } else if (dynamic_cast<const VariableOp*>(op) != nullptr) {
-    return false;
-  } else {
-    return true;
-  }
-}
-
-}  // namespace
-
 bool NormalForwardCompTaskNode::HasBackwardCompTaskNode() {
   for (TaskEdge* edge : out_edges()) {
     const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
@@ -29,10 +14,12 @@ bool NormalForwardCompTaskNode::HasBackwardCompTaskNode() {
 }
 
 void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  if (IsAllOutputNaive(logical_node())) {
-    ProduceRegst("out", true);
-  } else {
+  if (logical_node()->SoleOp()->op_conf().has_variable_conf()) {
     ProduceRegst("out", false, 1, 1);
+  } else if (logical_node()->SoleOp()->op_conf().has_keep_header_only_conf()) {
+    ProduceRegst("out", false, 100, 100);
+  } else {
+    ProduceRegst("out", true);
   }
   ProduceRegst("activation", true);
   ProduceRegst("data_tmp", true);

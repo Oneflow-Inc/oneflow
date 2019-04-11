@@ -15,7 +15,7 @@ void ReshapeLikeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
                                    const ParallelContext* parallel_ctx) const {
   CHECK_EQ(GetBlobDesc4BnInOp("x")->shape().elem_cnt(),
            GetBlobDesc4BnInOp("like")->shape().elem_cnt());
-  *GetBlobDesc4BnInOp("y") = *GetBlobDesc4BnInOp("like");
+  GetBlobDesc4BnInOp("y")->CopyMetaFrom(*GetBlobDesc4BnInOp("like"));
 }
 
 REGISTER_OP(OperatorConf::kReshapeLikeConf, ReshapeLikeOp);

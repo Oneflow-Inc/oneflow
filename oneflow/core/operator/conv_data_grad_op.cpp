@@ -103,7 +103,7 @@ void ConvDataGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   CHECK_EQ(x_like->shape().NumAxes(), num_spatial_dims + 2);
   CHECK_EQ(x_like->data_type(), dy->data_type());
   BlobDesc* dx = GetBlobDesc4BnInOp("dx");
-  *dx = *x_like;
+  dx->CopyMetaFrom(*x_like);
   if (DevIsGpuAndEnableCudnn()) {
 #ifdef WITH_CUDA
     ConvOpCtx* conv_op_ctx = new ConvOpCtx();
