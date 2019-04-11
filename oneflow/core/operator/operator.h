@@ -51,7 +51,6 @@ class Operator {
   virtual bool NeedInBlobWhenBackward() const { return true; }
   virtual bool IsForwardInplace() const { return false; }
   virtual bool IsBackwardInplace() const { return false; }
-  virtual std::vector<std::string> GetHeaderOnlyIbns() const { return std::vector<std::string>(); }
 
   // bn_in_op <-> lbi
   const LogicalBlobId& BnInOp2Lbi(const std::string& bn_in_op) const;
@@ -170,6 +169,7 @@ class Operator {
       const std::string& obn) const;
   void GenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                      bool is_forward, const ParallelContext*, KernelConf*, const OpContext*) const;
+  InputBlobModifier InputBlobModifier4Ibn(const std::string& ibn) const;
 
   const InputBlobModifier& InputBlobModifier4Ibn(const std::string& ibn) const;
   const OutputBlobModifier& OutputBlobModifier4Obn(const std::string& obn) const;
