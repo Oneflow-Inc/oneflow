@@ -19,7 +19,7 @@ const PbMessage& ReduceMeanGradOp::GetCustomizedConf() const {
 void ReduceMeanGradOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*) const {
   *GetBlobDesc4BnInOp("temp_storage") = *GetBlobDesc4BnInOp("dy");
-  *GetBlobDesc4BnInOp("dx") = *GetBlobDesc4BnInOp("x");
+  GetBlobDesc4BnInOp("dx")->CopyMetaFrom(*GetBlobDesc4BnInOp("x"));
 }
 
 REGISTER_OP(OperatorConf::kReduceMeanGradConf, ReduceMeanGradOp);
