@@ -3,6 +3,7 @@
 #include "oneflow/core/operator/momentum_model_update_op.h"
 #include "oneflow/core/operator/lars_model_update_op.h"
 #include "oneflow/core/operator/adam_model_update_op.h"
+#include "oneflow/core/operator/lamb_model_update_op.h"
 
 namespace oneflow {
 

@@ -4,6 +4,7 @@
 #include "oneflow/core/kernel/rmsprop_model_update_kernel.h"
 #include "oneflow/core/kernel/lars_model_update_kernel.h"
 #include "oneflow/core/kernel/adam_model_update_kernel.h"
+#include "oneflow/core/kernel/lamb_model_update_kernel.h"
 
 namespace oneflow {
 
@@ -50,6 +51,8 @@ Kernel* CreateMdUpdtKernel(const KernelConf& kernel_conf) {
     return CreateLARSMdUpdtKernel(kernel_conf);
   } else if (user_conf.has_adam_conf()) {
     return CreateAdamMdUpdtKernel(kernel_conf);
+  } else if (user_conf.has_lamb_conf()) {
+    return CreateLAMBMdUpdtKernel(kernel_conf);
   } else {
     UNIMPLEMENTED();
   }
