@@ -22,7 +22,10 @@ BlobDesc::BlobDesc(const Shape& shape, DataType data_type, bool has_data_id, boo
       body_field_(shape, data_type),
       is_body_disabled_(false) {}
 
-BlobDesc::BlobDesc(const BlobDesc& blob_desc) { *this = blob_desc; }
+BlobDesc::BlobDesc(const BlobDesc& blob_desc) {
+  this->CopyMetaFrom(blob_desc);
+  this->is_body_disabled_ = blob_desc.is_body_disabled_;
+}
 
 void BlobDesc::InitFromProto(const BlobDescProto& proto) {
   body_field_.InitFromProto(proto.body());
