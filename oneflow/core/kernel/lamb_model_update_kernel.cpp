@@ -83,8 +83,8 @@ class LAMBMdUpdateKernelUtil<DeviceType::kCPU, T> final {
       model_diff[i] = model_diff[i] / *batch_instance_num_ptr;
       m[i] = beta1 * m[i] + (1 - beta1) * model_diff[i];
       v[i] = beta2 * v[i] + (1 - beta2) * (model_diff[i] * model_diff[i]);
-      model_diff[i] =
-          (m[i] / (1 - *beta1_t)) / std::sqrt(v[i] / (1 - *beta2_t) + epsilon) + l2 * model[i];
+      model_diff[i] = (m[i] / (1 - *beta1_t)) / std::sqrt(v[i] / (1 - *beta2_t) + epsilon)
+                      + l1 * ((model[i] >= 0) - (model[i] <= 0)) + l2 * model[i];
     }
     KernelUtil<DeviceType::kCPU, T>::Dot(ctx, n, model, 1, model, 1, &fw_buf[0]);
     KernelUtil<DeviceType::kCPU, T>::Dot(ctx, n, model_diff, 1, model_diff, 1, &fw_buf[1]);

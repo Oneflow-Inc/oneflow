@@ -14,7 +14,7 @@ __global__ void UpdateMomentEstimateGpu(int64_t n, const T* batch_instance_num_p
     model_diff[i] = model_diff[i] / *batch_instance_num_ptr;
     m[i] = beta1 * m[i] + (1 - beta1) * model_diff[i];
     v[i] = beta2 * v[i] + (1 - beta2) * (model_diff[i] * model_diff[i]);
-    model_diff[i] = (m[i] / (1 - *beta1_t)) / sqrt(v[i] / (1 - *beta2_t) + epsilon)
+    model_diff[i] = (m[i] / (1 - *beta1_t)) * rsqrt(v[i] / (1 - *beta2_t) + epsilon)
                     + l1 * ((model[i] >= 0) - (model[i] <= 0)) + l2 * model[i];
   }
 }
