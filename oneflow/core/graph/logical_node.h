@@ -230,6 +230,7 @@ DECLARE_NAIVE_LOGICAL_NODE(LossPrintLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(AccuracyLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(AccuracyAccLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(AccuracyPrintLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(KeepHeaderOnlyLogicalNode);
 
 class NormalMdUpdtLogicalNode final : public LogicalNode {
  public:
@@ -301,7 +302,6 @@ DECLARE_REDUCE_LOGICAL_NODE(NcclReduceScatterLogicalNode, true);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatForward);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Acc);
 DECLARE_DERIVED_BACKWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatBackward);
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(KeepHeaderOnly);
 
 #define DECLARE_BEFORE_OR_AFTER_ALLREDUCE_REDUCE_NODE(class_name, may_consume_md_diff) \
   class class_name final : public ReduceLogicalNode {                                  \

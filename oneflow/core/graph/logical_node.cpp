@@ -434,7 +434,8 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
   OF_PP_MAKE_TUPLE_SEQ(NcclAllGather, kMdUpdtArea)        \
   OF_PP_MAKE_TUPLE_SEQ(Accuracy, kDataForwardArea)        \
   OF_PP_MAKE_TUPLE_SEQ(AccuracyAcc, kDataForwardArea)     \
-  OF_PP_MAKE_TUPLE_SEQ(AccuracyPrint, kPrintArea)
+  OF_PP_MAKE_TUPLE_SEQ(AccuracyPrint, kPrintArea)         \
+  OF_PP_MAKE_TUPLE_SEQ(KeepHeaderOnly, kDataForwardArea)
 
 #define DEFINE_VIRTUAL_METHOD(x, area_type)                                             \
   std::string x##LogicalNode::TypeName() const { return #x; }                           \
@@ -480,7 +481,6 @@ BackwardLogicalNode* RepeatForwardLogicalNode::NewCorrectBackwardNode() {
   return new RepeatBackwardLogicalNode();
 }
 
-BackwardLogicalNode* KeepHeaderOnlyLogicalNode::NewCorrectBackwardNode() { UNIMPLEMENTED(); }
 BackwardLogicalNode* AccLogicalNode::NewCorrectBackwardNode() { UNIMPLEMENTED(); }
 
 }  // namespace oneflow
