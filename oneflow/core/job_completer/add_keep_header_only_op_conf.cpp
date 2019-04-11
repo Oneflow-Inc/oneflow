@@ -52,7 +52,7 @@ void AddKeepHeaderOnlyOp(const OpGraph& op_graph, Job* job) {
         *(kho_conf->mutable_in()->Add()) = GenLogicalBlobName(cur_lbi);
         *(kho_conf->mutable_out()->Add()) = cur_lbi.blob_name();
 
-        std::string lbn = op_conf.name() + cur_lbi.blob_name();
+        std::string lbn = op_conf.name() + "/" + cur_lbi.blob_name();
         SetBnValInOpTypeConf(dst_op_type_conf, ibn, GenLogicalBlobName(cur_lbi), lbn);
       }
       job_builder.AddOps(src_node->parallel_desc().parallel_conf(),

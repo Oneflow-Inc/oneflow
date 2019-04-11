@@ -196,14 +196,14 @@ bool BlobDesc::operator==(const BlobDesc& rhs) const {
          && has_dim2_valid_num_ == rhs.has_dim2_valid_num_
          && has_record_id_in_device_piece_ == rhs.has_record_id_in_device_piece_
          && has_loss_instance_num_ == rhs.has_loss_instance_num_ && max_col_num_ == rhs.max_col_num_
-         && blob_mem_id_ == rhs.blob_mem_id_ && body_field_ == rhs.body_field_
-         && is_body_disabled_ == rhs.is_body_disabled_;
+         && blob_mem_id_ == rhs.blob_mem_id_ && body_field_ == rhs.body_field_;
 }
 
 BlobDesc& BlobDesc::operator=(const BlobDesc& blob_desc) {
   BlobDescProto proto;
   blob_desc.ToProto(&proto);
   InitFromProto(proto);
+  is_body_disabled_ = false;
   return *this;
 }
 
