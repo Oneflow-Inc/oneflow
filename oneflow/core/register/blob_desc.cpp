@@ -224,6 +224,8 @@ void BlobDesc::CopyMetaFrom(const BlobDesc& rhs) {
   body_field_ = rhs.body_field_;
   if (rhs.dim0_inner_shape_) {
     dim0_inner_shape_.reset(new Shape(rhs.dim0_inner_shape_->dim_vec()));
+  } else {
+    dim0_inner_shape_.reset(nullptr);
   }
 }
 
