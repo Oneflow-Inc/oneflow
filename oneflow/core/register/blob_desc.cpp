@@ -17,12 +17,12 @@ BlobDesc::BlobDesc(const Shape& shape, DataType data_type, bool has_data_id, boo
       has_dim2_valid_num_(false),
       has_record_id_in_device_piece_(false),
       has_loss_instance_num_(false),
-      is_body_disabled_(false),
       max_col_num_(max_col_num),
       blob_mem_id_(-1),
-      body_field_(shape, data_type) {}
+      body_field_(shape, data_type),
+      is_body_disabled_(false) {}
 
-BlobDesc::BlobDesc(const BlobDesc& BlobDesc) { *this = BlobDesc; }
+BlobDesc::BlobDesc(const BlobDesc& blob_desc) { *this = blob_desc; }
 
 void BlobDesc::InitFromProto(const BlobDescProto& proto) {
   body_field_.InitFromProto(proto.body());
@@ -196,15 +196,33 @@ bool BlobDesc::operator==(const BlobDesc& rhs) const {
          && has_dim2_valid_num_ == rhs.has_dim2_valid_num_
          && has_record_id_in_device_piece_ == rhs.has_record_id_in_device_piece_
          && has_loss_instance_num_ == rhs.has_loss_instance_num_ && max_col_num_ == rhs.max_col_num_
-         && blob_mem_id_ == rhs.blob_mem_id_ && body_field_ == rhs.body_field_;
+         && blob_mem_id_ == rhs.blob_mem_id_ && body_field_ == rhs.body_field_
+         && is_body_disabled_ == rhs.is_body_disabled_;
 }
 
 BlobDesc& BlobDesc::operator=(const BlobDesc& blob_desc) {
+  CHECK(blob_desc.is_body_disabled_); // prevent from misusing
   BlobDescProto proto;
   blob_desc.ToProto(&proto);
   InitFromProto(proto);
-  is_body_disabled_ = false;
   return *this;
+}
+
+void BlobDesc::CopyMetaFrom(const BlobDesc& rhs) {
+  header_is_opaque_ = rhs.header_is_opaque_;
+  opaque_header_ = rhs.opaque_header_;
+  header_pod_desc_ = rhs.header_pod_desc_;
+  has_data_id_ = rhs.has_data_id_;
+  has_col_num_ = rhs.has_col_num_;
+  has_dim0_valid_num_ = rhs.has_dim0_valid_num_;
+  has_dim1_valid_num_ = rhs.has_dim1_valid_num_;
+  has_dim2_valid_num_ = rhs.has_dim2_valid_num_;
+  has_record_id_in_device_piece_ = rhs.has_record_id_in_device_piece_;
+  has_loss_instance_num_ = rhs.has_loss_instance_num_;
+  max_col_num_ = rhs.max_col_num_;
+  blob_mem_id_ = rhs.blob_mem_id_;
+  body_field_ = rhs.body_field_;
+  *dim0_inner_shape_ = *(rhs.dim0_inner_shape_);
 }
 
 std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
