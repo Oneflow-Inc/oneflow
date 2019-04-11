@@ -5,7 +5,7 @@
 #include "oneflow/core/job_completer/add_keep_header_only_op_conf.h"
 #include "oneflow/core/job_completer/optimizer.h"
 #include "oneflow/core/job_completer/add_saver.h"
-#include "oneflow/core/optimizer/optimizer.h"
+#include "oneflow/core/job_completer/optimizer.h"
 #include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
