@@ -59,20 +59,18 @@ void FindAllReducedLbis(
   auto SoleConsumerOpNode4Lbi = MakeGetterSoleConsumerOpNode4Lbi(ProducerOpNode4Lbi);
   const auto& lbi2diff_lbi = job.helper().tag2lbi_relations().at(kProducedLbi2ConsumedDiffLbi);
   HashSet<LogicalBlobId> key_check;
-  HashSet<LogicalBlobId> value_check;
-  HashSet<LogicalBlobId> diff_lbi_check;
+  HashSet<LogicalBlobId> diff_lbis;
   for (const auto& pair : lbi2diff_lbi.pair()) {
     CHECK(key_check.emplace(pair.first()).second);
-    CHECK(value_check.emplace(pair.second()).second);
     const auto* producer = ProducerOpNode4Lbi(pair.first());
     if (producer->parallel_desc().parallel_num() == 1) { continue; }
     if (producer->op().op_conf().has_variable_conf() == false) { continue; }
     if (producer->SbpParallel4Lbi(pair.first()).has_broadcast_parallel() == false) { continue; }
     const auto& diff_lbi =
         FindP2BLbiWithSoleConsumer(pair.second(), ProducerOpNode4Lbi, SoleConsumerOpNode4Lbi);
-    lbis->push_back(diff_lbi);
-    CHECK(diff_lbi_check.emplace(diff_lbi).second);
+    diff_lbis.insert(diff_lbi);
   }
+  *lbis = {diff_lbis.begin(), diff_lbis.end()};
 }
 
 std::function<int32_t(const OpNode*)> MakeGetterDepth4OpNode(const OpGraph& op_graph) {
