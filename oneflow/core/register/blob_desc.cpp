@@ -22,10 +22,7 @@ BlobDesc::BlobDesc(const Shape& shape, DataType data_type, bool has_data_id, boo
       body_field_(shape, data_type),
       is_body_disabled_(false) {}
 
-BlobDesc::BlobDesc(const BlobDesc& blob_desc) {
-  this->CopyMetaFrom(blob_desc);
-  this->is_body_disabled_ = blob_desc.is_body_disabled_;
-}
+BlobDesc::BlobDesc(const BlobDesc& blob_desc) { this->CopyAllFrom(blob_desc); }
 
 void BlobDesc::InitFromProto(const BlobDescProto& proto) {
   body_field_.InitFromProto(proto.body());
@@ -204,7 +201,7 @@ bool BlobDesc::operator==(const BlobDesc& rhs) const {
 }
 
 BlobDesc& BlobDesc::operator=(const BlobDesc& blob_desc) {
-  CHECK(blob_desc.is_body_disabled_); // prevent from misusing
+  CHECK(blob_desc.is_body_disabled_ == false); // prevent from misusing
   BlobDescProto proto;
   blob_desc.ToProto(&proto);
   InitFromProto(proto);
@@ -225,7 +222,18 @@ void BlobDesc::CopyMetaFrom(const BlobDesc& rhs) {
   max_col_num_ = rhs.max_col_num_;
   blob_mem_id_ = rhs.blob_mem_id_;
   body_field_ = rhs.body_field_;
-  *dim0_inner_shape_ = *(rhs.dim0_inner_shape_);
+  if (rhs.dim0_inner_shape_) {
+    dim0_inner_shape_.reset(new Shape(rhs.dim0_inner_shape_->dim_vec()));
+  }
+}
+
+void BlobDesc::CopyNonMetaFrom(const BlobDesc& rhs) {
+  this->is_body_disabled_ = rhs.is_body_disabled_;
+}
+
+void BlobDesc::CopyAllFrom(const BlobDesc& rhs) {
+  this->CopyMetaFrom(rhs);
+  this->CopyNonMetaFrom(rhs);
 }
 
 std::unique_ptr<BlobDesc> ComputePackedBlobDesc(

@@ -70,6 +70,8 @@ class BlobDesc {
   void ToProto(BlobDescProto* proto) const;
   BlobDesc& operator=(const BlobDesc& blob_desc);
   void CopyMetaFrom(const BlobDesc& rhs);
+  void CopyNonMetaFrom(const BlobDesc& rhs);
+  void CopyAllFrom(const BlobDesc& rhs);
 
  private:
   void InitFromProto(const BlobDescProto& proto);
