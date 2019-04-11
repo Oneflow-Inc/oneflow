@@ -11,7 +11,6 @@
 #include "oneflow/core/graph/repeat_forward_compute_task_node.h"
 #include "oneflow/core/graph/repeat_backward_compute_task_node.h"
 #include "oneflow/core/graph/acc_compute_task_node.h"
-#include "oneflow/core/graph/keep_header_only_compute_task_node.h"
 
 namespace oneflow {
 
@@ -230,7 +229,6 @@ DECLARE_NAIVE_LOGICAL_NODE(LossPrintLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(AccuracyLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(AccuracyAccLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(AccuracyPrintLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(KeepHeaderOnlyLogicalNode);
 
 class NormalMdUpdtLogicalNode final : public LogicalNode {
  public:

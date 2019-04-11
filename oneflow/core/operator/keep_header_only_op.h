@@ -19,8 +19,6 @@ class KeepHeaderOnlyOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override { return op_conf().keep_header_only_conf(); }
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
-  LogicalNode* NewProperLogicalNode() { return new KeepHeaderOnlyLogicalNode; }
-
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return true; }
 };
