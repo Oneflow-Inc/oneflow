@@ -151,6 +151,7 @@ void LogicalGraph::NaiveBuildFwStruct(
     cur_node->mut_op_vec() = {cur_op};
     cur_node->SoleOp()->FixParallelDesc(parallel_desc_ptr.get());
     cur_node->mut_parallel_desc() = parallel_desc_ptr;
+    cur_node->reset_time_shape(new Shape(job_.helper().op_name2time_shape().at(cur_op->op_name())));
     for (const std::string& obn : cur_node->SoleOp()->output_bns()) {
       const LogicalBlobId& lbi = cur_node->SoleOp()->BnInOp2Lbi(obn);
       CHECK(lbi2producer.emplace(lbi, cur_node).second);
@@ -198,7 +199,7 @@ void LogicalGraph::FixSharedModelNodes(
     const ParallelDesc* shared_parallel_desc = shared_model_nodes->front()->parallel_desc().get();
     FOR_RANGE(size_t, i, 1, shared_model_nodes->size()) {
       shared_model_nodes->at(i)->SoleOp()->FixLbiWhenShareModel(shared_op_name);
-      CHECK(shared_model_nodes->at(i)->parallel_desc()->Equal(shared_parallel_desc));
+      CHECK(shared_model_nodes->at(i)->parallel_desc()->Equals(shared_parallel_desc));
     }
   }
 }
@@ -722,6 +723,25 @@ MdSaveLogicalNode* LogicalGraph::BuildMdSaveStructIfNeed(LogicalNode* need_save_
   } else {
     return nullptr;
   }
+}
+
+void LogicalGraph::ForEachNecessaryCtrlEdge(
+    const std::function<void(const LogicalNode*, const LogicalNode*)>& Handler) const {
+  HashMap<std::string, const LogicalNode*> op_name2node;
+  ForEachNode([&](LogicalNode* node) {
+    for (const auto& op : node->op_vec()) {
+      CHECK(op_name2node.emplace(op->op_name(), node).second);
+    }
+  });
+  auto IsReachable = MakePredicatorIsReachable();
+  ForEachNode([&](LogicalNode* node) {
+    for (const auto& op : node->op_vec()) {
+      for (const auto& ctrl_in_op_name : op->op_conf().ctrl_in_op_name()) {
+        const LogicalNode* ctrl_in_node = op_name2node.at(ctrl_in_op_name);
+        if (!IsReachable(ctrl_in_node, node)) { Handler(ctrl_in_node, node); }
+      }
+    }
+  });
 }
 
 NormalMdUpdtLogicalNode* LogicalGraph::BuildNormalMdUpdtAndMdSaveStruct(

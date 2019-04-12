@@ -65,10 +65,10 @@ BlobDesc::BlobDesc(const StructPodDesc& header_pod_desc, int64_t header_byte_siz
       has_dim2_valid_num_(false),
       has_record_id_in_device_piece_(false),
       has_loss_instance_num_(false),
-      is_body_disabled_(false),
       max_col_num_(max_col_num),
       blob_mem_id_(-1),
-      body_field_(shape, data_type) {
+      body_field_(shape, data_type),
+      is_body_disabled_(false) {
   CHECK_EQ(header_pod_desc.ByteSize(), header_byte_size);
   if (header_byte_size > 0) {
     header_is_opaque_ = true;
@@ -201,7 +201,7 @@ bool BlobDesc::operator==(const BlobDesc& rhs) const {
 }
 
 BlobDesc& BlobDesc::operator=(const BlobDesc& blob_desc) {
-  CHECK(blob_desc.is_body_disabled_ == false); // prevent from misusing
+  CHECK(blob_desc.is_body_disabled_ == false);  // prevent from misusing
   BlobDescProto proto;
   blob_desc.ToProto(&proto);
   InitFromProto(proto);

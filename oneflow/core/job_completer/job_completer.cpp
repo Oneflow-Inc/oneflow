@@ -248,6 +248,20 @@ void FixAndOptimizeDLNet(Job* job) {
   if (job_desc->IsTrain()) { AddIdentityOpForAllReduceOverlapingUntrainble(job); }
 }
 
+void SetOpTimeShape(const OpGraph& op_graph, Job* job) {
+  op_graph.ForEachNode([&](OpNode* op_node) {
+    op_node->out_blob_time_shape().ToProto(
+        &(*job->mutable_helper()->mutable_op_name2time_shape())[op_node->op().op_name()]);
+  });
+}
+
+void SetCtrlInOpName(const OpGraph& op_graph, Job* job) { TODO(); }
+
+void SetOpTimeShapeAndCtrlInOpName(const OpGraph& op_graph, Job* job) {
+  SetOpTimeShape(op_graph, job);
+  SetCtrlInOpName(op_graph, job);
+}
+
 }  // namespace
 
 void JobCompleter::Complete(Job* job) const {
@@ -266,6 +280,7 @@ void JobCompleter::Complete(Job* job) const {
   }
   // TODO: refine
   FixAndOptimizeDLNet(job);
+  WithOpGraphAndMutJob(job, &SetOpTimeShapeAndCtrlInOpName);
 }
 
 }  // namespace oneflow
