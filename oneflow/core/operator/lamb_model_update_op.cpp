@@ -13,14 +13,12 @@ void LAMBModelUpdateOp::MdUpdtVirtualInitFromOpConf() {
   EnrollForwardModelBn("v");
   EnrollForwardModelBn("beta1_t");
   EnrollForwardModelBn("beta2_t");
-
   EnrollFwBufBn("fw_buf");
 }
 
 void LAMBModelUpdateOp::MdUpdtVirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  const auto& lamb_conf = op_conf().normal_mdupdt_conf().user_conf().lamb_conf();
   const BlobDesc* model_blob_desc = GetBlobDesc4BnInOp("model");
   CHECK_EQ(model_blob_desc->data_type(), Global<JobDesc>::Get()->DefaultDataType());
   CHECK_EQ(model_blob_desc->has_data_id_field(), false);

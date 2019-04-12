@@ -359,7 +359,7 @@ message AdamModelUpdateConf {
 message LAMBModelUpdateConf {
   optional float beta1 = 1 [default = 0.9];
   optional float beta2 = 2 [default = 0.999];
-  optional float epsilon = 3 [default = 1e-8];
+  optional float epsilon = 3 [default = 1e-6];
 }
 
 message ExponentialDecayConf {

@@ -20,15 +20,11 @@ __global__ void UpdateMomentEstimateGpu(int64_t n, const T* batch_instance_num_p
 }
 
 template<typename T>
-__global__ void GetLocalLearningRateGpu(T learning_rate, T* fw_buf) {
-  fw_buf[0] = sqrt(fw_buf[0]);
-  fw_buf[1] = sqrt(fw_buf[1]);
-  learning_rate = fw_buf[0] / fw_buf[1] * learning_rate;
-}
-
-template<typename T>
-__global__ void UpdateModelGpu(int64_t n, T learning_rate, const T* model_diff, T* model) {
-  CUDA_1D_KERNEL_LOOP(i, n) { model[i] = model[i] - learning_rate * model_diff[i]; }
+__global__ void UpdateModelGpu(int64_t n, T learning_rate, const T* model_diff, T* model,
+                               T* fw_buf) {
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    model[i] = model[i] - fw_buf[0] / fw_buf[1] * learning_rate * model_diff[i];
+  }
 }
 
 }  // namespace
@@ -46,9 +42,9 @@ class LAMBMdUpdateKernelUtil<DeviceType::kGPU, T> final {
             model, m, v, fw_buf);
     KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, model, 1, model, 1, &fw_buf[0]);
     KernelUtil<DeviceType::kGPU, T>::Dot(ctx, n, model_diff, 1, model_diff, 1, &fw_buf[1]);
-    GetLocalLearningRateGpu<T><<<1, 1, 0, ctx->cuda_stream()>>>(learning_rate, fw_buf);
+    KernelUtil<DeviceType::kGPU, T>::Sqrt(ctx, 2, fw_buf, fw_buf);
     UpdateModelGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-        n, learning_rate, model_diff, model);
+        n, learning_rate, model_diff, model, fw_buf);
   }
 };
 
