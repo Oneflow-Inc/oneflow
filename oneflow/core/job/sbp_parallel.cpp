@@ -3,11 +3,15 @@
 
 namespace oneflow {
 
-bool operator==(const SbpParallel& lhs, const SbpParallel& rhs) {
-  return PbMd().Equivalent(lhs, rhs);
-}
+bool operator==(const SbpParallel& lhs, const SbpParallel& rhs) { return PbMd().Equals(lhs, rhs); }
 
 bool operator!=(const SbpParallel& lhs, const SbpParallel& rhs) { return !(lhs == rhs); }
+
+bool operator==(const SbpSignature& lhs, const SbpSignature& rhs) {
+  return PbMd().Equals(lhs, rhs);
+}
+
+bool operator!=(const SbpSignature& lhs, const SbpSignature& rhs) { return !(lhs == rhs); }
 
 //  S -> S
 //  P -> C

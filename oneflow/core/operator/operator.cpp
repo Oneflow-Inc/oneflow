@@ -187,12 +187,15 @@ void Operator::InferSbpSignatureIf(
   for (const auto& result : match_results) {
     if (result.has_success()) { ++match_success_cnt; }
   }
-  if (match_success_cnt == 1) {
-    const SbpSignatureRule* match_signature = nullptr;
+  if (match_success_cnt >= 1) {
+    HashSet<SbpSignature> signature_check;
     FOR_RANGE(int32_t, i, 0, rules.size()) {
-      if (match_results.at(i).has_success()) { match_signature = rules.at(i).get(); }
+      if (match_results.at(i).has_success()) {
+        rules.at(i)->GenerateSignature(SbpInferHint4Ibn, sbp_signature);
+        signature_check.insert(*sbp_signature);
+      }
     }
-    match_signature->GenerateSignature(SbpInferHint4Ibn, sbp_signature);
+    CHECK_EQ(signature_check.size(), 1);
   } else if (match_success_cnt == 0) {
     std::stringstream ss;
     FOR_RANGE(int32_t, i, 0, rules.size()) {
@@ -227,8 +230,6 @@ void Operator::InferSbpSignatureIf(
       }
     }
     LOG(FATAL) << ss.str();
-  } else {
-    UNIMPLEMENTED();
   }
 }
 
