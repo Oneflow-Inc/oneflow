@@ -9,13 +9,25 @@ void ReduceSumLikeKernel<device_type, T>::ForwardDataContent(
   const Blob* x_blob = BnInOp2Blob("x");
   Blob* y_blob = BnInOp2Blob("y");
   Blob* temp_storage_blob = BnInOp2Blob("temp_storage");
-  NdarrayUtil<device_type, T>::ReduceSum(
-      ctx.device_ctx,
-      XpuVarNdarray<T>(
-          Shape(BnInOp2Blob("like")->shape()).CreateLeftExtendedShape(x_blob->shape().NumAxes()),
-          y_blob->mut_dptr<T>()),
-      XpuVarNdarray<const T>(x_blob, x_blob->shape().NumAxes()),
-      XpuVarNdarray<T>(temp_storage_blob, x_blob->shape().NumAxes()));
+  const ReduceSumLikeOpConf& conf = this->op_conf().reduce_sum_like_conf();
+  if (conf.axis().empty()) {
+    CHECK_EQ(x_blob->shape(), y_blob->shape());
+    y_blob->CopyDataContentFrom(ctx.device_ctx, x_blob);
+  } else {
+    NdarrayUtil<device_type, T>::ReduceSum(
+        ctx.device_ctx,
+        XpuVarNdarray<T>(
+            x_blob->shape().CreateReducedShape({conf.axis().begin(), conf.axis().end()}),
+            y_blob->mut_dptr<T>()),
+        XpuVarNdarray<const T>(x_blob, x_blob->shape().NumAxes()),
+        XpuVarNdarray<T>(temp_storage_blob, x_blob->shape().NumAxes()));
+  }
+}
+
+template<DeviceType device_type, typename T>
+void ReduceSumLikeKernel<device_type, T>::ForwardDim0ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  BnInOp2Blob("y")->CopyDim0ValidNumFrom(ctx.device_ctx, BnInOp2Blob("like"));
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReduceSumLikeConf, ReduceSumLikeKernel,

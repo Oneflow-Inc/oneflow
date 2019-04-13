@@ -17,8 +17,12 @@ const PbMessage& ReduceSumLikeOp::GetCustomizedConf() const {
 
 void ReduceSumLikeOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*) const {
-  *GetBlobDesc4BnInOp("temp_storage") = *GetBlobDesc4BnInOp("x");
-  GetBlobDesc4BnInOp("y")->CopyMetaFrom(*GetBlobDesc4BnInOp("like"));
+  const ReduceSumLikeOpConf& conf = op_conf().reduce_sum_like_conf();
+  BlobDesc* x_blob = GetBlobDesc4BnInOp("x");
+  BlobDesc* like_blob = GetBlobDesc4BnInOp("like");
+  if (conf.axis().empty()) { CHECK_EQ(x_blob->shape(), like_blob->shape()); }
+  *GetBlobDesc4BnInOp("temp_storage") = *x_blob;
+  GetBlobDesc4BnInOp("y")->CopyMetaFrom(*like_blob);
 }
 
 REGISTER_OP(OperatorConf::kReduceSumLikeConf, ReduceSumLikeOp);
