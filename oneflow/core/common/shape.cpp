@@ -110,8 +110,8 @@ Shape Shape::Ones(const int64_t num_axes) {
 
 std::vector<int64_t> Shape::AxisByBroadcastTo(const Shape& broadcast_shape) const {
   std::vector<int64_t> broadcast_axis_vec;
-  CHECK_EQ(broadcast_shape.dim_vec().size(), this->dim_vec().size());
-  for (int64_t i = 0; i < this->dim_vec().size(); i++) {
+  CHECK_EQ(broadcast_shape.NumAxes(), NumAxes());
+  for (int64_t i = 0; i < this->NumAxes(); i++) {
     if (this->dim_vec()[i] != broadcast_shape.dim_vec()[i] && this->dim_vec()[i] == 1) {
       broadcast_axis_vec.push_back(i);
     } else {
