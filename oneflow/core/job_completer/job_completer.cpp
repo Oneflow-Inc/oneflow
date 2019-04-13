@@ -255,7 +255,32 @@ void SetOpTimeShape(const OpGraph& op_graph, Job* job) {
   });
 }
 
-void SetCtrlInOpName(const OpGraph& op_graph, Job* job) { TODO(); }
+void SetCtrlInOpName(const OpGraph& op_graph, Job* job) {
+  // TODO: handle model save nodes
+  std::vector<OperatorConf> mut_ops;
+  OpGraph(*job).TopoForEachNode([&](OpNode* op_node) {
+    if (IsClassRegistered<GenerateOptimizerOpConfWrapperStruct>(
+            op_node->op().op_conf().op_type_case())) {
+      OperatorConf mdupdt_op(op_node->op().op_conf());
+      for (OpEdge* in_edge_of_mdupdt : op_node->in_edges()) {
+        if (in_edge_of_mdupdt->src_node()->op().op_conf().has_variable_conf()) {
+          std::vector<const OperatorConf*> const_ops;
+          for (OpEdge* out_edge_of_variable : in_edge_of_mdupdt->src_node()->out_edges()) {
+            if (out_edge_of_variable->dst_node() == op_node) { continue; }
+            const_ops.push_back(&out_edge_of_variable->dst_node()->op().op_conf());
+          }
+          for (const auto* const_op : const_ops) {
+            mdupdt_op.add_ctrl_in_op_name(const_op->name());
+          }
+        }
+      }
+      if (!mdupdt_op.ctrl_in_op_name().empty()) {
+        mut_ops.push_back(mdupdt_op);
+      }
+    }
+  });
+  JobBuilder(job).MutOps(mut_ops);
+}
 
 void SetOpTimeShapeAndCtrlInOpName(const OpGraph& op_graph, Job* job) {
   SetOpTimeShape(op_graph, job);
