@@ -118,7 +118,7 @@ std::vector<int64_t> Shape::AxisByBroadcastTo(const Shape& broadcast_shape) cons
       CHECK_EQ(this->dim_vec()[i], broadcast_shape.dim_vec()[i]);
     }
   }
-  CHECK(!broadcast_axis_vec.empty);
+  CHECK(!broadcast_axis_vec.empty());
   return broadcast_axis_vec;
 }
 

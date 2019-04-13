@@ -40,7 +40,7 @@ class Shape final {
   Shape CreateReducedShape(const std::vector<int64_t>& axis_vec) const;
   Shape RemoveOnes(const std::vector<int64_t>& axis_vec) const;
   static Shape Ones(const int64_t num_axes);
-  static std::vector<int64_t> AxisByBroadcastTo(const std::vector<int64_t>& broadcast_dim_vec);
+  std::vector<int64_t> AxisByBroadcastTo(const Shape& broadcast_dim_vec) const;
 
  private:
   void UpdateElemCnt();
