@@ -62,10 +62,6 @@ int32_t TransposeOp::OutputBlobModelSplitAxis(
     }
   }
   CHECK_NE(split_axis, -1);
-  if (in_sbp_infer_hint.is_data_blob()) {
-    CHECK_GT(in_sbp_infer_hint.split_axis(), 0);
-    CHECK_GT(split_axis, 0);
-  }
   return split_axis;
 }
 

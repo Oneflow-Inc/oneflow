@@ -21,6 +21,12 @@ void ReduceSumLikeOp::InferBlobDescs(
   GetBlobDesc4BnInOp("y")->CopyMetaFrom(*GetBlobDesc4BnInOp("like"));
 }
 
+void ReduceSumLikeOp::GetSbpSignatureRules(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      std::vector<std::unique_ptr<const SbpSignatureRule>>*) const {
+  TODO();
+}
+
 REGISTER_OP(OperatorConf::kReduceSumLikeConf, ReduceSumLikeOp);
 
 }  // namespace oneflow
