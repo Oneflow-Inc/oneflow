@@ -552,6 +552,12 @@ message ReshapeOpConf {
   optional bool has_dim0_in_shape = 4;
 }
 
+message ExpendDimsOpConf {
+  required string in = 1;
+  required string out = 2;
+  required int32 dim = 3;
+}
+
 message EmbeddingLookupOpConf {
   required string ids = 1;
   required string out = 2;
@@ -1098,6 +1104,7 @@ message OperatorConf {
     L2NormalizeOpConf l2_normalize_conf = 264;
     PReluOpConf prelu_conf = 265;
     WhereOpConf where_conf = 266;
+    ExpendDimsOpConf expend_dims_conf = 267;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
