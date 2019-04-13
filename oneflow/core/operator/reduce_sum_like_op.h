@@ -23,7 +23,6 @@ class ReduceSumLikeOp final : public Operator {
   void GetSbpSignatureRules(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       std::vector<std::unique_ptr<const SbpSignatureRule>>*) const override;
-
 };
 
 }  // namespace oneflow

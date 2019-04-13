@@ -35,10 +35,11 @@ class ParallelDesc final {
   // Setters
   void set_policy(ParallelPolicy val) { parallel_conf_.set_policy(val); }
 
-  bool Equal(const ParallelDesc& rhs) const;
-  bool operator==(const ParallelDesc& rhs) const { return Equal(rhs); }
+  bool EqualsIgnoringPolicy(const ParallelDesc& rhs) const;
+  bool Equals(const ParallelDesc& rhs) const;
+  bool operator==(const ParallelDesc& rhs) const { return Equals(rhs); }
   bool operator!=(const ParallelDesc& rhs) const { return !(*this == rhs); }
-  bool Equal(const ParallelDesc* rhs) const { return Equal(*rhs); }
+  bool Equals(const ParallelDesc* rhs) const { return Equals(*rhs); }
 
  private:
   void ClearUp();

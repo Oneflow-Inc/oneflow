@@ -44,6 +44,14 @@ class Graph {
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
       const std::function<void(NodeType*)>& Handler) const;
 
+  std::function<bool(const NodeType* src, const NodeType* dst)> MakePredicatorIsReachable() const;
+
+  std::function<bool(const NodeType* src, const NodeType* dst)> MakePredicatorIsReachable(
+      const std::list<NodeType*>& starts,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode)
+      const;
+
   // Getters
   std::list<NodeType*> source_nodes() const;
   std::list<NodeType*> sink_nodes() const;
@@ -313,6 +321,33 @@ void Graph<NodeType, EdgeType>::DfsTopoForEachNode(
       if (is_ready && !be_visited[out]) { stack.push(out); }
     });
   }
+}
+
+template<typename NodeType, typename EdgeType>
+std::function<bool(const NodeType* src, const NodeType* dst)>
+Graph<NodeType, EdgeType>::MakePredicatorIsReachable() const {
+  return MakePredicatorIsReachable(source_nodes(), &NodeType::ForEachNodeOnInEdge,
+                                   &NodeType::ForEachNodeOnOutEdge);
+}
+
+template<typename NodeType, typename EdgeType>
+std::function<bool(const NodeType* src, const NodeType* dst)>
+Graph<NodeType, EdgeType>::MakePredicatorIsReachable(
+    const std::list<NodeType*>& starts,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode)
+    const {
+  auto node2ancestor = std::make_shared<HashMap<const NodeType*, HashSet<const NodeType*>>>();
+  TopoForEachNode(starts, ForEachInNode, ForEachOutNode, [&](NodeType* node) {
+    ForEachInNode(node, [&](NodeType* in_node) {
+      (*node2ancestor)[node].insert(in_node);
+      (*node2ancestor)[node].insert((*node2ancestor)[in_node].begin(),
+                                    (*node2ancestor)[in_node].end());
+    });
+  });
+  return [node2ancestor](const NodeType* src, const NodeType* dst) -> bool {
+    return node2ancestor->at(dst).find(src) != node2ancestor->at(dst).end();
+  };
 }
 
 }  // namespace oneflow

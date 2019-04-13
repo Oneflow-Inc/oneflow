@@ -12,7 +12,7 @@ void GenerateBackwardOpConf(
   if (DiffLbi4BnInOp("a") != nullptr) {
     OperatorConf broadcast_div_a;
     broadcast_div_a.set_name(op.op_name() + "_grad_a_div");
-    BroadcastMulOpConf* broadcast_div_a_op_conf = broadcast_div_a.mutable_broadcast_mul_conf();
+    BroadcastDivOpConf* broadcast_div_a_op_conf = broadcast_div_a.mutable_broadcast_div_conf();
     broadcast_div_a_op_conf->set_a(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
     broadcast_div_a_op_conf->set_b(GenLogicalBlobName(op.BnInOp2Lbi("b")));
     broadcast_div_a_op_conf->set_out("out");
