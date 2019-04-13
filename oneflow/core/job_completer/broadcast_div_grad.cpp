@@ -29,9 +29,8 @@ void GenerateBackwardOpConf(
       reduce_sum_like_a_op_conf->set_like(GenLogicalBlobName(op.BnInOp2Lbi("a")));
       reduce_sum_like_a_op_conf->set_x(broadcast_div_a.name() + "/out");
       reduce_sum_like_a_op_conf->set_y("y");
-      const std::vector<int64_t> broadcast_axis_vec =
-          LogicalBlobDesc4BnInOp("a").shape().BroadcastAxis(
-              LogicalBlobDesc4BnInOp("out").shape().dim_vec());
+      const std::vector<int64_t> broadcast_axis_vec = Shape::AxisByBroadcastTo(
+          LogicalBlobDesc4BnInOp("a").shape(), LogicalBlobDesc4BnInOp("out").shape());
       *reduce_sum_like_a_op_conf->mutable_axis() = {broadcast_axis_vec.begin(),
                                                     broadcast_axis_vec.end()};
 

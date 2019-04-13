@@ -108,18 +108,17 @@ Shape Shape::Ones(const int64_t num_axes) {
   return Shape(dim_vec);
 }
 
-std::vector<int64_t> Shape::BroadcastAxis(const std::vector<int64_t>& broadcast_dim_vec) const {
+std::vector<int64_t> Shape::AxisByBroadcastTo(const Shape& broadcast_shape) const {
   std::vector<int64_t> broadcast_axis_vec;
-  CHECK_GE(broadcast_dim_vec.size(), this->dim_vec().size());
-  const Shape& extended_shape = CreateLeftExtendedShape(broadcast_dim_vec.size());
-  for (int64_t i = 0; i < extended_shape.dim_vec().size(); i++) {
-    if (extended_shape.dim_vec()[i] != broadcast_dim_vec[i] && extended_shape.dim_vec()[i] == 1) {
+  CHECK_EQ(broadcast_shape.dim_vec().size(), this->dim_vec().size());
+  for (int64_t i = 0; i < this->dim_vec().size(); i++) {
+    if (this->dim_vec()[i] != broadcast_shape.dim_vec()[i] && this->dim_vec()[i] == 1) {
       broadcast_axis_vec.push_back(i);
     } else {
-      CHECK_EQ(extended_shape.dim_vec()[i], extended_shape.dim_vec()[i]);
+      CHECK_EQ(this->dim_vec()[i], broadcast_shape.dim_vec()[i]);
     }
   }
-  CHECK(!broadcast_axis_vec.empty());
+  CHECK(!broadcast_axis_vec.empty);
   return broadcast_axis_vec;
 }
 
