@@ -60,6 +60,14 @@ PbMessage* MutableMessageInPbMessage(PbMessage* msg, const std::string& field_na
   return r->MutableMessage(msg, fd);
 }
 
+const PbMessage& GetMessageInPbMessage(const PbMessage& msg, int field_index) {
+  const auto* d = const_cast<google::protobuf::Descriptor*>(msg.GetDescriptor());
+  const auto* fd = const_cast<PbFd*>(d->FindFieldByNumber(field_index));
+  CHECK_NOTNULL(fd);
+  const auto* r = const_cast<google::protobuf::Reflection*>(msg.GetReflection());
+  return r->GetMessage(msg, fd);
+}
+
 PbMessage* MutableMessageInPbMessage(PbMessage* msg, int field_index) {
   const auto* d = const_cast<google::protobuf::Descriptor*>(msg->GetDescriptor());
   const auto* fd = const_cast<PbFd*>(d->FindFieldByNumber(field_index));

@@ -243,9 +243,9 @@ void FixAndOptimizeDLNet(Job* job) {
   if (!(job_desc->IsPredict()
         && job_desc->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf())) {
     FixTickOpIfExists(job);
+    // ConvertPseudoChainToChain(job);
   }
-  ConvertPseudoChainToChain(job);
-  if (job_desc->IsTrain()) { AddIdentityOpForAllReduceOverlapingUntrainble(job); }
+  // if (job_desc->IsTrain()) { AddIdentityOpForAllReduceOverlapingUntrainble(job); }
 }
 
 void SetOpTimeShape(const OpGraph& op_graph, Job* job) {
@@ -256,31 +256,36 @@ void SetOpTimeShape(const OpGraph& op_graph, Job* job) {
 }
 
 void SetCtrlInOpName(const OpGraph& op_graph, Job* job) {
-  // TODO: handle model save nodes
-  std::vector<OperatorConf> mut_ops;
-  OpGraph(*job).TopoForEachNode([&](OpNode* op_node) {
-    if (op_node->op().op_conf().has_naive_model_update_conf()
-        || op_node->op().op_conf().has_momentum_model_update_conf()
-        || op_node->op().op_conf().has_rmsprop_model_update_conf()
-        || op_node->op().op_conf().has_lars_model_update_conf()
-        || op_node->op().op_conf().has_adam_model_update_conf()) {
-      OperatorConf mdupdt_op(op_node->op().op_conf());
-      for (OpEdge* in_edge_of_mdupdt : op_node->in_edges()) {
-        if (in_edge_of_mdupdt->src_node()->op().op_conf().has_variable_conf()) {
-          std::vector<const OperatorConf*> non_implace_ops;
-          for (OpEdge* out_edge_of_variable : in_edge_of_mdupdt->src_node()->out_edges()) {
-            if (out_edge_of_variable->dst_node() == op_node) { continue; }
-            non_implace_ops.push_back(&out_edge_of_variable->dst_node()->op().op_conf());
-          }
-          for (const auto* const_op : non_implace_ops) {
-            mdupdt_op.add_ctrl_in_op_name(const_op->name());
-          }
-        }
+  auto IsModelUpdateOp = [](const OperatorConf& op_conf) -> bool {
+    const PbMessage& conf = GetMessageInPbMessage(op_conf, op_conf.op_type_case());
+    const auto* user_conf =
+        TryGetMsgPtrFromPbMessage<NormalModelUpdateOpUserConf>(conf, "user_conf");
+    if (user_conf == nullptr) { return false; }
+    return IsClassRegistered<GenerateOptimizerOpConfWrapperStruct>(user_conf->normal_mdupdt_case());
+  };
+  JobBuilder job_builder(job);
+  op_graph.ForEachNode([&](OpNode* op_node) {
+    if (op_node->op().op_conf().has_variable_conf() == false) { return; }
+    if (op_node->out_edges().size() <= 1) { return; }
+    const OperatorConf* model_update_op_conf = nullptr;
+    std::vector<const OperatorConf*> fw_bw_ops;
+    for (OpEdge* edge : op_node->out_edges()) {
+      const auto& op_conf = edge->dst_node()->op().op_conf();
+      if (IsModelUpdateOp(op_conf)) {
+        CHECK(model_update_op_conf == nullptr);
+        model_update_op_conf = &op_conf;
+      } else {
+        // TODO: exclude model save nodes
+        fw_bw_ops.push_back(&op_conf);
       }
-      if (!mdupdt_op.ctrl_in_op_name().empty()) { mut_ops.push_back(mdupdt_op); }
     }
+    if (model_update_op_conf == nullptr) { return; }
+    OperatorConf mut_md_updt_op_conf(*model_update_op_conf);
+    for (const auto* fw_bw_op : fw_bw_ops) {
+      mut_md_updt_op_conf.add_ctrl_in_op_name(fw_bw_op->name());
+    }
+    job_builder.MutOps({mut_md_updt_op_conf});
   });
-  JobBuilder(job).MutOps(mut_ops);
 }
 
 void SetOpTimeShapeAndCtrlInOpName(const OpGraph& op_graph, Job* job) {
@@ -303,10 +308,10 @@ void JobCompleter::Complete(Job* job) const {
     WithOpGraphAndMutJob(job, &AutoTick);
     // add keep_header_only op
     WithOpGraphAndMutJob(job, &AddKeepHeaderOnlyOp);
+    WithOpGraphAndMutJob(job, &SetOpTimeShapeAndCtrlInOpName);
   }
   // TODO: refine
   FixAndOptimizeDLNet(job);
-  WithOpGraphAndMutJob(job, &SetOpTimeShapeAndCtrlInOpName);
 }
 
 }  // namespace oneflow

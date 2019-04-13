@@ -151,7 +151,11 @@ void LogicalGraph::NaiveBuildFwStruct(
     cur_node->mut_op_vec() = {cur_op};
     cur_node->SoleOp()->FixParallelDesc(parallel_desc_ptr.get());
     cur_node->mut_parallel_desc() = parallel_desc_ptr;
-    cur_node->reset_time_shape(new Shape(job_.helper().op_name2time_shape().at(cur_op->op_name())));
+    if (Global<JobDesc>::Get()->IsPredict()
+        && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+      cur_node->reset_time_shape(
+          new Shape(job_.helper().op_name2time_shape().at(cur_op->op_name())));
+    }
     for (const std::string& obn : cur_node->SoleOp()->output_bns()) {
       const LogicalBlobId& lbi = cur_node->SoleOp()->BnInOp2Lbi(obn);
       CHECK(lbi2producer.emplace(lbi, cur_node).second);
@@ -727,6 +731,10 @@ MdSaveLogicalNode* LogicalGraph::BuildMdSaveStructIfNeed(LogicalNode* need_save_
 
 void LogicalGraph::ForEachNecessaryCtrlEdge(
     const std::function<void(const LogicalNode*, const LogicalNode*)>& Handler) const {
+  if (!(Global<JobDesc>::Get()->IsPredict()
+        && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf())) {
+    return;
+  }
   HashMap<std::string, const LogicalNode*> op_name2node;
   ForEachNode([&](LogicalNode* node) {
     for (const auto& op : node->op_vec()) {
