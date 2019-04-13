@@ -22,6 +22,9 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   const char* TypeName() const override { return "LogicalGraph"; }
   int64_t total_mbn_num() const { return total_mbn_num_; }
 
+  void ForEachNecessaryCtrlEdge(
+      const std::function<void(const LogicalNode*, const LogicalNode*)>& Handler) const;
+
  private:
   struct BackwardCloneInfo {
     LogicalNode* succ_node;
