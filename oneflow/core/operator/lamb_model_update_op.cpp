@@ -13,7 +13,7 @@ void LAMBModelUpdateOp::MdUpdtVirtualInitFromOpConf() {
   EnrollForwardModelBn("v");
   EnrollForwardModelBn("beta1_t");
   EnrollForwardModelBn("beta2_t");
-  EnrollFwBufBn("fw_buf");
+  EnrollDataTmpBn("fw_buf");
 }
 
 void LAMBModelUpdateOp::MdUpdtVirtualInferBlobDescs(
