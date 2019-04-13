@@ -16,7 +16,16 @@ void ExpendDimsOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   *out_blob_desc = *in_blob_desc;
   std::vector<int64_t> dim_vec = in_blob_desc->shape().dim_vec();
-  dim_vec.insert(dim_vec.begin() + op_conf().expend_dims_conf().dim(), 1);
+  int32_t dim = op_conf().expend_dims_conf().dim();
+  CHECK_GE(dim, -dim_vec.size() - 1);
+  CHECK_LE(dim, dim_vec.size());
+  std::vector<int64_t>::iterator it;
+  if (dim >= 0) {
+    it = dim_vec.begin() + dim;
+  } else {
+    it = dim_vec.end() + 1 + dim;
+  }
+  dim_vec.insert(it, 1);
   out_blob_desc->mut_shape() = Shape(dim_vec);
   CHECK_EQ(out_blob_desc->shape().elem_cnt(), in_blob_desc->shape().elem_cnt());
 }
