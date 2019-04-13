@@ -12,6 +12,10 @@ const PbMessage& NaiveModelUpdateOp::GetCustomizedConf() const {
   }
 }
 
+const HashSet<std::string> NaiveModelUpdateOp::AlwaysBroadcastParallelBns() const {
+  return HashSet<std::string>{};
+}
+
 REGISTER_CLASS(NormalModelUpdateOpUserConf::kNaiveConf, NormalModelUpdtOp, NaiveModelUpdateOp);
 
 REGISTER_OP(OperatorConf::kNaiveModelUpdateConf, NaiveModelUpdateOp);

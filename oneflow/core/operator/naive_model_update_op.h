@@ -11,6 +11,7 @@ class NaiveModelUpdateOp final : public NormalModelUpdtOp {
   NaiveModelUpdateOp() = default;
   ~NaiveModelUpdateOp() = default;
   const PbMessage& GetCustomizedConf() const override;
+  const HashSet<std::string> AlwaysBroadcastParallelBns() const override;
 };
 
 }  // namespace oneflow

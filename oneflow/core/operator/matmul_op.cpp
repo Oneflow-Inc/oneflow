@@ -4,12 +4,12 @@ namespace oneflow {
 
 namespace {
 
-class Matmul_MS_MS_2_P_SbpSignatureRule final : public ParallelSbpSignatureRule {
+class Matmul_DS_MS_2_P_SbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(Matmul_MS_MS_2_P_SbpSignatureRule);
-  ~Matmul_MS_MS_2_P_SbpSignatureRule() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(Matmul_DS_MS_2_P_SbpSignatureRule);
+  ~Matmul_DS_MS_2_P_SbpSignatureRule() override = default;
 
-  Matmul_MS_MS_2_P_SbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
+  Matmul_DS_MS_2_P_SbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
 
   const std::string Description() const override { return op().op_name() + ": (S, S) -> P"; }
 
@@ -56,15 +56,22 @@ bool MatmulOp::IsInputBlobAllowedModelSplit(const std::string& ibn) const {
 }
 
 void MatmulOp::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  rules->emplace_back(MakeDataSplitSbpSignatureRule(this));
-  rules->emplace_back(Make_DS_MB_2_DS_SbpSignatureRule(this));
-  auto IsValidSplit = [this](int32_t axis) {
-    int32_t b_expected_split_axis = (op_conf().matmul_conf().transpose_b() ? 0 : 1);
-    return axis == b_expected_split_axis;
-  };
-  rules->emplace_back(Make_DB_MS_2_MS_SbpSignatureRule(this, IsValidSplit));
-  rules->emplace_back(new Matmul_MS_MS_2_P_SbpSignatureRule(this));
+  int32_t a_num_axes = SbpInferHint4Ibn("a").num_axes();
+  int32_t b_num_axes = SbpInferHint4Ibn("b").num_axes();
+  CHECK(a_num_axes == b_num_axes);
+  if (a_num_axes > 2) {
+    rules->emplace_back(MakeDataSplitSbpSignatureRule(this));
+  } else {
+    rules->emplace_back(Make_DS_MB_2_DS_SbpSignatureRule(this));
+    auto IsValidSplit = [this](int32_t axis) {
+      int32_t b_expected_split_axis = (op_conf().matmul_conf().transpose_b() ? 0 : 1);
+      return axis == b_expected_split_axis;
+    };
+    rules->emplace_back(Make_DB_MS_2_MS_SbpSignatureRule(this, IsValidSplit));
+    rules->emplace_back(new Matmul_DS_MS_2_P_SbpSignatureRule(this));
+  }
 }
 
 void MatmulOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -111,18 +118,9 @@ void MatmulOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
 int32_t MatmulOp::OutputBlobModelSplitAxis(
     const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     const std::string& obn) const {
-  CHECK_EQ(SbpInferHint4Ibn("a").num_axes(), SbpInferHint4Ibn("b").num_axes());
-  const auto& b_sbp_infer_hint = SbpInferHint4Ibn("b");
-  CHECK_EQ(SbpInferHint4Ibn("b").num_axes(), 2);
-  CHECK(b_sbp_infer_hint.is_model_split());
-  int32_t b_model_split_axis = b_sbp_infer_hint.split_axis();
-  if (op_conf().matmul_conf().transpose_b()) {
-    if (b_model_split_axis == 0) { return 1; }
-  } else {
-    if (b_model_split_axis == 1) { return 1; }
-  }
-  UNIMPLEMENTED();
-  return -1;
+  int32_t num_axes = SbpInferHint4Ibn("a").num_axes();
+  CHECK_EQ(num_axes, SbpInferHint4Ibn("b").num_axes());
+  return num_axes - 1;
 }
 
 void MatmulOp::InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

@@ -257,9 +257,14 @@ class Operator {
   OutputBlobModifier* MutOutputBlobModifier4Obn(const std::string& obn);
 
  private:
-  void GetSbpSignatureRulesIf(std::vector<std::unique_ptr<const SbpSignatureRule>>*) const;
+  void GetSbpSignatureRulesIf(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      std::vector<std::unique_ptr<const SbpSignatureRule>>*) const;
 
   virtual void GetSbpSignatureRules(std::vector<std::unique_ptr<const SbpSignatureRule>>*) const;
+  virtual void GetSbpSignatureRules(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      std::vector<std::unique_ptr<const SbpSignatureRule>>*) const;
   LogicalBlobId dtbn2lbi(const std::string& data_tmp_bn) const;
   LogicalBlobId fbbn2lbi(const std::string& fw_buf_bn) const { return dtbn2lbi(fw_buf_bn); }
   LogicalBlobId bbbn2lbi(const std::string& bw_buf_bn) const { return dtbn2lbi(bw_buf_bn); }

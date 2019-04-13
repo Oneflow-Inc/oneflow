@@ -109,11 +109,12 @@ void BroadcastBinaryOp::InferBwBufBlobDescs(
 }
 
 void BroadcastBinaryOp::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  rules->emplace_back(MakeBroadcastBinarySbpSignatureRule(this, {}));
-  rules->emplace_back(MakeBroadcastBinarySbpSignatureRule(this, {"a"}));
-  rules->emplace_back(MakeBroadcastBinarySbpSignatureRule(this, {"b"}));
-  rules->emplace_back(MakeBroadcastBinarySbpSignatureRule(this, {"a", "b"}));
+  HashSet<std::string> model_input_bns;
+  if (SbpInferHint4Ibn("a").is_model_blob()) { model_input_bns.insert("a"); }
+  if (SbpInferHint4Ibn("b").is_model_blob()) { model_input_bns.insert("b"); }
+  rules->emplace_back(MakeBroadcastBinarySbpSignatureRule(this, model_input_bns));
 }
 
 }  // namespace oneflow

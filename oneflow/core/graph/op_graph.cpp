@@ -267,8 +267,7 @@ void OpGraph::Init(const Job& job) {
   InferTimeShape();
   InferNoParallelBlobDesc();
   InferIsModelBlob();
-  InferSbpSignature(job);
-  InferLogicalBlobDesc();
+  InferLogicalBlobDesc(job);
 }
 
 void OpGraph::InitNodes(const Job& job) {
@@ -360,61 +359,64 @@ void OpGraph::InferIsModelBlob() const {
   });
 }
 
-void OpGraph::InferSbpSignature(const Job& job) const {
-  TopoForEachNode([&](OpNode* op_node) {
-    HashMap<std::string, SbpInferHint> ibn2sbp_infer_hint;
-    for (const std::string& ibn : op_node->op().input_bns()) {
-      const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
-      OpNode* producer = op_node->SrcNode4InputBnInOp(ibn);
-      bool is_model_blob = producer->IsModelBlob4Lbi(lbi);
-      const ParallelDesc& parallel_desc = op_node->parallel_desc();
-      int64_t num_axes = producer->NoParallelBlobDesc4Lbi(lbi).shape().NumAxes();
-      const auto& sbp = producer->SbpParallel4Lbi(lbi);
-      ibn2sbp_infer_hint.emplace(ibn, SbpInferHint(is_model_blob, parallel_desc, num_axes, sbp));
-    }
-    SbpSignature* sbp_signature = op_node->mut_sbp_signature();
-    auto SbpInferHint4Ibn = [&](const std::string& ibn) -> const SbpInferHint& {
-      return ibn2sbp_infer_hint.at(ibn);
-    };
-    SbpSignature obn_sbp_sig_hint;
-    for (const auto& obn : op_node->op().output_bns()) {
-      const auto& lbn = GenLogicalBlobName(op_node->op().BnInOp2Lbi(obn));
-      const auto& sbp_parallel_hint_iter = job.helper().lbn2sbp_parallel_hint().find(lbn);
-      if (sbp_parallel_hint_iter == job.helper().lbn2sbp_parallel_hint().end()) { continue; }
-      (*obn_sbp_sig_hint.mutable_bn_in_op2sbp_parallel())[obn] = sbp_parallel_hint_iter->second;
-    }
-    op_node->op().InferSbpSignatureIf(sbp_signature, obn_sbp_sig_hint, SbpInferHint4Ibn,
-                                      op_node->parallel_desc());
-    op_node->op().FixSbpSignature(sbp_signature);
-  });
+void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const Job& job) const {
+  HashMap<std::string, SbpInferHint> ibn2sbp_infer_hint;
+  for (const std::string& ibn : op_node->op().input_bns()) {
+    const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
+    OpNode* producer = op_node->SrcNode4InputBnInOp(ibn);
+    bool is_model_blob = producer->IsModelBlob4Lbi(lbi);
+    const ParallelDesc& parallel_desc = op_node->parallel_desc();
+    int64_t num_axes = producer->NoParallelBlobDesc4Lbi(lbi).shape().NumAxes();
+    const auto& sbp = producer->SbpParallel4Lbi(lbi);
+    ibn2sbp_infer_hint.emplace(ibn, SbpInferHint(is_model_blob, parallel_desc, num_axes, sbp));
+  }
+  SbpSignature* sbp_signature = op_node->mut_sbp_signature();
+  auto SbpInferHint4Ibn = [&](const std::string& ibn) -> const SbpInferHint& {
+    return ibn2sbp_infer_hint.at(ibn);
+  };
+  SbpSignature obn_sbp_sig_hint;
+  for (const auto& obn : op_node->op().output_bns()) {
+    const auto& lbn = GenLogicalBlobName(op_node->op().BnInOp2Lbi(obn));
+    const auto& sbp_parallel_hint_iter = job.helper().lbn2sbp_parallel_hint().find(lbn);
+    if (sbp_parallel_hint_iter == job.helper().lbn2sbp_parallel_hint().end()) { continue; }
+    (*obn_sbp_sig_hint.mutable_bn_in_op2sbp_parallel())[obn] = sbp_parallel_hint_iter->second;
+  }
+  op_node->op().InferSbpSignatureIf(sbp_signature, obn_sbp_sig_hint, SbpInferHint4Ibn,
+                                    op_node->parallel_desc());
+  op_node->op().FixSbpSignature(sbp_signature);
 }
 
-void OpGraph::InferLogicalBlobDesc() const {
+void OpGraph::InferOpNodeLogicalBlobDesc(OpNode* op_node) const {
+  auto* bn2parallel_id2blob_desc = op_node->mut_bn2parallel_id2blob_desc();
+  op_node->SplitLogicalInputBlobDesc();
+  int64_t parallel_num = op_node->parallel_desc().parallel_num();
+  const auto& input_bns = op_node->op().input_bns();
+  FOR_RANGE(int64_t, parallel_id, 0, parallel_num) {
+    auto BlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
+      if (std::find(input_bns.begin(), input_bns.end(), bn) != input_bns.end()) {
+        CHECK(bn2parallel_id2blob_desc->find(bn) != bn2parallel_id2blob_desc->end());
+        CHECK_EQ(bn2parallel_id2blob_desc->at(bn).size(), parallel_num);
+      } else if (bn2parallel_id2blob_desc->find(bn) == bn2parallel_id2blob_desc->end()) {
+        (*bn2parallel_id2blob_desc)[bn].resize(parallel_num);
+      } else {
+        CHECK_EQ(bn2parallel_id2blob_desc->at(bn).size(), parallel_num);
+      }
+      return &(*bn2parallel_id2blob_desc)[bn][parallel_id];
+    };
+    ParallelContext parallel_ctx;
+    parallel_ctx.set_parallel_id(parallel_id);
+    parallel_ctx.set_parallel_num(parallel_num);
+    parallel_ctx.set_policy(op_node->parallel_desc().policy());
+    op_node->op().InferBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx,
+                                   Global<JobDesc>::Get()->RecordPieceSize(), [](OpContext*) {});
+  }
+  op_node->ConcatLogicalOutputBlobDesc();
+}
+
+void OpGraph::InferLogicalBlobDesc(const Job& job) const {
   TopoForEachNode([&](OpNode* op_node) {
-    auto* bn2parallel_id2blob_desc = op_node->mut_bn2parallel_id2blob_desc();
-    op_node->SplitLogicalInputBlobDesc();
-    int64_t parallel_num = op_node->parallel_desc().parallel_num();
-    const auto& input_bns = op_node->op().input_bns();
-    FOR_RANGE(int64_t, parallel_id, 0, parallel_num) {
-      auto BlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
-        if (std::find(input_bns.begin(), input_bns.end(), bn) != input_bns.end()) {
-          CHECK(bn2parallel_id2blob_desc->find(bn) != bn2parallel_id2blob_desc->end());
-          CHECK_EQ(bn2parallel_id2blob_desc->at(bn).size(), parallel_num);
-        } else if (bn2parallel_id2blob_desc->find(bn) == bn2parallel_id2blob_desc->end()) {
-          (*bn2parallel_id2blob_desc)[bn].resize(parallel_num);
-        } else {
-          CHECK_EQ(bn2parallel_id2blob_desc->at(bn).size(), parallel_num);
-        }
-        return &(*bn2parallel_id2blob_desc)[bn][parallel_id];
-      };
-      ParallelContext parallel_ctx;
-      parallel_ctx.set_parallel_id(parallel_id);
-      parallel_ctx.set_parallel_num(parallel_num);
-      parallel_ctx.set_policy(op_node->parallel_desc().policy());
-      op_node->op().InferBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx,
-                                     Global<JobDesc>::Get()->RecordPieceSize(), [](OpContext*) {});
-    }
-    op_node->ConcatLogicalOutputBlobDesc();
+    InferOpNodeSbpSignature(op_node, job);
+    InferOpNodeLogicalBlobDesc(op_node);
   });
 }
 

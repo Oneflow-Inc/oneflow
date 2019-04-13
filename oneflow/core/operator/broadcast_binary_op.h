@@ -20,7 +20,9 @@ class BroadcastBinaryOp : public Operator {
 
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return true; }
-  void GetSbpSignatureRules(std::vector<std::unique_ptr<const SbpSignatureRule>>*) const override;
+  void GetSbpSignatureRules(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      std::vector<std::unique_ptr<const SbpSignatureRule>>*) const override;
 };
 
 }  // namespace oneflow

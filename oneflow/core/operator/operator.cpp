@@ -168,8 +168,15 @@ void Operator::GetSbpSignatureRules(
 }
 
 void Operator::GetSbpSignatureRulesIf(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   rules->emplace_back(MakeUnparallelSbpSignatureRule(this));
+  GetSbpSignatureRules(SbpInferHint4Ibn, rules);
+}
+
+void Operator::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   GetSbpSignatureRules(rules);
 }
 
@@ -178,7 +185,7 @@ void Operator::InferSbpSignatureIf(
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   std::vector<std::unique_ptr<const SbpSignatureRule>> rules;
-  GetSbpSignatureRulesIf(&rules);
+  GetSbpSignatureRulesIf(SbpInferHint4Ibn, &rules);
   std::vector<SbpSigMatchResult> match_results;
   for (const auto& signature : rules) {
     match_results.push_back(signature->MatchIf(SbpInferHint4Ibn, conf_sbp_sig_hint, parallel_desc));
