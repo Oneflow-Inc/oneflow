@@ -647,9 +647,10 @@ message ReduceSumOpConf {
 
 message ReduceSumLikeOpConf {
   required string x = 1;
-  required string y = 2;
-  required string like = 3;
-  optional string temp_storage = 4 [default = "temp_storage"];
+  required string like = 2;
+  required string y = 3;
+  repeated int32 axis = 4;
+  optional string temp_storage = 5 [default = "temp_storage"];
 }
 
 message ReduceMeanOpConf {
