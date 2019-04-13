@@ -145,6 +145,25 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
     SetAreaIdForNewNodes(logical_edge->src_node(), logical_edge->dst_node());
   });
   MergeChainAndSetOrderInGraphForEachNode();
+  logical_gph_->ForEachNecessaryCtrlEdge([&](const LogicalNode* src, const LogicalNode* dst) {
+    CHECK(src->parallel_desc()->EqualsIgnoringPolicy(*dst->parallel_desc()));
+    CHECK_NOTNULL(src->time_shape());
+    CHECK_NOTNULL(dst->time_shape());
+    CHECK(IsTimeShapeContain(*src->time_shape(), *dst->time_shape()));
+    CHECK_EQ(src->time_shape()->elem_cnt() % dst->time_shape()->elem_cnt(), 0);
+    int64_t regst_desc_num = src->time_shape()->elem_cnt() / dst->time_shape()->elem_cnt();
+    const auto& src_task_nodes = logical2sorted_comp_tasks.at(src);
+    const auto& dst_task_nodes = logical2sorted_comp_tasks.at(dst);
+    CHECK_EQ(src_task_nodes.size(), dst_task_nodes.size());
+    FOR_RANGE(int32_t, i, 0, src_task_nodes.size()) {
+      CHECK_NE(src_task_nodes.at(i)->chain_id(), dst_task_nodes.at(i)->chain_id());
+      RegstDesc* ctrl_regst_desc = src_task_nodes.at(i)->BuildCtrlRegstDesc(dst_task_nodes.at(i));
+      ctrl_regst_desc->UpdtMinRegstNumIfNeed(regst_desc_num);
+      ctrl_regst_desc->UpdtMaxRegstNumIfNeed(regst_desc_num);
+      ctrl_regst_desc->mut_regst_desc_type()->mutable_ctrl_regst_desc()->set_returned_regst_num(
+          regst_desc_num);
+    }
+  });
   ToDotWithAutoFilePath();
 }
 

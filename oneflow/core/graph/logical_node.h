@@ -30,6 +30,10 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   std::shared_ptr<const ParallelDesc> parallel_desc() const { return parallel_desc_; }
   std::shared_ptr<const ParallelDesc>& mut_parallel_desc() { return parallel_desc_; }
 
+  // time_shape
+  const Shape* time_shape() const { return time_shape_.get(); }
+  void reset_time_shape(const Shape* time_shape) { time_shape_.reset(time_shape); }
+
   // shared_model_nodes_
   std::shared_ptr<const std::vector<LogicalNode*>> shared_model_nodes() const {
     return shared_model_nodes_;
@@ -69,6 +73,7 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   std::shared_ptr<const std::vector<LogicalNode*>> shared_model_nodes_;
 
   HashMap<const LogicalNode*, std::vector<LogicalBlobId>> dst2data_lbis_;
+  std::unique_ptr<const Shape> time_shape_;
 };
 
 #define BLD_SUB_TSK_GPH_MTHD_ARGS()                                                       \

@@ -86,6 +86,8 @@ PbRpf<T>* MutPbRpfFromPbMessage(PbMessage* msg, const std::string& field_name) {
 template<typename T>
 void SetValInPbMessage(PbMessage* msg, const std::string& field_name, const T& val);
 
+const PbMessage& GetMessageInPbMessage(const PbMessage& msg, int field_index);
+
 PbMessage* MutableMessageInPbMessage(PbMessage*, const std::string& field_name);
 PbMessage* MutableMessageInPbMessage(PbMessage*, int field_index);
 
@@ -135,6 +137,18 @@ google::protobuf::Map<K, V> HashMap2PbMap(const HashMap<K, V>& hash_map) {
 template<typename T = PbMessage>
 const T* GetMsgPtrFromPbMessage(const PbMessage& msg, const std::string& field_name) {
   PROTOBUF_REFLECTION(msg, field_name);
+  if (r->HasField(msg, fd)) {
+    return static_cast<const T*>(&(GetValFromPbMessage<const PbMessage&>(msg, field_name)));
+  } else {
+    return nullptr;
+  }
+}
+
+template<typename T = PbMessage>
+const T* TryGetMsgPtrFromPbMessage(const PbMessage& msg, const std::string& field_name) {
+  PROTOBUF_GET_FIELDDESC(msg, field_name);
+  if (fd == nullptr) { return nullptr; }
+  auto r = const_cast<google::protobuf::Reflection*>(msg.GetReflection());
   if (r->HasField(msg, fd)) {
     return static_cast<const T*>(&(GetValFromPbMessage<const PbMessage&>(msg, field_name)));
   } else {
