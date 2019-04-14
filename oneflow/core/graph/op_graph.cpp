@@ -365,10 +365,11 @@ void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const Job& job) const {
     const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
     OpNode* producer = op_node->SrcNode4InputBnInOp(ibn);
     bool is_model_blob = producer->IsModelBlob4Lbi(lbi);
-    const ParallelDesc& parallel_desc = op_node->parallel_desc();
-    int64_t num_axes = producer->NoParallelBlobDesc4Lbi(lbi).shape().NumAxes();
+    const ParallelDesc* parallel_desc = &op_node->parallel_desc();
+    const BlobDesc* logical_blob_desc = &producer->LogicalBlobDesc4Lbi(lbi);
     const auto& sbp = producer->SbpParallel4Lbi(lbi);
-    ibn2sbp_infer_hint.emplace(ibn, SbpInferHint(is_model_blob, parallel_desc, num_axes, sbp));
+    ibn2sbp_infer_hint.emplace(ibn,
+                               SbpInferHint(is_model_blob, parallel_desc, logical_blob_desc, sbp));
   }
   SbpSignature* sbp_signature = op_node->mut_sbp_signature();
   auto SbpInferHint4Ibn = [&](const std::string& ibn) -> const SbpInferHint& {

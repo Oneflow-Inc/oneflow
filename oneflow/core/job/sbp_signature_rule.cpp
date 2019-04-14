@@ -142,6 +142,9 @@ class DataSplitSbpSignatureRule final : public ParallelSbpSignatureRule {
     };
     for (const auto& bn : op().input_bns()) {
       const SbpInferHint& sbp_infer_hint = SbpInferHint4Ibn(bn);
+      if (sbp_infer_hint.logical_blob_desc().shape().elem_cnt() < parallel_desc.parallel_num()) {
+        return MakeSbpSigMatchSignatureMismatch();
+      }
       if (!IsDataSplit(sbp_infer_hint)) {
         is_data_split = false;
         break;
@@ -179,7 +182,11 @@ class BroadcastSbpSignatureRule final : public ParallelSbpSignatureRule {
   const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
-    if (!SbpInferHint4Ibn(op().SoleIbn()).sbp_parallel().has_broadcast_parallel()) {
+    const auto& sole_ibn_hint = SbpInferHint4Ibn(op().SoleIbn());
+    if (sole_ibn_hint.logical_blob_desc().shape().elem_cnt() < parallel_desc.parallel_num()) {
+      return MakeSbpSigMatchSuccess();
+    }
+    if (!sole_ibn_hint.sbp_parallel().has_broadcast_parallel()) {
       return MakeSbpSigMatchSignatureMismatch();
     }
     int64_t expected_parallel_num = SbpInferHint4Ibn(op().SoleIbn()).parallel_num();
