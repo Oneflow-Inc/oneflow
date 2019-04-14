@@ -20,7 +20,7 @@ void ReduceMeanGradKernel<device_type, T>::ForwardDataContent(
   const ReduceMeanGradOpConf& conf = this->op_conf().reduce_mean_grad_conf();
   const Shape& reduced_shape = conf.reduced_axis().empty()
                                    ? Shape::Ones(x_blob->shape().NumAxes())
-                                   : x_blob->shape().CreateReducedShape(
+                                   : x_blob->shape().CreateReducedShapeOrOnesShape(
                                          {conf.reduced_axis().begin(), conf.reduced_axis().end()});
   NdarrayUtil<device_type, T>::BroadcastTo(
       ctx.device_ctx, XpuVarNdarray<T>(dx_blob, num_axes),

@@ -13,7 +13,7 @@ void BroadcastLikeKernel<device_type, T>::ForwardDataContent(
   const BroadcastLikeOpConf& conf = this->op_conf().broadcast_like_conf();
   const Shape& reduced_shape = conf.reduced_axis().empty()
                                    ? Shape::Ones(like_blob->shape().NumAxes())
-                                   : like_blob->shape().CreateReducedShape(
+                                   : like_blob->shape().CreateReducedShapeOrOnesShape(
                                          {conf.reduced_axis().begin(), conf.reduced_axis().end()});
   NdarrayUtil<device_type, T>::BroadcastTo(
       ctx.device_ctx, XpuVarNdarray<T>(y_blob, num_axes),

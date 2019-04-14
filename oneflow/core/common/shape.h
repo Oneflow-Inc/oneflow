@@ -38,6 +38,7 @@ class Shape final {
   Shape CreateLeftExtendedShape(int num_axes) const;
   std::vector<int64_t> ShiftNegativeAxis(const std::vector<int64_t>& axis_vec) const;
   Shape CreateReducedShape(const std::vector<int64_t>& axis_vec) const;
+  Shape CreateReducedShapeOrOnesShape(const std::vector<int64_t>& axis_vec) const;
   Shape RemoveOnes(const std::vector<int64_t>& axis_vec) const;
   static Shape Ones(const int64_t num_axes);
   std::vector<int64_t> Axes4BroadcastTo(const Shape& broadcast_dim_vec) const;
