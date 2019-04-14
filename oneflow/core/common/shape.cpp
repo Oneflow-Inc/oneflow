@@ -108,6 +108,11 @@ Shape Shape::Ones(const int64_t num_axes) {
   return Shape(dim_vec);
 }
 
+Shape Shape::CreateReducedShapeOrOnesShape(const std::vector<int64_t>& axis_vec) const {
+  if (axis_vec.empty()) { return Shape::Ones(NumAxes()); }
+  return CreateReducedShape(axis_vec);
+}
+
 std::vector<int64_t> Shape::Axes4BroadcastTo(const Shape& broadcast_shape) const {
   std::vector<int64_t> broadcast_axis_vec;
   CHECK_EQ(broadcast_shape.NumAxes(), NumAxes());
