@@ -29,7 +29,7 @@ void ReduceSumLikeOp::InferBlobDescs(
 void ReduceSumLikeOp::GetSbpSignatureRules(
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   const auto& reduced_axes = op_conf().reduce_sum_like_conf().axis();
-  GetReduceSbpSignatureRules(this, {reduced_axes.begin(), reduced_axes.end()}, rules);
+  GetReduceSbpSignatureRules(this, "x", {reduced_axes.begin(), reduced_axes.end()}, rules);
 }
 
 REGISTER_OP(OperatorConf::kReduceSumLikeConf, ReduceSumLikeOp);

@@ -44,7 +44,7 @@ void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
 void ReduceSumOp::GetSbpSignatureRules(
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   const auto& reduced_axes = op_conf().reduce_sum_conf().axis();
-  GetReduceSbpSignatureRules(this, {reduced_axes.begin(), reduced_axes.end()}, rules);
+  GetReduceSbpSignatureRules(this, "in", {reduced_axes.begin(), reduced_axes.end()}, rules);
 }
 
 REGISTER_OP(OperatorConf::kReduceSumConf, ReduceSumOp);

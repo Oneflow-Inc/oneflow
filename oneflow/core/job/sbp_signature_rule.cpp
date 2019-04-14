@@ -172,7 +172,6 @@ class BroadcastSbpSignatureRule final : public ParallelSbpSignatureRule {
   ~BroadcastSbpSignatureRule() override = default;
 
   BroadcastSbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {
-    CHECK_EQ(op->input_bns().size(), 1);
     CHECK(op->model_bns().empty());
     CHECK(op->const_model_bns().empty());
   }
@@ -182,6 +181,7 @@ class BroadcastSbpSignatureRule final : public ParallelSbpSignatureRule {
   const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
+    if (op().input_bns().size() > 1) { return MakeSbpSigMatchSignatureMismatch(); }
     const auto& sole_ibn_hint = SbpInferHint4Ibn(op().SoleIbn());
     if (sole_ibn_hint.logical_blob_desc().shape().elem_cnt() < parallel_desc.parallel_num()) {
       return MakeSbpSigMatchSuccess();

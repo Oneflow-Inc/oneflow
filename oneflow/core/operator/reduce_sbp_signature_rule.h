@@ -5,7 +5,8 @@
 
 namespace oneflow {
 
-void GetReduceSbpSignatureRules(const Operator* op, const HashSet<int64_t>& reduced_axes,
+void GetReduceSbpSignatureRules(const Operator* op, const std::string& data_ibn,
+                                const HashSet<int64_t>& reduced_axes,
                                 std::vector<std::unique_ptr<const SbpSignatureRule>>* rules);
 
 }  // namespace oneflow
