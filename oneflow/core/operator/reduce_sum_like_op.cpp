@@ -7,9 +7,9 @@ namespace oneflow {
 void ReduceSumLikeOp::InitFromOpConf() {
   CHECK(op_conf().has_reduce_sum_like_conf());
   EnrollInputBn("x");
-  EnrollInputBn("like")->set_use_header_only(true);
+  EnrollInputBn("like", false)->set_use_header_only(true);
   EnrollOutputBn("y");
-  EnrollOutputBn("temp_storage");
+  EnrollOutputBn("temp_storage", false);
 }
 
 const PbMessage& ReduceSumLikeOp::GetCustomizedConf() const {

@@ -4,7 +4,7 @@ namespace oneflow {
 
 void BroadcastLikeOp::InitFromOpConf() {
   EnrollInputBn("x");
-  EnrollInputBn("like")->set_use_header_only(true);
+  EnrollInputBn("like", false)->set_use_header_only(true);
   EnrollOutputBn("y");
 }
 

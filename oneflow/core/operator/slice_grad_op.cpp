@@ -4,9 +4,9 @@ namespace oneflow {
 
 void SliceGradOp::InitFromOpConf() {
   CHECK(op_conf().has_slice_grad_conf());
-  EnrollInputBn("dy");
-  EnrollInputBn("like")->set_use_header_only(true);
-  EnrollOutputBn("dx");
+  EnrollInputBn("dy", false);
+  EnrollInputBn("like", false)->set_use_header_only(true);
+  EnrollOutputBn("dx", false);
   if (op_conf().device_type() == DeviceType::kGPU) { EnrollConstBufBn("y_to_x_offset"); }
 }
 
