@@ -18,6 +18,7 @@ class BroadcastLikeOp final : public Operator {
 
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
+  void GetSbpSignatureRules(std::vector<std::unique_ptr<const SbpSignatureRule>>*) const override;
 };
 
 }  // namespace oneflow
