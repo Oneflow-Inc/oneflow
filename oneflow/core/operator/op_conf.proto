@@ -271,6 +271,12 @@ message TanHOpConf {
   required string out = 2;
 }
 
+message TanHGradOpConf {
+  required string y = 1;
+  required string dy = 2;
+  required string dx = 3;
+}
+
 message SoftmaxOpConf {
   required string in = 1;
   required string out = 2;
@@ -1424,6 +1430,7 @@ message OperatorConf {
     ConvBiasGradOpConf conv_bias_grad_conf = 283;
     ConvFilterGradOpConf conv_filter_grad_conf = 284;
     ConvDataGradOpConf conv_data_grad_conf = 285;
+    TanHGradOpConf tanh_grad_conf = 286;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
