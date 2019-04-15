@@ -166,6 +166,11 @@ struct LayerNormKernelUtil<DeviceType::kCPU, T> {
   }
 };
 
+#define INSTANTIATE_LAYER_NORM_KERNEL_UTIL_CPU(type_cpp, type_proto) \
+  template struct LayerNormKernelUtil<DeviceType::kCPU, type_cpp>;
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_LAYER_NORM_KERNEL_UTIL_CPU, FLOATING_DATA_TYPE_SEQ)
+#undef INSTANTIATE_LAYER_NORM_KERNEL_UTIL_CPU
+
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kLayerNormConf, LayerNormKernel, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
