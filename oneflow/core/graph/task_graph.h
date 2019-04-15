@@ -77,7 +77,6 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void SetAreaIdForNewNodes(const LogicalNode* src_logical, const LogicalNode* dst_logical);
   void MergeChainAndSetOrderInGraphForEachNode();
   void BuildCtrlRegstDescInSameChain();
-  void AddOrderCtrlEdgeBetweenVariableMutableConsumerAndEveryNth();
 
   void GeneratePersistenceThrdId(
       const std::vector<std::pair<int64_t, CompTaskNode*>>& persistence_nodes);
