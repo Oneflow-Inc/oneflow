@@ -158,8 +158,11 @@ void LogicalGraph::NaiveBuildFwStruct(
     cur_node->mut_parallel_desc() = parallel_desc_ptr;
     if (Global<JobDesc>::Get()->IsPredict()
         && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
-      cur_node->reset_time_shape(
-          new Shape(job_.helper().op_name2time_shape().at(cur_op->op_name())));
+      const auto& op_name2time_shape = job_.helper().op_name2time_shape();
+      const auto& time_shape_iter = op_name2time_shape.find(cur_op->op_name());
+      if (time_shape_iter != op_name2time_shape.end()) {
+        cur_node->reset_time_shape(new Shape(time_shape_iter->second));
+      }
     }
     for (const std::string& obn : cur_node->SoleOp()->output_bns()) {
       const LogicalBlobId& lbi = cur_node->SoleOp()->BnInOp2Lbi(obn);
