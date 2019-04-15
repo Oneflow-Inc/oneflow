@@ -10,8 +10,19 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 void NormalMdUpdateKernel<device_type, T>::Forward(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  int64_t next_model_vid = *reinterpret_cast<int64_t*>(ctx.other);
-  int64_t cur_batch_num = next_model_vid - 1;
+  int64_t next_model_vid = -1;
+  int64_t cur_batch_num = -1;
+  if (Global<JobDesc>::Get()->IsPredict()
+      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+    cur_batch_num = std::get<0>(
+        *(reinterpret_cast<std::tuple<int64_t, std::function<const Blob*(const LogicalBlobId&)>>*>(
+            ctx.other)));
+    next_model_vid = cur_batch_num + 1;
+  } else {
+    CHECK(Global<JobDesc>::Get()->IsTrain());
+    next_model_vid = *reinterpret_cast<int64_t*>(ctx.other);
+    cur_batch_num = next_model_vid - 1;
+  }
   const PbMessage& op_conf = this->GetCustomizedOpConf();
   const auto& conf = *GetMsgPtrFromPbMessage<NormalModelUpdateOpUserConf>(op_conf, "user_conf");
   float learning_rate = GetValFromPbMessage<float>(op_conf, "learning_rate");

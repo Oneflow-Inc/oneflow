@@ -108,4 +108,23 @@ Shape Shape::Ones(const int64_t num_axes) {
   return Shape(dim_vec);
 }
 
+Shape Shape::CreateReducedShapeOrOnesShape(const std::vector<int64_t>& axis_vec) const {
+  if (axis_vec.empty()) { return Shape::Ones(NumAxes()); }
+  return CreateReducedShape(axis_vec);
+}
+
+std::vector<int64_t> Shape::Axes4BroadcastTo(const Shape& broadcast_shape) const {
+  std::vector<int64_t> broadcast_axis_vec;
+  CHECK_EQ(broadcast_shape.NumAxes(), NumAxes());
+  for (int64_t i = 0; i < NumAxes(); i++) {
+    if (this->dim_vec()[i] != broadcast_shape.dim_vec()[i] && this->dim_vec()[i] == 1) {
+      broadcast_axis_vec.push_back(i);
+    } else {
+      CHECK_EQ(this->dim_vec()[i], broadcast_shape.dim_vec()[i]);
+    }
+  }
+  CHECK(!broadcast_axis_vec.empty());
+  return broadcast_axis_vec;
+}
+
 }  // namespace oneflow

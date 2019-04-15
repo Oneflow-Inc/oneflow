@@ -24,9 +24,9 @@ struct DropoutKernelUtil<DeviceType::kGPU, T> final {
   }
 };
 
-#define INITIATE_DROPOUT_KERNEL_UTIL(T, type_proto) \
+#define INITIATE_DROPOUT_KERNEL_UTIL_GPU(T, type_proto) \
   template struct DropoutKernelUtil<DeviceType::kGPU, T>;
-
-OF_PP_FOR_EACH_TUPLE(INITIATE_DROPOUT_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_SEQ);
+OF_PP_FOR_EACH_TUPLE(INITIATE_DROPOUT_KERNEL_UTIL_GPU, ARITHMETIC_DATA_TYPE_SEQ);
+#undef INITIATE_DROPOUT_KERNEL_UTIL_GPU
 
 }  // namespace oneflow

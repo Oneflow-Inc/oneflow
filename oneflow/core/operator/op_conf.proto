@@ -647,9 +647,10 @@ message ReduceSumOpConf {
 
 message ReduceSumLikeOpConf {
   required string x = 1;
-  required string y = 2;
-  required string like = 3;
-  optional string temp_storage = 4 [default = "temp_storage"];
+  required string like = 2;
+  required string y = 3;
+  repeated int32 axis = 4;
+  optional string temp_storage = 5 [default = "temp_storage"];
 }
 
 message ReduceMeanOpConf {
@@ -1317,6 +1318,7 @@ message OperatorConf {
   optional DeviceType device_type = 4 [default = kInvalidDevice];
   optional bool enable_cudnn = 5;
   optional int64 cudnn_buf_limit_mbyte = 6;
+  repeated string ctrl_in_op_name = 7;
   oneof op_type {
     // system op
     DecodeOFRecordOpConf decode_ofrecord_conf = 101;
