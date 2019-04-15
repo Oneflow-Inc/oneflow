@@ -11,11 +11,7 @@
 #include "oneflow/core/graph/repeat_forward_compute_task_node.h"
 #include "oneflow/core/graph/repeat_backward_compute_task_node.h"
 #include "oneflow/core/graph/acc_compute_task_node.h"
-<<<<<<< HEAD
-#include "oneflow/core/graph/keep_header_only_compute_task_node.h"
 #include "oneflow/core/graph/every_nth_compute_task_node.h"
-=======
->>>>>>> dev_split_fw_bw
 
 namespace oneflow {
 
