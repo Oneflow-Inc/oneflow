@@ -83,11 +83,11 @@ class ReduceGradSplitSignatureRule final : public ParallelSbpSignatureRule {
       SbpSignature* sbp_signature) const override {
     const auto& like_ibn_hint = SbpInferHint4Ibn(like_ibn_);
     auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
-    if (IsReduceAxisSplitted(SbpInferHint4Ibn)) {
-      for (const auto& ibn : op().input_bns()) { (*bn2sbp)[ibn].mutable_broadcast_parallel(); }
-    } else {
-      for (const auto& ibn : op().input_bns()) {
-        (*bn2sbp)[ibn] = SbpInferHint4Ibn(ibn).sbp_parallel();
+    for (const auto& ibn : op().input_bns()) {
+      if (ibn != like_ibn_ && IsReduceAxisSplitted(SbpInferHint4Ibn)) {
+        (*bn2sbp)[ibn].mutable_broadcast_parallel();
+      } else {
+        (*bn2sbp)[ibn] = like_ibn_hint.sbp_parallel();
       }
     }
     for (const auto& obn : op().output_bns()) { (*bn2sbp)[obn] = like_ibn_hint.sbp_parallel(); }
