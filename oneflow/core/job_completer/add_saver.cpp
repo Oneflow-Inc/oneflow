@@ -15,6 +15,9 @@ void AddSaver(const OpGraph& op_graph, Job* job_conf) {
     EveryNthOpConf* every_nth_conf = every_nth_op_conf.mutable_every_nth_conf();
     every_nth_conf->set_in(GenLogicalBlobName(node->op().BnInOp2Lbi("out")));
     every_nth_conf->set_out("out");
+    const Shape& variable_time_shape = node->out_blob_time_shape();
+    CHECK_EQ(variable_time_shape.NumAxes(), 1);
+    CHECK_EQ(variable_time_shape.At(0), Global<JobDesc>::Get()->TotalBatchNum());
     every_nth_conf->set_n(
         job_conf->other().predict_conf().tmp_split_fw_bw_train_conf().num_of_batches_in_snapshot());
     builder.AddOps(node->parallel_desc().parallel_conf(), {every_nth_op_conf});
