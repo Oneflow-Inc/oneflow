@@ -998,7 +998,7 @@ message L2NormalizeOpConf {
 message TupleBufferOpConf {
   repeated string in = 1;
   repeated string out = 2;
-  required int64 max_buffer_piece_size = 3;
+  required int64 max_buffer_piece = 3;
 }
 
 message OperatorConf {

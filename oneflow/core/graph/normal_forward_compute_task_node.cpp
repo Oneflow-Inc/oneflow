@@ -31,7 +31,7 @@ bool NormalForwardCompTaskNode::HasBackwardCompTaskNode() {
 void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   if (logical_node()->SoleOp()->op_conf().has_tuple_buffer_conf()) {
     const int64_t buffer_size =
-        logical_node()->SoleOp()->op_conf().tuple_buffer_conf().max_buffer_piece_size();
+        logical_node()->SoleOp()->op_conf().tuple_buffer_conf().max_buffer_piece();
     ProduceRegst("out", false, buffer_size, buffer_size);
   } else if (IsAllOutputNaive(logical_node())) {
     ProduceRegst("out", true);
