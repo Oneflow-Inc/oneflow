@@ -70,6 +70,7 @@ bool FullyConnectedOp::IsInputBlobAllowedModelSplit(const std::string& ibn) cons
 }
 
 void FullyConnectedOp::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   const FullyConnectedOpConf& conf = op_conf().fully_connected_conf();
   if (conf.has_weight()) {

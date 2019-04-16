@@ -1,5 +1,5 @@
 #include "oneflow/core/operator/reduce_mean_grad_op.h"
-#include "oneflow/core/operator/reduce_sbp_signature_rule.h"
+#include "oneflow/core/operator/reduce_sbp_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
 
@@ -24,9 +24,14 @@ void ReduceMeanGradOp::InferBlobDescs(
 }
 
 void ReduceMeanGradOp::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   const auto& reduced_axes = op_conf().reduce_mean_grad_conf().reduced_axis();
-  GetReduceGradSbpSignatureRules(this, "x", {reduced_axes.begin(), reduced_axes.end()}, rules);
+  HashSet<int64_t> conf_axes = {reduced_axes.begin(), reduced_axes.end()};
+  if (ReduceSbpUtil::IsReduceAxisSplitted(SbpInferHint4Ibn("x"), conf_axes) == false) {
+    rules->emplace_back(MakeDataSplitSbpSignatureRule(this));
+  }
+  rules->emplace_back(MakeMultiIbnsBroadcastSbpSignatureRule(this));
 }
 
 REGISTER_OP(OperatorConf::kReduceMeanGradConf, ReduceMeanGradOp);

@@ -356,6 +356,7 @@ void ConvOp<NDims>::InferCudnnAlgo(
 
 template<int32_t NDims>
 void ConvOp<NDims>::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   rules->emplace_back((MakeDataSplitSbpSignatureRule(this)));
   if (IsFwBwSplit()) {

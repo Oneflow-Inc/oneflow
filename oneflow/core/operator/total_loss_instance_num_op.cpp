@@ -57,6 +57,7 @@ const PbMessage& TotalLossInstanceNumOp::GetCustomizedConf() const {
 }
 
 void TotalLossInstanceNumOp::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   rules->emplace_back(new TotalLossInstanceSbpSignatureRule(this));
 }

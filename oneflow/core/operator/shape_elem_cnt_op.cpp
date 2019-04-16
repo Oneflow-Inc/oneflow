@@ -103,8 +103,9 @@ void ShapeElemCntOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
 }
 
 void ShapeElemCntOp::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  rules->emplace_back(MakeBroadcastSbpSignatureRule(this));
+  rules->emplace_back(MakeSoleIbnBroadcastSbpSignatureRule(this));
   rules->emplace_back(new ShapeElemCntOpSplitSbpSignatureRule(this));
   rules->emplace_back(new ShapeElemCntOpBroadcastSbpSignatureRule(this));
 }

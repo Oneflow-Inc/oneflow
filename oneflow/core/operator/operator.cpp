@@ -149,24 +149,6 @@ int32_t Operator::OutputBlobModelSplitAxis(
   }
 }
 
-void Operator::GetSbpSignatureRules(
-    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  bool has_model = !(model_bns().empty() && const_model_bns().empty());
-  rules->emplace_back(MakeDataSplitSbpSignatureRule(this));
-  if (IsSoleInputBlobAllowedModelSplit()) {
-    CHECK(!has_model);
-    rules->emplace_back(MakeModelSplitSbpSignatureRule(this));
-    rules->emplace_back(MakeBroadcastSbpSignatureRule(this));
-  } else if (has_model) {
-    for (const auto& ibn : input_bns()) { CHECK(!IsInputBlobAllowedModelSplit(ibn)); }
-    rules->emplace_back(MakeModelSplitSbpSignatureRule(this));
-  } else if (input_bns().size() == 1) {
-    rules->emplace_back(MakeBroadcastSbpSignatureRule(this));
-  } else {
-    // do nothing
-  }
-}
-
 void Operator::GetSbpSignatureRulesIf(
     const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
@@ -177,7 +159,22 @@ void Operator::GetSbpSignatureRulesIf(
 void Operator::GetSbpSignatureRules(
     const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  GetSbpSignatureRules(rules);
+  bool has_model = !(model_bns().empty() && const_model_bns().empty());
+  rules->emplace_back(MakeDataSplitSbpSignatureRule(this));
+  if (IsSoleInputBlobAllowedModelSplit()) {
+    CHECK(!has_model);
+    if (SbpInferHint4Ibn(SoleIbn()).sbp_parallel().has_split_parallel()) {
+      rules->emplace_back(MakeModelSplitSbpSignatureRule(this));
+    }
+    rules->emplace_back(MakeSoleIbnBroadcastSbpSignatureRule(this));
+  } else if (has_model) {
+    for (const auto& ibn : input_bns()) { CHECK(!IsInputBlobAllowedModelSplit(ibn)); }
+    rules->emplace_back(MakeModelSplitSbpSignatureRule(this));
+  } else if (input_bns().size() == 1) {
+    rules->emplace_back(MakeSoleIbnBroadcastSbpSignatureRule(this));
+  } else {
+    // do nothing
+  }
 }
 
 void Operator::InferSbpSignatureIf(
@@ -203,6 +200,7 @@ void Operator::InferSbpSignatureIf(
       }
     }
     CHECK_EQ(signature_check.size(), 1);
+    CHECK(IsSbpSignatureContaining(*sbp_signature, conf_sbp_sig_hint));
   } else if (match_success_cnt == 0) {
     std::stringstream ss;
     FOR_RANGE(int32_t, i, 0, rules.size()) {

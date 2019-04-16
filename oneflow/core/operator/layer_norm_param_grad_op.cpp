@@ -106,6 +106,7 @@ void LayerNormParamGradOp::InferBlobDescs(
 }
 
 void LayerNormParamGradOp::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   rules->emplace_back(new LayerNormParamGradDataParallelSbpSignatureRule(this));
 }

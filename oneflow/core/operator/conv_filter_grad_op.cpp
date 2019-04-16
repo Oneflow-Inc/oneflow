@@ -160,6 +160,7 @@ void ConvFilterGradOp::VirtualGenKernelConf(
 }
 
 void ConvFilterGradOp::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   rules->emplace_back(new ConvFilterGradDataParallelSbpSignatureRule(this));
   rules->emplace_back(new ConvFilterGradModelParallelSbpSignatureRule(this));

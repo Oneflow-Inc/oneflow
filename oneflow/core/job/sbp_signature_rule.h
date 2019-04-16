@@ -70,7 +70,10 @@ std::unique_ptr<const SbpSignatureRule> MakeDataSplitSbpSignatureRule(const Oper
 std::unique_ptr<const SbpSignatureRule> MakeModelSplitSbpSignatureRule(const Operator* op);
 
 // (B,) -> (B, ...)
-std::unique_ptr<const SbpSignatureRule> MakeBroadcastSbpSignatureRule(const Operator* op);
+std::unique_ptr<const SbpSignatureRule> MakeSoleIbnBroadcastSbpSignatureRule(const Operator* op);
+
+// (B, ...) -> (B, ...)
+std::unique_ptr<const SbpSignatureRule> MakeMultiIbnsBroadcastSbpSignatureRule(const Operator* op);
 
 // (B, S(0), ...) -> (S(0), ...)
 // return blobs: data splitted

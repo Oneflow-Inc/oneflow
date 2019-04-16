@@ -261,7 +261,6 @@ class Operator {
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       std::vector<std::unique_ptr<const SbpSignatureRule>>*) const;
 
-  virtual void GetSbpSignatureRules(std::vector<std::unique_ptr<const SbpSignatureRule>>*) const;
   virtual void GetSbpSignatureRules(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       std::vector<std::unique_ptr<const SbpSignatureRule>>*) const;

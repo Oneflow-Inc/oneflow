@@ -140,6 +140,7 @@ LogicalBlobId NormalModelUpdtOp::obn2lbi(const std::string& output_bn) const {
 }
 
 void NormalModelUpdtOp::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   rules->emplace_back(MakeModelUpdtOpBroadcastSignatureRule(this));
   rules->emplace_back(MakeModelUpdtOpSplitSignatureRule(this, AlwaysBroadcastParallelBns()));

@@ -141,6 +141,7 @@ void ConvDataGradOp::VirtualGenKernelConf(
 }
 
 void ConvDataGradOp::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   rules->emplace_back(new ConvDataGradDataParallelSbpSignatureRule(this));
   rules->emplace_back(new ConvDataGradModelParallelSbpSignatureRule(this));

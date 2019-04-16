@@ -124,6 +124,7 @@ void GatherGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
 }
 
 void GatherGradOp::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   rules->emplace_back(new GatherGradDataParallelSbpSignatureRule(this));
   rules->emplace_back(new GatherGradModelParallelSbpSignatureRule(this));

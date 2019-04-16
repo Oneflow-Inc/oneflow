@@ -12,6 +12,8 @@ bool operator!=(const SbpSignature& lhs, const SbpSignature& rhs);
 
 SbpParallel GetDualSbpParallel(const SbpParallel&);
 
+bool IsSbpSignatureContaining(const SbpSignature& bigger, const SbpSignature& smaller);
+
 }  // namespace oneflow
 
 namespace std {

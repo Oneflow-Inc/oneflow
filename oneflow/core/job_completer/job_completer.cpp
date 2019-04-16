@@ -43,6 +43,15 @@ void UpdateJobHelperConfSbpSignatureHint(
     const OpGraph& op_graph,
     const HashMap<std::string, HashMap<std::string, LogicalBlobId>>& op_name2ibn2in_diff_lbi,
     Job* job) {
+  auto IsBroadcastSbpSignature = [&](const OpNode* op_node) {
+    for (const auto& ibn : op_node->op().input_bns()) {
+      if (op_node->SbpParallel4BnInOp(ibn).has_broadcast_parallel() == false) { return false; }
+    }
+    for (const auto& obn : op_node->op().output_bns()) {
+      if (op_node->SbpParallel4BnInOp(obn).has_broadcast_parallel() == false) { return false; }
+    }
+    return true;
+  };
   op_graph.ForEachNode([&](OpNode* op_node) {
     const auto& op_name = (op_node->op().op_name());
     const auto& op_iter = op_name2ibn2in_diff_lbi.find(op_name);
@@ -52,8 +61,12 @@ void UpdateJobHelperConfSbpSignatureHint(
       if (in_diff_lbi_iter == op_iter->second.end()) { continue; }
       const auto& lbi = op_node->op().BnInOp2Lbi(ibn);
       const auto& in_diff_lbn = GenLogicalBlobName(in_diff_lbi_iter->second);
-      const auto& in_diff_sbp = GetDualSbpParallel(op_node->SbpParallel4Lbi(lbi));
-      (*job->mutable_helper()->mutable_lbn2sbp_parallel_hint())[in_diff_lbn] = in_diff_sbp;
+      auto* hint = &(*job->mutable_helper()->mutable_lbn2sbp_parallel_hint())[in_diff_lbn];
+      if (IsBroadcastSbpSignature(op_node)) {
+        hint->mutable_broadcast_parallel();
+      } else {
+        *hint = GetDualSbpParallel(op_node->SbpParallel4Lbi(lbi));
+      }
     }
   });
 }

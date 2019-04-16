@@ -100,6 +100,7 @@ int32_t ConvBiasGradOp::OutputBlobModelSplitAxis(
 }
 
 void ConvBiasGradOp::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   rules->emplace_back(new ConvBiasGradDataParallelSbpSignatureRule(this));
   rules->emplace_back(new ConvBiasGradModelParallelSbpSignatureRule(this));

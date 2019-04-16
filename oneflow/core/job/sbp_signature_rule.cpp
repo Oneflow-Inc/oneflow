@@ -68,12 +68,11 @@ const SbpSigMatchResult ParallelSbpSignatureRule::MatchByObnSbpSigHint(
     const SbpSignature& conf_obn_sbp_sig_hint) const {
   SbpSignature generated_sbp_signature;
   GenerateSignature(SbpInferHint4Ibn, &generated_sbp_signature);
-  auto& bn2sbp = generated_sbp_signature.bn_in_op2sbp_parallel();
-  for (const auto& pair : conf_obn_sbp_sig_hint.bn_in_op2sbp_parallel()) {
-    CHECK(bn2sbp.find(pair.first) != bn2sbp.end());
-    if (bn2sbp.at(pair.first) != pair.second) { return MakeSbpSigMatchSignatureMismatch(); }
+  if (IsSbpSignatureContaining(generated_sbp_signature, conf_obn_sbp_sig_hint)) {
+    return MakeSbpSigMatchSuccess();
+  } else {
+    return MakeSbpSigMatchSignatureMismatch();
   }
-  return MakeSbpSigMatchSuccess();
 }
 
 namespace {
@@ -166,12 +165,12 @@ class DataSplitSbpSignatureRule final : public ParallelSbpSignatureRule {
   }
 };
 
-class BroadcastSbpSignatureRule final : public ParallelSbpSignatureRule {
+class SoleIbnBroadcastSbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BroadcastSbpSignatureRule);
-  ~BroadcastSbpSignatureRule() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(SoleIbnBroadcastSbpSignatureRule);
+  ~SoleIbnBroadcastSbpSignatureRule() override = default;
 
-  BroadcastSbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {
+  SoleIbnBroadcastSbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {
     CHECK(op->model_bns().empty());
     CHECK(op->const_model_bns().empty());
   }
@@ -215,6 +214,50 @@ class BroadcastSbpSignatureRule final : public ParallelSbpSignatureRule {
     auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     for (const auto& bn : op().input_bns()) { (*bn2sbp)[bn].mutable_broadcast_parallel(); }
     for (const auto& bn : op().output_bns()) { (*bn2sbp)[bn].mutable_broadcast_parallel(); }
+  }
+};
+
+bool IsAllInputBroadcastParallel(
+    const Operator& op,
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn) {
+  for (const auto& ibn : op.input_bns()) {
+    if (SbpInferHint4Ibn(ibn).sbp_parallel().has_broadcast_parallel() == false) { return false; }
+  }
+  return true;
+}
+
+class MultiIbnsBroadcastSbpSignatureRule final : public ParallelSbpSignatureRule {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(MultiIbnsBroadcastSbpSignatureRule);
+  ~MultiIbnsBroadcastSbpSignatureRule() override = default;
+
+  MultiIbnsBroadcastSbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
+
+  const std::string Description() const override {
+    return op().op_name() + ": (B, ...) -> (B, ...)";
+  }
+
+  const SbpSigMatchResult MatchByIbnHint(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const override {
+    if (op().input_bns().size() <= 1) { return MakeSbpSigMatchSignatureMismatch(); }
+    if (!IsAllInputBroadcastParallel(op(), SbpInferHint4Ibn)) {
+      return MakeSbpSigMatchSignatureMismatch();
+    }
+    for (const auto& ibn : op().input_bns()) {
+      if (parallel_desc.parallel_num() != SbpInferHint4Ibn(ibn).parallel_num()) {
+        return MakeSbpSigMatchSignatureMismatch();
+      }
+    }
+    return MakeSbpSigMatchSuccess();
+  }
+
+  void GenerateSignature(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
+    for (const auto& ibn : op().input_bns()) { (*bn2sbp)[ibn].mutable_broadcast_parallel(); }
+    for (const auto& obn : op().output_bns()) { (*bn2sbp)[obn].mutable_broadcast_parallel(); }
   }
 };
 
@@ -437,8 +480,12 @@ std::unique_ptr<const SbpSignatureRule> MakeDataSplitSbpSignatureRule(const Oper
   return std::unique_ptr<const SbpSignatureRule>(new DataSplitSbpSignatureRule(op));
 }
 
-std::unique_ptr<const SbpSignatureRule> MakeBroadcastSbpSignatureRule(const Operator* op) {
-  return std::unique_ptr<const SbpSignatureRule>(new BroadcastSbpSignatureRule(op));
+std::unique_ptr<const SbpSignatureRule> MakeSoleIbnBroadcastSbpSignatureRule(const Operator* op) {
+  return std::unique_ptr<const SbpSignatureRule>(new SoleIbnBroadcastSbpSignatureRule(op));
+}
+
+std::unique_ptr<const SbpSignatureRule> MakeMultiIbnsBroadcastSbpSignatureRule(const Operator* op) {
+  return std::unique_ptr<const SbpSignatureRule>(new MultiIbnsBroadcastSbpSignatureRule(op));
 }
 
 std::unique_ptr<const SbpSignatureRule> MakeModelSplitSbpSignatureRule(const Operator* op) {

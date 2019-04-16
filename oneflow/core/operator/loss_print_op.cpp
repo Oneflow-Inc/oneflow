@@ -64,6 +64,7 @@ LogicalBlobId LossPrintOp::ibn2lbi(const std::string& input_bn) const {
 const PbMessage& LossPrintOp::GetCustomizedConf() const { return op_conf().loss_print_conf(); }
 
 void LossPrintOp::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   rules->emplace_back(new LossPrintSbpSignatureRule(this));
 }

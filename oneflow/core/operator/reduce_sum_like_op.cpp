@@ -1,5 +1,5 @@
 #include "oneflow/core/operator/reduce_sum_like_op.h"
-#include "oneflow/core/operator/reduce_sbp_signature_rule.h"
+#include "oneflow/core/operator/reduce_sbp_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
@@ -27,9 +27,12 @@ void ReduceSumLikeOp::InferBlobDescs(
 }
 
 void ReduceSumLikeOp::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   const auto& reduced_axes = op_conf().reduce_sum_like_conf().axis();
-  GetReduceSbpSignatureRules(this, "x", {reduced_axes.begin(), reduced_axes.end()}, rules);
+  ReduceSbpUtil::GetReduceSumSplitSignatureRules(this, "x",
+                                                 {reduced_axes.begin(), reduced_axes.end()}, rules);
+  rules->emplace_back(MakeMultiIbnsBroadcastSbpSignatureRule(this));
 }
 
 REGISTER_OP(OperatorConf::kReduceSumLikeConf, ReduceSumLikeOp);

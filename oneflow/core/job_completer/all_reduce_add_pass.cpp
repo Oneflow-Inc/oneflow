@@ -40,13 +40,29 @@ LogicalBlobId FindP2BLbiWithSoleConsumer(
     const std::function<const OpNode*(const LogicalBlobId&)>& SoleConsumerOpNode4Lbi) {
   CHECK(SoleConsumerOpNode4Lbi(lbi)->SbpParallel4Lbi(lbi).has_broadcast_parallel());
   LogicalBlobId cur_lbi = lbi;
-  while (!ProducerOpNode4Lbi(cur_lbi)->SbpParallel4Lbi(lbi).has_partial_sum_parallel()) {
+  auto SoleBodyIbn4Op = [&](const Operator& op) -> const std::string& {
+    if (op.input_bns().size() == 1) {
+      return op.SoleIbn();
+    } else if (op.input_bns().size() > 1) {
+      const std::string* data_bn = nullptr;
+      for (const auto& ibn : op.input_bns()) {
+        if (op.InputBlobModifier4Ibn(ibn).use_header_only() == false) {
+          CHECK(data_bn == nullptr);
+          data_bn = &ibn;
+        }
+      }
+      CHECK_NOTNULL(data_bn);
+      return *data_bn;
+    } else {
+      UNIMPLEMENTED();
+    }
+  };
+  while (!ProducerOpNode4Lbi(cur_lbi)->SbpParallel4Lbi(cur_lbi).has_partial_sum_parallel()) {
     const auto* producer = ProducerOpNode4Lbi(cur_lbi);
-    CHECK_EQ(producer->op().input_bns().size(), 1);
     CHECK_EQ(producer->op().output_bns().size(), 1);
-    LogicalBlobId in_lbi = producer->op().BnInOp2Lbi(producer->op().SoleIbn());
-    CHECK(ProducerOpNode4Lbi(cur_lbi)->SbpParallel4Lbi(lbi).has_broadcast_parallel());
-    CHECK(ProducerOpNode4Lbi(in_lbi)->SbpParallel4Lbi(lbi).has_broadcast_parallel());
+    LogicalBlobId in_lbi = producer->op().BnInOp2Lbi(SoleBodyIbn4Op(producer->op()));
+    CHECK(producer->SbpParallel4Lbi(cur_lbi).has_broadcast_parallel());
+    CHECK(producer->SbpParallel4Lbi(in_lbi).has_broadcast_parallel());
     cur_lbi = in_lbi;
   }
   return cur_lbi;

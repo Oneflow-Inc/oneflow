@@ -1,6 +1,6 @@
 #include "oneflow/core/operator/reduce_sum_op.h"
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/operator/reduce_sbp_signature_rule.h"
+#include "oneflow/core/operator/reduce_sbp_util.h"
 
 namespace oneflow {
 
@@ -42,9 +42,12 @@ void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
 }
 
 void ReduceSumOp::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   const auto& reduced_axes = op_conf().reduce_sum_conf().axis();
-  GetReduceSbpSignatureRules(this, "in", {reduced_axes.begin(), reduced_axes.end()}, rules);
+  ReduceSbpUtil::GetReduceSumSplitSignatureRules(this, "in",
+                                                 {reduced_axes.begin(), reduced_axes.end()}, rules);
+  rules->emplace_back(MakeSoleIbnBroadcastSbpSignatureRule(this));
 }
 
 REGISTER_OP(OperatorConf::kReduceSumConf, ReduceSumOp);

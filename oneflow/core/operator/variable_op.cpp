@@ -13,7 +13,7 @@ class VariableOpDataSplitSbpSignatureRule final : public ParallelSbpSignatureRul
 
   VariableOpDataSplitSbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
 
-  const std::string Description() const override { return op().op_name() + ": S(0) -> C"; }
+  const std::string Description() const override { return op().op_name() + ": S(0) -> B"; }
 
   const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
@@ -112,6 +112,7 @@ void VariableOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
 }
 
 void VariableOp::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   rules->emplace_back(new VariableOpDataSplitSbpSignatureRule(this));
   rules->emplace_back(new VariableOpModelSplitSbpSignatureRule(this));

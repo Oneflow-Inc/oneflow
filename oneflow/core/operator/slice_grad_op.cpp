@@ -5,25 +5,25 @@ namespace oneflow {
 
 namespace {
 
-class SliceGradPartialSumSignatureRule final : public ParallelSbpSignatureRule {
+class SliceGradBroadcastSignatureRule final : public ParallelSbpSignatureRule {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(SliceGradPartialSumSignatureRule);
-  ~SliceGradPartialSumSignatureRule() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(SliceGradBroadcastSignatureRule);
+  ~SliceGradBroadcastSignatureRule() override = default;
 
-  SliceGradPartialSumSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
+  SliceGradBroadcastSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
 
-  const std::string Description() const override { return op().op_name() + ": P -> P"; }
+  const std::string Description() const override { return op().op_name() + ": (B, B) -> B"; }
 
   const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
-    const auto& dy_sbp_infer_hint = SbpInferHint4Ibn("dy");
-    if (!dy_sbp_infer_hint.sbp_parallel().has_partial_sum_parallel()) {
+    const auto& like_sbp_infer_hint = SbpInferHint4Ibn("like");
+    if (!like_sbp_infer_hint.sbp_parallel().has_broadcast_parallel()) {
       return MakeSbpSigMatchSignatureMismatch();
     }
-    if (parallel_desc.parallel_num() != dy_sbp_infer_hint.parallel_num()) {
+    if (parallel_desc.parallel_num() != like_sbp_infer_hint.parallel_num()) {
       return MakeSbpSigMatchParallelNumError(parallel_desc.parallel_num(),
-                                             dy_sbp_infer_hint.parallel_num());
+                                             like_sbp_infer_hint.parallel_num());
     }
     return MakeSbpSigMatchSuccess();
   }
@@ -32,9 +32,9 @@ class SliceGradPartialSumSignatureRule final : public ParallelSbpSignatureRule {
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       SbpSignature* sbp_signature) const override {
     auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
-    (*bn2sbp)["like"] = SbpInferHint4Ibn("like").sbp_parallel();
-    (*bn2sbp)["dy"].mutable_partial_sum_parallel();
-    (*bn2sbp)["dx"].mutable_partial_sum_parallel();
+    (*bn2sbp)["dy"].mutable_broadcast_parallel();
+    (*bn2sbp)["like"].mutable_broadcast_parallel();
+    (*bn2sbp)["dx"].mutable_broadcast_parallel();
   }
 };
 
@@ -71,9 +71,10 @@ void SliceGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
 }
 
 void SliceGradOp::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  rules->emplace_back(new SliceGradPartialSumSignatureRule(this));
   rules->emplace_back(MakeDataSplitSbpSignatureRule(this));
+  rules->emplace_back(new SliceGradBroadcastSignatureRule(this));
 }
 
 REGISTER_OP(OperatorConf::kSliceGradConf, SliceGradOp);
