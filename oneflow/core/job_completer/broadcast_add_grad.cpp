@@ -15,14 +15,14 @@ void GenerateBackwardOpConf(
     if (LogicalBlobDesc4BnInOp("out").shape() == LogicalBlobDesc4BnInOp("a").shape()) {
       *DiffLbi4BnInOp("a") = *DiffLbi4BnInOp("out");
     } else if (LogicalBlobDesc4BnInOp("out").shape() == left_extended_shape) {
-      OperatorConf reshape_op;
-      reshape_op.set_name(op.op_name() + "_grad_a_reshape_like");
-      ReshapeLikeOpConf* reshape_like_op_conf = reshape_op.mutable_reshape_like_conf();
-      reshape_like_op_conf->set_x(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
-      reshape_like_op_conf->set_like(GenLogicalBlobName(op.BnInOp2Lbi("a")));
-      reshape_like_op_conf->set_y("y");
-      op_confs->push_back(reshape_op);
-      DiffLbi4BnInOp("a")->set_op_name(reshape_op.name());
+      OperatorConf reshape_like_a_op;
+      reshape_like_a_op.set_name(op.op_name() + "_grad_a_reshape_like");
+      ReshapeLikeOpConf* reshape_like_a_op_conf = reshape_like_a_op.mutable_reshape_like_conf();
+      reshape_like_a_op_conf->set_x(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
+      reshape_like_a_op_conf->set_like(GenLogicalBlobName(op.BnInOp2Lbi("a")));
+      reshape_like_a_op_conf->set_y("y");
+      op_confs->push_back(reshape_like_a_op);
+      DiffLbi4BnInOp("a")->set_op_name(reshape_like_a_op.name());
       DiffLbi4BnInOp("a")->set_blob_name("y");
     } else {
       OperatorConf reduce_sum_like_a_op;
@@ -47,14 +47,14 @@ void GenerateBackwardOpConf(
     if (LogicalBlobDesc4BnInOp("out").shape() == LogicalBlobDesc4BnInOp("b").shape()) {
       *DiffLbi4BnInOp("b") = *DiffLbi4BnInOp("out");
     } else if (LogicalBlobDesc4BnInOp("out").shape() == left_extended_shape) {
-      OperatorConf reshape_op;
-      reshape_op.set_name(op.op_name() + "_grad_b_reshape_like");
-      ReshapeLikeOpConf* reshape_like_op_conf = reshape_op.mutable_reshape_like_conf();
-      reshape_like_op_conf->set_x(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
-      reshape_like_op_conf->set_like(GenLogicalBlobName(op.BnInOp2Lbi("b")));
-      reshape_like_op_conf->set_y("y");
-      op_confs->push_back(reshape_op);
-      DiffLbi4BnInOp("b")->set_op_name(reshape_op.name());
+      OperatorConf reshape_like_b_op;
+      reshape_like_b_op.set_name(op.op_name() + "_grad_b_reshape_like");
+      ReshapeLikeOpConf* reshape_like_b_op_conf = reshape_like_b_op.mutable_reshape_like_conf();
+      reshape_like_b_op_conf->set_x(GenLogicalBlobName(*DiffLbi4BnInOp("out")));
+      reshape_like_b_op_conf->set_like(GenLogicalBlobName(op.BnInOp2Lbi("b")));
+      reshape_like_b_op_conf->set_y("y");
+      op_confs->push_back(reshape_like_b_op);
+      DiffLbi4BnInOp("b")->set_op_name(reshape_like_b_op.name());
       DiffLbi4BnInOp("b")->set_blob_name("y");
     } else {
       OperatorConf reduce_sum_like_b_op;
