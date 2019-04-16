@@ -27,5 +27,6 @@ void TupleIdentityKernel<device_type>::BackwardDataContent(
 }
 
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kTupleIdentityConf, TupleIdentityKernel);
+ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kTupleBufferConf, TupleIdentityKernel);
 
 }  // namespace oneflow
