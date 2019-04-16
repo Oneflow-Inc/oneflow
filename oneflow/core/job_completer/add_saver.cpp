@@ -22,7 +22,8 @@ void AddSaver(const OpGraph& op_graph, Job* job_conf) {
     model_save_op_conf.set_name("System-Saver-" + node->op().op_name() + "-MdSave");
     ModelSaveV2OpConf* model_save_conf = model_save_op_conf.mutable_model_save_v2_conf();
     model_save_conf->set_in(every_nth_op_conf.name() + "/" + every_nth_conf->out());
-    model_save_conf->set_lbn(GenLogicalBlobName(node->op().BnInOp2Lbi("out")));
+    model_save_conf->set_lbn(node->op().op_name() + "/"
+                             + node->op().op_conf().variable_conf().model_name());
     builder.AddOps(md_save_parallel_conf, {model_save_op_conf});
   });
 }
