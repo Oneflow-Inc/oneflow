@@ -105,15 +105,16 @@ message Conv2DOpConf {
   required string in = 1;
   required string out = 2;
   required int32 filters = 3;
-  optional string padding = 4 [default = "valid"];
-  required string data_format = 5;
-  repeated int32 kernel_size = 6;
-  repeated int32 strides = 7;
-  repeated int32 dilation_rate = 8;
-  optional ActivationType activation = 9 [default = kNone];
-  optional bool use_bias = 10 [default = true];
-  optional InitializerConf weight_initializer = 11;
-  optional InitializerConf bias_initializer = 12;
+  optional int32 group_num = 4 [default = 1];
+  optional string padding = 5 [default = "valid"];
+  required string data_format = 6;
+  repeated int32 kernel_size = 7;
+  repeated int32 strides = 8;
+  repeated int32 dilation_rate = 9;
+  optional ActivationType activation = 10 [default = kNone];
+  optional bool use_bias = 11 [default = true];
+  optional InitializerConf weight_initializer = 12;
+  optional InitializerConf bias_initializer = 13;
 }
 
 message Conv3DOpConf {
@@ -995,6 +996,13 @@ message L2NormalizeOpConf {
   optional float epsilon = 4 [default = 1e-12];
 }
 
+message WhereOpConf {
+  required string condition = 1;
+  required string x = 2;
+  required string y = 3;
+  required string out = 4;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1089,6 +1097,7 @@ message OperatorConf {
     ParallelCastOpConf parallel_cast_conf = 263;
     L2NormalizeOpConf l2_normalize_conf = 264;
     PReluOpConf prelu_conf = 265;
+    WhereOpConf where_conf = 266;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
