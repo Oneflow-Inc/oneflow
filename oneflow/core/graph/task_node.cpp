@@ -297,10 +297,12 @@ void TaskNode::ConsumeRegst(const std::string& name, std::shared_ptr<RegstDesc> 
   consumed_regsts_[name].push_back(regst);
 }
 
-bool TaskNode::IsAllConsumedRegstLocked() {
+bool TaskNode::IsAllConsumedDataRegstLocked() {
   for (const auto& pair : consumed_regsts_) {
     for (std::shared_ptr<RegstDesc> regst_desc : pair.second) {
-      if (regst_desc->IsLocked() == false) { return false; }
+      if (regst_desc->regst_desc_type().has_data_regst_desc() && regst_desc->IsLocked() == false) {
+        return false;
+      }
     }
   }
   return true;
