@@ -94,7 +94,15 @@ size_t JobDesc::rdma_recv_msg_buf_byte() const {
 }
 
 const std::string& JobDesc::MdSaveSnapshotsPath() const {
-  return job_conf_.other().train_conf().model_save_snapshots_path();
+  if (IsPredict()
+      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+    return job_conf_.other()
+        .predict_conf()
+        .tmp_split_fw_bw_train_conf()
+        .model_save_snapshots_path();
+  } else {
+    return job_conf_.other().train_conf().model_save_snapshots_path();
+  }
 }
 
 int32_t JobDesc::NumOfBatchesInSnapshot() const {
