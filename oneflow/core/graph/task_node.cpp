@@ -5,7 +5,7 @@ namespace oneflow {
 bool IsForwardTaskType(TaskType tt) {
   return tt == TaskType::kNormalForward || tt == TaskType::kRecurrentForward
          || tt == TaskType::kPackForward || tt == TaskType::kUnpackForward
-         || tt == TaskType::kRepeatForward;
+         || tt == TaskType::kRepeatForward || tt == TaskType::kEveryNth;
 }
 
 bool IsBackwardTaskType(TaskType tt) {
@@ -297,10 +297,12 @@ void TaskNode::ConsumeRegst(const std::string& name, std::shared_ptr<RegstDesc> 
   consumed_regsts_[name].push_back(regst);
 }
 
-bool TaskNode::IsAllConsumedRegstLocked() {
+bool TaskNode::IsAllConsumedDataRegstLocked() {
   for (const auto& pair : consumed_regsts_) {
     for (std::shared_ptr<RegstDesc> regst_desc : pair.second) {
-      if (regst_desc->IsLocked() == false) { return false; }
+      if (regst_desc->regst_desc_type().has_data_regst_desc() && regst_desc->IsLocked() == false) {
+        return false;
+      }
     }
   }
   return true;
@@ -440,5 +442,6 @@ std::map<TaskType, std::string> task_type2color = {{kInvalid, "0"},
                                                    {kRepeatBackward, "3"},
                                                    {kReduceIdentity, "2"},
                                                    {kAcc, "5"},
-                                                   {kKeepHeaderOnly, "12"}};
+                                                   {kKeepHeaderOnly, "12"},
+                                                   {kEveryNth, "2"}};
 }  // namespace oneflow
