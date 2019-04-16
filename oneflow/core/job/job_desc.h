@@ -50,9 +50,7 @@ class JobDesc final {
   bool enable_mem_sharing() const { return job_conf_.other().enable_mem_sharing(); }
   const FileSystemConf& data_fs_conf() const;
   const FileSystemConf& snapshot_fs_conf() const;
-  bool enable_write_snapshot() const {
-    return IsTrain() && job_conf_.other().enable_write_snapshot();
-  }
+  bool enable_write_snapshot() const;
   bool write_snapshot_to_master() const { return snapshot_fs_conf().has_localfs_conf(); }
   bool enable_blob_mem_sharing() const { return job_conf_.other().enable_blob_mem_sharing(); }
   bool enable_nccl() const { return job_conf_.other().enable_nccl(); }

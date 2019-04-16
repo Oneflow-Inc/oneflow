@@ -142,6 +142,15 @@ const FileSystemConf& JobDesc::snapshot_fs_conf() const {
   return job_conf_.other().snapshot_fs_conf();
 }
 
+bool JobDesc::enable_write_snapshot() const {
+  if (IsTrain()
+      || (IsPredict() && job_conf_.other().predict_conf().has_tmp_split_fw_bw_train_conf())) {
+    return job_conf_.other().enable_write_snapshot();
+  } else {
+    return false;
+  }
+}
+
 JobDesc::JobDesc(const std::string& job_conf_filepath) {
   ParseProtoFromTextFile(job_conf_filepath, &job_conf_);
   Init();
