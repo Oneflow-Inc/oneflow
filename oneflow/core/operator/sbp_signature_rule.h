@@ -75,6 +75,8 @@ std::unique_ptr<const SbpSignatureRule> Make_DS_MB_2_DS_SbpSignatureRule(const O
 std::unique_ptr<const SbpSignatureRule> Make_DB_MS_2_MS_SbpSignatureRule(
     const Operator* op, std::function<bool(int32_t)> IsExpectedAxis);
 
+std::unique_ptr<const SbpSignatureRule> MakeIdentitySbpSignatureRule(const Operator* op);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_OPERATOR_SBP_SIGNATURE_RULE_H_

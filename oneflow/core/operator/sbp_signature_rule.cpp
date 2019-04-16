@@ -393,6 +393,38 @@ class DB_MS_2_MS_SbpSignatureRule final : public ParallelSbpSignatureRule {
   std::vector<std::string> model_input_bns_;
 };
 
+class IdentitySbpSignatureRule final : public ParallelSbpSignatureRule {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(IdentitySbpSignatureRule);
+  ~IdentitySbpSignatureRule() override = default;
+
+  explicit IdentitySbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
+
+  const std::string Description() const override { return op().op_name() + ": (A,) -> (A,)"; }
+
+  const SbpSigMatchResult GetMatchResult(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      const ParallelDesc& parallel_desc) const override {
+    CHECK_EQ(op().input_bns().size(), 1);
+    CHECK_EQ(op().output_bns().size(), 1);
+    const SbpInferHint& in_sbp_infer_hint = SbpInferHint4BnInOp(op().input_bns().Get(0));
+    if (in_sbp_infer_hint.parallel_num() != parallel_desc.parallel_num()) {
+      return MakeSbpSigMatchParallelNumError(parallel_desc.parallel_num(),
+                                             in_sbp_infer_hint.parallel_num());
+    }
+    return MakeSbpSigMatchSuccess();
+  }
+
+  void GenerateSignature(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
+    const SbpParallel& sbp_parallel = SbpInferHint4Ibn(op().input_bns().Get(0)).sbp_parallel();
+    (*bn2sbp)[op().input_bns().Get(0)] = sbp_parallel;
+    (*bn2sbp)[op().output_bns().Get(0)] = sbp_parallel;
+  }
+};
+
 }  // namespace
 
 std::unique_ptr<const SbpSignatureRule> MakeUnparallelSbpSignatureRule(const Operator* op) {
@@ -424,6 +456,10 @@ std::unique_ptr<const SbpSignatureRule> Make_DB_MS_2_MS_SbpSignatureRule(
     const Operator* op, std::function<bool(int32_t)> IsExpectedAxis) {
   return std::unique_ptr<const SbpSignatureRule>(
       new DB_MS_2_MS_SbpSignatureRule(op, IsExpectedAxis));
+}
+
+std::unique_ptr<const SbpSignatureRule> MakeIdentitySbpSignatureRule(const Operator* op) {
+  return std::unique_ptr<const SbpSignatureRule>(new IdentitySbpSignatureRule(op));
 }
 
 }  // namespace oneflow
