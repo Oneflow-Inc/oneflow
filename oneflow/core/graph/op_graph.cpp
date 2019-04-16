@@ -231,10 +231,10 @@ void OpNode::CheckBlobDescs(const std::function<BlobDesc*(const std::string&)>& 
     CHECK_EQ(blob_desc_from_exec_graph.shape(), blob_desc_from_op_graph.shape());
     CHECK_EQ(blob_desc_from_exec_graph.data_type(), blob_desc_from_op_graph.data_type());
   };
-  for (const std::string& bn : op().data_tmp_bns()) { Check(bn); }
-  for (const std::string& bn : op().fw_buf_bns()) { Check(bn); }
   for (const std::string& bn : op().input_bns()) { Check(bn); }
   for (const std::string& bn : op().output_bns()) { Check(bn); }
+  for (const std::string& bn : op().data_tmp_bns()) { Check(bn); }
+  for (const std::string& bn : op().fw_buf_bns()) { Check(bn); }
   for (const std::string& bn : op().model_bns()) { Check(bn); }
   for (const std::string& bn : op().const_model_bns()) { Check(bn); }
   for (const std::string& bn : op().const_buf_bns()) { Check(bn); }

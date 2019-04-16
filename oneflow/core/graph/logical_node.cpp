@@ -38,24 +38,9 @@ bool HasSoleIdentityOp(const LogicalNode* logical_node) {
 
 BldBoxingOpConfMthd GetBldBoxingOpConfMethodByFwParallelPolicy(const LogicalNode* in_logical,
                                                                const LogicalNode* out_logical) {
-  if (HasSoleIdentityOp(in_logical) || HasSoleIdentityOp(out_logical)) {
-    return &BoxingTaskNode::BldBoxingOpConfWithFwSbpParallel;
-  }
-  ParallelPolicy in_policy = in_logical->parallel_desc()->policy();
-  ParallelPolicy out_policy = out_logical->parallel_desc()->policy();
-  if (in_policy == kDataParallel && out_policy == kDataParallel) {
-    return &BoxingTaskNode::BldBoxingOpConfWithDataConcatAndDataSplit;
-  } else if (in_policy == kDataParallel && out_policy == kModelParallel) {
-    return &BoxingTaskNode::BldBoxingOpConfWithDataConcatAndClone;
-  } else if (in_policy == kModelParallel && out_policy == kDataParallel) {
-    return &BoxingTaskNode::BldBoxingOpConfWithModelConcatAndDataSplit;
-  } else if (in_policy == kModelParallel && out_policy == kModelParallel) {
-    return &BoxingTaskNode::BldBoxingOpConfWithModelConcatAndClone;
-  } else {
-    LOG(FATAL) << "in " << in_policy << " out " << out_policy;
-  }
-  return nullptr;
+  return &BoxingTaskNode::BldBoxingOpConfWithFwSbpParallel;
 }
+
 BldBoxingOpConfMthd GetBldBoxingOpConfMethodByBwParallelPolicy(const LogicalNode* in_logical,
                                                                const LogicalNode* out_logical) {
   if (HasSoleIdentityOp(in_logical) || HasSoleIdentityOp(out_logical)) {
@@ -284,24 +269,30 @@ bool LogicalNode::HasOpWithCondition(std::function<bool(const Operator*)> cond) 
   return false;
 }
 
-static bool IsModelParallel121(const LogicalNode* src_node, const LogicalNode* dst_node) {
+static bool IsConnectedLbisAllSameSbpParallel(const LogicalNode* src_node,
+                                              const LogicalNode* dst_node) {
   if (src_node->parallel_desc()->parallel_num() != dst_node->parallel_desc()->parallel_num()) {
     return false;
   }
   LogicalEdge* connect_edge = nullptr;
   for (LogicalEdge* edge : src_node->out_edges()) {
-    if (edge->dst_node() == dst_node) { connect_edge = edge; }
+    if (edge->dst_node() == dst_node) {
+      CHECK(connect_edge == nullptr);
+      connect_edge = edge;
+    }
   }
   CHECK_NOTNULL(connect_edge);
   CHECK_GT(connect_edge->lbis().size(), 0);
   const std::string& src_op_name = src_node->SoleOp()->op_name();
   const std::string& dst_op_name = dst_node->SoleOp()->op_name();
+  HashSet<bool> predicators;
   for (const LogicalBlobId& lbi : connect_edge->lbis()) {
     const auto& src_sbp = Global<OpGraph>::Get()->GetSbpParallel(src_op_name, lbi);
     const auto& dst_sbp = Global<OpGraph>::Get()->GetSbpParallel(dst_op_name, lbi);
-    if (src_sbp != dst_sbp) { return false; }
+    predicators.insert(src_sbp == dst_sbp);
   }
-  return true;
+  CHECK_EQ(predicators.size(), 1);
+  return *predicators.begin();
 }
 
 BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const LogicalNode* dst_node) {
@@ -324,16 +315,9 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
   std::string k = ConcatTypeName(src_node, dst_node);
   auto it = GetFuncForFindBldSubTskGphMthd()->find(k);
   if (it != GetFuncForFindBldSubTskGphMthd()->end()) { return it->second(src_node, dst_node); }
-  if (src_pd->parallel_num() == dst_pd->parallel_num()) {
-    // NOTE: AllReduce is always DataParallel
-    if (src_pd->policy() == kDataParallel && dst_pd->policy() == kDataParallel) {
-      return &TaskGraph::BldSubTskGphByOneToOne;
-    } else if (src_pd->policy() == kModelParallel && dst_pd->policy() == kModelParallel
-               && IsModelParallel121(src_node, dst_node)) {
-      return &TaskGraph::BldSubTskGphByOneToOne;
-    } else {
-      // do nothing
-    }
+  if (src_pd->parallel_num() == dst_pd->parallel_num()
+      && IsConnectedLbisAllSameSbpParallel(src_node, dst_node)) {
+    return &TaskGraph::BldSubTskGphByOneToOne;
   }
   return &TaskGraph::BldSubTskGphByBoxing;
 }
@@ -352,6 +336,21 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
                               BldSubTskGphToMdSave);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
                               "NormalBackward",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
+                              "ReduceConcat",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceConcat"
+                              "ReduceIdentity",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceIdentity"
+                              "NcclAllReduce",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclAllReduce"
+                              "ReduceSplit",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceSplit"
+                              "NormalForward",
                               &TaskGraph::BldSubTskGphByOneToOne);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalBackward"
                               "MdDiffAcc",
