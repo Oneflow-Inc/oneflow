@@ -1284,12 +1284,24 @@ message PrintScalarSummaryOpConf {
   optional int32 interval = 5 [default = 1];
 }
 
+message ShapeElemCntAxisConf {
+  repeated int32 axis = 1;
+}
+
+message ShapeElemCntRangeAxisConf {
+  // closed interval: [begin_axis, end_axis]
+  optional int32 begin_axis = 1 [default = 0];
+  optional int32 end_axis = 2 [default = -1];
+}
+
 message ShapeElemCntOpConf {
   required string x = 1;
   required string y = 2;
-  // closed interval: [begin_axis, end_axis]
-  optional int32 begin_axis = 3 [default = 0];
-  optional int32 end_axis = 4 [default = -1];
+  oneof axis_conf {
+    ShapeElemCntAxisConf exclude_axis_conf = 3;
+    ShapeElemCntAxisConf include_axis_conf = 4;
+    ShapeElemCntRangeAxisConf range_axis_conf = 5;
+  }
 }
 
 message AccOpConf {

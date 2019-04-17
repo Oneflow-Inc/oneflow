@@ -21,6 +21,8 @@ class ShapeElemCntOp final : public Operator {
   void GetSbpSignatureRules(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const override;
+  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                            const ParallelContext*, KernelConf*, const OpContext*) const override;
 };
 
 }  // namespace oneflow

@@ -237,8 +237,7 @@ void AddTotalLossInstanceNumOpConf(const OpGraph& op_graph, Job* job,
     auto* instance_num_op_conf = instance_num_op.mutable_shape_elem_cnt_conf();
     instance_num_op_conf->set_x(GenLogicalBlobName(loss_lbi));
     instance_num_op_conf->set_y("y");
-    instance_num_op_conf->set_begin_axis(0);
-    instance_num_op_conf->set_end_axis(0);
+    instance_num_op_conf->mutable_include_axis_conf()->add_axis(0);
     job_builder.AddOps(op_node->parallel_desc().parallel_conf(), {instance_num_op});
     std::string loss_instance_num_lbn;
     if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {

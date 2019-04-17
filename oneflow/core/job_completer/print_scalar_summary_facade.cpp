@@ -5,6 +5,7 @@ namespace oneflow {
 namespace {
 
 void GenerateFacadeImplOpConf(const OpNode& op_node, const JobBuilder& job_builder) {
+  CHECK(op_node.op().op_conf().has_print_scalar_summary_conf());
   const auto& print_scalar_summary_conf = op_node.op().op_conf().print_scalar_summary_conf();
   const LogicalBlobId& vector_lbi = op_node.op().BnInOp2Lbi("x");
   std::vector<OperatorConf> new_ops;
@@ -20,6 +21,7 @@ void GenerateFacadeImplOpConf(const OpNode& op_node, const JobBuilder& job_build
   OperatorConf instance_num_op_conf;
   instance_num_op_conf.set_name("System-Facade-" + op_node.op().op_name() + "_instance_num");
   auto* instance_num_conf = instance_num_op_conf.mutable_shape_elem_cnt_conf();
+  instance_num_conf->mutable_include_axis_conf()->add_axis(0);
   instance_num_conf->set_x(GenLogicalBlobName(vector_lbi));
   instance_num_conf->set_y("y");
   new_ops.push_back(instance_num_op_conf);

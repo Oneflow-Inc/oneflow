@@ -153,6 +153,10 @@ message ConvDataGradKernelConf {
   optional int32 cudnn_bwd_data_algo = 1 [default = -1];
 }
 
+message ShapeElemCntKernelConf {
+  repeated int32 axis = 1;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
@@ -197,5 +201,6 @@ message KernelConf {
     PReluKernelConf prelu_conf = 409;
     ConvFilterGradKernelConf conv_filter_grad_conf = 410;
     ConvDataGradKernelConf conv_data_grad_conf = 411;
+    ShapeElemCntKernelConf shape_elem_cnt_conf = 412;
   }
 }
