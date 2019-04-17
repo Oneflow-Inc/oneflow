@@ -79,7 +79,7 @@ const BlobDesc& OpNode::NoParallelBlobDesc4Lbi(const LogicalBlobId& lbi) const {
 }
 
 const BlobDesc& OpNode::LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const {
-  return lbi2logical_blob_desc_.at(lbi);
+  return ProducerOpNode4Lbi(lbi)->lbi2logical_blob_desc_.at(lbi);
 }
 
 BlobDesc* OpNode::MutNoParallelBlobDesc(const LogicalBlobId& lbi) {
@@ -90,6 +90,12 @@ BlobDesc* OpNode::MutNoParallelBlobDesc(const LogicalBlobId& lbi) {
 BlobDesc* OpNode::MutLogicalBlobDesc4Lbi(const LogicalBlobId& lbi) {
   CHECK_EQ(lbi.op_name(), op().op_name());
   return &lbi2logical_blob_desc_[lbi];
+}
+
+const Shape* OpNode::out_blob_time_shape() const {
+  const Shape* ret = out_blob_time_shape_.get();
+  if (ret != nullptr && ret->elem_cnt() == 0) { return nullptr; }
+  return ret;
 }
 
 Shape* OpNode::mut_out_blob_time_shape() {
@@ -144,7 +150,7 @@ const Shape* OpNode::GetInputBlobFastestTimeShape() const {
     if (ret == nullptr || shape->elem_cnt() > ret->elem_cnt()) { ret = shape; }
   }
   for (OpEdge* edge : in_edges()) {
-    CHECK(ret->elem_cnt() % edge->src_node()->out_blob_time_shape()->elem_cnt());
+    CHECK_EQ(ret->elem_cnt() % edge->src_node()->out_blob_time_shape()->elem_cnt(), 0);
   }
   return ret;
 }

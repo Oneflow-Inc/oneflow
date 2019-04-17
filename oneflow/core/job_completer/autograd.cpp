@@ -74,14 +74,24 @@ void GetLossOpNodesAndAscendants(const OpGraph& op_graph, HashSet<OpNode*>* op_n
 }
 
 std::function<bool(OpNode*)> MakePredicatorNeedBackwardOp(const OpGraph& op_graph) {
-  auto variable_op_nodes_and_descendants = std::make_shared<HashSet<OpNode*>>();
-  GetVariableOpNodesAndDescendants(op_graph, variable_op_nodes_and_descendants.get());
+  auto var_op_nodes_and_descendants = std::make_shared<HashSet<OpNode*>>();
+  GetVariableOpNodesAndDescendants(op_graph, var_op_nodes_and_descendants.get());
   auto loss_op_nodes_and_ascendants = std::make_shared<HashSet<OpNode*>>();
   GetLossOpNodesAndAscendants(op_graph, loss_op_nodes_and_ascendants.get());
-  return [variable_op_nodes_and_descendants, loss_op_nodes_and_ascendants](OpNode* op_node) {
-    return variable_op_nodes_and_descendants->find(op_node)
-               != variable_op_nodes_and_descendants->end()
-           && loss_op_nodes_and_ascendants->find(op_node) != loss_op_nodes_and_ascendants->end();
+  return [var_op_nodes_and_descendants, loss_op_nodes_and_ascendants](OpNode* op_node) {
+    if (var_op_nodes_and_descendants->find(op_node) == var_op_nodes_and_descendants->end()) {
+      return false;
+    }
+    if (loss_op_nodes_and_ascendants->find(op_node) == loss_op_nodes_and_ascendants->end()) {
+      return false;
+    }
+    for (const auto& ibn : op_node->op().input_bns()) {
+      if (op_node->op().InputBlobModifier4Ibn(ibn).requires_grad()) { return true; }
+    }
+    for (const auto& obn : op_node->op().output_bns()) {
+      if (op_node->op().OutputBlobModifier4Obn(obn).requires_grad()) { return true; }
+    }
+    return false;
   };
 }
 
