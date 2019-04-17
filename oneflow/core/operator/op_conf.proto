@@ -1297,10 +1297,11 @@ message ShapeElemCntRangeAxisConf {
 message ShapeElemCntOpConf {
   required string x = 1;
   required string y = 2;
+  optional DataType data_type = 3 [default = kInt32];
   oneof axis_conf {
-    ShapeElemCntAxisConf exclude_axis_conf = 3;
-    ShapeElemCntAxisConf include_axis_conf = 4;
-    ShapeElemCntRangeAxisConf range_axis_conf = 5;
+    ShapeElemCntAxisConf exclude_axis_conf = 4;
+    ShapeElemCntAxisConf include_axis_conf = 5;
+    ShapeElemCntRangeAxisConf range_axis_conf = 6;
   }
 }
 

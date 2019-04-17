@@ -24,6 +24,7 @@ void GenerateFacadeImplOpConf(const OpNode& op_node, const JobBuilder& job_build
   instance_num_conf->mutable_include_axis_conf()->add_axis(0);
   instance_num_conf->set_x(GenLogicalBlobName(vector_lbi));
   instance_num_conf->set_y("y");
+  instance_num_conf->set_data_type(op_node.LogicalBlobDesc4Lbi(vector_lbi).data_type());
   new_ops.push_back(instance_num_op_conf);
   LogicalBlobId scalar_value_lbi4print;
   LogicalBlobId instance_num_lbi4print;
@@ -51,17 +52,6 @@ void GenerateFacadeImplOpConf(const OpNode& op_node, const JobBuilder& job_build
   } else {
     scalar_value_lbi4print = GenLogicalBlobId(reduce_sum_op_conf.name() + "/out");
     instance_num_lbi4print = GenLogicalBlobId(instance_num_op_conf.name() + "/y");
-  }
-  {
-    OperatorConf instance_num_cast_op_conf;
-    instance_num_cast_op_conf.set_name("System-Facade-" + op_node.op().op_name()
-                                       + "_instance_num_cast");
-    auto* instance_num_cast_conf = instance_num_cast_op_conf.mutable_cast_conf();
-    instance_num_cast_conf->set_in(GenLogicalBlobName(instance_num_lbi4print));
-    instance_num_cast_conf->set_out("out");
-    instance_num_cast_conf->set_data_type(DataType::kFloat);
-    new_ops.push_back(instance_num_cast_op_conf);
-    instance_num_lbi4print = GenLogicalBlobId(instance_num_cast_op_conf.name() + "/out");
   }
   job_builder.AddOps(op_node.SoleInEdge()->src_node()->parallel_desc().parallel_conf(), new_ops);
   // scalar print

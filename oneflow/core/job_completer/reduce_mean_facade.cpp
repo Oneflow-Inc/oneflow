@@ -40,6 +40,8 @@ void GenerateFacadeImplOpConf(const OpNode& op_node, const JobBuilder& job_build
   }
   partial_elem_cnt_conf->set_x(reduce_mean_conf.in());
   partial_elem_cnt_conf->set_y("y");
+  partial_elem_cnt_conf->set_data_type(
+      op_node.LogicalBlobDesc4Lbi(op_node.op().BnInOp2Lbi(op_node.op().SoleObn())).data_type());
 
   OperatorConf boradcast_div_op_conf;
   boradcast_div_op_conf.set_name("System-Facade-" + op_node.op().op_name() + "_broadcast_div");

@@ -237,21 +237,10 @@ void AddTotalLossInstanceNumOpConf(const OpGraph& op_graph, Job* job,
     auto* instance_num_op_conf = instance_num_op.mutable_shape_elem_cnt_conf();
     instance_num_op_conf->set_x(GenLogicalBlobName(loss_lbi));
     instance_num_op_conf->set_y("y");
+    instance_num_op_conf->set_data_type(op_node->LogicalBlobDesc4Lbi(loss_lbi).data_type());
     instance_num_op_conf->mutable_include_axis_conf()->add_axis(0);
     job_builder.AddOps(op_node->parallel_desc().parallel_conf(), {instance_num_op});
-    std::string loss_instance_num_lbn;
-    if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
-      OperatorConf cast_op;
-      cast_op.set_name("System-Autograd-" + loss_lbi.op_name() + "-" + loss_lbi.blob_name()
-                       + "-LossInstanceNum-Cast");
-      cast_op.mutable_cast_conf()->set_in(instance_num_op.name() + "/y");
-      cast_op.mutable_cast_conf()->set_out("out");
-      cast_op.mutable_cast_conf()->set_data_type(DataType::kFloat);
-      job_builder.AddOps(op_node->parallel_desc().parallel_conf(), {cast_op});
-      loss_instance_num_lbn = cast_op.name() + "/out";
-    } else {
-      loss_instance_num_lbn = instance_num_op.name() + "/y";
-    }
+    std::string loss_instance_num_lbn = instance_num_op.name() + "/y";
     total_loss_instance_num_conf->add_in(loss_instance_num_lbn);
   }
   total_loss_instance_num_conf->set_out("out");

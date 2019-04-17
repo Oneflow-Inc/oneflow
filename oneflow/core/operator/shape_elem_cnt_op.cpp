@@ -114,7 +114,7 @@ const PbMessage& ShapeElemCntOp::GetCustomizedConf() const {
 
 void ShapeElemCntOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                     const ParallelContext* parallel_ctx) const {
-  GetBlobDesc4BnInOp("y")->set_data_type(DataType::kInt32);
+  GetBlobDesc4BnInOp("y")->set_data_type(op_conf().shape_elem_cnt_conf().data_type());
   GetBlobDesc4BnInOp("y")->mut_shape() = Shape({1});
 }
 
