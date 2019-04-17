@@ -9,10 +9,15 @@ import "oneflow/core/register/logical_blob_id.proto";
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/common/shape.proto";
 
+message OpTimeShape {
+  optional ShapeProto in_blob_fastest_time_shape = 1;
+  optional ShapeProto out_blob_time_shape = 2;
+}
+
 message JobHelperConf {
   map<string, LogicalBlobIdPairs> tag2lbi_relations = 1;
   map<string, OpNameRelations> tag2op_name_relations = 2;
-  map<string, ShapeProto> op_name2time_shape = 3;
+  map<string, OpTimeShape> op_name2op_time_shape = 3;
 }
 
 message Job {
