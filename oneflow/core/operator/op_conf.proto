@@ -995,12 +995,6 @@ message L2NormalizeOpConf {
   optional float epsilon = 4 [default = 1e-12];
 }
 
-message TupleBufferOpConf {
-  repeated string in = 1;
-  repeated string out = 2;
-  required int64 max_buffer_piece = 3;
-}
-
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1095,8 +1089,6 @@ message OperatorConf {
     ParallelCastOpConf parallel_cast_conf = 263;
     L2NormalizeOpConf l2_normalize_conf = 264;
     PReluOpConf prelu_conf = 265;
-    TupleBufferOpConf tuple_buffer_conf = 266;
-
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
