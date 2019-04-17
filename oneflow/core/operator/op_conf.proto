@@ -1306,6 +1306,17 @@ message AccOpConf {
   optional int32 max_acc_num = 3 [default = 1];   
 }
 
+message EveryNthOpConf {
+  required string in = 1;
+  required string out = 2;
+  required int64 n = 3;
+}
+
+message ModelSaveV2OpConf {
+  required string in = 1;
+  required string lbn = 2;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1430,7 +1441,9 @@ message OperatorConf {
     ConvBiasGradOpConf conv_bias_grad_conf = 283;
     ConvFilterGradOpConf conv_filter_grad_conf = 284;
     ConvDataGradOpConf conv_data_grad_conf = 285;
-    TanHGradOpConf tanh_grad_conf = 286;
+    EveryNthOpConf every_nth_conf = 286;
+    ModelSaveV2OpConf model_save_v2_conf = 287;
+    TanHGradOpConf tanh_grad_conf = 288;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

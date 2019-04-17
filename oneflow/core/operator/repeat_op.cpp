@@ -3,7 +3,7 @@
 
 namespace oneflow {
 
-void oneflow::RepeatOp::InitFromOpConf() {
+void RepeatOp::InitFromOpConf() {
   CHECK(op_conf().has_repeat_conf());
   const RepeatOpConf& conf = op_conf().repeat_conf();
   CHECK_GE(conf.repeat_num(), 1);
