@@ -30,6 +30,52 @@ namespace oneflow {
 
 namespace {
 
+const LogicalEdge* GetConnectedEdge(const LogicalNode* src_node, const LogicalNode* dst_node) {
+  LogicalEdge* connect_edge = nullptr;
+  for (LogicalEdge* edge : src_node->out_edges()) {
+    if (edge->dst_node() == dst_node) {
+      CHECK(connect_edge == nullptr);
+      connect_edge = edge;
+    }
+  }
+  return connect_edge;
+}
+
+static bool IsConnectedLbisAllSameSbpParallel(const LogicalNode* src_node,
+                                              const LogicalNode* dst_node) {
+  if (src_node->parallel_desc()->parallel_num() != dst_node->parallel_desc()->parallel_num()) {
+    return false;
+  }
+  const LogicalEdge* connect_edge = GetConnectedEdge(src_node, dst_node);
+  CHECK_NOTNULL(connect_edge);
+  CHECK_GT(connect_edge->lbis().size(), 0);
+  const std::string& src_op_name = src_node->SoleOp()->op_name();
+  const std::string& dst_op_name = dst_node->SoleOp()->op_name();
+  HashSet<bool> predicators;
+  for (const LogicalBlobId& lbi : connect_edge->lbis()) {
+    const auto& src_sbp = Global<OpGraph>::Get()->GetSbpParallel(src_op_name, lbi);
+    const auto& dst_sbp = Global<OpGraph>::Get()->GetSbpParallel(dst_op_name, lbi);
+    predicators.insert(src_sbp == dst_sbp);
+  }
+  CHECK_EQ(predicators.size(), 1);
+  return *predicators.begin();
+}
+
+static bool IsProducedLbisAllBroadcastParallel(const LogicalNode* src_node,
+                                               const LogicalNode* dst_node) {
+  const LogicalEdge* connect_edge = GetConnectedEdge(src_node, dst_node);
+  CHECK_NOTNULL(connect_edge);
+  CHECK_GT(connect_edge->lbis().size(), 0);
+  const std::string& src_op_name = src_node->SoleOp()->op_name();
+  HashSet<bool> predicators;
+  for (const LogicalBlobId& lbi : connect_edge->lbis()) {
+    const auto& src_sbp = Global<OpGraph>::Get()->GetSbpParallel(src_op_name, lbi);
+    predicators.insert(src_sbp.has_broadcast_parallel());
+  }
+  CHECK_EQ(predicators.size(), 1);
+  return *predicators.begin();
+}
+
 bool HasSoleIdentityOp(const LogicalNode* logical_node) {
   const auto& op_conf = logical_node->SoleOp()->op_conf();
   return logical_node->op_vec().size() == 1
@@ -269,32 +315,6 @@ bool LogicalNode::HasOpWithCondition(std::function<bool(const Operator*)> cond) 
   return false;
 }
 
-static bool IsConnectedLbisAllSameSbpParallel(const LogicalNode* src_node,
-                                              const LogicalNode* dst_node) {
-  if (src_node->parallel_desc()->parallel_num() != dst_node->parallel_desc()->parallel_num()) {
-    return false;
-  }
-  LogicalEdge* connect_edge = nullptr;
-  for (LogicalEdge* edge : src_node->out_edges()) {
-    if (edge->dst_node() == dst_node) {
-      CHECK(connect_edge == nullptr);
-      connect_edge = edge;
-    }
-  }
-  CHECK_NOTNULL(connect_edge);
-  CHECK_GT(connect_edge->lbis().size(), 0);
-  const std::string& src_op_name = src_node->SoleOp()->op_name();
-  const std::string& dst_op_name = dst_node->SoleOp()->op_name();
-  HashSet<bool> predicators;
-  for (const LogicalBlobId& lbi : connect_edge->lbis()) {
-    const auto& src_sbp = Global<OpGraph>::Get()->GetSbpParallel(src_op_name, lbi);
-    const auto& dst_sbp = Global<OpGraph>::Get()->GetSbpParallel(dst_op_name, lbi);
-    predicators.insert(src_sbp == dst_sbp);
-  }
-  CHECK_EQ(predicators.size(), 1);
-  return *predicators.begin();
-}
-
 BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const LogicalNode* dst_node) {
   std::shared_ptr<const ParallelDesc> src_pd = src_node->parallel_desc();
   std::shared_ptr<const ParallelDesc> dst_pd = dst_node->parallel_desc();
@@ -319,7 +339,11 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
       && IsConnectedLbisAllSameSbpParallel(src_node, dst_node)) {
     return &TaskGraph::BldSubTskGphByOneToOne;
   }
-  return &TaskGraph::BldSubTskGphByBoxing;
+  if (IsProducedLbisAllBroadcastParallel(src_node, dst_node)) {
+    return &TaskGraph::BldSubTskGphBySelectOneSourceToSoleSink;
+  } else {
+    return &TaskGraph::BldSubTskGphByBoxing;
+  }
 }
 
 REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalMdUpdt"

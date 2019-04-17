@@ -80,8 +80,8 @@ class ShapeElemCntOpBroadcastSbpSignatureRule final : public ParallelSbpSignatur
 }  // namespace
 
 void ShapeElemCntOp::InitFromOpConf() {
-  EnrollInputBn("x")->set_use_header_only(true);
-  EnrollOutputBn("y");
+  EnrollInputBn("x", false)->set_use_header_only(true);
+  EnrollOutputBn("y", false);
 }
 
 const PbMessage& ShapeElemCntOp::GetCustomizedConf() const {
