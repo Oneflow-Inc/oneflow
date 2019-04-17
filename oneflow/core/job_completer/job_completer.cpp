@@ -4,6 +4,7 @@
 #include "oneflow/core/job_completer/autotick.h"
 #include "oneflow/core/job_completer/add_keep_header_only_op_conf.h"
 #include "oneflow/core/job_completer/optimizer.h"
+#include "oneflow/core/job_completer/add_saver.h"
 #include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
@@ -78,6 +79,7 @@ void GenerateOpConf4Trainning(const OpGraph& op_graph, Job* job) {
   HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
   AutoGrad(op_graph, job, &op_name2ibn2in_diff_lbi, &lbi2diff_lbi);
   AddOptimizerOpConf(op_graph, job, lbi2diff_lbi, total_loss_instance_num);
+  AddSaver(op_graph, job);
   UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(lbi2diff_lbi, job);
   UpdateJobHelperConfSbpSignatureHint(op_graph, op_name2ibn2in_diff_lbi, job);
 }
@@ -284,41 +286,60 @@ void FixAndOptimizeDLNet(Job* job) {
 
 void SetOpTimeShape(const OpGraph& op_graph, Job* job) {
   op_graph.ForEachNode([&](OpNode* op_node) {
-    op_node->out_blob_time_shape().ToProto(
-        &(*job->mutable_helper()->mutable_op_name2time_shape())[op_node->op().op_name()]);
+    auto* op_time_shape =
+        &(*job->mutable_helper()->mutable_op_name2op_time_shape())[op_node->op().op_name()];
+    if (op_node->out_blob_time_shape() != nullptr) {
+      op_node->out_blob_time_shape()->ToProto(op_time_shape->mutable_out_blob_time_shape());
+    }
+    const auto* in_blob_fastest_time_shape = op_node->GetInputBlobFastestTimeShape();
+    if (in_blob_fastest_time_shape != nullptr) {
+      in_blob_fastest_time_shape->ToProto(op_time_shape->mutable_in_blob_fastest_time_shape());
+    }
   });
 }
 
 void SetCtrlInOpName(const OpGraph& op_graph, Job* job) {
-  auto IsModelUpdateOp = [](const OperatorConf& op_conf) -> bool {
-    const PbMessage& conf = GetMessageInPbMessage(op_conf, op_conf.op_type_case());
-    const auto* user_conf =
-        TryGetMsgPtrFromPbMessage<NormalModelUpdateOpUserConf>(conf, "user_conf");
-    if (user_conf == nullptr) { return false; }
-    return IsClassRegistered<GenerateOptimizerOpConfWrapperStruct>(user_conf->normal_mdupdt_case());
+  auto IsMutableConsumedLbi = [](const Operator& op, const LogicalBlobId& lbi) -> bool {
+    for (const std::string& bn : op.input_bns()) {
+      if (op.BnInOp2Lbi(bn) == lbi && op.InputBlobModifier4Ibn(bn).is_mutable()) { return true; }
+    }
+    return false;
+  };
+  auto IsMdSaveEveryNthOp = [](const OperatorConf& op_conf) -> bool {
+    return op_conf.has_every_nth_conf();
   };
   JobBuilder job_builder(job);
   op_graph.ForEachNode([&](OpNode* op_node) {
     if (op_node->op().op_conf().has_variable_conf() == false) { return; }
     if (op_node->out_edges().size() <= 1) { return; }
-    const OperatorConf* model_update_op_conf = nullptr;
-    std::vector<const OperatorConf*> fw_bw_ops;
+    const Operator& variable_op = op_node->op();
+    const LogicalBlobId& variable_lbi = variable_op.BnInOp2Lbi(variable_op.SoleObn());
+    const OperatorConf* mutable_consumer = nullptr;
+    const OperatorConf* model_save_every_nth_op_conf = nullptr;
+    std::vector<const OperatorConf*> naive_consumers;
     for (OpEdge* edge : op_node->out_edges()) {
       const auto& op_conf = edge->dst_node()->op().op_conf();
-      if (IsModelUpdateOp(op_conf)) {
-        CHECK(model_update_op_conf == nullptr);
-        model_update_op_conf = &op_conf;
+      if (IsMutableConsumedLbi(edge->dst_node()->op(), variable_lbi)) {
+        CHECK(mutable_consumer == nullptr);
+        mutable_consumer = &op_conf;
+      } else if (IsMdSaveEveryNthOp(op_conf)) {
+        CHECK(model_save_every_nth_op_conf == nullptr);
+        model_save_every_nth_op_conf = &op_conf;
       } else {
-        // TODO: exclude model save nodes
-        fw_bw_ops.push_back(&op_conf);
+        naive_consumers.push_back(&op_conf);
       }
     }
-    if (model_update_op_conf == nullptr) { return; }
-    OperatorConf mut_md_updt_op_conf(*model_update_op_conf);
-    for (const auto* fw_bw_op : fw_bw_ops) {
-      mut_md_updt_op_conf.add_ctrl_in_op_name(fw_bw_op->name());
+    if (mutable_consumer == nullptr) { return; }
+    OperatorConf mut_mutable_consumer_op_conf(*mutable_consumer);
+    for (const auto* fw_bw_op : naive_consumers) {
+      mut_mutable_consumer_op_conf.add_ctrl_in_op_name(fw_bw_op->name());
     }
-    job_builder.MutOps({mut_md_updt_op_conf});
+    job_builder.MutOps({mut_mutable_consumer_op_conf});
+    if (model_save_every_nth_op_conf != nullptr) {
+      OperatorConf mut_model_save_every_nth_op_conf(*model_save_every_nth_op_conf);
+      mut_model_save_every_nth_op_conf.add_ctrl_in_op_name(mutable_consumer->name());
+      job_builder.MutOps({mut_model_save_every_nth_op_conf});
+    }
   });
 }
 

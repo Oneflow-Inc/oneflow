@@ -63,7 +63,7 @@ void CastOp::FixSbpSignature(SbpSignature* sbp_signature) const {
 void CastOp::GetSbpSignatureRules(
     const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  rules->emplace_back(new CastSbpSignatureRule(this));
+  rules->emplace_back(MakeIdentitySbpSignatureRule(this));
 }
 
 REGISTER_OP(OperatorConf::kCastConf, CastOp);

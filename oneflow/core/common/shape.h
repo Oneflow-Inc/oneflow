@@ -43,6 +43,8 @@ class Shape final {
   static Shape Ones(const int64_t num_axes);
   std::vector<int64_t> Axes4BroadcastTo(const Shape& broadcast_dim_vec) const;
 
+  bool Containing(const Shape& small_shape) const;
+
  private:
   void UpdateElemCnt();
 

@@ -11,6 +11,7 @@
 #include "oneflow/core/graph/repeat_forward_compute_task_node.h"
 #include "oneflow/core/graph/repeat_backward_compute_task_node.h"
 #include "oneflow/core/graph/acc_compute_task_node.h"
+#include "oneflow/core/graph/every_nth_compute_task_node.h"
 
 namespace oneflow {
 
@@ -31,8 +32,14 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   std::shared_ptr<const ParallelDesc>& mut_parallel_desc() { return parallel_desc_; }
 
   // time_shape
-  const Shape* time_shape() const { return time_shape_.get(); }
-  void reset_time_shape(const Shape* time_shape) { time_shape_.reset(time_shape); }
+  const Shape* out_blob_time_shape() const { return out_blob_time_shape_.get(); }
+  void reset_out_blob_time_shape(const Shape* time_shape) {
+    out_blob_time_shape_.reset(time_shape);
+  }
+  const Shape* in_blob_fastest_time_shape() const { return in_blob_fastest_time_shape_.get(); }
+  void reset_in_blob_fastest_time_shape(const Shape* time_shape) {
+    in_blob_fastest_time_shape_.reset(time_shape);
+  }
 
   // shared_model_nodes_
   std::shared_ptr<const std::vector<LogicalNode*>> shared_model_nodes() const {
@@ -73,7 +80,8 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   std::shared_ptr<const std::vector<LogicalNode*>> shared_model_nodes_;
 
   HashMap<const LogicalNode*, std::vector<LogicalBlobId>> dst2data_lbis_;
-  std::unique_ptr<const Shape> time_shape_;
+  std::unique_ptr<const Shape> in_blob_fastest_time_shape_;
+  std::unique_ptr<const Shape> out_blob_time_shape_;
 };
 
 #define BLD_SUB_TSK_GPH_MTHD_ARGS()                                                       \
@@ -305,6 +313,7 @@ DECLARE_REDUCE_LOGICAL_NODE(NcclReduceScatterLogicalNode, true);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatForward);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Acc);
 DECLARE_DERIVED_BACKWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatBackward);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(EveryNth);
 
 #define DECLARE_BEFORE_OR_AFTER_ALLREDUCE_REDUCE_NODE(class_name, may_consume_md_diff) \
   class class_name final : public ReduceLogicalNode {                                  \

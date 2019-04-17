@@ -17,8 +17,9 @@ void IdentityLossOp::VirtualInitFromOpConf() {
 void IdentityLossOp::VirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
+  const BlobDesc* prediction = GetBlobDesc4BnInOp("prediction");
+  *GetBlobDesc4BnInOp("loss") = *prediction;
   if (Global<JobDesc>::Get()->IsTrain()) {
-    const BlobDesc* prediction = GetBlobDesc4BnInOp("prediction");
     BlobDesc* ones = GetBlobDesc4BnInOp("ones");
     ones->set_data_type(prediction->data_type());
     ones->mut_shape() = prediction->shape();

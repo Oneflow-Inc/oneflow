@@ -44,13 +44,6 @@ LogicalBlobId* Operator::MutBnInOp2Lbi(const std::string& bn_in_op) {
   }
 }
 
-const InputBlobModifier& Operator::InputBlobModifier4Ibn(const std::string& ibn) const {
-  return op_attribute_.ibn2input_blob_modifier().at(ibn);
-}
-const OutputBlobModifier& Operator::OutputBlobModifier4Obn(const std::string& obn) const {
-  return op_attribute_.obn2output_blob_modifier().at(obn);
-}
-
 const std::string& Operator::SoleIbn() const {
   CHECK_EQ(input_bns().size(), 1);
   return input_bns().Get(0);
@@ -480,6 +473,14 @@ InputBlobModifier* Operator::EnrollInputBn(const std::string& ibn, bool has_diff
   auto* ret = MutInputBlobModifier4Ibn(ibn);
   ret->set_requires_grad(has_diff);
   return ret;
+}
+
+const InputBlobModifier& Operator::InputBlobModifier4Ibn(const std::string& ibn) const {
+  return op_attribute_.ibn2input_blob_modifier().at(ibn);
+}
+
+const OutputBlobModifier& Operator::OutputBlobModifier4Obn(const std::string& obn) const {
+  return op_attribute_.obn2output_blob_modifier().at(obn);
 }
 
 InputBlobModifier* Operator::MutInputBlobModifier4Ibn(const std::string& ibn) {
