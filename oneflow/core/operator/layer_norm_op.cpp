@@ -125,6 +125,7 @@ bool LayerNormOp::IsInputBlobAllowedModelSplit(const std::string& ibn) const {
 }
 
 void LayerNormOp::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   const LayerNormOpConf& conf = op_conf().layer_norm_conf();
   if (conf.has_beta() || conf.has_gamma()) {

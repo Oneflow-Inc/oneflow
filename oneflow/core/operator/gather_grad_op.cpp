@@ -15,7 +15,7 @@ class GatherGradDataParallelSbpSignatureRule final : public ParallelSbpSignature
 
   const std::string Description() const override { return op().op_name() + ": S -> P"; }
 
-  const SbpSigMatchResult GetMatchResult(
+  const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelDesc& parallel_desc) const override {
     const SbpParallel& indices_sbp_parallel = SbpInferHint4BnInOp("indices").sbp_parallel();
@@ -54,7 +54,7 @@ class GatherGradModelParallelSbpSignatureRule final : public ParallelSbpSignatur
 
   const std::string Description() const override { return op().op_name() + ": (B, S) -> S"; }
 
-  const SbpSigMatchResult GetMatchResult(
+  const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelDesc& parallel_desc) const override {
     const SbpParallel& indices_sbp_parallel = SbpInferHint4BnInOp("indices").sbp_parallel();
@@ -124,6 +124,7 @@ void GatherGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
 }
 
 void GatherGradOp::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   rules->emplace_back(new GatherGradDataParallelSbpSignatureRule(this));
   rules->emplace_back(new GatherGradModelParallelSbpSignatureRule(this));

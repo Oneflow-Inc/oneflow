@@ -142,50 +142,58 @@ int32_t Operator::OutputBlobModelSplitAxis(
   }
 }
 
+void Operator::GetSbpSignatureRulesIf(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  rules->emplace_back(MakeUnparallelSbpSignatureRule(this));
+  GetSbpSignatureRules(SbpInferHint4Ibn, rules);
+}
+
 void Operator::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   bool has_model = !(model_bns().empty() && const_model_bns().empty());
   rules->emplace_back(MakeDataSplitSbpSignatureRule(this));
   if (IsSoleInputBlobAllowedModelSplit()) {
     CHECK(!has_model);
-    rules->emplace_back(MakeModelSplitSbpSignatureRule(this));
-    rules->emplace_back(MakeBroadcastSbpSignatureRule(this));
+    if (SbpInferHint4Ibn(SoleIbn()).sbp_parallel().has_split_parallel()) {
+      rules->emplace_back(MakeModelSplitSbpSignatureRule(this));
+    }
+    rules->emplace_back(MakeSoleIbnBroadcastSbpSignatureRule(this));
   } else if (has_model) {
     for (const auto& ibn : input_bns()) { CHECK(!IsInputBlobAllowedModelSplit(ibn)); }
     rules->emplace_back(MakeModelSplitSbpSignatureRule(this));
   } else if (input_bns().size() == 1) {
-    rules->emplace_back(MakeBroadcastSbpSignatureRule(this));
+    rules->emplace_back(MakeSoleIbnBroadcastSbpSignatureRule(this));
   } else {
     // do nothing
   }
 }
 
-void Operator::GetSbpSignatureRulesIf(
-    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  rules->emplace_back(MakeUnparallelSbpSignatureRule(this));
-  GetSbpSignatureRules(rules);
-}
-
 void Operator::InferSbpSignatureIf(
-    SbpSignature* sbp_signature,
+    SbpSignature* sbp_signature, const SbpSignature& conf_sbp_sig_hint,
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   std::vector<std::unique_ptr<const SbpSignatureRule>> rules;
-  GetSbpSignatureRulesIf(&rules);
+  GetSbpSignatureRulesIf(SbpInferHint4Ibn, &rules);
   std::vector<SbpSigMatchResult> match_results;
   for (const auto& signature : rules) {
-    match_results.push_back(signature->GetMatchResultIf(SbpInferHint4Ibn, parallel_desc));
+    match_results.push_back(signature->MatchIf(SbpInferHint4Ibn, conf_sbp_sig_hint, parallel_desc));
   }
   int32_t match_success_cnt = 0;
   for (const auto& result : match_results) {
     if (result.has_success()) { ++match_success_cnt; }
   }
-  if (match_success_cnt == 1) {
-    const SbpSignatureRule* match_signature = nullptr;
+  if (match_success_cnt >= 1) {
+    HashSet<SbpSignature> signature_check;
     FOR_RANGE(int32_t, i, 0, rules.size()) {
-      if (match_results.at(i).has_success()) { match_signature = rules.at(i).get(); }
+      if (match_results.at(i).has_success()) {
+        rules.at(i)->GenerateSignature(SbpInferHint4Ibn, sbp_signature);
+        signature_check.insert(*sbp_signature);
+      }
     }
-    match_signature->GenerateSignature(SbpInferHint4Ibn, sbp_signature);
+    CHECK_EQ(signature_check.size(), 1);
+    CHECK(IsSbpSignatureContaining(*sbp_signature, conf_sbp_sig_hint));
   } else if (match_success_cnt == 0) {
     std::stringstream ss;
     FOR_RANGE(int32_t, i, 0, rules.size()) {
@@ -220,8 +228,6 @@ void Operator::InferSbpSignatureIf(
       }
     }
     LOG(FATAL) << ss.str();
-  } else {
-    UNIMPLEMENTED();
   }
 }
 
@@ -464,7 +470,9 @@ InputBlobModifier* Operator::EnrollInputBn(const std::string& ibn, bool has_diff
     *(mut_input_diff_bns()->Add()) = idbn;
     CHECK(mut_bn_in_op2lbi()->insert({idbn, lbi}).second);
   }
-  return MutInputBlobModifier4Ibn(ibn);
+  auto* ret = MutInputBlobModifier4Ibn(ibn);
+  ret->set_requires_grad(has_diff);
+  return ret;
 }
 
 const InputBlobModifier& Operator::InputBlobModifier4Ibn(const std::string& ibn) const {
@@ -511,7 +519,9 @@ OutputBlobModifier* Operator::EnrollOutputBn(const std::string& obn, bool has_di
     *(mut_output_diff_bns()->Add()) = odbn;
     CHECK(mut_bn_in_op2lbi()->insert({odbn, lbi}).second);
   }
-  return MutOutputBlobModifier4Obn(obn);
+  auto* ret = MutOutputBlobModifier4Obn(obn);
+  ret->set_requires_grad(has_diff);
+  return ret;
 }
 
 void Operator::EnrollRepeatedOutputBn(const std::string& obn_prefix, int32_t num, bool has_diff) {

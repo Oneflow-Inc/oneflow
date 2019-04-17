@@ -2,15 +2,28 @@
 
 namespace oneflow {
 
+void GenerateOptimizerOpConfWrapperStruct::Call(
+    const VariableOp& var_op, std::vector<OperatorConf>* op_confs, JobHelperConf* job_helper_conf,
+    const std::function<const LogicalBlobId&(const std::string&)>& DiffLbi4BnInOp,
+    const LogicalBlobId& total_loss_instance_num_lbi) const {
+  if (func_) {
+    (*func_)(var_op, op_confs, job_helper_conf, DiffLbi4BnInOp, total_loss_instance_num_lbi);
+  } else if (naive_func_) {
+    (*naive_func_)(var_op, op_confs, DiffLbi4BnInOp, total_loss_instance_num_lbi);
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
 void GenerateOptimizerOpConfIf(
-    const VariableOp& var_op, std::vector<OperatorConf>* op_confs,
+    const VariableOp& var_op, std::vector<OperatorConf>* op_confs, JobHelperConf* job_helper_conf,
     const std::function<const LogicalBlobId&(const std::string&)>& DiffLbi4BnInOp,
     const LogicalBlobId& total_loss_instance_num_lbi) {
   const auto& train_conf =
       Global<JobDesc>::Get()->other_conf().predict_conf().tmp_split_fw_bw_train_conf();
   auto optimizer_case = train_conf.model_update_conf().normal_mdupdt_case();
   auto* obj = NewObj<GenerateOptimizerOpConfWrapperStruct>(optimizer_case);
-  obj->Call(var_op, op_confs, DiffLbi4BnInOp, total_loss_instance_num_lbi);
+  obj->Call(var_op, op_confs, job_helper_conf, DiffLbi4BnInOp, total_loss_instance_num_lbi);
 }
 
 void AddOptimizerOpConf(const OpGraph& op_graph, Job* job,
@@ -25,7 +38,7 @@ void AddOptimizerOpConf(const OpGraph& op_graph, Job* job,
     auto DiffLbi4BnInOp = [&](const std::string& bn) -> const LogicalBlobId& {
       return lbi2diff_lbi.at(var_op->BnInOp2Lbi(bn));
     };
-    GenerateOptimizerOpConfIf(*var_op, &optimizer_op_confs, DiffLbi4BnInOp,
+    GenerateOptimizerOpConfIf(*var_op, &optimizer_op_confs, job->mutable_helper(), DiffLbi4BnInOp,
                               total_loss_instance_num_lbi);
     job_builder.AddOps(op_node->parallel_desc().parallel_conf(), optimizer_op_confs);
   });

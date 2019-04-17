@@ -20,7 +20,7 @@ class Conv_DB_2_S_SbpSignatureRule final : public ParallelSbpSignatureRule {
 
   const std::string Description() const override { return op().op_name() + ": DB -> S"; }
 
-  const SbpSigMatchResult GetMatchResult(
+  const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
     if (!SbpInferHint4Ibn("in").sbp_parallel().has_broadcast_parallel()) {
@@ -356,6 +356,7 @@ void ConvOp<NDims>::InferCudnnAlgo(
 
 template<int32_t NDims>
 void ConvOp<NDims>::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   rules->emplace_back((MakeDataSplitSbpSignatureRule(this)));
   if (IsFwBwSplit()) {

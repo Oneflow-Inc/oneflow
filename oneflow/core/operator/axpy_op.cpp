@@ -13,7 +13,7 @@ class AxpySbpSignatureRule final : public ParallelSbpSignatureRule {
 
   const std::string Description() const override { return op().op_name() + ": (A, A) -> ()"; }
 
-  const SbpSigMatchResult GetMatchResult(
+  const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
     if (parallel_desc.parallel_num() != SbpInferHint4Ibn("y").parallel_num()) {
@@ -51,6 +51,7 @@ void AxpyOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
 const PbMessage& AxpyOp::GetCustomizedConf() const { return op_conf().axpy_conf(); }
 
 void AxpyOp::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   rules->emplace_back(new AxpySbpSignatureRule(this));
 }
