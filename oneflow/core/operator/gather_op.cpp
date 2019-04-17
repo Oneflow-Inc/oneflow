@@ -24,7 +24,7 @@ class GatherDataParallelSbpSignatureRule final : public ParallelSbpSignatureRule
 
   const std::string Description() const override { return op().op_name() + ": (S, B) -> S"; }
 
-  const SbpSigMatchResult GetMatchResult(
+  const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelDesc& parallel_desc) const override {
     const SbpInferHint& in_sbp_infer_hint = SbpInferHint4BnInOp("in");
@@ -62,7 +62,7 @@ class GatherModelParallelSbpSignatureRule final : public ParallelSbpSignatureRul
 
   const std::string Description() const override { return op().op_name() + ": (B, S) -> S"; }
 
-  const SbpSigMatchResult GetMatchResult(
+  const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelDesc& parallel_desc) const override {
     const SbpInferHint& in_sbp_infer_hint = SbpInferHint4BnInOp("in");
@@ -143,6 +143,7 @@ void GatherOp::VirtualGenKernelConf(
 }
 
 void GatherOp::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   rules->emplace_back(new GatherDataParallelSbpSignatureRule(this));
   rules->emplace_back(new GatherModelParallelSbpSignatureRule(this));

@@ -1,10 +1,10 @@
-#ifndef ONEFLOW_CORE_OPERATOR_SBP_SIGNATURE_RULE_H_
-#define ONEFLOW_CORE_OPERATOR_SBP_SIGNATURE_RULE_H_
+#ifndef ONEFLOW_CORE_JOB_SBP_SIGNATURE_RULE_H_
+#define ONEFLOW_CORE_JOB_SBP_SIGNATURE_RULE_H_
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/operator/op_parallel_match_result.pb.h"
+#include "oneflow/core/job/sbp_sig_match_result.pb.h"
 #include "oneflow/core/job/sbp_infer_hint.h"
 
 namespace oneflow {
@@ -15,9 +15,11 @@ class SbpSignatureRule {
  public:
   virtual ~SbpSignatureRule() = default;
   virtual const std::string Description() const = 0;
-  virtual const SbpSigMatchResult GetMatchResultIf(
+
+  const SbpSigMatchResult MatchIf(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc) const = 0;
+      const SbpSignature& conf_obn_sbp_sig_hint, const ParallelDesc& parallel_desc) const;
+
   virtual void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       SbpSignature* sbp_signature) const = 0;
@@ -25,9 +27,14 @@ class SbpSignatureRule {
  protected:
   SbpSignatureRule(const Operator* op) : op_(op) {}
   const Operator& op() const { return *op_; }
-  virtual const SbpSigMatchResult GetMatchResult(
+
+  virtual const SbpSigMatchResult MatchByParallelNum(int32_t parallel_num) const = 0;
+  virtual const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const = 0;
+  virtual const SbpSigMatchResult MatchByObnSbpSigHint(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      const SbpSignature& conf_obn_sbp_signature) const = 0;
 
  private:
   const Operator* op_;
@@ -37,9 +44,10 @@ class ParallelSbpSignatureRule : public SbpSignatureRule {
  protected:
   ParallelSbpSignatureRule(const Operator* op) : SbpSignatureRule(op) {}
   virtual ~ParallelSbpSignatureRule() = default;
-  virtual const SbpSigMatchResult GetMatchResultIf(
+  const SbpSigMatchResult MatchByParallelNum(int32_t parallel_num) const override;
+  const SbpSigMatchResult MatchByObnSbpSigHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc) const override;
+      const SbpSignature& conf_obn_sbp_signature) const override;
 };
 
 const SbpSigMatchResult MakeSbpSigMatchSuccess();
@@ -62,7 +70,10 @@ std::unique_ptr<const SbpSignatureRule> MakeDataSplitSbpSignatureRule(const Oper
 std::unique_ptr<const SbpSignatureRule> MakeModelSplitSbpSignatureRule(const Operator* op);
 
 // (B,) -> (B, ...)
-std::unique_ptr<const SbpSignatureRule> MakeBroadcastSbpSignatureRule(const Operator* op);
+std::unique_ptr<const SbpSignatureRule> MakeSoleIbnBroadcastSbpSignatureRule(const Operator* op);
+
+// (B, ...) -> (B, ...)
+std::unique_ptr<const SbpSignatureRule> MakeMultiIbnsBroadcastSbpSignatureRule(const Operator* op);
 
 // (B, S(0), ...) -> (S(0), ...)
 // return blobs: data splitted
@@ -79,4 +90,4 @@ std::unique_ptr<const SbpSignatureRule> MakeIdentitySbpSignatureRule(const Opera
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_SBP_SIGNATURE_RULE_H_
+#endif  // ONEFLOW_CORE_JOB_SBP_SIGNATURE_RULE_H_

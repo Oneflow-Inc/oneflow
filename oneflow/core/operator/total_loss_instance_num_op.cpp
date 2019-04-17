@@ -13,7 +13,7 @@ class TotalLossInstanceSbpSignatureRule final : public ParallelSbpSignatureRule 
 
   const std::string Description() const override { return op().op_name() + ": (U, ...) -> (U,)"; }
 
-  const SbpSigMatchResult GetMatchResult(
+  const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
     for (const std::string& ibn : op().input_bns()) {
@@ -57,6 +57,7 @@ const PbMessage& TotalLossInstanceNumOp::GetCustomizedConf() const {
 }
 
 void TotalLossInstanceNumOp::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   rules->emplace_back(new TotalLossInstanceSbpSignatureRule(this));
 }

@@ -26,7 +26,7 @@ class ReduceConcatOp final : public Operator {
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext*, KernelConf*,
                             const OpContext* op_ctx) const override;
-  LogicalBlobId ibn2lbi(const std::string& input_bn) const override { return GenPackedLbi(); }
+  LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
   LogicalBlobId obn2lbi(const std::string& output_bn) const override;
 };
 

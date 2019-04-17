@@ -14,7 +14,7 @@ class ConvBiasGradDataParallelSbpSignatureRule final : public ParallelSbpSignatu
 
   const std::string Description() const override { return op().op_name() + ": S(0) -> P"; }
 
-  const SbpSigMatchResult GetMatchResult(
+  const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
     if (parallel_desc.policy() == kDataParallel) { return MakeSbpSigMatchSuccess(); }
@@ -40,7 +40,7 @@ class ConvBiasGradModelParallelSbpSignatureRule final : public ParallelSbpSignat
 
   const std::string Description() const override { return op().op_name() + ": S(chan) -> S"; }
 
-  const SbpSigMatchResult GetMatchResult(
+  const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
     if (parallel_desc.policy() == kModelParallel) { return MakeSbpSigMatchSuccess(); }
@@ -100,6 +100,7 @@ int32_t ConvBiasGradOp::OutputBlobModelSplitAxis(
 }
 
 void ConvBiasGradOp::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   rules->emplace_back(new ConvBiasGradDataParallelSbpSignatureRule(this));
   rules->emplace_back(new ConvBiasGradModelParallelSbpSignatureRule(this));

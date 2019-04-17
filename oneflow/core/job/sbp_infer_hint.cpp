@@ -4,11 +4,6 @@
 
 namespace oneflow {
 
-int64_t SbpInferHint::num_axes() const {
-  CHECK_GT(num_axes_, 0);
-  return num_axes_;
-}
-
 bool SbpInferHint::has_split_axis() const {
   bool ret = sbp_parallel_.has_split_parallel();
   if (ret) {

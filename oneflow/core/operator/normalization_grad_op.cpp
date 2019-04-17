@@ -15,7 +15,7 @@ class NormalizationGradDataParallelSbpSignatureRule final : public ParallelSbpSi
 
   const std::string Description() const override { return op().op_name() + ": (S, B) -> (S, P)"; }
 
-  const SbpSigMatchResult GetMatchResult(
+  const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelDesc& parallel_desc) const override {
     if (parallel_desc.policy() == kDataParallel) { return MakeSbpSigMatchSuccess(); }
@@ -127,6 +127,7 @@ void NormalizationGradOp::InferBlobDescs(
 }
 
 void NormalizationGradOp::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   rules->emplace_back(new NormalizationGradDataParallelSbpSignatureRule(this));
 }

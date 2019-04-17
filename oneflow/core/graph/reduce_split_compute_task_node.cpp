@@ -19,25 +19,37 @@ int32_t GetDataRegstDescCnt(
 }  // namespace
 
 void ReduceSplitCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  std::vector<EdgeInfo> edge_infos;
-  for (TaskEdge* edge : out_edges()) {
-    TaskNode* dst_node = edge->dst_node();
-    CHECK(dst_node->GetTaskType() == TaskType::kNormalMdUpdt);
-    CompTaskNode* mdupdt_node = dynamic_cast<CompTaskNode*>(dst_node);
-    for (TaskEdge* mdupdt_edge : mdupdt_node->out_edges()) {
-      if (IsBackwardTaskType(mdupdt_edge->dst_node()->GetTaskType())) {
-        CompTaskNode* bw_node = dynamic_cast<CompTaskNode*>(mdupdt_edge->dst_node());
-        // There may be multiple out_regsts on the same edge for shared_model app
-        EdgeInfo edge_info{edge, bw_node->order_in_graph()};
-        edge_infos.emplace_back(edge_info);
+  if (Global<JobDesc>::Get()->IsPredict()
+      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+    int idx = 0;
+    for (TaskEdge* edge : out_edges()) {
+      CHECK(edge->dst_node()->GetTaskType() == TaskType::kNormalForward);
+      std::string out_regst_name = "out_" + std::to_string(idx);
+      std::shared_ptr<RegstDesc> out_regst = ProduceRegst(out_regst_name, false, 1, 1);
+      edge->AddRegst(out_regst_name, out_regst);
+      ++idx;
+    }
+  } else {
+    std::vector<EdgeInfo> edge_infos;
+    for (TaskEdge* edge : out_edges()) {
+      TaskNode* dst_node = edge->dst_node();
+      CHECK(dst_node->GetTaskType() == TaskType::kNormalMdUpdt);
+      CompTaskNode* mdupdt_node = dynamic_cast<CompTaskNode*>(dst_node);
+      for (TaskEdge* mdupdt_edge : mdupdt_node->out_edges()) {
+        if (IsBackwardTaskType(mdupdt_edge->dst_node()->GetTaskType())) {
+          CompTaskNode* bw_node = dynamic_cast<CompTaskNode*>(mdupdt_edge->dst_node());
+          // There may be multiple out_regsts on the same edge for shared_model app
+          EdgeInfo edge_info{edge, bw_node->order_in_graph()};
+          edge_infos.emplace_back(edge_info);
+        }
       }
     }
-  }
-  SortEdges(&edge_infos);
-  FOR_RANGE(size_t, idx, 0, edge_infos.size()) {
-    std::string out_regst_name = "out_" + std::to_string(idx);
-    std::shared_ptr<RegstDesc> out_regst = ProduceRegst(out_regst_name, false, 1, 1);
-    edge_infos[idx].edge->AddRegst(out_regst_name, out_regst);
+    SortEdges(&edge_infos);
+    FOR_RANGE(size_t, idx, 0, edge_infos.size()) {
+      std::string out_regst_name = "out_" + std::to_string(idx);
+      std::shared_ptr<RegstDesc> out_regst = ProduceRegst(out_regst_name, false, 1, 1);
+      edge_infos[idx].edge->AddRegst(out_regst_name, out_regst);
+    }
   }
 }
 
@@ -65,8 +77,13 @@ void ReduceSplitCompTaskNode::BuildExecGphAndRegst() {
   FOR_RANGE(size_t, i, 0, reduce_split_op->output_bns().size()) {
     std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out_" + std::to_string(i));
     CHECK(out_regst.get() != nullptr);
-    out_regst->CopyBlobDescFrom(
-        reduce_concat_node->GetSoleConsumedRegst("in_" + std::to_string(i)).get());
+    if (Global<JobDesc>::Get()->IsPredict()
+        && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+      out_regst->AddLbi(reduce_split_op->BnInOp2Lbi(reduce_split_op->output_bns().Get(i)));
+    } else {
+      out_regst->CopyBlobDescFrom(
+          reduce_concat_node->GetSoleConsumedRegst("in_" + std::to_string(i)).get());
+    }
     node->BindBnWithRegst(reduce_split_op->output_bns().Get(i), out_regst);
   }
   node->InferBlobDescs(parallel_ctx());

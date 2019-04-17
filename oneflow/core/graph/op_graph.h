@@ -24,7 +24,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
 
   // Getters
   const Shape* GetInputBlobFastestTimeShape() const;
-  const Shape* out_blob_time_shape() const { return out_blob_time_shape_.get(); }
+  const Shape* out_blob_time_shape() const;
   const Operator& op() const { return *op_; }
   bool HasBackward() const { return has_in_diff() || has_model_diff(); }
   bool has_in_diff() const { return has_in_diff_; }
@@ -32,6 +32,9 @@ class OpNode final : public Node<OpNode, OpEdge> {
   void set_has_in_diff(bool has_in_diff) { has_in_diff_ = has_in_diff; }
   const ParallelDesc& parallel_desc() const { return parallel_desc_; }
   const SbpSignature& sbp_signature() const { return sbp_signature_; }
+  const SbpParallel& SbpParallel4Lbi(const LogicalBlobId& lbi) const;
+  const SbpParallel& SbpParallel4BnInOp(const std::string& bn_in_op) const;
+  const BlobDesc& LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const;
 
   std::string VisualStr() const override;
 
@@ -40,9 +43,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   friend class OpEdge;
   // Getters
   const BlobDesc& NoParallelBlobDesc4Lbi(const LogicalBlobId& lbi) const;
-  const BlobDesc& LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const;
   const Shape* GetInputBlobTimeShape(const std::string& bn_in_op) const;
-  const SbpParallel& SbpParallel4Lbi(const LogicalBlobId& lbi) const;
 
   // Setters
   ParallelDesc* mut_parallel_desc() { return &parallel_desc_; }
@@ -137,8 +138,9 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void InferTimeShape() const;
   void InferNoParallelBlobDesc() const;
   void InferIsModelBlob() const;
-  void InferSbpSignature() const;
-  void InferLogicalBlobDesc() const;
+  void InferOpNodeSbpSignature(OpNode* op_node, const Job& job) const;
+  void InferOpNodeLogicalBlobDesc(OpNode* op_node) const;
+  void InferLogicalBlobDesc(const Job& job) const;
   bool IsModelBlob(const std::string& op_name, const LogicalBlobId& lbi) const;
   bool IsDataBlob(const std::string& op_name, const LogicalBlobId& lbi) const;
   std::string GetOpNameKey(const std::string& op_name, const LogicalBlobId& lbi) const;

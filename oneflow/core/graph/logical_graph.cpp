@@ -4,6 +4,7 @@
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/job_completer/all_reduce_add_pass.h"
 
 namespace oneflow {
 
@@ -43,6 +44,10 @@ std::function<bool(const LogicalNode*)> MakePredicatorHasActualOutDiff(const Log
 }  // namespace
 
 LogicalGraph::LogicalGraph(const Job& job) : job_(job) {
+  if (Global<JobDesc>::Get()->IsPredict()
+      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+    AllReduceAddPass().Apply(&job_);
+  }
   bool is_train = Global<JobDesc>::Get()->IsTrain();
   BuildFwStruct();
   if (is_train) { GroupNodesForReduceStruct(); }

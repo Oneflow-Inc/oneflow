@@ -16,7 +16,7 @@ class ConvDataGradDataParallelSbpSignatureRule final : public ParallelSbpSignatu
 
   const std::string Description() const override { return op().op_name() + ": (MB, DS) -> DS"; }
 
-  const SbpSigMatchResult GetMatchResult(
+  const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
     if (parallel_desc.policy() == kDataParallel) { return MakeSbpSigMatchSuccess(); }
@@ -44,7 +44,7 @@ class ConvDataGradModelParallelSbpSignatureRule final : public ParallelSbpSignat
 
   const std::string Description() const override { return op().op_name() + ": (DS, MS) -> P"; }
 
-  const SbpSigMatchResult GetMatchResult(
+  const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
     if (parallel_desc.policy() == kModelParallel) { return MakeSbpSigMatchSuccess(); }
@@ -141,6 +141,7 @@ void ConvDataGradOp::VirtualGenKernelConf(
 }
 
 void ConvDataGradOp::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   rules->emplace_back(new ConvDataGradDataParallelSbpSignatureRule(this));
   rules->emplace_back(new ConvDataGradModelParallelSbpSignatureRule(this));

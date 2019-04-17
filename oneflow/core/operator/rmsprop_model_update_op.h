@@ -16,6 +16,7 @@ class RMSPropModelUpdateOp final : public NormalModelUpdtOp {
   void MdUpdtVirtualInitFromOpConf() override;
   void MdUpdtVirtualInferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                    const ParallelContext* parallel_ctx) const override;
+  const HashSet<std::string> AlwaysBroadcastParallelBns() const override;
 };
 
 }  // namespace oneflow

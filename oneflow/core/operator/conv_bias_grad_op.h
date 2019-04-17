@@ -21,7 +21,9 @@ class ConvBiasGradOp : public Operator {
  private:
   const PbMessage& GetCustomizedConf() const override;
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
-  void GetSbpSignatureRules(std::vector<std::unique_ptr<const SbpSignatureRule>>*) const override;
+  void GetSbpSignatureRules(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const override;
 };
 
 }  // namespace oneflow

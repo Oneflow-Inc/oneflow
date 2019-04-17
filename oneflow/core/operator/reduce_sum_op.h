@@ -20,6 +20,10 @@ class ReduceSumOp final : public Operator {
 
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
+  void GetSbpSignatureRules(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const override;
+
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override {
     const ReduceSumOpConf& conf = op_conf().reduce_sum_conf();
     if (conf.has_in_sys()) {
