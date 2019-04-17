@@ -132,6 +132,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void FixOpParallelDesc() const;
   void UpdateOpNodeHasInDiff() const;
   void InferTimeShape() const;
+  int64_t CalcUnparalleledPieceSize() const;
   void InferNoParallelBlobDesc() const;
   void InferIsModelBlob() const;
   void InferSbpParallel() const;

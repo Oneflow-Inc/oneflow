@@ -23,7 +23,9 @@ void UnpackOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
     CHECK_EQ(0, in_blob_desc->shape().At(0) % unpack_num);
   }
   out_blob_desc->mut_shape().Set(0, out_blob_desc->shape().At(0) / unpack_num);
-  out_blob_desc->mut_dim0_inner_shape() = Shape({1, out_blob_desc->shape().At(0)});
+  if (in_blob_desc->has_dim0_inner_shape()) {
+    out_blob_desc->mut_dim0_inner_shape() = Shape({1, out_blob_desc->shape().At(0)});
+  }
 }
 
 void UnpackOp::InferOutputBlobTimeShape(
