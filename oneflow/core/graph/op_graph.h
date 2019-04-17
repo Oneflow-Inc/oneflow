@@ -23,7 +23,8 @@ class OpNode final : public Node<OpNode, OpEdge> {
   ~OpNode() = default;
 
   // Getters
-  const Shape& out_blob_time_shape() const { return out_blob_time_shape_; }
+  const Shape* GetInputBlobFastestTimeShape() const;
+  const Shape* out_blob_time_shape() const { return out_blob_time_shape_.get(); }
   const Operator& op() const { return *op_; }
   bool HasBackward() const { return has_in_diff() || has_model_diff(); }
   bool has_in_diff() const { return has_in_diff_; }
@@ -41,13 +42,12 @@ class OpNode final : public Node<OpNode, OpEdge> {
   const BlobDesc& NoParallelBlobDesc4Lbi(const LogicalBlobId& lbi) const;
   const BlobDesc& LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const;
   const Shape* GetInputBlobTimeShape(const std::string& bn_in_op) const;
-  const Shape* GetInputBlobTimeShape() const;
   const SbpParallel& SbpParallel4Lbi(const LogicalBlobId& lbi) const;
 
   // Setters
   ParallelDesc* mut_parallel_desc() { return &parallel_desc_; }
   SbpSignature* mut_sbp_signature() { return &sbp_signature_; }
-  Shape* mut_out_blob_time_shape() { return &out_blob_time_shape_; }
+  Shape* mut_out_blob_time_shape();
   HashMap<std::string, std::vector<BlobDesc>>* mut_bn2parallel_id2blob_desc() {
     return &bn2parallel_id2blob_desc_;
   }
@@ -77,7 +77,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   std::shared_ptr<Operator> op_;
   HashSet<std::string> ibns_;
   bool has_in_diff_;
-  Shape out_blob_time_shape_;
+  std::unique_ptr<Shape> out_blob_time_shape_;
   SbpSignature sbp_signature_;
   HashMap<LogicalBlobId, BlobDesc> lbi2no_parallel_blob_desc_;
   HashMap<LogicalBlobId, bool> lbi2is_model_blob_;

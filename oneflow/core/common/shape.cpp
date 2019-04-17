@@ -127,4 +127,12 @@ std::vector<int64_t> Shape::Axes4BroadcastTo(const Shape& broadcast_shape) const
   return broadcast_axis_vec;
 }
 
+bool Shape::Containing(const Shape& small_shape) const {
+  if (this->NumAxes() < small_shape.NumAxes()) { return false; }
+  FOR_RANGE(int, i, 0, small_shape.NumAxes()) {
+    if (this->At(i) != small_shape.At(i)) { return false; }
+  }
+  return true;
+}
+
 }  // namespace oneflow

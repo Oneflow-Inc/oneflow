@@ -153,8 +153,14 @@ void LogicalGraph::NaiveBuildFwStruct(
     cur_node->mut_parallel_desc() = parallel_desc_ptr;
     if (Global<JobDesc>::Get()->IsPredict()
         && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
-      cur_node->reset_time_shape(
-          new Shape(job_.helper().op_name2time_shape().at(cur_op->op_name())));
+      const auto& op_time_shape = job_.helper().op_name2op_time_shape().at(cur_op->op_name());
+      if (op_time_shape.has_out_blob_time_shape()) {
+        cur_node->reset_out_blob_time_shape(new Shape(op_time_shape.out_blob_time_shape()));
+      }
+      if (op_time_shape.has_in_blob_fastest_time_shape()) {
+        cur_node->reset_in_blob_fastest_time_shape(
+            new Shape(op_time_shape.in_blob_fastest_time_shape()));
+      }
     }
     for (const std::string& obn : cur_node->SoleOp()->output_bns()) {
       const LogicalBlobId& lbi = cur_node->SoleOp()->BnInOp2Lbi(obn);
@@ -730,7 +736,7 @@ MdSaveLogicalNode* LogicalGraph::BuildMdSaveStructIfNeed(LogicalNode* need_save_
 }
 
 void LogicalGraph::ForEachNecessaryCtrlEdge(
-    const std::function<void(const LogicalNode*, const LogicalNode*)>& Handler) const {
+    const std::function<void(const LogicalNode*, const LogicalNode*, int64_t)>& Handler) const {
   if (!(Global<JobDesc>::Get()->IsPredict()
         && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf())) {
     return;
@@ -742,11 +748,23 @@ void LogicalGraph::ForEachNecessaryCtrlEdge(
     }
   });
   auto IsReachable = MakePredicatorIsReachable();
-  ForEachNode([&](LogicalNode* node) {
-    for (const auto& op : node->op_vec()) {
+  ForEachNode([&](LogicalNode* dst) {
+    for (const auto& op : dst->op_vec()) {
       for (const auto& ctrl_in_op_name : op->op_conf().ctrl_in_op_name()) {
-        const LogicalNode* ctrl_in_node = op_name2node.at(ctrl_in_op_name);
-        if (!IsReachable(ctrl_in_node, node)) { Handler(ctrl_in_node, node); }
+        const LogicalNode* src = op_name2node.at(ctrl_in_op_name);
+        if (!IsReachable(src, dst)) {
+          CHECK(src->parallel_desc()->EqualsIgnoringPolicy(*dst->parallel_desc()));
+          const Shape* src_time_shape = src->out_blob_time_shape();
+          if (src_time_shape == nullptr) { src_time_shape = src->in_blob_fastest_time_shape(); }
+          CHECK_NOTNULL(src_time_shape);
+          const Shape* dst_time_shape = dst->in_blob_fastest_time_shape();
+          if (dst_time_shape == nullptr) { dst_time_shape = dst->out_blob_time_shape(); }
+          CHECK_NOTNULL(dst_time_shape);
+          CHECK(src_time_shape->Containing(*dst_time_shape));
+          CHECK_EQ(src_time_shape->elem_cnt() % dst_time_shape->elem_cnt(), 0);
+          int64_t regst_desc_num = src_time_shape->elem_cnt() / dst_time_shape->elem_cnt();
+          Handler(src, dst, regst_desc_num);
+        }
       }
     }
   });
