@@ -252,8 +252,15 @@ void FixAndOptimizeDLNet(Job* job) {
 
 void SetOpTimeShape(const OpGraph& op_graph, Job* job) {
   op_graph.ForEachNode([&](OpNode* op_node) {
-    op_node->out_blob_time_shape().ToProto(
-        &(*job->mutable_helper()->mutable_op_name2time_shape())[op_node->op().op_name()]);
+    auto* op_time_shape =
+        &(*job->mutable_helper()->mutable_op_name2op_time_shape())[op_node->op().op_name()];
+    if (op_node->out_blob_time_shape() != nullptr) {
+      op_node->out_blob_time_shape()->ToProto(op_time_shape->mutable_out_blob_time_shape());
+    }
+    const auto* in_blob_fastest_time_shape = op_node->GetInputBlobFastestTimeShape();
+    if (in_blob_fastest_time_shape != nullptr) {
+      in_blob_fastest_time_shape->ToProto(op_time_shape->mutable_in_blob_fastest_time_shape());
+    }
   });
 }
 
