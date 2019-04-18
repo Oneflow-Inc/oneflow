@@ -46,7 +46,7 @@ class BboxNmsAndLimitKernel final : public KernelIf<DeviceType::kCPU> {
 
   void BroadcastBboxTransform(const Blob* bbox_blob, const Blob* bbox_pred_blob,
                               Blob* target_bbox_blob) const;
-  void ClipBBox(Blob* target_bbox_blob) const;
+  void ClipBBox(const Blob* image_size_blob, Blob* target_bbox_blob) const;
   std::vector<std::vector<int32_t>> GroupBBox(Blob* target_bbox_blob) const;
   std::vector<int32_t> ApplyNmsAndVoteByClass(const std::vector<int32_t>& bbox_row_ids,
                                               const Blob* bbox_prob_blob, Blob* bbox_score_blob,

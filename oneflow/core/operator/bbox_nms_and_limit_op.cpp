@@ -4,6 +4,7 @@ namespace oneflow {
 
 void BboxNmsAndLimitOp::InitFromOpConf() {
   CHECK(op_conf().has_bbox_nms_and_limit_conf());
+  EnrollInputBn("image_size", false);
   EnrollInputBn("bbox", false);
   EnrollInputBn("bbox_pred", false);
   EnrollInputBn("bbox_prob", false);
@@ -30,16 +31,22 @@ void BboxNmsAndLimitOp::InferBlobDescs(
   CHECK_EQ(device_type(), DeviceType::kCPU);
   const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
   if (conf.bbox_vote_enabled()) { CHECK(conf.has_bbox_vote()); }
-  int32_t img_record = Global<JobDesc>::Get()->DevicePieceSize4ParallelCtx(*parallel_ctx);
-  int32_t num_limit = conf.detections_per_im() * img_record;
+
+  // input: image_size (N, 2)
+  const BlobDesc* image_size_blob_desc = GetBlobDesc4BnInOp("image_size");
   // input: bbox (r, 5)
   const BlobDesc* bbox_bd = GetBlobDesc4BnInOp("bbox");
   // input: bbox_pred (r, c * 4)
   const BlobDesc* bbox_pred_bd = GetBlobDesc4BnInOp("bbox_pred");
   // input: bbox_prob (r, c)
   const BlobDesc* bbox_prob_bd = GetBlobDesc4BnInOp("bbox_prob");
+
+  const int64_t num_images = image_size_blob_desc->shape().At(0);
   const int64_t num_boxes = bbox_bd->shape().At(0);
   const int64_t num_classes = bbox_prob_bd->shape().At(1);
+  const int64_t num_limit = conf.detections_per_im() * num_images;
+  CHECK_EQ(image_size_blob_desc->data_type(), DataType::kInt32);
+  CHECK_EQ(image_size_blob_desc->shape().At(1), 2);
   CHECK_EQ(bbox_bd->shape().At(1), 5);
   CHECK_EQ(bbox_pred_bd->shape().At(0), num_boxes);
   CHECK_EQ(bbox_prob_bd->shape().At(0), num_boxes);

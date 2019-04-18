@@ -128,6 +128,8 @@ void BboxNmsAndLimitKernel<T>::ForwardRecordIdInDevicePiece(
 template<typename T>
 void BboxNmsAndLimitKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
+  const Blob* image_size_blob = BnInOp2Blob("image_size");
   const Blob* bbox_blob = BnInOp2Blob("bbox");
   const Blob* bbox_pred_blob = BnInOp2Blob("bbox_pred");
   const Blob* bbox_prob_blob = BnInOp2Blob("bbox_prob");
@@ -136,22 +138,22 @@ void BboxNmsAndLimitKernel<T>::ForwardDataContent(
   Blob* out_bbox_blob = BnInOp2Blob("out_bbox");
   Blob* out_bbox_score_blob = BnInOp2Blob("out_bbox_score");
   Blob* out_bbox_label_blob = BnInOp2Blob("out_bbox_label");
+  const Blob* bbox_score_blob = conf.bbox_vote_enabled() ? vote_bbox_score_blob : bbox_prob_blob;
+
   BroadcastBboxTransform(bbox_blob, bbox_pred_blob, target_bbox_blob);
-  ClipBBox(target_bbox_blob);
+  ClipBBox(image_size_blob, target_bbox_blob);
   std::vector<int32_t> all_im_bbox_inds;
   std::vector<std::vector<int32_t>> im_detected_bbox_inds_vec(num_images_);
   std::vector<std::vector<int32_t>> im_grouped_bbox_inds_vec = GroupBBox(target_bbox_blob);
   MultiThreadLoop(num_images_, [&](int64_t i) {
     im_detected_bbox_inds_vec[i] = ApplyNmsAndVoteByClass(
         im_grouped_bbox_inds_vec[i], bbox_prob_blob, vote_bbox_score_blob, target_bbox_blob);
+    Limit(conf.detections_per_im(), bbox_score_blob, im_detected_bbox_inds_vec[i]);
   });
   for (const auto& im_detected_bbox_inds : im_detected_bbox_inds_vec) {
     all_im_bbox_inds.insert(all_im_bbox_inds.end(), im_detected_bbox_inds.begin(),
                             im_detected_bbox_inds.end());
   }
-  const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
-  const Blob* bbox_score_blob = conf.bbox_vote_enabled() ? vote_bbox_score_blob : bbox_prob_blob;
-  Limit(out_bbox_blob->static_shape().At(0), bbox_score_blob, all_im_bbox_inds);
   OutputBBox(all_im_bbox_inds, target_bbox_blob, out_bbox_blob);
   OutputBBoxScore(all_im_bbox_inds, bbox_score_blob, out_bbox_score_blob);
   OutputBBoxLabel(all_im_bbox_inds, bbox_score_blob->shape().At(1), out_bbox_label_blob);
@@ -180,11 +182,14 @@ void BboxNmsAndLimitKernel<T>::BroadcastBboxTransform(const Blob* bbox_blob,
 }
 
 template<typename T>
-void BboxNmsAndLimitKernel<T>::ClipBBox(Blob* target_bbox_blob) const {
-  const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
+void BboxNmsAndLimitKernel<T>::ClipBBox(const Blob* image_size_blob, Blob* target_bbox_blob) const {
+  const int32_t* image_size_ptr = image_size_blob->dptr<int32_t>();
   auto* bbox_ptr = BBox::Cast(target_bbox_blob->mut_dptr<T>());
-  FOR_RANGE(int64_t, i, 0, target_bbox_blob->shape().Count(0, 2)) {
-    bbox_ptr[i].Clip(conf.image_height(), conf.image_width());
+  FOR_RANGE(size_t, i, 0, target_bbox_blob->shape().Count(0, 2)) {
+    const int32_t im_index = bbox_ptr[i].index();
+    const int32_t im_height = image_size_ptr[im_index * 2 + 0];
+    const int32_t im_width = image_size_ptr[im_index * 2 + 1];
+    bbox_ptr[i].Clip(im_height, im_width);
   }
 }
 
