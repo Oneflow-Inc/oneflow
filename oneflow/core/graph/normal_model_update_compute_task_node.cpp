@@ -4,13 +4,16 @@
 namespace oneflow {
 
 const NormalForwardCompTaskNode* NormalMdUpdtCompTaskNode::GetForwardTaskNode() const {
+  const NormalForwardCompTaskNode* ret = nullptr;
   ForEachOutDataEdge([&](TaskEdge* out_edge) {
     const TaskNode* dst_node = out_edge->dst_node();
-    if (IsForwardTaskType(dst_node->GetTaskType())) {
-      return dynamic_cast<const NormalForwardCompTaskNode*>(dst_node);
+    if (ret == nullptr && IsForwardTaskType(dst_node->GetTaskType())) {
+      ret = dynamic_cast<const NormalForwardCompTaskNode*>(dst_node);
+      CHECK_NOTNULL(ret);
     }
   });
-  UNIMPLEMENTED();
+  CHECK_NOTNULL(ret);
+  return ret;
 }
 
 bool NormalMdUpdtCompTaskNode::IsTrainable() const {
