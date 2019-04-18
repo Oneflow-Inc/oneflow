@@ -934,9 +934,8 @@ message BboxNmsAndLimitOpConf {
   required float score_threshold = 9;
   required float nms_threshold = 10;
   required int32 detections_per_im = 11;
-  required float threshold = 12;
-  required bool bbox_vote_enabled = 13;
-  optional BboxVoteConf bbox_vote = 14;
+  required bool bbox_vote_enabled = 12;
+  optional BboxVoteConf bbox_vote = 13;
 }
 
 message ProposalOpConf {
