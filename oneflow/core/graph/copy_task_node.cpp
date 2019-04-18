@@ -9,22 +9,26 @@ void CopyTaskNode::ProduceAllRegstsAndBindEdges() {
   std::shared_ptr<RegstDesc> out_regst(nullptr);
   CopyHdTaskNode* copy_hd = dynamic_cast<CopyHdTaskNode*>(this);
   if (copy_hd != nullptr) {
-    TaskType dst_node_type = (*out_edges().begin())->dst_node()->GetTaskType();
+    TaskNode* first_dst_node = nullptr;
+    ForEachNodeOnOutDataEdge([&](TaskNode* node) {
+      if (first_dst_node == nullptr) { first_dst_node = node; }
+    });
+    TaskType dst_node_type = first_dst_node->GetTaskType();
     if (copy_hd->copy_type() == CopyHdOpConf::H2D
         && (dst_node_type == TaskType::kReduceAdd || dst_node_type == TaskType::kReduceGather)) {
       out_regst = ProduceRegst(name, false, 1, 1);
     }
-    TaskType src_node_type = SoleInEdge()->src_node()->GetTaskType();
+    TaskType src_node_type = SoleInDataEdge()->src_node()->GetTaskType();
     if (copy_hd->copy_type() == CopyHdOpConf::D2H
         && (src_node_type == TaskType::kReduceScatter || src_node_type == TaskType::kReduceAdd)) {
       out_regst = ProduceRegst(name, false, 1, 1);
     }
   }
   if (out_regst == nullptr) { out_regst = ProduceRegst(name, false); }
-  for (TaskEdge* edge : out_edges()) { edge->AddRegst(name, out_regst); }
+  ForEachOutDataEdge([&](TaskEdge* edge) { edge->AddRegst(name, out_regst); });
 }
 
-void CopyTaskNode::ConsumeAllRegsts() { ConsumeRegst("copy_in", SoleInEdge()->GetSoleRegst()); }
+void CopyTaskNode::ConsumeAllRegsts() { ConsumeRegst("copy_in", SoleInDataEdge()->GetSoleRegst()); }
 
 void CopyTaskNode::BuildExecGphAndRegst() {
   auto out_regst = GetProducedRegst("copy_out");

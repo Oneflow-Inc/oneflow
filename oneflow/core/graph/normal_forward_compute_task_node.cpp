@@ -6,11 +6,12 @@
 namespace oneflow {
 
 bool NormalForwardCompTaskNode::HasBackwardCompTaskNode() {
-  for (TaskEdge* edge : out_edges()) {
+  bool ret = false;
+  ForEachOutDataEdge([&](TaskEdge* edge) {
     const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
-    if (succ_logical->TypeName() == "NormalBackward") { return true; }
-  }
-  return false;
+    if (ret == false && succ_logical->TypeName() == "NormalBackward") { ret = true; }
+  });
+  return ret;
 }
 
 void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
@@ -26,7 +27,7 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("fw_buf", true, 1, 1);
   ProduceRegst("forward_model", false);
   ProduceRegst("const_buf", false, 1, 1);
-  for (TaskEdge* edge : out_edges()) {
+  ForEachOutDataEdge([&](TaskEdge* edge) {
     const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
     if (succ_logical->TypeName() == "MdSave") {
       BindEdgeWithProducedRegst(edge, "forward_model");
@@ -38,11 +39,11 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
     } else {
       BindEdgeWithProducedRegst(edge, "out");
     }
-  }
+  });
 }
 
 void NormalForwardCompTaskNode::ConsumeAllRegsts() {
-  for (TaskEdge* edge : in_edges()) {
+  ForEachInDataEdge([&](TaskEdge* edge) {
     TaskNode* src_node = edge->src_node();
     TaskType src_task_type = src_node->GetTaskType();
     if (src_task_type == TaskType::kNormalMdUpdt) {
@@ -51,7 +52,7 @@ void NormalForwardCompTaskNode::ConsumeAllRegsts() {
     } else {
       ConsumeRegst("in", edge->GetSoleRegst());
     }
-  }
+  });
 }
 
 bool NormalForwardCompTaskNode::IsReadyForBuild() {

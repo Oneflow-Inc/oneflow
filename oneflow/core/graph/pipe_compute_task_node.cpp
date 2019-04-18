@@ -4,10 +4,10 @@
 namespace oneflow {
 
 void PipeCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  this->SoleOutEdge()->AddRegst("out", ProduceRegst("out", false, 1, 1));
+  this->SoleOutDataEdge()->AddRegst("out", ProduceRegst("out", false, 1, 1));
 }
 
-void PipeCompTaskNode::ConsumeAllRegsts() { ConsumeRegst("in", SoleInEdge()->GetSoleRegst()); }
+void PipeCompTaskNode::ConsumeAllRegsts() { ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst()); }
 
 void PipeCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
