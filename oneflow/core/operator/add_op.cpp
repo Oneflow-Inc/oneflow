@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/add_op.h"
+#include "oneflow/core/job/sbp_signature_rule.h"
 
 namespace oneflow {
 
@@ -21,38 +22,6 @@ bool IsAllInputBroadcastParallel(
 }
 
 namespace {
-
-class AddOpPartialSumSignatureRule final : public ParallelSbpSignatureRule {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(AddOpPartialSumSignatureRule);
-  ~AddOpPartialSumSignatureRule() override = default;
-
-  AddOpPartialSumSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
-
-  const std::string Description() const override { return op().op_name() + ": (P, ...) -> P"; }
-
-  const SbpSigMatchResult MatchByIbnHint(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc) const override {
-    if (!IsAllInputPartialSumParallel(op(), SbpInferHint4Ibn)) {
-      return MakeSbpSigMatchSignatureMismatch();
-    }
-    for (const auto& ibn : op().input_bns()) {
-      if (parallel_desc.parallel_num() != SbpInferHint4Ibn(ibn).parallel_num()) {
-        return MakeSbpSigMatchSignatureMismatch();
-      }
-    }
-    return MakeSbpSigMatchSuccess();
-  }
-
-  void GenerateSignature(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      SbpSignature* sbp_signature) const override {
-    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
-    for (const auto& ibn : op().input_bns()) { (*bn2sbp)[ibn].mutable_partial_sum_parallel(); }
-    for (const auto& obn : op().output_bns()) { (*bn2sbp)[obn].mutable_partial_sum_parallel(); }
-  }
-};
 
 class AddOpDataSplitSignatureRule final : public ParallelSbpSignatureRule {
  public:
@@ -109,7 +78,7 @@ void AddOp::GetSbpSignatureRules(
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   rules->emplace_back(new AddOpDataSplitSignatureRule(this));
   rules->emplace_back(MakeMultiIbnsBroadcastSbpSignatureRule(this));
-  rules->emplace_back(new AddOpPartialSumSignatureRule(this));
+  rules->emplace_back(MakePartialSumSignatureRule(this));
 }
 
 REGISTER_OP(OperatorConf::kAddConf, AddOp);

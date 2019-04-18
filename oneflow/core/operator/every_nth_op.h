@@ -20,7 +20,7 @@ class EveryNthOp final : public Operator {
                                 const ParallelContext* parallel_ctx,
                                 Shape* time_shape) const override;
   void InitFromOpConf() override;
-  LogicalNode* NewProperLogicalNode() override;
+  LogicalNode* NewProperLogicalNode() const override;
   bool NeedInBlobWhenBackward() const override { return false; }
   bool NeedOutBlobWhenBackward() const override { return false; }
   void GetSbpSignatureRules(

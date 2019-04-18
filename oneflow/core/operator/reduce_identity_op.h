@@ -12,7 +12,7 @@ class ReduceIdentityOp final : public Operator {
   ReduceIdentityOp() = default;
   ~ReduceIdentityOp() = default;
 
-  LogicalNode* NewProperLogicalNode() { return new ReduceIdentityLogicalNode; }
+  LogicalNode* NewProperLogicalNode() const override { return new ReduceIdentityLogicalNode; }
   void InitFromOpConf() override;
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
@@ -21,7 +21,10 @@ class ReduceIdentityOp final : public Operator {
   bool NeedOutBlobWhenBackward() const override { return false; }
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { UNIMPLEMENTED(); }
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
+  void GetSbpSignatureRules(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const override;
 
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
   LogicalBlobId obn2lbi(const std::string& output_bn) const override;

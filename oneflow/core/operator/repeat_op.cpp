@@ -43,7 +43,7 @@ void RepeatOp::InferDiffBlobDescsWithoutFwBlob(
   *in_diff_blob_desc = *out_diff_blob_desc;
 }
 
-LogicalNode* RepeatOp::NewProperLogicalNode() { return new RepeatForwardLogicalNode(); }
+LogicalNode* RepeatOp::NewProperLogicalNode() const { return new RepeatForwardLogicalNode(); }
 
 REGISTER_OP(OperatorConf::kRepeatConf, RepeatOp);
 

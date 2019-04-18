@@ -14,7 +14,7 @@ class UnpackOp final : public Operator {
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override { return op_conf().unpack_conf(); }
-  LogicalNode* NewProperLogicalNode() { return new UnpackForwardLogicalNode; }
+  LogicalNode* NewProperLogicalNode() const override { return new UnpackForwardLogicalNode; }
 
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
