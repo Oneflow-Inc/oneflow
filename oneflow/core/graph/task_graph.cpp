@@ -140,16 +140,16 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
       [&](const LogicalNode* src, const LogicalNode* dst, int64_t ctrl_regst_num) {
         const auto& src_task_nodes = logical2sorted_comp_tasks.at(src);
         const auto& dst_task_nodes = logical2sorted_comp_tasks.at(dst);
-        ConnectUserConfiguredCtrlEdges(src_task_nodes, dst_task_nodes, ctrl_regst_num);
+        ConnectCtrlEdges(src_task_nodes, dst_task_nodes, ctrl_regst_num);
       });
 
   MergeChainAndSetOrderInGraphForEachNode();
   ToDotWithAutoFilePath();
 }
 
-void TaskGraph::ConnectUserConfiguredCtrlEdges(const std::vector<CompTaskNode*>& src_task_nodes,
-                                               const std::vector<CompTaskNode*>& dst_task_nodes,
-                                               int64_t ctrl_regst_num) {
+void TaskGraph::ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_nodes,
+                                 const std::vector<CompTaskNode*>& dst_task_nodes,
+                                 int64_t ctrl_regst_num) {
   CHECK_EQ(src_task_nodes.size(), dst_task_nodes.size());
   FOR_RANGE(int32_t, i, 0, src_task_nodes.size()) {
     Connect<TaskNode>(src_task_nodes.at(i), NewEdge(), dst_task_nodes.at(i));
