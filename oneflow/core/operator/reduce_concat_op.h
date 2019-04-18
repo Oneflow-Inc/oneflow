@@ -21,7 +21,10 @@ class ReduceConcatOp final : public Operator {
                       std::function<void(OpContext*)> EnrollOpCtx) const override;
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { UNIMPLEMENTED(); }
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
+  void GetSbpSignatureRules(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const override;
 
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext*, KernelConf*,

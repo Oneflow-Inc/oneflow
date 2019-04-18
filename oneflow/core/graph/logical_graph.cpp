@@ -47,6 +47,8 @@ LogicalGraph::LogicalGraph(const Job& job) : job_(job) {
   if (Global<JobDesc>::Get()->IsPredict()
       && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     AllReduceAddPass().Apply(&job_);
+    Global<OpGraph>::Delete();
+    Global<OpGraph>::New(job_);
   }
   bool is_train = Global<JobDesc>::Get()->IsTrain();
   BuildFwStruct();

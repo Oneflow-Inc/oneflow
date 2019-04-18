@@ -1,6 +1,7 @@
 #include "oneflow/core/operator/nccl_all_reduce_op.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/graph/logical_node.h"
+#include "oneflow/core/job/sbp_signature_rule.h"
 
 namespace oneflow {
 
@@ -41,6 +42,12 @@ LogicalBlobId NcclAllReduceOp::obn2lbi(const std::string& output_bn) const {
     ret.set_blob_name("out");
     return ret;
   }
+}
+
+void NcclAllReduceOp::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  rules->emplace_back(MakeP2BSignatureRule(this));
 }
 
 LogicalNode* NcclAllReduceOp::NewProperLogicalNode() const {

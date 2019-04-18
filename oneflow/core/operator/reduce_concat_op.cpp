@@ -1,6 +1,7 @@
 #include "oneflow/core/operator/reduce_concat_op.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
+#include "oneflow/core/job/sbp_signature_rule.h"
 
 namespace oneflow {
 
@@ -83,6 +84,12 @@ LogicalBlobId ReduceConcatOp::ibn2lbi(const std::string& input_bn) const {
   } else {
     return GenPackedLbi();
   }
+}
+
+void ReduceConcatOp::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  rules->emplace_back(MakePartialSumSignatureRule(this));
 }
 
 LogicalBlobId ReduceConcatOp::obn2lbi(const std::string& output_bn) const {

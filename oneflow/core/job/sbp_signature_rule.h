@@ -75,6 +75,12 @@ std::unique_ptr<const SbpSignatureRule> MakeSoleIbnBroadcastSbpSignatureRule(con
 // (B, ...) -> (B, ...)
 std::unique_ptr<const SbpSignatureRule> MakeMultiIbnsBroadcastSbpSignatureRule(const Operator* op);
 
+// (P, ...) -> (P, ...)
+std::unique_ptr<const SbpSignatureRule> MakePartialSumSignatureRule(const Operator* op);
+
+// (P,) -> (B,)
+std::unique_ptr<const SbpSignatureRule> MakeP2BSignatureRule(const Operator* op);
+
 // (B, S(0), ...) -> (S(0), ...)
 // return blobs: data splitted
 // intput blobs: split data input blobs and broadcast model input blobs
