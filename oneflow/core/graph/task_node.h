@@ -123,10 +123,10 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void InferProducedDataRegstTimeShape() = 0;
   void NaiveInferProducedDataRegstTimeShape();
 
-  TaskEdge* SoleDataEdge(void (TaskNode::*ForEachDataEdge)(const std::function<void(TaskEdge*)>&)
-                             const) const;
-  size_t GetDataEdgesSize(void (TaskNode::*ForEachDataEdge)(const std::function<void(TaskEdge*)>&)
-                              const) const;
+  TaskEdge* GetSoleEdge(void (TaskNode::*ForEachEdge)(const std::function<void(TaskEdge*)>&)
+                            const) const;
+  size_t GetEdgesSize(void (TaskNode::*ForEachEdge)(const std::function<void(TaskEdge*)>&)
+                          const) const;
 
  private:
   void UpdateTaskId();

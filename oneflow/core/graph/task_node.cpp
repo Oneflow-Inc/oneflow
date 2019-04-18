@@ -6,16 +6,12 @@ namespace {
 
 void ForEachDataEdge(const std::unordered_set<TaskEdge*>& edges,
                      const std::function<void(TaskEdge*)>& Handler) {
-  auto GetDataRegstSize = [](const std::vector<std::shared_ptr<RegstDesc>>& regsts) -> int32_t {
-    int32_t size = 0;
-    for (const auto& regst : regsts) {
-      if (regst->regst_desc_type().has_data_regst_desc()) { ++size; }
-    }
-    return size;
-  };
   for (TaskEdge* edge : edges) {
     const auto& regsts = edge->GetRegsts();
-    int32_t data_regst_size = GetDataRegstSize(regsts);
+    int32_t data_regst_size =
+        std::count_if(regsts.begin(), regsts.end(), [](const std::shared_ptr<RegstDesc>& regst) {
+          return regst->regst_desc_type().has_data_regst_desc();
+        });
     if (data_regst_size == regsts.size()) {
       Handler(edge);
     } else {
@@ -452,10 +448,10 @@ void TaskNode::ForEachNodeOnInOutDataEdge(const std::function<void(TaskNode*)>& 
   ForEachNodeOnOutDataEdge(Handler);
 }
 
-TaskEdge* TaskNode::SoleDataEdge(
-    void (TaskNode::*ForEachDataEdge)(const std::function<void(TaskEdge*)>&) const) const {
+TaskEdge* TaskNode::GetSoleEdge(void (TaskNode::*ForEachEdge)(const std::function<void(TaskEdge*)>&)
+                                    const) const {
   TaskEdge* ret = nullptr;
-  (this->*ForEachDataEdge)([&](TaskEdge* edge) {
+  (this->*ForEachEdge)([&](TaskEdge* edge) {
     CHECK(ret == nullptr);
     ret = edge;
   });
@@ -463,24 +459,20 @@ TaskEdge* TaskNode::SoleDataEdge(
   return ret;
 }
 
-size_t TaskNode::GetDataEdgesSize(
-    void (TaskNode::*ForEachDataEdge)(const std::function<void(TaskEdge*)>&) const) const {
+size_t TaskNode::GetEdgesSize(void (TaskNode::*ForEachEdge)(const std::function<void(TaskEdge*)>&)
+                                  const) const {
   size_t size = 0;
-  (this->*ForEachDataEdge)([&](TaskEdge* edge) { ++size; });
+  (this->*ForEachEdge)([&](TaskEdge* edge) { ++size; });
   return size;
 }
 
-TaskEdge* TaskNode::SoleInDataEdge() const { return SoleDataEdge(&TaskNode::ForEachInDataEdge); }
+TaskEdge* TaskNode::SoleInDataEdge() const { return GetSoleEdge(&TaskNode::ForEachInDataEdge); }
 
-TaskEdge* TaskNode::SoleOutDataEdge() const { return SoleDataEdge(&TaskNode::ForEachOutDataEdge); }
+TaskEdge* TaskNode::SoleOutDataEdge() const { return GetSoleEdge(&TaskNode::ForEachOutDataEdge); }
 
-size_t TaskNode::in_data_edges_size() const {
-  return GetDataEdgesSize(&TaskNode::ForEachInDataEdge);
-}
+size_t TaskNode::in_data_edges_size() const { return GetEdgesSize(&TaskNode::ForEachInDataEdge); }
 
-size_t TaskNode::out_data_edges_size() const {
-  return GetDataEdgesSize(&TaskNode::ForEachOutDataEdge);
-}
+size_t TaskNode::out_data_edges_size() const { return GetEdgesSize(&TaskNode::ForEachOutDataEdge); }
 
 std::map<TaskType, std::string> task_type2color = {{kInvalid, "0"},
                                                    {kNormalForward, "2"},

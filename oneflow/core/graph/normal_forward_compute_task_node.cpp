@@ -11,7 +11,7 @@ bool NormalForwardCompTaskNode::HasBackwardCompTaskNode() {
     const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
     if (ret == false && succ_logical->TypeName() == "NormalBackward") { ret = true; }
   });
-  return false;
+  return ret;
 }
 
 void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
