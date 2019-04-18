@@ -136,22 +136,29 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
                     &logical2sorted_out_box, MutBufTask, AllocateCpuThrdIdEvenly);
     SetAreaIdForNewNodes(logical_edge->src_node(), logical_edge->dst_node());
   });
+  logical_gph_->ForEachNecessaryCtrlEdge(
+      [&](const LogicalNode* src, const LogicalNode* dst, int64_t ctrl_regst_num) {
+        const auto& src_task_nodes = logical2sorted_comp_tasks.at(src);
+        const auto& dst_task_nodes = logical2sorted_comp_tasks.at(dst);
+        ConnectUserConfiguredCtrlEdges(src_task_nodes, dst_task_nodes, ctrl_regst_num);
+      });
+
   MergeChainAndSetOrderInGraphForEachNode();
-  logical_gph_->ForEachNecessaryCtrlEdge([&](const LogicalNode* src, const LogicalNode* dst,
-                                             int64_t ctrl_regst_num) {
-    const auto& src_task_nodes = logical2sorted_comp_tasks.at(src);
-    const auto& dst_task_nodes = logical2sorted_comp_tasks.at(dst);
-    CHECK_EQ(src_task_nodes.size(), dst_task_nodes.size());
-    FOR_RANGE(int32_t, i, 0, src_task_nodes.size()) {
-      CHECK_NE(src_task_nodes.at(i)->chain_id(), dst_task_nodes.at(i)->chain_id());
-      RegstDesc* ctrl_regst_desc = src_task_nodes.at(i)->BuildCtrlRegstDesc(dst_task_nodes.at(i));
-      ctrl_regst_desc->UpdtMinRegstNumIfNeed(ctrl_regst_num);
-      ctrl_regst_desc->UpdtMaxRegstNumIfNeed(ctrl_regst_num);
-      ctrl_regst_desc->mut_regst_desc_type()->mutable_ctrl_regst_desc()->set_returned_regst_num(
-          ctrl_regst_num);
-    }
-  });
   ToDotWithAutoFilePath();
+}
+
+void TaskGraph::ConnectUserConfiguredCtrlEdges(const std::vector<CompTaskNode*>& src_task_nodes,
+                                               const std::vector<CompTaskNode*>& dst_task_nodes,
+                                               int64_t ctrl_regst_num) {
+  CHECK_EQ(src_task_nodes.size(), dst_task_nodes.size());
+  FOR_RANGE(int32_t, i, 0, src_task_nodes.size()) {
+    Connect<TaskNode>(src_task_nodes.at(i), NewEdge(), dst_task_nodes.at(i));
+    RegstDesc* ctrl_regst_desc = src_task_nodes.at(i)->BuildCtrlRegstDesc(dst_task_nodes.at(i));
+    ctrl_regst_desc->UpdtMinRegstNumIfNeed(ctrl_regst_num);
+    ctrl_regst_desc->UpdtMaxRegstNumIfNeed(ctrl_regst_num);
+    ctrl_regst_desc->mut_regst_desc_type()->mutable_ctrl_regst_desc()->set_returned_regst_num(
+        ctrl_regst_num);
+  }
 }
 
 void TaskGraph::GeneratePersistenceThrdId(
