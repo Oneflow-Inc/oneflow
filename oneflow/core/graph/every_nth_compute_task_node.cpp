@@ -4,11 +4,13 @@
 
 namespace oneflow {
 
-void EveryNthCompTaskNode::ConsumeAllRegsts() { ConsumeRegst("in", SoleInEdge()->GetSoleRegst()); }
+void EveryNthCompTaskNode::ConsumeAllRegsts() {
+  ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst());
+}
 
 void EveryNthCompTaskNode::ProduceAllRegstsAndBindEdges() {
   std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", false, 1, 1);
-  for (TaskEdge* edge : out_edges()) { edge->AddRegst("out", out_regst); }
+  ForEachOutDataEdge([&](TaskEdge* edge) { edge->AddRegst("out", out_regst); });
 }
 
 void EveryNthCompTaskNode::BuildExecGphAndRegst() {

@@ -46,11 +46,10 @@ class BoxingTaskNode : public TaskNode {
   DECLARE_BLD_BOXING_OP_CONF_METHOD(BwSbpParallel);
 
  private:
-  void InitLogical2SortedEdgeInfo(const std::unordered_set<TaskEdge*>& (TaskNode::*GetEdges)()
-                                      const,
-                                  TaskEdge* (TaskNode::*SoleEdge)() const,
-                                  TaskNode* (TaskEdge::*SoleNode)() const,
-                                  HashMap<const LogicalNode*, std::vector<EdgeInfo>>*);
+  void InitLogical2SortedEdgeInfo(
+      void (TaskNode::*ForEachDataEdge)(const std::function<void(TaskEdge*)>&) const,
+      TaskEdge* (TaskNode::*SoleEdge)() const, TaskNode* (TaskEdge::*SoleNode)() const,
+      HashMap<const LogicalNode*, std::vector<EdgeInfo>>* logical2sorted_edge_info);
   void BuildWithLogicalPair(const LogicalNode* in_logical,
                             const std::vector<EdgeInfo>& sorted_in_edges,
                             const LogicalNode* out_logical,

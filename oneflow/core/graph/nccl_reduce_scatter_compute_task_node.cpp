@@ -8,7 +8,7 @@ void NcclReduceScatterCompTaskNode::EnableMemSharingInReduce(const ReduceMemShar
   int64_t offset = ctx.Offset4RankCtxParallelId(rank_ctx, parallel_id());
   RegstDesc* out_regst = GetProducedRegst("out").get();
   ctx.EnableMemSharing4Regst(out_regst, offset);
-  if (this->SoleInEdge()->src_node()->GetTaskType() == TaskType::kReduceConcat) { return; }
+  if (this->SoleInDataEdge()->src_node()->GetTaskType() == TaskType::kReduceConcat) { return; }
   ctx.EnableMemSharing4Regst(GetSoleConsumedRegst("in").get(),
                              ctx.Offset4RankCtxParallelId(rank_ctx.CtxWithGather(), parallel_id()));
 }

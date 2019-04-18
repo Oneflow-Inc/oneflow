@@ -4,28 +4,28 @@
 namespace oneflow {
 
 void ReduceConcatCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  this->SoleOutEdge()->AddRegst("out", ProduceRegst("out", false, 1, 1));
+  this->SoleOutDataEdge()->AddRegst("out", ProduceRegst("out", false, 1, 1));
 }
 
 void ReduceConcatCompTaskNode::ConsumeAllRegsts() {
   if (Global<JobDesc>::Get()->IsPredict()
       && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     int32_t idx = 0;
-    for (TaskEdge* in_edge : in_edges()) {
+    ForEachInDataEdge([&](TaskEdge* in_edge) {
       ConsumeRegst("in_" + std::to_string(idx), in_edge->GetSoleRegst());
       ++idx;
-    }
+    });
   } else {
     std::vector<EdgeInfo> edge_infos;
-    for (TaskEdge* edge : in_edges()) {
+    ForEachInDataEdge([&](TaskEdge* edge) {
       TaskNode* src_node = edge->src_node();
       while (src_node->GetTaskType() != TaskType::kNormalBackward) {
-        src_node = src_node->SoleInEdge()->src_node();
+        src_node = src_node->SoleInDataEdge()->src_node();
       }
       CompTaskNode* bw_node = dynamic_cast<CompTaskNode*>(src_node);
       EdgeInfo edge_info{edge, bw_node->order_in_graph()};
       edge_infos.emplace_back(edge_info);
-    }
+    });
     SortEdges(&edge_infos);
     FOR_RANGE(size_t, idx, 0, edge_infos.size()) {
       ConsumeRegst("in_" + std::to_string(idx), edge_infos[idx].edge->GetSoleRegst());

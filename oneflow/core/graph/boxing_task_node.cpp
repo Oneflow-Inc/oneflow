@@ -8,29 +8,29 @@
 namespace oneflow {
 
 void BoxingTaskNode::ProduceAllRegstsAndBindEdges() {
-  for (TaskEdge* out_edge : out_edges()) {
+  ForEachOutDataEdge([&](TaskEdge* out_edge) {
     std::string name = "boxing_out_" + std::to_string(out_edge->edge_id());
     auto out_regst = ProduceRegst(name, true);
     out_edge->AddRegst(name, out_regst);
-  }
+  });
   ProduceRegst("middle", true, 1, 1);
 }
 
 void BoxingTaskNode::ConsumeAllRegsts() {
-  for (TaskEdge* in_edge : in_edges()) {
+  ForEachInDataEdge([&](TaskEdge* in_edge) {
     std::string name = "boxing_in_" + std::to_string(in_edge->edge_id());
     auto in_regst = in_edge->GetSoleRegst();
     ConsumeRegst(name, in_regst);
-  }
+  });
 }
 
 void BoxingTaskNode::BuildExecGphAndRegst() {
   HashMap<const LogicalNode*, std::vector<EdgeInfo>> in_logical2edge_info;
-  InitLogical2SortedEdgeInfo(&TaskNode::in_edges, &TaskNode::SoleInEdge, &TaskEdge::src_node,
-                             &in_logical2edge_info);
+  InitLogical2SortedEdgeInfo(&TaskNode::ForEachInDataEdge, &TaskNode::SoleInDataEdge,
+                             &TaskEdge::src_node, &in_logical2edge_info);
   HashMap<const LogicalNode*, std::vector<EdgeInfo>> out_logical2edge_info;
-  InitLogical2SortedEdgeInfo(&TaskNode::out_edges, &TaskNode::SoleOutEdge, &TaskEdge::dst_node,
-                             &out_logical2edge_info);
+  InitLogical2SortedEdgeInfo(&TaskNode::ForEachOutDataEdge, &TaskNode::SoleOutDataEdge,
+                             &TaskEdge::dst_node, &out_logical2edge_info);
   for (const auto& in_pair : in_logical2edge_info) {
     for (const auto& out_pair : out_logical2edge_info) {
       BuildWithLogicalPair(in_pair.first, in_pair.second, out_pair.first, out_pair.second);
@@ -167,11 +167,11 @@ DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, BwSbpParallel) {
 }
 
 void BoxingTaskNode::InitLogical2SortedEdgeInfo(
-    const std::unordered_set<TaskEdge*>& (TaskNode::*GetEdges)() const,
+    void (TaskNode::*ForEachDataEdge)(const std::function<void(TaskEdge*)>&) const,
     TaskEdge* (TaskNode::*SoleEdge)() const, TaskNode* (TaskEdge::*SoleNode)() const,
     HashMap<const LogicalNode*, std::vector<EdgeInfo>>* logical2sorted_edge_info) {
   logical2sorted_edge_info->clear();
-  for (const TaskEdge* edge : (this->*GetEdges)()) {
+  (this->*ForEachDataEdge)([&](const TaskEdge* edge) {
     EdgeInfo edge_info;
     edge_info.edge = edge;
     edge_info.parallel_id_min = GetMaxVal<int64_t>();
@@ -190,13 +190,12 @@ void BoxingTaskNode::InitLogical2SortedEdgeInfo(
             std::max(edge_info.parallel_id_max, cur_comp_node->parallel_id());
         if (logical == nullptr) { logical = cur_comp_node->logical_node(); }
       } else {
-        for (const TaskEdge* cur_edge : (cur_node->*GetEdges)()) {
-          node_queue.push((cur_edge->*SoleNode)());
-        }
+        (cur_node->*ForEachDataEdge)(
+            [&](const TaskEdge* cur_edge) { node_queue.push((cur_edge->*SoleNode)()); });
       }
     }
     (*logical2sorted_edge_info)[logical].push_back(edge_info);
-  }
+  });
   for (auto& pair : *logical2sorted_edge_info) {
     std::vector<EdgeInfo>& edges = pair.second;
     std::sort(edges.begin(), edges.end(), [&](const EdgeInfo& lhs, const EdgeInfo& rhs) {
