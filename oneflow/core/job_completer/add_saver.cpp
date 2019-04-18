@@ -3,6 +3,7 @@
 namespace oneflow {
 
 void AddSaver(const OpGraph& op_graph, Job* job_conf) {
+  if (!Global<JobDesc>::Get()->enable_write_snapshot()) { return; }
   const int64_t num_of_batches_in_snapshot =
       job_conf->other().predict_conf().tmp_split_fw_bw_train_conf().num_of_batches_in_snapshot();
   if (Global<JobDesc>::Get()->TotalBatchNum() < num_of_batches_in_snapshot) { return; }
