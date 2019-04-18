@@ -13,7 +13,7 @@ class AccuracyOp final : public Operator {
   virtual ~AccuracyOp() = default;
 
   void InitFromOpConf() override;
-  LogicalNode* NewProperLogicalNode() override { return new AccuracyLogicalNode; }
+  LogicalNode* NewProperLogicalNode() const override { return new AccuracyLogicalNode; }
 
   const PbMessage& GetCustomizedConf() const override;
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

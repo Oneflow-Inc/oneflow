@@ -13,7 +13,7 @@ class LossOp : public Operator {
   virtual ~LossOp() = default;
 
   void InitFromOpConf() override;
-  LogicalNode* NewProperLogicalNode() override { return new LossLogicalNode; }
+  LogicalNode* NewProperLogicalNode() const override { return new LossLogicalNode; }
 
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;

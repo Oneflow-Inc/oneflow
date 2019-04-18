@@ -20,9 +20,10 @@ void ReduceSplitOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   if (Global<JobDesc>::Get()->IsPredict()
       && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     FOR_RANGE(int32_t, i, 0, conf.out_num()) {
+      BlobDesc* blob_desc = GetBlobDesc4BnInOp(output_bns().Get(i));
       Shape shape(conf.out_shape(i));
-      CHECK_EQ(GetBlobDesc4BnInOp(output_bns().Get(i))->shape().elem_cnt(), shape.elem_cnt());
-      GetBlobDesc4BnInOp(output_bns().Get(i))->mut_shape() = shape;
+      blob_desc->mut_shape() = shape;
+      blob_desc->set_data_type(GetBlobDesc4BnInOp("in")->data_type());
     }
   }
 }

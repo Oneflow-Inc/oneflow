@@ -367,6 +367,9 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceConcat"
                               "ReduceIdentity",
                               &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
+                              "ReduceIdentity",
+                              &TaskGraph::BldSubTskGphByOneToOne);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceIdentity"
                               "NcclAllReduce",
                               &TaskGraph::BldSubTskGphByOneToOne);

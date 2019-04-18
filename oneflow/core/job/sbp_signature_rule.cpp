@@ -261,6 +261,81 @@ class MultiIbnsBroadcastSbpSignatureRule final : public ParallelSbpSignatureRule
   }
 };
 
+bool IsAllInputPartialSumParallel(
+    const Operator& op,
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn) {
+  for (const auto& ibn : op.input_bns()) {
+    if (SbpInferHint4Ibn(ibn).sbp_parallel().has_partial_sum_parallel() == false) { return false; }
+  }
+  return true;
+}
+
+class P2BSignatureRule final : public ParallelSbpSignatureRule {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(P2BSignatureRule);
+  ~P2BSignatureRule() override = default;
+
+  P2BSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
+
+  const std::string Description() const override {
+    return op().op_name() + ": (P, ...) -> (B, ...)";
+  }
+
+  const SbpSigMatchResult MatchByIbnHint(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const override {
+    if (!IsAllInputPartialSumParallel(op(), SbpInferHint4Ibn)) {
+      return MakeSbpSigMatchSignatureMismatch();
+    }
+    for (const auto& ibn : op().input_bns()) {
+      if (parallel_desc.parallel_num() != SbpInferHint4Ibn(ibn).parallel_num()) {
+        return MakeSbpSigMatchSignatureMismatch();
+      }
+    }
+    return MakeSbpSigMatchSuccess();
+  }
+
+  void GenerateSignature(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
+    for (const auto& ibn : op().input_bns()) { (*bn2sbp)[ibn].mutable_partial_sum_parallel(); }
+    for (const auto& obn : op().output_bns()) { (*bn2sbp)[obn].mutable_broadcast_parallel(); }
+  }
+};
+
+class PartialSumSignatureRule final : public ParallelSbpSignatureRule {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(PartialSumSignatureRule);
+  ~PartialSumSignatureRule() override = default;
+
+  PartialSumSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
+
+  const std::string Description() const override { return op().op_name() + ": (P, ...) -> P"; }
+
+  const SbpSigMatchResult MatchByIbnHint(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const override {
+    if (!IsAllInputPartialSumParallel(op(), SbpInferHint4Ibn)) {
+      return MakeSbpSigMatchSignatureMismatch();
+    }
+    for (const auto& ibn : op().input_bns()) {
+      if (parallel_desc.parallel_num() != SbpInferHint4Ibn(ibn).parallel_num()) {
+        return MakeSbpSigMatchSignatureMismatch();
+      }
+    }
+    return MakeSbpSigMatchSuccess();
+  }
+
+  void GenerateSignature(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
+    for (const auto& ibn : op().input_bns()) { (*bn2sbp)[ibn].mutable_partial_sum_parallel(); }
+    for (const auto& obn : op().output_bns()) { (*bn2sbp)[obn].mutable_partial_sum_parallel(); }
+  }
+};
+
 class DS_MB_2_DS_SbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DS_MB_2_DS_SbpSignatureRule);
@@ -518,6 +593,14 @@ std::unique_ptr<const SbpSignatureRule> MakeSoleIbnBroadcastSbpSignatureRule(con
 
 std::unique_ptr<const SbpSignatureRule> MakeMultiIbnsBroadcastSbpSignatureRule(const Operator* op) {
   return std::unique_ptr<const SbpSignatureRule>(new MultiIbnsBroadcastSbpSignatureRule(op));
+}
+
+std::unique_ptr<const SbpSignatureRule> MakePartialSumSignatureRule(const Operator* op) {
+  return std::unique_ptr<const SbpSignatureRule>(new PartialSumSignatureRule(op));
+}
+
+std::unique_ptr<const SbpSignatureRule> MakeP2BSignatureRule(const Operator* op) {
+  return std::unique_ptr<const SbpSignatureRule>(new P2BSignatureRule(op));
 }
 
 std::unique_ptr<const SbpSignatureRule> MakeModelSplitSbpSignatureRule(const Operator* op) {

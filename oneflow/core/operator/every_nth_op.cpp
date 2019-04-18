@@ -35,7 +35,7 @@ void EveryNthOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
 }
 
-LogicalNode* EveryNthOp::NewProperLogicalNode() { return new EveryNthLogicalNode(); }
+LogicalNode* EveryNthOp::NewProperLogicalNode() const { return new EveryNthLogicalNode(); }
 
 void EveryNthOp::GetSbpSignatureRules(
     const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
