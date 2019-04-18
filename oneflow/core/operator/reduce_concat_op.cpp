@@ -21,6 +21,15 @@ const PbMessage& ReduceConcatOp::GetCustomizedConf() const {
   return op_conf().reduce_concat_conf();
 }
 
+LogicalNode* ReduceConcatOp::NewProperLogicalNode() const const {
+  if (Global<JobDesc>::Get()->IsPredict()
+      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+    return new NormalForwardLogicalNode;
+  } else {
+    return new ReduceConcatLogicalNode;
+  }
+}
+
 void ReduceConcatOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                     const ParallelContext* parallel_ctx, int64_t record_piece_size,
                                     std::function<void(OpContext*)> EnrollOpCtx) const {

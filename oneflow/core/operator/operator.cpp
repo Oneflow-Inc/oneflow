@@ -29,7 +29,7 @@ void Operator::InitFromOpConf(const OperatorConf& op_conf) {
   InitFromOpConf();
 }
 
-LogicalNode* Operator::NewProperLogicalNode() { return new NormalForwardLogicalNode; }
+LogicalNode* Operator::NewProperLogicalNode() const { return new NormalForwardLogicalNode; }
 
 const LogicalBlobId& Operator::BnInOp2Lbi(const std::string& bn_in_op) const {
   return op_attribute_.bn_in_op2lbi().at(bn_in_op);

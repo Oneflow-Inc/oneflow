@@ -15,7 +15,7 @@ class ReduceScatterOp final : public Operator {
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
 
-  LogicalNode* NewProperLogicalNode() override { return new ReduceScatterLogicalNode; }
+  LogicalNode* NewProperLogicalNode() const override { return new ReduceScatterLogicalNode; }
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
 

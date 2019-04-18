@@ -20,7 +20,7 @@ class RecordLoadOp final : public Operator {
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext*, KernelConf*) const override;
 
-  LogicalNode* NewProperLogicalNode() override { return new RecordLoadLogicalNode; }
+  LogicalNode* NewProperLogicalNode() const override { return new RecordLoadLogicalNode; }
 
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }

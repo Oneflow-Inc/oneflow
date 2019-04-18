@@ -15,7 +15,7 @@ class ReduceAddOp final : public Operator {
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
 
-  LogicalNode* NewProperLogicalNode() override { return new ReduceAddLogicalNode; }
+  LogicalNode* NewProperLogicalNode() const override { return new ReduceAddLogicalNode; }
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
 

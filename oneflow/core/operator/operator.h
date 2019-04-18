@@ -36,7 +36,7 @@ class Operator {
 
   ActivationType GetActivationType() const;
 
-  virtual LogicalNode* NewProperLogicalNode();
+  virtual LogicalNode* NewProperLogicalNode() const;
 
   virtual bool IsLossOp() const { return false; }
   virtual bool IsRecurrentOp() const { return false; }

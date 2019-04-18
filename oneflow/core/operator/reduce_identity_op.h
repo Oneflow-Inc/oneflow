@@ -12,7 +12,7 @@ class ReduceIdentityOp final : public Operator {
   ReduceIdentityOp() = default;
   ~ReduceIdentityOp() = default;
 
-  LogicalNode* NewProperLogicalNode() { return new ReduceIdentityLogicalNode; }
+  LogicalNode* NewProperLogicalNode() const override { return new ReduceIdentityLogicalNode; }
   void InitFromOpConf() override;
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;

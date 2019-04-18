@@ -43,7 +43,9 @@ LogicalBlobId NcclAllReduceOp::obn2lbi(const std::string& output_bn) const {
   }
 }
 
-LogicalNode* NcclAllReduceOp::NewProperLogicalNode() { return new NcclAllReduceLogicalNode(); }
+LogicalNode* NcclAllReduceOp::NewProperLogicalNode() const {
+  return new NcclAllReduceLogicalNode();
+}
 
 REGISTER_OP(OperatorConf::kNcclAllReduceConf, NcclAllReduceOp);
 
