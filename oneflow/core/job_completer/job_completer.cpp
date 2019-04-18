@@ -79,7 +79,7 @@ void GenerateOpConf4Trainning(const OpGraph& op_graph, Job* job) {
   HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
   AutoGrad(op_graph, job, &op_name2ibn2in_diff_lbi, &lbi2diff_lbi);
   AddOptimizerOpConf(op_graph, job, lbi2diff_lbi, total_loss_instance_num);
-  AddSaver(op_graph, job);
+  // AddSaver(op_graph, job);
   UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(lbi2diff_lbi, job);
   UpdateJobHelperConfSbpSignatureHint(op_graph, op_name2ibn2in_diff_lbi, job);
 }
