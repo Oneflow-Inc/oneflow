@@ -5,12 +5,12 @@ namespace oneflow {
 
 void ReduceScatterCompTaskNode::ProduceAllRegstsAndBindEdges() {
   std::vector<EdgeInfo> edge_infos;
-  for (TaskEdge* edge : out_edges()) {
+  ForEachOutDataEdge([&](TaskEdge* edge) {
     std::vector<CompTaskNode*> comp_task_nodes = GetSuccCompTaskNodesOnEdge(edge);
     CHECK_EQ(comp_task_nodes.size(), 1);
     EdgeInfo edge_info = {edge, comp_task_nodes.front()->task_id()};
     edge_infos.push_back(edge_info);
-  }
+  });
   SortEdges(&edge_infos);
   FOR_RANGE(int64_t, out_edge_index, 0, edge_infos.size()) {
     std::string out_regst_name = "out_" + std::to_string(out_edge_index);
@@ -20,7 +20,7 @@ void ReduceScatterCompTaskNode::ProduceAllRegstsAndBindEdges() {
 }
 
 void ReduceScatterCompTaskNode::ConsumeAllRegsts() {
-  ConsumeRegst("in", this->SoleInEdge()->GetSoleRegst());
+  ConsumeRegst("in", this->SoleInDataEdge()->GetSoleRegst());
 }
 
 void ReduceScatterCompTaskNode::BuildExecGphAndRegst() {
@@ -28,7 +28,7 @@ void ReduceScatterCompTaskNode::BuildExecGphAndRegst() {
   OperatorConf reduce_scatter_op_conf;
   reduce_scatter_op_conf.set_name("reduce_scatter_" + NewUniqueId());
   reduce_scatter_op_conf.set_device_type(this->device_type());
-  reduce_scatter_op_conf.mutable_reduce_scatter_conf()->set_out_num(out_edges().size());
+  reduce_scatter_op_conf.mutable_reduce_scatter_conf()->set_out_num(out_data_edges_size());
 
   std::shared_ptr<Operator> reduce_scatter_op = ConstructOp(reduce_scatter_op_conf);
   node->mut_op() = reduce_scatter_op;
@@ -57,7 +57,7 @@ void ReduceScatterCompTaskNode::EnableMemSharingInReduce(const ReduceMemSharingC
     RegstDesc* out = GetProducedRegst("out_" + std::to_string(i)).get();
     ctx.EnableMemSharing4Regst(out, offset + i * out_size);
   }
-  if (this->SoleInEdge()->src_node()->GetTaskType() == TaskType::kReduceConcat) { return; }
+  if (this->SoleInDataEdge()->src_node()->GetTaskType() == TaskType::kReduceConcat) { return; }
   ctx.EnableMemSharing4Regst(GetSoleConsumedRegst("in").get(), offset);
 }
 

@@ -4,12 +4,12 @@
 namespace oneflow {
 
 const NormalForwardCompTaskNode* NormalMdUpdtCompTaskNode::GetForwardTaskNode() const {
-  for (const TaskEdge* out_edge : out_edges()) {
+  ForEachOutDataEdge([&](TaskEdge* out_edge) {
     const TaskNode* dst_node = out_edge->dst_node();
     if (IsForwardTaskType(dst_node->GetTaskType())) {
       return dynamic_cast<const NormalForwardCompTaskNode*>(dst_node);
     }
-  }
+  });
   UNIMPLEMENTED();
 }
 
@@ -28,7 +28,7 @@ void NormalMdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
   related_init_model_task_id_ = -1;
   std::list<std::pair<std::string, std::shared_ptr<RegstDesc>>> model_to_save{
       {"model", model_regst}, {"forward_model", forward_model_regst}};
-  for (TaskEdge* out_edge : out_edges()) {
+  ForEachOutDataEdge([&](TaskEdge* out_edge) {
     TaskNode* dst_node = out_edge->dst_node();
     if (IsForwardTaskType(dst_node->GetTaskType()) || IsBackwardTaskType(dst_node->GetTaskType())) {
       out_edge->AddRegst("model", model_regst);
@@ -42,17 +42,17 @@ void NormalMdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
       out_edge->AddRegst(model_to_save.front().first, model_to_save.front().second);
       model_to_save.pop_front();
     }
-  }
+  });
 }
 
 void NormalMdUpdtCompTaskNode::ConsumeAllRegsts() {
   if (!IsTrainable()) { return; }
-  for (TaskEdge* edge : in_edges()) {
+  ForEachInDataEdge([&](TaskEdge* edge) {
     auto regst_descs = edge->GetRegsts();
     for (auto& regst_desc : regst_descs) {
       ConsumeRegst("model_diff_acc_" + NewUniqueId(), regst_desc);
     }
-  }
+  });
 }
 
 bool NormalMdUpdtCompTaskNode::IsReadyForBuild() {

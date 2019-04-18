@@ -6,7 +6,7 @@ namespace oneflow {
 void SinkCompTaskNode::ProduceAllRegstsAndBindEdges() {}
 
 void SinkCompTaskNode::ConsumeAllRegsts() {
-  for (TaskEdge* edge : in_edges()) { ConsumeRegst("in", edge->GetSoleRegst()); }
+  ForEachInDataEdge([&](TaskEdge* edge) { ConsumeRegst("in", edge->GetSoleRegst()); });
 }
 
 void SinkCompTaskNode::BuildExecGphAndRegst() {

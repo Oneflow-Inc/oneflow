@@ -8,11 +8,11 @@ void LossCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("out", true);
   ProduceRegst("data_tmp", true, 1, 1);
   ProduceRegst("const_buf", false, 1, 1);
-  for (TaskEdge* edge : out_edges()) { BindEdgeWithProducedRegst(edge, "out"); }
+  ForEachOutDataEdge([&](TaskEdge* edge) { BindEdgeWithProducedRegst(edge, "out"); });
 }
 
 void LossCompTaskNode::ConsumeAllRegsts() {
-  for (TaskEdge* edge : in_edges()) { ConsumeRegst("in", edge->GetSoleRegst()); }
+  ForEachInDataEdge([&](TaskEdge* edge) { ConsumeRegst("in", edge->GetSoleRegst()); });
 }
 
 void LossCompTaskNode::BuildExecGphAndRegst() {

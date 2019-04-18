@@ -7,14 +7,14 @@ namespace oneflow {
 void DecodeCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("data_tmp", true, 1, 1);
   ProduceRegst("out", true);
-  for (TaskEdge* edge : out_edges()) { BindEdgeWithProducedRegst(edge, "out"); }
+  ForEachOutDataEdge([&](TaskEdge* edge) { BindEdgeWithProducedRegst(edge, "out"); });
 }
 
 void DecodeCompTaskNode::ConsumeAllRegsts() {
-  if (in_edges().size() == 1) {
-    ConsumeRegst("record", SoleInEdge()->GetSoleRegst());
+  if (in_data_edges_size() == 1) {
+    ConsumeRegst("record", SoleInDataEdge()->GetSoleRegst());
   } else {
-    CHECK_EQ(in_edges().size(), 0);
+    CHECK_EQ(in_data_edges_size(), 0);
   }
 }
 

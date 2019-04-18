@@ -7,11 +7,11 @@ namespace oneflow {
 void AccuracyCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("accuracy", false);
   ProduceRegst("data_tmp", true);
-  for (TaskEdge* edge : out_edges()) { BindEdgeWithProducedRegst(edge, "accuracy"); }
+  ForEachOutDataEdge([&](TaskEdge* edge) { BindEdgeWithProducedRegst(edge, "accuracy"); });
 }
 
 void AccuracyCompTaskNode::ConsumeAllRegsts() {
-  for (TaskEdge* edge : in_edges()) { ConsumeRegst("in", edge->GetSoleRegst()); }
+  ForEachInDataEdge([&](TaskEdge* edge) { ConsumeRegst("in", edge->GetSoleRegst()); });
 }
 
 void AccuracyCompTaskNode::BuildExecGphAndRegst() {

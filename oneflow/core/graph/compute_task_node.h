@@ -26,6 +26,9 @@ class CompTaskNode : public TaskNode {
   const LogicalNode* logical_node() const { return logical_node_; }
   void set_logical_node(const LogicalNode* val) { logical_node_ = val; }
 
+  virtual TaskEdge* SoleInDataEdge() const { return SoleInEdge(); }
+  virtual TaskEdge* SoleOutDataEdge() const { return SoleOutEdge(); }
+
  protected:
   const LogicalNode* GetOneSuccLogicalNodeOnEdge(TaskEdge* edge);
   const LogicalNode* GetOnePredLogicalNodeOnEdge(TaskEdge* edge);

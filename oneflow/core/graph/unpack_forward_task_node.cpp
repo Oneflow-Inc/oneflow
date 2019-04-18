@@ -6,14 +6,14 @@ namespace oneflow {
 
 void UnpackForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("out", false);
-  for (TaskEdge* edge : out_edges()) {
+  ForEachOutDataEdge([&](TaskEdge* edge) {
     const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
     if (succ_logical->TypeName() != "UnpackBackward") { BindEdgeWithProducedRegst(edge, "out"); }
-  }
+  });
 }
 
 void UnpackForwardCompTaskNode::ConsumeAllRegsts() {
-  ConsumeRegst("in", SoleInEdge()->GetSoleRegst());
+  ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst());
 }
 
 void UnpackForwardCompTaskNode::BuildExecGphAndRegst() {
