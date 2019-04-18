@@ -23,6 +23,10 @@ const PbMessage& RMSPropModelUpdateOp::GetCustomizedConf() const {
   }
 }
 
+const HashSet<std::string> RMSPropModelUpdateOp::AlwaysBroadcastParallelBns() const {
+  return HashSet<std::string>{};
+}
+
 REGISTER_CLASS(NormalModelUpdateOpUserConf::kRmspropConf, NormalModelUpdtOp, RMSPropModelUpdateOp);
 
 REGISTER_OP(OperatorConf::kRmspropModelUpdateConf, RMSPropModelUpdateOp);

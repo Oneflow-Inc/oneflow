@@ -25,7 +25,7 @@ class ParallelCastSbpSignatureRule final : public ParallelSbpSignatureRule {
 
   const std::string Description() const override { return op().op_name() + ": A -> A"; }
 
-  const SbpSigMatchResult GetMatchResult(
+  const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelDesc& parallel_desc) const override {
     const auto& configured_sbp_parallel = GetSbpParallel(op().op_conf().parallel_cast_conf());
@@ -50,6 +50,7 @@ class ParallelCastSbpSignatureRule final : public ParallelSbpSignatureRule {
 }  // namespace
 
 void ParallelCastOp::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   rules->emplace_back(new ParallelCastSbpSignatureRule(this));
 }

@@ -23,7 +23,8 @@ class OpNode final : public Node<OpNode, OpEdge> {
   ~OpNode() = default;
 
   // Getters
-  const Shape& out_blob_time_shape() const { return out_blob_time_shape_; }
+  const Shape* GetInputBlobFastestTimeShape() const;
+  const Shape* out_blob_time_shape() const;
   const Operator& op() const { return *op_; }
   bool HasBackward() const { return has_in_diff() || has_model_diff(); }
   bool has_in_diff() const { return has_in_diff_; }
@@ -31,6 +32,9 @@ class OpNode final : public Node<OpNode, OpEdge> {
   void set_has_in_diff(bool has_in_diff) { has_in_diff_ = has_in_diff; }
   const ParallelDesc& parallel_desc() const { return parallel_desc_; }
   const SbpSignature& sbp_signature() const { return sbp_signature_; }
+  const SbpParallel& SbpParallel4Lbi(const LogicalBlobId& lbi) const;
+  const SbpParallel& SbpParallel4BnInOp(const std::string& bn_in_op) const;
+  const BlobDesc& LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const;
 
   std::string VisualStr() const override;
 
@@ -39,15 +43,12 @@ class OpNode final : public Node<OpNode, OpEdge> {
   friend class OpEdge;
   // Getters
   const BlobDesc& NoParallelBlobDesc4Lbi(const LogicalBlobId& lbi) const;
-  const BlobDesc& LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const;
   const Shape* GetInputBlobTimeShape(const std::string& bn_in_op) const;
-  const Shape* GetInputBlobTimeShape() const;
-  const SbpParallel& SbpParallel4Lbi(const LogicalBlobId& lbi) const;
 
   // Setters
   ParallelDesc* mut_parallel_desc() { return &parallel_desc_; }
   SbpSignature* mut_sbp_signature() { return &sbp_signature_; }
-  Shape* mut_out_blob_time_shape() { return &out_blob_time_shape_; }
+  Shape* mut_out_blob_time_shape();
   HashMap<std::string, std::vector<BlobDesc>>* mut_bn2parallel_id2blob_desc() {
     return &bn2parallel_id2blob_desc_;
   }
@@ -77,7 +78,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   std::shared_ptr<Operator> op_;
   HashSet<std::string> ibns_;
   bool has_in_diff_;
-  Shape out_blob_time_shape_;
+  std::unique_ptr<Shape> out_blob_time_shape_;
   SbpSignature sbp_signature_;
   HashMap<LogicalBlobId, BlobDesc> lbi2no_parallel_blob_desc_;
   HashMap<LogicalBlobId, bool> lbi2is_model_blob_;
@@ -137,8 +138,9 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void InferTimeShape() const;
   void InferNoParallelBlobDesc() const;
   void InferIsModelBlob() const;
-  void InferSbpSignature() const;
-  void InferLogicalBlobDesc() const;
+  void InferOpNodeSbpSignature(OpNode* op_node, const Job& job) const;
+  void InferOpNodeLogicalBlobDesc(OpNode* op_node) const;
+  void InferLogicalBlobDesc(const Job& job) const;
   bool IsModelBlob(const std::string& op_name, const LogicalBlobId& lbi) const;
   bool IsDataBlob(const std::string& op_name, const LogicalBlobId& lbi) const;
   std::string GetOpNameKey(const std::string& op_name, const LogicalBlobId& lbi) const;

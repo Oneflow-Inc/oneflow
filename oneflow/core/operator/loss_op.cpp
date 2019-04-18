@@ -4,21 +4,34 @@ namespace oneflow {
 
 namespace {
 
-class LossSbpSignatureRule final : public ParallelSbpSignatureRule {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(LossSbpSignatureRule);
-  ~LossSbpSignatureRule() override = default;
+bool IsAnyInputBroadcastParallel(
+    const Operator& op,
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn) {
+  for (const auto& ibn : op.input_bns()) {
+    if (SbpInferHint4Ibn(ibn).sbp_parallel().has_broadcast_parallel()) { return true; }
+  }
+  return false;
+}
 
-  LossSbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
+class LossSplitSignatureRule final : public ParallelSbpSignatureRule {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(LossSplitSignatureRule);
+  ~LossSplitSignatureRule() override = default;
+
+  LossSplitSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
 
   const std::string Description() const override {
     return op().op_name() + ": (S(0), S(0)) -> S(0)";
   }
 
-  const SbpSigMatchResult GetMatchResult(
+  const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelDesc& parallel_desc) const override {
-    return MakeSbpSigMatchSuccess();
+    if (IsAnyInputBroadcastParallel(op(), SbpInferHint4BnInOp)) {
+      return MakeSbpSigMatchSignatureMismatch();
+    } else {
+      return MakeSbpSigMatchSuccess();
+    }
   }
 
   void GenerateSignature(
@@ -38,11 +51,39 @@ class LossSbpSignatureRule final : public ParallelSbpSignatureRule {
   }
 };
 
+class LossBroadcastSignatureRule final : public ParallelSbpSignatureRule {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(LossBroadcastSignatureRule);
+  ~LossBroadcastSignatureRule() override = default;
+
+  LossBroadcastSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
+
+  const std::string Description() const override { return op().op_name() + ": (B, B) -> B"; }
+
+  const SbpSigMatchResult MatchByIbnHint(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      const ParallelDesc& parallel_desc) const override {
+    if (IsAnyInputBroadcastParallel(op(), SbpInferHint4BnInOp)) {
+      return MakeSbpSigMatchSuccess();
+    } else {
+      return MakeSbpSigMatchSignatureMismatch();
+    }
+  }
+
+  void GenerateSignature(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
+    for (const auto& ibn : op().input_bns()) { (*bn2sbp)[ibn].mutable_broadcast_parallel(); }
+    for (const auto& obn : op().output_bns()) { (*bn2sbp)[obn].mutable_broadcast_parallel(); }
+  }
+};
+
 }  // namespace
 void LossOp::InitFromOpConf() {
   EnrollInputBn("prediction");
   if (HasFieldInCustomizedConf("label")) { EnrollInputBn("label", false); }
-  EnrollOutputBn("loss", false);
+  EnrollOutputBn("loss");
   EnrollOutputBn("loss_instance_num", false);
   if (!GetValFromCustomizedConf<std::string>("weight").empty()) {
     EnrollInputBn("weight", false);
@@ -101,8 +142,10 @@ void LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
 }
 
 void LossOp::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  rules->emplace_back(new LossSbpSignatureRule(this));
+  rules->emplace_back(new LossSplitSignatureRule(this));
+  rules->emplace_back(new LossBroadcastSignatureRule(this));
 }
 
 LogicalBlobId LossOp::obn2lbi(const std::string& output_bn) const {

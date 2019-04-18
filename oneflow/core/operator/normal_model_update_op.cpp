@@ -6,6 +6,97 @@
 
 namespace oneflow {
 
+namespace {
+
+class ModelUpdtOpBroadcastSignatureRule final : public ParallelSbpSignatureRule {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ModelUpdtOpBroadcastSignatureRule);
+  ~ModelUpdtOpBroadcastSignatureRule() override = default;
+
+  ModelUpdtOpBroadcastSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
+
+  const std::string Description() const override {
+    return op().op_name() + ": (B, ...) -> (B, ...)";
+  }
+
+  const SbpSigMatchResult MatchByIbnHint(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const override {
+    const auto& model_sbp_infer_hint = SbpInferHint4Ibn("model");
+    CHECK(model_sbp_infer_hint.is_model_blob());
+    if (model_sbp_infer_hint.sbp_parallel().has_broadcast_parallel()) {
+      // TODO: CHECK(parallel_desc.EqualsIgnoringPolicy(model_sbp_infer_hint.parallel_desc()));
+      return MakeSbpSigMatchSuccess();
+    } else {
+      return MakeSbpSigMatchSignatureMismatch();
+    }
+  }
+
+  void GenerateSignature(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
+    for (const auto& bn : op().input_bns()) { (*bn2sbp)[bn].mutable_broadcast_parallel(); }
+    for (const auto& bn : op().output_bns()) { (*bn2sbp)[bn].mutable_broadcast_parallel(); }
+  }
+};
+
+class ModelUpdtOpSplitSignatureRule final : public ParallelSbpSignatureRule {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ModelUpdtOpSplitSignatureRule);
+  ~ModelUpdtOpSplitSignatureRule() override = default;
+
+  ModelUpdtOpSplitSignatureRule(const Operator* op,
+                                const HashSet<std::string>& always_broadcast_parallel_bns)
+      : ParallelSbpSignatureRule(op),
+        always_broadcast_parallel_bns_(always_broadcast_parallel_bns) {}
+
+  const std::string Description() const override {
+    return op().op_name() + ": (S(0), ...) -> (S(0), ...)";
+  }
+
+  const SbpSigMatchResult MatchByIbnHint(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const override {
+    const auto& model_sbp_infer_hint = SbpInferHint4Ibn("model");
+    CHECK(model_sbp_infer_hint.is_model_blob());
+    if (model_sbp_infer_hint.sbp_parallel().has_split_parallel()) {
+      return MakeSbpSigMatchSuccess();
+    } else {
+      return MakeSbpSigMatchSignatureMismatch();
+    }
+  }
+
+  void GenerateSignature(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
+    auto SetSbpParallel = [&](const std::string& bn) {
+      if (always_broadcast_parallel_bns_.find(bn) == always_broadcast_parallel_bns_.end()) {
+        (*bn2sbp)[bn].mutable_split_parallel()->set_axis(0);
+      } else {
+        (*bn2sbp)[bn].mutable_broadcast_parallel();
+      }
+    };
+    for (const auto& bn : op().input_bns()) { SetSbpParallel(bn); }
+    for (const auto& bn : op().output_bns()) { SetSbpParallel(bn); }
+  }
+
+ private:
+  HashSet<std::string> always_broadcast_parallel_bns_;
+};
+
+}  // namespace
+
+std::unique_ptr<const SbpSignatureRule> MakeModelUpdtOpBroadcastSignatureRule(const Operator* op) {
+  return std::make_unique<const ModelUpdtOpBroadcastSignatureRule>(op);
+}
+
+std::unique_ptr<const SbpSignatureRule> MakeModelUpdtOpSplitSignatureRule(
+    const Operator* op, const HashSet<std::string>& always_broadcast_parallel_bns) {
+  return std::make_unique<const ModelUpdtOpSplitSignatureRule>(op, always_broadcast_parallel_bns);
+}
+
 void NormalModelUpdtOp::InitFromOpConf() {
   EnrollInputBn("model_diff", false);
   EnrollInputBn("total_instance_num_diff", false);
@@ -46,6 +137,13 @@ LogicalBlobId NormalModelUpdtOp::obn2lbi(const std::string& output_bn) const {
   const google::protobuf::FieldDescriptor* fd = desc->FindFieldByName(output_bn);
   CHECK(fd);
   return GenLogicalBlobId(GetValFromCustomizedConf<std::string>(output_bn));
+}
+
+void NormalModelUpdtOp::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  rules->emplace_back(MakeModelUpdtOpBroadcastSignatureRule(this));
+  rules->emplace_back(MakeModelUpdtOpSplitSignatureRule(this, AlwaysBroadcastParallelBns()));
 }
 
 REGISTER_OP_CREATOR(OperatorConf::kNormalMdupdtConf, [](const OperatorConf& op_conf) -> Operator* {

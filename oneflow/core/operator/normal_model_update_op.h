@@ -22,11 +22,19 @@ class NormalModelUpdtOp : public Operator {
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext*) const {}
 
- private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return true; }
+  virtual const HashSet<std::string> AlwaysBroadcastParallelBns() const = 0;
 
+ private:
+  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
+  void GetSbpSignatureRules(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const override;
   LogicalBlobId obn2lbi(const std::string& output_bn) const override;
 };
+
+std::unique_ptr<const SbpSignatureRule> MakeModelUpdtOpBroadcastSignatureRule(const Operator*);
+std::unique_ptr<const SbpSignatureRule> MakeModelUpdtOpSplitSignatureRule(
+    const Operator*, const HashSet<std::string>& always_broadcast_parallel_bns);
 
 }  // namespace oneflow
 

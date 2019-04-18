@@ -6,7 +6,7 @@ void ReshapeLikeOp::InitFromOpConf() {
   CHECK(op_conf().has_reshape_like_conf());
   EnrollInputBn("x");
   EnrollOutputBn("y");
-  EnrollInputBn("like")->set_use_header_only(true);
+  EnrollInputBn("like", false)->set_use_header_only(true);
 }
 
 const PbMessage& ReshapeLikeOp::GetCustomizedConf() const { return op_conf().reshape_like_conf(); }

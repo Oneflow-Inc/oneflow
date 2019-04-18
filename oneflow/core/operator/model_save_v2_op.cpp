@@ -13,7 +13,7 @@ class ModelSaveV2SbpSignatureRule final : public ParallelSbpSignatureRule {
 
   const std::string Description() const override { return op().op_name() + ": (B,) -> ()"; }
 
-  const SbpSigMatchResult GetMatchResult(
+  const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
       const ParallelDesc& parallel_desc) const override {
     return MakeSbpSigMatchSuccess();
@@ -37,6 +37,7 @@ void ModelSaveV2Op::InitFromOpConf() {
 const PbMessage& ModelSaveV2Op::GetCustomizedConf() const { return op_conf().model_save_v2_conf(); }
 
 void ModelSaveV2Op::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   rules->emplace_back(new ModelSaveV2SbpSignatureRule(this));
 }

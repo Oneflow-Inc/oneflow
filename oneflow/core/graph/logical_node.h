@@ -32,8 +32,14 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   std::shared_ptr<const ParallelDesc>& mut_parallel_desc() { return parallel_desc_; }
 
   // time_shape
-  const Shape* time_shape() const { return time_shape_.get(); }
-  void reset_time_shape(const Shape* time_shape) { time_shape_.reset(time_shape); }
+  const Shape* out_blob_time_shape() const { return out_blob_time_shape_.get(); }
+  void reset_out_blob_time_shape(const Shape* time_shape) {
+    out_blob_time_shape_.reset(time_shape);
+  }
+  const Shape* in_blob_fastest_time_shape() const { return in_blob_fastest_time_shape_.get(); }
+  void reset_in_blob_fastest_time_shape(const Shape* time_shape) {
+    in_blob_fastest_time_shape_.reset(time_shape);
+  }
 
   // shared_model_nodes_
   std::shared_ptr<const std::vector<LogicalNode*>> shared_model_nodes() const {
@@ -74,7 +80,8 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   std::shared_ptr<const std::vector<LogicalNode*>> shared_model_nodes_;
 
   HashMap<const LogicalNode*, std::vector<LogicalBlobId>> dst2data_lbis_;
-  std::unique_ptr<const Shape> time_shape_;
+  std::unique_ptr<const Shape> in_blob_fastest_time_shape_;
+  std::unique_ptr<const Shape> out_blob_time_shape_;
 };
 
 #define BLD_SUB_TSK_GPH_MTHD_ARGS()                                                       \
@@ -315,7 +322,7 @@ DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(EveryNth);
     void set_order_in_logical_graph(int32_t order_in_logical_graph) {                  \
       order_in_logical_graph_ = order_in_logical_graph;                                \
     }                                                                                  \
-    int32_t order_in_logical_graph() const { return order_in_logical_graph_; }         \
+    int32_t order_in_logical_graph() const;                                            \
     bool MayConsumeModelDiff() const override { return may_consume_md_diff; }          \
                                                                                        \
    private:                                                                            \

@@ -44,6 +44,10 @@ const PbMessage& LARSModelUpdateOp::GetCustomizedConf() const {
   }
 }
 
+const HashSet<std::string> LARSModelUpdateOp::AlwaysBroadcastParallelBns() const {
+  return HashSet<std::string>{"data_tmp"};
+}
+
 REGISTER_CLASS(NormalModelUpdateOpUserConf::kLarsConf, NormalModelUpdtOp, LARSModelUpdateOp);
 
 REGISTER_OP(OperatorConf::kLarsModelUpdateConf, LARSModelUpdateOp);

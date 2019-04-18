@@ -6,8 +6,8 @@
 namespace oneflow {
 
 void GenerateCloneGradOpIfNeed(
-    const Operator& op, std::vector<OperatorConf>* op_confs,
-    const HashMap<LogicalBlobId, HashMap<std::string, LogicalBlobId>>& lbi2op_name2in_diff_lbi,
+    const OpNode& op_node, std::vector<OperatorConf>* op_confs,
+    const HashMap<std::string, HashMap<std::string, LogicalBlobId>>& op_name2ibn2in_diff_lbi,
     HashMap<LogicalBlobId, LogicalBlobId>* lbi2out_diff_lbi);
 }
 

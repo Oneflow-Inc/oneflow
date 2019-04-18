@@ -40,14 +40,48 @@ void UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(
   }
 }
 
+void UpdateJobHelperConfSbpSignatureHint(
+    const OpGraph& op_graph,
+    const HashMap<std::string, HashMap<std::string, LogicalBlobId>>& op_name2ibn2in_diff_lbi,
+    Job* job) {
+  auto IsBroadcastSbpSignature = [&](const OpNode* op_node) {
+    for (const auto& ibn : op_node->op().input_bns()) {
+      if (op_node->SbpParallel4BnInOp(ibn).has_broadcast_parallel() == false) { return false; }
+    }
+    for (const auto& obn : op_node->op().output_bns()) {
+      if (op_node->SbpParallel4BnInOp(obn).has_broadcast_parallel() == false) { return false; }
+    }
+    return true;
+  };
+  op_graph.ForEachNode([&](OpNode* op_node) {
+    const auto& op_name = (op_node->op().op_name());
+    const auto& op_iter = op_name2ibn2in_diff_lbi.find(op_name);
+    if (op_iter == op_name2ibn2in_diff_lbi.end()) { return; }
+    for (const auto& ibn : op_node->op().input_bns()) {
+      const auto& in_diff_lbi_iter = op_iter->second.find(ibn);
+      if (in_diff_lbi_iter == op_iter->second.end()) { continue; }
+      const auto& lbi = op_node->op().BnInOp2Lbi(ibn);
+      const auto& in_diff_lbn = GenLogicalBlobName(in_diff_lbi_iter->second);
+      auto* hint = &(*job->mutable_helper()->mutable_lbn2sbp_parallel_hint())[in_diff_lbn];
+      if (IsBroadcastSbpSignature(op_node)) {
+        hint->mutable_broadcast_parallel();
+      } else {
+        *hint = GetDualSbpParallel(op_node->SbpParallel4Lbi(lbi));
+      }
+    }
+  });
+}
+
 void GenerateOpConf4Trainning(const OpGraph& op_graph, Job* job) {
   LogicalBlobId total_loss_instance_num;
   AddTotalLossInstanceNumOpConf(op_graph, job, &total_loss_instance_num);
+  HashMap<std::string, HashMap<std::string, LogicalBlobId>> op_name2ibn2in_diff_lbi;
   HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
-  AutoGrad(op_graph, job, &lbi2diff_lbi);
+  AutoGrad(op_graph, job, &op_name2ibn2in_diff_lbi, &lbi2diff_lbi);
   AddOptimizerOpConf(op_graph, job, lbi2diff_lbi, total_loss_instance_num);
   AddSaver(op_graph, job);
   UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(lbi2diff_lbi, job);
+  UpdateJobHelperConfSbpSignatureHint(op_graph, op_name2ibn2in_diff_lbi, job);
 }
 
 std::function<ParallelConf*(const std::string&)> MakeGetterMutParallelConf4OpName(
@@ -252,8 +286,15 @@ void FixAndOptimizeDLNet(Job* job) {
 
 void SetOpTimeShape(const OpGraph& op_graph, Job* job) {
   op_graph.ForEachNode([&](OpNode* op_node) {
-    op_node->out_blob_time_shape().ToProto(
-        &(*job->mutable_helper()->mutable_op_name2time_shape())[op_node->op().op_name()]);
+    auto* op_time_shape =
+        &(*job->mutable_helper()->mutable_op_name2op_time_shape())[op_node->op().op_name()];
+    if (op_node->out_blob_time_shape() != nullptr) {
+      op_node->out_blob_time_shape()->ToProto(op_time_shape->mutable_out_blob_time_shape());
+    }
+    const auto* in_blob_fastest_time_shape = op_node->GetInputBlobFastestTimeShape();
+    if (in_blob_fastest_time_shape != nullptr) {
+      in_blob_fastest_time_shape->ToProto(op_time_shape->mutable_in_blob_fastest_time_shape());
+    }
   });
 }
 
@@ -321,7 +362,7 @@ void JobCompleter::Complete(Job* job) const {
     // complete tick ops
     WithOpGraphAndMutJob(job, &AutoTick);
     // add keep_header_only op
-    WithOpGraphAndMutJob(job, &AddKeepHeaderOnlyOp);
+    // WithOpGraphAndMutJob(job, &AddKeepHeaderOnlyOp);
     WithOpGraphAndMutJob(job, &SetOpTimeShapeAndCtrlInOpName);
   }
   // TODO: refine
