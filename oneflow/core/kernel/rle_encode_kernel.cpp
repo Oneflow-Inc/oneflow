@@ -24,6 +24,11 @@ void RleEncodeKernel::ForwardDim1ValidNum(
   // do nothing
 }
 
+void RleEncodeKernel::ForwardInstanceShape(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  // do nothing
+}
+
 REGISTER_KERNEL(OperatorConf::kRleEncodeConf, RleEncodeKernel);
 
 }  // namespace oneflow
