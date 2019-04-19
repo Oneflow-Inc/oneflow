@@ -1,19 +1,19 @@
-#include "oneflow/core/operator/calculate_scale_op.h"
+#include "oneflow/core/operator/calc_target_resize_info_op.h"
 
 namespace oneflow {
 
-void CalculateScaleOp::InitFromOpConf() {
-  CHECK(op_conf().has_calculate_scale_conf());
+void CalcTargetResizeInfoOp::InitFromOpConf() {
+  CHECK(op_conf().has_calc_target_resize_info_conf());
   EnrollInputBn("origin_height", false);
   EnrollInputBn("origin_width", false);
-  EnrollOutputBn("scale", false);
-  EnrollOutputBn("image_size", false);
+  EnrollDataTmpBn("scale");
+  EnrollOutputBn("resized_image_size", false);
 }
 
-void CalculateScaleOp::InferBlobDescs(
+void CalcTargetResizeInfoOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  const auto& conf = op_conf().calculate_scale_conf();
+  const auto& conf = op_conf().calc_target_resize_info_conf();
   const int32_t target_size = conf.target_size();
   const int32_t max_size = conf.max_size();
   CHECK_GT(target_size, 0);
@@ -27,21 +27,15 @@ void CalculateScaleOp::InferBlobDescs(
 
   // scale
   BlobDesc* scale = GetBlobDesc4BnInOp("scale");
-  scale->mut_shape() = Shape({origin_height->shape().At(0), 2});
+  scale->mut_shape() = origin_height->shape();
   scale->set_data_type(Global<JobDesc>::Get()->DefaultDataType());
 
-  // image_size
-  BlobDesc* image_size = GetBlobDesc4BnInOp("image_size");
-  image_size->mut_shape() = Shape({origin_height->shape().At(0), 2});
-  image_size->set_data_type(origin_height->data_type());
+  // resized_image_size
+  BlobDesc* resized_image_size = GetBlobDesc4BnInOp("resized_image_size");
+  resized_image_size->mut_shape() = Shape({origin_height->shape().At(0), 2});
+  resized_image_size->set_data_type(origin_height->data_type());
 }
 
-void CalculateScaleOp::VirtualGenKernelConf(
-    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-    KernelConf* kernel_conf) const {
-  kernel_conf->set_data_type(GetBlobDesc4BnInOp("scale")->data_type());
-}
-
-REGISTER_CPU_OP(OperatorConf::kCalculateScaleConf, CalculateScaleOp);
+REGISTER_CPU_OP(OperatorConf::kCalcTargetResizeInfoConf, CalcTargetResizeInfoOp);
 
 }  // namespace oneflow
