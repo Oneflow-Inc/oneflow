@@ -281,25 +281,29 @@ void OpGraph::InitNodes(const Job& job) {
 
 void OpGraph::InitEdges() {
   HashMap<LogicalBlobId, OpNode*> lbi2producer;
+  HashMap<std::string, HashMap<LogicalBlobId, std::string>> producer_op_name2lbi2obn;
   ForEachNode([&](OpNode* op_node) {
     for (const auto& obn : op_node->op().output_bns()) {
-      CHECK(lbi2producer.emplace(op_node->op().BnInOp2Lbi(obn), op_node).second);
+      const auto& lbi = op_node->op().BnInOp2Lbi(obn);
+      CHECK(lbi2producer.emplace(lbi, op_node).second);
+      CHECK(producer_op_name2lbi2obn[op_node->op().op_name()].emplace(lbi, obn).second);
     }
   });
   ForEachNode([&](OpNode* op_node) {
-    HashMap<std::string, std::vector<LogicalBlobId>> producer_name2lbis;
+    HashMap<std::string, HashSet<LogicalBlobId>> producer_op_name2lbis;
     HashMap<std::string, HashMap<LogicalBlobId, std::vector<std::string>>>
         consumer_op_name2lbi2ibns;
     for (const auto& ibn : op_node->op().input_bns()) {
       const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
-      producer_name2lbis[lbi.op_name()].push_back(lbi);
+      producer_op_name2lbis[lbi.op_name()].insert(lbi);
       consumer_op_name2lbi2ibns[op_node->op().op_name()][lbi].push_back(ibn);
     }
-    for (const auto& pair : producer_name2lbis) {
-      const auto& lbis = pair.second;
+    for (const auto& pair : producer_op_name2lbis) {
+      std::vector<LogicalBlobId> lbis{pair.second.begin(), pair.second.end()};
+      const auto& lbi2obn = producer_op_name2lbi2obn.at(pair.first);
       const auto& lbi2ibns = consumer_op_name2lbi2ibns.at(op_node->op().op_name());
       OpNode* producer = lbi2producer.at(lbis.at(0));
-      Connect(producer, NewEdge(lbis, lbi2ibns), op_node);
+      Connect(producer, NewEdge(lbis, lbi2obn, lbi2ibns), op_node);
     }
   });
 }
@@ -473,20 +477,6 @@ void OpGraph::ForEachPseudoChain(
   auto IsReachable = MakePredicatorIsReachable();
   ForEachComponentWithSameDataParallelDescAndTimeShape(
       [&](const std::vector<OpNode*>& nodes) { ForEachPseudoChain(nodes, IsReachable, Handler); });
-}
-
-std::function<bool(OpNode* src, OpNode* dst)> OpGraph::MakePredicatorIsReachable() const {
-  auto node2ancestors_ptr = std::make_shared<HashMap<OpNode*, HashSet<OpNode*>>>();
-  TopoForEachNode([&](OpNode* node) {
-    node->ForEachNodeOnInEdge([&](OpNode* in_node) {
-      (*node2ancestors_ptr)[node].insert(in_node);
-      (*node2ancestors_ptr)[node].insert((*node2ancestors_ptr)[in_node].begin(),
-                                         (*node2ancestors_ptr)[in_node].end());
-    });
-  });
-  return [node2ancestors_ptr](OpNode* src, OpNode* dst) -> bool {
-    return node2ancestors_ptr->at(dst).find(src) != node2ancestors_ptr->at(dst).end();
-  };
 }
 
 void OpGraph::ForEachComponentWithSameDataParallelDescAndTimeShape(

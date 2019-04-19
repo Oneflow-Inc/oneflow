@@ -86,11 +86,13 @@ class OpEdge final : public Edge<OpNode, OpEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpEdge);
   explicit OpEdge(const std::vector<LogicalBlobId>& lbis,
+                  const HashMap<LogicalBlobId, std::string>& lbi2obn,
                   const HashMap<LogicalBlobId, std::vector<std::string>>& lbi2ibns)
-      : lbis_(lbis), lbi2ibns_(lbi2ibns), has_diff_(false) {}
+      : lbis_(lbis), lbi2obn_(lbi2obn), lbi2ibns_(lbi2ibns), has_diff_(false) {}
   ~OpEdge() = default;
 
   const std::vector<LogicalBlobId>& lbis() const { return lbis_; }
+  const HashMap<LogicalBlobId, std::string>& lbi2obn() const { return lbi2obn_; }
   const HashMap<LogicalBlobId, std::vector<std::string>>& lbi2ibns() const { return lbi2ibns_; }
   bool has_diff() const { return has_diff_; }
   std::string VisualStr() const override;
@@ -99,6 +101,7 @@ class OpEdge final : public Edge<OpNode, OpEdge> {
 
  private:
   std::vector<LogicalBlobId> lbis_;
+  HashMap<LogicalBlobId, std::string> lbi2obn_;
   HashMap<LogicalBlobId, std::vector<std::string>> lbi2ibns_;
   bool has_diff_;
 };
@@ -145,7 +148,6 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void ReverseTopoGetPseudoChain(
       const HashSet<OpNode*>& op_nodes, HashSet<OpNode*>* chain,
       const std::function<bool(OpNode* src, OpNode* dst)>& IsReachable) const;
-  std::function<bool(OpNode* src, OpNode* dst)> MakePredicatorIsReachable() const;
   void ForEachComponentWithSameDataParallelDescAndTimeShape(
       const std::function<void(const std::vector<OpNode*>&)>& Handler) const;
 
