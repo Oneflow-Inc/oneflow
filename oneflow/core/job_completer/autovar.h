@@ -17,10 +17,10 @@ class GenerateInputVarOpConfWrapperStruct final {
   using Func = std::function<void(const Operator&, std::vector<OperatorConf>*,
                                   const std::function<const BlobDesc&(const std::string&)>&)>;
   GenerateInputVarOpConfWrapperStruct(const Func& f) : func_(std::make_unique<Func>(f)) {}
-  void Call(const Operator& op, std::vector<OperatorConf>* op_confs,
-            const std::function<const BlobDesc&(const std::string&)>& UnitBatchSizeBlobDesc4BnInOp)
-      const {
-    (*func_)(op, op_confs, UnitBatchSizeBlobDesc4BnInOp);
+  void Call(
+      const Operator& op, std::vector<OperatorConf>* op_confs,
+      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) const {
+    (*func_)(op, op_confs, LogicalBlobDesc4BnInOp);
   }
 
  private:
