@@ -35,6 +35,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   const SbpParallel& SbpParallel4Lbi(const LogicalBlobId& lbi) const;
   const SbpParallel& SbpParallel4BnInOp(const std::string& bn_in_op) const;
   const BlobDesc& LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const;
+  const OpNode* ProducerOpNode4Lbi(const LogicalBlobId& lbi) const;
 
   std::string VisualStr() const override;
 
@@ -42,7 +43,6 @@ class OpNode final : public Node<OpNode, OpEdge> {
   friend class OpGraph;
   friend class OpEdge;
   // Getters
-  const BlobDesc& NoParallelBlobDesc4Lbi(const LogicalBlobId& lbi) const;
   const Shape* GetInputBlobTimeShape(const std::string& bn_in_op) const;
 
   // Setters
@@ -54,14 +54,11 @@ class OpNode final : public Node<OpNode, OpEdge> {
   }
   bool IsModelBlob4Lbi(const LogicalBlobId& lbi) const;
   bool* MutIsModelBlob4Lbi(const LogicalBlobId& lbi);
-  BlobDesc* NoParallelBlobDesc4BnInOp(const std::string& bn_in_op);
-  BlobDesc* MutNoParallelBlobDesc(const LogicalBlobId& lbi);
   BlobDesc* MutLogicalBlobDesc4Lbi(const LogicalBlobId& lbi);
   OpNode* SrcNode4InputBnInOp(const std::string& bn_in_op) const;
   OpNode* ProducerOpNode4BnInOp(const std::string& bn_in_op);
   OpNode* SrcNode4InputLbi(const LogicalBlobId& lbi) const;
-  OpNode* ProducerOpNode4Lbi(const LogicalBlobId& lbi);
-  const OpNode* ProducerOpNode4Lbi(const LogicalBlobId& lbi) const;
+  OpNode* MutProducerOpNode4Lbi(const LogicalBlobId& lbi);
 
   void ForEachParallelBlobDesc(const BlobDesc& blob_desc, const SbpParallel& sbp_parallel,
                                const std::function<void(const BlobDesc&)>& Handler) const;
@@ -80,7 +77,6 @@ class OpNode final : public Node<OpNode, OpEdge> {
   bool has_in_diff_;
   std::unique_ptr<Shape> out_blob_time_shape_;
   SbpSignature sbp_signature_;
-  HashMap<LogicalBlobId, BlobDesc> lbi2no_parallel_blob_desc_;
   HashMap<LogicalBlobId, bool> lbi2is_model_blob_;
   HashMap<std::string, std::vector<BlobDesc>> bn2parallel_id2blob_desc_;
   HashMap<LogicalBlobId, BlobDesc> lbi2logical_blob_desc_;
@@ -120,7 +116,6 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   const SbpParallel& GetSbpParallel(const std::string& op_name, const LogicalBlobId& lbi) const;
   DataType GetBlobDataType(const LogicalBlobId& lbi) const;
   const BlobDesc& GetLogicalBlobDesc(const LogicalBlobId& lbi) const;
-  const BlobDesc& GetUnitBatchSizeBlobDesc(const LogicalBlobId& lbi) const;
   void CheckBlobDescs(const std::string& op_name,
                       const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const;
@@ -136,7 +131,6 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void FixOpParallelDesc() const;
   void UpdateOpNodeHasInDiff() const;
   void InferTimeShape() const;
-  void InferNoParallelBlobDesc() const;
   void InferIsModelBlob() const;
   void InferOpNodeSbpSignature(OpNode* op_node, const Job& job) const;
   void InferOpNodeLogicalBlobDesc(OpNode* op_node) const;

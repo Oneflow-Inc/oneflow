@@ -17,10 +17,10 @@ OperatorConf GenerateVariableOpConf(const BlobDesc& blob_desc, const std::string
 
 void GenerateInputVarOpConfIf(
     const Operator& op, std::vector<OperatorConf>* op_confs,
-    const std::function<const BlobDesc&(const std::string&)>& UnitBatchSizeBlobDesc4BnInOp) {
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
   if (IsClassRegistered<GenerateInputVarOpConfWrapperStruct>(op.op_conf().op_type_case())) {
     auto* obj = NewObj<GenerateInputVarOpConfWrapperStruct>(op.op_conf().op_type_case());
-    obj->Call(op, op_confs, UnitBatchSizeBlobDesc4BnInOp);
+    obj->Call(op, op_confs, LogicalBlobDesc4BnInOp);
   }
 }
 
@@ -28,10 +28,11 @@ void AutoVar(const OpGraph& op_graph, Job* job) {
   JobBuilder job_builder(job);
   op_graph.ForEachNode([&](OpNode* op_node) {
     std::vector<OperatorConf> ops;
-    auto UnitBatchSizeBlobDesc4BnInOp = [&](const std::string& bn) -> const BlobDesc& {
-      return op_graph.GetUnitBatchSizeBlobDesc(op_node->op().BnInOp2Lbi(bn));
+    auto LogicalBlobDesc4BnInOp = [&](const std::string& bn) -> const BlobDesc& {
+      const auto& lbi = op_node->op().BnInOp2Lbi(bn);
+      return op_node->LogicalBlobDesc4Lbi(lbi);
     };
-    GenerateInputVarOpConfIf(op_node->op(), &ops, UnitBatchSizeBlobDesc4BnInOp);
+    GenerateInputVarOpConfIf(op_node->op(), &ops, LogicalBlobDesc4BnInOp);
     if (!ops.empty()) { job_builder.AddOrMutOps(op_node->parallel_desc().parallel_conf(), ops); }
   });
 }
