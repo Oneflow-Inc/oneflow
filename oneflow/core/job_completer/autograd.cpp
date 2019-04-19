@@ -18,34 +18,48 @@ const TrainConf& GetTrainConf() {
   }
 }
 
+bool AnyLbiWithDiffLbi(const OpEdge* op_edge) {
+  const Operator& src_op = op_edge->src_node()->op();
+  const Operator& dst_op = op_edge->dst_node()->op();
+  auto IsOutputBlobModifierRequiresGrad = [&](const LogicalBlobId& lbi) {
+    return src_op.OutputBlobModifier4Obn(op_edge->lbi2obn().at(lbi)).requires_grad();
+  };
+  auto IsInputBlobModifierRequiresGrad = [&](const LogicalBlobId& lbi) {
+    const auto& ibns = op_edge->lbi2ibns().at(lbi);
+    for (const std::string& ibn : ibns) {
+      if (dst_op.InputBlobModifier4Ibn(ibn).requires_grad()) { return true; }
+    }
+    CHECK_GT(ibns.size(), 0);
+    return false;
+  };
+  for (const LogicalBlobId& lbi : op_edge->lbis()) {
+    if (IsOutputBlobModifierRequiresGrad(lbi) && IsInputBlobModifierRequiresGrad(lbi)) {
+      return true;
+    }
+  }
+  CHECK_GT(op_edge->lbis().size(), 0);
+  return false;
+}
+
 void GetVariableOpNodesAndDescendants(const OpGraph& op_graph, HashSet<OpNode*>* op_nodes) {
   std::list<OpNode*> starts;
   op_graph.ForEachNode([&](OpNode* op_node) {
     const auto& op_conf = op_node->op().op_conf();
     if (op_conf.has_variable_conf()) { starts.push_back(op_node); }
   });
-  op_graph.BfsForEachNode(starts, &OpNode::ForEachNodeOnOutEdge,
+  auto ForEachNextNode = [&](OpNode* op_node, const std::function<void(OpNode*)>& Handler) {
+    for (OpEdge* edge : op_node->out_edges()) {
+      if (AnyLbiWithDiffLbi(edge)) { Handler(edge->dst_node()); }
+    }
+  };
+  op_graph.BfsForEachNode(starts, ForEachNextNode,
                           [&](OpNode* op_node) { op_nodes->emplace(op_node); });
 }
 
-std::function<bool(const OpNode*, const OpNode*)> MakeOpNodeIsReachable(const OpGraph& op_graph) {
-  auto node2ancestor = std::make_shared<HashMap<const OpNode*, HashSet<const OpNode*>>>();
-  op_graph.TopoForEachNode([&](OpNode* op_node) {
-    op_node->ForEachNodeOnInEdge([&](OpNode* in_node) {
-      (*node2ancestor)[op_node].insert(in_node);
-      (*node2ancestor)[op_node].insert((*node2ancestor)[in_node].begin(),
-                                       (*node2ancestor)[in_node].end());
-    });
-  });
-  return [node2ancestor](const OpNode* node, const OpNode* ancestor) -> bool {
-    return node2ancestor->at(node).find(ancestor) != node2ancestor->at(node).end();
-  };
-}
-
 void CheckNotReachableAmongOpNodes(const OpGraph& op_graph, const std::list<OpNode*>& op_nodes) {
-  auto IsReachable = MakeOpNodeIsReachable(op_graph);
-  for (const OpNode* src_node : op_nodes) {
-    for (const OpNode* dst_node : op_nodes) {
+  auto IsReachable = op_graph.MakePredicatorIsReachable();
+  for (OpNode* src_node : op_nodes) {
+    for (OpNode* dst_node : op_nodes) {
       if (src_node == dst_node) { continue; }
       CHECK(!IsReachable(src_node, dst_node));
     }
@@ -69,7 +83,12 @@ void GetLossOpNodes(const OpGraph& op_graph, std::list<OpNode*>* loss_op_nodes) 
 void GetLossOpNodesAndAscendants(const OpGraph& op_graph, HashSet<OpNode*>* op_nodes) {
   std::list<OpNode*> starts;
   GetLossOpNodes(op_graph, &starts);
-  op_graph.BfsForEachNode(starts, &OpNode::ForEachNodeOnInEdge,
+  auto ForEachNextNode = [&](OpNode* op_node, const std::function<void(OpNode*)>& Handler) {
+    for (OpEdge* edge : op_node->in_edges()) {
+      if (AnyLbiWithDiffLbi(edge)) { Handler(edge->src_node()); }
+    }
+  };
+  op_graph.BfsForEachNode(starts, ForEachNextNode,
                           [&](OpNode* op_node) { op_nodes->emplace(op_node); });
 }
 
