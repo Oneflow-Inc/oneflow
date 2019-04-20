@@ -6,11 +6,11 @@
 namespace oneflow {
 
 template<typename T>
-class BoxScaleKernel final : public KernelIf<DeviceType::kCPU> {
+class BBoxScaleKernel final : public KernelIf<DeviceType::kCPU> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BoxScaleKernel);
-  BoxScaleKernel() = default;
-  ~BoxScaleKernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(BBoxScaleKernel);
+  BBoxScaleKernel() = default;
+  ~BBoxScaleKernel() = default;
 
  private:
   void ForwardDataContent(const KernelCtx&,
