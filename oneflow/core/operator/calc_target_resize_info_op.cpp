@@ -5,7 +5,6 @@ namespace oneflow {
 void CalcTargetResizeInfoOp::InitFromOpConf() {
   CHECK(op_conf().has_calc_target_resize_info_conf());
   EnrollInputBn("in", false);
-  EnrollDataTmpBn("scale");
   EnrollOutputBn("out", false);
 }
 
@@ -23,11 +22,6 @@ void CalcTargetResizeInfoOp::InferBlobDescs(
   CHECK_EQ(in->shape().NumAxes(), 2);
   CHECK_EQ(in->shape().At(1), 2);
   CHECK_EQ(in->data_type(), DataType::kInt32);
-
-  // data tmp: scale (N,)
-  BlobDesc* scale = GetBlobDesc4BnInOp("scale");
-  scale->mut_shape() = Shape({in->shape().At(0)});
-  scale->set_data_type(Global<JobDesc>::Get()->DefaultDataType());
 
   // out: (N, 2)
   *GetBlobDesc4BnInOp("out") = *in;
