@@ -243,11 +243,12 @@ void OpNode::CheckBlobDescs(const std::function<BlobDesc*(const std::string&)>& 
 }
 
 void OpGraph::InferOpModelSize(HashMap<std::string, size_t>* op_name2model_size) {
+  auto BlobDesc4ModelLbi = MakeGetterBlobDesc4ModelLbi();
   ForEachNode([&](OpNode* op_node) {
     size_t model_size = 0;
     for (const std::string& model_bn : op_node->op().model_bns()) {
       const auto& lbi = op_node->op().BnInOp2Lbi(model_bn);
-      int64_t elem_cnt = op_node->LogicalBlobDesc4Lbi(lbi).shape().elem_cnt();
+      int64_t elem_cnt = BlobDesc4ModelLbi(lbi).shape().elem_cnt();
       model_size += elem_cnt * GetSizeOfDataType(Global<JobDesc>::Get()->DefaultDataType());
       model_size = RoundUp(model_size, kCudaAlignSize);
     }
@@ -606,6 +607,40 @@ LogicalBlobId OpGraph::GetLogicalBlobIdKey(const std::string& op_name,
     CHECK(!lbi.has_clone_id());
     return lbi;
   }
+}
+
+std::function<const BlobDesc&(const LogicalBlobId&)> OpGraph::MakeGetterBlobDesc4ModelLbi() const {
+  HashMap<LogicalBlobId, BlobDesc> lbi2unparalleled_blob_desc;
+  TopoForEachNode([&](OpNode* op_node) {
+    ParallelContext parallel_ctx;
+    parallel_ctx.set_parallel_id(0);
+    parallel_ctx.set_parallel_num(1);
+    parallel_ctx.set_policy(op_node->parallel_desc().policy());
+    auto MutUnparalleledBlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
+      return &lbi2unparalleled_blob_desc[op_node->op().BnInOp2Lbi(bn)];
+    };
+    // the real important data we want to get is:
+    // a) model blobs' byte size;
+    // b) number of axes of blobs' body shape;
+    // Hence the argument record_piece_size can be any positive number, here it's 1
+    op_node->op().InferBlobDescsIf(MutUnparalleledBlobDesc4BnInOp, &parallel_ctx, 1,
+                                   [](OpContext*) {});
+  });
+  auto model_lbi2blob_desc = std::make_shared<HashMap<LogicalBlobId, BlobDesc>>();
+  ForEachNode([&](OpNode* op_node) {
+    auto ForEachModelBn = [&](const std::function<void(const std::string&)>& Handler) {
+      for (const std::string& bn : op_node->op().model_bns()) { Handler(bn); }
+      for (const std::string& bn : op_node->op().const_model_bns()) { Handler(bn); }
+      for (const std::string& bn : op_node->op().forward_model_bns()) { Handler(bn); }
+    };
+    ForEachModelBn([&](const std::string& model_bn) {
+      const auto& lbi = op_node->op().BnInOp2Lbi(model_bn);
+      CHECK(model_lbi2blob_desc->emplace(lbi, lbi2unparalleled_blob_desc.at(lbi)).second);
+    });
+  });
+  return [model_lbi2blob_desc](const LogicalBlobId& model_lbi) -> const BlobDesc& {
+    return model_lbi2blob_desc->at(model_lbi);
+  };
 }
 
 }  // namespace oneflow

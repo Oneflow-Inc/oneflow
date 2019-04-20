@@ -113,6 +113,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   ~OpGraph() = default;
 
   void InferOpModelSize(HashMap<std::string, size_t>* op_name2model_size);
+  std::function<const BlobDesc&(const LogicalBlobId&)> MakeGetterBlobDesc4ModelLbi() const;
 
   int32_t GetModelSplitAxis(const std::string& op_name, const LogicalBlobId& lbi) const;
   BalancedSplitter GetBalancedSplitter(const std::string& op_name, const LogicalBlobId& lbi) const;
