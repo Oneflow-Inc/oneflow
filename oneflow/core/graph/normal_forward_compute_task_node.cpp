@@ -15,9 +15,10 @@ bool NormalForwardCompTaskNode::HasBackwardCompTaskNode() {
 }
 
 void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  if (logical_node()->SoleOp()->op_conf().has_variable_conf()) {
+  const Operator& op = *logical_node()->SoleOp();
+  if (op.IsAllOutputConst() || op.op_conf().has_variable_conf()) {
     ProduceRegst("out", false, 1, 1);
-  } else if (logical_node()->SoleOp()->op_conf().has_keep_header_only_conf()) {
+  } else if (op.op_conf().has_keep_header_only_conf()) {
     ProduceRegst("out", false, 100, 100);
   } else {
     ProduceRegst("out", true);
