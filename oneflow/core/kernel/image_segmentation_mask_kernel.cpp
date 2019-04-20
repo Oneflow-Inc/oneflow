@@ -100,6 +100,7 @@ void CopyToOutputBlob(int32_t dim0_idx, const Blob* image_size_blob,
   const int32_t bbox_h = bbox->height();
   const int32_t bbox_w = bbox->width();
   CHECK_EQ(bbox_w * bbox_h, binary_mask.size());
+  CHECK_LE(im_height * im_width, out_blob->static_shape().Count(1));
 
   const int32_t clipped_x0 = std::max<int32_t>(bbox->left(), 0);
   const int32_t clipped_y0 = std::max<int32_t>(bbox->top(), 0);
