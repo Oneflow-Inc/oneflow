@@ -1422,10 +1422,10 @@ message ConcatGtProposalsOpConf {
   required string out = 3;
 }
 
-message GtBboxScaleOpConf {
-  required string in = 1;
+message BoxScaleOpConf {
+  required string in_box = 1;
   required string scale = 2;
-  required string out = 3;
+  required string out_box = 3;
 }
 
 message OperatorConf {
@@ -1552,7 +1552,7 @@ message OperatorConf {
     Conv2DV2OpConf conv_2d_v2_conf = 293;
     Conv3DV2OpConf conv_3d_v2_conf = 294;
     ConcatGtProposalsOpConf concat_gt_proposals_conf = 295;
-    GtBboxScaleOpConf gt_bbox_scale_conf = 296;
+    BoxScaleOpConf box_scale_conf = 296;
     AnchorGenerateOpConf anchor_generate_conf = 297;
 
     // Maybe not needed
