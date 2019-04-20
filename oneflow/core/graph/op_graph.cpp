@@ -243,7 +243,7 @@ void OpNode::CheckBlobDescs(const std::function<BlobDesc*(const std::string&)>& 
 }
 
 void OpGraph::InferOpModelSize(HashMap<std::string, size_t>* op_name2model_size) {
-  auto BlobDesc4ModelLbi = MakeGetterBlobDesc4ModelLbi(*this);
+  auto BlobDesc4ModelLbi = MakeGetterBlobDesc4ModelLbi();
   ForEachNode([&](OpNode* op_node) {
     size_t model_size = 0;
     for (const std::string& model_bn : op_node->op().model_bns()) {
@@ -609,10 +609,9 @@ LogicalBlobId OpGraph::GetLogicalBlobIdKey(const std::string& op_name,
   }
 }
 
-std::function<const BlobDesc&(const LogicalBlobId&)> MakeGetterBlobDesc4ModelLbi(
-    const OpGraph& op_graph) {
+std::function<const BlobDesc&(const LogicalBlobId&)> OpGraph::MakeGetterBlobDesc4ModelLbi() const {
   HashMap<LogicalBlobId, BlobDesc> lbi2unparalleled_blob_desc;
-  op_graph.TopoForEachNode([&](OpNode* op_node) {
+  TopoForEachNode([&](OpNode* op_node) {
     ParallelContext parallel_ctx;
     parallel_ctx.set_parallel_id(0);
     parallel_ctx.set_parallel_num(1);
@@ -628,7 +627,7 @@ std::function<const BlobDesc&(const LogicalBlobId&)> MakeGetterBlobDesc4ModelLbi
                                    [](OpContext*) {});
   });
   auto model_lbi2blob_desc = std::make_shared<HashMap<LogicalBlobId, BlobDesc>>();
-  op_graph.ForEachNode([&](OpNode* op_node) {
+  ForEachNode([&](OpNode* op_node) {
     auto ForEachModelBn = [&](const std::function<void(const std::string&)>& Handler) {
       for (const std::string& bn : op_node->op().model_bns()) { Handler(bn); }
       for (const std::string& bn : op_node->op().const_model_bns()) { Handler(bn); }

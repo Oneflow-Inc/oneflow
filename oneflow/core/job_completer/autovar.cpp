@@ -25,7 +25,7 @@ void GenerateInputVarOpConfIf(
 }
 
 void AutoVar(const OpGraph& op_graph, Job* job) {
-  auto BlobDesc4ModelLbi = MakeGetterBlobDesc4ModelLbi(op_graph);
+  auto BlobDesc4ModelLbi = op_graph.MakeGetterBlobDesc4ModelLbi();
   JobBuilder job_builder(job);
   op_graph.ForEachNode([&](OpNode* op_node) {
     std::vector<OperatorConf> ops;
