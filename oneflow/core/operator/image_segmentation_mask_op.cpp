@@ -31,7 +31,6 @@ void ImageSegmentationMaskOp::InferBlobDescs(
   const int64_t num_bboxes = bbox_blob_desc->shape().At(0);
   const int64_t mask_h = mask_blob_desc->shape().At(1);
   const int64_t mask_w = mask_blob_desc->shape().At(2);
-  DataType data_type = mask_blob_desc->data_type();
   CHECK_EQ(num_masks, num_bboxes);
   CHECK_EQ(mask_blob_desc->shape().NumAxes(), 3);
   CHECK_EQ(bbox_blob_desc->shape().NumAxes(), 2);

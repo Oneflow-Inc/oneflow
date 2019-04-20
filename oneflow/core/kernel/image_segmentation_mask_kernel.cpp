@@ -134,7 +134,7 @@ void ImageSegmentationMaskKernel<T>::ForwardDataContent(
   ClearBlob<T>(padded_mask_blob);
   ClearBlob<uint8_t>(out_blob);
 
-  MultiThreadLoop(mask_blob->shape().At(0), [&](int64_t i) {
+  MultiThreadLoop(out_blob->shape().At(0), [&](int64_t i) {
     cv::Mat mask_mat;
     std::array<int32_t, 4> expanded_bbox_vec;
     std::vector<uint8_t> binarized_mask;
@@ -147,6 +147,18 @@ void ImageSegmentationMaskKernel<T>::ForwardDataContent(
     BinarizeMask(mask_mat, conf.threshold(), binarized_mask);
     CopyToOutputBlob(i, image_size_blob, binarized_mask, expanded_bbox, out_blob);
   });
+}
+
+template<typename T>
+void ImageSegmentationMaskKernel<T>::ForwardDim0ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  BnInOp2Blob("out")->set_dim0_valid_num(0, BnInOp2Blob("mask")->dim0_valid_num(0));
+}
+
+template<typename T>
+void ImageSegmentationMaskKernel<T>::ForwardRecordIdInDevicePiece(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  BnInOp2Blob("out")->CopyRecordIdInDevicePieceFrom(ctx.device_ctx, BnInOp2Blob("mask"));
 }
 
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kImageSegmentationMaskConf,

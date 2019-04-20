@@ -1155,8 +1155,9 @@ message RedefineDim0OpConf {
 
 message RleEncodeOpConf {
   required string in = 1;
-  required string out = 2;
-  optional int32 rle_max_bytes = 3 [default = 1048576];
+  required string size = 2;
+  required string out = 3;
+  optional int32 rle_max_bytes = 4 [default = 1048576];
 }
 
 message MaskTargetOpConf {
