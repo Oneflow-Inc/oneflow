@@ -968,14 +968,18 @@ message BboxClipConf {
 }
 
 message ImageSegmentationMaskOpConf {
-  required string roi_labels = 1;
-  required string rois = 2;
-  required string masks = 3;
+  // in
+  required string mask = 1;
+  required string bbox = 2;
+  required string image_size = 3;
+  // out
   required string out = 4;
-  required int64 im_width = 5;
-  required int64 im_height = 6;
-  optional float binary_threshold = 7 [default = 0.5];
-  optional bool class_specific_mask = 8 [default = true];
+  // conf
+  required int32 image_max_height = 5;
+  required int32 image_max_width = 6;
+  optional int32 padding = 7 [default = 1];
+  optional float threshold = 8 [default = 0.5];
+  optional bool class_specific_mask = 9 [default = true];
 }
 
 message BboxTransformOpConf {
@@ -1151,8 +1155,9 @@ message RedefineDim0OpConf {
 
 message RleEncodeOpConf {
   required string in = 1;
-  required string out = 2;
-  optional int32 rle_max_bytes = 3 [default = 1048576];
+  required string size = 2;
+  required string out = 3;
+  optional int32 rle_max_bytes = 4 [default = 1048576];
 }
 
 message MaskTargetOpConf {
