@@ -155,6 +155,9 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   HashMap<std::string, OpNode*> op_name2op_node_;
 };
 
+std::function<const BlobDesc&(const LogicalBlobId&)> MakeGetterBlobDesc4ModelLbi(
+    const OpGraph& op_graph);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_GRAPH_OP_GRAPH_H_

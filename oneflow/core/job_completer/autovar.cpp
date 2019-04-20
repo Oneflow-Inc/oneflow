@@ -25,30 +25,14 @@ void GenerateInputVarOpConfIf(
 }
 
 void AutoVar(const OpGraph& op_graph, Job* job) {
-  HashMap<LogicalBlobId, BlobDesc> lbi2unparalleled_blob_desc;
-  op_graph.TopoForEachNode([&](OpNode* op_node) {
-    ParallelContext parallel_ctx;
-    parallel_ctx.set_parallel_id(0);
-    parallel_ctx.set_parallel_num(1);
-    parallel_ctx.set_policy(op_node->parallel_desc().policy());
-    auto MutUnparalleledBlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
-      return &lbi2unparalleled_blob_desc[op_node->op().BnInOp2Lbi(bn)];
-    };
-    // the real important data we want to get is:
-    // a) model blobs' byte size;
-    // b) number of axes of blobs' body shape;
-    // Hence the argument record_piece_size can be any positive number, here it's 1
-    op_node->op().InferBlobDescsIf(MutUnparalleledBlobDesc4BnInOp, &parallel_ctx, 1,
-                                   [](OpContext*) {});
-  });
+  auto BlobDesc4ModelLbi = MakeGetterBlobDesc4ModelLbi(op_graph);
   JobBuilder job_builder(job);
-
   op_graph.ForEachNode([&](OpNode* op_node) {
     std::vector<OperatorConf> ops;
-    auto UnparalleledBlobDesc4BnInOp = [&](const std::string& bn) -> const BlobDesc& {
-      return lbi2unparalleled_blob_desc.at(op_node->op().BnInOp2Lbi(bn));
+    auto BlobDesc4ModelBn = [&](const std::string& bn) -> const BlobDesc& {
+      return BlobDesc4ModelLbi(op_node->op().BnInOp2Lbi(bn));
     };
-    GenerateInputVarOpConfIf(op_node->op(), &ops, UnparalleledBlobDesc4BnInOp);
+    GenerateInputVarOpConfIf(op_node->op(), &ops, BlobDesc4ModelBn);
     if (!ops.empty()) { job_builder.AddOrMutOps(op_node->parallel_desc().parallel_conf(), ops); }
   });
 }
