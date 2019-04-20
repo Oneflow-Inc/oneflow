@@ -5,9 +5,9 @@ namespace oneflow {
 template<typename T>
 void BoxScaleKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* in_box = BnInOp2Blob("in_box");
+  const Blob* in_box = BnInOp2Blob("in");
   const Blob* scale = BnInOp2Blob("scale");
-  Blob* out_box = BnInOp2Blob("out_box");
+  Blob* out_box = BnInOp2Blob("out");
   const T* in_box_ptr = in_box->dptr<T>();
   T* out_box_ptr = out_box->mut_dptr<T>();
   Memset<DeviceType::kCPU>(ctx.device_ctx, out_box_ptr, 0, out_box->ByteSizeOfDataContentField());
@@ -47,18 +47,19 @@ void BoxScaleKernel<T>::ForwardDataContent(
     int32_t num_box = 0;
     FOR_RANGE(int32_t, i, 0, in_box->shape().At(0)) {
       const int32_t im_idx = in_box->record_id_in_device_piece(i);
-      const T x_scale = scale->dptr<T>(im_idx)[0];
-      const T y_scale = scale->dptr<T>(im_idx)[1];
+      const T y_scale = scale->dptr<T>(im_idx)[0];
+      const T x_scale = scale->dptr<T>(im_idx)[1];
       const int32_t offset = i * 4;
       T in_x_min = in_box_ptr[offset + 0];
       T in_y_min = in_box_ptr[offset + 1];
       T in_x_max = in_box_ptr[offset + 2];
       T in_y_max = in_box_ptr[offset + 3];
+      T* cur_out_box_ptr = out_box_ptr + num_box * 4;
       if (in_x_max > in_x_min && in_y_max > in_y_min) {
-        out_box_ptr[i * 4] = in_x_min * x_scale;
-        out_box_ptr[i * 4 + 1] = in_y_min * y_scale;
-        out_box_ptr[i * 4 + 2] = in_x_min * x_scale;
-        out_box_ptr[i * 4 + 3] = in_y_min * y_scale;
+        cur_out_box_ptr[0] = in_x_min * x_scale;
+        cur_out_box_ptr[1] = in_y_min * y_scale;
+        cur_out_box_ptr[2] = in_x_min * x_scale;
+        cur_out_box_ptr[3] = in_y_min * y_scale;
         num_box += 1;
       }
       out_box->set_record_id_in_device_piece(i, im_idx);

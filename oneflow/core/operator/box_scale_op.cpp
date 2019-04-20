@@ -4,15 +4,15 @@ namespace oneflow {
 
 void BoxScaleOp::InitFromOpConf() {
   CHECK(op_conf().has_box_scale_conf());
-  EnrollInputBn("in_box", false);
+  EnrollInputBn("in", false);
   EnrollInputBn("scale", false);
-  EnrollOutputBn("out_box", false);
+  EnrollOutputBn("out", false);
 }
 
 void BoxScaleOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx) const {
   // input: in_bbox, (N, G, 4) or (R, 4)
-  const BlobDesc* in_box = GetBlobDesc4BnInOp("in_box");
+  const BlobDesc* in_box = GetBlobDesc4BnInOp("in");
   const bool dim0_varing = in_box->has_dim0_valid_num_field();
   const bool dim1_varing = in_box->has_dim1_valid_num_field();
   CHECK((dim0_varing && !dim1_varing) || (!dim0_varing && dim1_varing));
@@ -25,7 +25,7 @@ void BoxScaleOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   CHECK_EQ(in_box->data_type(), scale->data_type());
 
   // output: out_bbox, (N, G, 4) or (R, 4)
-  *GetBlobDesc4BnInOp("out_box") = *in_box;
+  *GetBlobDesc4BnInOp("out") = *in_box;
 }
 
 void BoxScaleOp::VirtualGenKernelConf(
