@@ -4,10 +4,9 @@ namespace oneflow {
 
 void CalcTargetResizeInfoOp::InitFromOpConf() {
   CHECK(op_conf().has_calc_target_resize_info_conf());
-  EnrollInputBn("origin_height", false);
-  EnrollInputBn("origin_width", false);
+  EnrollInputBn("in", false);
   EnrollDataTmpBn("scale");
-  EnrollOutputBn("resized_image_size", false);
+  EnrollOutputBn("out", false);
 }
 
 void CalcTargetResizeInfoOp::InferBlobDescs(
@@ -18,22 +17,20 @@ void CalcTargetResizeInfoOp::InferBlobDescs(
   const int32_t max_size = conf.max_size();
   CHECK_GT(target_size, 0);
   CHECK_GE(max_size, target_size);
-  const BlobDesc* origin_height = GetBlobDesc4BnInOp("origin_height");
-  const BlobDesc* origin_width = GetBlobDesc4BnInOp("origin_width");
-  CHECK_EQ(origin_height->shape().NumAxes(), 1);
-  CHECK_EQ(origin_height->shape(), origin_width->shape());
-  CHECK_EQ(origin_height->data_type(), DataType::kInt32);
-  CHECK_EQ(origin_height->data_type(), origin_width->data_type());
 
-  // scale
+  // in: (N, 2)
+  const BlobDesc* in = GetBlobDesc4BnInOp("in");
+  CHECK_EQ(in->shape().NumAxes(), 2);
+  CHECK_EQ(in->shape().At(1), 2);
+  CHECK_EQ(in->data_type(), DataType::kInt32);
+
+  // data tmp: scale (N,)
   BlobDesc* scale = GetBlobDesc4BnInOp("scale");
-  scale->mut_shape() = origin_height->shape();
+  scale->mut_shape() = Shape({in->shape().At(0)});
   scale->set_data_type(Global<JobDesc>::Get()->DefaultDataType());
 
-  // resized_image_size
-  BlobDesc* resized_image_size = GetBlobDesc4BnInOp("resized_image_size");
-  resized_image_size->mut_shape() = Shape({origin_height->shape().At(0), 2});
-  resized_image_size->set_data_type(origin_height->data_type());
+  // out: (N, 2)
+  *GetBlobDesc4BnInOp("out") = *in;
 }
 
 REGISTER_CPU_OP(OperatorConf::kCalcTargetResizeInfoConf, CalcTargetResizeInfoOp);

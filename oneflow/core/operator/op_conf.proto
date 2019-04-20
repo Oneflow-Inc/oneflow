@@ -1397,14 +1397,10 @@ message BinaryCrossEntropyOpConf {
 }
 
 message CalcTargetResizeInfoOpConf {
-  // in
-  required string origin_height = 1;
-  required string origin_width = 2;
-  // out
-  required string resized_image_size = 3;
-  // conf
-  required int32 target_size = 4;
-  required int32 max_size = 5;
+  required string in = 1;
+  required string out = 2;
+  required int32 target_size = 3;
+  required int32 max_size = 4;
 }
 
 message ReshapeInstanceShapeToDim0OpConf {
@@ -1428,9 +1424,9 @@ message ConcatGtProposalsOpConf {
 }
 
 message BoxScaleOpConf {
-  required string in_box = 1;
+  required string in = 1;
   required string scale = 2;
-  required string out_box = 3;
+  required string out = 3;
 }
 
 message OperatorConf {
