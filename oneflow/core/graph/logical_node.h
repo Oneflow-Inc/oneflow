@@ -64,8 +64,11 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
                               std::vector<std::pair<int64_t, CompTaskNode*>>* nodes,
                               std::function<void(CompTaskNode*)>) const;
 
+  // other
   virtual int64_t GetAreaId() const = 0;
   virtual bool MayConsumeModelDiff() const { return false; }
+  bool IsProducedLogicalBlobAllModelBlob() const;
+  HashSet<LogicalBlobId>* mut_model_lbis() { return &model_lbis_; }
 
  protected:
   LogicalNode() {}
@@ -82,6 +85,7 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   HashMap<const LogicalNode*, std::vector<LogicalBlobId>> dst2data_lbis_;
   std::unique_ptr<const Shape> in_blob_fastest_time_shape_;
   std::unique_ptr<const Shape> out_blob_time_shape_;
+  HashSet<LogicalBlobId> model_lbis_;
 };
 
 #define BLD_SUB_TSK_GPH_MTHD_ARGS()                                                       \

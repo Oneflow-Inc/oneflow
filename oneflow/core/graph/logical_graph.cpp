@@ -192,6 +192,9 @@ void LogicalGraph::NaiveBuildFwStruct(
       Connect(pred_node, edge, cur_node);
     }
   });
+  for (const LogicalBlobId& lbi : job_.helper().model_lbis()) {
+    CHECK(lbi2producer.at(lbi)->mut_model_lbis()->emplace(lbi).second);
+  }
 }
 
 void LogicalGraph::FixSharedModelNodes(
