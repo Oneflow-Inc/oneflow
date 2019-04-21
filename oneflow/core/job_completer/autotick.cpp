@@ -30,6 +30,31 @@ void AddAutoTick4VariableOp(const OpGraph& op_graph, Job* job) {
   }
 }
 
+void AddAutoTick4ConstantOp(const OpGraph& op_graph, Job* job) {
+  JobBuilder job_builder(job);
+  HashMap<ParallelDesc, std::vector<OpNode*>> parallel_desc2op_node;
+  op_graph.ForEachNode([&](OpNode* op_node) {
+    if (!op_node->op().op_conf().has_constant_conf()) { return; }
+    const auto& conf = op_node->op().op_conf().variable_conf();
+    if (conf.has_tick()) { return; }
+    parallel_desc2op_node[op_node->parallel_desc()].push_back(op_node);
+  });
+  for (const auto& pair : parallel_desc2op_node) {
+    OperatorConf tick_op;
+    tick_op.set_name("tick_" + NewUniqueId());
+    tick_op.mutable_tick_conf()->set_out("out");
+    job_builder.AddOps(pair.first.parallel_conf(), {tick_op});
+
+    std::vector<OperatorConf> var_ops;
+    for (const auto* var_op_node : pair.second) {
+      OperatorConf new_var_op(var_op_node->op().op_conf());
+      new_var_op.mutable_constant_conf()->set_tick(tick_op.name() + "/out");
+      var_ops.push_back(new_var_op);
+    }
+    job_builder.MutOps(var_ops);
+  }
+}
+
 OpNode* FindSourceOpNode(const OpGraph& op_graph) {
   OpNode* ret = nullptr;
   op_graph.ForEachNode([&](OpNode* op_node) {
@@ -80,6 +105,7 @@ void ConnectSrcAndTickIfNeed(const OpNode& src_node, Job* job) {
 
 void AutoTick(const OpGraph& op_graph, Job* job) {
   AddAutoTick4VariableOp(op_graph, job);
+  AddAutoTick4ConstantOp(op_graph, job);
   OpNode* src_op_node = FindSourceOpNode(op_graph);
   if (src_op_node != nullptr) { ConnectSrcAndTickIfNeed(*src_op_node, job); }
 }
