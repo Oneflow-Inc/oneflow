@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_OPERATOR_BOX_SCALE_OP_H_
-#define ONEFLOW_CORE_OPERATOR_BOX_SCALE_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_BBOX_SCALE_OP_H_
+#define ONEFLOW_CORE_OPERATOR_BBOX_SCALE_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 
@@ -22,4 +22,4 @@ class BBoxScaleOp final : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_BOX_SCALE_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_BBOX_SCALE_OP_H_
