@@ -315,6 +315,16 @@ bool LogicalNode::HasOpWithCondition(std::function<bool(const Operator*)> cond) 
   return false;
 }
 
+bool LogicalNode::IsProducedLogicalBlobAllModelBlob() const {
+  for (std::shared_ptr<const Operator> op : op_vec_) {
+    for (const auto& obn : op->output_bns()) {
+      const auto& lbi = op->BnInOp2Lbi(obn);
+      if (model_lbis_.find(lbi) == model_lbis_.end()) { return false; }
+    }
+  }
+  return true;
+}
+
 BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const LogicalNode* dst_node) {
   std::shared_ptr<const ParallelDesc> src_pd = src_node->parallel_desc();
   std::shared_ptr<const ParallelDesc> dst_pd = dst_node->parallel_desc();
