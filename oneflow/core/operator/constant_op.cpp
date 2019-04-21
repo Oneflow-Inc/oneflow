@@ -4,7 +4,7 @@ namespace oneflow {
 
 void ConstantOp::InitFromOpConf() {
   CHECK(op_conf().has_constant_conf());
-  EnrollInputBn("tick", false);
+  if (op_conf().constant_conf().has_tick()) { EnrollInputBn("tick", false); }
   EnrollOutputBn("out", false);
 }
 
