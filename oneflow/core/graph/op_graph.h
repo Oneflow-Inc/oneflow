@@ -35,6 +35,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   const SbpParallel& SbpParallel4Lbi(const LogicalBlobId& lbi) const;
   const SbpParallel& SbpParallel4BnInOp(const std::string& bn_in_op) const;
   const BlobDesc& LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const;
+  bool IsModelBlob4Lbi(const LogicalBlobId& lbi) const;
   const OpNode* ProducerOpNode4Lbi(const LogicalBlobId& lbi) const;
 
   std::string VisualStr() const override;
@@ -52,7 +53,6 @@ class OpNode final : public Node<OpNode, OpEdge> {
   HashMap<std::string, std::vector<BlobDesc>>* mut_bn2parallel_id2blob_desc() {
     return &bn2parallel_id2blob_desc_;
   }
-  bool IsModelBlob4Lbi(const LogicalBlobId& lbi) const;
   bool* MutIsModelBlob4Lbi(const LogicalBlobId& lbi);
   BlobDesc* MutLogicalBlobDesc4Lbi(const LogicalBlobId& lbi);
   OpNode* SrcNode4InputBnInOp(const std::string& bn_in_op) const;

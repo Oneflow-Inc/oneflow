@@ -146,6 +146,12 @@ bool NoOutRegstConsumedByBwNode(TaskNode* node) {
   return true;
 };
 
+bool IsProducedRegstAllModelRegst(TaskNode* task_node) {
+  const auto* comp_task_node = dynamic_cast<CompTaskNode*>(task_node);
+  if (comp_task_node == nullptr) { return false; }
+  return comp_task_node->logical_node()->IsProducedLogicalBlobAllModelBlob();
+}
+
 }  // namespace
 
 std::string ChainNode::VisualStr() const {
@@ -180,6 +186,7 @@ void ChainGraph::GroupTaskNodesByMachineAndCollectAncestors(
     if (node->AreaId4ChainMerge() == kMdUpdtArea) { return; }
     node->ForEachNodeOnInEdge([&](TaskNode* in_node) {
       if (IsBackEdge(in_node, node)) { return; }
+      if (IsProducedRegstAllModelRegst(in_node)) { return; }
       (*node2ancestors)[node].insert(in_node);
       (*node2ancestors)[node].insert((*node2ancestors)[in_node].begin(),
                                      (*node2ancestors)[in_node].end());
