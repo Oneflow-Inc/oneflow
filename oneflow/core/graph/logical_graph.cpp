@@ -119,7 +119,7 @@ void LogicalGraph::ForEachLogicalNode(std::function<void(LogicalNodeType*)> func
 void LogicalGraph::BuildFwStruct() {
   HashMap<std::string, std::vector<LogicalNode*>> op_name2nodes;
   NaiveBuildFwStruct(&op_name2nodes);
-  BuildAllReduceFacade();
+  BuildAllReduceFacades();
   FixSharedModelNodes(op_name2nodes);
   LinkUnpackFw2PackFw(op_name2nodes);
   total_mbn_num_ = 0;
@@ -801,7 +801,7 @@ NormalMdUpdtLogicalNode* LogicalGraph::BuildNormalMdUpdtAndMdSaveStruct(
   return md_updt_logical;
 }
 
-void LogicalGraph::BuildAllReduceFacade() {
+void LogicalGraph::BuildAllReduceFacades() {
   ForEachLogicalNode<AllReduceFacadeLogicalNode>([this](AllReduceFacadeLogicalNode* facade_node) {
     CHECK_EQ(facade_node->in_edges().size(), 1);
     CHECK_EQ(facade_node->out_edges().size(), 1);
@@ -811,6 +811,10 @@ void LogicalGraph::BuildAllReduceFacade() {
     DisConnect(facade_node->SoleOutEdge());
     DeleteNode(facade_node);
     AddAllReduce(src, dst);
+    Operator* all_reduce_ending_op = dst->SoleInEdge()->src_node()->SoleOp().get();
+    const LogicalBlobId& ending_lbi =
+        all_reduce_ending_op->BnInOp2Lbi(all_reduce_ending_op->SoleObn());
+    *dst->SoleOp()->MutBnInOp2Lbi(dst->SoleOp()->SoleIbn()) = ending_lbi;
   });
 }
 
