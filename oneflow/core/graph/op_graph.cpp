@@ -475,36 +475,53 @@ void OpGraph::CheckBlobDescs(const std::string& op_name,
 
 void OpGraph::ForEachPseudoChain(
     const std::function<void(const HashSet<OpNode*>&)>& Handler) const {
-  auto IsReachable = MakePredicatorIsReachable();
-  ForEachComponentWithSameDataParallelDescAndTimeShape(
-      [&](const std::vector<OpNode*>& nodes) { ForEachPseudoChain(nodes, IsReachable, Handler); });
-}
-
-void OpGraph::ForEachComponentWithSameDataParallelDescAndTimeShape(
-    const std::function<void(const std::vector<OpNode*>&)>& Handler) const {
-  auto WithSameDataParallelDescAndTimeShape = [](OpNode* src, OpNode* dst) -> bool {
-    if (src->parallel_desc().policy() != ParallelPolicy::kDataParallel) { return false; }
-    if (dst->parallel_desc().policy() != ParallelPolicy::kDataParallel) { return false; }
+  auto IsSameSbpEdge = [](OpEdge* edge) -> bool {
+    for (const LogicalBlobId& lbi : edge->lbis()) {
+      if (edge->src_node()->SbpParallel4Lbi(lbi) != edge->dst_node()->SbpParallel4Lbi(lbi)) {
+        return false;
+      }
+    }
+    return true;
+  };
+  auto WithSameDataParallelDescAndTimeShape = [](OpEdge* edge) -> bool {
+    OpNode* src = edge->src_node();
+    OpNode* dst = edge->dst_node();
+    if (!src->parallel_desc().EqualsIgnoringPolicy(dst->parallel_desc())) { return false; }
     if (src->in_edges().empty()) { return false; }
     if (*src->GetInputBlobFastestTimeShape() != *src->out_blob_time_shape()) { return false; }
     if (*dst->GetInputBlobFastestTimeShape() != *dst->out_blob_time_shape()) { return false; }
-    return src->parallel_desc() == dst->parallel_desc()
-           && *src->out_blob_time_shape() == *dst->out_blob_time_shape();
+    if (*src->out_blob_time_shape() != *dst->out_blob_time_shape()) { return false; }
+    return true;
   };
-  auto ForEachNext = [&](OpNode* node, const std::function<void(OpNode*)>& Handler) {
-    node->ForEachNodeOnInEdge([&](OpNode* in_node) {
-      if (WithSameDataParallelDescAndTimeShape(in_node, node)) { Handler(in_node); }
-    });
-    node->ForEachNodeOnOutEdge([&](OpNode* out_node) {
-      if (WithSameDataParallelDescAndTimeShape(node, out_node)) { Handler(out_node); }
-    });
-  };
+  auto ForEachConnectedWithSameSbp7ParallelDesc7TimeShape =
+      [&](OpNode* node, const std::function<void(OpNode*)>& Handler) {
+        for (OpEdge* edge : node->in_edges()) {
+          if (IsSameSbpEdge(edge) == false) { return; }
+          if (WithSameDataParallelDescAndTimeShape(edge) == false) { return; }
+          Handler(edge->src_node());
+        }
+        for (OpEdge* edge : node->out_edges()) {
+          if (IsSameSbpEdge(edge) == false) { return; }
+          if (WithSameDataParallelDescAndTimeShape(edge) == false) { return; }
+          Handler(edge->dst_node());
+        }
+      };
+  auto IsReachable = MakePredicatorIsReachable();
+  ForEachComponent(
+      ForEachConnectedWithSameSbp7ParallelDesc7TimeShape,
+      [&](const std::vector<OpNode*>& nodes) { ForEachPseudoChain(nodes, IsReachable, Handler); });
+}
+
+void OpGraph::ForEachComponent(
+    const std::function<void(OpNode* node, const std::function<void(OpNode*)>& Handler)>&
+        ForEachConnected,
+    const std::function<void(const std::vector<OpNode*>&)>& Handler) const {
   HashMap<OpNode*, int32_t> op_node2component_id;
   int32_t cur_component_id = 0;
   ForEachNode([&](OpNode* start) {
     if (op_node2component_id.find(start) != op_node2component_id.end()) { return; }
     ++cur_component_id;
-    BfsForEachNode({start}, ForEachNext, [&](OpNode* node) {
+    BfsForEachNode({start}, ForEachConnected, [&](OpNode* node) {
       CHECK(op_node2component_id.emplace(node, cur_component_id).second);
     });
   });
@@ -556,14 +573,14 @@ void OpGraph::ReverseTopoGetPseudoChain(
     }
     return false;
   };
-  auto AnyOutputNodesNotInSubsetAndReachableIntoSink = [&](OpNode* node) {
+  auto AnyOutputNodesNotInSubsetAndReachableToSink = [&](OpNode* node) {
     for (OpEdge* edge : node->out_edges()) {
       if (!IsInSubset(edge->dst_node()) && ReachableToAnySink(edge->dst_node())) { return true; }
     }
     return false;
   };
   for (OpNode* node : op_nodes) {
-    if (AnyOutputNodesNotInSubsetAndReachableIntoSink(node)) { continue; }
+    if (AnyOutputNodesNotInSubsetAndReachableToSink(node)) { continue; }
     node->ForEachNodeOnOutEdge([&](OpNode* out_node) {
       if (IsInSubset(out_node)) {
         node2in_nodes[out_node].push_back(node);
