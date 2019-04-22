@@ -279,6 +279,7 @@ void FixAndOptimizeDLNet(Job* job) {
   if (!(job_desc->IsPredict()
         && job_desc->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf())) {
     FixTickOpIfExists(job);
+    // ConvertPseudoChainToChain(job);
   }
   // if (job_desc->IsTrain()) { AddIdentityOpForAllReduceOverlapingUntrainble(job); }
 }
