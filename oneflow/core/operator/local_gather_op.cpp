@@ -4,15 +4,12 @@ namespace oneflow {
 
 namespace {
 
-int64_t GetGatherAxis(const LocalGatherOpConf& conf, int64_t num_axes) {
+int64_t GetGatherAxis(const LocalGatherOpConf& conf, const BlobDesc* blob_desc) {
+  const int64_t num_axes = blob_desc->shape().NumAxes();
   const int64_t axis = conf.axis() < 0 ? num_axes + conf.axis() : conf.axis();
   CHECK_GE(axis, 0);
   CHECK_LT(axis, num_axes);
   return axis;
-}
-
-int64_t GetGatherAxis(const LocalGatherOpConf& conf, const BlobDesc* in_blob_desc) {
-  return GetGatherAxis(conf, in_blob_desc->shape().NumAxes());
 }
 
 }  // namespace
