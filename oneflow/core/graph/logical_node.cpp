@@ -490,6 +490,19 @@ BackwardLogicalNode* NormalForwardLogicalNode::NewCorrectBackwardNode() {
   return new NormalBackwardLogicalNode;
 }
 
+std::string OptimizerLogicalNode::TypeName() const { return "Optimizer"; }
+
+CompTaskNode* OptimizerLogicalNode::NewCompTaskNode() const {
+  return new NormalForwardCompTaskNode;
+}
+
+int64_t OptimizerLogicalNode::GetAreaId() const { return kMdUpdtArea; }
+
+BackwardLogicalNode* OptimizerLogicalNode::NewCorrectBackwardNode() {
+  UNIMPLEMENTED();
+  return nullptr;
+}
+
 void NormalMdUpdtLogicalNode::FixCompTaskNode(CompTaskNode* node) const {
   NormalMdUpdtCompTaskNode* normal_mdupdt_node = static_cast<NormalMdUpdtCompTaskNode*>(node);
   if (parallel_desc()->policy() == ParallelPolicy::kDataParallel) {

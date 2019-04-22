@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_OPERATOR_RMSPROP_MODEL_UPDATE_OP_H_
 
 #include "oneflow/core/operator/normal_model_update_op.h"
+#include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
@@ -11,6 +12,7 @@ class RMSPropModelUpdateOp final : public NormalModelUpdtOp {
   RMSPropModelUpdateOp() = default;
   ~RMSPropModelUpdateOp() = default;
   const PbMessage& GetCustomizedConf() const override;
+  LogicalNode* NewProperLogicalNode() const override { return new OptimizerLogicalNode; }
 
  private:
   void MdUpdtVirtualInitFromOpConf() override;
