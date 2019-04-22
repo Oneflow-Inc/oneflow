@@ -5,7 +5,7 @@ namespace oneflow {
 
 namespace {
 
-// S(0) -> C
+// S(0) -> B
 class VariableOpDataSplitSbpSignatureRule final : public ParallelSbpSignatureRule {
  public:
   OF_DISALLOW_COPY_AND_MOVE(VariableOpDataSplitSbpSignatureRule);
