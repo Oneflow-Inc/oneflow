@@ -1202,6 +1202,13 @@ message GatherOpConf {
   optional int64 axis = 4 [default = 0];
 }
 
+message LocalGatherOpConf {
+  required string in = 1;
+  required string indices = 2;
+  required string out = 3;
+  optional int64 axis = 4 [default = 0];
+}
+
 message BatchGatherOpConf {
   required string in = 1;
   required string indices = 2;
@@ -1512,7 +1519,8 @@ message OperatorConf {
     LogCounterOpConf log_counter_conf = 240;
     GeluOpConf gelu_conf = 241;
     GatherOpConf gather_conf = 242;
-    BatchGatherOpConf batch_gather_conf = 243;
+    LocalGatherOpConf local_gather_conf = 243;
+    BatchGatherOpConf batch_gather_conf = 244;
     MeanOpConf mean_conf = 251;
     SliceOpConf slice_conf = 252;
     BiasAddOpConf bias_add_conf = 253;
