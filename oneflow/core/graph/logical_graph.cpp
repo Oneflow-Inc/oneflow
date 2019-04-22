@@ -649,7 +649,7 @@ void LogicalGraph::AddNcclReduceScatterAndAllGather(LogicalNode* src, LogicalNod
 
 void LogicalGraph::AddNcclAllReduce(LogicalNode* src, LogicalNode* dst) {
   std::shared_ptr<const ParallelDesc> src_pd = src->parallel_desc();
-  OperatorConf nccl_all_reduce_op_conf;
+  OperatorConf nccl_all_reduce_op_conf{};
   nccl_all_reduce_op_conf.set_name("nccl_all_reduce_" + NewUniqueId());
   nccl_all_reduce_op_conf.set_device_type(src_pd->device_type());
   nccl_all_reduce_op_conf.mutable_nccl_all_reduce_conf();
@@ -683,6 +683,11 @@ void LogicalGraph::AddReduceScatterAddGatherNodes(LogicalNode* src, LogicalNode*
   Connect<LogicalNode>(reduce_scatter_node, NewEdge(), reduce_add_node);
 
   ReduceGatherLogicalNode* reduce_gather_node = NewNode<ReduceGatherLogicalNode>();
+  OperatorConf reduce_gather_op_conf{};
+  reduce_gather_op_conf.set_name("reduce_gather_" + NewUniqueId());
+  reduce_gather_op_conf.set_device_type(src_pd->device_type());
+  reduce_gather_op_conf.mutable_reduce_gather_conf();
+  reduce_gather_node->mut_op_vec() = {ConstructOp(reduce_gather_op_conf)};
   reduce_gather_node->mut_parallel_desc() = src_pd;
   reduce_gather_node->mut_rank_ctx() = current_rank_ctx;
 

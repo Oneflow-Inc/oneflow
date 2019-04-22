@@ -940,7 +940,7 @@ message ReduceAddOpConf {
 }
 
 message ReduceGatherOpConf {
-  required int32 in_num = 1;
+  optional int32 in_num = 1 [default = 0];
 }
 
 message AccuracyOpConf {

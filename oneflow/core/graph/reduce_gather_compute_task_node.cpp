@@ -25,9 +25,10 @@ void ReduceGatherCompTaskNode::ConsumeAllRegsts() {
 
 void ReduceGatherCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
-  OperatorConf reduce_gather_op_conf;
-  reduce_gather_op_conf.set_name("reduce_gather_" + NewUniqueId());
-  reduce_gather_op_conf.set_device_type(this->device_type());
+  const Operator* op = this->logical_node()->SoleOp().get();
+  OperatorConf reduce_gather_op_conf{};
+  reduce_gather_op_conf.set_name(op->op_name());
+  reduce_gather_op_conf.set_device_type(op->device_type());
   reduce_gather_op_conf.mutable_reduce_gather_conf()->set_in_num(in_data_edges_size());
   std::shared_ptr<Operator> reduce_gather_op = ConstructOp(reduce_gather_op_conf);
   node->mut_op() = reduce_gather_op;
