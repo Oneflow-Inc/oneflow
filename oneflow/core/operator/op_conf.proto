@@ -932,11 +932,11 @@ message ReduceSplitOpConf {
 }
 
 message ReduceScatterOpConf {
-  required int32 out_num = 1;
+  optional int32 out_num = 1 [default = 0];
 }
 
 message ReduceAddOpConf {
-  required int32 in_num = 1;
+  optional int32 in_num = 1 [default = 0];
 }
 
 message ReduceGatherOpConf {

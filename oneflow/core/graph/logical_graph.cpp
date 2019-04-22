@@ -624,7 +624,7 @@ void LogicalGraph::AddNcclReduceScatterAndAllGather(LogicalNode* src, LogicalNod
 
   ReduceRankCtx rank_ctx = ReduceRankCtx().CtxWithScatter(src_pd->device_num_of_each_machine());
 
-  OperatorConf nccl_reduce_scatter_op_conf;
+  OperatorConf nccl_reduce_scatter_op_conf{};
   nccl_reduce_scatter_op_conf.set_name("nccl_reduce_scatter_" + NewUniqueId());
   nccl_reduce_scatter_op_conf.set_device_type(src_pd->device_type());
   nccl_reduce_scatter_op_conf.mutable_nccl_reduce_scatter_conf();
@@ -634,7 +634,7 @@ void LogicalGraph::AddNcclReduceScatterAndAllGather(LogicalNode* src, LogicalNod
   nccl_reduce_scatter_node->mut_rank_ctx() = rank_ctx;
   Connect<LogicalNode>(src, NewEdge(), nccl_reduce_scatter_node);
 
-  OperatorConf nccl_all_gather_op_conf;
+  OperatorConf nccl_all_gather_op_conf{};
   nccl_all_gather_op_conf.set_name("nccl_all_gather_" + NewUniqueId());
   nccl_all_gather_op_conf.set_device_type(src_pd->device_type());
   nccl_all_gather_op_conf.mutable_nccl_all_gather_conf();
@@ -673,11 +673,21 @@ void LogicalGraph::AddReduceScatterAddGatherNodes(LogicalNode* src, LogicalNode*
 
   ReduceRankCtx current_rank_ctx = prev_rank_ctx.CtxWithScatter(segment_count);
   ReduceScatterLogicalNode* reduce_scatter_node = NewNode<ReduceScatterLogicalNode>();
+  OperatorConf reduce_scatter_op_conf{};
+  reduce_scatter_op_conf.set_name("reduce_scatter_" + NewUniqueId());
+  reduce_scatter_op_conf.set_device_type(src_pd->device_type());
+  reduce_scatter_op_conf.mutable_reduce_scatter_conf();
+  reduce_scatter_node->mut_op_vec() = {ConstructOp(reduce_scatter_op_conf)};
   reduce_scatter_node->mut_parallel_desc() = src_pd;
   reduce_scatter_node->mut_rank_ctx() = current_rank_ctx;
   Connect<LogicalNode>(src, NewEdge(), reduce_scatter_node);
 
   ReduceAddLogicalNode* reduce_add_node = NewNode<ReduceAddLogicalNode>();
+  OperatorConf reduce_add_op_conf{};
+  reduce_add_op_conf.set_name("reduce_add_" + NewUniqueId());
+  reduce_add_op_conf.set_device_type(src_pd->device_type());
+  reduce_add_op_conf.mutable_reduce_add_conf();
+  reduce_add_node->mut_op_vec() = {ConstructOp(reduce_add_op_conf)};
   reduce_add_node->mut_parallel_desc() = src_pd;
   reduce_add_node->mut_rank_ctx() = current_rank_ctx;
   Connect<LogicalNode>(reduce_scatter_node, NewEdge(), reduce_add_node);
