@@ -478,6 +478,17 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
   int64_t x##LogicalNode::GetAreaId() const { return area_type; }
 OF_PP_FOR_EACH_TUPLE(DEFINE_VIRTUAL_METHOD, LOGICAL_TYPE_SEQ);
 
+#define FACADE_LOGICAL_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(AllReduceFacade, kMdUpdtArea)
+
+#define FACADE_DEFINE_VIRTUAL_METHOD(x, area_type)                           \
+  std::string x##LogicalNode::TypeName() const { return #x; }                \
+  CompTaskNode* x##LogicalNode::NewCompTaskNode() const { UNIMPLEMENTED(); } \
+  int64_t x##LogicalNode::GetAreaId() const { return area_type; }
+OF_PP_FOR_EACH_TUPLE(FACADE_DEFINE_VIRTUAL_METHOD, FACADE_LOGICAL_TYPE_SEQ)
+
+#undef FACADE_DEFINE_VIRTUAL_METHOD
+#undef FACADE_LOGICAL_TYPE_SEQ
+
 BackwardLogicalNode* ForwardLogicalNode::NewBackwardNode() {
   bw_node_ = NewCorrectBackwardNode();
   bw_node_->mut_op_vec() = op_vec();
