@@ -419,6 +419,9 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceAdd"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
                               "ReduceGather",
                               &TaskGraph::BldSubTskGphByReduceGather2ReduceGather);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
+                              "ReduceSplit",
+                              &TaskGraph::BldSubTskGphByOneToOne);
 
 BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src, const LogicalNode* dst) {
   std::string k = ConcatTypeName(src, dst);
