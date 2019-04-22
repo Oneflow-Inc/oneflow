@@ -336,7 +336,7 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
     }
     if (src_node->SoleOp()->op_conf().has_tick_conf()
         && dst_node->SoleOp()->op_conf().has_log_counter_conf() == false) {
-      return &TaskGraph::BldSubTskGphByTickToSource;
+      return &TaskGraph::BldSubTskGphByBroadcastToBroadcast;
     }
   }
   if (src_pd->parallel_num() == 1 && dst_pd->parallel_num() == 1) {
