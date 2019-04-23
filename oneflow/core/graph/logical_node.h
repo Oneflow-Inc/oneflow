@@ -322,7 +322,6 @@ DECLARE_REDUCE_LOGICAL_NODE(NcclAllReduceLogicalNode, true);
 DECLARE_REDUCE_LOGICAL_NODE(ReduceAddLogicalNode, false);
 DECLARE_REDUCE_LOGICAL_NODE(NcclAllGatherLogicalNode, false);
 DECLARE_REDUCE_LOGICAL_NODE(NcclReduceScatterLogicalNode, true);
-DECLARE_REDUCE_LOGICAL_NODE(AllReduceFacadeLogicalNode, false);
 
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatForward);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Acc);
@@ -345,6 +344,21 @@ DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(EveryNth);
 
 DECLARE_BEFORE_OR_AFTER_ALLREDUCE_REDUCE_NODE(ReduceIdentityLogicalNode, true);
 DECLARE_BEFORE_OR_AFTER_ALLREDUCE_REDUCE_NODE(ReduceSplitLogicalNode, false);
+
+class FacadeLogicalNode : public LogicalNode {
+ public:
+  LOGICAL_NODE_BOILERPLATE(FacadeLogicalNode);
+
+ private:
+};
+
+#define DECLARE_FACADE_LOGICAL_NODE(name)          \
+  class name final : public FacadeLogicalNode {    \
+   public:                                         \
+    std::string TypeName() const { return #name; } \
+  }
+
+DECLARE_FACADE_LOGICAL_NODE(AllReduceFacadeLogicalNode);
 
 }  // namespace oneflow
 
