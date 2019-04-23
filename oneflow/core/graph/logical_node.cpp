@@ -484,9 +484,6 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
   int64_t x##LogicalNode::GetAreaId() const { return area_type; }
 OF_PP_FOR_EACH_TUPLE(DEFINE_VIRTUAL_METHOD, LOGICAL_TYPE_SEQ);
 
-#undef FACADE_DEFINE_VIRTUAL_METHOD
-#undef FACADE_LOGICAL_TYPE_SEQ
-
 BackwardLogicalNode* ForwardLogicalNode::NewBackwardNode() {
   bw_node_ = NewCorrectBackwardNode();
   bw_node_->mut_op_vec() = op_vec();
