@@ -17,9 +17,7 @@ const PbMessage& AllReduceFacadeOp::GetCustomizedConf() const {
 void AllReduceFacadeOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  const BlobDesc* in_blob = GetBlobDesc4BnInOp("in");
-  BlobDesc* out_blob = GetBlobDesc4BnInOp("out");
-  *out_blob = *in_blob;
+  *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
 }
 
 void AllReduceFacadeOp::GetSbpSignatureRules(

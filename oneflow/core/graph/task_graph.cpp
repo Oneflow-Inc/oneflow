@@ -2,7 +2,6 @@
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include "oneflow/core/graph/normal_backward_compute_task_node.h"
 #include "oneflow/core/graph/normal_model_update_compute_task_node.h"
-#include "oneflow/core/graph/reduce_concat_compute_task_node.h"
 #include "oneflow/core/graph/chain_graph.h"
 #include "oneflow/core/graph/boxing_task_node.h"
 #include "oneflow/core/common/balanced_splitter.h"
