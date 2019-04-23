@@ -6,6 +6,7 @@
 #include "oneflow/core/job_completer/optimizer.h"
 #include "oneflow/core/job_completer/add_saver.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job_completer/all_reduce_add_pass.h"
 
 namespace oneflow {
 
@@ -360,6 +361,13 @@ void SetOpTimeShape7CtrlInOpName7ModelLbis(const OpGraph& op_graph, Job* job) {
   SetModelLbis(op_graph, job);
 }
 
+void OptimizeBoxingWithAllReduce(const OpGraph& op_graph, Job* job) {
+  if (Global<JobDesc>::Get()->IsPredict()
+      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+    AllReduceAddPass().Apply(job);
+  }
+}
+
 }  // namespace
 
 void JobCompleter::Complete(Job* job) const {
@@ -375,6 +383,7 @@ void JobCompleter::Complete(Job* job) const {
     WithOpGraphAndMutJob(job, &AutoTick);
     // add keep_header_only op
     WithOpGraphAndMutJob(job, &AddKeepHeaderOnlyOp);
+    WithOpGraphAndMutJob(job, &OptimizeBoxingWithAllReduce);
     WithOpGraphAndMutJob(job, &SetOpTimeShape7CtrlInOpName7ModelLbis);
   }
   // TODO: refine
