@@ -558,8 +558,4 @@ int32_t ReduceSplitLogicalNode::order_in_logical_graph() const {
   }
 }
 
-CompTaskNode* FacadeLogicalNode::NewCompTaskNode() const { UNIMPLEMENTED(); }
-
-int64_t FacadeLogicalNode::GetAreaId() const { return kInvalidArea; }
-
 }  // namespace oneflow
