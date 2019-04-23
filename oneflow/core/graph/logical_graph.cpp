@@ -112,7 +112,7 @@ void LogicalGraph::ForEachLogicalNode(std::function<void(LogicalNodeType*)> func
 void LogicalGraph::BuildFwStruct() {
   HashMap<std::string, std::vector<LogicalNode*>> op_name2nodes;
   NaiveBuildFwStruct(&op_name2nodes);
-  BuildAllReduceFacades();
+  ReplaceAllReduceFacades();
   FixSharedModelNodes(op_name2nodes);
   LinkUnpackFw2PackFw(op_name2nodes);
   total_mbn_num_ = 0;
@@ -809,7 +809,7 @@ NormalMdUpdtLogicalNode* LogicalGraph::BuildNormalMdUpdtAndMdSaveStruct(
   return md_updt_logical;
 }
 
-void LogicalGraph::BuildAllReduceFacades() {
+void LogicalGraph::ReplaceAllReduceFacades() {
   ForEachLogicalNode<AllReduceFacadeLogicalNode>([this](AllReduceFacadeLogicalNode* facade_node) {
     CHECK_EQ(facade_node->in_edges().size(), 1);
     CHECK_EQ(facade_node->out_edges().size(), 1);

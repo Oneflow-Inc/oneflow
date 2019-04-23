@@ -67,7 +67,7 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   MdSaveLogicalNode* BuildMdSaveStructIfNeed(LogicalNode* need_save_logical);
   NormalMdUpdtLogicalNode* BuildNormalMdUpdtAndMdSaveStruct(bool is_train,
                                                             ForwardLogicalNode* fw_logical);
-  void BuildAllReduceFacades();
+  void ReplaceAllReduceFacades();
 
   void ConnectFwToBw();
   void UpdateEdge2Ibn(const LogicalEdge* edge, const std::string& ibn);
