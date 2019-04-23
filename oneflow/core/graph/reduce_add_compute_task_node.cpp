@@ -26,7 +26,7 @@ void ReduceAddCompTaskNode::ConsumeAllRegsts() {
 void ReduceAddCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   OperatorConf reduce_add_op_conf;
-  reduce_add_op_conf.set_name("reduce_add_" + NewUniqueId());
+  reduce_add_op_conf.set_name(this->logical_node()->SoleOp()->op_name());
   reduce_add_op_conf.set_device_type(this->device_type());
   reduce_add_op_conf.mutable_reduce_add_conf()->set_in_num(in_data_edges_size());
   std::shared_ptr<Operator> reduce_add_op = ConstructOp(reduce_add_op_conf);

@@ -26,7 +26,7 @@ void ReduceScatterCompTaskNode::ConsumeAllRegsts() {
 void ReduceScatterCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   OperatorConf reduce_scatter_op_conf;
-  reduce_scatter_op_conf.set_name("reduce_scatter_" + NewUniqueId());
+  reduce_scatter_op_conf.set_name(this->logical_node()->SoleOp()->op_name());
   reduce_scatter_op_conf.set_device_type(this->device_type());
   reduce_scatter_op_conf.mutable_reduce_scatter_conf()->set_out_num(out_data_edges_size());
 
