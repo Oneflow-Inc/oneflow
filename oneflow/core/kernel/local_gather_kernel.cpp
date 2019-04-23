@@ -66,6 +66,22 @@ void LocalGatherKernel<device_type, T>::BackwardDataContent(
       BnInOp2Blob(GenDiffBn("in")));
 }
 
+template<DeviceType device_type, typename T>
+void LocalGatherKernel<device_type, T>::ForwardDim0ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* in_blob = BnInOp2Blob("in");
+  const Blob* indices_blob = BnInOp2Blob("indices");
+  Blob* out_blob = BnInOp2Blob("out");
+  const int64_t axis = this->kernel_conf().local_gather_conf().axis();
+  if (axis == 0 && indices_blob->has_dim0_valid_num_field()) {
+    out_blob->CopyDim0ValidNumFrom(ctx.device_ctx, indices_blob);
+  } else if (axis > 0 && in_blob->has_dim0_valid_num_field()) {
+    out_blob->CopyDim0ValidNumFrom(ctx.device_ctx, in_blob);
+  } else {
+    LOG(FATAL) << "Should not forward dim0 valid num in" << this->op_conf().name();
+  }
+}
+
 template<typename T, typename K>
 struct LocalGatherKernelUtil<DeviceType::kCPU, T, K> final {
   static void Forward(DeviceCtx* ctx, const K* indices, int64_t num_indices, const T* in,

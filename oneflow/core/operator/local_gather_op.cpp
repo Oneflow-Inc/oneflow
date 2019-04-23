@@ -41,6 +41,15 @@ void LocalGatherOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   dim_vec.insert(dim_vec.end(), in->shape().dim_vec().cbegin() + axis + 1,
                  in->shape().dim_vec().end());
   out->mut_shape() = Shape(dim_vec);
+  if (axis == 0 && indices->has_dim0_valid_num_field()) {
+    out->set_has_dim0_valid_num_field(true);
+    out->mut_dim0_inner_shape() = Shape({1, indices->shape().At(0)});
+  } else if (axis > 0 && in->has_dim0_valid_num_field()) {
+    out->set_has_dim0_valid_num_field(true);
+    out->mut_dim0_inner_shape() = Shape({1, in->shape().At(0)});
+  } else {
+    out->set_has_dim0_valid_num_field(false);
+  }
 }
 
 void LocalGatherOp::VirtualGenKernelConf(
