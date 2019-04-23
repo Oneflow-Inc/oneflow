@@ -2,6 +2,7 @@
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include "oneflow/core/graph/normal_backward_compute_task_node.h"
 #include "oneflow/core/graph/normal_model_update_compute_task_node.h"
+#include "oneflow/core/graph/reduce_concat_compute_task_node.h"
 #include "oneflow/core/graph/chain_graph.h"
 #include "oneflow/core/graph/boxing_task_node.h"
 #include "oneflow/core/common/balanced_splitter.h"
@@ -369,10 +370,10 @@ void TaskGraph::AddReduceNoBwForwardNodeOverlapingCtrlEdges() {
 }
 
 void TaskGraph::EnableMemSharingInReduceStruct() {
-  auto GetPredReduceTaskNode = [](TaskNode* succ) {
+  auto GetSuccReduceTaskNode = [](TaskNode* pred) {
     std::vector<TaskNode*> nodes;
-    succ->ForEachNodeOnInEdge([&](TaskNode* pred) {
-      if (dynamic_cast<ReduceCompTaskNodeIf*>(pred)) { nodes.push_back(pred); }
+    pred->ForEachNodeOnOutEdge([&](TaskNode* succ) {
+      if (dynamic_cast<ReduceCompTaskNodeIf*>(succ) != nullptr) { nodes.push_back(succ); }
     });
     return nodes;
   };
@@ -381,39 +382,37 @@ void TaskGraph::EnableMemSharingInReduceStruct() {
 
   auto CollectReduceTaskNode = [&](TaskNode* from) {
     std::list<TaskNode*> nodes;
-    TaskNode* succ = from;
+    nodes.push_back(from);
+    TaskNode* pred = from;
     while (true) {
-      std::vector<TaskNode*> pred_reduce_nodes = GetPredReduceTaskNode(succ);
-      if (pred_reduce_nodes.size() != 1) { break; }
-      TaskNode* pred_reduce_node = pred_reduce_nodes.front();
-      if (has_enabled_nodes.find(pred_reduce_node) != has_enabled_nodes.end()) { break; }
-      nodes.push_back(pred_reduce_node);
-      succ = pred_reduce_node;
+      std::vector<TaskNode*> succ_reduce_nodes = GetSuccReduceTaskNode(pred);
+      if (succ_reduce_nodes.size() != 1) { break; }
+      TaskNode* succ_reduce_node = succ_reduce_nodes.front();
+      if (has_enabled_nodes.find(succ_reduce_node) != has_enabled_nodes.end()) { break; }
+      nodes.push_back(succ_reduce_node);
+      pred = succ_reduce_node;
     }
-    nodes.reverse();
     return nodes;
   };
 
-  auto CalcModelSize = [](NormalMdUpdtCompTaskNode* node) {
-    auto* pred = dynamic_cast<ReduceSplitCompTaskNode*>(node->SoleInEdge()->src_node());
-    if (pred) { return InferRegstSize(*pred->GetSoleConsumedRegst("in")); }
-    return InferRegstSize(*(node->consumed_regsts().begin()->second.front()));
+  auto CalcModelSize = [](ReduceConcatCompTaskNode* node) {
+    return InferRegstSize(*node->produced_regsts().at("out").get());
   };
 
   ForEachNode([&](TaskNode* node) {
-    auto* updt = dynamic_cast<NormalMdUpdtCompTaskNode*>(node);
-    if (!updt) { return; }
-    if (updt->parallel_ctx()->policy() != ParallelPolicy::kDataParallel) { return; }
-    if (updt->device_type() != DeviceType::kGPU) { return; }
-    if (updt->parallel_ctx()->parallel_num() < 2) { return; }
-    std::list<TaskNode*> reduce_task_nodes = CollectReduceTaskNode(updt);
+    ReduceConcatCompTaskNode* concat_node = dynamic_cast<ReduceConcatCompTaskNode*>(node);
+    if (!concat_node) { return; }
+    if (concat_node->parallel_ctx()->policy() != ParallelPolicy::kDataParallel) { return; }
+    if (concat_node->device_type() != DeviceType::kGPU) { return; }
+    if (concat_node->parallel_ctx()->parallel_num() < 2) { return; }
+    std::list<TaskNode*> reduce_task_nodes = CollectReduceTaskNode(concat_node);
 
-    int64_t mem_shared_id = Global<IDMgr>::Get()->NewMemSharedId();
-    int64_t mem_size = CalcModelSize(updt);
+    const int64_t mem_shared_id = Global<IDMgr>::Get()->NewMemSharedId();
+    const int64_t mem_size = CalcModelSize(concat_node);
     ReduceMemSharingCtx ctx(mem_size, mem_shared_id);
     for (TaskNode* reduce_node : reduce_task_nodes) {
       auto reduce_task_node_if = dynamic_cast<ReduceCompTaskNodeIf*>(reduce_node);
-      CHECK(reduce_task_node_if);
+      CHECK_NOTNULL(reduce_task_node_if);
       reduce_task_node_if->EnableMemSharingInReduce(ctx);
       has_enabled_nodes.insert(reduce_node);
     }
