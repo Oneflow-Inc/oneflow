@@ -4,7 +4,6 @@
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/common/balanced_splitter.h"
-#include "oneflow/core/job_completer/all_reduce_add_pass.h"
 
 namespace oneflow {
 
