@@ -49,6 +49,8 @@ void ImageSegmentationMaskOp::InferBlobDescs(
   out_blob_desc->set_data_type(DataType::kUInt8);
   out_blob_desc->mut_dim0_inner_shape() = mask_blob_desc->dim0_inner_shape();
   out_blob_desc->set_has_dim0_valid_num_field(mask_blob_desc->has_dim0_valid_num_field());
+  out_blob_desc->set_has_record_id_in_device_piece_field(
+      mask_blob_desc->has_record_id_in_device_piece_field());
 
   // padded_mask: (R, m_h + padding * 2, m_w + padding * 2)
   // To work around an issue with cv2.resize, zero-pad the masks by 1 pixel

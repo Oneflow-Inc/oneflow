@@ -1403,16 +1403,11 @@ message BinaryCrossEntropyOpConf {
   required string out = 3;
 }
 
-message CalculateScaleOpConf {
-  // in
-  required string origin_height = 1;
-  required string origin_width = 2;
-  // out
-  required string scale = 3;
-  required string image_size = 4;
-  // conf
-  required int32 target_size = 5;
-  required int32 max_size = 6;
+message CalcTargetResizeInfoOpConf {
+  required string in = 1;
+  required string out = 2;
+  required int32 target_size = 3;
+  required int32 max_size = 4;
 }
 
 message ReshapeInstanceShapeToDim0OpConf {
@@ -1435,7 +1430,7 @@ message ConcatGtProposalsOpConf {
   required string out = 3;
 }
 
-message GtBboxScaleOpConf {
+message BboxScaleOpConf {
   required string in = 1;
   required string scale = 2;
   required string out = 3;
@@ -1559,14 +1554,14 @@ message OperatorConf {
     GroupByRecordIdOpConf group_by_record_id_conf = 286;
     SmoothL1OpConf smooth_l1_conf = 287;
     BinaryCrossEntropyOpConf binary_cross_entropy_conf = 288;
-    CalculateScaleOpConf calculate_scale_conf = 289;
+    CalcTargetResizeInfoOpConf calc_target_resize_info_conf = 289;
     ReshapeInstanceShapeToDim0OpConf reshape_instance_shape_to_dim0_conf = 290;
     ElementCountOpConf element_count_conf = 291;
     Conv1DV2OpConf conv_1d_v2_conf = 292;
     Conv2DV2OpConf conv_2d_v2_conf = 293;
     Conv3DV2OpConf conv_3d_v2_conf = 294;
     ConcatGtProposalsOpConf concat_gt_proposals_conf = 295;
-    GtBboxScaleOpConf gt_bbox_scale_conf = 296;
+    BboxScaleOpConf bbox_scale_conf = 296;
     AnchorGenerateOpConf anchor_generate_conf = 297;
 
     // Maybe not needed

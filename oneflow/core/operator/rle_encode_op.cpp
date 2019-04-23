@@ -30,6 +30,7 @@ void RleEncodeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   out->mut_dim0_inner_shape() = in->dim0_inner_shape();
   out->set_has_dim0_valid_num_field(in->has_dim0_valid_num_field());
   out->set_has_dim1_valid_num_field(true);
+  out->set_has_record_id_in_device_piece_field(in->has_record_id_in_device_piece_field());
 }
 
 REGISTER_CPU_OP(OperatorConf::kRleEncodeConf, RleEncodeOp);
