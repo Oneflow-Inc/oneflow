@@ -348,8 +348,6 @@ DECLARE_BEFORE_OR_AFTER_ALLREDUCE_REDUCE_NODE(ReduceSplitLogicalNode, false);
 class FacadeLogicalNode : public LogicalNode {
  public:
   LOGICAL_NODE_BOILERPLATE(FacadeLogicalNode);
-
- private:
 };
 
 #define DECLARE_FACADE_LOGICAL_NODE(name)          \
