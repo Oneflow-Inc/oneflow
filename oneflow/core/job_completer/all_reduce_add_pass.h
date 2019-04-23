@@ -5,11 +5,13 @@
 
 namespace oneflow {
 
+class OpGraph;
+
 class AllReduceAddPass final {
  public:
   AllReduceAddPass() = default;
   ~AllReduceAddPass() = default;
-  void Apply(Job*) const;
+  void Apply(const OpGraph& op_graph, Job* job) const;
 };
 
 }  // namespace oneflow

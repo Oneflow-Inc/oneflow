@@ -246,7 +246,7 @@ void BuildAllReduceStruct(
 
 }  // namespace
 
-void AllReduceAddPass::Apply(Job* job) const {
+void AllReduceAddPass::Apply(const OpGraph& op_graph, Job* job) const {
   OpGraph op_graph(*job);
   auto ProducerOpNode4Lbi = MakeGetterProducerOpNode4Lbi(op_graph);
 

@@ -364,7 +364,7 @@ void SetOpTimeShape7CtrlInOpName7ModelLbis(const OpGraph& op_graph, Job* job) {
 void OptimizeBoxingWithAllReduce(const OpGraph& op_graph, Job* job) {
   if (Global<JobDesc>::Get()->IsPredict()
       && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
-    AllReduceAddPass().Apply(job);
+    AllReduceAddPass().Apply(op_graph, job);
   }
 }
 
