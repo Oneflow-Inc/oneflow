@@ -149,7 +149,9 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void ReverseTopoGetPseudoChain(
       const HashSet<OpNode*>& op_nodes, HashSet<OpNode*>* chain,
       const std::function<bool(OpNode* src, OpNode* dst)>& IsReachable) const;
-  void ForEachComponentWithSameDataParallelDescAndTimeShape(
+  void ForEachComponent(
+      const std::function<void(OpNode* node, const std::function<void(OpNode*)>& Handler)>&
+          ForEachConnected,
       const std::function<void(const std::vector<OpNode*>&)>& Handler) const;
 
   int64_t GetSplitNum(const std::string& op_name, const LogicalBlobId& lbi) const;

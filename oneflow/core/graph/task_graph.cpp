@@ -617,28 +617,30 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne) {
   }
 }
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByTickToSource) {
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBroadcastToBroadcast) {
   CHECK(src_logical->SoleOp()->op_conf().has_tick_conf());
-  HashMap<size_t, CompTaskNode*> machine_id2tick_task;
-  HashMap<size_t, std::vector<CompTaskNode*>> machine_id2dst_tasks;
-  for (CompTaskNode* tick_node : sorted_src_comp_tasks) {
-    machine_id2tick_task[tick_node->machine_id()] = tick_node;
+  HashMap<size_t, CompTaskNode*> machine_id2last_src_task;
+  HashMap<std::pair<int64_t, int64_t>, CompTaskNode*> global_thrd_id2src_task;
+  auto GlobalThrdId4TaskNode = [](TaskNode* task_node) -> std::pair<int64_t, int64_t> {
+    return std::make_pair(task_node->machine_id(), task_node->thrd_id());
+  };
+  for (CompTaskNode* src_node : sorted_src_comp_tasks) {
+    machine_id2last_src_task[src_node->machine_id()] = src_node;
+    global_thrd_id2src_task[GlobalThrdId4TaskNode(src_node)] = src_node;
   }
+  HashMap<std::pair<int64_t, int64_t>, CompTaskNode*> global_thrd_id2dst_task;
   for (CompTaskNode* dst_node : sorted_dst_comp_tasks) {
-    machine_id2dst_tasks[dst_node->machine_id()].push_back(dst_node);
+    global_thrd_id2dst_task[GlobalThrdId4TaskNode(dst_node)] = dst_node;
   }
-
-  CompTaskNode* first_tick = sorted_src_comp_tasks.at(0);
-  for (const auto& pair : machine_id2dst_tasks) {
-    size_t machine_id = pair.first;
-    for (CompTaskNode* dst_node : pair.second) {
-      if (machine_id2tick_task.find(machine_id) != machine_id2tick_task.end()) {
-        Connect<TaskNode>(machine_id2tick_task.at(machine_id), NewEdge(), dst_node);
-      } else {
-        TaskNode* next_node = AddCopyCommNetTaskBetween(first_tick, dst_node);
-        Connect<TaskNode>(first_tick, NewEdge(), next_node);
-      }
-    }
+  auto GetSrcNode = [&](const std::pair<int64_t, int64_t>& global_thrd_id) -> CompTaskNode* {
+    const auto& src_task_it = global_thrd_id2src_task.find(global_thrd_id);
+    if (src_task_it != global_thrd_id2src_task.end()) { return src_task_it->second; }
+    const auto& m_src_task_it = machine_id2last_src_task.find(global_thrd_id.first);
+    if (m_src_task_it != machine_id2last_src_task.end()) { return m_src_task_it->second; }
+    return machine_id2last_src_task.begin()->second;
+  };
+  for (const auto& pair : global_thrd_id2dst_task) {
+    BuildTaskPath(GetSrcNode(pair.first), pair.second, MutBufTask, true);
   }
 }
 

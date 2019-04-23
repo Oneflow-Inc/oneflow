@@ -249,11 +249,7 @@ void AddTotalLossInstanceNumOpConf(const OpGraph& op_graph, Job* job,
   JobBuilder job_builder(job);
   std::list<OpNode*> loss_nodes;
   GetLossOpNodes(op_graph, &loss_nodes);
-  OperatorConf op_conf;
-  op_conf.set_name("System-Autograd-total_loss_instance_num");
-  TotalLossInstanceNumOpConf* total_loss_instance_num_conf =
-      op_conf.mutable_total_loss_instance_num_conf();
-  for (const std::string& loss_lbn : GetTrainConf().loss_lbn()) {
+  auto BuildInstanceNumOpConf4LossOpNode = [&](const std::string& loss_lbn, LogicalBlobId* lbi) {
     const LogicalBlobId loss_lbi = GenLogicalBlobId(loss_lbn);
     const auto loss_node_it = std::find_if(
         loss_nodes.cbegin(), loss_nodes.cend(),
@@ -269,18 +265,34 @@ void AddTotalLossInstanceNumOpConf(const OpGraph& op_graph, Job* job,
     instance_num_op_conf->set_data_type(op_node->LogicalBlobDesc4Lbi(loss_lbi).data_type());
     instance_num_op_conf->mutable_include_axis_conf()->add_axis(0);
     job_builder.AddOps(op_node->parallel_desc().parallel_conf(), {instance_num_op});
-    std::string loss_instance_num_lbn = instance_num_op.name() + "/y";
-    total_loss_instance_num_conf->add_in(loss_instance_num_lbn);
+    lbi->set_op_name(instance_num_op.name());
+    lbi->set_blob_name("y");
+  };
+  const auto& train_conf = GetTrainConf();
+  if (train_conf.loss_lbn().size() == 1) {
+    BuildInstanceNumOpConf4LossOpNode(train_conf.loss_lbn().Get(0), total_loss_instance_num_lbi);
+  } else if (train_conf.loss_lbn().size() > 1) {
+    OperatorConf op_conf;
+    op_conf.set_name("System-Autograd-total_loss_instance_num");
+    TotalLossInstanceNumOpConf* total_loss_instance_num_conf =
+        op_conf.mutable_total_loss_instance_num_conf();
+    for (const std::string& loss_lbn : train_conf.loss_lbn()) {
+      LogicalBlobId loss_instance_num_lbi;
+      BuildInstanceNumOpConf4LossOpNode(loss_lbn, &loss_instance_num_lbi);
+      total_loss_instance_num_conf->add_in(GenLogicalBlobName(loss_instance_num_lbi));
+    }
+    total_loss_instance_num_conf->set_out("out");
+
+    ParallelConf parallel_conf;
+    parallel_conf.set_policy(kDataParallel);
+    parallel_conf.add_device_name("0:cpu:0");
+    job_builder.AddOps(parallel_conf, {op_conf});
+
+    total_loss_instance_num_lbi->set_op_name(op_conf.name());
+    total_loss_instance_num_lbi->set_blob_name("out");
+  } else {
+    UNIMPLEMENTED();
   }
-  total_loss_instance_num_conf->set_out("out");
-
-  ParallelConf parallel_conf;
-  parallel_conf.set_policy(kDataParallel);
-  parallel_conf.add_device_name("0:cpu:0");
-  job_builder.AddOps(parallel_conf, {op_conf});
-
-  total_loss_instance_num_lbi->set_op_name(op_conf.name());
-  total_loss_instance_num_lbi->set_blob_name("out");
 }
 
 }  // namespace oneflow
