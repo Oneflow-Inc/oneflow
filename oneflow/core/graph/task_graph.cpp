@@ -395,20 +395,20 @@ void TaskGraph::EnableMemSharingInReduceStruct() {
     return nodes;
   };
 
-  auto CalcModelSize = [](ReduceConcatCompTaskNode* node) {
+  auto CalcModelSize = [](ReduceIdentityCompTaskNode* node) {
     return InferRegstSize(*node->produced_regsts().at("out").get());
   };
 
   ForEachNode([&](TaskNode* node) {
-    ReduceConcatCompTaskNode* concat_node = dynamic_cast<ReduceConcatCompTaskNode*>(node);
-    if (!concat_node) { return; }
-    if (concat_node->parallel_ctx()->policy() != ParallelPolicy::kDataParallel) { return; }
-    if (concat_node->device_type() != DeviceType::kGPU) { return; }
-    if (concat_node->parallel_ctx()->parallel_num() < 2) { return; }
-    std::list<TaskNode*> reduce_task_nodes = CollectReduceTaskNode(concat_node);
+    ReduceIdentityCompTaskNode* identity_node = dynamic_cast<ReduceIdentityCompTaskNode*>(node);
+    if (!identity_node) { return; }
+    if (identity_node->parallel_ctx()->policy() != ParallelPolicy::kDataParallel) { return; }
+    if (identity_node->device_type() != DeviceType::kGPU) { return; }
+    if (identity_node->parallel_ctx()->parallel_num() < 2) { return; }
+    std::list<TaskNode*> reduce_task_nodes = CollectReduceTaskNode(identity_node);
 
     const int64_t mem_shared_id = Global<IDMgr>::Get()->NewMemSharedId();
-    const int64_t mem_size = CalcModelSize(concat_node);
+    const int64_t mem_size = CalcModelSize(identity_node);
     ReduceMemSharingCtx ctx(mem_size, mem_shared_id);
     for (TaskNode* reduce_node : reduce_task_nodes) {
       auto reduce_task_node_if = dynamic_cast<ReduceCompTaskNodeIf*>(reduce_node);
