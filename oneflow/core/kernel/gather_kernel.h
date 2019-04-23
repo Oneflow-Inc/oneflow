@@ -18,6 +18,8 @@ class GatherKernel final : public KernelIf<device_type> {
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void BackwardDataContent(const KernelCtx& ctx,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardDim0ValidNum(const KernelCtx&,
+                           std::function<Blob*(const std::string&)>) const override;
 };
 
 template<DeviceType device_type, typename T, typename K>
