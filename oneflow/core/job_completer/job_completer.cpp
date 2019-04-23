@@ -246,6 +246,45 @@ void ConvertPseudoChainToChain(Job* job) {
   });
 }
 
+std::function<bool(OpNode*)> MakePredicatorIsReachableFromAnyVariableOps(const OpGraph& op_graph) {
+  auto vars_and_decendants = std::make_shared<HashSet<OpNode*>>();
+  GetVariableOpNodesAndDescendants(op_graph, vars_and_decendants.get());
+  return [vars_and_decendants](OpNode* op_node) -> bool {
+    return vars_and_decendants->find(op_node) != vars_and_decendants->end();
+  };
+}
+
+void TieUpChainHeadersUnReachableFromAnyVariableOps(const OpGraph& op_graph, Job* job) {
+  auto IsReachableFromAnyVariableOps = MakePredicatorIsReachableFromAnyVariableOps(op_graph);
+  auto GetSourceNodesAndEdges = [&](const HashSet<OpNode*>& chain_nodes,
+                                    std::vector<OpNode*>* source_nodes,
+                                    std::vector<OpEdge*>* source_edges) {
+    for (OpNode* node : chain_nodes) {
+      for (OpEdge* edge : node->in_edges()) {
+        if (chain_nodes.find(edge->src_node()) == chain_nodes.end()
+            && IsReachableFromAnyVariableOps(edge->src_node()) == false) {
+          source_edges->push_back(edge);
+          source_nodes->push_back(node);
+        }
+      }
+    }
+  };
+  auto MutOperatorConf4OpName = MakeMutableOperatorConf4OpName(job);
+  auto ParallelConf4OpName = MakeGetterParallelConf4OpName(job->placement());
+  op_graph.ForEachChainFamily([&](const HashSet<OpNode*>& chain_nodes) {
+    std::vector<OpNode*> source_nodes;
+    std::vector<OpEdge*> source_edges;
+    GetSourceNodesAndEdges(chain_nodes, &source_nodes, &source_edges);
+    if (source_edges.size() <= 1) { return; }
+    if (source_nodes.size() <= 1) { return; }
+    // ignore small chain
+    if (chain_nodes.size() - source_nodes.size() <= 2) { return; }
+    AddIdentityOpAndReconnect("pseudo_chain_header_", job, source_edges, MutOperatorConf4OpName,
+                              *ParallelConf4OpName(source_nodes.at(0)->op().op_name()));
+
+  });
+}
+
 void AddIdentityOpForAllReduceOverlapingUntrainble(Job* job) {
   auto MutOperatorConf4OpName = MakeMutableOperatorConf4OpName(job);
   auto ParallelConf4OpName = MakeGetterParallelConf4OpName(job->placement());
@@ -369,12 +408,13 @@ void JobCompleter::Complete(Job* job) const {
       && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     // complete variable ops
     WithOpGraphAndMutJob(job, &AutoVar);
+    // WithOpGraphAndMutJob(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);
     // complete ops for trainning
     WithOpGraphAndMutJob(job, &GenerateOpConf4Trainning);
     // complete tick ops
     WithOpGraphAndMutJob(job, &AutoTick);
     // add keep_header_only op
-    WithOpGraphAndMutJob(job, &AddKeepHeaderOnlyOp);
+    // WithOpGraphAndMutJob(job, &AddKeepHeaderOnlyOp);
     WithOpGraphAndMutJob(job, &SetOpTimeShape7CtrlInOpName7ModelLbis);
   }
   // TODO: refine

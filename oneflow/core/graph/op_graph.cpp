@@ -475,6 +475,13 @@ void OpGraph::CheckBlobDescs(const std::string& op_name,
 
 void OpGraph::ForEachPseudoChain(
     const std::function<void(const HashSet<OpNode*>&)>& Handler) const {
+  auto IsReachable = MakePredicatorIsReachable();
+  ForEachChainFamily(
+      [&](const HashSet<OpNode*>& nodes) { ForEachPseudoChain(nodes, IsReachable, Handler); });
+}
+
+void OpGraph::ForEachChainFamily(
+    const std::function<void(const HashSet<OpNode*>&)>& Handler) const {
   auto IsSameSbpEdge = [](OpEdge* edge) -> bool {
     for (const LogicalBlobId& lbi : edge->lbis()) {
       if (edge->src_node()->SbpParallel4Lbi(lbi) != edge->dst_node()->SbpParallel4Lbi(lbi)) {
@@ -483,7 +490,7 @@ void OpGraph::ForEachPseudoChain(
     }
     return true;
   };
-  auto WithSameDataParallelDescAndTimeShape = [](OpEdge* edge) -> bool {
+  auto WithSameParallelDescAndTimeShape = [](OpEdge* edge) -> bool {
     OpNode* src = edge->src_node();
     OpNode* dst = edge->dst_node();
     if (!src->parallel_desc().EqualsIgnoringPolicy(dst->parallel_desc())) { return false; }
@@ -493,29 +500,24 @@ void OpGraph::ForEachPseudoChain(
     if (*src->out_blob_time_shape() != *dst->out_blob_time_shape()) { return false; }
     return true;
   };
+  auto Is121Edge = [&](OpEdge* edge) -> bool {
+    return IsSameSbpEdge(edge) && WithSameParallelDescAndTimeShape(edge);
+  };
   auto ForEachConnectedWithSameSbp7ParallelDesc7TimeShape =
       [&](OpNode* node, const std::function<void(OpNode*)>& Handler) {
         for (OpEdge* edge : node->in_edges()) {
-          if (IsSameSbpEdge(edge) == false) { return; }
-          if (WithSameDataParallelDescAndTimeShape(edge) == false) { return; }
-          Handler(edge->src_node());
+          if (Is121Edge(edge)) { Handler(edge->src_node()); }
         }
         for (OpEdge* edge : node->out_edges()) {
-          if (IsSameSbpEdge(edge) == false) { return; }
-          if (WithSameDataParallelDescAndTimeShape(edge) == false) { return; }
-          Handler(edge->dst_node());
+          if (Is121Edge(edge)) { Handler(edge->dst_node()); }
         }
       };
-  auto IsReachable = MakePredicatorIsReachable();
-  ForEachComponent(
-      ForEachConnectedWithSameSbp7ParallelDesc7TimeShape,
-      [&](const std::vector<OpNode*>& nodes) { ForEachPseudoChain(nodes, IsReachable, Handler); });
+  ForEachComponent(ForEachConnectedWithSameSbp7ParallelDesc7TimeShape, Handler);
 }
 
 void OpGraph::ForEachComponent(
-    const std::function<void(OpNode* node, const std::function<void(OpNode*)>& Handler)>&
-        ForEachConnected,
-    const std::function<void(const std::vector<OpNode*>&)>& Handler) const {
+    const std::function<void(OpNode*, const std::function<void(OpNode*)>&)>& ForEachConnected,
+    const std::function<void(const HashSet<OpNode*>&)>& Handler) const {
   HashMap<OpNode*, int32_t> op_node2component_id;
   int32_t cur_component_id = 0;
   ForEachNode([&](OpNode* start) {
@@ -525,21 +527,20 @@ void OpGraph::ForEachComponent(
       CHECK(op_node2component_id.emplace(node, cur_component_id).second);
     });
   });
-  HashMap<int32_t, std::vector<OpNode*>> component_id2op_nodes;
+  HashMap<int32_t, HashSet<OpNode*>> component_id2op_nodes;
   for (const auto& pair : op_node2component_id) {
-    component_id2op_nodes[pair.second].push_back(pair.first);
+    component_id2op_nodes[pair.second].insert(pair.first);
   }
   for (const auto& pair : component_id2op_nodes) { Handler(pair.second); }
 }
 
 void OpGraph::ForEachPseudoChain(
-    const std::vector<OpNode*>& nodes,
-    const std::function<bool(OpNode* src, OpNode* dst)>& IsReachable,
+    const HashSet<OpNode*>& nodes, const std::function<bool(OpNode* src, OpNode* dst)>& IsReachable,
     const std::function<void(const HashSet<OpNode*>&)>& Handler) const {
   if (nodes.size() <= 1) { return; }
-  if (nodes.front()->parallel_desc().device_type() == DeviceType::kCPU) { return; }
-  if (nodes.front()->parallel_desc().policy() != ParallelPolicy::kDataParallel) { return; }
-  HashSet<OpNode*> all_nodes(nodes.begin(), nodes.end());
+  if ((*nodes.begin())->parallel_desc().device_type() == DeviceType::kCPU) { return; }
+  if ((*nodes.begin())->parallel_desc().policy() != ParallelPolicy::kDataParallel) { return; }
+  HashSet<OpNode*> all_nodes(nodes);
   while (all_nodes.size() > 1) {
     HashSet<OpNode*> chain;
     ReverseTopoGetPseudoChain(all_nodes, &chain, IsReachable);
