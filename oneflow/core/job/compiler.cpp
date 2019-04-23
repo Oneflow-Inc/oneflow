@@ -126,8 +126,8 @@ Plan Compiler::DoCompile() {
   }
   task_gph->RemoveEmptyRegsts();
   task_gph->AddOrderingCtrlEdgeInSameChain();
+  task_gph->EnableMemSharingInReduceStruct();
   if (job_desc->IsTrain() && job_desc->enable_mem_sharing()) {
-    task_gph->EnableMemSharingInReduceStruct();
     task_gph->EnableMemSharingAfterAllManualSetForMdUpdt();  // must last mem shared manual set
   }
   task_gph->EnableInplaceMemSharing();
