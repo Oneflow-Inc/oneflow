@@ -2,6 +2,43 @@
 
 namespace oneflow {
 
+namespace {
+
+class ConstantOpSbpSignatureRule final : public ParallelSbpSignatureRule {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ConstantOpSbpSignatureRule);
+  ~ConstantOpSbpSignatureRule() override = default;
+
+  ConstantOpSbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
+
+  const std::string Description() const override { return op().op_name() + ": S(0) -> S|B"; }
+
+  const SbpSigMatchResult MatchByIbnHint(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const override {
+    return MakeSbpSigMatchSuccess();
+  }
+
+  void GenerateSignature(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      SbpSignature* sbp_signature) const override {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
+    if (op().op_conf().constant_conf().has_tick()) {
+      CHECK(SbpInferHint4Ibn("tick").is_data_split());
+      (*bn2sbp)["tick"].mutable_split_parallel()->set_axis(0);
+    }
+    const auto& conf_bn2_sbp = op().op_conf().sbp_sig_part().bn_in_op2sbp_parallel();
+    const auto& sbp_it = conf_bn2_sbp.find("out");
+    if (sbp_it != conf_bn2_sbp.end()) {
+      (*bn2sbp)["out"] = sbp_it->second;
+    } else {
+      (*bn2sbp)["out"].mutable_broadcast_parallel();
+    }
+  }
+};
+
+}  // namespace
+
 void ConstantOp::InitFromOpConf() {
   CHECK(op_conf().has_constant_conf());
   if (op_conf().constant_conf().has_tick()) { EnrollInputBn("tick", false); }
@@ -29,6 +66,12 @@ void ConstantOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   out->set_data_type(data_type);
   out->mut_shape() = Shape(dim_vec);
+}
+
+void ConstantOp::GetSbpSignatureRules(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
+  rules->emplace_back(new ConstantOpSbpSignatureRule(this));
 }
 
 void ConstantOp::VirtualGenKernelConf(
