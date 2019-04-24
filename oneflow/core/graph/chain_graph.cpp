@@ -152,6 +152,20 @@ bool IsProducedRegstAllModelRegst(TaskNode* task_node) {
   return comp_task_node->logical_node()->IsProducedLogicalBlobAllModelBlob();
 }
 
+bool IsModelToFwOrBw(TaskNode* src_task, TaskNode* dst_task) {
+  return IsProducedRegstAllModelRegst(src_task)
+         && dynamic_cast<NormalForwardCompTaskNode*>(dst_task) != nullptr;
+}
+
+bool IsNonSoleKeepHeaderOnlyEdge(TaskNode* src_task, TaskNode* dst_task) {
+  if (dst_task->in_edges().size() <= 1) { return false; }
+  const auto* src_comp_task = dynamic_cast<CompTaskNode*>(src_task);
+  if (src_comp_task == nullptr) { return false; }
+  if (src_comp_task->logical_node()->op_vec().size() != 1) { return false; }
+  const auto& src_op = *src_comp_task->logical_node()->SoleOp();
+  return src_op.op_conf().has_keep_header_only_conf();
+}
+
 }  // namespace
 
 std::string ChainNode::VisualStr() const {
@@ -186,7 +200,8 @@ void ChainGraph::GroupTaskNodesByMachineAndCollectAncestors(
     if (node->AreaId4ChainMerge() == kMdUpdtArea) { return; }
     node->ForEachNodeOnInEdge([&](TaskNode* in_node) {
       if (IsBackEdge(in_node, node)) { return; }
-      if (IsProducedRegstAllModelRegst(in_node)) { return; }
+      if (IsModelToFwOrBw(in_node, node)) { return; }
+      if (IsNonSoleKeepHeaderOnlyEdge(in_node, node)) { return; }
       (*node2ancestors)[node].insert(in_node);
       (*node2ancestors)[node].insert((*node2ancestors)[in_node].begin(),
                                      (*node2ancestors)[in_node].end());

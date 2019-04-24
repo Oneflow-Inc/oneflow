@@ -229,6 +229,6 @@ void NormalForwardCompActor::SendConstBufInitMsgToBwActor() {
 REGISTER_ACTOR(TaskType::kNormalForward, NormalForwardCompActor);
 REGISTER_ACTOR(TaskType::kLoss, NormalForwardCompActor);
 REGISTER_ACTOR(TaskType::kAccuracy, NormalForwardCompActor);
-REGISTER_ACTOR(TaskType::kKeepHeaderOnly, NormalForwardCompActor);
+REGISTER_ACTOR(TaskType::kOptimizer, NormalForwardCompActor);
 
 }  // namespace oneflow

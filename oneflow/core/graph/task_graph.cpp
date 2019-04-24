@@ -152,12 +152,17 @@ void TaskGraph::ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_node
                                  int64_t ctrl_regst_num) {
   CHECK_EQ(src_task_nodes.size(), dst_task_nodes.size());
   FOR_RANGE(int32_t, i, 0, src_task_nodes.size()) {
-    Connect<TaskNode>(src_task_nodes.at(i), NewEdge(), dst_task_nodes.at(i));
-    RegstDesc* ctrl_regst_desc = src_task_nodes.at(i)->BuildCtrlRegstDesc(dst_task_nodes.at(i));
+    std::string regst_desc_name;
+    RegstDesc* ctrl_regst_desc =
+        src_task_nodes.at(i)->BuildCtrlRegstDesc(dst_task_nodes.at(i), &regst_desc_name);
     ctrl_regst_desc->UpdtMinRegstNumIfNeed(ctrl_regst_num);
     ctrl_regst_desc->UpdtMaxRegstNumIfNeed(ctrl_regst_num);
     ctrl_regst_desc->mut_regst_desc_type()->mutable_ctrl_regst_desc()->set_returned_regst_num(
         ctrl_regst_num);
+
+    TaskEdge* edge = NewEdge();
+    Connect<TaskNode>(src_task_nodes.at(i), edge, dst_task_nodes.at(i));
+    src_task_nodes.at(i)->BindEdgeWithProducedRegst(edge, regst_desc_name);
   }
 }
 
