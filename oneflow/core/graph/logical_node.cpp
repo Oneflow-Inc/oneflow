@@ -1,6 +1,7 @@
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/graph/normal_backward_compute_task_node.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
+#include "oneflow/core/graph/optimizer_compute_task_node.h"
 #include "oneflow/core/graph/loss_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/loss_compute_task_node.h"
 #include "oneflow/core/graph/loss_print_compute_task_node.h"
@@ -504,9 +505,7 @@ BackwardLogicalNode* NormalForwardLogicalNode::NewCorrectBackwardNode() {
 
 std::string OptimizerLogicalNode::TypeName() const { return "Optimizer"; }
 
-CompTaskNode* OptimizerLogicalNode::NewCompTaskNode() const {
-  return new NormalForwardCompTaskNode;
-}
+CompTaskNode* OptimizerLogicalNode::NewCompTaskNode() const { return new OptimizerCompTaskNode; }
 
 int64_t OptimizerLogicalNode::GetAreaId() const { return kMdUpdtArea; }
 
