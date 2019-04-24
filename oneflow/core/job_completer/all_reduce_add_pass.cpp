@@ -153,7 +153,7 @@ void GroupAllReducedLbisByStrategy(
       });
 }
 
-void AddReduceConcatAndReduceIdentityOpConf(const JobBuilder& job_builder,
+void AddReduceConcatAndReduceIdentityOpConf(JobBuilder* job_builder,
                                             const ParallelConf& parallel_conf,
                                             const std::vector<LogicalBlobId>& lbi_groups,
                                             int32_t order_in_graph, LogicalBlobId* grouped_lbi) {
@@ -172,11 +172,11 @@ void AddReduceConcatAndReduceIdentityOpConf(const JobBuilder& job_builder,
   reduce_identity_conf->set_in(reduce_concat_op_conf.name() + "/out");
   reduce_identity_conf->set_out("out");
   reduce_identity_conf->set_order_in_graph(order_in_graph);
-  job_builder.AddOps(parallel_conf, {reduce_concat_op_conf, reduce_identity_op_conf});
+  job_builder->AddOps(parallel_conf, {reduce_concat_op_conf, reduce_identity_op_conf});
   *grouped_lbi = GenLogicalBlobId(reduce_identity_op_conf.name() + "/out");
 }
 
-void AddAllReduceOpConf(const JobBuilder& job_builder, const ParallelConf& parallel_conf,
+void AddAllReduceOpConf(JobBuilder* job_builder, const ParallelConf& parallel_conf,
                         const LogicalBlobId& grouped_lbi, LogicalBlobId* all_reduced_lbi) {
   OperatorConf all_reduce_op{};
   all_reduce_op.set_name("System-Boxing-AllReduce-" + grouped_lbi.op_name() + "-"
@@ -186,11 +186,11 @@ void AddAllReduceOpConf(const JobBuilder& job_builder, const ParallelConf& paral
   all_reduce_facade_op_conf->set_out("out");
   all_reduced_lbi->set_op_name(all_reduce_op.name());
   all_reduced_lbi->set_blob_name(all_reduce_facade_op_conf->out());
-  job_builder.AddOps(parallel_conf, {all_reduce_op});
+  job_builder->AddOps(parallel_conf, {all_reduce_op});
 }
 
 void AddReduceSplitOpConf(
-    const JobBuilder& job_builder,
+    JobBuilder* job_builder,
     const std::function<const OpNode*(const LogicalBlobId&)>& ProducerOpNode4Lbi,
     const std::vector<LogicalBlobId>& lbi_groups, int32_t order_in_graph,
     const LogicalBlobId& all_reduced_lbi) {
@@ -209,7 +209,7 @@ void AddReduceSplitOpConf(
     PbMessage* md_updt_conf =
         MutableMessageInPbMessage(&md_updt_op_conf, md_updt_op_conf.op_type_case());
     SetBnValInOpTypeConf(md_updt_conf, ibn, GenLogicalBlobName(lbi), GenLogicalBlobName(new_lbi));
-    job_builder.MutOps({md_updt_op_conf});
+    job_builder->MutOps({md_updt_op_conf});
   };
 
   OperatorConf reduce_split_op_conf;
@@ -226,12 +226,12 @@ void AddReduceSplitOpConf(
         reduce_split_conf->add_out_shape());
     MutModelUpdateOpConf(lbi, GenLogicalBlobId(reduce_split_op_conf.name() + "/" + out_blob_name));
   }
-  job_builder.AddOps(ProducerOpNode4Lbi(lbi_groups.at(0))->parallel_desc().parallel_conf(),
-                     {reduce_split_op_conf});
+  job_builder->AddOps(ProducerOpNode4Lbi(lbi_groups.at(0))->parallel_desc().parallel_conf(),
+                      {reduce_split_op_conf});
 }
 
 void BuildAllReduceStruct(
-    const JobBuilder& job_builder,
+    JobBuilder* job_builder,
     const std::function<const OpNode*(const LogicalBlobId&)>& ProducerOpNode4Lbi,
     const std::vector<LogicalBlobId>& lbi_groups, int32_t order_in_graph) {
   const auto& parallel_conf = ProducerOpNode4Lbi(lbi_groups.at(0))->parallel_desc().parallel_conf();
@@ -260,7 +260,7 @@ void AllReduceAddPass::Apply(const OpGraph& op_graph, Job* job) const {
   JobBuilder job_builder(job);
   FOR_RANGE(int32_t, i, 0, lbi_groups.size()) {
     const auto& lbi_group = lbi_groups.at(i);
-    BuildAllReduceStruct(job_builder, ProducerOpNode4Lbi, lbi_group,
+    BuildAllReduceStruct(&job_builder, ProducerOpNode4Lbi, lbi_group,
                          lbi2order_in_graph.at(lbi_group.at(0)));
   }
 }
