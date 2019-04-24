@@ -1,6 +1,7 @@
 #include "oneflow/core/job_completer/autograd.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job_completer/clone_grad.h"
+#include "oneflow/core/operator/variable_op.h"
 
 namespace oneflow {
 
@@ -140,6 +141,42 @@ void GenerateOnesAsDiffLbi(const LogicalBlobId& lbi, std::vector<OperatorConf>* 
   out_diff_lbi->set_blob_name("out");
 }
 
+void BuildTotalLossInstanceNumIdOpConf(
+    const OpGraph& op_graph, const JobBuilder& job_builder,
+    const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
+    const LogicalBlobId& total_loss_instance_num_lbi,
+    std::function<const LogicalBlobId&(const ParallelDesc&)>* LossInstanceNum4ParallelDesc) {
+  HashMap<ParallelDesc, int32_t> parallel_desc2optimizer_node_cnt;
+  op_graph.ForEachNode([&](OpNode* op_node) {
+    const VariableOp* var_op = dynamic_cast<const VariableOp*>(&op_node->op());
+    if (var_op == nullptr) { return; }
+    if (lbi2diff_lbi.find(var_op->BnInOp2Lbi(var_op->SoleObn())) == lbi2diff_lbi.end()) { return; }
+    ++parallel_desc2optimizer_node_cnt[op_node->parallel_desc()];
+  });
+  auto parallel_desc2total_loss_instance_num_lbi =
+      std::make_shared<HashMap<ParallelDesc, LogicalBlobId>>();
+  for (const auto& pair : parallel_desc2optimizer_node_cnt) {
+    if (pair.second == 1) {
+      parallel_desc2total_loss_instance_num_lbi->emplace(pair.first, total_loss_instance_num_lbi);
+    } else if (pair.second > 1) {
+      OperatorConf id_op_conf;
+      id_op_conf.set_name(std::string("System-TotalLossInstanceNum-Identity_") + NewUniqueId());
+      auto* id_conf = id_op_conf.mutable_tuple_identity_conf();
+      id_conf->add_in(GenLogicalBlobName(total_loss_instance_num_lbi));
+      id_conf->add_out("out");
+      job_builder.AddOps(pair.first.parallel_conf(), {id_op_conf});
+      parallel_desc2total_loss_instance_num_lbi->emplace(
+          pair.first, GenLogicalBlobId(id_op_conf.name() + "/out"));
+    } else {
+      UNIMPLEMENTED();
+    }
+  }
+  *LossInstanceNum4ParallelDesc = [parallel_desc2total_loss_instance_num_lbi](
+                                      const ParallelDesc& parallel_desc) -> const LogicalBlobId& {
+    return parallel_desc2total_loss_instance_num_lbi->at(parallel_desc);
+  };
+}
+
 }  // namespace
 
 void GetVariableOpNodesAndDescendants(const OpGraph& op_graph, HashSet<OpNode*>* op_nodes) {
@@ -244,8 +281,9 @@ void AutoGrad(const OpGraph& op_graph, Job* job,
   });
 }
 
-void AddTotalLossInstanceNumOpConf(const OpGraph& op_graph, Job* job,
-                                   LogicalBlobId* total_loss_instance_num_lbi) {
+void AddTotalLossInstanceNumOpConf(
+    const OpGraph& op_graph, Job* job, const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
+    std::function<const LogicalBlobId&(const ParallelDesc&)>* LossInstanceNum4ParallelDesc) {
   JobBuilder job_builder(job);
   std::list<OpNode*> loss_nodes;
   GetLossOpNodes(op_graph, &loss_nodes);
@@ -269,8 +307,9 @@ void AddTotalLossInstanceNumOpConf(const OpGraph& op_graph, Job* job,
     lbi->set_blob_name("y");
   };
   const auto& train_conf = GetTrainConf();
+  LogicalBlobId total_loss_instance_num_lbi;
   if (train_conf.loss_lbn().size() == 1) {
-    BuildInstanceNumOpConf4LossOpNode(train_conf.loss_lbn().Get(0), total_loss_instance_num_lbi);
+    BuildInstanceNumOpConf4LossOpNode(train_conf.loss_lbn().Get(0), &total_loss_instance_num_lbi);
   } else if (train_conf.loss_lbn().size() > 1) {
     OperatorConf op_conf;
     op_conf.set_name("System-Autograd-total_loss_instance_num");
@@ -288,11 +327,13 @@ void AddTotalLossInstanceNumOpConf(const OpGraph& op_graph, Job* job,
     parallel_conf.add_device_name("0:cpu:0");
     job_builder.AddOps(parallel_conf, {op_conf});
 
-    total_loss_instance_num_lbi->set_op_name(op_conf.name());
-    total_loss_instance_num_lbi->set_blob_name("out");
+    total_loss_instance_num_lbi.set_op_name(op_conf.name());
+    total_loss_instance_num_lbi.set_blob_name("out");
   } else {
     UNIMPLEMENTED();
   }
+  BuildTotalLossInstanceNumIdOpConf(op_graph, job_builder, lbi2diff_lbi,
+                                    total_loss_instance_num_lbi, LossInstanceNum4ParallelDesc);
 }
 
 }  // namespace oneflow
