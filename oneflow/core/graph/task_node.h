@@ -82,6 +82,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual int64_t MemZoneId121() const;  // TODO: there is bug for reduce task node
   void BuildCtrlRegstDescIfNeed(TaskNode* dst_node);
   RegstDesc* BuildCtrlRegstDesc(TaskNode* dst_node);
+  RegstDesc* BuildCtrlRegstDesc(TaskNode* dst_node, std::string* name);
 
   void ForEachInDataEdge(const std::function<void(TaskEdge*)>& Handler) const;
   void ForEachOutDataEdge(const std::function<void(TaskEdge*)>& Handler) const;
