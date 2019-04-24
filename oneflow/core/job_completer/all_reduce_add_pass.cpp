@@ -178,15 +178,14 @@ void AddReduceConcatAndReduceIdentityOpConf(const JobBuilder& job_builder,
 
 void AddAllReduceOpConf(const JobBuilder& job_builder, const ParallelConf& parallel_conf,
                         const LogicalBlobId& grouped_lbi, LogicalBlobId* all_reduced_lbi) {
-  // TODO: support all type all reduce
-  OperatorConf all_reduce_op;
+  OperatorConf all_reduce_op{};
   all_reduce_op.set_name("System-Boxing-AllReduce-" + grouped_lbi.op_name() + "-"
                          + grouped_lbi.blob_name());
-  NcclAllReduceOpConf* nccl_all_reduce_op_conf = all_reduce_op.mutable_nccl_all_reduce_conf();
-  nccl_all_reduce_op_conf->set_in(GenLogicalBlobName(grouped_lbi));
-  nccl_all_reduce_op_conf->set_out("out");
+  AllReduceFacadeOpConf* all_reduce_facade_op_conf = all_reduce_op.mutable_all_reduce_facade_conf();
+  all_reduce_facade_op_conf->set_in(GenLogicalBlobName(grouped_lbi));
+  all_reduce_facade_op_conf->set_out("out");
   all_reduced_lbi->set_op_name(all_reduce_op.name());
-  all_reduced_lbi->set_blob_name(nccl_all_reduce_op_conf->out());
+  all_reduced_lbi->set_blob_name(all_reduce_facade_op_conf->out());
   job_builder.AddOps(parallel_conf, {all_reduce_op});
 }
 
@@ -247,8 +246,7 @@ void BuildAllReduceStruct(
 
 }  // namespace
 
-void AllReduceAddPass::Apply(Job* job) const {
-  OpGraph op_graph(*job);
+void AllReduceAddPass::Apply(const OpGraph& op_graph, Job* job) const {
   auto ProducerOpNode4Lbi = MakeGetterProducerOpNode4Lbi(op_graph);
 
   std::vector<LogicalBlobId> lbis;

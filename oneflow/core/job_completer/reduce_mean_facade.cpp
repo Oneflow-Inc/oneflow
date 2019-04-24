@@ -29,30 +29,54 @@ void GenerateFacadeImplOpConf(const OpNode& op_node, const JobBuilder& job_build
   reduce_sum_conf->set_out("out");
   job_builder.MutOps({reduce_sum_op_conf});
 
-  OperatorConf partial_elem_cnt_op_conf;
-  partial_elem_cnt_op_conf.set_name("System-Facade-" + op_node.op().op_name()
-                                    + "_partial_elem_cnt");
-  auto* partial_elem_cnt_conf = partial_elem_cnt_op_conf.mutable_shape_elem_cnt_conf();
-  if (reduce_mean_conf.axis().empty()) {
-    partial_elem_cnt_conf->mutable_exclude_axis_conf();
+  const auto& in_blob = op_node.LogicalBlobDesc4Lbi(GenLogicalBlobId(reduce_mean_conf.in()));
+  CHECK_EQ(in_blob.has_dim1_valid_num_field(), false);
+  CHECK_EQ(in_blob.has_dim2_valid_num_field(), false);
+  std::string out_lbi;
+  if (in_blob.has_dim0_valid_num_field()) {  // TODO: && in_blob.has_instance_shape()
+    OperatorConf partial_elem_cnt_op_conf;
+    partial_elem_cnt_op_conf.set_name("System-Facade-" + op_node.op().op_name()
+                                      + "_partial_elem_cnt");
+    auto* partial_elem_cnt_conf = partial_elem_cnt_op_conf.mutable_shape_elem_cnt_conf();
+    if (reduce_mean_conf.axis().empty()) {
+      partial_elem_cnt_conf->mutable_exclude_axis_conf();
+    } else {
+      *partial_elem_cnt_conf->mutable_include_axis_conf()->mutable_axis() = reduce_mean_conf.axis();
+    }
+    partial_elem_cnt_conf->set_x(reduce_mean_conf.in());
+    partial_elem_cnt_conf->set_y("y");
+    partial_elem_cnt_conf->set_data_type(
+        op_node.LogicalBlobDesc4Lbi(op_node.op().BnInOp2Lbi(op_node.op().SoleObn())).data_type());
+
+    OperatorConf boradcast_div_op_conf;
+    boradcast_div_op_conf.set_name("System-Facade-" + op_node.op().op_name() + "_broadcast_div");
+    auto* boradcast_div_conf = boradcast_div_op_conf.mutable_broadcast_div_conf();
+    boradcast_div_conf->set_a(reduce_sum_op_conf.name() + "/out");
+    boradcast_div_conf->set_b(partial_elem_cnt_op_conf.name() + "/y");
+    boradcast_div_conf->set_out("out");
+    job_builder.AddOps(op_node.parallel_desc().parallel_conf(),
+                       {partial_elem_cnt_op_conf, boradcast_div_op_conf});
+    out_lbi = boradcast_div_op_conf.name() + "/out";
   } else {
-    *partial_elem_cnt_conf->mutable_include_axis_conf()->mutable_axis() = reduce_mean_conf.axis();
+    double shape_elem_cnt = 1.0;
+    if (reduce_mean_conf.axis().empty()) {
+      shape_elem_cnt = in_blob.shape().elem_cnt();
+    } else {
+      const auto& axes = reduce_mean_conf.axis();
+      for (const auto& axis : in_blob.shape().ShiftNegativeAxis({axes.begin(), axes.end()})) {
+        shape_elem_cnt *= in_blob.shape().At(axis);
+      }
+    }
+    OperatorConf scalar_div_op_conf;
+    scalar_div_op_conf.set_name("System-Facade-" + op_node.op().op_name() + "_scalar_div");
+    auto* scalar_div_conf = scalar_div_op_conf.mutable_scalar_mul_conf();
+    scalar_div_conf->set_in(reduce_sum_op_conf.name() + "/out");
+    scalar_div_conf->set_out("out");
+    scalar_div_conf->set_float_operand(1 / shape_elem_cnt);
+    job_builder.AddOps(op_node.parallel_desc().parallel_conf(), {scalar_div_op_conf});
+    out_lbi = scalar_div_op_conf.name() + "/out";
   }
-  partial_elem_cnt_conf->set_x(reduce_mean_conf.in());
-  partial_elem_cnt_conf->set_y("y");
-  partial_elem_cnt_conf->set_data_type(
-      op_node.LogicalBlobDesc4Lbi(op_node.op().BnInOp2Lbi(op_node.op().SoleObn())).data_type());
-
-  OperatorConf boradcast_div_op_conf;
-  boradcast_div_op_conf.set_name("System-Facade-" + op_node.op().op_name() + "_broadcast_div");
-  auto* boradcast_div_conf = boradcast_div_op_conf.mutable_broadcast_div_conf();
-  boradcast_div_conf->set_a(reduce_sum_op_conf.name() + "/out");
-  boradcast_div_conf->set_b(partial_elem_cnt_op_conf.name() + "/y");
-  boradcast_div_conf->set_out("out");
-  job_builder.AddOps(op_node.parallel_desc().parallel_conf(),
-                     {partial_elem_cnt_op_conf, boradcast_div_op_conf});
-
-  UpdateConsumerOpConf(boradcast_div_op_conf.name() + "/out", op_node, job_builder);
+  UpdateConsumerOpConf(out_lbi, op_node, job_builder);
 }
 
 }  // namespace

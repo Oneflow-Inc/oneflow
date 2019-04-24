@@ -30,7 +30,8 @@ void ReduceSplitCompTaskNode::ProduceAllRegstsAndBindEdges() {
     }
     ForEachOutDataEdge([&](TaskEdge* edge) {
       TaskNode* dst_node = edge->dst_node();
-      CHECK(edge->dst_node()->GetTaskType() == TaskType::kNormalForward);
+      CHECK(edge->dst_node()->GetTaskType() == TaskType::kOptimizer
+            || edge->dst_node()->GetTaskType() == TaskType::kNormalForward);
       CompTaskNode* mdupdt_node = dynamic_cast<CompTaskNode*>(dst_node);
       std::shared_ptr<Operator> mdupdt_op = mdupdt_node->logical_node()->SoleOp();
       int32_t order = -1;

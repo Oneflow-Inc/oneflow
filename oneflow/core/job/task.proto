@@ -43,7 +43,7 @@ enum TaskType {
   kRepeatBackward = 35;
   kReduceIdentity = 36;
   kAcc = 37;
-  kKeepHeaderOnly = 38;
+  kOptimizer = 38;
   kEveryNth = 39;
 };
 

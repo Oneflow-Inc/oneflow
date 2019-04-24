@@ -345,6 +345,19 @@ DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(EveryNth);
 DECLARE_BEFORE_OR_AFTER_ALLREDUCE_REDUCE_NODE(ReduceIdentityLogicalNode, true);
 DECLARE_BEFORE_OR_AFTER_ALLREDUCE_REDUCE_NODE(ReduceSplitLogicalNode, false);
 
+#define DECLARE_FACADE_LOGICAL_NODE(class_name)                         \
+  class class_name final : public LogicalNode {                         \
+   public:                                                              \
+    OF_DISALLOW_COPY_AND_MOVE(class_name);                              \
+    class_name() = default;                                             \
+    ~class_name() override = default;                                   \
+    std::string TypeName() const override { return #class_name; }       \
+    CompTaskNode* NewCompTaskNode() const override { UNIMPLEMENTED(); } \
+    int64_t GetAreaId() const override { UNIMPLEMENTED(); };            \
+  }
+
+DECLARE_FACADE_LOGICAL_NODE(AllReduceFacadeLogicalNode);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_GRAPH_LOGICAL_NODE_H_

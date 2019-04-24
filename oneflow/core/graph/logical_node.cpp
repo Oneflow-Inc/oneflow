@@ -1,6 +1,7 @@
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/graph/normal_backward_compute_task_node.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
+#include "oneflow/core/graph/optimizer_compute_task_node.h"
 #include "oneflow/core/graph/loss_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/loss_compute_task_node.h"
 #include "oneflow/core/graph/loss_print_compute_task_node.h"
@@ -383,6 +384,12 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceIdentity"
                               "NcclAllReduce",
                               &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceIdentity"
+                              "ReduceScatter",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceIdentity"
+                              "NcclReduceScatter",
+                              &TaskGraph::BldSubTskGphByOneToOne);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclAllReduce"
                               "ReduceSplit",
                               &TaskGraph::BldSubTskGphByOneToOne);
@@ -416,6 +423,12 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceAdd"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
                               "ReduceGather",
                               &TaskGraph::BldSubTskGphByReduceGather2ReduceGather);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
+                              "ReduceSplit",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclAllGather"
+                              "ReduceSplit",
+                              &TaskGraph::BldSubTskGphByOneToOne);
 
 BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src, const LogicalNode* dst) {
   std::string k = ConcatTypeName(src, dst);
@@ -492,9 +505,7 @@ BackwardLogicalNode* NormalForwardLogicalNode::NewCorrectBackwardNode() {
 
 std::string OptimizerLogicalNode::TypeName() const { return "Optimizer"; }
 
-CompTaskNode* OptimizerLogicalNode::NewCompTaskNode() const {
-  return new NormalForwardCompTaskNode;
-}
+CompTaskNode* OptimizerLogicalNode::NewCompTaskNode() const { return new OptimizerCompTaskNode; }
 
 int64_t OptimizerLogicalNode::GetAreaId() const { return kMdUpdtArea; }
 

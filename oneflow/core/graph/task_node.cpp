@@ -240,11 +240,16 @@ void TaskNode::BuildCtrlRegstDescIfNeed(TaskNode* dst_node) {
 }
 
 RegstDesc* TaskNode::BuildCtrlRegstDesc(TaskNode* dst_node) {
+  std::string name;
+  return BuildCtrlRegstDesc(dst_node, &name);
+}
+
+RegstDesc* TaskNode::BuildCtrlRegstDesc(TaskNode* dst_node, std::string* name) {
   RegstDescTypeProto regst_desc_type;
   regst_desc_type.mutable_ctrl_regst_desc();
   auto regst = NewProducedRegst(false, 1, kMaxRegisterNum, regst_desc_type);
-  std::string name = "out_ctrl_" + std::to_string(regst->regst_desc_id());
-  CHECK(produced_regsts_.emplace(name, regst).second);
+  *name = "out_ctrl_" + std::to_string(regst->regst_desc_id());
+  CHECK(produced_regsts_.emplace(*name, regst).second);
   dst_node->ConsumeRegst("in_ctrl", regst);
   return regst.get();
 }
@@ -509,6 +514,6 @@ std::map<TaskType, std::string> task_type2color = {{kInvalid, "0"},
                                                    {kRepeatBackward, "3"},
                                                    {kReduceIdentity, "2"},
                                                    {kAcc, "5"},
-                                                   {kKeepHeaderOnly, "12"},
+                                                   {kOptimizer, "12"},
                                                    {kEveryNth, "2"}};
 }  // namespace oneflow
