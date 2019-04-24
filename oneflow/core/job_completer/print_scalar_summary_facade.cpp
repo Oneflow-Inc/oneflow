@@ -4,7 +4,7 @@ namespace oneflow {
 
 namespace {
 
-void GenerateFacadeImplOpConf(const OpNode& op_node, const JobBuilder& job_builder) {
+void GenerateFacadeImplOpConf(const OpNode& op_node, JobBuilder* job_builder) {
   CHECK(op_node.op().op_conf().has_print_scalar_summary_conf());
   const auto& print_scalar_summary_conf = op_node.op().op_conf().print_scalar_summary_conf();
   const LogicalBlobId& vector_lbi = op_node.op().BnInOp2Lbi("x");
@@ -53,7 +53,7 @@ void GenerateFacadeImplOpConf(const OpNode& op_node, const JobBuilder& job_build
     scalar_value_lbi4print = GenLogicalBlobId(reduce_sum_op_conf.name() + "/out");
     instance_num_lbi4print = GenLogicalBlobId(instance_num_op_conf.name() + "/y");
   }
-  job_builder.AddOps(op_node.SoleInEdge()->src_node()->parallel_desc().parallel_conf(), new_ops);
+  job_builder->AddOps(op_node.SoleInEdge()->src_node()->parallel_desc().parallel_conf(), new_ops);
   // scalar print
   OperatorConf print_op_conf;
   print_op_conf.set_name(op_node.op().op_name());
@@ -65,7 +65,7 @@ void GenerateFacadeImplOpConf(const OpNode& op_node, const JobBuilder& job_build
   if (print_scalar_summary_conf.has_weight()) {
     *(print_conf->mutable_reduction_lbi()) = GenLogicalBlobId(print_scalar_summary_conf.weight());
   }
-  job_builder.MutOps({print_op_conf});
+  job_builder->MutOps({print_op_conf});
 }
 
 }  // namespace

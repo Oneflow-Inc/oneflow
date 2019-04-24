@@ -18,9 +18,9 @@ class JobCompleter final {
 
 class GenerateFacadeImplOpConfWrapperStruct final {
  public:
-  using Func = std::function<void(const OpNode&, const JobBuilder&)>;
+  using Func = std::function<void(const OpNode&, JobBuilder*)>;
   GenerateFacadeImplOpConfWrapperStruct(const Func& f) : func_(std::make_unique<Func>(f)) {}
-  void Call(const OpNode& op_node, const JobBuilder& job_builder) const {
+  void Call(const OpNode& op_node, JobBuilder* job_builder) const {
     (*func_)(op_node, job_builder);
   }
 
