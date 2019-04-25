@@ -125,7 +125,7 @@ T GenInitialFan(VarianceNorm variance_norm, Blob* blob, const std::string& data_
 }
 
 template<typename T>
-T CalculateGain(const Nonlinearity nonlinearity, const T a) {
+T CalculateGain(const Nonlinearity nonlinearity, const T negative_slope) {
   if (nonlinearity == Nonlinearity::kLinear || nonlinearity == Nonlinearity::kConv1D
       || nonlinearity == Nonlinearity::kConv2D || nonlinearity == Nonlinearity::kConv3D
       || nonlinearity == Nonlinearity::kConvTransposed1D
@@ -138,7 +138,7 @@ T CalculateGain(const Nonlinearity nonlinearity, const T a) {
   } else if (nonlinearity == Nonlinearity::kNonlinearRelu) {
     return std::sqrt(2.0);
   } else if (nonlinearity == Nonlinearity::kNonlinearLeakyRelu) {
-    return std::sqrt(2.0 / (1.0 + std::pow(a, 2)));
+    return std::sqrt(2.0 / (1.0 + std::pow(negative_slope, 2)));
   } else {
     UNIMPLEMENTED();
   }
@@ -169,8 +169,9 @@ void KaimingUniformInitializer(const KaimingUniformInitializerConf& initializer_
                                uint32_t random_seed, Blob* blob, const std::string& data_format) {
   CHECK(blob->shape().elem_cnt());
   VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
-  const T gain = CalculateGain(initializer_conf.nonlinearity(), initializer_conf.a());
-  const T std = gain / std::sqrt(GenInitialFan<T>(variance_norm, blob, data_format));
+  const T fan = GenInitialFan<T>(variance_norm, blob, data_format);
+  const T gain = CalculateGain(initializer_conf.nonlinearity(), initializer_conf.negative_slope());
+  const T std = gain / std::sqrt(fan);
   const T bound = std::sqrt(static_cast<T>(3.0)) * std;
   RngUniform<T>(blob->shape().elem_cnt(), static_cast<T>(-bound), static_cast<T>(bound),
                 random_seed, blob->mut_dptr<T>());
@@ -181,9 +182,9 @@ void KaimingNormalInitializer(const KaimingNormalInitializerConf& initializer_co
                               uint32_t random_seed, Blob* blob, const std::string& data_format) {
   CHECK(blob->shape().elem_cnt());
   VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
-  const T gain = CalculateGain(initializer_conf.nonlinearity(), initializer_conf.a());
-  const T std = gain / std::sqrt(GenInitialFan<T>(variance_norm, blob, data_format));
-  const T bound = std::sqrt(static_cast<T>(3.0)) * std;
+  const T fan = GenInitialFan<T>(variance_norm, blob, data_format);
+  const T gain = CalculateGain(initializer_conf.nonlinearity(), initializer_conf.negative_slope());
+  const T std = gain / std::sqrt(fan);
   RngNormal<T>(blob->shape().elem_cnt(), ZeroVal<T>::value, static_cast<T>(std), random_seed,
                blob->mut_dptr<T>());
 }

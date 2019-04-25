@@ -74,13 +74,13 @@ enum Nonlinearity {
 message KaimingUniformInitializerConf {
   required VarianceNorm variance_norm = 1;
   optional Nonlinearity nonlinearity = 2 [default = kNonlinearLeakyRelu];
-  optional float a = 3 [default = 0.0];
+  optional float negative_slope = 3 [default = 0.01];
 }
 
 message KaimingNormalInitializerConf {
   required VarianceNorm variance_norm = 1;
   optional Nonlinearity nonlinearity = 2 [default = kNonlinearLeakyRelu];
-  optional float a = 3 [default = 0.0];
+  optional float negative_slope = 3 [default = 0.01];
 }
 
 //output[D_0 ... D_(axis - 1) i D_(axis + 1) ... D_n] = start + i * stride
