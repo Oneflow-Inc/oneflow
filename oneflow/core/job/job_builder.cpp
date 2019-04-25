@@ -67,10 +67,15 @@ void JobBuilder::AddOrMutOps(const ParallelConf& parallel_conf,
   MutOps(mut_ops);
 }
 
-SbpParallel* JobBuilder::MutObnSbpParallel4Lbi(const LogicalBlobId& lbi) const {
+SbpParallel* JobBuilder::MutSbpParallel4Lbi(const LogicalBlobId& lbi) const {
   OperatorConf* op_conf = op_name2op_conf_.at(lbi.op_name());
   DeviceType device_type = ParallelDesc(*op_name2parallel_conf_.at(lbi.op_name())).device_type();
   std::shared_ptr<Operator> op = ConstructOp(*op_conf, device_type);
+  for (const auto& ibn : op->input_bns()) {
+    if (op->BnInOp2Lbi(ibn) == lbi) {
+      return &(*op_conf->mutable_sbp_signature_hint()->mutable_bn_in_op2sbp_parallel())[ibn];
+    }
+  }
   for (const auto& obn : op->output_bns()) {
     if (op->BnInOp2Lbi(obn) == lbi) {
       return &(*op_conf->mutable_sbp_signature_hint()->mutable_bn_in_op2sbp_parallel())[obn];
