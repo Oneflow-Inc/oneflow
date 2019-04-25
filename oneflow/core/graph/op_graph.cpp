@@ -365,15 +365,7 @@ void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const Job& job) const {
   auto SbpInferHint4Ibn = [&](const std::string& ibn) -> const SbpInferHint& {
     return ibn2sbp_infer_hint.at(ibn);
   };
-  SbpSignature obn_sbp_sig_hint;
-  for (const auto& obn : op_node->op().output_bns()) {
-    const auto& lbn = GenLogicalBlobName(op_node->op().BnInOp2Lbi(obn));
-    const auto& sbp_parallel_hint_iter = job.helper().lbn2sbp_parallel_hint().find(lbn);
-    if (sbp_parallel_hint_iter == job.helper().lbn2sbp_parallel_hint().end()) { continue; }
-    (*obn_sbp_sig_hint.mutable_bn_in_op2sbp_parallel())[obn] = sbp_parallel_hint_iter->second;
-  }
-  op_node->op().InferSbpSignatureIf(sbp_signature, obn_sbp_sig_hint, SbpInferHint4Ibn,
-                                    op_node->parallel_desc());
+  op_node->op().InferSbpSignatureIf(sbp_signature, SbpInferHint4Ibn, op_node->parallel_desc());
   op_node->op().FixSbpSignature(sbp_signature);
 }
 

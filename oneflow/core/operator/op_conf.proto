@@ -1343,7 +1343,7 @@ message OperatorConf {
   optional bool enable_cudnn = 5;
   optional int64 cudnn_buf_limit_mbyte = 6;
   repeated string ctrl_in_op_name = 7;
-  optional SbpSignature sbp_sig_part = 8;
+  optional SbpSignature sbp_signature_hint = 8;
   oneof op_type {
     // system op
     DecodeOFRecordOpConf decode_ofrecord_conf = 101;

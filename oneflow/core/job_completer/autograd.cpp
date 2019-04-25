@@ -142,7 +142,7 @@ void GenerateOnesAsDiffLbi(const LogicalBlobId& lbi, std::vector<OperatorConf>* 
 }
 
 void BuildTotalLossInstanceNumIdOpConf(
-    const OpGraph& op_graph, const JobBuilder& job_builder,
+    const OpGraph& op_graph, JobBuilder* job_builder,
     const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
     const LogicalBlobId& total_loss_instance_num_lbi,
     std::function<const LogicalBlobId&(const ParallelDesc&)>* LossInstanceNum4ParallelDesc) {
@@ -164,7 +164,9 @@ void BuildTotalLossInstanceNumIdOpConf(
       auto* id_conf = id_op_conf.mutable_tuple_identity_conf();
       id_conf->add_in(GenLogicalBlobName(total_loss_instance_num_lbi));
       id_conf->add_out("out");
-      job_builder.AddOps(pair.first.parallel_conf(), {id_op_conf});
+      (*id_op_conf.mutable_sbp_signature_hint()->mutable_bn_in_op2sbp_parallel())["out_0"]
+          .mutable_broadcast_parallel();
+      job_builder->AddOps(pair.first.parallel_conf(), {id_op_conf});
       parallel_desc2total_loss_instance_num_lbi->emplace(
           pair.first, GenLogicalBlobId(id_op_conf.name() + "/out"));
     } else {
@@ -332,7 +334,7 @@ void AddTotalLossInstanceNumOpConf(
   } else {
     UNIMPLEMENTED();
   }
-  BuildTotalLossInstanceNumIdOpConf(op_graph, job_builder, lbi2diff_lbi,
+  BuildTotalLossInstanceNumIdOpConf(op_graph, &job_builder, lbi2diff_lbi,
                                     total_loss_instance_num_lbi, LossInstanceNum4ParallelDesc);
 }
 

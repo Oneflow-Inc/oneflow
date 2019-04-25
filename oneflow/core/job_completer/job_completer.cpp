@@ -17,7 +17,7 @@ void WithOpGraphAndMutJob(Job* job, const std::function<void(const OpGraph&, Job
   Handler(op_graph, job);
 }
 
-void GenerateFacadeImplOpConfIf(const OpNode& op_node, const JobBuilder& job_builder) {
+void GenerateFacadeImplOpConfIf(const OpNode& op_node, JobBuilder* job_builder) {
   auto op_type_case = op_node.op().op_conf().op_type_case();
   if (IsClassRegistered<GenerateFacadeImplOpConfWrapperStruct>(op_type_case)) {
     auto* obj = NewObj<GenerateFacadeImplOpConfWrapperStruct>(op_type_case);
@@ -27,7 +27,8 @@ void GenerateFacadeImplOpConfIf(const OpNode& op_node, const JobBuilder& job_bui
 
 void ReplaceFacade(const OpGraph& op_graph, Job* job) {
   JobBuilder job_builder(job);
-  op_graph.ForEachNode([&](OpNode* op_node) { GenerateFacadeImplOpConfIf(*op_node, job_builder); });
+  op_graph.ForEachNode(
+      [&](OpNode* op_node) { GenerateFacadeImplOpConfIf(*op_node, &job_builder); });
 }
 
 void UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(
@@ -41,11 +42,12 @@ void UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(
   }
 }
 
-void UpdateJobHelperConfSbpSignatureHint(
+void UpdateOpSbpSignatureHint(
     const OpGraph& op_graph,
     const HashMap<std::string, HashMap<std::string, LogicalBlobId>>& op_name2ibn2in_diff_lbi,
     Job* job) {
-  auto IsBroadcastSbpSignature = [&](const OpNode* op_node) {
+  JobBuilder job_builder(job);
+  auto IsBroadcastSbpSignature = [](const OpNode* op_node) {
     for (const auto& ibn : op_node->op().input_bns()) {
       if (op_node->SbpParallel4BnInOp(ibn).has_broadcast_parallel() == false) { return false; }
     }
@@ -62,12 +64,11 @@ void UpdateJobHelperConfSbpSignatureHint(
       const auto& in_diff_lbi_iter = op_iter->second.find(ibn);
       if (in_diff_lbi_iter == op_iter->second.end()) { continue; }
       const auto& lbi = op_node->op().BnInOp2Lbi(ibn);
-      const auto& in_diff_lbn = GenLogicalBlobName(in_diff_lbi_iter->second);
-      auto* hint = &(*job->mutable_helper()->mutable_lbn2sbp_parallel_hint())[in_diff_lbn];
+      SbpParallel* sbp_parallel = job_builder.MutObnSbpParallel4Lbi(in_diff_lbi_iter->second);
       if (IsBroadcastSbpSignature(op_node)) {
-        hint->mutable_broadcast_parallel();
+        sbp_parallel->mutable_broadcast_parallel();
       } else {
-        *hint = GetDualSbpParallel(op_node->SbpParallel4Lbi(lbi));
+        *sbp_parallel = GetDualSbpParallel(op_node->SbpParallel4Lbi(lbi));
       }
     }
   });
@@ -83,7 +84,7 @@ void GenerateOpConf4Trainning(const OpGraph& op_graph, Job* job) {
   AddOptimizerOpConf(op_graph, job, lbi2diff_lbi, LossInstanceNum4ParallelDesc);
   AddSaver(op_graph, job);
   UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(lbi2diff_lbi, job);
-  UpdateJobHelperConfSbpSignatureHint(op_graph, op_name2ibn2in_diff_lbi, job);
+  UpdateOpSbpSignatureHint(op_graph, op_name2ibn2in_diff_lbi, job);
 }
 
 std::function<ParallelConf*(const std::string&)> MakeGetterMutParallelConf4OpName(
@@ -416,6 +417,7 @@ void JobCompleter::Complete(Job* job) const {
     WithOpGraphAndMutJob(job, &AutoVar);
     WithOpGraphAndMutJob(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);
     // complete ops for trainning
+    HashMap<std::string, HashMap<std::string, LogicalBlobId>> op_name2ibn2in_diff_lbi;
     WithOpGraphAndMutJob(job, &GenerateOpConf4Trainning);
     // complete tick ops
     WithOpGraphAndMutJob(job, &AutoTick);

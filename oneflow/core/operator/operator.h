@@ -149,7 +149,7 @@ class Operator {
       std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
       Shape* time_shape) const;
   // Infer blob's SbpSignature
-  void InferSbpSignatureIf(SbpSignature* sbp_signature, const SbpSignature& conf_sbp_sig_hint,
+  void InferSbpSignatureIf(SbpSignature* sbp_signature,
                            std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
                            const ParallelDesc& parallel_desc) const;
   virtual void FixSbpSignature(SbpSignature* sbp_signature) const {}

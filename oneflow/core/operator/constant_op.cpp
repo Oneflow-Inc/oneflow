@@ -27,7 +27,7 @@ class ConstantOpSbpSignatureRule final : public ParallelSbpSignatureRule {
       CHECK(SbpInferHint4Ibn("tick").is_data_split());
       (*bn2sbp)["tick"].mutable_split_parallel()->set_axis(0);
     }
-    const auto& conf_bn2_sbp = op().op_conf().sbp_sig_part().bn_in_op2sbp_parallel();
+    const auto& conf_bn2_sbp = op().op_conf().sbp_signature_hint().bn_in_op2sbp_parallel();
     const auto& sbp_it = conf_bn2_sbp.find("out");
     if (sbp_it != conf_bn2_sbp.end()) {
       (*bn2sbp)["out"] = sbp_it->second;
