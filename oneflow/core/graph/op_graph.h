@@ -127,6 +127,8 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   // a set of nodes is called a pseudo chain if they can merge into a chain regardless of the
   // connections before their source nodes
   void ForEachPseudoChain(const std::function<void(const HashSet<OpNode*>&)>& Handler) const;
+  // a set of nodes is called a chain family if they can divided into several connected chains
+  void ForEachChainFamily(const std::function<void(const HashSet<OpNode*>&)>& Handler) const;
 
  private:
   void Init(const Job& job);
@@ -143,16 +145,15 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   bool IsDataBlob(const std::string& op_name, const LogicalBlobId& lbi) const;
   std::string GetOpNameKey(const std::string& op_name, const LogicalBlobId& lbi) const;
   LogicalBlobId GetLogicalBlobIdKey(const std::string& op_name, const LogicalBlobId& lbi) const;
-  void ForEachPseudoChain(const std::vector<OpNode*>& nodes,
+  void ForEachPseudoChain(const HashSet<OpNode*>& nodes,
                           const std::function<bool(OpNode* src, OpNode* dst)>& IsReachable,
                           const std::function<void(const HashSet<OpNode*>&)>& Handler) const;
   void ReverseTopoGetPseudoChain(
       const HashSet<OpNode*>& op_nodes, HashSet<OpNode*>* chain,
       const std::function<bool(OpNode* src, OpNode* dst)>& IsReachable) const;
   void ForEachComponent(
-      const std::function<void(OpNode* node, const std::function<void(OpNode*)>& Handler)>&
-          ForEachConnected,
-      const std::function<void(const std::vector<OpNode*>&)>& Handler) const;
+      const std::function<void(OpNode*, const std::function<void(OpNode*)>&)>& ForEachConnected,
+      const std::function<void(const HashSet<OpNode*>&)>& Handler) const;
 
   int64_t GetSplitNum(const std::string& op_name, const LogicalBlobId& lbi) const;
   HashMap<std::string, OpNode*> op_name2op_node_;
