@@ -12,9 +12,9 @@ void AutoGrad(const OpGraph& op_graph, Job* job,
               HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
 void AddTotalLossInstanceNumOpConf(const OpGraph& op_graph, Job* job,
                                    LogicalBlobId* total_loss_instance_num_lbi);
-
 void GenerateBackwardOpConfIf(const Operator&, std::vector<OperatorConf>*,
                               const std::function<LogicalBlobId*(const std::string&)>&);
+void GetVariableOpNodesAndDescendants(const OpGraph& op_graph, HashSet<OpNode*>* op_nodes);
 
 class GenerateBackwardOpConfWrapperStruct final {
  public:

@@ -41,21 +41,6 @@ bool AnyLbiWithDiffLbi(const OpEdge* op_edge) {
   return false;
 }
 
-void GetVariableOpNodesAndDescendants(const OpGraph& op_graph, HashSet<OpNode*>* op_nodes) {
-  std::list<OpNode*> starts;
-  op_graph.ForEachNode([&](OpNode* op_node) {
-    const auto& op_conf = op_node->op().op_conf();
-    if (op_conf.has_variable_conf()) { starts.push_back(op_node); }
-  });
-  auto ForEachNextNode = [&](OpNode* op_node, const std::function<void(OpNode*)>& Handler) {
-    for (OpEdge* edge : op_node->out_edges()) {
-      if (AnyLbiWithDiffLbi(edge)) { Handler(edge->dst_node()); }
-    }
-  };
-  op_graph.BfsForEachNode(starts, ForEachNextNode,
-                          [&](OpNode* op_node) { op_nodes->emplace(op_node); });
-}
-
 void CheckNotReachableAmongOpNodes(const OpGraph& op_graph, const std::list<OpNode*>& op_nodes) {
   auto IsReachable = op_graph.MakePredicatorIsReachable();
   for (OpNode* src_node : op_nodes) {
@@ -156,6 +141,21 @@ void GenerateOnesAsDiffLbi(const LogicalBlobId& lbi, std::vector<OperatorConf>* 
 }
 
 }  // namespace
+
+void GetVariableOpNodesAndDescendants(const OpGraph& op_graph, HashSet<OpNode*>* op_nodes) {
+  std::list<OpNode*> starts;
+  op_graph.ForEachNode([&](OpNode* op_node) {
+    const auto& op_conf = op_node->op().op_conf();
+    if (op_conf.has_variable_conf()) { starts.push_back(op_node); }
+  });
+  auto ForEachNextNode = [&](OpNode* op_node, const std::function<void(OpNode*)>& Handler) {
+    for (OpEdge* edge : op_node->out_edges()) {
+      if (AnyLbiWithDiffLbi(edge)) { Handler(edge->dst_node()); }
+    }
+  };
+  op_graph.BfsForEachNode(starts, ForEachNextNode,
+                          [&](OpNode* op_node) { op_nodes->emplace(op_node); });
+}
 
 void GenerateBackwardOpConfWrapperStruct::Call(
     const Operator& op, std::vector<OperatorConf>* op_confs,
