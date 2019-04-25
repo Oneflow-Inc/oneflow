@@ -152,7 +152,8 @@ bool IsProducedRegstAllModelRegst(TaskNode* task_node) {
   return comp_task_node->logical_node()->IsProducedLogicalBlobAllModelBlob();
 }
 
-bool IsModelToFwOrBw(TaskNode* src_task, TaskNode* dst_task) {
+bool IsModelToNonSoleIbnFwOrBw(TaskNode* src_task, TaskNode* dst_task) {
+  if (dst_task->in_edges().size() <= 1) { return false; }
   return IsProducedRegstAllModelRegst(src_task)
          && dynamic_cast<NormalForwardCompTaskNode*>(dst_task) != nullptr;
 }
@@ -200,7 +201,7 @@ void ChainGraph::GroupTaskNodesByMachineAndCollectAncestors(
     if (node->AreaId4ChainMerge() == kMdUpdtArea) { return; }
     node->ForEachNodeOnInEdge([&](TaskNode* in_node) {
       if (IsBackEdge(in_node, node)) { return; }
-      if (IsModelToFwOrBw(in_node, node)) { return; }
+      if (IsModelToNonSoleIbnFwOrBw(in_node, node)) { return; }
       if (IsNonSoleKeepHeaderOnlyEdge(in_node, node)) { return; }
       (*node2ancestors)[node].insert(in_node);
       (*node2ancestors)[node].insert((*node2ancestors)[in_node].begin(),

@@ -56,7 +56,6 @@ void UpdateOpSbpSignatureHint(
     }
     return true;
   };
-  auto GetOpNodeAndObn4Lbi = op_graph.MakeGetterOpNodeAndObn4Lbi();
   op_graph.ForEachNode([&](OpNode* op_node) {
     const auto& op_name = (op_node->op().op_name());
     const auto& op_iter = op_name2ibn2in_diff_lbi.find(op_name);
