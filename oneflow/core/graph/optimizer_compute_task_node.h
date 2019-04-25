@@ -11,7 +11,7 @@ class OptimizerCompTaskNode final : public CompTaskNode {
   OptimizerCompTaskNode() = default;
   ~OptimizerCompTaskNode() = default;
 
-  void ProduceAllRegstsAndBindEdges() override{};
+  void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
 
   TaskType GetTaskType() const override { return TaskType::kOptimizer; }
@@ -19,7 +19,7 @@ class OptimizerCompTaskNode final : public CompTaskNode {
 
  private:
   void BuildExecGphAndRegst() override;
-  void InferProducedDataRegstTimeShape() override {}
+  void InferProducedDataRegstTimeShape() override;
 };
 
 }  // namespace oneflow
