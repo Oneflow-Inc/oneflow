@@ -20,7 +20,7 @@ class JobBuilder final {
   void AddOps(const ParallelConf& parallel_conf, const std::vector<OperatorConf>& op_confs);
   void MutOps(const std::vector<OperatorConf>& op_confs) const;
   void AddOrMutOps(const ParallelConf& parallel_conf, const std::vector<OperatorConf>& op_confs);
-  SbpParallel* MutObnSbpParallel4Lbi(const LogicalBlobId& lbi) const;
+  SbpParallel* MutSbpParallel4Lbi(const LogicalBlobId& lbi) const;
 
  private:
   Job* job_;

@@ -64,7 +64,7 @@ void UpdateOpSbpSignatureHint(
       const auto& in_diff_lbi_iter = op_iter->second.find(ibn);
       if (in_diff_lbi_iter == op_iter->second.end()) { continue; }
       const auto& lbi = op_node->op().BnInOp2Lbi(ibn);
-      SbpParallel* sbp_parallel = job_builder.MutObnSbpParallel4Lbi(in_diff_lbi_iter->second);
+      SbpParallel* sbp_parallel = job_builder.MutSbpParallel4Lbi(in_diff_lbi_iter->second);
       if (IsBroadcastSbpSignature(op_node)) {
         sbp_parallel->mutable_broadcast_parallel();
       } else {
