@@ -26,9 +26,9 @@ void GenerateOptimizerOpConfIf(
   obj->Call(var_op, op_confs, job_helper_conf, DiffLbi4BnInOp, total_loss_instance_num_lbi);
 }
 
-void AddOptimizerOpConf(const OpGraph& op_graph, Job* job,
-                        const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
-                        const LogicalBlobId& total_loss_instance_num_lbi) {
+void AddOptimizerOpConf(
+    const OpGraph& op_graph, Job* job, const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
+    const std::function<const LogicalBlobId&(const ParallelDesc&)>& LossInstanceNum4ParallelDesc) {
   JobBuilder job_builder(job);
   op_graph.ForEachNode([&](OpNode* op_node) {
     const VariableOp* var_op = dynamic_cast<const VariableOp*>(&op_node->op());
@@ -38,9 +38,10 @@ void AddOptimizerOpConf(const OpGraph& op_graph, Job* job,
     auto DiffLbi4BnInOp = [&](const std::string& bn) -> const LogicalBlobId& {
       return lbi2diff_lbi.at(var_op->BnInOp2Lbi(bn));
     };
+    const auto& parallel_desc = op_node->parallel_desc();
     GenerateOptimizerOpConfIf(*var_op, &optimizer_op_confs, job->mutable_helper(), DiffLbi4BnInOp,
-                              total_loss_instance_num_lbi);
-    job_builder.AddOps(op_node->parallel_desc().parallel_conf(), optimizer_op_confs);
+                              LossInstanceNum4ParallelDesc(parallel_desc));
+    job_builder.AddOps(parallel_desc.parallel_conf(), optimizer_op_confs);
   });
 }
 
