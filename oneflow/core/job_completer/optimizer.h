@@ -6,9 +6,9 @@
 
 namespace oneflow {
 
-void AddOptimizerOpConf(const OpGraph& op_graph, Job* job,
-                        const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
-                        const LogicalBlobId& total_loss_instance_num_lbi);
+void AddOptimizerOpConf(
+    const OpGraph& op_graph, Job* job, const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
+    const std::function<const LogicalBlobId&(const ParallelDesc&)>& LossInstanceNum4ParallelDesc);
 
 template<typename T>
 void ConstructMdUpdtOpConf(

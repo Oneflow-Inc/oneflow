@@ -76,11 +76,12 @@ void UpdateOpSbpSignatureHint(
 
 void GenerateOpConf4Trainning(const OpGraph& op_graph, Job* job) {
   LogicalBlobId total_loss_instance_num;
-  AddTotalLossInstanceNumOpConf(op_graph, job, &total_loss_instance_num);
   HashMap<std::string, HashMap<std::string, LogicalBlobId>> op_name2ibn2in_diff_lbi;
   HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
   AutoGrad(op_graph, job, &op_name2ibn2in_diff_lbi, &lbi2diff_lbi);
-  AddOptimizerOpConf(op_graph, job, lbi2diff_lbi, total_loss_instance_num);
+  std::function<const LogicalBlobId&(const ParallelDesc&)> LossInstanceNum4ParallelDesc;
+  AddTotalLossInstanceNumOpConf(op_graph, job, lbi2diff_lbi, &LossInstanceNum4ParallelDesc);
+  AddOptimizerOpConf(op_graph, job, lbi2diff_lbi, LossInstanceNum4ParallelDesc);
   AddSaver(op_graph, job);
   UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(lbi2diff_lbi, job);
   UpdateOpSbpSignatureHint(op_graph, op_name2ibn2in_diff_lbi, job);
