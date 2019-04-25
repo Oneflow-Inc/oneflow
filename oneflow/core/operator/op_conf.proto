@@ -21,7 +21,7 @@ message ConstantInitializerConf {
 }
 
 message ConstantIntInitializerConf {
-  optional int32 value = 1 [default = 0];
+  optional int64 value = 1 [default = 0];
 }
 
 message RandomUniformInitializerConf {
