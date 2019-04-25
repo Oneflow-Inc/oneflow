@@ -509,6 +509,8 @@ KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& ini
                                       const std::string& data_format) {
   if (initializer_conf.has_constant_conf()) {
     ConstantInitializer<T>(static_cast<T>(initializer_conf.constant_conf().value()), blob);
+  } else if (initializer_conf.has_constant_int_conf()) {
+    ConstantInitializer<T>(initializer_conf.constant_int_conf().value(), blob);
   } else if (initializer_conf.has_random_uniform_conf()) {
     RandomUniformInitializer<T>(initializer_conf.random_uniform_conf(), random_seed, blob);
   } else if (initializer_conf.has_random_normal_conf()) {
