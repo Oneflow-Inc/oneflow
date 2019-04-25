@@ -57,6 +57,32 @@ message MsraInitializerConf {
   required VarianceNorm variance_norm = 1;
 }
 
+enum Nonlinearity {
+  kLinear = 0;
+  kConv1D = 1;
+  kConv2D = 2;
+  kConv3D = 3;
+  kConvTransposed1D = 4;
+  kConvTransposed2D = 5;
+  kConvTransposed3D = 6;
+  kNonlinearSigmoid = 7;
+  kNonlinearTanH = 8;
+  kNonlinearRelu = 9;
+  kNonlinearLeakyRelu = 10;
+}
+
+message KaimingUniformInitializerConf {
+  required VarianceNorm variance_norm = 1;
+  optional Nonlinearity nonlinearity = 2 [default = kNonlinearLeakyRelu];
+  optional float a = 3 [default = 0.0];
+}
+
+message KaimingNormalInitializerConf {
+  required VarianceNorm variance_norm = 1;
+  optional Nonlinearity nonlinearity = 2 [default = kNonlinearLeakyRelu];
+  optional float a = 3 [default = 0.0];
+}
+
 //output[D_0 ... D_(axis - 1) i D_(axis + 1) ... D_n] = start + i * stride
 message RangeInitializerConf {
   optional double start = 1 [default = 0];
@@ -70,7 +96,6 @@ message IntRangeInitializerConf {
   optional int64 axis = 3 [default = -1];
 }
 
-
 message InitializerConf {
   oneof type {
     ConstantInitializerConf constant_conf = 1;
@@ -83,6 +108,8 @@ message InitializerConf {
     MsraInitializerConf msra_conf = 8;
     RangeInitializerConf range_conf = 9;
     IntRangeInitializerConf int_range_conf = 10;
+    KaimingUniformInitializerConf kaiming_uniform_conf = 11;
+    KaimingNormalInitializerConf kaiming_normal_conf = 12;
   }
 }
 

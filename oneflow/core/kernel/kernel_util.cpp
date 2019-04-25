@@ -125,6 +125,26 @@ T GenInitialFan(VarianceNorm variance_norm, Blob* blob, const std::string& data_
 }
 
 template<typename T>
+T CalculateGain(const Nonlinearity nonlinearity, const T a) {
+  if (nonlinearity == Nonlinearity::kLinear || nonlinearity == Nonlinearity::kConv1D
+      || nonlinearity == Nonlinearity::kConv2D || nonlinearity == Nonlinearity::kConv3D
+      || nonlinearity == Nonlinearity::kConvTransposed1D
+      || nonlinearity == Nonlinearity::kConvTransposed2D
+      || nonlinearity == Nonlinearity::kConvTransposed3D
+      || nonlinearity == Nonlinearity::kNonlinearSigmoid) {
+    return 1;
+  } else if (nonlinearity == Nonlinearity::kNonlinearTanH) {
+    return 5.0 / 3;
+  } else if (nonlinearity == Nonlinearity::kNonlinearRelu) {
+    return std::sqrt(2.0);
+  } else if (nonlinearity == Nonlinearity::kNonlinearLeakyRelu) {
+    return std::sqrt(2.0 / (1.0 + std::pow(a, 2)));
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+template<typename T>
 void XavierInitializer(const XavierInitializerConf& initializer_conf, uint32_t random_seed,
                        Blob* blob, const std::string& data_format) {
   CHECK(blob->shape().elem_cnt());
@@ -140,6 +160,30 @@ void MsraInitializer(const MsraInitializerConf& initializer_conf, uint32_t rando
   CHECK(blob->shape().elem_cnt());
   VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
   T std = std::sqrt(static_cast<T>(2) / GenInitialFan<T>(variance_norm, blob, data_format));
+  RngNormal<T>(blob->shape().elem_cnt(), ZeroVal<T>::value, static_cast<T>(std), random_seed,
+               blob->mut_dptr<T>());
+}
+
+template<typename T>
+void KaimingUniformInitializer(const KaimingUniformInitializerConf& initializer_conf,
+                               uint32_t random_seed, Blob* blob, const std::string& data_format) {
+  CHECK(blob->shape().elem_cnt());
+  VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
+  const T gain = CalculateGain(initializer_conf.nonlinearity(), initializer_conf.a());
+  const T std = gain / std::sqrt(GenInitialFan<T>(variance_norm, blob, data_format));
+  const T bound = std::sqrt(static_cast<T>(3.0)) * std;
+  RngUniform<T>(blob->shape().elem_cnt(), static_cast<T>(-bound), static_cast<T>(bound),
+                random_seed, blob->mut_dptr<T>());
+}
+
+template<typename T>
+void KaimingNormalInitializer(const KaimingNormalInitializerConf& initializer_conf,
+                              uint32_t random_seed, Blob* blob, const std::string& data_format) {
+  CHECK(blob->shape().elem_cnt());
+  VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
+  const T gain = CalculateGain(initializer_conf.nonlinearity(), initializer_conf.a());
+  const T std = gain / std::sqrt(GenInitialFan<T>(variance_norm, blob, data_format));
+  const T bound = std::sqrt(static_cast<T>(3.0)) * std;
   RngNormal<T>(blob->shape().elem_cnt(), ZeroVal<T>::value, static_cast<T>(std), random_seed,
                blob->mut_dptr<T>());
 }
@@ -539,6 +583,12 @@ KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& ini
     XavierInitializer<T>(initializer_conf.xavier_conf(), random_seed, blob, data_format);
   } else if (initializer_conf.has_msra_conf()) {
     MsraInitializer<T>(initializer_conf.msra_conf(), random_seed, blob, data_format);
+  } else if (initializer_conf.has_kaiming_uniform_conf()) {
+    KaimingUniformInitializer<T>(initializer_conf.kaiming_uniform_conf(), random_seed, blob,
+                                 data_format);
+  } else if (initializer_conf.has_kaiming_normal_conf()) {
+    KaimingNormalInitializer<T>(initializer_conf.kaiming_normal_conf(), random_seed, blob,
+                                data_format);
   } else if (initializer_conf.has_range_conf()) {
     RangeInitializer<T>(initializer_conf.range_conf(), random_seed, blob);
   } else {
@@ -581,4 +631,4 @@ KU_INTEGRAL_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& ini
   template struct KernelUtil<DeviceType::kCPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_SEQ);
 
-}  //  namespace oneflow
+}  // namespace oneflow
