@@ -125,20 +125,15 @@ T GenInitialFan(VarianceNorm variance_norm, Blob* blob, const std::string& data_
 }
 
 template<typename T>
-T CalculateGain(const Nonlinearity nonlinearity, const T negative_slope) {
-  if (nonlinearity == Nonlinearity::kLinear || nonlinearity == Nonlinearity::kConv1D
-      || nonlinearity == Nonlinearity::kConv2D || nonlinearity == Nonlinearity::kConv3D
-      || nonlinearity == Nonlinearity::kConvTransposed1D
-      || nonlinearity == Nonlinearity::kConvTransposed2D
-      || nonlinearity == Nonlinearity::kConvTransposed3D
-      || nonlinearity == Nonlinearity::kNonlinearSigmoid) {
-    return 1;
-  } else if (nonlinearity == Nonlinearity::kNonlinearTanH) {
-    return 5.0 / 3;
-  } else if (nonlinearity == Nonlinearity::kNonlinearRelu) {
-    return std::sqrt(2.0);
-  } else if (nonlinearity == Nonlinearity::kNonlinearLeakyRelu) {
-    return std::sqrt(2.0 / (1.0 + std::pow(negative_slope, 2)));
+T CalculateGain(const ActivationType nonlinearity, const T negative_slope) {
+  if (nonlinearity == ActivationType::kNone || nonlinearity == ActivationType::kSigmoid) {
+    return static_cast<T>(1);
+  } else if (nonlinearity == ActivationType::kTanH) {
+    return static_cast<T>(5.0 / 3);
+  } else if (nonlinearity == ActivationType::kRelu) {
+    return static_cast<T>(std::sqrt(2.0));
+  } else if (nonlinearity == ActivationType::kLeakyRelu) {
+    return static_cast<T>(std::sqrt(2.0 / (1.0 + std::pow(negative_slope, 2))));
   } else {
     UNIMPLEMENTED();
   }

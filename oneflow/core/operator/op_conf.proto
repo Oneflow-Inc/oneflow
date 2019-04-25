@@ -14,6 +14,7 @@ enum ActivationType {
   kTanH = 1;
   kSigmoid = 2;
   kRelu = 3;
+  kLeakyRelu = 4;
 }
 
 message ConstantInitializerConf {
@@ -57,29 +58,15 @@ message MsraInitializerConf {
   required VarianceNorm variance_norm = 1;
 }
 
-enum Nonlinearity {
-  kLinear = 0;
-  kConv1D = 1;
-  kConv2D = 2;
-  kConv3D = 3;
-  kConvTransposed1D = 4;
-  kConvTransposed2D = 5;
-  kConvTransposed3D = 6;
-  kNonlinearSigmoid = 7;
-  kNonlinearTanH = 8;
-  kNonlinearRelu = 9;
-  kNonlinearLeakyRelu = 10;
-}
-
 message KaimingUniformInitializerConf {
   required VarianceNorm variance_norm = 1;
-  optional Nonlinearity nonlinearity = 2 [default = kNonlinearLeakyRelu];
+  optional ActivationType nonlinearity = 2 [default = kLeakyRelu];
   optional float negative_slope = 3 [default = 0.01];
 }
 
 message KaimingNormalInitializerConf {
   required VarianceNorm variance_norm = 1;
-  optional Nonlinearity nonlinearity = 2 [default = kNonlinearLeakyRelu];
+  optional ActivationType nonlinearity = 2 [default = kLeakyRelu];
   optional float negative_slope = 3 [default = 0.01];
 }
 
