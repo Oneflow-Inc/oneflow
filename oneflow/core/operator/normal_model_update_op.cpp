@@ -143,7 +143,9 @@ void NormalModelUpdtOp::GetSbpSignatureRules(
     const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   rules->emplace_back(MakeModelUpdtOpBroadcastSignatureRule(this));
-  rules->emplace_back(MakeModelUpdtOpSplitSignatureRule(this, AlwaysBroadcastParallelBns()));
+  HashSet<std::string> broadcast_parallel_bns = AlwaysBroadcastParallelBns();
+  broadcast_parallel_bns.emplace("total_instance_num_diff");
+  rules->emplace_back(MakeModelUpdtOpSplitSignatureRule(this, broadcast_parallel_bns));
 }
 
 REGISTER_OP_CREATOR(OperatorConf::kNormalMdupdtConf, [](const OperatorConf& op_conf) -> Operator* {
