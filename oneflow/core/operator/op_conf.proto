@@ -60,13 +60,13 @@ message MsraInitializerConf {
 
 message KaimingUniformInitializerConf {
   required VarianceNorm variance_norm = 1;
-  optional ActivationType nonlinearity = 2 [default = kLeakyRelu];
+  optional ActivationType activation_type = 2 [default = kLeakyRelu];
   optional float negative_slope = 3 [default = 0.01];
 }
 
 message KaimingNormalInitializerConf {
   required VarianceNorm variance_norm = 1;
-  optional ActivationType nonlinearity = 2 [default = kLeakyRelu];
+  optional ActivationType activation_type = 2 [default = kLeakyRelu];
   optional float negative_slope = 3 [default = 0.01];
 }
 

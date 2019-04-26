@@ -125,14 +125,14 @@ T GenInitialFan(VarianceNorm variance_norm, Blob* blob, const std::string& data_
 }
 
 template<typename T>
-T CalculateGain(const ActivationType nonlinearity, const T negative_slope) {
-  if (nonlinearity == ActivationType::kNone || nonlinearity == ActivationType::kSigmoid) {
+T CalculateGain(const ActivationType activation_type, const T negative_slope) {
+  if (activation_type == ActivationType::kNone || activation_type == ActivationType::kSigmoid) {
     return static_cast<T>(1);
-  } else if (nonlinearity == ActivationType::kTanH) {
+  } else if (activation_type == ActivationType::kTanH) {
     return static_cast<T>(5.0 / 3);
-  } else if (nonlinearity == ActivationType::kRelu) {
+  } else if (activation_type == ActivationType::kRelu) {
     return static_cast<T>(std::sqrt(2.0));
-  } else if (nonlinearity == ActivationType::kLeakyRelu) {
+  } else if (activation_type == ActivationType::kLeakyRelu) {
     return static_cast<T>(std::sqrt(2.0 / (1.0 + std::pow(negative_slope, 2))));
   } else {
     UNIMPLEMENTED();
@@ -167,7 +167,8 @@ void KaimingUniformInitializer(const KaimingUniformInitializerConf& initializer_
   CHECK(blob->shape().elem_cnt());
   const VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
   const T fan = GenInitialFan<T>(variance_norm, blob, data_format);
-  const T gain = CalculateGain(initializer_conf.nonlinearity(), initializer_conf.negative_slope());
+  const T gain =
+      CalculateGain(initializer_conf.activation_type(), initializer_conf.negative_slope());
   const T std = gain / std::sqrt(fan);
   const T bound = std::sqrt(static_cast<T>(3.0)) * std;
   RngUniform<T>(blob->shape().elem_cnt(), static_cast<T>(-bound), static_cast<T>(bound),
@@ -180,7 +181,8 @@ void KaimingNormalInitializer(const KaimingNormalInitializerConf& initializer_co
   CHECK(blob->shape().elem_cnt());
   const VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
   const T fan = GenInitialFan<T>(variance_norm, blob, data_format);
-  const T gain = CalculateGain(initializer_conf.nonlinearity(), initializer_conf.negative_slope());
+  const T gain =
+      CalculateGain(initializer_conf.activation_type(), initializer_conf.negative_slope());
   const T std = gain / std::sqrt(fan);
   RngNormal<T>(blob->shape().elem_cnt(), ZeroVal<T>::value, static_cast<T>(std), random_seed,
                blob->mut_dptr<T>());
