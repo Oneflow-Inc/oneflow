@@ -11,14 +11,16 @@ void RleEncodeKernel::ForwardDataContent(
 
   const size_t max_len = static_cast<size_t>(out->static_shape().At(1));
   const uint8_t* in_ptr = in->dptr<uint8_t>();
+  int8_t* out_ptr = out->mut_dptr<int8_t>();
   FOR_RANGE(int32_t, i, 0, out->shape().At(0)) {
     const int32_t im_idx = in->record_id_in_device_piece(i);
     const int32_t height = size->dptr<int32_t>(im_idx)[0];
     const int32_t width = size->dptr<int32_t>(im_idx)[1];
     const int32_t hxw = in->static_shape().Count(1);
+    const int32_t max_rle_len = out->static_shape().Count(1);
     CHECK_LE(height * width, hxw);
-    const size_t len =
-        RleUtil::EncodeToString(in_ptr + i * hxw, height, width, max_len, out->mut_dptr<char>(i));
+    const size_t len = RleUtil::EncodeToString(in_ptr + i * hxw, height, width, max_len,
+                                               reinterpret_cast<char*>(out_ptr + i * max_rle_len));
     out->set_dim1_valid_num(i, len);
   }
 };
