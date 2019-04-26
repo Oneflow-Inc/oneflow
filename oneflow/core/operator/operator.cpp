@@ -233,7 +233,9 @@ void Operator::InferSbpSignatureIf(
 
 bool Operator::HasOutDiff4Lbi(const LogicalBlobId& lbi) const {
   CHECK_EQ(lbi.op_name(), op_name());
-  return std::find(output_diff_bns().begin(), output_diff_bns().end(), GenDiffBn(lbi.blob_name()))
+  return std::find_if(
+             output_diff_bns().cbegin(), output_diff_bns().cend(),
+             [&](const std::string& diff_bn) { return BnInOp2Lbi(GenUnDiffBn(diff_bn)) == lbi; })
          != output_diff_bns().end();
 }
 
