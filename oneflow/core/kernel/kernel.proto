@@ -182,6 +182,10 @@ message GatherKernelConf {
   required int64 axis = 1;
 }
 
+message LocalGatherKernelConf {
+  required int64 axis = 1;
+}
+
 message VariableKernelConf {
   required bool is_fw_inplace = 1;
   required bool is_bw_inplace = 2;
@@ -237,9 +241,10 @@ message KernelConf {
     SigmoidCrossEntropyLossKernelConf sigmoid_cross_entropy_loss_conf = 404;
     IdentityLossKernelConf identity_loss_conf = 405;
     GatherKernelConf gather_conf = 406;
-    VariableKernelConf variable_conf = 407;
-    RecordLoadKernelConf record_load_conf = 408;
-    PReluKernelConf prelu_conf = 409;
-    SmoothL1LossKernelConf smooth_l1_loss_conf = 410;
+    LocalGatherKernelConf local_gather_conf = 407;
+    VariableKernelConf variable_conf = 421;
+    RecordLoadKernelConf record_load_conf = 422;
+    PReluKernelConf prelu_conf = 423;
+    SmoothL1LossKernelConf smooth_l1_loss_conf = 424;
   }
 }

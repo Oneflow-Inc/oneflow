@@ -44,7 +44,13 @@ struct GatherSwitchUtil final {
 
 template<DeviceType device_type, typename T>
 const PbMessage& GatherKernel<device_type, T>::GetCustomizedOpConf() const {
-  return this->op_conf().gather_conf();
+  if (this->op_conf().has_gather_conf()) {
+    return this->op_conf().gather_conf();
+  } else if (this->op_conf().has_local_gather_conf()) {
+    return this->op_conf().local_gather_conf();
+  } else {
+    UNIMPLEMENTED();
+  }
 }
 
 template<DeviceType device_type, typename T>
@@ -62,6 +68,22 @@ void GatherKernel<device_type, T>::BackwardDataContent(
       SwitchCase(BnInOp2Blob("indices")->data_type()), ctx.device_ctx, BnInOp2Blob("indices"),
       BnInOp2Blob(GenDiffBn("out")), this->kernel_conf().gather_conf().axis(),
       BnInOp2Blob(GenDiffBn("in")));
+}
+
+template<DeviceType device_type, typename T>
+void GatherKernel<device_type, T>::ForwardDim0ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* in_blob = BnInOp2Blob("in");
+  const Blob* indices_blob = BnInOp2Blob("indices");
+  Blob* out_blob = BnInOp2Blob("out");
+  const int64_t axis = this->kernel_conf().local_gather_conf().axis();
+  if (axis == 0 && indices_blob->has_dim0_valid_num_field()) {
+    out_blob->CopyDim0ValidNumFrom(ctx.device_ctx, indices_blob);
+  } else if (axis > 0 && in_blob->has_dim0_valid_num_field()) {
+    out_blob->CopyDim0ValidNumFrom(ctx.device_ctx, in_blob);
+  } else {
+    UNIMPLEMENTED();
+  }
 }
 
 template<typename T, typename K>
@@ -109,5 +131,6 @@ void GatherKernelUtil<DeviceType::kCPU, T, K>::Backward(DeviceCtx* ctx, const K*
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kGatherConf, GatherKernel, FLOATING_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kLocalGatherConf, GatherKernel, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
