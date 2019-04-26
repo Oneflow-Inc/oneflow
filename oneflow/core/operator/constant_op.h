@@ -22,6 +22,7 @@ class ConstantOp final : public Operator {
 
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
+  void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
   void GetSbpSignatureRules(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const override;

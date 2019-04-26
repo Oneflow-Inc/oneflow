@@ -148,6 +148,11 @@ void NormalModelUpdtOp::GetSbpSignatureRules(
   rules->emplace_back(MakeModelUpdtOpSplitSignatureRule(this, broadcast_parallel_bns));
 }
 
+void NormalModelUpdtOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  for (const auto& ibn : input_bns()) { CHECK_EQ(*HasBatchDim4BnInOp(ibn), false); }
+}
+
 REGISTER_OP_CREATOR(OperatorConf::kNormalMdupdtConf, [](const OperatorConf& op_conf) -> Operator* {
   return NewObj<NormalModelUpdtOp>(op_conf.normal_mdupdt_conf().user_conf().normal_mdupdt_case());
 });

@@ -96,6 +96,11 @@ void ConstantOp::VirtualGenKernelConf(
   kernel_conf->set_data_type(data_type);
 }
 
+void ConstantOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  *HasBatchDim4BnInOp("out") = false;
+}
+
 REGISTER_OP(OperatorConf::kConstantConf, ConstantOp);
 
 }  // namespace oneflow

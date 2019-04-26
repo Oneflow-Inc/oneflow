@@ -141,6 +141,13 @@ class Operator {
       const ParallelContext*) const {
     UNIMPLEMENTED();
   }
+
+  void InferHasBatchDimIf(
+      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+    InferHasBatchDim(LogicalBlobDesc4Ibn, HasBatchDim4BnInOp);
+  }
+
   // Infer out blob's time shape
   void InferOutputBlobTimeShapeIf(
       std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
@@ -257,6 +264,13 @@ class Operator {
   OutputBlobModifier* MutOutputBlobModifier4Obn(const std::string& obn);
 
  private:
+  virtual void InferHasBatchDim(
+      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+    InferHasBatchDim(HasBatchDim4BnInOp);
+  }
+  virtual void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const;
+
   void GetSbpSignatureRulesIf(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       std::vector<std::unique_ptr<const SbpSignatureRule>>*) const;
