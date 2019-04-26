@@ -130,6 +130,11 @@ void GatherGradOp::GetSbpSignatureRules(
   rules->emplace_back(new GatherGradModelParallelSbpSignatureRule(this));
 }
 
+void GatherGradOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  *HasBatchDim4BnInOp("in_diff") = false;
+}
+
 REGISTER_OP(OperatorConf::kGatherGradConf, GatherGradOp);
 
 }  // namespace oneflow
