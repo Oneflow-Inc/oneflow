@@ -34,10 +34,6 @@ void PrintKernel::Forward(const KernelCtx& ctx,
     CHECK_EQ(cur_blob->shape().At(0), record_num);
     CHECK_EQ(cur_blob->has_data_id_field(), has_data_id_field);
     CHECK_EQ(cur_blob->has_col_num_field(), has_col_num_field);
-    FOR_RANGE(int32_t, record_id, 0, record_num) {
-      CHECK_EQ(first_blob->record_id_in_device_piece(record_id),
-               cur_blob->record_id_in_device_piece(record_id));
-    }
   }
 
   FOR_RANGE(int64_t, record_id, 0, record_num) {
