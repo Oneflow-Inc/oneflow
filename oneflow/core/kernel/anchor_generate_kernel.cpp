@@ -33,6 +33,8 @@ void AnchorGenerateKernel<T>::ForwardDim0ValidNum(
   const Blob* images_blob = BnInOp2Blob("images");
   const int64_t batch_height = images_blob->shape().At(1);
   const int64_t batch_width = images_blob->shape().At(2);
+  CHECK_EQ(batch_height, images_blob->instance_shape().At(0));
+  CHECK_EQ(batch_width, images_blob->instance_shape().At(1));
 
   const int64_t num_anchors_per_cell = conf.anchor_scales_size() * conf.aspect_ratios_size();
   const float fm_stride = conf.feature_map_stride();
