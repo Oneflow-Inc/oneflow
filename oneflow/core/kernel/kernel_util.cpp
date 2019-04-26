@@ -143,9 +143,10 @@ template<typename T>
 void XavierInitializer(const XavierInitializerConf& initializer_conf, uint32_t random_seed,
                        Blob* blob, const std::string& data_format) {
   CHECK(blob->shape().elem_cnt());
-  VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
-  T scale = std::sqrt(static_cast<T>(3) / GenInitialFan<T>(variance_norm, blob, data_format));
-  RngUniform<T>(blob->shape().elem_cnt(), static_cast<T>(-scale), static_cast<T>(scale),
+  const VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
+  const T fan = GenInitialFan<T>(variance_norm, blob, data_format);
+  const T bound = std::sqrt(static_cast<T>(3) / fan);
+  RngUniform<T>(blob->shape().elem_cnt(), static_cast<T>(-bound), static_cast<T>(bound),
                 random_seed, blob->mut_dptr<T>());
 }
 
@@ -153,8 +154,9 @@ template<typename T>
 void MsraInitializer(const MsraInitializerConf& initializer_conf, uint32_t random_seed, Blob* blob,
                      const std::string& data_format) {
   CHECK(blob->shape().elem_cnt());
-  VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
-  T std = std::sqrt(static_cast<T>(2) / GenInitialFan<T>(variance_norm, blob, data_format));
+  const VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
+  const T fan = GenInitialFan<T>(variance_norm, blob, data_format);
+  const T std = std::sqrt(static_cast<T>(2) / fan);
   RngNormal<T>(blob->shape().elem_cnt(), ZeroVal<T>::value, static_cast<T>(std), random_seed,
                blob->mut_dptr<T>());
 }
@@ -163,7 +165,7 @@ template<typename T>
 void KaimingUniformInitializer(const KaimingUniformInitializerConf& initializer_conf,
                                uint32_t random_seed, Blob* blob, const std::string& data_format) {
   CHECK(blob->shape().elem_cnt());
-  VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
+  const VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
   const T fan = GenInitialFan<T>(variance_norm, blob, data_format);
   const T gain = CalculateGain(initializer_conf.nonlinearity(), initializer_conf.negative_slope());
   const T std = gain / std::sqrt(fan);
@@ -176,7 +178,7 @@ template<typename T>
 void KaimingNormalInitializer(const KaimingNormalInitializerConf& initializer_conf,
                               uint32_t random_seed, Blob* blob, const std::string& data_format) {
   CHECK(blob->shape().elem_cnt());
-  VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
+  const VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
   const T fan = GenInitialFan<T>(variance_norm, blob, data_format);
   const T gain = CalculateGain(initializer_conf.nonlinearity(), initializer_conf.negative_slope());
   const T std = gain / std::sqrt(fan);
