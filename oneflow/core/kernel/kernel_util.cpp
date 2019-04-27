@@ -140,52 +140,36 @@ T CalculateGain(const ActivationType activation_type, const T negative_slope) {
 }
 
 template<typename T>
-void XavierInitializer(const XavierInitializerConf& initializer_conf, uint32_t random_seed,
-                       Blob* blob, const std::string& data_format) {
-  CHECK(blob->shape().elem_cnt());
-  const VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
-  const T fan = GenInitialFan<T>(variance_norm, blob, data_format);
-  const T bound = std::sqrt(static_cast<T>(3) / fan);
-  RngUniform<T>(blob->shape().elem_cnt(), static_cast<T>(-bound), static_cast<T>(bound),
-                random_seed, blob->mut_dptr<T>());
-}
-
-template<typename T>
 void MsraInitializer(const MsraInitializerConf& initializer_conf, uint32_t random_seed, Blob* blob,
                      const std::string& data_format) {
   CHECK(blob->shape().elem_cnt());
   const VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
   const T fan = GenInitialFan<T>(variance_norm, blob, data_format);
-  const T std = std::sqrt(static_cast<T>(2) / fan);
-  RngNormal<T>(blob->shape().elem_cnt(), ZeroVal<T>::value, static_cast<T>(std), random_seed,
-               blob->mut_dptr<T>());
+  const T gain =
+      CalculateGain(initializer_conf.activation_type(), initializer_conf.negative_slope());
+  const T std = gain / (std::sqrt(fan));
+  const Distribution distribution = static_cast<Distribution>(initializer_conf.distribution());
+  if (distribution == Distribution::kUniform) {
+    const T bound = std::sqrt(static_cast<T>(3.0)) * std;
+    RngUniform<T>(blob->shape().elem_cnt(), static_cast<T>(-bound), static_cast<T>(bound),
+                  random_seed, blob->mut_dptr<T>());
+  } else if (distribution == Distribution::kNormal) {
+    RngNormal<T>(blob->shape().elem_cnt(), ZeroVal<T>::value, static_cast<T>(std), random_seed,
+                 blob->mut_dptr<T>());
+  } else {
+    UNIMPLEMENTED();
+  }
 }
 
 template<typename T>
-void KaimingUniformInitializer(const KaimingUniformInitializerConf& initializer_conf,
-                               uint32_t random_seed, Blob* blob, const std::string& data_format) {
-  CHECK(blob->shape().elem_cnt());
-  const VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
-  const T fan = GenInitialFan<T>(variance_norm, blob, data_format);
-  const T gain =
-      CalculateGain(initializer_conf.activation_type(), initializer_conf.negative_slope());
-  const T std = gain / std::sqrt(fan);
-  const T bound = std::sqrt(static_cast<T>(3.0)) * std;
-  RngUniform<T>(blob->shape().elem_cnt(), static_cast<T>(-bound), static_cast<T>(bound),
-                random_seed, blob->mut_dptr<T>());
-}
-
-template<typename T>
-void KaimingNormalInitializer(const KaimingNormalInitializerConf& initializer_conf,
-                              uint32_t random_seed, Blob* blob, const std::string& data_format) {
-  CHECK(blob->shape().elem_cnt());
-  const VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
-  const T fan = GenInitialFan<T>(variance_norm, blob, data_format);
-  const T gain =
-      CalculateGain(initializer_conf.activation_type(), initializer_conf.negative_slope());
-  const T std = gain / std::sqrt(fan);
-  RngNormal<T>(blob->shape().elem_cnt(), ZeroVal<T>::value, static_cast<T>(std), random_seed,
-               blob->mut_dptr<T>());
+void XavierInitializer(const XavierInitializerConf& initializer_conf, uint32_t random_seed,
+                       Blob* blob, const std::string& data_format) {
+  MsraInitializerConf msra_conf;
+  msra_conf.set_variance_norm(initializer_conf.variance_norm());
+  msra_conf.set_activation_type(ActivationType::kNone);
+  msra_conf.set_negative_slope(0);
+  msra_conf.set_distribution(initializer_conf.distribution());
+  MsraInitializer<T>(msra_conf, random_seed, blob, data_format);
 }
 
 template<typename T>
@@ -583,12 +567,6 @@ KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& ini
     XavierInitializer<T>(initializer_conf.xavier_conf(), random_seed, blob, data_format);
   } else if (initializer_conf.has_msra_conf()) {
     MsraInitializer<T>(initializer_conf.msra_conf(), random_seed, blob, data_format);
-  } else if (initializer_conf.has_kaiming_uniform_conf()) {
-    KaimingUniformInitializer<T>(initializer_conf.kaiming_uniform_conf(), random_seed, blob,
-                                 data_format);
-  } else if (initializer_conf.has_kaiming_normal_conf()) {
-    KaimingNormalInitializer<T>(initializer_conf.kaiming_normal_conf(), random_seed, blob,
-                                data_format);
   } else if (initializer_conf.has_range_conf()) {
     RangeInitializer<T>(initializer_conf.range_conf(), random_seed, blob);
   } else {

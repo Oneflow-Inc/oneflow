@@ -50,24 +50,21 @@ enum VarianceNorm {
   kAverage = 2;
 }
 
+enum Distribution {
+  kUniform = 0;
+  kNormal = 1;
+}
+
 message XavierInitializerConf {
   required VarianceNorm variance_norm = 1;
+  optional Distribution distribution = 2 [default = kUniform];
 }
 
 message MsraInitializerConf {
   required VarianceNorm variance_norm = 1;
-}
-
-message KaimingUniformInitializerConf {
-  required VarianceNorm variance_norm = 1;
-  optional ActivationType activation_type = 2 [default = kLeakyRelu];
+  optional ActivationType activation_type = 2 [default = kRelu];
   optional float negative_slope = 3 [default = 0.01];
-}
-
-message KaimingNormalInitializerConf {
-  required VarianceNorm variance_norm = 1;
-  optional ActivationType activation_type = 2 [default = kLeakyRelu];
-  optional float negative_slope = 3 [default = 0.01];
+  optional Distribution distribution = 4 [default = kUniform];
 }
 
 //output[D_0 ... D_(axis - 1) i D_(axis + 1) ... D_n] = start + i * stride
@@ -95,8 +92,6 @@ message InitializerConf {
     MsraInitializerConf msra_conf = 8;
     RangeInitializerConf range_conf = 9;
     IntRangeInitializerConf int_range_conf = 10;
-    KaimingUniformInitializerConf kaiming_uniform_conf = 11;
-    KaimingNormalInitializerConf kaiming_normal_conf = 12;
   }
 }
 
