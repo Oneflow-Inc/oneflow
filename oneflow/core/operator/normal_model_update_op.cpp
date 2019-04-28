@@ -23,7 +23,6 @@ class ModelUpdtOpBroadcastSignatureRule final : public ParallelSbpSignatureRule 
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
     const auto& model_sbp_infer_hint = SbpInferHint4Ibn("model");
-    CHECK(model_sbp_infer_hint.is_model_blob());
     if (model_sbp_infer_hint.sbp_parallel().has_broadcast_parallel()) {
       // TODO: CHECK(parallel_desc.EqualsIgnoringPolicy(model_sbp_infer_hint.parallel_desc()));
       return MakeSbpSigMatchSuccess();
@@ -59,7 +58,6 @@ class ModelUpdtOpSplitSignatureRule final : public ParallelSbpSignatureRule {
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
     const auto& model_sbp_infer_hint = SbpInferHint4Ibn("model");
-    CHECK(model_sbp_infer_hint.is_model_blob());
     if (model_sbp_infer_hint.sbp_parallel().has_split_parallel()) {
       return MakeSbpSigMatchSuccess();
     } else {

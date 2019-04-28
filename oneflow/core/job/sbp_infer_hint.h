@@ -9,10 +9,9 @@ namespace oneflow {
 
 class SbpInferHint final {
  public:
-  SbpInferHint(bool is_model_blob, bool has_batch_dim, const ParallelDesc* parallel_desc,
+  SbpInferHint(bool has_batch_dim, const ParallelDesc* parallel_desc,
                const BlobDesc* logical_blob_desc, const SbpParallel& sbp_parallel)
-      : is_model_blob_(is_model_blob),
-        has_batch_dim_(has_batch_dim),
+      : has_batch_dim_(has_batch_dim),
         parallel_desc_(parallel_desc),
         logical_blob_desc_(logical_blob_desc),
         sbp_parallel_(sbp_parallel) {}
@@ -20,7 +19,7 @@ class SbpInferHint final {
   ~SbpInferHint() = default;
 
   // Getters
-  bool is_model_blob() const { return is_model_blob_; }
+  bool is_model_blob() const { return !has_batch_dim_; }
   int64_t parallel_num() const { return parallel_desc_->parallel_num(); }
   int64_t num_axes() const { return logical_blob_desc_->shape().NumAxes(); }
   int64_t split_axis() const;
@@ -35,7 +34,6 @@ class SbpInferHint final {
   const SbpParallel& sbp_parallel() const { return sbp_parallel_; }
 
  private:
-  const bool is_model_blob_;
   const bool has_batch_dim_;
   const ParallelDesc* parallel_desc_;
   const BlobDesc* logical_blob_desc_;
