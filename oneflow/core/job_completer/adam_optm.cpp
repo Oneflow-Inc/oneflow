@@ -17,7 +17,7 @@ void SetScalarShapeAndSbpConf(OperatorConf* op_conf, JobBuilder* job_builder) {
   op_conf->mutable_variable_conf()->mutable_shape()->clear_dim();
   op_conf->mutable_variable_conf()->mutable_shape()->add_dim(1);
   CHECK_NE(op_conf->name(), std::string(""));
-  job_builder->MutSbpParallel4Lbi(GenLogicalBlobId(op_conf->name() + "/out"))
+  job_builder->MutSbpParallel4Oba(GenOpBlobArg(op_conf->name(), "out"))
       ->mutable_broadcast_parallel();
 }
 

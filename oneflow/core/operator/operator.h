@@ -344,6 +344,13 @@ inline LogicalBlobId GenPackedLbi() {
   return lbi;
 }
 
+inline OpBlobArg GenOpBlobArg(const std::string& op_name, const std::string& bn_in_op) {
+  OpBlobArg oba;
+  oba.set_op_name(op_name);
+  oba.set_bn_in_op(bn_in_op);
+  return oba;
+}
+
 inline LogicalBlobId GenLogicalBlobId(const std::string& lbn) {
   LogicalBlobId lbi;
   size_t pos = lbn.find('/');

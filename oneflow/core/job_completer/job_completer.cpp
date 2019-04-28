@@ -42,11 +42,27 @@ void UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(
   }
 }
 
+void BindIdenticalSbpObaPairsBetweenIbns(const OpNode& op_node, JobBuilder* job_builder) {
+  HashMap<LogicalBlobId, std::vector<OpBlobArg>> in_lbi2obas;
+  for (const std::string& ibn : op_node.op().input_bns()) {
+    in_lbi2obas[op_node.op().BnInOp2Lbi(ibn)].push_back(GenOpBlobArg(op_node.op().op_name(), ibn));
+  }
+  for (const auto& pair : in_lbi2obas) {
+    if (pair.second.size() > 1) {
+      FOR_RANGE(int32_t, i, 1, pair.second.size()) {
+        job_builder->BindIdenticalSbpOpBlobArgPair(pair.second.at(0), pair.second.at(i));
+      }
+    }
+  }
+}
+
 void UpdateOpSbpSignatureHint(
     const OpGraph& op_graph,
     const HashMap<std::string, HashMap<std::string, LogicalBlobId>>& op_name2ibn2in_diff_lbi,
     Job* job) {
   JobBuilder job_builder(job);
+  op_graph.ForEachNode(
+      [&](OpNode* op_node) { BindIdenticalSbpObaPairsBetweenIbns(*op_node, &job_builder); });
   auto IsBroadcastSbpSignature = [](const OpNode* op_node) {
     for (const auto& ibn : op_node->op().input_bns()) {
       if (op_node->SbpParallel4BnInOp(ibn).has_broadcast_parallel() == false) { return false; }
@@ -78,10 +94,8 @@ void UpdateOpSbpSignatureHint(
       for (const auto& ibn : op_node->op().input_bns()) { Handler(ibn); }
       for (const auto& obn : op_node->op().output_bns()) { Handler(obn); }
     };
-    OpBlobArg oba;
-    oba.set_op_name(op_node->op().op_name());
     ForEachBn([&](const std::string& bn_in_op) {
-      oba.set_bn_in_op(bn_in_op);
+      const auto& oba = GenOpBlobArg(op_node->op().op_name(), bn_in_op);
       oba2sbp_parallel[oba] = &op_node->SbpParallel4Lbi(op_node->op().BnInOp2Lbi(bn_in_op));
     });
   });

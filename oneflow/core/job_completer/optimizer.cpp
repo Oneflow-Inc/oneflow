@@ -41,13 +41,8 @@ void AddOptimizerOpConf(
 
 void BindTwoVariableOpObnSbpConf(const std::string& lhs_op_name, const std::string& rhs_op_name,
                                  JobBuilder* job_builder) {
-  OpBlobArg first;
-  first.set_op_name(lhs_op_name);
-  first.set_bn_in_op("out");
-  OpBlobArg second;
-  second.set_op_name(rhs_op_name);
-  second.set_bn_in_op("out");
-  job_builder->BindIdenticalSbpOpBlobArgPair(first, second);
+  job_builder->BindIdenticalSbpOpBlobArgPair(GenOpBlobArg(lhs_op_name, "out"),
+                                             GenOpBlobArg(rhs_op_name, "out"));
 }
 
 template<typename T>

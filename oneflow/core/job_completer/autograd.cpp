@@ -167,12 +167,12 @@ void BuildTotalLossInstanceNumIdOpConf(
       id_op_conf.set_name(std::string("System-TotalLossInstanceNum-Identity_") + NewUniqueId());
       auto* id_conf = id_op_conf.mutable_tuple_identity_conf();
       id_conf->add_in(GenLogicalBlobName(total_loss_instance_num_lbi));
-      id_conf->add_out("out");
+      id_conf->add_out("out_0");
       job_builder->AddOps(pair.first.parallel_conf(), {id_op_conf});
-      job_builder->MutSbpParallel4Lbi(GenLogicalBlobId(id_op_conf.name() + "/out"))
+      job_builder->MutSbpParallel4Oba(GenOpBlobArg(id_op_conf.name(), "out_0"))
           ->mutable_broadcast_parallel();
       parallel_desc2total_loss_instance_num_lbi->emplace(
-          pair.first, GenLogicalBlobId(id_op_conf.name() + "/out"));
+          pair.first, GenLogicalBlobId(id_op_conf.name() + "/out_0"));
     } else {
       UNIMPLEMENTED();
     }
@@ -200,7 +200,7 @@ void BuildConstantOpAsTotalLossInstanceNum(
     int64_t elem_cnt = loss_blob_desc.shape().elem_cnt();
     constant_conf->mutable_initializer()->mutable_constant_int_conf()->set_value(elem_cnt);
     job_builder.AddOps(pair.first.parallel_conf(), {constant_op_conf});
-    job_builder.MutSbpParallel4Lbi(GenLogicalBlobId(constant_op_conf.name() + "/out"))
+    job_builder.MutSbpParallel4Oba(GenOpBlobArg(constant_op_conf.name(), "out"))
         ->mutable_broadcast_parallel();
     parallel_desc2total_loss_instance_num_lbi->emplace(
         pair.first, GenLogicalBlobId(constant_op_conf.name() + "/out"));
@@ -271,6 +271,27 @@ std::function<OpNode*(const std::string&)> MakeGetterLossOpNode4OpName(const OpG
   return [loss_op_name2op_node](const std::string& op_name) -> OpNode* {
     return loss_op_name2op_node->at(op_name);
   };
+}
+
+void BindIdenticalSbpObaPairsBetweenFwBw(const OpNode& op_node,
+                                         const std::vector<OperatorConf>& op_confs,
+                                         JobBuilder* job_builder) {
+  HashMap<LogicalBlobId, OpBlobArg> lbi2fw_oba;
+  auto InsertLbi2Oba = [&](const std::string& bn_in_op) {
+    lbi2fw_oba[op_node.op().BnInOp2Lbi(bn_in_op)] = GenOpBlobArg(op_node.op().op_name(), bn_in_op);
+  };
+  for (const std::string& bn : op_node.op().input_bns()) { InsertLbi2Oba(bn); }
+  for (const std::string& bn : op_node.op().output_bns()) { InsertLbi2Oba(bn); }
+  for (const auto& op_conf : op_confs) {
+    auto op = ConstructOp(op_conf, op_node.parallel_desc().device_type());
+    for (const std::string& ibn : op->input_bns()) {
+      const auto& fw_oba_it = lbi2fw_oba.find(op->BnInOp2Lbi(ibn));
+      if (fw_oba_it != lbi2fw_oba.end()) {
+        job_builder->BindIdenticalSbpOpBlobArgPair(GenOpBlobArg(op->op_name(), ibn),
+                                                   fw_oba_it->second);
+      }
+    }
+  }
 }
 
 }  // namespace
@@ -374,6 +395,7 @@ void AutoGrad(const OpGraph& op_graph, Job* job,
     GenerateCloneGradOpIfNeed(*op_node, &ops, *op_name2ibn2in_diff_lbi, lbi2out_diff_lbi);
     GenerateBackwardOpConfIf(op_node->op(), &ops, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp);
     job_builder.AddOps(op_node->parallel_desc().parallel_conf(), ops);
+    BindIdenticalSbpObaPairsBetweenFwBw(*op_node, ops, &job_builder);
   });
 }
 
