@@ -43,11 +43,11 @@ const SbpSigMatchResult MakeSbpSigMatchDeviceSetError(const std::string& configu
 
 const SbpSigMatchResult SbpSignatureRule::MatchIf(
     const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    const ParallelDesc& parallel_desc) const {
+    const SbpSignature& sbp_sig_hint, const ParallelDesc& parallel_desc) const {
   const auto& parallel_res = MatchByParallelNum(parallel_desc.parallel_num());
   if (parallel_res.has_success() == false) { return parallel_res; }
-  if (op().op_conf().sbp_signature_hint().bn_in_op2sbp_parallel().size() > 0) {
-    const auto& result = MatchByObnSbpSigHint(SbpInferHint4Ibn);
+  if (sbp_sig_hint.bn_in_op2sbp_parallel().size() > 0) {
+    const auto& result = MatchBySbpSigHint(SbpInferHint4Ibn, sbp_sig_hint);
     if (result.has_success()) { return result; }
   }
   return MatchByIbnHint(SbpInferHint4Ibn, parallel_desc);
@@ -63,11 +63,12 @@ const SbpSigMatchResult ParallelSbpSignatureRule::MatchByParallelNum(int32_t par
   }
 }
 
-const SbpSigMatchResult ParallelSbpSignatureRule::MatchByObnSbpSigHint(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn) const {
+const SbpSigMatchResult ParallelSbpSignatureRule::MatchBySbpSigHint(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+    const SbpSignature& sbp_sig_hint) const {
   SbpSignature generated_sbp_signature;
   GenerateSignature(SbpInferHint4Ibn, &generated_sbp_signature);
-  if (IsSbpSignatureContaining(generated_sbp_signature, op().op_conf().sbp_signature_hint())) {
+  if (IsSbpSignatureContaining(generated_sbp_signature, sbp_sig_hint)) {
     return MakeSbpSigMatchSuccess();
   } else {
     return MakeSbpSigMatchSignatureMismatch();
@@ -103,8 +104,9 @@ class UnparallelSbpSignatureRule final : public SbpSignatureRule {
     return MakeSbpSigMatchSuccess();
   }
 
-  const SbpSigMatchResult MatchByObnSbpSigHint(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn) const {
+  const SbpSigMatchResult MatchBySbpSigHint(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      const SbpSignature& sbp_sig_hint) const {
     return MakeSbpSigMatchSuccess();
   }
 

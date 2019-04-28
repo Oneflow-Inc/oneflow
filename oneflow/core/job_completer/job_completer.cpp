@@ -72,6 +72,37 @@ void UpdateOpSbpSignatureHint(
       }
     }
   });
+  HashMap<OpBlobArg, const SbpParallel*> oba2sbp_parallel;
+  op_graph.ForEachNode([&](OpNode* op_node) {
+    auto ForEachBn = [&](const std::function<void(const std::string&)>& Handler) {
+      for (const auto& ibn : op_node->op().input_bns()) { Handler(ibn); }
+      for (const auto& obn : op_node->op().output_bns()) { Handler(obn); }
+    };
+    OpBlobArg oba;
+    oba.set_op_name(op_node->op().op_name());
+    ForEachBn([&](const std::string& bn_in_op) {
+      oba.set_bn_in_op(bn_in_op);
+      oba2sbp_parallel[oba] = &op_node->SbpParallel4Lbi(op_node->op().BnInOp2Lbi(bn_in_op));
+    });
+  });
+  auto HasSbpParallel = [&](const OpBlobArg& oba) {
+    return oba2sbp_parallel.find(oba) != oba2sbp_parallel.end();
+  };
+  for (const auto& pair : job->helper().identical_sbp_oba_pairs().pair()) {
+    const SbpParallel* sbp_parallel = nullptr;
+    if (HasSbpParallel(pair.first()) && HasSbpParallel(pair.second())) {
+      CHECK(oba2sbp_parallel.at(pair.first()) == oba2sbp_parallel.at(pair.second()));
+      sbp_parallel = oba2sbp_parallel.at(pair.first());
+    } else if (HasSbpParallel(pair.first())) {
+      sbp_parallel = oba2sbp_parallel.at(pair.first());
+    } else if (HasSbpParallel(pair.second())) {
+      sbp_parallel = oba2sbp_parallel.at(pair.second());
+    } else {
+      UNIMPLEMENTED();
+    }
+    *job_builder.MutSbpParallel4Oba(pair.first()) = *sbp_parallel;
+    *job_builder.MutSbpParallel4Oba(pair.second()) = *sbp_parallel;
+  }
 }
 
 void GenerateOpConf4Trainning(const OpGraph& op_graph, Job* job) {

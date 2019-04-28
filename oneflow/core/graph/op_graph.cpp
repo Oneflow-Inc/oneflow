@@ -366,18 +366,24 @@ void OpGraph::InferOpNodeSbpSignature(
   for (const std::string& ibn : op_node->op().input_bns()) {
     const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
     OpNode* producer = op_node->SrcNode4InputBnInOp(ibn);
-    bool is_model_blob = producer->IsModelBlob4Lbi(lbi);
     const ParallelDesc* parallel_desc = &op_node->parallel_desc();
     const BlobDesc* logical_blob_desc = &producer->LogicalBlobDesc4Lbi(lbi);
     const auto& sbp = producer->SbpParallel4Lbi(lbi);
-    ibn2sbp_infer_hint.emplace(ibn, SbpInferHint(*HasBatchDim4Lbi(lbi), parallel_desc,
-                                                logical_blob_desc, sbp));
+    ibn2sbp_infer_hint.emplace(
+        ibn, SbpInferHint(*HasBatchDim4Lbi(lbi), parallel_desc, logical_blob_desc, sbp));
   }
   SbpSignature* sbp_signature = op_node->mut_sbp_signature();
   auto SbpInferHint4Ibn = [&](const std::string& ibn) -> const SbpInferHint& {
     return ibn2sbp_infer_hint.at(ibn);
   };
-  op_node->op().InferSbpSignatureIf(sbp_signature, SbpInferHint4Ibn, op_node->parallel_desc());
+  SbpSignature sbp_sig_hint;
+  {
+    const auto& op_name2sbp_sig_hint = job.sbp_conf().op_name2sbp_signature_hint();
+    const auto& it = op_name2sbp_sig_hint.find(op_node->op().op_name());
+    if (it != op_name2sbp_sig_hint.end()) { sbp_sig_hint = it->second; }
+  }
+  op_node->op().InferSbpSignatureIf(sbp_signature, sbp_sig_hint, SbpInferHint4Ibn,
+                                    op_node->parallel_desc());
   op_node->op().FixSbpSignature(sbp_signature);
 }
 

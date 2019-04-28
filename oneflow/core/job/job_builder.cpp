@@ -71,18 +71,32 @@ SbpParallel* JobBuilder::MutSbpParallel4Lbi(const LogicalBlobId& lbi) const {
   OperatorConf* op_conf = op_name2op_conf_.at(lbi.op_name());
   DeviceType device_type = ParallelDesc(*op_name2parallel_conf_.at(lbi.op_name())).device_type();
   std::shared_ptr<Operator> op = ConstructOp(*op_conf, device_type);
+  auto* sbp_sig = &(*job_->mutable_sbp_conf()->mutable_op_name2sbp_signature_hint())[lbi.op_name()];
   for (const auto& ibn : op->input_bns()) {
-    if (op->BnInOp2Lbi(ibn) == lbi) {
-      return &(*op_conf->mutable_sbp_signature_hint()->mutable_bn_in_op2sbp_parallel())[ibn];
-    }
+    if (op->BnInOp2Lbi(ibn) == lbi) { return &(*sbp_sig->mutable_bn_in_op2sbp_parallel())[ibn]; }
   }
   for (const auto& obn : op->output_bns()) {
-    if (op->BnInOp2Lbi(obn) == lbi) {
-      return &(*op_conf->mutable_sbp_signature_hint()->mutable_bn_in_op2sbp_parallel())[obn];
-    }
+    if (op->BnInOp2Lbi(obn) == lbi) { return &(*sbp_sig->mutable_bn_in_op2sbp_parallel())[obn]; }
   }
   UNIMPLEMENTED();
   return nullptr;
+}
+
+SbpParallel* JobBuilder::MutSbpParallel4Oba(const OpBlobArg& oba) const {
+  auto* sbp_sig = &(*job_->mutable_sbp_conf()->mutable_op_name2sbp_signature_hint())[oba.op_name()];
+  return &(*sbp_sig->mutable_bn_in_op2sbp_parallel())[oba.bn_in_op()];
+}
+
+bool JobBuilder::HasSbpSignature(const std::string& op_name) const {
+  const auto& op_name2hint = job_->mutable_sbp_conf()->mutable_op_name2sbp_signature_hint();
+  const auto& it = op_name2hint->find(op_name);
+  return it != op_name2hint->end() && it->second.bn_in_op2sbp_parallel().size() > 0;
+}
+
+void JobBuilder::BindIdenticalSbpOpBlobArgPair(const OpBlobArg& first, const OpBlobArg& second) {
+  auto* pair = job_->mutable_helper()->mutable_identical_sbp_oba_pairs()->mutable_pair()->Add();
+  *pair->mutable_first() = first;
+  *pair->mutable_second() = second;
 }
 
 }  // namespace oneflow

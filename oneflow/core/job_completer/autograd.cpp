@@ -168,9 +168,9 @@ void BuildTotalLossInstanceNumIdOpConf(
       auto* id_conf = id_op_conf.mutable_tuple_identity_conf();
       id_conf->add_in(GenLogicalBlobName(total_loss_instance_num_lbi));
       id_conf->add_out("out");
-      (*id_op_conf.mutable_sbp_signature_hint()->mutable_bn_in_op2sbp_parallel())["out_0"]
-          .mutable_broadcast_parallel();
       job_builder->AddOps(pair.first.parallel_conf(), {id_op_conf});
+      job_builder->MutSbpParallel4Lbi(GenLogicalBlobId(id_op_conf.name() + "/out"))
+          ->mutable_broadcast_parallel();
       parallel_desc2total_loss_instance_num_lbi->emplace(
           pair.first, GenLogicalBlobId(id_op_conf.name() + "/out"));
     } else {
@@ -193,8 +193,6 @@ void BuildConstantOpAsTotalLossInstanceNum(
   for (const auto& pair : parallel_desc2optimizer_node_cnt) {
     OperatorConf constant_op_conf;
     constant_op_conf.set_name("System-TotalLossInstanceNum-Constant_" + NewUniqueId());
-    (*constant_op_conf.mutable_sbp_signature_hint()->mutable_bn_in_op2sbp_parallel())["out"]
-        .mutable_broadcast_parallel();
     auto* constant_conf = constant_op_conf.mutable_constant_conf();
     constant_conf->set_out("out");
     constant_conf->mutable_shape()->add_dim(1);
@@ -202,6 +200,8 @@ void BuildConstantOpAsTotalLossInstanceNum(
     int64_t elem_cnt = loss_blob_desc.shape().elem_cnt();
     constant_conf->mutable_initializer()->mutable_constant_int_conf()->set_value(elem_cnt);
     job_builder.AddOps(pair.first.parallel_conf(), {constant_op_conf});
+    job_builder.MutSbpParallel4Lbi(GenLogicalBlobId(constant_op_conf.name() + "/out"))
+        ->mutable_broadcast_parallel();
     parallel_desc2total_loss_instance_num_lbi->emplace(
         pair.first, GenLogicalBlobId(constant_op_conf.name() + "/out"));
   }

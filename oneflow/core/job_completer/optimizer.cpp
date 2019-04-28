@@ -3,27 +3,21 @@
 namespace oneflow {
 
 void GenerateOptimizerOpConfWrapperStruct::Call(
-    const VariableOp& var_op, std::vector<OperatorConf>* op_confs, JobHelperConf* job_helper_conf,
+    const VariableOp& var_op, const ParallelConf& parallel_conf, JobBuilder* job_builder,
     const std::function<const LogicalBlobId&(const std::string&)>& DiffLbi4BnInOp,
     const LogicalBlobId& total_loss_instance_num_lbi) const {
-  if (func_) {
-    (*func_)(var_op, op_confs, job_helper_conf, DiffLbi4BnInOp, total_loss_instance_num_lbi);
-  } else if (naive_func_) {
-    (*naive_func_)(var_op, op_confs, DiffLbi4BnInOp, total_loss_instance_num_lbi);
-  } else {
-    UNIMPLEMENTED();
-  }
+  (*func_)(var_op, parallel_conf, job_builder, DiffLbi4BnInOp, total_loss_instance_num_lbi);
 }
 
 void GenerateOptimizerOpConfIf(
-    const VariableOp& var_op, std::vector<OperatorConf>* op_confs, JobHelperConf* job_helper_conf,
+    const VariableOp& var_op, const ParallelConf& parallel_conf, JobBuilder* job_builder,
     const std::function<const LogicalBlobId&(const std::string&)>& DiffLbi4BnInOp,
     const LogicalBlobId& total_loss_instance_num_lbi) {
   const auto& train_conf =
       Global<JobDesc>::Get()->other_conf().predict_conf().tmp_split_fw_bw_train_conf();
   auto optimizer_case = train_conf.model_update_conf().normal_mdupdt_case();
   auto* obj = NewObj<GenerateOptimizerOpConfWrapperStruct>(optimizer_case);
-  obj->Call(var_op, op_confs, job_helper_conf, DiffLbi4BnInOp, total_loss_instance_num_lbi);
+  obj->Call(var_op, parallel_conf, job_builder, DiffLbi4BnInOp, total_loss_instance_num_lbi);
 }
 
 void AddOptimizerOpConf(
@@ -39,10 +33,21 @@ void AddOptimizerOpConf(
       return lbi2diff_lbi.at(var_op->BnInOp2Lbi(bn));
     };
     const auto& parallel_desc = op_node->parallel_desc();
-    GenerateOptimizerOpConfIf(*var_op, &optimizer_op_confs, job->mutable_helper(), DiffLbi4BnInOp,
-                              LossInstanceNum4ParallelDesc(parallel_desc));
+    GenerateOptimizerOpConfIf(*var_op, op_node->parallel_desc().parallel_conf(), &job_builder,
+                              DiffLbi4BnInOp, LossInstanceNum4ParallelDesc(parallel_desc));
     job_builder.AddOps(parallel_desc.parallel_conf(), optimizer_op_confs);
   });
+}
+
+void BindTwoVariableOpObnSbpConf(const std::string& lhs_op_name, const std::string& rhs_op_name,
+                                 JobBuilder* job_builder) {
+  OpBlobArg first;
+  first.set_op_name(lhs_op_name);
+  first.set_bn_in_op("out");
+  OpBlobArg second;
+  second.set_op_name(rhs_op_name);
+  second.set_bn_in_op("out");
+  job_builder->BindIdenticalSbpOpBlobArgPair(first, second);
 }
 
 template<typename T>
