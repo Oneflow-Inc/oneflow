@@ -148,12 +148,13 @@ void MsraInitializer(const MsraInitializerConf& initializer_conf, uint32_t rando
   const T gain =
       CalculateGain(initializer_conf.activation_type(), initializer_conf.negative_slope());
   const T std = gain / (std::sqrt(fan));
-  const Distribution distribution = static_cast<Distribution>(initializer_conf.distribution());
-  if (distribution == Distribution::kUniform) {
+  const DistributionType distribution =
+      static_cast<DistributionType>(initializer_conf.distribution());
+  if (distribution == DistributionType::kUniform) {
     const T bound = std::sqrt(static_cast<T>(3.0)) * std;
     RngUniform<T>(blob->shape().elem_cnt(), static_cast<T>(-bound), static_cast<T>(bound),
                   random_seed, blob->mut_dptr<T>());
-  } else if (distribution == Distribution::kNormal) {
+  } else if (distribution == DistributionType::kNormal) {
     RngNormal<T>(blob->shape().elem_cnt(), ZeroVal<T>::value, static_cast<T>(std), random_seed,
                  blob->mut_dptr<T>());
   } else {
@@ -164,12 +165,23 @@ void MsraInitializer(const MsraInitializerConf& initializer_conf, uint32_t rando
 template<typename T>
 void XavierInitializer(const XavierInitializerConf& initializer_conf, uint32_t random_seed,
                        Blob* blob, const std::string& data_format) {
-  MsraInitializerConf msra_conf;
-  msra_conf.set_variance_norm(initializer_conf.variance_norm());
-  msra_conf.set_activation_type(ActivationType::kNone);
-  msra_conf.set_negative_slope(0);
-  msra_conf.set_distribution(initializer_conf.distribution());
-  MsraInitializer<T>(msra_conf, random_seed, blob, data_format);
+  CHECK(blob->shape().elem_cnt());
+  const VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
+  const T fan = GenInitialFan<T>(variance_norm, blob, data_format);
+  const T gain = initializer_conf.gain();
+  const T std = gain / (std::sqrt(fan));
+  const DistributionType distribution =
+      static_cast<DistributionType>(initializer_conf.distribution());
+  if (distribution == DistributionType::kUniform) {
+    const T bound = std::sqrt(static_cast<T>(3.0)) * std;
+    RngUniform<T>(blob->shape().elem_cnt(), static_cast<T>(-bound), static_cast<T>(bound),
+                  random_seed, blob->mut_dptr<T>());
+  } else if (distribution == DistributionType::kNormal) {
+    RngNormal<T>(blob->shape().elem_cnt(), ZeroVal<T>::value, static_cast<T>(std), random_seed,
+                 blob->mut_dptr<T>());
+  } else {
+    UNIMPLEMENTED();
+  }
 }
 
 template<typename T>

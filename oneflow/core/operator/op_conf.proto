@@ -50,21 +50,22 @@ enum VarianceNorm {
   kAverage = 2;
 }
 
-enum Distribution {
+enum DistributionType {
   kUniform = 0;
   kNormal = 1;
 }
 
 message XavierInitializerConf {
   required VarianceNorm variance_norm = 1;
-  optional Distribution distribution = 2 [default = kUniform];
+  optional float gain = 2 [default = 1.0];
+  optional DistributionType distribution = 3 [default = kUniform];
 }
 
 message MsraInitializerConf {
   required VarianceNorm variance_norm = 1;
   optional ActivationType activation_type = 2 [default = kRelu];
   optional float negative_slope = 3 [default = 0.01];
-  optional Distribution distribution = 4 [default = kUniform];
+  optional DistributionType distribution = 4 [default = kNormal];
 }
 
 //output[D_0 ... D_(axis - 1) i D_(axis + 1) ... D_n] = start + i * stride
