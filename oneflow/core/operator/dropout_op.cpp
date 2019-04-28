@@ -47,6 +47,13 @@ void DropoutOp::VirtualGenKernelConf(
   GetBlobDesc4BnInOp("out")->shape().ToProto(mut_dropout_conf->mutable_out());
 }
 
+void DropoutOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  for (const auto& obn : output_bns()) {
+    *HasBatchDim4BnInOp(obn) = *HasBatchDim4BnInOp(SoleIbn());
+  }
+}
+
 REGISTER_OP(OperatorConf::kDropoutConf, DropoutOp);
 
 }  // namespace oneflow

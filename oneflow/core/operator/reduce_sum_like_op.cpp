@@ -35,6 +35,11 @@ void ReduceSumLikeOp::GetSbpSignatureRules(
   rules->emplace_back(MakeMultiIbnsBroadcastSbpSignatureRule(this));
 }
 
+void ReduceSumLikeOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  *HasBatchDim4BnInOp("y") = *HasBatchDim4BnInOp("like");
+}
+
 REGISTER_OP(OperatorConf::kReduceSumLikeConf, ReduceSumLikeOp);
 
 }  // namespace oneflow

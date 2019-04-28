@@ -138,6 +138,30 @@ void MatmulOp::InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> 
   }
 }
 
+void MatmulOp::InferHasBatchDim(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  const MatmulOpConf& conf = op_conf().matmul_conf();
+  int32_t num_axes = LogicalBlobDesc4Ibn("a").shape().NumAxes();
+  if (num_axes > 2) {
+    CHECK(*HasBatchDim4BnInOp("a"));
+    CHECK(*HasBatchDim4BnInOp("b"));
+    *HasBatchDim4BnInOp("out") = true;
+  } else {
+    if (*HasBatchDim4BnInOp("a") == false) {
+      *HasBatchDim4BnInOp("out") = false;
+    } else {
+      if (conf.transpose_a()) {
+        CHECK(*HasBatchDim4BnInOp("b"));
+        CHECK(!conf.transpose_b());
+        *HasBatchDim4BnInOp("out") = false;
+      } else {
+        *HasBatchDim4BnInOp("out") = true;
+      }
+    }
+  }
+}
+
 REGISTER_OP(OperatorConf::kMatmulConf, MatmulOp);
 
 }  // namespace oneflow

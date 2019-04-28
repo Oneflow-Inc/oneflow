@@ -24,6 +24,10 @@ void AccOp::InferOutputBlobTimeShape(
 
 const PbMessage& AccOp::GetCustomizedConf() const { return op_conf().acc_conf(); }
 
+void AccOp::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  *HasBatchDim4BnInOp("acc") = false;
+}
+
 REGISTER_OP(OperatorConf::kAccConf, AccOp);
 
 }  // namespace oneflow

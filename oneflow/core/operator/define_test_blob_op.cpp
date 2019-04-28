@@ -32,6 +32,11 @@ void DefineTestBlobOp::InferBlobDescs(
   if (conf.has_dim0_valid_num()) { CHECK(conf.has_dim0_inner_shape()); }
 }
 
+void DefineTestBlobOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  *HasBatchDim4BnInOp("out") = true;
+}
+
 REGISTER_OP(OperatorConf::kDefineTestBlobConf, DefineTestBlobOp);
 
 }  // namespace oneflow

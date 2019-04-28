@@ -136,6 +136,11 @@ void ShapeElemCntOp::VirtualGenKernelConf(
                                                                  inclusive_axis.end()};
 }
 
+void ShapeElemCntOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  *HasBatchDim4BnInOp("out") = false;
+}
+
 REGISTER_OP(OperatorConf::kShapeElemCntConf, ShapeElemCntOp);
 
 }  // namespace oneflow
