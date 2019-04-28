@@ -140,13 +140,12 @@ T CalculateGain(const ActivationType activation_type, const T negative_slope) {
 }
 
 template<typename T>
-void MsraInitializer(const MsraInitializerConf& initializer_conf, uint32_t random_seed, Blob* blob,
-                     const std::string& data_format) {
+void XavierInitializer(const XavierInitializerConf& initializer_conf, uint32_t random_seed,
+                       Blob* blob, const std::string& data_format) {
   CHECK(blob->shape().elem_cnt());
   const VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
   const T fan = GenInitialFan<T>(variance_norm, blob, data_format);
-  const T gain =
-      CalculateGain(initializer_conf.activation_type(), initializer_conf.negative_slope());
+  const T gain = initializer_conf.gain();
   const T std = gain / (std::sqrt(fan));
   const DistributionType distribution =
       static_cast<DistributionType>(initializer_conf.distribution());
@@ -163,12 +162,13 @@ void MsraInitializer(const MsraInitializerConf& initializer_conf, uint32_t rando
 }
 
 template<typename T>
-void XavierInitializer(const XavierInitializerConf& initializer_conf, uint32_t random_seed,
-                       Blob* blob, const std::string& data_format) {
+void MsraInitializer(const MsraInitializerConf& initializer_conf, uint32_t random_seed, Blob* blob,
+                     const std::string& data_format) {
   CHECK(blob->shape().elem_cnt());
   const VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
   const T fan = GenInitialFan<T>(variance_norm, blob, data_format);
-  const T gain = initializer_conf.gain();
+  const T gain =
+      CalculateGain(initializer_conf.activation_type(), initializer_conf.negative_slope());
   const T std = gain / (std::sqrt(fan));
   const DistributionType distribution =
       static_cast<DistributionType>(initializer_conf.distribution());
