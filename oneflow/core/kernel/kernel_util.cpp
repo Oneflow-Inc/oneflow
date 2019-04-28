@@ -125,23 +125,63 @@ T GenInitialFan(VarianceNorm variance_norm, Blob* blob, const std::string& data_
 }
 
 template<typename T>
+T CalculateGain(const ActivationType activation_type, const T negative_slope) {
+  if (activation_type == ActivationType::kNone || activation_type == ActivationType::kSigmoid) {
+    return static_cast<T>(1);
+  } else if (activation_type == ActivationType::kTanH) {
+    return static_cast<T>(5.0 / 3);
+  } else if (activation_type == ActivationType::kRelu) {
+    return static_cast<T>(std::sqrt(2.0));
+  } else if (activation_type == ActivationType::kLeakyRelu) {
+    return static_cast<T>(std::sqrt(2.0 / (1.0 + std::pow(negative_slope, 2))));
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+template<typename T>
 void XavierInitializer(const XavierInitializerConf& initializer_conf, uint32_t random_seed,
                        Blob* blob, const std::string& data_format) {
   CHECK(blob->shape().elem_cnt());
-  VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
-  T scale = std::sqrt(static_cast<T>(3) / GenInitialFan<T>(variance_norm, blob, data_format));
-  RngUniform<T>(blob->shape().elem_cnt(), static_cast<T>(-scale), static_cast<T>(scale),
-                random_seed, blob->mut_dptr<T>());
+  const VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
+  const T fan = GenInitialFan<T>(variance_norm, blob, data_format);
+  const T gain = initializer_conf.gain();
+  const T std = gain / (std::sqrt(fan));
+  const DistributionType distribution =
+      static_cast<DistributionType>(initializer_conf.distribution());
+  if (distribution == DistributionType::kUniform) {
+    const T bound = std::sqrt(static_cast<T>(3.0)) * std;
+    RngUniform<T>(blob->shape().elem_cnt(), static_cast<T>(-bound), static_cast<T>(bound),
+                  random_seed, blob->mut_dptr<T>());
+  } else if (distribution == DistributionType::kNormal) {
+    RngNormal<T>(blob->shape().elem_cnt(), ZeroVal<T>::value, static_cast<T>(std), random_seed,
+                 blob->mut_dptr<T>());
+  } else {
+    UNIMPLEMENTED();
+  }
 }
 
 template<typename T>
 void MsraInitializer(const MsraInitializerConf& initializer_conf, uint32_t random_seed, Blob* blob,
                      const std::string& data_format) {
   CHECK(blob->shape().elem_cnt());
-  VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
-  T std = std::sqrt(static_cast<T>(2) / GenInitialFan<T>(variance_norm, blob, data_format));
-  RngNormal<T>(blob->shape().elem_cnt(), ZeroVal<T>::value, static_cast<T>(std), random_seed,
-               blob->mut_dptr<T>());
+  const VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
+  const T fan = GenInitialFan<T>(variance_norm, blob, data_format);
+  const T gain =
+      CalculateGain(initializer_conf.activation_type(), initializer_conf.negative_slope());
+  const T std = gain / (std::sqrt(fan));
+  const DistributionType distribution =
+      static_cast<DistributionType>(initializer_conf.distribution());
+  if (distribution == DistributionType::kUniform) {
+    const T bound = std::sqrt(static_cast<T>(3.0)) * std;
+    RngUniform<T>(blob->shape().elem_cnt(), static_cast<T>(-bound), static_cast<T>(bound),
+                  random_seed, blob->mut_dptr<T>());
+  } else if (distribution == DistributionType::kNormal) {
+    RngNormal<T>(blob->shape().elem_cnt(), ZeroVal<T>::value, static_cast<T>(std), random_seed,
+                 blob->mut_dptr<T>());
+  } else {
+    UNIMPLEMENTED();
+  }
 }
 
 template<typename T>
@@ -581,4 +621,4 @@ KU_INTEGRAL_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& ini
   template struct KernelUtil<DeviceType::kCPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_SEQ);
 
-}  //  namespace oneflow
+}  // namespace oneflow
