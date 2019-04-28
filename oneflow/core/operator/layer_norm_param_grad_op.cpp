@@ -111,6 +111,15 @@ void LayerNormParamGradOp::GetSbpSignatureRules(
   rules->emplace_back(new LayerNormParamGradDataParallelSbpSignatureRule(this));
 }
 
+void LayerNormParamGradOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = false; }
+  const LayerNormParamGradOpConf& conf = op_conf().layer_norm_param_grad_conf();
+  if (conf.has_normalized_diff()) {
+    *HasBatchDim4BnInOp("normalized_diff") = *HasBatchDim4BnInOp("dy");
+  }
+}
+
 REGISTER_OP(OperatorConf::kLayerNormParamGradConf, LayerNormParamGradOp);
 
 }  // namespace oneflow

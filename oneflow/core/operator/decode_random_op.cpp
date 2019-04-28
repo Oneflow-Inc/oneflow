@@ -31,6 +31,11 @@ void DecodeRandomOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   out_blob_desc->set_has_data_id_field(Global<JobDesc>::Get()->SizeOfOneDataId() > 0);
 }
 
+void DecodeRandomOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  *HasBatchDim4BnInOp("out") = true;
+}
+
 REGISTER_OP(OperatorConf::kDecodeRandomConf, DecodeRandomOp);
 
 }  // namespace oneflow

@@ -130,6 +130,11 @@ void VariableOp::VirtualGenKernelConf(
   conf->mutable_variable_conf()->set_is_bw_inplace(*is_bw_inplace_);
 }
 
+void VariableOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  *HasBatchDim4BnInOp("out") = false;
+}
+
 REGISTER_OP(OperatorConf::kVariableConf, VariableOp);
 
 }  // namespace oneflow

@@ -161,4 +161,9 @@ LogicalBlobId LossOp::obn2lbi(const std::string& output_bn) const {
   return ret;
 }
 
+void LossOp::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = false; }
+  *HasBatchDim4BnInOp("loss") = *HasBatchDim4BnInOp("prediction");
+}
+
 }  // namespace oneflow

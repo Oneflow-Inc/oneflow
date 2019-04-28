@@ -84,6 +84,13 @@ void ReduceMeanOp::GetSbpSignatureRules(
   }
 }
 
+void ReduceMeanOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  const auto& reduced_axes = op_conf().reduce_mean_conf().axis();
+  HashSet<int64_t> conf_axes = {reduced_axes.begin(), reduced_axes.end()};
+  *HasBatchDim4BnInOp("out") = !(conf_axes.empty() || (conf_axes.find(0) != conf_axes.end()));
+}
+
 REGISTER_OP(OperatorConf::kReduceMeanConf, ReduceMeanOp);
 
 }  // namespace oneflow

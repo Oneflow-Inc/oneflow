@@ -57,6 +57,12 @@ LogicalBlobId DecodeOFRecordOp::obn2lbi(const std::string& output_bn) const {
   return ret;
 }
 
+void DecodeOFRecordOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  CHECK(*HasBatchDim4BnInOp(SoleIbn()));
+  for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = true; }
+}
+
 REGISTER_CPU_OP(OperatorConf::kDecodeOfrecordConf, DecodeOFRecordOp);
 
 }  // namespace oneflow

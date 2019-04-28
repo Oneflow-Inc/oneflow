@@ -104,6 +104,12 @@ LogicalBlobId ReduceConcatOp::obn2lbi(const std::string& output_bn) const {
   }
 }
 
+void ReduceConcatOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  for (const auto& ibn : input_bns()) { CHECK_EQ(*HasBatchDim4BnInOp(ibn), false); }
+  *HasBatchDim4BnInOp("out") = false;
+}
+
 REGISTER_OP(OperatorConf::kReduceConcatConf, ReduceConcatOp);
 
 }  // namespace oneflow

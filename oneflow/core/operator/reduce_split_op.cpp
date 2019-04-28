@@ -64,6 +64,12 @@ LogicalBlobId ReduceSplitOp::obn2lbi(const std::string& output_bn) const {
   }
 }
 
+void ReduceSplitOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  CHECK_EQ(*HasBatchDim4BnInOp("in"), false);
+  for (const auto& ibn : input_bns()) { *HasBatchDim4BnInOp(ibn) = false; }
+}
+
 REGISTER_OP(OperatorConf::kReduceSplitConf, ReduceSplitOp);
 
 }  // namespace oneflow

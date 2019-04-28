@@ -25,6 +25,11 @@ void RecordLoadOp::VirtualGenKernelConf(
   kernel_conf->mutable_record_load_conf()->set_device_piece_size(device_piece_size);
 }
 
+void RecordLoadOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  *HasBatchDim4BnInOp("out") = true;
+}
+
 REGISTER_CPU_OP(OperatorConf::kRecordLoadConf, RecordLoadOp);
 
 }  // namespace oneflow
