@@ -138,7 +138,7 @@ void ShapeElemCntOp::VirtualGenKernelConf(
 
 void ShapeElemCntOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("out") = false;
+  *HasBatchDim4BnInOp("y") = false;
 }
 
 REGISTER_OP(OperatorConf::kShapeElemCntConf, ShapeElemCntOp);

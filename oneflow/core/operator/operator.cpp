@@ -193,7 +193,9 @@ void Operator::InferSbpSignature(
       }
     }
     CHECK_EQ(signature_check.size(), 1);
-    CHECK(IsSbpSignatureContaining(*sbp_signature, sbp_sig_hint));
+    if (parallel_desc.parallel_num() > 1) {
+      CHECK(IsSbpSignatureContaining(*sbp_signature, sbp_sig_hint));
+    }
   } else if (match_success_cnt == 0) {
     std::stringstream ss;
     FOR_RANGE(int32_t, i, 0, rules.size()) {
