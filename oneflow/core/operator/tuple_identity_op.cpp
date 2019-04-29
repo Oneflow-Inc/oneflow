@@ -21,9 +21,9 @@ class TupleIdentitySbpSignatureRule final : public ParallelSbpSignatureRule {
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      SbpSignature* sbp_signature) const override {
+      const SbpSignature& sbp_sig_hint, SbpSignature* sbp_signature) const override {
     auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
-    const auto& bn2conf_sbp = op().op_conf().sbp_signature_hint().bn_in_op2sbp_parallel();
+    const auto& bn2conf_sbp = sbp_sig_hint.bn_in_op2sbp_parallel();
     FOR_RANGE(int32_t, i, 0, op().input_bns().size()) {
       const SbpParallel* sbp_parallel = nullptr;
       const auto& conf_sbp_it = bn2conf_sbp.find(op().output_bns().Get(i));

@@ -6,6 +6,7 @@ import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/job/dlnet_conf.proto";
 import "oneflow/core/job/resource.proto";
 import "oneflow/core/job/placement.proto";
+import "oneflow/core/job/sbp_parallel.proto";
 
 message TrainConf {
   required int64 batch_size = 1; // batch_size % piece_size = 0
@@ -45,6 +46,10 @@ message FileSystemConf {
     NetworkFsConf networkfs_conf = 2;
     HdfsConf hdfs_conf = 3;
   }
+}
+
+message SbpConf {
+  map<string, SbpSignature> op_name2sbp_signature_hint = 1;
 }
 
 message ExperimentalRunConf {
@@ -105,5 +110,6 @@ message JobConf {
   required DLNetConf net = 1;
   required Resource resource = 2;
   required Placement placement = 3;
-  required Config other = 4;
+  optional SbpConf sbp_conf = 4;
+  required Config other = 5;
 }

@@ -11,7 +11,7 @@ class ConstantOpSbpSignatureRule final : public ParallelSbpSignatureRule {
 
   ConstantOpSbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
 
-  const std::string Description() const override { return op().op_name() + ": S(0) -> S|B"; }
+  const std::string Description() const override { return op().op_name() + ": S(0) -> B"; }
 
   const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
@@ -27,13 +27,7 @@ class ConstantOpSbpSignatureRule final : public ParallelSbpSignatureRule {
       CHECK(SbpInferHint4Ibn("tick").is_data_split());
       (*bn2sbp)["tick"].mutable_split_parallel()->set_axis(0);
     }
-    const auto& conf_bn2_sbp = op().op_conf().sbp_signature_hint().bn_in_op2sbp_parallel();
-    const auto& sbp_it = conf_bn2_sbp.find("out");
-    if (sbp_it != conf_bn2_sbp.end()) {
-      (*bn2sbp)["out"] = sbp_it->second;
-    } else {
-      (*bn2sbp)["out"].mutable_broadcast_parallel();
-    }
+    (*bn2sbp)["out"].mutable_broadcast_parallel();
   }
 };
 

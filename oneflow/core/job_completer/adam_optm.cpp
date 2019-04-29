@@ -4,29 +4,30 @@ namespace oneflow {
 
 namespace {
 
-OperatorConf GenerateAdamHelperVariableOpConf(const VariableOp& op, const std::string& name) {
+OperatorConf GenerateAdamHelperVariableOpConf(const VariableOp& op, const std::string& name,
+                                              JobBuilder* job_builder) {
   OperatorConf helper_variable_op(op.op_conf());
   helper_variable_op.set_name(op.op_name() + "-" + name);
   helper_variable_op.mutable_variable_conf()->set_out("out");
+  BindTwoVariableOpObnSbpConf(helper_variable_op.name(), op.op_name(), job_builder);
   return helper_variable_op;
 }
 
-void SetScalarShape(OperatorConf* op_conf, JobHelperConf* job_helper_conf) {
+void SetScalarShapeAndSbpConf(OperatorConf* op_conf, JobBuilder* job_builder) {
   op_conf->mutable_variable_conf()->mutable_shape()->clear_dim();
   op_conf->mutable_variable_conf()->mutable_shape()->add_dim(1);
-  (*op_conf->mutable_sbp_signature_hint()->mutable_bn_in_op2sbp_parallel())["out"]
-      .mutable_broadcast_parallel();
+  CHECK_NE(op_conf->name(), std::string(""));
+  job_builder->MutSbpParallel4Oba(GenOpBlobArg(op_conf->name(), "out"))
+      ->mutable_broadcast_parallel();
 }
 
 void GenerateOptimizerOpConf(
-    const VariableOp& op, std::vector<OperatorConf>* op_confs, JobHelperConf* job_helper_conf,
+    const VariableOp& op, const ParallelConf& parallel_conf, JobBuilder* job_builder,
     const std::function<const LogicalBlobId&(const std::string&)>& DiffLbi4BnInOp,
     const LogicalBlobId& total_loss_instance_num_lbi) {
-  const OperatorConf& m_var = GenerateAdamHelperVariableOpConf(op, "m");
-  op_confs->push_back(m_var);
-
-  const OperatorConf& v_var = GenerateAdamHelperVariableOpConf(op, "v");
-  op_confs->push_back(v_var);
+  const OperatorConf& m_var = GenerateAdamHelperVariableOpConf(op, "m", job_builder);
+  const OperatorConf& v_var = GenerateAdamHelperVariableOpConf(op, "v", job_builder);
+  job_builder->AddOps(parallel_conf, {m_var, v_var});
 
   OperatorConf mdupdt_op;
   mdupdt_op.set_name(op.op_name() + "_optimizer");
@@ -39,13 +40,11 @@ void GenerateOptimizerOpConf(
   OperatorConf beta1_t_var;
   OperatorConf beta2_t_var;
   if (mdupdt_op_conf->user_conf().adam_conf().do_bias_correction()) {
-    beta1_t_var = GenerateAdamHelperVariableOpConf(op, "beta1_t");
-    SetScalarShape(&beta1_t_var, job_helper_conf);
-    op_confs->push_back(beta1_t_var);
-
-    beta2_t_var = GenerateAdamHelperVariableOpConf(op, "beta2_t");
-    SetScalarShape(&beta2_t_var, job_helper_conf);
-    op_confs->push_back(beta2_t_var);
+    beta1_t_var = GenerateAdamHelperVariableOpConf(op, "beta1_t", job_builder);
+    beta2_t_var = GenerateAdamHelperVariableOpConf(op, "beta2_t", job_builder);
+    job_builder->AddOps(parallel_conf, {beta1_t_var, beta2_t_var});
+    SetScalarShapeAndSbpConf(&beta1_t_var, job_builder);
+    SetScalarShapeAndSbpConf(&beta2_t_var, job_builder);
   }
   ConstructMdUpdtOpConf(op, DiffLbi4BnInOp, total_loss_instance_num_lbi, mdupdt_op_conf);
   mdupdt_op_conf->set_m(m_var.name() + "/out");
@@ -54,7 +53,7 @@ void GenerateOptimizerOpConf(
     mdupdt_op_conf->set_beta1_t(beta1_t_var.name() + "/out");
     mdupdt_op_conf->set_beta2_t(beta2_t_var.name() + "/out");
   }
-  op_confs->push_back(mdupdt_op);
+  job_builder->AddOps(parallel_conf, {mdupdt_op});
 }
 
 }  // namespace

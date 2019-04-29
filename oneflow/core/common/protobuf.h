@@ -11,6 +11,8 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/register/logical_blob_id.pb.h"
+#include "oneflow/core/register/op_blob_arg.pb.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
 
 namespace oneflow {
@@ -179,6 +181,12 @@ inline bool operator==(const LogicalBlobId& lhs, const LogicalBlobId& rhs) {
 
 inline bool operator!=(const LogicalBlobId& lhs, const LogicalBlobId& rhs) { return !(lhs == rhs); }
 
+inline bool operator==(const OpBlobArg& lhs, const OpBlobArg& rhs) {
+  return PbMd().Equals(lhs, rhs);
+}
+
+inline bool operator!=(const OpBlobArg& lhs, const OpBlobArg& rhs) { return !(lhs == rhs); }
+
 // Persistent
 
 PersistentOutStream& operator<<(PersistentOutStream&, const PbMessage&);
@@ -192,6 +200,13 @@ struct hash<oneflow::LogicalBlobId> {
   size_t operator()(const oneflow::LogicalBlobId& lbi) const {
     return std::hash<std::string>()(lbi.op_name() + lbi.blob_name() + std::to_string(lbi.clone_id())
                                     + std::to_string(lbi.is_packed_id()));
+  }
+};
+
+template<>
+struct hash<oneflow::OpBlobArg> {
+  size_t operator()(const oneflow::OpBlobArg& oba) const {
+    return std::hash<std::string>()(oba.op_name() + oba.bn_in_op());
   }
 };
 

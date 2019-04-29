@@ -139,7 +139,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void InferTimeShape() const;
   void InferIsModelBlob() const;
   void InferOpNodeSbpSignature(
-      OpNode* op_node, const Job& job,
+      OpNode* op_node, const SbpConf& sbp_conf,
       const std::function<bool*(const LogicalBlobId&)>& HasBatchDim4Lbi) const;
   void InferOpNodeLogicalBlobDesc(OpNode* op_node) const;
   void InferLogicalBlobDesc(const Job& job) const;
