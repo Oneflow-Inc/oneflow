@@ -42,49 +42,69 @@ void UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(
   }
 }
 
-void UpdateOpSbpSignatureHint(
-    const OpGraph& op_graph,
-    const HashMap<std::string, HashMap<std::string, LogicalBlobId>>& op_name2ibn2in_diff_lbi,
-    Job* job) {
-  JobBuilder job_builder(job);
-  auto IsBroadcastSbpSignature = [](const OpNode* op_node) {
-    for (const auto& ibn : op_node->op().input_bns()) {
-      if (op_node->SbpParallel4BnInOp(ibn).has_broadcast_parallel() == false) { return false; }
-    }
-    for (const auto& obn : op_node->op().output_bns()) {
-      if (op_node->SbpParallel4BnInOp(obn).has_broadcast_parallel() == false) { return false; }
-    }
-    return true;
-  };
-  op_graph.ForEachNode([&](OpNode* op_node) {
-    const auto& op_name = (op_node->op().op_name());
-    const auto& op_iter = op_name2ibn2in_diff_lbi.find(op_name);
-    if (op_iter == op_name2ibn2in_diff_lbi.end()) { return; }
-    for (const auto& ibn : op_node->op().input_bns()) {
-      const auto& in_diff_lbi_iter = op_iter->second.find(ibn);
-      if (in_diff_lbi_iter == op_iter->second.end()) { continue; }
-      const auto& lbi = op_node->op().BnInOp2Lbi(ibn);
-      SbpParallel* sbp_parallel = job_builder.MutSbpParallel4Lbi(in_diff_lbi_iter->second);
-      if (IsBroadcastSbpSignature(op_node)) {
-        sbp_parallel->mutable_broadcast_parallel();
-      } else {
-        *sbp_parallel = GetDualSbpParallel(op_node->SbpParallel4Lbi(lbi));
+void BindIdenticalSbpObaPairsBetweenIbns(const OpNode& op_node, JobBuilder* job_builder) {
+  HashMap<LogicalBlobId, std::vector<OpBlobArg>> in_lbi2obas;
+  for (const std::string& ibn : op_node.op().input_bns()) {
+    in_lbi2obas[op_node.op().BnInOp2Lbi(ibn)].push_back(GenOpBlobArg(op_node.op().op_name(), ibn));
+  }
+  for (const auto& pair : in_lbi2obas) {
+    if (pair.second.size() > 1) {
+      FOR_RANGE(int32_t, i, 1, pair.second.size()) {
+        job_builder->BindIdenticalSbpOpBlobArgPair(pair.second.at(0), pair.second.at(i));
       }
     }
+  }
+}
+
+void SetSbpSignatureHintByIdenticalSbpObaPairs(const OpGraph& op_graph, JobBuilder* job_builder) {
+  HashMap<OpBlobArg, const SbpParallel*> oba2sbp_parallel;
+  op_graph.ForEachNode([&](OpNode* op_node) {
+    auto ForEachBn = [&](const std::function<void(const std::string&)>& Handler) {
+      for (const auto& ibn : op_node->op().input_bns()) { Handler(ibn); }
+      for (const auto& obn : op_node->op().output_bns()) { Handler(obn); }
+    };
+    ForEachBn([&](const std::string& bn_in_op) {
+      const auto& oba = GenOpBlobArg(op_node->op().op_name(), bn_in_op);
+      oba2sbp_parallel[oba] = &op_node->SbpParallel4Lbi(op_node->op().BnInOp2Lbi(bn_in_op));
+    });
   });
+  auto HasSbpParallel = [&](const OpBlobArg& oba) {
+    return oba2sbp_parallel.find(oba) != oba2sbp_parallel.end();
+  };
+  for (const auto& pair : job_builder->job().helper().identical_sbp_oba_pairs().pair()) {
+    const SbpParallel* sbp_parallel = nullptr;
+    if (HasSbpParallel(pair.first()) && HasSbpParallel(pair.second())) {
+      CHECK(oba2sbp_parallel.at(pair.first()) == oba2sbp_parallel.at(pair.second()));
+      sbp_parallel = oba2sbp_parallel.at(pair.first());
+    } else if (HasSbpParallel(pair.first())) {
+      sbp_parallel = oba2sbp_parallel.at(pair.first());
+    } else if (HasSbpParallel(pair.second())) {
+      sbp_parallel = oba2sbp_parallel.at(pair.second());
+    } else {
+      UNIMPLEMENTED();
+    }
+    *job_builder->MutSbpParallel4Oba(pair.first()) = *sbp_parallel;
+    *job_builder->MutSbpParallel4Oba(pair.second()) = *sbp_parallel;
+  }
+}
+
+void UpdateOpSbpSignatureHint(const OpGraph& op_graph, Job* job) {
+  JobBuilder job_builder(job);
+  op_graph.ForEachNode(
+      [&](OpNode* op_node) { BindIdenticalSbpObaPairsBetweenIbns(*op_node, &job_builder); });
+  SetSbpSignatureHintByIdenticalSbpObaPairs(op_graph, &job_builder);
 }
 
 void GenerateOpConf4Trainning(const OpGraph& op_graph, Job* job) {
   LogicalBlobId total_loss_instance_num;
-  HashMap<std::string, HashMap<std::string, LogicalBlobId>> op_name2ibn2in_diff_lbi;
   HashMap<LogicalBlobId, LogicalBlobId> lbi2diff_lbi;
-  AutoGrad(op_graph, job, &op_name2ibn2in_diff_lbi, &lbi2diff_lbi);
+  AutoGrad(op_graph, job, &lbi2diff_lbi);
   std::function<const LogicalBlobId&(const ParallelDesc&)> LossInstanceNum4ParallelDesc;
   AddTotalLossInstanceNumOpConf(op_graph, job, lbi2diff_lbi, &LossInstanceNum4ParallelDesc);
   AddOptimizerOpConf(op_graph, job, lbi2diff_lbi, LossInstanceNum4ParallelDesc);
   AddSaver(op_graph, job);
   UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(lbi2diff_lbi, job);
-  UpdateOpSbpSignatureHint(op_graph, op_name2ibn2in_diff_lbi, job);
+  UpdateOpSbpSignatureHint(op_graph, job);
 }
 
 std::function<ParallelConf*(const std::string&)> MakeGetterMutParallelConf4OpName(

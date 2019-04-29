@@ -156,9 +156,11 @@ class Operator {
       std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
       Shape* time_shape) const;
   // Infer blob's SbpSignature
-  void InferSbpSignatureIf(SbpSignature* sbp_signature,
+  void InferSbpSignatureIf(SbpSignature* sbp_signature, const SbpSignature& sbp_sig_hint,
                            std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
-                           const ParallelDesc& parallel_desc) const;
+                           const ParallelDesc& parallel_desc) const {
+    InferSbpSignature(sbp_signature, sbp_sig_hint, SbpInferHint4Ibn, parallel_desc);
+  }
   virtual void FixSbpSignature(SbpSignature* sbp_signature) const {}
   // Infer is_model_blob
   void InferIsModelBlob4OutputBlobsIf(
@@ -264,6 +266,10 @@ class Operator {
   OutputBlobModifier* MutOutputBlobModifier4Obn(const std::string& obn);
 
  private:
+  virtual void InferSbpSignature(
+      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_hint,
+      std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const;
   virtual void InferHasBatchDim(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
@@ -336,6 +342,13 @@ inline LogicalBlobId GenPackedLbi() {
   LogicalBlobId lbi;
   lbi.set_is_packed_id(true);
   return lbi;
+}
+
+inline OpBlobArg GenOpBlobArg(const std::string& op_name, const std::string& bn_in_op) {
+  OpBlobArg oba;
+  oba.set_op_name(op_name);
+  oba.set_bn_in_op(bn_in_op);
+  return oba;
 }
 
 inline LogicalBlobId GenLogicalBlobId(const std::string& lbn) {

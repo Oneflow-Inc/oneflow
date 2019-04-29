@@ -67,22 +67,23 @@ void JobBuilder::AddOrMutOps(const ParallelConf& parallel_conf,
   MutOps(mut_ops);
 }
 
-SbpParallel* JobBuilder::MutSbpParallel4Lbi(const LogicalBlobId& lbi) const {
-  OperatorConf* op_conf = op_name2op_conf_.at(lbi.op_name());
-  DeviceType device_type = ParallelDesc(*op_name2parallel_conf_.at(lbi.op_name())).device_type();
-  std::shared_ptr<Operator> op = ConstructOp(*op_conf, device_type);
-  for (const auto& ibn : op->input_bns()) {
-    if (op->BnInOp2Lbi(ibn) == lbi) {
-      return &(*op_conf->mutable_sbp_signature_hint()->mutable_bn_in_op2sbp_parallel())[ibn];
-    }
+void JobBuilder::ForEachOperator(const std::function<void(const Operator&)>& Handler) const {
+  for (const auto& pair : op_name2op_conf_) {
+    DeviceType device_type = ParallelDesc(*op_name2parallel_conf_.at(pair.first)).device_type();
+    std::shared_ptr<Operator> op = ConstructOp(*pair.second, device_type);
+    Handler(*op);
   }
-  for (const auto& obn : op->output_bns()) {
-    if (op->BnInOp2Lbi(obn) == lbi) {
-      return &(*op_conf->mutable_sbp_signature_hint()->mutable_bn_in_op2sbp_parallel())[obn];
-    }
-  }
-  UNIMPLEMENTED();
-  return nullptr;
+}
+
+SbpParallel* JobBuilder::MutSbpParallel4Oba(const OpBlobArg& oba) const {
+  auto* sbp_sig = &(*job_->mutable_sbp_conf()->mutable_op_name2sbp_signature_hint())[oba.op_name()];
+  return &(*sbp_sig->mutable_bn_in_op2sbp_parallel())[oba.bn_in_op()];
+}
+
+void JobBuilder::BindIdenticalSbpOpBlobArgPair(const OpBlobArg& first, const OpBlobArg& second) {
+  auto* pair = job_->mutable_helper()->mutable_identical_sbp_oba_pairs()->mutable_pair()->Add();
+  *pair->mutable_first() = first;
+  *pair->mutable_second() = second;
 }
 
 }  // namespace oneflow
