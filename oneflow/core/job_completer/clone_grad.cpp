@@ -12,11 +12,12 @@ void GenerateCloneGradOpIfNeed(const OpNode& op_node, std::vector<OperatorConf>*
   HashMap<OpBlobArg, std::vector<LogicalBlobId>> out_oba2in_diff_lbis;
   op_node.ForEachNodeOnOutEdge([&](OpNode* out_node) {
     for (const auto& ibn : out_node->op().input_bns()) {
+      const auto& oba_it = out_lbi2out_oba.find(out_node->op().BnInOp2Lbi(ibn));
+      if (oba_it == out_lbi2out_oba.end()) { continue; }
       const auto& in_diff_lbi_it =
           in_oba2in_diff_lbi.find(GenOpBlobArg(out_node->op().op_name(), ibn));
       if (in_diff_lbi_it == in_oba2in_diff_lbi.end()) { continue; }
-      const auto& oba = out_lbi2out_oba.at(out_node->op().BnInOp2Lbi(ibn));
-      out_oba2in_diff_lbis[oba].push_back(in_diff_lbi_it->second);
+      out_oba2in_diff_lbis[oba_it->second].push_back(in_diff_lbi_it->second);
     }
   });
   for (const auto& obn : op_node.op().output_bns()) {

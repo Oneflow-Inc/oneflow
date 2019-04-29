@@ -25,7 +25,6 @@ class JobBuilder final {
   void MutOps(const std::vector<OperatorConf>& op_confs) const;
   void AddOrMutOps(const ParallelConf& parallel_conf, const std::vector<OperatorConf>& op_confs);
   SbpParallel* MutSbpParallel4Oba(const OpBlobArg& oba) const;
-  bool HasSbpSignature(const std::string& op_name) const;
   void BindIdenticalSbpOpBlobArgPair(const OpBlobArg& first, const OpBlobArg& second);
 
   void ForEachOperator(const std::function<void(const Operator&)>& Handler) const;

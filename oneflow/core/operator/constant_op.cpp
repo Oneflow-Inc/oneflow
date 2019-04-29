@@ -11,7 +11,7 @@ class ConstantOpSbpSignatureRule final : public ParallelSbpSignatureRule {
 
   ConstantOpSbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
 
-  const std::string Description() const override { return op().op_name() + ": S(0) -> S|B"; }
+  const std::string Description() const override { return op().op_name() + ": S(0) -> B"; }
 
   const SbpSigMatchResult MatchByIbnHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,

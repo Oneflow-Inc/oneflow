@@ -67,7 +67,7 @@ const SbpSigMatchResult ParallelSbpSignatureRule::MatchBySbpSigHint(
     const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     const SbpSignature& sbp_sig_hint) const {
   SbpSignature generated_sbp_signature;
-  GenerateSignature(SbpInferHint4Ibn, &generated_sbp_signature);
+  GenerateSignature(SbpInferHint4Ibn, sbp_sig_hint, &generated_sbp_signature);
   if (IsSbpSignatureContaining(generated_sbp_signature, sbp_sig_hint)) {
     return MakeSbpSigMatchSuccess();
   } else {

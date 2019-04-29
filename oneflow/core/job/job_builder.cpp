@@ -80,12 +80,6 @@ SbpParallel* JobBuilder::MutSbpParallel4Oba(const OpBlobArg& oba) const {
   return &(*sbp_sig->mutable_bn_in_op2sbp_parallel())[oba.bn_in_op()];
 }
 
-bool JobBuilder::HasSbpSignature(const std::string& op_name) const {
-  const auto& op_name2hint = job_->mutable_sbp_conf()->mutable_op_name2sbp_signature_hint();
-  const auto& it = op_name2hint->find(op_name);
-  return it != op_name2hint->end() && it->second.bn_in_op2sbp_parallel().size() > 0;
-}
-
 void JobBuilder::BindIdenticalSbpOpBlobArgPair(const OpBlobArg& first, const OpBlobArg& second) {
   auto* pair = job_->mutable_helper()->mutable_identical_sbp_oba_pairs()->mutable_pair()->Add();
   *pair->mutable_first() = first;

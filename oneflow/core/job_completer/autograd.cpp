@@ -296,17 +296,32 @@ void BindFwBwObaPairs(const OpGraph& op_graph, const OpBlobArgPairs& fw_bw_oba_p
   }
 }
 
-void CalcFwBwObaPairs(const HashMap<OpBlobArg, LogicalBlobId>& out_oba2out_diff_lbi,
+void CalcFwBwObaPairs(const OpGraph& op_graph,
                       const HashMap<OpBlobArg, LogicalBlobId>& in_oba2in_diff_lbi,
+                      const HashMap<OpBlobArg, LogicalBlobId>& out_oba2out_diff_lbi,
                       const JobBuilder& job_builder, OpBlobArgPairs* fw_bw_oba_pairs) {
-  HashMap<LogicalBlobId, OpBlobArg> out_diff_lbi2out_oba;
-  for (const auto& pair : out_oba2out_diff_lbi) {
-    CHECK(out_diff_lbi2out_oba.emplace(pair.second, pair.first).second);
-  }
   HashMap<LogicalBlobId, OpBlobArg> in_diff_lbi2in_oba;
-  for (const auto& pair : in_oba2in_diff_lbi) {
-    CHECK(in_diff_lbi2in_oba.emplace(pair.second, pair.first).second);
-  };
+  op_graph.ReverseTopoForEachNode([&](OpNode* op_node) {
+    const auto& op = op_node->op();
+    for (const auto& ibn : op.input_bns()) {
+      const auto& in_diff_lbi_it = in_oba2in_diff_lbi.find(GenOpBlobArg(op.op_name(), ibn));
+      if (in_diff_lbi_it == in_oba2in_diff_lbi.end()) { continue; }
+      if (in_diff_lbi2in_oba.find(in_diff_lbi_it->second) == in_diff_lbi2in_oba.end()) {
+        in_diff_lbi2in_oba[in_diff_lbi_it->second] = in_diff_lbi_it->first;
+      }
+    }
+  });
+  HashMap<LogicalBlobId, OpBlobArg> out_diff_lbi2out_oba;
+  op_graph.TopoForEachNode([&](OpNode* op_node) {
+    const auto& op = op_node->op();
+    for (const auto& obn : op.output_bns()) {
+      const auto& out_diff_lbi_it = out_oba2out_diff_lbi.find(GenOpBlobArg(op.op_name(), obn));
+      if (out_diff_lbi_it == out_oba2out_diff_lbi.end()) { continue; }
+      if (out_diff_lbi2out_oba.find(out_diff_lbi_it->second) == out_diff_lbi2out_oba.end()) {
+        out_diff_lbi2out_oba[out_diff_lbi_it->second] = out_diff_lbi_it->first;
+      }
+    }
+  });
   job_builder.ForEachOperator([&](const Operator& op) {
     for (const auto& ibn : op.input_bns()) {
       const auto& out_oba_it = out_diff_lbi2out_oba.find(op.BnInOp2Lbi(ibn));
@@ -455,7 +470,8 @@ void AutoGrad(const OpGraph& op_graph, Job* job,
     job_builder.AddOps(op_node->parallel_desc().parallel_conf(), ops);
   });
   OpBlobArgPairs fw_bw_oba_pairs;
-  CalcFwBwObaPairs(in_oba2in_diff_lbi, out_oba2out_diff_lbi, job_builder, &fw_bw_oba_pairs);
+  CalcFwBwObaPairs(op_graph, in_oba2in_diff_lbi, out_oba2out_diff_lbi, job_builder,
+                   &fw_bw_oba_pairs);
   BindFwBwObaPairs(op_graph, fw_bw_oba_pairs, &job_builder);
   CalcOutLbi2OutDiffLbi(op_graph, out_oba2out_diff_lbi, out_lbi2out_diff_lbi);
 }

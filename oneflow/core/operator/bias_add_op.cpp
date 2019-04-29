@@ -21,7 +21,6 @@ bool BiasAddOp::IsInputBlobAllowedModelSplit(const std::string& ibn) const {
 void BiasAddOp::GetSbpSignatureRules(
     const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  rules->emplace_back(MakeDataSplitSbpSignatureRule(this));
   rules->emplace_back(Make_DS_MB_2_DS_SbpSignatureRule(this));
   auto EqZero = [](int32_t axis) { return axis == 0; };
   rules->emplace_back(Make_DB_MS_2_MS_SbpSignatureRule(this, EqZero));
