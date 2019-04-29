@@ -370,8 +370,8 @@ void OpGraph::InferOpNodeSbpSignature(
     const ParallelDesc* parallel_desc = &op_node->parallel_desc();
     const BlobDesc* logical_blob_desc = &producer->LogicalBlobDesc4Lbi(lbi);
     const auto& sbp = producer->SbpParallel4Lbi(lbi);
-    ibn2sbp_infer_hint.emplace(ibn, SbpInferHint(*HasBatchDim4Lbi(lbi), parallel_desc,
-                                                logical_blob_desc, sbp));
+    ibn2sbp_infer_hint.emplace(
+        ibn, SbpInferHint(*HasBatchDim4Lbi(lbi), parallel_desc, logical_blob_desc, sbp));
   }
   SbpSignature* sbp_signature = op_node->mut_sbp_signature();
   auto SbpInferHint4Ibn = [&](const std::string& ibn) -> const SbpInferHint& {
