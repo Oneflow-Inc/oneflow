@@ -3,6 +3,7 @@
 
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/register/op_blob_arg.pb.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -18,13 +19,16 @@ class JobBuilder final {
   explicit JobBuilder(Job* job);
   ~JobBuilder() = default;
 
+  const Job& job() const { return *job_; }
+
   void AddOps(const ParallelConf& parallel_conf, const std::vector<OperatorConf>& op_confs);
   void MutOps(const std::vector<OperatorConf>& op_confs) const;
   void AddOrMutOps(const ParallelConf& parallel_conf, const std::vector<OperatorConf>& op_confs);
-  SbpParallel* MutSbpParallel4Lbi(const LogicalBlobId& lbi) const;
   SbpParallel* MutSbpParallel4Oba(const OpBlobArg& oba) const;
   bool HasSbpSignature(const std::string& op_name) const;
   void BindIdenticalSbpOpBlobArgPair(const OpBlobArg& first, const OpBlobArg& second);
+
+  void ForEachOperator(const std::function<void(const Operator&)>& Handler) const;
 
  private:
   Job* job_;
