@@ -45,7 +45,7 @@ void BatchGatherGradOp::GetSbpSignatureRules(
 void BatchGatherGradOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
-      .PartialSum(output_bns())
+      .Split(output_bns(), 0)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 

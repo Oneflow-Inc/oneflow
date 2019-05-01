@@ -122,7 +122,7 @@ void VariableOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
 }
 
 void VariableOp::InferSbpSignature(
-    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf, const SbpSignature& sbp_sig_hint,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
@@ -130,8 +130,8 @@ void VariableOp::InferSbpSignature(
   if (sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
     (*var_sbp_sig_conf.mutable_bn_in_op2sbp_parallel())["out"].mutable_broadcast_parallel();
   }
-  this->Operator::InferSbpSignature(sbp_signature, var_sbp_sig_conf, CalcOrderValue4SbpSig,
-                                    SbpInferHint4Ibn, parallel_desc);
+  this->Operator::InferSbpSignature(sbp_signature, var_sbp_sig_conf, sbp_sig_hint,
+                                    CalcOrderValue4SbpSig, SbpInferHint4Ibn, parallel_desc);
 }
 
 REGISTER_OP(OperatorConf::kVariableConf, VariableOp);

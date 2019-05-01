@@ -29,6 +29,7 @@ class VariableOp final : public Operator {
 
  private:
   void InferSbpSignature(SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+                         const SbpSignature& sbp_sig_hint,
                          const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
                          std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
                          const ParallelDesc& parallel_desc) const override;

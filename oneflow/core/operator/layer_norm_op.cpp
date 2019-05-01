@@ -146,7 +146,7 @@ void LayerNormOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
-      .Broadcast({"gamma", "beta", "mean", "inv_variance"})
+      .Broadcast({"gamma", "beta"})
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 

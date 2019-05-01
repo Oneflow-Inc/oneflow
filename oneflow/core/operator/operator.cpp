@@ -182,7 +182,7 @@ void Operator::GetSbpSignaturesIf(
 }
 
 void Operator::InferSbpSignatureIf(
-    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf, const SbpSignature& sbp_sig_hint,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
@@ -191,8 +191,8 @@ void Operator::InferSbpSignatureIf(
     for (const auto& ibn : input_bns()) { (*bn2sbp)[ibn].mutable_split_parallel()->set_axis(0); }
     for (const auto& obn : output_bns()) { (*bn2sbp)[obn].mutable_split_parallel()->set_axis(0); }
   } else if (parallel_desc.parallel_num() > 1) {
-    InferSbpSignature(sbp_signature, sbp_sig_conf, CalcOrderValue4SbpSig, SbpInferHint4Ibn,
-                      parallel_desc);
+    InferSbpSignature(sbp_signature, sbp_sig_conf, sbp_sig_hint, CalcOrderValue4SbpSig,
+                      SbpInferHint4Ibn, parallel_desc);
   } else {
     UNIMPLEMENTED();
   }
@@ -229,15 +229,21 @@ void Operator::InferSbpSignatureV2(
 }
 
 void Operator::InferSbpSignature(
-    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf, const SbpSignature& sbp_sig_hint,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
+  const SbpSignature* sbp_sig = nullptr;
+  if (sbp_sig_conf.bn_in_op2sbp_parallel().size() > 0) {
+    sbp_sig = &sbp_sig_conf;
+  } else {
+    sbp_sig = &sbp_sig_hint;
+  }
   std::vector<std::unique_ptr<const SbpSignatureRule>> rules;
   GetSbpSignatureRulesIf(SbpInferHint4Ibn, &rules);
   std::vector<SbpSigMatchResult> match_results;
   for (const auto& signature : rules) {
-    match_results.push_back(signature->MatchIf(SbpInferHint4Ibn, sbp_sig_conf, parallel_desc));
+    match_results.push_back(signature->MatchIf(SbpInferHint4Ibn, *sbp_sig, parallel_desc));
   }
   int32_t match_success_cnt = 0;
   for (const auto& result : match_results) {
@@ -247,18 +253,18 @@ void Operator::InferSbpSignature(
     HashSet<SbpSignature> signature_check;
     FOR_RANGE(int32_t, i, 0, rules.size()) {
       if (match_results.at(i).has_success()) {
-        rules.at(i)->GenerateSignatureIf(SbpInferHint4Ibn, sbp_sig_conf, sbp_signature);
+        rules.at(i)->GenerateSignatureIf(SbpInferHint4Ibn, *sbp_sig, sbp_signature);
         signature_check.insert(*sbp_signature);
       }
     }
     CHECK_EQ(signature_check.size(), 1);
     if (parallel_desc.parallel_num() > 1) {
-      CHECK(IsSbpSignatureContaining(*sbp_signature, sbp_sig_conf));
+      CHECK(IsSbpSignatureContaining(*sbp_signature, *sbp_sig));
     }
     SbpSignature sbp_sig_v2;
     InferSbpSignatureV2(&sbp_sig_v2, sbp_sig_conf, CalcOrderValue4SbpSig, SbpInferHint4Ibn,
                         parallel_desc);
-    CHECK(sbp_sig_v2 == *sbp_signature);
+    CHECK(IsSbpSignatureContaining(sbp_sig_v2, *sbp_signature));
   } else if (match_success_cnt == 0) {
     std::stringstream ss;
     FOR_RANGE(int32_t, i, 0, rules.size()) {

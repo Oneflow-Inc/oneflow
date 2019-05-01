@@ -69,7 +69,6 @@ void LayerNormGradOp::GetSbpSignatureRules(
 void LayerNormGradOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
-      .Broadcast({"mean", "inv_variance"})
       .Split(output_bns(), 0)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
