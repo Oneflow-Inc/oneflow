@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/layer_norm_op.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -139,6 +140,14 @@ void LayerNormOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = false; }
   *HasBatchDim4BnInOp("out") = *HasBatchDim4BnInOp("in");
+}
+
+void LayerNormOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split(input_bns(), 0)
+      .Split(output_bns(), 0)
+      .Broadcast({"gamma", "beta", "mean", "inv_variance"})
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_OP(OperatorConf::kLayerNormConf, LayerNormOp);

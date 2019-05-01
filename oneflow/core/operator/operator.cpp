@@ -1,6 +1,7 @@
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -170,10 +171,53 @@ void Operator::GetSbpSignatureRules(
   }
 }
 
+void Operator::GetSbpSignaturesIf(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  GetSbpSignatures(LogicalBlobDesc4Ibn, sbp_sig_list);
+  SbpSignatureBuilder()
+      .Broadcast(input_bns())
+      .Broadcast(output_bns())
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+}
+
+void Operator::InferSbpSignatureIf(
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_hint,
+    std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+    const ParallelDesc& parallel_desc) const {
+  if (parallel_desc.parallel_num() == 1) {
+    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
+    for (const auto& ibn : input_bns()) { (*bn2sbp)[ibn].mutable_split_parallel()->set_axis(0); }
+    for (const auto& obn : output_bns()) { (*bn2sbp)[obn].mutable_split_parallel()->set_axis(0); }
+  } else if (parallel_desc.parallel_num() > 1) {
+    InferSbpSignature(sbp_signature, sbp_sig_hint, SbpInferHint4Ibn, parallel_desc);
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
 void Operator::InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_hint,
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
+  SbpSignatureList sbp_sig_list;
+  auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> const BlobDesc& {
+    return SbpInferHint4Ibn(ibn).logical_blob_desc();
+  };
+  GetSbpSignatures(LogicalBlobDesc4Ibn, &sbp_sig_list);
+  SbpSignatureList filtered_sbp_sig_list;
+  FilterSbpSignatureList(sbp_sig_list, sbp_sig_hint, &filtered_sbp_sig_list);
+  CHECK_GT(filtered_sbp_sig_list.sbp_signature_size(), 0);
+  HashMap<std::string, const SbpParallel*> ibn2producer_sbp_parallel;
+  for (const auto& ibn : input_bns()) {
+    ibn2producer_sbp_parallel[ibn] = &SbpInferHint4Ibn(ibn).sbp_parallel();
+  }
+  std::vector<const SbpSignature*> sorted_sbp_signatures;
+  SortSbpSignatureList(input_bns(), SbpInferHint4Ibn, filtered_sbp_sig_list,
+                       &sorted_sbp_signatures);
+  *sbp_signature = *sorted_sbp_signatures.at(0);
+  return;
+
   std::vector<std::unique_ptr<const SbpSignatureRule>> rules;
   GetSbpSignatureRulesIf(SbpInferHint4Ibn, &rules);
   std::vector<SbpSigMatchResult> match_results;

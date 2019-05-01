@@ -158,9 +158,7 @@ class Operator {
   // Infer blob's SbpSignature
   void InferSbpSignatureIf(SbpSignature* sbp_signature, const SbpSignature& sbp_sig_hint,
                            std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
-                           const ParallelDesc& parallel_desc) const {
-    InferSbpSignature(sbp_signature, sbp_sig_hint, SbpInferHint4Ibn, parallel_desc);
-  }
+                           const ParallelDesc& parallel_desc) const;
   virtual void FixSbpSignature(SbpSignature* sbp_signature) const {}
   // Infer is_model_blob
   void InferIsModelBlob4OutputBlobsIf(
@@ -181,7 +179,18 @@ class Operator {
   const InputBlobModifier& InputBlobModifier4Ibn(const std::string& ibn) const;
   const OutputBlobModifier& OutputBlobModifier4Obn(const std::string& obn) const;
 
+  void GetSbpSignaturesIf(
+      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+      SbpSignatureList* sbp_sig_list) const;
+
  protected:
+  virtual void GetSbpSignatures(
+      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+      SbpSignatureList* sbp_sig_list) const {
+    return GetSbpSignatures(sbp_sig_list);
+  }
+  virtual void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const { UNIMPLEMENTED(); }
+
   virtual void InferIsModelBlob4OutputBlobs(
       std::function<bool*(const std::string&)> IsModelBlob4BnInOp) const;
 

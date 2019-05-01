@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/dropout_grad_op.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -18,6 +19,16 @@ void DropoutGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   BlobDesc* dy_desc = GetBlobDesc4BnInOp("dy");
   *GetBlobDesc4BnInOp("dx") = *dy_desc;
   CHECK_EQ(dy_desc->shape(), GetBlobDesc4BnInOp("random_mask")->shape());
+}
+
+void DropoutGradOp::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split(input_bns(), 0)
+      .Split(output_bns(), 0)
+      .MakeSplitSignatureListBuilder(LogicalBlobDesc4Ibn("dy").shape().NumAxes())
+      .Build(sbp_sig_list);
 }
 
 REGISTER_OP(OperatorConf::kDropoutGradConf, DropoutGradOp);

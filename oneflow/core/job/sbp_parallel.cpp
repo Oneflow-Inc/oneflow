@@ -39,4 +39,64 @@ bool IsSbpSignatureContaining(const SbpSignature& bigger, const SbpSignature& sm
   return true;
 }
 
+void FilterSbpSignatureList(const SbpSignatureList& sbp_sig_list, const SbpSignature& sbp_sig_hint,
+                            SbpSignatureList* filtered_sbp_sig_list) {
+  for (const auto& sbp_sigature : sbp_sig_list.sbp_signature()) {
+    if (IsSbpSignatureContaining(sbp_sigature, sbp_sig_hint)) {
+      *filtered_sbp_sig_list->mutable_sbp_signature()->Add() = sbp_sigature;
+    }
+  }
+}
+
+double ComputCopyCostBetweenTwoSbpParallel(const SbpInferHint& producer_sbp_infer_hint,
+                                           const SbpParallel& consumer_sbp_parallel) {
+  if (producer_sbp_infer_hint.sbp_parallel() == consumer_sbp_parallel) { return 0.0; }
+  if (consumer_sbp_parallel.has_partial_sum_parallel()) { return MaxVal<int64_t>::value; }
+  if (producer_sbp_infer_hint.sbp_parallel().has_broadcast_parallel()) {
+    return MaxVal<int32_t>::value;
+  }
+  const auto& logical_blob_desc = producer_sbp_infer_hint.logical_blob_desc();
+  return logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
+}
+
+double ComputeIbnCopyCost4SbpSig(
+    const PbRpf<std::string>& ibns,
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+    const SbpSignature& sbp_signature) {
+  double cost = 0;
+  for (const auto& ibn : ibns) {
+    const auto& consumer_sbp_parallel = sbp_signature.bn_in_op2sbp_parallel().find(ibn)->second;
+    cost += ComputCopyCostBetweenTwoSbpParallel(SbpInferHint4Ibn(ibn), consumer_sbp_parallel);
+  }
+  return cost;
+}
+
+std::function<double(const SbpSignature*)> MakeGetterIbnCopyCost4SbpSig(
+    const PbRpf<std::string>& ibns,
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+    const SbpSignatureList& sbp_sig_list) {
+  auto sbp_sig2ibn_copy_cast = std::make_shared<HashMap<const SbpSignature*, double>>();
+  for (const auto& sbp_signature : sbp_sig_list.sbp_signature()) {
+    double cost = ComputeIbnCopyCost4SbpSig(ibns, SbpInferHint4Ibn, sbp_signature);
+    CHECK(sbp_sig2ibn_copy_cast->emplace(&sbp_signature, cost).second);
+  }
+  return [sbp_sig2ibn_copy_cast](const SbpSignature* sbp_sig) -> double {
+    return sbp_sig2ibn_copy_cast->at(sbp_sig);
+  };
+}
+
+void SortSbpSignatureList(
+    const PbRpf<std::string>& ibns,
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+    const SbpSignatureList& sbp_sig_list, std::vector<const SbpSignature*>* sorted_sbp_signatures) {
+  for (const auto& sbp_signature : sbp_sig_list.sbp_signature()) {
+    sorted_sbp_signatures->push_back(&sbp_signature);
+  }
+  auto IbnCopyCost4SbpSig = MakeGetterIbnCopyCost4SbpSig(ibns, SbpInferHint4Ibn, sbp_sig_list);
+  std::sort(sorted_sbp_signatures->begin(), sorted_sbp_signatures->end(),
+            [&](const SbpSignature* lhs, const SbpSignature* rhs) {
+              return IbnCopyCost4SbpSig(lhs) < IbnCopyCost4SbpSig(rhs);
+            });
+}
+
 }  // namespace oneflow

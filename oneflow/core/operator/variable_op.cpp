@@ -1,5 +1,7 @@
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -104,6 +106,19 @@ void VariableOp::VirtualGenKernelConf(
 void VariableOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("out") = false;
+}
+
+void VariableOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+  FOR_RANGE(int32_t, i, 0, op_conf().variable_conf().shape().dim_size()) {
+    SbpSignatureBuilder()
+        .Split(input_bns(), 0)
+        .Split(output_bns(), i)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  }
+  SbpSignatureBuilder()
+      .Split(input_bns(), 0)
+      .Broadcast(output_bns())
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_OP(OperatorConf::kVariableConf, VariableOp);

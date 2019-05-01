@@ -1,5 +1,6 @@
 #include "oneflow/core/operator/bias_add_op.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -39,6 +40,20 @@ void BiasAddOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
 
   *GetBlobDesc4BnInOp("out") = *a_blob_desc;
   GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() = Shape({a_blob_desc->shape().At(0), 1});
+}
+void BiasAddOp::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split("a", 0)
+      .Broadcast("b")
+      .Split(output_bns(), 0)
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  SbpSignatureBuilder()
+      .Split("b", 0)
+      .Broadcast("a")
+      .Split(output_bns(), 1)
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_OP(OperatorConf::kBiasAddConf, BiasAddOp);

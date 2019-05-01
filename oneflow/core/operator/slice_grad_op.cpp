@@ -1,5 +1,6 @@
 #include "oneflow/core/operator/slice_grad_op.h"
 #include "oneflow/core/job/sbp_signature_rule.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -75,6 +76,19 @@ void SliceGradOp::GetSbpSignatureRules(
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   rules->emplace_back(MakeDataSplitSbpSignatureRule(this));
   rules->emplace_back(new SliceGradBroadcastSignatureRule(this));
+}
+
+void SliceGradOp::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split(input_bns(), 0)
+      .Split(output_bns(), 0)
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  SbpSignatureBuilder()
+      .PartialSum(input_bns())
+      .PartialSum(output_bns())
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_OP(OperatorConf::kSliceGradConf, SliceGradOp);

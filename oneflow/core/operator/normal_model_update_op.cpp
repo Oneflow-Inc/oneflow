@@ -3,6 +3,7 @@
 #include "oneflow/core/operator/momentum_model_update_op.h"
 #include "oneflow/core/operator/lars_model_update_op.h"
 #include "oneflow/core/operator/adam_model_update_op.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -149,6 +150,20 @@ void NormalModelUpdtOp::GetSbpSignatureRules(
 void NormalModelUpdtOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   for (const auto& ibn : input_bns()) { CHECK_EQ(*HasBatchDim4BnInOp(ibn), false); }
+}
+
+void NormalModelUpdtOp::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  const auto& bns = AlwaysBroadcastParallelBns();
+  PbRpf<std::string> broadcast_bns = {bns.begin(), bns.end()};
+  *broadcast_bns.Add() = "total_instance_num_diff";
+  FOR_RANGE(int64_t, i, 0, LogicalBlobDesc4Ibn("model").shape().NumAxes()) {
+    SbpSignatureBuilder()
+        .Split(input_bns(), i)
+        .Broadcast(broadcast_bns)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  }
 }
 
 REGISTER_OP_CREATOR(OperatorConf::kNormalMdupdtConf, [](const OperatorConf& op_conf) -> Operator* {

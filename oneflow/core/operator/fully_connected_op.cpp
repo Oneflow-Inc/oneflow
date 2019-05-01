@@ -1,5 +1,6 @@
 #include "oneflow/core/operator/fully_connected_op.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -83,6 +84,23 @@ void FullyConnectedOp::GetSbpSignatureRules(
     rules->emplace_back(MakeDataSplitSbpSignatureRule(this));
     rules->emplace_back(MakeModelSplitSbpSignatureRule(this));
   }
+}
+
+void FullyConnectedOp::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  int32_t num_axes = LogicalBlobDesc4Ibn("in").shape().NumAxes();
+  SbpSignatureBuilder()
+      .Split("in", 0)
+      .Broadcast({"weight", "bias"})
+      .Split("out", 0)
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+
+  SbpSignatureBuilder()
+      .Broadcast("in")
+      .Split({"weight", "bias"}, 0)
+      .Split("out", num_axes - 1)
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_OP(OperatorConf::kFullyConnectedConf, FullyConnectedOp);

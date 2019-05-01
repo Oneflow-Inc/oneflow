@@ -1,5 +1,6 @@
 #include "oneflow/core/operator/matmul_op.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -147,7 +148,7 @@ void MatmulOp::InferHasBatchDim(
     CHECK(*HasBatchDim4BnInOp("a"));
     CHECK(*HasBatchDim4BnInOp("b"));
     *HasBatchDim4BnInOp("out") = true;
-  } else {
+  } else if (num_axes == 2) {
     if (*HasBatchDim4BnInOp("a") == false) {
       *HasBatchDim4BnInOp("out") = false;
     } else {
@@ -159,6 +160,58 @@ void MatmulOp::InferHasBatchDim(
         *HasBatchDim4BnInOp("out") = true;
       }
     }
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+void MatmulOp::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  const MatmulOpConf& conf = op_conf().matmul_conf();
+  int32_t num_axes = LogicalBlobDesc4Ibn("a").shape().NumAxes();
+  if (num_axes > 2) {
+    SbpSignatureBuilder()
+        .Split(input_bns(), 0)
+        .Split(output_bns(), 0)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  } else if (num_axes == 2) {
+    // (m, k_a) * (k_b, n) where k_a == k_b
+    int32_t m_axis = -1;
+    int32_t k_a_axis = -1;
+    int32_t k_b_axis = -1;
+    int32_t n_axis = -1;
+    if (conf.transpose_a()) {
+      m_axis = 1;
+      k_a_axis = 0;
+    } else {
+      m_axis = 0;
+      k_a_axis = 1;
+    }
+    if (conf.transpose_b()) {
+      k_b_axis = 1;
+      n_axis = 0;
+    } else {
+      k_b_axis = 0;
+      n_axis = 1;
+    }
+    SbpSignatureBuilder()
+        .Split("a", m_axis)
+        .Broadcast("b")
+        .Split(output_bns(), 0)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    SbpSignatureBuilder()
+        .Broadcast("a")
+        .Split("b", n_axis)
+        .Split(output_bns(), 1)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    SbpSignatureBuilder()
+        .Split("a", k_a_axis)
+        .Split("b", k_b_axis)
+        .PartialSum(output_bns())
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  } else {
+    UNIMPLEMENTED();
   }
 }
 

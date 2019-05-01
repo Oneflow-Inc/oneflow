@@ -61,4 +61,20 @@ void ReduceSbpUtil::GetReduceSumSplitSignatureRules(
   rules->emplace_back(new ReduceSplitSignatureRule(op, data_ibn, reduced_axes));
 }
 
+std::function<bool(int32_t)> ReduceSbpUtil::MakePredicatorIsReducedAxis(const PbRf<int32_t>& axes,
+                                                                        int32_t num_axes) {
+  auto axis_set = std::make_shared<HashSet<int32_t>>();
+  for (int32_t axis : axes) {
+    if (axis < 0) { axis += num_axes; }
+    CHECK_GE(axis, 0);
+    CHECK_LT(axis, num_axes);
+    axis_set->insert(axis);
+  }
+  if (axis_set->empty()) {
+    return [](int32_t axis) { return true; };
+  } else {
+    return [axis_set](int32_t axis) -> bool { return axis_set->find(axis) != axis_set->end(); };
+  }
+}
+
 }  // namespace oneflow

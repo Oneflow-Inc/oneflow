@@ -25,6 +25,7 @@ class RecordLoadOp final : public Operator {
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
   void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
+  void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 };
 
 }  // namespace oneflow

@@ -1,5 +1,6 @@
 #include "oneflow/core/operator/broadcast_like_op.h"
 #include "oneflow/core/operator/reduce_sbp_util.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -78,6 +79,28 @@ void BroadcastLikeOp::GetSbpSignatureRules(
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   const auto& reduced_axes = op_conf().broadcast_like_conf().reduced_axis();
   GetReduceGradSbpSignatureRules(this, "like", {reduced_axes.begin(), reduced_axes.end()}, rules);
+}
+
+void BroadcastLikeOp::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  int32_t num_axes = LogicalBlobDesc4Ibn("like").shape().NumAxes();
+  auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(
+      op_conf().broadcast_like_conf().reduced_axis(), num_axes);
+  FOR_RANGE(int64_t, i, 0, num_axes) {
+    if (IsReducedAxis(i)) {
+      SbpSignatureBuilder()
+          .Broadcast("x")
+          .Split("like", i)
+          .Split(output_bns(), i)
+          .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    } else {
+      SbpSignatureBuilder()
+          .Split(input_bns(), i)
+          .Split(output_bns(), i)
+          .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    }
+  }
 }
 
 REGISTER_OP(OperatorConf::kBroadcastLikeConf, BroadcastLikeOp);

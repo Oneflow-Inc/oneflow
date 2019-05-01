@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/broadcast_binary_op.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -109,6 +110,62 @@ void BroadcastBinaryOp::GetSbpSignatureRules(
     broadcast_bns.insert(a_shape.At(0) < b_shape.At(0) ? "a" : "b");
   }
   rules->emplace_back(MakeBroadcastBinarySbpSignatureRule(this, broadcast_bns));
+}
+
+void BroadcastBinaryOp::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  const Shape& a_shape = LogicalBlobDesc4Ibn("a").shape();
+  const Shape& b_shape = LogicalBlobDesc4Ibn("b").shape();
+  if (a_shape.NumAxes() < b_shape.NumAxes()) {
+    FOR_RANGE(int64_t, i, 0, b_shape.NumAxes() - a_shape.NumAxes()) {
+      SbpSignatureBuilder().Broadcast("a").Split("b", i).Split("out", i).Build(
+          sbp_sig_list->mutable_sbp_signature()->Add());
+    }
+    FOR_RANGE(int64_t, i, 0, a_shape.NumAxes()) {
+      SbpSignatureBuilder()
+          .Split("a", a_shape.NumAxes() - 1 - i)
+          .Split("b", b_shape.NumAxes() - 1 - i)
+          .Split(output_bns(), b_shape.NumAxes() - 1 - i)
+          .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    }
+  } else if (a_shape.NumAxes() > b_shape.NumAxes()) {
+    FOR_RANGE(int64_t, i, 0, a_shape.NumAxes() - b_shape.NumAxes()) {
+      SbpSignatureBuilder().Split("a", i).Broadcast("b").Split("out", i).Build(
+          sbp_sig_list->mutable_sbp_signature()->Add());
+    }
+    FOR_RANGE(int64_t, i, 0, b_shape.NumAxes()) {
+      SbpSignatureBuilder()
+          .Split("a", a_shape.NumAxes() - 1 - i)
+          .Split("b", b_shape.NumAxes() - 1 - i)
+          .Split(output_bns(), a_shape.NumAxes() - 1 - i)
+          .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    }
+  } else {
+    FOR_RANGE(int64_t, i, 0, a_shape.NumAxes()) {
+      if (a_shape.At(i) == 1 && b_shape.At(i) == 1) { continue; }
+      if (a_shape.At(i) == b_shape.At(i)) {
+        SbpSignatureBuilder()
+            .Split(input_bns(), i)
+            .Split(output_bns(), i)
+            .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+      } else if (a_shape.At(i) == 1) {
+        SbpSignatureBuilder()
+            .Broadcast("a")
+            .Split("b", i)
+            .Split(output_bns(), i)
+            .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+      } else if (b_shape.At(i) == 1) {
+        SbpSignatureBuilder()
+            .Split("a", i)
+            .Broadcast("b")
+            .Split(output_bns(), i)
+            .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+      } else {
+        UNIMPLEMENTED();
+      }
+    }
+  }
 }
 
 }  // namespace oneflow

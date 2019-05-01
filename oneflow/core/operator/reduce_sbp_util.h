@@ -14,6 +14,8 @@ struct ReduceSbpUtil final {
   static void GetReduceSumSplitSignatureRules(
       const Operator* op, const std::string& data_ibn, const HashSet<int64_t>& reduced_axes,
       std::vector<std::unique_ptr<const SbpSignatureRule>>* rules);
+  static std::function<bool(int32_t)> MakePredicatorIsReducedAxis(const PbRf<int32_t>& axes,
+                                                                  int32_t num_axes);
 };
 
 }  // namespace oneflow

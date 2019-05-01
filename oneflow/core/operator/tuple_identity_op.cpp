@@ -2,44 +2,6 @@
 
 namespace oneflow {
 
-namespace {
-
-class TupleIdentitySbpSignatureRule final : public ParallelSbpSignatureRule {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(TupleIdentitySbpSignatureRule);
-  ~TupleIdentitySbpSignatureRule() override = default;
-
-  TupleIdentitySbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
-
-  const std::string Description() const override { return op().op_name() + ": A -> A"; }
-
-  const SbpSigMatchResult MatchByIbnHint(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      const ParallelDesc& parallel_desc) const override {
-    return MakeSbpSigMatchSuccess();
-  }
-
-  void GenerateSignature(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      const SbpSignature& sbp_sig_hint, SbpSignature* sbp_signature) const override {
-    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
-    const auto& bn2conf_sbp = sbp_sig_hint.bn_in_op2sbp_parallel();
-    FOR_RANGE(int32_t, i, 0, op().input_bns().size()) {
-      const SbpParallel* sbp_parallel = nullptr;
-      const auto& conf_sbp_it = bn2conf_sbp.find(op().output_bns().Get(i));
-      if (conf_sbp_it == bn2conf_sbp.end()) {
-        sbp_parallel = &SbpInferHint4BnInOp(op().input_bns().Get(i)).sbp_parallel();
-      } else {
-        sbp_parallel = &conf_sbp_it->second;
-      }
-      (*bn2sbp)[op().input_bns().Get(i)] = *sbp_parallel;
-      (*bn2sbp)[op().output_bns().Get(i)] = *sbp_parallel;
-    }
-  }
-};
-
-}  // namespace
-
 void TupleIdentityOp::InitFromOpConf() {
   CHECK(op_conf().has_tuple_identity_conf());
   int32_t in_size = op_conf().tuple_identity_conf().in_size();
@@ -63,10 +25,23 @@ void TupleIdentityOp::InferBlobDescs(
   }
 }
 
-void TupleIdentityOp::GetSbpSignatureRules(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  rules->emplace_back(new TupleIdentitySbpSignatureRule(this));
+void TupleIdentityOp::InferSbpSignature(
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_hint,
+    std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+    const ParallelDesc& parallel_desc) const {
+  auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
+  const auto& bn2conf_sbp = sbp_sig_hint.bn_in_op2sbp_parallel();
+  FOR_RANGE(int32_t, i, 0, input_bns().size()) {
+    const SbpParallel* sbp_parallel = nullptr;
+    const auto& conf_sbp_it = bn2conf_sbp.find(output_bns().Get(i));
+    if (conf_sbp_it == bn2conf_sbp.end()) {
+      sbp_parallel = &SbpInferHint4Ibn(input_bns().Get(i)).sbp_parallel();
+    } else {
+      sbp_parallel = &conf_sbp_it->second;
+    }
+    (*bn2sbp)[input_bns().Get(i)] = *sbp_parallel;
+    (*bn2sbp)[output_bns().Get(i)] = *sbp_parallel;
+  }
 }
 
 void TupleIdentityOp::InferHasBatchDim(

@@ -1,5 +1,6 @@
 #include "oneflow/core/operator/gather_grad_op.h"
 #include "oneflow/core/operator/gather_op.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -128,6 +129,16 @@ void GatherGradOp::GetSbpSignatureRules(
     std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
   rules->emplace_back(new GatherGradDataParallelSbpSignatureRule(this));
   rules->emplace_back(new GatherGradModelParallelSbpSignatureRule(this));
+}
+
+void GatherGradOp::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split(input_bns(), 0)
+      .PartialSum(output_bns())
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  // TODO: complete other signatures
 }
 
 void GatherGradOp::InferHasBatchDim(

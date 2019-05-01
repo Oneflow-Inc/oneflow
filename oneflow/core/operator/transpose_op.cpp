@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/transpose_op.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -76,6 +77,23 @@ void TransposeOp::VirtualGenKernelConf(
   invert_perm->Reserve(perm->size());
   invert_perm->CopyFrom(*perm);
   FOR_RANGE(size_t, i, 0, perm->size()) { (*invert_perm)[(*perm)[i]] = i; }
+}
+
+void TransposeOp::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  const PbRf<int32_t>& perm = op_conf().transpose_conf().perm();
+  CHECK_EQ(perm.size(), LogicalBlobDesc4Ibn("in").shape().NumAxes());
+  FOR_RANGE(int32_t, i, 0, perm.size()) {
+    int32_t axis = perm.Get(i);
+    if (axis < 0) { axis += perm.size(); }
+    CHECK_GE(axis, 0);
+    CHECK_LT(axis, perm.size());
+    SbpSignatureBuilder()
+        .Split(input_bns(), i)
+        .Split(output_bns(), axis)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  }
 }
 
 REGISTER_OP(OperatorConf::kTransposeConf, TransposeOp);

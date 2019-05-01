@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/layer_norm_param_grad_op.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -118,6 +119,15 @@ void LayerNormParamGradOp::InferHasBatchDim(
   if (conf.has_normalized_diff()) {
     *HasBatchDim4BnInOp("normalized_diff") = *HasBatchDim4BnInOp("dy");
   }
+}
+
+void LayerNormParamGradOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split(input_bns(), 0)
+      .Broadcast("gamma")
+      .Split(output_bns(), 0)
+      .PartialSum({"gamma_diff", "beta_diff"})
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_OP(OperatorConf::kLayerNormParamGradConf, LayerNormParamGradOp);

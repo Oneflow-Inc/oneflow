@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/gather_op.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -153,6 +154,20 @@ int32_t GatherOp::OutputBlobModelSplitAxis(
     const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     const std::string& obn) const {
   UNIMPLEMENTED();
+}
+
+void GatherOp::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  CHECK_EQ(LogicalBlobDesc4Ibn("in").shape().NumAxes(), 2);
+  int64_t gather_axis = GetGatherAxis(op_conf().gather_conf(), &LogicalBlobDesc4Ibn("in"));
+  CHECK_EQ(gather_axis, 0);
+  SbpSignatureBuilder()
+      .Split("indices", 0)
+      .Broadcast("in")
+      .Split(output_bns(), 0)
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  // TODO: complete other signatures
 }
 
 REGISTER_OP(OperatorConf::kGatherConf, GatherOp);
