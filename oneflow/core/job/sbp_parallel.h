@@ -15,10 +15,10 @@ SbpParallel GetDualSbpParallel(const SbpParallel&);
 
 bool IsSbpSignatureContaining(const SbpSignature& bigger, const SbpSignature& smaller);
 
-void FilterSbpSignatureList(const SbpSignatureList& sbp_sig_list, const SbpSignature& sbp_sig_hint,
+void FilterSbpSignatureList(const SbpSignatureList& sbp_sig_list, const SbpSignature& sbp_sig_conf,
                             SbpSignatureList* filtered_sbp_sig_list);
 
-void SortSbpSignatureList(
+void SortSbpSignatureListByCopyCost(
     const PbRpf<std::string>& ibns,
     const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     const SbpSignatureList& sbp_sig_list, std::vector<const SbpSignature*>* sorted_sbp_signatures);

@@ -29,13 +29,13 @@ class VariableOpSbpSignatureRule final : public ParallelSbpSignatureRule {
 
   void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const SbpSignature& sbp_sig_hint, SbpSignature* sbp_signature) const override {
+      const SbpSignature& sbp_sig_conf, SbpSignature* sbp_signature) const override {
     auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
     if (op().op_conf().variable_conf().has_tick()) {
       CHECK(SbpInferHint4Ibn("tick").is_data_split());
       (*bn2sbp)["tick"].mutable_split_parallel()->set_axis(0);
     }
-    const auto& conf_bn2sbp = sbp_sig_hint.bn_in_op2sbp_parallel();
+    const auto& conf_bn2sbp = sbp_sig_conf.bn_in_op2sbp_parallel();
     if (conf_bn2sbp.find("out") == conf_bn2sbp.end()) {
       (*bn2sbp)["out"].mutable_broadcast_parallel();
     } else {

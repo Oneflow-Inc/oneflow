@@ -39,10 +39,10 @@ bool IsSbpSignatureContaining(const SbpSignature& bigger, const SbpSignature& sm
   return true;
 }
 
-void FilterSbpSignatureList(const SbpSignatureList& sbp_sig_list, const SbpSignature& sbp_sig_hint,
+void FilterSbpSignatureList(const SbpSignatureList& sbp_sig_list, const SbpSignature& sbp_sig_conf,
                             SbpSignatureList* filtered_sbp_sig_list) {
   for (const auto& sbp_sigature : sbp_sig_list.sbp_signature()) {
-    if (IsSbpSignatureContaining(sbp_sigature, sbp_sig_hint)) {
+    if (IsSbpSignatureContaining(sbp_sigature, sbp_sig_conf)) {
       *filtered_sbp_sig_list->mutable_sbp_signature()->Add() = sbp_sigature;
     }
   }
@@ -85,7 +85,7 @@ std::function<double(const SbpSignature*)> MakeGetterIbnCopyCost4SbpSig(
   };
 }
 
-void SortSbpSignatureList(
+void SortSbpSignatureListByCopyCost(
     const PbRpf<std::string>& ibns,
     const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
     const SbpSignatureList& sbp_sig_list, std::vector<const SbpSignature*>* sorted_sbp_signatures) {

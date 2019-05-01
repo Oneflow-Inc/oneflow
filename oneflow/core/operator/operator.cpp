@@ -182,7 +182,7 @@ void Operator::GetSbpSignaturesIf(
 }
 
 void Operator::InferSbpSignatureIf(
-    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_hint,
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf, const SbpSignature& sbp_sig_hint,
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   if (parallel_desc.parallel_num() == 1) {
@@ -190,31 +190,49 @@ void Operator::InferSbpSignatureIf(
     for (const auto& ibn : input_bns()) { (*bn2sbp)[ibn].mutable_split_parallel()->set_axis(0); }
     for (const auto& obn : output_bns()) { (*bn2sbp)[obn].mutable_split_parallel()->set_axis(0); }
   } else if (parallel_desc.parallel_num() > 1) {
-    InferSbpSignature(sbp_signature, sbp_sig_hint, SbpInferHint4Ibn, parallel_desc);
+    InferSbpSignature(sbp_signature, sbp_sig_conf, sbp_sig_hint, SbpInferHint4Ibn, parallel_desc);
   } else {
     UNIMPLEMENTED();
   }
 }
 
 void Operator::InferSbpSignature(
-    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_hint,
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf, const SbpSignature& sbp_sig_hint,
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
-  SbpSignatureList sbp_sig_list;
+  // get op sbp signatures
   auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> const BlobDesc& {
     return SbpInferHint4Ibn(ibn).logical_blob_desc();
   };
+  SbpSignatureList sbp_sig_list;
   GetSbpSignatures(LogicalBlobDesc4Ibn, &sbp_sig_list);
-  SbpSignatureList filtered_sbp_sig_list;
-  FilterSbpSignatureList(sbp_sig_list, sbp_sig_hint, &filtered_sbp_sig_list);
-  CHECK_GT(filtered_sbp_sig_list.sbp_signature_size(), 0);
+  // filter sbp signatures by sbp signature conf
+  SbpSignatureList filtered_sbp_sigs_by_conf;
+  FilterSbpSignatureList(sbp_sig_list, sbp_sig_conf, &filtered_sbp_sigs_by_conf);
+  CHECK_GT(filtered_sbp_sigs_by_conf.sbp_signature_size(), 0);
+  // try filter sbp signatures by sbp signature hint
+  SbpSignatureList filtered_sbp_sigs_by_hint;
+  if (filtered_sbp_sigs_by_conf.sbp_signature_size() > 1) {
+    FilterSbpSignatureList(filtered_sbp_sigs_by_conf, sbp_sig_hint, &filtered_sbp_sigs_by_hint);
+  }
+  const SbpSignatureList* filtered_sbp_sig_list = nullptr;
+  if (filtered_sbp_sigs_by_hint.sbp_signature_size() > 0) {
+    filtered_sbp_sig_list = &filtered_sbp_sigs_by_hint;
+  } else {
+    filtered_sbp_sig_list = &filtered_sbp_sigs_by_conf;
+  }
+  if (filtered_sbp_sig_list->sbp_signature_size() == 1) {
+    *sbp_signature = *filtered_sbp_sig_list->sbp_signature().begin();
+    return;
+  }
+  // sort sbp signatures by copy cost, then return the one with least cost
   HashMap<std::string, const SbpParallel*> ibn2producer_sbp_parallel;
   for (const auto& ibn : input_bns()) {
     ibn2producer_sbp_parallel[ibn] = &SbpInferHint4Ibn(ibn).sbp_parallel();
   }
   std::vector<const SbpSignature*> sorted_sbp_signatures;
-  SortSbpSignatureList(input_bns(), SbpInferHint4Ibn, filtered_sbp_sig_list,
-                       &sorted_sbp_signatures);
+  SortSbpSignatureListByCopyCost(input_bns(), SbpInferHint4Ibn, *filtered_sbp_sig_list,
+                                 &sorted_sbp_signatures);
   *sbp_signature = *sorted_sbp_signatures.at(0);
   return;
 
@@ -222,7 +240,7 @@ void Operator::InferSbpSignature(
   GetSbpSignatureRulesIf(SbpInferHint4Ibn, &rules);
   std::vector<SbpSigMatchResult> match_results;
   for (const auto& signature : rules) {
-    match_results.push_back(signature->MatchIf(SbpInferHint4Ibn, sbp_sig_hint, parallel_desc));
+    match_results.push_back(signature->MatchIf(SbpInferHint4Ibn, sbp_sig_conf, parallel_desc));
   }
   int32_t match_success_cnt = 0;
   for (const auto& result : match_results) {
@@ -232,13 +250,13 @@ void Operator::InferSbpSignature(
     HashSet<SbpSignature> signature_check;
     FOR_RANGE(int32_t, i, 0, rules.size()) {
       if (match_results.at(i).has_success()) {
-        rules.at(i)->GenerateSignatureIf(SbpInferHint4Ibn, sbp_sig_hint, sbp_signature);
+        rules.at(i)->GenerateSignatureIf(SbpInferHint4Ibn, sbp_sig_conf, sbp_signature);
         signature_check.insert(*sbp_signature);
       }
     }
     CHECK_EQ(signature_check.size(), 1);
     if (parallel_desc.parallel_num() > 1) {
-      CHECK(IsSbpSignatureContaining(*sbp_signature, sbp_sig_hint));
+      CHECK(IsSbpSignatureContaining(*sbp_signature, sbp_sig_conf));
     }
   } else if (match_success_cnt == 0) {
     std::stringstream ss;

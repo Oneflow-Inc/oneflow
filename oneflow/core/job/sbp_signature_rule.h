@@ -18,12 +18,12 @@ class SbpSignatureRule {
 
   const SbpSigMatchResult MatchIf(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const SbpSignature& sbp_sig_hint, const ParallelDesc& parallel_desc) const;
+      const SbpSignature& sbp_sig_conf, const ParallelDesc& parallel_desc) const;
 
   void GenerateSignatureIf(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const SbpSignature& sbp_sig_hint, SbpSignature* sbp_signature) const {
-    GenerateSignature(SbpInferHint4Ibn, sbp_sig_hint, sbp_signature);
+      const SbpSignature& sbp_sig_conf, SbpSignature* sbp_signature) const {
+    GenerateSignature(SbpInferHint4Ibn, sbp_sig_conf, sbp_signature);
   }
 
  protected:
@@ -32,7 +32,7 @@ class SbpSignatureRule {
 
   virtual void GenerateSignature(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const SbpSignature& sbp_sig_hint, SbpSignature* sbp_signature) const {
+      const SbpSignature& sbp_sig_conf, SbpSignature* sbp_signature) const {
     GenerateSignature(SbpInferHint4Ibn, sbp_signature);
   }
 
@@ -48,7 +48,7 @@ class SbpSignatureRule {
       const ParallelDesc& parallel_desc) const = 0;
   virtual const SbpSigMatchResult MatchBySbpSigHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const SbpSignature& sbp_sig_hint) const = 0;
+      const SbpSignature& sbp_sig_conf) const = 0;
 
  private:
   const Operator* op_;
@@ -61,7 +61,7 @@ class ParallelSbpSignatureRule : public SbpSignatureRule {
   const SbpSigMatchResult MatchByParallelNum(int32_t parallel_num) const override;
   const SbpSigMatchResult MatchBySbpSigHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const SbpSignature& sbp_sig_hint) const override;
+      const SbpSignature& sbp_sig_conf) const override;
 };
 
 const SbpSigMatchResult MakeSbpSigMatchSuccess();

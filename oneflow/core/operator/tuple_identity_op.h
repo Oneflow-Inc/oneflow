@@ -23,7 +23,8 @@ class TupleIdentityOp final : public Operator {
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override {
     return op_conf().tuple_identity_conf().in_size() == 1 && ibn == SoleIbn();
   }
-  void InferSbpSignature(SbpSignature* sbp_signature, const SbpSignature& sbp_sig_hint,
+  void InferSbpSignature(SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+                         const SbpSignature& sbp_sig_hint,
                          std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
                          const ParallelDesc& parallel_desc) const override;
 

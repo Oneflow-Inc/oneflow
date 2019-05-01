@@ -43,11 +43,11 @@ const SbpSigMatchResult MakeSbpSigMatchDeviceSetError(const std::string& configu
 
 const SbpSigMatchResult SbpSignatureRule::MatchIf(
     const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    const SbpSignature& sbp_sig_hint, const ParallelDesc& parallel_desc) const {
+    const SbpSignature& sbp_sig_conf, const ParallelDesc& parallel_desc) const {
   const auto& parallel_res = MatchByParallelNum(parallel_desc.parallel_num());
   if (parallel_res.has_success() == false) { return parallel_res; }
-  if (sbp_sig_hint.bn_in_op2sbp_parallel().size() > 0) {
-    const auto& result = MatchBySbpSigHint(SbpInferHint4Ibn, sbp_sig_hint);
+  if (sbp_sig_conf.bn_in_op2sbp_parallel().size() > 0) {
+    const auto& result = MatchBySbpSigHint(SbpInferHint4Ibn, sbp_sig_conf);
     if (result.has_success()) { return result; }
   }
   return MatchByIbnHint(SbpInferHint4Ibn, parallel_desc);
@@ -65,10 +65,10 @@ const SbpSigMatchResult ParallelSbpSignatureRule::MatchByParallelNum(int32_t par
 
 const SbpSigMatchResult ParallelSbpSignatureRule::MatchBySbpSigHint(
     const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    const SbpSignature& sbp_sig_hint) const {
+    const SbpSignature& sbp_sig_conf) const {
   SbpSignature generated_sbp_signature;
-  GenerateSignature(SbpInferHint4Ibn, sbp_sig_hint, &generated_sbp_signature);
-  if (IsSbpSignatureContaining(generated_sbp_signature, sbp_sig_hint)) {
+  GenerateSignature(SbpInferHint4Ibn, sbp_sig_conf, &generated_sbp_signature);
+  if (IsSbpSignatureContaining(generated_sbp_signature, sbp_sig_conf)) {
     return MakeSbpSigMatchSuccess();
   } else {
     return MakeSbpSigMatchSignatureMismatch();
@@ -106,7 +106,7 @@ class UnparallelSbpSignatureRule final : public SbpSignatureRule {
 
   const SbpSigMatchResult MatchBySbpSigHint(
       const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const SbpSignature& sbp_sig_hint) const {
+      const SbpSignature& sbp_sig_conf) const {
     return MakeSbpSigMatchSuccess();
   }
 
