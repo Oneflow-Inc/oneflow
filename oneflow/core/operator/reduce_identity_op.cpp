@@ -1,5 +1,6 @@
 #include "oneflow/core/operator/reduce_identity_op.h"
 #include "oneflow/core/job/sbp_signature_rule.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -40,6 +41,17 @@ LogicalBlobId ReduceIdentityOp::obn2lbi(const std::string& output_bn) const {
     ret.set_blob_name(output_bn);
     return ret;
   }
+}
+
+void ReduceIdentityOp::InferSbpSignature(
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf, const SbpSignature& sbp_sig_hint,
+    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+    std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+    const ParallelDesc& parallel_desc) const {
+  for (const auto& ibn : input_bns()) {
+    CHECK(SbpInferHint4Ibn(ibn).sbp_parallel().has_partial_sum_parallel());
+  }
+  SbpSignatureBuilder().PartialSum(input_bns()).PartialSum(output_bns()).Build(sbp_signature);
 }
 
 REGISTER_OP(OperatorConf::kReduceIdentityConf, ReduceIdentityOp);

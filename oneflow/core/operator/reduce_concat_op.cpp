@@ -2,6 +2,7 @@
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/job/sbp_signature_rule.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -108,6 +109,17 @@ void ReduceConcatOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   for (const auto& ibn : input_bns()) { CHECK_EQ(*HasBatchDim4BnInOp(ibn), false); }
   *HasBatchDim4BnInOp("out") = false;
+}
+
+void ReduceConcatOp::InferSbpSignature(
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf, const SbpSignature& sbp_sig_hint,
+    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+    std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+    const ParallelDesc& parallel_desc) const {
+  for (const auto& ibn : input_bns()) {
+    CHECK(SbpInferHint4Ibn(ibn).sbp_parallel().has_partial_sum_parallel());
+  }
+  SbpSignatureBuilder().PartialSum(input_bns()).PartialSum(output_bns()).Build(sbp_signature);
 }
 
 REGISTER_OP(OperatorConf::kReduceConcatConf, ReduceConcatOp);

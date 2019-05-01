@@ -21,6 +21,7 @@ class ReduceSplitOp final : public Operator {
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return true; }
   void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
+  void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override {}
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext*, KernelConf*) const override;
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
