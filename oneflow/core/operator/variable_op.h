@@ -28,6 +28,10 @@ class VariableOp final : public Operator {
   void set_is_bw_inplace(bool val) const { *is_bw_inplace_ = val; }
 
  private:
+  void InferSbpSignature(SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+                         const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+                         std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+                         const ParallelDesc& parallel_desc) const override;
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
   void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
   void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;

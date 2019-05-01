@@ -376,18 +376,41 @@ void OpGraph::InferOpNodeSbpSignature(
   auto SbpInferHint4Ibn = [&](const std::string& ibn) -> const SbpInferHint& {
     return ibn2sbp_infer_hint.at(ibn);
   };
-  SbpSignature sbp_sig_hint;
-  auto TrySetS0Hint = [&](const std::string& bn) {
-    if (*HasBatchDim4Lbi(op_node->op().BnInOp2Lbi(bn))) {
-      (*sbp_sig_hint.mutable_bn_in_op2sbp_parallel())[bn].mutable_split_parallel()->set_axis(0);
-    }
-  };
+  std::function<int32_t(const SbpSignature&)> CalcOrderValue4SbpSig;
   if (sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
-    for (const auto& ibn : op_node->op().input_bns()) { TrySetS0Hint(ibn); }
-    for (const auto& obn : op_node->op().output_bns()) { TrySetS0Hint(obn); }
+    auto OrderValue4HasBatchDim = [&](const std::string& bn,
+                                      const SbpParallel& sbp_parallel) -> int32_t {
+      return -1
+             * (*HasBatchDim4Lbi(op_node->op().BnInOp2Lbi(bn)) && sbp_parallel.has_split_parallel()
+                && sbp_parallel.split_parallel().axis() == 0);
+    };
+    auto OrderValue4HasNoBatchDim = [&](const std::string& ibn,
+                                        const SbpParallel& sbp_parallel) -> int32_t {
+      return -2
+             * (*HasBatchDim4Lbi(op_node->op().BnInOp2Lbi(ibn)) == false
+                && SbpInferHint4Ibn(ibn).sbp_parallel().has_split_parallel() == false
+                && sbp_parallel.has_split_parallel() == false);
+    };
+    CalcOrderValue4SbpSig = [&](const SbpSignature& sbp_signature) -> int32_t {
+      int32_t order_value = 0;
+      for (const auto& ibn : op_node->op().input_bns()) {
+        const auto& sbp_parallel_it = sbp_signature.bn_in_op2sbp_parallel().find(ibn);
+        CHECK(sbp_parallel_it != sbp_signature.bn_in_op2sbp_parallel().end());
+        order_value += OrderValue4HasBatchDim(ibn, sbp_parallel_it->second);
+        order_value += OrderValue4HasNoBatchDim(ibn, sbp_parallel_it->second);
+      }
+      for (const auto& obn : op_node->op().output_bns()) {
+        const auto& sbp_parallel_it = sbp_signature.bn_in_op2sbp_parallel().find(obn);
+        CHECK(sbp_parallel_it != sbp_signature.bn_in_op2sbp_parallel().end());
+        order_value += OrderValue4HasBatchDim(obn, sbp_parallel_it->second);
+      }
+      return order_value;
+    };
+  } else {
+    CalcOrderValue4SbpSig = [](const SbpSignature&) -> int32_t { return 0; };
   }
-  op_node->op().InferSbpSignatureIf(sbp_signature, sbp_sig_conf, sbp_sig_hint, SbpInferHint4Ibn,
-                                    op_node->parallel_desc());
+  op_node->op().InferSbpSignatureIf(sbp_signature, sbp_sig_conf, CalcOrderValue4SbpSig,
+                                    SbpInferHint4Ibn, op_node->parallel_desc());
   op_node->op().FixSbpSignature(sbp_signature);
 }
 

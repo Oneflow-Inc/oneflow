@@ -157,7 +157,7 @@ class Operator {
       Shape* time_shape) const;
   // Infer blob's SbpSignature
   void InferSbpSignatureIf(SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
-                           const SbpSignature& sbp_sig_hint,
+                           const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
                            std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
                            const ParallelDesc& parallel_desc) const;
   virtual void FixSbpSignature(SbpSignature* sbp_signature) const {}
@@ -190,6 +190,11 @@ class Operator {
       SbpSignatureList* sbp_sig_list) const {
     return GetSbpSignatures(sbp_sig_list);
   }
+  virtual void InferSbpSignature(
+      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+      std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const;
   virtual void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const { UNIMPLEMENTED(); }
 
   virtual void InferIsModelBlob4OutputBlobs(
@@ -276,11 +281,10 @@ class Operator {
   OutputBlobModifier* MutOutputBlobModifier4Obn(const std::string& obn);
 
  private:
-  virtual void InferSbpSignature(
-      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
-      const SbpSignature& sbp_sig_hint,
-      std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc) const;
+  void InferSbpSignatureV2(SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+                           const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+                           std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+                           const ParallelDesc& parallel_desc) const;
   virtual void InferHasBatchDim(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {

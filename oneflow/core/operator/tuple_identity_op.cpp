@@ -26,10 +26,10 @@ void TupleIdentityOp::InferBlobDescs(
 }
 
 void TupleIdentityOp::InferSbpSignature(
-    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf, const SbpSignature& sbp_sig_hint,
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
-  // ignore sbp_sig_hint
   auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
   const auto& bn2conf_sbp = sbp_sig_conf.bn_in_op2sbp_parallel();
   FOR_RANGE(int32_t, i, 0, input_bns().size()) {

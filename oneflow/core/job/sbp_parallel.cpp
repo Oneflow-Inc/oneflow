@@ -85,16 +85,32 @@ std::function<double(const SbpSignature*)> MakeGetterIbnCopyCost4SbpSig(
   };
 }
 
+std::function<int32_t(const SbpSignature* sbp_sig)> MakeGetterOrderValue4SbpSig(
+    const SbpSignatureList& sbp_sig_list,
+    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig) {
+  auto sbp_sig2order_value = std::make_shared<HashMap<const SbpSignature*, int32_t>>();
+  for (const SbpSignature& sbp_signature : sbp_sig_list.sbp_signature()) {
+    sbp_sig2order_value->emplace(&sbp_signature, CalcOrderValue4SbpSig(sbp_signature));
+  }
+  return [sbp_sig2order_value](const SbpSignature* sbp_sig) {
+    return sbp_sig2order_value->at(sbp_sig);
+  };
+}
+
 void SortSbpSignatureListByCopyCost(
-    const PbRpf<std::string>& ibns,
+    const SbpSignatureList& sbp_sig_list, const PbRpf<std::string>& ibns,
     const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    const SbpSignatureList& sbp_sig_list, std::vector<const SbpSignature*>* sorted_sbp_signatures) {
+    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+    std::vector<const SbpSignature*>* sorted_sbp_signatures) {
+  auto OrderValue4SbpSig = MakeGetterOrderValue4SbpSig(sbp_sig_list, CalcOrderValue4SbpSig);
+  auto IbnCopyCost4SbpSig = MakeGetterIbnCopyCost4SbpSig(ibns, SbpInferHint4Ibn, sbp_sig_list);
   for (const auto& sbp_signature : sbp_sig_list.sbp_signature()) {
     sorted_sbp_signatures->push_back(&sbp_signature);
   }
-  auto IbnCopyCost4SbpSig = MakeGetterIbnCopyCost4SbpSig(ibns, SbpInferHint4Ibn, sbp_sig_list);
   std::sort(sorted_sbp_signatures->begin(), sorted_sbp_signatures->end(),
             [&](const SbpSignature* lhs, const SbpSignature* rhs) {
+              if (OrderValue4SbpSig(lhs) < OrderValue4SbpSig(rhs)) { return true; }
+              if (OrderValue4SbpSig(lhs) > OrderValue4SbpSig(rhs)) { return false; }
               return IbnCopyCost4SbpSig(lhs) < IbnCopyCost4SbpSig(rhs);
             });
 }
