@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/naive_model_update_op.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 

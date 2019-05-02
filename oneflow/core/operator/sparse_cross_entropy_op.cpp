@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/sparse_cross_entropy_op.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -39,6 +40,13 @@ void SparseCrossEntropyOp::InferBlobDescs(
   *out_blob_desc = *pred_blob_desc;
   out_blob_desc->mut_shape() = Shape(std::vector<int64_t>(
       pred_blob_desc->shape().dim_vec().cbegin(), pred_blob_desc->shape().dim_vec().cend() - 1));
+}
+
+void SparseCrossEntropyOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split(input_bns(), 0)
+      .Split(output_bns(), 0)
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_OP(OperatorConf::kSparseCrossEntropyConf, SparseCrossEntropyOp);

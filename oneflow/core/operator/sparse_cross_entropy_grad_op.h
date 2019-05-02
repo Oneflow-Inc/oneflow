@@ -18,7 +18,7 @@ class SparseCrossEntropyGradOp final : public Operator {
                       std::function<void(OpContext*)> EnrollOpCtx) const override;
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
+  void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 };
 
 }  // namespace oneflow

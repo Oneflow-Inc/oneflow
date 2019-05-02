@@ -2,37 +2,6 @@
 
 namespace oneflow {
 
-namespace {
-
-class LossPrintSbpSignatureRule final : public ParallelSbpSignatureRule {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(LossPrintSbpSignatureRule);
-  ~LossPrintSbpSignatureRule() override = default;
-
-  LossPrintSbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
-
-  const std::string Description() const override { return op().op_name() + ": (B, B) -> B"; }
-
-  const SbpSigMatchResult MatchByIbnHint(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      const ParallelDesc& parallel_desc) const override {
-    return MakeSbpSigMatchSuccess();
-  }
-
-  void GenerateSignature(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      SbpSignature* sbp_signature) const override {
-    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
-    (*bn2sbp)["loss_acc"].mutable_broadcast_parallel();
-    (*bn2sbp)["loss_instance_num"].mutable_broadcast_parallel();
-    if (op().op_conf().loss_print_conf().has_reduction_lbi()) {
-      (*bn2sbp)["reduction_acc"].mutable_broadcast_parallel();
-    }
-  }
-};
-
-}  // namespace
-
 void LossPrintOp::InitFromOpConf() {
   CHECK(op_conf().has_loss_print_conf());
   EnrollInputBn("loss_acc", false);
@@ -62,12 +31,6 @@ LogicalBlobId LossPrintOp::ibn2lbi(const std::string& input_bn) const {
 }
 
 const PbMessage& LossPrintOp::GetCustomizedConf() const { return op_conf().loss_print_conf(); }
-
-void LossPrintOp::GetSbpSignatureRules(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  rules->emplace_back(new LossPrintSbpSignatureRule(this));
-}
 
 REGISTER_CPU_OP(OperatorConf::kLossPrintConf, LossPrintOp);
 

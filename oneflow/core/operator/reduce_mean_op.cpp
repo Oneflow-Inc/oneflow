@@ -1,37 +1,8 @@
 #include "oneflow/core/operator/reduce_mean_op.h"
 #include "oneflow/core/operator/reduce_sbp_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/job/sbp_signature_rule.h"
 
 namespace oneflow {
-
-namespace {
-
-class ReduceMeanBroadcastSignatureRule final : public ParallelSbpSignatureRule {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(ReduceMeanBroadcastSignatureRule);
-  ~ReduceMeanBroadcastSignatureRule() override = default;
-
-  ReduceMeanBroadcastSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
-
-  const std::string Description() const override { return op().op_name() + ": (B,) -> (B,)"; }
-
-  const SbpSigMatchResult MatchByIbnHint(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc) const override {
-    return MakeSbpSigMatchSuccess();
-  }
-
-  void GenerateSignature(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      SbpSignature* sbp_signature) const override {
-    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
-    (*bn2sbp)["in"].mutable_broadcast_parallel();
-    (*bn2sbp)["out"].mutable_broadcast_parallel();
-  }
-};
-
-}  // namespace
 
 void ReduceMeanOp::InitFromOpConf() {
   CHECK(op_conf().has_reduce_mean_conf());
@@ -70,18 +41,6 @@ void ReduceMeanOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
 void ReduceMeanOp::InferBwBufBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*) const {
   *GetBlobDesc4BnInOp("bw_tmp") = *GetBlobDesc4BnInOp("out");
-}
-
-void ReduceMeanOp::GetSbpSignatureRules(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  const auto& reduced_axes = op_conf().reduce_mean_conf().axis();
-  HashSet<int64_t> conf_axes = {reduced_axes.begin(), reduced_axes.end()};
-  if (ReduceSbpUtil::IsReduceAxisSplitted(SbpInferHint4Ibn("in"), conf_axes) == false) {
-    rules->emplace_back(MakeDataSplitSbpSignatureRule(this));
-  } else {
-    rules->emplace_back(new ReduceMeanBroadcastSignatureRule(this));
-  }
 }
 
 void ReduceMeanOp::InferHasBatchDim(

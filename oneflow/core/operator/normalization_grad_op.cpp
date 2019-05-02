@@ -3,42 +3,6 @@
 
 namespace oneflow {
 
-namespace {
-
-class NormalizationGradDataParallelSbpSignatureRule final : public ParallelSbpSignatureRule {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(NormalizationGradDataParallelSbpSignatureRule);
-  ~NormalizationGradDataParallelSbpSignatureRule() override = default;
-
-  explicit NormalizationGradDataParallelSbpSignatureRule(const Operator* op)
-      : ParallelSbpSignatureRule(op) {}
-
-  const std::string Description() const override { return op().op_name() + ": (S, B) -> (S, P)"; }
-
-  const SbpSigMatchResult MatchByIbnHint(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      const ParallelDesc& parallel_desc) const override {
-    if (parallel_desc.policy() == kDataParallel) { return MakeSbpSigMatchSuccess(); }
-    return MakeSbpSigMatchParallelPolicyError(parallel_desc.policy(), kDataParallel);
-  }
-
-  void GenerateSignature(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      SbpSignature* sbp_signature) const override {
-    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
-    const NormalizationGradOpConf& conf = op().op_conf().normalization_grad_conf();
-    (*bn2sbp)["dy"].mutable_split_parallel()->set_axis(0);
-    if (conf.has_dx()) { (*bn2sbp)["dx"].mutable_split_parallel()->set_axis(0); }
-    if (conf.has_gamma()) { (*bn2sbp)["gamma"].mutable_broadcast_parallel(); }
-    if (conf.has_mean()) { (*bn2sbp)["mean"].mutable_broadcast_parallel(); }
-    if (conf.has_inv_variance()) { (*bn2sbp)["inv_variance"].mutable_broadcast_parallel(); }
-    if (conf.has_gamma_diff()) { (*bn2sbp)["gamma_diff"].mutable_partial_sum_parallel(); }
-    if (conf.has_beta_diff()) { (*bn2sbp)["beta_diff"].mutable_partial_sum_parallel(); }
-  }
-};
-
-}  // namespace
-
 void NormalizationGradOp::InitFromOpConf() {
   const NormalizationGradOpConf& conf = op_conf().normalization_grad_conf();
 #ifdef WITH_CUDA
@@ -124,12 +88,6 @@ void NormalizationGradOp::InferBlobDescs(
   CheckParamBlobDesc("gamma");
   SetParamBlobDesc("gamma_diff");
   SetParamBlobDesc("beta_diff");
-}
-
-void NormalizationGradOp::GetSbpSignatureRules(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  rules->emplace_back(new NormalizationGradDataParallelSbpSignatureRule(this));
 }
 
 REGISTER_OP(OperatorConf::kNormalizationGradConf, NormalizationGradOp);

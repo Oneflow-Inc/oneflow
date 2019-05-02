@@ -11,35 +11,6 @@ bool IsFwBwSplit() {
   return Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf();
 }
 
-class Conv_DB_2_S_SbpSignatureRule final : public ParallelSbpSignatureRule {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(Conv_DB_2_S_SbpSignatureRule);
-  ~Conv_DB_2_S_SbpSignatureRule() override = default;
-
-  explicit Conv_DB_2_S_SbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
-
-  const std::string Description() const override { return op().op_name() + ": DB -> S"; }
-
-  const SbpSigMatchResult MatchByIbnHint(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc) const override {
-    if (!SbpInferHint4Ibn("in").sbp_parallel().has_broadcast_parallel()) {
-      return MakeSbpSigMatchSignatureMismatch();
-    }
-    if (parallel_desc.policy() == kModelParallel) { return MakeSbpSigMatchSuccess(); }
-    return MakeSbpSigMatchParallelPolicyError(parallel_desc.policy(), kModelParallel);
-  }
-
-  void GenerateSignature(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      SbpSignature* sbp_signature) const override {
-    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
-    (*bn2sbp)["in"].mutable_broadcast_parallel();
-    (*bn2sbp)["out"].mutable_split_parallel()->set_axis(
-        op().OutputBlobModelSplitAxis(SbpInferHint4Ibn, "out"));
-  }
-};
-
 void GetOutAndPad(const Shape& in_blob_shape, const PbMessage& conv_conf, std::vector<int64_t>* out,
                   std::vector<int32_t>* pad_small_side, std::vector<int32_t>* pad_large_side) {
   int32_t opkernel_dim = in_blob_shape.NumAxes() - 2;
@@ -325,24 +296,6 @@ PbMessage* ConvOp<NDims>::MutableCustomizedKernelConf(KernelConf* kernel_conf) c
   return kernel_conf->mutable_conv_conf();
 }
 
-template<int32_t NDims>
-bool ConvOp<NDims>::IsInputBlobAllowedModelSplit(const std::string& ibn) const {
-  return ibn == "weight" || ibn == "bias";
-}
-
-template<int32_t NDims>
-int32_t ConvOp<NDims>::OutputBlobModelSplitAxis(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    const std::string& obn) const {
-  if (GetValFromCustomizedConf<std::string>("data_format") == "channels_first") {
-    return 1;
-  } else if (GetValFromCustomizedConf<std::string>("data_format") == "channels_last") {
-    return NDims + 1;
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
 #ifdef WITH_CUDA
 template<int32_t NDims>
 void ConvOp<NDims>::InferCudnnAlgo(
@@ -353,20 +306,6 @@ void ConvOp<NDims>::InferCudnnAlgo(
       GetCustomizedConf(), static_cast<size_t>(cudnn_buf_limit_byte()), conv_ctx));
 }
 #endif  // WITH_CUDA
-
-template<int32_t NDims>
-void ConvOp<NDims>::GetSbpSignatureRules(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  rules->emplace_back((MakeDataSplitSbpSignatureRule(this)));
-  if (IsFwBwSplit()) {
-    rules->emplace_back((Make_DS_MB_2_DS_SbpSignatureRule(this)));
-    rules->emplace_back(
-        (Make_DB_MS_2_MS_SbpSignatureRule(this, [](const int32_t axis) { return axis == 0; })));
-  } else {
-    rules->emplace_back(new Conv_DB_2_S_SbpSignatureRule(this));
-  }
-}
 
 template class ConvOp<1>;
 template class ConvOp<2>;

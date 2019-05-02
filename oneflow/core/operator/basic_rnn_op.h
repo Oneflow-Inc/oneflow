@@ -13,8 +13,6 @@ class BasicRnnOp final : public RecurrentOp {
   const PbMessage& GetCustomizedConf() const override;
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { UNIMPLEMENTED(); }
-
   void VirtualInitFromOpConf();
   void VirtualInferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const;

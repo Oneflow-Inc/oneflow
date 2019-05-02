@@ -29,7 +29,7 @@ class SoftmaxOp final : public Operator {
                            const ParallelContext*, const OpContext*) const override;
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
+  void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext*, KernelConf*, const OpContext*) const override;

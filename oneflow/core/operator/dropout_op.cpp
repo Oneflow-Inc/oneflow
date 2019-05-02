@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/dropout_op.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -52,6 +53,16 @@ void DropoutOp::InferHasBatchDim(
   for (const auto& obn : output_bns()) {
     *HasBatchDim4BnInOp(obn) = *HasBatchDim4BnInOp(SoleIbn());
   }
+}
+
+void DropoutOp::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split(input_bns(), 0)
+      .Split(output_bns(), 0)
+      .MakeSplitSignatureListBuilder(LogicalBlobDesc4Ibn("in").shape().NumAxes())
+      .Build(sbp_sig_list);
 }
 
 REGISTER_OP(OperatorConf::kDropoutConf, DropoutOp);

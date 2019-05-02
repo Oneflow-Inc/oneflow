@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/reshape_op.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -38,6 +39,17 @@ void ReshapeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
   }
   out_blob_desc->mut_shape() = Shape(dim_vec);
   CHECK_EQ(out_blob_desc->shape().elem_cnt(), in_blob_desc->shape().elem_cnt());
+}
+
+void ReshapeOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split(input_bns(), 0)
+      .Split(output_bns(), 0)
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  SbpSignatureBuilder()
+      .PartialSum(input_bns())
+      .PartialSum(output_bns())
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_OP(OperatorConf::kReshapeConf, ReshapeOp);

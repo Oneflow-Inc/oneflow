@@ -21,10 +21,10 @@ class ReduceIdentityOp final : public Operator {
   bool NeedOutBlobWhenBackward() const override { return false; }
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
-  void GetSbpSignatureRules(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const override;
+  void InferSbpSignature(SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+                         const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+                         std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+                         const ParallelDesc& parallel_desc) const override;
 
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
   LogicalBlobId obn2lbi(const std::string& output_bn) const override;
