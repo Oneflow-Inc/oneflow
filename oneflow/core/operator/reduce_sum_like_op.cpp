@@ -29,15 +29,6 @@ void ReduceSumLikeOp::InferBlobDescs(
   GetBlobDesc4BnInOp("y")->CopyMetaFrom(*like_blob);
 }
 
-void ReduceSumLikeOp::GetSbpSignatureRules(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  const auto& reduced_axes = op_conf().reduce_sum_like_conf().axis();
-  ReduceSbpUtil::GetReduceSumSplitSignatureRules(this, "x",
-                                                 {reduced_axes.begin(), reduced_axes.end()}, rules);
-  rules->emplace_back(MakeMultiIbnsBroadcastSbpSignatureRule(this));
-}
-
 void ReduceSumLikeOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("y") = *HasBatchDim4BnInOp("like");

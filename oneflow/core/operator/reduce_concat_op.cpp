@@ -1,7 +1,6 @@
 #include "oneflow/core/operator/reduce_concat_op.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
-#include "oneflow/core/job/sbp_signature_rule.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
@@ -87,12 +86,6 @@ LogicalBlobId ReduceConcatOp::ibn2lbi(const std::string& input_bn) const {
   }
 }
 
-void ReduceConcatOp::GetSbpSignatureRules(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  rules->emplace_back(MakePartialSumSignatureRule(this));
-}
-
 LogicalBlobId ReduceConcatOp::obn2lbi(const std::string& output_bn) const {
   if (Global<JobDesc>::Get()->IsPredict()
       && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
@@ -112,7 +105,7 @@ void ReduceConcatOp::InferHasBatchDim(
 }
 
 void ReduceConcatOp::InferSbpSignature(
-    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf, const SbpSignature& sbp_sig_hint,
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {

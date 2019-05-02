@@ -15,18 +15,11 @@ class ConvFilterGradOp : public Operator {
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx, int64_t record_piece_size,
                       std::function<void(OpContext*)> EnrollOpCtx) const override;
-  int32_t OutputBlobModelSplitAxis(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const std::string& obn) const override;
 
  private:
   const PbMessage& GetCustomizedConf() const override;
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext*, KernelConf*, const OpContext*) const override;
-  void GetSbpSignatureRules(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const override;
 };
 
 }  // namespace oneflow

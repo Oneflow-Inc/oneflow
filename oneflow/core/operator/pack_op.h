@@ -24,7 +24,6 @@ class PackOp final : public Operator {
   int32_t GetPackNum() const;
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
 };
 
 }  // namespace oneflow

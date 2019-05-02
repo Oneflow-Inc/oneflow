@@ -23,7 +23,6 @@ class DropoutOp final : public Operator {
                             KernelConf* kernel_conf) const override;
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return true; }
   void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
   void GetSbpSignatures(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,

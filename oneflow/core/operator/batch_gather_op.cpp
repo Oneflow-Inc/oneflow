@@ -41,12 +41,6 @@ void BatchGatherOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
-void BatchGatherOp::GetSbpSignatureRules(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  rules->emplace_back(MakeDataSplitSbpSignatureRule(this));
-}
-
 REGISTER_OP(OperatorConf::kBatchGatherConf, BatchGatherOp);
 
 }  // namespace oneflow

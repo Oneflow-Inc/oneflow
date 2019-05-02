@@ -12,7 +12,6 @@ class EveryNthOp final : public Operator {
   ~EveryNthOp() override = default;
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return true; }
   const PbMessage& GetCustomizedConf() const override;
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
@@ -23,9 +22,6 @@ class EveryNthOp final : public Operator {
   LogicalNode* NewProperLogicalNode() const override;
   bool NeedInBlobWhenBackward() const override { return false; }
   bool NeedOutBlobWhenBackward() const override { return false; }
-  void GetSbpSignatureRules(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const override;
 };
 
 }  // namespace oneflow

@@ -37,12 +37,6 @@ void EveryNthOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
 
 LogicalNode* EveryNthOp::NewProperLogicalNode() const { return new EveryNthLogicalNode(); }
 
-void EveryNthOp::GetSbpSignatureRules(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  rules->emplace_back(MakeIdentitySbpSignatureRule(this));
-}
-
 REGISTER_OP(OperatorConf::kEveryNthConf, EveryNthOp);
 
 }  // namespace oneflow

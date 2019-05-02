@@ -20,7 +20,6 @@ class ReshapeLikeOp final : public Operator {
                       const ParallelContext* parallel_ctx) const override;
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
   void GetSbpSignatures(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;

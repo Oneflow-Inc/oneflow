@@ -20,7 +20,6 @@ class SparseCrossEntropyOp final : public Operator {
   bool NeedInBlobWhenBackward() const override { return true; }
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
   void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 };
 

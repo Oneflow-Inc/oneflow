@@ -16,21 +16,11 @@ class FullyConnectedOp final : public Operator {
   bool NeedOutBlobWhenBackward() const override { return false; }
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
-  int32_t OutputBlobModelSplitAxis(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const std::string& obn) const override {
-    return 1;
-  }
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override;
   void GetSbpSignatures(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
-
-  void GetSbpSignatureRules(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const override;
 };
 
 }  // namespace oneflow

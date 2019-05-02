@@ -60,12 +60,6 @@ void LayerNormGradOp::InferBlobDescs(
   *bn_bias_diff = *bn_scale;
 }
 
-void LayerNormGradOp::GetSbpSignatureRules(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  rules->emplace_back(MakeDataSplitSbpSignatureRule(this));
-}
-
 void LayerNormGradOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)

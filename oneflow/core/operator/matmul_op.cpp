@@ -4,43 +4,6 @@
 
 namespace oneflow {
 
-namespace {
-
-class Matmul_DS_MS_2_P_SbpSignatureRule final : public ParallelSbpSignatureRule {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(Matmul_DS_MS_2_P_SbpSignatureRule);
-  ~Matmul_DS_MS_2_P_SbpSignatureRule() override = default;
-
-  Matmul_DS_MS_2_P_SbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
-
-  const std::string Description() const override { return op().op_name() + ": (S, S) -> P"; }
-
-  const SbpSigMatchResult MatchByIbnHint(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc) const override {
-    const auto& b_sbp_infer_hint = SbpInferHint4Ibn("b");
-    if (!b_sbp_infer_hint.is_model_split()) { return MakeSbpSigMatchSignatureMismatch(); }
-    int32_t b_expected_split_axis = (op().op_conf().matmul_conf().transpose_b() ? 1 : 0);
-    if (b_sbp_infer_hint.split_axis() != b_expected_split_axis) {
-      return MakeSbpSigMatchSignatureMismatch();
-    }
-    if (parallel_desc.policy() == kModelParallel) { return MakeSbpSigMatchSuccess(); }
-    return MakeSbpSigMatchParallelPolicyError(parallel_desc.policy(), kModelParallel);
-  }
-
-  void GenerateSignature(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      SbpSignature* sbp_signature) const override {
-    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
-    int32_t a_split_axis = (op().op_conf().matmul_conf().transpose_a() ? 0 : 1);
-    (*bn2sbp)["a"].mutable_split_parallel()->set_axis(a_split_axis);
-    (*bn2sbp)["b"] = SbpInferHint4Ibn("b").sbp_parallel();
-    (*bn2sbp)["out"].mutable_partial_sum_parallel();
-  }
-};
-
-}  // namespace
-
 void MatmulOp::InitFromOpConf() {
   CHECK(op_conf().has_matmul_conf());
   EnrollInputBn("a");
@@ -51,30 +14,6 @@ void MatmulOp::InitFromOpConf() {
 }
 
 const PbMessage& MatmulOp::GetCustomizedConf() const { return op_conf().matmul_conf(); }
-
-bool MatmulOp::IsInputBlobAllowedModelSplit(const std::string& ibn) const {
-  CHECK(std::find(input_bns().begin(), input_bns().end(), ibn) != input_bns().end());
-  return ibn == "b";
-}
-
-void MatmulOp::GetSbpSignatureRules(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  int32_t a_num_axes = SbpInferHint4Ibn("a").num_axes();
-  int32_t b_num_axes = SbpInferHint4Ibn("b").num_axes();
-  CHECK(a_num_axes == b_num_axes);
-  if (a_num_axes > 2) {
-    rules->emplace_back(MakeDataSplitSbpSignatureRule(this));
-  } else {
-    rules->emplace_back(Make_DS_MB_2_DS_SbpSignatureRule(this));
-    auto IsValidSplit = [this](int32_t axis) {
-      int32_t b_expected_split_axis = (op_conf().matmul_conf().transpose_b() ? 0 : 1);
-      return axis == b_expected_split_axis;
-    };
-    rules->emplace_back(Make_DB_MS_2_MS_SbpSignatureRule(this, IsValidSplit));
-    rules->emplace_back(new Matmul_DS_MS_2_P_SbpSignatureRule(this));
-  }
-}
 
 void MatmulOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext* parallel_ctx) const {
@@ -115,14 +54,6 @@ void MatmulOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
     fw_buf_blob_desc->set_data_type(DataType::kInt64);
     fw_buf_blob_desc->set_has_data_id_field(false);
   }
-}
-
-int32_t MatmulOp::OutputBlobModelSplitAxis(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    const std::string& obn) const {
-  int32_t num_axes = SbpInferHint4Ibn("a").num_axes();
-  CHECK_EQ(num_axes, SbpInferHint4Ibn("b").num_axes());
-  return num_axes - 1;
 }
 
 void MatmulOp::InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

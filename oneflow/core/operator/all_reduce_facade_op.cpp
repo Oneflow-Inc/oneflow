@@ -1,6 +1,5 @@
 #include "oneflow/core/operator/all_reduce_facade_op.h"
 #include "oneflow/core/graph/logical_node.h"
-#include "oneflow/core/job/sbp_signature_rule.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
@@ -21,18 +20,12 @@ void AllReduceFacadeOp::InferBlobDescs(
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
 }
 
-void AllReduceFacadeOp::GetSbpSignatureRules(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  rules->emplace_back(MakeP2BSignatureRule(this));
-}
-
 LogicalNode* AllReduceFacadeOp::NewProperLogicalNode() const {
   return new AllReduceFacadeLogicalNode();
 }
 
 void AllReduceFacadeOp::InferSbpSignature(
-    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf, const SbpSignature& sbp_sig_hint,
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {

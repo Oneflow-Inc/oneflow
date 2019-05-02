@@ -4,71 +4,6 @@
 
 namespace oneflow {
 
-namespace {
-
-class ConvFilterGradDataParallelSbpSignatureRule final : public ParallelSbpSignatureRule {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(ConvFilterGradDataParallelSbpSignatureRule);
-  ~ConvFilterGradDataParallelSbpSignatureRule() override = default;
-
-  explicit ConvFilterGradDataParallelSbpSignatureRule(const Operator* op)
-      : ParallelSbpSignatureRule(op) {}
-
-  const std::string Description() const override { return op().op_name() + ": (MB, DS) -> P"; }
-
-  const SbpSigMatchResult MatchByIbnHint(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc) const override {
-    if (parallel_desc.policy() == kDataParallel) { return MakeSbpSigMatchSuccess(); }
-    return MakeSbpSigMatchParallelPolicyError(parallel_desc.policy(), kDataParallel);
-  }
-
-  void GenerateSignature(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      SbpSignature* sbp_signature) const override {
-    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
-    (*bn2sbp)["dy"].mutable_split_parallel()->set_axis(0);
-    (*bn2sbp)["x"].mutable_split_parallel()->set_axis(0);
-    (*bn2sbp)["filter_diff"].mutable_partial_sum_parallel();
-  }
-};
-
-class ConvFilterGradModelParallelSbpSignatureRule final : public ParallelSbpSignatureRule {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(ConvFilterGradModelParallelSbpSignatureRule);
-  ~ConvFilterGradModelParallelSbpSignatureRule() override = default;
-
-  explicit ConvFilterGradModelParallelSbpSignatureRule(const Operator* op)
-      : ParallelSbpSignatureRule(op) {}
-
-  const std::string Description() const override { return op().op_name() + ": (MS, DB) -> S"; }
-
-  const SbpSigMatchResult MatchByIbnHint(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc) const override {
-    if (parallel_desc.policy() == kModelParallel) { return MakeSbpSigMatchSuccess(); }
-    return MakeSbpSigMatchParallelPolicyError(parallel_desc.policy(), kModelParallel);
-  }
-
-  void GenerateSignature(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      SbpSignature* sbp_signature) const override {
-    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
-    const ConvConf& conf = op().op_conf().conv_filter_grad_conf().conv_conf();
-    if (conf.data_format() == "channels_first") {
-      (*bn2sbp)["dy"].mutable_split_parallel()->set_axis(1);
-    } else if (conf.data_format() == "channels_last") {
-      (*bn2sbp)["dy"].mutable_split_parallel()->set_axis(1 + conf.num_spatial_dims());
-    } else {
-      UNIMPLEMENTED();
-    }
-    (*bn2sbp)["filter_diff"].mutable_split_parallel()->set_axis(0);
-    (*bn2sbp)["x"].mutable_broadcast_parallel();
-  }
-};
-
-}  // namespace
-
 const PbMessage& ConvFilterGradOp::GetCustomizedConf() const {
   return op_conf().conv_filter_grad_conf();
 }
@@ -137,12 +72,6 @@ void ConvFilterGradOp::InferBlobDescs(
   }
 }
 
-int32_t ConvFilterGradOp::OutputBlobModelSplitAxis(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    const std::string& obn) const {
-  return 0;
-}
-
 void ConvFilterGradOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx) const {
@@ -157,13 +86,6 @@ void ConvFilterGradOp::VirtualGenKernelConf(
   } else {
     UNIMPLEMENTED();
   }
-}
-
-void ConvFilterGradOp::GetSbpSignatureRules(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  rules->emplace_back(new ConvFilterGradDataParallelSbpSignatureRule(this));
-  rules->emplace_back(new ConvFilterGradModelParallelSbpSignatureRule(this));
 }
 
 REGISTER_OP(OperatorConf::kConvFilterGradConf, ConvFilterGradOp);

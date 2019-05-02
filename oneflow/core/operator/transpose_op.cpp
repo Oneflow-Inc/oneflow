@@ -48,24 +48,6 @@ void TransposeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   }
 }
 
-int32_t TransposeOp::OutputBlobModelSplitAxis(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    const std::string& obn) const {
-  const auto& in_sbp_infer_hint = SbpInferHint4Ibn("in");
-  const PbRf<int32_t>& perm = op_conf().transpose_conf().perm();
-  CHECK_GT(perm.size(), 0);
-  CHECK_EQ(perm.size(), in_sbp_infer_hint.num_axes());
-  int32_t split_axis = -1;
-  FOR_RANGE(int32_t, i, 0, perm.size()) {
-    if (perm[i] == in_sbp_infer_hint.split_axis()) {
-      split_axis = i;
-      break;
-    }
-  }
-  CHECK_NE(split_axis, -1);
-  return split_axis;
-}
-
 void TransposeOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {

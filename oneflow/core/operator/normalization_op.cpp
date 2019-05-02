@@ -9,39 +9,6 @@ inline bool IsFwBwSplit() {
   return Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf();
 }
 
-class NormalizationDataParallelSbpSignatureRule final : public ParallelSbpSignatureRule {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(NormalizationDataParallelSbpSignatureRule);
-  ~NormalizationDataParallelSbpSignatureRule() override = default;
-
-  explicit NormalizationDataParallelSbpSignatureRule(const Operator* op)
-      : ParallelSbpSignatureRule(op) {}
-
-  const std::string Description() const override { return op().op_name() + ": (S, B) -> (S, B)"; }
-
-  const SbpSigMatchResult MatchByIbnHint(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      const ParallelDesc& parallel_desc) const override {
-    if (parallel_desc.policy() == kDataParallel) { return MakeSbpSigMatchSuccess(); }
-    return MakeSbpSigMatchParallelPolicyError(parallel_desc.policy(), kDataParallel);
-  }
-
-  void GenerateSignature(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      SbpSignature* sbp_signature) const override {
-    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
-    const NormalizationOpConf& conf = op().op_conf().normalization_conf();
-    (*bn2sbp)["in"].mutable_split_parallel()->set_axis(0);
-    (*bn2sbp)["out"].mutable_split_parallel()->set_axis(0);
-    if (conf.has_gamma()) { (*bn2sbp)["gamma"].mutable_broadcast_parallel(); }
-    if (conf.has_beta()) { (*bn2sbp)["beta"].mutable_broadcast_parallel(); }
-    if (conf.has_mean()) { (*bn2sbp)["mean"].mutable_broadcast_parallel(); }
-    if (conf.has_inv_variance()) { (*bn2sbp)["inv_variance"].mutable_broadcast_parallel(); }
-    if (conf.has_moving_mean()) { (*bn2sbp)["moving_mean"].mutable_broadcast_parallel(); }
-    if (conf.has_moving_variance()) { (*bn2sbp)["moving_variance"].mutable_broadcast_parallel(); }
-  }
-};
-
 }  // namespace
 
 void NormalizationOp::InitFromOpConf() {
@@ -178,12 +145,6 @@ void NormalizationOp::InferBwBufBlobDescs(
     inv_variance->set_data_type(data_type);
     inv_variance->mut_shape() = param_shape;
   }
-}
-
-void NormalizationOp::GetSbpSignatureRules(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  rules->emplace_back(new NormalizationDataParallelSbpSignatureRule(this));
 }
 
 REGISTER_OP(OperatorConf::kNormalizationConf, NormalizationOp);

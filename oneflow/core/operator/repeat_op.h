@@ -14,7 +14,6 @@ class RepeatOp final : public Operator {
   int32_t GetRepeatNum() const;
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return true; }
   const PbMessage& GetCustomizedConf() const override;
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;

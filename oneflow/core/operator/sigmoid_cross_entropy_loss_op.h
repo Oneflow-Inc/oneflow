@@ -14,8 +14,6 @@ class SigmoidCrossEntropyLossOp final : public LossOp {
   const PbMessage& GetCustomizedConf() const override;
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
-
   void VirtualInitFromOpConf() override;
   void VirtualInferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const override;

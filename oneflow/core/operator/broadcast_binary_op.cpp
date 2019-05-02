@@ -9,49 +9,6 @@ bool IsScalarBlob(const BlobDesc* blob) {
   return blob->shape().NumAxes() == 1 && blob->shape().At(0) == 1;
 }
 
-class BroadcastBinarySbpSignatureRule final : public ParallelSbpSignatureRule {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(BroadcastBinarySbpSignatureRule);
-  ~BroadcastBinarySbpSignatureRule() override = default;
-
-  BroadcastBinarySbpSignatureRule(const Operator* op, const HashSet<std::string>& broadcast_bns)
-      : ParallelSbpSignatureRule(op), broadcast_bns_(broadcast_bns) {}
-
-  const std::string Description() const override {
-    return op().op_name() + ": (C, ..., S(0), ...) -> (S(0), ...)";
-  }
-
-  const SbpSigMatchResult MatchByIbnHint(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc) const override {
-    return MakeSbpSigMatchSuccess();
-  }
-
-  void GenerateSignature(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      SbpSignature* sbp_signature) const override {
-    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
-    auto SetSbpParallel = [&](const std::string& bn) {
-      if (broadcast_bns_.find(bn) != broadcast_bns_.end()) {
-        (*bn2sbp)[bn].mutable_broadcast_parallel();
-      } else {
-        (*bn2sbp)[bn].mutable_split_parallel()->set_axis(0);
-      }
-    };
-    for (const auto& bn : op().input_bns()) { SetSbpParallel(bn); }
-    for (const auto& bn : op().output_bns()) { SetSbpParallel(bn); }
-  }
-
- private:
-  HashSet<std::string> broadcast_bns_;
-};
-
-std::unique_ptr<const SbpSignatureRule> MakeBroadcastBinarySbpSignatureRule(
-    const Operator* op, const HashSet<std::string>& broadcast_bns) {
-  return std::unique_ptr<const SbpSignatureRule>(
-      new BroadcastBinarySbpSignatureRule(op, broadcast_bns));
-}
-
 }  // namespace
 
 void BroadcastBinaryOp::InitFromOpConf() {
@@ -92,24 +49,6 @@ void BroadcastBinaryOp::InferBwBufBlobDescs(
   BlobDesc* bw_buf = GetBlobDesc4BnInOp("bw_buf");
   bw_buf->mut_shape() = Shape({out->shape().elem_cnt()});
   bw_buf->set_data_type(out->data_type());
-}
-
-void BroadcastBinaryOp::GetSbpSignatureRules(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  HashSet<std::string> broadcast_bns;
-  const auto& a_shape = SbpInferHint4Ibn("a").logical_blob_desc().shape();
-  const auto& b_shape = SbpInferHint4Ibn("b").logical_blob_desc().shape();
-  if (a_shape.NumAxes() != b_shape.NumAxes()) {
-    broadcast_bns.insert(a_shape.NumAxes() < b_shape.NumAxes() ? "a" : "b");
-  } else if (a_shape.At(0) == 1 && b_shape.At(0) == 1) {
-    broadcast_bns = HashSet<std::string>{"a", "b", "out"};
-  } else if (a_shape.At(0) == b_shape.At(0)) {
-    // do nothing
-  } else {
-    broadcast_bns.insert(a_shape.At(0) < b_shape.At(0) ? "a" : "b");
-  }
-  rules->emplace_back(MakeBroadcastBinarySbpSignatureRule(this, broadcast_bns));
 }
 
 void BroadcastBinaryOp::GetSbpSignatures(

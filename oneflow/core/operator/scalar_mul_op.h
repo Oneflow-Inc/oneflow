@@ -19,7 +19,6 @@ class ScalarMulOp final : public Operator {
   bool NeedOutBlobWhenBackward() const override { return false; }
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return true; }
   void GetSbpSignatures(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;

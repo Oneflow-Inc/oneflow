@@ -17,11 +17,10 @@ class ShapeElemCntOp final : public Operator {
                       const ParallelContext* parallel_ctx) const override;
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const { return true; }
   void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
-  void GetSbpSignatureRules(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const override;
+  void GetSbpSignatures(
+      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+      SbpSignatureList* sbp_sig_list) const override;
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext*, KernelConf*, const OpContext*) const override;
 };

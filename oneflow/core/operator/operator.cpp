@@ -132,45 +132,6 @@ void Operator::InferOutputBlobTimeShape(
   }
 }
 
-int32_t Operator::OutputBlobModelSplitAxis(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    const std::string& obn) const {
-  if (IsSoleInputBlobAllowedModelSplit()) {
-    return SbpInferHint4Ibn(SoleIbn()).split_axis();
-  } else {
-    UNIMPLEMENTED();
-    return -1;
-  }
-}
-
-void Operator::GetSbpSignatureRulesIf(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  rules->emplace_back(MakeUnparallelSbpSignatureRule(this));
-  GetSbpSignatureRules(SbpInferHint4Ibn, rules);
-}
-
-void Operator::GetSbpSignatureRules(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  bool has_model = !(model_bns().empty() && const_model_bns().empty());
-  rules->emplace_back(MakeDataSplitSbpSignatureRule(this));
-  if (IsSoleInputBlobAllowedModelSplit()) {
-    CHECK(!has_model);
-    if (SbpInferHint4Ibn(SoleIbn()).sbp_parallel().has_split_parallel()) {
-      rules->emplace_back(MakeModelSplitSbpSignatureRule(this));
-    }
-    rules->emplace_back(MakeSoleIbnBroadcastSbpSignatureRule(this));
-  } else if (has_model) {
-    for (const auto& ibn : input_bns()) { CHECK(!IsInputBlobAllowedModelSplit(ibn)); }
-    rules->emplace_back(MakeModelSplitSbpSignatureRule(this));
-  } else if (input_bns().size() == 1) {
-    rules->emplace_back(MakeSoleIbnBroadcastSbpSignatureRule(this));
-  } else {
-    // do nothing
-  }
-}
-
 void Operator::GetSbpSignaturesIf(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
@@ -182,7 +143,7 @@ void Operator::GetSbpSignaturesIf(
 }
 
 void Operator::InferSbpSignatureIf(
-    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf, const SbpSignature& sbp_sig_hint,
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
@@ -191,14 +152,14 @@ void Operator::InferSbpSignatureIf(
     for (const auto& ibn : input_bns()) { (*bn2sbp)[ibn].mutable_split_parallel()->set_axis(0); }
     for (const auto& obn : output_bns()) { (*bn2sbp)[obn].mutable_split_parallel()->set_axis(0); }
   } else if (parallel_desc.parallel_num() > 1) {
-    InferSbpSignature(sbp_signature, sbp_sig_conf, sbp_sig_hint, CalcOrderValue4SbpSig,
-                      SbpInferHint4Ibn, parallel_desc);
+    InferSbpSignature(sbp_signature, sbp_sig_conf, CalcOrderValue4SbpSig, SbpInferHint4Ibn,
+                      parallel_desc);
   } else {
     UNIMPLEMENTED();
   }
 }
 
-void Operator::InferSbpSignatureV2(
+void Operator::InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
@@ -228,90 +189,12 @@ void Operator::InferSbpSignatureV2(
   *sbp_signature = *sorted_sbp_signatures.at(0);
 }
 
-void Operator::InferSbpSignature(
-    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf, const SbpSignature& sbp_sig_hint,
-    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-    std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
-    const ParallelDesc& parallel_desc) const {
-  const SbpSignature* sbp_sig = nullptr;
-  if (sbp_sig_conf.bn_in_op2sbp_parallel().size() > 0) {
-    sbp_sig = &sbp_sig_conf;
-  } else {
-    sbp_sig = &sbp_sig_hint;
-  }
-  std::vector<std::unique_ptr<const SbpSignatureRule>> rules;
-  GetSbpSignatureRulesIf(SbpInferHint4Ibn, &rules);
-  std::vector<SbpSigMatchResult> match_results;
-  for (const auto& signature : rules) {
-    match_results.push_back(signature->MatchIf(SbpInferHint4Ibn, *sbp_sig, parallel_desc));
-  }
-  int32_t match_success_cnt = 0;
-  for (const auto& result : match_results) {
-    if (result.has_success()) { ++match_success_cnt; }
-  }
-  if (match_success_cnt >= 1) {
-    HashSet<SbpSignature> signature_check;
-    FOR_RANGE(int32_t, i, 0, rules.size()) {
-      if (match_results.at(i).has_success()) {
-        rules.at(i)->GenerateSignatureIf(SbpInferHint4Ibn, *sbp_sig, sbp_signature);
-        signature_check.insert(*sbp_signature);
-      }
-    }
-    CHECK_EQ(signature_check.size(), 1);
-    if (parallel_desc.parallel_num() > 1) {
-      CHECK(IsSbpSignatureContaining(*sbp_signature, *sbp_sig));
-    }
-    SbpSignature sbp_sig_v2;
-    InferSbpSignatureV2(&sbp_sig_v2, sbp_sig_conf, CalcOrderValue4SbpSig, SbpInferHint4Ibn,
-                        parallel_desc);
-    CHECK(IsSbpSignatureContaining(sbp_sig_v2, *sbp_signature));
-  } else if (match_success_cnt == 0) {
-    std::stringstream ss;
-    FOR_RANGE(int32_t, i, 0, rules.size()) {
-      CHECK(match_results.at(i).has_fail());
-      const auto& failed_msg = match_results.at(i).fail();
-      ss << "rule match failed\n" << rules.at(i)->Description() << ":\n";
-      if (failed_msg.has_signature_mismatch()) {
-        ss << "\t"
-           << "signature mismatch"
-           << "\n";
-      } else {
-        CHECK(failed_msg.has_conf_error());
-        if (failed_msg.conf_error().has_parallel_policy_error()) {
-          const auto& policy_error_msg = failed_msg.conf_error().parallel_policy_error();
-          ss << "\t"
-             << "parallel_policy conf error, configured: "
-             << ParallelPolicy_Name(policy_error_msg.configured())
-             << ", expected: " << ParallelPolicy_Name(policy_error_msg.expected()) << "\n";
-        }
-        if (failed_msg.conf_error().has_parallel_num_error()) {
-          const auto& parallel_num_error_msg = failed_msg.conf_error().parallel_num_error();
-          ss << "\t"
-             << "parallel_num conf error, configured: " << parallel_num_error_msg.configured()
-             << ", expected: " << parallel_num_error_msg.expected() << "\n";
-        }
-        if (failed_msg.conf_error().has_device_set_error()) {
-          const auto& device_set_error_msg = failed_msg.conf_error().device_set_error();
-          ss << "\t"
-             << "device_set conf error, configured: " << device_set_error_msg.configured()
-             << ", expected: " << device_set_error_msg.expected() << "\n";
-        }
-      }
-    }
-    LOG(FATAL) << ss.str();
-  }
-}
-
 bool Operator::HasOutDiff4Lbi(const LogicalBlobId& lbi) const {
   CHECK_EQ(lbi.op_name(), op_name());
   return std::find_if(
              output_diff_bns().cbegin(), output_diff_bns().cend(),
              [&](const std::string& diff_bn) { return BnInOp2Lbi(GenUnDiffBn(diff_bn)) == lbi; })
          != output_diff_bns().end();
-}
-
-bool Operator::IsSoleInputBlobAllowedModelSplit() const {
-  return input_bns().size() == 1 && IsInputBlobAllowedModelSplit(SoleIbn());
 }
 
 void Operator::InferIsModelBlob4OutputBlobsIf(
@@ -321,7 +204,7 @@ void Operator::InferIsModelBlob4OutputBlobsIf(
 
 void Operator::InferIsModelBlob4OutputBlobs(
     std::function<bool*(const std::string&)> IsModelBlob4BnInOp) const {
-  bool is_model_blob = (IsSoleInputBlobAllowedModelSplit() && *IsModelBlob4BnInOp(SoleIbn()));
+  bool is_model_blob = (input_bns().size() == 1 && *IsModelBlob4BnInOp(SoleIbn()));
   for (const std::string& obn : output_bns()) { *IsModelBlob4BnInOp(obn) = is_model_blob; }
 }
 

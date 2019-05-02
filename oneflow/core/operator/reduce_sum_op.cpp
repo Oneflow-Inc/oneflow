@@ -42,15 +42,6 @@ void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   }
 }
 
-void ReduceSumOp::GetSbpSignatureRules(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  const auto& reduced_axes = op_conf().reduce_sum_conf().axis();
-  ReduceSbpUtil::GetReduceSumSplitSignatureRules(this, "in",
-                                                 {reduced_axes.begin(), reduced_axes.end()}, rules);
-  rules->emplace_back(MakeSoleIbnBroadcastSbpSignatureRule(this));
-}
-
 void ReduceSumOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   const auto& reduced_axes = op_conf().reduce_sum_conf().axis();
