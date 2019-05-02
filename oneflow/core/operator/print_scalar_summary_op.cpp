@@ -14,12 +14,6 @@ const PbMessage& PrintScalarSummaryOp::GetCustomizedConf() const {
   return op_conf().print_scalar_summary_conf();
 }
 
-void PrintScalarSummaryOp::GetSbpSignatureRules(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  // do nothing. only unparalleled sbp signature supported
-}
-
 REGISTER_CPU_OP(OperatorConf::kPrintScalarSummaryConf, PrintScalarSummaryOp);
 
 }  // namespace oneflow

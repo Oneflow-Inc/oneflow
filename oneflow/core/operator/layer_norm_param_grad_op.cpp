@@ -1,50 +1,7 @@
 #include "oneflow/core/operator/layer_norm_param_grad_op.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
-
-namespace {
-
-class LayerNormParamGradDataParallelSbpSignatureRule final : public ParallelSbpSignatureRule {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(LayerNormParamGradDataParallelSbpSignatureRule);
-  ~LayerNormParamGradDataParallelSbpSignatureRule() override = default;
-
-  explicit LayerNormParamGradDataParallelSbpSignatureRule(const Operator* op)
-      : ParallelSbpSignatureRule(op) {}
-
-  const std::string Description() const override {
-    return op().op_name() + ": (S(0), B) -> (S(0), P)";
-  }
-
-  const SbpSigMatchResult MatchByIbnHint(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      const ParallelDesc& parallel_desc) const override {
-    if (parallel_desc.policy() == kDataParallel) { return MakeSbpSigMatchSuccess(); }
-    return MakeSbpSigMatchParallelPolicyError(parallel_desc.policy(), kDataParallel);
-  }
-
-  void GenerateSignature(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      SbpSignature* sbp_signature) const override {
-    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
-    for (const std::string& ibn : op().input_bns()) {
-      if (ibn == "gamma") {
-        (*bn2sbp)[ibn].mutable_broadcast_parallel();
-      } else {
-        (*bn2sbp)[ibn].mutable_split_parallel()->set_axis(0);
-      }
-    }
-    for (const std::string& obn : op().output_bns()) {
-      if (obn == "beta_diff" || obn == "gamma_diff") {
-        (*bn2sbp)[obn].mutable_partial_sum_parallel();
-      } else {
-        (*bn2sbp)[obn].mutable_split_parallel()->set_axis(0);
-      }
-    }
-  }
-};
-
-}  // namespace
 
 void LayerNormParamGradOp::InitFromOpConf() {
   CHECK(op_conf().has_layer_norm_param_grad_conf());
@@ -105,12 +62,6 @@ void LayerNormParamGradOp::InferBlobDescs(
   }
 }
 
-void LayerNormParamGradOp::GetSbpSignatureRules(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  rules->emplace_back(new LayerNormParamGradDataParallelSbpSignatureRule(this));
-}
-
 void LayerNormParamGradOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = false; }
@@ -118,6 +69,15 @@ void LayerNormParamGradOp::InferHasBatchDim(
   if (conf.has_normalized_diff()) {
     *HasBatchDim4BnInOp("normalized_diff") = *HasBatchDim4BnInOp("dy");
   }
+}
+
+void LayerNormParamGradOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split(input_bns(), 0)
+      .Broadcast("gamma")
+      .Split(output_bns(), 0)
+      .PartialSum({"gamma_diff", "beta_diff"})
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_OP(OperatorConf::kLayerNormParamGradConf, LayerNormParamGradOp);

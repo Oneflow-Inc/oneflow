@@ -23,17 +23,6 @@ void ReduceMeanGradOp::InferBlobDescs(
   GetBlobDesc4BnInOp("dx")->CopyMetaFrom(*GetBlobDesc4BnInOp("x"));
 }
 
-void ReduceMeanGradOp::GetSbpSignatureRules(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  const auto& reduced_axes = op_conf().reduce_mean_grad_conf().reduced_axis();
-  HashSet<int64_t> conf_axes = {reduced_axes.begin(), reduced_axes.end()};
-  if (ReduceSbpUtil::IsReduceAxisSplitted(SbpInferHint4Ibn("x"), conf_axes) == false) {
-    rules->emplace_back(MakeDataSplitSbpSignatureRule(this));
-  }
-  rules->emplace_back(MakeMultiIbnsBroadcastSbpSignatureRule(this));
-}
-
 REGISTER_OP(OperatorConf::kReduceMeanGradConf, ReduceMeanGradOp);
 
 }  // namespace oneflow

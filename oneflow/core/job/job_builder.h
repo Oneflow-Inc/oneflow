@@ -3,7 +3,6 @@
 
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/register/op_blob_arg.pb.h"
-#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -12,6 +11,7 @@ void SetBnValInOpTypeConf(PbMessage* pb_msg, const std::string& bn, const std::s
 
 class SbpParallel;
 class LogicalBlobId;
+class Operator;
 
 class JobBuilder final {
  public:

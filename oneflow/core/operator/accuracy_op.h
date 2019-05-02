@@ -22,8 +22,6 @@ class AccuracyOp final : public Operator {
                             const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const;
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
-
   LogicalBlobId obn2lbi(const std::string& output_bn) const override;
 };
 

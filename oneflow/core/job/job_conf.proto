@@ -49,7 +49,7 @@ message FileSystemConf {
 }
 
 message SbpConf {
-  map<string, SbpSignature> op_name2sbp_signature_hint = 1;
+  map<string, SbpSignature> op_name2sbp_signature_conf = 1;
 }
 
 message ExperimentalRunConf {

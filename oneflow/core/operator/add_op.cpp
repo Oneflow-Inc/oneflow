@@ -1,5 +1,5 @@
 #include "oneflow/core/operator/add_op.h"
-#include "oneflow/core/job/sbp_signature_rule.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -21,46 +21,6 @@ bool IsAllInputBroadcastParallel(
   return true;
 }
 
-namespace {
-
-class AddOpDataSplitSignatureRule final : public ParallelSbpSignatureRule {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(AddOpDataSplitSignatureRule);
-  ~AddOpDataSplitSignatureRule() override = default;
-
-  AddOpDataSplitSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
-
-  const std::string Description() const override {
-    return op().op_name() + ": (S(0), ...) -> S(0)";
-  }
-
-  const SbpSigMatchResult MatchByIbnHint(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc) const override {
-    if (IsAllInputPartialSumParallel(op(), SbpInferHint4Ibn)) {
-      return MakeSbpSigMatchSignatureMismatch();
-    }
-    if (IsAllInputBroadcastParallel(op(), SbpInferHint4Ibn)) {
-      return MakeSbpSigMatchSignatureMismatch();
-    }
-    return MakeSbpSigMatchSuccess();
-  }
-
-  void GenerateSignature(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      SbpSignature* sbp_signature) const override {
-    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
-    for (const auto& ibn : op().input_bns()) {
-      (*bn2sbp)[ibn].mutable_split_parallel()->set_axis(0);
-    }
-    for (const auto& obn : op().output_bns()) {
-      (*bn2sbp)[obn].mutable_split_parallel()->set_axis(0);
-    }
-  }
-};
-
-}  // namespace
-
 void AddOp::VirtualInitFromOpConf() { CHECK(op_conf().has_add_conf()); }
 const PbMessage& AddOp::GetCustomizedConf() const { return op_conf().add_conf(); }
 void AddOp::VirtualFixInDiffBlobDescs(
@@ -73,12 +33,19 @@ void AddOp::VirtualFixInDiffBlobDescs(
   }
 }
 
-void AddOp::GetSbpSignatureRules(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  rules->emplace_back(new AddOpDataSplitSignatureRule(this));
-  rules->emplace_back(MakeMultiIbnsBroadcastSbpSignatureRule(this));
-  rules->emplace_back(MakePartialSumSignatureRule(this));
+void AddOp::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  int64_t num_axes = LogicalBlobDesc4Ibn(input_bns().Get(0)).shape().NumAxes();
+  SbpSignatureBuilder()
+      .Split(input_bns(), 0)
+      .Split(output_bns(), 0)
+      .MakeSplitSignatureListBuilder(num_axes)
+      .Build(sbp_sig_list);
+  SbpSignatureBuilder()
+      .PartialSum(input_bns())
+      .PartialSum(output_bns())
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_OP(OperatorConf::kAddConf, AddOp);

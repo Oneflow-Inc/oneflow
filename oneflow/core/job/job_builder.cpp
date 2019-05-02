@@ -76,7 +76,7 @@ void JobBuilder::ForEachOperator(const std::function<void(const Operator&)>& Han
 }
 
 SbpParallel* JobBuilder::MutSbpParallel4Oba(const OpBlobArg& oba) const {
-  auto* sbp_sig = &(*job_->mutable_sbp_conf()->mutable_op_name2sbp_signature_hint())[oba.op_name()];
+  auto* sbp_sig = &(*job_->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf())[oba.op_name()];
   return &(*sbp_sig->mutable_bn_in_op2sbp_parallel())[oba.bn_in_op()];
 }
 

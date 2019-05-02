@@ -1,37 +1,7 @@
 #include "oneflow/core/operator/constant_op.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
-
-namespace {
-
-class ConstantOpSbpSignatureRule final : public ParallelSbpSignatureRule {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(ConstantOpSbpSignatureRule);
-  ~ConstantOpSbpSignatureRule() override = default;
-
-  ConstantOpSbpSignatureRule(const Operator* op) : ParallelSbpSignatureRule(op) {}
-
-  const std::string Description() const override { return op().op_name() + ": S(0) -> B"; }
-
-  const SbpSigMatchResult MatchByIbnHint(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc) const override {
-    return MakeSbpSigMatchSuccess();
-  }
-
-  void GenerateSignature(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      SbpSignature* sbp_signature) const override {
-    auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
-    if (op().op_conf().constant_conf().has_tick()) {
-      CHECK(SbpInferHint4Ibn("tick").is_data_split());
-      (*bn2sbp)["tick"].mutable_split_parallel()->set_axis(0);
-    }
-    (*bn2sbp)["out"].mutable_broadcast_parallel();
-  }
-};
-
-}  // namespace
 
 void ConstantOp::InitFromOpConf() {
   CHECK(op_conf().has_constant_conf());
@@ -62,12 +32,6 @@ void ConstantOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   out->mut_shape() = Shape(dim_vec);
 }
 
-void ConstantOp::GetSbpSignatureRules(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  rules->emplace_back(new ConstantOpSbpSignatureRule(this));
-}
-
 void ConstantOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
@@ -93,6 +57,13 @@ void ConstantOp::VirtualGenKernelConf(
 void ConstantOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("out") = false;
+}
+
+void ConstantOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split(input_bns(), 0)
+      .Broadcast(output_bns())
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_OP(OperatorConf::kConstantConf, ConstantOp);

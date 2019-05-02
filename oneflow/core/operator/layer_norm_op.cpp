@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/layer_norm_op.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -120,25 +121,18 @@ void LayerNormOp::InferBwBufBlobDescs(
   *GetBlobDesc4BnInOp("cudnn_bn_bias_diff_buf") = *bn_scale_diff;
 }
 
-bool LayerNormOp::IsInputBlobAllowedModelSplit(const std::string& ibn) const {
-  return ibn == "beta" || ibn == "gamma";
-}
-
-void LayerNormOp::GetSbpSignatureRules(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  const LayerNormOpConf& conf = op_conf().layer_norm_conf();
-  if (conf.has_beta() || conf.has_gamma()) {
-    rules->emplace_back(Make_DS_MB_2_DS_SbpSignatureRule(this));
-  } else {
-    rules->emplace_back(MakeDataSplitSbpSignatureRule(this));
-  }
-}
-
 void LayerNormOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = false; }
   *HasBatchDim4BnInOp("out") = *HasBatchDim4BnInOp("in");
+}
+
+void LayerNormOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split(input_bns(), 0)
+      .Split(output_bns(), 0)
+      .Broadcast({"gamma", "beta"})
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_OP(OperatorConf::kLayerNormConf, LayerNormOp);

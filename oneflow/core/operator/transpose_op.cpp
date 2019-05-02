@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/transpose_op.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -47,24 +48,6 @@ void TransposeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   }
 }
 
-int32_t TransposeOp::OutputBlobModelSplitAxis(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    const std::string& obn) const {
-  const auto& in_sbp_infer_hint = SbpInferHint4Ibn("in");
-  const PbRf<int32_t>& perm = op_conf().transpose_conf().perm();
-  CHECK_GT(perm.size(), 0);
-  CHECK_EQ(perm.size(), in_sbp_infer_hint.num_axes());
-  int32_t split_axis = -1;
-  FOR_RANGE(int32_t, i, 0, perm.size()) {
-    if (perm[i] == in_sbp_infer_hint.split_axis()) {
-      split_axis = i;
-      break;
-    }
-  }
-  CHECK_NE(split_axis, -1);
-  return split_axis;
-}
-
 void TransposeOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
@@ -76,6 +59,23 @@ void TransposeOp::VirtualGenKernelConf(
   invert_perm->Reserve(perm->size());
   invert_perm->CopyFrom(*perm);
   FOR_RANGE(size_t, i, 0, perm->size()) { (*invert_perm)[(*perm)[i]] = i; }
+}
+
+void TransposeOp::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  const PbRf<int32_t>& perm = op_conf().transpose_conf().perm();
+  CHECK_EQ(perm.size(), LogicalBlobDesc4Ibn("in").shape().NumAxes());
+  FOR_RANGE(int32_t, i, 0, perm.size()) {
+    int32_t axis = perm.Get(i);
+    if (axis < 0) { axis += perm.size(); }
+    CHECK_GE(axis, 0);
+    CHECK_LT(axis, perm.size());
+    SbpSignatureBuilder()
+        .Split(input_bns(), i)
+        .Split(output_bns(), axis)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  }
 }
 
 REGISTER_OP(OperatorConf::kTransposeConf, TransposeOp);

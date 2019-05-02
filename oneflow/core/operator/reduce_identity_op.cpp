@@ -1,5 +1,5 @@
 #include "oneflow/core/operator/reduce_identity_op.h"
-#include "oneflow/core/job/sbp_signature_rule.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -24,12 +24,6 @@ LogicalBlobId ReduceIdentityOp::ibn2lbi(const std::string& input_bn) const {
   }
 }
 
-void ReduceIdentityOp::GetSbpSignatureRules(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    std::vector<std::unique_ptr<const SbpSignatureRule>>* rules) const {
-  rules->emplace_back(MakePartialSumSignatureRule(this));
-}
-
 LogicalBlobId ReduceIdentityOp::obn2lbi(const std::string& output_bn) const {
   if (Global<JobDesc>::Get()->IsPredict()
       && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
@@ -40,6 +34,17 @@ LogicalBlobId ReduceIdentityOp::obn2lbi(const std::string& output_bn) const {
     ret.set_blob_name(output_bn);
     return ret;
   }
+}
+
+void ReduceIdentityOp::InferSbpSignature(
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+    std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+    const ParallelDesc& parallel_desc) const {
+  for (const auto& ibn : input_bns()) {
+    CHECK(SbpInferHint4Ibn(ibn).sbp_parallel().has_partial_sum_parallel());
+  }
+  SbpSignatureBuilder().PartialSum(input_bns()).PartialSum(output_bns()).Build(sbp_signature);
 }
 
 REGISTER_OP(OperatorConf::kReduceIdentityConf, ReduceIdentityOp);

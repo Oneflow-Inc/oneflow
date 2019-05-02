@@ -21,7 +21,6 @@ class MeanOp final : public Operator {
                            const ParallelContext*) const override;
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
 };
 
 }  // namespace oneflow
