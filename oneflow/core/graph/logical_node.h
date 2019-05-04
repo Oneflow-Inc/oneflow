@@ -50,9 +50,13 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   }
 
   // Lbis
+  size_t produced_batch_dim_lbis_cnt() const { return produced_batch_dim_lbis_cnt_; }
+  size_t consumed_batch_dim_lbis_cnt() const { return consumed_batch_dim_lbis_cnt_; }
   std::vector<LogicalBlobId> GetLbisTo(const LogicalNode* dst) const;
   void SetDataLbisTo(const LogicalNode* dst, const std::vector<LogicalBlobId>&);
   bool IsDataLbiOnOutEdge(const LogicalBlobId& lbi) const;
+  void set_produced_batch_dim_lbis_cnt(size_t val) { produced_batch_dim_lbis_cnt_ = val; }
+  void set_consumed_batch_dim_lbis_cnt(size_t val) { consumed_batch_dim_lbis_cnt_ = val; }
 
   // util
   virtual std::string TypeName() const = 0;
@@ -67,8 +71,6 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   // other
   virtual int64_t GetAreaId() const = 0;
   virtual bool MayConsumeModelDiff() const { return false; }
-  bool IsProducedLogicalBlobAllModelBlob() const;
-  HashSet<LogicalBlobId>* mut_model_lbis() { return &model_lbis_; }
 
  protected:
   LogicalNode() {}
@@ -85,7 +87,8 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   HashMap<const LogicalNode*, std::vector<LogicalBlobId>> dst2data_lbis_;
   std::unique_ptr<const Shape> in_blob_fastest_time_shape_;
   std::unique_ptr<const Shape> out_blob_time_shape_;
-  HashSet<LogicalBlobId> model_lbis_;
+  size_t produced_batch_dim_lbis_cnt_;
+  size_t consumed_batch_dim_lbis_cnt_;
 };
 
 #define BLD_SUB_TSK_GPH_MTHD_ARGS()                                                       \
