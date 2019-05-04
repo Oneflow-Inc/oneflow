@@ -32,6 +32,7 @@ void ReduceSumLikeOp::InferBlobDescs(
 void ReduceSumLikeOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("y") = *HasBatchDim4BnInOp("like");
+  *HasBatchDim4BnInOp("temp_storage") = *HasBatchDim4BnInOp("like");
 }
 
 void ReduceSumLikeOp::GetSbpSignatures(

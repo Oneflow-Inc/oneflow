@@ -405,12 +405,12 @@ void SetCtrlInOpName(const OpGraph& op_graph, Job* job) {
   });
 }
 
-void SetModelLbis(const OpGraph& op_graph, Job* job) {
+void SetBatchDimLbis(const OpGraph& op_graph, Job* job) {
   op_graph.ForEachNode([&](OpNode* op_node) {
     for (const auto& obn : op_node->op().output_bns()) {
       const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(obn);
-      if (op_node->IsModelBlob4Lbi(lbi)) {
-        *job->mutable_helper()->mutable_model_lbis()->Add() = lbi;
+      if (op_node->HasBatchDim4Lbi(lbi)) {
+        *job->mutable_helper()->mutable_batch_dim_lbis()->Add() = lbi;
       }
     }
   });
@@ -419,7 +419,7 @@ void SetModelLbis(const OpGraph& op_graph, Job* job) {
 void SetOpTimeShape7CtrlInOpName7ModelLbis(const OpGraph& op_graph, Job* job) {
   SetOpTimeShape(op_graph, job);
   SetCtrlInOpName(op_graph, job);
-  SetModelLbis(op_graph, job);
+  SetBatchDimLbis(op_graph, job);
 }
 
 void RewriteBoxingWithAllReduce(const OpGraph& op_graph, Job* job) {
