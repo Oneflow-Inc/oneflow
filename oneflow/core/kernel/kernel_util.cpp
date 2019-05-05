@@ -143,22 +143,10 @@ template<typename T>
 void XavierInitializer(const XavierInitializerConf& initializer_conf, uint32_t random_seed,
                        Blob* blob, const std::string& data_format) {
   CHECK(blob->shape().elem_cnt());
-  const VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
-  const T fan = GenInitialFan<T>(variance_norm, blob, data_format);
-  const T gain = initializer_conf.gain();
-  const T std = gain / (std::sqrt(fan));
-  const DistributionType distribution =
-      static_cast<DistributionType>(initializer_conf.distribution());
-  if (distribution == DistributionType::kUniform) {
-    const T bound = std::sqrt(static_cast<T>(3.0)) * std;
-    RngUniform<T>(blob->shape().elem_cnt(), static_cast<T>(-bound), static_cast<T>(bound),
-                  random_seed, blob->mut_dptr<T>());
-  } else if (distribution == DistributionType::kNormal) {
-    RngNormal<T>(blob->shape().elem_cnt(), ZeroVal<T>::value, static_cast<T>(std), random_seed,
-                 blob->mut_dptr<T>());
-  } else {
-    UNIMPLEMENTED();
-  }
+  VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
+  T scale = std::sqrt(static_cast<T>(3) / GenInitialFan<T>(variance_norm, blob, data_format));
+  RngUniform<T>(blob->shape().elem_cnt(), static_cast<T>(-scale), static_cast<T>(scale),
+                random_seed, blob->mut_dptr<T>());
 }
 
 template<typename T>

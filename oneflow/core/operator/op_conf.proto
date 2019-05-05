@@ -57,8 +57,6 @@ enum DistributionType {
 
 message XavierInitializerConf {
   required VarianceNorm variance_norm = 1;
-  optional float gain = 2 [default = 1.0];
-  optional DistributionType distribution = 3 [default = kUniform];
 }
 
 message MsraInitializerConf {
