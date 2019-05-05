@@ -34,11 +34,21 @@ void BatchGatherOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   out->mut_shape() = Shape(out_dim_vec);
 }
 
-void BatchGatherOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
-  SbpSignatureBuilder()
-      .Split(input_bns(), 0)
-      .Split(output_bns(), 0)
-      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+void BatchGatherOp::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  const int64_t indices_num_axes = LogicalBlobDesc4Ibn("indices").shape().NumAxes();
+  if (indices_num_axes > 1) {
+    FOR_RANGE(int64_t, i, 0, indices_num_axes - 1) {
+      SbpSignatureBuilder()
+          .Split("indices", i)
+          .Split("in", i)
+          .Split("out", i)
+          .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    }
+  } else {
+    TODO();
+  }
 }
 
 REGISTER_OP(OperatorConf::kBatchGatherConf, BatchGatherOp);
