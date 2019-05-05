@@ -158,9 +158,6 @@ class Operator {
                            std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
                            const ParallelDesc& parallel_desc) const;
   virtual void FixSbpSignature(SbpSignature* sbp_signature) const {}
-  // Infer is_model_blob
-  void InferIsModelBlob4OutputBlobsIf(
-      std::function<bool*(const std::string&)> IsModelBlob4BnInOp) const;
   virtual void FixInDiffBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                   const ParallelContext*) const;
   virtual void VirtualFixInDiffBlobDescs(
@@ -190,9 +187,6 @@ class Operator {
       std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const;
   virtual void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const { UNIMPLEMENTED(); }
-
-  virtual void InferIsModelBlob4OutputBlobs(
-      std::function<bool*(const std::string&)> IsModelBlob4BnInOp) const;
 
   int64_t cudnn_buf_limit_byte() const;
 

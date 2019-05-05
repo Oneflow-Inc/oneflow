@@ -38,11 +38,6 @@ void VariableOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   *GetBlobDesc4BnInOp("out") = *model_blob_desc;
 }
 
-void VariableOp::InferIsModelBlob4OutputBlobs(
-    std::function<bool*(const std::string&)> IsModelBlob4BnInOp) const {
-  *IsModelBlob4BnInOp("out") = true;
-}
-
 void VariableOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
     KernelConf* conf) const {
