@@ -133,6 +133,7 @@ class Blob final {
   void CopyRecordIdInDevicePieceFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyInstanceShapeFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  void UpdateDynamicShape();
 
   size_t CalcDim0ValidNumSum() const;
   const int32_t& record_num() const;
@@ -147,7 +148,6 @@ class Blob final {
   PodPtr* header_pod_ptr() { return &header_pod_ptr_; }
 
  private:
-  const Shape& dynamic_shape() const;
   size_t ContiguousDim0ValidNum() const;
   int64_t GetDptrOffset(int32_t index) const { return 0; }
   template<typename... Int64s>
@@ -179,6 +179,7 @@ class Blob final {
   float* loss_instance_num_ptr_;
   int64_t* instance_shape_ptr_;
   bool use_instance_shape_;
+  bool has_dynamic_shape_;
   void* dptr_;
   const RtBlobDesc* blob_desc_;
   Regst* regst_;

@@ -36,8 +36,8 @@ void Blob::Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, cha
     use_instance_shape_ = false;
   }
   dptr_ = body_ptr;
-  dynamic_shape_ = blob_desc->shape();
   record_num_ = -1;
+  UpdateDynamicShape();
 }
 
 const char* Blob::data_id(int32_t no) const {
@@ -78,6 +78,7 @@ void Blob::set_dim0_valid_num(int64_t no, int64_t val) {
   CHECK_GE(val, 0);
   CHECK_LE(val, dim0_inner_shape().Count(1));
   dim0_valid_num_ptr_[no] = val;
+  UpdateDynamicShape();
 }
 
 int64_t Blob::dim1_valid_num(int64_t no) const {
@@ -178,9 +179,13 @@ void Blob::set_instance_shape(const Shape& shape) {
                                 .elem_cnt());
   use_instance_shape_ = true;
   for (size_t i = 0; i < shape.NumAxes(); ++i) { *(instance_shape_ptr_ + i) = shape.At(i); }
+  UpdateDynamicShape();
 }
 
-const Shape& Blob::shape() const { return dynamic_shape(); }
+const Shape& Blob::shape() const {
+  if (has_dynamic_shape_) { return dynamic_shape_; }
+  return static_shape();
+}
 
 size_t Blob::ContiguousDim0ValidNum() const {
   size_t contiguous_invalid_instance_num = 0;
@@ -197,7 +202,7 @@ bool Blob::IsShapeEmpty() const {
   return ContiguousDim0ValidNum() == 0;
 }
 
-const Shape& Blob::dynamic_shape() const {
+void Blob::UpdateDynamicShape() {
   dynamic_shape_ = static_shape();
   if (dim0_valid_num_ptr_ != nullptr) {
     size_t contiguous_instance_num = ContiguousDim0ValidNum();
@@ -205,6 +210,7 @@ const Shape& Blob::dynamic_shape() const {
     if (dynamic_shape_.At(0) != contiguous_instance_num) {
       dynamic_shape_.Set(0, contiguous_instance_num);
     }
+    has_dynamic_shape_ = true;
   }
   if (instance_shape_ptr_ != nullptr && use_instance_shape_) {
     int64_t total_dim_val = 1;
@@ -215,8 +221,8 @@ const Shape& Blob::dynamic_shape() const {
       total_dim_val *= dim_val;
     }
     CHECK_LE(total_dim_val, static_shape().elem_cnt());
+    has_dynamic_shape_ = false;
   }
-  return dynamic_shape_;
 }
 
 const int32_t& Blob::record_num() const { return record_num_; }
@@ -272,6 +278,7 @@ void Blob::CopyDim0ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   CHECK_EQ(ByteSizeOfDim0ValidNumField(), rhs->ByteSizeOfDim0ValidNumField());
   Memcpy<DeviceType::kCPU>(device_ctx, mut_dim0_valid_num_ptr(), rhs->dim0_valid_num_ptr(),
                            ByteSizeOfDim0ValidNumField());
+  UpdateDynamicShape();
 }
 
 void Blob::CopyDim1ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
@@ -301,6 +308,7 @@ void Blob::CopyInstanceShapeFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   CHECK_EQ(ByteSizeOfInstanceShapeField(), rhs->ByteSizeOfInstanceShapeField());
   Memcpy<DeviceType::kCPU>(device_ctx, mut_instance_shape_ptr(), rhs->instance_shape_ptr(),
                            ByteSizeOfInstanceShapeField());
+  UpdateDynamicShape();
 }
 
 void Blob::CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) {
