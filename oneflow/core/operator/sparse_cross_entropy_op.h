@@ -20,6 +20,11 @@ class SparseCrossEntropyOp final : public Operator {
   bool NeedInBlobWhenBackward() const override { return true; }
 
  private:
+  void InferHasBatchDim(
+      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {
+    NaiveInferHasBatchDim(HasBatchDim4BnInOp);
+  }
+
   void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 };
 

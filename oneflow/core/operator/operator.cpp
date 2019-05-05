@@ -599,7 +599,8 @@ void EraseEmptyBnInVec(std::function<const BlobDesc*(const std::string&)> GetBlo
   bns->erase(bns->begin() + idx_available, bns->end());
 }
 
-void Operator::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+void Operator::NaiveInferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   if (output_bns().empty()) { return; }
   CHECK_GT(input_bns().size(), 0);
   CHECK_EQ(output_bns().size(), 1);
