@@ -18,6 +18,11 @@ class GeluOp final : public Operator {
                       const ParallelContext* parallel_ctx) const override;
 
  private:
+  void InferHasBatchDim(
+      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {
+    NaiveInferHasBatchDim(HasBatchDim4BnInOp);
+  }
+
   void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 };
 

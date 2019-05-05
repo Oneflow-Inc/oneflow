@@ -144,6 +144,7 @@ class Operator {
       std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
     InferHasBatchDim(LogicalBlobDesc4Ibn, HasBatchDim4BnInOp);
   }
+  void NaiveInferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const;
 
   // Infer out blob's time shape
   void InferOutputBlobTimeShapeIf(
@@ -274,7 +275,9 @@ class Operator {
       std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
     InferHasBatchDim(HasBatchDim4BnInOp);
   }
-  virtual void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const;
+  virtual void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+    UNIMPLEMENTED();
+  }
 
   LogicalBlobId dtbn2lbi(const std::string& data_tmp_bn) const;
   LogicalBlobId fbbn2lbi(const std::string& fw_buf_bn) const { return dtbn2lbi(fw_buf_bn); }
