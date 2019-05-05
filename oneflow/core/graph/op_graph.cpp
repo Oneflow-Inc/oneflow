@@ -389,7 +389,7 @@ void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_s
   }
   op_node->op().InferSbpSignatureIf(sbp_signature, sbp_sig_conf, CalcOrderValue4SbpSig,
                                     SbpInferHint4Ibn, op_node->parallel_desc());
-  op_node->op().FixSbpSignature(sbp_signature);
+  op_node->op().FixSbpSignature(SbpInferHint4Ibn, sbp_signature);
 }
 
 void OpGraph::InferOpNodeLogicalBlobDesc(OpNode* op_node) const {

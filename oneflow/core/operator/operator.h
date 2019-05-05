@@ -158,7 +158,9 @@ class Operator {
                            const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
                            std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
                            const ParallelDesc& parallel_desc) const;
-  virtual void FixSbpSignature(SbpSignature* sbp_signature) const {}
+  virtual void FixSbpSignature(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      SbpSignature* sbp_signature) const {}
   virtual void FixInDiffBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                   const ParallelContext*) const;
   virtual void VirtualFixInDiffBlobDescs(

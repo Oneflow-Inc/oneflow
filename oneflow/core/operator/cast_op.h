@@ -15,7 +15,9 @@ class CastOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override;
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
-  void FixSbpSignature(SbpSignature* sbp_signature) const override;
+  void FixSbpSignature(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      SbpSignature* sbp_signature) const override;
 
  private:
   void InferHasBatchDim(
