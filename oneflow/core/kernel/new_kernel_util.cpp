@@ -13,8 +13,8 @@ void NewKernelUtil::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CB
 
 }
 void NewKernelUtil::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-            const int m, const int n, const int k, const half alpha, const half* a, const half* b,
-            const half beta, half* c) {
+            const int m, const int n, const int k, const float16 alpha, const float16* a, const float16* b,
+            const float16 beta, float16* c) {
 
 }
 
