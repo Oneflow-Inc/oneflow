@@ -62,7 +62,7 @@ class Blob final {
   Shape instance_shape() const;
   const int64_t* instance_shape_ptr() const { return instance_shape_ptr_; }
   int64_t* mut_instance_shape_ptr() const { return instance_shape_ptr_; }
-  void DisableInstanceShape() { use_instance_shape_ = false; }
+  void DisableInstanceShape();
 
   const void* header_ptr() const { return header_ptr_; }
   void* mut_header_ptr() { return header_ptr_; }
@@ -94,7 +94,7 @@ class Blob final {
   const RtBlobDesc& blob_desc() const { return *blob_desc_; }
   const RtBlobDesc* blob_desc_ptr() const { return blob_desc_; }
   const Shape& static_shape() const { return blob_desc_->shape(); }
-  const Shape& shape() const;
+  const Shape& shape() const { return dynamic_shape_; }
   bool IsShapeEmpty() const;
   bool has_dim0_inner_shape() const { return blob_desc_->has_dim0_inner_shape(); }
   const Shape& dim0_inner_shape() const { return blob_desc_->dim0_inner_shape(); }
@@ -179,12 +179,11 @@ class Blob final {
   float* loss_instance_num_ptr_;
   int64_t* instance_shape_ptr_;
   bool use_instance_shape_;
-  bool has_dynamic_shape_;
   void* dptr_;
   const RtBlobDesc* blob_desc_;
   Regst* regst_;
   PodPtr header_pod_ptr_;
-  mutable Shape dynamic_shape_;
+  Shape dynamic_shape_;
 };
 
 template<typename RecordType>

@@ -37,7 +37,7 @@ void Blob::Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, cha
   }
   dptr_ = body_ptr;
   record_num_ = -1;
-  UpdateDynamicShape();
+  dynamic_shape_ = static_shape();
 }
 
 const char* Blob::data_id(int32_t no) const {
@@ -182,11 +182,6 @@ void Blob::set_instance_shape(const Shape& shape) {
   UpdateDynamicShape();
 }
 
-const Shape& Blob::shape() const {
-  if (has_dynamic_shape_) { return dynamic_shape_; }
-  return static_shape();
-}
-
 size_t Blob::ContiguousDim0ValidNum() const {
   size_t contiguous_invalid_instance_num = 0;
   for (int i = dim0_inner_shape().At(0) - 1; i >= 0; --i) {
@@ -210,7 +205,6 @@ void Blob::UpdateDynamicShape() {
     if (dynamic_shape_.At(0) != contiguous_instance_num) {
       dynamic_shape_.Set(0, contiguous_instance_num);
     }
-    has_dynamic_shape_ = true;
   }
   if (instance_shape_ptr_ != nullptr && use_instance_shape_) {
     int64_t total_dim_val = 1;
@@ -221,8 +215,12 @@ void Blob::UpdateDynamicShape() {
       total_dim_val *= dim_val;
     }
     CHECK_LE(total_dim_val, static_shape().elem_cnt());
-    has_dynamic_shape_ = false;
   }
+}
+
+void Blob::DisableInstanceShape() {
+  use_instance_shape_ = false;
+  UpdateDynamicShape();
 }
 
 const int32_t& Blob::record_num() const { return record_num_; }
