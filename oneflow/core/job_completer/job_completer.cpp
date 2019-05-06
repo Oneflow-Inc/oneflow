@@ -7,6 +7,7 @@
 #include "oneflow/core/job_completer/add_saver.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job_completer/all_reduce_add_pass.h"
+#include "oneflow/core/job_completer/freeze_sbp_signature.h"
 
 namespace oneflow {
 
@@ -304,7 +305,6 @@ void TieUpChainHeadersUnReachableFromAnyVariableOps(const OpGraph& op_graph, Job
     if (chain_nodes.size() - source_nodes.size() <= 2) { return; }
     AddIdentityOpAndReconnect("pseudo_chain_header_", job, source_edges, MutOperatorConf4OpName,
                               *ParallelConf4OpName(source_nodes.at(0)->op().op_name()));
-
   });
 }
 
@@ -444,6 +444,7 @@ void JobCompleter::Complete(Job* job) const {
     // add keep_header_only op
     WithOpGraphAndMutJob(job, &AddKeepHeaderOnlyOp);
     WithOpGraphAndMutJob(job, &RewriteBoxingWithAllReduce);
+    WithOpGraphAndMutJob(job, &FreezeSbpSignature);
     WithOpGraphAndMutJob(job, &SetOpTimeShape7CtrlInOpName7ModelLbis);
   }
   // TODO: refine
