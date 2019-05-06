@@ -59,7 +59,6 @@ void GatherOp::GetSbpSignatures(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   const int64_t in_num_axes = LogicalBlobDesc4Ibn("in").shape().NumAxes();
-  CHECK_EQ(in_num_axes, 2);
   const int64_t gather_axis = GetGatherAxis(op_conf().gather_conf(), in_num_axes);
   CHECK_GE(gather_axis, 0);
   CHECK_LT(gather_axis, in_num_axes);
