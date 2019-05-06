@@ -36,11 +36,21 @@ void BatchGatherGradOp::InferBlobDescs(
   in_diff->mut_shape() = Shape(in_diff_dim_vec);
 }
 
-void BatchGatherGradOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
-  SbpSignatureBuilder()
-      .Split(input_bns(), 0)
-      .Split(output_bns(), 0)
-      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+void BatchGatherGradOp::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  const int64_t indices_num_axes = LogicalBlobDesc4Ibn("indices").shape().NumAxes();
+  if (indices_num_axes > 1) {
+    FOR_RANGE(int64_t, i, 0, indices_num_axes - 1) {
+      SbpSignatureBuilder()
+          .Split("indices", i)
+          .Split("out_diff", i)
+          .Split("in_diff", i)
+          .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    }
+  } else {
+    UNIMPLEMENTED();
+  }
 }
 
 REGISTER_OP(OperatorConf::kBatchGatherGradConf, BatchGatherGradOp);
