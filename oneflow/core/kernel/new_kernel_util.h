@@ -26,6 +26,17 @@ class NewKernelUtil {
   static void OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
                      const int m, const int n, const int k, const float16 alpha, const float16* a, const float16* b,
                      const float16 beta, float16* c);
+
+  template <typename T>
+  static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE trans_a,
+                   const enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
+                   const T alpha, const T* a, const int lda, const T* b, const int ldb,
+                   const T beta, T* c, const int ldc);
+  static void HGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
+                    const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
+                    const int m, const int n, const int k, const T alpha, const T* a, const int lda,
+                    const T* b, const int ldb, const T beta, T* c, const int ldc) 
+
 };
 
 } // namespace oneflow
