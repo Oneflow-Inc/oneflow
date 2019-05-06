@@ -360,6 +360,7 @@ DECLARE_BEFORE_OR_AFTER_ALLREDUCE_REDUCE_NODE(ReduceSplitLogicalNode, false);
   }
 
 DECLARE_FACADE_LOGICAL_NODE(AllReduceFacadeLogicalNode);
+DECLARE_FACADE_LOGICAL_NODE(ParallelCastFacadeLogicalNode);
 
 }  // namespace oneflow
 

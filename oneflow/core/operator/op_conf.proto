@@ -1252,6 +1252,13 @@ message ParallelCastOpConf {
   }
 }
 
+message ParallelCastFacadeOpConf {
+  required string in = 1;
+  required string out = 2;
+  required SbpParallel in_sbp_parallel = 3;
+  required SbpParallel out_sbp_parallel = 4;
+}
+
 message L2NormalizeOpConf {
   required string in = 1;
   required string out = 2;
@@ -1379,6 +1386,7 @@ message OperatorConf {
     ShapeElemCntOpConf shape_elem_cnt_conf = 132;
     AccOpConf acc_conf = 133;
     AllReduceFacadeOpConf all_reduce_facade_conf = 134;
+    ParallelCastFacadeOpConf parallel_cast_facade_conf = 135;
       
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
