@@ -4,8 +4,9 @@
 namespace oneflow {
 
 void FreezeSbpSignature(const OpGraph& op_graph, Job* job) {
-  op_graph.ForEachNode([&](const OpNode* node){
-    *job->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf()[node->op().op_name()] = node->sbp_signature();
+  op_graph.ForEachNode([&](const OpNode* node) {
+    (*job->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf())[node->op().op_name()] =
+        node->sbp_signature();
   });
 }
 
