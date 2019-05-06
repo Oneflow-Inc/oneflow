@@ -30,9 +30,19 @@ void AddKeepHeaderOnlyOp(const OpGraph& op_graph, Job* job) {
     HashMap<OpNode*, std::vector<std::string>> src_node2ibns;
     for (const std::string& ibn : header_only_ibns) {
       const LogicalBlobId& lbi = node->op().BnInOp2Lbi(ibn);
-      src_node2ibns[OpEdge4Lbi(lbi)->src_node()].push_back(ibn);
+      OpNode* src_node = OpEdge4Lbi(lbi)->src_node();
+      if (src_node->parallel_desc() != node->parallel_desc()) {
+        LOG(WARNING) << "can not enable KeepHeaderOnly for " << ibn << " of "
+                     << node->op().op_name();
+        continue;
+      }
+      if (src_node->SbpParallel4Lbi(lbi) != node->SbpParallel4BnInOp(ibn)) {
+        LOG(WARNING) << "can not enable KeepHeaderOnly for " << ibn << " of "
+                     << node->op().op_name();
+        continue;
+      }
+      src_node2ibns[src_node].push_back(ibn);
     }
-
     OperatorConf dst_op_conf = node->op().op_conf();
     PbMessage* dst_op_type_conf =
         MutableMessageInPbMessage(&dst_op_conf, dst_op_conf.op_type_case());
@@ -45,7 +55,7 @@ void AddKeepHeaderOnlyOp(const OpGraph& op_graph, Job* job) {
       OperatorConf op_conf;
       op_conf.set_name(node->op().op_name() + "-" + src_node->op().op_name() + "-keep_header_only");
       KeepHeaderOnlyOpConf* kho_conf = op_conf.mutable_keep_header_only_conf();
-      for (const std::string ibn : cur_ibns) {
+      for (const std::string& ibn : cur_ibns) {
         const LogicalBlobId& cur_lbi = node->op().BnInOp2Lbi(ibn);
         OpEdge* cur_edge = OpEdge4Lbi(cur_lbi);
         CHECK(lbi.op_name() == cur_lbi.op_name());
