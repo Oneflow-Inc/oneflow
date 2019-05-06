@@ -1257,6 +1257,7 @@ message ParallelCastFacadeOpConf {
   required string out = 2;
   required SbpParallel in_sbp_parallel = 3;
   required SbpParallel out_sbp_parallel = 4;
+  required ShapeProto logical_blob_shape = 5;
 }
 
 message L2NormalizeOpConf {

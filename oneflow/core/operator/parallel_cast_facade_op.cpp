@@ -1,6 +1,7 @@
 #include "oneflow/core/operator/parallel_cast_facade_op.h"
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
+#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 
@@ -21,6 +22,28 @@ LogicalNode* ParallelCastFacadeOp::NewProperLogicalNode() const {
 void ParallelCastFacadeOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("out") = *HasBatchDim4BnInOp("in");
+}
+
+void ParallelCastFacadeOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
+  const ParallelCastFacadeOpConf& conf = op_conf().parallel_cast_facade_conf();
+  const SbpParallel& out_sbp_parallel = conf.out_sbp_parallel();
+  const BlobDesc* in = GetBlobDesc4BnInOp("in");
+  BlobDesc* out = GetBlobDesc4BnInOp("out");
+  *out = *in;
+  if (out_sbp_parallel.has_partial_sum_parallel() || out_sbp_parallel.has_broadcast_parallel()) {
+    out->mut_shape() = Shape(conf.logical_blob_shape());
+  } else if (out_sbp_parallel.has_split_parallel()) {
+    const int64_t axis = out_sbp_parallel.split_parallel().axis();
+    CHECK_GE(axis, 0);
+    CHECK_LT(axis, conf.logical_blob_shape().dim_size());
+    BalancedSplitter splitter(conf.logical_blob_shape().dim(axis), parallel_ctx->parallel_num());
+    out->mut_shape() = Shape(conf.logical_blob_shape());
+    out->mut_shape().Set(axis, splitter.At(parallel_ctx->parallel_id()).size());
+  } else {
+    UNIMPLEMENTED();
+  }
 }
 
 void ParallelCastFacadeOp::InferSbpSignature(
