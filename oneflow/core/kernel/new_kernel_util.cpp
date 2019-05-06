@@ -16,32 +16,44 @@ static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, enum CBLAS_TRANSP
   cblas_gemm<T>(order, trans_a, trans_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
 }
 
+template<typename T>
+static void OFGemmImplement(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
+                      T alpha, T beta, const Blob* a, const Blob* b, Blob* c) {
+  const int m = c->shape().At(0);
+  const int n = c->shape().Count(1);
+  const int k = (trans_a == CblasNoTrans) ? a->shape().Count(1) : a->shape().At(0);
+
+  NewKernelUtil::OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a->dptr<T>(), b->dptr<T>(), beta,
+           c->mut_dptr<T>());
+}
+
 } // namespace
 
 void NewKernelUtil::BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-            const int m, const int n, const int k, const float alpha, const float* a, const float* b, const float beta, float* c) {
-  NewKernelUtil::OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
+                      float alpha, float beta, const Blob* a, const Blob* b, Blob* c) {
+  OFGemmImplement(ctx, trans_a, trans_b, alpha, beta, a, b, c);
 }
 
 void NewKernelUtil::BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-            const int m, const int n, const int k, const double alpha, const double* a, const double* b, const double beta, double* c) {
-  NewKernelUtil::OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
+                       double alpha, double beta, const Blob* a, const Blob* b, Blob* c) {
+  OFGemmImplement(ctx, trans_a, trans_b, alpha, beta, a, b, c);
 }
 
 void NewKernelUtil::BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-            const int m, const int n, const int k, const float16 alpha, const float16* a, const float16* b, const float16 beta, float16* c) {
-  NewKernelUtil::OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
+                      float16 alpha, float16 beta, const Blob* a, const Blob* b, Blob* c) {
+  OFGemmImplement(ctx, trans_a, trans_b, alpha, beta, a, b, c);
 }
+
 void NewKernelUtil::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
             const int m, const int n, const int k, const float alpha, const float* a, const float* b,
             const float beta, float* c) {
-  Gemm<float>(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
+  Gemm(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
 }
 
 void NewKernelUtil::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
             const int m, const int n, const int k, const double alpha, const double* a, const double* b,
             const double beta, double* c) {
-  Gemm<double>(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
+  Gemm(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
 }
 
 void NewKernelUtil::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,

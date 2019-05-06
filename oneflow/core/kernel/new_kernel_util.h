@@ -18,12 +18,11 @@ namespace oneflow {
 class NewKernelUtil {
  public:
   static void BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-            const int m, const int n, const int k, const float alpha, const float* a, const float* b, const float beta, float* c);
+                       float alpha, float beta, const Blob* a, const Blob* b, Blob* c);
   static void BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-            const int m, const int n, const int k, const double alpha, const double* a, const double* b, const double beta, double* c);
+                       double alpha, double beta, const Blob* a, const Blob* b, Blob* c) ;
   static void BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-            const int m, const int n, const int k, const float16 alpha, const float16* a, const float16* b, const float16 beta, float16* c);
-
+                       float16 alpha, float16 beta, const Blob* a, const Blob* b, Blob* c);
   static void OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
                      const int m, const int n, const int k, const float alpha, const float* a, const float* b,
                      const float beta, float* c);

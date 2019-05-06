@@ -30,7 +30,7 @@ static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, enum CBLAS_TRANSP
   const int ldc = n;
   cublasOperation_t cublas_trans_a = CblasTrans2CublasTrans(trans_a);
   cublasOperation_t cublas_trans_b = CblasTrans2CublasTrans(trans_b);
-  
+
   cublas_gemm<T>(ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k, &alpha, b,
   ldb, a, lda, &beta, c, ldc);
 }
@@ -54,15 +54,15 @@ static void HGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, enum CBLAS_TRANS
 } // namespace
 
 void NewKernelUtil::BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-    const int m, const int n, const int k, const float alpha, const float* a, const float* b, const float beta, float* c) {
+  float alpha, float beta, const Blob* a, const Blob* b, Blob* c) {
   NewKernelUtil::OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
 }
 void NewKernelUtil::BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-  const int m, const int n, const int k, const double alpha, const double* a, const float* b, const double beta, double* c) {
+  float alpha, float beta, const Blob* a, const Blob* b, Blob* c) {
   NewKernelUtil::OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
 }
 void NewKernelUtil::BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-  const int m, const int n, const int k, const float16 alpha, const float16* a, const float* b, const float16 beta, float16* c) {
+  float alpha, float beta, const Blob* a, const Blob* b, Blob* c) {
   NewKernelUtil::OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
 }
 void NewKernelUtil::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
