@@ -451,7 +451,7 @@ BalancedSplitter OpGraph::GetBalancedSplitter(const std::string& op_name,
   CHECK(sbp_parallel.has_split_parallel());
   int64_t split_num = GetSplitNum(op_name, lbi);
   if (IsBatchDimBlob(op_name, lbi)) {
-    CHECK_EQ(sbp_parallel.split_parallel().axis(), 0);
+    // CHECK_EQ(sbp_parallel.split_parallel().axis(), 0);
     CHECK_EQ(split_num % op_node->parallel_desc().parallel_num(), 0);
   } else {
     CHECK_GE(split_num, op_node->parallel_desc().parallel_num());
