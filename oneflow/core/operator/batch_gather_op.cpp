@@ -47,7 +47,7 @@ void BatchGatherOp::GetSbpSignatures(
           .Build(sbp_sig_list->mutable_sbp_signature()->Add());
     }
   } else {
-    TODO();
+    UNIMPLEMENTED();
   }
 }
 
