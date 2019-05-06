@@ -38,7 +38,8 @@ void ParallelCastFacadeOp::InferBlobDescs(
     const int64_t axis = out_sbp_parallel.split_parallel().axis();
     CHECK_GE(axis, 0);
     CHECK_LT(axis, conf.logical_blob_shape().dim_size());
-    BalancedSplitter splitter(conf.logical_blob_shape().dim(axis), parallel_ctx->parallel_num());
+    const BalancedSplitter splitter(conf.logical_blob_shape().dim(axis),
+                                    parallel_ctx->parallel_num());
     out->mut_shape() = Shape(conf.logical_blob_shape());
     out->mut_shape().Set(axis, splitter.At(parallel_ctx->parallel_id()).size());
   } else {
