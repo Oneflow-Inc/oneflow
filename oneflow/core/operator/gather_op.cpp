@@ -69,13 +69,10 @@ void GatherOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
   const int64_t axis = GetGatherAxis(op_conf().gather_conf(), in);
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   *out = *in;
-  std::vector<int64_t> dim_vec;
-  dim_vec.insert(dim_vec.end(), in->shape().dim_vec().cbegin(),
-                 in->shape().dim_vec().cbegin() + axis);
-  dim_vec.insert(dim_vec.end(), indices->shape().dim_vec().cbegin(),
-                 indices->shape().dim_vec().cend());
-  dim_vec.insert(dim_vec.end(), in->shape().dim_vec().cbegin() + axis + 1,
-                 in->shape().dim_vec().end());
+  auto dim_vec = in->shape().dim_vec();
+  auto insert_dim_vec = indices->shape().dim_vec();
+  auto insert_pos = dim_vec.erase(dim_vec.begin() + axis);
+  dim_vec.insert(insert_pos, insert_dim_vec.begin(), insert_dim_vec.end());
   out->mut_shape() = Shape(dim_vec);
 }
 

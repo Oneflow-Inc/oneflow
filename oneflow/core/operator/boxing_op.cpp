@@ -98,21 +98,22 @@ void BoxingOp::InferDataTmpBlobDesc(std::function<BlobDesc*(const std::string&)>
     FOR_RANGE(size_t, ib_idx, 1, input_bns().size()) {
       const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(ib_idx));
       const std::vector<int64_t>& in_blob_shape_vec = in_blob_desc->shape().dim_vec();
-      const std::vector<int64_t>* in_blob_dim0_inner_shape_vec = nullptr;
+      const Shape* in_blob_dim0_inner_shape_ptr = nullptr;
       if (in_blob_desc->has_dim0_inner_shape()) {
-        in_blob_dim0_inner_shape_vec = &in_blob_desc->dim0_inner_shape().dim_vec();
+        in_blob_dim0_inner_shape_ptr = &in_blob_desc->dim0_inner_shape();
       }
       CHECK_LT(concat_axis, in_blob_shape_vec.size());
       FOR_RANGE(size_t, i, 0, in_blob_shape_vec.size()) {
         if (i == concat_axis) {
           (*data_tmp_vec_ptr)[i] += in_blob_shape_vec[i];
-          if (i == 0 && in_blob_dim0_inner_shape_vec) {
-            (*data_tmp_dim0_inner_shape_vec_ptr)[0] += (*in_blob_dim0_inner_shape_vec)[0];
+          if (i == 0 && in_blob_dim0_inner_shape_ptr) {
+            (*data_tmp_dim0_inner_shape_vec_ptr)[0] += in_blob_dim0_inner_shape_ptr->At(0);
           }
         } else {
           CHECK_EQ((*data_tmp_vec_ptr)[i], in_blob_shape_vec[i]);
-          if (i == 0 && in_blob_dim0_inner_shape_vec) {
-            CHECK(*data_tmp_dim0_inner_shape_vec_ptr == *in_blob_dim0_inner_shape_vec);
+          if (i == 0 && in_blob_dim0_inner_shape_ptr) {
+            auto in_blob_dim0_inner_shape_vec = in_blob_dim0_inner_shape_ptr->dim_vec();
+            CHECK(*data_tmp_dim0_inner_shape_vec_ptr == in_blob_dim0_inner_shape_vec);
           }
         }
       }

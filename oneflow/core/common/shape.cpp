@@ -3,71 +3,72 @@
 
 namespace oneflow {
 
-Shape::Shape(const std::initializer_list<int64_t>& dim_vec) : dim_vec_(dim_vec) { UpdateElemCnt(); }
-Shape::Shape(const std::vector<int64_t>& dim_vec) : dim_vec_(dim_vec) { UpdateElemCnt(); }
+namespace {
 
-Shape::Shape(const ShapeProto& shape_proto) {
-  dim_vec_.assign(shape_proto.dim().begin(), shape_proto.dim().end());
+template<class InputIt, class OutputIt>
+OutputIt CopyDims(InputIt first, InputIt last, OutputIt d_first) {
+  while (first != last) {
+    CHECK_GE(*first, 0LL);
+    *d_first++ = *first++;
+  }
+  return d_first;
+}
+
+}  // namespace
+
+Shape::Shape(const ShapeProto& shape_proto) : num_axes_(shape_proto.dim_size()) {
+  CHECK_LE(num_axes_, sizeof(dim_) / sizeof(int64_t));
+  CopyDims(shape_proto.dim().begin(), shape_proto.dim().end(), dim_);
   UpdateElemCnt();
 }
 
-Shape& Shape::operator=(const Shape& shape) {
-  dim_vec_ = shape.dim_vec_;
+Shape::Shape(const std::vector<int64_t>& dim_vec) : num_axes_(dim_vec.size()) {
+  CHECK_LE(num_axes_, sizeof(dim_) / sizeof(int64_t));
+  CopyDims(dim_vec.begin(), dim_vec.end(), dim_);
   UpdateElemCnt();
-  return *this;
 }
 
-bool Shape::operator==(const Shape& rhs) const { return dim_vec_ == rhs.dim_vec_; }
+Shape::Shape(const std::initializer_list<int64_t>& dim_list) : num_axes_(dim_list.size()) {
+  CHECK_LE(num_axes_, sizeof(dim_) / sizeof(int64_t));
+  CopyDims(dim_list.begin(), dim_list.end(), dim_);
+  UpdateElemCnt();
+}
+
+int64_t Shape::Count(int64_t begin_axis, int64_t end_axis) const {
+  int64_t begin = ShiftNegativeAxisIfNeedAndCheck(begin_axis);
+  int64_t end = ShiftNegativeAxisIfNeedAndCheck(end_axis);
+  CHECK_LE(begin, end) << "Num of axes: " << num_axes_ << ", begin axis: " << begin_axis
+                       << ", end axis: " << end_axis;
+  int64_t elem_cnt = 1;
+  FOR_RANGE(int64_t, i, begin, end) { elem_cnt *= dim_[i]; }
+  return elem_cnt;
+}
+
+Shape Shape::CreateLeftExtendedShape(size_t extend_axes) const {
+  CHECK_GE(extend_axes, num_axes_);
+  std::vector<int64_t> dim_vec = this->dim_vec();
+  FOR_RANGE(size_t, i, 0, extend_axes - num_axes_) { dim_vec.insert(dim_vec.begin(), 1LL); }
+  return Shape(dim_vec);
+}
 
 std::string Shape::ToString() const {
   std::stringstream ss;
-  int32_t idx = 0;
   ss << "(";
-  for (int64_t dim : dim_vec_) {
-    ss << dim;
-    if (++idx != dim_vec_.size() || dim_vec_.size() == 1) { ss << ","; }
+  FOR_RANGE(size_t, i, 0, num_axes_) {
+    ss << i;
+    if (num_axes_ == 1 || i != num_axes_ - 1) { ss << ","; }
   }
   ss << ")";
   return ss.str();
 }
 
-std::string Shape::DebugStr() const { return ToString(); }
-
 void Shape::ToProto(ShapeProto* ret) const {
-  *(ret->mutable_dim()) = PbRf<int64_t>(dim_vec_.begin(), dim_vec_.end());
-}
-
-void Shape::Set(int64_t index, int64_t val) {
-  dim_vec_[index] = val;
-  UpdateElemCnt();
-}
-
-int64_t Shape::Count(int64_t begin_axis, int64_t end_axis) const {
-  CHECK(0 <= begin_axis && begin_axis <= end_axis && end_axis <= NumAxes())
-      << begin_axis << " " << end_axis;
-  int64_t cnt = 1;
-  for (int64_t i = begin_axis; i < end_axis; ++i) { cnt *= At(i); }
-  return cnt;
-}
-
-int64_t Shape::Count(int64_t begin_axis) const { return Count(begin_axis, NumAxes()); }
-
-void Shape::UpdateElemCnt() {
-  elem_cnt_ = 1;
-  for (int64_t s : dim_vec_) { elem_cnt_ *= s; }
-  if (dim_vec_.size() == 0) { elem_cnt_ = 0; }
+  *(ret->mutable_dim()) = PbRf<int64_t>(dim_, dim_ + num_axes_);
 }
 
 std::ostream& operator<<(std::ostream& out, const Shape& shape) {
   out << shape.DebugStr();
   return out;
-}
-
-Shape Shape::CreateLeftExtendedShape(int num_axes) const {
-  CHECK_GE(num_axes, NumAxes());
-  std::vector<int64_t> dim_vec = this->dim_vec();
-  for (int i = 0; i < num_axes - NumAxes(); ++i) { dim_vec.insert(dim_vec.begin(), 1LL); }
-  return Shape(dim_vec);
 }
 
 }  // namespace oneflow

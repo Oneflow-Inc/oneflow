@@ -33,13 +33,10 @@ void LocalGatherOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   const int64_t axis = GetGatherAxis(op_conf().local_gather_conf(), in);
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   *out = *in;
-  std::vector<int64_t> dim_vec;
-  dim_vec.insert(dim_vec.end(), in->shape().dim_vec().cbegin(),
-                 in->shape().dim_vec().cbegin() + axis);
-  dim_vec.insert(dim_vec.end(), indices->shape().dim_vec().cbegin(),
-                 indices->shape().dim_vec().cend());
-  dim_vec.insert(dim_vec.end(), in->shape().dim_vec().cbegin() + axis + 1,
-                 in->shape().dim_vec().end());
+  auto dim_vec = in->shape().dim_vec();
+  auto insert_dim_vec = indices->shape().dim_vec();
+  auto insert_pos = dim_vec.erase(dim_vec.begin() + axis);
+  dim_vec.insert(insert_pos, insert_dim_vec.begin(), insert_dim_vec.end());
   out->mut_shape() = Shape(dim_vec);
   if (axis == 0 && indices->has_dim0_valid_num_field()) {
     out->set_has_dim0_valid_num_field(true);
