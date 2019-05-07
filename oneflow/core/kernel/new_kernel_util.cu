@@ -70,6 +70,7 @@ GPU_KU_METHOD BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_
   float alpha, float beta, const Blob* a, const Blob* b, Blob* c) {
   BlobGemmImpl(ctx, trans_a, trans_b, alpha, beta, a, b, c);
 }
+<<<<<<< HEAD
 GPU_KU_METHOD BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
   double alpha, double beta, const Blob* a, const Blob* b, Blob* c) {
   BlobGemmImpl(ctx, trans_a, trans_b, alpha, beta, a, b, c);
@@ -79,19 +80,76 @@ GPU_KU_METHOD BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_
   BlobGemmImpl(ctx, trans_a, trans_b, alpha, beta, a, b, c);
 }
 GPU_KU_METHOD OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
+=======
+
+void NewKernelUtil::BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
+  double alpha, double beta, const Blob* a, const Blob* b, Blob* c) {
+  BlobGemmImpl(ctx, trans_a, trans_b, alpha, beta, a, b, c);
+}
+
+void NewKernelUtil::BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
+  float16 alpha, float16 beta, const Blob* a, const Blob* b, Blob* c) {
+  BlobGemmImpl(ctx, trans_a, trans_b, alpha, beta, a, b, c);
+}
+
+void NewKernelUtil::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
+>>>>>>> dev_sx_alexnet_stuff
     const int m, const int n, const int k, const float alpha, const float* a, const float* b,
 const float beta, float* c) {
   Gemm<float>(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
 }
+<<<<<<< HEAD
 GPU_KU_METHOD OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
+=======
+
+void NewKernelUtil::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
+>>>>>>> dev_sx_alexnet_stuff
     const int m, const int n, const int k, const double alpha, const double* a, const double* b,
     const double beta, double* c) {
   Gemm<double>(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
 }
+<<<<<<< HEAD
 GPU_KU_METHOD OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
+=======
+
+void NewKernelUtil::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
+>>>>>>> dev_sx_alexnet_stuff
     const int m, const int n, const int k, const float16 alpha, const float16* a, const float16* b,
     const float16 beta, float16* c) {
   HGemm(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
 }
 
+<<<<<<< HEAD
 } // namespace oneflow
+=======
+static void Relu(DeviceCtx* ctx, const int64_t n, const float* x, float* y) {
+
+}
+
+static void Relu(DeviceCtx* ctx, const int64_t n, const double* x, double* y) {
+
+}
+  
+static void Relu(DeviceCtx* ctx, const int64_t n, const float16* x, float16* y) {
+
+}
+  
+static void ReluBackward(DeviceCtx* ctx, const int64_t n, const float* x, const float* y, const float* dy,
+                           float* dx) {
+
+}
+  
+static void ReluBackward(DeviceCtx* ctx, const int64_t n, const float* x, const double* y, const double* dy,
+                           double* dx) {
+
+}
+
+static void ReluBackward(DeviceCtx* ctx, const int64_t n, const float* x, const float16* y, const float16* dy,
+                           float16* dx) {
+
+}
+
+}
+
+} // namespace oneflow
+>>>>>>> dev_sx_alexnet_stuff

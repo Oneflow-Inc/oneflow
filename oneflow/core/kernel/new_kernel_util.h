@@ -56,6 +56,15 @@ class NewKernelUtil<DeviceType::kGPU> {
   static void OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
                      const int m, const int n, const int k, const float16 alpha, const float16* a, const float16* b,
                      const float16 beta, float16* c);
+  static void Relu(DeviceCtx* ctx, const int64_t n, const float* x, float* y);
+  static void Relu(DeviceCtx* ctx, const int64_t n, const double* x, double* y);
+  static void Relu(DeviceCtx* ctx, const int64_t n, const float16* x, float16* y);
+  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const float* x, const float* y, const float* dy,
+                           float* dx);
+  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const float* x, const double* y, const double* dy,
+                           double* dx);
+  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const float* x, const float16* y, const float16* dy,
+                           float16* dx);
 };
  
 } // namespace oneflow
