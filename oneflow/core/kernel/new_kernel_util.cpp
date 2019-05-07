@@ -62,5 +62,14 @@ void NewKernelUtil::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CB
    UNIMPLEMENTED();
 }
 
+void NewKernelUtil::Relu(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+  for (int64_t i = 0; i != n; ++i) { y[i] = std::max(x[i], zero); }
+}
+
+void NewKernelUtil::ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
+                           T* dx) {
+    T zero = ZeroVal<T>::value;
+    for (int64_t i = 0; i != n; ++i) { dx[i] = (y[i] > zero) * dy[i]; }
+  }
 } // namespace oneflow
 
