@@ -1,5 +1,7 @@
 #include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/core/common/blas.h"
+#include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/register/register_manager.h"
+#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
@@ -29,14 +31,15 @@ static void BlobGemmImpl(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLA
 
 template<typename T>
 static void ReluImpl(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+  T zero = ZeroVal<T>::value;
   for (int64_t i = 0; i != n; ++i) { y[i] = std::max(x[i], zero); }
 }
 
 template<typename T>
 static void ReluBackwardImpl(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
                            T* dx) {
-    T zero = ZeroVal<T>::value;
-    for (int64_t i = 0; i != n; ++i) { dx[i] = (y[i] > zero) * dy[i]; }
+  T zero = ZeroVal<T>::value;
+  for (int64_t i = 0; i != n; ++i) { dx[i] = (y[i] > zero) * dy[i]; }
 }
 
 } // namespace
@@ -76,36 +79,23 @@ CPU_KU_METHOD OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TR
    UNIMPLEMENTED();
 }
 
-<<<<<<< HEAD
-} // namespace oneflow
-=======
-void NewKernelUtil::Relu(DeviceCtx* ctx, const int64_t n, const float* x, float* y) {
+CPU_KU_METHOD Relu(DeviceCtx* ctx, const int64_t n, const float* x, float* y) {
   ReluImpl(ctx, n, x, y);
 }
 
-void NewKernelUtil::Relu(DeviceCtx* ctx, const int64_t n, const double* x, double* y) {
+CPU_KU_METHOD Relu(DeviceCtx* ctx, const int64_t n, const double* x, double* y) {
   ReluImpl(ctx, n, x, y);
 }
 
-void NewKernelUtil::Relu(DeviceCtx* ctx, const int64_t n, const float16* x, float16* y) {
-  ReluImpl(ctx, n, x, y);
-}
-
-void NewKernelUtil::ReluBackward(DeviceCtx* ctx, const int64_t n, const float* x, const float* y, const float* dy,
+CPU_KU_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const float* x, const float* y, const float* dy,
                            float* dx) {
   ReluBackwardImpl(ctx, n, x, y, dy, dx);
 }
 
-void NewKernelUtil::ReluBackward(DeviceCtx* ctx, const int64_t n, const double* x, const double* y, const double* dy,
+CPU_KU_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const double* x, const double* y, const double* dy,
                            double* dx) {
   ReluBackwardImpl(ctx, n, x, y, dy, dx);
 }
 
-void NewKernelUtil::ReluBackward(DeviceCtx* ctx, const int64_t n, const float16* x, const float16* y, const float16* dy,
-                           float16* dx) {
-   ReluBackwardImpl(ctx, n, x, y, dy, dx);
-}
-
 } // namespace oneflow
 
->>>>>>> dev_sx_alexnet_stuff
