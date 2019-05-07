@@ -62,7 +62,7 @@ class Blob final {
   Shape instance_shape() const;
   const int64_t* instance_shape_ptr() const { return instance_shape_ptr_; }
   int64_t* mut_instance_shape_ptr() const { return instance_shape_ptr_; }
-  void DisableInstanceShape() { use_instance_shape_ = false; }
+  void DisableInstanceShape();
 
   const void* header_ptr() const { return header_ptr_; }
   void* mut_header_ptr() { return header_ptr_; }
@@ -94,7 +94,7 @@ class Blob final {
   const RtBlobDesc& blob_desc() const { return *blob_desc_; }
   const RtBlobDesc* blob_desc_ptr() const { return blob_desc_; }
   const Shape& static_shape() const { return blob_desc_->shape(); }
-  const Shape& shape() const;
+  const Shape& shape() const { return dynamic_shape_; }
   bool IsShapeEmpty() const;
   bool has_dim0_inner_shape() const { return blob_desc_->has_dim0_inner_shape(); }
   const Shape& dim0_inner_shape() const { return blob_desc_->dim0_inner_shape(); }
@@ -133,6 +133,7 @@ class Blob final {
   void CopyRecordIdInDevicePieceFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyInstanceShapeFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  void UpdateDynamicShapeIfNeed();
 
   size_t CalcDim0ValidNumSum() const;
   const int32_t& record_num() const;
@@ -147,7 +148,6 @@ class Blob final {
   PodPtr* header_pod_ptr() { return &header_pod_ptr_; }
 
  private:
-  const Shape& dynamic_shape() const;
   size_t ContiguousDim0ValidNum() const;
   int64_t GetDptrOffset(int32_t index) const { return 0; }
   template<typename... Int64s>
@@ -183,7 +183,8 @@ class Blob final {
   const RtBlobDesc* blob_desc_;
   Regst* regst_;
   PodPtr header_pod_ptr_;
-  mutable Shape dynamic_shape_;
+  // dynamic shape is build by concatenating dim0_valid_num and instance_shape
+  Shape dynamic_shape_;
 };
 
 template<typename RecordType>
