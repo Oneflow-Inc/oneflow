@@ -8,7 +8,7 @@ void AddParallelCastFacadeOp(const OpGraph& op_graph, Job* job) {
   JobBuilder job_builder(job);
   using BlobParallel = std::pair<ParallelDesc, SbpParallel>;
   using BlobConsumer = std::pair<const OpNode*, std::string>;
-  HashMap<LogicalBlobId, const OpNode*> lib2producer;
+  HashMap<LogicalBlobId, const OpNode*> lbi2producer;
   HashMap<LogicalBlobId, HashMap<BlobParallel, std::vector<BlobConsumer>>> lib2consumers;
   op_graph.ForEachNode([&](const OpNode* node) {
     for (const std::string& ibn : node->op().input_bns()) {
@@ -16,7 +16,7 @@ void AddParallelCastFacadeOp(const OpGraph& op_graph, Job* job) {
       const OpNode* producer = node->ProducerOpNode4Lbi(lbi);
       if (producer->parallel_desc().parallel_num() != node->parallel_desc().parallel_num()
           || producer->SbpParallel4Lbi(lbi) != node->SbpParallel4BnInOp(ibn)) {
-        lib2producer.emplace(lbi, producer);
+        lbi2producer.emplace(lbi, producer);
         lib2consumers[lbi][{node->parallel_desc(), node->SbpParallel4BnInOp(ibn)}].push_back(
             {node, ibn});
       }
@@ -24,7 +24,7 @@ void AddParallelCastFacadeOp(const OpGraph& op_graph, Job* job) {
   });
   for (const auto& lib7consumer : lib2consumers) {
     const LogicalBlobId& lbi = lib7consumer.first;
-    const OpNode* producer = lib7consumer.second;
+    const OpNode* producer = lbi2producer.at(lbi);
     const SbpParallel& src_sbp_parallel = producer->SbpParallel4Lbi(lbi);
     const Shape& logical_blob_shape = producer->LogicalBlobDesc4Lbi(lbi).shape();
     for (const auto& blob_parallel7consumers : lib7consumer.second) {
@@ -43,7 +43,7 @@ void AddParallelCastFacadeOp(const OpGraph& op_graph, Job* job) {
       casted_lbi.set_op_name(facade_op_conf.name());
       casted_lbi.set_blob_name(cast_conf->out());
       for (const auto& consumer7ibn : blob_parallel7consumers.second) {
-        OpNode* consumer = consumer7ibn.first;
+        const OpNode* consumer = consumer7ibn.first;
         const std::string& ibn = consumer7ibn.second;
         OperatorConf consumer_op_conf = consumer->op().op_conf();
         PbMessage* consumer_op_type_conf =
