@@ -8,9 +8,8 @@ void AddParallelCastFacadeOp(const OpGraph& op_graph, Job* job) {
   JobBuilder job_builder(job);
   using BlobParallel = std::pair<ParallelDesc, SbpParallel>;
   using BlobConsumer = std::pair<const OpNode*, std::string>;
-  HashMap<const LogicalBlobId, const OpNode*> lib2producer;
-  HashMap<const LogicalBlobId, HashMap<const BlobParallel, std::vector<BlobConsumer>>>
-      lib2consumers;
+  HashMap<LogicalBlobId, const OpNode*> lib2producer;
+  HashMap<LogicalBlobId, HashMap<BlobParallel, std::vector<BlobConsumer>>> lib2consumers;
   op_graph.ForEachNode([&](const OpNode* node) {
     for (const std::string& ibn : node->op().input_bns()) {
       const LogicalBlobId& lbi = node->op().BnInOp2Lbi(ibn);
