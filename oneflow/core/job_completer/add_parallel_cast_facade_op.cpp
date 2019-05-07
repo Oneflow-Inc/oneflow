@@ -50,7 +50,7 @@ void AddParallelCastFacadeOp(const OpGraph& op_graph, Job* job) {
       for (const auto& consumer7ibn : blob_parallel7consumers.second) {
         const OpNode* consumer = consumer7ibn.first;
         const std::string& ibn = consumer7ibn.second;
-        OperatorConf consumer_op_conf = op_node2op_conf[consumer];
+        OperatorConf& consumer_op_conf = op_node2op_conf[consumer];
         PbMessage* consumer_op_type_conf =
             MutableMessageInPbMessage(&consumer_op_conf, consumer_op_conf.op_type_case());
         SetBnValInOpTypeConf(consumer_op_type_conf, ibn, GenLogicalBlobName(lbi),
