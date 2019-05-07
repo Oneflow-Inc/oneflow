@@ -27,6 +27,18 @@ static void BlobGemmImpl(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLA
            c->mut_dptr<T>());
 }
 
+template<typename T>
+static void ReluImpl(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+  for (int64_t i = 0; i != n; ++i) { y[i] = std::max(x[i], zero); }
+}
+
+template<typename T>
+static void ReluBackwardImpl(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
+                           T* dx) {
+    T zero = ZeroVal<T>::value;
+    for (int64_t i = 0; i != n; ++i) { dx[i] = (y[i] > zero) * dy[i]; }
+}
+
 } // namespace
 
 void NewKernelUtil::BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
@@ -62,14 +74,32 @@ void NewKernelUtil::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CB
    UNIMPLEMENTED();
 }
 
-void NewKernelUtil::Relu(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
-  for (int64_t i = 0; i != n; ++i) { y[i] = std::max(x[i], zero); }
+void NewKernelUtil::Relu(DeviceCtx* ctx, const int64_t n, const float* x, float* y) {
+  ReluImpl(ctx, n, x, y);
 }
 
-void NewKernelUtil::ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
-                           T* dx) {
-    T zero = ZeroVal<T>::value;
-    for (int64_t i = 0; i != n; ++i) { dx[i] = (y[i] > zero) * dy[i]; }
-  }
+void NewKernelUtil::Relu(DeviceCtx* ctx, const int64_t n, const double* x, double* y) {
+  ReluImpl(ctx, n, x, y);
+}
+
+void NewKernelUtil::Relu(DeviceCtx* ctx, const int64_t n, const float16* x, float16* y) {
+  ReluImpl(ctx, n, x, y);
+}
+
+void NewKernelUtil::ReluBackward(DeviceCtx* ctx, const int64_t n, const float* x, const float* y, const float* dy,
+                           float* dx) {
+  ReluBackwardImpl(ctx, n, x, y, dy, dx);
+}
+
+void NewKernelUtil::ReluBackward(DeviceCtx* ctx, const int64_t n, const double* x, const double* y, const double* dy,
+                           double* dx) {
+  ReluBackwardImpl(ctx, n, x, y, dy, dx);
+}
+
+void NewKernelUtil::ReluBackward(DeviceCtx* ctx, const int64_t n, const float16* x, const float16* y, const float16* dy,
+                           float16* dx) {
+   ReluBackwardImpl(ctx, n, x, y, dy, dx);
+}
+
 } // namespace oneflow
 
