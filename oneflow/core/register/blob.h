@@ -183,7 +183,7 @@ class Blob final {
   const RtBlobDesc* blob_desc_;
   Regst* regst_;
   PodPtr header_pod_ptr_;
-  // 
+  // dynamic shape is build by concatenating dim0_valid_num and instance_shape
   Shape dynamic_shape_;
 };
 
