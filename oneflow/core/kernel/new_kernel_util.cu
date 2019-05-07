@@ -6,7 +6,7 @@
 namespace oneflow {
 
 namespace {
-  
+
 cublasOperation_t CblasTrans2CublasTrans(CBLAS_TRANSPOSE trans) {
   cublasOperation_t cublas_trans;
   if (trans == CBLAS_TRANSPOSE::CblasNoTrans) {
@@ -57,36 +57,38 @@ static void BlobGemmImpl(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLA
   const int m = c->shape().At(0);
   const int n = c->shape().Count(1);
   const int k = (trans_a == CblasNoTrans) ? a->shape().Count(1) : a->shape().At(0);
-  
-  NewKernelUtil::OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a->dptr<T>(), b->dptr<T>(), beta,
+
+  NewKernelUtil<DeviceType::kGPU>::OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a->dptr<T>(), b->dptr<T>(), beta,
            c->mut_dptr<T>());
 }
 
 } // namespace
 
-void NewKernelUtil::BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
+#define GPU_KU_METHOD void NewKernelUtil<DeviceType::kGPU>::
+
+GPU_KU_METHOD BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
   float alpha, float beta, const Blob* a, const Blob* b, Blob* c) {
   BlobGemmImpl(ctx, trans_a, trans_b, alpha, beta, a, b, c);
 }
-void NewKernelUtil::BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
+GPU_KU_METHOD BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
   double alpha, double beta, const Blob* a, const Blob* b, Blob* c) {
   BlobGemmImpl(ctx, trans_a, trans_b, alpha, beta, a, b, c);
 }
-void NewKernelUtil::BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
+GPU_KU_METHOD BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
   float16 alpha, float16 beta, const Blob* a, const Blob* b, Blob* c) {
   BlobGemmImpl(ctx, trans_a, trans_b, alpha, beta, a, b, c);
 }
-void NewKernelUtil::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
+GPU_KU_METHOD OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
     const int m, const int n, const int k, const float alpha, const float* a, const float* b,
 const float beta, float* c) {
   Gemm<float>(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
 }
-void NewKernelUtil::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
+GPU_KU_METHOD OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
     const int m, const int n, const int k, const double alpha, const double* a, const double* b,
     const double beta, double* c) {
   Gemm<double>(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
 }
-void NewKernelUtil::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
+GPU_KU_METHOD OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
     const int m, const int n, const int k, const float16 alpha, const float16* a, const float16* b,
     const float16 beta, float16* c) {
   HGemm(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
