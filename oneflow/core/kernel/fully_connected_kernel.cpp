@@ -1,5 +1,6 @@
 #include "oneflow/core/kernel/fully_connected_kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/kernel/new_kernel_util.h"
 
 namespace oneflow {
 
@@ -11,7 +12,7 @@ void FullyConnectedKernel<device_type, T>::ForwardDataContent(
   Blob* out_blob = BnInOp2Blob("out");
 
   // out = in * weight
-  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTrans, OneVal<T>::value,
+  NewKernelUtil<device_type>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTrans, OneVal<T>::value,
                                        ZeroVal<T>::value, in_blob, weight_blob, out_blob);
 
   if (this->op_conf().fully_connected_conf().use_bias()) {
@@ -19,7 +20,7 @@ void FullyConnectedKernel<device_type, T>::ForwardDataContent(
     const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
 
     // out = bias_multiplier * bias + out
-    KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasNoTrans,
+    NewKernelUtil<device_type>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasNoTrans,
                                          OneVal<T>::value, OneVal<T>::value, bias_mul_blob,
                                          bias_blob, out_blob);
   }
@@ -38,13 +39,13 @@ void FullyConnectedKernel<device_type, T>::BackwardDataContent(
 
   if (in_diff_blob != nullptr) {
     // in_diff = out_diff * weight
-    KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasNoTrans,
+    NewKernelUtil<device_type>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasNoTrans,
                                          OneVal<T>::value, ZeroVal<T>::value, out_diff_blob,
                                          weight_blob, in_diff_blob);
   }
   if (this->op_conf().trainable()) {
     // weight_diff = out_diff * in
-    KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans, OneVal<T>::value,
+    NewKernelUtil<device_type>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans, OneVal<T>::value,
                                          ZeroVal<T>::value, out_diff_blob, in_blob,
                                          weight_diff_blob);
 
@@ -53,7 +54,7 @@ void FullyConnectedKernel<device_type, T>::BackwardDataContent(
       Blob* bias_diff_blob = BnInOp2Blob("bias_diff");
 
       // bias_diff = bias_multiplier * out_diff
-      KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans,
+      NewKernelUtil<device_type>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans,
                                            OneVal<T>::value, ZeroVal<T>::value, bias_mul_blob,
                                            out_diff_blob, bias_diff_blob);
     }
