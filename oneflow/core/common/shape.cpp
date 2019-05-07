@@ -3,37 +3,6 @@
 
 namespace oneflow {
 
-namespace {
-
-template<class InputIt, class OutputIt>
-OutputIt CopyDims(InputIt first, InputIt last, OutputIt d_first) {
-  while (first != last) {
-    CHECK_GE(*first, 0LL);
-    *d_first++ = *first++;
-  }
-  return d_first;
-}
-
-}  // namespace
-
-Shape::Shape(const ShapeProto& shape_proto) : num_axes_(shape_proto.dim_size()) {
-  CHECK_LE(num_axes_, sizeof(dim_) / sizeof(int64_t));
-  CopyDims(shape_proto.dim().begin(), shape_proto.dim().end(), dim_);
-  UpdateElemCnt();
-}
-
-Shape::Shape(const std::vector<int64_t>& dim_vec) : num_axes_(dim_vec.size()) {
-  CHECK_LE(num_axes_, sizeof(dim_) / sizeof(int64_t));
-  CopyDims(dim_vec.begin(), dim_vec.end(), dim_);
-  UpdateElemCnt();
-}
-
-Shape::Shape(const std::initializer_list<int64_t>& dim_list) : num_axes_(dim_list.size()) {
-  CHECK_LE(num_axes_, sizeof(dim_) / sizeof(int64_t));
-  CopyDims(dim_list.begin(), dim_list.end(), dim_);
-  UpdateElemCnt();
-}
-
 int64_t Shape::Count(int64_t begin_axis, int64_t end_axis) const {
   int64_t begin = ShiftNegativeAxisIfNeedAndCheck(begin_axis);
   int64_t end = ShiftNegativeAxisIfNeedAndCheck(end_axis);

@@ -11,9 +11,9 @@ namespace oneflow {
 class Shape final {
  public:
   Shape() : num_axes_(0), elem_cnt_(1) {}
-  explicit Shape(const ShapeProto& shape_proto);
-  explicit Shape(const std::vector<int64_t>& dim_vec);
-  Shape(const std::initializer_list<int64_t>& dim_vec);
+  explicit Shape(const ShapeProto& shape_proto) { Init(shape_proto.dim()); }
+  explicit Shape(const std::vector<int64_t>& dim_vec) { Init(dim_vec); }
+  Shape(const std::initializer_list<int64_t>& ilist) { Init(ilist); }
   ~Shape() = default;
 
   bool operator==(const Shape& rhs) const {
@@ -56,6 +56,8 @@ class Shape final {
   int64_t* mut_dim() { return dim_; }
 
  private:
+  template<typename T>
+  void Init(const T& other);
   size_t GetElemsTotalBytesSize() const { return elem_cnt_ * sizeof(int64_t); }
   void UpdateElemCnt() {
     elem_cnt_ = 1;
@@ -73,6 +75,27 @@ class Shape final {
   int64_t elem_cnt_;
   int64_t dim_[OF_PP_SEQ_SIZE(DIM_SEQ)];
 };
+
+namespace {
+
+template<class InputIt, class OutputIt>
+OutputIt CopyDims(InputIt first, InputIt last, OutputIt d_first) {
+  while (first != last) {
+    CHECK_GE(*first, 0LL);
+    *d_first++ = *first++;
+  }
+  return d_first;
+}
+
+}  // namespace
+
+template<typename T>
+void Shape::Init(const T& other) {
+  num_axes_ = other.size();
+  CHECK_LE(num_axes_, sizeof(dim_) / sizeof(int64_t));
+  CopyDims(other.begin(), other.end(), dim_);
+  UpdateElemCnt();
+}
 
 template<typename StreamT>
 void Shape::SerializeWithTextFormat(StreamT& out_stream) const {
