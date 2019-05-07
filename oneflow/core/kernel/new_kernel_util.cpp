@@ -17,7 +17,7 @@ static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, enum CBLAS_TRANSP
 }
 
 template<typename T>
-static void OFGemmImplement(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
+static void BlobGemmImpl(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
                       T alpha, T beta, const Blob* a, const Blob* b, Blob* c) {
   const int m = c->shape().At(0);
   const int n = c->shape().Count(1);
@@ -31,17 +31,17 @@ static void OFGemmImplement(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum C
 
 void NewKernelUtil::BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
                       float alpha, float beta, const Blob* a, const Blob* b, Blob* c) {
-  OFGemmImplement(ctx, trans_a, trans_b, alpha, beta, a, b, c);
+  BlobGemmImpl(ctx, trans_a, trans_b, alpha, beta, a, b, c);
 }
 
 void NewKernelUtil::BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
                        double alpha, double beta, const Blob* a, const Blob* b, Blob* c) {
-  OFGemmImplement(ctx, trans_a, trans_b, alpha, beta, a, b, c);
+  BlobGemmImpl(ctx, trans_a, trans_b, alpha, beta, a, b, c);
 }
 
 void NewKernelUtil::BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
                       float16 alpha, float16 beta, const Blob* a, const Blob* b, Blob* c) {
-  OFGemmImplement(ctx, trans_a, trans_b, alpha, beta, a, b, c);
+  BlobGemmImpl(ctx, trans_a, trans_b, alpha, beta, a, b, c);
 }
 
 void NewKernelUtil::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
