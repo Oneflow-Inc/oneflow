@@ -10,7 +10,8 @@ void AddParallelCastFacadeOp(const OpGraph& op_graph, Job* job) {
   using BlobParallel = std::pair<ParallelDesc, SbpParallel>;
   using BlobConsumer = std::pair<const OpNode*, std::string>;
   HashMap<LogicalBlobId, const OpNode*> lbi2producer;
-  HashMap<LogicalBlobId, HashMap<BlobParallel, std::vector<BlobConsumer>>> lib2consumers;
+  HashMap<LogicalBlobId, HashMap<BlobParallel, std::vector<BlobConsumer>>> lbi2consumers;
+  HashMap<const OpNode*, OperatorConf> op_node2op_conf;
   op_graph.ForEachNode([&](const OpNode* node) {
     for (const std::string& ibn : node->op().input_bns()) {
       const LogicalBlobId& lbi = node->op().BnInOp2Lbi(ibn);
@@ -18,17 +19,20 @@ void AddParallelCastFacadeOp(const OpGraph& op_graph, Job* job) {
       if (producer->parallel_desc().parallel_num() != node->parallel_desc().parallel_num()
           || producer->SbpParallel4Lbi(lbi) != node->SbpParallel4BnInOp(ibn)) {
         lbi2producer.emplace(lbi, producer);
-        lib2consumers[lbi][{node->parallel_desc(), node->SbpParallel4BnInOp(ibn)}].push_back(
+        lbi2consumers[lbi][{node->parallel_desc(), node->SbpParallel4BnInOp(ibn)}].push_back(
             {node, ibn});
+        if (op_node2op_conf.find(node) == op_node2op_conf.end()) {
+          op_node2op_conf[node] = node->op().op_conf();
+        }
       }
     }
   });
-  for (const auto& lib7consumer : lib2consumers) {
-    const LogicalBlobId& lbi = lib7consumer.first;
+  for (const auto& lbi7consumer : lbi2consumers) {
+    const LogicalBlobId& lbi = lbi7consumer.first;
     const OpNode* producer = lbi2producer.at(lbi);
     const SbpParallel& src_sbp_parallel = producer->SbpParallel4Lbi(lbi);
     const Shape& logical_blob_shape = producer->LogicalBlobDesc4Lbi(lbi).shape();
-    for (const auto& blob_parallel7consumers : lib7consumer.second) {
+    for (const auto& blob_parallel7consumers : lbi7consumer.second) {
       const ParallelDesc& dst_parallel_desc = blob_parallel7consumers.first.first;
       const SbpParallel& dst_sbp_parallel = blob_parallel7consumers.first.second;
       OperatorConf facade_op_conf{};
@@ -46,14 +50,16 @@ void AddParallelCastFacadeOp(const OpGraph& op_graph, Job* job) {
       for (const auto& consumer7ibn : blob_parallel7consumers.second) {
         const OpNode* consumer = consumer7ibn.first;
         const std::string& ibn = consumer7ibn.second;
-        OperatorConf consumer_op_conf = consumer->op().op_conf();
+        OperatorConf consumer_op_conf = op_node2op_conf[consumer];
         PbMessage* consumer_op_type_conf =
             MutableMessageInPbMessage(&consumer_op_conf, consumer_op_conf.op_type_case());
         SetBnValInOpTypeConf(consumer_op_type_conf, ibn, GenLogicalBlobName(lbi),
                              GenLogicalBlobName(casted_lbi));
-        job_builder.MutOps({consumer_op_conf});
       }
     }
+  }
+  for (const auto& op_node7op_conf : op_node2op_conf) {
+    job_builder.MutOps({op_node7op_conf.second});
   }
 }
 
