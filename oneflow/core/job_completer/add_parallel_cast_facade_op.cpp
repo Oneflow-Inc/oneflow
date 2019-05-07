@@ -1,6 +1,7 @@
 #include "oneflow/core/job_completer/add_parallel_cast_facade_op.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 
