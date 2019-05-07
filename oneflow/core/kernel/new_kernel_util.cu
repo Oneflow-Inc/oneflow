@@ -1,7 +1,7 @@
-#include "oneflow/core/kernel/new_kernel_util.h"
 #include <cub/cub.cuh>
 #include <math.h>
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/kernel/new_kernel_util.h"
 
 namespace oneflow {
 
@@ -51,19 +51,30 @@ static void HGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, enum CBLAS_TRANS
         ldc));
 }
 
+template<typename T>
+static void BlobGemmImpl(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
+                      T alpha, T beta, const Blob* a, const Blob* b, Blob* c) {
+  const int m = c->shape().At(0);
+  const int n = c->shape().Count(1);
+  const int k = (trans_a == CblasNoTrans) ? a->shape().Count(1) : a->shape().At(0);
+  
+  NewKernelUtil::OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a->dptr<T>(), b->dptr<T>(), beta,
+           c->mut_dptr<T>());
+}
+
 } // namespace
 
 void NewKernelUtil::BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
   float alpha, float beta, const Blob* a, const Blob* b, Blob* c) {
-  NewKernelUtil::OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
+  BlobGemmImpl(ctx, trans_a, trans_b, alpha, beta, a, b, c);
 }
 void NewKernelUtil::BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-  float alpha, float beta, const Blob* a, const Blob* b, Blob* c) {
-  NewKernelUtil::OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
+  double alpha, double beta, const Blob* a, const Blob* b, Blob* c) {
+  BlobGemmImpl(ctx, trans_a, trans_b, alpha, beta, a, b, c);
 }
 void NewKernelUtil::BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-  float alpha, float beta, const Blob* a, const Blob* b, Blob* c) {
-  NewKernelUtil::OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
+  float16 alpha, float16 beta, const Blob* a, const Blob* b, Blob* c) {
+  BlobGemmImpl(ctx, trans_a, trans_b, alpha, beta, a, b, c);
 }
 void NewKernelUtil::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
     const int m, const int n, const int k, const float alpha, const float* a, const float* b,
