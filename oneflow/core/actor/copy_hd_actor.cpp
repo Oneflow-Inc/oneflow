@@ -17,7 +17,7 @@ void CopyHdActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
     out_regst->set_model_version_id(in_regst->model_version_id());
     const auto& lbi2blob = out_regst->lbi2blob();
     for (auto it = lbi2blob.cbegin(); it != lbi2blob.cend(); ++it) {
-      it->second->UpdateDynamicShape();
+      it->second->UpdateDynamicShapeIfNeed();
     }
     return true;
   });

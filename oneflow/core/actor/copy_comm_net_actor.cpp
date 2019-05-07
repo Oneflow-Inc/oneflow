@@ -76,7 +76,7 @@ void CopyCommNetActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
     regst->set_piece_id(next_piece_id_);
     const auto& lbi2blob = regst->lbi2blob();
     for (auto it = lbi2blob.cbegin(); it != lbi2blob.cend(); ++it) {
-      it->second->UpdateDynamicShape();
+      it->second->UpdateDynamicShapeIfNeed();
     }
     return true;
   });

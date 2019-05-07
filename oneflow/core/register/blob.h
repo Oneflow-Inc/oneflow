@@ -133,7 +133,7 @@ class Blob final {
   void CopyRecordIdInDevicePieceFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyInstanceShapeFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
-  void UpdateDynamicShape();
+  void UpdateDynamicShapeIfNeed();
 
   size_t CalcDim0ValidNumSum() const;
   const int32_t& record_num() const;
@@ -183,6 +183,7 @@ class Blob final {
   const RtBlobDesc* blob_desc_;
   Regst* regst_;
   PodPtr header_pod_ptr_;
+  // 
   Shape dynamic_shape_;
 };
 

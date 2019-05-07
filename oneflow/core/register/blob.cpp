@@ -78,7 +78,7 @@ void Blob::set_dim0_valid_num(int64_t no, int64_t val) {
   CHECK_GE(val, 0);
   CHECK_LE(val, dim0_inner_shape().Count(1));
   dim0_valid_num_ptr_[no] = val;
-  UpdateDynamicShape();
+  UpdateDynamicShapeIfNeed();
 }
 
 int64_t Blob::dim1_valid_num(int64_t no) const {
@@ -179,7 +179,7 @@ void Blob::set_instance_shape(const Shape& shape) {
                                 .elem_cnt());
   use_instance_shape_ = true;
   for (size_t i = 0; i < shape.NumAxes(); ++i) { *(instance_shape_ptr_ + i) = shape.At(i); }
-  UpdateDynamicShape();
+  UpdateDynamicShapeIfNeed();
 }
 
 size_t Blob::ContiguousDim0ValidNum() const {
@@ -197,7 +197,7 @@ bool Blob::IsShapeEmpty() const {
   return ContiguousDim0ValidNum() == 0;
 }
 
-void Blob::UpdateDynamicShape() {
+void Blob::UpdateDynamicShapeIfNeed() {
   dynamic_shape_ = static_shape();
   if (dim0_valid_num_ptr_ != nullptr) {
     size_t contiguous_instance_num = ContiguousDim0ValidNum();
@@ -220,7 +220,7 @@ void Blob::UpdateDynamicShape() {
 
 void Blob::DisableInstanceShape() {
   use_instance_shape_ = false;
-  UpdateDynamicShape();
+  UpdateDynamicShapeIfNeed();
 }
 
 const int32_t& Blob::record_num() const { return record_num_; }
@@ -276,7 +276,7 @@ void Blob::CopyDim0ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   CHECK_EQ(ByteSizeOfDim0ValidNumField(), rhs->ByteSizeOfDim0ValidNumField());
   Memcpy<DeviceType::kCPU>(device_ctx, mut_dim0_valid_num_ptr(), rhs->dim0_valid_num_ptr(),
                            ByteSizeOfDim0ValidNumField());
-  UpdateDynamicShape();
+  UpdateDynamicShapeIfNeed();
 }
 
 void Blob::CopyDim1ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
@@ -306,7 +306,7 @@ void Blob::CopyInstanceShapeFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   CHECK_EQ(ByteSizeOfInstanceShapeField(), rhs->ByteSizeOfInstanceShapeField());
   Memcpy<DeviceType::kCPU>(device_ctx, mut_instance_shape_ptr(), rhs->instance_shape_ptr(),
                            ByteSizeOfInstanceShapeField());
-  UpdateDynamicShape();
+  UpdateDynamicShapeIfNeed();
 }
 
 void Blob::CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) {
