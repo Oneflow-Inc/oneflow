@@ -18,11 +18,13 @@ class Shape final {
   ~Shape() = default;
 
   bool operator==(const Shape& rhs) const {
-    return num_axes_ == rhs.num_axes() && dim_array_ == rhs.dim_array();
+    return num_axes_ == rhs.num_axes() 
+           && std::equal(dim_array_.begin(), dim_array_.begin() + num_axes_,	
+                         rhs.dim_array().begin());;
   }
 
   bool operator!=(const Shape& rhs) const {
-    return num_axes_ != rhs.num_axes() || dim_array_ != rhs.dim_array();
+    return !(*this == rhs);
   }
 
   int64_t NumAxes() const { return num_axes_; }
