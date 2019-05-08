@@ -97,7 +97,7 @@ class NewKernelUtil<DeviceType::kGPU> {
   static void Addition(DeviceCtx* ctx, const int64_t n, float16* out, const float16* in_0);
   static void Addition(DeviceCtx* ctx, const int64_t n, float* out, const float* in_0, const float* in_1);
   static void Addition(DeviceCtx* ctx, const int64_t n, double* out, const double* in_0, const double* in_1);
-  static void Addition(DeviceCtx* ctx, const int64_t n, float16* out, const float16* in_0, const float16 in_1);
+  static void Addition(DeviceCtx* ctx, const int64_t n, float16* out, const float16* in_0, const float16* in_1);
   static void Addition(DeviceCtx* ctx, const int64_t n, float* out, const float* in_0, const float* in_1,
                        const float* in_2);
   static void Addition(DeviceCtx* ctx, const int64_t n, double* out, const double* in_0, const double* in_1,
@@ -108,44 +108,30 @@ class NewKernelUtil<DeviceType::kGPU> {
                        const float* in_2, const float* in_3);
   static void Addition(DeviceCtx* ctx, const int64_t n, double* out, const double* in_0, const double* in_1,
                        const double* in_2, const double* in_3);
-  static void Addition(DeviceCtx* ctx, const int64_t n, float16* out, const float16* in_0, const float16* in_1,
-                       const float16* in_2, const float16* in_3);
   static void Addition(DeviceCtx* ctx, const int64_t n, float* out, const float* in_0, const float* in_1,
                        const float* in_2, const float* in_3, const float* in_4);
   static void Addition(DeviceCtx* ctx, const int64_t n, double* out, const double* in_0, const double* in_1,
                        const double* in_2, const double* in_3, const double* in_4);
-  static void Addition(DeviceCtx* ctx, const int64_t n, float16* out, const float16* in_0, const float16* in_1,
-                       const float16* in_2, const float16* in_3, const float16* in_4);
   static void Addition(DeviceCtx* ctx, const int64_t n, float* out, const float* in_0, const float* in_1,
                        const float* in_2, const float* in_3, const float* in_4, const float* in_5);
   static void Addition(DeviceCtx* ctx, const int64_t n, double* out, const double* in_0, const double* in_1,
                        const double* in_2, const double* in_3, const double* in_4, const double* in_5);
-  static void Addition(DeviceCtx* ctx, const int64_t n, float16* out, const float16* in_0, const float16* in_1,
-                       const float16* in_2, const float16* in_3, const float16* in_4, const float16* in_5);
   static void Addition(DeviceCtx* ctx, const int64_t n, float* out, const float* in_0, const float* in_1,
                        const float* in_2, const float* in_3, const float* in_4, const float* in_5, const float* in_6);
   static void Addition(DeviceCtx* ctx, const int64_t n, double* out, const double* in_0, const double* in_1,
                        const double* in_2, const double* in_3, const double* in_4, const double* in_5, const double* in_6);
-  static void Addition(DeviceCtx* ctx, const int64_t n, float16* out, const float16* in_0, const float16* in_1,
-                       const float16* in_2, const float16* in_3, const float16* in_4, const float16* in_5, const float16* in_6);
   static void Addition(DeviceCtx* ctx, const int64_t n, float* out, const float* in_0, const float* in_1,
                        const float* in_2, const float* in_3, const float* in_4, const float* in_5, const float* in_6,
                        const float* in_7);
   static void Addition(DeviceCtx* ctx, const int64_t n, double* out, const double* in_0, const double* in_1,
                        const double* in_2, const double* in_3, const double* in_4, const double* in_5, const double* in_6,
                        const double* in_7);
-  static void Addition(DeviceCtx* ctx, const int64_t n, float16* out, const float16* in_0, const float16* in_1,
-                       const float16* in_2, const float16* in_3, const float16* in_4, const float16* in_5, const float16* in_6,
-                       const float16* in_7);
   static void Addition(DeviceCtx* ctx, const int64_t n, float* out, const float* in_0, const float* in_1,
                        const float* in_2, const float* in_3, const float* in_4, const float* in_5, const float* in_6,
                        const float* in_7, const float* in_8);
   static void Addition(DeviceCtx* ctx, const int64_t n, double* out, const double* in_0, const double* in_1,
                        const double* in_2, const double* in_3, const double* in_4, const double* in_5, const double* in_6,
                        const double* in_7, const double* in_8);
-  static void Addition(DeviceCtx* ctx, const int64_t n, float16* out, const float16* in_0, const float16* in_1,
-                       const float16* in_2, const float16* in_3, const float16* in_4, const float16* in_5, const float16* in_6,
-                       const float16* in_7, const float16* in_8);
  
 };
 
