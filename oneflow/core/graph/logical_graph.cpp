@@ -853,11 +853,14 @@ void LogicalGraph::ReplaceAllParallelCastFacades() {
         LogicalNode* src = facade_node->SoleInEdge()->src_node();
         LogicalNode* dst = facade_node->SoleOutEdge()->dst_node();
         CHECK(dst->SoleOp()->op_conf().has_identity_conf());
-        *dst->SoleOp()->MutBnInOp2Lbi("in") = facade_node->SoleOp()->BnInOp2Lbi("in");
+        const LogicalBlobId facade_in_lbi = facade_node->SoleOp()->BnInOp2Lbi("in");
+        *dst->SoleOp()->MutBnInOp2Lbi("in") = facade_in_lbi;
         DisConnect(facade_node->SoleInEdge());
         DisConnect(facade_node->SoleOutEdge());
         DeleteNode(facade_node);
-        Connect(src, NewEdge(), dst);
+        LogicalEdge* edge = NewEdge();
+        edge->mut_lbis() = {facade_in_lbi};
+        Connect(src, edge, dst);
       });
 }
 
