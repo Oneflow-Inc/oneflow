@@ -9,39 +9,49 @@
 namespace oneflow {
 
 class Shape final {
+  const static size_t kMaxNumAxes = 12;
+  using DimArray = std::array<int64_t, kMaxNumAxes>;
+
  public:
-  Shape() : num_axes_(0), elem_cnt_(1) {}
+  Shape() : num_axes_(0) {}
   explicit Shape(const ShapeProto& shape_proto) { Init(shape_proto.dim()); }
   explicit Shape(const std::vector<int64_t>& dim_vec) { Init(dim_vec); }
   Shape(const std::initializer_list<int64_t>& ilist) { Init(ilist); }
   ~Shape() = default;
 
   bool operator==(const Shape& rhs) const {
-    return num_axes_ == rhs.num_axes() && std::memcmp(dim_, rhs.dim(), GetElemsTotalBytesSize());
+    return num_axes_ == rhs.num_axes()
+           && std::equal(dim_array_.begin(), dim_array_.begin() + num_axes_,
+                         rhs.dim_array().begin());
   }
 
   bool operator!=(const Shape& rhs) const {
-    return num_axes_ != rhs.num_axes() || !std::memcmp(dim_, rhs.dim(), GetElemsTotalBytesSize());
+    return num_axes_ != rhs.num_axes()
+           || !std::equal(dim_array_.begin(), dim_array_.begin() + num_axes_,
+                          rhs.dim_array().begin());
   }
 
   void Set(int64_t axis, int64_t dim) {
     int64_t raxis = ShiftNegativeAxisIfNeedAndCheck(axis);
-    dim_[raxis] = dim;
-    UpdateElemCnt();
+    dim_array_[raxis] = dim;
   }
   int64_t At(int64_t axis) const {
     int64_t raxis = ShiftNegativeAxisIfNeedAndCheck(axis);
-    return dim_[raxis];
+    return dim_array_[raxis];
   }
   int64_t NumAxes() const { return num_axes_; }
-  int64_t Count() const { return elem_cnt(); }
+  int64_t Count() const { return Count(0, NumAxes()); }
   int64_t Count(int64_t begin_axis, int64_t end_axis) const;
   int64_t CountFrom(int64_t begin_axis) const { return Count(begin_axis, num_axes()); }
   int64_t CountTo(int64_t end_axis) const { return Count(0, end_axis); }
-  // deprecated
-  int64_t Count(int64_t begin_axis) const { return Count(begin_axis, num_axes()); }
+  // deprecated, use CountFrom instead
+  int64_t Count(int64_t begin_axis) const { return CountFrom(begin_axis); }
+  // deprecated, use Count instead
+  int64_t elem_cnt() const { return Count(); }
 
-  std::vector<int64_t> dim_vec() const { return std::vector<int64_t>(dim_, dim_ + num_axes_); }
+  std::vector<int64_t> dim_vec() const {
+    return std::vector<int64_t>(dim_array_.begin(), dim_array_.end());
+  }
   Shape CreateLeftExtendedShape(size_t extend_axes) const;
 
   std::string ToString() const;
@@ -51,18 +61,12 @@ class Shape final {
   void SerializeWithTextFormat(StreamT& out_stream) const;
 
   size_t num_axes() const { return num_axes_; }
-  int64_t elem_cnt() const { return elem_cnt_; }
-  const int64_t* dim() const { return dim_; }
-  int64_t* mut_dim() { return dim_; }
+  const DimArray& dim_array() const { return dim_array_; }
+  DimArray& mut_dim_array() { return dim_array_; }
 
  private:
   template<typename T>
   void Init(const T& other);
-  size_t GetElemsTotalBytesSize() const { return elem_cnt_ * sizeof(int64_t); }
-  void UpdateElemCnt() {
-    elem_cnt_ = 1;
-    FOR_RANGE(size_t, i, 0, num_axes_) { elem_cnt_ *= dim_[i]; }
-  }
   int64_t ShiftNegativeAxisIfNeedAndCheck(int64_t axis) const {
     int64_t regular_axis = axis < 0 ? num_axes_ + axis : axis;
     CHECK_GE(regular_axis, 0);
@@ -72,8 +76,7 @@ class Shape final {
 
  private:
   size_t num_axes_;
-  int64_t elem_cnt_;
-  int64_t dim_[OF_PP_SEQ_SIZE(DIM_SEQ)];
+  DimArray dim_array_;
 };
 
 namespace {
@@ -92,14 +95,13 @@ OutputIt CopyDims(InputIt first, InputIt last, OutputIt d_first) {
 template<typename T>
 void Shape::Init(const T& other) {
   num_axes_ = other.size();
-  CHECK_LE(num_axes_, sizeof(dim_) / sizeof(int64_t));
-  CopyDims(other.begin(), other.end(), dim_);
-  UpdateElemCnt();
+  CHECK_LE(num_axes_, dim_array_.size());
+  CopyDims(other.begin(), other.end(), dim_array_.begin());
 }
 
 template<typename StreamT>
 void Shape::SerializeWithTextFormat(StreamT& out_stream) const {
-  FOR_RANGE(int64_t, i, 0, num_axes_) { out_stream << std::to_string(dim_[i]) << ' '; }
+  FOR_RANGE(int64_t, i, 0, num_axes_) { out_stream << std::to_string(dim_array_[i]) << ' '; }
 }
 
 std::ostream& operator<<(std::ostream& out, const Shape& shape);

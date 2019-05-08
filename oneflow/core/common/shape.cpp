@@ -9,7 +9,7 @@ int64_t Shape::Count(int64_t begin_axis, int64_t end_axis) const {
   CHECK_LE(begin, end) << "Num of axes: " << num_axes_ << ", begin axis: " << begin_axis
                        << ", end axis: " << end_axis;
   int64_t elem_cnt = 1;
-  FOR_RANGE(int64_t, i, begin, end) { elem_cnt *= dim_[i]; }
+  FOR_RANGE(int64_t, i, begin, end) { elem_cnt *= dim_array_.at(i); }
   return elem_cnt;
 }
 
@@ -32,7 +32,7 @@ std::string Shape::ToString() const {
 }
 
 void Shape::ToProto(ShapeProto* ret) const {
-  *(ret->mutable_dim()) = PbRf<int64_t>(dim_, dim_ + num_axes_);
+  *(ret->mutable_dim()) = PbRf<int64_t>(dim_array_.begin(), dim_array_.begin() + num_axes_);
 }
 
 std::ostream& operator<<(std::ostream& out, const Shape& shape) {
