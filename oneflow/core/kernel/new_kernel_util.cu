@@ -7,6 +7,10 @@ namespace oneflow {
 
 namespace {
 
+#define HALF_CHECK_FAILED                   \
+  printf("use half need nvcc arch >= 530"); \
+  assert(false)
+
 __inline__ __device__ half hone() { return __float2half(1.0); }
 __inline__ __device__ half hzero() { return __float2half(0.0); }
 
@@ -116,23 +120,21 @@ static void BlobGemmImpl(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLA
            c->mut_dptr<T>());
 }
 
-
-
 } // namespace
 
 #define GPU_KU_METHOD void NewKernelUtil<DeviceType::kGPU>::
 
 GPU_KU_METHOD BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
   float alpha, float beta, const Blob* a, const Blob* b, Blob* c) {
-  BlobGemmImpl(ctx, trans_a, trans_b, alpha, beta, a, b, c);
+  BlobGemmImpl<float>(ctx, trans_a, trans_b, alpha, beta, a, b, c);
 }
 GPU_KU_METHOD BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
   double alpha, double beta, const Blob* a, const Blob* b, Blob* c) {
-  BlobGemmImpl(ctx, trans_a, trans_b, alpha, beta, a, b, c);
+  BlobGemmImpl<double>(ctx, trans_a, trans_b, alpha, beta, a, b, c);
 }
 GPU_KU_METHOD BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
   float16 alpha, float16 beta, const Blob* a, const Blob* b, Blob* c) {
-  BlobGemmImpl(ctx, trans_a, trans_b, alpha, beta, a, b, c);
+  BlobGemmImpl<float16>(ctx, trans_a, trans_b, alpha, beta, a, b, c);
 }
 GPU_KU_METHOD OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
     const int m, const int n, const int k, const float alpha, const float* a, const float* b,
@@ -151,34 +153,36 @@ GPU_KU_METHOD OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TR
 }
 
 GPU_KU_METHOD Relu(DeviceCtx* ctx, const int64_t n, const float* x, float* y) {
-  ReluForwardGpu
+  ReluForwardGpu<float>
   <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
 }
 
 GPU_KU_METHOD Relu(DeviceCtx* ctx, const int64_t n, const double* x, double* y) {
-  ReluForwardGpu
+  ReluForwardGpu<double>
   <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
 }
 GPU_KU_METHOD Relu(DeviceCtx* ctx, const int64_t n, const float16* x, float16* y) {
-  ReluForwardGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+  ReluForwardGpu
+  <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
     n, reinterpret_cast<const half*>(x), reinterpret_cast<half*>(y));
 }
   
 GPU_KU_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const float* x, const float* y, const float* dy,
                            float* dx) {
-  ReluBackwardGpu
+  ReluBackwardGpu<float>
   <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y, dy, dx);
 }
   
 GPU_KU_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const double* x, const double* y, const double* dy,
                            double* dx) {
-  ReluBackwardGpu
+  ReluBackwardGpu<double>
   <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y, dy, dx);
 }
 
 GPU_KU_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const float16* x, const float16* y, const float16* dy,
                            float16* dx) {
-ReluBackwardGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+ReluBackwardGpu
+<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
   n, reinterpret_cast<const half*>(y), reinterpret_cast<const half*>(dy), reinterpret_cast<half*>(dx));
 }
 

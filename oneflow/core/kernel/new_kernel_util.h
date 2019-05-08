@@ -72,10 +72,6 @@ class NewKernelUtil<DeviceType::kGPU> {
   static void ReluBackward(DeviceCtx* ctx, const int64_t n, const float16* x, const float16* y, const float16* dy,
                            float16* dx);
 };
- 
-#define HALF_CHECK_FAILED                   \
-  printf("use half need nvcc arch >= 530"); \
-  assert(false)
 
 } // namespace oneflow
 
