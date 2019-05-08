@@ -18,17 +18,15 @@ class Shape final {
   ~Shape() = default;
 
   bool operator==(const Shape& rhs) const {
-    return num_axes_ == rhs.num_axes() 
-           && std::equal(dim_array_.begin(), dim_array_.begin() + num_axes_,	
-                         rhs.dim_array().begin());;
+    return num_axes_ == rhs.num_axes()
+           && std::equal(dim_array_.begin(), dim_array_.begin() + num_axes_,
+                         rhs.dim_array().begin());
   }
 
-  bool operator!=(const Shape& rhs) const {
-    return !(*this == rhs);
-  }
+  bool operator!=(const Shape& rhs) const { return !(*this == rhs); }
 
   int64_t NumAxes() const { return num_axes_; }
-  int64_t ShiftIfNeed(int64_t axis) const { return axis < 0 ? num_axes_ + axis : axis; }
+  int64_t ShiftAxisIfNeed(int64_t axis) const { return axis < 0 ? num_axes_ + axis : axis; }
   void Set(int64_t axis, int64_t dim) {
     CHECK_GE(axis, 0);
     CHECK_LT(axis, num_axes_);
@@ -61,7 +59,7 @@ class Shape final {
 
   size_t num_axes() const { return num_axes_; }
   const DimArray& dim_array() const { return dim_array_; }
-  DimArray& mut_dim_array() { return dim_array_; }
+  DimArray* mut_dim_array() { return &dim_array_; }
 
  private:
   template<typename T>
