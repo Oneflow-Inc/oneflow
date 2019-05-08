@@ -4,12 +4,13 @@
 namespace oneflow {
 
 int64_t Shape::Count(int64_t begin_axis, int64_t end_axis) const {
-  int64_t begin = ShiftNegativeAxisIfNeedAndCheck(begin_axis);
-  int64_t end = ShiftNegativeAxisIfNeedAndCheck(end_axis);
-  CHECK_LE(begin, end) << "Num of axes: " << num_axes_ << ", begin axis: " << begin_axis
-                       << ", end axis: " << end_axis;
+  CHECK_GE(begin_axis, 0) << "begin_axis " << begin_axis << " less than 0";
+  CHECK_LE(begin_axis, end_axis) << "begin_axis " << begin_axis << " greater than end_axis "
+                                 << end_axis;
+  CHECK_LE(end_axis, num_axes_) << "end_axis " << end_axis << " greater than num_axes "
+                                << num_axes_;
   int64_t elem_cnt = 1;
-  FOR_RANGE(int64_t, i, begin, end) { elem_cnt *= dim_array_.at(i); }
+  FOR_RANGE(int64_t, i, begin_axis, end_axis) { elem_cnt *= dim_array_.at(i); }
   return elem_cnt;
 }
 

@@ -18,26 +18,25 @@ class Shape final {
   ~Shape() = default;
 
   bool operator==(const Shape& rhs) const {
-    return num_axes_ == rhs.num_axes()
-           && std::equal(dim_array_.begin(), dim_array_.begin() + num_axes_,
-                         rhs.dim_array().begin());
+    return num_axes_ == rhs.num_axes() && dim_array_ == rhs.dim_array();
   }
 
   bool operator!=(const Shape& rhs) const {
-    return num_axes_ != rhs.num_axes()
-           || !std::equal(dim_array_.begin(), dim_array_.begin() + num_axes_,
-                          rhs.dim_array().begin());
+    return num_axes_ != rhs.num_axes() || dim_array_ != rhs.dim_array();
   }
 
+  int64_t NumAxes() const { return num_axes_; }
+  int64_t ShiftIfNeed(int64_t axis) const { return axis < 0 ? num_axes_ + axis : axis; }
   void Set(int64_t axis, int64_t dim) {
-    int64_t raxis = ShiftNegativeAxisIfNeedAndCheck(axis);
-    dim_array_[raxis] = dim;
+    CHECK_GE(axis, 0);
+    CHECK_LT(axis, num_axes_);
+    dim_array_[axis] = dim;
   }
   int64_t At(int64_t axis) const {
-    int64_t raxis = ShiftNegativeAxisIfNeedAndCheck(axis);
-    return dim_array_[raxis];
+    CHECK_GE(axis, 0);
+    CHECK_LT(axis, num_axes_);
+    return dim_array_[axis];
   }
-  int64_t NumAxes() const { return num_axes_; }
   int64_t Count() const { return Count(0, NumAxes()); }
   int64_t Count(int64_t begin_axis, int64_t end_axis) const;
   int64_t CountFrom(int64_t begin_axis) const { return Count(begin_axis, num_axes()); }
@@ -65,12 +64,6 @@ class Shape final {
  private:
   template<typename T>
   void Init(const T& other);
-  int64_t ShiftNegativeAxisIfNeedAndCheck(int64_t axis) const {
-    int64_t regular_axis = axis < 0 ? num_axes_ + axis : axis;
-    CHECK_GE(regular_axis, 0);
-    CHECK_LT(regular_axis, num_axes_);
-    return regular_axis;
-  }
 
  private:
   size_t num_axes_;
