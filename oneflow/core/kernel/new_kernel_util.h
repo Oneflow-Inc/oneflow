@@ -72,6 +72,12 @@ class NewKernelUtil<DeviceType::kCPU> {
   static void Addition(DeviceCtx* ctx, const int64_t n, double* out, const double* in_0, const double* in_1,
                        const double* in_2, const double* in_3, const double* in_4, const double* in_5, const double* in_6,
                        const double* in_7, const double* in_8);
+  static void Relu(DeviceCtx* ctx, const int64_t n, const float* x, float* y);
+  static void Relu(DeviceCtx* ctx, const int64_t n, const double* x, double* y);
+  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const float* x, const float* y, const float* dy,
+                           float* dx);
+  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const double* x, const double* y, const double* dy,
+                           double* dx);
 };
 
 template<>
@@ -133,6 +139,15 @@ class NewKernelUtil<DeviceType::kGPU> {
                        const double* in_2, const double* in_3, const double* in_4, const double* in_5, const double* in_6,
                        const double* in_7, const double* in_8);
  
+  static void Relu(DeviceCtx* ctx, const int64_t n, const float* x, float* y);
+  static void Relu(DeviceCtx* ctx, const int64_t n, const double* x, double* y);
+  static void Relu(DeviceCtx* ctx, const int64_t n, const float16* x, float16* y);
+  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const float* x, const float* y, const float* dy,
+                           float* dx);
+  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const double* x, const double* y, const double* dy,
+                           double* dx);
+  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const float16* x, const float16* y, const float16* dy,
+                           float16* dx);
 };
 
 } // namespace oneflow

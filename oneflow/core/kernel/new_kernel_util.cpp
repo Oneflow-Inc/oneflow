@@ -1,5 +1,7 @@
 #include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/core/common/blas.h"
+#include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/register/register_manager.h"
+#include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
@@ -90,35 +92,43 @@ static void Add(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T*
   }
 }
 
+template<typename T>
+static void ReluImpl(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+  T zero = ZeroVal<T>::value;
+  for (int64_t i = 0; i != n; ++i) { y[i] = std::max(x[i], zero); }
+}
+
+template<typename T>
+static void ReluBackwardImpl(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
+                           T* dx) {
+  T zero = ZeroVal<T>::value;
+  for (int64_t i = 0; i != n; ++i) { dx[i] = (y[i] > zero) * dy[i]; }
+}
+
 } // namespace
 
 #define CPU_KU_METHOD void NewKernelUtil<DeviceType::kCPU>::
 
 CPU_KU_METHOD BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
                       float alpha, float beta, const Blob* a, const Blob* b, Blob* c) {
-  BlobGemmImpl(ctx, trans_a, trans_b, alpha, beta, a, b, c);
+  BlobGemmImpl<float>(ctx, trans_a, trans_b, alpha, beta, a, b, c);
 }
 
 CPU_KU_METHOD BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
                        double alpha, double beta, const Blob* a, const Blob* b, Blob* c) {
-  BlobGemmImpl(ctx, trans_a, trans_b, alpha, beta, a, b, c);
-}
-
-CPU_KU_METHOD BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-                      float16 alpha, float16 beta, const Blob* a, const Blob* b, Blob* c) {
-  BlobGemmImpl(ctx, trans_a, trans_b, alpha, beta, a, b, c);
+  BlobGemmImpl<double>(ctx, trans_a, trans_b, alpha, beta, a, b, c);
 }
 
 CPU_KU_METHOD OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
             const int m, const int n, const int k, const float alpha, const float* a, const float* b,
             const float beta, float* c) {
-  Gemm(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
+  Gemm<float>(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
 }
 
 CPU_KU_METHOD OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
             const int m, const int n, const int k, const double alpha, const double* a, const double* b,
             const double beta, double* c) {
-  Gemm(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
+  Gemm<double>(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
 }
 
 CPU_KU_METHOD OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
@@ -137,83 +147,103 @@ CPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, double* out, const doubl
 
 CPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, float* out, const float* in_0, const float* in_1) {
   Add<float>(ctx, n, out, in_0, in_1);
-};
+}
 
 CPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, double* out, const double* in_0, const double* in_1) {
   Add<double>(ctx, n, out, in_0, in_1);
-};
+}
 
 CPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, float* out, const float* in_0, const float* in_1,
           const float* in_2) {
   Add<float>(ctx, n, out, in_0, in_1, in_2);
-};
+}
 
 CPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, double* out, const double* in_0, const double* in_1,
           const double* in_2) {
   Add<double>(ctx, n, out, in_0, in_1, in_2);
-};
+}
 
 CPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, float* out, const float* in_0, const float* in_1,
           const float* in_2, const float* in_3) {
   Add<float>(ctx, n, out, in_0, in_1, in_2, in_3);
-};
+}
 
 CPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, double* out, const double* in_0, const double* in_1,
           const double* in_2, const double* in_3) {
   Add<double>(ctx, n, out, in_0, in_1, in_2, in_3);
-};
+}
 
 CPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, float* out, const float* in_0, const float* in_1,
           const float* in_2, const float* in_3, const float* in_4) {
   Add<float>(ctx, n, out, in_0, in_1, in_2, in_3, in_4);
- };
+}
 
 CPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, double* out, const double* in_0, const double* in_1,
           const double* in_2, const double* in_3, const double* in_4) {
   Add<double>(ctx, n, out, in_0, in_1, in_2, in_3, in_4);
-};
+}
+
 CPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, float* out, const float* in_0, const float* in_1,
           const float* in_2, const float* in_3, const float* in_4, const float* in_5) {
   Add<float>(ctx, n, out, in_0, in_1, in_2, in_3, in_4, in_5);
-};
+}
+
 CPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, double* out, const double* in_0, const double* in_1,
           const double* in_2, const double* in_3, const double* in_4, const double* in_5) {
   Add<double>(ctx, n, out, in_0, in_1, in_2, in_3, in_4, in_5);
-};
+}
 
 CPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, float* out, const float* in_0, const float* in_1,
           const float* in_2, const float* in_3, const float* in_4, const float* in_5, const float* in_6) {
   Add<float>(ctx, n, out, in_0, in_1, in_2, in_3, in_4, in_5, in_6);
-};
+}
 
 CPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, double* out, const double* in_0, const double* in_1,
           const double* in_2, const double* in_3, const double* in_4, const double* in_5, const double* in_6) {
   Add<double>(ctx, n, out, in_0, in_1, in_2, in_3, in_4, in_5, in_6);
-};
+}
 
 CPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, float* out, const float* in_0, const float* in_1,
           const float* in_2, const float* in_3, const float* in_4, const float* in_5, const float* in_6,
           const float* in_7) {
   Add<float>(ctx, n, out, in_0, in_1, in_2, in_3, in_4, in_5, in_6, in_7);
-};
+}
 
 CPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, double* out, const double* in_0, const double* in_1,
           const double* in_2, const double* in_3, const double* in_4, const double* in_5, const double* in_6,
           const double* in_7) {
   Add<double>(ctx, n, out, in_0, in_1, in_2, in_3, in_4, in_5, in_6, in_7);
-};
+}
 
 CPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, float* out, const float* in_0, const float* in_1,
           const float* in_2, const float* in_3, const float* in_4, const float* in_5, const float* in_6,
           const float* in_7, const float* in_8) {
   Add<float>(ctx, n, out, in_0, in_1, in_2, in_3, in_4, in_5, in_6, in_7, in_8);
-};
+}
 
 CPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, double* out, const double* in_0, const double* in_1,
           const double* in_2, const double* in_3, const double* in_4, const double* in_5, const double* in_6,
           const double* in_7, const double* in_8) {
   Add<double>(ctx, n, out, in_0, in_1, in_2, in_3, in_4, in_5, in_6, in_7, in_8);
-};
+}
+
+CPU_KU_METHOD Relu(DeviceCtx* ctx, const int64_t n, const float* x, float* y) {
+  ReluImpl<float>(ctx, n, x, y);
+}
+
+CPU_KU_METHOD Relu(DeviceCtx* ctx, const int64_t n, const double* x, double* y) {
+  ReluImpl<double>(ctx, n, x, y);
+}
+
+CPU_KU_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const float* x, const float* y, const float* dy,
+                           float* dx) {
+  ReluBackwardImpl<float>(ctx, n, x, y, dy, dx);
+}
+
+CPU_KU_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const double* x, const double* y, const double* dy,
+                           double* dx) {
+  ReluBackwardImpl<double>(ctx, n, x, y, dy, dx);
+}
 
 } // namespace oneflow
 

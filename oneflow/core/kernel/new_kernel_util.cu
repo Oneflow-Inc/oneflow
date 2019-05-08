@@ -7,6 +7,64 @@ namespace oneflow {
 
 namespace {
 
+#define HALF_CHECK_FAILED                   \
+  printf("use half need nvcc arch >= 530"); \
+  assert(false)
+
+__inline__ __device__ half hone() { return __float2half(1.0); }
+__inline__ __device__ half hzero() { return __float2half(0.0); }
+
+template<typename T>
+__global__ void ReluForwardGpu(const int n, const T* x, T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = x[i] > 0 ? x[i] : 0; }
+}
+  
+template<typename T>
+__global__ void ReluBackwardGpu(const int n, const T* y, const T* dy, T* dx) {
+  CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = y[i] > 0 ? dy[i] : 0; }
+}
+
+__inline__ half float16_2half(float16 x) {
+  // TODO: Potential loss of accuracy
+  half* ret = reinterpret_cast<half*>(&x);
+  return *ret;
+}
+
+__inline__ float16 half2float16(half x) {
+  // TODO: Potential loss of accuracy
+  float16* ret = reinterpret_cast<float16*>(&x);
+  return *ret;
+}
+
+__global__ void ReluForwardGpuHalf(const int n, const half* x, half* y) {
+  #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+    CUDA_1D_KERNEL_LOOP(i, n) {
+      if (__hgt(x[i], hzero())) {
+        y[i] = x[i];
+      } else {
+        y[i] = hzero();
+      }
+    }
+  #else
+    HALF_CHECK_FAILED;
+  #endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) */
+}
+  
+  __global__ void ReluBackwardGpuHalf(const int n, const half* y, const half* dy, half* dx) {
+  #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+    half zero = __float2half(0.0);
+    CUDA_1D_KERNEL_LOOP(i, n) {
+      if (__hgt(y[i], zero)) {
+        dx[i] = dy[i];
+      } else {
+        dx[i] = zero;
+      }
+    }
+  #else
+    HALF_CHECK_FAILED;
+  #endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+}
+
 cublasOperation_t CblasTrans2CublasTrans(CBLAS_TRANSPOSE trans) {
   cublasOperation_t cublas_trans;
   if (trans == CBLAS_TRANSPOSE::CblasNoTrans) {
@@ -138,15 +196,15 @@ __global__ void AddGpuHalf(const int64_t n, half* out, const half* in_0, const h
 
 GPU_KU_METHOD BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
   float alpha, float beta, const Blob* a, const Blob* b, Blob* c) {
-  BlobGemmImpl(ctx, trans_a, trans_b, alpha, beta, a, b, c);
+  BlobGemmImpl<float>(ctx, trans_a, trans_b, alpha, beta, a, b, c);
 }
 GPU_KU_METHOD BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
   double alpha, double beta, const Blob* a, const Blob* b, Blob* c) {
-  BlobGemmImpl(ctx, trans_a, trans_b, alpha, beta, a, b, c);
+  BlobGemmImpl<double>(ctx, trans_a, trans_b, alpha, beta, a, b, c);
 }
 GPU_KU_METHOD BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
   float16 alpha, float16 beta, const Blob* a, const Blob* b, Blob* c) {
-  BlobGemmImpl(ctx, trans_a, trans_b, alpha, beta, a, b, c);
+  BlobGemmImpl<float16>(ctx, trans_a, trans_b, alpha, beta, a, b, c);
 }
 GPU_KU_METHOD OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
     const int m, const int n, const int k, const float alpha, const float* a, const float* b,
@@ -182,81 +240,81 @@ GPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, float16* out, const floa
 GPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, float* out, const float* in_0, const float* in_1) {
   AddGpu<float>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, out, in_0, in_1);
-};
+}
 
 GPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, double* out, const double* in_0, const double* in_1) {
   AddGpu<double>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, out, in_0, in_1);
-};
+}
 
 GPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, float16* out, const float16* in_0, const float16* in_1) {
   AddGpuHalf
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, reinterpret_cast<half*>(out), reinterpret_cast<const half*>(in_0), reinterpret_cast<const half*>(in_1));
-};
+}
 
 GPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, float* out, const float* in_0, const float* in_1,
           const float* in_2) {
   AddGpu<float>
             <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, out, in_0, in_1, in_2);
-};
+}
 
 GPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, double* out, const double* in_0, const double* in_1,
           const double* in_2) {
   AddGpu<double>
             <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, out, in_0, in_1, in_2);
-};
+}
 
 GPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, float16* out, const float16* in_0, const float16* in_1,
   const float16* in_2) {
   AddGpuHalf
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, reinterpret_cast<half*>(out), reinterpret_cast<const half*>(in_0), reinterpret_cast<const half*>(in_1), reinterpret_cast<const half*>(in_2));
-};
+}
 
 GPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, float* out, const float* in_0, const float* in_1,
           const float* in_2, const float* in_3) {
   AddGpu<float>
             <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, out, in_0, in_1, in_2, in_3);
-};
+}
 
 GPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, double* out, const double* in_0, const double* in_1,
           const double* in_2, const double* in_3) {
   AddGpu<double>
             <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, out, in_0, in_1, in_2, in_3);
-};
+}
 
 GPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, float* out, const float* in_0, const float* in_1,
           const float* in_2, const float* in_3, const float* in_4) {
   AddGpu<float>
             <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, out, in_0, in_1, in_2, in_3, in_4);
- };
+}
 
 GPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, double* out, const double* in_0, const double* in_1,
           const double* in_2, const double* in_3, const double* in_4) {
   AddGpu<double>
             <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, out, in_0, in_1, in_2, in_3, in_4);
-};
+}
 GPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, float* out, const float* in_0, const float* in_1,
           const float* in_2, const float* in_3, const float* in_4, const float* in_5) {
   AddGpu<float>
             <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, out, in_0, in_1, in_2, in_3, in_4, in_5);
-};
+}
 GPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, double* out, const double* in_0, const double* in_1,
           const double* in_2, const double* in_3, const double* in_4, const double* in_5) {
   AddGpu<double>
             <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, out, in_0, in_1, in_2, in_3, in_4, in_5);
-};
+}
 
 GPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, float* out, const float* in_0, const float* in_1,
           const float* in_2, const float* in_3, const float* in_4, const float* in_5, const float* in_6) {
   AddGpu<float>
             <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, out, in_0, in_1, in_2, in_3, in_4, in_5, in_6);
-};
+}
 
 GPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, double* out, const double* in_0, const double* in_1,
           const double* in_2, const double* in_3, const double* in_4, const double* in_5, const double* in_6) {
   AddGpu<double>
             <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, out, in_0, in_1, in_2, in_3, in_4, in_5, in_6);
-};
+}
 
 GPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, float* out, const float* in_0, const float* in_1,
           const float* in_2, const float* in_3, const float* in_4, const float* in_5, const float* in_6,
@@ -270,20 +328,54 @@ GPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, double* out, const doubl
           const double* in_7) {
   AddGpu<double>
             <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, out, in_0, in_1, in_2, in_3, in_4, in_5, in_6, in_7);
-};
+}
 
 GPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, float* out, const float* in_0, const float* in_1,
           const float* in_2, const float* in_3, const float* in_4, const float* in_5, const float* in_6,
           const float* in_7, const float* in_8) {
   AddGpu<float>
             <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, out, in_0, in_1, in_2, in_3, in_4, in_5, in_6, in_7, in_8);
-};
+}
 
 GPU_KU_METHOD Addition(DeviceCtx* ctx, const int64_t n, double* out, const double* in_0, const double* in_1,
           const double* in_2, const double* in_3, const double* in_4, const double* in_5, const double* in_6,
           const double* in_7, const double* in_8) {
   AddGpu<double>
             <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, out, in_0, in_1, in_2, in_3, in_4, in_5, in_6, in_7, in_8);
-};
+}
+
+GPU_KU_METHOD Relu(DeviceCtx* ctx, const int64_t n, const float* x, float* y) {
+  ReluForwardGpu<float>
+  <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
+}
+
+GPU_KU_METHOD Relu(DeviceCtx* ctx, const int64_t n, const double* x, double* y) {
+  ReluForwardGpu<double>
+  <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
+}
+GPU_KU_METHOD Relu(DeviceCtx* ctx, const int64_t n, const float16* x, float16* y) {
+  ReluForwardGpuHalf
+  <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+    n, reinterpret_cast<const half*>(x), reinterpret_cast<half*>(y));
+}
+  
+GPU_KU_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const float* x, const float* y, const float* dy,
+                           float* dx) {
+  ReluBackwardGpu<float>
+  <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y, dy, dx);
+}
+  
+GPU_KU_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const double* x, const double* y, const double* dy,
+                           double* dx) {
+  ReluBackwardGpu<double>
+  <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y, dy, dx);
+}
+
+GPU_KU_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const float16* x, const float16* y, const float16* dy,
+                           float16* dx) {
+ReluBackwardGpuHalf
+<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+  n, reinterpret_cast<const half*>(y), reinterpret_cast<const half*>(dy), reinterpret_cast<half*>(dx));
+}
 
 } // namespace oneflow
