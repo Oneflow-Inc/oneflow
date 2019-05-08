@@ -121,8 +121,8 @@ __global__ void gpu_add(const int64_t n, T* out, const T* in_0, const T* in_1, c
 }
 
 template<typename T>
-__global__ void gpu_add() {
-  
+__global__ void half_gpu_add() {
+
 }
 
 } // namespace
