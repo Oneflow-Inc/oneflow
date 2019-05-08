@@ -182,5 +182,4 @@ ReluBackwardGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda
   n, reinterpret_cast<const half*>(y), reinterpret_cast<const half*>(dy), reinterpret_cast<half*>(dx));
 }
 
-
 } // namespace oneflow
