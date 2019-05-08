@@ -44,9 +44,14 @@ void AddParallelCastFacadeOp(const OpGraph& op_graph, Job* job) {
       *cast_conf->mutable_out_sbp_parallel() = dst_sbp_parallel;
       logical_blob_shape.ToProto(cast_conf->mutable_logical_blob_shape());
       job_builder.AddOps(dst_parallel_desc.parallel_conf(), {facade_op_conf});
+      OperatorConf identity_op_conf{};
+      identity_op_conf.set_name("System-Boxing-ParallelCastIdentity-" + NewUniqueId());
+      IdentityOpConf* identity_conf = identity_op_conf.mutable_identity_conf();
+      identity_conf->set_in(facade_op_conf.name() + "/" + cast_conf->out());
+      identity_conf->set_out("out");
       LogicalBlobId casted_lbi;
-      casted_lbi.set_op_name(facade_op_conf.name());
-      casted_lbi.set_blob_name(cast_conf->out());
+      casted_lbi.set_op_name(identity_op_conf.name());
+      casted_lbi.set_blob_name(identity_conf->out());
       for (const auto& consumer7ibn : blob_parallel7consumers.second) {
         const OpNode* consumer = consumer7ibn.first;
         const std::string& ibn = consumer7ibn.second;
