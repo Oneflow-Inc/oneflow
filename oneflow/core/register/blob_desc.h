@@ -57,6 +57,9 @@ class BlobDesc {
   bool has_instance_shape_field() const { return has_instance_shape_; }
   void set_has_instance_shape_field(bool val);
 
+  bool has_actual_shape_field() const { return has_actutal_shape_; }
+  void set_has_actual_shape_field(bool val);
+
   bool has_col_num_field() const { return has_col_num_; }
   void set_has_col_num_field(bool val);
 
@@ -81,6 +84,7 @@ class BlobDesc {
   void RecordIdInDevicePieceToProto(StructPodDesc* header_pod_desc) const;
   void LossInstanceNumToProto(StructPodDesc* header_pod_desc) const;
   void InstanceShapeToProto(StructPodDesc* header_pod_desc) const;
+  void ActualShapeToProto(StructPodDesc* header_pod_desc) const;
 
   bool header_is_opaque_;
   FieldDesc opaque_header_;
@@ -94,6 +98,7 @@ class BlobDesc {
   bool has_record_id_in_device_piece_;
   bool has_loss_instance_num_;
   bool has_instance_shape_;
+  bool has_actutal_shape_;
   int64_t max_col_num_;
   int32_t blob_mem_id_;
 

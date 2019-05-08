@@ -51,6 +51,10 @@ bool RtBlobDesc::has_instance_shape_field() const {
   return header_pod_desc_.HasField(FieldKey::kInstanceShape);
 }
 
+bool RtBlobDesc::has_actual_shape_field() const {
+  return header_pod_desc_.HasField(FieldKey::kActualShape);
+}
+
 size_t RtBlobDesc::ByteSizeOfBlobHeader() const { return header_pod_desc_.ByteSize(); }
 
 size_t RtBlobDesc::ByteSizeOfBlobBody() const { return body_desc_.AlignedByteSize(); }
@@ -88,6 +92,11 @@ size_t RtBlobDesc::ByteSizeOfRecordIdInDevicePieceField() const {
 size_t RtBlobDesc::ByteSizeOfInstanceShapeField() const {
   if (!has_instance_shape_field()) { return 0; }
   return header_pod_desc_.Field(FieldKey::kInstanceShape).ByteSize();
+}
+
+size_t RtBlobDesc::ByteSizeOfActualShapeField() const {
+  if (!has_actual_shape_field()) { return 0; }
+  return header_pod_desc_.Field(FieldKey::kActualShape).ByteSize();
 }
 
 size_t RtBlobDesc::ByteSizeOfDataContentField() const { return body_desc_.ByteSize(); }

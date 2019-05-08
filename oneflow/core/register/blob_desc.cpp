@@ -120,6 +120,11 @@ void BlobDesc::set_has_instance_shape_field(bool val) {
   has_instance_shape_ = val;
 }
 
+void BlobDesc::set_has_actual_shape_field(bool val) {
+  CHECK(!header_is_opaque_);
+  has_actutal_shape_ = val;
+}
+
 Shape& BlobDesc::mut_dim0_inner_shape() {
   CHECK(!header_is_opaque_);
   if (!dim0_inner_shape_) { dim0_inner_shape_.reset(new Shape()); }
@@ -172,6 +177,11 @@ void BlobDesc::InstanceShapeToProto(StructPodDesc* header_pod_desc) const {
   header_pod_desc->AddField(FieldKey::kInstanceShape, TensorPodDesc(shape, DataType::kInt64));
 }
 
+void BlobDesc::ActualShapeToProto(StructPodDesc* header_pod_desc) const {
+  Shape shape({sizeof(Shape)});
+  header_pod_desc->AddField(FieldKey::kActualShape, TensorPodDesc(shape, DataType::kChar));
+}
+
 void BlobDesc::HeaderToProto(BlobDescProto* proto) const {
   proto->mutable_header()->set_max_col_num(max_col_num_);
   proto->mutable_header()->set_blob_mem_id(blob_mem_id_);
@@ -186,6 +196,7 @@ void BlobDesc::HeaderToProto(BlobDescProto* proto) const {
     if (has_record_id_in_device_piece_field()) { RecordIdInDevicePieceToProto(&header_pod_desc); }
     if (has_loss_instance_num_field()) { LossInstanceNumToProto(&header_pod_desc); }
     if (has_instance_shape_field()) { InstanceShapeToProto(&header_pod_desc); }
+    if (has_actual_shape_field()) { ActualShapeToProto(&header_pod_desc); }
     header_pod_desc.ToProto(proto->mutable_header()->mutable_header_pod_desc());
   } else {
     opaque_header_.ToProto(proto->mutable_header()->mutable_opaque_header());

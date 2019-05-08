@@ -179,6 +179,7 @@ class Blob final {
   float* loss_instance_num_ptr_;
   int64_t* instance_shape_ptr_;
   bool use_instance_shape_;
+  Shape* actual_shape_;
   void* dptr_;
   const RtBlobDesc* blob_desc_;
   Regst* regst_;

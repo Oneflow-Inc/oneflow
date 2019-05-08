@@ -35,6 +35,8 @@ void Blob::Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, cha
   } else {
     use_instance_shape_ = false;
   }
+  actual_shape_ =
+      reinterpret_cast<Shape*>(header_pod_ptr_.MutTensorPtr<char>(FieldKey::kActualShape, nullptr));
   dptr_ = body_ptr;
   record_num_ = -1;
   dynamic_shape_ = static_shape();
