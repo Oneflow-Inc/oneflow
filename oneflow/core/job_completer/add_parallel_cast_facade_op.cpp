@@ -49,6 +49,7 @@ void AddParallelCastFacadeOp(const OpGraph& op_graph, Job* job) {
       IdentityOpConf* identity_conf = identity_op_conf.mutable_identity_conf();
       identity_conf->set_in(facade_op_conf.name() + "/" + cast_conf->out());
       identity_conf->set_out("out");
+      job_builder.AddOps(dst_parallel_desc.parallel_conf(), {identity_op_conf});
       LogicalBlobId casted_lbi;
       casted_lbi.set_op_name(identity_op_conf.name());
       casted_lbi.set_blob_name(identity_conf->out());
