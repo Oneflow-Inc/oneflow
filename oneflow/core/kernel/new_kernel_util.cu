@@ -36,7 +36,7 @@ __inline__ float16 half2float16(half x) {
   return *ret;
 }
 
-__global__ void ReluForwardGpu(const int n, const half* x, half* y) {
+__global__ void ReluForwardGpuHalf(const int n, const half* x, half* y) {
   #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     CUDA_1D_KERNEL_LOOP(i, n) {
       if (__hgt(x[i], hzero())) {
@@ -50,7 +50,7 @@ __global__ void ReluForwardGpu(const int n, const half* x, half* y) {
   #endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) */
 }
   
-  __global__ void ReluBackwardGpu(const int n, const half* y, const half* dy, half* dx) {
+  __global__ void ReluBackwardGpuHalf(const int n, const half* y, const half* dy, half* dx) {
   #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     half zero = __float2half(0.0);
     CUDA_1D_KERNEL_LOOP(i, n) {
@@ -162,7 +162,7 @@ GPU_KU_METHOD Relu(DeviceCtx* ctx, const int64_t n, const double* x, double* y) 
   <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
 }
 GPU_KU_METHOD Relu(DeviceCtx* ctx, const int64_t n, const float16* x, float16* y) {
-  ReluForwardGpu
+  ReluForwardGpuHalf
   <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
     n, reinterpret_cast<const half*>(x), reinterpret_cast<half*>(y));
 }
@@ -181,7 +181,7 @@ GPU_KU_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const double* x, con
 
 GPU_KU_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const float16* x, const float16* y, const float16* dy,
                            float16* dx) {
-ReluBackwardGpu
+ReluBackwardGpuHalf
 <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
   n, reinterpret_cast<const half*>(y), reinterpret_cast<const half*>(dy), reinterpret_cast<half*>(dx));
 }
