@@ -24,7 +24,7 @@ std::string Shape::ToString() const {
   std::stringstream ss;
   ss << "(";
   FOR_RANGE(size_t, i, 0, num_axes_) {
-    ss << i;
+    ss << dim_array_.at(i);
     if (num_axes_ == 1 || i != num_axes_ - 1) { ss << ","; }
   }
   ss << ")";
@@ -32,7 +32,7 @@ std::string Shape::ToString() const {
 }
 
 void Shape::ToProto(ShapeProto* ret) const {
-  *(ret->mutable_dim()) = PbRf<int64_t>(dim_array_.begin(), dim_array_.begin() + num_axes_);
+  *(ret->mutable_dim()) = {dim_array_.begin(), dim_array_.begin() + num_axes_};
 }
 
 std::ostream& operator<<(std::ostream& out, const Shape& shape) {

@@ -4,8 +4,6 @@
 #include "oneflow/core/common/shape.pb.h"
 #include "oneflow/core/common/util.h"
 
-#include <cstring>
-
 namespace oneflow {
 
 class Shape final {
@@ -50,7 +48,7 @@ class Shape final {
   int64_t elem_cnt() const { return Count(); }
 
   std::vector<int64_t> dim_vec() const {
-    return std::vector<int64_t>(dim_array_.begin(), dim_array_.end());
+    return std::vector<int64_t>(dim_array_.begin(), dim_array_.begin() + num_axes_);
   }
   Shape CreateLeftExtendedShape(size_t extend_axes) const;
 
@@ -79,24 +77,12 @@ class Shape final {
   DimArray dim_array_;
 };
 
-namespace {
-
-template<class InputIt, class OutputIt>
-OutputIt CopyDims(InputIt first, InputIt last, OutputIt d_first) {
-  while (first != last) {
-    CHECK_GE(*first, 0LL);
-    *d_first++ = *first++;
-  }
-  return d_first;
-}
-
-}  // namespace
-
 template<typename T>
 void Shape::Init(const T& other) {
   num_axes_ = other.size();
   CHECK_LE(num_axes_, dim_array_.size());
-  CopyDims(other.begin(), other.end(), dim_array_.begin());
+  for (auto it = other.begin(); it != other.end(); ++it) { CHECK_GE(*it, 0LL); }
+  std::copy(other.begin(), other.end(), dim_array_.begin());
 }
 
 template<typename StreamT>
