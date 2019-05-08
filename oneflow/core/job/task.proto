@@ -68,6 +68,11 @@ message TaskSetInfo {
   required int64 order_in_graph = 5;
 }
 
+message RegstInplaceInfo {
+  required int64 out_regst_desc_id = 1;
+  required int64 in_regst_desc_id = 2;
+}
+
 message TaskProto {
   // common
   required TaskType task_type = 1;
@@ -83,4 +88,6 @@ message TaskProto {
   optional int64 random_seed = 1001; // ForwardCompTask
   repeated int64 related_save_model_task_ids = 1002;
   optional int64 related_init_model_task_id = 1003 [default = -1];
+
+  repeated RegstInplaceInfo regst_inplace_infos = 1100;
 };

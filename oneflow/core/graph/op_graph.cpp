@@ -13,15 +13,6 @@ std::string OpEdge::VisualStr() const {
   return str;
 }
 
-bool* OpNode::MutIsModelBlob4Lbi(const LogicalBlobId& lbi) {
-  CHECK_EQ(MutProducerOpNode4Lbi(lbi), this);
-  return &lbi2is_model_blob_[lbi];
-}
-
-bool OpNode::IsModelBlob4Lbi(const LogicalBlobId& lbi) const {
-  return ProducerOpNode4Lbi(lbi)->lbi2is_model_blob_.at(lbi);
-}
-
 bool* OpNode::MutHasBatchDim4Lbi(const LogicalBlobId& lbi) {
   CHECK_EQ(MutProducerOpNode4Lbi(lbi), this);
   return &lbi2has_batch_dim_[lbi];
@@ -277,7 +268,6 @@ void OpGraph::Init(const Job& job) {
   FixOpParallelDesc();
   UpdateOpNodeHasInDiff();
   InferTimeShape();
-  InferIsModelBlob();
   InferLogicalBlobDesc(job);
 }
 
@@ -350,14 +340,6 @@ void OpGraph::InferTimeShape() const {
   });
 }
 
-void OpGraph::InferIsModelBlob() const {
-  TopoForEachNode([&](OpNode* op_node) {
-    op_node->op().InferIsModelBlob4OutputBlobsIf([&](const std::string& bn) -> bool* {
-      return op_node->ProducerOpNode4BnInOp(bn)->MutIsModelBlob4Lbi(op_node->op().BnInOp2Lbi(bn));
-    });
-  });
-}
-
 void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_sig_conf) const {
   HashMap<std::string, SbpInferHint> ibn2sbp_infer_hint;
   for (const std::string& ibn : op_node->op().input_bns()) {
@@ -407,7 +389,7 @@ void OpGraph::InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_s
   }
   op_node->op().InferSbpSignatureIf(sbp_signature, sbp_sig_conf, CalcOrderValue4SbpSig,
                                     SbpInferHint4Ibn, op_node->parallel_desc());
-  op_node->op().FixSbpSignature(sbp_signature);
+  op_node->op().FixSbpSignature(SbpInferHint4Ibn, sbp_signature);
 }
 
 void OpGraph::InferOpNodeLogicalBlobDesc(OpNode* op_node) const {
@@ -468,10 +450,10 @@ BalancedSplitter OpGraph::GetBalancedSplitter(const std::string& op_name,
   const SbpParallel& sbp_parallel = GetSbpParallel(op_name, lbi);
   CHECK(sbp_parallel.has_split_parallel());
   int64_t split_num = GetSplitNum(op_name, lbi);
-  if (IsDataBlob(op_name, lbi)) {
+  if (IsBatchDimBlob(op_name, lbi)) {
+    CHECK_EQ(sbp_parallel.split_parallel().axis(), 0);
     CHECK_EQ(split_num % op_node->parallel_desc().parallel_num(), 0);
   } else {
-    CHECK(IsModelBlob(op_name, lbi));
     CHECK_GE(split_num, op_node->parallel_desc().parallel_num());
   }
   return BalancedSplitter(split_num, op_node->parallel_desc().parallel_num());
@@ -508,13 +490,9 @@ const BlobDesc& OpGraph::GetLogicalBlobDesc(const LogicalBlobId& lbi) const {
       ->LogicalBlobDesc4Lbi(GetLogicalBlobIdKey(lbi.op_name(), lbi));
 }
 
-bool OpGraph::IsModelBlob(const std::string& op_name, const LogicalBlobId& lbi) const {
+bool OpGraph::IsBatchDimBlob(const std::string& op_name, const LogicalBlobId& lbi) const {
   return op_name2op_node_.at(GetOpNameKey(op_name, lbi))
-      ->IsModelBlob4Lbi(GetLogicalBlobIdKey(op_name, lbi));
-}
-
-bool OpGraph::IsDataBlob(const std::string& op_name, const LogicalBlobId& lbi) const {
-  return !IsModelBlob(op_name, lbi);
+      ->HasBatchDim4Lbi(GetLogicalBlobIdKey(op_name, lbi));
 }
 
 void OpGraph::CheckBlobDescs(const std::string& op_name,

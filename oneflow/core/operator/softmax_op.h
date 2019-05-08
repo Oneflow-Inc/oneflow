@@ -29,6 +29,11 @@ class SoftmaxOp final : public Operator {
                            const ParallelContext*, const OpContext*) const override;
 
  private:
+  void InferHasBatchDim(
+      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {
+    NaiveInferHasBatchDim(HasBatchDim4BnInOp);
+  }
+
   void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

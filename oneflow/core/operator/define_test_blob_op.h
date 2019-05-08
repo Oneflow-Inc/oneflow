@@ -21,6 +21,7 @@ class DefineTestBlobOp final : public Operator {
 
  private:
   void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
+  void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 };
 
 }  // namespace oneflow

@@ -18,6 +18,8 @@ class AllReduceFacadeOp final : public Operator {
                       const ParallelContext* parallel_ctx) const override;
 
  private:
+  void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
+
   void InferSbpSignature(SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
                          const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
                          std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
