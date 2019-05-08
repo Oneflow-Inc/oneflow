@@ -42,6 +42,27 @@ static void ReluBackwardImpl(DeviceCtx* ctx, const int64_t n, const T* x, const 
   for (int64_t i = 0; i != n; ++i) { dx[i] = (y[i] > zero) * dy[i]; }
 }
 
+template<typename T>
+static void RowMaxImpl(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x, T* y,
+                     void* temp_storage, const size_t temp_storage_bytes) {
+  FOR_RANGE(int64_t, i, 0, row_num) {
+      y[i] = x[i * col_num];
+      FOR_RANGE(int64_t, j, 1, col_num) {
+        if (y[i] < x[i * col_num + j]) { y[i] = x[i * col_num + j]; }
+      }
+  }                      
+}
+
+template<typename T>
+static void RowSumImpl(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x, T* y,
+                     void* temp_storage, const size_t temp_storage_bytes) {
+  FOR_RANGE(int64_t, i, 0, row_num) {
+      y[i] = x[i * col_num];
+      FOR_RANGE(int64_t, j, 1, col_num) { y[i] += x[i * col_num + j]; }
+    }
+}
+
+
 } // namespace
 
 #define CPU_KU_METHOD void NewKernelUtil<DeviceType::kCPU>::
@@ -92,5 +113,27 @@ CPU_KU_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const double* x, con
   ReluBackwardImpl<double>(ctx, n, x, y, dy, dx);
 }
 
+CPU_KU_METHOD RowMax(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const float* x, float* y,
+                     void* temp_storage, const size_t temp_storage_bytes) {
+  RowMaxImpl<float>(ctx, row_num, col_num, x, y, temp_storage, temp_storage_bytes);                        
+}
+
+CPU_KU_METHOD RowMax(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const double* x, double* y,
+                     void* temp_storage, const size_t temp_storage_bytes) {
+  RowMaxImpl<double>(ctx, row_num, col_num, x, y, temp_storage, temp_storage_bytes);                      
+}
+
+CPU_KU_METHOD RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const float* x, float* y,
+                     void* temp_storage, const size_t temp_storage_bytes) {
+  RowSumImpl<float>(ctx, row_num, col_num, x, y, temp_storage, temp_storage_bytes);
+}
+
+CPU_KU_METHOD RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const double* x, double* y,
+                     void* temp_storage, const size_t temp_storage_bytes) {
+  RowSumImpl<double>(ctx, row_num, col_num, x, y, temp_storage, temp_storage_bytes);
+}
+
 } // namespace oneflow
+
+
 

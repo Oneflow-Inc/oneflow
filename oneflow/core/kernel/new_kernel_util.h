@@ -42,6 +42,14 @@ class NewKernelUtil<DeviceType::kCPU> {
                            float* dx);
   static void ReluBackward(DeviceCtx* ctx, const int64_t n, const double* x, const double* y, const double* dy,
                            double* dx);
+  static void RowMax(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const float* x, float* y,
+                     void* temp_storage, const size_t temp_storage_bytes);
+  static void RowMax(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const double* x, double* y,
+                     void* temp_storage, const size_t temp_storage_bytes);
+  static void RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const float* x, float* y,
+                     void* temp_storage, const size_t temp_storage_bytes);
+  static void RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const double* x, double* y,
+                     void* temp_storage, const size_t temp_storage_bytes);
 };
 
 template<>
@@ -71,6 +79,18 @@ class NewKernelUtil<DeviceType::kGPU> {
                            double* dx);
   static void ReluBackward(DeviceCtx* ctx, const int64_t n, const float16* x, const float16* y, const float16* dy,
                            float16* dx);
+  static void RowMax(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const float* x, float* y,
+                     void* temp_storage, const size_t temp_storage_bytes);
+  static void RowMax(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const double* x, double* y,
+                     void* temp_storage, const size_t temp_storage_bytes);
+  static void RowMax(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const float16* x, float16* y,
+                     void* temp_storage, const size_t temp_storage_bytes);
+  static void RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const float* x, float* y,
+                     void* temp_storage, const size_t temp_storage_bytes);
+  static void RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const double* x, double* y,
+                     void* temp_storage, const size_t temp_storage_bytes);
+  static void RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const float16* x, float16* y,
+                     void* temp_storage, const size_t temp_storage_bytes);
 };
 
 } // namespace oneflow
