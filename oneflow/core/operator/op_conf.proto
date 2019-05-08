@@ -1343,6 +1343,11 @@ message AllReduceFacadeOpConf {
   required string out = 2;
 }
 
+message IdentityOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1472,6 +1477,7 @@ message OperatorConf {
     EveryNthOpConf every_nth_conf = 286;
     ModelSaveV2OpConf model_save_v2_conf = 287;
     TanHGradOpConf tanh_grad_conf = 288;
+    IdentityOpConf identity_conf = 289;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
