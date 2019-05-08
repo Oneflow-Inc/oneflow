@@ -113,6 +113,7 @@ void LogicalGraph::BuildFwStruct() {
   HashMap<std::string, std::vector<LogicalNode*>> op_name2nodes;
   NaiveBuildFwStruct(&op_name2nodes);
   ReplaceAllReduceFacades();
+  ReplaceAllParallelCastFacades();
   FixSharedModelNodes(op_name2nodes);
   LinkUnpackFw2PackFw(op_name2nodes);
   total_mbn_num_ = 0;
@@ -842,6 +843,22 @@ void LogicalGraph::ReplaceAllReduceFacades() {
         all_reduce_ending_op->BnInOp2Lbi(all_reduce_ending_op->SoleObn());
     *dst->SoleOp()->MutBnInOp2Lbi(dst->SoleOp()->SoleIbn()) = ending_lbi;
   });
+}
+
+void LogicalGraph::ReplaceAllParallelCastFacades() {
+  ForEachLogicalNode<ParallelCastFacadeLogicalNode>(
+      [this](ParallelCastFacadeLogicalNode* facade_node) {
+        CHECK_EQ(facade_node->in_edges().size(), 1);
+        CHECK_EQ(facade_node->out_edges().size(), 1);
+        LogicalNode* src = facade_node->SoleInEdge()->src_node();
+        LogicalNode* dst = facade_node->SoleOutEdge()->dst_node();
+        CHECK(dst->SoleOp()->op_conf().has_identity_conf());
+        *dst->SoleOp()->MutBnInOp2Lbi("in") = facade_node->SoleOp()->BnInOp2Lbi("in");
+        DisConnect(facade_node->SoleInEdge());
+        DisConnect(facade_node->SoleOutEdge());
+        DeleteNode(facade_node);
+        Connect(src, NewEdge(), dst);
+      });
 }
 
 void LogicalGraph::ConnectFwToBw() {
