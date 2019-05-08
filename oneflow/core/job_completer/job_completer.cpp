@@ -8,6 +8,7 @@
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job_completer/all_reduce_add_pass.h"
 #include "oneflow/core/job_completer/freeze_sbp_signature.h"
+#include "oneflow/core/job_completer/add_parallel_cast_facade_op.h"
 
 namespace oneflow {
 
@@ -442,9 +443,10 @@ void JobCompleter::Complete(Job* job) const {
     // complete tick ops
     WithOpGraphAndMutJob(job, &AutoTick);
     // add keep_header_only op
-    WithOpGraphAndMutJob(job, &AddKeepHeaderOnlyOp);
     WithOpGraphAndMutJob(job, &RewriteBoxingWithAllReduce);
     WithOpGraphAndMutJob(job, &FreezeSbpSignature);
+    WithOpGraphAndMutJob(job, &AddParallelCastFacadeOp);
+    WithOpGraphAndMutJob(job, &AddKeepHeaderOnlyOp);
     WithOpGraphAndMutJob(job, &SetOpTimeShape7CtrlInOpName7ModelLbis);
   }
   // TODO: refine
