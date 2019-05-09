@@ -130,6 +130,9 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   // a set of nodes is called a chain family if they can divided into several connected chains
   void ForEachChainFamily(const std::function<void(const HashSet<OpNode*>&)>& Handler) const;
 
+  void ForEachDataAndCtrlInNode(OpNode* node, const std::function<void(OpNode*)>& Handler) const;
+  void ForEachDataAndCtrlOutNode(OpNode* node, const std::function<void(OpNode*)>& Handler) const;
+
  private:
   void Init(const Job& job);
   void InitNodes(const Job& job);
