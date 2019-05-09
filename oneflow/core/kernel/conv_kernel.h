@@ -34,14 +34,6 @@ class ConvKernelIf : public KernelIfWithModel<device_type, T>,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void BackwardDataContent(const KernelCtx&,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void InitConstBufBlobs(DeviceCtx*,
-                         std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void InitModelBlobsWithRandomSeed(
-      DeviceCtx*, std::mt19937* random_seed_gen,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void InitModelBlobsWithDir(DeviceCtx*, int32_t part_id, int32_t part_num,
-                             const std::string& model_load_dir,
-                             std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
   virtual void DoForwardDataContent(DeviceCtx*, const Blob* in_blob, const Blob* weight_blob,
                                     Blob* out_blob,
@@ -156,6 +148,42 @@ class ConvKernel<DeviceType::kGPU, T> final : public ConvKernelImplByIm2Col<Devi
   std::unique_ptr<CudnnFilterDesc> filter_desc_;
   std::unique_ptr<CudnnConvDesc> conv_desc_;
   std::unique_ptr<CudnnTensorDesc> bias_desc_;
+};
+
+template<>
+class ConvKernel<DeviceType::kGPU, float16> final : public ConvKernelIf<DeviceType::kGPU, float16> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ConvKernel);
+  ConvKernel() = default;
+  ~ConvKernel() = default;
+
+ private:
+  void VirtualKernelInit(const ParallelContext*) override;
+  void KernelInitWithCudnn(const ParallelContext*);
+
+  void DoForwardDataContent(DeviceCtx*, const Blob* in_blob, const Blob* weight_blob,
+                            Blob* out_blob,
+                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void WeightBackward(DeviceCtx*, const Blob* out_diff_blob, const Blob* in_blob,
+                      Blob* weight_diff_blob, Blob* in_diff_blob,
+                      std::function<Blob*(const std::string&)> BnInOp2Blob) const override {}
+  void BiasBackward(DeviceCtx*, const Blob* out_diff_blob, Blob* bias_diff_blob,
+                    std::function<Blob*(const std::string&)> BnInOp2Blob) const override {}
+
+  std::unique_ptr<CudnnTensorDesc> in_desc_;
+  std::unique_ptr<CudnnTensorDesc> out_desc_;
+  std::unique_ptr<CudnnFilterDesc> filter_desc_;
+  std::unique_ptr<CudnnConvDesc> conv_desc_;
+  std::unique_ptr<CudnnTensorDesc> bias_desc_;
+};
+
+// ConvKernel<kCPU, float16> is not used
+template<>
+class ConvKernel<DeviceType::kCPU, float16> final : public Kernel {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ConvKernel);
+  ConvKernel() = default;
+  ~ConvKernel() = default;
 };
 
 template<typename T>

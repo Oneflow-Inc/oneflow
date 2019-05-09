@@ -180,7 +180,6 @@ class Actor {
   }
   virtual void AsyncSendCustomizedConsumedRegstMsgToProducer() {}
 
-
   int64_t actor_id_;
   int64_t act_id_;
   std::unique_ptr<ParallelContext> parallel_ctx_;

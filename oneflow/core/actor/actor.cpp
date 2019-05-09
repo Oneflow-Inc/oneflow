@@ -217,7 +217,7 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
       } else if (inplace_consumed_rs_.HasRegstDescId(regst->regst_desc_id())) {
         CHECK_EQ(0, inplace_consumed_rs_.TryPushBackRegst(regst));
         CHECK(regst->packed_blob()->dptr()
-            == inplace_produced_rs_.Front(regst->regst_desc_id())->packed_blob()->dptr());
+              == inplace_produced_rs_.Front(regst->regst_desc_id())->packed_blob()->dptr());
       } else if (TryUpdtStateAsProducedRegst(regst) == 0) {
         // do nothing
       } else {
@@ -236,12 +236,14 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
     UNIMPLEMENTED();
   }
   // handler halts
-  bool naive_exist_and_eord_and_empty = is_naive_consumed_eord_
-        && naive_consumed_rs_.available_regst_desc_cnt() == 0;
-  bool naive_not_exist_and_customized_eord = naive_consumed_rs_.total_regst_desc_cnt() == 0
-        && IsCustomizedReadAlwaysUnReadyFromNow();
-  bool inplace_condition = inplace_consumed_rs_.total_regst_desc_cnt() != 0 ?
-    (is_inplace_consumed_eord_ && inplace_consumed_rs_.available_regst_desc_cnt() == 0) : (true);
+  bool naive_exist_and_eord_and_empty =
+      is_naive_consumed_eord_ && naive_consumed_rs_.available_regst_desc_cnt() == 0;
+  bool naive_not_exist_and_customized_eord =
+      naive_consumed_rs_.total_regst_desc_cnt() == 0 && IsCustomizedReadAlwaysUnReadyFromNow();
+  bool inplace_condition =
+      inplace_consumed_rs_.total_regst_desc_cnt() != 0
+          ? (is_inplace_consumed_eord_ && inplace_consumed_rs_.available_regst_desc_cnt() == 0)
+          : (true);
   if (inplace_condition
       && (naive_exist_and_eord_and_empty || naive_not_exist_and_customized_eord)) {
     CHECK_EQ(naive_consumed_rs_.available_regst_desc_cnt(), 0);
@@ -330,7 +332,7 @@ void Actor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
 }
 
 void Actor::AsyncSendInplaceProducedRegstMsgToConsumer() {
-  std::vector<int64_t>regst_desc_ids;
+  std::vector<int64_t> regst_desc_ids;
   inplace_produced_rs_.ForEachFrontRegst([&](Regst* regst) {
     CHECK(regst->regst_desc()->regst_desc_type().has_data_regst_desc());
     int64_t real_consumer_cnt = HandleRegstToConsumer(regst, [](int64_t) { return true; });
@@ -402,14 +404,14 @@ int64_t Actor::HandleRegstToConsumer(Regst* regst, std::function<bool(int64_t)> 
   return real_consumer_cnt;
 }
 
-bool Actor::IsReadReady() { return naive_consumed_rs_.IsCurSlotReady()
-  && inplace_consumed_rs_.IsCurSlotReady()
-  && IsCustomizedReadReady(); }
+bool Actor::IsReadReady() {
+  return naive_consumed_rs_.IsCurSlotReady() && inplace_consumed_rs_.IsCurSlotReady()
+         && IsCustomizedReadReady();
+}
 
 bool Actor::IsWriteReady() {
-  return naive_produced_rs_.IsCurSlotReady()
-    && inplace_produced_rs_.IsCurSlotReady()
-    && IsCustomizedWriteReady();
+  return naive_produced_rs_.IsCurSlotReady() && inplace_produced_rs_.IsCurSlotReady()
+         && IsCustomizedWriteReady();
 }
 
 void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx,

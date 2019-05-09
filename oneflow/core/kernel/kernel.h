@@ -202,11 +202,6 @@ class KernelIfWithModel : virtual public KernelIf<device_type> {
   OF_DISALLOW_COPY_AND_MOVE(KernelIfWithModel);
   virtual ~KernelIfWithModel() = default;
 
- private:
-  void SetTotalInstanceNumDiffBlob(
-      const KernelCtx& ctx,
-      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
-
  protected:
   KernelIfWithModel() = default;
 };
@@ -219,11 +214,6 @@ class KernelIfWithActivation : virtual public KernelIf<device_type> {
 
  protected:
   KernelIfWithActivation() = default;
-
-  ActivationType GetActivationType() const override;
-  void ForwardActivation(const KernelCtx& ctx, Blob* out_blob) const override;
-  void BackwardActivation(const KernelCtx& ctx, const Blob* out_blob, const Blob* out_diff_blob,
-                          Blob* bw_activation_blob) const override;
 };
 
 #define REGISTER_KERNEL(k, KernelType) \
