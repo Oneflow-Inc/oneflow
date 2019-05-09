@@ -42,6 +42,16 @@ static void ReluBackwardImpl(DeviceCtx* ctx, const int64_t n, const T* x, const 
   for (int64_t i = 0; i != n; ++i) { dx[i] = (y[i] > zero) * dy[i]; }
 }
 
+template<typename T>
+static void AxpyImpl(DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx,
+                        T* y, const int incy) {
+  FOR_RANGE(int, i, 0, n) {
+    *y += alpha * *x;
+    x += incx;
+    y += incy;
+  }
+}
+
 } // namespace
 
 #define CPU_KU_METHOD void NewKernelUtil<DeviceType::kCPU>::
@@ -90,6 +100,16 @@ CPU_KU_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const float* x, cons
 CPU_KU_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const double* x, const double* y, const double* dy,
                            double* dx) {
   ReluBackwardImpl<double>(ctx, n, x, y, dy, dx);
+}
+
+CPU_KU_METHOD Axpy(DeviceCtx* ctx, const int n, const float alpha, const float* x, const int incx,
+                        float* y, const int incy) {
+  AxpyImpl<float>(ctx, n, alpha, x, incx, y, incy);
+}
+
+CPU_KU_METHOD Axpy(DeviceCtx* ctx, const int n, const double alpha, const double* x, const int incx,
+                        double* y, const int incy) {
+  AxpyImpl<double>(ctx, n, alpha, x, incx, y, incy);
 }
 
 } // namespace oneflow

@@ -65,6 +65,15 @@ __global__ void ReluForwardGpuHalf(const int n, const half* x, half* y) {
   #endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
 }
 
+__global__ void AxpyHalfGpu(const int n, const half alpha, const half* x, const int incx, half* y,
+  const int incy) {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+CUDA_1D_KERNEL_LOOP(i, n) { y[i * incy] = __hfma(alpha, x[i * incx], y[i * incy]); }
+#else
+HALF_CHECK_FAILED;
+#endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+}
+
 cublasOperation_t CblasTrans2CublasTrans(CBLAS_TRANSPOSE trans) {
   cublasOperation_t cublas_trans;
   if (trans == CBLAS_TRANSPOSE::CblasNoTrans) {
@@ -184,6 +193,23 @@ GPU_KU_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const float16* x, co
 ReluBackwardGpuHalf
 <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
   n, reinterpret_cast<const half*>(y), reinterpret_cast<const half*>(dy), reinterpret_cast<half*>(dx));
+}
+
+GPU_KU_METHOD Axpy(DeviceCtx* ctx, const int n, const float alpha, const float* x, const int incx,
+  float* y, const int incy) {
+  cublas_axpy<float>(ctx->cublas_pmh_handle(), n, &alpha, x, incx, y, incy);
+}
+
+GPU_KU_METHOD Axpy(DeviceCtx* ctx, const int n, const double alpha, const double* x, const int incx,
+  double* y, const int incy) {
+  cublas_axpy<double>(ctx->cublas_pmh_handle(), n, &alpha, x, incx, y, incy);
+}
+
+GPU_KU_METHOD Axpy(DeviceCtx* ctx, const int n, const float16 alpha, const float16* x, const int incx,
+  float16* y, const int incy) {
+  AxpyHalfGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+      n, float16_2half(alpha), reinterpret_cast<const half*>(x), incx, reinterpret_cast<half*>(y),
+      incy);
 }
 
 } // namespace oneflow
