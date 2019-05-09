@@ -1413,7 +1413,8 @@ message OperatorConf {
     AllReduceFacadeOpConf all_reduce_facade_conf = 134;
     ParallelCastFacadeOpConf parallel_cast_facade_conf = 135;
     LocalGpuPeerSplitToSplitOpConf local_gpu_peer_split_to_split_conf = 136;
-      
+    LocalGpuPeerSplitToBroadcastOpConf local_gpu_peer_split_to_broadcast_conf = 137;
+
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
     TransposeOpConf transpose_conf = 201;
