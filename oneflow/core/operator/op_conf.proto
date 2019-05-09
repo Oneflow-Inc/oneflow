@@ -1414,6 +1414,7 @@ message OperatorConf {
     ParallelCastFacadeOpConf parallel_cast_facade_conf = 135;
     LocalGpuPeerSplitToSplitOpConf local_gpu_peer_split_to_split_conf = 136;
     LocalGpuPeerSplitToBroadcastOpConf local_gpu_peer_split_to_broadcast_conf = 137;
+    LocalGpuPeerPartialSumToSplitOpConf local_gpu_peer_partial_sum_to_split_conf = 138;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;

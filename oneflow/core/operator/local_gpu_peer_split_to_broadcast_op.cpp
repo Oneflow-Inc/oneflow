@@ -20,8 +20,8 @@ void LocalGpuPeerSplitToBroadcastOp::InferBlobDescs(
       op_conf().local_gpu_peer_split_to_broadcast_conf();
   const int64_t in_split_axis = conf.in_split_axis();
   const BlobDesc* in_0 = GetBlobDesc4BnInOp(GenRepeatedBn("in", 0));
-  CHECK_GE(in_split_axis, 0);
   const int64_t num_axes = in_0->shape().NumAxes();
+  CHECK_GE(in_split_axis, 0);
   CHECK_LT(in_split_axis, num_axes);
   std::vector<int64_t> parts;
   parts.push_back(in_0->shape().At(in_split_axis));
