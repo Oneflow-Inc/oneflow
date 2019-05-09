@@ -1348,6 +1348,25 @@ message IdentityOpConf {
   required string out = 2;
 }
 
+message LocalGpuPeerSplitToSplitOpConf {
+  repeated string in = 1;
+  required string out = 2;
+  required int64 in_split_axis = 3;
+  required int64 out_split_axis = 4;
+}
+
+message LocalGpuPeerSplitToBroadcastOpConf {
+  repeated string in = 1;
+  required string out = 2;
+  required int64 in_split_axis = 3;
+}
+
+message LocalGpuPeerPartialSumToSplitOpConf {
+  repeated string in = 1;
+  required string out = 2;
+  required int64 out_split_axis = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1393,6 +1412,7 @@ message OperatorConf {
     AccOpConf acc_conf = 133;
     AllReduceFacadeOpConf all_reduce_facade_conf = 134;
     ParallelCastFacadeOpConf parallel_cast_facade_conf = 135;
+    LocalGpuPeerSplitToSplitOpConf local_gpu_peer_split_to_split_conf = 136;
       
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
