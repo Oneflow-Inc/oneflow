@@ -12,6 +12,7 @@
 #include "oneflow/core/graph/repeat_backward_compute_task_node.h"
 #include "oneflow/core/graph/acc_compute_task_node.h"
 #include "oneflow/core/graph/every_nth_compute_task_node.h"
+#include "oneflow/core/graph/local_gpu_peer_boxing_compute_task_node.h"
 
 namespace oneflow {
 
@@ -361,6 +362,10 @@ DECLARE_BEFORE_OR_AFTER_ALLREDUCE_REDUCE_NODE(ReduceSplitLogicalNode, false);
 
 DECLARE_FACADE_LOGICAL_NODE(AllReduceFacadeLogicalNode);
 DECLARE_FACADE_LOGICAL_NODE(ParallelCastFacadeLogicalNode);
+
+class LocalGpuPeerBoxingLogicalNode final : public LogicalNode {
+  LOGICAL_NODE_WITH_NEW_AREA_ID_BOILERPLATE(LocalGpuPeerBoxing)
+};
 
 }  // namespace oneflow
 
