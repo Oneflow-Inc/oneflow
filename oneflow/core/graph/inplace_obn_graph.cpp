@@ -25,6 +25,16 @@ void InplaceObnGraph::InitNodes(
       obn += "_updated";
       CHECK(std::find(op->output_bns().begin(), op->output_bns().end(), obn)
             == op->output_bns().end());
+      for (const auto& bn : op->output_bns()) {
+        const auto& obn_modifier = op->OutputBlobModifier4Obn(bn);
+        if (obn_modifier.has_const_inplace_ibn()) {
+          CHECK(obn_modifier.const_inplace_ibn() != oba.bn_in_op());
+        } else if (obn_modifier.has_mutable_inplace_ibn()) {
+          CHECK(obn_modifier.mutable_inplace_ibn() != oba.bn_in_op());
+        } else {
+          // do nothing
+        }
+      }
       node = new FakeObnInplaceObnNode(op, obn, oba.bn_in_op());
     } else if (std::find(op->output_bns().begin(), op->output_bns().end(), oba.bn_in_op())
                != op->output_bns().end()) {
