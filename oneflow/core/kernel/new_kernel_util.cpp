@@ -42,7 +42,31 @@ static void ReluBackwardImpl(DeviceCtx* ctx, const int64_t n, const T* x, const 
   for (int64_t i = 0; i != n; ++i) { dx[i] = (y[i] > zero) * dy[i]; }
 }
 
-}  // namespace
+template<typename T>
+static void SigmoidImpl(DeviceCtx* ctx, int64_t n, const T* x, T* y) {
+  T half = static_cast<T>(0.5);
+    for (int64_t i = 0; i != n; ++i) { y[i] = half * std::tanh(half * x[i]) + half; }
+}
+
+template<typename T>
+static void SigmoidBackwardImpl(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
+                              T* dx) {
+  T half = static_cast<T>(0.5);
+    for (int64_t i = 0; i != n; ++i) { dx[i] = y[i] * (1 - y[i]) * dy[i]; }
+}
+
+template<typename T>
+static void TanHImpl(DeviceCtx* ctx, int64_t n, const T* x, T* y) {
+  for (int64_t i = 0; i != n; ++i) { y[i] = std::tanh(x[i]); }
+}
+
+template<typename T>
+static void TanHBackwardImpl(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
+                              T* dx) {
+  for (int64_t i = 0; i != n; ++i) { dx[i] = (1 - y[i] * y[i]) * dy[i]; }
+}
+
+} // namespace
 
 #define CPU_KU_METHOD void NewKernelUtil<DeviceType::kCPU>::
 
@@ -86,4 +110,40 @@ CPU_KU_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const double* x, con
   ReluBackwardImpl<double>(ctx, n, x, y, dy, dx);
 }
 
-}  // namespace oneflow
+CPU_KU_METHOD Sigmoid(DeviceCtx* ctx, int64_t n, const float* x, float* y) {
+  SigmoidImpl<float>(ctx, n, x, y);
+}
+
+CPU_KU_METHOD Sigmoid(DeviceCtx* ctx, int64_t n, const double* x, double* y) {
+  SigmoidImpl<double>(ctx, n, x, y);
+}
+
+CPU_KU_METHOD SigmoidBackward(DeviceCtx* ctx, const int64_t n, const float* x, const float* y, const float* dy,
+                              float* dx) {
+  SigmoidBackwardImpl<float>(ctx, n, x, y, dy, dx);
+}
+
+CPU_KU_METHOD SigmoidBackward(DeviceCtx* ctx, const int64_t n, const double* x, const double* y, const double* dy,
+                              double* dx) {
+  SigmoidBackwardImpl<double>(ctx, n, x, y, dy, dx);
+}
+
+CPU_KU_METHOD TanH(DeviceCtx* ctx, const int64_t n, const float* x, float* y) {
+  TanHImpl<float>(ctx, n, x, y);
+}
+
+CPU_KU_METHOD TanH(DeviceCtx* ctx, const int64_t n, const double* x, double* y) {
+  TanHImpl<double>(ctx, n, x, y);
+}
+
+CPU_KU_METHOD TanHBackward(DeviceCtx* ctx, const int64_t n, const float* x, const float* y, const float* dy,
+                           float* dx) {
+  TanHBackwardImpl<float>(ctx, n, x, y, dy, dx);
+}
+
+CPU_KU_METHOD TanHBackward(DeviceCtx* ctx, const int64_t n, const double* x, const double* y, const double* dy,
+                           double* dx) {
+  TanHBackwardImpl<double>(ctx, n, x, y, dy, dx);
+}
+
+} // namespace oneflow
