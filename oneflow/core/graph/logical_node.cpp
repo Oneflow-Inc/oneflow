@@ -428,6 +428,9 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("LocalGpuPeerBoxing"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("LocalGpuPeerBoxing"
                               "NormalForward",
                               &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("DecodeRandom"
+                              "LocalGpuPeerBoxing",
+                              &TaskGraph::BldSubTskGphByAllToAll);
 
 BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src, const LogicalNode* dst) {
   std::string k = ConcatTypeName(src, dst);
