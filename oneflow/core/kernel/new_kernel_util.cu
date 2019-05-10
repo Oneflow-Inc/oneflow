@@ -5,6 +5,13 @@
 
 namespace oneflow {
 
+// Type Trait: IsHalf
+template<typename T>
+struct IsHalf : std::integral_constant<bool, false> {};
+
+template<>
+struct IsHalf<half> : std::integral_constant<bool, true> {};
+
 namespace {
 
 #define HALF_CHECK_FAILED                   \
@@ -154,8 +161,14 @@ static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, enum CBLAS_TRANSP
   cublasOperation_t cublas_trans_a = CblasTrans2CublasTrans(trans_a);
   cublasOperation_t cublas_trans_b = CblasTrans2CublasTrans(trans_b);
 
-  cublas_gemm<T>(ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k, alpha, b, ldb,
-                 a, lda, beta, c, ldc);
+  cublasHandle_t handle;
+  if (IsHalf<T>::value) {
+    handle = ctx->cublas_tensor_op_math_handle();
+  } else {
+    handle = ctx->cublas_pmh_handle();
+  }
+  cublas_gemm<T>(handle, cublas_trans_b, cublas_trans_a, n, m, k, alpha, b, ldb, a, lda, beta, c,
+                 ldc);
 }
 
 template<typename T>
