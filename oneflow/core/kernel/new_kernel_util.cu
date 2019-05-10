@@ -26,24 +26,8 @@ __global__ void ReluForwardGpu(const int n, const T* x, T* y) {
   CUDA_1D_KERNEL_LOOP(i, n) { y[i] = x[i] > 0 ? x[i] : 0; }
 }
 
-template<typename T>
-__global__ void ReluBackwardGpu(const int n, const T* y, const T* dy, T* dx) {
-  CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = y[i] > 0 ? dy[i] : 0; }
-}
-
-__inline__ half float16_2half(float16 x) {
-  // TODO: Potential loss of accuracy
-  half* ret = reinterpret_cast<half*>(&x);
-  return *ret;
-}
-
-__inline__ float16 half2float16(half x) {
-  // TODO: Potential loss of accuracy
-  float16* ret = reinterpret_cast<float16*>(&x);
-  return *ret;
-}
-
-__global__ void ReluForwardGpuHalf(const int n, const half* x, half* y) {
+template<>
+__global__ void ReluForwardGpu<half>(const int n, const half* x, half* y) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   CUDA_1D_KERNEL_LOOP(i, n) {
     if (__hgt(x[i], hzero())) {
@@ -57,7 +41,13 @@ __global__ void ReluForwardGpuHalf(const int n, const half* x, half* y) {
 #endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) */
 }
 
-__global__ void ReluBackwardGpuHalf(const int n, const half* y, const half* dy, half* dx) {
+template<typename T>
+__global__ void ReluBackwardGpu(const int n, const T* y, const T* dy, T* dx) {
+  CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = y[i] > 0 ? dy[i] : 0; }
+}
+
+template<>
+__global__ void ReluBackwardGpu<half>(const int n, const half* y, const half* dy, half* dx) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   half zero = __float2half(0.0);
   CUDA_1D_KERNEL_LOOP(i, n) {
@@ -72,7 +62,13 @@ __global__ void ReluBackwardGpuHalf(const int n, const half* y, const half* dy, 
 #endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
 }
 
-__global__ void SigmoidForwardGpuHalf(const int n, const half* x, half* y) {
+template<typename T>
+__global__ void SigmoidForwardGpu(const int n, const T* x, T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = 1.0 / (1.0 + std::exp(-x[i])); }
+}
+
+template<>
+__global__ void SigmoidForwardGpu<half>(const int n, const half* x, half* y) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   CUDA_1D_KERNEL_LOOP(i, n) { y[i] = __hdiv(hone(), __hadd(hone(), hexp(__hneg(x[i])))); }
 #else
@@ -80,7 +76,13 @@ __global__ void SigmoidForwardGpuHalf(const int n, const half* x, half* y) {
 #endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) */
 }
 
-__global__ void SigmoidBackwardGpuHalf(const int n, const half* y, const half* dy, half* dx) {
+template<typename T>
+__global__ void SigmoidBackwardGpu(const int n, const T* y, const T* dy, T* dx) {
+  CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = dy[i] * y[i] * (1.0 - y[i]); }
+}
+
+template<>
+__global__ void SigmoidBackwardGpu<half>(const int n, const half* y, const half* dy, half* dx) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = __hmul(dy[i], __hmul(y[i], __hsub(hone(), y[i]))); }
 #else
@@ -88,7 +90,13 @@ __global__ void SigmoidBackwardGpuHalf(const int n, const half* y, const half* d
 #endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) */
 }
 
-__global__ void TanHForwardGpuHalf(const int n, const half* x, half* y) {
+template<typename T>
+__global__ void TanHForwardGpu(const int n, const T* x, T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = std::tanh(x[i]); }
+}
+
+template<>
+__global__ void TanHForwardGpu<half>(const int n, const half* x, half* y) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   CUDA_1D_KERNEL_LOOP(i, n) {
     half ex = hexp(x[i]);
@@ -100,32 +108,18 @@ __global__ void TanHForwardGpuHalf(const int n, const half* x, half* y) {
 #endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
 }
 
-__global__ void TanHBackwardGpuHalf(const int n, const half* y, const half* dy, half* dx) {
+template<typename T>
+__global__ void TanHBackwardGpu(const int n, const T* y, const T* dy, T* dx) {
+  CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = dy[i] * (1.0 - y[i] * y[i]); }
+}
+
+template<>
+__global__ void TanHBackwardGpu<half>(const int n, const half* y, const half* dy, half* dx) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = __hmul(dy[i], __hsub(hone(), __hmul(y[i], y[i]))); }
 #else
   HALF_CHECK_FAILED;
 #endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-}
-
-template<typename T>
-__global__ void SigmoidForwardGpu(const int n, const T* x, T* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = 1.0 / (1.0 + std::exp(-x[i])); }
-}
-
-template<typename T>
-__global__ void SigmoidBackwardGpu(const int n, const T* y, const T* dy, T* dx) {
-  CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = dy[i] * y[i] * (1.0 - y[i]); }
-}
-
-template<typename T>
-__global__ void TanHForwardGpu(const int n, const T* x, T* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = std::tanh(x[i]); }
-}
-
-template<typename T>
-__global__ void TanHBackwardGpu(const int n, const T* y, const T* dy, T* dx) {
-  CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = dy[i] * (1.0 - y[i] * y[i]); }
 }
 
 __global__ void AxpyHalfGpu(const int n, const half alpha, const half* x, const int incx, half* y,
@@ -135,6 +129,18 @@ __global__ void AxpyHalfGpu(const int n, const half alpha, const half* x, const 
 #else
   HALF_CHECK_FAILED;
 #endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+}
+
+__inline__ half float16_2half(float16 x) {
+  // TODO: Potential loss of accuracy
+  half* ret = reinterpret_cast<half*>(&x);
+  return *ret;
+}
+
+__inline__ float16 half2float16(half x) {
+  // TODO: Potential loss of accuracy
+  float16* ret = reinterpret_cast<float16*>(&x);
+  return *ret;
 }
 
 cublasOperation_t CblasTrans2CublasTrans(CBLAS_TRANSPOSE trans) {
@@ -226,7 +232,7 @@ GPU_KU_METHOD Relu(DeviceCtx* ctx, const int64_t n, const double* x, double* y) 
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
 }
 GPU_KU_METHOD Relu(DeviceCtx* ctx, const int64_t n, const float16* x, float16* y) {
-  ReluForwardGpuHalf<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+  ReluForwardGpu<half><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       n, reinterpret_cast<const half*>(x), reinterpret_cast<half*>(y));
 }
 
@@ -244,9 +250,10 @@ GPU_KU_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const double* x, con
 
 GPU_KU_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const float16* x, const float16* y,
                            const float16* dy, float16* dx) {
-  ReluBackwardGpuHalf<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-      n, reinterpret_cast<const half*>(y), reinterpret_cast<const half*>(dy),
-      reinterpret_cast<half*>(dx));
+  ReluBackwardGpu<half>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          n, reinterpret_cast<const half*>(y), reinterpret_cast<const half*>(dy),
+          reinterpret_cast<half*>(dx));
 }
 
 GPU_KU_METHOD Sigmoid(DeviceCtx* ctx, int64_t n, const float* x, float* y) {
@@ -260,9 +267,9 @@ GPU_KU_METHOD Sigmoid(DeviceCtx* ctx, int64_t n, const double* x, double* y) {
 }
 
 GPU_KU_METHOD Sigmoid(DeviceCtx* ctx, int64_t n, const float16* x, float16* y) {
-  SigmoidForwardGpuHalf<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                          ctx->cuda_stream()>>>(n, reinterpret_cast<const half*>(x),
-                                                reinterpret_cast<half*>(y));
+  SigmoidForwardGpu<half>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          n, reinterpret_cast<const half*>(x), reinterpret_cast<half*>(y));
 }
 
 GPU_KU_METHOD SigmoidBackward(DeviceCtx* ctx, const int64_t n, const float* x, const float* y,
@@ -279,10 +286,10 @@ GPU_KU_METHOD SigmoidBackward(DeviceCtx* ctx, const int64_t n, const double* x, 
 
 GPU_KU_METHOD SigmoidBackward(DeviceCtx* ctx, const int64_t n, const float16* x, const float16* y,
                               const float16* dy, float16* dx) {
-  SigmoidBackwardGpuHalf<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                           ctx->cuda_stream()>>>(n, reinterpret_cast<const half*>(y),
-                                                 reinterpret_cast<const half*>(dy),
-                                                 reinterpret_cast<half*>(dx));
+  SigmoidBackwardGpu<half>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          n, reinterpret_cast<const half*>(y), reinterpret_cast<const half*>(dy),
+          reinterpret_cast<half*>(dx));
 }
 
 GPU_KU_METHOD TanH(DeviceCtx* ctx, int64_t n, const float* x, float* y) {
@@ -296,7 +303,7 @@ GPU_KU_METHOD TanH(DeviceCtx* ctx, int64_t n, const double* x, double* y) {
 }
 
 GPU_KU_METHOD TanH(DeviceCtx* ctx, int64_t n, const float16* x, float16* y) {
-  TanHForwardGpuHalf<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+  TanHForwardGpu<half><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       n, reinterpret_cast<const half*>(x), reinterpret_cast<half*>(y));
 }
 
@@ -314,9 +321,10 @@ GPU_KU_METHOD TanHBackward(DeviceCtx* ctx, const int64_t n, const double* x, con
 
 GPU_KU_METHOD TanHBackward(DeviceCtx* ctx, const int64_t n, const float16* x, const float16* y,
                            const float16* dy, float16* dx) {
-  TanHBackwardGpuHalf<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-      n, reinterpret_cast<const half*>(y), reinterpret_cast<const half*>(dy),
-      reinterpret_cast<half*>(dx));
+  TanHBackwardGpu<half>
+      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          n, reinterpret_cast<const half*>(y), reinterpret_cast<const half*>(dy),
+          reinterpret_cast<half*>(dx));
 }
 
 GPU_KU_METHOD Axpy(DeviceCtx* ctx, const int n, const float alpha, const float* x, const int incx,
