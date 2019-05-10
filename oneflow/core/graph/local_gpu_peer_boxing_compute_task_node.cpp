@@ -5,6 +5,7 @@ namespace oneflow {
 
 void LocalGpuPeerBoxingCompTaskNode::ProduceAllRegstsAndBindEdges() {
   this->SoleOutDataEdge()->AddRegst("out", ProduceRegst("out", false, 1, 1));
+  ProduceRegst("fw_buf", false, 1, 1);
 }
 
 void LocalGpuPeerBoxingCompTaskNode::ConsumeAllRegsts() {
@@ -33,6 +34,7 @@ void LocalGpuPeerBoxingCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   out_regst->AddLbi(boxing_op->BnInOp2Lbi(boxing_op->SoleObn()));
   node->BindBnWithRegst(boxing_op->SoleObn(), out_regst);
+  node->AddBnToRegstAndBindIt(&Operator::fw_buf_bns, GetProducedRegst("fw_buf"));
   node->InferBlobDescs(parallel_ctx());
 }
 
