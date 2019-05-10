@@ -113,6 +113,7 @@ void LogicalGraph::BuildFwStruct() {
   HashMap<std::string, std::vector<LogicalNode*>> op_name2nodes;
   NaiveBuildFwStruct(&op_name2nodes);
   ReplaceAllReduceFacades();
+  ReplaceParallelCastFacades();
   FixSharedModelNodes(op_name2nodes);
   LinkUnpackFw2PackFw(op_name2nodes);
   total_mbn_num_ = 0;
@@ -842,6 +843,121 @@ void LogicalGraph::ReplaceAllReduceFacades() {
         all_reduce_ending_op->BnInOp2Lbi(all_reduce_ending_op->SoleObn());
     *dst->SoleOp()->MutBnInOp2Lbi(dst->SoleOp()->SoleIbn()) = ending_lbi;
   });
+}
+
+void LogicalGraph::ReplaceParallelCastFacades() {
+  ForEachLogicalNode<ParallelCastFacadeLogicalNode>(
+      [this](ParallelCastFacadeLogicalNode* facade_node) {
+        CHECK_EQ(facade_node->in_edges().size(), 1);
+        CHECK_EQ(facade_node->out_edges().size(), 1);
+        LogicalNode* src_node = facade_node->SoleInEdge()->src_node();
+        LogicalNode* dst_node = facade_node->SoleOutEdge()->dst_node();
+        std::shared_ptr<Operator> facade_op = facade_node->SoleOp();
+        DisConnect(facade_node->SoleInEdge());
+        DisConnect(facade_node->SoleOutEdge());
+        DeleteNode(facade_node);
+        AddLocalGpuPeerBoxing(facade_op->BnInOp2Lbi("in"),
+                              facade_op->op_conf().parallel_cast_facade_conf(), src_node, dst_node);
+      });
+}
+
+void LogicalGraph::AddLocalGpuPeerBoxing(const LogicalBlobId& lbi,
+                                         const ParallelCastFacadeOpConf& conf, LogicalNode* src,
+                                         LogicalNode* dst) {
+  LogicalNode* boxing_logical_node = nullptr;
+  LogicalBlobId boxed_lbi;
+  if (conf.in_sbp_parallel().has_split_parallel() && conf.out_sbp_parallel().has_split_parallel()) {
+    LogicalNode* s2s_logical_node = NewNode<LocalGpuPeerBoxingLogicalNode>();
+    OperatorConf s2s_op_conf{};
+    s2s_op_conf.set_name("System-Boxing-LocalGpuPeerSplitToSplit-" + NewUniqueId());
+    LocalGpuPeerSplitToSplitOpConf* s2s_conf =
+        s2s_op_conf.mutable_local_gpu_peer_split_to_split_conf();
+    FOR_RANGE(int32_t, i, 0, src->parallel_desc()->parallel_num()) {
+      *s2s_conf->mutable_in()->Add() = GenLogicalBlobName(lbi);
+    }
+    s2s_conf->set_out("out");
+    s2s_conf->set_in_split_axis(conf.in_sbp_parallel().split_parallel().axis());
+    s2s_conf->set_out_split_axis(conf.out_sbp_parallel().split_parallel().axis());
+    s2s_logical_node->mut_op_vec() = {ConstructOp(s2s_op_conf)};
+    s2s_logical_node->parallel_desc() = dst->parallel_desc();
+    Connect(src, NewEdge(), s2s_logical_node);
+    boxing_logical_node = s2s_logical_node;
+    boxed_lbi.set_op_name(s2s_op_conf.name());
+    boxed_lbi.set_blob_name(s2s_conf->out());
+  } else if (conf.in_sbp_parallel().has_split_parallel()
+             && conf.out_sbp_parallel().has_broadcast_parallel()) {
+    LogicalNode* s2b_logical_node = NewNode<LocalGpuPeerBoxingLogicalNode>();
+    OperatorConf s2b_op_conf{};
+    s2b_op_conf.set_name("System-Boxing-LocalGpuPeerSplitToBroadcast-" + NewUniqueId());
+    LocalGpuPeerSplitToBroadcastOpConf* s2b_conf =
+        s2b_op_conf.mutable_local_gpu_peer_split_to_broadcast_conf();
+    FOR_RANGE(int32_t, i, 0, src->parallel_desc()->parallel_num()) {
+      *s2b_conf->mutable_in()->Add() = GenLogicalBlobName(lbi);
+    }
+    s2b_conf->set_out("out");
+    s2b_conf->set_in_split_axis(conf.in_sbp_parallel().split_parallel().axis());
+    s2b_logical_node->mut_op_vec() = {ConstructOp(s2b_op_conf)};
+    s2b_logical_node->parallel_desc() = dst->parallel_desc();
+    Connect(src, NewEdge(), s2b_logical_node);
+    boxing_logical_node = s2b_logical_node;
+    boxed_lbi.set_op_name(s2b_op_conf.name());
+    boxed_lbi.set_blob_name(s2b_conf->out());
+  } else if (conf.in_sbp_parallel().has_partial_sum_parallel()
+             && conf.out_sbp_parallel().has_split_parallel()) {
+    LogicalNode* p2s_logical_node = NewNode<LocalGpuPeerBoxingLogicalNode>();
+    OperatorConf p2s_op_conf{};
+    p2s_op_conf.set_name("System-Boxing-LocalGpuPeerPartialSumToSplit-" + NewUniqueId());
+    LocalGpuPeerPartialSumToSplitOpConf* p2s_conf =
+        p2s_op_conf.mutable_local_gpu_peer_partial_sum_to_split_conf();
+    FOR_RANGE(int32_t, i, 0, src->parallel_desc()->parallel_num()) {
+      *p2s_conf->mutable_in()->Add() = GenLogicalBlobName(lbi);
+    }
+    p2s_conf->set_out("out");
+    p2s_conf->set_out_split_axis(conf.out_sbp_parallel().split_parallel().axis());
+    p2s_logical_node->mut_op_vec() = {ConstructOp(p2s_op_conf)};
+    p2s_logical_node->parallel_desc() = dst->parallel_desc();
+    Connect(src, NewEdge(), p2s_logical_node);
+    boxing_logical_node = p2s_logical_node;
+    boxed_lbi.set_op_name(p2s_op_conf.name());
+    boxed_lbi.set_blob_name(p2s_conf->out());
+  } else if (conf.in_sbp_parallel().has_partial_sum_parallel()
+             && conf.out_sbp_parallel().has_broadcast_parallel()) {
+    LogicalNode* p2s_logical_node = NewNode<LocalGpuPeerBoxingLogicalNode>();
+    OperatorConf p2s_op_conf{};
+    p2s_op_conf.set_name("System-Boxing-LocalGpuPeerPartialSumToSplit-" + NewUniqueId());
+    LocalGpuPeerPartialSumToSplitOpConf* p2s_conf =
+        p2s_op_conf.mutable_local_gpu_peer_partial_sum_to_split_conf();
+    FOR_RANGE(int32_t, i, 0, src->parallel_desc()->parallel_num()) {
+      *p2s_conf->mutable_in()->Add() = GenLogicalBlobName(lbi);
+    }
+    p2s_conf->set_out("out");
+    p2s_conf->set_out_split_axis(0);
+    p2s_logical_node->mut_op_vec() = {ConstructOp(p2s_op_conf)};
+    p2s_logical_node->parallel_desc() = dst->parallel_desc();
+    Connect(src, NewEdge(), p2s_logical_node);
+
+    LogicalNode* s2b_logical_node = NewNode<LocalGpuPeerBoxingLogicalNode>();
+    OperatorConf s2b_op_conf{};
+    s2b_op_conf.set_name("System-Boxing-LocalGpuPeerSplitToBroadcast-" + NewUniqueId());
+    LocalGpuPeerSplitToBroadcastOpConf* s2b_conf =
+        s2b_op_conf.mutable_local_gpu_peer_split_to_broadcast_conf();
+    FOR_RANGE(int32_t, i, 0, src->parallel_desc()->parallel_num()) {
+      *s2b_conf->mutable_in()->Add() = p2s_op_conf.name() + "/" + p2s_conf->out();
+    }
+    s2b_conf->set_out("out");
+    s2b_conf->set_in_split_axis(0);
+    s2b_logical_node->mut_op_vec() = {ConstructOp(s2b_op_conf)};
+    s2b_logical_node->parallel_desc() = dst->parallel_desc();
+    Connect(p2s_logical_node, NewEdge(), s2b_logical_node);
+    boxing_logical_node = s2b_logical_node;
+    boxed_lbi.set_op_name(s2b_op_conf.name());
+    boxed_lbi.set_blob_name(s2b_conf->out());
+  } else {
+    UNIMPLEMENTED();
+  }
+  Connect(boxing_logical_node, NewEdge(), dst);
+  CHECK(dst->SoleOp()->op_conf().has_identity_conf());
+  *dst->SoleOp()->MutBnInOp2Lbi("in") = boxed_lbi;
 }
 
 void LogicalGraph::ConnectFwToBw() {

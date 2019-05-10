@@ -5,6 +5,16 @@
 
 namespace oneflow {
 
+namespace {
+
+bool IsGpuNodeOnSingleMachine(const OpNode* node) {
+  if (node->parallel_desc().device_type() != DeviceType::kGPU) { return false; }
+  if (node->parallel_desc().sorted_machine_ids().size() != 1) { return false; }
+  return true;
+}
+
+}  // namespace
+
 void AddParallelCastFacadeOp(const OpGraph& op_graph, Job* job) {
   JobBuilder job_builder(job);
   using BlobParallel = std::pair<ParallelDesc, SbpParallel>;
@@ -13,9 +23,18 @@ void AddParallelCastFacadeOp(const OpGraph& op_graph, Job* job) {
   HashMap<LogicalBlobId, HashMap<BlobParallel, std::vector<BlobConsumer>>> lbi2consumers;
   HashMap<const OpNode*, OperatorConf> op_node2op_conf;
   op_graph.ForEachNode([&](const OpNode* node) {
+    // TODO:
+    if (!IsGpuNodeOnSingleMachine(node)) { return; }
+    const int64_t machine_id = node->parallel_desc().sorted_machine_ids().at(0);
+
     for (const std::string& ibn : node->op().input_bns()) {
       const LogicalBlobId& lbi = node->op().BnInOp2Lbi(ibn);
       const OpNode* producer = node->ProducerOpNode4Lbi(lbi);
+
+      // TODO:
+      if (!IsGpuNodeOnSingleMachine(producer)) { continue; }
+      if (node->parallel_desc().sorted_machine_ids().at(0) != machine_id) { continue; }
+
       if (producer->parallel_desc().parallel_num() != node->parallel_desc().parallel_num()
           || producer->SbpParallel4Lbi(lbi) != node->SbpParallel4BnInOp(ibn)) {
         lbi2producer.emplace(lbi, producer);
