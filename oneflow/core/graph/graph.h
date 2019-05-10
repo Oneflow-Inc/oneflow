@@ -52,6 +52,13 @@ class Graph {
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode)
       const;
 
+  void ForEachConnectedComponent(
+      const std::function<void(const HashSet<NodeType*>&)>& Handler) const;
+
+  void ForEachConnectedComponent(
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachConnected,
+      const std::function<void(const HashSet<NodeType*>&)>& Handler) const;
+
   // Getters
   std::list<NodeType*> source_nodes() const;
   std::list<NodeType*> sink_nodes() const;
@@ -350,6 +357,30 @@ Graph<NodeType, EdgeType>::MakePredicatorIsReachable(
   return [node2ancestor](const NodeType* src, const NodeType* dst) -> bool {
     return node2ancestor->at(dst).find(src) != node2ancestor->at(dst).end();
   };
+}
+
+template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::ForEachConnectedComponent(
+    const std::function<void(const HashSet<NodeType*>&)>& Handler) const {
+  ForEachConnectedComponent(&NodeType::ForEachNodeOnInOutEdge, Handler);
+}
+
+template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::ForEachConnectedComponent(
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachConnected,
+    const std::function<void(const HashSet<NodeType*>&)>& Handler) const {
+  HashMap<NodeType*, int32_t> node2component_id;
+  int32_t cur_component_id = 0;
+  ForEachNode([&](NodeType* start) {
+    if (node2component_id.find(start) != node2component_id.end()) { return; }
+    ++cur_component_id;
+    BfsForEachNode({start}, ForEachConnected, [&](NodeType* node) {
+      CHECK(node2component_id.emplace(node, cur_component_id).second);
+    });
+  });
+  HashMap<int32_t, HashSet<NodeType*>> component_id2nodes;
+  for (const auto& pair : node2component_id) { component_id2nodes[pair.second].insert(pair.first); }
+  for (const auto& pair : component_id2nodes) { Handler(pair.second); }
 }
 
 }  // namespace oneflow

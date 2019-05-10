@@ -16,7 +16,9 @@ class InplaceObnNode : public Node<InplaceObnNode, InplaceObnEdge> {
   const Operator& op() const { return *op_; }
   const std::string& obn() const { return obn_; }
   const LogicalBlobId& lbi() const { return op().BnInOp2Lbi(obn()); }
+  bool IsMutableIbn() const { return op().InputBlobModifier4Ibn(ibn()).has_is_mutable(); }
   virtual const std::string& ibn() const = 0;
+  virtual bool IsDataMmutable() const = 0;
 
  protected:
   OF_DISALLOW_COPY_AND_MOVE(InplaceObnNode);
@@ -33,16 +35,27 @@ class NormalInplaceObnNode final : public InplaceObnNode {
   NormalInplaceObnNode(const Operator* op, const std::string& obn) : InplaceObnNode(op, obn) {}
   ~NormalInplaceObnNode() = default;
   const std::string& ibn() const override;
+  bool IsDataMmutable() const override;
 };
 
-class FakeObnInplaceObnNode final : public InplaceObnNode {
+class VarInplaceObnNode final : public InplaceObnNode {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(FakeObnInplaceObnNode);
-  FakeObnInplaceObnNode(const Operator* op, const std::string& obn, const std::string& ibn)
+  OF_DISALLOW_COPY_AND_MOVE(VarInplaceObnNode);
+  VarInplaceObnNode(const Operator* op, const std::string& obn) : InplaceObnNode(op, obn) {}
+  ~VarInplaceObnNode() = default;
+  const std::string& ibn() const override { UNIMPLEMENTED(); }
+  bool IsDataMmutable() const override { UNIMPLEMENTED(); }
+};
+
+class UpdtObnInplaceObnNode final : public InplaceObnNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(UpdtObnInplaceObnNode);
+  UpdtObnInplaceObnNode(const Operator* op, const std::string& obn, const std::string& ibn)
       : InplaceObnNode(op, obn), ibn_(ibn) {}
-  ~FakeObnInplaceObnNode() = default;
+  ~UpdtObnInplaceObnNode() = default;
 
   const std::string& ibn() const override { return ibn_; }
+  bool IsDataMmutable() const override { return true; }
 
  private:
   std::string ibn_;
@@ -64,18 +77,41 @@ class InplaceObnGraph final : public Graph<const InplaceObnNode, const InplaceOb
   }
   ~InplaceObnGraph() = default;
 
-  void ComputeSafeInplaceObns(OpBlobArgList* obas) const;
+  void ComputeSafeInplaceObns(OpBlobArgList* obas,
+                              const std::function<bool(const LogicalBlobId&, const std::string&)>&
+                                  IsReachableFromLbiToOpName) const;
 
  private:
   void Init(const OpBlobArgList& obas,
             const std::function<const Operator*(const std::string&)>& Op4OpName);
   void InitNodes(HashMap<OpBlobArg, InplaceObnNode*>* oba2node, const OpBlobArgList& obas,
                  const std::function<const Operator*(const std::string&)>& Op4OpName);
-  void CompleteVariableObnNodes(
-      HashMap<OpBlobArg, InplaceObnNode*>* oba2node,
-      const std::function<const Operator*(const std::string&)>& Op4OpName);
+  void CompleteObnNodes(HashMap<OpBlobArg, InplaceObnNode*>* oba2node,
+                        const std::function<const Operator*(const std::string&)>& Op4OpName);
   void InitEdges(const HashMap<OpBlobArg, InplaceObnNode*>& oba2node, const OpBlobArgList& obas,
                  const std::function<const Operator*(const std::string&)>& Op4OpName);
+  void ComputeSafeInplaceObns(const std::function<bool(const LogicalBlobId&, const std::string&)>&
+                                  IsReachableFromLbiToOpName,
+                              const std::function<void(const InplaceObnNode*)>& Handler) const;
+  void ComputeSafeInplaceObns(const HashSet<const InplaceObnNode*>& nodes,
+                              const std::function<bool(const LogicalBlobId&, const std::string&)>&
+                                  IsReachableFromLbiToOpName,
+                              const std::function<void(const InplaceObnNode*)>& Handler) const;
+  void GetSafeInplaceObnNodes(const HashSet<const InplaceObnNode*>& nodes,
+                              const HashSet<const InplaceObnEdge*>& disabled_edges,
+                              HashSet<const InplaceObnNode*>* cur_disabled_nodes) const;
+  void DisconnectDataMutableEdgeByReachability(
+      const HashSet<const InplaceObnNode*>& nodes,
+      const HashSet<const InplaceObnEdge*>& disabled_edges,
+      const std::function<bool(const LogicalBlobId&, const std::string&)>&
+          IsReachableFromLbiToOpName,
+      HashSet<const InplaceObnEdge*>* cur_disabled_edges) const;
+  void DisconnectDataMutableEdgeByReducingConficts(
+      const HashSet<const InplaceObnNode*>& nodes,
+      const HashSet<const InplaceObnEdge*>& disabled_edges,
+      const std::function<bool(const LogicalBlobId&, const std::string&)>&
+          IsReachableFromLbiToOpName,
+      HashSet<const InplaceObnEdge*>* cur_disabled_edges) const;
 };
 
 }  // namespace oneflow

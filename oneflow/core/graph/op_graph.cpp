@@ -541,26 +541,7 @@ void OpGraph::ForEachChainFamily(
           if (Is121Edge(edge)) { Handler(edge->dst_node()); }
         }
       };
-  ForEachComponent(ForEachConnectedWithSameSbp7ParallelDesc7TimeShape, Handler);
-}
-
-void OpGraph::ForEachComponent(
-    const std::function<void(OpNode*, const std::function<void(OpNode*)>&)>& ForEachConnected,
-    const std::function<void(const HashSet<OpNode*>&)>& Handler) const {
-  HashMap<OpNode*, int32_t> op_node2component_id;
-  int32_t cur_component_id = 0;
-  ForEachNode([&](OpNode* start) {
-    if (op_node2component_id.find(start) != op_node2component_id.end()) { return; }
-    ++cur_component_id;
-    BfsForEachNode({start}, ForEachConnected, [&](OpNode* node) {
-      CHECK(op_node2component_id.emplace(node, cur_component_id).second);
-    });
-  });
-  HashMap<int32_t, HashSet<OpNode*>> component_id2op_nodes;
-  for (const auto& pair : op_node2component_id) {
-    component_id2op_nodes[pair.second].insert(pair.first);
-  }
-  for (const auto& pair : component_id2op_nodes) { Handler(pair.second); }
+  ForEachConnectedComponent(ForEachConnectedWithSameSbp7ParallelDesc7TimeShape, Handler);
 }
 
 void OpGraph::ForEachPseudoChain(
