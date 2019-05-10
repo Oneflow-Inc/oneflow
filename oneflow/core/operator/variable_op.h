@@ -31,8 +31,6 @@ class VariableOp final : public Operator {
                          const ParallelDesc& parallel_desc) const override;
   void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
   void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
-  void InferIsModelBlob4OutputBlobs(
-      std::function<bool*(const std::string&)> IsModelBlob4BnInOp) const;
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext*, KernelConf*) const override;
 

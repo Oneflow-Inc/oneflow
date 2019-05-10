@@ -19,6 +19,10 @@ class SparseCrossEntropyGradOp final : public Operator {
 
  private:
   void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
+  void InferHasBatchDim(
+      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {
+    NaiveInferHasBatchDim(HasBatchDim4BnInOp);
+  }
 };
 
 }  // namespace oneflow

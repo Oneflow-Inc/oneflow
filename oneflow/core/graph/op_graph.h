@@ -35,7 +35,6 @@ class OpNode final : public Node<OpNode, OpEdge> {
   const SbpParallel& SbpParallel4Lbi(const LogicalBlobId& lbi) const;
   const SbpParallel& SbpParallel4BnInOp(const std::string& bn_in_op) const;
   const BlobDesc& LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const;
-  bool IsModelBlob4Lbi(const LogicalBlobId& lbi) const;
   bool HasBatchDim4Lbi(const LogicalBlobId& lbi) const;
   const OpNode* ProducerOpNode4Lbi(const LogicalBlobId& lbi) const;
 
@@ -54,7 +53,6 @@ class OpNode final : public Node<OpNode, OpEdge> {
   HashMap<std::string, std::vector<BlobDesc>>* mut_bn2parallel_id2blob_desc() {
     return &bn2parallel_id2blob_desc_;
   }
-  bool* MutIsModelBlob4Lbi(const LogicalBlobId& lbi);
   bool* MutHasBatchDim4Lbi(const LogicalBlobId& lbi);
   BlobDesc* MutLogicalBlobDesc4Lbi(const LogicalBlobId& lbi);
   OpNode* SrcNode4InputBnInOp(const std::string& bn_in_op) const;
@@ -79,7 +77,6 @@ class OpNode final : public Node<OpNode, OpEdge> {
   bool has_in_diff_;
   std::unique_ptr<Shape> out_blob_time_shape_;
   SbpSignature sbp_signature_;
-  HashMap<LogicalBlobId, bool> lbi2is_model_blob_;
   HashMap<LogicalBlobId, bool> lbi2has_batch_dim_;
   HashMap<std::string, std::vector<BlobDesc>> bn2parallel_id2blob_desc_;
   HashMap<LogicalBlobId, BlobDesc> lbi2logical_blob_desc_;
@@ -140,12 +137,10 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void FixOpParallelDesc() const;
   void UpdateOpNodeHasInDiff() const;
   void InferTimeShape() const;
-  void InferIsModelBlob() const;
   void InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_sig_conf) const;
   void InferOpNodeLogicalBlobDesc(OpNode* op_node) const;
   void InferLogicalBlobDesc(const Job& job) const;
-  bool IsModelBlob(const std::string& op_name, const LogicalBlobId& lbi) const;
-  bool IsDataBlob(const std::string& op_name, const LogicalBlobId& lbi) const;
+  bool IsBatchDimBlob(const std::string& op_name, const LogicalBlobId& lbi) const;
   std::string GetOpNameKey(const std::string& op_name, const LogicalBlobId& lbi) const;
   LogicalBlobId GetLogicalBlobIdKey(const std::string& op_name, const LogicalBlobId& lbi) const;
   void ForEachPseudoChain(const HashSet<OpNode*>& nodes,

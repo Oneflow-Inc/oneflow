@@ -61,6 +61,8 @@ float JobDesc::all_reduce_lazy_ratio() const {
   return ratio;
 }
 
+bool JobDesc::all_reduce_fp16() const { return job_conf_.other().all_reduce_fp16(); }
+
 int64_t JobDesc::piece_num_of_experiment_phase() const {
   return job_conf_.other().exp_run_conf().piece_num_of_experiment_phase();
 }

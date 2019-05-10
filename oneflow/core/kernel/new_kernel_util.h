@@ -24,18 +24,18 @@ class NewKernelUtil<DeviceType::kCPU> {
   static void BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
                        float alpha, float beta, const Blob* a, const Blob* b, Blob* c);
   static void BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-                       double alpha, double beta, const Blob* a, const Blob* b, Blob* c) ;
+                       double alpha, double beta, const Blob* a, const Blob* b, Blob* c);
   static void BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
                        float16 alpha, float16 beta, const Blob* a, const Blob* b, Blob* c);
   static void OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-                     const int m, const int n, const int k, const float alpha, const float* a, const float* b,
-                     const float beta, float* c);
+                     const int m, const int n, const int k, const float alpha, const float* a,
+                     const float* b, const float beta, float* c);
   static void OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-                     const int m, const int n, const int k, const double alpha, const double* a, const double* b,
-                     const double beta, double* c);
+                     const int m, const int n, const int k, const double alpha, const double* a,
+                     const double* b, const double beta, double* c);
   static void OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-                     const int m, const int n, const int k, const float16 alpha, const float16* a, const float16* b,
-                     const float16 beta, float16* c);
+                     const int m, const int n, const int k, const float16 alpha, const float16* a,
+                     const float16* b, const float16 beta, float16* c);
   static void Relu(DeviceCtx* ctx, const int64_t n, const float* x, float* y);
   static void Relu(DeviceCtx* ctx, const int64_t n, const double* x, double* y);
   static void ReluBackward(DeviceCtx* ctx, const int64_t n, const float* x, const float* y, const float* dy,
@@ -46,7 +46,18 @@ class NewKernelUtil<DeviceType::kCPU> {
                         float* y, const int incy);
   static void Axpy(DeviceCtx* ctx, const int n, const double alpha, const double* x, const int incx,
                         double* y, const int incy);
-
+  static void Sigmoid(DeviceCtx* ctx, int64_t n, const float* x, float* y);
+  static void Sigmoid(DeviceCtx* ctx, int64_t n, const double* x, double* y);
+  static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const float* x, const float* y,
+  const float* dy, float* dx);
+  static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const double* x, const double* y,
+  const double* dy, double* dx); 
+  static void TanH(DeviceCtx* ctx, int64_t n, const float* x, float* y);
+  static void TanH(DeviceCtx* ctx, int64_t n, const double* x, double* y);
+  static void TanHBackward(DeviceCtx* ctx, const int64_t n, const float* x, const float* y,
+                     const float* dy, float* dx);
+  static void TanHBackward(DeviceCtx* ctx, const int64_t n, const double* x, const double* y,
+                     const double* dy, double* dx);
 };
 
 template<>
@@ -55,18 +66,18 @@ class NewKernelUtil<DeviceType::kGPU> {
   static void BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
                        float alpha, float beta, const Blob* a, const Blob* b, Blob* c);
   static void BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-                       double alpha, double beta, const Blob* a, const Blob* b, Blob* c) ;
+                       double alpha, double beta, const Blob* a, const Blob* b, Blob* c);
   static void BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
                        float16 alpha, float16 beta, const Blob* a, const Blob* b, Blob* c);
   static void OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-                     const int m, const int n, const int k, const float alpha, const float* a, const float* b,
-                     const float beta, float* c);
+                     const int m, const int n, const int k, const float alpha, const float* a,
+                     const float* b, const float beta, float* c);
   static void OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-                     const int m, const int n, const int k, const double alpha, const double* a, const double* b,
-                     const double beta, double* c);
+                     const int m, const int n, const int k, const double alpha, const double* a,
+                     const double* b, const double beta, double* c);
   static void OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-                     const int m, const int n, const int k, const float16 alpha, const float16* a, const float16* b,
-                     const float16 beta, float16* c);
+                     const int m, const int n, const int k, const float16 alpha, const float16* a,
+                     const float16* b, const float16 beta, float16* c);
   static void Relu(DeviceCtx* ctx, const int64_t n, const float* x, float* y);
   static void Relu(DeviceCtx* ctx, const int64_t n, const double* x, double* y);
   static void Relu(DeviceCtx* ctx, const int64_t n, const float16* x, float16* y);
@@ -82,8 +93,26 @@ class NewKernelUtil<DeviceType::kGPU> {
   double* y, const int incy);
   static void Axpy(DeviceCtx* ctx, const int n, const float16 alpha, const float16* x, const int incx,
   float16* y, const int incy);                           
+  static void Sigmoid(DeviceCtx* ctx, int64_t n, const float* x, float* y);
+  static void Sigmoid(DeviceCtx* ctx, int64_t n, const double* x, double* y);
+  static void Sigmoid(DeviceCtx* ctx, int64_t n, const float16* x, float16* y);
+  static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const float* x, const float* y,
+  const float* dy, float* dx);
+  static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const double* x, const double* y,
+  const double* dy, double* dx); 
+  static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const float16* x, const float16* y,
+  const float16* dy, float16* dx);
+  static void TanH(DeviceCtx* ctx, int64_t n, const float* x, float* y);
+  static void TanH(DeviceCtx* ctx, int64_t n, const double* x, double* y);
+  static void TanH(DeviceCtx* ctx, int64_t n, const float16* x, float16* y);
+  static void TanHBackward(DeviceCtx* ctx, const int64_t n, const float* x, const float* y,
+                     const float* dy, float* dx);
+  static void TanHBackward(DeviceCtx* ctx, const int64_t n, const double* x, const double* y,
+                     const double* dy, double* dx);
+  static void TanHBackward(DeviceCtx* ctx, const int64_t n, const float16* x, const float16* y,
+                     const float16* dy, float16* dx);
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_KERNEL_NEW_KERNEL_UTIL_H_
+#endif  // ONEFLOW_CORE_KERNEL_NEW_KERNEL_UTIL_H_

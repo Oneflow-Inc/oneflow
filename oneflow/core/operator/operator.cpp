@@ -197,17 +197,6 @@ bool Operator::HasOutDiff4Lbi(const LogicalBlobId& lbi) const {
          != output_diff_bns().end();
 }
 
-void Operator::InferIsModelBlob4OutputBlobsIf(
-    std::function<bool*(const std::string&)> IsModelBlob4BnInOp) const {
-  InferIsModelBlob4OutputBlobs(IsModelBlob4BnInOp);
-}
-
-void Operator::InferIsModelBlob4OutputBlobs(
-    std::function<bool*(const std::string&)> IsModelBlob4BnInOp) const {
-  bool is_model_blob = (input_bns().size() == 1 && *IsModelBlob4BnInOp(SoleIbn()));
-  for (const std::string& obn : output_bns()) { *IsModelBlob4BnInOp(obn) = is_model_blob; }
-}
-
 void Operator::InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                    const ParallelContext* parallel_ctx,
                                    const OpContext* op_ctx) const {
@@ -610,7 +599,8 @@ void EraseEmptyBnInVec(std::function<const BlobDesc*(const std::string&)> GetBlo
   bns->erase(bns->begin() + idx_available, bns->end());
 }
 
-void Operator::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+void Operator::NaiveInferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   if (output_bns().empty()) { return; }
   CHECK_GT(input_bns().size(), 0);
   CHECK_EQ(output_bns().size(), 1);

@@ -17,6 +17,11 @@ class TickOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override { return op_conf().tick_conf(); }
 
  private:
+  void InferHasBatchDim(
+      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {
+    NaiveInferHasBatchDim(HasBatchDim4BnInOp);
+  }
+
   void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 };
 

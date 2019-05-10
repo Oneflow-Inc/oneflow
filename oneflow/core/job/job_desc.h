@@ -61,6 +61,7 @@ class JobDesc final {
   int64_t all_reduce_group_min_byte() const;
   float all_reduce_group_size_warmup() const;
   float all_reduce_lazy_ratio() const;
+  bool all_reduce_fp16() const;
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.other().cudnn_buf_limit_mbyte(); }
   int64_t GetMachineId(const std::string& addr) const;
 

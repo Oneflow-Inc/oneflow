@@ -3,6 +3,75 @@
 
 namespace oneflow {
 
+void ConvKernel<DeviceType::kGPU, float16>::VirtualKernelInit(const ParallelContext* parallel_ctx) {
+  CHECK(this->EnableCudnn());
+  Shape in_shape(this->GetConvKernelConf().in());
+  Shape out_shape(this->GetConvKernelConf().out());
+  Shape weight_shape(this->GetConvKernelConf().weight());
+
+  const std::string& data_format =
+      this->template GetValFromCustomizedOpConf<std::string>("data_format");
+  this->in_desc_.reset(new CudnnTensorDesc(GetDataType<float16>::value, in_shape, data_format));
+  this->out_desc_.reset(new CudnnTensorDesc(GetDataType<float16>::value, out_shape, data_format));
+  this->filter_desc_.reset(
+      new CudnnFilterDesc(GetDataType<float16>::value, weight_shape, data_format));
+  this->conv_desc_.reset(
+      new CudnnConvDesc(GetDataType<float16>::value, in_shape, this->GetCustomizedOpConf()));
+
+  if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
+    int32_t filters = Shape(this->GetConvKernelConf().bias()).At(0);
+    if ((this->OpKernelDim() == 1) || (this->OpKernelDim() == 2)) {
+      if (data_format == "channels_first") {
+        this->bias_desc_.reset(
+            new CudnnTensorDesc(CUDNN_TENSOR_NCHW, GetDataType<float16>::value, 1, filters, 1, 1));
+      } else if (data_format == "channels_last") {
+        if (GetDataType<float16>::value == DataType::kDouble) {
+          LOG(FATAL) << "CUDNN 1d & 2d support channels last only if data type "
+                        "is float";
+        }
+        this->bias_desc_.reset(
+            new CudnnTensorDesc(CUDNN_TENSOR_NHWC, GetDataType<float16>::value, 1, filters, 1, 1));
+      } else {
+        UNIMPLEMENTED();
+      }
+    } else {
+      if (data_format == "channels_last") {
+        LOG(FATAL) << "CUDNN Nd API only support channels first";
+      }
+      std::vector<int32_t> bias_dim(this->OpKernelDim() + 2, 1);
+      std::vector<int32_t> stride_of_bias_tensor(this->OpKernelDim() + 2, 1);
+      bias_dim[1] = filters;
+      stride_of_bias_tensor[0] = filters;
+      this->bias_desc_.reset(new CudnnTensorDesc(GetDataType<float16>::value,
+                                                 this->OpKernelDim() + 2, bias_dim.data(),
+                                                 stride_of_bias_tensor.data()));
+    }
+  }
+}
+
+void ConvKernel<DeviceType::kGPU, float16>::DoForwardDataContent(
+    DeviceCtx* device_ctx, const Blob* in_blob, const Blob* weight_blob, Blob* out_blob,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  CHECK(this->EnableCudnn());
+  Blob* fw_cudnn_buf = BnInOp2Blob("fw_cudnn_buf");
+  void* fw_cudnn_buf_ptr = fw_cudnn_buf ? fw_cudnn_buf->mut_dptr() : nullptr;
+  size_t fw_cudnn_buf_size = fw_cudnn_buf ? fw_cudnn_buf->ByteSizeOfDataContentField() : 0;
+  CudaCheck(cudnnConvolutionForward(
+      device_ctx->cudnn_handle(), OnePtr<float16>::value, this->in_desc_->Get(),
+      in_blob->dptr<float16>(), this->filter_desc_->Get(), weight_blob->dptr<float16>(),
+      this->conv_desc_->Get(),
+      static_cast<cudnnConvolutionFwdAlgo_t>(this->GetConvKernelConf().cudnn_fwd_algo()),
+      fw_cudnn_buf_ptr, fw_cudnn_buf_size, ZeroPtr<float16>::value, this->out_desc_->Get(),
+      out_blob->mut_dptr<float16>()));
+
+  if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
+    const Blob* bias = BnInOp2Blob("bias");
+    CudaCheck(cudnnAddTensor(device_ctx->cudnn_handle(), OnePtr<float16>::value,
+                             this->bias_desc_->Get(), bias->dptr<float16>(), OnePtr<float16>::value,
+                             this->out_desc_->Get(), out_blob->mut_dptr<float16>()));
+  }
+}
+
 template<typename T>
 void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(const ParallelContext* parallel_ctx) {
   if (this->EnableCudnn()) {
@@ -493,7 +562,7 @@ void ConvKernelUtil<DeviceType::kGPU, T>::NDHWCCol2Im(
 
 #define INSTANTIATE_CONV_KERNEL(type_cpp, type_proto) \
   template class ConvKernel<DeviceType::kGPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CONV_KERNEL, FLOATING_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CONV_KERNEL, FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
 
 #define INSTANTIATE_CONV_KERNEL_UTIL(type_cpp, type_proto) \
   template class ConvKernelUtil<DeviceType::kGPU, type_cpp>;
