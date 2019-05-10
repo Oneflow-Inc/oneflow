@@ -206,7 +206,9 @@ void ChainGraph::GroupTaskNodesByMachineAndCollectAncestors(
       if (IsNonSoleKeepHeaderOnlyEdge(in_node, node)) { return; }
       if (dynamic_cast<CompTaskNode*>(in_node) != nullptr
           && dynamic_cast<CompTaskNode*>(node) != nullptr && IsAllProducedBlobHasNoBatchDim(in_node)
-          && !IsAllConsumedBlobHasNoBatchDim(node)) {
+          && !IsAllConsumedBlobHasNoBatchDim(node)
+          && dynamic_cast<LocalGpuPeerBoxingCompTaskNode*>(in_node) == nullptr
+          && dynamic_cast<LocalGpuPeerBoxingCompTaskNode*>(node) == nullptr) {
         return;
       }
       (*node2ancestors)[node].insert(in_node);
