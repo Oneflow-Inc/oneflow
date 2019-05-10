@@ -43,6 +43,15 @@ static void ReluBackwardImpl(DeviceCtx* ctx, const int64_t n, const T* x, const 
 }
 
 template<typename T>
+static void AxpyImpl(DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx,
+                        T* y, const int incy) {
+  FOR_RANGE(int, i, 0, n) {
+    *y += alpha * *x;
+    x += incx;
+    y += incy;
+  }
+}
+
 static void SigmoidImpl(DeviceCtx* ctx, int64_t n, const T* x, T* y) {
   T half = static_cast<T>(0.5);
     for (int64_t i = 0; i != n; ++i) { y[i] = half * std::tanh(half * x[i]) + half; }
@@ -108,6 +117,16 @@ CPU_KU_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const float* x, cons
 CPU_KU_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const double* x, const double* y,
                            const double* dy, double* dx) {
   ReluBackwardImpl<double>(ctx, n, x, y, dy, dx);
+}
+
+CPU_KU_METHOD Axpy(DeviceCtx* ctx, const int n, const float alpha, const float* x, const int incx,
+                        float* y, const int incy) {
+  AxpyImpl<float>(ctx, n, alpha, x, incx, y, incy);
+}
+
+CPU_KU_METHOD Axpy(DeviceCtx* ctx, const int n, const double alpha, const double* x, const int incx,
+                        double* y, const int incy) {
+  AxpyImpl<double>(ctx, n, alpha, x, incx, y, incy);
 }
 
 CPU_KU_METHOD Sigmoid(DeviceCtx* ctx, int64_t n, const float* x, float* y) {
