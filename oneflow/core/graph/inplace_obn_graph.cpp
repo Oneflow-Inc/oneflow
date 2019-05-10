@@ -43,7 +43,8 @@ void DisconnectUnReachabeAndDataMutableEdge(
   TODO();
 }
 
-void DisconnectFirstDataMutableEdgeOnEveryPath(const HashSet<const InplaceObnNode*>& nodes,
+void DisconnectFirstDataMutableEdgeOnEveryPath(const InplaceObnNode* root,
+                                               const HashSet<const InplaceObnNode*>& nodes,
                                                HashSet<const InplaceObnEdge*>* disabled_edges) {
   TODO();
 }
@@ -181,17 +182,16 @@ void InplaceObnGraph::ComputeSafeInplaceObns(
     const std::function<bool(const LogicalBlobId&, const std::string&)>& IsReachableFromLbiToOpName,
     const std::function<void(const InplaceObnNode*)>& Handler) const {
   CheckSubGraph(nodes);
+  const InplaceObnNode* root = GetRoot(nodes);
   HashSet<const InplaceObnNode*> remainder_nodes(nodes);
   HashSet<const InplaceObnEdge*> disabled_edges;
-  const InplaceObnNode* root = GetRoot(nodes);
   if (dynamic_cast<const VarInplaceObnNode*>(root) != nullptr) {
     const InplaceObnNode* updt_node = GetIsMutableIbnConsumer(root);
     if (updt_node != nullptr) {
       DisconnectUnReachabeAndDataMutableEdge(nodes, IsReachableFromLbiToOpName, &disabled_edges);
       remainder_nodes.erase(updt_node);
-    } else {
-      DisconnectFirstDataMutableEdgeOnEveryPath(nodes, &disabled_edges);
     }
+    DisconnectFirstDataMutableEdgeOnEveryPath(root, nodes, &disabled_edges);
     remainder_nodes.erase(root);
   }
   while (!remainder_nodes.empty()) {
