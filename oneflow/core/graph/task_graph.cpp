@@ -726,6 +726,14 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceAdd2ReduceGather) {
   }
 }
 
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByAllToAll) {
+  for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
+    for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
+      Connect<TaskNode>(src_comp_task, NewEdge(), dst_comp_task);
+    }
+  }
+}
+
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGather2ReduceGather) {
   const auto& pd = sorted_src_comp_tasks.front()->logical_node()->parallel_desc();
   CHECK_GT(pd->device_num_of_each_machine(), 1);
