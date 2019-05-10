@@ -864,6 +864,9 @@ void LogicalGraph::ReplaceParallelCastFacades() {
 void LogicalGraph::AddLocalGpuPeerBoxing(const LogicalBlobId& lbi,
                                          const ParallelCastFacadeOpConf& conf, LogicalNode* src,
                                          LogicalNode* dst) {
+  const auto SetParallelDesc = [&](LogicalNode* node) {
+    node->mut_parallel_desc() = dst->parallel_desc();
+  };
   LogicalNode* boxing_logical_node = nullptr;
   LogicalBlobId boxed_lbi;
   if (conf.in_sbp_parallel().has_split_parallel() && conf.out_sbp_parallel().has_split_parallel()) {
@@ -879,7 +882,7 @@ void LogicalGraph::AddLocalGpuPeerBoxing(const LogicalBlobId& lbi,
     s2s_conf->set_in_split_axis(conf.in_sbp_parallel().split_parallel().axis());
     s2s_conf->set_out_split_axis(conf.out_sbp_parallel().split_parallel().axis());
     s2s_logical_node->mut_op_vec() = {ConstructOp(s2s_op_conf)};
-    s2s_logical_node->parallel_desc() = dst->parallel_desc();
+    SetParallelDesc(s2s_logical_node);
     Connect(src, NewEdge(), s2s_logical_node);
     boxing_logical_node = s2s_logical_node;
     boxed_lbi.set_op_name(s2s_op_conf.name());
@@ -897,7 +900,7 @@ void LogicalGraph::AddLocalGpuPeerBoxing(const LogicalBlobId& lbi,
     s2b_conf->set_out("out");
     s2b_conf->set_in_split_axis(conf.in_sbp_parallel().split_parallel().axis());
     s2b_logical_node->mut_op_vec() = {ConstructOp(s2b_op_conf)};
-    s2b_logical_node->parallel_desc() = dst->parallel_desc();
+    SetParallelDesc(s2b_logical_node);
     Connect(src, NewEdge(), s2b_logical_node);
     boxing_logical_node = s2b_logical_node;
     boxed_lbi.set_op_name(s2b_op_conf.name());
@@ -915,7 +918,7 @@ void LogicalGraph::AddLocalGpuPeerBoxing(const LogicalBlobId& lbi,
     p2s_conf->set_out("out");
     p2s_conf->set_out_split_axis(conf.out_sbp_parallel().split_parallel().axis());
     p2s_logical_node->mut_op_vec() = {ConstructOp(p2s_op_conf)};
-    p2s_logical_node->parallel_desc() = dst->parallel_desc();
+    SetParallelDesc(p2s_logical_node);
     Connect(src, NewEdge(), p2s_logical_node);
     boxing_logical_node = p2s_logical_node;
     boxed_lbi.set_op_name(p2s_op_conf.name());
@@ -933,7 +936,7 @@ void LogicalGraph::AddLocalGpuPeerBoxing(const LogicalBlobId& lbi,
     p2s_conf->set_out("out");
     p2s_conf->set_out_split_axis(0);
     p2s_logical_node->mut_op_vec() = {ConstructOp(p2s_op_conf)};
-    p2s_logical_node->parallel_desc() = dst->parallel_desc();
+    SetParallelDesc(p2s_logical_node);
     Connect(src, NewEdge(), p2s_logical_node);
 
     LogicalNode* s2b_logical_node = NewNode<LocalGpuPeerBoxingLogicalNode>();
@@ -947,7 +950,7 @@ void LogicalGraph::AddLocalGpuPeerBoxing(const LogicalBlobId& lbi,
     s2b_conf->set_out("out");
     s2b_conf->set_in_split_axis(0);
     s2b_logical_node->mut_op_vec() = {ConstructOp(s2b_op_conf)};
-    s2b_logical_node->parallel_desc() = dst->parallel_desc();
+    SetParallelDesc(s2b_logical_node);
     Connect(p2s_logical_node, NewEdge(), s2b_logical_node);
     boxing_logical_node = s2b_logical_node;
     boxed_lbi.set_op_name(s2b_op_conf.name());
