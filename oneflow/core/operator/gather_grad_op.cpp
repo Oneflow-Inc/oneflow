@@ -35,11 +35,31 @@ void GatherGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
 void GatherGradOp::GetSbpSignatures(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
+  const int64_t gather_axis = op_conf().gather_grad_conf().axis();
+  const int64_t indices_num_axes = LogicalBlobDesc4Ibn("indices").shape().NumAxes();
+  const int64_t out_diff_num_axes = LogicalBlobDesc4Ibn("out_diff").shape().NumAxes();
+  FOR_RANGE(int64_t, i, 0, indices_num_axes) {
+    SbpSignatureBuilder()
+        .Split("indices", i)
+        .Split("out_diff", i + gather_axis)
+        .PartialSum("in_diff")
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  }
+  FOR_RANGE(int64_t, i, 0, out_diff_num_axes) {
+    if (i >= gather_axis && i < gather_axis + indices_num_axes) { continue; }
+    const int64_t in_diff_split_axis = (i < gather_axis) ? i : i - indices_num_axes + 1;
+    if (in_diff_split_axis == gather_axis) { continue; }
+    SbpSignatureBuilder()
+        .Broadcast("indices")
+        .Split("out_diff", i)
+        .Split("in_diff", in_diff_split_axis)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  }
   SbpSignatureBuilder()
-      .Split(input_bns(), 0)
-      .PartialSum(output_bns())
+      .Broadcast("indices")
+      .PartialSum("out_diff")
+      .PartialSum("in_diff")
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
-  // TODO: complete other signatures
 }
 
 void GatherGradOp::InferHasBatchDim(

@@ -58,15 +58,26 @@ void GatherOp::VirtualGenKernelConf(
 void GatherOp::GetSbpSignatures(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  CHECK_EQ(LogicalBlobDesc4Ibn("in").shape().NumAxes(), 2);
-  int64_t gather_axis = GetGatherAxis(op_conf().gather_conf(), &LogicalBlobDesc4Ibn("in"));
-  CHECK_EQ(gather_axis, 0);
-  SbpSignatureBuilder()
-      .Split("indices", 0)
-      .Broadcast("in")
-      .Split(output_bns(), 0)
-      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
-  // TODO: complete other signatures
+  const int64_t in_num_axes = LogicalBlobDesc4Ibn("in").shape().NumAxes();
+  const int64_t gather_axis = GetGatherAxis(op_conf().gather_conf(), in_num_axes);
+  CHECK_GE(gather_axis, 0);
+  CHECK_LT(gather_axis, in_num_axes);
+  const int64_t indices_num_axes = LogicalBlobDesc4Ibn("indices").shape().NumAxes();
+  FOR_RANGE(int64_t, i, 0, indices_num_axes) {
+    SbpSignatureBuilder()
+        .Split("indices", i)
+        .Broadcast("in")
+        .Split("out", gather_axis + i)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  }
+  FOR_RANGE(int64_t, i, 0, in_num_axes) {
+    if (i == gather_axis) { continue; }
+    SbpSignatureBuilder()
+        .Broadcast("indices")
+        .Split("in", i)
+        .Split("out", i < gather_axis ? i : i + indices_num_axes - 1)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  }
 }
 
 REGISTER_OP(OperatorConf::kGatherConf, GatherOp);

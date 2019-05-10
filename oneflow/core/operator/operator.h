@@ -144,6 +144,7 @@ class Operator {
       std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
     InferHasBatchDim(LogicalBlobDesc4Ibn, HasBatchDim4BnInOp);
   }
+  void NaiveInferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const;
 
   // Infer out blob's time shape
   void InferOutputBlobTimeShapeIf(
@@ -157,10 +158,9 @@ class Operator {
                            const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
                            std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
                            const ParallelDesc& parallel_desc) const;
-  virtual void FixSbpSignature(SbpSignature* sbp_signature) const {}
-  // Infer is_model_blob
-  void InferIsModelBlob4OutputBlobsIf(
-      std::function<bool*(const std::string&)> IsModelBlob4BnInOp) const;
+  virtual void FixSbpSignature(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      SbpSignature* sbp_signature) const {}
   virtual void FixInDiffBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                   const ParallelContext*) const;
   virtual void VirtualFixInDiffBlobDescs(
@@ -190,9 +190,6 @@ class Operator {
       std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const;
   virtual void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const { UNIMPLEMENTED(); }
-
-  virtual void InferIsModelBlob4OutputBlobs(
-      std::function<bool*(const std::string&)> IsModelBlob4BnInOp) const;
 
   int64_t cudnn_buf_limit_byte() const;
 
@@ -280,7 +277,9 @@ class Operator {
       std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
     InferHasBatchDim(HasBatchDim4BnInOp);
   }
-  virtual void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const;
+  virtual void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+    UNIMPLEMENTED();
+  }
 
   LogicalBlobId dtbn2lbi(const std::string& data_tmp_bn) const;
   LogicalBlobId fbbn2lbi(const std::string& fw_buf_bn) const { return dtbn2lbi(fw_buf_bn); }

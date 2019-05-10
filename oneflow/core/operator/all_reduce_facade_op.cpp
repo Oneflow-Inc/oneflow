@@ -24,6 +24,12 @@ LogicalNode* AllReduceFacadeOp::NewProperLogicalNode() const {
   return new AllReduceFacadeLogicalNode();
 }
 
+void AllReduceFacadeOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  CHECK_EQ(*HasBatchDim4BnInOp("in"), false);
+  *HasBatchDim4BnInOp("out") = false;
+}
+
 void AllReduceFacadeOp::InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,

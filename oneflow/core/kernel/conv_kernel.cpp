@@ -24,47 +24,6 @@ void ConvKernelIf<device_type, T>::BackwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
-void ConvKernelIf<device_type, T>::InitConstBufBlobs(
-    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (this->template GetValFromCustomizedOpConf<bool>("use_bias")
-      && (device_type == DeviceType::kCPU || this->EnableCudnn() == false)) {
-    InitializerConf bias_multiplier_initializer_conf;
-    bias_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
-    KernelUtil<device_type, T>::InitializeWithConf(ctx, bias_multiplier_initializer_conf, 0,
-                                                   BnInOp2Blob("bias_multiplier"));
-  }
-}
-
-template<DeviceType device_type, typename T>
-void ConvKernelIf<device_type, T>::InitModelBlobsWithRandomSeed(
-    DeviceCtx* ctx, std::mt19937* random_seed_gen,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx, GetMsgPtrFromPbMessage(this->GetCustomizedOpConf(), "weight_initializer"),
-      (*random_seed_gen)(), BnInOp2Blob("weight"),
-      this->template GetValFromCustomizedOpConf<std::string>("data_format"));
-  if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
-    KernelUtil<device_type, T>::InitializeWithProperConf(
-        ctx, GetMsgPtrFromPbMessage(this->GetCustomizedOpConf(), "bias_initializer"),
-        (*random_seed_gen)(), BnInOp2Blob("bias"));
-  }
-}
-
-template<DeviceType device_type, typename T>
-void ConvKernelIf<device_type, T>::InitModelBlobsWithDir(
-    DeviceCtx* ctx, int32_t part_id, int32_t part_num, const std::string& model_load_dir,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* weight_blob = BnInOp2Blob("weight");
-  int32_t dim_num = this->template GetValFromCustomizedOpConf<int32_t>("filters");
-  KernelUtil<device_type, T>::InitializeWithDir(ctx, part_id, part_num, model_load_dir, weight_blob,
-                                                "weight", dim_num, weight_blob->shape().Count(1));
-  if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
-    KernelUtil<device_type, T>::InitializeWithDir(ctx, part_id, part_num, model_load_dir,
-                                                  BnInOp2Blob("bias"), "bias", dim_num, 1);
-  }
-}
-
-template<DeviceType device_type, typename T>
 const PbMessage& ConvKernelIf<device_type, T>::GetCustomizedOpConf() const {
   CHECK(this->kernel_conf().has_conv_conf());
   switch (this->OpKernelDim()) {
@@ -215,9 +174,12 @@ void ConvKernelImplByIm2Col<device_type, T>::BiasBackward(
   }
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv1DConf, ConvKernel, FLOATING_DATA_TYPE_SEQ);
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv2DConf, ConvKernel, FLOATING_DATA_TYPE_SEQ);
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv3DConf, ConvKernel, FLOATING_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv1DConf, ConvKernel,
+                           FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv2DConf, ConvKernel,
+                           FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv3DConf, ConvKernel,
+                           FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
 
 template<typename T>
 ColBufWriter<T>::ColBufWriter(const T* src_ptr, T* dst_ptr, int64_t c_size, int64_t id_size,
@@ -438,6 +400,7 @@ void ConvKernelUtil<DeviceType::kCPU, T>::NDHWCCol2Im(
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_CONV_KERNEL_IF, DEVICE_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ);
+template class ConvKernelIf<DeviceType::kGPU, float16>;
 
 #define INSTANTIATE_CONV_KERNEL(type_cpp, type_proto) \
   template class ConvKernel<DeviceType::kCPU, type_cpp>;
