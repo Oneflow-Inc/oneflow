@@ -38,26 +38,26 @@ class NewKernelUtil<DeviceType::kCPU> {
                      const float16* b, const float16 beta, float16* c);
   static void Relu(DeviceCtx* ctx, const int64_t n, const float* x, float* y);
   static void Relu(DeviceCtx* ctx, const int64_t n, const double* x, double* y);
-  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const float* x, const float* y, const float* dy,
-                           float* dx);
-  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const double* x, const double* y, const double* dy,
-                           double* dx);
+  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const float* x, const float* y,
+                           const float* dy, float* dx);
+  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const double* x, const double* y,
+                           const double* dy, double* dx);
   static void Axpy(DeviceCtx* ctx, const int n, const float alpha, const float* x, const int incx,
-                        float* y, const int incy);
+                   float* y, const int incy);
   static void Axpy(DeviceCtx* ctx, const int n, const double alpha, const double* x, const int incx,
-                        double* y, const int incy);
+                   double* y, const int incy);
   static void Sigmoid(DeviceCtx* ctx, int64_t n, const float* x, float* y);
   static void Sigmoid(DeviceCtx* ctx, int64_t n, const double* x, double* y);
   static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const float* x, const float* y,
-  const float* dy, float* dx);
+                              const float* dy, float* dx);
   static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const double* x, const double* y,
-  const double* dy, double* dx); 
+                              const double* dy, double* dx);
   static void TanH(DeviceCtx* ctx, int64_t n, const float* x, float* y);
   static void TanH(DeviceCtx* ctx, int64_t n, const double* x, double* y);
   static void TanHBackward(DeviceCtx* ctx, const int64_t n, const float* x, const float* y,
-                     const float* dy, float* dx);
+                           const float* dy, float* dx);
   static void TanHBackward(DeviceCtx* ctx, const int64_t n, const double* x, const double* y,
-                     const double* dy, double* dx);
+                           const double* dy, double* dx);
 };
 
 template<>
@@ -81,36 +81,36 @@ class NewKernelUtil<DeviceType::kGPU> {
   static void Relu(DeviceCtx* ctx, const int64_t n, const float* x, float* y);
   static void Relu(DeviceCtx* ctx, const int64_t n, const double* x, double* y);
   static void Relu(DeviceCtx* ctx, const int64_t n, const float16* x, float16* y);
-  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const float* x, const float* y, const float* dy,
-                           float* dx);
-  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const double* x, const double* y, const double* dy,
-                           double* dx);
-  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const float16* x, const float16* y, const float16* dy,
-                           float16* dx);
+  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const float* x, const float* y,
+                           const float* dy, float* dx);
+  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const double* x, const double* y,
+                           const double* dy, double* dx);
+  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const float16* x, const float16* y,
+                           const float16* dy, float16* dx);
   static void Axpy(DeviceCtx* ctx, const int n, const float alpha, const float* x, const int incx,
-  float* y, const int incy);
+                   float* y, const int incy);
   static void Axpy(DeviceCtx* ctx, const int n, const double alpha, const double* x, const int incx,
-  double* y, const int incy);
-  static void Axpy(DeviceCtx* ctx, const int n, const float16 alpha, const float16* x, const int incx,
-  float16* y, const int incy);                           
+                   double* y, const int incy);
+  static void Axpy(DeviceCtx* ctx, const int n, const float16 alpha, const float16* x,
+                   const int incx, float16* y, const int incy);
   static void Sigmoid(DeviceCtx* ctx, int64_t n, const float* x, float* y);
   static void Sigmoid(DeviceCtx* ctx, int64_t n, const double* x, double* y);
   static void Sigmoid(DeviceCtx* ctx, int64_t n, const float16* x, float16* y);
   static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const float* x, const float* y,
-  const float* dy, float* dx);
+                              const float* dy, float* dx);
   static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const double* x, const double* y,
-  const double* dy, double* dx); 
+                              const double* dy, double* dx);
   static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const float16* x, const float16* y,
-  const float16* dy, float16* dx);
+                              const float16* dy, float16* dx);
   static void TanH(DeviceCtx* ctx, int64_t n, const float* x, float* y);
   static void TanH(DeviceCtx* ctx, int64_t n, const double* x, double* y);
   static void TanH(DeviceCtx* ctx, int64_t n, const float16* x, float16* y);
   static void TanHBackward(DeviceCtx* ctx, const int64_t n, const float* x, const float* y,
-                     const float* dy, float* dx);
+                           const float* dy, float* dx);
   static void TanHBackward(DeviceCtx* ctx, const int64_t n, const double* x, const double* y,
-                     const double* dy, double* dx);
+                           const double* dy, double* dx);
   static void TanHBackward(DeviceCtx* ctx, const int64_t n, const float16* x, const float16* y,
-                     const float16* dy, float16* dx);
+                           const float16* dy, float16* dx);
 };
 
 }  // namespace oneflow
