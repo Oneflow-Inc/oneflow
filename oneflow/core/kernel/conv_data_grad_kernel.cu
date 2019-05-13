@@ -23,6 +23,7 @@ struct ConvDataGradKernelUtil<DeviceType::kGPU, T> final {
 
 #define INSTANTIATE_CONV_DATA_GRAD_KERNEL_UTIL(type_cpp, type_proto) \
   template struct ConvDataGradKernelUtil<DeviceType::kGPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CONV_DATA_GRAD_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CONV_DATA_GRAD_KERNEL_UTIL,
+                     FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

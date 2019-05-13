@@ -26,6 +26,6 @@ struct ConvDataGradKernelUtil<DeviceType::kCPU, T> final {
 };
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConvDataGradConf, ConvDataGradKernel,
-                           FLOATING_DATA_TYPE_SEQ);
+                           FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
