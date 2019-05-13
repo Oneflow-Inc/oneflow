@@ -14,7 +14,7 @@ void BlobDumpKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
 }
 
 void BlobDumpKernel::Forward(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+                             std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   PersistentOutStream out(SnapshotFS(), JoinPath(base_dir_, std::to_string(iter_)));
   const Blob* in = BnInOp2Blob("in");
   out.Write(in->dptr<char>(), in->ByteSizeOfDataContentField());

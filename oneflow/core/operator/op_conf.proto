@@ -831,6 +831,7 @@ message DecodeRandomOpConf {
   required ShapeProto shape = 2;
   required DataType data_type = 3;
   required InitializerConf data_initializer = 4;
+  optional int64 split_axis = 5 [default = 0];
 }
 
 message DefineTestBlobOpConf {
