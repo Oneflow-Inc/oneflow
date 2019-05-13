@@ -232,6 +232,10 @@ void Kernel::Forward(const KernelCtx& ctx,
 
 void Kernel::Backward(const KernelCtx& ctx,
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (kernel_conf_.need_do_instance_shape()) {
+    CHECK(!kernel_conf_.need_do_opaque_header());
+    BackwardActualShape(ctx, BnInOp2Blob);
+  }
   if (op_attribute().model_diff_bns().size() > 0) {
     BackwardModelDiffDim0ValidNum(ctx, BnInOp2Blob);
   }
