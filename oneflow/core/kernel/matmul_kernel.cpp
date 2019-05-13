@@ -1,5 +1,6 @@
 #include "oneflow/core/kernel/matmul_kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/kernel/new_kernel_util.h"
 
 namespace oneflow {
 
@@ -61,10 +62,10 @@ void MatmulKernel<device_type, T>::Calc2DMatMul(DeviceCtx* ctx, const Blob* a, b
   CBLAS_TRANSPOSE blas_trans_a = trans_a ? CblasTrans : CblasNoTrans;
   CBLAS_TRANSPOSE blas_trans_b = trans_b ? CblasTrans : CblasNoTrans;
   if (swap_in) {
-    KernelUtil<device_type, T>::BlobGemm(ctx, blas_trans_b, blas_trans_a, OneVal<T>::value,
+    NewKernelUtil<device_type>::BlobGemm(ctx, blas_trans_b, blas_trans_a, OneVal<T>::value,
                                          ZeroVal<T>::value, b, a, c);
   } else {
-    KernelUtil<device_type, T>::BlobGemm(ctx, blas_trans_a, blas_trans_b, OneVal<T>::value,
+    NewKernelUtil<device_type>::BlobGemm(ctx, blas_trans_a, blas_trans_b, OneVal<T>::value,
                                          ZeroVal<T>::value, a, b, c);
   }
 }
@@ -95,11 +96,25 @@ void MatmulKernel<device_type, T>::CalcBatchMatMul(DeviceCtx* ctx, const Blob* a
   const T* b_dptr = b->dptr<T>();
   T* c_dptr = c->mut_dptr<T>();
   T** buf_dptr = reinterpret_cast<T**>(buf->mut_dptr<int64_t>());
-  KernelUtil<device_type, T>::OFBatchedGemm(ctx, blas_trans_a, blas_trans_b, batch_size, m, n, k,
+  NewKernelUtil<device_type>::OFBatchedGemm(ctx, blas_trans_a, blas_trans_b, batch_size, m, n, k,
                                             OneVal<T>::value, a_dptr, b_dptr, ZeroVal<T>::value,
                                             c_dptr, buf_dptr);
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMatmulConf, MatmulKernel, FLOATING_DATA_TYPE_SEQ);
+namespace {
+
+Kernel* CreateMatMulKernel(const KernelConf& kernel_conf) {
+  static const HashMap<std::string, std::function<Kernel*()>> creators = {
+      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY, (MatmulKernel), DEVICE_TYPE_SEQ,
+                                       FLOATING_DATA_TYPE_SEQ)
+          MAKE_KERNEL_CREATOR_ENTRY(MatmulKernel, DeviceType::kGPU, (float16, DataType::kFloat16))};
+
+  return creators.at(
+      GetHashKey(kernel_conf.op_attribute().op_conf().device_type(), kernel_conf.data_type()))();
+}  // namespace
+
+REGISTER_KERNEL_CREATOR(OperatorConf::kMatmulConf, CreateMatMulKernel);
+
+}  // namespace
 
 }  // namespace oneflow

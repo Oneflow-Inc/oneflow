@@ -75,6 +75,20 @@ static void TanHBackwardImpl(DeviceCtx* ctx, const int64_t n, const T* x, const 
   for (int64_t i = 0; i != n; ++i) { dx[i] = (1 - y[i] * y[i]) * dy[i]; }
 }
 
+template<typename T>
+void BatchedGemmImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
+                     const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
+                     int batch_size, int m, int n, int k, const T alpha, const T* a, const T* b,
+                     const T beta, T* c, T** buf) {
+  const int a_stride = m * k;
+  const int b_stride = k * n;
+  const int c_stride = m * n;
+  FOR_RANGE(int32_t, i, 0, batch_size) {
+    NewKernelUtil<DeviceType::kCPU>::OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a + i * a_stride,
+                                            b + i * b_stride, beta, c + i * c_stride);
+  }
+}
+
 }  // namespace
 
 #define CPU_KU_METHOD void NewKernelUtil<DeviceType::kCPU>::
@@ -99,6 +113,22 @@ CPU_KU_METHOD OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TR
                      const int m, const int n, const int k, const double alpha, const double* a,
                      const double* b, const double beta, double* c) {
   Gemm<double>(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
+}
+
+CPU_KU_METHOD OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
+                            enum CBLAS_TRANSPOSE trans_b, const int batch_size, const int m,
+                            const int n, const int k, const float alpha, const float* a,
+                            const float* b, const float beta, float* c, float** buf) {
+  BatchedGemmImpl<float>(ctx, CblasRowMajor, trans_a, trans_b, batch_size, m, n, k, alpha, a, b,
+                         beta, c, buf);
+}
+
+CPU_KU_METHOD OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
+                            enum CBLAS_TRANSPOSE trans_b, const int batch_size, const int m,
+                            const int n, const int k, const double alpha, const double* a,
+                            const double* b, const double beta, double* c, double** buf) {
+  BatchedGemmImpl<double>(ctx, CblasRowMajor, trans_a, trans_b, batch_size, m, n, k, alpha, a, b,
+                          beta, c, buf);
 }
 
 CPU_KU_METHOD Relu(DeviceCtx* ctx, const int64_t n, const float* x, float* y) {

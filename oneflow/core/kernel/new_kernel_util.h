@@ -31,6 +31,14 @@ class NewKernelUtil<DeviceType::kCPU> {
   static void OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
                      const int m, const int n, const int k, const double alpha, const double* a,
                      const double* b, const double beta, double* c);
+  static void OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
+                            enum CBLAS_TRANSPOSE trans_b, const int batch_size, const int m,
+                            const int n, const int k, const float alpha, const float* a,
+                            const float* b, const float beta, float* c, float** buf);
+  static void OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
+                            enum CBLAS_TRANSPOSE trans_b, const int batch_size, const int m,
+                            const int n, const int k, const double alpha, const double* a,
+                            const double* b, const double beta, double* c, double** buf);
 
   static void Relu(DeviceCtx* ctx, const int64_t n, const float* x, float* y);
   static void Relu(DeviceCtx* ctx, const int64_t n, const double* x, double* y);
