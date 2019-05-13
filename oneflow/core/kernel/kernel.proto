@@ -157,6 +157,19 @@ message ShapeElemCntKernelConf {
   repeated int32 axis = 1;
 }
 
+message RangeProto {
+  required int64 start = 1;
+  required int64 end = 2;
+}
+
+message RangeList {
+  repeated RangeProto range = 1;
+}
+
+message LocalGpuPeerSplitToBroadcastKernelConf {
+  required RangeList in_split = 1;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
@@ -202,5 +215,7 @@ message KernelConf {
     ConvFilterGradKernelConf conv_filter_grad_conf = 410;
     ConvDataGradKernelConf conv_data_grad_conf = 411;
     ShapeElemCntKernelConf shape_elem_cnt_conf = 412;
+    LocalGpuPeerSplitToBroadcastKernelConf local_gpu_peer_split_to_broadcast_conf = 413;
+
   }
 }
