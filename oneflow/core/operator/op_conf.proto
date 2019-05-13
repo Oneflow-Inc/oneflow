@@ -1367,6 +1367,11 @@ message LocalGpuPeerPartialSumToSplitOpConf {
   required int64 out_split_axis = 3;
 }
 
+message BlobDumpOpConf {
+  required string in = 1;
+  optional string dir = 2;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1500,6 +1505,7 @@ message OperatorConf {
     ModelSaveV2OpConf model_save_v2_conf = 287;
     TanHGradOpConf tanh_grad_conf = 288;
     IdentityOpConf identity_conf = 289;
+    BlobDumpOpConf blob_dump_conf = 290;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
