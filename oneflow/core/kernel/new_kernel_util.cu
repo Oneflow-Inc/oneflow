@@ -188,6 +188,54 @@ static void BlobGemmImpl(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLA
                                           b->dptr<T>(), beta, c->mut_dptr<T>());
 }
 
+template<typename T>
+__global__ void AssignStridedAddrGpu(T** dev_ptrs, T* start_ptr, int32_t stride_len,
+                                     int32_t stride_num) {
+  CUDA_1D_KERNEL_LOOP(i, stride_num) { dev_ptrs[i] = start_ptr + i * stride_len; }
+}
+
+template<typename T>
+void AssignStridedAddr(DeviceCtx* ctx, T** dev_ptrs, T* start_ptr, int stride_len, int stride_num) {
+  AssignStridedAddrGpu<T>
+      <<<BlocksNum4ThreadsNum(stride_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          dev_ptrs, start_ptr, stride_len, stride_num);
+}
+
+template<typename T>
+static void BatchedGemmImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
+                            const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
+                            int batch_size, int m, int n, int k, const T alpha, const T* a,
+                            const T* b, const T beta, T* c, T** buf) {
+  const int a_stride = m * k;
+  const int b_stride = k * n;
+  const int c_stride = m * n;
+  const int lda = (trans_a == CblasNoTrans) ? k : m;
+  const int ldb = (trans_b == CblasNoTrans) ? n : k;
+  const int ldc = n;
+  cublasOperation_t cublas_trans_a = CblasTrans2CublasTrans(trans_a);
+  cublasOperation_t cublas_trans_b = CblasTrans2CublasTrans(trans_b);
+  T** dev_a_ptrs = buf;
+  T** dev_b_ptrs = buf + batch_size;
+  T** dev_c_ptrs = buf + 2 * batch_size;
+  AssignStridedAddr<T>(ctx, dev_a_ptrs, const_cast<T*>(a), a_stride, batch_size);
+  AssignStridedAddr<T>(ctx, dev_b_ptrs, const_cast<T*>(b), b_stride, batch_size);
+  AssignStridedAddr<T>(ctx, dev_c_ptrs, c, c_stride, batch_size);
+#if CUDA_VERSION >= 9010
+  cudaDataType_t data_type = CudaDataType<T>::value;
+  cublasGemmBatchedEx(ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
+                      reinterpret_cast<const void*>(&alpha),
+                      reinterpret_cast<const void**>(const_cast<const T**>(dev_b_ptrs)), data_type,
+                      ldb, reinterpret_cast<const void**>(const_cast<const T**>(dev_a_ptrs)),
+                      data_type, lda, reinterpret_cast<const void*>(&beta),
+                      reinterpret_cast<void**>(dev_c_ptrs), data_type, ldc, batch_size, data_type,
+                      CUBLAS_GEMM_DEFAULT);
+#else
+  cublas_gemmBatched<T>(ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n, m, k, &alpha,
+                        const_cast<const T**>(dev_b_ptrs), ldb, const_cast<const T**>(dev_a_ptrs),
+                        lda, &beta, dev_c_ptrs, ldc, batch_size);
+#endif
+}
+
 }  // namespace
 
 #define GPU_KU_METHOD void NewKernelUtil<DeviceType::kGPU>::
@@ -222,11 +270,32 @@ GPU_KU_METHOD OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TR
              reinterpret_cast<const half*>(&beta), reinterpret_cast<half*>(c));
 }
 
+GPU_KU_METHOD OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
+                            enum CBLAS_TRANSPOSE trans_b, const int batch_size, const int m,
+                            const int n, const int k, const float alpha, const float* a,
+                            const float* b, const float beta, float* c, float** buf) {
+  BatchedGemmImpl<float>(ctx, CblasRowMajor, trans_a, trans_b, batch_size, m, n, k, alpha, a, b,
+                         beta, c, buf);
+}
+GPU_KU_METHOD OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
+                            enum CBLAS_TRANSPOSE trans_b, const int batch_size, const int m,
+                            const int n, const int k, const double alpha, const double* a,
+                            const double* b, const double beta, double* c, double** buf) {
+  BatchedGemmImpl<double>(ctx, CblasRowMajor, trans_a, trans_b, batch_size, m, n, k, alpha, a, b,
+                          beta, c, buf);
+}
+GPU_KU_METHOD OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
+                            enum CBLAS_TRANSPOSE trans_b, const int batch_size, const int m,
+                            const int n, const int k, const float16 alpha, const float16* a,
+                            const float16* b, const float16 beta, float16* c, float16** buf) {
+  // TODO(niuchong): implement half batched gemm
+  UNIMPLEMENTED();
+}
+
 GPU_KU_METHOD Relu(DeviceCtx* ctx, const int64_t n, const float* x, float* y) {
   ReluForwardGpu<float>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
 }
-
 GPU_KU_METHOD Relu(DeviceCtx* ctx, const int64_t n, const double* x, double* y) {
   ReluForwardGpu<double>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);

@@ -76,6 +76,19 @@ class NewKernelUtil<DeviceType::kGPU> {
                      const int m, const int n, const int k, const float16 alpha, const float16* a,
                      const float16* b, const float16 beta, float16* c);
 
+  static void OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
+                            enum CBLAS_TRANSPOSE trans_b, const int batch_size, const int m,
+                            const int n, const int k, const float alpha, const float* a,
+                            const float* b, const float beta, float* c, float** buf);
+  static void OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
+                            enum CBLAS_TRANSPOSE trans_b, const int batch_size, const int m,
+                            const int n, const int k, const double alpha, const double* a,
+                            const double* b, const double beta, double* c, double** buf);
+  static void OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
+                            enum CBLAS_TRANSPOSE trans_b, const int batch_size, const int m,
+                            const int n, const int k, const float16 alpha, const float16* a,
+                            const float16* b, const float16 beta, float16* c, float16** buf);
+
   static void Relu(DeviceCtx* ctx, const int64_t n, const float* x, float* y);
   static void Relu(DeviceCtx* ctx, const int64_t n, const double* x, double* y);
   static void Relu(DeviceCtx* ctx, const int64_t n, const float16* x, float16* y);
