@@ -6,6 +6,11 @@ import "oneflow/core/common/data_type.proto";
 import "oneflow/core/register/logical_blob_id.proto";
 import "oneflow/core/operator/op_conf.proto";
 
+message ActualShapeLike {
+  required string bn_in_op = 1;
+  repeated string shape_like_bns = 2;
+}
+
 message ConvKernelConf {
   required ShapeProto in = 1;
   required ShapeProto out = 2;
@@ -216,6 +221,7 @@ message KernelConf {
   optional bool need_do_actual_shape = 14 [default = false];
   optional bool can_naive_do_dim0_valid_num = 15 [default = false];
   optional bool can_naive_do_record_id_in_device_piece = 16 [default = false];
+  repeated ActualShapeLike actual_shape_like = 17;
 
   oneof kernel_type {
     SparseSoftmaxCrossEntropyLossKernelConf sparse_softmax_cross_entropy_loss_conf = 101;

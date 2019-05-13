@@ -434,14 +434,6 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
                              &BlobDesc::has_instance_shape_field)) {
       kernel_conf->set_need_do_instance_shape(true);
     }
-
-    const auto* bns_for_actual_shape = &output_bns();
-    if (IsLossOp()) { bns_for_actual_shape = &input_bns(); }
-    if (!is_forward) { bns_for_actual_shape = &input_bns(); }
-    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns_for_actual_shape,
-                             &BlobDesc::has_actual_shape_field)) {
-      kernel_conf->set_need_do_actual_shape(true);
-    }
   }
 
   kernel_conf->set_is_forward(is_forward);
@@ -454,6 +446,7 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
   }
   kernel_conf->set_data_type(data_type);
 
+  InferKernelConfActualShapeLike(kernel_conf, GetBlobDesc4BnInOp);
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf, op_ctx);
 }
 
@@ -652,6 +645,52 @@ void Operator::InferTotalInstanceNumDesc(
       }
     }
   }
+}
+
+void Operator::InferKernelConfActualShapeLike(
+    KernelConf* kernel_conf,
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp) const {
+  if (kernel_conf->need_do_opaque_header()) { return; }
+  auto InferActualShapeLike = [=](const PbRpf<std::string>& input_bns,
+                                  const PbRpf<std::string>& output_bns, bool forward) {
+    for (const auto& output_bn : output_bns) {
+      const BlobDesc* out = GetBlobDesc4BnInOp(output_bn);
+      if (!out->has_actual_shape_field()) { continue; }
+      std::vector<std::string> shape_like_bns;
+      if (!forward) { shape_like_bns.emplace_back(GenUnDiffBn(output_bn)); }
+      for (const auto& input_bn : input_bns) {
+        const BlobDesc* in = GetBlobDesc4BnInOp(input_bn);
+        if (!in->has_actual_shape_field()) { continue; }
+        if (in->shape() != out->shape()) { continue; }
+        shape_like_bns.emplace_back(input_bn);
+      }
+      CHECK_GT(shape_like_bns.size(), 0);
+
+      ActualShapeLike* actual_shape_like = nullptr;
+      for (ActualShapeLike& item : *kernel_conf->mutable_actual_shape_like()) {
+        if (item.bn_in_op() == output_bn) {
+          actual_shape_like = &item;
+          break;
+        }
+      }
+      if (actual_shape_like == nullptr) {
+        actual_shape_like = kernel_conf->add_actual_shape_like();
+        actual_shape_like->set_bn_in_op(output_bn);
+      }
+      for (const auto& bn : shape_like_bns) { actual_shape_like->add_shape_like_bns(bn); }
+    }
+  };
+
+  if (IsLossOp()) {
+    InferActualShapeLike(input_bns(), output_bns(), true);
+    InferActualShapeLike(output_diff_bns(), PbRpf<std::string>(), false);
+  } else if (kernel_conf->is_forward()) {
+    InferActualShapeLike(input_bns(), output_bns(), true);
+  } else {
+    InferActualShapeLike(output_diff_bns(), input_diff_bns(), false);
+  }
+
+  if (kernel_conf->actual_shape_like_size() > 0) { kernel_conf->set_need_do_actual_shape(true); }
 }
 
 std::string GenDiffBn(const std::string& bn) { return bn + "_diff"; }

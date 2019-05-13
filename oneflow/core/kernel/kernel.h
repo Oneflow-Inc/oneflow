@@ -150,6 +150,10 @@ class Kernel {
   virtual bool HasSameShapeBetweenInOut() const { return false; }
   void CheckSameDim0ValidNum(const PbRpf<std::string>& bns,
                              const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  virtual void InferActualShape(const KernelCtx& ctx,
+                                const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+    UNIMPLEMENTED();
+  }
   virtual Blob* InferBlobShouldHasSameActualShapeAs(
       const std::string& bn, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
     UNIMPLEMENTED();
@@ -220,8 +224,12 @@ class KernelIf : public Kernel {
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   virtual void BackwardInstanceShape(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  virtual void InferActualShape(
+      const KernelCtx& ctx,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
   virtual Blob* InferBlobShouldHasSameActualShapeAs(
-      const std::string& bn, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+      const std::string& bn,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const override;
   void CopyField(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
                  const Blob* from_blob, const PbRpf<std::string>& to_bns,
                  void (Blob::*Copy)(DeviceCtx*, const Blob*)) const;

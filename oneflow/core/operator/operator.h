@@ -168,6 +168,9 @@ class Operator {
       const std::string& obn) const;
   void GenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                      bool is_forward, const ParallelContext*, KernelConf*, const OpContext*) const;
+  virtual void InferKernelConfActualShapeLike(
+      KernelConf* kernel_conf,
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp) const;
 
  protected:
   virtual void InferIsModelBlob4OutputBlobs(

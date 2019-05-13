@@ -301,10 +301,32 @@ void KernelIf<device_type>::ForwardColNum(
 template<DeviceType device_type>
 void KernelIf<device_type>::ForwardActualShape(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  for (const auto& output_bn : op_attribute().output_bns()) {
-    Blob* same_shape_blob = InferBlobShouldHasSameActualShapeAs(output_bn, BnInOp2Blob);
-    CHECK_NOTNULL(same_shape_blob);
-    BnInOp2Blob(output_bn)->CopyActualShapeFrom(ctx.device_ctx, same_shape_blob);
+  // for (const auto& output_bn : op_attribute().output_bns()) {
+  //   Blob* same_shape_blob = InferBlobShouldHasSameActualShapeAs(output_bn, BnInOp2Blob);
+  //   CHECK_NOTNULL(same_shape_blob);
+  //   BnInOp2Blob(output_bn)->CopyActualShapeFrom(ctx.device_ctx, same_shape_blob);
+  // }
+  InferActualShape(ctx, BnInOp2Blob);
+}
+
+template<DeviceType device_type>
+void KernelIf<device_type>::InferActualShape(
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+  for (const auto& actual_shape_like : kernel_conf().actual_shape_like()) {
+    Blob* infer_blob = BnInOp2Blob(actual_shape_like.bn_in_op());
+    if (infer_blob) {
+      std::vector<Blob*> shape_like_blobs;
+      shape_like_blobs.reserve(actual_shape_like.shape_like_bns_size());
+      for (const std::string& bn : actual_shape_like.shape_like_bns()) {
+        Blob* blob = BnInOp2Blob(bn);
+        if (blob) { shape_like_blobs.emplace_back(blob); }
+      }
+      CHECK_GT(shape_like_blobs.size(), 0);
+      if (shape_like_blobs.size() > 1) {
+        CHECK(HasSameShapeBetweenBlobs(shape_like_blobs, &Blob::actual_shape));
+      }
+      infer_blob->CopyActualShapeFrom(ctx.device_ctx, shape_like_blobs.at(0));
+    }
   }
 }
 
@@ -434,11 +456,12 @@ void KernelIf<device_type>::BackwardInstanceShape(
 template<DeviceType device_type>
 void KernelIf<device_type>::BackwardActualShape(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  for (const auto& in_diff_bn : op_attribute().input_diff_bns()) {
-    Blob* same_shape_blob = InferBlobShouldHasSameActualShapeAs(in_diff_bn, BnInOp2Blob);
-    CHECK_NOTNULL(same_shape_blob);
-    BnInOp2Blob(in_diff_bn)->CopyActualShapeFrom(ctx.device_ctx, same_shape_blob);
-  }
+  // for (const auto& in_diff_bn : op_attribute().input_diff_bns()) {
+  //   Blob* same_shape_blob = InferBlobShouldHasSameActualShapeAs(in_diff_bn, BnInOp2Blob);
+  //   CHECK_NOTNULL(same_shape_blob);
+  //   BnInOp2Blob(in_diff_bn)->CopyActualShapeFrom(ctx.device_ctx, same_shape_blob);
+  // }
+  InferActualShape(ctx, BnInOp2Blob);
 }
 
 template<DeviceType device_type>
