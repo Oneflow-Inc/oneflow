@@ -171,6 +171,11 @@ Shape Blob::instance_shape() const {
   return Shape(dim_vec);
 }
 
+const Shape& Blob::actual_shape() const {
+  CHECK_NOTNULL(actual_shape_);
+  return *actual_shape_;
+}
+
 void Blob::set_instance_shape(const Shape& shape) {
   CHECK_NOTNULL(instance_shape_ptr_);
   CHECK_EQ(shape.NumAxes(), static_shape().NumAxes() - 1);
@@ -309,6 +314,13 @@ void Blob::CopyInstanceShapeFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   Memcpy<DeviceType::kCPU>(device_ctx, mut_instance_shape_ptr(), rhs->instance_shape_ptr(),
                            ByteSizeOfInstanceShapeField());
   UpdateDynamicShapeIfNeed();
+}
+
+void Blob::CopyActualShapeFrom(DeviceCtx* device_ctx, const Blob* rhs) {
+  if (this == rhs || ByteSizeOfActualShapeField() == 0) { return; }
+  CHECK_EQ(ByteSizeOfActualShapeField(), rhs->ByteSizeOfActualShapeField());
+  Memcpy<DeviceType::kCPU>(device_ctx, actual_shape_, &rhs->actual_shape(),
+                           ByteSizeOfActualShapeField());
 }
 
 void Blob::CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) {

@@ -94,6 +94,8 @@ class Blob final {
   const RtBlobDesc& blob_desc() const { return *blob_desc_; }
   const RtBlobDesc* blob_desc_ptr() const { return blob_desc_; }
   const Shape& static_shape() const { return blob_desc_->shape(); }
+  const Shape& actual_shape() const;
+  Shape* mut_actual_shape() { return actual_shape_; }
   const Shape& shape() const { return dynamic_shape_; }
   bool IsShapeEmpty() const;
   bool has_dim0_inner_shape() const { return blob_desc_->has_dim0_inner_shape(); }
@@ -102,6 +104,7 @@ class Blob final {
   DataType data_type() const { return blob_desc_->data_type(); }
   bool has_data_id_field() const { return blob_desc_->has_data_id_field(); }
   bool has_col_num_field() const { return blob_desc_->has_col_num_field(); }
+  bool has_actual_shape_field() const { return blob_desc_->has_actual_shape_field(); }
   bool has_dim0_valid_num_field() const { return blob_desc_->has_dim0_valid_num_field(); }
   bool has_dim1_valid_num_field() const { return blob_desc_->has_dim1_valid_num_field(); }
   bool has_dim2_valid_num_field() const { return blob_desc_->has_dim2_valid_num_field(); }
@@ -114,6 +117,7 @@ class Blob final {
   size_t ByteSizeOfBlobHeader() const { return blob_desc_->ByteSizeOfBlobHeader(); }
   size_t ByteSizeOfDataIdField() const { return blob_desc_->ByteSizeOfDataIdField(); }
   size_t ByteSizeOfColNumField() const { return blob_desc_->ByteSizeOfColNumField(); }
+  size_t ByteSizeOfActualShapeField() const { return blob_desc_->ByteSizeOfActualShapeField(); }
   size_t ByteSizeOfDim0ValidNumField() const;
   size_t ByteSizeOfDim1ValidNumField() const;
   size_t ByteSizeOfDim2ValidNumField() const;
@@ -127,6 +131,7 @@ class Blob final {
   void CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  void CopyActualShapeFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyDim0ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyDim1ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyDim2ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
