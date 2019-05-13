@@ -4,7 +4,8 @@
 namespace oneflow {
 
 void LocalGpuPeerBoxingCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  this->SoleOutDataEdge()->AddRegst("out", ProduceRegst("out", false, 1, 1));
+  std::shared_ptr<RegstDesc> out_regst_desc = ProduceRegst("out", false, 1, 1);
+  this->ForEachOutDataEdge([&](TaskEdge* edge) { edge->AddRegst("out", out_regst_desc); });
   ProduceRegst("fw_buf", false, 1, 1);
 }
 
