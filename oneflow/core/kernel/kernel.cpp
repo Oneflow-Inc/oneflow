@@ -81,6 +81,15 @@ void NaiveCopyLossInstanceNum(const PbRpf<std::string>& from_bns, const PbRpf<st
   }
 }
 
+bool HasSameShapeBetweenBlobs(const std::vector<Blob*>& blobs,
+                              const std::function<const Shape&(Blob*)>& GetShape) {
+  const Shape& first_shape = GetShape(blobs.at(0));
+  for (auto it = blobs.begin() + 1; it != blobs.end(); ++it) {
+    if (GetShape(*it) != first_shape) { return false; }
+  }
+  return true;
+}
+
 }  // namespace
 
 void Kernel::Init(const ParallelContext* parallel_ctx, const KernelConf& kernel_conf,
@@ -173,6 +182,10 @@ void Kernel::CheckSameDim0ValidNum(
 
 void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (kernel_conf_.need_do_actual_shape()) {
+    CHECK(!kernel_conf_.need_do_opaque_header());
+    ForwardActualShape(ctx, BnInOp2Blob);
+  }
   if (kernel_conf_.need_do_dim0_valid_num()) {
     CHECK(!kernel_conf_.need_do_opaque_header());
     ForwardDim0ValidNum(ctx, BnInOp2Blob);
@@ -279,6 +292,16 @@ void KernelIf<device_type>::ForwardColNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
             &Blob::CopyColNumFrom);
+}
+
+template<DeviceType device_type>
+void KernelIf<device_type>::ForwardActualShape(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  for (const auto& output_bn : op_attribute().output_bns()) {
+    Blob* same_shape_blob = InferBlobShouldHasSameActualShapeAs(output_bn, BnInOp2Blob);
+    CHECK_NOTNULL(same_shape_blob);
+    BnInOp2Blob(output_bn)->CopyActualShapeFrom(ctx.device_ctx, same_shape_blob);
+  }
 }
 
 template<DeviceType device_type>
@@ -402,6 +425,53 @@ void KernelIf<device_type>::BackwardInstanceShape(
       }
     }
   }
+}
+
+template<DeviceType device_type>
+void KernelIf<device_type>::BackwardActualShape(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  for (const auto& in_diff_bn : op_attribute().input_diff_bns()) {
+    Blob* same_shape_blob = InferBlobShouldHasSameActualShapeAs(in_diff_bn, BnInOp2Blob);
+    CHECK_NOTNULL(same_shape_blob);
+    BnInOp2Blob(in_diff_bn)->CopyActualShapeFrom(ctx.device_ctx, same_shape_blob);
+  }
+}
+
+template<DeviceType device_type>
+Blob* KernelIf<device_type>::InferBlobShouldHasSameActualShapeAs(
+    const std::string& bn, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+  Blob* blob = BnInOp2Blob(bn);
+  CHECK_NOTNULL(blob);
+  CHECK(blob->has_actual_shape_field());
+  std::vector<Blob*> cand_blobs;
+
+  if (kernel_conf().is_forward()) {
+    for (const auto& input_bn : op_attribute().input_bns()) {
+      Blob* in_blob = BnInOp2Blob(input_bn);
+      if (!in_blob->has_actual_shape_field()) { continue; }
+      if (in_blob->static_shape() != blob->static_shape()) { continue; }
+      cand_blobs.emplace_back(in_blob);
+    }
+  } else {
+    const auto& input_bns = op_attribute().input_bns();
+    const std::string& in_bn = GenUnDiffBn(bn);
+    CHECK(std::find(input_bns.begin(), input_bns.end(), in_bn) != input_bns.end());
+    Blob* in_blob = BnInOp2Blob(in_bn);
+    if (in_blob) {
+      cand_blobs.emplace_back(in_blob);
+    } else {
+      for (const auto& outpuf_diff_bn : op_attribute().output_diff_bns()) {
+        Blob* out_diff_blob = BnInOp2Blob(outpuf_diff_bn);
+        if (out_diff_blob == nullptr) { continue; }
+        if (!out_diff_blob->has_actual_shape_field()) { continue; }
+        if (out_diff_blob->static_shape() != blob->static_shape()) { continue; }
+        cand_blobs.emplace_back(out_diff_blob);
+      }
+    }
+  }
+  CHECK_GT(cand_blobs.size(), 0);
+  if (cand_blobs.size() > 1) { CHECK(HasSameShapeBetweenBlobs(cand_blobs, &Blob::actual_shape)); }
+  return cand_blobs.at(0);
 }
 
 template<DeviceType device_type, typename T>

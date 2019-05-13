@@ -109,6 +109,27 @@ void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> Get
     if (it != output_diff_bns().end()) { continue; }
     CHECK(!blob_desc->has_instance_shape_field());
   }
+  // check only in/out/bw_activation blob has actual shape
+  for (const auto& pair : op_attribute_.bn_in_op2lbi()) {
+    BlobDesc* blob_desc = GetBlobDesc4BnInOp(pair.first);
+    if (!blob_desc) { continue; }
+    if (pair.first == "bw_activation") { continue; }
+    if (std::find(input_bns().begin(), input_bns().end(), pair.first) != input_bns().end()) {
+      continue;
+    }
+    if (std::find(input_diff_bns().begin(), input_diff_bns().end(), pair.first)
+        != input_diff_bns().end()) {
+      continue;
+    }
+    if (std::find(output_bns().begin(), output_bns().end(), pair.first) != output_bns().end()) {
+      continue;
+    }
+    if (std::find(output_diff_bns().begin(), output_diff_bns().end(), pair.first)
+        != output_diff_bns().end()) {
+      continue;
+    }
+    CHECK(!blob_desc->has_actual_shape_field());
+  }
   /*
   // check model blob has not instance shape
   std::vector<std::string> all_model_bns;
@@ -412,6 +433,14 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
     if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns_for_instance_shape,
                              &BlobDesc::has_instance_shape_field)) {
       kernel_conf->set_need_do_instance_shape(true);
+    }
+
+    const auto* bns_for_actual_shape = &output_bns();
+    if (IsLossOp()) { bns_for_actual_shape = &input_bns(); }
+    if (!is_forward) { bns_for_actual_shape = &input_bns(); }
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns_for_actual_shape,
+                             &BlobDesc::has_actual_shape_field)) {
+      kernel_conf->set_need_do_actual_shape(true);
     }
   }
 
