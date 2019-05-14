@@ -4,20 +4,19 @@ namespace oneflow {
 
 void GenerateOptimizerOpConfWrapperStruct::Call(
     const VariableOp& var_op, const ParallelConf& parallel_conf, JobBuilder* job_builder,
-    const std::function<const LogicalBlobId&(const std::string&)>& DiffLbi4BnInOp,
+    const LogicalBlobId& diff_lbi_of_var_out,
     const LogicalBlobId& total_loss_instance_num_lbi) const {
-  (*func_)(var_op, parallel_conf, job_builder, DiffLbi4BnInOp, total_loss_instance_num_lbi);
+  (*func_)(var_op, parallel_conf, job_builder, diff_lbi_of_var_out, total_loss_instance_num_lbi);
 }
 
-void GenerateOptimizerOpConfIf(
-    const VariableOp& var_op, const ParallelConf& parallel_conf, JobBuilder* job_builder,
-    const std::function<const LogicalBlobId&(const std::string&)>& DiffLbi4BnInOp,
-    const LogicalBlobId& total_loss_instance_num_lbi) {
+void GenerateOptimizerOpConfIf(const VariableOp& var_op, const ParallelConf& parallel_conf,
+                               JobBuilder* job_builder, const LogicalBlobId& diff_lbi_of_var_out,
+                               const LogicalBlobId& total_loss_instance_num_lbi) {
   const auto& train_conf =
       Global<JobDesc>::Get()->other_conf().predict_conf().tmp_split_fw_bw_train_conf();
   auto optimizer_case = train_conf.model_update_conf().normal_mdupdt_case();
   auto* obj = NewObj<GenerateOptimizerOpConfWrapperStruct>(optimizer_case);
-  obj->Call(var_op, parallel_conf, job_builder, DiffLbi4BnInOp, total_loss_instance_num_lbi);
+  obj->Call(var_op, parallel_conf, job_builder, diff_lbi_of_var_out, total_loss_instance_num_lbi);
 }
 
 void AddOptimizerOpConf(
@@ -28,14 +27,12 @@ void AddOptimizerOpConf(
     const VariableOp* var_op = dynamic_cast<const VariableOp*>(&op_node->op());
     if (var_op == nullptr) { return; }
     if (lbi2diff_lbi.find(var_op->BnInOp2Lbi(var_op->SoleObn())) == lbi2diff_lbi.end()) { return; }
-    std::vector<OperatorConf> optimizer_op_confs;
-    auto DiffLbi4BnInOp = [&](const std::string& bn) -> const LogicalBlobId& {
-      return lbi2diff_lbi.at(var_op->BnInOp2Lbi(bn));
-    };
+
+    const LogicalBlobId& diff_lbi_of_var_out =
+        lbi2diff_lbi.at(var_op->BnInOp2Lbi(var_op->SoleObn()));
     const auto& parallel_desc = op_node->parallel_desc();
-    GenerateOptimizerOpConfIf(*var_op, op_node->parallel_desc().parallel_conf(), &job_builder,
-                              DiffLbi4BnInOp, LossInstanceNum4ParallelDesc(parallel_desc));
-    job_builder.AddOps(parallel_desc.parallel_conf(), optimizer_op_confs);
+    GenerateOptimizerOpConfIf(*var_op, parallel_desc.parallel_conf(), &job_builder,
+                              diff_lbi_of_var_out, LossInstanceNum4ParallelDesc(parallel_desc));
   });
 }
 
@@ -46,14 +43,12 @@ void BindTwoVariableOpObnSbpConf(const std::string& lhs_op_name, const std::stri
 }
 
 template<typename T>
-void ConstructMdUpdtOpConf(
-    const VariableOp& op,
-    const std::function<const LogicalBlobId&(const std::string&)>& DiffLbi4BnInOp,
-    const LogicalBlobId& total_loss_instance_num_lbi, T* mdupdt_op_conf) {
+void ConstructMdUpdtOpConf(const VariableOp& op, const LogicalBlobId& diff_lbi_of_var_out,
+                           const LogicalBlobId& total_loss_instance_num_lbi, T* mdupdt_op_conf) {
   const auto& train_conf =
       Global<JobDesc>::Get()->other_conf().predict_conf().tmp_split_fw_bw_train_conf();
   *mdupdt_op_conf->mutable_user_conf() = train_conf.model_update_conf();
-  mdupdt_op_conf->set_model_diff(GenLogicalBlobName(DiffLbi4BnInOp("out")));
+  mdupdt_op_conf->set_model_diff(GenLogicalBlobName(diff_lbi_of_var_out));
   mdupdt_op_conf->set_total_instance_num_diff(GenLogicalBlobName(total_loss_instance_num_lbi));
   mdupdt_op_conf->set_model(GenLogicalBlobName(op.BnInOp2Lbi("out")));
   float primary_lr = Global<JobDesc>::Get()->primary_lr();
@@ -74,10 +69,9 @@ void ConstructMdUpdtOpConf(
   }
 }
 
-#define INSTANTIATE_CONSTRUCTOR_MDUPDT_OP_CONF(T)                                    \
-  template void ConstructMdUpdtOpConf<T>(                                            \
-      const VariableOp& op,                                                          \
-      const std::function<const LogicalBlobId&(const std::string&)>& DiffLbi4BnInOp, \
+#define INSTANTIATE_CONSTRUCTOR_MDUPDT_OP_CONF(T)                     \
+  template void ConstructMdUpdtOpConf<T>(                             \
+      const VariableOp& op, const LogicalBlobId& diff_lbi_of_var_out, \
       const LogicalBlobId& total_loss_instance_num_lbi, T* mdupdt_op_conf)
 
 INSTANTIATE_CONSTRUCTOR_MDUPDT_OP_CONF(NaiveModelUpdateOpConf);
