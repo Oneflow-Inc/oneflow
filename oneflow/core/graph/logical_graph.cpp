@@ -925,36 +925,51 @@ void LogicalGraph::AddLocalGpuPeerBoxing(const LogicalBlobId& lbi,
     boxed_lbi.set_blob_name(p2s_conf->out());
   } else if (conf.in_sbp_parallel().has_partial_sum_parallel()
              && conf.out_sbp_parallel().has_broadcast_parallel()) {
-    LogicalNode* p2s_logical_node = NewNode<LocalGpuPeerBoxingLogicalNode>();
-    OperatorConf p2s_op_conf{};
-    p2s_op_conf.set_name("System-Boxing-LocalGpuPeerPartialSumToSplit-" + NewUniqueId());
-    LocalGpuPeerPartialSumToSplitOpConf* p2s_conf =
-        p2s_op_conf.mutable_local_gpu_peer_partial_sum_to_split_conf();
+    //    LogicalNode* p2s_logical_node = NewNode<LocalGpuPeerBoxingLogicalNode>();
+    //    OperatorConf p2s_op_conf{};
+    //    p2s_op_conf.set_name("System-Boxing-LocalGpuPeerPartialSumToSplit-" + NewUniqueId());
+    //    LocalGpuPeerPartialSumToSplitOpConf* p2s_conf =
+    //        p2s_op_conf.mutable_local_gpu_peer_partial_sum_to_split_conf();
+    //    FOR_RANGE(int32_t, i, 0, src->parallel_desc()->parallel_num()) {
+    //      *p2s_conf->mutable_in()->Add() = GenLogicalBlobName(lbi);
+    //    }
+    //    p2s_conf->set_out("out");
+    //    p2s_conf->set_out_split_axis(0);
+    //    p2s_logical_node->mut_op_vec() = {ConstructOp(p2s_op_conf)};
+    //    SetParallelDesc(p2s_logical_node);
+    //    Connect(src, NewEdge(), p2s_logical_node);
+    //
+    //    LogicalNode* s2b_logical_node = NewNode<LocalGpuPeerBoxingLogicalNode>();
+    //    OperatorConf s2b_op_conf{};
+    //    s2b_op_conf.set_name("System-Boxing-LocalGpuPeerSplitToBroadcast-" + NewUniqueId());
+    //    LocalGpuPeerSplitToBroadcastOpConf* s2b_conf =
+    //        s2b_op_conf.mutable_local_gpu_peer_split_to_broadcast_conf();
+    //    FOR_RANGE(int32_t, i, 0, src->parallel_desc()->parallel_num()) {
+    //      *s2b_conf->mutable_in()->Add() = p2s_op_conf.name() + "/" + p2s_conf->out();
+    //    }
+    //    s2b_conf->set_out("out");
+    //    s2b_conf->set_in_split_axis(0);
+    //    s2b_logical_node->mut_op_vec() = {ConstructOp(s2b_op_conf)};
+    //    SetParallelDesc(s2b_logical_node);
+    //    Connect(p2s_logical_node, NewEdge(), s2b_logical_node);
+    //    boxing_logical_node = s2b_logical_node;
+    //    boxed_lbi.set_op_name(s2b_op_conf.name());
+    //    boxed_lbi.set_blob_name(s2b_conf->out());
+    LogicalNode* p2b_logical_node = NewNode<LocalGpuPeerBoxingLogicalNode>();
+    OperatorConf p2b_op_conf{};
+    p2b_op_conf.set_name("System-Boxing-LocalGpuPeerPartialSumToBroadcast-" + NewUniqueId());
+    LocalGpuPeerPartialSumToBroadcastOpConf* p2b_conf =
+        p2b_op_conf.mutable_local_gpu_peer_partial_sum_to_broadcast_conf();
     FOR_RANGE(int32_t, i, 0, src->parallel_desc()->parallel_num()) {
-      *p2s_conf->mutable_in()->Add() = GenLogicalBlobName(lbi);
+      *p2b_conf->mutable_in()->Add() = GenLogicalBlobName(lbi);
     }
-    p2s_conf->set_out("out");
-    p2s_conf->set_out_split_axis(0);
-    p2s_logical_node->mut_op_vec() = {ConstructOp(p2s_op_conf)};
-    SetParallelDesc(p2s_logical_node);
-    Connect(src, NewEdge(), p2s_logical_node);
-
-    LogicalNode* s2b_logical_node = NewNode<LocalGpuPeerBoxingLogicalNode>();
-    OperatorConf s2b_op_conf{};
-    s2b_op_conf.set_name("System-Boxing-LocalGpuPeerSplitToBroadcast-" + NewUniqueId());
-    LocalGpuPeerSplitToBroadcastOpConf* s2b_conf =
-        s2b_op_conf.mutable_local_gpu_peer_split_to_broadcast_conf();
-    FOR_RANGE(int32_t, i, 0, src->parallel_desc()->parallel_num()) {
-      *s2b_conf->mutable_in()->Add() = p2s_op_conf.name() + "/" + p2s_conf->out();
-    }
-    s2b_conf->set_out("out");
-    s2b_conf->set_in_split_axis(0);
-    s2b_logical_node->mut_op_vec() = {ConstructOp(s2b_op_conf)};
-    SetParallelDesc(s2b_logical_node);
-    Connect(p2s_logical_node, NewEdge(), s2b_logical_node);
-    boxing_logical_node = s2b_logical_node;
-    boxed_lbi.set_op_name(s2b_op_conf.name());
-    boxed_lbi.set_blob_name(s2b_conf->out());
+    p2b_conf->set_out("out");
+    p2b_logical_node->mut_op_vec() = {ConstructOp(p2b_op_conf)};
+    SetParallelDesc(p2b_logical_node);
+    Connect(src, NewEdge(), p2b_logical_node);
+    boxing_logical_node = p2b_logical_node;
+    boxed_lbi.set_op_name(p2b_op_conf.name());
+    boxed_lbi.set_blob_name(p2b_conf->out());
   } else {
     UNIMPLEMENTED();
   }
