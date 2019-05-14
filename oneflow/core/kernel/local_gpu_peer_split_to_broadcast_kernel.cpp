@@ -32,11 +32,11 @@ void LocalGpuPeerSplitToBroadcastKernel<T>::ForwardDataContent(
                                 ctx.device_ctx->cuda_stream()));
     } else {
       const int64_t rows = out->shape().Count(0, in_split_axis);
-      const int64_t src_pitch = in_i->shape().elem_cnt() / rows * sizeof(T);
+      const ino64_t inner_size = out->shape().Count(in_split_axis + 1) * sizeof(T);
+      const int64_t src_pitch = in_i->shape().At(in_split_axis) * inner_size;
       const void* src_dptr = in_i->dptr();
-      const int64_t dst_pitch = out->shape().elem_cnt() / rows * sizeof(T);
-      void* dst_dptr = out->mut_dptr<char>()
-                       + range.begin() * in_i->shape().Count(in_split_axis + 1) * sizeof(T);
+      const int64_t dst_pitch = out->shape().At(in_split_axis) * inner_size;
+      void* dst_dptr = out->mut_dptr<char>() + range.begin() * inner_size;
       CudaCheck(cudaMemcpy2DAsync(dst_dptr, dst_pitch, src_dptr, src_pitch, src_pitch, rows,
                                   cudaMemcpyDefault, ctx.device_ctx->cuda_stream()));
     }
