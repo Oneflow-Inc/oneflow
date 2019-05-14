@@ -541,7 +541,8 @@ void OpGraph::ForEachChainFamily(
           if (Is121Edge(edge)) { Handler(edge->dst_node()); }
         }
       };
-  ForEachConnectedComponent(ForEachConnectedWithSameSbp7ParallelDesc7TimeShape, Handler);
+  ForEachConnectedComponent(source_nodes(), ForEachConnectedWithSameSbp7ParallelDesc7TimeShape,
+                            Handler);
 }
 
 void OpGraph::ForEachPseudoChain(

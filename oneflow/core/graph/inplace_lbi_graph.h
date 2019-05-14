@@ -54,6 +54,8 @@ class InplaceLbiEdge final : public Edge<InplaceLbiNode, InplaceLbiEdge> {
   const Operator& op() const { return *op_; }
   const std::string& ibn() const { return ibn_; }
   const std::string& obn() const { return obn_; }
+  bool IsMutRef() const;
+  bool IsConstRef() const { return !IsMutRef(); }
 
  private:
   const Operator* op_;
@@ -87,23 +89,32 @@ class InplaceLbiGraph final : public Graph<const InplaceLbiNode, const InplaceLb
                                   IsReachableFromLbiToOpName,
                               const std::function<void(const InplaceLbiEdge*)>& Handler) const;
   void GetSafeInplaceObnEdges(const HashSet<const InplaceLbiNode*>& nodes,
-                              const HashSet<const InplaceLbiEdge*>& disabled_edges,
+                              const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge,
+                              const std::function<bool(const LogicalBlobId&, const std::string&)>&
+                                  IsReachableFromLbiToOpName,
                               HashSet<const InplaceLbiEdge*>* cur_disabled_edges) const;
-  void GetDisabledNodes(const HashSet<const InplaceLbiNode*>& nodes,
-                        const HashSet<const InplaceLbiEdge*>& disabled_edges,
-                        HashSet<const InplaceLbiNode*>* cur_disabled_nodes) const;
-  void DisconnectDataMutableEdgeByReachability(
+  const InplaceLbiEdge* FindFirstConstRefConflictMutRefEdge(
       const HashSet<const InplaceLbiNode*>& nodes,
-      const HashSet<const InplaceLbiEdge*>& disabled_edges,
+      const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge,
       const std::function<bool(const LogicalBlobId&, const std::string&)>&
-          IsReachableFromLbiToOpName,
-      HashSet<const InplaceLbiEdge*>* cur_disabled_edges) const;
-  void DisconnectDataMutableEdgeByReducingConficts(
+          IsReachableFromLbiToOpName) const;
+
+  const InplaceLbiEdge* FindFirstIntraOpRefConflictMutRefEdge(
       const HashSet<const InplaceLbiNode*>& nodes,
-      const HashSet<const InplaceLbiEdge*>& disabled_edges,
+      const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge) const;
+
+  const InplaceLbiEdge* FindFirstInterOpRefConflictMutRefEdge(
+      const HashSet<const InplaceLbiNode*>& nodes,
+      const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge,
       const std::function<bool(const LogicalBlobId&, const std::string&)>&
-          IsReachableFromLbiToOpName,
-      HashSet<const InplaceLbiEdge*>* cur_disabled_edges) const;
+          IsReachableFromLbiToOpName) const;
+
+  void ForEachTree(const HashSet<const InplaceLbiNode*>& nodes,
+                   const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge,
+                   const std::function<void(const HashSet<const InplaceLbiNode*>&)>& Handler) const;
+  void FindAllEdges(const HashSet<const InplaceLbiNode*>& nodes,
+                    const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge,
+                    HashSet<const InplaceLbiEdge*>* cur_disabled_edges) const;
 };
 
 }  // namespace oneflow

@@ -56,6 +56,7 @@ class Graph {
       const std::function<void(const HashSet<NodeType*>&)>& Handler) const;
 
   void ForEachConnectedComponent(
+      const std::list<NodeType*>& starts,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachConnected,
       const std::function<void(const HashSet<NodeType*>&)>& Handler) const;
 
@@ -362,16 +363,17 @@ Graph<NodeType, EdgeType>::MakePredicatorIsReachable(
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::ForEachConnectedComponent(
     const std::function<void(const HashSet<NodeType*>&)>& Handler) const {
-  ForEachConnectedComponent(&NodeType::ForEachNodeOnInOutEdge, Handler);
+  ForEachConnectedComponent(source_nodes(), &NodeType::ForEachNodeOnInOutEdge, Handler);
 }
 
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::ForEachConnectedComponent(
+    const std::list<NodeType*>& starts,
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachConnected,
     const std::function<void(const HashSet<NodeType*>&)>& Handler) const {
   HashMap<NodeType*, int32_t> node2component_id;
   int32_t cur_component_id = 0;
-  ForEachNode([&](NodeType* start) {
+  BfsForEachNode(starts, ForEachConnected, [&](NodeType* start) {
     if (node2component_id.find(start) != node2component_id.end()) { return; }
     ++cur_component_id;
     BfsForEachNode({start}, ForEachConnected, [&](NodeType* node) {
