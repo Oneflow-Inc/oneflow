@@ -81,6 +81,7 @@ class JobDesc final {
   float weight_l2() const;
   float bias_l2() const;
   int32_t DataPartNum() const;
+  int32_t loss_scale_factor() const;
 
  private:
   friend class Global<JobDesc>;

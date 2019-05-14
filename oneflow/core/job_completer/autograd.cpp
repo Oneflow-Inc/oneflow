@@ -120,7 +120,7 @@ std::function<bool(const LogicalBlobId&, const std::string&)> MakePredicatorHasD
   };
 }
 
-void GenerateOnesAsDiffLbi(const LogicalBlobId& lbi, std::vector<OperatorConf>* op_confs,
+void GenerateOriginDiffLbi(const LogicalBlobId& lbi, std::vector<OperatorConf>* op_confs,
                            LogicalBlobId* out_diff_lbi) {
   OperatorConf mul_zero_op;
   mul_zero_op.set_name(lbi.op_name() + "_" + lbi.blob_name() + "_grad_stage0");
@@ -130,15 +130,18 @@ void GenerateOnesAsDiffLbi(const LogicalBlobId& lbi, std::vector<OperatorConf>* 
   mul_zero_op_conf->set_int_operand(0);
   op_confs->push_back(mul_zero_op);
 
-  OperatorConf add_one_op;
-  add_one_op.set_name(lbi.op_name() + "_" + lbi.blob_name() + "_grad_stage1");
-  ScalarAddOpConf* add_one_op_conf = add_one_op.mutable_scalar_add_conf();
-  add_one_op_conf->set_in(mul_zero_op.name() + "/out");
-  add_one_op_conf->set_out("out");
-  add_one_op_conf->set_int_operand(1);
-  op_confs->push_back(add_one_op);
+  OperatorConf add_origin_grad_op;
+  add_origin_grad_op.set_name(lbi.op_name() + "_" + lbi.blob_name() + "_grad_stage1");
+  ScalarAddOpConf* add_origin_grad_op_conf = add_origin_grad_op.mutable_scalar_add_conf();
+  add_origin_grad_op_conf->set_in(mul_zero_op.name() + "/out");
+  add_origin_grad_op_conf->set_out("out");
+  {
+    int32_t origin_grad = Global<JobDesc>::Get()->loss_scale_factor();
+    add_origin_grad_op_conf->set_int_operand(origin_grad);
+  }
+  op_confs->push_back(add_origin_grad_op);
 
-  out_diff_lbi->set_op_name(add_one_op.name());
+  out_diff_lbi->set_op_name(add_origin_grad_op.name());
   out_diff_lbi->set_blob_name("out");
 }
 
@@ -359,7 +362,7 @@ void InitOutOba2OutDiffLbi(const std::list<OpNode*>& loss_nodes,
     LogicalBlobId* out_diff_lbi =
         &(*out_oba2out_diff_lbi)[GenOpBlobArg(loss_op_node->op().op_name(), *bn_it)];
     std::vector<OperatorConf> ops;
-    GenerateOnesAsDiffLbi(loss_lbi, &ops, out_diff_lbi);
+    GenerateOriginDiffLbi(loss_lbi, &ops, out_diff_lbi);
     job_builder->AddOps(loss_op_node->parallel_desc().parallel_conf(), ops);
   }
 }
