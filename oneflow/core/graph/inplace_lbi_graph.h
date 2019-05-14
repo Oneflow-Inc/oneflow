@@ -14,6 +14,10 @@ class InplaceLbiNode : public Node<InplaceLbiNode, InplaceLbiEdge> {
   virtual ~InplaceLbiNode() = default;
 
   const LogicalBlobId& lbi() const { return lbi_; }
+  const InplaceLbiEdge* GetValidInEdge(
+      const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge) const;
+  virtual bool IsMutRef(const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge) const;
+  bool IsConstRef(const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge) const;
 
  protected:
   OF_DISALLOW_COPY_AND_MOVE(InplaceLbiNode);
@@ -28,6 +32,8 @@ class NormalInplaceLbiNode final : public InplaceLbiNode {
   OF_DISALLOW_COPY_AND_MOVE(NormalInplaceLbiNode);
   explicit NormalInplaceLbiNode(const LogicalBlobId& lbi) : InplaceLbiNode(lbi) {}
   ~NormalInplaceLbiNode() override = default;
+
+  bool IsMutRef(const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge) const override;
 };
 
 class SourceOpInplaceLbiNode final : public InplaceLbiNode {
@@ -105,6 +111,12 @@ class InplaceLbiGraph final : public Graph<const InplaceLbiNode, const InplaceLb
 
   const InplaceLbiEdge* FindFirstInterOpRefConflictMutRefEdge(
       const HashSet<const InplaceLbiNode*>& nodes,
+      const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge,
+      const std::function<bool(const LogicalBlobId&, const std::string&)>&
+          IsReachableFromLbiToOpName) const;
+
+  bool IsConstRefConflictMutRefNode(
+      const InplaceLbiNode* mut_ref_node, const HashSet<const InplaceLbiNode*>& nodes,
       const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge,
       const std::function<bool(const LogicalBlobId&, const std::string&)>&
           IsReachableFromLbiToOpName) const;
