@@ -51,7 +51,7 @@ void LocalGpuPeerPartialSumToSplitOp::VirtualGenKernelConf(
       kernel_conf->mutable_local_gpu_peer_partial_sum_to_split_conf();
   const int64_t out_split_axis =
       op_conf().local_gpu_peer_partial_sum_to_split_conf().out_split_axis();
-  const BalancedSplitter bs(GetBlobDesc4BnInOp("in")->shape().At(out_split_axis),
+  const BalancedSplitter bs(GetBlobDesc4BnInOp(input_bns().Get(0))->shape().At(out_split_axis),
                             parallel_ctx->parallel_num());
   conf->mutable_range()->set_begin(bs.At(parallel_ctx->parallel_id()).begin());
   conf->mutable_range()->set_end(bs.At(parallel_ctx->parallel_id()).end());
