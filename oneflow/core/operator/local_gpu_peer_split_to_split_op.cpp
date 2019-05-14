@@ -40,10 +40,12 @@ void LocalGpuPeerSplitToSplitOp::InferBlobDescs(
     }
   }
   const int64_t in_split_dim_size = std::accumulate(parts.cbegin(), parts.cend(), 0L);
+  std::vector<int64_t> logical_blob_shape_vec = in_0->shape().dim_vec();
+  logical_blob_shape_vec[in_split_axis] = in_split_dim_size;
   const BalancedSplitter in_bs(in_split_dim_size, conf.in_size());
   FOR_RANGE(int64_t, i, 0, conf.in_size()) { CHECK_EQ(in_bs.At(i).size(), parts.at(i)); }
-  const int64_t split_dim_size = in_0->shape().At(out_split_axis);
-  const BalancedSplitter out_split_bs(split_dim_size, parallel_ctx->parallel_num());
+  const int64_t out_split_dim_size = logical_blob_shape_vec.at(out_split_axis);
+  const BalancedSplitter out_split_bs(out_split_dim_size, parallel_ctx->parallel_num());
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   *out = *in_0;
   out->mut_shape().Set(in_split_axis, in_split_dim_size);
@@ -52,6 +54,31 @@ void LocalGpuPeerSplitToSplitOp::InferBlobDescs(
 
 LogicalNode* LocalGpuPeerSplitToSplitOp::NewProperLogicalNode() const {
   return new LocalGpuPeerBoxingLogicalNode();
+}
+
+void LocalGpuPeerSplitToSplitOp::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+  LocalGpuPeerSplitToSplitKernelConf* conf =
+      kernel_conf->mutable_local_gpu_peer_split_to_split_conf();
+  const int64_t in_split_axis = op_conf().local_gpu_peer_split_to_split_conf().in_split_axis();
+  int64_t begin = 0;
+  FOR_RANGE(int64_t, i, 0, input_bns().size()) {
+    const BlobDesc* in_i = GetBlobDesc4BnInOp(GenRepeatedBn("in", i));
+    const int64_t size = in_i->shape().At(in_split_axis);
+    RangeProto* range = conf->mutable_in_split()->mutable_range()->Add();
+    range->set_begin(begin);
+    range->set_end(begin + size);
+    begin = range->end();
+  }
+  std::vector<int64_t> logical_blob_shape_vec =
+      GetBlobDesc4BnInOp(input_bns().Get(0))->shape().dim_vec();
+  logical_blob_shape_vec[in_split_axis] = begin;
+  const int64_t out_split_axis = op_conf().local_gpu_peer_split_to_split_conf().out_split_axis();
+  const BalancedSplitter out_bs(logical_blob_shape_vec.at(out_split_axis),
+                                parallel_ctx->parallel_num());
+  conf->mutable_out_range()->set_begin(out_bs.At(parallel_ctx->parallel_id()).begin());
+  conf->mutable_out_range()->set_end(out_bs.At(parallel_ctx->parallel_id()).end());
 }
 
 REGISTER_OP(OperatorConf::kLocalGpuPeerSplitToSplitConf, LocalGpuPeerSplitToSplitOp);
