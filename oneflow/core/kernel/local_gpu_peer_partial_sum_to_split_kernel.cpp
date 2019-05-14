@@ -35,7 +35,7 @@ void LocalGpuPeerPartialSumToSplitKernel<T>::ForwardDataContent(
       const void* src_dptr = in_i->dptr<char>() + range.begin() * inner_size;
       const int64_t dst_pitch = out->shape().At(out_split_axis) * inner_size;
       void* dst_dptr = out->mut_dptr();
-      CudaCheck(cudaMemcpy2DAsync(dst_dptr, dst_pitch, src_dptr, src_pitch, src_pitch, rows,
+      CudaCheck(cudaMemcpy2DAsync(dst_dptr, dst_pitch, src_dptr, src_pitch, dst_pitch, rows,
                                   cudaMemcpyDefault, ctx.device_ctx->cuda_stream()));
     }
     if (i != 0) {
