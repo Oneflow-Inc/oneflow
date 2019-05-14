@@ -1368,6 +1368,11 @@ message LocalGpuPeerPartialSumToSplitOpConf {
   required int64 out_split_axis = 3;
 }
 
+message LocalGpuPeerPartialSumToBroadcastOpConf {
+  repeated string in = 1;
+  required string out = 2;
+}
+
 message BlobDumpOpConf {
   required string in = 1;
   optional string dir = 2;
@@ -1421,7 +1426,7 @@ message OperatorConf {
     LocalGpuPeerSplitToSplitOpConf local_gpu_peer_split_to_split_conf = 136;
     LocalGpuPeerSplitToBroadcastOpConf local_gpu_peer_split_to_broadcast_conf = 137;
     LocalGpuPeerPartialSumToSplitOpConf local_gpu_peer_partial_sum_to_split_conf = 138;
-
+    LocalGpuPeerPartialSumToBroadcastOpConf local_gpu_peer_partial_sum_to_broadcast_conf = 139;
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
     TransposeOpConf transpose_conf = 201;

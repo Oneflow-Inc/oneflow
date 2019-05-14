@@ -25,7 +25,7 @@ void LocalGpuPeerPartialSumToSplitOp::InferBlobDescs(
   CHECK_GE(out_split_axis, 0);
   CHECK_LT(out_split_axis, num_axes);
   FOR_RANGE(int64_t, i, 1, input_bns().size()) {
-    const BlobDesc* in_i = GetBlobDesc4BnInOp(GenRepeatedBn("in", 0));
+    const BlobDesc* in_i = GetBlobDesc4BnInOp(GenRepeatedBn("in", i));
     CHECK_EQ(in_i->data_type(), in_0->data_type());
     CHECK_EQ(in_i->shape().NumAxes(), num_axes);
     FOR_RANGE(int64_t, axis, 0, in_i->shape().NumAxes()) {

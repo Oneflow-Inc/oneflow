@@ -28,7 +28,7 @@ void LocalGpuPeerSplitToSplitOp::InferBlobDescs(
   std::vector<int64_t> parts;
   parts.push_back(in_0->shape().At(in_split_axis));
   FOR_RANGE(int64_t, i, 1, input_bns().size()) {
-    const BlobDesc* in_i = GetBlobDesc4BnInOp(GenRepeatedBn("in", 0));
+    const BlobDesc* in_i = GetBlobDesc4BnInOp(GenRepeatedBn("in", i));
     CHECK_EQ(in_i->data_type(), in_0->data_type());
     CHECK_EQ(in_i->shape().NumAxes(), num_axes);
     FOR_RANGE(int64_t, axis, 0, in_i->shape().NumAxes()) {
