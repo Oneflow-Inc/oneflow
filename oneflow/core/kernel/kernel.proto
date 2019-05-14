@@ -158,7 +158,7 @@ message ShapeElemCntKernelConf {
 }
 
 message RangeProto {
-  required int64 start = 1;
+  required int64 begin = 1;
   required int64 end = 2;
 }
 
@@ -168,6 +168,10 @@ message RangeList {
 
 message LocalGpuPeerSplitToBroadcastKernelConf {
   required RangeList in_split = 1;
+}
+
+message LocalGpuPeerPartialSumToSplitKernelConf {
+  required RangeProto range = 1;
 }
 
 message KernelConf {
@@ -216,6 +220,6 @@ message KernelConf {
     ConvDataGradKernelConf conv_data_grad_conf = 411;
     ShapeElemCntKernelConf shape_elem_cnt_conf = 412;
     LocalGpuPeerSplitToBroadcastKernelConf local_gpu_peer_split_to_broadcast_conf = 413;
-
-  }
+    LocalGpuPeerPartialSumToSplitKernelConf local_gpu_peer_partial_sum_to_split_conf = 414;
+}
 }

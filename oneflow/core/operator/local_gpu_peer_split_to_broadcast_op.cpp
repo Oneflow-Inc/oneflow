@@ -55,14 +55,14 @@ void LocalGpuPeerSplitToBroadcastOp::VirtualGenKernelConf(
   LocalGpuPeerSplitToBroadcastKernelConf* conf =
       kernel_conf->mutable_local_gpu_peer_split_to_broadcast_conf();
   const int64_t in_split_axis = op_conf().local_gpu_peer_split_to_broadcast_conf().in_split_axis();
-  int64_t start = 0;
+  int64_t begin = 0;
   FOR_RANGE(int64_t, i, 0, input_bns().size()) {
     const BlobDesc* in_i = GetBlobDesc4BnInOp(GenRepeatedBn("in", i));
     const int64_t size = in_i->shape().At(in_split_axis);
     RangeProto* range = conf->mutable_in_split()->mutable_range()->Add();
-    range->set_start(start);
-    range->set_end(start + size);
-    start = range->end();
+    range->set_begin(begin);
+    range->set_end(begin + size);
+    begin = range->end();
   }
 }
 

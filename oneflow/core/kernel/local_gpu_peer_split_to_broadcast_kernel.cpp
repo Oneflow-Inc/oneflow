@@ -17,17 +17,17 @@ void LocalGpuPeerSplitToBroadcastKernel<T>::ForwardDataContent(
     const Blob* in_i = BnInOp2Blob(ibn);
     CHECK_EQ(in_i->shape().NumAxes(), out->shape().NumAxes());
     const RangeProto& range = conf.in_split().range(i);
-    CHECK_LT(range.start(), range.end());
+    CHECK_LT(range.begin(), range.end());
     CHECK_LE(range.end(), out->shape().At(in_split_axis));
     FOR_RANGE(int64_t, axis, 0, in_i->shape().NumAxes()) {
       if (axis == in_split_axis) {
-        CHECK_EQ(in_i->shape().At(axis), range.end() - range.start());
+        CHECK_EQ(in_i->shape().At(axis), range.end() - range.begin());
       } else {
         CHECK_EQ(in_i->shape().At(axis), out->shape().At(axis));
       }
     }
     if (in_split_axis == 0) {
-      CudaCheck(cudaMemcpyAsync(out->mut_dptr<T>(range.start()), in_i->dptr(),
+      CudaCheck(cudaMemcpyAsync(out->mut_dptr<T>(range.begin()), in_i->dptr(),
                                 in_i->ByteSizeOfDataContentField(), cudaMemcpyDefault,
                                 ctx.device_ctx->cuda_stream()));
     } else {
@@ -36,7 +36,7 @@ void LocalGpuPeerSplitToBroadcastKernel<T>::ForwardDataContent(
       const void* src_dptr = in_i->dptr();
       const int64_t dst_pitch = out->shape().elem_cnt() / rows * sizeof(T);
       void* dst_dptr = out->mut_dptr<char>()
-                       + range.start() * in_i->shape().Count(in_split_axis + 1) * sizeof(T);
+                       + range.begin() * in_i->shape().Count(in_split_axis + 1) * sizeof(T);
       CudaCheck(cudaMemcpy2DAsync(dst_dptr, dst_pitch, src_dptr, src_pitch, src_pitch, rows,
                                   cudaMemcpyDefault, ctx.device_ctx->cuda_stream()));
     }
