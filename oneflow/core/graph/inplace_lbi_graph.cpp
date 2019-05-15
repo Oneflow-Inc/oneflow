@@ -193,6 +193,7 @@ void InplaceLbiGraph::Init(const OpBlobArgList& obas,
                                             FindOrCreateNode(lbi));
   }
   ForEachNode([](const InplaceLbiNode* node) { CHECK_LE(node->in_edges().size(), 1); });
+  CHECK_ISNULL(FindFirstBackEdgeDstNode());
 }
 
 void InplaceLbiGraph::ComputeSafeInplaceObns(

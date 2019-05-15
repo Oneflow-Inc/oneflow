@@ -26,6 +26,11 @@ class Graph {
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachNext,
       const std::function<void(NodeType*)>& Handler) const;
 
+  void DfsForEachNode(
+      const std::list<NodeType*>& starts,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachNext,
+      const std::function<void(NodeType*)>& Handler) const;
+
   void TopoForEachNode(
       const std::list<NodeType*>& starts,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
@@ -59,6 +64,13 @@ class Graph {
       const std::list<NodeType*>& starts,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachConnected,
       const std::function<void(const HashSet<NodeType*>&)>& Handler) const;
+
+  NodeType* FindFirstBackEdgeDstNode(
+      const std::list<NodeType*>& starts,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachNext)
+      const;
+
+  NodeType* FindFirstBackEdgeDstNode() const;
 
   // Getters
   std::list<NodeType*> source_nodes() const;
@@ -238,6 +250,53 @@ void Graph<NodeType, EdgeType>::BfsForEachNode(
       }
     });
   }
+}
+
+template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::DfsForEachNode(
+    const std::list<NodeType*>& starts,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachNext,
+    const std::function<void(NodeType*)>& Handler) const {
+  HashSet<NodeType*> visited_nodes;
+  std::stack<NodeType*> stack;
+  for (NodeType* start : starts) { stack.push(start); }
+  while (!stack.empty()) {
+    NodeType* cur_node = stack.top();
+    stack.pop();
+    if (visited_nodes.find(cur_node) == visited_nodes.end()) {
+      Handler(cur_node);
+      visited_nodes.insert(cur_node);
+      ForEachNext(cur_node, [&](NodeType* next) {
+        if (visited_nodes.find(next) == visited_nodes.end()) { stack.push(next); }
+      });
+    }
+  }
+}
+
+template<typename NodeType, typename EdgeType>
+NodeType* Graph<NodeType, EdgeType>::FindFirstBackEdgeDstNode() const {
+  if (nodes_.empty()) { return nullptr; }
+  const auto& starts = source_nodes();
+  if (starts.empty()) { return nodes_.at(0).get(); }
+  return FindFirstBackEdgeDstNode(starts, &NodeType::ForEachNodeOnOutEdge);
+}
+
+template<typename NodeType, typename EdgeType>
+NodeType* Graph<NodeType, EdgeType>::FindFirstBackEdgeDstNode(
+    const std::list<NodeType*>& starts,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachNext)
+    const {
+  NodeType* back_edge_dst_node = nullptr;
+  HashSet<NodeType*> visited_nodes;
+  DfsForEachNode(starts, ForEachNext, [&](NodeType* node) {
+    if (back_edge_dst_node != nullptr) { return; }
+    visited_nodes.emplace(node);
+    ForEachNext(node, [&](NodeType* next_node) {
+      if (back_edge_dst_node != nullptr) { return; }
+      if (visited_nodes.find(next_node) != visited_nodes.end()) { back_edge_dst_node = next_node; }
+    });
+  });
+  return back_edge_dst_node;
 }
 
 template<typename NodeType, typename EdgeType>
