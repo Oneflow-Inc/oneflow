@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/pooling_grad_op.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -38,6 +39,13 @@ void PoolingGradOp::CheckPoolSizeAndStrides() const {
   const PbRf<int32_t>& strides = pooling_conf.strides();
   CHECK_EQ(strides.size(), num_spatial_dims);
   for (int32_t stride_dim : strides) { CHECK_GT(stride_dim, 0); }
+}
+
+void PoolingGradOp::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder().Split("x", 0).Split("y", 0).Split("dx", 0).Split("dy", 0).Build(
+      sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_OP(OperatorConf::kPoolingGradConf, PoolingGradOp);

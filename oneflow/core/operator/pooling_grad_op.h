@@ -19,8 +19,10 @@ class PoolingGradOp : public Operator {
 
  private:
   const PbMessage& GetCustomizedConf() const override;
-
   void CheckPoolSizeAndStrides() const;
+  void GetSbpSignatures(
+      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+      SbpSignatureList* sbp_sig_list) const override;
 };
 
 }  // namespace oneflow
