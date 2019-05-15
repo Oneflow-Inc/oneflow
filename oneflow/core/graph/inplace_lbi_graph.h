@@ -16,6 +16,10 @@ class InplaceLbiNode : public Node<InplaceLbiNode, InplaceLbiEdge> {
   const LogicalBlobId& lbi() const { return lbi_; }
   const InplaceLbiEdge* GetValidInEdge(
       const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge) const;
+  const InplaceLbiEdge* GetSoleValidInEdge(
+      const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge) const;
+  void ForEachNodeOnValidOutEdge(const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge,
+                                 const std::function<void(const InplaceLbiNode*)>& Handler) const;
   virtual bool IsMutRef(const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge) const;
   bool IsConstRef(const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge) const;
 
@@ -125,11 +129,11 @@ class InplaceLbiGraph final : public Graph<const InplaceLbiNode, const InplaceLb
       const HashSet<const InplaceLbiNode*>& nodes,
       const std::function<bool(const LogicalBlobId&, const std::string&)>&
           IsReachableFromLbiToOpName,
-      HashSet<const InplaceLbiEdge*>* disabled_edges) const;
+      HashSet<const InplaceLbiEdge*>* cur_disabled_edges) const;
 
   void DisconnectFirstDataMutableEdgeOnEveryPath(
-      const InplaceLbiNode* root, const HashSet<const InplaceLbiNode*>& nodes,
-      HashSet<const InplaceLbiEdge*>* disabled_edges) const;
+      const InplaceLbiNode* root, const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge,
+      HashSet<const InplaceLbiEdge*>* cur_disabled_edges) const;
 
   void ForEachTree(const HashSet<const InplaceLbiNode*>& nodes,
                    const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge,
