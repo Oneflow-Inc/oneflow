@@ -15,7 +15,7 @@ const InplaceLbiNode* GetRoot(const HashSet<const InplaceLbiNode*>& nodes,
   const InplaceLbiNode* root = nullptr;
   for (const InplaceLbiNode* node : nodes) {
     if (node->GetValidInEdge(IsValidEdge) == nullptr) {
-      CHECK(root == nullptr);
+      CHECK_ISNULL(root);
       root = node;
     }
   }
@@ -36,7 +36,7 @@ const InplaceLbiNode* GetIsMutableIbnConsumer(const InplaceLbiNode* node) {
   const InplaceLbiNode* ret = nullptr;
   for (const InplaceLbiEdge* edge : node->out_edges()) {
     if (dynamic_cast<const UpdateInplaceLbiNode*>(edge->dst_node()) != nullptr) {
-      CHECK(ret == nullptr);
+      CHECK_ISNULL(ret);
       ret = edge->dst_node();
     }
   }
