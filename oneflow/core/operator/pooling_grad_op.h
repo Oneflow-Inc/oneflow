@@ -20,6 +20,10 @@ class PoolingGradOp : public Operator {
  private:
   const PbMessage& GetCustomizedConf() const override;
   void CheckPoolSizeAndStrides() const;
+  void InferHasBatchDim(
+      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {
+    NaiveInferHasBatchDim(HasBatchDim4BnInOp);
+  }
   void GetSbpSignatures(
       const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
       SbpSignatureList* sbp_sig_list) const override;
