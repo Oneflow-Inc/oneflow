@@ -57,7 +57,7 @@ class BlobDesc {
   bool has_instance_shape_field() const { return has_instance_shape_; }
   void set_has_instance_shape_field(bool val);
 
-  bool has_actual_shape_field() const { return has_actutal_shape_; }
+  bool has_actual_shape_field() const { return has_actual_shape_; }
   void set_has_actual_shape_field(bool val);
 
   bool has_col_num_field() const { return has_col_num_; }
@@ -98,7 +98,7 @@ class BlobDesc {
   bool has_record_id_in_device_piece_;
   bool has_loss_instance_num_;
   bool has_instance_shape_;
-  bool has_actutal_shape_;
+  bool has_actual_shape_;
   int64_t max_col_num_;
   int32_t blob_mem_id_;
 

@@ -18,6 +18,7 @@ BlobDesc::BlobDesc(const Shape& shape, DataType data_type, bool has_data_id, boo
       has_record_id_in_device_piece_(false),
       has_loss_instance_num_(false),
       has_instance_shape_(false),
+      has_actual_shape_(false),
       max_col_num_(max_col_num),
       blob_mem_id_(-1),
       body_field_(shape, data_type) {}
@@ -39,6 +40,7 @@ void BlobDesc::InitFromProto(const BlobDescProto& proto) {
     has_record_id_in_device_piece_ = false;
     has_loss_instance_num_ = false;
     has_instance_shape_ = false;
+    has_actual_shape_ = false;
     opaque_header_ = FieldDesc(proto.header().opaque_header());
   } else {
     CHECK(proto.header().has_field_header());
@@ -51,6 +53,7 @@ void BlobDesc::InitFromProto(const BlobDescProto& proto) {
     has_record_id_in_device_piece_ = header_pod_desc_.HasField(FieldKey::kRecordIdInDevicePiece);
     has_loss_instance_num_ = header_pod_desc_.HasField(FieldKey::kLossInstanceNum);
     has_instance_shape_ = header_pod_desc_.HasField(FieldKey::kInstanceShape);
+    has_actual_shape_ = header_pod_desc_.HasField(FieldKey::kActualShape);
   }
   if (proto.has_dim0_inner_shape()) {
     dim0_inner_shape_.reset(new Shape(proto.dim0_inner_shape()));
@@ -67,6 +70,7 @@ BlobDesc::BlobDesc(const StructPodDesc& header_pod_desc, int64_t header_byte_siz
       has_record_id_in_device_piece_(false),
       has_loss_instance_num_(false),
       has_instance_shape_(false),
+      has_actual_shape_(false),
       max_col_num_(max_col_num),
       blob_mem_id_(-1),
       body_field_(shape, data_type) {
@@ -122,7 +126,7 @@ void BlobDesc::set_has_instance_shape_field(bool val) {
 
 void BlobDesc::set_has_actual_shape_field(bool val) {
   CHECK(!header_is_opaque_);
-  has_actutal_shape_ = val;
+  has_actual_shape_ = val;
 }
 
 Shape& BlobDesc::mut_dim0_inner_shape() {
@@ -219,7 +223,8 @@ bool BlobDesc::operator==(const BlobDesc& rhs) const {
          && has_record_id_in_device_piece_ == rhs.has_record_id_in_device_piece_
          && has_loss_instance_num_ == rhs.has_loss_instance_num_
          && has_instance_shape_ == rhs.has_instance_shape_ && max_col_num_ == rhs.max_col_num_
-         && blob_mem_id_ == rhs.blob_mem_id_ && body_field_ == rhs.body_field_;
+         && has_actual_shape_ == rhs.has_actual_shape_ && blob_mem_id_ == rhs.blob_mem_id_
+         && body_field_ == rhs.body_field_;
 }
 
 BlobDesc& BlobDesc::operator=(const BlobDesc& blob_desc) {
