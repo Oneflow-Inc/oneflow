@@ -125,13 +125,13 @@ class InplaceLbiGraph final : public Graph<const InplaceLbiNode, const InplaceLb
       const std::function<bool(const LogicalBlobId&, const std::string&)>&
           IsReachableFromLbiToOpName) const;
 
-  void DisconnectUnReachabeAndDataMutableEdge(
+  void FixConstRefOrMutRefConflictsToUpdtNode(
       const HashSet<const InplaceLbiNode*>& nodes,
       const std::function<bool(const LogicalBlobId&, const std::string&)>&
           IsReachableFromLbiToOpName,
       HashSet<const InplaceLbiEdge*>* cur_disabled_edges) const;
 
-  void DisconnectFirstDataMutableEdgeOnEveryPath(
+  void FixMutRefConflictsFromSourceOpNode(
       const InplaceLbiNode* root, const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge,
       HashSet<const InplaceLbiEdge*>* cur_disabled_edges) const;
 
