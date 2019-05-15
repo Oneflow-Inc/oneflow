@@ -121,6 +121,16 @@ class InplaceLbiGraph final : public Graph<const InplaceLbiNode, const InplaceLb
       const std::function<bool(const LogicalBlobId&, const std::string&)>&
           IsReachableFromLbiToOpName) const;
 
+  void DisconnectUnReachabeAndDataMutableEdge(
+      const HashSet<const InplaceLbiNode*>& nodes,
+      const std::function<bool(const LogicalBlobId&, const std::string&)>&
+          IsReachableFromLbiToOpName,
+      HashSet<const InplaceLbiEdge*>* disabled_edges) const;
+
+  void DisconnectFirstDataMutableEdgeOnEveryPath(
+      const InplaceLbiNode* root, const HashSet<const InplaceLbiNode*>& nodes,
+      HashSet<const InplaceLbiEdge*>* disabled_edges) const;
+
   void ForEachTree(const HashSet<const InplaceLbiNode*>& nodes,
                    const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge,
                    const std::function<void(const HashSet<const InplaceLbiNode*>&)>& Handler) const;
