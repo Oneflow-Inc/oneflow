@@ -98,6 +98,11 @@ class Graph {
   void ToDotWithAutoFilePath();
 
  private:
+  NodeType* FindFirstBackEdgeDstNode(
+      const std::list<NodeType*>& starts,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachNext,
+      size_t* node_cnt) const;
+
   std::vector<std::unique_ptr<NodeType>> nodes_;
   std::vector<std::unique_ptr<EdgeType>> edges_;
 };
@@ -278,7 +283,17 @@ NodeType* Graph<NodeType, EdgeType>::FindFirstBackEdgeDstNode() const {
   if (nodes_.empty()) { return nullptr; }
   const auto& starts = source_nodes();
   if (starts.empty()) { return nodes_.at(0).get(); }
-  return FindFirstBackEdgeDstNode(starts, &NodeType::ForEachNodeOnOutEdge);
+  size_t node_cnt = 0;
+  auto ForEachNext = &NodeType::ForEachNodeOnOutEdge;
+  NodeType* ret = FindFirstBackEdgeDstNode(starts, ForEachNext, &node_cnt);
+  if (ret == nullptr && node_cnt != nodes_.size()) {
+    HashSet<NodeType*> visited_nodes;
+    BfsForEachNode(starts, ForEachNext, [&](NodeType* node) { visited_nodes.emplace(node); });
+    for (const auto& node : nodes_) {
+      if (visited_nodes.find(node.get()) == visited_nodes.end()) { return node.get(); }
+    }
+  }
+  return ret;
 }
 
 template<typename NodeType, typename EdgeType>
@@ -286,9 +301,20 @@ NodeType* Graph<NodeType, EdgeType>::FindFirstBackEdgeDstNode(
     const std::list<NodeType*>& starts,
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachNext)
     const {
+  size_t node_cnt = 0;
+  return FindFirstBackEdgeDstNode(starts, ForEachNext, &node_cnt);
+}
+
+template<typename NodeType, typename EdgeType>
+NodeType* Graph<NodeType, EdgeType>::FindFirstBackEdgeDstNode(
+    const std::list<NodeType*>& starts,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachNext,
+    size_t* node_cnt) const {
   NodeType* back_edge_dst_node = nullptr;
   HashSet<NodeType*> visited_nodes;
+  *node_cnt = 0;
   DfsForEachNode(starts, ForEachNext, [&](NodeType* node) {
+    ++*node_cnt;
     if (back_edge_dst_node != nullptr) { return; }
     visited_nodes.emplace(node);
     ForEachNext(node, [&](NodeType* next_node) {
