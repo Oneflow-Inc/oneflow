@@ -228,21 +228,21 @@ void InplaceLbiGraph::ComputeSafeInplaceObns(
   };
   size_t dead_loop_check = remainder_nodes.size();
   while (!remainder_nodes.empty()) {
-    {
+    ForEachTree(remainder_nodes, IsValidEdge, [&](const HashSet<const InplaceLbiNode*>& nodes) {
       const InplaceLbiEdge* cur_disabled_edge =
-          FindFirstIntraOpRefConflictMutRefEdge(remainder_nodes, IsValidEdge);
+          FindFirstIntraOpRefConflictMutRefEdge(nodes, IsValidEdge);
       if (cur_disabled_edge != nullptr) { disabled_edges.insert(cur_disabled_edge); }
-    }
-    {
-      const InplaceLbiEdge* cur_disabled_edge = FindFirstConstRefConflictMutRefEdge(
-          remainder_nodes, IsValidEdge, IsReachableFromLbiToOpName);
+    });
+    ForEachTree(remainder_nodes, IsValidEdge, [&](const HashSet<const InplaceLbiNode*>& nodes) {
+      const InplaceLbiEdge* cur_disabled_edge =
+          FindFirstConstRefConflictMutRefEdge(nodes, IsValidEdge, IsReachableFromLbiToOpName);
       if (cur_disabled_edge != nullptr) { disabled_edges.insert(cur_disabled_edge); }
-    }
-    {
-      const InplaceLbiEdge* cur_disabled_edge = FindFirstInterOpRefConflictMutRefEdge(
-          remainder_nodes, IsValidEdge, IsReachableFromLbiToOpName);
+    });
+    ForEachTree(remainder_nodes, IsValidEdge, [&](const HashSet<const InplaceLbiNode*>& nodes) {
+      const InplaceLbiEdge* cur_disabled_edge =
+          FindFirstInterOpRefConflictMutRefEdge(nodes, IsValidEdge, IsReachableFromLbiToOpName);
       if (cur_disabled_edge != nullptr) { disabled_edges.insert(cur_disabled_edge); }
-    }
+    });
     {
       HashSet<const InplaceLbiEdge*> cur_safe_inplace_obn_edges;
       GetSafeInplaceObnEdges(remainder_nodes, IsValidEdge, IsReachableFromLbiToOpName,
