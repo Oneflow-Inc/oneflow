@@ -15,7 +15,7 @@ class DecodeOFRecordOp final : public Operator {
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
 
-  LogicalNode* NewProperLogicalNode() override { return new DecodeLogicalNode; }
+  LogicalNode* NewProperLogicalNode() const override { return new DecodeLogicalNode; }
 
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
@@ -24,7 +24,8 @@ class DecodeOFRecordOp final : public Operator {
                             KernelConf* kernel_conf) const override;
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
+  void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
+  void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 
   LogicalBlobId obn2lbi(const std::string& output_bn) const override;
 };

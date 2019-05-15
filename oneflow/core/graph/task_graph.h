@@ -39,7 +39,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByRecordLoadToTick);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByTickToSource);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBroadcastToBroadcast);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceAdd);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceAdd2ReduceGather);
@@ -73,6 +73,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
                      std::vector<TaskNode*>* sorted_in_box,
                      std::function<int64_t(const TaskNode*)> AllocateCpuThrdId);
   void ConnectWithCopyCommNetIfNeed(TaskNode* src, TaskNode* dst);
+  void ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_nodes,
+                        const std::vector<CompTaskNode*>& dst_task_nodes, int64_t ctrl_regst_num);
 
   void SetAreaIdForNewNodes(const LogicalNode* src_logical, const LogicalNode* dst_logical);
   void MergeChainAndSetOrderInGraphForEachNode();

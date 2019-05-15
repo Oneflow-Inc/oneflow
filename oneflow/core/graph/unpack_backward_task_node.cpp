@@ -5,17 +5,17 @@ namespace oneflow {
 
 void UnpackBackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("in_diff", false);
-  BindEdgeWithProducedRegst(SoleOutEdge(), "in_diff");
+  BindEdgeWithProducedRegst(SoleOutDataEdge(), "in_diff");
 }
 
 void UnpackBackwardCompTaskNode::ConsumeAllRegsts() {
-  for (TaskEdge* edge : in_edges()) {
+  ForEachInDataEdge([&](TaskEdge* edge) {
     if (edge->src_node()->GetTaskType() == TaskType::kUnpackForward) {
       ConsumeRegst("in", edge->src_node()->GetSoleConsumedRegst("in"));
     } else {
       ConsumeRegst("out_diff", edge->GetSoleRegst());
     }
-  }
+  });
 }
 
 void UnpackBackwardCompTaskNode::BuildExecGphAndRegst() {

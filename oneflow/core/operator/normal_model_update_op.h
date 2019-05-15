@@ -22,8 +22,13 @@ class NormalModelUpdtOp : public Operator {
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext*) const {}
 
+  virtual const HashSet<std::string> AlwaysBroadcastParallelBns() const = 0;
+
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return true; }
+  void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
+  void GetSbpSignatures(
+      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+      SbpSignatureList* sbp_sig_list) const override;
 
   LogicalBlobId obn2lbi(const std::string& output_bn) const override;
 };

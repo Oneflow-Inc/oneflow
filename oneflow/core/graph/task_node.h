@@ -65,7 +65,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void ForEachConsumedDataRegst(
       std::function<void(const std::string&, const RegstDesc*)> Handler) const;
   void Build();
-  virtual bool IsReadyForBuild() { return IsAllConsumedRegstLocked(); }
+  virtual bool IsReadyForBuild() { return IsAllConsumedDataRegstLocked(); }
 
   void EraseZeroSizeProducedBlob();
   void EraseZeroSizeConsumedRegst();
@@ -82,6 +82,19 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual int64_t MemZoneId121() const;  // TODO: there is bug for reduce task node
   void BuildCtrlRegstDescIfNeed(TaskNode* dst_node);
   RegstDesc* BuildCtrlRegstDesc(TaskNode* dst_node);
+  RegstDesc* BuildCtrlRegstDesc(TaskNode* dst_node, std::string* name);
+
+  void ForEachInDataEdge(const std::function<void(TaskEdge*)>& Handler) const;
+  void ForEachOutDataEdge(const std::function<void(TaskEdge*)>& Handler) const;
+
+  void ForEachNodeOnInDataEdge(const std::function<void(TaskNode*)>& Handler) const;
+  void ForEachNodeOnOutDataEdge(const std::function<void(TaskNode*)>& Handler) const;
+  void ForEachNodeOnInOutDataEdge(const std::function<void(TaskNode*)>& Handler) const;
+
+  TaskEdge* SoleInDataEdge() const;
+  TaskEdge* SoleOutDataEdge() const;
+  size_t in_data_edges_size() const;
+  size_t out_data_edges_size() const;
 
  protected:
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, bool enable_mem_sharing);
@@ -96,7 +109,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void InitProducedRegstMemCase(MemoryCase*);
   virtual void PinConsumedRegstMemCase(MemoryCase*);
   void ConsumeRegst(const std::string& name, std::shared_ptr<RegstDesc>);
-  bool IsAllConsumedRegstLocked();
+  bool IsAllConsumedDataRegstLocked();
   ExecGraph& mut_exec_gph() { return exec_gph_; }
   void TryLockConsumedRegst(const std::string& name);
   void EraseConsumedRegstsByName(const std::string& name);
@@ -110,6 +123,11 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
   virtual void InferProducedDataRegstTimeShape() = 0;
   void NaiveInferProducedDataRegstTimeShape();
+
+  TaskEdge* GetSoleEdge(void (TaskNode::*ForEachEdge)(const std::function<void(TaskEdge*)>&)
+                            const) const;
+  size_t GetEdgesSize(void (TaskNode::*ForEachEdge)(const std::function<void(TaskEdge*)>&)
+                          const) const;
 
  private:
   void UpdateTaskId();

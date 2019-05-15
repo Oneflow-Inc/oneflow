@@ -37,6 +37,10 @@ const PbMessage& MomentumModelUpdateOp::GetCustomizedConf() const {
   }
 }
 
+const HashSet<std::string> MomentumModelUpdateOp::AlwaysBroadcastParallelBns() const {
+  return HashSet<std::string>{};
+}
+
 REGISTER_CLASS(NormalModelUpdateOpUserConf::kMomentumConf, NormalModelUpdtOp,
                MomentumModelUpdateOp);
 

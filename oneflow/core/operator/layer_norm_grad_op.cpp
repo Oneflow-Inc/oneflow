@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/layer_norm_grad_op.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -59,9 +60,11 @@ void LayerNormGradOp::InferBlobDescs(
   *bn_bias_diff = *bn_scale;
 }
 
-void LayerNormGradOp::GetSbpSignatures(
-    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(MakeDataSplitSbpSignature(this));
+void LayerNormGradOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split(input_bns(), 0)
+      .Split(output_bns(), 0)
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_OP(OperatorConf::kLayerNormGradConf, LayerNormGradOp);

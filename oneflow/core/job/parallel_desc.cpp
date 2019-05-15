@@ -58,9 +58,12 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) : parallel_conf_(user_
   SanityCheck();
 }
 
-bool ParallelDesc::Equal(const ParallelDesc& rhs) const {
-  return device_type_ == rhs.device_type_ && policy() == rhs.policy()
-         && sorted_machine_ids_ == rhs.sorted_machine_ids_
+bool ParallelDesc::Equals(const ParallelDesc& rhs) const {
+  return EqualsIgnoringPolicy(rhs) && policy() == rhs.policy();
+}
+
+bool ParallelDesc::EqualsIgnoringPolicy(const ParallelDesc& rhs) const {
+  return device_type_ == rhs.device_type_ && sorted_machine_ids_ == rhs.sorted_machine_ids_
          && machine_id2sorted_dev_phy_ids_ == rhs.machine_id2sorted_dev_phy_ids_;
 }
 

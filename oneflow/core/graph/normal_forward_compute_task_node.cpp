@@ -5,41 +5,30 @@
 
 namespace oneflow {
 
-namespace {
-
-bool IsAllOutputNaive(const LogicalNode* logical_node) {
-  const Operator* op = logical_node->SoleOp().get();
-  if (op->IsAllOutputConst()) {
-    return false;
-  } else if (dynamic_cast<const VariableOp*>(op) != nullptr) {
-    return false;
-  } else {
-    return true;
-  }
-}
-
-}  // namespace
-
 bool NormalForwardCompTaskNode::HasBackwardCompTaskNode() {
-  for (TaskEdge* edge : out_edges()) {
+  bool ret = false;
+  ForEachOutDataEdge([&](TaskEdge* edge) {
     const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
-    if (succ_logical->TypeName() == "NormalBackward") { return true; }
-  }
-  return false;
+    if (ret == false && succ_logical->TypeName() == "NormalBackward") { ret = true; }
+  });
+  return ret;
 }
 
 void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  if (IsAllOutputNaive(logical_node())) {
-    ProduceRegst("out", true);
-  } else {
+  const Operator& op = *logical_node()->SoleOp();
+  if (op.IsAllOutputConst() || op.op_conf().has_variable_conf()) {
     ProduceRegst("out", false, 1, 1);
+  } else if (op.op_conf().has_keep_header_only_conf()) {
+    ProduceRegst("out", false, 100, 100);
+  } else {
+    ProduceRegst("out", true);
   }
   ProduceRegst("activation", true);
   ProduceRegst("data_tmp", true);
   ProduceRegst("fw_buf", true, 1, 1);
   ProduceRegst("forward_model", false);
   ProduceRegst("const_buf", false, 1, 1);
-  for (TaskEdge* edge : out_edges()) {
+  ForEachOutDataEdge([&](TaskEdge* edge) {
     const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
     if (succ_logical->TypeName() == "MdSave") {
       BindEdgeWithProducedRegst(edge, "forward_model");
@@ -51,11 +40,11 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
     } else {
       BindEdgeWithProducedRegst(edge, "out");
     }
-  }
+  });
 }
 
 void NormalForwardCompTaskNode::ConsumeAllRegsts() {
-  for (TaskEdge* edge : in_edges()) {
+  ForEachInDataEdge([&](TaskEdge* edge) {
     TaskNode* src_node = edge->src_node();
     TaskType src_task_type = src_node->GetTaskType();
     if (src_task_type == TaskType::kNormalMdUpdt) {
@@ -64,7 +53,7 @@ void NormalForwardCompTaskNode::ConsumeAllRegsts() {
     } else {
       ConsumeRegst("in", edge->GetSoleRegst());
     }
-  }
+  });
 }
 
 bool NormalForwardCompTaskNode::IsReadyForBuild() {

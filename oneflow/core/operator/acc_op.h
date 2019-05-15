@@ -14,7 +14,7 @@ class AccOp final : public Operator {
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
-  LogicalNode* NewProperLogicalNode() override { return new AccLogicalNode; }
+  LogicalNode* NewProperLogicalNode() const override { return new AccLogicalNode; }
 
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
@@ -23,7 +23,7 @@ class AccOp final : public Operator {
                                 Shape* time_shape) const override;
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return true; }
+  void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
 };
 
 }  // namespace oneflow

@@ -1,39 +1,7 @@
 #include "oneflow/core/operator/cast_op.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
-
-namespace {
-
-class CastSbpSignature final : public ParallelSbpSignature {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CastSbpSignature);
-  ~CastSbpSignature() override = default;
-
-  CastSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
-
-  const std::string Description() const override { return op().op_name() + ": (A,) -> (A,)"; }
-
-  const SbpSigMatchResult GetMatchResult(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      const ParallelDesc& parallel_desc) const override {
-    const SbpInferHint& in_sbp_infer_hint = SbpInferHint4BnInOp("in");
-    if (in_sbp_infer_hint.sbp_parallel().has_split_parallel() == false
-        && in_sbp_infer_hint.parallel_num() != parallel_desc.parallel_num()) {
-      return MakeSbpSigMatchParallelNumError(parallel_desc.parallel_num(),
-                                             in_sbp_infer_hint.parallel_num());
-    }
-    return MakeSbpSigMatchSuccess();
-  }
-
-  void GenerateSignature(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
-    (*bn2sbp)["in"] = SbpInferHint4BnInOp("in").sbp_parallel();
-    (*bn2sbp)["out"] = SbpInferHint4BnInOp("in").sbp_parallel();
-  }
-};
-
-}  // namespace
 
 void CastOp::InitFromOpConf() {
   CHECK(op_conf().has_cast_conf());
@@ -51,17 +19,29 @@ void CastOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   out_blob_desc->set_data_type(op_conf().cast_conf().data_type());
 }
 
-void CastOp::FixInputOutputSbpParallel(
-    const std::function<SbpParallel*(const std::string&)>& SbpParallel4BnInOp) const {
-  if (SbpParallel4BnInOp("out")->has_partial_sum_parallel()) {
-    SbpParallel4BnInOp("in")->mutable_broadcast_parallel();
-    SbpParallel4BnInOp("out")->mutable_broadcast_parallel();
+void CastOp::FixSbpSignature(
+    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+    SbpSignature* sbp_signature) const {
+  auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
+  if (bn2sbp->at("out").has_partial_sum_parallel()  // TODO: data_type is float16
+      && Global<JobDesc>::Get()->all_reduce_fp16()) {
+    bn2sbp->at("in").mutable_broadcast_parallel();
+    bn2sbp->at("out").mutable_broadcast_parallel();
   }
 }
 
 void CastOp::GetSbpSignatures(
-    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new CastSbpSignature(this));
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split(input_bns(), 0)
+      .Split(output_bns(), 0)
+      .MakeSplitSignatureListBuilder(LogicalBlobDesc4Ibn("in").shape().NumAxes())
+      .Build(sbp_sig_list);
+  SbpSignatureBuilder()
+      .PartialSum(input_bns())
+      .PartialSum(output_bns())
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_OP(OperatorConf::kCastConf, CastOp);

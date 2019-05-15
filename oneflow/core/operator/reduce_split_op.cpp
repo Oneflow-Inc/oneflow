@@ -20,9 +20,10 @@ void ReduceSplitOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   if (Global<JobDesc>::Get()->IsPredict()
       && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     FOR_RANGE(int32_t, i, 0, conf.out_num()) {
+      BlobDesc* blob_desc = GetBlobDesc4BnInOp(output_bns().Get(i));
       Shape shape(conf.out_shape(i));
-      CHECK_EQ(GetBlobDesc4BnInOp(output_bns().Get(i))->shape().elem_cnt(), shape.elem_cnt());
-      GetBlobDesc4BnInOp(output_bns().Get(i))->mut_shape() = shape;
+      blob_desc->mut_shape() = shape;
+      blob_desc->set_data_type(GetBlobDesc4BnInOp("in")->data_type());
     }
   }
 }
@@ -43,6 +44,30 @@ void ReduceSplitOp::VirtualGenKernelConf(
       RoundUp(offset / data_type_byte_size, parallel_ctx->parallel_num());
   const int64_t in_blob_elem_cnt = GetBlobDesc4BnInOp(SoleIbn())->shape().elem_cnt();
   CHECK_EQ(out_blob_elem_cnt_sum, in_blob_elem_cnt);
+}
+
+LogicalBlobId ReduceSplitOp::ibn2lbi(const std::string& input_bn) const {
+  if (Global<JobDesc>::Get()->IsPredict()
+      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+    return this->Operator::ibn2lbi(input_bn);
+  } else {
+    return GenPackedLbi();
+  }
+}
+
+LogicalBlobId ReduceSplitOp::obn2lbi(const std::string& output_bn) const {
+  if (Global<JobDesc>::Get()->IsPredict()
+      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+    return this->Operator::obn2lbi(output_bn);
+  } else {
+    return GenPackedLbi();
+  }
+}
+
+void ReduceSplitOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  CHECK_EQ(*HasBatchDim4BnInOp("in"), false);
+  for (const auto& ibn : input_bns()) { *HasBatchDim4BnInOp(ibn) = false; }
 }
 
 REGISTER_OP(OperatorConf::kReduceSplitConf, ReduceSplitOp);

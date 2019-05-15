@@ -19,7 +19,6 @@ class PoolingGradOp : public Operator {
 
  private:
   const PbMessage& GetCustomizedConf() const override;
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
 
   void CheckPoolSizeAndStrides() const;
 };

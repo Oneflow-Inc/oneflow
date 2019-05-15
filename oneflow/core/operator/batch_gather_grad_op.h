@@ -18,9 +18,13 @@ class BatchGatherGradOp final : public Operator {
                       const ParallelContext* parallel_ctx) const override;
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
+  void InferHasBatchDim(
+      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {
+    NaiveInferHasBatchDim(HasBatchDim4BnInOp);
+  }
   void GetSbpSignatures(
-      std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const override;
+      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+      SbpSignatureList* sbp_sig_list) const override;
 };
 
 }  // namespace oneflow

@@ -13,7 +13,7 @@ class AccuracyOp final : public Operator {
   virtual ~AccuracyOp() = default;
 
   void InitFromOpConf() override;
-  LogicalNode* NewProperLogicalNode() override { return new AccuracyLogicalNode; }
+  LogicalNode* NewProperLogicalNode() const override { return new AccuracyLogicalNode; }
 
   const PbMessage& GetCustomizedConf() const override;
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -22,8 +22,6 @@ class AccuracyOp final : public Operator {
                             const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const;
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
-
   LogicalBlobId obn2lbi(const std::string& output_bn) const override;
 };
 

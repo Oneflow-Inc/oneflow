@@ -11,11 +11,11 @@ void BroadcastLikeKernel<device_type, T>::ForwardDataContent(
   Blob* y_blob = BnInOp2Blob("y");
   const int64_t num_axes = y_blob->shape().NumAxes();
   const BroadcastLikeOpConf& conf = this->op_conf().broadcast_like_conf();
+  const Shape& reduced_shape = like_blob->shape().CreateReducedShapeOrOnesShape(
+      {conf.reduced_axis().begin(), conf.reduced_axis().end()});
   NdarrayUtil<device_type, T>::BroadcastTo(
       ctx.device_ctx, XpuVarNdarray<T>(y_blob, num_axes),
-      XpuVarNdarray<const T>(like_blob->shape().CreateReducedShape(
-                                 {conf.reduced_axis().begin(), conf.reduced_axis().end()}),
-                             x_blob->dptr<T>()));
+      XpuVarNdarray<const T>(reduced_shape, x_blob->dptr<T>()));
 }
 
 template<DeviceType device_type, typename T>

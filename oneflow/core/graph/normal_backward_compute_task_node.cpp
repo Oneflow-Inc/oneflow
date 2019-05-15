@@ -13,7 +13,7 @@ void NormalBackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("in_diff", true);
   ProduceRegst("activation_diff", true, 1, 1);
   ProduceRegst("bw_buf", true, 1, 1);
-  for (TaskEdge* edge : out_edges()) {
+  ForEachOutDataEdge([&](TaskEdge* edge) {
     const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
     if (succ_logical->MayConsumeModelDiff()) {
       edge->AddRegst("model_diff", ProduceRegst("model_diff", true, 1, 1));
@@ -21,11 +21,11 @@ void NormalBackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
     } else {
       BindEdgeWithProducedRegst(edge, "in_diff");
     }
-  }
+  });
 }
 
 void NormalBackwardCompTaskNode::ConsumeAllRegsts() {
-  for (TaskEdge* edge : in_edges()) {
+  ForEachInDataEdge([&](TaskEdge* edge) {
     TaskNode* src_node = edge->src_node();
     TaskType src_task_type = src_node->GetTaskType();
     if (IsForwardTaskType(src_task_type)) {
@@ -39,7 +39,7 @@ void NormalBackwardCompTaskNode::ConsumeAllRegsts() {
     } else {
       ConsumeRegst("out_diff", edge->GetSoleRegst());
     }
-  }
+  });
   CompTaskNode* fw_task = GetRelatedFwTaskNode();
   if (fw_task) {
     const std::list<std::shared_ptr<RegstDesc>>& in_regst = fw_task->GetConsumedRegst("in");
@@ -203,11 +203,14 @@ void NormalBackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
 }
 
 CompTaskNode* NormalBackwardCompTaskNode::GetRelatedFwTaskNode() {
-  for (TaskEdge* edge : in_edges()) {
+  CompTaskNode* ret = nullptr;
+  ForEachInDataEdge([&](TaskEdge* edge) {
     TaskNode* fw_node = edge->src_node();
-    if (IsForwardTaskType(fw_node->GetTaskType())) { return static_cast<CompTaskNode*>(fw_node); }
-  }
-  return nullptr;
+    if (ret == nullptr && IsForwardTaskType(fw_node->GetTaskType())) {
+      ret = static_cast<CompTaskNode*>(fw_node);
+    }
+  });
+  return ret;
 }
 
 void NormalBackwardCompTaskNode::FixPackedBlobDescOfProducedRegst() {

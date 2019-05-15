@@ -1,5 +1,6 @@
 #include "oneflow/core/operator/softmax_op.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -105,6 +106,13 @@ SoftmaxOpCtx* SoftmaxOp::NewSoftmaxOpCtx(const Shape& in_shape) const {
     op_ctx->need_transpose = true;
   }
   return op_ctx;
+}
+
+void SoftmaxOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split(input_bns(), 0)
+      .Split(output_bns(), 0)
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_OP(OperatorConf::kSoftmaxConf, SoftmaxOp);

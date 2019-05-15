@@ -3,7 +3,7 @@
 
 namespace oneflow {
 
-void oneflow::RepeatOp::InitFromOpConf() {
+void RepeatOp::InitFromOpConf() {
   CHECK(op_conf().has_repeat_conf());
   const RepeatOpConf& conf = op_conf().repeat_conf();
   CHECK_GE(conf.repeat_num(), 1);
@@ -43,7 +43,7 @@ void RepeatOp::InferDiffBlobDescsWithoutFwBlob(
   *in_diff_blob_desc = *out_diff_blob_desc;
 }
 
-LogicalNode* RepeatOp::NewProperLogicalNode() { return new RepeatForwardLogicalNode(); }
+LogicalNode* RepeatOp::NewProperLogicalNode() const { return new RepeatForwardLogicalNode(); }
 
 REGISTER_OP(OperatorConf::kRepeatConf, RepeatOp);
 

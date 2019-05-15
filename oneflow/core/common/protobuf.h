@@ -11,6 +11,8 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/register/logical_blob_id.pb.h"
+#include "oneflow/core/register/op_blob_arg.pb.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
 
 namespace oneflow {
@@ -86,6 +88,8 @@ PbRpf<T>* MutPbRpfFromPbMessage(PbMessage* msg, const std::string& field_name) {
 template<typename T>
 void SetValInPbMessage(PbMessage* msg, const std::string& field_name, const T& val);
 
+const PbMessage& GetMessageInPbMessage(const PbMessage& msg, int field_index);
+
 PbMessage* MutableMessageInPbMessage(PbMessage*, const std::string& field_name);
 PbMessage* MutableMessageInPbMessage(PbMessage*, int field_index);
 
@@ -142,6 +146,18 @@ const T* GetMsgPtrFromPbMessage(const PbMessage& msg, const std::string& field_n
   }
 }
 
+template<typename T = PbMessage>
+const T* TryGetMsgPtrFromPbMessage(const PbMessage& msg, const std::string& field_name) {
+  PROTOBUF_GET_FIELDDESC(msg, field_name);
+  if (fd == nullptr) { return nullptr; }
+  auto r = const_cast<google::protobuf::Reflection*>(msg.GetReflection());
+  if (r->HasField(msg, fd)) {
+    return static_cast<const T*>(&(GetValFromPbMessage<const PbMessage&>(msg, field_name)));
+  } else {
+    return nullptr;
+  }
+}
+
 // If value exists in RepeatedField
 template<typename T>
 bool IsInRepeatedField(const PbRf<T>& repeated_field, const T& value) {
@@ -165,6 +181,12 @@ inline bool operator==(const LogicalBlobId& lhs, const LogicalBlobId& rhs) {
 
 inline bool operator!=(const LogicalBlobId& lhs, const LogicalBlobId& rhs) { return !(lhs == rhs); }
 
+inline bool operator==(const OpBlobArg& lhs, const OpBlobArg& rhs) {
+  return PbMd().Equals(lhs, rhs);
+}
+
+inline bool operator!=(const OpBlobArg& lhs, const OpBlobArg& rhs) { return !(lhs == rhs); }
+
 // Persistent
 
 PersistentOutStream& operator<<(PersistentOutStream&, const PbMessage&);
@@ -178,6 +200,13 @@ struct hash<oneflow::LogicalBlobId> {
   size_t operator()(const oneflow::LogicalBlobId& lbi) const {
     return std::hash<std::string>()(lbi.op_name() + lbi.blob_name() + std::to_string(lbi.clone_id())
                                     + std::to_string(lbi.is_packed_id()));
+  }
+};
+
+template<>
+struct hash<oneflow::OpBlobArg> {
+  size_t operator()(const oneflow::OpBlobArg& oba) const {
+    return std::hash<std::string>()(oba.op_name() + oba.bn_in_op());
   }
 };
 

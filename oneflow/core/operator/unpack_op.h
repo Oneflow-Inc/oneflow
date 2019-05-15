@@ -14,7 +14,7 @@ class UnpackOp final : public Operator {
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override { return op_conf().unpack_conf(); }
-  LogicalNode* NewProperLogicalNode() { return new UnpackForwardLogicalNode; }
+  LogicalNode* NewProperLogicalNode() const override { return new UnpackForwardLogicalNode; }
 
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
@@ -26,7 +26,6 @@ class UnpackOp final : public Operator {
   int32_t GetUnpackNum() const;
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
 };
 
 }  // namespace oneflow

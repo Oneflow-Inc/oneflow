@@ -17,8 +17,12 @@ class LayerNormGradOp final : public Operator {
                       const ParallelContext*) const override;
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
-  void GetSbpSignatures(std::vector<std::unique_ptr<const SbpSignature>>*) const override;
+  void InferHasBatchDim(
+      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {
+    NaiveInferHasBatchDim(HasBatchDim4BnInOp);
+  }
+
+  void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 };
 
 }  // namespace oneflow

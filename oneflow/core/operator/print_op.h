@@ -14,13 +14,16 @@ class PrintOp final : public Operator {
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
-  virtual LogicalNode* NewProperLogicalNode() { return new PrintLogicalNode; }
+  LogicalNode* NewProperLogicalNode() const override { return new PrintLogicalNode; }
 
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override {}
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return true; }
+  void InferHasBatchDim(
+      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {}
+
+  void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
 };

@@ -5,16 +5,16 @@
 namespace oneflow {
 
 void RepeatBackwardCompTaskNode::ConsumeAllRegsts() {
-  for (const TaskEdge* edge : in_edges()) {
-    if (edge->src_node()->GetTaskType() == TaskType::kRepeatForward) { continue; }
+  ForEachInDataEdge([&](TaskEdge* edge) {
+    if (edge->src_node()->GetTaskType() == TaskType::kRepeatForward) { return; }
     CHECK(consumed_regsts().empty());
     ConsumeRegst("out_diff", edge->GetSoleRegst());
-  }
+  });
 }
 
 void RepeatBackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   std::shared_ptr<RegstDesc> in_diff_regst = ProduceRegst("in_diff", false, 1, 1);
-  SoleOutEdge()->AddRegst("in_diff", in_diff_regst);
+  SoleOutDataEdge()->AddRegst("in_diff", in_diff_regst);
 }
 
 void RepeatBackwardCompTaskNode::BuildExecGphAndRegst() {

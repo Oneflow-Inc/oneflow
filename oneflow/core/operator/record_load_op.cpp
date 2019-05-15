@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/record_load_op.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -23,6 +24,18 @@ void RecordLoadOp::VirtualGenKernelConf(
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   int64_t device_piece_size = GetBlobDesc4BnInOp("out")->shape().At(0);
   kernel_conf->mutable_record_load_conf()->set_device_piece_size(device_piece_size);
+}
+
+void RecordLoadOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  *HasBatchDim4BnInOp("out") = true;
+}
+
+void RecordLoadOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split(input_bns(), 0)
+      .Split(output_bns(), 0)
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_CPU_OP(OperatorConf::kRecordLoadConf, RecordLoadOp);

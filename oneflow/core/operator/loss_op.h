@@ -13,7 +13,7 @@ class LossOp : public Operator {
   virtual ~LossOp() = default;
 
   void InitFromOpConf() override;
-  LogicalNode* NewProperLogicalNode() override { return new LossLogicalNode; }
+  LogicalNode* NewProperLogicalNode() const override { return new LossLogicalNode; }
 
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
@@ -31,9 +31,10 @@ class LossOp : public Operator {
                             KernelConf* kernel_conf) const override;
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
-  void GetSbpSignatures(std::vector<std::unique_ptr<const SbpSignature>>*) const override;
-
+  void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
+  void GetSbpSignatures(
+      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+      SbpSignatureList* sbp_sig_list) const override;
   LogicalBlobId obn2lbi(const std::string& output_bn) const override;
 };
 

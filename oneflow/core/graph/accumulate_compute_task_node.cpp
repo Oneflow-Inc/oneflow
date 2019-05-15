@@ -5,11 +5,11 @@ namespace oneflow {
 
 void AccumulateCompTaskNode::ProduceAllRegstsAndBindEdges() {
   auto acc_regst = ProduceRegst("acc", false);
-  SoleOutEdge()->AddRegst("acc", acc_regst);
+  SoleOutDataEdge()->AddRegst("acc", acc_regst);
 }
 
 void AccumulateCompTaskNode::ConsumeAllRegsts() {
-  ConsumeRegst("one", SoleInEdge()->GetSoleRegst());
+  ConsumeRegst("one", SoleInDataEdge()->GetSoleRegst());
 }
 
 void AccumulateCompTaskNode::BuildExecGphAndRegst() {

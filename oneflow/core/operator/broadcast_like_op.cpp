@@ -1,10 +1,12 @@
 #include "oneflow/core/operator/broadcast_like_op.h"
+#include "oneflow/core/operator/reduce_sbp_util.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
 void BroadcastLikeOp::InitFromOpConf() {
   EnrollInputBn("x");
-  EnrollInputBn("like")->set_use_header_only(true);
+  EnrollInputBn("like", false)->set_use_header_only(true);
   EnrollOutputBn("y");
 }
 
@@ -15,7 +17,29 @@ const PbMessage& BroadcastLikeOp::GetCustomizedConf() const {
 void BroadcastLikeOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  *GetBlobDesc4BnInOp("y") = *GetBlobDesc4BnInOp("like");
+  GetBlobDesc4BnInOp("y")->CopyMetaFrom(*GetBlobDesc4BnInOp("like"));
+}
+
+void BroadcastLikeOp::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  int32_t num_axes = LogicalBlobDesc4Ibn("like").shape().NumAxes();
+  auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(
+      op_conf().broadcast_like_conf().reduced_axis(), num_axes);
+  FOR_RANGE(int64_t, i, 0, num_axes) {
+    if (IsReducedAxis(i)) {
+      SbpSignatureBuilder()
+          .Broadcast("x")
+          .Split("like", i)
+          .Split(output_bns(), i)
+          .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    } else {
+      SbpSignatureBuilder()
+          .Split(input_bns(), i)
+          .Split(output_bns(), i)
+          .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    }
+  }
 }
 
 REGISTER_OP(OperatorConf::kBroadcastLikeConf, BroadcastLikeOp);

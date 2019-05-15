@@ -19,15 +19,17 @@ BlobDesc::BlobDesc(const Shape& shape, DataType data_type, bool has_data_id, boo
       has_loss_instance_num_(false),
       max_col_num_(max_col_num),
       blob_mem_id_(-1),
-      body_field_(shape, data_type) {}
+      body_field_(shape, data_type),
+      is_body_disabled_(false) {}
 
-BlobDesc::BlobDesc(const BlobDesc& BlobDesc) { *this = BlobDesc; }
+BlobDesc::BlobDesc(const BlobDesc& blob_desc) { this->CopyAllFrom(blob_desc); }
 
 void BlobDesc::InitFromProto(const BlobDescProto& proto) {
   body_field_.InitFromProto(proto.body());
   max_col_num_ = proto.header().max_col_num();
   blob_mem_id_ = proto.header().blob_mem_id();
   header_pod_desc_.InitFromProto(proto.header().header_pod_desc());
+  is_body_disabled_ = proto.is_body_disabled();
   if (proto.header().has_opaque_header()) {
     header_is_opaque_ = true;
     has_data_id_ = false;
@@ -65,7 +67,8 @@ BlobDesc::BlobDesc(const StructPodDesc& header_pod_desc, int64_t header_byte_siz
       has_loss_instance_num_(false),
       max_col_num_(max_col_num),
       blob_mem_id_(-1),
-      body_field_(shape, data_type) {
+      body_field_(shape, data_type),
+      is_body_disabled_(false) {
   CHECK_EQ(header_pod_desc.ByteSize(), header_byte_size);
   if (header_byte_size > 0) {
     header_is_opaque_ = true;
@@ -182,6 +185,7 @@ void BlobDesc::ToProto(BlobDescProto* proto) const {
   HeaderToProto(proto);
   body_field_.ToProto(proto->mutable_body());
   if (dim0_inner_shape_) { dim0_inner_shape_->ToProto(proto->mutable_dim0_inner_shape()); }
+  proto->set_is_body_disabled(is_body_disabled_);
 }
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
@@ -192,14 +196,46 @@ bool BlobDesc::operator==(const BlobDesc& rhs) const {
          && has_dim2_valid_num_ == rhs.has_dim2_valid_num_
          && has_record_id_in_device_piece_ == rhs.has_record_id_in_device_piece_
          && has_loss_instance_num_ == rhs.has_loss_instance_num_ && max_col_num_ == rhs.max_col_num_
-         && blob_mem_id_ == rhs.blob_mem_id_ && body_field_ == rhs.body_field_;
+         && blob_mem_id_ == rhs.blob_mem_id_ && body_field_ == rhs.body_field_
+         && is_body_disabled_ == rhs.is_body_disabled_;
 }
 
 BlobDesc& BlobDesc::operator=(const BlobDesc& blob_desc) {
+  CHECK(blob_desc.is_body_disabled_ == false);  // prevent from misusing
   BlobDescProto proto;
   blob_desc.ToProto(&proto);
   InitFromProto(proto);
   return *this;
+}
+
+void BlobDesc::CopyMetaFrom(const BlobDesc& rhs) {
+  header_is_opaque_ = rhs.header_is_opaque_;
+  opaque_header_ = rhs.opaque_header_;
+  header_pod_desc_ = rhs.header_pod_desc_;
+  has_data_id_ = rhs.has_data_id_;
+  has_col_num_ = rhs.has_col_num_;
+  has_dim0_valid_num_ = rhs.has_dim0_valid_num_;
+  has_dim1_valid_num_ = rhs.has_dim1_valid_num_;
+  has_dim2_valid_num_ = rhs.has_dim2_valid_num_;
+  has_record_id_in_device_piece_ = rhs.has_record_id_in_device_piece_;
+  has_loss_instance_num_ = rhs.has_loss_instance_num_;
+  max_col_num_ = rhs.max_col_num_;
+  blob_mem_id_ = rhs.blob_mem_id_;
+  body_field_ = rhs.body_field_;
+  if (rhs.dim0_inner_shape_) {
+    dim0_inner_shape_.reset(new Shape(rhs.dim0_inner_shape_->dim_vec()));
+  } else {
+    dim0_inner_shape_.reset(nullptr);
+  }
+}
+
+void BlobDesc::CopyNonMetaFrom(const BlobDesc& rhs) {
+  this->is_body_disabled_ = rhs.is_body_disabled_;
+}
+
+void BlobDesc::CopyAllFrom(const BlobDesc& rhs) {
+  this->CopyMetaFrom(rhs);
+  this->CopyNonMetaFrom(rhs);
 }
 
 std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
@@ -213,6 +249,7 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
   const BlobDesc* last_blob_desc = nullptr;
   HashMap<int32_t, size_t> blob_mem_id2size;
   StructPodDesc opaque_header_pod_desc;
+  bool is_body_disabled = false;
   for (auto& pair : lbi2blob_desc) {
     BlobDesc* blob_desc = pair.second.get();
     RtBlobDesc rt_blob_desc(*blob_desc);
@@ -238,6 +275,7 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     }
     blob_desc_cnt += 1;
     last_blob_desc = blob_desc;
+    is_body_disabled = is_body_disabled || blob_desc->is_body_disabled();
   }
   for (auto& pair : blob_mem_id2size) { body_byte_size += pair.second; }
   if (blob_desc_cnt == 0) {
@@ -245,6 +283,7 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
   } else if (blob_desc_cnt == 1) {
     ret.reset(new BlobDesc(*last_blob_desc));
   } else if (data_type_set.size() == 1) {
+    CHECK_EQ(false, is_body_disabled);
     DataType sole_data_type = static_cast<DataType>(*(data_type_set.begin()));
     int64_t size_of_one_elem = GetSizeOfDataType(sole_data_type);
     CHECK_EQ(body_byte_size % size_of_one_elem, 0);
@@ -256,6 +295,7 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
                              sole_data_type, max_col_num));
     }
   } else {
+    CHECK_EQ(false, is_body_disabled);
     ret.reset(new BlobDesc(opaque_header_pod_desc, header_byte_size, Shape({body_byte_size}),
                            DataType::kChar, max_col_num));
   }

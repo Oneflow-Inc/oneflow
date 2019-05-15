@@ -11,6 +11,7 @@
 #include "oneflow/core/graph/repeat_forward_compute_task_node.h"
 #include "oneflow/core/graph/repeat_backward_compute_task_node.h"
 #include "oneflow/core/graph/acc_compute_task_node.h"
+#include "oneflow/core/graph/every_nth_compute_task_node.h"
 
 namespace oneflow {
 
@@ -30,6 +31,16 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   std::shared_ptr<const ParallelDesc> parallel_desc() const { return parallel_desc_; }
   std::shared_ptr<const ParallelDesc>& mut_parallel_desc() { return parallel_desc_; }
 
+  // time_shape
+  const Shape* out_blob_time_shape() const { return out_blob_time_shape_.get(); }
+  void reset_out_blob_time_shape(const Shape* time_shape) {
+    out_blob_time_shape_.reset(time_shape);
+  }
+  const Shape* in_blob_fastest_time_shape() const { return in_blob_fastest_time_shape_.get(); }
+  void reset_in_blob_fastest_time_shape(const Shape* time_shape) {
+    in_blob_fastest_time_shape_.reset(time_shape);
+  }
+
   // shared_model_nodes_
   std::shared_ptr<const std::vector<LogicalNode*>> shared_model_nodes() const {
     return shared_model_nodes_;
@@ -39,9 +50,13 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   }
 
   // Lbis
+  size_t produced_batch_dim_lbis_cnt() const { return produced_batch_dim_lbis_cnt_; }
+  size_t consumed_batch_dim_lbis_cnt() const { return consumed_batch_dim_lbis_cnt_; }
   std::vector<LogicalBlobId> GetLbisTo(const LogicalNode* dst) const;
   void SetDataLbisTo(const LogicalNode* dst, const std::vector<LogicalBlobId>&);
   bool IsDataLbiOnOutEdge(const LogicalBlobId& lbi) const;
+  void set_produced_batch_dim_lbis_cnt(size_t val) { produced_batch_dim_lbis_cnt_ = val; }
+  void set_consumed_batch_dim_lbis_cnt(size_t val) { consumed_batch_dim_lbis_cnt_ = val; }
 
   // util
   virtual std::string TypeName() const = 0;
@@ -53,6 +68,7 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
                               std::vector<std::pair<int64_t, CompTaskNode*>>* nodes,
                               std::function<void(CompTaskNode*)>) const;
 
+  // other
   virtual int64_t GetAreaId() const = 0;
   virtual bool MayConsumeModelDiff() const { return false; }
 
@@ -69,6 +85,10 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   std::shared_ptr<const std::vector<LogicalNode*>> shared_model_nodes_;
 
   HashMap<const LogicalNode*, std::vector<LogicalBlobId>> dst2data_lbis_;
+  std::unique_ptr<const Shape> in_blob_fastest_time_shape_;
+  std::unique_ptr<const Shape> out_blob_time_shape_;
+  size_t produced_batch_dim_lbis_cnt_;
+  size_t consumed_batch_dim_lbis_cnt_;
 };
 
 #define BLD_SUB_TSK_GPH_MTHD_ARGS()                                                       \
@@ -143,6 +163,15 @@ class ForwardLogicalNode : public LogicalNode {
 class NormalForwardLogicalNode final : public ForwardLogicalNode {
  public:
   LOGICAL_NODE_BOILERPLATE(NormalForwardLogicalNode);
+
+  BackwardLogicalNode* NewCorrectBackwardNode() override;
+
+ private:
+};
+
+class OptimizerLogicalNode final : public ForwardLogicalNode {
+ public:
+  LOGICAL_NODE_BOILERPLATE(OptimizerLogicalNode);
 
   BackwardLogicalNode* NewCorrectBackwardNode() override;
 
@@ -300,6 +329,7 @@ DECLARE_REDUCE_LOGICAL_NODE(NcclReduceScatterLogicalNode, true);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatForward);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Acc);
 DECLARE_DERIVED_BACKWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatBackward);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(EveryNth);
 
 #define DECLARE_BEFORE_OR_AFTER_ALLREDUCE_REDUCE_NODE(class_name, may_consume_md_diff) \
   class class_name final : public ReduceLogicalNode {                                  \
@@ -308,7 +338,7 @@ DECLARE_DERIVED_BACKWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatBackward);
     void set_order_in_logical_graph(int32_t order_in_logical_graph) {                  \
       order_in_logical_graph_ = order_in_logical_graph;                                \
     }                                                                                  \
-    int32_t order_in_logical_graph() const { return order_in_logical_graph_; }         \
+    int32_t order_in_logical_graph() const;                                            \
     bool MayConsumeModelDiff() const override { return may_consume_md_diff; }          \
                                                                                        \
    private:                                                                            \
@@ -317,6 +347,19 @@ DECLARE_DERIVED_BACKWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatBackward);
 
 DECLARE_BEFORE_OR_AFTER_ALLREDUCE_REDUCE_NODE(ReduceIdentityLogicalNode, true);
 DECLARE_BEFORE_OR_AFTER_ALLREDUCE_REDUCE_NODE(ReduceSplitLogicalNode, false);
+
+#define DECLARE_FACADE_LOGICAL_NODE(class_name)                         \
+  class class_name final : public LogicalNode {                         \
+   public:                                                              \
+    OF_DISALLOW_COPY_AND_MOVE(class_name);                              \
+    class_name() = default;                                             \
+    ~class_name() override = default;                                   \
+    std::string TypeName() const override { return #class_name; }       \
+    CompTaskNode* NewCompTaskNode() const override { UNIMPLEMENTED(); } \
+    int64_t GetAreaId() const override { UNIMPLEMENTED(); };            \
+  }
+
+DECLARE_FACADE_LOGICAL_NODE(AllReduceFacadeLogicalNode);
 
 }  // namespace oneflow
 

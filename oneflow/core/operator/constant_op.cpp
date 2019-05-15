@@ -1,10 +1,11 @@
 #include "oneflow/core/operator/constant_op.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
 void ConstantOp::InitFromOpConf() {
   CHECK(op_conf().has_constant_conf());
-  EnrollInputBn("tick", false);
+  if (op_conf().constant_conf().has_tick()) { EnrollInputBn("tick", false); }
   EnrollOutputBn("out", false);
 }
 
@@ -51,6 +52,18 @@ void ConstantOp::VirtualGenKernelConf(
     UNIMPLEMENTED();
   }
   kernel_conf->set_data_type(data_type);
+}
+
+void ConstantOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  *HasBatchDim4BnInOp("out") = false;
+}
+
+void ConstantOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split(input_bns(), 0)
+      .Broadcast(output_bns())
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_OP(OperatorConf::kConstantConf, ConstantOp);

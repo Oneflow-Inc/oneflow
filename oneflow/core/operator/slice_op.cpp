@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/slice_op.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -16,11 +17,6 @@ void SliceOp::VirtualGenKernelConf(
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   const Shape& in_shape = GetBlobDesc4BnInOp("in")->shape();
   in_shape.ToProto(kernel_conf->mutable_slice_conf()->mutable_in_shape());
-}
-
-bool SliceOp::IsInputBlobAllowedModelSplit(const std::string& ibn) const {
-  CHECK(std::find(input_bns().begin(), input_bns().end(), ibn) != input_bns().end());
-  return ibn == "in";
 }
 
 void SliceOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -54,6 +50,19 @@ void SliceOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlo
     *offset_blob_desc = *out_blob_desc;
     offset_blob_desc->set_data_type(DataType::kInt64);
   }
+}
+
+void SliceOp::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split(input_bns(), 0)
+      .Split(output_bns(), 0)
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  SbpSignatureBuilder()
+      .PartialSum(input_bns())
+      .PartialSum(output_bns())
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_OP(OperatorConf::kSliceConf, SliceOp);

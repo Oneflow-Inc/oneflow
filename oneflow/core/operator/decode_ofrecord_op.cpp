@@ -1,5 +1,6 @@
 #include "oneflow/core/operator/decode_ofrecord_op.h"
 #include "oneflow/core/record/ofrecord_decoder.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -55,6 +56,19 @@ LogicalBlobId DecodeOFRecordOp::obn2lbi(const std::string& output_bn) const {
   ret.set_blob_name(
       op_conf().decode_ofrecord_conf().blob(oneflow_cast<int32_t>(output_bn.substr(4))).name());
   return ret;
+}
+
+void DecodeOFRecordOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  CHECK(*HasBatchDim4BnInOp(SoleIbn()));
+  for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = true; }
+}
+
+void DecodeOFRecordOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split(input_bns(), 0)
+      .Split(output_bns(), 0)
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_CPU_OP(OperatorConf::kDecodeOfrecordConf, DecodeOFRecordOp);

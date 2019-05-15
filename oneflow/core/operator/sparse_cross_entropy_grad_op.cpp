@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/sparse_cross_entropy_grad_op.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -19,6 +20,13 @@ void SparseCrossEntropyGradOp::InferBlobDescs(
     const ParallelContext* parallel_ctx, int64_t record_piece_size,
     std::function<void(OpContext*)> EnrollOpCtx) const {
   *GetBlobDesc4BnInOp("prediction_diff") = *GetBlobDesc4BnInOp("prediction");
+}
+
+void SparseCrossEntropyGradOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split(input_bns(), 0)
+      .Split(output_bns(), 0)
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_OP(OperatorConf::kSparseCrossEntropyGradConf, SparseCrossEntropyGradOp);

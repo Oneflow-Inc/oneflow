@@ -146,6 +146,29 @@ bool NoOutRegstConsumedByBwNode(TaskNode* node) {
   return true;
 };
 
+size_t IsAllProducedBlobHasNoBatchDim(TaskNode* task_node) {
+  const auto* comp_task_node = dynamic_cast<CompTaskNode*>(task_node);
+  CHECK_NOTNULL(comp_task_node);
+  const LogicalNode* logical_node = comp_task_node->logical_node();
+  return logical_node->produced_batch_dim_lbis_cnt() == 0;
+}
+
+bool IsAllConsumedBlobHasNoBatchDim(TaskNode* task_node) {
+  const auto* comp_task_node = dynamic_cast<CompTaskNode*>(task_node);
+  CHECK_NOTNULL(comp_task_node);
+  const LogicalNode* logical_node = comp_task_node->logical_node();
+  return logical_node->consumed_batch_dim_lbis_cnt() == 0;
+}
+
+bool IsNonSoleKeepHeaderOnlyEdge(TaskNode* src_task, TaskNode* dst_task) {
+  if (dst_task->in_edges().size() <= 1) { return false; }
+  const auto* src_comp_task = dynamic_cast<CompTaskNode*>(src_task);
+  if (src_comp_task == nullptr) { return false; }
+  if (src_comp_task->logical_node()->op_vec().size() != 1) { return false; }
+  const auto& src_op = *src_comp_task->logical_node()->SoleOp();
+  return src_op.op_conf().has_keep_header_only_conf();
+}
+
 }  // namespace
 
 std::string ChainNode::VisualStr() const {
@@ -180,6 +203,12 @@ void ChainGraph::GroupTaskNodesByMachineAndCollectAncestors(
     if (node->AreaId4ChainMerge() == kMdUpdtArea) { return; }
     node->ForEachNodeOnInEdge([&](TaskNode* in_node) {
       if (IsBackEdge(in_node, node)) { return; }
+      if (IsNonSoleKeepHeaderOnlyEdge(in_node, node)) { return; }
+      if (dynamic_cast<CompTaskNode*>(in_node) != nullptr
+          && dynamic_cast<CompTaskNode*>(node) != nullptr && IsAllProducedBlobHasNoBatchDim(in_node)
+          && !IsAllConsumedBlobHasNoBatchDim(node)) {
+        return;
+      }
       (*node2ancestors)[node].insert(in_node);
       (*node2ancestors)[node].insert((*node2ancestors)[in_node].begin(),
                                      (*node2ancestors)[in_node].end());

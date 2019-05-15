@@ -57,6 +57,9 @@ class BlobDesc {
   bool has_col_num_field() const { return has_col_num_; }
   void set_has_col_num_field(bool val);
 
+  bool is_body_disabled() const { return is_body_disabled_; }
+  void set_is_body_disabled(bool val) { is_body_disabled_ = val; }
+
   int32_t max_col_num() const { return max_col_num_; }
   void set_max_col_num(int32_t val) { max_col_num_ = val; }
 
@@ -66,6 +69,9 @@ class BlobDesc {
   bool operator==(const BlobDesc& rhs) const;
   void ToProto(BlobDescProto* proto) const;
   BlobDesc& operator=(const BlobDesc& blob_desc);
+  void CopyMetaFrom(const BlobDesc& rhs);
+  void CopyNonMetaFrom(const BlobDesc& rhs);
+  void CopyAllFrom(const BlobDesc& rhs);
 
  private:
   void InitFromProto(const BlobDescProto& proto);
@@ -78,6 +84,7 @@ class BlobDesc {
   void RecordIdInDevicePieceToProto(StructPodDesc* header_pod_desc) const;
   void LossInstanceNumToProto(StructPodDesc* header_pod_desc) const;
 
+  // meta
   bool header_is_opaque_;
   FieldDesc opaque_header_;
   StructPodDesc header_pod_desc_;
@@ -94,6 +101,9 @@ class BlobDesc {
 
   FieldDesc body_field_;
   std::unique_ptr<Shape> dim0_inner_shape_;
+
+  // meta
+  bool is_body_disabled_;
 };
 
 std::unique_ptr<BlobDesc> ComputePackedBlobDesc(

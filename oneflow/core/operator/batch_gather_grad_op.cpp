@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/batch_gather_grad_op.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -36,8 +37,20 @@ void BatchGatherGradOp::InferBlobDescs(
 }
 
 void BatchGatherGradOp::GetSbpSignatures(
-    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(MakeDataSplitSbpSignature(this));
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  const int64_t indices_num_axes = LogicalBlobDesc4Ibn("indices").shape().NumAxes();
+  if (indices_num_axes > 1) {
+    FOR_RANGE(int64_t, i, 0, indices_num_axes - 1) {
+      SbpSignatureBuilder()
+          .Split("indices", i)
+          .Split("out_diff", i)
+          .Split("in_diff", i)
+          .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    }
+  } else {
+    UNIMPLEMENTED();
+  }
 }
 
 REGISTER_OP(OperatorConf::kBatchGatherGradConf, BatchGatherGradOp);

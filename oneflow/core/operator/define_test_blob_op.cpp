@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/define_test_blob_op.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -30,6 +31,15 @@ void DefineTestBlobOp::InferBlobDescs(
     out_blob_desc->mut_dim0_inner_shape() = Shape(conf.dim0_inner_shape());
   }
   if (conf.has_dim0_valid_num()) { CHECK(conf.has_dim0_inner_shape()); }
+}
+
+void DefineTestBlobOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  *HasBatchDim4BnInOp("out") = true;
+}
+
+void DefineTestBlobOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder().Split(output_bns(), 0).Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_OP(OperatorConf::kDefineTestBlobConf, DefineTestBlobOp);

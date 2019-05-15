@@ -2,10 +2,30 @@
 
 namespace oneflow {
 
+namespace {
+
+void ForEachDataEdge(const std::unordered_set<TaskEdge*>& edges,
+                     const std::function<void(TaskEdge*)>& Handler) {
+  for (TaskEdge* edge : edges) {
+    const auto& regsts = edge->GetRegsts();
+    int32_t data_regst_size =
+        std::count_if(regsts.begin(), regsts.end(), [](const std::shared_ptr<RegstDesc>& regst) {
+          return regst->regst_desc_type().has_data_regst_desc();
+        });
+    if (data_regst_size == regsts.size()) {
+      Handler(edge);
+    } else {
+      CHECK_EQ(data_regst_size, 0);
+    }
+  }
+}
+
+}  // namespace
+
 bool IsForwardTaskType(TaskType tt) {
   return tt == TaskType::kNormalForward || tt == TaskType::kRecurrentForward
          || tt == TaskType::kPackForward || tt == TaskType::kUnpackForward
-         || tt == TaskType::kRepeatForward;
+         || tt == TaskType::kRepeatForward || tt == TaskType::kEveryNth;
 }
 
 bool IsBackwardTaskType(TaskType tt) {
@@ -220,11 +240,16 @@ void TaskNode::BuildCtrlRegstDescIfNeed(TaskNode* dst_node) {
 }
 
 RegstDesc* TaskNode::BuildCtrlRegstDesc(TaskNode* dst_node) {
+  std::string name;
+  return BuildCtrlRegstDesc(dst_node, &name);
+}
+
+RegstDesc* TaskNode::BuildCtrlRegstDesc(TaskNode* dst_node, std::string* name) {
   RegstDescTypeProto regst_desc_type;
   regst_desc_type.mutable_ctrl_regst_desc();
   auto regst = NewProducedRegst(false, 1, kMaxRegisterNum, regst_desc_type);
-  std::string name = "out_ctrl_" + std::to_string(regst->regst_desc_id());
-  CHECK(produced_regsts_.emplace(name, regst).second);
+  *name = "out_ctrl_" + std::to_string(regst->regst_desc_id());
+  CHECK(produced_regsts_.emplace(*name, regst).second);
   dst_node->ConsumeRegst("in_ctrl", regst);
   return regst.get();
 }
@@ -297,10 +322,12 @@ void TaskNode::ConsumeRegst(const std::string& name, std::shared_ptr<RegstDesc> 
   consumed_regsts_[name].push_back(regst);
 }
 
-bool TaskNode::IsAllConsumedRegstLocked() {
+bool TaskNode::IsAllConsumedDataRegstLocked() {
   for (const auto& pair : consumed_regsts_) {
     for (std::shared_ptr<RegstDesc> regst_desc : pair.second) {
-      if (regst_desc->IsLocked() == false) { return false; }
+      if (regst_desc->regst_desc_type().has_data_regst_desc() && regst_desc->IsLocked() == false) {
+        return false;
+      }
     }
   }
   return true;
@@ -405,6 +432,53 @@ RegstDescIdSet* FindOrCreateConsumedCtrlRegstDescIdSet(TaskProto* task_proto,
   return &consumed_regst_desc_id_sets->at(regst_desc_name);
 }
 
+void TaskNode::ForEachInDataEdge(const std::function<void(TaskEdge*)>& Handler) const {
+  ForEachDataEdge(in_edges(), Handler);
+}
+
+void TaskNode::ForEachOutDataEdge(const std::function<void(TaskEdge*)>& Handler) const {
+  ForEachDataEdge(out_edges(), Handler);
+}
+
+void TaskNode::ForEachNodeOnInDataEdge(const std::function<void(TaskNode*)>& Handler) const {
+  ForEachInDataEdge([&](TaskEdge* in_edge) { Handler(in_edge->src_node()); });
+}
+
+void TaskNode::ForEachNodeOnOutDataEdge(const std::function<void(TaskNode*)>& Handler) const {
+  ForEachOutDataEdge([&](TaskEdge* out_edge) { Handler(out_edge->dst_node()); });
+}
+
+void TaskNode::ForEachNodeOnInOutDataEdge(const std::function<void(TaskNode*)>& Handler) const {
+  ForEachNodeOnInDataEdge(Handler);
+  ForEachNodeOnOutDataEdge(Handler);
+}
+
+TaskEdge* TaskNode::GetSoleEdge(void (TaskNode::*ForEachEdge)(const std::function<void(TaskEdge*)>&)
+                                    const) const {
+  TaskEdge* ret = nullptr;
+  (this->*ForEachEdge)([&](TaskEdge* edge) {
+    CHECK(ret == nullptr);
+    ret = edge;
+  });
+  CHECK_NOTNULL(ret);
+  return ret;
+}
+
+size_t TaskNode::GetEdgesSize(void (TaskNode::*ForEachEdge)(const std::function<void(TaskEdge*)>&)
+                                  const) const {
+  size_t size = 0;
+  (this->*ForEachEdge)([&](TaskEdge* edge) { ++size; });
+  return size;
+}
+
+TaskEdge* TaskNode::SoleInDataEdge() const { return GetSoleEdge(&TaskNode::ForEachInDataEdge); }
+
+TaskEdge* TaskNode::SoleOutDataEdge() const { return GetSoleEdge(&TaskNode::ForEachOutDataEdge); }
+
+size_t TaskNode::in_data_edges_size() const { return GetEdgesSize(&TaskNode::ForEachInDataEdge); }
+
+size_t TaskNode::out_data_edges_size() const { return GetEdgesSize(&TaskNode::ForEachOutDataEdge); }
+
 std::map<TaskType, std::string> task_type2color = {{kInvalid, "0"},
                                                    {kNormalForward, "2"},
                                                    {kNormalBackward, "3"},
@@ -439,5 +513,7 @@ std::map<TaskType, std::string> task_type2color = {{kInvalid, "0"},
                                                    {kRepeatForward, "2"},
                                                    {kRepeatBackward, "3"},
                                                    {kReduceIdentity, "2"},
-                                                   {kAcc, "5"}};
+                                                   {kAcc, "5"},
+                                                   {kOptimizer, "12"},
+                                                   {kEveryNth, "2"}};
 }  // namespace oneflow

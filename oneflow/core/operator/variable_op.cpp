@@ -1,74 +1,9 @@
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
-
-namespace {
-
-// S(0) -> C
-class VariableOpDataSplitSbpSignature final : public ParallelSbpSignature {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(VariableOpDataSplitSbpSignature);
-  ~VariableOpDataSplitSbpSignature() override = default;
-
-  VariableOpDataSplitSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
-
-  const std::string Description() const override { return op().op_name() + ": S(0) -> C"; }
-
-  const SbpSigMatchResult GetMatchResult(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc) const override {
-    if (parallel_desc.policy() == kDataParallel) {
-      return MakeSbpSigMatchSuccess();
-    } else {
-      return MakeSbpSigMatchParallelPolicyError(parallel_desc.policy(), kDataParallel);
-    }
-  }
-
-  void GenerateSignature(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
-    if (op().op_conf().variable_conf().has_tick()) {
-      CHECK(SbpInferHint4Ibn("tick").is_data_split());
-      (*bn2sbp)["tick"].mutable_split_parallel()->set_axis(0);
-    }
-    (*bn2sbp)["out"].mutable_broadcast_parallel();
-  }
-};
-
-// S(0) -> S
-class VariableOpModelSplitSbpSignature final : public ParallelSbpSignature {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(VariableOpModelSplitSbpSignature);
-  ~VariableOpModelSplitSbpSignature() override = default;
-
-  VariableOpModelSplitSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
-
-  const std::string Description() const override { return op().op_name() + ": S(0) -> S"; }
-
-  const SbpSigMatchResult GetMatchResult(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc) const override {
-    if (parallel_desc.policy() == kModelParallel) {
-      return MakeSbpSigMatchSuccess();
-    } else {
-      return MakeSbpSigMatchParallelPolicyError(parallel_desc.policy(), kModelParallel);
-    }
-  }
-
-  void GenerateSignature(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
-    if (op().op_conf().variable_conf().has_tick()) {
-      CHECK(SbpInferHint4Ibn("tick").is_data_split());
-      (*bn2sbp)["tick"].mutable_split_parallel()->set_axis(0);
-    }
-    (*bn2sbp)["out"].mutable_split_parallel()->set_axis(
-        (op().OutputBlobModelSplitAxis(SbpInferHint4Ibn, "out")));
-  }
-};
-
-}  // namespace
 
 void VariableOp::InitFromOpConf() {
   CHECK(op_conf().has_variable_conf());
@@ -81,12 +16,6 @@ void VariableOp::InitFromOpConf() {
 }
 
 const PbMessage& VariableOp::GetCustomizedConf() const { return op_conf().variable_conf(); }
-
-int32_t VariableOp::OutputBlobModelSplitAxis(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    const std::string& obn) const {
-  return op_conf().variable_conf().model_split_axis();
-}
 
 void VariableOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx) const {
@@ -109,22 +38,42 @@ void VariableOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   *GetBlobDesc4BnInOp("out") = *model_blob_desc;
 }
 
-void VariableOp::GetSbpSignatures(
-    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new VariableOpDataSplitSbpSignature(this));
-  op_parallel_signatures->emplace_back(new VariableOpModelSplitSbpSignature(this));
-}
-
-void VariableOp::InferIsModelBlob4OutputBlobs(
-    std::function<bool*(const std::string&)> IsModelBlob4BnInOp) const {
-  *IsModelBlob4BnInOp("out") = true;
-}
-
 void VariableOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
     KernelConf* conf) const {
   conf->mutable_variable_conf()->set_is_fw_inplace(*is_fw_inplace_);
   conf->mutable_variable_conf()->set_is_bw_inplace(*is_bw_inplace_);
+}
+
+void VariableOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  *HasBatchDim4BnInOp("out") = false;
+}
+
+void VariableOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+  FOR_RANGE(int32_t, i, 0, op_conf().variable_conf().shape().dim_size()) {
+    SbpSignatureBuilder()
+        .Split(input_bns(), 0)
+        .Split(output_bns(), i)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  }
+  SbpSignatureBuilder()
+      .Split(input_bns(), 0)
+      .Broadcast(output_bns())
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+}
+
+void VariableOp::InferSbpSignature(
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+    std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+    const ParallelDesc& parallel_desc) const {
+  SbpSignature var_sbp_sig_conf(sbp_sig_conf);
+  if (sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
+    (*var_sbp_sig_conf.mutable_bn_in_op2sbp_parallel())["out"].mutable_broadcast_parallel();
+  }
+  this->Operator::InferSbpSignature(sbp_signature, var_sbp_sig_conf, CalcOrderValue4SbpSig,
+                                    SbpInferHint4Ibn, parallel_desc);
 }
 
 REGISTER_OP(OperatorConf::kVariableConf, VariableOp);

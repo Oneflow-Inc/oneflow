@@ -23,13 +23,20 @@ class OpNode final : public Node<OpNode, OpEdge> {
   ~OpNode() = default;
 
   // Getters
-  const Shape& out_blob_time_shape() const { return out_blob_time_shape_; }
+  const Shape* GetInputBlobFastestTimeShape() const;
+  const Shape* out_blob_time_shape() const;
   const Operator& op() const { return *op_; }
   bool HasBackward() const { return has_in_diff() || has_model_diff(); }
   bool has_in_diff() const { return has_in_diff_; }
   bool has_model_diff() const { return op().model_diff_bns().size() > 0; }
   void set_has_in_diff(bool has_in_diff) { has_in_diff_ = has_in_diff; }
   const ParallelDesc& parallel_desc() const { return parallel_desc_; }
+  const SbpSignature& sbp_signature() const { return sbp_signature_; }
+  const SbpParallel& SbpParallel4Lbi(const LogicalBlobId& lbi) const;
+  const SbpParallel& SbpParallel4BnInOp(const std::string& bn_in_op) const;
+  const BlobDesc& LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const;
+  bool HasBatchDim4Lbi(const LogicalBlobId& lbi) const;
+  const OpNode* ProducerOpNode4Lbi(const LogicalBlobId& lbi) const;
 
   std::string VisualStr() const override;
 
@@ -37,29 +44,21 @@ class OpNode final : public Node<OpNode, OpEdge> {
   friend class OpGraph;
   friend class OpEdge;
   // Getters
-  const BlobDesc& NoParallelBlobDesc4Lbi(const LogicalBlobId& lbi) const;
-  const BlobDesc& LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const;
-  const SbpParallel& SbpParallel4Lbi(const LogicalBlobId& lbi) const;
   const Shape* GetInputBlobTimeShape(const std::string& bn_in_op) const;
-  const Shape* GetInputBlobTimeShape() const;
 
   // Setters
   ParallelDesc* mut_parallel_desc() { return &parallel_desc_; }
-  Shape* mut_out_blob_time_shape() { return &out_blob_time_shape_; }
+  SbpSignature* mut_sbp_signature() { return &sbp_signature_; }
+  Shape* mut_out_blob_time_shape();
   HashMap<std::string, std::vector<BlobDesc>>* mut_bn2parallel_id2blob_desc() {
     return &bn2parallel_id2blob_desc_;
   }
-  bool IsModelBlob4Lbi(const LogicalBlobId& lbi) const;
-  bool* MutIsModelBlob4Lbi(const LogicalBlobId& lbi);
-  BlobDesc* NoParallelBlobDesc4BnInOp(const std::string& bn_in_op);
-  BlobDesc* MutNoParallelBlobDesc(const LogicalBlobId& lbi);
+  bool* MutHasBatchDim4Lbi(const LogicalBlobId& lbi);
   BlobDesc* MutLogicalBlobDesc4Lbi(const LogicalBlobId& lbi);
-  SbpParallel* MutSbpParallel4Lbi(const LogicalBlobId& lbi);
   OpNode* SrcNode4InputBnInOp(const std::string& bn_in_op) const;
   OpNode* ProducerOpNode4BnInOp(const std::string& bn_in_op);
   OpNode* SrcNode4InputLbi(const LogicalBlobId& lbi) const;
-  OpNode* ProducerOpNode4Lbi(const LogicalBlobId& lbi);
-  const OpNode* ProducerOpNode4Lbi(const LogicalBlobId& lbi) const;
+  OpNode* MutProducerOpNode4Lbi(const LogicalBlobId& lbi);
 
   void ForEachParallelBlobDesc(const BlobDesc& blob_desc, const SbpParallel& sbp_parallel,
                                const std::function<void(const BlobDesc&)>& Handler) const;
@@ -76,10 +75,9 @@ class OpNode final : public Node<OpNode, OpEdge> {
   std::shared_ptr<Operator> op_;
   HashSet<std::string> ibns_;
   bool has_in_diff_;
-  Shape out_blob_time_shape_;
-  HashMap<LogicalBlobId, BlobDesc> lbi2no_parallel_blob_desc_;
-  HashMap<LogicalBlobId, bool> lbi2is_model_blob_;
-  HashMap<LogicalBlobId, SbpParallel> lbi2sbp_parallel_;
+  std::unique_ptr<Shape> out_blob_time_shape_;
+  SbpSignature sbp_signature_;
+  HashMap<LogicalBlobId, bool> lbi2has_batch_dim_;
   HashMap<std::string, std::vector<BlobDesc>> bn2parallel_id2blob_desc_;
   HashMap<LogicalBlobId, BlobDesc> lbi2logical_blob_desc_;
 };
@@ -88,11 +86,13 @@ class OpEdge final : public Edge<OpNode, OpEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpEdge);
   explicit OpEdge(const std::vector<LogicalBlobId>& lbis,
+                  const HashMap<LogicalBlobId, std::string>& lbi2obn,
                   const HashMap<LogicalBlobId, std::vector<std::string>>& lbi2ibns)
-      : lbis_(lbis), lbi2ibns_(lbi2ibns), has_diff_(false) {}
+      : lbis_(lbis), lbi2obn_(lbi2obn), lbi2ibns_(lbi2ibns), has_diff_(false) {}
   ~OpEdge() = default;
 
   const std::vector<LogicalBlobId>& lbis() const { return lbis_; }
+  const HashMap<LogicalBlobId, std::string>& lbi2obn() const { return lbi2obn_; }
   const HashMap<LogicalBlobId, std::vector<std::string>>& lbi2ibns() const { return lbi2ibns_; }
   bool has_diff() const { return has_diff_; }
   std::string VisualStr() const override;
@@ -101,6 +101,7 @@ class OpEdge final : public Edge<OpNode, OpEdge> {
 
  private:
   std::vector<LogicalBlobId> lbis_;
+  HashMap<LogicalBlobId, std::string> lbi2obn_;
   HashMap<LogicalBlobId, std::vector<std::string>> lbi2ibns_;
   bool has_diff_;
 };
@@ -108,17 +109,17 @@ class OpEdge final : public Edge<OpNode, OpEdge> {
 class OpGraph final : public Graph<OpNode, OpEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpGraph);
-  explicit OpGraph(const JobDesc* job_desc) : job_desc_(job_desc) { Init(); }
+  explicit OpGraph(const Job& job) { Init(job); }
   ~OpGraph() = default;
 
   void InferOpModelSize(HashMap<std::string, size_t>* op_name2model_size);
+  std::function<const BlobDesc&(const LogicalBlobId&)> MakeGetterBlobDesc4ModelLbi() const;
 
   int32_t GetModelSplitAxis(const std::string& op_name, const LogicalBlobId& lbi) const;
   BalancedSplitter GetBalancedSplitter(const std::string& op_name, const LogicalBlobId& lbi) const;
   const SbpParallel& GetSbpParallel(const std::string& op_name, const LogicalBlobId& lbi) const;
   DataType GetBlobDataType(const LogicalBlobId& lbi) const;
   const BlobDesc& GetLogicalBlobDesc(const LogicalBlobId& lbi) const;
-  const BlobDesc& GetUnitBatchSizeBlobDesc(const LogicalBlobId& lbi) const;
   void CheckBlobDescs(const std::string& op_name,
                       const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const;
@@ -126,34 +127,33 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   // a set of nodes is called a pseudo chain if they can merge into a chain regardless of the
   // connections before their source nodes
   void ForEachPseudoChain(const std::function<void(const HashSet<OpNode*>&)>& Handler) const;
+  // a set of nodes is called a chain family if they can divided into several connected chains
+  void ForEachChainFamily(const std::function<void(const HashSet<OpNode*>&)>& Handler) const;
 
  private:
-  void Init();
-  void InitNodes();
+  void Init(const Job& job);
+  void InitNodes(const Job& job);
   void InitEdges();
   void FixOpParallelDesc() const;
   void UpdateOpNodeHasInDiff() const;
   void InferTimeShape() const;
-  void InferNoParallelBlobDesc() const;
-  void InferIsModelBlob() const;
-  void InferSbpParallel() const;
-  void InferLogicalBlobDesc() const;
-  bool IsModelBlob(const std::string& op_name, const LogicalBlobId& lbi) const;
-  bool IsDataBlob(const std::string& op_name, const LogicalBlobId& lbi) const;
+  void InferOpNodeSbpSignature(OpNode* op_node, const SbpSignature& sbp_sig_conf) const;
+  void InferOpNodeLogicalBlobDesc(OpNode* op_node) const;
+  void InferLogicalBlobDesc(const Job& job) const;
+  bool IsBatchDimBlob(const std::string& op_name, const LogicalBlobId& lbi) const;
   std::string GetOpNameKey(const std::string& op_name, const LogicalBlobId& lbi) const;
   LogicalBlobId GetLogicalBlobIdKey(const std::string& op_name, const LogicalBlobId& lbi) const;
-  void ForEachPseudoChain(const std::vector<OpNode*>& nodes,
+  void ForEachPseudoChain(const HashSet<OpNode*>& nodes,
                           const std::function<bool(OpNode* src, OpNode* dst)>& IsReachable,
                           const std::function<void(const HashSet<OpNode*>&)>& Handler) const;
   void ReverseTopoGetPseudoChain(
       const HashSet<OpNode*>& op_nodes, HashSet<OpNode*>* chain,
       const std::function<bool(OpNode* src, OpNode* dst)>& IsReachable) const;
-  std::function<bool(OpNode* src, OpNode* dst)> MakePredicatorIsReachable() const;
-  void ForEachComponentWithSameDataParallelDescAndTimeShape(
-      const std::function<void(const std::vector<OpNode*>&)>& Handler) const;
+  void ForEachComponent(
+      const std::function<void(OpNode*, const std::function<void(OpNode*)>&)>& ForEachConnected,
+      const std::function<void(const HashSet<OpNode*>&)>& Handler) const;
 
   int64_t GetSplitNum(const std::string& op_name, const LogicalBlobId& lbi) const;
-  const JobDesc* job_desc_;
   HashMap<std::string, OpNode*> op_name2op_node_;
 };
 

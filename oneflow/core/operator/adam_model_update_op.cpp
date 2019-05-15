@@ -67,6 +67,10 @@ void AdamModelUpdateOp::MdUpdtVirtualInferBlobDescs(
   }
 }
 
+const HashSet<std::string> AdamModelUpdateOp::AlwaysBroadcastParallelBns() const {
+  return HashSet<std::string>{"beta1_t", "beta2_t"};
+}
+
 const PbMessage& AdamModelUpdateOp::GetCustomizedConf() const {
   if (Global<JobDesc>::Get()->IsTrain()) {
     return op_conf().normal_mdupdt_conf();

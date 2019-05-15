@@ -5,17 +5,17 @@ namespace oneflow {
 
 void ReduceAddCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("out", false, 1, 1);
-  for (TaskEdge* edge : out_edges()) { BindEdgeWithProducedRegst(edge, "out"); }
+  ForEachOutDataEdge([&](TaskEdge* edge) { BindEdgeWithProducedRegst(edge, "out"); });
 }
 
 void ReduceAddCompTaskNode::ConsumeAllRegsts() {
   std::vector<EdgeInfo> edge_infos;
-  for (TaskEdge* edge : in_edges()) {
+  ForEachInDataEdge([&](TaskEdge* edge) {
     std::vector<CompTaskNode*> pred_comp_task_nodes = GetPredCompTaskNodesOnEdge(edge);
     CHECK_EQ(pred_comp_task_nodes.size(), 1);
     EdgeInfo edge_info = {edge, pred_comp_task_nodes.front()->task_id()};
     edge_infos.push_back(edge_info);
-  }
+  });
   SortEdges(&edge_infos);
   FOR_RANGE(int64_t, in_edge_index, 0, edge_infos.size()) {
     ConsumeRegst("in_" + std::to_string(in_edge_index),
@@ -26,9 +26,9 @@ void ReduceAddCompTaskNode::ConsumeAllRegsts() {
 void ReduceAddCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   OperatorConf reduce_add_op_conf;
-  reduce_add_op_conf.set_name("reduce_add_" + NewUniqueId());
+  reduce_add_op_conf.set_name(this->logical_node()->SoleOp()->op_name());
   reduce_add_op_conf.set_device_type(this->device_type());
-  reduce_add_op_conf.mutable_reduce_add_conf()->set_in_num(in_edges().size());
+  reduce_add_op_conf.mutable_reduce_add_conf()->set_in_num(in_data_edges_size());
   std::shared_ptr<Operator> reduce_add_op = ConstructOp(reduce_add_op_conf);
   node->mut_op() = reduce_add_op;
   for (const std::string& input_bn : reduce_add_op->input_bns()) {
@@ -81,21 +81,21 @@ void ReduceAddCompTaskNode::BuildCtrlRegstBetweenReduceCopyNodes(const CompTaskN
   };
   HashMap<int64_t, ReduceCopyNodePair> mem_shared_offset2copy_nodes;
 
-  for (TaskEdge* out_edge : src_reduce->out_edges()) {
+  src_reduce->ForEachOutDataEdge([&](TaskEdge* out_edge) {
     if (out_edge->dst_node()->GetTaskType() == TaskType::kCopyHd) {
       int64_t offset = out_edge->GetSoleRegst()->mem_shared_offset();
       mem_shared_offset2copy_nodes[offset].copy_d2h = out_edge->dst_node();
     }
-  }
+  });
   CHECK_EQ(copy_node_num, mem_shared_offset2copy_nodes.size());
 
-  for (TaskEdge* in_edge : dst_reduce->in_edges()) {
+  dst_reduce->ForEachInDataEdge([&](TaskEdge* in_edge) {
     if (in_edge->src_node()->GetTaskType() == TaskType::kCopyHd) {
       int64_t offset = in_edge->GetSoleRegst()->mem_shared_offset();
       CHECK(mem_shared_offset2copy_nodes.find(offset) != mem_shared_offset2copy_nodes.end());
       mem_shared_offset2copy_nodes.at(offset).copy_h2d = in_edge->src_node();
     }
-  }
+  });
 
   for (const auto& kv : mem_shared_offset2copy_nodes) {
     kv.second.copy_d2h->BuildCtrlRegstDesc(kv.second.copy_h2d);

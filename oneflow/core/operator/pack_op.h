@@ -14,7 +14,7 @@ class PackOp final : public Operator {
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override { return op_conf().pack_conf(); }
-  LogicalNode* NewProperLogicalNode() { return new PackForwardLogicalNode; }
+  LogicalNode* NewProperLogicalNode() const override { return new PackForwardLogicalNode; }
   void InferOutputBlobTimeShape(std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
                                 const ParallelContext* parallel_ctx,
                                 Shape* time_shape) const override;
@@ -24,7 +24,6 @@ class PackOp final : public Operator {
   int32_t GetPackNum() const;
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
 };
 
 }  // namespace oneflow

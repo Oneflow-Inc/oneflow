@@ -1,47 +1,12 @@
 #include "oneflow/core/operator/loss_op.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
-namespace {
-
-class LossSbpSignature final : public ParallelSbpSignature {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(LossSbpSignature);
-  ~LossSbpSignature() override = default;
-
-  LossSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
-
-  const std::string Description() const override {
-    return op().op_name() + ": (S(0), S(0)) -> S(0)";
-  }
-
-  const SbpSigMatchResult GetMatchResult(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      const ParallelDesc& parallel_desc) const override {
-    return MakeSbpSigMatchSuccess();
-  }
-
-  void GenerateSignature(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
-    for (const auto& ibn : op().input_bns()) {
-      (*bn2sbp)[ibn].mutable_split_parallel()->set_axis(0);
-    }
-    for (const auto& obn : op().output_bns()) {
-      (*bn2sbp)[obn].mutable_split_parallel()->set_axis(0);
-    }
-    (*bn2sbp)["loss_instance_num"].mutable_partial_sum_parallel();
-    if (!op().GetValFromCustomizedConf<std::string>("weight").empty()) {
-      (*bn2sbp)["reduction_coefficient"].mutable_partial_sum_parallel();
-    }
-  }
-};
-
-}  // namespace
 void LossOp::InitFromOpConf() {
   EnrollInputBn("prediction");
   if (HasFieldInCustomizedConf("label")) { EnrollInputBn("label", false); }
-  EnrollOutputBn("loss", false);
+  EnrollOutputBn("loss");
   EnrollOutputBn("loss_instance_num", false);
   if (!GetValFromCustomizedConf<std::string>("weight").empty()) {
     EnrollInputBn("weight", false);
@@ -99,11 +64,6 @@ void LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   VirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
-void LossOp::GetSbpSignatures(
-    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new LossSbpSignature(this));
-}
-
 LogicalBlobId LossOp::obn2lbi(const std::string& output_bn) const {
   LogicalBlobId ret;
   ret.set_op_name(op_name());
@@ -115,6 +75,21 @@ LogicalBlobId LossOp::obn2lbi(const std::string& output_bn) const {
     ret.set_blob_name(GetValFromCustomizedConf<std::string>(output_bn));
   }
   return ret;
+}
+
+void LossOp::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = false; }
+  *HasBatchDim4BnInOp("loss") = *HasBatchDim4BnInOp("prediction");
+}
+
+void LossOp::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split(input_bns(), 0)
+      .Split(output_bns(), 0)
+      .PartialSum({"loss_instance_num", "reduction_coefficient"})
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 }  // namespace oneflow

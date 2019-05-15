@@ -78,14 +78,6 @@ void ForEachDeviceSrcUntrainableNode(const std::vector<NormalForwardCompTaskNode
   }
 }
 
-bool IsTimeShapeContain(const Shape& big_shape, const Shape& small_shape) {
-  if (big_shape.NumAxes() < small_shape.NumAxes()) { return false; }
-  FOR_RANGE(int, i, 0, small_shape.NumAxes()) {
-    if (big_shape.At(i) != small_shape.At(i)) { return false; }
-  }
-  return true;
-}
-
 }  // namespace
 
 TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
@@ -144,8 +136,34 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
                     &logical2sorted_out_box, MutBufTask, AllocateCpuThrdIdEvenly);
     SetAreaIdForNewNodes(logical_edge->src_node(), logical_edge->dst_node());
   });
+  logical_gph_->ForEachNecessaryCtrlEdge(
+      [&](const LogicalNode* src, const LogicalNode* dst, int64_t ctrl_regst_num) {
+        const auto& src_task_nodes = logical2sorted_comp_tasks.at(src);
+        const auto& dst_task_nodes = logical2sorted_comp_tasks.at(dst);
+        ConnectCtrlEdges(src_task_nodes, dst_task_nodes, ctrl_regst_num);
+      });
+
   MergeChainAndSetOrderInGraphForEachNode();
   ToDotWithAutoFilePath();
+}
+
+void TaskGraph::ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_nodes,
+                                 const std::vector<CompTaskNode*>& dst_task_nodes,
+                                 int64_t ctrl_regst_num) {
+  CHECK_EQ(src_task_nodes.size(), dst_task_nodes.size());
+  FOR_RANGE(int32_t, i, 0, src_task_nodes.size()) {
+    std::string regst_desc_name;
+    RegstDesc* ctrl_regst_desc =
+        src_task_nodes.at(i)->BuildCtrlRegstDesc(dst_task_nodes.at(i), &regst_desc_name);
+    ctrl_regst_desc->UpdtMinRegstNumIfNeed(ctrl_regst_num);
+    ctrl_regst_desc->UpdtMaxRegstNumIfNeed(ctrl_regst_num);
+    ctrl_regst_desc->mut_regst_desc_type()->mutable_ctrl_regst_desc()->set_returned_regst_num(
+        ctrl_regst_num);
+
+    TaskEdge* edge = NewEdge();
+    Connect<TaskNode>(src_task_nodes.at(i), edge, dst_task_nodes.at(i));
+    src_task_nodes.at(i)->BindEdgeWithProducedRegst(edge, regst_desc_name);
+  }
 }
 
 void TaskGraph::GeneratePersistenceThrdId(
@@ -343,7 +361,7 @@ void TaskGraph::AddReduceNoBwForwardNodeOverlapingCtrlEdges() {
       std::shared_ptr<RegstDesc> regst_desc = node->GetProducedRegst("out");
       if (!regst_desc) { return; }
       const Shape& time_shape = *regst_desc->data_regst_time_shape();
-      if (!IsTimeShapeContain(time_shape, identity_time_shape)) { return; }
+      if (!time_shape.Containing(identity_time_shape)) { return; }
       CHECK_EQ(time_shape.elem_cnt() % identity_time_shape.elem_cnt(), 0);
       int regst_desc_num = time_shape.elem_cnt() / identity_time_shape.elem_cnt();
       RegstDesc* ctrl_regst_desc = node->BuildCtrlRegstDesc(first_identity_node);
@@ -356,10 +374,10 @@ void TaskGraph::AddReduceNoBwForwardNodeOverlapingCtrlEdges() {
 }
 
 void TaskGraph::EnableMemSharingInReduceStruct() {
-  auto GetPredReduceTaskNode = [](TaskNode* succ) {
+  auto GetSuccReduceTaskNode = [](TaskNode* pred) {
     std::vector<TaskNode*> nodes;
-    succ->ForEachNodeOnInEdge([&](TaskNode* pred) {
-      if (dynamic_cast<ReduceCompTaskNodeIf*>(pred)) { nodes.push_back(pred); }
+    pred->ForEachNodeOnOutEdge([&](TaskNode* succ) {
+      if (dynamic_cast<ReduceCompTaskNodeIf*>(succ) != nullptr) { nodes.push_back(succ); }
     });
     return nodes;
   };
@@ -368,39 +386,37 @@ void TaskGraph::EnableMemSharingInReduceStruct() {
 
   auto CollectReduceTaskNode = [&](TaskNode* from) {
     std::list<TaskNode*> nodes;
-    TaskNode* succ = from;
+    nodes.push_back(from);
+    TaskNode* pred = from;
     while (true) {
-      std::vector<TaskNode*> pred_reduce_nodes = GetPredReduceTaskNode(succ);
-      if (pred_reduce_nodes.size() != 1) { break; }
-      TaskNode* pred_reduce_node = pred_reduce_nodes.front();
-      if (has_enabled_nodes.find(pred_reduce_node) != has_enabled_nodes.end()) { break; }
-      nodes.push_back(pred_reduce_node);
-      succ = pred_reduce_node;
+      std::vector<TaskNode*> succ_reduce_nodes = GetSuccReduceTaskNode(pred);
+      if (succ_reduce_nodes.size() != 1) { break; }
+      TaskNode* succ_reduce_node = succ_reduce_nodes.front();
+      if (has_enabled_nodes.find(succ_reduce_node) != has_enabled_nodes.end()) { break; }
+      nodes.push_back(succ_reduce_node);
+      pred = succ_reduce_node;
     }
-    nodes.reverse();
     return nodes;
   };
 
-  auto CalcModelSize = [](NormalMdUpdtCompTaskNode* node) {
-    auto* pred = dynamic_cast<ReduceSplitCompTaskNode*>(node->SoleInEdge()->src_node());
-    if (pred) { return InferRegstSize(*pred->GetSoleConsumedRegst("in")); }
-    return InferRegstSize(*(node->consumed_regsts().begin()->second.front()));
+  auto CalcModelSize = [](ReduceIdentityCompTaskNode* node) {
+    return InferRegstSize(*node->produced_regsts().at("out").get());
   };
 
   ForEachNode([&](TaskNode* node) {
-    auto* updt = dynamic_cast<NormalMdUpdtCompTaskNode*>(node);
-    if (!updt) { return; }
-    if (updt->parallel_ctx()->policy() != ParallelPolicy::kDataParallel) { return; }
-    if (updt->device_type() != DeviceType::kGPU) { return; }
-    if (updt->parallel_ctx()->parallel_num() < 2) { return; }
-    std::list<TaskNode*> reduce_task_nodes = CollectReduceTaskNode(updt);
+    ReduceIdentityCompTaskNode* identity_node = dynamic_cast<ReduceIdentityCompTaskNode*>(node);
+    if (!identity_node) { return; }
+    if (identity_node->parallel_ctx()->policy() != ParallelPolicy::kDataParallel) { return; }
+    if (identity_node->device_type() != DeviceType::kGPU) { return; }
+    if (identity_node->parallel_ctx()->parallel_num() < 2) { return; }
+    std::list<TaskNode*> reduce_task_nodes = CollectReduceTaskNode(identity_node);
 
-    int64_t mem_shared_id = Global<IDMgr>::Get()->NewMemSharedId();
-    int64_t mem_size = CalcModelSize(updt);
+    const int64_t mem_shared_id = Global<IDMgr>::Get()->NewMemSharedId();
+    const int64_t mem_size = CalcModelSize(identity_node);
     ReduceMemSharingCtx ctx(mem_size, mem_shared_id);
     for (TaskNode* reduce_node : reduce_task_nodes) {
       auto reduce_task_node_if = dynamic_cast<ReduceCompTaskNodeIf*>(reduce_node);
-      CHECK(reduce_task_node_if);
+      CHECK_NOTNULL(reduce_task_node_if);
       reduce_task_node_if->EnableMemSharingInReduce(ctx);
       has_enabled_nodes.insert(reduce_node);
     }
@@ -604,28 +620,30 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne) {
   }
 }
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByTickToSource) {
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBroadcastToBroadcast) {
   CHECK(src_logical->SoleOp()->op_conf().has_tick_conf());
-  HashMap<size_t, CompTaskNode*> machine_id2tick_task;
-  HashMap<size_t, std::vector<CompTaskNode*>> machine_id2dst_tasks;
-  for (CompTaskNode* tick_node : sorted_src_comp_tasks) {
-    machine_id2tick_task[tick_node->machine_id()] = tick_node;
+  HashMap<size_t, CompTaskNode*> machine_id2last_src_task;
+  HashMap<std::pair<int64_t, int64_t>, CompTaskNode*> global_thrd_id2src_task;
+  auto GlobalThrdId4TaskNode = [](TaskNode* task_node) -> std::pair<int64_t, int64_t> {
+    return std::make_pair(task_node->machine_id(), task_node->thrd_id());
+  };
+  for (CompTaskNode* src_node : sorted_src_comp_tasks) {
+    machine_id2last_src_task[src_node->machine_id()] = src_node;
+    global_thrd_id2src_task[GlobalThrdId4TaskNode(src_node)] = src_node;
   }
+  HashMap<std::pair<int64_t, int64_t>, CompTaskNode*> global_thrd_id2dst_task;
   for (CompTaskNode* dst_node : sorted_dst_comp_tasks) {
-    machine_id2dst_tasks[dst_node->machine_id()].push_back(dst_node);
+    global_thrd_id2dst_task[GlobalThrdId4TaskNode(dst_node)] = dst_node;
   }
-
-  CompTaskNode* first_tick = sorted_src_comp_tasks.at(0);
-  for (const auto& pair : machine_id2dst_tasks) {
-    size_t machine_id = pair.first;
-    for (CompTaskNode* dst_node : pair.second) {
-      if (machine_id2tick_task.find(machine_id) != machine_id2tick_task.end()) {
-        Connect<TaskNode>(machine_id2tick_task.at(machine_id), NewEdge(), dst_node);
-      } else {
-        TaskNode* next_node = AddCopyCommNetTaskBetween(first_tick, dst_node);
-        Connect<TaskNode>(first_tick, NewEdge(), next_node);
-      }
-    }
+  auto GetSrcNode = [&](const std::pair<int64_t, int64_t>& global_thrd_id) -> CompTaskNode* {
+    const auto& src_task_it = global_thrd_id2src_task.find(global_thrd_id);
+    if (src_task_it != global_thrd_id2src_task.end()) { return src_task_it->second; }
+    const auto& m_src_task_it = machine_id2last_src_task.find(global_thrd_id.first);
+    if (m_src_task_it != machine_id2last_src_task.end()) { return m_src_task_it->second; }
+    return machine_id2last_src_task.begin()->second;
+  };
+  for (const auto& pair : global_thrd_id2dst_task) {
+    BuildTaskPath(GetSrcNode(pair.first), pair.second, MutBufTask, true);
   }
 }
 

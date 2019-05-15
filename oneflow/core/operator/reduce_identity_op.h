@@ -12,7 +12,7 @@ class ReduceIdentityOp final : public Operator {
   ReduceIdentityOp() = default;
   ~ReduceIdentityOp() = default;
 
-  LogicalNode* NewProperLogicalNode() { return new ReduceIdentityLogicalNode; }
+  LogicalNode* NewProperLogicalNode() const override { return new ReduceIdentityLogicalNode; }
   void InitFromOpConf() override;
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
@@ -21,9 +21,17 @@ class ReduceIdentityOp final : public Operator {
   bool NeedOutBlobWhenBackward() const override { return false; }
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { UNIMPLEMENTED(); }
+  void InferHasBatchDim(
+      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {
+    NaiveInferHasBatchDim(HasBatchDim4BnInOp);
+  }
 
-  LogicalBlobId ibn2lbi(const std::string& input_bn) const override { return GenPackedLbi(); }
+  void InferSbpSignature(SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+                         const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+                         std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+                         const ParallelDesc& parallel_desc) const override;
+
+  LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
   LogicalBlobId obn2lbi(const std::string& output_bn) const override;
 };
 

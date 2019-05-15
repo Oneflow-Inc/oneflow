@@ -2,7 +2,7 @@
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/device/cudnn_conv_ctx_cache.h"
 #include "oneflow/core/graph/op_graph.h"
-#include "oneflow/core/autograd/job_completer.h"
+#include "oneflow/core/job_completer/job_completer.h"
 
 namespace oneflow {
 
@@ -43,6 +43,16 @@ void ToDotFile(const Plan& plan, const std::string& filepath) {
     }
   }
   log_stream << "}\n";
+}
+
+Job ConvertJobConf2Job(const JobConf& job_conf) {
+  Job job;
+  *job.mutable_net() = job_conf.net();
+  *job.mutable_resource() = job_conf.resource();
+  *job.mutable_placement() = job_conf.placement();
+  *job.mutable_sbp_conf() = job_conf.sbp_conf();
+  *job.mutable_other() = job_conf.other();
+  return job;
 }
 
 }  // namespace
@@ -97,13 +107,13 @@ Plan Compiler::DoCompile() {
 #ifdef WITH_CUDA
   Global<CudnnConvCtxCache>::New();
 #endif
-  JobCompleter().CompleteGlobalJobDesc();
-  Global<JobDesc>::Get()->FixAndOptimizeDLNet();
   const JobDesc* job_desc = Global<JobDesc>::Get();
-  TeePersistentLogStream::Create("optimized_job_conf")->Write(job_desc->job_conf());
-  Global<OpGraph>::New(job_desc);
+  Job job = ConvertJobConf2Job(job_desc->job_conf());
+  JobCompleter().Complete(&job);
+  TeePersistentLogStream::Create("optimized_job")->Write(job);
+  Global<OpGraph>::New(job);
   Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_op_graph.dot");
-  auto logical_gph = std::make_unique<LogicalGraph>(job_desc->IsTrain());
+  auto logical_gph = std::make_unique<LogicalGraph>(job);
   int64_t total_mbn_num = logical_gph->total_mbn_num();
   auto task_gph = std::make_unique<TaskGraph>(std::move(logical_gph));
   using std::placeholders::_1;
@@ -117,8 +127,8 @@ Plan Compiler::DoCompile() {
   }
   task_gph->RemoveEmptyRegsts();
   task_gph->AddOrderingCtrlEdgeInSameChain();
+  task_gph->EnableMemSharingInReduceStruct();
   if (job_desc->IsTrain() && job_desc->enable_mem_sharing()) {
-    task_gph->EnableMemSharingInReduceStruct();
     task_gph->EnableMemSharingAfterAllManualSetForMdUpdt();  // must last mem shared manual set
   }
   task_gph->EnableInplaceMemSharing();

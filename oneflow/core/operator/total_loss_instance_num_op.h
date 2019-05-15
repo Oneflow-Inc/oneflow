@@ -19,8 +19,6 @@ class TotalLossInstanceNumOp final : public CWiseOp {
                              const ParallelContext* parallel_ctx) const override;
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
-  void GetSbpSignatures(std::vector<std::unique_ptr<const SbpSignature>>*) const override;
 };
 
 }  // namespace oneflow

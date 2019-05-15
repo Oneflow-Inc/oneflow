@@ -14,8 +14,6 @@ class SparseCrossEntropyLossOp final : public LossOp {
   const PbMessage& GetCustomizedConf() const override;
 
  private:
-  bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
-
   LossKernelConf* GetMutLossKernelConf(KernelConf*) const override;
 };
 

@@ -42,7 +42,8 @@ std::function<bool(const LogicalNode*)> MakePredicatorHasActualOutDiff(const Log
 
 }  // namespace
 
-LogicalGraph::LogicalGraph(bool is_train) {
+LogicalGraph::LogicalGraph(const Job& job) : job_(job) {
+  bool is_train = Global<JobDesc>::Get()->IsTrain();
   BuildFwStruct();
   if (is_train) { GroupNodesForReduceStruct(); }
   if (is_train) { BuildBwStruct(); }
@@ -111,6 +112,7 @@ void LogicalGraph::ForEachLogicalNode(std::function<void(LogicalNodeType*)> func
 void LogicalGraph::BuildFwStruct() {
   HashMap<std::string, std::vector<LogicalNode*>> op_name2nodes;
   NaiveBuildFwStruct(&op_name2nodes);
+  ReplaceAllReduceFacades();
   FixSharedModelNodes(op_name2nodes);
   LinkUnpackFw2PackFw(op_name2nodes);
   total_mbn_num_ = 0;
@@ -122,8 +124,8 @@ void LogicalGraph::BuildFwStruct() {
 
 void LogicalGraph::NaiveBuildFwStruct(
     HashMap<std::string, std::vector<LogicalNode*>>* op_name2nodes) {
-  const DLNetConf& dlnet_conf = Global<JobDesc>::Get()->dlnet_conf();
-  const Placement& placement = Global<JobDesc>::Get()->placement();
+  const DLNetConf& dlnet_conf = job_.net();
+  const Placement& placement = job_.placement();
   HashMap<std::string, std::shared_ptr<ParallelDesc>> name2parallel_desc;
   for (const PlacementGroup& p_group : placement.placement_group()) {
     for (const std::string& op_name : p_group.op_set().op_name()) {
@@ -150,6 +152,21 @@ void LogicalGraph::NaiveBuildFwStruct(
     cur_node->mut_op_vec() = {cur_op};
     cur_node->SoleOp()->FixParallelDesc(parallel_desc_ptr.get());
     cur_node->mut_parallel_desc() = parallel_desc_ptr;
+    if (Global<JobDesc>::Get()->IsPredict()
+        && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+      const auto& name2shape = job_.helper().op_name2op_time_shape();
+      const auto& op_time_shape_it = name2shape.find(cur_op->op_name());
+      if (op_time_shape_it != name2shape.end()) {
+        const auto& op_time_shape = op_time_shape_it->second;
+        if (op_time_shape.has_out_blob_time_shape()) {
+          cur_node->reset_out_blob_time_shape(new Shape(op_time_shape.out_blob_time_shape()));
+        }
+        if (op_time_shape.has_in_blob_fastest_time_shape()) {
+          cur_node->reset_in_blob_fastest_time_shape(
+              new Shape(op_time_shape.in_blob_fastest_time_shape()));
+        }
+      }
+    }
     for (const std::string& obn : cur_node->SoleOp()->output_bns()) {
       const LogicalBlobId& lbi = cur_node->SoleOp()->BnInOp2Lbi(obn);
       CHECK(lbi2producer.emplace(lbi, cur_node).second);
@@ -169,12 +186,33 @@ void LogicalGraph::NaiveBuildFwStruct(
       Connect(pred_node, edge, cur_node);
     }
   });
+  // set batch_dim_lbis_cnt
+  HashSet<LogicalBlobId> batch_dim_lbis;
+  for (const LogicalBlobId& lbi : job_.helper().batch_dim_lbis()) {
+    CHECK(batch_dim_lbis.emplace(lbi).second);
+  }
+  ForEachNode([&](LogicalNode* cur_node) {
+    size_t consumed_batch_dim_lbis_cnt = 0;
+    size_t produced_batch_dim_lbis_cnt = 0;
+    for (const auto& op : cur_node->op_vec()) {
+      for (const std::string& ibn : op->input_bns()) {
+        consumed_batch_dim_lbis_cnt +=
+            batch_dim_lbis.find(op->BnInOp2Lbi(ibn)) != batch_dim_lbis.end();
+      }
+      for (const std::string& obn : op->output_bns()) {
+        produced_batch_dim_lbis_cnt +=
+            batch_dim_lbis.find(op->BnInOp2Lbi(obn)) != batch_dim_lbis.end();
+      }
+    }
+    cur_node->set_consumed_batch_dim_lbis_cnt(consumed_batch_dim_lbis_cnt);
+    cur_node->set_produced_batch_dim_lbis_cnt(produced_batch_dim_lbis_cnt);
+  });
 }
 
 void LogicalGraph::FixSharedModelNodes(
     const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes) {
   HashSet<std::string> all_shared_model_op_names;
-  const DLNetConf& dlnet_conf = Global<JobDesc>::Get()->dlnet_conf();
+  const DLNetConf& dlnet_conf = job_.net();
   for (const OpNameSet& op_name_set : dlnet_conf.shared_model_group()) {
     std::vector<std::string> shared_model_op_names(op_name_set.op_name().begin(),
                                                    op_name_set.op_name().end());
@@ -197,7 +235,7 @@ void LogicalGraph::FixSharedModelNodes(
     const ParallelDesc* shared_parallel_desc = shared_model_nodes->front()->parallel_desc().get();
     FOR_RANGE(size_t, i, 1, shared_model_nodes->size()) {
       shared_model_nodes->at(i)->SoleOp()->FixLbiWhenShareModel(shared_op_name);
-      CHECK(shared_model_nodes->at(i)->parallel_desc()->Equal(shared_parallel_desc));
+      CHECK(shared_model_nodes->at(i)->parallel_desc()->Equals(shared_parallel_desc));
     }
   }
 }
@@ -597,7 +635,7 @@ void LogicalGraph::AddNcclReduceScatterAndAllGather(LogicalNode* src, LogicalNod
 
   ReduceRankCtx rank_ctx = ReduceRankCtx().CtxWithScatter(src_pd->device_num_of_each_machine());
 
-  OperatorConf nccl_reduce_scatter_op_conf;
+  OperatorConf nccl_reduce_scatter_op_conf{};
   nccl_reduce_scatter_op_conf.set_name("nccl_reduce_scatter_" + NewUniqueId());
   nccl_reduce_scatter_op_conf.set_device_type(src_pd->device_type());
   nccl_reduce_scatter_op_conf.mutable_nccl_reduce_scatter_conf();
@@ -607,7 +645,7 @@ void LogicalGraph::AddNcclReduceScatterAndAllGather(LogicalNode* src, LogicalNod
   nccl_reduce_scatter_node->mut_rank_ctx() = rank_ctx;
   Connect<LogicalNode>(src, NewEdge(), nccl_reduce_scatter_node);
 
-  OperatorConf nccl_all_gather_op_conf;
+  OperatorConf nccl_all_gather_op_conf{};
   nccl_all_gather_op_conf.set_name("nccl_all_gather_" + NewUniqueId());
   nccl_all_gather_op_conf.set_device_type(src_pd->device_type());
   nccl_all_gather_op_conf.mutable_nccl_all_gather_conf();
@@ -622,7 +660,7 @@ void LogicalGraph::AddNcclReduceScatterAndAllGather(LogicalNode* src, LogicalNod
 
 void LogicalGraph::AddNcclAllReduce(LogicalNode* src, LogicalNode* dst) {
   std::shared_ptr<const ParallelDesc> src_pd = src->parallel_desc();
-  OperatorConf nccl_all_reduce_op_conf;
+  OperatorConf nccl_all_reduce_op_conf{};
   nccl_all_reduce_op_conf.set_name("nccl_all_reduce_" + NewUniqueId());
   nccl_all_reduce_op_conf.set_device_type(src_pd->device_type());
   nccl_all_reduce_op_conf.mutable_nccl_all_reduce_conf();
@@ -646,16 +684,31 @@ void LogicalGraph::AddReduceScatterAddGatherNodes(LogicalNode* src, LogicalNode*
 
   ReduceRankCtx current_rank_ctx = prev_rank_ctx.CtxWithScatter(segment_count);
   ReduceScatterLogicalNode* reduce_scatter_node = NewNode<ReduceScatterLogicalNode>();
+  OperatorConf reduce_scatter_op_conf{};
+  reduce_scatter_op_conf.set_name("reduce_scatter_" + NewUniqueId());
+  reduce_scatter_op_conf.set_device_type(src_pd->device_type());
+  reduce_scatter_op_conf.mutable_reduce_scatter_conf();
+  reduce_scatter_node->mut_op_vec() = {ConstructOp(reduce_scatter_op_conf)};
   reduce_scatter_node->mut_parallel_desc() = src_pd;
   reduce_scatter_node->mut_rank_ctx() = current_rank_ctx;
   Connect<LogicalNode>(src, NewEdge(), reduce_scatter_node);
 
   ReduceAddLogicalNode* reduce_add_node = NewNode<ReduceAddLogicalNode>();
+  OperatorConf reduce_add_op_conf{};
+  reduce_add_op_conf.set_name("reduce_add_" + NewUniqueId());
+  reduce_add_op_conf.set_device_type(src_pd->device_type());
+  reduce_add_op_conf.mutable_reduce_add_conf();
+  reduce_add_node->mut_op_vec() = {ConstructOp(reduce_add_op_conf)};
   reduce_add_node->mut_parallel_desc() = src_pd;
   reduce_add_node->mut_rank_ctx() = current_rank_ctx;
   Connect<LogicalNode>(reduce_scatter_node, NewEdge(), reduce_add_node);
 
   ReduceGatherLogicalNode* reduce_gather_node = NewNode<ReduceGatherLogicalNode>();
+  OperatorConf reduce_gather_op_conf{};
+  reduce_gather_op_conf.set_name("reduce_gather_" + NewUniqueId());
+  reduce_gather_op_conf.set_device_type(src_pd->device_type());
+  reduce_gather_op_conf.mutable_reduce_gather_conf();
+  reduce_gather_node->mut_op_vec() = {ConstructOp(reduce_gather_op_conf)};
   reduce_gather_node->mut_parallel_desc() = src_pd;
   reduce_gather_node->mut_rank_ctx() = current_rank_ctx;
 
@@ -723,6 +776,42 @@ MdSaveLogicalNode* LogicalGraph::BuildMdSaveStructIfNeed(LogicalNode* need_save_
   }
 }
 
+void LogicalGraph::ForEachNecessaryCtrlEdge(
+    const std::function<void(const LogicalNode*, const LogicalNode*, int64_t)>& Handler) const {
+  if (!(Global<JobDesc>::Get()->IsPredict()
+        && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf())) {
+    return;
+  }
+  HashMap<std::string, const LogicalNode*> op_name2node;
+  ForEachNode([&](LogicalNode* node) {
+    for (const auto& op : node->op_vec()) {
+      CHECK(op_name2node.emplace(op->op_name(), node).second);
+    }
+  });
+  auto IsReachable = MakePredicatorIsReachable();
+  ForEachNode([&](LogicalNode* dst) {
+    for (const auto& op : dst->op_vec()) {
+      for (const auto& ctrl_in_op_name : op->op_conf().ctrl_in_op_name()) {
+        const LogicalNode* src = op_name2node.at(ctrl_in_op_name);
+        CHECK(!IsReachable(dst, src));
+        if (!IsReachable(src, dst)) {
+          CHECK(src->parallel_desc()->EqualsIgnoringPolicy(*dst->parallel_desc()));
+          const Shape* src_time_shape = src->out_blob_time_shape();
+          if (src_time_shape == nullptr) { src_time_shape = src->in_blob_fastest_time_shape(); }
+          CHECK_NOTNULL(src_time_shape);
+          const Shape* dst_time_shape = dst->in_blob_fastest_time_shape();
+          if (dst_time_shape == nullptr) { dst_time_shape = dst->out_blob_time_shape(); }
+          CHECK_NOTNULL(dst_time_shape);
+          CHECK(src_time_shape->Containing(*dst_time_shape));
+          CHECK_EQ(src_time_shape->elem_cnt() % dst_time_shape->elem_cnt(), 0);
+          int64_t regst_desc_num = src_time_shape->elem_cnt() / dst_time_shape->elem_cnt();
+          Handler(src, dst, regst_desc_num);
+        }
+      }
+    }
+  });
+}
+
 NormalMdUpdtLogicalNode* LogicalGraph::BuildNormalMdUpdtAndMdSaveStruct(
     bool is_train, ForwardLogicalNode* fw_logical) {
   NormalMdUpdtLogicalNode* md_updt_logical = NewNode<NormalMdUpdtLogicalNode>();
@@ -736,6 +825,23 @@ NormalMdUpdtLogicalNode* LogicalGraph::BuildNormalMdUpdtAndMdSaveStruct(
     BuildMdSaveStructIfNeed(md_updt_logical);
   }
   return md_updt_logical;
+}
+
+void LogicalGraph::ReplaceAllReduceFacades() {
+  ForEachLogicalNode<AllReduceFacadeLogicalNode>([this](AllReduceFacadeLogicalNode* facade_node) {
+    CHECK_EQ(facade_node->in_edges().size(), 1);
+    CHECK_EQ(facade_node->out_edges().size(), 1);
+    LogicalNode* src = facade_node->SoleInEdge()->src_node();
+    LogicalNode* dst = facade_node->SoleOutEdge()->dst_node();
+    DisConnect(facade_node->SoleInEdge());
+    DisConnect(facade_node->SoleOutEdge());
+    DeleteNode(facade_node);
+    AddAllReduce(src, dst);
+    Operator* all_reduce_ending_op = dst->SoleInEdge()->src_node()->SoleOp().get();
+    const LogicalBlobId& ending_lbi =
+        all_reduce_ending_op->BnInOp2Lbi(all_reduce_ending_op->SoleObn());
+    *dst->SoleOp()->MutBnInOp2Lbi(dst->SoleOp()->SoleIbn()) = ending_lbi;
+  });
 }
 
 void LogicalGraph::ConnectFwToBw() {

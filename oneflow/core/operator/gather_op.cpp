@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/gather_op.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -14,87 +15,6 @@ int64_t GetGatherAxis(const GatherOpConf& conf, int64_t num_axes) {
 int64_t GetGatherAxis(const GatherOpConf& conf, const BlobDesc* in_blob_desc) {
   return GetGatherAxis(conf, in_blob_desc->shape().NumAxes());
 }
-
-class GatherDataParallelSbpSignature final : public ParallelSbpSignature {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(GatherDataParallelSbpSignature);
-  ~GatherDataParallelSbpSignature() override = default;
-
-  explicit GatherDataParallelSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
-
-  const std::string Description() const override { return op().op_name() + ": (S, B) -> S"; }
-
-  const SbpSigMatchResult GetMatchResult(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      const ParallelDesc& parallel_desc) const override {
-    const SbpInferHint& in_sbp_infer_hint = SbpInferHint4BnInOp("in");
-    if (!in_sbp_infer_hint.sbp_parallel().has_broadcast_parallel()) {
-      return MakeSbpSigMatchSignatureMismatch();
-    }
-    const SbpInferHint& indices_sbp_infer_hint = SbpInferHint4BnInOp("indices");
-    if (!indices_sbp_infer_hint.sbp_parallel().has_split_parallel()) {
-      return MakeSbpSigMatchSignatureMismatch();
-    }
-    if (parallel_desc.policy() == kDataParallel) { return MakeSbpSigMatchSuccess(); }
-    return MakeSbpSigMatchParallelPolicyError(parallel_desc.policy(), kDataParallel);
-  }
-
-  void GenerateSignature(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
-    const int64_t gather_axis =
-        GetGatherAxis(op().op_conf().gather_conf(), SbpInferHint4BnInOp("in").num_axes());
-    const int64_t indices_split_axis =
-        SbpInferHint4BnInOp("indices").sbp_parallel().split_parallel().axis();
-    (*bn2sbp)["indices"].mutable_split_parallel()->set_axis(indices_split_axis);
-    (*bn2sbp)["in"].mutable_broadcast_parallel();
-    (*bn2sbp)["out"].mutable_split_parallel()->set_axis(gather_axis + indices_split_axis);
-  }
-};
-
-class GatherModelParallelSbpSignature final : public ParallelSbpSignature {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(GatherModelParallelSbpSignature);
-  ~GatherModelParallelSbpSignature() override = default;
-
-  explicit GatherModelParallelSbpSignature(const Operator* op) : ParallelSbpSignature(op) {}
-
-  const std::string Description() const override { return op().op_name() + ": (B, S) -> S"; }
-
-  const SbpSigMatchResult GetMatchResult(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      const ParallelDesc& parallel_desc) const override {
-    const SbpInferHint& in_sbp_infer_hint = SbpInferHint4BnInOp("in");
-    if (!in_sbp_infer_hint.sbp_parallel().has_split_parallel()) {
-      return MakeSbpSigMatchSignatureMismatch();
-    }
-    const int64_t gather_axis =
-        GetGatherAxis(op().op_conf().gather_conf(), SbpInferHint4BnInOp("in").num_axes());
-    if (in_sbp_infer_hint.sbp_parallel().split_parallel().axis() == gather_axis) {
-      return MakeSbpSigMatchSignatureMismatch();
-    }
-    const SbpInferHint& indices_sbp_infer_hint = SbpInferHint4BnInOp("indices");
-    if (!indices_sbp_infer_hint.sbp_parallel().has_broadcast_parallel()) {
-      return MakeSbpSigMatchSignatureMismatch();
-    }
-    if (parallel_desc.policy() == kModelParallel) { return MakeSbpSigMatchSuccess(); }
-    return MakeSbpSigMatchParallelPolicyError(parallel_desc.policy(), kModelParallel);
-  }
-
-  void GenerateSignature(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4BnInOp,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
-    const int64_t gather_axis =
-        GetGatherAxis(op().op_conf().gather_conf(), SbpInferHint4BnInOp("in").num_axes());
-    const int64_t in_split_axis = SbpInferHint4BnInOp("in").sbp_parallel().split_parallel().axis();
-    (*bn2sbp)["indices"].mutable_broadcast_parallel();
-    (*bn2sbp)["in"].mutable_split_parallel()->set_axis(in_split_axis);
-    (*bn2sbp)["out"].mutable_split_parallel()->set_axis(
-        in_split_axis < gather_axis
-            ? in_split_axis
-            : in_split_axis + SbpInferHint4BnInOp("indices").num_axes() - 1);
-  }
-};
 
 }  // namespace
 
@@ -114,11 +34,6 @@ void GatherOp::InitFromOpConf() {
 }
 
 const PbMessage& GatherOp::GetCustomizedConf() const { return op_conf().gather_conf(); }
-
-bool GatherOp::IsInputBlobAllowedModelSplit(const std::string& ibn) const {
-  CHECK(std::find(input_bns().begin(), input_bns().end(), ibn) != input_bns().end());
-  return ibn == "in";
-}
 
 void GatherOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext* parallel_ctx) const {
@@ -141,15 +56,28 @@ void GatherOp::VirtualGenKernelConf(
 }
 
 void GatherOp::GetSbpSignatures(
-    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(new GatherDataParallelSbpSignature(this));
-  op_parallel_signatures->emplace_back(new GatherModelParallelSbpSignature(this));
-}
-
-int32_t GatherOp::OutputBlobModelSplitAxis(
-    const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-    const std::string& obn) const {
-  UNIMPLEMENTED();
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  const int64_t in_num_axes = LogicalBlobDesc4Ibn("in").shape().NumAxes();
+  const int64_t gather_axis = GetGatherAxis(op_conf().gather_conf(), in_num_axes);
+  CHECK_GE(gather_axis, 0);
+  CHECK_LT(gather_axis, in_num_axes);
+  const int64_t indices_num_axes = LogicalBlobDesc4Ibn("indices").shape().NumAxes();
+  FOR_RANGE(int64_t, i, 0, indices_num_axes) {
+    SbpSignatureBuilder()
+        .Split("indices", i)
+        .Broadcast("in")
+        .Split("out", gather_axis + i)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  }
+  FOR_RANGE(int64_t, i, 0, in_num_axes) {
+    if (i == gather_axis) { continue; }
+    SbpSignatureBuilder()
+        .Broadcast("indices")
+        .Split("in", i)
+        .Split("out", i < gather_axis ? i : i + indices_num_axes - 1)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  }
 }
 
 REGISTER_OP(OperatorConf::kGatherConf, GatherOp);

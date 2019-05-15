@@ -5,17 +5,17 @@ namespace oneflow {
 
 void ReduceGatherCompTaskNode::ProduceAllRegstsAndBindEdges() {
   std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", false, 1, 1);
-  for (TaskEdge* edge : out_edges()) { edge->AddRegst("out", out_regst); }
+  ForEachOutDataEdge([&](TaskEdge* edge) { edge->AddRegst("out", out_regst); });
 }
 
 void ReduceGatherCompTaskNode::ConsumeAllRegsts() {
   std::vector<EdgeInfo> edge_infos;
-  for (TaskEdge* edge : in_edges()) {
+  ForEachInDataEdge([&](TaskEdge* edge) {
     std::vector<CompTaskNode*> pred_comp_task_nodes = GetPredCompTaskNodesOnEdge(edge);
     CHECK_EQ(pred_comp_task_nodes.size(), 1);
     EdgeInfo edge_info = {edge, pred_comp_task_nodes.front()->task_id()};
     edge_infos.push_back(edge_info);
-  }
+  });
   SortEdges(&edge_infos);
   FOR_RANGE(int64_t, in_edge_index, 0, edge_infos.size()) {
     ConsumeRegst("in_" + std::to_string(in_edge_index),
@@ -26,9 +26,9 @@ void ReduceGatherCompTaskNode::ConsumeAllRegsts() {
 void ReduceGatherCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   OperatorConf reduce_gather_op_conf;
-  reduce_gather_op_conf.set_name("reduce_gather_" + NewUniqueId());
+  reduce_gather_op_conf.set_name(this->logical_node()->SoleOp()->op_name());
   reduce_gather_op_conf.set_device_type(this->device_type());
-  reduce_gather_op_conf.mutable_reduce_gather_conf()->set_in_num(in_edges().size());
+  reduce_gather_op_conf.mutable_reduce_gather_conf()->set_in_num(in_data_edges_size());
   std::shared_ptr<Operator> reduce_gather_op = ConstructOp(reduce_gather_op_conf);
   node->mut_op() = reduce_gather_op;
 

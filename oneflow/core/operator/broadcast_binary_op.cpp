@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/broadcast_binary_op.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -6,62 +7,6 @@ namespace {
 
 bool IsScalarBlob(const BlobDesc* blob) {
   return blob->shape().NumAxes() == 1 && blob->shape().At(0) == 1;
-}
-
-class BroadcastBinarySbpSignature final : public ParallelSbpSignature {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(BroadcastBinarySbpSignature);
-  ~BroadcastBinarySbpSignature() override = default;
-
-  BroadcastBinarySbpSignature(const Operator* op, const HashSet<std::string>& model_input_bns)
-      : ParallelSbpSignature(op), model_input_bns_(model_input_bns) {}
-
-  const std::string Description() const override {
-    return op().op_name() + ": (C, ..., S(0), ...) -> (S(0), ...)";
-  }
-
-  const SbpSigMatchResult GetMatchResult(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc) const override {
-    for (const auto& bn : op().input_bns()) {
-      const auto& sbp_infer_hint = SbpInferHint4Ibn(bn);
-      bool is_model_input_bns = (model_input_bns_.find(bn) != model_input_bns_.end());
-      bool has_actual_model_input = sbp_infer_hint.is_model_blob();
-      if (is_model_input_bns ^ has_actual_model_input) {
-        return MakeSbpSigMatchSignatureMismatch();
-      }
-    }
-    if (parallel_desc.policy() == kDataParallel) { return MakeSbpSigMatchSuccess(); }
-    return MakeSbpSigMatchParallelPolicyError(parallel_desc.policy(), kDataParallel);
-  }
-
-  void GenerateSignature(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      HashMap<std::string, SbpParallel>* bn2sbp) const override {
-    for (const auto& bn : op().input_bns()) {
-      if (model_input_bns_.find(bn) != model_input_bns_.end()) {
-        (*bn2sbp)[bn].mutable_broadcast_parallel();
-      } else {
-        const auto& in_sbp = SbpInferHint4Ibn(bn).sbp_parallel();
-        if (in_sbp.has_broadcast_parallel()) {
-          (*bn2sbp)[bn].mutable_broadcast_parallel();
-        } else {
-          (*bn2sbp)[bn].mutable_split_parallel()->set_axis(0);
-        }
-      }
-    }
-    for (const auto& bn : op().output_bns()) {
-      (*bn2sbp)[bn].mutable_split_parallel()->set_axis(0);
-    }
-  }
-
- private:
-  HashSet<std::string> model_input_bns_;
-};
-
-std::unique_ptr<const SbpSignature> MakeBroadcastBinarySbpSignature(
-    const Operator* op, const HashSet<std::string>& model_input_bns) {
-  return std::unique_ptr<const SbpSignature>(new BroadcastBinarySbpSignature(op, model_input_bns));
 }
 
 }  // namespace
@@ -107,11 +52,59 @@ void BroadcastBinaryOp::InferBwBufBlobDescs(
 }
 
 void BroadcastBinaryOp::GetSbpSignatures(
-    std::vector<std::unique_ptr<const SbpSignature>>* op_parallel_signatures) const {
-  op_parallel_signatures->emplace_back(MakeBroadcastBinarySbpSignature(this, {}));
-  op_parallel_signatures->emplace_back(MakeBroadcastBinarySbpSignature(this, {"a"}));
-  op_parallel_signatures->emplace_back(MakeBroadcastBinarySbpSignature(this, {"b"}));
-  op_parallel_signatures->emplace_back(MakeBroadcastBinarySbpSignature(this, {"a", "b"}));
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  const Shape& a_shape = LogicalBlobDesc4Ibn("a").shape();
+  const Shape& b_shape = LogicalBlobDesc4Ibn("b").shape();
+  if (a_shape.NumAxes() < b_shape.NumAxes()) {
+    FOR_RANGE(int64_t, i, 0, b_shape.NumAxes() - a_shape.NumAxes()) {
+      SbpSignatureBuilder().Broadcast("a").Split("b", i).Split("out", i).Build(
+          sbp_sig_list->mutable_sbp_signature()->Add());
+    }
+    FOR_RANGE(int64_t, i, 0, a_shape.NumAxes()) {
+      SbpSignatureBuilder()
+          .Split("a", a_shape.NumAxes() - 1 - i)
+          .Split("b", b_shape.NumAxes() - 1 - i)
+          .Split(output_bns(), b_shape.NumAxes() - 1 - i)
+          .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    }
+  } else if (a_shape.NumAxes() > b_shape.NumAxes()) {
+    FOR_RANGE(int64_t, i, 0, a_shape.NumAxes() - b_shape.NumAxes()) {
+      SbpSignatureBuilder().Split("a", i).Broadcast("b").Split("out", i).Build(
+          sbp_sig_list->mutable_sbp_signature()->Add());
+    }
+    FOR_RANGE(int64_t, i, 0, b_shape.NumAxes()) {
+      SbpSignatureBuilder()
+          .Split("a", a_shape.NumAxes() - 1 - i)
+          .Split("b", b_shape.NumAxes() - 1 - i)
+          .Split(output_bns(), a_shape.NumAxes() - 1 - i)
+          .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+    }
+  } else {
+    FOR_RANGE(int64_t, i, 0, a_shape.NumAxes()) {
+      if (a_shape.At(i) == 1 && b_shape.At(i) == 1) { continue; }
+      if (a_shape.At(i) == b_shape.At(i)) {
+        SbpSignatureBuilder()
+            .Split(input_bns(), i)
+            .Split(output_bns(), i)
+            .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+      } else if (a_shape.At(i) == 1) {
+        SbpSignatureBuilder()
+            .Broadcast("a")
+            .Split("b", i)
+            .Split(output_bns(), i)
+            .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+      } else if (b_shape.At(i) == 1) {
+        SbpSignatureBuilder()
+            .Split("a", i)
+            .Broadcast("b")
+            .Split(output_bns(), i)
+            .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+      } else {
+        UNIMPLEMENTED();
+      }
+    }
+  }
 }
 
 }  // namespace oneflow

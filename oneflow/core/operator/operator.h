@@ -10,8 +10,7 @@
 #include "oneflow/core/kernel/kernel.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/register/blob_desc.h"
-#include "oneflow/core/operator/sbp_signature.h"
-#include "oneflow/core/job/job_conf_builder.h"
+#include "oneflow/core/job/job_builder.h"
 
 namespace oneflow {
 
@@ -30,13 +29,11 @@ class Operator {
   //
   void InitFromOpConf(const OperatorConf& op_conf);
   virtual void InitFromOpConf() = 0;
-  bool IsSoleInputBlobAllowedModelSplit() const;
-  virtual bool IsInputBlobAllowedModelSplit(const std::string& ibn) const = 0;
   bool HasOutDiff4Lbi(const LogicalBlobId& lbi) const;
 
   ActivationType GetActivationType() const;
 
-  virtual LogicalNode* NewProperLogicalNode();
+  virtual LogicalNode* NewProperLogicalNode() const;
 
   virtual bool IsLossOp() const { return false; }
   virtual bool IsRecurrentOp() const { return false; }
@@ -141,6 +138,14 @@ class Operator {
       const ParallelContext*) const {
     UNIMPLEMENTED();
   }
+
+  void InferHasBatchDimIf(
+      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+    InferHasBatchDim(LogicalBlobDesc4Ibn, HasBatchDim4BnInOp);
+  }
+  void NaiveInferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const;
+
   // Infer out blob's time shape
   void InferOutputBlobTimeShapeIf(
       std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
@@ -148,16 +153,14 @@ class Operator {
   virtual void InferOutputBlobTimeShape(
       std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
       Shape* time_shape) const;
-  // Infer blob's SbpParallel
-  void InferInputOutputSbpParallelIf(
-      std::function<SbpParallel*(const std::string&)> SbpParallel4BnInOp,
-      std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
-      const ParallelDesc& parallel_desc) const;
-  virtual void FixInputOutputSbpParallel(
-      const std::function<SbpParallel*(const std::string&)>& SbpParallel4BnInOp) const {}
-  // Infer is_model_blob
-  void InferIsModelBlob4OutputBlobsIf(
-      std::function<bool*(const std::string&)> IsModelBlob4BnInOp) const;
+  // Infer blob's SbpSignature
+  void InferSbpSignatureIf(SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+                           const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+                           std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+                           const ParallelDesc& parallel_desc) const;
+  virtual void FixSbpSignature(
+      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
+      SbpSignature* sbp_signature) const {}
   virtual void FixInDiffBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                   const ParallelContext*) const;
   virtual void VirtualFixInDiffBlobDescs(
@@ -166,15 +169,27 @@ class Operator {
 
   void FixParallelDesc(ParallelDesc* pr_desc) const;
   void FixLbiWhenShareModel(const std::string& shared_op_name);
-  virtual int32_t OutputBlobModelSplitAxis(
-      const std::function<const SbpInferHint&(const std::string&)>& SbpInferHint4Ibn,
-      const std::string& obn) const;
   void GenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                      bool is_forward, const ParallelContext*, KernelConf*, const OpContext*) const;
+  const InputBlobModifier& InputBlobModifier4Ibn(const std::string& ibn) const;
+  const OutputBlobModifier& OutputBlobModifier4Obn(const std::string& obn) const;
+
+  void GetSbpSignaturesIf(
+      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+      SbpSignatureList* sbp_sig_list) const;
 
  protected:
-  virtual void InferIsModelBlob4OutputBlobs(
-      std::function<bool*(const std::string&)> IsModelBlob4BnInOp) const;
+  virtual void GetSbpSignatures(
+      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+      SbpSignatureList* sbp_sig_list) const {
+    return GetSbpSignatures(sbp_sig_list);
+  }
+  virtual void InferSbpSignature(
+      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+      std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+      const ParallelDesc& parallel_desc) const;
+  virtual void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const { UNIMPLEMENTED(); }
 
   int64_t cudnn_buf_limit_byte() const;
 
@@ -257,9 +272,15 @@ class Operator {
   OutputBlobModifier* MutOutputBlobModifier4Obn(const std::string& obn);
 
  private:
-  void GetSbpSignaturesIf(std::vector<std::unique_ptr<const SbpSignature>>*) const;
+  virtual void InferHasBatchDim(
+      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+    InferHasBatchDim(HasBatchDim4BnInOp);
+  }
+  virtual void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+    UNIMPLEMENTED();
+  }
 
-  virtual void GetSbpSignatures(std::vector<std::unique_ptr<const SbpSignature>>*) const;
   LogicalBlobId dtbn2lbi(const std::string& data_tmp_bn) const;
   LogicalBlobId fbbn2lbi(const std::string& fw_buf_bn) const { return dtbn2lbi(fw_buf_bn); }
   LogicalBlobId bbbn2lbi(const std::string& bw_buf_bn) const { return dtbn2lbi(bw_buf_bn); }
@@ -318,6 +339,13 @@ inline LogicalBlobId GenPackedLbi() {
   LogicalBlobId lbi;
   lbi.set_is_packed_id(true);
   return lbi;
+}
+
+inline OpBlobArg GenOpBlobArg(const std::string& op_name, const std::string& bn_in_op) {
+  OpBlobArg oba;
+  oba.set_op_name(op_name);
+  oba.set_bn_in_op(bn_in_op);
+  return oba;
 }
 
 inline LogicalBlobId GenLogicalBlobId(const std::string& lbn) {

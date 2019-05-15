@@ -7,6 +7,7 @@
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/logical_node.h"
+#include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 
@@ -16,10 +17,14 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   LogicalGraph() = delete;
   ~LogicalGraph() = default;
 
-  LogicalGraph(bool is_train);
+  LogicalGraph(const Job& job);
 
   const char* TypeName() const override { return "LogicalGraph"; }
   int64_t total_mbn_num() const { return total_mbn_num_; }
+
+  void ForEachNecessaryCtrlEdge(
+      const std::function<void(const LogicalNode* src, const LogicalNode* dst,
+                               int64_t ctrl_regst_num)>& Handler) const;
 
  private:
   struct BackwardCloneInfo {
@@ -42,8 +47,6 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   void NaiveBuildFwStruct(HashMap<std::string, std::vector<LogicalNode*>>* op_name2nodes);
   void FixSharedModelNodes(const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes);
   void LinkUnpackFw2PackFw(const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes);
-  void ReConnectToFwClone(LogicalNode* clone_node, const LogicalBlobId& lbi,
-                          const std::vector<LogicalEdge*>& edges, const std::string& obn);
   void BuildBwStruct();
   void NaiveBuildBwStruct();
   void AddBackwardClone();
@@ -64,12 +67,15 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   MdSaveLogicalNode* BuildMdSaveStructIfNeed(LogicalNode* need_save_logical);
   NormalMdUpdtLogicalNode* BuildNormalMdUpdtAndMdSaveStruct(bool is_train,
                                                             ForwardLogicalNode* fw_logical);
+  void ReplaceAllReduceFacades();
+
   void ConnectFwToBw();
   void UpdateEdge2Ibn(const LogicalEdge* edge, const std::string& ibn);
   void UpdateEdge2Obn(const LogicalEdge* edge, const std::string& obn);
 
   bool MustHaveModelDiffAcc();
 
+  Job job_;
   int64_t total_mbn_num_;
 
   std::vector<std::vector<const LogicalNode*>> fw_node_groups_;
