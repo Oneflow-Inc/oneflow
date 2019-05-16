@@ -1,5 +1,4 @@
 #include "oneflow/core/register/memory_copier.h"
-#include <memory>
 
 namespace oneflow {
 
@@ -31,7 +30,7 @@ void BaseMemoryCopier::Copy3D(DeviceCtx* ctx, const TensorCopyDesc& desc) const 
 void BaseMemoryCopier::CopyND(DeviceCtx* ctx, const TensorCopyDesc& desc) const { UNIMPLEMENTED(); }
 
 void HostMemoryCopier::Copy1D(DeviceCtx* ctx, void* dst, const void* src, size_t count) const {
-  std::memcpy(dst, src, count);
+  memcpy(dst, src, count);
 }
 
 #ifdef WITH_CUDA
