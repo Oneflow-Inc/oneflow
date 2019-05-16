@@ -1,65 +1,60 @@
-#include "oneflow/core/register/partial_tensor_view_desc.h"
+#include "oneflow/core/register/partial_tensor_view.h"
 
 namespace oneflow {
 
-PartialTensorViewDesc::PartialTensorViewDesc(const std::initializer_list<Range>& ranges)
+PartialTensorView::PartialTensorView(const std::initializer_list<Range>& ranges)
     : range_vec_(ranges) {
   UpdateShape();
 }
 
-PartialTensorViewDesc::PartialTensorViewDesc(const std::vector<Range>& ranges)
-    : range_vec_(ranges) {
+PartialTensorView::PartialTensorView(const std::vector<Range>& ranges) : range_vec_(ranges) {
   UpdateShape();
 }
 
-PartialTensorViewDesc& PartialTensorViewDesc::operator=(const PartialTensorViewDesc& other) {
+PartialTensorView& PartialTensorView::operator=(const PartialTensorView& other) {
   range_vec_ = other.range_vec_;
   UpdateShape();
   return *this;
 }
 
-bool PartialTensorViewDesc::operator==(const PartialTensorViewDesc& rhs) const {
+bool PartialTensorView::operator==(const PartialTensorView& rhs) const {
   return range_vec_ == rhs.range_vec_;
 }
 
-bool PartialTensorViewDesc::operator!=(const PartialTensorViewDesc& rhs) const {
-  return !(*this == rhs);
-}
+bool PartialTensorView::operator!=(const PartialTensorView& rhs) const { return !(*this == rhs); }
 
-void PartialTensorViewDesc::UpdateShape() {
+void PartialTensorView::UpdateShape() {
   std::vector<int64_t> dim_vec(range_vec_.size());
   std::transform(range_vec_.cbegin(), range_vec_.cend(), dim_vec.begin(),
                  [](const Range& range) { return range.size(); });
   shape_ = Shape(dim_vec);
 }
 
-bool PartialTensorViewDesc::IsEmpty() const { return range_vec_.empty(); }
+bool PartialTensorView::IsEmpty() const { return range_vec_.empty(); }
 
-PartialTensorViewDesc PartialTensorViewDesc::Intersect(const PartialTensorViewDesc& other) const {
+PartialTensorView PartialTensorView::Intersect(const PartialTensorView& other) const {
   CHECK_EQ(other.range_vec_.size(), range_vec_.size());
   std::vector<Range> intersection_vec;
   const Range zero(0, 0);
   FOR_RANGE(int64_t, i, 0, range_vec_.size()) {
     const Range intersection = FindIntersectant(range_vec_.at(i), other.range_vec_.at(i));
     if (intersection == zero) {
-      return PartialTensorViewDesc();
+      return PartialTensorView();
     } else {
       intersection_vec.emplace_back(intersection);
     }
   }
-  return PartialTensorViewDesc(intersection_vec);
+  return PartialTensorView(intersection_vec);
 }
 
-const Range& PartialTensorViewDesc::At(int64_t index) const { return range_vec_.at(index); }
+const Range& PartialTensorView::At(int64_t index) const { return range_vec_.at(index); }
 
-const Shape& PartialTensorViewDesc::shape() const { return shape_; }
+const Shape& PartialTensorView::shape() const { return shape_; }
 
-size_t PartialTensorViewDesc::size() const { return range_vec_.size(); }
+size_t PartialTensorView::size() const { return range_vec_.size(); }
 
-void PartialTensorViewDesc::JointFold(const PartialTensorViewDesc& lhs,
-                                      const PartialTensorViewDesc& rhs,
-                                      PartialTensorViewDesc* lhs_out,
-                                      PartialTensorViewDesc* rhs_out) {
+void PartialTensorView::JointFold(const PartialTensorView& lhs, const PartialTensorView& rhs,
+                                  PartialTensorView* lhs_out, PartialTensorView* rhs_out) {
   std::vector<Range> lhs_out_vec;
   std::vector<Range> rhs_out_vec;
   CHECK_EQ(lhs.range_vec_.size(), rhs.range_vec_.size());
@@ -80,8 +75,8 @@ void PartialTensorViewDesc::JointFold(const PartialTensorViewDesc& lhs,
       rhs_out_vec.push_back(rhs_range);
     }
   }
-  *lhs_out = PartialTensorViewDesc(lhs_out_vec);
-  *rhs_out = PartialTensorViewDesc(rhs_out_vec);
+  *lhs_out = PartialTensorView(lhs_out_vec);
+  *rhs_out = PartialTensorView(rhs_out_vec);
 }
 
 }  // namespace oneflow
