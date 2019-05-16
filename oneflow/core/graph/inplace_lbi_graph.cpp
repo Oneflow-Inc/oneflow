@@ -402,9 +402,6 @@ void InplaceLbiGraph::GetSafeInplaceObnEdges(
     const std::function<bool(const LogicalBlobId&, const std::string&)>& IsReachableFromLbiToOpName,
     HashSet<const InplaceLbiEdge*>* cur_disabled_edges) const {
   ForEachTree(nodes, IsValidEdge, [&](const HashSet<const InplaceLbiNode*>& nodes) {
-    for (const auto* node : nodes) {
-      CHECK_NOTNULL(dynamic_cast<const NormalInplaceLbiNode*>(node));
-    }
     // no intra-op reference conflicts
     const InplaceLbiEdge* intra_op_conflict_ref_edge =
         FindFirstIntraOpRefConflictMutRefEdge(nodes, IsValidEdge);
