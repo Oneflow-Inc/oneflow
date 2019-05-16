@@ -59,6 +59,8 @@ void CudaMemoryCopier::Copy3D(DeviceCtx* ctx, const TensorCopyDesc& desc) const 
   CudaCheck(cudaMemcpy3DAsync(&params, ctx->cuda_stream()));
 }
 
+void CudaMemoryCopier::CopyND(DeviceCtx* ctx, const TensorCopyDesc& desc) const { UNIMPLEMENTED(); }
+
 #endif
 
 }  // namespace oneflow
