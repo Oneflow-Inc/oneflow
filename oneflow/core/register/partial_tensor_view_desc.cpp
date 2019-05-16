@@ -29,7 +29,7 @@ bool PartialTensorViewDesc::operator!=(const PartialTensorViewDesc& rhs) const {
 void PartialTensorViewDesc::UpdateShape() {
   std::vector<int64_t> dim_vec(range_vec_.size());
   std::transform(range_vec_.cbegin(), range_vec_.cend(), dim_vec.begin(),
-                 [](const Range& range) { range.size(); });
+                 [](const Range& range) { return range.size(); });
   shape_ = Shape(dim_vec);
 }
 
