@@ -4,6 +4,7 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/register/partial_tensor_view.h"
 #include "oneflow/core/register/blob.h"
+#include "oneflow/core/register/tensor_copy_desc.h"
 
 namespace oneflow {
 
@@ -15,8 +16,12 @@ class PartialTensorViewCopier {
 
   void CopyIntersection(DeviceCtx* ctx, const PartialTensorView& dst_view, Blob* dst_blob,
                         const PartialTensorView& src_view, const Blob* src_blob) const;
-  void DoCopy(DeviceCtx* ctx, const PartialTensorView& dst_view, Blob* dst_blob,
-              const PartialTensorView& src_view, const Blob* src_blob) const;
+  virtual void DoMemcpyCopy(DeviceCtx* ctx, const TensorCopyDesc& desc) const;
+  virtual void DoMemcpyCopy1D(DeviceCtx* ctx, void* dst, const void* src, size_t count) const = 0;
+  virtual void DoMemcpyCopy2D(DeviceCtx* ctx, void* dst, size_t dst_pitch, const void* src,
+                              size_t src_pitch, size_t width, size_t height) const;
+  virtual void DoMemcpyCopy3D(DeviceCtx* ctx, void* dst, size_t dst_pitch, const void* src,
+                              size_t src_pitch, size_t width, size_t height) const;
 
  protected:
  private:

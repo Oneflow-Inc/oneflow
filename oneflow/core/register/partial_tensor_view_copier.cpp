@@ -17,4 +17,14 @@ void PartialTensorViewCopier::CopyIntersection(DeviceCtx* ctx, const PartialTens
   PartialTensorView fold_intersection = folded_dst_view.Intersect(folded_src_view);
 }
 
+void PartialTensorViewCopier::DoMemcpyCopy(DeviceCtx* ctx, const TensorCopyDesc& desc) const {}
+
+void PartialTensorViewCopier::DoMemcpyCopy2D(DeviceCtx* ctx, void* dst, size_t dst_pitch,
+                                             const void* src, size_t src_pitch, size_t width,
+                                             size_t height) const {}
+
+void PartialTensorViewCopier::DoMemcpyCopy3D(DeviceCtx* ctx, void* dst, size_t dst_pitch,
+                                             const void* src, size_t src_pitch, size_t width,
+                                             size_t height) const {}
+
 }  // namespace oneflow
