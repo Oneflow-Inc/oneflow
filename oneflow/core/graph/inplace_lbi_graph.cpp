@@ -383,8 +383,7 @@ const InplaceLbiEdge* InplaceLbiGraph::FindFirstInterOpRefConflictMutRefEdge(
       if (mut_ref_node2descendents_size[node] == 0) { sink_mut_ref_nodes.push_back(node); }
     }
   }
-  CHECK(!sink_mut_ref_nodes.empty());
-  if (sink_mut_ref_nodes.size() == 1) { return nullptr; }
+  if (sink_mut_ref_nodes.size() <= 1) { return nullptr; }
   const InplaceLbiNode* first_diff_node =
       GetFirstDiffNode(node2mut_ref_ancestors.at(sink_mut_ref_nodes.at(0)),
                        node2mut_ref_ancestors.at(sink_mut_ref_nodes.at(1)));
