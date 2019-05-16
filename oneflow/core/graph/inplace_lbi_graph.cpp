@@ -76,14 +76,11 @@ InplaceLbiNode* CreateNode(const LogicalBlobId& lbi,
 void GetUnconnectedNodes(const HashSet<const InplaceLbiNode*>& nodes,
                          const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge,
                          HashSet<const InplaceLbiNode*>* cur_disabled_nodes) {
-  auto GetConnectedEdgesSize = [&](const InplaceLbiNode* node) -> size_t {
+  for (const InplaceLbiNode* node : nodes) {
     size_t cnt = 0;
     for (const InplaceLbiEdge* edge : node->in_edges()) { cnt += IsValidEdge(edge); }
     for (const InplaceLbiEdge* edge : node->out_edges()) { cnt += IsValidEdge(edge); }
-    return cnt;
-  };
-  for (const InplaceLbiNode* node : nodes) {
-    if (GetConnectedEdgesSize(node) == 0) { CHECK(cur_disabled_nodes->emplace(node).second); }
+    if (cnt == 0) { CHECK(cur_disabled_nodes->emplace(node).second); }
   }
 }
 
@@ -111,6 +108,14 @@ GetForEachValidOutNode(std::function<bool(const InplaceLbiEdge*)> IsValidEdge) {
     node->ForEachNodeOnValidOutEdge(IsValidEdge, Handler);
   };
 }
+
+bool IsOtherIbnBoundToOneOfLbis(const HashSet<LogicalBlobId>& lbis, const InplaceLbiEdge* edge) {
+  const Operator& op = edge->op();
+  for (const std::string& ibn : op.input_bns()) {
+    if (ibn != edge->ibn() && lbis.find(op.BnInOp2Lbi(ibn)) != lbis.end()) { return true; }
+  }
+  return false;
+};
 
 }  // namespace
 
@@ -301,25 +306,16 @@ void InplaceLbiGraph::FindAllEdges(const HashSet<const InplaceLbiNode*>& nodes,
 const InplaceLbiEdge* InplaceLbiGraph::FindFirstIntraOpRefConflictMutRefEdge(
     const HashSet<const InplaceLbiNode*>& nodes,
     const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge) const {
-  std::function<bool(const InplaceLbiEdge*)> IsIntraOpRefConflictMutRefEdge;
-  {
-    HashSet<LogicalBlobId> lbis;
-    for (const auto* node : nodes) { CHECK(lbis.insert(node->lbi()).second); }
-    IsIntraOpRefConflictMutRefEdge = [&](const InplaceLbiEdge* edge) -> bool {
-      const Operator& op = edge->op();
-      for (const std::string& ibn : op.input_bns()) {
-        if (ibn != edge->ibn() && lbis.find(op.BnInOp2Lbi(ibn)) != lbis.end()) { return true; }
-      }
-      return false;
-    };
-  }
+  const InplaceLbiEdge* ret = nullptr;
+  HashSet<LogicalBlobId> lbis;
+  for (const auto* node : nodes) { CHECK(lbis.insert(node->lbi()).second); }
+
   const auto* root = GetRoot(nodes, IsValidEdge);
   auto ForEachInNode = GetForEachValidInNode(IsValidEdge);
   auto ForEachOutNode = GetForEachValidOutNode(IsValidEdge);
-  const InplaceLbiEdge* ret = nullptr;
   TopoForEachNode({root}, ForEachInNode, ForEachOutNode, [&](const InplaceLbiNode* node) {
     if (ret != nullptr) { return; }
-    if (node->IsMutRef(IsValidEdge) && IsIntraOpRefConflictMutRefEdge(node->SoleInEdge())) {
+    if (node->IsMutRef(IsValidEdge) && IsOtherIbnBoundToOneOfLbis(lbis, node->SoleInEdge())) {
       ret = node->SoleInEdge();
     }
   });
