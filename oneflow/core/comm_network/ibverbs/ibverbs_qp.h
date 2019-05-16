@@ -32,7 +32,7 @@ class IBVerbsQP;
 struct WorkRequestId {
   IBVerbsQP* qp;
   int32_t outstanding_sge_cnt;
-  void* read_id;
+  int64_t stream_id;
   ActorMsgMR* msg_mr;
 };
 
@@ -48,7 +48,7 @@ class IBVerbsQP final {
   void PostAllRecvRequest();
 
   void PostReadRequest(const IBVerbsMemDescProto& remote_mem, const IBVerbsMemDesc& local_mem,
-                       void* read_id);
+                       int64_t stream_id);
   void PostSendRequest(const ActorMsg& msg);
 
   void ReadDone(WorkRequestId*);
