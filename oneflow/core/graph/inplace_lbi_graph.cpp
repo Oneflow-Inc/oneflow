@@ -292,8 +292,7 @@ const InplaceLbiEdge* InplaceLbiGraph::FindFirstIntraOpRefConflictMutRefEdge(
     IsIntraOpRefConflictMutRefEdge = [&](const InplaceLbiEdge* edge) -> bool {
       const Operator& op = edge->op();
       for (const std::string& ibn : op.input_bns()) {
-        const LogicalBlobId& lbi = op.BnInOp2Lbi(ibn);
-        if (lbi != edge->src_node()->lbi() && lbis.find(lbi) != lbis.end()) { return true; }
+        if (ibn != edge->ibn() && lbis.find(op.BnInOp2Lbi(ibn)) != lbis.end()) { return true; }
       }
       return false;
     };
