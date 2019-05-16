@@ -15,6 +15,7 @@ PartialTensorViewDesc::PartialTensorViewDesc(const std::vector<Range>& ranges)
 PartialTensorViewDesc& PartialTensorViewDesc::operator=(const PartialTensorViewDesc& other) {
   range_vec_ = other.range_vec_;
   UpdateShape();
+  return *this;
 }
 
 bool PartialTensorViewDesc::operator==(const PartialTensorViewDesc& rhs) const {
