@@ -37,8 +37,9 @@ void SparseCrossEntropyOp::InferBlobDescs(
   }
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *pred_blob_desc;
-  out_blob_desc->mut_shape() = Shape(std::vector<int64_t>(
-      pred_blob_desc->shape().dim_vec().cbegin(), pred_blob_desc->shape().dim_vec().cend() - 1));
+  std::vector<int64_t> out_shape_vec = pred_blob_desc->shape().dim_vec();
+  out_shape_vec.pop_back();
+  out_blob_desc->mut_shape() = Shape(out_shape_vec);
 }
 
 REGISTER_OP(OperatorConf::kSparseCrossEntropyConf, SparseCrossEntropyOp);
