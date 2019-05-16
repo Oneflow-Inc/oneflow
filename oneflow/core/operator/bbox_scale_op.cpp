@@ -2,14 +2,14 @@
 
 namespace oneflow {
 
-void BBoxScaleOp::InitFromOpConf() {
+void BboxScaleOp::InitFromOpConf() {
   CHECK(op_conf().has_bbox_scale_conf());
   EnrollInputBn("in", false);
   EnrollInputBn("scale", false);
   EnrollOutputBn("out", false);
 }
 
-void BBoxScaleOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+void BboxScaleOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                  const ParallelContext* parallel_ctx) const {
   // input: in (N, R, 4) or (R, 4)
   const BlobDesc* in_box = GetBlobDesc4BnInOp("in");
@@ -35,6 +35,6 @@ void BBoxScaleOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   *GetBlobDesc4BnInOp("out") = *in_box;
 }
 
-REGISTER_CPU_OP(OperatorConf::kBboxScaleConf, BBoxScaleOp);
+REGISTER_CPU_OP(OperatorConf::kBboxScaleConf, BboxScaleOp);
 
 }  // namespace oneflow

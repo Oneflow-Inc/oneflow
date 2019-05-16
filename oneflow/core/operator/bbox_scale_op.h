@@ -5,11 +5,11 @@
 
 namespace oneflow {
 
-class BBoxScaleOp final : public Operator {
+class BboxScaleOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BBoxScaleOp);
-  BBoxScaleOp() = default;
-  ~BBoxScaleOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(BboxScaleOp);
+  BboxScaleOp() = default;
+  ~BboxScaleOp() = default;
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override { return op_conf().bbox_scale_conf(); }

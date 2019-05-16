@@ -14,7 +14,7 @@ void ScaleBBox(const BBoxT<T>* origin_bbox, const T x_scale, const T y_scale, BB
 }  // namespace
 
 template<typename T>
-void BBoxScaleKernel<T>::ForwardDataContent(
+void BboxScaleKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_box = BnInOp2Blob("in");
   const Blob* scale = BnInOp2Blob("scale");
@@ -48,24 +48,24 @@ void BBoxScaleKernel<T>::ForwardDataContent(
 }
 
 template<typename T>
-void BBoxScaleKernel<T>::ForwardDim0ValidNum(
+void BboxScaleKernel<T>::ForwardDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   BnInOp2Blob("out")->set_dim0_valid_num(0, BnInOp2Blob("in")->dim0_valid_num(0));
 }
 
 template<typename T>
-void BBoxScaleKernel<T>::ForwardDim1ValidNum(
+void BboxScaleKernel<T>::ForwardDim1ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   BnInOp2Blob("out")->CopyDim1ValidNumFrom(ctx.device_ctx, BnInOp2Blob("in"));
 }
 
 template<typename T>
-void BBoxScaleKernel<T>::ForwardRecordIdInDevicePiece(
+void BboxScaleKernel<T>::ForwardRecordIdInDevicePiece(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   BnInOp2Blob("out")->CopyRecordIdInDevicePieceFrom(ctx.device_ctx, BnInOp2Blob("in"));
 }
 
-ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kBboxScaleConf, BBoxScaleKernel,
+ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kBboxScaleConf, BboxScaleKernel,
                                FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
