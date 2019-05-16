@@ -26,6 +26,11 @@ class Graph {
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachNext,
       const std::function<void(NodeType*)>& Handler) const;
 
+  void DfsForEachNode(
+      const std::list<NodeType*>& starts,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachNext,
+      const std::function<void(NodeType*)>& Handler) const;
+
   void TopoForEachNode(
       const std::list<NodeType*>& starts,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
@@ -51,6 +56,21 @@ class Graph {
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode)
       const;
+
+  void ForEachConnectedComponent(
+      const std::function<void(const HashSet<NodeType*>&)>& Handler) const;
+
+  void ForEachConnectedComponent(
+      const std::list<NodeType*>& starts,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachConnected,
+      const std::function<void(const HashSet<NodeType*>&)>& Handler) const;
+
+  NodeType* FindFirstBackEdgeDstNode(
+      const std::list<NodeType*>& starts,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachNext)
+      const;
+
+  NodeType* FindFirstBackEdgeDstNode() const;
 
   // Getters
   std::list<NodeType*> source_nodes() const;
@@ -78,6 +98,16 @@ class Graph {
   void ToDotWithAutoFilePath();
 
  private:
+  void ForEachConnectedComponent(
+      const std::function<void(const std::function<void(NodeType*)>&)>& ForEachPotentialStart,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachConnected,
+      const std::function<void(const HashSet<NodeType*>&)>& Handler) const;
+
+  NodeType* FindFirstBackEdgeDstNode(
+      const std::list<NodeType*>& starts,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachNext,
+      size_t* node_cnt) const;
+
   std::vector<std::unique_ptr<NodeType>> nodes_;
   std::vector<std::unique_ptr<EdgeType>> edges_;
 };
@@ -233,6 +263,74 @@ void Graph<NodeType, EdgeType>::BfsForEachNode(
 }
 
 template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::DfsForEachNode(
+    const std::list<NodeType*>& starts,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachNext,
+    const std::function<void(NodeType*)>& Handler) const {
+  HashSet<NodeType*> visited_nodes;
+  std::stack<NodeType*> stack;
+  for (NodeType* start : starts) { stack.push(start); }
+  while (!stack.empty()) {
+    NodeType* cur_node = stack.top();
+    stack.pop();
+    if (visited_nodes.find(cur_node) == visited_nodes.end()) {
+      Handler(cur_node);
+      visited_nodes.insert(cur_node);
+      ForEachNext(cur_node, [&](NodeType* next) {
+        if (visited_nodes.find(next) == visited_nodes.end()) { stack.push(next); }
+      });
+    }
+  }
+}
+
+template<typename NodeType, typename EdgeType>
+NodeType* Graph<NodeType, EdgeType>::FindFirstBackEdgeDstNode() const {
+  if (nodes_.empty()) { return nullptr; }
+  const auto& starts = source_nodes();
+  if (starts.empty()) { return nodes_.at(0).get(); }
+  size_t node_cnt = 0;
+  auto ForEachNext = &NodeType::ForEachNodeOnOutEdge;
+  NodeType* ret = FindFirstBackEdgeDstNode(starts, ForEachNext, &node_cnt);
+  if (ret == nullptr && node_cnt != nodes_.size()) {
+    HashSet<NodeType*> visited_nodes;
+    BfsForEachNode(starts, ForEachNext, [&](NodeType* node) { visited_nodes.emplace(node); });
+    for (const auto& node : nodes_) {
+      if (visited_nodes.find(node.get()) == visited_nodes.end()) { return node.get(); }
+    }
+  }
+  return ret;
+}
+
+template<typename NodeType, typename EdgeType>
+NodeType* Graph<NodeType, EdgeType>::FindFirstBackEdgeDstNode(
+    const std::list<NodeType*>& starts,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachNext)
+    const {
+  size_t node_cnt = 0;
+  return FindFirstBackEdgeDstNode(starts, ForEachNext, &node_cnt);
+}
+
+template<typename NodeType, typename EdgeType>
+NodeType* Graph<NodeType, EdgeType>::FindFirstBackEdgeDstNode(
+    const std::list<NodeType*>& starts,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachNext,
+    size_t* node_cnt) const {
+  NodeType* back_edge_dst_node = nullptr;
+  HashSet<NodeType*> visited_nodes;
+  *node_cnt = 0;
+  DfsForEachNode(starts, ForEachNext, [&](NodeType* node) {
+    ++*node_cnt;
+    if (back_edge_dst_node != nullptr) { return; }
+    visited_nodes.emplace(node);
+    ForEachNext(node, [&](NodeType* next_node) {
+      if (back_edge_dst_node != nullptr) { return; }
+      if (visited_nodes.find(next_node) != visited_nodes.end()) { back_edge_dst_node = next_node; }
+    });
+  });
+  return back_edge_dst_node;
+}
+
+template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::TopoForEachNode(
     const std::list<NodeType*>& starts,
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
@@ -268,23 +366,25 @@ void Graph<NodeType, EdgeType>::DfsTopoForEachNodeSortByDistanceToSink(
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
     const std::function<void(NodeType*)>& Handler) const {
-  std::list<NodeType*> nodes;
-  TopoForEachNode(starts, ForEachInNode, ForEachOutNode,
-                  [&](NodeType* node) { nodes.push_back(node); });
-  std::list<NodeType*> sinks;
-  for (NodeType* node : nodes) {
-    bool is_sink = true;
-    ForEachOutNode(node, [&](NodeType* out_node) { is_sink = false; });
-    if (is_sink) { sinks.push_back(node); }
-  }
   HashMap<NodeType*, int64_t> node2distance_to_sink;
-  TopoForEachNode(sinks, ForEachOutNode, ForEachInNode, [&](NodeType* node) {
-    int64_t distance_to_sink = -1;
-    ForEachOutNode(node, [&](NodeType* out_node) {
-      distance_to_sink = std::max(distance_to_sink, node2distance_to_sink[out_node]);
+  {
+    std::list<NodeType*> nodes;
+    TopoForEachNode(starts, ForEachInNode, ForEachOutNode,
+                    [&](NodeType* node) { nodes.push_back(node); });
+    std::list<NodeType*> sinks;
+    for (NodeType* node : nodes) {
+      bool is_sink = true;
+      ForEachOutNode(node, [&](NodeType* out_node) { is_sink = false; });
+      if (is_sink) { sinks.push_back(node); }
+    }
+    TopoForEachNode(sinks, ForEachOutNode, ForEachInNode, [&](NodeType* node) {
+      int64_t distance_to_sink = -1;
+      ForEachOutNode(node, [&](NodeType* out_node) {
+        distance_to_sink = std::max(distance_to_sink, node2distance_to_sink[out_node]);
+      });
+      node2distance_to_sink[node] = distance_to_sink + 1;
     });
-    node2distance_to_sink[node] = distance_to_sink + 1;
-  });
+  }
   auto ForEachOutNodeSortedByDistanceToSink = [&](NodeType* node,
                                                   const std::function<void(NodeType*)>& Handler) {
     std::vector<NodeType*> out_nodes;
@@ -350,6 +450,44 @@ Graph<NodeType, EdgeType>::MakePredicatorIsReachable(
   return [node2ancestor](const NodeType* src, const NodeType* dst) -> bool {
     return node2ancestor->at(dst).find(src) != node2ancestor->at(dst).end();
   };
+}
+
+template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::ForEachConnectedComponent(
+    const std::function<void(const HashSet<NodeType*>&)>& Handler) const {
+  ForEachConnectedComponent(
+      [&](const std::function<void(NodeType*)>& Handler) { ForEachNode(Handler); },
+      &NodeType::ForEachNodeOnInOutEdge, Handler);
+}
+
+template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::ForEachConnectedComponent(
+    const std::list<NodeType*>& starts,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachConnected,
+    const std::function<void(const HashSet<NodeType*>&)>& Handler) const {
+  auto ForEachPotentialStart = [&](const std::function<void(NodeType*)>& Handler) {
+    BfsForEachNode(starts, ForEachConnected, Handler);
+  };
+  ForEachConnectedComponent(ForEachPotentialStart, ForEachConnected, Handler);
+}
+
+template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::ForEachConnectedComponent(
+    const std::function<void(const std::function<void(NodeType*)>&)>& ForEachPotentialStart,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachConnected,
+    const std::function<void(const HashSet<NodeType*>&)>& Handler) const {
+  HashMap<NodeType*, int32_t> node2component_id;
+  int32_t cur_component_id = 0;
+  ForEachPotentialStart([&](NodeType* start) {
+    if (node2component_id.find(start) != node2component_id.end()) { return; }
+    ++cur_component_id;
+    BfsForEachNode({start}, ForEachConnected, [&](NodeType* node) {
+      CHECK(node2component_id.emplace(node, cur_component_id).second);
+    });
+  });
+  HashMap<int32_t, HashSet<NodeType*>> component_id2nodes;
+  for (const auto& pair : node2component_id) { component_id2nodes[pair.second].insert(pair.first); }
+  for (const auto& pair : component_id2nodes) { Handler(pair.second); }
 }
 
 }  // namespace oneflow

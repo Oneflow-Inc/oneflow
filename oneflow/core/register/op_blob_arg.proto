@@ -15,3 +15,7 @@ message OpBlobArgPair {
 message OpBlobArgPairs {
   repeated OpBlobArgPair pair = 1;
 }
+
+message OpBlobArgList {
+  repeated OpBlobArg oba = 1;
+}

@@ -13,6 +13,10 @@ message InputBlobModifier {
 message OutputBlobModifier {
   optional bool is_mutable = 1 [default = false];
   optional bool requires_grad = 2 [default = false];
+  oneof inplace_type {
+    string mutable_inplace_ibn = 3;
+    string const_inplace_ibn = 4;
+  }
 }
 
 message OpAttribute {
