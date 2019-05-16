@@ -24,10 +24,9 @@ void GroupByRecordIdOp::InferBlobDescs(
 
   // output: out(N, IN_D0, ...)
   BlobDesc* out = GetBlobDesc4BnInOp("out");
-  std::vector<int64_t> out_shape_dim_vec;
-  out_shape_dim_vec.push_back(Global<JobDesc>::Get()->DevicePieceSize4ParallelCtx(*parallel_ctx));
-  out_shape_dim_vec.insert(out_shape_dim_vec.end(), in->shape().dim_vec().cbegin(),
-                           in->shape().dim_vec().cend());
+  std::vector<int64_t> out_shape_dim_vec = in->shape().dim_vec();
+  out_shape_dim_vec.insert(out_shape_dim_vec.begin(),
+                           Global<JobDesc>::Get()->DevicePieceSize4ParallelCtx(*parallel_ctx));
   out->mut_shape() = Shape(out_shape_dim_vec);
   out->set_data_type(in->data_type());
   out->set_has_record_id_in_device_piece_field(false);
