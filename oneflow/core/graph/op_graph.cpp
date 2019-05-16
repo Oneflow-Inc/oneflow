@@ -325,7 +325,21 @@ void OpGraph::InferTimeShape() const {
   });
 }
 
+int64_t OpGraph::CalcUnparalleledPieceSize() const {
+  int64_t time_shape_dim0 = 0;
+  int64_t max_time_shape_elem_cnt = 0;
+  ForEachNode([&](OpNode* op_node) {
+    const auto& out_blob_time_shape = op_node->out_blob_time_shape();
+    if (time_shape_dim0 != 0) { CHECK_EQ(time_shape_dim0, out_blob_time_shape.At(0)); }
+    time_shape_dim0 = out_blob_time_shape.At(0);
+    max_time_shape_elem_cnt = std::max(max_time_shape_elem_cnt, out_blob_time_shape.elem_cnt());
+  });
+  CHECK_EQ(max_time_shape_elem_cnt % time_shape_dim0, 0);
+  return max_time_shape_elem_cnt / time_shape_dim0;
+}
+
 void OpGraph::InferNoParallelBlobDesc() const {
+  int64_t unparalleled_piece_size = CalcUnparalleledPieceSize();
   TopoForEachNode([&](OpNode* op_node) {
     ParallelContext parallel_ctx;
     parallel_ctx.set_parallel_id(0);
@@ -337,7 +351,7 @@ void OpGraph::InferNoParallelBlobDesc() const {
     // Hence the argument record_piece_size can be any positive number, here it's 1
     op_node->op().InferBlobDescsIf(
         std::bind(&OpNode::NoParallelBlobDesc4BnInOp, op_node, std::placeholders::_1),
-        &parallel_ctx, 1, [](OpContext*) {});
+        &parallel_ctx, unparalleled_piece_size, [](OpContext*) {});
   });
 }
 

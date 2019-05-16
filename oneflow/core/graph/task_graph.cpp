@@ -486,6 +486,7 @@ void TaskGraph::EnableInplaceMemSharing() {
       // do nothing
       return;
     }
+    if (input_regst->consumers().size() != 1) { return; }
     if (input_regst->NumOfLbi() != 1) { return; }
     if (output_regst->NumOfLbi() != 1) { return; }
     if (input_regst->mem_shared_inplace_block_id() == -1) {
@@ -544,7 +545,7 @@ void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {
           if (IsMdUpdtTaskType(node_on_in_edge->GetTaskType())) {
             RegstDesc* ctrl_regst = task_node->BuildCtrlRegstDesc(node_on_in_edge);
             RegstDesc* copy_out_regst = copy_hd_task_node->GetProducedRegst("copy_out").get();
-            int64_t piece_num_in_batch = Global<JobDesc>::Get()->NumOfPiecesInBatch();
+            int64_t piece_num_in_batch = copy_out_regst->data_regst_time_shape()->Count(1);
             ctrl_regst->UpdtMinRegstNumIfNeed(copy_out_regst->min_register_num()
                                               + piece_num_in_batch - 1);
             CtrlRegstDesc* ctrl_regst_desc =
