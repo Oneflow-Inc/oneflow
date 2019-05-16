@@ -19,6 +19,10 @@ class TanHOp final : public Operator {
                       const ParallelContext* parallel_ctx) const override;
 
  private:
+  void InferHasBatchDim(
+      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {
+    NaiveInferHasBatchDim(HasBatchDim4BnInOp);
+  }
 };
 
 }  // namespace oneflow
