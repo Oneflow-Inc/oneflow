@@ -319,10 +319,9 @@ bool InplaceLbiGraph::IsConstRefConflictMutRefNode(
   CHECK(mut_ref_node->IsMutRef(IsValidEdge));
   auto ForEachNext = [&](const InplaceLbiNode* node,
                          const std::function<void(const InplaceLbiNode*)>& Handler) {
-    for (const auto* edge : node->out_edges()) {
-      const auto* dst_node = edge->dst_node();
-      if (IsValidEdge(edge) && dst_node->IsConstRef(IsValidEdge)) { Handler(dst_node); }
-    }
+    node->ForEachNodeOnValidOutEdge(IsValidEdge, [&](const InplaceLbiNode* out_node) {
+      if (out_node->IsConstRef(IsValidEdge)) { Handler(out_node); }
+    });
   };
   bool conflict = false;
   const auto& op_name = mut_ref_node->lbi().op_name();
