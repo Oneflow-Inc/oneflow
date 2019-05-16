@@ -44,25 +44,18 @@ void TransposeKernel<device_type, T>::BackwardInstanceShape(
 }
 
 template<DeviceType device_type, typename T>
-void TransposeKernel<device_type, T>::ForwardActualShape(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Shape& in_shape = BnInOp2Blob("in")->shape();
+void TransposeKernel<device_type, T>::InferActualShape(
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+  bool is_forward = this->kernel_conf().is_forward();
+  const auto& conf = this->kernel_conf().transpose_conf();
+  const Shape& in_shape =
+      is_forward ? BnInOp2Blob("in")->shape() : BnInOp2Blob("out_diff")->shape();
+  const auto& perm = is_forward ? conf.perm() : conf.invert_perm();
+  Blob* out_blob = is_forward ? BnInOp2Blob("out") : BnInOp2Blob("in_diff");
+  if (!out_blob) { return; }
   auto shape_vec = in_shape.dim_vec();
-  const auto& perm = this->kernel_conf().transpose_conf().perm();
   FOR_RANGE(size_t, i, 0, perm.size()) { shape_vec[i] = in_shape.At(perm[i]); }
-  *BnInOp2Blob("out")->mut_actual_shape() = Shape(shape_vec);
-}
-
-template<DeviceType device_type, typename T>
-void TransposeKernel<device_type, T>::BackwardActualShape(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* in_diff_blob = BnInOp2Blob("in_diff");
-  if (!in_diff_blob) { return; }
-  const Shape& out_diff_shape = BnInOp2Blob("out_diff")->shape();
-  auto shape_vec = out_diff_shape.dim_vec();
-  const auto& perm = this->kernel_conf().transpose_conf().invert_perm();
-  FOR_RANGE(size_t, i, 0, perm.size()) { shape_vec[i] = out_diff_shape.At(perm[i]); }
-  *in_diff_blob->mut_actual_shape() = Shape(shape_vec);
+  *out_blob->mut_actual_shape() = Shape(shape_vec);
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kTransposeConf, TransposeKernel, ARITHMETIC_DATA_TYPE_SEQ);
