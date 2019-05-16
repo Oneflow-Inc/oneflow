@@ -355,7 +355,7 @@ KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_sh
   }
   int32_t trans_axis = num_axis - shared_idxs_num;
   std::vector<int64_t> x_to_y_offset;
-  ComputeOffset(trans_axis, y_shape.dim_vec().data(), permutation.data(), x_to_y_offset);
+  ComputeOffset(trans_axis, y_shape.dim_array().data(), permutation.data(), x_to_y_offset);
   std::vector<int64_t> x_index_digits(trans_axis, 0);
   int64_t num_blocks = elem_cnt / block_size;
   FOR_RANGE(int64_t, x_idx, 0, num_blocks) {
@@ -366,7 +366,7 @@ KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_sh
     } else {
       memcpy(y + block_size * y_idx, x + block_size * x_idx, block_size * sizeof(T));
     }
-    IncreaseIndex(x_shape.dim_vec().data(), x_index_digits);
+    IncreaseIndex(x_shape.dim_array().data(), x_index_digits);
   }
 }
 KU_IF_METHOD InitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num,

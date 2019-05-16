@@ -49,6 +49,10 @@ class Shape final {
   std::vector<int64_t> dim_vec() const {
     return std::vector<int64_t>(dim_array_.begin(), dim_array_.begin() + num_axes_);
   }
+  template<typename T>
+  std::vector<T> dim_vec() const {
+    return std::vector<T>(dim_array_.begin(), dim_array_.begin() + num_axes_);
+  }
   Shape CreateLeftExtendedShape(size_t extend_axes) const;
 
   std::string ToString() const;

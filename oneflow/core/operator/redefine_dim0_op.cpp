@@ -25,17 +25,18 @@ void RedefineDim0Op::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
       CHECK_GE(shrink_axis, 1);
       CHECK(in_blob_desc->has_dim0_inner_shape());
       CHECK(!in_blob_desc->has_dim1_valid_num_field());
-      const Shape& shape = in_blob_desc->shape();
+      const Shape& in_shape = in_blob_desc->shape();
       const Shape& inner_shape = in_blob_desc->dim0_inner_shape();
+      const auto& in_shape_dim_vec = in_shape.dim_vec();
       inner_shape_vec.reserve(shrink_axis);
       FOR_RANGE(int64_t, axis, 0, shrink_axis) {
         inner_shape_vec.emplace_back(inner_shape.At(axis));
       }
-      shape_vec.reserve(shape.dim_vec().size() + inner_shape.NumAxes() - shrink_axis);
+      shape_vec.reserve(in_shape_dim_vec.size() + inner_shape.NumAxes() - shrink_axis);
       FOR_RANGE(int64_t, axis, shrink_axis, inner_shape.NumAxes()) {
         shape_vec.emplace_back(inner_shape.At(axis));
       }
-      shape_vec.insert(shape_vec.end(), ++shape.dim_vec().begin(), shape.dim_vec().end());
+      shape_vec.insert(shape_vec.end(), ++in_shape_dim_vec.begin(), in_shape_dim_vec.end());
       if (shrink_axis == 1) {
         out_blob_desc->set_has_dim1_valid_num_field(in_blob_desc->has_dim0_valid_num_field());
         out_blob_desc->set_has_dim0_valid_num_field(false);
@@ -48,29 +49,30 @@ void RedefineDim0Op::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
     case RedefineDim0OpConf::kExtendConf: {
       int64_t extend_axis = conf.extend_conf().axis();
       CHECK_GE(extend_axis, 1);
-      const Shape& shape = in_blob_desc->shape();
+      const Shape& in_shape = in_blob_desc->shape();
       bool has_inner_shape = false;
       if (in_blob_desc->has_dim0_inner_shape()) {
         CHECK(!in_blob_desc->has_dim1_valid_num_field());
         const Shape& inner_shape = in_blob_desc->dim0_inner_shape();
+        const auto& inner_shape_dim_vec = inner_shape.dim_vec();
         inner_shape_vec.reserve(inner_shape.NumAxes() + extend_axis);
-        inner_shape_vec.insert(inner_shape_vec.begin(), inner_shape.dim_vec().begin(),
-                               inner_shape.dim_vec().end());
+        inner_shape_vec.insert(inner_shape_vec.begin(), inner_shape_dim_vec.begin(),
+                               inner_shape_dim_vec.end());
         has_inner_shape = true;
       } else {
         inner_shape_vec.reserve(1 + extend_axis);
-        inner_shape_vec.emplace_back(shape.At(0));
+        inner_shape_vec.emplace_back(in_shape.At(0));
       }
       int64_t extend_dims = 1;
       FOR_RANGE(int64_t, axis, 1, extend_axis + 1) {
-        int64_t dim = shape.At(axis);
+        int64_t dim = in_shape.At(axis);
         inner_shape_vec.emplace_back(dim);
         extend_dims *= dim;
       }
-      shape_vec.reserve(shape.dim_vec().size() - extend_axis);
-      shape_vec.emplace_back(shape.At(0) * extend_dims);
-      FOR_RANGE(int64_t, axis, extend_axis + 1, shape.NumAxes()) {
-        shape_vec.emplace_back(shape.At(axis));
+      shape_vec.reserve(in_shape.NumAxes() - extend_axis);
+      shape_vec.emplace_back(in_shape.At(0) * extend_dims);
+      FOR_RANGE(int64_t, axis, extend_axis + 1, in_shape.NumAxes()) {
+        shape_vec.emplace_back(in_shape.At(axis));
       }
       out_blob_desc->set_has_dim1_valid_num_field(false);
       if (has_inner_shape) {

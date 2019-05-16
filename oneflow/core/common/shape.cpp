@@ -9,6 +9,7 @@ int64_t Shape::Count(int64_t begin_axis, int64_t end_axis) const {
                                  << end_axis;
   CHECK_LE(end_axis, num_axes_) << "end_axis " << end_axis << " greater than num_axes "
                                 << num_axes_;
+  if (num_axes_ == 0) { return 0; }
   int64_t elem_cnt = 1;
   FOR_RANGE(int64_t, i, begin_axis, end_axis) { elem_cnt *= dim_array_.at(i); }
   return elem_cnt;

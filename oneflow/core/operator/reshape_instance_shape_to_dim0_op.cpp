@@ -24,10 +24,8 @@ void ReshapeInstanceShapeToDim0Op::InferBlobDescs(
   if (out_instance_shape.elem_cnt() > 0) {
     CHECK_EQ(in->shape().elem_cnt() % out_instance_shape.elem_cnt(), 0);
     const int64_t out_dim0 = in->shape().elem_cnt() / out_instance_shape.elem_cnt();
-    std::vector<int64_t> out_shape_dim_vec;
-    out_shape_dim_vec.push_back(out_dim0);
-    out_shape_dim_vec.insert(out_shape_dim_vec.end(), out_instance_shape.dim_vec().cbegin(),
-                             out_instance_shape.dim_vec().cend());
+    std::vector<int64_t> out_shape_dim_vec = out_instance_shape.dim_vec();
+    out_shape_dim_vec.insert(out_shape_dim_vec.begin(), out_dim0);
     out->mut_shape() = Shape(out_shape_dim_vec);
     out->set_has_dim0_valid_num_field(true);
     out->mut_dim0_inner_shape() = Shape({1, out_dim0});
