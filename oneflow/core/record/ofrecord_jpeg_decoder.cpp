@@ -113,6 +113,8 @@ void OFRecordDecoderImpl<EncodeCase::kJpeg, T>::ReadDynamicDataContent(
   // CHECK_LE(max_rows, blob_conf.shape().dim(0));
   // CHECK_LE(max_cols, blob_conf.shape().dim(1));
   CHECK_LE(max_rows * max_cols, blob_conf.shape().dim(0) * blob_conf.shape().dim(1));
+  CHECK(out_blob->has_instance_shape_field());
+  CHECK(out_blob->has_actual_shape_field());
   Shape instance_shape({max_rows, max_cols, channels});
   out_blob->set_instance_shape(instance_shape);
   *out_blob->mut_actual_shape() = Shape({n, max_rows, max_cols, channels});
