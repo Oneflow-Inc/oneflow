@@ -285,7 +285,7 @@ void InplaceLbiGraph::FindAllEdges(const HashSet<const InplaceLbiNode*>& nodes,
 const InplaceLbiEdge* InplaceLbiGraph::FindFirstIntraOpRefConflictMutRefEdge(
     const HashSet<const InplaceLbiNode*>& nodes,
     const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge) const {
-  std::function<bool(const InplaceLbiEdge* edge)> IsIntraOpRefConflictMutRefEdge;
+  std::function<bool(const InplaceLbiEdge*)> IsIntraOpRefConflictMutRefEdge;
   {
     HashSet<LogicalBlobId> lbis;
     for (const auto* node : nodes) { CHECK(lbis.insert(node->lbi()).second); }
