@@ -1,0 +1,8 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/common/range.proto";
+
+message PartialTensorView {
+    repeated RangeProto dim = 1;
+}

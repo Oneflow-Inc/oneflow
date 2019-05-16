@@ -5,6 +5,7 @@ import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/operator/op_attribute.proto";
 import "oneflow/core/operator/op_conf.proto";
+import "oneflow/core/common/range.proto";
 
 message ConvKernelConf {
   required ShapeProto in = 1;
@@ -155,11 +156,6 @@ message ConvDataGradKernelConf {
 
 message ShapeElemCntKernelConf {
   repeated int32 axis = 1;
-}
-
-message RangeProto {
-  required int64 begin = 1;
-  required int64 end = 2;
 }
 
 message RangeList {
