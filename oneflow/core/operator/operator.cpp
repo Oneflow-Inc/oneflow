@@ -446,7 +446,11 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
   }
   kernel_conf->set_data_type(data_type);
 
-  InferKernelConfActualShapeLike(kernel_conf, GetBlobDesc4BnInOp);
+  if (CanNaiveInferActualShapeLike()) {
+    InferKernelConfActualShapeLike(kernel_conf, GetBlobDesc4BnInOp);
+  } else {
+    InferKernelConfNeedDoActualShape(kernel_conf, GetBlobDesc4BnInOp);
+  }
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf, op_ctx);
 }
 
@@ -664,8 +668,7 @@ void Operator::InferKernelConfActualShapeLike(
         if (in->shape() != out->shape()) { continue; }
         shape_like_bns.emplace_back(input_bn);
       }
-      CHECK_GT(shape_like_bns.size(), 0);
-
+      // CHECK_GT(shape_like_bns.size(), 0);
       ActualShapeLike* actual_shape_like = nullptr;
       for (ActualShapeLike& item : *kernel_conf->mutable_actual_shape_like()) {
         if (item.bn_in_op() == output_bn) {
@@ -691,6 +694,17 @@ void Operator::InferKernelConfActualShapeLike(
   }
 
   if (kernel_conf->actual_shape_like_size() > 0) { kernel_conf->set_need_do_actual_shape(true); }
+}
+
+void Operator::InferKernelConfNeedDoActualShape(
+    KernelConf* kernel_conf,
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp) const {
+  const PbRpf<std::string>* bns = &output_bns();
+  if (IsLossOp()) { bns = &input_bns(); }
+  if (!kernel_conf->is_forward()) { bns = &input_diff_bns(); }
+  if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_actual_shape_field)) {
+    kernel_conf->set_need_do_actual_shape(true);
+  }
 }
 
 std::string GenDiffBn(const std::string& bn) { return bn + "_diff"; }

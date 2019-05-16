@@ -41,6 +41,7 @@ class Operator {
   virtual bool IsEmbeddingLookupOp() const { return false; }
   virtual bool IsAllOutputConst() const { return false; }
   virtual bool CanInferInDiffDynamicShapeWithoutIn() const { return false; }
+  virtual bool CanNaiveInferActualShapeLike() const { return true; }
 
   bool NeedOutBlobWhenBackwardIf() const {
     return NeedOutBlobWhenBackward() || (GetActivationType() != ActivationType::kNone);
@@ -168,13 +169,17 @@ class Operator {
       const std::string& obn) const;
   void GenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                      bool is_forward, const ParallelContext*, KernelConf*, const OpContext*) const;
-  virtual void InferKernelConfActualShapeLike(
-      KernelConf* kernel_conf,
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp) const;
 
  protected:
   virtual void InferIsModelBlob4OutputBlobs(
       std::function<bool*(const std::string&)> IsModelBlob4BnInOp) const;
+
+  virtual void InferKernelConfActualShapeLike(
+      KernelConf* kernel_conf,
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp) const;
+  virtual void InferKernelConfNeedDoActualShape(
+      KernelConf* kernel_conf,
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp) const;
 
   int64_t cudnn_buf_limit_byte() const;
 

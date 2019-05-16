@@ -312,6 +312,7 @@ void KernelIf<device_type>::ForwardActualShape(
 template<DeviceType device_type>
 void KernelIf<device_type>::InferActualShape(
     const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+  CHECK_GT(kernel_conf().actual_shape_like_size(), 0);
   for (const auto& actual_shape_like : kernel_conf().actual_shape_like()) {
     Blob* infer_blob = BnInOp2Blob(actual_shape_like.bn_in_op());
     if (infer_blob) {
