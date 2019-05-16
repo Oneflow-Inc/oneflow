@@ -384,10 +384,15 @@ const InplaceLbiEdge* InplaceLbiGraph::FindFirstInterOpRefConflictMutRefEdge(
     }
   }
   if (sink_mut_ref_nodes.size() <= 1) { return nullptr; }
-  const InplaceLbiNode* first_diff_node =
-      GetFirstDiffNode(node2mut_ref_ancestors.at(sink_mut_ref_nodes.at(0)),
-                       node2mut_ref_ancestors.at(sink_mut_ref_nodes.at(1)));
-  if (first_diff_node == nullptr) { first_diff_node = sink_mut_ref_nodes.at(0); }
+  const InplaceLbiNode* first_diff_node = nullptr;
+  {
+    const auto& first = node2mut_ref_ancestors.at(sink_mut_ref_nodes.at(0));
+    const auto& second = node2mut_ref_ancestors.at(sink_mut_ref_nodes.at(1));
+    first_diff_node = GetFirstDiffNode(first, second);
+    if (first_diff_node == nullptr) {
+      first_diff_node = sink_mut_ref_nodes.at(first.size() < second.size() ? 0 : 1);
+    }
+  }
   return first_diff_node->GetSoleValidInEdge(IsValidEdge);
 }
 
