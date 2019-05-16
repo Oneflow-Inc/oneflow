@@ -36,6 +36,8 @@ class ConvKernelIf : public KernelIfWithModel<device_type, T>,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void ForwardInstanceShape(const KernelCtx& ctx,
                             std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardActualShape(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void InitConstBufBlobs(DeviceCtx*,
                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void InitModelBlobsWithRandomSeed(

@@ -123,12 +123,46 @@ void ConvKernel<DeviceType::kGPU, T>::DoForwardDataContentWithCudnn(
   Blob* fw_cudnn_buf = BnInOp2Blob("fw_cudnn_buf");
   void* fw_cudnn_buf_ptr = fw_cudnn_buf ? fw_cudnn_buf->mut_dptr() : nullptr;
   size_t fw_cudnn_buf_size = fw_cudnn_buf ? fw_cudnn_buf->ByteSizeOfDataContentField() : 0;
+
+  cudnnDataType_t in_cudnn_data_type;
+  std::array<int, 4> in_shape;
+  std::array<int, 4> in_stride;
+  CudaCheck(cudnnGetTensor4dDescriptor(this->in_desc_->Get(), &in_cudnn_data_type, &in_shape[0],
+                                       &in_shape[1], &in_shape[2], &in_shape[3], &in_stride[0],
+                                       &in_stride[1], &in_stride[2], &in_stride[3]));
+
+  cudnnDataType_t out_cudnn_data_type;
+  std::array<int, 4> out_shape;
+  std::array<int, 4> out_stride;
+  CudaCheck(cudnnGetTensor4dDescriptor(this->out_desc_->Get(), &out_cudnn_data_type, &out_shape[0],
+                                       &out_shape[1], &out_shape[2], &out_shape[3], &out_stride[0],
+                                       &out_stride[1], &out_stride[2], &out_stride[3]));
+
+  cudnnDataType_t filter_data_type;
+  cudnnTensorFormat_t filter_format;
+  std::array<int, 4> filter_shape;
+  CudaCheck(cudnnGetFilter4dDescriptor(this->filter_desc_->Get(), &filter_data_type, &filter_format,
+                                       &filter_shape[0], &filter_shape[1], &filter_shape[2],
+                                       &filter_shape[3]));
+
+  std::array<int, 2> conv_pad;
+  std::array<int, 2> conv_stride;
+  std::array<int, 2> conv_dilate;
+  cudnnConvolutionMode_t conv_mode;
+  cudnnDataType_t conv_data_type;
+  CudaCheck(cudnnGetConvolution2dDescriptor(this->conv_desc_->Get(), &conv_pad[0], &conv_pad[1],
+                                            &conv_stride[0], &conv_stride[1], &conv_dilate[0],
+                                            &conv_dilate[1], &conv_mode, &conv_data_type));
+
   CudaCheck(cudnnConvolutionForward(
       device_ctx->cudnn_handle(), OnePtr<T>::value, this->in_desc_->Get(), in_blob->dptr<T>(),
       this->filter_desc_->Get(), weight_blob->dptr<T>(), this->conv_desc_->Get(),
       static_cast<cudnnConvolutionFwdAlgo_t>(this->GetConvKernelConf().cudnn_fwd_algo()),
       fw_cudnn_buf_ptr, fw_cudnn_buf_size, ZeroPtr<T>::value, this->out_desc_->Get(),
       out_blob->mut_dptr<T>()));
+
+  CudaCheck(cudaStreamSynchronize(device_ctx->cuda_stream()));
+  CudaCheck(cudaGetLastError());
 
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
     const Blob* bias = BnInOp2Blob("bias");

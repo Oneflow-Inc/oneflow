@@ -33,6 +33,28 @@ void ConvKernelIf<device_type, T>::ForwardInstanceShape(
 }
 
 template<DeviceType device_type, typename T>
+void ConvKernelIf<device_type, T>::ForwardActualShape(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  // CHECK(device_type == DeviceType::kGPU && this->EnableCudnn());
+  const Shape& in_shape = BnInOp2Blob("in")->shape();
+  const Shape& out_static_shape = BnInOp2Blob("out")->static_shape();
+  const auto& data_format = this->template GetValFromCustomizedOpConf<std::string>("data_format");
+  const auto& padding = this->template GetValFromCustomizedOpConf<std::string>("padding");
+  const auto& dilation_rate = this->template GetPbRfFromCustomizedOpConf<int32_t>("dilation_rate");
+  const auto& strides = this->template GetPbRfFromCustomizedOpConf<int32_t>("strides");
+  const auto& kernel_size = this->template GetPbRfFromCustomizedOpConf<int32_t>("kernel_size");
+
+  auto out_shape_vec = out_static_shape.dim_vec();
+  size_t dhw_axis_begin = DhwOffset(data_format);
+  FOR_RANGE(int32_t, i, 0, in_shape.NumAxes() - 2) {
+    GetWindowedOutputSize(in_shape.At(dhw_axis_begin + i), kernel_size.Get(i), dilation_rate.Get(i),
+                          strides.Get(i), padding, &(out_shape_vec[dhw_axis_begin + i]), nullptr,
+                          nullptr);
+  }
+  *BnInOp2Blob("out")->mut_actual_shape() = Shape(out_shape_vec);
+}
+
+template<DeviceType device_type, typename T>
 void ConvKernelIf<device_type, T>::UpdateCudnnDescIfNeed(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CHECK(this->kernel_conf().need_do_instance_shape() == false);

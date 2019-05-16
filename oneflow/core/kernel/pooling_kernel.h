@@ -90,6 +90,15 @@ class PoolingKernelIf : public KernelIf<device_type> {
     out_vec.erase(out_vec.begin());
     BnInOp2Blob("out")->set_instance_shape(Shape(out_vec));
   }
+  void ForwardActualShape(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
+    const Shape& in_shape = BnInOp2Blob("in")->shape();
+    const PoolingKernelConf& conf = GetPoolingKernelConf();
+    Shape out_shape = GetPoolOutShapeFromInShapeAndPoolConf(
+        in_shape, conf.dim(), conf.data_format(), conf.padding_type(),
+        PbRf2StdVec(conf.pool_size()), PbRf2StdVec(conf.strides()));
+    *BnInOp2Blob("out")->mut_actual_shape() = out_shape;
+  }
   void ForwardDataContent(const KernelCtx& kernel_ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const Blob* in_blob = BnInOp2Blob("in");

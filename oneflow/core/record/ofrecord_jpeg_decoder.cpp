@@ -115,6 +115,7 @@ void OFRecordDecoderImpl<EncodeCase::kJpeg, T>::ReadDynamicDataContent(
   CHECK_LE(max_rows * max_cols, blob_conf.shape().dim(0) * blob_conf.shape().dim(1));
   Shape instance_shape({max_rows, max_cols, channels});
   out_blob->set_instance_shape(instance_shape);
+  *out_blob->mut_actual_shape() = Shape({n, max_rows, max_cols, channels});
   int64_t one_col_elem_num = instance_shape.elem_cnt();
 
   // ThreadPool thread_pool_norm(std::thread::hardware_concurrency() / 4);

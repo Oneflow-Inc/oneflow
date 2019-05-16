@@ -16,6 +16,8 @@ class TransposeOp final : public Operator {
   bool NeedInBlobWhenBackward() const override { return false; }
   bool NeedOutBlobWhenBackward() const override { return false; }
   bool CanInferInDiffDynamicShapeWithoutIn() const override { return true; }
+  bool CanNaiveInferActualShapeLike() const override { return false; }
+
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
   int32_t OutputBlobModelSplitAxis(

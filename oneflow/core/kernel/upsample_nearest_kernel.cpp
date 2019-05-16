@@ -49,6 +49,28 @@ void UpsampleNearestKernel<device_type, T>::BackwardInstanceShape(
       Shape({out_shape.At(1), out_shape.At(2) / scale, out_shape.At(3) / scale}));
 }
 
+template<DeviceType device_type, typename T>
+void UpsampleNearestKernel<device_type, T>::ForwardActualShape(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const int32_t scale = this->op_conf().upsample_nearest_conf().scale();
+  const Shape& in_shape = BnInOp2Blob("in")->shape();
+  *BnInOp2Blob("out")->mut_actual_shape() =
+      Shape({in_shape.At(0), in_shape.At(1), scale * in_shape.At(2), scale * in_shape.At(3)});
+}
+
+template<DeviceType device_type, typename T>
+void UpsampleNearestKernel<device_type, T>::BackwardActualShape(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  Blob* in_diff_blob = BnInOp2Blob("in_diff");
+  if (!in_diff_blob) { return; }
+  const int32_t scale = this->op_conf().upsample_nearest_conf().scale();
+  const Shape& out_shape = BnInOp2Blob("out_diff")->shape();
+  CHECK_EQ(out_shape.At(2) % scale, 0);
+  CHECK_EQ(out_shape.At(3) % scale, 0);
+  *in_diff_blob->mut_actual_shape() =
+      Shape({out_shape.At(0), out_shape.At(1), out_shape.At(2) / scale, out_shape.At(3) / scale});
+}
+
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kUpsampleNearestConf, UpsampleNearestKernel,
                            FLOATING_DATA_TYPE_SEQ);
 
