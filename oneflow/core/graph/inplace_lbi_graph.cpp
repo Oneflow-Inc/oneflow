@@ -8,7 +8,23 @@ bool IsSourceNode(const Operator& op) {
   return op.op_conf().has_variable_conf() || op.op_conf().has_constant_conf();
 }
 
-void CheckSubGraph(const HashSet<const InplaceLbiNode*>& nodes) { TODO(); }
+void CheckSubGraph(const HashSet<const InplaceLbiNode*>& nodes) {
+  size_t source_op_node_cnt = 0;
+  size_t updt_node_cnt = 0;
+  size_t source_cnt = 0;
+  for (const auto* node : nodes) {
+    if (node->in_edges().empty()) { CHECK_EQ(++source_cnt, 1); }
+    if (dynamic_cast<const SourceOpInplaceLbiNode*>(node) != nullptr) {
+      CHECK_EQ(++source_op_node_cnt, 1);
+      CHECK(node->in_edges().empty());
+    }
+    if (dynamic_cast<const UpdateInplaceLbiNode*>(node) != nullptr) {
+      CHECK_EQ(++updt_node_cnt, 1);
+      CHECK_NOTNULL(dynamic_cast<const SourceOpInplaceLbiNode*>(node->SoleInEdge()->src_node()));
+      CHECK(node->SoleInEdge()->op().op_conf().has_variable_conf());
+    }
+  }
+}
 
 const InplaceLbiNode* GetRoot(const HashSet<const InplaceLbiNode*>& nodes,
                               const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge) {
