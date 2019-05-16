@@ -32,7 +32,7 @@ std::list<const InplaceLbiNode*> GetSourceNodes(
   return ret;
 }
 
-const InplaceLbiNode* GetIsMutableIbnConsumer(const SourceOpInplaceLbiNode* node) {
+const InplaceLbiNode* FindSoleIsMutableIbnConsumer(const SourceOpInplaceLbiNode* node) {
   const InplaceLbiNode* ret = nullptr;
   for (const InplaceLbiEdge* edge : node->out_edges()) {
     if (dynamic_cast<const UpdateInplaceLbiNode*>(edge->dst_node()) != nullptr) {
@@ -230,7 +230,7 @@ void InplaceLbiGraph::ComputeSafeInplaceObns(
     const InplaceLbiNode* root = GetRoot(nodes, [](const InplaceLbiEdge*) { return true; });
     const auto* source_op_root = dynamic_cast<const SourceOpInplaceLbiNode*>(root);
     if (source_op_root != nullptr) {
-      const InplaceLbiNode* updt_node = GetIsMutableIbnConsumer(source_op_root);
+      const InplaceLbiNode* updt_node = FindSoleIsMutableIbnConsumer(source_op_root);
       if (updt_node != nullptr) {
         FixConstRefOrMutRefConflictsToUpdtNode(nodes, IsReachableFromLbiToOpName, &disabled_edges);
       }
@@ -443,7 +443,7 @@ void InplaceLbiGraph::FixConstRefOrMutRefConflictsToUpdtNode(
     CHECK_NOTNULL(root);
     const auto* source_op_root = dynamic_cast<const SourceOpInplaceLbiNode*>(root);
     CHECK_NOTNULL(source_op_root);
-    const InplaceLbiNode* updt_node = GetIsMutableIbnConsumer(source_op_root);
+    const InplaceLbiNode* updt_node = FindSoleIsMutableIbnConsumer(source_op_root);
     CHECK_NOTNULL(updt_node);
     auto ForEachNext = [&](const InplaceLbiNode* node,
                            const std::function<void(const InplaceLbiNode*)>& Handler) {
