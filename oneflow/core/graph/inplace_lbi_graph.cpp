@@ -405,7 +405,7 @@ void InplaceLbiGraph::GetSafeInplaceObnEdges(
     // no intra-op reference conflicts
     const InplaceLbiEdge* intra_op_conflict_ref_edge =
         FindFirstIntraOpRefConflictMutRefEdge(nodes, IsValidEdge);
-    // reference always go after const reference
+    // mutable reference always goes after const reference
     const InplaceLbiEdge* const_ref_conflict_ref_edge =
         FindFirstConstRefConflictMutRefEdge(nodes, IsValidEdge, IsReachableFromLbiToOpName);
     // no inter-op reference conflicts
