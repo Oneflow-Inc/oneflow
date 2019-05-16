@@ -437,13 +437,14 @@ void InplaceLbiGraph::FixConstRefOrMutRefConflictsToUpdtNode(
     const std::function<bool(const LogicalBlobId&, const std::string&)>& IsReachableFromLbiToOpName,
     HashSet<const InplaceLbiEdge*>* cur_disabled_edges) const {
   auto IsValidEdge = [](const InplaceLbiEdge*) { return true; };
+  const InplaceLbiNode* updt_node = nullptr;
   HashSet<const InplaceLbiNode*> safe_const_ref_nodes;
   {
     const InplaceLbiNode* root = GetRoot(nodes, IsValidEdge);
     CHECK_NOTNULL(root);
     const auto* source_op_root = dynamic_cast<const SourceOpInplaceLbiNode*>(root);
     CHECK_NOTNULL(source_op_root);
-    const InplaceLbiNode* updt_node = FindSoleIsMutableIbnConsumer(source_op_root);
+    updt_node = FindSoleIsMutableIbnConsumer(source_op_root);
     CHECK_NOTNULL(updt_node);
     auto ForEachNext = [&](const InplaceLbiNode* node,
                            const std::function<void(const InplaceLbiNode*)>& Handler) {
@@ -461,7 +462,8 @@ void InplaceLbiGraph::FixConstRefOrMutRefConflictsToUpdtNode(
   }
   for (const auto* node : safe_const_ref_nodes) {
     node->ForEachNodeOnValidOutEdge(IsValidEdge, [&](const InplaceLbiNode* out_node) {
-      if (safe_const_ref_nodes.find(out_node) == safe_const_ref_nodes.end()) {
+      if (safe_const_ref_nodes.find(out_node) == safe_const_ref_nodes.end()
+	  && out_node != updt_node) {
         CHECK(nodes.find(out_node) != nodes.end());
         CHECK(cur_disabled_edges->emplace(out_node->GetSoleValidInEdge(IsValidEdge)).second);
       }
