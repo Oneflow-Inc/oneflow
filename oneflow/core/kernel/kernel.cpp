@@ -232,7 +232,7 @@ void Kernel::Forward(const KernelCtx& ctx,
 
 void Kernel::Backward(const KernelCtx& ctx,
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (kernel_conf_.need_do_instance_shape()) {
+  if (kernel_conf_.need_do_actual_shape()) {
     CHECK(!kernel_conf_.need_do_opaque_header());
     BackwardActualShape(ctx, BnInOp2Blob);
   }
