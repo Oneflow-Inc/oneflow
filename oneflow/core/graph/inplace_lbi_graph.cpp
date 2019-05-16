@@ -32,7 +32,7 @@ std::list<const InplaceLbiNode*> GetSourceNodes(
   return ret;
 }
 
-const InplaceLbiNode* GetIsMutableIbnConsumer(const InplaceLbiNode* node) {
+const InplaceLbiNode* GetIsMutableIbnConsumer(const SourceOpInplaceLbiNode* node) {
   const InplaceLbiNode* ret = nullptr;
   for (const InplaceLbiEdge* edge : node->out_edges()) {
     if (dynamic_cast<const UpdateInplaceLbiNode*>(edge->dst_node()) != nullptr) {
@@ -50,10 +50,10 @@ InplaceLbiNode* CreateNode(const LogicalBlobId& lbi,
     return new SourceOpInplaceLbiNode(lbi);
   } else if (std::find_if(op.output_bns().begin(), op.output_bns().end(),
                           [&](const std::string& obn) { return op.BnInOp2Lbi(obn) == lbi; })
-             == op.output_bns().end()) {
-    return new UpdateInplaceLbiNode(lbi);
-  } else {
+             != op.output_bns().end()) {
     return new NormalInplaceLbiNode(lbi);
+  } else {
+    return new UpdateInplaceLbiNode(lbi);
   }
 }
 
@@ -228,8 +228,9 @@ void InplaceLbiGraph::ComputeSafeInplaceObns(
   };
   {
     const InplaceLbiNode* root = GetRoot(nodes, [](const InplaceLbiEdge*) { return true; });
-    if (dynamic_cast<const SourceOpInplaceLbiNode*>(root) != nullptr) {
-      const InplaceLbiNode* updt_node = GetIsMutableIbnConsumer(root);
+    const auto* source_op_root = dynamic_cast<const SourceOpInplaceLbiNode*>(root);
+    if (source_op_root != nullptr) {
+      const InplaceLbiNode* updt_node = GetIsMutableIbnConsumer(source_op_root);
       if (updt_node != nullptr) {
         FixConstRefOrMutRefConflictsToUpdtNode(nodes, IsReachableFromLbiToOpName, &disabled_edges);
       }
@@ -440,8 +441,9 @@ void InplaceLbiGraph::FixConstRefOrMutRefConflictsToUpdtNode(
   {
     const InplaceLbiNode* root = GetRoot(nodes, IsValidEdge);
     CHECK_NOTNULL(root);
-    CHECK_NOTNULL(dynamic_cast<const SourceOpInplaceLbiNode*>(root));
-    const InplaceLbiNode* updt_node = GetIsMutableIbnConsumer(root);
+    const auto* source_op_root = dynamic_cast<const SourceOpInplaceLbiNode*>(root);
+    CHECK_NOTNULL(source_op_root);
+    const InplaceLbiNode* updt_node = GetIsMutableIbnConsumer(source_op_root);
     CHECK_NOTNULL(updt_node);
     auto ForEachNext = [&](const InplaceLbiNode* node,
                            const std::function<void(const InplaceLbiNode*)>& Handler) {

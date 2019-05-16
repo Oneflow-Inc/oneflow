@@ -98,6 +98,11 @@ class Graph {
   void ToDotWithAutoFilePath();
 
  private:
+  void ForEachConnectedComponent(
+      const std::function<void(const std::function<void(NodeType*)>&)>& ForEachPotentialStart,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachConnected,
+      const std::function<void(const HashSet<NodeType*>&)>& Handler) const;
+
   NodeType* FindFirstBackEdgeDstNode(
       const std::list<NodeType*>& starts,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachNext,
@@ -361,23 +366,25 @@ void Graph<NodeType, EdgeType>::DfsTopoForEachNodeSortByDistanceToSink(
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
     const std::function<void(NodeType*)>& Handler) const {
-  std::list<NodeType*> nodes;
-  TopoForEachNode(starts, ForEachInNode, ForEachOutNode,
-                  [&](NodeType* node) { nodes.push_back(node); });
-  std::list<NodeType*> sinks;
-  for (NodeType* node : nodes) {
-    bool is_sink = true;
-    ForEachOutNode(node, [&](NodeType* out_node) { is_sink = false; });
-    if (is_sink) { sinks.push_back(node); }
-  }
   HashMap<NodeType*, int64_t> node2distance_to_sink;
-  TopoForEachNode(sinks, ForEachOutNode, ForEachInNode, [&](NodeType* node) {
-    int64_t distance_to_sink = -1;
-    ForEachOutNode(node, [&](NodeType* out_node) {
-      distance_to_sink = std::max(distance_to_sink, node2distance_to_sink[out_node]);
+  {
+    std::list<NodeType*> nodes;
+    TopoForEachNode(starts, ForEachInNode, ForEachOutNode,
+                    [&](NodeType* node) { nodes.push_back(node); });
+    std::list<NodeType*> sinks;
+    for (NodeType* node : nodes) {
+      bool is_sink = true;
+      ForEachOutNode(node, [&](NodeType* out_node) { is_sink = false; });
+      if (is_sink) { sinks.push_back(node); }
+    }
+    TopoForEachNode(sinks, ForEachOutNode, ForEachInNode, [&](NodeType* node) {
+      int64_t distance_to_sink = -1;
+      ForEachOutNode(node, [&](NodeType* out_node) {
+        distance_to_sink = std::max(distance_to_sink, node2distance_to_sink[out_node]);
+      });
+      node2distance_to_sink[node] = distance_to_sink + 1;
     });
-    node2distance_to_sink[node] = distance_to_sink + 1;
-  });
+  }
   auto ForEachOutNodeSortedByDistanceToSink = [&](NodeType* node,
                                                   const std::function<void(NodeType*)>& Handler) {
     std::vector<NodeType*> out_nodes;
@@ -448,7 +455,9 @@ Graph<NodeType, EdgeType>::MakePredicatorIsReachable(
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::ForEachConnectedComponent(
     const std::function<void(const HashSet<NodeType*>&)>& Handler) const {
-  ForEachConnectedComponent(source_nodes(), &NodeType::ForEachNodeOnInOutEdge, Handler);
+  ForEachConnectedComponent(
+      [&](const std::function<void(NodeType*)>& Handler) { ForEachNode(Handler); },
+      &NodeType::ForEachNodeOnInOutEdge, Handler);
 }
 
 template<typename NodeType, typename EdgeType>
@@ -456,9 +465,20 @@ void Graph<NodeType, EdgeType>::ForEachConnectedComponent(
     const std::list<NodeType*>& starts,
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachConnected,
     const std::function<void(const HashSet<NodeType*>&)>& Handler) const {
+  auto ForEachPotentialStart = [&](const std::function<void(NodeType*)>& Handler) {
+    BfsForEachNode(starts, ForEachConnected, Handler);
+  };
+  ForEachConnectedComponent(ForEachPotentialStart, ForEachConnected, Handler);
+}
+
+template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::ForEachConnectedComponent(
+    const std::function<void(const std::function<void(NodeType*)>&)>& ForEachPotentialStart,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachConnected,
+    const std::function<void(const HashSet<NodeType*>&)>& Handler) const {
   HashMap<NodeType*, int32_t> node2component_id;
   int32_t cur_component_id = 0;
-  BfsForEachNode(starts, ForEachConnected, [&](NodeType* start) {
+  ForEachPotentialStart([&](NodeType* start) {
     if (node2component_id.find(start) != node2component_id.end()) { return; }
     ++cur_component_id;
     BfsForEachNode({start}, ForEachConnected, [&](NodeType* node) {
