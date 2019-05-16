@@ -234,7 +234,7 @@ void InplaceLbiGraph::ComputeSafeInplaceObns(
       if (updt_node != nullptr) {
         FixConstRefOrMutRefConflictsToUpdtNode(nodes, IsReachableFromLbiToOpName, &disabled_edges);
       }
-      FixMutRefConflictsFromSourceOpNode(root, IsValidEdge, &disabled_edges);
+      FixMutRefConflictsFromSourceOpNode(source_op_root, IsValidEdge, &disabled_edges);
       if (updt_node != nullptr) { disabled_edges.insert(updt_node->SoleInEdge()); }
       remainder_nodes.erase(root);
     }
@@ -463,7 +463,7 @@ void InplaceLbiGraph::FixConstRefOrMutRefConflictsToUpdtNode(
   for (const auto* node : safe_const_ref_nodes) {
     node->ForEachNodeOnValidOutEdge(IsValidEdge, [&](const InplaceLbiNode* out_node) {
       if (safe_const_ref_nodes.find(out_node) == safe_const_ref_nodes.end()
-	  && out_node != updt_node) {
+          && out_node != updt_node) {
         CHECK(nodes.find(out_node) != nodes.end());
         CHECK(cur_disabled_edges->emplace(out_node->GetSoleValidInEdge(IsValidEdge)).second);
       }
@@ -472,14 +472,15 @@ void InplaceLbiGraph::FixConstRefOrMutRefConflictsToUpdtNode(
 }
 
 void InplaceLbiGraph::FixMutRefConflictsFromSourceOpNode(
-    const InplaceLbiNode* root, const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge,
+    const SourceOpInplaceLbiNode* root,
+    const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge,
     HashSet<const InplaceLbiEdge*>* cur_disabled_edges) const {
   HashSet<const InplaceLbiNode*> safe_const_ref_nodes;
   {
     auto ForEachNext = [&](const InplaceLbiNode* node,
                            const std::function<void(const InplaceLbiNode*)>& Handler) {
       node->ForEachNodeOnValidOutEdge(IsValidEdge, [&](const InplaceLbiNode* out_node) {
-        if (dynamic_cast<const UpdateInplaceLbiNode*>(out_node) != nullptr) {
+        if (dynamic_cast<const NormalInplaceLbiNode*>(out_node) == nullptr) {
           Handler(out_node);
         } else if (out_node->IsConstRef(IsValidEdge)) {
           Handler(out_node);
@@ -489,8 +490,9 @@ void InplaceLbiGraph::FixMutRefConflictsFromSourceOpNode(
       });
     };
     BfsForEachNode({root}, ForEachNext, [&](const InplaceLbiNode* node) {
-      if (node == root) { return; }
-      CHECK(safe_const_ref_nodes.emplace(node).second);
+      if (dynamic_cast<const NormalInplaceLbiNode*>(node) != nullptr) {
+        CHECK(safe_const_ref_nodes.emplace(node).second);
+      }
     });
   }
   for (const auto* node : safe_const_ref_nodes) {

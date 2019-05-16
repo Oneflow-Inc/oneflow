@@ -132,7 +132,8 @@ class InplaceLbiGraph final : public Graph<const InplaceLbiNode, const InplaceLb
       HashSet<const InplaceLbiEdge*>* cur_disabled_edges) const;
 
   void FixMutRefConflictsFromSourceOpNode(
-      const InplaceLbiNode* root, const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge,
+      const SourceOpInplaceLbiNode* root,
+      const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge,
       HashSet<const InplaceLbiEdge*>* cur_disabled_edges) const;
 
   void ForEachTree(const HashSet<const InplaceLbiNode*>& nodes,
