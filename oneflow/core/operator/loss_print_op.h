@@ -20,6 +20,8 @@ class LossPrintOp final : public Operator {
 
  private:
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
+  void InferHasBatchDim(
+      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {}
 };
 
 }  // namespace oneflow

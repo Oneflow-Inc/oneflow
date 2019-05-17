@@ -44,10 +44,15 @@ void PoolingGradOp::CheckPoolSizeAndStrides() const {
 void PoolingGradOp::GetSbpSignatures(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
+<<<<<<< HEAD
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+=======
+  SbpSignatureBuilder().Split("x", 0).Split("y", 0).Split("dx", 0).Split("dy", 0).Build(
+      sbp_sig_list->mutable_sbp_signature()->Add());
+>>>>>>> c820263571945a38538c03dc7e12c16e26e9c3d1
 }
 
 REGISTER_OP(OperatorConf::kPoolingGradConf, PoolingGradOp);
