@@ -59,6 +59,7 @@ Index PartialTensorView::OffsetTo(const PartialTensorView& other) {
   CHECK_EQ(other.NumAxes(), NumAxes());
   std::vector<int64_t> indices_vec;
   std::transform(range_vec_.cbegin(), range_vec_.cend(), other.range_vec_.cbegin(),
+                 indices_vec.begin(),
                  [](const Range& lhs, const Range& rhs) { return rhs.begin() - lhs.begin(); });
   return Index(indices_vec);
 }
