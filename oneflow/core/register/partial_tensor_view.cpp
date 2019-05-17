@@ -51,10 +51,20 @@ const Range& PartialTensorView::At(int64_t index) const { return range_vec_.at(i
 
 const Shape& PartialTensorView::shape() const { return shape_; }
 
-size_t PartialTensorView::size() const { return range_vec_.size(); }
+const std::vector<Range>& PartialTensorView::range_vec() const { return range_vec_; }
 
-void PartialTensorView::JointFold(const PartialTensorView& lhs, const PartialTensorView& rhs,
-                                  PartialTensorView* lhs_out, PartialTensorView* rhs_out) {
+size_t PartialTensorView::NumAxes() const { return range_vec_.size(); }
+
+Index PartialTensorView::OffsetTo(const PartialTensorView& other) {
+  CHECK_EQ(other.NumAxes(), NumAxes());
+  std::vector<int64_t> indices_vec;
+  std::transform(range_vec_.cbegin(), range_vec_.cend(), other.range_vec_.cbegin(),
+                 [](const Range& lhs, const Range& rhs) { return rhs.begin() - lhs.begin(); });
+  return Index(indices_vec);
+}
+
+void PartialTensorView::FoldSameRange(const PartialTensorView& lhs, const PartialTensorView& rhs,
+                                      PartialTensorView* lhs_out, PartialTensorView* rhs_out) {
   std::vector<Range> lhs_out_vec;
   std::vector<Range> rhs_out_vec;
   CHECK_EQ(lhs.range_vec_.size(), rhs.range_vec_.size());

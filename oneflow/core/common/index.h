@@ -7,6 +7,7 @@ namespace oneflow {
 
 class Index final {
  public:
+  Index() = default;
   explicit Index(const std::vector<int64_t>& dim_vec);
   Index(const std::initializer_list<int64_t>& dim_vec);
   ~Index() = default;

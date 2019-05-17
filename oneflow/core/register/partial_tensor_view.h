@@ -3,6 +3,7 @@
 
 #include "oneflow/core/common/range.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/index.h"
 
 namespace oneflow {
 
@@ -20,10 +21,12 @@ class PartialTensorView final {
   PartialTensorView Intersect(const PartialTensorView& other) const;
   const Range& At(int64_t index) const;
   const Shape& shape() const;
-  size_t size() const;
+  const std::vector<Range>& range_vec() const;
+  size_t NumAxes() const;
+  Index OffsetTo(const PartialTensorView& other);
 
-  static void JointFold(const PartialTensorView& lhs, const PartialTensorView& rhs,
-                        PartialTensorView* lhs_out, PartialTensorView* rhs_out);
+  static void FoldSameRange(const PartialTensorView& lhs, const PartialTensorView& rhs,
+                            PartialTensorView* lhs_out, PartialTensorView* rhs_out);
 
  private:
   std::vector<Range> range_vec_;
