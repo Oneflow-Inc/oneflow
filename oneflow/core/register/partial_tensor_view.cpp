@@ -80,6 +80,8 @@ void PartialTensorView::FoldSameRange(const PartialTensorView& lhs, const Partia
       } else {
         lhs_out_vec.back().mut_begin() *= lhs_range.size();
         lhs_out_vec.back().mut_end() *= lhs_range.size();
+        rhs_out_vec.back().mut_begin() *= rhs_range.size();
+        rhs_out_vec.back().mut_end() *= rhs_range.size();
       }
     } else {
       lhs_out_vec.push_back(lhs_range);
