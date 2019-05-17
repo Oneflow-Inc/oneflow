@@ -75,7 +75,7 @@ void EpollCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& actor_ms
 }
 
 void EpollCommNet::RequestRead(int64_t dst_machine_id, void* src_token, void* dst_token,
-                               int64_t stream_id) {
+                               void* read_id) {
   CHECK(src_token);
   CHECK(dst_token);
   int32_t total_byte_size = static_cast<const SocketMemDesc*>(src_token)->byte_size;
@@ -97,7 +97,7 @@ void EpollCommNet::RequestRead(int64_t dst_machine_id, void* src_token, void* ds
     msg.request_read_msg.dst_token = dst_token;
     msg.request_read_msg.offset = link_index * part_length;
     msg.request_read_msg.byte_size = byte_size;
-    msg.request_read_msg.stream_id = stream_id;
+    msg.request_read_msg.read_id = read_id;
     msg.request_read_msg.part_num = part_num;
     GetSocketHelper(dst_machine_id, link_index)->AsyncWrite(msg);
   }
@@ -207,22 +207,21 @@ SocketHelper* EpollCommNet::GetSocketHelper(int64_t machine_id, int32_t link_ind
   return sockfd2helper_.at(sockfd);
 }
 
-void EpollCommNet::DoRead(int64_t stream_id, int64_t src_machine_id, void* src_token,
-                          void* dst_token) {
+void EpollCommNet::DoRead(void* read_id, int64_t src_machine_id, void* src_token, void* dst_token) {
   SocketMsg msg;
   msg.msg_type = SocketMsgType::kRequestWrite;
   msg.request_write_msg.src_token = src_token;
   msg.request_write_msg.dst_machine_id = Global<MachineCtx>::Get()->this_machine_id();
   msg.request_write_msg.dst_token = dst_token;
-  msg.request_write_msg.stream_id = stream_id;
+  msg.request_write_msg.read_id = read_id;
   dst_token2part_done_cnt_.at(dst_token) = 0;
   GetSocketHelper(src_machine_id, epoll_conf_.link_num() - 1)->AsyncWrite(msg);
 }
 
-void EpollCommNet::PartReadDone(int64_t stream_id, void* dst_token, int32_t part_num) {
+void EpollCommNet::PartReadDone(void* read_id, void* dst_token, int32_t part_num) {
   if (dst_token2part_done_cnt_.at(dst_token).fetch_add(1, std::memory_order_relaxed)
       == (part_num - 1)) {
-    ReadDone(stream_id);
+    ReadDone(read_id);
   }
 }
 

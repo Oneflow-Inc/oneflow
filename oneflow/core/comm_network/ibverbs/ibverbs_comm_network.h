@@ -28,7 +28,7 @@ class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
   }
 
   IBVerbsCommNet(const Plan&);
-  void DoRead(int64_t stream_id, int64_t src_machine_id, void* src_token, void* dst_token) override;
+  void DoRead(void* read_id, int64_t src_machine_id, void* src_token, void* dst_token) override;
   void PollCQ();
   void InitContext(const std::string&);
   uint32_t QueryPort(uint32_t, ibv_port_attr*);

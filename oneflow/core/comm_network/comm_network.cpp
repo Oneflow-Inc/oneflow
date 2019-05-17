@@ -11,8 +11,9 @@ CommNet::~CommNet() {
 }
 
 void CommNet::Read(int64_t stream_id, int64_t src_machine_id, void* src_token, void* dst_token) {
-  auto do_read = [this, stream_id, src_machine_id, src_token, dst_token]() {
-    DoRead(stream_id, src_machine_id, src_token, dst_token);
+  ReadContext* read_ctx = new ReadContext(stream_id);
+  auto do_read = [this, read_ctx, src_machine_id, src_token, dst_token]() {
+    DoRead(read_ctx, src_machine_id, src_token, dst_token);
   };
   AddWorkToStream(stream_id, do_read, true);
 }
@@ -22,10 +23,11 @@ void CommNet::AddReadCallBack(int64_t stream_id, std::function<void()> callback)
 }
 
 /*
-void CommNet::ReadDone(int64_t stream_id) {
-  auto& local_stream = stream_id2stream_.at(stream_id);
+void CommNet::ReadDone(void* read_id) {
+  ReadContext* read_ctx = static_cast<ReadContext*>(read_id);
+  auto& local_stream = stream_id2stream_.at(read_ctx->stream_id);
   {
-    std::unique_lock<std::mutex> lck(*stream_id2stream_mtx_ptr_.at(stream_id));
+    std::unique_lock<std::mutex> lck(*stream_id2stream_mtx_ptr_.at(read_ctx->stream_id));
     CHECK(!local_stream.empty() && local_stream.front().is_read);
     local_stream.pop();
     while (!local_stream.empty() && !local_stream.front().is_read) {
@@ -38,10 +40,13 @@ void CommNet::ReadDone(int64_t stream_id) {
       IssueCallBack(item.callback);
     }
   }
+  delete read_ctx;
 }
 */
 
-void CommNet::ReadDone(int64_t stream_id) {
+void CommNet::ReadDone(void* read_id) {
+  ReadContext* read_ctx = static_cast<ReadContext*>(read_id);
+  int64_t stream_id = read_ctx->stream_id;
   auto& local_stream = stream_id2stream_.at(stream_id);
   {
     std::unique_lock<std::mutex> lck(*stream_id2stream_mtx_ptr_.at(stream_id));
@@ -59,6 +64,7 @@ void CommNet::ReadDone(int64_t stream_id) {
       local_stream.pop();
     }
   }
+  delete read_ctx;
   {
     std::unique_lock<std::mutex> lck(*stream_id2stream_mtx_ptr_.at(stream_id));
     if (local_stream.empty()) { return; }
