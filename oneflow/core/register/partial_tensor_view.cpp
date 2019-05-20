@@ -11,6 +11,14 @@ PartialTensorView::PartialTensorView(const std::vector<Range>& ranges) : range_v
   UpdateShape();
 }
 
+PartialTensorView::PartialTensorView(const PartialTensorViewProto& proto) {
+  range_vec_.resize(proto.dim_size());
+  std::transform(proto.dim().cbegin(), proto.dim().cend(), range_vec_.begin(), [](const RangeProto& rp){
+    return Range(rp);
+  });
+  UpdateShape();
+}
+
 PartialTensorView& PartialTensorView::operator=(const PartialTensorView& other) {
   range_vec_ = other.range_vec_;
   UpdateShape();
@@ -55,13 +63,19 @@ const std::vector<Range>& PartialTensorView::range_vec() const { return range_ve
 
 size_t PartialTensorView::NumAxes() const { return range_vec_.size(); }
 
-Index PartialTensorView::OffsetTo(const PartialTensorView& other) {
+Index PartialTensorView::OffsetTo(const PartialTensorView& other) const {
   CHECK_EQ(other.NumAxes(), NumAxes());
   std::vector<int64_t> indices_vec;
   std::transform(range_vec_.cbegin(), range_vec_.cend(), other.range_vec_.cbegin(),
                  indices_vec.begin(),
                  [](const Range& lhs, const Range& rhs) { return rhs.begin() - lhs.begin(); });
   return Index(indices_vec);
+}
+
+void PartialTensorView::ToProto(PartialTensorViewProto* proto) const {
+  for(const Range& range : range_vec_) {
+    range.ToProto(proto->mutable_dim()->Add());
+  }
 }
 
 }  // namespace oneflow

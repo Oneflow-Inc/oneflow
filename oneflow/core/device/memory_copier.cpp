@@ -28,7 +28,7 @@ void CheckMemoryCopyNdDesc(const MemoryCopyNdDesc& desc) {
 
 }  // namespace
 
-MemoryCopyNdDesc MemoryCopyNdDesc::CompressDims() {
+MemoryCopyNdDesc MemoryCopyNdDesc::CompressDims() const {
   MemoryCopyNdDesc compressed = *this;
   std::vector<int64_t> dst_shape_vec;
   std::vector<int64_t> src_shape_vec;

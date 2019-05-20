@@ -16,7 +16,7 @@ struct MemoryCopyNdDesc {
   Index src_pos;
   Shape extent;
 
-  MemoryCopyNdDesc CompressDims();
+  MemoryCopyNdDesc CompressDims() const;
 };
 
 class MemoryCopier {
