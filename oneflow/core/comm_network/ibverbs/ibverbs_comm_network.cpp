@@ -229,11 +229,11 @@ IBVerbsCommNet::IBVerbsCommNet(const Plan& plan)
   OF_BARRIER();
 }
 
-void IBVerbsCommNet::DoRead(void* read_id, int64_t src_machine_id, void* src_token,
+void IBVerbsCommNet::DoRead(int64_t stream_id, int64_t src_machine_id, void* src_token,
                             void* dst_token) {
   qp_vec_.at(src_machine_id)
       ->PostReadRequest(token2mem_desc_.at(src_machine_id).at(src_token),
-                        *static_cast<const IBVerbsMemDesc*>(dst_token), read_id);
+                        *static_cast<const IBVerbsMemDesc*>(dst_token), stream_id);
 }
 
 void IBVerbsCommNet::PollCQ() {

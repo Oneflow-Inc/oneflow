@@ -19,8 +19,8 @@ class EpollCommNet final : public CommNetIf<SocketMemDesc> {
   void RegisterMemoryDone() override;
 
   void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) override;
-  void RequestRead(int64_t dst_machine_id, void* src_token, void* dst_token, void* read_id);
-  void PartReadDone(void* read_id, void* dst_token, int32_t part_num);
+  void RequestRead(int64_t dst_machine_id, void* src_token, void* dst_token, int64_t stream_id);
+  void PartReadDone(int64_t stream_id, void* dst_token, int32_t part_num);
 
  private:
   SocketMemDesc* NewMemDesc(void* ptr, size_t byte_size) override;
@@ -29,7 +29,7 @@ class EpollCommNet final : public CommNetIf<SocketMemDesc> {
   void InitSockets();
   void SetSocketHelper(int64_t machine_id, int32_t sockfd);
   SocketHelper* GetSocketHelper(int64_t machine_id, int32_t link_index) const;
-  void DoRead(void* read_id, int64_t src_machine_id, void* src_token, void* dst_token) override;
+  void DoRead(int64_t stream_id, int64_t src_machine_id, void* src_token, void* dst_token) override;
 
   const EpollConf& epoll_conf_;
   size_t poller_idx_;

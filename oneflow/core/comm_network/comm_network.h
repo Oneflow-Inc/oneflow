@@ -23,7 +23,7 @@ class CommNet {
   // Stream
   void Read(int64_t stream_id, int64_t src_machine_id, void* src_token, void* dst_token);
   void AddReadCallBack(int64_t stream_id, std::function<void()> callback);
-  void ReadDone(void* read_id);
+  void ReadDone(int64_t stream_id);
 
   //
   virtual void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) = 0;
@@ -31,17 +31,14 @@ class CommNet {
  protected:
   CommNet(const Plan& plan);
 
-  virtual void DoRead(void* read_id, int64_t src_machine_id, void* src_token, void* dst_token) = 0;
+  virtual void DoRead(int64_t stream_id, int64_t src_machine_id, void* src_token,
+                      void* dst_token) = 0;
   const HashSet<int64_t>& peer_machine_id() { return peer_machine_id_; }
 
   Channel<std::function<void()>> ready_cbs_;
 
  private:
   friend class Global<CommNet>;
-  struct ReadContext {
-    int64_t stream_id;
-    ReadContext(int64_t stream_id) : stream_id(stream_id) {}
-  };
   struct CommNetItem {
     std::function<void()> callback;
     bool is_read;

@@ -11,9 +11,8 @@ CommNet::~CommNet() {
 }
 
 void CommNet::Read(int64_t stream_id, int64_t src_machine_id, void* src_token, void* dst_token) {
-  ReadContext* read_ctx = new ReadContext(stream_id);
-  auto do_read = [this, read_ctx, src_machine_id, src_token, dst_token]() {
-    DoRead(read_ctx, src_machine_id, src_token, dst_token);
+  auto do_read = [this, stream_id, src_machine_id, src_token, dst_token]() {
+    DoRead(stream_id, src_machine_id, src_token, dst_token);
   };
   AddWorkToStream(stream_id, do_read, true);
 }
@@ -22,12 +21,10 @@ void CommNet::AddReadCallBack(int64_t stream_id, std::function<void()> callback)
   AddWorkToStream(stream_id, callback, false);
 }
 
-/*
-void CommNet::ReadDone(void* read_id) {
-  ReadContext* read_ctx = static_cast<ReadContext*>(read_id);
-  auto& local_stream = stream_id2stream_.at(read_ctx->stream_id);
+void CommNet::ReadDone(int64_t stream_id) {
+  auto& local_stream = stream_id2stream_.at(stream_id);
   {
-    std::unique_lock<std::mutex> lck(*stream_id2stream_mtx_ptr_.at(read_ctx->stream_id));
+    std::unique_lock<std::mutex> lck(*stream_id2stream_mtx_ptr_.at(stream_id));
     CHECK(!local_stream.empty() && local_stream.front().is_read);
     local_stream.pop();
     while (!local_stream.empty() && !local_stream.front().is_read) {
@@ -40,38 +37,6 @@ void CommNet::ReadDone(void* read_id) {
       IssueCallBack(item.callback);
     }
   }
-  delete read_ctx;
-}
-*/
-
-void CommNet::ReadDone(void* read_id) {
-  ReadContext* read_ctx = static_cast<ReadContext*>(read_id);
-  int64_t stream_id = read_ctx->stream_id;
-  auto& local_stream = stream_id2stream_.at(stream_id);
-  {
-    std::unique_lock<std::mutex> lck(*stream_id2stream_mtx_ptr_.at(stream_id));
-    CHECK(!local_stream.empty() && local_stream.front().is_read);
-    local_stream.pop();
-  }
-  while (true) {
-    {
-      std::unique_lock<std::mutex> lck(*stream_id2stream_mtx_ptr_.at(stream_id));
-      if (local_stream.empty() || local_stream.front().is_read) { break; }
-    }
-    IssueCallBack(local_stream.front().callback);
-    {
-      std::unique_lock<std::mutex> lck(*stream_id2stream_mtx_ptr_.at(stream_id));
-      local_stream.pop();
-    }
-  }
-  delete read_ctx;
-  {
-    std::unique_lock<std::mutex> lck(*stream_id2stream_mtx_ptr_.at(stream_id));
-    if (local_stream.empty()) { return; }
-  }
-  auto item = local_stream.front();
-  CHECK(item.is_read);
-  IssueCallBack(item.callback);
 }
 
 void CommNet::IssueCallBack(const std::function<void()>& cb) {
@@ -79,7 +44,6 @@ void CommNet::IssueCallBack(const std::function<void()>& cb) {
   ready_cbs_.Send(cb);
 }
 
-/*
 void CommNet::AddWorkToStream(int64_t stream_id, const std::function<void()>& cb, bool is_read) {
   CHECK_LT(stream_id, peer_machine_id_.size());
   std::unique_lock<std::mutex> lck(*stream_id2stream_mtx_ptr_.at(stream_id));
@@ -87,23 +51,6 @@ void CommNet::AddWorkToStream(int64_t stream_id, const std::function<void()>& cb
   if (is_stream_empty) { IssueCallBack(cb); }
   if (!is_stream_empty || is_read) {
     stream_id2stream_.at(stream_id).push(CommNetItem(cb, is_read));
-  }
-}
-*/
-
-void CommNet::AddWorkToStream(int64_t stream_id, const std::function<void()>& cb, bool is_read) {
-  CHECK_LT(stream_id, peer_machine_id_.size());
-  bool is_stream_empty;
-  {
-    std::unique_lock<std::mutex> lck(*stream_id2stream_mtx_ptr_.at(stream_id));
-    is_stream_empty = stream_id2stream_.at(stream_id).empty();
-  }
-  if (is_stream_empty) { IssueCallBack(cb); }
-  {
-    std::unique_lock<std::mutex> lck(*stream_id2stream_mtx_ptr_.at(stream_id));
-    if (!stream_id2stream_.at(stream_id).empty() || is_read) {
-      stream_id2stream_.at(stream_id).push(CommNetItem(cb, is_read));
-    }
   }
 }
 
