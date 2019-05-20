@@ -4,7 +4,7 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/register/partial_tensor_view.h"
 #include "oneflow/core/register/blob.h"
-#include "oneflow/core/register/memory_copier.h"
+#include "oneflow/core/device/memory_copier.h"
 
 namespace oneflow {
 

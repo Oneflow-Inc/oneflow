@@ -1,4 +1,4 @@
-#include "oneflow/core/register/memory_copier.h"
+#include "memory_copier.h"
 
 namespace oneflow {
 

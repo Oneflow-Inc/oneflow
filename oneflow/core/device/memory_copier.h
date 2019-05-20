@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_REGISTER_MEMORY_COPIER_H_
-#define ONEFLOW_CORE_REGISTER_MEMORY_COPIER_H_
+#ifndef ONEFLOW_CORE_DEVICE_MEMORY_COPIER_H_
+#define ONEFLOW_CORE_DEVICE_MEMORY_COPIER_H_
 
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/common/index.h"
@@ -72,4 +72,4 @@ class CudaMemoryCopier final : virtual public MemoryCopier {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_REGISTER_MEMORY_COPIER_H_
+#endif  // ONEFLOW_CORE_DEVICE_MEMORY_COPIER_H_
