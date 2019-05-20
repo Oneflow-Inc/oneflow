@@ -28,6 +28,37 @@ void CheckMemoryCopyNdDesc(const MemoryCopyNdDesc& desc) {
 
 }  // namespace
 
+MemoryCopyNdDesc MemoryCopyNdDesc::CompressDims() {
+  MemoryCopyNdDesc compressed = *this;
+  std::vector<int64_t> dst_shape_vec;
+  std::vector<int64_t> src_shape_vec;
+  std::vector<int64_t> dst_pos_vec;
+  std::vector<int64_t> src_pos_vec;
+  std::vector<int64_t> extent_vec;
+  FOR_RANGE(int64_t, i, 0, MemoryCopyNdDescGetNumAxes(*this)) {
+    if (dst_shape.At(i) == src_shape.At(i) && dst_shape.At(i) == extent.At(i) && dst_pos.At(i) == 0
+        && src_pos.At(i) == 0 && i != 0) {
+      dst_shape_vec.back() *= extent.At(i);
+      src_shape_vec.back() *= extent.At(i);
+      dst_pos_vec.back() *= extent.At(i);
+      src_pos_vec.back() *= extent.At(i);
+      extent_vec.back() *= extent.At(i);
+    } else {
+      dst_shape_vec.push_back(dst_shape.At(i));
+      src_shape_vec.push_back(src_shape.At(i));
+      dst_pos_vec.push_back(dst_pos.At(i));
+      src_pos_vec.push_back(src_pos.At(i));
+      extent_vec.push_back(extent.At(i));
+    }
+  }
+  compressed.dst_shape = Shape(dst_shape_vec);
+  compressed.src_shape = Shape(src_shape_vec);
+  compressed.dst_pos = Index(dst_pos_vec);
+  compressed.src_pos = Index(src_pos_vec);
+  compressed.extent = Shape(extent_vec);
+  return compressed;
+}
+
 void MemoryCopier::Copy(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const {
   CheckMemoryCopyNdDesc(desc);
   const int64_t num_axes = MemoryCopyNdDescGetNumAxes(desc);

@@ -25,9 +25,6 @@ class PartialTensorView final {
   size_t NumAxes() const;
   Index OffsetTo(const PartialTensorView& other);
 
-  static void FoldSameRange(const PartialTensorView& lhs, const PartialTensorView& rhs,
-                            PartialTensorView* lhs_out, PartialTensorView* rhs_out);
-
  private:
   std::vector<Range> range_vec_;
   Shape shape_;

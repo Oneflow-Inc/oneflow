@@ -24,18 +24,16 @@ PartialTensorCopier::PartialTensorCopier(const PartialTensorView& dst_view,
     dst_raw_view = PartialTensorView(dst_raw_range_vec);
     src_raw_view = PartialTensorView(src_raw_range_vec);
   }
-  PartialTensorView folded_dst_raw_view;
-  PartialTensorView folded_src_raw_view;
-  PartialTensorView::FoldSameRange(dst_raw_view, src_raw_view, &folded_dst_raw_view,
-                                   &folded_src_raw_view);
-  PartialTensorView fold_intersection = folded_dst_raw_view.Intersect(folded_src_raw_view);
-  memory_copy_nd_desc_.dst_shape = folded_dst_raw_view.shape();
-  memory_copy_nd_desc_.src_shape = folded_src_raw_view.shape();
-  memory_copy_nd_desc_.dst_pos = fold_intersection.OffsetTo(dst_raw_view);
-  memory_copy_nd_desc_.src_pos = fold_intersection.OffsetTo(src_raw_view);
-  memory_copy_nd_desc_.extent = fold_intersection.shape();
-  memory_copy_nd_desc_.dst_ptr = nullptr;
-  memory_copy_nd_desc_.src_ptr = nullptr;
+  PartialTensorView intersection = src_raw_view.Intersect(src_raw_view);
+  MemoryCopyNdDesc raw_copy_desc;
+  raw_copy_desc.dst_shape = dst_raw_view.shape();
+  raw_copy_desc.src_shape = src_raw_view.shape();
+  raw_copy_desc.dst_pos = intersection.OffsetTo(dst_raw_view);
+  raw_copy_desc.src_pos = intersection.OffsetTo(src_raw_view);
+  raw_copy_desc.extent = intersection.shape();
+  raw_copy_desc.dst_ptr = nullptr;
+  raw_copy_desc.src_ptr = nullptr;
+  memory_copy_nd_desc_ = raw_copy_desc.CompressDims();
 }
 
 void PartialTensorCopier::Exec(DeviceCtx* ctx, const MemoryCopier& copier, Blob* dst_blob,

@@ -64,32 +64,4 @@ Index PartialTensorView::OffsetTo(const PartialTensorView& other) {
   return Index(indices_vec);
 }
 
-void PartialTensorView::FoldSameRange(const PartialTensorView& lhs, const PartialTensorView& rhs,
-                                      PartialTensorView* lhs_out, PartialTensorView* rhs_out) {
-  std::vector<Range> lhs_out_vec;
-  std::vector<Range> rhs_out_vec;
-  CHECK_EQ(lhs.range_vec_.size(), rhs.range_vec_.size());
-  FOR_RANGE(int64_t, i, 0, lhs.range_vec_.size()) {
-    const Range& lhs_range = lhs.range_vec_.at(i);
-    const Range& rhs_range = rhs.range_vec_.at(i);
-    if (lhs_range == rhs_range) {
-      if (lhs_out_vec.empty()) {
-        CHECK(rhs_out_vec.empty());
-        lhs_out_vec.push_back(lhs_range);
-        rhs_out_vec.push_back(lhs_range);
-      } else {
-        lhs_out_vec.back().mut_begin() *= lhs_range.size();
-        lhs_out_vec.back().mut_end() *= lhs_range.size();
-        rhs_out_vec.back().mut_begin() *= rhs_range.size();
-        rhs_out_vec.back().mut_end() *= rhs_range.size();
-      }
-    } else {
-      lhs_out_vec.push_back(lhs_range);
-      rhs_out_vec.push_back(rhs_range);
-    }
-  }
-  *lhs_out = PartialTensorView(lhs_out_vec);
-  *rhs_out = PartialTensorView(rhs_out_vec);
-}
-
 }  // namespace oneflow
