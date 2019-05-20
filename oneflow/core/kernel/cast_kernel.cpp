@@ -20,12 +20,24 @@ void CopyBlob(DeviceCtx* ctx, const Blob* src, Blob* dst) {
 
 }  // namespace
 
-#define MAKE_CAST_SWITCH_ENTRY(func_name, T, U) func_name<device_type, T, U>
+#define MAKE_CASE_HANDLER_ENTRY(in_type_pair, out_type_pair)                          \
+  {std::make_pair(OF_PP_PAIR_SECOND(in_type_pair), OF_PP_PAIR_SECOND(out_type_pair)), \
+   CopyBlob<device_type, OF_PP_PAIR_FIRST(in_type_pair), OF_PP_PAIR_FIRST(out_type_pair)>},
+
 template<DeviceType device_type>
 struct CastUtil final {
-  DEFINE_STATIC_SWITCH_FUNC(void, CopyBlob, MAKE_CAST_SWITCH_ENTRY,
-                            MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ),
-                            MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ));
+  static void SwitchCopyBlob(const std::pair<DataType, DataType>& key, DeviceCtx* ctx,
+                             const Blob* src, Blob* dst) {
+    static const std::map<std::pair<DataType, DataType>,
+                          std::function<void(DeviceCtx*, const Blob*, Blob*)>>
+        case_handler{
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_CASE_HANDLER_ENTRY, POD_DATA_TYPE_SEQ,
+                                             POD_DATA_TYPE_SEQ)
+                MAKE_CASE_HANDLER_ENTRY((float, DataType::kFloat), (float16, DataType::kFloat16))
+                    MAKE_CASE_HANDLER_ENTRY((float16, DataType::kFloat16),
+                                            (float, DataType::kFloat))};
+    case_handler.at(key)(ctx, src, dst);
+  }
 };
 
 template<DeviceType device_type>
@@ -33,18 +45,8 @@ void CastKernel<device_type>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
-  CastUtil<device_type>::SwitchCopyBlob(SwitchCase(in_blob->data_type(), out_blob->data_type()),
+  CastUtil<device_type>::SwitchCopyBlob(std::make_pair(in_blob->data_type(), out_blob->data_type()),
                                         ctx.device_ctx, in_blob, out_blob);
-}
-
-template<DeviceType device_type>
-void CastKernel<device_type>::BackwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
-  Blob* in_diff_blob = BnInOp2Blob(GenDiffBn("in"));
-  CastUtil<device_type>::SwitchCopyBlob(
-      SwitchCase(out_diff_blob->data_type(), in_diff_blob->data_type()), ctx.device_ctx,
-      out_diff_blob, in_diff_blob);
 }
 
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kCastConf, CastKernel);
