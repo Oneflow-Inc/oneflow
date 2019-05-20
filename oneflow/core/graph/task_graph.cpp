@@ -9,6 +9,7 @@
 #include "oneflow/core/graph/reduce_add_compute_task_node.h"
 #include "oneflow/core/graph/reduce_gather_compute_task_node.h"
 #include "oneflow/core/graph/reduce_split_compute_task_node.h"
+#include "oneflow/core/graph/inplace_lbi_graph.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/job/thrd_id_generator.h"
 #include "oneflow/core/graph/reduce_identity_task_node.h"
@@ -76,6 +77,18 @@ void ForEachDeviceSrcUntrainableNode(const std::vector<NormalForwardCompTaskNode
   for (NormalForwardCompTaskNode* fw_node : fw_nodes) {
     if (IsSourceTaskNode(fw_node) && !HasBwNode(fw_node)) { Handler(fw_node); }
   }
+}
+
+std::function<TaskNode*(const std::string&)> MakeGetterTaskNode4SoleOpName(
+    const HashSet<TaskNode*>& nodes) {
+  TODO();
+  return [](const std::string&) -> TaskNode* {};
+};
+
+std::function<bool(const LogicalBlobId&, const std::string&)>
+MakePredicatorIsLbiConsumersReachableInChain(const HashSet<TaskNode*>* task_nodes) {
+  TODO();
+  return [](const LogicalBlobId& lbi, const std::string& op_name) -> bool {};
 }
 
 }  // namespace
@@ -484,7 +497,49 @@ void TaskGraph::EnableMemSharingInVariableOp() {
   });
 }
 
-void TaskGraph::EnableInplaceMemSharing() {
+void TaskGraph::GetInplaceOpBlobArgList(
+    OpBlobArgList* inplace_obas, const HashSet<TaskNode*>& dev_nodes,
+    const std::function<const TaskNode*(const std::string&)>& TaskNode4OpName) const {
+  TODO();
+}
+
+void TaskGraph::GetSafeInplaceOpBlobArgList(
+    OpBlobArgList* safe_obas, const HashSet<TaskNode*>& dev_nodes,
+    const std::function<bool(const LogicalBlobId&, const std::string&)>&
+        IsLbiConsumersReachableToOpName) const {
+  auto TaskNode4SoleOpName = MakeGetterTaskNode4SoleOpName(dev_nodes);
+  OpBlobArgList inplace_obas;
+  GetInplaceOpBlobArgList(&inplace_obas, dev_nodes, TaskNode4SoleOpName);
+  auto Op4OpName = [&](const std::string& op_name) -> const Operator* { TODO(); };
+  auto IsLbiConsumersReachableInChain = MakePredicatorIsLbiConsumersReachableInChain(&dev_nodes);
+  auto IsLbiConsumersReachableToDst = [&](const LogicalBlobId& lbi, const std::string& op_name) {
+    return IsLbiConsumersReachableToOpName(lbi, op_name)
+           || IsLbiConsumersReachableInChain(lbi, op_name);
+  };
+  InplaceLbiGraph(inplace_obas, Op4OpName)
+      .ComputeSafeInplaceObns(safe_obas, IsLbiConsumersReachableToDst);
+}
+
+void TaskGraph::SetTaskRegstInplaceInfo(const OpBlobArgList& obas,
+                                        const HashSet<TaskNode*>& dev_nodes) const {
+  TODO();
+}
+
+void TaskGraph::ForEachDeviceNodes(
+    const std::function<void(const HashSet<TaskNode*>& dev_nodes)>& Handler) const {
+  TODO();
+}
+
+void TaskGraph::EnableInplaceMemSharing(
+    const std::function<bool(const LogicalBlobId&, const std::string&)>&
+        IsLbiConsumersReachableToOpName) {
+  ForEachDeviceNodes([&](const HashSet<TaskNode*>& dev_nodes) {
+    if ((*dev_nodes.begin())->device_type() != DeviceType::kGPU) { return; }
+    OpBlobArgList safe_inplace_obas;
+    GetSafeInplaceOpBlobArgList(&safe_inplace_obas, dev_nodes, IsLbiConsumersReachableToOpName);
+    SetTaskRegstInplaceInfo(safe_inplace_obas, dev_nodes);
+  });
+  return;
   AcyclicTopoForEachNode([&](TaskNode* node) {
     if (node->exec_gph().node_num() != 1) { return; }
     const Operator* op = node->exec_gph().SoleNode()->op().get();
