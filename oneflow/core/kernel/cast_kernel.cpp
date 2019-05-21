@@ -30,11 +30,11 @@ struct CastUtil final {
     static const std::map<std::pair<DataType, DataType>,
                           std::function<void(DeviceCtx*, const Blob*, Blob*)>>
         case_handler{
-          // clang-format off
+            // clang-format off
           OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_CASE_HANDLER_ENTRY, POD_DATA_TYPE_SEQ, POD_DATA_TYPE_SEQ)
           MAKE_CASE_HANDLER_ENTRY((float, DataType::kFloat), (float16, DataType::kFloat16))
           MAKE_CASE_HANDLER_ENTRY((float16, DataType::kFloat16), (float, DataType::kFloat))
-          // clang-format on
+            // clang-format on
         };
     case_handler.at(key)(ctx, src, dst);
   }
