@@ -42,4 +42,9 @@ void BoxingCopyTaskNode::InferProducedDataRegstTimeShape() {
   NaiveInferProducedDataRegstTimeShape();
 }
 
+void BoxingCopyTaskNode::BindTensorPartialViewToInDataEdge(const TaskEdge* edge,
+                                                           const TensorPartialView& view) {
+  edge2tensor_partial_view_.emplace(edge, view);
+}
+
 }  // namespace oneflow

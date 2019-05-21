@@ -16,6 +16,7 @@
 #include "oneflow/core/operator/constant_op.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/graph/boxing_copy_task_node.h"
+#include "oneflow/core/register/tensor_partial_view.h"
 
 namespace oneflow {
 
@@ -78,6 +79,30 @@ void ForEachDeviceSrcUntrainableNode(const std::vector<NormalForwardCompTaskNode
   for (NormalForwardCompTaskNode* fw_node : fw_nodes) {
     if (IsSourceTaskNode(fw_node) && !HasBwNode(fw_node)) { Handler(fw_node); }
   }
+}
+
+std::vector<TensorPartialView> GetTensorPartialView(const int64_t parallel_num,
+                                                    const SbpParallel& sbp_parallel,
+                                                    const BlobDesc& blob_desc) {
+  std::vector<Range> ranges(blob_desc.shape().NumAxes());
+  FOR_RANGE(int64_t, i, 0, blob_desc.shape().NumAxes()) {
+    ranges[i].mut_begin() = 0;
+    ranges[i].mut_end() = blob_desc.shape().At(i);
+  }
+  std::vector<TensorPartialView> views;
+  if (sbp_parallel.has_partial_sum_parallel() || sbp_parallel.has_broadcast_parallel()) {
+    FOR_RANGE(int64_t, i, 0, parallel_num) { views.emplace_back(ranges); }
+  } else if (sbp_parallel.has_split_parallel()) {
+    const int64_t axis = sbp_parallel.split_parallel().axis();
+    const BalancedSplitter bs(blob_desc.shape().At(axis), parallel_num);
+    FOR_RANGE(int64_t, i, 0, parallel_num) {
+      ranges[axis] = bs.At(i);
+      views.emplace_back(ranges);
+    }
+  } else {
+    UNIMPLEMENTED();
+  }
+  return views;
 }
 
 }  // namespace
@@ -633,6 +658,10 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV2) {
         && (src_parallel_desc->device_type() == DeviceType::kGPU
             || src_parallel_desc->device_type() == DeviceType::kCPU)
         && dst_parallel_desc->device_type() == DeviceType::kGPU) {
+      const std::vector<TensorPartialView> src_views =
+          GetTensorPartialView(src_parallel_desc->parallel_num(), src_sbp_parallel, blob_desc);
+      const std::vector<TensorPartialView> dst_views =
+          GetTensorPartialView(dst_parallel_desc->parallel_num(), dst_sbp_parallel, blob_desc);
       FOR_RANGE(int64_t, i, 0, dst_parallel_desc->parallel_num()) {
         CompTaskNode* dst_comp_task_node = sorted_dst_comp_tasks.at(i);
         BoxingCopyTaskNode* copy_task_node = NewNode<BoxingCopyTaskNode>();
@@ -642,7 +671,9 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV2) {
         copy_task_node->set_area_id(kBoundaryArea);
         Connect<TaskNode>(copy_task_node, NewEdge(), dst_comp_task_node);
         FOR_RANGE(int64_t, src_id, 0, src_parallel_desc->parallel_num()) {
-          Connect<TaskNode>(sorted_src_comp_tasks.at(src_id), NewEdge(), copy_task_node);
+          TaskEdge* edge = NewEdge();
+          Connect<TaskNode>(sorted_src_comp_tasks.at(src_id), edge, copy_task_node);
+          copy_task_node->BindTensorPartialViewToInDataEdge(edge, src_views.at(src_id));
         }
       }
     } else {
