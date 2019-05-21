@@ -15,7 +15,7 @@ class TensorPartialCopier final {
                       DataType data_type);
   virtual ~TensorPartialCopier() = default;
 
-  void Exec(DeviceCtx* ctx, const MemoryCopier& copier, Blob* dst_blob, Blob* src_blob) const;
+  void Exec(DeviceCtx* ctx, const MemoryCopier& copier, Blob* dst_blob, const Blob* src_blob) const;
 
  private:
   mutable MemoryCopyNdDesc memory_copy_nd_desc_;

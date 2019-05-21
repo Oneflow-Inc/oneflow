@@ -8,6 +8,7 @@ import "oneflow/core/record/record.proto";
 import "oneflow/core/job/resource.proto";
 import "oneflow/core/job/sbp_parallel.proto";
 import "oneflow/core/register/logical_blob_id.proto";
+import "oneflow/core/register/tensor_partial_view.proto";
 
 enum ActivationType {
   kNone = 0;
@@ -1378,6 +1379,18 @@ message BlobDumpOpConf {
   optional string dir = 2;
 }
 
+message BoxingCopyOpConf {
+  required LogicalBlobId lbi = 1;
+  repeated TensorPartialViewProto in_view = 2;
+  required TensorPartialViewProto out_view = 3;
+}
+
+message BoxingCopyAddOpConf {
+  required LogicalBlobId lbi = 1;
+  repeated TensorPartialViewProto in_view = 2;
+  required TensorPartialViewProto out_view = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1427,6 +1440,9 @@ message OperatorConf {
     LocalGpuPeerSplitToBroadcastOpConf local_gpu_peer_split_to_broadcast_conf = 137;
     LocalGpuPeerPartialSumToSplitOpConf local_gpu_peer_partial_sum_to_split_conf = 138;
     LocalGpuPeerPartialSumToBroadcastOpConf local_gpu_peer_partial_sum_to_broadcast_conf = 139;
+    BoxingCopyOpConf boxing_copy_conf = 140;
+    BoxingCopyAddOpConf boxing_copy_add_conf = 141;
+
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
     TransposeOpConf transpose_conf = 201;

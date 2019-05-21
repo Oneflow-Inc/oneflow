@@ -37,7 +37,7 @@ TensorPartialCopier::TensorPartialCopier(const TensorPartialView& dst_view,
 }
 
 void TensorPartialCopier::Exec(DeviceCtx* ctx, const MemoryCopier& copier, Blob* dst_blob,
-                               Blob* src_blob) const {
+                               const Blob* src_blob) const {
   CHECK_EQ(dst_blob->data_type(), data_type_);
   CHECK_EQ(src_blob->data_type(), data_type_);
   CHECK_EQ(dst_view_.shape(), dst_blob->shape());
