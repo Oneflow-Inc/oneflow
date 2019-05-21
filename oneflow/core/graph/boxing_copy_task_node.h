@@ -17,14 +17,17 @@ class BoxingCopyTaskNode final : public TaskNode {
   TaskType GetTaskType() const override { return TaskType::kBoxingCopy; }
 
   void BindTensorPartialViewToInDataEdge(const TaskEdge* edge, const TensorPartialView& view);
+  void SetOutTensorPartialView(const TensorPartialView& out_view);
+  void SetLbi(const LogicalBlobId& lbi);
 
  private:
   void BuildExecGphAndRegst() override;
   void InferProducedDataRegstTimeShape() override;
 
-  std::shared_ptr<Operator> op_;
   HashMap<const TaskEdge*, TensorPartialView> in_data_edge2tensor_partial_view_;
-  std::vector<const TaskEdge*> sorted_in_data_edge_vec;
+  std::vector<const TaskEdge*> sorted_in_data_edge_vec_;
+  TensorPartialView out_view_;
+  LogicalBlobId& lbi_;
 };
 
 }  // namespace oneflow

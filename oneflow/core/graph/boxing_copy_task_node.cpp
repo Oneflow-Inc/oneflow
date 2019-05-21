@@ -10,8 +10,8 @@ void BoxingCopyTaskNode::ProduceAllRegstsAndBindEdges() {
 
 void BoxingCopyTaskNode::ConsumeAllRegsts() {
   HashMap<const TaskEdge*, int64_t> edge2order_;
-  FOR_RANGE(int64_t, i, 0, sorted_in_data_edge_vec.size()) {
-    edge2order_.emplace(sorted_in_data_edge_vec.at(i), i);
+  FOR_RANGE(int64_t, i, 0, sorted_in_data_edge_vec_.size()) {
+    edge2order_.emplace(sorted_in_data_edge_vec_.at(i), i);
   }
   int64_t in_data_edge_cnt = 0;
   ForEachInDataEdge([&](TaskEdge* edge) {
@@ -20,20 +20,28 @@ void BoxingCopyTaskNode::ConsumeAllRegsts() {
     ConsumeRegst("in_" + std::to_string(order_it->second), edge->GetSoleRegst());
     in_data_edge_cnt += 1;
   });
-  CHECK_EQ(in_data_edge_cnt, sorted_in_data_edge_vec.size());
+  CHECK_EQ(in_data_edge_cnt, sorted_in_data_edge_vec_.size());
 }
 
 void BoxingCopyTaskNode::BuildExecGphAndRegst() {
+  OperatorConf op_conf{};
+  BoxingCopyOpConf* boxing_copy_conf = op_conf.mutable_boxing_copy_conf();
+  *boxing_copy_conf->mutable_lbi() = lbi_;
+  out_view_.ToProto(boxing_copy_conf->mutable_out_view());
+  for (const TaskEdge* edge : sorted_in_data_edge_vec_) {
+    in_data_edge2tensor_partial_view_.at(edge).ToProto(boxing_copy_conf->mutable_in_view()->Add());
+  }
   ExecNode* node = mut_exec_gph().NewNode();
-  node->mut_op() = op_;
-  FOR_RANGE(size_t, i, 0, op_->input_bns().size()) {
-    const std::string& ibn = op_->input_bns().Get(i);
+  std::shared_ptr<Operator> op = ConstructOp(op_conf);
+  node->mut_op() = op;
+  FOR_RANGE(size_t, i, 0, op->input_bns().size()) {
+    const std::string& ibn = op->input_bns().Get(i);
     CHECK_EQ(GenUnRepeatedBn(ibn).second, i);
     node->BindBnWithRegst(ibn, GetSoleConsumedRegst("in_" + std::to_string(i)));
   }
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
-  out_regst->AddLbi(op_->BnInOp2Lbi(op_->SoleObn()));
-  node->BindBnWithRegst(op_->SoleObn(), out_regst);
+  out_regst->AddLbi(op->BnInOp2Lbi(op->SoleObn()));
+  node->BindBnWithRegst(op->SoleObn(), out_regst);
   node->AddBnToRegstAndBindIt(&Operator::fw_buf_bns, GetProducedRegst("fw_buf"));
   node->InferBlobDescs(parallel_ctx());
 }
@@ -44,8 +52,14 @@ void BoxingCopyTaskNode::InferProducedDataRegstTimeShape() {
 
 void BoxingCopyTaskNode::BindTensorPartialViewToInDataEdge(const TaskEdge* edge,
                                                            const TensorPartialView& view) {
-  sorted_in_data_edge_vec.push_back(edge);
+  sorted_in_data_edge_vec_.push_back(edge);
   in_data_edge2tensor_partial_view_.emplace(edge, view);
 }
+
+void BoxingCopyTaskNode::SetOutTensorPartialView(const TensorPartialView& out_view) {
+  out_view_ = out_view;
+}
+
+void BoxingCopyTaskNode::SetLbi(const LogicalBlobId& lbi) { lbi_ = lbi; }
 
 }  // namespace oneflow
