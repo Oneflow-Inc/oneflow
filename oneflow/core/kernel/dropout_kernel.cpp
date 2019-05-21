@@ -65,6 +65,7 @@ struct DropoutKernelUtil<DeviceType::kCPU, T> final {
 OF_PP_FOR_EACH_TUPLE(INITIATE_DROPOUT_KERNEL_UTIL_CPU, ARITHMETIC_DATA_TYPE_SEQ);
 #undef INITIATE_DROPOUT_KERNEL_UTIL_CPU
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kDropoutConf, DropoutKernel, ARITHMETIC_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kDropoutConf, DropoutKernel,
+                           ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
