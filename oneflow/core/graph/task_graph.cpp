@@ -631,10 +631,16 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV2) {
         && src_parallel_desc->sorted_machine_ids().at(0)
                == dst_parallel_desc->sorted_machine_ids().at(0)
         && (src_parallel_desc->device_type() == DeviceType::kGPU
-            || dst_parallel_desc->device_type() == DeviceType::kGPU)) {
+            || src_parallel_desc->device_type() == DeviceType::kCPU)
+        && dst_parallel_desc->device_type() == DeviceType::kGPU) {
       FOR_RANGE(int64_t, i, 0, dst_parallel_desc->parallel_num()) {
+        CompTaskNode* dst_comp_task_node = sorted_dst_comp_tasks.at(i);
         BoxingCopyTaskNode* copy_task_node = NewNode<BoxingCopyTaskNode>();
-        Connect<TaskNode>(copy_task_node, NewEdge(), sorted_dst_comp_tasks.at(i));
+        copy_task_node->set_machine_id(dst_comp_task_node->machine_id());
+        copy_task_node->set_thrd_id(Global<IDMgr>::Get()->GetGpuMixThrdId(
+            Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(dst_comp_task_node->thrd_id())));
+        copy_task_node->set_area_id(kBoundaryArea);
+        Connect<TaskNode>(copy_task_node, NewEdge(), dst_comp_task_node);
         FOR_RANGE(int64_t, src_id, 0, src_parallel_desc->parallel_num()) {
           Connect<TaskNode>(sorted_src_comp_tasks.at(src_id), NewEdge(), copy_task_node);
         }
