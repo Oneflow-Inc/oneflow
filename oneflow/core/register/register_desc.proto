@@ -54,4 +54,5 @@ message RegstDescProto {
   required int64 mem_shared_offset = 11;
   // from bottom to top
   repeated MemBlock mem_block_hierarchy = 13;
+  optional int64 inplace_consumed_regst_desc_id = 14 [default = -1];
 }
