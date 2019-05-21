@@ -63,6 +63,13 @@ class NewKernelUtil<DeviceType::kCPU> {
                    float* y, const int incy);
   static void Axpy(DeviceCtx* ctx, const int n, const double alpha, const double* x, const int incx,
                    double* y, const int incy);
+
+  static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
+                        const Shape& y_shape, const PbRf<int32_t>& permutation,
+                        const int64_t elem_cnt, const float* x, float* y);
+  static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
+                        const Shape& y_shape, const PbRf<int32_t>& permutation,
+                        const int64_t elem_cnt, const double* x, double* y);
 };
 
 template<>
@@ -131,6 +138,16 @@ class NewKernelUtil<DeviceType::kGPU> {
                    double* y, const int incy);
   static void Axpy(DeviceCtx* ctx, const int n, const float16 alpha, const float16* x,
                    const int incx, float16* y, const int incy);
+
+  static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
+                        const Shape& y_shape, const PbRf<int32_t>& permutation,
+                        const int64_t elem_cnt, const float* x, float* y);
+  static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
+                        const Shape& y_shape, const PbRf<int32_t>& permutation,
+                        const int64_t elem_cnt, const double* x, double* y);
+  static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
+                        const Shape& y_shape, const PbRf<int32_t>& permutation,
+                        const int64_t elem_cnt, const float16* x, float16* y);
 };
 
 }  // namespace oneflow
