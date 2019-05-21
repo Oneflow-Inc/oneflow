@@ -12,11 +12,11 @@ void BoxingCopyOpBase::InitFromOpConf() {
 }
 
 LogicalBlobId BoxingCopyOpBase::ibn2lbi(const std::string& input_bn) const {
-  return op_conf().boxing_copy_conf().lbi();
+  return GetValFromCustomizedConf<LogicalBlobId>("lbi");
 }
 
 LogicalBlobId BoxingCopyOpBase::obn2lbi(const std::string& output_bn) const {
-  return op_conf().boxing_copy_conf().lbi();
+  return GetValFromCustomizedConf<LogicalBlobId>("lbi");
 }
 
 void BoxingCopyOpBase::InferBlobDescs(
