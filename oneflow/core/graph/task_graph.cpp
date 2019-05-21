@@ -665,6 +665,8 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV2) {
       FOR_RANGE(int64_t, i, 0, dst_parallel_desc->parallel_num()) {
         CompTaskNode* dst_comp_task_node = sorted_dst_comp_tasks.at(i);
         BoxingCopyTaskNode* copy_task_node = NewNode<BoxingCopyTaskNode>();
+        copy_task_node->SetOutTensorPartialView(dst_views.at(i));
+        copy_task_node->SetLbi(lbi);
         copy_task_node->set_machine_id(dst_comp_task_node->machine_id());
         copy_task_node->set_thrd_id(Global<IDMgr>::Get()->GetGpuMixThrdId(
             Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(dst_comp_task_node->thrd_id())));
