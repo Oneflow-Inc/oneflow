@@ -91,13 +91,19 @@ class InplaceLbiGraph final : public Graph<const InplaceLbiNode, const InplaceLb
             const std::function<const Operator*(const std::string&)>& Op4OpName);
   std::function<InplaceLbiNode*(const LogicalBlobId&)> MakeMutFindOrCreateNode(
       std::function<const Operator*(const std::string&)> Op4OpName);
-  void ComputeSafeInplaceObns(const std::function<bool(const LogicalBlobId&, const std::string&)>&
-                                  IsReachableFromLbiToOpName,
-                              const std::function<void(const InplaceLbiEdge*)>& Handler) const;
-  void ComputeSafeInplaceObns(const HashSet<const InplaceLbiNode*>& nodes,
-                              const std::function<bool(const LogicalBlobId&, const std::string&)>&
-                                  IsReachableFromLbiToOpName,
-                              const std::function<void(const InplaceLbiEdge*)>& Handler) const;
+  void ComputeSafeInplaceEdges(const std::function<bool(const LogicalBlobId&, const std::string&)>&
+                                   IsReachableFromLbiToOpName,
+                               const std::function<void(const InplaceLbiEdge*)>& Handler) const;
+  void ComputeSafeInplaceEdges(const HashSet<const InplaceLbiNode*>& nodes,
+                               const std::function<bool(const LogicalBlobId&, const std::string&)>&
+                                   IsReachableFromLbiToOpName,
+                               const std::function<void(const InplaceLbiEdge*)>& Handler) const;
+  void ForEachSafeInplaceEdgesInSourceOpSubTree(
+      const HashSet<const InplaceLbiNode*>& nodes,
+      const std::function<bool(const LogicalBlobId&, const std::string&)>&
+          IsReachableFromLbiToOpName,
+      const std::function<void(const InplaceLbiEdge*)>& Handler,
+      HashSet<const InplaceLbiEdge*>* cur_disabled_edges) const;
   void GetSafeInplaceObnEdges(const HashSet<const InplaceLbiNode*>& nodes,
                               const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge,
                               const std::function<bool(const LogicalBlobId&, const std::string&)>&
