@@ -67,7 +67,7 @@ Index TensorPartialView::OffsetTo(const TensorPartialView& other) const {
   std::vector<int64_t> indices_vec(range_vec_.size());
   std::transform(range_vec_.cbegin(), range_vec_.cend(), other.range_vec_.cbegin(),
                  indices_vec.begin(),
-                 [](const Range& lhs, const Range& rhs) { return rhs.begin() - lhs.begin(); });
+                 [](const Range& lhs, const Range& rhs) { return lhs.begin() - rhs.begin(); });
   return Index(indices_vec);
 }
 
