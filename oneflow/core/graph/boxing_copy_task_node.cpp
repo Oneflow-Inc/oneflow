@@ -25,6 +25,7 @@ void BoxingCopyTaskNode::ConsumeAllRegsts() {
 
 void BoxingCopyTaskNode::BuildExecGphAndRegst() {
   OperatorConf op_conf{};
+  op_conf.set_device_type(DeviceType::kGPU);
   op_conf.set_name("System-Boxing-Copy-" + NewUniqueId());
   BoxingCopyOpConf* boxing_copy_conf = op_conf.mutable_boxing_copy_conf();
   *boxing_copy_conf->mutable_lbi() = lbi_;
