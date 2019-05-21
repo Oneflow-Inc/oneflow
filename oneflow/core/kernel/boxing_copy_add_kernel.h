@@ -19,7 +19,7 @@ class BoxingCopyAddKernel final : public KernelIf<device_type> {
                           std::function<Blob*(const std::string&)>) const override;
   void VirtualKernelInit(const ParallelContext*);
 
-  std::vector<TensorPartialCopier> tensor_partial_copier_vec_;
+  std::vector<std::shared_ptr<TensorPartialCopier>> tensor_partial_copier_vec_;
   std::shared_ptr<MemoryCopier> memory_copier_;
 };
 
