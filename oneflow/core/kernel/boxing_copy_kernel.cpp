@@ -19,11 +19,11 @@ void BoxingCopyKernel<device_type, T>::VirtualKernelInit(const ParallelContext*)
 template<DeviceType device_type, typename T>
 void BoxingCopyKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  //  Blob* out = BnInOp2Blob("out");
-  //  FOR_RANGE(int64_t, i, 0, this->op_attribute().input_bns().size()) {
-  //    const Blob* in_i = BnInOp2Blob(GenRepeatedBn("in", i));
-  //    tensor_partial_copier_vec_.at(i)->Exec(ctx.device_ctx, *memory_copier_, out, in_i);
-  //  }
+  Blob* out = BnInOp2Blob("out");
+  FOR_RANGE(int64_t, i, 0, this->op_attribute().input_bns().size()) {
+    const Blob* in_i = BnInOp2Blob(GenRepeatedBn("in", i));
+    tensor_partial_copier_vec_.at(i)->Exec(ctx.device_ctx, *memory_copier_, out, in_i);
+  }
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBoxingCopyConf, BoxingCopyKernel, POD_DATA_TYPE_SEQ)
