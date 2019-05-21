@@ -31,9 +31,9 @@ class BoxingCopyOp final : public BoxingCopyOpBase {
 
 class BoxingCopyAddOp final : public BoxingCopyOpBase {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BoxingCopyOp);
-  BoxingCopyOp() = default;
-  ~BoxingCopyOp() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(BoxingCopyAddOp);
+  BoxingCopyAddOp() = default;
+  ~BoxingCopyAddOp() override = default;
 
   const PbMessage& GetCustomizedConf() const override;
 };

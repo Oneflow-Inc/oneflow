@@ -44,6 +44,7 @@ void BoxingCopyOpBase::InferBlobDescs(
 }
 
 const PbMessage& BoxingCopyOp::GetCustomizedConf() const { return op_conf().boxing_copy_conf(); }
+
 const PbMessage& BoxingCopyAddOp::GetCustomizedConf() const {
   return op_conf().boxing_copy_add_conf();
 }
