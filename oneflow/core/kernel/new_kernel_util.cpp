@@ -261,4 +261,10 @@ CPU_KU_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_s
   TransposeImpl<double>(ctx, num_axis, x_shape, y_shape, permutation, elem_cnt, x, y);
 }
 
+CPU_KU_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
+                        const Shape& y_shape, const PbRf<int32_t>& permutation,
+                        const int64_t elem_cnt, const float16* x, float16* y) {
+  TransposeImpl<float16>(ctx, num_axis, x_shape, y_shape, permutation, elem_cnt, x, y);
+}
+
 }  // namespace oneflow
