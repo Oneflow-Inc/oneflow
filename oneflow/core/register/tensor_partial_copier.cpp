@@ -24,7 +24,7 @@ TensorPartialCopier::TensorPartialCopier(const TensorPartialView& dst_view,
     dst_raw_view = TensorPartialView(dst_raw_range_vec);
     src_raw_view = TensorPartialView(src_raw_range_vec);
   }
-  TensorPartialView intersection = src_raw_view.Intersect(src_raw_view);
+  TensorPartialView intersection = dst_raw_view.Intersect(src_raw_view);
   MemoryCopyNdDesc raw_copy_desc;
   raw_copy_desc.dst_shape = dst_raw_view.shape();
   raw_copy_desc.src_shape = src_raw_view.shape();
