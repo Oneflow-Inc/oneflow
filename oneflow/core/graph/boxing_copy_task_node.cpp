@@ -9,18 +9,18 @@ void BoxingCopyTaskNode::ProduceAllRegstsAndBindEdges() {
 }
 
 void BoxingCopyTaskNode::ConsumeAllRegsts() {
-  HashMap<const TaskNode*, int64_t> task_node2order_;
-  FOR_RANGE(int64_t, i, 0, sorted_pred_task_node_vec_.size()) {
-    task_node2order_.emplace(sorted_pred_task_node_vec_.at(i), i);
+  HashMap<const TaskEdge*, int64_t> edge2order_;
+  FOR_RANGE(int64_t, i, 0, sorted_in_data_edge_vec.size()) {
+    edge2order_.emplace(sorted_in_data_edge_vec.at(i), i);
   }
   int64_t in_data_edge_cnt = 0;
   ForEachInDataEdge([&](TaskEdge* edge) {
-    const auto order_it = task_node2order_.find(edge->src_node());
-    CHECK(order_it != task_node2order_.end());
+    const auto order_it = edge2order_.find(edge);
+    CHECK(order_it != edge2order_.end());
     ConsumeRegst("in_" + std::to_string(order_it->second), edge->GetSoleRegst());
     in_data_edge_cnt += 1;
   });
-  CHECK_EQ(in_data_edge_cnt, sorted_pred_task_node_vec_.size());
+  CHECK_EQ(in_data_edge_cnt, sorted_in_data_edge_vec.size());
 }
 
 void BoxingCopyTaskNode::BuildExecGphAndRegst() {
@@ -44,7 +44,8 @@ void BoxingCopyTaskNode::InferProducedDataRegstTimeShape() {
 
 void BoxingCopyTaskNode::BindTensorPartialViewToInDataEdge(const TaskEdge* edge,
                                                            const TensorPartialView& view) {
-  edge2tensor_partial_view_.emplace(edge, view);
+  sorted_in_data_edge_vec.push_back(edge);
+  in_data_edge2tensor_partial_view_.emplace(edge, view);
 }
 
 }  // namespace oneflow

@@ -23,7 +23,8 @@ class BoxingCopyTaskNode final : public TaskNode {
   void InferProducedDataRegstTimeShape() override;
 
   std::shared_ptr<Operator> op_;
-  std::map<const TaskEdge*, TensorPartialView> edge2tensor_partial_view_;
+  HashMap<const TaskEdge*, TensorPartialView> in_data_edge2tensor_partial_view_;
+  std::vector<const TaskEdge*> sorted_in_data_edge_vec;
 };
 
 }  // namespace oneflow
