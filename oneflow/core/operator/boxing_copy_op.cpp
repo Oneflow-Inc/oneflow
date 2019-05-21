@@ -23,9 +23,9 @@ void BoxingCopyOpBase::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const PbRpf<TensorPartialViewProto>& in_view_proto =
-      GetPbRpfFromPbMessage<TensorPartialViewProto>(GetCustomizedConf(), "in_view");
+      GetPbRpfFromCustomizedConf<TensorPartialViewProto>("in_view");
   const TensorPartialViewProto& out_view_proto =
-      GetValFromCustomizedConf<TensorPartialViewProto>("out_view");
+      GetMsgFromCustomizedConf<TensorPartialViewProto>("out_view");
   const BlobDesc* in_0 = GetBlobDesc4BnInOp(GenRepeatedBn("in", 0));
   const DataType data_type = in_0->data_type();
   FOR_RANGE(int64_t, i, 1, input_bns().size()) {
