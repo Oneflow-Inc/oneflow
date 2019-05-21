@@ -2,9 +2,9 @@
 
 namespace oneflow {
 
-Range::Range(const RangeProto& range_proto){
-    begin_ = range_proto.begin();
-    end_ = range_proto.end();
+Range::Range(const RangeProto& range_proto) {
+  begin_ = range_proto.begin();
+  end_ = range_proto.end();
 }
 
 void Range::ToProto(RangeProto* ret) const {

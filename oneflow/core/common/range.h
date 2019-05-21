@@ -26,7 +26,6 @@ class Range final {
 
   int64_t size() const { return end_ - begin_; }
 
-
   void ToProto(RangeProto* ret) const;
 
  private:

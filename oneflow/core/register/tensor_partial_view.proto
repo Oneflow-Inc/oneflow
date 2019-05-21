@@ -3,6 +3,6 @@ package oneflow;
 
 import "oneflow/core/common/range.proto";
 
-message PartialTensorViewProto {
+message TensorPartialViewProto {
     repeated RangeProto dim = 1;
 }
