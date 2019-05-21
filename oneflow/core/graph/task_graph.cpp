@@ -795,7 +795,7 @@ void TaskGraph::BuildTaskPath(
     if (*cur_val == nullptr) {
       *cur_val = new_val;
     } else {
-      CHECK_EQ(*cur_vBoxingal, new_val);
+      CHECK_EQ(*cur_val, new_val);
     }
     return new_val;
   };
