@@ -8,6 +8,4 @@ void BoxingCopyCompActor::VirtualCompActorInit(const TaskProto& proto) {
 
 void BoxingCopyCompActor::SetKernelCtxOther(void** other) {}
 
-REGISTER_ACTOR(TaskType::kBoxingCopy, BoxingCopyCompActor);
-
 }  // namespace oneflow

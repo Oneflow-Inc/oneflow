@@ -14,5 +14,6 @@ void NaiveActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
 
 REGISTER_ACTOR(TaskType::kReduceIdentity, NaiveActor);
 REGISTER_ACTOR(TaskType::kLocalGpuPeerBoxing, NaiveActor);
+REGISTER_ACTOR(TaskType::kBoxingCopy, NaiveActor);
 
 }  // namespace oneflow
