@@ -22,6 +22,7 @@ struct MemoryCopyNdDesc {
 class MemoryCopier {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MemoryCopier);
+  MemoryCopier() = default;
   virtual ~MemoryCopier() = default;
 
   virtual void Copy(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const;
@@ -36,7 +37,8 @@ class MemoryCopier {
 
 class BaseMemoryCopier : virtual public MemoryCopier {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BaseMemoryCopier);
+  OF_DISALLOW_COPY_AND_MOVE(BaseMemoryCopier)
+  BaseMemoryCopier() = default;
   ~BaseMemoryCopier() override = default;
 
  protected:
@@ -49,6 +51,7 @@ class BaseMemoryCopier : virtual public MemoryCopier {
 class HostMemoryCopier final : public BaseMemoryCopier {
  public:
   OF_DISALLOW_COPY_AND_MOVE(HostMemoryCopier);
+  HostMemoryCopier() = default;
   ~HostMemoryCopier() override = default;
 
  private:
@@ -60,6 +63,7 @@ class HostMemoryCopier final : public BaseMemoryCopier {
 class CudaMemoryCopier final : virtual public MemoryCopier {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaMemoryCopier);
+  CudaMemoryCopier() = default;
   ~CudaMemoryCopier() override = default;
 
  private:
@@ -71,6 +75,15 @@ class CudaMemoryCopier final : virtual public MemoryCopier {
 };
 
 #endif
+
+class DefaultMemoryCopierCreator {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DefaultMemoryCopierCreator)
+  DefaultMemoryCopierCreator() = default;
+  virtual ~DefaultMemoryCopierCreator() = default;
+
+  virtual MemoryCopier* Create() = 0;
+};
 
 }  // namespace oneflow
 

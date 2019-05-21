@@ -1,4 +1,6 @@
-#include "memory_copier.h"
+#include "oneflow/core/device/memory_copier.h"
+#include "oneflow/core/common/auto_registration_factory.h"
+#include "oneflow/core/job/resource.pb.h"
 
 namespace oneflow {
 
@@ -145,6 +147,31 @@ void CudaMemoryCopier::Copy3D(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) cons
 void CudaMemoryCopier::CopyND(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const {
   UNIMPLEMENTED();
 }
+
+class FuncDefaultMemoryCopierCreator final : public DefaultMemoryCopierCreator {
+ public:
+  using Func = std::function<MemoryCopier*()>;
+  OF_DISALLOW_COPY_AND_MOVE(FuncDefaultMemoryCopierCreator)
+  explicit FuncDefaultMemoryCopierCreator(Func f) : func_(std::move(f)) {}
+  ~FuncDefaultMemoryCopierCreator() override = default;
+
+  virtual MemoryCopier* Create() { return func_(); }
+
+ private:
+  const Func func_;
+};
+
+REGISTER_CLASS_CREATOR(DeviceType::kCPU, DefaultMemoryCopierCreator, []() {
+  return new FuncDefaultMemoryCopierCreator([]() { return new HostMemoryCopier(); });
+});
+
+#ifdef WITH_CUDA
+
+REGISTER_CLASS_CREATOR(DeviceType::kGPU, DefaultMemoryCopierCreator, []() {
+  return new FuncDefaultMemoryCopierCreator([]() { return new CudaMemoryCopier(); });
+});
+
+#endif
 
 #endif
 

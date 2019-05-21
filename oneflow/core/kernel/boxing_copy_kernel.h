@@ -20,7 +20,7 @@ class BoxingCopyKernel final : public KernelIf<device_type> {
   void VirtualKernelInit(const ParallelContext*);
 
   std::vector<std::shared_ptr<TensorPartialCopier>> tensor_partial_copier_vec_;
-  std::shared_ptr<MemoryCopier> memory_copier_;
+  std::unique_ptr<MemoryCopier> memory_copier_;
 };
 
 }  // namespace oneflow
