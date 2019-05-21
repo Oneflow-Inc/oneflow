@@ -6,8 +6,7 @@ void BoxingCopyCompActor::VirtualCompActorInit(const TaskProto& proto) {
   InputWiseCompActor::Init(proto);
 }
 
-void BoxingCopyCompActor::SetKernelCtxOther(void** other) {
-}
+void BoxingCopyCompActor::SetKernelCtxOther(void** other) {}
 
 REGISTER_ACTOR(TaskType::kBoxingCopy, BoxingCopyCompActor);
 
