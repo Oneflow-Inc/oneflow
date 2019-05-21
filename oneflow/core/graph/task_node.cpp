@@ -516,5 +516,6 @@ std::map<TaskType, std::string> task_type2color = {{kInvalid, "0"},
                                                    {kAcc, "5"},
                                                    {kOptimizer, "12"},
                                                    {kEveryNth, "2"},
-                                                   {kLocalGpuPeerBoxing, "2"}};
+                                                   {kLocalGpuPeerBoxing, "2"},
+                                                   {kBoxingCopy, "2"}};
 }  // namespace oneflow
