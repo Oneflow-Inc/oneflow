@@ -98,7 +98,7 @@ class InplaceLbiGraph final : public Graph<const InplaceLbiNode, const InplaceLb
                                const std::function<bool(const LogicalBlobId&, const std::string&)>&
                                    IsReachableFromLbiToOpName,
                                const std::function<void(const InplaceLbiEdge*)>& Handler) const;
-  void ForEachSafeInplaceEdgesInSourceOpSubTree(
+  void ForEachSafeInplaceEdgeInSourceOpSubTree(
       const HashSet<const InplaceLbiNode*>& nodes,
       const std::function<bool(const LogicalBlobId&, const std::string&)>&
           IsReachableFromLbiToOpName,

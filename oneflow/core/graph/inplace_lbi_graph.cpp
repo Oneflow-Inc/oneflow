@@ -242,7 +242,7 @@ void InplaceLbiGraph::ComputeSafeInplaceEdges(
   });
 }
 
-void InplaceLbiGraph::ForEachSafeInplaceEdgesInSourceOpSubTree(
+void InplaceLbiGraph::ForEachSafeInplaceEdgeInSourceOpSubTree(
     const HashSet<const InplaceLbiNode*>& nodes,
     const std::function<bool(const LogicalBlobId&, const std::string&)>& IsReachableFromLbiToOpName,
     const std::function<void(const InplaceLbiEdge*)>& Handler,
@@ -294,8 +294,8 @@ void InplaceLbiGraph::ComputeSafeInplaceEdges(
   {
     // compute safe inplace edges in the subtree containning SourceOpInplaceLbiNode as root
     HashSet<const InplaceLbiEdge*> cur_disabled_edges;
-    ForEachSafeInplaceEdgesInSourceOpSubTree(remainder_nodes, IsReachableFromLbiToOpName, Handler,
-                                             &cur_disabled_edges);
+    ForEachSafeInplaceEdgeInSourceOpSubTree(remainder_nodes, IsReachableFromLbiToOpName, Handler,
+                                            &cur_disabled_edges);
     disabled_edges.insert(cur_disabled_edges.begin(), cur_disabled_edges.end());
   }
   auto IsValidEdge = [&](const InplaceLbiEdge* edge) {
