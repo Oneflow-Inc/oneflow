@@ -4,6 +4,7 @@
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/common/index.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/job/resource.pb.h"
 
 namespace oneflow {
 
@@ -84,6 +85,8 @@ class DefaultMemoryCopierCreator {
 
   virtual MemoryCopier* Create() = 0;
 };
+
+MemoryCopier* NewDefaultMemoryCopier(DeviceType device_type);
 
 }  // namespace oneflow
 

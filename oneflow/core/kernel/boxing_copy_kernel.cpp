@@ -4,9 +4,7 @@ namespace oneflow {
 
 template<DeviceType device_type, typename T>
 void BoxingCopyKernel<device_type, T>::VirtualKernelInit(const ParallelContext*) {
-  memory_copier_.reset(
-      std::unique_ptr<DefaultMemoryCopierCreator>(NewObj<DefaultMemoryCopierCreator>(device_type))
-          ->Create());
+  memory_copier_.reset(NewDefaultMemoryCopier(device_type));
   const BoxingCopyOpConf& conf = this->op_conf().boxing_copy_conf();
   const TensorPartialView dst_view(conf.out_view());
   for (const TensorPartialViewProto& src_view_proto : conf.in_view()) {

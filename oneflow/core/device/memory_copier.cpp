@@ -1,6 +1,5 @@
 #include "oneflow/core/device/memory_copier.h"
 #include "oneflow/core/common/auto_registration_factory.h"
-#include "oneflow/core/job/resource.pb.h"
 
 namespace oneflow {
 
@@ -172,6 +171,12 @@ REGISTER_CLASS_CREATOR(DeviceType::kGPU, DefaultMemoryCopierCreator, []() {
 });
 
 #endif
+
+MemoryCopier* NewDefaultMemoryCopier(DeviceType device_type) {
+  return std::unique_ptr<DefaultMemoryCopierCreator>(
+             NewObj<DefaultMemoryCopierCreator>(device_type))
+      ->Create();
+}
 
 #endif
 
