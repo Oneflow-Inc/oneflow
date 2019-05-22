@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/pooling_op.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -127,6 +128,13 @@ void PoolingOp::VirtualGenKernelConf(
     UNIMPLEMENTED();
   }
   pooling_conf->set_data_format(GetValFromCustomizedConf<std::string>("data_format"));
+}
+
+void PoolingOp::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder().Split("in", 0).Split("out", 0).Build(
+      sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 }  // namespace oneflow

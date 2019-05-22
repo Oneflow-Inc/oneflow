@@ -57,7 +57,6 @@ class Actor {
   std::unique_ptr<DeviceCtx>& mut_device_ctx() { return device_ctx_; }
   KernelCtx GenDefaultKernelCtx() const;
   const std::vector<ExecKernel>& exec_kernel_vec() { return exec_kernel_vec_; }
-  virtual void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const {}
   virtual void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*) const;
   void ForEachCurNaiveReadableDataRegst(std::function<void(const Regst*)>) const;
 
@@ -127,12 +126,9 @@ class Actor {
   }
 
   // Process Msg
-  virtual void NormalProcessCustomizedEordMsg(const ActorMsg&) {}
   virtual void NormalProcessNaiveReadableDataRegstMsg(const std::deque<Regst*>&) {}
-  virtual void NormalProcessCustomizedReadableRegstMsg(const ActorMsg&) { UNIMPLEMENTED(); }
   virtual bool NormalTryProcessReadableMsgFromOtherMachine(const ActorMsg&) { return false; }
   int TryUpdtStateAsProducedRegst(Regst* regst);
-  virtual void UpdtStateAsCustomizedProducedRegst(Regst* regst) { UNIMPLEMENTED(); }
 
   // Act
   void ActUntilFail();
@@ -147,33 +143,42 @@ class Actor {
   // Ready
   bool IsReadReady();
   bool IsWriteReady();
-  virtual bool IsCustomizedReadReady() { return true; }
-  virtual bool IsCustomizedWriteReady() { return true; }
-  virtual bool IsCustomizedReadAlwaysUnReadyFromNow() { return false; }
 
   // NaiveOrCustomized
-  virtual std::pair<RegstNameType, HashSet<std::string>>
-  GetNaiveOrCustomizedConsumedRegstDescName() {
-    return std::make_pair(RegstNameType::kCustomized, HashSet<std::string>{});
-  }
-  virtual std::pair<RegstNameType, HashSet<std::string>>
-  GetNaiveOrCustomizedProducedRegstDescName() {
-    return std::make_pair(RegstNameType::kCustomized, HashSet<std::string>{});
-  }
   void TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids);
   void TakeOverNaiveProduced(const PbMap<std::string, RegstDescProto>& produced_ids);
 
   // Send Msgs
   void AsyncSendNaiveProducedRegstMsgToConsumer();
   virtual void VirtualAsyncSendNaiveProducedRegstMsgToConsumer();
-  virtual void AsyncSendCustomizedProducedRegstMsgToConsumer() {}
+  void AsyncSendInplaceProducedRegstMsgToConsumer();
   void AsyncSendNaiveConsumedRegstMsgToProducer();
   virtual void VirtualAsyncSendNaiveConsumedRegstMsgToProducer();
-  virtual void AsyncSendCustomizedConsumedRegstMsgToProducer() {}
   void AsyncSendConsumedCtrlRegstMsgToProducer();
   void AsyncSendProducedCtrlRegstMsgToConsumer();
   int64_t HandleRegstToConsumer(Regst* regst, std::function<bool(int64_t)> IsAllowedActor);
+
+  // Customized Consumed virtual func
+  virtual void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const {}
+  virtual void NormalProcessCustomizedEordMsg(const ActorMsg&) {}
+  virtual void NormalProcessCustomizedReadableRegstMsg(const ActorMsg&) { UNIMPLEMENTED(); }
+  virtual bool IsCustomizedReadReady() { return true; }
+  virtual bool IsCustomizedReadAlwaysUnReadyFromNow() { return false; }
+  virtual std::pair<RegstNameType, HashSet<std::string>>
+  GetNaiveOrCustomizedConsumedRegstDescName() {
+    return std::make_pair(RegstNameType::kCustomized, HashSet<std::string>{});
+  }
+  virtual void AsyncSendCustomizedProducedRegstMsgToConsumer() {}
   virtual void AsyncReturnAllCustomizedReadableRegst() {}
+
+  // Customized Produced virtual func
+  virtual void UpdtStateAsCustomizedProducedRegst(Regst* regst) { UNIMPLEMENTED(); }
+  virtual bool IsCustomizedWriteReady() { return true; }
+  virtual std::pair<RegstNameType, HashSet<std::string>>
+  GetNaiveOrCustomizedProducedRegstDescName() {
+    return std::make_pair(RegstNameType::kCustomized, HashSet<std::string>{});
+  }
+  virtual void AsyncSendCustomizedConsumedRegstMsgToProducer() {}
 
   int64_t actor_id_;
   int64_t act_id_;
@@ -196,6 +201,11 @@ class Actor {
 
   HashSet<int64_t> produced_ctrl_regst_desc_ids_;
   HashSet<int64_t> consumed_ctrl_regst_desc_ids_;
+
+  RegstSlot inplace_consumed_rs_;
+  RegstSlot inplace_produced_rs_;
+  bool is_inplace_consumed_eord_;
+  HashMap<int64_t, int64_t> inplace_out2in_;
 };
 
 class ScopedActEventRecorder;

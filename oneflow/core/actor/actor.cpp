@@ -31,6 +31,27 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
     ek.bn_in_op2regst_desc_id = PbMap2HashMap(node.bn_in_op2regst_desc_id());
     exec_kernel_vec_.push_back(std::move(ek));
   }
+  // handle inplace regst pairs
+  {
+    HashSet<int64_t> consumed_regst_desc_ids;
+    for (const auto& pair : task_proto.consumed_regst_desc_id()) {
+      for (int64_t id : pair.second.regst_desc_id()) { consumed_regst_desc_ids.insert(id); }
+    }
+    for (const auto& pair : task_proto.produced_regst_desc()) {
+      int64_t out_regst_desc_id = pair.second.regst_desc_id();
+      int64_t in_regst_desc_id = pair.second.inplace_consumed_regst_desc_id();
+      if (in_regst_desc_id = -1) { continue; }
+      CHECK(consumed_regst_desc_ids.find(in_regst_desc_id) != consumed_regst_desc_ids.end());
+
+      inplace_out2in_.insert(std::make_pair(out_regst_desc_id, in_regst_desc_id));
+      inplace_consumed_rs_.InsertRegstDescId(in_regst_desc_id);
+      inplace_produced_rs_.InsertRegstDescId(out_regst_desc_id);
+    }
+    inplace_consumed_rs_.InitedDone();
+    inplace_produced_rs_.InitedDone();
+    is_inplace_consumed_eord_ = false;
+  }
+
   remaining_eord_cnt_ = 0;
   msg_handler_ = nullptr;
   eord_regst_desc_ids_.clear();
@@ -78,6 +99,7 @@ void Actor::TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& cons
     bool find_the_name = names.find(pair.first) != names.end();
     if (is_naive_names == find_the_name || pair.first == "in_ctrl") {
       for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
+        if (inplace_consumed_rs_.HasRegstDescId(regst_desc_id)) { continue; }
         naive_consumed_rs_.InsertRegstDescId(regst_desc_id);
       }
     }
@@ -92,6 +114,7 @@ void Actor::TakeOverNaiveProduced(const PbMap<std::string, RegstDescProto>& prod
 
   for (const auto& pair : produced_ids) {
     bool find_the_name = names.find(pair.first) != names.end();
+    if (inplace_produced_rs_.HasRegstDescId(pair.second.regst_desc_id())) { continue; }
     if (is_naive_names == find_the_name || pair.first.substr(0, 9) == "out_ctrl_") {
       naive_produced_rs_.InsertRegstDescId(pair.second.regst_desc_id());
     }
@@ -185,6 +208,8 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
     CHECK(eord_regst_desc_ids_.insert(msg.eord_regst_desc_id()).second);
     if (naive_consumed_rs_.HasRegstDescId(msg.eord_regst_desc_id())) {
       is_naive_consumed_eord_ = true;
+    } else if (inplace_consumed_rs_.HasRegstDescId(msg.eord_regst_desc_id())) {
+      is_inplace_consumed_eord_ = true;
     } else {
       NormalProcessCustomizedEordMsg(msg);
     }
@@ -198,6 +223,10 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
         if (rdeq.front()->regst_desc()->regst_desc_type().has_data_regst_desc()) {
           NormalProcessNaiveReadableDataRegstMsg(rdeq);
         }
+      } else if (inplace_consumed_rs_.HasRegstDescId(regst->regst_desc_id())) {
+        CHECK_EQ(0, inplace_consumed_rs_.TryPushBackRegst(regst));
+        CHECK(regst->packed_blob()->dptr()
+              == inplace_produced_rs_.Front(regst->regst_desc_id())->packed_blob()->dptr());
       } else if (TryUpdtStateAsProducedRegst(regst) == 0) {
         // do nothing
       } else {
@@ -215,10 +244,17 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
   } else {
     UNIMPLEMENTED();
   }
-  if ((naive_consumed_rs_.total_regst_desc_cnt() != 0 && is_naive_consumed_eord_
-       && naive_consumed_rs_.available_regst_desc_cnt() == 0)
-      || (naive_consumed_rs_.total_regst_desc_cnt() == 0
-          && IsCustomizedReadAlwaysUnReadyFromNow())) {
+  // handler halts
+  bool naive_exist_and_eord_and_empty =
+      is_naive_consumed_eord_ && naive_consumed_rs_.available_regst_desc_cnt() == 0;
+  bool naive_not_exist_and_customized_eord =
+      naive_consumed_rs_.total_regst_desc_cnt() == 0 && IsCustomizedReadAlwaysUnReadyFromNow();
+  bool inplace_condition =
+      inplace_consumed_rs_.total_regst_desc_cnt() != 0
+          ? (is_inplace_consumed_eord_ && inplace_consumed_rs_.available_regst_desc_cnt() == 0)
+          : (true);
+  if (inplace_condition
+      && (naive_exist_and_eord_and_empty || naive_not_exist_and_customized_eord)) {
     CHECK_EQ(naive_consumed_rs_.available_regst_desc_cnt(), 0);
     AsyncReturnAllCustomizedReadableRegst();
     AsyncSendEORDMsgForAllProducedRegstDesc();
@@ -288,6 +324,7 @@ void Actor::ActUntilFail() {
 
     AsyncSendCustomizedProducedRegstMsgToConsumer();
     AsyncSendNaiveProducedRegstMsgToConsumer();
+    AsyncSendInplaceProducedRegstMsgToConsumer();
 
     AsyncSendCustomizedConsumedRegstMsgToProducer();
     AsyncSendNaiveConsumedRegstMsgToProducer();
@@ -301,6 +338,16 @@ void Actor::AsyncSendNaiveProducedRegstMsgToConsumer() {
 
 void Actor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   HandleProducedNaiveDataRegstToConsumer();
+}
+
+void Actor::AsyncSendInplaceProducedRegstMsgToConsumer() {
+  std::vector<int64_t> regst_desc_ids;
+  inplace_produced_rs_.ForEachFrontRegst([&](Regst* regst) {
+    CHECK(regst->regst_desc()->regst_desc_type().has_data_regst_desc());
+    int64_t real_consumer_cnt = HandleRegstToConsumer(regst, [](int64_t) { return true; });
+    if (real_consumer_cnt > 0) { regst_desc_ids.push_back(regst->regst_desc_id()); }
+  });
+  inplace_produced_rs_.PopFrontRegsts(regst_desc_ids);
 }
 
 void Actor::AsyncSendNaiveConsumedRegstMsgToProducer() {
@@ -366,10 +413,14 @@ int64_t Actor::HandleRegstToConsumer(Regst* regst, std::function<bool(int64_t)> 
   return real_consumer_cnt;
 }
 
-bool Actor::IsReadReady() { return naive_consumed_rs_.IsCurSlotReady() && IsCustomizedReadReady(); }
+bool Actor::IsReadReady() {
+  return naive_consumed_rs_.IsCurSlotReady() && inplace_consumed_rs_.IsCurSlotReady()
+         && IsCustomizedReadReady();
+}
 
 bool Actor::IsWriteReady() {
-  return naive_produced_rs_.IsCurSlotReady() && IsCustomizedWriteReady();
+  return naive_produced_rs_.IsCurSlotReady() && inplace_produced_rs_.IsCurSlotReady()
+         && IsCustomizedWriteReady();
 }
 
 void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx,
@@ -430,12 +481,16 @@ void Actor::AsyncSendRegstMsgToConsumer(Regst* regst, std::function<bool(int64_t
 }
 
 void Actor::HandleConsumedNaiveDataRegstToProducer(std::function<bool(Regst*)> IsAllowedRegst) {
+  std::vector<int64_t> regst_desc_ids;
   naive_consumed_rs_.ForEachFrontRegst([&](Regst* regst) {
     if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) {
       if (IsAllowedRegst(regst) == false) { return; }
-      AsyncSendRegstMsgToProducer(regst);
+      // must access regst before sending it to producer
+      regst_desc_ids.push_back(regst->regst_desc_id());
+      AsyncSendMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, regst->producer_actor_id(), regst));
     }
   });
+  naive_consumed_rs_.PopFrontRegsts(regst_desc_ids);
 }
 
 void Actor::AsyncSendEORDMsgForAllProducedRegstDesc() {
@@ -477,6 +532,14 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
   reading_cnt_it->second -= 1;
   total_reading_cnt_ -= 1;
   if (reading_cnt_it->second != 0) { return 0; }
+
+  if (inplace_produced_rs_.TryPushBackRegst(regst) == 0) {
+    int64_t in_regst_desc_id = inplace_out2in_.at(regst->regst_desc_id());
+    Regst* in_regst = inplace_consumed_rs_.Front(in_regst_desc_id);
+    CHECK(in_regst);
+    AsyncSendRegstMsgToProducer(in_regst);
+    CHECK_EQ(0, inplace_consumed_rs_.TryPopFrontRegst(in_regst_desc_id));
+  }
 
   if (naive_produced_rs_.TryPushBackRegst(regst) != 0) {
     UpdtStateAsCustomizedProducedRegst(regst);

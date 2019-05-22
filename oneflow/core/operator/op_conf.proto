@@ -243,6 +243,27 @@ message MaxPooling3DOpConf {
   repeated int32 strides = 6;
 }
 
+
+message PoolingConf {
+  required int32 num_spatial_dims = 1;
+  // "avg" or "max"
+  required string pool_mode = 2;
+  required string data_format = 3;
+  repeated int32 pool_size = 4;
+  repeated int32 strides = 5;
+  optional string padding = 6 [default = "valid"];
+}
+
+message PoolingGradOpConf {
+  // input
+  required string x = 1;
+  required string y = 2;
+  required string dy = 3;
+  // output
+  required string dx = 4;
+  required PoolingConf pooling_conf = 5;
+}
+
 message ReluOpConf {
   required string in = 1;
   required string out = 2;
@@ -1528,8 +1549,9 @@ message OperatorConf {
     EveryNthOpConf every_nth_conf = 286;
     ModelSaveV2OpConf model_save_v2_conf = 287;
     TanHGradOpConf tanh_grad_conf = 288;
-    IdentityOpConf identity_conf = 289;
-    BlobDumpOpConf blob_dump_conf = 290;
+    PoolingGradOpConf pooling_grad_conf = 289;
+    IdentityOpConf identity_conf = 290;
+    BlobDumpOpConf blob_dump_conf = 291;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
