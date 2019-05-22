@@ -1,43 +1,22 @@
-#include "oneflow/core/job_completer/add_parallel_cast_facade_op.h"
+#include "oneflow/core/job_completer/aggregate_boxing.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 
-namespace {
-
-bool IsGpuNodeOnSingleMachine(const OpNode* node) {
-  if (node->parallel_desc().device_type() != DeviceType::kGPU) { return false; }
-  if (node->parallel_desc().sorted_machine_ids().size() != 1) { return false; }
-  return true;
-}
-
-}  // namespace
-
-void AddParallelCastFacadeOp(const OpGraph& op_graph, Job* job) {
+void AggregateBoxing(const OpGraph& op_graph, Job* job) {
   JobBuilder job_builder(job);
   using BlobParallel = std::pair<ParallelDesc, SbpParallel>;
   using BlobConsumer = std::pair<const OpNode*, std::string>;
-  HashMap<LogicalBlobId, const OpNode*> lbi2producer;
   HashMap<LogicalBlobId, HashMap<BlobParallel, std::vector<BlobConsumer>>> lbi2consumers;
   HashMap<const OpNode*, OperatorConf> op_node2op_conf;
   op_graph.ForEachNode([&](const OpNode* node) {
-    // TODO:
-    if (!IsGpuNodeOnSingleMachine(node)) { return; }
-    const int64_t machine_id = node->parallel_desc().sorted_machine_ids().at(0);
-
     for (const std::string& ibn : node->op().input_bns()) {
       const LogicalBlobId& lbi = node->op().BnInOp2Lbi(ibn);
       const OpNode* producer = node->ProducerOpNode4Lbi(lbi);
-
-      // TODO:
-      if (!IsGpuNodeOnSingleMachine(producer)) { continue; }
-      if (node->parallel_desc().sorted_machine_ids().at(0) != machine_id) { continue; }
-
-      if (producer->parallel_desc().parallel_num() != node->parallel_desc().parallel_num()
+      if (producer->parallel_desc() != node->parallel_desc()
           || producer->SbpParallel4Lbi(lbi) != node->SbpParallel4BnInOp(ibn)) {
-        lbi2producer.emplace(lbi, producer);
         lbi2consumers[lbi][{node->parallel_desc(), node->SbpParallel4BnInOp(ibn)}].push_back(
             {node, ibn});
         if (op_node2op_conf.find(node) == op_node2op_conf.end()) {
@@ -48,35 +27,24 @@ void AddParallelCastFacadeOp(const OpGraph& op_graph, Job* job) {
   });
   for (const auto& lbi7consumer : lbi2consumers) {
     const LogicalBlobId& lbi = lbi7consumer.first;
-    const OpNode* producer = lbi2producer.at(lbi);
-    const SbpParallel& src_sbp_parallel = producer->SbpParallel4Lbi(lbi);
-    const Shape& logical_blob_shape = producer->LogicalBlobDesc4Lbi(lbi).shape();
     for (const auto& blob_parallel7consumers : lbi7consumer.second) {
+      if (blob_parallel7consumers.second.size() < 2) { continue; }
       const ParallelDesc& dst_parallel_desc = blob_parallel7consumers.first.first;
       const SbpParallel& dst_sbp_parallel = blob_parallel7consumers.first.second;
-      OperatorConf facade_op_conf{};
-      facade_op_conf.set_name("System-Boxing-ParallelCastFacade-" + NewUniqueId());
-      ParallelCastFacadeOpConf* cast_conf = facade_op_conf.mutable_parallel_cast_facade_conf();
-      cast_conf->set_in(GenLogicalBlobName(lbi));
-      cast_conf->set_out("out");
-      *cast_conf->mutable_in_sbp_parallel() = src_sbp_parallel;
-      *cast_conf->mutable_out_sbp_parallel() = dst_sbp_parallel;
-      logical_blob_shape.ToProto(cast_conf->mutable_logical_blob_shape());
-      job_builder.AddOps(dst_parallel_desc.parallel_conf(), {facade_op_conf});
       OperatorConf identity_op_conf{};
-      identity_op_conf.set_name("System-Boxing-ParallelCastIdentity-" + NewUniqueId());
+      identity_op_conf.set_name("System-Boxing-Identity-" + NewUniqueId());
       IdentityOpConf* identity_conf = identity_op_conf.mutable_identity_conf();
-      identity_conf->set_in(facade_op_conf.name() + "/" + cast_conf->out());
+      identity_conf->set_in(GenLogicalBlobName(lbi));
       identity_conf->set_out("out");
       job_builder.AddOps(dst_parallel_desc.parallel_conf(), {identity_op_conf});
-      SbpSignature identity_signature;
-      (*identity_signature.mutable_bn_in_op2sbp_parallel())["in"] = dst_sbp_parallel;
-      (*identity_signature.mutable_bn_in_op2sbp_parallel())["out"] = dst_sbp_parallel;
+      SbpSignature identity_sbp_signature;
+      (*identity_sbp_signature.mutable_bn_in_op2sbp_parallel())["in"] = dst_sbp_parallel;
+      (*identity_sbp_signature.mutable_bn_in_op2sbp_parallel())["out"] = dst_sbp_parallel;
       (*job->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf())[identity_op_conf.name()] =
-          identity_signature;
-      LogicalBlobId casted_lbi;
-      casted_lbi.set_op_name(identity_op_conf.name());
-      casted_lbi.set_blob_name(identity_conf->out());
+          identity_sbp_signature;
+      LogicalBlobId aggregated_lbi;
+      aggregated_lbi.set_op_name(identity_op_conf.name());
+      aggregated_lbi.set_blob_name(identity_conf->out());
       for (const auto& consumer7ibn : blob_parallel7consumers.second) {
         const OpNode* consumer = consumer7ibn.first;
         const std::string& ibn = consumer7ibn.second;
@@ -84,7 +52,7 @@ void AddParallelCastFacadeOp(const OpGraph& op_graph, Job* job) {
         PbMessage* consumer_op_type_conf =
             MutableMessageInPbMessage(&consumer_op_conf, consumer_op_conf.op_type_case());
         SetBnValInOpTypeConf(consumer_op_type_conf, ibn, GenLogicalBlobName(lbi),
-                             GenLogicalBlobName(casted_lbi));
+                             GenLogicalBlobName(aggregated_lbi));
       }
     }
   }
