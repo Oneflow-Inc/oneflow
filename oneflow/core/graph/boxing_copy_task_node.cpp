@@ -83,6 +83,7 @@ OperatorConf BoxingCopyTaskNode::GetBoxingOpConf() {
   for (const TaskEdge* edge : ordered_in_data_edges_) {
     in_data_edge2view_.at(edge).ToProto(mut_in_view->Add());
   }
+  return op_conf;
 }
 
 }  // namespace oneflow
