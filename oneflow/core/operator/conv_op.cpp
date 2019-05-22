@@ -2,6 +2,7 @@
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/device/cuda_stream_handle.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -306,6 +307,14 @@ void ConvOp<NDims>::InferCudnnAlgo(
       GetCustomizedConf(), static_cast<size_t>(cudnn_buf_limit_byte()), conv_ctx));
 }
 #endif  // WITH_CUDA
+
+template<int32_t NDims>
+void ConvOp<NDims>::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder().Split("in", 0).Broadcast("weight").Broadcast("bias").Split("out", 0).Build(
+      sbp_sig_list->mutable_sbp_signature()->Add());
+}
 
 template class ConvOp<1>;
 template class ConvOp<2>;
