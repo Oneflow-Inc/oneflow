@@ -1,11 +1,11 @@
-#include "oneflow/core/job_completer/aggregate_boxing.h"
+#include "oneflow/core/job_completer/aggregate_boxing_by_dst_parallel.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 
-void AggregateBoxing(const OpGraph& op_graph, Job* job) {
+void AggregateBoxingByDstParallel(const OpGraph& op_graph, Job* job) {
   JobBuilder job_builder(job);
   using BlobParallel = std::pair<ParallelDesc, SbpParallel>;
   using BlobConsumer = std::pair<const OpNode*, std::string>;

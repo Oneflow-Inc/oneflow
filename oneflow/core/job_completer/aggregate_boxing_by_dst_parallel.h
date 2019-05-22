@@ -6,7 +6,7 @@ namespace oneflow {
 class OpGraph;
 class Job;
 
-void AggregateBoxing(const OpGraph &op_graph, Job *job);
+void AggregateBoxingByDstParallel(const OpGraph &op_graph, Job *job);
 
 }  // namespace oneflow
 
