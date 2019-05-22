@@ -40,7 +40,7 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
     for (const auto& pair : task_proto.produced_regst_desc()) {
       int64_t out_regst_desc_id = pair.second.regst_desc_id();
       int64_t in_regst_desc_id = pair.second.inplace_consumed_regst_desc_id();
-      if (in_regst_desc_id = -1) { continue; }
+      if (in_regst_desc_id == -1) { continue; }
       CHECK(consumed_regst_desc_ids.find(in_regst_desc_id) != consumed_regst_desc_ids.end());
 
       inplace_out2in_.insert(std::make_pair(out_regst_desc_id, in_regst_desc_id));
