@@ -582,7 +582,9 @@ void TaskGraph::GetSafeInplaceOpBlobArgList(
   auto TaskNode4SoleOpName = MakeGetterTaskNode4SoleOpName(dev_nodes);
   OpBlobArgList inplace_obas;
   GetInplaceOpBlobArgList(&inplace_obas, dev_nodes, TaskNode4SoleOpName);
-  auto Op4OpName = [&](const std::string& op_name) -> const Operator* { TODO(); };
+  auto Op4OpName = [&](const std::string& op_name) -> const Operator* {
+    return TaskNode4SoleOpName(op_name)->exec_gph().SoleNode()->op().get();
+  };
   auto IsLbiConsumersReachableInChain =
       MakePredicatorIsLbiConsumersReachableInChain(TaskNode4SoleOpName);
   auto IsLbiConsumersReachableToDst = [&](const LogicalBlobId& lbi, const std::string& op_name) {
@@ -595,7 +597,30 @@ void TaskGraph::GetSafeInplaceOpBlobArgList(
 
 void TaskGraph::SetTaskRegstInplaceInfo(const OpBlobArgList& obas,
                                         const HashSet<TaskNode*>& dev_nodes) const {
-  TODO();
+  auto TaskNode4SoleOpName = MakeGetterTaskNode4SoleOpName(dev_nodes);
+  auto Op4OpName = [&](const std::string& op_name) -> const Operator* {
+    return TaskNode4SoleOpName(op_name)->exec_gph().SoleNode()->op().get();
+  };
+  InplaceLbiGraph inplace_gph(obas, Op4OpName);
+  inplace_gph.ForEachConnectedComponent([&](const HashSet<const InplaceLbiNode*> inplace_nodes) {
+    HashSet<RegstDesc*> regst_descs;
+    for (const auto* inplace_node : inplace_nodes) {
+      if (inplace_node->in_edges().empty()) { continue; }
+      const auto* inplace_edge = inplace_node->SoleInEdge();
+      auto* exec_node = TaskNode4SoleOpName(inplace_edge->op().op_name())->exec_gph().SoleNode();
+      RegstDesc* in_regst = exec_node->RegstDesc4BnInOp(inplace_edge->ibn());
+      RegstDesc* out_regst = exec_node->RegstDesc4BnInOp(inplace_edge->obn());
+      regst_descs.insert(in_regst);
+      regst_descs.insert(out_regst);
+      // Set InplaceInfo
+      TODO();
+    }
+    int64_t mem_block_id = Global<IDMgr>::Get()->NewMemBlockId();
+    for (auto* regst_desc : regst_descs) {
+      CHECK_EQ(regst_desc->NumOfLbi(), 1);
+      regst_desc->set_mem_shared_inplace_block_id(mem_block_id);
+    }
+  });
 }
 
 void TaskGraph::ForEachDeviceNodes(
@@ -615,32 +640,6 @@ void TaskGraph::EnableInplaceMemSharing(
     OpBlobArgList safe_inplace_obas;
     GetSafeInplaceOpBlobArgList(&safe_inplace_obas, dev_nodes, IsLbiConsumersReachableToOpName);
     SetTaskRegstInplaceInfo(safe_inplace_obas, dev_nodes);
-  });
-  return;
-  AcyclicTopoForEachNode([&](TaskNode* node) {
-    if (node->exec_gph().node_num() != 1) { return; }
-    const Operator* op = node->exec_gph().SoleNode()->op().get();
-    auto* fw_task_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
-    auto* bw_task_node = dynamic_cast<NormalBackwardCompTaskNode*>(node);
-    RegstDesc* input_regst = nullptr;
-    RegstDesc* output_regst = nullptr;
-    if (op->IsForwardInplace() && fw_task_node) {
-      input_regst = fw_task_node->GetSoleConsumedRegst("in").get();
-      output_regst = fw_task_node->GetProducedRegst("out").get();
-    } else if (op->IsBackwardInplace() && bw_task_node) {
-      input_regst = bw_task_node->GetSoleConsumedRegst(GenDiffBn("out")).get();
-      output_regst = bw_task_node->GetProducedRegst(GenDiffBn("in")).get();
-    } else {
-      // do nothing
-      return;
-    }
-    if (input_regst->consumers().size() != 1) { return; }
-    if (input_regst->NumOfLbi() != 1) { return; }
-    if (output_regst->NumOfLbi() != 1) { return; }
-    if (input_regst->mem_shared_inplace_block_id() == -1) {
-      input_regst->set_mem_shared_inplace_block_id(Global<IDMgr>::Get()->NewMemBlockId());
-    }
-    output_regst->set_mem_shared_inplace_block_id(input_regst->mem_shared_inplace_block_id());
   });
 }
 
