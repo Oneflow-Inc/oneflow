@@ -22,6 +22,6 @@ void DropoutGradKernel<device_type, T>::DropoutBackward(DeviceCtx* ctx, const in
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kDropoutGradConf, DropoutGradKernel,
-                           ARITHMETIC_DATA_TYPE_SEQ);
+                           ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
