@@ -131,7 +131,7 @@ Plan Compiler::DoCompile() {
   if (job_desc->IsTrain() && job_desc->enable_mem_sharing()) {
     task_gph->EnableMemSharingAfterAllManualSetForMdUpdt();  // must last mem shared manual set
   }
-  {
+  if (job_desc->enable_inplace()) {
     auto IsReachable = Global<OpGraph>::Get()->MakePredicatorIsAllLbiConsumersReachableToOpName();
     task_gph->EnableInplaceMemSharing(IsReachable);
   }

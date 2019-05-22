@@ -26,7 +26,7 @@ RegstDesc::RegstDesc() {
   enable_mem_sharing_ = false;
   mem_shared_id_ = -1;
   mem_shared_offset_ = -1;
-  mem_shared_inplace_block_id_ = -1;
+  hint_inplace_consumed_regst_desc_id_ = -1;
 }
 
 int64_t RegstDesc::mem_shared_offset() const {
@@ -158,9 +158,8 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
   ret->set_enable_mem_sharing(enable_mem_sharing_);
   ret->set_mem_shared_id(mem_shared_id_);
   ret->set_mem_shared_offset(mem_shared_offset_);
-  ret->add_mem_block_hierarchy()->set_mem_block_id(Global<IDMgr>::Get()->NewMemBlockId());
-  if (mem_shared_inplace_block_id_ != -1) {
-    ret->add_mem_block_hierarchy()->set_mem_block_id(mem_shared_inplace_block_id_);
+  if (hint_inplace_consumed_regst_desc_id_ != -1) {
+    ret->set_hint_inplace_consumed_regst_desc_id(hint_inplace_consumed_regst_desc_id_);
   }
 }
 

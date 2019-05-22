@@ -603,22 +603,13 @@ void TaskGraph::SetTaskRegstInplaceInfo(const OpBlobArgList& obas,
   };
   InplaceLbiGraph inplace_gph(obas, Op4OpName);
   inplace_gph.ForEachConnectedComponent([&](const HashSet<const InplaceLbiNode*> inplace_nodes) {
-    HashSet<RegstDesc*> regst_descs;
     for (const auto* inplace_node : inplace_nodes) {
       if (inplace_node->in_edges().empty()) { continue; }
       const auto* inplace_edge = inplace_node->SoleInEdge();
       auto* exec_node = TaskNode4SoleOpName(inplace_edge->op().op_name())->exec_gph().SoleNode();
       RegstDesc* in_regst = exec_node->RegstDesc4BnInOp(inplace_edge->ibn());
       RegstDesc* out_regst = exec_node->RegstDesc4BnInOp(inplace_edge->obn());
-      regst_descs.insert(in_regst);
-      regst_descs.insert(out_regst);
-      // Set InplaceInfo
-      TODO();
-    }
-    int64_t mem_block_id = Global<IDMgr>::Get()->NewMemBlockId();
-    for (auto* regst_desc : regst_descs) {
-      CHECK_EQ(regst_desc->NumOfLbi(), 1);
-      regst_desc->set_mem_shared_inplace_block_id(mem_block_id);
+      out_regst->set_hint_inplace_consumed_regst_desc_id(in_regst->regst_desc_id());
     }
   });
 }

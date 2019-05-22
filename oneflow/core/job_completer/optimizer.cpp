@@ -16,7 +16,8 @@ void GenerateOptimizerOpConfIf(
   const auto& train_conf =
       Global<JobDesc>::Get()->other_conf().predict_conf().tmp_split_fw_bw_train_conf();
   auto optimizer_case = train_conf.model_update_conf().normal_mdupdt_case();
-  auto* obj = NewObj<GenerateOptimizerOpConfWrapperStruct>(optimizer_case);
+  std::unique_ptr<GenerateOptimizerOpConfWrapperStruct> obj;
+  obj.reset(NewObj<GenerateOptimizerOpConfWrapperStruct>(optimizer_case));
   obj->Call(var_op, parallel_conf, job_builder, DiffLbi4BnInOp, total_loss_instance_num_lbi);
 }
 

@@ -52,7 +52,6 @@ message RegstDescProto {
   required bool enable_mem_sharing = 9;
   required int32 mem_shared_id = 10;
   required int64 mem_shared_offset = 11;
-  // from bottom to top
-  repeated MemBlock mem_block_hierarchy = 13;
-  optional int64 inplace_consumed_regst_desc_id = 14 [default = -1];
+  optional int64 inplace_consumed_regst_desc_id = 12 [default = -1];
+  optional int64 hint_inplace_consumed_regst_desc_id = 13 [default = -1];
 }
