@@ -265,7 +265,7 @@ void OpGraph::Init(const Job& job) {
   ForEachNode(
       [&](OpNode* node) { CHECK(op_name2op_node_.emplace(node->op().op_name(), node).second); });
   InitEdges();
-  CHECK_ISNULL(FindFirstBackEdgeDstNode());
+  //CHECK_ISNULL(FindFirstBackEdgeDstNode());
   FixOpParallelDesc();
   UpdateOpNodeHasInDiff();
   InferTimeShape();
