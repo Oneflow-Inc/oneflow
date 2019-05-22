@@ -15,7 +15,7 @@
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/operator/constant_op.h"
 #include "oneflow/core/graph/op_graph.h"
-#include "oneflow/core/graph/boxing_copy_task_node.h"
+#include "oneflow/core/graph/boxing_v2_task_node.h"
 #include "oneflow/core/register/tensor_partial_view.h"
 
 namespace oneflow {
@@ -662,10 +662,13 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV2) {
           GetTensorPartialView(src_parallel_desc->parallel_num(), src_sbp_parallel, blob_desc);
       const std::vector<TensorPartialView> dst_views =
           GetTensorPartialView(dst_parallel_desc->parallel_num(), dst_sbp_parallel, blob_desc);
+      const BoxingV2TaskMode mode = src_sbp_parallel.has_partial_sum_parallel()
+                                        ? BoxingV2TaskMode::kBoxingV2TaskModeAdd
+                                        : kBoxingV2TaskModeCopy;
       FOR_RANGE(int64_t, i, 0, dst_parallel_desc->parallel_num()) {
         CompTaskNode* dst_comp_task_node = sorted_dst_comp_tasks.at(i);
-        BoxingCopyTaskNode* copy_task_node = NewNode<BoxingCopyTaskNode>();
-        copy_task_node->Init(lbi, dst_views.at(i), BoxingCopyTaskMode::kBoxingCopyTaskModeCopy);
+        BoxingV2TaskNode* copy_task_node = NewNode<BoxingV2TaskNode>();
+        copy_task_node->Init(lbi, dst_views.at(i), mode);
         copy_task_node->set_machine_id(dst_comp_task_node->machine_id());
         copy_task_node->set_thrd_id(Global<IDMgr>::Get()->GetGpuMixThrdId(
             Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(dst_comp_task_node->thrd_id())));

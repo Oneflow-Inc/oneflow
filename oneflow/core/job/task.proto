@@ -46,7 +46,7 @@ enum TaskType {
   kOptimizer = 38;
   kEveryNth = 39;
   kLocalGpuPeerBoxing = 40;
-  kBoxingCopy = 41;
+  kBoxingV2 = 41;
 };
 
 enum AreaType {

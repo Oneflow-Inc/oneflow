@@ -1379,16 +1379,18 @@ message BlobDumpOpConf {
   optional string dir = 2;
 }
 
-message BoxingCopyOpConf {
+message BoxingV2Conf {
   required LogicalBlobId lbi = 1;
   repeated TensorPartialViewProto in_view = 2;
   required TensorPartialViewProto out_view = 3;
 }
 
-message BoxingCopyAddOpConf {
-  required LogicalBlobId lbi = 1;
-  repeated TensorPartialViewProto in_view = 2;
-  required TensorPartialViewProto out_view = 3;
+message BoxingV2CopyOpConf {
+  required BoxingV2Conf boxing_conf = 1;
+}
+
+message BoxingV2AddOpConf {
+  required BoxingV2Conf boxing_conf = 1;
 }
 
 message OperatorConf {
@@ -1440,8 +1442,8 @@ message OperatorConf {
     LocalGpuPeerSplitToBroadcastOpConf local_gpu_peer_split_to_broadcast_conf = 137;
     LocalGpuPeerPartialSumToSplitOpConf local_gpu_peer_partial_sum_to_split_conf = 138;
     LocalGpuPeerPartialSumToBroadcastOpConf local_gpu_peer_partial_sum_to_broadcast_conf = 139;
-    BoxingCopyOpConf boxing_copy_conf = 140;
-    BoxingCopyAddOpConf boxing_copy_add_conf = 141;
+    BoxingV2CopyOpConf boxing_v2_copy_conf = 140;
+    BoxingV2AddOpConf boxing_v2_add_conf = 141;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
