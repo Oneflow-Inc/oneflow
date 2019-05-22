@@ -36,7 +36,7 @@ TensorPartialCopier::TensorPartialCopier(const TensorPartialView& dst_view,
   memory_copy_nd_desc_ = raw_copy_desc.CompressDims();
 }
 
-void TensorPartialCopier::Exec(DeviceCtx* ctx, const MemoryCopier& copier, Blob* dst_blob,
+void TensorPartialCopier::Copy(DeviceCtx* ctx, const MemoryCopier& copier, Blob* dst_blob,
                                const Blob* src_blob) const {
   CHECK_EQ(dst_blob->data_type(), data_type_);
   CHECK_EQ(src_blob->data_type(), data_type_);

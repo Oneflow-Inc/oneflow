@@ -12,7 +12,7 @@ void CheckPosExtent(const int64_t num_axes, const Shape& shape, const Index& pos
   CHECK_EQ(shape.NumAxes(), num_axes);
   CHECK_EQ(pos.NumAxes(), num_axes);
   CHECK_EQ(extent.NumAxes(), num_axes);
-  FOR_RANGE(int64_t, i, 0, shape.NumAxes()) {
+  FOR_RANGE(int64_t, i, 0, num_axes) {
     CHECK_GE(pos.At(i), 0);
     CHECK_GT(extent.At(i), 0);
     CHECK_GT(shape.At(i), 0);
@@ -30,7 +30,9 @@ void CheckMemoryCopyNdDesc(const MemoryCopyNdDesc& desc) {
 }  // namespace
 
 MemoryCopyNdDesc MemoryCopyNdDesc::CompressDims() const {
-  MemoryCopyNdDesc compressed = *this;
+  MemoryCopyNdDesc compressed;
+  compressed.dst_ptr = dst_ptr;
+  compressed.src_ptr = src_ptr;
   std::vector<int64_t> dst_shape_vec;
   std::vector<int64_t> src_shape_vec;
   std::vector<int64_t> dst_pos_vec;
@@ -154,7 +156,7 @@ class FuncDefaultMemoryCopierCreator final : public DefaultMemoryCopierCreator {
   explicit FuncDefaultMemoryCopierCreator(Func f) : func_(std::move(f)) {}
   ~FuncDefaultMemoryCopierCreator() override = default;
 
-  virtual MemoryCopier* Create() { return func_(); }
+  MemoryCopier* Create() override { return func_(); }
 
  private:
   const Func func_;

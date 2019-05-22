@@ -38,7 +38,7 @@ void BoxingV2CopyKernel<device_type, T>::ForwardDataContent(
   Blob* out = BnInOp2Blob("out");
   FOR_RANGE(int64_t, i, 0, this->op_attribute().input_bns().size()) {
     const Blob* in_i = BnInOp2Blob(GenRepeatedBn("in", i));
-    this->tensor_partial_copier_vec().at(i)->Exec(ctx.device_ctx, *this->memory_copier(), out,
+    this->tensor_partial_copier_vec().at(i)->Copy(ctx.device_ctx, *this->memory_copier(), out,
                                                   in_i);
   }
 }
@@ -56,10 +56,10 @@ void BoxingV2AddKernel<device_type, T>::ForwardDataContent(
   FOR_RANGE(int64_t, i, 0, this->op_attribute().input_bns().size()) {
     const Blob* in_i = BnInOp2Blob(GenRepeatedBn("in", i));
     if (i == 0) {
-      this->tensor_partial_copier_vec().at(i)->Exec(ctx.device_ctx, *this->memory_copier(), out,
+      this->tensor_partial_copier_vec().at(i)->Copy(ctx.device_ctx, *this->memory_copier(), out,
                                                     in_i);
     } else {
-      this->tensor_partial_copier_vec().at(i)->Exec(ctx.device_ctx, *this->memory_copier(), buf,
+      this->tensor_partial_copier_vec().at(i)->Copy(ctx.device_ctx, *this->memory_copier(), buf,
                                                     in_i);
       Addition<device_type, T>(ctx.device_ctx, out, out, buf);
     }
