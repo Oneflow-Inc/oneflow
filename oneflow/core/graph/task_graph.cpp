@@ -665,8 +665,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV2) {
       FOR_RANGE(int64_t, i, 0, dst_parallel_desc->parallel_num()) {
         CompTaskNode* dst_comp_task_node = sorted_dst_comp_tasks.at(i);
         BoxingCopyTaskNode* copy_task_node = NewNode<BoxingCopyTaskNode>();
-        copy_task_node->SetOutTensorPartialView(dst_views.at(i));
-        copy_task_node->SetLbi(lbi);
+        copy_task_node->Init(lbi, dst_views.at(i), BoxingCopyTaskMode::kBoxingCopyTaskModeCopy);
         copy_task_node->set_machine_id(dst_comp_task_node->machine_id());
         copy_task_node->set_thrd_id(Global<IDMgr>::Get()->GetGpuMixThrdId(
             Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(dst_comp_task_node->thrd_id())));
@@ -675,7 +674,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV2) {
         FOR_RANGE(int64_t, src_id, 0, src_parallel_desc->parallel_num()) {
           TaskEdge* edge = NewEdge();
           Connect<TaskNode>(sorted_src_comp_tasks.at(src_id), edge, copy_task_node);
-          copy_task_node->BindTensorPartialViewToInDataEdge(edge, src_views.at(src_id));
+          copy_task_node->SetInDataEdgeView(edge, src_views.at(src_id));
         }
       }
     } else {

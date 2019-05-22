@@ -6,28 +6,34 @@
 
 namespace oneflow {
 
+enum BoxingCopyTaskMode {
+  kBoxingCopyTaskModeInvalid,
+  kBoxingCopyTaskModeCopy,
+  kBoxingCopyTaskModeAdd,
+};
+
 class BoxingCopyTaskNode final : public TaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BoxingCopyTaskNode);
   BoxingCopyTaskNode() = default;
   ~BoxingCopyTaskNode() override = default;
 
+  void Init(const LogicalBlobId& lbi, const TensorPartialView& out_view, BoxingCopyTaskMode mode);
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   TaskType GetTaskType() const override { return TaskType::kBoxingCopy; }
-
-  void BindTensorPartialViewToInDataEdge(const TaskEdge* edge, const TensorPartialView& view);
-  void SetOutTensorPartialView(const TensorPartialView& out_view);
-  void SetLbi(const LogicalBlobId& lbi);
+  void SetInDataEdgeView(const TaskEdge* edge, const TensorPartialView& view);
 
  private:
   void BuildExecGphAndRegst() override;
   void InferProducedDataRegstTimeShape() override;
+  OperatorConf GetBoxingOpConf();
 
-  HashMap<const TaskEdge*, TensorPartialView> in_data_edge2tensor_partial_view_;
-  std::vector<const TaskEdge*> sorted_in_data_edge_vec_;
-  TensorPartialView out_view_;
+  HashMap<const TaskEdge*, TensorPartialView> in_data_edge2view_;
+  std::vector<const TaskEdge*> ordered_in_data_edges_;
   LogicalBlobId lbi_;
+  TensorPartialView out_view_;
+  BoxingCopyTaskMode mode_ = kBoxingCopyTaskModeInvalid;
 };
 
 }  // namespace oneflow
