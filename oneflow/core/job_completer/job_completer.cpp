@@ -8,7 +8,7 @@
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job_completer/all_reduce_add_pass.h"
 #include "oneflow/core/job_completer/freeze_sbp_signature.h"
-#include "oneflow/core/job_completer/aggregate_boxing.h"
+#include "oneflow/core/job_completer/aggregate_boxing_by_dst_parallel.h"
 
 namespace oneflow {
 
@@ -445,7 +445,7 @@ void JobCompleter::Complete(Job* job) const {
     // add keep_header_only op
     WithOpGraphAndMutJob(job, &RewriteBoxingWithAllReduce);
     WithOpGraphAndMutJob(job, &FreezeSbpSignature);
-    WithOpGraphAndMutJob(job, &AggregateBoxing);
+    WithOpGraphAndMutJob(job, &AggregateBoxingByDstParallel);
     WithOpGraphAndMutJob(job, &AddKeepHeaderOnlyOp);
     WithOpGraphAndMutJob(job, &SetOpTimeShape7CtrlInOpName7ModelLbis);
   }
