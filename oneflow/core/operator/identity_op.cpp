@@ -15,15 +15,19 @@ void IdentityOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
 
 const PbMessage& IdentityOp::GetCustomizedConf() const { return op_conf().identity_conf(); }
 
+void IdentityOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  NaiveInferHasBatchDim(HasBatchDim4BnInOp);
+}
+
 void IdentityOp::GetSbpSignatures(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
   const auto bns = StdVec2PbRpf<std::string>({"in", "out"});
   SbpSignatureBuilder().Broadcast(bns).Build(sbp_sig_list->mutable_sbp_signature()->Add());
   SbpSignatureBuilder().PartialSum(bns).Build(sbp_sig_list->mutable_sbp_signature()->Add());
-  FOR_RANGE(int64_t, i, 0, LogicalBlobDesc4Ibn("in").shape().NumAxes()) {
-    SbpSignatureBuilder().Split(bns, i).Build(sbp_sig_list->mutable_sbp_signature()->Add());
-  }
+  const int64_t num_axes = LogicalBlobDesc4Ibn("in").shape().NumAxes();
+  SbpSignatureBuilder().Split(bns, 0).MakeSplitSignatureListBuilder(num_axes).Build(sbp_sig_list);
 }
 
 REGISTER_OP(OperatorConf::kIdentityConf, IdentityOp);

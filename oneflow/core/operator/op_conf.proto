@@ -1266,15 +1266,6 @@ message TopKOpConf {
   optional bool sorted = 4 [default = true];
 }
 
-message ParallelCastOpConf {
-  required string in = 1;
-  required string out = 2;
-  oneof parallel_type {
-    SplitParallel split_parallel = 3;
-    BroadcastParallel broadcast_parallel = 4;
-  }
-}
-
 message L2NormalizeOpConf {
   required string in = 1;
   required string out = 2;
@@ -1486,7 +1477,6 @@ message OperatorConf {
     SparseCrossEntropyOpConf sparse_cross_entropy_conf= 260;
     ReduceMeanOpConf reduce_mean_conf = 261;
     TopKOpConf top_k_conf = 262;
-    ParallelCastOpConf parallel_cast_conf = 263;
     L2NormalizeOpConf l2_normalize_conf = 264;
     PReluOpConf prelu_conf = 265;
     ReluGradOpConf relu_grad_conf = 266;
