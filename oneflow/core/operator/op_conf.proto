@@ -1264,15 +1264,6 @@ message TopKOpConf {
   optional bool sorted = 4 [default = true];
 }
 
-message ParallelCastOpConf {
-  required string in = 1;
-  required string out = 2;
-  oneof parallel_type {
-    SplitParallel split_parallel = 3;
-    BroadcastParallel broadcast_parallel = 4;
-  }
-}
-
 message L2NormalizeOpConf {
   required string in = 1;
   required string out = 2;
@@ -1356,6 +1347,11 @@ message AllReduceFacadeOpConf {
   required string out = 2;
 }
 
+message IdentityOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1400,7 +1396,7 @@ message OperatorConf {
     ShapeElemCntOpConf shape_elem_cnt_conf = 132;
     AccOpConf acc_conf = 133;
     AllReduceFacadeOpConf all_reduce_facade_conf = 134;
-      
+
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
     TransposeOpConf transpose_conf = 201;
@@ -1458,7 +1454,6 @@ message OperatorConf {
     SparseCrossEntropyOpConf sparse_cross_entropy_conf= 260;
     ReduceMeanOpConf reduce_mean_conf = 261;
     TopKOpConf top_k_conf = 262;
-    ParallelCastOpConf parallel_cast_conf = 263;
     L2NormalizeOpConf l2_normalize_conf = 264;
     PReluOpConf prelu_conf = 265;
     ReluGradOpConf relu_grad_conf = 266;
@@ -1485,6 +1480,7 @@ message OperatorConf {
     ModelSaveV2OpConf model_save_v2_conf = 287;
     TanHGradOpConf tanh_grad_conf = 288;
     PoolingGradOpConf pooling_grad_conf = 289;
+    IdentityOpConf identity_conf = 290;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
