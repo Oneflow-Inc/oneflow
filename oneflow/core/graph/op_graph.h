@@ -131,7 +131,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void ForEachChainFamily(const std::function<void(const HashSet<OpNode*>&)>& Handler) const;
 
   std::function<bool(const LogicalBlobId&, const std::string&)>
-  MakePredicatorIsAllLbiConsumersReachableToOpName() const;
+  MakePredicatorIsLbiAllConsumersReachableToOpName() const;
 
  private:
   void Init(const Job& job);

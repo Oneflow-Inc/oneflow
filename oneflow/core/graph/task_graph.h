@@ -28,7 +28,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void EnableMemSharingAfterAllManualSetForMdUpdt();
   void EnableMemSharingInVariableOp();
   void EnableInplaceMemSharing(const std::function<bool(const LogicalBlobId&, const std::string&)>&
-                                   IsLbiConsumersReachableToOpName);
+                                   IsLbiAllConsumersReachableToOpName);
 
   void AddOrderCtrlEdgeBetweenCopyAndMdUpdt();
   void RmUselessConsumeRelationshipBetweenFwBw();

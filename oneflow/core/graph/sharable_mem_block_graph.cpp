@@ -23,6 +23,7 @@ void ForEachInplacedRegstDescs(
     const std::function<void(const HashSet<const RegstDescProto*>&)>& Handler) {
   InplaceRegstGraph inplace_gph(regst_desc);
   inplace_gph.ForEachConnectedComponent([&](const HashSet<const InplaceRegstNode*>& nodes) {
+    if (nodes.size() == 1) { return; }
     HashSet<const RegstDescProto*> regst_descs;
     for (const auto* node : nodes) { CHECK(regst_descs.emplace(node->regst_desc()).second); }
     Handler(regst_descs);
@@ -41,16 +42,16 @@ SharableMemBlockNode::SharableMemBlockNode(int64_t chain_id,
 SharableMemBlockGraph::SharableMemBlockGraph(
     const PlanTaskGraph& plan_task_gph,
     const std::function<bool(const RegstDescProto&)>& IsSharable) {
-  HashMap<int64_t, HashSet<const RegstDescProto*>> chain_id2regst_desc;
+  HashMap<int64_t, HashSet<const RegstDescProto*>> chain_id2regst_descs;
   for (const TaskProto& task : plan_task_gph.plan().task()) {
     for (const auto& pair : task.produced_regst_desc()) {
       if (IsConsumersAndProducerInSameChain(pair.second, plan_task_gph)
           && IsSharable(pair.second)) {
-        CHECK(chain_id2regst_desc[task.task_set_info().chain_id()].emplace(&pair.second).second);
+        CHECK(chain_id2regst_descs[task.task_set_info().chain_id()].emplace(&pair.second).second);
       }
     }
   }
-  for (const auto& pair : chain_id2regst_desc) {
+  for (const auto& pair : chain_id2regst_descs) {
     HashMap<const RegstDescProto*, SharableMemBlockNode*> regst_desc2node;
     for (const auto* regst_desc : pair.second) {
       auto* node = new SharableMemBlockNode(pair.first, {regst_desc});

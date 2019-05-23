@@ -60,7 +60,7 @@ void ForEachSameColoredStreamRegstDescWithoutConsumer(
       });
 }
 
-void ForEachSameColoredChainRegstRegstDescs(
+void ForEachSameColoredChainRegstDescs(
     const SharableMemBlockGraph& sharable_mem_block_gph,
     const std::function<std::vector<const RegstDescProto*>(
         const std::vector<const SharableMemBlockNode*>&)>& GetRegstDescs,
@@ -158,8 +158,8 @@ void ForEachSameColoredChainRegstDescWithConsumer(
     }
     Handler(members);
   };
-  ForEachSameColoredChainRegstRegstDescs(sharable_mem_block_gph, GetRegstDescs,
-                                         ComputeLifetimeSameChainActorIds, AppendGroupMembers);
+  ForEachSameColoredChainRegstDescs(sharable_mem_block_gph, GetRegstDescs,
+                                    ComputeLifetimeSameChainActorIds, AppendGroupMembers);
 }
 
 void ForEachImprovedMemSharedId(const PlanTaskGraph& plan_task_graph,

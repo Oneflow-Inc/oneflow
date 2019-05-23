@@ -365,8 +365,8 @@ const InplaceLbiEdge* InplaceLbiGraph::FindFirstIntraOpRefConflictMutRefEdge(
 bool InplaceLbiGraph::IsConstRefConflictMutRefNode(
     const InplaceLbiNode* mut_ref_node, const HashSet<const InplaceLbiNode*>& nodes,
     const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge,
-    const std::function<bool(const LogicalBlobId&, const std::string&)>& IsReachableFromLbiToOpName)
-    const {
+    const std::function<bool(const LogicalBlobId&, const std::string&)>&
+        IsLbiAllConsumerReachableToOpName) const {
   CHECK(mut_ref_node->IsMutRef(IsValidEdge));
   auto ForEachNext = [&](const InplaceLbiNode* node,
                          const std::function<void(const InplaceLbiNode*)>& Handler) {
@@ -377,7 +377,7 @@ bool InplaceLbiGraph::IsConstRefConflictMutRefNode(
   bool conflict = false;
   const auto& op_name = mut_ref_node->lbi().op_name();
   BfsForEachNode({GetRoot(nodes, IsValidEdge)}, ForEachNext, [&](const InplaceLbiNode* node) {
-    conflict = conflict || !IsReachableFromLbiToOpName(node->lbi(), op_name);
+    conflict = conflict || !IsLbiAllConsumerReachableToOpName(node->lbi(), op_name);
   });
   return conflict;
 }
@@ -385,8 +385,8 @@ bool InplaceLbiGraph::IsConstRefConflictMutRefNode(
 const InplaceLbiEdge* InplaceLbiGraph::FindFirstConstRefConflictMutRefEdge(
     const HashSet<const InplaceLbiNode*>& nodes,
     const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge,
-    const std::function<bool(const LogicalBlobId&, const std::string&)>& IsReachableFromLbiToOpName)
-    const {
+    const std::function<bool(const LogicalBlobId&, const std::string&)>&
+        IsLbiAllConsumerReachableToOpName) const {
   const InplaceLbiNode* root = GetRoot(nodes, IsValidEdge);
   auto ForEachInNode = GetForEachValidInNode(IsValidEdge);
   auto ForEachOutNode = GetForEachValidOutNode(IsValidEdge);
@@ -394,7 +394,8 @@ const InplaceLbiEdge* InplaceLbiGraph::FindFirstConstRefConflictMutRefEdge(
   TopoForEachNode({root}, ForEachInNode, ForEachOutNode, [&](const InplaceLbiNode* node) {
     if (ret != nullptr) { return; }
     if (node->IsMutRef(IsValidEdge)
-        && IsConstRefConflictMutRefNode(node, nodes, IsValidEdge, IsReachableFromLbiToOpName)) {
+        && IsConstRefConflictMutRefNode(node, nodes, IsValidEdge,
+                                        IsLbiAllConsumerReachableToOpName)) {
       ret = node->GetValidInEdge(IsValidEdge);
     }
   });
@@ -404,8 +405,8 @@ const InplaceLbiEdge* InplaceLbiGraph::FindFirstConstRefConflictMutRefEdge(
 const InplaceLbiEdge* InplaceLbiGraph::FindFirstInterOpRefConflictMutRefEdge(
     const HashSet<const InplaceLbiNode*>& nodes,
     const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge,
-    const std::function<bool(const LogicalBlobId&, const std::string&)>& IsReachableFromLbiToOpName)
-    const {
+    const std::function<bool(const LogicalBlobId&, const std::string&)>&
+        IsLbiAllConsumerReachableToOpName) const {
   HashSet<const InplaceLbiNode*> mut_ref_nodes;
   HashMap<const InplaceLbiNode*, std::vector<const InplaceLbiNode*>> node2mut_ref_ancestors;
   {
@@ -450,7 +451,8 @@ const InplaceLbiEdge* InplaceLbiGraph::FindFirstInterOpRefConflictMutRefEdge(
 void InplaceLbiGraph::GetSafeInplaceObnEdges(
     const HashSet<const InplaceLbiNode*>& nodes,
     const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge,
-    const std::function<bool(const LogicalBlobId&, const std::string&)>& IsReachableFromLbiToOpName,
+    const std::function<bool(const LogicalBlobId&, const std::string&)>&
+        IsLbiAllConsumerReachableToOpName,
     HashSet<const InplaceLbiEdge*>* cur_disabled_edges) const {
   ForEachTree(nodes, IsValidEdge, [&](const HashSet<const InplaceLbiNode*>& nodes) {
     // no intra-op reference conflicts
@@ -458,10 +460,10 @@ void InplaceLbiGraph::GetSafeInplaceObnEdges(
         FindFirstIntraOpRefConflictMutRefEdge(nodes, IsValidEdge);
     // mutable reference always goes after const reference
     const InplaceLbiEdge* const_ref_conflict_ref_edge =
-        FindFirstConstRefConflictMutRefEdge(nodes, IsValidEdge, IsReachableFromLbiToOpName);
+        FindFirstConstRefConflictMutRefEdge(nodes, IsValidEdge, IsLbiAllConsumerReachableToOpName);
     // no inter-op reference conflicts
-    const InplaceLbiEdge* inter_op_conflict_ref_edge =
-        FindFirstInterOpRefConflictMutRefEdge(nodes, IsValidEdge, IsReachableFromLbiToOpName);
+    const InplaceLbiEdge* inter_op_conflict_ref_edge = FindFirstInterOpRefConflictMutRefEdge(
+        nodes, IsValidEdge, IsLbiAllConsumerReachableToOpName);
     if (const_ref_conflict_ref_edge == nullptr && intra_op_conflict_ref_edge == nullptr
         && inter_op_conflict_ref_edge == nullptr) {
       FindAllEdges(nodes, IsValidEdge, cur_disabled_edges);
@@ -485,7 +487,8 @@ void InplaceLbiGraph::ForEachTree(
 
 void InplaceLbiGraph::FixConstRefOrMutRefConflictsToUpdtNode(
     const HashSet<const InplaceLbiNode*>& nodes,
-    const std::function<bool(const LogicalBlobId&, const std::string&)>& IsReachableFromLbiToOpName,
+    const std::function<bool(const LogicalBlobId&, const std::string&)>&
+        IsLbiAllConsumerReachableToOpName,
     HashSet<const InplaceLbiEdge*>* cur_disabled_edges) const {
   auto IsValidEdge = [](const InplaceLbiEdge*) { return true; };
   const InplaceLbiNode* updt_node = nullptr;
@@ -502,7 +505,9 @@ void InplaceLbiGraph::FixConstRefOrMutRefConflictsToUpdtNode(
       node->ForEachNodeOnValidOutEdge(IsValidEdge, [&](const InplaceLbiNode* out_node) {
         if (dynamic_cast<const NormalInplaceLbiNode*>(out_node) == nullptr) { return; }
         if (out_node->IsMutRef(IsValidEdge)) { return; }
-        if (!IsReachableFromLbiToOpName(out_node->lbi(), updt_node->lbi().op_name())) { return; }
+        if (!IsLbiAllConsumerReachableToOpName(out_node->lbi(), updt_node->lbi().op_name())) {
+          return;
+        }
         Handler(out_node);
       });
     };

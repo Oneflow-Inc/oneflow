@@ -710,17 +710,19 @@ void OpGraph::ForEachDataAndCtrlOutNode(OpNode* node,
 }
 
 std::function<bool(const LogicalBlobId&, const std::string&)>
-OpGraph::MakePredicatorIsAllLbiConsumersReachableToOpName() const {
+OpGraph::MakePredicatorIsLbiAllConsumersReachableToOpName() const {
   auto IsDataOrCtrlReachable = MakePredicatorIsDataOrCtrlReachable();
   return [IsDataOrCtrlReachable, this](const LogicalBlobId& lbi, const std::string& op_name) {
     const OpNode* src_node = op_name2op_node_.at(lbi.op_name());
     const OpNode* dst_node = op_name2op_node_.at(op_name);
     size_t out_node_cnt = 0;
     size_t reachable_out_node_cnt = 0;
-    src_node->ForEachNodeOnOutEdge([&](OpNode* out_node) {
-      ++out_node_cnt;
-      reachable_out_node_cnt += IsDataOrCtrlReachable(out_node, dst_node);
-    });
+    for (OpEdge* edge : src_node->out_edges()) {
+      if (std::find(edge->lbis().begin(), edge->lbis().end(), lbi) != edge->lbis().end()) {
+        out_node_cnt += 1;
+        reachable_out_node_cnt += IsDataOrCtrlReachable(edge->dst_node(), dst_node);
+      }
+    }
     return out_node_cnt > 0 && out_node_cnt == reachable_out_node_cnt;
   };
 }

@@ -132,7 +132,7 @@ Plan Compiler::DoCompile() {
     task_gph->EnableMemSharingAfterAllManualSetForMdUpdt();  // must last mem shared manual set
   }
   if (job_desc->enable_inplace()) {
-    auto IsReachable = Global<OpGraph>::Get()->MakePredicatorIsAllLbiConsumersReachableToOpName();
+    auto IsReachable = Global<OpGraph>::Get()->MakePredicatorIsLbiAllConsumersReachableToOpName();
     task_gph->EnableInplaceMemSharing(IsReachable);
   }
   if (job_desc->IsTrain()) { task_gph->AddOrderCtrlEdgeBetweenCopyAndMdUpdt(); }

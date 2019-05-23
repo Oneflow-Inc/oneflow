@@ -83,9 +83,10 @@ std::function<TaskNode*(const std::string&)> MakeGetterTaskNode4SoleOpName(
     const HashSet<TaskNode*>& task_nodes) {
   auto op_name2task_nodes = std::make_shared<HashMap<std::string, HashSet<TaskNode*>>>();
   for (TaskNode* task_node : task_nodes) {
-    task_node->exec_gph().ForEachNode([&](ExecNode* exec_node) {
+    if (task_node->exec_gph().node_num() == 1) {
+      ExecNode* exec_node = task_node->exec_gph().SoleNode();
       CHECK((*op_name2task_nodes)[exec_node->op()->op_name()].emplace(task_node).second);
-    });
+    }
   }
   return [op_name2task_nodes](const std::string& op_name) -> TaskNode* {
     const auto& iter = op_name2task_nodes->find(op_name);
@@ -95,7 +96,7 @@ std::function<TaskNode*(const std::string&)> MakeGetterTaskNode4SoleOpName(
   };
 };
 
-bool IsInplaceLbiOnEdge(const TaskEdge* edge, const LogicalBlobId& lbi) {
+bool IsLbiOnTaskEdge(const TaskEdge* edge, const LogicalBlobId& lbi) {
   for (const auto& regst_desc : edge->GetRegsts()) {
     if (regst_desc->HasLbi(lbi)) {
       CHECK_EQ(regst_desc->NumOfLbi(), 1);
@@ -106,7 +107,7 @@ bool IsInplaceLbiOnEdge(const TaskEdge* edge, const LogicalBlobId& lbi) {
 }
 
 std::function<bool(const LogicalBlobId&, const std::string&)>
-MakePredicatorIsLbiConsumersReachableInChain(
+MakePredicatorIsLbiAllConsumersReachableInChain(
     std::function<const TaskNode*(const std::string&)> TaskNode4SoleOpName) {
   return [TaskNode4SoleOpName](const LogicalBlobId& lbi, const std::string& op_name) -> bool {
     const TaskNode* src_task_node = TaskNode4SoleOpName(lbi.op_name());
@@ -114,7 +115,7 @@ MakePredicatorIsLbiConsumersReachableInChain(
     size_t out_edges_size = 0;
     size_t rechable_out_edges_size = 0;
     for (TaskEdge* out_edge : src_task_node->out_edges()) {
-      if (IsInplaceLbiOnEdge(out_edge, lbi)) {
+      if (IsLbiOnTaskEdge(out_edge, lbi)) {
         out_edges_size += 1;
         rechable_out_edges_size +=
             (out_edge->dst_node()->chain_id() == dst_task_node->chain_id()
@@ -131,6 +132,7 @@ bool IsInplaceAllowed(
   if (task_node->exec_gph().node_num() != 1) { return false; }
   const auto& exec_node = *task_node->exec_gph().SoleNode();
   for (const auto& bn : bns) {
+    // TaskNode for bn is not nullptr if it's on the same device with `task_node`
     if (TaskNode4SoleOpName(exec_node.op()->BnInOp2Lbi(bn).op_name()) == nullptr) { return false; }
     const RegstDesc& regst_desc = *exec_node.RegstDesc4BnInOp(bn);
     if (regst_desc.NumOfLbi() != 1) { return false; }
@@ -578,21 +580,20 @@ void TaskGraph::GetInplaceOpBlobArgList(
 void TaskGraph::GetSafeInplaceOpBlobArgList(
     OpBlobArgList* safe_obas, const HashSet<TaskNode*>& dev_nodes,
     const std::function<bool(const LogicalBlobId&, const std::string&)>&
-        IsLbiConsumersReachableToOpName) const {
+        IsLbiAllConsumersReachableToOpName) const {
   auto TaskNode4SoleOpName = MakeGetterTaskNode4SoleOpName(dev_nodes);
   OpBlobArgList inplace_obas;
   GetInplaceOpBlobArgList(&inplace_obas, dev_nodes, TaskNode4SoleOpName);
   auto Op4OpName = [&](const std::string& op_name) -> const Operator* {
     return TaskNode4SoleOpName(op_name)->exec_gph().SoleNode()->op().get();
   };
-  auto IsLbiConsumersReachableInChain =
-      MakePredicatorIsLbiConsumersReachableInChain(TaskNode4SoleOpName);
-  auto IsLbiConsumersReachableToDst = [&](const LogicalBlobId& lbi, const std::string& op_name) {
-    return IsLbiConsumersReachableToOpName(lbi, op_name)
-           || IsLbiConsumersReachableInChain(lbi, op_name);
-  };
+  auto IsLbiAllConsumersReachableInChain =
+      MakePredicatorIsLbiAllConsumersReachableInChain(TaskNode4SoleOpName);
   InplaceLbiGraph(inplace_obas, Op4OpName)
-      .ComputeSafeInplaceObns(safe_obas, IsLbiConsumersReachableToDst);
+      .ComputeSafeInplaceObns(safe_obas, [&](const LogicalBlobId& lbi, const std::string& op_name) {
+        return IsLbiAllConsumersReachableToOpName(lbi, op_name)
+               || IsLbiAllConsumersReachableInChain(lbi, op_name);
+      });
 }
 
 void TaskGraph::SetTaskRegstInplaceInfo(const OpBlobArgList& obas,
@@ -625,11 +626,11 @@ void TaskGraph::ForEachDeviceNodes(
 
 void TaskGraph::EnableInplaceMemSharing(
     const std::function<bool(const LogicalBlobId&, const std::string&)>&
-        IsLbiConsumersReachableToOpName) {
+        IsLbiAllConsumersReachableToOpName) {
   ForEachDeviceNodes([&](const HashSet<TaskNode*>& dev_nodes) {
     if ((*dev_nodes.begin())->device_type() != DeviceType::kGPU) { return; }
     OpBlobArgList safe_inplace_obas;
-    GetSafeInplaceOpBlobArgList(&safe_inplace_obas, dev_nodes, IsLbiConsumersReachableToOpName);
+    GetSafeInplaceOpBlobArgList(&safe_inplace_obas, dev_nodes, IsLbiAllConsumersReachableToOpName);
     SetTaskRegstInplaceInfo(safe_inplace_obas, dev_nodes);
   });
 }
