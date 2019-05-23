@@ -65,6 +65,7 @@ class Graph {
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachConnected,
       const std::function<void(const HashSet<NodeType*>&)>& Handler) const;
 
+  // find first nontrivial strongly connected component
   std::unique_ptr<std::vector<NodeType*>> FindFirstNontrivialSCC(
       const std::list<NodeType*>& starts,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
