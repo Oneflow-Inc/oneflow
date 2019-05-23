@@ -157,7 +157,7 @@ BldSubTskGphMthd BldSubTskGphToMdSave(const LogicalNode*, const LogicalNode* sav
 
 BldSubTskGphMthd BldSubTskGphToNormalMdUpdt(const LogicalNode*, const LogicalNode* updt) {
   if (updt->parallel_desc()->policy() == kDataParallel) {
-    return &TaskGraph::BldSubTskGphByBoxingV2;
+    return &TaskGraph::BldSubTskGphByBoxing;
   } else if (updt->parallel_desc()->policy() == kModelParallel) {
     return &TaskGraph::BldSubTskGphByOneToOne;
   } else {
@@ -343,7 +343,7 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
   if (IsProducedLbisAllBroadcastParallel(src_node, dst_node)) {
     return &TaskGraph::BldSubTskGphBySelectOneSourceToSoleSink;
   } else {
-    return &TaskGraph::BldSubTskGphByBoxingV2;
+    return &TaskGraph::BldSubTskGphByBoxing;
   }
 }
 

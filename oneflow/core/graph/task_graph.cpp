@@ -619,6 +619,15 @@ void TaskGraph::SetAreaIdForNewNodes(const LogicalNode* src_logical,
   void TaskGraph::method_name BLD_SUB_TSK_GPH_MTHD_ARGS()
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
+  BldSubTskGphMthd method = Global<JobDesc>::Get()->use_boxing_v2()
+                                ? &TaskGraph::BldSubTskGphByBoxingV2
+                                : &TaskGraph::BldSubTskGphByBoxingV1;
+  (this->*method)(src_logical, dst_logical, sorted_src_comp_tasks, sorted_dst_comp_tasks,
+                  logical2sorted_in_box, logical2sorted_out_box, MutBufTask,
+                  AllocateCpuThrdIdEvenly);
+}
+
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV1) {
   std::vector<TaskNode*>* sorted_out_box = nullptr;
   if (logical2sorted_out_box->find(src_logical) == logical2sorted_out_box->end()) {
     BuildOutBoxing(src_logical, sorted_src_comp_tasks, &((*logical2sorted_out_box)[src_logical]),

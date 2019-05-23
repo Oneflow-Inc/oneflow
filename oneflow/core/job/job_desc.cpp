@@ -63,6 +63,8 @@ float JobDesc::all_reduce_lazy_ratio() const {
 
 bool JobDesc::all_reduce_fp16() const { return job_conf_.other().all_reduce_fp16(); }
 
+bool JobDesc::use_boxing_v2() const { return job_conf_.other().use_boxing_v2(); }
+
 int64_t JobDesc::piece_num_of_experiment_phase() const {
   return job_conf_.other().exp_run_conf().piece_num_of_experiment_phase();
 }
