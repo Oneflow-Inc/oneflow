@@ -1,6 +1,7 @@
 #include "oneflow/core/operator/conv_data_grad_op.h"
 #include "oneflow/core/operator/conv_op.h"
 #include "oneflow/core/device/cudnn_conv_ctx_cache.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -71,6 +72,25 @@ void ConvDataGradOp::VirtualGenKernelConf(
   } else {
     UNIMPLEMENTED();
   }
+}
+
+void ConvDataGradOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  CHECK(*HasBatchDim4BnInOp("dy"));
+  CHECK(*HasBatchDim4BnInOp("x_like"));
+  CHECK(*HasBatchDim4BnInOp("filter") == false);
+  *HasBatchDim4BnInOp("dx") = true;
+}
+
+void ConvDataGradOp::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split("dy", 0)
+      .Broadcast("filter")
+      .Split("x_like", 0)
+      .Split("out", 0)
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_OP(OperatorConf::kConvDataGradConf, ConvDataGradOp);

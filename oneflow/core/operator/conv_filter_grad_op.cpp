@@ -1,6 +1,7 @@
 #include "oneflow/core/operator/conv_filter_grad_op.h"
 #include "oneflow/core/operator/conv_op.h"
 #include "oneflow/core/device/cudnn_conv_ctx_cache.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -86,6 +87,23 @@ void ConvFilterGradOp::VirtualGenKernelConf(
   } else {
     UNIMPLEMENTED();
   }
+}
+
+void ConvFilterGradOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  CHECK(*HasBatchDim4BnInOp("dy"));
+  CHECK(*HasBatchDim4BnInOp("x"));
+  *HasBatchDim4BnInOp("filter_diff") = false;
+}
+
+void ConvFilterGradOp::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split("dy", 0)
+      .Split("x", 0)
+      .PartialSum("filter_diff")
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_OP(OperatorConf::kConvFilterGradConf, ConvFilterGradOp);
