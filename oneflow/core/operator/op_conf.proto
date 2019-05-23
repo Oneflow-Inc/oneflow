@@ -6,7 +6,6 @@ import "oneflow/core/common/data_type.proto";
 import "oneflow/core/record/image.proto";
 import "oneflow/core/record/record.proto";
 import "oneflow/core/job/resource.proto";
-import "oneflow/core/job/sbp_parallel.proto";
 import "oneflow/core/register/logical_blob_id.proto";
 import "oneflow/core/register/tensor_partial_view.proto";
 
