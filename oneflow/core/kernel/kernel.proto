@@ -5,7 +5,6 @@ import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/operator/op_attribute.proto";
 import "oneflow/core/operator/op_conf.proto";
-import "oneflow/core/common/range.proto";
 
 message ConvKernelConf {
   required ShapeProto in = 1;
@@ -158,23 +157,6 @@ message ShapeElemCntKernelConf {
   repeated int32 axis = 1;
 }
 
-message RangeList {
-  repeated RangeProto range = 1;
-}
-
-message LocalGpuPeerSplitToBroadcastKernelConf {
-  required RangeList in_split = 1;
-}
-
-message LocalGpuPeerPartialSumToSplitKernelConf {
-  required RangeProto range = 1;
-}
-
-message LocalGpuPeerSplitToSplitKernelConf {
-  required RangeList in_split = 1;
-  required RangeProto out_range = 2;
-}
-
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
@@ -220,8 +202,5 @@ message KernelConf {
     ConvFilterGradKernelConf conv_filter_grad_conf = 410;
     ConvDataGradKernelConf conv_data_grad_conf = 411;
     ShapeElemCntKernelConf shape_elem_cnt_conf = 412;
-    LocalGpuPeerSplitToBroadcastKernelConf local_gpu_peer_split_to_broadcast_conf = 413;
-    LocalGpuPeerPartialSumToSplitKernelConf local_gpu_peer_partial_sum_to_split_conf = 414;
-    LocalGpuPeerSplitToSplitKernelConf local_gpu_peer_split_to_split_conf = 415;
   }
 }
