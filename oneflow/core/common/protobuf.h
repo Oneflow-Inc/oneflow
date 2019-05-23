@@ -220,6 +220,8 @@ struct hash<oneflow::SbpParallel> {
       desc = "P";
     } else if (sbp_parallel.has_split_parallel()) {
       desc = "S(" + std::to_string(sbp_parallel.split_parallel().axis()) + ")";
+    } else {
+      UNIMPLEMENTED();
     }
     return std::hash<std::string>()(desc);
   }

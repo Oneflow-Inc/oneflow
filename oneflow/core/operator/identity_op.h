@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class IdentityOp : public Operator {
+class IdentityOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(IdentityOp);
   IdentityOp() = default;
