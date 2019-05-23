@@ -40,7 +40,6 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV1);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV2);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByAllToAll);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByRecordLoadToTick);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBroadcastToBroadcast);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink);

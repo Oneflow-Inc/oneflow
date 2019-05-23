@@ -419,18 +419,6 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("NcclAllGather"
                               "ReduceSplit",
                               &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
-                              "LocalGpuPeerBoxing",
-                              &TaskGraph::BldSubTskGphByAllToAll);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("LocalGpuPeerBoxing"
-                              "LocalGpuPeerBoxing",
-                              &TaskGraph::BldSubTskGphByAllToAll);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("LocalGpuPeerBoxing"
-                              "NormalForward",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("DecodeRandom"
-                              "LocalGpuPeerBoxing",
-                              &TaskGraph::BldSubTskGphByAllToAll);
 
 BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src, const LogicalNode* dst) {
   std::string k = ConcatTypeName(src, dst);

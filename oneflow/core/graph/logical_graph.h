@@ -68,9 +68,6 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   NormalMdUpdtLogicalNode* BuildNormalMdUpdtAndMdSaveStruct(bool is_train,
                                                             ForwardLogicalNode* fw_logical);
   void ReplaceAllReduceFacades();
-  void ReplaceParallelCastFacades();
-  void AddLocalGpuPeerBoxing(const LogicalBlobId& lbi, const ParallelCastFacadeOpConf& conf,
-                             LogicalNode* src, LogicalNode* dst);
 
   void ConnectFwToBw();
   void UpdateEdge2Ibn(const LogicalEdge* edge, const std::string& ibn);

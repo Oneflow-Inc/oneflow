@@ -1275,14 +1275,6 @@ message ParallelCastOpConf {
   }
 }
 
-message ParallelCastFacadeOpConf {
-  required string in = 1;
-  required string out = 2;
-  required SbpParallel in_sbp_parallel = 3;
-  required SbpParallel out_sbp_parallel = 4;
-  required ShapeProto logical_blob_shape = 5;
-}
-
 message L2NormalizeOpConf {
   required string in = 1;
   required string out = 2;
@@ -1371,30 +1363,6 @@ message IdentityOpConf {
   required string out = 2;
 }
 
-message LocalGpuPeerSplitToSplitOpConf {
-  repeated string in = 1;
-  required string out = 2;
-  required int64 in_split_axis = 3;
-  required int64 out_split_axis = 4;
-}
-
-message LocalGpuPeerSplitToBroadcastOpConf {
-  repeated string in = 1;
-  required string out = 2;
-  required int64 in_split_axis = 3;
-}
-
-message LocalGpuPeerPartialSumToSplitOpConf {
-  repeated string in = 1;
-  required string out = 2;
-  required int64 out_split_axis = 3;
-}
-
-message LocalGpuPeerPartialSumToBroadcastOpConf {
-  repeated string in = 1;
-  required string out = 2;
-}
-
 message BlobDumpOpConf {
   required string in = 1;
   optional string dir = 2;
@@ -1458,13 +1426,8 @@ message OperatorConf {
     ShapeElemCntOpConf shape_elem_cnt_conf = 132;
     AccOpConf acc_conf = 133;
     AllReduceFacadeOpConf all_reduce_facade_conf = 134;
-    ParallelCastFacadeOpConf parallel_cast_facade_conf = 135;
-    LocalGpuPeerSplitToSplitOpConf local_gpu_peer_split_to_split_conf = 136;
-    LocalGpuPeerSplitToBroadcastOpConf local_gpu_peer_split_to_broadcast_conf = 137;
-    LocalGpuPeerPartialSumToSplitOpConf local_gpu_peer_partial_sum_to_split_conf = 138;
-    LocalGpuPeerPartialSumToBroadcastOpConf local_gpu_peer_partial_sum_to_broadcast_conf = 139;
-    BoxingV2CopyOpConf boxing_v2_copy_conf = 140;
-    BoxingV2AddOpConf boxing_v2_add_conf = 141;
+    BoxingV2CopyOpConf boxing_v2_copy_conf = 135;
+    BoxingV2AddOpConf boxing_v2_add_conf = 136;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
