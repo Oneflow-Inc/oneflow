@@ -98,10 +98,7 @@ std::function<TaskNode*(const std::string&)> MakeGetterTaskNode4SoleOpName(
 
 bool IsLbiOnTaskEdge(const TaskEdge* edge, const LogicalBlobId& lbi) {
   for (const auto& regst_desc : edge->GetRegsts()) {
-    if (regst_desc->HasLbi(lbi)) {
-      CHECK_EQ(regst_desc->NumOfLbi(), 1);
-      return true;
-    }
+    if (regst_desc->HasLbi(lbi)) { return true; }
   }
   return false;
 }
