@@ -314,7 +314,7 @@ std::unique_ptr<std::vector<NodeType*>> Graph<NodeType, EdgeType>::FindFirstNont
       }
     }
   }
-  return std::move(nontrivial_scc);
+  return nontrivial_scc;
 }
 
 template<typename NodeType, typename EdgeType>
