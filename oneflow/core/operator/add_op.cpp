@@ -33,6 +33,13 @@ void AddOp::VirtualFixInDiffBlobDescs(
   }
 }
 
+void AddOp::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  for (const auto& ibn : input_bns()) {
+    CHECK_EQ(*HasBatchDim4BnInOp(ibn), *HasBatchDim4BnInOp(input_bns().Get(0)));
+  }
+  NaiveInferHasBatchDim(HasBatchDim4BnInOp);
+}
+
 void AddOp::GetSbpSignatures(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {

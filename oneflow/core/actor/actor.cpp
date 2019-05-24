@@ -31,12 +31,21 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
     ek.bn_in_op2regst_desc_id = PbMap2HashMap(node.bn_in_op2regst_desc_id());
     exec_kernel_vec_.push_back(std::move(ek));
   }
-  // handle inplace regsts
+  // handle inplace regst pairs
   {
-    for (const auto& info : task_proto.regst_inplace_infos()) {
-      inplace_out2in_.insert(std::make_pair(info.out_regst_desc_id(), info.in_regst_desc_id()));
-      inplace_consumed_rs_.InsertRegstDescId(info.in_regst_desc_id());
-      inplace_produced_rs_.InsertRegstDescId(info.out_regst_desc_id());
+    HashSet<int64_t> consumed_regst_desc_ids;
+    for (const auto& pair : task_proto.consumed_regst_desc_id()) {
+      for (int64_t id : pair.second.regst_desc_id()) { consumed_regst_desc_ids.insert(id); }
+    }
+    for (const auto& pair : task_proto.produced_regst_desc()) {
+      int64_t out_regst_desc_id = pair.second.regst_desc_id();
+      int64_t in_regst_desc_id = pair.second.inplace_consumed_regst_desc_id();
+      if (in_regst_desc_id == -1) { continue; }
+      CHECK(consumed_regst_desc_ids.find(in_regst_desc_id) != consumed_regst_desc_ids.end());
+
+      inplace_out2in_.insert(std::make_pair(out_regst_desc_id, in_regst_desc_id));
+      inplace_consumed_rs_.InsertRegstDescId(in_regst_desc_id);
+      inplace_produced_rs_.InsertRegstDescId(out_regst_desc_id);
     }
     inplace_consumed_rs_.InitedDone();
     inplace_produced_rs_.InitedDone();

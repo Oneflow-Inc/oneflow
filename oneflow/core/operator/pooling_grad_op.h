@@ -1,24 +1,25 @@
-#ifndef ONEFLOW_CORE_OPERATOR_TANH_OP_H_
-#define ONEFLOW_CORE_OPERATOR_TANH_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_POOLING_GRAD_OP_H_
+#define ONEFLOW_CORE_OPERATOR_POOLING_GRAD_OP_H_
 
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/operator/operator_util.h"
 
 namespace oneflow {
 
-class TanHOp final : public Operator {
+class PoolingGradOp : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(TanHOp);
-  TanHOp() = default;
-  ~TanHOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(PoolingGradOp);
+  PoolingGradOp() = default;
+  virtual ~PoolingGradOp() = default;
 
   void InitFromOpConf() override;
-  const PbMessage& GetCustomizedConf() const override;
-  bool NeedInBlobWhenBackward() const override { return false; }
 
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
 
  private:
+  const PbMessage& GetCustomizedConf() const override;
+  void CheckPoolSizeAndStrides() const;
   void InferHasBatchDim(
       std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {
     NaiveInferHasBatchDim(HasBatchDim4BnInOp);
@@ -30,4 +31,4 @@ class TanHOp final : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_TANH_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_POOLING_GRAD_OP_H_

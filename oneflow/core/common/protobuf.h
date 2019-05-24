@@ -210,6 +210,23 @@ struct hash<oneflow::OpBlobArg> {
   }
 };
 
+template<>
+struct hash<oneflow::SbpParallel> {
+  size_t operator()(const oneflow::SbpParallel& sbp_parallel) const {
+    std::string desc;
+    if (sbp_parallel.has_broadcast_parallel()) {
+      desc = "B";
+    } else if (sbp_parallel.has_partial_sum_parallel()) {
+      desc = "P";
+    } else if (sbp_parallel.has_split_parallel()) {
+      desc = "S(" + std::to_string(sbp_parallel.split_parallel().axis()) + ")";
+    } else {
+      UNIMPLEMENTED();
+    }
+    return std::hash<std::string>()(desc);
+  }
+};
+
 }  // namespace std
 
 #endif  // ONEFLOW_CORE_COMMON_PROTOBUF_H_

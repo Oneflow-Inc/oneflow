@@ -28,6 +28,8 @@
 
 DECLARE_string(log_dir);
 
+#define CHECK_ISNULL(e) CHECK((e) == nullptr)
+
 namespace std {
 template<typename T0, typename T1>
 struct hash<std::pair<T0, T1>> {
