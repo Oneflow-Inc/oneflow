@@ -111,7 +111,7 @@ Kernel* CreateMatMulKernel(const KernelConf& kernel_conf) {
 
   return creators.at(
       GetHashKey(kernel_conf.op_attribute().op_conf().device_type(), kernel_conf.data_type()))();
-}  // namespace
+}
 
 REGISTER_KERNEL_CREATOR(OperatorConf::kMatmulConf, CreateMatMulKernel);
 
