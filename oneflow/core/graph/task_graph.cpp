@@ -15,8 +15,7 @@
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/operator/constant_op.h"
 #include "oneflow/core/graph/op_graph.h"
-#include "oneflow/core/graph/boxing_v2_task_node.h"
-#include "oneflow/core/register/tensor_partial_view.h"
+#include "oneflow/core/graph/boxing/local_peer_boxing_builder.h"
 
 namespace oneflow {
 
@@ -79,30 +78,6 @@ void ForEachDeviceSrcUntrainableNode(const std::vector<NormalForwardCompTaskNode
   for (NormalForwardCompTaskNode* fw_node : fw_nodes) {
     if (IsSourceTaskNode(fw_node) && !HasBwNode(fw_node)) { Handler(fw_node); }
   }
-}
-
-std::vector<TensorPartialView> GetTensorPartialView(const int64_t parallel_num,
-                                                    const SbpParallel& sbp_parallel,
-                                                    const BlobDesc& blob_desc) {
-  std::vector<Range> ranges(blob_desc.shape().NumAxes());
-  FOR_RANGE(int64_t, i, 0, blob_desc.shape().NumAxes()) {
-    ranges[i].mut_begin() = 0;
-    ranges[i].mut_end() = blob_desc.shape().At(i);
-  }
-  std::vector<TensorPartialView> views;
-  if (sbp_parallel.has_partial_sum_parallel() || sbp_parallel.has_broadcast_parallel()) {
-    FOR_RANGE(int64_t, i, 0, parallel_num) { views.emplace_back(ranges); }
-  } else if (sbp_parallel.has_split_parallel()) {
-    const int64_t axis = sbp_parallel.split_parallel().axis();
-    const BalancedSplitter bs(blob_desc.shape().At(axis), parallel_num);
-    FOR_RANGE(int64_t, i, 0, parallel_num) {
-      ranges[axis] = bs.At(i);
-      views.emplace_back(ranges);
-    }
-  } else {
-    UNIMPLEMENTED();
-  }
-  return views;
 }
 
 }  // namespace
@@ -660,38 +635,12 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV2) {
     const std::shared_ptr<const ParallelDesc>& src_parallel_desc = src_logical->parallel_desc();
     const std::shared_ptr<const ParallelDesc>& dst_parallel_desc = dst_logical->parallel_desc();
     const BlobDesc& blob_desc = Global<OpGraph>::Get()->GetLogicalBlobDesc(lbi);
-    if (src_parallel_desc->sorted_machine_ids().size() == 1
-        && dst_parallel_desc->sorted_machine_ids().size() == 1
-        && src_parallel_desc->sorted_machine_ids().at(0)
-               == dst_parallel_desc->sorted_machine_ids().at(0)
-        && (src_parallel_desc->device_type() == DeviceType::kGPU
-            || src_parallel_desc->device_type() == DeviceType::kCPU)
-        && dst_parallel_desc->device_type() == DeviceType::kGPU) {
-      const std::vector<TensorPartialView> src_views =
-          GetTensorPartialView(src_parallel_desc->parallel_num(), src_sbp_parallel, blob_desc);
-      const std::vector<TensorPartialView> dst_views =
-          GetTensorPartialView(dst_parallel_desc->parallel_num(), dst_sbp_parallel, blob_desc);
-      const BoxingV2TaskMode mode = src_sbp_parallel.has_partial_sum_parallel()
-                                        ? BoxingV2TaskMode::kBoxingV2TaskModeAdd
-                                        : kBoxingV2TaskModeCopy;
-      FOR_RANGE(int64_t, i, 0, dst_parallel_desc->parallel_num()) {
-        CompTaskNode* dst_comp_task_node = sorted_dst_comp_tasks.at(i);
-        BoxingV2TaskNode* copy_task_node = NewNode<BoxingV2TaskNode>();
-        copy_task_node->Init(lbi, dst_views.at(i), mode);
-        copy_task_node->set_machine_id(dst_comp_task_node->machine_id());
-        copy_task_node->set_thrd_id(Global<IDMgr>::Get()->GetGpuMixThrdId(
-            Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(dst_comp_task_node->thrd_id())));
-        copy_task_node->set_area_id(kBoundaryArea);
-        Connect<TaskNode>(copy_task_node, NewEdge(), dst_comp_task_node);
-        FOR_RANGE(int64_t, src_id, 0, src_parallel_desc->parallel_num()) {
-          TaskEdge* edge = NewEdge();
-          Connect<TaskNode>(sorted_src_comp_tasks.at(src_id), edge, copy_task_node);
-          copy_task_node->SetInDataEdgeView(edge, src_views.at(src_id));
-        }
-      }
-    } else {
-      UNIMPLEMENTED();
-    }
+
+    BasicBoxingBuilderCtx ctx(this, AllocateCpuThrdIdEvenly);
+
+    LocalPeerBoxingBuilder().Build(&ctx, sorted_src_comp_tasks, sorted_dst_comp_tasks,
+                                   *src_parallel_desc, *dst_parallel_desc, lbi, blob_desc,
+                                   src_sbp_parallel, dst_sbp_parallel);
   }
 }
 
