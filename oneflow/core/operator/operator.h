@@ -11,6 +11,7 @@
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/job/job_builder.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
