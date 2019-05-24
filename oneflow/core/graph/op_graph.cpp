@@ -274,11 +274,14 @@ void OpGraph::Init(const Job& job) {
 }
 
 void OpGraph::CheckIsDAG() const {
-  CHECK_ISNULL(FindFirstBackEdgeDstNode());
-  auto ForEachNext = [&](OpNode* node, const std::function<void(OpNode*)>& Handler) {
+  CHECK(!FindFirstNontrivialSCC());
+  auto ForEachIn = [&](OpNode* node, const std::function<void(OpNode*)>& Handler) {
+    ForEachDataAndCtrlInNode(node, Handler);
+  };
+  auto ForEachOut = [&](OpNode* node, const std::function<void(OpNode*)>& Handler) {
     ForEachDataAndCtrlOutNode(node, Handler);
   };
-  CHECK_ISNULL(FindFirstBackEdgeDstNode(source_nodes(), ForEachNext));
+  CHECK(!FindFirstNontrivialSCC(ForEachIn, ForEachOut));
 }
 
 void OpGraph::InitNodes(const Job& job) {
