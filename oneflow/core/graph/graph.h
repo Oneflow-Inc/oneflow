@@ -65,12 +65,14 @@ class Graph {
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachConnected,
       const std::function<void(const HashSet<NodeType*>&)>& Handler) const;
 
-  NodeType* FindFirstBackEdgeDstNode(
+  // find first nontrivial strongly connected component
+  std::unique_ptr<std::vector<NodeType*>> FindFirstNontrivialSCC(
       const std::list<NodeType*>& starts,
-      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachNext)
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode)
       const;
 
-  NodeType* FindFirstBackEdgeDstNode() const;
+  std::unique_ptr<std::vector<NodeType*>> FindFirstNontrivialSCC() const;
 
   // Getters
   std::list<NodeType*> source_nodes() const;
@@ -103,9 +105,10 @@ class Graph {
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachConnected,
       const std::function<void(const HashSet<NodeType*>&)>& Handler) const;
 
-  NodeType* FindFirstBackEdgeDstNode(
+  std::unique_ptr<std::vector<NodeType*>> FindFirstNontrivialSCC(
       const std::list<NodeType*>& starts,
-      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachNext,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
       size_t* node_cnt) const;
 
   std::vector<std::unique_ptr<NodeType>> nodes_;
@@ -284,50 +287,54 @@ void Graph<NodeType, EdgeType>::DfsForEachNode(
 }
 
 template<typename NodeType, typename EdgeType>
-NodeType* Graph<NodeType, EdgeType>::FindFirstBackEdgeDstNode() const {
-  if (nodes_.empty()) { return nullptr; }
-  const auto& starts = source_nodes();
-  if (starts.empty()) { return nodes_.at(0).get(); }
-  size_t node_cnt = 0;
-  auto ForEachNext = &NodeType::ForEachNodeOnOutEdge;
-  NodeType* ret = FindFirstBackEdgeDstNode(starts, ForEachNext, &node_cnt);
-  if (ret == nullptr && node_cnt != nodes_.size()) {
-    HashSet<NodeType*> visited_nodes;
-    BfsForEachNode(starts, ForEachNext, [&](NodeType* node) { visited_nodes.emplace(node); });
-    for (const auto& node : nodes_) {
-      if (visited_nodes.find(node.get()) == visited_nodes.end()) { return node.get(); }
-    }
-  }
-  return ret;
-}
-
-template<typename NodeType, typename EdgeType>
-NodeType* Graph<NodeType, EdgeType>::FindFirstBackEdgeDstNode(
+std::unique_ptr<std::vector<NodeType*>> Graph<NodeType, EdgeType>::FindFirstNontrivialSCC(
     const std::list<NodeType*>& starts,
-    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachNext)
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode)
     const {
   size_t node_cnt = 0;
-  return FindFirstBackEdgeDstNode(starts, ForEachNext, &node_cnt);
+  return FindFirstNontrivialSCC(starts, ForEachInNode, ForEachOutNode, &node_cnt);
 }
 
 template<typename NodeType, typename EdgeType>
-NodeType* Graph<NodeType, EdgeType>::FindFirstBackEdgeDstNode(
+std::unique_ptr<std::vector<NodeType*>> Graph<NodeType, EdgeType>::FindFirstNontrivialSCC() const {
+  if (nodes_.empty()) { return std::unique_ptr<std::vector<NodeType*>>(); }
+  auto&& starts = source_nodes();
+  if (starts.empty()) { starts = std::list<NodeType*>{nodes_.at(0).get()}; }
+  auto ForEachIn = &NodeType::ForEachNodeOnInEdge;
+  auto ForEachOut = &NodeType::ForEachNodeOnOutEdge;
+  size_t node_cnt = 0;
+  auto nontrivial_scc = FindFirstNontrivialSCC(starts, ForEachIn, ForEachOut, &node_cnt);
+  if (!nontrivial_scc && node_cnt != nodes_.size()) {
+    HashSet<NodeType*> visited_nodes;
+    BfsForEachNode(starts, ForEachOut, [&](NodeType* node) { visited_nodes.emplace(node); });
+    for (const auto& node : nodes_) {
+      if (visited_nodes.find(node.get()) == visited_nodes.end()) {
+        nontrivial_scc = FindFirstNontrivialSCC({node.get()}, ForEachIn, ForEachOut);
+        break;
+      }
+    }
+  }
+  return nontrivial_scc;
+}
+
+template<typename NodeType, typename EdgeType>
+std::unique_ptr<std::vector<NodeType*>> Graph<NodeType, EdgeType>::FindFirstNontrivialSCC(
     const std::list<NodeType*>& starts,
-    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachNext,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
     size_t* node_cnt) const {
-  NodeType* back_edge_dst_node = nullptr;
-  HashSet<NodeType*> visited_nodes;
-  *node_cnt = 0;
-  DfsForEachNode(starts, ForEachNext, [&](NodeType* node) {
-    ++*node_cnt;
-    if (back_edge_dst_node != nullptr) { return; }
-    visited_nodes.emplace(node);
-    ForEachNext(node, [&](NodeType* next_node) {
-      if (back_edge_dst_node != nullptr) { return; }
-      if (visited_nodes.find(next_node) != visited_nodes.end()) { back_edge_dst_node = next_node; }
-    });
-  });
-  return back_edge_dst_node;
+  std::stack<NodeType*> stack;
+  DfsForEachNode(starts, ForEachOutNode, [&](NodeType* node) { stack.push(node); });
+  *node_cnt = stack.size();
+  while (stack.empty() == false) {
+    NodeType* cur_node = stack.top();
+    stack.pop();
+    auto ret = std::make_unique<std::vector<NodeType*>>();
+    DfsForEachNode({cur_node}, ForEachInNode, [&](NodeType* node) { ret->push_back(node); });
+    if (ret->size() > 1) { return ret; }
+  }
+  return std::unique_ptr<std::vector<NodeType*>>();
 }
 
 template<typename NodeType, typename EdgeType>
