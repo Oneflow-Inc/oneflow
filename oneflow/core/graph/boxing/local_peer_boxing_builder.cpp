@@ -7,6 +7,11 @@ namespace oneflow {
 
 namespace {
 
+bool IsDeviceTypeCPUOrGPU(const ParallelDesc& parallel_desc) {
+  return parallel_desc.device_type() == DeviceType::kCPU
+         || parallel_desc.device_type() == DeviceType::kGPU;
+}
+
 std::vector<TensorPartialView> GetTensorPartialView(const int64_t parallel_num,
                                                     const SbpParallel& sbp_parallel,
                                                     const BlobDesc& blob_desc) {
@@ -47,14 +52,8 @@ BoxingBuilderStatus LocalPeerBoxingBuilder::Build(
       != dst_parallel_desc.sorted_machine_ids().at(0)) {
     return BoxingBuilderStatus::MakeStatusError();
   }
-  if (src_parallel_desc.device_type() != DeviceType::kGPU
-      && src_parallel_desc.device_type() != DeviceType::kCPU) {
-    return BoxingBuilderStatus::MakeStatusError();
-  }
-  if (dst_parallel_desc.device_type() != DeviceType::kGPU
-      && dst_parallel_desc.device_type() != DeviceType::kCPU) {
-    return BoxingBuilderStatus::MakeStatusError();
-  }
+  if (!IsDeviceTypeCPUOrGPU(src_parallel_desc)) { return BoxingBuilderStatus::MakeStatusError(); }
+  if (!IsDeviceTypeCPUOrGPU(dst_parallel_desc)) { return BoxingBuilderStatus::MakeStatusError(); }
 
   std::vector<TaskNode*> from_nodes;
   if (src_parallel_desc.device_type() == DeviceType::kGPU
