@@ -29,7 +29,7 @@ void CheckMemoryCopyNdDesc(const MemoryCopyNdDesc& desc) {
 
 }  // namespace
 
-MemoryCopyNdDesc MemoryCopyNdDesc::CompressDims() const {
+MemoryCopyNdDesc MemoryCopyNdDesc::CreateDimReducedDesc() const {
   MemoryCopyNdDesc compressed;
   compressed.dst_ptr = dst_ptr;
   compressed.src_ptr = src_ptr;

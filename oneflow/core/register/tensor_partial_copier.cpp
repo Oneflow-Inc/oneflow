@@ -33,7 +33,7 @@ TensorPartialCopier::TensorPartialCopier(const TensorPartialView& dst_view,
   raw_copy_desc.extent = intersection.shape();
   raw_copy_desc.dst_ptr = nullptr;
   raw_copy_desc.src_ptr = nullptr;
-  memory_copy_nd_desc_ = raw_copy_desc.CompressDims();
+  memory_copy_nd_desc_ = raw_copy_desc.CreateDimReducedDesc();
 }
 
 void TensorPartialCopier::Copy(DeviceCtx* ctx, const MemoryCopier& copier, Blob* dst_blob,

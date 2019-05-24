@@ -11,15 +11,17 @@ bool BoxingBuilderStatus::ok() const { return ok_; }
 
 const std::string& BoxingBuilderStatus::msg() const { return msg_; }
 
-BoxingBuilderStatus MakeStatusOK() { return BoxingBuilderStatus(true, ""); }
+BoxingBuilderStatus BoxingBuilderStatus::MakeStatusOK() { return BoxingBuilderStatus(true, ""); }
 
-BoxingBuilderStatus MakeStatusOK(std::string msg) {
+BoxingBuilderStatus BoxingBuilderStatus::MakeStatusOK(std::string msg) {
   return BoxingBuilderStatus(true, std::move(msg));
 }
 
-static BoxingBuilderStatus MakeStatusError() { return BoxingBuilderStatus(false, ""); }
+BoxingBuilderStatus BoxingBuilderStatus::MakeStatusError() {
+  return BoxingBuilderStatus(false, "");
+}
 
-BoxingBuilderStatus MakeStatusError(std::string msg) {
+BoxingBuilderStatus BoxingBuilderStatus::MakeStatusError(std::string msg) {
   return BoxingBuilderStatus(false, std::move(msg));
 }
 
