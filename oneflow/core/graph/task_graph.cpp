@@ -614,11 +614,12 @@ void TaskGraph::SetTaskRegstInplaceInfo(const OpBlobArgList& obas,
 
 void TaskGraph::ForEachDeviceNodes(
     const std::function<void(const HashSet<TaskNode*>& dev_nodes)>& Handler) const {
-  HashMap<int32_t, HashSet<TaskNode*>> device_type2nodes;
+  HashMap<std::pair<int64_t, int64_t>, HashSet<TaskNode*>> global_dev_phy_id2nodes;
   ForEachNode([&](TaskNode* task_node) {
-    CHECK(device_type2nodes[task_node->device_type()].emplace(task_node).second);
+    int64_t dev_phy_id = Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(task_node->thrd_id());
+    global_dev_phy_id2nodes[{task_node->machine_id(), dev_phy_id}].emplace(task_node);
   });
-  for (const auto& pair : device_type2nodes) { Handler(pair.second); }
+  for (const auto& pair : global_dev_phy_id2nodes) { Handler(pair.second); }
 }
 
 void TaskGraph::EnableInplaceMemSharing(
