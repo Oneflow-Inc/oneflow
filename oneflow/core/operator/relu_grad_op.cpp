@@ -16,6 +16,13 @@ void ReluGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   *GetBlobDesc4BnInOp("dx") = *GetBlobDesc4BnInOp("y");
 }
 
+void ReluGradOp::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder().Split("y", 0).Split("dy", 0).Split("dx", 0).Build(
+      sbp_sig_list->mutable_sbp_signature()->Add());
+}
+
 REGISTER_OP(OperatorConf::kReluGradConf, ReluGradOp);
 
 }  // namespace oneflow

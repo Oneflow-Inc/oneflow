@@ -1,5 +1,4 @@
 #include "oneflow/core/operator/relu_op.h"
-#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
