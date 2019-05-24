@@ -21,7 +21,6 @@ void CheckSubGraph(const HashSet<const InplaceLbiNode*>& nodes) {
     if (dynamic_cast<const UpdateInplaceLbiNode*>(node) != nullptr) {
       CHECK_EQ(++updt_node_cnt, 1);
       CHECK_NOTNULL(dynamic_cast<const SourceOpInplaceLbiNode*>(node->SoleInEdge()->src_node()));
-      CHECK(node->SoleInEdge()->op().op_conf().has_variable_conf());
     }
   }
 }
