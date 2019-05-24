@@ -612,10 +612,11 @@ void TaskGraph::SetTaskRegstInplaceInfo(const OpBlobArgList& obas,
   });
 }
 
-void TaskGraph::ForEachDeviceNodes(
+void TaskGraph::ForEachGpuDeviceNodes(
     const std::function<void(const HashSet<TaskNode*>& dev_nodes)>& Handler) const {
   HashMap<std::pair<int64_t, int64_t>, HashSet<TaskNode*>> global_dev_phy_id2nodes;
   ForEachNode([&](TaskNode* task_node) {
+    if (task_node->device_type() != DeviceType::kGPU) { return; }
     int64_t dev_phy_id = Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(task_node->thrd_id());
     global_dev_phy_id2nodes[{task_node->machine_id(), dev_phy_id}].emplace(task_node);
   });
@@ -625,8 +626,7 @@ void TaskGraph::ForEachDeviceNodes(
 void TaskGraph::EnableInplaceMemSharing(
     const std::function<bool(const LogicalBlobId&, const std::string&)>&
         IsLbiAllConsumersReachableToOpName) {
-  ForEachDeviceNodes([&](const HashSet<TaskNode*>& dev_nodes) {
-    if ((*dev_nodes.begin())->device_type() != DeviceType::kGPU) { return; }
+  ForEachGpuDeviceNodes([&](const HashSet<TaskNode*>& dev_nodes) {
     OpBlobArgList safe_inplace_obas;
     GetSafeInplaceOpBlobArgList(&safe_inplace_obas, dev_nodes, IsLbiAllConsumersReachableToOpName);
     SetTaskRegstInplaceInfo(safe_inplace_obas, dev_nodes);

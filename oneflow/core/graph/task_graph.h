@@ -94,7 +94,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
           IsLbiConsumersReachableToOpName) const;
   void SetTaskRegstInplaceInfo(const OpBlobArgList& obas,
                                const HashSet<TaskNode*>& dev_nodes) const;
-  void ForEachDeviceNodes(
+  void ForEachGpuDeviceNodes(
       const std::function<void(const HashSet<TaskNode*>& dev_nodes)>& Handler) const;
 
   std::unique_ptr<const LogicalGraph> logical_gph_;
