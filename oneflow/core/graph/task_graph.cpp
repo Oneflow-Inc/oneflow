@@ -568,7 +568,7 @@ void TaskGraph::GetInplaceOpBlobArgList(
         }
       }
       if (ibn != "" && IsInplaceAllowed(task_node, {ibn, obn}, TaskNode4OpName)) {
-        *inplace_obas->mutable_oba()->Add() = GenOpBlobArg(op.op_name(), ibn);
+        *inplace_obas->mutable_oba()->Add() = GenOpBlobArg(op.op_name(), obn);
       }
     }
   }
