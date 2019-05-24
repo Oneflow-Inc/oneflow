@@ -114,13 +114,13 @@ bool IsOtherIbnBoundToOneOfLbis(const HashSet<LogicalBlobId>& lbis, const Inplac
     if (ibn != edge->ibn() && lbis.find(op.BnInOp2Lbi(ibn)) != lbis.end()) { return true; }
   }
   return false;
-};
+}
 
 void RemoveUnconnectedNodes(HashSet<const InplaceLbiNode*>* nodes,
                             const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge) {
   HashSet<const InplaceLbiNode*> cur_disabled_nodes;
   GetUnconnectedNodes(*nodes, IsValidEdge, &cur_disabled_nodes);
-  nodes->erase(cur_disabled_nodes.begin(), cur_disabled_nodes.end());
+  for (const auto* node : cur_disabled_nodes) { nodes->erase(node); }
 }
 
 }  // namespace
