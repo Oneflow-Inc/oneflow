@@ -48,8 +48,8 @@ void ConvDataGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
     CHECK(conv_op_ctx->cudnn_conv_algo_ctx.bwd_data_algo_found);
     BlobDesc* cudnn_buf = GetBlobDesc4BnInOp("buf");
     cudnn_buf->set_data_type(DataType::kChar);
-    cudnn_buf->mut_shape() =
-        Shape({static_cast<int64_t>(conv_op_ctx->cudnn_conv_algo_ctx.bwd_data_ws_size)});
+    size_t buf_size = std::max(size_t(1), conv_op_ctx->cudnn_conv_algo_ctx.bwd_data_ws_size);
+    cudnn_buf->mut_shape() = Shape({static_cast<int64_t>(buf_size)});
 #else
     UNIMPLEMENTED();
 #endif
