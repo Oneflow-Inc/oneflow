@@ -22,8 +22,9 @@ void RandomFillBlob(DeviceCtx* ctx, DeviceType device_type, const InitializerCon
 }  // namespace
 
 template<DeviceType device_type>
-void DecodeRandomKernel<device_type>::VirtualKernelInit(const ParallelContext*) {
-  gen_.reset(new std::mt19937(this->kernel_conf().decode_random_conf().random_seed()));
+void DecodeRandomKernel<device_type>::VirtualKernelInit(const ParallelContext* ctx) {
+  gen_.reset(new std::mt19937(this->kernel_conf().decode_random_conf().random_seed()
+                              + ctx->parallel_id()));
   dis_.reset(new std::uniform_int_distribution<uint32_t>());
   is_init_ = false;
 }
@@ -37,11 +38,8 @@ template<DeviceType device_type>
 void DecodeRandomKernel<device_type>::Forward(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const DecodeRandomOpConf& conf = this->op_conf().decode_random_conf();
-  if (is_init_ == false) {
-    RandomFillBlob(ctx.device_ctx, device_type, conf.data_initializer(), this->GenNextRandomSeed(),
-                   BnInOp2Blob("out"));
-    is_init_ = true;
-  }
+  RandomFillBlob(ctx.device_ctx, device_type, conf.data_initializer(), this->GenNextRandomSeed(),
+                 BnInOp2Blob("out"));
 }
 
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kDecodeRandomConf, DecodeRandomKernel);

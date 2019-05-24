@@ -144,6 +144,28 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
   *(plan->mutable_net_topo()) = net_topo;
 }
 
+#ifdef WITH_CUDA
+
+void EnableCudaPeerAccess() {
+  int32_t saved_dev_id;
+  CudaCheck(cudaGetDevice(&saved_dev_id));
+  int32_t device_count;
+  CudaCheck(cudaGetDeviceCount(&device_count));
+  FOR_RANGE(int32_t, dev, 0, device_count) {
+    CudaCheck(cudaSetDevice(dev));
+    FOR_RANGE(int32_t, peer, 0, device_count) {
+      int32_t can_access_peer;
+      CudaCheck(cudaDeviceCanAccessPeer(&can_access_peer, dev, peer));
+      if (can_access_peer == 1) { CudaCheck(cudaDeviceEnablePeerAccess(peer, 0)); }
+    }
+  }
+  CudaCheck(cudaSetDevice(saved_dev_id));
+}
+
+void InitialCudaDevices() { EnableCudaPeerAccess(); }
+
+#endif
+
 }  // namespace
 
 class Oneflow final {
@@ -163,6 +185,9 @@ Oneflow::Oneflow(const std::string& job_conf_filepath) {
   ctrl_server_.reset(new CtrlServer());
   Global<CtrlClient>::New();
   OF_BARRIER();
+#ifdef WITH_CUDA
+  InitialCudaDevices();
+#endif
   int64_t this_mchn_id = Global<JobDesc>::Get()->GetMachineId(ctrl_server_->this_machine_addr());
   Global<MachineCtx>::New(this_mchn_id);
   const MachineCtx* machine_ctx = Global<MachineCtx>::Get();

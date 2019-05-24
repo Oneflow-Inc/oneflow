@@ -14,6 +14,8 @@
 #include "oneflow/core/graph/reduce_identity_task_node.h"
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/operator/constant_op.h"
+#include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/graph/boxing/local_peer_boxing_builder.h"
 
 namespace oneflow {
 
@@ -592,6 +594,15 @@ void TaskGraph::SetAreaIdForNewNodes(const LogicalNode* src_logical,
   void TaskGraph::method_name BLD_SUB_TSK_GPH_MTHD_ARGS()
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
+  BldSubTskGphMthd method = Global<JobDesc>::Get()->use_boxing_v2()
+                                ? &TaskGraph::BldSubTskGphByBoxingV2
+                                : &TaskGraph::BldSubTskGphByBoxingV1;
+  (this->*method)(src_logical, dst_logical, sorted_src_comp_tasks, sorted_dst_comp_tasks,
+                  logical2sorted_in_box, logical2sorted_out_box, MutBufTask,
+                  AllocateCpuThrdIdEvenly);
+}
+
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV1) {
   std::vector<TaskNode*>* sorted_out_box = nullptr;
   if (logical2sorted_out_box->find(src_logical) == logical2sorted_out_box->end()) {
     BuildOutBoxing(src_logical, sorted_src_comp_tasks, &((*logical2sorted_out_box)[src_logical]),
@@ -608,6 +619,27 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
 
   for (TaskNode* src_box : *sorted_out_box) {
     for (TaskNode* dst_box : *sorted_in_box) { ConnectWithCopyCommNetIfNeed(src_box, dst_box); }
+  }
+}
+
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV2) {
+  const auto connected_edge_it = std::find_if(
+      src_logical->out_edges().cbegin(), src_logical->out_edges().cend(),
+      [&](const LogicalEdge* edge) -> bool { return edge->dst_node() == dst_logical; });
+  CHECK(connected_edge_it != src_logical->out_edges().cend());
+  for (const LogicalBlobId& lbi : (*connected_edge_it)->lbis()) {
+    const SbpParallel& src_sbp_parallel =
+        Global<OpGraph>::Get()->GetSbpParallel(src_logical->SoleOp()->op_name(), lbi);
+    const SbpParallel& dst_sbp_parallel =
+        Global<OpGraph>::Get()->GetSbpParallel(dst_logical->SoleOp()->op_name(), lbi);
+    const std::shared_ptr<const ParallelDesc>& src_parallel_desc = src_logical->parallel_desc();
+    const std::shared_ptr<const ParallelDesc>& dst_parallel_desc = dst_logical->parallel_desc();
+    const BlobDesc& blob_desc = Global<OpGraph>::Get()->GetLogicalBlobDesc(lbi);
+    BasicBoxingBuilderCtx ctx(this, AllocateCpuThrdIdEvenly);
+    BoxingBuilderStatus status = LocalPeerBoxingBuilder().Build(
+        &ctx, sorted_src_comp_tasks, sorted_dst_comp_tasks, *src_parallel_desc, *dst_parallel_desc,
+        lbi, blob_desc, src_sbp_parallel, dst_sbp_parallel);
+    CHECK(status.ok());
   }
 }
 

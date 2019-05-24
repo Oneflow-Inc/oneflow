@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_COMMON_RANGE_H_
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/range.pb.h"
 
 namespace oneflow {
 
@@ -12,8 +13,10 @@ class Range final {
   ~Range() = default;
 
   Range(int64_t begin, int64_t end) : begin_(begin), end_(end) {}
+  explicit Range(const RangeProto& range_proto);
 
   bool operator==(const Range& rhs) const { return begin_ == rhs.begin_ && end_ == rhs.end_; }
+  bool operator!=(const Range& rhs) const { return !(*this == rhs); }
 
   int64_t begin() const { return begin_; }
   int64_t end() const { return end_; }
@@ -22,6 +25,8 @@ class Range final {
   int64_t& mut_end() { return end_; }
 
   int64_t size() const { return end_ - begin_; }
+
+  void ToProto(RangeProto* ret) const;
 
  private:
   int64_t begin_;

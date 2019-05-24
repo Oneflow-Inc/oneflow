@@ -6,8 +6,8 @@ import "oneflow/core/common/data_type.proto";
 import "oneflow/core/record/image.proto";
 import "oneflow/core/record/record.proto";
 import "oneflow/core/job/resource.proto";
-import "oneflow/core/job/sbp_parallel.proto";
 import "oneflow/core/register/logical_blob_id.proto";
+import "oneflow/core/register/tensor_partial_view.proto";
 
 enum ActivationType {
   kNone = 0;
@@ -852,6 +852,7 @@ message DecodeRandomOpConf {
   required ShapeProto shape = 2;
   required DataType data_type = 3;
   required InitializerConf data_initializer = 4;
+  optional int64 split_axis = 5 [default = 0];
 }
 
 message DefineTestBlobOpConf {
@@ -1352,6 +1353,25 @@ message IdentityOpConf {
   required string out = 2;
 }
 
+message BlobDumpOpConf {
+  required string in = 1;
+  optional string dir = 2;
+}
+
+message BoxingV2Conf {
+  required LogicalBlobId lbi = 1;
+  repeated TensorPartialViewProto in_view = 2;
+  required TensorPartialViewProto out_view = 3;
+}
+
+message BoxingV2CopyOpConf {
+  required BoxingV2Conf boxing_conf = 1;
+}
+
+message BoxingV2AddOpConf {
+  required BoxingV2Conf boxing_conf = 1;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1396,6 +1416,8 @@ message OperatorConf {
     ShapeElemCntOpConf shape_elem_cnt_conf = 132;
     AccOpConf acc_conf = 133;
     AllReduceFacadeOpConf all_reduce_facade_conf = 134;
+    BoxingV2CopyOpConf boxing_v2_copy_conf = 135;
+    BoxingV2AddOpConf boxing_v2_add_conf = 136;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
@@ -1481,6 +1503,7 @@ message OperatorConf {
     TanHGradOpConf tanh_grad_conf = 288;
     PoolingGradOpConf pooling_grad_conf = 289;
     IdentityOpConf identity_conf = 290;
+    BlobDumpOpConf blob_dump_conf = 291;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

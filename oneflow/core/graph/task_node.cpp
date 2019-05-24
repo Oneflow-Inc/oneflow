@@ -515,5 +515,6 @@ std::map<TaskType, std::string> task_type2color = {{kInvalid, "0"},
                                                    {kReduceIdentity, "2"},
                                                    {kAcc, "5"},
                                                    {kOptimizer, "12"},
-                                                   {kEveryNth, "2"}};
+                                                   {kEveryNth, "2"},
+                                                   {kBoxingV2, "2"}};
 }  // namespace oneflow

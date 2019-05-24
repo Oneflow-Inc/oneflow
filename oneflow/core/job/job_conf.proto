@@ -100,6 +100,8 @@ message Config {
   optional float all_reduce_group_size_warmup = 148 [default = 2];
   optional bool all_reduce_fp16 = 149 [default = true];
 
+  optional bool use_boxing_v2 = 150 [default = false];
+
   oneof JobType {
     TrainConf train_conf = 200;
     PredictConf predict_conf = 201;
