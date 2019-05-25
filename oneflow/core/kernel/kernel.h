@@ -276,4 +276,20 @@ std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext*, const Kern
   REGISTER_KERNEL_CREATOR(op_type_case, CreateKernel);                                  \
   }
 
+#define ADD_GPU_HALF_KENRLE_CREATOR(op_type_case, kernel_class, data_type_seq)        \
+  namespace {                                                                         \
+                                                                                      \
+  Kernel* OF_PP_CAT(CreateKernel, __LINE__)(const KernelConf& kernel_conf) {          \
+    static const HashMap<std::string, std::function<Kernel*()>> creators = {          \
+        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY, (kernel_class),   \
+                                         DEVICE_TYPE_SEQ, data_type_seq)              \
+            MAKE_KERNEL_CREATOR_ENTRY(kernel_class, DeviceType::kGPU,                 \
+                                      (float16, DataType::kFloat16))};                \
+    return creators.at(GetHashKey(kernel_conf.op_attribute().op_conf().device_type(), \
+                                  kernel_conf.data_type()))();                        \
+  }                                                                                   \
+                                                                                      \
+  REGISTER_KERNEL_CREATOR(op_type_case, OF_PP_CAT(CreateKernel, __LINE__));           \
+  }
+
 #endif  // ONEFLOW_CORE_KERNEL_KERNEL_H_

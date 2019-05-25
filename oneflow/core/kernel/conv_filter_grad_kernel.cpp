@@ -25,7 +25,7 @@ struct ConvFilterGradKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConvFilterGradConf, ConvFilterGradKernel,
-                           FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
+ADD_GPU_HALF_KENRLE_CREATOR(OperatorConf::kConvFilterGradConf, ConvFilterGradKernel,
+                            FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

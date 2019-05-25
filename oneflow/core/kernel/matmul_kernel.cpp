@@ -101,20 +101,6 @@ void MatmulKernel<device_type, T>::CalcBatchMatMul(DeviceCtx* ctx, const Blob* a
                                             c_dptr, buf_dptr);
 }
 
-namespace {
-
-Kernel* CreateMatMulKernel(const KernelConf& kernel_conf) {
-  static const HashMap<std::string, std::function<Kernel*()>> creators = {
-      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY, (MatmulKernel), DEVICE_TYPE_SEQ,
-                                       FLOATING_DATA_TYPE_SEQ)
-          MAKE_KERNEL_CREATOR_ENTRY(MatmulKernel, DeviceType::kGPU, (float16, DataType::kFloat16))};
-
-  return creators.at(
-      GetHashKey(kernel_conf.op_attribute().op_conf().device_type(), kernel_conf.data_type()))();
-}
-
-REGISTER_KERNEL_CREATOR(OperatorConf::kMatmulConf, CreateMatMulKernel);
-
-}  // namespace
+ADD_GPU_HALF_KENRLE_CREATOR(OperatorConf::kMatmulConf, MatmulKernel, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

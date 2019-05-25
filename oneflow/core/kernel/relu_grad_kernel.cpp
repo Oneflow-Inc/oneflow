@@ -12,7 +12,6 @@ void ReluGradKernel<device_type, T>::ForwardDataContent(
       BnInOp2Blob("dy")->dptr<T>(), BnInOp2Blob("dx")->mut_dptr<T>());
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReluGradConf, ReluGradKernel,
-                           FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
+ADD_GPU_HALF_KENRLE_CREATOR(OperatorConf::kReluGradConf, ReluGradKernel, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
