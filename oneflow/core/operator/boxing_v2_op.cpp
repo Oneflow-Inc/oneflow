@@ -25,8 +25,8 @@ const BoxingV2Conf& BoxingV2Op::GetCustomizedBoxingConf() const {
 void BoxingV2Op::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx) const {
   const BoxingV2Conf& boxing_conf = GetCustomizedBoxingConf();
-  const PbRpf<TensorPartialViewProto>& in_view_proto = boxing_conf.in_view();
-  const TensorPartialViewProto& out_view_proto = boxing_conf.out_view();
+  const PbRpf<TensorSliceViewProto>& in_view_proto = boxing_conf.in_view();
+  const TensorSliceViewProto& out_view_proto = boxing_conf.out_view();
   const BlobDesc* in_0 = GetBlobDesc4BnInOp(GenRepeatedBn("in", 0));
   const DataType data_type = in_0->data_type();
   FOR_RANGE(int64_t, i, 1, input_bns().size()) {
