@@ -1,6 +1,6 @@
 #include "oneflow/core/operator/boxing_v2_op.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/register/tensor_partial_view.h"
+#include "oneflow/core/register/tensor_slice_view.h"
 
 namespace oneflow {
 
@@ -35,10 +35,10 @@ void BoxingV2Op::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   }
   FOR_RANGE(int64_t, i, 0, input_bns().size()) {
     const BlobDesc* in_i = GetBlobDesc4BnInOp(GenRepeatedBn("in", i));
-    const TensorPartialView in_i_view(in_view_proto.Get(i));
+    const TensorSliceView in_i_view(in_view_proto.Get(i));
     CHECK_EQ(in_i->shape(), in_i_view.shape());
   }
-  const TensorPartialView out_view(out_view_proto);
+  const TensorSliceView out_view(out_view_proto);
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   out->set_data_type(data_type);
   out->mut_shape() = out_view.shape();

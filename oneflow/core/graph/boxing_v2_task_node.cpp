@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-void BoxingV2TaskNode::Init(const LogicalBlobId& lbi, const TensorPartialView& out_view,
+void BoxingV2TaskNode::Init(const LogicalBlobId& lbi, const TensorSliceView& out_view,
                             const BoxingV2TaskMode mode) {
   lbi_ = lbi;
   out_view_ = out_view;
@@ -48,7 +48,7 @@ void BoxingV2TaskNode::BuildExecGphAndRegst() {
 
 void BoxingV2TaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataRegstTimeShape(); }
 
-void BoxingV2TaskNode::SetInDataEdgeView(const TaskEdge* edge, const TensorPartialView& view) {
+void BoxingV2TaskNode::SetInDataEdgeView(const TaskEdge* edge, const TensorSliceView& view) {
   CHECK(in_data_edge2view_.emplace(edge, view).second);
   ordered_in_data_edges_.push_back(edge);
 }

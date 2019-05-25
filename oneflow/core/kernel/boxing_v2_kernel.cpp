@@ -8,11 +8,11 @@ template<DeviceType device_type, typename T>
 void BoxingV2Kernel<device_type, T>::VirtualKernelInit(const ParallelContext*) {
   memory_copier_.reset(NewDefaultMemoryCopier(device_type));
   const BoxingV2Conf& conf = GetCustomizedBoxingConf();
-  const TensorPartialView dst_view(conf.out_view());
-  for (const TensorPartialViewProto& src_view_proto : conf.in_view()) {
-    const TensorPartialView src_view(src_view_proto);
-    tensor_partial_copier_vec_.emplace_back(
-        new TensorPartialCopier(dst_view, src_view, this->kernel_conf().data_type()));
+  const TensorSliceView dst_view(conf.out_view());
+  for (const TensorSliceViewProto& src_view_proto : conf.in_view()) {
+    const TensorSliceView src_view(src_view_proto);
+    tensor_slice_copier_vec_.emplace_back(
+        new TensorSliceCopier(dst_view, src_view, this->kernel_conf().data_type()));
   }
 }
 
@@ -22,9 +22,9 @@ MemoryCopier* BoxingV2Kernel<device_type, T>::memory_copier() const {
 }
 
 template<DeviceType device_type, typename T>
-const std::vector<std::shared_ptr<TensorPartialCopier>>&
-BoxingV2Kernel<device_type, T>::tensor_partial_copier_vec() const {
-  return tensor_partial_copier_vec_;
+const std::vector<std::shared_ptr<TensorSliceCopier>>&
+BoxingV2Kernel<device_type, T>::tensor_slice_copier_vec() const {
+  return tensor_slice_copier_vec_;
 }
 
 template<DeviceType device_type, typename T>
@@ -38,8 +38,7 @@ void BoxingV2CopyKernel<device_type, T>::ForwardDataContent(
   Blob* out = BnInOp2Blob("out");
   FOR_RANGE(int64_t, i, 0, this->op_attribute().input_bns().size()) {
     const Blob* in_i = BnInOp2Blob(GenRepeatedBn("in", i));
-    this->tensor_partial_copier_vec().at(i)->Copy(ctx.device_ctx, *this->memory_copier(), out,
-                                                  in_i);
+    this->tensor_slice_copier_vec().at(i)->Copy(ctx.device_ctx, *this->memory_copier(), out, in_i);
   }
 }
 
@@ -56,11 +55,11 @@ void BoxingV2AddKernel<device_type, T>::ForwardDataContent(
   FOR_RANGE(int64_t, i, 0, this->op_attribute().input_bns().size()) {
     const Blob* in_i = BnInOp2Blob(GenRepeatedBn("in", i));
     if (i == 0) {
-      this->tensor_partial_copier_vec().at(i)->Copy(ctx.device_ctx, *this->memory_copier(), out,
-                                                    in_i);
+      this->tensor_slice_copier_vec().at(i)->Copy(ctx.device_ctx, *this->memory_copier(), out,
+                                                  in_i);
     } else {
-      this->tensor_partial_copier_vec().at(i)->Copy(ctx.device_ctx, *this->memory_copier(), buf,
-                                                    in_i);
+      this->tensor_slice_copier_vec().at(i)->Copy(ctx.device_ctx, *this->memory_copier(), buf,
+                                                  in_i);
       Addition<device_type, T>(ctx.device_ctx, out, out, buf);
     }
   }

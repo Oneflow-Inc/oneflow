@@ -7,7 +7,7 @@ import "oneflow/core/record/image.proto";
 import "oneflow/core/record/record.proto";
 import "oneflow/core/job/resource.proto";
 import "oneflow/core/register/logical_blob_id.proto";
-import "oneflow/core/register/tensor_partial_view.proto";
+import "oneflow/core/register/tensor_slice_view.proto";
 
 enum ActivationType {
   kNone = 0;
@@ -1360,8 +1360,8 @@ message BlobDumpOpConf {
 
 message BoxingV2Conf {
   required LogicalBlobId lbi = 1;
-  repeated TensorPartialViewProto in_view = 2;
-  required TensorPartialViewProto out_view = 3;
+  repeated TensorSliceViewProto in_view = 2;
+  required TensorSliceViewProto out_view = 3;
 }
 
 message BoxingV2CopyOpConf {

@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_KERNEL_BOXING_V2_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/register/tensor_partial_copier.h"
+#include "oneflow/core/register/tensor_slice_copier.h"
 #include "oneflow/core/device/memory_copier.h"
 
 namespace oneflow {
@@ -17,12 +17,12 @@ class BoxingV2Kernel : public KernelIf<device_type> {
  protected:
   virtual const BoxingV2Conf& GetCustomizedBoxingConf() const = 0;
   MemoryCopier* memory_copier() const;
-  const std::vector<std::shared_ptr<TensorPartialCopier>>& tensor_partial_copier_vec() const;
+  const std::vector<std::shared_ptr<TensorSliceCopier>>& tensor_slice_copier_vec() const;
 
  private:
   void VirtualKernelInit(const ParallelContext*);
 
-  std::vector<std::shared_ptr<TensorPartialCopier>> tensor_partial_copier_vec_;
+  std::vector<std::shared_ptr<TensorSliceCopier>> tensor_slice_copier_vec_;
   std::unique_ptr<MemoryCopier> memory_copier_;
 };
 

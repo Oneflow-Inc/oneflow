@@ -1,5 +1,5 @@
 #include "oneflow/core/graph/boxing/local_peer_boxing_builder.h"
-#include "oneflow/core/register/tensor_partial_view.h"
+#include "oneflow/core/register/tensor_slice_view.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/graph/boxing_v2_task_node.h"
 
@@ -12,15 +12,15 @@ bool IsDeviceTypeCPUOrGPU(const ParallelDesc& parallel_desc) {
          || parallel_desc.device_type() == DeviceType::kGPU;
 }
 
-std::vector<TensorPartialView> GetTensorPartialView(const int64_t parallel_num,
-                                                    const SbpParallel& sbp_parallel,
-                                                    const BlobDesc& blob_desc) {
+std::vector<TensorSliceView> GetTensorSliceView(const int64_t parallel_num,
+                                                const SbpParallel& sbp_parallel,
+                                                const BlobDesc& blob_desc) {
   std::vector<Range> ranges(blob_desc.shape().NumAxes());
   FOR_RANGE(int64_t, i, 0, blob_desc.shape().NumAxes()) {
     ranges[i].mut_begin() = 0;
     ranges[i].mut_end() = blob_desc.shape().At(i);
   }
-  std::vector<TensorPartialView> views;
+  std::vector<TensorSliceView> views;
   if (sbp_parallel.has_partial_sum_parallel() || sbp_parallel.has_broadcast_parallel()) {
     FOR_RANGE(int64_t, i, 0, parallel_num) { views.emplace_back(ranges); }
   } else if (sbp_parallel.has_split_parallel()) {
@@ -81,10 +81,10 @@ BoxingBuilderStatus LocalPeerBoxingBuilder::Build(
       UNIMPLEMENTED();
     }
   };
-  const std::vector<TensorPartialView> src_views =
-      GetTensorPartialView(src_parallel_desc.parallel_num(), src_sbp_parallel, logical_blob_desc);
-  const std::vector<TensorPartialView> dst_views =
-      GetTensorPartialView(dst_parallel_desc.parallel_num(), dst_sbp_parallel, logical_blob_desc);
+  const std::vector<TensorSliceView> src_views =
+      GetTensorSliceView(src_parallel_desc.parallel_num(), src_sbp_parallel, logical_blob_desc);
+  const std::vector<TensorSliceView> dst_views =
+      GetTensorSliceView(dst_parallel_desc.parallel_num(), dst_sbp_parallel, logical_blob_desc);
   const BoxingV2TaskMode mode = src_sbp_parallel.has_partial_sum_parallel()
                                     ? BoxingV2TaskMode::kBoxingV2TaskModeAdd
                                     : kBoxingV2TaskModeCopy;
