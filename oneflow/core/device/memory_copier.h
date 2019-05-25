@@ -31,25 +31,12 @@ class MemoryCopier {
  protected:
   virtual void Copy1D(DeviceCtx* ctx, void* dst, const void* src, size_t count) const = 0;
   virtual void Copy2D(DeviceCtx* ctx, void* dst, size_t dst_pitch, const void* src,
-                      size_t src_pitch, size_t width, size_t height) const = 0;
-  virtual void Copy3D(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const = 0;
-  virtual void CopyND(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const = 0;
+                      size_t src_pitch, size_t width, size_t height) const;
+  virtual void Copy3D(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const;
+  virtual void CopyND(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const;
 };
 
-class BaseMemoryCopier : virtual public MemoryCopier {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(BaseMemoryCopier)
-  BaseMemoryCopier() = default;
-  ~BaseMemoryCopier() override = default;
-
- protected:
-  void Copy2D(DeviceCtx* ctx, void* dst, size_t dst_pitch, const void* src, size_t src_pitch,
-              size_t width, size_t height) const override;
-  void Copy3D(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const override;
-  void CopyND(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const override;
-};
-
-class HostMemoryCopier final : public BaseMemoryCopier {
+class HostMemoryCopier final : public MemoryCopier {
  public:
   OF_DISALLOW_COPY_AND_MOVE(HostMemoryCopier);
   HostMemoryCopier() = default;

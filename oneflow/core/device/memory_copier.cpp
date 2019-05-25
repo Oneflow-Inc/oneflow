@@ -84,8 +84,8 @@ void MemoryCopier::Copy(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const {
   }
 }
 
-void BaseMemoryCopier::Copy2D(DeviceCtx* ctx, void* dst, size_t dst_pitch, const void* src,
-                              size_t src_pitch, size_t width, size_t height) const {
+void MemoryCopier::Copy2D(DeviceCtx* ctx, void* dst, size_t dst_pitch, const void* src,
+                          size_t src_pitch, size_t width, size_t height) const {
   unsigned char* dst_ptr = (unsigned char*)dst;
   const unsigned char* src_ptr = (unsigned char*)src;
   FOR_RANGE(size_t, i, 0, height) {
@@ -95,7 +95,7 @@ void BaseMemoryCopier::Copy2D(DeviceCtx* ctx, void* dst, size_t dst_pitch, const
   }
 }
 
-void BaseMemoryCopier::Copy3D(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const {
+void MemoryCopier::Copy3D(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const {
   const size_t dst_pitch = desc.dst_shape.Count(2);
   const size_t src_pitch = desc.src_shape.Count(2);
   const size_t dst_inner_area = desc.dst_shape.Count(1);
@@ -112,9 +112,7 @@ void BaseMemoryCopier::Copy3D(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) cons
   }
 }
 
-void BaseMemoryCopier::CopyND(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const {
-  UNIMPLEMENTED();
-}
+void MemoryCopier::CopyND(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const { UNIMPLEMENTED(); }
 
 void HostMemoryCopier::Copy1D(DeviceCtx* ctx, void* dst, const void* src, size_t count) const {
   memcpy(dst, src, count);
