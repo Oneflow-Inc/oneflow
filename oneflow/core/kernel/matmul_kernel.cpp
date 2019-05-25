@@ -101,6 +101,6 @@ void MatmulKernel<device_type, T>::CalcBatchMatMul(DeviceCtx* ctx, const Blob* a
                                             c_dptr, buf_dptr);
 }
 
-ADD_GPU_HALF_KENRLE_CREATOR(OperatorConf::kMatmulConf, MatmulKernel, FLOATING_DATA_TYPE_SEQ);
+ADD_GPU_HALF_KERNEL_CREATOR(OperatorConf::kMatmulConf, MatmulKernel, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

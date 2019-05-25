@@ -276,7 +276,7 @@ std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext*, const Kern
   REGISTER_KERNEL_CREATOR(op_type_case, CreateKernel);                                  \
   }
 
-#define ADD_GPU_HALF_KENRLE_CREATOR(op_type_case, kernel_class, data_type_seq)        \
+#define ADD_GPU_HALF_KERNEL_CREATOR(op_type_case, kernel_class, data_type_seq)        \
   namespace {                                                                         \
                                                                                       \
   Kernel* OF_PP_CAT(CreateKernel, __LINE__)(const KernelConf& kernel_conf) {          \
