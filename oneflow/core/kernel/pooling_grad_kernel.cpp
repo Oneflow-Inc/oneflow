@@ -29,7 +29,7 @@ struct PoolingGradKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kPoolingGradConf, PoolingGradKernel,
-                           FLOATING_DATA_TYPE_SEQ);
+ADD_GPU_HALF_KERNEL_CREATOR(OperatorConf::kPoolingGradConf, PoolingGradKernel,
+                            FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
