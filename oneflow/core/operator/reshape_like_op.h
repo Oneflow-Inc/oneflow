@@ -13,8 +13,6 @@ class ReshapeLikeOp final : public Operator {
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
-  // It could be inplace but won't pass the check for sole input
-  bool IsForwardInplace() const override { return false; }
 
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;

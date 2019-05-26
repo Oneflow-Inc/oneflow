@@ -19,7 +19,8 @@ void GenerateInputVarOpConfIf(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
   if (IsClassRegistered<GenerateInputVarOpConfWrapperStruct>(op.op_conf().op_type_case())) {
-    auto* obj = NewObj<GenerateInputVarOpConfWrapperStruct>(op.op_conf().op_type_case());
+    std::unique_ptr<GenerateInputVarOpConfWrapperStruct> obj;
+    obj.reset(NewObj<GenerateInputVarOpConfWrapperStruct>(op.op_conf().op_type_case()));
     obj->Call(op, op_confs, LogicalBlobDesc4BnInOp);
   }
 }
