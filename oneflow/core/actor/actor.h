@@ -221,7 +221,8 @@ class Actor {
   RegstSlot inplace_consumed_rs_;
   RegstSlot inplace_produced_rs_;
   bool is_inplace_consumed_eord_;
-  HashMap<int64_t, int64_t> inplace_out2in_;
+  HashMap<int64_t, int64_t> inplace_regst_desc_id_in2out_;
+  HashMap<int64_t, int64_t> inplace_regst_desc_id_out2in_;
 };
 
 class ScopedActEventRecorder;
