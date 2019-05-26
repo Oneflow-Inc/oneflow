@@ -72,6 +72,11 @@ class Graph {
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode)
       const;
 
+  std::unique_ptr<std::vector<NodeType*>> FindFirstNontrivialSCC(
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode)
+      const;
+
   std::unique_ptr<std::vector<NodeType*>> FindFirstNontrivialSCC() const;
 
   // Getters
@@ -341,6 +346,16 @@ std::unique_ptr<std::vector<NodeType*>> Graph<NodeType, EdgeType>::FindFirstNont
     for (NodeType* start : starts) { Handler(start); }
   };
   return FindFirstNontrivialSCC(ForEachStart, ForEachInNode, ForEachOutNode);
+}
+
+template<typename NodeType, typename EdgeType>
+std::unique_ptr<std::vector<NodeType*>> Graph<NodeType, EdgeType>::FindFirstNontrivialSCC(
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode)
+    const {
+  return FindFirstNontrivialSCC(
+      [&](const std::function<void(NodeType*)>& Handler) { ForEachNode(Handler); }, ForEachInNode,
+      ForEachOutNode);
 }
 
 template<typename NodeType, typename EdgeType>
