@@ -795,7 +795,7 @@ void LogicalGraph::ForEachNecessaryCtrlEdge(
         const LogicalNode* src = op_name2node.at(ctrl_in_op_name);
         CHECK(!IsReachable(dst, src));
         if (!IsReachable(src, dst)) {
-          CHECK(src->parallel_desc()->EqualsIgnoringPolicy(*dst->parallel_desc()));
+          CHECK(src->parallel_desc()->EqualsIgnoringPolicyAndDeviceType(*dst->parallel_desc()));
           const Shape* src_time_shape = src->out_blob_time_shape();
           if (src_time_shape == nullptr) { src_time_shape = src->in_blob_fastest_time_shape(); }
           CHECK_NOTNULL(src_time_shape);
