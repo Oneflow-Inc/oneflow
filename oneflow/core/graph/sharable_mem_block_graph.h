@@ -12,12 +12,7 @@ class SharableMemBlockEdge;
 class SharableMemBlockNode final : public Node<SharableMemBlockNode, SharableMemBlockEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SharableMemBlockNode);
-  SharableMemBlockNode(int64_t chain_id, const MemBlock& mem_block,
-                       const HashSet<const RegstDescProto*>& regst_descs,
-                       const PlanTaskGraph& plan_task_graph)
-      : chain_id_(chain_id),
-        mem_block_(mem_block),
-        regst_descs_(regst_descs.begin(), regst_descs.end()) {}
+  SharableMemBlockNode(int64_t chain_id, const HashSet<const RegstDescProto*>& regst_descs);
 
   ~SharableMemBlockNode() = default;
 
@@ -27,8 +22,8 @@ class SharableMemBlockNode final : public Node<SharableMemBlockNode, SharableMem
 
  private:
   const int64_t chain_id_;
-  const MemBlock mem_block_;
   const std::vector<const RegstDescProto*> regst_descs_;
+  MemBlock mem_block_;
 };
 
 class SharableMemBlockEdge final : public Edge<SharableMemBlockNode, SharableMemBlockEdge> {
@@ -38,7 +33,8 @@ class SharableMemBlockEdge final : public Edge<SharableMemBlockNode, SharableMem
   ~SharableMemBlockEdge() = default;
 };
 
-class SharableMemBlockGraph final : public Graph<const SharableMemBlockNode, SharableMemBlockEdge> {
+class SharableMemBlockGraph final
+    : public Graph<const SharableMemBlockNode, const SharableMemBlockEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SharableMemBlockGraph);
   SharableMemBlockGraph(const PlanTaskGraph& plan_task_gph,
