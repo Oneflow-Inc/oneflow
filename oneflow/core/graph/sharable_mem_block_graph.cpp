@@ -1,6 +1,7 @@
 #include "oneflow/core/graph/sharable_mem_block_graph.h"
 #include "oneflow/core/register/register_desc.h"
 #include "oneflow/core/register/runtime_register_desc.h"
+#include "oneflow/core/graph/inplace_regst_graph.h"
 
 namespace oneflow {
 
@@ -17,53 +18,56 @@ bool IsConsumersAndProducerInSameChain(const RegstDescProto& regst_desc,
   }
   return true;
 }
+void ForEachInplacedRegstDescs(
+    const HashSet<const RegstDescProto*> regst_desc,
+    const std::function<void(const HashSet<const RegstDescProto*>&)>& Handler) {
+  InplaceRegstGraph inplace_gph(regst_desc);
+  inplace_gph.ForEachConnectedComponent([&](const HashSet<const InplaceRegstNode*>& nodes) {
+    if (nodes.size() == 1) { return; }
+    HashSet<const RegstDescProto*> regst_descs;
+    for (const auto* node : nodes) { CHECK(regst_descs.emplace(node->regst_desc()).second); }
+    Handler(regst_descs);
+  });
+}
 
 }  // namespace
+
+SharableMemBlockNode::SharableMemBlockNode(int64_t chain_id,
+                                           const HashSet<const RegstDescProto*>& regst_descs)
+    : chain_id_(chain_id), regst_descs_(regst_descs.begin(), regst_descs.end()) {
+  mem_block_.set_mem_block_id(Global<IDMgr>::Get()->NewMemBlockId());
+  mem_block_.set_mem_reduce_method(MemReduceMethod::kMemMax);
+}
 
 SharableMemBlockGraph::SharableMemBlockGraph(
     const PlanTaskGraph& plan_task_gph,
     const std::function<bool(const RegstDescProto&)>& IsSharable) {
-  auto ForEachSharableChainRegstDesc =
-      [&](const std::function<void(int64_t, const RegstDescProto&)>& Handler) {
-        for (const TaskProto& task : plan_task_gph.plan().task()) {
-          for (const auto& pair : task.produced_regst_desc()) {
-            if (IsConsumersAndProducerInSameChain(pair.second, plan_task_gph)
-                && IsSharable(pair.second)) {
-              Handler(task.task_set_info().chain_id(), pair.second);
-            }
-          }
-        }
-      };
-  HashMap<std::pair<int64_t, MemBlock>, HashSet<const RegstDescProto*>>
-      chain_id7mem_block2regst_descs;
-  HashSet<int64_t> mem_block_ids_check;
-  ForEachSharableChainRegstDesc([&](int64_t chain_id, const RegstDescProto& regst_desc) {
-    int32_t idx = 0;
-    for (const auto& mem_block : regst_desc.mem_block_hierarchy()) {
-      if (idx++ == 0) { CHECK(mem_block_ids_check.emplace(mem_block.mem_block_id()).second); }
-      auto& regst_descs = chain_id7mem_block2regst_descs[std::make_pair(chain_id, mem_block)];
-      CHECK(regst_descs.emplace(&regst_desc).second);
-    }
-  });
-  HashMap<std::pair<int64_t, MemBlock>, SharableMemBlockNode*> chain_id7mem_block2node;
-  for (const auto& pair : chain_id7mem_block2regst_descs) {
-    auto* node =
-        new SharableMemBlockNode(pair.first.first, pair.first.second, pair.second, plan_task_gph);
-    AddAllocatedNode(node);
-    CHECK(chain_id7mem_block2node.emplace(pair.first, node).second);
-  }
-  HashSet<const SharableMemBlockNode*> connected_children;
-  ForEachSharableChainRegstDesc([&](int64_t chain_id, const RegstDescProto& regst_desc) {
-    SharableMemBlockNode* child = nullptr;
-    for (const auto& mem_block : regst_desc.mem_block_hierarchy()) {
-      auto* parent = chain_id7mem_block2node.at(std::make_pair(chain_id, mem_block));
-      if (child != nullptr && connected_children.find(child) == connected_children.end()) {
-        Connect(parent, NewEdge(), child);
-        CHECK(connected_children.emplace(child).second);
+  HashMap<int64_t, HashSet<const RegstDescProto*>> chain_id2regst_descs;
+  for (const TaskProto& task : plan_task_gph.plan().task()) {
+    for (const auto& pair : task.produced_regst_desc()) {
+      if (IsConsumersAndProducerInSameChain(pair.second, plan_task_gph)
+          && IsSharable(pair.second)) {
+        CHECK(chain_id2regst_descs[task.task_set_info().chain_id()].emplace(&pair.second).second);
       }
-      child = parent;
     }
-  });
+  }
+  for (const auto& pair : chain_id2regst_descs) {
+    HashMap<const RegstDescProto*, SharableMemBlockNode*> regst_desc2node;
+    for (const auto* regst_desc : pair.second) {
+      auto* node = new SharableMemBlockNode(pair.first, {regst_desc});
+      AddAllocatedNode(node);
+      CHECK(regst_desc2node.emplace(regst_desc, node).second);
+    }
+    ForEachInplacedRegstDescs(pair.second, [&](const HashSet<const RegstDescProto*>& regst_descs) {
+      auto* parent = new SharableMemBlockNode(pair.first, regst_descs);
+      AddAllocatedNode(parent);
+      for (const RegstDescProto* regst_desc : regst_descs) {
+        auto* edge = new SharableMemBlockEdge();
+        AddAllocatedEdge(edge);
+        Connect(parent, edge, regst_desc2node.at(regst_desc));
+      }
+    });
+  }
 }
 
 void SharableMemBlockGraph::ForEachSourceNodeGroup(

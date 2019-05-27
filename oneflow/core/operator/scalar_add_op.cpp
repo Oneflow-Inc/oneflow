@@ -5,7 +5,7 @@ namespace oneflow {
 
 void ScalarAddOp::InitFromOpConf() {
   EnrollInputBn("in");
-  EnrollOutputBn("out");
+  EnrollOutputBn("out")->set_mutable_inplace_ibn("in");
 }
 
 void ScalarAddOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
