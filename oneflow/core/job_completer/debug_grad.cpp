@@ -29,7 +29,7 @@ void GenerateBackwardOpConf(
     } else if (conf.has_const_in_diff_feature()) {
       *diff_conf->mutable_const_out_feature() = conf.const_in_diff_feature();
     } else {
-      UNIMPLEMENTED();
+      // do nothing
     }
     DiffLbi4BnInOp("in")->set_op_name(diff_op_conf->name());
     DiffLbi4BnInOp("in")->set_blob_name("out");
