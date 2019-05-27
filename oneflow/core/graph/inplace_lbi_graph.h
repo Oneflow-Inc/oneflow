@@ -84,30 +84,36 @@ class InplaceLbiGraph final : public Graph<const InplaceLbiNode, const InplaceLb
 
   void ComputeSafeInplaceObns(OpBlobArgList* obas,
                               const std::function<bool(const LogicalBlobId&, const std::string&)>&
-                                  IsReachableFromLbiToOpName) const;
+                                  IsLbiAllConsumerReachableToOpName) const;
 
  private:
   void Init(const OpBlobArgList& obas,
             const std::function<const Operator*(const std::string&)>& Op4OpName);
   std::function<InplaceLbiNode*(const LogicalBlobId&)> MakeMutFindOrCreateNode(
       std::function<const Operator*(const std::string&)> Op4OpName);
-  void ComputeSafeInplaceObns(const std::function<bool(const LogicalBlobId&, const std::string&)>&
-                                  IsReachableFromLbiToOpName,
-                              const std::function<void(const InplaceLbiEdge*)>& Handler) const;
-  void ComputeSafeInplaceObns(const HashSet<const InplaceLbiNode*>& nodes,
-                              const std::function<bool(const LogicalBlobId&, const std::string&)>&
-                                  IsReachableFromLbiToOpName,
-                              const std::function<void(const InplaceLbiEdge*)>& Handler) const;
+  void ComputeSafeInplaceEdges(const std::function<bool(const LogicalBlobId&, const std::string&)>&
+                                   IsLbiAllConsumerReachableToOpName,
+                               const std::function<void(const InplaceLbiEdge*)>& Handler) const;
+  void ComputeSafeInplaceEdges(const HashSet<const InplaceLbiNode*>& nodes,
+                               const std::function<bool(const LogicalBlobId&, const std::string&)>&
+                                   IsLbiAllConsumerReachableToOpName,
+                               const std::function<void(const InplaceLbiEdge*)>& Handler) const;
+  void ForEachSafeInplaceEdgeInSourceOpSubTree(
+      const HashSet<const InplaceLbiNode*>& nodes,
+      const std::function<bool(const LogicalBlobId&, const std::string&)>&
+          IsLbiAllConsumerReachableToOpName,
+      const std::function<void(const InplaceLbiEdge*)>& Handler,
+      HashSet<const InplaceLbiEdge*>* cur_disabled_edges) const;
   void GetSafeInplaceObnEdges(const HashSet<const InplaceLbiNode*>& nodes,
                               const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge,
                               const std::function<bool(const LogicalBlobId&, const std::string&)>&
-                                  IsReachableFromLbiToOpName,
+                                  IsLbiAllConsumerReachableToOpName,
                               HashSet<const InplaceLbiEdge*>* cur_disabled_edges) const;
   const InplaceLbiEdge* FindFirstConstRefConflictMutRefEdge(
       const HashSet<const InplaceLbiNode*>& nodes,
       const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge,
       const std::function<bool(const LogicalBlobId&, const std::string&)>&
-          IsReachableFromLbiToOpName) const;
+          IsLbiAllConsumerReachableToOpName) const;
 
   const InplaceLbiEdge* FindFirstIntraOpRefConflictMutRefEdge(
       const HashSet<const InplaceLbiNode*>& nodes,
@@ -117,18 +123,18 @@ class InplaceLbiGraph final : public Graph<const InplaceLbiNode, const InplaceLb
       const HashSet<const InplaceLbiNode*>& nodes,
       const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge,
       const std::function<bool(const LogicalBlobId&, const std::string&)>&
-          IsReachableFromLbiToOpName) const;
+          IsLbiAllConsumerReachableToOpName) const;
 
   bool IsConstRefConflictMutRefNode(
       const InplaceLbiNode* mut_ref_node, const HashSet<const InplaceLbiNode*>& nodes,
       const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge,
       const std::function<bool(const LogicalBlobId&, const std::string&)>&
-          IsReachableFromLbiToOpName) const;
+          IsLbiAllConsumerReachableToOpName) const;
 
   void FixConstRefOrMutRefConflictsToUpdtNode(
       const HashSet<const InplaceLbiNode*>& nodes,
       const std::function<bool(const LogicalBlobId&, const std::string&)>&
-          IsReachableFromLbiToOpName,
+          IsLbiAllConsumerReachableToOpName,
       HashSet<const InplaceLbiEdge*>* cur_disabled_edges) const;
 
   void FixMutRefConflictsFromSourceOpNode(

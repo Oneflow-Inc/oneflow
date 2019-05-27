@@ -130,13 +130,15 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   // a set of nodes is called a chain family if they can divided into several connected chains
   void ForEachChainFamily(const std::function<void(const HashSet<OpNode*>&)>& Handler) const;
 
-  void ForEachDataAndCtrlInNode(OpNode* node, const std::function<void(OpNode*)>& Handler) const;
-  void ForEachDataAndCtrlOutNode(OpNode* node, const std::function<void(OpNode*)>& Handler) const;
+  std::function<bool(const LogicalBlobId&, const std::string&)>
+  MakePredicatorIsLbiAllConsumersReachableToOpName() const;
 
  private:
   void Init(const Job& job);
   void InitNodes(const Job& job);
   void InitEdges();
+  void InitProducerOpName2CtrlConsumerOpNames(const Job& job);
+  void CheckIsDAG() const;
   void FixOpParallelDesc() const;
   void UpdateOpNodeHasInDiff() const;
   void InferTimeShape() const;
@@ -153,8 +155,13 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
       const HashSet<OpNode*>& op_nodes, HashSet<OpNode*>* chain,
       const std::function<bool(OpNode* src, OpNode* dst)>& IsReachable) const;
 
+  std::function<bool(const OpNode*, const OpNode*)> MakePredicatorIsDataOrCtrlReachable() const;
+  void ForEachDataAndCtrlInNode(OpNode* node, const std::function<void(OpNode*)>& Handler) const;
+  void ForEachDataAndCtrlOutNode(OpNode* node, const std::function<void(OpNode*)>& Handler) const;
+
   int64_t GetSplitNum(const std::string& op_name, const LogicalBlobId& lbi) const;
   HashMap<std::string, OpNode*> op_name2op_node_;
+  HashMap<std::string, HashSet<std::string>> producer_op_name2ctrl_consumer_op_names_;
 };
 
 }  // namespace oneflow

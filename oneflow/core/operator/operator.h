@@ -47,8 +47,6 @@ class Operator {
   virtual bool NeedOutBlobWhenBackward() const { return true; }
   bool NeedInBlobWhenBackwardIf() const { return NeedInBlobWhenBackward(); }
   virtual bool NeedInBlobWhenBackward() const { return true; }
-  virtual bool IsForwardInplace() const { return false; }
-  virtual bool IsBackwardInplace() const { return false; }
 
   // bn_in_op <-> lbi
   const LogicalBlobId& BnInOp2Lbi(const std::string& bn_in_op) const;

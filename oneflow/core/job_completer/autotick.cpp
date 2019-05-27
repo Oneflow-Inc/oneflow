@@ -5,22 +5,21 @@ namespace oneflow {
 
 namespace {
 
-const MutOpConTickInputHelper* NewMutOpConTickInputHelper(const OperatorConf& op_conf) {
+std::unique_ptr<MutOpConTickInputHelper> NewMutOpConTickInputHelper(const OperatorConf& op_conf) {
+  std::unique_ptr<MutOpConTickInputHelper> ret;
   if (IsClassRegistered<MutOpConTickInputHelper>(op_conf.op_type_case())) {
-    auto* ret = NewObj<MutOpConTickInputHelper>(op_conf.op_type_case());
+    ret.reset(NewObj<MutOpConTickInputHelper>(op_conf.op_type_case()));
     ret->InitFromOpConf(op_conf);
-    return ret;
-  } else {
-    return nullptr;
   }
+  return ret;
 }
 
 void AddAutoTickOpConf(const OpGraph& op_graph, Job* job) {
   JobBuilder job_builder(job);
   HashMap<ParallelDesc, std::vector<OpNode*>> parallel_desc2op_node;
   op_graph.ForEachNode([&](OpNode* op_node) {
-    const auto* mut_tick_input_helper = NewMutOpConTickInputHelper(op_node->op().op_conf());
-    if (mut_tick_input_helper == nullptr) { return; }
+    auto mut_tick_input_helper = NewMutOpConTickInputHelper(op_node->op().op_conf());
+    if (!mut_tick_input_helper) { return; }
     if (mut_tick_input_helper->IsTickInputBound() == true) { return; }
     parallel_desc2op_node[op_node->parallel_desc()].push_back(op_node);
   });
@@ -32,7 +31,7 @@ void AddAutoTickOpConf(const OpGraph& op_graph, Job* job) {
 
     std::vector<OperatorConf> var_ops;
     for (const auto* op_node : pair.second) {
-      const auto* mut_tick_input_helper = NewMutOpConTickInputHelper(op_node->op().op_conf());
+      auto mut_tick_input_helper = NewMutOpConTickInputHelper(op_node->op().op_conf());
       var_ops.push_back(mut_tick_input_helper->NewTickInputBoundOpConf(tick_op.name() + "/out"));
     }
     job_builder.MutOps(var_ops);

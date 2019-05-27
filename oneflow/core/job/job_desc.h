@@ -48,6 +48,7 @@ class JobDesc final {
   size_t rdma_recv_msg_buf_byte() const;
   bool collect_act_event() const { return job_conf_.other().collect_act_event(); }
   bool enable_mem_sharing() const { return job_conf_.other().enable_mem_sharing(); }
+  bool enable_inplace() const { return job_conf_.other().enable_inplace(); }
   const FileSystemConf& data_fs_conf() const;
   const FileSystemConf& snapshot_fs_conf() const;
   bool enable_write_snapshot() const;

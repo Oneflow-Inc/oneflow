@@ -22,7 +22,8 @@ void WithOpGraphAndMutJob(Job* job, const std::function<void(const OpGraph&, Job
 void GenerateFacadeImplOpConfIf(const OpNode& op_node, JobBuilder* job_builder) {
   auto op_type_case = op_node.op().op_conf().op_type_case();
   if (IsClassRegistered<GenerateFacadeImplOpConfWrapperStruct>(op_type_case)) {
-    auto* obj = NewObj<GenerateFacadeImplOpConfWrapperStruct>(op_type_case);
+    std::unique_ptr<GenerateFacadeImplOpConfWrapperStruct> obj;
+    obj.reset(NewObj<GenerateFacadeImplOpConfWrapperStruct>(op_type_case));
     obj->Call(op_node, job_builder);
   }
 }
