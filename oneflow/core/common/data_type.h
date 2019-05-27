@@ -142,6 +142,32 @@ TRAIT_LIMIT_VAL(Min, double, -DBL_MAX);
 
 #undef TRAIT_LIMIT_VAL
 
+#if defined(__CUDACC__)
+#define OF_DEVICE_FUNC __device__ __host__ __forceinline__
+#else
+#define OF_DEVICE_FUNC
+#endif
+
+template<typename T>
+OF_DEVICE_FUNC T GetZeroVal() {
+  return static_cast<T>(0);
+}
+
+template<typename T>
+OF_DEVICE_FUNC T GetOneVal() {
+  return static_cast<T>(1);
+}
+
+template<typename T>
+T GetMinVal() {
+  return std::numeric_limits<T>::lowest();
+}
+
+template<typename T>
+T GetMaxVal() {
+  return std::numeric_limits<T>::max();
+}
+
 // Func
 
 bool IsIntegralDataType(DataType data_type);

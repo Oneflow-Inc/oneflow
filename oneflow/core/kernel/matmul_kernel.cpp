@@ -62,11 +62,11 @@ void MatmulKernel<device_type, T>::Calc2DMatMul(DeviceCtx* ctx, const Blob* a, b
   CBLAS_TRANSPOSE blas_trans_a = trans_a ? CblasTrans : CblasNoTrans;
   CBLAS_TRANSPOSE blas_trans_b = trans_b ? CblasTrans : CblasNoTrans;
   if (swap_in) {
-    NewKernelUtil<device_type>::BlobGemm(ctx, blas_trans_b, blas_trans_a, OneVal<T>::value,
-                                         ZeroVal<T>::value, b, a, c);
+    NewKernelUtil<device_type>::BlobGemm(ctx, blas_trans_b, blas_trans_a, GetOneVal<T>(),
+                                         GetZeroVal<T>(), b, a, c);
   } else {
-    NewKernelUtil<device_type>::BlobGemm(ctx, blas_trans_a, blas_trans_b, OneVal<T>::value,
-                                         ZeroVal<T>::value, a, b, c);
+    NewKernelUtil<device_type>::BlobGemm(ctx, blas_trans_a, blas_trans_b, GetOneVal<T>(),
+                                         GetZeroVal<T>(), a, b, c);
   }
 }
 
@@ -97,8 +97,8 @@ void MatmulKernel<device_type, T>::CalcBatchMatMul(DeviceCtx* ctx, const Blob* a
   T* c_dptr = c->mut_dptr<T>();
   T** buf_dptr = reinterpret_cast<T**>(buf->mut_dptr<int64_t>());
   NewKernelUtil<device_type>::OFBatchedGemm(ctx, blas_trans_a, blas_trans_b, batch_size, m, n, k,
-                                            OneVal<T>::value, a_dptr, b_dptr, ZeroVal<T>::value,
-                                            c_dptr, buf_dptr);
+                                            GetOneVal<T>(), a_dptr, b_dptr, GetZeroVal<T>(), c_dptr,
+                                            buf_dptr);
 }
 
 ADD_GPU_HALF_KERNEL_CREATOR(OperatorConf::kMatmulConf, MatmulKernel, FLOATING_DATA_TYPE_SEQ);

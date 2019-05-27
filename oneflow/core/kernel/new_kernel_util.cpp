@@ -31,14 +31,14 @@ static void BlobGemmImpl(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLA
 
 template<typename T>
 static void ReluImpl(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
-  T zero = ZeroVal<T>::value;
+  T zero = GetZeroVal<T>();
   for (int64_t i = 0; i != n; ++i) { y[i] = std::max(x[i], zero); }
 }
 
 template<typename T>
 static void ReluBackwardImpl(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
                              T* dx) {
-  T zero = ZeroVal<T>::value;
+  T zero = GetZeroVal<T>();
   for (int64_t i = 0; i != n; ++i) { dx[i] = (y[i] > zero) * dy[i]; }
 }
 
