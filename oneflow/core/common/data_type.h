@@ -133,35 +133,65 @@ OF_DEVICE_FUNC T GetMinVal();
 template<typename T>
 OF_DEVICE_FUNC T GetMaxVal();
 
-#define TRAIT_LIMIT_VAL(max_or_min, T, limit_value)   \
-  template<>                                          \
-  inline OF_DEVICE_FUNC T Get##max_or_min##Val<T>() { \
-    return limit_value;                               \
+#define MAX_VAL_SEQ                          \
+  OF_PP_MAKE_TUPLE_SEQ(int8_t, CHAR_MAX)     \
+  OF_PP_MAKE_TUPLE_SEQ(int16_t, SHRT_MAX)    \
+  OF_PP_MAKE_TUPLE_SEQ(int32_t, INT_MAX)     \
+  OF_PP_MAKE_TUPLE_SEQ(int64_t, LLONG_MAX)   \
+  OF_PP_MAKE_TUPLE_SEQ(uint8_t, UCHAR_MAX)   \
+  OF_PP_MAKE_TUPLE_SEQ(uint16_t, USHRT_MAX)  \
+  OF_PP_MAKE_TUPLE_SEQ(uint32_t, UINT_MAX)   \
+  OF_PP_MAKE_TUPLE_SEQ(uint64_t, ULLONG_MAX) \
+  OF_PP_MAKE_TUPLE_SEQ(float, FLT_MAX)       \
+  OF_PP_MAKE_TUPLE_SEQ(double, DBL_MAX)
+
+#define MIN_VAL_SEQ                        \
+  OF_PP_MAKE_TUPLE_SEQ(int8_t, CHAR_MIN)   \
+  OF_PP_MAKE_TUPLE_SEQ(int16_t, SHRT_MIN)  \
+  OF_PP_MAKE_TUPLE_SEQ(int32_t, INT_MIN)   \
+  OF_PP_MAKE_TUPLE_SEQ(int64_t, LLONG_MIN) \
+  OF_PP_MAKE_TUPLE_SEQ(uint8_t, 0)         \
+  OF_PP_MAKE_TUPLE_SEQ(uint16_t, 0)        \
+  OF_PP_MAKE_TUPLE_SEQ(uint32_t, 0)        \
+  OF_PP_MAKE_TUPLE_SEQ(uint64_t, 0)        \
+  OF_PP_MAKE_TUPLE_SEQ(float, -FLT_MAX)    \
+  OF_PP_MAKE_TUPLE_SEQ(double, -DBL_MAX)
+
+#define SPECIALIZE_MAX_VAL(T, limit_value) \
+  template<>                               \
+  inline OF_DEVICE_FUNC T GetMaxVal<T>() { \
+    return limit_value;                    \
   }
+OF_PP_FOR_EACH_TUPLE(SPECIALIZE_MAX_VAL, MAX_VAL_SEQ);
+#undef SPECIALIZE_MAX_VAL
 
-TRAIT_LIMIT_VAL(Max, int8_t, CHAR_MAX);
-TRAIT_LIMIT_VAL(Max, int16_t, SHRT_MAX);
-TRAIT_LIMIT_VAL(Max, int32_t, INT_MAX);
-TRAIT_LIMIT_VAL(Max, int64_t, LLONG_MAX);
-TRAIT_LIMIT_VAL(Max, uint8_t, UCHAR_MAX);
-TRAIT_LIMIT_VAL(Max, uint16_t, USHRT_MAX);
-TRAIT_LIMIT_VAL(Max, uint32_t, UINT_MAX);
-TRAIT_LIMIT_VAL(Max, uint64_t, ULLONG_MAX);
-TRAIT_LIMIT_VAL(Max, float, FLT_MAX);
-TRAIT_LIMIT_VAL(Max, double, DBL_MAX);
+#define SPECIALIZE_MIN_VAL(T, limit_value) \
+  template<>                               \
+  inline OF_DEVICE_FUNC T GetMinVal<T>() { \
+    return limit_value;                    \
+  }
+OF_PP_FOR_EACH_TUPLE(SPECIALIZE_MIN_VAL, MIN_VAL_SEQ);
+#undef SPECIALIZE_MIN_VAL
 
-TRAIT_LIMIT_VAL(Min, int8_t, CHAR_MIN);
-TRAIT_LIMIT_VAL(Min, int16_t, SHRT_MIN);
-TRAIT_LIMIT_VAL(Min, int32_t, INT_MIN);
-TRAIT_LIMIT_VAL(Min, int64_t, LLONG_MIN);
-TRAIT_LIMIT_VAL(Min, uint8_t, 0);
-TRAIT_LIMIT_VAL(Min, uint16_t, 0);
-TRAIT_LIMIT_VAL(Min, uint32_t, 0);
-TRAIT_LIMIT_VAL(Min, uint64_t, 0);
-TRAIT_LIMIT_VAL(Min, float, -FLT_MAX);
-TRAIT_LIMIT_VAL(Min, double, -DBL_MAX);
+template<>
+inline float16 GetZeroVal<float16>() {
+  return float16(0.0);
+}
 
-#undef TRAIT_LIMIT_VAL
+template<>
+inline float16 GetOneVal<float16>() {
+  return float16(1.0);
+}
+
+template<>
+inline float16 GetMaxVal<float16>() {
+  return std::numeric_limits<float16>::max();
+}
+
+template<>
+inline float16 GetMinVal<float16>() {
+  return std::numeric_limits<float16>::lowest();
+}
 
 // Func
 
