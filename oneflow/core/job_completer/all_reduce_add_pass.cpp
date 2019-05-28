@@ -140,7 +140,7 @@ void GroupAllReducedLbisByStrategy(
         const size_t group_min_size = Global<JobDesc>::Get()->all_reduce_group_min_byte();
         const float group_size_warmup = Global<JobDesc>::Get()->all_reduce_group_size_warmup();
         size_t cur_group_capacity = group_min_size / group_size_warmup;
-        size_t cur_group_model_size = MaxVal<size_t>::value;
+        size_t cur_group_model_size = GetMaxVal<size_t>();
         for (const LogicalBlobId& lbi : lbis) {
           if (cur_group_model_size >= cur_group_capacity) {
             lbi_groups->emplace_back(std::vector<LogicalBlobId>{});

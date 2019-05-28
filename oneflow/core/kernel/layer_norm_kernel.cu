@@ -10,8 +10,8 @@ class LayerNormCudnnBnCtx final {
     const int64_t cudnn_c = param_shape.elem_cnt();
     CHECK_EQ(data_shape.elem_cnt() % cudnn_c, 0);
     const int64_t cudnn_w = data_shape.elem_cnt() / cudnn_c;
-    CHECK_LT(cudnn_c, MaxVal<int32_t>::value);
-    CHECK_LT(cudnn_w, MaxVal<int32_t>::value);
+    CHECK_LT(cudnn_c, GetMaxVal<int32_t>());
+    CHECK_LT(cudnn_w, GetMaxVal<int32_t>());
     data_tensor_desc_.reset(new CudnnTensorDesc(CUDNN_TENSOR_NCHW, data_type, 1,
                                                 static_cast<int32_t>(cudnn_c), 1,
                                                 static_cast<int32_t>(cudnn_w)));

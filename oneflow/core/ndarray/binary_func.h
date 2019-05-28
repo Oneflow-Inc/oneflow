@@ -48,16 +48,16 @@ OF_DEVICE_FUNC const T BinaryFuncMin(const T x, const T y) {
 template<typename T, const T (*binary_func)(const T, const T), typename Enable = void>
 struct UnitOfBinaryFunc;
 
-#define SPECIALIZE_UNIT_OF_BINARY_FUNC(binary_func, val_trait)                               \
+#define SPECIALIZE_UNIT_OF_BINARY_FUNC(binary_func, get_val)                                 \
   template<typename T, const T (*bfunc)(const T, const T)>                                   \
   struct UnitOfBinaryFunc<T, bfunc, typename std::enable_if<bfunc == &binary_func<T>>::type> \
       final {                                                                                \
-    constexpr static T value = val_trait<T>::value;                                          \
+    static OF_DEVICE_FUNC T Val() { return get_val<T>(); }                                   \
   };
-SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncAdd, ZeroVal);
-SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncMul, OneVal);
-SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncMax, MinVal);
-SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncMin, MaxVal);
+SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncAdd, GetZeroVal);
+SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncMul, GetOneVal);
+SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncMax, GetMinVal);
+SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncMin, GetMaxVal);
 #undef SPECIALIZE_UNIT_OF_BINARY_FUNC
 
 #define REDUCE_BINARY_FUNC_SEQ        \

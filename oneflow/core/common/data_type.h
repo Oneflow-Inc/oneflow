@@ -111,39 +111,8 @@ TRAIT_CONST_VAR(One, 1);
 
 #undef TRAIT_CONST_VAR
 
-template<typename T>
-struct MaxVal;
-template<typename T>
-struct MinVal;
-
-#define TRAIT_LIMIT_VAL(max_or_min, T, limit_value)                                               \
-  template<>                                                                                      \
-  struct max_or_min##Val<T> final {                                                               \
-    static_assert(alignof(int) == alignof(int32_t), "int32_t should be exactly int");             \
-    static_assert(alignof(long long) == alignof(int64_t), "int64_t should be exactly long long"); \
-    constexpr static T value = limit_value;                                                       \
-  }
-
-TRAIT_LIMIT_VAL(Max, int8_t, CHAR_MAX);
-TRAIT_LIMIT_VAL(Max, int32_t, INT_MAX);
-TRAIT_LIMIT_VAL(Max, uint32_t, UINT_MAX);
-TRAIT_LIMIT_VAL(Max, int64_t, LLONG_MAX);
-TRAIT_LIMIT_VAL(Max, uint64_t, ULLONG_MAX);
-TRAIT_LIMIT_VAL(Max, float, FLT_MAX);
-TRAIT_LIMIT_VAL(Max, double, DBL_MAX);
-
-TRAIT_LIMIT_VAL(Min, int8_t, CHAR_MIN);
-TRAIT_LIMIT_VAL(Min, int32_t, INT_MIN);
-TRAIT_LIMIT_VAL(Min, uint32_t, 0);
-TRAIT_LIMIT_VAL(Min, int64_t, LLONG_MIN);
-TRAIT_LIMIT_VAL(Min, uint64_t, 0);
-TRAIT_LIMIT_VAL(Min, float, -FLT_MAX);
-TRAIT_LIMIT_VAL(Min, double, -DBL_MAX);
-
-#undef TRAIT_LIMIT_VAL
-
 #if defined(__CUDACC__)
-#define OF_DEVICE_FUNC __device__ __host__ __forceinline__
+#define OF_DEVICE_FUNC __device__ __host__
 #else
 #define OF_DEVICE_FUNC
 #endif
@@ -159,14 +128,40 @@ OF_DEVICE_FUNC T GetOneVal() {
 }
 
 template<typename T>
-T GetMinVal() {
-  return std::numeric_limits<T>::lowest();
-}
+OF_DEVICE_FUNC T GetMinVal();
 
 template<typename T>
-T GetMaxVal() {
-  return std::numeric_limits<T>::max();
-}
+OF_DEVICE_FUNC T GetMaxVal();
+
+#define TRAIT_LIMIT_VAL(max_or_min, T, limit_value)   \
+  template<>                                          \
+  inline OF_DEVICE_FUNC T Get##max_or_min##Val<T>() { \
+    return limit_value;                               \
+  }
+
+TRAIT_LIMIT_VAL(Max, int8_t, CHAR_MAX);
+TRAIT_LIMIT_VAL(Max, int16_t, SHRT_MAX);
+TRAIT_LIMIT_VAL(Max, int32_t, INT_MAX);
+TRAIT_LIMIT_VAL(Max, int64_t, LLONG_MAX);
+TRAIT_LIMIT_VAL(Max, uint8_t, UCHAR_MAX);
+TRAIT_LIMIT_VAL(Max, uint16_t, USHRT_MAX);
+TRAIT_LIMIT_VAL(Max, uint32_t, UINT_MAX);
+TRAIT_LIMIT_VAL(Max, uint64_t, ULLONG_MAX);
+TRAIT_LIMIT_VAL(Max, float, FLT_MAX);
+TRAIT_LIMIT_VAL(Max, double, DBL_MAX);
+
+TRAIT_LIMIT_VAL(Min, int8_t, CHAR_MIN);
+TRAIT_LIMIT_VAL(Min, int16_t, SHRT_MIN);
+TRAIT_LIMIT_VAL(Min, int32_t, INT_MIN);
+TRAIT_LIMIT_VAL(Min, int64_t, LLONG_MIN);
+TRAIT_LIMIT_VAL(Min, uint8_t, 0);
+TRAIT_LIMIT_VAL(Min, uint16_t, 0);
+TRAIT_LIMIT_VAL(Min, uint32_t, 0);
+TRAIT_LIMIT_VAL(Min, uint64_t, 0);
+TRAIT_LIMIT_VAL(Min, float, -FLT_MAX);
+TRAIT_LIMIT_VAL(Min, double, -DBL_MAX);
+
+#undef TRAIT_LIMIT_VAL
 
 // Func
 

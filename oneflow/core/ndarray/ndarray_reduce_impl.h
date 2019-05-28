@@ -94,7 +94,7 @@ struct NdarrayReduceCore final {
       T* dst_reduced_ptr = dst_reduced.template Mut(i);
       int64_t coord[NDIMS];
       dst_reduced.shape().template Offset2Coordinate<NDIMS>(i, coord);
-      T reduced = UnitOfBinaryFunc<T, binary_func>::value;
+      T reduced = UnitOfBinaryFunc<T, binary_func>::Val();
       while (coord[axis] < x.shape().At(axis)) {
         reduced = binary_func(reduced, x.template Get<NDIMS>(coord));
         coord[axis] += dst_dim_val;

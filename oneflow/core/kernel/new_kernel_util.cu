@@ -275,7 +275,7 @@ __global__ void TransposeGpu(const Int32Array<NDIMS> y_shape, const Int32Array<N
 template<int32_t NDIMS, typename T>
 void TransposeImpl(DeviceCtx* ctx, const Shape& x_shape, const Shape& y_shape,
                    const PbRf<int32_t>& permutation, const int64_t elem_cnt, const T* x, T* y) {
-  CHECK_LE(y_shape.elem_cnt(), MaxVal<int32_t>::value);
+  CHECK_LE(y_shape.elem_cnt(), GetMaxVal<int32_t>());
   Int32Array<NDIMS> y_shape_struct;
   FOR_RANGE(int32_t, i, 0, NDIMS) { y_shape_struct.val[i] = y_shape.At(i); }
   Int32Array<NDIMS> x_strides;
@@ -475,9 +475,9 @@ GPU_KU_METHOD Axpy(DeviceCtx* ctx, const int n, const float16 alpha, const float
       incy);
 }
 
-#define TRANSPOSE_CHECK                                 \
-  CHECK_LE(y_shape.elem_cnt(), MaxVal<int32_t>::value); \
-  CHECK_EQ(num_axis, y_shape.NumAxes());                \
+#define TRANSPOSE_CHECK                               \
+  CHECK_LE(y_shape.elem_cnt(), GetMaxVal<int32_t>()); \
+  CHECK_EQ(num_axis, y_shape.NumAxes());              \
   CHECK_EQ(num_axis, x_shape.NumAxes())
 
 GPU_KU_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
