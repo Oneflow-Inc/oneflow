@@ -12,6 +12,7 @@ struct NdarrayApplyBroadcastUnaryCoreWrapper<DeviceType::kCPU, T, NDIMS, unary_f
 #define INSTANTIATE_BROADCAST_UNARY_FUNC(dtype_pair, NDIMS, unary_func) \
   template struct NdarrayApplyBroadcastUnaryCoreWrapper<                \
       DeviceType::kCPU, OF_PP_PAIR_FIRST(dtype_pair), NDIMS, unary_func>;
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BROADCAST_UNARY_FUNC, ARITHMETIC_DATA_TYPE_SEQ,
-                                 DIM_SEQ, ARITHMETIC_UNARY_FUNC_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BROADCAST_UNARY_FUNC,
+                                 ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, DIM_SEQ,
+                                 ARITHMETIC_UNARY_FUNC_SEQ)
 }  // namespace oneflow

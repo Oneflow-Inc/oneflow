@@ -2,10 +2,14 @@
 #define ONEFLOW_CORE_COMMON_DATA_TYPE_H_
 
 #include <half.hpp>
+#if defined(WITH_CUDA)
+#include <cuda_fp16.h>
+#endif
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/job/resource.pb.h"
 
 namespace oneflow {
 
@@ -38,6 +42,10 @@ typedef half_float::half float16;
 #define ALL_DATA_TYPE_SEQ POD_DATA_TYPE_SEQ PB_DATA_TYPE_SEQ
 
 #define FLOAT16_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(float16, DataType::kFloat16)
+
+#if defined(WITH_CUDA)
+#define HALF_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(half, DataType::kFloat16)
+#endif
 
 // Type Trait: IsFloating
 
@@ -89,27 +97,6 @@ OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_DATA_TYPE,
 
 template<DataType type>
 using DataTypeToType = decltype(GetTypeByDataType(std::integral_constant<DataType, type>{}));
-
-// Type Trait: const var
-
-#define TRAIT_CONST_VAR(var_name, var_val)                   \
-  template<typename T>                                       \
-  struct var_name##Val {                                     \
-    static const T value;                                    \
-  };                                                         \
-  template<typename T>                                       \
-  const T var_name##Val<T>::value = static_cast<T>(var_val); \
-  template<typename T>                                       \
-  struct var_name##Ptr {                                     \
-    static const T* value;                                   \
-  };                                                         \
-  template<typename T>                                       \
-  const T* var_name##Ptr<T>::value = &var_name##Val<T>::value;
-
-TRAIT_CONST_VAR(Zero, 0);
-TRAIT_CONST_VAR(One, 1);
-
-#undef TRAIT_CONST_VAR
 
 #if defined(__CUDACC__)
 #define OF_DEVICE_FUNC __device__ __host__
@@ -192,6 +179,66 @@ template<>
 inline float16 GetMinVal<float16>() {
   return std::numeric_limits<float16>::lowest();
 }
+
+// Type Trait: const var
+
+#define TRAIT_CONST_VAR(var_name, var_val)                   \
+  template<typename T>                                       \
+  struct var_name##Val {                                     \
+    static const T value;                                    \
+  };                                                         \
+  template<typename T>                                       \
+  const T var_name##Val<T>::value = static_cast<T>(var_val); \
+  template<typename T>                                       \
+  struct var_name##Ptr {                                     \
+    static const T* value;                                   \
+  };                                                         \
+  template<typename T>                                       \
+  const T* var_name##Ptr<T>::value = &var_name##Val<T>::value;
+
+TRAIT_CONST_VAR(Zero, 0);
+TRAIT_CONST_VAR(One, 1);
+#undef TRAIT_CONST_VAR
+
+#if defined(WITH_CUDA)
+template<>
+inline half GetZeroVal<half>() {
+  uint16_t ret = 0;
+  return *(half*)&ret;
+}
+
+template<>
+inline half GetOneVal<half>() {
+  uint16_t ret = 15360;
+  return *(half*)&ret;
+}
+
+template<>
+inline half GetMaxVal<half>() {
+  uint16_t ret = 31743;
+  return *(half*)&ret;
+}
+
+template<>
+inline half GetMinVal<half>() {
+  uint16_t ret = 64511;
+  return *(half*)&ret;
+}
+
+#endif
+
+template<DeviceType, typename T>
+struct DevDType {
+  typedef T type;
+};
+
+#if defined(WITH_CUDA)
+template<>
+struct DevDType<DeviceType::kGPU, float16> {
+  static_assert(sizeof(float16) == sizeof(half), "sizeof(float16) != sizeof(half)");
+  typedef half type;
+};
+#endif
 
 // Func
 

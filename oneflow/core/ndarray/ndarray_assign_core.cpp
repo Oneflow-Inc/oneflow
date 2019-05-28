@@ -13,6 +13,7 @@ struct NdarrayAssignCoreWrapper<DeviceType::kCPU, T, NDIMS> final {
 
 #define INSTANTIATE_NDARRAY_ASSIGN(dtype_pair, NDIMS) \
   template struct NdarrayAssignCoreWrapper<DeviceType::kCPU, OF_PP_PAIR_FIRST(dtype_pair), NDIMS>;
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_ASSIGN, ARITHMETIC_DATA_TYPE_SEQ, DIM_SEQ);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_ASSIGN,
+                                 ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, DIM_SEQ);
 
 }  // namespace oneflow
