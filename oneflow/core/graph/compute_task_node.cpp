@@ -71,4 +71,12 @@ std::vector<CompTaskNode*> CompTaskNode::GetPredCompTaskNodesOnEdge(TaskEdge* ed
   return GetCompTaskNodesOnEdge(edge, &TaskEdge::src_node, &TaskNode::ForEachInDataEdge);
 }
 
+std::string CompTaskNode::VisualStr() const {
+  std::stringstream ss;
+  ss << TaskType_Name(GetTaskType()) << "\\n";
+  for (const auto& op : logical_node()->op_vec()) { ss << "[" << op->op_name() << "]\n"; }
+  ss << this->machine_id() << ":" << this->thrd_id() << "\\n" << this->task_id();
+  return ss.str();
+}
+
 }  // namespace oneflow

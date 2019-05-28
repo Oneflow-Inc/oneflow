@@ -1,4 +1,4 @@
-#include "oneflow/core/graph/boxing/local_peer_boxing_builder.h"
+#include "oneflow/core/graph/boxing/local_peer_sub_task_graph_builder.h"
 #include "oneflow/core/register/tensor_slice_view.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/graph/boxing_v2_task_node.h"
@@ -38,22 +38,26 @@ std::vector<TensorSliceView> GetTensorSliceView(const int64_t parallel_num,
 
 }  // namespace
 
-BoxingBuilderStatus LocalPeerBoxingBuilder::Build(
-    BoxingBuilderCtx* ctx, const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
+SubTskGphBuilderStatus LocalPeerSubTskGphBuilder::Build(
+    SubTskGphBuilderCtx* ctx, const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
     const std::vector<CompTaskNode*>& sorted_dst_comp_tasks, const ParallelDesc& src_parallel_desc,
     const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
     const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
     const SbpParallel& dst_sbp_parallel) const {
   if (src_parallel_desc.sorted_machine_ids().size() != 1
       || dst_parallel_desc.sorted_machine_ids().size() != 1) {
-    return BoxingBuilderStatus::MakeStatusError();
+    return SubTskGphBuilderStatus::MakeStatusError();
   }
   if (src_parallel_desc.sorted_machine_ids().at(0)
       != dst_parallel_desc.sorted_machine_ids().at(0)) {
-    return BoxingBuilderStatus::MakeStatusError();
+    return SubTskGphBuilderStatus::MakeStatusError();
   }
-  if (!IsDeviceTypeCPUOrGPU(src_parallel_desc)) { return BoxingBuilderStatus::MakeStatusError(); }
-  if (!IsDeviceTypeCPUOrGPU(dst_parallel_desc)) { return BoxingBuilderStatus::MakeStatusError(); }
+  if (!IsDeviceTypeCPUOrGPU(src_parallel_desc)) {
+    return SubTskGphBuilderStatus::MakeStatusError();
+  }
+  if (!IsDeviceTypeCPUOrGPU(dst_parallel_desc)) {
+    return SubTskGphBuilderStatus::MakeStatusError();
+  }
 
   std::vector<TaskNode*> from_nodes;
   if (src_parallel_desc.device_type() == DeviceType::kGPU
@@ -102,7 +106,7 @@ BoxingBuilderStatus LocalPeerBoxingBuilder::Build(
       copy_task_node->SetInDataEdgeView(edge, src_views.at(src_id));
     }
   }
-  return BoxingBuilderStatus::MakeStatusOK();
+  return SubTskGphBuilderStatus::MakeStatusOK();
 }
 
 }  // namespace oneflow

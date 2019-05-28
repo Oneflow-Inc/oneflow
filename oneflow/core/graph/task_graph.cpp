@@ -15,7 +15,7 @@
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/operator/constant_op.h"
 #include "oneflow/core/graph/op_graph.h"
-#include "oneflow/core/graph/boxing/local_peer_boxing_builder.h"
+#include "oneflow/core/graph/boxing/local_peer_sub_task_graph_builder.h"
 
 namespace oneflow {
 
@@ -635,8 +635,8 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV2) {
     const std::shared_ptr<const ParallelDesc>& src_parallel_desc = src_logical->parallel_desc();
     const std::shared_ptr<const ParallelDesc>& dst_parallel_desc = dst_logical->parallel_desc();
     const BlobDesc& blob_desc = Global<OpGraph>::Get()->GetLogicalBlobDesc(lbi);
-    BasicBoxingBuilderCtx ctx(this, AllocateCpuThrdIdEvenly);
-    BoxingBuilderStatus status = LocalPeerBoxingBuilder().Build(
+    BasicSubTskGphBuilderCtx ctx(this, AllocateCpuThrdIdEvenly);
+    SubTskGphBuilderStatus status = LocalPeerSubTskGphBuilder().Build(
         &ctx, sorted_src_comp_tasks, sorted_dst_comp_tasks, *src_parallel_desc, *dst_parallel_desc,
         lbi, blob_desc, src_sbp_parallel, dst_sbp_parallel);
     CHECK(status.ok());

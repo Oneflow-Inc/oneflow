@@ -1355,7 +1355,7 @@ message IdentityOpConf {
 
 message BlobDumpOpConf {
   required string in = 1;
-  optional string dir = 2;
+  required string dir = 2;
 }
 
 message BoxingV2Conf {

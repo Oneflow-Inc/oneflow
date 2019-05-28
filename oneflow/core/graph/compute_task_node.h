@@ -31,6 +31,7 @@ class CompTaskNode : public TaskNode {
   const LogicalNode* GetOnePredLogicalNodeOnEdge(TaskEdge* edge);
   std::vector<CompTaskNode*> GetSuccCompTaskNodesOnEdge(TaskEdge* edge) const;
   std::vector<CompTaskNode*> GetPredCompTaskNodesOnEdge(TaskEdge* edge) const;
+  std::string VisualStr() const override;
 
  private:
   ParallelContext parallel_ctx_;

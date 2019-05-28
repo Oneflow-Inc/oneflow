@@ -15,8 +15,8 @@ class BlobDumpKernel final : public KernelIf<DeviceType::kCPU> {
   void VirtualKernelInit(const ParallelContext*) override;
   void Forward(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
 
-  std::string base_dir_;
   mutable int64_t iter_;
+  int64_t parallel_id_;
 };
 
 }  // namespace oneflow

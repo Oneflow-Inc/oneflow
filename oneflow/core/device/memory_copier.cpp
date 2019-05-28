@@ -105,9 +105,9 @@ void MemoryCopier::Copy3D(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const {
   const size_t depth = desc.extent.At(0);
   FOR_RANGE(size_t, i, 0, depth) {
     void* dst = (unsigned char*)desc.dst_ptr + (desc.dst_pos.At(0) + i) * dst_inner_area
-                + desc.dst_pos.At(1) * dst_pitch + desc.dst_pos.At(0);
+                + desc.dst_pos.At(1) * dst_pitch + desc.dst_pos.At(2);
     const void* src = (unsigned char*)desc.src_ptr + (desc.src_pos.At(0) + i) * src_inner_area
-                      + desc.src_pos.At(1) * src_pitch + desc.src_pos.At(0);
+                      + desc.src_pos.At(1) * src_pitch + desc.src_pos.At(2);
     Copy2D(ctx, dst, dst_pitch, src, src_pitch, width, height);
   }
 }

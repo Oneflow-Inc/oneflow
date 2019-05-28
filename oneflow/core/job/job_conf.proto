@@ -7,6 +7,8 @@ import "oneflow/core/job/dlnet_conf.proto";
 import "oneflow/core/job/resource.proto";
 import "oneflow/core/job/placement.proto";
 import "oneflow/core/job/sbp_parallel.proto";
+import "oneflow/core/register/logical_blob_id.proto";
+import "oneflow/core/register/blob_desc.proto";
 
 message TrainConf {
   required int64 batch_size = 1; // batch_size % piece_size = 0
@@ -57,6 +59,10 @@ message ExperimentalRunConf {
   optional bool enable_experiment_run = 2 [default = false];
 }
 
+message DebugBlobDumpConf {
+  required string base_dir = 1;
+}
+
 message Config {
   required int64 piece_size = 2;
   required int32 data_part_num = 3; // piece_size % data_part_num = 0
@@ -102,6 +108,8 @@ message Config {
 
   optional bool use_boxing_v2 = 150 [default = false];
 
+  optional DebugBlobDumpConf debug_blob_dump_conf = 151;
+
   oneof JobType {
     TrainConf train_conf = 200;
     PredictConf predict_conf = 201;
@@ -115,4 +123,16 @@ message JobConf {
   required Placement placement = 3;
   optional SbpConf sbp_conf = 4;
   required Config other = 5;
+}
+
+message BlobDumpMetaElem {
+  required LogicalBlobId lbi = 1;
+  required BlobDescProto blob_desc = 2;
+  required ParallelConf parallel_conf = 3;
+  required SbpParallel sbp_parallel = 4;
+  required string dir = 5;
+}
+
+message BlobDumpMeta {
+  repeated BlobDumpMetaElem blob = 1;
 }
