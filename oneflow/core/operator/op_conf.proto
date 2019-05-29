@@ -1444,6 +1444,25 @@ message BboxScaleOpConf {
   required string out = 3;
 }
 
+message IoUMatrixOpConf {
+  required string gt_boxes = 1;
+  required string proposals = 2;
+  required string iou_matrix = 3;
+}
+
+// split Matcher into top_1 with keep_same_val and set_low_quality_matches
+message MatcherOpConf {
+  // in
+  required string iou_matrix = 1;
+  required string iou_matrix_shape = 2;
+  // out
+  required string matched_indices = 3;
+  // conf
+  optional float high_threshold = 4 [default = 0.7];
+  optional float low_threshold = 5 [default = 0.3];
+  optional bool allow_low_quality_matches = 6 [default = true];
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1571,6 +1590,8 @@ message OperatorConf {
     ConcatGtProposalsOpConf concat_gt_proposals_conf = 295;
     BboxScaleOpConf bbox_scale_conf = 296;
     AnchorGenerateOpConf anchor_generate_conf = 297;
+    IoUMatrixOpConf iou_matrix_conf = 298;
+    MatcherOpConf matcher_conf = 299;
 
     // Maybe not needed
     RedefineDim0OpConf redefine_dim0_conf = 400;
