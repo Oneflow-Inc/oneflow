@@ -1,6 +1,7 @@
 #include "oneflow/core/operator/conv_data_grad_op.h"
 #include "oneflow/core/operator/conv_op.h"
 #include "oneflow/core/device/cudnn_conv_ctx_cache.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -47,8 +48,8 @@ void ConvDataGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
     CHECK(conv_op_ctx->cudnn_conv_algo_ctx.bwd_data_algo_found);
     BlobDesc* cudnn_buf = GetBlobDesc4BnInOp("buf");
     cudnn_buf->set_data_type(DataType::kChar);
-    cudnn_buf->mut_shape() =
-        Shape({static_cast<int64_t>(conv_op_ctx->cudnn_conv_algo_ctx.bwd_data_ws_size)});
+    size_t buf_size = std::max(size_t(1), conv_op_ctx->cudnn_conv_algo_ctx.bwd_data_ws_size);
+    cudnn_buf->mut_shape() = Shape({static_cast<int64_t>(buf_size)});
 #else
     UNIMPLEMENTED();
 #endif
@@ -71,6 +72,25 @@ void ConvDataGradOp::VirtualGenKernelConf(
   } else {
     UNIMPLEMENTED();
   }
+}
+
+void ConvDataGradOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  CHECK(*HasBatchDim4BnInOp("dy"));
+  CHECK(*HasBatchDim4BnInOp("x_like"));
+  CHECK(*HasBatchDim4BnInOp("filter") == false);
+  *HasBatchDim4BnInOp("dx") = true;
+}
+
+void ConvDataGradOp::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split("dy", 0)
+      .Broadcast("filter")
+      .Split("x_like", 0)
+      .Split("out", 0)
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_OP(OperatorConf::kConvDataGradConf, ConvDataGradOp);

@@ -15,6 +15,13 @@ void ReluOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
 }
 
+void ReluOp::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder().Split("in", 0).Split("out", 0).Build(
+      sbp_sig_list->mutable_sbp_signature()->Add());
+}
+
 REGISTER_OP(OperatorConf::kReluConf, ReluOp);
 
 }  // namespace oneflow
