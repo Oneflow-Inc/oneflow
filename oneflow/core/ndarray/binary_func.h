@@ -12,35 +12,49 @@
 #include "oneflow/core/common/util.h"
 namespace oneflow {
 
+#define SPECIALIZE_CONST_TYPE_BINARY_FUNC(func_struct)                  \
+  template<typename T>                                                  \
+  struct func_struct<const T> final {                                   \
+    static inline OF_DEVICE_FUNC const T Invoke(const T x, const T y) { \
+      return func_struct<T>::Invoke(x, y);                              \
+    }                                                                   \
+  }
+
 template<typename T>
 struct BinaryFuncAdd final {
   static inline OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x + y; }
 };
+SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncAdd);
 
 template<typename T>
 struct BinaryFuncSub final {
   static inline OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x - y; }
 };
+SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncSub);
 
 template<typename T>
 struct BinaryFuncMul final {
   static inline OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x * y; }
 };
+SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncMul);
 
 template<typename T>
 struct BinaryFuncDiv final {
   static inline OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x / y; }
 };
+SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncDiv);
 
 template<typename T>
 struct BinaryFuncMax final {
   static inline OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x > y ? x : y; }
 };
+SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncMax);
 
 template<typename T>
 struct BinaryFuncMin final {
   static inline OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x < y ? x : y; }
 };
+SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncMin);
 
 #if defined(__CUDA_ARCH__)
 

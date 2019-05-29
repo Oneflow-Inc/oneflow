@@ -6,8 +6,15 @@
 
 namespace oneflow {
 
+template<DeviceType device_type, typename T, int NDIMS, template<typename> class binary_func,
+         typename Enable = void>
+struct NdarrayApplyBroadcastBinary;
+
 template<DeviceType device_type, typename T, int NDIMS, template<typename> class binary_func>
-struct NdarrayApplyBroadcastBinary final {
+struct NdarrayApplyBroadcastBinary<
+    device_type, T, NDIMS, binary_func,
+    typename std::enable_if<std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>
+    final {
   static void Apply(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& a,
                     const XpuVarNdarray<const T>& b) {
     using NdarrayAssign = XpuNdarrayAssign<device_type, T>;
@@ -26,6 +33,7 @@ struct NdarrayApplyBroadcastBinary final {
     }
   }
 
+ private:
   static void CheckBroadcastable(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& a,
                                  const XpuVarNdarray<const T>& b) {
     CHECK_EQ(y.shape().NumAxes(), a.shape().NumAxes());
@@ -36,6 +44,21 @@ struct NdarrayApplyBroadcastBinary final {
         CHECK(a.shape().At(i) == 1 || b.shape().At(i) == 1);
       }
     }
+  }
+};
+
+template<DeviceType device_type, typename T, int NDIMS, template<typename> class binary_func>
+struct NdarrayApplyBroadcastBinary<
+    device_type, T, NDIMS, binary_func,
+    typename std::enable_if<!std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>
+    final {
+  static void Apply(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& a,
+                    const XpuVarNdarray<const T>& b) {
+    using NewT = typename DevDType<device_type, T>::type;
+    return NdarrayApplyBroadcastBinary<device_type, NewT, NDIMS, binary_func>::Apply(
+        ctx, reinterpret_cast<const XpuVarNdarray<NewT>&>(y),
+        reinterpret_cast<const XpuVarNdarray<const NewT>&>(a),
+        reinterpret_cast<const XpuVarNdarray<const NewT>&>(b));
   }
 };
 

@@ -11,6 +11,12 @@ namespace oneflow {
 
 #define ARITHMETIC_UNARY_FUNC_SEQ (UnaryFuncIdentity)(UnaryFuncNegative)
 
+#define SPECIALIZE_CONST_TYPE_UNARY_FUNC(func_struct)                                            \
+  template<typename T>                                                                           \
+  struct func_struct<const T> final {                                                            \
+    static inline OF_DEVICE_FUNC const T Invoke(const T x) { return func_struct<T>::Invoke(x); } \
+  }
+
 template<typename T>
 struct UnaryFuncIdentity final {
   static OF_DEVICE_FUNC const T Invoke(const T x) { return x; }
@@ -20,6 +26,7 @@ template<typename T>
 struct UnaryFuncNegative final {
   static OF_DEVICE_FUNC const T Invoke(const T x) { return -x; }
 };
+SPECIALIZE_CONST_TYPE_UNARY_FUNC(UnaryFuncNegative);
 
 #define NO_HALF_UTIL_FOUND         \
   printf("cuda arch must >= 530"); \
@@ -29,17 +36,6 @@ struct UnaryFuncNegative final {
 #if defined(__CUDA_ARCH__)
 template<>
 struct UnaryFuncNegative<half> final {
-  static OF_DEVICE_FUNC const half Invoke(const half x) {
-#if __CUDA_ARCH__ >= 530
-    return __hneg(x);
-#else
-    NO_HALF_UTIL_FOUND;
-#endif
-  }
-};
-
-template<>
-struct UnaryFuncNegative<const half> final {
   static OF_DEVICE_FUNC const half Invoke(const half x) {
 #if __CUDA_ARCH__ >= 530
     return __hneg(x);
