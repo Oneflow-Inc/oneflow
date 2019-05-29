@@ -12,47 +12,47 @@
 #include "oneflow/core/common/util.h"
 namespace oneflow {
 
-#define SPECIALIZE_CONST_TYPE_BINARY_FUNC(func_struct)                  \
-  template<typename T>                                                  \
-  struct func_struct<const T> final {                                   \
-    static inline OF_DEVICE_FUNC const T Invoke(const T x, const T y) { \
-      return func_struct<T>::Invoke(x, y);                              \
-    }                                                                   \
+#define SPECIALIZE_CONST_TYPE_BINARY_FUNC(func_struct)           \
+  template<typename T>                                           \
+  struct func_struct<const T> final {                            \
+    static OF_DEVICE_FUNC const T Invoke(const T x, const T y) { \
+      return func_struct<T>::Invoke(x, y);                       \
+    }                                                            \
   }
 
 template<typename T>
 struct BinaryFuncAdd final {
-  static inline OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x + y; }
+  static OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x + y; }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncAdd);
 
 template<typename T>
 struct BinaryFuncSub final {
-  static inline OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x - y; }
+  static OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x - y; }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncSub);
 
 template<typename T>
 struct BinaryFuncMul final {
-  static inline OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x * y; }
+  static OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x * y; }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncMul);
 
 template<typename T>
 struct BinaryFuncDiv final {
-  static inline OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x / y; }
+  static OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x / y; }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncDiv);
 
 template<typename T>
 struct BinaryFuncMax final {
-  static inline OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x > y ? x : y; }
+  static OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x > y ? x : y; }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncMax);
 
 template<typename T>
 struct BinaryFuncMin final {
-  static inline OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x < y ? x : y; }
+  static OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x < y ? x : y; }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncMin);
 
@@ -64,13 +64,11 @@ SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncMin);
   return __float2half(0.0)
 template<>
 struct BinaryFuncAdd<half> final {
-  static inline OF_DEVICE_FUNC const half Invoke(const half x, const half y) {
-    return __hadd(x, y);
-  }
+  static OF_DEVICE_FUNC const half Invoke(const half x, const half y) { return __hadd(x, y); }
 };
 template<>
 struct BinaryFuncSub<half> final {
-  static inline OF_DEVICE_FUNC const half Invoke(const half x, const half y) {
+  static OF_DEVICE_FUNC const half Invoke(const half x, const half y) {
 #if __CUDA_ARCH__ >= 530
     return __hsub(x, y);
 #else
@@ -80,7 +78,7 @@ struct BinaryFuncSub<half> final {
 };
 template<>
 struct BinaryFuncMul<half> final {
-  static inline OF_DEVICE_FUNC const half Invoke(const half x, const half y) {
+  static OF_DEVICE_FUNC const half Invoke(const half x, const half y) {
 #if __CUDA_ARCH__ >= 530
     return __hmul(x, y);
 #else
@@ -90,7 +88,7 @@ struct BinaryFuncMul<half> final {
 };
 template<>
 struct BinaryFuncDiv<half> final {
-  static inline OF_DEVICE_FUNC const half Invoke(const half x, const half y) {
+  static OF_DEVICE_FUNC const half Invoke(const half x, const half y) {
 #if __CUDA_ARCH__ >= 530
     return __hdiv(x, y);
 #else
@@ -100,7 +98,7 @@ struct BinaryFuncDiv<half> final {
 };
 template<>
 struct BinaryFuncMax<half> final {
-  static inline OF_DEVICE_FUNC const half Invoke(const half x, const half y) {
+  static OF_DEVICE_FUNC const half Invoke(const half x, const half y) {
 #if __CUDA_ARCH__ >= 530
     return __hgt(x, y) ? x : y;
 #else
@@ -110,7 +108,7 @@ struct BinaryFuncMax<half> final {
 };
 template<>
 struct BinaryFuncMin<half> final {
-  static inline OF_DEVICE_FUNC const half Invoke(const half x, const half y) {
+  static OF_DEVICE_FUNC const half Invoke(const half x, const half y) {
 #if __CUDA_ARCH__ >= 530
     return __hlt(x, y) ? x : y;
 #else
@@ -125,10 +123,10 @@ struct BinaryFuncMin<half> final {
 template<typename T, template<typename> class binary_func>
 struct UnitOfBinaryFunc;
 
-#define SPECIALIZE_UNIT_OF_BINARY_FUNC(binary_func, get_val)      \
-  template<typename T>                                            \
-  struct UnitOfBinaryFunc<T, binary_func> final {                 \
-    static inline OF_DEVICE_FUNC T Val() { return get_val<T>(); } \
+#define SPECIALIZE_UNIT_OF_BINARY_FUNC(binary_func, get_val) \
+  template<typename T>                                       \
+  struct UnitOfBinaryFunc<T, binary_func> final {            \
+    static OF_DEVICE_FUNC T Val() { return get_val<T>(); }   \
   };
 SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncAdd, GetZeroVal);
 SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncMul, GetOneVal);

@@ -11,10 +11,10 @@ namespace oneflow {
 
 #define ARITHMETIC_UNARY_FUNC_SEQ (UnaryFuncIdentity)(UnaryFuncNegative)
 
-#define SPECIALIZE_CONST_TYPE_UNARY_FUNC(func_struct)                                            \
-  template<typename T>                                                                           \
-  struct func_struct<const T> final {                                                            \
-    static inline OF_DEVICE_FUNC const T Invoke(const T x) { return func_struct<T>::Invoke(x); } \
+#define SPECIALIZE_CONST_TYPE_UNARY_FUNC(func_struct)                                     \
+  template<typename T>                                                                    \
+  struct func_struct<const T> final {                                                     \
+    static OF_DEVICE_FUNC const T Invoke(const T x) { return func_struct<T>::Invoke(x); } \
   }
 
 template<typename T>

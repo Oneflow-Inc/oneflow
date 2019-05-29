@@ -99,9 +99,9 @@ template<DataType type>
 using DataTypeToType = decltype(GetTypeByDataType(std::integral_constant<DataType, type>{}));
 
 #if defined(__CUDACC__)
-#define OF_DEVICE_FUNC __device__ __host__
+#define OF_DEVICE_FUNC __device__ __host__ __forceinline__
 #else
-#define OF_DEVICE_FUNC
+#define OF_DEVICE_FUNC inline
 #endif
 
 template<typename T>
@@ -146,7 +146,7 @@ OF_DEVICE_FUNC T GetMaxVal();
 
 #define SPECIALIZE_MAX_VAL(T, limit_value) \
   template<>                               \
-  inline OF_DEVICE_FUNC T GetMaxVal<T>() { \
+  OF_DEVICE_FUNC T GetMaxVal<T>() {        \
     return limit_value;                    \
   }
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_MAX_VAL, MAX_VAL_SEQ);
@@ -154,7 +154,7 @@ OF_PP_FOR_EACH_TUPLE(SPECIALIZE_MAX_VAL, MAX_VAL_SEQ);
 
 #define SPECIALIZE_MIN_VAL(T, limit_value) \
   template<>                               \
-  inline OF_DEVICE_FUNC T GetMinVal<T>() { \
+  OF_DEVICE_FUNC T GetMinVal<T>() {        \
     return limit_value;                    \
   }
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_MIN_VAL, MIN_VAL_SEQ);
@@ -184,25 +184,25 @@ const T* GetOnePtr() {
 
 #if defined(WITH_CUDA)
 template<>
-inline OF_DEVICE_FUNC half GetZeroVal<half>() {
+OF_DEVICE_FUNC half GetZeroVal<half>() {
   uint16_t ret = 0;
   return *(half*)&ret;
 }
 
 template<>
-inline OF_DEVICE_FUNC half GetOneVal<half>() {
+OF_DEVICE_FUNC half GetOneVal<half>() {
   uint16_t ret = 15360;
   return *(half*)&ret;
 }
 
 template<>
-inline OF_DEVICE_FUNC half GetMaxVal<half>() {
+OF_DEVICE_FUNC half GetMaxVal<half>() {
   uint16_t ret = 31743;
   return *(half*)&ret;
 }
 
 template<>
-inline OF_DEVICE_FUNC half GetMinVal<half>() {
+OF_DEVICE_FUNC half GetMinVal<half>() {
   uint16_t ret = 64511;
   return *(half*)&ret;
 }
