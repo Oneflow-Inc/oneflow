@@ -56,7 +56,7 @@ void LayerNormKernelUtil<DeviceType::kGPU, T>::NormalizeForward(const DeviceCtx*
   CHECK_GE(epsilon, CUDNN_BN_MIN_EPSILON);
   LayerNormCudnnBnCtx bn_ctx(in->static_shape(), mean->shape(), in->data_type());
   CudaCheck(cudnnBatchNormalizationForwardTraining(
-      ctx->cudnn_handle(), bn_ctx.mode(), OnePtr<T>::value, ZeroPtr<T>::value,
+      ctx->cudnn_handle(), bn_ctx.mode(), GetOnePtr<T>(), GetZeroPtr<T>(),
       bn_ctx.data_tensor_desc(), in->dptr<T>(), bn_ctx.data_tensor_desc(), out->mut_dptr<T>(),
       bn_ctx.param_tensor_desc(), scale->dptr<T>(), bias->dptr<T>(), 1.0, nullptr, nullptr, epsilon,
       mean->mut_dptr<T>(), inv_variance->mut_dptr<T>()));
@@ -70,8 +70,8 @@ void LayerNormKernelUtil<DeviceType::kGPU, T>::NormalizeBackward(
   CHECK_GE(epsilon, CUDNN_BN_MIN_EPSILON);
   LayerNormCudnnBnCtx bn_ctx(in->static_shape(), scale_diff->shape(), in->data_type());
   CudaCheck(cudnnBatchNormalizationBackward(
-      ctx->cudnn_handle(), bn_ctx.mode(), OnePtr<T>::value, ZeroPtr<T>::value, OnePtr<T>::value,
-      ZeroPtr<T>::value, bn_ctx.data_tensor_desc(), in->dptr<T>(), bn_ctx.data_tensor_desc(),
+      ctx->cudnn_handle(), bn_ctx.mode(), GetOnePtr<T>(), GetZeroPtr<T>(), GetOnePtr<T>(),
+      GetZeroPtr<T>(), bn_ctx.data_tensor_desc(), in->dptr<T>(), bn_ctx.data_tensor_desc(),
       out_diff->dptr<T>(), bn_ctx.data_tensor_desc(), in_diff->mut_dptr<T>(),
       bn_ctx.param_tensor_desc(), scale->dptr<T>(), scale_diff->mut_dptr<T>(),
       bias_diff->mut_dptr<T>(), epsilon, mean ? mean->dptr<T>() : nullptr,

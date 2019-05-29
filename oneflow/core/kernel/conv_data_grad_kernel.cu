@@ -13,10 +13,10 @@ struct ConvDataGradKernelUtil<DeviceType::kGPU, T> final {
     CudnnTensorDesc dx_desc(dx->data_type(), dx->shape(), conf.data_format());
     CudnnConvDesc conv_desc(dx->data_type(), dx->shape(), conf);
     CudaCheck(cudnnConvolutionBackwardData(
-        ctx->cudnn_handle(), OnePtr<T>::value, filter_desc.Get(), filter->dptr<T>(), dy_desc.Get(),
+        ctx->cudnn_handle(), GetOnePtr<T>(), filter_desc.Get(), filter->dptr<T>(), dy_desc.Get(),
         dy->dptr<T>(), conv_desc.Get(),
         static_cast<cudnnConvolutionBwdDataAlgo_t>(kernel_conf.cudnn_bwd_data_algo()),
-        buf->mut_dptr(), buf->ByteSizeOfDataContentField(), ZeroPtr<T>::value, dx_desc.Get(),
+        buf->mut_dptr(), buf->ByteSizeOfDataContentField(), GetZeroPtr<T>(), dx_desc.Get(),
         dx->mut_dptr<T>()));
   }
 };

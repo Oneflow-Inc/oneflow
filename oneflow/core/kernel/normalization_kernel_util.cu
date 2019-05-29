@@ -41,7 +41,7 @@ struct NormalizationKernelUtil<kGPU, T> {
     CheckParamBlob(inv_variance);
     CudnnTensorDesc param_desc(CUDNN_TENSOR_NCHW, data_type, 1, param_dim_size, 1, 1);
     CudaCheck(cudnnBatchNormalizationForwardTraining(
-        ctx->cudnn_handle(), CudnnBatchNormModeTraining(), OnePtr<T>::value, ZeroPtr<T>::value,
+        ctx->cudnn_handle(), CudnnBatchNormModeTraining(), GetOnePtr<T>(), GetZeroPtr<T>(),
         xy_desc.Get(), x->dptr(), xy_desc.Get(), y->mut_dptr(), param_desc.Get(), gamma->dptr<T>(),
         beta->dptr<T>(), 1.0 - momentum, moving_mean->mut_dptr(), moving_variance->mut_dptr(),
         epsilon, mean->mut_dptr(), inv_variance->mut_dptr()));
@@ -68,7 +68,7 @@ struct NormalizationKernelUtil<kGPU, T> {
     CheckParamBlob(moving_variance);
     CudnnTensorDesc param_desc(CUDNN_TENSOR_NCHW, data_type, 1, param_dim_size, 1, 1);
     CudaCheck(cudnnBatchNormalizationForwardInference(
-        ctx->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL, OnePtr<T>::value, ZeroPtr<T>::value,
+        ctx->cudnn_handle(), CUDNN_BATCHNORM_SPATIAL, GetOnePtr<T>(), GetZeroPtr<T>(),
         xy_desc.Get(), x->dptr(), xy_desc.Get(), y->mut_dptr(), param_desc.Get(), gamma->dptr(),
         beta->dptr(), moving_mean->dptr(), moving_variance->dptr(), epsilon));
   }
@@ -95,8 +95,8 @@ struct NormalizationKernelUtil<kGPU, T> {
     CheckParamBlob(beta_diff);
     CudnnTensorDesc param_desc(CUDNN_TENSOR_NCHW, data_type, 1, param_dim_size, 1, 1);
     CudaCheck(cudnnBatchNormalizationBackward(
-        ctx->cudnn_handle(), CudnnBatchNormModeTraining(), OnePtr<T>::value, ZeroPtr<T>::value,
-        OnePtr<T>::value, ZeroPtr<T>::value, xy_desc.Get(), x->dptr(), xy_desc.Get(), dy->dptr(),
+        ctx->cudnn_handle(), CudnnBatchNormModeTraining(), GetOnePtr<T>(), GetZeroPtr<T>(),
+        GetOnePtr<T>(), GetZeroPtr<T>(), xy_desc.Get(), x->dptr(), xy_desc.Get(), dy->dptr(),
         xy_desc.Get(), dx->mut_dptr(), param_desc.Get(), gamma->dptr(), gamma_diff->mut_dptr(),
         beta_diff->mut_dptr(), epsilon, mean->dptr(), inv_variance->dptr()));
   }

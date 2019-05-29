@@ -161,16 +161,6 @@ OF_PP_FOR_EACH_TUPLE(SPECIALIZE_MIN_VAL, MIN_VAL_SEQ);
 #undef SPECIALIZE_MIN_VAL
 
 template<>
-inline float16 GetZeroVal<float16>() {
-  return float16(0.0);
-}
-
-template<>
-inline float16 GetOneVal<float16>() {
-  return float16(1.0);
-}
-
-template<>
 inline float16 GetMaxVal<float16>() {
   return std::numeric_limits<float16>::max();
 }
@@ -180,47 +170,39 @@ inline float16 GetMinVal<float16>() {
   return std::numeric_limits<float16>::lowest();
 }
 
-// Type Trait: const var
+template<typename T>
+const T* GetZeroPtr() {
+  static const T ret = GetZeroVal<T>();
+  return &ret;
+}
 
-#define TRAIT_CONST_VAR(var_name, var_val)                   \
-  template<typename T>                                       \
-  struct var_name##Val {                                     \
-    static const T value;                                    \
-  };                                                         \
-  template<typename T>                                       \
-  const T var_name##Val<T>::value = static_cast<T>(var_val); \
-  template<typename T>                                       \
-  struct var_name##Ptr {                                     \
-    static const T* value;                                   \
-  };                                                         \
-  template<typename T>                                       \
-  const T* var_name##Ptr<T>::value = &var_name##Val<T>::value;
-
-TRAIT_CONST_VAR(Zero, 0);
-TRAIT_CONST_VAR(One, 1);
-#undef TRAIT_CONST_VAR
+template<typename T>
+const T* GetOnePtr() {
+  static const T ret = GetZeroVal<T>();
+  return &ret;
+}
 
 #if defined(WITH_CUDA)
 template<>
-inline half GetZeroVal<half>() {
+inline OF_DEVICE_FUNC half GetZeroVal<half>() {
   uint16_t ret = 0;
   return *(half*)&ret;
 }
 
 template<>
-inline half GetOneVal<half>() {
+inline OF_DEVICE_FUNC half GetOneVal<half>() {
   uint16_t ret = 15360;
   return *(half*)&ret;
 }
 
 template<>
-inline half GetMaxVal<half>() {
+inline OF_DEVICE_FUNC half GetMaxVal<half>() {
   uint16_t ret = 31743;
   return *(half*)&ret;
 }
 
 template<>
-inline half GetMinVal<half>() {
+inline OF_DEVICE_FUNC half GetMinVal<half>() {
   uint16_t ret = 64511;
   return *(half*)&ret;
 }
