@@ -12,11 +12,14 @@ struct ConvDataGradKernelUtil<DeviceType::kGPU, T> final {
     CudnnFilterDesc filter_desc(filter->data_type(), filter->shape(), conf.data_format());
     CudnnTensorDesc dx_desc(dx->data_type(), dx->shape(), conf.data_format());
     CudnnConvDesc conv_desc(dx->data_type(), dx->shape(), conf);
+
+    auto one = GetCudnnScalingParameters<T>(1.0);
+    auto zero = GetCudnnScalingParameters<T>(0.0);
     CudaCheck(cudnnConvolutionBackwardData(
-        ctx->cudnn_handle(), OnePtr<T>::value, filter_desc.Get(), filter->dptr<T>(), dy_desc.Get(),
+        ctx->cudnn_handle(), one.get(), filter_desc.Get(), filter->dptr<T>(), dy_desc.Get(),
         dy->dptr<T>(), conv_desc.Get(),
         static_cast<cudnnConvolutionBwdDataAlgo_t>(kernel_conf.cudnn_bwd_data_algo()),
-        buf->mut_dptr(), buf->ByteSizeOfDataContentField(), ZeroPtr<T>::value, dx_desc.Get(),
+        buf->mut_dptr(), buf->ByteSizeOfDataContentField(), zero.get(), dx_desc.Get(),
         dx->mut_dptr<T>()));
   }
 };

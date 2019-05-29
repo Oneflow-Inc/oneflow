@@ -117,4 +117,17 @@ CudnnActivationDesc::~CudnnActivationDesc() { CudaCheck(cudnnDestroyActivationDe
 
 #endif  // WITH_CUDA
 
+template<typename T>
+std::shared_ptr<void> GetCudnnScalingParameters(float val) {
+  std::shared_ptr<float> fval = std::make_shared<float>(val);
+  std::shared_ptr<double> dval = std::make_shared<double>(val);
+  std::shared_ptr<void> ret = std::is_same<T, double>::value ? std::static_pointer_cast<void>(dval)
+                                                             : std::static_pointer_cast<void>(fval);
+  return ret;
+}
+
+template std::shared_ptr<void> GetCudnnScalingParameters<float>(float val);
+template std::shared_ptr<void> GetCudnnScalingParameters<double>(float val);
+template std::shared_ptr<void> GetCudnnScalingParameters<float16>(float val);
+
 }  // namespace oneflow

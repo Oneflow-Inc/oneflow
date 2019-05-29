@@ -72,6 +72,9 @@ class CudnnActivationDesc final {
   cudnnActivationDescriptor_t val_;
 };
 
+template<typename T>
+std::shared_ptr<void> GetCudnnScalingParameters(float val);
+
 }  // namespace oneflow
 
 #endif  // WITH_CUDA
