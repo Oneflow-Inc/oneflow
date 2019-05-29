@@ -6,7 +6,7 @@ namespace oneflow {
 void ReshapeOp::InitFromOpConf() {
   CHECK(op_conf().has_reshape_conf());
   EnrollInputBn("in");
-  EnrollOutputBn("out");
+  EnrollOutputBn("out")->set_const_inplace_ibn("in");
 }
 
 const PbMessage& ReshapeOp::GetCustomizedConf() const { return op_conf().reshape_conf(); }

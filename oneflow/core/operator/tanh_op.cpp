@@ -6,7 +6,7 @@ namespace oneflow {
 void TanHOp::InitFromOpConf() {
   CHECK(op_conf().has_tanh_conf());
   EnrollInputBn("in");
-  EnrollOutputBn("out");
+  EnrollOutputBn("out")->set_mutable_inplace_ibn("in");
 }
 
 const PbMessage& TanHOp::GetCustomizedConf() const { return op_conf().tanh_conf(); }
