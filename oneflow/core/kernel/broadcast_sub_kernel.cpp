@@ -34,7 +34,7 @@ void BroadcastSubKernel<device_type, T>::BackwardDataContent(
     NdarrayUtil<device_type, T>::ReduceSum(
         kernel_ctx.device_ctx, XpuVarNdarray<T>(b_diff_blob, num_axes),
         XpuVarNdarray<const T>(out_diff_blob, num_axes), XpuVarNdarray<T>(bw_buf_blob, num_axes));
-    NdarrayUtil<device_type, T>::template ImplaceApplyUnary<UnaryFuncMinus>(
+    NdarrayUtil<device_type, T>::template ImplaceApplyUnary<UnaryFuncNegative>(
         kernel_ctx.device_ctx, XpuVarNdarray<T>(b_diff_blob, num_axes));
   }
 }

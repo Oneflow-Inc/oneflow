@@ -8,7 +8,6 @@
 #if defined(__CUDACC__)
 #include <cuda_fp16.h>
 #endif
-
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/util.h"
 namespace oneflow {
@@ -43,7 +42,12 @@ struct BinaryFuncMin final {
   static inline OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x < y ? x : y; }
 };
 
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530
+#if defined(__CUDA_ARCH__)
+
+#define NO_HALF_UTIL_FOUND         \
+  printf("cuda arch must >= 530"); \
+  assert(false);                   \
+  return __float2half(0.0)
 template<>
 struct BinaryFuncAdd<half> final {
   static inline OF_DEVICE_FUNC const half Invoke(const half x, const half y) {
@@ -53,31 +57,51 @@ struct BinaryFuncAdd<half> final {
 template<>
 struct BinaryFuncSub<half> final {
   static inline OF_DEVICE_FUNC const half Invoke(const half x, const half y) {
+#if __CUDA_ARCH__ >= 530
     return __hsub(x, y);
+#else
+    NO_HALF_UTIL_FOUND;
+#endif
   }
 };
 template<>
 struct BinaryFuncMul<half> final {
   static inline OF_DEVICE_FUNC const half Invoke(const half x, const half y) {
+#if __CUDA_ARCH__ >= 530
     return __hmul(x, y);
+#else
+    NO_HALF_UTIL_FOUND;
+#endif
   }
 };
 template<>
 struct BinaryFuncDiv<half> final {
   static inline OF_DEVICE_FUNC const half Invoke(const half x, const half y) {
+#if __CUDA_ARCH__ >= 530
     return __hdiv(x, y);
+#else
+    NO_HALF_UTIL_FOUND;
+#endif
   }
 };
 template<>
 struct BinaryFuncMax<half> final {
   static inline OF_DEVICE_FUNC const half Invoke(const half x, const half y) {
+#if __CUDA_ARCH__ >= 530
     return __hgt(x, y) ? x : y;
+#else
+    NO_HALF_UTIL_FOUND;
+#endif
   }
 };
 template<>
 struct BinaryFuncMin<half> final {
   static inline OF_DEVICE_FUNC const half Invoke(const half x, const half y) {
+#if __CUDA_ARCH__ >= 530
     return __hlt(x, y) ? x : y;
+#else
+    NO_HALF_UTIL_FOUND;
+#endif
   }
 };
 #endif

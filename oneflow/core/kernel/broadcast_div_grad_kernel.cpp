@@ -24,7 +24,7 @@ void BroadcastDivGradKernel<device_type, T>::ForwardDataContent(
                                                                       const_tmp);
   NdarrayUtil<device_type, T>::ReduceSum(ctx.device_ctx, XpuVarNdarray<T>(db_blob, num_axes),
                                          const_tmp, tmp);
-  NdarrayUtil<device_type, T>::template ImplaceApplyUnary<UnaryFuncMinus>(
+  NdarrayUtil<device_type, T>::template ImplaceApplyUnary<UnaryFuncNegative>(
       ctx.device_ctx, XpuVarNdarray<T>(db_blob, num_axes));
 }
 

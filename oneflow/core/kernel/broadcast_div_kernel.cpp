@@ -90,7 +90,7 @@ void BroadcastDivKernel<device_type, T>::BackwardDataContent(
           ctx.device_ctx, tmp, out_diff_tensor, const_tmp);
       NdarrayUtil<device_type, T>::ReduceSum(ctx.device_ctx, XpuVarNdarray<T>(b_diff, num_axes),
                                              const_tmp, tmp);
-      NdarrayUtil<device_type, T>::template ImplaceApplyUnary<UnaryFuncMinus>(
+      NdarrayUtil<device_type, T>::template ImplaceApplyUnary<UnaryFuncNegative>(
           ctx.device_ctx, XpuVarNdarray<T>(b_diff, num_axes));
     }
   }
