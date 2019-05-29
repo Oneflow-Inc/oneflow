@@ -4,19 +4,19 @@ namespace oneflow {
 
 namespace {
 
-template<typename T, int NDIMS, const T (*binary_func)(const T, const T)>
+template<typename T, int NDIMS, template<typename> class binary_func>
 __global__ void GpuBroadcastBinaryFunc(const XpuVarNdarray<T> y, const XpuVarNdarray<const T> a,
                                        const XpuVarNdarray<const T> b) {
   NdarrayApplyBroadcastBinaryCore<T, NDIMS, binary_func>::Apply(y, a, b);
 }
-template<typename T, int NDIMS, const T (*binary_func)(const T, const T)>
+template<typename T, int NDIMS, template<typename> class binary_func>
 __global__ void GpuBroadcastBinaryFunc(const XpuVarNdarray<T> y, const XpuVarNdarray<const T> x) {
   NdarrayApplyBroadcastBinaryCore<T, NDIMS, binary_func>::ImplaceApply(y, x);
 }
 
 }  // namespace
 
-template<typename T, int NDIMS, const T (*binary_func)(const T, const T)>
+template<typename T, int NDIMS, template<typename> class binary_func>
 struct NdarrayApplyBroadcastBinaryCoreWrapper<DeviceType::kGPU, T, NDIMS, binary_func> final {
   static void Apply(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& a,
                     const XpuVarNdarray<const T>& b) {

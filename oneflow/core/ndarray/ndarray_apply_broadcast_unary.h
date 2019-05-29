@@ -6,7 +6,7 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T, int NDIMS, const T (*unary_func)(const T)>
+template<DeviceType device_type, typename T, int NDIMS, template<typename> class unary_func>
 struct NdarrayApplyBroadcastUnary final {
   static void Apply(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
     CheckBroadcastable(y, x);

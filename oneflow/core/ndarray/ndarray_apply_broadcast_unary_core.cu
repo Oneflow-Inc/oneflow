@@ -4,14 +4,14 @@ namespace oneflow {
 
 namespace {
 
-template<typename T, int NDIMS, const T (*unary_func)(const T)>
+template<typename T, int NDIMS, template<typename> class unary_func>
 __global__ void GpuBroadcastUnaryFunc(const XpuVarNdarray<T> y, const XpuVarNdarray<const T> x) {
   NdarrayApplyBroadcastUnaryCore<T, NDIMS, unary_func>::Apply(y, x);
 }
 
 }  // namespace
 
-template<typename T, int NDIMS, const T (*unary_func)(const T)>
+template<typename T, int NDIMS, template<typename> class unary_func>
 struct NdarrayApplyBroadcastUnaryCoreWrapper<DeviceType::kGPU, T, NDIMS, unary_func> final {
   static void Apply(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
     size_t n = y.host_shape().HostElemNum();

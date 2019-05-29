@@ -6,7 +6,7 @@
 namespace oneflow {
 
 #define SPECIALIZE_CPU_NDARRAY_REDUCE_IMPL(struct_name)                                            \
-  template<typename T, const T (*binary_func)(const T, const T)>                                   \
+  template<typename T, template<typename> class binary_func>                                       \
   struct struct_name<DeviceType::kCPU, T, binary_func> final {                                     \
     static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {              \
       return false;                                                                                \
@@ -29,7 +29,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_IMPL,
                                  ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ,
                                  REDUCE_BINARY_FUNC_SEQ);
 
-template<typename T, int NDIMS, const T (*binary_func)(const T, const T)>
+template<typename T, int NDIMS, template<typename> class binary_func>
 struct NdarrayReduceCoreWrapper<DeviceType::kCPU, T, NDIMS, binary_func> final {
   static void ReduceAxis(DeviceCtx* ctx, const XpuReducedNdarray<T, NDIMS>& dst_reduced,
                          const XpuReducedNdarray<T, NDIMS>& x, int axis) {

@@ -5,19 +5,17 @@
 
 namespace oneflow {
 
-#define ARITHMETIC_UNARY_FUNC_SEQ         \
-  OF_PP_MAKE_TUPLE_SEQ(UnaryFuncIdentity) \
-  OF_PP_MAKE_TUPLE_SEQ(UnaryFuncMinus)
+#define ARITHMETIC_UNARY_FUNC_SEQ (UnaryFuncIdentity)(UnaryFuncMinus)
 
 template<typename T>
-OF_DEVICE_FUNC const T UnaryFuncIdentity(const T x) {
-  return x;
-}
+struct UnaryFuncIdentity final {
+  static OF_DEVICE_FUNC const T Invoke(const T x) { return x; }
+};
 
 template<typename T>
-OF_DEVICE_FUNC const T UnaryFuncMinus(const T x) {
-  return -x;
-}
+struct UnaryFuncMinus final {
+  static OF_DEVICE_FUNC const T Invoke(const T x) { return -x; }
+};
 
 }  // namespace oneflow
 

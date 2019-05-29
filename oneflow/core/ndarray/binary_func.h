@@ -14,76 +14,83 @@
 namespace oneflow {
 
 template<typename T>
-OF_DEVICE_FUNC const T BinaryFuncAdd(const T x, const T y) {
-  return x + y;
-}
+struct BinaryFuncAdd final {
+  static inline OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x + y; }
+};
 
 template<typename T>
-OF_DEVICE_FUNC const T BinaryFuncSub(const T x, const T y) {
-  return x - y;
-}
+struct BinaryFuncSub final {
+  static inline OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x - y; }
+};
 
 template<typename T>
-OF_DEVICE_FUNC const T BinaryFuncMul(const T x, const T y) {
-  return x * y;
-}
+struct BinaryFuncMul final {
+  static inline OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x * y; }
+};
 
 template<typename T>
-OF_DEVICE_FUNC const T BinaryFuncDiv(const T x, const T y) {
-  return x / y;
-}
+struct BinaryFuncDiv final {
+  static inline OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x / y; }
+};
 
 template<typename T>
-OF_DEVICE_FUNC const T BinaryFuncMax(const T x, const T y) {
-  return x > y ? x : y;
-}
+struct BinaryFuncMax final {
+  static inline OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x > y ? x : y; }
+};
 
 template<typename T>
-OF_DEVICE_FUNC const T BinaryFuncMin(const T x, const T y) {
-  return x < y ? x : y;
-}
+struct BinaryFuncMin final {
+  static inline OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x < y ? x : y; }
+};
 
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530
 template<>
-inline OF_DEVICE_FUNC const half BinaryFuncAdd<half>(const half x, const half y) {
-  return __hadd(x, y);
-}
+struct BinaryFuncAdd<half> final {
+  static inline OF_DEVICE_FUNC const half Invoke(const half x, const half y) {
+    return __hadd(x, y);
+  }
+};
 template<>
-inline OF_DEVICE_FUNC const half BinaryFuncSub<half>(const half x, const half y) {
-  return __hsub(x, y);
-}
+struct BinaryFuncSub<half> final {
+  static inline OF_DEVICE_FUNC const half Invoke(const half x, const half y) {
+    return __hsub(x, y);
+  }
+};
 template<>
-inline OF_DEVICE_FUNC const half BinaryFuncMul<half>(const half x, const half y) {
-  return __hmul(x, y);
-}
+struct BinaryFuncMul<half> final {
+  static inline OF_DEVICE_FUNC const half Invoke(const half x, const half y) {
+    return __hmul(x, y);
+  }
+};
 template<>
-inline OF_DEVICE_FUNC const half BinaryFuncDiv<half>(const half x, const half y) {
-  return __hdiv(x, y);
-}
+struct BinaryFuncDiv<half> final {
+  static inline OF_DEVICE_FUNC const half Invoke(const half x, const half y) {
+    return __hdiv(x, y);
+  }
+};
 template<>
-inline OF_DEVICE_FUNC const half BinaryFuncMax<half>(const half x, const half y) {
-  return __hgt(x, y) ? x : y;
-}
+struct BinaryFuncMax<half> final {
+  static inline OF_DEVICE_FUNC const half Invoke(const half x, const half y) {
+    return __hgt(x, y) ? x : y;
+  }
+};
 template<>
-inline OF_DEVICE_FUNC const half BinaryFuncMin<half>(const half x, const half y) {
-  return __hlt(x, y) ? x : y;
-}
+struct BinaryFuncMin<half> final {
+  static inline OF_DEVICE_FUNC const half Invoke(const half x, const half y) {
+    return __hlt(x, y) ? x : y;
+  }
+};
 #endif
 
-#define ARITHMETIC_BINARY_FUNC_SEQ    \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryFuncAdd) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryFuncSub) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryFuncMul) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryFuncDiv)
+#define ARITHMETIC_BINARY_FUNC_SEQ (BinaryFuncAdd)(BinaryFuncSub)(BinaryFuncMul)(BinaryFuncDiv)
 
-template<typename T, const T (*binary_func)(const T, const T), typename Enable = void>
+template<typename T, template<typename> class binary_func>
 struct UnitOfBinaryFunc;
 
-#define SPECIALIZE_UNIT_OF_BINARY_FUNC(binary_func, get_val)                                 \
-  template<typename T, const T (*bfunc)(const T, const T)>                                   \
-  struct UnitOfBinaryFunc<T, bfunc, typename std::enable_if<bfunc == &binary_func<T>>::type> \
-      final {                                                                                \
-    static OF_DEVICE_FUNC T Val() { return get_val<T>(); }                                   \
+#define SPECIALIZE_UNIT_OF_BINARY_FUNC(binary_func, get_val)      \
+  template<typename T>                                            \
+  struct UnitOfBinaryFunc<T, binary_func> final {                 \
+    static inline OF_DEVICE_FUNC T Val() { return get_val<T>(); } \
   };
 SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncAdd, GetZeroVal);
 SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncMul, GetOneVal);
@@ -91,10 +98,7 @@ SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncMax, GetMinVal);
 SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncMin, GetMaxVal);
 #undef SPECIALIZE_UNIT_OF_BINARY_FUNC
 
-#define REDUCE_BINARY_FUNC_SEQ        \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryFuncAdd) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryFuncMax) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryFuncMin)
+#define REDUCE_BINARY_FUNC_SEQ (BinaryFuncAdd)(BinaryFuncMax)(BinaryFuncMin)
 
 }  // namespace oneflow
 

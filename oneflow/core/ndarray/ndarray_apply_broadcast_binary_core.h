@@ -10,7 +10,7 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T, int NDIMS, const T (*binary_func)(const T, const T)>
+template<DeviceType device_type, typename T, int NDIMS, template<typename> class binary_func>
 struct NdarrayApplyBroadcastBinaryCoreWrapper final {
   static void Apply(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& a,
                     const XpuVarNdarray<const T>& b);
@@ -18,7 +18,7 @@ struct NdarrayApplyBroadcastBinaryCoreWrapper final {
                            const XpuVarNdarray<const T>& x);
 };
 
-template<typename T, int NDIMS, const T (*binary_func)(const T, const T)>
+template<typename T, int NDIMS, template<typename> class binary_func>
 struct NdarrayApplyBroadcastBinaryCore final {
   OF_DEVICE_FUNC static void Apply(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& a,
                                    const XpuVarNdarray<const T>& b) {

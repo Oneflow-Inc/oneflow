@@ -8,11 +8,11 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T, const T (*binary_func)(const T, const T),
+template<DeviceType device_type, typename T, template<typename> class binary_func,
          typename Enable = void>
 struct NdarrayReduce;
 
-template<DeviceType device_type, typename T, const T (*binary_func)(const T, const T)>
+template<DeviceType device_type, typename T, template<typename> class binary_func>
 struct NdarrayReduce<
     device_type, T, binary_func,
     typename std::enable_if<std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>
@@ -34,7 +34,7 @@ struct NdarrayReduce<
   }
 };
 
-template<DeviceType device_type, typename T, const T (*binary_func)(const T, const T)>
+template<DeviceType device_type, typename T, template<typename> class binary_func>
 struct NdarrayReduce<
     device_type, T, binary_func,
     typename std::enable_if<!std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>

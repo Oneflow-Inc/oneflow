@@ -6,7 +6,7 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T, const T (*unary_func)(const T)>
+template<DeviceType device_type, typename T, template<typename> class unary_func>
 struct NdarrayApplyUnary final {
   static void ImplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y) {
     NdarrayApplyUnaryCoreWrapper<device_type, T, unary_func>::ImplaceApply(ctx, y);

@@ -15,7 +15,7 @@ namespace oneflow {
 
 template<DeviceType device_type, typename T>
 struct NdarrayUtil final {
-  template<const T (*unary_func)(const T)>
+  template<template<typename> class unary_func>
   static void BroadcastApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
                              const XpuVarNdarray<const T>& x) {
     CHECK_EQ(x.shape().NumAxes(), y.shape().NumAxes());
@@ -25,7 +25,7 @@ struct NdarrayUtil final {
                           const XpuVarNdarray<const T>& x) {
     return BroadcastApply<UnaryFuncIdentity>(ctx, y, x);
   }
-  template<const T (*binary_func)(const T, const T)>
+  template<template<typename> class binary_func>
   static void BroadcastApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
                              const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
     CHECK_EQ(a.shape().NumAxes(), y.shape().NumAxes());
@@ -44,13 +44,13 @@ struct NdarrayUtil final {
                         const XpuVarNdarray<T>& tmp_storage) {
     return NdarrayReduce<device_type, T, BinaryFuncMin>::Reduce(ctx, y, x, tmp_storage);
   }
-  template<const T (*unary_func)(const T)>
+  template<template<typename> class unary_func>
   static void ImplaceApplyUnary(DeviceCtx* ctx, const XpuVarNdarray<T>& y) {
     return NdarrayApplyUnary<device_type, T, unary_func>::ImplaceApply(ctx, y);
   }
 
  private:
-  template<const T (*unary_func)(const T)>
+  template<template<typename> class unary_func>
   struct Unary final {
     template<int NDIMS>
     static void BroadcastApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
@@ -64,7 +64,7 @@ struct NdarrayUtil final {
 #undef DEFINE_NDARRAY_BROADCAST_UNARY
   };
 
-  template<const T (*binary_func)(const T, const T)>
+  template<template<typename> class binary_func>
   struct Binary final {
     template<int NDIMS>
     static void BroadcastApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,

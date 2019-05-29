@@ -54,12 +54,12 @@ class XpuVarNdarray final : public XpuNdarrayBase<XpuVarNdarray<T>, T> {
     XPU_1D_KERNEL_LOOP(i, n) { ptr_[i] = x.template Get<NDIMS>(i); }
   }
 
-  template<const T (*binary_func)(const T, const T), int NDIMS, typename X>
+  template<template<typename> class binary_func, int NDIMS, typename X>
   OF_DEVICE_FUNC void BinaryAssign(const X& x) const {
     size_t n = shape_.ElemNum();
     XPU_1D_KERNEL_LOOP(i, n) {
       T* ptr_i = ptr_ + i;
-      *ptr_i = binary_func(*ptr_i, x.template Get<NDIMS>(i));
+      *ptr_i = binary_func<T>::Invoke(*ptr_i, x.template Get<NDIMS>(i));
     }
   }
 
