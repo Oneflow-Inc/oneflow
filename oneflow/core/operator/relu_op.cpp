@@ -18,8 +18,11 @@ void ReluOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
 void ReluOp::GetSbpSignatures(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  SbpSignatureBuilder().Split("in", 0).Split("out", 0).Build(
-      sbp_sig_list->mutable_sbp_signature()->Add());
+  SbpSignatureBuilder()
+      .Split(input_bns(), 0)
+      .Split(output_bns(), 0)
+      .MakeSplitSignatureListBuilder(LogicalBlobDesc4Ibn(output_bns().Get(0)).shape().NumAxes())
+      .Build(sbp_sig_list);
 }
 
 REGISTER_OP(OperatorConf::kReluConf, ReluOp);
