@@ -1,6 +1,7 @@
 #include "oneflow/core/operator/conv_filter_grad_op.h"
 #include "oneflow/core/operator/conv_op.h"
 #include "oneflow/core/device/cudnn_conv_ctx_cache.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -62,8 +63,8 @@ void ConvFilterGradOp::InferBlobDescs(
     CHECK(conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_algo_found);
     BlobDesc* cudnn_buf = GetBlobDesc4BnInOp("buf");
     cudnn_buf->set_data_type(DataType::kChar);
-    cudnn_buf->mut_shape() =
-        Shape({static_cast<int64_t>(conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_ws_size)});
+    size_t buf_size = std::max(size_t(1), conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_ws_size);
+    cudnn_buf->mut_shape() = Shape({static_cast<int64_t>(buf_size)});
 #else
     UNIMPLEMENTED();
 #endif
@@ -86,6 +87,23 @@ void ConvFilterGradOp::VirtualGenKernelConf(
   } else {
     UNIMPLEMENTED();
   }
+}
+
+void ConvFilterGradOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  CHECK(*HasBatchDim4BnInOp("dy"));
+  CHECK(*HasBatchDim4BnInOp("x"));
+  *HasBatchDim4BnInOp("filter_diff") = false;
+}
+
+void ConvFilterGradOp::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split("dy", 0)
+      .Split("x", 0)
+      .PartialSum("filter_diff")
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_OP(OperatorConf::kConvFilterGradConf, ConvFilterGradOp);

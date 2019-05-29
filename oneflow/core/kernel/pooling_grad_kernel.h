@@ -27,6 +27,9 @@ struct PoolingGradKernelUtil final {
                       const Blob* y_blob, const Blob* x_blob, Blob* dx_blob);
 };
 
+template<typename T>
+struct PoolingGradKernelUtil<DeviceType::kCPU, T> final {};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_POOLING_GRAD_KERNEL_H_

@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/conv_bias_grad_op.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -28,6 +29,21 @@ void ConvBiasGradOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   } else {
     UNIMPLEMENTED();
   }
+}
+
+void ConvBiasGradOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  CHECK(*HasBatchDim4BnInOp("dy"));
+  *HasBatchDim4BnInOp("bias_diff") = false;
+}
+
+void ConvBiasGradOp::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split("dy", 0)
+      .PartialSum("bias_diff")
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_OP(OperatorConf::kConvBiasGradConf, ConvBiasGradOp);
