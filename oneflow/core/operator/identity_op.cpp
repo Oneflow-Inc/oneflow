@@ -5,7 +5,7 @@ namespace oneflow {
 
 void IdentityOp::InitFromOpConf() {
   EnrollInputBn("in");
-  EnrollOutputBn("out");
+  EnrollOutputBn("out")->set_const_inplace_ibn("in");
 }
 
 void IdentityOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/relu_grad_op.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -6,7 +7,7 @@ void ReluGradOp::InitFromOpConf() {
   CHECK(op_conf().has_relu_grad_conf());
   EnrollInputBn("y");
   EnrollInputBn("dy");
-  EnrollOutputBn("dx");
+  EnrollOutputBn("dx")->set_mutable_inplace_ibn("dy");
 }
 
 const PbMessage& ReluGradOp::GetCustomizedConf() const { return op_conf().relu_grad_conf(); }

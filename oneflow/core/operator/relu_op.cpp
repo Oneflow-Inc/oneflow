@@ -1,11 +1,12 @@
 #include "oneflow/core/operator/relu_op.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
 void ReluOp::InitFromOpConf() {
   CHECK(op_conf().has_relu_conf());
   EnrollInputBn("in");
-  EnrollOutputBn("out");
+  EnrollOutputBn("out")->set_mutable_inplace_ibn("in");
 }
 
 const PbMessage& ReluOp::GetCustomizedConf() const { return op_conf().relu_conf(); }
