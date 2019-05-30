@@ -1472,6 +1472,47 @@ message ClampOpConf {
   required float max = 4;
 }
 
+message EqualConf {
+  required float scalar = 1;
+}
+
+message NonEqualConf {
+  required float scalar = 1;
+}
+
+message GreaterThanConf {
+  required float scalar = 1;
+}
+
+message GreaterEqualConf {
+  required float scalar = 1;
+}
+
+message LessThanConf {
+  required float scalar = 1;
+}
+
+message LessEqualConf {
+  required float scalar = 1;
+}
+
+message Condition {
+  oneof compare_type {
+    EqualConf equal_conf = 3;
+    NonEqualConf non_equal_conf = 4;
+    GreaterThanConf greater_than_conf = 5;
+    GreaterEqualConf greater_equal_conf = 6;
+    LessThanConf less_than_conf = 7;
+    LessEqualConf less_equal_conf = 8;
+  }
+}
+
+message WhereOpConf {
+  required string in = 1;
+  repeated Condition condition = 2;
+  required string out = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1602,6 +1643,7 @@ message OperatorConf {
     IoUMatrixOpConf iou_matrix_conf = 298;
     MatcherOpConf matcher_conf = 299;
     ClampOpConf clamp_conf = 300;
+    WhereOpConf where_conf = 301;
 
     // Maybe not needed
     RedefineDim0OpConf redefine_dim0_conf = 400;
