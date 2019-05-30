@@ -27,10 +27,10 @@ void LayerNormParamGradKernel<device_type, T>::ForwardDataContent(
     const int64_t m = gamma_diff->shape().elem_cnt();
     CHECK_EQ(dy->shape().elem_cnt() % m, 0);
     const int64_t n = dy->shape().elem_cnt() / m;
-    NdarrayUtil<device_type, T>::template BroadcastApply<BinaryFuncMul>(
-        ctx.device_ctx, XpuVarNdarray<T>({n, m}, reduce_buf->mut_dptr<T>()),
-        XpuVarNdarray<const T>({n, m}, normalized->dptr<T>()),
-        XpuVarNdarray<const T>({n, m}, dy->dptr<T>()));
+    NdarrayUtil<device_type, T>::BroadcastMul(ctx.device_ctx,
+                                              XpuVarNdarray<T>({n, m}, reduce_buf->mut_dptr<T>()),
+                                              XpuVarNdarray<const T>({n, m}, normalized->dptr<T>()),
+                                              XpuVarNdarray<const T>({n, m}, dy->dptr<T>()));
     NdarrayUtil<device_type, T>::ReduceSum(ctx.device_ctx,
                                            XpuVarNdarray<T>({1, m}, gamma_diff->mut_dptr<T>()),
                                            XpuVarNdarray<const T>({n, m}, reduce_buf->dptr<T>()),
@@ -43,7 +43,7 @@ void LayerNormParamGradKernel<device_type, T>::ForwardDataContent(
       const int64_t m = gamma->shape().elem_cnt();
       CHECK_EQ(dy->shape().elem_cnt() % m, 0);
       const int64_t n = dy->shape().elem_cnt() / m;
-      NdarrayUtil<device_type, T>::template BroadcastApply<BinaryFuncMul>(
+      NdarrayUtil<device_type, T>::BroadcastMul(
           ctx.device_ctx, XpuVarNdarray<T>({n, m}, normalized_diff->mut_dptr<T>()),
           XpuVarNdarray<const T>({n, m}, dy->dptr<T>()),
           XpuVarNdarray<const T>({1, m}, gamma->dptr<T>()));

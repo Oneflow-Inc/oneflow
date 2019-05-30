@@ -24,10 +24,10 @@ struct NdarrayApplyBroadcastBinary<
     return BroadcastBinary::Apply(ctx, y, a, b);
     if (a.shape() == y.shape()) {
       NdarrayAssign::Assign(ctx, y, a);
-      BroadcastBinary::ImplaceApply(ctx, y, b);
+      BroadcastBinary::InplaceApply(ctx, y, b);
     } else if (b.shape() == y.shape()) {
       NdarrayAssign::Assign(ctx, y, b);
-      BroadcastBinary::ImplaceApply(ctx, y, a);
+      BroadcastBinary::InplaceApply(ctx, y, a);
     } else {
       BroadcastBinary::Apply(ctx, y, a, b);
     }

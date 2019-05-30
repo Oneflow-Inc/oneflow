@@ -12,6 +12,16 @@
 #include "oneflow/core/common/util.h"
 namespace oneflow {
 
+#define ARITHMETIC_BINARY_FUNC_NAME_SEQ (Add)(Sub)(Mul)(Div)
+
+#define PREPEND_PREFIX_BINARY_FUNC(name) OF_PP_CAT(BinaryFunc, name)
+#define ARITHMETIC_BINARY_FUNC_SEQ \
+  OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, ARITHMETIC_BINARY_FUNC_NAME_SEQ)
+
+#define REDUCE_BINARY_FUNC_NAME_SEQ (Sum)(Max)(Min)
+#define REDUCE_BINARY_FUNC_SEQ \
+  OF_PP_SEQ_MAP(PREPEND_PREFIX_BINARY_FUNC, REDUCE_BINARY_FUNC_NAME_SEQ)
+
 #define SPECIALIZE_CONST_TYPE_BINARY_FUNC(func_struct)           \
   template<typename T>                                           \
   struct func_struct<const T> final {                            \
@@ -23,6 +33,12 @@ namespace oneflow {
 template<typename T>
 struct BinaryFuncAdd final {
   static OF_DEVICE_FUNC const T Invoke(const T x, const T y) { return x + y; }
+};
+template<typename T>
+struct BinaryFuncSum final {
+  static OF_DEVICE_FUNC const T Invoke(const T x, const T y) {
+    return BinaryFuncAdd<T>::Invoke(x, y);
+  }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncAdd);
 
@@ -118,8 +134,6 @@ struct BinaryFuncMin<half> final {
 };
 #endif
 
-#define ARITHMETIC_BINARY_FUNC_SEQ (BinaryFuncAdd)(BinaryFuncSub)(BinaryFuncMul)(BinaryFuncDiv)
-
 template<typename T, template<typename> class binary_func>
 struct UnitOfBinaryFunc;
 
@@ -129,12 +143,11 @@ struct UnitOfBinaryFunc;
     static OF_DEVICE_FUNC T Val() { return get_val<T>(); }   \
   };
 SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncAdd, GetZeroVal);
+SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncSum, GetZeroVal);
 SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncMul, GetOneVal);
 SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncMax, GetMinVal);
 SPECIALIZE_UNIT_OF_BINARY_FUNC(BinaryFuncMin, GetMaxVal);
 #undef SPECIALIZE_UNIT_OF_BINARY_FUNC
-
-#define REDUCE_BINARY_FUNC_SEQ (BinaryFuncAdd)(BinaryFuncMax)(BinaryFuncMin)
 
 }  // namespace oneflow
 

@@ -9,7 +9,11 @@
 
 namespace oneflow {
 
-#define ARITHMETIC_UNARY_FUNC_SEQ (UnaryFuncIdentity)(UnaryFuncNegative)
+#define ARITHMETIC_UNARY_FUNC_NAME_SEQ (Identity)(Negative)
+
+#define PREPEND_PREFIX_UNARY_FUNC(name) OF_PP_CAT(UnaryFunc, name)
+#define ARITHMETIC_UNARY_FUNC_SEQ \
+  OF_PP_SEQ_MAP(PREPEND_PREFIX_UNARY_FUNC, ARITHMETIC_UNARY_FUNC_NAME_SEQ)
 
 #define SPECIALIZE_CONST_TYPE_UNARY_FUNC(func_struct)                                     \
   template<typename T>                                                                    \

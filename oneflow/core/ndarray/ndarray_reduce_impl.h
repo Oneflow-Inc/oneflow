@@ -62,14 +62,14 @@ struct NdarrayDefaultReduce final {
       if (y.shape().At(i) == x.shape().At(i)) { continue; }
       CHECK_EQ(y.shape().At(i), 1);
       CHECK_GT(x.shape().At(i), y.shape().At(i));
-      ImplaceReduceAxis<NDIMS>(ctx, i, storage, &cur_shape);
+      InplaceReduceAxis<NDIMS>(ctx, i, storage, &cur_shape);
     }
     XpuReducedNdarray<T, NDIMS> reduced(y.shape(), storage);
     XpuNdarrayAssign<device_type, T>::template Assign<NDIMS>(ctx, y, reduced);
   }
 
   template<int NDIMS>
-  static void ImplaceReduceAxis(DeviceCtx* ctx, int axis, const XpuVarNdarray<T>& implace,
+  static void InplaceReduceAxis(DeviceCtx* ctx, int axis, const XpuVarNdarray<T>& implace,
                                 XpuShape* cur_shape) {
     int64_t target_elem_num = cur_shape->ElemNum() / cur_shape->At(axis);
     while (cur_shape->At(axis) > 1) {

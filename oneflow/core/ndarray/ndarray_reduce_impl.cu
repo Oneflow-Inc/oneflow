@@ -9,16 +9,12 @@ namespace oneflow {
 template<typename T, template<typename> class binary_func>
 struct CubFunctor4BianryFunc;
 
-#define SPECIALIZE_CUB_FUNCTOR_4_BINARY_FUNC(binary_func, cub_functor) \
-  template<typename T>                                                 \
-  struct CubFunctor4BianryFunc<T, binary_func> final {                 \
-    using type = cub_functor;                                          \
-  }
-
-SPECIALIZE_CUB_FUNCTOR_4_BINARY_FUNC(BinaryFuncAdd, cub::Sum);
-SPECIALIZE_CUB_FUNCTOR_4_BINARY_FUNC(BinaryFuncMax, cub::Max);
-SPECIALIZE_CUB_FUNCTOR_4_BINARY_FUNC(BinaryFuncMin, cub::Min);
-
+#define SPECIALIZE_CUB_FUNCTOR_4_BINARY_FUNC(func_name)          \
+  template<typename T>                                           \
+  struct CubFunctor4BianryFunc<T, BinaryFunc##func_name> final { \
+    using type = cub::func_name;                                 \
+  };
+OF_PP_FOR_EACH_ATOMIC(SPECIALIZE_CUB_FUNCTOR_4_BINARY_FUNC, REDUCE_BINARY_FUNC_NAME_SEQ);
 #undef SPECIALIZE_CUB_FUNCTOR_4_BINARY_FUNC
 
 namespace {
@@ -171,7 +167,7 @@ struct NdarrayMatrixColReduce<DeviceType::kGPU, T, binary_func> final {
 namespace {
 
 template<typename T, int NDIMS, template<typename> class binary_func>
-__global__ void NdarrayReduceGpuImplaceReduceAxis(const XpuReducedNdarray<T, NDIMS> dst_reduced,
+__global__ void NdarrayReduceGpuInplaceReduceAxis(const XpuReducedNdarray<T, NDIMS> dst_reduced,
                                                   const XpuReducedNdarray<T, NDIMS> x, int axis) {
   NdarrayReduceCore<T, NDIMS, binary_func>::ReduceAxis(dst_reduced, x, axis);
 }
@@ -183,7 +179,7 @@ struct NdarrayReduceCoreWrapper<DeviceType::kGPU, T, NDIMS, binary_func> final {
   static void ReduceAxis(DeviceCtx* ctx, const XpuReducedNdarray<T, NDIMS>& dst_reduced,
                          const XpuReducedNdarray<T, NDIMS>& x, int axis) {
     size_t n = x.host_shape().HostElemNum();
-    RUN_CUDA_KERNEL((NdarrayReduceGpuImplaceReduceAxis<T, NDIMS, binary_func>), ctx, n, dst_reduced,
+    RUN_CUDA_KERNEL((NdarrayReduceGpuInplaceReduceAxis<T, NDIMS, binary_func>), ctx, n, dst_reduced,
                     x, axis);
   }
 };

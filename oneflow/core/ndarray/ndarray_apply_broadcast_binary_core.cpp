@@ -8,9 +8,9 @@ struct NdarrayApplyBroadcastBinaryCoreWrapper<DeviceType::kCPU, T, NDIMS, binary
                     const XpuVarNdarray<const T>& b) {
     NdarrayApplyBroadcastBinaryCore<T, NDIMS, binary_func>::Apply(y, a, b);
   }
-  static void ImplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
+  static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
                            const XpuVarNdarray<const T>& x) {
-    NdarrayApplyBroadcastBinaryCore<T, NDIMS, binary_func>::ImplaceApply(y, x);
+    NdarrayApplyBroadcastBinaryCore<T, NDIMS, binary_func>::InplaceApply(y, x);
   }
 };
 

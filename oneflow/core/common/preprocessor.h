@@ -25,6 +25,10 @@
 
 #define OF_PP_FOR_EACH_TUPLE(macro, seq) OF_PP_INTERNAL_FOR_EACH_TUPLE(macro, seq)
 
+#define OF_PP_ATOMIC_TO_TUPLE(x) (x)
+#define OF_PP_FOR_EACH_ATOMIC(macro, seq) \
+  OF_PP_FOR_EACH_TUPLE(macro, OF_PP_SEQ_MAP(OF_PP_ATOMIC_TO_TUPLE, seq))
+
 #define OF_PP_SEQ_MAP(macro, seq) \
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OF_PP_I_SEQ_MAP_DO_EACH, (macro), seq)
 #define OF_PP_I_SEQ_MAP_DO_EACH(macro, elem) (macro(elem))

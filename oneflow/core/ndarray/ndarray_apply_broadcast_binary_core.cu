@@ -11,7 +11,7 @@ __global__ void GpuBroadcastBinaryFunc(const XpuVarNdarray<T> y, const XpuVarNda
 }
 template<typename T, int NDIMS, template<typename> class binary_func>
 __global__ void GpuBroadcastBinaryFunc(const XpuVarNdarray<T> y, const XpuVarNdarray<const T> x) {
-  NdarrayApplyBroadcastBinaryCore<T, NDIMS, binary_func>::ImplaceApply(y, x);
+  NdarrayApplyBroadcastBinaryCore<T, NDIMS, binary_func>::InplaceApply(y, x);
 }
 
 }  // namespace
@@ -23,7 +23,7 @@ struct NdarrayApplyBroadcastBinaryCoreWrapper<DeviceType::kGPU, T, NDIMS, binary
     size_t n = y.host_shape().HostElemNum();
     RUN_CUDA_KERNEL((GpuBroadcastBinaryFunc<T, NDIMS, binary_func>), ctx, n, y, a, b);
   }
-  static void ImplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
+  static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
                            const XpuVarNdarray<const T>& x) {
     size_t n = y.host_shape().HostElemNum();
     RUN_CUDA_KERNEL((GpuBroadcastBinaryFunc<T, NDIMS, binary_func>), ctx, n, y, x);
