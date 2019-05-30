@@ -15,8 +15,8 @@ void ConvKernel<DeviceType::kGPU, float16>::VirtualKernelInit(const ParallelCont
   this->out_desc_.reset(new CudnnTensorDesc(GetDataType<float16>::value, out_shape, data_format));
   this->filter_desc_.reset(
       new CudnnFilterDesc(GetDataType<float16>::value, weight_shape, data_format));
-  this->conv_desc_.reset(
-      new CudnnConvDesc(GetDataType<float16>::value, in_shape, this->GetCustomizedOpConf()));
+  this->conv_desc_.reset(new CudnnConvDesc(GetConvDescDataType(GetDataType<float16>::value),
+                                           in_shape, this->GetCustomizedOpConf()));
 
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
     int32_t filters = Shape(this->GetConvKernelConf().bias()).At(0);
@@ -131,8 +131,8 @@ void ConvKernel<DeviceType::kGPU, T>::KernelInitWithCudnn(const ParallelContext*
   this->in_desc_.reset(new CudnnTensorDesc(GetDataType<T>::value, in_shape, data_format));
   this->out_desc_.reset(new CudnnTensorDesc(GetDataType<T>::value, out_shape, data_format));
   this->filter_desc_.reset(new CudnnFilterDesc(GetDataType<T>::value, weight_shape, data_format));
-  this->conv_desc_.reset(
-      new CudnnConvDesc(GetDataType<T>::value, in_shape, this->GetCustomizedOpConf()));
+  this->conv_desc_.reset(new CudnnConvDesc(GetConvDescDataType(GetDataType<T>::value), in_shape,
+                                           this->GetCustomizedOpConf()));
 
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
     int32_t filters = Shape(this->GetConvKernelConf().bias()).At(0);
@@ -183,7 +183,7 @@ void ConvKernel<DeviceType::kGPU, T>::DoForwardDataContentWithCudnn(
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
     const Blob* bias = BnInOp2Blob("bias");
     CudaCheck(cudnnAddTensor(device_ctx->cudnn_handle(), one.get(), this->bias_desc_->Get(),
-                             bias->dptr<T>(), zero.get(), this->out_desc_->Get(),
+                             bias->dptr<T>(), one.get(), this->out_desc_->Get(),
                              out_blob->mut_dptr<T>()));
   }
 }

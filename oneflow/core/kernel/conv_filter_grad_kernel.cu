@@ -12,7 +12,7 @@ struct ConvFilterGradKernelUtil<DeviceType::kGPU, T> final {
     CudnnTensorDesc dy_desc(dy->data_type(), dy->shape(), conf.data_format());
     CudnnFilterDesc filter_diff_desc(filter_diff->data_type(), filter_diff->shape(),
                                      conf.data_format());
-    CudnnConvDesc conv_desc(x->data_type(), x->shape(), conf);
+    CudnnConvDesc conv_desc(GetConvDescDataType(x->data_type()), x->shape(), conf);
     auto one = GetCudnnScalingParameters<T>(1.0);
     auto zero = GetCudnnScalingParameters<T>(0.0);
     CudaCheck(cudnnConvolutionBackwardFilter(

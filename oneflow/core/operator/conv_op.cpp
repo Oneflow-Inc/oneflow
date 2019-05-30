@@ -305,6 +305,7 @@ void ConvOp<NDims>::InferCudnnAlgo(
   CHECK(Global<CudnnConvCtxCache>::Get()->FindCudnnConvAlgoCtxWithConfig(
       *GetBlobDesc4BnInOp("in"), *GetBlobDesc4BnInOp("out"), *GetBlobDesc4BnInOp("weight"),
       GetCustomizedConf(), static_cast<size_t>(cudnn_buf_limit_byte()), conv_ctx));
+  CHECK(conv_ctx->fwd_algo_found) << "algo: " << conv_ctx->fwd_algo;
 }
 #endif  // WITH_CUDA
 

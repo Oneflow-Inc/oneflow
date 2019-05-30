@@ -11,7 +11,7 @@ struct ConvDataGradKernelUtil<DeviceType::kGPU, T> final {
     CudnnTensorDesc dy_desc(dy->data_type(), dy->shape(), conf.data_format());
     CudnnFilterDesc filter_desc(filter->data_type(), filter->shape(), conf.data_format());
     CudnnTensorDesc dx_desc(dx->data_type(), dx->shape(), conf.data_format());
-    CudnnConvDesc conv_desc(dx->data_type(), dx->shape(), conf);
+    CudnnConvDesc conv_desc(GetConvDescDataType(dx->data_type()), dx->shape(), conf);
 
     auto one = GetCudnnScalingParameters<T>(1.0);
     auto zero = GetCudnnScalingParameters<T>(0.0);

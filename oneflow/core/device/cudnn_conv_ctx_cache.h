@@ -45,6 +45,8 @@ class CudnnConvCtxCache final {
   HashMap<std::string, CudnnConvAlgoCtx> conv_config2algo_ctx_;
 };
 
+DataType GetConvDescDataType(DataType blob_data_type);
+
 }  // namespace oneflow
 
 #endif  // WITH_CUDA
