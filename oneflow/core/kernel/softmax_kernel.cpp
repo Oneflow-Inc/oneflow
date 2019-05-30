@@ -40,7 +40,8 @@ template<DeviceType device_type, typename T>
 void SoftmaxComputeProb(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* in, T* tmp,
                         T* prob, void* temp_storage, const size_t temp_storage_bytes) {
   // copy in blob to prob blob
-  KernelUtil<device_type, T>::Copy(ctx, n * w, in, 1, prob, 1);
+  NdarrayUtil<device_type, T>::Assign(ctx, XpuVarNdarray<T>({n, w}, prob),
+                                      XpuVarNdarray<const T>({n, w}, in));
   // max | calculate max of every sample vector prob[i], store in tmp[i]
   //       the prob[i] now is store the data of in[i]
   NdarrayUtil<device_type, T>::ReduceMax(
@@ -50,7 +51,7 @@ void SoftmaxComputeProb(DeviceCtx* ctx, const int64_t n, const int64_t w, const 
   // sub | every element of prob blob subract the max value of the same sample
   SoftmaxKernelUtil<device_type, T>::Sub(ctx, n, w, prob, tmp);
   // exp | exponentiation every element
-  KernelUtil<device_type, T>::Exp(ctx, n * w, prob, prob);
+  NdarrayUtil<device_type, T>::InplaceExp(ctx, XpuVarNdarray<T>({n, w}, prob));
   // sum | calculate sum of every sample vector prob[i], store in tmp[i]
   //       the prob[i] now is store the tmp data after exp
   NdarrayUtil<device_type, T>::ReduceSum(

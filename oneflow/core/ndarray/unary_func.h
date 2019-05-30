@@ -9,7 +9,7 @@
 
 namespace oneflow {
 
-#define ARITHMETIC_UNARY_FUNC_NAME_SEQ (Identity)(Negative)
+#define ARITHMETIC_UNARY_FUNC_NAME_SEQ (Identity)(Negative)(Exp)
 
 #define PREPEND_PREFIX_UNARY_FUNC(name) OF_PP_CAT(UnaryFunc, name)
 #define ARITHMETIC_UNARY_FUNC_SEQ \
@@ -32,6 +32,18 @@ struct UnaryFuncNegative final {
 };
 SPECIALIZE_CONST_TYPE_UNARY_FUNC(UnaryFuncNegative);
 
+template<typename T>
+struct UnaryFuncExp final {
+  static OF_DEVICE_FUNC const T Invoke(const T x) { return std::exp(x); }
+};
+SPECIALIZE_CONST_TYPE_UNARY_FUNC(UnaryFuncExp);
+
+template<>
+struct UnaryFuncExp<float16> final {
+  static OF_DEVICE_FUNC const float16 Invoke(const float16 x) {
+    return float16(std::exp(static_cast<float>(x)));
+  }
+};
 #define NO_HALF_UTIL_FOUND         \
   printf("cuda arch must >= 530"); \
   assert(false);                   \
@@ -46,6 +58,12 @@ struct UnaryFuncNegative<half> final {
 #else
     NO_HALF_UTIL_FOUND;
 #endif
+  }
+};
+template<>
+struct UnaryFuncExp<half> final {
+  static OF_DEVICE_FUNC const half Invoke(const half x) {
+    return __float2half(std::log(__half2float(x)));
   }
 };
 #endif
