@@ -7,10 +7,10 @@ template<typename T>
 void PoolingKernel<DeviceType::kGPU, T>::PoolingForward(const KernelCtx& kernel_ctx,
                                                         const PoolingCtx& pooling_ctx,
                                                         const Blob* in_blob, Blob* out_blob) const {
-  CudaCheck(cudnnPoolingForward(
-      kernel_ctx.device_ctx->cudnn_handle(), pooling_ctx.cudnn_pooling_desc(), OnePtr<T>::value,
-      pooling_ctx.cudnn_in_tensor_desc(), in_blob->dptr(), ZeroPtr<T>::value,
-      pooling_ctx.cudnn_out_tensor_desc(), out_blob->mut_dptr()));
+  CudaCheck(cudnnPoolingForward(kernel_ctx.device_ctx->cudnn_handle(),
+                                pooling_ctx.cudnn_pooling_desc(), SPOnePtr<T>(),
+                                pooling_ctx.cudnn_in_tensor_desc(), in_blob->dptr(), SPZeroPtr<T>(),
+                                pooling_ctx.cudnn_out_tensor_desc(), out_blob->mut_dptr()));
 }
 
 template<typename T>
@@ -20,14 +20,14 @@ void PoolingKernel<DeviceType::kGPU, T>::PoolingBackward(const KernelCtx& kernel
                                                          const Blob* out_blob, const Blob* in_blob,
                                                          Blob* in_diff_blob) const {
   CudaCheck(cudnnPoolingBackward(
-      kernel_ctx.device_ctx->cudnn_handle(), pooling_ctx.cudnn_pooling_desc(), OnePtr<T>::value,
+      kernel_ctx.device_ctx->cudnn_handle(), pooling_ctx.cudnn_pooling_desc(), SPOnePtr<T>(),
       pooling_ctx.cudnn_out_tensor_desc(), out_blob->dptr(), pooling_ctx.cudnn_out_tensor_desc(),
-      out_diff_blob->dptr(), pooling_ctx.cudnn_in_tensor_desc(), in_blob->dptr(), ZeroPtr<T>::value,
+      out_diff_blob->dptr(), pooling_ctx.cudnn_in_tensor_desc(), in_blob->dptr(), SPZeroPtr<T>(),
       pooling_ctx.cudnn_in_tensor_desc(), in_diff_blob->mut_dptr()));
 }
 
 #define INSTANTIATE_POOLING_KERNEL(type_cpp, type_proto) \
   template class PoolingKernel<DeviceType::kGPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_POOLING_KERNEL, ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_POOLING_KERNEL, FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

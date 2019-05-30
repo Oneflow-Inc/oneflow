@@ -118,16 +118,29 @@ CudnnActivationDesc::~CudnnActivationDesc() { CudaCheck(cudnnDestroyActivationDe
 #endif  // WITH_CUDA
 
 template<typename T>
-std::shared_ptr<void> GetCudnnScalingParameters(float val) {
-  std::shared_ptr<float> fval = std::make_shared<float>(val);
-  std::shared_ptr<double> dval = std::make_shared<double>(val);
-  std::shared_ptr<void> ret = std::is_same<T, double>::value ? std::static_pointer_cast<void>(dval)
-                                                             : std::static_pointer_cast<void>(fval);
+const void* SPOnePtr() {
+  static const float fval = 1.0f;
+  static const double dval = 1.0;
+  const void* ret = std::is_same<T, double>::value ? static_cast<const void*>(&dval)
+                                                   : static_cast<const void*>(&fval);
   return ret;
 }
 
-template std::shared_ptr<void> GetCudnnScalingParameters<float>(float val);
-template std::shared_ptr<void> GetCudnnScalingParameters<double>(float val);
-template std::shared_ptr<void> GetCudnnScalingParameters<float16>(float val);
+template<typename T>
+const void* SPZeroPtr() {
+  static const float fval = 0.0f;
+  static const double dval = 0.0;
+  const void* ret = std::is_same<T, double>::value ? static_cast<const void*>(&dval)
+                                                   : static_cast<const void*>(&fval);
+  return ret;
+}
+
+template const void* SPOnePtr<float>();
+template const void* SPOnePtr<double>();
+template const void* SPOnePtr<float16>();
+
+template const void* SPZeroPtr<float>();
+template const void* SPZeroPtr<double>();
+template const void* SPZeroPtr<float16>();
 
 }  // namespace oneflow

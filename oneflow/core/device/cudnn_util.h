@@ -72,8 +72,12 @@ class CudnnActivationDesc final {
   cudnnActivationDescriptor_t val_;
 };
 
+// SP for scaling parameter
 template<typename T>
-std::shared_ptr<void> GetCudnnScalingParameters(float val);
+const void* SPOnePtr();
+
+template<typename T>
+const void* SPZeroPtr();
 
 }  // namespace oneflow
 

@@ -48,12 +48,12 @@ void AveragePoolingKernel<DeviceType::kCPU, T>::NDHWCProcessGrad(
 }
 
 ADD_GPU_HALF_KERNEL_CREATOR(OperatorConf::kAveragePooling1DConf, AveragePoolingKernel,
-                            ARITHMETIC_DATA_TYPE_SEQ);
+                            FLOATING_DATA_TYPE_SEQ);
 
 ADD_GPU_HALF_KERNEL_CREATOR(OperatorConf::kAveragePooling2DConf, AveragePoolingKernel,
-                            ARITHMETIC_DATA_TYPE_SEQ);
+                            FLOATING_DATA_TYPE_SEQ);
 
 ADD_GPU_HALF_KERNEL_CREATOR(OperatorConf::kAveragePooling3DConf, AveragePoolingKernel,
-                            ARITHMETIC_DATA_TYPE_SEQ);
+                            FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
