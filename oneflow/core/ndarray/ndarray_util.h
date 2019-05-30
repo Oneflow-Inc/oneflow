@@ -3,6 +3,7 @@
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
+#include "oneflow/core/ndarray/xpu_var_ndarray_builder.h"
 #include "oneflow/core/ndarray/ndarray_reduce.h"
 #include "oneflow/core/ndarray/ndarray_apply_unary.h"
 #include "oneflow/core/ndarray/ndarray_apply_binary.h"
@@ -17,6 +18,11 @@ namespace oneflow {
 
 template<DeviceType device_type, typename T>
 struct NdarrayUtil final {
+  static XpuVarNdarrayBuilder<const T> GetValNdarrayBuilder() {
+    return XpuVarNdarrayBuilder<const T>();
+  }
+  static XpuVarNdarrayBuilder<T> GetVarNdarrayBuilder() { return XpuVarNdarrayBuilder<T>(); }
+
   static void Assign(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
     return XpuNdarrayAssign<device_type, T>::Assign(ctx, y, x);
   }
