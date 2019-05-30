@@ -304,33 +304,35 @@ void Graph<NodeType, EdgeType>::FfsForEachNode(
     const std::function<void(const std::function<void(NodeType*)>&)>& ForEachStart,
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachNext,
     const std::function<void(NodeType*)>& Handler) const {
-  HashSet<NodeType*> visited_node;
+  HashSet<NodeType*> visited_nodes;
+  HashSet<NodeType*> handled_nodes;
   ForEachStart([&](NodeType* start) {
-    if (visited_node.find(start) != visited_node.end()) { return; }
+    if (visited_nodes.find(start) != visited_nodes.end()) { return; }
     std::stack<std::queue<NodeType*>> stack;
     stack.emplace(std::queue<NodeType*>{});
     stack.top().push(start);
-    while (stack.empty()) {
-      if (visited_node.find(stack.top().front()) == visited_node.end()) {
-        visited_node.insert(stack.top().front());
-        int64_t next_unvisited_cnt = 0;
-        ForEachNext(stack.top().front(), [&](NodeType* next) {
-          if (visited_node.find(next) == visited_node.end()) {
-            if (next_unvisited_cnt == 0) { stack.emplace(std::queue<NodeType*>()); }
-            stack.top().push(next);
-            ++next_unvisited_cnt;
-          }
-        });
-        if (next_unvisited_cnt == 0) {
-          NodeType* cur_node = stack.top().front();
-          Handler(cur_node);
-          stack.top().pop();
+    while (!stack.empty()) {
+      if (stack.top().empty()) {
+        stack.pop();
+        continue;
+      }
+      if (handled_nodes.find(stack.top().front()) != handled_nodes.end()) {
+        stack.top().pop();
+        continue;
+      }
+      NodeType* cur_node = stack.top().front();
+      if (visited_nodes.find(cur_node) == visited_nodes.end()) { visited_nodes.insert(cur_node); }
+      int64_t next_unvisited_cnt = 0;
+      ForEachNext(cur_node, [&](NodeType* next) {
+        if (visited_nodes.find(next) == visited_nodes.end()) {
+          if (next_unvisited_cnt == 0) { stack.emplace(std::queue<NodeType*>()); }
+          stack.top().push(next);
+          ++next_unvisited_cnt;
         }
-      } else {
-        while (!stack.empty() && (visited_node.find(stack.top().front()) != visited_node.end())) {
-          stack.top().pop();
-          if (stack.top().empty()) { stack.pop(); }
-        }
+      });
+      if (next_unvisited_cnt == 0) {
+        Handler(cur_node);
+        handled_nodes.insert(cur_node);
       }
     }
   });
