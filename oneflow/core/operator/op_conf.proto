@@ -1445,8 +1445,10 @@ message BboxScaleOpConf {
 }
 
 message IoUMatrixOpConf {
-  required string gt_boxes = 1;
-  required string proposals = 2;
+  // in
+  required string proposals = 1;
+  required string gt_boxes = 2;
+  // out
   required string iou_matrix = 3;
 }
 
