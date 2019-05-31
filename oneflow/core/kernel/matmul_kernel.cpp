@@ -4,6 +4,34 @@
 
 namespace oneflow {
 
+namespace {
+
+template<DeviceType device_type, typename T>
+struct Dim2MatMulUtil {
+  static void Calc(DeviceCtx* ctx, const Blob* a, CBLAS_TRANSPOSE blas_trans_a, const Blob* b,
+                   CBLAS_TRANSPOSE blas_trans_b, Blob* c) {
+    NewKernelUtil<device_type>::BlobGemm(ctx, blas_trans_a, blas_trans_b, OneVal<T>::value,
+                                         ZeroVal<T>::value, a, b, c);
+  }
+};  // namespace oneflow
+
+template<>
+struct Dim2MatMulUtil<DeviceType::kGPU, float16> {
+  static void Calc(DeviceCtx* ctx, const Blob* a, CBLAS_TRANSPOSE blas_trans_a, const Blob* b,
+                   CBLAS_TRANSPOSE blas_trans_b, Blob* c) {
+    if (Global<JobDesc>::Get()->enable_cublashgemm_when_matmul()) {
+      NewKernelUtil<DeviceType::kGPU>::BlobGemm(ctx, blas_trans_a, blas_trans_b,
+                                                OneVal<float16>::value, ZeroVal<float16>::value, a,
+                                                b, c);
+    } else {
+      NewKernelUtil<DeviceType::kGPU>::BlobHGemmWithFloat(
+          ctx, blas_trans_a, blas_trans_b, OneVal<float>::value, ZeroVal<float>::value, a, b, c);
+    }
+  }
+};
+
+}  // namespace
+
 template<DeviceType device_type, typename T>
 void MatmulKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
@@ -14,10 +42,10 @@ void MatmulKernel<device_type, T>::ForwardDataContent(
   bool transpose_a = this->op_conf().matmul_conf().transpose_a();
   bool transpose_b = this->op_conf().matmul_conf().transpose_b();
   if (a_blob->static_shape().dim_vec().size() == 2) {
-    Calc2DMatMul(ctx.device_ctx, a_blob, transpose_a, b_blob, transpose_b, out_blob, false);
+    Calc2DMatMul(ctx.device_ctx, a_blob, transpose_a, b_blob, transpose_b, out_blob);
   } else {
-    CalcBatchMatMul(ctx.device_ctx, a_blob, transpose_a, b_blob, transpose_b, out_blob, fw_buf_blob,
-                    false);
+    CalcBatchMatMul(ctx.device_ctx, a_blob, transpose_a, b_blob, transpose_b, out_blob,
+                    fw_buf_blob);
   }
 }
 
@@ -28,28 +56,10 @@ const PbMessage& MatmulKernel<device_type, T>::GetCustomizedOpConf() const {
 
 template<DeviceType device_type, typename T>
 void MatmulKernel<device_type, T>::Calc2DMatMul(DeviceCtx* ctx, const Blob* a, bool trans_a,
-                                                const Blob* b, bool trans_b, Blob* c,
-                                                bool swap_in) const {
+                                                const Blob* b, bool trans_b, Blob* c) const {
   CBLAS_TRANSPOSE blas_trans_a = trans_a ? CblasTrans : CblasNoTrans;
   CBLAS_TRANSPOSE blas_trans_b = trans_b ? CblasTrans : CblasNoTrans;
-  if (swap_in) {
-    NewKernelUtil<device_type>::BlobGemm(ctx, blas_trans_b, blas_trans_a, OneVal<T>::value,
-                                         ZeroVal<T>::value, b, a, c);
-  } else {
-    NewKernelUtil<device_type>::BlobGemm(ctx, blas_trans_a, blas_trans_b, OneVal<T>::value,
-                                         ZeroVal<T>::value, a, b, c);
-  }
-}
-
-template<DeviceType device_type, typename T>
-void MatmulKernel<device_type, T>::CalcBatchMatMul(DeviceCtx* ctx, const Blob* a, bool trans_a,
-                                                   const Blob* b, bool trans_b, Blob* c, Blob* buf,
-                                                   bool swap_in) const {
-  if (swap_in) {
-    CalcBatchMatMul(ctx, b, trans_b, a, trans_a, c, buf);
-  } else {
-    CalcBatchMatMul(ctx, a, trans_a, b, trans_b, c, buf);
-  }
+  Dim2MatMulUtil<device_type, T>::Calc(ctx, a, blas_trans_a, b, blas_trans_b, c);
 }
 
 template<DeviceType device_type, typename T>

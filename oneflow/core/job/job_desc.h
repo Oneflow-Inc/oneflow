@@ -52,6 +52,9 @@ class JobDesc final {
   bool enable_true_half_config_when_conv() const {
     return job_conf_.other().enable_true_half_config_when_conv();
   }
+  bool enable_cublashgemm_when_matmul() const {
+    return job_conf_.other().enable_cublashgemm_when_matmul();
+  }
   const FileSystemConf& data_fs_conf() const;
   const FileSystemConf& snapshot_fs_conf() const;
   bool enable_write_snapshot() const;
