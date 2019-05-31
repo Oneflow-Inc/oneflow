@@ -169,9 +169,9 @@ std::tuple<int, int, int, cublasOperation_t, cublasOperation_t> PrepareToCallCub
 }
 
 template<typename T>
-static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, enum CBLAS_TRANSPOSE trans_a,
-                 enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
-                 const T* alpha, const T* a, const T* b, const T* beta, T* c) {
+void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, enum CBLAS_TRANSPOSE trans_a,
+          enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k, const T* alpha,
+          const T* a, const T* b, const T* beta, T* c) {
   int lda, ldb, ldc;
   cublasOperation_t cublas_trans_a, cublas_trans_b;
   std::tie(lda, ldb, ldc, cublas_trans_a, cublas_trans_b) =
@@ -209,8 +209,8 @@ std::tuple<int, int, int> CalcMNKForGemm(enum CBLAS_TRANSPOSE trans_a, const Blo
 }
 
 template<typename T>
-static void BlobGemmImpl(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-                         T alpha, T beta, const Blob* a, const Blob* b, Blob* c) {
+void BlobGemmImpl(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
+                  T alpha, T beta, const Blob* a, const Blob* b, Blob* c) {
   int m, n, k;
   std::tie(m, n, k) = CalcMNKForGemm(trans_a, a, c);
   NewKernelUtil<DeviceType::kGPU>::OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a->dptr<T>(),
@@ -231,10 +231,10 @@ void AssignStridedAddr(DeviceCtx* ctx, T** dev_ptrs, T* start_ptr, int stride_le
 }
 
 template<typename T>
-static void BatchedGemmImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
-                            const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
-                            int batch_size, int m, int n, int k, const T alpha, const T* a,
-                            const T* b, const T beta, T* c, T** buf) {
+void BatchedGemmImpl(DeviceCtx* ctx, const enum CBLAS_ORDER order,
+                     const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
+                     int batch_size, int m, int n, int k, const T alpha, const T* a, const T* b,
+                     const T beta, T* c, T** buf) {
   const int a_stride = m * k;
   const int b_stride = k * n;
   const int c_stride = m * n;
