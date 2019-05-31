@@ -114,15 +114,17 @@ void SoftmaxKernel<device_type, T>::BackwardDataContent(
 template<typename T>
 struct SoftmaxKernelUtil<DeviceType::kCPU, T> {
   static void Sub(DeviceCtx* ctx, const int64_t n, const int64_t w, T* matrix, const T* vector) {
-    for (int64_t i = 0; i < w; ++i) {
-      KernelUtil<DeviceType::kCPU, T>::Axpy(ctx, n, static_cast<T>(-1.0), vector, 1, matrix + i, w);
-    }
+    auto Val = NdarrayUtil<DeviceType::kCPU, T>::GetValNdarrayBuilder();
+    auto Var = NdarrayUtil<DeviceType::kCPU, T>::GetVarNdarrayBuilder();
+    NdarrayUtil<DeviceType::kCPU, T>::InplaceBroadcastSub(ctx, Var({n, w}, matrix),
+                                                          Val({n, 1}, vector));
   }
 
   static void Div(DeviceCtx* ctx, const int64_t n, const int64_t w, T* matrix, const T* vector) {
-    for (int64_t i = 0; i < n; ++i) {
-      KernelUtil<DeviceType::kCPU, T>::Div(ctx, w, matrix + i * w, vector + i);
-    }
+    auto Val = NdarrayUtil<DeviceType::kCPU, T>::GetValNdarrayBuilder();
+    auto Var = NdarrayUtil<DeviceType::kCPU, T>::GetVarNdarrayBuilder();
+    NdarrayUtil<DeviceType::kCPU, T>::InplaceBroadcastDiv(ctx, Var({n, w}, matrix),
+                                                          Val({n, 1}, vector));
   }
 };
 #define INSTANTIATE_SOFTMAX_KERNEL_UTIL(type_cpp, type_proto) \
