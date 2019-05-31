@@ -1358,18 +1358,18 @@ message BlobDumpOpConf {
   required string dir = 2;
 }
 
-message BoxingV2Conf {
+message SliceBoxingConf {
   required LogicalBlobId lbi = 1;
-  repeated TensorSliceViewProto in_view = 2;
-  required TensorSliceViewProto out_view = 3;
+  repeated TensorSliceViewProto in_slice = 2;
+  required TensorSliceViewProto out_slice = 3;
 }
 
-message BoxingV2CopyOpConf {
-  required BoxingV2Conf boxing_conf = 1;
+message SliceBoxingCopyOpConf {
+  required SliceBoxingConf slice_boxing_conf = 1;
 }
 
-message BoxingV2AddOpConf {
-  required BoxingV2Conf boxing_conf = 1;
+message SliceBoxingAddOpConf {
+  required SliceBoxingConf slice_boxing_conf = 1;
 }
 
 message OperatorConf {
@@ -1416,8 +1416,8 @@ message OperatorConf {
     ShapeElemCntOpConf shape_elem_cnt_conf = 132;
     AccOpConf acc_conf = 133;
     AllReduceFacadeOpConf all_reduce_facade_conf = 134;
-    BoxingV2CopyOpConf boxing_v2_copy_conf = 135;
-    BoxingV2AddOpConf boxing_v2_add_conf = 136;
+    SliceBoxingCopyOpConf slice_boxing_copy_conf = 135;
+    SliceBoxingAddOpConf slice_boxing_add_conf = 136;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;

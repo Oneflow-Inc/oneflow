@@ -13,6 +13,6 @@ void NaiveActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
 }
 
 REGISTER_ACTOR(TaskType::kReduceIdentity, NaiveActor);
-REGISTER_ACTOR(TaskType::kBoxingV2, NaiveActor);
+REGISTER_ACTOR(TaskType::kSliceBoxing, NaiveActor);
 
 }  // namespace oneflow

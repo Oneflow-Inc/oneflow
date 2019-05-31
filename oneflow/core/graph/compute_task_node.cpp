@@ -75,7 +75,15 @@ std::string CompTaskNode::VisualStr() const {
   std::stringstream ss;
   ss << TaskType_Name(GetTaskType()) << "\\n";
   for (const auto& op : logical_node()->op_vec()) { ss << "[" << op->op_name() << "]\n"; }
-  ss << this->machine_id() << ":" << this->thrd_id() << "\\n" << this->task_id();
+  ss << machine_id();
+  if (device_type() == DeviceType::kCPU) {
+    ss << ":CPU";
+  } else if (device_type() == DeviceType::kGPU) {
+    ss << ":GPU:" << GpuPhyId();
+  } else {
+    ss << "OTHER";
+  }
+  ss << "\\n" << this->task_id();
   return ss.str();
 }
 

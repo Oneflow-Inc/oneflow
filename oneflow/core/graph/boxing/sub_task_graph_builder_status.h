@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class SubTskGphBuilderStatus {
+class SubTskGphBuilderStatus final {
  public:
   SubTskGphBuilderStatus(bool ok, std::string msg);
   ~SubTskGphBuilderStatus() = default;

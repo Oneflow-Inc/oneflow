@@ -79,6 +79,14 @@ void ParallelDesc::ClearUp() {
     parallel_num_ += pair.second.size();
   }
   SortAndRemoveDuplication(&sorted_machine_ids_);
+  int64_t parallel_id = 0;
+  for (int64_t machine_id : sorted_machine_ids_) {
+    for (int64_t device_id : machine_id2sorted_dev_phy_ids_.at(machine_id)) {
+      parallel_id2machine_id_[parallel_id] = machine_id;
+      parallel_id2device_id_[parallel_id] = device_id;
+      parallel_id += 1;
+    }
+  }
 }
 
 void ParallelDesc::SanityCheck() {
@@ -90,6 +98,14 @@ void ParallelDesc::SanityCheck() {
       CHECK_EQ(device_num_of_each_machine_, pair.second.size());
     }
   }
+}
+
+int64_t ParallelDesc::MachineIdForParallelId(int64_t parallel_id) const {
+  return parallel_id2machine_id_.at(parallel_id);
+}
+
+int64_t ParallelDesc::DeviceIdForParallelId(int64_t parallel_id) const {
+  return parallel_id2device_id_.at(parallel_id);
 }
 
 std::tuple<int32_t, int32_t> GetPartIdAndPartNumFromParallelCtx(

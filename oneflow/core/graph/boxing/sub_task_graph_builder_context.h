@@ -3,32 +3,25 @@
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/task_graph.h"
+#include "oneflow/core/memory/memory_allocator.h"
 
 namespace oneflow {
 
-class SubTskGphBuilderCtx {
+class SubTskGphBuilderCtx final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SubTskGphBuilderCtx);
-  SubTskGphBuilderCtx() = default;
+  explicit SubTskGphBuilderCtx(TaskGraph* task_graph);
   virtual ~SubTskGphBuilderCtx() = default;
 
-  virtual TaskGraph* task_graph() = 0;
-  virtual int64_t AllocateCpuThrdId(const TaskNode* task_node) = 0;
-};
-
-class BasicSubTskGphBuilderCtx final : public SubTskGphBuilderCtx {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(BasicSubTskGphBuilderCtx);
-  BasicSubTskGphBuilderCtx(TaskGraph* task_graph,
-                           std::function<int64_t(const TaskNode*)> func_allocate_cpu_thrd_id);
-  ~BasicSubTskGphBuilderCtx() override = default;
+  virtual TaskGraph* task_graph();
+  TaskNode* CopyToMachine(TaskNode* src, const MemoryCase& src_mem_case, int64_t dst_machine_id);
+  TaskNode* CopyToMachine(TaskNode* src, int64_t dst_machine_id);
+  TaskNode* GetProxyNode(TaskNode* src_node, const MemoryCase& src_mem_case, int64_t dst_machine_id,
+                         const MemoryCase& dst_mem_case);
 
  private:
-  TaskGraph* task_graph() override;
-  int64_t AllocateCpuThrdId(const TaskNode* task_node) override;
-
   TaskGraph* task_graph_;
-  std::function<int64_t(const TaskNode*)> func_allocate_cpu_thrd_id_;
+  HashMap<TaskNode*, HashMap<std::pair<int64_t, MemoryCase>, TaskNode*>> node2proxies_;
 };
 
 }  // namespace oneflow

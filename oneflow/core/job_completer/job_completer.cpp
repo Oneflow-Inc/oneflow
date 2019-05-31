@@ -444,7 +444,7 @@ void JobCompleter::Complete(Job* job) const {
     // complete tick ops
     WithOpGraphAndMutJob(job, &AutoTick);
     // add keep_header_only op
-    WithOpGraphAndMutJob(job, &RewriteBoxingWithAllReduce);
+    // WithOpGraphAndMutJob(job, &RewriteBoxingWithAllReduce);
     WithOpGraphAndMutJob(job, &FreezeSbpSignature);
     if (Global<JobDesc>::Get()->job_conf().other().has_debug_blob_dump_conf()) {
       WithOpGraphAndMutJob(job, &DebugBlobDump);

@@ -188,9 +188,15 @@ void TaskNode::UnbindBnWithEmptyRegst() {
 
 std::string TaskNode::VisualStr() const {
   std::stringstream ss;
-  ss << TaskType_Name(GetTaskType()) << "\\n"
-     << machine_id_ << ":" << thrd_id_ << "\\n"
-     << task_id_;
+  ss << TaskType_Name(GetTaskType()) << "\\n" << machine_id();
+  if (device_type() == DeviceType::kCPU) {
+    ss << ":CPU";
+  } else if (device_type() == DeviceType::kGPU) {
+    ss << ":GPU:" << GpuPhyId();
+  } else {
+    ss << "OTHER";
+  }
+  ss << "\\n" << task_id_;
   return ss.str();
 }
 
@@ -301,14 +307,7 @@ void TaskNode::InitProducedRegstMemCase(RegstDesc* regst) {
 }
 
 void TaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
-  if (device_type() == DeviceType::kCPU) {
-    mem_case->mutable_host_mem();
-  } else if (device_type() == DeviceType::kGPU) {
-    mem_case->mutable_device_cuda_mem()->set_device_id(
-        Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id_));
-  } else {
-    UNIMPLEMENTED();
-  }
+  *mem_case = GetDefaultMemCase(this);
 }
 
 void TaskNode::PinConsumedRegstMemCase(MemoryCase* mem_case) {
@@ -432,6 +431,19 @@ RegstDescIdSet* FindOrCreateConsumedCtrlRegstDescIdSet(TaskProto* task_proto,
   return &consumed_regst_desc_id_sets->at(regst_desc_name);
 }
 
+MemoryCase GetDefaultMemCase(const TaskNode* node) {
+  MemoryCase mem_case;
+  if (node->device_type() == DeviceType::kCPU) {
+    mem_case.mutable_host_mem();
+  } else if (node->device_type() == DeviceType::kGPU) {
+    mem_case.mutable_device_cuda_mem()->set_device_id(
+        Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(node->thrd_id()));
+  } else {
+    UNIMPLEMENTED();
+  }
+  return mem_case;
+}
+
 void TaskNode::ForEachInDataEdge(const std::function<void(TaskEdge*)>& Handler) const {
   ForEachDataEdge(in_edges(), Handler);
 }
@@ -516,5 +528,5 @@ std::map<TaskType, std::string> task_type2color = {{kInvalid, "0"},
                                                    {kAcc, "5"},
                                                    {kOptimizer, "12"},
                                                    {kEveryNth, "2"},
-                                                   {kBoxingV2, "2"}};
+                                                   {kSliceBoxing, "2"}};
 }  // namespace oneflow
