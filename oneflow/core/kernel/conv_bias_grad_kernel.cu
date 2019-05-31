@@ -24,9 +24,9 @@ struct ConvBiasGradKernelUtil<DeviceType::kGPU, T> final {
     } else {
       UNIMPLEMENTED();
     }
-    CudaCheck(cudnnConvolutionBackwardBias(ctx->cudnn_handle(), SPOnePtr<T>(), dy_desc->Get(),
-                                           dy->dptr<T>(), SPZeroPtr<T>(), bias_diff_desc->Get(),
-                                           bias_diff->mut_dptr<T>()));
+    CudaCheck(cudnnConvolutionBackwardBias(ctx->cudnn_handle(), CudnnSPOnePtr<T>(), dy_desc->Get(),
+                                           dy->dptr<T>(), CudnnSPZeroPtr<T>(),
+                                           bias_diff_desc->Get(), bias_diff->mut_dptr<T>()));
   }
 };
 

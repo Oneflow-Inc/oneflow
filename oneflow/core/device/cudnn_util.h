@@ -74,10 +74,10 @@ class CudnnActivationDesc final {
 
 // SP for scaling parameter
 template<typename T>
-const void* SPOnePtr();
+const void* CudnnSPOnePtr();
 
 template<typename T>
-const void* SPZeroPtr();
+const void* CudnnSPZeroPtr();
 
 }  // namespace oneflow
 
