@@ -7,7 +7,7 @@ void VariableKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* model_blob = BnInOp2Blob(ModelName());
   Blob* out_blob = BnInOp2Blob("out");
-  if ((this->op_conf().trainable() && *tick_ % Global<JobDesc>::Get()->NumOfPiecesInBatch() == 0)
+  if ((this->op_conf().trainable() && *tick_ % this->job_desc().NumOfPiecesInBatch() == 0)
       || (this->op_conf().trainable() == false && *tick_ == 0)) {
     if (this->kernel_conf().variable_conf().is_fw_inplace()) {
       CHECK_EQ(out_blob->dptr(), model_blob->dptr());
@@ -40,7 +40,7 @@ void VariableKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937* random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx, GetMsgPtrFromPbMessage(this->op_conf().variable_conf(), "initializer"),
+      ctx, this->GetInitializerFromPbMessage(this->op_conf().variable_conf(), "initializer"),
       (*random_seed_gen)(), BnInOp2Blob(ModelName()));
 }
 

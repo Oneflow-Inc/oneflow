@@ -5,10 +5,11 @@ namespace oneflow {
 
 namespace {
 
-const MomentumModelUpdateConf& GetMomentumModelUpdateConf(const OperatorConf& op_conf) {
-  if (Global<JobDesc>::Get()->IsTrain()) {
+const MomentumModelUpdateConf& GetMomentumModelUpdateConf(const JobDesc& job_desc,
+                                                          const OperatorConf& op_conf) {
+  if (job_desc.IsTrain()) {
     return op_conf.normal_mdupdt_conf().user_conf().momentum_conf();
-  } else if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+  } else if (job_desc.other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     return op_conf.momentum_model_update_conf().user_conf().momentum_conf();
   } else {
     UNIMPLEMENTED();
@@ -19,9 +20,9 @@ const MomentumModelUpdateConf& GetMomentumModelUpdateConf(const OperatorConf& op
 
 template<DeviceType device_type, typename T>
 const PbMessage& MomentumMdUpdateKernel<device_type, T>::GetCustomizedOpConf() const {
-  if (Global<JobDesc>::Get()->IsTrain()) {
+  if (this->job_desc().IsTrain()) {
     return this->op_conf().normal_mdupdt_conf();
-  } else if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+  } else if (this->job_desc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     return this->op_conf().momentum_model_update_conf();
   } else {
     UNIMPLEMENTED();
@@ -55,7 +56,7 @@ void MomentumMdUpdateKernel<device_type, T>::UpdateModel(
   const Blob* model_diff_blob = BnInOp2Blob("model_diff");
   Blob* model_blob = BnInOp2Blob("model");
   Blob* momentum_blob = BnInOp2Blob("momentum");
-  float beta = GetMomentumModelUpdateConf(this->op_conf()).beta();
+  float beta = GetMomentumModelUpdateConf(this->job_desc(), this->op_conf()).beta();
   if (next_model_vid == 1) { beta = 0.0f; }
 
   MomentumMdUpdateKernelUtil<device_type, T>::UpdateModel(

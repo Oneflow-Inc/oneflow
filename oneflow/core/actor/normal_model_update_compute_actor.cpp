@@ -68,8 +68,8 @@ void NormalMdUpdtCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   cur_model_regst->set_model_version_id(next_model_version_id_);
   pre_model_regst_ = cur_model_regst;
 
-  bool need_save_model = NeedModelSave(next_model_version_id_ - 1);
-  bool need_send_model = next_model_version_id_ < Global<JobDesc>::Get()->TotalBatchNum();
+  bool need_save_model = NeedModelSave(job_desc(), next_model_version_id_ - 1);
+  bool need_send_model = next_model_version_id_ < job_desc().TotalBatchNum();
   HandleProducedNaiveDataRegstToConsumer(
       [cur_model_regst](Regst* regst) { return regst == cur_model_regst; },
       [&](int64_t actor_id) {
@@ -84,10 +84,9 @@ void NormalMdUpdtCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
 }
 
 int64_t NormalMdUpdtCompActor::ActNumForEachOutput(int64_t regst_desc_id) const {
-  const auto* job_desc = Global<JobDesc>::Get();
   if (forward_model_regst_ != nullptr && regst_desc_id == forward_model_regst_->regst_desc_id()) {
-    return std::min<int64_t>(job_desc->TotalBatchNum() - (forward_model_regst_->act_id() + 1),
-                             job_desc->NumOfBatchesInSnapshot());
+    return std::min<int64_t>(job_desc().TotalBatchNum() - (forward_model_regst_->act_id() + 1),
+                             job_desc().NumOfBatchesInSnapshot());
   }
   return 1;
 }

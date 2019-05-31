@@ -7,7 +7,7 @@ namespace oneflow {
 void RecordLoadKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
   const RecordLoadOpConf& record_load_conf = op_conf().record_load_conf();
 
-  int32_t data_part_num = Global<JobDesc>::Get()->DataPartNum();
+  int32_t data_part_num = this->job_desc().DataPartNum();
   std::string data_dir = record_load_conf.data_dir();
   std::string part_name_prefix = record_load_conf.part_name_prefix();
   int32_t part_name_suffix_length = record_load_conf.part_name_suffix_length();
@@ -22,12 +22,12 @@ void RecordLoadKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
     data_paths.push_back(JoinPath(data_dir, part_name_prefix + std::string(zero_count, '0') + num));
   }
   piece_size_in_one_loader_ = kernel_conf().record_load_conf().device_piece_size();
-  if (Global<JobDesc>::Get()->IsTrain()) {
+  if (this->job_desc().IsTrain()) {
     const size_t num_max_read =
-        static_cast<size_t>(piece_size_in_one_loader_ * Global<JobDesc>::Get()->TotalBatchNum()
-                            * Global<JobDesc>::Get()->NumOfPiecesInBatch());
-    in_stream_.reset(new PersistentInStream(
-        DataFS(), data_paths, true, Global<JobDesc>::Get()->save_downloaded_file_to_local_fs()));
+        static_cast<size_t>(piece_size_in_one_loader_ * this->job_desc().TotalBatchNum()
+                            * this->job_desc().NumOfPiecesInBatch());
+    in_stream_.reset(new PersistentInStream(DataFS(), data_paths, true,
+                                            this->job_desc().save_downloaded_file_to_local_fs()));
     if (record_load_conf.has_random_shuffle_conf()) {
       const int32_t shuffle_buffer_size = record_load_conf.random_shuffle_conf().buffer_size();
       CHECK_GT(shuffle_buffer_size, 0);

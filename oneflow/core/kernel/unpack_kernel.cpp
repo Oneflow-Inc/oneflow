@@ -90,7 +90,7 @@ void UnpackKernel<device_type>::ForwardDataId(
   for (size_t i = 0; i < out_blob->shape().At(0); ++i) {
     Memcpy<DeviceType::kCPU>(ctx.device_ctx, out_blob->mut_data_id(i),
                              in_blob->data_id(i + out_index * out_blob->static_shape().At(0)),
-                             Global<JobDesc>::Get()->other_conf().max_data_id_length());
+                             this->job_desc().other_conf().max_data_id_length());
   }
 }
 

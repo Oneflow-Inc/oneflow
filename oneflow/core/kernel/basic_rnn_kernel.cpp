@@ -132,13 +132,15 @@ void BasicRnnKernel<device_type, T>::VirtualInitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937* random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx, GetMsgPtrFromPbMessage(this->op_conf().basic_rnn_conf(), "i2h_weight_initializer"),
+      ctx,
+      this->GetInitializerFromPbMessage(this->op_conf().basic_rnn_conf(), "i2h_weight_initializer"),
       (*random_seed_gen)(), BnInOp2Blob("i2h_weight"));
   KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx, GetMsgPtrFromPbMessage(this->op_conf().basic_rnn_conf(), "h2h_weight_initializer"),
+      ctx,
+      this->GetInitializerFromPbMessage(this->op_conf().basic_rnn_conf(), "h2h_weight_initializer"),
       (*random_seed_gen)(), BnInOp2Blob("h2h_weight"));
   KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx, GetMsgPtrFromPbMessage(this->op_conf().basic_rnn_conf(), "bias_initializer"),
+      ctx, this->GetInitializerFromPbMessage(this->op_conf().basic_rnn_conf(), "bias_initializer"),
       (*random_seed_gen)(), BnInOp2Blob("bias"));
 }
 

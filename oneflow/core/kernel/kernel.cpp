@@ -65,10 +65,18 @@ void NaiveCopyLossInstanceNum(const PbRpf<std::string>& from_bns, const PbRpf<st
 
 }  // namespace
 
-void Kernel::Init(const ParallelContext* parallel_ctx, const KernelConf& kernel_conf,
-                  DeviceCtx* device_ctx) {
+void Kernel::Init(const JobDesc* job_desc, const ParallelContext* parallel_ctx,
+                  const KernelConf& kernel_conf, DeviceCtx* device_ctx) {
+  job_desc_ = job_desc;
   kernel_conf_ = kernel_conf;
   VirtualKernelInit(parallel_ctx, device_ctx);
+}
+
+const InitializerConf* Kernel::GetInitializerFromPbMessage(const PbMessage& msg,
+                                                           const std::string& field) const {
+  auto ret = dynamic_cast<const InitializerConf*>(GetMsgPtrFromPbMessage(msg, field));
+  if (ret == nullptr) { return job_desc().DefaultInitializerConf(); }
+  return ret;
 }
 
 void Kernel::InitModelAndConstBuf(const KernelCtx& ctx, const ParallelContext* parallel_ctx,
@@ -360,7 +368,7 @@ void KernelIf<device_type>::CopyField(DeviceCtx* ctx,
 std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext* parallel_ctx,
                                               const KernelConf& conf, DeviceCtx* device_ctx) {
   Kernel* rptr = NewObj<Kernel>(conf.op_attribute().op_conf().op_type_case(), conf);
-  rptr->Init(parallel_ctx, conf, device_ctx);
+  rptr->Init(Global<JobDesc>::Get(), parallel_ctx, conf, device_ctx);
   return std::unique_ptr<const Kernel>(rptr);
 }
 
