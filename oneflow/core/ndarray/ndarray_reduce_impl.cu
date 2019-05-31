@@ -51,15 +51,10 @@ struct NdarrayScalarReduce<DeviceType::kGPU, T, binary_func> final {
     size_t x_size = x.shape().ElemNum();
     size_t tmp_storage_bytes = 0;
     auto DoReduce = [&](T* tmp_storage_ptr) {
-      int retcode = 0;
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530
-      retcode =
+      int retcode =
           cub::DeviceReduce::Reduce(tmp_storage_ptr, tmp_storage_bytes, x.ptr(), y.ptr(), x_size,
                                     typename CubFunctor4BianryFunc<T, binary_func>::type(),
                                     UnitOfBinaryFunc<T, binary_func>::Val(), ctx->cuda_stream());
-#else
-      UNIMPLEMENTED();
-#endif
       CHECK_EQ(retcode, 0) << "cub::DeviceSegmentedReduce::Reduce error";
     };
     DoReduce(nullptr);
@@ -93,15 +88,10 @@ struct NdarrayMatrixRowReduce<DeviceType::kGPU, T, binary_func> final {
         transform_input_iter(counting_intput_it, get_row_offset);
     size_t tmp_storage_bytes = 0;
     auto DoReduce = [&](T* tmp_storage_ptr) {
-      int retcode = 0;
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530
-      retcode = cub::DeviceSegmentedReduce::Reduce(
+      int retcode = cub::DeviceSegmentedReduce::Reduce(
           tmp_storage_ptr, tmp_storage_bytes, x.ptr(), y.ptr(), num_rows, transform_input_iter,
           transform_input_iter + 1, typename CubFunctor4BianryFunc<T, binary_func>::type(),
           UnitOfBinaryFunc<T, binary_func>::Val(), ctx->cuda_stream());
-#else
-      UNIMPLEMENTED();
-#endif
       CHECK_EQ(retcode, 0) << "cub::DeviceSegmentedReduce::Reduce error";
     };
     DoReduce(nullptr);

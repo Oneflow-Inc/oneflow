@@ -49,11 +49,11 @@ struct UnaryFuncExp<float16> final {
   assert(false);                   \
   return __float2half(0.0)
 
-#if defined(__CUDA_ARCH__)
+#if defined(__CUDACC__)
 template<>
 struct UnaryFuncNegative<half> final {
-  static OF_DEVICE_FUNC const half Invoke(const half x) {
-#if __CUDA_ARCH__ >= 530
+  static __device__ __forceinline__ const half Invoke(const half x) {
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530
     return __hneg(x);
 #else
     NO_HALF_UTIL_FOUND;
@@ -62,7 +62,7 @@ struct UnaryFuncNegative<half> final {
 };
 template<>
 struct UnaryFuncExp<half> final {
-  static OF_DEVICE_FUNC const half Invoke(const half x) {
+  static __device__ __forceinline__ const half Invoke(const half x) {
     return __float2half(std::log(__half2float(x)));
   }
 };

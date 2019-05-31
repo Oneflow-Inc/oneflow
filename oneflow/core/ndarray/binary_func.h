@@ -72,39 +72,45 @@ struct BinaryFuncMin final {
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncMin);
 
-#if defined(__CUDA_ARCH__)
-
 #define NO_HALF_UTIL_FOUND         \
   printf("cuda arch must >= 530"); \
   assert(false);                   \
   return __float2half(0.0)
+
+#if defined(__CUDACC__)
+
 template<>
 struct BinaryFuncAdd<half> final {
-  static OF_DEVICE_FUNC const half Invoke(const half x, const half y) { return __hadd(x, y); }
+  static __device__ __forceinline__ const half Invoke(const half x, const half y) {
+    return __hadd(x, y);
+  }
 };
+
 template<>
 struct BinaryFuncSub<half> final {
-  static OF_DEVICE_FUNC const half Invoke(const half x, const half y) {
-#if __CUDA_ARCH__ >= 530
+  static __device__ __forceinline__ const half Invoke(const half x, const half y) {
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530
     return __hsub(x, y);
 #else
     NO_HALF_UTIL_FOUND;
 #endif
   }
 };
+
 template<>
 struct BinaryFuncMul<half> final {
-  static OF_DEVICE_FUNC const half Invoke(const half x, const half y) {
-#if __CUDA_ARCH__ >= 530
+  static __device__ __forceinline__ const half Invoke(const half x, const half y) {
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530
     return __hmul(x, y);
 #else
     NO_HALF_UTIL_FOUND;
 #endif
   }
 };
+
 template<>
 struct BinaryFuncDiv<half> final {
-  static OF_DEVICE_FUNC const half Invoke(const half x, const half y) {
+  static __device__ __forceinline__ const half Invoke(const half x, const half y) {
 #if __CUDA_ARCH__ >= 530
     return __hdiv(x, y);
 #else
@@ -112,27 +118,30 @@ struct BinaryFuncDiv<half> final {
 #endif
   }
 };
+
 template<>
 struct BinaryFuncMax<half> final {
-  static OF_DEVICE_FUNC const half Invoke(const half x, const half y) {
-#if __CUDA_ARCH__ >= 530
+  static __device__ __forceinline__ const half Invoke(const half x, const half y) {
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530
     return __hgt(x, y) ? x : y;
 #else
     NO_HALF_UTIL_FOUND;
 #endif
   }
 };
+
 template<>
 struct BinaryFuncMin<half> final {
-  static OF_DEVICE_FUNC const half Invoke(const half x, const half y) {
-#if __CUDA_ARCH__ >= 530
+  static __device__ __forceinline__ const half Invoke(const half x, const half y) {
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530
     return __hlt(x, y) ? x : y;
 #else
     NO_HALF_UTIL_FOUND;
 #endif
   }
 };
-#endif
+
+#endif  // defined(__CUDACC__)
 
 template<typename T, template<typename> class binary_func>
 struct UnitOfBinaryFunc;
