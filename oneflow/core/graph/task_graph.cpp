@@ -586,11 +586,15 @@ void TaskGraph::GetSafeInplaceOpBlobArgList(
   };
   auto IsLbiAllConsumersReachableInChain =
       MakePredicatorIsLbiAllConsumersReachableInChain(TaskNode4SoleOpName);
-  InplaceLbiGraph(inplace_obas, Op4OpName)
-      .ComputeSafeInplaceObns(safe_obas, [&](const LogicalBlobId& lbi, const std::string& op_name) {
-        return IsLbiAllConsumersReachableToOpName(lbi, op_name)
-               || IsLbiAllConsumersReachableInChain(lbi, op_name);
-      });
+  InplaceLbiGraph origin_graph(inplace_obas, Op4OpName);
+  origin_graph.ToDotWithAutoFilePath();
+  origin_graph.ComputeSafeInplaceObns(safe_obas,
+                                      [&](const LogicalBlobId& lbi, const std::string& op_name) {
+                                        return IsLbiAllConsumersReachableToOpName(lbi, op_name)
+                                               || IsLbiAllConsumersReachableInChain(lbi, op_name);
+                                      });
+  InplaceLbiGraph inplaced_graph(*safe_obas, Op4OpName);
+  inplaced_graph.ToDotWithAutoFilePath();
 }
 
 void TaskGraph::SetTaskRegstInplaceInfo(const OpBlobArgList& obas,
