@@ -11,20 +11,21 @@ namespace {
 template<DeviceType device_type, typename T>
 void SoftmaxComputeDiff(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* dy, const T* out,
                         T* sum_vec, T* dx, void* temp_storage, const size_t temp_storage_bytes) {
+  auto Val = NdarrayUtil<device_type, T>::GetValNdarrayBuilder();
+  auto Var = NdarrayUtil<device_type, T>::GetVarNdarrayBuilder();
   // it's safe to use dx as tmp
   // dot product | get dot product sum_vec[i] from out[i] * dy[i]
   T* tmp = dx;
-  KernelUtil<device_type, T>::Mul(ctx, n * w, out, dy, tmp);
-  NdarrayUtil<device_type, T>::ReduceSum(
-      ctx, XpuVarNdarray<T>({n, 1}, sum_vec), XpuVarNdarray<const T>({n, w}, tmp),
-      XpuVarNdarray<T>({static_cast<int64_t>(temp_storage_bytes / sizeof(T))},
-                       reinterpret_cast<T*>(temp_storage)));
+  NdarrayUtil<device_type, T>::Mul(ctx, Var({n * w}, tmp), Val({n * w}, out), Val({n * w}, dy));
+  NdarrayUtil<device_type, T>::ReduceSum(ctx, Var({n, 1}, sum_vec), Val({n, w}, tmp),
+                                         Var({static_cast<int64_t>(temp_storage_bytes / sizeof(T))},
+                                             reinterpret_cast<T*>(temp_storage)));
   // copy dy to dx
-  KernelUtil<device_type, T>::Copy(ctx, n * w, dy, 1, dx, 1);
+  NdarrayUtil<device_type, T>::Assign(ctx, Var({n * w}, dx), Val({n * w}, dy));
   // sub | dx[i][j] -= sum_vec[i]
-  SoftmaxKernelUtil<device_type, T>::Sub(ctx, n, w, dx, sum_vec);
+  NdarrayUtil<device_type, T>::InplaceBroadcastSub(ctx, Var({n, w}, dx), Val({n, 1}, sum_vec));
   // elementwise multiplication | dx[i][j] *= out[i][j]
-  KernelUtil<device_type, T>::Mul(ctx, n * w, dx, out, dx);
+  NdarrayUtil<device_type, T>::InplaceMul(ctx, Var({n * w}, dx), Val({n * w}, out));
 }
 
 }  // namespace
