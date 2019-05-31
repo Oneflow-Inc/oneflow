@@ -84,7 +84,7 @@ void PackKernel<device_type>::ForwardDataId(
   for (size_t i = 0; i < in_blob->shape().At(0); ++i) {
     Memcpy<DeviceType::kCPU>(
         ctx.device_ctx, out_blob->mut_data_id(i + in_index * in_blob->static_shape().At(0)),
-        in_blob->data_id(i), Global<JobDesc>::Get()->other_conf().max_data_id_length());
+        in_blob->data_id(i), this->job_desc().other_conf().max_data_id_length());
   }
 }
 

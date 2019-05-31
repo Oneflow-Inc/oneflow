@@ -40,12 +40,12 @@ void ConvKernelIf<device_type, T>::InitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937* random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx, GetMsgPtrFromPbMessage(this->GetCustomizedOpConf(), "weight_initializer"),
+      ctx, this->GetInitializerFromPbMessage(this->GetCustomizedOpConf(), "weight_initializer"),
       (*random_seed_gen)(), BnInOp2Blob("weight"),
       this->template GetValFromCustomizedOpConf<std::string>("data_format"));
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
     KernelUtil<device_type, T>::InitializeWithProperConf(
-        ctx, GetMsgPtrFromPbMessage(this->GetCustomizedOpConf(), "bias_initializer"),
+        ctx, this->GetInitializerFromPbMessage(this->GetCustomizedOpConf(), "bias_initializer"),
         (*random_seed_gen)(), BnInOp2Blob("bias"));
   }
 }

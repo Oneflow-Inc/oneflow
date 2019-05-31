@@ -29,12 +29,14 @@ bool IsLastRegstInPieceWithOrder(const Regst* regst, ColIdOrder order) {
          || (order == ColIdOrder::kDescending && regst->col_id() == 0);
 }
 
-bool NeedModelSave(int64_t model_version_id) {
-  return model_version_id + 1 == Global<JobDesc>::Get()->TotalBatchNum()
-         || (model_version_id + 1) % Global<JobDesc>::Get()->NumOfBatchesInSnapshot() == 0;
+bool NeedModelSave(const JobDesc& job_desc, int64_t model_version_id) {
+  return model_version_id + 1 == job_desc.TotalBatchNum()
+         || (model_version_id + 1) % job_desc.NumOfBatchesInSnapshot() == 0;
 }
 
-void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
+void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
+                 const ThreadCtx& thread_ctx) {
+  job_desc_ = job_desc;
   actor_id_ = task_proto.task_id();
   act_id_ = -1;
   InitDeviceCtx(thread_ctx);
@@ -645,7 +647,7 @@ Regst* Actor::GetNaiveCurWriteable(int64_t regst_desc_id) const {
 
 std::unique_ptr<Actor> NewActor(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   Actor* rptr = NewObj<Actor>(task_proto.task_type());
-  rptr->Init(task_proto, thread_ctx);
+  rptr->Init(Global<JobDesc>::Get(), task_proto, thread_ctx);
   return std::unique_ptr<Actor>(rptr);
 }
 

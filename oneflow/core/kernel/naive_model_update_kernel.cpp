@@ -17,9 +17,9 @@ void NaiveMdUpdateKernel<device_type, T>::UpdateModel(
 
 template<DeviceType device_type, typename T>
 const PbMessage& NaiveMdUpdateKernel<device_type, T>::GetCustomizedOpConf() const {
-  if (Global<JobDesc>::Get()->IsTrain()) {
+  if (this->job_desc().IsTrain()) {
     return this->op_conf().normal_mdupdt_conf();
-  } else if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+  } else if (this->job_desc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     return this->op_conf().naive_model_update_conf();
   } else {
     UNIMPLEMENTED();

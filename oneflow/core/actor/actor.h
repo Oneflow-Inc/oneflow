@@ -20,14 +20,16 @@ enum class ColIdOrder { kUnCertain = 0, kAscending, kDescending };
 
 bool IsFirstRegstInPieceWithOrder(const Regst*, ColIdOrder);
 bool IsLastRegstInPieceWithOrder(const Regst*, ColIdOrder);
-bool NeedModelSave(int64_t model_version_id);
+bool NeedModelSave(const JobDesc& job_desc, int64_t model_version_id);
 
 class Actor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Actor);
   virtual ~Actor() = default;
 
-  void Init(const TaskProto&, const ThreadCtx&);
+  const JobDesc& job_desc() const { return *job_desc_; }
+
+  void Init(const JobDesc* job_desc, const TaskProto&, const ThreadCtx&);
 
   // 1: success, and actor finish
   // 0: success, and actor not finish
@@ -196,6 +198,7 @@ class Actor {
   }
   virtual void AsyncSendCustomizedConsumedRegstMsgToProducer() {}
 
+  const JobDesc* job_desc_;
   int64_t actor_id_;
   int64_t act_id_;
   std::unique_ptr<ParallelContext> parallel_ctx_;
@@ -224,8 +227,6 @@ class Actor {
   HashMap<int64_t, int64_t> inplace_regst_desc_id_in2out_;
   HashMap<int64_t, int64_t> inplace_regst_desc_id_out2in_;
 };
-
-class ScopedActEventRecorder;
 
 std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);
 

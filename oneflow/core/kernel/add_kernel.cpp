@@ -30,7 +30,7 @@ template<DeviceType device_type, typename T>
 void AddKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
-  bool blob_sharing_mem = Global<JobDesc>::Get()->enable_blob_mem_sharing();
+  bool blob_sharing_mem = this->job_desc().enable_blob_mem_sharing();
   size_t copy_cnt = blob_sharing_mem ? 1 : this->op_attribute().input_diff_bns().size();
   FOR_RANGE(size_t, i, 0, copy_cnt) {
     Blob* in_diff_blob = BnInOp2Blob(this->op_attribute().input_diff_bns(i));

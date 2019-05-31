@@ -18,7 +18,9 @@ class Kernel {
   OF_DISALLOW_COPY_AND_MOVE(Kernel);
   virtual ~Kernel() = default;
 
-  void Init(const ParallelContext*, const KernelConf&, DeviceCtx*);
+  const JobDesc& job_desc() const { return *job_desc_; }
+
+  void Init(const JobDesc* job_desc, const ParallelContext*, const KernelConf&, DeviceCtx*);
 
   void InitModelAndConstBuf(const KernelCtx& ctx, const ParallelContext* parallel_ctx,
                             const Snapshot*,
@@ -32,6 +34,8 @@ class Kernel {
 
  protected:
   Kernel() = default;
+  const InitializerConf* GetInitializerFromPbMessage(const PbMessage& msg,
+                                                     const std::string& field) const;
   virtual void VirtualKernelInit(const ParallelContext* parallel_ctx, DeviceCtx* device_ctx) {
     VirtualKernelInit(parallel_ctx);
   }
@@ -150,6 +154,8 @@ class Kernel {
 
  private:
   bool HasModelBns() const;
+
+  const JobDesc* job_desc_;
   KernelConf kernel_conf_;
 };
 

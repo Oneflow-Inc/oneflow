@@ -53,10 +53,10 @@ void RecurrentKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937* random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (!NeedExternalH0()) {
-    const PbMessage* init_hidden_initializer = nullptr;
+    const InitializerConf* init_hidden_initializer = nullptr;
     if (HasInitHiddenInitializer()) {
       init_hidden_initializer =
-          GetMsgPtrFromPbMessage(GetRecurrentOpConf(), "init_hidden_initializer");
+          this->GetInitializerFromPbMessage(GetRecurrentOpConf(), "init_hidden_initializer");
     }
     KernelUtil<device_type, T>::InitializeWithProperConf(ctx, init_hidden_initializer,
                                                          (*random_seed_gen)(), BnInOp2Blob("h0"));
