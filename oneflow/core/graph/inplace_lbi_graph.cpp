@@ -307,7 +307,7 @@ void InplaceLbiGraph::ComputeSafeInplaceEdges(
   while (!remainder_nodes.empty()) {
     ForEachTree(remainder_nodes, IsValidEdge, [&](const HashSet<const InplaceLbiNode*>& nodes) {
       const InplaceLbiEdge* cur_disabled_edge =
-          FindFirstIntraOpRefConflictMutRefEdge(nodes, IsValidEdge);
+          FindFirstInterOpRefConflictMutRefEdge(nodes, IsValidEdge, IsReachableFromLbiToOpName);
       if (cur_disabled_edge != nullptr) { disabled_edges.insert(cur_disabled_edge); }
     });
     ForEachTree(remainder_nodes, IsValidEdge, [&](const HashSet<const InplaceLbiNode*>& nodes) {
@@ -317,7 +317,7 @@ void InplaceLbiGraph::ComputeSafeInplaceEdges(
     });
     ForEachTree(remainder_nodes, IsValidEdge, [&](const HashSet<const InplaceLbiNode*>& nodes) {
       const InplaceLbiEdge* cur_disabled_edge =
-          FindFirstInterOpRefConflictMutRefEdge(nodes, IsValidEdge, IsReachableFromLbiToOpName);
+          FindFirstIntraOpRefConflictMutRefEdge(nodes, IsValidEdge);
       if (cur_disabled_edge != nullptr) { disabled_edges.insert(cur_disabled_edge); }
     });
     {
@@ -454,15 +454,15 @@ void InplaceLbiGraph::GetSafeInplaceObnEdges(
         IsLbiAllConsumerReachableToOpName,
     HashSet<const InplaceLbiEdge*>* cur_disabled_edges) const {
   ForEachTree(nodes, IsValidEdge, [&](const HashSet<const InplaceLbiNode*>& nodes) {
-    // no intra-op reference conflicts
-    const InplaceLbiEdge* intra_op_conflict_ref_edge =
-        FindFirstIntraOpRefConflictMutRefEdge(nodes, IsValidEdge);
-    // mutable reference always goes after const reference
-    const InplaceLbiEdge* const_ref_conflict_ref_edge =
-        FindFirstConstRefConflictMutRefEdge(nodes, IsValidEdge, IsLbiAllConsumerReachableToOpName);
     // no inter-op reference conflicts
     const InplaceLbiEdge* inter_op_conflict_ref_edge = FindFirstInterOpRefConflictMutRefEdge(
         nodes, IsValidEdge, IsLbiAllConsumerReachableToOpName);
+    // mutable reference always goes after const reference
+    const InplaceLbiEdge* const_ref_conflict_ref_edge =
+        FindFirstConstRefConflictMutRefEdge(nodes, IsValidEdge, IsLbiAllConsumerReachableToOpName);
+    // no intra-op reference conflicts
+    const InplaceLbiEdge* intra_op_conflict_ref_edge =
+        FindFirstIntraOpRefConflictMutRefEdge(nodes, IsValidEdge);
     if (const_ref_conflict_ref_edge == nullptr && intra_op_conflict_ref_edge == nullptr
         && inter_op_conflict_ref_edge == nullptr) {
       FindAllEdges(nodes, IsValidEdge, cur_disabled_edges);
@@ -492,9 +492,9 @@ void InplaceLbiGraph::FixConstRefOrMutRefConflictsToUpdtNode(
   auto IsValidEdge = [](const InplaceLbiEdge*) { return true; };
   const InplaceLbiNode* updt_node = nullptr;
   HashSet<const InplaceLbiNode*> safe_const_ref_nodes;
+  const InplaceLbiNode* root = GetRoot(nodes, IsValidEdge);
+  CHECK_NOTNULL(root);
   {
-    const InplaceLbiNode* root = GetRoot(nodes, IsValidEdge);
-    CHECK_NOTNULL(root);
     const auto* source_op_root = dynamic_cast<const SourceOpInplaceLbiNode*>(root);
     CHECK_NOTNULL(source_op_root);
     updt_node = FindSoleIsMutableIbnConsumer(source_op_root);
@@ -524,6 +524,14 @@ void InplaceLbiGraph::FixConstRefOrMutRefConflictsToUpdtNode(
       }
     });
   }
+  // remove mutable inplace edges from root which are not end with model update node
+  root->ForEachNodeOnValidOutEdge(IsValidEdge, [&](const InplaceLbiNode* out_node) {
+    const auto* node = dynamic_cast<const NormalInplaceLbiNode*>(out_node);
+    if (node != nullptr && node->IsMutRef(IsValidEdge)) {
+      CHECK(nodes.find(out_node) != nodes.end());
+      CHECK(cur_disabled_edges->emplace(node->GetSoleValidInEdge(IsValidEdge)).second);
+    }
+  });
 }
 
 void InplaceLbiGraph::FixMutRefConflictsFromSourceOpNode(
