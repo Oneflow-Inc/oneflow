@@ -157,15 +157,25 @@ cublasOperation_t CblasTrans2CublasTrans(CBLAS_TRANSPOSE trans) {
   return cublas_trans;
 }
 
+std::tuple<int, int, int, cublasOperation_t, cublasOperation_t> PrepareToCallCublasGemm(
+    enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
+    const int k) {
+  int lda = (trans_a == CblasNoTrans) ? k : m;
+  int ldb = (trans_b == CblasNoTrans) ? n : k;
+  int ldc = n;
+  cublasOperation_t cublas_trans_a = CblasTrans2CublasTrans(trans_a);
+  cublasOperation_t cublas_trans_b = CblasTrans2CublasTrans(trans_b);
+  return std::make_tuple(lda, ldb, ldc, cublas_trans_a, cublas_trans_b);
+}
+
 template<typename T>
 static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, enum CBLAS_TRANSPOSE trans_a,
                  enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
                  const T* alpha, const T* a, const T* b, const T* beta, T* c) {
-  const int lda = (trans_a == CblasNoTrans) ? k : m;
-  const int ldb = (trans_b == CblasNoTrans) ? n : k;
-  const int ldc = n;
-  cublasOperation_t cublas_trans_a = CblasTrans2CublasTrans(trans_a);
-  cublasOperation_t cublas_trans_b = CblasTrans2CublasTrans(trans_b);
+  int lda, ldb, ldc;
+  cublasOperation_t cublas_trans_a, cublas_trans_b;
+  std::tie(lda, ldb, ldc, cublas_trans_a, cublas_trans_b) =
+      PrepareToCallCublasGemm(trans_a, trans_b, m, n, k);
 
   cublasHandle_t handle;
   if (IsHalf<T>::value) {
@@ -177,13 +187,32 @@ static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, enum CBLAS_TRANSP
                  ldc);
 }
 
+void HGemmWithFloat(DeviceCtx* ctx, const enum CBLAS_ORDER order, enum CBLAS_TRANSPOSE trans_a,
+                    enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
+                    const float* alpha, const half* a, const half* b, const float* beta, half* c) {
+  int lda, ldb, ldc;
+  cublasOperation_t cublas_trans_a, cublas_trans_b;
+  std::tie(lda, ldb, ldc, cublas_trans_a, cublas_trans_b) =
+      PrepareToCallCublasGemm(trans_a, trans_b, m, n, k);
+
+  cudaDataType_t data_type = GetCudaDataType(DataType::kFloat16);
+  CudaCheck(cublasSgemmEx(ctx->cublas_tensor_op_math_handle(), cublas_trans_b, cublas_trans_a, n, m,
+                          k, alpha, b, data_type, ldb, a, data_type, lda, beta, c, data_type, ldc));
+}
+
+std::tuple<int, int, int> CalcMNKForGemm(enum CBLAS_TRANSPOSE trans_a, const Blob* a,
+                                         const Blob* c) {
+  int m = c->shape().At(0);
+  int n = c->shape().Count(1);
+  int k = (trans_a == CblasNoTrans) ? a->shape().Count(1) : a->shape().At(0);
+  return std::make_tuple(m, n, k);
+}
+
 template<typename T>
 static void BlobGemmImpl(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
                          T alpha, T beta, const Blob* a, const Blob* b, Blob* c) {
-  const int m = c->shape().At(0);
-  const int n = c->shape().Count(1);
-  const int k = (trans_a == CblasNoTrans) ? a->shape().Count(1) : a->shape().At(0);
-
+  int m, n, k;
+  std::tie(m, n, k) = CalcMNKForGemm(trans_a, a, c);
   NewKernelUtil<DeviceType::kGPU>::OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a->dptr<T>(),
                                           b->dptr<T>(), beta, c->mut_dptr<T>());
 }
@@ -314,6 +343,15 @@ GPU_KU_METHOD BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_
                        float16 alpha, float16 beta, const Blob* a, const Blob* b, Blob* c) {
   BlobGemmImpl<float16>(ctx, trans_a, trans_b, alpha, beta, a, b, c);
 }
+GPU_KU_METHOD BlobHGemmWithFloat(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
+                                 enum CBLAS_TRANSPOSE trans_b, float alpha, float beta,
+                                 const Blob* a, const Blob* b, Blob* c) {
+  int m, n, k;
+  std::tie(m, n, k) = CalcMNKForGemm(trans_a, a, c);
+  NewKernelUtil<DeviceType::kGPU>::OFHGemmWithFloat(ctx, trans_a, trans_b, m, n, k, alpha,
+                                                    a->dptr<float16>(), b->dptr<float16>(), beta,
+                                                    c->mut_dptr<float16>());
+}
 GPU_KU_METHOD OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
                      const int m, const int n, const int k, const float alpha, const float* a,
                      const float* b, const float beta, float* c) {
@@ -330,6 +368,14 @@ GPU_KU_METHOD OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TR
   Gemm<half>(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, reinterpret_cast<const half*>(&alpha),
              reinterpret_cast<const half*>(a), reinterpret_cast<const half*>(b),
              reinterpret_cast<const half*>(&beta), reinterpret_cast<half*>(c));
+}
+GPU_KU_METHOD OFHGemmWithFloat(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
+                               enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
+                               const float alpha, const float16* a, const float16* b,
+                               const float beta, float16* c) {
+  HGemmWithFloat(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, &alpha,
+                 reinterpret_cast<const half*>(a), reinterpret_cast<const half*>(b), &beta,
+                 reinterpret_cast<half*>(c));
 }
 
 GPU_KU_METHOD OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
