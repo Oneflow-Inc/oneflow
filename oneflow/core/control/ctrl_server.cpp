@@ -1,7 +1,7 @@
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/job/profiler.h"
-#include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/resource_desc.h"
 #include "grpc/grpc_posix.h"
 
 DEFINE_bool(grpc_use_no_signal, false, "prevent GRPC library from using any signals");
@@ -28,7 +28,7 @@ CtrlServer::CtrlServer() : is_first_connect_(true), this_machine_addr_("") {
   Init();
 
   if (FLAGS_grpc_use_no_signal) { grpc_use_signal(-1); }
-  int port = Global<JobDesc>::Get()->resource().ctrl_port();
+  int port = Global<ResourceDesc>::Get()->ctrl_port();
   grpc::ServerBuilder server_builder;
   int bound_port = 0;
   server_builder.AddListeningPort("0.0.0.0:" + std::to_string(port),

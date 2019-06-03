@@ -3,7 +3,7 @@
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/job_desc.h"
-#include "oneflow/core/job/resource.pb.h"
+#include "oneflow/core/job/resource_desc.h"
 
 namespace oneflow {
 
@@ -31,7 +31,7 @@ class IDMgr final {
   int64_t NewMemBlockId() { return mem_block_id_count_++; }
 
   // MemZoneId
-  int64_t CpuMemZoneId() const { return Global<JobDesc>::Get()->GpuDeviceNum(); }
+  int64_t CpuMemZoneId() const { return Global<ResourceDesc>::Get()->GpuDeviceNum(); }
   int64_t GpuMemZoneId(int64_t dev_phy_id) const { return dev_phy_id; }
   int64_t GetGpuPhyIdFromMemZoneId(int64_t mem_zone_id) const {
     CHECK_LT(mem_zone_id, gpu_device_num_);

@@ -4,6 +4,7 @@
 #include "oneflow/core/job/compiler.h"
 #include "oneflow/core/job/improver.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/profiler.h"
 #include "oneflow/core/job/sub_plan.pb.h"
@@ -42,8 +43,7 @@ std::string GetAmdCtrlKey(int64_t machine_id) {
 void PushAvailableMemDescOfThisMachine() {
   AvailableMemDescOfMachine this_machine_mem_desc;
 #ifdef WITH_CUDA
-  const JobDesc* job_desc = Global<JobDesc>::Get();
-  FOR_RANGE(int, i, 0, job_desc->GpuDeviceNum()) {
+  FOR_RANGE(int, i, 0, Global<ResourceDesc>::Get()->GpuDeviceNum()) {
     this_machine_mem_desc.add_zone_size(GetAvailableGpuMemSize(i));
   }
 #endif
@@ -55,14 +55,14 @@ void PushAvailableMemDescOfThisMachine() {
 AvailableMemDesc PullAvailableMemDesc() {
   AvailableMemDesc ret;
   AvailableMemDescOfMachine machine_amd_i;
-  FOR_RANGE(int64_t, i, 0, Global<JobDesc>::Get()->TotalMachineNum()) {
+  FOR_RANGE(int64_t, i, 0, Global<ResourceDesc>::Get()->TotalMachineNum()) {
     Global<CtrlClient>::Get()->PullKV(GetAmdCtrlKey(i), ret.add_machine_amd());
   }
   return ret;
 }
 
 void FixCpuDeviceNum() {
-  int32_t cpu_device_num = Global<JobDesc>::Get()->CpuDeviceNum();
+  int32_t cpu_device_num = Global<ResourceDesc>::Get()->CpuDeviceNum();
   if (cpu_device_num > 0) { return; }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     cpu_device_num = std::thread::hardware_concurrency();
@@ -75,7 +75,7 @@ void FixCpuDeviceNum() {
     Global<CtrlClient>::Get()->ClearKV("cpu_device_num");
   }
   CHECK_GT(cpu_device_num, 0);
-  Global<JobDesc>::Get()->SetCpuDeviceNum(cpu_device_num);
+  Global<ResourceDesc>::Get()->SetCpuDeviceNum(cpu_device_num);
 }
 
 std::string cluster_thrd_ids_key(const std::string& plan_name) {
@@ -160,6 +160,7 @@ class Oneflow final {
 Oneflow::Oneflow(const std::string& job_conf_filepath) {
   // New All Global
   Global<JobDesc>::New(job_conf_filepath);
+  Global<ResourceDesc>::New(Global<JobDesc>::Get()->job_conf());
   ctrl_server_.reset(new CtrlServer());
   Global<CtrlClient>::New();
   OF_BARRIER();
@@ -228,6 +229,7 @@ Oneflow::Oneflow(const std::string& job_conf_filepath) {
   Global<Profiler>::Delete();
   Global<MachineCtx>::Delete();
   Global<IDMgr>::Delete();
+  Global<ResourceDesc>::Delete();
   Global<JobDesc>::Delete();
 }
 

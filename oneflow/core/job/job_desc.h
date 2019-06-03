@@ -6,7 +6,6 @@
 #include "oneflow/core/job/job_conf.pb.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/placement.pb.h"
-#include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/register/logical_blob_id.pb.h"
 
@@ -20,20 +19,12 @@ class JobDesc final {
 
   // Common
   const JobConf& job_conf() const { return job_conf_; }
-  const Resource& resource() const { return job_conf_.resource(); }
   const Config& other_conf() const { return job_conf_.other(); }
   const std::string& MdLoadSnapshotPath() { return job_conf_.other().model_load_snapshot_path(); }
   DataType DefaultDataType() const { return job_conf_.other().default_data_type(); }
   size_t SizeOfOneDataId() const { return job_conf_.other().max_data_id_length() * sizeof(char); }
   bool use_rdma() const { return job_conf_.other().use_rdma(); }
   bool EnableCudnn() const { return job_conf_.other().enable_cudnn(); }
-  int64_t TotalMachineNum() const { return job_conf_.resource().machine().size(); }
-  int32_t CpuDeviceNum() const { return job_conf_.resource().cpu_device_num(); }
-  void SetCpuDeviceNum(int32_t val) { job_conf_.mutable_resource()->set_cpu_device_num(val); }
-  int32_t GpuDeviceNum() const { return job_conf_.resource().gpu_device_num(); }
-  int32_t MemZoneNum() const { return GpuDeviceNum() + 1; }
-  int32_t CommNetWorkerNum() const { return job_conf_.resource().comm_net_worker_num(); }
-  int32_t MaxMdSaveWorkerNum() const { return job_conf_.resource().max_mdsave_worker_num(); }
   bool IsTrain() const { return job_conf_.other().has_train_conf(); }
   bool IsPredict() const { return job_conf_.other().has_predict_conf(); }
   int64_t RecordPieceSize() const { return job_conf_.other().piece_size(); }

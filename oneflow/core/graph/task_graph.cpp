@@ -145,20 +145,19 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   HashMap<const LogicalNode*, std::vector<TaskNode*>> logical2sorted_in_box;
   HashMap<const LogicalNode*, std::vector<TaskNode*>> logical2sorted_out_box;
   HashMap<CompTaskNode*, HashMap<int64_t, std::vector<TaskNode*>>> buf_task;
-  const JobDesc* job_desc = Global<JobDesc>::Get();
   auto MutBufTask = [&](CompTaskNode* task_node, int64_t machine_id, int32_t mem_zone_id) {
     auto& buf_vec = buf_task[task_node][machine_id];
-    if (buf_vec.empty()) { buf_vec.assign(job_desc->MemZoneNum(), nullptr); }
+    if (buf_vec.empty()) { buf_vec.assign(Global<ResourceDesc>::Get()->MemZoneNum(), nullptr); }
     return &(buf_vec.at(mem_zone_id));
   };
 
-  std::vector<int64_t> cpu_device_offset(job_desc->TotalMachineNum(), 0);
+  std::vector<int64_t> cpu_device_offset(Global<ResourceDesc>::Get()->TotalMachineNum(), 0);
   auto AllocateCpuThrdIdEvenly = [&](const TaskNode* task_node) {
     CHECK(!task_node->IsPersistence());
     int64_t ret = -1;
     int64_t& offset = cpu_device_offset.at(task_node->machine_id());
     ret = Global<IDMgr>::Get()->GetCpuDeviceThrdId(offset);
-    offset = (offset + 1) % job_desc->CpuDeviceNum();
+    offset = (offset + 1) % Global<ResourceDesc>::Get()->CpuDeviceNum();
     return ret;
   };
 
