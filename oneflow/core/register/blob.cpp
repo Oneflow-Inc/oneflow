@@ -34,10 +34,7 @@ void Blob::Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, cha
   record_num_ = -1;
 }
 
-const char* Blob::data_id(int32_t no) const {
-  CHECK_NOTNULL(data_id_ptr_);
-  return data_id_ptr_ + no * Global<JobDesc>::Get()->SizeOfOneDataId();
-}
+const char* Blob::data_id(int32_t no) const { UNIMPLEMENTED(); }
 
 int32_t Blob::col_num(int32_t no) const {
   if (col_num_ptr_ == nullptr) {

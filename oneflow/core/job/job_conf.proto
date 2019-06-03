@@ -10,7 +10,6 @@ import "oneflow/core/job/sbp_parallel.proto";
 message TrainConf {
   required int64 batch_size = 1; // batch_size % piece_size = 0
   required NormalModelUpdateOpUserConf model_update_conf = 3;
-  required string model_save_snapshots_path = 4;
   required int32 num_of_batches_in_snapshot = 5;
   repeated string loss_lbn = 6;
 
@@ -29,24 +28,6 @@ message PredictConf {
   optional TrainConf tmp_split_fw_bw_train_conf = 1;
 }
 
-message LocalFsConf {
-}
-
-message NetworkFsConf {
-}
-
-message HdfsConf {
-  required string namenode = 1;
-}
-
-message FileSystemConf {
-  oneof fs_type {
-    LocalFsConf localfs_conf = 1;
-    NetworkFsConf networkfs_conf = 2;
-    HdfsConf hdfs_conf = 3;
-  }
-}
-
 message SbpConf {
   map<string, SbpSignature> op_name2sbp_signature_conf = 1;
 }
@@ -61,20 +42,14 @@ message Config {
   required int32 data_part_num = 3; // piece_size % data_part_num = 0
   required int64 total_batch_num = 4;
 
-  optional bool use_rdma = 100 [default = false];
-  optional string model_load_snapshot_path = 101 [default = ""];
   optional int32 max_data_id_length = 102 [default = 0];
   optional bool enable_cudnn = 103 [default = true];
   optional DataType default_data_type = 104 [default = kFloat]; // kFloat or kDouble
   optional ExperimentalRunConf exp_run_conf = 105;
   optional bool save_downloaded_file_to_local_fs = 109 [default = false];
-  required FileSystemConf data_fs_conf = 112;
-  required FileSystemConf snapshot_fs_conf = 113;
 
-  optional bool collect_act_event = 125 [default = false];
   optional bool enable_mem_sharing = 126 [default = true];
   optional bool enable_inplace = 127 [default = true];
-  optional bool enable_write_snapshot = 130 [default = true];
   optional bool enable_blob_mem_sharing = 140 [default = true];
   optional bool enable_nccl = 142 [default = true];
   optional bool use_nccl_inter_node_communication = 143 [default = false];

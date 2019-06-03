@@ -22,7 +22,7 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
     CHECK(data_regst_desc.has_time_shape());
     data_regst_time_shape_.reset(new Shape(data_regst_desc.time_shape()));
   } else {
-    packed_blob_desc_.reset(new RtBlobDesc(BlobDesc()));
+    packed_blob_desc_.reset(new RtBlobDesc(BlobDesc(DataType::kChar)));
   }
 }
 

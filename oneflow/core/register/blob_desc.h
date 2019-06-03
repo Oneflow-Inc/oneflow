@@ -16,9 +16,11 @@ class BlobDesc {
   // OF_DISALLOW_COPY_AND_MOVE(BlobDesc);
   ~BlobDesc() = default;
 
-  BlobDesc();
+  explicit BlobDesc(DataType data_type);
   BlobDesc(const Shape&, DataType, bool has_data_id, bool has_col_num, int32_t max_col_num);
-  explicit BlobDesc(const BlobDescProto& proto) { InitFromProto(proto); }
+  explicit BlobDesc(const BlobDescProto& proto) : BlobDesc(DataType::kInvalidDataType) {
+    InitFromProto(proto);
+  }
   explicit BlobDesc(const BlobDesc& blob_desc);
   BlobDesc(const StructPodDesc& header_pod_desc, int64_t header_byte_size, const Shape&, DataType,
            int32_t max_col_num);

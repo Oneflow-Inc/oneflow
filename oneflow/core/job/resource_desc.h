@@ -29,6 +29,7 @@ class ResourceDesc final {
   size_t reserved_host_mem_byte() const { return resource_.reserved_host_mem_mbyte() * kMB; }
   size_t reserved_device_mem_byte() const { return resource_.reserved_device_mem_mbyte() * kMB; }
   int64_t GetMachineId(const std::string& addr) const;
+  bool use_rdma() const { return resource_.use_rdma(); }
 
  private:
   friend class Global<ResourceDesc>;

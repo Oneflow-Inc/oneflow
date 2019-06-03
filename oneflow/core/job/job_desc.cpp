@@ -76,18 +76,6 @@ bool JobDesc::save_downloaded_file_to_local_fs() const {
   return job_conf_.other().save_downloaded_file_to_local_fs();
 }
 
-const std::string& JobDesc::MdSaveSnapshotsPath() const {
-  if (IsPredict()
-      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
-    return job_conf_.other()
-        .predict_conf()
-        .tmp_split_fw_bw_train_conf()
-        .model_save_snapshots_path();
-  } else {
-    return job_conf_.other().train_conf().model_save_snapshots_path();
-  }
-}
-
 int32_t JobDesc::NumOfBatchesInSnapshot() const {
   return GetTrainConf(job_conf_).num_of_batches_in_snapshot();
 }
@@ -104,10 +92,7 @@ int32_t JobDesc::PieceNumOfPrintAccuracy() const {
 }
 int64_t JobDesc::BatchSize() const { return GetTrainConf(job_conf_).batch_size(); }
 int64_t JobDesc::NumOfPiecesInBatch() const {
-  if (IsPredict()
-      && !Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
-    return 1;
-  }
+  if (IsPredict() && !other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) { return 1; }
   CHECK_EQ(BatchSize() % RecordPieceSize(), 0);
   return BatchSize() / RecordPieceSize();
 }
@@ -120,28 +105,16 @@ float JobDesc::bias_l2() const { return GetTrainConf(job_conf_).bias_l2(); }
 
 int32_t JobDesc::DataPartNum() const { return job_conf_.other().data_part_num(); }
 
-const FileSystemConf& JobDesc::data_fs_conf() const { return job_conf_.other().data_fs_conf(); }
-const FileSystemConf& JobDesc::snapshot_fs_conf() const {
-  return job_conf_.other().snapshot_fs_conf();
+JobDesc::JobDesc(const JobConf& job_conf, int32_t job_id) : job_conf_(job_conf), job_id_(job_id) {
+  Init();
 }
-
-bool JobDesc::enable_write_snapshot() const {
-  if (IsTrain()
-      || (IsPredict() && job_conf_.other().predict_conf().has_tmp_split_fw_bw_train_conf())) {
-    return job_conf_.other().enable_write_snapshot();
-  } else {
-    return false;
-  }
-}
-
-JobDesc::JobDesc(const JobConf& job_conf) : job_conf_(job_conf) { Init(); }
 
 void JobDesc::Init() {
   SanityCheck();
   SplitDecodeOps();
   AddRecordLoadOps();
 #ifndef WITH_RDMA
-  CHECK_EQ(job_conf_.other().use_rdma(), false) << "Please compile ONEFLOW with RDMA";
+  CHECK_EQ(Global<ResourceDesc>::Get()->use_rdma(), false) << "Please compile ONEFLOW with RDMA";
 #endif
 #ifndef WITH_CUDA
   CHECK_EQ(job_conf_.other().enable_nccl(), false) << "Please compile ONEFLOW with NCCL";

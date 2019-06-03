@@ -4,7 +4,39 @@ package oneflow;
 import "oneflow/core/job/job_conf.proto";
 import "oneflow/core/job/resource.proto";
 
+message LocalFsConf {
+}
+
+message NetworkFsConf {
+}
+
+message HdfsConf {
+  required string namenode = 1;
+}
+
+message FileSystemConf {
+  oneof fs_type {
+    LocalFsConf localfs_conf = 1;
+    NetworkFsConf networkfs_conf = 2;
+    HdfsConf hdfs_conf = 3;
+  }
+}
+
+message IOConf {
+  required FileSystemConf data_fs_conf = 1;
+  required FileSystemConf snapshot_fs_conf = 2;
+  optional string model_load_snapshot_path = 3 [default = ""];
+  optional string model_save_snapshots_path = 4 [default = ""];
+  optional bool enable_write_snapshot = 5 [default = true];
+}
+
+message ProfileConf {
+  optional bool collect_act_event = 1 [default = false];
+}
+
 message JobSet {
   required Resource resource = 1;
   repeated JobConf job_conf = 2;
+  required IOConf io_conf = 3;
+  optional ProfileConf profile_conf = 4;
 }

@@ -2,13 +2,17 @@
 
 namespace oneflow {
 
-RtBlobDesc::RtBlobDesc(const BlobDesc& blob_desc) {
+RtBlobDesc::RtBlobDesc(const BlobDesc& blob_desc)
+    : body_desc_(Shape({}), DataType::kInvalidDataType) {
   BlobDescProto blob_desc_proto;
   blob_desc.ToProto(&blob_desc_proto);
   InitFromProto(blob_desc_proto);
 }
 
-RtBlobDesc::RtBlobDesc(const BlobDescProto& blob_desc_proto) { InitFromProto(blob_desc_proto); }
+RtBlobDesc::RtBlobDesc(const BlobDescProto& blob_desc_proto)
+    : body_desc_(Shape({}), DataType::kInvalidDataType) {
+  InitFromProto(blob_desc_proto);
+}
 
 void RtBlobDesc::InitFromProto(const BlobDescProto& blob_desc_proto) {
   blob_desc_proto_ = blob_desc_proto;

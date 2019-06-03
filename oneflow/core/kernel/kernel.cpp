@@ -365,10 +365,11 @@ void KernelIf<device_type>::CopyField(DeviceCtx* ctx,
   }
 }
 
-std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext* parallel_ctx,
+std::unique_ptr<const Kernel> ConstructKernel(const JobDesc* job_desc,
+                                              const ParallelContext* parallel_ctx,
                                               const KernelConf& conf, DeviceCtx* device_ctx) {
   Kernel* rptr = NewObj<Kernel>(conf.op_attribute().op_conf().op_type_case(), conf);
-  rptr->Init(Global<JobDesc>::Get(), parallel_ctx, conf, device_ctx);
+  rptr->Init(job_desc, parallel_ctx, conf, device_ctx);
   return std::unique_ptr<const Kernel>(rptr);
 }
 
