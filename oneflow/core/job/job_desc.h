@@ -69,7 +69,7 @@ class JobDesc final {
 
  private:
   friend class Global<JobDesc>;
-  JobDesc(const std::string& job_conf_filepath);
+  JobDesc(const JobConf& job_conf);
   void Init();
   void SanityCheck();
   void SplitDecodeOps();

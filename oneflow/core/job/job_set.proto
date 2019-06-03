@@ -1,0 +1,10 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/job/job_conf.proto";
+import "oneflow/core/job/resource.proto";
+
+message JobSet {
+  required Resource resource = 1;
+  repeated JobConf job_conf = 2;
+}

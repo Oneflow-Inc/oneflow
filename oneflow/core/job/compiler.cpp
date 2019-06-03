@@ -48,7 +48,6 @@ void ToDotFile(const Plan& plan, const std::string& filepath) {
 Job ConvertJobConf2Job(const JobConf& job_conf) {
   Job job;
   *job.mutable_net() = job_conf.net();
-  *job.mutable_resource() = job_conf.resource();
   *job.mutable_placement() = job_conf.placement();
   *job.mutable_sbp_conf() = job_conf.sbp_conf();
   *job.mutable_other() = job_conf.other();
