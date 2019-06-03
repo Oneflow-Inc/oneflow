@@ -1,5 +1,5 @@
 #include "oneflow/core/common/str_util.h"
-#include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/persistence/snapshot_manager.h"
 
@@ -38,7 +38,7 @@ void Snapshot::OnePartDone(const LogicalBlobId& lbi, int32_t part_id, int32_t pa
 
 void Snapshot::ConcatLbnFile(const LogicalBlobId& lbi, int32_t part_num,
                              const std::string& concat_file) {
-  std::vector<char> buffer(Global<JobDesc>::Get()->persistence_buf_byte());
+  std::vector<char> buffer(Global<ResourceDesc>::Get()->persistence_buf_byte());
   std::string part_dir = JoinPath(root_path_, lbi.op_name(), lbi.blob_name() + "_tmp4a58");
   {
     PersistentOutStream out_stream(SnapshotFS(), concat_file);

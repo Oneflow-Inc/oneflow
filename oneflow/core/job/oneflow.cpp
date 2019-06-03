@@ -160,11 +160,12 @@ class Oneflow final {
 Oneflow::Oneflow(const std::string& job_conf_filepath) {
   // New All Global
   Global<JobDesc>::New(job_conf_filepath);
-  Global<ResourceDesc>::New(Global<JobDesc>::Get()->job_conf());
+  Global<ResourceDesc>::New(Global<JobDesc>::Get()->job_conf().resource());
   ctrl_server_.reset(new CtrlServer());
   Global<CtrlClient>::New();
   OF_BARRIER();
-  int64_t this_mchn_id = Global<JobDesc>::Get()->GetMachineId(ctrl_server_->this_machine_addr());
+  int64_t this_mchn_id =
+      Global<ResourceDesc>::Get()->GetMachineId(ctrl_server_->this_machine_addr());
   Global<MachineCtx>::New(this_mchn_id);
   const MachineCtx* machine_ctx = Global<MachineCtx>::Get();
   bool DoProfile =
