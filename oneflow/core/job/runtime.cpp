@@ -4,6 +4,7 @@
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/nccl_comm_manager.h"
+#include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/graph/task_node.h"
@@ -91,7 +92,7 @@ void Runtime::NewAllGlobal(const Plan& plan, bool is_experiment_phase) {
       && Global<RuntimeCtx>::Get()->NeedCollectActEvent()) {
     Global<ActEventLogger>::New(is_experiment_phase);
   }
-  if (job_desc->TotalMachineNum() > 1) {
+  if (Global<ResourceDesc>::Get()->TotalMachineNum() > 1) {
 #ifdef PLATFORM_POSIX
     if (job_desc->use_rdma()) {
 #ifdef WITH_RDMA

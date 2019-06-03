@@ -3,6 +3,7 @@
 
 #include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -16,7 +17,9 @@ class ThrdIdGenerator final {
 
   int64_t GenerateThrdId(int64_t machine_id, int64_t task_type) {
     auto key = std::make_pair(machine_id, task_type);
-    return machine_task_type2lowerbound_[key] + GetModThrdId(key);
+    int64_t ret = machine_task_type2lowerbound_[key] + GetModThrdId(key);
+    CHECK_GE(ret, 0);
+    return ret;
   }
 
  private:
@@ -31,7 +34,7 @@ class ThrdIdGenerator final {
 
   bool EqualConf(int64_t task_type, int32_t thrd_num) {
     if (task_type == TaskType::kMdSave) {
-      if (thrd_num == Global<JobDesc>::Get()->MaxMdSaveWorkerNum()) return true;
+      if (thrd_num == Global<ResourceDesc>::Get()->MaxMdSaveWorkerNum()) { return true; }
     }
 
     return false;

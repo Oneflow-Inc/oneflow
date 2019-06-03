@@ -49,7 +49,7 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) : parallel_conf_(user_
     CHECK_LE(min_id, max_id);
     for (int64_t dev_phy_id = min_id; dev_phy_id <= max_id; ++dev_phy_id) {
       if (device_type_ == DeviceType::kGPU) {
-        CHECK_LT(dev_phy_id, Global<JobDesc>::Get()->GpuDeviceNum());
+        CHECK_LT(dev_phy_id, Global<ResourceDesc>::Get()->GpuDeviceNum());
       }
       machine_id2sorted_dev_phy_ids_[mchn_id].push_back(dev_phy_id);
     }

@@ -78,6 +78,7 @@ void TaskNode::set_machine_id(int64_t val) {
 void TaskNode::set_thrd_id(int64_t val) {
   CHECK_EQ(thrd_id_, -1);
   thrd_id_ = val;
+  CHECK_GE(thrd_id_, 0);
   if (machine_id_ != -1) { UpdateTaskId(); }
 }
 

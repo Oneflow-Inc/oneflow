@@ -4,6 +4,7 @@
 #include "oneflow/core/register/register_desc.pb.h"
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/profiler.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/regst_lifetime_graph.h"
@@ -413,7 +414,7 @@ void SetInplaceConsumedRegstDescId(
 uint64_t Improver::AvailableMemSize(int64_t machine_id, int64_t memory_zone_id) const {
   int64_t mem_size = amd_.machine_amd(machine_id).zone_size(memory_zone_id);
   JobDesc* job_desc = Global<JobDesc>::Get();
-  if (memory_zone_id == job_desc->GpuDeviceNum()) {
+  if (memory_zone_id == Global<ResourceDesc>::Get()->GpuDeviceNum()) {
     mem_size -= job_desc->reserved_host_mem_byte();
     mem_size -= job_desc->persistence_buf_byte() * record_load_task_num_.at(machine_id);
   } else {
@@ -427,7 +428,7 @@ int64_t Improver::GetMemoryZoneId(const MemoryCase& mem_case) const {
   if (mem_case.has_device_cuda_mem()) {
     return mem_case.device_cuda_mem().device_id();
   } else {
-    return Global<JobDesc>::Get()->GpuDeviceNum();
+    return Global<ResourceDesc>::Get()->GpuDeviceNum();
   }
 }
 
@@ -554,7 +555,7 @@ void Improver::ForEachInferredMemSharingCriticalSection(
 void Improver::Init(const AvailableMemDesc& amd, const Plan& naive_plan) {
   start_mem_shared_id_ = Global<IDMgr>::Get()->NewMemSharedId();
   amd_ = amd;
-  record_load_task_num_.assign(Global<JobDesc>::Get()->TotalMachineNum(), 0);
+  record_load_task_num_.assign(Global<ResourceDesc>::Get()->TotalMachineNum(), 0);
   for (const TaskProto& task_proto : naive_plan.task()) {
     if (task_proto.task_type() == TaskType::kRecordLoad) {
       record_load_task_num_.at(Global<IDMgr>::Get()->MachineId4ActorId(task_proto.task_id())) += 1;
