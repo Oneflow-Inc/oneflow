@@ -4,6 +4,7 @@
 #include "oneflow/core/job/compiler.h"
 #include "oneflow/core/job/improver.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/profiler.h"
@@ -151,16 +152,19 @@ class Oneflow final {
   OF_DISALLOW_COPY_AND_MOVE(Oneflow);
   ~Oneflow() = default;
 
-  Oneflow(const std::string& job_conf_filepath);
+  Oneflow(const std::string& job_set_filepath);
 
  private:
   std::unique_ptr<CtrlServer> ctrl_server_;
 };
 
-Oneflow::Oneflow(const std::string& job_conf_filepath) {
+Oneflow::Oneflow(const std::string& job_set_filepath) {
   // New All Global
-  Global<JobDesc>::New(job_conf_filepath);
-  Global<ResourceDesc>::New(Global<JobDesc>::Get()->job_conf().resource());
+  JobSet job_set;
+  ParseProtoFromTextFile(job_set_filepath, &job_set);
+  Global<const JobSet>::New(job_set);
+  Global<ResourceDesc>::New(Global<const JobSet>::Get()->resource());
+  Global<JobDesc>::New(Global<const JobSet>::Get()->job_conf(0));
   ctrl_server_.reset(new CtrlServer());
   Global<CtrlClient>::New();
   OF_BARRIER();
@@ -230,8 +234,9 @@ Oneflow::Oneflow(const std::string& job_conf_filepath) {
   Global<Profiler>::Delete();
   Global<MachineCtx>::Delete();
   Global<IDMgr>::Delete();
-  Global<ResourceDesc>::Delete();
   Global<JobDesc>::Delete();
+  Global<ResourceDesc>::Delete();
+  Global<const JobSet>::Delete();
 }
 
 }  // namespace oneflow

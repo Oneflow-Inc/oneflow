@@ -25,7 +25,6 @@ message JobHelperConf {
 
 message Job {
   required DLNetConf net = 1;
-  required Resource resource = 2;
   required Placement placement = 3;
   required Config other = 4;
   required SbpConf sbp_conf = 5;

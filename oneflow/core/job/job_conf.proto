@@ -4,7 +4,6 @@ package oneflow;
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/job/dlnet_conf.proto";
-import "oneflow/core/job/resource.proto";
 import "oneflow/core/job/placement.proto";
 import "oneflow/core/job/sbp_parallel.proto";
 
@@ -104,7 +103,6 @@ message Config {
 
 message JobConf {
   required DLNetConf net = 1;
-  required Resource resource = 2;
   required Placement placement = 3;
   optional SbpConf sbp_conf = 4;
   required Config other = 5;

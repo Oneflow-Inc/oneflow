@@ -1,4 +1,5 @@
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/protobuf.h"
@@ -133,10 +134,7 @@ bool JobDesc::enable_write_snapshot() const {
   }
 }
 
-JobDesc::JobDesc(const std::string& job_conf_filepath) {
-  ParseProtoFromTextFile(job_conf_filepath, &job_conf_);
-  Init();
-}
+JobDesc::JobDesc(const JobConf& job_conf) : job_conf_(job_conf) { Init(); }
 
 void JobDesc::Init() {
   SanityCheck();
@@ -167,13 +165,14 @@ void JobDesc::Init() {
   LOG(INFO) << "Set piece_num_of_experiment_phase " << piece_exp;
   job_conf_.mutable_other()->mutable_exp_run_conf()->set_piece_num_of_experiment_phase(piece_exp);
 #ifndef WITH_CUDA
-  CHECK_EQ(job_conf_.resource().gpu_device_num(), 0);
+  CHECK_EQ(Global<ResourceDesc>::Get()->GpuDeviceNum(), 0);
 #endif
 }
 
 void JobDesc::SanityCheck() {
-  int64_t machine_num = job_conf_.resource().machine_size();
-  FOR_RANGE(int64_t, i, 0, machine_num) { CHECK_EQ(job_conf_.resource().machine(i).id(), i); }
+  FOR_RANGE(int64_t, i, 0, Global<ResourceDesc>::Get()->TotalMachineNum()) {
+    CHECK_EQ(Global<ResourceDesc>::Get()->machine(i).id(), i);
+  }
 }
 
 void JobDesc::SplitDecodeOps() {
