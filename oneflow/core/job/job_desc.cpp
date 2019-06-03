@@ -71,28 +71,8 @@ bool JobDesc::enable_experiment_run() const {
   return job_conf_.other().exp_run_conf().enable_experiment_run();
 }
 
-size_t JobDesc::persistence_buf_byte() const {
-  return job_conf_.other().persistence_buf_mbyte() * 1024 * 1024;
-}
-
-size_t JobDesc::reserved_host_mem_byte() const {
-  return job_conf_.other().reserved_host_mem_mbyte() * 1024 * 1024;
-}
-
-size_t JobDesc::reserved_device_mem_byte() const {
-  return job_conf_.other().reserved_device_mem_mbyte() * 1024 * 1024;
-}
-
 bool JobDesc::save_downloaded_file_to_local_fs() const {
   return job_conf_.other().save_downloaded_file_to_local_fs();
-}
-
-size_t JobDesc::rdma_mem_block_byte() const {
-  return job_conf_.other().rdma_mem_block_mbyte() * 1024 * 1024;
-}
-
-size_t JobDesc::rdma_recv_msg_buf_byte() const {
-  return job_conf_.other().rdma_recv_msg_buf_mbyte() * 1024 * 1024;
 }
 
 const std::string& JobDesc::MdSaveSnapshotsPath() const {
@@ -194,21 +174,6 @@ void JobDesc::Init() {
 void JobDesc::SanityCheck() {
   int64_t machine_num = job_conf_.resource().machine_size();
   FOR_RANGE(int64_t, i, 0, machine_num) { CHECK_EQ(job_conf_.resource().machine(i).id(), i); }
-}
-
-int64_t JobDesc::GetMachineId(const std::string& addr) const {
-  int64_t machine_id = -1;
-  auto resource_conf = job_conf_.resource();
-  int64_t machine_num = resource_conf.machine_size();
-  FOR_RANGE(int64_t, i, 0, machine_num) {
-    if (addr == resource_conf.machine(i).addr()) {
-      machine_id = i;
-      break;
-    }
-  }
-  CHECK_GE(machine_id, 0);
-  CHECK_LT(machine_id, machine_num);
-  return machine_id;
 }
 
 void JobDesc::SplitDecodeOps() {

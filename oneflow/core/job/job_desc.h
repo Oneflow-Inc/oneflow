@@ -30,13 +30,7 @@ class JobDesc final {
   int64_t RecordPieceSize() const { return job_conf_.other().piece_size(); }
   int64_t piece_num_of_experiment_phase() const;
   bool enable_experiment_run() const;
-  float available_zone_mem_ratio() const;
-  size_t persistence_buf_byte() const;
-  size_t reserved_host_mem_byte() const;
-  size_t reserved_device_mem_byte() const;
   bool save_downloaded_file_to_local_fs() const;
-  size_t rdma_mem_block_byte() const;
-  size_t rdma_recv_msg_buf_byte() const;
   bool collect_act_event() const { return job_conf_.other().collect_act_event(); }
   bool enable_mem_sharing() const { return job_conf_.other().enable_mem_sharing(); }
   bool enable_inplace() const { return job_conf_.other().enable_inplace(); }
@@ -55,7 +49,6 @@ class JobDesc final {
   float all_reduce_lazy_ratio() const;
   bool all_reduce_fp16() const;
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.other().cudnn_buf_limit_mbyte(); }
-  int64_t GetMachineId(const std::string& addr) const;
 
   // Train conf
   const std::string& MdSaveSnapshotsPath() const;

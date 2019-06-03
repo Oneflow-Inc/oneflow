@@ -413,12 +413,12 @@ void SetInplaceConsumedRegstDescId(
 
 uint64_t Improver::AvailableMemSize(int64_t machine_id, int64_t memory_zone_id) const {
   int64_t mem_size = amd_.machine_amd(machine_id).zone_size(memory_zone_id);
-  JobDesc* job_desc = Global<JobDesc>::Get();
-  if (memory_zone_id == Global<ResourceDesc>::Get()->GpuDeviceNum()) {
-    mem_size -= job_desc->reserved_host_mem_byte();
-    mem_size -= job_desc->persistence_buf_byte() * record_load_task_num_.at(machine_id);
+  const ResourceDesc* resource_desc = Global<ResourceDesc>::Get();
+  if (memory_zone_id == resource_desc->GpuDeviceNum()) {
+    mem_size -= resource_desc->reserved_host_mem_byte();
+    mem_size -= resource_desc->persistence_buf_byte() * record_load_task_num_.at(machine_id);
   } else {
-    mem_size -= job_desc->reserved_device_mem_byte();
+    mem_size -= resource_desc->reserved_device_mem_byte();
   }
   CHECK_GT(mem_size, 0);
   return static_cast<uint64_t>(mem_size);

@@ -1,7 +1,7 @@
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/persistence/binary_in_stream_with_local_copy.h"
 #include "oneflow/core/persistence/binary_in_stream_without_local_copy.h"
-#include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/resource_desc.h"
 #include <cstring>
 
 namespace oneflow {
@@ -24,7 +24,7 @@ PersistentInStream::PersistentInStream(fs::FileSystem* fs,
     stream_scanner_.reset(new AcyclicStreamScanner(fs, streams, offset));
   }
 
-  buffer_.resize(Global<JobDesc>::Get()->persistence_buf_byte() + 1);
+  buffer_.resize(Global<ResourceDesc>::Get()->persistence_buf_byte() + 1);
   cur_buf_begin_ = buffer_.data();
   cur_buf_end_ = buffer_.data();
   *cur_buf_end_ = '\0';
