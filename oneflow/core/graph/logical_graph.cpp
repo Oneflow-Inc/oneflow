@@ -734,7 +734,9 @@ void LogicalGraph::SetupNormalMdUpdtOp() {
 }
 
 MdSaveLogicalNode* LogicalGraph::BuildMdSaveStructIfNeed(LogicalNode* need_save_logical) {
-  if (Global<JobDesc>::Get()->enable_write_snapshot()) {
+  bool write_snapshot_to_master =
+      Global<const JobSet>::Get()->io_conf().snapshot_fs_conf().has_localfs_conf();
+  if (Global<const JobSet>::Get()->io_conf().enable_write_snapshot()) {
     OperatorConf md_save_op_conf;
     md_save_op_conf.set_name("md_save_" + NewUniqueId());
     md_save_op_conf.set_device_type(DeviceType::kCPU);
@@ -746,7 +748,7 @@ MdSaveLogicalNode* LogicalGraph::BuildMdSaveStructIfNeed(LogicalNode* need_save_
     auto related_pr_desc = need_save_logical->parallel_desc();
     pr_conf.set_policy(related_pr_desc->policy());
     if (pr_conf.policy() == ParallelPolicy::kDataParallel) {
-      if (Global<JobDesc>::Get()->write_snapshot_to_master()) {
+      if (write_snapshot_to_master) {
         pr_conf.add_device_name("0:cpu:0");
       } else {
         std::mt19937 gen(NewRandomSeed());
@@ -756,7 +758,7 @@ MdSaveLogicalNode* LogicalGraph::BuildMdSaveStructIfNeed(LogicalNode* need_save_
         pr_conf.add_device_name(std::to_string(selected_mchn_id) + ":cpu:0");
       }
     } else if (pr_conf.policy() == ParallelPolicy::kModelParallel) {
-      if (Global<JobDesc>::Get()->write_snapshot_to_master()) {
+      if (write_snapshot_to_master) {
         pr_conf.add_device_name("0:cpu:0-" + std::to_string(related_pr_desc->parallel_num() - 1));
       } else {
         for (int64_t i = 0; i < related_pr_desc->sorted_machine_ids().size(); ++i) {

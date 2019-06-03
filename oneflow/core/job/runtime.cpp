@@ -38,8 +38,8 @@ bool HasNonCtrlConsumedRegstDescId(const TaskProto& task) {
 
 }  // namespace
 
-Runtime::Runtime(const Plan& plan, bool is_experiment_phase) {
-  NewAllGlobal(plan, is_experiment_phase);
+Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_phase) {
+  NewAllGlobal(plan, total_piece_num, is_experiment_phase);
   std::vector<const TaskProto*> mdupdt_tasks;
   std::vector<const TaskProto*> source_tasks;
   std::vector<const TaskProto*> other_tasks;
@@ -79,22 +79,15 @@ Runtime::Runtime(const Plan& plan, bool is_experiment_phase) {
   DeleteAllGlobal();
 }
 
-void Runtime::NewAllGlobal(const Plan& plan, bool is_experiment_phase) {
-  const JobDesc* job_desc = Global<JobDesc>::Get();
-  int64_t piece_num = 0;
-  if (is_experiment_phase) {
-    piece_num = job_desc->piece_num_of_experiment_phase();
-  } else {
-    piece_num = job_desc->NumOfPiecesInBatch() * job_desc->TotalBatchNum();
-  }
-  Global<RuntimeCtx>::New(piece_num, is_experiment_phase);
+void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_experiment_phase) {
+  Global<RuntimeCtx>::New(total_piece_num, is_experiment_phase);
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()
       && Global<RuntimeCtx>::Get()->NeedCollectActEvent()) {
     Global<ActEventLogger>::New(is_experiment_phase);
   }
   if (Global<ResourceDesc>::Get()->TotalMachineNum() > 1) {
 #ifdef PLATFORM_POSIX
-    if (job_desc->use_rdma()) {
+    if (Global<ResourceDesc>::Get()->use_rdma()) {
 #ifdef WITH_RDMA
       IBVerbsCommNet::Init(plan);
 #else

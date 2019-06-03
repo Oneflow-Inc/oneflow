@@ -1,9 +1,10 @@
 #include "oneflow/core/job_completer/add_saver.h"
+#include "oneflow/core/job/job_set.pb.h"
 
 namespace oneflow {
 
 void AddSaver(const OpGraph& op_graph, Job* job_conf) {
-  if (!Global<JobDesc>::Get()->enable_write_snapshot()) { return; }
+  if (!Global<const JobSet>::Get()->io_conf().enable_write_snapshot()) { return; }
   const int64_t num_of_batches_in_snapshot = Global<JobDesc>::Get()
                                                  ->other_conf()
                                                  .predict_conf()

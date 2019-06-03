@@ -1,15 +1,14 @@
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
-#include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 
-BlobDesc::BlobDesc()
-    : BlobDesc(Shape(), Global<JobDesc>::Get()->DefaultDataType(), false, false, 1) {}
+BlobDesc::BlobDesc(DataType data_type) : BlobDesc(Shape(), data_type, false, false, 1) {}
 
 BlobDesc::BlobDesc(const Shape& shape, DataType data_type, bool has_data_id, bool has_col_num,
                    int32_t max_col_num)
     : header_is_opaque_(false),
+      opaque_header_(shape, data_type),
       has_data_id_(has_data_id),
       has_col_num_(has_col_num),
       has_dim0_valid_num_(false),
@@ -22,7 +21,9 @@ BlobDesc::BlobDesc(const Shape& shape, DataType data_type, bool has_data_id, boo
       body_field_(shape, data_type),
       is_body_disabled_(false) {}
 
-BlobDesc::BlobDesc(const BlobDesc& blob_desc) { this->CopyAllFrom(blob_desc); }
+BlobDesc::BlobDesc(const BlobDesc& blob_desc) : BlobDesc(DataType::kInvalidDataType) {
+  this->CopyAllFrom(blob_desc);
+}
 
 void BlobDesc::InitFromProto(const BlobDescProto& proto) {
   body_field_.InitFromProto(proto.body());
@@ -58,7 +59,8 @@ void BlobDesc::InitFromProto(const BlobDescProto& proto) {
 
 BlobDesc::BlobDesc(const StructPodDesc& header_pod_desc, int64_t header_byte_size,
                    const Shape& shape, DataType data_type, int32_t max_col_num)
-    : has_data_id_(false),
+    : opaque_header_(shape, DataType::kInvalidDataType),
+      has_data_id_(false),
       has_col_num_(false),
       has_dim0_valid_num_(false),
       has_dim1_valid_num_(false),
@@ -121,11 +123,7 @@ Shape& BlobDesc::mut_dim0_inner_shape() {
 }
 
 void BlobDesc::DataIdFieldToProto(FieldHeaderDesc* proto, StructPodDesc* header_pod_desc) const {
-  Shape shape(
-      {body_field_.shape().At(0), static_cast<int64_t>(Global<JobDesc>::Get()->SizeOfOneDataId())});
-  FieldDesc data_id_field(shape, DataType::kChar);
-  data_id_field.ToProto(proto->mutable_data_id());
-  header_pod_desc->AddField(FieldKey::kDataId, TensorPodDesc(shape, DataType::kChar));
+  UNIMPLEMENTED();
 }
 
 void BlobDesc::ColNumFieldToProto(FieldHeaderDesc* proto, StructPodDesc* header_pod_desc) const {
@@ -245,7 +243,7 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
   HashSet<int> data_type_set;
   int32_t max_col_num = -1;
   int32_t blob_desc_cnt = 0;
-  std::unique_ptr<BlobDesc> ret(new BlobDesc());
+  std::unique_ptr<BlobDesc> ret(new BlobDesc(Global<JobDesc>::Get()->DefaultDataType()));
   const BlobDesc* last_blob_desc = nullptr;
   HashMap<int32_t, size_t> blob_mem_id2size;
   StructPodDesc opaque_header_pod_desc;

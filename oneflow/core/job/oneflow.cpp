@@ -155,88 +155,106 @@ class Oneflow final {
   Oneflow(const std::string& job_set_filepath);
 
  private:
+  void WithJobSetLevelGlobalObjs(const std::string& job_set_filepath,
+                                 const std::function<void()>& Callback);
+
   std::unique_ptr<CtrlServer> ctrl_server_;
 };
 
-Oneflow::Oneflow(const std::string& job_set_filepath) {
+void Oneflow::WithJobSetLevelGlobalObjs(const std::string& job_set_filepath,
+                                        const std::function<void()>& Callback) {
   // New All Global
   JobSet job_set;
   ParseProtoFromTextFile(job_set_filepath, &job_set);
   Global<const JobSet>::New(job_set);
   Global<ResourceDesc>::New(Global<const JobSet>::Get()->resource());
-  Global<JobDesc>::New(Global<const JobSet>::Get()->job_conf(0));
   ctrl_server_.reset(new CtrlServer());
   Global<CtrlClient>::New();
   OF_BARRIER();
   int64_t this_mchn_id =
       Global<ResourceDesc>::Get()->GetMachineId(ctrl_server_->this_machine_addr());
   Global<MachineCtx>::New(this_mchn_id);
-  const MachineCtx* machine_ctx = Global<MachineCtx>::Get();
-  bool DoProfile =
-      machine_ctx->IsThisMachineMaster() && Global<JobDesc>::Get()->collect_act_event();
-  if (DoProfile) { Global<Profiler>::New(); }
   FixCpuDeviceNum();
   Global<IDMgr>::New();
-  // Compile
-  Plan naive_plan;
-  Plan mem_shared_plan;
-  Plan improved_plan;
-  PushAvailableMemDescOfThisMachine();
-  AvailableMemDesc amd;
-  double start = GetCurTime();
+  bool DoProfile = Global<MachineCtx>::Get()->IsThisMachineMaster()
+                   && Global<const JobSet>::Get()->profile_conf().collect_act_event();
+  if (DoProfile) { Global<Profiler>::New(); }
+  Global<std::vector<std::unique_ptr<JobDesc>>>::New();
+  FOR_RANGE(int32_t, i, 0, job_set.job_conf_size()) {
+    Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->emplace_back(
+        new JobDesc(job_set.job_conf(i), i));
+  }
 
-  if (machine_ctx->IsThisMachineMaster()) {
-    double start = GetCurTime();
-    naive_plan = Compiler().Compile();
-    LOG(INFO) << "compile time: " << GetCurTime() - start;
-    amd = PullAvailableMemDesc();
-    mem_shared_plan = Improver().ImproveMemSharedIdOnly(amd, naive_plan);
-    PushPlan("naive_plan", naive_plan);
-    PushPlan("mem_shared_plan", mem_shared_plan);
-  } else {
-    PullPlan("naive_plan", &naive_plan);
-    PullPlan("mem_shared_plan", &mem_shared_plan);
-  }
-  OF_BARRIER();
-  TeePersistentLogStream::Create("naive_plan")->Write(naive_plan);
-  TeePersistentLogStream::Create("mem_shared_plan")->Write(mem_shared_plan);
-  LOG(INFO) << "push_pull_plan:" << GetCurTime() - start;
-  if (Global<JobDesc>::Get()->enable_experiment_run()) {
-    // Experiment Runtime
-    { Runtime experiment_run(mem_shared_plan, true); }
-    // Improve
-    if (machine_ctx->IsThisMachineMaster()) {
-      TeePersistentLogStream::Create("available_mem_desc")->Write(amd);
-      CHECK_GT(amd.machine_amd_size(), 0);
-      improved_plan = Improver().Improve(
-          amd, naive_plan,
-          JoinPath(FLAGS_log_dir, ActEventLogger::experiment_act_event_bin_filename()));
-      PushPlan("improved_plan", improved_plan);
-    } else {
-      PullPlan("improved_plan", &improved_plan);
-    }
-    OF_BARRIER();
-    TeePersistentLogStream::Create("improved_plan")->Write(improved_plan);
-    Global<CtrlClient>::Get()->Clear();
-    OF_BARRIER();
-  } else {
-    improved_plan = mem_shared_plan;
-  }
-  // Runtime
-  { Runtime run(improved_plan, false); }
-  if (DoProfile) {
-    Global<Profiler>::Get()->Profile(
-        improved_plan, JoinPath(FLAGS_log_dir, ActEventLogger::act_event_bin_filename()));
-  }
-  // Delete All Global
+  Callback();
+
+  Global<std::vector<std::unique_ptr<JobDesc>>>::Delete();
+  if (DoProfile) { Global<Profiler>::Delete(); }
+  Global<IDMgr>::Delete();
+  Global<MachineCtx>::Delete();
   Global<CtrlClient>::Delete();
   ctrl_server_.reset();
-  Global<Profiler>::Delete();
-  Global<MachineCtx>::Delete();
-  Global<IDMgr>::Delete();
-  Global<JobDesc>::Delete();
   Global<ResourceDesc>::Delete();
   Global<const JobSet>::Delete();
+}
+
+Oneflow::Oneflow(const std::string& job_set_filepath) {
+  WithJobSetLevelGlobalObjs(job_set_filepath, [&]() {
+    Global<JobDesc>::New(Global<const JobSet>::Get()->job_conf(0), 0);
+    const JobDesc* job_desc = Global<JobDesc>::Get();
+    // Compile
+    Plan naive_plan;
+    Plan mem_shared_plan;
+    Plan improved_plan;
+    PushAvailableMemDescOfThisMachine();
+    AvailableMemDesc amd;
+    double start = GetCurTime();
+
+    if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+      double start = GetCurTime();
+      naive_plan = Compiler().Compile();
+      LOG(INFO) << "compile time: " << GetCurTime() - start;
+      amd = PullAvailableMemDesc();
+      mem_shared_plan = Improver().ImproveMemSharedIdOnly(amd, naive_plan);
+      PushPlan("naive_plan", naive_plan);
+      PushPlan("mem_shared_plan", mem_shared_plan);
+    } else {
+      PullPlan("naive_plan", &naive_plan);
+      PullPlan("mem_shared_plan", &mem_shared_plan);
+    }
+    OF_BARRIER();
+    TeePersistentLogStream::Create("naive_plan")->Write(naive_plan);
+    TeePersistentLogStream::Create("mem_shared_plan")->Write(mem_shared_plan);
+    LOG(INFO) << "push_pull_plan:" << GetCurTime() - start;
+    if (job_desc->enable_experiment_run()) {
+      // Experiment Runtime
+      { Runtime experiment_run(mem_shared_plan, job_desc->piece_num_of_experiment_phase(), true); }
+      // Improve
+      if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+        TeePersistentLogStream::Create("available_mem_desc")->Write(amd);
+        CHECK_GT(amd.machine_amd_size(), 0);
+        improved_plan = Improver().Improve(
+            amd, naive_plan,
+            JoinPath(FLAGS_log_dir, ActEventLogger::experiment_act_event_bin_filename()));
+        PushPlan("improved_plan", improved_plan);
+      } else {
+        PullPlan("improved_plan", &improved_plan);
+      }
+      OF_BARRIER();
+      TeePersistentLogStream::Create("improved_plan")->Write(improved_plan);
+      Global<CtrlClient>::Get()->Clear();
+      OF_BARRIER();
+    } else {
+      improved_plan = mem_shared_plan;
+    }
+    size_t total_piece_num = job_desc->NumOfPiecesInBatch() * job_desc->TotalBatchNum();
+    Global<JobDesc>::Delete();
+    // Runtime
+    { Runtime run(improved_plan, total_piece_num, false); }
+    if (Global<Profiler>::Get() != nullptr) {
+      Global<Profiler>::Get()->Profile(
+          improved_plan, JoinPath(FLAGS_log_dir, ActEventLogger::act_event_bin_filename()));
+    }
+  });
 }
 
 }  // namespace oneflow

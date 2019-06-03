@@ -74,7 +74,7 @@ message TaskProto {
   required int64 machine_id = 2;
   required int64 thrd_id = 3;
   required int64 task_id = 4;
-  optional int64 job_id = 5 [default = 0];
+  required int64 job_id = 5;
   required TaskSetInfo task_set_info = 6;
   required ExecSequence exec_sequence = 7;
   map<string, RegstDescProto> produced_regst_desc = 8;

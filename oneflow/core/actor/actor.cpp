@@ -45,7 +45,7 @@ void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
   }
   for (const ExecNodeProto& node : task_proto.exec_sequence().exec_node()) {
     ExecKernel ek;
-    ek.kernel = ConstructKernel(parallel_ctx(), node.kernel_conf(), device_ctx_.get());
+    ek.kernel = ConstructKernel(job_desc_, parallel_ctx(), node.kernel_conf(), device_ctx_.get());
     ek.bn_in_op2regst_desc_id = PbMap2HashMap(node.bn_in_op2regst_desc_id());
     exec_kernel_vec_.push_back(std::move(ek));
   }
@@ -647,7 +647,8 @@ Regst* Actor::GetNaiveCurWriteable(int64_t regst_desc_id) const {
 
 std::unique_ptr<Actor> NewActor(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   Actor* rptr = NewObj<Actor>(task_proto.task_type());
-  rptr->Init(Global<JobDesc>::Get(), task_proto, thread_ctx);
+  const auto* job_descs = Global<std::vector<std::unique_ptr<JobDesc>>>::Get();
+  rptr->Init(job_descs->at(task_proto.job_id()).get(), task_proto, thread_ctx);
   return std::unique_ptr<Actor>(rptr);
 }
 

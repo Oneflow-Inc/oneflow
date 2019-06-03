@@ -3,6 +3,7 @@
 
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
 
@@ -17,7 +18,7 @@ class RuntimeCtx final {
   int64_t total_piece_num() const { return total_piece_num_; }
   bool is_experiment_phase() const { return is_experiment_phase_; }
   bool NeedCollectActEvent() const {
-    return is_experiment_phase_ || Global<JobDesc>::Get()->collect_act_event();
+    return is_experiment_phase_ || Global<const JobSet>::Get()->profile_conf().collect_act_event();
   }
 
   void NewCounter(const std::string& name, int64_t val);

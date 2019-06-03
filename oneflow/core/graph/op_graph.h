@@ -50,7 +50,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
   ParallelDesc* mut_parallel_desc() { return &parallel_desc_; }
   SbpSignature* mut_sbp_signature() { return &sbp_signature_; }
   Shape* mut_out_blob_time_shape();
-  HashMap<std::string, std::vector<BlobDesc>>* mut_bn2parallel_id2blob_desc() {
+  HashMap<std::string, std::vector<std::unique_ptr<BlobDesc>>>* mut_bn2parallel_id2blob_desc() {
     return &bn2parallel_id2blob_desc_;
   }
   bool* MutHasBatchDim4Lbi(const LogicalBlobId& lbi);
@@ -64,8 +64,8 @@ class OpNode final : public Node<OpNode, OpEdge> {
                                const std::function<void(const BlobDesc&)>& Handler) const;
   int64_t GetAxisParallelNum(
       const std::function<void(bool*, int32_t*, int64_t*)>& GetAxisParallelInfo) const;
-  void ConcatBlobDesc(const std::vector<BlobDesc>& blob_descs, const SbpParallel& sbp_parallel,
-                      BlobDesc* concatenated_blob_desc) const;
+  void ConcatBlobDesc(const std::vector<std::unique_ptr<BlobDesc>>& blob_descs,
+                      const SbpParallel& sbp_parallel, BlobDesc* concatenated_blob_desc) const;
   void SplitLogicalInputBlobDesc();
   void ConcatLogicalOutputBlobDesc();
   void CheckBlobDescs(const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
@@ -78,8 +78,8 @@ class OpNode final : public Node<OpNode, OpEdge> {
   std::unique_ptr<Shape> out_blob_time_shape_;
   SbpSignature sbp_signature_;
   HashMap<LogicalBlobId, bool> lbi2has_batch_dim_;
-  HashMap<std::string, std::vector<BlobDesc>> bn2parallel_id2blob_desc_;
-  HashMap<LogicalBlobId, BlobDesc> lbi2logical_blob_desc_;
+  HashMap<std::string, std::vector<std::unique_ptr<BlobDesc>>> bn2parallel_id2blob_desc_;
+  HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2logical_blob_desc_;
 };
 
 class OpEdge final : public Edge<OpNode, OpEdge> {
