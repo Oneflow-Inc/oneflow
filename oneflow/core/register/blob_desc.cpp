@@ -8,7 +8,7 @@ BlobDesc::BlobDesc(DataType data_type) : BlobDesc(Shape(), data_type, false, fal
 BlobDesc::BlobDesc(const Shape& shape, DataType data_type, bool has_data_id, bool has_col_num,
                    int32_t max_col_num)
     : header_is_opaque_(false),
-      opaque_header_(shape, data_type),
+      opaque_header_(Shape({}), data_type),
       has_data_id_(has_data_id),
       has_col_num_(has_col_num),
       has_dim0_valid_num_(false),
@@ -59,7 +59,7 @@ void BlobDesc::InitFromProto(const BlobDescProto& proto) {
 
 BlobDesc::BlobDesc(const StructPodDesc& header_pod_desc, int64_t header_byte_size,
                    const Shape& shape, DataType data_type, int32_t max_col_num)
-    : opaque_header_(shape, DataType::kInvalidDataType),
+    : opaque_header_(Shape({}), DataType::kInvalidDataType),
       has_data_id_(false),
       has_col_num_(false),
       has_dim0_valid_num_(false),
