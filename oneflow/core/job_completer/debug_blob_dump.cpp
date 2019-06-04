@@ -10,7 +10,7 @@ ParallelConf GenCpuOneToOneParallelConf(const ParallelDesc& desc) {
   conf.set_policy(ParallelPolicy::kDataParallel);
   for (const int64_t machine_id : desc.sorted_machine_ids()) {
     for (const int64_t dev_id : desc.sorted_dev_phy_ids(machine_id)) {
-      conf.add_device_name(std::to_string(machine_id) = ":cpu:" + std::to_string(dev_id));
+      conf.add_device_name(std::to_string(machine_id) + ":cpu:" + std::to_string(dev_id));
     }
   }
   return conf;

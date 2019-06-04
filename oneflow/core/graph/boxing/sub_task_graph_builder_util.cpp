@@ -66,4 +66,24 @@ bool SubTskGphBuilderUtil::IsOnSameGPU(const TaskNode* lhs, const TaskNode* rhs)
          && rhs->device_type() == DeviceType::kGPU && lhs->GpuPhyId() == rhs->GpuPhyId();
 }
 
+bool SubTskGphBuilderUtil::IsBoxingS2S(const SbpParallel& src, const SbpParallel& dst) {
+  return src.has_split_parallel() && dst.has_split_parallel();
+}
+
+bool SubTskGphBuilderUtil::IsBoxingS2B(const SbpParallel& src, const SbpParallel& dst) {
+  return src.has_split_parallel() && dst.has_broadcast_parallel();
+}
+
+bool SubTskGphBuilderUtil::IsBoxingP2S(const SbpParallel& src, const SbpParallel& dst) {
+  return src.has_partial_sum_parallel() && dst.has_split_parallel();
+}
+
+bool SubTskGphBuilderUtil::IsBoxingP2B(const SbpParallel& src, const SbpParallel& dst) {
+  return src.has_partial_sum_parallel() && dst.has_broadcast_parallel();
+}
+
+bool SubTskGphBuilderUtil::IsBoxingB2B(const SbpParallel& src, const SbpParallel& dst) {
+  return src.has_broadcast_parallel() && dst.has_broadcast_parallel();
+}
+
 }  // namespace oneflow
