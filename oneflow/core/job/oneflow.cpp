@@ -320,7 +320,7 @@ Oneflow::Oneflow(const std::string& job_set_filepath) {
 
 }  // namespace oneflow
 
-DEFINE_string(job_conf, "", "");
+DEFINE_string(job_set, "", "");
 
 int main(int argc, char** argv) {
   using namespace oneflow;
@@ -330,7 +330,7 @@ int main(int argc, char** argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir);
   RedirectStdoutAndStderrToGlogDir();
-  { Oneflow flow(FLAGS_job_conf); }
+  { Oneflow flow(FLAGS_job_set); }
   CloseStdoutAndStderr();
   return 0;
 }
