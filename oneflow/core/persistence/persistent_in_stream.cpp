@@ -24,7 +24,7 @@ PersistentInStream::PersistentInStream(fs::FileSystem* fs,
     stream_scanner_.reset(new AcyclicStreamScanner(fs, streams, offset));
   }
 
-  buffer_.resize(Global<ResourceDesc>::Get()->persistence_buf_byte() + 1);
+  buffer_.resize(Global<const JobSet>::Get()->io_conf().persistence_buf_byte() + 1);
   cur_buf_begin_ = buffer_.data();
   cur_buf_end_ = buffer_.data();
   *cur_buf_end_ = '\0';
