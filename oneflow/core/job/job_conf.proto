@@ -46,7 +46,6 @@ message Config {
   optional bool enable_cudnn = 103 [default = true];
   optional DataType default_data_type = 104 [default = kFloat]; // kFloat or kDouble
   optional ExperimentalRunConf exp_run_conf = 105;
-  optional bool save_downloaded_file_to_local_fs = 109 [default = false];
 
   optional bool enable_mem_sharing = 126 [default = true];
   optional bool enable_inplace = 127 [default = true];

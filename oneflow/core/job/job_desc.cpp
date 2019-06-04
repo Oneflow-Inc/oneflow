@@ -72,10 +72,6 @@ bool JobDesc::enable_experiment_run() const {
   return job_conf_.other().exp_run_conf().enable_experiment_run();
 }
 
-bool JobDesc::save_downloaded_file_to_local_fs() const {
-  return job_conf_.other().save_downloaded_file_to_local_fs();
-}
-
 int32_t JobDesc::NumOfBatchesInSnapshot() const {
   return GetTrainConf(job_conf_).num_of_batches_in_snapshot();
 }

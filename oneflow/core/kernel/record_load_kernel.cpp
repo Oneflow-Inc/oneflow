@@ -27,8 +27,8 @@ void RecordLoadKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
     const size_t num_max_read =
         static_cast<size_t>(piece_size_in_one_loader_ * this->job_desc().TotalBatchNum()
                             * this->job_desc().NumOfPiecesInBatch());
-    in_stream_.reset(new PersistentInStream(DataFS(), data_paths, true,
-                                            this->job_desc().save_downloaded_file_to_local_fs()));
+    bool save_to_local = Global<const JobSet>::Get()->io_conf().save_downloaded_file_to_local_fs();
+    in_stream_.reset(new PersistentInStream(DataFS(), data_paths, true, save_to_local));
     if (record_load_conf.has_random_shuffle_conf()) {
       const int32_t shuffle_buffer_size = record_load_conf.random_shuffle_conf().buffer_size();
       CHECK_GT(shuffle_buffer_size, 0);
