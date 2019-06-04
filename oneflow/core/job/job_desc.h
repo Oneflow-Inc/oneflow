@@ -55,6 +55,9 @@ class JobDesc final {
   bool enable_cublashgemm_when_matmul() const {
     return job_conf_.other().enable_cublashgemm_when_matmul();
   }
+  bool enable_auto_mixed_precision() const {
+    return job_conf_.other().enable_auto_mixed_precision();
+  }
   const FileSystemConf& data_fs_conf() const;
   const FileSystemConf& snapshot_fs_conf() const;
   bool enable_write_snapshot() const;

@@ -103,6 +103,7 @@ message Config {
   optional bool all_reduce_fp16 = 149 [default = true];
   optional bool enable_true_half_config_when_conv = 150 [default = false];
   optional bool enable_cublashgemm_when_matmul = 151[default = false];
+  optional bool enable_auto_mixed_precision = 152 [default = false];
 
   oneof JobType {
     TrainConf train_conf = 200;
