@@ -56,12 +56,12 @@ Job ConvertJobConf2Job(const JobConf& job_conf) {
 
 }  // namespace
 
-Plan Compiler::Compile() {
+Plan Compiler::Compile() const {
   Plan plan = DoCompile();
   return plan;
 }
 
-void Compiler::GenNetTopo(Plan* plan) {
+void Compiler::GenNetTopo(Plan* plan) const {
   HashMap<int64_t, int64_t> rid2mid;
   HashMap<int64_t, int64_t> tid2mid;
   std::map<int64_t, std::set<int64_t>> net_topo;
@@ -102,7 +102,7 @@ void Compiler::GenNetTopo(Plan* plan) {
   *(pb_net_topo.mutable_peer_machine_ids()) = HashMap2PbMap(std_net_topo);
 }
 
-Plan Compiler::DoCompile() {
+Plan Compiler::DoCompile() const {
 #ifdef WITH_CUDA
   Global<CudnnConvCtxCache>::New();
 #endif

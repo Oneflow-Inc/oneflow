@@ -14,11 +14,11 @@ class Compiler final {
   Compiler() = default;
   ~Compiler() = default;
 
-  Plan Compile();
+  Plan Compile() const;
+  void GenNetTopo(Plan* plan) const;
 
  private:
-  Plan DoCompile();
-  void GenNetTopo(Plan* plan);
+  Plan DoCompile() const;
 };
 
 }  // namespace oneflow
