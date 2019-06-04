@@ -28,6 +28,7 @@ message IOConf {
   optional string model_load_snapshot_path = 3 [default = ""];
   optional string model_save_snapshots_path = 4 [default = ""];
   optional bool enable_write_snapshot = 5 [default = true];
+  optional bool save_downloaded_file_to_local_fs = 6 [default = false];
 }
 
 message ProfileConf {

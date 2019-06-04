@@ -29,7 +29,6 @@ class JobDesc final {
   int64_t RecordPieceSize() const { return job_conf_.other().piece_size(); }
   int64_t piece_num_of_experiment_phase() const;
   bool enable_experiment_run() const;
-  bool save_downloaded_file_to_local_fs() const;
   bool enable_mem_sharing() const { return job_conf_.other().enable_mem_sharing(); }
   bool enable_inplace() const { return job_conf_.other().enable_inplace(); }
   bool enable_blob_mem_sharing() const { return job_conf_.other().enable_blob_mem_sharing(); }
