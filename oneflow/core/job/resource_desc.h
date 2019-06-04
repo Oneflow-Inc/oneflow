@@ -25,7 +25,6 @@ class ResourceDesc final {
   int32_t GpuDeviceNum() const { return resource_.gpu_device_num(); }
   int32_t MemZoneNum() const { return GpuDeviceNum() + 1; }
   int32_t MaxMdSaveWorkerNum() const { return resource_.max_mdsave_worker_num(); }
-  size_t persistence_buf_byte() const { return resource_.persistence_buf_mbyte() * kMB; }
   size_t reserved_host_mem_byte() const { return resource_.reserved_host_mem_mbyte() * kMB; }
   size_t reserved_device_mem_byte() const { return resource_.reserved_device_mem_mbyte() * kMB; }
   int64_t GetMachineId(const std::string& addr) const;
