@@ -60,7 +60,7 @@ void ForEachSameColoredStreamRegstDescWithoutConsumer(
       });
 }
 
-void ForEachSameColoredChainRegstRegstDescs(
+void ForEachSameColoredChainRegstDescs(
     const SharableMemBlockGraph& sharable_mem_block_gph,
     const std::function<std::vector<const RegstDescProto*>(
         const std::vector<const SharableMemBlockNode*>&)>& GetRegstDescs,
@@ -158,8 +158,8 @@ void ForEachSameColoredChainRegstDescWithConsumer(
     }
     Handler(members);
   };
-  ForEachSameColoredChainRegstRegstDescs(sharable_mem_block_gph, GetRegstDescs,
-                                         ComputeLifetimeSameChainActorIds, AppendGroupMembers);
+  ForEachSameColoredChainRegstDescs(sharable_mem_block_gph, GetRegstDescs,
+                                    ComputeLifetimeSameChainActorIds, AppendGroupMembers);
 }
 
 void ForEachImprovedMemSharedId(const PlanTaskGraph& plan_task_graph,
@@ -253,14 +253,6 @@ std::function<void(int64_t, uint64_t)> MakeSetterSetPlanRegstNum(Plan* plan) {
   auto regst_desc_id2regst_desc = MakeRegstDescId2RegstDesc(plan);
   return [regst_desc_id2regst_desc](int64_t regst_desc_id, uint64_t num) {
     regst_desc_id2regst_desc->at(regst_desc_id)->set_register_num(num);
-  };
-}
-
-std::function<void(int64_t, int64_t)> MakeSetterSetPlanMemSharedId(Plan* plan) {
-  auto regst_desc_id2regst_desc = MakeRegstDescId2RegstDesc(plan);
-  return [regst_desc_id2regst_desc](int64_t regst_desc_id, int64_t mem_shared_id) {
-    regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_shared_id(mem_shared_id);
-    regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_shared_offset(0);
   };
 }
 
@@ -395,6 +387,27 @@ void FixReliantCtrlRegstNum(const Plan& plan, const std::function<uint64_t(int64
   }
 }
 
+void SetInplaceConsumedRegstDescId(
+    Plan* plan, const HashMap<int64_t, RegstDescProto*>& regst_desc_id2regst_desc) {
+  for (int i = 0; i < plan->task_size(); i++) {
+    TaskProto* task = plan->mutable_task(i);
+    for (auto& pair : *task->mutable_produced_regst_desc()) {
+      RegstDescProto* regst_desc = &pair.second;
+      CHECK_EQ(regst_desc->has_inplace_consumed_regst_desc_id(), false);
+      if (regst_desc->has_hint_inplace_consumed_regst_desc_id()) {
+        int64_t hint = regst_desc->hint_inplace_consumed_regst_desc_id();
+        const RegstDescProto* in_regst_desc = regst_desc_id2regst_desc.at(hint);
+        if (in_regst_desc->mem_shared_id() != -1
+            && in_regst_desc->mem_shared_id() == regst_desc->mem_shared_id()
+            && in_regst_desc->mem_shared_offset() == regst_desc->mem_shared_offset()) {
+          CHECK_EQ(in_regst_desc->register_num(), regst_desc->register_num());
+          regst_desc->set_inplace_consumed_regst_desc_id(hint);
+        }
+      }
+    }
+  }
+}
+
 }  // namespace
 
 uint64_t Improver::AvailableMemSize(int64_t machine_id, int64_t memory_zone_id) const {
@@ -501,8 +514,13 @@ void Improver::ForEachImprovedRegstNum(
   LOG(INFO) << "memory " << (is_memory_limited ? "limited" : "unlimited") << " ii: " << ii;
   for (const auto& task_proto : plan.task()) {
     for (const auto& pair : task_proto.produced_regst_desc()) {
-      uint64_t regst_num =
-          CalcRegstNum(pair.second, PathDurations4RegstDescId, ii, PathIIScales4RegstDescId);
+      uint64_t regst_num = 0;
+      if (pair.second.has_inplace_consumed_regst_desc_id()) {
+        regst_num = pair.second.register_num();
+      } else {
+        regst_num =
+            CalcRegstNum(pair.second, PathDurations4RegstDescId, ii, PathIIScales4RegstDescId);
+      }
       Handler(pair.second.regst_desc_id(), regst_num);
     }
   }
@@ -581,15 +599,24 @@ Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
 Plan Improver::ImproveMemSharedId(const Plan& naive_plan) const {
   Plan plan(naive_plan);
   PlanTaskGraph plan_task_graph(naive_plan);
-  ForEachImprovedMemSharedId(plan_task_graph, MakeSetterSetPlanMemSharedId(&plan));
-  auto OrderInGraph4TaskId = [&](int64_t task_id) {
-    return plan_task_graph.TaskProto4TaskId(task_id)->task_set_info().order_in_graph();
-  };
-  auto IsReachable = [&](int64_t src_task_id, int64_t dst_task_id) {
-    return plan_task_graph.IsReachableInSameArea(src_task_id, dst_task_id);
-  };
-  ForEachInferredMemSharingCriticalSection(plan, OrderInGraph4TaskId,
-                                           MakeSetterAddCtrlRegst(&plan, IsReachable));
+  {
+    auto regst_desc_id2regst_desc = MakeRegstDescId2RegstDesc(&plan);
+    ForEachImprovedMemSharedId(plan_task_graph, [&](int64_t regst_desc_id, int64_t mem_shared_id) {
+      regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_shared_id(mem_shared_id);
+      regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_shared_offset(0);
+    });
+    SetInplaceConsumedRegstDescId(&plan, *regst_desc_id2regst_desc);
+  }
+  {
+    auto OrderInGraph4TaskId = [&](int64_t task_id) {
+      return plan_task_graph.TaskProto4TaskId(task_id)->task_set_info().order_in_graph();
+    };
+    auto IsReachable = [&](int64_t src_task_id, int64_t dst_task_id) {
+      return plan_task_graph.IsReachableInSameArea(src_task_id, dst_task_id);
+    };
+    ForEachInferredMemSharingCriticalSection(plan, OrderInGraph4TaskId,
+                                             MakeSetterAddCtrlRegst(&plan, IsReachable));
+  }
   return plan;
 }
 

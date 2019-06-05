@@ -265,11 +265,23 @@ void OpGraph::Init(const Job& job) {
   ForEachNode(
       [&](OpNode* node) { CHECK(op_name2op_node_.emplace(node->op().op_name(), node).second); });
   InitEdges();
-  // CHECK(!FindFirstNontrivialSCC());
+  InitProducerOpName2CtrlConsumerOpNames(job);
+  CheckIsDAG();
   FixOpParallelDesc();
   UpdateOpNodeHasInDiff();
   InferTimeShape();
   InferLogicalBlobDesc(job);
+}
+
+void OpGraph::CheckIsDAG() const {
+  CHECK(!FindFirstNontrivialSCC());
+  auto ForEachIn = [&](OpNode* node, const std::function<void(OpNode*)>& Handler) {
+    ForEachDataAndCtrlInNode(node, Handler);
+  };
+  auto ForEachOut = [&](OpNode* node, const std::function<void(OpNode*)>& Handler) {
+    ForEachDataAndCtrlOutNode(node, Handler);
+  };
+  CHECK(!FindFirstNontrivialSCC(ForEachIn, ForEachOut));
 }
 
 void OpGraph::InitNodes(const Job& job) {
@@ -307,6 +319,15 @@ void OpGraph::InitEdges() {
       Connect(producer, NewEdge(lbis, lbi2obn, lbi2ibns), op_node);
     }
   });
+}
+
+void OpGraph::InitProducerOpName2CtrlConsumerOpNames(const Job& job) {
+  for (const auto& op_conf : job.net().op()) {
+    for (const auto& ctrl_in_op_name : op_conf.ctrl_in_op_name()) {
+      auto* consumer_op_names = &producer_op_name2ctrl_consumer_op_names_[ctrl_in_op_name];
+      CHECK(consumer_op_names->emplace(op_conf.name()).second);
+    }
+  }
 }
 
 void OpGraph::FixOpParallelDesc() const {
@@ -671,6 +692,51 @@ std::function<const BlobDesc&(const LogicalBlobId&)> OpGraph::MakeGetterBlobDesc
   return [model_lbi2blob_desc](const LogicalBlobId& model_lbi) -> const BlobDesc& {
     return model_lbi2blob_desc->at(model_lbi);
   };
+}
+
+void OpGraph::ForEachDataAndCtrlInNode(OpNode* node,
+                                       const std::function<void(OpNode*)>& Handler) const {
+  node->ForEachNodeOnInEdge(Handler);
+  for (const auto& ctrl_in_op_name : node->op().op_conf().ctrl_in_op_name()) {
+    Handler(op_name2op_node_.at(ctrl_in_op_name));
+  }
+}
+
+void OpGraph::ForEachDataAndCtrlOutNode(OpNode* node,
+                                        const std::function<void(OpNode*)>& Handler) const {
+  node->ForEachNodeOnOutEdge(Handler);
+  const auto& op_name_it = producer_op_name2ctrl_consumer_op_names_.find(node->op().op_name());
+  if (op_name_it == producer_op_name2ctrl_consumer_op_names_.end()) { return; }
+  for (const std::string& ctrl_consumer_op_name : op_name_it->second) {
+    Handler(op_name2op_node_.at(ctrl_consumer_op_name));
+  }
+}
+
+std::function<bool(const LogicalBlobId&, const std::string&)>
+OpGraph::MakePredicatorIsLbiAllConsumersReachableToOpName() const {
+  auto IsDataOrCtrlReachable = MakePredicatorIsDataOrCtrlReachable();
+  return [IsDataOrCtrlReachable, this](const LogicalBlobId& lbi, const std::string& op_name) {
+    const OpNode* src_node = op_name2op_node_.at(lbi.op_name());
+    const OpNode* dst_node = op_name2op_node_.at(op_name);
+    size_t out_node_cnt = 0;
+    size_t reachable_out_node_cnt = 0;
+    for (OpEdge* edge : src_node->out_edges()) {
+      if (std::find(edge->lbis().begin(), edge->lbis().end(), lbi) != edge->lbis().end()) {
+        out_node_cnt += 1;
+        reachable_out_node_cnt += IsDataOrCtrlReachable(edge->dst_node(), dst_node);
+      }
+    }
+    return out_node_cnt > 0 && out_node_cnt == reachable_out_node_cnt;
+  };
+}
+
+std::function<bool(const OpNode*, const OpNode*)> OpGraph::MakePredicatorIsDataOrCtrlReachable()
+    const {
+  auto _1 = std::placeholders::_1;
+  auto _2 = std::placeholders::_2;
+  return MakePredicatorIsReachable(source_nodes(),
+                                   std::bind(&OpGraph::ForEachDataAndCtrlInNode, this, _1, _2),
+                                   std::bind(&OpGraph::ForEachDataAndCtrlOutNode, this, _1, _2));
 }
 
 }  // namespace oneflow

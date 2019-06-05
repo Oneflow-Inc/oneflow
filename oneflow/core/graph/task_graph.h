@@ -27,7 +27,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void EnableMemSharingInReduceStruct();
   void EnableMemSharingAfterAllManualSetForMdUpdt();
   void EnableMemSharingInVariableOp();
-  void EnableInplaceMemSharing();
+  void EnableInplaceMemSharing(const std::function<bool(const LogicalBlobId&, const std::string&)>&
+                                   IsLbiAllConsumersReachableToOpName);
 
   void AddOrderCtrlEdgeBetweenCopyAndMdUpdt();
   void RmUselessConsumeRelationshipBetweenFwBw();
@@ -84,6 +85,19 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
   void GeneratePersistenceThrdId(
       const std::vector<std::pair<int64_t, CompTaskNode*>>& persistence_nodes);
+
+  // inplace
+  void GetInplaceOpBlobArgList(
+      OpBlobArgList* inplace_obas, const HashSet<TaskNode*>& dev_nodes,
+      const std::function<const TaskNode*(const std::string&)>& TaskNode4OpName) const;
+  void GetSafeInplaceOpBlobArgList(
+      OpBlobArgList* obas, const HashSet<TaskNode*>& dev_nodes,
+      const std::function<bool(const LogicalBlobId&, const std::string&)>&
+          IsLbiConsumersReachableToOpName) const;
+  void SetTaskRegstInplaceInfo(const OpBlobArgList& obas,
+                               const HashSet<TaskNode*>& dev_nodes) const;
+  void ForEachGpuDeviceNodes(
+      const std::function<void(const HashSet<TaskNode*>& dev_nodes)>& Handler) const;
 
   std::unique_ptr<const LogicalGraph> logical_gph_;
   std::vector<TaskNode*> ordered_task_nodes_;

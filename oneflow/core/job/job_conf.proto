@@ -85,6 +85,7 @@ message Config {
 
   optional bool collect_act_event = 125 [default = false];
   optional bool enable_mem_sharing = 126 [default = true];
+  optional bool enable_inplace = 127 [default = true];
   optional bool enable_write_snapshot = 130 [default = true];
   optional bool enable_blob_mem_sharing = 140 [default = true];
   optional bool enable_nccl = 142 [default = true];

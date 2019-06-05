@@ -65,6 +65,7 @@ class Actor {
   void IncreaseReadingCnt4ProducedRegst(Regst* regst, int64_t val);
   void IncreaseTotalReadingCnt(int64_t val) { total_reading_cnt_ += val; }
   int64_t GetPieceId4NaiveCurReadableDataRegst() const;
+  int64_t GetPieceId4NaiveOrInplaceCurReadableDataRegst() const;
 
   // Msg Handler
   void set_msg_handler(MsgHandler val) { msg_handler_ = val; }
@@ -93,6 +94,11 @@ class Actor {
   void HandleProducedNaiveDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess);
   void HandleProducedNaiveDataRegstToConsumer(std::function<bool(int64_t)> IsAllowedActor);
   void HandleProducedNaiveDataRegstToConsumer();
+  void HandleProducedInplaceDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess,
+                                                std::function<bool(int64_t)> IsAllowedActor);
+  void HandleProducedInplaceDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess);
+  void HandleProducedInplaceDataRegstToConsumer(std::function<bool(int64_t)> IsAllowedActor);
+  void HandleProducedInplaceDataRegstToConsumer();
   void AsyncSendRegstMsgToConsumer(Regst* regst);
   void AsyncSendRegstMsgToConsumer(Regst* regst, std::function<bool(int64_t)> IsAllowedActor);
 
@@ -102,15 +108,23 @@ class Actor {
   void AsyncSendEORDMsgForAllProducedRegstDesc();
 
   // Get Regst
-  Regst* GetNaiveCurReadable(int64_t desc_id) { return naive_consumed_rs_.Front(desc_id); }
-  Regst* GetNaiveCurReadable(const std::string& name) {
+  Regst* GetNaiveCurReadable(int64_t regst_desc_id) const;
+  Regst* GetNaiveCurReadable(const std::string& name) const {
     return GetNaiveCurReadable(Name2SoleRegstDescId(name));
   }
-  Regst* GetNaiveCurWriteable(int64_t desc_id) { return naive_produced_rs_.Front(desc_id); }
-  Regst* GetNaiveCurWriteable(const std::string& name) {
+  Regst* GetNaiveOrInplaceCurReadable(int64_t regst_desc_id) const;
+  Regst* GetNaiveOrInplaceCurReadable(const std::string& name) const {
+    return GetNaiveOrInplaceCurReadable(Name2SoleRegstDescId(name));
+  }
+  Regst* GetNaiveCurWriteable(int64_t regst_desc_id) const;
+  Regst* GetNaiveCurWriteable(const std::string& name) const {
     return GetNaiveCurWriteable(Name2SoleRegstDescId(name));
   }
-  Regst* GetSoleProducedRegst4RegstDescId(int64_t regst_desc_id);
+  Regst* GetNaiveOrInplaceCurWriteable(int64_t regst_desc_id) const;
+  Regst* GetNaiveOrInplaceCurWriteable(const std::string& name) const {
+    return GetNaiveOrInplaceCurWriteable(Name2SoleRegstDescId(name));
+  }
+  Regst* GetSoleProducedRegst4RegstDescId(int64_t regst_desc_id) const;
 
  private:
   int64_t GetGlobalWorkStreamId() const;
@@ -141,16 +155,18 @@ class Actor {
   void TryLogActEvent(const std::function<void()>& Callback) const;
 
   // Ready
-  bool IsReadReady();
-  bool IsWriteReady();
+  bool IsReadReady() const;
+  bool IsWriteReady() const;
 
-  // NaiveOrCustomized
+  // Naive, Inplace Or Customized
+  void TakeOverInplaceConsumedAndProduced(const PbMap<std::string, RegstDescProto>& produced_ids);
   void TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids);
   void TakeOverNaiveProduced(const PbMap<std::string, RegstDescProto>& produced_ids);
 
   // Send Msgs
   void AsyncSendNaiveProducedRegstMsgToConsumer();
   virtual void VirtualAsyncSendNaiveProducedRegstMsgToConsumer();
+  virtual void VirtualAsyncSendInplaceProducedRegstMsgToConsumer();
   void AsyncSendInplaceProducedRegstMsgToConsumer();
   void AsyncSendNaiveConsumedRegstMsgToProducer();
   virtual void VirtualAsyncSendNaiveConsumedRegstMsgToProducer();
@@ -162,8 +178,8 @@ class Actor {
   virtual void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const {}
   virtual void NormalProcessCustomizedEordMsg(const ActorMsg&) {}
   virtual void NormalProcessCustomizedReadableRegstMsg(const ActorMsg&) { UNIMPLEMENTED(); }
-  virtual bool IsCustomizedReadReady() { return true; }
-  virtual bool IsCustomizedReadAlwaysUnReadyFromNow() { return false; }
+  virtual bool IsCustomizedReadReady() const { return true; }
+  virtual bool IsCustomizedReadAlwaysUnReadyFromNow() const { return false; }
   virtual std::pair<RegstNameType, HashSet<std::string>>
   GetNaiveOrCustomizedConsumedRegstDescName() {
     return std::make_pair(RegstNameType::kCustomized, HashSet<std::string>{});
@@ -173,7 +189,7 @@ class Actor {
 
   // Customized Produced virtual func
   virtual void UpdtStateAsCustomizedProducedRegst(Regst* regst) { UNIMPLEMENTED(); }
-  virtual bool IsCustomizedWriteReady() { return true; }
+  virtual bool IsCustomizedWriteReady() const { return true; }
   virtual std::pair<RegstNameType, HashSet<std::string>>
   GetNaiveOrCustomizedProducedRegstDescName() {
     return std::make_pair(RegstNameType::kCustomized, HashSet<std::string>{});
@@ -205,7 +221,8 @@ class Actor {
   RegstSlot inplace_consumed_rs_;
   RegstSlot inplace_produced_rs_;
   bool is_inplace_consumed_eord_;
-  HashMap<int64_t, int64_t> inplace_out2in_;
+  HashMap<int64_t, int64_t> inplace_regst_desc_id_in2out_;
+  HashMap<int64_t, int64_t> inplace_regst_desc_id_out2in_;
 };
 
 class ScopedActEventRecorder;

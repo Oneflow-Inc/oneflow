@@ -37,7 +37,7 @@ void NormalForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   }
 }
 
-bool NormalForwardCompActor::IsCustomizedWriteReady() {
+bool NormalForwardCompActor::IsCustomizedWriteReady() const {
   if (const_buf_regst_desc_id_ != -1) { CHECK(send_const_buf_regst_); }
   return true;
 }
@@ -72,7 +72,7 @@ void NormalForwardCompActor::NormalProcessCustomizedReadableRegstMsg(const Actor
 
 void NormalForwardCompActor::Act() {
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
-  cur_piece_id_ = GetPieceId4NaiveCurReadableDataRegst();
+  cur_piece_id_ = GetPieceId4NaiveOrInplaceCurReadableDataRegst();
   std::tuple<int64_t, std::function<const Blob*(const LogicalBlobId&)>> other_val(
       cur_piece_id_, [this](const LogicalBlobId& lbi) -> const Blob* {
         CHECK_NOTNULL(pre_forward_model_regst_);
@@ -106,6 +106,13 @@ void NormalForwardCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   if (Global<JobDesc>::Get()->IsTrain()) { TrySendMsgToForwardModelSaveActor(cur_piece_id_); }
 }
 
+void NormalForwardCompActor::VirtualAsyncSendInplaceProducedRegstMsgToConsumer() {
+  HandleProducedInplaceDataRegstToConsumer([&](Regst* regst) {
+    regst->set_piece_id(cur_piece_id_);
+    return true;
+  });
+}
+
 void NormalForwardCompActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
   if (Global<JobDesc>::Get()->IsTrain() && model_regst_) {
     int64_t last_piece_id = GetLastPieceIdForModelVersionId(model_regst_->model_version_id(),
@@ -116,7 +123,7 @@ void NormalForwardCompActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
   cur_piece_id_ = -1;
 }
 
-bool NormalForwardCompActor::IsCustomizedReadReady() {
+bool NormalForwardCompActor::IsCustomizedReadReady() const {
   if (model_regst_desc_id_ != -1 && model_regst_ == nullptr) { return false; }
   if (const_model_regst_desc_id_ != -1 && const_model_regst_ == nullptr) { return false; }
   return true;

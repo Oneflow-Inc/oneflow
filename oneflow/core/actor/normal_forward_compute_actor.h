@@ -16,7 +16,7 @@ class NormalForwardCompActor final : public CompActor {
   void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const override;
   void NormalProcessCustomizedReadableRegstMsg(const ActorMsg&) override;
   void Act() override;
-  bool IsCustomizedReadReady() override;
+  bool IsCustomizedReadReady() const override;
   void AsyncReturnAllCustomizedReadableRegst() override;
   std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName()
       override {
@@ -28,9 +28,10 @@ class NormalForwardCompActor final : public CompActor {
   }
   void AsyncSendCustomizedProducedRegstMsgToConsumer() override {}
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
+  void VirtualAsyncSendInplaceProducedRegstMsgToConsumer() override;
   void AsyncSendCustomizedConsumedRegstMsgToProducer() override;
 
-  bool IsCustomizedWriteReady() override;
+  bool IsCustomizedWriteReady() const override;
   void UpdtStateAsCustomizedProducedRegst(Regst* regst) override;
   bool CheckOutputActId(int64_t regst_desc_id) const override;
 

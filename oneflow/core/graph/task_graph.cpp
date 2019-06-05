@@ -9,6 +9,7 @@
 #include "oneflow/core/graph/reduce_add_compute_task_node.h"
 #include "oneflow/core/graph/reduce_gather_compute_task_node.h"
 #include "oneflow/core/graph/reduce_split_compute_task_node.h"
+#include "oneflow/core/graph/inplace_lbi_graph.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/job/thrd_id_generator.h"
 #include "oneflow/core/graph/reduce_identity_task_node.h"
@@ -79,6 +80,64 @@ void ForEachDeviceSrcUntrainableNode(const std::vector<NormalForwardCompTaskNode
   for (NormalForwardCompTaskNode* fw_node : fw_nodes) {
     if (IsSourceTaskNode(fw_node) && !HasBwNode(fw_node)) { Handler(fw_node); }
   }
+}
+
+std::function<TaskNode*(const std::string&)> MakeGetterTaskNode4SoleOpName(
+    const HashSet<TaskNode*>& task_nodes) {
+  auto op_name2task_nodes = std::make_shared<HashMap<std::string, HashSet<TaskNode*>>>();
+  for (TaskNode* task_node : task_nodes) {
+    if (task_node->exec_gph().node_num() == 1) {
+      ExecNode* exec_node = task_node->exec_gph().SoleNode();
+      CHECK((*op_name2task_nodes)[exec_node->op()->op_name()].emplace(task_node).second);
+    }
+  }
+  return [op_name2task_nodes](const std::string& op_name) -> TaskNode* {
+    const auto& iter = op_name2task_nodes->find(op_name);
+    if (iter == op_name2task_nodes->end()) { return nullptr; }
+    if (iter->second.size() > 1) { return nullptr; }
+    return *iter->second.begin();
+  };
+};
+
+bool IsLbiOnTaskEdge(const TaskEdge* edge, const LogicalBlobId& lbi) {
+  for (const auto& regst_desc : edge->GetRegsts()) {
+    if (regst_desc->HasLbi(lbi)) { return true; }
+  }
+  return false;
+}
+
+std::function<bool(const LogicalBlobId&, const std::string&)>
+MakePredicatorIsLbiAllConsumersReachableInChain(
+    std::function<const TaskNode*(const std::string&)> TaskNode4SoleOpName) {
+  return [TaskNode4SoleOpName](const LogicalBlobId& lbi, const std::string& op_name) -> bool {
+    const TaskNode* src_task_node = TaskNode4SoleOpName(lbi.op_name());
+    const TaskNode* dst_task_node = TaskNode4SoleOpName(op_name);
+    size_t out_edges_size = 0;
+    size_t rechable_out_edges_size = 0;
+    for (TaskEdge* out_edge : src_task_node->out_edges()) {
+      if (IsLbiOnTaskEdge(out_edge, lbi)) {
+        out_edges_size += 1;
+        rechable_out_edges_size +=
+            (out_edge->dst_node()->chain_id() == dst_task_node->chain_id()
+             && out_edge->dst_node()->order_in_graph() < dst_task_node->order_in_graph());
+      }
+    }
+    return out_edges_size > 0 && out_edges_size == rechable_out_edges_size;
+  };
+}
+
+bool IsInplaceAllowed(
+    TaskNode* task_node, const std::vector<std::string>& bns,
+    const std::function<const TaskNode*(const std::string&)>& TaskNode4SoleOpName) {
+  if (task_node->exec_gph().node_num() != 1) { return false; }
+  const auto& exec_node = *task_node->exec_gph().SoleNode();
+  for (const auto& bn : bns) {
+    // TaskNode for bn is not nullptr if it's on the same device with `task_node`
+    if (TaskNode4SoleOpName(exec_node.op()->BnInOp2Lbi(bn).op_name()) == nullptr) { return false; }
+    const RegstDesc& regst_desc = *exec_node.RegstDesc4BnInOp(bn);
+    if (regst_desc.NumOfLbi() != 1) { return false; }
+  }
+  return true;
 }
 
 }  // namespace
@@ -487,31 +546,101 @@ void TaskGraph::EnableMemSharingInVariableOp() {
   });
 }
 
-void TaskGraph::EnableInplaceMemSharing() {
-  AcyclicTopoForEachNode([&](TaskNode* node) {
-    if (node->exec_gph().node_num() != 1) { return; }
-    const Operator* op = node->exec_gph().SoleNode()->op().get();
-    auto* fw_task_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
-    auto* bw_task_node = dynamic_cast<NormalBackwardCompTaskNode*>(node);
-    RegstDesc* input_regst = nullptr;
-    RegstDesc* output_regst = nullptr;
-    if (op->IsForwardInplace() && fw_task_node) {
-      input_regst = fw_task_node->GetSoleConsumedRegst("in").get();
-      output_regst = fw_task_node->GetProducedRegst("out").get();
-    } else if (op->IsBackwardInplace() && bw_task_node) {
-      input_regst = bw_task_node->GetSoleConsumedRegst(GenDiffBn("out")).get();
-      output_regst = bw_task_node->GetProducedRegst(GenDiffBn("in")).get();
-    } else {
-      // do nothing
-      return;
+void TaskGraph::GetInplaceOpBlobArgList(
+    OpBlobArgList* inplace_obas, const HashSet<TaskNode*>& dev_nodes,
+    const std::function<const TaskNode*(const std::string&)>& TaskNode4OpName) const {
+  for (TaskNode* task_node : dev_nodes) {
+    if (task_node->exec_gph().node_num() != 1) { continue; }
+    const auto& op = *task_node->exec_gph().SoleNode()->op();
+    for (const std::string& ibn : op.input_bns()) {
+      if (op.InputBlobModifier4Ibn(ibn).is_mutable()) {
+        CHECK(IsInplaceAllowed(task_node, {ibn}, TaskNode4OpName));
+        *inplace_obas->mutable_oba()->Add() = GenOpBlobArg(op.op_name(), ibn);
+      }
     }
-    if (input_regst->consumers().size() != 1) { return; }
-    if (input_regst->NumOfLbi() != 1) { return; }
-    if (output_regst->NumOfLbi() != 1) { return; }
-    if (input_regst->mem_shared_inplace_block_id() == -1) {
-      input_regst->set_mem_shared_inplace_block_id(Global<IDMgr>::Get()->NewMemBlockId());
+    for (const std::string& obn : op.output_bns()) {
+      std::string ibn = "";
+      {
+        const auto& obn_modifier = op.OutputBlobModifier4Obn(obn);
+        if (obn_modifier.has_const_inplace_ibn()) {
+          ibn = obn_modifier.const_inplace_ibn();
+        } else if (obn_modifier.has_mutable_inplace_ibn()) {
+          ibn = obn_modifier.mutable_inplace_ibn();
+        } else {
+          // do nothing
+        }
+      }
+      if (ibn != "" && IsInplaceAllowed(task_node, {ibn, obn}, TaskNode4OpName)) {
+        *inplace_obas->mutable_oba()->Add() = GenOpBlobArg(op.op_name(), obn);
+      }
     }
-    output_regst->set_mem_shared_inplace_block_id(input_regst->mem_shared_inplace_block_id());
+  }
+}
+
+void TaskGraph::GetSafeInplaceOpBlobArgList(
+    OpBlobArgList* safe_obas, const HashSet<TaskNode*>& dev_nodes,
+    const std::function<bool(const LogicalBlobId&, const std::string&)>&
+        IsLbiAllConsumersReachableToOpName) const {
+  auto TaskNode4SoleOpName = MakeGetterTaskNode4SoleOpName(dev_nodes);
+  OpBlobArgList inplace_obas;
+  GetInplaceOpBlobArgList(&inplace_obas, dev_nodes, TaskNode4SoleOpName);
+  auto Op4OpName = [&](const std::string& op_name) -> const Operator* {
+    return TaskNode4SoleOpName(op_name)->exec_gph().SoleNode()->op().get();
+  };
+  auto IsLbiAllConsumersReachableInChain =
+      MakePredicatorIsLbiAllConsumersReachableInChain(TaskNode4SoleOpName);
+  InplaceLbiGraph origin_graph(inplace_obas, Op4OpName);
+  origin_graph.ToDotWithAutoFilePath();
+  origin_graph.ComputeSafeInplaceObns(safe_obas,
+                                      [&](const LogicalBlobId& lbi, const std::string& op_name) {
+                                        return IsLbiAllConsumersReachableToOpName(lbi, op_name)
+                                               || IsLbiAllConsumersReachableInChain(lbi, op_name);
+                                      });
+  InplaceLbiGraph inplaced_graph(*safe_obas, Op4OpName);
+  inplaced_graph.ToDotWithAutoFilePath();
+}
+
+void TaskGraph::SetTaskRegstInplaceInfo(const OpBlobArgList& obas,
+                                        const HashSet<TaskNode*>& dev_nodes) const {
+  auto TaskNode4SoleOpName = MakeGetterTaskNode4SoleOpName(dev_nodes);
+  auto Op4OpName = [&](const std::string& op_name) -> const Operator* {
+    return TaskNode4SoleOpName(op_name)->exec_gph().SoleNode()->op().get();
+  };
+  InplaceLbiGraph inplace_gph(obas, Op4OpName);
+  inplace_gph.ForEachConnectedComponent([&](const HashSet<const InplaceLbiNode*> inplace_nodes) {
+    for (const auto* inplace_node : inplace_nodes) {
+      if (inplace_node->in_edges().empty()) { continue; }
+      const auto* inplace_edge = inplace_node->SoleInEdge();
+      auto* exec_node = TaskNode4SoleOpName(inplace_edge->op().op_name())->exec_gph().SoleNode();
+      RegstDesc* in_regst = exec_node->RegstDesc4BnInOp(inplace_edge->ibn());
+      RegstDesc* out_regst = exec_node->RegstDesc4BnInOp(inplace_edge->obn());
+      out_regst->set_hint_inplace_consumed_regst_desc_id(in_regst->regst_desc_id());
+    }
+  });
+}
+
+void TaskGraph::ForEachGpuDeviceNodes(
+    const std::function<void(const HashSet<TaskNode*>& dev_nodes)>& Handler) const {
+  HashMap<std::pair<int64_t, int64_t>, HashSet<TaskNode*>> global_dev_phy_id2nodes;
+  ForEachNode([&](TaskNode* task_node) {
+    if (task_node->device_type() != DeviceType::kGPU) { return; }
+    int64_t dev_phy_id = Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(task_node->thrd_id());
+    global_dev_phy_id2nodes[{task_node->machine_id(), dev_phy_id}].emplace(task_node);
+  });
+  for (const auto& pair : global_dev_phy_id2nodes) { Handler(pair.second); }
+}
+
+void TaskGraph::EnableInplaceMemSharing(
+    const std::function<bool(const LogicalBlobId&, const std::string&)>&
+        IsLbiAllConsumersReachableToOpName) {
+  if (!(Global<JobDesc>::Get()->IsPredict()
+        && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf())) {
+    return;
+  }
+  ForEachGpuDeviceNodes([&](const HashSet<TaskNode*>& dev_nodes) {
+    OpBlobArgList safe_inplace_obas;
+    GetSafeInplaceOpBlobArgList(&safe_inplace_obas, dev_nodes, IsLbiAllConsumersReachableToOpName);
+    SetTaskRegstInplaceInfo(safe_inplace_obas, dev_nodes);
   });
 }
 
