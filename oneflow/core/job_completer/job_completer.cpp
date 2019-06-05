@@ -9,6 +9,7 @@
 #include "oneflow/core/job_completer/all_reduce_add_pass.h"
 #include "oneflow/core/job_completer/freeze_sbp_signature.h"
 #include "oneflow/core/job_completer/group_boxing_by_dst_parallel.h"
+#include "oneflow/core/job_completer/auto_mixed_precision.h"
 
 namespace oneflow {
 
@@ -428,6 +429,13 @@ void RewriteBoxingWithAllReduce(const OpGraph& op_graph, Job* job) {
   AllReduceAddPass().Apply(op_graph, job);
 }
 
+void EnableAutoMixedPrecision(const OpGraph& op_graph, Job* job) {
+  if (!Global<JobDesc>::Get()->enable_auto_mixed_precision()) { return; }
+  AutoMixedPrecision(AutoMixedPrecisionLists::WhiteList(), AutoMixedPrecisionLists::BlackList(),
+                     AutoMixedPrecisionLists::GrayList())
+      .Apply(op_graph, job);
+}
+
 }  // namespace
 
 void JobCompleter::Complete(Job* job) const {
@@ -438,6 +446,7 @@ void JobCompleter::Complete(Job* job) const {
     // complete variable ops
     WithOpGraphAndMutJob(job, &AutoVar);
     WithOpGraphAndMutJob(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);
+    WithOpGraphAndMutJob(job, &EnableAutoMixedPrecision);
     // complete ops for trainning
     HashMap<std::string, HashMap<std::string, LogicalBlobId>> op_name2ibn2in_diff_lbi;
     WithOpGraphAndMutJob(job, &GenerateOpConf4Trainning);

@@ -12,12 +12,14 @@ struct OpTypeCaseHash {
   }
 };
 
+typedef HashSet<OperatorConf::OpTypeCase, OpTypeCaseHash> AMPList;
+
 class AutoMixedPrecisionLists final {
  public:
   // TODO(niuchong): list include grad
-  static const HashSet<OperatorConf::OpTypeCase, OpTypeCaseHash>& WhiteList();
-  static const HashSet<OperatorConf::OpTypeCase, OpTypeCaseHash>& BlackList();
-  static const HashSet<OperatorConf::OpTypeCase, OpTypeCaseHash>& GrayList();
+  static const AMPList& WhiteList();
+  static const AMPList& BlackList();
+  static const AMPList& GrayList();
 };
 
 }  // namespace oneflow
