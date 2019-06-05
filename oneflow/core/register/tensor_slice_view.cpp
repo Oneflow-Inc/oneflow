@@ -74,4 +74,28 @@ void TensorSliceView::ToProto(TensorSliceViewProto* proto) const {
   for (const Range& range : range_vec_) { range.ToProto(proto->mutable_dim()->Add()); }
 }
 
+TensorSliceView TensorSliceView::Concatenate(std::vector<TensorSliceView>& slices, int64_t axis) {
+  CHECK_GT(slices.size(), 0);
+  const int64_t num_axes = slices.front().shape().NumAxes();
+  FOR_RANGE(int64_t, i, 1, slices.size()) { CHECK_EQ(slices.at(i).NumAxes(), num_axes); }
+  CHECK_GE(axis, 0);
+  CHECK_LT(axis, num_axes);
+  FOR_RANGE(int64_t, i, 0, num_axes) {
+    if (i == axis) {
+      CHECK(std::adjacent_find(slices.cbegin(), slices.cend() - 1,
+                               [&](const TensorSliceView& lhs, const TensorSliceView& rhs) {
+                                 return lhs.At(i).end() != rhs.At(i).begin();
+                               })
+            == slices.cend() - 1);
+    } else {
+      const Range& dim_range = slices.front().At(i);
+      CHECK(std::all_of(slices.cbegin() + 1, slices.cbegin(),
+                        [&](const TensorSliceView& view) { return view.At(i) == dim_range; }));
+    }
+  }
+  std::vector<Range> range_vec = slices.front().range_vec();
+  range_vec.at(axis).mut_end() = slices.back().At(axis).end();
+  return TensorSliceView(range_vec);
+}
+
 }  // namespace oneflow

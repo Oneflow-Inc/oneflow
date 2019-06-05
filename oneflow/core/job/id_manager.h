@@ -21,6 +21,8 @@ class IDMgr final {
   int64_t GetGpuMixThrdId(int64_t dev_phy_id) const;
   int64_t GetGpuReduceCtrlThrdId(int64_t dev_phy_id) const;
   int64_t GetGpuMdUpdtThrdId(int64_t dev_phy_id) const;
+  int64_t GetGpuBoxingH2DThrdId(int64_t dev_phy_id) const;
+  int64_t GetGpuBoxingD2HThrdId(int64_t dev_phy_id) const;
   int64_t GetCpuDeviceThrdId(int64_t dev_phy_id) const;
   int64_t CommNetThrdId() const;
   int64_t BasePersistenceThrdId() const;

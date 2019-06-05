@@ -28,6 +28,8 @@ class TensorSliceView final {
   Index OffsetTo(const TensorSliceView& other) const;
   void ToProto(TensorSliceViewProto* proto) const;
 
+  static TensorSliceView Concatenate(std::vector<TensorSliceView>& slices, int64_t axis);
+
  private:
   std::vector<Range> range_vec_;
   Shape shape_;
