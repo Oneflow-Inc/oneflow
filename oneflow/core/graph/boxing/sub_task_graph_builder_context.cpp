@@ -2,38 +2,9 @@
 
 namespace oneflow {
 
-SubTskGphBuilderCtx::SubTskGphBuilderCtx(TaskGraph* task_graph) : task_graph_(task_graph) {}
-
-TaskGraph* SubTskGphBuilderCtx::task_graph() { return task_graph_; }
-
-TaskNode* SubTskGphBuilderCtx::CopyToMachine(TaskNode* src, const MemoryCase& src_mem_case,
-                                             int64_t dst_machine_id) {
-  CHECK_NE(src->machine_id(), dst_machine_id);
-  TaskNode* comm_net_in = nullptr;
-  if (src_mem_case.has_host_mem()) {
-    comm_net_in = src;
-  } else if (src_mem_case.has_device_cuda_mem()) {
-    CopyHdTaskNode* copy_hd_task = task_graph()->NewNode<CopyHdTaskNode>();
-    copy_hd_task->Init(CopyHdOpConf::H2D, src->machine_id(),
-                       src_mem_case.device_cuda_mem().device_id());
-    Connect<TaskNode>(src, task_graph()->NewEdge(), copy_hd_task);
-    comm_net_in = copy_hd_task;
-  } else {
-    UNIMPLEMENTED();
-  }
-  CopyCommNetTaskNode* copy_comm_net_task = task_graph()->NewNode<CopyCommNetTaskNode>();
-  copy_comm_net_task->Init(dst_machine_id, comm_net_in->machine_id());
-  Connect<TaskNode>(comm_net_in, task_graph()->NewEdge(), copy_comm_net_task);
-  return copy_comm_net_task;
-}
-
-TaskNode* SubTskGphBuilderCtx::CopyToMachine(TaskNode* src, int64_t dst_machine_id) {
-  return CopyToMachine(src, GetDefaultMemCase(src), dst_machine_id);
-}
-
 namespace {
 
-bool IsSameMemCase(const MemoryCase& lhs, const MemoryCase& rhs) {
+bool IsMemoryCaseEquals(const MemoryCase& lhs, const MemoryCase& rhs) {
   if (lhs.has_host_mem() && rhs.has_host_mem()) {
     return true;
   } else if (lhs.has_device_cuda_mem() && rhs.has_device_cuda_mem()
@@ -48,6 +19,10 @@ bool IsSameMemCase(const MemoryCase& lhs, const MemoryCase& rhs) {
 
 }  // namespace
 
+SubTskGphBuilderCtx::SubTskGphBuilderCtx(TaskGraph* task_graph) : task_graph_(task_graph) {}
+
+TaskGraph* SubTskGphBuilderCtx::task_graph() { return task_graph_; }
+
 TaskNode* SubTskGphBuilderCtx::GetProxyNode(TaskNode* src_node, const MemoryCase& src_mem_case,
                                             int64_t dst_machine_id,
                                             const MemoryCase& dst_mem_case) {
@@ -56,7 +31,8 @@ TaskNode* SubTskGphBuilderCtx::GetProxyNode(TaskNode* src_node, const MemoryCase
       && node2proxies_.at(src_node).find(key) != node2proxies_.at(src_node).cend()) {
     return node2proxies_.at(src_node).at(key);
   } else {
-    if (dst_machine_id == src_node->machine_id() && IsSameMemCase(dst_mem_case, src_mem_case)) {
+    if (dst_machine_id == src_node->machine_id()
+        && IsMemoryCaseEquals(dst_mem_case, src_mem_case)) {
       node2proxies_[src_node][key] = src_node;
       return src_node;
     } else if (dst_mem_case.has_device_cuda_mem()) {

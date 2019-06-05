@@ -14,8 +14,6 @@ class SubTskGphBuilderCtx final {
   virtual ~SubTskGphBuilderCtx() = default;
 
   virtual TaskGraph* task_graph();
-  TaskNode* CopyToMachine(TaskNode* src, const MemoryCase& src_mem_case, int64_t dst_machine_id);
-  TaskNode* CopyToMachine(TaskNode* src, int64_t dst_machine_id);
   TaskNode* GetProxyNode(TaskNode* src_node, const MemoryCase& src_mem_case, int64_t dst_machine_id,
                          const MemoryCase& dst_mem_case);
 

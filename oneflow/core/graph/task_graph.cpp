@@ -15,7 +15,6 @@
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/operator/constant_op.h"
 #include "oneflow/core/graph/op_graph.h"
-#include "oneflow/core/graph/boxing/local_peer_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/inter_node_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/chain_sub_task_graph_builder.h"
 
@@ -640,7 +639,6 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV2) {
     SubTskGphBuilderCtx ctx(this);
     std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
     builders.emplace_back(new InterNodeSubTskGphBuilder());
-    builders.emplace_back(new LocalPeerSubTskGphBuilder());
     SubTskGphBuilderStatus status = ChainSubTskGphBuilder(builders).Build(
         &ctx, sorted_src_comp_tasks, sorted_dst_comp_tasks, *src_parallel_desc, *dst_parallel_desc,
         lbi, blob_desc, src_sbp_parallel, dst_sbp_parallel);
