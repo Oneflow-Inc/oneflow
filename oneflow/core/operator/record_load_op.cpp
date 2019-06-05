@@ -5,6 +5,7 @@ namespace oneflow {
 
 void RecordLoadOp::InitFromOpConf() {
   CHECK(op_conf().has_record_load_conf());
+  if (op_conf().record_load_conf().has_tick()) { EnrollInputBn("tick", false); }
   EnrollOutputBn("out", false);
 }
 

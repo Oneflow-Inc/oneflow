@@ -1,4 +1,4 @@
-#include "oneflow/core/graph/record_load_compute_task_node.h"
+#include "oneflow/core/graph/source_tick_compute_task_node.h"
 #include "oneflow/core/graph/decode_compute_task_node.h"
 #include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/common/str_util.h"
@@ -6,29 +6,24 @@
 
 namespace oneflow {
 
-void RecordLoadCompTaskNode::ConsumeAllRegsts() {
-  ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst());
+void SourceTickCompTaskNode::ProduceAllRegstsAndBindEdges() {
+  std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", false, 2, 2);
+  ForEachOutDataEdge([&](TaskEdge* edge) { edge->AddRegst("out", out_regst); });
 }
 
-void RecordLoadCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  std::shared_ptr<RegstDesc> record_regst = ProduceRegst("record", false, 2, 2);
-  ForEachOutDataEdge([&](TaskEdge* edge) { edge->AddRegst("record", record_regst); });
-}
-
-void RecordLoadCompTaskNode::BuildExecGphAndRegst() {
+void SourceTickCompTaskNode::BuildExecGphAndRegst() {
+  std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   ExecNode* node = mut_exec_gph().NewNode();
   node->mut_op() = logical_node()->SoleOp();
-  node->BindBnWithRegst(node->op()->SoleIbn(), GetSoleConsumedRegst("in"));
-  std::shared_ptr<RegstDesc> record_regst = GetProducedRegst("record");
   for (const std::string& obn : node->op()->output_bns()) {
     const LogicalBlobId& lbi = node->op()->BnInOp2Lbi(obn);
-    record_regst->AddLbi(lbi);
-    node->BindBnWithRegst(obn, record_regst);
+    out_regst->AddLbi(lbi);
+    node->BindBnWithRegst(obn, out_regst);
   }
   node->InferBlobDescs(parallel_ctx());
 }
 
-void RecordLoadCompTaskNode::InferProducedDataRegstTimeShape() {
+void SourceTickCompTaskNode::InferProducedDataRegstTimeShape() {
   std::shared_ptr<Shape> time_shape(new Shape(
       {Global<JobDesc>::Get()->TotalBatchNum(), Global<JobDesc>::Get()->NumOfPiecesInBatch()}));
   ForEachProducedDataRegst([time_shape](const std::string& name, RegstDesc* regst) {

@@ -4,6 +4,10 @@
 
 namespace oneflow {
 
+void DecodeRandomCompTaskNode::ConsumeAllRegsts() {
+  ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst());
+}
+
 void DecodeRandomCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("out", false);
   ForEachOutDataEdge([&](TaskEdge* edge) { BindEdgeWithProducedRegst(edge, "out"); });
@@ -13,6 +17,7 @@ void DecodeRandomCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   ExecNode* node = mut_exec_gph().NewNode();
   node->mut_op() = logical_node()->SoleOp();
+  node->BindBnWithRegst(node->op()->SoleIbn(), GetSoleConsumedRegst("in"));
   node->AddBnToRegstAndBindIt(&Operator::output_bns, out_regst);
   node->InferBlobDescs(parallel_ctx());
 }

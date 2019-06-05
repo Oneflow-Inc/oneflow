@@ -749,7 +749,6 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne) {
 }
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBroadcastToBroadcast) {
-  CHECK(src_logical->SoleOp()->op_conf().has_tick_conf());
   HashMap<size_t, CompTaskNode*> machine_id2last_src_task;
   HashMap<std::pair<int64_t, int64_t>, CompTaskNode*> global_thrd_id2src_task;
   auto GlobalThrdId4TaskNode = [](TaskNode* task_node) -> std::pair<int64_t, int64_t> {

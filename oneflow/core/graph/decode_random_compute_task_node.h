@@ -12,7 +12,7 @@ class DecodeRandomCompTaskNode final : public CompTaskNode {
   ~DecodeRandomCompTaskNode() = default;
 
   void ProduceAllRegstsAndBindEdges() override;
-  void ConsumeAllRegsts() override {}
+  void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
 
   TaskType GetTaskType() const override { return TaskType::kDecodeRandom; }

@@ -5,36 +5,25 @@
 namespace oneflow {
 
 void RecordLoadActor::VirtualCompActorInit(const TaskProto& task_proto) {
-  piece_id_ = 0;
   is_eof_ = false;
-  OF_SET_MSG_HANDLER(&RecordLoadActor::HandlerWaitToStart);
+  OF_SET_MSG_HANDLER(&RecordLoadActor::HandlerNormal);
   record_load_status_.is_eof = false;
   record_load_status_.record_num = 0;
 }
 
 void RecordLoadActor::Act() {
-  Regst* regst = GetNaiveCurWriteable("record");
-  regst->set_piece_id(piece_id_++);
-
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
   kernel_ctx.other = &record_load_status_;
   AsyncLaunchKernel(kernel_ctx);
-
-  if (record_load_status_.is_eof) { is_eof_ = true; }
+  CHECK_EQ(record_load_status_.is_eof, false);
 }
 
 void RecordLoadActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  if (record_load_status_.record_num > 0) { HandleProducedNaiveDataRegstToConsumer(); }
-}
-
-bool RecordLoadActor::IsCustomizedReadReady() {
-  return !is_eof_ && piece_id_ < Global<RuntimeCtx>::Get()->total_piece_num();
-}
-
-int RecordLoadActor::HandlerWaitToStart(const ActorMsg& msg) {
-  CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
-  OF_SET_MSG_HANDLER(&RecordLoadActor::HandlerNormal);
-  return ProcessMsg(msg);
+  Regst* in_regst = GetNaiveCurReadable("in");
+  HandleProducedNaiveDataRegstToConsumer([&](Regst* out_regst) {
+    out_regst->set_piece_id(in_regst->piece_id());
+    return true;
+  });
 }
 
 REGISTER_ACTOR(kRecordLoad, RecordLoadActor);

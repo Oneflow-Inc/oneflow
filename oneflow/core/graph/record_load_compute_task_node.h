@@ -12,7 +12,7 @@ class RecordLoadCompTaskNode final : public CompTaskNode {
   ~RecordLoadCompTaskNode() = default;
 
   void ProduceAllRegstsAndBindEdges() override;
-  void ConsumeAllRegsts() override {}
+  void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
   bool IsMeaningLess() override { return false; }
 

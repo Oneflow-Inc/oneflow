@@ -3,26 +3,14 @@
 
 namespace oneflow {
 
-void DecodeRandomActor::VirtualCompActorInit(const TaskProto& task_proto) {
-  piece_id_ = 0;
-  OF_SET_MSG_HANDLER(&DecodeRandomActor::HandlerWaitToStart);
-}
+void DecodeRandomActor::Act() { AsyncLaunchKernel(GenDefaultKernelCtx()); }
 
-void DecodeRandomActor::Act() {
-  Regst* regst = GetNaiveCurWriteable("out");
-  regst->set_piece_id(piece_id_++);
-
-  AsyncLaunchKernel(GenDefaultKernelCtx());
-}
-
-bool DecodeRandomActor::IsCustomizedReadReady() {
-  return piece_id_ < Global<RuntimeCtx>::Get()->total_piece_num();
-}
-
-int DecodeRandomActor::HandlerWaitToStart(const ActorMsg& msg) {
-  CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
-  OF_SET_MSG_HANDLER(&DecodeRandomActor::HandlerNormal);
-  return ProcessMsg(msg);
+void DecodeRandomActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
+  Regst* in_regst = GetNaiveCurReadable("in");
+  HandleProducedNaiveDataRegstToConsumer([&](Regst* out_regst) {
+    out_regst->set_piece_id(in_regst->piece_id());
+    return true;
+  });
 }
 
 REGISTER_ACTOR(kDecodeRandom, DecodeRandomActor);
