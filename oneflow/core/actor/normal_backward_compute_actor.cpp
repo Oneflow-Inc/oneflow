@@ -81,7 +81,7 @@ void NormalBackwardCompActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
   AsyncReturnModelRegstUntilLastPieceIdGreaterThan(piece_id);
 }
 
-bool NormalBackwardCompActor::IsCustomizedReadReady() {
+bool NormalBackwardCompActor::IsCustomizedReadReady() const {
   if (model_regst_desc_id_ != -1) {
     if (model_regst_queue_.empty()) { return false; }
     int64_t expected_model_vid =

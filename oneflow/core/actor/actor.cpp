@@ -413,12 +413,12 @@ int64_t Actor::HandleRegstToConsumer(Regst* regst, std::function<bool(int64_t)> 
   return real_consumer_cnt;
 }
 
-bool Actor::IsReadReady() {
+bool Actor::IsReadReady() const {
   return naive_consumed_rs_.IsCurSlotReady() && inplace_consumed_rs_.IsCurSlotReady()
          && IsCustomizedReadReady();
 }
 
-bool Actor::IsWriteReady() {
+bool Actor::IsWriteReady() const {
   return naive_produced_rs_.IsCurSlotReady() && inplace_produced_rs_.IsCurSlotReady()
          && IsCustomizedWriteReady();
 }

@@ -37,7 +37,7 @@ void NormalForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   }
 }
 
-bool NormalForwardCompActor::IsCustomizedWriteReady() {
+bool NormalForwardCompActor::IsCustomizedWriteReady() const {
   if (const_buf_regst_desc_id_ != -1) { CHECK(send_const_buf_regst_); }
   return true;
 }
@@ -116,7 +116,7 @@ void NormalForwardCompActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
   cur_piece_id_ = -1;
 }
 
-bool NormalForwardCompActor::IsCustomizedReadReady() {
+bool NormalForwardCompActor::IsCustomizedReadReady() const {
   if (model_regst_desc_id_ != -1 && model_regst_ == nullptr) { return false; }
   if (const_model_regst_desc_id_ != -1 && const_model_regst_ == nullptr) { return false; }
   return true;
