@@ -24,7 +24,7 @@ void GroupTickByParallelDesc(const OpGraph& op_graph, Job* job) {
     parallel_desc2op_node[op_node->parallel_desc()].push_back(op_node);
   });
   for (const auto& pair : parallel_desc2op_node) {
-    if (pair.first.parallel_num() == 1 && pair.second.size() == 1) { continue; }
+    if (pair.second.size() == 1) { continue; }
     OperatorConf tick_op;
     tick_op.set_name("System-Tick_" + NewUniqueId());
     tick_op.mutable_tick_conf()->set_out("out");
