@@ -9,6 +9,11 @@ namespace oneflow {
 void SetBnValInOpTypeConf(PbMessage* pb_msg, const std::string& bn, const std::string& old_val,
                           const std::string& new_val);
 
+const static std::string kProducedLbi2ConsumedDiffLbi = "produced_lbi2consumed_diff_lbi";
+
+std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4OpName(
+    const Placement& placement);
+
 class SbpParallel;
 class LogicalBlobId;
 class Operator;

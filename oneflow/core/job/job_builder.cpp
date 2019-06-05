@@ -4,6 +4,20 @@
 
 namespace oneflow {
 
+std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4OpName(
+    const Placement& placement) {
+  auto op_name2parallel_conf = std::make_shared<HashMap<std::string, const ParallelConf*>>();
+  for (const auto& placement_group : placement.placement_group()) {
+    for (const std::string& op_name : placement_group.op_set().op_name()) {
+      const ParallelConf* parallel_conf = &placement_group.parallel_conf();
+      CHECK(op_name2parallel_conf->emplace(op_name, parallel_conf).second);
+    }
+  }
+  return [op_name2parallel_conf](const std::string& op_name) {
+    return op_name2parallel_conf->at(op_name);
+  };
+}
+
 void SetBnValInOpTypeConf(PbMessage* pb_msg, const std::string& bn, const std::string& old_val,
                           const std::string& new_val) {
   const PbFd* fd = pb_msg->GetDescriptor()->FindFieldByName(bn);
