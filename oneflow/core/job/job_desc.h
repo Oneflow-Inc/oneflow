@@ -63,17 +63,10 @@ class JobDesc final {
   friend class Global<JobDesc>;
   void Init();
   void SanityCheck();
-  void SplitDecodeOps();
-  void AddRecordLoadOps();
 
   JobConf job_conf_;
   int32_t job_id_;
 };
-
-const static std::string kProducedLbi2ConsumedDiffLbi = "produced_lbi2consumed_diff_lbi";
-
-std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4OpName(
-    const Placement& placement);
 
 }  // namespace oneflow
 

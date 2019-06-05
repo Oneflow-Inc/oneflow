@@ -1,4 +1,5 @@
 #include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/job/job_builder.h"
 
 namespace oneflow {
 
