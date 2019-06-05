@@ -52,7 +52,9 @@ size_t GetAvailableGpuMemSize(int dev_id);
   OF_PP_MAKE_TUPLE_SEQ(kNcclGather)  \
   OF_PP_MAKE_TUPLE_SEQ(kMix)         \
   OF_PP_MAKE_TUPLE_SEQ(kReduceCtrl)  \
-  OF_PP_MAKE_TUPLE_SEQ(kMdUpdt)
+  OF_PP_MAKE_TUPLE_SEQ(kMdUpdt)      \
+  OF_PP_MAKE_TUPLE_SEQ(kBoxingH2D)   \
+  OF_PP_MAKE_TUPLE_SEQ(kBoxingD2H)
 
 enum class CudaWorkType {
 #define DECLARE_CUDA_WORK_TYPE(type) type,

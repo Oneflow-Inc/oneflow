@@ -29,8 +29,14 @@ SubTskGphBuilderStatus InterNodeSubTskGphBuilder::Build(
   if (!SubTskGphBuilderUtil::IsDeviceTypeCPUOrGPU(dst_parallel_desc)) {
     return SubTskGphBuilderStatus::MakeStatusError();
   }
-  const auto GetBoxingGpuThrdId = [](const int64_t dev_id) -> int64_t {
-    return Global<IDMgr>::Get()->GetGpuMixThrdId(dev_id);
+  const auto GetBoxingGpuThrdId = [](const int64_t dev_id, CudaWorkType work_type) -> int64_t {
+    if (work_type == CudaWorkType::kBoxingH2D) {
+      return Global<IDMgr>::Get()->GetGpuBoxingH2DThrdId(dev_id);
+    } else if (work_type == CudaWorkType::kBoxingD2H) {
+      return Global<IDMgr>::Get()->GetGpuBoxingD2HThrdId(dev_id);
+    } else {
+      return Global<IDMgr>::Get()->GetGpuMixThrdId(dev_id);
+    }
   };
   const auto NewEdge = [&ctx]() -> TaskEdge* { return ctx->task_graph()->NewEdge(); };
   const auto CreateBoxingNode121 = [&ctx, &lbi, &GetBoxingGpuThrdId](
@@ -43,7 +49,7 @@ SubTskGphBuilderStatus InterNodeSubTskGphBuilder::Build(
     if (pd.device_type() == DeviceType::kCPU) {
       thrd_id = Global<IDMgr>::Get()->PickCpuThrdIdEvenly(machine_id);
     } else if (pd.device_type() == DeviceType::kGPU) {
-      thrd_id = GetBoxingGpuThrdId(pd.DeviceIdForParallelId(parallel_id));
+      thrd_id = GetBoxingGpuThrdId(pd.DeviceIdForParallelId(parallel_id), CudaWorkType::kBoxingH2D);
     } else {
       UNIMPLEMENTED();
     }
@@ -59,7 +65,7 @@ SubTskGphBuilderStatus InterNodeSubTskGphBuilder::Build(
     if (src_node->device_type() == DeviceType::kCPU) {
       thrd_id = Global<IDMgr>::Get()->PickCpuThrdIdEvenly(src_node->machine_id());
     } else if (src_node->device_type() == DeviceType::kGPU) {
-      thrd_id = GetBoxingGpuThrdId(src_node->GpuPhyId());
+      thrd_id = GetBoxingGpuThrdId(src_node->GpuPhyId(), CudaWorkType::kBoxingD2H);
     } else {
       UNIMPLEMENTED();
     }
@@ -143,7 +149,8 @@ SubTskGphBuilderStatus InterNodeSubTskGphBuilder::Build(
             local_concat_thrd_id = Global<IDMgr>::Get()->PickCpuThrdIdEvenly(in_machine_id);
           } else if (in_pd.device_type() == DeviceType::kGPU) {
             local_concat_thrd_id = GetBoxingGpuThrdId(
-                in_nodes.at(in_parallel_ids.at(out_id % in_parallel_ids.size()))->GpuPhyId());
+                in_nodes.at(in_parallel_ids.at(out_id % in_parallel_ids.size()))->GpuPhyId(),
+                CudaWorkType::kBoxingD2H);
           }
           local_concat_node->Init(lbi, concat_slice, kSliceBoxingTaskModeCopy, in_machine_id,
                                   local_concat_thrd_id, MakeHostMemCase());
@@ -182,8 +189,9 @@ SubTskGphBuilderStatus InterNodeSubTskGphBuilder::Build(
         if (out_node->machine_id() == in_machine_id) {
           for (const int64_t in_id : in_parallel_ids) {
             TaskNode* in_node = in_nodes.at(in_id);
-            if (in_pd.device_type() == DeviceType::kGPU
-                && out_pd.device_type() == DeviceType::kCPU) {
+            if (SubTskGphBuilderUtil::IsOnSameGPU(in_node, out_node)) {
+              out_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
+            } else if (in_pd.device_type() == DeviceType::kGPU) {
               SliceBoxingTaskNode* copy_to_host =
                   CreateBoxingNodeToHost(in_node, in_slice, out_slice);
               out_node->ConnectToSrcNodeWithSlice(copy_to_host, NewEdge(), out_slice);
@@ -198,7 +206,8 @@ SubTskGphBuilderStatus InterNodeSubTskGphBuilder::Build(
             local_add_thrd_id = Global<IDMgr>::Get()->PickCpuThrdIdEvenly(in_machine_id);
           } else if (in_pd.device_type() == DeviceType::kGPU) {
             local_add_thrd_id = GetBoxingGpuThrdId(
-                in_nodes.at(in_parallel_ids.at(out_id % in_parallel_ids.size()))->GpuPhyId());
+                in_nodes.at(in_parallel_ids.at(out_id % in_parallel_ids.size()))->GpuPhyId(),
+                CudaWorkType::kBoxingD2H);
           }
           local_add_node->Init(lbi, out_slice, kSliceBoxingTaskModeAdd, in_machine_id,
                                local_add_thrd_id, MakeHostMemCase());

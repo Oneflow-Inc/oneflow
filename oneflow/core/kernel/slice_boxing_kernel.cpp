@@ -35,11 +35,12 @@ const SliceBoxingConf& SliceBoxingCopyKernel<device_type, T>::GetCustomizedBoxin
 template<DeviceType device_type, typename T>
 void SliceBoxingCopyKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const auto* other_val = static_cast<std::pair<int64_t, int64_t>*>(ctx.other);
+  const int64_t in_bn_id = other_val->first;
   Blob* out = BnInOp2Blob("out");
-  FOR_RANGE(int64_t, i, 0, this->op_attribute().input_bns().size()) {
-    const Blob* in_i = BnInOp2Blob(GenRepeatedBn("in", i));
-    this->tensor_slice_copier_vec().at(i)->Copy(ctx.device_ctx, *this->memory_copier(), out, in_i);
-  }
+  const Blob* in_i = BnInOp2Blob(GenRepeatedBn("in", in_bn_id));
+  this->tensor_slice_copier_vec().at(in_bn_id)->Copy(ctx.device_ctx, *this->memory_copier(), out,
+                                                     in_i);
 }
 
 template<DeviceType device_type, typename T>
@@ -50,16 +51,24 @@ const SliceBoxingConf& SliceBoxingAddKernel<device_type, T>::GetCustomizedBoxing
 template<DeviceType device_type, typename T>
 void SliceBoxingAddKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const auto* other_val = static_cast<std::pair<int64_t, int64_t>*>(ctx.other);
+  const int64_t in_bn_id = other_val->first;
+  const int64_t processed_cnt = other_val->second;
   Blob* out = BnInOp2Blob("out");
-  Blob* buf = BnInOp2Blob("buf");
-  FOR_RANGE(int64_t, i, 0, this->op_attribute().input_bns().size()) {
-    const Blob* in_i = BnInOp2Blob(GenRepeatedBn("in", i));
-    if (i == 0) {
-      this->tensor_slice_copier_vec().at(i)->Copy(ctx.device_ctx, *this->memory_copier(), out,
-                                                  in_i);
+  const Blob* in_i = BnInOp2Blob(GenRepeatedBn("in", in_bn_id));
+  if (processed_cnt == 0) {
+    this->tensor_slice_copier_vec().at(in_bn_id)->Copy(ctx.device_ctx, *this->memory_copier(), out,
+                                                       in_i);
+  } else {
+    bool can_direct_access = (device_type == kCPU)
+                             || (device_type == DeviceType::kGPU && in_i->mem_case().has_host_mem()
+                                 && in_i->mem_case().host_mem().used_by_device());
+    if (in_i->shape() == out->shape() && can_direct_access) {
+      Addition<device_type, T>(ctx.device_ctx, out, out, in_i);
     } else {
-      this->tensor_slice_copier_vec().at(i)->Copy(ctx.device_ctx, *this->memory_copier(), buf,
-                                                  in_i);
+      Blob* buf = BnInOp2Blob("buf");
+      this->tensor_slice_copier_vec().at(in_bn_id)->Copy(ctx.device_ctx, *this->memory_copier(),
+                                                         buf, in_i);
       Addition<device_type, T>(ctx.device_ctx, out, out, buf);
     }
   }
