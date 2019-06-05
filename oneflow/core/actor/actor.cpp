@@ -3,6 +3,22 @@
 
 namespace oneflow {
 
+namespace {
+
+void CheckInplaceRegstDescId(const TaskProto& task_proto) {
+  HashSet<int64_t> consumed_regst_desc_ids;
+  for (const auto& pair : task_proto.consumed_regst_desc_id()) {
+    for (int64_t id : pair.second.regst_desc_id()) { consumed_regst_desc_ids.insert(id); }
+  }
+  for (const auto& pair : task_proto.produced_regst_desc()) {
+    if (pair.second.has_inplace_consumed_regst_desc_id() == false) { continue; }
+    int64_t in_regst_desc_id = pair.second.inplace_consumed_regst_desc_id();
+    CHECK(consumed_regst_desc_ids.find(in_regst_desc_id) != consumed_regst_desc_ids.end());
+  }
+}
+
+}  // namespace
+
 bool IsFirstRegstInPieceWithOrder(const Regst* regst, ColIdOrder order) {
   return (order == ColIdOrder::kAscending && regst->col_id() == 0)
          || (order == ColIdOrder::kDescending && regst->IsMaxCol());
@@ -30,26 +46,6 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
     ek.kernel = ConstructKernel(parallel_ctx(), node.kernel_conf(), device_ctx_.get());
     ek.bn_in_op2regst_desc_id = PbMap2HashMap(node.bn_in_op2regst_desc_id());
     exec_kernel_vec_.push_back(std::move(ek));
-  }
-  // handle inplace regst pairs
-  {
-    HashSet<int64_t> consumed_regst_desc_ids;
-    for (const auto& pair : task_proto.consumed_regst_desc_id()) {
-      for (int64_t id : pair.second.regst_desc_id()) { consumed_regst_desc_ids.insert(id); }
-    }
-    for (const auto& pair : task_proto.produced_regst_desc()) {
-      int64_t out_regst_desc_id = pair.second.regst_desc_id();
-      int64_t in_regst_desc_id = pair.second.inplace_consumed_regst_desc_id();
-      if (in_regst_desc_id == -1) { continue; }
-      CHECK(consumed_regst_desc_ids.find(in_regst_desc_id) != consumed_regst_desc_ids.end());
-
-      inplace_out2in_.insert(std::make_pair(out_regst_desc_id, in_regst_desc_id));
-      inplace_consumed_rs_.InsertRegstDescId(in_regst_desc_id);
-      inplace_produced_rs_.InsertRegstDescId(out_regst_desc_id);
-    }
-    inplace_consumed_rs_.InitedDone();
-    inplace_produced_rs_.InitedDone();
-    is_inplace_consumed_eord_ = false;
   }
 
   remaining_eord_cnt_ = 0;
@@ -84,10 +80,35 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   }
 
   total_reading_cnt_ = 0;
+  is_inplace_consumed_eord_ = false;
+  CheckInplaceRegstDescId(task_proto);
+  TakeOverInplaceConsumedAndProduced(task_proto.produced_regst_desc());
   is_naive_consumed_eord_ = false;
   TakeOverNaiveConsumed(task_proto.consumed_regst_desc_id());
   TakeOverNaiveProduced(task_proto.produced_regst_desc());
   VirtualActorInit(task_proto);
+}
+
+void Actor::TakeOverInplaceConsumedAndProduced(
+    const PbMap<std::string, RegstDescProto>& produced_ids) {
+  for (const auto& pair : produced_ids) {
+    int64_t out_regst_desc_id = pair.second.regst_desc_id();
+    if (pair.second.has_inplace_consumed_regst_desc_id() == false) { continue; }
+    int64_t in_regst_desc_id = pair.second.inplace_consumed_regst_desc_id();
+    inplace_regst_desc_id_in2out_.insert(std::make_pair(in_regst_desc_id, out_regst_desc_id));
+    inplace_regst_desc_id_out2in_.insert(std::make_pair(out_regst_desc_id, in_regst_desc_id));
+    inplace_consumed_rs_.InsertRegstDescId(in_regst_desc_id);
+    inplace_produced_rs_.InsertRegstDescId(out_regst_desc_id);
+  }
+  inplace_consumed_rs_.InitedDone();
+  inplace_produced_rs_.InitedDone();
+  for (const auto& pair : produced_regsts_) {
+    if (inplace_produced_rs_.HasRegstDescId(pair.first)) {
+      for (const auto& regst : pair.second) {
+        CHECK_EQ(0, inplace_produced_rs_.TryPushBackRegst(regst.get()));
+      }
+    }
+  }
 }
 
 void Actor::TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids) {
@@ -155,15 +176,26 @@ void Actor::IncreaseReadingCnt4ProducedRegst(Regst* regst, int64_t val) {
 }
 
 int64_t Actor::GetPieceId4NaiveCurReadableDataRegst() const {
-  int64_t pid = -1;
-  naive_consumed_rs_.ForChosenFrontRegst(
-      [&pid](int64_t) { return pid == -1; },
-      [&pid](Regst* regst) {
-        if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) {
-          pid = regst->piece_id();
-        }
-      });
-  CHECK_NE(-1, pid);
+  int64_t init_val = -2;
+  int64_t pid = init_val;
+  auto FirstFoundOnly = [&pid, init_val](int64_t) { return pid == init_val; };
+  naive_consumed_rs_.ForChosenFrontRegst(FirstFoundOnly, [&pid](Regst* regst) {
+    if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) { pid = regst->piece_id(); }
+  });
+  CHECK_GE(pid, 0);
+  return pid;
+}
+
+int64_t Actor::GetPieceId4NaiveOrInplaceCurReadableDataRegst() const {
+  int64_t init_val = -2;
+  int64_t pid = init_val;
+  auto FirstFoundOnly = [&pid, init_val](int64_t) { return pid == init_val; };
+  auto Select = [&pid](Regst* regst) {
+    if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) { pid = regst->piece_id(); }
+  };
+  naive_consumed_rs_.ForChosenFrontRegst(FirstFoundOnly, Select);
+  if (pid == init_val) { inplace_consumed_rs_.ForChosenFrontRegst(FirstFoundOnly, Select); }
+  CHECK_GE(pid, 0);
   return pid;
 }
 
@@ -225,8 +257,9 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
         }
       } else if (inplace_consumed_rs_.HasRegstDescId(regst->regst_desc_id())) {
         CHECK_EQ(0, inplace_consumed_rs_.TryPushBackRegst(regst));
+        int64_t out_regst_desc_id = inplace_regst_desc_id_in2out_.at(regst->regst_desc_id());
         CHECK(regst->packed_blob()->dptr()
-              == inplace_produced_rs_.Front(regst->regst_desc_id())->packed_blob()->dptr());
+              == inplace_produced_rs_.Front(out_regst_desc_id)->packed_blob()->dptr());
       } else if (TryUpdtStateAsProducedRegst(regst) == 0) {
         // do nothing
       } else {
@@ -245,16 +278,15 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
     UNIMPLEMENTED();
   }
   // handler halts
-  bool naive_exist_and_eord_and_empty =
-      is_naive_consumed_eord_ && naive_consumed_rs_.available_regst_desc_cnt() == 0;
-  bool naive_not_exist_and_customized_eord =
-      naive_consumed_rs_.total_regst_desc_cnt() == 0 && IsCustomizedReadAlwaysUnReadyFromNow();
-  bool inplace_condition =
-      inplace_consumed_rs_.total_regst_desc_cnt() != 0
-          ? (is_inplace_consumed_eord_ && inplace_consumed_rs_.available_regst_desc_cnt() == 0)
-          : (true);
-  if (inplace_condition
-      && (naive_exist_and_eord_and_empty || naive_not_exist_and_customized_eord)) {
+  bool has_naive_or_inplace = naive_consumed_rs_.total_regst_desc_cnt() != 0
+                              || inplace_consumed_rs_.total_regst_desc_cnt() != 0;
+  bool naive_or_inplace_eord_and_empty =
+      (is_naive_consumed_eord_ || is_inplace_consumed_eord_)
+      && (naive_consumed_rs_.available_regst_desc_cnt() == 0
+          && inplace_consumed_rs_.available_regst_desc_cnt() == 0);
+  bool customized_eord = IsCustomizedReadAlwaysUnReadyFromNow();
+  if ((has_naive_or_inplace && naive_or_inplace_eord_and_empty)
+      || (!has_naive_or_inplace && customized_eord)) {
     CHECK_EQ(naive_consumed_rs_.available_regst_desc_cnt(), 0);
     AsyncReturnAllCustomizedReadableRegst();
     AsyncSendEORDMsgForAllProducedRegstDesc();
@@ -341,13 +373,11 @@ void Actor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
 }
 
 void Actor::AsyncSendInplaceProducedRegstMsgToConsumer() {
-  std::vector<int64_t> regst_desc_ids;
-  inplace_produced_rs_.ForEachFrontRegst([&](Regst* regst) {
-    CHECK(regst->regst_desc()->regst_desc_type().has_data_regst_desc());
-    int64_t real_consumer_cnt = HandleRegstToConsumer(regst, [](int64_t) { return true; });
-    if (real_consumer_cnt > 0) { regst_desc_ids.push_back(regst->regst_desc_id()); }
-  });
-  inplace_produced_rs_.PopFrontRegsts(regst_desc_ids);
+  VirtualAsyncSendInplaceProducedRegstMsgToConsumer();
+}
+
+void Actor::VirtualAsyncSendInplaceProducedRegstMsgToConsumer() {
+  HandleProducedInplaceDataRegstToConsumer();
 }
 
 void Actor::AsyncSendNaiveConsumedRegstMsgToProducer() {
@@ -429,8 +459,8 @@ void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx,
     ek.kernel->Launch(kernel_ctx, [&](const std::string& bn_in_op) -> Blob* {
       auto regst_desc_id_it = ek.bn_in_op2regst_desc_id.find(bn_in_op);
       if (regst_desc_id_it == ek.bn_in_op2regst_desc_id.end()) { return nullptr; }
-      Regst* regst = GetNaiveCurWriteable(regst_desc_id_it->second);
-      if (regst == nullptr) { regst = GetNaiveCurReadable(regst_desc_id_it->second); }
+      Regst* regst = GetNaiveOrInplaceCurWriteable(regst_desc_id_it->second);
+      if (regst == nullptr) { regst = GetNaiveOrInplaceCurReadable(regst_desc_id_it->second); }
       if (regst == nullptr) { regst = Regst4RegstDescId(regst_desc_id_it->second); }
       if (regst == nullptr) { return nullptr; }
       const LogicalBlobId& lbi = ek.kernel->BnInOp2Lbi(bn_in_op);
@@ -469,6 +499,30 @@ void Actor::HandleProducedNaiveDataRegstToConsumer(std::function<bool(int64_t)> 
 
 void Actor::HandleProducedNaiveDataRegstToConsumer() {
   HandleProducedNaiveDataRegstToConsumer([](Regst*) { return true; });
+}
+
+void Actor::HandleProducedInplaceDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess,
+                                                     std::function<bool(int64_t)> IsAllowedActor) {
+  std::vector<int64_t> regst_desc_ids;
+  inplace_produced_rs_.ForEachFrontRegst([&](Regst* regst) {
+    CHECK(regst->regst_desc()->regst_desc_type().has_data_regst_desc());
+    if (RegstPreProcess(regst) == false) { return; }
+    int64_t real_consumer_cnt = HandleRegstToConsumer(regst, IsAllowedActor);
+    if (real_consumer_cnt > 0) { regst_desc_ids.push_back(regst->regst_desc_id()); }
+  });
+  inplace_produced_rs_.PopFrontRegsts(regst_desc_ids);
+}
+
+void Actor::HandleProducedInplaceDataRegstToConsumer(std::function<bool(Regst*)> RegstPreProcess) {
+  HandleProducedInplaceDataRegstToConsumer(RegstPreProcess, [](int64_t) { return true; });
+}
+
+void Actor::HandleProducedInplaceDataRegstToConsumer(std::function<bool(int64_t)> IsAllowedActor) {
+  HandleProducedInplaceDataRegstToConsumer([](Regst*) { return true; }, IsAllowedActor);
+}
+
+void Actor::HandleProducedInplaceDataRegstToConsumer() {
+  HandleProducedInplaceDataRegstToConsumer([](Regst*) { return true; });
 }
 
 void Actor::AsyncSendRegstMsgToConsumer(Regst* regst) {
@@ -517,7 +571,7 @@ void Actor::AsyncSendRegstMsgToProducer(Regst* regst, int64_t producer) {
   naive_consumed_rs_.TryPopFrontRegst(regst_desc_id);
 }
 
-Regst* Actor::GetSoleProducedRegst4RegstDescId(int64_t regst_desc_id) {
+Regst* Actor::GetSoleProducedRegst4RegstDescId(int64_t regst_desc_id) const {
   auto it = produced_regsts_.find(regst_desc_id);
   CHECK(it != produced_regsts_.end());
   CHECK_EQ(it->second.size(), 1);
@@ -534,14 +588,12 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
   if (reading_cnt_it->second != 0) { return 0; }
 
   if (inplace_produced_rs_.TryPushBackRegst(regst) == 0) {
-    int64_t in_regst_desc_id = inplace_out2in_.at(regst->regst_desc_id());
+    int64_t in_regst_desc_id = inplace_regst_desc_id_out2in_.at(regst->regst_desc_id());
     Regst* in_regst = inplace_consumed_rs_.Front(in_regst_desc_id);
     CHECK(in_regst);
     AsyncSendRegstMsgToProducer(in_regst);
     CHECK_EQ(0, inplace_consumed_rs_.TryPopFrontRegst(in_regst_desc_id));
-  }
-
-  if (naive_produced_rs_.TryPushBackRegst(regst) != 0) {
+  } else if (naive_produced_rs_.TryPushBackRegst(regst) != 0) {
     UpdtStateAsCustomizedProducedRegst(regst);
   }
 
@@ -569,6 +621,26 @@ int64_t Actor::GetGlobalWorkStreamId() const {
 
 int64_t Actor::GetLocalWorkStreamId() const {
   return Global<IDMgr>::Get()->LocalWorkStreamId4ActorId(actor_id_);
+}
+
+Regst* Actor::GetNaiveOrInplaceCurReadable(int64_t regst_desc_id) const {
+  Regst* regst = naive_consumed_rs_.Front(regst_desc_id);
+  if (regst == nullptr) { regst = inplace_consumed_rs_.Front(regst_desc_id); }
+  return regst;
+}
+
+Regst* Actor::GetNaiveOrInplaceCurWriteable(int64_t regst_desc_id) const {
+  Regst* regst = naive_produced_rs_.Front(regst_desc_id);
+  if (regst == nullptr) { regst = inplace_produced_rs_.Front(regst_desc_id); }
+  return regst;
+}
+
+Regst* Actor::GetNaiveCurReadable(int64_t regst_desc_id) const {
+  return naive_consumed_rs_.Front(regst_desc_id);
+}
+
+Regst* Actor::GetNaiveCurWriteable(int64_t regst_desc_id) const {
+  return naive_produced_rs_.Front(regst_desc_id);
 }
 
 std::unique_ptr<Actor> NewActor(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {

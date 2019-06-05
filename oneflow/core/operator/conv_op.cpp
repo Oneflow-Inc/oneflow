@@ -2,6 +2,7 @@
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/device/cuda_stream_handle.h"
 #include "oneflow/core/register/runtime_blob_desc.h"
+#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 
@@ -99,7 +100,7 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   CHECK_EQ(in_blob_desc->shape().NumAxes(), NDims + 2);
-  CHECK_EQ(in_blob_desc->data_type(), Global<JobDesc>::Get()->DefaultDataType());
+  // CHECK_EQ(in_blob_desc->data_type(), Global<JobDesc>::Get()->DefaultDataType());
 
   // out
   int64_t data_num = in_blob_desc->shape().At(0);
@@ -306,6 +307,23 @@ void ConvOp<NDims>::InferCudnnAlgo(
       GetCustomizedConf(), static_cast<size_t>(cudnn_buf_limit_byte()), conv_ctx));
 }
 #endif  // WITH_CUDA
+
+template<int32_t NDims>
+void ConvOp<NDims>::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  *HasBatchDim4BnInOp("out") = *HasBatchDim4BnInOp("in");
+}
+
+template<int32_t NDims>
+void ConvOp<NDims>::GetSbpSignatures(
+    const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
+    SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split("in", 0)
+      .Broadcast({"weight", "bias"})
+      .Split("out", 0)
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+}
 
 template class ConvOp<1>;
 template class ConvOp<2>;

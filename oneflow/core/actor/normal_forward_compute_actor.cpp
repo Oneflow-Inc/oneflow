@@ -72,7 +72,7 @@ void NormalForwardCompActor::NormalProcessCustomizedReadableRegstMsg(const Actor
 
 void NormalForwardCompActor::Act() {
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
-  cur_piece_id_ = GetPieceId4NaiveCurReadableDataRegst();
+  cur_piece_id_ = GetPieceId4NaiveOrInplaceCurReadableDataRegst();
   std::tuple<int64_t, std::function<const Blob*(const LogicalBlobId&)>> other_val(
       cur_piece_id_, [this](const LogicalBlobId& lbi) -> const Blob* {
         CHECK_NOTNULL(pre_forward_model_regst_);
@@ -104,6 +104,13 @@ void NormalForwardCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
     return regst->regst_desc_id() != forward_model_regst_desc_id_;
   });
   if (Global<JobDesc>::Get()->IsTrain()) { TrySendMsgToForwardModelSaveActor(cur_piece_id_); }
+}
+
+void NormalForwardCompActor::VirtualAsyncSendInplaceProducedRegstMsgToConsumer() {
+  HandleProducedInplaceDataRegstToConsumer([&](Regst* regst) {
+    regst->set_piece_id(cur_piece_id_);
+    return true;
+  });
 }
 
 void NormalForwardCompActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {

@@ -28,6 +28,7 @@ class NormalForwardCompActor final : public CompActor {
   }
   void AsyncSendCustomizedProducedRegstMsgToConsumer() override {}
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
+  void VirtualAsyncSendInplaceProducedRegstMsgToConsumer() override;
   void AsyncSendCustomizedConsumedRegstMsgToProducer() override;
 
   bool IsCustomizedWriteReady() const override;

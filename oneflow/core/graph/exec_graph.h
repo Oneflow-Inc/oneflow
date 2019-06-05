@@ -42,7 +42,7 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
 
   std::shared_ptr<const Operator> op() const { return op_; }
   std::shared_ptr<const Operator>& mut_op() { return op_; }
-  RegstDesc* RegstDesc4BnInOp(const std::string& bn) { return bn_in_op2regst_.at(bn).get(); }
+  RegstDesc* RegstDesc4BnInOp(const std::string& bn) const { return bn_in_op2regst_.at(bn).get(); }
 
   void BindBnWithRegst(const std::string& bn, std::shared_ptr<RegstDesc>);
   void BindBnsWithRegst(const PbRpf<std::string>& (Operator::*bns_getter)() const,

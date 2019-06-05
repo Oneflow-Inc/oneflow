@@ -415,7 +415,8 @@ void GenerateBackwardOpConfIf(
     const Operator& op, std::vector<OperatorConf>* op_confs,
     const std::function<LogicalBlobId*(const std::string&)>& DiffLbi4BnInOp,
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4BnInOp) {
-  auto* obj = NewObj<GenerateBackwardOpConfWrapperStruct>(op.op_conf().op_type_case());
+  std::unique_ptr<GenerateBackwardOpConfWrapperStruct> obj;
+  obj.reset(NewObj<GenerateBackwardOpConfWrapperStruct>(op.op_conf().op_type_case()));
   obj->Call(op, op_confs, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp);
 }
 
