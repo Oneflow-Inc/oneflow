@@ -4,6 +4,7 @@ namespace oneflow {
 
 void DecodeRandomOp::InitFromOpConf() {
   CHECK(op_conf().has_decode_random_conf());
+  if (op_conf().decode_random_conf().has_tick()) { EnrollInputBn("tick", false); }
   EnrollOutputBn("out", false);
 }
 
@@ -34,6 +35,13 @@ void DecodeRandomOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
 void DecodeRandomOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("out") = true;
+}
+
+void DecodeRandomOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+  SbpSignatureBuilder()
+      .Split(input_bns(), 0)
+      .Split(output_bns(), 0)
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_OP(OperatorConf::kDecodeRandomConf, DecodeRandomOp);

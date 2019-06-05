@@ -47,6 +47,10 @@ JobBuilder::JobBuilder(Job* job) : job_(job) {
   }
 }
 
+const OperatorConf& JobBuilder::OpConf4OpName(const std::string& op_name) const {
+  return *op_name2op_conf_.at(op_name);
+}
+
 void JobBuilder::AddOps(const ParallelConf& parallel_conf,
                         const std::vector<OperatorConf>& op_confs) {
   auto* placemnt_group = job_->mutable_placement()->add_placement_group();

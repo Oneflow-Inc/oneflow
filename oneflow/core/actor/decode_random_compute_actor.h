@@ -12,18 +12,8 @@ class DecodeRandomActor final : public CompActor {
   ~DecodeRandomActor() = default;
 
  private:
-  void VirtualCompActorInit(const TaskProto&) override;
   void Act() override;
-  std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName()
-      override {
-    return std::make_pair(RegstNameType::kNaive, HashSet<std::string>{});
-  }
-  bool IsCustomizedReadReady() override;
-  bool IsCustomizedReadAlwaysUnReadyFromNow() override { return !IsCustomizedReadReady(); }
-
-  int HandlerWaitToStart(const ActorMsg&);
-
-  int32_t piece_id_;
+  void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
 };
 
 }  // namespace oneflow

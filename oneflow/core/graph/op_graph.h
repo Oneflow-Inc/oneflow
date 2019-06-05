@@ -133,6 +133,9 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   std::function<bool(const LogicalBlobId&, const std::string&)>
   MakePredicatorIsLbiAllConsumersReachableToOpName() const;
 
+  void ForEachDataAndCtrlInNode(OpNode* node, const std::function<void(OpNode*)>& Handler) const;
+  void ForEachDataAndCtrlOutNode(OpNode* node, const std::function<void(OpNode*)>& Handler) const;
+
  private:
   void Init(const Job& job);
   void InitNodes(const Job& job);
@@ -156,8 +159,6 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
       const std::function<bool(OpNode* src, OpNode* dst)>& IsReachable) const;
 
   std::function<bool(const OpNode*, const OpNode*)> MakePredicatorIsDataOrCtrlReachable() const;
-  void ForEachDataAndCtrlInNode(OpNode* node, const std::function<void(OpNode*)>& Handler) const;
-  void ForEachDataAndCtrlOutNode(OpNode* node, const std::function<void(OpNode*)>& Handler) const;
 
   int64_t GetSplitNum(const std::string& op_name, const LogicalBlobId& lbi) const;
   HashMap<std::string, OpNode*> op_name2op_node_;

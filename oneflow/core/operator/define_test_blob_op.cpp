@@ -5,6 +5,7 @@ namespace oneflow {
 
 void DefineTestBlobOp::InitFromOpConf() {
   CHECK(op_conf().has_define_test_blob_conf());
+  if (op_conf().define_test_blob_conf().has_tick()) { EnrollInputBn("tick", false); }
   EnrollOutputBn("out", op_conf().define_test_blob_conf().has_diff());
 }
 
@@ -39,7 +40,10 @@ void DefineTestBlobOp::InferHasBatchDim(
 }
 
 void DefineTestBlobOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
-  SbpSignatureBuilder().Split(output_bns(), 0).Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  SbpSignatureBuilder()
+      .Split(input_bns(), 0)
+      .Split(output_bns(), 0)
+      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
 }
 
 REGISTER_OP(OperatorConf::kDefineTestBlobConf, DefineTestBlobOp);

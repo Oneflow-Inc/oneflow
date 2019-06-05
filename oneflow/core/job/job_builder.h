@@ -26,6 +26,7 @@ class JobBuilder final {
 
   const Job& job() const { return *job_; }
 
+  const OperatorConf& OpConf4OpName(const std::string& op_name) const;
   void AddOps(const ParallelConf& parallel_conf, const std::vector<OperatorConf>& op_confs);
   void MutOps(const std::vector<OperatorConf>& op_confs) const;
   void AddOrMutOps(const ParallelConf& parallel_conf, const std::vector<OperatorConf>& op_confs);

@@ -12,6 +12,7 @@
 #include "oneflow/core/graph/decode_compute_task_node.h"
 #include "oneflow/core/graph/decode_random_compute_task_node.h"
 #include "oneflow/core/graph/record_load_compute_task_node.h"
+#include "oneflow/core/graph/source_tick_compute_task_node.h"
 #include "oneflow/core/graph/reduce_scatter_compute_task_node.h"
 #include "oneflow/core/graph/reduce_add_compute_task_node.h"
 #include "oneflow/core/graph/reduce_gather_compute_task_node.h"
@@ -324,7 +325,8 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
       CHECK(src_pd->parallel_num() == dst_pd->parallel_num());
       CHECK(src_pd->policy() == kDataParallel && dst_pd->policy() == kDataParallel);
     }
-    if (src_node->SoleOp()->op_conf().has_tick_conf()
+    if ((src_node->SoleOp()->op_conf().has_source_tick_conf()
+         || src_node->SoleOp()->op_conf().has_tick_conf())
         && dst_node->SoleOp()->op_conf().has_log_counter_conf() == false) {
       return &TaskGraph::BldSubTskGphByBroadcastToBroadcast;
     }
@@ -451,6 +453,7 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
 #define LOGICAL_TYPE_SEQ                                  \
   OF_PP_MAKE_TUPLE_SEQ(NormalForward, kDataForwardArea)   \
   OF_PP_MAKE_TUPLE_SEQ(NormalBackward, kDataBackwardArea) \
+  OF_PP_MAKE_TUPLE_SEQ(SourceTick, kDataPreprocessArea)   \
   OF_PP_MAKE_TUPLE_SEQ(RecordLoad, kDataPreprocessArea)   \
   OF_PP_MAKE_TUPLE_SEQ(Decode, kDataPreprocessArea)       \
   OF_PP_MAKE_TUPLE_SEQ(DecodeRandom, kDataPreprocessArea) \
