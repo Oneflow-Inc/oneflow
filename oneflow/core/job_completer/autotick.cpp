@@ -59,7 +59,7 @@ void ConnectSourceTickAndOtherTick(Job* job) {
 
 }  // namespace
 
-void AutoTick(const OpGraph& op_graph, Job* job) {
+void AutoSourceTick(const OpGraph& op_graph, Job* job) {
   GroupTickByParallelDesc(op_graph, job);
   op_graph.ForEachNode([&](OpNode* node) { CHECK(!node->op().op_conf().has_source_tick_conf()); });
   ConnectSourceTickAndOtherTick(job);

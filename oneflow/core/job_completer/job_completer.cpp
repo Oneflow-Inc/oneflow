@@ -568,7 +568,7 @@ void JobCompleter::Complete(Job* job) const {
     WithOpGraphAndMutJob(job, &GenerateOpConf4Trainning);
     WithOpGraphAndMutJob(job, &AddSaver);
     // complete tick ops
-    WithOpGraphAndMutJob(job, &AutoTick);
+    WithOpGraphAndMutJob(job, &AutoSourceTick);
     // add keep_header_only op
     WithOpGraphAndMutJob(job, &RewriteBoxingWithAllReduce);
     WithOpGraphAndMutJob(job, &FreezeSbpSignature);

@@ -7,7 +7,7 @@
 
 namespace oneflow {
 
-void AutoTick(const OpGraph& op_graph, Job* job);
+void AutoSourceTick(const OpGraph& op_graph, Job* job);
 
 class MutOpConTickInputHelper {
  public:
