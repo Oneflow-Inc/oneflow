@@ -1067,6 +1067,11 @@ message SquareOpConf {
   required string out = 2;
 }
 
+message ExpOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
 message BroadcastAddOpConf {
   required string a = 1;
   required string b = 2;
@@ -1516,6 +1521,7 @@ message OperatorConf {
     RsqrtOpConf rsqrt_conf = 506;
     ScalarAddOpConf scalar_add_conf = 507;
     ScalarMulOpConf scalar_mul_conf = 508;
+    ExpOpConf exp_conf = 509;
 
     // mutable input op
     AxpyOpConf axpy_conf = 752;
