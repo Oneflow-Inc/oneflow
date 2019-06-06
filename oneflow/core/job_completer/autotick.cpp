@@ -65,4 +65,39 @@ void AutoSourceTick(const OpGraph& op_graph, Job* job) {
   ConnectSourceTickAndOtherTick(job);
 }
 
+void AddTickForTimeShape(const OpGraph& op_graph, Job* job) { TODO(); }
+
+void AutoSinkTick(const OpGraph& op_graph, Job* job) {
+  op_graph.ForEachNode([&](OpNode* node) { CHECK(!node->op().op_conf().has_sink_tick_conf()); });
+  const OpNode* src_tick = nullptr;
+  op_graph.ForEachNode([&](OpNode* op_node) {
+    CHECK_ISNULL(src_tick);
+    if (op_node->op().op_conf().has_source_tick_conf()) { src_tick = op_node; }
+  });
+  const auto& src_time_shape = *src_tick->out_blob_time_shape();
+  HashSet<LogicalBlobId> tick_lbis;
+  op_graph.ForEachNode([&](OpNode* op_node) {
+    size_t out_cnt = 0;
+    op_graph.ForEachDataAndCtrlOutNode(op_node, [&](OpNode*) { ++out_cnt; });
+    if (out_cnt > 0) { return; }
+    CHECK_EQ(op_node->out_blob_time_shape()->elem_cnt() % src_time_shape.elem_cnt(), 0);
+    if (op_node->op().op_conf().has_tick_conf()) {
+      CHECK(*op_node->out_blob_time_shape() == src_time_shape);
+      CHECK(tick_lbis.emplace(op_node->op().BnInOp2Lbi(op_node->op().SoleObn())).second);
+    } else {
+      CHECK_GT(op_node->out_blob_time_shape()->elem_cnt(), src_time_shape.elem_cnt());
+    }
+  });
+  OperatorConf sink_tick_op_conf;
+  sink_tick_op_conf.set_name(std::string("System-SinkTick_") + NewUniqueId());
+  auto* sink_tick_conf = sink_tick_op_conf.mutable_sink_tick_conf();
+  for (const LogicalBlobId& tick_lbi : tick_lbis) {
+    sink_tick_conf->add_tick(GenLogicalBlobName(tick_lbi));
+  }
+  ParallelConf parallel_conf;
+  parallel_conf.set_policy(kDataParallel);
+  parallel_conf.add_device_name("0:cpu:0");
+  JobBuilder(job).AddOps(parallel_conf, {sink_tick_op_conf});
+}
+
 }  // namespace oneflow
