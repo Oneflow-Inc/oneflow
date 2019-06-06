@@ -76,6 +76,7 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
   for (OpEdge* edge : white_set_edges) {
     CHECK_EQ(1, edge->lbis().size());
     LogicalBlobId cur_lbi = edge->lbis().front();
+    std::string cur_lbn = GenLogicalBlobName(cur_lbi);
     CHECK_EQ(1, edge->lbi2ibns().at(cur_lbi).size());
     const std::string& dst_ibn = edge->lbi2ibns().at(cur_lbi).front();
     OpNode* src_node = edge->src_node();
@@ -88,11 +89,12 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
       cast_op_conf.set_name(src_node->op().op_name() + "-" + dst_node->op().op_name()
                             + cast_suffix);
       CastOpConf* cast_conf = cast_op_conf.mutable_cast_conf();
-      cast_conf->set_in(GenLogicalBlobName(cur_lbi));
+      cast_conf->set_in(cur_lbn);
       cast_conf->set_out("out");
       cast_conf->set_data_type(cast_data_type);
       job_builder.AddOps(src_node->parallel_desc().parallel_conf(),
                          std::vector<OperatorConf>{cast_op_conf});
+      LOG(INFO) << "insert CastOp: " << cast_op_conf.name() << " between " << cur_lbn;
     }
 
     {
@@ -104,7 +106,7 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
       PbMessage* dst_op_type_conf =
           MutableMessageInPbMessage(&dst_op_conf, dst_op_conf.op_type_case());
       std::string lbn = cast_op_conf.name() + "/out";
-      SetBnValInOpTypeConf(dst_op_type_conf, dst_ibn, GenLogicalBlobName(cur_lbi), lbn);
+      SetBnValInOpTypeConf(dst_op_type_conf, dst_ibn, cur_lbn, lbn);
     }
   }
   std::vector<OperatorConf> dst_op_confs;
