@@ -15,7 +15,7 @@ void Backward(DeviceCtx* ctx, const Blob* prediction, const Blob* label, const B
   Memset<device_type>(ctx, prediction_diff->mut_dptr<T>(), 0,
                       prediction_diff->ByteSizeOfDataContentField());
   SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeDiff(
-      ctx, num_instances, num_classes, prediction->dptr<T>(), label->dptr<K>(), dy->dptr<T>(),
+      ctx, num_instances, 0, num_classes, prediction->dptr<T>(), label->dptr<K>(), dy->dptr<T>(),
       prediction_diff->mut_dptr<T>());
 }
 
