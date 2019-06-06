@@ -1072,6 +1072,12 @@ message ExpOpConf {
   required string out = 2;
 }
 
+message ExpGradOpConf {
+  required string dy = 1;
+  required string y = 2;
+  required string dx = 3;
+}
+
 message BroadcastAddOpConf {
   required string a = 1;
   required string b = 2;
@@ -1522,6 +1528,7 @@ message OperatorConf {
     ScalarAddOpConf scalar_add_conf = 507;
     ScalarMulOpConf scalar_mul_conf = 508;
     ExpOpConf exp_conf = 509;
+    ExpGradOpConf exp_grad_conf = 510;
 
     // mutable input op
     AxpyOpConf axpy_conf = 752;
