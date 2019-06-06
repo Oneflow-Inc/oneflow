@@ -39,6 +39,7 @@ void TensorSliceView::UpdateShape() {
 bool TensorSliceView::IsEmpty() const { return range_vec_.empty(); }
 
 TensorSliceView TensorSliceView::Intersect(const TensorSliceView& other) const {
+  if (IsEmpty() || other.IsEmpty()) { return TensorSliceView(); }
   CHECK_EQ(other.range_vec_.size(), range_vec_.size());
   std::vector<Range> intersection_vec;
   const Range zero(0, 0);

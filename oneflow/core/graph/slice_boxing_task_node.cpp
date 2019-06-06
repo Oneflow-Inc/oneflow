@@ -7,6 +7,7 @@ void SliceBoxingTaskNode::Init(const LogicalBlobId& lbi, const TensorSliceView& 
                                const MemoryCase& mem_case) {
   lbi_ = lbi;
   out_slice_ = out_slice;
+  out_shape_ = out_slice.shape();
   mode_ = mode;
   mem_case_ = mem_case;
   set_machine_id(machine_id);
@@ -83,12 +84,15 @@ void SliceBoxingTaskNode::ConnectToSrcNodeWithSlice(TaskNode* src, TaskEdge* edg
   SetInDataEdgeSlice(edge, slice);
 }
 
+void SliceBoxingTaskNode::SetOutShape(const Shape& shape) { out_shape_ = shape; }
+
 OperatorConf SliceBoxingTaskNode::GetBoxingOpConf() {
   OperatorConf op_conf{};
   op_conf.set_device_type(device_type());
   SliceBoxingConf boxing_conf{};
   *boxing_conf.mutable_lbi() = lbi_;
   out_slice_.ToProto(boxing_conf.mutable_out_slice());
+  out_shape_.ToProto(boxing_conf.mutable_out_shape());
   for (const TaskEdge* edge : ordered_in_data_edges_) {
     in_data_edge2slice_.at(edge).ToProto(boxing_conf.mutable_in_slice()->Add());
   }

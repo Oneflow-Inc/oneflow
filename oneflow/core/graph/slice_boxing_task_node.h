@@ -27,6 +27,7 @@ class SliceBoxingTaskNode final : public TaskNode {
   TaskType GetTaskType() const override { return TaskType::kSliceBoxing; }
   void SetInDataEdgeSlice(const TaskEdge* edge, const TensorSliceView& slice);
   void ConnectToSrcNodeWithSlice(TaskNode* src, TaskEdge* edge, const TensorSliceView& slice);
+  void SetOutShape(const Shape& shape);
 
  private:
   void BuildExecGphAndRegst() override;
@@ -38,6 +39,7 @@ class SliceBoxingTaskNode final : public TaskNode {
   std::vector<const TaskEdge*> ordered_in_data_edges_;
   LogicalBlobId lbi_;
   TensorSliceView out_slice_;
+  Shape out_shape_;
   SliceBoxingTaskMode mode_ = kSliceBoxingTaskModeInvalid;
   MemoryCase mem_case_;
 };

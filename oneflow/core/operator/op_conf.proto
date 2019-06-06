@@ -1362,6 +1362,7 @@ message SliceBoxingConf {
   required LogicalBlobId lbi = 1;
   repeated TensorSliceViewProto in_slice = 2;
   required TensorSliceViewProto out_slice = 3;
+  optional ShapeProto out_shape = 4;
 }
 
 message SliceBoxingCopyOpConf {

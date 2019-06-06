@@ -36,12 +36,18 @@ void SliceBoxingOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   FOR_RANGE(int64_t, i, 0, input_bns().size()) {
     const BlobDesc* in_i = GetBlobDesc4BnInOp(GenRepeatedBn("in", i));
     const TensorSliceView in_i_slice(in_slice_proto.Get(i));
-    CHECK_EQ(in_i->shape(), in_i_slice.shape());
+    CHECK_EQ(in_i->shape().elem_cnt(), in_i_slice.shape().elem_cnt());
   }
   const TensorSliceView out_slice(out_slice_proto);
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   out->set_data_type(data_type);
-  out->mut_shape() = out_slice.shape();
+  if (slice_boxing_conf.has_out_shape()) {
+    const Shape out_shape(slice_boxing_conf.out_shape());
+    CHECK_EQ(out_shape.elem_cnt(), out_slice.shape().elem_cnt());
+    out->mut_shape() = out_shape;
+  } else {
+    out->mut_shape() = out_slice.shape();
+  }
   VirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 

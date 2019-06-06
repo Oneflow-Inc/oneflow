@@ -39,8 +39,8 @@ void TensorSliceCopier::Copy(DeviceCtx* ctx, const MemoryCopier& copier, Blob* d
                              const Blob* src_blob) const {
   CHECK_EQ(dst_blob->data_type(), data_type_);
   CHECK_EQ(src_blob->data_type(), data_type_);
-  CHECK_EQ(dst_view_.shape(), dst_blob->shape());
-  CHECK_EQ(src_view_.shape(), src_blob->shape());
+  CHECK_EQ(dst_view_.shape().elem_cnt(), dst_blob->shape().elem_cnt());
+  CHECK_EQ(src_view_.shape().elem_cnt(), src_blob->shape().elem_cnt());
   memory_copy_nd_desc_.dst_ptr = dst_blob->mut_dptr();
   memory_copy_nd_desc_.src_ptr = src_blob->dptr();
   copier.Copy(ctx, memory_copy_nd_desc_);

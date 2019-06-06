@@ -30,9 +30,9 @@ void CheckMemoryCopyNdDesc(const MemoryCopyNdDesc& desc) {
 }  // namespace
 
 MemoryCopyNdDesc MemoryCopyNdDesc::CreateDimReducedDesc() const {
-  MemoryCopyNdDesc compressed;
-  compressed.dst_ptr = dst_ptr;
-  compressed.src_ptr = src_ptr;
+  MemoryCopyNdDesc reduced;
+  reduced.dst_ptr = dst_ptr;
+  reduced.src_ptr = src_ptr;
   std::vector<int64_t> dst_shape_vec;
   std::vector<int64_t> src_shape_vec;
   std::vector<int64_t> dst_pos_vec;
@@ -54,12 +54,12 @@ MemoryCopyNdDesc MemoryCopyNdDesc::CreateDimReducedDesc() const {
       extent_vec.push_back(extent.At(i));
     }
   }
-  compressed.dst_shape = Shape(dst_shape_vec);
-  compressed.src_shape = Shape(src_shape_vec);
-  compressed.dst_pos = Index(dst_pos_vec);
-  compressed.src_pos = Index(src_pos_vec);
-  compressed.extent = Shape(extent_vec);
-  return compressed;
+  reduced.dst_shape = Shape(dst_shape_vec);
+  reduced.src_shape = Shape(src_shape_vec);
+  reduced.dst_pos = Index(dst_pos_vec);
+  reduced.src_pos = Index(src_pos_vec);
+  reduced.extent = Shape(extent_vec);
+  return reduced;
 }
 
 void MemoryCopier::Copy(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const {
