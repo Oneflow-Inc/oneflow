@@ -398,7 +398,7 @@ const InplaceLbiEdge* InplaceLbiGraph::FindFirstConstRefConflictMutRefEdge(
       ret = node->GetValidInEdge(IsValidEdge);
     }
   });
-  return nullptr;
+  return ret;
 }
 
 const InplaceLbiEdge* InplaceLbiGraph::FindFirstInterOpRefConflictMutRefEdge(
