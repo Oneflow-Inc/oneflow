@@ -94,7 +94,7 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
       cast_conf->set_data_type(cast_data_type);
       job_builder.AddOps(src_node->parallel_desc().parallel_conf(),
                          std::vector<OperatorConf>{cast_op_conf});
-      VLOG(1) << "insert CastOp: " << cast_op_conf.name() << " between " << cur_lbn;
+      LOG(INFO) << "insert CastOp: " << cast_op_conf.name() << " between " << cur_lbn;
     }
 
     {
