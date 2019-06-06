@@ -16,17 +16,22 @@ class AutoMixedPrecision final {
       : white_list_(white), black_list_(black), gray_list_(gray) {}
   ~AutoMixedPrecision() = default;
 
-  void Apply(const OpGraph& op_graph, Job* job) const;
+  void Apply(const OpGraph& op_graph, Job* job);
 
  private:
-  void SetBlackSet(const OpGraph& op_graph, HashSet<OpNode*>* black_set) const;
+  void SetBlackSet(const OpGraph& op_graph, HashSet<OpNode*>* black_set);
   void SetWhiteSet(const OpGraph& op_graph, std::function<bool(OpNode*)> IsAllowedToRunWithHalf,
-                   const HashSet<OpNode*>& black_set, HashSet<OpNode*>* white_set) const;
-  void InsertCastOp(const OpGraph& op_graph, const HashSet<OpNode*>& white_set, Job* job) const;
+                   const HashSet<OpNode*>& black_set, HashSet<OpNode*>* white_set);
+  void PropagateWhiteThroughNonListNodes(const OpGraph& op_graph,
+                                         std::function<bool(OpNode*)> IsAllowedToRunWithHalf,
+                                         const HashSet<OpNode*>& black_set,
+                                         HashSet<OpNode*>* white_set);
+  void InsertCastOp(const OpGraph& op_graph, const HashSet<OpNode*>& white_set, Job* job);
 
   const AMPList& white_list_;
   const AMPList& black_list_;
   const AMPList& gray_list_;
+  HashSet<OpNode*> non_list_nodes_;
 };
 
 }  // namespace oneflow
