@@ -54,6 +54,65 @@ bool IsOpFloat32(const OpNode* node) {
   return true;
 }
 
+void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>& white_set,
+                      Job* job) {
+  JobBuilder job_builder(job);
+
+  HashSet<OpEdge*> white_set_edges;
+  {
+    std::function<const std::unordered_set<OpEdge*>&(OpNode*)> Node2Edges =
+        f2h ? &OpNode::in_edges : &OpNode::out_edges;
+    std::function<OpNode*(OpEdge*)> OppositeNode = f2h ? &OpEdge::src_node : &OpEdge::dst_node;
+    op_graph.ForEachNode([&](OpNode* node) {
+      if (IsKeyFound(white_set, node)) {
+        for (OpEdge* edge : Node2Edges(node)) {
+          if (!IsKeyFound(white_set, OppositeNode(edge))) { white_set_edges.insert(edge); }
+        }
+      }
+    });
+  }
+
+  HashMap<std::string, OperatorConf> dst_op_name2dst_op_confs;
+  for (OpEdge* edge : white_set_edges) {
+    CHECK_EQ(1, edge->lbis().size());
+    LogicalBlobId cur_lbi = edge->lbis().front();
+    CHECK_EQ(1, edge->lbi2ibns().at(cur_lbi).size());
+    const std::string& dst_ibn = edge->lbi2ibns().at(cur_lbi).front();
+    OpNode* src_node = edge->src_node();
+    OpNode* dst_node = edge->dst_node();
+
+    OperatorConf cast_op_conf;
+    {
+      std::string cast_suffix = f2h ? "-cast_f2h" : "-cast_h2f";
+      DataType cast_data_type = f2h ? DataType::kFloat16 : DataType::kFloat;
+      cast_op_conf.set_name(src_node->op().op_name() + "-" + dst_node->op().op_name()
+                            + cast_suffix);
+      CastOpConf* cast_conf = cast_op_conf.mutable_cast_conf();
+      cast_conf->set_in(GenLogicalBlobName(cur_lbi));
+      cast_conf->set_out("out");
+      cast_conf->set_data_type(cast_data_type);
+      job_builder.AddOps(src_node->parallel_desc().parallel_conf(),
+                         std::vector<OperatorConf>{cast_op_conf});
+    }
+
+    {
+      const std::string& dst_op_name = dst_node->op().op_name();
+      if (!IsKeyFound(dst_op_name2dst_op_confs, dst_op_name)) {
+        dst_op_name2dst_op_confs.insert(std::make_pair(dst_op_name, dst_node->op().op_conf()));
+      }
+      OperatorConf dst_op_conf = dst_op_name2dst_op_confs.at(dst_op_name);
+      PbMessage* dst_op_type_conf =
+          MutableMessageInPbMessage(&dst_op_conf, dst_op_conf.op_type_case());
+      std::string lbn = cast_op_conf.name() + "/out";
+      SetBnValInOpTypeConf(dst_op_type_conf, dst_ibn, GenLogicalBlobName(cur_lbi), lbn);
+    }
+  }
+  std::vector<OperatorConf> dst_op_confs;
+  for (const auto& pair : dst_op_name2dst_op_confs) { dst_op_confs.push_back(pair.second); }
+  // make sure an op_conf can only be udpated once, cuz later update will override before
+  job_builder.MutOps(dst_op_confs);
+}
+
 }  // namespace
 
 void AutoMixedPrecision::Apply(const OpGraph& op_graph, Job* job) const {
@@ -154,48 +213,8 @@ void AutoMixedPrecision::SetWhiteSet(const OpGraph& op_graph,
 
 void AutoMixedPrecision::InsertCastOp(const OpGraph& op_graph, const HashSet<OpNode*>& white_set,
                                       Job* job) const {
-  JobBuilder job_builder(job);
-
-  HashSet<OpEdge*> white_set_in_edges;
-  op_graph.ForEachNode([&](OpNode* node) {
-    if (IsKeyFound(white_set, node)) {
-      for (OpEdge* edge : node->in_edges()) {
-        if (!IsKeyFound(white_set, edge->src_node())) { white_set_in_edges.insert(edge); }
-      }
-    }
-  });
-  HashMap<std::string, OperatorConf> dst_op_name2dst_op_confs;
-  for (OpEdge* edge : white_set_in_edges) {
-    CHECK_EQ(1, edge->lbis().size());
-    LogicalBlobId cur_lbi = edge->lbis().front();
-    CHECK_EQ(1, edge->lbi2ibns().at(cur_lbi).size());
-    const std::string& dst_ibn = edge->lbi2ibns().at(cur_lbi).front();
-    OpNode* src_node = edge->src_node();
-    OpNode* dst_node = edge->dst_node();
-
-    OperatorConf cast_op_conf;
-    cast_op_conf.set_name(src_node->op().op_name() + "-" + dst_node->op().op_name() + "-cast_f2h");
-    CastOpConf* cast_conf = cast_op_conf.mutable_cast_conf();
-    cast_conf->set_in(GenLogicalBlobName(cur_lbi));
-    cast_conf->set_out("out");
-    cast_conf->set_data_type(DataType::kFloat16);
-    job_builder.AddOps(src_node->parallel_desc().parallel_conf(),
-                       std::vector<OperatorConf>{cast_op_conf});
-
-    const std::string& dst_op_name = dst_node->op().op_name();
-    if (!IsKeyFound(dst_op_name2dst_op_confs, dst_op_name)) {
-      dst_op_name2dst_op_confs.insert(std::make_pair(dst_op_name, dst_node->op().op_conf()));
-    }
-    OperatorConf dst_op_conf = dst_op_name2dst_op_confs.at(dst_op_name);
-    PbMessage* dst_op_type_conf =
-        MutableMessageInPbMessage(&dst_op_conf, dst_op_conf.op_type_case());
-    std::string lbn = cast_op_conf.name() + "/out";
-    SetBnValInOpTypeConf(dst_op_type_conf, dst_ibn, GenLogicalBlobName(cur_lbi), lbn);
-  }
-  std::vector<OperatorConf> dst_op_confs;
-  for (const auto& pair : dst_op_name2dst_op_confs) { dst_op_confs.push_back(pair.second); }
-  // make sure an op_conf can only be udpated once, cuz later update will override before
-  job_builder.MutOps(dst_op_confs);
+  InsertCastOpImpl(true, op_graph, white_set, job);
+  InsertCastOpImpl(false, op_graph, white_set, job);
 }
 
 }  // namespace oneflow
