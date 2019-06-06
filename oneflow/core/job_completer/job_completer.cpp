@@ -105,7 +105,6 @@ void GenerateOpConf4Trainning(const OpGraph& op_graph, Job* job) {
   std::function<const LogicalBlobId&(const ParallelDesc&)> LossInstanceNum4ParallelDesc;
   AddTotalLossInstanceNumOpConf(op_graph, job, lbi2diff_lbi, &LossInstanceNum4ParallelDesc);
   AddOptimizerOpConf(op_graph, job, lbi2diff_lbi, LossInstanceNum4ParallelDesc);
-  AddSaver(op_graph, job);
   UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(lbi2diff_lbi, job);
   UpdateOpSbpSignatureHint(op_graph, job);
 }
@@ -441,6 +440,7 @@ void JobCompleter::Complete(Job* job) const {
     // complete ops for trainning
     HashMap<std::string, HashMap<std::string, LogicalBlobId>> op_name2ibn2in_diff_lbi;
     WithOpGraphAndMutJob(job, &GenerateOpConf4Trainning);
+    WithOpGraphAndMutJob(job, &AddSaver);
     // complete tick ops
     WithOpGraphAndMutJob(job, &AutoTick);
     // add keep_header_only op
