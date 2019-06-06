@@ -94,7 +94,7 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
       cast_conf->set_data_type(cast_data_type);
       job_builder.AddOps(src_node->parallel_desc().parallel_conf(),
                          std::vector<OperatorConf>{cast_op_conf});
-      LOG(INFO) << "insert CastOp: " << cast_op_conf.name() << " between " << cur_lbn;
+      VLOG(1) << "insert CastOp: " << cast_op_conf.name() << " between " << cur_lbn;
     }
 
     {
@@ -148,8 +148,8 @@ void AutoMixedPrecision::SetBlackSet(const OpGraph& op_graph, HashSet<OpNode*>* 
           },
           [&](OpNode* node) {
             upstream_or_part_of_black_and_gray.insert(node);
-            LOG(INFO) << "insert " << node->op().op_name()
-                      << " to upstream_or_part_of_black_and_gray";
+            VLOG(1) << "insert " << node->op().op_name()
+                    << " to upstream_or_part_of_black_and_gray";
           });
     }
   });
@@ -167,7 +167,7 @@ void AutoMixedPrecision::SetBlackSet(const OpGraph& op_graph, HashSet<OpNode*>* 
         },
         [&](OpNode* node) {
           black_set->insert(node);
-          LOG(INFO) << "insert " << node->op().op_name() << " to black_set";
+          VLOG(1) << "insert " << node->op().op_name() << " to black_set";
         });
   });
 }
@@ -189,7 +189,7 @@ void AutoMixedPrecision::SetWhiteSet(const OpGraph& op_graph,
           },
           [&](OpNode* node) {
             upstream_or_part_of_white.insert(node);
-            LOG(INFO) << "insert " << node->op().op_name() << " to upstream_or_part_of_white";
+            VLOG(1) << "insert " << node->op().op_name() << " to upstream_or_part_of_white";
           });
     }
   });
@@ -207,7 +207,7 @@ void AutoMixedPrecision::SetWhiteSet(const OpGraph& op_graph,
           },
           [&](OpNode* node) {
             white_set->insert(node);
-            LOG(INFO) << "insert " << node->op().op_name() << " to white_set";
+            VLOG(1) << "insert " << node->op().op_name() << " to white_set";
           });
     }
   });
