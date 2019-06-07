@@ -1444,10 +1444,10 @@ message BboxScaleOpConf {
   required string out = 3;
 }
 
-message IoUMatrixOpConf {
+message CalcIoUMatrixOpConf {
   // in
-  required string proposals = 1;
-  required string gt_boxes = 2;
+  required string boxes1= 1;
+  required string boxes2= 2;
   // out
   required string iou_matrix = 3;
 }
@@ -1640,7 +1640,7 @@ message OperatorConf {
     ConcatGtProposalsOpConf concat_gt_proposals_conf = 295;
     BboxScaleOpConf bbox_scale_conf = 296;
     AnchorGenerateOpConf anchor_generate_conf = 297;
-    IoUMatrixOpConf iou_matrix_conf = 298;
+    CalcIoUMatrixOpConf calc_iou_matrix_conf = 298;
     MatcherOpConf matcher_conf = 299;
     ClampOpConf clamp_conf = 300;
     WhereOpConf where_conf = 301;
