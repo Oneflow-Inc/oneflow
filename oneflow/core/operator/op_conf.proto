@@ -1472,6 +1472,16 @@ message ClampOpConf {
   required float max = 4;
 }
 
+message BoxEncodeOpConf {
+  // in
+  required string ref_boxes = 1;
+  required string boxes = 2;
+  // out
+  required string boxes_delta = 3;
+  // conf
+  required BBoxRegressionWeights regression_weights = 4;
+}
+
 message EqualConf {
   required float scalar = 1;
 }
@@ -1637,11 +1647,6 @@ message OperatorConf {
     Conv1DV2OpConf conv_1d_v2_conf = 292;
     Conv2DV2OpConf conv_2d_v2_conf = 293;
     Conv3DV2OpConf conv_3d_v2_conf = 294;
-    ConcatGtProposalsOpConf concat_gt_proposals_conf = 295;
-    BboxScaleOpConf bbox_scale_conf = 296;
-    AnchorGenerateOpConf anchor_generate_conf = 297;
-    CalcIoUMatrixOpConf calc_iou_matrix_conf = 298;
-    MatcherOpConf matcher_conf = 299;
     ClampOpConf clamp_conf = 300;
     WhereOpConf where_conf = 301;
 
@@ -1659,6 +1664,14 @@ message OperatorConf {
     RsqrtOpConf rsqrt_conf = 506;
     ScalarAddOpConf scalar_add_conf = 507;
     ScalarMulOpConf scalar_mul_conf = 508;
+
+    // Used for detection network
+    ConcatGtProposalsOpConf concat_gt_proposals_conf = 601;
+    BboxScaleOpConf bbox_scale_conf = 602;
+    AnchorGenerateOpConf anchor_generate_conf = 603;
+    CalcIoUMatrixOpConf calc_iou_matrix_conf = 604;
+    MatcherOpConf matcher_conf = 605;
+    BoxEncodeOpConf box_encode_conf = 606;
   }
 }
 

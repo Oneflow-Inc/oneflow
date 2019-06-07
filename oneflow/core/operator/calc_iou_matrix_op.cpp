@@ -30,8 +30,10 @@ void CalcIoUMatrixOp::InferBlobDescs(
   BlobDesc* iou_matrix = GetBlobDesc4BnInOp("iou_matrix");
   iou_matrix->mut_shape() = Shape({num_boxes1, num_boxes2});
   iou_matrix->set_data_type(DataType::kFloat);
-  iou_matrix->set_has_dim0_valid_num_field(boxes1->has_dim0_valid_num_field());
-  iou_matrix->mut_dim0_inner_shape() = Shape({1, num_boxes1});
+  if (boxes1->has_dim0_valid_num_field()) {
+    iou_matrix->set_has_dim0_valid_num_field(true);
+    iou_matrix->mut_dim0_inner_shape() = Shape({1, num_boxes1});
+  }
   iou_matrix->set_has_instance_shape_field(boxes2->has_dim0_valid_num_field());
 }
 
