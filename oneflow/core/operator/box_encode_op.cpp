@@ -20,7 +20,7 @@ void BoxEncodeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   CHECK_EQ(ref_boxes->shape().NumAxes(), 2);
   CHECK_EQ(ref_boxes->shape().At(1), 4);
   const bool dim0_varing = ref_boxes->has_dim0_valid_num_field();
-  // input: boxes2 (N, 4)
+  // input: boxes (N, 4)
   const BlobDesc* boxes = GetBlobDesc4BnInOp("boxes");
   CHECK_EQ(boxes->shape().NumAxes(), 2);
   CHECK_EQ(boxes->shape().At(1), 4);

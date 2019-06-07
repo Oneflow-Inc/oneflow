@@ -1482,6 +1482,16 @@ message BoxEncodeOpConf {
   required BBoxRegressionWeights regression_weights = 4;
 }
 
+message BoxDecodeOpConf {
+  // in
+  required string ref_boxes = 1;
+  required string boxes_delta = 2;
+  // out
+  required string boxes = 3;
+  // conf
+  required BBoxRegressionWeights regression_weights = 4;
+}
+
 message EqualConf {
   required float scalar = 1;
 }
@@ -1672,6 +1682,7 @@ message OperatorConf {
     CalcIoUMatrixOpConf calc_iou_matrix_conf = 604;
     MatcherOpConf matcher_conf = 605;
     BoxEncodeOpConf box_encode_conf = 606;
+    BoxDecodeOpConf box_decode_conf = 607;
   }
 }
 
