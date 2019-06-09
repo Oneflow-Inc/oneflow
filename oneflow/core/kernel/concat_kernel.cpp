@@ -13,7 +13,7 @@ void ConcatKernel<device_type, T>::ForwardInstanceShape(
   if (axis < 0) { axis += out_dim_vec.size(); }
   for (size_t i = 1; i < in_bns.size(); ++i) {
     const Blob* in_i_blob = BnInOp2Blob(in_bns.Get(i));
-    for (int64_t j = 0; j < in_i_blob->shape().NumAxes(); ++j) {
+    for (int64_t j = 1; j < in_i_blob->shape().NumAxes(); ++j) {
       if (j == axis) {
         out_dim_vec[j] += in_i_blob->shape().At(j);
       } else {
@@ -22,6 +22,24 @@ void ConcatKernel<device_type, T>::ForwardInstanceShape(
     }
   }
   BnInOp2Blob("out")->set_instance_shape(Shape(out_dim_vec));
+}
+
+template<DeviceType device_type, typename T>
+void ConcatKernel<device_type, T>::ForwardDim0ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const PbRpf<std::string>& in_bns = this->op_attribute().input_bns();
+  const Blob* in_0_blob = BnInOp2Blob(in_bns.Get(0));
+  int32_t axis = this->op_conf().concat_conf().axis();
+  if (axis < 0) { axis += in_0_blob->shape().NumAxes(); }
+  int64_t out_dim0_valid_num = in_0_blob->shape().At(0);
+  for (size_t i = 1; i < in_bns.size(); ++i) {
+    if (axis == 0) {
+      out_dim0_valid_num += BnInOp2Blob(in_bns.Get(i))->shape().At(0);
+    } else {
+      CHECK_EQ(out_dim0_valid_num, BnInOp2Blob(in_bns.Get(i))->shape().At(0));
+    }
+  }
+  BnInOp2Blob("out")->set_dim0_valid_num(0, out_dim0_valid_num);
 }
 
 template<DeviceType device_type, typename T>
