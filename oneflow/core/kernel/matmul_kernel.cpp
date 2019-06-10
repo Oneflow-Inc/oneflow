@@ -10,8 +10,8 @@ template<DeviceType device_type, typename T>
 struct Dim2MatMulUtil {
   static void Calc(DeviceCtx* ctx, const Blob* a, CBLAS_TRANSPOSE blas_trans_a, const Blob* b,
                    CBLAS_TRANSPOSE blas_trans_b, Blob* c) {
-    NewKernelUtil<device_type>::BlobGemm(ctx, blas_trans_a, blas_trans_b, OneVal<T>::value,
-                                         ZeroVal<T>::value, a, b, c);
+    NewKernelUtil<device_type>::BlobGemm(ctx, blas_trans_a, blas_trans_b, GetOneVal<T>(),
+                                         GetZeroVal<T>(), a, b, c);
   }
 };  // namespace oneflow
 
@@ -20,12 +20,11 @@ struct Dim2MatMulUtil<DeviceType::kGPU, float16> {
   static void Calc(DeviceCtx* ctx, const Blob* a, CBLAS_TRANSPOSE blas_trans_a, const Blob* b,
                    CBLAS_TRANSPOSE blas_trans_b, Blob* c) {
     if (Global<JobDesc>::Get()->enable_cublashgemm_when_matmul()) {
-      NewKernelUtil<DeviceType::kGPU>::BlobGemm(ctx, blas_trans_a, blas_trans_b,
-                                                OneVal<float16>::value, ZeroVal<float16>::value, a,
-                                                b, c);
+      NewKernelUtil<DeviceType::kGPU>::BlobGemm(
+          ctx, blas_trans_a, blas_trans_b, GetOneVal<float16>(), GetZeroVal<float16>(), a, b, c);
     } else {
       NewKernelUtil<DeviceType::kGPU>::BlobHGemmWithFloat(
-          ctx, blas_trans_a, blas_trans_b, OneVal<float>::value, ZeroVal<float>::value, a, b, c);
+          ctx, blas_trans_a, blas_trans_b, GetOneVal<float>(), GetZeroVal<float>(), a, b, c);
     }
   }
 };
