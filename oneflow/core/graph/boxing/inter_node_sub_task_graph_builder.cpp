@@ -262,10 +262,7 @@ SubTskGphBuilderStatus InterNodeSubTskGphBuilder::Build(
   } else {
     UNIMPLEMENTED();
   }
-  CHECK_EQ(out_nodes.size(), sorted_dst_comp_tasks.size());
-  FOR_RANGE(int64_t, i, 0, sorted_dst_comp_tasks.size()) {
-    Connect<TaskNode>(out_nodes.at(i), NewEdge(), sorted_dst_comp_tasks.at(i));
-  }
+  ctx->NaiveConnectAll121(out_nodes, sorted_dst_comp_tasks);
   return SubTskGphBuilderStatus::MakeStatusOK();
 }
 
