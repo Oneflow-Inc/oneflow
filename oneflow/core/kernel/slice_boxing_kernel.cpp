@@ -66,8 +66,8 @@ void SliceBoxingAddKernel<device_type, T>::ForwardDataContent(
             && in_i->mem_case().host_mem().used_by_device())
         || (device_type == DeviceType::kGPU && in_i->mem_case().has_device_cuda_mem()
             && out->mem_case().has_device_cuda_mem()
-            && out->mem_case().device_cuda_mem().device_id() / 2
-                   == in_i->mem_case().device_cuda_mem().device_id() / 2);
+            && out->mem_case().device_cuda_mem().device_id()
+                   == in_i->mem_case().device_cuda_mem().device_id());
     if (in_i->shape() == out->shape() && can_direct_access) {
       Addition<device_type, T>(ctx.device_ctx, out, out, in_i);
     } else {
