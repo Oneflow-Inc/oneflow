@@ -195,20 +195,20 @@ void ConvKernel<DeviceType::kGPU, T>::WeightBackwardWithCudnn(
   size_t bw_cudnn_buf_size = bw_cudnn_buf ? bw_cudnn_buf->ByteSizeOfDataContentField() : 0;
   if (this->op_conf().trainable()) {
     CudaCheck(cudnnConvolutionBackwardFilter(
-        device_ctx->cudnn_handle(), GetOnePtr<T>(), this->in_desc_->Get(), in_blob->dptr<T>(),
+        device_ctx->cudnn_handle(), CudnnSPOnePtr<T>(), this->in_desc_->Get(), in_blob->dptr<T>(),
         this->out_desc_->Get(), out_diff_blob->dptr<T>(), this->conv_desc_->Get(),
         static_cast<cudnnConvolutionBwdFilterAlgo_t>(
             this->GetConvKernelConf().cudnn_bwd_filter_algo()),
-        bw_cudnn_buf_ptr, bw_cudnn_buf_size, GetZeroPtr<T>(), this->filter_desc_->Get(),
+        bw_cudnn_buf_ptr, bw_cudnn_buf_size, CudnnSPZeroPtr<T>(), this->filter_desc_->Get(),
         weight_diff_blob->mut_dptr<T>()));
   }
   if (in_diff_blob != nullptr) {
     CudaCheck(cudnnConvolutionBackwardData(
-        device_ctx->cudnn_handle(), GetOnePtr<T>(), this->filter_desc_->Get(),
+        device_ctx->cudnn_handle(), CudnnSPOnePtr<T>(), this->filter_desc_->Get(),
         weight_blob->dptr<T>(), this->out_desc_->Get(), out_diff_blob->dptr<T>(),
         this->conv_desc_->Get(),
         static_cast<cudnnConvolutionBwdDataAlgo_t>(this->GetConvKernelConf().cudnn_bwd_data_algo()),
-        bw_cudnn_buf_ptr, bw_cudnn_buf_size, GetZeroPtr<T>(), this->in_desc_->Get(),
+        bw_cudnn_buf_ptr, bw_cudnn_buf_size, CudnnSPZeroPtr<T>(), this->in_desc_->Get(),
         in_diff_blob->mut_dptr<T>()));
   }
 }
@@ -218,8 +218,8 @@ void ConvKernel<DeviceType::kGPU, T>::BiasBackwardWithCudnn(
     DeviceCtx* device_ctx, const Blob* out_diff_blob, Blob* bias_diff_blob,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CudaCheck(cudnnConvolutionBackwardBias(
-      device_ctx->cudnn_handle(), GetOnePtr<T>(), this->out_desc_->Get(), out_diff_blob->dptr<T>(),
-      GetZeroPtr<T>(), this->bias_desc_->Get(), bias_diff_blob->mut_dptr<T>()));
+      device_ctx->cudnn_handle(), CudnnSPOnePtr<T>(), this->out_desc_->Get(), out_diff_blob->dptr<T>(),
+      CudnnSPZeroPtr<T>(), this->bias_desc_->Get(), bias_diff_blob->mut_dptr<T>()));
 }
 
 namespace {
