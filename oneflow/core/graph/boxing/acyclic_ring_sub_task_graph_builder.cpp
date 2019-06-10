@@ -65,6 +65,7 @@ SubTskGphBuilderStatus AcyclicRingSubTskGphBuilder::Build(
       SliceBoxingTaskNode* out_node =
           CreateBoxingNode121(parallel_desc, out_id, out_slice, kSliceBoxingTaskModeCopy);
       out_boxing_nodes.push_back(out_node);
+      out_nodes->push_back(out_node);
     }
     FOR_RANGE(int64_t, in_id, 0, parallel_desc.parallel_num()) {
       TaskNode* in_node = in_nodes.at(in_id);
