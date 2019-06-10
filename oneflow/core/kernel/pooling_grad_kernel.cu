@@ -50,9 +50,9 @@ struct PoolingGradKernelUtil<DeviceType::kGPU, T> final {
     std::unique_ptr<CudnnPoolingDesc> pooling_desc;
     pooling_desc.reset(new CudnnPoolingDesc(pooling_mode, num_spatial_dims, pool_size.data(),
                                             padding.data(), strides.data()));
-    CudaCheck(cudnnPoolingBackward(ctx->cudnn_handle(), pooling_desc->Get(), GetOnePtr<T>(),
+    CudaCheck(cudnnPoolingBackward(ctx->cudnn_handle(), pooling_desc->Get(), CudnnSPOnePtr<T>(),
                                    y_desc.Get(), y_blob->dptr(), y_desc.Get(), dy_blob->dptr(),
-                                   x_desc.Get(), x_blob->dptr(), GetZeroPtr<T>(), x_desc.Get(),
+                                   x_desc.Get(), x_blob->dptr(), CudnnSPZeroPtr<T>(), x_desc.Get(),
                                    dx_blob->mut_dptr()));
   }
 };

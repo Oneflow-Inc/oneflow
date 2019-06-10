@@ -72,6 +72,13 @@ class CudnnActivationDesc final {
   cudnnActivationDescriptor_t val_;
 };
 
+// SP for scaling parameter
+template<typename T>
+const void* CudnnSPOnePtr();
+
+template<typename T>
+const void* CudnnSPZeroPtr();
+
 }  // namespace oneflow
 
 #endif  // WITH_CUDA
