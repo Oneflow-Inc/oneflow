@@ -148,6 +148,7 @@ void AutoMixedPrecision::SetBlackSet(const OpGraph& op_graph, HashSet<OpNode*>* 
   HashSet<OpNode*> upstream_or_part_of_black_and_gray;
   op_graph.ForEachNode([&](OpNode* start_node) {
     OperatorConf::OpTypeCase op_type = start_node->op().op_conf().op_type_case();
+    if (IsKeyFound(upstream_or_part_of_black_and_gray, start_node)) { return; }
     if (IsKeyFound(black_list_, op_type) || IsKeyFound(gray_list_, op_type)) {
       DfsGraphTraversal<OpGraph, OpNode>(
           op_graph, std::list<OpNode*>{start_node}, &OpNode::ForEachNodeOnOutEdge,
@@ -167,7 +168,8 @@ void AutoMixedPrecision::SetBlackSet(const OpGraph& op_graph, HashSet<OpNode*>* 
   // propagate black through upstream_or_part_of_black_and_gray
   op_graph.ForEachNode([&](OpNode* start_node) {
     OperatorConf::OpTypeCase op_type = start_node->op().op_conf().op_type_case();
-    if (IsKeyFound(*black_set, start_node) || !IsKeyFound(black_list_, op_type)) { return; }
+    if (IsKeyFound(*black_set, start_node)) { return; }
+    if (!IsKeyFound(black_list_, op_type)) { return; }
     DfsGraphTraversal<OpGraph, OpNode>(
         op_graph, std::list<OpNode*>{start_node}, &OpNode::ForEachNodeOnInEdge,
         [&](OpNode* node) -> bool {
@@ -189,6 +191,7 @@ void AutoMixedPrecision::SetWhiteSet(const OpGraph& op_graph,
   HashSet<OpNode*> upstream_or_part_of_white;
   op_graph.ForEachNode([&](OpNode* start_node) {
     OperatorConf::OpTypeCase op_type = start_node->op().op_conf().op_type_case();
+    if (IsKeyFound(upstream_or_part_of_white, start_node)) { return; }
     if (IsAllowedToRunWithHalf(start_node) && IsKeyFound(white_list_, op_type)) {
       DfsGraphTraversal<OpGraph, OpNode>(
           op_graph, std::list<OpNode*>{start_node}, &OpNode::ForEachNodeOnOutEdge,
@@ -207,8 +210,8 @@ void AutoMixedPrecision::SetWhiteSet(const OpGraph& op_graph,
 
   op_graph.ForEachNode([&](OpNode* start_node) {
     OperatorConf::OpTypeCase op_type = start_node->op().op_conf().op_type_case();
-    if (IsAllowedToRunWithHalf(start_node) && !IsKeyFound(*white_set, start_node)
-        && IsKeyFound(white_list_, op_type)) {
+    if (IsKeyFound(*white_set, start_node)) { return; }
+    if (IsAllowedToRunWithHalf(start_node) && IsKeyFound(white_list_, op_type)) {
       DfsGraphTraversal<OpGraph, OpNode>(
           op_graph, std::list<OpNode*>{start_node}, &OpNode::ForEachNodeOnInEdge,
           [&](OpNode* node) -> bool {
@@ -227,19 +230,27 @@ void AutoMixedPrecision::SetWhiteSet(const OpGraph& op_graph,
 void AutoMixedPrecision::PropagateWhiteThroughNonListNodes(
     const OpGraph& op_graph, std::function<bool(OpNode*)> IsAllowedToRunWithHalf,
     const HashSet<OpNode*>& black_set, HashSet<OpNode*>* white_set) {
+  HashSet<OpNode*> visited;
   op_graph.ForEachNode([&](OpNode* start_node) {
+    if (IsKeyFound(visited, start_node)) { return; }
     if (IsAllowedToRunWithHalf(start_node) && IsKeyFound(*white_set, start_node)) {
       DfsGraphTraversal<OpGraph, OpNode>(
           op_graph, std::list<OpNode*>{start_node}, &OpNode::ForEachNodeOnInOutEdge,
           [&](OpNode* node) -> bool {
-            return (!IsKeyFound(*white_set, node) && !IsKeyFound(black_set, node)
-                    && IsKeyFound(non_list_nodes_, node) && IsOpFloat32(node)
-                    && IsAllowedToRunWithHalf(node));
+            return (node == start_node)
+                   || (!IsKeyFound(visited, node) && !IsKeyFound(*white_set, node)
+                       && !IsKeyFound(black_set, node) && IsKeyFound(non_list_nodes_, node)
+                       && IsOpFloat32(node) && IsAllowedToRunWithHalf(node));
           },
           [&](OpNode* node) {
-            INSERT_CHECK(white_set->insert(node));
+            INSERT_CHECK(visited.insert(node));
             VLOG(1) << "PropagateWhiteThroughNonListNodes(): Insert " << node->op().op_name()
-                    << " to white_set";
+                    << " to visited";
+            bool inserted = white_set->insert(node).second;
+            if (inserted) {
+              VLOG(1) << "PropagateWhiteThroughNonListNodes(): Insert " << node->op().op_name()
+                      << " to white_set";
+            }
           });
     }
   });
