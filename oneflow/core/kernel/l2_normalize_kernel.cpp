@@ -60,7 +60,7 @@ struct L2NormalizeKernelUtil<DeviceType::kCPU, T> {
       const T norm = std::sqrt(std::max(square_x_sum[i], static_cast<T>(conf.epsilon())));
       const int32_t offset = (i / d) * d * c + (i % d);
       if (square_x_sum[i] >= conf.epsilon()) {
-        T y_dy_inner_prod = ZeroVal<T>::value;
+        T y_dy_inner_prod = GetZeroVal<T>();
         for (int32_t j = 0; j < c; j++) {
           const int32_t index = offset + j * d;
           y_dy_inner_prod += out_diff[index] * out[index];

@@ -13,7 +13,7 @@ __global__ void L2NormalizeForward(const int32_t n, const int32_t c, const int32
   __shared__ typename BlockReduce::TempStorage temp_storage;
 
   for (int32_t i = blockIdx.x; i < n; i += gridDim.x) {
-    T sum = ZeroVal<T>::value;
+    T sum = GetZeroVal<T>();
     const int32_t offset = (i / d) * d * c + (i % d);
     for (int32_t j = threadIdx.x; j < c; j += blockDim.x) {
       const T x = in[offset + j * d];
@@ -42,7 +42,7 @@ __global__ void L2NormalizeBackward(const int32_t n, const int32_t c, const int3
       using BlockReduce = cub::BlockReduce<T, kCudaThreadsNumPerBlock>;
       __shared__ typename BlockReduce::TempStorage temp_storage_prod_sum;
 
-      T y_dy_prod_sum = ZeroVal<T>::value;
+      T y_dy_prod_sum = GetZeroVal<T>();
       for (int32_t j = threadIdx.x; j < c; j += blockDim.x) {
         const int32_t index = offset + j * d;
         y_dy_prod_sum += out[index] * out_diff[index];

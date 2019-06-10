@@ -17,8 +17,8 @@ void BiasAddKernel<device_type, T>::ForwardDataContent(
                       a_blob->ByteSizeOfDataContentField());
   NewKernelUtil<device_type>::OFGemm(ctx.device_ctx, CblasNoTrans, CblasNoTrans,
                                      out_blob->shape().At(0), out_blob->shape().At(1), 1,
-                                     OneVal<T>::value, bias_mul_blob->dptr<T>(), b_blob->dptr<T>(),
-                                     OneVal<T>::value, out_blob->mut_dptr<T>());
+                                     GetOneVal<T>(), bias_mul_blob->dptr<T>(), b_blob->dptr<T>(),
+                                     GetOneVal<T>(), out_blob->mut_dptr<T>());
 }
 
 template<DeviceType device_type, typename T>

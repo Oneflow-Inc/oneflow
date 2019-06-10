@@ -225,7 +225,7 @@ void FixTickOpIfExists(Job* job) {
   tick_log_counter->set_name("tick_log_counter_" + NewUniqueId());
   LogCounterOpConf* tick_log_counter_conf = tick_log_counter->mutable_log_counter_conf();
   tick_log_counter_conf->set_in(tick_op_conf->name() + "/" + tick_op_conf->tick_conf().out());
-  tick_log_counter_conf->set_interval(MaxVal<int32_t>::value);
+  tick_log_counter_conf->set_interval(GetMaxVal<int32_t>());
   // add placement of tick_log_counter op
   PlacementGroup* p_group = job->mutable_placement()->add_placement_group();
   *(p_group->mutable_op_set()->add_op_name()) = tick_log_counter->name();

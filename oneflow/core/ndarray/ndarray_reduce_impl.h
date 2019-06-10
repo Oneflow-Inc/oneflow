@@ -10,7 +10,7 @@
 namespace oneflow {
 
 #define DECLARE_NDARRAY_REDUCE_IMPL(struct_name)                                                   \
-  template<DeviceType device_type, typename T, const T (*binary_func)(const T, const T)>           \
+  template<DeviceType device_type, typename T, template<typename> class binary_func>               \
   struct struct_name final {                                                                       \
     static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x);               \
     static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x, \
@@ -21,7 +21,7 @@ DECLARE_NDARRAY_REDUCE_IMPL(NdarrayMatrixRowReduce);
 DECLARE_NDARRAY_REDUCE_IMPL(NdarrayMatrixColReduce);
 #undef DECLARE_NDARRAY_REDUCE_IMPL
 
-template<DeviceType device_type, typename T, const T (*binary_func)(const T, const T)>
+template<DeviceType device_type, typename T, template<typename> class binary_func>
 struct NdarrayNoReduce final {
   static bool Matched(const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x) {
     return x.shape() == y.shape();
@@ -32,13 +32,13 @@ struct NdarrayNoReduce final {
   }
 };
 
-template<DeviceType device_type, typename T, int NDIMS, const T (*binary_func)(const T, const T)>
+template<DeviceType device_type, typename T, int NDIMS, template<typename> class binary_func>
 struct NdarrayReduceCoreWrapper final {
   static void ReduceAxis(DeviceCtx* ctx, const XpuReducedNdarray<T, NDIMS>& dst_reduced,
                          const XpuReducedNdarray<T, NDIMS>& x, int axis);
 };
 
-template<DeviceType device_type, typename T, const T (*binary_func)(const T, const T)>
+template<DeviceType device_type, typename T, template<typename> class binary_func>
 struct NdarrayDefaultReduce final {
   static void Reduce(DeviceCtx* ctx, const XpuVarNdarray<T>& y, const XpuVarNdarray<const T>& x,
                      const XpuVarNdarray<T>& tmp_storage) {
@@ -62,14 +62,14 @@ struct NdarrayDefaultReduce final {
       if (y.shape().At(i) == x.shape().At(i)) { continue; }
       CHECK_EQ(y.shape().At(i), 1);
       CHECK_GT(x.shape().At(i), y.shape().At(i));
-      ImplaceReduceAxis<NDIMS>(ctx, i, storage, &cur_shape);
+      InplaceReduceAxis<NDIMS>(ctx, i, storage, &cur_shape);
     }
     XpuReducedNdarray<T, NDIMS> reduced(y.shape(), storage);
     XpuNdarrayAssign<device_type, T>::template Assign<NDIMS>(ctx, y, reduced);
   }
 
   template<int NDIMS>
-  static void ImplaceReduceAxis(DeviceCtx* ctx, int axis, const XpuVarNdarray<T>& implace,
+  static void InplaceReduceAxis(DeviceCtx* ctx, int axis, const XpuVarNdarray<T>& implace,
                                 XpuShape* cur_shape) {
     int64_t target_elem_num = cur_shape->ElemNum() / cur_shape->At(axis);
     while (cur_shape->At(axis) > 1) {
@@ -83,7 +83,7 @@ struct NdarrayDefaultReduce final {
   }
 };
 
-template<typename T, int NDIMS, const T (*binary_func)(const T, const T)>
+template<typename T, int NDIMS, template<typename> class binary_func>
 struct NdarrayReduceCore final {
   template<typename X>
   OF_DEVICE_FUNC static void ReduceAxis(const XpuReducedNdarray<T, NDIMS>& dst_reduced, const X& x,
@@ -94,9 +94,9 @@ struct NdarrayReduceCore final {
       T* dst_reduced_ptr = dst_reduced.template Mut(i);
       int64_t coord[NDIMS];
       dst_reduced.shape().template Offset2Coordinate<NDIMS>(i, coord);
-      T reduced = UnitOfBinaryFunc<T, binary_func>::value;
+      T reduced = UnitOfBinaryFunc<T, binary_func>::Val();
       while (coord[axis] < x.shape().At(axis)) {
-        reduced = binary_func(reduced, x.template Get<NDIMS>(coord));
+        reduced = binary_func<T>::Invoke(reduced, x.template Get<NDIMS>(coord));
         coord[axis] += dst_dim_val;
       }
       *dst_reduced_ptr = reduced;

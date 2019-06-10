@@ -35,6 +35,7 @@ void ReduceSumKernel<device_type, T>::BackwardDataContent(
       XpuVarNdarray<const T>(reduced_shape, out_diff_blob->dptr<T>()));
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReduceSumConf, ReduceSumKernel, ARITHMETIC_DATA_TYPE_SEQ);
+ADD_GPU_HALF_KERNEL_CREATOR(OperatorConf::kReduceSumConf, ReduceSumKernel,
+                            ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

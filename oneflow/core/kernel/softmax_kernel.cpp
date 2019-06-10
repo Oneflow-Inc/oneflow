@@ -11,20 +11,21 @@ template<DeviceType device_type, typename T>
 void SoftmaxComputeDiff(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* out_diff,
                         const T* out, T* sum_vec, T* in_diff, void* temp_storage,
                         const size_t temp_storage_bytes) {
+  auto Val = NdarrayUtil<device_type, T>::GetValNdarrayBuilder();
+  auto Var = NdarrayUtil<device_type, T>::GetVarNdarrayBuilder();
   // it's safe to use in_diff as tmp
-  // dot product | get dot product sum_vec[i] from out[i] * out_diff[i]
   T* tmp = in_diff;
-  KernelUtil<device_type, T>::Mul(ctx, n * w, out, out_diff, tmp);
-  NdarrayUtil<device_type, T>::ReduceSum(
-      ctx, XpuVarNdarray<T>({n, 1}, sum_vec), XpuVarNdarray<const T>({n, w}, tmp),
-      XpuVarNdarray<T>({static_cast<int64_t>(temp_storage_bytes / sizeof(T))},
-                       reinterpret_cast<T*>(temp_storage)));
+  // dot product | get dot product sum_vec[i] from out[i] * out_diff[i]
+  NdarrayUtil<device_type, T>::Mul(ctx, Var({n, w}, tmp), Val({n, w}, out), Val({n, w}, out_diff));
+  NdarrayUtil<device_type, T>::ReduceSum(ctx, Var({n, 1}, sum_vec), Val({n, w}, tmp),
+                                         Var({static_cast<int64_t>(temp_storage_bytes / sizeof(T))},
+                                             reinterpret_cast<T*>(temp_storage)));
   // copy out_diff to in_diff
-  KernelUtil<device_type, T>::Copy(ctx, n * w, out_diff, 1, in_diff, 1);
+  NdarrayUtil<device_type, T>::Assign(ctx, Var({n, w}, in_diff), Val({n, w}, out_diff));
   // sub | in_diff[i][j] -= sum_vec[i]
-  SoftmaxKernelUtil<device_type, T>::Sub(ctx, n, w, in_diff, sum_vec);
+  NdarrayUtil<device_type, T>::InplaceBroadcastSub(ctx, Var({n, w}, in_diff), Val({n, 1}, sum_vec));
   // elementwise multiplication | in_diff[i][j] *= out[i][j]
-  KernelUtil<device_type, T>::Mul(ctx, n * w, in_diff, out, in_diff);
+  NdarrayUtil<device_type, T>::InplaceMul(ctx, Var({n, w}, in_diff), Val({n, w}, out));
 }
 
 }  // namespace
@@ -32,27 +33,27 @@ void SoftmaxComputeDiff(DeviceCtx* ctx, const int64_t n, const int64_t w, const 
 template<DeviceType device_type, typename T>
 void SoftmaxComputeProb(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* in, T* tmp,
                         T* prob, void* temp_storage, const size_t temp_storage_bytes) {
+  auto Val = NdarrayUtil<device_type, T>::GetValNdarrayBuilder();
+  auto Var = NdarrayUtil<device_type, T>::GetVarNdarrayBuilder();
   // copy in blob to prob blob
-  KernelUtil<device_type, T>::Copy(ctx, n * w, in, 1, prob, 1);
+  NdarrayUtil<device_type, T>::Assign(ctx, Var({n, w}, prob), Val({n, w}, in));
   // max | calculate max of every sample vector prob[i], store in tmp[i]
   //       the prob[i] now is store the data of in[i]
-  NdarrayUtil<device_type, T>::ReduceMax(
-      ctx, XpuVarNdarray<T>({n, 1}, tmp), XpuVarNdarray<const T>({n, w}, prob),
-      XpuVarNdarray<T>({static_cast<int64_t>(temp_storage_bytes / sizeof(T))},
-                       reinterpret_cast<T*>(temp_storage)));
+  NdarrayUtil<device_type, T>::ReduceMax(ctx, Var({n, 1}, tmp), Val({n, w}, prob),
+                                         Var({static_cast<int64_t>(temp_storage_bytes / sizeof(T))},
+                                             reinterpret_cast<T*>(temp_storage)));
   // sub | every element of prob blob subract the max value of the same sample
-  SoftmaxKernelUtil<device_type, T>::Sub(ctx, n, w, prob, tmp);
+  NdarrayUtil<device_type, T>::InplaceBroadcastSub(ctx, Var({n, w}, prob), Val({n, 1}, tmp));
   // exp | exponentiation every element
-  KernelUtil<device_type, T>::Exp(ctx, n * w, prob, prob);
+  NdarrayUtil<device_type, T>::InplaceExp(ctx, Var({n, w}, prob));
   // sum | calculate sum of every sample vector prob[i], store in tmp[i]
   //       the prob[i] now is store the tmp data after exp
-  NdarrayUtil<device_type, T>::ReduceSum(
-      ctx, XpuVarNdarray<T>({n, 1}, tmp), XpuVarNdarray<const T>({n, w}, prob),
-      XpuVarNdarray<T>({static_cast<int64_t>(temp_storage_bytes / sizeof(T))},
-                       reinterpret_cast<T*>(temp_storage)));
+  NdarrayUtil<device_type, T>::ReduceSum(ctx, Var({n, 1}, tmp), Val({n, w}, prob),
+                                         Var({static_cast<int64_t>(temp_storage_bytes / sizeof(T))},
+                                             reinterpret_cast<T*>(temp_storage)));
   // div | every element of prob[i] divided by the data of tmp[i] (the sum
   // value)
-  SoftmaxKernelUtil<device_type, T>::Div(ctx, n, w, prob, tmp);
+  NdarrayUtil<device_type, T>::InplaceBroadcastDiv(ctx, Var({n, w}, prob), Val({n, 1}, tmp));
 }
 
 template<DeviceType device_type, typename T>
@@ -110,24 +111,6 @@ void SoftmaxKernel<device_type, T>::BackwardDataContent(
   }
 }
 
-template<typename T>
-struct SoftmaxKernelUtil<DeviceType::kCPU, T> {
-  static void Sub(DeviceCtx* ctx, const int64_t n, const int64_t w, T* matrix, const T* vector) {
-    for (int64_t i = 0; i < w; ++i) {
-      KernelUtil<DeviceType::kCPU, T>::Axpy(ctx, n, static_cast<T>(-1.0), vector, 1, matrix + i, w);
-    }
-  }
-
-  static void Div(DeviceCtx* ctx, const int64_t n, const int64_t w, T* matrix, const T* vector) {
-    for (int64_t i = 0; i < n; ++i) {
-      KernelUtil<DeviceType::kCPU, T>::Div(ctx, w, matrix + i * w, vector + i);
-    }
-  }
-};
-#define INSTANTIATE_SOFTMAX_KERNEL_UTIL(type_cpp, type_proto) \
-  template struct SoftmaxKernelUtil<DeviceType::kCPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_SOFTMAX_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
-
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSoftmaxConf, SoftmaxKernel, FLOATING_DATA_TYPE_SEQ);
+ADD_GPU_HALF_KERNEL_CREATOR(OperatorConf::kSoftmaxConf, SoftmaxKernel, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

@@ -30,7 +30,7 @@ __global__ void AccuracyComputeKernel(const int32_t N, const int32_t D, const in
       if (pred > label_pred || (pred == label_pred && col <= label)) { ++ngt; }
     }
     ngt = BlockReduce(temp_storage).Sum(ngt);
-    if (ngt <= top_k) { correct += weight ? weight[row] : OneVal<PredType>::value; }
+    if (ngt <= top_k) { correct += weight ? weight[row] : GetOneVal<PredType>(); }
     __syncthreads();
   }
   if (threadIdx.x == 0) { gpu_atomic_add(accuracy, correct); }

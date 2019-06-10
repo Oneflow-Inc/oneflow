@@ -5,7 +5,7 @@ namespace oneflow {
 
 template<typename T>
 void RandomGenerator<DeviceType::kCPU>::Uniform(const int64_t elem_cnt, T* dptr) {
-  Uniform(elem_cnt, ZeroVal<T>::value, OneVal<T>::value, dptr);
+  Uniform(elem_cnt, GetZeroVal<T>(), GetOneVal<T>(), dptr);
 }
 
 template<typename T>

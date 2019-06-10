@@ -36,7 +36,7 @@ void LayerNormKernel<device_type, T>::ForwardDataContent(
     const int64_t m = gamma->shape().elem_cnt();
     CHECK_EQ(out->shape().elem_cnt() % m, 0);
     const int64_t n = out->shape().elem_cnt() / m;
-    NdarrayUtil<device_type, T>::template BroadcastApply<BinaryFuncMul>(
+    NdarrayUtil<device_type, T>::BroadcastMul(
         ctx.device_ctx, XpuVarNdarray<T>({n, m}, out->mut_dptr<T>()),
         XpuVarNdarray<const T>({n, m}, normalize_out->dptr<T>()),
         XpuVarNdarray<const T>({1, m}, gamma->dptr<T>()));
@@ -46,10 +46,10 @@ void LayerNormKernel<device_type, T>::ForwardDataContent(
     const int64_t m = beta->shape().elem_cnt();
     CHECK_EQ(out->shape().elem_cnt() % m, 0);
     const int64_t n = out->shape().elem_cnt() / m;
-    NdarrayUtil<device_type, T>::template BroadcastApply<BinaryFuncAdd>(
-        ctx.device_ctx, XpuVarNdarray<T>({n, m}, out->mut_dptr<T>()),
-        XpuVarNdarray<const T>({n, m}, out->dptr<T>()),
-        XpuVarNdarray<const T>({1, m}, beta->dptr<T>()));
+    NdarrayUtil<device_type, T>::BroadcastAdd(ctx.device_ctx,
+                                              XpuVarNdarray<T>({n, m}, out->mut_dptr<T>()),
+                                              XpuVarNdarray<const T>({n, m}, out->dptr<T>()),
+                                              XpuVarNdarray<const T>({1, m}, beta->dptr<T>()));
   }
 }
 
@@ -78,7 +78,7 @@ void LayerNormKernel<device_type, T>::BackwardDataContent(
     CHECK_EQ(out_diff->shape().elem_cnt() % m, 0);
     const int64_t n = out_diff->shape().elem_cnt() / m;
     if (this->op_conf().trainable()) {
-      NdarrayUtil<device_type, T>::template BroadcastApply<BinaryFuncMul>(
+      NdarrayUtil<device_type, T>::BroadcastMul(
           ctx.device_ctx, XpuVarNdarray<T>({n, m}, bw_buf->mut_dptr<T>()),
           XpuVarNdarray<const T>({n, m}, normalize_out->dptr<T>()),
           XpuVarNdarray<const T>({n, m}, out_diff->dptr<T>()));
@@ -88,7 +88,7 @@ void LayerNormKernel<device_type, T>::BackwardDataContent(
                                              XpuVarNdarray<T>({n, m}, bw_buf->mut_dptr<T>()));
     }
     if (in_diff) {
-      NdarrayUtil<device_type, T>::template BroadcastApply<BinaryFuncMul>(
+      NdarrayUtil<device_type, T>::BroadcastMul(
           ctx.device_ctx, XpuVarNdarray<T>({n, m}, normalize_out->mut_dptr<T>()),
           XpuVarNdarray<const T>({n, m}, out_diff->dptr<T>()),
           XpuVarNdarray<const T>({1, m}, gamma->dptr<T>()));

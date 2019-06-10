@@ -40,12 +40,6 @@ void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
 template<DeviceType device_type>
 void Memset(DeviceCtx*, void* dst, const char value, size_t sz);
 
-#if defined(__CUDACC__)
-#define OF_DEVICE_FUNC __device__ __host__ __forceinline__
-#else
-#define OF_DEVICE_FUNC
-#endif
-
 template<typename T>
 OF_DEVICE_FUNC T ReduceCoreAdd(const T x, const T y) {
   return x + y;
