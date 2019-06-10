@@ -4,16 +4,6 @@
 
 namespace oneflow {
 
-namespace {
-
-bool CudaCanPeerAccess(int32_t device, int32_t peer) {
-  int32_t can_access;
-  CudaCheck(cudaDeviceCanAccessPeer(&can_access, device, peer));
-  return can_access == 1;
-}
-
-}  // namespace
-
 template<DeviceType device_type, typename T>
 void SliceBoxingKernel<device_type, T>::VirtualKernelInit(const ParallelContext*) {
   memory_copier_.reset(NewDefaultMemoryCopier(device_type));
@@ -76,8 +66,7 @@ void SliceBoxingAddKernel<device_type, T>::ForwardDataContent(
             && in_i->mem_case().host_mem().used_by_device())
         || (device_type == DeviceType::kGPU && in_i->mem_case().has_device_cuda_mem()
             && out->mem_case().has_device_cuda_mem()
-            && CudaCanPeerAccess(out->mem_case().device_cuda_mem().device_id(),
-                                 in_i->mem_case().device_cuda_mem().device_id()));
+            && out->mem_case().device_cuda_mem().device_id() == in_i->mem_case().device_cuda_mem().device_id());
     if (in_i->shape() == out->shape() && can_direct_access) {
       Addition<device_type, T>(ctx.device_ctx, out, out, in_i);
     } else {
