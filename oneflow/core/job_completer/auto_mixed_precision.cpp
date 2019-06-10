@@ -34,7 +34,7 @@ void DfsGraphTraversal(
 }
 
 std::function<bool(OpNode*)> MakePredicatorIsAllowedToRunWithHalf(const OpGraph& op_graph) {
-  std::shared_ptr<HashSet<OpNode*>> allowed_set;
+  auto allowed_set = std::make_shared<HashSet<OpNode*>>();
   op_graph.ForEachNode([&](OpNode* node) {
     if (node->parallel_desc().device_type() != DeviceType::kGPU) { return; }
     for (const std::string& obn : node->op().output_bns()) {
@@ -228,7 +228,6 @@ void AutoMixedPrecision::PropagateWhiteThroughNonListNodes(
     const OpGraph& op_graph, std::function<bool(OpNode*)> IsAllowedToRunWithHalf,
     const HashSet<OpNode*>& black_set, HashSet<OpNode*>* white_set) {
   op_graph.ForEachNode([&](OpNode* start_node) {
-    OperatorConf::OpTypeCase op_type = start_node->op().op_conf().op_type_case();
     if (IsAllowedToRunWithHalf(start_node) && IsKeyFound(*white_set, start_node)) {
       DfsGraphTraversal<OpGraph, OpNode>(
           op_graph, std::list<OpNode*>{start_node}, &OpNode::ForEachNodeOnInOutEdge,
