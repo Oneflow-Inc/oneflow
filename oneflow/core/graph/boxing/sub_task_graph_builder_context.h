@@ -20,7 +20,7 @@ class SubTskGphBuilderCtx final {
   void NaiveConnectAll121(const std::vector<T1*>& src_nodes, const std::vector<T2*>& dst_nodes) {
     CHECK_EQ(src_nodes.size(), dst_nodes.size());
     FOR_RANGE(int64_t, i, 0, dst_nodes.size()) {
-      Connect<TaskNode>(dst_nodes.at(i), task_graph()->NewEdge(), dst_nodes.at(i));
+      Connect<TaskNode>(src_nodes.at(i), task_graph()->NewEdge(), dst_nodes.at(i));
     }
   }
 
