@@ -2,5 +2,5 @@
 
 namespace oneflow {
 
-REGISTER_ACTOR(TaskType::kPrint, PrintCompActor);
+// REGISTER_ACTOR(TaskType::kPrint, PrintCompActor);
 }

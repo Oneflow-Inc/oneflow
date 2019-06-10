@@ -208,7 +208,7 @@ void FixTickOpIfExists(Job* job) {
     }
   }
   if (tick_op_conf == nullptr) { return; }
-  if (tick_op_conf->tick_conf().has_tick()) { return; }
+  if (tick_op_conf->tick_conf().tick_size() > 0) { return; }
   std::map<OperatorConf::OpTypeCase, std::vector<OperatorConf*>> op_type_case2source_op_confs;
   FOR_RANGE(int, idx, 0, job->mutable_net()->op_size()) {
     OperatorConf* op_conf = job->mutable_net()->mutable_op(idx);
@@ -230,8 +230,8 @@ void FixTickOpIfExists(Job* job) {
   CHECK_GE(source_op->output_bns().size(), 1);
   LogicalBlobId src_first_output_lbi = source_op->BnInOp2Lbi(source_op->output_bns().Get(0));
   std::string source_op_output_lbn = GenLogicalBlobName(src_first_output_lbi);
-  CHECK_EQ(tick_op_conf->tick_conf().has_tick(), false);
-  tick_op_conf->mutable_tick_conf()->set_tick(source_op_output_lbn);
+  CHECK(tick_op_conf->tick_conf().tick().empty());
+  tick_op_conf->mutable_tick_conf()->add_tick(source_op_output_lbn);
   // fix tick op placement
   *MutParallelConf4OpName(tick_op_conf->name()) = *source_parallel_conf;
   // add log_counter op connecting to tick op, making tick op always consumed
@@ -571,10 +571,10 @@ void JobCompleter::Complete(Job* job) const {
     WithOpGraphAndMutJob(job, &AutoSourceTick);
     WithOpGraphAndMutJob(job, &AddTickForTimeShape);
     WithOpGraphAndMutJob(job, &AutoSinkTick);
-    // add keep_header_only op
     WithOpGraphAndMutJob(job, &RewriteBoxingWithAllReduce);
     WithOpGraphAndMutJob(job, &FreezeSbpSignature);
     WithOpGraphAndMutJob(job, &GroupBoxingByDstParallel);
+    // add keep_header_only op
     WithOpGraphAndMutJob(job, &AddKeepHeaderOnlyOp);
     WithOpGraphAndMutJob(job, &SetOpTimeShape7CtrlInOpName7ModelLbis);
     CheckOpGraph(OpGraph(*job));

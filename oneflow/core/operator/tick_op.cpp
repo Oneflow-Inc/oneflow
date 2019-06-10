@@ -4,13 +4,17 @@
 namespace oneflow {
 
 void TickOp::InitFromOpConf() {
-  if (op_conf().tick_conf().has_tick()) { EnrollInputBn("tick", false); }
+  EnrollRepeatedInputBn("tick", false);
   EnrollOutputBn("out", false);
 }
 
 void TickOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx) const {
   GetBlobDesc4BnInOp("out")->mut_shape() = Shape({1});
+}
+
+void TickOp::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  *HasBatchDim4BnInOp("out") = false;
 }
 
 void TickOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {

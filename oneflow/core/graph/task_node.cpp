@@ -127,6 +127,21 @@ void TaskNode::InferTimeShapeIfMeaningful() {
   if (!IsMeaningLess()) { InferProducedDataRegstTimeShape(); }
 }
 
+std::shared_ptr<Shape> TaskNode::GetFastestInputOutputTimeShape() const {
+  std::shared_ptr<Shape> shape;
+  auto UpdateRetShape = [&](TaskEdge* edge) {
+    for (const auto& regst : edge->GetRegsts()) {
+      if (!shape || shape->elem_cnt() < regst->data_regst_time_shape()->elem_cnt()) {
+        shape = regst->data_regst_time_shape();
+      }
+    }
+  };
+  ForEachOutDataEdge(UpdateRetShape);
+  if (shape) { return shape; }
+  ForEachInDataEdge(UpdateRetShape);
+  return shape;
+}
+
 void TaskNode::ForEachConsumedDataRegst(
     std::function<void(const std::string&, const RegstDesc*)> Handler) const {
   for (const auto& pair : consumed_regsts_) {
@@ -319,6 +334,10 @@ void TaskNode::PinConsumedRegstMemCase(MemoryCase* mem_case) {
   }
 }
 
+void TaskNode::ConsumeRegst(const std::string& name) {
+  consumed_regsts_.emplace(name, std::list<std::shared_ptr<RegstDesc>>{});
+}
+
 void TaskNode::ConsumeRegst(const std::string& name, std::shared_ptr<RegstDesc> regst) {
   regst->AddConsumer(this);
   consumed_regsts_[name].push_back(regst);
@@ -485,6 +504,8 @@ std::map<TaskType, std::string> task_type2color = {{kInvalid, "0"},
                                                    {kNormalForward, "2"},
                                                    {kNormalBackward, "3"},
                                                    {kSourceTick, "1"},
+                                                   {kTick, "1"},
+                                                   {kSinkTick, "1"},
                                                    {kRecordLoad, "1"},
                                                    {kDecode, "1"},
                                                    {kLoss, "4"},
