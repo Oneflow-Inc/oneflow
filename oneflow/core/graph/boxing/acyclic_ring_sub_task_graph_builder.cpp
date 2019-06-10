@@ -50,6 +50,24 @@ SubTskGphBuilderStatus AcyclicRingSubTskGphBuilder::Build(
     node->Init(lbi, slice, mode, machine_id, thrd_id);
     return node;
   };
+  const auto CreateBoxingNodeToHost =
+      [&ctx, &lbi, &GetBoxingGpuThrdId, &NewEdge](
+          TaskNode* src_node, const TensorSliceView& src_slice,
+          const TensorSliceView& dst_slice) -> SliceBoxingTaskNode* {
+    SliceBoxingTaskNode* dst_node = ctx->task_graph()->NewNode<SliceBoxingTaskNode>();
+    int64_t thrd_id = -1;
+    if (src_node->device_type() == DeviceType::kCPU) {
+      thrd_id = Global<IDMgr>::Get()->PickCpuThrdIdEvenly(src_node->machine_id());
+    } else if (src_node->device_type() == DeviceType::kGPU) {
+      thrd_id = GetBoxingGpuThrdId(src_node->GpuPhyId(), CudaWorkType::kBoxingD2H);
+    } else {
+      UNIMPLEMENTED();
+    }
+    dst_node->Init(lbi, dst_slice, kSliceBoxingTaskModeCopy, src_node->machine_id(), thrd_id,
+                   MakeHostMemCase());
+    dst_node->ConnectToSrcNodeWithSlice(src_node, NewEdge(), src_slice);
+    return dst_node;
+  };
   const auto BuildSubTaskGphS2B = [&ctx, &CreateBoxingNode121, &NewEdge, &RingNextParallelId,
                                    &parallel_desc](const SbpParallel& in_sbp,
                                                    const SbpParallel& out_sbp,
@@ -95,11 +113,11 @@ SubTskGphBuilderStatus AcyclicRingSubTskGphBuilder::Build(
     }
   };
   const auto BuildSubTaskGphP2S = [&ctx, &CreateBoxingNode121, &NewEdge, &RingNextParallelId,
-                                   &parallel_desc](const SbpParallel& in_sbp,
-                                                   const SbpParallel& out_sbp,
-                                                   const BlobDesc& blob_desc,
-                                                   const std::vector<TaskNode*> in_nodes,
-                                                   std::vector<TaskNode*>* out_nodes) {
+                                   &parallel_desc, &CreateBoxingNodeToHost](
+                                      const SbpParallel& in_sbp, const SbpParallel& out_sbp,
+                                      const BlobDesc& blob_desc,
+                                      const std::vector<TaskNode*> in_nodes,
+                                      std::vector<TaskNode*>* out_nodes) {
     CHECK(SubTskGphBuilderUtil::IsBoxingP2S(in_sbp, out_sbp));
     const TensorSliceView in_slice = SubTskGphBuilderUtil::GetBroadcastTensorSliceView(blob_desc);
     const std::vector<TensorSliceView> out_slices =
@@ -107,25 +125,24 @@ SubTskGphBuilderStatus AcyclicRingSubTskGphBuilder::Build(
     FOR_RANGE(int64_t, out_id, 0, parallel_desc.parallel_num()) {
       const TensorSliceView& out_slice = out_slices.at(out_id);
       int64_t send_id = RingNextParallelId(out_id);
-      SliceBoxingTaskNode* first_boxing_node =
-          CreateBoxingNode121(parallel_desc, send_id, out_slice, kSliceBoxingTaskModeAdd);
-      first_boxing_node->ConnectToSrcNodeWithSlice(in_nodes.at(send_id), NewEdge(), in_slice);
-      TaskNode* send_node = first_boxing_node;
+      TaskNode* send_node = in_nodes.at(send_id);
+      const TensorSliceView* send_slice = &in_slice;
       while (send_id != out_id) {
         int64_t recv_id = RingNextParallelId(send_id);
         SliceBoxingTaskNode* recv_boxing_node =
             CreateBoxingNode121(parallel_desc, recv_id, out_slice, kSliceBoxingTaskModeAdd);
         recv_boxing_node->ConnectToSrcNodeWithSlice(in_nodes.at(recv_id), NewEdge(), in_slice);
         if (send_node->machine_id() == recv_boxing_node->machine_id()) {
-          recv_boxing_node->ConnectToSrcNodeWithSlice(send_node, NewEdge(), out_slice);
+          recv_boxing_node->ConnectToSrcNodeWithSlice(send_node, NewEdge(), *send_slice);
         } else {
-          TaskNode* proxy_node = ctx->GetProxyNode(send_node, GetDefaultMemCase(send_node),
-                                                   recv_boxing_node->machine_id(),
-                                                   GetDefaultMemCase(recv_boxing_node));
+          TaskNode* host_copy = CreateBoxingNodeToHost(send_node, *send_slice, out_slice);
+          TaskNode* proxy_node = ctx->GetProxyNode(
+              host_copy, MakeHostMemCase(), recv_boxing_node->machine_id(), MakeHostMemCase());
           recv_boxing_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), out_slice);
         }
         send_node = recv_boxing_node;
         send_id = recv_id;
+        send_slice = &out_slice;
       }
       out_nodes->push_back(send_node);
     }
