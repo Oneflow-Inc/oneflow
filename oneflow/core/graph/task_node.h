@@ -83,6 +83,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void BuildCtrlRegstDescIfNeed(TaskNode* dst_node);
   RegstDesc* BuildCtrlRegstDesc(TaskNode* dst_node);
   RegstDesc* BuildCtrlRegstDesc(TaskNode* dst_node, std::string* name);
+  std::shared_ptr<Shape> GetFastestInputOutputTimeShape() const;
 
   void ForEachInDataEdge(const std::function<void(TaskEdge*)>& Handler) const;
   void ForEachOutDataEdge(const std::function<void(TaskEdge*)>& Handler) const;
@@ -108,6 +109,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void InitProducedRegstMemCase(RegstDesc* regst);
   virtual void InitProducedRegstMemCase(MemoryCase*);
   virtual void PinConsumedRegstMemCase(MemoryCase*);
+  void ConsumeRegst(const std::string& name);
   void ConsumeRegst(const std::string& name, std::shared_ptr<RegstDesc>);
   bool IsAllConsumedDataRegstLocked();
   ExecGraph& mut_exec_gph() { return exec_gph_; }

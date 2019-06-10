@@ -61,4 +61,17 @@ std::ostream& operator<<(std::ostream& out, const Shape& shape);
 
 }  // namespace oneflow
 
+namespace std {
+
+template<>
+struct hash<oneflow::Shape> {
+  size_t operator()(const oneflow::Shape& shape) const {
+    size_t ret = 0;
+    FOR_RANGE(int, i, 0, shape.elem_cnt()) { ret ^= std::hash<int64_t>()(shape.At(i)); }
+    return ret;
+  }
+};
+
+}  // namespace std
+
 #endif  // ONEFLOW_CORE_COMMON_SHAPE_H_

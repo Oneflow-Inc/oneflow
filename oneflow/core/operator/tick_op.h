@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_OPERATOR_TICK_OP_H_
 
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
@@ -15,13 +16,10 @@ class TickOp final : public Operator {
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
   const PbMessage& GetCustomizedConf() const override { return op_conf().tick_conf(); }
+  LogicalNode* NewProperLogicalNode() const override { return new TickLogicalNode; }
 
  private:
-  void InferHasBatchDim(
-      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {
-    NaiveInferHasBatchDim(HasBatchDim4BnInOp);
-  }
-
+  void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
   void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 };
 
