@@ -199,6 +199,11 @@ message PReluKernelConf {
   repeated int32 perm = 1;
 }
 
+message WhereKernelConf {
+  required DataType cond_type = 1;
+  required DataType value_type = 2;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
@@ -246,5 +251,6 @@ message KernelConf {
     RecordLoadKernelConf record_load_conf = 422;
     PReluKernelConf prelu_conf = 423;
     SmoothL1LossKernelConf smooth_l1_loss_conf = 424;
+    WhereKernelConf where_conf = 425;
   }
 }

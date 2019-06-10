@@ -1492,45 +1492,13 @@ message BoxDecodeOpConf {
   required BBoxRegressionWeights regression_weights = 4;
 }
 
-message EqualConf {
-  required float scalar = 1;
-}
-
-message NonEqualConf {
-  required float scalar = 1;
-}
-
-message GreaterThanConf {
-  required float scalar = 1;
-}
-
-message GreaterEqualConf {
-  required float scalar = 1;
-}
-
-message LessThanConf {
-  required float scalar = 1;
-}
-
-message LessEqualConf {
-  required float scalar = 1;
-}
-
-message Condition {
-  oneof compare_type {
-    EqualConf equal_conf = 3;
-    NonEqualConf non_equal_conf = 4;
-    GreaterThanConf greater_than_conf = 5;
-    GreaterEqualConf greater_equal_conf = 6;
-    LessThanConf less_than_conf = 7;
-    LessEqualConf less_equal_conf = 8;
-  }
-}
-
 message WhereOpConf {
-  required string in = 1;
-  repeated Condition condition = 2;
-  required string out = 3;
+  // in
+  required string condition = 1;
+  required string lhs = 2;
+  required string rhs = 3;
+  // out
+  required string out = 4;
 }
 
 message OperatorConf {
