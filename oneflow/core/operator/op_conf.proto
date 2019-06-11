@@ -1512,6 +1512,12 @@ message ClipByValueOpConf {
   required string out = 4;
 }
 
+message ConstantLikeOpConf {
+  required string in = 1;
+  required float scalar = 2;
+  required string out = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1639,6 +1645,7 @@ message OperatorConf {
     WhereOpConf where_conf = 301;
     LogicalAndOpConf logical_and_conf = 302;
     ClipByValueOpConf clip_by_value_conf = 303;
+    ConstantLikeOpConf constant_like_conf = 304;
 
     // Maybe not needed
     RedefineDim0OpConf redefine_dim0_conf = 400;
