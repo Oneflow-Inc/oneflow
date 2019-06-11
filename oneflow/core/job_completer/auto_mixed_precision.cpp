@@ -151,7 +151,7 @@ void AutoMixedPrecision::SetBlackSet(const OpGraph& op_graph, HashSet<OpNode*>* 
     if (IsKeyFound(upstream_or_part_of_black_and_gray, start_node)) { return; }
     if (IsKeyFound(black_list_, op_type) || IsKeyFound(gray_list_, op_type)) {
       DfsGraphTraversal<OpGraph, OpNode>(
-          op_graph, std::list<OpNode*>{start_node}, &OpNode::ForEachNodeOnOutEdge,
+          op_graph, std::list<OpNode*>{start_node}, &OpNode::ForEachNodeOnInEdge,
           [&](OpNode* node) -> bool {
             return (node == start_node)
                    || (!IsKeyFound(upstream_or_part_of_black_and_gray, node)
@@ -171,7 +171,7 @@ void AutoMixedPrecision::SetBlackSet(const OpGraph& op_graph, HashSet<OpNode*>* 
     if (IsKeyFound(*black_set, start_node)) { return; }
     if (!IsKeyFound(black_list_, op_type)) { return; }
     DfsGraphTraversal<OpGraph, OpNode>(
-        op_graph, std::list<OpNode*>{start_node}, &OpNode::ForEachNodeOnInEdge,
+        op_graph, std::list<OpNode*>{start_node}, &OpNode::ForEachNodeOnOutEdge,
         [&](OpNode* node) -> bool {
           return (node == start_node)
                  || (!IsKeyFound(*black_set, node)
@@ -194,7 +194,7 @@ void AutoMixedPrecision::SetWhiteSet(const OpGraph& op_graph,
     if (IsKeyFound(upstream_or_part_of_white, start_node)) { return; }
     if (IsAllowedToRunWithHalf(start_node) && IsKeyFound(white_list_, op_type)) {
       DfsGraphTraversal<OpGraph, OpNode>(
-          op_graph, std::list<OpNode*>{start_node}, &OpNode::ForEachNodeOnOutEdge,
+          op_graph, std::list<OpNode*>{start_node}, &OpNode::ForEachNodeOnInEdge,
           [&](OpNode* node) -> bool {
             return (node == start_node)
                    || (!IsKeyFound(upstream_or_part_of_white, node) && !IsKeyFound(black_set, node)
@@ -213,7 +213,7 @@ void AutoMixedPrecision::SetWhiteSet(const OpGraph& op_graph,
     if (IsKeyFound(*white_set, start_node)) { return; }
     if (IsAllowedToRunWithHalf(start_node) && IsKeyFound(white_list_, op_type)) {
       DfsGraphTraversal<OpGraph, OpNode>(
-          op_graph, std::list<OpNode*>{start_node}, &OpNode::ForEachNodeOnInEdge,
+          op_graph, std::list<OpNode*>{start_node}, &OpNode::ForEachNodeOnOutEdge,
           [&](OpNode* node) -> bool {
             return (node == start_node)
                    || (!IsKeyFound(*white_set, node)
