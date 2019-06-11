@@ -436,10 +436,6 @@ void OpKernelTestCase::RunKernel(Operator* op, OpContext* op_context) {
     SwitchSyncStream(SwitchCase(default_device_type()), &kernel_ctx_);
   };
   Launch(true);
-  if (Global<JobDesc>::Get()->IsTrain() && !is_forward_) {
-    initiation_before_backward_();
-    Launch(false);
-  }
 }
 
 void OpKernelTestCase::Run() {
@@ -459,9 +455,6 @@ std::list<std::string> DiffKernelImplTestCase::AllInputBlobNames() const {
 
 std::list<std::string> DiffKernelImplTestCase::AllOutputBlobNamesWithValidBlob() const {
   std::list<std::string> all_output_blob_names(output_blob_names_);
-  if (Global<JobDesc>::Get()->IsTrain() && !is_forward()) {
-    for (const auto& bn : input_diff_blob_names_) { all_output_blob_names.push_back(bn); }
-  }
   for (const auto& bn_in_op : all_output_blob_names) {
     CHECK(bn_in_op2blob().find(bn_in_op) != bn_in_op2blob().end());
   }
