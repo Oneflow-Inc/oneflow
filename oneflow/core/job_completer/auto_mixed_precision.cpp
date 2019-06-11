@@ -136,15 +136,15 @@ void AutoMixedPrecision::Apply(const OpGraph& op_graph, Job* job) {
 
   HashSet<OpNode*> black_set;
   HashSet<OpNode*> white_set;
-  SetBlackSet(op_graph, &black_set);
+  FillBlackSet(op_graph, &black_set);
 
   auto IsAllowedToRunWithHalf = MakePredicatorIsAllowedToRunWithHalf(op_graph);
-  SetWhiteSet(op_graph, IsAllowedToRunWithHalf, black_set, &white_set);
+  FillWhiteSet(op_graph, IsAllowedToRunWithHalf, black_set, &white_set);
   PropagateWhiteThroughNonListNodes(op_graph, IsAllowedToRunWithHalf, black_set, &white_set);
   InsertCastOp(op_graph, white_set, job);
 }
 
-void AutoMixedPrecision::SetBlackSet(const OpGraph& op_graph, HashSet<OpNode*>* black_set) {
+void AutoMixedPrecision::FillBlackSet(const OpGraph& op_graph, HashSet<OpNode*>* black_set) {
   HashSet<OpNode*> upstream_or_part_of_black_and_gray;
   op_graph.ForEachNode([&](OpNode* start_node) {
     OperatorConf::OpTypeCase op_type = start_node->op().op_conf().op_type_case();
@@ -159,7 +159,7 @@ void AutoMixedPrecision::SetBlackSet(const OpGraph& op_graph, HashSet<OpNode*>* 
           },
           [&](OpNode* node) {
             INSERT_CHECK(upstream_or_part_of_black_and_gray.insert(node));
-            VLOG(1) << "SetBlackSet(): Insert " << node->op().op_name()
+            VLOG(1) << "FillBlackSet(): Insert " << node->op().op_name()
                     << " to upstream_or_part_of_black_and_gray";
           });
     }
@@ -179,15 +179,15 @@ void AutoMixedPrecision::SetBlackSet(const OpGraph& op_graph, HashSet<OpNode*>* 
         },
         [&](OpNode* node) {
           INSERT_CHECK(black_set->insert(node));
-          VLOG(1) << "SetBlackSet(): Insert " << node->op().op_name() << " to black_set";
+          VLOG(1) << "FillBlackSet(): Insert " << node->op().op_name() << " to black_set";
         });
   });
 }
 
-void AutoMixedPrecision::SetWhiteSet(const OpGraph& op_graph,
-                                     std::function<bool(OpNode*)> IsAllowedToRunWithHalf,
-                                     const HashSet<OpNode*>& black_set,
-                                     HashSet<OpNode*>* white_set) {
+void AutoMixedPrecision::FillWhiteSet(const OpGraph& op_graph,
+                                      std::function<bool(OpNode*)> IsAllowedToRunWithHalf,
+                                      const HashSet<OpNode*>& black_set,
+                                      HashSet<OpNode*>* white_set) {
   HashSet<OpNode*> upstream_or_part_of_white;
   op_graph.ForEachNode([&](OpNode* start_node) {
     OperatorConf::OpTypeCase op_type = start_node->op().op_conf().op_type_case();
@@ -202,7 +202,7 @@ void AutoMixedPrecision::SetWhiteSet(const OpGraph& op_graph,
           },
           [&](OpNode* node) {
             INSERT_CHECK(upstream_or_part_of_white.insert(node));
-            VLOG(1) << "SetWhiteSet(): Insert " << node->op().op_name()
+            VLOG(1) << "FillWhiteSet(): Insert " << node->op().op_name()
                     << " to upstream_or_part_of_white";
           });
     }
@@ -221,7 +221,7 @@ void AutoMixedPrecision::SetWhiteSet(const OpGraph& op_graph,
           },
           [&](OpNode* node) {
             INSERT_CHECK(white_set->insert(node));
-            VLOG(1) << "SetWhiteSet(): Insert " << node->op().op_name() << " to white_set";
+            VLOG(1) << "FillWhiteSet(): Insert " << node->op().op_name() << " to white_set";
           });
     }
   });

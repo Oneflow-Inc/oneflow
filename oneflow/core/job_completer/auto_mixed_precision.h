@@ -19,9 +19,9 @@ class AutoMixedPrecision final {
   void Apply(const OpGraph& op_graph, Job* job);
 
  private:
-  void SetBlackSet(const OpGraph& op_graph, HashSet<OpNode*>* black_set);
-  void SetWhiteSet(const OpGraph& op_graph, std::function<bool(OpNode*)> IsAllowedToRunWithHalf,
-                   const HashSet<OpNode*>& black_set, HashSet<OpNode*>* white_set);
+  void FillBlackSet(const OpGraph& op_graph, HashSet<OpNode*>* black_set);
+  void FillWhiteSet(const OpGraph& op_graph, std::function<bool(OpNode*)> IsAllowedToRunWithHalf,
+                    const HashSet<OpNode*>& black_set, HashSet<OpNode*>* white_set);
   void PropagateWhiteThroughNonListNodes(const OpGraph& op_graph,
                                          std::function<bool(OpNode*)> IsAllowedToRunWithHalf,
                                          const HashSet<OpNode*>& black_set,
