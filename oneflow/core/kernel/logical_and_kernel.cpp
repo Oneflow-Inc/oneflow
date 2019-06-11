@@ -38,6 +38,6 @@ struct LogicalAndUtil<DeviceType::kCPU, T> {
   }
 };
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kLogicalAndConf, LogicalAndKernel, FLOATING_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kLogicalAndConf, LogicalAndKernel, INT_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

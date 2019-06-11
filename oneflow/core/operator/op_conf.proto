@@ -1465,13 +1465,6 @@ message MatcherOpConf {
   optional bool allow_low_quality_matches = 6 [default = true];
 }
 
-message ClampOpConf {
-  required string in = 1;
-  required string out = 2;
-  required float min = 3;
-  required float max = 4;
-}
-
 message BoxEncodeOpConf {
   // in
   required string ref_boxes = 1;
@@ -1507,6 +1500,16 @@ message LogicalAndOpConf {
   required string rhs = 2;
   // out
   required string out = 3;
+}
+
+message ClipByValueOpConf {
+  // in
+  required string in = 1;
+  // conf
+  required float min_val = 2;
+  required float max_val = 3;
+  // out
+  required string out = 4;
 }
 
 message OperatorConf {
@@ -1633,9 +1636,9 @@ message OperatorConf {
     Conv1DV2OpConf conv_1d_v2_conf = 292;
     Conv2DV2OpConf conv_2d_v2_conf = 293;
     Conv3DV2OpConf conv_3d_v2_conf = 294;
-    ClampOpConf clamp_conf = 300;
     WhereOpConf where_conf = 301;
     LogicalAndOpConf logical_and_conf = 302;
+    ClipByValueOpConf clip_by_value_conf = 303;
 
     // Maybe not needed
     RedefineDim0OpConf redefine_dim0_conf = 400;
