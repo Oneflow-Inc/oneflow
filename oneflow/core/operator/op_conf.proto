@@ -1501,6 +1501,14 @@ message WhereOpConf {
   required string out = 4;
 }
 
+message LogicalAndOpConf {
+  // in
+  required string lhs = 1;
+  required string rhs = 2;
+  // out
+  required string out = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1627,6 +1635,7 @@ message OperatorConf {
     Conv3DV2OpConf conv_3d_v2_conf = 294;
     ClampOpConf clamp_conf = 300;
     WhereOpConf where_conf = 301;
+    LogicalAndOpConf logical_and_conf = 302;
 
     // Maybe not needed
     RedefineDim0OpConf redefine_dim0_conf = 400;
