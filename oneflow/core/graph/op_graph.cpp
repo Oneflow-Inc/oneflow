@@ -754,9 +754,19 @@ std::function<bool(const OpNode*, const OpNode*)> OpGraph::MakePredicatorIsDataO
     const {
   auto _1 = std::placeholders::_1;
   auto _2 = std::placeholders::_2;
-  return MakePredicatorIsReachable(source_nodes(),
+  return MakePredicatorIsReachable(DataOrCtrlSourceNodes(),
                                    std::bind(&OpGraph::ForEachDataAndCtrlInNode, this, _1, _2),
                                    std::bind(&OpGraph::ForEachDataAndCtrlOutNode, this, _1, _2));
+}
+
+std::list<OpNode*> OpGraph::DataOrCtrlSourceNodes() const {
+  std::list<OpNode*> ret;
+  ForEachNode([&](OpNode* op_node) {
+    size_t in_edges_cnt = 0;
+    ForEachDataAndCtrlInNode(op_node, [&](OpNode*) { ++in_edges_cnt; });
+    if (in_edges_cnt == 0) { ret.push_back(op_node); }
+  });
+  return ret;
 }
 
 }  // namespace oneflow

@@ -159,6 +159,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
       const std::function<bool(OpNode* src, OpNode* dst)>& IsReachable) const;
 
   std::function<bool(const OpNode*, const OpNode*)> MakePredicatorIsDataOrCtrlReachable() const;
+  std::list<OpNode*> DataOrCtrlSourceNodes() const;
 
   int64_t GetSplitNum(const std::string& op_name, const LogicalBlobId& lbi) const;
   HashMap<std::string, OpNode*> op_name2op_node_;
