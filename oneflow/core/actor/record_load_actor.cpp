@@ -27,7 +27,7 @@ void RecordLoadActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   if (record_load_status_.record_num > 0) { HandleProducedNaiveDataRegstToConsumer(); }
 }
 
-bool RecordLoadActor::IsCustomizedReadReady() {
+bool RecordLoadActor::IsCustomizedReadReady() const {
   return !is_eof_ && piece_id_ < Global<RuntimeCtx>::Get()->total_piece_num();
 }
 
