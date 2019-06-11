@@ -107,7 +107,7 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
         INSERT_CHECK(
             dst_op_name2dst_op_confs.insert(std::make_pair(dst_op_name, dst_node->op().op_conf())));
       }
-      OperatorConf dst_op_conf = dst_op_name2dst_op_confs.at(dst_op_name);
+      OperatorConf& dst_op_conf = dst_op_name2dst_op_confs.at(dst_op_name);
       PbMessage* dst_op_type_conf =
           MutableMessageInPbMessage(&dst_op_conf, dst_op_conf.op_type_case());
       std::string lbn = cast_op_conf.name() + "/out";
