@@ -323,6 +323,36 @@ void TaskGraph::BuildCtrlRegstDescInSameChain() {
   }
 }
 
+void TaskGraph::AddReduceSequenceCtrlEdges() {
+  HashMap<int64_t, std::vector<ReduceSplitCompTaskNode*>> global_thrd_id2split_nodes;
+  for (auto* node : ordered_task_nodes_) {
+    auto* split_node = dynamic_cast<ReduceSplitCompTaskNode*>(node);
+    if (split_node == nullptr) { continue; }
+    int64_t global_thrd_id = Global<IDMgr>::Get()->GlobalThrdId4TaskId(split_node->task_id());
+    global_thrd_id2split_nodes[global_thrd_id].push_back(split_node);
+  }
+  auto GetCtrlOrder = MakeGetterReduceTaskNodeCtrlOrder<ReduceSplitLogicalNode>(*logical_gph_);
+  for (auto& pair : global_thrd_id2split_nodes) {
+    auto& split_nodes = pair.second;
+    std::sort(split_nodes.begin(), split_nodes.end(),
+              [&](ReduceSplitCompTaskNode* lhs, ReduceSplitCompTaskNode* rhs) {
+                return GetCtrlOrder(lhs->logical_node()) < GetCtrlOrder(rhs->logical_node());
+              });
+    ReduceSplitCompTaskNode* prev_split_node = split_nodes.at(0);
+    for (auto* split_node : split_nodes) {
+      if (prev_split_node != split_node) {
+        auto* to_node = split_node->GetPrevReduceTaskNode(TaskType::kReduceIdentity);
+        TaskNode* from_node = prev_split_node;
+        if (GetCtrlOrder(split_node->logical_node()) < 0) {
+          from_node = prev_split_node->GetPrevReduceTaskNode(TaskType::kReduceIdentity);
+        }
+        from_node->BuildCtrlRegstDescIfNeed(to_node);
+      }
+      prev_split_node = split_node;
+    }
+  }
+}
+
 void TaskGraph::EnableMemSharingInReduceStruct() {
   auto GetSuccReduceTaskNode = [](TaskNode* pred) {
     std::vector<TaskNode*> nodes;

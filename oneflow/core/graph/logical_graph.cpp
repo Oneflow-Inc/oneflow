@@ -7,41 +7,6 @@
 
 namespace oneflow {
 
-namespace {
-
-std::function<bool(const LogicalNode*)> MakePredicatorHasActualOutDiff(const LogicalGraph* graph) {
-  std::list<LogicalNode*> loss_nodes;
-  graph->ForEachNode([&](LogicalNode* node) {
-    if (dynamic_cast<LossLogicalNode*>(node)) { loss_nodes.push_back(node); }
-  });
-  auto nodes_have_actual_out_diff_ptr = std::make_shared<HashSet<const LogicalNode*>>();
-  auto HasBwConnection = [](const LogicalNode* prev, const LogicalNode* next) {
-    HashSet<LogicalBlobId> idbn_lbis;
-    for (const auto& idbn : next->SoleOp()->input_diff_bns()) {
-      idbn_lbis.insert(next->SoleOp()->BnInOp2Lbi(idbn));
-    }
-    for (const auto& odbn : prev->SoleOp()->output_diff_bns()) {
-      LogicalBlobId lbi = prev->SoleOp()->BnInOp2Lbi(odbn);
-      if (idbn_lbis.find(lbi) != idbn_lbis.end()) { return true; }
-    }
-    return false;
-  };
-  auto ForEachNext = [&](LogicalNode* node, const std::function<void(LogicalNode*)>& Handler) {
-    node->ForEachNodeOnInEdge([&](LogicalNode* in_node) {
-      if (HasBwConnection(in_node, node)) { Handler(in_node); }
-    });
-  };
-  graph->BfsForEachNode(loss_nodes, ForEachNext,
-                        [nodes_have_actual_out_diff_ptr](LogicalNode* node) {
-                          nodes_have_actual_out_diff_ptr->insert(node);
-                        });
-  return [nodes_have_actual_out_diff_ptr](const LogicalNode* node) {
-    return nodes_have_actual_out_diff_ptr->find(node) != nodes_have_actual_out_diff_ptr->end();
-  };
-}
-
-}  // namespace
-
 LogicalGraph::LogicalGraph(const Job& job) : job_(job) {
   BuildFwStruct();
   MergeEdge();
@@ -65,7 +30,6 @@ void LogicalGraph::BuildFwStruct() {
   HashMap<std::string, std::vector<LogicalNode*>> op_name2nodes;
   NaiveBuildFwStruct(&op_name2nodes);
   ReplaceAllReduceFacades();
-  FixSharedModelNodes(op_name2nodes);
   LinkUnpackFw2PackFw(op_name2nodes);
   total_mbn_num_ = 0;
   ForEachNode([&](LogicalNode* node) {
@@ -159,37 +123,6 @@ void LogicalGraph::NaiveBuildFwStruct(
     cur_node->set_consumed_batch_dim_lbis_cnt(consumed_batch_dim_lbis_cnt);
     cur_node->set_produced_batch_dim_lbis_cnt(produced_batch_dim_lbis_cnt);
   });
-}
-
-void LogicalGraph::FixSharedModelNodes(
-    const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes) {
-  HashSet<std::string> all_shared_model_op_names;
-  const DLNetConf& dlnet_conf = job_.net();
-  for (const OpNameSet& op_name_set : dlnet_conf.shared_model_group()) {
-    std::vector<std::string> shared_model_op_names(op_name_set.op_name().begin(),
-                                                   op_name_set.op_name().end());
-    SortAndRemoveDuplication(&shared_model_op_names);
-    CHECK_GE(shared_model_op_names.size(), 2);
-
-    auto shared_model_nodes = std::make_shared<std::vector<LogicalNode*>>();
-    shared_model_nodes->reserve(shared_model_op_names.size());
-    for (const std::string& op_name : shared_model_op_names) {
-      CHECK(all_shared_model_op_names.insert(op_name).second);
-      CHECK_EQ(op_name2nodes.at(op_name).size(), 1);
-      shared_model_nodes->push_back(op_name2nodes.at(op_name).front());
-    }
-
-    for (LogicalNode* cur_node : *shared_model_nodes) {
-      cur_node->mut_shared_model_nodes() = shared_model_nodes;
-    }
-
-    const std::string& shared_op_name = shared_model_nodes->front()->SoleOp()->op_name();
-    const ParallelDesc* shared_parallel_desc = shared_model_nodes->front()->parallel_desc().get();
-    FOR_RANGE(size_t, i, 1, shared_model_nodes->size()) {
-      shared_model_nodes->at(i)->SoleOp()->FixLbiWhenShareModel(shared_op_name);
-      CHECK(shared_model_nodes->at(i)->parallel_desc()->Equals(shared_parallel_desc));
-    }
-  }
 }
 
 void LogicalGraph::LinkUnpackFw2PackFw(

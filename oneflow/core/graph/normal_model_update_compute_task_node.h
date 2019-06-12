@@ -25,7 +25,6 @@ class NormalMdUpdtCompTaskNode final : public CompTaskNode {
 
  private:
   const NormalForwardCompTaskNode* GetForwardTaskNode() const;
-  bool IsTrainable() const;
   void FixPackedBlobDescOfProducedRegst() override;
   void InferProducedDataRegstTimeShape() override;
   uint32_t random_seed_;
