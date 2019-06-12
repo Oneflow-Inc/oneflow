@@ -121,6 +121,9 @@ Plan Compiler::DoCompile() {
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::PinConsumedRegst, _1));
   task_gph->MdUpdtDelayedTopoForEachNode(&TaskNode::Build);
+  if (job_desc->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+    task_gph->AddReduceSequenceCtrlEdges();
+  }
   task_gph->RemoveEmptyRegsts();
   task_gph->AddOrderingCtrlEdgeInSameChain();
   task_gph->EnableMemSharingInReduceStruct();
