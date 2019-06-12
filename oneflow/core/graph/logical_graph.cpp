@@ -43,11 +43,11 @@ std::function<bool(const LogicalNode*)> MakePredicatorHasActualOutDiff(const Log
 }  // namespace
 
 LogicalGraph::LogicalGraph(const Job& job) : job_(job) {
-  bool is_train = Global<JobDesc>::Get()->IsTrain();
   BuildFwStruct();
   MergeEdge();
   SetNodeDataLbi();
-  BuildModelStruct(is_train);
+  // TODO: remove redundant code in BuildModelStruct
+  BuildModelStruct(false);
   ToDotWithAutoFilePath();
 }
 

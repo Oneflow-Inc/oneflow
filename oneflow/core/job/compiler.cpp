@@ -121,27 +121,14 @@ Plan Compiler::DoCompile() {
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::PinConsumedRegst, _1));
   task_gph->MdUpdtDelayedTopoForEachNode(&TaskNode::Build);
-  if (job_desc->IsTrain()) {
-    task_gph->AddReduceSequenceCtrlEdges();
-    task_gph->AddMdUpdtCtrlEdgesWithinReduceSplitNode();
-  }
   task_gph->RemoveEmptyRegsts();
   task_gph->AddOrderingCtrlEdgeInSameChain();
   task_gph->EnableMemSharingInReduceStruct();
-  if (job_desc->IsTrain() && job_desc->enable_mem_sharing()) {
-    task_gph->EnableMemSharingAfterAllManualSetForMdUpdt();  // must last mem shared manual set
-  }
   if (job_desc->enable_inplace()) {
     auto IsReachable = Global<OpGraph>::Get()->MakePredicatorIsLbiAllConsumersReachableToOpName();
     task_gph->EnableInplaceMemSharing(IsReachable);
   }
-  if (job_desc->IsTrain()) { task_gph->AddOrderCtrlEdgeBetweenCopyAndMdUpdt(); }
-  if (job_desc->IsTrain()) { task_gph->RmUselessConsumeRelationshipBetweenFwBw(); }
   task_gph->MdUpdtDelayedTopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
-  if (job_desc->IsTrain() && job_desc->enable_mem_sharing()) {
-    task_gph->EnableMemSharingInVariableOp();
-  }
-  if (job_desc->IsTrain()) { task_gph->AddReduceNoBwForwardNodeOverlapingCtrlEdges(); }
 
   Plan plan;
   task_gph->ForEachNode([&](TaskNode* task_node) {
