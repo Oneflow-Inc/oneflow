@@ -56,6 +56,20 @@ bool IsOpFloat32(const OpNode* node) {
   return true;
 }
 
+bool TryUpdtBnVal4SepcialOpConf(const OperatorConf::OpTypeCase& op_type, PbMessage* op_conf,
+                                const std::string& old_val, const std::string& new_val,
+                                const std::string& dst_ibn) {
+  if (OperatorConf::kPrintConf == op_type) {
+    const std::pair<std::string, int32_t> prefix_idx = GenUnRepeatedBn(dst_ibn);
+    CHECK_EQ("in", prefix_idx.first);
+    PbMessage* print_record_conf =
+        MutableRepeatedMessageInPbMessage(op_conf, "in", prefix_idx.second);
+    SetBnValInOpTypeConf(print_record_conf, "lbn", old_val, new_val);
+    return true;
+  }
+  return false;
+}
+
 void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>& white_set,
                       Job* job) {
   JobBuilder job_builder(job);
@@ -111,7 +125,10 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
       PbMessage* dst_op_type_conf =
           MutableMessageInPbMessage(&dst_op_conf, dst_op_conf.op_type_case());
       std::string lbn = cast_op_conf.name() + "/out";
-      SetBnValInOpTypeConf(dst_op_type_conf, dst_ibn, cur_lbn, lbn);
+      if (!TryUpdtBnVal4SepcialOpConf(dst_op_conf.op_type_case(), dst_op_type_conf, cur_lbn, lbn,
+                                      dst_ibn)) {
+        SetBnValInOpTypeConf(dst_op_type_conf, dst_ibn, cur_lbn, lbn);
+      }
     }
   }
   std::vector<OperatorConf> dst_op_confs;

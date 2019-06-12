@@ -92,6 +92,8 @@ const PbMessage& GetMessageInPbMessage(const PbMessage& msg, int field_index);
 
 PbMessage* MutableMessageInPbMessage(PbMessage*, const std::string& field_name);
 PbMessage* MutableMessageInPbMessage(PbMessage*, int field_index);
+PbMessage* MutableRepeatedMessageInPbMessage(PbMessage* msg, const std::string& field_name,
+                                             int index);
 
 // Add In PbMessage RepeatedField
 
