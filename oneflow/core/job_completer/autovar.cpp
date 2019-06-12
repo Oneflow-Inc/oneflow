@@ -7,8 +7,6 @@ OperatorConf GenerateVariableOpConf(const BlobDesc& blob_desc, const std::string
                                     const std::string& model_name) {
   OperatorConf var_op;
   var_op.set_name(name);
-  // TODO: give more options to determine whether generated variable is trainable
-  var_op.set_trainable(true);
   VariableOpConf* var_op_conf = var_op.mutable_variable_conf();
   var_op_conf->set_out("out");
   blob_desc.shape().ToProto(var_op_conf->mutable_shape());
