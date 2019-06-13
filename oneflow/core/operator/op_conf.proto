@@ -1362,6 +1362,17 @@ message IdentityOpConf {
   required string out = 2;
 }
 
+message CaseOpConf {
+  required string in = 1;
+  repeated string out = 2;
+}
+
+message EsacOpConf {
+  repeated string in = 1;
+  required string out = 2;
+  optional DataType data_type = 3 [default=kInt32];
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1493,6 +1504,8 @@ message OperatorConf {
     TanHGradOpConf tanh_grad_conf = 288;
     PoolingGradOpConf pooling_grad_conf = 289;
     IdentityOpConf identity_conf = 290;
+    CaseOpConf case_conf = 291;
+    EsacOpConf esac_conf = 292;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

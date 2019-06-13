@@ -537,6 +537,8 @@ BackwardLogicalNode* RepeatForwardLogicalNode::NewCorrectBackwardNode() {
 }
 
 BackwardLogicalNode* EveryNthLogicalNode::NewCorrectBackwardNode() { UNIMPLEMENTED(); }
+BackwardLogicalNode* CaseLogicalNode::NewCorrectBackwardNode() { UNIMPLEMENTED(); }
+BackwardLogicalNode* EsacLogicalNode::NewCorrectBackwardNode() { UNIMPLEMENTED(); }
 BackwardLogicalNode* AccLogicalNode::NewCorrectBackwardNode() { UNIMPLEMENTED(); }
 
 int32_t ReduceIdentityLogicalNode::order_in_logical_graph() const {
