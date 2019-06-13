@@ -18,10 +18,6 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
         *(reinterpret_cast<std::tuple<int64_t, std::function<const Blob*(const LogicalBlobId&)>>*>(
             ctx.other)));
     next_model_vid = cur_batch_num + 1;
-  } else {
-    CHECK(Global<JobDesc>::Get()->IsTrain());
-    next_model_vid = *reinterpret_cast<int64_t*>(ctx.other);
-    cur_batch_num = next_model_vid - 1;
   }
   const PbMessage& op_conf = this->GetCustomizedOpConf();
   const auto& conf = *GetMsgPtrFromPbMessage<NormalModelUpdateOpUserConf>(op_conf, "user_conf");

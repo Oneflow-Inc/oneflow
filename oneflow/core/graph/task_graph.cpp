@@ -641,14 +641,6 @@ void TaskGraph::EnableInplaceMemSharing(
   });
 }
 
-void TaskGraph::RmUselessConsumeRelationshipBetweenFwBw() {
-  for (TaskNode* task_node : ordered_task_nodes_) {
-    auto bw_node = dynamic_cast<NormalBackwardCompTaskNode*>(task_node);
-    if (bw_node == nullptr) { continue; }
-    bw_node->RmUselessConsumeRelationshipToFw();
-  }
-}
-
 void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {
   for (TaskNode* task_node : ordered_task_nodes_) {
     auto copy_hd_task_node = dynamic_cast<CopyHdTaskNode*>(task_node);

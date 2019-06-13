@@ -6,9 +6,7 @@ namespace oneflow {
 namespace {
 
 const AdamModelUpdateConf& GetAdamModelUpdateConf(const OperatorConf& op_conf) {
-  if (Global<JobDesc>::Get()->IsTrain()) {
-    return op_conf.normal_mdupdt_conf().user_conf().adam_conf();
-  } else if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+  if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     return op_conf.adam_model_update_conf().user_conf().adam_conf();
   } else {
     UNIMPLEMENTED();
@@ -32,9 +30,7 @@ void UpdateMomentEstimate(int64_t n, bool do_bias_correction, T beta, int32_t p,
 
 template<DeviceType device_type, typename T>
 const PbMessage& AdamMdUpdateKernel<device_type, T>::GetCustomizedOpConf() const {
-  if (Global<JobDesc>::Get()->IsTrain()) {
-    return this->op_conf().normal_mdupdt_conf();
-  } else if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+  if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     return this->op_conf().adam_model_update_conf();
   } else {
     UNIMPLEMENTED();

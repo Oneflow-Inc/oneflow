@@ -103,7 +103,6 @@ void NormalForwardCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
     regst->set_model_version_id(model_version_id);
     return regst->regst_desc_id() != forward_model_regst_desc_id_;
   });
-  if (Global<JobDesc>::Get()->IsTrain()) { TrySendMsgToForwardModelSaveActor(cur_piece_id_); }
 }
 
 void NormalForwardCompActor::VirtualAsyncSendInplaceProducedRegstMsgToConsumer() {
@@ -113,15 +112,7 @@ void NormalForwardCompActor::VirtualAsyncSendInplaceProducedRegstMsgToConsumer()
   });
 }
 
-void NormalForwardCompActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
-  if (Global<JobDesc>::Get()->IsTrain() && model_regst_) {
-    int64_t last_piece_id = GetLastPieceIdForModelVersionId(model_regst_->model_version_id(),
-                                                            actual_num_of_piece_in_batch_);
-    CHECK_LE(cur_piece_id_, last_piece_id);
-    if (cur_piece_id_ == last_piece_id) { AsyncReturnModelRegst(); }
-  }
-  cur_piece_id_ = -1;
-}
+void NormalForwardCompActor::AsyncSendCustomizedConsumedRegstMsgToProducer() { cur_piece_id_ = -1; }
 
 bool NormalForwardCompActor::IsCustomizedReadReady() const {
   if (model_regst_desc_id_ != -1 && model_regst_ == nullptr) { return false; }

@@ -41,21 +41,13 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   };
   template<typename LogicalNodeType>
   void ForEachLogicalNode(std::function<void(LogicalNodeType*)> Handler);
-  void GroupNodesForReduceStruct();
 
   void BuildFwStruct();
   void NaiveBuildFwStruct(HashMap<std::string, std::vector<LogicalNode*>>* op_name2nodes);
-  void FixSharedModelNodes(const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes);
   void LinkUnpackFw2PackFw(const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes);
-  void BuildBwStruct();
-  void NaiveBuildBwStruct();
-  void AddBackwardClone();
-  void AddOneBackwardClone(const BackwardCloneInfo& clone_info);
 
   void MergeEdge();
   void SetNodeDataLbi();
-  void BuildLossPrintStruct();
-  void BuildAccuracyPrintStruct();
   void BuildModelStruct(bool is_train);
   void AddReduceScatterAddGatherNodes(LogicalNode* src, LogicalNode* dst,
                                       const ReduceRankCtx& prev_rank_ctx);
@@ -69,7 +61,6 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
                                                             ForwardLogicalNode* fw_logical);
   void ReplaceAllReduceFacades();
 
-  void ConnectFwToBw();
   void UpdateEdge2Ibn(const LogicalEdge* edge, const std::string& ibn);
   void UpdateEdge2Obn(const LogicalEdge* edge, const std::string& obn);
 
