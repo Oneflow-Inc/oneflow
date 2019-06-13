@@ -141,30 +141,16 @@ BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src, const Logi
   ~class_name() = default;                   \
   OVERRIDE_PURE_VIRTUAL_METHOD();
 
-class BackwardLogicalNode;
-
 class ForwardLogicalNode : public LogicalNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ForwardLogicalNode);
-  ForwardLogicalNode() : bw_node_(nullptr) {}
+  ForwardLogicalNode() = default;
   virtual ~ForwardLogicalNode() = default;
-
-  BackwardLogicalNode* bw_node() const { return bw_node_; }
-
-  BackwardLogicalNode* NewBackwardNode();
-
- protected:
-  virtual BackwardLogicalNode* NewCorrectBackwardNode() = 0;
-
- private:
-  BackwardLogicalNode* bw_node_;
 };
 
 class NormalForwardLogicalNode final : public ForwardLogicalNode {
  public:
   LOGICAL_NODE_BOILERPLATE(NormalForwardLogicalNode);
-
-  BackwardLogicalNode* NewCorrectBackwardNode() override;
 
  private:
 };
@@ -172,8 +158,6 @@ class NormalForwardLogicalNode final : public ForwardLogicalNode {
 class OptimizerLogicalNode final : public ForwardLogicalNode {
  public:
   LOGICAL_NODE_BOILERPLATE(OptimizerLogicalNode);
-
-  BackwardLogicalNode* NewCorrectBackwardNode() override;
 
  private:
 };
@@ -198,7 +182,6 @@ int64_t NewAreaId();
     LOGICAL_NODE_WITH_NEW_AREA_ID_BOILERPLATE(name)                 \
                                                                     \
    private:                                                         \
-    BackwardLogicalNode* NewCorrectBackwardNode() override;         \
   }
 
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(UnpackForward);
@@ -211,36 +194,8 @@ class PackForwardLogicalNode final : public ForwardLogicalNode {
   void set_related_unpack(UnpackForwardLogicalNode* val) { related_unpack_ = val; }
 
  private:
-  BackwardLogicalNode* NewCorrectBackwardNode() override;
-
   UnpackForwardLogicalNode* related_unpack_;
 };
-
-class BackwardLogicalNode : public LogicalNode {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(BackwardLogicalNode);
-  BackwardLogicalNode() : fw_node_(nullptr) {}
-  virtual ~BackwardLogicalNode() = default;
-
-  ForwardLogicalNode* fw_node() const { return fw_node_; }
-
- private:
-  friend class ForwardLogicalNode;
-
-  ForwardLogicalNode* fw_node_;
-};
-
-class NormalBackwardLogicalNode final : public BackwardLogicalNode {
- public:
-  LOGICAL_NODE_BOILERPLATE(NormalBackwardLogicalNode);
-};
-
-#define DECLARE_DERIVED_BACKWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(name) \
-  class name##LogicalNode final : public BackwardLogicalNode {       \
-    LOGICAL_NODE_WITH_NEW_AREA_ID_BOILERPLATE(name);                 \
-  }
-
-DECLARE_DERIVED_BACKWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(UnpackBackward);
 
 #define DECLARE_NAIVE_LOGICAL_NODE(name)  \
   class name final : public LogicalNode { \
@@ -328,7 +283,6 @@ DECLARE_REDUCE_LOGICAL_NODE(NcclReduceScatterLogicalNode, true);
 
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatForward);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Acc);
-DECLARE_DERIVED_BACKWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatBackward);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(EveryNth);
 
 #define DECLARE_BEFORE_OR_AFTER_ALLREDUCE_REDUCE_NODE(class_name, may_consume_md_diff) \
