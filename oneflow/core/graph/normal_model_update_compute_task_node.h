@@ -17,6 +17,7 @@ class NormalMdUpdtCompTaskNode final : public CompTaskNode {
   bool IsReadyForBuild() override;
   void BuildExecGphAndRegst() override {}
   void LockRegsts() override;
+  void EnableMemSharingBetweenFirstInAndProcessedMdDiffRegst();
 
   void set_random_seed(uint32_t val) { random_seed_ = val; }
   TaskType GetTaskType() const override { return TaskType::kNormalMdUpdt; }
@@ -25,6 +26,7 @@ class NormalMdUpdtCompTaskNode final : public CompTaskNode {
 
  private:
   const NormalForwardCompTaskNode* GetForwardTaskNode() const;
+  bool IsTrainable() const;
   void FixPackedBlobDescOfProducedRegst() override;
   void InferProducedDataRegstTimeShape() override;
   uint32_t random_seed_;

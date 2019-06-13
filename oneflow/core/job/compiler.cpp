@@ -123,15 +123,29 @@ Plan Compiler::DoCompile() {
   task_gph->MdUpdtDelayedTopoForEachNode(&TaskNode::Build);
   if (job_desc->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     task_gph->AddReduceSequenceCtrlEdges();
+    // TODO: update method for fw bw split
+    // task_gph->AddMdUpdtCtrlEdgesWithinReduceSplitNode();
   }
   task_gph->RemoveEmptyRegsts();
   task_gph->AddOrderingCtrlEdgeInSameChain();
   task_gph->EnableMemSharingInReduceStruct();
+  // TODO: update method for fw bw split
+  // if (job_desc->IsTrain() && job_desc->enable_mem_sharing()) {
+  //   task_gph->EnableMemSharingAfterAllManualSetForMdUpdt();  // must last mem shared manual set
+  // }
   if (job_desc->enable_inplace()) {
     auto IsReachable = Global<OpGraph>::Get()->MakePredicatorIsLbiAllConsumersReachableToOpName();
     task_gph->EnableInplaceMemSharing(IsReachable);
   }
+  // TODO: update method for fw bw split
+  // if (job_desc->IsTrain()) { task_gph->AddOrderCtrlEdgeBetweenCopyAndMdUpdt(); }
   task_gph->MdUpdtDelayedTopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
+  // TODO: update method for fw bw split
+  // if (job_desc->IsTrain() && job_desc->enable_mem_sharing()) {
+  //   task_gph->EnableMemSharingInVariableOp();
+  // }
+  // TODO: update method for fw bw split
+  // if (job_desc->IsTrain()) { task_gph->AddReduceNoBwForwardNodeOverlapingCtrlEdges(); }
 
   Plan plan;
   task_gph->ForEachNode([&](TaskNode* task_node) {

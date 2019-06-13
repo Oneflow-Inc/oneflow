@@ -482,6 +482,14 @@ void TaskGraph::EnableMemSharingInReduceStruct() {
   });
 }
 
+void TaskGraph::EnableMemSharingAfterAllManualSetForMdUpdt() {
+  ForEachNode([&](TaskNode* node) {
+    auto* updt = dynamic_cast<NormalMdUpdtCompTaskNode*>(node);
+    if (!updt) { return; }
+    updt->EnableMemSharingBetweenFirstInAndProcessedMdDiffRegst();
+  });
+}
+
 void TaskGraph::EnableMemSharingInVariableOp() {
   ForEachNode([&](TaskNode* node) {
     if (node->exec_gph().node_num() != 1) { return; }
