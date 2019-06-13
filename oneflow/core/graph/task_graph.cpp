@@ -482,6 +482,59 @@ void TaskGraph::EnableMemSharingInReduceStruct() {
   });
 }
 
+void TaskGraph::EnableMemSharingInVariableOp() {
+  ForEachNode([&](TaskNode* node) {
+    if (node->exec_gph().node_num() != 1) { return; }
+    auto* variable_op = dynamic_cast<const VariableOp*>(node->exec_gph().SoleNode()->op().get());
+    if (variable_op == nullptr) { return; }
+    std::string model_bn = variable_op->op_conf().variable_conf().model_name();
+    auto* fw_task_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
+    auto* bw_task_node = dynamic_cast<NormalBackwardCompTaskNode*>(node);
+    if (fw_task_node != nullptr) {
+      const LogicalBlobId& lbi = variable_op->BnInOp2Lbi(model_bn);
+      RegstDesc* model_regst = fw_task_node->GetSoleConsumedRegst("model").get();
+      CHECK_EQ(model_regst->min_register_num(), 1);
+      CHECK_EQ(model_regst->max_register_num(), 1);
+      model_regst->set_enable_mem_sharing(true);
+      if (model_regst->mem_shared_id() == -1) {
+        model_regst->set_mem_shared_id(Global<IDMgr>::Get()->NewMemSharedId());
+        model_regst->set_mem_shared_offset(0);
+      }
+      RegstDesc* out_regst = fw_task_node->GetProducedRegst("out").get();
+      CHECK_EQ(out_regst->min_register_num(), 1);
+      CHECK_EQ(out_regst->max_register_num(), 1);
+      CHECK_EQ(out_regst->NumOfLbi(), 1);
+      out_regst->set_enable_mem_sharing(true);
+      out_regst->set_mem_shared_id(model_regst->mem_shared_id());
+      out_regst->set_mem_shared_offset(model_regst->mem_shared_offset()
+                                       + model_regst->ByteOffsetInPackedBlobDescBody(lbi));
+      variable_op->set_is_fw_inplace(true);
+    } else if (bw_task_node != nullptr) {
+      const LogicalBlobId& lbi = variable_op->BnInOp2Lbi(GenDiffBn(model_bn));
+      RegstDesc* model_diff_regst = bw_task_node->GetProducedRegst("model_diff").get();
+      CHECK_EQ(model_diff_regst->min_register_num(), 1);
+      CHECK_EQ(model_diff_regst->max_register_num(), 1);
+      model_diff_regst->set_enable_mem_sharing(true);
+      if (model_diff_regst->mem_shared_id() == -1) {
+        model_diff_regst->set_mem_shared_id(Global<IDMgr>::Get()->NewMemSharedId());
+        model_diff_regst->set_mem_shared_offset(0);
+      }
+      RegstDesc* out_diff_regst = bw_task_node->GetSoleConsumedRegst("out_diff").get();
+      if (out_diff_regst->min_register_num() != 1) { return; }
+      if (out_diff_regst->max_register_num() != 1) { return; }
+      if (out_diff_regst->NumOfLbi() != 1) { return; }
+      out_diff_regst->set_enable_mem_sharing(true);
+      out_diff_regst->set_mem_shared_id(model_diff_regst->mem_shared_id());
+      out_diff_regst->set_mem_shared_offset(
+          model_diff_regst->mem_shared_offset()
+          + model_diff_regst->ByteOffsetInPackedBlobDescBody(lbi));
+      variable_op->set_is_bw_inplace(true);
+    } else {
+      // do nothing
+    }
+  });
+}
+
 void TaskGraph::GetInplaceOpBlobArgList(
     OpBlobArgList* inplace_obas, const HashSet<TaskNode*>& dev_nodes,
     const std::function<const TaskNode*(const std::string&)>& TaskNode4OpName) const {
