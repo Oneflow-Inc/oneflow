@@ -203,31 +203,13 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
         }
       }
       Connect<LogicalNode>(md_updt_logical, NewEdge(), fw_logical);
-      BackwardLogicalNode* bw_logical = fw_logical->bw_node();
-      if (bw_logical) { Connect<LogicalNode>(md_updt_logical, NewEdge(), bw_logical); }
       // Model Diff Accumulate Logical
       if (is_train && fw_logical->HasOpWithModelBlob()) {
-        CHECK_NOTNULL(bw_logical);
         LogicalNode* md_diff_acc_logical = nullptr;
-        if (must_have_model_diff_acc || Global<JobDesc>::Get()->NumOfPiecesInBatch() > 1) {
-          OperatorConf md_diff_acc_op_conf;
-          md_diff_acc_op_conf.set_name("md_diff_acc_" + NewUniqueId());
-          md_diff_acc_op_conf.set_device_type(fw_logical->parallel_desc()->device_type());
-          md_diff_acc_op_conf.mutable_accumulate_conf();
-          auto md_diff_acc_op = ConstructOp(md_diff_acc_op_conf);
-          md_diff_acc_logical = NewNode<MdDiffAccLogicalNode>();
-          md_diff_acc_logical->mut_op_vec() = {md_diff_acc_op};
-          auto md_diff_acc_pr_desc = new ParallelDesc(*(fw_logical->parallel_desc()));
-          md_diff_acc_logical->mut_parallel_desc().reset(md_diff_acc_pr_desc);
-          Connect<LogicalNode>(bw_logical, NewEdge(), md_diff_acc_logical);
-        } else {
-          md_diff_acc_logical = bw_logical;
-        }
         if (md_diff_acc_logical->parallel_desc()->parallel_num() > 1
             && md_diff_acc_logical->parallel_desc()->policy() == kDataParallel) {
           ReduceCtx reduce_ctx;
           reduce_ctx.fw_logicals.emplace_back(fw_logical);
-          reduce_ctx.bw_logicals.emplace_back(bw_logical);
           reduce_ctx.md_diff_acc_logicals.emplace_back(md_diff_acc_logical);
           reduce_ctx.md_updt_logicals.emplace_back(md_updt_logical);
           CHECK(fw_node2reduce_ctx.emplace(fw_logical, reduce_ctx).second);
