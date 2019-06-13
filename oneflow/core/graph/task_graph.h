@@ -28,6 +28,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void EnableInplaceMemSharing(const std::function<bool(const LogicalBlobId&, const std::string&)>&
                                    IsLbiAllConsumersReachableToOpName);
 
+  void AddOrderCtrlEdgeBetweenCopyAndMdUpdt();
   void AcyclicTopoForEachNode(std::function<void(TaskNode* node)> Handler) const;
   void MdUpdtDelayedTopoForEachNode(std::function<void(TaskNode* node)> Handler) const;
 

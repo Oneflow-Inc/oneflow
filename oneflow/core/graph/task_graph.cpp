@@ -580,6 +580,61 @@ void TaskGraph::EnableInplaceMemSharing(
   });
 }
 
+void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {
+  for (TaskNode* task_node : ordered_task_nodes_) {
+    auto copy_hd_task_node = dynamic_cast<CopyHdTaskNode*>(task_node);
+    if (copy_hd_task_node == nullptr) { continue; }
+    if (copy_hd_task_node->copy_type() != CopyHdOpConf::H2D) { continue; }
+    if (copy_hd_task_node->area_id() != static_cast<int64_t>(kDataForwardArea)
+        && copy_hd_task_node->area_id() != static_cast<int64_t>(kBoundaryArea)) {
+      continue;
+    }
+    std::vector<TaskNode*> candidate_nodes;
+    auto ForEachNextNode = [&](TaskNode* node,
+                               const std::function<void(TaskNode*)>& TryPushNodeToQueue) {
+      auto fw_task_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
+      if (fw_task_node != nullptr && fw_task_node->logical_node()->HasOpWithModelBlob()) { return; }
+      node->ForEachNodeOnOutEdge([&](TaskNode* node_on_out_edge) {
+        if (IsForwardTaskType(node_on_out_edge->GetTaskType())) {
+          TryPushNodeToQueue(node_on_out_edge);
+        }
+      });
+    };
+    auto HandlerAddCandidate = [&](TaskNode* node) {
+      auto fw_task_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
+      if (fw_task_node != nullptr && fw_task_node->logical_node()->HasOpWithModelBlob()
+          && fw_task_node->parallel_ctx()->parallel_num() > 1
+          && fw_task_node->parallel_ctx()->policy() == kDataParallel) {
+        candidate_nodes.push_back(node);
+      }
+    };
+    BfsForEachNode({task_node}, ForEachNextNode, HandlerAddCandidate);
+    std::sort(candidate_nodes.begin(), candidate_nodes.end(),
+              [](const TaskNode* a, const TaskNode* b) {
+                return a->order_in_graph() < b->order_in_graph();
+              });
+    int64_t last_chain_id = -1;
+    for (TaskNode* candidate_node : candidate_nodes) {
+      if (candidate_node->chain_id() != last_chain_id) {
+        last_chain_id = candidate_node->chain_id();
+        candidate_node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
+          if (IsMdUpdtTaskType(node_on_in_edge->GetTaskType())) {
+            RegstDesc* ctrl_regst = task_node->BuildCtrlRegstDesc(node_on_in_edge);
+            RegstDesc* copy_out_regst = copy_hd_task_node->GetProducedRegst("copy_out").get();
+            int64_t piece_num_in_batch = Global<JobDesc>::Get()->NumOfPiecesInBatch();
+            ctrl_regst->UpdtMinRegstNumIfNeed(copy_out_regst->min_register_num()
+                                              + piece_num_in_batch - 1);
+            CtrlRegstDesc* ctrl_regst_desc =
+                ctrl_regst->mut_regst_desc_type()->mutable_ctrl_regst_desc();
+            ctrl_regst_desc->set_reliant_regst_desc_id(copy_out_regst->regst_desc_id());
+            ctrl_regst_desc->set_returned_regst_num(piece_num_in_batch);
+          }
+        });
+      }
+    }
+  }
+}
+
 void TaskGraph::SetAreaIdForNewNodes(const LogicalNode* src_logical,
                                      const LogicalNode* dst_logical) {
   CHECK(src_logical != nullptr && dst_logical != nullptr);
