@@ -21,6 +21,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void RemoveEmptyRegsts();
   void AddOrderingCtrlEdgeInSameChain();
   void AddReduceSequenceCtrlEdges();
+  void AddMdUpdtCtrlEdgesWithinReduceSplitNode();
+  void AddReduceNoBwForwardNodeOverlapingCtrlEdges();
 
   void EnableMemSharingInReduceStruct();
   void EnableInplaceMemSharing(const std::function<bool(const LogicalBlobId&, const std::string&)>&
