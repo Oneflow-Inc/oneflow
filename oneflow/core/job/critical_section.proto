@@ -1,0 +1,25 @@
+syntax = "proto2";
+package oneflow;
+
+enum CriticalSectionType {
+  kInvalidCriticalSection = 0;
+  kTotalJobCriticalSection = 1;
+  kInputCriticalSection = 2;
+  kOutputCriticalSection = 3;
+}
+
+message CriticalSectionId {
+  required int64 job_id = 1;
+  required string source_tick_op_name_ = 2;
+  required string sink_tick_op_name_ = 3;
+}
+
+message CriticalSection {
+  required CriticalSectionId critical_section_id = 1;
+  required CriticalSectionType critical_section_type = 2;
+  repeated int64 mem_block_id = 3;
+}
+
+message CriticalSectionIndexList {
+  repeated int64 index = 1;
+}

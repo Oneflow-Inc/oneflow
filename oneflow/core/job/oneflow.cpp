@@ -12,6 +12,7 @@
 #include "oneflow/core/job/sub_plan.pb.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/runtime.h"
+#include "oneflow/core/job/critical_section_desc.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/persistence/file_system.h"
@@ -173,11 +174,15 @@ void WithJobSetLevelGlobalObjs(const std::string& job_set_filepath,
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     Global<AvailableMemDesc>::New();
     *Global<AvailableMemDesc>::Get() = PullAvailableMemDesc();
+    Global<CriticalSectionDesc>::New();
   }
 
   Callback();
 
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) { Global<AvailableMemDesc>::Delete(); }
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    Global<CriticalSectionDesc>::Delete();
+    Global<AvailableMemDesc>::Delete();
+  }
   Global<std::vector<std::unique_ptr<JobDesc>>>::Delete();
   if (DoProfile) { Global<Profiler>::Delete(); }
   Global<IDMgr>::Delete();

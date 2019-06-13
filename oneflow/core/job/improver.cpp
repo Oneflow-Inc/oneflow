@@ -409,6 +409,20 @@ void SetInplaceConsumedRegstDescId(
   }
 }
 
+void SetUniqueMemSharedId4UnsharedRegst(Plan* plan) {
+  for (int i = 0; i < plan->task_size(); i++) {
+    TaskProto* task = plan->mutable_task(i);
+    for (auto& pair : *task->mutable_produced_regst_desc()) {
+      RegstDescProto* regst_desc = &pair.second;
+      if (regst_desc->mem_shared_id() == -1) {
+        CHECK_EQ(regst_desc->mem_shared_offset(), -1);
+        regst_desc->set_mem_shared_id(Global<IDMgr>::Get()->NewMemSharedId());
+        regst_desc->set_mem_shared_offset(0);
+      }
+    }
+  }
+}
+
 }  // namespace
 
 uint64_t Improver::AvailableMemSize(int64_t machine_id, int64_t memory_zone_id) const {
@@ -573,6 +587,7 @@ Plan Improver::ImproveMemSharedIdOnly(const AvailableMemDesc& amd, const Plan& n
   HashMap<int64_t, double> zero2one{{0, 1}};
   auto Zero2One = [&](int64_t) -> const HashMap<int64_t, double>& { return zero2one; };
   CHECK(!IsAnyZoneOutOfMemory(mz_regst_descs, Zero2One, Zero2One, 1));
+  SetUniqueMemSharedId4UnsharedRegst(&mem_shared_plan);
   return mem_shared_plan;
 }
 
@@ -595,6 +610,7 @@ Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
   ForEachImprovedRegstNum(mem_shared_plan, true, base_ii, PathDurations4RegstDescId,
                           PathIIScales4RegstDescId, MakeSetterSetPlanRegstNum(&plan));
   FixReliantCtrlRegstNum(plan, MakeGetterGetPlanRegstNum(&plan), MakeSetterSetPlanRegstNum(&plan));
+  SetUniqueMemSharedId4UnsharedRegst(&plan);
   return plan;
 }
 
