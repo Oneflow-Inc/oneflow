@@ -12,9 +12,6 @@
 #include "oneflow/core/graph/decode_compute_task_node.h"
 #include "oneflow/core/graph/decode_random_compute_task_node.h"
 #include "oneflow/core/graph/record_load_compute_task_node.h"
-#include "oneflow/core/graph/source_tick_compute_task_node.h"
-#include "oneflow/core/graph/tick_compute_task_node.h"
-#include "oneflow/core/graph/sink_tick_compute_task_node.h"
 #include "oneflow/core/graph/reduce_scatter_compute_task_node.h"
 #include "oneflow/core/graph/reduce_add_compute_task_node.h"
 #include "oneflow/core/graph/reduce_gather_compute_task_node.h"
@@ -453,9 +450,6 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
                                  &BoxingTaskNode::BldBoxingOpConfWithAddAndClone);
 
 #define LOGICAL_TYPE_SEQ                                  \
-  OF_PP_MAKE_TUPLE_SEQ(SourceTick, kBoundaryArea)         \
-  OF_PP_MAKE_TUPLE_SEQ(Tick, kBoundaryArea)               \
-  OF_PP_MAKE_TUPLE_SEQ(SinkTick, kBoundaryArea)           \
   OF_PP_MAKE_TUPLE_SEQ(NormalForward, kDataForwardArea)   \
   OF_PP_MAKE_TUPLE_SEQ(NormalBackward, kDataBackwardArea) \
   OF_PP_MAKE_TUPLE_SEQ(RecordLoad, kDataPreprocessArea)   \
@@ -535,7 +529,9 @@ BackwardLogicalNode* UnpackForwardLogicalNode::NewCorrectBackwardNode() {
 BackwardLogicalNode* RepeatForwardLogicalNode::NewCorrectBackwardNode() {
   return new RepeatBackwardLogicalNode();
 }
-
+BackwardLogicalNode* SourceTickLogicalNode::NewCorrectBackwardNode() { UNIMPLEMENTED(); }
+BackwardLogicalNode* TickLogicalNode::NewCorrectBackwardNode() { UNIMPLEMENTED(); }
+BackwardLogicalNode* SinkTickLogicalNode::NewCorrectBackwardNode() { UNIMPLEMENTED(); }
 BackwardLogicalNode* EveryNthLogicalNode::NewCorrectBackwardNode() { UNIMPLEMENTED(); }
 BackwardLogicalNode* AccLogicalNode::NewCorrectBackwardNode() { UNIMPLEMENTED(); }
 

@@ -1,7 +1,6 @@
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
-#include "oneflow/core/job/sbp_signature_builder.h"
 
 namespace oneflow {
 

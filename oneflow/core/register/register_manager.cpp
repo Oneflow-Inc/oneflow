@@ -34,22 +34,22 @@ RegstMgr::RegstMgr(const std::list<const RegstDescProto*>& regst_protos) {
 void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& regst_protos) {
   std::vector<const RegstDescProto*> sorted_regst_protos(regst_protos.begin(), regst_protos.end());
   for (const RegstDescProto* regst_desc : regst_protos) {
+    CHECK_NE(regst_desc->mem_shared_id(), -1);
+    CHECK_NE(regst_desc->mem_shared_offset(), -1);
     CHECK(
         regst_desc_id2rt_regst_desc_
             .emplace(regst_desc->regst_desc_id(), std::make_unique<const RtRegstDesc>(*regst_desc))
             .second);
-    if (regst_desc->mem_shared_id() != -1) { CHECK_EQ(regst_desc->register_num(), 1); }
   }
   auto GetMemSize4Regst = [&](const RegstDescProto* regst_desc) {
-    if (regst_desc->mem_shared_id() == -1) {
-      return regst_desc_id2rt_regst_desc_.at(regst_desc->regst_desc_id())
-          ->TotalMainByteSize4AllRegst();
-    } else {
-      CheckBlobInRegstNotDisabled(*regst_desc);
-      return regst_desc_id2rt_regst_desc_.at(regst_desc->regst_desc_id())
-                 ->TotalMainByteSize4AllRegst()
-             + regst_desc->mem_shared_offset();
+    size_t ret =
+        regst_desc_id2rt_regst_desc_.at(regst_desc->regst_desc_id())->TotalMainByteSize4AllRegst()
+        + regst_desc->mem_shared_offset();
+    if (regst_desc->regst_desc_type().has_ctrl_regst_desc()
+        || regst_desc->regst_desc_type().data_regst_desc().packed_blob_desc().is_body_disabled()) {
+      CHECK_EQ(ret, 0);
     }
+    return ret;
   };
   std::sort(sorted_regst_protos.begin(), sorted_regst_protos.end(),
             [&](const RegstDescProto* lhs, const RegstDescProto* rhs) {
@@ -63,7 +63,7 @@ void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& re
     if (regst_desc->regst_desc_type().has_data_regst_desc() == false) { continue; }
     size_t mem_size = GetMemSize4Regst(regst_desc);
     int32_t current_mem_shared_id = regst_desc->mem_shared_id();
-    if (current_mem_shared_id == -1 || (current_mem_shared_id != last_mem_shared_id)) {
+    if (current_mem_shared_id != last_mem_shared_id) {
       if (mem_size == 0) {
         main_mem_ptr = nullptr;
       } else {
@@ -84,6 +84,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
   char* main_mem_ptr = nullptr;
   if (regst_desc_id2main_mem_ptr_.find(regst_desc_id) != regst_desc_id2main_mem_ptr_.end()) {
     main_mem_ptr = regst_desc_id2main_mem_ptr_.at(regst_desc_id);
+    main_mem_ptr += regst_desc_proto.mem_shared_offset();
   }
   std::vector<LbiBlobDescPair> lbi_pairs;
   if (regst_desc_type.has_data_regst_desc()) {
@@ -92,10 +93,6 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     }
     std::sort(lbi_pairs.begin(), lbi_pairs.end(), &CompareLbiBlobDescPair);
     CHECK(!lbi_pairs.empty());
-  }
-  if (regst_desc_proto.mem_shared_id() != -1) {
-    CheckBlobInRegstNotDisabled(regst_desc_proto);
-    main_mem_ptr += regst_desc_proto.mem_shared_offset();
   }
   for (int64_t i = 0; i < rt_regst_desc->register_num(); ++i) {
     Regst* regst = new Regst;
