@@ -22,14 +22,30 @@ void RecordLoadKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
     data_paths.push_back(JoinPath(data_dir, part_name_prefix + std::string(zero_count, '0') + num));
   }
   piece_size_in_one_loader_ = kernel_conf().record_load_conf().device_piece_size();
-  in_stream_.reset(new PersistentInStream(DataFS(), data_paths, false, false));
-  if (record_load_conf.has_random_shuffle_conf()) {
-    const int32_t shuffle_buffer_size = record_load_conf.random_shuffle_conf().buffer_size();
-    CHECK_GT(shuffle_buffer_size, 0);
-    record_reader_.reset(new RandomShuffleOFRecordReader(in_stream_.get(),
-                                                         static_cast<size_t>(shuffle_buffer_size)));
+  if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+    const size_t num_max_read =
+        static_cast<size_t>(piece_size_in_one_loader_ * Global<JobDesc>::Get()->TotalBatchNum()
+                            * Global<JobDesc>::Get()->NumOfPiecesInBatch());
+    in_stream_.reset(new PersistentInStream(
+        DataFS(), data_paths, true, Global<JobDesc>::Get()->save_downloaded_file_to_local_fs()));
+    if (record_load_conf.has_random_shuffle_conf()) {
+      const int32_t shuffle_buffer_size = record_load_conf.random_shuffle_conf().buffer_size();
+      CHECK_GT(shuffle_buffer_size, 0);
+      record_reader_.reset(new RandomShuffleOFRecordReader(
+          in_stream_.get(), static_cast<size_t>(shuffle_buffer_size), num_max_read));
+    } else {
+      record_reader_.reset(new NaiveOFRecordReader(in_stream_.get(), num_max_read));
+    }
   } else {
-    record_reader_.reset(new NaiveOFRecordReader(in_stream_.get()));
+    in_stream_.reset(new PersistentInStream(DataFS(), data_paths, false, false));
+    if (record_load_conf.has_random_shuffle_conf()) {
+      const int32_t shuffle_buffer_size = record_load_conf.random_shuffle_conf().buffer_size();
+      CHECK_GT(shuffle_buffer_size, 0);
+      record_reader_.reset(new RandomShuffleOFRecordReader(
+          in_stream_.get(), static_cast<size_t>(shuffle_buffer_size)));
+    } else {
+      record_reader_.reset(new NaiveOFRecordReader(in_stream_.get()));
+    }
   }
 }
 
