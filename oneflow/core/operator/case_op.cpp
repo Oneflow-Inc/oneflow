@@ -32,12 +32,7 @@ void CaseOp::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchD
 
 void CaseOp::GetSbpSignatures(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {
-  SbpSignatureBuilder()
-      .Broadcast(input_bns())
-      .Broadcast(output_bns())
-      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
-}
+    SbpSignatureList* sbp_sig_list) const {}
 
 LogicalNode* CaseOp::NewProperLogicalNode() const { return new CaseLogicalNode(); }
 

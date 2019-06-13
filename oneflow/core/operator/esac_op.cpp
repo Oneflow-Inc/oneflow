@@ -26,12 +26,7 @@ void EsacOp::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchD
 
 void EsacOp::GetSbpSignatures(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {
-  SbpSignatureBuilder()
-      .Broadcast(input_bns())
-      .Broadcast(output_bns())
-      .Build(sbp_sig_list->mutable_sbp_signature()->Add());
-}
+    SbpSignatureList* sbp_sig_list) const {}
 
 LogicalNode* EsacOp::NewProperLogicalNode() const { return new EsacLogicalNode(); }
 
