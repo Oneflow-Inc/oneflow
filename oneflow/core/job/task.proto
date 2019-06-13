@@ -48,6 +48,8 @@ enum TaskType {
   kSourceTick = 40;
   kTick = 41;
   kSinkTick = 42;
+  kCase = 43;
+  kEsac = 44;
 };
 
 enum AreaType {

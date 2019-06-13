@@ -15,6 +15,8 @@
 #include "oneflow/core/graph/repeat_backward_compute_task_node.h"
 #include "oneflow/core/graph/acc_compute_task_node.h"
 #include "oneflow/core/graph/every_nth_compute_task_node.h"
+#include "oneflow/core/graph/case_compute_task_node.h"
+#include "oneflow/core/graph/esac_compute_task_node.h"
 
 namespace oneflow {
 
@@ -336,6 +338,8 @@ DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatForward);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Acc);
 DECLARE_DERIVED_BACKWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatBackward);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(EveryNth);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Case);
+DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Esac);
 
 #define DECLARE_BEFORE_OR_AFTER_ALLREDUCE_REDUCE_NODE(class_name, may_consume_md_diff) \
   class class_name final : public ReduceLogicalNode {                                  \
