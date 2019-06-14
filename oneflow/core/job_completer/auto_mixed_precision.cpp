@@ -13,6 +13,22 @@ bool IsKeyFound(const MapT& m, const KeyT& k) {
   return m.find(k) != m.end();
 }
 
+template<typename ContainerT, typename ElemT>
+std::string Container2Str(const ContainerT& container,
+                          std::function<std::string(const ElemT&)> elem2str) {
+  std::string ret;
+  bool is_first = true;
+  for (const ElemT& elem : container) {
+    if (is_first) {
+      is_first = false;
+    } else {
+      ret += ", ";
+    }
+    ret += elem2str(elem);
+  }
+  return ret;
+}
+
 template<typename GraphType, typename NodeType>
 void DfsGraphTraversal(
     const GraphType& graph, const std::list<NodeType*>& starts,
@@ -151,13 +167,24 @@ void AutoMixedPrecision::Apply(const OpGraph& op_graph, Job* job) {
     });
   }
 
+  std::function<std::string(OpNode* const&)> OpName4Node = [](OpNode* const& node) {
+    return node->op().op_name();
+  };
   HashSet<OpNode*> black_set;
   HashSet<OpNode*> white_set;
+
   FillBlackSet(op_graph, &black_set);
+  VLOG(1) << "BlackSet include: "
+          << Container2Str<HashSet<OpNode*>, OpNode*>(black_set, OpName4Node);
 
   auto IsAllowedToRunWithHalf = MakePredicatorIsAllowedToRunWithHalf(op_graph);
   FillWhiteSet(op_graph, IsAllowedToRunWithHalf, black_set, &white_set);
+  VLOG(2) << "WhiteSet Before Propagate include: "
+          << Container2Str<HashSet<OpNode*>, OpNode*>(white_set, OpName4Node);
   PropagateWhiteThroughNonListNodes(op_graph, IsAllowedToRunWithHalf, black_set, &white_set);
+  VLOG(1) << "WhiteSet include: "
+          << Container2Str<HashSet<OpNode*>, OpNode*>(white_set, OpName4Node);
+
   InsertCastOp(op_graph, white_set, job);
 }
 
@@ -176,7 +203,7 @@ void AutoMixedPrecision::FillBlackSet(const OpGraph& op_graph, HashSet<OpNode*>*
           },
           [&](OpNode* node) {
             INSERT_CHECK(upstream_or_part_of_black_and_gray.insert(node));
-            VLOG(1) << "FillBlackSet(): Insert " << node->op().op_name()
+            VLOG(3) << "FillBlackSet(): Insert " << node->op().op_name()
                     << " to upstream_or_part_of_black_and_gray";
           });
     }
@@ -196,7 +223,7 @@ void AutoMixedPrecision::FillBlackSet(const OpGraph& op_graph, HashSet<OpNode*>*
         },
         [&](OpNode* node) {
           INSERT_CHECK(black_set->insert(node));
-          VLOG(1) << "FillBlackSet(): Insert " << node->op().op_name() << " to black_set";
+          VLOG(2) << "FillBlackSet(): Insert " << node->op().op_name() << " to black_set";
         });
   });
 }
@@ -219,7 +246,7 @@ void AutoMixedPrecision::FillWhiteSet(const OpGraph& op_graph,
           },
           [&](OpNode* node) {
             INSERT_CHECK(upstream_or_part_of_white.insert(node));
-            VLOG(1) << "FillWhiteSet(): Insert " << node->op().op_name()
+            VLOG(3) << "FillWhiteSet(): Insert " << node->op().op_name()
                     << " to upstream_or_part_of_white";
           });
     }
@@ -238,7 +265,7 @@ void AutoMixedPrecision::FillWhiteSet(const OpGraph& op_graph,
           },
           [&](OpNode* node) {
             INSERT_CHECK(white_set->insert(node));
-            VLOG(1) << "FillWhiteSet(): Insert " << node->op().op_name() << " to white_set";
+            VLOG(2) << "FillWhiteSet(): Insert " << node->op().op_name() << " to white_set";
           });
     }
   });
@@ -261,11 +288,11 @@ void AutoMixedPrecision::PropagateWhiteThroughNonListNodes(
           },
           [&](OpNode* node) {
             INSERT_CHECK(visited.insert(node));
-            VLOG(1) << "PropagateWhiteThroughNonListNodes(): Insert " << node->op().op_name()
+            VLOG(3) << "PropagateWhiteThroughNonListNodes(): Insert " << node->op().op_name()
                     << " to visited";
             bool inserted = white_set->insert(node).second;
             if (inserted) {
-              VLOG(1) << "PropagateWhiteThroughNonListNodes(): Insert " << node->op().op_name()
+              VLOG(2) << "PropagateWhiteThroughNonListNodes(): Insert " << node->op().op_name()
                       << " to white_set";
             }
           });
