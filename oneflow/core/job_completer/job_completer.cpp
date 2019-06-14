@@ -15,18 +15,13 @@ namespace oneflow {
 namespace {
 
 void CheckOpGraph(const OpGraph& op_graph) {
-  size_t source_op_cnt = 0;
-  // size_t sink_op_cnt = 0;
   op_graph.ForEachNode([&](OpNode* op_node) {
     size_t in_cnt = 0;
     op_graph.ForEachDataAndCtrlInNode(op_node, [&](OpNode*) { ++in_cnt; });
-    if (in_cnt == 0) {
-      CHECK_EQ(++source_op_cnt, 1);
-      CHECK(op_node->op().op_conf().has_source_tick_conf());
-    }
-    // size_t out_cnt = 0;
-    // op_graph.ForEachDataAndCtrlOutNode(op_node, [&](OpNode*) { ++out_cnt; });
-    // if (out_cnt == 0) { CHECK_EQ(++sink_op_cnt, 1); }
+    if (in_cnt == 0) { CHECK(op_node->op().op_conf().has_source_tick_conf()); }
+    size_t out_cnt = 0;
+    op_graph.ForEachDataAndCtrlOutNode(op_node, [&](OpNode*) { ++out_cnt; });
+    if (out_cnt == 0) { CHECK(op_node->op().op_conf().has_sink_tick_conf()); }
   });
 }
 
@@ -571,7 +566,8 @@ void JobCompleter::Complete(Job* job) const {
     WithOpGraphAndMutJob(job, &AutoSourceTick);
     WithOpGraphAndMutJob(job, &AddTickForTimeShape);
     WithOpGraphAndMutJob(job, &AutoSinkTick);
-    MakeTotalJobCriticalSection(*job);
+    AddGlobalTotalJobCriticalSection(*job);
+    WithOpGraphAndMutJob(job, &AddGlobalInputOutputCriticalSections);
     WithOpGraphAndMutJob(job, &RewriteBoxingWithAllReduce);
     WithOpGraphAndMutJob(job, &FreezeSbpSignature);
     WithOpGraphAndMutJob(job, &GroupBoxingByDstParallel);
