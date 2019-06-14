@@ -76,5 +76,6 @@ void VariableOp::InferSbpSignature(
 }
 
 REGISTER_OP(OperatorConf::kVariableConf, VariableOp);
+REGISTER_OP_SAME_OUTPUT_BLOB_MEM_BLOCK_NUM(OperatorConf::kVariableConf, 1);
 
 }  // namespace oneflow

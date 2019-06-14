@@ -60,4 +60,7 @@ void InputOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
       .Build(sbp_sig_list);
 }
 
+REGISTER_OP(OperatorConf::kInputConf, InputOp);
+REGISTER_OP_SAME_OUTPUT_BLOB_MEM_BLOCK_NUM(OperatorConf::kInputConf, 1);
+
 }  // namespace oneflow

@@ -5,6 +5,20 @@
 
 namespace oneflow {
 
+namespace {
+
+size_t MemBlockNum4OpSameOutputBlob(OperatorConf::OpTypeCase op_type_case) {
+  if (IsClassRegistered<RuntimeMemBlockNum4OpSameOutputBlob>(op_type_case)) {
+    std::unique_ptr<RuntimeMemBlockNum4OpSameOutputBlob> ptr;
+    ptr.reset(NewObj<RuntimeMemBlockNum4OpSameOutputBlob>(op_type_case));
+    return *ptr;
+  } else {
+    return -1;
+  }
+}
+
+}  // namespace
+
 bool NormalForwardCompTaskNode::HasBackwardCompTaskNode() {
   bool ret = false;
   ForEachOutDataEdge([&](TaskEdge* edge) {
@@ -16,10 +30,9 @@ bool NormalForwardCompTaskNode::HasBackwardCompTaskNode() {
 
 void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   const Operator& op = *logical_node()->SoleOp();
-  if (op.IsAllOutputConst() || op.op_conf().has_variable_conf()) {
-    ProduceRegst("out", false, 1, 1);
-  } else if (op.op_conf().has_keep_header_only_conf()) {
-    ProduceRegst("out", false, 100, 100);
+  size_t mem_block_num = MemBlockNum4OpSameOutputBlob(op.op_conf().op_type_case());
+  if (mem_block_num != -1) {
+    ProduceRegst("out", false, mem_block_num, mem_block_num);
   } else {
     ProduceRegst("out", true);
   }

@@ -10,6 +10,7 @@ namespace oneflow {
 void AutoSourceTick(const OpGraph& op_graph, Job* job);
 void AddTickForTimeShape(const OpGraph& op_graph, Job* job);
 void AutoSinkTick(const OpGraph& op_graph, Job* job);
+void MakeTotalJobCriticalSection(const Job& job);
 
 class MutOpConTickInputHelper {
  public:

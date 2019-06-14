@@ -571,6 +571,7 @@ void JobCompleter::Complete(Job* job) const {
     WithOpGraphAndMutJob(job, &AutoSourceTick);
     WithOpGraphAndMutJob(job, &AddTickForTimeShape);
     WithOpGraphAndMutJob(job, &AutoSinkTick);
+    MakeTotalJobCriticalSection(*job);
     WithOpGraphAndMutJob(job, &RewriteBoxingWithAllReduce);
     WithOpGraphAndMutJob(job, &FreezeSbpSignature);
     WithOpGraphAndMutJob(job, &GroupBoxingByDstParallel);

@@ -307,6 +307,14 @@ struct OnlyCpuSupportPredicator {
   bool only_cpu_;
 };
 
+struct RuntimeMemBlockNum4OpSameOutputBlob final {
+  RuntimeMemBlockNum4OpSameOutputBlob(size_t num) : num_(num) {}
+  operator size_t() { return num_; }
+
+ private:
+  size_t num_;
+};
+
 #define REGISTER_OP(op_type_case, OpType)                                       \
   REGISTER_CLASS_CREATOR(op_type_case, OnlyCpuSupportPredicator,                \
                          ([] { return new OnlyCpuSupportPredicator(false); })); \
@@ -322,6 +330,10 @@ struct OnlyCpuSupportPredicator {
   REGISTER_CLASS_CREATOR(op_type_case, OnlyCpuSupportPredicator,                \
                          ([] { return new OnlyCpuSupportPredicator(false); })); \
   REGISTER_CLASS_CREATOR(op_type_case, Operator, creator, const OperatorConf&)
+
+#define REGISTER_OP_SAME_OUTPUT_BLOB_MEM_BLOCK_NUM(op_type_case, num)       \
+  REGISTER_CLASS_CREATOR(op_type_case, RuntimeMemBlockNum4OpSameOutputBlob, \
+                         ([] { return new RuntimeMemBlockNum4OpSameOutputBlob(num); }))
 
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf);
 
