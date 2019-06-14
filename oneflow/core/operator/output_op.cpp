@@ -5,7 +5,7 @@ namespace oneflow {
 
 void OutputOp::InitFromOpConf() {
   EnrollInputBn("in");
-  EnrollOutputBn("out")->set_const_inplace_ibn("in");
+  EnrollOutputBn("out");
 }
 
 void OutputOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

@@ -211,6 +211,13 @@ struct hash<oneflow::OpBlobArg> {
 };
 
 template<>
+struct hash<oneflow::OperatorConf::OpTypeCase> {
+  size_t operator()(const oneflow::OperatorConf::OpTypeCase& op_type_case) const {
+    return std::hash<int64_t>()(static_cast<int64_t>(op_type_case));
+  }
+};
+
+template<>
 struct hash<oneflow::SbpParallel> {
   size_t operator()(const oneflow::SbpParallel& sbp_parallel) const {
     std::string desc;
