@@ -15,14 +15,6 @@ void BatchGatherKernel<device_type, T>::ForwardDataContent(
                                                  BnInOp2Blob("indices"), BnInOp2Blob("out"));
 }
 
-template<DeviceType device_type, typename T>
-void BatchGatherKernel<device_type, T>::BackwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BatchGatherKernelUtil<device_type, T>::Backward(ctx.device_ctx, BnInOp2Blob(GenDiffBn("out")),
-                                                  BnInOp2Blob("indices"),
-                                                  BnInOp2Blob(GenDiffBn("in")));
-}
-
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBatchGatherConf, BatchGatherKernel,
                            FLOATING_DATA_TYPE_SEQ);
 

@@ -15,8 +15,6 @@ class VariableKernel final : public KernelIfWithModel<device_type, T> {
  private:
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
-  void BackwardDataContent(const KernelCtx&,
-                           std::function<Blob*(const std::string&)>) const override;
   void InitModelBlobsWithRandomSeed(DeviceCtx*, std::mt19937*,
                                     std::function<Blob*(const std::string&)>) const override;
   void InitModelBlobsWithDir(DeviceCtx*, int32_t part_id, int32_t part_num,

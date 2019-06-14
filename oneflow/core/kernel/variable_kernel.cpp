@@ -22,20 +22,6 @@ void VariableKernel<device_type, T>::ForwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
-void VariableKernel<device_type, T>::BackwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CHECK(this->op_conf().trainable());
-  const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
-  Blob* model_diff_blob = BnInOp2Blob(GenDiffBn(ModelName()));
-  if (this->kernel_conf().variable_conf().is_bw_inplace()) {
-    CHECK_EQ(out_diff_blob->dptr(), model_diff_blob->dptr());
-  } else {
-    CHECK_NE(out_diff_blob->dptr(), model_diff_blob->dptr());
-    model_diff_blob->CopyDataContentFrom(ctx.device_ctx, out_diff_blob);
-  }
-}
-
-template<DeviceType device_type, typename T>
 void VariableKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937* random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {

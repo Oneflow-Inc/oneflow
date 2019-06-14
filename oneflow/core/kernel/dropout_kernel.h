@@ -18,8 +18,6 @@ class DropoutKernel final : public KernelIf<device_type> {
   void VirtualKernelInit(const ParallelContext*, DeviceCtx*) override;
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
-  void BackwardDataContent(const KernelCtx&,
-                           std::function<Blob*(const std::string&)>) const override;
 
   // random_mask = random_uniform(0, 1)
   // y = dropout(x, random_mask, dropout_rate)
