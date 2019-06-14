@@ -104,6 +104,12 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
         }
       }
     });
+    auto EdgeName4Edge = [](OpEdge* const& edge) {
+      return std::string("edge_of_") + edge->src_node()->op().op_name() + "_to_"
+             + edge->dst_node()->op().op_name();
+    };
+    VLOG(3) << "white_set_edges for f2h value: " << f2h << " is "
+            << Container2Str<HashSet<OpEdge*>, OpEdge*>(white_set_edges, EdgeName4Edge);
   }
 
   HashMap<std::string, OperatorConf> dst_op_name2dst_op_confs;
