@@ -8,6 +8,14 @@ void SourceTickOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
+LogicalNode* SourceTickOp::NewProperLogicalNode() const {
+  if (op_conf().ctrl_in_op_name().empty()) {
+    return new SourceTickLogicalNode;
+  } else {
+    return new TickLogicalNode;
+  }
+}
+
 const PbMessage& SourceTickOp::GetCustomizedConf() const { return op_conf().source_tick_conf(); }
 
 void SourceTickOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

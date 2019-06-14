@@ -10,7 +10,6 @@
 #include "oneflow/core/graph/unpack_backward_task_node.h"
 #include "oneflow/core/graph/source_tick_compute_task_node.h"
 #include "oneflow/core/graph/tick_compute_task_node.h"
-#include "oneflow/core/graph/sink_tick_compute_task_node.h"
 #include "oneflow/core/graph/repeat_forward_compute_task_node.h"
 #include "oneflow/core/graph/repeat_backward_compute_task_node.h"
 #include "oneflow/core/graph/acc_compute_task_node.h"
@@ -333,7 +332,6 @@ DECLARE_REDUCE_LOGICAL_NODE(NcclReduceScatterLogicalNode, true);
 
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(SourceTick);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Tick);
-DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(SinkTick);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatForward);
 DECLARE_DERIVED_FORWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(Acc);
 DECLARE_DERIVED_BACKWARD_LOGICAL_NODE_WITH_NEW_AREA_ID(RepeatBackward);
