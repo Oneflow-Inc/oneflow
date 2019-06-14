@@ -29,14 +29,6 @@ void DropoutKernel<device_type, T>::ForwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
-void DropoutKernel<device_type, T>::BackwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  DropoutBackward(ctx.device_ctx, BnInOp2Blob("out_diff")->shape().elem_cnt(),
-                  this->op_conf().dropout_conf().rate(), BnInOp2Blob("out_diff")->dptr<T>(),
-                  BnInOp2Blob("random_mask")->dptr<float>(), BnInOp2Blob("in_diff")->mut_dptr<T>());
-}
-
-template<DeviceType device_type, typename T>
 void DropoutKernel<device_type, T>::Dropout(DeviceCtx* ctx, const int64_t n, float dropout_rate,
                                             const T* in, float* random_mask, T* out) const {
   random_generator_->Uniform(n, random_mask);
