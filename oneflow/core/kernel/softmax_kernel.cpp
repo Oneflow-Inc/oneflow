@@ -81,35 +81,6 @@ void SoftmaxKernel<device_type, T>::ForwardDataContent(
   }
 }
 
-template<DeviceType device_type, typename T>
-void SoftmaxKernel<device_type, T>::BackwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* out_blob = BnInOp2Blob(this->op_attribute().output_bns(0));
-  const Blob* out_diff_blob = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
-  Blob* in_diff_blob = BnInOp2Blob(this->op_attribute().input_diff_bns(0));
-  Blob* tmp_blob = BnInOp2Blob("bw_softmax_num");
-  Blob* buf_blob = BnInOp2Blob("bw_buf");
-  auto conf = this->kernel_conf().softmax_conf();
-  const int64_t n = conf.transpose_rows();
-  const int64_t w = conf.transpose_cols();
-  T* tmp = tmp_blob->mut_dptr<T>();
-  if (conf.need_transpose()) {
-    Blob* transpose_in_diff_blob = BnInOp2Blob("transpose_in");
-    Blob* transpose_out_blob = BnInOp2Blob("transpose_out");
-    Blob* transpose_out_diff_blob = BnInOp2Blob("transpose_out_diff");
-    Transpose<device_type, T>(ctx.device_ctx, out_diff_blob, transpose_out_diff_blob, conf.perm());
-    SoftmaxComputeDiff<device_type, T>(ctx.device_ctx, n, w, transpose_out_diff_blob->dptr<T>(),
-                                       transpose_out_blob->dptr<T>(), tmp,
-                                       transpose_in_diff_blob->mut_dptr<T>(), buf_blob->mut_dptr(),
-                                       buf_blob->ByteSizeOfDataContentField());
-    Transpose<device_type, T>(ctx.device_ctx, transpose_in_diff_blob, in_diff_blob, conf.perm());
-  } else {
-    SoftmaxComputeDiff<device_type, T>(
-        ctx.device_ctx, n, w, out_diff_blob->dptr<T>(), out_blob->dptr<T>(), tmp,
-        in_diff_blob->mut_dptr<T>(), buf_blob->mut_dptr(), buf_blob->ByteSizeOfDataContentField());
-  }
-}
-
 template<typename T>
 struct SoftmaxKernelUtil<DeviceType::kCPU, T> {
   static void Sub(DeviceCtx* ctx, const int64_t n, const int64_t w, T* matrix, const T* vector) {
