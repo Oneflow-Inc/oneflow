@@ -14,6 +14,7 @@ class CriticalSectionDesc final {
   void AddCriticalSection(std::unique_ptr<CriticalSection>&&);
   void Done();
   const CriticalSection& GetCriticalSectionByIndex(int64_t) const;
+  CriticalSection* MutCriticalSectionByIndex(int64_t) const;
   const std::vector<int64_t>& CriticalSectionIndexes4JobId(int64_t) const;
   const HashSet<int64_t>& GetIntersectingCriticalSectionIndexes(int64_t) const;
 

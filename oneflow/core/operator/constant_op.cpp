@@ -67,5 +67,6 @@ void ConstantOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
 }
 
 REGISTER_OP(OperatorConf::kConstantConf, ConstantOp);
+REGISTER_OP_SAME_OUTPUT_BLOB_MEM_BLOCK_NUM(OperatorConf::kConstantConf, 1);
 
 }  // namespace oneflow

@@ -1,5 +1,6 @@
 #include "oneflow/core/job_completer/autotick.h"
 #include "oneflow/core/job/job_builder.h"
+#include "oneflow/core/job/critical_section_desc.h"
 
 namespace oneflow {
 
@@ -125,6 +126,16 @@ void AppendAccTick(const Shape& src_shape, const std::list<OpNode*>& op_nodes,
                       {acc_op_conf, last_tick_op_conf});
 }
 
+void MakeTotalJobCriticalSection(const std::string& src_tick_op_name,
+                                 const std::string& sink_tick_op_name) {
+  auto critical_sec = std::make_unique<CriticalSection>();
+  critical_sec->mutable_critical_section_id()->set_job_id(Global<JobDesc>::Get()->job_id());
+  critical_sec->mutable_critical_section_id()->set_source_tick_op_name(src_tick_op_name);
+  critical_sec->mutable_critical_section_id()->set_sink_tick_op_name(sink_tick_op_name);
+  critical_sec->set_critical_section_type(kTotalJobCriticalSection);
+  Global<CriticalSectionDesc>::Get()->AddCriticalSection(std::move(critical_sec));
+}
+
 }  // namespace
 
 void AutoSourceTick(const OpGraph& op_graph, Job* job) {
@@ -184,6 +195,24 @@ void AutoSinkTick(const OpGraph& op_graph, Job* job) {
   parallel_conf.set_policy(kDataParallel);
   parallel_conf.add_device_name("0:cpu:0");
   JobBuilder(job).AddOps(parallel_conf, {sink_tick_op_conf});
+}
+
+void MakeTotalJobCriticalSection(const Job& job) {
+  const OperatorConf* src_tick_op_conf = nullptr;
+  const OperatorConf* sink_tick_op_conf = nullptr;
+  for (const auto& op_conf : job.net().op()) {
+    if (op_conf.has_source_tick_conf()) {
+      CHECK_ISNULL(src_tick_op_conf);
+      src_tick_op_conf = &op_conf;
+    }
+    if (op_conf.has_sink_tick_conf()) {
+      CHECK_ISNULL(sink_tick_op_conf);
+      sink_tick_op_conf = &op_conf;
+    }
+  }
+  CHECK_NOTNULL(src_tick_op_conf);
+  CHECK_NOTNULL(sink_tick_op_conf);
+  MakeTotalJobCriticalSection(src_tick_op_conf->name(), sink_tick_op_conf->name());
 }
 
 }  // namespace oneflow

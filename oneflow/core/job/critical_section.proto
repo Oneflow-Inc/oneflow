@@ -9,8 +9,8 @@ enum CriticalSectionType {
 
 message CriticalSectionId {
   required int64 job_id = 1;
-  required string source_tick_op_name_ = 2;
-  required string sink_tick_op_name_ = 3;
+  required string source_tick_op_name = 2;
+  required string sink_tick_op_name = 3;
 }
 
 message CriticalSection {
