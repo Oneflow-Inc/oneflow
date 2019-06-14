@@ -136,6 +136,8 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void ForEachDataAndCtrlInNode(OpNode* node, const std::function<void(OpNode*)>& Handler) const;
   void ForEachDataAndCtrlOutNode(OpNode* node, const std::function<void(OpNode*)>& Handler) const;
 
+  const OpNode* OpNode4OpName(const std::string& name) const { return op_name2op_node_.at(name); }
+
  private:
   void Init(const Job& job);
   void InitNodes(const Job& job);

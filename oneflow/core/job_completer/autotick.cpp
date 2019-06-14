@@ -108,7 +108,7 @@ OperatorConf AppendTick(const std::vector<std::string> op_names,
   return tick_op_conf;
 }
 
-OperatorConf AppendTick(const std::list<OpNode*>& op_nodes, JobBuilder* job_builder) {
+OperatorConf AppendTick(const std::list<const OpNode*>& op_nodes, JobBuilder* job_builder) {
   std::vector<std::string> op_names;
   std::vector<LogicalBlobId> lbis;
   for (const auto* op_node : op_nodes) {
@@ -121,7 +121,7 @@ OperatorConf AppendTick(const std::list<OpNode*>& op_nodes, JobBuilder* job_buil
   return AppendTick(op_names, lbis, op_nodes.front()->parallel_desc().parallel_conf(), job_builder);
 }
 
-OperatorConf PrependTick(const std::list<OpNode*>& op_nodes, JobBuilder* job_builder) {
+OperatorConf PrependTick(const std::list<const OpNode*>& op_nodes, JobBuilder* job_builder) {
   OperatorConf tick_op_conf = MakeTickOpConf();
   std::vector<OperatorConf> op_confs;
   for (const OpNode* op_node : op_nodes) {
@@ -133,7 +133,7 @@ OperatorConf PrependTick(const std::list<OpNode*>& op_nodes, JobBuilder* job_bui
   return tick_op_conf;
 }
 
-void AppendAccTick(const Shape& src_shape, const std::list<OpNode*>& op_nodes,
+void AppendAccTick(const Shape& src_shape, const std::list<const OpNode*>& op_nodes,
                    JobBuilder* job_builder) {
   const auto& tick_shape = GetOpTimeShape(op_nodes.front());
   CHECK_EQ(tick_shape.elem_cnt() % src_shape.elem_cnt(), 0);
@@ -168,14 +168,15 @@ void AddGlobalCriticalSection(const std::string& src_tick_op_name,
 }
 
 void ForEachInputOutputCriticalSectionOpNodes(
-    const OpGraph& op_graph, const std::function<void(const HashSet<OpNode*>&)>& Handler) {
-  HashMap<int32_t, HashSet<OpNode*>> op_type_case2op_nodes;
-  op_graph.ForEachNode([&](OpNode* op_node) {
+    const OpGraph& op_graph, const std::function<void(const HashSet<const OpNode*>&)>& Handler) {
+  HashMap<OperatorConf::OpTypeCase, HashSet<const OpNode*>> op_type_case2op_nodes;
+  for (const std::string& op_name : Global<JobDesc>::Get()->arg_op_name()) {
+    const OpNode* op_node = op_graph.OpNode4OpName(op_name);
     const auto& op_conf = op_node->op().op_conf();
     if (op_conf.has_input_conf() || op_conf.has_output_conf() || op_conf.has_variable_conf()) {
       CHECK(op_type_case2op_nodes[op_conf.op_type_case()].emplace(op_node).second);
     }
-  });
+  }
   for (OperatorConf::OpTypeCase op_type_case :
        {OperatorConf::kVariableConf, OperatorConf::kInputConf, OperatorConf::kOutputConf}) {
     if (op_type_case2op_nodes[op_type_case].empty() == false) {
@@ -184,11 +185,11 @@ void ForEachInputOutputCriticalSectionOpNodes(
   }
 }
 
-void AddGlobalInputOutputCriticalSection(const HashSet<OpNode*>& op_nodes, Job* job) {
+void AddGlobalInputOutputCriticalSection(const HashSet<const OpNode*>& op_nodes, Job* job) {
   auto time_shape = std::make_unique<Shape>(std::vector<int64_t>{
       Global<JobDesc>::Get()->TotalBatchNum(), Global<JobDesc>::Get()->NumOfPiecesInBatch()});
-  HashMap<ParallelDesc, std::list<OpNode*>> parallel_desc2op_nodes;
-  for (OpNode* op_node : op_nodes) {
+  HashMap<ParallelDesc, std::list<const OpNode*>> parallel_desc2op_nodes;
+  for (const OpNode* op_node : op_nodes) {
     parallel_desc2op_nodes[op_node->parallel_desc()].push_back(op_node);
     const auto& op_conf = op_node->op().op_conf();
     CHECK(op_conf.has_input_conf() || op_conf.has_output_conf() || op_conf.has_variable_conf());
@@ -233,7 +234,8 @@ void AutoSourceTick(const OpGraph& op_graph, Job* job) {
 
 void AddTickForTimeShape(const OpGraph& op_graph, Job* job) {
   const auto& src_time_shape = *GetSrcTickOpNode(op_graph)->out_blob_time_shape();
-  HashMap<std::pair<ParallelDesc, std::pair<Shape, Shape>>, std::list<OpNode*>> pd7ts2op_nodes;
+  HashMap<std::pair<ParallelDesc, std::pair<Shape, Shape>>, std::list<const OpNode*>>
+      pd7ts2op_nodes;
   op_graph.ForEachNode([&](OpNode* op_node) {
     CHECK(!op_node->op().op_conf().has_sink_tick_conf());
     size_t out_cnt = 0;
@@ -297,7 +299,7 @@ void AddGlobalTotalJobCriticalSection(const Job& job) {
 }
 
 void AddGlobalInputOutputCriticalSections(const OpGraph& op_graph, Job* job) {
-  ForEachInputOutputCriticalSectionOpNodes(op_graph, [&](const HashSet<OpNode*>& op_nodes) {
+  ForEachInputOutputCriticalSectionOpNodes(op_graph, [&](const HashSet<const OpNode*>& op_nodes) {
     AddGlobalInputOutputCriticalSection(op_nodes, job);
   });
 }

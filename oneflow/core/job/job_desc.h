@@ -20,6 +20,8 @@ class JobDesc final {
   // Common
   const JobConf& job_conf() const { return job_conf_; }
   int32_t job_id() const { return job_id_; }
+  const std::string& name() const { return job_conf_.name(); }
+  const PbRpf<std::string>& arg_op_name() const { return job_conf_.arg_op_name(); }
   const Config& other_conf() const { return job_conf_.other(); }
   DataType DefaultDataType() const { return job_conf_.other().default_data_type(); }
   size_t SizeOfOneDataId() const { return job_conf_.other().max_data_id_length() * sizeof(char); }
