@@ -531,7 +531,6 @@ BackwardLogicalNode* RepeatForwardLogicalNode::NewCorrectBackwardNode() {
 }
 BackwardLogicalNode* SourceTickLogicalNode::NewCorrectBackwardNode() { UNIMPLEMENTED(); }
 BackwardLogicalNode* TickLogicalNode::NewCorrectBackwardNode() { UNIMPLEMENTED(); }
-BackwardLogicalNode* SinkTickLogicalNode::NewCorrectBackwardNode() { UNIMPLEMENTED(); }
 BackwardLogicalNode* EveryNthLogicalNode::NewCorrectBackwardNode() { UNIMPLEMENTED(); }
 BackwardLogicalNode* CaseLogicalNode::NewCorrectBackwardNode() { UNIMPLEMENTED(); }
 BackwardLogicalNode* EsacLogicalNode::NewCorrectBackwardNode() { UNIMPLEMENTED(); }

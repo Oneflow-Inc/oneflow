@@ -125,11 +125,6 @@ void AppendAccTick(const Shape& src_shape, const std::list<OpNode*>& op_nodes,
                       {acc_op_conf, last_tick_op_conf});
 }
 
-void SearchAccThenAppendTick(const OpGraph& op_graph, const Shape& src_shape,
-                             const std::list<OpNode*>& op_nodes, JobBuilder* job_builder) {
-  TODO();
-}
-
 }  // namespace
 
 void AutoSourceTick(const OpGraph& op_graph, Job* job) {
@@ -158,7 +153,7 @@ void AddTickForTimeShape(const OpGraph& op_graph, Job* job) {
     } else if (ts.second.elem_cnt() > src_time_shape.elem_cnt()) {
       AppendAccTick(src_time_shape, pair.second, &job_builder);
     } else {
-      SearchAccThenAppendTick(op_graph, src_time_shape, pair.second, &job_builder);
+      UNIMPLEMENTED();
     }
   }
 }

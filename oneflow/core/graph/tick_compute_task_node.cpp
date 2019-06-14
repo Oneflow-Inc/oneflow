@@ -30,11 +30,13 @@ void TickCompTaskNode::BuildExecGphAndRegst() {
 }
 
 void TickCompTaskNode::InferProducedDataRegstTimeShape() {
-  auto in_time_shape = (*in_edges().begin())->src_node()->GetFastestInputOutputTimeShape();
+  auto time_shape = (*in_edges().begin())->src_node()->GetFastestInputOutputTimeShape();
   for (TaskEdge* edge : in_edges()) {
-    CHECK(*in_time_shape == *edge->src_node()->GetFastestInputOutputTimeShape());
+    CHECK(*time_shape == *edge->src_node()->GetFastestInputOutputTimeShape());
   }
-  *GetProducedRegst("out")->mut_data_regst_time_shape() = in_time_shape;
+  ForEachProducedDataRegst([time_shape](const std::string& name, RegstDesc* regst) {
+    *regst->mut_data_regst_time_shape() = time_shape;
+  });
 }
 
 }  // namespace oneflow

@@ -4,8 +4,7 @@ package oneflow;
 enum CriticalSectionType {
   kInvalidCriticalSection = 0;
   kTotalJobCriticalSection = 1;
-  kInputCriticalSection = 2;
-  kOutputCriticalSection = 3;
+  kInputOutputCriticalSection = 2;
 }
 
 message CriticalSectionId {
