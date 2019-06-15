@@ -204,6 +204,11 @@ message WhereKernelConf {
   required DataType value_type = 2;
 }
 
+message LocalScatterNdUpdateConf {
+ required DataType value_type = 1;
+ required DataType indices_type = 2; 
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
@@ -252,5 +257,6 @@ message KernelConf {
     PReluKernelConf prelu_conf = 423;
     SmoothL1LossKernelConf smooth_l1_loss_conf = 424;
     WhereKernelConf where_conf = 425;
+    LocalScatterNdUpdateConf local_scatter_nd_update_conf = 426;
   }
 }

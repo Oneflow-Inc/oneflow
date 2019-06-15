@@ -1518,6 +1518,15 @@ message ConstantLikeOpConf {
   required string out = 3;
 }
 
+message LocalScatterNdUpdateOpConf {
+  // in
+  required string in = 1;
+  required string indices = 2;
+  required string updates = 3;
+  // out
+  required string out = 4;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1646,6 +1655,7 @@ message OperatorConf {
     LogicalAndOpConf logical_and_conf = 302;
     ClipByValueOpConf clip_by_value_conf = 303;
     ConstantLikeOpConf constant_like_conf = 304;
+    LocalScatterNdUpdateOpConf local_scatter_nd_update_conf = 305;
 
     // Maybe not needed
     RedefineDim0OpConf redefine_dim0_conf = 400;
