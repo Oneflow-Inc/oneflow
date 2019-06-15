@@ -430,8 +430,8 @@ uint64_t Improver::AvailableMemSize(int64_t machine_id, int64_t memory_zone_id) 
   const ResourceDesc* resource_desc = Global<ResourceDesc>::Get();
   if (memory_zone_id == resource_desc->GpuDeviceNum()) {
     mem_size -= resource_desc->reserved_host_mem_byte();
-    mem_size -= Global<const JobSet>::Get()->io_conf().persistence_buf_byte()
-                * record_load_task_num_.at(machine_id);
+    mem_size -=
+        Global<const IOConf>::Get()->persistence_buf_byte() * record_load_task_num_.at(machine_id);
   } else {
     mem_size -= resource_desc->reserved_device_mem_byte();
   }
