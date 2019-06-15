@@ -45,21 +45,7 @@ void ToDotFile(const Plan& plan, const std::string& filepath) {
   log_stream << "}\n";
 }
 
-Job ConvertJobConf2Job(const JobConf& job_conf) {
-  Job job;
-  *job.mutable_net() = job_conf.net();
-  *job.mutable_placement() = job_conf.placement();
-  *job.mutable_sbp_conf() = job_conf.sbp_conf();
-  *job.mutable_other() = job_conf.other();
-  return job;
-}
-
 }  // namespace
-
-Plan Compiler::Compile() const {
-  Plan plan = DoCompile();
-  return plan;
-}
 
 void Compiler::GenNetTopo(Plan* plan) const {
   HashMap<int64_t, int64_t> rid2mid;
@@ -102,17 +88,16 @@ void Compiler::GenNetTopo(Plan* plan) const {
   *(pb_net_topo.mutable_peer_machine_ids()) = HashMap2PbMap(std_net_topo);
 }
 
-Plan Compiler::DoCompile() const {
+void Compiler::Compile(Job* job, Plan* plan) const {
 #ifdef WITH_CUDA
   Global<CudnnConvCtxCache>::New();
 #endif
   const JobDesc* job_desc = Global<JobDesc>::Get();
-  Job job = ConvertJobConf2Job(job_desc->job_conf());
-  JobCompleter().Complete(&job);
-  TeePersistentLogStream::Create("optimized_job")->Write(job);
-  Global<OpGraph>::New(job);
+  JobCompleter().Complete(job);
+  TeePersistentLogStream::Create("optimized_job")->Write(*job);
+  Global<OpGraph>::New(*job);
   Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_op_graph.dot");
-  auto logical_gph = std::make_unique<LogicalGraph>(job);
+  auto logical_gph = std::make_unique<LogicalGraph>(*job);
   int64_t total_mbn_num = logical_gph->total_mbn_num();
   auto task_gph = std::make_unique<TaskGraph>(std::move(logical_gph));
   using std::placeholders::_1;
@@ -142,19 +127,17 @@ Plan Compiler::DoCompile() const {
   }
   if (job_desc->IsTrain()) { task_gph->AddReduceNoBwForwardNodeOverlapingCtrlEdges(); }
 
-  Plan plan;
   task_gph->ForEachNode([&](TaskNode* task_node) {
     if (task_node->IsMeaningLess()) { return; }
-    task_node->ToProto(plan.mutable_task()->Add());
+    task_node->ToProto(plan->mutable_task()->Add());
   });
-  plan.set_total_mbn_num(total_mbn_num);
-  GenNetTopo(&plan);
-  ToDotFile(plan, "/dot/plan.dot");
+  plan->set_total_mbn_num(total_mbn_num);
+  GenNetTopo(plan);
+  ToDotFile(*plan, "/dot/plan.dot");
   Global<OpGraph>::Delete();
 #ifdef WITH_CUDA
   Global<CudnnConvCtxCache>::Delete();
 #endif
-  return plan;
 }
 
 }  // namespace oneflow

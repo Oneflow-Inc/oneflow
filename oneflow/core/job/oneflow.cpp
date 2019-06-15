@@ -191,13 +191,13 @@ void WithJobSetLevelGlobalObjs(
   Global<ResourceDesc>::Delete();
 }
 
-void CompileCurJobOnMaster(Plan* improved_plan) {
+void CompileCurJobOnMaster(Job* job, Plan* improved_plan) {
   const JobDesc* job_desc = Global<JobDesc>::Get();
   Plan naive_plan;
   Plan mem_shared_plan;
   double start = GetCurTime();
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-    naive_plan = Compiler().Compile();
+    Compiler().Compile(job, &naive_plan);
     LOG(INFO) << "compile time: " << GetCurTime() - start;
     mem_shared_plan =
         Improver().ImproveMemSharedIdOnly(*Global<AvailableMemDesc>::Get(), naive_plan);
@@ -252,11 +252,22 @@ void MergePlan(Plan* plan, const std::vector<Plan>& sub_plans) {
   Compiler().GenNetTopo(plan);
 }
 
+Job ConvertJobConf2Job(const JobConf& job_conf) {
+  Job job;
+  *job.mutable_net() = job_conf.net();
+  *job.mutable_placement() = job_conf.placement();
+  *job.mutable_sbp_conf() = job_conf.sbp_conf();
+  *job.mutable_other() = job_conf.other();
+  return job;
+}
+
 void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
+  std::vector<Job> jobs(job_confs.size());
   std::vector<Plan> sub_plans(job_confs.size());
   FOR_RANGE(int32_t, i, 0, sub_plans.size()) {
     Global<JobDesc>::New(job_confs.Get(i), i);
-    CompileCurJobOnMaster(&sub_plans.at(i));
+    jobs.at(i) = ConvertJobConf2Job(job_confs.Get(i));
+    CompileCurJobOnMaster(&jobs.at(i), &sub_plans.at(i));
     Global<JobDesc>::Delete();
   }
   MergePlan(plan, sub_plans);
