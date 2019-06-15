@@ -18,7 +18,7 @@ class RuntimeCtx final {
   int64_t total_piece_num() const { return total_piece_num_; }
   bool is_experiment_phase() const { return is_experiment_phase_; }
   bool NeedCollectActEvent() const {
-    return is_experiment_phase_ || Global<const JobSet>::Get()->profile_conf().collect_act_event();
+    return is_experiment_phase_ || Global<const ProfileConf>::Get()->collect_act_event();
   }
 
   void NewCounter(const std::string& name, int64_t val);

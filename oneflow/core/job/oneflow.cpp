@@ -147,13 +147,16 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
   *(plan->mutable_net_topo()) = net_topo;
 }
 
-void WithJobSetLevelGlobalObjs(const std::string& job_set_filepath,
-                               const std::function<void()>& Callback) {
+void WithJobSetLevelGlobalObjs(
+    const std::string& job_set_filepath,
+    const std::function<void(const PbRpf<JobConf>& job_confs)>& Handler) {
   // New All Global
   JobSet job_set;
   ParseProtoFromTextFile(job_set_filepath, &job_set);
-  Global<const JobSet>::New(job_set);
-  Global<ResourceDesc>::New(Global<const JobSet>::Get()->resource());
+  Global<JobSet>::New(job_set);
+  Global<ResourceDesc>::New(job_set.resource());
+  Global<const IOConf>::New(job_set.io_conf());
+  Global<const ProfileConf>::New(job_set.profile_conf());
   std::unique_ptr<CtrlServer> ctrl_server(new CtrlServer());
   Global<CtrlClient>::New();
   OF_BARRIER();
@@ -163,13 +166,8 @@ void WithJobSetLevelGlobalObjs(const std::string& job_set_filepath,
   FixCpuDeviceNum();
   Global<IDMgr>::New();
   bool DoProfile = Global<MachineCtx>::Get()->IsThisMachineMaster()
-                   && Global<const JobSet>::Get()->profile_conf().collect_act_event();
+                   && Global<const ProfileConf>::Get()->collect_act_event();
   if (DoProfile) { Global<Profiler>::New(); }
-  Global<std::vector<std::unique_ptr<JobDesc>>>::New();
-  FOR_RANGE(int32_t, i, 0, job_set.job_conf_size()) {
-    Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->emplace_back(
-        new JobDesc(job_set.job_conf(i), i));
-  }
   PushAvailableMemDescOfThisMachine();
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     Global<AvailableMemDesc>::New();
@@ -177,20 +175,20 @@ void WithJobSetLevelGlobalObjs(const std::string& job_set_filepath,
     Global<CriticalSectionDesc>::New();
   }
 
-  Callback();
+  Handler(job_set.job_conf());
 
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     Global<CriticalSectionDesc>::Delete();
     Global<AvailableMemDesc>::Delete();
   }
-  Global<std::vector<std::unique_ptr<JobDesc>>>::Delete();
   if (DoProfile) { Global<Profiler>::Delete(); }
   Global<IDMgr>::Delete();
   Global<MachineCtx>::Delete();
   Global<CtrlClient>::Delete();
   ctrl_server.reset();
+  Global<const ProfileConf>::Delete();
+  Global<const IOConf>::Delete();
   Global<ResourceDesc>::Delete();
-  Global<const JobSet>::Delete();
 }
 
 void CompileCurJobOnMaster(Plan* improved_plan) {
@@ -254,20 +252,20 @@ void MergePlan(Plan* plan, const std::vector<Plan>& sub_plans) {
   Compiler().GenNetTopo(plan);
 }
 
-void CompileAndMergePlanOnMaster(Plan* plan) {
-  std::vector<Plan> sub_plans(Global<const JobSet>::Get()->job_conf_size());
+void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
+  std::vector<Plan> sub_plans(job_confs.size());
   FOR_RANGE(int32_t, i, 0, sub_plans.size()) {
-    Global<JobDesc>::New(Global<const JobSet>::Get()->job_conf(i), i);
+    Global<JobDesc>::New(job_confs.Get(i), i);
     CompileCurJobOnMaster(&sub_plans.at(i));
     Global<JobDesc>::Delete();
   }
   MergePlan(plan, sub_plans);
 }
 
-void CheckGlobalJobSet() {
+void CheckJobConfs(const PbRpf<JobConf>& job_confs) {
   HashMap<std::string, std::vector<const VariableOpConf*>> op_name2var_op_conf;
   HashSet<std::string> non_var_op_name_check;
-  for (const auto& job_conf : Global<const JobSet>::Get()->job_conf()) {
+  for (const auto& job_conf : job_confs) {
     HashSet<std::string> op_name_check;
     for (const auto& op : job_conf.net().op()) {
       if (op.has_variable_conf()) {
@@ -305,11 +303,16 @@ class Oneflow final {
 };
 
 Oneflow::Oneflow(const std::string& job_set_filepath) {
-  WithJobSetLevelGlobalObjs(job_set_filepath, [&]() {
-    CheckGlobalJobSet();
+  WithJobSetLevelGlobalObjs(job_set_filepath, [&](const PbRpf<JobConf>& job_confs) {
+    Global<std::vector<std::unique_ptr<JobDesc>>>::New();
+    FOR_RANGE(int32_t, i, 0, job_confs.size()) {
+      Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->emplace_back(
+          new JobDesc(job_confs.Get(i), i));
+    }
+    CheckJobConfs(job_confs);
     // Runtime
     Plan plan;
-    CompileAndMergePlanOnMaster(&plan);
+    CompileAndMergePlanOnMaster(job_confs, &plan);
     if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
       PushPlan("plan", plan);
     } else {
@@ -320,6 +323,7 @@ Oneflow::Oneflow(const std::string& job_set_filepath) {
       Global<Profiler>::Get()->Profile(
           plan, JoinPath(FLAGS_log_dir, ActEventLogger::act_event_bin_filename()));
     }
+    Global<std::vector<std::unique_ptr<JobDesc>>>::Delete();
   });
 }
 

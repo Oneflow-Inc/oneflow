@@ -735,8 +735,8 @@ void LogicalGraph::SetupNormalMdUpdtOp() {
 
 MdSaveLogicalNode* LogicalGraph::BuildMdSaveStructIfNeed(LogicalNode* need_save_logical) {
   bool write_snapshot_to_master =
-      Global<const JobSet>::Get()->io_conf().snapshot_fs_conf().has_localfs_conf();
-  if (Global<const JobSet>::Get()->io_conf().enable_write_snapshot()) {
+      Global<const IOConf>::Get()->snapshot_fs_conf().has_localfs_conf();
+  if (Global<const IOConf>::Get()->enable_write_snapshot()) {
     OperatorConf md_save_op_conf;
     md_save_op_conf.set_name("md_save_" + NewUniqueId());
     md_save_op_conf.set_device_type(DeviceType::kCPU);

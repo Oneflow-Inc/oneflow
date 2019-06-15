@@ -121,8 +121,6 @@ fs::FileSystem* GetFS(const FileSystemConf& file_system_conf) {
   }
 }
 
-fs::FileSystem* DataFS() { return GetFS(Global<const JobSet>::Get()->io_conf().data_fs_conf()); }
-fs::FileSystem* SnapshotFS() {
-  return GetFS(Global<const JobSet>::Get()->io_conf().snapshot_fs_conf());
-}
+fs::FileSystem* DataFS() { return GetFS(Global<const IOConf>::Get()->data_fs_conf()); }
+fs::FileSystem* SnapshotFS() { return GetFS(Global<const IOConf>::Get()->snapshot_fs_conf()); }
 }  // namespace oneflow
