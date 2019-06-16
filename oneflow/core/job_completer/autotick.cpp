@@ -173,7 +173,7 @@ void ForEachInputOutputCriticalSectionOpNodes(
   for (const std::string& op_name : Global<JobDesc>::Get()->arg_op_name()) {
     const OpNode* op_node = op_graph.OpNode4OpName(op_name);
     const auto& op_conf = op_node->op().op_conf();
-    if (op_conf.has_input_conf() || op_conf.has_output_conf() || op_conf.has_variable_conf()) {
+    if (IsInterfaceOpConf(op_conf)) {
       CHECK(op_type_case2op_nodes[op_conf.op_type_case()].emplace(op_node).second);
     }
   }
@@ -192,7 +192,7 @@ void AddGlobalInputOutputCriticalSection(const HashSet<const OpNode*>& op_nodes,
   for (const OpNode* op_node : op_nodes) {
     parallel_desc2op_nodes[op_node->parallel_desc()].push_back(op_node);
     const auto& op_conf = op_node->op().op_conf();
-    CHECK(op_conf.has_input_conf() || op_conf.has_output_conf() || op_conf.has_variable_conf());
+    CHECK(IsInterfaceOpConf(op_conf));
     CHECK(*time_shape == *op_node->out_blob_time_shape());
   }
   JobBuilder job_builder(job);

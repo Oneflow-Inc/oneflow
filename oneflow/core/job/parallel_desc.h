@@ -54,6 +54,14 @@ class ParallelDesc final {
   std::string device_names_;
 };
 
+inline bool operator==(const ParallelConf& lhs, const ParallelConf& rhs) {
+  return ParallelDesc(lhs) == ParallelDesc(rhs);
+}
+
+inline bool operator!=(const ParallelConf& lhs, const ParallelConf& rhs) {
+  return ParallelDesc(lhs) != ParallelDesc(rhs);
+}
+
 std::tuple<int32_t, int32_t> GetPartIdAndPartNumFromParallelCtx(
     const ParallelContext* parallel_ctx);
 
@@ -70,6 +78,13 @@ struct hash<oneflow::ParallelDesc> {
       for (int dev_id : pr.sorted_dev_phy_ids(machine_id)) { str += std::to_string(dev_id) + ","; }
     }
     return hash<std::string>()(str);
+  }
+};
+
+template<>
+struct hash<oneflow::ParallelConf> {
+  size_t operator()(const oneflow::ParallelConf& parallel_conf) const {
+    return std::hash<oneflow::ParallelDesc>()(oneflow::ParallelDesc(parallel_conf));
   }
 };
 
