@@ -31,4 +31,14 @@ void RecordLoadCompTaskNode::InferProducedDataRegstTimeShape() {
   });
 }
 
+TaskType RecordLoadCompTaskNode::GetTaskType() const {
+  const OperatorConf& op_conf = logical_node()->SoleOp()->op_conf();
+  if (op_conf.has_record_load_conf()) {
+    return TaskType::kRecordLoad;
+  } else if (op_conf.has_data_load_conf()) {
+    return TaskType::kDataLoad;
+  }
+  return TaskType::kInvalid;
+}
+
 }  // namespace oneflow

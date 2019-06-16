@@ -8,6 +8,7 @@
 #include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/dataset/dataset_manager.h"
 
 namespace oneflow {
 
@@ -107,6 +108,7 @@ void Runtime::NewAllGlobal(const Plan& plan, bool is_experiment_phase) {
 #ifdef WITH_CUDA
   InitGlobalCudaDeviceProp();
 #endif
+  Global<DatasetManager>::New(job_desc);
   Global<SnapshotMgr>::New(plan);
   Global<MemoryAllocator>::New();
   Global<RegstMgr>::New(plan);
@@ -126,6 +128,7 @@ void Runtime::DeleteAllGlobal() {
   Global<RegstMgr>::Delete();
   Global<MemoryAllocator>::Delete();
   Global<SnapshotMgr>::Delete();
+  Global<DatasetManager>::Delete();
   Global<CommNet>::Delete();
   Global<ActEventLogger>::Delete();
   Global<RuntimeCtx>::Delete();

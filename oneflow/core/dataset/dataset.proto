@@ -1,0 +1,36 @@
+syntax = "proto2";
+package oneflow;
+
+// enum DatasetCatalog {
+//   kImageNet = 0;
+//   kCOCO = 1;
+// }
+
+// enum DatasetType {
+//   kTrain = 0;
+//   kVal = 1;
+//   kTest = 2;
+// }
+
+message ImageNetDatasetCatalog {
+  required string image_dir = 1;
+}
+
+message COCODatasetCatalog {
+  required string annotation_file = 1;
+  required string image_dir = 2;
+}
+
+message DatasetProto {
+  required string dataset_dir = 1;
+  optional bool shuffle = 2 [default = true];
+  optional int64 random_seed = 3 [default = 123456];
+  oneof dataset_catalog {
+    ImageNetDatasetCatalog image_net = 100;
+    COCODatasetCatalog coco = 101;
+  }
+}
+
+message DatasetCluster {
+  map<string, DatasetProto> dataset_map = 1;
+}

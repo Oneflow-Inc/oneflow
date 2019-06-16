@@ -254,7 +254,11 @@ JobDesc::JobDesc(const JobConf1& job_conf) : job_conf_(job_conf) { Init(); }
 
 void JobDesc::Init() {
   SplitDecodeOps();
-  AddRecordLoadOps();
+  if (job_conf_.other().use_data_loader()) {
+    AddDataLoadOps();
+  } else {
+    AddRecordLoadOps();
+  }
 #ifndef WITH_RDMA
   CHECK_EQ(job_conf_.other().use_rdma(), false) << "Please compile ONEFLOW with RDMA";
 #endif
@@ -414,6 +418,64 @@ void JobDesc::AddRecordLoadOps() {
   }
 }
 
+void JobDesc::AddDataLoadOps() {
+  HashMap<std::string, std::vector<OperatorConf*>> dataset2decode_op_confs;
+  FOR_RANGE(size_t, idx, 0, job_conf_.net().op_size()) {
+    OperatorConf* op_conf = job_conf_.mutable_net()->mutable_op()->Mutable(idx);
+    if (!op_conf->has_decode_ofrecord_conf()) { continue; }
+    if (op_conf->decode_ofrecord_conf().blob_size() == 0) { continue; }
+    const DecodeOFRecordOpConf& decode_conf = op_conf->decode_ofrecord_conf();
+    CHECK(decode_conf.has_dataset());
+    dataset2decode_op_confs[decode_conf.dataset()].emplace_back(op_conf);
+  }
+
+  HashMap<std::string, const ParallelConf*> name2parallel_conf;
+  for (const PlacementGroup& p_group : job_conf_.placement().placement_group()) {
+    for (const std::string& op_name : p_group.op_set().op_name()) {
+      CHECK(name2parallel_conf.emplace(op_name, &p_group.parallel_conf()).second);
+    }
+  }
+
+  for (const auto& pair : dataset2decode_op_confs) {
+    std::vector<const ParallelConf*> parallel_confs;
+    for (const OperatorConf* op_conf : pair.second) {
+      auto op_parallel_conf_it = name2parallel_conf.find(op_conf->name());
+      CHECK(op_parallel_conf_it != name2parallel_conf.end());
+      auto iter = std::find_if(
+          parallel_confs.begin(), parallel_confs.end(), [&](const ParallelConf* parallel_conf) {
+            PbMd message_diff;
+            return message_diff.Equivalent(*parallel_conf, *(op_parallel_conf_it->second));
+          });
+      if (iter == parallel_confs.end()) {
+        parallel_confs.emplace_back(op_parallel_conf_it->second);
+      }
+    }
+    LOG_IF(WARNING, parallel_confs.size() > 1)
+        << "Decoders sharing the same dataset have different parallel configs";
+    for (const ParallelConf* parallel_conf : parallel_confs) {
+      std::string data_load_op_name = "loader" + NewUniqueId();
+      std::string data_load_out_name = "out";
+      std::string data_load_lbi_name = data_load_op_name + "/" + data_load_out_name;
+      OperatorConf* op = job_conf_.mutable_net()->add_op();
+      DataLoadOpConf* data_load_op = op->mutable_data_load_conf();
+      op->set_name(data_load_op_name);
+      data_load_op->set_out(data_load_out_name);
+      data_load_op->set_dataset(pair.first);
+
+      PlacementGroup* p_group = job_conf_.mutable_placement()->add_placement_group();
+      *(p_group->mutable_op_set()->add_op_name()) = data_load_op_name;
+      *(p_group->mutable_parallel_conf()) = *parallel_conf;
+      for (OperatorConf* op : pair.second) {
+        auto op_parallel_conf_it = name2parallel_conf.find(op->name());
+        CHECK(op_parallel_conf_it != name2parallel_conf.end());
+        PbMd message_diff;
+        if (!message_diff.Equivalent(*parallel_conf, *(op_parallel_conf_it->second))) { continue; }
+        op->mutable_decode_ofrecord_conf()->set_in(data_load_lbi_name);
+      }
+    }
+  }
+}
+
 void JobDesc::FixAndOptimizeDLNet() {
   FixTickOpIfExists();
   // ConvertPseudoChainToChain();
@@ -546,5 +608,14 @@ std::string JobDesc::MdLoadSnapshotPath() const {
 int64_t JobDesc::DevicePieceSize4ParallelCtx(const ParallelContext& ctx) const {
   return BalancedSplitter(RecordPieceSize(), ctx.parallel_num()).At(ctx.parallel_id()).size();
 }
+
+// std::unique_ptr<Dataset> JobDesc::BuildDataset() const {
+//   const DatasetProto& dataset_proto = job_conf_.other().dataset_config();
+//   Dataset* dataset = NewObj<Dataset>(dataset_proto.dataset_catalog_case(), dataset_proto);
+//   dataset->Init(dataset_proto);
+//   int64_t total_data_num = IsTrain() ? TotalBatchNum() * BatchSize() : dataset->Size();
+//   dataset->GenDataSequence(total_data_num);
+//   return std::unique_ptr<Dataset>(dataset);
+// }
 
 }  // namespace oneflow

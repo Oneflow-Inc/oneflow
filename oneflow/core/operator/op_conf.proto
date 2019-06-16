@@ -767,6 +767,11 @@ message RecordLoadOpConf {
   optional RandomShuffleConf random_shuffle_conf = 5;
 }
 
+message DataLoadOpConf {
+  required string out = 1;
+  required string dataset = 2;
+}
+
 message BlobConf {
   required string name = 1;
   required ShapeProto shape = 2;
@@ -785,6 +790,7 @@ message DecodeOFRecordOpConf {
   optional string in = 4;
   repeated BlobConf blob = 5;
   optional RandomShuffleConf random_shuffle_conf = 6;
+  optional string dataset = 7;
 }
 
 message DecodeRandomOpConf {
@@ -1477,6 +1483,7 @@ message OperatorConf {
     VariableOpConf variable_conf = 122;
     ReduceIdentityOpConf reduce_identity_conf = 123;
     TickOpConf tick_conf = 124;
+    DataLoadOpConf data_load_conf = 125;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;

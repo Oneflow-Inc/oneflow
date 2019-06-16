@@ -6,6 +6,7 @@ import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/job/dlnet_conf.proto";
 import "oneflow/core/job/resource.proto";
 import "oneflow/core/job/placement.proto";
+import "oneflow/core/dataset/dataset.proto";
 
 message TrainConf {
   required int64 batch_size = 1; // batch_size % piece_size = 0
@@ -55,7 +56,7 @@ message OtherConf {
   required int64 piece_size = 2;
   required int32 data_part_num = 3; // piece_size % data_part_num = 0
   required int64 total_batch_num = 4;
-
+  
   optional bool use_rdma = 100 [default = false];
   optional string model_load_path = 101 [default = ""];
   optional int32 max_data_id_length = 102 [default = 0];
@@ -70,6 +71,9 @@ message OtherConf {
   optional uint64 rdma_recv_msg_buf_mbyte = 111 [default = 6];
   required FileSystemConf data_fs_conf = 112;
   required FileSystemConf snapshot_fs_conf = 113;
+  optional bool use_data_loader = 114 [default = false];
+  optional uint32 data_load_queue_size = 115 [default = 3];
+  required DatasetCluster dataset_cluster = 116;
 
   optional bool collect_act_event = 125 [default = false];
   optional bool enable_mem_sharing = 126 [default = true];

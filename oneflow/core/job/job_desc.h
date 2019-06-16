@@ -8,6 +8,7 @@
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/register/logical_blob_id.pb.h"
+#include "oneflow/core/dataset/dataset.h"
 
 namespace oneflow {
 
@@ -53,6 +54,7 @@ class JobDesc final {
   bool enable_mem_sharing() const { return job_conf_.other().enable_mem_sharing(); }
   const FileSystemConf& data_fs_conf() const;
   const FileSystemConf& snapshot_fs_conf() const;
+  const DatasetCluster& dataset_cluster() const { return job_conf_.other().dataset_cluster(); }
   bool enable_write_snapshot() const {
     return IsTrain() && job_conf_.other().enable_write_snapshot();
   }
@@ -68,6 +70,7 @@ class JobDesc final {
   float all_reduce_lazy_ratio() const;
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.other().cudnn_buf_limit_mbyte(); }
   int64_t GetMachineId(const std::string& addr) const;
+  size_t data_load_queue_size() const { return job_conf_.other().data_load_queue_size(); }
 
   // Train conf
   const std::string& MdSaveSnapshotsPath() const;
@@ -88,6 +91,7 @@ class JobDesc final {
 
   // fix and Optimize
   void FixAndOptimizeDLNet();
+  // std::unique_ptr<Dataset> BuildDataset() const;
 
  private:
   friend class Global<JobDesc>;
@@ -97,6 +101,7 @@ class JobDesc final {
   void SanityCheck();
   void SplitDecodeOps();
   void AddRecordLoadOps();
+  void AddDataLoadOps();
   void ConvertPseudoChainToChain();
   void AddIdentityOpForChainMergeOptimization();
   void AddIdentityOpForAllReduceOverlapingUntrainble();
