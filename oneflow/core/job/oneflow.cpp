@@ -295,17 +295,20 @@ void GetInterfaceOpBlobInfo(const JobBuilder& job_builder, const std::string& op
       helper.sbp_conf().op_name2sbp_signature_conf().at(op_name).bn_in_op2sbp_parallel().at(obn);
 }
 
-void CheckJobs(std::vector<Job>* jobs) {
-  std::vector<std::unique_ptr<const JobBuilder>> job_builders;
+HashSet<std::string> GetArgOpNames(const std::vector<Job>& jobs) {
   HashSet<std::string> arg_op_names;
-  for (Job& job : *jobs) {
-    job_builders.emplace_back(std::make_unique<const JobBuilder>(&job));
+  for (const Job& job : jobs) {
     for (const auto& arg_op_name : job.arg_op_name()) { arg_op_names.insert(arg_op_name); }
   }
+  return arg_op_names;
+}
+
+HashMap<std::string, HashSet<int64_t>> GetInterfaceOpName2JobIds(const std::vector<Job>& jobs) {
+  HashSet<std::string> arg_op_names = GetArgOpNames(jobs);
   HashMap<std::string, HashSet<int64_t>> interface_op_name2job_ids;
   HashSet<std::string> unique_op_name_check;
-  FOR_RANGE(int32_t, i, 0, jobs->size()) {
-    const auto& job = jobs->at(i);
+  FOR_RANGE(int32_t, i, 0, jobs.size()) {
+    const auto& job = jobs.at(i);
     for (const auto& op : job.net().op()) {
       if (IsInterfaceOpConf(op)) {
         if (op.has_variable_conf() == false) {
@@ -318,7 +321,13 @@ void CheckJobs(std::vector<Job>* jobs) {
       unique_op_name_check.emplace(op.name());
     }
   }
-  for (const auto& pair : interface_op_name2job_ids) {
+  return interface_op_name2job_ids;
+}
+
+void CheckJobs(std::vector<Job>* jobs) {
+  std::vector<std::unique_ptr<const JobBuilder>> job_builders;
+  for (Job& job : *jobs) { job_builders.emplace_back(std::make_unique<const JobBuilder>(&job)); }
+  for (const auto& pair : GetInterfaceOpName2JobIds(*jobs)) {
     if (pair.second.size() <= 1) { continue; }
     bool op_as_output_found = false;
     for (int64_t job_id : pair.second) {
@@ -346,6 +355,61 @@ void CheckJobs(std::vector<Job>* jobs) {
   }
 }
 
+std::vector<TaskProto*> SortSameOpNameTaskProtos(const std::string& op_name, Plan* plan) {
+  std::vector<TaskProto*> task_protos;
+  FOR_RANGE(int64_t, i, 0, plan->task_size()) {
+    TaskProto* task = plan->mutable_task(i);
+    if (task->exec_sequence().exec_node_size() == 1) {
+      const KernelConf& kernel_conf = task->exec_sequence().exec_node(0).kernel_conf();
+      if (op_name == kernel_conf.op_attribute().op_conf().name()) {
+        task_protos.emplace_back(task);
+      }
+    }
+  }
+  std::sort(task_protos.begin(), task_protos.end(), [](const TaskProto* lhs, const TaskProto* rhs) {
+    return lhs->machine_id() < rhs->machine_id()
+           || (lhs->machine_id() == rhs->machine_id() && lhs->thrd_id() < rhs->thrd_id());
+  });
+  return task_protos;
+}
+
+RegstDescProto* GetSoleDataRegst(TaskProto* task_proto) {
+  RegstDescProto* ret = nullptr;
+  for (auto& pair : *task_proto->mutable_produced_regst_desc()) {
+    RegstDescProto* regst_desc = &pair.second;
+    if (regst_desc->regst_desc_type().has_data_regst_desc()) {
+      CHECK_ISNULL(ret);
+      CHECK_EQ(regst_desc->regst_desc_type().data_regst_desc().lbi2blob_desc_size(), 1);
+      ret = regst_desc;
+    }
+  }
+  CHECK_NOTNULL(ret);
+  return ret;
+}
+
+void BindInterfaceMemBlobId(const std::vector<Job>& jobs, std::vector<Plan>* sub_plans) {
+  for (const auto& pair : GetInterfaceOpName2JobIds(jobs)) {
+    std::vector<std::vector<TaskProto*>> same_op_name_sorted_task_protos;
+    for (int64_t job_id : pair.second) {
+      same_op_name_sorted_task_protos.push_back(
+          SortSameOpNameTaskProtos(pair.first, &sub_plans->at(job_id)));
+    }
+    const auto& first_vec = same_op_name_sorted_task_protos.at(0);
+    for (const auto& task_protos : same_op_name_sorted_task_protos) {
+      CHECK_EQ(task_protos.size(), first_vec.size());
+      FOR_RANGE(int32_t, i, 0, first_vec.size()) {
+        CHECK_EQ(task_protos.at(i)->machine_id(), first_vec.at(i)->machine_id());
+        CHECK_EQ(task_protos.at(i)->thrd_id(), first_vec.at(i)->thrd_id());
+        const RegstDescProto& first_regst_desc = *GetSoleDataRegst(first_vec.at(i));
+        CHECK_EQ(first_regst_desc.mem_shared_offset(), 0);
+        RegstDescProto* regst_desc = GetSoleDataRegst(task_protos.at(i));
+        CHECK_EQ(regst_desc->mem_shared_offset(), 0);
+        regst_desc->set_mem_shared_id(first_regst_desc.mem_shared_id());
+      }
+    }
+  }
+}
+
 void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
   std::vector<Job> jobs(job_confs.size());
   std::vector<Plan> sub_plans(job_confs.size());
@@ -356,6 +420,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
     Global<JobDesc>::Delete();
   }
   CheckJobs(&jobs);
+  BindInterfaceMemBlobId(jobs, &sub_plans);
   MergePlan(plan, sub_plans);
 }
 
