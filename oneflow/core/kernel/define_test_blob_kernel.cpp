@@ -12,6 +12,13 @@ void DefineTestBlobKernel::ForwardDim0ValidNum(
   }
 }
 
+void DefineTestBlobKernel::ForwardInstanceShape(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const auto& conf = op_conf().define_test_blob_conf();
+  if (!conf.has_instance_shape()) { return; }
+  BnInOp2Blob("out")->set_instance_shape(Shape(PbRf2StdVec(conf.instance_shape().dim())));
+}
+
 void DefineTestBlobKernel::ForwardDim1ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const auto& conf = op_conf().define_test_blob_conf();

@@ -5,8 +5,8 @@ namespace oneflow {
 namespace {
 
 template<typename K>
-int64_t GetOffsetInNdarray(const std::vector<int64_t>& shape_dim_vec, const K* index_ptr,
-                           const int64_t index_dim) {
+int64_t GetOffset(const std::vector<int64_t>& shape_dim_vec, const K* index_ptr,
+                  const int64_t index_dim) {
   int64_t offset = 0;
   FOR_RANGE(int64_t, i, 0, index_dim) {
     const int64_t stride = std::accumulate(shape_dim_vec.begin() + 1 + i, shape_dim_vec.end(), 1,
@@ -29,7 +29,6 @@ void LocalScatterNdUpdateKernel<device_type, T, K>::ForwardDataContent(
   const Blob* in_blob = BnInOp2Blob("in");
   const Blob* indices_blob = BnInOp2Blob("indices");
   const Blob* updates_blob = BnInOp2Blob("updates");
-  if (this->op_conf().device_type() == DeviceType::kGPU) {}
   Blob* out_blob = BnInOp2Blob("out");
 
   const auto indices_dim_vec = indices_blob->shape().dim_vec();
@@ -44,7 +43,7 @@ void LocalScatterNdUpdateKernel<device_type, T, K>::ForwardDataContent(
   }
   const int64_t num_updates = std::accumulate(indices_dim_vec.begin(), indices_dim_vec.end() - 1, 1,
                                               std::multiplies<int64_t>());
-  const int64_t block_size = std::accumulate(updates_dim_vec.begin() + indices_dim - 1,
+  const int64_t block_size = std::accumulate(updates_dim_vec.begin() + indices_dim,
                                              updates_dim_vec.end(), 1, std::multiplies<int64_t>());
   int64_t* shape_ptr = (this->op_conf().device_type() == DeviceType::kGPU)
                            ? BnInOp2Blob("shape")->mut_dptr<int64_t>()
@@ -69,7 +68,7 @@ void LocalScatterNdUpdateKernel<device_type, T, K>::BackwardDataContent(
   const int64_t num_updates = std::accumulate(indices_dim_vec.begin(), indices_dim_vec.end() - 1, 1,
                                               std::multiplies<int64_t>());
   const int64_t block_size =
-      std::accumulate(updates_diff_dim_vec.begin() + indices_dim - 1, updates_diff_dim_vec.end(), 1,
+      std::accumulate(updates_diff_dim_vec.begin() + indices_dim, updates_diff_dim_vec.end(), 1,
                       std::multiplies<int64_t>());
   int64_t* shape_ptr = (this->op_conf().device_type() == DeviceType::kGPU)
                            ? BnInOp2Blob("shape")->mut_dptr<int64_t>()
@@ -101,15 +100,15 @@ struct LocalScatterNdUpdateKernelUtil<DeviceType::kCPU, T, K> {
     const int64_t index_dim = indices_blob->shape().dim_vec().back();
     FOR_RANGE(int64_t, i, 0, num_updates) {
       const K* index_ptr = indices_blob->dptr<K>() + i * index_dim;
-      T* to = out_blob->mut_dptr<T>()
-              + GetOffsetInNdarray(out_blob->shape().dim_vec(), index_ptr, index_dim) * block_size;
+      T* to =
+          out_blob->mut_dptr<T>() + GetOffset(out_blob->shape().dim_vec(), index_ptr, index_dim);
       memset(to, 0, block_size * sizeof(T));
     }
     FOR_RANGE(int64_t, i, 0, num_updates) {
-      const T* from = updates_blob->dptr<T>() + i * block_size;
       const K* index_ptr = indices_blob->dptr<K>() + i * index_dim;
-      T* to = out_blob->mut_dptr<T>()
-              + GetOffsetInNdarray(out_blob->shape().dim_vec(), index_ptr, index_dim) * block_size;
+      const T* from = updates_blob->dptr<T>() + i * block_size;
+      T* to =
+          out_blob->mut_dptr<T>() + GetOffset(out_blob->shape().dim_vec(), index_ptr, index_dim);
       std::transform(from, from + block_size, to, to, std::plus<T>());
     }
   }
@@ -120,9 +119,8 @@ struct LocalScatterNdUpdateKernelUtil<DeviceType::kCPU, T, K> {
     const int64_t index_dim = indices_blob->shape().dim_vec().back();
     FOR_RANGE(int64_t, i, 0, num_updates) {
       const K* index_ptr = indices_blob->dptr<K>() + i * index_dim;
-      const int64_t offset =
-          GetOffsetInNdarray(in_diff_blob->shape().dim_vec(), index_ptr, index_dim);
-      const T* from = out_diff_blob->dptr<T>() + offset * block_size;
+      const int64_t offset = GetOffset(in_diff_blob->shape().dim_vec(), index_ptr, index_dim);
+      const T* from = out_diff_blob->dptr<T>() + offset;
       T* to = updates_diff_blob->mut_dptr<T>() + i * block_size;
       std::copy(from, from + block_size, to);
       memset(in_diff_blob->mut_dptr<T>() + offset, 0, block_size * sizeof(T));
@@ -144,8 +142,8 @@ Kernel* CreateLocalScatterNdUpdateKernel(const KernelConf& kernel_conf) {
       OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(LOCAL_SCATTER_ND_UPDATE_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
                                        FLOATING_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)};
   return creators.at(GetHashKey(kernel_conf.op_attribute().op_conf().device_type(),
-                                kernel_conf.local_scatter_nd_update_conf().indices_type(),
-                                kernel_conf.local_scatter_nd_update_conf().value_type()))();
+                                kernel_conf.local_scatter_nd_update_conf().value_type(),
+                                kernel_conf.local_scatter_nd_update_conf().indices_type()))();
 }
 
 }  // namespace

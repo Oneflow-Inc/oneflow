@@ -12,8 +12,10 @@ void LogicalAndKernel<device_type, T>::ForwardDataContent(
   const Shape shape = lhs_blob->shape();
   CHECK_EQ(shape, rhs_blob->shape());
   CHECK_EQ(shape, out_blob->shape());
-  out_blob->set_dim0_valid_num(0, shape.At(0));
-  out_blob->set_instance_shape(lhs_blob->instance_shape());
+  if (out_blob->has_dim0_valid_num_field()) { out_blob->set_dim0_valid_num(0, shape.At(0)); }
+  if (out_blob->has_instance_shape_field()) {
+    out_blob->set_instance_shape(lhs_blob->instance_shape());
+  }
   LogicalAndUtil<device_type, T>::Forward(ctx.device_ctx, shape.elem_cnt(), lhs_blob->dptr<T>(),
                                           rhs_blob->dptr<T>(), out_blob->mut_dptr<T>());
 }

@@ -27,7 +27,7 @@ void BoxDecodeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   CHECK_EQ(ref_boxes->shape(), boxes_delta->shape());
   CHECK_EQ(dim0_varing, boxes_delta->has_dim0_valid_num_field());
   // output: boxes (N, 4)
-  BlobDesc* boxes = GetBlobDesc4BnInOp("boxes_delta");
+  BlobDesc* boxes = GetBlobDesc4BnInOp("boxes");
   boxes->mut_shape() = ref_boxes->shape();
   boxes->set_data_type(ref_boxes->data_type());
   if (dim0_varing) {

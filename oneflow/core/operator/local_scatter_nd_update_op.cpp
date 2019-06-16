@@ -36,14 +36,7 @@ void LocalScatterNdUpdateOp::InferBlobDescs(
   const BlobDesc* updates = GetBlobDesc4BnInOp("updates");
   CHECK_EQ(in->data_type(), updates->data_type());
   CHECK(IsIntegralDataType(indices->data_type()));
-  FOR_RANGE(size_t, i, 0, indices->shape().NumAxes() - 1) {
-    CHECK_EQ(indices->shape().At(i), updates->shape().At(i));
-  }
   const auto indices_dim_vec = indices->shape().dim_vec();
-  CHECK_LE(indices_dim_vec.back(), in->shape().NumAxes());
-  FOR_RANGE(size_t, i, indices_dim_vec.back(), in->shape().NumAxes()) {
-    CHECK_EQ(in->shape().At(i), updates->shape().At(i));
-  }
   if (this->device_type(), DeviceType::kGPU) {
     // datatmp
     BlobDesc* shape = GetBlobDesc4BnInOp("shape");

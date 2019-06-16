@@ -800,10 +800,11 @@ message DefineTestBlobOpConf {
   required DataType data_type = 3;
   optional ShapeProto dim0_inner_shape = 4;
   optional int64 dim0_valid_num = 5;
-  optional int64 dim1_valid_num = 6;
-  optional int64 dim2_valid_num = 7;
-  repeated int64 record_id_in_device_piece = 8;
-  optional bool has_diff = 9 [default = false];
+  optional ShapeProto instance_shape = 6;
+  optional int64 dim1_valid_num = 7;
+  optional int64 dim2_valid_num = 8;
+  repeated int64 record_id_in_device_piece = 9;
+  optional bool has_diff = 10 [default = false];
 }
 
 message NormalizationOpConf {

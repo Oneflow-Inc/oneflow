@@ -34,9 +34,9 @@ struct BoxDecodeUtil<DeviceType::kGPU, T> {
   static void Forward(DeviceCtx* ctx, const int32_t num_boxes, const T* ref_boxes_ptr,
                       const T* boxes_delta_ptr, const float weight_x, const float weight_y,
                       const float weight_w, const float weight_h, T* boxes_ptr) {
-    GpuForward<<<std::min(num_boxes, kCudaMaxBlocksNum), kCudaThreadsNumPerBlock, 0,
-                 ctx->cuda_stream()>>>(num_boxes, ref_boxes_ptr, boxes_delta_ptr, weight_x,
-                                       weight_y, weight_w, weight_h, boxes_ptr);
+    GpuForward<<<BlocksNum4ThreadsNum(num_boxes), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        num_boxes, ref_boxes_ptr, boxes_delta_ptr, weight_x, weight_y, weight_w, weight_h,
+        boxes_ptr);
   }
 };
 

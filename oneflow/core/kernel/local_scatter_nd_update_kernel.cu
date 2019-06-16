@@ -15,7 +15,7 @@ __device__ int64_t GetOffset(const int64_t* shape_ptr, const int64_t shape_dim, 
     FOR_RANGE(int64_t, j, i + 1, shape_dim) { stride *= shape_ptr[j]; }
     offset += index_ptr[i] * stride;
   }
-  return offset * block_size + (update_idx % block_size);
+  return offset + update_idx % block_size;
 }
 
 template<typename T, typename K>
@@ -27,11 +27,10 @@ __global__ void GpuForward(const int64_t elem_cnt, const T* updates_ptr, const i
                       block_size, i)] = 0;
   }
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    gpu_atomic_add(
-        out_ptr
-            + GetOffset<K>(shape_ptr, shape_dim, indices_ptr + (i / block_size) * index_dim,
-                           index_dim, block_size, i),
-        updates_ptr[i]);
+    gpu_atomic_add(out_ptr
+                       + GetOffset(shape_ptr, shape_dim, indices_ptr + (i / block_size) * index_dim,
+                                   index_dim, block_size, i),
+                   updates_ptr[i]);
   }
 }
 
