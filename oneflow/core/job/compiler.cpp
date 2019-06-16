@@ -4,6 +4,8 @@
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job_completer/job_completer.h"
 
+#include "oneflow/core/compiler/of2xla/xla_graph_compiler.h"
+
 namespace oneflow {
 
 namespace {
@@ -113,6 +115,13 @@ Plan Compiler::DoCompile() {
   TeePersistentLogStream::Create("optimized_job")->Write(job);
   Global<OpGraph>::New(job);
   Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_op_graph.dot");
+  // TODO(hjchen2): For debug
+  {
+    xla::XlaBuilder builder("op_graph");
+    mola::XlaGraphCompiler xla_compiler(Global<OpGraph>::Get(), &builder);
+    xla_compiler.Compile();
+  }
+
   auto logical_gph = std::make_unique<LogicalGraph>(job);
   int64_t total_mbn_num = logical_gph->total_mbn_num();
   auto task_gph = std::make_unique<TaskGraph>(std::move(logical_gph));

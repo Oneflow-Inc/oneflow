@@ -1351,6 +1351,16 @@ message IdentityOpConf {
   required string out = 2;
 }
 
+message XlaLaunchOpAttribute {
+  repeated OperatorConf node = 1;
+}
+
+message XlaLaunchOpConf {
+  repeated string in = 1;
+  repeated string out = 2;
+  required XlaLaunchOpAttribute attr = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1494,6 +1504,9 @@ message OperatorConf {
 
     // mutable input op
     AxpyOpConf axpy_conf = 752;
+
+    // xla op
+    XlaLaunchOpConf xla_launch_conf = 800;
   }
 }
 

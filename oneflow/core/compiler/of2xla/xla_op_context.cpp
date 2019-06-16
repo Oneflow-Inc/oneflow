@@ -1,18 +1,19 @@
 #include "tensorflow/compiler/xla/status.h"
 #include "tensorflow/compiler/xla/shape.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "oneflow/core/compiler/of2xla/xla_utility.h"
 #include "oneflow/core/compiler/of2xla/xla_op_context.h"
 
 namespace oneflow {
 namespace mola {
 
-xla::Shape GetXlaOpShape(const xla::XlaOp &handle) {
+Shape GetXlaOpShape(const xla::XlaOp &handle) {
   CHECK(handle.IsUninitialized()) << "XlaOp has not been initialized.";
   xla::StatusOr<xla::Shape> shape = handle.builder()->GetShape(handle);
-  return shape.ValueOrDie();
+  return ShapeFromXlaShape(shape.ValueOrDie());
 }
 
-XlaOprand XlaOprand::Constant(xla::Shape shape, DataType dtype) {
+XlaOprand XlaOprand::Constant(Shape shape, DataType dtype) {
   XlaOprand op;
   op.shape_ = shape;
   op.dtype_ = dtype;
@@ -42,51 +43,74 @@ xla::XlaOp XlaOprand::AsXlaOp(xla::XlaBuilder *builder) {
 
 xla::XlaBuilder *XlaOpContext::Builder() { return param_.builder; }
 
-xla::XlaOp XlaOpContext::Input(const int index) {
-  DCHECK_LT(index, param_.inputs.size());
-  return param_.inputs[index].AsXlaOp(Builder());
+xla::XlaOp XlaOpContext::Input(const std::string &name) {
+  return Input(BlobIdFromString(name));
 }
 
-xla::XlaOp XlaOpContext::Output(const int index) {
-  DCHECK_LT(index, outputs_.size());
-  return outputs_[index].AsXlaOp(Builder());
+xla::XlaOp XlaOpContext::Output(const std::string &name) {
+  return Output(BlobIdFromString(name));
 }
 
-const XlaOprands &InputOprands() { return param_.inputs; }
+xla::XlaOp XlaOpContext::Input(const LogicalBlobId &blob_id) {
+  DCHECK_GT(param_.inputs.count(blob_id), 0);
+  return param_.inputs[blob_id].AsXlaOp(Builder());
+}
 
-const XlaOprands &OutputOprands() { return outputs_; }
+xla::XlaOp XlaOpContext::Output(const LogicalBlobId &blob_id) {
+  DCHECK_GT(outputs_.count(blob_id), 0);
+  return outputs_[blob_id].AsXlaOp(Builder());
+}
 
 int XlaOpContext::num_inputs() const { return param_.inputs.size(); }
 
 int XlaOpContext::num_outputs() const { return param_.num_outputs; }
 
-void XlaOpContext::SetOutput(const int index, const xla::XlaOp &handle) {
-  SetOutput(index, XlaOprand::XlaOp(handle, OutputType(index)));
+void XlaOpContext::SetOutput(const std::string &name, const xla::XlaOp &handle) {
+  SetOutput(name, XlaOprand::XlaOp(handle, OutputType(name)));
 }
 
-void XlaOpContext::SetOutput(const int index, const XlaOprand &handle) {
-  DCHECK_LT(index, outputs_.size());
-  outputs_[index] = handle;
+void XlaOpContext::SetOutput(const std::string &name, const XlaOprand &handle) {
+  LogicalBlobId blob_id = BlobIdFromString(name);
+  DCHECK_EQ(outputs_.count(blob_id), 0);
+  outputs_[blob_id] = handle;
 }
 
-const DataType XlaOpContext::InputType(const int index) {
-  DCHECK_LT(index, param_.input_types.size());
-  return param_.input_types[index];
+const DataType XlaOpContext::InputType(const std::string &name) {
+  return InputType(BlobIdFromString(name));
 }
 
-const DataType XlaOpContext::OutputType(const int index) {
-  DCHECK_LT(index, param_.output_types.size());
-  return param_.output_types[index];
+const DataType XlaOpContext::OutputType(const std::string &name) {
+  return OutputType(BlobIdFromString(name));
 }
 
-const xla::Shape XlaOpContext::InputShape(const int index) {
-  xla::StatusOr<xla::Shape> shape_status = Builder()->GetShape(Input(index));
-  return shape_status.ValueOrDie();
+const DataType XlaOpContext::InputType(const LogicalBlobId &blob_id) {
+  DCHECK_GT(param_.inputs.count(blob_id), 0);
+  return param_.inputs[blob_id].dtype_;
 }
 
-const xla::Shape XlaOpContext::OutputShape(const int index) {
-  xla::StatusOr<xla::Shape> shape_status = Builder()->GetShape(Output(index));
-  return shape_status.ValueOrDie();
+const DataType XlaOpContext::OutputType(const LogicalBlobId &blob_id) {
+  DCHECK_GT(outputs_.count(blob_id), 0);
+  return outputs_[blob_id].dtype_;
+}
+
+const Shape XlaOpContext::InputShape(const std::string &name) {
+  return InputShape(BlobIdFromString(name));
+}
+
+const Shape XlaOpContext::InputShape(const LogicalBlobId &blob_id) {
+  return GetXlaOpShape(Input(blob_id));
+}
+
+const Shape XlaOpContext::OutputShape(const std::string &name) {
+  return OutputShape(BlobIdFromString(name));
+}
+
+const Shape XlaOpContext::OutputShape(const LogicalBlobId &blob_id) {
+  return GetXlaOpShape(Output(blob_id));
+}
+
+const LogicalBlobId XlaOpContext::BlobIdFromString(const std::string &name) {
+  return param_.blob_id_from_string_fn(name);
 }
 
 }  // namespace mola

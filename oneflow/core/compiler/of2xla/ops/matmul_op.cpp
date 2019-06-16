@@ -12,12 +12,12 @@ class MatMulOp : public XlaOpCompiler {
     bool transpose_a = ctx->GetAttr<bool>("transpose_a");
     bool transpose_b = ctx->GetAttr<bool>("transpose_b");
 
-    xla::XlaOp a = ctx->Input(0);
-    xla::XlaOp b = ctx->Input(1);
+    xla::XlaOp a = ctx->Input("a");
+    xla::XlaOp b = ctx->Input("b");
 
     auto lhs = transpose_a ? xla::Transpose(a, {1, 0}) : a;
     auto rhs = transpose_b ? xla::Transpose(b, {1, 0}) : b;
-    ctx->SetOutput(0, xla::Dot(lhs, rhs));
+    ctx->SetOutput("out", xla::Dot(lhs, rhs));
   }
 };
 

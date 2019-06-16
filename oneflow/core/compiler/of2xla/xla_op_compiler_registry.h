@@ -21,12 +21,16 @@ class XlaOpCompilerRegistry {
       creator_map_.emplace(type, creator);
     }
 
-    CreatorFunc Get(const std::string &type) {
+    CreatorFunc Build(const std::string &type) {
       DCHECK_GT(creator_map_.count(type), 0) << DebugString();
       return creator_map_[type];
     }
 
-    CreatorFunc operator[](const std::string &type) { return this->Get(type); }
+    CreatorFunc operator[](const std::string &type) { return this->Build(type); }
+
+    bool IsRegistered(const std::string &type) {
+      return (creator_map_.count(type) > 0) ? true : false;
+    }
 
     std::vector<std::string> ListAllRegisteredTypes() {
       std::vector<std::string> all_register_types(creator_map_.size());
@@ -47,25 +51,36 @@ class XlaOpCompilerRegistry {
       debug_str += ")";
       return debug_str;
     }
-    // Currently CPU or CUDA
+    // Currently the backend is one of "CPU" and "CUDA"
     std::string backend_;
-    // Registered creator factory
+    // Registered creator factories
     std::unordered_map<std::string, CreatorFunc> creator_map_;
   };
 
   typedef std::unordered_map<std::string, XlaBackendRegistry> XlaBackendFactory;
 
-  static void Register(const std::string &backend, const std::string &type, CreatorFunc creator) {
+  static void Register(const std::string &backend, const std::string &type,
+                       CreatorFunc creator) {
     XlaBackendFactory *factory = XlaOpCompilerRegistry::Factory();
     XlaBackendRegistry *backend_registry = &((*factory)[backend]);
     backend_registry->backend_ = backend;
     backend_registry->Register(type, creator);
   }
 
-  static XlaBackendRegistry &Get(const std::string &backend) {
+  static XlaBackendRegistry &Build(const std::string &backend) {
     XlaBackendFactory *factory = XlaOpCompilerRegistry::Factory();
     DCHECK_GT(factory->count(backend), 0);
     return (*factory)[backend];
+  }
+
+  static bool IsRegistered(const std::string &backend, const std::string &type) {
+    bool registered = false;
+    XlaBackendFactory *factory = XlaOpCompilerRegistry::Factory();
+    if (factory->count(backend) > 0) {
+      XlaBackendRegistry *backend_registry = &((*factory)[backend]);
+      registered = backend_registry->IsRegistered(type);
+    }
+    return registered;
   }
 
  private:
