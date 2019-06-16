@@ -51,6 +51,10 @@ const OperatorConf& JobBuilder::OpConf4OpName(const std::string& op_name) const 
   return *op_name2op_conf_.at(op_name);
 }
 
+const ParallelConf& JobBuilder::ParallelConf4OpName(const std::string& op_name) const {
+  return *op_name2parallel_conf_.at(op_name);
+}
+
 void JobBuilder::AddOps(const ParallelConf& parallel_conf,
                         const std::vector<OperatorConf>& op_confs) {
   auto* placemnt_group = job_->mutable_placement()->add_placement_group();
@@ -94,7 +98,9 @@ void JobBuilder::ForEachOperator(const std::function<void(const Operator&)>& Han
 }
 
 SbpParallel* JobBuilder::MutSbpParallel4Oba(const OpBlobArg& oba) const {
-  auto* sbp_sig = &(*job_->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf())[oba.op_name()];
+  auto* sbp_sig = &(*job_->mutable_helper()
+                         ->mutable_sbp_conf()
+                         ->mutable_op_name2sbp_signature_conf())[oba.op_name()];
   return &(*sbp_sig->mutable_bn_in_op2sbp_parallel())[oba.bn_in_op()];
 }
 

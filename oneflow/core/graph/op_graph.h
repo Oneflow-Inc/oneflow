@@ -112,6 +112,8 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   explicit OpGraph(const Job& job) { Init(job); }
   ~OpGraph() = default;
 
+  const OpNode* OpNode4OpName(const std::string& name) const { return op_name2op_node_.at(name); }
+
   void InferOpModelSize(HashMap<std::string, size_t>* op_name2model_size);
   std::function<const BlobDesc&(const LogicalBlobId&)> MakeGetterBlobDesc4ModelLbi() const;
 
@@ -136,7 +138,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
   void ForEachDataAndCtrlInNode(OpNode* node, const std::function<void(OpNode*)>& Handler) const;
   void ForEachDataAndCtrlOutNode(OpNode* node, const std::function<void(OpNode*)>& Handler) const;
 
-  const OpNode* OpNode4OpName(const std::string& name) const { return op_name2op_node_.at(name); }
+  void DumpLogicalBlobDescAndSbpSignature(Job* job) const;
 
  private:
   void Init(const Job& job);

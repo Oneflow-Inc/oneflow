@@ -467,7 +467,7 @@ void OpGraph::InferLogicalBlobDesc(const Job& job) const {
     // infer sbp_signature
     SbpSignature sbp_sig_conf;
     {
-      const auto& op_name2sbp_sig_conf = job.sbp_conf().op_name2sbp_signature_conf();
+      const auto& op_name2sbp_sig_conf = job.helper().sbp_conf().op_name2sbp_signature_conf();
       const auto& it = op_name2sbp_sig_conf.find(op_node->op().op_name());
       if (it != op_name2sbp_sig_conf.end()) { sbp_sig_conf = it->second; }
     }
@@ -767,6 +767,19 @@ std::list<OpNode*> OpGraph::DataOrCtrlSourceNodes() const {
     if (in_edges_cnt == 0) { ret.push_back(op_node); }
   });
   return ret;
+}
+
+void OpGraph::DumpLogicalBlobDescAndSbpSignature(Job* job) const {
+  auto* helper = job->mutable_helper();
+  ForEachNode([&](const OpNode* node) {
+    for (const auto& obn : node->op().output_bns()) {
+      const auto& lbi = node->op().BnInOp2Lbi(obn);
+      node->LogicalBlobDesc4Lbi(lbi).ToProto(
+          &(*helper->mutable_lbn2logical_blob_desc())[GenLogicalBlobName(lbi)]);
+    }
+    (*helper->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf())[node->op().op_name()] =
+        node->sbp_signature();
+  });
 }
 
 }  // namespace oneflow

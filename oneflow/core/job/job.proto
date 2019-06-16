@@ -2,11 +2,11 @@ syntax = "proto2";
 package oneflow;
 
 import "oneflow/core/job/dlnet_conf.proto";
-import "oneflow/core/job/resource.proto";
 import "oneflow/core/job/placement.proto";
 import "oneflow/core/job/job_conf.proto";
 import "oneflow/core/register/logical_blob_id.proto";
 import "oneflow/core/register/op_blob_arg.proto";
+import "oneflow/core/register/blob_desc.proto";
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/common/shape.proto";
 
@@ -19,14 +19,16 @@ message JobHelperConf {
   map<string, LogicalBlobIdPairs> tag2lbi_relations = 1;
   map<string, OpNameRelations> tag2op_name_relations = 2;
   map<string, OpTimeShape> op_name2op_time_shape = 3;
-  repeated LogicalBlobId batch_dim_lbis = 4;
-  required OpBlobArgPairs identical_sbp_oba_pairs = 5;
+  map<string, BlobDescProto> lbn2logical_blob_desc = 4;
+  required SbpConf sbp_conf = 5;
+  repeated LogicalBlobId batch_dim_lbis = 6;
+  required OpBlobArgPairs identical_sbp_oba_pairs = 7;
 }
 
 message Job {
   required DLNetConf net = 1;
-  required Placement placement = 3;
-  required Config other = 4;
-  required SbpConf sbp_conf = 5;
-  required JobHelperConf helper = 6;
+  required Placement placement = 2;
+  required Config other = 3;
+  repeated string arg_op_name = 4;
+  required JobHelperConf helper = 5;
 }

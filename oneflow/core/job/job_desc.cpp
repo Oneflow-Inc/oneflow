@@ -128,4 +128,8 @@ void JobDesc::SanityCheck() {
   }
 }
 
+bool IsInterfaceOpConf(const OperatorConf& op_conf) {
+  return op_conf.has_variable_conf() || op_conf.has_input_conf() || op_conf.has_output_conf();
+}
+
 }  // namespace oneflow

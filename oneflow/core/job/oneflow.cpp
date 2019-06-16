@@ -5,6 +5,7 @@
 #include "oneflow/core/job/compiler.h"
 #include "oneflow/core/job/improver.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/machine_context.h"
@@ -175,7 +176,15 @@ void WithJobSetLevelGlobalObjs(
     Global<CriticalSectionDesc>::New();
   }
 
+  Global<std::vector<std::unique_ptr<JobDesc>>>::New();
+  FOR_RANGE(int32_t, i, 0, job_set.job_conf_size()) {
+    Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->emplace_back(
+        new JobDesc(job_set.job_conf(i), i));
+  }
+
   Handler(job_set.job_conf());
+
+  Global<std::vector<std::unique_ptr<JobDesc>>>::Delete();
 
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     Global<CriticalSectionDesc>::Delete();
@@ -256,9 +265,85 @@ Job ConvertJobConf2Job(const JobConf& job_conf) {
   Job job;
   *job.mutable_net() = job_conf.net();
   *job.mutable_placement() = job_conf.placement();
-  *job.mutable_sbp_conf() = job_conf.sbp_conf();
   *job.mutable_other() = job_conf.other();
+  *job.mutable_arg_op_name() = job_conf.arg_op_name();
+  *job.mutable_helper()->mutable_sbp_conf() = job_conf.sbp_conf();
   return job;
+}
+
+void GetInterfaceOpBlobInfo(const JobBuilder& job_builder, const std::string& op_name,
+                            ParallelConf* parallel_conf, BlobDescProto* blob_desc,
+                            SbpParallel* sbp_parallel) {
+  std::string obn = "out";
+  std::string lbn;
+  {
+    const auto& op_conf = job_builder.OpConf4OpName(op_name);
+    if (op_conf.has_variable_conf()) {
+      lbn = op_name + "/" + op_conf.variable_conf().out();
+    } else if (op_conf.has_input_conf()) {
+      lbn = op_name + "/" + op_conf.input_conf().out();
+    } else if (op_conf.has_output_conf()) {
+      lbn = op_name + "/" + op_conf.output_conf().out();
+    } else {
+      UNIMPLEMENTED();
+    }
+  }
+  const auto& helper = job_builder.job().helper();
+  *parallel_conf = job_builder.ParallelConf4OpName(op_name);
+  *blob_desc = helper.lbn2logical_blob_desc().at(lbn);
+  *sbp_parallel =
+      helper.sbp_conf().op_name2sbp_signature_conf().at(op_name).bn_in_op2sbp_parallel().at(obn);
+}
+
+void CheckJobs(std::vector<Job>* jobs) {
+  std::vector<std::unique_ptr<const JobBuilder>> job_builders;
+  HashSet<std::string> arg_op_names;
+  for (Job& job : *jobs) {
+    job_builders.emplace_back(std::make_unique<const JobBuilder>(&job));
+    for (const auto& arg_op_name : job.arg_op_name()) { arg_op_names.insert(arg_op_name); }
+  }
+  HashMap<std::string, HashSet<int64_t>> interface_op_name2job_ids;
+  HashSet<std::string> unique_op_name_check;
+  FOR_RANGE(int32_t, i, 0, jobs->size()) {
+    const auto& job = jobs->at(i);
+    for (const auto& op : job.net().op()) {
+      if (IsInterfaceOpConf(op)) {
+        if (op.has_variable_conf() == false) {
+          CHECK(arg_op_names.find(op.name()) != arg_op_names.end());
+        }
+        CHECK(interface_op_name2job_ids[op.name()].emplace(i).second);
+      } else {
+        CHECK(unique_op_name_check.find(op.name()) == unique_op_name_check.end());
+      }
+      unique_op_name_check.emplace(op.name());
+    }
+  }
+  for (const auto& pair : interface_op_name2job_ids) {
+    if (pair.second.size() <= 1) { continue; }
+    bool op_as_output_found = false;
+    for (int64_t job_id : pair.second) {
+      if (job_builders.at(job_id)->OpConf4OpName(pair.first).has_output_conf()) {
+        CHECK_EQ(op_as_output_found, false);
+        op_as_output_found = true;
+      }
+    }
+    ParallelConf first_op_parallel_conf;
+    BlobDescProto first_op_out_blob_desc;
+    SbpParallel first_op_out_blob_sbp;
+    GetInterfaceOpBlobInfo(*job_builders.at(*pair.second.begin()), pair.first,
+                           &first_op_parallel_conf, &first_op_out_blob_desc,
+                           &first_op_out_blob_sbp);
+    for (int64_t job_id : pair.second) {
+      ParallelConf parallel_conf;
+      BlobDescProto out_blob_desc;
+      SbpParallel out_blob_sbp;
+      GetInterfaceOpBlobInfo(*job_builders.at(job_id), pair.first, &parallel_conf, &out_blob_desc,
+                             &out_blob_sbp);
+      CHECK(first_op_parallel_conf == parallel_conf);
+      CHECK(BlobDesc(first_op_out_blob_desc) == BlobDesc(out_blob_desc));
+      CHECK(first_op_out_blob_sbp == out_blob_sbp);
+    }
+  }
 }
 
 void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
@@ -270,37 +355,8 @@ void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
     CompileCurJobOnMaster(&jobs.at(i), &sub_plans.at(i));
     Global<JobDesc>::Delete();
   }
+  CheckJobs(&jobs);
   MergePlan(plan, sub_plans);
-}
-
-void CheckJobConfs(const PbRpf<JobConf>& job_confs) {
-  HashMap<std::string, std::vector<const VariableOpConf*>> op_name2var_op_conf;
-  HashSet<std::string> non_var_op_name_check;
-  for (const auto& job_conf : job_confs) {
-    HashSet<std::string> op_name_check;
-    for (const auto& op : job_conf.net().op()) {
-      if (op.has_variable_conf()) {
-        op_name2var_op_conf[op.name()].emplace_back(&op.variable_conf());
-      } else {
-        CHECK(non_var_op_name_check.find(op.name()) == non_var_op_name_check.end());
-        non_var_op_name_check.emplace(op.name());
-      }
-      CHECK(op_name_check.find(op.name()) == op_name_check.end());
-      op_name_check.emplace(op.name());
-    }
-  }
-  PbMd msg_differencer;
-  for (const auto& pair : op_name2var_op_conf) {
-    const auto& lh = *pair.second.at(0);
-    FOR_RANGE(int32_t, i, 1, pair.second.size()) {
-      const auto& rh = *pair.second.at(i);
-      CHECK(msg_differencer.Equals(lh.shape(), rh.shape()));
-      CHECK_EQ(lh.data_type(), rh.data_type());
-      CHECK(msg_differencer.Equals(lh.initializer(), rh.initializer()));
-      CHECK_EQ(lh.model_name(), rh.model_name());
-      CHECK_EQ(lh.model_split_axis(), rh.model_split_axis());
-    }
-  }
 }
 
 }  // namespace
@@ -315,12 +371,6 @@ class Oneflow final {
 
 Oneflow::Oneflow(const std::string& job_set_filepath) {
   WithJobSetLevelGlobalObjs(job_set_filepath, [&](const PbRpf<JobConf>& job_confs) {
-    Global<std::vector<std::unique_ptr<JobDesc>>>::New();
-    FOR_RANGE(int32_t, i, 0, job_confs.size()) {
-      Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->emplace_back(
-          new JobDesc(job_confs.Get(i), i));
-    }
-    CheckJobConfs(job_confs);
     // Runtime
     Plan plan;
     CompileAndMergePlanOnMaster(job_confs, &plan);
@@ -334,7 +384,6 @@ Oneflow::Oneflow(const std::string& job_set_filepath) {
       Global<Profiler>::Get()->Profile(
           plan, JoinPath(FLAGS_log_dir, ActEventLogger::act_event_bin_filename()));
     }
-    Global<std::vector<std::unique_ptr<JobDesc>>>::Delete();
   });
 }
 
