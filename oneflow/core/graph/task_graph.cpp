@@ -153,7 +153,7 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
 
   std::vector<int64_t> cpu_device_offset(Global<ResourceDesc>::Get()->TotalMachineNum(), 0);
   auto AllocateCpuThrdIdEvenly = [&](const TaskNode* task_node) {
-    CHECK(!task_node->IsBlockable());
+    CHECK(!task_node->MayBeBlocked());
     int64_t ret = -1;
     int64_t& offset = cpu_device_offset.at(task_node->machine_id());
     ret = Global<IDMgr>::Get()->GetCpuDeviceThrdId(offset);

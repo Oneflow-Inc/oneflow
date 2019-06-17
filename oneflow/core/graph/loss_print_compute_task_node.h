@@ -12,7 +12,7 @@ class LossPrintCompTaskNode final : public SinkCompTaskNode {
   ~LossPrintCompTaskNode() = default;
 
   TaskType GetTaskType() const override { return TaskType::kLossPrint; }
-  bool IsBlockable() const override { return true; }
+  bool MayBeBlocked() const override { return true; }
 
  private:
 };
