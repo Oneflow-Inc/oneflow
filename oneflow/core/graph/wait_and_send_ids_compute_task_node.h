@@ -17,6 +17,7 @@ class WaitAndSendIdsCompTaskNode final : public CompTaskNode {
   bool IsMeaningLess() override { return false; }
 
   TaskType GetTaskType() const override { return TaskType::kWaitAndSendIds; }
+  bool IsBlockable() const override { return true; }
 
  private:
   void InferProducedDataRegstTimeShape() override;
