@@ -1,4 +1,5 @@
 #include "oneflow/core/job/runtime.h"
+#include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
 #include "oneflow/core/control/ctrl_client.h"
@@ -74,6 +75,10 @@ Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_ph
   runtime_ctx->NewCounter("running_actor_cnt", this_machine_task_num);
   SendCmdMsg(mdupdt_tasks, ActorCmd::kSendInitialModel);
   SendCmdMsg(source_tasks, ActorCmd::kStart);
+  //  FOR_RANGE(int64_t, i, 0,
+  //  Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->at(0)->TotalBatchNum()) {
+  //    Global<BufferMgr<int32_t>>::Get()->Get(kBufferNameGlobalWaitJobId)->Send(0);
+  //  }
   runtime_ctx->WaitUntilCntEqualZero("running_actor_cnt");
   OF_BARRIER();
   DeleteAllGlobal();

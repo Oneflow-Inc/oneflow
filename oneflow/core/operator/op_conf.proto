@@ -1271,6 +1271,16 @@ message TickOpConf {
   required string out = 2;
 }
 
+message IdList {
+  repeated int32 id = 1;
+}
+
+message WaitAndSendIdsOpConf {
+  required string out = 1;
+  required string wait_queue_name = 2;
+  repeated IdList id_list = 3; 
+}
+
 message SourceTickOpConf {
   required string out = 1;
 }
@@ -1438,6 +1448,7 @@ message OperatorConf {
     SinkTickOpConf sink_tick_conf = 136;
     InputOpConf input_conf = 137;
     OutputOpConf output_conf = 138;
+    WaitAndSendIdsOpConf wait_and_send_ids_conf = 139;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;

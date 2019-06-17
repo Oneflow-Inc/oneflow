@@ -1,5 +1,6 @@
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/job/compiler.h"
@@ -175,17 +176,18 @@ void WithJobSetLevelGlobalObjs(
     *Global<AvailableMemDesc>::Get() = PullAvailableMemDesc();
     Global<CriticalSectionDesc>::New();
   }
-
   Global<std::vector<std::unique_ptr<JobDesc>>>::New();
   FOR_RANGE(int32_t, i, 0, job_set.job_conf_size()) {
     Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->emplace_back(
         new JobDesc(job_set.job_conf(i), i));
   }
+  Global<BufferMgr<int32_t>>::New();
+  Global<BufferMgr<int32_t>>::Get()->NewBuffer(kBufferNameGlobalWaitJobId, job_set.job_conf_size());
 
   Handler(job_set.job_conf());
 
+  Global<BufferMgr<int32_t>>::Delete();
   Global<std::vector<std::unique_ptr<JobDesc>>>::Delete();
-
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     Global<CriticalSectionDesc>::Delete();
     Global<AvailableMemDesc>::Delete();

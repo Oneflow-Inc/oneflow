@@ -146,6 +146,14 @@ const Shape* OpNode::GetInputBlobFastestTimeShape() const {
   return ret;
 }
 
+const Shape* OpNode::GetInputOutputFastestTimeShape() const {
+  const Shape* in = GetInputBlobFastestTimeShape();
+  const Shape* out = out_blob_time_shape();
+  if (in == nullptr) { return out; }
+  if (out == nullptr) { return in; }
+  return in->elem_cnt() > out->elem_cnt() ? in : out;
+}
+
 void OpNode::ForEachParallelBlobDesc(const BlobDesc& blob_desc, const SbpParallel& sbp_parallel,
                                      const std::function<void(const BlobDesc&)>& Handler) const {
   if (sbp_parallel.has_split_parallel()) {

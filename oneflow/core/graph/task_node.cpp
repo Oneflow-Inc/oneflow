@@ -503,6 +503,7 @@ size_t TaskNode::out_data_edges_size() const { return GetEdgesSize(&TaskNode::Fo
 std::map<TaskType, std::string> task_type2color = {{kInvalid, "0"},
                                                    {kNormalForward, "2"},
                                                    {kNormalBackward, "3"},
+                                                   {kWaitAndSendIds, "1"},
                                                    {kSourceTick, "1"},
                                                    {kTick, "1"},
                                                    {kSinkTick, "1"},

@@ -133,8 +133,8 @@ OperatorConf PrependTick(const std::list<const OpNode*>& op_nodes, JobBuilder* j
   return tick_op_conf;
 }
 
-void AppendAccTick(const Shape& src_shape, const std::list<const OpNode*>& op_nodes,
-                   JobBuilder* job_builder) {
+OperatorConf AppendAccTick(const Shape& src_shape, const std::list<const OpNode*>& op_nodes,
+                           JobBuilder* job_builder) {
   const auto& tick_shape = GetOpTimeShape(op_nodes.front());
   CHECK_EQ(tick_shape.elem_cnt() % src_shape.elem_cnt(), 0);
   const OperatorConf& tick_op_conf = AppendTick(op_nodes, job_builder);
@@ -155,6 +155,7 @@ void AppendAccTick(const Shape& src_shape, const std::list<const OpNode*>& op_no
   }
   job_builder->AddOps(op_nodes.front()->parallel_desc().parallel_conf(),
                       {acc_op_conf, last_tick_op_conf});
+  return last_tick_op_conf;
 }
 
 void AddGlobalCriticalSection(const std::string& src_tick_op_name,
@@ -178,11 +179,39 @@ void ForEachInputOutputCriticalSectionOpNodes(
     }
   }
   for (OperatorConf::OpTypeCase op_type_case :
-       {OperatorConf::kVariableConf, OperatorConf::kInputConf, OperatorConf::kOutputConf}) {
-    if (op_type_case2op_nodes[op_type_case].empty() == false) {
-      Handler(op_type_case2op_nodes[op_type_case]);
+       {OperatorConf::kVariableConf, OperatorConf::kInputConf}) {
+    if (op_type_case2op_nodes[op_type_case].empty()) { continue; }
+    HashSet<const OpNode*> consumer_op_nodes;
+    for (const OpNode* op_node : op_type_case2op_nodes[op_type_case]) {
+      op_node->ForEachNodeOnOutEdge([&](OpNode* out_node) { consumer_op_nodes.insert(out_node); });
+    }
+    Handler(consumer_op_nodes);
+  }
+  Handler(op_type_case2op_nodes[OperatorConf::kOutputConf]);
+}
+
+std::vector<OperatorConf> AddTickForTimeShape(const Shape& src_time_shape,
+                                              const HashSet<const OpNode*>& op_nodes,
+                                              JobBuilder* job_builder) {
+  HashMap<std::pair<ParallelDesc, std::pair<Shape, Shape>>, std::list<const OpNode*>>
+      pd7ts2op_nodes;
+  for (const OpNode* op_node : op_nodes) {
+    auto ts = std::make_pair(*op_node->GetInputOutputFastestTimeShape(), GetOpTimeShape(op_node));
+    pd7ts2op_nodes[{op_node->parallel_desc(), ts}].push_back(op_node);
+  }
+  std::vector<OperatorConf> op_confs;
+  for (const auto& pair : pd7ts2op_nodes) {
+    const std::pair<Shape, Shape>& ts = pair.first.second;
+    if (ts.second == src_time_shape) {
+      CHECK_GE(ts.first.elem_cnt(), ts.second.elem_cnt());
+      op_confs.push_back(AppendTick(pair.second, job_builder));
+    } else if (ts.second.elem_cnt() > src_time_shape.elem_cnt()) {
+      op_confs.push_back(AppendAccTick(src_time_shape, pair.second, job_builder));
+    } else {
+      UNIMPLEMENTED();
     }
   }
+  return op_confs;
 }
 
 void AddGlobalInputOutputCriticalSection(const HashSet<const OpNode*>& op_nodes, Job* job) {
@@ -191,16 +220,15 @@ void AddGlobalInputOutputCriticalSection(const HashSet<const OpNode*>& op_nodes,
   HashMap<ParallelDesc, std::list<const OpNode*>> parallel_desc2op_nodes;
   for (const OpNode* op_node : op_nodes) {
     parallel_desc2op_nodes[op_node->parallel_desc()].push_back(op_node);
-    const auto& op_conf = op_node->op().op_conf();
-    CHECK(IsInterfaceOpConf(op_conf));
-    CHECK(*time_shape == *op_node->out_blob_time_shape());
   }
   JobBuilder job_builder(job);
   std::vector<OperatorConf> source_ticks;
   std::vector<OperatorConf> sink_ticks;
   for (const auto& pair : parallel_desc2op_nodes) {
     source_ticks.push_back(PrependTick(pair.second, &job_builder));
-    sink_ticks.push_back(AppendTick(pair.second, &job_builder));
+    for (const auto& sink_tick : AddTickForTimeShape(*time_shape, op_nodes, &job_builder)) {
+      sink_ticks.push_back(sink_tick);
+    }
   }
   OperatorConf src_tick_op_conf;
   {
@@ -234,28 +262,15 @@ void AutoSourceTick(const OpGraph& op_graph, Job* job) {
 
 void AddTickForTimeShape(const OpGraph& op_graph, Job* job) {
   const auto& src_time_shape = *GetSrcTickOpNode(op_graph)->out_blob_time_shape();
-  HashMap<std::pair<ParallelDesc, std::pair<Shape, Shape>>, std::list<const OpNode*>>
-      pd7ts2op_nodes;
+  HashSet<const OpNode*> sink_op_nodes;
   op_graph.ForEachNode([&](OpNode* op_node) {
     CHECK(!op_node->op().op_conf().has_sink_tick_conf());
     size_t out_cnt = 0;
     op_graph.ForEachDataAndCtrlOutNode(op_node, [&](OpNode*) { ++out_cnt; });
-    if (out_cnt > 0) { return; }
-    auto ts = std::make_pair(*op_node->GetInputBlobFastestTimeShape(), GetOpTimeShape(op_node));
-    pd7ts2op_nodes[{op_node->parallel_desc(), ts}].push_back(op_node);
+    if (out_cnt == 0) { sink_op_nodes.insert(op_node); }
   });
   JobBuilder job_builder(job);
-  for (const auto& pair : pd7ts2op_nodes) {
-    const std::pair<Shape, Shape>& ts = pair.first.second;
-    if (ts.second == src_time_shape) {
-      CHECK_GE(ts.first.elem_cnt(), ts.second.elem_cnt());
-      AppendTick(pair.second, &job_builder);
-    } else if (ts.second.elem_cnt() > src_time_shape.elem_cnt()) {
-      AppendAccTick(src_time_shape, pair.second, &job_builder);
-    } else {
-      UNIMPLEMENTED();
-    }
-  }
+  AddTickForTimeShape(src_time_shape, sink_op_nodes, &job_builder);
 }
 
 void AutoSinkTick(const OpGraph& op_graph, Job* job) {

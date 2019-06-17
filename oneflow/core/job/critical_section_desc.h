@@ -13,6 +13,7 @@ class CriticalSectionDesc final {
 
   void AddCriticalSection(std::unique_ptr<CriticalSection>&&);
   void Done();
+  size_t CriticalSectionNum() const { return critical_sections_.size(); }
   const CriticalSection& GetCriticalSectionByIndex(int64_t) const;
   CriticalSection* MutCriticalSectionByIndex(int64_t) const;
   const std::vector<int64_t>& CriticalSectionIndexes4JobId(int64_t) const;
@@ -29,6 +30,8 @@ class CriticalSectionDesc final {
   std::vector<int64_t> total_job_critical_section_indexes_;
   HashMap<int64_t, HashSet<int64_t>> critical_section_index2intersecting_indexes_;
 };
+
+static const std::string kBufferNameGlobalWaitJobId = "GlobalWaitJobId";
 
 }  // namespace oneflow
 
