@@ -12,7 +12,7 @@ class AccuracyPrintCompTaskNode final : public SinkCompTaskNode {
   ~AccuracyPrintCompTaskNode() = default;
 
   TaskType GetTaskType() const override { return TaskType::kAccuracyPrint; }
-  bool IsPersistence() const override { return true; }
+  bool IsBlockable() const override { return true; }
 
  private:
 };
