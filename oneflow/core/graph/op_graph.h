@@ -24,6 +24,7 @@ class OpNode final : public Node<OpNode, OpEdge> {
 
   // Getters
   const Shape* GetInputBlobFastestTimeShape() const;
+  const Shape* GetInputOutputFastestTimeShape() const;
   const Shape* out_blob_time_shape() const;
   const Operator& op() const { return *op_; }
   bool HasBackward() const { return has_in_diff() || has_model_diff(); }

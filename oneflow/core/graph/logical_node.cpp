@@ -529,6 +529,7 @@ BackwardLogicalNode* UnpackForwardLogicalNode::NewCorrectBackwardNode() {
 BackwardLogicalNode* RepeatForwardLogicalNode::NewCorrectBackwardNode() {
   return new RepeatBackwardLogicalNode();
 }
+BackwardLogicalNode* WaitAndSendIdsLogicalNode::NewCorrectBackwardNode() { UNIMPLEMENTED(); }
 BackwardLogicalNode* SourceTickLogicalNode::NewCorrectBackwardNode() { UNIMPLEMENTED(); }
 BackwardLogicalNode* TickLogicalNode::NewCorrectBackwardNode() { UNIMPLEMENTED(); }
 BackwardLogicalNode* EveryNthLogicalNode::NewCorrectBackwardNode() { UNIMPLEMENTED(); }
