@@ -264,6 +264,14 @@ void MergePlan(Plan* plan, const std::vector<Plan>& sub_plans) {
   Compiler().GenNetTopo(plan);
 }
 
+void ResetTaskTypeSourceTickToTick(Plan* plan) { TODO(); }
+
+void MergeCtrlPlan(Plan* plan, const Plan& ctrl_plan,
+                   const std::vector<std::string>& identity_op_names) {
+  TODO();
+  ResetTaskTypeSourceTickToTick(plan);
+}
+
 Job ConvertJobConf2Job(const JobConf& job_conf) {
   Job job;
   *job.mutable_net() = job_conf.net();
@@ -413,6 +421,15 @@ void BindInterfaceMemBlobId(const std::vector<Job>& jobs, std::vector<Plan>* sub
   }
 }
 
+void MakeCtrlJob(const std::vector<Job>& jobs, Job* ctrl_job,
+                 std::vector<std::string>* identity_op_names) {
+  TODO();
+}
+
+void CompileCtrlJob(const Job& job, int32_t job_id, Plan* ctrl_plan) { TODO(); }
+
+void AddGlobalJobDesc(const Job& job, int32_t job_id) { TODO(); }
+
 void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
   std::vector<Job> jobs(job_confs.size());
   std::vector<Plan> sub_plans(job_confs.size());
@@ -422,9 +439,25 @@ void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
     CompileCurJobOnMaster(&jobs.at(i), &sub_plans.at(i));
     Global<JobDesc>::Delete();
   }
-  CheckJobs(&jobs);
-  BindInterfaceMemBlobId(jobs, &sub_plans);
-  MergePlan(plan, sub_plans);
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    CheckJobs(&jobs);
+    BindInterfaceMemBlobId(jobs, &sub_plans);
+    MergePlan(plan, sub_plans);
+    Plan ctrl_plan;
+    std::vector<std::string> identity_op_names;
+    {
+      Job job;
+      MakeCtrlJob(jobs, &job, &identity_op_names);
+      AddGlobalJobDesc(job, sub_plans.size());
+      CompileCtrlJob(job, sub_plans.size(), &ctrl_plan);
+    }
+    MergeCtrlPlan(plan, ctrl_plan, identity_op_names);
+
+    TeePersistentLogStream::Create("merged_plan")->Write(*plan);
+    PushPlan("merged_plan", *plan);
+  } else {
+    PullPlan("merged_plan", plan);
+  }
 }
 
 }  // namespace
