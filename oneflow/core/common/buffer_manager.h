@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_COMMON_BUFFER_MANAGER_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/common/buffer.h"
+#include "oneflow/core/common/channel.h"
 
 namespace oneflow {
 
@@ -12,12 +12,18 @@ class BufferMgr final {
   OF_DISALLOW_COPY_AND_MOVE(BufferMgr);
   ~BufferMgr() = default;
 
-  void NewBuffer(const std::string& buffer_name, size_t buffer_size) { TODO(); }
-  Buffer<T>* Get(const std::string& buffer_name) const { TODO(); }
+  void NewChannel(const std::string& channel_name, size_t channel_size) {
+    CHECK(name2channel_.emplace(channel_name, std::make_unique<Channel<T>>(channel_size)).second);
+  }
+  Channel<T>* Get(const std::string& channel_name) const {
+    return name2channel_.at(channel_name).get();
+  }
 
  private:
   friend class Global<BufferMgr>;
   BufferMgr() = default;
+
+  HashMap<std::string, std::unique_ptr<Channel<T>>> name2channel_;
 };
 
 }  // namespace oneflow

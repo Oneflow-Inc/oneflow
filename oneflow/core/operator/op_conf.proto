@@ -1277,7 +1277,7 @@ message IdList {
 
 message WaitAndSendIdsOpConf {
   required string out = 1;
-  required string wait_queue_name = 2;
+  required string wait_channel_name = 2;
   repeated IdList id_list = 3; 
 }
 

@@ -21,17 +21,19 @@ class CriticalSectionDesc final {
 
  private:
   friend class Global<CriticalSectionDesc>;
-  CriticalSectionDesc() : critical_section_relations_updated_(false) {}
-  void UpdateCriticalSectionRelations();
+  CriticalSectionDesc() : inited_(false) {}
+  void UpdateJobId2CriticalSectionIndexes();
+  void UpdateTotalJobCriticalSectionIndexes();
+  void UpdateCriticalSectionIndexes2IntersectingIndexes();
 
-  bool critical_section_relations_updated_;
+  bool inited_;
   std::vector<std::unique_ptr<CriticalSection>> critical_sections_;
-  HashMap<int64_t, std::vector<int64_t>> job_id2critical_section_indexes_;
+  std::vector<std::vector<int64_t>> job_id2critical_section_indexes_;
   std::vector<int64_t> total_job_critical_section_indexes_;
-  HashMap<int64_t, HashSet<int64_t>> critical_section_index2intersecting_indexes_;
+  std::vector<HashSet<int64_t>> critical_section_index2intersecting_indexes_;
 };
 
-static const std::string kBufferNameGlobalWaitJobId = "GlobalWaitJobId";
+static const std::string kChannelNameGlobalWaitJobId = "GlobalWaitJobId";
 
 }  // namespace oneflow
 
