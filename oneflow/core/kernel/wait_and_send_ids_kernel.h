@@ -2,10 +2,12 @@
 #define ONEFLOW_CORE_KERNEL_WAIT_AND_SEND_IDS_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/common/buffer_manager.h"
 
 namespace oneflow {
 
 struct WaitAndSendIdsStatus final {
+  ChannelStatus channel_status_;
   int32_t in_id_;
   int32_t out_idx_;
   int32_t out_num_;

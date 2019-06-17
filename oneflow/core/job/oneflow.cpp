@@ -182,7 +182,8 @@ void WithJobSetLevelGlobalObjs(
         new JobDesc(job_set.job_conf(i), i));
   }
   Global<BufferMgr<int32_t>>::New();
-  Global<BufferMgr<int32_t>>::Get()->NewBuffer(kBufferNameGlobalWaitJobId, job_set.job_conf_size());
+  Global<BufferMgr<int32_t>>::Get()->NewChannel(kChannelNameGlobalWaitJobId,
+                                                job_set.job_conf_size());
 
   Handler(job_set.job_conf());
 
