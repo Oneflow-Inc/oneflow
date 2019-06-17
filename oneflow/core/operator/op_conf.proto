@@ -1528,6 +1528,18 @@ message LocalScatterNdUpdateOpConf {
   required string out = 4;
 }
 
+message MaskrcnnPositiveNegativeSampleOpConf {
+  // in
+  required string pos_inds = 1;
+  required string neg_inds = 2;
+  // config
+  required int32 total_subsample_num = 3;
+  required float pos_fraction = 4;
+  // out
+  required string sampled_pos_inds = 5;
+  required string sampled_neg_inds = 6;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1681,6 +1693,7 @@ message OperatorConf {
     MatcherOpConf matcher_conf = 605;
     BoxEncodeOpConf box_encode_conf = 606;
     BoxDecodeOpConf box_decode_conf = 607;
+    MaskrcnnPositiveNegativeSampleOpConf maskrcnn_positive_negative_sample_conf = 608;
   }
 }
 
