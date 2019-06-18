@@ -264,31 +264,103 @@ void MergePlan(Plan* plan, const std::vector<Plan>& sub_plans) {
   Compiler().GenNetTopo(plan);
 }
 
+RegstDescProto* GetSoleDataRegstDescProto(TaskProto* task) {
+  RegstDescProto* ret = nullptr;
+  for (auto& pair : *task->mutable_produced_regst_desc()) {
+    CHECK(pair.second.regst_desc_type().has_data_regst_desc());
+    CHECK_ISNULL(ret);
+    ret = &pair.second;
+  }
+  CHECK_NOTNULL(ret);
+  return ret;
+}
+
+const OperatorConf& GetSoleOpConf(const TaskProto& task) {
+  CHECK_EQ(task.exec_sequence().exec_node_size(), 1);
+  return task.exec_sequence().exec_node(0).kernel_conf().op_attribute().op_conf();
+}
+
+LogicalBlobId* GetDataRegstSoleLbi(RegstDescProto* regst) {
+  CHECK(regst->regst_desc_type().has_data_regst_desc());
+  auto* data_regst_desc = regst->mutable_regst_desc_type()->mutable_data_regst_desc();
+  return data_regst_desc->mutable_lbi2blob_desc(0)->mutable_lbi();
+}
+
+void UpdateSoleObnRegstDescId(TaskProto* task) {
+  CHECK_EQ(task->exec_sequence().exec_node_size(), 1);
+  auto* exec_node = task->mutable_exec_sequence()->mutable_exec_node(0);
+  const auto& obns = exec_node->kernel_conf().op_attribute().output_bns();
+  CHECK_EQ(obns.size(), 1);
+  int64_t regst_desc_id = GetSoleDataRegstDescProto(task)->regst_desc_id();
+  (*exec_node->mutable_bn_in_op2regst_desc_id())[obns.Get(0)] = regst_desc_id;
+}
+
+// example
+// given caller plan: op_A --> op_identity_tick --> op_B
+// given callee plan: op_src_tick --> op_C --> op_D --> op_E --> op_sink_tick
+// return:
+//         op_A --> op_identity_tick --> op_C --> op_D --> op_E --> op_sink_tick --> op_B
+//                                        /
+//                        op_src_tick ---/
+//
+// note: after this function called, op_src_tick is illegal and need to be deleted from plan
+void LinkTickTaskProto(TaskProto* identity_tick, TaskProto* src_tick, TaskProto* sink_tick) {
+  CHECK(GetSoleOpConf(*identity_tick).has_tick_conf());
+  CHECK(GetSoleOpConf(*src_tick).has_source_tick_conf());
+  CHECK(GetSoleOpConf(*sink_tick).has_sink_tick_conf());
+  RegstDescProto* id_tick_sole_regst = GetSoleDataRegstDescProto(identity_tick);
+  RegstDescProto* sink_tick_sole_regst = GetSoleDataRegstDescProto(sink_tick);
+  RegstDescProto id_tick_sole_regst_value = *id_tick_sole_regst;
+
+  *id_tick_sole_regst = *GetSoleDataRegstDescProto(src_tick);
+  *GetDataRegstSoleLbi(id_tick_sole_regst) = *GetDataRegstSoleLbi(&id_tick_sole_regst_value);
+
+  *GetDataRegstSoleLbi(&id_tick_sole_regst_value) = *GetDataRegstSoleLbi(sink_tick_sole_regst);
+  *sink_tick_sole_regst = id_tick_sole_regst_value;
+
+  UpdateSoleObnRegstDescId(identity_tick);
+  UpdateSoleObnRegstDescId(sink_tick);
+}
+
 void MergeCtrlPlan(Plan* plan, const Plan& ctrl_plan,
                    const std::vector<std::string>& identity_tick_op_names) {
-  std::vector<TaskProto> ctrl_tasks(ctrl_plan.task().begin(), ctrl_plan.task().end());
+  plan->mutable_task()->MergeFrom(ctrl_plan.task());
   HashMap<std::string, TaskProto*> sole_op_name2sole_task;
-  {
-    HashMap<std::string, std::vector<TaskProto*>> sole_op_name2task;
-    FOR_RANGE(int64_t, i, 0, plan->task_size()) {
-      TaskProto* task = plan->mutable_task(i);
-      if (task->exec_sequence().exec_node_size() == 1) {
-        const auto& kernel_conf = task->exec_sequence().exec_node(0).kernel_conf();
-        sole_op_name2task[kernel_conf.op_attribute().op_conf().name()].push_back(task);
-      }
-    }
-    for (const auto& pair : sole_op_name2task) {
-      if (pair.second.size() == 1) { sole_op_name2sole_task[pair.first] = pair.second.at(0); }
+  FOR_RANGE(int64_t, i, 0, plan->task_size()) {
+    TaskProto* task = plan->mutable_task(i);
+    if (task->exec_sequence().exec_node_size() == 1) {
+      const auto& kernel_conf = task->exec_sequence().exec_node(0).kernel_conf();
+      const auto& op_name = kernel_conf.op_attribute().op_conf().name();
+      CHECK(sole_op_name2sole_task.emplace(op_name, task).second);
     }
   }
-  HashMap<int64_t, TaskProto*> task_id2ctrl_task;
-  HashMap<std::string, int64_t> sole_op_name2ctrl_task_id;
-  for (auto& task : ctrl_tasks) {
-    CHECK(task_id2ctrl_task.emplace(task.task_id(), &task).second);
-    CHECK(task.exec_sequence().exec_node_size() == 1);
-    const auto& kernel_conf = task.exec_sequence().exec_node(0).kernel_conf();
-    const std::string& op_name = kernel_conf.op_attribute().op_conf().name();
-    CHECK(sole_op_name2ctrl_task_id.emplace(op_name, task.task_id()).second);
+  FOR_RANGE(int32_t, i, 0, Global<CriticalSectionDesc>::Get()->CriticalSectionNum()) {
+    const CriticalSectionId& critical_section_id =
+        Global<CriticalSectionDesc>::Get()->GetCriticalSectionByIndex(i).critical_section_id();
+    LinkTickTaskProto(sole_op_name2sole_task.at(identity_tick_op_names.at(i)),
+                      sole_op_name2sole_task.at(critical_section_id.source_tick_op_name()),
+                      sole_op_name2sole_task.at(critical_section_id.sink_tick_op_name()));
+  }
+  {
+    // erase source_tick task_proto
+    HashSet<std::string> source_tick_op_names;
+    FOR_RANGE(int32_t, i, 0, Global<CriticalSectionDesc>::Get()->CriticalSectionNum()) {
+      const CriticalSectionId& critical_section_id =
+          Global<CriticalSectionDesc>::Get()->GetCriticalSectionByIndex(i).critical_section_id();
+      CHECK(source_tick_op_names.emplace(critical_section_id.source_tick_op_name()).second);
+    }
+    Erase<PbRpf<TaskProto>>(*plan->mutable_task(), [&](const TaskProto& task) {
+      if (task.task_type() == TaskType::kSourceTick) {
+        CHECK(task.exec_sequence().exec_node_size() == 1);
+        const auto& kernel_conf = task.exec_sequence().exec_node(0).kernel_conf();
+        const auto& op_conf = kernel_conf.op_attribute().op_conf();
+        CHECK(op_conf.has_source_tick_conf());
+        CHECK(source_tick_op_names.find(op_conf.name()) != source_tick_op_names.end());
+        return true;
+      } else {
+        return false;
+      }
+    });
   }
 }
 
@@ -443,7 +515,58 @@ void BindInterfaceMemBlobId(const std::vector<Job>& jobs, std::vector<Plan>* sub
 
 void MakeCtrlJob(const std::vector<Job>& jobs, Job* ctrl_job,
                  std::vector<std::string>* identity_tick_op_names) {
-  TODO();
+  std::vector<OperatorConf> op_confs;
+  op_confs.push_back(OperatorConf());
+  OperatorConf& wait_and_send_ids_op_conf = op_confs.back();
+  {
+    wait_and_send_ids_op_conf.set_name(std::string("System-Ctrl-WaitAndSendIds_") + NewUniqueId());
+    auto* wait_and_send_ids_conf = wait_and_send_ids_op_conf.mutable_wait_and_send_ids_conf();
+    wait_and_send_ids_conf->set_out("out");
+    wait_and_send_ids_conf->set_wait_channel_name(kChannelNameGlobalWaitJobId);
+    FOR_RANGE(int64_t, i, 0, Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->size() - 1) {
+      const auto& cs_idx = Global<CriticalSectionDesc>::Get()->CriticalSectionIndexes4JobId(i);
+      *wait_and_send_ids_conf->add_id_list()->mutable_id() = {cs_idx.begin(), cs_idx.end()};
+    }
+  }
+  op_confs.push_back(OperatorConf());
+  OperatorConf& cs_case_op_conf = op_confs.back();
+  {
+    cs_case_op_conf.set_name(std::string("System-Ctrl-Case_") + NewUniqueId());
+    auto* cs_case_conf = cs_case_op_conf.mutable_case_conf();
+    cs_case_conf->set_in(wait_and_send_ids_op_conf.name() + "/out");
+    FOR_RANGE(int64_t, i, 0, Global<CriticalSectionDesc>::Get()->CriticalSectionNum()) {
+      cs_case_conf->add_out(GenRepeatedBn("out", i));
+    }
+  }
+  FOR_RANGE(int64_t, i, 0, Global<CriticalSectionDesc>::Get()->CriticalSectionNum()) {
+    op_confs.push_back(OperatorConf());
+    OperatorConf& identity_tick_op_conf = op_confs.back();
+    identity_tick_op_conf.set_name(std::string("System-Ctrl-Tick_") + NewUniqueId());
+    auto* identity_tick_conf = identity_tick_op_conf.mutable_tick_conf();
+    identity_tick_conf->add_tick(cs_case_op_conf.name() + "/" + GenRepeatedBn("out", i));
+    identity_tick_conf->set_out("out");
+    identity_tick_op_names->push_back(identity_tick_op_conf.name());
+  }
+  op_confs.push_back(OperatorConf());
+  OperatorConf& cs_esac_op_conf = op_confs.back();
+  {
+    cs_esac_op_conf.set_name(std::string("System-Ctrl-Esac_") + NewUniqueId());
+    auto* cs_esac_conf = cs_esac_op_conf.mutable_esac_conf();
+    for (const auto& identity_tick_op_name : *identity_tick_op_names) {
+      cs_esac_conf->add_in(identity_tick_op_name + "/out");
+    }
+    cs_esac_conf->set_out("out");
+  }
+
+  ParallelConf parallel_conf;
+  parallel_conf.set_policy(kDataParallel);
+  parallel_conf.add_device_name("0:cpu:0");
+  JobBuilder(ctrl_job).AddOps(parallel_conf, op_confs);
+  ctrl_job->mutable_other()->mutable_predict_conf();
+  ctrl_job->mutable_other()->set_piece_size(1);
+  ctrl_job->mutable_other()->set_data_part_num(1);
+  ctrl_job->mutable_other()->set_total_batch_num(1);
+  ctrl_job->mutable_other()->set_default_data_type(DataType::kInt32);
 }
 
 void CompileCtrlJob(const Job& job, int32_t job_id, Plan* ctrl_plan) { TODO(); }
@@ -464,6 +587,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     CheckJobs(&jobs);
     BindInterfaceMemBlobId(jobs, &sub_plans);
+    UpdateGlobalCriticalSectionDesc(sub_plans);
     MergePlan(plan, sub_plans);
     Plan ctrl_plan;
     std::vector<std::string> identity_tick_op_names;
@@ -475,7 +599,6 @@ void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
     }
     MergeCtrlPlan(plan, ctrl_plan, identity_tick_op_names);
 
-    UpdateGlobalCriticalSectionDesc(sub_plans);
     PushPlan("merged_plan", *plan);
     TeePersistentLogStream::Create("merged_plan")->Write(*plan);
   } else {
