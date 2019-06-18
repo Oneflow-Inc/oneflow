@@ -18,8 +18,6 @@ void LayerNormOp::InitFromOpConf() {
   CHECK(op_conf().has_layer_norm_conf());
   const LayerNormOpConf& conf = op_conf().layer_norm_conf();
   if (!(conf.center() || conf.scale())) { mut_op_conf()->set_trainable(false); }
-  CHECK(conf.has_beta());
-  CHECK(conf.has_gamma());
   EnrollInputBn("in");
   EnrollOutputBn("out");
   if (conf.center()) { EnrollInputBn("beta"); }
