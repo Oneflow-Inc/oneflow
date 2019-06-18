@@ -88,12 +88,12 @@ void Compiler::GenNetTopo(Plan* plan) const {
   *(pb_net_topo.mutable_peer_machine_ids()) = HashMap2PbMap(std_net_topo);
 }
 
-void Compiler::Compile(Job* job, Plan* plan) const {
+void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
 #ifdef WITH_CUDA
   Global<CudnnConvCtxCache>::New();
 #endif
   const JobDesc* job_desc = Global<JobDesc>::Get();
-  JobCompleter().Complete(job);
+  if (need_job_complete) { JobCompleter().Complete(job); }
   TeePersistentLogStream::Create("optimized_job")->Write(*job);
   Global<OpGraph>::New(*job);
   Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_op_graph.dot");
