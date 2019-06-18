@@ -38,20 +38,6 @@ const PbMessage& AdamMdUpdateKernel<device_type, T>::GetCustomizedOpConf() const
 }
 
 template<DeviceType device_type, typename T>
-void AdamMdUpdateKernel<device_type, T>::InitModelBlobsWithRandomSeed(
-    DeviceCtx* ctx, std::mt19937* random_seed_gen,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  LOG(FATAL) << "should init model in variable op";
-}
-
-template<DeviceType device_type, typename T>
-void AdamMdUpdateKernel<device_type, T>::InitModelBlobsWithDir(
-    DeviceCtx* ctx, int32_t part_id, int32_t part_num, const std::string& model_load_dir,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  LOG(FATAL) << "should init model in variable op";
-}
-
-template<DeviceType device_type, typename T>
 void AdamMdUpdateKernel<device_type, T>::UpdateModel(
     DeviceCtx* ctx, const T* batch_instance_num_ptr, T learning_rate, T l1, T l2,
     int64_t next_model_vid, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
