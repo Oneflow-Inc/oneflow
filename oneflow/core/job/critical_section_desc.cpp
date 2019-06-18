@@ -56,7 +56,7 @@ void CriticalSectionDesc::UpdateTotalJobCriticalSectionIndexes() {
   HashSet<int64_t> unique_check;
   FOR_RANGE(int64_t, i, 0, critical_sections_.size()) {
     const auto& critical_section = *critical_sections_.at(i);
-    if (critical_section.critical_section_type() == kTotalJobCriticalSection) {
+    if (critical_section.has_total_job_critical_section()) {
       CHECK(unique_check.emplace(critical_section.critical_section_id().job_id()).second);
       total_job_critical_section_indexes_.push_back(i);
     }

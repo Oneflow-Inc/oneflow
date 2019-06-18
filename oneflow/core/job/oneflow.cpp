@@ -594,24 +594,67 @@ void AddGlobalJobDesc(const Job& job, int32_t job_id) {
   job_descs->emplace_back(new JobDesc(job_conf, job_id));
 }
 
+bool NeedAllocateMemory(const RegstDescTypeProto& regst_desc_type) {
+  return regst_desc_type.has_data_regst_desc()
+         && regst_desc_type.data_regst_desc().packed_blob_desc().is_body_disabled() == false;
+}
+
 void FinishGlobalCriticalSectionDesc(const std::vector<Plan>& plans) {
-  std::vector<std::unique_ptr<PlanTaskGraph>> plan_task_graphs;
-  for (const auto& plan : plans) { plan_task_graphs.emplace_back(new PlanTaskGraph(plan)); }
-  HashSet<int64_t> input_output_mem_block_ids;
-  auto* critical_section_desc = Global<CriticalSectionDesc>::Get();
-  FOR_RANGE(int64_t, i, 0, critical_section_desc->CriticalSectionNum()) {
-    auto* critical_section = critical_section_desc->MutCriticalSectionByIndex(i);
-    if (critical_section->critical_section_type() == kInputCriticalSection) {
-      TODO();
-    } else if (critical_section->critical_section_type() == kOutputCriticalSection) {
-      TODO();
-    } else {
-      CHECK_EQ(critical_section->critical_section_type(), kTotalJobCriticalSection);
+  std::vector<HashMap<std::string, HashSet<int64_t>>> job_id2sole_op_name2mem_block_ids;
+  std::vector<HashSet<int64_t>> job_id2mem_block_ids;
+  for (const auto& plan : plans) {
+    job_id2sole_op_name2mem_block_ids.push_back(HashMap<std::string, HashSet<int64_t>>());
+    auto* sole_op_name2mem_block_ids = &job_id2sole_op_name2mem_block_ids.back();
+    job_id2mem_block_ids.push_back(HashSet<int64_t>());
+    auto* job_id_mem_block_ids = &job_id2mem_block_ids.back();
+    for (const auto& task : plan.task()) {
+      if (task.exec_sequence().exec_node_size() == 1) {
+        const auto& kernel_conf = task.exec_sequence().exec_node(0).kernel_conf();
+        const auto& op_name = kernel_conf.op_attribute().op_conf().name();
+        auto* mem_block_ids = &(*sole_op_name2mem_block_ids)[op_name];
+        for (const auto& pair : task.produced_regst_desc()) {
+          if (NeedAllocateMemory(pair.second.regst_desc_type())) {
+            CHECK(mem_block_ids->emplace(pair.second.mem_shared_id()).second);
+          }
+        }
+      }
+      for (const auto& pair : task.produced_regst_desc()) {
+        if (NeedAllocateMemory(pair.second.regst_desc_type())) {
+          job_id_mem_block_ids->emplace(pair.second.mem_shared_id());
+        }
+      }
     }
   }
+  HashSet<int64_t> input_output_mem_block_ids;
+  auto* critical_section_desc = Global<CriticalSectionDesc>::Get();
+  // set mem_block_id for InputOutputCriticalSection
   FOR_RANGE(int64_t, i, 0, critical_section_desc->CriticalSectionNum()) {
     auto* critical_section = critical_section_desc->MutCriticalSectionByIndex(i);
-    if (critical_section->critical_section_type() == kTotalJobCriticalSection) { TODO(); }
+    int64_t job_id = critical_section->critical_section_id().job_id();
+    if (critical_section->has_input_output_critical_section()) {
+      HashSet<int64_t> mem_block_ids;
+      for (const auto& op_name :
+           critical_section->input_output_critical_section().lbi_producer_op_name()) {
+        const auto& cur_mem_block_ids = job_id2sole_op_name2mem_block_ids.at(job_id).at(op_name);
+        mem_block_ids.insert(cur_mem_block_ids.begin(), cur_mem_block_ids.end());
+      }
+      *critical_section->mutable_mem_block_id() = {mem_block_ids.begin(), mem_block_ids.end()};
+      input_output_mem_block_ids.insert(mem_block_ids.begin(), mem_block_ids.end());
+    } else {
+      CHECK(critical_section->has_total_job_critical_section());
+    }
+  }
+  HashSet<int64_t> unique_job_id_check;
+  // set mem_block_id for TotalJobCriticalSection
+  FOR_RANGE(int64_t, i, 0, critical_section_desc->CriticalSectionNum()) {
+    auto* critical_section = critical_section_desc->MutCriticalSectionByIndex(i);
+    if (critical_section->has_total_job_critical_section()) {
+      int64_t job_id = critical_section->critical_section_id().job_id();
+      CHECK(unique_job_id_check.emplace(job_id).second);
+      auto* mem_block_ids = &job_id2mem_block_ids.at(job_id);
+      mem_block_ids->erase(input_output_mem_block_ids.begin(), input_output_mem_block_ids.end());
+      *critical_section->mutable_mem_block_id() = {mem_block_ids->begin(), mem_block_ids->end()};
+    }
   }
   critical_section_desc->Done();
 }
