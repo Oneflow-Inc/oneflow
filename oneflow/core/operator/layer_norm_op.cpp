@@ -18,36 +18,17 @@ void LayerNormOp::InitFromOpConf() {
   CHECK(op_conf().has_layer_norm_conf());
   const LayerNormOpConf& conf = op_conf().layer_norm_conf();
   if (!(conf.center() || conf.scale())) { mut_op_conf()->set_trainable(false); }
-  const bool fw_bw_split = Global<JobDesc>::Get()->IsTrain();
-  if (!fw_bw_split) {
-    CHECK(!conf.has_beta());
-    CHECK(!conf.has_gamma());
-  }
+  CHECK(conf.has_beta());
+  CHECK(conf.has_gamma());
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  if (conf.center()) {
-    if (fw_bw_split && conf.has_beta()) {
-      EnrollInputBn("beta");
-    } else {
-      EnrollModelBn("beta");
-    }
-  }
+  if (conf.center()) { EnrollInputBn("beta"); }
   if (conf.scale()) {
-    if (fw_bw_split && conf.has_gamma()) {
-      EnrollInputBn("gamma");
-      EnrollOutputBn("normalized", false);
-    } else {
-      EnrollModelBn("gamma");
-      EnrollDataTmpBn("normalized");
-    }
+    EnrollInputBn("gamma");
+    EnrollOutputBn("normalized", false);
   }
-  if (fw_bw_split) {
-    EnrollOutputBn("mean", false);
-    EnrollOutputBn("inv_variance", false);
-  } else {
-    EnrollDataTmpBn("mean");
-    EnrollDataTmpBn("inv_variance");
-  }
+  EnrollOutputBn("mean", false);
+  EnrollOutputBn("inv_variance", false);
   EnrollConstBufBn("cudnn_bn_scale_ones");
   EnrollConstBufBn("cudnn_bn_bias_zeros");
   EnrollBwBufBn("cudnn_bn_scale_diff_buf");
