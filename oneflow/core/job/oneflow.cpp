@@ -203,13 +203,13 @@ void WithJobSetLevelGlobalObjs(
   Global<ResourceDesc>::Delete();
 }
 
-void CompileCurJobOnMaster(Job* job, Plan* improved_plan) {
+void CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_complete) {
   const JobDesc* job_desc = Global<JobDesc>::Get();
   Plan naive_plan;
   Plan mem_shared_plan;
   double start = GetCurTime();
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-    Compiler().Compile(job, &naive_plan);
+    Compiler().Compile(job, &naive_plan, need_job_complete);
     LOG(INFO) << "compile time: " << GetCurTime() - start;
     mem_shared_plan =
         Improver().ImproveMemSharedIdOnly(*Global<AvailableMemDesc>::Get(), naive_plan);
@@ -372,6 +372,16 @@ Job ConvertJobConf2Job(const JobConf& job_conf) {
   *job.mutable_arg_op_name() = job_conf.arg_op_name();
   *job.mutable_helper()->mutable_sbp_conf() = job_conf.sbp_conf();
   return job;
+}
+
+JobConf ConvertJob2JobConf(const Job& job) {
+  JobConf job_conf;
+  *job_conf.mutable_net() = job.net();
+  *job_conf.mutable_placement() = job.placement();
+  *job_conf.mutable_other() = job.other();
+  *job_conf.mutable_arg_op_name() = job.arg_op_name();
+  *job_conf.mutable_sbp_conf() = job.helper().sbp_conf();
+  return job_conf;
 }
 
 void GetInterfaceOpBlobInfo(const JobBuilder& job_builder, const std::string& op_name,
@@ -569,7 +579,12 @@ void MakeMainJob(const std::vector<Job>& jobs, Job* main_job,
   main_job->mutable_other()->set_default_data_type(DataType::kInt32);
 }
 
-void CompileMainJob(const Job& main_job, int32_t job_id, Plan* main_plan) { TODO(); }
+void CompileMainJob(Job* main_job, int32_t job_id, Plan* main_plan) {
+  JobConf job_conf = ConvertJob2JobConf(*main_job);
+  Global<JobDesc>::New(job_conf, job_id);
+  CompileCurJobOnMaster(main_job, main_plan, false);
+  Global<JobDesc>::Delete();
+}
 
 void AddGlobalJobDesc(const Job& job, int32_t job_id) { TODO(); }
 
@@ -581,7 +596,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
   FOR_RANGE(int32_t, i, 0, sub_plans.size()) {
     Global<JobDesc>::New(job_confs.Get(i), i);
     jobs.at(i) = ConvertJobConf2Job(job_confs.Get(i));
-    CompileCurJobOnMaster(&jobs.at(i), &sub_plans.at(i));
+    CompileCurJobOnMaster(&jobs.at(i), &sub_plans.at(i), true);
     Global<JobDesc>::Delete();
   }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
@@ -595,7 +610,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
       Job main_job;
       MakeMainJob(jobs, &main_job, &identity_tick_op_names);
       AddGlobalJobDesc(main_job, sub_plans.size());
-      CompileMainJob(main_job, sub_plans.size(), &main_plan);
+      CompileMainJob(&main_job, sub_plans.size(), &main_plan);
     }
     LinkMainPlan(plan, main_plan, identity_tick_op_names);
 
