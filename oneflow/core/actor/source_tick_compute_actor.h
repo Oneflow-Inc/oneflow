@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_ACTOR_SOURCE_TICK_ACTOR_H_
-#define ONEFLOW_CORE_ACTOR_SOURCE_TICK_ACTOR_H_
+#ifndef ONEFLOW_CORE_ACTOR_SOURCE_TICK_COMPUTE_ACTOR_H_
+#define ONEFLOW_CORE_ACTOR_SOURCE_TICK_COMPUTE_ACTOR_H_
 
 #include "oneflow/core/actor/compute_actor.h"
 
 namespace oneflow {
 
-class SourceTickActor final : public CompActor {
+class SourceTickComputeActor final : public CompActor {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(SourceTickActor);
-  SourceTickActor() = default;
-  ~SourceTickActor() = default;
+  OF_DISALLOW_COPY_AND_MOVE(SourceTickComputeActor);
+  SourceTickComputeActor() = default;
+  ~SourceTickComputeActor() = default;
 
  private:
   void VirtualCompActorInit(const TaskProto&) override;
@@ -28,4 +28,4 @@ class SourceTickActor final : public CompActor {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_RECORD_LOAD_ACTOR_H_
+#endif  // ONEFLOW_CORE_ACTOR_SOURCE_TICK_COMPUTE_ACTOR_H_
