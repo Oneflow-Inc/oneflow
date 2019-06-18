@@ -24,14 +24,7 @@ LogicalBlobId ReduceIdentityOp::ibn2lbi(const std::string& input_bn) const {
 }
 
 LogicalBlobId ReduceIdentityOp::obn2lbi(const std::string& output_bn) const {
-  if (Global<JobDesc>::Get()->IsTrain()) {
-    return this->Operator::obn2lbi(output_bn);
-  } else {
-    LogicalBlobId ret;
-    ret.set_op_name(op_name());
-    ret.set_blob_name(output_bn);
-    return ret;
-  }
+  return this->Operator::obn2lbi(output_bn);
 }
 
 void ReduceIdentityOp::InferSbpSignature(

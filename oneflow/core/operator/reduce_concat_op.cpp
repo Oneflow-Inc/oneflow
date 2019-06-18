@@ -79,14 +79,7 @@ LogicalBlobId ReduceConcatOp::ibn2lbi(const std::string& input_bn) const {
 }
 
 LogicalBlobId ReduceConcatOp::obn2lbi(const std::string& output_bn) const {
-  if (Global<JobDesc>::Get()->IsTrain()) {
-    return this->Operator::obn2lbi(output_bn);
-  } else {
-    LogicalBlobId ret;
-    ret.set_op_name(op_name());
-    ret.set_blob_name("out");
-    return ret;
-  }
+  return this->Operator::obn2lbi(output_bn);
 }
 
 void ReduceConcatOp::InferHasBatchDim(

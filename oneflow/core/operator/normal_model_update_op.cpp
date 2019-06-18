@@ -10,12 +10,7 @@ namespace oneflow {
 void NormalModelUpdtOp::InitFromOpConf() {
   EnrollInputBn("model_diff", false);
   EnrollInputBn("total_instance_num_diff", false);
-  const JobDesc* g_job_conf = Global<JobDesc>::Get();
-  if (g_job_conf->IsTrain()) {
-    EnrollInputBn("model", false)->set_is_mutable(true);
-  } else {
-    UNIMPLEMENTED();
-  }
+  EnrollInputBn("model", false)->set_is_mutable(true);
   const PbMessage& conf = this->GetCustomizedConf();
   const auto& user_conf = *GetMsgPtrFromPbMessage<NormalModelUpdateOpUserConf>(conf, "user_conf");
   if (user_conf.has_clip_conf() && user_conf.clip_conf().has_clip_by_global_norm()) {

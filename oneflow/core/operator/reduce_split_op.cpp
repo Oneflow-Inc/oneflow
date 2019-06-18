@@ -17,13 +17,11 @@ const PbMessage& ReduceSplitOp::GetCustomizedConf() const { return op_conf().red
 void ReduceSplitOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                    const ParallelContext* parallel_ctx) const {
   const auto& conf = op_conf().reduce_split_conf();
-  if (Global<JobDesc>::Get()->IsTrain()) {
-    FOR_RANGE(int32_t, i, 0, conf.out_num()) {
-      BlobDesc* blob_desc = GetBlobDesc4BnInOp(output_bns().Get(i));
-      Shape shape(conf.out_shape(i));
-      blob_desc->mut_shape() = shape;
-      blob_desc->set_data_type(GetBlobDesc4BnInOp("in")->data_type());
-    }
+  FOR_RANGE(int32_t, i, 0, conf.out_num()) {
+    BlobDesc* blob_desc = GetBlobDesc4BnInOp(output_bns().Get(i));
+    Shape shape(conf.out_shape(i));
+    blob_desc->mut_shape() = shape;
+    blob_desc->set_data_type(GetBlobDesc4BnInOp("in")->data_type());
   }
 }
 
@@ -46,19 +44,11 @@ void ReduceSplitOp::VirtualGenKernelConf(
 }
 
 LogicalBlobId ReduceSplitOp::ibn2lbi(const std::string& input_bn) const {
-  if (Global<JobDesc>::Get()->IsTrain()) {
-    return this->Operator::ibn2lbi(input_bn);
-  } else {
-    return GenPackedLbi();
-  }
+  return this->Operator::ibn2lbi(input_bn);
 }
 
 LogicalBlobId ReduceSplitOp::obn2lbi(const std::string& output_bn) const {
-  if (Global<JobDesc>::Get()->IsTrain()) {
-    return this->Operator::obn2lbi(output_bn);
-  } else {
-    return GenPackedLbi();
-  }
+  return this->Operator::obn2lbi(output_bn);
 }
 
 void ReduceSplitOp::InferHasBatchDim(
