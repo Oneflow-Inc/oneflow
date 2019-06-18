@@ -339,8 +339,7 @@ void AddIdentityOpForAllReduceOverlapingUntrainble(Job* job) {
 
 void FixAndOptimizeDLNet(Job* job) {
   const JobDesc* job_desc = Global<JobDesc>::Get();
-  if (!(job_desc->IsPredict()
-        && job_desc->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf())) {
+  if (!(Global<JobDesc>::Get()->IsTrain())) {
     FixTickOpIfExists(job);
     // ConvertPseudoChainToChain(job);
   }
@@ -432,8 +431,7 @@ void RewriteBoxingWithAllReduce(const OpGraph& op_graph, Job* job) {
 void JobCompleter::Complete(Job* job) const {
   // replace facade op
   WithOpGraphAndMutJob(job, &ReplaceFacade);
-  if (Global<JobDesc>::Get()->IsPredict()
-      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+  if (Global<JobDesc>::Get()->IsTrain()) {
     // complete variable ops
     WithOpGraphAndMutJob(job, &AutoVar);
     WithOpGraphAndMutJob(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);

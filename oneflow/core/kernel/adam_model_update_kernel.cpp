@@ -6,7 +6,7 @@ namespace oneflow {
 namespace {
 
 const AdamModelUpdateConf& GetAdamModelUpdateConf(const OperatorConf& op_conf) {
-  if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+  if (Global<JobDesc>::Get()->IsTrain()) {
     return op_conf.adam_model_update_conf().user_conf().adam_conf();
   } else {
     UNIMPLEMENTED();
@@ -30,7 +30,7 @@ void UpdateMomentEstimate(int64_t n, bool do_bias_correction, T beta, int32_t p,
 
 template<DeviceType device_type, typename T>
 const PbMessage& AdamMdUpdateKernel<device_type, T>::GetCustomizedOpConf() const {
-  if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+  if (Global<JobDesc>::Get()->IsTrain()) {
     return this->op_conf().adam_model_update_conf();
   } else {
     UNIMPLEMENTED();
@@ -41,9 +41,7 @@ template<DeviceType device_type, typename T>
 void AdamMdUpdateKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937* random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
-    return;
-  }
+  if (Global<JobDesc>::Get()->IsTrain()) { return; }
   const auto& adam_conf = GetAdamModelUpdateConf(this->op_conf());
   InitializerConf m_init_conf;
   InitializerConf v_init_conf;
@@ -66,9 +64,7 @@ template<DeviceType device_type, typename T>
 void AdamMdUpdateKernel<device_type, T>::InitModelBlobsWithDir(
     DeviceCtx* ctx, int32_t part_id, int32_t part_num, const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
-    return;
-  }
+  if (Global<JobDesc>::Get()->IsTrain()) { return; }
   const auto& adam_conf = GetAdamModelUpdateConf(this->op_conf());
   Blob* m_blob = BnInOp2Blob("m");
   Blob* v_blob = BnInOp2Blob("v");

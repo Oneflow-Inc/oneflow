@@ -68,8 +68,7 @@ void LogicalGraph::NaiveBuildFwStruct(
     cur_node->mut_op_vec() = {cur_op};
     cur_node->SoleOp()->FixParallelDesc(parallel_desc_ptr.get());
     cur_node->mut_parallel_desc() = parallel_desc_ptr;
-    if (Global<JobDesc>::Get()->IsPredict()
-        && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+    if (Global<JobDesc>::Get()->IsTrain()) {
       const auto& name2shape = job_.helper().op_name2op_time_shape();
       const auto& op_time_shape_it = name2shape.find(cur_op->op_name());
       if (op_time_shape_it != name2shape.end()) {
@@ -432,10 +431,7 @@ MdSaveLogicalNode* LogicalGraph::BuildMdSaveStructIfNeed(LogicalNode* need_save_
 
 void LogicalGraph::ForEachNecessaryCtrlEdge(
     const std::function<void(const LogicalNode*, const LogicalNode*, int64_t)>& Handler) const {
-  if (!(Global<JobDesc>::Get()->IsPredict()
-        && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf())) {
-    return;
-  }
+  if (!Global<JobDesc>::Get()->IsTrain()) { return; }
   HashMap<std::string, const LogicalNode*> op_name2node;
   ForEachNode([&](LogicalNode* node) {
     for (const auto& op : node->op_vec()) {

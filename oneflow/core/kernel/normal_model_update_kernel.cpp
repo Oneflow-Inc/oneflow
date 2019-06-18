@@ -12,8 +12,7 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   int64_t next_model_vid = -1;
   int64_t cur_batch_num = -1;
-  if (Global<JobDesc>::Get()->IsPredict()
-      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+  if (Global<JobDesc>::Get()->IsTrain()) {
     cur_batch_num = std::get<0>(
         *(reinterpret_cast<std::tuple<int64_t, std::function<const Blob*(const LogicalBlobId&)>>*>(
             ctx.other)));

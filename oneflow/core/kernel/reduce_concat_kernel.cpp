@@ -5,9 +5,8 @@ namespace oneflow {
 template<DeviceType device_type>
 void ReduceConcatKernel<device_type>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (!(Global<JobDesc>::Get()->IsPredict()
-        && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf())
-      && device_type == DeviceType::kGPU && Global<JobDesc>::Get()->enable_mem_sharing()) {
+  if (!Global<JobDesc>::Get()->IsTrain() && device_type == DeviceType::kGPU
+      && Global<JobDesc>::Get()->enable_mem_sharing()) {
     return;
   }
   Blob* out_blob = BnInOp2Blob("out");

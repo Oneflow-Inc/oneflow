@@ -8,8 +8,7 @@ void ReduceConcatCompTaskNode::ProduceAllRegstsAndBindEdges() {
 }
 
 void ReduceConcatCompTaskNode::ConsumeAllRegsts() {
-  if (Global<JobDesc>::Get()->IsPredict()
-      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+  if (Global<JobDesc>::Get()->IsTrain()) {
     int32_t idx = 0;
     ForEachInDataEdge([&](TaskEdge* in_edge) {
       ConsumeRegst("in_" + std::to_string(idx), in_edge->GetSoleRegst());
