@@ -8,13 +8,8 @@ void SoftmaxOp::InitFromOpConf() {
   CHECK(op_conf().has_softmax_conf());
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  if (Global<JobDesc>::Get()->IsTrain() && op_conf().softmax_conf().axis() != -1) {
-    EnrollOutputBn("transpose_in");
-    EnrollOutputBn("transpose_out", false);
-  } else {
-    EnrollDataTmpBn("transpose_in");
-    EnrollDataTmpBn("transpose_out");
-  }
+  EnrollOutputBn("transpose_in");
+  EnrollOutputBn("transpose_out", false);
   EnrollFwBufBn("fw_softmax_num");
   EnrollFwBufBn("fw_buf");
   EnrollBwBufBn("transpose_out_diff");
