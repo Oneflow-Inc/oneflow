@@ -169,7 +169,8 @@ void AddGlobalCriticalSection(const std::string& src_tick_op_name,
 }
 
 void ForEachInputOutputCriticalSectionOpNodes(
-    const OpGraph& op_graph, const std::function<void(const HashSet<const OpNode*>&)>& Handler) {
+    const OpGraph& op_graph,
+    const std::function<void(const HashSet<const OpNode*>&, CriticalSectionType)>& Handler) {
   HashMap<OperatorConf::OpTypeCase, HashSet<const OpNode*>> op_type_case2op_nodes;
   for (const std::string& op_name : Global<JobDesc>::Get()->arg_op_name()) {
     const OpNode* op_node = op_graph.OpNode4OpName(op_name);
@@ -185,9 +186,9 @@ void ForEachInputOutputCriticalSectionOpNodes(
     for (const OpNode* op_node : op_type_case2op_nodes[op_type_case]) {
       op_node->ForEachNodeOnOutEdge([&](OpNode* out_node) { consumer_op_nodes.insert(out_node); });
     }
-    Handler(consumer_op_nodes);
+    Handler(consumer_op_nodes, kInputCriticalSection);
   }
-  Handler(op_type_case2op_nodes[OperatorConf::kOutputConf]);
+  Handler(op_type_case2op_nodes[OperatorConf::kOutputConf], kOutputCriticalSection);
 }
 
 std::vector<OperatorConf> AddTickForTimeShape(const Shape& src_time_shape,
@@ -214,7 +215,8 @@ std::vector<OperatorConf> AddTickForTimeShape(const Shape& src_time_shape,
   return op_confs;
 }
 
-void AddGlobalInputOutputCriticalSection(const HashSet<const OpNode*>& op_nodes, Job* job) {
+void AddGlobalInputOutputCriticalSection(const HashSet<const OpNode*>& op_nodes, Job* job,
+                                         CriticalSectionType critical_section_type) {
   auto time_shape = std::make_unique<Shape>(std::vector<int64_t>{
       Global<JobDesc>::Get()->TotalBatchNum(), Global<JobDesc>::Get()->NumOfPiecesInBatch()});
   HashMap<ParallelDesc, std::list<const OpNode*>> parallel_desc2op_nodes;
@@ -249,7 +251,7 @@ void AddGlobalInputOutputCriticalSection(const HashSet<const OpNode*>& op_nodes,
     job_builder.MutOps({sink_tick_op_conf});
   }
   AddGlobalCriticalSection(src_tick_op_conf.name(), sink_tick_op_conf.name(),
-                           kInputOutputCriticalSection);
+                           critical_section_type);
 }
 
 }  // namespace
@@ -314,9 +316,11 @@ void AddGlobalTotalJobCriticalSection(const Job& job) {
 }
 
 void AddGlobalInputOutputCriticalSections(const OpGraph& op_graph, Job* job) {
-  ForEachInputOutputCriticalSectionOpNodes(op_graph, [&](const HashSet<const OpNode*>& op_nodes) {
-    AddGlobalInputOutputCriticalSection(op_nodes, job);
-  });
+  ForEachInputOutputCriticalSectionOpNodes(
+      op_graph,
+      [&](const HashSet<const OpNode*>& op_nodes, CriticalSectionType critical_section_type) {
+        AddGlobalInputOutputCriticalSection(op_nodes, job, critical_section_type);
+      });
 }
 
 }  // namespace oneflow
