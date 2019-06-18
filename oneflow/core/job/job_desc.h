@@ -20,7 +20,6 @@ class JobDesc final {
   ~JobDesc() = default;
 
   // Common
-  const JobConf& job_conf() const { return job_conf_; }
   int32_t job_id() const { return job_id_; }
   const std::string& name() const { return job_conf_.name(); }
   const PbRpf<std::string>& arg_op_name() const { return job_conf_.arg_op_name(); }

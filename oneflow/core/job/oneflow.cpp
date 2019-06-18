@@ -586,7 +586,12 @@ void CompileMainJob(Job* main_job, int32_t job_id, Plan* main_plan) {
   Global<JobDesc>::Delete();
 }
 
-void AddGlobalJobDesc(const Job& job, int32_t job_id) { TODO(); }
+void AddGlobalJobDesc(const Job& job, int32_t job_id) {
+  JobConf job_conf = ConvertJob2JobConf(job);
+  auto* job_descs = Global<std::vector<std::unique_ptr<JobDesc>>>::Get();
+  CHECK_EQ(job_descs->size(), job_id);
+  job_descs->emplace_back(new JobDesc(job_conf, job_id));
+}
 
 void UpdateGlobalCriticalSectionDesc(const std::vector<Plan>& plans) { TODO(); }
 
