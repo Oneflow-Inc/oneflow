@@ -41,46 +41,14 @@ template<DeviceType device_type, typename T>
 void AdamMdUpdateKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937* random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (Global<JobDesc>::Get()->IsTrain()) { return; }
-  const auto& adam_conf = GetAdamModelUpdateConf(this->op_conf());
-  InitializerConf m_init_conf;
-  InitializerConf v_init_conf;
-  m_init_conf.mutable_constant_conf()->set_value(0.0f);
-  v_init_conf.mutable_constant_conf()->set_value(0.0f);
-  KernelUtil<device_type, T>::InitializeWithProperConf(ctx, &m_init_conf, 0, BnInOp2Blob("m"));
-  KernelUtil<device_type, T>::InitializeWithProperConf(ctx, &v_init_conf, 0, BnInOp2Blob("v"));
-  if (!adam_conf.do_bias_correction()) { return; }
-  InitializerConf beta1_init_conf;
-  InitializerConf beta2_init_conf;
-  beta1_init_conf.mutable_constant_conf()->set_value(adam_conf.beta1());
-  beta2_init_conf.mutable_constant_conf()->set_value(adam_conf.beta2());
-  KernelUtil<device_type, T>::InitializeWithProperConf(ctx, &beta1_init_conf, 0,
-                                                       BnInOp2Blob("beta1_t"));
-  KernelUtil<device_type, T>::InitializeWithProperConf(ctx, &beta2_init_conf, 0,
-                                                       BnInOp2Blob("beta2_t"));
+  LOG(FATAL) << "should init model in variable op";
 }
 
 template<DeviceType device_type, typename T>
 void AdamMdUpdateKernel<device_type, T>::InitModelBlobsWithDir(
     DeviceCtx* ctx, int32_t part_id, int32_t part_num, const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (Global<JobDesc>::Get()->IsTrain()) { return; }
-  const auto& adam_conf = GetAdamModelUpdateConf(this->op_conf());
-  Blob* m_blob = BnInOp2Blob("m");
-  Blob* v_blob = BnInOp2Blob("v");
-  KernelUtil<device_type, T>::InitializeWithDir(ctx, part_id, part_num, model_load_dir, m_blob, "m",
-                                                m_blob->shape().At(0), m_blob->shape().Count(1));
-  KernelUtil<device_type, T>::InitializeWithDir(ctx, part_id, part_num, model_load_dir, v_blob, "v",
-                                                v_blob->shape().At(0), v_blob->shape().Count(1));
-  if (!adam_conf.do_bias_correction()) { return; }
-  Blob* beta1_t_blob = BnInOp2Blob("beta1_t");
-  Blob* beta2_t_blob = BnInOp2Blob("beta2_t");
-  KernelUtil<device_type, T>::InitializeWithDir(
-      ctx, part_id, part_num, model_load_dir, beta1_t_blob, "beta1_t", beta1_t_blob->shape().At(0),
-      beta1_t_blob->shape().Count(1));
-  KernelUtil<device_type, T>::InitializeWithDir(
-      ctx, part_id, part_num, model_load_dir, beta2_t_blob, "beta2_t", beta2_t_blob->shape().At(0),
-      beta2_t_blob->shape().Count(1));
+  LOG(FATAL) << "should init model in variable op";
 }
 
 template<DeviceType device_type, typename T>
