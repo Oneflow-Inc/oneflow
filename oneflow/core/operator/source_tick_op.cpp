@@ -5,16 +5,11 @@ namespace oneflow {
 
 void SourceTickOp::InitFromOpConf() {
   CHECK(op_conf().has_source_tick_conf());
+  CHECK(op_conf().ctrl_in_op_name().empty());
   EnrollOutputBn("out", false);
 }
 
-LogicalNode* SourceTickOp::NewProperLogicalNode() const {
-  if (op_conf().ctrl_in_op_name().empty()) {
-    return new SourceTickLogicalNode;
-  } else {
-    return new TickLogicalNode;
-  }
-}
+LogicalNode* SourceTickOp::NewProperLogicalNode() const { return new SourceTickLogicalNode(); }
 
 const PbMessage& SourceTickOp::GetCustomizedConf() const { return op_conf().source_tick_conf(); }
 
