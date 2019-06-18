@@ -68,7 +68,7 @@ void LayerNormOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
       beta->set_data_type(in->data_type());
     }
   }
-  if (conf.scale() && conf.has_gamma()) {
+  if (conf.scale()) {
     if (conf.has_gamma()) {
       const BlobDesc* gamma = GetBlobDesc4BnInOp("gamma");
       CHECK_EQ(gamma->shape(), param_shape);
