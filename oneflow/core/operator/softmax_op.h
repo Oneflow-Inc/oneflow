@@ -29,10 +29,7 @@ class SoftmaxOp final : public Operator {
                            const ParallelContext*, const OpContext*) const override;
 
  private:
-  void InferHasBatchDim(
-      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {
-    NaiveInferHasBatchDim(HasBatchDim4BnInOp);
-  }
+  void InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
 
   void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 

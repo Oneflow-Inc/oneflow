@@ -8,13 +8,11 @@ void SoftmaxOp::InitFromOpConf() {
   CHECK(op_conf().has_softmax_conf());
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  EnrollOutputBn("transpose_in");
-  EnrollOutputBn("transpose_out", false);
+  // TODO: update method for fw bw split
+  // EnrollOutputBn("transpose_in");
+  // EnrollOutputBn("transpose_out");
   EnrollFwBufBn("fw_softmax_num");
   EnrollFwBufBn("fw_buf");
-  EnrollBwBufBn("transpose_out_diff");
-  EnrollBwBufBn("bw_buf");
-  EnrollBwBufBn("bw_softmax_num");
 }
 
 const PbMessage& SoftmaxOp::GetCustomizedConf() const { return op_conf().softmax_conf(); }
@@ -106,6 +104,11 @@ void SoftmaxOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
       .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+}
+
+void SoftmaxOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = *HasBatchDim4BnInOp("in"); }
 }
 
 REGISTER_OP(OperatorConf::kSoftmaxConf, SoftmaxOp);
