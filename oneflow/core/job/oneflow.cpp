@@ -595,23 +595,23 @@ void AddGlobalJobDesc(const Job& job, int32_t job_id) {
 }
 
 void FinishGlobalCriticalSectionDesc(const std::vector<Plan>& plans) {
-  std::vector<PlanTaskGraph> plan_task_graphs;
-  for (const auto& plan : plans) { plan_task_graphs.emplace_back(plan); }
+  std::vector<std::unique_ptr<PlanTaskGraph>> plan_task_graphs;
+  for (const auto& plan : plans) { plan_task_graphs.emplace_back(new PlanTaskGraph(plan)); }
   HashSet<int64_t> input_output_mem_block_ids;
-  auto* critical_section_desc = *Global<CriticalSectionDesc>::Get();
+  auto* critical_section_desc = Global<CriticalSectionDesc>::Get();
   FOR_RANGE(int64_t, i, 0, critical_section_desc->CriticalSectionNum()) {
     auto* critical_section = critical_section_desc->MutCriticalSectionByIndex(i);
-    if (critical_section.critical_section_type() == kInputCriticalSection) {
+    if (critical_section->critical_section_type() == kInputCriticalSection) {
       TODO();
-    } else if (critical_section.critical_section_type() == kOutputCriticalSection) {
+    } else if (critical_section->critical_section_type() == kOutputCriticalSection) {
       TODO();
     } else {
-      CHECK_EQ(critical_section.critical_section_type(), kTotalJobCriticalSection);
+      CHECK_EQ(critical_section->critical_section_type(), kTotalJobCriticalSection);
     }
   }
   FOR_RANGE(int64_t, i, 0, critical_section_desc->CriticalSectionNum()) {
     auto* critical_section = critical_section_desc->MutCriticalSectionByIndex(i);
-    if (critical_section.critical_section_type() == kTotalJobCriticalSection) { TODO(); }
+    if (critical_section->critical_section_type() == kTotalJobCriticalSection) { TODO(); }
   }
   critical_section_desc->Done();
 }
