@@ -22,13 +22,7 @@ const PbMessage& ReduceConcatOp::GetCustomizedConf() const {
   return op_conf().reduce_concat_conf();
 }
 
-LogicalNode* ReduceConcatOp::NewProperLogicalNode() const {
-  if (Global<JobDesc>::Get()->IsTrain()) {
-    return new NormalForwardLogicalNode;
-  } else {
-    return new ReduceConcatLogicalNode;
-  }
-}
+LogicalNode* ReduceConcatOp::NewProperLogicalNode() const { return new NormalForwardLogicalNode; }
 
 void ReduceConcatOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                     const ParallelContext* parallel_ctx, int64_t record_piece_size,
