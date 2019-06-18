@@ -3,12 +3,6 @@
 
 namespace oneflow {
 
-namespace {
-
-inline bool IsFwBwSplit() { return Global<JobDesc>::Get()->IsTrain(); }
-
-}  // namespace
-
 void NormalizationOp::InitFromOpConf() {
   const NormalizationOpConf& conf = op_conf().normalization_conf();
 #ifdef WITH_CUDA
@@ -18,62 +12,31 @@ void NormalizationOp::InitFromOpConf() {
   CHECK_LE(conf.momentum(), 1);
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  if (IsFwBwSplit()) {
-    CHECK(conf.has_moving_mean());
-    CHECK(conf.has_moving_variance());
-    EnrollInputBn("moving_mean")->set_is_mutable(conf.is_training());
-    EnrollInputBn("moving_variance")->set_is_mutable(conf.is_training());
-    if (conf.has_gamma()) {
-      EnrollInputBn("gamma");
-    } else {
-      if (DevIsGpuAndEnableCudnn()) {
-        EnrollConstBufBn("gamma");
-      } else {
-        UNIMPLEMENTED();
-      }
-    }
-    if (conf.has_beta()) {
-      EnrollInputBn("beta");
-    } else {
-      if (DevIsGpuAndEnableCudnn()) {
-        EnrollConstBufBn("beta");
-      } else {
-        UNIMPLEMENTED();
-      }
-    }
-    if (conf.is_training()) {
-      EnrollOutputBn("mean", false);
-      EnrollOutputBn("inv_variance", false);
-    }
+  CHECK(conf.has_moving_mean());
+  CHECK(conf.has_moving_variance());
+  EnrollInputBn("moving_mean")->set_is_mutable(conf.is_training());
+  EnrollInputBn("moving_variance")->set_is_mutable(conf.is_training());
+  if (conf.has_gamma()) {
+    EnrollInputBn("gamma");
   } else {
-    EnrollForwardModelBn("moving_mean");
-    EnrollForwardModelBn("moving_variance");
-    if (conf.center()) {
-      EnrollModelBn("beta");
+    if (DevIsGpuAndEnableCudnn()) {
+      EnrollConstBufBn("gamma");
     } else {
-      if (DevIsGpuAndEnableCudnn()) {
-        EnrollConstBufBn("beta");
-        EnrollBwBufBn("beta_diff");
-      } else {
-        UNIMPLEMENTED();
-      }
+      UNIMPLEMENTED();
     }
-    if (conf.scale()) {
-      EnrollModelBn("gamma");
+  }
+  if (conf.has_beta()) {
+    EnrollInputBn("beta");
+  } else {
+    if (DevIsGpuAndEnableCudnn()) {
+      EnrollConstBufBn("beta");
     } else {
-      if (DevIsGpuAndEnableCudnn()) {
-        EnrollConstBufBn("gamma");
-        EnrollBwBufBn("gamma_diff");
-      } else {
-        UNIMPLEMENTED();
-      }
+      UNIMPLEMENTED();
     }
-    if (conf.is_training()) {
-      EnrollDataTmpBn("mean");
-      EnrollDataTmpBn("inv_variance");
-    } else {
-      EnrollBwBufBn("inv_variance");
-    }
+  }
+  if (conf.is_training()) {
+    EnrollOutputBn("mean", false);
+    EnrollOutputBn("inv_variance", false);
   }
 }
 
@@ -88,7 +51,6 @@ void NormalizationOp::InferBlobDescs(
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
   const DataType data_type = in->data_type();
   *GetBlobDesc4BnInOp("out") = *in;
-  const bool is_fw_bw_split = IsFwBwSplit();
   const Shape param_shape({in->shape().At(conf.axis())});
   const auto CheckParamBlobDesc = [&](const std::string& bn) {
     const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn);
@@ -104,17 +66,10 @@ void NormalizationOp::InferBlobDescs(
       blob_desc->mut_shape() = param_shape;
     }
   };
-  if (is_fw_bw_split) {
-    CheckParamBlobDesc("moving_mean");
-    CheckParamBlobDesc("moving_variance");
-    CheckParamBlobDesc("beta");
-    CheckParamBlobDesc("gamma");
-  } else {
-    SetParamBlobDesc("moving_mean");
-    SetParamBlobDesc("moving_variance");
-    SetParamBlobDesc("beta");
-    SetParamBlobDesc("gamma");
-  }
+  CheckParamBlobDesc("moving_mean");
+  CheckParamBlobDesc("moving_variance");
+  CheckParamBlobDesc("beta");
+  CheckParamBlobDesc("gamma");
   if (conf.is_training()) {
     SetParamBlobDesc("mean");
     SetParamBlobDesc("inv_variance");
