@@ -322,9 +322,9 @@ void LinkTickTaskProto(TaskProto* identity_tick, TaskProto* src_tick, TaskProto*
   UpdateSoleObnRegstDescId(sink_tick);
 }
 
-void MergeCtrlPlan(Plan* plan, const Plan& ctrl_plan,
-                   const std::vector<std::string>& identity_tick_op_names) {
-  plan->mutable_task()->MergeFrom(ctrl_plan.task());
+void LinkMainPlan(Plan* plan, const Plan& main_plan,
+                  const std::vector<std::string>& identity_tick_op_names) {
+  plan->mutable_task()->MergeFrom(main_plan.task());
   HashMap<std::string, TaskProto*> sole_op_name2sole_task;
   FOR_RANGE(int64_t, i, 0, plan->task_size()) {
     TaskProto* task = plan->mutable_task(i);
@@ -513,13 +513,13 @@ void BindInterfaceMemBlobId(const std::vector<Job>& jobs, std::vector<Plan>* sub
   }
 }
 
-void MakeCtrlJob(const std::vector<Job>& jobs, Job* ctrl_job,
+void MakeMainJob(const std::vector<Job>& jobs, Job* main_job,
                  std::vector<std::string>* identity_tick_op_names) {
   std::vector<OperatorConf> op_confs;
   op_confs.push_back(OperatorConf());
   OperatorConf& wait_and_send_ids_op_conf = op_confs.back();
   {
-    wait_and_send_ids_op_conf.set_name(std::string("System-Ctrl-WaitAndSendIds_") + NewUniqueId());
+    wait_and_send_ids_op_conf.set_name(std::string("System-Main-WaitAndSendIds_") + NewUniqueId());
     auto* wait_and_send_ids_conf = wait_and_send_ids_op_conf.mutable_wait_and_send_ids_conf();
     wait_and_send_ids_conf->set_out("out");
     wait_and_send_ids_conf->set_wait_channel_name(kChannelNameGlobalWaitJobId);
@@ -531,7 +531,7 @@ void MakeCtrlJob(const std::vector<Job>& jobs, Job* ctrl_job,
   op_confs.push_back(OperatorConf());
   OperatorConf& cs_case_op_conf = op_confs.back();
   {
-    cs_case_op_conf.set_name(std::string("System-Ctrl-Case_") + NewUniqueId());
+    cs_case_op_conf.set_name(std::string("System-Main-Case_") + NewUniqueId());
     auto* cs_case_conf = cs_case_op_conf.mutable_case_conf();
     cs_case_conf->set_in(wait_and_send_ids_op_conf.name() + "/out");
     FOR_RANGE(int64_t, i, 0, Global<CriticalSectionDesc>::Get()->CriticalSectionNum()) {
@@ -541,7 +541,7 @@ void MakeCtrlJob(const std::vector<Job>& jobs, Job* ctrl_job,
   FOR_RANGE(int64_t, i, 0, Global<CriticalSectionDesc>::Get()->CriticalSectionNum()) {
     op_confs.push_back(OperatorConf());
     OperatorConf& identity_tick_op_conf = op_confs.back();
-    identity_tick_op_conf.set_name(std::string("System-Ctrl-Tick_") + NewUniqueId());
+    identity_tick_op_conf.set_name(std::string("System-Main-Tick_") + NewUniqueId());
     auto* identity_tick_conf = identity_tick_op_conf.mutable_tick_conf();
     identity_tick_conf->add_tick(cs_case_op_conf.name() + "/" + GenRepeatedBn("out", i));
     identity_tick_conf->set_out("out");
@@ -550,7 +550,7 @@ void MakeCtrlJob(const std::vector<Job>& jobs, Job* ctrl_job,
   op_confs.push_back(OperatorConf());
   OperatorConf& cs_esac_op_conf = op_confs.back();
   {
-    cs_esac_op_conf.set_name(std::string("System-Ctrl-Esac_") + NewUniqueId());
+    cs_esac_op_conf.set_name(std::string("System-Main-Esac_") + NewUniqueId());
     auto* cs_esac_conf = cs_esac_op_conf.mutable_esac_conf();
     for (const auto& identity_tick_op_name : *identity_tick_op_names) {
       cs_esac_conf->add_in(identity_tick_op_name + "/out");
@@ -561,15 +561,15 @@ void MakeCtrlJob(const std::vector<Job>& jobs, Job* ctrl_job,
   ParallelConf parallel_conf;
   parallel_conf.set_policy(kDataParallel);
   parallel_conf.add_device_name("0:cpu:0");
-  JobBuilder(ctrl_job).AddOps(parallel_conf, op_confs);
-  ctrl_job->mutable_other()->mutable_predict_conf();
-  ctrl_job->mutable_other()->set_piece_size(1);
-  ctrl_job->mutable_other()->set_data_part_num(1);
-  ctrl_job->mutable_other()->set_total_batch_num(1);
-  ctrl_job->mutable_other()->set_default_data_type(DataType::kInt32);
+  JobBuilder(main_job).AddOps(parallel_conf, op_confs);
+  main_job->mutable_other()->mutable_predict_conf();
+  main_job->mutable_other()->set_piece_size(1);
+  main_job->mutable_other()->set_data_part_num(1);
+  main_job->mutable_other()->set_total_batch_num(1);
+  main_job->mutable_other()->set_default_data_type(DataType::kInt32);
 }
 
-void CompileCtrlJob(const Job& job, int32_t job_id, Plan* ctrl_plan) { TODO(); }
+void CompileMainJob(const Job& main_job, int32_t job_id, Plan* main_plan) { TODO(); }
 
 void AddGlobalJobDesc(const Job& job, int32_t job_id) { TODO(); }
 
@@ -589,15 +589,15 @@ void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
     BindInterfaceMemBlobId(jobs, &sub_plans);
     UpdateGlobalCriticalSectionDesc(sub_plans);
     MergePlan(plan, sub_plans);
-    Plan ctrl_plan;
+    Plan main_plan;
     std::vector<std::string> identity_tick_op_names;
     {
-      Job job;
-      MakeCtrlJob(jobs, &job, &identity_tick_op_names);
-      AddGlobalJobDesc(job, sub_plans.size());
-      CompileCtrlJob(job, sub_plans.size(), &ctrl_plan);
+      Job main_job;
+      MakeMainJob(jobs, &main_job, &identity_tick_op_names);
+      AddGlobalJobDesc(main_job, sub_plans.size());
+      CompileMainJob(main_job, sub_plans.size(), &main_plan);
     }
-    MergeCtrlPlan(plan, ctrl_plan, identity_tick_op_names);
+    LinkMainPlan(plan, main_plan, identity_tick_op_names);
 
     PushPlan("merged_plan", *plan);
     TeePersistentLogStream::Create("merged_plan")->Write(*plan);
