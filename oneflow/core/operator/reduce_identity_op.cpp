@@ -16,11 +16,7 @@ void ReduceIdentityOp::InferBlobDescs(
 }
 
 LogicalBlobId ReduceIdentityOp::ibn2lbi(const std::string& input_bn) const {
-  if (Global<JobDesc>::Get()->IsTrain()) {
-    return this->Operator::ibn2lbi(input_bn);
-  } else {
-    return GenPackedLbi();
-  }
+  return this->Operator::ibn2lbi(input_bn);
 }
 
 LogicalBlobId ReduceIdentityOp::obn2lbi(const std::string& output_bn) const {
