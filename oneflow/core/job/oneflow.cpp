@@ -264,12 +264,32 @@ void MergePlan(Plan* plan, const std::vector<Plan>& sub_plans) {
   Compiler().GenNetTopo(plan);
 }
 
-void ResetTaskTypeSourceTickToTick(Plan* plan) { TODO(); }
-
 void MergeCtrlPlan(Plan* plan, const Plan& ctrl_plan,
-                   const std::vector<std::string>& identity_op_names) {
-  TODO();
-  ResetTaskTypeSourceTickToTick(plan);
+                   const std::vector<std::string>& identity_tick_op_names) {
+  std::vector<TaskProto> ctrl_tasks(ctrl_plan.task().begin(), ctrl_plan.task().end());
+  HashMap<std::string, TaskProto*> sole_op_name2sole_task;
+  {
+    HashMap<std::string, std::vector<TaskProto*>> sole_op_name2task;
+    FOR_RANGE(int64_t, i, 0, plan->task_size()) {
+      TaskProto* task = plan->mutable_task(i);
+      if (task->exec_sequence().exec_node_size() == 1) {
+        const auto& kernel_conf = task->exec_sequence().exec_node(0).kernel_conf();
+        sole_op_name2task[kernel_conf.op_attribute().op_conf().name()].push_back(task);
+      }
+    }
+    for (const auto& pair : sole_op_name2task) {
+      if (pair.second.size() == 1) { sole_op_name2sole_task[pair.first] = pair.second.at(0); }
+    }
+  }
+  HashMap<int64_t, TaskProto*> task_id2ctrl_task;
+  HashMap<std::string, int64_t> sole_op_name2ctrl_task_id;
+  for (auto& task : ctrl_tasks) {
+    CHECK(task_id2ctrl_task.emplace(task.task_id(), &task).second);
+    CHECK(task.exec_sequence().exec_node_size() == 1);
+    const auto& kernel_conf = task.exec_sequence().exec_node(0).kernel_conf();
+    const std::string& op_name = kernel_conf.op_attribute().op_conf().name();
+    CHECK(sole_op_name2ctrl_task_id.emplace(op_name, task.task_id()).second);
+  }
 }
 
 Job ConvertJobConf2Job(const JobConf& job_conf) {
@@ -422,13 +442,15 @@ void BindInterfaceMemBlobId(const std::vector<Job>& jobs, std::vector<Plan>* sub
 }
 
 void MakeCtrlJob(const std::vector<Job>& jobs, Job* ctrl_job,
-                 std::vector<std::string>* identity_op_names) {
+                 std::vector<std::string>* identity_tick_op_names) {
   TODO();
 }
 
 void CompileCtrlJob(const Job& job, int32_t job_id, Plan* ctrl_plan) { TODO(); }
 
 void AddGlobalJobDesc(const Job& job, int32_t job_id) { TODO(); }
+
+void UpdateGlobalCriticalSectionDesc(const std::vector<Plan>& plans) { TODO(); }
 
 void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
   std::vector<Job> jobs(job_confs.size());
@@ -444,17 +466,18 @@ void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
     BindInterfaceMemBlobId(jobs, &sub_plans);
     MergePlan(plan, sub_plans);
     Plan ctrl_plan;
-    std::vector<std::string> identity_op_names;
+    std::vector<std::string> identity_tick_op_names;
     {
       Job job;
-      MakeCtrlJob(jobs, &job, &identity_op_names);
+      MakeCtrlJob(jobs, &job, &identity_tick_op_names);
       AddGlobalJobDesc(job, sub_plans.size());
       CompileCtrlJob(job, sub_plans.size(), &ctrl_plan);
     }
-    MergeCtrlPlan(plan, ctrl_plan, identity_op_names);
+    MergeCtrlPlan(plan, ctrl_plan, identity_tick_op_names);
 
-    TeePersistentLogStream::Create("merged_plan")->Write(*plan);
+    UpdateGlobalCriticalSectionDesc(sub_plans);
     PushPlan("merged_plan", *plan);
+    TeePersistentLogStream::Create("merged_plan")->Write(*plan);
   } else {
     PullPlan("merged_plan", plan);
   }
