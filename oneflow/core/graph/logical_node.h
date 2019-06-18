@@ -286,6 +286,7 @@ class NormalMdUpdtLogicalNode final : public LogicalNode {
 };
 
 DECLARE_NAIVE_LOGICAL_NODE(MdSaveLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(MdLoadLogicalNode);
 
 class MdDiffAccLogicalNode final : public LogicalNode {
  public:
