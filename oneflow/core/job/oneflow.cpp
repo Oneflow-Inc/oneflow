@@ -19,6 +19,7 @@
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/actor/act_event_logger.h"
+#include "oneflow/core/graph/plan_task_graph.h"
 
 namespace oneflow {
 
@@ -593,7 +594,27 @@ void AddGlobalJobDesc(const Job& job, int32_t job_id) {
   job_descs->emplace_back(new JobDesc(job_conf, job_id));
 }
 
-void UpdateGlobalCriticalSectionDesc(const std::vector<Plan>& plans) { TODO(); }
+void FinishGlobalCriticalSectionDesc(const std::vector<Plan>& plans) {
+  std::vector<PlanTaskGraph> plan_task_graphs;
+  for (const auto& plan : plans) { plan_task_graphs.emplace_back(plan); }
+  HashSet<int64_t> input_output_mem_block_ids;
+  auto* critical_section_desc = *Global<CriticalSectionDesc>::Get();
+  FOR_RANGE(int64_t, i, 0, critical_section_desc->CriticalSectionNum()) {
+    auto* critical_section = critical_section_desc->MutCriticalSectionByIndex(i);
+    if (critical_section.critical_section_type() == kInputCriticalSection) {
+      TODO();
+    } else if (critical_section.critical_section_type() == kOutputCriticalSection) {
+      TODO();
+    } else {
+      CHECK_EQ(critical_section.critical_section_type(), kTotalJobCriticalSection);
+    }
+  }
+  FOR_RANGE(int64_t, i, 0, critical_section_desc->CriticalSectionNum()) {
+    auto* critical_section = critical_section_desc->MutCriticalSectionByIndex(i);
+    if (critical_section.critical_section_type() == kTotalJobCriticalSection) { TODO(); }
+  }
+  critical_section_desc->Done();
+}
 
 void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
   std::vector<Job> jobs(job_confs.size());
@@ -607,7 +628,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     CheckJobs(&jobs);
     BindInterfaceMemBlobId(jobs, &sub_plans);
-    UpdateGlobalCriticalSectionDesc(sub_plans);
+    FinishGlobalCriticalSectionDesc(sub_plans);
     MergePlan(plan, sub_plans);
     Plan main_plan;
     std::vector<std::string> identity_tick_op_names;
