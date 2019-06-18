@@ -1387,6 +1387,8 @@ message ModelSaveV2OpConf {
 message ModelLoadOpConf {
   required string out = 1;
   required string lbn = 2;
+  required ShapeProto shape = 3;
+  optional DataType data_type = 4;
 }
 
 message AllReduceFacadeOpConf {
