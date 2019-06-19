@@ -5,7 +5,7 @@
 namespace oneflow {
 
 void WaitAndSendIdsOp::InitFromOpConf() {
-  CHECK(op_conf().has_source_tick_conf());
+  CHECK(op_conf().has_wait_and_send_ids_conf());
   EnrollOutputBn("out", false);
 }
 
