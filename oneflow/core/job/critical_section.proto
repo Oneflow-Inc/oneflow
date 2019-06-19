@@ -6,21 +6,13 @@ message InputOutputCriticalSection {
   repeated string lbi_producer_op_name = 1;
 }
 
-message CriticalSectionId {
+message CriticalSection {
   required int64 job_id = 1;
   required string source_tick_op_name = 2;
   required string sink_tick_op_name = 3;
-}
-
-message CriticalSection {
-  required CriticalSectionId critical_section_id = 1;
-  oneof type {
-    TotalJobCriticalSection total_job_critical_section = 2;
-    InputOutputCriticalSection input_output_critical_section = 3;
-  }
   repeated int64 mem_block_id = 4;
-}
-
-message CriticalSectionIndexList {
-  repeated int64 index = 1;
+  oneof type {
+    TotalJobCriticalSection total_job_critical_section = 5;
+    InputOutputCriticalSection input_output_critical_section = 6;
+  }
 }

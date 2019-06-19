@@ -330,19 +330,19 @@ void LinkMainPlan(Plan* plan, const Plan& main_plan,
     }
   }
   FOR_RANGE(int32_t, i, 0, Global<CriticalSectionDesc>::Get()->CriticalSectionNum()) {
-    const CriticalSectionId& critical_section_id =
-        Global<CriticalSectionDesc>::Get()->GetCriticalSectionByIndex(i).critical_section_id();
+    const CriticalSection& critical_section =
+        Global<CriticalSectionDesc>::Get()->GetCriticalSection(i);
     LinkTickTaskProto(sole_op_name2sole_task.at(identity_tick_op_names.at(i)),
-                      sole_op_name2sole_task.at(critical_section_id.source_tick_op_name()),
-                      sole_op_name2sole_task.at(critical_section_id.sink_tick_op_name()));
+                      sole_op_name2sole_task.at(critical_section.source_tick_op_name()),
+                      sole_op_name2sole_task.at(critical_section.sink_tick_op_name()));
   }
   {
     // erase source_tick task_proto
     HashSet<std::string> source_tick_op_names;
     FOR_RANGE(int32_t, i, 0, Global<CriticalSectionDesc>::Get()->CriticalSectionNum()) {
-      const CriticalSectionId& critical_section_id =
-          Global<CriticalSectionDesc>::Get()->GetCriticalSectionByIndex(i).critical_section_id();
-      CHECK(source_tick_op_names.emplace(critical_section_id.source_tick_op_name()).second);
+      const CriticalSection& critical_section =
+          Global<CriticalSectionDesc>::Get()->GetCriticalSection(i);
+      CHECK(source_tick_op_names.emplace(critical_section.source_tick_op_name()).second);
     }
     Erase<PbRpf<TaskProto>>(*plan->mutable_task(), [&](const TaskProto& task) {
       if (task.task_type() == TaskType::kSourceTick) {
@@ -528,7 +528,7 @@ void MakeMainJob(const std::vector<Job>& jobs, Job* main_job,
     wait_and_send_ids_conf->set_out("out");
     wait_and_send_ids_conf->set_wait_channel_name(kChannelNameGlobalWaitJobId);
     FOR_RANGE(int64_t, i, 0, Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->size()) {
-      const auto& cs_idx = Global<CriticalSectionDesc>::Get()->CriticalSectionIndexes4JobId(i);
+      const auto& cs_idx = Global<CriticalSectionDesc>::Get()->CriticalSectionIds4JobId(i);
       *wait_and_send_ids_conf->add_id_list()->mutable_id() = {cs_idx.begin(), cs_idx.end()};
     }
   }
@@ -623,8 +623,8 @@ void FinishGlobalCriticalSectionDesc(const std::vector<Plan>& plans) {
   auto* critical_section_desc = Global<CriticalSectionDesc>::Get();
   // set mem_block_id for InputOutputCriticalSection
   FOR_RANGE(int64_t, i, 0, critical_section_desc->CriticalSectionNum()) {
-    auto* critical_section = critical_section_desc->MutCriticalSectionByIndex(i);
-    int64_t job_id = critical_section->critical_section_id().job_id();
+    auto* critical_section = critical_section_desc->MutCriticalSection(i);
+    int64_t job_id = critical_section->job_id();
     if (critical_section->has_input_output_critical_section()) {
       HashSet<int64_t> mem_block_ids;
       for (const auto& op_name :
@@ -641,9 +641,9 @@ void FinishGlobalCriticalSectionDesc(const std::vector<Plan>& plans) {
   HashSet<int64_t> unique_job_id_check;
   // set mem_block_id for TotalJobCriticalSection
   FOR_RANGE(int64_t, i, 0, critical_section_desc->CriticalSectionNum()) {
-    auto* critical_section = critical_section_desc->MutCriticalSectionByIndex(i);
+    auto* critical_section = critical_section_desc->MutCriticalSection(i);
     if (critical_section->has_total_job_critical_section()) {
-      int64_t job_id = critical_section->critical_section_id().job_id();
+      int64_t job_id = critical_section->job_id();
       CHECK(unique_job_id_check.emplace(job_id).second);
       auto* mem_block_ids = &job_id2mem_block_ids.at(job_id);
       mem_block_ids->erase(input_output_mem_block_ids.begin(), input_output_mem_block_ids.end());
