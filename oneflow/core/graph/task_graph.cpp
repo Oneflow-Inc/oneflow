@@ -1,6 +1,5 @@
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
-#include "oneflow/core/graph/normal_backward_compute_task_node.h"
 #include "oneflow/core/graph/normal_model_update_compute_task_node.h"
 #include "oneflow/core/graph/chain_graph.h"
 #include "oneflow/core/graph/boxing_task_node.h"
@@ -76,8 +75,10 @@ void ForEachDeviceSrcUntrainableNode(const std::vector<NormalForwardCompTaskNode
     return true;
   };
   auto HasBwNode = [&](NormalForwardCompTaskNode* node) {
-    const auto* fw_logical_node = dynamic_cast<const ForwardLogicalNode*>(node->logical_node());
-    return fw_logical_node->bw_node() != nullptr;
+    // TODO: update method for fw bw split
+    // const auto* fw_logical_node = dynamic_cast<const ForwardLogicalNode*>(node->logical_node());
+    // return fw_logical_node->bw_node() != nullptr;
+    return false;
   };
   for (NormalForwardCompTaskNode* fw_node : fw_nodes) {
     if (IsSourceTaskNode(fw_node) && !HasBwNode(fw_node)) { Handler(fw_node); }
@@ -502,7 +503,6 @@ void TaskGraph::EnableMemSharingInVariableOp() {
     if (variable_op == nullptr) { return; }
     std::string model_bn = variable_op->op_conf().variable_conf().model_name();
     auto* fw_task_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
-    auto* bw_task_node = dynamic_cast<NormalBackwardCompTaskNode*>(node);
     if (fw_task_node != nullptr) {
       const LogicalBlobId& lbi = variable_op->BnInOp2Lbi(model_bn);
       RegstDesc* model_regst = fw_task_node->GetSoleConsumedRegst("model").get();
@@ -522,26 +522,6 @@ void TaskGraph::EnableMemSharingInVariableOp() {
       out_regst->set_mem_shared_offset(model_regst->mem_shared_offset()
                                        + model_regst->ByteOffsetInPackedBlobDescBody(lbi));
       variable_op->set_is_fw_inplace(true);
-    } else if (bw_task_node != nullptr) {
-      const LogicalBlobId& lbi = variable_op->BnInOp2Lbi(GenDiffBn(model_bn));
-      RegstDesc* model_diff_regst = bw_task_node->GetProducedRegst("model_diff").get();
-      CHECK_EQ(model_diff_regst->min_register_num(), 1);
-      CHECK_EQ(model_diff_regst->max_register_num(), 1);
-      model_diff_regst->set_enable_mem_sharing(true);
-      if (model_diff_regst->mem_shared_id() == -1) {
-        model_diff_regst->set_mem_shared_id(Global<IDMgr>::Get()->NewMemSharedId());
-        model_diff_regst->set_mem_shared_offset(0);
-      }
-      RegstDesc* out_diff_regst = bw_task_node->GetSoleConsumedRegst("out_diff").get();
-      if (out_diff_regst->min_register_num() != 1) { return; }
-      if (out_diff_regst->max_register_num() != 1) { return; }
-      if (out_diff_regst->NumOfLbi() != 1) { return; }
-      out_diff_regst->set_enable_mem_sharing(true);
-      out_diff_regst->set_mem_shared_id(model_diff_regst->mem_shared_id());
-      out_diff_regst->set_mem_shared_offset(
-          model_diff_regst->mem_shared_offset()
-          + model_diff_regst->ByteOffsetInPackedBlobDescBody(lbi));
-      variable_op->set_is_bw_inplace(true);
     } else {
       // do nothing
     }
@@ -644,14 +624,6 @@ void TaskGraph::EnableInplaceMemSharing(
     GetSafeInplaceOpBlobArgList(&safe_inplace_obas, dev_nodes, IsLbiAllConsumersReachableToOpName);
     SetTaskRegstInplaceInfo(safe_inplace_obas, dev_nodes);
   });
-}
-
-void TaskGraph::RmUselessConsumeRelationshipBetweenFwBw() {
-  for (TaskNode* task_node : ordered_task_nodes_) {
-    auto bw_node = dynamic_cast<NormalBackwardCompTaskNode*>(task_node);
-    if (bw_node == nullptr) { continue; }
-    bw_node->RmUselessConsumeRelationshipToFw();
-  }
 }
 
 void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {

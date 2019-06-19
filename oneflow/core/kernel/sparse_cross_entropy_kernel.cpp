@@ -50,17 +50,6 @@ void SparseCrossEntropyKernel<device_type, T>::ForwardDataContent(
                                                          ctx.device_ctx, prediction, label, out);
 }
 
-template<DeviceType device_type, typename T>
-void SparseCrossEntropyKernel<device_type, T>::BackwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* prediction = BnInOp2Blob("prediction");
-  const Blob* label = BnInOp2Blob("label");
-  const Blob* out_diff = BnInOp2Blob(GenDiffBn("out"));
-  Blob* prediction_diff = BnInOp2Blob(GenDiffBn("prediction"));
-  SparseCrossEntropyUntil<device_type, T>::SwitchBackward(
-      SwitchCase(label->data_type()), ctx.device_ctx, prediction, label, out_diff, prediction_diff);
-}
-
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSparseCrossEntropyConf, SparseCrossEntropyKernel,
                            FLOATING_DATA_TYPE_SEQ);
 

@@ -1,5 +1,4 @@
 #include "oneflow/core/graph/logical_node.h"
-#include "oneflow/core/graph/normal_backward_compute_task_node.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include "oneflow/core/graph/optimizer_compute_task_node.h"
 #include "oneflow/core/graph/loss_accumulate_compute_task_node.h"
@@ -454,7 +453,6 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
 
 #define LOGICAL_TYPE_SEQ                                  \
   OF_PP_MAKE_TUPLE_SEQ(NormalForward, kDataForwardArea)   \
-  OF_PP_MAKE_TUPLE_SEQ(NormalBackward, kDataBackwardArea) \
   OF_PP_MAKE_TUPLE_SEQ(RecordLoad, kDataPreprocessArea)   \
   OF_PP_MAKE_TUPLE_SEQ(Decode, kDataPreprocessArea)       \
   OF_PP_MAKE_TUPLE_SEQ(DecodeRandom, kDataPreprocessArea) \
@@ -484,28 +482,11 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
   int64_t x##LogicalNode::GetAreaId() const { return area_type; }
 OF_PP_FOR_EACH_TUPLE(DEFINE_VIRTUAL_METHOD, LOGICAL_TYPE_SEQ);
 
-BackwardLogicalNode* ForwardLogicalNode::NewBackwardNode() {
-  bw_node_ = NewCorrectBackwardNode();
-  bw_node_->mut_op_vec() = op_vec();
-  bw_node_->mut_parallel_desc() = parallel_desc();
-  bw_node_->fw_node_ = this;
-  return bw_node_;
-}
-
-BackwardLogicalNode* NormalForwardLogicalNode::NewCorrectBackwardNode() {
-  return new NormalBackwardLogicalNode;
-}
-
 std::string OptimizerLogicalNode::TypeName() const { return "Optimizer"; }
 
 CompTaskNode* OptimizerLogicalNode::NewCompTaskNode() const { return new OptimizerCompTaskNode; }
 
 int64_t OptimizerLogicalNode::GetAreaId() const { return kMdUpdtArea; }
-
-BackwardLogicalNode* OptimizerLogicalNode::NewCorrectBackwardNode() {
-  UNIMPLEMENTED();
-  return nullptr;
-}
 
 void NormalMdUpdtLogicalNode::FixCompTaskNode(CompTaskNode* node) const {
   NormalMdUpdtCompTaskNode* normal_mdupdt_node = static_cast<NormalMdUpdtCompTaskNode*>(node);
@@ -522,19 +503,6 @@ int64_t NewAreaId() {
   static int64_t next_area_id = AreaType_ARRAYSIZE;
   return ++next_area_id;
 }
-
-BackwardLogicalNode* PackForwardLogicalNode::NewCorrectBackwardNode() { UNIMPLEMENTED(); }
-
-BackwardLogicalNode* UnpackForwardLogicalNode::NewCorrectBackwardNode() {
-  return new UnpackBackwardLogicalNode;
-}
-
-BackwardLogicalNode* RepeatForwardLogicalNode::NewCorrectBackwardNode() {
-  return new RepeatBackwardLogicalNode();
-}
-
-BackwardLogicalNode* EveryNthLogicalNode::NewCorrectBackwardNode() { UNIMPLEMENTED(); }
-BackwardLogicalNode* AccLogicalNode::NewCorrectBackwardNode() { UNIMPLEMENTED(); }
 
 int32_t ReduceIdentityLogicalNode::order_in_logical_graph() const {
   const auto& op_conf = SoleOp()->op_conf();

@@ -21,35 +21,6 @@ void MatmulKernel<device_type, T>::ForwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
-void MatmulKernel<device_type, T>::BackwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* a_blob = BnInOp2Blob("a");
-  const Blob* b_blob = BnInOp2Blob("b");
-  const Blob* out_diff_blob = BnInOp2Blob("out_diff");
-  Blob* a_diff_blob = BnInOp2Blob("a_diff");
-  Blob* b_diff_blob = BnInOp2Blob("b_diff");
-  Blob* bw_buf_blob = BnInOp2Blob("bw_buf");
-  bool transpose_a = this->op_conf().matmul_conf().transpose_a();
-  bool transpose_b = this->op_conf().matmul_conf().transpose_b();
-  // trans_a  trans_b  a_diff  b_diff
-  //   T        T       b'g'    g'a'
-  //   T        F       bg'     ag
-  //   F        T       gb      g'a
-  //   F        F       gb'     a'g
-  if (a_blob->static_shape().dim_vec().size() == 2) {
-    Calc2DMatMul(ctx.device_ctx, b_blob, !(transpose_a ^ transpose_b), out_diff_blob, transpose_a,
-                 a_diff_blob, !transpose_a);
-    Calc2DMatMul(ctx.device_ctx, a_blob, !(transpose_a ^ transpose_b), out_diff_blob, transpose_b,
-                 b_diff_blob, transpose_b);
-  } else {
-    CalcBatchMatMul(ctx.device_ctx, b_blob, !(transpose_a ^ transpose_b), out_diff_blob,
-                    transpose_a, a_diff_blob, bw_buf_blob, !transpose_a);
-    CalcBatchMatMul(ctx.device_ctx, a_blob, !(transpose_a ^ transpose_b), out_diff_blob,
-                    transpose_b, b_diff_blob, bw_buf_blob, transpose_b);
-  }
-}
-
-template<DeviceType device_type, typename T>
 const PbMessage& MatmulKernel<device_type, T>::GetCustomizedOpConf() const {
   return this->op_conf().matmul_conf();
 }

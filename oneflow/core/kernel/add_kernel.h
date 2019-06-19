@@ -18,8 +18,6 @@ class AddKernel final
   void ForwardDataContent(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
-  void BackwardDataContent(const KernelCtx& ctx,
-                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   const PbMessage& GetCustomizedOpConf() const override;
 
   decltype(make_tuple_from_sequence<7>()) tp_;

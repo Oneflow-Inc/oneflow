@@ -18,7 +18,7 @@ template<DeviceType device_type, typename T>
 void DropoutKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   int64_t elem_cnt = BnInOp2Blob("in")->shape().elem_cnt();
-  if (Global<JobDesc>::Get()->IsTrain()) {
+  if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     Dropout(ctx.device_ctx, elem_cnt, this->op_conf().dropout_conf().rate(),
             BnInOp2Blob("in")->dptr<T>(), BnInOp2Blob("random_mask")->mut_dptr<float>(),
             BnInOp2Blob("out")->mut_dptr<T>());
@@ -26,14 +26,6 @@ void DropoutKernel<device_type, T>::ForwardDataContent(
     Memcpy<device_type>(ctx.device_ctx, BnInOp2Blob("out")->mut_dptr<void>(),
                         BnInOp2Blob("in")->dptr<void>(), elem_cnt * sizeof(T));
   }
-}
-
-template<DeviceType device_type, typename T>
-void DropoutKernel<device_type, T>::BackwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  DropoutBackward(ctx.device_ctx, BnInOp2Blob("out_diff")->shape().elem_cnt(),
-                  this->op_conf().dropout_conf().rate(), BnInOp2Blob("out_diff")->dptr<T>(),
-                  BnInOp2Blob("random_mask")->dptr<float>(), BnInOp2Blob("in_diff")->mut_dptr<T>());
 }
 
 template<DeviceType device_type, typename T>

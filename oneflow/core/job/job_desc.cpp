@@ -147,8 +147,7 @@ const FileSystemConf& JobDesc::snapshot_fs_conf() const {
 }
 
 bool JobDesc::enable_write_snapshot() const {
-  if (IsTrain()
-      || (IsPredict() && job_conf_.other().predict_conf().has_tmp_split_fw_bw_train_conf())) {
+  if ((IsPredict() && job_conf_.other().predict_conf().has_tmp_split_fw_bw_train_conf())) {
     return job_conf_.other().enable_write_snapshot();
   } else {
     return false;
