@@ -1281,6 +1281,12 @@ message WaitAndSendIdsOpConf {
   repeated IdList id_list = 3; 
 }
 
+message ReentrantLockOpConf {
+  required string start = 1;
+  required string end = 2;
+  required string out = 3; 
+}
+
 message SourceTickOpConf {
   required string out = 1;
 }
@@ -1450,6 +1456,7 @@ message OperatorConf {
     InputOpConf input_conf = 137;
     OutputOpConf output_conf = 138;
     WaitAndSendIdsOpConf wait_and_send_ids_conf = 139;
+    ReentrantLockOpConf reentrant_lock_conf = 140;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
