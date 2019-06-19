@@ -43,8 +43,12 @@ std::vector<TensorSliceView> SubTskGphBuilderUtil::GetTensorSliceView(
     const int64_t axis = sbp_parallel.split_parallel().axis();
     const BalancedSplitter bs(blob_desc.shape().At(axis), parallel_num);
     FOR_RANGE(int64_t, i, 0, parallel_num) {
-      ranges[axis] = bs.At(i);
-      views.emplace_back(ranges);
+      if (bs.At(i).size() == 0) {
+        views.emplace_back();
+      } else {
+        ranges[axis] = bs.At(i);
+        views.emplace_back(ranges);
+      }
     }
   } else {
     UNIMPLEMENTED();
@@ -59,6 +63,16 @@ TensorSliceView SubTskGphBuilderUtil::GetBroadcastTensorSliceView(const BlobDesc
     ranges[i].mut_end() = blob_desc.shape().At(i);
   }
   return TensorSliceView(ranges);
+}
+
+bool SubTskGphBuilderUtil::HasEmptySliceIfSplit(int64_t parallel_num,
+                                                const SbpParallel& sbp_parallel,
+                                                const BlobDesc& blob_desc) {
+  if (sbp_parallel.has_split_parallel()) {
+    return blob_desc.shape().At(sbp_parallel.split_parallel().axis()) < parallel_num;
+  } else {
+    return false;
+  }
 }
 
 bool SubTskGphBuilderUtil::IsOnSameGPU(const TaskNode* lhs, const TaskNode* rhs) {

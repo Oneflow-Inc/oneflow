@@ -17,6 +17,13 @@ TensorSliceView::TensorSliceView(const TensorSliceViewProto& proto) {
   UpdateShape();
 }
 
+TensorSliceView::TensorSliceView(const Shape& shape) {
+  range_vec_.resize(shape.dim_vec().size());
+  std::transform(shape.dim_vec().cbegin(), shape.dim_vec().cend(), range_vec_.begin(),
+                 [](const int64_t dim_size) { return Range(0, dim_size); });
+  UpdateShape();
+}
+
 TensorSliceView& TensorSliceView::operator=(const TensorSliceView& other) {
   range_vec_ = other.range_vec_;
   UpdateShape();

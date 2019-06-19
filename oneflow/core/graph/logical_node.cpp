@@ -270,6 +270,10 @@ void LogicalNode::GenSortedCompTaskNodes(
             comp_task_node->set_thrd_id(id_mgr->GetGpuD2HThrdId(dev_phy_id));
             break;
           }
+          case CudaWorkType::kCopyD2D: {
+            comp_task_node->set_thrd_id(id_mgr->GetGpuD2DThrdId(dev_phy_id));
+            break;
+          }
           case CudaWorkType::kNcclScatter: {
             comp_task_node->set_thrd_id(id_mgr->GetGpuNcclScatterThrdId(dev_phy_id));
             break;

@@ -60,9 +60,14 @@ void SliceBoxingAddKernel<device_type, T>::ForwardDataContent(
     this->tensor_slice_copier_vec().at(in_bn_id)->Copy(ctx.device_ctx, *this->memory_copier(), out,
                                                        in_i);
   } else {
-    bool can_direct_access = (device_type == kCPU)
-                             || (device_type == DeviceType::kGPU && in_i->mem_case().has_host_mem()
-                                 && in_i->mem_case().host_mem().used_by_device());
+    bool can_direct_access =
+        (device_type == kCPU)
+        || (device_type == DeviceType::kGPU && in_i->mem_case().has_host_mem()
+            && in_i->mem_case().host_mem().used_by_device())
+        || (device_type == DeviceType::kGPU && in_i->mem_case().has_device_cuda_mem()
+            && out->mem_case().has_device_cuda_mem()
+            && out->mem_case().device_cuda_mem().device_id()
+                   == in_i->mem_case().device_cuda_mem().device_id());
     if (in_i->shape() == out->shape() && can_direct_access) {
       Addition<device_type, T>(ctx.device_ctx, out, out, in_i);
     } else {

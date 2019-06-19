@@ -197,6 +197,13 @@ void Blob::CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
              rhs->mem_case());
 }
 
+void Blob::CopyValidDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
+  if (this == rhs) { return; }
+  CHECK_EQ(rhs->shape().elem_cnt(), shape().elem_cnt());
+  AutoMemcpy(device_ctx, mut_dptr(), rhs->dptr(), ByteSizeOfValidDataContent(), mem_case(),
+             rhs->mem_case());
+}
+
 void Blob::CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs || ByteSizeOfBlobHeader() == 0) { return; }
   CHECK_EQ(ByteSizeOfBlobHeader(), rhs->ByteSizeOfBlobHeader());
@@ -229,6 +236,10 @@ size_t Blob::ByteSizeOfDim2ValidNumField() const {
 
 size_t Blob::ByteSizeOfRecordIdInDevicePieceField() const {
   return blob_desc_->ByteSizeOfRecordIdInDevicePieceField();
+}
+
+size_t Blob::ByteSizeOfValidDataContent() const {
+  return shape().elem_cnt() * GetSizeOfDataType(data_type());
 }
 
 void Blob::CopyDim0ValidNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {

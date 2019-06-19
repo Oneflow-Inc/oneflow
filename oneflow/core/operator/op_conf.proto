@@ -385,6 +385,7 @@ message CopyHdOpConf {
   enum Type {
     H2D = 0;
     D2H = 1;
+    D2D = 2;
   }
   required Type type = 1;
 }
@@ -1384,6 +1385,26 @@ message SliceBoxingAddOpConf {
   required SliceBoxingConf slice_boxing_conf = 1;
 }
 
+message RingBoxingConf {
+  required LogicalBlobId lbi = 1;
+  required ShapeProto logical_blob_shape = 2;
+  repeated int64 ring = 3;
+  repeated TensorSliceViewProto slices = 4;
+  optional ShapeProto out_shape = 5;
+}
+
+message RingReduceScatterOpConf {
+  required RingBoxingConf ring_boxing_conf = 1;
+}
+
+message RingAllGatherOpConf {
+  required RingBoxingConf ring_boxing_conf = 1;
+}
+
+message RingAllReduceOpConf {
+  required RingBoxingConf ring_boxing_conf = 1;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1430,7 +1451,9 @@ message OperatorConf {
     AllReduceFacadeOpConf all_reduce_facade_conf = 134;
     SliceBoxingCopyOpConf slice_boxing_copy_conf = 135;
     SliceBoxingAddOpConf slice_boxing_add_conf = 136;
-
+    RingReduceScatterOpConf ring_reduce_scatter_conf = 137;
+    RingAllGatherOpConf ring_all_gather_conf = 138;
+    RingAllReduceOpConf ring_all_reduce_conf = 139;
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
     TransposeOpConf transpose_conf = 201;

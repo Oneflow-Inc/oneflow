@@ -34,6 +34,17 @@ SubTskGphBuilderStatus InterNodeSubTskGphBuilder::Build(
   if (!SubTskGphBuilderUtil::IsDeviceTypeCPUOrGPU(dst_parallel_desc)) {
     return SubTskGphBuilderStatus::MakeStatusError();
   }
+  if (SubTskGphBuilderUtil::HasEmptySliceIfSplit(src_parallel_desc.parallel_num(), src_sbp_parallel,
+                                                 logical_blob_desc)) {
+    return SubTskGphBuilderStatus::MakeStatusError();
+  }
+  if (SubTskGphBuilderUtil::HasEmptySliceIfSplit(dst_parallel_desc.parallel_num(), dst_sbp_parallel,
+                                                 logical_blob_desc)) {
+    return SubTskGphBuilderStatus::MakeStatusError();
+  }
+  if (dst_parallel_desc.parallel_num() > logical_blob_desc.shape().elem_cnt()) {
+    return SubTskGphBuilderStatus::MakeStatusError();
+  }
   const auto GetBoxingGpuThrdId = [](const int64_t dev_id, CudaWorkType work_type) -> int64_t {
     if (work_type == CudaWorkType::kBoxingH2D) {
       return Global<IDMgr>::Get()->GetGpuBoxingH2DThrdId(dev_id);
@@ -262,10 +273,7 @@ SubTskGphBuilderStatus InterNodeSubTskGphBuilder::Build(
   } else {
     UNIMPLEMENTED();
   }
-  CHECK_EQ(out_nodes.size(), sorted_dst_comp_tasks.size());
-  FOR_RANGE(int64_t, i, 0, sorted_dst_comp_tasks.size()) {
-    Connect<TaskNode>(out_nodes.at(i), NewEdge(), sorted_dst_comp_tasks.at(i));
-  }
+  ctx->NaiveConnectAll121(out_nodes, sorted_dst_comp_tasks);
   return SubTskGphBuilderStatus::MakeStatusOK();
 }
 

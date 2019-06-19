@@ -5,8 +5,8 @@
 namespace oneflow {
 
 void ReduceIdentityCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  ProduceRegst("out", false);
-  BindEdgeWithProducedRegst(SoleOutDataEdge(), "out");
+  std::shared_ptr<RegstDesc> out_regst_desc = ProduceRegst("out", false);
+  this->ForEachOutDataEdge([&](TaskEdge* edge) { edge->AddRegst("out", out_regst_desc); });
 }
 
 void ReduceIdentityCompTaskNode::EnableMemSharingInReduce(const ReduceMemSharingCtx& ctx) {

@@ -13,15 +13,19 @@ void CopyTaskNode::ProduceAllRegstsAndBindEdges() {
     ForEachNodeOnOutDataEdge([&](TaskNode* node) {
       if (first_dst_node == nullptr) { first_dst_node = node; }
     });
-    TaskType dst_node_type = first_dst_node->GetTaskType();
-    if (copy_hd->copy_type() == CopyHdOpConf::H2D
-        && (dst_node_type == TaskType::kReduceAdd || dst_node_type == TaskType::kReduceGather)) {
+    if (first_dst_node == nullptr) {
       out_regst = ProduceRegst(name, false, 1, 1);
-    }
-    TaskType src_node_type = SoleInDataEdge()->src_node()->GetTaskType();
-    if (copy_hd->copy_type() == CopyHdOpConf::D2H
-        && (src_node_type == TaskType::kReduceScatter || src_node_type == TaskType::kReduceAdd)) {
-      out_regst = ProduceRegst(name, false, 1, 1);
+    } else {
+      TaskType dst_node_type = first_dst_node->GetTaskType();
+      if (copy_hd->copy_type() == CopyHdOpConf::H2D
+          && (dst_node_type == TaskType::kReduceAdd || dst_node_type == TaskType::kReduceGather)) {
+        out_regst = ProduceRegst(name, false, 1, 1);
+      }
+      TaskType src_node_type = SoleInDataEdge()->src_node()->GetTaskType();
+      if (copy_hd->copy_type() == CopyHdOpConf::D2H
+          && (src_node_type == TaskType::kReduceScatter || src_node_type == TaskType::kReduceAdd)) {
+        out_regst = ProduceRegst(name, false, 1, 1);
+      }
     }
   }
   if (out_regst == nullptr) { out_regst = ProduceRegst(name, false); }
@@ -49,6 +53,8 @@ void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, int64_t machine_id, int6
     set_thrd_id(Global<IDMgr>::Get()->GetGpuH2DThrdId(dev_phy_id));
   } else if (copy_type == CopyHdOpConf::D2H) {
     set_thrd_id(Global<IDMgr>::Get()->GetGpuD2HThrdId(dev_phy_id));
+  } else if (copy_type == CopyHdOpConf::D2D) {
+    set_thrd_id(Global<IDMgr>::Get()->GetGpuD2DThrdId(dev_phy_id));
   } else {
     UNIMPLEMENTED();
   }
@@ -59,6 +65,8 @@ void CopyHdTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
     TaskNode::InitProducedRegstMemCase(mem_case);
   } else if (copy_type_ == CopyHdOpConf::D2H) {
     mem_case->mutable_host_mem()->set_used_by_device(true);
+  } else if (copy_type_ == CopyHdOpConf::D2D) {
+    TaskNode::InitProducedRegstMemCase(mem_case);
   } else {
     UNIMPLEMENTED();
   }

@@ -16,6 +16,8 @@ struct SubTskGphBuilderUtil {
                                                          const SbpParallel& sbp_parallel,
                                                          const BlobDesc& blob_desc);
   static TensorSliceView GetBroadcastTensorSliceView(const BlobDesc& blob_desc);
+  static bool HasEmptySliceIfSplit(int64_t parallel_num, const SbpParallel& sbp_parallel,
+                                   const BlobDesc& blob_desc);
   static bool IsOnSameGPU(const TaskNode* lhs, const TaskNode* rhs);
   static bool IsBoxingS2S(const SbpParallel& src, const SbpParallel& dst);
   static bool IsBoxingS2B(const SbpParallel& src, const SbpParallel& dst);

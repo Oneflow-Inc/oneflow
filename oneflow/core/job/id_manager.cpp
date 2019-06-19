@@ -7,26 +7,29 @@ int64_t IDMgr::GetGpuH2DThrdId(int64_t dev_phy_id) const { return gpu_device_num
 int64_t IDMgr::GetGpuD2HThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ * 2 + dev_phy_id;
 }
-int64_t IDMgr::GetGpuNcclScatterThrdId(int64_t dev_phy_id) const {
+int64_t IDMgr::GetGpuD2DThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ * 3 + dev_phy_id;
 }
-int64_t IDMgr::GetGpuNcclGatherThrdId(int64_t dev_phy_id) const {
+int64_t IDMgr::GetGpuNcclScatterThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ * 4 + dev_phy_id;
 }
-int64_t IDMgr::GetGpuMixThrdId(int64_t dev_phy_id) const {
+int64_t IDMgr::GetGpuNcclGatherThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ * 5 + dev_phy_id;
 }
-int64_t IDMgr::GetGpuReduceCtrlThrdId(int64_t dev_phy_id) const {
+int64_t IDMgr::GetGpuMixThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ * 6 + dev_phy_id;
 }
-int64_t IDMgr::GetGpuMdUpdtThrdId(int64_t dev_phy_id) const {
+int64_t IDMgr::GetGpuReduceCtrlThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ * 7 + dev_phy_id;
 }
-int64_t IDMgr::GetGpuBoxingH2DThrdId(int64_t dev_phy_id) const {
+int64_t IDMgr::GetGpuMdUpdtThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ * 8 + dev_phy_id;
 }
-int64_t IDMgr::GetGpuBoxingD2HThrdId(int64_t dev_phy_id) const {
+int64_t IDMgr::GetGpuBoxingH2DThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ * 9 + dev_phy_id;
+}
+int64_t IDMgr::GetGpuBoxingD2HThrdId(int64_t dev_phy_id) const {
+  return gpu_device_num_ * 10 + dev_phy_id;
 }
 int64_t IDMgr::GetCpuDeviceThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ * GetCudaWorkTypeSize() + dev_phy_id;
