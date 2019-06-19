@@ -50,7 +50,7 @@ void BuildSourceTickOpAndParallelConf(OperatorConf* src_tick_op, JobBuilder* job
 
 void BuildSinkTickOpAndParallelConf(OperatorConf* sink_tick_op, JobBuilder* job_builder) {
   sink_tick_op->set_name("System-AutoTick-SinkTick_" + NewUniqueId());
-  sink_tick_op->mutable_sink_tick_conf();
+  sink_tick_op->mutable_sink_tick_conf()->set_out("out");
   ParallelConf parallel_conf;
   parallel_conf.set_policy(kDataParallel);
   parallel_conf.add_device_name("0:cpu:0");
@@ -162,11 +162,12 @@ OperatorConf AppendAccTick(const Shape& src_shape, const std::list<const OpNode*
 CriticalSection* AddGlobalCriticalSection(const std::string& src_tick_op_name,
                                           const std::string& sink_tick_op_name) {
   auto critical_sec = std::make_unique<CriticalSection>();
+  CriticalSection* ret = critical_sec.get();
   critical_sec->mutable_critical_section_id()->set_job_id(Global<JobDesc>::Get()->job_id());
   critical_sec->mutable_critical_section_id()->set_source_tick_op_name(src_tick_op_name);
   critical_sec->mutable_critical_section_id()->set_sink_tick_op_name(sink_tick_op_name);
   Global<CriticalSectionDesc>::Get()->AddCriticalSection(std::move(critical_sec));
-  return critical_sec.get();
+  return ret;
 }
 
 std::vector<std::string> GetOpNames(const HashSet<const OpNode*>& op_nodes) {
@@ -196,8 +197,10 @@ void ForEachInputOutputCriticalSectionOpNodes(
     }
     Handler(consumer_op_nodes, GetOpNames(op_type_case2op_nodes[op_type_case]));
   }
-  Handler(op_type_case2op_nodes[OperatorConf::kOutputConf],
-          GetOpNames(op_type_case2op_nodes[OperatorConf::kOutputConf]));
+  if (op_type_case2op_nodes[OperatorConf::kOutputConf].empty() == false) {
+    Handler(op_type_case2op_nodes[OperatorConf::kOutputConf],
+            GetOpNames(op_type_case2op_nodes[OperatorConf::kOutputConf]));
+  }
 }
 
 std::vector<OperatorConf> AddTickForTimeShape(const Shape& src_time_shape,
@@ -244,6 +247,7 @@ void AddGlobalInputOutputCriticalSection(const HashSet<const OpNode*>& op_nodes,
   }
   OperatorConf src_tick_op_conf;
   {
+    CHECK_EQ(source_ticks.empty(), false);
     BuildSourceTickOpAndParallelConf(&src_tick_op_conf, &job_builder);
     for (auto& op_conf : source_ticks) {
       op_conf.mutable_tick_conf()->add_tick(src_tick_op_conf.name() + "/"
