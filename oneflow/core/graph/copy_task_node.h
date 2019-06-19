@@ -38,6 +38,8 @@ class CopyHdTaskNode final : public CopyTaskNode {
       return TaskNode::MemZoneId121();
     } else if (copy_type_ == CopyHdOpConf::D2H) {
       return Global<IDMgr>::Get()->CpuMemZoneId();
+    } else if (copy_type_ == CopyHdOpConf::D2D) {
+      return TaskNode::MemZoneId121();
     } else {
       UNIMPLEMENTED();
     }

@@ -23,6 +23,17 @@ SubTskGphBuilderStatus AcyclicRingSubTskGphBuilder::Build(
   const auto RingNextParallelId = [&parallel_desc](int64_t parallel_id) -> int64_t {
     return (parallel_id + 1) % parallel_desc.parallel_num();
   };
+  if (SubTskGphBuilderUtil::HasEmptySliceIfSplit(src_parallel_desc.parallel_num(), src_sbp_parallel,
+                                                 logical_blob_desc)) {
+    return SubTskGphBuilderStatus::MakeStatusError();
+  }
+  if (SubTskGphBuilderUtil::HasEmptySliceIfSplit(dst_parallel_desc.parallel_num(), dst_sbp_parallel,
+                                                 logical_blob_desc)) {
+    return SubTskGphBuilderStatus::MakeStatusError();
+  }
+  if (dst_parallel_desc.parallel_num() > logical_blob_desc.shape().elem_cnt()) {
+    return SubTskGphBuilderStatus::MakeStatusError();
+  }
   const auto GetBoxingGpuThrdId = [](const int64_t dev_id, CudaWorkType work_type) -> int64_t {
     if (work_type == CudaWorkType::kBoxingH2D) {
       return Global<IDMgr>::Get()->GetGpuBoxingH2DThrdId(dev_id);

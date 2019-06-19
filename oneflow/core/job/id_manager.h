@@ -16,6 +16,7 @@ class IDMgr final {
   int64_t GetGpuComputeThrdId(int64_t dev_phy_id) const { return dev_phy_id; }
   int64_t GetGpuH2DThrdId(int64_t dev_phy_id) const;
   int64_t GetGpuD2HThrdId(int64_t dev_phy_id) const;
+  int64_t GetGpuD2DThrdId(int64_t dev_phy_id) const;
   int64_t GetGpuNcclScatterThrdId(int64_t dev_phy_id) const;
   int64_t GetGpuNcclGatherThrdId(int64_t dev_phy_id) const;
   int64_t GetGpuMixThrdId(int64_t dev_phy_id) const;

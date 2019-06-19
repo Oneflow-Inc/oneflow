@@ -14,6 +14,7 @@ class TensorSliceView final {
   TensorSliceView(const std::initializer_list<Range>& ranges);
   explicit TensorSliceView(const std::vector<Range>& ranges);
   explicit TensorSliceView(const TensorSliceViewProto& proto);
+  explicit TensorSliceView(const Shape& shape);
 
   TensorSliceView& operator=(const TensorSliceView& other);
   bool operator==(const TensorSliceView& rhs) const;
