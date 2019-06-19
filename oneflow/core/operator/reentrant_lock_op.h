@@ -24,6 +24,6 @@ class ReentrantLockOp final : public Operator {
   LogicalNode* NewProperLogicalNode() const override;
 };
 
-}
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_OPERATOR_REENTRANT_LOCK_OP_H_

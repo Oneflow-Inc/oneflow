@@ -495,7 +495,7 @@ RegstDescProto* GetSoleDataRegst(TaskProto* task_proto) {
   return ret;
 }
 
-void BindInterfaceMemBlobId(const std::vector<Job>& jobs, std::vector<Plan>* sub_plans) {
+void BindInterfaceMemBlockId(const std::vector<Job>& jobs, std::vector<Plan>* sub_plans) {
   for (const auto& pair : GetInterfaceOpName2JobIds(jobs)) {
     std::vector<std::vector<TaskProto*>> same_op_name_sorted_task_protos;
     for (int64_t job_id : pair.second) {
@@ -664,7 +664,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
   }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     CheckJobs(&jobs);
-    BindInterfaceMemBlobId(jobs, &sub_plans);
+    BindInterfaceMemBlockId(jobs, &sub_plans);
     FinishGlobalCriticalSectionDesc(sub_plans);
     MergePlan(plan, sub_plans);
     Plan main_plan;

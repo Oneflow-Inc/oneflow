@@ -76,6 +76,7 @@ Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_ph
   runtime_ctx->NewCounter("running_actor_cnt", this_machine_task_num);
   SendCmdMsg(mdupdt_tasks, ActorCmd::kSendInitialModel);
   SendCmdMsg(source_tasks, ActorCmd::kStart);
+  // if is this machine master
   FOR_RANGE(int64_t, i, 0,
             Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->at(0)->TotalBatchNum()) {
     Global<BufferMgr<int32_t>>::Get()->Get(kChannelNameGlobalWaitJobId)->Send(0);
