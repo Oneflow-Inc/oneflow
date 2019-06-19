@@ -51,6 +51,7 @@ enum TaskType {
   kCase = 43;
   kEsac = 44;
   kWaitAndSendIds = 45;
+  kReentrantLock = 46;
 };
 
 enum AreaType {
