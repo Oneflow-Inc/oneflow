@@ -14,7 +14,7 @@ class WaitAndSendIdsCompActor final : public CompActor {
 
  private:
   void VirtualCompActorInit(const TaskProto&) override;
-  void Act() override;
+  void Act(bool* cur_act_encounter_eord) override;
   std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName()
       override {
     return std::make_pair(RegstNameType::kNaive, HashSet<std::string>{});

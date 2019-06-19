@@ -19,6 +19,7 @@
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/actor/act_event_logger.h"
+#include "oneflow/core/graph/plan_task_graph.h"
 
 namespace oneflow {
 
@@ -203,13 +204,13 @@ void WithJobSetLevelGlobalObjs(
   Global<ResourceDesc>::Delete();
 }
 
-void CompileCurJobOnMaster(Job* job, Plan* improved_plan) {
+void CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_complete) {
   const JobDesc* job_desc = Global<JobDesc>::Get();
   Plan naive_plan;
   Plan mem_shared_plan;
   double start = GetCurTime();
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-    Compiler().Compile(job, &naive_plan);
+    Compiler().Compile(job, &naive_plan, need_job_complete);
     LOG(INFO) << "compile time: " << GetCurTime() - start;
     mem_shared_plan =
         Improver().ImproveMemSharedIdOnly(*Global<AvailableMemDesc>::Get(), naive_plan);
@@ -264,12 +265,98 @@ void MergePlan(Plan* plan, const std::vector<Plan>& sub_plans) {
   Compiler().GenNetTopo(plan);
 }
 
-void ResetTaskTypeSourceTickToTick(Plan* plan) { TODO(); }
+RegstDescProto* GetSoleDataRegstDescProto(TaskProto* task) {
+  RegstDescProto* ret = nullptr;
+  for (auto& pair : *task->mutable_produced_regst_desc()) {
+    CHECK(pair.second.regst_desc_type().has_data_regst_desc());
+    CHECK_ISNULL(ret);
+    ret = &pair.second;
+  }
+  CHECK_NOTNULL(ret);
+  return ret;
+}
 
-void MergeCtrlPlan(Plan* plan, const Plan& ctrl_plan,
-                   const std::vector<std::string>& identity_op_names) {
-  TODO();
-  ResetTaskTypeSourceTickToTick(plan);
+const OperatorConf& GetSoleOpConf(const TaskProto& task) {
+  CHECK_EQ(task.exec_sequence().exec_node_size(), 1);
+  return task.exec_sequence().exec_node(0).kernel_conf().op_attribute().op_conf();
+}
+
+void UpdateSoleObnRegstDescId(TaskProto* task) {
+  CHECK_EQ(task->exec_sequence().exec_node_size(), 1);
+  auto* exec_node = task->mutable_exec_sequence()->mutable_exec_node(0);
+  const auto& obns = exec_node->kernel_conf().op_attribute().output_bns();
+  CHECK_EQ(obns.size(), 1);
+  int64_t regst_desc_id = GetSoleDataRegstDescProto(task)->regst_desc_id();
+  (*exec_node->mutable_bn_in_op2regst_desc_id())[obns.Get(0)] = regst_desc_id;
+}
+
+// example
+// given caller plan: op_A --> op_identity_tick --> op_B
+// given callee plan: op_src_tick --> op_C --> op_D --> op_E --> op_sink_tick
+// return:
+//         op_A --> op_identity_tick --> op_C --> op_D --> op_E --> op_sink_tick --> op_B
+//                                        /
+//                        op_src_tick ---/
+//
+// note: after this function called, op_src_tick is illegal and need to be deleted from plan
+void LinkTickTaskProto(TaskProto* identity_tick, TaskProto* src_tick, TaskProto* sink_tick) {
+  CHECK(GetSoleOpConf(*identity_tick).has_tick_conf());
+  CHECK(GetSoleOpConf(*src_tick).has_source_tick_conf());
+  CHECK(GetSoleOpConf(*sink_tick).has_sink_tick_conf());
+  RegstDescProto* id_tick_sole_regst = GetSoleDataRegstDescProto(identity_tick);
+  RegstDescProto* src_tick_sole_regst = GetSoleDataRegstDescProto(src_tick);
+  RegstDescProto* sink_tick_sole_regst = GetSoleDataRegstDescProto(sink_tick);
+  RegstDescProto id_tick_sole_regst_value = *id_tick_sole_regst;
+
+  id_tick_sole_regst->set_regst_desc_id(src_tick_sole_regst->regst_desc_id());
+  *id_tick_sole_regst->mutable_consumer_task_id() = src_tick_sole_regst->consumer_task_id();
+  UpdateSoleObnRegstDescId(identity_tick);
+
+  sink_tick_sole_regst->set_regst_desc_id(id_tick_sole_regst_value.regst_desc_id());
+  *sink_tick_sole_regst->mutable_consumer_task_id() = id_tick_sole_regst_value.consumer_task_id();
+  UpdateSoleObnRegstDescId(sink_tick);
+}
+
+void LinkMainPlan(Plan* plan, const Plan& main_plan,
+                  const std::vector<std::string>& identity_tick_op_names) {
+  plan->mutable_task()->MergeFrom(main_plan.task());
+  HashMap<std::string, TaskProto*> sole_op_name2sole_task;
+  FOR_RANGE(int64_t, i, 0, plan->task_size()) {
+    TaskProto* task = plan->mutable_task(i);
+    if (task->exec_sequence().exec_node_size() == 1) {
+      const auto& kernel_conf = task->exec_sequence().exec_node(0).kernel_conf();
+      const auto& op_name = kernel_conf.op_attribute().op_conf().name();
+      CHECK(sole_op_name2sole_task.emplace(op_name, task).second);
+    }
+  }
+  FOR_RANGE(int32_t, i, 0, Global<CriticalSectionDesc>::Get()->CriticalSectionNum()) {
+    const CriticalSection& critical_section =
+        Global<CriticalSectionDesc>::Get()->GetCriticalSection(i);
+    LinkTickTaskProto(sole_op_name2sole_task.at(identity_tick_op_names.at(i)),
+                      sole_op_name2sole_task.at(critical_section.source_tick_op_name()),
+                      sole_op_name2sole_task.at(critical_section.sink_tick_op_name()));
+  }
+  {
+    // erase source_tick task_proto
+    HashSet<std::string> source_tick_op_names;
+    FOR_RANGE(int32_t, i, 0, Global<CriticalSectionDesc>::Get()->CriticalSectionNum()) {
+      const CriticalSection& critical_section =
+          Global<CriticalSectionDesc>::Get()->GetCriticalSection(i);
+      CHECK(source_tick_op_names.emplace(critical_section.source_tick_op_name()).second);
+    }
+    Erase<PbRpf<TaskProto>>(*plan->mutable_task(), [&](const TaskProto& task) {
+      if (task.task_type() == TaskType::kSourceTick) {
+        CHECK(task.exec_sequence().exec_node_size() == 1);
+        const auto& kernel_conf = task.exec_sequence().exec_node(0).kernel_conf();
+        const auto& op_conf = kernel_conf.op_attribute().op_conf();
+        CHECK(op_conf.has_source_tick_conf());
+        CHECK(source_tick_op_names.find(op_conf.name()) != source_tick_op_names.end());
+        return true;
+      } else {
+        return false;
+      }
+    });
+  }
 }
 
 Job ConvertJobConf2Job(const JobConf& job_conf) {
@@ -280,6 +367,16 @@ Job ConvertJobConf2Job(const JobConf& job_conf) {
   *job.mutable_arg_op_name() = job_conf.arg_op_name();
   *job.mutable_helper()->mutable_sbp_conf() = job_conf.sbp_conf();
   return job;
+}
+
+JobConf ConvertJob2JobConf(const Job& job) {
+  JobConf job_conf;
+  *job_conf.mutable_net() = job.net();
+  *job_conf.mutable_placement() = job.placement();
+  *job_conf.mutable_other() = job.other();
+  *job_conf.mutable_arg_op_name() = job.arg_op_name();
+  *job_conf.mutable_sbp_conf() = job.helper().sbp_conf();
+  return job_conf;
 }
 
 void GetInterfaceOpBlobInfo(const JobBuilder& job_builder, const std::string& op_name,
@@ -421,14 +518,140 @@ void BindInterfaceMemBlobId(const std::vector<Job>& jobs, std::vector<Plan>* sub
   }
 }
 
-void MakeCtrlJob(const std::vector<Job>& jobs, Job* ctrl_job,
-                 std::vector<std::string>* identity_op_names) {
-  TODO();
+void MakeMainJob(const std::vector<Job>& jobs, Job* main_job,
+                 std::vector<std::string>* identity_tick_op_names) {
+  std::vector<OperatorConf> op_confs;
+  OperatorConf wait_and_send_ids_op_conf;
+  {
+    wait_and_send_ids_op_conf.set_name(std::string("System-Main-WaitAndSendIds_") + NewUniqueId());
+    auto* wait_and_send_ids_conf = wait_and_send_ids_op_conf.mutable_wait_and_send_ids_conf();
+    wait_and_send_ids_conf->set_out("out");
+    wait_and_send_ids_conf->set_wait_channel_name(kChannelNameGlobalWaitJobId);
+    FOR_RANGE(int64_t, i, 0, Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->size()) {
+      const auto& cs_idx = Global<CriticalSectionDesc>::Get()->CriticalSectionIds4JobId(i);
+      *wait_and_send_ids_conf->add_id_list()->mutable_id() = {cs_idx.begin(), cs_idx.end()};
+    }
+  }
+  op_confs.push_back(wait_and_send_ids_op_conf);
+  OperatorConf cs_case_op_conf;
+  {
+    cs_case_op_conf.set_name(std::string("System-Main-Case_") + NewUniqueId());
+    auto* cs_case_conf = cs_case_op_conf.mutable_case_conf();
+    cs_case_conf->set_in(wait_and_send_ids_op_conf.name() + "/out");
+    FOR_RANGE(int64_t, i, 0, Global<CriticalSectionDesc>::Get()->CriticalSectionNum()) {
+      cs_case_conf->add_out(GenRepeatedBn("out", i));
+    }
+  }
+  op_confs.push_back(cs_case_op_conf);
+  FOR_RANGE(int64_t, i, 0, Global<CriticalSectionDesc>::Get()->CriticalSectionNum()) {
+    OperatorConf identity_tick_op_conf;
+    identity_tick_op_conf.set_name(std::string("System-Main-Tick_") + NewUniqueId());
+    auto* identity_tick_conf = identity_tick_op_conf.mutable_tick_conf();
+    identity_tick_conf->add_tick(cs_case_op_conf.name() + "/" + GenRepeatedBn("out", i));
+    identity_tick_conf->set_out("out");
+    identity_tick_op_names->push_back(identity_tick_op_conf.name());
+    op_confs.push_back(identity_tick_op_conf);
+  }
+  OperatorConf cs_esac_op_conf;
+  {
+    cs_esac_op_conf.set_name(std::string("System-Main-Esac_") + NewUniqueId());
+    auto* cs_esac_conf = cs_esac_op_conf.mutable_esac_conf();
+    for (const auto& identity_tick_op_name : *identity_tick_op_names) {
+      cs_esac_conf->add_in(identity_tick_op_name + "/out");
+    }
+    cs_esac_conf->set_out("out");
+  }
+  op_confs.push_back(cs_esac_op_conf);
+
+  ParallelConf parallel_conf;
+  parallel_conf.set_policy(kDataParallel);
+  parallel_conf.add_device_name("0:cpu:0");
+  JobBuilder(main_job).AddOps(parallel_conf, op_confs);
+  main_job->mutable_other()->mutable_predict_conf();
+  main_job->mutable_other()->set_piece_size(1);
+  main_job->mutable_other()->set_data_part_num(1);
+  main_job->mutable_other()->set_total_batch_num(1);
+  main_job->mutable_other()->set_default_data_type(DataType::kInt32);
 }
 
-void CompileCtrlJob(const Job& job, int32_t job_id, Plan* ctrl_plan) { TODO(); }
+void CompileMainJob(Job* main_job, int32_t job_id, Plan* main_plan) {
+  JobConf job_conf = ConvertJob2JobConf(*main_job);
+  Global<JobDesc>::New(job_conf, job_id);
+  CompileCurJobOnMaster(main_job, main_plan, false);
+  Global<JobDesc>::Delete();
+}
 
-void AddGlobalJobDesc(const Job& job, int32_t job_id) { TODO(); }
+void AddGlobalJobDesc(const Job& job, int32_t job_id) {
+  JobConf job_conf = ConvertJob2JobConf(job);
+  auto* job_descs = Global<std::vector<std::unique_ptr<JobDesc>>>::Get();
+  CHECK_EQ(job_descs->size(), job_id);
+  job_descs->emplace_back(new JobDesc(job_conf, job_id));
+}
+
+bool NeedAllocateMemory(const RegstDescTypeProto& regst_desc_type) {
+  return regst_desc_type.has_data_regst_desc()
+         && regst_desc_type.data_regst_desc().packed_blob_desc().is_body_disabled() == false;
+}
+
+void FinishGlobalCriticalSectionDesc(const std::vector<Plan>& plans) {
+  std::vector<HashMap<std::string, HashSet<int64_t>>> job_id2sole_op_name2mem_block_ids;
+  std::vector<HashSet<int64_t>> job_id2mem_block_ids;
+  for (const auto& plan : plans) {
+    job_id2sole_op_name2mem_block_ids.push_back(HashMap<std::string, HashSet<int64_t>>());
+    auto* sole_op_name2mem_block_ids = &job_id2sole_op_name2mem_block_ids.back();
+    job_id2mem_block_ids.push_back(HashSet<int64_t>());
+    auto* job_id_mem_block_ids = &job_id2mem_block_ids.back();
+    for (const auto& task : plan.task()) {
+      if (task.exec_sequence().exec_node_size() == 1) {
+        const auto& kernel_conf = task.exec_sequence().exec_node(0).kernel_conf();
+        const auto& op_name = kernel_conf.op_attribute().op_conf().name();
+        auto* mem_block_ids = &(*sole_op_name2mem_block_ids)[op_name];
+        for (const auto& pair : task.produced_regst_desc()) {
+          if (NeedAllocateMemory(pair.second.regst_desc_type())) {
+            CHECK(mem_block_ids->emplace(pair.second.mem_shared_id()).second);
+          }
+        }
+      }
+      for (const auto& pair : task.produced_regst_desc()) {
+        if (NeedAllocateMemory(pair.second.regst_desc_type())) {
+          job_id_mem_block_ids->emplace(pair.second.mem_shared_id());
+        }
+      }
+    }
+  }
+  HashSet<int64_t> input_output_mem_block_ids;
+  auto* critical_section_desc = Global<CriticalSectionDesc>::Get();
+  // set mem_block_id for InputOutputCriticalSection
+  FOR_RANGE(int64_t, i, 0, critical_section_desc->CriticalSectionNum()) {
+    auto* critical_section = critical_section_desc->MutCriticalSection(i);
+    int64_t job_id = critical_section->job_id();
+    if (critical_section->has_input_output_critical_section()) {
+      HashSet<int64_t> mem_block_ids;
+      for (const auto& op_name :
+           critical_section->input_output_critical_section().lbi_producer_op_name()) {
+        const auto& cur_mem_block_ids = job_id2sole_op_name2mem_block_ids.at(job_id).at(op_name);
+        mem_block_ids.insert(cur_mem_block_ids.begin(), cur_mem_block_ids.end());
+      }
+      *critical_section->mutable_mem_block_id() = {mem_block_ids.begin(), mem_block_ids.end()};
+      input_output_mem_block_ids.insert(mem_block_ids.begin(), mem_block_ids.end());
+    } else {
+      CHECK(critical_section->has_total_job_critical_section());
+    }
+  }
+  HashSet<int64_t> unique_job_id_check;
+  // set mem_block_id for TotalJobCriticalSection
+  FOR_RANGE(int64_t, i, 0, critical_section_desc->CriticalSectionNum()) {
+    auto* critical_section = critical_section_desc->MutCriticalSection(i);
+    if (critical_section->has_total_job_critical_section()) {
+      int64_t job_id = critical_section->job_id();
+      CHECK(unique_job_id_check.emplace(job_id).second);
+      auto* mem_block_ids = &job_id2mem_block_ids.at(job_id);
+      mem_block_ids->erase(input_output_mem_block_ids.begin(), input_output_mem_block_ids.end());
+      *critical_section->mutable_mem_block_id() = {mem_block_ids->begin(), mem_block_ids->end()};
+    }
+  }
+  critical_section_desc->Done();
+}
 
 void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
   std::vector<Job> jobs(job_confs.size());
@@ -436,23 +659,23 @@ void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
   FOR_RANGE(int32_t, i, 0, sub_plans.size()) {
     Global<JobDesc>::New(job_confs.Get(i), i);
     jobs.at(i) = ConvertJobConf2Job(job_confs.Get(i));
-    CompileCurJobOnMaster(&jobs.at(i), &sub_plans.at(i));
+    CompileCurJobOnMaster(&jobs.at(i), &sub_plans.at(i), true);
     Global<JobDesc>::Delete();
   }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     CheckJobs(&jobs);
     BindInterfaceMemBlobId(jobs, &sub_plans);
+    FinishGlobalCriticalSectionDesc(sub_plans);
     MergePlan(plan, sub_plans);
-    Plan ctrl_plan;
-    std::vector<std::string> identity_op_names;
+    Plan main_plan;
+    std::vector<std::string> identity_tick_op_names;
     {
-      Job job;
-      MakeCtrlJob(jobs, &job, &identity_op_names);
-      AddGlobalJobDesc(job, sub_plans.size());
-      CompileCtrlJob(job, sub_plans.size(), &ctrl_plan);
+      Job main_job;
+      MakeMainJob(jobs, &main_job, &identity_tick_op_names);
+      AddGlobalJobDesc(main_job, sub_plans.size());
+      CompileMainJob(&main_job, sub_plans.size(), &main_plan);
     }
-    MergeCtrlPlan(plan, ctrl_plan, identity_op_names);
-
+    LinkMainPlan(plan, main_plan, identity_tick_op_names);
     TeePersistentLogStream::Create("merged_plan")->Write(*plan);
     PushPlan("merged_plan", *plan);
   } else {

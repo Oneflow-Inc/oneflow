@@ -6,6 +6,7 @@
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/nccl_comm_manager.h"
 #include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/critical_section_desc.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/graph/task_node.h"
@@ -75,10 +76,11 @@ Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_ph
   runtime_ctx->NewCounter("running_actor_cnt", this_machine_task_num);
   SendCmdMsg(mdupdt_tasks, ActorCmd::kSendInitialModel);
   SendCmdMsg(source_tasks, ActorCmd::kStart);
-  //  FOR_RANGE(int64_t, i, 0,
-  //  Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->at(0)->TotalBatchNum()) {
-  //    Global<BufferMgr<int32_t>>::Get()->Get(kChannelNameGlobalWaitJobId)->Send(0);
-  //  }
+  FOR_RANGE(int64_t, i, 0,
+            Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->at(0)->TotalBatchNum()) {
+    Global<BufferMgr<int32_t>>::Get()->Get(kChannelNameGlobalWaitJobId)->Send(0);
+  }
+  Global<BufferMgr<int32_t>>::Get()->Get(kChannelNameGlobalWaitJobId)->Close();
   runtime_ctx->WaitUntilCntEqualZero("running_actor_cnt");
   OF_BARRIER();
   DeleteAllGlobal();

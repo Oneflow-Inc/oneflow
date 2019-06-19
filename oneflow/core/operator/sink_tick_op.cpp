@@ -6,6 +6,17 @@ namespace oneflow {
 void SinkTickOp::InitFromOpConf() {
   CHECK(op_conf().has_sink_tick_conf());
   EnrollRepeatedInputBn("tick", false);
+  EnrollOutputBn("out", false);
+}
+
+void SinkTickOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx) const {
+  GetBlobDesc4BnInOp("out")->mut_shape() = Shape({1});
+}
+
+void SinkTickOp::InferHasBatchDim(
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
+  *HasBatchDim4BnInOp("out") = false;
 }
 
 const PbMessage& SinkTickOp::GetCustomizedConf() const { return op_conf().sink_tick_conf(); }
