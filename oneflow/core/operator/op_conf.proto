@@ -1272,7 +1272,7 @@ message TickOpConf {
 }
 
 message IdList {
-  repeated int32 id = 1;
+  repeated int64 id = 1;
 }
 
 message WaitAndSendIdsOpConf {
@@ -1284,7 +1284,8 @@ message WaitAndSendIdsOpConf {
 message ReentrantLockOpConf {
   required string start = 1;
   required string end = 2;
-  required string out = 3; 
+  required string out = 3;
+  repeated IdList lock_id2intersecting_lock_ids = 4;
 }
 
 message SourceTickOpConf {
