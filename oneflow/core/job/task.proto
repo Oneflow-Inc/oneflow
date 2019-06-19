@@ -46,8 +46,7 @@ enum TaskType {
   kOptimizer = 38;
   kEveryNth = 39;
   kSliceBoxing = 40;
-  kLocalRingBoxing = 41;
-  kRingBoxing = 42;
+  kRingBoxing = 41;
 };
 
 enum AreaType {
