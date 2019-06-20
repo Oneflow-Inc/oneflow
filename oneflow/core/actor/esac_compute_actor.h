@@ -21,9 +21,9 @@ class EsacCompActor final : public CompActor {
   void Act() override;
   void NormalProcessCustomizedReadableRegstMsg(const ActorMsg&) override;
   void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const override;
-  bool IsCustomizedReadReady() override;
+  bool IsCustomizedReadReady() const override;
   void NormalProcessCustomizedEordMsg(const ActorMsg&) override {}
-  bool IsCustomizedReadAlwaysUnReadyFromNow() override {
+  bool IsCustomizedReadAlwaysUnReadyFromNow() const override {
     return ReceiveAllEordMsg() && consumed_rs_.available_regst_desc_cnt() == 0;
   }
   void AsyncReturnAllCustomizedReadableRegst() override;
@@ -33,7 +33,7 @@ class EsacCompActor final : public CompActor {
   }
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
   void AsyncSendCustomizedConsumedRegstMsgToProducer() override;
-  int64_t GetCurProcessedRegstDescId();
+  int64_t GetCurProcessedRegstDescId() const;
 
   RegstSlot consumed_rs_;
   int64_t cur_processed_regst_desc_id_;

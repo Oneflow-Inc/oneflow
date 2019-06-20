@@ -21,15 +21,6 @@ void ScalarAddKernel<device_type, T>::ForwardDataContent(
                                           out_blob->mut_dptr<T>());
 }
 
-template<DeviceType device_type, typename T>
-void ScalarAddKernel<device_type, T>::BackwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
-  Blob* in_diff_blob = BnInOp2Blob(GenDiffBn("in"));
-  Memcpy<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr<T>(), out_diff_blob->dptr<T>(),
-                      out_diff_blob->ByteSizeOfDataContentField());
-}
-
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kScalarAddConf, ScalarAddKernel, ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

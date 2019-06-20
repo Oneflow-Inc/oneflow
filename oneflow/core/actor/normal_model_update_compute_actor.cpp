@@ -29,7 +29,7 @@ void NormalMdUpdtCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   OF_SET_MSG_HANDLER(&NormalMdUpdtCompActor::HandlerInitModelAndConstModel);
 }
 
-bool NormalMdUpdtCompActor::IsCustomizedWriteReady() {
+bool NormalMdUpdtCompActor::IsCustomizedWriteReady() const {
   if (const_model_regst_desc_id_ != -1) { CHECK(send_const_model_regst_); }
   return true;
 }

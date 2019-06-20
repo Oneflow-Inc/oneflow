@@ -19,9 +19,9 @@ class ReentrantLockCompActor final : public CompActor {
   void Act() override;
   void NormalProcessCustomizedReadableRegstMsg(const ActorMsg&) override;
   void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const override;
-  bool IsCustomizedReadReady() override;
+  bool IsCustomizedReadReady() const override;
   void NormalProcessCustomizedEordMsg(const ActorMsg&) override {}
-  bool IsCustomizedReadAlwaysUnReadyFromNow() override;
+  bool IsCustomizedReadAlwaysUnReadyFromNow() const override;
   void AsyncReturnAllCustomizedReadableRegst() override;
   std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName()
       override {
@@ -29,7 +29,7 @@ class ReentrantLockCompActor final : public CompActor {
   }
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
   void AsyncSendCustomizedConsumedRegstMsgToProducer() override;
-  int64_t GetCurProcessedRegstDescId();
+  int64_t GetCurProcessedRegstDescId() const;
 
   const std::string& Ibn4RegstDescId(int64_t id) const { return regst_desc_id2ibn_.at(id); }
 

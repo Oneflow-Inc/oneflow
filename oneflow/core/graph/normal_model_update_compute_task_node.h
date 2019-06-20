@@ -13,9 +13,9 @@ class NormalMdUpdtCompTaskNode final : public CompTaskNode {
   ~NormalMdUpdtCompTaskNode() = default;
 
   void ProduceAllRegstsAndBindEdges() override;
-  void ConsumeAllRegsts() override;
+  void ConsumeAllRegsts() override {}
   bool IsReadyForBuild() override;
-  void BuildExecGphAndRegst() override;
+  void BuildExecGphAndRegst() override {}
   void LockRegsts() override;
   void EnableMemSharingBetweenFirstInAndProcessedMdDiffRegst();
 
