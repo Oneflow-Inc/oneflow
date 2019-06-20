@@ -36,13 +36,6 @@ void VariableOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   *GetBlobDesc4BnInOp("out") = *model_blob_desc;
 }
 
-void VariableOp::VirtualGenKernelConf(
-    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
-    KernelConf* conf) const {
-  conf->mutable_variable_conf()->set_is_fw_inplace(*is_fw_inplace_);
-  conf->mutable_variable_conf()->set_is_bw_inplace(*is_bw_inplace_);
-}
-
 void VariableOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   *HasBatchDim4BnInOp("out") = false;

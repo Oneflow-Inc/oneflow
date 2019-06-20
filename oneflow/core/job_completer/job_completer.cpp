@@ -338,7 +338,7 @@ void AddIdentityOpForAllReduceOverlapingUntrainble(Job* job) {
 }
 
 void FixAndOptimizeDLNet(Job* job) {
-  const JobDesc* job_desc = Global<JobDesc>::Get();
+  // const JobDesc* job_desc = Global<JobDesc>::Get();
   if (!(Global<JobDesc>::Get()->IsTrain())) {
     FixTickOpIfExists(job);
     // ConvertPseudoChainToChain(job);

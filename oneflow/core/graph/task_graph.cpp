@@ -516,7 +516,7 @@ void TaskGraph::EnableMemSharingInVariableOp() {
       out_regst->set_mem_shared_id(model_regst->mem_shared_id());
       out_regst->set_mem_shared_offset(model_regst->mem_shared_offset()
                                        + model_regst->ByteOffsetInPackedBlobDescBody(lbi));
-      variable_op->set_is_fw_inplace(true);
+      // variable_op->set_is_fw_inplace(true);
     } else {
       // do nothing
     }
