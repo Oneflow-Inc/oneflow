@@ -2,22 +2,24 @@
 
 namespace oneflow {
 
-void WaitAndSendIdsKernel::ForwardDataContent(
+template<typename T>
+void WaitAndSendIdsKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CHECK(ctx.other);
   auto* status = static_cast<WaitAndSendIdsStatus*>(ctx.other);
-  const auto& conf = op_conf().wait_and_send_ids_conf();
+  const auto& conf = this->op_conf().wait_and_send_ids_conf();
   if (status->out_idx_ >= status->out_num_) {
     status->channel_status_ =
-        Global<BufferMgr<int32_t>>::Get()->Get(conf.wait_channel_name())->Receive(&status->in_id_);
+        Global<BufferMgr<int64_t>>::Get()->Get(conf.wait_channel_name())->Receive(&status->in_id_);
     if (status->channel_status_ == kChannelStatusErrorClosed) { return; }
     status->out_idx_ = 0;
     status->out_num_ = conf.id_list(status->in_id_).id_size();
   }
-  *BnInOp2Blob("out")->mut_dptr<int32_t>() = conf.id_list(status->in_id_).id(status->out_idx_);
+  *BnInOp2Blob("out")->mut_dptr<T>() = conf.id_list(status->in_id_).id(status->out_idx_);
   ++status->out_idx_;
 }
 
-REGISTER_KERNEL(OperatorConf::kWaitAndSendIdsConf, WaitAndSendIdsKernel);
+ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kWaitAndSendIdsConf, WaitAndSendIdsKernel,
+                               INT_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

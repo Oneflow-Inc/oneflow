@@ -3,6 +3,7 @@
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/critical_section.pb.h"
+#include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 
@@ -17,7 +18,7 @@ class CriticalSectionDesc final {
   const CriticalSection& GetCriticalSection(int64_t) const;
   CriticalSection* MutCriticalSection(int64_t) const;
   const std::vector<int64_t>& CriticalSectionIds4JobId(int64_t) const;
-  const HashSet<int64_t>& GetIntersectingCriticalSectionIds(int64_t) const;
+  void DumpCriticalSectionId2IntersectinIds(PbRpf<IdList>* id2id_list) const;
 
  private:
   friend class Global<CriticalSectionDesc>;

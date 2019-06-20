@@ -1278,12 +1278,13 @@ message IdList {
 message WaitAndSendIdsOpConf {
   required string out = 1;
   required string wait_channel_name = 2;
-  repeated IdList id_list = 3; 
+  repeated IdList id_list = 3;
+  required DataType data_type = 4 [default = kInt32];
 }
 
 message ReentrantLockOpConf {
   required string start = 1;
-  required string end = 2;
+  optional string end = 2;
   required string out = 3;
   repeated IdList lock_id2intersecting_lock_ids = 4;
 }
