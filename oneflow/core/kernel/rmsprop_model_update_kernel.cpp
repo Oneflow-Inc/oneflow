@@ -6,22 +6,16 @@ namespace oneflow {
 namespace {
 
 const RMSPropModelUpdateConf& GetRMSPropModelUpdateConf(const OperatorConf& op_conf) {
-  if (Global<JobDesc>::Get()->IsTrain()) {
-    return op_conf.rmsprop_model_update_conf().user_conf().rmsprop_conf();
-  } else {
-    UNIMPLEMENTED();
-  }
+  CHECK(Global<JobDesc>::Get()->IsTrain());
+  return op_conf.rmsprop_model_update_conf().user_conf().rmsprop_conf();
 }
 
 }  // namespace
 
 template<DeviceType device_type, typename T>
 const PbMessage& RMSPropMdUpdateKernel<device_type, T>::GetCustomizedOpConf() const {
-  if (Global<JobDesc>::Get()->IsTrain()) {
-    return this->op_conf().rmsprop_model_update_conf();
-  } else {
-    UNIMPLEMENTED();
-  }
+  CHECK(Global<JobDesc>::Get()->IsTrain());
+  return this->op_conf().rmsprop_model_update_conf();
 }
 
 template<DeviceType device_type, typename T>
