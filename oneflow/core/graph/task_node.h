@@ -77,7 +77,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   std::string VisualStr() const override;
   virtual bool IsMeaningLess();
   virtual void ToProto(TaskProto*);
-  virtual bool MayBeBlocked() const { return false; }
+  virtual bool IsIndependent() const { return false; }
   void BindEdgeWithProducedRegst(TaskEdge*, const std::string& name);
   virtual int64_t MemZoneId121() const;  // TODO: there is bug for reduce task node
   void BuildCtrlRegstDescIfNeed(TaskNode* dst_node);
