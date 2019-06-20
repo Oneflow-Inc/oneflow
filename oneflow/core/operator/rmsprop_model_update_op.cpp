@@ -14,11 +14,8 @@ void RMSPropModelUpdateOp::MdUpdtVirtualInferBlobDescs(
 }
 
 const PbMessage& RMSPropModelUpdateOp::GetCustomizedConf() const {
-  if (Global<JobDesc>::Get()->IsTrain()) {
-    return op_conf().rmsprop_model_update_conf();
-  } else {
-    UNIMPLEMENTED();
-  }
+  CHECK(Global<JobDesc>::Get()->IsTrain());
+  return op_conf().rmsprop_model_update_conf();
 }
 
 const HashSet<std::string> RMSPropModelUpdateOp::AlwaysBroadcastParallelBns() const {
