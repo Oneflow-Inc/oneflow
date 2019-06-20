@@ -12,6 +12,8 @@ class TensorSliceCopier final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TensorSliceCopier);
   TensorSliceCopier(const TensorSliceView& dst_view, const TensorSliceView& src_view,
+                    const TensorSliceView& copy_view, DataType data_type);
+  TensorSliceCopier(const TensorSliceView& dst_view, const TensorSliceView& src_view,
                     DataType data_type);
   virtual ~TensorSliceCopier() = default;
 

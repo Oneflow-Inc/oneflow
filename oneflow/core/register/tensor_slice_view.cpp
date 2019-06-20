@@ -45,6 +45,18 @@ void TensorSliceView::UpdateShape() {
 
 bool TensorSliceView::IsEmpty() const { return range_vec_.empty(); }
 
+bool TensorSliceView::Contains(const TensorSliceView& other) const {
+  if (other.IsEmpty()) { return true; }
+  CHECK_EQ(NumAxes(), other.NumAxes());
+  FOR_RANGE(int64_t, i, 0, NumAxes()) {
+    if (range_vec_.at(i).begin() > other.range_vec_.at(i).begin()
+        || range_vec_.at(i).end() < other.range_vec_.at(i).end()) {
+      return false;
+    }
+  }
+  return true;
+}
+
 TensorSliceView TensorSliceView::Intersect(const TensorSliceView& other) const {
   if (IsEmpty() || other.IsEmpty()) { return TensorSliceView(); }
   CHECK_EQ(other.range_vec_.size(), range_vec_.size());

@@ -22,6 +22,7 @@ class TensorSliceView final {
 
   bool IsEmpty() const;
   TensorSliceView Intersect(const TensorSliceView& other) const;
+  bool Contains(const TensorSliceView& other) const;
   const Range& At(int64_t index) const;
   const Shape& shape() const;
   const std::vector<Range>& range_vec() const;
