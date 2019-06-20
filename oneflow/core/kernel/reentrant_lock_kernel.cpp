@@ -11,14 +11,17 @@ void ReentrantLockStatus::Init(const KernelConf& kernel_conf) {
   total_acquired_lock_num_ = 0;
   lock_id2queued_request_act_id_.resize(conf.lock_id2intersecting_lock_ids_size());
   lock_id2acquired_num_.resize(conf.lock_id2intersecting_lock_ids_size());
-  lock_id2intersecting_lock_ids_ = conf.lock_id2intersecting_lock_ids();
+  for (const IdList ids : conf.lock_id2intersecting_lock_ids()) {
+    lock_id2intersecting_lock_ids_.push_back(
+        std::vector<int64_t>(ids.id().begin(), ids.id().end()));
+  }
 }
 
 bool ReentrantLockStatus::TryAcquireLock(int64_t lock_id) {
   CHECK_EQ(lock_id2queued_request_act_id_.at(lock_id).empty(), false);
   int64_t act_id = lock_id2queued_request_act_id_.at(lock_id).front();
   bool blocked = false;
-  for (int64_t intersect_lock_id : lock_id2intersecting_lock_ids_.Get(lock_id).id()) {
+  for (int64_t intersect_lock_id : lock_id2intersecting_lock_ids_.at(lock_id)) {
     if (lock_id2acquired_num_.at(intersect_lock_id) > 0
         || (lock_id2queued_request_act_id_.at(intersect_lock_id).empty() == false
             && lock_id2queued_request_act_id_.at(intersect_lock_id).front() < act_id)) {
@@ -48,7 +51,7 @@ int64_t ReentrantLockStatus::ReleaseLock(int64_t lock_id) {
   if (lock_id2acquired_num_.at(lock_id) == 0) {
     int64_t min_act_id = cur_act_id();
     int64_t min_lock_id = -1;
-    for (int64_t intersect_lock_id : lock_id2intersecting_lock_ids_.Get(lock_id).id()) {
+    for (int64_t intersect_lock_id : lock_id2intersecting_lock_ids_.at(lock_id)) {
       CHECK_EQ(lock_id2acquired_num_.at(intersect_lock_id), 0);
       int64_t act_id = lock_id2queued_request_act_id_.at(intersect_lock_id).front();
       if (act_id < min_act_id) {

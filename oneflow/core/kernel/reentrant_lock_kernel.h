@@ -46,7 +46,7 @@ class ReentrantLockStatus final {
   size_t total_acquired_lock_num_;
   std::vector<std::queue<int64_t>> lock_id2queued_request_act_id_;
   std::vector<size_t> lock_id2acquired_num_;
-  PbRpf<IdList> lock_id2intersecting_lock_ids_;
+  std::vector<std::vector<int64_t>> lock_id2intersecting_lock_ids_;
 };
 
 template<typename T>

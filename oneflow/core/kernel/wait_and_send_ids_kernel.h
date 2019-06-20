@@ -8,11 +8,12 @@ namespace oneflow {
 
 struct WaitAndSendIdsStatus final {
   ChannelStatus channel_status_;
-  int32_t in_id_;
-  int32_t out_idx_;
-  int32_t out_num_;
+  int64_t in_id_;
+  int64_t out_idx_;
+  size_t out_num_;
 };
 
+template<typename T>
 class WaitAndSendIdsKernel final : public KernelIf<DeviceType::kCPU> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(WaitAndSendIdsKernel);
