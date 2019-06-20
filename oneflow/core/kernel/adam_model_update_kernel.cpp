@@ -6,11 +6,8 @@ namespace oneflow {
 namespace {
 
 const AdamModelUpdateConf& GetAdamModelUpdateConf(const OperatorConf& op_conf) {
-  if (Global<JobDesc>::Get()->IsTrain()) {
-    return op_conf.adam_model_update_conf().user_conf().adam_conf();
-  } else {
-    UNIMPLEMENTED();
-  }
+  CHECK(Global<JobDesc>::Get()->IsTrain());
+  return op_conf.adam_model_update_conf().user_conf().adam_conf();
 };
 
 template<typename T>
@@ -30,11 +27,8 @@ void UpdateMomentEstimate(int64_t n, bool do_bias_correction, T beta, int32_t p,
 
 template<DeviceType device_type, typename T>
 const PbMessage& AdamMdUpdateKernel<device_type, T>::GetCustomizedOpConf() const {
-  if (Global<JobDesc>::Get()->IsTrain()) {
-    return this->op_conf().adam_model_update_conf();
-  } else {
-    UNIMPLEMENTED();
-  }
+  CHECK(Global<JobDesc>::Get()->IsTrain());
+  return this->op_conf().adam_model_update_conf();
 }
 
 template<DeviceType device_type, typename T>
