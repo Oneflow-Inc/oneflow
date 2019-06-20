@@ -9,8 +9,8 @@ void SoftmaxOp::InitFromOpConf() {
   EnrollInputBn("in");
   EnrollOutputBn("out");
   // TODO: update method for fw bw split
-  // EnrollOutputBn("transpose_in");
-  // EnrollOutputBn("transpose_out");
+  EnrollOutputBn("transpose_in");
+  EnrollOutputBn("transpose_out");
   EnrollFwBufBn("fw_softmax_num");
   EnrollFwBufBn("fw_buf");
 }
@@ -44,6 +44,9 @@ void SoftmaxOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
     transpose_blob_desc->mut_shape().Set(op_ctx->dims - 1, op_ctx->transpose_cols);
     transpose_blob_desc->set_data_type(in_blob_desc->data_type());
     *GetBlobDesc4BnInOp("transpose_out") = *transpose_blob_desc;
+  } else {
+    *GetBlobDesc4BnInOp("transpose_in") = *in_blob_desc;
+    *GetBlobDesc4BnInOp("transpose_out") = *in_blob_desc;
   }
 }
 
