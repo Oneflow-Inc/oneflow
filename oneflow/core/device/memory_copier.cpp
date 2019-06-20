@@ -7,7 +7,7 @@ namespace {
 
 int64_t MemoryCopyNdDescGetNumAxes(const MemoryCopyNdDesc& desc) { return desc.extent.NumAxes(); }
 
-void CheckPosExtent(const int64_t num_axes, const Shape& shape, const Index& pos,
+void CheckPosExtent(const int64_t num_axes, const Shape& shape, const NdIndex& pos,
                     const Shape& extent) {
   CHECK_EQ(shape.NumAxes(), num_axes);
   CHECK_EQ(pos.NumAxes(), num_axes);
@@ -56,8 +56,8 @@ MemoryCopyNdDesc MemoryCopyNdDesc::CreateDimReducedDesc() const {
   }
   reduced.dst_shape = Shape(dst_shape_vec);
   reduced.src_shape = Shape(src_shape_vec);
-  reduced.dst_pos = Index(dst_pos_vec);
-  reduced.src_pos = Index(src_pos_vec);
+  reduced.dst_pos = NdIndex(dst_pos_vec);
+  reduced.src_pos = NdIndex(src_pos_vec);
   reduced.extent = Shape(extent_vec);
   return reduced;
 }

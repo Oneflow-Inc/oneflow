@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_DEVICE_MEMORY_COPIER_H_
 
 #include "oneflow/core/device/device_context.h"
-#include "oneflow/core/common/index.h"
+#include "oneflow/core/common/nd_index.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/job/resource.pb.h"
 
@@ -13,8 +13,8 @@ struct MemoryCopyNdDesc {
   const void* src_ptr;
   Shape dst_shape;
   Shape src_shape;
-  Index dst_pos;
-  Index src_pos;
+  NdIndex dst_pos;
+  NdIndex src_pos;
   Shape extent;
 
   MemoryCopyNdDesc CreateDimReducedDesc() const;

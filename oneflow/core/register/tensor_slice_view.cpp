@@ -81,13 +81,13 @@ const std::vector<Range>& TensorSliceView::range_vec() const { return range_vec_
 
 size_t TensorSliceView::NumAxes() const { return range_vec_.size(); }
 
-Index TensorSliceView::OffsetTo(const TensorSliceView& other) const {
+NdIndex TensorSliceView::OffsetTo(const TensorSliceView& other) const {
   CHECK_EQ(other.NumAxes(), NumAxes());
   std::vector<int64_t> indices_vec(range_vec_.size());
   std::transform(range_vec_.cbegin(), range_vec_.cend(), other.range_vec_.cbegin(),
                  indices_vec.begin(),
                  [](const Range& lhs, const Range& rhs) { return lhs.begin() - rhs.begin(); });
-  return Index(indices_vec);
+  return NdIndex(indices_vec);
 }
 
 void TensorSliceView::ToProto(TensorSliceViewProto* proto) const {
