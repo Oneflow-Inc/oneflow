@@ -92,12 +92,8 @@ void ReduceSplitCompTaskNode::BuildExecGphAndRegst() {
   FOR_RANGE(size_t, i, 0, reduce_split_op->output_bns().size()) {
     std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out_" + std::to_string(i));
     CHECK(out_regst.get() != nullptr);
-    if (Global<JobDesc>::Get()->IsTrain()) {
-      out_regst->AddLbi(reduce_split_op->BnInOp2Lbi(reduce_split_op->output_bns().Get(i)));
-    } else {
-      out_regst->CopyBlobDescFrom(
-          reduce_concat_node->GetSoleConsumedRegst("in_" + std::to_string(i)).get());
-    }
+    CHECK(Global<JobDesc>::Get()->IsTrain());
+    out_regst->AddLbi(reduce_split_op->BnInOp2Lbi(reduce_split_op->output_bns().Get(i)));
     node->BindBnWithRegst(reduce_split_op->output_bns().Get(i), out_regst);
   }
   node->InferBlobDescs(parallel_ctx());

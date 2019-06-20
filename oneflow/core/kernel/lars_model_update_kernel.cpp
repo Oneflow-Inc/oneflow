@@ -6,11 +6,8 @@ namespace oneflow {
 namespace {
 
 const LARSModelUpdateConf& GetLARSModelUpdateConf(const OperatorConf& op_conf) {
-  if (Global<JobDesc>::Get()->IsTrain()) {
-    return op_conf.lars_model_update_conf().user_conf().lars_conf();
-  } else {
-    UNIMPLEMENTED();
-  }
+  CHECK(Global<JobDesc>::Get()->IsTrain());
+  return op_conf.lars_model_update_conf().user_conf().lars_conf();
 }
 
 }  // namespace

@@ -7,30 +7,7 @@ void ReduceConcatCompTaskNode::ProduceAllRegstsAndBindEdges() {
   this->SoleOutDataEdge()->AddRegst("out", ProduceRegst("out", false, 1, 1));
 }
 
-void ReduceConcatCompTaskNode::ConsumeAllRegsts() {
-  if (Global<JobDesc>::Get()->IsTrain()) {
-    int32_t idx = 0;
-    ForEachInDataEdge([&](TaskEdge* in_edge) {
-      ConsumeRegst("in_" + std::to_string(idx), in_edge->GetSoleRegst());
-      ++idx;
-    });
-  } else {
-    std::vector<EdgeInfo> edge_infos;
-    ForEachInDataEdge([&](TaskEdge* edge) {
-      TaskNode* src_node = edge->src_node();
-      while (src_node->GetTaskType() != TaskType::kNormalBackward) {
-        src_node = src_node->SoleInDataEdge()->src_node();
-      }
-      CompTaskNode* bw_node = dynamic_cast<CompTaskNode*>(src_node);
-      EdgeInfo edge_info{edge, bw_node->order_in_graph()};
-      edge_infos.emplace_back(edge_info);
-    });
-    SortEdges(&edge_infos);
-    FOR_RANGE(size_t, idx, 0, edge_infos.size()) {
-      ConsumeRegst("in_" + std::to_string(idx), edge_infos[idx].edge->GetSoleRegst());
-    }
-  }
-}
+void ReduceConcatCompTaskNode::ConsumeAllRegsts() { TODO(); }
 
 void ReduceConcatCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
