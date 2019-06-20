@@ -5,7 +5,7 @@
 namespace oneflow {
 
 void WaitAndSendIdsCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
-  wait_and_send_ids_status_.channel_status_ = kChannelStatusSuccess;
+  wait_and_send_ids_status_.buffer_status_ = kBufferStatusSuccess;
   wait_and_send_ids_status_.in_id_ = 0;
   wait_and_send_ids_status_.out_idx_ = 0;
   wait_and_send_ids_status_.out_num_ = 0;
@@ -20,13 +20,13 @@ void WaitAndSendIdsCompActor::Act() {
 }
 
 void WaitAndSendIdsCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
-  if (wait_and_send_ids_status_.channel_status_ == kChannelStatusSuccess) {
+  if (wait_and_send_ids_status_.buffer_status_ == kBufferStatusSuccess) {
     HandleProducedNaiveDataRegstToConsumer();
   }
 }
 
 bool WaitAndSendIdsCompActor::IsCustomizedReadReady() const {
-  return wait_and_send_ids_status_.channel_status_ == kChannelStatusSuccess;
+  return wait_and_send_ids_status_.buffer_status_ == kBufferStatusSuccess;
 }
 
 int WaitAndSendIdsCompActor::HandlerWaitToStart(const ActorMsg& msg) {

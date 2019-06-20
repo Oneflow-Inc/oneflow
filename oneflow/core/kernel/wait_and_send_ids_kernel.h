@@ -7,7 +7,7 @@
 namespace oneflow {
 
 struct WaitAndSendIdsStatus final {
-  ChannelStatus channel_status_;
+  BufferStatus buffer_status_;
   int64_t in_id_;
   int64_t out_idx_;
   size_t out_num_;

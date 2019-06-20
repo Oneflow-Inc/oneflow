@@ -34,7 +34,7 @@ class CriticalSectionDesc final {
   std::vector<HashSet<int64_t>> critical_section_id2intersecting_ids_;
 };
 
-static const std::string kChannelNameGlobalWaitJobId = "GlobalWaitJobId";
+static const std::string kBufferNameGlobalWaitJobId = "GlobalWaitJobId";
 
 }  // namespace oneflow
 
