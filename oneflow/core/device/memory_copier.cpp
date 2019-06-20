@@ -147,28 +147,11 @@ void CudaMemoryCopier::CopyND(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) cons
   UNIMPLEMENTED();
 }
 
-class FuncDefaultMemoryCopierCreator final : public DefaultMemoryCopierCreator {
- public:
-  using Func = std::function<MemoryCopier*()>;
-  OF_DISALLOW_COPY_AND_MOVE(FuncDefaultMemoryCopierCreator)
-  explicit FuncDefaultMemoryCopierCreator(Func f) : func_(std::move(f)) {}
-  ~FuncDefaultMemoryCopierCreator() override = default;
-
-  MemoryCopier* Create() override { return func_(); }
-
- private:
-  const Func func_;
-};
-
-REGISTER_CLASS_CREATOR(DeviceType::kCPU, DefaultMemoryCopierCreator, []() {
-  return new FuncDefaultMemoryCopierCreator([]() { return new HostMemoryCopier(); });
-});
+REGISTER_DEFAULT_MEMORY_COPIER(DeviceType::kCPU, []() { return new HostMemoryCopier(); });
 
 #ifdef WITH_CUDA
 
-REGISTER_CLASS_CREATOR(DeviceType::kGPU, DefaultMemoryCopierCreator, []() {
-  return new FuncDefaultMemoryCopierCreator([]() { return new CudaMemoryCopier(); });
-});
+REGISTER_DEFAULT_MEMORY_COPIER(DeviceType::kGPU, []() { return new CudaMemoryCopier(); });
 
 #endif
 

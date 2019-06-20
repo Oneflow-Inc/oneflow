@@ -64,14 +64,22 @@ class CudaMemoryCopier final : virtual public MemoryCopier {
 
 #endif
 
-class DefaultMemoryCopierCreator {
+class DefaultMemoryCopierCreator final {
  public:
+  using Func = std::function<MemoryCopier*()>;
   OF_DISALLOW_COPY_AND_MOVE(DefaultMemoryCopierCreator)
-  DefaultMemoryCopierCreator() = default;
-  virtual ~DefaultMemoryCopierCreator() = default;
+  explicit DefaultMemoryCopierCreator(Func f) : func_(std::move(f)) {}
+  ~DefaultMemoryCopierCreator() = default;
 
-  virtual MemoryCopier* Create() = 0;
+  MemoryCopier* Create() { return func_(); }
+
+ private:
+  const Func func_;
 };
+
+#define REGISTER_DEFAULT_MEMORY_COPIER(device_type, func)         \
+  REGISTER_CLASS_CREATOR(device_type, DefaultMemoryCopierCreator, \
+                         ([] { return new DefaultMemoryCopierCreator(func); }))
 
 MemoryCopier* NewDefaultMemoryCopier(DeviceType device_type);
 
