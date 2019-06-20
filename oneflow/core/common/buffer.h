@@ -1,0 +1,59 @@
+#ifndef ONEFLOW_CORE_COMMON_BUFFER_H_
+#define ONEFLOW_CORE_COMMON_BUFFER_H_
+
+#include "oneflow/core/common/util.h"
+
+namespace oneflow {
+
+enum BufferStatus { kBufferStatusSuccess = 0, kBufferStatusErrorClosed };
+
+template<typename T>
+class Buffer final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(Buffer);
+  Buffer(size_t max_len) : max_len_(max_len), is_closed_(false) {}
+  ~Buffer() = default;
+
+  BufferStatus Send(const T& item);
+  BufferStatus Receive(T* item);
+  void Close();
+
+ private:
+  std::queue<T> queue_;
+  mutable std::mutex mutex_;
+  size_t max_len_;
+  bool is_closed_;
+  std::condition_variable cond_;
+};
+
+template<typename T>
+BufferStatus Buffer<T>::Send(const T& item) {
+  std::unique_lock<std::mutex> lock(mutex_);
+  if (is_closed_) { return kBufferStatusErrorClosed; }
+  cond_.wait(lock, [this]() { return queue_.size() < max_len_; });
+  queue_.push(item);
+  cond_.notify_one();
+  return kBufferStatusSuccess;
+}
+
+template<typename T>
+BufferStatus Buffer<T>::Receive(T* item) {
+  std::unique_lock<std::mutex> lock(mutex_);
+  cond_.wait(lock, [this]() { return (!queue_.empty()) || is_closed_; });
+  if (queue_.empty()) { return kBufferStatusErrorClosed; }
+  *item = queue_.front();
+  queue_.pop();
+  if (queue_.size() < max_len_) { cond_.notify_all(); }
+  return kBufferStatusSuccess;
+}
+
+template<typename T>
+void Buffer<T>::Close() {
+  std::unique_lock<std::mutex> lock(mutex_);
+  is_closed_ = true;
+  cond_.notify_all();
+}
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_COMMON_BUFFER_H_

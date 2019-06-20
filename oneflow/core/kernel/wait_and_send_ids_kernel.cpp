@@ -9,9 +9,9 @@ void WaitAndSendIdsKernel<T>::ForwardDataContent(
   auto* status = static_cast<WaitAndSendIdsStatus*>(ctx.other);
   const auto& conf = this->op_conf().wait_and_send_ids_conf();
   if (status->out_idx_ >= status->out_num_) {
-    status->channel_status_ =
-        Global<BufferMgr<int64_t>>::Get()->Get(conf.wait_channel_name())->Receive(&status->in_id_);
-    if (status->channel_status_ == kChannelStatusErrorClosed) { return; }
+    status->buffer_status_ =
+        Global<BufferMgr<int64_t>>::Get()->Get(conf.wait_buffer_name())->Receive(&status->in_id_);
+    if (status->buffer_status_ == kBufferStatusErrorClosed) { return; }
     status->out_idx_ = 0;
     status->out_num_ = conf.id_list(status->in_id_).id_size();
   }

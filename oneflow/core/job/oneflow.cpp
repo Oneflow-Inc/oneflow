@@ -183,8 +183,7 @@ void WithJobSetLevelGlobalObjs(
         new JobDesc(job_set.job_conf(i), i));
   }
   Global<BufferMgr<int64_t>>::New();
-  Global<BufferMgr<int64_t>>::Get()->NewChannel(kChannelNameGlobalWaitJobId,
-                                                job_set.job_conf_size());
+  Global<BufferMgr<int64_t>>::Get()->NewBuffer(kBufferNameGlobalWaitJobId, job_set.job_conf_size());
 
   Handler(job_set.job_conf());
 
@@ -529,7 +528,7 @@ void MakeMainJob(const std::vector<Job>& jobs, Job* main_job,
     wait_and_send_ids_op_conf.set_name(std::string("System-Main-WaitAndSendIds_") + NewUniqueId());
     auto* wait_and_send_ids_conf = wait_and_send_ids_op_conf.mutable_wait_and_send_ids_conf();
     wait_and_send_ids_conf->set_out("out");
-    wait_and_send_ids_conf->set_wait_channel_name(kChannelNameGlobalWaitJobId);
+    wait_and_send_ids_conf->set_wait_buffer_name(kBufferNameGlobalWaitJobId);
     wait_and_send_ids_conf->set_data_type(DataType::kInt32);
     FOR_RANGE(int64_t, i, 0, Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->size()) {
       const auto& cs_idx = Global<CriticalSectionDesc>::Get()->CriticalSectionIds4JobId(i);
