@@ -14,11 +14,8 @@ const LARSModelUpdateConf& GetLARSModelUpdateConf(const OperatorConf& op_conf) {
 
 template<DeviceType device_type, typename T>
 const PbMessage& LARSMdUpdateKernel<device_type, T>::GetCustomizedOpConf() const {
-  if (Global<JobDesc>::Get()->IsTrain()) {
-    return this->op_conf().lars_model_update_conf();
-  } else {
-    UNIMPLEMENTED();
-  }
+  CHECK(Global<JobDesc>::Get()->IsTrain());
+  return this->op_conf().lars_model_update_conf();
 }
 
 template<DeviceType device_type, typename T>
