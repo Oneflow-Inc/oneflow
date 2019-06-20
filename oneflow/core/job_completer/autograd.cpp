@@ -10,11 +10,8 @@ namespace {
 
 const TrainConf& GetTrainConf() {
   const JobDesc* job_desc = Global<JobDesc>::Get();
-  if (Global<JobDesc>::Get()->IsTrain()) {
-    return job_desc->other_conf().train_conf();
-  } else {
-    UNIMPLEMENTED();
-  }
+  CHECK(Global<JobDesc>::Get()->IsTrain());
+  return job_desc->other_conf().train_conf();
 }
 
 bool AnyLbiWithDiffLbi(const OpEdge* op_edge) {
