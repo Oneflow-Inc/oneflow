@@ -45,8 +45,9 @@ void SoftmaxOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
     transpose_blob_desc->set_data_type(in_blob_desc->data_type());
     *GetBlobDesc4BnInOp("transpose_out") = *transpose_blob_desc;
   } else {
-    *GetBlobDesc4BnInOp("transpose_in") = *in_blob_desc;
-    *GetBlobDesc4BnInOp("transpose_out") = *in_blob_desc;
+    BlobDesc* transpose_blob_desc = GetBlobDesc4BnInOp("transpose_in");
+    transpose_blob_desc->mut_shape() = Shape({in_blob_desc->shape().At(0)});
+    *GetBlobDesc4BnInOp("transpose_out") = *transpose_blob_desc;
   }
 }
 

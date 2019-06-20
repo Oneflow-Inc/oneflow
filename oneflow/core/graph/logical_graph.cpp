@@ -181,7 +181,6 @@ bool LogicalGraph::MustHaveModelDiffAcc() {
 void LogicalGraph::BuildModelStruct(bool is_train) {
   HashMap<const LogicalNode*, NormalMdUpdtLogicalNode*> first_shared2mdupdt;
   HashMap<const LogicalNode*, ReduceCtx> fw_node2reduce_ctx;
-  bool must_have_model_diff_acc = MustHaveModelDiffAcc();
   ForEachLogicalNode<ForwardLogicalNode>([&](ForwardLogicalNode* fw_logical) {
     if (fw_logical->HasOpWithForwardModelBlob()) { BuildMdSaveStructIfNeed(fw_logical); }
     if (fw_logical->HasOpWithModelOrConstModelBlob()) {
@@ -431,7 +430,6 @@ MdSaveLogicalNode* LogicalGraph::BuildMdSaveStructIfNeed(LogicalNode* need_save_
 
 void LogicalGraph::ForEachNecessaryCtrlEdge(
     const std::function<void(const LogicalNode*, const LogicalNode*, int64_t)>& Handler) const {
-  if (!Global<JobDesc>::Get()->IsTrain()) { return; }
   HashMap<std::string, const LogicalNode*> op_name2node;
   ForEachNode([&](LogicalNode* node) {
     for (const auto& op : node->op_vec()) {

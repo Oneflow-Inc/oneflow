@@ -43,14 +43,6 @@ void ReduceSplitOp::VirtualGenKernelConf(
   CHECK_EQ(out_blob_elem_cnt_sum, in_blob_elem_cnt);
 }
 
-LogicalBlobId ReduceSplitOp::ibn2lbi(const std::string& input_bn) const {
-  return this->Operator::ibn2lbi(input_bn);
-}
-
-LogicalBlobId ReduceSplitOp::obn2lbi(const std::string& output_bn) const {
-  return this->Operator::obn2lbi(output_bn);
-}
-
 void ReduceSplitOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   CHECK_EQ(*HasBatchDim4BnInOp("in"), false);

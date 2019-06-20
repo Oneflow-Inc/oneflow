@@ -23,8 +23,6 @@ class ReduceSplitOp final : public Operator {
   void GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override {}
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext*, KernelConf*) const override;
-  LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
-  LogicalBlobId obn2lbi(const std::string& output_bn) const override;
 };
 
 }  // namespace oneflow

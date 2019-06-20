@@ -30,9 +30,6 @@ class ReduceIdentityOp final : public Operator {
                          const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
                          std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
                          const ParallelDesc& parallel_desc) const override;
-
-  LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
-  LogicalBlobId obn2lbi(const std::string& output_bn) const override;
 };
 
 }  // namespace oneflow

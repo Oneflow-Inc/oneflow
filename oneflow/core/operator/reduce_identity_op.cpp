@@ -15,14 +15,6 @@ void ReduceIdentityOp::InferBlobDescs(
   CHECK_EQ(GetBlobDesc4BnInOp("out")->shape().elem_cnt() % parallel_ctx->parallel_num(), 0);
 }
 
-LogicalBlobId ReduceIdentityOp::ibn2lbi(const std::string& input_bn) const {
-  return this->Operator::ibn2lbi(input_bn);
-}
-
-LogicalBlobId ReduceIdentityOp::obn2lbi(const std::string& output_bn) const {
-  return this->Operator::obn2lbi(output_bn);
-}
-
 void ReduceIdentityOp::InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
