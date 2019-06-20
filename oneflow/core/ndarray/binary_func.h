@@ -39,11 +39,58 @@ OF_DEVICE_FUNC const T BinaryFuncMin(const T x, const T y) {
   return x < y ? x : y;
 }
 
-#define ARITHMETIC_BINARY_FUNC_SEQ    \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryFuncAdd) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryFuncSub) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryFuncMul) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryFuncDiv)
+// TODO: Add a different template argument for output datatype in compare operations below.
+template<typename T>
+OF_DEVICE_FUNC const T BinaryFuncEqual(const T x, const T y) {
+  return static_cast<const T>(x == y);
+}
+
+template<typename T>
+OF_DEVICE_FUNC const T BinaryFuncNotEqual(const T x, const T y) {
+  return static_cast<const T>(x != y);
+}
+
+template<typename T>
+OF_DEVICE_FUNC const T BinaryFuncLess(const T x, const T y) {
+  return static_cast<const T>(x < y);
+}
+
+template<typename T>
+OF_DEVICE_FUNC const T BinaryFuncLessEqual(const T x, const T y) {
+  return static_cast<const T>(x <= y);
+}
+
+template<typename T>
+OF_DEVICE_FUNC const T BinaryFuncGreater(const T x, const T y) {
+  return static_cast<const T>(x > y);
+}
+
+template<typename T>
+OF_DEVICE_FUNC const T BinaryFuncGreaterEqual(const T x, const T y) {
+  return static_cast<const T>(x >= y);
+}
+
+template<typename T>
+OF_DEVICE_FUNC const T BinaryLogicalAnd(const T x, const T y) {
+  return static_cast<const T>(x >= y);
+}
+
+template<typename T>
+OF_DEVICE_FUNC const T BinaryFuncLogicalOr(const T x, const T y) {
+  return static_cast<const T>(x || y);
+}
+
+#define ARITHMETIC_BINARY_FUNC_SEQ          \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryFuncAdd)       \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryFuncSub)       \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryFuncMul)       \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryFuncDiv)       \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryFuncEqual)     \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryFuncNotEqual)  \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryFuncLess)      \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryFuncLessEqual) \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryFuncGreater)   \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryFuncGreaterEqual)
 
 template<typename T, const T (*binary_func)(const T, const T), typename Enable = void>
 struct UnitOfBinaryFunc;
