@@ -14,18 +14,6 @@ void TupleIdentityKernel<device_type>::ForwardDataContent(
   }
 }
 
-template<DeviceType device_type>
-void TupleIdentityKernel<device_type>::BackwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const auto& input_diff_bns = this->op_attribute().input_diff_bns();
-  const auto& output_diff_bns = this->op_attribute().output_diff_bns();
-  CHECK_EQ(input_diff_bns.size(), output_diff_bns.size());
-  FOR_RANGE(int, i, 0, output_diff_bns.size()) {
-    Blob* in_diff_blob = BnInOp2Blob(input_diff_bns.Get(i));
-    in_diff_blob->CopyDataContentFrom(ctx.device_ctx, BnInOp2Blob(output_diff_bns.Get(i)));
-  }
-}
-
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kTupleIdentityConf, TupleIdentityKernel);
 
 }  // namespace oneflow

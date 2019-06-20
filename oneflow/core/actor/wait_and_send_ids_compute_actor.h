@@ -19,8 +19,8 @@ class WaitAndSendIdsCompActor final : public CompActor {
       override {
     return std::make_pair(RegstNameType::kNaive, HashSet<std::string>{});
   }
-  bool IsCustomizedReadReady() override;
-  bool IsCustomizedReadAlwaysUnReadyFromNow() override { return !IsCustomizedReadReady(); }
+  bool IsCustomizedReadReady() const override;
+  bool IsCustomizedReadAlwaysUnReadyFromNow() const override { return !IsCustomizedReadReady(); }
 
   int HandlerWaitToStart(const ActorMsg&);
 

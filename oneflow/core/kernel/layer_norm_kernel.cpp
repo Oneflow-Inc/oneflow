@@ -54,61 +54,6 @@ void LayerNormKernel<device_type, T>::ForwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
-void LayerNormKernel<device_type, T>::BackwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const LayerNormOpConf& conf = this->op_conf().layer_norm_conf();
-  const Blob* out_diff = BnInOp2Blob(GenDiffBn("out"));
-  Blob* in_diff = BnInOp2Blob(GenDiffBn("in"));
-  Blob* bw_buf = BnInOp2Blob("bw_reduce_buf");
-  if (conf.center() && this->op_conf().trainable()) {
-    Blob* beta_diff = BnInOp2Blob(GenDiffBn("beta"));
-    const int64_t m = beta_diff->shape().elem_cnt();
-    CHECK_EQ(out_diff->shape().elem_cnt() % m, 0);
-    const int64_t n = out_diff->shape().elem_cnt() / m;
-    NdarrayUtil<device_type, T>::ReduceSum(ctx.device_ctx,
-                                           XpuVarNdarray<T>({1, m}, beta_diff->mut_dptr<T>()),
-                                           XpuVarNdarray<const T>({n, m}, out_diff->dptr<T>()),
-                                           XpuVarNdarray<T>({n, m}, bw_buf->mut_dptr<T>()));
-  }
-  if (conf.scale()) {
-    Blob* normalize_out = BnInOp2Blob("normalized");
-    const Blob* gamma = BnInOp2Blob("gamma");
-    Blob* gamma_diff = BnInOp2Blob(GenDiffBn("gamma"));
-    const int64_t m = gamma_diff->shape().elem_cnt();
-    CHECK_EQ(out_diff->shape().elem_cnt() % m, 0);
-    const int64_t n = out_diff->shape().elem_cnt() / m;
-    if (this->op_conf().trainable()) {
-      NdarrayUtil<device_type, T>::template BroadcastApply<BinaryFuncMul>(
-          ctx.device_ctx, XpuVarNdarray<T>({n, m}, bw_buf->mut_dptr<T>()),
-          XpuVarNdarray<const T>({n, m}, normalize_out->dptr<T>()),
-          XpuVarNdarray<const T>({n, m}, out_diff->dptr<T>()));
-      NdarrayUtil<device_type, T>::ReduceSum(ctx.device_ctx,
-                                             XpuVarNdarray<T>({1, m}, gamma_diff->mut_dptr<T>()),
-                                             XpuVarNdarray<const T>({n, m}, bw_buf->dptr<T>()),
-                                             XpuVarNdarray<T>({n, m}, bw_buf->mut_dptr<T>()));
-    }
-    if (in_diff) {
-      NdarrayUtil<device_type, T>::template BroadcastApply<BinaryFuncMul>(
-          ctx.device_ctx, XpuVarNdarray<T>({n, m}, normalize_out->mut_dptr<T>()),
-          XpuVarNdarray<const T>({n, m}, out_diff->dptr<T>()),
-          XpuVarNdarray<const T>({1, m}, gamma->dptr<T>()));
-    }
-  }
-  if (in_diff) {
-    const Blob* in = BnInOp2Blob("in");
-    const Blob* normalize_out_diff = conf.scale() ? BnInOp2Blob("normalized") : out_diff;
-    const Blob* bn_scale = BnInOp2Blob("cudnn_bn_scale_ones");
-    const Blob* mean = BnInOp2Blob("mean");
-    const Blob* inv_variance = BnInOp2Blob("inv_variance");
-    Blob* bn_scale_diff = BnInOp2Blob("cudnn_bn_scale_diff_buf");
-    Blob* bn_bias_diff = BnInOp2Blob("cudnn_bn_bias_diff_buf");
-    LayerNormKernelUtil<device_type, T>::NormalizeBackward(
-        ctx.device_ctx, in, bn_scale, mean, inv_variance, normalize_out_diff, conf.epsilon(),
-        in_diff, bn_scale_diff, bn_bias_diff);
-  }
-}
-
-template<DeviceType device_type, typename T>
 void LayerNormKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937*, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const LayerNormOpConf& conf = this->op_conf().layer_norm_conf();

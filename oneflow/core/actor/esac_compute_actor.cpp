@@ -25,7 +25,7 @@ void EsacCompActor::NormalProcessCustomizedReadableRegstMsg(const ActorMsg& msg)
   CHECK_EQ(0, consumed_rs_.TryPushBackRegst(msg.regst()));
 }
 
-bool EsacCompActor::IsCustomizedReadReady() { return -1 != GetCurProcessedRegstDescId(); }
+bool EsacCompActor::IsCustomizedReadReady() const { return -1 != GetCurProcessedRegstDescId(); }
 
 void EsacCompActor::ForEachCurCustomizedReadableRegst(
     std::function<void(const Regst*)> handler) const {
@@ -67,7 +67,7 @@ void EsacCompActor::AsyncReturnAllCustomizedReadableRegst() {
 
 bool EsacCompActor::ProducedCtrlRegstValid(int64_t regst_desc_id) const { return true; }
 
-int64_t EsacCompActor::GetCurProcessedRegstDescId() {
+int64_t EsacCompActor::GetCurProcessedRegstDescId() const {
   int64_t cur_processed_regst_desc_id = -1;
   consumed_rs_.ForChosenRegstDeq(
       [&cur_processed_regst_desc_id](int64_t) { return cur_processed_regst_desc_id == -1; },
