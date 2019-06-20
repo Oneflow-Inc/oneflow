@@ -92,11 +92,8 @@ size_t JobDesc::rdma_recv_msg_buf_byte() const {
 }
 
 const std::string& JobDesc::MdSaveSnapshotsPath() const {
-  if (Global<JobDesc>::Get()->IsTrain()) {
-    return job_conf_.other().train_conf().model_save_snapshots_path();
-  } else {
-    UNIMPLEMENTED();
-  }
+  CHECK(Global<JobDesc>::Get()->IsTrain());
+  return job_conf_.other().train_conf().model_save_snapshots_path();
 }
 
 int32_t JobDesc::NumOfBatchesInSnapshot() const {
