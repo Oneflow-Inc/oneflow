@@ -12,7 +12,7 @@ class PrintCompTaskNode final : public SinkCompTaskNode {
   ~PrintCompTaskNode() = default;
 
   TaskType GetTaskType() const override { return TaskType::kPrint; }
-  bool MayBeBlocked() const override { return true; }
+  bool IsIndependent() const override { return true; }
 
  private:
 };
