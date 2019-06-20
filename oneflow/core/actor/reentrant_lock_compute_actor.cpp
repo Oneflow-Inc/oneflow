@@ -7,8 +7,9 @@ void ReentrantLockCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   const auto& kernel_conf = task_proto.exec_sequence().exec_node().Get(0).kernel_conf();
   const auto& ibns = kernel_conf.op_attribute().input_bns();
   for (const auto& ibn : ibns) {
-    CHECK(regst_desc_id2ibn_.emplace(exec_kernel_vec().at(0).bn_in_op2regst_desc_id.at(ibn), ibn)
-              .second);
+    int64_t regst_desc_id = exec_kernel_vec().at(0).bn_in_op2regst_desc_id.at(ibn);
+    if (ibn == "start") { eord_regst_desc_id_ = regst_desc_id; }
+    CHECK(regst_desc_id2ibn_.emplace(regst_desc_id, ibn).second);
   }
   for (const auto& pair : task_proto.consumed_regst_desc_id()) {
     for (const int64_t regst_desc_id : pair.second.regst_desc_id()) {
@@ -49,7 +50,8 @@ void ReentrantLockCompActor::Act() {
 }
 
 bool ReentrantLockCompActor::IsCustomizedReadAlwaysUnReadyFromNow() const {
-  return ReceiveAllEordMsg() && reentrant_lock_status_.total_queued_request_lock_num() == 0
+  return ReceiveEordMsg(eord_regst_desc_id_)
+         && reentrant_lock_status_.total_queued_request_lock_num() == 0
          && reentrant_lock_status_.total_acquired_lock_num() == 0;
 }
 
