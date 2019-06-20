@@ -358,9 +358,7 @@ void Actor::TryLogActEvent(const std::function<void()>& DoAct) const {
 void Actor::ActUntilFail() {
   while (IsReadReady() && IsWriteReady()) {
     act_id_ += 1;
-    bool cur_act_encounter_eord = false;
-    TryLogActEvent([&] { Act(&cur_act_encounter_eord); });
-    if (cur_act_encounter_eord) { return; }
+    TryLogActEvent([&] { Act(); });
 
     AsyncSendCustomizedProducedRegstMsgToConsumer();
     AsyncSendNaiveProducedRegstMsgToConsumer();
