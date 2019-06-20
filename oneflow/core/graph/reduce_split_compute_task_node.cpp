@@ -20,43 +20,28 @@ int32_t GetDataRegstDescCnt(
 
 void ReduceSplitCompTaskNode::ProduceAllRegstsAndBindEdges() {
   std::vector<EdgeInfo> edge_infos;
-  if (Global<JobDesc>::Get()->IsTrain()) {
-    std::shared_ptr<Operator> reduce_split_op = this->logical_node()->SoleOp();
-    HashMap<LogicalBlobId, int32_t> lbi2order;
-    FOR_RANGE(int32_t, idx, 0, reduce_split_op->output_bns().size()) {
-      const auto& lbi = reduce_split_op->BnInOp2Lbi(reduce_split_op->output_bns().Get(idx));
-      CHECK(lbi2order.emplace(lbi, idx).second);
-    }
-    ForEachOutDataEdge([&](TaskEdge* edge) {
-      TaskNode* dst_node = edge->dst_node();
-      CHECK(edge->dst_node()->GetTaskType() == TaskType::kOptimizer
-            || edge->dst_node()->GetTaskType() == TaskType::kNormalForward);
-      CompTaskNode* mdupdt_node = dynamic_cast<CompTaskNode*>(dst_node);
-      std::shared_ptr<Operator> mdupdt_op = mdupdt_node->logical_node()->SoleOp();
-      int32_t order = -1;
-      for (const std::string& ibn : mdupdt_op->input_bns()) {
-        const auto& order_it = lbi2order.find(mdupdt_op->BnInOp2Lbi(ibn));
-        if (order_it != lbi2order.end()) { order = order_it->second; }
-      }
-      CHECK_NE(order, -1);
-      EdgeInfo edge_info{edge, order};
-      edge_infos.emplace_back(edge_info);
-    });
-  } else {
-    ForEachOutDataEdge([&](TaskEdge* edge) {
-      TaskNode* dst_node = edge->dst_node();
-      CHECK(dst_node->GetTaskType() == TaskType::kNormalMdUpdt);
-      CompTaskNode* mdupdt_node = dynamic_cast<CompTaskNode*>(dst_node);
-      mdupdt_node->ForEachOutDataEdge([&](TaskEdge* mdupdt_edge) {
-        if (IsBackwardTaskType(mdupdt_edge->dst_node()->GetTaskType())) {
-          CompTaskNode* bw_node = dynamic_cast<CompTaskNode*>(mdupdt_edge->dst_node());
-          // There may be multiple out_regsts on the same edge for shared_model app
-          EdgeInfo edge_info{edge, bw_node->order_in_graph()};
-          edge_infos.emplace_back(edge_info);
-        }
-      });
-    });
+  CHECK(Global<JobDesc>::Get()->IsTrain());
+  std::shared_ptr<Operator> reduce_split_op = this->logical_node()->SoleOp();
+  HashMap<LogicalBlobId, int32_t> lbi2order;
+  FOR_RANGE(int32_t, idx, 0, reduce_split_op->output_bns().size()) {
+    const auto& lbi = reduce_split_op->BnInOp2Lbi(reduce_split_op->output_bns().Get(idx));
+    CHECK(lbi2order.emplace(lbi, idx).second);
   }
+  ForEachOutDataEdge([&](TaskEdge* edge) {
+    TaskNode* dst_node = edge->dst_node();
+    CHECK(edge->dst_node()->GetTaskType() == TaskType::kOptimizer
+          || edge->dst_node()->GetTaskType() == TaskType::kNormalForward);
+    CompTaskNode* mdupdt_node = dynamic_cast<CompTaskNode*>(dst_node);
+    std::shared_ptr<Operator> mdupdt_op = mdupdt_node->logical_node()->SoleOp();
+    int32_t order = -1;
+    for (const std::string& ibn : mdupdt_op->input_bns()) {
+      const auto& order_it = lbi2order.find(mdupdt_op->BnInOp2Lbi(ibn));
+      if (order_it != lbi2order.end()) { order = order_it->second; }
+    }
+    CHECK_NE(order, -1);
+    EdgeInfo edge_info{edge, order};
+    edge_infos.emplace_back(edge_info);
+  });
   SortEdges(&edge_infos);
   FOR_RANGE(size_t, idx, 0, edge_infos.size()) {
     std::string out_regst_name = "out_" + std::to_string(idx);
