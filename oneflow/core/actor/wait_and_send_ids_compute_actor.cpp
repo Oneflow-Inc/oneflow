@@ -12,12 +12,17 @@ void WaitAndSendIdsCompActor::VirtualCompActorInit(const TaskProto& task_proto) 
   OF_SET_MSG_HANDLER(&WaitAndSendIdsCompActor::HandlerWaitToStart);
 }
 
-void WaitAndSendIdsCompActor::Act(bool* cur_act_encounter_eord) {
+void WaitAndSendIdsCompActor::Act() {
   CHECK_LE(wait_and_send_ids_status_.out_idx_, wait_and_send_ids_status_.out_num_);
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
   kernel_ctx.other = &wait_and_send_ids_status_;
   AsyncLaunchKernel(kernel_ctx);
-  *cur_act_encounter_eord = (wait_and_send_ids_status_.channel_status_ != kChannelStatusSuccess);
+}
+
+void WaitAndSendIdsCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
+  if (wait_and_send_ids_status_.channel_status_ == kChannelStatusSuccess) {
+    HandleProducedNaiveDataRegstToConsumer();
+  }
 }
 
 bool WaitAndSendIdsCompActor::IsCustomizedReadReady() const {
