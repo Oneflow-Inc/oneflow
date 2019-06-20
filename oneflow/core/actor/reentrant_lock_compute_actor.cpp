@@ -49,8 +49,8 @@ void ReentrantLockCompActor::Act() {
 }
 
 bool ReentrantLockCompActor::IsCustomizedReadAlwaysUnReadyFromNow() const {
-  return ReceiveAllEordMsg() && reentrant_lock_status_.queued_request_lock_num() == 0
-         && reentrant_lock_status_.acquired_lock_num() == 0;
+  return ReceiveAllEordMsg() && reentrant_lock_status_.total_queued_request_lock_num() == 0
+         && reentrant_lock_status_.total_acquired_lock_num() == 0;
 }
 
 void ReentrantLockCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
