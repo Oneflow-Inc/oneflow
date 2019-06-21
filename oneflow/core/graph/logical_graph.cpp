@@ -457,7 +457,8 @@ void LogicalGraph::ForEachNecessaryCtrlEdge(
           const Shape* dst_time_shape = dst->in_blob_fastest_time_shape();
           if (dst_time_shape == nullptr) { dst_time_shape = dst->out_blob_time_shape(); }
           CHECK_NOTNULL(dst_time_shape);
-          CHECK(src_time_shape->Containing(*dst_time_shape));
+          CHECK(src_time_shape->elem_cnt() == dst_time_shape->elem_cnt()
+                || src_time_shape->Containing(*dst_time_shape));
           CHECK_EQ(src_time_shape->elem_cnt() % dst_time_shape->elem_cnt(), 0);
           int64_t regst_desc_num = src_time_shape->elem_cnt() / dst_time_shape->elem_cnt();
           Handler(src, dst, regst_desc_num);

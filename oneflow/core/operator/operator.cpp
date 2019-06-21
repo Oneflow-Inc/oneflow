@@ -113,7 +113,8 @@ void Operator::InferOutputBlobTimeShapeIf(
     std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
     const ParallelContext* parallel_ctx, Shape* time_shape) const {
   for (const std::string& ibn : input_bns()) {
-    CHECK_EQ(*GetTimeShape4BnInOp(ibn), *GetTimeShape4BnInOp(input_bns().Get(0)));
+    CHECK_EQ(GetTimeShape4BnInOp(ibn)->elem_cnt(),
+             GetTimeShape4BnInOp(input_bns().Get(0))->elem_cnt());
   }
   InferOutputBlobTimeShape(GetTimeShape4BnInOp, parallel_ctx, time_shape);
 }
@@ -121,9 +122,6 @@ void Operator::InferOutputBlobTimeShapeIf(
 void Operator::InferOutputBlobTimeShape(
     std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
     Shape* time_shape) const {
-  for (const std::string& bn : input_bns()) {
-    CHECK_EQ(*GetTimeShape4BnInOp(input_bns().Get(0)), *GetTimeShape4BnInOp(bn));
-  }
   if (input_bns().empty() == false) {
     *time_shape = *GetTimeShape4BnInOp(input_bns().Get(0));
   } else {
