@@ -6,7 +6,6 @@ namespace oneflow {
 namespace {
 
 const AdamModelUpdateConf& GetAdamModelUpdateConf(const OperatorConf& op_conf) {
-  CHECK(Global<JobDesc>::Get()->IsTrain());
   return op_conf.adam_model_update_conf().user_conf().adam_conf();
 };
 

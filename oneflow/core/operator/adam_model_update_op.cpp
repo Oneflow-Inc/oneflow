@@ -3,7 +3,6 @@
 namespace oneflow {
 
 void AdamModelUpdateOp::MdUpdtVirtualInitFromOpConf() {
-  CHECK(Global<JobDesc>::Get()->IsTrain());
   const auto& adam_conf = op_conf().adam_model_update_conf().user_conf().adam_conf();
   CHECK_GE(adam_conf.beta1(), 0);
   CHECK_LT(adam_conf.beta1(), 1);
@@ -21,7 +20,6 @@ void AdamModelUpdateOp::MdUpdtVirtualInitFromOpConf() {
 void AdamModelUpdateOp::MdUpdtVirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  CHECK(Global<JobDesc>::Get()->IsTrain());
   const auto& adam_conf = op_conf().adam_model_update_conf().user_conf().adam_conf();
   const BlobDesc* model_blob_desc = GetBlobDesc4BnInOp("model");
   CHECK_EQ(model_blob_desc->data_type(), Global<JobDesc>::Get()->DefaultDataType());

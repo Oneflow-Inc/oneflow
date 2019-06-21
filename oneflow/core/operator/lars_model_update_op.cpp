@@ -3,7 +3,6 @@
 namespace oneflow {
 
 void LARSModelUpdateOp::MdUpdtVirtualInitFromOpConf() {
-  CHECK(Global<JobDesc>::Get()->IsTrain());
   EnrollInputBn("momentum", false)->set_is_mutable(true);
   EnrollDataTmpBn("data_tmp");
 }
@@ -12,7 +11,6 @@ void LARSModelUpdateOp::MdUpdtVirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* model_blob_desc = GetBlobDesc4BnInOp("model");
-  CHECK(Global<JobDesc>::Get()->IsTrain());
   CHECK(*GetBlobDesc4BnInOp("momentum") == *model_blob_desc);
 
   // data_tmp for gpu compute

@@ -6,7 +6,6 @@ namespace oneflow {
 namespace {
 
 const MomentumModelUpdateConf& GetMomentumModelUpdateConf(const OperatorConf& op_conf) {
-  CHECK(Global<JobDesc>::Get()->IsTrain());
   return op_conf.momentum_model_update_conf().user_conf().momentum_conf();
 }
 

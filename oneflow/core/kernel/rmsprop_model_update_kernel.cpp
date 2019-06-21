@@ -6,7 +6,6 @@ namespace oneflow {
 namespace {
 
 const RMSPropModelUpdateConf& GetRMSPropModelUpdateConf(const OperatorConf& op_conf) {
-  CHECK(Global<JobDesc>::Get()->IsTrain());
   return op_conf.rmsprop_model_update_conf().user_conf().rmsprop_conf();
 }
 
