@@ -7,10 +7,9 @@ namespace {
 
 void CheckOpConf(const OperatorConf& op_conf) {
   CHECK(op_conf.ctrl_in_op_name().empty());
-  if (op_conf.input_conf().has_dim0_inner_shape()) { TODO(); }
-  if (op_conf.input_conf().has_dim0_valid_num()) { TODO(); }
-  if (op_conf.input_conf().has_dim1_valid_num()) { TODO(); }
-  if (op_conf.input_conf().has_dim2_valid_num()) { TODO(); }
+  if (op_conf.input_conf().blob_conf().has_dim0_inner_shape()) { TODO(); }
+  if (op_conf.input_conf().blob_conf().has_dim1_valid_num()) { TODO(); }
+  if (op_conf.input_conf().blob_conf().has_dim2_valid_num()) { TODO(); }
 }
 
 void CheckShape(const Shape& shape) {
@@ -21,7 +20,7 @@ void CheckShape(const Shape& shape) {
 
 void InputOp::InitFromOpConf() {
   CHECK(op_conf().has_input_conf());
-  if (op_conf().input_conf().has_tick()) { EnrollOutputBn("in", false); }
+  if (op_conf().input_conf().has_tick()) { EnrollInputBn("tick", false); }
   EnrollOutputBn("out", false);
 }
 
@@ -30,7 +29,7 @@ const PbMessage& InputOp::GetCustomizedConf() const { return op_conf().input_con
 void InputOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx, int64_t record_piece_size) const {
   CheckOpConf(op_conf());
-  const auto& conf = op_conf().input_conf();
+  const auto& conf = op_conf().input_conf().blob_conf();
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   out_blob_desc->mut_shape() = Shape(conf.shape());
   CheckShape(out_blob_desc->shape());
@@ -45,14 +44,15 @@ void InputOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlo
   } else {
     out_blob_desc->set_data_type(Global<JobDesc>::Get()->DefaultDataType());
   }
+  out_blob_desc->set_has_dim1_valid_num_field(conf.dim0_valid_num());
 }
 
 void InputOp::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  *HasBatchDim4BnInOp("out") = op_conf().input_conf().has_batch_dim();
+  *HasBatchDim4BnInOp("out") = op_conf().input_conf().blob_conf().has_batch_dim();
 }
 
 void InputOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
-  int64_t num_axes = op_conf().input_conf().shape().dim_size();
+  int64_t num_axes = op_conf().input_conf().blob_conf().shape().dim_size();
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .Split(output_bns(), 0)
