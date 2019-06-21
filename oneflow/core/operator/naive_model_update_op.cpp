@@ -4,7 +4,6 @@
 namespace oneflow {
 
 const PbMessage& NaiveModelUpdateOp::GetCustomizedConf() const {
-  CHECK(Global<JobDesc>::Get()->IsTrain());
   return op_conf().naive_model_update_conf();
 }
 

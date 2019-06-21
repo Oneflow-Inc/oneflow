@@ -13,7 +13,6 @@ const RMSPropModelUpdateConf& GetRMSPropModelUpdateConf(const OperatorConf& op_c
 
 template<DeviceType device_type, typename T>
 const PbMessage& RMSPropMdUpdateKernel<device_type, T>::GetCustomizedOpConf() const {
-  CHECK(Global<JobDesc>::Get()->IsTrain());
   return this->op_conf().rmsprop_model_update_conf();
 }
 

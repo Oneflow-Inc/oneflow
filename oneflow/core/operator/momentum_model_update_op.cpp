@@ -16,7 +16,6 @@ void MomentumModelUpdateOp::MdUpdtVirtualInferBlobDescs(
 }
 
 const PbMessage& MomentumModelUpdateOp::GetCustomizedConf() const {
-  CHECK(Global<JobDesc>::Get()->IsTrain());
   return op_conf().momentum_model_update_conf();
 }
 

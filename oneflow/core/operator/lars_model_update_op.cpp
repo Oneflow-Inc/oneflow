@@ -21,7 +21,6 @@ void LARSModelUpdateOp::MdUpdtVirtualInferBlobDescs(
 }
 
 const PbMessage& LARSModelUpdateOp::GetCustomizedConf() const {
-  CHECK(Global<JobDesc>::Get()->IsTrain());
   return op_conf().lars_model_update_conf();
 }
 

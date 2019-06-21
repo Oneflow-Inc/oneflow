@@ -13,7 +13,6 @@ const MomentumModelUpdateConf& GetMomentumModelUpdateConf(const OperatorConf& op
 
 template<DeviceType device_type, typename T>
 const PbMessage& MomentumMdUpdateKernel<device_type, T>::GetCustomizedOpConf() const {
-  CHECK(Global<JobDesc>::Get()->IsTrain());
   return this->op_conf().momentum_model_update_conf();
 }
 

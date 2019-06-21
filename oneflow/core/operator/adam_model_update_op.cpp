@@ -38,7 +38,6 @@ const HashSet<std::string> AdamModelUpdateOp::AlwaysBroadcastParallelBns() const
 }
 
 const PbMessage& AdamModelUpdateOp::GetCustomizedConf() const {
-  CHECK(Global<JobDesc>::Get()->IsTrain());
   return op_conf().adam_model_update_conf();
 }
 

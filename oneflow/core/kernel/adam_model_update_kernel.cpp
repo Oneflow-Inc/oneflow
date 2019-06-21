@@ -26,7 +26,6 @@ void UpdateMomentEstimate(int64_t n, bool do_bias_correction, T beta, int32_t p,
 
 template<DeviceType device_type, typename T>
 const PbMessage& AdamMdUpdateKernel<device_type, T>::GetCustomizedOpConf() const {
-  CHECK(Global<JobDesc>::Get()->IsTrain());
   return this->op_conf().adam_model_update_conf();
 }
 

@@ -14,7 +14,6 @@ void RMSPropModelUpdateOp::MdUpdtVirtualInferBlobDescs(
 }
 
 const PbMessage& RMSPropModelUpdateOp::GetCustomizedConf() const {
-  CHECK(Global<JobDesc>::Get()->IsTrain());
   return op_conf().rmsprop_model_update_conf();
 }
 
