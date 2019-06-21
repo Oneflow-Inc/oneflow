@@ -755,21 +755,38 @@ message CastOpConf {
   required DataType data_type = 3;
 }
 
+message InputBlobConf {
+  required ShapeProto shape = 1;
+  optional DataType data_type = 2;
+  optional ShapeProto dim0_inner_shape = 3;
+  optional int64 dim0_valid_num = 4;
+  optional int64 dim1_valid_num = 5;
+  optional int64 dim2_valid_num = 6;
+  optional bool has_batch_dim = 7 [default = true];
+}
+
 message InputOpConf {
   optional string tick = 1;
   required string out = 2;
-  required ShapeProto shape = 3;
-  optional DataType data_type = 4;
-  optional ShapeProto dim0_inner_shape = 5;
-  optional int64 dim0_valid_num = 6;
-  optional int64 dim1_valid_num = 7;
-  optional int64 dim2_valid_num = 8;
-  optional bool has_batch_dim = 9 [default = true];
+  required InputBlobConf blob_conf = 3;
+}
+
+message ForeignInputOpConf {
+  optional string tick = 1;
+  required string out = 2;
+  required InputBlobConf blob_conf = 3;
+  required string foreign_blob_buffer_name = 4;
 }
 
 message OutputOpConf {
   required string in = 1;
   required string out = 2;
+}
+
+message ForeignOutputOpConf {
+  required string in = 1;
+  required string out = 2;
+  required string foreign_blob_buffer_name = 3;
 }
 
 message VariableOpConf {
@@ -1465,6 +1482,8 @@ message OperatorConf {
     WaitAndSendIdsOpConf wait_and_send_ids_conf = 139;
     ReentrantLockOpConf reentrant_lock_conf = 140;
     CallbackNotifyOpConf callback_notify_conf = 141;
+    ForeignInputOpConf foreign_input_conf = 142;
+    ForeignOutputOpConf foreign_output_conf = 143;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;

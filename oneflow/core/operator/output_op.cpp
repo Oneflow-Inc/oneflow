@@ -4,6 +4,7 @@
 namespace oneflow {
 
 void OutputOp::InitFromOpConf() {
+  CHECK(op_conf().has_output_conf());
   EnrollInputBn("in");
   EnrollOutputBn("out");
 }
@@ -22,7 +23,6 @@ void OutputOp::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatc
 void OutputOp::GetSbpSignatures(
     const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
     SbpSignatureList* sbp_sig_list) const {
-  const auto bns = StdVec2PbRpf<std::string>({"in", "out"});
   int64_t num_axes = LogicalBlobDesc4Ibn(input_bns().Get(0)).shape().NumAxes();
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
