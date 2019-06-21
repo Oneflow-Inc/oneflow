@@ -9,7 +9,8 @@ void CallbackNotifyKernel<T>::ForwardDataContent(
   const auto& buffer_name = this->op_conf().callback_notify_conf().callback_buffer_name(buffer_id);
   std::function<void()> Callback;
   BufferStatus buffer_status =
-      Global<BufferMgr<std::function<void()>>>::Get()->Get(buffer_name)->Receive(&Callback);
+      Global<BufferMgr<std::function<void()>>>::Get()->Get(buffer_name)->TryReceive(&Callback);
+  CHECK_NE(buffer_status, kBufferStatusEmpty);
   if (buffer_status == kBufferStatusSuccess) { Callback(); }
 }
 

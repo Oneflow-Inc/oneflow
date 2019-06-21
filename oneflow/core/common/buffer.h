@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-enum BufferStatus { kBufferStatusSuccess = 0, kBufferStatusErrorClosed };
+enum BufferStatus { kBufferStatusSuccess = 0, kBufferStatusErrorClosed, kBufferStatusEmpty };
 
 template<typename T>
 class Buffer final {
@@ -16,6 +16,7 @@ class Buffer final {
 
   BufferStatus Send(const T& item);
   BufferStatus Receive(T* item);
+  BufferStatus TryReceive(T* item);
   void Close();
 
  private:
@@ -41,6 +42,16 @@ BufferStatus Buffer<T>::Receive(T* item) {
   std::unique_lock<std::mutex> lock(mutex_);
   cond_.wait(lock, [this]() { return (!queue_.empty()) || is_closed_; });
   if (queue_.empty()) { return kBufferStatusErrorClosed; }
+  *item = queue_.front();
+  queue_.pop();
+  if (queue_.size() < max_len_) { cond_.notify_all(); }
+  return kBufferStatusSuccess;
+}
+
+template<typename T>
+BufferStatus Buffer<T>::TryReceive(T* item) {
+  std::unique_lock<std::mutex> lock(mutex_);
+  if (queue_.empty()) { return is_closed_ ? kBufferStatusErrorClosed : kBufferStatusEmpty; }
   *item = queue_.front();
   queue_.pop();
   if (queue_.size() < max_len_) { cond_.notify_all(); }
