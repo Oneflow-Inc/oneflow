@@ -10,9 +10,9 @@ void CriticalSectionDesc::AddCriticalSection(std::unique_ptr<CriticalSection>&& 
 void CriticalSectionDesc::Done() {
   CHECK_EQ(inited_, false);
   UpdateJobId2CriticalSectionIds();
-  UpdateTotalJobCriticalSectionIds();
+  UpdateJobId2TotalJobCriticalSectionId();
   UpdateCriticalSectionIds2IntersectingIds();
-  CHECK_EQ(job_id2critical_section_ids_.size(), total_job_critical_section_ids_.size());
+  CHECK_EQ(job_id2critical_section_ids_.size(), job_id2total_job_critical_section_id_.size());
   CHECK_EQ(critical_sections_.size(), critical_section_id2intersecting_ids_.size());
   inited_ = true;
 }
@@ -53,16 +53,18 @@ void CriticalSectionDesc::UpdateJobId2CriticalSectionIds() {
   job_id2critical_section_ids_.resize(max_job_id + 1);
 }
 
-void CriticalSectionDesc::UpdateTotalJobCriticalSectionIds() {
+void CriticalSectionDesc::UpdateJobId2TotalJobCriticalSectionId() {
   CHECK_EQ(inited_, false);
   HashSet<int64_t> unique_check;
+  job_id2total_job_critical_section_id_.resize(critical_sections_.size());
   FOR_RANGE(int64_t, i, 0, critical_sections_.size()) {
     const auto& critical_section = *critical_sections_.at(i);
     if (critical_section.has_total_job_critical_section()) {
       CHECK(unique_check.emplace(critical_section.job_id()).second);
-      total_job_critical_section_ids_.push_back(i);
+      job_id2total_job_critical_section_id_.at(critical_section.job_id()) = i;
     }
   }
+  job_id2total_job_critical_section_id_.resize(unique_check.size());
 }
 
 void CriticalSectionDesc::UpdateCriticalSectionIds2IntersectingIds() {
