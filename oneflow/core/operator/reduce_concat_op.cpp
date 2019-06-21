@@ -70,18 +70,6 @@ void ReduceConcatOp::VirtualGenKernelConf(
   CHECK_EQ(reduce_concat_op_ctx->out_blob_elem_cnt, out_blob_elem_cnt);
 }
 
-LogicalBlobId ReduceConcatOp::ibn2lbi(const std::string& input_bn) const {
-  if (Global<JobDesc>::Get()->IsTrain()) {
-    return this->Operator::ibn2lbi(input_bn);
-  } else {
-    return GenPackedLbi();
-  }
-}
-
-LogicalBlobId ReduceConcatOp::obn2lbi(const std::string& output_bn) const {
-  return this->Operator::obn2lbi(output_bn);
-}
-
 void ReduceConcatOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
   for (const auto& ibn : input_bns()) { CHECK_EQ(*HasBatchDim4BnInOp(ibn), false); }
