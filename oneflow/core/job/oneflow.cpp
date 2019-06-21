@@ -184,9 +184,17 @@ void WithJobSetLevelGlobalObjs(
   }
   Global<BufferMgr<int64_t>>::New();
   Global<BufferMgr<int64_t>>::Get()->NewBuffer(kBufferNameGlobalWaitJobId, job_set.job_conf_size());
+  Global<BufferMgr<std::function<void()>>>::New();
+  {
+    auto* buffer_mgr = Global<BufferMgr<std::function<void()>>>::Get();
+    FOR_RANGE(int64_t, job_id, 0, Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->size()) {
+      buffer_mgr->NewBuffer(GetJobCallbackNotifierBufferName(job_id), 100);
+    }
+  }
 
   Handler(job_set.job_conf());
 
+  Global<BufferMgr<std::function<void()>>>::Delete();
   Global<BufferMgr<int64_t>>::Delete();
   Global<std::vector<std::unique_ptr<JobDesc>>>::Delete();
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
@@ -577,6 +585,29 @@ void MakeMainJob(const std::vector<Job>& jobs, Job* main_job,
     cs_esac_conf->set_data_type(DataType::kInt32);
   }
   op_confs.push_back(cs_esac_op_conf);
+  OperatorConf callback_notify_esac_op_conf;
+  {
+    callback_notify_esac_op_conf.set_name(std::string("System-Main-Esac_") + NewUniqueId());
+    auto* callback_notify_esac_conf = callback_notify_esac_op_conf.mutable_esac_conf();
+    for (int64_t total_job_cs_id :
+         Global<CriticalSectionDesc>::Get()->job_id2total_job_critical_section_id()) {
+      callback_notify_esac_conf->add_in(identity_tick_op_names->at(total_job_cs_id) + "/out");
+    }
+    callback_notify_esac_conf->set_out("out");
+    callback_notify_esac_conf->set_data_type(DataType::kInt32);
+  }
+  op_confs.push_back(callback_notify_esac_op_conf);
+  OperatorConf callback_notify_op_conf;
+  {
+    callback_notify_op_conf.set_name(std::string("System-Main-CallbackNotify_") + NewUniqueId());
+    auto* callback_notify_conf = callback_notify_op_conf.mutable_callback_notify_conf();
+    callback_notify_conf->set_in(callback_notify_esac_op_conf.name() + "/out");
+    FOR_RANGE(int64_t, i, 0,
+              Global<CriticalSectionDesc>::Get()->job_id2total_job_critical_section_id().size()) {
+      callback_notify_conf->add_callback_buffer_name(GetJobCallbackNotifierBufferName(i));
+    }
+  }
+  op_confs.push_back(callback_notify_op_conf);
 
   critical_section_sink_lbi->set_op_name(cs_esac_op_conf.name());
   critical_section_sink_lbi->set_blob_name("out");

@@ -26,6 +26,13 @@ class BufferMgr final {
   HashMap<std::string, std::unique_ptr<Buffer<T>>> name2buffer_;
 };
 
+static const std::string kBufferNameGlobalWaitJobId = "GlobalWaitJobId";
+
+inline std::string GetJobCallbackNotifierBufferName(int64_t job_id) {
+  static const std::string prefix = "GlobalCallbackNotifier_";
+  return prefix + std::to_string(job_id);
+}
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_BUFFER_MANAGER_H_
