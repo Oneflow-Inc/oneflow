@@ -14,6 +14,7 @@ class ReentrantLockCompActor final : public CompActor {
 
  protected:
   void VirtualCompActorInit(const TaskProto&) override;
+  bool CheckOutputActId(int64_t regst_desc_id) const override { return false; }
 
  private:
   void Act() override;
