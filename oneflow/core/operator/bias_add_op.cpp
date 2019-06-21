@@ -26,6 +26,7 @@ void BiasAddOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
   // CHECK_EQ(b_blob_desc->data_type(), Global<JobDesc>::Get()->DefaultDataType());
 
   *GetBlobDesc4BnInOp("out") = *a_blob_desc;
+  *GetBlobDesc4BnInOp("bias_multiplier") = *a_blob_desc;
   GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() = Shape({a_blob_desc->shape().At(0), 1});
 }
 void BiasAddOp::GetSbpSignatures(
