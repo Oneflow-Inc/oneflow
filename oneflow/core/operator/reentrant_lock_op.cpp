@@ -6,7 +6,7 @@ namespace oneflow {
 
 void ReentrantLockOp::InitFromOpConf() {
   EnrollInputBn("start", false);
-  EnrollInputBn("end", false);
+  if (op_conf().reentrant_lock_conf().has_end()) { EnrollInputBn("end", false); }
   EnrollOutputBn("out", false);
 }
 
@@ -16,7 +16,7 @@ void ReentrantLockOp::InferBlobDescs(
   CHECK_EQ(parallel_ctx->parallel_num(), 1);
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   out->mut_shape() = Shape({1});
-  const DataType data_type = op_conf().esac_conf().data_type();
+  const DataType data_type = GetBlobDesc4BnInOp("out")->data_type();
   CHECK(IsIntegralDataType(data_type));
   out->set_data_type(data_type);
 }

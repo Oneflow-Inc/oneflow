@@ -1,18 +1,18 @@
-#ifndef ONEFLOW_CORE_OPERATOR_MODEL_LOAD_OP_H_
-#define ONEFLOW_CORE_OPERATOR_MODEL_LOAD_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_MODEL_INIT_OP_H_
+#define ONEFLOW_CORE_OPERATOR_MODEL_INIT_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
-class ModelLoadOp : public Operator {
+class ModelInitOp : public Operator {
  public:
   void InitFromOpConf() override;
 
   const PbMessage& GetCustomizedConf() const override;
 
-  LogicalNode* NewProperLogicalNode() const override { return new MdLoadLogicalNode; }
+  LogicalNode* NewProperLogicalNode() const override { return new MdInitLogicalNode; }
 
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
@@ -28,4 +28,4 @@ class ModelLoadOp : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_MODEL_LOAD_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_MODEL_INIT_OP_H_

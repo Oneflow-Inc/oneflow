@@ -17,7 +17,7 @@ class RecordLoadCompTaskNode final : public CompTaskNode {
   bool IsMeaningLess() override { return false; }
 
   TaskType GetTaskType() const override { return TaskType::kRecordLoad; }
-  bool MayBeBlocked() const override { return true; }
+  bool IsIndependent() const override { return true; }
 
  private:
   void InferProducedDataRegstTimeShape() override;

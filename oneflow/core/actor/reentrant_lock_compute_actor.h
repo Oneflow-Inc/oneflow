@@ -14,6 +14,7 @@ class ReentrantLockCompActor final : public CompActor {
 
  protected:
   void VirtualCompActorInit(const TaskProto&) override;
+  bool CheckOutputActId(int64_t regst_desc_id) const override { return false; }
 
  private:
   void Act() override;
@@ -37,6 +38,7 @@ class ReentrantLockCompActor final : public CompActor {
   int64_t cur_processed_regst_desc_id_;
   HashMap<int64_t, std::string> regst_desc_id2ibn_;
   ReentrantLockStatus reentrant_lock_status_;
+  int64_t eord_regst_desc_id_;
 };
 
 }  // namespace oneflow

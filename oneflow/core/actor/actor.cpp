@@ -236,6 +236,10 @@ void Actor::ForEachCurNaiveReadableDataRegst(std::function<void(const Regst*)> f
   });
 }
 
+bool Actor::ReceiveEordMsg(int64_t regst_desc_id) const {
+  return eord_regst_desc_ids_.find(regst_desc_id) != eord_regst_desc_ids_.end();
+}
+
 int Actor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
     remaining_eord_cnt_ -= 1;
@@ -354,9 +358,7 @@ void Actor::TryLogActEvent(const std::function<void()>& DoAct) const {
 void Actor::ActUntilFail() {
   while (IsReadReady() && IsWriteReady()) {
     act_id_ += 1;
-    bool cur_act_encounter_eord = false;
-    TryLogActEvent([&] { Act(&cur_act_encounter_eord); });
-    if (cur_act_encounter_eord) { return; }
+    TryLogActEvent([&] { Act(); });
 
     AsyncSendCustomizedProducedRegstMsgToConsumer();
     AsyncSendNaiveProducedRegstMsgToConsumer();

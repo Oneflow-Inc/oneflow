@@ -14,11 +14,12 @@ class WaitAndSendIdsCompActor final : public CompActor {
 
  private:
   void VirtualCompActorInit(const TaskProto&) override;
-  void Act(bool* cur_act_encounter_eord) override;
+  void Act() override;
   std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName()
       override {
     return std::make_pair(RegstNameType::kNaive, HashSet<std::string>{});
   }
+  void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
   bool IsCustomizedReadReady() const override;
   bool IsCustomizedReadAlwaysUnReadyFromNow() const override { return !IsCustomizedReadReady(); }
 

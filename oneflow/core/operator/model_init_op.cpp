@@ -1,17 +1,17 @@
-#include "oneflow/core/operator/model_load_op.h"
+#include "oneflow/core/operator/model_init_op.h"
 
 namespace oneflow {
 
-void ModelLoadOp::InitFromOpConf() {
-  CHECK(op_conf().has_model_load_conf());
+void ModelInitOp::InitFromOpConf() {
+  CHECK(op_conf().has_model_init_conf());
   EnrollInputBn("out", false);
 }
 
-const PbMessage& ModelLoadOp::GetCustomizedConf() const { return op_conf().model_load_conf(); }
+const PbMessage& ModelInitOp::GetCustomizedConf() const { return op_conf().model_init_conf(); }
 
-void ModelLoadOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+void ModelInitOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                  const ParallelContext* parallel_ctx) const {
-  const ModelLoadOpConf &conf = op_conf().model_load_conf();
+  const ModelInitOpConf &conf = op_conf().model_init_conf();
   BlobDesc* model_blob_desc = GetBlobDesc4BnInOp("out");
   model_blob_desc->mut_shape() = Shape(conf.shape());
   DataType data_type = Global<JobDesc>::Get()->DefaultDataType();
@@ -21,6 +21,6 @@ void ModelLoadOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   model_blob_desc->set_data_type(data_type);
 }
 
-REGISTER_OP(OperatorConf::kModelLoadConf, ModelLoadOp);
+REGISTER_OP(OperatorConf::kModelInitConf, ModelInitOp);
 
 }  // namespace oneflow

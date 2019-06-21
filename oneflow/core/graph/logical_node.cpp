@@ -24,7 +24,7 @@
 #include "oneflow/core/graph/accuracy_print_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/reduce_identity_task_node.h"
-#include "oneflow/core/graph/model_load_compute_task_node.h"
+#include "oneflow/core/graph/model_init_compute_task_node.h"
 #include "oneflow/core/graph/op_graph.h"
 
 namespace oneflow {
@@ -293,7 +293,7 @@ void LogicalNode::GenSortedCompTaskNodes(
           default: UNIMPLEMENTED();
         }
       } else if (parallel_desc_->device_type() == DeviceType::kCPU) {
-        if (comp_task_node->MayBeBlocked()) {
+        if (comp_task_node->IsIndependent()) {
           nodes->push_back({machine_id, comp_task_node});
         } else {
           comp_task_node->set_thrd_id(AllocateCpuThrdIdEvenly(comp_task_node));
@@ -473,7 +473,7 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
   OF_PP_MAKE_TUPLE_SEQ(Accuracy, kDataForwardArea)        \
   OF_PP_MAKE_TUPLE_SEQ(AccuracyAcc, kDataForwardArea)     \
   OF_PP_MAKE_TUPLE_SEQ(AccuracyPrint, kPrintArea)         \
-  OF_PP_MAKE_TUPLE_SEQ(MdLoad, kMdLoadArea)
+  OF_PP_MAKE_TUPLE_SEQ(MdInit, kMdInitArea)
 
 #define DEFINE_VIRTUAL_METHOD(x, area_type)                                             \
   std::string x##LogicalNode::TypeName() const { return #x; }                           \

@@ -1277,13 +1277,19 @@ message IdList {
 
 message WaitAndSendIdsOpConf {
   required string out = 1;
-  required string wait_channel_name = 2;
-  repeated IdList id_list = 3; 
+  required string wait_buffer_name = 2;
+  repeated IdList id_list = 3;
+  required DataType data_type = 4 [default = kInt32];
+}
+
+message CallbackNotifyOpConf {
+  required string in = 1;
+  repeated string callback_buffer_name = 2;
 }
 
 message ReentrantLockOpConf {
   required string start = 1;
-  required string end = 2;
+  optional string end = 2;
   required string out = 3;
   repeated IdList lock_id2intersecting_lock_ids = 4;
 }
@@ -1392,11 +1398,12 @@ message ModelSaveV2OpConf {
   required string lbn = 2;
 }
 
-message ModelLoadOpConf {
+message ModelInitOpConf {
   required string out = 1;
   required string lbn = 2;
   required ShapeProto shape = 3;
   optional DataType data_type = 4;
+  optional InitializerConf initializer = 5;
 }
 
 message AllReduceFacadeOpConf {
@@ -1470,6 +1477,7 @@ message OperatorConf {
     OutputOpConf output_conf = 138;
     WaitAndSendIdsOpConf wait_and_send_ids_conf = 139;
     ReentrantLockOpConf reentrant_lock_conf = 140;
+    CallbackNotifyOpConf callback_notify_conf = 141;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
@@ -1557,7 +1565,7 @@ message OperatorConf {
     IdentityOpConf identity_conf = 290;
     CaseOpConf case_conf = 291;
     EsacOpConf esac_conf = 292;
-    ModelLoadOpConf model_load_conf = 293;
+    ModelInitOpConf model_init_conf = 293;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;

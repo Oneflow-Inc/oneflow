@@ -51,6 +51,7 @@ class Actor {
   Actor() = default;
   const ParallelContext* parallel_ctx() const { return parallel_ctx_.get(); }
   bool ReceiveAllEordMsg() const { return remaining_eord_cnt_ == 0; }
+  bool ReceiveEordMsg(int64_t regst_desc_id) const;
   DeviceType GetDeviceType() const;
   virtual void VirtualActorInit(const TaskProto&) {}
   int64_t Name2SoleRegstDescId(const std::string& name) const;
@@ -148,7 +149,6 @@ class Actor {
 
   // Act
   void ActUntilFail();
-  virtual void Act(bool* cur_act_encounter_eord) { Act(); }
   virtual void Act() { UNIMPLEMENTED(); }
   virtual int64_t ActNumForEachOutput(int64_t regst_desc_id) const { return 1; }
   virtual bool CheckOutputActId(int64_t regst_desc_id) const {

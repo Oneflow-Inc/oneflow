@@ -1,12 +1,12 @@
-#ifndef ONEFLOW_CORE_KERNEL_MODEL_LOAD_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_MODEL_LOAD_KERNEL_H_
+#ifndef ONEFLOW_CORE_KERNEL_MODEL_INIT_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_MODEL_INIT_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class ModelLoadKernel final : public KernelIf<device_type> {
+class ModelInitKernel final : public KernelIf<device_type> {
  private:
   void VirtualKernelInit(const ParallelContext*) override;
 
@@ -18,4 +18,4 @@ class ModelLoadKernel final : public KernelIf<device_type> {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_MODEL_LOAD_KERNEL_H_
+#endif  // ONEFLOW_CORE_KERNEL_MODEL_INIT_KERNEL_H_

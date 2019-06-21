@@ -1,16 +1,16 @@
 #include "oneflow/core/graph/logical_node.h"
-#include "oneflow/core/graph/model_load_compute_task_node.h"
+#include "oneflow/core/graph/model_init_compute_task_node.h"
 
 namespace oneflow {
 
-void MdLoadCompTaskNode::ProduceAllRegstsAndBindEdges() {
+void MdInitCompTaskNode::ProduceAllRegstsAndBindEdges() {
   std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", false);
   ForEachOutDataEdge([&](TaskEdge* edge) { edge->AddRegst("out", out_regst); });
 }
 
-void MdLoadCompTaskNode::ConsumeAllRegsts() {}
+void MdInitCompTaskNode::ConsumeAllRegsts() {}
 
-void MdLoadCompTaskNode::BuildExecGphAndRegst() {
+void MdInitCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   ExecNode* node = mut_exec_gph().NewNode();
   node->mut_op() = logical_node()->SoleOp();

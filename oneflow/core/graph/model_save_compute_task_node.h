@@ -12,7 +12,7 @@ class MdSaveCompTaskNode final : public SinkCompTaskNode {
   ~MdSaveCompTaskNode() = default;
 
   TaskType GetTaskType() const override { return TaskType::kMdSave; }
-  bool MayBeBlocked() const override { return true; }
+  bool IsIndependent() const override { return true; }
 
  private:
 };

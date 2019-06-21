@@ -17,9 +17,8 @@ void ReentrantLockCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   node->mut_op() = logical_node()->SoleOp();
   const std::list<std::shared_ptr<RegstDesc>>& in_regsts = GetConsumedRegst("in");
-  for (const std::string& ibn : node->op()->input_bns()) {
-    node->BindBnWithOneOfTheRegsts(ibn, in_regsts);
-  }
+  // no regst_desc for ibn "end" provided because TaskGraph hates cycle
+  node->BindBnWithOneOfTheRegsts("start", in_regsts);
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   for (const std::string& obn : node->op()->output_bns()) {
     const LogicalBlobId& lbi = node->op()->BnInOp2Lbi(obn);

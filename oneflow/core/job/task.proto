@@ -52,7 +52,8 @@ enum TaskType {
   kEsac = 44;
   kWaitAndSendIds = 45;
   kReentrantLock = 46;
-  kMdLoad = 47;
+  kCallbackNotify = 47;
+  kMdInit = 48;
 };
 
 enum AreaType {
@@ -64,7 +65,7 @@ enum AreaType {
   kMdSaveArea = 5;
   kPrintArea = 6;
   kBoundaryArea = 7;
-  kMdLoadArea = 8;
+  kMdInitArea = 8;
 }
 
 message RegstDescIdSet {

@@ -79,9 +79,12 @@ Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_ph
   // if is this machine master
   FOR_RANGE(int64_t, i, 0,
             Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->at(0)->TotalBatchNum()) {
-    Global<BufferMgr<int32_t>>::Get()->Get(kChannelNameGlobalWaitJobId)->Send(0);
+    Global<BufferMgr<int64_t>>::Get()->Get(kBufferNameGlobalWaitJobId)->Send(0);
+    auto* buffer =
+        Global<BufferMgr<std::function<void()>>>::Get()->Get(GetJobCallbackNotifierBufferName(0));
+    buffer->Send([]() { LOG(INFO) << "callback_notifier"; });
   }
-  Global<BufferMgr<int32_t>>::Get()->Get(kChannelNameGlobalWaitJobId)->Close();
+  Global<BufferMgr<int64_t>>::Get()->Get(kBufferNameGlobalWaitJobId)->Close();
   runtime_ctx->WaitUntilCntEqualZero("running_actor_cnt");
   OF_BARRIER();
   DeleteAllGlobal();
