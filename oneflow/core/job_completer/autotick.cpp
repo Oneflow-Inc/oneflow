@@ -218,7 +218,7 @@ std::vector<OperatorConf> AddTickForTimeShape(const Shape& src_time_shape,
   std::vector<OperatorConf> op_confs;
   for (const auto& pair : pd7ts2op_nodes) {
     const std::pair<Shape, Shape>& ts = pair.first.second;
-    if (ts.second == src_time_shape) {
+    if (ts.second.elem_cnt() == src_time_shape.elem_cnt()) {
       CHECK_GE(ts.first.elem_cnt(), ts.second.elem_cnt());
       op_confs.push_back(AppendTick(pair.second, job_builder));
     } else if (ts.second.elem_cnt() > src_time_shape.elem_cnt()) {
