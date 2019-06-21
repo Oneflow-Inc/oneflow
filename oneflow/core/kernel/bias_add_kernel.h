@@ -15,8 +15,6 @@ class BiasAddKernel final : public KernelIf<device_type> {
  private:
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
-  void BackwardDataContent(const KernelCtx&,
-                           std::function<Blob*(const std::string&)>) const override;
   void InitConstBufBlobs(DeviceCtx*,
                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   const PbMessage& GetCustomizedOpConf() const override;

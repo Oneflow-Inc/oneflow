@@ -37,16 +37,6 @@ void CastKernel<device_type>::ForwardDataContent(
                                         ctx.device_ctx, in_blob, out_blob);
 }
 
-template<DeviceType device_type>
-void CastKernel<device_type>::BackwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
-  Blob* in_diff_blob = BnInOp2Blob(GenDiffBn("in"));
-  CastUtil<device_type>::SwitchCopyBlob(
-      SwitchCase(out_diff_blob->data_type(), in_diff_blob->data_type()), ctx.device_ctx,
-      out_diff_blob, in_diff_blob);
-}
-
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kCastConf, CastKernel);
 
 }  // namespace oneflow

@@ -37,7 +37,7 @@ void NormalForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   }
 }
 
-bool NormalForwardCompActor::IsCustomizedWriteReady() {
+bool NormalForwardCompActor::IsCustomizedWriteReady() const {
   if (const_buf_regst_desc_id_ != -1) { CHECK(send_const_buf_regst_); }
   return true;
 }
@@ -103,7 +103,6 @@ void NormalForwardCompActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
     regst->set_model_version_id(model_version_id);
     return regst->regst_desc_id() != forward_model_regst_desc_id_;
   });
-  if (job_desc().IsTrain()) { TrySendMsgToForwardModelSaveActor(cur_piece_id_); }
 }
 
 void NormalForwardCompActor::VirtualAsyncSendInplaceProducedRegstMsgToConsumer() {
@@ -113,17 +112,9 @@ void NormalForwardCompActor::VirtualAsyncSendInplaceProducedRegstMsgToConsumer()
   });
 }
 
-void NormalForwardCompActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
-  if (job_desc().IsTrain() && model_regst_) {
-    int64_t last_piece_id = GetLastPieceIdForModelVersionId(model_regst_->model_version_id(),
-                                                            actual_num_of_piece_in_batch_);
-    CHECK_LE(cur_piece_id_, last_piece_id);
-    if (cur_piece_id_ == last_piece_id) { AsyncReturnModelRegst(); }
-  }
-  cur_piece_id_ = -1;
-}
+void NormalForwardCompActor::AsyncSendCustomizedConsumedRegstMsgToProducer() { cur_piece_id_ = -1; }
 
-bool NormalForwardCompActor::IsCustomizedReadReady() {
+bool NormalForwardCompActor::IsCustomizedReadReady() const {
   if (model_regst_desc_id_ != -1 && model_regst_ == nullptr) { return false; }
   if (const_model_regst_desc_id_ != -1 && const_model_regst_ == nullptr) { return false; }
   return true;

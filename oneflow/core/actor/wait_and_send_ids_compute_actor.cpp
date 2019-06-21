@@ -20,7 +20,7 @@ void WaitAndSendIdsCompActor::Act(bool* cur_act_encounter_eord) {
   *cur_act_encounter_eord = (wait_and_send_ids_status_.channel_status_ != kChannelStatusSuccess);
 }
 
-bool WaitAndSendIdsCompActor::IsCustomizedReadReady() {
+bool WaitAndSendIdsCompActor::IsCustomizedReadReady() const {
   return wait_and_send_ids_status_.channel_status_ == kChannelStatusSuccess;
 }
 

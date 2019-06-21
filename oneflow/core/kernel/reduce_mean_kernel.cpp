@@ -24,27 +24,6 @@ void ReduceMeanKernel<device_type, T>::ForwardDataContent(
                                   out_blob->mut_dptr<T>(), static_cast<T>(count));
 }
 
-template<DeviceType device_type, typename T>
-void ReduceMeanKernel<device_type, T>::BackwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* out_diff_blob = BnInOp2Blob("out_diff");
-  Blob* in_diff_blob = BnInOp2Blob("in_diff");
-  Blob* bw_tmp_blob = BnInOp2Blob("bw_tmp");
-  size_t count = in_diff_blob->shape().elem_cnt() / out_diff_blob->shape().elem_cnt();
-  const ReduceMeanOpConf& conf = this->op_conf().reduce_mean_conf();
-  Memcpy<device_type>(ctx.device_ctx, bw_tmp_blob->mut_dptr(), out_diff_blob->dptr(),
-                      out_diff_blob->ByteSizeOfDataContentField());
-  KernelUtil<device_type, T>::Div(ctx.device_ctx, bw_tmp_blob->shape().elem_cnt(),
-                                  bw_tmp_blob->mut_dptr<T>(), static_cast<T>(count));
-  const Shape& reduced_shape =
-      conf.axis().empty()
-          ? Shape::Ones(in_diff_blob->shape().NumAxes())
-          : in_diff_blob->shape().CreateReducedShape({conf.axis().begin(), conf.axis().end()});
-  NdarrayUtil<device_type, T>::BroadcastTo(
-      ctx.device_ctx, XpuVarNdarray<T>(in_diff_blob, in_diff_blob->shape().NumAxes()),
-      XpuVarNdarray<const T>(reduced_shape, bw_tmp_blob->dptr<T>()));
-}
-
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReduceMeanConf, ReduceMeanKernel, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

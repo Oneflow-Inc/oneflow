@@ -34,8 +34,8 @@ class CopyCommNetActor final : public Actor {
   void Act() override;
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
   void AsyncSendCustomizedConsumedRegstMsgToProducer() override;
-  bool IsCustomizedReadReady() override;
-  bool IsCustomizedReadAlwaysUnReadyFromNow() override;
+  bool IsCustomizedReadReady() const override;
+  bool IsCustomizedReadAlwaysUnReadyFromNow() const override;
   void AsyncReturnAllCustomizedReadableRegst() override;
 
   bool is_in_eord_;

@@ -5,28 +5,15 @@ namespace oneflow {
 
 namespace {
 
-const RMSPropModelUpdateConf& GetRMSPropModelUpdateConf(const JobDesc& job_desc,
-                                                        const OperatorConf& op_conf) {
-  if (job_desc.IsTrain()) {
-    return op_conf.normal_mdupdt_conf().user_conf().rmsprop_conf();
-  } else if (job_desc.other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
-    return op_conf.rmsprop_model_update_conf().user_conf().rmsprop_conf();
-  } else {
-    UNIMPLEMENTED();
-  }
+const RMSPropModelUpdateConf& GetRMSPropModelUpdateConf(const OperatorConf& op_conf) {
+  return op_conf.rmsprop_model_update_conf().user_conf().rmsprop_conf();
 }
 
 }  // namespace
 
 template<DeviceType device_type, typename T>
 const PbMessage& RMSPropMdUpdateKernel<device_type, T>::GetCustomizedOpConf() const {
-  if (this->job_desc().IsTrain()) {
-    return this->op_conf().normal_mdupdt_conf();
-  } else if (this->job_desc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
-    return this->op_conf().rmsprop_model_update_conf();
-  } else {
-    UNIMPLEMENTED();
-  }
+  return this->op_conf().rmsprop_model_update_conf();
 }
 
 template<DeviceType device_type, typename T>
@@ -36,7 +23,7 @@ void RMSPropMdUpdateKernel<device_type, T>::UpdateModel(
   const Blob* model_diff_blob = BnInOp2Blob("model_diff");
   Blob* model_blob = BnInOp2Blob("model");
   Blob* mean_square_blob = BnInOp2Blob("mean_square");
-  const RMSPropModelUpdateConf& conf = GetRMSPropModelUpdateConf(this->job_desc(), this->op_conf());
+  const RMSPropModelUpdateConf& conf = GetRMSPropModelUpdateConf(this->op_conf());
   float decay_rate = conf.decay_rate();
   if (next_model_vid == 1) { decay_rate = 0.0f; }
 

@@ -14,7 +14,7 @@ void SourceTickComputeActor::Act() {
   regst->set_piece_id(piece_id_++);
 }
 
-bool SourceTickComputeActor::IsCustomizedReadReady() {
+bool SourceTickComputeActor::IsCustomizedReadReady() const {
   return piece_id_ < Global<RuntimeCtx>::Get()->total_piece_num();
 }
 
