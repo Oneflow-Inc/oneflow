@@ -1282,6 +1282,11 @@ message WaitAndSendIdsOpConf {
   required DataType data_type = 4 [default = kInt32];
 }
 
+message CallbackNotifyOpConf {
+  required string in = 1;
+  repeated string callback_buffer_name = 2;
+}
+
 message ReentrantLockOpConf {
   required string start = 1;
   optional string end = 2;
@@ -1459,6 +1464,7 @@ message OperatorConf {
     OutputOpConf output_conf = 138;
     WaitAndSendIdsOpConf wait_and_send_ids_conf = 139;
     ReentrantLockOpConf reentrant_lock_conf = 140;
+    CallbackNotifyOpConf callback_notify_conf = 141;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;

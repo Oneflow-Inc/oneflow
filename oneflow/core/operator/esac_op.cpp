@@ -21,7 +21,7 @@ void EsacOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
 const PbMessage& EsacOp::GetCustomizedConf() const { return op_conf().esac_conf(); }
 
 void EsacOp::InferHasBatchDim(std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  NaiveInferHasBatchDim(HasBatchDim4BnInOp);
+  *HasBatchDim4BnInOp("out") = false;
 }
 
 void EsacOp::GetSbpSignatures(
