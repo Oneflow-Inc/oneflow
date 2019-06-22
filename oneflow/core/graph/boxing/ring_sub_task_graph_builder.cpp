@@ -20,9 +20,6 @@ SubTskGphBuilderStatus RingSubTskGphBuilder::Build(
     return SubTskGphBuilderStatus::MakeStatusError();
   }
   if (parallel_desc.parallel_num() <= 1) { return SubTskGphBuilderStatus::MakeStatusError(); }
-  if (parallel_desc.sorted_machine_ids().size() > 1) {
-    return SubTskGphBuilderStatus::MakeStatusError();
-  }
   if (SubTskGphBuilderUtil::HasEmptySliceIfSplit(src_parallel_desc.parallel_num(), src_sbp_parallel,
                                                  logical_blob_desc)) {
     return SubTskGphBuilderStatus::MakeStatusError();
@@ -71,8 +68,8 @@ SubTskGphBuilderStatus RingSubTskGphBuilder::Build(
       Connect<TaskNode>(boxing_nodes.at(i), ctx->task_graph()->NewEdge(), copy_d2h_task_node);
       CopyCommNetTaskNode* copy_comm_net_task_node =
           ctx->task_graph()->NewNode<CopyCommNetTaskNode>();
-      copy_comm_net_task_node->Init(parallel_desc.MachineIdForParallelId(i),
-                                    parallel_desc.MachineIdForParallelId(next_id));
+      copy_comm_net_task_node->Init(parallel_desc.MachineIdForParallelId(next_id),
+                                    parallel_desc.MachineIdForParallelId(i));
       Connect<TaskNode>(copy_d2h_task_node, ctx->task_graph()->NewEdge(), copy_comm_net_task_node);
       CopyHdTaskNode* copy_h2d_task_node = ctx->task_graph()->NewNode<CopyHdTaskNode>();
       copy_h2d_task_node->Init(CopyHdOpConf::H2D, parallel_desc.MachineIdForParallelId(next_id),

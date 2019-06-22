@@ -221,8 +221,14 @@ void InitCtrlRegstDesc(int64_t producer_task_id, RegstDescProto* ctrl_regst_prot
 }
 
 MemoryCase MakeHostMemCase() {
-  MemoryCase mem_case;
+  MemoryCase mem_case{};
   mem_case.mutable_host_mem();
+  return mem_case;
+}
+
+MemoryCase MakeCudaMemCase(int64_t device_id) {
+  MemoryCase mem_case{};
+  mem_case.mutable_device_cuda_mem()->set_device_id(device_id);
   return mem_case;
 }
 

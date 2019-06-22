@@ -87,7 +87,8 @@ void RingBoxingActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
   } else {
     HandleProducedNaiveDataRegstToConsumer([this](Regst* regst) {
       if (regst->regst_desc_id() == send_regst_desc_id_) {
-        regst->set_piece_id(++send_regst_piece_id_);
+        regst->set_piece_id(send_regst_piece_id_);
+        send_regst_piece_id_ += 1;
         return true;
       } else {
         return false;

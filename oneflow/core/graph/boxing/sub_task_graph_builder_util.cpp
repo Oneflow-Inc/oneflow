@@ -57,12 +57,7 @@ std::vector<TensorSliceView> SubTskGphBuilderUtil::GetTensorSliceView(
 }
 
 TensorSliceView SubTskGphBuilderUtil::GetBroadcastTensorSliceView(const BlobDesc& blob_desc) {
-  std::vector<Range> ranges(blob_desc.shape().NumAxes());
-  FOR_RANGE(int64_t, i, 0, blob_desc.shape().NumAxes()) {
-    ranges[i].mut_begin() = 0;
-    ranges[i].mut_end() = blob_desc.shape().At(i);
-  }
-  return TensorSliceView(ranges);
+  return TensorSliceView(blob_desc.shape());
 }
 
 bool SubTskGphBuilderUtil::HasEmptySliceIfSplit(int64_t parallel_num,
