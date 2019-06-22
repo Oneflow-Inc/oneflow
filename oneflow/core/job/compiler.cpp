@@ -4,7 +4,9 @@
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job_completer/job_completer.h"
 
+#include "oneflow/core/compiler/of2xla/xla_graph.h"
 #include "oneflow/core/compiler/of2xla/xla_graph_compiler.h"
+#include "oneflow/core/compiler/of2xla/pass/xla_optimize_pass.h"
 
 namespace oneflow {
 
@@ -117,9 +119,19 @@ Plan Compiler::DoCompile() {
   Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_op_graph.dot");
   // TODO(hjchen2): For debug
   {
-    xla::XlaBuilder builder("op_graph");
-    mola::XlaGraphCompiler xla_compiler(Global<OpGraph>::Get(), &builder);
-    xla_compiler.Compile();
+    mola::XlaGraph graph(Global<OpGraph>::Get());
+    mola::OptimizeOptions options;
+    options.graph = &graph;
+    options.minimum_nodes_in_cluster = 1;
+
+    mola::XlaOptimizePass *cluster_pass =
+        mola::XlaOptimizePass::Create("ClusterCompiledOps", options);
+    cluster_pass->Run();
+
+    mola::XlaOptimizePass *create_launch_pass =
+        mola::XlaOptimizePass::Create("CreateXlaLaunchOp", options);
+
+    // TODO(hjchen2) Generate compiled job
   }
 
   auto logical_gph = std::make_unique<LogicalGraph>(job);

@@ -23,15 +23,13 @@ class XlaNode {
   void AddOutEdge(const XlaEdge *edge);
 
   const OpNode *node() const { return node_; }
+  const Operator *op() const { return &node_->op(); }
   const int64_t unique_id() const { return unique_id_; }
   const int64_t cluster_id() const {return cluster_id_; }
   const std::string &backend() const { return backend_; }
   const std::string &op_type() const { return op_type_; }
-  const std::unordered_set<const XlaNode *> &folded_nodes() const {
-    return folded_nodes_;
-  }
 
-  std::unordered_set<const XlaNode *> &fold(const XlaNode *node);
+  const PbMessage &proto_conf() const { return this->op()->GetCustomizedConf(); }
 
   void set_cluster_id(int64_t cluster_id) { cluster_id_ = cluster_id; }
 
@@ -63,8 +61,6 @@ class XlaNode {
   std::string backend_;
   // String operator type, such as "Conv2d", "Matmul" or other else
   std::string op_type_;
-  // All folded nodes
-  std::unordered_set<const XlaNode *> folded_nodes_;
 };
 
 }

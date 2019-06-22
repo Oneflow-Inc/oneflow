@@ -38,11 +38,3 @@ tf_cc_shared_object(
         "@com_google_absl//absl/strings",
     ],
 )
-
-tf_cc_test(
-    name = "test",
-    srcs = ["test.cc"],
-    deps = [
-        "//tensorflow/compiler/lib:libxla_computation_client.so",
-    ],
-)

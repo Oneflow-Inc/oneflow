@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_COMPILER_OF2XLA_XLA_GRAPH_H_
 
 #include <vector>
+#include "oneflow/core/compiler/of2xla/xla_argument.h"
 #include "oneflow/core/compiler/of2xla/xla_node.h"
 
 namespace oneflow {
@@ -18,10 +19,12 @@ class XlaEdge {
   XlaNode *start() const { return start_; }
   XlaNode *end() const { return end_; }
   int64_t unique_id() const { return unique_id_; }
+  const Argument &argument() const { return arg_; }
+  Argument &argument() { return arg_; }
 
   void UpdateStartNode(XlaNode *start) { start_ = start; }
   void UpdateEndNode(XlaNode *end) { end_ = end; }
-  void UpdateData(const std::string &data) { data_ = data; }
+  void UpdateArgument(const Argument &arg) { arg_ = arg; }
 
  private:
   friend class XlaGraph;
@@ -29,8 +32,8 @@ class XlaEdge {
   XlaNode *start_;
   // end node of the edge
   XlaNode *end_;
-  // 
-  std::string data_;
+  //  
+  Argument arg_;
   int64_t unique_id_ = -1;
 };
 
@@ -40,8 +43,6 @@ class XlaGraph {
   explicit XlaGraph(const OpGraph *op_graph);
 
   virtual ~XlaGraph();
-
-  void CopyFrom(const XlaGraph &graph);
 
   XlaNode *Node(int64_t node_id);
   const XlaNode *Node(int64_t node_id) const;

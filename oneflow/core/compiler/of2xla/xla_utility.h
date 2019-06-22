@@ -16,8 +16,6 @@ namespace mola {
 
 std::string ExtractOpTypeAsString(const Operator &op);
 
-bool IsOpTypeCompiled(const std::string &backend, const std::string &type);
-
 Shape ShapeFromXlaShape(const xla::Shape &xla_shape);
 
 xla::Shape XlaShapeFromShape(const Shape &shape);

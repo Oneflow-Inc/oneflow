@@ -4,7 +4,6 @@
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/compiler/of2xla/xla_op_compiler_registry.h"
 #include "oneflow/core/compiler/of2xla/xla_utility.h"
 
 namespace oneflow {
@@ -28,11 +27,6 @@ std::string ExtractOpTypeAsString(const Operator &op) {
     // Return empty if the operator is not in the translation map
     return NoneString;
   }
-}
-
-bool IsOpTypeCompiled(const std::string &backend, const std::string &type) {
-  // TODO(hjchen2) should replaced with node->compiled
-  return XlaOpCompilerRegistry::IsRegistered(backend, type);
 }
 
 Shape ShapeFromXlaShape(const xla::Shape &xla_shape) {

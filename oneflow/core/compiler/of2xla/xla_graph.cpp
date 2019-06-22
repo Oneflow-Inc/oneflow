@@ -1,5 +1,6 @@
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/compiler/of2xla/xla_utility.h"
+#include "oneflow/core/compiler/of2xla/xla_argument.h"
 #include "oneflow/core/compiler/of2xla/xla_graph.h"
 
 namespace oneflow {
@@ -50,10 +51,6 @@ XlaGraph::~XlaGraph() {
   for (auto &edge : edges_) {
     if (NOTNULL(edge)) delete edge;
   }
-}
-
-void XlaGraph::CopyFrom(const XlaGraph &graph) {
-
 }
 
 XlaNode *XlaGraph::Node(int64_t node_id) {

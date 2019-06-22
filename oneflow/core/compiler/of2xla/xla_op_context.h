@@ -2,11 +2,12 @@
 #define ONEFLOW_CORE_COMPILER_OF2XLA_XLA_OP_CONTEXT_H_
 
 #include <unordered_map>
+#include "tensorflow/compiler/xla/shape.h"
+#include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape.h"
-#include "tensorflow/compiler/xla/shape.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "oneflow/core/compiler/of2xla/xla_argument.h"
 
 namespace oneflow {
 namespace mola {
@@ -37,22 +38,17 @@ class XlaOprand {
 
 class XlaOpContext {
  public:
-  typedef std::unordered_map<LogicalBlobId, XlaOprand> XlaOprands;
-  typedef std::unordered_map<LogicalBlobId, DataType> DataTypes;
+  typedef std::unordered_map<Argument, XlaOprand> XlaOprands;
 
   struct Param {
     // Input oprands
     XlaOprands inputs;
-    // Output data types, it's size must equal to num_outputs
-    DataTypes output_types;
-    // The number of the operator's outputs
-    int num_outputs;
     // Config proto related to the operator
     const PbMessage *op_conf;
     // XlaBuilder to compile the XlaComputation
     xla::XlaBuilder *builder;
-    // Function that convert blob name to blob id
-    std::function<LogicalBlobId(const std::string &)> blob_id_from_string_fn;
+    // Function that convert argument name to Argument
+    std::function<Argument(const std::string &)> argument_from_string_fn;
   };
 
   explicit XlaOpContext(const XlaOpContext::Param &param) : param_(param) {}
@@ -61,20 +57,15 @@ class XlaOpContext {
 
   // Return input named `name` as XlaOp
   xla::XlaOp Input(const std::string &name);
-  // Return input which blob id is `blob_id` as XlaOp
-  xla::XlaOp Input(const LogicalBlobId &blob_id);
+  xla::XlaOp Input(const Argument &arg);
   // Return output named `name` as XlaOp
   xla::XlaOp Output(const std::string &name);
-  // Return output which blob id is `blob_id` as XlaOp
-  xla::XlaOp Output(const LogicalBlobId &blob_id);
+  xla::XlaOp Output(const Argument &arg);
 
   // Return inputs as Oprands
   const XlaOprands &InputOprands() { return param_.inputs; }
   // Return output as Oprands
   const XlaOprands &OutputOprands() { return outputs_; }
-
-  int num_inputs() const;
-  int num_outputs() const;
 
   // Setup the output `output_name` with XlaOp
   void SetOutput(const std::string &name, const xla::XlaOp &handle);
@@ -83,19 +74,13 @@ class XlaOpContext {
 
   // Return input `name` shape as Shape
   const Shape InputShape(const std::string &name);
-  // Return input which blob id is `blob_id` shape as Shape
-  const Shape InputShape(const LogicalBlobId &blob_id);
   // Return output `name` shape as Shape
   const Shape OutputShape(const std::string &name);
-  // Return output shape as Shape which blob id is `blob_id`
-  const Shape OutputShape(const LogicalBlobId &blob_id);
  
   // Input data type
   const DataType InputType(const std::string &name);
-  const DataType InputType(const LogicalBlobId &blob_id);
   // Output data type
   const DataType OutputType(const std::string &name);
-  const DataType OutputType(const LogicalBlobId &blob_id);
 
   template <typename T>
   T GetAttr(const std::string &attr_name);
@@ -109,7 +94,7 @@ class XlaOpContext {
  private:
   XlaOpContext() = delete;
 
-  const LogicalBlobId BlobIdFromString(const std::string &name);
+  const Argument ArgumentFromString(const std::string &name);
 
   // Output oprands
   XlaOprands outputs_;
