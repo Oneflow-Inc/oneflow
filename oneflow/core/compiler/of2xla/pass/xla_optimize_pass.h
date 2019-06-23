@@ -8,10 +8,12 @@ namespace mola {
 
 struct OptimizeOptions {
   XlaGraph *graph;
-  // Minimum node number in each cluster in cluster pass. If the number of
-  // nodes of a cluster is less than `minimum_nodes_in_cluster`, then this
-  // cluster will be given up and not compiled.
-  int32_t minimum_nodes_in_cluster;
+
+  // Minimum node number in each cluster in `XlaClusterCompiledOps` pass.
+  // If the number of nodes contained by a cluster is less than
+  // `minimum_nodes_in_cluster`, then this cluster will be given up and
+  // not compiled.
+  int32_t minimum_nodes_in_cluster; 
 };
 
 class XlaOptimizePass {
@@ -35,19 +37,24 @@ class XlaOptimizePass {
   OptimizeOptions optimize_options_;
 };
 
+template <typename OptimizePassClass>
 class XlaOptimizePassRegistrar {
  public:
-  XlaOptimizePassRegistrar(const std::string &pass_type,
-                           const XlaOptimizePass::PassFactory factory) {
+  XlaOptimizePassRegistrar(const std::string &pass_type) {
+    auto factory = [](const OptimizeOptions &options) -> OptimizePassClass* {
+        return new OptimizePassClass(options);
+    };
     XlaOptimizePass::Register(pass_type, factory);
   }
 };
 
-#define REGISTER_OPTIMIZE_PASS(PassType, OptimizePassClass)                    \
-  static XlaOptimizePassRegistrar _xla_optimize_pass_##PassType##_ __attribute__((unused)) =  \
-      XlaOptimizePassRegistrar(#PassType, [](const OptimizeOptions &options) {  \
-        return new OptimizePassClass(options);                                 \
-      });
+#define REGISTER_OPTIMIZE_PASS(PassType, OptimizePassClass)       \
+  static XlaOptimizePassRegistrar<OptimizePassClass>              \
+      _xla_optimize_pass_##PassType##_ __attribute__((unused)) =  \
+      XlaOptimizePassRegistrar<OptimizePassClass>(#PassType);
+
+
+void RunOptimizePass(const std::string &pass, OptimizeOptions &options);
 
 }  // namespace mola
 }  // namespace oneflow

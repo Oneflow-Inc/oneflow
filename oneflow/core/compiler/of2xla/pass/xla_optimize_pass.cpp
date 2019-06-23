@@ -30,5 +30,11 @@ XlaOptimizePass *XlaOptimizePass::Create(const std::string &pass_type,
   return (*factories)[pass_type](options);
 }
 
+void RunOptimizePass(const std::string &pass, OptimizeOptions &options) {
+  mola::XlaOptimizePass *optimize_pass =
+          mola::XlaOptimizePass::Create(pass, options);
+  optimize_pass->Run();
+}
+
 }  // namespace mola
 }  // namespace oneflow

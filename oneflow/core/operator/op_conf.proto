@@ -1351,14 +1351,22 @@ message IdentityOpConf {
   required string out = 2;
 }
 
-message XlaLaunchOpAttribute {
-  repeated OperatorConf node = 1;
-}
-
 message XlaLaunchOpConf {
+  message Attribute {
+    repeated OperatorConf node = 1;
+  }
   repeated string in = 1;
   repeated string out = 2;
-  required XlaLaunchOpAttribute attr = 3;
+  required Attribute attr = 3;
+}
+
+message XlaArgumentOpConf {
+  message DataVec {
+    repeated string data = 1;
+    repeated ShapeProto shape = 2;
+  }
+  optional DataVec in = 1;
+  optional DataVec out = 2;
 }
 
 message OperatorConf {
@@ -1507,6 +1515,7 @@ message OperatorConf {
 
     // xla op
     XlaLaunchOpConf xla_launch_conf = 800;
+    XlaArgumentOpConf xla_argument_conf = 801;
   }
 }
 

@@ -1,9 +1,4 @@
-#include <string>
-#include <unordered_map>
-#include "tensorflow/compiler/xla/shape.h"
-#include "oneflow/core/common/shape.h"
 #include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/core/operator/operator.h"
 #include "oneflow/core/compiler/of2xla/xla_utility.h"
 
 namespace oneflow {
@@ -18,8 +13,7 @@ static std::unordered_map<int32_t, std::string> op_type2string_map = {
   // TODO(hjchen2)
 };
 
-std::string ExtractOpTypeAsString(const Operator &op) {
-  const OperatorConf &conf = op.op_conf();
+std::string ExtractOpTypeAsString(const OperatorConf &conf) {
   const auto it = op_type2string_map.find(conf.op_type_case());
   if (it != op_type2string_map.end()) {
     return it->second;
@@ -27,18 +21,6 @@ std::string ExtractOpTypeAsString(const Operator &op) {
     // Return empty if the operator is not in the translation map
     return NoneString;
   }
-}
-
-Shape ShapeFromXlaShape(const xla::Shape &xla_shape) {
-  // TODO(hjchen2)
-  Shape shape;
-  return shape;
-}
-
-xla::Shape XlaShapeFromShape(const Shape &shape) {
-  // TODO(hjchen2)
-  xla::Shape xla_shape;
-  return xla_shape;
 }
 
 }  // namespace mola

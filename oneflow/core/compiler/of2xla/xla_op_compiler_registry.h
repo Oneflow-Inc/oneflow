@@ -90,10 +90,11 @@ class XlaOpCompilerRegistry {
   }
 };
 
+template <typename OpCompiler>
 class XlaOpCompilerRegistrar {
  public:
-  XlaOpCompilerRegistrar(const std::string &backend, const std::string &type,
-                          XlaOpCompilerRegistry::CreatorFunc creator) {
+  XlaOpCompilerRegistrar(const std::string &backend, const std::string &type) {
+    auto creator = []() -> XlaOpCompiler* { return new OpCompiler; };
     XlaOpCompilerRegistry::Register(backend, type, creator);
   }
 };
@@ -102,15 +103,21 @@ class XlaOpCompilerRegistrar {
   REGISTER_XLA_CPU_OP_COMPILER(Type, OpCompiler);  \
   REGISTER_XLA_CUDA_OP_COMPILER(Type, OpCompiler);
 
-#define REGISTER_XLA_CPU_OP_COMPILER(Type, OpCompiler) \
-  static XlaOpCompilerRegistrar g_xla_cpu__##Type##__compiler =                \
-      XlaOpCompilerRegistrar("CPU", #Type,                                     \
-                             []() -> XlaOpCompiler* { return new OpCompiler; });
+#define REGISTER_XLA_CPU_OP_COMPILER(Type, OpCompiler)              \
+  static XlaOpCompilerRegistrar<OpCompiler>                         \
+      g_xla_cpu__##Type##__op_compiler __attribute__((unused)) =    \
+      XlaOpCompilerRegistrar<OpCompiler>("CPU", #Type)
 
-#define REGISTER_XLA_CUDA_OP_COMPILER(Type, OpCompiler) \
-  static XlaOpCompilerRegistrar g_xla_gpu__##Type##__op_compiler =              \
-      XlaOpCompilerRegistrar("CUDA", #Type,                                     \
-                             []() -> XlaOpCompiler* { return new OpCompiler; });
+#define REGISTER_XLA_CUDA_OP_COMPILER(Type, OpCompiler)             \
+  static XlaOpCompilerRegistrar<OpCompiler>                         \
+      g_xla_gpu__##Type##__op_compiler __attribute__((unused)) =    \
+      XlaOpCompilerRegistrar<OpCompiler>("CUDA", #Type)
+
+
+inline bool IsOpCompilerRegistered(const std::string &backend,
+                                   const std::string &op_type) {
+  return XlaOpCompilerRegistry::IsRegistered(backend, op_type);
+}
 
 }  // namespace mola
 }  // namespace oneflow

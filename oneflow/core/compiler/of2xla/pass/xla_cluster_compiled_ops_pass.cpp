@@ -52,7 +52,7 @@ void ClusterCompiledOpsPass::Run() {
   std::unordered_set<int64_t> visited_nodes;
   std::vector<Cluster> clusters;
 
-  for (auto &node : graph->Nodes()) {
+  for (XlaNode *node : graph->Nodes()) {
     int64_t unique_id = node->unique_id();
     if (node->IsCompiled() && (visited_nodes.count(unique_id) == 0)) {
       visited_nodes.insert(unique_id);
@@ -68,7 +68,7 @@ void ClusterCompiledOpsPass::Run() {
   // filter invalid cluster
   int32_t minimum_nodes_in_cluster =
       this->optimize_options_.minimum_nodes_in_cluster;
-  for (auto &cluster : clusters) {
+  for (Cluster &cluster : clusters) {
     if (cluster.size() < minimum_nodes_in_cluster) {
       cluster.clear();
     }
@@ -94,23 +94,23 @@ void ClusterCompiledOpsPass::InfectNeighborNodes(
     XlaNode *top_node = stack.top();
     stack.pop();
 
-    // Visit input edges, and try to infect front nodes
-    for (auto &e : top_node->in_edges()) {
+    // Visit the input edges, and try to infect the front nodes
+    for (XlaEdge *e : top_node->in_edges()) {
       XlaNode *front = e->start();
-      // TODO(hjchen2) Sbp signatures and control flow should be
-      // token into consideration
-      if (front->IsCompiled() && !visited_fn(front)) {
+      // TODO(hjchen2) Should ensure that there is no ring after clustering 
+      if (front->IsCompiled() && !visited_fn(front) &&
+          front->backend() == top_node->backend()) {
         visited_nodes->insert(front->unique_id());
         cluster->push(front->unique_id());
         stack.push(front);
       }
     }
-    // Visit output edges, and try to infect latter nodes
-    for (auto &e : top_node->out_edges()) {
+    // Visit the output edges, and try to infect the latter nodes
+    for (XlaEdge *e : top_node->out_edges()) {
       XlaNode *latter = e->end();
-      // TODO(hjchen2) Sbp signatures and control flow should be
-      // token into consideration
-      if (latter->IsCompiled() && !visited_fn(latter)) {
+      // TODO(hjchen2) Should ensure that there is no ring after clustering
+      if (latter->IsCompiled() && !visited_fn(latter) &&
+          latter->backend() == top_node->backend()) {
         visited_nodes->insert(latter->unique_id());
         cluster->push(latter->unique_id());
         stack.push(latter);
@@ -121,7 +121,7 @@ void ClusterCompiledOpsPass::InfectNeighborNodes(
 
 void ClusterCompiledOpsPass::UpdateClusterInfoToGraph(
     const std::vector<Cluster> &clusters, XlaGraph *graph) {
-  for (const auto &cluster : clusters) {
+  for (const Cluster &cluster : clusters) {
     for (int64_t node_id : cluster.nodes()) {
       XlaNode *node = graph->Node(node_id);
       node->set_cluster_id(cluster.id());

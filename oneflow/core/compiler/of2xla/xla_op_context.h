@@ -63,9 +63,9 @@ class XlaOpContext {
   xla::XlaOp Output(const Argument &arg);
 
   // Return inputs as Oprands
-  const XlaOprands &InputOprands() { return param_.inputs; }
+  const XlaOprands &InputOprands() const { return param_.inputs; }
   // Return output as Oprands
-  const XlaOprands &OutputOprands() { return outputs_; }
+  const XlaOprands &OutputOprands() const { return outputs_; }
 
   // Setup the output `output_name` with XlaOp
   void SetOutput(const std::string &name, const xla::XlaOp &handle);
@@ -73,28 +73,28 @@ class XlaOpContext {
   void SetOutput(const std::string &name, const XlaOprand &handle);
 
   // Return input `name` shape as Shape
-  const Shape InputShape(const std::string &name);
+  Shape InputShape(const std::string &name) const;
   // Return output `name` shape as Shape
-  const Shape OutputShape(const std::string &name);
+  Shape OutputShape(const std::string &name) const;
  
   // Input data type
-  const DataType InputType(const std::string &name);
+  DataType InputType(const std::string &name) const;
   // Output data type
-  const DataType OutputType(const std::string &name);
+  DataType OutputType(const std::string &name) const;
 
   template <typename T>
-  T GetAttr(const std::string &attr_name);
+  T GetAttr(const std::string &attr_name) const;
 
   template <typename T>
   void SetAttr(const std::string &attr_name, const T &value);
 
   // Return XlaBuilder
-  xla::XlaBuilder *Builder();
+  xla::XlaBuilder *Builder() const;
 
  private:
   XlaOpContext() = delete;
 
-  const Argument ArgumentFromString(const std::string &name);
+  Argument ArgumentFromString(const std::string &name) const;
 
   // Output oprands
   XlaOprands outputs_;
@@ -102,7 +102,7 @@ class XlaOpContext {
 };
 
 template <typename T>
-T XlaOpContext::GetAttr(const std::string &attr_name) {
+T XlaOpContext::GetAttr(const std::string &attr_name) const {
   DCHECK(HasFieldInPbMessage(*param_.op_conf, attr_name));
   return GetValFromPbMessage<T>(*param_.op_conf, attr_name);
 }

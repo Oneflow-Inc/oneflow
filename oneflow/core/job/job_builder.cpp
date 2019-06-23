@@ -48,6 +48,56 @@ void JobBuilder::AddOps(const ParallelConf& parallel_conf,
   }
 }
 
+void JobBuilder::RemoveOp(const std::string &op_name) {
+  // Update placement
+  auto placement_group = job_->placement().placement_group();
+  job_->mutable_placement()->clear_placement_group();
+  for (const PlacementGroup &place : placement_group) {
+    PlacementGroup p;
+    OpNameSet *op_set = p.mutable_op_set();
+    for (const std::string &name : place.op_set().op_name()) {
+      if (name != op_name) {
+        op_set->add_op_name(name);
+      }
+    }
+
+    *(p.mutable_parallel_conf()) = place.parallel_conf();
+    if (op_set->op_name().size() > 0) {
+      *(job_->mutable_placement()->add_placement_group()) = p;
+    }
+  }
+  // Update net
+  DLNetConf net = job_->net();
+  job_->mutable_net()->clear_op();
+  job_->mutable_net()->clear_shared_model_group();
+  for (const OperatorConf &op_conf : net.op()) {
+    if (op_conf.name() != op_name) {
+      *(job_->mutable_net()->add_op()) = op_conf;
+    }
+  }
+  for (const OpNameSet &op_set : net.shared_model_group()) {
+    OpNameSet s;
+    for (const std::string &name : op_set.op_name()) {
+      if (name != op_name) {
+        s.add_op_name(name);
+      }
+    }
+    if (s.op_name().size() >= 2) {
+      *(job_->mutable_net()->add_shared_model_group()) = s;
+    }
+  }
+  // Update Sbp
+  auto *sbp_conf = job_->mutable_sbp_conf()
+                       ->mutable_op_name2sbp_signature_conf();
+  if (sbp_conf->count(op_name) > 0) {
+    sbp_conf->erase(op_name);
+  }
+  // Update builder
+  JobBuilder builder(job_);
+  op_name2op_conf_.swap(builder.op_name2op_conf_);
+  op_name2parallel_conf_.swap(builder.op_name2parallel_conf_);
+}
+
 void JobBuilder::MutOps(const std::vector<OperatorConf>& op_confs) const {
   for (const auto& op_conf : op_confs) { op_name2op_conf_.at(op_conf.name())->CopyFrom(op_conf); }
 }

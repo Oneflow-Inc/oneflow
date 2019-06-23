@@ -1,6 +1,7 @@
 #include "tensorflow/compiler/xla/status.h"
 #include "tensorflow/compiler/xla/shape.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "oneflow/core/compiler/of2xla/xla_shape.h"
 #include "oneflow/core/compiler/of2xla/xla_utility.h"
 #include "oneflow/core/compiler/of2xla/xla_argument.h"
 #include "oneflow/core/compiler/of2xla/xla_op_context.h"
@@ -43,7 +44,7 @@ xla::XlaOp XlaOprand::AsXlaOp(xla::XlaBuilder *builder) {
   return handle_;
 }
 
-xla::XlaBuilder *XlaOpContext::Builder() { return param_.builder; }
+xla::XlaBuilder *XlaOpContext::Builder() const { return param_.builder; }
 
 xla::XlaOp XlaOpContext::Input(const std::string &name) {
   return Input(ArgumentFromString(name));
@@ -75,23 +76,23 @@ void XlaOpContext::SetOutput(const std::string &name, const XlaOprand &handle) {
   outputs_[arg] = handle;
 }
 
-const DataType XlaOpContext::InputType(const std::string &name) {
+DataType XlaOpContext::InputType(const std::string &name) const {
   return ArgumentFromString(name).data_type();
 }
 
-const DataType XlaOpContext::OutputType(const std::string &name) {
+DataType XlaOpContext::OutputType(const std::string &name) const {
   return ArgumentFromString(name).data_type();
 }
 
-const Shape XlaOpContext::InputShape(const std::string &name) {
+Shape XlaOpContext::InputShape(const std::string &name) const {
   return ArgumentFromString(name).shape();
 }
 
-const Shape XlaOpContext::OutputShape(const std::string &name) {
+Shape XlaOpContext::OutputShape(const std::string &name) const {
   return ArgumentFromString(name).shape();
 }
 
-const Argument XlaOpContext::ArgumentFromString(const std::string &name) {
+Argument XlaOpContext::ArgumentFromString(const std::string &name) const {
   return param_.argument_from_string_fn(name);
 }
 

@@ -7,6 +7,8 @@
 #include "oneflow/core/compiler/of2xla/xla_graph.h"
 #include "oneflow/core/compiler/of2xla/xla_graph_compiler.h"
 #include "oneflow/core/compiler/of2xla/pass/xla_optimize_pass.h"
+#include "oneflow/core/compiler/rebuild_job.h"
+#include <fstream>
 
 namespace oneflow {
 
@@ -124,14 +126,15 @@ Plan Compiler::DoCompile() {
     options.graph = &graph;
     options.minimum_nodes_in_cluster = 1;
 
-    mola::XlaOptimizePass *cluster_pass =
-        mola::XlaOptimizePass::Create("ClusterCompiledOps", options);
-    cluster_pass->Run();
+    mola::RunOptimizePass("ClusterCompiledOps", options);
+    mola::RunOptimizePass("CreateXlaLaunchOp", options);
+    // Rebuild Job
+    RebuildXlaCompiledJob(graph, &job);
 
-    mola::XlaOptimizePass *create_launch_pass =
-        mola::XlaOptimizePass::Create("CreateXlaLaunchOp", options);
-
-    // TODO(hjchen2) Generate compiled job
+    std::string job_string = job.DebugString();
+    std::ofstream ost("./job_string.prototxt");
+    ost << job_string;
+    ost.close();
   }
 
   auto logical_gph = std::make_unique<LogicalGraph>(job);

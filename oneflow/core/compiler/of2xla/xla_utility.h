@@ -2,23 +2,28 @@
 #define ONEFLOW_CORE_COMPILER_OF2XLA_XLA_UTILITY_H_
 
 #include <string>
-#include "tensorflow/compiler/xla/shape.h"
-#include "oneflow/core/common/shape.h"
-#include "oneflow/core/operator/operator.h"
+#include "oneflow/core/operator/op_conf.pb.h"
 
 namespace oneflow {
 namespace mola {
 
-#define NoneString    ""
-#define NonePtr       nullptr
-#define ISNULL(x)     NonePtr == (x)
-#define NOTNULL(x)    NonePtr != (x)
+#define NoneString        ""
+#define NonePtr           nullptr
+#define ISNULL(x)         NonePtr == (x)
+#define NOTNULL(x)        NonePtr != (x)
 
-std::string ExtractOpTypeAsString(const Operator &op);
+#define DELETE(x)                        \
+  do {                                   \
+    delete x; x = NonePtr;               \
+  } while (NOTNULL(x))
 
-Shape ShapeFromXlaShape(const xla::Shape &xla_shape);
+#define DELETE_V(x)                      \
+  do {                                   \
+    delete [] x; x = NonePtr;            \
+  } while (NOTNULL(x))
 
-xla::Shape XlaShapeFromShape(const Shape &shape);
+
+std::string ExtractOpTypeAsString(const OperatorConf &conf);
 
 }  // namespace mola
 }  // namespace oneflow
