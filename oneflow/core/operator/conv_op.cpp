@@ -8,8 +8,6 @@ namespace oneflow {
 
 namespace {
 
-bool IsFwBwSplit() { return Global<JobDesc>::Get()->IsTrain(); }
-
 void GetOutAndPad(const Shape& in_blob_shape, const PbMessage& conv_conf, std::vector<int64_t>* out,
                   std::vector<int32_t>* pad_small_side, std::vector<int32_t>* pad_large_side) {
   int32_t opkernel_dim = in_blob_shape.NumAxes() - 2;
@@ -65,25 +63,15 @@ void ConvOp<NDims>::InitFromOpConf() {
   StrFieldTolower("data_format");
   StrFieldTolower("padding");
 
-  // TODO: fw bw split
-  const bool fw_bw_split = IsFwBwSplit();
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  if (fw_bw_split) {
-    EnrollInputBn("weight");
-  } else {
-    EnrollModelBn("weight");
-  }
+  EnrollInputBn("weight");
   EnrollFwBufBn("fw_cudnn_buf");
   EnrollBwBufBn("bw_cudnn_buf");
   EnrollFwBufBn("fw_col_buf");
   EnrollBwBufBn("bw_col_buf");
   if (GetValFromCustomizedConf<bool>("use_bias")) {
-    if (fw_bw_split) {
-      EnrollInputBn("bias");
-    } else {
-      EnrollModelBn("bias");
-    }
+    EnrollInputBn("bias");
     EnrollConstBufBn("bias_multiplier");
   }
 }
@@ -93,7 +81,6 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
                                    const ParallelContext* parallel_ctx, int64_t record_piece_size,
                                    std::function<void(OpContext*)> EnrollOpCtx) const {
   const std::string& data_format = GetValFromCustomizedConf<std::string>("data_format");
-  const bool fw_bw_split = IsFwBwSplit();
 
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
@@ -124,19 +111,11 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   for (size_t i = 0; i < NDims; ++i) {
     weight_shape[dhw_offset + i] = GetPbRfFromCustomizedConf<int32_t>("kernel_size").Get(i);
   }
-  if (fw_bw_split) {
-    CHECK_EQ(GetBlobDesc4BnInOp("weight")->shape(), Shape(weight_shape));
-  } else {
-    GetBlobDesc4BnInOp("weight")->mut_shape() = Shape(weight_shape);
-  }
+  CHECK_EQ(GetBlobDesc4BnInOp("weight")->shape(), Shape(weight_shape));
 
   if (GetValFromCustomizedConf<bool>("use_bias")) {
     // bias and bias_multiplier
-    if (fw_bw_split) {
-      CHECK_EQ(GetBlobDesc4BnInOp("bias")->shape(), Shape({filters}));
-    } else {
-      GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({filters, 1});
-    }
+    CHECK_EQ(GetBlobDesc4BnInOp("bias")->shape(), Shape({filters}));
     if (DevIsGpuAndEnableCudnn() == false) {
       std::vector<int64_t> bias_mul_shape(NDims + 1, 1);
       for (size_t i = 0; i != NDims; ++i) { bias_mul_shape[i + 1] = out_shape[dhw_offset + i]; }
