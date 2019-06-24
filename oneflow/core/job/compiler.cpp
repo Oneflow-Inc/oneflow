@@ -122,13 +122,13 @@ Plan Compiler::DoCompile() {
   task_gph->ForEachNode(std::bind(&TaskNode::PinConsumedRegst, _1));
   task_gph->MdUpdtDelayedTopoForEachNode(&TaskNode::Build);
   if (job_desc->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
-    task_gph->AddReduceSequenceCtrlEdges();
+    // task_gph->AddReduceSequenceCtrlEdges();
     // TODO: update method for fw bw split
     // task_gph->AddMdUpdtCtrlEdgesWithinReduceSplitNode();
   }
   task_gph->RemoveEmptyRegsts();
   task_gph->AddOrderingCtrlEdgeInSameChain();
-  task_gph->EnableMemSharingInReduceStruct();
+  // task_gph->EnableMemSharingInReduceStruct();
   // TODO: update method for fw bw split
   // if (job_desc->IsTrain() && job_desc->enable_mem_sharing()) {
   //   task_gph->EnableMemSharingAfterAllManualSetForMdUpdt();  // must last mem shared manual set
