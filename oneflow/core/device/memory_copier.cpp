@@ -120,17 +120,17 @@ void HostMemoryCopier::Copy1D(DeviceCtx* ctx, void* dst, const void* src, size_t
 
 #ifdef WITH_CUDA
 
-void CudaMemoryCopier::Copy1D(DeviceCtx* ctx, void* dst, const void* src, size_t count) const {
+void CudaAsyncMemoryCopier::Copy1D(DeviceCtx* ctx, void* dst, const void* src, size_t count) const {
   CudaCheck(cudaMemcpyAsync(dst, src, count, cudaMemcpyDefault, ctx->cuda_stream()));
 }
 
-void CudaMemoryCopier::Copy2D(DeviceCtx* ctx, void* dst, size_t dst_pitch, const void* src,
-                              size_t src_pitch, size_t width, size_t height) const {
+void CudaAsyncMemoryCopier::Copy2D(DeviceCtx* ctx, void* dst, size_t dst_pitch, const void* src,
+                                   size_t src_pitch, size_t width, size_t height) const {
   CudaCheck(cudaMemcpy2DAsync(dst, dst_pitch, src, src_pitch, width, height, cudaMemcpyDefault,
                               ctx->cuda_stream()));
 }
 
-void CudaMemoryCopier::Copy3D(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const {
+void CudaAsyncMemoryCopier::Copy3D(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const {
   cudaMemcpy3DParms params{};
   params.srcPos = make_cudaPos(desc.src_pos.At(2), desc.src_pos.At(1), desc.src_pos.At(0));
   params.srcPtr = make_cudaPitchedPtr(const_cast<void*>(desc.src_ptr), desc.src_shape.At(2),
@@ -143,7 +143,7 @@ void CudaMemoryCopier::Copy3D(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) cons
   CudaCheck(cudaMemcpy3DAsync(&params, ctx->cuda_stream()));
 }
 
-void CudaMemoryCopier::CopyND(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const {
+void CudaAsyncMemoryCopier::CopyND(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const {
   UNIMPLEMENTED();
 }
 
@@ -151,7 +151,7 @@ REGISTER_DEFAULT_MEMORY_COPIER(DeviceType::kCPU, []() { return new HostMemoryCop
 
 #ifdef WITH_CUDA
 
-REGISTER_DEFAULT_MEMORY_COPIER(DeviceType::kGPU, []() { return new CudaMemoryCopier(); });
+REGISTER_DEFAULT_MEMORY_COPIER(DeviceType::kGPU, []() { return new CudaAsyncMemoryCopier(); });
 
 #endif
 

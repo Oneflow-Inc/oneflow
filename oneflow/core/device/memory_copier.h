@@ -48,11 +48,11 @@ class HostMemoryCopier final : public MemoryCopier {
 
 #ifdef WITH_CUDA
 
-class CudaMemoryCopier final : virtual public MemoryCopier {
+class CudaAsyncMemoryCopier final : public MemoryCopier {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CudaMemoryCopier);
-  CudaMemoryCopier() = default;
-  ~CudaMemoryCopier() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(CudaAsyncMemoryCopier);
+  CudaAsyncMemoryCopier() = default;
+  ~CudaAsyncMemoryCopier() override = default;
 
  private:
   void Copy1D(DeviceCtx* ctx, void* dst, const void* src, size_t count) const override;
