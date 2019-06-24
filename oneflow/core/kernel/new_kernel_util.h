@@ -113,6 +113,11 @@ class NewKernelUtil<DeviceType::kGPU> {
                             enum CBLAS_TRANSPOSE trans_b, const int batch_size, const int m,
                             const int n, const int k, const float16 alpha, const float16* a,
                             const float16* b, const float16 beta, float16* c, float16** buf);
+  static void OFBatchedHGemmWithFloat(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
+                                      enum CBLAS_TRANSPOSE trans_b, const int batch_size,
+                                      const int m, const int n, const int k, const float alpha,
+                                      const float16* a, const float16* b, const float beta,
+                                      float16* c, float16** buf);
 
   static void Relu(DeviceCtx* ctx, const int64_t n, const float* x, float* y);
   static void Relu(DeviceCtx* ctx, const int64_t n, const double* x, double* y);

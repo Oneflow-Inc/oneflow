@@ -19,12 +19,40 @@ template<>
 struct Dim2MatMulUtil<DeviceType::kGPU, float16> {
   static void Calc(DeviceCtx* ctx, const Blob* a, CBLAS_TRANSPOSE blas_trans_a, const Blob* b,
                    CBLAS_TRANSPOSE blas_trans_b, Blob* c) {
-    if (Global<JobDesc>::Get()->enable_cublashgemm_when_matmul()) {
-      NewKernelUtil<DeviceType::kGPU>::BlobGemm(
-          ctx, blas_trans_a, blas_trans_b, GetOneVal<float16>(), GetZeroVal<float16>(), a, b, c);
-    } else {
+    if (Global<JobDesc>::Get()->enable_float_compute_for_half_gemm()) {
       NewKernelUtil<DeviceType::kGPU>::BlobHGemmWithFloat(
           ctx, blas_trans_a, blas_trans_b, GetOneVal<float>(), GetZeroVal<float>(), a, b, c);
+    } else {
+      NewKernelUtil<DeviceType::kGPU>::BlobGemm(
+          ctx, blas_trans_a, blas_trans_b, GetOneVal<float16>(), GetZeroVal<float16>(), a, b, c);
+    }
+  }
+};
+
+template<DeviceType device_type, typename T>
+struct BatchMatMulUtil {
+  static void Calc(DeviceCtx* ctx, CBLAS_TRANSPOSE blas_trans_a, CBLAS_TRANSPOSE blas_trans_b,
+                   int32_t batch_size, int m, int n, int k, const T* a_dptr, const T* b_dptr,
+                   T* c_dptr, T** buf_dptr) {
+    NewKernelUtil<device_type>::OFBatchedGemm(ctx, blas_trans_a, blas_trans_b, batch_size, m, n, k,
+                                              GetOneVal<T>(), a_dptr, b_dptr, GetZeroVal<T>(),
+                                              c_dptr, buf_dptr);
+  }
+};  // namespace oneflow
+
+template<>
+struct BatchMatMulUtil<DeviceType::kGPU, float16> {
+  static void Calc(DeviceCtx* ctx, CBLAS_TRANSPOSE blas_trans_a, CBLAS_TRANSPOSE blas_trans_b,
+                   int32_t batch_size, int m, int n, int k, const float16* a_dptr,
+                   const float16* b_dptr, float16* c_dptr, float16** buf_dptr) {
+    if (Global<JobDesc>::Get()->enable_float_compute_for_half_gemm()) {
+      NewKernelUtil<DeviceType::kGPU>::OFBatchedHGemmWithFloat(
+          ctx, blas_trans_a, blas_trans_b, batch_size, m, n, k, GetOneVal<float>(), a_dptr, b_dptr,
+          GetZeroVal<float>(), c_dptr, buf_dptr);
+    } else {
+      NewKernelUtil<DeviceType::kGPU>::OFBatchedGemm(ctx, blas_trans_a, blas_trans_b, batch_size, m,
+                                                     n, k, GetOneVal<float16>(), a_dptr, b_dptr,
+                                                     GetZeroVal<float16>(), c_dptr, buf_dptr);
     }
   }
 };
@@ -76,9 +104,8 @@ void MatmulKernel<device_type, T>::CalcBatchMatMul(DeviceCtx* ctx, const Blob* a
   const T* b_dptr = b->dptr<T>();
   T* c_dptr = c->mut_dptr<T>();
   T** buf_dptr = reinterpret_cast<T**>(buf->mut_dptr<int64_t>());
-  NewKernelUtil<device_type>::OFBatchedGemm(ctx, blas_trans_a, blas_trans_b, batch_size, m, n, k,
-                                            GetOneVal<T>(), a_dptr, b_dptr, GetZeroVal<T>(), c_dptr,
-                                            buf_dptr);
+  BatchMatMulUtil<device_type, T>::Calc(ctx, blas_trans_a, blas_trans_b, batch_size, m, n, k,
+                                        a_dptr, b_dptr, c_dptr, buf_dptr);
 }
 
 ADD_GPU_HALF_KERNEL_CREATOR(OperatorConf::kMatmulConf, MatmulKernel, FLOATING_DATA_TYPE_SEQ);

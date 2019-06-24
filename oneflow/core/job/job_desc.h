@@ -52,8 +52,8 @@ class JobDesc final {
   bool enable_true_half_config_when_conv() const {
     return job_conf_.other().enable_true_half_config_when_conv();
   }
-  bool enable_cublashgemm_when_matmul() const {
-    return job_conf_.other().enable_cublashgemm_when_matmul();
+  bool enable_float_compute_for_half_gemm() const {
+    return job_conf_.other().enable_float_compute_for_half_gemm();
   }
   bool enable_auto_mixed_precision() const {
     return job_conf_.other().enable_auto_mixed_precision();
