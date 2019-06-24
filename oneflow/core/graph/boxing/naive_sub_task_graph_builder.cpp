@@ -1,4 +1,4 @@
-#include "oneflow/core/graph/boxing/inter_node_sub_task_graph_builder.h"
+#include "oneflow/core/graph/boxing/naive_sub_task_graph_builder.h"
 #include "oneflow/core/register/tensor_slice_view.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/graph/slice_boxing_task_node.h"
@@ -22,7 +22,7 @@ bool ContainsEmptySlice(const std::vector<TensorSliceView>& slices) {
 
 }  // namespace
 
-SubTskGphBuilderStatus InterNodeSubTskGphBuilder::Build(
+SubTskGphBuilderStatus NaiveSubTskGphBuilder::Build(
     SubTskGphBuilderCtx* ctx, const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
     const std::vector<CompTaskNode*>& sorted_dst_comp_tasks, const ParallelDesc& src_parallel_desc,
     const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,

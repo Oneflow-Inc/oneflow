@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_GRAPH_BOXING_INTER_NODE_SUB_TASK_GRAPH_BUILDER_H_
-#define ONEFLOW_CORE_GRAPH_BOXING_INTER_NODE_SUB_TASK_GRAPH_BUILDER_H_
+#ifndef ONEFLOW_CORE_GRAPH_BOXING_NAIVE_SUB_TASK_GRAPH_BUILDER_H_
+#define ONEFLOW_CORE_GRAPH_BOXING_NAIVE_SUB_TASK_GRAPH_BUILDER_H_
 
 #include "oneflow/core/graph/boxing/sub_task_graph_builder.h"
 
 namespace oneflow {
 
-class InterNodeSubTskGphBuilder final : public SubTskGphBuilder {
+class NaiveSubTskGphBuilder final : public SubTskGphBuilder {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(InterNodeSubTskGphBuilder);
-  InterNodeSubTskGphBuilder() = default;
-  ~InterNodeSubTskGphBuilder() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(NaiveSubTskGphBuilder);
+  NaiveSubTskGphBuilder() = default;
+  ~NaiveSubTskGphBuilder() override = default;
 
   SubTskGphBuilderStatus Build(SubTskGphBuilderCtx* ctx,
                                const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
@@ -23,4 +23,4 @@ class InterNodeSubTskGphBuilder final : public SubTskGphBuilder {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_BOXING_INTER_NODE_SUB_TASK_GRAPH_BUILDER_H_
+#endif  // ONEFLOW_CORE_GRAPH_BOXING_NAIVE_SUB_TASK_GRAPH_BUILDER_H_
