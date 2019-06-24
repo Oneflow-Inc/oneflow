@@ -30,6 +30,21 @@ void GatherKernel<device_type, T>::BackwardDataContent(
                                              this->kernel_conf().gather_conf().axis(), in_diff);
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kGatherConf, GatherKernel, FLOATING_DATA_TYPE_SEQ);
+namespace {
+
+Kernel* CreateGatherKernel(const KernelConf& kernel_conf) {
+  static const HashMap<std::string, std::function<Kernel*()>> creators = {
+    OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY, (GatherKernel), DEVICE_TYPE_SEQ,
+                                     FLOATING_DATA_TYPE_SEQ)
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
+        MAKE_KERNEL_CREATOR_ENTRY(GatherKernel, DeviceType::kGPU, (float16, DataType::kFloat16))
+#endif
+  };
+  return creators.at(
+      GetHashKey(kernel_conf.op_attribute().op_conf().device_type(), kernel_conf.data_type()))();
+}
+
+REGISTER_KERNEL_CREATOR(OperatorConf::kGatherConf, CreateGatherKernel);
+}  // namespace
 
 }  // namespace oneflow

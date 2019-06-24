@@ -653,9 +653,16 @@ KU_INTEGRAL_METHOD Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, 
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_SEQ);
 
 template<>
-__device__ float gpu_atomic_add(float* address, const float val) {
+__device__ float gpu_atomic_add(float* address, float val) {
   return atomicAdd(address, val);
 }
+
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
+template<>
+__device__ half gpu_atomic_add(half* address, half val) {
+  return atomicAdd(address, val);
+}
+#endif
 
 template<>
 __device__ double gpu_atomic_add(double* address, const double val) {

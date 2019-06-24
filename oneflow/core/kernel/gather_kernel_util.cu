@@ -43,37 +43,53 @@ __global__ void GatherBackwardGpu(int64_t elem_cnt, const K* indices, int64_t nu
 template<typename T, typename K>
 struct GatherKernelUtilImpl<DeviceType::kGPU, T, K> final {
   static void Forward(DeviceCtx* ctx, const K* indices, int64_t num_indices, const T* in,
-                      const Shape& flat_in_shape, T* out);
+                      const Shape& flat_in_shape, T* out) {
+    const int64_t elem_cnt = flat_in_shape.At(0) * num_indices * flat_in_shape.At(2);
+    GatherForwardGpu<T, K>
+        <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+            elem_cnt, indices, num_indices, in, flat_in_shape.At(1), flat_in_shape.At(2), out);
+  }
   static void Backward(DeviceCtx* ctx, const K* indices, int64_t num_indices, const T* out_diff,
-                       const Shape& flat_in_shape, T* in_diff);
+                       const Shape& flat_in_shape, T* in_diff) {
+    const int64_t elem_cnt = flat_in_shape.At(0) * num_indices * flat_in_shape.At(2);
+    GatherBackwardGpu<T, K>
+        <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+            elem_cnt, indices, num_indices, out_diff, flat_in_shape.At(1), flat_in_shape.At(2),
+            in_diff);
+  }
 };
 
-template<typename T, typename K>
-void GatherKernelUtilImpl<DeviceType::kGPU, T, K>::Forward(DeviceCtx* ctx, const K* indices,
-                                                           int64_t num_indices, const T* in,
-                                                           const Shape& flat_in_shape, T* out) {
-  const int64_t elem_cnt = flat_in_shape.At(0) * num_indices * flat_in_shape.At(2);
-  GatherForwardGpu<T, K>
-      <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          elem_cnt, indices, num_indices, in, flat_in_shape.At(1), flat_in_shape.At(2), out);
-}
-
-template<typename T, typename K>
-void GatherKernelUtilImpl<DeviceType::kGPU, T, K>::Backward(DeviceCtx* ctx, const K* indices,
-                                                            int64_t num_indices, const T* out_diff,
-                                                            const Shape& flat_in_shape,
-                                                            T* in_diff) {
-  const int64_t elem_cnt = flat_in_shape.At(0) * num_indices * flat_in_shape.At(2);
-  GatherBackwardGpu<T, K>
-      <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          elem_cnt, indices, num_indices, out_diff, flat_in_shape.At(1), flat_in_shape.At(2),
-          in_diff);
-}
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
+template<typename K>
+struct GatherKernelUtilImpl<DeviceType::kGPU, float16, K> final {
+  static void Forward(DeviceCtx* ctx, const K* indices, int64_t num_indices, const float16* in,
+                      const Shape& flat_in_shape, float16* out) {
+    const int64_t elem_cnt = flat_in_shape.At(0) * num_indices * flat_in_shape.At(2);
+    GatherForwardGpu<half, K>
+        <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+            elem_cnt, indices, num_indices, reinterpret_cast<const half*>(in), flat_in_shape.At(1),
+            flat_in_shape.At(2), reinterpret_cast<half*>(out));
+  }
+  static void Backward(DeviceCtx* ctx, const K* indices, int64_t num_indices,
+                       const float16* out_diff, const Shape& flat_in_shape, float16* in_diff) {
+    const int64_t elem_cnt = flat_in_shape.At(0) * num_indices * flat_in_shape.At(2);
+    GatherBackwardGpu<half, K>
+        <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+            elem_cnt, indices, num_indices, reinterpret_cast<const half*>(out_diff),
+            flat_in_shape.At(1), flat_in_shape.At(2), reinterpret_cast<half*>(in_diff));
+  }
+};
+#endif
 
 #define INITIATE_GATHER_KERNEL_UTIL_GPU_IMPL(in_type_pair, index_type_pair)              \
   template struct GatherKernelUtilImpl<DeviceType::kGPU, OF_PP_PAIR_FIRST(in_type_pair), \
                                        OF_PP_PAIR_FIRST(index_type_pair)>;
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL_GPU_IMPL, FLOATING_DATA_TYPE_SEQ,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL_GPU_IMPL,
+                                 FLOATING_DATA_TYPE_SEQ
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
+                                     FLOAT16_DATA_TYPE_SEQ
+#endif
+                                 ,
                                  INT_DATA_TYPE_SEQ);
 #undef INITIATE_GATHER_KERNEL_UTIL_GPU_IMPL
 
