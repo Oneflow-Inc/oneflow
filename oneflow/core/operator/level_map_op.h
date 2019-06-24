@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_OPERATOR_MATCHER_OP_H_
-#define ONEFLOW_CORE_OPERATOR_MATCHER_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_LEVEL_MAP_OP_H_
+#define ONEFLOW_CORE_OPERATOR_LEVEL_MAP_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-class MatcherOp final : public Operator {
+class LevelMapOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(MatcherOp);
-  MatcherOp() = default;
-  ~MatcherOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(LevelMapOp);
+  LevelMapOp() = default;
+  ~LevelMapOp() = default;
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
@@ -22,4 +22,4 @@ class MatcherOp final : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_MATCHER_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_LEVEL_MAP_OP_H_

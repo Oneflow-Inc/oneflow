@@ -1453,19 +1453,6 @@ message CalcIoUMatrixOpConf {
   required string iou_matrix = 3;
 }
 
-// split Matcher into top_1 with keep_same_val and set_low_quality_matches
-message MatcherOpConf {
-  // in
-  required string iou_matrix = 1;
-  required string iou_matrix_shape = 2;
-  // out
-  required string matched_indices = 3;
-  // conf
-  optional float high_threshold = 4 [default = 0.7];
-  optional float low_threshold = 5 [default = 0.3];
-  optional bool allow_low_quality_matches = 6 [default = true];
-}
-
 message BoxEncodeOpConf {
   // in
   required string ref_boxes = 1;
@@ -1580,6 +1567,19 @@ message BroadcastGreaterEqualOpConf {
   required string b = 2;
   required string out = 3;
   optional bool is_const = 4 [default = false];
+}
+
+message LevelMapOpConf {
+  // in
+  required string in = 1;
+  // out
+  required string out = 2;
+  // conf
+  required int32 min_level = 3 [default = 2];
+  required int32 max_level = 4 [default = 5];
+  required int32 canonical_level = 5 [default = 4];
+  required float canonical_scale = 6 [default = 224];
+  optional float epsilon = 7 [default = 1e-6];
 }
 
 message OperatorConf {
@@ -1738,10 +1738,10 @@ message OperatorConf {
     BboxScaleOpConf bbox_scale_conf = 602;
     AnchorGenerateOpConf anchor_generate_conf = 603;
     CalcIoUMatrixOpConf calc_iou_matrix_conf = 604;
-    MatcherOpConf matcher_conf = 605;
-    BoxEncodeOpConf box_encode_conf = 606;
-    BoxDecodeOpConf box_decode_conf = 607;
-    MaskrcnnPositiveNegativeSampleOpConf maskrcnn_positive_negative_sample_conf = 608;
+    BoxEncodeOpConf box_encode_conf = 605;
+    BoxDecodeOpConf box_decode_conf = 606;
+    MaskrcnnPositiveNegativeSampleOpConf maskrcnn_positive_negative_sample_conf = 607;
+    LevelMapOpConf level_map_conf = 608;
   }
 }
 
