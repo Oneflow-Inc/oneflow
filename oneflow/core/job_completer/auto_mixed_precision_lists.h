@@ -20,6 +20,7 @@ class AutoMixedPrecisionLists final {
   static const AMPList& WhiteList();
   static const AMPList& BlackList();
   static const AMPList& GrayList();
+  static const AMPList& ClearList();
 };
 
 }  // namespace oneflow

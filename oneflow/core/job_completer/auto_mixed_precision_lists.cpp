@@ -13,15 +13,30 @@ const AMPList& AutoMixedPrecisionLists::BlackList() {
 }
 
 const AMPList& AutoMixedPrecisionLists::GrayList() {
-  static AMPList gray_list = {OperatorConf::kAddConf,          OperatorConf::kAveragePooling1DConf,
-                              OperatorConf::kMaxPooling1DConf, OperatorConf::kAveragePooling2DConf,
-                              OperatorConf::kMaxPooling2DConf, OperatorConf::kAveragePooling3DConf,
-                              OperatorConf::kMaxPooling3DConf, OperatorConf::kBiasAddConf,
-                              OperatorConf::kMultiplyConf,     OperatorConf::kSigmoidConf,
-                              OperatorConf::kTanhConf,         OperatorConf::kSqrtConf,
-                              OperatorConf::kScalarMulConf,    OperatorConf::kScalarAddConf,
-                              OperatorConf::kBroadcastAddConf, OperatorConf::kBroadcastSubConf,
-                              OperatorConf::kBroadcastMulConf, OperatorConf::kBroadcastDivConf};
+  static AMPList gray_list = {OperatorConf::kAddConf,
+                              OperatorConf::kAveragePooling1DConf,
+                              OperatorConf::kAveragePooling2DConf,
+                              OperatorConf::kAveragePooling3DConf,
+                              OperatorConf::kBiasAddConf,
+                              OperatorConf::kMultiplyConf,
+                              OperatorConf::kSigmoidConf,
+                              OperatorConf::kTanhConf,
+                              OperatorConf::kSqrtConf,
+                              OperatorConf::kScalarMulConf,
+                              OperatorConf::kScalarAddConf,
+                              OperatorConf::kBroadcastAddConf,
+                              OperatorConf::kBroadcastSubConf,
+                              OperatorConf::kBroadcastMulConf,
+                              OperatorConf::kBroadcastDivConf};
+  return gray_list;
+}
+
+const AMPList& AutoMixedPrecisionLists::ClearList() {
+  static AMPList gray_list = {OperatorConf::kGatherConf,        OperatorConf::kIdentityConf,
+                              OperatorConf::kTupleIdentityConf, OperatorConf::kMaxPooling1DConf,
+                              OperatorConf::kMaxPooling2DConf,  OperatorConf::kMaxPooling3DConf,
+                              OperatorConf::kReshapeConf,       OperatorConf::kReluConf,
+                              OperatorConf::kTransposeConf};
   return gray_list;
 }
 

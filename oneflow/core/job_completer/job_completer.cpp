@@ -432,7 +432,7 @@ void RewriteBoxingWithAllReduce(const OpGraph& op_graph, Job* job) {
 void EnableAutoMixedPrecision(const OpGraph& op_graph, Job* job) {
   if (!Global<JobDesc>::Get()->enable_auto_mixed_precision()) { return; }
   AutoMixedPrecision(AutoMixedPrecisionLists::WhiteList(), AutoMixedPrecisionLists::BlackList(),
-                     AutoMixedPrecisionLists::GrayList())
+                     AutoMixedPrecisionLists::GrayList(), AutoMixedPrecisionLists::ClearList())
       .Apply(op_graph, job);
 }
 
