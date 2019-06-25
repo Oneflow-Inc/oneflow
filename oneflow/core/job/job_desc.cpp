@@ -22,6 +22,20 @@ const TrainConf& GetTrainConf(const JobConf& job_conf) {
   return job_conf.other().train_conf();
 }
 
+class JobId final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(JobId);
+  ~JobId() = default;
+
+  operator int64_t() const { return value_; }
+
+ private:
+  friend class Global<JobId>;
+  JobId(int64_t value) : value_(value) {}
+
+  int64_t value_;
+};
+
 }  // namespace
 
 int64_t JobDesc::all_reduce_group_min_byte() const {
@@ -126,8 +140,14 @@ bool IsInterfaceOpConf(const OperatorConf& op_conf) {
   return op_conf.has_variable_conf() || op_conf.has_input_conf() || op_conf.has_output_conf();
 }
 
+void WithGlobalJobId(int64_t job_id, const std::function<void()>& Handler) {
+  Global<JobId>::New(job_id);
+  Handler();
+  Global<JobId>::Delete();
+}
+
 const JobDesc& GlobalJobDesc() {
-  return *Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->at(Global<JobId>::Get()->value());
+  return *Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->at(*Global<JobId>::Get());
 }
 
 }  // namespace oneflow

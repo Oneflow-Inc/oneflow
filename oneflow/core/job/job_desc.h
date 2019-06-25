@@ -70,21 +70,7 @@ class JobDesc final {
   int32_t job_id_;
 };
 
-class JobId final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(JobId);
-  ~JobId() = default;
-
-  int64_t value() const { return value_; }
-  void set_value(int64_t val) { value_ = val; }
-
- private:
-  friend class Global<JobId>;
-  JobId() = default;
-
-  int64_t value_;
-};
-
+void WithGlobalJobId(int64_t job_id, const std::function<void()>& Handler);
 const JobDesc& GlobalJobDesc();
 
 }  // namespace oneflow
