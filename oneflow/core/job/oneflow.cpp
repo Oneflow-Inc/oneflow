@@ -177,10 +177,12 @@ void WithJobSetLevelGlobalObjs(
     *Global<AvailableMemDesc>::Get() = PullAvailableMemDesc();
     Global<CriticalSectionDesc>::New();
   }
+  Global<JobName2JobId>::New();
   Global<std::vector<std::unique_ptr<JobDesc>>>::New();
   FOR_RANGE(int32_t, i, 0, job_set.job_conf_size()) {
-    Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->emplace_back(
-        new JobDesc(job_set.job_conf(i), i));
+    auto* job_desc = new JobDesc(job_set.job_conf(i), i);
+    Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->emplace_back(job_desc);
+    CHECK(Global<JobName2JobId>::Get()->emplace(job_desc->job_name(), job_desc->job_id()).second);
   }
   Global<BufferMgr<int64_t>>::New();
   Global<BufferMgr<int64_t>>::Get()->NewBuffer(kBufferNameGlobalWaitJobId, job_set.job_conf_size());
@@ -199,6 +201,7 @@ void WithJobSetLevelGlobalObjs(
   Global<BufferMgr<std::function<void()>>>::Delete();
   Global<BufferMgr<int64_t>>::Delete();
   Global<std::vector<std::unique_ptr<JobDesc>>>::Delete();
+  Global<JobName2JobId>::Delete();
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     Global<CriticalSectionDesc>::Delete();
     Global<AvailableMemDesc>::Delete();
@@ -668,11 +671,13 @@ void CompileMainJob(Job* main_job, const LogicalBlobId& critical_section_sink_lb
   ConnectCriticalSectionEndToReentrantLockEnd(main_plan, critical_section_sink_lbi);
 }
 
-void AddGlobalJobDesc(const Job& job, int32_t job_id) {
+void AddGlobalJobDesc(const Job& job, const std::string& job_name, int32_t job_id) {
   JobConf job_conf = ConvertJob2JobConf(job);
+  job_conf.set_name(job_name);
   auto* job_descs = Global<std::vector<std::unique_ptr<JobDesc>>>::Get();
   CHECK_EQ(job_descs->size(), job_id);
   job_descs->emplace_back(new JobDesc(job_conf, job_id));
+  CHECK(Global<JobName2JobId>::Get()->emplace(job_name, job_id).second);
 }
 
 bool NeedAllocateMemory(const RegstDescTypeProto& regst_desc_type) {
@@ -770,7 +775,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
       Job main_job;
       LogicalBlobId critical_section_sink_lbi;
       MakeMainJob(jobs, &main_job, &identity_tick_op_names, &critical_section_sink_lbi);
-      AddGlobalJobDesc(main_job, sub_plans.size());
+      AddGlobalJobDesc(main_job, "MainJob-unamed", sub_plans.size());
       CompileMainJob(&main_job, critical_section_sink_lbi, sub_plans.size(), &main_plan);
     }
     LinkMainPlan(plan, main_plan, identity_tick_op_names);

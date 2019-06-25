@@ -84,6 +84,6 @@ message JobConf {
   required Placement placement = 2;
   optional SbpConf sbp_conf = 3;
   required Config other = 4;
-  optional string name = 5;
+  required string name = 5;
   repeated string arg_op_name = 6;
 }
