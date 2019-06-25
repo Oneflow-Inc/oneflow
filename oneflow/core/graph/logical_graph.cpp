@@ -220,49 +220,6 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
   SetupNormalMdUpdtOp();
 }
 
-void LogicalGraph::BuildReduceStruct(const ReduceCtx& reduce_ctx) {
-  CHECK_GT(reduce_ctx.fw_logicals.size(), 0);
-  std::shared_ptr<const ParallelDesc> src_pd = reduce_ctx.fw_logicals[0]->parallel_desc();
-
-  OperatorConf reduce_concat_op_conf;
-  reduce_concat_op_conf.set_name("reduce_concat_" + NewUniqueId());
-  reduce_concat_op_conf.set_device_type(src_pd->device_type());
-  reduce_concat_op_conf.mutable_reduce_concat_conf()->set_in_num(reduce_ctx.fw_logicals.size());
-  LogicalNode* reduce_concat_node = NewNode<ReduceConcatLogicalNode>();
-  reduce_concat_node->mut_op_vec() = {ConstructOp(reduce_concat_op_conf)};
-  reduce_concat_node->mut_parallel_desc() = src_pd;
-
-  // We can not add ctrl edges between all_reduce nodes due to the implementation of nccl.
-  // So we add ctrl edges between ReduceIdentityTaskNodes which are followed by
-  // all_reduce nodes;
-  OperatorConf reduce_identity_conf;
-  reduce_identity_conf.set_name("reduce_identity_" + NewUniqueId());
-  reduce_identity_conf.set_device_type(src_pd->device_type());
-  reduce_identity_conf.mutable_reduce_identity_conf();
-  auto* reduce_identity_node = NewNode<ReduceIdentityLogicalNode>();
-  reduce_identity_node->mut_op_vec() = {ConstructOp(reduce_identity_conf)};
-  reduce_identity_node->mut_parallel_desc() = src_pd;
-  reduce_identity_node->set_order_in_logical_graph(reduce_ctx.order_in_logical_graph);
-
-  OperatorConf reduce_split_op_conf;
-  reduce_split_op_conf.set_name("reduce_split_" + NewUniqueId());
-  reduce_split_op_conf.set_device_type(src_pd->device_type());
-  reduce_split_op_conf.mutable_reduce_split_conf()->set_out_num(reduce_ctx.fw_logicals.size());
-  auto* reduce_split_node = NewNode<ReduceSplitLogicalNode>();
-  reduce_split_node->mut_op_vec() = {ConstructOp(reduce_split_op_conf)};
-  reduce_split_node->mut_parallel_desc() = src_pd;
-  reduce_split_node->set_order_in_logical_graph(reduce_ctx.order_in_logical_graph);
-
-  for (auto& md_diff_acc_node : reduce_ctx.md_diff_acc_logicals) {
-    Connect(md_diff_acc_node, NewEdge(), reduce_concat_node);
-  }
-  Connect(reduce_concat_node, NewEdge(), static_cast<LogicalNode*>(reduce_identity_node));
-  AddAllReduce(reduce_identity_node, reduce_split_node);
-  for (auto& md_updt_node : reduce_ctx.md_updt_logicals) {
-    Connect(static_cast<LogicalNode*>(reduce_split_node), NewEdge(), md_updt_node);
-  }
-}
-
 void LogicalGraph::AddAllReduce(LogicalNode* src, LogicalNode* dst) {
   std::shared_ptr<const ParallelDesc> src_pd = src->parallel_desc();
   std::shared_ptr<const ParallelDesc> dst_pd = dst->parallel_desc();
