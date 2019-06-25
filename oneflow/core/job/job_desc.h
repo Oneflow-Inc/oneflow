@@ -21,7 +21,7 @@ class JobDesc final {
 
   // Common
   int32_t job_id() const { return job_id_; }
-  const std::string& name() const { return job_conf_.name(); }
+  const std::string& job_name() const { return job_conf_.name(); }
   const PbRpf<std::string>& arg_op_name() const { return job_conf_.arg_op_name(); }
   int64_t concurrency_width() const { return job_conf_.other().concurrency_width(); }
   const Config& other_conf() const { return job_conf_.other(); }
@@ -69,6 +69,8 @@ class JobDesc final {
   JobConf job_conf_;
   int32_t job_id_;
 };
+
+typedef HashMap<std::string, int64_t> JobName2JobId;
 
 void WithGlobalJobId(int64_t job_id, const std::function<void()>& Handler);
 const JobDesc& GlobalJobDesc();
