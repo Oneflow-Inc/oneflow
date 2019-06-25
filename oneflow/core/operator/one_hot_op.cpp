@@ -15,7 +15,7 @@ void OneHotOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
   const OneHotOpConf& conf = op_conf().one_hot_conf();
   const int64_t depth = conf.depth();
   const DataType data_type =
-      conf.has_data_type() ? conf.data_type() : Global<JobDesc>::Get()->DefaultDataType();
+      conf.has_data_type() ? conf.data_type() : GlobalJobDesc().DefaultDataType();
   CHECK_GT(depth, 0);
   const BlobDesc* indices = GetBlobDesc4BnInOp("indices");
   CHECK(IsIntegralDataType(indices->data_type()));

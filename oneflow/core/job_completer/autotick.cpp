@@ -163,7 +163,7 @@ CriticalSection* AddGlobalCriticalSection(const std::string& src_tick_op_name,
                                           const std::string& sink_tick_op_name) {
   auto critical_sec = std::make_unique<CriticalSection>();
   CriticalSection* ret = critical_sec.get();
-  critical_sec->set_job_id(Global<JobDesc>::Get()->job_id());
+  critical_sec->set_job_id(GlobalJobDesc().job_id());
   critical_sec->set_source_tick_op_name(src_tick_op_name);
   critical_sec->set_sink_tick_op_name(sink_tick_op_name);
   Global<CriticalSectionDesc>::Get()->AddCriticalSection(std::move(critical_sec));
@@ -181,7 +181,7 @@ void ForEachInputOutputCriticalSectionOpNodes(
     const std::function<void(const HashSet<const OpNode*>&, const std::vector<std::string>&)>&
         Handler) {
   HashSet<std::string> arg_op_names;
-  for (const auto& name : Global<JobDesc>::Get()->arg_op_name()) { arg_op_names.insert(name); }
+  for (const auto& name : GlobalJobDesc().arg_op_name()) { arg_op_names.insert(name); }
   HashMap<OperatorConf::OpTypeCase, HashSet<const OpNode*>> op_type_case2op_nodes;
   op_graph.ForEachNode([&](OpNode* op_node) {
     const auto& op_name = op_node->op().op_name();
@@ -233,8 +233,8 @@ std::vector<OperatorConf> AddTickForTimeShape(const Shape& src_time_shape,
 void AddGlobalInputOutputCriticalSection(const HashSet<const OpNode*>& op_nodes,
                                          const std::vector<std::string>& lbi_producer_op_names,
                                          Job* job) {
-  auto time_shape = std::make_unique<Shape>(std::vector<int64_t>{
-      Global<JobDesc>::Get()->TotalBatchNum(), Global<JobDesc>::Get()->NumOfPiecesInBatch()});
+  auto time_shape = std::make_unique<Shape>(
+      std::vector<int64_t>{GlobalJobDesc().TotalBatchNum(), GlobalJobDesc().NumOfPiecesInBatch()});
   HashMap<ParallelDesc, std::list<const OpNode*>> parallel_desc2op_nodes;
   for (const OpNode* op_node : op_nodes) {
     parallel_desc2op_nodes[op_node->parallel_desc()].push_back(op_node);

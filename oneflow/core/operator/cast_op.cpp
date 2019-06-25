@@ -24,7 +24,7 @@ void CastOp::FixSbpSignature(
     SbpSignature* sbp_signature) const {
   auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
   if (bn2sbp->at("out").has_partial_sum_parallel()  // TODO: data_type is float16
-      && Global<JobDesc>::Get()->all_reduce_fp16()) {
+      && GlobalJobDesc().all_reduce_fp16()) {
     bn2sbp->at("in").mutable_broadcast_parallel();
     bn2sbp->at("out").mutable_broadcast_parallel();
   }

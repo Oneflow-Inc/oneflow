@@ -19,8 +19,8 @@ void LayerNormOp::InitFromOpConf() {
   const LayerNormOpConf& conf = op_conf().layer_norm_conf();
   if (!(conf.center() || conf.scale())) { mut_op_conf()->set_trainable(false); }
   const bool fw_bw_split =
-      Global<JobDesc>::Get()->IsPredict()
-      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf();
+      GlobalJobDesc().IsPredict()
+      && GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf();
   if (!fw_bw_split) {
     CHECK(!conf.has_beta());
     CHECK(!conf.has_gamma());

@@ -7,6 +7,7 @@
 #include "oneflow/core/graph/graph.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_builder.h"
+#include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 
@@ -92,7 +93,6 @@ JobDesc::JobDesc(const JobConf& job_conf, int32_t job_id) : job_conf_(job_conf),
 }
 
 void JobDesc::Init() {
-  SanityCheck();
 #ifndef WITH_RDMA
   CHECK_EQ(Global<ResourceDesc>::Get()->use_rdma(), false) << "Please compile ONEFLOW with RDMA";
 #endif
@@ -122,14 +122,12 @@ void JobDesc::Init() {
 #endif
 }
 
-void JobDesc::SanityCheck() {
-  FOR_RANGE(int64_t, i, 0, Global<ResourceDesc>::Get()->TotalMachineNum()) {
-    CHECK_EQ(Global<ResourceDesc>::Get()->machine(i).id(), i);
-  }
-}
-
 bool IsInterfaceOpConf(const OperatorConf& op_conf) {
   return op_conf.has_variable_conf() || op_conf.has_input_conf() || op_conf.has_output_conf();
+}
+
+const JobDesc& GlobalJobDesc() {
+  return *Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->at(Global<JobId>::Get()->value());
 }
 
 }  // namespace oneflow

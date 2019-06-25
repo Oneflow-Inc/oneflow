@@ -20,7 +20,7 @@ void LocalResponseNormalizationOp::InferBlobDescs(
   const LocalResponseNormalizationOpConf conf = op_conf().local_response_normalization_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   CHECK_EQ(in_blob_desc->shape().NumAxes(), 4);
-  CHECK_EQ(in_blob_desc->data_type(), Global<JobDesc>::Get()->DefaultDataType());
+  CHECK_EQ(in_blob_desc->data_type(), GlobalJobDesc().DefaultDataType());
   *GetBlobDesc4BnInOp("out") = *in_blob_desc;
 
   if (device_type() == DeviceType::kCPU) {

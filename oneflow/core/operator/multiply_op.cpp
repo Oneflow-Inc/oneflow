@@ -17,7 +17,7 @@ void MultiplyOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
                                 const ParallelContext* parallel_ctx) const {
   BlobDesc* in_0_blob_desc = GetBlobDesc4BnInOp("in_0");
   BlobDesc* in_1_blob_desc = GetBlobDesc4BnInOp("in_1");
-  CHECK_EQ(in_0_blob_desc->data_type(), Global<JobDesc>::Get()->DefaultDataType());
+  CHECK_EQ(in_0_blob_desc->data_type(), GlobalJobDesc().DefaultDataType());
   CHECK_EQ(in_0_blob_desc->shape(), in_1_blob_desc->shape());
   // out
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");

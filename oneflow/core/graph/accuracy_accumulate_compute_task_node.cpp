@@ -3,9 +3,9 @@
 namespace oneflow {
 
 void AccuracyAccCompTaskNode::InferProducedDataRegstTimeShape() {
-  int64_t accuracy_acc_output_num = Global<JobDesc>::Get()->TotalBatchNum()
-                                    * Global<JobDesc>::Get()->NumOfPiecesInBatch()
-                                    / Global<JobDesc>::Get()->PieceNumOfPrintAccuracy();
+  int64_t accuracy_acc_output_num = GlobalJobDesc().TotalBatchNum()
+                                    * GlobalJobDesc().NumOfPiecesInBatch()
+                                    / GlobalJobDesc().PieceNumOfPrintAccuracy();
   std::shared_ptr<Shape> time_shape(new Shape({accuracy_acc_output_num}));
   ForEachProducedDataRegst([time_shape](const std::string& name, RegstDesc* regst) {
     *regst->mut_data_regst_time_shape() = time_shape;

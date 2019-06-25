@@ -6,7 +6,7 @@ template<typename T>
 std::shared_ptr<Operator> GetTestPoolingOp() {
   JobConf job_conf;
   job_conf.set_DefaultDataType(GetDataType<T>::value);
-  Global<JobDesc>::Get()->InitFromJobConf(job_conf);
+  GlobalJobDesc().InitFromJobConf(job_conf);
   OperatorConf op_conf;
   op_conf.set_name("pooling_test");
   op_conf.mutable_pooling_conf()->set_in("pooling_in");

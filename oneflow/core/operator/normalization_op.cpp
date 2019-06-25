@@ -6,7 +6,7 @@ namespace oneflow {
 namespace {
 
 inline bool IsFwBwSplit() {
-  return Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf();
+  return GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf();
 }
 
 }  // namespace

@@ -10,7 +10,7 @@ void MdDiffAccCompTaskNode::FixPackedBlobDescOfProducedRegst() {
 }
 
 void MdDiffAccCompTaskNode::InferProducedDataRegstTimeShape() {
-  std::shared_ptr<Shape> time_shape(new Shape({Global<JobDesc>::Get()->TotalBatchNum()}));
+  std::shared_ptr<Shape> time_shape(new Shape({GlobalJobDesc().TotalBatchNum()}));
   ForEachProducedDataRegst([time_shape](const std::string& name, RegstDesc* regst) {
     *regst->mut_data_regst_time_shape() = time_shape;
   });

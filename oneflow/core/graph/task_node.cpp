@@ -217,7 +217,7 @@ void TaskNode::ToProto(TaskProto* task_proto) {
   task_proto->set_machine_id(machine_id_);
   task_proto->set_thrd_id(thrd_id_);
   task_proto->set_task_id(task_id_);
-  task_proto->set_job_id(Global<JobDesc>::Get()->job_id());
+  task_proto->set_job_id(GlobalJobDesc().job_id());
   task_proto->mutable_task_set_info()->set_area_id(area_id_);
   task_proto->mutable_task_set_info()->set_chain_id(chain_id_);
   task_proto->mutable_task_set_info()->set_order_in_graph(order_in_graph_);
@@ -308,7 +308,7 @@ std::shared_ptr<RegstDesc> TaskNode::NewProducedRegst(bool enable_mem_sharing,
   *(regst->mut_regst_desc_type()) = regst_desc_type;
   regst->UpdtMinRegstNumIfNeed(min_register_num);
   regst->UpdtMaxRegstNumIfNeed(max_register_num);
-  regst->set_enable_mem_sharing(Global<JobDesc>::Get()->enable_mem_sharing() && enable_mem_sharing);
+  regst->set_enable_mem_sharing(GlobalJobDesc().enable_mem_sharing() && enable_mem_sharing);
   InitProducedRegstMemCase(regst.get());
   return regst;
 }

@@ -75,6 +75,8 @@ message Config {
   // You can see the actual number of reduce group is slightly bigger than all_reduce_group_num.
   optional float all_reduce_group_size_warmup = 602 [default = 2];
   optional bool all_reduce_fp16 = 603 [default = true];
+
+  optional int64 concurrency_width = 1000 [default = 128];
 }
 
 message JobConf {

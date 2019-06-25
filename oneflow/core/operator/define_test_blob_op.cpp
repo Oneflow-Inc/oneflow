@@ -21,7 +21,7 @@ void DefineTestBlobOp::InferBlobDescs(
   Shape shape(conf.shape());
   out_blob_desc->mut_shape() = shape;
   out_blob_desc->set_data_type(conf.data_type());
-  out_blob_desc->set_has_data_id_field(Global<JobDesc>::Get()->SizeOfOneDataId() > 0);
+  out_blob_desc->set_has_data_id_field(GlobalJobDesc().SizeOfOneDataId() > 0);
   out_blob_desc->set_has_col_num_field(false);
   out_blob_desc->set_has_dim0_valid_num_field(conf.has_dim0_valid_num());
   out_blob_desc->set_has_dim1_valid_num_field(conf.has_dim1_valid_num());

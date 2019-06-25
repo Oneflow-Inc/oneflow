@@ -17,7 +17,8 @@ class MockJobDesc : public JobDesc {
 };
 
 void InitJobDescSingleton(MockJobDesc* mock_job_desc) {
-  *(Global<JobDesc>::GetPPtr()) = mock_job_desc;
+  TODO();
+  // *(Global<JobDesc>::GetPPtr()) = mock_job_desc;
 }
 
 }  // namespace test

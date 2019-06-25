@@ -53,7 +53,7 @@ void ExecNode::ToProto(bool is_forward, const ParallelContext* parallel_ctx,
 
 void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx) {
   auto GetBlobDesc4BnInOp = GetBlobDesc4BnInOpFunc();
-  op_->InferBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx, Global<JobDesc>::Get()->RecordPieceSize(),
+  op_->InferBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx, GlobalJobDesc().RecordPieceSize(),
                         [this](OpContext* op_ctx) { op_ctx_.reset(op_ctx); });
   Global<OpGraph>::Get()->CheckBlobDescs(op_->op_name(), GetBlobDesc4BnInOp, parallel_ctx);
 }

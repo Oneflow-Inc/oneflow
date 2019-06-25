@@ -61,15 +61,14 @@ void LogicalGraph::NaiveBuildFwStruct(
     std::shared_ptr<Operator> cur_op = ConstructOp(cur_op_conf);
     LogicalNode* cur_node = cur_op->NewProperLogicalNode();
     if (cur_node->TypeName() == "PackForward" || cur_node->TypeName() == "UnpackForward") {
-      CHECK_EQ(
-          0, Global<JobDesc>::Get()->other_conf().piece_size() % parallel_desc_ptr->parallel_num());
+      CHECK_EQ(0, GlobalJobDesc().other_conf().piece_size() % parallel_desc_ptr->parallel_num());
     }
     AddAllocatedNode(cur_node);
     cur_node->mut_op_vec() = {cur_op};
     cur_node->SoleOp()->FixParallelDesc(parallel_desc_ptr.get());
     cur_node->mut_parallel_desc() = parallel_desc_ptr;
-    if (Global<JobDesc>::Get()->IsPredict()
-        && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+    if (GlobalJobDesc().IsPredict()
+        && GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
       const auto& name2shape = job_.helper().op_name2op_time_shape();
       const auto& op_time_shape_it = name2shape.find(cur_op->op_name());
       if (op_time_shape_it != name2shape.end()) {
@@ -269,9 +268,9 @@ void LogicalGraph::AddAllReduce(LogicalNode* src, LogicalNode* dst) {
   std::shared_ptr<const ParallelDesc> dst_pd = dst->parallel_desc();
   CHECK_EQ(src_pd->parallel_num(), dst_pd->parallel_num());
   CHECK_EQ(src_pd->device_type(), dst_pd->device_type());
-  if (Global<JobDesc>::Get()->enable_nccl() && src_pd->device_type() == DeviceType::kGPU) {
+  if (GlobalJobDesc().enable_nccl() && src_pd->device_type() == DeviceType::kGPU) {
     if (src_pd->sorted_machine_ids().size() == 1
-        || Global<JobDesc>::Get()->use_nccl_inter_node_communication()) {
+        || GlobalJobDesc().use_nccl_inter_node_communication()) {
       AddNcclAllReduce(src, dst);
     } else if (src_pd->device_num_of_each_machine() == 1) {
       AddReduceScatterAddGatherNodes(src, dst, ReduceRankCtx());
@@ -433,8 +432,8 @@ MdSaveLogicalNode* LogicalGraph::BuildMdSaveStructIfNeed(LogicalNode* need_save_
 
 void LogicalGraph::ForEachNecessaryCtrlEdge(
     const std::function<void(const LogicalNode*, const LogicalNode*, int64_t)>& Handler) const {
-  if (!(Global<JobDesc>::Get()->IsPredict()
-        && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf())) {
+  if (!(GlobalJobDesc().IsPredict()
+        && GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf())) {
     return;
   }
   HashMap<std::string, const LogicalNode*> op_name2node;
@@ -475,8 +474,8 @@ NormalMdUpdtLogicalNode* LogicalGraph::BuildNormalMdUpdtAndMdSaveStruct(
   // for model
   BuildMdSaveStructIfNeed(md_updt_logical);
   // TODO: remove the following ugly hard coded `if'
-  if (Global<JobDesc>::Get()->other_conf().train_conf().model_update_conf().has_momentum_conf()
-      || Global<JobDesc>::Get()->other_conf().train_conf().model_update_conf().has_adam_conf()) {
+  if (GlobalJobDesc().other_conf().train_conf().model_update_conf().has_momentum_conf()
+      || GlobalJobDesc().other_conf().train_conf().model_update_conf().has_adam_conf()) {
     // for forward_model
     BuildMdSaveStructIfNeed(md_updt_logical);
   }

@@ -82,7 +82,7 @@ const BlobDesc& OpNode::LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const {
 BlobDesc* OpNode::MutLogicalBlobDesc4Lbi(const LogicalBlobId& lbi) {
   CHECK_EQ(lbi.op_name(), op().op_name());
   if (lbi2logical_blob_desc_.find(lbi) == lbi2logical_blob_desc_.end()) {
-    lbi2logical_blob_desc_[lbi].reset(new BlobDesc(Global<JobDesc>::Get()->DefaultDataType()));
+    lbi2logical_blob_desc_[lbi].reset(new BlobDesc(GlobalJobDesc().DefaultDataType()));
   }
   return lbi2logical_blob_desc_.at(lbi).get();
 }
@@ -264,7 +264,7 @@ void OpGraph::InferOpModelSize(HashMap<std::string, size_t>* op_name2model_size)
     for (const std::string& model_bn : op_node->op().model_bns()) {
       const auto& lbi = op_node->op().BnInOp2Lbi(model_bn);
       int64_t elem_cnt = BlobDesc4ModelLbi(lbi).shape().elem_cnt();
-      model_size += elem_cnt * GetSizeOfDataType(Global<JobDesc>::Get()->DefaultDataType());
+      model_size += elem_cnt * GetSizeOfDataType(GlobalJobDesc().DefaultDataType());
       model_size = RoundUp(model_size, kCudaAlignSize);
     }
     size_t parallel_num = op_node->parallel_desc().parallel_num();
@@ -442,8 +442,7 @@ void OpGraph::InferOpNodeLogicalBlobDesc(OpNode* op_node) const {
       } else if (bn2parallel_id2blob_desc->find(bn) == bn2parallel_id2blob_desc->end()) {
         auto* parallel_id2blob_desc = &(*bn2parallel_id2blob_desc)[bn];
         FOR_RANGE(int32_t, i, 0, parallel_num) {
-          parallel_id2blob_desc->emplace_back(
-              new BlobDesc(Global<JobDesc>::Get()->DefaultDataType()));
+          parallel_id2blob_desc->emplace_back(new BlobDesc(GlobalJobDesc().DefaultDataType()));
         }
       } else {
         CHECK_EQ(bn2parallel_id2blob_desc->at(bn).size(), parallel_num);
@@ -455,7 +454,7 @@ void OpGraph::InferOpNodeLogicalBlobDesc(OpNode* op_node) const {
     parallel_ctx.set_parallel_num(parallel_num);
     parallel_ctx.set_policy(op_node->parallel_desc().policy());
     op_node->op().InferBlobDescsIf(BlobDesc4BnInOp, &parallel_ctx,
-                                   Global<JobDesc>::Get()->RecordPieceSize(), [](OpContext*) {});
+                                   GlobalJobDesc().RecordPieceSize(), [](OpContext*) {});
   }
   op_node->ConcatLogicalOutputBlobDesc();
 }
@@ -681,7 +680,7 @@ LogicalBlobId OpGraph::GetLogicalBlobIdKey(const std::string& op_name,
 
 std::function<const BlobDesc&(const LogicalBlobId&)> OpGraph::MakeGetterBlobDesc4ModelLbi() const {
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2unparalleled_blob_desc;
-  DataType dtype = Global<JobDesc>::Get()->DefaultDataType();
+  DataType dtype = GlobalJobDesc().DefaultDataType();
   TopoForEachNode([&](OpNode* op_node) {
     ParallelContext parallel_ctx;
     parallel_ctx.set_parallel_id(0);

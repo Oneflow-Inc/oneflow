@@ -92,7 +92,7 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
 #ifdef WITH_CUDA
   Global<CudnnConvCtxCache>::New();
 #endif
-  const JobDesc* job_desc = Global<JobDesc>::Get();
+  const JobDesc& job_desc = GlobalJobDesc();
   if (need_job_complete) { JobCompleter().Complete(job); }
   TeePersistentLogStream::Create("optimized_job")->Write(*job);
   Global<OpGraph>::New(*job);
@@ -105,7 +105,7 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::PinConsumedRegst, _1));
   task_gph->MdUpdtDelayedTopoForEachNode(&TaskNode::Build);
-  if (job_desc->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+  if (job_desc.other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     task_gph->AddReduceSequenceCtrlEdges();
     // TODO: update method for fw bw split
     // task_gph->AddMdUpdtCtrlEdgesWithinReduceSplitNode();
@@ -114,22 +114,22 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   task_gph->AddOrderingCtrlEdgeInSameChain();
   task_gph->EnableMemSharingInReduceStruct();
   // TODO: update method for fw bw split
-  // if (job_desc->IsTrain() && job_desc->enable_mem_sharing()) {
+  // if (job_desc.IsTrain() && job_desc.enable_mem_sharing()) {
   //   task_gph->EnableMemSharingAfterAllManualSetForMdUpdt();  // must last mem shared manual set
   // }
-  if (job_desc->enable_inplace()) {
+  if (job_desc.enable_inplace()) {
     auto IsReachable = Global<OpGraph>::Get()->MakePredicatorIsLbiAllConsumersReachableToOpName();
     task_gph->EnableInplaceMemSharing(IsReachable);
   }
   // TODO: update method for fw bw split
-  // if (job_desc->IsTrain()) { task_gph->AddOrderCtrlEdgeBetweenCopyAndMdUpdt(); }
+  // if (job_desc.IsTrain()) { task_gph->AddOrderCtrlEdgeBetweenCopyAndMdUpdt(); }
   task_gph->MdUpdtDelayedTopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
   // TODO: update method for fw bw split
-  // if (job_desc->IsTrain() && job_desc->enable_mem_sharing()) {
+  // if (job_desc.IsTrain() && job_desc.enable_mem_sharing()) {
   //   task_gph->EnableMemSharingInVariableOp();
   // }
   // TODO: update method for fw bw split
-  // if (job_desc->IsTrain()) { task_gph->AddReduceNoBwForwardNodeOverlapingCtrlEdges(); }
+  // if (job_desc.IsTrain()) { task_gph->AddReduceNoBwForwardNodeOverlapingCtrlEdges(); }
 
   task_gph->ForEachNode([&](TaskNode* task_node) {
     if (task_node->IsMeaningLess()) { return; }

@@ -34,7 +34,7 @@ void ForeignInputOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   if (conf.has_data_type()) {
     out_blob_desc->set_data_type(conf.data_type());
   } else {
-    out_blob_desc->set_data_type(Global<JobDesc>::Get()->DefaultDataType());
+    out_blob_desc->set_data_type(GlobalJobDesc().DefaultDataType());
   }
   out_blob_desc->set_has_dim1_valid_num_field(conf.dim0_valid_num());
 }
