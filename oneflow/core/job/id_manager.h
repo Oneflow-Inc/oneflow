@@ -23,7 +23,7 @@ class IDMgr final {
   int64_t GetGpuMdUpdtThrdId(int64_t dev_phy_id) const;
   int64_t GetCpuDeviceThrdId(int64_t dev_phy_id) const;
   int64_t CommNetThrdId() const;
-  int64_t BasePersistenceThrdId() const;
+  int64_t BaseIndependentThrdId() const;
 
   int64_t NewTaskId(int64_t machine_id, int64_t thrd_id, int64_t local_work_stream_id);
   int64_t NewRegstDescId() { return regst_desc_id_count_++; }
