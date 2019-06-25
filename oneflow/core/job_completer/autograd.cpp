@@ -9,10 +9,10 @@ namespace oneflow {
 namespace {
 
 const TrainConf& GetTrainConf() {
-  const JobDesc* job_desc = Global<JobDesc>::Get();
-  if (job_desc->IsPredict()
-      && job_desc->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
-    return job_desc->other_conf().predict_conf().tmp_split_fw_bw_train_conf();
+  const JobDesc& job_desc = GlobalJobDesc();
+  if (job_desc.IsPredict()
+      && job_desc.other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+    return job_desc.other_conf().predict_conf().tmp_split_fw_bw_train_conf();
   } else {
     UNIMPLEMENTED();
   }

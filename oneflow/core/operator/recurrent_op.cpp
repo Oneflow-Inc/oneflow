@@ -22,7 +22,7 @@ void RecurrentOp::InitFromOpConf() {
 void RecurrentOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                  const ParallelContext* parallel_ctx) const {
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-  DataType data_type = Global<JobDesc>::Get()->DefaultDataType();
+  DataType data_type = GlobalJobDesc().DefaultDataType();
   CHECK_EQ(in_blob_desc->data_type(), data_type);
   CHECK_EQ(in_blob_desc->shape().NumAxes(), 2);
   CHECK_EQ(in_blob_desc->has_col_num_field(), true);

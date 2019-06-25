@@ -243,7 +243,7 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
   HashSet<int> data_type_set;
   int32_t max_col_num = -1;
   int32_t blob_desc_cnt = 0;
-  std::unique_ptr<BlobDesc> ret(new BlobDesc(Global<JobDesc>::Get()->DefaultDataType()));
+  std::unique_ptr<BlobDesc> ret(new BlobDesc(GlobalJobDesc().DefaultDataType()));
   const BlobDesc* last_blob_desc = nullptr;
   HashMap<int32_t, size_t> blob_mem_id2size;
   StructPodDesc opaque_header_pod_desc;

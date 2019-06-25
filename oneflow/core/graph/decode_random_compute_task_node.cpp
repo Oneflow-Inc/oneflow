@@ -23,8 +23,8 @@ void DecodeRandomCompTaskNode::BuildExecGphAndRegst() {
 }
 
 void DecodeRandomCompTaskNode::InferProducedDataRegstTimeShape() {
-  std::shared_ptr<Shape> time_shape(new Shape(
-      {Global<JobDesc>::Get()->TotalBatchNum(), Global<JobDesc>::Get()->NumOfPiecesInBatch()}));
+  std::shared_ptr<Shape> time_shape(
+      new Shape({GlobalJobDesc().TotalBatchNum(), GlobalJobDesc().NumOfPiecesInBatch()}));
 
   ForEachProducedDataRegst([time_shape](const std::string& name, RegstDesc* regst) {
     *regst->mut_data_regst_time_shape() = time_shape;

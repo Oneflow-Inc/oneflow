@@ -22,9 +22,9 @@ DataType GetDataTypeFromBnInOpVec(
 void Operator::InitFromOpConf(const OperatorConf& op_conf) {
   OperatorConf* this_op_conf = op_attribute_.mutable_op_conf();
   *this_op_conf = op_conf;
-  if (Global<JobDesc>::Get()->IsPredict()) { this_op_conf->set_trainable(false); }
+  if (GlobalJobDesc().IsPredict()) { this_op_conf->set_trainable(false); }
   if (this_op_conf->has_enable_cudnn() == false) {
-    this_op_conf->set_enable_cudnn(Global<JobDesc>::Get()->EnableCudnn());
+    this_op_conf->set_enable_cudnn(GlobalJobDesc().EnableCudnn());
   }
   if (GetActivationType() != ActivationType::kNone) { EnrollBwBufBn("bw_activation"); }
   InitFromOpConf();
@@ -125,8 +125,7 @@ void Operator::InferOutputBlobTimeShape(
   if (input_bns().empty() == false) {
     *time_shape = *GetTimeShape4BnInOp(input_bns().Get(0));
   } else {
-    *time_shape = Shape(
-        {Global<JobDesc>::Get()->TotalBatchNum(), Global<JobDesc>::Get()->NumOfPiecesInBatch()});
+    *time_shape = Shape({GlobalJobDesc().TotalBatchNum(), GlobalJobDesc().NumOfPiecesInBatch()});
   }
 }
 
@@ -339,7 +338,7 @@ int64_t Operator::cudnn_buf_limit_byte() const {
   if (op_conf().has_cudnn_buf_limit_mbyte()) {
     cudnn_buf_limit_mbyte = op_conf().cudnn_buf_limit_mbyte();
   } else {
-    cudnn_buf_limit_mbyte = Global<JobDesc>::Get()->cudnn_buf_limit_mbyte();
+    cudnn_buf_limit_mbyte = GlobalJobDesc().cudnn_buf_limit_mbyte();
   }
   return cudnn_buf_limit_mbyte * 1024 * 1024;
 }

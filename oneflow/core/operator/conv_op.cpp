@@ -9,7 +9,7 @@ namespace oneflow {
 namespace {
 
 bool IsFwBwSplit() {
-  return Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf();
+  return GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf();
 }
 
 void GetOutAndPad(const Shape& in_blob_shape, const PbMessage& conv_conf, std::vector<int64_t>* out,
@@ -100,7 +100,7 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   CHECK_EQ(in_blob_desc->shape().NumAxes(), NDims + 2);
-  // CHECK_EQ(in_blob_desc->data_type(), Global<JobDesc>::Get()->DefaultDataType());
+  // CHECK_EQ(in_blob_desc->data_type(), GlobalJobDesc().DefaultDataType());
 
   // out
   int64_t data_num = in_blob_desc->shape().At(0);

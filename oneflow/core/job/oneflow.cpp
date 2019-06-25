@@ -187,13 +187,17 @@ void WithJobSetLevelGlobalObjs(
   Global<BufferMgr<std::function<void()>>>::New();
   {
     auto* buffer_mgr = Global<BufferMgr<std::function<void()>>>::Get();
-    FOR_RANGE(int64_t, job_id, 0, Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->size()) {
-      buffer_mgr->NewBuffer(GetJobCallbackNotifierBufferName(job_id), 100);
+    const auto& job_descs = *Global<std::vector<std::unique_ptr<JobDesc>>>::Get();
+    FOR_RANGE(int64_t, job_id, 0, job_descs.size()) {
+      buffer_mgr->NewBuffer(GetJobCallbackNotifierBufferName(job_id),
+                            job_descs.at(0)->concurrency_width());
     }
   }
+  Global<JobId>::New();
 
   Handler(job_set.job_conf());
 
+  Global<JobId>::Delete();
   Global<BufferMgr<std::function<void()>>>::Delete();
   Global<BufferMgr<int64_t>>::Delete();
   Global<std::vector<std::unique_ptr<JobDesc>>>::Delete();
@@ -212,7 +216,7 @@ void WithJobSetLevelGlobalObjs(
 }
 
 void CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_complete) {
-  const JobDesc* job_desc = Global<JobDesc>::Get();
+  const JobDesc& job_desc = GlobalJobDesc();
   Plan naive_plan;
   Plan mem_shared_plan;
   double start = GetCurTime();
@@ -226,14 +230,14 @@ void CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_complete
     TeePersistentLogStream::Create("mem_shared_plan")->Write(mem_shared_plan);
     LOG(INFO) << "push_pull_plan:" << GetCurTime() - start;
   }
-  if (job_desc->enable_experiment_run()) {
+  if (job_desc.enable_experiment_run()) {
     if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
       PushPlan("mem_shared_plan", mem_shared_plan);
     } else {
       PullPlan("mem_shared_plan", &mem_shared_plan);
     }
     // Experiment Runtime
-    { Runtime experiment_run(mem_shared_plan, job_desc->piece_num_of_experiment_phase(), true); }
+    { Runtime experiment_run(mem_shared_plan, job_desc.piece_num_of_experiment_phase(), true); }
     // Improve
     if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
       TeePersistentLogStream::Create("available_mem_desc")->Write(*Global<AvailableMemDesc>::Get());
@@ -663,9 +667,9 @@ void CompileMainJob(Job* main_job, const LogicalBlobId& critical_section_sink_lb
                     Plan* main_plan) {
   CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
   JobConf job_conf = ConvertJob2JobConf(*main_job);
-  Global<JobDesc>::New(job_conf, job_id);
+  Global<JobId>::Get()->set_value(job_id);
   CompileCurJobOnMaster(main_job, main_plan, false);
-  Global<JobDesc>::Delete();
+  Global<JobId>::Get()->set_value(-1);
   ConnectCriticalSectionEndToReentrantLockEnd(main_plan, critical_section_sink_lbi);
 }
 
@@ -757,10 +761,10 @@ void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
   std::vector<Job> jobs(job_confs.size());
   std::vector<Plan> sub_plans(job_confs.size());
   FOR_RANGE(int32_t, i, 0, sub_plans.size()) {
-    Global<JobDesc>::New(job_confs.Get(i), i);
     jobs.at(i) = ConvertJobConf2Job(job_confs.Get(i));
+    Global<JobId>::Get()->set_value(i);
     CompileCurJobOnMaster(&jobs.at(i), &sub_plans.at(i), true);
-    Global<JobDesc>::Delete();
+    Global<JobId>::Get()->set_value(-1);
   }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     CheckJobs(&jobs);

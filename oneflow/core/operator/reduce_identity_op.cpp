@@ -16,8 +16,8 @@ void ReduceIdentityOp::InferBlobDescs(
 }
 
 LogicalBlobId ReduceIdentityOp::ibn2lbi(const std::string& input_bn) const {
-  if (Global<JobDesc>::Get()->IsPredict()
-      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+  if (GlobalJobDesc().IsPredict()
+      && GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     return this->Operator::ibn2lbi(input_bn);
   } else {
     return GenPackedLbi();
@@ -25,8 +25,8 @@ LogicalBlobId ReduceIdentityOp::ibn2lbi(const std::string& input_bn) const {
 }
 
 LogicalBlobId ReduceIdentityOp::obn2lbi(const std::string& output_bn) const {
-  if (Global<JobDesc>::Get()->IsPredict()
-      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+  if (GlobalJobDesc().IsPredict()
+      && GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     return this->Operator::obn2lbi(output_bn);
   } else {
     LogicalBlobId ret;

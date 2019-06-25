@@ -7,8 +7,7 @@ namespace oneflow {
 void VariableOp::InitFromOpConf() {
   CHECK(op_conf().has_variable_conf());
   if (op_conf().variable_conf().has_tick()) { EnrollInputBn("tick", false); }
-  bool has_diff =
-      Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf();
+  bool has_diff = GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf();
   EnrollOutputBn("out", has_diff)->set_is_mutable(true);
   EnrollModelBn(op_conf().variable_conf().model_name());
 }
@@ -20,9 +19,8 @@ void VariableOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   const VariableOpConf& variable_conf = op_conf().variable_conf();
   BlobDesc* model_blob_desc = GetBlobDesc4BnInOp(variable_conf.model_name());
   model_blob_desc->mut_shape() = Shape(variable_conf.shape());
-  model_blob_desc->set_data_type(variable_conf.has_data_type()
-                                     ? variable_conf.data_type()
-                                     : Global<JobDesc>::Get()->DefaultDataType());
+  model_blob_desc->set_data_type(variable_conf.has_data_type() ? variable_conf.data_type()
+                                                               : GlobalJobDesc().DefaultDataType());
   if (parallel_ctx->policy() == kModelParallel) {
     int32_t model_split_axis = variable_conf.model_split_axis();
     CHECK_GE(model_split_axis, 0);

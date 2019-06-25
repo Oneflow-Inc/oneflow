@@ -45,7 +45,7 @@ MakeGetterReduceTaskNodeCtrlOrder(const LogicalGraph& logical_graph) {
               return lhs->order_in_logical_graph() < rhs->order_in_logical_graph();
             });
   auto logical_node2ctrl_order = std::make_shared<HashMap<const LogicalNode*, int32_t>>();
-  int32_t lazy_count = Global<JobDesc>::Get()->all_reduce_lazy_ratio() * logical_nodes.size();
+  int32_t lazy_count = GlobalJobDesc().all_reduce_lazy_ratio() * logical_nodes.size();
   for (int32_t i = 0; i < logical_nodes.size(); ++i) {
     int32_t ctrl_order = 0;
     if (i > lazy_count) {
@@ -609,8 +609,8 @@ void TaskGraph::ForEachGpuDeviceNodes(
 void TaskGraph::EnableInplaceMemSharing(
     const std::function<bool(const LogicalBlobId&, const std::string&)>&
         IsLbiAllConsumersReachableToOpName) {
-  if (!(Global<JobDesc>::Get()->IsPredict()
-        && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf())) {
+  if (!(GlobalJobDesc().IsPredict()
+        && GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf())) {
     return;
   }
   ForEachGpuDeviceNodes([&](const HashSet<TaskNode*>& dev_nodes) {
@@ -661,7 +661,7 @@ void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {
           if (IsMdUpdtTaskType(node_on_in_edge->GetTaskType())) {
             RegstDesc* ctrl_regst = task_node->BuildCtrlRegstDesc(node_on_in_edge);
             RegstDesc* copy_out_regst = copy_hd_task_node->GetProducedRegst("copy_out").get();
-            int64_t piece_num_in_batch = Global<JobDesc>::Get()->NumOfPiecesInBatch();
+            int64_t piece_num_in_batch = GlobalJobDesc().NumOfPiecesInBatch();
             ctrl_regst->UpdtMinRegstNumIfNeed(copy_out_regst->min_register_num()
                                               + piece_num_in_batch - 1);
             CtrlRegstDesc* ctrl_regst_desc =

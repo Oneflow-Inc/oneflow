@@ -25,7 +25,8 @@ void OptimizerCompTaskNode::BuildExecGphAndRegst() {
 
 void OptimizerCompTaskNode::InferProducedDataRegstTimeShape() {
   ForEachProducedDataRegst([](const std::string& name, RegstDesc* regst) {
-    regst->mut_data_regst_time_shape()->reset(new Shape({Global<JobDesc>::Get()->TotalBatchNum()}));
+    regst->mut_data_regst_time_shape()->reset(
+        new Shape({GlobalJobDesc().TotalBatchNum(), static_cast<int64_t>(1)}));
   });
 }
 

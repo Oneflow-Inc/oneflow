@@ -13,8 +13,8 @@ TEST(Snapshot, write_and_read) {
   snapshot_path_conf->set_allocated_localfs_conf(new LocalFsConf);
   auto resource = jb_desc_proto.mutable_resource();
   resource->add_machine();
-  Global<JobDesc>::Get()->InitFromProto(jb_desc_proto);
-  fs::FileSystem* snapshot_fs = GetFS(Global<JobDesc>::Get()->snapshot_path_conf());
+  GlobalJobDesc().InitFromProto(jb_desc_proto);
+  fs::FileSystem* snapshot_fs = GetFS(GlobalJobDesc().snapshot_path_conf());
 
   std::string current_dir = GetCwd();
   StringReplace(&current_dir, '\\', '/');

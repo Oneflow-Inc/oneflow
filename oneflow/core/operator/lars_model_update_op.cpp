@@ -3,7 +3,7 @@
 namespace oneflow {
 
 void LARSModelUpdateOp::MdUpdtVirtualInitFromOpConf() {
-  if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+  if (GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     EnrollInputBn("momentum", false)->set_is_mutable(true);
   } else {
     UNIMPLEMENTED();
@@ -15,7 +15,7 @@ void LARSModelUpdateOp::MdUpdtVirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* model_blob_desc = GetBlobDesc4BnInOp("model");
-  if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+  if (GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     CHECK(*GetBlobDesc4BnInOp("momentum") == *model_blob_desc);
   } else {
     UNIMPLEMENTED();
@@ -29,7 +29,7 @@ void LARSModelUpdateOp::MdUpdtVirtualInferBlobDescs(
 }
 
 const PbMessage& LARSModelUpdateOp::GetCustomizedConf() const {
-  if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+  if (GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     return op_conf().lars_model_update_conf();
   } else {
     UNIMPLEMENTED();

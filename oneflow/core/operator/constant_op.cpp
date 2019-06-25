@@ -17,7 +17,7 @@ void ConstantOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   CHECK_EQ(parallel_ctx->policy(), ParallelPolicy::kDataParallel);
   const ConstantOpConf& conf = op_conf().constant_conf();
   const DataType& data_type =
-      conf.has_data_type() ? conf.data_type() : Global<JobDesc>::Get()->DefaultDataType();
+      conf.has_data_type() ? conf.data_type() : GlobalJobDesc().DefaultDataType();
   std::vector<int64_t> dim_vec;
   if (conf.use_device_piece_size_as_dim0()) {
     CHECK_EQ(record_piece_size % parallel_ctx->parallel_num(), 0);

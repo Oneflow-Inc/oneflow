@@ -15,7 +15,7 @@ void EmbeddingLookupAccumulateOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   // use vars
-  const int64_t num_of_piece_in_batch = Global<JobDesc>::Get()->NumOfPiecesInBatch();
+  const int64_t num_of_piece_in_batch = GlobalJobDesc().NumOfPiecesInBatch();
   const BlobDesc* ids_blob_desc = GetBlobDesc4BnInOp("one_ids");
   const BlobDesc* val_blob_desc = GetBlobDesc4BnInOp("one_val");
 

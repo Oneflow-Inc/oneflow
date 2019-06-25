@@ -348,13 +348,13 @@ void AddIdentityOpForAllReduceOverlapingUntrainble(Job* job) {
 }
 
 void FixAndOptimizeDLNet(Job* job) {
-  const JobDesc* job_desc = Global<JobDesc>::Get();
-  if (!(job_desc->IsPredict()
-        && job_desc->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf())) {
+  const JobDesc& job_desc = GlobalJobDesc();
+  if (!(job_desc.IsPredict()
+        && job_desc.other_conf().predict_conf().has_tmp_split_fw_bw_train_conf())) {
     FixTickOpIfExists(job);
     // ConvertPseudoChainToChain(job);
   }
-  // if (job_desc->IsTrain()) { AddIdentityOpForAllReduceOverlapingUntrainble(job); }
+  // if (job_desc.IsTrain()) { AddIdentityOpForAllReduceOverlapingUntrainble(job); }
 }
 
 void SetOpTimeShape(const OpGraph& op_graph, Job* job) {
@@ -553,8 +553,8 @@ void JobCompleter::Complete(Job* job) const {
   SplitDecodeOps(job);
   AddRecordLoadOps(job);
   WithOpGraphAndMutJob(job, &ReplaceFacade);
-  if (Global<JobDesc>::Get()->IsPredict()
-      && Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+  if (GlobalJobDesc().IsPredict()
+      && GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     // complete variable ops
     WithOpGraphAndMutJob(job, &AutoVar);
     WithOpGraphAndMutJob(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);

@@ -23,6 +23,7 @@ class JobDesc final {
   int32_t job_id() const { return job_id_; }
   const std::string& name() const { return job_conf_.name(); }
   const PbRpf<std::string>& arg_op_name() const { return job_conf_.arg_op_name(); }
+  int64_t concurrency_width() const { return job_conf_.other().concurrency_width(); }
   const Config& other_conf() const { return job_conf_.other(); }
   DataType DefaultDataType() const { return job_conf_.other().default_data_type(); }
   size_t SizeOfOneDataId() const { return job_conf_.other().max_data_id_length() * sizeof(char); }
@@ -63,13 +64,28 @@ class JobDesc final {
   int32_t DataPartNum() const;
 
  private:
-  friend class Global<JobDesc>;
   void Init();
-  void SanityCheck();
 
   JobConf job_conf_;
   int32_t job_id_;
 };
+
+class JobId final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(JobId);
+  ~JobId() = default;
+
+  int64_t value() const { return value_; }
+  void set_value(int64_t val) { value_ = val; }
+
+ private:
+  friend class Global<JobId>;
+  JobId() = default;
+
+  int64_t value_;
+};
+
+const JobDesc& GlobalJobDesc();
 
 }  // namespace oneflow
 

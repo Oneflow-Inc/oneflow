@@ -136,9 +136,9 @@ void GroupAllReducedLbisByStrategy(
       ProducerOpNode4Lbi, sorted_lbis, [&](const std::vector<LogicalBlobId>& lbis) {
         size_t model_total_size = 0;
         for (const auto& lbi : lbis) { model_total_size += MemSize4Lbi(lbi); }
-        size_t avg_size = model_total_size / Global<JobDesc>::Get()->all_reduce_group_num();
-        const size_t group_min_size = Global<JobDesc>::Get()->all_reduce_group_min_byte();
-        const float group_size_warmup = Global<JobDesc>::Get()->all_reduce_group_size_warmup();
+        size_t avg_size = model_total_size / GlobalJobDesc().all_reduce_group_num();
+        const size_t group_min_size = GlobalJobDesc().all_reduce_group_min_byte();
+        const float group_size_warmup = GlobalJobDesc().all_reduce_group_size_warmup();
         size_t cur_group_capacity = group_min_size / group_size_warmup;
         size_t cur_group_model_size = MaxVal<size_t>::value;
         for (const LogicalBlobId& lbi : lbis) {

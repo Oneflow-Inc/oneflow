@@ -17,7 +17,7 @@ const NormalForwardCompTaskNode* NormalMdUpdtCompTaskNode::GetForwardTaskNode() 
 }
 
 bool NormalMdUpdtCompTaskNode::IsTrainable() const {
-  return Global<JobDesc>::Get()->IsTrain()
+  return GlobalJobDesc().IsTrain()
          && GetForwardTaskNode()->logical_node()->SoleOp()->op_conf().trainable();
 }
 
@@ -84,8 +84,7 @@ void NormalMdUpdtCompTaskNode::InferProducedDataRegstTimeShape() {
     if (name == "const_model") {
       regst->mut_data_regst_time_shape()->reset(new Shape({1}));
     } else {
-      regst->mut_data_regst_time_shape()->reset(
-          new Shape({Global<JobDesc>::Get()->TotalBatchNum()}));
+      regst->mut_data_regst_time_shape()->reset(new Shape({GlobalJobDesc().TotalBatchNum()}));
     }
   });
 }

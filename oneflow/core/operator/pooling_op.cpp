@@ -28,7 +28,7 @@ void PoolingOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
   const Shape& in_shape = in_blob_desc->shape();
   CHECK_GE(in_blob_desc->shape().NumAxes(), 3);
   CHECK_LE(in_blob_desc->shape().NumAxes(), 5);
-  CHECK_EQ(in_blob_desc->data_type(), Global<JobDesc>::Get()->DefaultDataType());
+  CHECK_EQ(in_blob_desc->data_type(), GlobalJobDesc().DefaultDataType());
   // out
   std::string data_format = GetValFromCustomizedConf<std::string>("data_format");
   std::vector<int64_t> in = {GetInDim(in_shape, data_format, 0, GetDim()),

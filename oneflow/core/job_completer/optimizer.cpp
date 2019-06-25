@@ -13,8 +13,7 @@ void GenerateOptimizerOpConfIf(
     const VariableOp& var_op, const ParallelConf& parallel_conf, JobBuilder* job_builder,
     const std::function<const LogicalBlobId&(const std::string&)>& DiffLbi4BnInOp,
     const LogicalBlobId& total_loss_instance_num_lbi) {
-  const auto& train_conf =
-      Global<JobDesc>::Get()->other_conf().predict_conf().tmp_split_fw_bw_train_conf();
+  const auto& train_conf = GlobalJobDesc().other_conf().predict_conf().tmp_split_fw_bw_train_conf();
   auto optimizer_case = train_conf.model_update_conf().normal_mdupdt_case();
   std::unique_ptr<GenerateOptimizerOpConfWrapperStruct> obj;
   obj.reset(NewObj<GenerateOptimizerOpConfWrapperStruct>(optimizer_case));
@@ -51,23 +50,22 @@ void ConstructMdUpdtOpConf(
     const VariableOp& op,
     const std::function<const LogicalBlobId&(const std::string&)>& DiffLbi4BnInOp,
     const LogicalBlobId& total_loss_instance_num_lbi, T* mdupdt_op_conf) {
-  const auto& train_conf =
-      Global<JobDesc>::Get()->other_conf().predict_conf().tmp_split_fw_bw_train_conf();
+  const auto& train_conf = GlobalJobDesc().other_conf().predict_conf().tmp_split_fw_bw_train_conf();
   *mdupdt_op_conf->mutable_user_conf() = train_conf.model_update_conf();
   mdupdt_op_conf->set_model_diff(GenLogicalBlobName(DiffLbi4BnInOp("out")));
   mdupdt_op_conf->set_total_instance_num_diff(GenLogicalBlobName(total_loss_instance_num_lbi));
   mdupdt_op_conf->set_model(GenLogicalBlobName(op.BnInOp2Lbi("out")));
-  float primary_lr = Global<JobDesc>::Get()->primary_lr();
-  float secondary_lr = Global<JobDesc>::Get()->secondary_lr();
+  float primary_lr = GlobalJobDesc().primary_lr();
+  float secondary_lr = GlobalJobDesc().secondary_lr();
   if (secondary_lr < 0) { secondary_lr = primary_lr; }
   if (op.op_conf().variable_conf().model_name() == "weight") {
     mdupdt_op_conf->set_learning_rate(primary_lr);
-    mdupdt_op_conf->set_l1(Global<JobDesc>::Get()->weight_l1());
-    mdupdt_op_conf->set_l2(Global<JobDesc>::Get()->weight_l2());
+    mdupdt_op_conf->set_l1(GlobalJobDesc().weight_l1());
+    mdupdt_op_conf->set_l2(GlobalJobDesc().weight_l2());
   } else if (op.op_conf().variable_conf().model_name() == "bias") {
     mdupdt_op_conf->set_learning_rate(secondary_lr);
-    mdupdt_op_conf->set_l1(Global<JobDesc>::Get()->bias_l1());
-    mdupdt_op_conf->set_l2(Global<JobDesc>::Get()->bias_l2());
+    mdupdt_op_conf->set_l1(GlobalJobDesc().bias_l1());
+    mdupdt_op_conf->set_l2(GlobalJobDesc().bias_l2());
   } else {
     mdupdt_op_conf->set_learning_rate(primary_lr);
     mdupdt_op_conf->set_l1(0);
