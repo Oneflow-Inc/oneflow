@@ -1582,6 +1582,11 @@ message LevelMapOpConf {
   optional float epsilon = 7 [default = 1e-6];
 }
 
+message LocalNonzeroOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1742,6 +1747,7 @@ message OperatorConf {
     BoxDecodeOpConf box_decode_conf = 606;
     MaskrcnnPositiveNegativeSampleOpConf maskrcnn_positive_negative_sample_conf = 607;
     LevelMapOpConf level_map_conf = 608;
+    LocalNonzeroOpConf local_nonzero_conf = 609;
   }
 }
 

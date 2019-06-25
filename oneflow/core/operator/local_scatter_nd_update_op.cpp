@@ -7,11 +7,7 @@ void LocalScatterNdUpdateOp::InitFromOpConf() {
   EnrollInputBn("in");
   EnrollInputBn("indices", false);
   EnrollInputBn("updates");
-  if (this->device_type(), DeviceType::kGPU) {
-    // For better performance, input/output shape information is allocated on global memory, instead
-    // of passing as a argument to cuda kernel.
-    EnrollDataTmpBn("shape");
-  }
+  if (this->device_type() == DeviceType::kGPU) { EnrollDataTmpBn("shape"); }
   EnrollOutputBn("out");
 }
 
@@ -37,7 +33,7 @@ void LocalScatterNdUpdateOp::InferBlobDescs(
   CHECK_EQ(in->data_type(), updates->data_type());
   CHECK(IsIntegralDataType(indices->data_type()));
   const auto indices_dim_vec = indices->shape().dim_vec();
-  if (this->device_type(), DeviceType::kGPU) {
+  if (this->device_type() == DeviceType::kGPU) {
     // datatmp
     BlobDesc* shape = GetBlobDesc4BnInOp("shape");
     shape->mut_shape() = Shape({in->shape().NumAxes()});
