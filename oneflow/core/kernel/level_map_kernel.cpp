@@ -33,7 +33,7 @@ void LevelMapKernel<device_type, T>::ForwardInstanceShape(
 template<typename T>
 struct LevelMapUtil<DeviceType::kCPU, T> {
   static void Forward(DeviceCtx* ctx, const int64_t num_boxes, const T* in_ptr,
-                      const int32_t canonical_level, const int32_t canonical_scale,
+                      const int32_t canonical_level, const float canonical_scale,
                       const int32_t min_level, const int32_t max_level, const float epsilon,
                       int32_t* out_ptr) {
     const T TO_REMOVE = 1.0;
@@ -41,8 +41,8 @@ struct LevelMapUtil<DeviceType::kCPU, T> {
       const T scale = std::sqrt((in_ptr[i * 4 + 2] - in_ptr[i * 4] + TO_REMOVE)
                                 * (in_ptr[i * 4 + 3] - in_ptr[i * 4 + 1] + TO_REMOVE));
       const int32_t target_level =
-          std::log2(canonical_level + log2(scale / canonical_scale + epsilon));
-      out_ptr[i] = std::min(std::max(target_level, min_level), max_level) - canonical_level;
+          std::floor(canonical_level + std::log2(scale / canonical_scale + epsilon));
+      out_ptr[i] = std::min(std::max(target_level, min_level), max_level) - min_level;
     }
   }
 };

@@ -24,7 +24,7 @@ class LevelMapKernel final : public KernelIf<device_type> {
 template<DeviceType device_type, typename T>
 struct LevelMapUtil {
   static void Forward(DeviceCtx* ctx, const int64_t num_boxes, const T* in_ptr,
-                      const int32_t canonical_level, const int32_t canonical_scale,
+                      const int32_t canonical_level, const float canonical_scale,
                       const int32_t min_level, const int32_t max_level, const float epsilon,
                       int32_t* out_ptr);
 };

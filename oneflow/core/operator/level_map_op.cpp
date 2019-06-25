@@ -23,6 +23,12 @@ void LevelMapOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   out->set_data_type(DataType::kInt32);
 }
 
+void LevelMapOp::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
+    KernelConf* kernel_conf) const {
+  kernel_conf->set_data_type(GetBlobDesc4BnInOp("in")->data_type());
+}
+
 REGISTER_OP(OperatorConf::kLevelMapConf, LevelMapOp);
 
 }  // namespace oneflow
