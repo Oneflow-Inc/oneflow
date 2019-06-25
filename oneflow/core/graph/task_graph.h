@@ -80,7 +80,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void MergeChainAndSetOrderInGraphForEachNode();
   void BuildCtrlRegstDescInSameChain();
 
-  void GeneratePersistenceThrdId(
+  void GenerateIndependentThrdId(
       const std::vector<std::pair<int64_t, CompTaskNode*>>& persistence_nodes);
 
   // inplace
