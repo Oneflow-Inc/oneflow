@@ -193,11 +193,9 @@ void WithJobSetLevelGlobalObjs(
                             job_descs.at(0)->concurrency_width());
     }
   }
-  Global<JobId>::New();
 
   Handler(job_set.job_conf());
 
-  Global<JobId>::Delete();
   Global<BufferMgr<std::function<void()>>>::Delete();
   Global<BufferMgr<int64_t>>::Delete();
   Global<std::vector<std::unique_ptr<JobDesc>>>::Delete();
@@ -666,10 +664,7 @@ void ConnectCriticalSectionEndToReentrantLockEnd(Plan* main_plan,
 void CompileMainJob(Job* main_job, const LogicalBlobId& critical_section_sink_lbi, int32_t job_id,
                     Plan* main_plan) {
   CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
-  JobConf job_conf = ConvertJob2JobConf(*main_job);
-  Global<JobId>::Get()->set_value(job_id);
-  CompileCurJobOnMaster(main_job, main_plan, false);
-  Global<JobId>::Get()->set_value(-1);
+  WithGlobalJobId(job_id, [&]() { CompileCurJobOnMaster(main_job, main_plan, false); });
   ConnectCriticalSectionEndToReentrantLockEnd(main_plan, critical_section_sink_lbi);
 }
 
@@ -762,9 +757,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
   std::vector<Plan> sub_plans(job_confs.size());
   FOR_RANGE(int32_t, i, 0, sub_plans.size()) {
     jobs.at(i) = ConvertJobConf2Job(job_confs.Get(i));
-    Global<JobId>::Get()->set_value(i);
-    CompileCurJobOnMaster(&jobs.at(i), &sub_plans.at(i), true);
-    Global<JobId>::Get()->set_value(-1);
+    WithGlobalJobId(i, [&]() { CompileCurJobOnMaster(&jobs.at(i), &sub_plans.at(i), true); });
   }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     CheckJobs(&jobs);
