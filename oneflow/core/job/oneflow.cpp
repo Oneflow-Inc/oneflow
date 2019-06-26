@@ -318,15 +318,14 @@ void LinkTickTaskProto(TaskProto* identity_tick, TaskProto* src_tick, TaskProto*
   RegstDescProto* id_tick_sole_regst = GetSoleDataRegstDescProto(identity_tick);
   RegstDescProto* src_tick_sole_regst = GetSoleDataRegstDescProto(src_tick);
   RegstDescProto* sink_tick_sole_regst = GetSoleDataRegstDescProto(sink_tick);
-  RegstDescProto id_tick_sole_regst_value = *id_tick_sole_regst;
+
+  sink_tick_sole_regst->set_regst_desc_id(id_tick_sole_regst->regst_desc_id());
+  *sink_tick_sole_regst->mutable_consumer_task_id() = id_tick_sole_regst->consumer_task_id();
+  UpdateSoleObnRegstDescId(sink_tick);
 
   id_tick_sole_regst->set_regst_desc_id(src_tick_sole_regst->regst_desc_id());
   *id_tick_sole_regst->mutable_consumer_task_id() = src_tick_sole_regst->consumer_task_id();
   UpdateSoleObnRegstDescId(identity_tick);
-
-  sink_tick_sole_regst->set_regst_desc_id(id_tick_sole_regst_value.regst_desc_id());
-  *sink_tick_sole_regst->mutable_consumer_task_id() = id_tick_sole_regst_value.consumer_task_id();
-  UpdateSoleObnRegstDescId(sink_tick);
 }
 
 void LinkMainPlan(Plan* plan, const Plan& main_plan,
