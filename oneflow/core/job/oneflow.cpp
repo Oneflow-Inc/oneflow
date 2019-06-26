@@ -25,6 +25,11 @@ namespace oneflow {
 
 namespace {
 
+bool operator==(const ParallelBlobConf& lhs, const ParallelBlobConf& rhs) {
+  return BlobDesc(lhs.logical_blob_desc_conf()) == BlobDesc(rhs.logical_blob_desc_conf())
+         && lhs.parallel_conf() == rhs.parallel_conf() && lhs.sbp_conf() == rhs.sbp_conf();
+}
+
 #define OF_VERSION_MAJOR "0"
 #define OF_VERSION_MINOR "1"
 #define OF_VERSION_PATCH "0"
@@ -391,8 +396,7 @@ JobConf ConvertJob2JobConf(const Job& job) {
 }
 
 void GetInterfaceOpBlobInfo(const JobBuilder& job_builder, const std::string& op_name,
-                            ParallelConf* parallel_conf, BlobDescProto* blob_desc,
-                            SbpParallel* sbp_parallel) {
+                            ParallelBlobConf* blob_conf) {
   std::string obn = "out";
   std::string lbn;
   {
@@ -408,9 +412,10 @@ void GetInterfaceOpBlobInfo(const JobBuilder& job_builder, const std::string& op
     }
   }
   const auto& helper = job_builder.job().helper();
-  *parallel_conf = job_builder.ParallelConf4OpName(op_name);
-  *blob_desc = helper.lbn2logical_blob_desc().at(lbn);
-  *sbp_parallel =
+  ParallelBlobConf ret;
+  *blob_conf->mutable_parallel_conf() = job_builder.ParallelConf4OpName(op_name);
+  *blob_conf->mutable_logical_blob_desc_conf() = helper.lbn2logical_blob_desc().at(lbn);
+  *blob_conf->mutable_sbp_conf() =
       helper.sbp_conf().op_name2sbp_signature_conf().at(op_name).bn_in_op2sbp_parallel().at(obn);
 }
 
@@ -444,7 +449,9 @@ HashMap<std::string, HashSet<int64_t>> GetInterfaceOpName2JobIds(const std::vect
   return interface_op_name2job_ids;
 }
 
-void CheckJobs(std::vector<Job>* jobs) {
+void GetInterfaceOpName2ParallelBlobConf(
+    std::vector<Job>* jobs,
+    HashMap<std::string, ParallelBlobConf>* interface_op_name2parallel_blob_conf) {
   std::vector<std::unique_ptr<const JobBuilder>> job_builders;
   for (Job& job : *jobs) { job_builders.emplace_back(std::make_unique<const JobBuilder>(&job)); }
   for (const auto& pair : GetInterfaceOpName2JobIds(*jobs)) {
@@ -456,21 +463,14 @@ void CheckJobs(std::vector<Job>* jobs) {
         op_as_output_found = true;
       }
     }
-    ParallelConf first_op_parallel_conf;
-    BlobDescProto first_op_out_blob_desc;
-    SbpParallel first_op_out_blob_sbp;
+    ParallelBlobConf* first_op_parallel_blob_conf =
+        &(*interface_op_name2parallel_blob_conf)[pair.first];
     GetInterfaceOpBlobInfo(*job_builders.at(*pair.second.begin()), pair.first,
-                           &first_op_parallel_conf, &first_op_out_blob_desc,
-                           &first_op_out_blob_sbp);
+                           first_op_parallel_blob_conf);
     for (int64_t job_id : pair.second) {
-      ParallelConf parallel_conf;
-      BlobDescProto out_blob_desc;
-      SbpParallel out_blob_sbp;
-      GetInterfaceOpBlobInfo(*job_builders.at(job_id), pair.first, &parallel_conf, &out_blob_desc,
-                             &out_blob_sbp);
-      CHECK(first_op_parallel_conf == parallel_conf);
-      CHECK(BlobDesc(first_op_out_blob_desc) == BlobDesc(out_blob_desc));
-      CHECK(first_op_out_blob_sbp == out_blob_sbp);
+      ParallelBlobConf parallel_blob_conf;
+      GetInterfaceOpBlobInfo(*job_builders.at(job_id), pair.first, &parallel_blob_conf);
+      CHECK(parallel_blob_conf == *first_op_parallel_blob_conf);
     }
   }
 }
@@ -764,7 +764,8 @@ void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
     WithGlobalJobId(i, [&]() { CompileCurJobOnMaster(&jobs.at(i), &sub_plans.at(i), true); });
   }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-    CheckJobs(&jobs);
+    HashMap<std::string, ParallelBlobConf> interface_op_name2parallel_blob_conf;
+    GetInterfaceOpName2ParallelBlobConf(&jobs, &interface_op_name2parallel_blob_conf);
     BindInterfaceMemBlockId(jobs, &sub_plans);
     FinishGlobalCriticalSectionDesc(sub_plans);
     MergePlan(plan, sub_plans);

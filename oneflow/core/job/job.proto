@@ -9,10 +9,17 @@ import "oneflow/core/register/op_blob_arg.proto";
 import "oneflow/core/register/blob_desc.proto";
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/common/shape.proto";
+import "oneflow/core/job/sbp_parallel.proto";
 
 message OpTimeShape {
   optional ShapeProto in_blob_fastest_time_shape = 1;
   optional ShapeProto out_blob_time_shape = 2;
+}
+
+message ParallelBlobConf {
+  required BlobDescProto logical_blob_desc_conf = 1;
+  required ParallelConf parallel_conf = 2;
+  required SbpParallel sbp_conf = 3;
 }
 
 message JobHelperConf {
