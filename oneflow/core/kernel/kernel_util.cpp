@@ -99,7 +99,7 @@ void TruncatedNormalInitializer(const TruncatedNormalInitializerConf& initialize
 
 template<typename T>
 T GenInitialFan(VarianceNorm variance_norm, Blob* blob, const std::string& data_format) {
-  T fan = ZeroVal<T>::value;
+  T fan = GetZeroVal<T>();
   T fan_in = static_cast<T>(blob->shape().Count(1));
   T fan_out = static_cast<T>(blob->shape().At(0));
   if (data_format == "channels_first") {
@@ -138,7 +138,7 @@ void MsraInitializer(const MsraInitializerConf& initializer_conf, uint32_t rando
   CHECK(blob->shape().elem_cnt());
   VarianceNorm variance_norm = static_cast<VarianceNorm>(initializer_conf.variance_norm());
   T std = std::sqrt(static_cast<T>(2) / GenInitialFan<T>(variance_norm, blob, data_format));
-  RngNormal<T>(blob->shape().elem_cnt(), ZeroVal<T>::value, static_cast<T>(std), random_seed,
+  RngNormal<T>(blob->shape().elem_cnt(), GetZeroVal<T>(), static_cast<T>(std), random_seed,
                blob->mut_dptr<T>());
 }
 
@@ -445,12 +445,12 @@ KU_FLOATING_METHOD TanHBackward(DeviceCtx* ctx, const int64_t n, const T* x, con
   for (int64_t i = 0; i != n; ++i) { dx[i] = (1 - y[i] * y[i]) * dy[i]; }
 }
 KU_FLOATING_METHOD Relu(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
-  T zero = ZeroVal<T>::value;
+  T zero = GetZeroVal<T>();
   for (int64_t i = 0; i != n; ++i) { y[i] = std::max(x[i], zero); }
 }
 KU_FLOATING_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
                                 const T* dy, T* dx) {
-  T zero = ZeroVal<T>::value;
+  T zero = GetZeroVal<T>();
   for (int64_t i = 0; i != n; ++i) { dx[i] = (y[i] > zero) * dy[i]; }
 }
 KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0) {

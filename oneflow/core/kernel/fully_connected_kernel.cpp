@@ -11,17 +11,16 @@ void FullyConnectedKernel<device_type, T>::ForwardDataContent(
   Blob* out_blob = BnInOp2Blob("out");
 
   // out = in * weight
-  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTrans, OneVal<T>::value,
-                                       ZeroVal<T>::value, in_blob, weight_blob, out_blob);
+  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTrans, GetOneVal<T>(),
+                                       GetZeroVal<T>(), in_blob, weight_blob, out_blob);
 
   if (this->op_conf().fully_connected_conf().use_bias()) {
     const Blob* bias_blob = BnInOp2Blob("bias");
     const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
 
     // out = bias_multiplier * bias + out
-    KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasNoTrans,
-                                         OneVal<T>::value, OneVal<T>::value, bias_mul_blob,
-                                         bias_blob, out_blob);
+    KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasNoTrans, GetOneVal<T>(),
+                                         GetOneVal<T>(), bias_mul_blob, bias_blob, out_blob);
   }
 }
 
