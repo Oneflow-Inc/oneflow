@@ -31,6 +31,9 @@ class JobBuilder final {
 
   void ForEachOperator(const std::function<void(const Operator&)>& Handler) const;
 
+  OperatorConf *MutableOpConf(const std::string &op_name);
+  const OperatorConf *OpConf(const std::string &op_name);
+
  private:
   Job* job_;
   HashMap<std::string, OperatorConf*> op_name2op_conf_;

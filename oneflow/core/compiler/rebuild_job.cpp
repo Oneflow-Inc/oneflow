@@ -20,140 +20,183 @@ extern const std::string _XlaInArgumentPrefix;
 extern const std::string _XlaOutArgumentPrefix;
 }  // namespace mola
 
-void DoNoDuplicationAdd(XlaArgumentOpConf::DataVec *data_vec,
-                        const std::string &data) {
-  const auto &d = data_vec->data();
-  if (std::find(d.begin(), d.end(), data) == d.end()) {
-    data_vec->add_data(data);
+template <typename T>
+using RepeatedPtrField = google::protobuf::RepeatedPtrField<T>;
+
+template <typename T>
+void DoNoDuplicationAdd(RepeatedPtrField<T> *repeat_field, const T &val) {
+  if (std::find(repeat_field->begin(), repeat_field->end(), val) ==
+      repeat_field->end()) {
+    repeat_field->Add()->assign(val);
   }
 }
 
-void DoNoDuplicationAddInput(XlaLaunchOpConf *launch_conf,
-                             const std::string &in) {
-  const auto &d = launch_conf->in();
-  if (std::find(d.begin(), d.end(), in) == d.end()) {
-    launch_conf->add_in(in);
-  }
-}
-
-void DoNoDuplicationAddOutput(XlaLaunchOpConf *launch_conf,
-                              const std::string &out) {
-  const auto &d = launch_conf->out();
-  if (std::find(d.begin(), d.end(), out) == d.end()) {
-    launch_conf->add_out(out);
-  }
-}
-
-std::string FixBlobNamePrefix(const std::string &blob_name,
-                              const std::string &prefix) {
-  std::vector<std::string> name_split = absl::StrSplit(blob_name, "/");
-  CHECK_EQ(name_split.size(), 2);
-  return absl::StrCat(prefix, "/", name_split[1]);
-}
-
-XlaLaunchOpConf *MutableXlaLaunchOpConf(Job *job, const std::string &op_name) {
-  for (auto &conf : *(job->mutable_net()->mutable_op())) {
-    if (conf.name() == op_name) {
-      return conf.mutable_xla_launch_conf();
+XlaLaunchOpConf::Argument *MutableXlaArgumentProto(
+                                XlaLaunchOpConf *launch_op_conf,
+                                const std::string &op_name) {
+  for (auto &proto : *(launch_op_conf->mutable_attr()->mutable_argument())) {
+    if (proto.name() == op_name) {
+      return &proto;
     }
   }
   return nullptr;
 }
 
-XlaArgumentOpConf *MutableXlaArgumentOpConf(XlaLaunchOpConf *launch_conf,
-                                            const std::string &op_name) {
-  for (auto &conf : *(launch_conf->mutable_attr()->mutable_node())) {
-    if (conf.name() == op_name) {
-      return conf.mutable_xla_argument_conf();
-    }
-  }
-  return nullptr;
-}
-
-void FixSubgraphInArgumentsBlobNames(const mola::XlaGraph *graph,
-                                     XlaLaunchOpConf *launch_conf,
-                                     const std::string &blob_name,
-                                     const std::string &fixed_blob_name) {
-  for (const auto *node : graph->Nodes()) {
+void FixSubgraphInArgumentsBlobNames(
+        const mola::XlaGraph *sub_graph,
+        const std::string &launch_op_name,
+        XlaLaunchOpConf *launch_op_conf,
+        const std::unordered_map<std::string, std::string> &fixed_blob_names) {
+  for (const auto *node : sub_graph->Nodes()) {
     if (absl::StartsWith(node->op_name(), mola::_XlaInArgumentPrefix)) {
-      auto *argument_conf = MutableXlaArgumentOpConf(launch_conf,
-                                                     node->op_name());
-      for (auto &argument_blob_name :
-           *(argument_conf->mutable_out()->mutable_data())) {
-        if (argument_blob_name == blob_name) {
-          argument_blob_name = fixed_blob_name;
+      auto *argument_conf = MutableXlaArgumentProto(launch_op_conf,
+                                                    node->op_name());
+      for (auto &blob_name : *(argument_conf->mutable_data())) {
+        const auto &it = fixed_blob_names.find(blob_name);
+        if (it != fixed_blob_names.end()) {
+          blob_name = absl::StrCat(launch_op_name, "/", it->second);
         }
       }
     }
   }
 }
 
-void FixSubgraphOutArgumentsBlobNames(const mola::XlaGraph *graph,
-                                      XlaLaunchOpConf *launch_conf,
-                                      const std::string &launch_op_name) {
-  for (const auto *node : graph->Nodes()) {
+void FixSubgraphOutArgumentsBlobNames(
+        const mola::XlaGraph *sub_graph,
+        XlaLaunchOpConf *launch_op_conf,
+        const std::unordered_map<std::string, std::string> &fixed_blob_names) {
+  for (const auto *node : sub_graph->Nodes()) {
     if (absl::StartsWith(node->op_name(), mola::_XlaOutArgumentPrefix)) {
-      auto *argument_conf = MutableXlaArgumentOpConf(launch_conf,
-                                                     node->op_name());
-      for (auto &blob_name :
-           *(argument_conf->mutable_in()->mutable_data())) {
-        blob_name = FixBlobNamePrefix(blob_name, launch_op_name);
+      auto *argument_conf = MutableXlaArgumentProto(launch_op_conf,
+                                                    node->op_name());
+      for (auto &blob_name : *(argument_conf->mutable_data())) {
+        const auto &it = fixed_blob_names.find(blob_name);
+        if (it != fixed_blob_names.end()) {
+          blob_name = it->second;
+        }
       }
     }
   }
 }
 
-void FixXlaLaunchBlobNames(const mola::XlaGraph &graph, Job *job,
-                           JobBuilder *builder) {
+void FixControlInOpNames(const mola::XlaGraph &graph, JobBuilder *builder) {
+  // Map folded node names to cluster node names
+  std::unordered_map<std::string, std::string> folded_op_names;
+
   for (const XlaNode *node : graph.Nodes()) {
-    if (node->op_type() != mola::_XlaLaunchOpType) {
+    if (node->sub_graph() == nullptr) {
       continue;
     }
     std::string launch_op_name = node->op_name();
-    XlaLaunchOpConf *launch_conf = MutableXlaLaunchOpConf(job, launch_op_name);
-    for (auto &blob_name : *launch_conf->mutable_out()) {
-      // Set fixed output blob name
-      blob_name = FixBlobNamePrefix(blob_name, launch_op_name);
+    for (const XlaNode *sub_node : node->sub_graph()->Nodes()) {
+      folded_op_names.emplace(sub_node->op_name(), launch_op_name);
     }
+  }
 
+  auto AddControlInOpName = [&](OperatorConf *conf,
+                                const std::string &op_name) -> void {
+    std::string ctrl_in_op_name = op_name;
+    const auto &it = folded_op_names.find(op_name);
+    if (it != folded_op_names.end()) {
+      ctrl_in_op_name = it->second;
+    }
+    DoNoDuplicationAdd(conf->mutable_ctrl_in_op_name(), ctrl_in_op_name);
+  };
+
+  for (const XlaNode *node : graph.Nodes()) {
+    auto *op_conf = builder->MutableOpConf(node->op_name());
+    if (node->sub_graph() == nullptr) {
+      auto ctrl_in_op_names = op_conf->ctrl_in_op_name();
+      op_conf->clear_ctrl_in_op_name();
+      for (const auto &op_name : ctrl_in_op_names) {
+        AddControlInOpName(op_conf, op_name);
+      }
+    } else {
+      for (const XlaNode *sub_node : node->sub_graph()->Nodes()) {
+        if (sub_node->op_type() == mola::_XlaArgumentOpType) {
+          continue;
+        }
+        const auto *folded_op_conf = builder->OpConf(sub_node->op_name());
+        for (const auto &op_name : folded_op_conf->ctrl_in_op_name()) {
+          AddControlInOpName(op_conf, op_name);
+        }
+      }
+    }
+  }
+}
+
+void FixInOutBlobNames(const mola::XlaGraph &graph, JobBuilder *builder) {
+  for (const XlaNode *node : graph.Nodes()) {
+    if (node->sub_graph() == nullptr) {
+      continue;
+    }
+    std::string launch_op_name = node->op_name();
+    auto *launch_op_conf = builder->MutableOpConf(launch_op_name)
+                                  ->mutable_xla_launch_conf();
+    std::unordered_map<std::string, std::string> fixed_blob_names;
+    // Fix output blob names
+    for (int i = 0; i < launch_op_conf->out().size(); ++i) {
+      std::string blob_name = launch_op_conf->out()[i];
+      std::vector<std::string> name_split = absl::StrSplit(blob_name, "/");
+      CHECK_EQ(name_split.size(), 2);
+      std::string fixed_blob_name = absl::StrCat(name_split[1], "_", i);
+      launch_op_conf->mutable_out()->Mutable(i)->assign(fixed_blob_name);
+      fixed_blob_names.emplace(blob_name, fixed_blob_name);
+    }
+    // Infect changes to the next operators
     for (const XlaEdge *edge : node->out_edges()) {
-      if (!edge->IsControlEdge()) {
-        const XlaNode *end = edge->end();
-        const Argument &arg = edge->argument();
-
-        if (end->op_type() == mola::_XlaLaunchOpType) {
-          auto *launch_conf = MutableXlaLaunchOpConf(job, end->op_name());
-          for (auto &blob_name : *launch_conf->mutable_in()) {
-            if (blob_name == arg.blob_name()) {
-              std::string fixed_blob_name =
-                  FixBlobNamePrefix(blob_name, launch_op_name);
-              // Fix input argument blob name for subgraph
-              FixSubgraphInArgumentsBlobNames(
-                  end->sub_graph(), launch_conf, blob_name, fixed_blob_name);
-              blob_name = fixed_blob_name;
-            }
+      if (edge->IsControlEdge()) {
+        continue;
+      }
+      const XlaNode *end = edge->end();
+      if (end->op_type() == mola::_XlaLaunchOpType) {
+        auto *launch_op_conf = builder->MutableOpConf(end->op_name())
+                                      ->mutable_xla_launch_conf();
+        for (auto &blob_name : *launch_op_conf->mutable_in()) {
+          const auto &it = fixed_blob_names.find(blob_name);
+          if (it != fixed_blob_names.end()) {
+            std::string fixed_blob_name = absl::StrCat(launch_op_name, "/",
+                                                       it->second);
+            blob_name = fixed_blob_name;
           }
-        } else {
-          // TODO(hjchen2) This implementation is ugly
-          PbMessage *op_conf = const_cast<PbMessage *>(&(end->proto_conf()));
-          for (const std::string &input : end->op()->input_bns()) {
-            const LogicalBlobId &lbi = end->op()->BnInOp2Lbi(input);
-            if (absl::StrCat(lbi.op_name(), "/", lbi.blob_name()) ==
-                arg.blob_name()) {
-              std::string fixed_blob_name =
-                  FixBlobNamePrefix(arg.blob_name(), launch_op_name);
-              // Fix input blob name for normal node
-              SetBnValInOpTypeConf(op_conf, input, arg.blob_name(),
-                                   fixed_blob_name);
-            }
+        }
+        // Fix input argument blob name for subgraph first
+        FixSubgraphInArgumentsBlobNames(end->sub_graph(), launch_op_name,
+                                        launch_op_conf, fixed_blob_names);
+      } else {
+        // TODO(hjchen2) Current implementation is ugly
+        auto *op_conf = builder->MutableOpConf(end->op_name());
+        for (const std::string &input : end->op()->input_bns()) {
+          const LogicalBlobId &lbi = end->op()->BnInOp2Lbi(input);
+          std::string blob_name = GenLogicalBlobName(lbi);
+          const auto &it = fixed_blob_names.find(blob_name);
+          if (it != fixed_blob_names.end()) {
+            std::string fixed_blob_name = absl::StrCat(launch_op_name, "/",
+                                                       it->second);
+            // Fix input blob name for normal node
+            auto *spec_conf = MutableMessageInPbMessage(
+                                    op_conf, op_conf->op_type_case());
+            SetBnValInOpTypeConf(spec_conf, input, blob_name, fixed_blob_name);
           }
-          builder->MutOps({end->op()->op_conf()});
         }
       }
     }
     // Subgraph output argument blob name
-    FixSubgraphOutArgumentsBlobNames(
-        node->sub_graph(), launch_conf, launch_op_name);
+    FixSubgraphOutArgumentsBlobNames(node->sub_graph(), launch_op_conf,
+                                     fixed_blob_names);
+  }
+}
+
+void RemoveFoldedOperators(const mola::XlaGraph &graph,
+                           JobBuilder *builder) {
+  for (const XlaNode *node : graph.Nodes()) {
+    if (node->sub_graph() != nullptr) {
+      for (const XlaNode *sub_node : node->sub_graph()->Nodes()) {
+        if (sub_node->op_type() != mola::_XlaArgumentOpType) {
+          builder->RemoveOp(sub_node->op_name());
+        }
+      }
+    }
   }
 }
 
@@ -162,30 +205,29 @@ void buildXlaLaunchAttribute(JobBuilder *builder,
                              XlaLaunchOpConf::Attribute *launch_attr) {
   for (const XlaNode *node : graph->Nodes()) {
     if (node->op_type() != mola::_XlaArgumentOpType) {
-      builder->RemoveOp(node->op()->op_name());
+      // builder->RemoveOp(node->op()->op_name());
       *(launch_attr->add_node()) = node->op()->op_conf();
     } else {
-      OperatorConf op_conf;
-      op_conf.set_name(node->op_name());
-      XlaArgumentOpConf *argument_conf = op_conf.mutable_xla_argument_conf();
+      XlaLaunchOpConf::Argument argument_proto;
+      argument_proto.set_name(node->op_name());
       // Usually one argument node has either inputs or outputs
       CHECK(node->in_edges().size() == 0 || node->out_edges().size() == 0);
       // Build inputs or outputs for the argument nodes
       if (node->in_edges().size() > 0) {
-        auto *in_vec = argument_conf->mutable_in(); 
         for (const XlaEdge *edge : node->in_edges()) {
           const Argument &argument = edge->argument();
-          DoNoDuplicationAdd(in_vec, argument.blob_name());
+          DoNoDuplicationAdd(argument_proto.mutable_data(),
+                             argument.blob_name());
         }
       }
       if (node->out_edges().size() > 0) {
-        auto *out_vec = argument_conf->mutable_out();
         for (const XlaEdge *edge : node->out_edges()) {
           const Argument &argument = edge->argument();
-          DoNoDuplicationAdd(out_vec, argument.blob_name());
+          DoNoDuplicationAdd(argument_proto.mutable_data(),
+                             argument.blob_name());
         }
       }
-      *(launch_attr->add_node()) = op_conf;
+      *(launch_attr->add_argument()) = argument_proto;
     }
   }
 }
@@ -198,33 +240,39 @@ void RebuildXlaCompiledJob(const mola::XlaGraph &graph, Job *job) {
       continue;
     }
     // Add xla launch operator
-    OperatorConf launch_op_conf; 
-    launch_op_conf.set_name(node->op_name());
+    OperatorConf op_conf; 
+    op_conf.set_name(node->op_name());
 
-    XlaLaunchOpConf *launch_conf = launch_op_conf.mutable_xla_launch_conf();
+    XlaLaunchOpConf *launch_op_conf = op_conf.mutable_xla_launch_conf();
     for (const XlaEdge *edge : node->in_edges()) {
       if (!edge->IsControlEdge()) {
         const Argument &arg = edge->argument();
-        DoNoDuplicationAddInput(launch_conf, arg.blob_name());
+        DoNoDuplicationAdd(launch_op_conf->mutable_in(), arg.blob_name());
       }
     }
     for (const XlaEdge *edge : node->out_edges()) {
       if (!edge->IsControlEdge()) {
         const Argument &arg = edge->argument();
-        DoNoDuplicationAddOutput(launch_conf, arg.blob_name());
+        DoNoDuplicationAdd(launch_op_conf->mutable_out(), arg.blob_name());
       }
     }
 
-    XlaLaunchOpConf::Attribute *launch_attr = launch_conf->mutable_attr();
+    XlaLaunchOpConf::Attribute *launch_attr = launch_op_conf->mutable_attr();
     buildXlaLaunchAttribute(&builder, node->sub_graph(), launch_attr);
    
     // TODO(hjchen2) Assign parallel conf
     ParallelConf parallel_conf;
-    builder.AddOps(parallel_conf, {launch_op_conf});
+    parallel_conf.set_policy(kDataParallel);
+    parallel_conf.mutable_device_name()->Add()->assign("0:gpu:0");
+    builder.AddOps(parallel_conf, {op_conf});
   }
 
+  // Fix ctrl_in_op_name
+  FixControlInOpNames(graph, &builder);
   // Fix blob names
-  FixXlaLaunchBlobNames(graph, job, &builder);
+  FixInOutBlobNames(graph, &builder);
+  // Remove folded operator conf from job
+  RemoveFoldedOperators(graph, &builder);
 }
 
 }  // namespace oneflow

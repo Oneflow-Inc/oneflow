@@ -7,9 +7,9 @@
 namespace oneflow {
 namespace mola {
 
-class ClusterCompiledOpsPass : public XlaOptimizePass {
+class MarkClusterIdPass : public XlaOptimizePass {
  public:
-  ClusterCompiledOpsPass(const OptimizeOptions &options)
+  MarkClusterIdPass(const OptimizeOptions &options)
       : XlaOptimizePass(options) {}
 
   void Run() override;
@@ -46,7 +46,7 @@ class ClusterCompiledOpsPass : public XlaOptimizePass {
                                 XlaGraph *graph);
 };
 
-void ClusterCompiledOpsPass::Run() {
+void MarkClusterIdPass::Run() {
   XlaGraph *graph = this->optimize_options_.graph;
 
   std::unordered_set<int64_t> visited_nodes;
@@ -79,7 +79,7 @@ void ClusterCompiledOpsPass::Run() {
   UpdateClusterInfoToGraph(clusters, this->optimize_options_.graph);
 }
 
-void ClusterCompiledOpsPass::InfectNeighborNodes(
+void MarkClusterIdPass::InfectNeighborNodes(
     XlaNode *node, std::unordered_set<int64_t> *visited_nodes,
     Cluster *cluster) {
   auto visited_fn = [&](XlaNode *n) -> bool {
@@ -119,7 +119,7 @@ void ClusterCompiledOpsPass::InfectNeighborNodes(
   }
 }
 
-void ClusterCompiledOpsPass::UpdateClusterInfoToGraph(
+void MarkClusterIdPass::UpdateClusterInfoToGraph(
     const std::vector<Cluster> &clusters, XlaGraph *graph) {
   for (const Cluster &cluster : clusters) {
     for (int64_t node_id : cluster.nodes()) {
@@ -129,13 +129,13 @@ void ClusterCompiledOpsPass::UpdateClusterInfoToGraph(
   }
 }
 
-void ClusterCompiledOpsPass::Cluster::merge(
-    const ClusterCompiledOpsPass::Cluster &other) {
+void MarkClusterIdPass::Cluster::merge(
+    const MarkClusterIdPass::Cluster &other) {
   DCHECK_EQ(id_, other.id_);
   nodes_.insert(other.nodes_.begin(), other.nodes_.end());
 }
 
-REGISTER_OPTIMIZE_PASS(ClusterCompiledOps, ClusterCompiledOpsPass);
+REGISTER_OPTIMIZE_PASS(MarkClusterId, MarkClusterIdPass);
 
 }  // namespace mola
 }  // namespace oneflow

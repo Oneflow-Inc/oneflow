@@ -126,8 +126,8 @@ Plan Compiler::DoCompile() {
     options.graph = &graph;
     options.minimum_nodes_in_cluster = 1;
 
-    mola::RunOptimizePass("ClusterCompiledOps", options);
-    mola::RunOptimizePass("CreateXlaLaunchOp", options);
+    mola::RunOptimizePass("MarkClusterId", options);
+    mola::RunOptimizePass("FoldSubGraph", options);
     // Rebuild Job
     RebuildXlaCompiledJob(graph, &job);
 
@@ -135,6 +135,9 @@ Plan Compiler::DoCompile() {
     std::ofstream ost("./job_string.prototxt");
     ost << job_string;
     ost.close();
+
+    Global<OpGraph>::Delete();
+    Global<OpGraph>::New(job);
   }
 
   auto logical_gph = std::make_unique<LogicalGraph>(job);

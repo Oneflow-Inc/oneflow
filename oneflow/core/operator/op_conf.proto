@@ -7,6 +7,7 @@ import "oneflow/core/record/image.proto";
 import "oneflow/core/record/record.proto";
 import "oneflow/core/job/resource.proto";
 import "oneflow/core/register/logical_blob_id.proto";
+import "oneflow/core/job/sbp_parallel.proto";
 
 enum ActivationType {
   kNone = 0;
@@ -1352,21 +1353,19 @@ message IdentityOpConf {
 }
 
 message XlaLaunchOpConf {
+  message Argument {
+    required string name = 1;
+    repeated string data = 2;
+    repeated ShapeProto shape = 3;
+  }
   message Attribute {
-    repeated OperatorConf node = 1;
+    repeated Argument argument = 1;
+    repeated OperatorConf node = 2;
   }
   repeated string in = 1;
   repeated string out = 2;
   required Attribute attr = 3;
-}
-
-message XlaArgumentOpConf {
-  message DataVec {
-    repeated string data = 1;
-    repeated ShapeProto shape = 2;
-  }
-  optional DataVec in = 1;
-  optional DataVec out = 2;
+  required SbpSignature sbp_signature = 4;
 }
 
 message OperatorConf {
@@ -1498,6 +1497,7 @@ message OperatorConf {
     TanHGradOpConf tanh_grad_conf = 288;
     PoolingGradOpConf pooling_grad_conf = 289;
     IdentityOpConf identity_conf = 290;
+    XlaLaunchOpConf xla_launch_conf = 291;
 
     // math op
     BroadcastAddOpConf broadcast_add_conf = 500;
@@ -1512,10 +1512,6 @@ message OperatorConf {
 
     // mutable input op
     AxpyOpConf axpy_conf = 752;
-
-    // xla op
-    XlaLaunchOpConf xla_launch_conf = 800;
-    XlaArgumentOpConf xla_argument_conf = 801;
   }
 }
 

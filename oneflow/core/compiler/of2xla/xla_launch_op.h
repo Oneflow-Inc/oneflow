@@ -22,10 +22,11 @@ class XlaLaunchOp : public Operator {
     NaiveInferHasBatchDim(HasBatchDim4BnInOp);
   }
 
-  void GetSbpSignatures(
-      const std::function<const BlobDesc&(const std::string&)>& LogicalBlobDesc4Ibn,
-      SbpSignatureList* sbp_sig_list) const override;
-
+  void InferSbpSignature(
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+    std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
+    const ParallelDesc& parallel_desc) const override;
 };
 
 }  // namespace oneflow

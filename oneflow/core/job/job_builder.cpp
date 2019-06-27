@@ -136,4 +136,17 @@ void JobBuilder::BindIdenticalSbpOpBlobArgPair(const OpBlobArg& first, const OpB
   *pair->mutable_second() = second;
 }
 
+OperatorConf *JobBuilder::MutableOpConf(const std::string &op_name) {
+  const auto &it = op_name2op_conf_.find(op_name);
+  CHECK(it != op_name2op_conf_.end());
+  if (it != op_name2op_conf_.end()) {
+    return it->second;
+  }
+  return nullptr;
+}
+
+const OperatorConf *JobBuilder::OpConf(const std::string &op_name) {
+  return const_cast<const OperatorConf *>(MutableOpConf(op_name));
+}
+
 }  // namespace oneflow

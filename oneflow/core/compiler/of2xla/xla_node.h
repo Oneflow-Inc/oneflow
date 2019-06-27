@@ -31,9 +31,7 @@ class XlaEdge {
   XlaEdge(XlaNode *start, XlaNode *end) : start_(start), end_(end) {}
   virtual ~XlaEdge() {}
 
-  // start node of the edge
   XlaNode *start_;
-  // end node of the edge
   XlaNode *end_;
   //
   Argument arg_;
@@ -69,7 +67,7 @@ class XlaNode {
   void set_cluster_id(int64_t cluster_id) { cluster_id_ = cluster_id; }
   void set_backend(const std::string &backend) { backend_ = backend; }
   void set_op_type(const std::string &type) { op_type_ = type; }
-  void set_op_name(const std::string &name) const { op_name_ = name; }
+  void set_op_name(const std::string &name) { op_name_ = name; }
 
   bool IsCompiled() const { return compiled_; }
   bool IsSourceNode() const;
@@ -83,11 +81,9 @@ class XlaNode {
   explicit XlaNode(const OpNode *op_node);
   virtual ~XlaNode() {}
 
-  // Input edges
   std::list<XlaEdge *> in_edges_;
-  // Output edges
   std::list<XlaEdge *> out_edges_;
-  // The internal op node which is not holding by this xla node
+  // The internal op node which is not holded by this xla node
   const OpNode *node_;
   // Each node has a unique id related to it's index in the graph's nodes
   int64_t unique_id_;
@@ -102,7 +98,7 @@ class XlaNode {
   // String operator type, such as "Conv2d", "Matmul" or other else
   std::string op_type_;
   // String operator name
-  mutable std::string op_name_;
+  std::string op_name_;
   // Subgraph will be built for xla launch nodes. Note that `sub_graph_` should
   // be built and managed by the graph, other than the node
   XlaGraph *sub_graph_;
