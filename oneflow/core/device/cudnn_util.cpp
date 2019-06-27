@@ -117,4 +117,30 @@ CudnnActivationDesc::~CudnnActivationDesc() { CudaCheck(cudnnDestroyActivationDe
 
 #endif  // WITH_CUDA
 
+template<typename T>
+const void* CudnnSPOnePtr() {
+  static const float fval = 1.0f;
+  static const double dval = 1.0;
+  const void* ret = std::is_same<T, double>::value ? static_cast<const void*>(&dval)
+                                                   : static_cast<const void*>(&fval);
+  return ret;
+}
+
+template<typename T>
+const void* CudnnSPZeroPtr() {
+  static const float fval = 0.0f;
+  static const double dval = 0.0;
+  const void* ret = std::is_same<T, double>::value ? static_cast<const void*>(&dval)
+                                                   : static_cast<const void*>(&fval);
+  return ret;
+}
+
+template const void* CudnnSPOnePtr<float>();
+template const void* CudnnSPOnePtr<double>();
+template const void* CudnnSPOnePtr<float16>();
+
+template const void* CudnnSPZeroPtr<float>();
+template const void* CudnnSPZeroPtr<double>();
+template const void* CudnnSPZeroPtr<float16>();
+
 }  // namespace oneflow

@@ -12,6 +12,7 @@ namespace oneflow {
 
 #define CUDNN_DATA_TYPE_SEQ                       \
   OF_PP_MAKE_TUPLE_SEQ(float, CUDNN_DATA_FLOAT)   \
+  OF_PP_MAKE_TUPLE_SEQ(float16, CUDNN_DATA_HALF)  \
   OF_PP_MAKE_TUPLE_SEQ(double, CUDNN_DATA_DOUBLE) \
   OF_PP_MAKE_TUPLE_SEQ(int8_t, CUDNN_DATA_INT8)   \
   OF_PP_MAKE_TUPLE_SEQ(int32_t, CUDNN_DATA_INT32)
@@ -70,6 +71,12 @@ class CudnnActivationDesc final {
  private:
   cudnnActivationDescriptor_t val_;
 };
+
+// SP for scaling parameter
+template<typename T>
+const void* CudnnSPOnePtr();
+template<typename T>
+const void* CudnnSPZeroPtr();
 
 }  // namespace oneflow
 

@@ -12,6 +12,7 @@
 #include <cudnn.h>
 #include <curand.h>
 #include <nccl.h>
+#include <cuda_fp16.h>
 
 namespace oneflow {
 
@@ -61,9 +62,10 @@ enum class CudaWorkType {
 
 inline size_t GetCudaWorkTypeSize() { return OF_PP_SEQ_SIZE(CUDA_WORK_TYPE_SEQ); }
 
-#define CUDA_DATA_TYPE_SEQ                \
-  OF_PP_MAKE_TUPLE_SEQ(float, CUDA_R_32F) \
-  OF_PP_MAKE_TUPLE_SEQ(double, CUDA_R_64F)
+#define CUDA_DATA_TYPE_SEQ                 \
+  OF_PP_MAKE_TUPLE_SEQ(float, CUDA_R_32F)  \
+  OF_PP_MAKE_TUPLE_SEQ(double, CUDA_R_64F) \
+  OF_PP_MAKE_TUPLE_SEQ(float16, CUDA_R_16F)
 
 cudaDataType_t GetCudaDataType(DataType);
 
