@@ -789,7 +789,6 @@ message OutputOpConf {
 
 message ForeignOutputOpConf {
   required string in = 1;
-  required string out = 2;
   required string foreign_blob_buffer_name = 3;
 }
 
