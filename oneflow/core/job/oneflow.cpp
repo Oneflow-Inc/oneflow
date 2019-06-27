@@ -381,7 +381,7 @@ Job ConvertJobConf2Job(const JobConf& job_conf) {
   *job.mutable_placement() = job_conf.placement();
   *job.mutable_other() = job_conf.other();
   *job.mutable_arg_op_name() = job_conf.arg_op_name();
-  *job.mutable_helper()->mutable_sbp_conf() = job_conf.sbp_conf();
+  *job.mutable_sbp_conf() = job_conf.sbp_conf();
   return job;
 }
 
@@ -391,7 +391,7 @@ JobConf ConvertJob2JobConf(const Job& job) {
   *job_conf.mutable_placement() = job.placement();
   *job_conf.mutable_other() = job.other();
   *job_conf.mutable_arg_op_name() = job.arg_op_name();
-  *job_conf.mutable_sbp_conf() = job.helper().sbp_conf();
+  *job_conf.mutable_sbp_conf() = job.sbp_conf();
   return job_conf;
 }
 
@@ -411,14 +411,14 @@ void GetInterfaceOpBlobInfo(const JobBuilder& job_builder, const std::string& op
       UNIMPLEMENTED();
     }
   }
-  const auto& helper = job_builder.job().helper();
+  const auto& job = job_builder.job();
   ParallelBlobConf ret;
   *blob_conf->mutable_parallel_conf() = job_builder.ParallelConf4OpName(op_name);
-  *blob_conf->mutable_logical_blob_desc_conf() = helper.lbn2logical_blob_desc().at(lbn);
+  *blob_conf->mutable_logical_blob_desc_conf() = job.helper().lbn2logical_blob_desc().at(lbn);
   *blob_conf->mutable_sbp_conf() =
-      helper.sbp_conf().op_name2sbp_signature_conf().at(op_name).bn_in_op2sbp_parallel().at(obn);
+      job.sbp_conf().op_name2sbp_signature_conf().at(op_name).bn_in_op2sbp_parallel().at(obn);
   LogicalBlobId lbi(GenLogicalBlobId(lbn));
-  const auto& lbis = helper.batch_dim_lbis();
+  const auto& lbis = job.helper().batch_dim_lbis();
   blob_conf->set_has_batch_dim(std::find(lbis.begin(), lbis.end(), lbi) != lbis.end());
 }
 
