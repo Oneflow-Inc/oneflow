@@ -417,6 +417,9 @@ void GetInterfaceOpBlobInfo(const JobBuilder& job_builder, const std::string& op
   *blob_conf->mutable_logical_blob_desc_conf() = helper.lbn2logical_blob_desc().at(lbn);
   *blob_conf->mutable_sbp_conf() =
       helper.sbp_conf().op_name2sbp_signature_conf().at(op_name).bn_in_op2sbp_parallel().at(obn);
+  LogicalBlobId lbi(GenLogicalBlobId(lbn));
+  const auto& lbis = helper.batch_dim_lbis();
+  blob_conf->set_has_batch_dim(std::find(lbis.begin(), lbis.end(), lbi) != lbis.end());
 }
 
 HashSet<std::string> GetArgOpNames(const std::vector<Job>& jobs) {
@@ -756,6 +759,40 @@ void FinishGlobalCriticalSectionDesc(const std::vector<Plan>& plans) {
   critical_section_desc->Done();
 }
 
+void MakePullJob(const std::string& op_name, const ParallelBlobConf& parallel_blob_conf, Job* job) {
+  JobBuilder job_builder(job);
+  OperatorConf input_op_conf;
+  {
+    input_op_conf.set_name(std::string("System-Pull-Input_") + NewUniqueId());
+    auto* input_conf = input_op_conf.mutable_input_conf();
+    input_conf->set_out("out");
+    auto* blob_conf = input_conf->mutable_blob_conf();
+    BlobDesc blob_desc(parallel_blob_conf.logical_blob_desc_conf());
+    blob_desc.shape().ToProto(blob_conf->mutable_shape());
+    blob_conf->set_data_type(blob_desc.data_type());
+    if (blob_desc.has_dim0_inner_shape()) {
+      blob_desc.dim0_inner_shape().ToProto(blob_conf->mutable_dim0_inner_shape());
+    }
+    blob_conf->set_has_dim0_valid_num(blob_desc.has_dim0_valid_num_field());
+    blob_conf->set_has_dim1_valid_num(blob_desc.has_dim1_valid_num_field());
+    blob_conf->set_has_dim2_valid_num(blob_desc.has_dim2_valid_num_field());
+    if (parallel_blob_conf.sbp_conf().has_split_parallel()) {
+      blob_conf->set_split_axis(parallel_blob_conf.sbp_conf().split_parallel().axis());
+    } else if (parallel_blob_conf.sbp_conf().has_broadcast_parallel()) {
+      blob_conf->set_broadcast(true);
+    } else {
+      UNIMPLEMENTED();
+    }
+    blob_conf->set_has_batch_dim(parallel_blob_conf.has_batch_dim());
+    job_builder.AddOps(parallel_blob_conf.parallel_conf(), {input_op_conf});
+  }
+  TODO();
+}
+
+void MakePushJob(const std::string& op_name, const ParallelBlobConf& parallel_blob_conf, Job* job) {
+  TODO();
+}
+
 void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
   std::vector<Job> jobs(job_confs.size());
   std::vector<Plan> sub_plans(job_confs.size());
@@ -763,9 +800,35 @@ void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
     jobs.at(i) = ConvertJobConf2Job(job_confs.Get(i));
     WithGlobalJobId(i, [&]() { CompileCurJobOnMaster(&jobs.at(i), &sub_plans.at(i), true); });
   }
+  size_t user_job_size = jobs.size();
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     HashMap<std::string, ParallelBlobConf> interface_op_name2parallel_blob_conf;
     GetInterfaceOpName2ParallelBlobConf(&jobs, &interface_op_name2parallel_blob_conf);
+    size_t pull_push_job_size = interface_op_name2parallel_blob_conf.size() * 2;
+    jobs.resize(user_job_size + pull_push_job_size);
+    sub_plans.resize(user_job_size + pull_push_job_size);
+    int64_t job_id = user_job_size;
+    for (const auto& pair : interface_op_name2parallel_blob_conf) {
+      {
+        Job pull_job;
+        MakePullJob(pair.first, pair.second, &pull_job);
+        jobs.at(job_id) = pull_job;
+        AddGlobalJobDesc(pull_job, std::string("Pull-") + pair.first, job_id);
+        WithGlobalJobId(job_id,
+                        [&]() { CompileCurJobOnMaster(&pull_job, &sub_plans.at(job_id), false); });
+        ++job_id;
+      }
+      {
+        Job push_job;
+        MakePushJob(pair.first, pair.second, &push_job);
+        jobs.at(job_id) = push_job;
+        AddGlobalJobDesc(push_job, std::string("Push-") + pair.first, job_id);
+        WithGlobalJobId(job_id,
+                        [&]() { CompileCurJobOnMaster(&push_job, &sub_plans.at(job_id), false); });
+        ++job_id;
+      }
+    }
+
     BindInterfaceMemBlockId(jobs, &sub_plans);
     FinishGlobalCriticalSectionDesc(sub_plans);
     MergePlan(plan, sub_plans);

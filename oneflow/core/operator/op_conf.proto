@@ -759,10 +759,14 @@ message InputBlobConf {
   required ShapeProto shape = 1;
   optional DataType data_type = 2;
   optional ShapeProto dim0_inner_shape = 3;
-  optional int64 dim0_valid_num = 4;
-  optional int64 dim1_valid_num = 5;
-  optional int64 dim2_valid_num = 6;
-  optional bool has_batch_dim = 7 [default = true];
+  optional bool has_dim0_valid_num = 4;
+  optional bool has_dim1_valid_num = 5;
+  optional bool has_dim2_valid_num = 6;
+  oneof split_or_broadcast {
+    int32 split_axis = 7;
+    bool broadcast = 8;
+  }
+  optional bool has_batch_dim = 9 [default = true];
 }
 
 message InputOpConf {
