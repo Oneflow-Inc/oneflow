@@ -20,6 +20,7 @@ message ParallelBlobConf {
   required BlobDescProto logical_blob_desc_conf = 1;
   required ParallelConf parallel_conf = 2;
   required SbpParallel sbp_conf = 3;
+  required bool has_batch_dim = 4;
 }
 
 message JobHelperConf {
