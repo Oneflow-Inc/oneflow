@@ -185,25 +185,25 @@ const T* GetOnePtr() {
 #if defined(WITH_CUDA)
 template<>
 OF_DEVICE_FUNC half GetZeroVal<half>() {
-  uint16_t ret = 0;
+  uint16_t ret = 0x0; // Decimal: 0; Binary: 0 00000 0000000000
   return *(half*)&ret;
 }
 
 template<>
 OF_DEVICE_FUNC half GetOneVal<half>() {
-  uint16_t ret = 15360;
+  uint16_t ret = 0x3c00; // Decimal: 15360; Binary: 0 01111 0000000000
   return *(half*)&ret;
 }
 
 template<>
 OF_DEVICE_FUNC half GetMaxVal<half>() {
-  uint16_t ret = 31743;
+  uint16_t ret = 0x7bff; // Decimal: 31743; Binary: 0 11110 1111111111
   return *(half*)&ret;
 }
 
 template<>
 OF_DEVICE_FUNC half GetMinVal<half>() {
-  uint16_t ret = 64511;
+  uint16_t ret = 0xfbff; // Decimal: 64511; Binary: 1 11110 1111111111
   return *(half*)&ret;
 }
 
