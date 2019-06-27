@@ -12,6 +12,9 @@ SubTskGphBuilderStatus RingSubTskGphBuilder::Build(
     const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
     const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
     const SbpParallel& dst_sbp_parallel) const {
+  if (SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)) {
+    return SubTskGphBuilderStatus::MakeStatusError();
+  }
   if (!dst_parallel_desc.EqualsIgnoringPolicy(src_parallel_desc)) {
     return SubTskGphBuilderStatus::MakeStatusError();
   }

@@ -17,6 +17,7 @@
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/graph/boxing/naive_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/ring_sub_task_graph_builder.h"
+#include "oneflow/core/graph/boxing/dynamic_shape_supported_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/chain_sub_task_graph_builder.h"
 
 namespace oneflow {
@@ -742,6 +743,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV2) {
     std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
     builders.emplace_back(new RingSubTskGphBuilder());
     builders.emplace_back(new NaiveSubTskGphBuilder());
+    builders.emplace_back(new DynamicShapeSupportedSubTskGphBuilder());
     SubTskGphBuilderStatus status = ChainSubTskGphBuilder(builders).Build(
         &ctx, sorted_src_comp_tasks, sorted_dst_comp_tasks, *src_parallel_desc, *dst_parallel_desc,
         lbi, blob_desc, src_sbp_parallel, dst_sbp_parallel);

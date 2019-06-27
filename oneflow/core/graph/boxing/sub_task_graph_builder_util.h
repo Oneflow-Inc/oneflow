@@ -24,6 +24,7 @@ struct SubTskGphBuilderUtil {
   static bool IsBoxingP2S(const SbpParallel& src, const SbpParallel& dst);
   static bool IsBoxingP2B(const SbpParallel& src, const SbpParallel& dst);
   static bool IsBoxingB2B(const SbpParallel& src, const SbpParallel& dst);
+  static bool BlobHasDynamicShape(const BlobDesc& blob_desc);
 };
 
 }  // namespace oneflow

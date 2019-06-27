@@ -95,4 +95,9 @@ bool SubTskGphBuilderUtil::IsBoxingB2B(const SbpParallel& src, const SbpParallel
   return src.has_broadcast_parallel() && dst.has_broadcast_parallel();
 }
 
+bool SubTskGphBuilderUtil::BlobHasDynamicShape(const BlobDesc& blob_desc) {
+  return blob_desc.has_dim0_valid_num_field() || blob_desc.has_dim1_valid_num_field()
+         || blob_desc.has_dim2_valid_num_field();
+}
+
 }  // namespace oneflow
