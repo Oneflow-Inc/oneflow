@@ -13,8 +13,6 @@ class CallbackNotifyCompTaskNode final : public SinkCompTaskNode {
 
   TaskType GetTaskType() const override { return TaskType::kCallbackNotify; }
   bool IsIndependent() const override { return true; }
-
- private:
 };
 
 }  // namespace oneflow
