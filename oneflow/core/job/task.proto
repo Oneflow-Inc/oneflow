@@ -53,6 +53,8 @@ enum TaskType {
   kWaitAndSendIds = 45;
   kReentrantLock = 46;
   kCallbackNotify = 47;
+  kForeignInput = 48;
+  kForeignOutput = 49;
 };
 
 enum AreaType {
