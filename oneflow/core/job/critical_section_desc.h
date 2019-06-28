@@ -23,10 +23,6 @@ class CriticalSectionDesc final {
   const std::vector<int64_t>& job_id2total_job_critical_section_id() const {
     return job_id2total_job_critical_section_id_;
   }
-  const std::vector<HashSet<int64_t>>& critical_section_id2intersecting_ids() const {
-    return critical_section_id2intersecting_ids_;
-  }
-  void AddIntersectingIdsAfterInit(const std::vector<HashSet<int64_t>>& cs_id2new_is_ids);
 
  private:
   friend class Global<CriticalSectionDesc>;

@@ -87,12 +87,4 @@ void CriticalSectionDesc::UpdateCriticalSectionIds2IntersectingIds() {
   }
 }
 
-void CriticalSectionDesc::AddIntersectingIdsAfterInit(const std::vector<HashSet<int64_t>>& rhs) {
-  CHECK(inited_);
-  CHECK_EQ(critical_section_id2intersecting_ids_.size(), rhs.size());
-  FOR_RANGE(int64_t, i, 0, rhs.size()) {
-    critical_section_id2intersecting_ids_[i].insert(rhs[i].begin(), rhs[i].end());
-  }
-}
-
 }  // namespace oneflow
