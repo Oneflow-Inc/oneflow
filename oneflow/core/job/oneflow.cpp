@@ -740,7 +740,6 @@ void FinishGlobalCriticalSectionDesc(const std::vector<Plan>& plans) {
     int64_t job_id = critical_section->job_id();
     const auto& input_output_mem_block_ids = job_id2input_output_mem_block_ids.at(job_id);
     if (critical_section->has_total_job_critical_section()) {
-      int64_t job_id = critical_section->job_id();
       CHECK(unique_job_id_check.emplace(job_id).second);
       auto* mem_block_ids = &job_id2mem_block_ids.at(job_id);
       {
