@@ -36,9 +36,32 @@ message ProfileConf {
   optional bool collect_act_event = 1 [default = false];
 }
 
+message MemSharingPriorityStrategy {
+}
+
+message ParallelismPriorityStrategy {
+}
+
+message JobNameGroup {
+  repeated string job_name = 1;
+}
+
+message CustomParallelismStrategy {
+  repeated JobNameGroup nonparallel_group = 1;
+}
+
+message JobMemSharingStrategy {
+  oneof strategy_case {
+    MemSharingPriorityStrategy mem_sharing_priority = 1;
+    ParallelismPriorityStrategy palallelism_priority = 2;
+    CustomParallelismStrategy custom_parallelism = 3;
+  }
+}
+
 message JobSet {
   required Resource resource = 1;
   repeated JobConf job_conf = 2;
   required IOConf io_conf = 3;
   optional ProfileConf profile_conf = 4;
+  optional JobMemSharingStrategy job_mem_sharing_strategy = 5;
 }
