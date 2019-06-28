@@ -3,5 +3,4 @@
 namespace oneflow {
 
 REGISTER_INDEPENDENT_THREAD_NUM(TaskType::kForeignInput, 1);
-
 }
