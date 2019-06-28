@@ -13,8 +13,6 @@ class MdSaveCompTaskNode final : public SinkCompTaskNode {
 
   TaskType GetTaskType() const override { return TaskType::kMdSave; }
   bool IsIndependent() const override { return true; }
-
- private:
 };
 
 }  // namespace oneflow
