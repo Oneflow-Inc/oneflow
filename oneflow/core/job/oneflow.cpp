@@ -157,8 +157,7 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
 }
 
 void WithJobSetLevelGlobalObjs_(
-    const JobSet& job_set,
-    const std::function<void(const PbRpf<JobConf>& job_confs)>& Handler) {
+    const JobSet& job_set, const std::function<void(const PbRpf<JobConf>& job_confs)>& Handler) {
   // New All Global
   Global<JobSet>::New(job_set);
   Global<ResourceDesc>::New(job_set.resource());
