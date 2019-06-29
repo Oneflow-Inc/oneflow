@@ -16,6 +16,7 @@
 #include "oneflow/core/job/runtime.h"
 #include "oneflow/core/job/critical_section_desc.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
+#include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/actor/act_event_logger.h"
@@ -189,19 +190,22 @@ void WithJobSetLevelGlobalObjs_(
   }
   Global<BufferMgr<int64_t>>::New();
   Global<BufferMgr<int64_t>>::Get()->NewBuffer(kBufferNameGlobalWaitJobId, job_set.job_conf_size());
-  Global<BufferMgr<std::function<void()>>>::New();
+  Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::New();
   {
-    auto* buffer_mgr = Global<BufferMgr<std::function<void()>>>::Get();
+    auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::Get();
     const auto& job_descs = *Global<std::vector<std::unique_ptr<JobDesc>>>::Get();
     FOR_RANGE(int64_t, job_id, 0, job_descs.size()) {
-      buffer_mgr->NewBuffer(GetJobCallbackNotifierBufferName(job_id),
+      const auto& job_name = GlobalJobDesc(job_id).job_name();
+      buffer_mgr->NewBuffer(GetForeignInputBufferName(job_name), 2);
+      buffer_mgr->NewBuffer(GetForeignOutputBufferName(job_name), 2);
+      buffer_mgr->NewBuffer(GetCallbackNotifierBufferName(job_name),
                             job_descs.at(0)->concurrency_width());
     }
   }
 
   Handler(job_set.job_conf());
 
-  Global<BufferMgr<std::function<void()>>>::Delete();
+  Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::Delete();
   Global<BufferMgr<int64_t>>::Delete();
   Global<std::vector<std::unique_ptr<JobDesc>>>::Delete();
   Global<JobName2JobId>::Delete();
@@ -617,7 +621,8 @@ void MakeMainJob(const std::vector<Job>& jobs, Job* main_job,
     callback_notify_conf->set_in(callback_notify_esac_op_conf.name() + "/out");
     FOR_RANGE(int64_t, i, 0,
               Global<CriticalSectionDesc>::Get()->job_id2total_job_critical_section_id().size()) {
-      callback_notify_conf->add_callback_buffer_name(GetJobCallbackNotifierBufferName(i));
+      const auto& buffer_name = GetCallbackNotifierBufferName(GlobalJobDesc(i).job_name());
+      callback_notify_conf->add_callback_buffer_name(buffer_name);
     }
   }
   op_confs.push_back(callback_notify_op_conf);
@@ -804,7 +809,7 @@ void MakePullJob(const std::string& job_name, const std::string& op_name,
     foreign_output_op_conf.set_name(std::string("System-Pull-ForeignOutput_") + NewUniqueId());
     auto* foreign_output_conf = foreign_output_op_conf.mutable_foreign_output_conf();
     foreign_output_conf->set_in(input_op_conf.name() + "/out");
-    foreign_output_conf->set_foreign_blob_buffer_name(job_name);
+    foreign_output_conf->set_foreign_blob_buffer_name(GetForeignOutputBufferName(job_name));
     ParallelConf parallel_conf;
     parallel_conf.set_policy(kDataParallel);
     parallel_conf.add_device_name("0:cpu:0");
@@ -826,7 +831,7 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
     foreign_input_op_conf.set_name(std::string("System-Push-ForeignOutput_") + NewUniqueId());
     auto* foreign_input_conf = foreign_input_op_conf.mutable_foreign_input_conf();
     foreign_input_conf->set_out("out");
-    foreign_input_conf->set_foreign_blob_buffer_name(job_name);
+    foreign_input_conf->set_foreign_blob_buffer_name(GetForeignInputBufferName(job_name));
     auto* blob_conf = foreign_input_conf->mutable_blob_conf();
     InitBlobConf(blob_conf, parallel_blob_conf);
     data_type = blob_conf->data_type();

@@ -11,7 +11,9 @@ class ForeignCallback {
 
   virtual ~ForeignCallback() = default;
 
-  virtual void Run(const ForeignBlob&) const = 0;
+  virtual void PushBlob(const ForeignBlob&) const { UNIMPLEMENTED(); }
+  virtual void PullBlob(const ForeignBlob&) const { UNIMPLEMENTED(); }
+  virtual void Callback() const { UNIMPLEMENTED(); }
 };
 
 }  // namespace oneflow
