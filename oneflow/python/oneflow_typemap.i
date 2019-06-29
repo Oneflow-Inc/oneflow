@@ -1,14 +1,3 @@
-%module oneflow_internal
-
-%{
-#include "oneflow/python/oneflow_internal.h"
-%}
-
-%include std_string.i
-%inline %{
-using namespace std;
-%}
-
 %typemap(in) const oneflow::JobSet& (oneflow::JobSet temp) {
   char* c_string;
   Py_ssize_t py_size;
@@ -19,7 +8,7 @@ using namespace std;
     SWIG_fail;
   }
 
-  if (!temp.ParseFromString(string(c_string, py_size))) {
+  if (!temp.ParseFromString(std::string(c_string, py_size))) {
     PyErr_SetString(
         PyExc_TypeError,
         "Failed to parse serialized protobuf message");
@@ -27,5 +16,3 @@ using namespace std;
   }
   $1 = &temp;
 }
-
-%include "oneflow/python/oneflow_internal.h"

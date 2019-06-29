@@ -954,17 +954,10 @@ int main(int argc, char** argv) {
 
 int Main(const oneflow::JobSet& job_set) {
   using namespace oneflow;
-  if (job_set.has_log_conf()) {
-    FLAGS_log_dir = job_set.log_conf().log_dir();
-    FLAGS_logtostderr = job_set.log_conf().logtostderr();
-    FLAGS_logbuflevel = job_set.log_conf().logbuflevel();
-    FLAGS_v = job_set.log_conf().v();
-  } else {
-    FLAGS_log_dir = "./log";
-    FLAGS_logtostderr = 0;
-    FLAGS_logbuflevel = -1;
-    FLAGS_v = 0;
-  }
+  FLAGS_log_dir = job_set.log_conf().log_dir();
+  FLAGS_logtostderr = job_set.log_conf().logtostderr();
+  FLAGS_logbuflevel = job_set.log_conf().logbuflevel();
+  FLAGS_v = job_set.log_conf().v();
   const std::string binary_name = "oneflow";
   google::InitGoogleLogging(binary_name.c_str());
   gflags::SetVersionString(BuildVersionString());

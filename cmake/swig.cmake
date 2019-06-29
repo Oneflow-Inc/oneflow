@@ -14,14 +14,16 @@ function(RELATIVE_SWIG_GENERATE_CPP SRCS HDRS ROOT_DIR)
     file(RELATIVE_PATH REL_DIR ${ROOT_DIR} ${FIL_DIR})
 
     set(GENERATED_FILE "${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}PYTHON_wrap.cpp")
+    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}")
+    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/python")
     list(APPEND ${SRCS} ${GENERATED_FILE})
     add_custom_command(
       OUTPUT ${GENERATED_FILE}
       COMMAND ${SWIG_EXECUTABLE}
       ARGS -python -c++ -py3
-           -module oneflow_internal
+           -module ${FIL_WE}
            -I${ROOT_DIR}
-           -outdir ${CMAKE_CURRENT_BINARY_DIR}
+           -outdir "${CMAKE_CURRENT_BINARY_DIR}/python"
            -o ${GENERATED_FILE} 
            ${ABS_FIL}
       DEPENDS ${ABS_FIL}

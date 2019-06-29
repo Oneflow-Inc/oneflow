@@ -26,7 +26,7 @@ else()
   list(APPEND oneflow_platform_excludes "windows")
 endif()
 
-file(GLOB_RECURSE oneflow_all_src "${PROJECT_SOURCE_DIR}/oneflow/core/*.*")
+file(GLOB_RECURSE oneflow_all_src "${PROJECT_SOURCE_DIR}/oneflow/core/*.*" "${PROJECT_SOURCE_DIR}/oneflow/python/*.*")
 foreach(oneflow_single_file ${oneflow_all_src})
   # Verify whether this file is for other platforms
   set(exclude_this OFF)
@@ -68,7 +68,7 @@ foreach(oneflow_single_file ${oneflow_all_src})
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.i$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/python/.*\\.i$")
     list(APPEND of_all_swig ${oneflow_single_file})
     set(group_this ON)
   endif()
@@ -141,6 +141,7 @@ elseif(WIN32)
 endif()
 
 # build swig
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/python)
 foreach(swig_name ${of_all_swig})
   file(RELATIVE_PATH swig_rel_name ${PROJECT_SOURCE_DIR} ${swig_name})
   list(APPEND of_all_rel_swigs ${swig_rel_name})
@@ -153,8 +154,8 @@ find_package(PythonLibs)
 include_directories(${PYTHON_INCLUDE_DIRS})
 oneflow_add_library(oneflow_internal SHARED ${SWIG_SRCS} ${SWIG_HDRS} ${of_main_cc})
 SET_TARGET_PROPERTIES(oneflow_internal PROPERTIES PREFIX "_")
+set_target_properties(oneflow_internal PROPERTIES CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/python")
 target_link_libraries(oneflow_internal ${of_libs} ${oneflow_third_party_libs})
-set_target_properties(${main_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/swig")
 
 # build main
 set(RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
