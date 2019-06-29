@@ -946,7 +946,7 @@ DEFINE_string(job_set, "", "");
 
 int Main(const oneflow::JobSet& job_set, const char* binary_name) {
   using namespace oneflow;
-  FLAGS_log_dir = job_set.log_conf().log_dir();
+  FLAGS_log_dir = LogDir(job_set.log_conf().log_dir());
   FLAGS_logtostderr = job_set.log_conf().logtostderr();
   FLAGS_logbuflevel = job_set.log_conf().logbuflevel();
   google::InitGoogleLogging(binary_name);
@@ -968,6 +968,6 @@ int main(int argc, char** argv) {
   JobSet job_set;
   ParseProtoFromTextFile(FLAGS_job_set, &job_set);
   gflags::ParseCommandLineFlags(&argc, &argv, true);
-  job_set.mutable_log_conf()->set_log_dir(LogDir(FLAGS_log_dir));
+  job_set.mutable_log_conf()->set_log_dir(FLAGS_log_dir);
   return Main(job_set, argv[0]);
 }
