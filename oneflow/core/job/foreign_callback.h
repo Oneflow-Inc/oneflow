@@ -1,5 +1,7 @@
-#ifndef ONEFLOW_CORE_JOB_FOREIGN_CALLBACK_H
-#define ONEFLOW_CORE_JOB_FOREIGN_CALLBACK_H
+#ifndef ONEFLOW_CORE_JOB_FOREIGN_CALLBACK_H_
+#define ONEFLOW_CORE_JOB_FOREIGN_CALLBACK_H_
+
+#include "oneflow/core/register/foreign_blob.h"
 
 namespace oneflow {
 
@@ -9,9 +11,9 @@ class ForeignCallback {
 
   virtual ~ForeignCallback() = default;
 
-  virtual void run() = 0;
+  virtual void run(const ForeignBlob&) const = 0;
 };
 
 }  // namespace oneflow
 
-#endif
+#endif  // ONEFLOW_CORE_JOB_FOREIGN_CALLBACK_H_
