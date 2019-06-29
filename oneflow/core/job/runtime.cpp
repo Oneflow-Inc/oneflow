@@ -4,6 +4,8 @@
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/job/foreign_callback.h"
+#include "oneflow/core/job/mock_callback_notifier.h"
 #include "oneflow/core/job/nccl_comm_manager.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/critical_section_desc.h"
@@ -77,14 +79,17 @@ Runtime::Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_ph
   SendCmdMsg(mdupdt_tasks, ActorCmd::kSendInitialModel);
   SendCmdMsg(source_tasks, ActorCmd::kStart);
   // if is this machine master
-  FOR_RANGE(int64_t, i, 0,
-            Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->at(0)->TotalBatchNum()) {
-    auto* buffer =
-        Global<BufferMgr<std::function<void()>>>::Get()->Get(GetJobCallbackNotifierBufferName(0));
-    buffer->Send([]() { LOG(INFO) << "callback_notifier"; });
-    Global<BufferMgr<int64_t>>::Get()->Get(kBufferNameGlobalWaitJobId)->Send(0);
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    FOR_RANGE(int64_t, i, 0,
+              Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->at(0)->TotalBatchNum()) {
+      const auto& job_name = GetCallbackNotifierBufferName(GlobalJobDesc(0).job_name());
+      auto* buffer = Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::Get()->Get(job_name);
+      buffer->Send(
+          std::make_shared<MockCallbackNotifier>([]() { LOG(INFO) << "callback_notifier"; }));
+      Global<BufferMgr<int64_t>>::Get()->Get(kBufferNameGlobalWaitJobId)->Send(0);
+    }
+    Global<BufferMgr<int64_t>>::Get()->Get(kBufferNameGlobalWaitJobId)->Close();
   }
-  Global<BufferMgr<int64_t>>::Get()->Get(kBufferNameGlobalWaitJobId)->Close();
   runtime_ctx->WaitUntilCntEqualZero("running_actor_cnt");
   OF_BARRIER();
   DeleteAllGlobal();

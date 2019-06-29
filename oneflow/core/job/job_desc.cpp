@@ -146,8 +146,10 @@ void WithGlobalJobId(int64_t job_id, const std::function<void()>& Handler) {
   Global<JobId>::Delete();
 }
 
-const JobDesc& GlobalJobDesc() {
-  return *Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->at(*Global<JobId>::Get());
+const JobDesc& GlobalJobDesc(int64_t job_id) {
+  return *Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->at(job_id);
 }
+
+const JobDesc& GlobalJobDesc() { return GlobalJobDesc(*Global<JobId>::Get()); }
 
 }  // namespace oneflow
