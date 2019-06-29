@@ -157,7 +157,7 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
   *(plan->mutable_net_topo()) = net_topo;
 }
 
-void WithJobSetLevelGlobalObjs_(
+void WithJobSetLevelGlobalObjs(
     const JobSet& job_set, const std::function<void(const PbRpf<JobConf>& job_confs)>& Handler) {
   // New All Global
   Global<JobSet>::New(job_set);
@@ -228,7 +228,7 @@ void WithJobSetLevelGlobalObjs(
     const std::function<void(const PbRpf<JobConf>& job_confs)>& Handler) {
   JobSet job_set;
   ParseProtoFromTextFile(job_set_filepath, &job_set);
-  WithJobSetLevelGlobalObjs_(job_set, Handler);
+  WithJobSetLevelGlobalObjs(job_set, Handler);
 }
 
 void CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_complete) {
@@ -943,7 +943,7 @@ Oneflow::Oneflow(const std::string& job_set_filepath) {
 }
 
 Oneflow::Oneflow(const oneflow::JobSet& job_set) {
-  WithJobSetLevelGlobalObjs_(job_set, [&](const PbRpf<JobConf>& job_confs) {
+  WithJobSetLevelGlobalObjs(job_set, [&](const PbRpf<JobConf>& job_confs) {
     // Runtime
     Plan plan;
     CompileAndMergePlanOnMaster(job_confs, &plan);
@@ -977,12 +977,19 @@ int main(int argc, char** argv) {
   return 0;
 }
 
-int launch(const oneflow::JobSet& job_set) {
+int Main(const oneflow::JobSet& job_set) {
   using namespace oneflow;
-  FLAGS_log_dir = "./log";
-  FLAGS_logtostderr = 0;
-  FLAGS_logbuflevel = -1;
-  FLAGS_v = 0;
+  if (job_set.has_log_conf()) {
+    FLAGS_log_dir = job_set.log_conf().log_dir();
+    FLAGS_logtostderr = job_set.log_conf().logtostderr();
+    FLAGS_logbuflevel = job_set.log_conf().logbuflevel();
+    FLAGS_v = job_set.log_conf().v();
+  } else {
+    FLAGS_log_dir = "./log";
+    FLAGS_logtostderr = 0;
+    FLAGS_logbuflevel = -1;
+    FLAGS_v = 0;
+  }
   const std::string binary_name = "oneflow";
   google::InitGoogleLogging(binary_name.c_str());
   gflags::SetVersionString(BuildVersionString());

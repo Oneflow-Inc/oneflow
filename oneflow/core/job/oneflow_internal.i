@@ -1,12 +1,8 @@
-%module oneflow_wrap
+%module oneflow_internal
 
-%include "std_vector.i"
 %{
-#include "oneflow/core/job/oneflow_wrap.h"
+#include "oneflow/core/job/oneflow_internal.h"
 %}
-namespace std{
-%template(FloatVector) vector<float>;
-}
 
 %include std_string.i
 %inline %{
@@ -32,4 +28,4 @@ using namespace std;
   $1 = &temp;
 }
 
-%include "oneflow/core/job/oneflow_wrap.h"
+%include "oneflow/core/job/oneflow_internal.h"

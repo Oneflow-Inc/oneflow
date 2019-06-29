@@ -19,7 +19,7 @@ function(RELATIVE_SWIG_GENERATE_CPP SRCS HDRS ROOT_DIR)
       OUTPUT ${GENERATED_FILE}
       COMMAND ${SWIG_EXECUTABLE}
       ARGS -python -c++ -py3
-           -module oneflow_wrap
+           -module oneflow_internal
            -I${ROOT_DIR}
            -outdir ${CMAKE_CURRENT_BINARY_DIR}
            -o ${GENERATED_FILE} 
