@@ -969,5 +969,7 @@ int main(int argc, char** argv) {
   ParseProtoFromTextFile(FLAGS_job_set, &job_set);
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   job_set.mutable_log_conf()->set_log_dir(FLAGS_log_dir);
+  job_set.mutable_log_conf()->set_logtostderr(FLAGS_logtostderr);
+  job_set.mutable_log_conf()->set_logbuflevel(FLAGS_logbuflevel);
   return Main(job_set, argv[0]);
 }
