@@ -229,5 +229,7 @@ REGISTER_ACTOR(TaskType::kLoss, NormalForwardCompActor);
 REGISTER_ACTOR(TaskType::kAccuracy, NormalForwardCompActor);
 REGISTER_ACTOR(TaskType::kOptimizer, NormalForwardCompActor);
 REGISTER_ACTOR(TaskType::kPrint, NormalForwardCompActor);
+REGISTER_ACTOR(TaskType::kForeignInput, NormalForwardCompActor);
+REGISTER_ACTOR(TaskType::kForeignOutput, NormalForwardCompActor);
 
 }  // namespace oneflow

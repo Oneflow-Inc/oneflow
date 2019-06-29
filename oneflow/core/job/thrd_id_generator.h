@@ -19,7 +19,7 @@ class ThrdIdGenerator final {
 
  private:
   int64_t GetModThrdId(std::pair<int64_t, int64_t> machine_task_type);
-  bool EqualConf(int64_t task_type, int32_t thrd_num);
+  bool TaskTypeThrdNumEqMax(int64_t task_type, int32_t thrd_num);
   void InitLowerboundOfTaskType(const HashMap<int64_t, std::set<TaskType>>& machine2task_types);
 
   int64_t base_thrd_id_;

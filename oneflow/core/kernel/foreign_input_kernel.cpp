@@ -12,7 +12,7 @@ void ForeignInputKernel::ForwardDataContent(
                                    ->Get(buffer_name)
                                    ->TryReceive(&foreign_blob);
   CHECK_NE(buffer_status, kBufferStatusEmpty);
-  foreign_blob->CopyTo(BnInOp2Blob("out"));
+  TODO();
 }
 
 REGISTER_KERNEL(OperatorConf::kForeignInputConf, ForeignInputKernel);
