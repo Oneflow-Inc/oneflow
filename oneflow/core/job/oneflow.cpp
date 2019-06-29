@@ -223,14 +223,6 @@ void WithJobSetLevelGlobalObjs(
   Global<ResourceDesc>::Delete();
 }
 
-void WithJobSetLevelGlobalObjs(
-    const std::string& job_set_filepath,
-    const std::function<void(const PbRpf<JobConf>& job_confs)>& Handler) {
-  JobSet job_set;
-  ParseProtoFromTextFile(job_set_filepath, &job_set);
-  WithJobSetLevelGlobalObjs(job_set, Handler);
-}
-
 void CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_complete) {
   const JobDesc& job_desc = GlobalJobDesc();
   Plan naive_plan;
@@ -920,27 +912,8 @@ class Oneflow final {
   OF_DISALLOW_COPY_AND_MOVE(Oneflow);
   ~Oneflow() = default;
 
-  Oneflow(const std::string& job_set_filepath);
   Oneflow(const oneflow::JobSet& job_set);
 };
-
-Oneflow::Oneflow(const std::string& job_set_filepath) {
-  WithJobSetLevelGlobalObjs(job_set_filepath, [&](const PbRpf<JobConf>& job_confs) {
-    // Runtime
-    Plan plan;
-    CompileAndMergePlanOnMaster(job_confs, &plan);
-    if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-      PushPlan("plan", plan);
-    } else {
-      PullPlan("plan", &plan);
-    }
-    { Runtime run(plan, ComputeTotalPieceNum(), false); }
-    if (Global<Profiler>::Get() != nullptr) {
-      Global<Profiler>::Get()->Profile(
-          plan, JoinPath(FLAGS_log_dir, ActEventLogger::act_event_bin_filename()));
-    }
-  });
-}
 
 Oneflow::Oneflow(const oneflow::JobSet& job_set) {
   WithJobSetLevelGlobalObjs(job_set, [&](const PbRpf<JobConf>& job_confs) {
@@ -972,7 +945,9 @@ int main(int argc, char** argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir);
   RedirectStdoutAndStderrToGlogDir();
-  { Oneflow flow(FLAGS_job_set); }
+  JobSet job_set;
+  ParseProtoFromTextFile(FLAGS_job_set, &job_set);
+  { Oneflow flow(job_set); }
   CloseStdoutAndStderr();
   return 0;
 }
