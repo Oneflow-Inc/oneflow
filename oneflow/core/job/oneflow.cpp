@@ -20,6 +20,7 @@
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/graph/plan_task_graph.h"
+#include "oneflow/core/job/oneflow.h"
 
 namespace oneflow {
 
@@ -155,12 +156,10 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
   *(plan->mutable_net_topo()) = net_topo;
 }
 
-void WithJobSetLevelGlobalObjs(
-    const std::string& job_set_filepath,
+void WithJobSetLevelGlobalObjs_(
+    const JobSet& job_set,
     const std::function<void(const PbRpf<JobConf>& job_confs)>& Handler) {
   // New All Global
-  JobSet job_set;
-  ParseProtoFromTextFile(job_set_filepath, &job_set);
   Global<JobSet>::New(job_set);
   Global<ResourceDesc>::New(job_set.resource());
   Global<const IOConf>::New(job_set.io_conf());
@@ -219,6 +218,14 @@ void WithJobSetLevelGlobalObjs(
   Global<const ProfileConf>::Delete();
   Global<const IOConf>::Delete();
   Global<ResourceDesc>::Delete();
+}
+
+void WithJobSetLevelGlobalObjs(
+    const std::string& job_set_filepath,
+    const std::function<void(const PbRpf<JobConf>& job_confs)>& Handler) {
+  JobSet job_set;
+  ParseProtoFromTextFile(job_set_filepath, &job_set);
+  WithJobSetLevelGlobalObjs_(job_set, Handler);
 }
 
 void CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_complete) {
@@ -910,10 +917,29 @@ class Oneflow final {
   ~Oneflow() = default;
 
   Oneflow(const std::string& job_set_filepath);
+  Oneflow(const oneflow::JobSet& job_set);
 };
 
 Oneflow::Oneflow(const std::string& job_set_filepath) {
   WithJobSetLevelGlobalObjs(job_set_filepath, [&](const PbRpf<JobConf>& job_confs) {
+    // Runtime
+    Plan plan;
+    CompileAndMergePlanOnMaster(job_confs, &plan);
+    if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+      PushPlan("plan", plan);
+    } else {
+      PullPlan("plan", &plan);
+    }
+    { Runtime run(plan, ComputeTotalPieceNum(), false); }
+    if (Global<Profiler>::Get() != nullptr) {
+      Global<Profiler>::Get()->Profile(
+          plan, JoinPath(FLAGS_log_dir, ActEventLogger::act_event_bin_filename()));
+    }
+  });
+}
+
+Oneflow::Oneflow(const oneflow::JobSet& job_set) {
+  WithJobSetLevelGlobalObjs_(job_set, [&](const PbRpf<JobConf>& job_confs) {
     // Runtime
     Plan plan;
     CompileAndMergePlanOnMaster(job_confs, &plan);
@@ -943,6 +969,22 @@ int main(int argc, char** argv) {
   LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir);
   RedirectStdoutAndStderrToGlogDir();
   { Oneflow flow(FLAGS_job_set); }
+  CloseStdoutAndStderr();
+  return 0;
+}
+
+int launch(const oneflow::JobSet& job_set) {
+  using namespace oneflow;
+  FLAGS_log_dir = "./log";
+  FLAGS_logtostderr = 0;
+  FLAGS_logbuflevel = -1;
+  FLAGS_v = 0;
+  std::string binary_name = "oneflow";
+  google::InitGoogleLogging(binary_name.c_str());
+  gflags::SetVersionString(BuildVersionString());
+  LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir);
+  RedirectStdoutAndStderrToGlogDir();
+  { Oneflow flow(job_set); }
   CloseStdoutAndStderr();
   return 0;
 }

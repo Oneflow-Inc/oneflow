@@ -151,7 +151,7 @@ RELATIVE_SWIG_GENERATE_CPP(SWIG_SRCS SWIG_HDRS
                               ${of_all_rel_swigs})
 find_package(PythonLibs)
 include_directories(${PYTHON_INCLUDE_DIRS})
-oneflow_add_library(oneflow_wrap SHARED ${SWIG_SRCS} ${SWIG_HDRS})
+oneflow_add_library(oneflow_wrap SHARED ${SWIG_SRCS} ${SWIG_HDRS} ${of_main_cc})
 SET_TARGET_PROPERTIES(oneflow_wrap PROPERTIES PREFIX "_")
 target_link_libraries(oneflow_wrap ${of_libs} ${oneflow_third_party_libs})
 set_target_properties(${main_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/swig")
