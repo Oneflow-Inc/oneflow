@@ -935,22 +935,14 @@ Oneflow::Oneflow(const oneflow::JobSet& job_set) {
 
 }  // namespace oneflow
 
-DEFINE_string(job_set, "", "");
-
-int main(int argc, char** argv) {
-  using namespace oneflow;
-  FLAGS_log_dir = LogDir();
-  google::InitGoogleLogging(argv[0]);
-  gflags::SetVersionString(BuildVersionString());
-  gflags::ParseCommandLineFlags(&argc, &argv, true);
-  LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir);
-  RedirectStdoutAndStderrToGlogDir();
-  JobSet job_set;
-  ParseProtoFromTextFile(FLAGS_job_set, &job_set);
-  { Oneflow flow(job_set); }
-  CloseStdoutAndStderr();
-  return 0;
+std::string LogDir(const std::string& log_dir) {
+  char hostname[255];
+  CHECK_EQ(gethostname(hostname, sizeof(hostname)), 0);
+  std::string v = log_dir + "/" + std::string(hostname);
+  return v;
 }
+
+DEFINE_string(job_set, "", "");
 
 int Main(const oneflow::JobSet& job_set) {
   using namespace oneflow;
@@ -966,4 +958,15 @@ int Main(const oneflow::JobSet& job_set) {
   { Oneflow flow(job_set); }
   CloseStdoutAndStderr();
   return 0;
+}
+
+int main(int argc, char** argv) {
+  using namespace oneflow;
+  JobSet job_set;
+  ParseProtoFromTextFile(FLAGS_job_set, &job_set);
+  google::InitGoogleLogging(argv[0]);
+  gflags::SetVersionString(BuildVersionString());
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
+  job_set.mutable_log_conf()->set_log_dir(LogDir(FLAGS_log_dir));
+  return Main(job_set);
 }
