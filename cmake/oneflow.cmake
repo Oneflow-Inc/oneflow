@@ -68,6 +68,11 @@ foreach(oneflow_single_file ${oneflow_all_src})
     set(group_this ON)
   endif()
 
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.i$")
+    list(APPEND of_all_swig ${oneflow_single_file})
+    set(group_this ON)
+  endif()
+
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.cpp$")
     if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*_test\\.cpp$")
       # test file
@@ -134,6 +139,22 @@ elseif(WIN32)
   set(of_libs of_ccobj of_protoobj)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:of_ccobj") 
 endif()
+
+# build swig
+foreach(swig_name ${of_all_swig})
+  file(RELATIVE_PATH swig_rel_name ${PROJECT_SOURCE_DIR} ${swig_name})
+  list(APPEND of_all_rel_swigs ${swig_rel_name})
+endforeach()
+
+RELATIVE_SWIG_GENERATE_CPP(SWIG_SRCS SWIG_HDRS
+                              ${PROJECT_SOURCE_DIR}
+                              ${of_all_rel_swigs})
+find_package(PythonLibs)
+include_directories(${PYTHON_INCLUDE_DIRS})
+oneflow_add_library(oneflow_wrap SHARED ${SWIG_SRCS} ${SWIG_HDRS})
+SET_TARGET_PROPERTIES(oneflow_wrap PROPERTIES PREFIX "_")
+target_link_libraries(oneflow_wrap ${of_libs} ${oneflow_third_party_libs})
+set_target_properties(${main_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/swig")
 
 # build main
 set(RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
