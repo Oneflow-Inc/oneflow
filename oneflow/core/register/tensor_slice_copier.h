@@ -20,7 +20,7 @@ class TensorSliceCopier final {
   void Copy(DeviceCtx* ctx, const MemoryCopier& copier, Blob* dst_blob, const Blob* src_blob) const;
 
  private:
-  mutable MemoryCopyNdDesc memory_copy_nd_desc_;
+  MemoryCopyNdDesc memory_copy_nd_desc_;
   const TensorSliceView dst_view_;
   const TensorSliceView src_view_;
   const DataType data_type_;

@@ -9,8 +9,6 @@
 namespace oneflow {
 
 struct MemoryCopyNdDesc {
-  void* dst_ptr;
-  const void* src_ptr;
   Shape dst_shape;
   Shape src_shape;
   NdIndex dst_pos;
@@ -26,14 +24,16 @@ class MemoryCopier {
   MemoryCopier() = default;
   virtual ~MemoryCopier() = default;
 
-  virtual void Copy(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const;
+  virtual void Copy(DeviceCtx* ctx, void* dst, const void* src, const MemoryCopyNdDesc& desc) const;
 
  protected:
   virtual void Copy1D(DeviceCtx* ctx, void* dst, const void* src, size_t count) const = 0;
   virtual void Copy2D(DeviceCtx* ctx, void* dst, size_t dst_pitch, const void* src,
                       size_t src_pitch, size_t width, size_t height) const;
-  virtual void Copy3D(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const;
-  virtual void CopyND(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const;
+  virtual void Copy3D(DeviceCtx* ctx, void* dst, const void* src,
+                      const MemoryCopyNdDesc& desc) const;
+  virtual void CopyND(DeviceCtx* ctx, void* dst, const void* src,
+                      const MemoryCopyNdDesc& desc) const;
 };
 
 class HostMemoryCopier final : public MemoryCopier {
@@ -58,8 +58,10 @@ class CudaAsyncMemoryCopier final : public MemoryCopier {
   void Copy1D(DeviceCtx* ctx, void* dst, const void* src, size_t count) const override;
   void Copy2D(DeviceCtx* ctx, void* dst, size_t dst_pitch, const void* src, size_t src_pitch,
               size_t width, size_t height) const override;
-  void Copy3D(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const override;
-  void CopyND(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const override;
+  void Copy3D(DeviceCtx* ctx, void* dst, const void* src,
+              const MemoryCopyNdDesc& desc) const override;
+  void CopyND(DeviceCtx* ctx, void* dst, const void* src,
+              const MemoryCopyNdDesc& desc) const override;
 };
 
 #endif
