@@ -47,7 +47,7 @@ enum TaskType {
   kEveryNth = 39;
   kSourceTick = 40;
   kTick = 41;
-  kSinkTick = 42;
+  kAccTick = 42;
   kCase = 43;
   kEsac = 44;
   kWaitAndSendIds = 45;

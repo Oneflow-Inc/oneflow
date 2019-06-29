@@ -46,4 +46,6 @@ void EsacCompTaskNode::BuildExecGphAndRegst() {
 
 void EsacCompTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataRegstTimeShape(); }
 
+REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kEsac);
+
 }  // namespace oneflow

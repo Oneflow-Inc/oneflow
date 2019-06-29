@@ -141,8 +141,8 @@ OperatorConf AppendAccTick(const Shape& src_shape, const std::list<const OpNode*
   const OperatorConf& tick_op_conf = AppendTick(op_nodes, job_builder);
   OperatorConf acc_op_conf;
   {
-    acc_op_conf.set_name(std::string("System-AutoTick-Acc_") + NewUniqueId());
-    auto* acc_conf = acc_op_conf.mutable_acc_conf();
+    acc_op_conf.set_name(std::string("System-AutoTick-AccTick_") + NewUniqueId());
+    auto* acc_conf = acc_op_conf.mutable_acc_tick_conf();
     acc_conf->set_one(tick_op_conf.name() + "/" + tick_op_conf.tick_conf().out());
     acc_conf->set_acc("acc");
     acc_conf->set_max_acc_num(tick_shape.elem_cnt() / src_shape.elem_cnt());
