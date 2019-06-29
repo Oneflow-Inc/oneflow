@@ -979,7 +979,7 @@ int launch(const oneflow::JobSet& job_set) {
   FLAGS_logtostderr = 0;
   FLAGS_logbuflevel = -1;
   FLAGS_v = 0;
-  std::string binary_name = "oneflow";
+  const std::string binary_name = "oneflow";
   google::InitGoogleLogging(binary_name.c_str());
   gflags::SetVersionString(BuildVersionString());
   LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir);
