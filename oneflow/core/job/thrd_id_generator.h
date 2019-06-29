@@ -22,6 +22,7 @@ class ThrdIdGenerator final {
   bool TaskTypeThrdNumEqMax(int64_t task_type, int32_t thrd_num);
   void InitLowerboundOfTaskType(const HashMap<int64_t, std::set<TaskType>>& machine2task_types);
 
+  int64_t tick_tock_thrd_id_;
   int64_t base_thrd_id_;
   HashMap<std::pair<int64_t, int64_t>, int32_t> machine_task_type2thrd_num_;
   HashMap<std::pair<int64_t, int64_t>, int64_t> machine_task_type2offset_;

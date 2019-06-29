@@ -41,4 +41,6 @@ void ReentrantLockCompTaskNode::InferProducedDataRegstTimeShape() {
   });
 }
 
+REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kReentrantLock);
+
 }  // namespace oneflow
