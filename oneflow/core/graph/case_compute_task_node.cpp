@@ -45,4 +45,6 @@ void CaseCompTaskNode::BuildExecGphAndRegst() {
 
 void CaseCompTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataRegstTimeShape(); }
 
+REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kCase);
+
 }  // namespace oneflow

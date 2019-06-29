@@ -181,6 +181,11 @@ struct IndependentThreadNum4TaskType final {
   REGISTER_CLASS_CREATOR(task_type, IndependentThreadNum4TaskType, \
                          ([] { return new IndependentThreadNum4TaskType(num); }))
 
+struct TickTockTaskType final {};
+
+#define REGISTER_TICK_TOCK_TASK_TYPE(task_type) \
+  REGISTER_CLASS_CREATOR(task_type, TickTockTaskType, ([] { return new TickTockTaskType; }))
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_GRAPH_TASK_NODE_H_
