@@ -23,6 +23,6 @@ float average(std::vector<float> v) {
 	return s / v.size();
 }
 
-int launchWithSerialized(const oneflow::JobConf& conf) {
-	return conf.other().data_part_num();
+int launchWithSerialized(const oneflow::JobSet& conf) {
+	return 0;
 }

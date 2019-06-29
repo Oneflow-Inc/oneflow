@@ -13,7 +13,7 @@ namespace std{
 using namespace std;
 %}
 
-%typemap(in) const oneflow::JobConf& (oneflow::JobConf temp) {
+%typemap(in) const oneflow::JobSet& (oneflow::JobSet temp) {
   char* c_string;
   Py_ssize_t py_size;
   if (PyBytes_AsStringAndSize($input, &c_string, &py_size) == -1) {
