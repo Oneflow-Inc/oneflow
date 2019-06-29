@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_REGISTER_FOREIGN_BLOB_H_
-#define ONEFLOW_CORE_REGISTER_FOREIGN_BLOB_H_
+#ifndef ONEFLOW_CORE_REGISTER_OFBLOB_H_
+#define ONEFLOW_CORE_REGISTER_OFBLOB_H_
 
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/kernel/kernel_util.h"
@@ -7,13 +7,13 @@
 
 namespace oneflow {
 
-class ForeignBlob final {
+class OfBlob final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ForeignBlob);
-  ForeignBlob(DeviceCtx* device_ctx, Blob* blob) : device_ctx_(device_ctx), blob_(blob) {
+  OF_DISALLOW_COPY_AND_MOVE(OfBlob);
+  OfBlob(DeviceCtx* device_ctx, Blob* blob) : device_ctx_(device_ctx), blob_(blob) {
     mem_case_.mutable_host_mem();
   }
-  ~ForeignBlob() = default;
+  ~OfBlob() = default;
 
   int data_type() const { return blob_->data_type(); }
   size_t NumAxes() const { return blob_->shape().NumAxes(); }
@@ -56,20 +56,20 @@ class ForeignBlob final {
   MemoryCase mem_case_;
 };
 
-inline void ForeignBlob::CopyShapeTo(int64_t* ptr, int64_t num_axis) const {
+inline void OfBlob::CopyShapeTo(int64_t* ptr, int64_t num_axis) const {
   CHECK_EQ(num_axis, NumAxes());
   FOR_RANGE(int32_t, i, 0, num_axis) { ptr[i] = blob_->shape().At(i); }
 }
 
 template<typename T>
-void ForeignBlob::AutoMemCopyTo(T* ptr, int64_t len) const {
+void OfBlob::AutoMemCopyTo(T* ptr, int64_t len) const {
   CHECK_EQ(blob_->shape().elem_cnt(), len);
   CHECK(blob_->data_type() == GetDataType<T>::value);
   AutoMemcpy(device_ctx_, ptr, blob_->dptr(), len * sizeof(T), mem_case_, blob_->mem_case());
 }
 
 template<typename T>
-void ForeignBlob::AutoMemCopyFrom(const T* ptr, int64_t len) const {
+void OfBlob::AutoMemCopyFrom(const T* ptr, int64_t len) const {
   CHECK_EQ(blob_->shape().elem_cnt(), len);
   CHECK(blob_->data_type() == GetDataType<T>::value);
   AutoMemcpy(device_ctx_, blob_->mut_dptr(), ptr, len * sizeof(T), blob_->mem_case(), mem_case_);
@@ -77,4 +77,4 @@ void ForeignBlob::AutoMemCopyFrom(const T* ptr, int64_t len) const {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_REGISTER_FOREIGN_BLOB_H_
+#endif  // ONEFLOW_CORE_REGISTER_OFBLOB_H_
