@@ -801,7 +801,7 @@ void MakePullJob(const std::string& job_name, const std::string& op_name,
     foreign_output_op_conf.set_name(std::string("System-Pull-ForeignOutput_") + NewUniqueId());
     auto* foreign_output_conf = foreign_output_op_conf.mutable_foreign_output_conf();
     foreign_output_conf->set_in(input_op_conf.name() + "/out");
-    foreign_output_conf->set_foreign_blob_buffer_name(GetForeignOutputBufferName(job_name));
+    foreign_output_conf->set_ofblob_buffer_name(GetForeignOutputBufferName(job_name));
     ParallelConf parallel_conf;
     parallel_conf.set_policy(kDataParallel);
     parallel_conf.add_device_name("0:cpu:0");
@@ -823,7 +823,7 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
     foreign_input_op_conf.set_name(std::string("System-Push-ForeignOutput_") + NewUniqueId());
     auto* foreign_input_conf = foreign_input_op_conf.mutable_foreign_input_conf();
     foreign_input_conf->set_out("out");
-    foreign_input_conf->set_foreign_blob_buffer_name(GetForeignInputBufferName(job_name));
+    foreign_input_conf->set_ofblob_buffer_name(GetForeignInputBufferName(job_name));
     auto* blob_conf = foreign_input_conf->mutable_blob_conf();
     InitBlobConf(blob_conf, parallel_blob_conf);
     data_type = blob_conf->data_type();
