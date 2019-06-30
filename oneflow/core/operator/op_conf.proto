@@ -1355,17 +1355,19 @@ message IdentityOpConf {
 message XlaLaunchOpConf {
   message Argument {
     required string name = 1;
-    repeated string data = 2;
-    repeated ShapeProto shape = 3;
+    repeated string in = 2;
+    repeated string out = 3;
+    repeated ShapeProto shape = 4;
   }
   message Attribute {
     repeated Argument argument = 1;
     repeated OperatorConf node = 2;
+    repeated string batch_dim_blob = 3;
+    required SbpSignature sbp_signature = 4;
   }
   repeated string in = 1;
   repeated string out = 2;
   required Attribute attr = 3;
-  required SbpSignature sbp_signature = 4;
 }
 
 message OperatorConf {

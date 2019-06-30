@@ -51,7 +51,7 @@ void FixSubgraphInArgumentsBlobNames(
     if (absl::StartsWith(node->op_name(), mola::_XlaInArgumentPrefix)) {
       auto *argument_conf = MutableXlaArgumentProto(launch_op_conf,
                                                     node->op_name());
-      for (auto &blob_name : *(argument_conf->mutable_data())) {
+      for (auto &blob_name : *(argument_conf->mutable_in())) {
         const auto &it = fixed_blob_names.find(blob_name);
         if (it != fixed_blob_names.end()) {
           blob_name = absl::StrCat(launch_op_name, "/", it->second);
@@ -69,7 +69,7 @@ void FixSubgraphOutArgumentsBlobNames(
     if (absl::StartsWith(node->op_name(), mola::_XlaOutArgumentPrefix)) {
       auto *argument_conf = MutableXlaArgumentProto(launch_op_conf,
                                                     node->op_name());
-      for (auto &blob_name : *(argument_conf->mutable_data())) {
+      for (auto &blob_name : *(argument_conf->mutable_out())) {
         const auto &it = fixed_blob_names.find(blob_name);
         if (it != fixed_blob_names.end()) {
           blob_name = it->second;
@@ -200,40 +200,54 @@ void RemoveFoldedOperators(const mola::XlaGraph &graph,
   }
 }
 
-void buildXlaLaunchAttribute(JobBuilder *builder,
-                             const mola::XlaGraph *graph,
-                             XlaLaunchOpConf::Attribute *launch_attr) {
+template <typename HasBatchDimFn>
+void buildXlaLaunchAttribute(const mola::XlaGraph *graph,
+                             XlaLaunchOpConf::Attribute *launch_attr,
+                             HasBatchDimFn has_batch_dim_fn) {  
   for (const XlaNode *node : graph->Nodes()) {
     if (node->op_type() != mola::_XlaArgumentOpType) {
-      // builder->RemoveOp(node->op()->op_name());
-      *(launch_attr->add_node()) = node->op()->op_conf();
+      *(launch_attr->add_node()) = node->op()->op_conf();      
     } else {
       XlaLaunchOpConf::Argument argument_proto;
       argument_proto.set_name(node->op_name());
       // Usually one argument node has either inputs or outputs
       CHECK(node->in_edges().size() == 0 || node->out_edges().size() == 0);
       // Build inputs or outputs for the argument nodes
-      if (node->in_edges().size() > 0) {
-        for (const XlaEdge *edge : node->in_edges()) {
-          const Argument &argument = edge->argument();
-          DoNoDuplicationAdd(argument_proto.mutable_data(),
-                             argument.blob_name());
-        }
+      for (const XlaEdge *edge : node->out_edges()) {
+        const Argument &argument = edge->argument();
+        DoNoDuplicationAdd(argument_proto.mutable_in(),
+                           argument.blob_name());
+        DoNoDuplicationAdd(argument_proto.mutable_out(),
+                           argument.blob_name());
       }
-      if (node->out_edges().size() > 0) {
-        for (const XlaEdge *edge : node->out_edges()) {
-          const Argument &argument = edge->argument();
-          DoNoDuplicationAdd(argument_proto.mutable_data(),
-                             argument.blob_name());
+      for (const XlaEdge *edge : node->in_edges()) {
+        const Argument &argument = edge->argument();
+        DoNoDuplicationAdd(argument_proto.mutable_in(),
+                           argument.blob_name());
+        DoNoDuplicationAdd(argument_proto.mutable_out(),
+                           argument.blob_name());
+      }
+      for (const std::string &blob_name : argument_proto.out()) {
+        if (has_batch_dim_fn(blob_name)) {
+          DoNoDuplicationAdd(launch_attr->mutable_batch_dim_blob(),
+                             blob_name);
         }
       }
       *(launch_attr->add_argument()) = argument_proto;
     }
   }
+
+  // TODO(hjchen2) Rewrite sbp signatures
 }
 
 void RebuildXlaCompiledJob(const mola::XlaGraph &graph, Job *job) {
   JobBuilder builder(job);
+
+  std::unordered_set<std::string> batch_dim_lbis;
+  for (const auto &lbi : job->helper().batch_dim_lbis()) {
+    std::string blob_name = GenLogicalBlobName(lbi);
+    batch_dim_lbis.insert(blob_name);
+  }
 
   for (const XlaNode *node : graph.Nodes()) {
     if (node->op_type() != mola::_XlaLaunchOpType) {
@@ -258,7 +272,10 @@ void RebuildXlaCompiledJob(const mola::XlaGraph &graph, Job *job) {
     }
 
     XlaLaunchOpConf::Attribute *launch_attr = launch_op_conf->mutable_attr();
-    buildXlaLaunchAttribute(&builder, node->sub_graph(), launch_attr);
+    auto has_batch_dim_fn = [&](const std::string &blob_name) -> bool {
+      return batch_dim_lbis.count(blob_name) > 0;
+    };
+    buildXlaLaunchAttribute(node->sub_graph(), launch_attr, has_batch_dim_fn);
    
     // TODO(hjchen2) Assign parallel conf
     ParallelConf parallel_conf;

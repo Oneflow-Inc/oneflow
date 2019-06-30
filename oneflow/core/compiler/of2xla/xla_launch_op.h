@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_COMPILER_OF2XLA_XLA_LAUNCH_OP_H_
 #define ONEFLOW_CORE_COMPILER_OF2XLA_XLA_LAUNCH_OP_H_
 
+#include <unordered_map>
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
@@ -18,15 +19,17 @@ class XlaLaunchOp : public Operator {
 
  private:
   void InferHasBatchDim(
-      std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override {
-    NaiveInferHasBatchDim(HasBatchDim4BnInOp);
-  }
+    std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const override;
 
   void InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const override;
+
+  std::unordered_map<std::string, std::string> subgraph_inputs_;
+  std::unordered_map<std::string, std::string> subgraph_outputs_;
+  std::unordered_map<std::string, bool> has_batch_dim_;
 };
 
 }  // namespace oneflow
