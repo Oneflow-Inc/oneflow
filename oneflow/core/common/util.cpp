@@ -86,11 +86,4 @@ size_t GetAvailableCpuMemSize() {
   return 0;
 }
 
-std::string LogDir() {
-  char hostname[255];
-  CHECK_EQ(gethostname(hostname, sizeof(hostname)), 0);
-  std::string v = FLAGS_log_dir + "/" + std::string(hostname);
-  return v;
-}
-
 }  // namespace oneflow
