@@ -968,8 +968,14 @@ int main(int argc, char** argv) {
   JobSet job_set;
   ParseProtoFromTextFile(FLAGS_job_set, &job_set);
   gflags::ParseCommandLineFlags(&argc, &argv, true);
-  job_set.mutable_log_conf()->set_log_dir(FLAGS_log_dir);
-  job_set.mutable_log_conf()->set_logtostderr(FLAGS_logtostderr);
-  job_set.mutable_log_conf()->set_logbuflevel(FLAGS_logbuflevel);
+  if (job_set.log_conf().has_log_dir() == false) {
+    job_set.mutable_log_conf()->set_log_dir(FLAGS_log_dir);
+  }
+  if (job_set.log_conf().has_logtostderr() == false) {
+    job_set.mutable_log_conf()->set_logtostderr(FLAGS_logtostderr);
+  }
+  if (job_set.log_conf().has_logbuflevel() == false) {
+    job_set.mutable_log_conf()->set_logbuflevel(FLAGS_logbuflevel);
+  }
   return Main(job_set, argv[0]);
 }
