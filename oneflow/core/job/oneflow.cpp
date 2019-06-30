@@ -21,6 +21,7 @@
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/graph/plan_task_graph.h"
+#include "oneflow/core/job/oneflow.h"
 
 namespace oneflow {
 
@@ -157,11 +158,8 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
 }
 
 void WithJobSetLevelGlobalObjs(
-    const std::string& job_set_filepath,
-    const std::function<void(const PbRpf<JobConf>& job_confs)>& Handler) {
+    const JobSet& job_set, const std::function<void(const PbRpf<JobConf>& job_confs)>& Handler) {
   // New All Global
-  JobSet job_set;
-  ParseProtoFromTextFile(job_set_filepath, &job_set);
   Global<JobSet>::New(job_set);
   Global<ResourceDesc>::New(job_set.resource());
   Global<const IOConf>::New(job_set.io_conf());
@@ -914,11 +912,11 @@ class Oneflow final {
   OF_DISALLOW_COPY_AND_MOVE(Oneflow);
   ~Oneflow() = default;
 
-  Oneflow(const std::string& job_set_filepath);
+  Oneflow(const oneflow::JobSet& job_set);
 };
 
-Oneflow::Oneflow(const std::string& job_set_filepath) {
-  WithJobSetLevelGlobalObjs(job_set_filepath, [&](const PbRpf<JobConf>& job_confs) {
+Oneflow::Oneflow(const oneflow::JobSet& job_set) {
+  WithJobSetLevelGlobalObjs(job_set, [&](const PbRpf<JobConf>& job_confs) {
     // Runtime
     Plan plan;
     CompileAndMergePlanOnMaster(job_confs, &plan);
@@ -937,17 +935,47 @@ Oneflow::Oneflow(const std::string& job_set_filepath) {
 
 }  // namespace oneflow
 
+std::string LogDir(const std::string& log_dir) {
+  char hostname[255];
+  CHECK_EQ(gethostname(hostname, sizeof(hostname)), 0);
+  std::string v = log_dir + "/" + std::string(hostname);
+  return v;
+}
+
 DEFINE_string(job_set, "", "");
+
+int Main(const oneflow::JobSet& job_set, const char* binary_name) {
+  using namespace oneflow;
+  FLAGS_log_dir = LogDir(job_set.log_conf().log_dir());
+  FLAGS_logtostderr = job_set.log_conf().logtostderr();
+  FLAGS_logbuflevel = job_set.log_conf().logbuflevel();
+  google::InitGoogleLogging(binary_name);
+  gflags::SetVersionString(BuildVersionString());
+  LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir);
+  RedirectStdoutAndStderrToGlogDir();
+  { Oneflow flow(job_set); }
+  CloseStdoutAndStderr();
+  return 0;
+}
+
+int Main(const oneflow::JobSet& job_set) {
+  const std::string binary_name = "oneflow";
+  return Main(job_set, binary_name.c_str());
+}
 
 int main(int argc, char** argv) {
   using namespace oneflow;
-  FLAGS_log_dir = LogDir();
-  google::InitGoogleLogging(argv[0]);
-  gflags::SetVersionString(BuildVersionString());
+  JobSet job_set;
+  ParseProtoFromTextFile(FLAGS_job_set, &job_set);
   gflags::ParseCommandLineFlags(&argc, &argv, true);
-  LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir);
-  RedirectStdoutAndStderrToGlogDir();
-  { Oneflow flow(FLAGS_job_set); }
-  CloseStdoutAndStderr();
-  return 0;
+  if (job_set.log_conf().has_log_dir() == false) {
+    job_set.mutable_log_conf()->set_log_dir(FLAGS_log_dir);
+  }
+  if (job_set.log_conf().has_logtostderr() == false) {
+    job_set.mutable_log_conf()->set_logtostderr(FLAGS_logtostderr);
+  }
+  if (job_set.log_conf().has_logbuflevel() == false) {
+    job_set.mutable_log_conf()->set_logbuflevel(FLAGS_logbuflevel);
+  }
+  return Main(job_set, argv[0]);
 }
