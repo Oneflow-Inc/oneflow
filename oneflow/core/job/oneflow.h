@@ -40,8 +40,8 @@ class Oneflow final {
   std::unique_ptr<RuntimeBuffersScope> runtime_buffers_scope_;
 };
 
-}  // namespace oneflow
-
 int Main(const oneflow::JobSet& job_set);
+
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_JOB_ONEFLOW_H_

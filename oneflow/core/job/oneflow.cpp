@@ -839,6 +839,13 @@ void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
   }
 }
 
+std::string LogDir(const std::string& log_dir) {
+  char hostname[255];
+  CHECK_EQ(gethostname(hostname, sizeof(hostname)), 0);
+  std::string v = log_dir + "/" + std::string(hostname);
+  return v;
+}
+
 }  // namespace
 
 GlobalObjectsScope::GlobalObjectsScope(const JobSet& job_set) {
@@ -957,17 +964,6 @@ Oneflow::~Oneflow() {
   global_objects_scope_.reset();
 }
 
-}  // namespace oneflow
-
-std::string LogDir(const std::string& log_dir) {
-  char hostname[255];
-  CHECK_EQ(gethostname(hostname, sizeof(hostname)), 0);
-  std::string v = log_dir + "/" + std::string(hostname);
-  return v;
-}
-
-DEFINE_string(job_set, "", "");
-
 int Main(const oneflow::JobSet& job_set, const char* binary_name) {
   using namespace oneflow;
   FLAGS_log_dir = LogDir(job_set.cpp_flags_conf().log_dir());
@@ -986,6 +982,10 @@ int Main(const oneflow::JobSet& job_set) {
   const std::string binary_name = "oneflow";
   return Main(job_set, binary_name.c_str());
 }
+
+}  // namespace oneflow
+
+DEFINE_string(job_set, "", "");
 
 int main(int argc, char** argv) {
   using namespace oneflow;
