@@ -530,5 +530,6 @@ std::map<TaskType, std::string> task_type2color = {{kInvalid, "0"},
                                                    {kEveryNth, "2"},
                                                    {kSliceBoxing, "2"},
                                                    {kRingBoxing, "2"},
-                                                   {kBoxingConcat, "2"}};
+                                                   {kBoxingConcat, "2"},
+                                                   {kMultiRingAllReduce, "2"}};
 }  // namespace oneflow

@@ -48,6 +48,7 @@ enum TaskType {
   kSliceBoxing = 40;
   kRingBoxing = 41;
   kBoxingConcat = 42;
+  kMultiRingAllReduce = 43;
 };
 
 enum AreaType {

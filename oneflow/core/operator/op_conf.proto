@@ -1411,6 +1411,15 @@ message BoxingConcatOpConf {
   required LogicalBlobId lbi = 3;
 }
 
+message RingConf {
+  repeated int64 next = 1;
+}
+
+message MultiRingAllReduceOpConf {
+  required LogicalBlobId lbi = 1;
+  repeated RingConf rings = 2;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1461,6 +1470,7 @@ message OperatorConf {
     RingAllGatherOpConf ring_all_gather_conf = 138;
     RingAllReduceOpConf ring_all_reduce_conf = 139;
     BoxingConcatOpConf boxing_concat_conf = 140;
+    MultiRingAllReduceOpConf multi_ring_all_reduce_conf = 141;
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
     TransposeOpConf transpose_conf = 201;
