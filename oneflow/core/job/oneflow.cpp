@@ -188,39 +188,14 @@ void WithJobSetLevelGlobalObjs(
     Global<AvailableMemDesc>::New();
     *Global<AvailableMemDesc>::Get() = PullAvailableMemDesc();
     Global<CriticalSectionDesc>::New();
-
     Global<BufferMgr<int64_t>>::New();
-    Global<BufferMgr<int64_t>>::Get()->NewBuffer(kBufferNameGlobalWaitJobId,
-                                                 job_set.job_conf_size());
     Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::New();
-    {
-      auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::Get();
-      const auto& job_descs = *Global<std::vector<std::unique_ptr<JobDesc>>>::Get();
-      FOR_RANGE(int64_t, job_id, 0, job_descs.size()) {
-        const auto& job_name = GlobalJobDesc(job_id).job_name();
-        buffer_mgr->NewBuffer(GetForeignInputBufferName(job_name), 2);
-        buffer_mgr->NewBuffer(GetForeignOutputBufferName(job_name), 2);
-        buffer_mgr->NewBuffer(GetCallbackNotifierBufferName(job_name),
-                              job_descs.at(0)->concurrency_width());
-      }
-    }
   }
 
   Handler(job_set.job_conf());
 
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-    {
-      auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::Get();
-      const auto& job_descs = *Global<std::vector<std::unique_ptr<JobDesc>>>::Get();
-      FOR_RANGE(int64_t, job_id, 0, job_descs.size()) {
-        const auto& job_name = GlobalJobDesc(job_id).job_name();
-        buffer_mgr->Get(GetForeignInputBufferName(job_name))->Close();
-        buffer_mgr->Get(GetForeignOutputBufferName(job_name))->Close();
-        buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Close();
-      }
-    }
     Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::Delete();
-    Global<BufferMgr<int64_t>>::Get()->Get(kBufferNameGlobalWaitJobId)->Close();
     Global<BufferMgr<int64_t>>::Delete();
     Global<CriticalSectionDesc>::Delete();
     Global<AvailableMemDesc>::Delete();
@@ -235,6 +210,35 @@ void WithJobSetLevelGlobalObjs(
   Global<const ProfileConf>::Delete();
   Global<const IOConf>::Delete();
   Global<ResourceDesc>::Delete();
+}
+
+void WithRuntimeBuffers(const std::function<void()>& Handler) {
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    const auto& job_descs = *Global<std::vector<std::unique_ptr<JobDesc>>>::Get();
+    Global<BufferMgr<int64_t>>::Get()->NewBuffer(kBufferNameGlobalWaitJobId, job_descs.size());
+    auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::Get();
+    FOR_RANGE(int64_t, job_id, 0, job_descs.size()) {
+      const auto& job_name = GlobalJobDesc(job_id).job_name();
+      buffer_mgr->NewBuffer(GetForeignInputBufferName(job_name), 2);
+      buffer_mgr->NewBuffer(GetForeignOutputBufferName(job_name), 2);
+      buffer_mgr->NewBuffer(GetCallbackNotifierBufferName(job_name),
+                            job_descs.at(0)->concurrency_width());
+    }
+  }
+
+  Handler();
+
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::Get();
+    const auto& job_descs = *Global<std::vector<std::unique_ptr<JobDesc>>>::Get();
+    FOR_RANGE(int64_t, job_id, 0, job_descs.size()) {
+      const auto& job_name = GlobalJobDesc(job_id).job_name();
+      buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Close();
+      buffer_mgr->Get(GetForeignOutputBufferName(job_name))->Close();
+      buffer_mgr->Get(GetForeignInputBufferName(job_name))->Close();
+    }
+    Global<BufferMgr<int64_t>>::Get()->Get(kBufferNameGlobalWaitJobId)->Close();
+  }
 }
 
 void CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_complete) {
@@ -876,12 +880,14 @@ void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
   }
   HashMap<std::string, ParallelBlobConf> interface_op_name2parallel_blob_conf;
   GetInterfaceOpName2ParallelBlobConf(&jobs, &interface_op_name2parallel_blob_conf);
-  size_t pull_push_job_size = interface_op_name2parallel_blob_conf.size() * 2;
-  size_t user_job_size = jobs.size();
-  jobs.resize(user_job_size + pull_push_job_size);
-  sub_plans.resize(user_job_size + pull_push_job_size);
-  int64_t job_id = user_job_size;
-
+  int64_t job_id = -1;
+  {
+    size_t pull_push_job_size = interface_op_name2parallel_blob_conf.size() * 2;
+    size_t user_job_size = jobs.size();
+    jobs.resize(user_job_size + pull_push_job_size);
+    sub_plans.resize(user_job_size + pull_push_job_size);
+    job_id = user_job_size;
+  }
   for (const auto& pair : interface_op_name2parallel_blob_conf) {
     std::vector<Job> pull_push_job(2);
     MakePullJob(std::string("Pull-") + pair.first, pair.first, pair.second, &pull_push_job.at(0));
@@ -896,7 +902,6 @@ void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
       ++job_id;
     }
   }
-
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     BindInterfaceMemBlockId(jobs, &sub_plans);
     FinishGlobalCriticalSectionDesc(sub_plans);
@@ -938,7 +943,7 @@ Oneflow::Oneflow(const oneflow::JobSet& job_set) {
     } else {
       PullPlan("plan", &plan);
     }
-    { Runtime run(plan, ComputeTotalPieceNum(), false); }
+    WithRuntimeBuffers([&] { Runtime run(plan, ComputeTotalPieceNum(), false); });
     if (Global<Profiler>::Get() != nullptr) {
       Global<Profiler>::Get()->Profile(
           plan, JoinPath(FLAGS_log_dir, ActEventLogger::act_event_bin_filename()));
@@ -959,9 +964,9 @@ DEFINE_string(job_set, "", "");
 
 int Main(const oneflow::JobSet& job_set, const char* binary_name) {
   using namespace oneflow;
-  FLAGS_log_dir = LogDir(job_set.log_conf().log_dir());
-  FLAGS_logtostderr = job_set.log_conf().logtostderr();
-  FLAGS_logbuflevel = job_set.log_conf().logbuflevel();
+  FLAGS_log_dir = LogDir(job_set.cpp_flags_conf().log_dir());
+  FLAGS_logtostderr = job_set.cpp_flags_conf().logtostderr();
+  FLAGS_logbuflevel = job_set.cpp_flags_conf().logbuflevel();
   google::InitGoogleLogging(binary_name);
   gflags::SetVersionString(BuildVersionString());
   LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir);
@@ -981,14 +986,14 @@ int main(int argc, char** argv) {
   JobSet job_set;
   ParseProtoFromTextFile(FLAGS_job_set, &job_set);
   gflags::ParseCommandLineFlags(&argc, &argv, true);
-  if (job_set.log_conf().has_log_dir() == false) {
-    job_set.mutable_log_conf()->set_log_dir(FLAGS_log_dir);
+  if (job_set.cpp_flags_conf().has_log_dir() == false) {
+    job_set.mutable_cpp_flags_conf()->set_log_dir(FLAGS_log_dir);
   }
-  if (job_set.log_conf().has_logtostderr() == false) {
-    job_set.mutable_log_conf()->set_logtostderr(FLAGS_logtostderr);
+  if (job_set.cpp_flags_conf().has_logtostderr() == false) {
+    job_set.mutable_cpp_flags_conf()->set_logtostderr(FLAGS_logtostderr);
   }
-  if (job_set.log_conf().has_logbuflevel() == false) {
-    job_set.mutable_log_conf()->set_logbuflevel(FLAGS_logbuflevel);
+  if (job_set.cpp_flags_conf().has_logbuflevel() == false) {
+    job_set.mutable_cpp_flags_conf()->set_logbuflevel(FLAGS_logbuflevel);
   }
   return Main(job_set, argv[0]);
 }
