@@ -17,6 +17,7 @@
 #include "oneflow/core/job/critical_section_desc.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
 #include "oneflow/core/job/foreign_callback.h"
+#include "oneflow/core/job/mock_callback_notifier.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/actor/act_event_logger.h"
@@ -157,63 +158,69 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
   *(plan->mutable_net_topo()) = net_topo;
 }
 
-void WithJobSetLevelGlobalObjs(
-    const JobSet& job_set, const std::function<void(const PbRpf<JobConf>& job_confs)>& Handler) {
-  // New All Global
-  Global<JobSet>::New(job_set);
-  Global<ResourceDesc>::New(job_set.resource());
-  Global<const IOConf>::New(job_set.io_conf());
-  Global<const ProfileConf>::New(job_set.profile_conf());
-  std::unique_ptr<CtrlServer> ctrl_server(new CtrlServer());
-  Global<CtrlClient>::New();
-  OF_BARRIER();
-  int64_t this_mchn_id =
-      Global<ResourceDesc>::Get()->GetMachineId(ctrl_server->this_machine_addr());
-  Global<MachineCtx>::New(this_mchn_id);
-  FixCpuDeviceNum();
-  Global<IDMgr>::New();
-  bool DoProfile = Global<MachineCtx>::Get()->IsThisMachineMaster()
-                   && Global<const ProfileConf>::Get()->collect_act_event();
-  if (DoProfile) { Global<Profiler>::New(); }
-  PushAvailableMemDescOfThisMachine();
-  Global<JobName2JobId>::New();
-  Global<std::vector<std::unique_ptr<JobDesc>>>::New();
-  FOR_RANGE(int32_t, i, 0, job_set.job_conf_size()) {
-    auto* job_desc = new JobDesc(job_set.job_conf(i), i);
-    Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->emplace_back(job_desc);
-    CHECK(Global<JobName2JobId>::Get()->emplace(job_desc->job_name(), job_desc->job_id()).second);
+class GlobalObjectsScope final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(GlobalObjectsScope);
+  GlobalObjectsScope(const JobSet& job_set) {
+    Global<JobSet>::New(job_set);
+    Global<ResourceDesc>::New(job_set.resource());
+    Global<const IOConf>::New(job_set.io_conf());
+    Global<const ProfileConf>::New(job_set.profile_conf());
+    ctrl_server_.reset(new CtrlServer());
+    Global<CtrlClient>::New();
+    OF_BARRIER();
+    int64_t this_mchn_id =
+        Global<ResourceDesc>::Get()->GetMachineId(ctrl_server_->this_machine_addr());
+    Global<MachineCtx>::New(this_mchn_id);
+    FixCpuDeviceNum();
+    Global<IDMgr>::New();
+    if (Global<MachineCtx>::Get()->IsThisMachineMaster()
+        && Global<const ProfileConf>::Get()->collect_act_event()) {
+      Global<Profiler>::New();
+    }
+    PushAvailableMemDescOfThisMachine();
+    Global<JobName2JobId>::New();
+    Global<std::vector<std::unique_ptr<JobDesc>>>::New();
+    FOR_RANGE(int32_t, i, 0, job_set.job_conf_size()) {
+      auto* job_desc = new JobDesc(job_set.job_conf(i), i);
+      Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->emplace_back(job_desc);
+      CHECK(Global<JobName2JobId>::Get()->emplace(job_desc->job_name(), job_desc->job_id()).second);
+    }
+    if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+      Global<AvailableMemDesc>::New();
+      *Global<AvailableMemDesc>::Get() = PullAvailableMemDesc();
+      Global<CriticalSectionDesc>::New();
+      Global<BufferMgr<int64_t>>::New();
+      Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::New();
+    }
+  }
+  ~GlobalObjectsScope() {
+    if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+      Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::Delete();
+      Global<BufferMgr<int64_t>>::Delete();
+      Global<CriticalSectionDesc>::Delete();
+      Global<AvailableMemDesc>::Delete();
+    }
+    Global<std::vector<std::unique_ptr<JobDesc>>>::Delete();
+    Global<JobName2JobId>::Delete();
+    if (Global<Profiler>::Get() != nullptr) { Global<Profiler>::Delete(); }
+    Global<IDMgr>::Delete();
+    Global<MachineCtx>::Delete();
+    Global<CtrlClient>::Delete();
+    ctrl_server_.reset();
+    Global<const ProfileConf>::Delete();
+    Global<const IOConf>::Delete();
+    Global<ResourceDesc>::Delete();
   }
 
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-    Global<AvailableMemDesc>::New();
-    *Global<AvailableMemDesc>::Get() = PullAvailableMemDesc();
-    Global<CriticalSectionDesc>::New();
-    Global<BufferMgr<int64_t>>::New();
-    Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::New();
-  }
+ private:
+  std::unique_ptr<CtrlServer> ctrl_server_;
+};
 
-  Handler(job_set.job_conf());
-
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-    Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::Delete();
-    Global<BufferMgr<int64_t>>::Delete();
-    Global<CriticalSectionDesc>::Delete();
-    Global<AvailableMemDesc>::Delete();
-  }
-  Global<std::vector<std::unique_ptr<JobDesc>>>::Delete();
-  Global<JobName2JobId>::Delete();
-  if (DoProfile) { Global<Profiler>::Delete(); }
-  Global<IDMgr>::Delete();
-  Global<MachineCtx>::Delete();
-  Global<CtrlClient>::Delete();
-  ctrl_server.reset();
-  Global<const ProfileConf>::Delete();
-  Global<const IOConf>::Delete();
-  Global<ResourceDesc>::Delete();
-}
-
-void WithRuntimeBuffers(const std::function<void()>& Handler) {
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+class RuntimeBuffersScope final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(RuntimeBuffersScope);
+  RuntimeBuffersScope() {
     const auto& job_descs = *Global<std::vector<std::unique_ptr<JobDesc>>>::Get();
     Global<BufferMgr<int64_t>>::Get()->NewBuffer(kBufferNameGlobalWaitJobId, job_descs.size());
     auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::Get();
@@ -225,10 +232,7 @@ void WithRuntimeBuffers(const std::function<void()>& Handler) {
                             job_descs.at(0)->concurrency_width());
     }
   }
-
-  Handler();
-
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+  ~RuntimeBuffersScope() {
     auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::Get();
     const auto& job_descs = *Global<std::vector<std::unique_ptr<JobDesc>>>::Get();
     FOR_RANGE(int64_t, job_id, 0, job_descs.size()) {
@@ -239,7 +243,7 @@ void WithRuntimeBuffers(const std::function<void()>& Handler) {
     }
     Global<BufferMgr<int64_t>>::Get()->Get(kBufferNameGlobalWaitJobId)->Close();
   }
-}
+};
 
 void CompileCurJobOnMaster(Job* job, Plan* improved_plan, bool need_job_complete) {
   const JobDesc& job_desc = GlobalJobDesc();
@@ -928,27 +932,55 @@ void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
 class Oneflow final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Oneflow);
-  ~Oneflow() = default;
+  ~Oneflow();
 
   Oneflow(const oneflow::JobSet& job_set);
+
+  void NaiveSequentialRun() const;
+
+ private:
+  std::unique_ptr<GlobalObjectsScope> global_objects_scope_;
+  Plan plan_;
+  std::unique_ptr<Runtime> runtime_;
+  std::unique_ptr<RuntimeBuffersScope> runtime_buffers_scope_;
 };
 
 Oneflow::Oneflow(const oneflow::JobSet& job_set) {
-  WithJobSetLevelGlobalObjs(job_set, [&](const PbRpf<JobConf>& job_confs) {
-    // Runtime
-    Plan plan;
-    CompileAndMergePlanOnMaster(job_confs, &plan);
-    if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-      PushPlan("plan", plan);
-    } else {
-      PullPlan("plan", &plan);
+  global_objects_scope_.reset(new GlobalObjectsScope(job_set));
+  // Runtime
+  CompileAndMergePlanOnMaster(job_set.job_conf(), &plan_);
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    PushPlan("plan", plan_);
+  } else {
+    PullPlan("plan", &plan_);
+  }
+  runtime_.reset(new Runtime(plan_, ComputeTotalPieceNum(), false));
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    runtime_buffers_scope_.reset(new RuntimeBuffersScope());
+  }
+}
+
+void Oneflow::NaiveSequentialRun() const {
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    FOR_RANGE(int64_t, i, 0,
+              Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->at(0)->TotalBatchNum()) {
+      const auto& job_name = GetCallbackNotifierBufferName(GlobalJobDesc(0).job_name());
+      auto* buffer = Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::Get()->Get(job_name);
+      buffer->Send(
+          std::make_shared<MockCallbackNotifier>([]() { LOG(INFO) << "callback_notifier"; }));
+      Global<BufferMgr<int64_t>>::Get()->Get(kBufferNameGlobalWaitJobId)->Send(0);
     }
-    WithRuntimeBuffers([&] { Runtime run(plan, ComputeTotalPieceNum(), false); });
-    if (Global<Profiler>::Get() != nullptr) {
-      Global<Profiler>::Get()->Profile(
-          plan, JoinPath(FLAGS_log_dir, ActEventLogger::act_event_bin_filename()));
-    }
-  });
+  }
+}
+
+Oneflow::~Oneflow() {
+  runtime_buffers_scope_.reset();
+  runtime_.reset();
+  if (Global<Profiler>::Get() != nullptr) {
+    Global<Profiler>::Get()->Profile(
+        plan_, JoinPath(FLAGS_log_dir, ActEventLogger::act_event_bin_filename()));
+  }
+  global_objects_scope_.reset();
 }
 
 }  // namespace oneflow
@@ -971,7 +1003,7 @@ int Main(const oneflow::JobSet& job_set, const char* binary_name) {
   gflags::SetVersionString(BuildVersionString());
   LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir);
   RedirectStdoutAndStderrToGlogDir();
-  { Oneflow flow(job_set); }
+  Oneflow(job_set).NaiveSequentialRun();
   CloseStdoutAndStderr();
   return 0;
 }
@@ -983,9 +1015,9 @@ int Main(const oneflow::JobSet& job_set) {
 
 int main(int argc, char** argv) {
   using namespace oneflow;
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
   JobSet job_set;
   ParseProtoFromTextFile(FLAGS_job_set, &job_set);
-  gflags::ParseCommandLineFlags(&argc, &argv, true);
   if (job_set.cpp_flags_conf().has_log_dir() == false) {
     job_set.mutable_cpp_flags_conf()->set_log_dir(FLAGS_log_dir);
   }
