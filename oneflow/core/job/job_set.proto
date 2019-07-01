@@ -36,17 +36,21 @@ message ProfileConf {
   optional bool collect_act_event = 1 [default = false];
 }
 
-message LogConf {
+message CppFlagsConf {
+  // glog
   optional string log_dir = 1 [default = "./log"];
   optional int32 logtostderr = 2 [default = 0];
   optional int32 logbuflevel = 3 [default = -1];
   optional int32 v = 4 [default = 0];
+
+  // grpc
+  optional bool grpc_use_no_signal = 5 [default = false];
 }
 
 message JobSet {
   required Resource resource = 1;
   repeated JobConf job_conf = 2;
   required IOConf io_conf = 3;
-  required LogConf log_conf = 4;
+  required CppFlagsConf cpp_flags_conf = 4;
   optional ProfileConf profile_conf = 5;
 }
