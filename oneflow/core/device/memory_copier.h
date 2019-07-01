@@ -2,19 +2,17 @@
 #define ONEFLOW_CORE_DEVICE_MEMORY_COPIER_H_
 
 #include "oneflow/core/device/device_context.h"
-#include "oneflow/core/common/index.h"
+#include "oneflow/core/common/nd_index.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/job/resource.pb.h"
 
 namespace oneflow {
 
 struct MemoryCopyNdDesc {
-  void* dst_ptr;
-  const void* src_ptr;
   Shape dst_shape;
   Shape src_shape;
-  Index dst_pos;
-  Index src_pos;
+  NdIndex dst_pos;
+  NdIndex src_pos;
   Shape extent;
 
   MemoryCopyNdDesc CreateDimReducedDesc() const;
@@ -26,14 +24,16 @@ class MemoryCopier {
   MemoryCopier() = default;
   virtual ~MemoryCopier() = default;
 
-  virtual void Copy(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const;
+  virtual void Copy(DeviceCtx* ctx, void* dst, const void* src, const MemoryCopyNdDesc& desc) const;
 
  protected:
   virtual void Copy1D(DeviceCtx* ctx, void* dst, const void* src, size_t count) const = 0;
   virtual void Copy2D(DeviceCtx* ctx, void* dst, size_t dst_pitch, const void* src,
                       size_t src_pitch, size_t width, size_t height) const;
-  virtual void Copy3D(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const;
-  virtual void CopyND(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const;
+  virtual void Copy3D(DeviceCtx* ctx, void* dst, const void* src,
+                      const MemoryCopyNdDesc& desc) const;
+  virtual void CopyND(DeviceCtx* ctx, void* dst, const void* src,
+                      const MemoryCopyNdDesc& desc) const;
 };
 
 class HostMemoryCopier final : public MemoryCopier {
@@ -48,18 +48,20 @@ class HostMemoryCopier final : public MemoryCopier {
 
 #ifdef WITH_CUDA
 
-class CudaMemoryCopier final : virtual public MemoryCopier {
+class CudaAsyncMemoryCopier final : public MemoryCopier {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CudaMemoryCopier);
-  CudaMemoryCopier() = default;
-  ~CudaMemoryCopier() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(CudaAsyncMemoryCopier);
+  CudaAsyncMemoryCopier() = default;
+  ~CudaAsyncMemoryCopier() override = default;
 
  private:
   void Copy1D(DeviceCtx* ctx, void* dst, const void* src, size_t count) const override;
   void Copy2D(DeviceCtx* ctx, void* dst, size_t dst_pitch, const void* src, size_t src_pitch,
               size_t width, size_t height) const override;
-  void Copy3D(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const override;
-  void CopyND(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const override;
+  void Copy3D(DeviceCtx* ctx, void* dst, const void* src,
+              const MemoryCopyNdDesc& desc) const override;
+  void CopyND(DeviceCtx* ctx, void* dst, const void* src,
+              const MemoryCopyNdDesc& desc) const override;
 };
 
 #endif

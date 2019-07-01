@@ -7,7 +7,7 @@ namespace {
 
 int64_t MemoryCopyNdDescGetNumAxes(const MemoryCopyNdDesc& desc) { return desc.extent.NumAxes(); }
 
-void CheckPosExtent(const int64_t num_axes, const Shape& shape, const Index& pos,
+void CheckPosExtent(const int64_t num_axes, const Shape& shape, const NdIndex& pos,
                     const Shape& extent) {
   CHECK_EQ(shape.NumAxes(), num_axes);
   CHECK_EQ(pos.NumAxes(), num_axes);
@@ -31,8 +31,6 @@ void CheckMemoryCopyNdDesc(const MemoryCopyNdDesc& desc) {
 
 MemoryCopyNdDesc MemoryCopyNdDesc::CreateDimReducedDesc() const {
   MemoryCopyNdDesc reduced;
-  reduced.dst_ptr = dst_ptr;
-  reduced.src_ptr = src_ptr;
   std::vector<int64_t> dst_shape_vec;
   std::vector<int64_t> src_shape_vec;
   std::vector<int64_t> dst_pos_vec;
@@ -56,31 +54,32 @@ MemoryCopyNdDesc MemoryCopyNdDesc::CreateDimReducedDesc() const {
   }
   reduced.dst_shape = Shape(dst_shape_vec);
   reduced.src_shape = Shape(src_shape_vec);
-  reduced.dst_pos = Index(dst_pos_vec);
-  reduced.src_pos = Index(src_pos_vec);
+  reduced.dst_pos = NdIndex(dst_pos_vec);
+  reduced.src_pos = NdIndex(src_pos_vec);
   reduced.extent = Shape(extent_vec);
   return reduced;
 }
 
-void MemoryCopier::Copy(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const {
+void MemoryCopier::Copy(DeviceCtx* ctx, void* dst, const void* src,
+                        const MemoryCopyNdDesc& desc) const {
   CheckMemoryCopyNdDesc(desc);
   const int64_t num_axes = MemoryCopyNdDescGetNumAxes(desc);
   if (num_axes == 1) {
-    Copy1D(ctx, (unsigned char*)desc.dst_ptr + desc.dst_pos.At(0),
-           (unsigned char*)desc.src_ptr + desc.src_pos.At(0), desc.extent.At(0));
+    Copy1D(ctx, (unsigned char*)dst + desc.dst_pos.At(0), (unsigned char*)src + desc.src_pos.At(0),
+           desc.extent.At(0));
   } else if (num_axes == 2) {
     const size_t dst_pitch = desc.dst_shape.At(1);
     const size_t src_pitch = desc.src_shape.At(1);
     const size_t width = desc.extent.At(1);
     const size_t height = desc.extent.At(0);
-    void* dst = (unsigned char*)desc.dst_ptr + desc.dst_pos.At(0) * dst_pitch + desc.dst_pos.At(1);
-    const void* src =
-        (const unsigned char*)desc.src_ptr + desc.src_pos.At(0) * src_pitch + desc.src_pos.At(1);
-    Copy2D(ctx, dst, dst_pitch, src, src_pitch, width, height);
+    void* dst_2d = (unsigned char*)dst + desc.dst_pos.At(0) * dst_pitch + desc.dst_pos.At(1);
+    const void* src_2d =
+        (const unsigned char*)src + desc.src_pos.At(0) * src_pitch + desc.src_pos.At(1);
+    Copy2D(ctx, dst_2d, dst_pitch, src_2d, src_pitch, width, height);
   } else if (num_axes == 3) {
-    Copy3D(ctx, desc);
+    Copy3D(ctx, dst, src, desc);
   } else {
-    CopyND(ctx, desc);
+    CopyND(ctx, dst, src, desc);
   }
 }
 
@@ -95,7 +94,8 @@ void MemoryCopier::Copy2D(DeviceCtx* ctx, void* dst, size_t dst_pitch, const voi
   }
 }
 
-void MemoryCopier::Copy3D(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const {
+void MemoryCopier::Copy3D(DeviceCtx* ctx, void* dst, const void* src,
+                          const MemoryCopyNdDesc& desc) const {
   const size_t dst_pitch = desc.dst_shape.Count(2);
   const size_t src_pitch = desc.src_shape.Count(2);
   const size_t dst_inner_area = desc.dst_shape.Count(1);
@@ -104,15 +104,18 @@ void MemoryCopier::Copy3D(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const {
   const size_t height = desc.extent.At(1);
   const size_t depth = desc.extent.At(0);
   FOR_RANGE(size_t, i, 0, depth) {
-    void* dst = (unsigned char*)desc.dst_ptr + (desc.dst_pos.At(0) + i) * dst_inner_area
-                + desc.dst_pos.At(1) * dst_pitch + desc.dst_pos.At(2);
-    const void* src = (unsigned char*)desc.src_ptr + (desc.src_pos.At(0) + i) * src_inner_area
-                      + desc.src_pos.At(1) * src_pitch + desc.src_pos.At(2);
-    Copy2D(ctx, dst, dst_pitch, src, src_pitch, width, height);
+    void* dst_2d = (unsigned char*)dst + (desc.dst_pos.At(0) + i) * dst_inner_area
+                   + desc.dst_pos.At(1) * dst_pitch + desc.dst_pos.At(2);
+    const void* src_2d = (unsigned char*)src + (desc.src_pos.At(0) + i) * src_inner_area
+                         + desc.src_pos.At(1) * src_pitch + desc.src_pos.At(2);
+    Copy2D(ctx, dst_2d, dst_pitch, src_2d, src_pitch, width, height);
   }
 }
 
-void MemoryCopier::CopyND(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const { UNIMPLEMENTED(); }
+void MemoryCopier::CopyND(DeviceCtx* ctx, void* dst, const void* src,
+                          const MemoryCopyNdDesc& desc) const {
+  UNIMPLEMENTED();
+}
 
 void HostMemoryCopier::Copy1D(DeviceCtx* ctx, void* dst, const void* src, size_t count) const {
   memcpy(dst, src, count);
@@ -120,30 +123,32 @@ void HostMemoryCopier::Copy1D(DeviceCtx* ctx, void* dst, const void* src, size_t
 
 #ifdef WITH_CUDA
 
-void CudaMemoryCopier::Copy1D(DeviceCtx* ctx, void* dst, const void* src, size_t count) const {
+void CudaAsyncMemoryCopier::Copy1D(DeviceCtx* ctx, void* dst, const void* src, size_t count) const {
   CudaCheck(cudaMemcpyAsync(dst, src, count, cudaMemcpyDefault, ctx->cuda_stream()));
 }
 
-void CudaMemoryCopier::Copy2D(DeviceCtx* ctx, void* dst, size_t dst_pitch, const void* src,
-                              size_t src_pitch, size_t width, size_t height) const {
+void CudaAsyncMemoryCopier::Copy2D(DeviceCtx* ctx, void* dst, size_t dst_pitch, const void* src,
+                                   size_t src_pitch, size_t width, size_t height) const {
   CudaCheck(cudaMemcpy2DAsync(dst, dst_pitch, src, src_pitch, width, height, cudaMemcpyDefault,
                               ctx->cuda_stream()));
 }
 
-void CudaMemoryCopier::Copy3D(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const {
+void CudaAsyncMemoryCopier::Copy3D(DeviceCtx* ctx, void* dst, const void* src,
+                                   const MemoryCopyNdDesc& desc) const {
   cudaMemcpy3DParms params{};
   params.srcPos = make_cudaPos(desc.src_pos.At(2), desc.src_pos.At(1), desc.src_pos.At(0));
-  params.srcPtr = make_cudaPitchedPtr(const_cast<void*>(desc.src_ptr), desc.src_shape.At(2),
+  params.srcPtr = make_cudaPitchedPtr(const_cast<void*>(src), desc.src_shape.At(2),
                                       desc.src_shape.At(2), desc.src_shape.At(1));
   params.dstPos = make_cudaPos(desc.dst_pos.At(2), desc.dst_pos.At(1), desc.dst_pos.At(0));
-  params.dstPtr = make_cudaPitchedPtr(desc.dst_ptr, desc.dst_shape.At(2), desc.dst_shape.At(2),
-                                      desc.dst_shape.At(1));
+  params.dstPtr =
+      make_cudaPitchedPtr(dst, desc.dst_shape.At(2), desc.dst_shape.At(2), desc.dst_shape.At(1));
   params.extent = make_cudaExtent(desc.extent.At(2), desc.extent.At(1), desc.extent.At(0));
   params.kind = cudaMemcpyDefault;
   CudaCheck(cudaMemcpy3DAsync(&params, ctx->cuda_stream()));
 }
 
-void CudaMemoryCopier::CopyND(DeviceCtx* ctx, const MemoryCopyNdDesc& desc) const {
+void CudaAsyncMemoryCopier::CopyND(DeviceCtx* ctx, void* dst, const void* src,
+                                   const MemoryCopyNdDesc& desc) const {
   UNIMPLEMENTED();
 }
 
@@ -151,7 +156,7 @@ REGISTER_DEFAULT_MEMORY_COPIER(DeviceType::kCPU, []() { return new HostMemoryCop
 
 #ifdef WITH_CUDA
 
-REGISTER_DEFAULT_MEMORY_COPIER(DeviceType::kGPU, []() { return new CudaMemoryCopier(); });
+REGISTER_DEFAULT_MEMORY_COPIER(DeviceType::kGPU, []() { return new CudaAsyncMemoryCopier(); });
 
 #endif
 

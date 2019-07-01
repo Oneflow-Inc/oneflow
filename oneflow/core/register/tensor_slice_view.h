@@ -3,7 +3,7 @@
 
 #include "oneflow/core/common/range.h"
 #include "oneflow/core/common/shape.h"
-#include "oneflow/core/common/index.h"
+#include "oneflow/core/common/nd_index.h"
 #include "oneflow/core/register/tensor_slice_view.pb.h"
 
 namespace oneflow {
@@ -27,7 +27,7 @@ class TensorSliceView final {
   const Shape& shape() const;
   const std::vector<Range>& range_vec() const;
   size_t NumAxes() const;
-  Index OffsetTo(const TensorSliceView& other) const;
+  NdIndex OffsetTo(const TensorSliceView& other) const;
   void ToProto(TensorSliceViewProto* proto) const;
 
   static TensorSliceView Concatenate(std::vector<TensorSliceView>& slices, int64_t axis);
