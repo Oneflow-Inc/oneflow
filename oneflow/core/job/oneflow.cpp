@@ -20,6 +20,7 @@
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/graph/plan_task_graph.h"
+#include "oneflow/core/memory/memory_allocator.h"
 
 namespace oneflow {
 
@@ -687,6 +688,80 @@ bool NeedAllocateMemory(const RegstDescTypeProto& regst_desc_type) {
          && regst_desc_type.data_regst_desc().packed_blob_desc().is_body_disabled() == false;
 }
 
+void MergeMemBlockBetweenSubPlans(std::vector<Plan>* sub_plans) {
+  int32_t job_size = sub_plans->size();
+  if (job_size == 1) { return; }
+  int32_t mem_group_size = 0;
+  int64_t mem_block_id_max = Global<IDMgr>::Get()->NewMemSharedId();
+  std::vector<std::vector<RegstDescProto*>> mem_block_id2regst_descs(mem_block_id_max);
+  std::vector<int64_t> mem_block_id2size(mem_block_id_max, -1);
+  std::vector<MemoryCase> mem_block_id2mem_case(mem_block_id_max);
+  std::vector<int32_t> mem_block_id2job_id(mem_block_id_max, -1);
+  std::vector<HashSet<int32_t>> job_id2mutual_exclusion_ids;
+  std::vector<int32_t> job_id2mem_share_group_id(job_size, -1);
+  std::vector<HashMap<MemoryCase, HashSet<int32_t>>> job_id2mem_case2mem_block_ids(job_size);
+  // std::vector<MemBlock> mem_blocks(Global<IDMgr>::Get()->NewMemSharedId());
+  HashMap<std::string, HashSet<int32_t>> arg_op_name2job_ids;
+  job_id2mutual_exclusion_ids.resize(job_size);
+  for (const auto& job_desc_ptr : *(Global<std::vector<std::unique_ptr<JobDesc>>>::Get())) {
+    for (const std::string& arg_op_name : job_desc_ptr->arg_op_name()) {
+      arg_op_name2job_ids[arg_op_name].emplace(job_desc_ptr->job_id());
+    }
+  }
+  for (const auto& pair : arg_op_name2job_ids) {
+    for (int32_t first_id : pair.second) {
+      for (int32_t second_id : pair.second) {
+        if (first_id != second_id) { job_id2mutual_exclusion_ids[first_id].emplace(second_id); }
+      }
+    }
+  }
+  for (int32_t job_id = 0; job_id < job_size; ++job_id) {
+    Plan* sub_plan = &(sub_plans->at(job_id));
+    for (int32_t i = 0; i < sub_plan->task_size(); ++i) {
+      TaskProto* task = sub_plan->mutable_task(i);
+      for (auto& pair : *(task->mutable_produced_regst_desc())) {
+        RegstDescProto* regst_desc = &pair.second;
+        // only handle memory reused
+        if (!regst_desc->enable_mem_sharing()) { continue; }
+        CHECK(regst_desc->regst_desc_type().has_data_regst_desc());
+        int32_t mem_block_id = regst_desc->mem_shared_id();
+        CHECK_GE(mem_block_id, 0);
+        int64_t mem_byte_size =
+            RtRegstDesc(*regst_desc).TotalMainByteSize4AllRegst() + regst_desc->mem_shared_offset();
+        CHECK_GT(mem_byte_size, 0);
+        MemoryCase mem_case = regst_desc->mem_case();
+        if (mem_block_id2size[mem_block_id] == -1) {
+          mem_block_id2mem_case[mem_block_id] = mem_case;
+          mem_block_id2job_id[mem_block_id] = job_id;
+        } else {
+          CHECK(mem_block_id2mem_case[mem_block_id] == mem_case);
+          CHECK_EQ(mem_block_id2job_id[mem_block_id], job_id);
+        }
+        // only handle kMemMax
+        mem_block_id2size[mem_block_id] = std::max(mem_block_id2size[mem_block_id], mem_byte_size);
+        mem_block_id2regst_descs[mem_block_id].push_back(regst_desc);
+        job_id2mem_case2mem_block_ids[job_id][mem_case].emplace(mem_block_id);
+      }
+    }
+  }
+  /*
+  for(int32_t mem_block_id = 0; mem_block_id < mem_block_id_max; ++mem_block_id) {
+    int64_t mem_byte_size = mem_block_id2size[mem_block_id];
+    if(mem_byte_size == -1) { continue; }
+    CHECK_GT(mem_byte_size, 0);
+    MemoryCase mem_case = mem_block_id2mem_case[mem_block_id];
+  }
+  */
+
+  const JobMemSharingStrategy& strategy = Global<JobSet>::Get()->job_mem_sharing_strategy();
+  if (strategy.has_mem_sharing_priority()) {
+  } else if (strategy.has_palallelism_priority()) {
+  } else if (strategy.has_custom_parallelism()) {
+  } else {
+    // do nothing
+  }
+}
+
 void FinishGlobalCriticalSectionDesc(const std::vector<Plan>& plans) {
   std::vector<HashMap<std::string, HashSet<int64_t>>> job_id2sole_op_name2mem_block_ids;
   std::vector<HashSet<int64_t>> job_id2mem_block_ids;
@@ -882,6 +957,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
     }
 
     BindInterfaceMemBlockId(jobs, &sub_plans);
+    MergeMemBlockBetweenSubPlans(&sub_plans);
     FinishGlobalCriticalSectionDesc(sub_plans);
     MergePlan(plan, sub_plans);
     Plan main_plan;
