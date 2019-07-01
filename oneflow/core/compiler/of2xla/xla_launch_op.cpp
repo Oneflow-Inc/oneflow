@@ -14,7 +14,7 @@ void XlaLaunchOp::InitFromOpConf() {
 
   EnrollRepeatedInputBn("in");
   EnrollRepeatedOutputBn("out");
-
+  // Mapping the outer inputs and outputs with that of the subgraph arguments
   const auto &xla_launch_conf = op_conf().xla_launch_conf();
   for (const auto &arg_conf : xla_launch_conf.attr().argument()) {
     const auto &inputs = arg_conf.in();
@@ -102,10 +102,26 @@ void XlaLaunchOp::InferSbpSignature(
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
-  const auto &xla_launch_conf = op_conf().xla_launch_conf();
-  const SbpSignature &sbp_conf = xla_launch_conf.attr().sbp_signature();
-  this->InferSbpSignature(sbp_signature, sbp_conf, CalcOrderValue4SbpSig,
-                          SbpInferHint4Ibn, parallel_desc);
+  UNIMPLEMENTED();
+  // const auto &xla_launch_conf = op_conf().xla_launch_conf();
+  // const auto &attr_sbp_conf = xla_launch_conf.attr().sbp_signature();
+  // SbpSignature sbp_conf;
+  // auto *bn2sbp_parallel = sbp_conf.mutable_bn_in_op2sbp_parallel();
+  // for (const std::string &bn : this->input_bns()) {
+  //   std::string blob_name = GenLogicalBlobName(this->BnInOp2Lbi(bn));
+  //   const auto &it = subgraph_inputs_.find(blob_name);
+  //   CHECK(it != subgraph_inputs_.end());
+  //   CHECK_GT(attr_sbp_conf.count(it->second), 0);
+  //   (*bn2sbp_parallel)[bn] = attr_sbp_conf.at(it->second);
+  // }
+  // for (const std::string &bn : this->input_bns()) {
+  //   const auto &it = subgraph_outputs_.find(bn);
+  //   CHECK(it != subgraph_outputs_.end());
+  //   CHECK_GT(attr_sbp_conf.count(it->second), 0);
+  //   (*bn2sbp_parallel)[bn] = attr_sbp_conf.at(it->second);
+  // }
+  // this->InferSbpSignature(sbp_signature, sbp_conf, CalcOrderValue4SbpSig,
+  //                         SbpInferHint4Ibn, parallel_desc);
 }
 
 REGISTER_OP(OperatorConf::kXlaLaunchConf, XlaLaunchOp);

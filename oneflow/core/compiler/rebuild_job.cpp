@@ -42,6 +42,29 @@ XlaLaunchOpConf::Argument *MutableXlaArgumentProto(
   return nullptr;
 }
 
+std::function<bool(const std::string &blob_name)> MakeHasBatchDimFunc(
+        JobBuilder *builder) {
+  auto has_batch_dim_fn = [builder](const std::string &blob_name) -> bool {
+    const auto &batch_dim_lbis = builder->batch_dim_lbis();
+    LogicalBlobId lbi = GenLogicalBlobId(blob_name);
+    return batch_dim_lbis.count(lbi) > 0;
+  };
+  return has_batch_dim_fn;
+}
+
+std::function<SbpParallel(const std::string &blob_name)>
+        MakeGetSbpSignatureFunc(JobBuilder *builder) {
+  auto get_sbp_signature_fn = [builder](const std::string &blob_name) -> SbpParallel {
+    LogicalBlobId lbi = GenLogicalBlobId(blob_name);
+    const auto &sbp_signature =
+        builder->OpSbpSignature(lbi.op_name()).bn_in_op2sbp_parallel();
+    const auto &it = sbp_signature.find(lbi.blob_name());
+    CHECK(it != sbp_signature.end());
+    return it->second;
+  };
+  return get_sbp_signature_fn;
+}
+
 void FixSubgraphInArgumentsBlobNames(
         const mola::XlaGraph *sub_graph,
         const std::string &launch_op_name,
@@ -80,7 +103,7 @@ void FixSubgraphOutArgumentsBlobNames(
 }
 
 void FixControlInOpNames(const mola::XlaGraph &graph, JobBuilder *builder) {
-  // Map folded node names to cluster node names
+  // Map folded node names to cluster node
   std::unordered_map<std::string, std::string> folded_op_names;
 
   for (const XlaNode *node : graph.Nodes()) {
@@ -116,8 +139,8 @@ void FixControlInOpNames(const mola::XlaGraph &graph, JobBuilder *builder) {
         if (sub_node->op_type() == mola::_XlaArgumentOpType) {
           continue;
         }
-        const auto *folded_op_conf = builder->OpConf(sub_node->op_name());
-        for (const auto &op_name : folded_op_conf->ctrl_in_op_name()) {
+        const auto &folded_op_conf = builder->OpConf(sub_node->op_name());
+        for (const auto &op_name : folded_op_conf.ctrl_in_op_name()) {
           AddControlInOpName(op_conf, op_name);
         }
       }
@@ -200,10 +223,51 @@ void RemoveFoldedOperators(const mola::XlaGraph &graph,
   }
 }
 
-template <typename HasBatchDimFn>
+void FixSbpSignatures(const mola::XlaGraph &graph,
+                      JobBuilder *builder) {
+  auto get_sbp_signature_fn = MakeGetSbpSignatureFunc(builder);
+  for (const XlaNode *node : graph.Nodes()) {
+    if (node->sub_graph() == nullptr) {
+      continue;
+    }
+    OperatorConf *op_conf = builder->MutableOpConf(node->op_name());
+    std::shared_ptr<Operator> op = ConstructOp(*op_conf);
+    std::unordered_map<std::string, std::string> input_blob_names;
+    for (const std::string &bn : op->input_bns()) {
+      std::string blob_name = GenLogicalBlobName(op->BnInOp2Lbi(bn));
+      input_blob_names.emplace(blob_name, bn);
+    }
+
+    SbpSignature sbp_conf;
+    auto *bn2sbp_parallel = sbp_conf.mutable_bn_in_op2sbp_parallel();
+    const auto &attr_proto = op_conf->xla_launch_conf().attr();
+    for (const auto &argument : attr_proto.argument()) {
+      // Input argument
+      if (absl::StartsWith(argument.name(), mola::_XlaInArgumentPrefix)) {
+        CHECK_EQ(argument.in().size(), argument.out().size());
+        for (int i = 0; i < argument.in().size(); ++i) {
+          std::string bn = input_blob_names.at(argument.in()[i]);
+          (*bn2sbp_parallel)[bn] = get_sbp_signature_fn(argument.out()[i]);
+        }
+      }
+      // Output argument
+      if (absl::StartsWith(argument.name(), mola::_XlaOutArgumentPrefix)) {
+        CHECK_EQ(argument.in().size(), argument.out().size());
+        for (int i = 0; i < argument.in().size(); ++i) {
+          std::string bn = argument.out()[i];
+          (*bn2sbp_parallel)[bn] = get_sbp_signature_fn(argument.in()[i]);
+        }
+      }
+    }
+    // Add the Sbp Signature to the job
+    builder->AddOpSbpSignature(node->op_name(), sbp_conf);
+  }
+}
+
 void buildXlaLaunchAttribute(const mola::XlaGraph *graph,
-                             XlaLaunchOpConf::Attribute *launch_attr,
-                             HasBatchDimFn has_batch_dim_fn) {  
+                             JobBuilder *builder,
+                             XlaLaunchOpConf::Attribute *launch_attr) {
+  auto has_batch_dim_fn = MakeHasBatchDimFunc(builder);
   for (const XlaNode *node : graph->Nodes()) {
     if (node->op_type() != mola::_XlaArgumentOpType) {
       *(launch_attr->add_node()) = node->op()->op_conf();      
@@ -227,6 +291,14 @@ void buildXlaLaunchAttribute(const mola::XlaGraph *graph,
         DoNoDuplicationAdd(argument_proto.mutable_out(),
                            argument.blob_name());
       }
+      // Restore the blob names that have batch dimension, so that it's no need
+      // to infer `HasBatchDim` for `XlaLaunch` operators. In practice it's hard
+      // to infer `HasBatchDim` since the operators to be infered have been
+      // folded. Normally we have to infer `HasBatchDim` before `SbpSignature`
+      // and `BlobDesc`, and `HasBatchDim` will reply on the front operators
+      // `BlobDesc`. Therefor we probably could not infer `HasBatchDim` for the
+      // folded operators because their inputs `BlobDesc` were not infered if
+      // the front operators have been folded as well
       for (const std::string &blob_name : argument_proto.out()) {
         if (has_batch_dim_fn(blob_name)) {
           DoNoDuplicationAdd(launch_attr->mutable_batch_dim_blob(),
@@ -236,18 +308,10 @@ void buildXlaLaunchAttribute(const mola::XlaGraph *graph,
       *(launch_attr->add_argument()) = argument_proto;
     }
   }
-
-  // TODO(hjchen2) Rewrite sbp signatures
 }
 
 void RebuildXlaCompiledJob(const mola::XlaGraph &graph, Job *job) {
   JobBuilder builder(job);
-
-  std::unordered_set<std::string> batch_dim_lbis;
-  for (const auto &lbi : job->helper().batch_dim_lbis()) {
-    std::string blob_name = GenLogicalBlobName(lbi);
-    batch_dim_lbis.insert(blob_name);
-  }
 
   for (const XlaNode *node : graph.Nodes()) {
     if (node->op_type() != mola::_XlaLaunchOpType) {
@@ -272,12 +336,9 @@ void RebuildXlaCompiledJob(const mola::XlaGraph &graph, Job *job) {
     }
 
     XlaLaunchOpConf::Attribute *launch_attr = launch_op_conf->mutable_attr();
-    auto has_batch_dim_fn = [&](const std::string &blob_name) -> bool {
-      return batch_dim_lbis.count(blob_name) > 0;
-    };
-    buildXlaLaunchAttribute(node->sub_graph(), launch_attr, has_batch_dim_fn);
+    buildXlaLaunchAttribute(node->sub_graph(), &builder, launch_attr);
    
-    // TODO(hjchen2) Assign parallel conf
+    // TODO(hjchen2) Assign parallel conf 
     ParallelConf parallel_conf;
     parallel_conf.set_policy(kDataParallel);
     parallel_conf.mutable_device_name()->Add()->assign("0:gpu:0");
@@ -288,7 +349,9 @@ void RebuildXlaCompiledJob(const mola::XlaGraph &graph, Job *job) {
   FixControlInOpNames(graph, &builder);
   // Fix blob names
   FixInOutBlobNames(graph, &builder);
-  // Remove folded operator conf from job
+  // Fix Sbp signatures
+  FixSbpSignatures(graph, &builder);
+  // Remove folded operator conf from the job
   RemoveFoldedOperators(graph, &builder);
 }
 

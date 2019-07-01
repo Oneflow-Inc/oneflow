@@ -1363,7 +1363,7 @@ message XlaLaunchOpConf {
     repeated Argument argument = 1;
     repeated OperatorConf node = 2;
     repeated string batch_dim_blob = 3;
-    required SbpSignature sbp_signature = 4;
+    map<string, SbpParallel> sbp_signature = 4;
   }
   repeated string in = 1;
   repeated string out = 2;

@@ -31,6 +31,12 @@ JobBuilder::JobBuilder(Job* job) : job_(job) {
           op_name2parallel_conf_.emplace(op_name, placemnt_group->mutable_parallel_conf()).second);
     }
   }
+  for (auto &pair : *(job->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf())) {
+    op_name2sbp_signature_conf_.emplace(pair.first, &pair.second);
+  }
+  for (const auto &lbi : job->helper().batch_dim_lbis()) {
+    batch_dim_lbis_.insert(lbi);
+  }
 }
 
 void JobBuilder::AddOps(const ParallelConf& parallel_conf,
@@ -96,6 +102,8 @@ void JobBuilder::RemoveOp(const std::string &op_name) {
   JobBuilder builder(job_);
   op_name2op_conf_.swap(builder.op_name2op_conf_);
   op_name2parallel_conf_.swap(builder.op_name2parallel_conf_);
+  op_name2sbp_signature_conf_.swap(builder.op_name2sbp_signature_conf_); 
+  batch_dim_lbis_.swap(builder.batch_dim_lbis_);
 }
 
 void JobBuilder::MutOps(const std::vector<OperatorConf>& op_confs) const {
@@ -139,14 +147,33 @@ void JobBuilder::BindIdenticalSbpOpBlobArgPair(const OpBlobArg& first, const OpB
 OperatorConf *JobBuilder::MutableOpConf(const std::string &op_name) {
   const auto &it = op_name2op_conf_.find(op_name);
   CHECK(it != op_name2op_conf_.end());
-  if (it != op_name2op_conf_.end()) {
-    return it->second;
-  }
-  return nullptr;
+  return it->second;
 }
 
-const OperatorConf *JobBuilder::OpConf(const std::string &op_name) {
-  return const_cast<const OperatorConf *>(MutableOpConf(op_name));
+const OperatorConf &JobBuilder::OpConf(const std::string &op_name) {
+  return *const_cast<const OperatorConf *>(MutableOpConf(op_name));
+}
+
+SbpSignature* JobBuilder::MutableOpSbpSignature(const std::string &op_name) {
+  const auto &it = op_name2sbp_signature_conf_.find(op_name);
+  CHECK(it != op_name2sbp_signature_conf_.end());
+  return it->second; 
+}
+
+const SbpSignature& JobBuilder::OpSbpSignature(
+                                    const std::string &op_name) const {
+  const auto &it = op_name2sbp_signature_conf_.find(op_name);
+  CHECK(it != op_name2sbp_signature_conf_.end());
+  return *(it->second);
+}
+
+void JobBuilder::AddOpSbpSignature(const std::string &op_name,
+                                   const SbpSignature &sbp_signature) {
+  auto *op_name2sbp_signature_conf =
+      job_->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf();
+  (*op_name2sbp_signature_conf)[op_name] = sbp_signature;
+  op_name2sbp_signature_conf_.emplace(op_name,
+                                      &(*op_name2sbp_signature_conf)[op_name]);
 }
 
 }  // namespace oneflow

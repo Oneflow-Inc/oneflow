@@ -29,7 +29,6 @@ class XlaLaunchOp : public Operator {
 
   std::unordered_map<std::string, std::string> subgraph_inputs_;
   std::unordered_map<std::string, std::string> subgraph_outputs_;
-  std::unordered_map<std::string, bool> has_batch_dim_;
 };
 
 }  // namespace oneflow

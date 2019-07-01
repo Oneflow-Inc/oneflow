@@ -18,7 +18,8 @@ class JobBuilder final {
   OF_DISALLOW_COPY_AND_MOVE(JobBuilder);
   explicit JobBuilder(Job* job);
   ~JobBuilder() = default;
-
+  
+  Job *mutable_job() { return job_; }
   const Job& job() const { return *job_; }
 
   void AddOps(const ParallelConf& parallel_conf, const std::vector<OperatorConf>& op_confs);
@@ -32,12 +33,21 @@ class JobBuilder final {
   void ForEachOperator(const std::function<void(const Operator&)>& Handler) const;
 
   OperatorConf *MutableOpConf(const std::string &op_name);
-  const OperatorConf *OpConf(const std::string &op_name);
+  const OperatorConf &OpConf(const std::string &op_name);
+
+  SbpSignature* MutableOpSbpSignature(const std::string &op_name);
+  const SbpSignature& OpSbpSignature(const std::string &op_name) const;
+  void AddOpSbpSignature(const std::string &op_name,
+                         const SbpSignature &sbp_signature);
+
+  const HashSet<LogicalBlobId> &batch_dim_lbis() const { return batch_dim_lbis_; }
 
  private:
   Job* job_;
   HashMap<std::string, OperatorConf*> op_name2op_conf_;
   HashMap<std::string, ParallelConf*> op_name2parallel_conf_;
+  HashMap<std::string, SbpSignature*> op_name2sbp_signature_conf_;
+  HashSet<LogicalBlobId> batch_dim_lbis_;
 };
 
 }  // namespace oneflow
