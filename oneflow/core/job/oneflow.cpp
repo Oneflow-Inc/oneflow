@@ -766,6 +766,35 @@ void MergeMemBlockBetweenSubPlans(std::vector<Plan>* sub_plans) {
   }
 
   std::vector<HashSet<int32_t>> job_groups = GetMutualExclusionJobGroups();
+  HashSet<int32_t> job_id_unique;
+  for (auto& job_group : job_groups) {
+    for (int32_t job_id : job_group) { CHECK(job_id_unique.emplace(job_id).second); }
+  }
+  // merge
+  auto MergeMemBlockIdR2L = [&](int32_t lhs, int32_t rhs) {
+    for (auto* regst_desc : mem_block_id2regst_descs[rhs]) { regst_desc->set_mem_shared_id(lhs); }
+  };
+
+  for (auto& job_group : job_groups) {
+    int32_t max_mem_case_num_job_id = *(job_group.begin());
+    int32_t max_mem_case_num = job_id2mem_case2mem_block_ids[max_mem_case_num_job_id].size();
+    for (int32_t job_id : job_group) {
+      if (job_id2mem_case2mem_block_ids[job_id].size() > max_mem_case_num) {
+        max_mem_case_num_job_id = job_id;
+        max_mem_case_num = job_id2mem_case2mem_block_ids[job_id].size();
+      }
+    }
+    // separate merge mem_block_id by different mem_case,
+    // for merge as much memory as possible
+    for (const auto& pair : job_id2mem_case2mem_block_ids[max_mem_case_num_job_id]) {
+      MemoryCase mem_case = pair.first;
+      int32_t max_mem_block_num = pair.second.size();
+      for (int32_t job_id : job_group) {
+        // TODO();
+      }
+    }
+  }
+
   // TODO();
   /*
   for(int32_t mem_block_id = 0; mem_block_id < mem_block_id_max; ++mem_block_id) {
