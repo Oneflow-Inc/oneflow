@@ -20,8 +20,8 @@ class RecordLoadActor final : public CompActor {
     return std::make_pair(RegstNameType::kNaive, HashSet<std::string>{});
   }
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
-  bool IsCustomizedReadReady() override;
-  bool IsCustomizedReadAlwaysUnReadyFromNow() override { return !IsCustomizedReadReady(); }
+  bool IsCustomizedReadReady() const override;
+  bool IsCustomizedReadAlwaysUnReadyFromNow() const override { return !IsCustomizedReadReady(); }
 
   int HandlerWaitToStart(const ActorMsg&);
 

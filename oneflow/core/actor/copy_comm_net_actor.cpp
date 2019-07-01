@@ -86,11 +86,11 @@ void CopyCommNetActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
   next_piece_id_ += 1;
 }
 
-bool CopyCommNetActor::IsCustomizedReadReady() {
+bool CopyCommNetActor::IsCustomizedReadReady() const {
   return piece_id2regst_ctx_.find(next_piece_id_) != piece_id2regst_ctx_.end();
 }
 
-bool CopyCommNetActor::IsCustomizedReadAlwaysUnReadyFromNow() {
+bool CopyCommNetActor::IsCustomizedReadAlwaysUnReadyFromNow() const {
   return is_in_eord_ && piece_id2regst_ctx_.empty();
 }
 

@@ -32,9 +32,6 @@ class ConvKernelIf : public KernelIfWithModel<device_type, T>,
  protected:
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void BackwardDataContent(const KernelCtx&,
-                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-
   virtual void DoForwardDataContent(DeviceCtx*, const Blob* in_blob, const Blob* weight_blob,
                                     Blob* out_blob,
                                     std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;

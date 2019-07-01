@@ -20,7 +20,7 @@ class NormalMdUpdtCompActor final : public CompActor {
   }
   void AsyncSendCustomizedProducedRegstMsgToConsumer() override {}
   void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
-  bool IsCustomizedWriteReady() override;
+  bool IsCustomizedWriteReady() const override;
   void UpdtStateAsCustomizedProducedRegst(Regst* regst) override;
   void SendConstModelRegstToConsumer();
   bool CheckOutputActId(int64_t regst_desc_id) const override;

@@ -7,7 +7,7 @@ void TanHGradOp::InitFromOpConf() {
   CHECK(op_conf().has_tanh_grad_conf());
   EnrollInputBn("y");
   EnrollInputBn("dy");
-  EnrollOutputBn("dx");
+  EnrollOutputBn("dx")->set_mutable_inplace_ibn("dy");
 }
 
 const PbMessage& TanHGradOp::GetCustomizedConf() const { return op_conf().tanh_grad_conf(); }

@@ -6,9 +6,7 @@ namespace oneflow {
 namespace {
 
 const MomentumModelUpdateConf& GetMomentumModelUpdateConf(const OperatorConf& op_conf) {
-  if (Global<JobDesc>::Get()->IsTrain()) {
-    return op_conf.normal_mdupdt_conf().user_conf().momentum_conf();
-  } else if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+  if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     return op_conf.momentum_model_update_conf().user_conf().momentum_conf();
   } else {
     UNIMPLEMENTED();
@@ -19,9 +17,7 @@ const MomentumModelUpdateConf& GetMomentumModelUpdateConf(const OperatorConf& op
 
 template<DeviceType device_type, typename T>
 const PbMessage& MomentumMdUpdateKernel<device_type, T>::GetCustomizedOpConf() const {
-  if (Global<JobDesc>::Get()->IsTrain()) {
-    return this->op_conf().normal_mdupdt_conf();
-  } else if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+  if (Global<JobDesc>::Get()->other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     return this->op_conf().momentum_model_update_conf();
   } else {
     UNIMPLEMENTED();

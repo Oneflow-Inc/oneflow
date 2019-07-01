@@ -48,88 +48,8 @@ void NormalMdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
   });
 }
 
-void NormalMdUpdtCompTaskNode::ConsumeAllRegsts() {
-  if (!IsTrainable()) { return; }
-  ForEachInDataEdge([&](TaskEdge* edge) {
-    auto regst_descs = edge->GetRegsts();
-    for (auto& regst_desc : regst_descs) {
-      ConsumeRegst("model_diff_acc_" + NewUniqueId(), regst_desc);
-    }
-  });
-}
-
 bool NormalMdUpdtCompTaskNode::IsReadyForBuild() {
   return GetProducedRegst("model")->IsLocked() && GetProducedRegst("const_model")->IsLocked();
-}
-
-void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
-  if (!IsTrainable()) { return; }
-  ExecNode* shared_model_diff_add_node = mut_exec_gph().NewNode();
-  shared_model_diff_add_node->mut_op() = logical_node()->SoleOp();
-  size_t ibn_idx = 0;
-  for (const auto& pair : consumed_regsts()) {
-    shared_model_diff_add_node->BindBnWithRegst(
-        shared_model_diff_add_node->op()->input_bns().Get(ibn_idx++), pair.second.front());
-  }
-  std::shared_ptr<RegstDesc> processed_model_diff_regst = GetProducedRegst("processed_model_diff");
-  shared_model_diff_add_node->BindBnWithRegst(logical_node()->SoleOp()->SoleObn(),
-                                              processed_model_diff_regst);
-  // "model" regst is already bound with lbis and locked by the corresponding
-  // NormalForwardCompTaskNode
-  processed_model_diff_regst->CopyBlobDescFrom(GetProducedRegst("model").get());
-
-  ExecNode* model_update_node = nullptr;
-  ExecEdge* exec_edge = nullptr;
-  processed_model_diff_regst->ForEachLbi([&](const LogicalBlobId& lbi) {
-    OperatorConf op_conf;
-    op_conf.set_name("model_update-" + lbi.op_name() + "-" + lbi.blob_name());
-    op_conf.set_device_type(logical_node()->parallel_desc()->device_type());
-    op_conf.mutable_normal_mdupdt_conf()->set_model_diff(lbi.op_name() + '/' + lbi.blob_name());
-    op_conf.mutable_normal_mdupdt_conf()->set_total_instance_num_diff(lbi.op_name() + '/'
-                                                                      + "total_instance_num");
-    op_conf.mutable_normal_mdupdt_conf()->set_model(lbi.op_name() + '/' + lbi.blob_name());
-    if (Global<JobDesc>::Get()->IsTrain()) {
-      if (lbi.blob_name() == "total_instance_num") {
-        op_conf.mutable_normal_mdupdt_conf()->mutable_user_conf()->mutable_naive_conf();
-      } else {
-        *(op_conf.mutable_normal_mdupdt_conf()->mutable_user_conf()) =
-            Global<JobDesc>::Get()->other_conf().train_conf().model_update_conf();
-      }
-      float primary_lr = Global<JobDesc>::Get()->primary_lr();
-      float secondary_lr = Global<JobDesc>::Get()->secondary_lr();
-      if (secondary_lr < 0) { secondary_lr = primary_lr; }
-      if (lbi.blob_name() == "weight") {
-        op_conf.mutable_normal_mdupdt_conf()->set_learning_rate(primary_lr);
-        op_conf.mutable_normal_mdupdt_conf()->set_l1(Global<JobDesc>::Get()->weight_l1());
-        op_conf.mutable_normal_mdupdt_conf()->set_l2(Global<JobDesc>::Get()->weight_l2());
-      } else if (lbi.blob_name() == "bias") {
-        op_conf.mutable_normal_mdupdt_conf()->set_learning_rate(secondary_lr);
-        op_conf.mutable_normal_mdupdt_conf()->set_l1(Global<JobDesc>::Get()->bias_l1());
-        op_conf.mutable_normal_mdupdt_conf()->set_l2(Global<JobDesc>::Get()->bias_l2());
-      } else if (lbi.blob_name() == "total_instance_num") {
-        // we don't treat total_instance_num as model, just use total_instance_num_diff
-        op_conf.mutable_normal_mdupdt_conf()->set_learning_rate(-1.0);
-        op_conf.mutable_normal_mdupdt_conf()->set_l1(0);
-        op_conf.mutable_normal_mdupdt_conf()->set_l2(0);
-      } else {
-        op_conf.mutable_normal_mdupdt_conf()->set_learning_rate(primary_lr);
-        op_conf.mutable_normal_mdupdt_conf()->set_l1(0);
-        op_conf.mutable_normal_mdupdt_conf()->set_l2(0);
-      }
-    }
-    std::shared_ptr<Operator> model_update_op = ConstructOp(op_conf);
-    model_update_node = mut_exec_gph().NewNode();
-    model_update_node->mut_op() = model_update_op;
-    exec_edge = mut_exec_gph().NewEdge();
-    Connect(shared_model_diff_add_node, exec_edge, model_update_node);
-
-    model_update_node->BindBnsWithRegst(&Operator::input_bns, processed_model_diff_regst);
-    model_update_node->BindBnWithRegst(model_update_op->SoleObn(), GetProducedRegst("model"));
-    model_update_node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, GetProducedRegst("data_tmp"));
-    model_update_node->AddBnToRegstAndBindIt(&Operator::forward_model_bns,
-                                             GetProducedRegst("forward_model"));
-  });
-  mut_exec_gph().TopoForEachNode([this](ExecNode* node) { node->InferBlobDescs(parallel_ctx()); });
 }
 
 void NormalMdUpdtCompTaskNode::LockRegsts() {

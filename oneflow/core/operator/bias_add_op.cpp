@@ -8,7 +8,7 @@ void BiasAddOp::InitFromOpConf() {
   CHECK(op_conf().has_bias_add_conf());
   EnrollInputBn("a");
   EnrollInputBn("b");
-  EnrollOutputBn("out");
+  EnrollOutputBn("out")->set_mutable_inplace_ibn("a");
   EnrollConstBufBn("bias_multiplier");
 }
 

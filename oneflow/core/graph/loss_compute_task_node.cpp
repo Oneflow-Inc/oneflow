@@ -17,11 +17,7 @@ void LossCompTaskNode::ConsumeAllRegsts() {
 
 void LossCompTaskNode::BuildExecGphAndRegst() {
   const auto& op_vec = logical_node()->op_vec();
-  if (Global<JobDesc>::Get()->IsTrain()) {
-    CHECK_EQ(op_vec.size(), 2);
-  } else {
-    CHECK_EQ(op_vec.size(), 1);
-  }
+  CHECK_EQ(op_vec.size(), 1);
   std::shared_ptr<const Operator> loss_op = op_vec[0];
   ExecNode* loss_node = mut_exec_gph().NewNode();
   loss_node->mut_op() = loss_op;
@@ -32,49 +28,14 @@ void LossCompTaskNode::BuildExecGphAndRegst() {
   loss_node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, data_tmp_regst);
   loss_node->AddBnToRegstAndBindIt(&Operator::const_buf_bns, GetProducedRegst("const_buf"));
 
-  if (Global<JobDesc>::Get()->IsTrain()) {
-    BuildRegstWhenTraining();
-  } else {
-    std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
-    for (const std::string& obn : loss_op->output_bns()) {
-      out_regst->AddLbi(loss_op->BnInOp2Lbi(obn));
-      loss_node->BindBnWithRegst(obn, out_regst);
-    }
+  std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
+  for (const std::string& obn : loss_op->output_bns()) {
+    out_regst->AddLbi(loss_op->BnInOp2Lbi(obn));
+    loss_node->BindBnWithRegst(obn, out_regst);
   }
   mut_exec_gph().TopoForEachNode([this](ExecNode* node) { node->InferBlobDescs(parallel_ctx()); });
   mut_exec_gph().TopoForEachNode(
       [this](ExecNode* node) { node->FixInDiffBlobDescs(parallel_ctx()); });
-}
-
-void LossCompTaskNode::BuildRegstWhenTraining() {
-  const auto& op_vec = logical_node()->op_vec();
-  ExecNode* loss_node = mut_exec_gph().SoleNode();
-  std::shared_ptr<const Operator> loss_op = op_vec[0];
-  std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
-  std::shared_ptr<RegstDesc> data_tmp_regst = GetProducedRegst("data_tmp");
-  loss_node->AddBnToRegstAndBindIt(&Operator::input_diff_bns, out_regst);
-  for (std::shared_ptr<RegstDesc> regst : GetConsumedRegst("in")) {
-    out_regst->CopyBlobDescWithoutAddLbi(regst.get());
-  }
-  out_regst->AddLbi(loss_op->BnInOp2Lbi("loss"));
-  loss_node->BindBnWithRegst("loss", out_regst);
-
-  std::shared_ptr<const Operator> sum_op = op_vec[1];
-  ExecNode* sum_node = mut_exec_gph().NewNode();
-  sum_node->mut_op() = sum_op;
-  Connect(loss_node, mut_exec_gph().NewEdge(), sum_node);
-
-  sum_node->BindBnWithRegst(sum_op->SoleIbn(), out_regst);
-  sum_node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, data_tmp_regst);
-
-  out_regst->AddLbi(sum_op->BnInOp2Lbi(sum_op->SoleObn()));
-  out_regst->AddLbi(loss_op->BnInOp2Lbi("loss_instance_num"));
-  sum_node->BindBnWithRegst(sum_op->SoleObn(), out_regst);
-  loss_node->BindBnWithRegst("loss_instance_num", out_regst);
-  if (!loss_op->GetValFromCustomizedConf<std::string>("weight").empty()) {
-    out_regst->AddLbi(loss_op->BnInOp2Lbi("reduction_coefficient"));
-    loss_node->BindBnWithRegst("reduction_coefficient", out_regst);
-  }
 }
 
 void LossCompTaskNode::InferProducedDataRegstTimeShape() { NaiveInferProducedDataRegstTimeShape(); }

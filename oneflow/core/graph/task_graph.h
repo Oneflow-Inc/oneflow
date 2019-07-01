@@ -31,7 +31,6 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
                                    IsLbiAllConsumersReachableToOpName);
 
   void AddOrderCtrlEdgeBetweenCopyAndMdUpdt();
-  void RmUselessConsumeRelationshipBetweenFwBw();
   void AcyclicTopoForEachNode(std::function<void(TaskNode* node)> Handler) const;
   void MdUpdtDelayedTopoForEachNode(std::function<void(TaskNode* node)> Handler) const;
 

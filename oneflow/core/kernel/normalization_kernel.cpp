@@ -107,23 +107,6 @@ void NormalizationKernel<device_type, T>::ForwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
-void NormalizationKernel<device_type, T>::BackwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const NormalizationOpConf& conf = this->op_conf().normalization_conf();
-  Blob* inv_variance = BnInOp2Blob("inv_variance");
-  if (!conf.is_training()) {
-    inv_variance->CopyDataContentFrom(ctx.device_ctx, BnInOp2Blob("moving_variance"));
-    KernelUtil<device_type, T>::Rsqrt(ctx.device_ctx, inv_variance->shape().elem_cnt(),
-                                      inv_variance->mut_dptr<T>(), conf.epsilon());
-  }
-  const Blob* mean = conf.is_training() ? BnInOp2Blob("mean") : BnInOp2Blob("moving_mean");
-  NormalizationKernelUtil<device_type, T>::Backward(
-      ctx.device_ctx, BnInOp2Blob("in"), BnInOp2Blob("gamma"), mean, inv_variance,
-      BnInOp2Blob(GenDiffBn("out")), BnInOp2Blob(GenDiffBn("in")), BnInOp2Blob(GenDiffBn("gamma")),
-      BnInOp2Blob(GenDiffBn("beta")), BnInOp2Blob("buf"), conf.axis(), conf.epsilon());
-}
-
-template<DeviceType device_type, typename T>
 const PbMessage& NormalizationKernel<device_type, T>::GetCustomizedOpConf() const {
   return this->op_conf().normalization_conf();
 }

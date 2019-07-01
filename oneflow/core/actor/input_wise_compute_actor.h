@@ -28,9 +28,9 @@ class InputWiseCompActor : public CompActor {
   void Act() override;
   void NormalProcessCustomizedReadableRegstMsg(const ActorMsg&) override;
   void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const override;
-  bool IsCustomizedReadReady() override;
+  bool IsCustomizedReadReady() const override;
   void NormalProcessCustomizedEordMsg(const ActorMsg&) override {}
-  bool IsCustomizedReadAlwaysUnReadyFromNow() override {
+  bool IsCustomizedReadAlwaysUnReadyFromNow() const override {
     return ReceiveAllEordMsg() && consumed_rs_.available_regst_desc_cnt() == 0;
   }
   void AsyncReturnAllCustomizedReadableRegst() override;
@@ -42,6 +42,7 @@ class InputWiseCompActor : public CompActor {
   void AsyncSendCustomizedConsumedRegstMsgToProducer() override;
 
   virtual void SetKernelCtxOther(void** other) { *other = nullptr; }
+  int64_t GetCurProcessedRegstDescId() const;
 
   RegstSlot consumed_rs_;
   HashMap<int64_t, bool> regst_desc_id2is_processed_;

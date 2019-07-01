@@ -155,8 +155,8 @@ class Actor {
   void TryLogActEvent(const std::function<void()>& Callback) const;
 
   // Ready
-  bool IsReadReady();
-  bool IsWriteReady();
+  bool IsReadReady() const;
+  bool IsWriteReady() const;
 
   // Naive, Inplace Or Customized
   void TakeOverInplaceConsumedAndProduced(const PbMap<std::string, RegstDescProto>& produced_ids);
@@ -178,8 +178,8 @@ class Actor {
   virtual void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const {}
   virtual void NormalProcessCustomizedEordMsg(const ActorMsg&) {}
   virtual void NormalProcessCustomizedReadableRegstMsg(const ActorMsg&) { UNIMPLEMENTED(); }
-  virtual bool IsCustomizedReadReady() { return true; }
-  virtual bool IsCustomizedReadAlwaysUnReadyFromNow() { return false; }
+  virtual bool IsCustomizedReadReady() const { return true; }
+  virtual bool IsCustomizedReadAlwaysUnReadyFromNow() const { return false; }
   virtual std::pair<RegstNameType, HashSet<std::string>>
   GetNaiveOrCustomizedConsumedRegstDescName() {
     return std::make_pair(RegstNameType::kCustomized, HashSet<std::string>{});
@@ -189,7 +189,7 @@ class Actor {
 
   // Customized Produced virtual func
   virtual void UpdtStateAsCustomizedProducedRegst(Regst* regst) { UNIMPLEMENTED(); }
-  virtual bool IsCustomizedWriteReady() { return true; }
+  virtual bool IsCustomizedWriteReady() const { return true; }
   virtual std::pair<RegstNameType, HashSet<std::string>>
   GetNaiveOrCustomizedProducedRegstDescName() {
     return std::make_pair(RegstNameType::kCustomized, HashSet<std::string>{});

@@ -15,7 +15,7 @@ void DecodeRandomActor::Act() {
   AsyncLaunchKernel(GenDefaultKernelCtx());
 }
 
-bool DecodeRandomActor::IsCustomizedReadReady() {
+bool DecodeRandomActor::IsCustomizedReadReady() const {
   return piece_id_ < Global<RuntimeCtx>::Get()->total_piece_num();
 }
 

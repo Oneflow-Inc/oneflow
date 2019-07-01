@@ -63,7 +63,7 @@ struct UnaryFuncNegative<half> final {
 template<>
 struct UnaryFuncExp<half> final {
   static __device__ __forceinline__ const half Invoke(const half x) {
-    return __float2half(std::log(__half2float(x)));
+    return __float2half(std::exp(__half2float(x)));
   }
 };
 #endif

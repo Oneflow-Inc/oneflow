@@ -23,6 +23,8 @@ class InplaceLbiNode : public Node<InplaceLbiNode, InplaceLbiEdge> {
   virtual bool IsMutRef(const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge) const;
   bool IsConstRef(const std::function<bool(const InplaceLbiEdge*)>& IsValidEdge) const;
 
+  std::string VisualStr() const override { return GenLogicalBlobName(lbi_); }
+
  protected:
   OF_DISALLOW_COPY_AND_MOVE(InplaceLbiNode);
   explicit InplaceLbiNode(const LogicalBlobId& lbi) : lbi_(lbi) {}
@@ -66,6 +68,10 @@ class InplaceLbiEdge final : public Edge<InplaceLbiNode, InplaceLbiEdge> {
   const std::string& obn() const { return obn_; }
   bool IsMutRef() const;
   bool IsConstRef() const { return !IsMutRef(); }
+
+  std::string VisualStr() const override {
+    return std::string(op_->op_name() + "/" + ibn_ + ":" + obn_);
+  }
 
  private:
   const Operator* op_;

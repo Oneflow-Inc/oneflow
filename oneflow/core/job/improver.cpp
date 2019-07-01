@@ -397,7 +397,8 @@ void SetInplaceConsumedRegstDescId(
       if (regst_desc->has_hint_inplace_consumed_regst_desc_id()) {
         int64_t hint = regst_desc->hint_inplace_consumed_regst_desc_id();
         const RegstDescProto* in_regst_desc = regst_desc_id2regst_desc.at(hint);
-        if (in_regst_desc->mem_shared_id() == regst_desc->mem_shared_id()
+        if (in_regst_desc->mem_shared_id() != -1
+            && in_regst_desc->mem_shared_id() == regst_desc->mem_shared_id()
             && in_regst_desc->mem_shared_offset() == regst_desc->mem_shared_offset()) {
           CHECK_EQ(in_regst_desc->register_num(), regst_desc->register_num());
           regst_desc->set_inplace_consumed_regst_desc_id(hint);

@@ -13,15 +13,6 @@ void GeluKernel<device_type, T>::ForwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
-void GeluKernel<device_type, T>::BackwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* in_blob = BnInOp2Blob("in");
-  GeluKernelUtil<device_type, T>::GeluBackward(
-      ctx.device_ctx, in_blob->static_shape().elem_cnt(), in_blob->dptr<T>(),
-      BnInOp2Blob("out_diff")->dptr<T>(), BnInOp2Blob("in_diff")->mut_dptr<T>());
-}
-
-template<DeviceType device_type, typename T>
 const PbMessage& GeluKernel<device_type, T>::GetCustomizedOpConf() const {
   return this->op_conf().gelu_conf();
 }

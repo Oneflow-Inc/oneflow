@@ -37,17 +37,8 @@ void InputWiseCompActor::NormalProcessCustomizedReadableRegstMsg(const ActorMsg&
   CHECK_EQ(0, consumed_rs_.TryPushBackRegst(msg.regst()));
 }
 
-bool InputWiseCompActor::IsCustomizedReadReady() {
-  CHECK_EQ(-1, cur_processed_regst_desc_id_);
-  consumed_rs_.ForChosenRegstDeq([this](int64_t) { return cur_processed_regst_desc_id_ == -1; },
-                                 [this](const std::deque<Regst*>& reg_deq) {
-                                   if (reg_deq.empty()) { return; }
-                                   int64_t regst_desc_id = reg_deq.front()->regst_desc_id();
-                                   if (regst_desc_id2is_processed_.at(regst_desc_id) == false) {
-                                     cur_processed_regst_desc_id_ = regst_desc_id;
-                                   }
-                                 });
-  return cur_processed_regst_desc_id_ != -1;
+bool InputWiseCompActor::IsCustomizedReadReady() const {
+  return -1 != GetCurProcessedRegstDescId();
 }
 
 void InputWiseCompActor::ForEachCurCustomizedReadableRegst(
@@ -56,6 +47,7 @@ void InputWiseCompActor::ForEachCurCustomizedReadableRegst(
 }
 
 void InputWiseCompActor::Act() {
+  cur_processed_regst_desc_id_ = GetCurProcessedRegstDescId();
   Regst* cur_regst = consumed_rs_.Front(cur_processed_regst_desc_id_);
   CHECK(cur_regst);
 
@@ -98,5 +90,19 @@ void InputWiseCompActor::AsyncReturnAllCustomizedReadableRegst() {
 }
 
 bool InputWiseCompActor::ProducedCtrlRegstValid(int64_t regst_desc_id) const { return true; }
+
+int64_t InputWiseCompActor::GetCurProcessedRegstDescId() const {
+  int64_t cur_processed_regst_desc_id = -1;
+  consumed_rs_.ForChosenRegstDeq(
+      [cur_processed_regst_desc_id](int64_t) { return cur_processed_regst_desc_id == -1; },
+      [this, &cur_processed_regst_desc_id](const std::deque<Regst*>& reg_deq) {
+        if (reg_deq.empty()) { return; }
+        int64_t regst_desc_id = reg_deq.front()->regst_desc_id();
+        if (regst_desc_id2is_processed_.at(regst_desc_id) == false) {
+          cur_processed_regst_desc_id = regst_desc_id;
+        }
+      });
+  return cur_processed_regst_desc_id;
+}
 
 }  // namespace oneflow

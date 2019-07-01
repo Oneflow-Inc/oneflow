@@ -18,26 +18,6 @@ void BroadcastAddKernel<device_type, T>::ForwardDataContent(
       XpuVarNdarray<const T>(a_blob, num_axes), XpuVarNdarray<const T>(b_blob, num_axes));
 }
 
-template<DeviceType device_type, typename T>
-void BroadcastAddKernel<device_type, T>::BackwardDataContent(
-    const KernelCtx& kernel_ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* out_diff_blob = BnInOp2Blob("out_diff");
-  Blob* a_diff_blob = BnInOp2Blob("a_diff");
-  Blob* b_diff_blob = BnInOp2Blob("b_diff");
-  Blob* bw_buf_blob = BnInOp2Blob("bw_buf");
-  size_t num_axes = out_diff_blob->shape().NumAxes();
-  if (a_diff_blob) {
-    NdarrayUtil<device_type, T>::ReduceSum(
-        kernel_ctx.device_ctx, XpuVarNdarray<T>(a_diff_blob, num_axes),
-        XpuVarNdarray<const T>(out_diff_blob, num_axes), XpuVarNdarray<T>(bw_buf_blob, num_axes));
-  }
-  if (b_diff_blob) {
-    NdarrayUtil<device_type, T>::ReduceSum(
-        kernel_ctx.device_ctx, XpuVarNdarray<T>(b_diff_blob, num_axes),
-        XpuVarNdarray<const T>(out_diff_blob, num_axes), XpuVarNdarray<T>(bw_buf_blob, num_axes));
-  }
-}
-
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBroadcastAddConf, BroadcastAddKernel,
                            ARITHMETIC_DATA_TYPE_SEQ);
 }  // namespace oneflow

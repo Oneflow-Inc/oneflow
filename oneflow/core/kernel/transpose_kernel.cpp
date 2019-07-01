@@ -9,17 +9,7 @@ void TransposeKernel<device_type, T>::ForwardDataContent(
                             this->kernel_conf().transpose_conf().perm());
 }
 
-template<DeviceType device_type, typename T>
-void TransposeKernel<device_type, T>::BackwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* in_diff = BnInOp2Blob("in_diff");
-  if (in_diff) {
-    Transpose<device_type, T>(ctx.device_ctx, BnInOp2Blob("out_diff"), in_diff,
-                              this->kernel_conf().transpose_conf().invert_perm());
-  }
-}
-
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kTransposeConf, TransposeKernel,
-                           FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kTransposeConf, TransposeKernel,
+                                         FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
