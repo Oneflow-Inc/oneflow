@@ -688,22 +688,18 @@ bool NeedAllocateMemory(const RegstDescTypeProto& regst_desc_type) {
          && regst_desc_type.data_regst_desc().packed_blob_desc().is_body_disabled() == false;
 }
 
-void MergeMemBlockBetweenSubPlans(std::vector<Plan>* sub_plans) {
-  int32_t job_size = sub_plans->size();
-  if (job_size == 1) { return; }
+std::vector<HashSet<int32_t>> GetMutualExclusionJobGroups() {
+  std::vector<HashSet<int32_t>> job_groups;
+  std::vector<std::unique_ptr<JobDesc>>* job_descs =
+      Global<std::vector<std::unique_ptr<JobDesc>>>::Get();
   int32_t mem_group_size = 0;
-  int64_t mem_block_id_max = Global<IDMgr>::Get()->NewMemSharedId();
-  std::vector<std::vector<RegstDescProto*>> mem_block_id2regst_descs(mem_block_id_max);
-  std::vector<int64_t> mem_block_id2size(mem_block_id_max, -1);
-  std::vector<MemoryCase> mem_block_id2mem_case(mem_block_id_max);
-  std::vector<int32_t> mem_block_id2job_id(mem_block_id_max, -1);
+  int32_t job_size = job_descs->size();
   std::vector<HashSet<int32_t>> job_id2mutual_exclusion_ids;
   std::vector<int32_t> job_id2mem_share_group_id(job_size, -1);
-  std::vector<HashMap<MemoryCase, HashSet<int32_t>>> job_id2mem_case2mem_block_ids(job_size);
   // std::vector<MemBlock> mem_blocks(Global<IDMgr>::Get()->NewMemSharedId());
   HashMap<std::string, HashSet<int32_t>> arg_op_name2job_ids;
   job_id2mutual_exclusion_ids.resize(job_size);
-  for (const auto& job_desc_ptr : *(Global<std::vector<std::unique_ptr<JobDesc>>>::Get())) {
+  for (const auto& job_desc_ptr : *(job_descs)) {
     for (const std::string& arg_op_name : job_desc_ptr->arg_op_name()) {
       arg_op_name2job_ids[arg_op_name].emplace(job_desc_ptr->job_id());
     }
@@ -715,6 +711,30 @@ void MergeMemBlockBetweenSubPlans(std::vector<Plan>* sub_plans) {
       }
     }
   }
+  // TODO();
+  const JobMemSharingStrategy& strategy = Global<JobSet>::Get()->job_mem_sharing_strategy();
+  if (strategy.has_mem_sharing_priority()) {
+    // TODO();
+  } else if (strategy.has_palallelism_priority()) {
+    // TODO();
+  } else if (strategy.has_custom_parallelism()) {
+    // TODO();
+  } else {
+    // do nothing
+  }
+  return job_groups;
+}
+
+void MergeMemBlockBetweenSubPlans(std::vector<Plan>* sub_plans) {
+  int32_t job_size = sub_plans->size();
+  if (job_size == 1) { return; }
+  int64_t mem_block_id_max = Global<IDMgr>::Get()->NewMemSharedId();
+  std::vector<std::vector<RegstDescProto*>> mem_block_id2regst_descs(mem_block_id_max);
+  std::vector<int64_t> mem_block_id2size(mem_block_id_max, -1);
+  std::vector<MemoryCase> mem_block_id2mem_case(mem_block_id_max);
+  std::vector<int32_t> mem_block_id2job_id(mem_block_id_max, -1);
+  std::vector<HashMap<MemoryCase, HashSet<int32_t>>> job_id2mem_case2mem_block_ids(job_size);
+
   for (int32_t job_id = 0; job_id < job_size; ++job_id) {
     Plan* sub_plan = &(sub_plans->at(job_id));
     for (int32_t i = 0; i < sub_plan->task_size(); ++i) {
@@ -744,6 +764,9 @@ void MergeMemBlockBetweenSubPlans(std::vector<Plan>* sub_plans) {
       }
     }
   }
+
+  std::vector<HashSet<int32_t>> job_groups = GetMutualExclusionJobGroups();
+  // TODO();
   /*
   for(int32_t mem_block_id = 0; mem_block_id < mem_block_id_max; ++mem_block_id) {
     int64_t mem_byte_size = mem_block_id2size[mem_block_id];
@@ -752,14 +775,6 @@ void MergeMemBlockBetweenSubPlans(std::vector<Plan>* sub_plans) {
     MemoryCase mem_case = mem_block_id2mem_case[mem_block_id];
   }
   */
-
-  const JobMemSharingStrategy& strategy = Global<JobSet>::Get()->job_mem_sharing_strategy();
-  if (strategy.has_mem_sharing_priority()) {
-  } else if (strategy.has_palallelism_priority()) {
-  } else if (strategy.has_custom_parallelism()) {
-  } else {
-    // do nothing
-  }
 }
 
 void FinishGlobalCriticalSectionDesc(const std::vector<Plan>& plans) {
