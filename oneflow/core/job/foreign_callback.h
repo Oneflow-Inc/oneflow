@@ -11,8 +11,8 @@ class ForeignCallback {
 
   virtual ~ForeignCallback() = default;
 
-  virtual void PushBlob(const OfBlob&) const { UNIMPLEMENTED(); }
-  virtual void PullBlob(const OfBlob&) const { UNIMPLEMENTED(); }
+  virtual void PushBlob(uint64_t ofblob_ptr) const { UNIMPLEMENTED(); }
+  virtual void PullBlob(uint64_t ofblob_ptr) const { UNIMPLEMENTED(); }
   virtual void Callback() const { UNIMPLEMENTED(); }
 };
 

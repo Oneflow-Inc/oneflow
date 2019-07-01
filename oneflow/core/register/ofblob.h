@@ -19,38 +19,12 @@ class OfBlob final {
   size_t NumAxes() const { return blob_->shape().NumAxes(); }
   void CopyShapeTo(int64_t* ptr, int64_t num_axis) const;
 
-#define DEFINE_COPIER(T, type_proto)                                               \
-  void CopyToBuffer_##T(T* ptr, int64_t len) const { AutoMemCopyTo<T>(ptr, len); } \
-  void CopyFromBuffer_##T(const T* ptr, int64_t len) const { AutoMemCopyFrom<T>(ptr, len); }
-
-  OF_PP_FOR_EACH_TUPLE(DEFINE_COPIER, POD_DATA_TYPE_SEQ);
-
-#undef DEFINE_COPIER
-
-  std::string GetCopyToBufferFuncNmae() const {
-    static const HashMap<int64_t, std::string> data_type2func_name{
-#define DATA_TYPE_FUNC_NAME_PAIR(type_cpp, type_proto) {type_proto, "CopyToBuffer_" #type_cpp},
-        OF_PP_FOR_EACH_TUPLE(DATA_TYPE_FUNC_NAME_PAIR, POD_DATA_TYPE_SEQ)
-#undef DATA_TYPE_FUNC_NAME_PAIR
-    };
-    return data_type2func_name.at(data_type());
-  }
-
-  std::string GetCopyFromBufferFuncNmae() const {
-    static const HashMap<int64_t, std::string> data_type2func_name{
-#define DATA_TYPE_FUNC_NAME_PAIR(type_cpp, type_proto) {type_proto, "CopyFromBuffer_" #type_cpp},
-        OF_PP_FOR_EACH_TUPLE(DATA_TYPE_FUNC_NAME_PAIR, POD_DATA_TYPE_SEQ)
-#undef DATA_TYPE_FUNC_NAME_PAIR
-    };
-    return data_type2func_name.at(data_type());
-  }
-
- private:
   template<typename T>
   void AutoMemCopyTo(T* ptr, int64_t len) const;
   template<typename T>
   void AutoMemCopyFrom(const T* ptr, int64_t len) const;
 
+ private:
   DeviceCtx* device_ctx_;
   Blob* blob_;
   MemoryCase mem_case_;
