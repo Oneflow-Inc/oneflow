@@ -725,15 +725,26 @@ std::vector<HashSet<int32_t>> GetMutualExclusionJobGroups() {
   return job_groups;
 }
 
+int64_t GenMemZoneUniqueId(int64_t machine_id, const MemoryCase& mem_case) {
+  int64_t mem_zone_id = 1024;
+  if (mem_case.has_host_mem()) {
+    mem_zone_id += mem_case.host_mem().used_by_device();
+  } else {
+    mem_zone_id = mem_case.device_cuda_mem().device_id();
+  }
+  return (machine_id << 32) | mem_zone_id;
+}
+
 void MergeMemBlockBetweenSubPlans(std::vector<Plan>* sub_plans) {
   int32_t job_size = sub_plans->size();
   if (job_size == 1) { return; }
   int64_t mem_block_id_max = Global<IDMgr>::Get()->NewMemSharedId();
   std::vector<std::vector<RegstDescProto*>> mem_block_id2regst_descs(mem_block_id_max);
   std::vector<int64_t> mem_block_id2size(mem_block_id_max, -1);
-  std::vector<MemoryCase> mem_block_id2mem_case(mem_block_id_max);
+  // mzui = memory zone unique id
+  std::vector<int64_t> mem_block_id2mzui(mem_block_id_max, -1);
   std::vector<int32_t> mem_block_id2job_id(mem_block_id_max, -1);
-  std::vector<HashMap<MemoryCase, HashSet<int32_t>>> job_id2mem_case2mem_block_ids(job_size);
+  std::vector<HashMap<int64_t, HashSet<int32_t>>> job_id2mzui2mem_block_ids(job_size);
 
   for (int32_t job_id = 0; job_id < job_size; ++job_id) {
     Plan* sub_plan = &(sub_plans->at(job_id));
@@ -749,18 +760,18 @@ void MergeMemBlockBetweenSubPlans(std::vector<Plan>* sub_plans) {
         int64_t mem_byte_size =
             RtRegstDesc(*regst_desc).TotalMainByteSize4AllRegst() + regst_desc->mem_shared_offset();
         CHECK_GT(mem_byte_size, 0);
-        MemoryCase mem_case = regst_desc->mem_case();
+        int64_t mzui = GenMemZoneUniqueId(task->machine_id(), regst_desc->mem_case());
         if (mem_block_id2size[mem_block_id] == -1) {
-          mem_block_id2mem_case[mem_block_id] = mem_case;
+          mem_block_id2mzui[mem_block_id] = mzui;
           mem_block_id2job_id[mem_block_id] = job_id;
         } else {
-          CHECK(mem_block_id2mem_case[mem_block_id] == mem_case);
+          CHECK(mem_block_id2mzui[mem_block_id] == mzui);
           CHECK_EQ(mem_block_id2job_id[mem_block_id], job_id);
         }
         // only handle kMemMax
         mem_block_id2size[mem_block_id] = std::max(mem_block_id2size[mem_block_id], mem_byte_size);
         mem_block_id2regst_descs[mem_block_id].push_back(regst_desc);
-        job_id2mem_case2mem_block_ids[job_id][mem_case].emplace(mem_block_id);
+        job_id2mzui2mem_block_ids[job_id][mzui].emplace(mem_block_id);
       }
     }
   }
@@ -776,18 +787,18 @@ void MergeMemBlockBetweenSubPlans(std::vector<Plan>* sub_plans) {
   };
 
   for (auto& job_group : job_groups) {
-    int32_t max_mem_case_num_job_id = *(job_group.begin());
-    int32_t max_mem_case_num = job_id2mem_case2mem_block_ids[max_mem_case_num_job_id].size();
+    int32_t max_mzui_num_job_id = *(job_group.begin());
+    int32_t max_mzui_num = job_id2mzui2mem_block_ids[max_mzui_num_job_id].size();
     for (int32_t job_id : job_group) {
-      if (job_id2mem_case2mem_block_ids[job_id].size() > max_mem_case_num) {
-        max_mem_case_num_job_id = job_id;
-        max_mem_case_num = job_id2mem_case2mem_block_ids[job_id].size();
+      if (job_id2mzui2mem_block_ids[job_id].size() > max_mzui_num) {
+        max_mzui_num_job_id = job_id;
+        max_mzui_num = job_id2mzui2mem_block_ids[job_id].size();
       }
     }
-    // separate merge mem_block_id by different mem_case,
+    // separate merge mem_block_id by different memory zone unique id,
     // for merge as much memory as possible
-    for (const auto& pair : job_id2mem_case2mem_block_ids[max_mem_case_num_job_id]) {
-      MemoryCase mem_case = pair.first;
+    for (const auto& pair : job_id2mzui2mem_block_ids[max_mzui_num_job_id]) {
+      int64_t mzui = pair.first;
       int32_t max_mem_block_num = pair.second.size();
       for (int32_t job_id : job_group) {
         // TODO();
