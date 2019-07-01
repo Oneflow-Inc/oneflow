@@ -23,8 +23,8 @@ class OfBlob final {
   void AutoMemCopyTo(T* ptr, int64_t len) const;
   template<typename T>
   void AutoMemCopyFrom(const T* ptr, int64_t len) const;
- private:
 
+ private:
   DeviceCtx* device_ctx_;
   Blob* blob_;
   MemoryCase mem_case_;
