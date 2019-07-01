@@ -765,7 +765,7 @@ void MergeMemBlockBetweenSubPlans(std::vector<Plan>* sub_plans) {
           mem_block_id2mzui[mem_block_id] = mzui;
           mem_block_id2job_id[mem_block_id] = job_id;
         } else {
-          CHECK(mem_block_id2mzui[mem_block_id] == mzui);
+          CHECK_EQ(mem_block_id2mzui[mem_block_id], mzui);
           CHECK_EQ(mem_block_id2job_id[mem_block_id], job_id);
         }
         // only handle kMemMax
@@ -783,7 +783,28 @@ void MergeMemBlockBetweenSubPlans(std::vector<Plan>* sub_plans) {
   }
   // merge
   auto MergeMemBlockIdR2L = [&](int32_t lhs, int32_t rhs) {
+    CHECK_NE(lhs, rhs);
+    CHECK_NE(mem_block_id2job_id[lhs], mem_block_id2job_id[rhs]);
+    CHECK_EQ(mem_block_id2mzui[lhs], mem_block_id2mzui[rhs]);
+    CHECK_GT(mem_block_id2size[lhs], 0);
+    CHECK_GT(mem_block_id2size[rhs], 0);
     for (auto* regst_desc : mem_block_id2regst_descs[rhs]) { regst_desc->set_mem_shared_id(lhs); }
+    mem_block_id2size[lhs] = std::max(mem_block_id2size[lhs], mem_block_id2size[rhs]);
+    mem_block_id2size[rhs] = -1;
+    mem_block_id2mzui[rhs] = -1;
+    mem_block_id2job_id[rhs] = -1;
+  };
+
+  auto GetMemBlockIdsInfo = [&](int32_t job_id, int64_t mzui) {
+    std::vector<std::pair<int64_t, int64_t>> ret;
+    for (int64_t mem_block_id : job_id2mzui2mem_block_ids[job_id][mzui]) {
+      ret.push_back({mem_block_id, mem_block_id2size[mem_block_id]});
+    }
+    std::sort(ret.begin(), ret.end(),
+              [&](const std::pair<int64_t, int64_t>& lhs, const std::pair<int64_t, int64_t>& rhs) {
+                return lhs.second > rhs.second;
+              });
+    return ret;
   };
 
   for (auto& job_group : job_groups) {
@@ -800,21 +821,31 @@ void MergeMemBlockBetweenSubPlans(std::vector<Plan>* sub_plans) {
     for (const auto& pair : job_id2mzui2mem_block_ids[max_mzui_num_job_id]) {
       int64_t mzui = pair.first;
       int32_t max_mem_block_num = pair.second.size();
+      int32_t merge_job_id = max_mzui_num_job_id;
       for (int32_t job_id : job_group) {
-        // TODO();
+        auto& mzui2mem_block_ids = job_id2mzui2mem_block_ids[job_id];
+        if (mzui2mem_block_ids.find(mzui) != mzui2mem_block_ids.end()) {
+          int32_t mem_block_num = mzui2mem_block_ids[mzui].size();
+          if (mem_block_num > max_mem_block_num) {
+            max_mem_block_num = mem_block_num;
+            merge_job_id = job_id;
+          }
+        }
+      }
+
+      for (int32_t job_id : job_group) {
+        if (job_id == merge_job_id) { continue; }
+        auto& mzui2mem_block_ids = job_id2mzui2mem_block_ids[job_id];
+        if (mzui2mem_block_ids.find(mzui) == mzui2mem_block_ids.end()) { continue; }
+        auto lhs_info = GetMemBlockIdsInfo(merge_job_id, mzui);
+        auto rhs_info = GetMemBlockIdsInfo(job_id, mzui);
+        CHECK_GE(lhs_info.size(), rhs_info.size());
+        for (int64_t i = 0; i < rhs_info.size(); ++i) {
+          MergeMemBlockIdR2L(lhs_info[i].first, rhs_info[i].first);
+        }
       }
     }
   }
-
-  // TODO();
-  /*
-  for(int32_t mem_block_id = 0; mem_block_id < mem_block_id_max; ++mem_block_id) {
-    int64_t mem_byte_size = mem_block_id2size[mem_block_id];
-    if(mem_byte_size == -1) { continue; }
-    CHECK_GT(mem_byte_size, 0);
-    MemoryCase mem_case = mem_block_id2mem_case[mem_block_id];
-  }
-  */
 }
 
 void FinishGlobalCriticalSectionDesc(const std::vector<Plan>& plans) {
