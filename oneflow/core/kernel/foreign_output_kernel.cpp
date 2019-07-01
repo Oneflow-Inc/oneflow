@@ -14,7 +14,7 @@ void ForeignOutputKernel::ForwardDataContent(
                                    ->TryReceive(&foreign_callback);
   CHECK_NE(buffer_status, kBufferStatusEmpty);
   OfBlob ofblob(ctx.device_ctx, BnInOp2Blob("in"));
-  foreign_callback->PullBlob(ofblob);
+  foreign_callback->PullBlob(reinterpret_cast<uint64_t>(&ofblob));
 }
 
 REGISTER_KERNEL(OperatorConf::kForeignOutputConf, ForeignOutputKernel);
