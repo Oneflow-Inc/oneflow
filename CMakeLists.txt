@@ -43,7 +43,7 @@ if (WIN32)
 else()
   list(APPEND CUDA_NVCC_FLAGS -std=c++11 -w -Wno-deprecated-gpu-targets)
   #  half is not fully supported when __CUDA_ARCH__ < 530
-  #  list(APPEND CUDA_NVCC_FLAGS -gencode arch=compute_29,code=\"sm_30,compute_30\")
+  #  list(APPEND CUDA_NVCC_FLAGS -gencode arch=compute_30,code=\"sm_30,compute_30\")
   #  list(APPEND CUDA_NVCC_FLAGS -gencode arch=compute_52,code=\"sm_52,compute_52\")
   list(APPEND CUDA_NVCC_FLAGS -gencode arch=compute_60,code=\"sm_60,compute_60\")
   list(APPEND CUDA_NVCC_FLAGS -gencode arch=compute_61,code=\"sm_61,compute_61\")
