@@ -176,11 +176,6 @@ void WithJobSetLevelGlobalObjs(
                    && Global<const ProfileConf>::Get()->collect_act_event();
   if (DoProfile) { Global<Profiler>::New(); }
   PushAvailableMemDescOfThisMachine();
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-    Global<AvailableMemDesc>::New();
-    *Global<AvailableMemDesc>::Get() = PullAvailableMemDesc();
-    Global<CriticalSectionDesc>::New();
-  }
   Global<JobName2JobId>::New();
   Global<std::vector<std::unique_ptr<JobDesc>>>::New();
   FOR_RANGE(int32_t, i, 0, job_set.job_conf_size()) {
@@ -188,31 +183,50 @@ void WithJobSetLevelGlobalObjs(
     Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->emplace_back(job_desc);
     CHECK(Global<JobName2JobId>::Get()->emplace(job_desc->job_name(), job_desc->job_id()).second);
   }
-  Global<BufferMgr<int64_t>>::New();
-  Global<BufferMgr<int64_t>>::Get()->NewBuffer(kBufferNameGlobalWaitJobId, job_set.job_conf_size());
-  Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::New();
-  {
-    auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::Get();
-    const auto& job_descs = *Global<std::vector<std::unique_ptr<JobDesc>>>::Get();
-    FOR_RANGE(int64_t, job_id, 0, job_descs.size()) {
-      const auto& job_name = GlobalJobDesc(job_id).job_name();
-      buffer_mgr->NewBuffer(GetForeignInputBufferName(job_name), 2);
-      buffer_mgr->NewBuffer(GetForeignOutputBufferName(job_name), 2);
-      buffer_mgr->NewBuffer(GetCallbackNotifierBufferName(job_name),
-                            job_descs.at(0)->concurrency_width());
+
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    Global<AvailableMemDesc>::New();
+    *Global<AvailableMemDesc>::Get() = PullAvailableMemDesc();
+    Global<CriticalSectionDesc>::New();
+
+    Global<BufferMgr<int64_t>>::New();
+    Global<BufferMgr<int64_t>>::Get()->NewBuffer(kBufferNameGlobalWaitJobId,
+                                                 job_set.job_conf_size());
+    Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::New();
+    {
+      auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::Get();
+      const auto& job_descs = *Global<std::vector<std::unique_ptr<JobDesc>>>::Get();
+      FOR_RANGE(int64_t, job_id, 0, job_descs.size()) {
+        const auto& job_name = GlobalJobDesc(job_id).job_name();
+        buffer_mgr->NewBuffer(GetForeignInputBufferName(job_name), 2);
+        buffer_mgr->NewBuffer(GetForeignOutputBufferName(job_name), 2);
+        buffer_mgr->NewBuffer(GetCallbackNotifierBufferName(job_name),
+                              job_descs.at(0)->concurrency_width());
+      }
     }
   }
 
   Handler(job_set.job_conf());
 
-  Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::Delete();
-  Global<BufferMgr<int64_t>>::Delete();
-  Global<std::vector<std::unique_ptr<JobDesc>>>::Delete();
-  Global<JobName2JobId>::Delete();
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    {
+      auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::Get();
+      const auto& job_descs = *Global<std::vector<std::unique_ptr<JobDesc>>>::Get();
+      FOR_RANGE(int64_t, job_id, 0, job_descs.size()) {
+        const auto& job_name = GlobalJobDesc(job_id).job_name();
+        buffer_mgr->Get(GetForeignInputBufferName(job_name))->Close();
+        buffer_mgr->Get(GetForeignOutputBufferName(job_name))->Close();
+        buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Close();
+      }
+    }
+    Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::Delete();
+    Global<BufferMgr<int64_t>>::Get()->Get(kBufferNameGlobalWaitJobId)->Close();
+    Global<BufferMgr<int64_t>>::Delete();
     Global<CriticalSectionDesc>::Delete();
     Global<AvailableMemDesc>::Delete();
   }
+  Global<std::vector<std::unique_ptr<JobDesc>>>::Delete();
+  Global<JobName2JobId>::Delete();
   if (DoProfile) { Global<Profiler>::Delete(); }
   Global<IDMgr>::Delete();
   Global<MachineCtx>::Delete();
@@ -382,6 +396,7 @@ Job ConvertJobConf2Job(const JobConf& job_conf) {
   *job.mutable_net() = job_conf.net();
   *job.mutable_placement() = job_conf.placement();
   *job.mutable_other() = job_conf.other();
+  *job.mutable_job_name() = job_conf.job_name();
   *job.mutable_arg_op_name() = job_conf.arg_op_name();
   *job.mutable_sbp_conf() = job_conf.sbp_conf();
   return job;
@@ -392,6 +407,7 @@ JobConf ConvertJob2JobConf(const Job& job) {
   *job_conf.mutable_net() = job.net();
   *job_conf.mutable_placement() = job.placement();
   *job_conf.mutable_other() = job.other();
+  *job_conf.mutable_job_name() = job.job_name();
   *job_conf.mutable_arg_op_name() = job.arg_op_name();
   *job_conf.mutable_sbp_conf() = job.sbp_conf();
   return job_conf;
@@ -626,6 +642,7 @@ void MakeMainJob(const std::vector<Job>& jobs, Job* main_job,
   parallel_conf.set_policy(kDataParallel);
   parallel_conf.add_device_name("0:cpu:0");
   JobBuilder(main_job).AddOps(parallel_conf, op_confs);
+  main_job->set_job_name("MainJob-unamed");
   main_job->mutable_other()->mutable_predict_conf();
   main_job->mutable_other()->set_piece_size(1);
   main_job->mutable_other()->set_data_part_num(1);
@@ -676,13 +693,12 @@ void CompileMainJob(Job* main_job, const LogicalBlobId& critical_section_sink_lb
   ConnectCriticalSectionEndToReentrantLockEnd(main_plan, critical_section_sink_lbi);
 }
 
-void AddGlobalJobDesc(const Job& job, const std::string& job_name, int32_t job_id) {
+void AddGlobalJobDesc(const Job& job, int32_t job_id) {
   JobConf job_conf = ConvertJob2JobConf(job);
-  job_conf.set_name(job_name);
   auto* job_descs = Global<std::vector<std::unique_ptr<JobDesc>>>::Get();
   CHECK_EQ(job_descs->size(), job_id);
   job_descs->emplace_back(new JobDesc(job_conf, job_id));
-  CHECK(Global<JobName2JobId>::Get()->emplace(job_name, job_id).second);
+  CHECK(Global<JobName2JobId>::Get()->emplace(job.job_name(), job_id).second);
 }
 
 bool NeedAllocateMemory(const RegstDescTypeProto& regst_desc_type) {
@@ -807,6 +823,8 @@ void MakePullJob(const std::string& job_name, const std::string& op_name,
     parallel_conf.add_device_name("0:cpu:0");
     job_builder.AddOps(parallel_conf, {foreign_output_op_conf});
   }
+  job->set_job_name(job_name);
+  job->add_arg_op_name(input_op_conf.name());
   job->mutable_other()->mutable_predict_conf();
   job->mutable_other()->set_piece_size(1);
   job->mutable_other()->set_data_part_num(1);
@@ -840,6 +858,8 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
     output_conf->set_out("out");
     job_builder.AddOps(parallel_blob_conf.parallel_conf(), {output_op_conf});
   }
+  job->set_job_name(job_name);
+  job->add_arg_op_name(output_op_conf.name());
   job->mutable_other()->mutable_predict_conf();
   job->mutable_other()->set_piece_size(1);
   job->mutable_other()->set_data_part_num(1);
@@ -854,37 +874,30 @@ void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
     jobs.at(i) = ConvertJobConf2Job(job_confs.Get(i));
     WithGlobalJobId(i, [&]() { CompileCurJobOnMaster(&jobs.at(i), &sub_plans.at(i), true); });
   }
+  HashMap<std::string, ParallelBlobConf> interface_op_name2parallel_blob_conf;
+  GetInterfaceOpName2ParallelBlobConf(&jobs, &interface_op_name2parallel_blob_conf);
+  size_t pull_push_job_size = interface_op_name2parallel_blob_conf.size() * 2;
   size_t user_job_size = jobs.size();
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-    HashMap<std::string, ParallelBlobConf> interface_op_name2parallel_blob_conf;
-    GetInterfaceOpName2ParallelBlobConf(&jobs, &interface_op_name2parallel_blob_conf);
-    size_t pull_push_job_size = interface_op_name2parallel_blob_conf.size() * 2;
-    jobs.resize(user_job_size + pull_push_job_size);
-    sub_plans.resize(user_job_size + pull_push_job_size);
-    int64_t job_id = user_job_size;
-    for (const auto& pair : interface_op_name2parallel_blob_conf) {
-      {
-        Job pull_job;
-        const std::string& job_name = std::string("Pull-") + pair.first;
-        MakePullJob(job_name, pair.first, pair.second, &pull_job);
-        jobs.at(job_id) = pull_job;
-        AddGlobalJobDesc(pull_job, job_name, job_id);
-        WithGlobalJobId(job_id,
-                        [&]() { CompileCurJobOnMaster(&pull_job, &sub_plans.at(job_id), false); });
-        ++job_id;
-      }
-      {
-        Job push_job;
-        const std::string& job_name = std::string("Push-") + pair.first;
-        MakePushJob(job_name, pair.first, pair.second, &push_job);
-        jobs.at(job_id) = push_job;
-        AddGlobalJobDesc(push_job, job_name, job_id);
-        WithGlobalJobId(job_id,
-                        [&]() { CompileCurJobOnMaster(&push_job, &sub_plans.at(job_id), false); });
-        ++job_id;
-      }
-    }
+  jobs.resize(user_job_size + pull_push_job_size);
+  sub_plans.resize(user_job_size + pull_push_job_size);
+  int64_t job_id = user_job_size;
 
+  for (const auto& pair : interface_op_name2parallel_blob_conf) {
+    std::vector<Job> pull_push_job(2);
+    MakePullJob(std::string("Pull-") + pair.first, pair.first, pair.second, &pull_push_job.at(0));
+    MakePushJob(std::string("Push-") + pair.first, pair.first, pair.second, &pull_push_job.at(1));
+    for (auto& job : pull_push_job) {
+      jobs.at(job_id) = job;
+      AddGlobalJobDesc(job, job_id);
+      if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+        WithGlobalJobId(job_id,
+                        [&]() { CompileCurJobOnMaster(&job, &sub_plans.at(job_id), false); });
+      }
+      ++job_id;
+    }
+  }
+
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     BindInterfaceMemBlockId(jobs, &sub_plans);
     FinishGlobalCriticalSectionDesc(sub_plans);
     MergePlan(plan, sub_plans);
@@ -894,7 +907,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
       Job main_job;
       LogicalBlobId critical_section_sink_lbi;
       MakeMainJob(jobs, &main_job, &identity_tick_op_names, &critical_section_sink_lbi);
-      AddGlobalJobDesc(main_job, "MainJob-unamed", sub_plans.size());
+      AddGlobalJobDesc(main_job, job_id);
       CompileMainJob(&main_job, critical_section_sink_lbi, sub_plans.size(), &main_plan);
     }
     LinkMainPlan(plan, main_plan, identity_tick_op_names);

@@ -36,6 +36,28 @@ class JobId final {
   int64_t value_;
 };
 
+bool FindForeignInputOp(const JobConf& job_conf) {
+  bool foreigin_input_op_found = false;
+  for (const auto& op_conf : job_conf.net().op()) {
+    if (op_conf.has_foreign_input_conf()) {
+      CHECK_EQ(foreigin_input_op_found, false);
+      foreigin_input_op_found = true;
+    }
+  }
+  return foreigin_input_op_found;
+}
+
+bool FindForeignOutputOp(const JobConf& job_conf) {
+  bool foreigin_output_op_found = false;
+  for (const auto& op_conf : job_conf.net().op()) {
+    if (op_conf.has_foreign_output_conf()) {
+      CHECK_EQ(foreigin_output_op_found, false);
+      foreigin_output_op_found = true;
+    }
+  }
+  return foreigin_output_op_found;
+}
+
 }  // namespace
 
 int64_t JobDesc::all_reduce_group_min_byte() const {
@@ -134,6 +156,8 @@ void JobDesc::Init() {
 #ifndef WITH_CUDA
   CHECK_EQ(Global<ResourceDesc>::Get()->GpuDeviceNum(), 0);
 #endif
+  is_push_job_ = FindForeignInputOp(job_conf_);
+  is_pull_job_ = FindForeignOutputOp(job_conf_);
 }
 
 bool IsInterfaceOpConf(const OperatorConf& op_conf) {
