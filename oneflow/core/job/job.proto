@@ -38,5 +38,6 @@ message Job {
   required Config other = 3;
   required SbpConf sbp_conf = 4;
   required JobHelperConf helper = 5;
-  repeated string arg_op_name = 6;
+  required string job_name = 6;
+  repeated string arg_op_name = 7;
 }
