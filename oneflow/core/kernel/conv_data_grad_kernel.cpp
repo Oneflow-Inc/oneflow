@@ -25,7 +25,7 @@ struct ConvDataGradKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
-ADD_GPU_HALF_KERNEL_CREATOR(OperatorConf::kConvDataGradConf, ConvDataGradKernel,
-                            FLOATING_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kConvDataGradConf, ConvDataGradKernel,
+                                         FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

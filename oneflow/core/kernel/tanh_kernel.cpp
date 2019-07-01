@@ -11,6 +11,7 @@ void TanHKernel<device_type, T>::ForwardDataContent(
                                    BnInOp2Blob("out")->mut_dptr<T>());
 }
 
-ADD_GPU_HALF_KERNEL_CREATOR(OperatorConf::kTanhConf, TanHKernel, FLOATING_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kTanhConf, TanHKernel,
+                                         FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

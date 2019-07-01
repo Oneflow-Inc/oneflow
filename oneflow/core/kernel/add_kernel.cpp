@@ -57,5 +57,6 @@ struct AddUtil<DeviceType::kGPU, float16> {
   }
 };
 
-ADD_GPU_HALF_KERNEL_CREATOR(OperatorConf::kAddConf, AddKernel, ARITHMETIC_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kAddConf, AddKernel,
+                                         ARITHMETIC_DATA_TYPE_SEQ);
 }  // namespace oneflow

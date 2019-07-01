@@ -111,6 +111,7 @@ void SoftmaxKernel<device_type, T>::BackwardDataContent(
   }
 }
 
-ADD_GPU_HALF_KERNEL_CREATOR(OperatorConf::kSoftmaxConf, SoftmaxKernel, FLOATING_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kSoftmaxConf, SoftmaxKernel,
+                                         FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

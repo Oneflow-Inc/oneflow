@@ -34,7 +34,7 @@ void SparseCrossEntropyKernel<device_type, T>::ForwardDataContent(
                                                          ctx.device_ctx, prediction, label, out);
 }
 
-ADD_GPU_HALF_KERNEL_CREATOR(OperatorConf::kSparseCrossEntropyConf, SparseCrossEntropyKernel,
-                            FLOATING_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kSparseCrossEntropyConf,
+                                         SparseCrossEntropyKernel, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
