@@ -82,7 +82,13 @@ void MultiRingAllReduceActor::Act() {
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
   SetKernelCtxOther(&(kernel_ctx.other));
   AsyncLaunchKernel(kernel_ctx, [&](int64_t regst_desc_id) -> Regst* {
-    return consumed_rs_.Front(regst_desc_id);
+    if (produced_rs_.HasRegstDescId(regst_desc_id)) {
+      return produced_rs_.Front(regst_desc_id);
+    } else if (consumed_rs_.HasRegstDescId(regst_desc_id)) {
+      return consumed_rs_.Front(regst_desc_id);
+    } else {
+      return nullptr;
+    }
   });
 }
 
