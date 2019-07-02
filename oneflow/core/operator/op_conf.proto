@@ -787,6 +787,12 @@ message OutputOpConf {
   required string out = 2;
 }
 
+message SwitchOutputOpConf {
+  repeated string in = 1;
+  required string in_index = 2;
+  required string out = 3;
+}
+
 message ForeignOutputOpConf {
   required string in = 1;
   required string ofblob_buffer_name = 3;
@@ -1496,6 +1502,7 @@ message OperatorConf {
     ForeignInputOpConf foreign_input_conf = 142;
     ForeignOutputOpConf foreign_output_conf = 143;
     AccTickOpConf acc_tick_conf = 144;
+    SwitchOutputOpConf switch_output_conf = 145;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
