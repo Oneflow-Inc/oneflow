@@ -34,6 +34,10 @@ void MultiRingAllReduceActor::VirtualActorInit(const TaskProto& task_proto) {
     consumed_rs_.InsertRegstDescId(recv_regst_desc_id);
   }
   produced_rs_.InitedDone();
+  produced_rs_.TryPushBackRegst(GetSoleProducedRegst4RegstDescId(out_regst_desc_id_));
+  for (const int64_t send_regst_desc_id : send_regst_desc_id_) {
+    produced_rs_.TryPushBackRegst(GetSoleProducedRegst4RegstDescId(send_regst_desc_id));
+  }
   consumed_rs_.InitedDone();
   in_regst_eord_ = false;
   OF_SET_MSG_HANDLER(&MultiRingAllReduceActor::HandlerNormal);
