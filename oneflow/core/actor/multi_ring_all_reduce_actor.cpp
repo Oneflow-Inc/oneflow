@@ -127,11 +127,12 @@ void MultiRingAllReduceActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
     CHECK(cur_regst);
     AsyncSendRegstMsgToProducer(cur_regst);
     CHECK_EQ(0, consumed_rs_.TryPopFrontRegst(in_regst_desc_id_));
-  } else if (current_step_ < num_steps_ - 1) {
+  } else if (current_step_ > 0 && current_step_ < num_steps_ - 1) {
     Regst* cur_regst = consumed_rs_.Front(recv_regst_desc_id_.at(current_ring_id_));
     CHECK(cur_regst);
     AsyncSendRegstMsgToProducer(cur_regst);
     CHECK_EQ(0, consumed_rs_.TryPopFrontRegst(recv_regst_desc_id_.at(current_ring_id_)));
+  } else if (current_step_ == 0) {
   } else {
     UNIMPLEMENTED();
   }
