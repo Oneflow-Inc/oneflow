@@ -3,6 +3,7 @@
 
 #include <unordered_map>
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/compiler/of2xla/xla_graph.h"
 
 namespace oneflow {
 
@@ -27,8 +28,7 @@ class XlaLaunchOp : public Operator {
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const override;
 
-  std::unordered_map<std::string, std::string> subgraph_inputs_;
-  std::unordered_map<std::string, std::string> subgraph_outputs_;
+  std::shared_ptr<mola::XlaLaunchGraph> subgraph_;
 };
 
 }  // namespace oneflow

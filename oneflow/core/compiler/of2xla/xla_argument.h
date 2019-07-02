@@ -32,8 +32,12 @@ class Argument {
   Shape shape() const { return blob_desc_.shape(); }
 
   std::string blob_name() const {
-      return absl::StrCat(blob_id_.op_name(), "/", blob_id_.blob_name());
+    return absl::StrCat(blob_id_.op_name(), "/", blob_id_.blob_name());
   }
+
+  const LogicalBlobId &blob_id() const { return blob_id_; }
+
+  const BlobDesc &blob_desc() const { return blob_desc_; }
 
  private:
   friend inline bool operator<(const Argument &lhs, const Argument &rhs);

@@ -295,9 +295,9 @@ void buildXlaLaunchAttribute(const mola::XlaGraph *graph,
       // to infer `HasBatchDim` for `XlaLaunch` operators. In practice it's hard
       // to infer `HasBatchDim` since the operators to be infered have been
       // folded. Normally we have to infer `HasBatchDim` before `SbpSignature`
-      // and `BlobDesc`, and `HasBatchDim` will reply on the front operators
+      // and `BlobDesc`, and `HasBatchDim` replies on the front operators
       // `BlobDesc`. Therefor we probably could not infer `HasBatchDim` for the
-      // folded operators because their inputs `BlobDesc` were not infered if
+      // folded operators because their inputs `BlobDesc` were not infered since
       // the front operators have been folded as well
       for (const std::string &blob_name : argument_proto.out()) {
         if (has_batch_dim_fn(blob_name)) {
@@ -310,9 +310,7 @@ void buildXlaLaunchAttribute(const mola::XlaGraph *graph,
   }
 }
 
-void RebuildXlaCompiledJob(const mola::XlaGraph &graph, Job *job) {
-  JobBuilder builder(job);
-
+void AddXlaLaunchOps(const mola::XlaGraph &graph, JobBuilder *builder) {
   for (const XlaNode *node : graph.Nodes()) {
     if (node->op_type() != mola::_XlaLaunchOpType) {
       continue;
@@ -336,15 +334,19 @@ void RebuildXlaCompiledJob(const mola::XlaGraph &graph, Job *job) {
     }
 
     XlaLaunchOpConf::Attribute *launch_attr = launch_op_conf->mutable_attr();
-    buildXlaLaunchAttribute(node->sub_graph(), &builder, launch_attr);
+    buildXlaLaunchAttribute(node->sub_graph(), builder, launch_attr);
    
     // TODO(hjchen2) Assign parallel conf 
     ParallelConf parallel_conf;
     parallel_conf.set_policy(kDataParallel);
     parallel_conf.mutable_device_name()->Add()->assign("0:gpu:0");
-    builder.AddOps(parallel_conf, {op_conf});
+    builder->AddOps(parallel_conf, {op_conf});
   }
+}
 
+void RebuildXlaCompiledJob(const mola::XlaGraph &graph, Job *job) {
+  JobBuilder builder(job);
+  AddXlaLaunchOps(graph, &builder);
   // Fix ctrl_in_op_name
   FixControlInOpNames(graph, &builder);
   // Fix blob names

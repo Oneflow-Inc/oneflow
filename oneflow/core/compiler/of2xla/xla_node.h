@@ -60,6 +60,9 @@ class XlaNode {
   const std::string &op_type() const { return op_type_; }
   const std::string &op_name() const { return op_name_; }
 
+  const std::vector<LogicalBlobId> Input() const { return inputs_; }
+  const std::vector<LogicalBlobId> Output() const { return outputs_; }
+
   XlaGraph *sub_graph() const { return sub_graph_; }
 
   const PbMessage &proto_conf() const { return this->op()->GetCustomizedConf(); }
@@ -72,8 +75,13 @@ class XlaNode {
   bool IsCompiled() const { return compiled_; }
   bool IsSourceNode() const;
   bool IsFinishNode() const;
+  bool IsArgumentNode() const;
 
- private:
+  typedef std::function<BlobDesc*(const LogicalBlobId &)> GetBlobDescFunc;
+  virtual void InferBlobDescs(GetBlobDescFunc func,
+                              const ParallelContext* parallel_ctx) const;
+
+ protected:
   friend class XlaGraph;
   // XlaNode only can be created by XlaGraph
   XlaNode() : node_(nullptr), unique_id_(-1), cluster_id_(-1),
@@ -102,7 +110,26 @@ class XlaNode {
   // Subgraph will be built for xla launch nodes. Note that `sub_graph_` should
   // be built and managed by the graph, other than the node
   XlaGraph *sub_graph_;
+  // Input and output logical blob id
+  std::vector<LogicalBlobId> inputs_;
+  std::vector<LogicalBlobId> outputs_; 
 };
+
+class XlaArgumentNode : public XlaNode {
+ public:
+  void InferBlobDescs(XlaNode::GetBlobDescFunc func,
+                      const ParallelContext* parallel_ctx) const override;
+
+ private:
+  friend class XlaGraph;
+  XlaArgumentNode() = default;
+  virtual ~XlaArgumentNode() = default;
+
+  explicit XlaArgumentNode(const XlaLaunchOpConf::Argument &arg_conf);
+};
+
+bool IsNodeInput(const XlaNode *node, const LogicalBlobId &lbi);
+bool IsNodeOutput(const XlaNode *node, const LogicalBlobId &lbi);
 
 }  // namespace mola
 }  // namespace oneflow
