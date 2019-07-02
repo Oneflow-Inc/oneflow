@@ -6,7 +6,7 @@ namespace oneflow {
 void MultiRingAllReduceOp::InitFromOpConf() {
   const MultiRingAllReduceOpConf& conf = op_conf().multi_ring_all_reduce_conf();
   EnrollInputBn("in", false);
-  EnrollOutputBn("send", false);
+  EnrollOutputBn("out", false);
   EnrollRepeatedInputBn("recv", conf.rings_size(), false);
   EnrollRepeatedOutputBn("send", conf.rings_size(), false);
 }
