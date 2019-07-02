@@ -111,22 +111,26 @@ void MultiRingAllReduceActor::AsyncSendCustomizedProducedRegstMsgToConsumer() {
     send_regst_piece_id_[current_ring_id_] += 1;
     HandleRegstToConsumer(send_regst, [](int64_t) { return true; });
     produced_rs_.PopFrontRegsts({send_regst_desc_id});
+  } else {
+    UNIMPLEMENTED();
   }
 }
 
 void MultiRingAllReduceActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
   const int64_t step = current_step_.at(current_ring_id_);
-  if (step == num_steps_ - 1) {
+  if (std::all_of(current_step_.cbegin(), current_step_.cend(),
+                  [&](const int64_t step) { return step == num_steps_ - 1; })) {
     Regst* cur_regst = consumed_rs_.Front(in_regst_desc_id_);
     CHECK(cur_regst);
     AsyncSendRegstMsgToProducer(cur_regst);
     CHECK_EQ(0, consumed_rs_.TryPopFrontRegst(in_regst_desc_id_));
-  }
-  if (step != 0) {
+  } else if (step < num_steps_ - 1) {
     Regst* cur_regst = consumed_rs_.Front(recv_regst_desc_id_.at(current_ring_id_));
     CHECK(cur_regst);
     AsyncSendRegstMsgToProducer(cur_regst);
     CHECK_EQ(0, consumed_rs_.TryPopFrontRegst(recv_regst_desc_id_.at(current_ring_id_)));
+  } else {
+    UNIMPLEMENTED();
   }
   current_step_[current_ring_id_] = (current_step_.at(current_ring_id_) + 1) % num_steps_;
 }
