@@ -34,7 +34,8 @@ void MultiRingAllReduceOp::InferBlobDescs(
   const BalancedSplitter range4ring(in->shape().elem_cnt(), conf.rings_size());
   FOR_RANGE(int64_t, i, 0, conf.rings_size()) {
     const int64_t ring_elem_cnt = range4ring.At(i).size();
-    const int64_t buffer_size = RoundUp(ring_elem_cnt, conf.rings(i).next_size());
+    const int64_t buffer_size =
+        RoundUp(ring_elem_cnt, conf.rings(i).next_size()) / conf.rings(i).next_size();
     BlobDesc* send_i = GetBlobDesc4BnInOp(GenRepeatedBn("send", i));
     send_i->set_data_type(in->data_type());
     send_i->mut_shape() = Shape({buffer_size});
