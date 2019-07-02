@@ -12,7 +12,7 @@ class MultiRingAllReduceTaskNode final : public TaskNode {
   ~MultiRingAllReduceTaskNode() override = default;
 
   void Init(int64_t machine_id, int64_t thrd_id, const LogicalBlobId& lbi,
-            const ParallelContext& parallel_ctx);
+            const Shape& logical_blob_shape, const ParallelContext& parallel_ctx);
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   TaskType GetTaskType() const override { return TaskType::kMultiRingAllReduce; }
@@ -31,6 +31,7 @@ class MultiRingAllReduceTaskNode final : public TaskNode {
   std::vector<std::vector<int64_t>> rings_;
   std::vector<TaskNode*> send_to_;
   std::vector<TaskNode*> recv_from_;
+  Shape logical_blob_shape_;
 };
 
 }  // namespace oneflow

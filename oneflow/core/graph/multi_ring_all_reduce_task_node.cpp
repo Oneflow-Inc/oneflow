@@ -3,12 +3,14 @@
 namespace oneflow {
 
 void MultiRingAllReduceTaskNode::Init(int64_t machine_id, int64_t thrd_id, const LogicalBlobId& lbi,
+                                      const Shape& logical_blob_shape,
                                       const ParallelContext& parallel_ctx) {
   lbi_ = lbi;
   set_machine_id(machine_id);
   set_thrd_id(thrd_id);
   set_area_id(kMdUpdtArea);
   parallel_ctx_ = parallel_ctx;
+  logical_blob_shape_ = logical_blob_shape;
 }
 
 bool MultiRingAllReduceTaskNode::IsReadyForBuild() {
