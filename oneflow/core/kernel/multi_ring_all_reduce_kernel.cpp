@@ -51,9 +51,11 @@ void MultiRingAllReduceKernel<device_type, T>::ForwardDim0ValidNum(
   const int64_t ring_id = KernelCtxGetRingId(ctx);
   const int64_t step = KernelCtxGetStep(ctx);
   if (step == 0) {
-    BnInOp2Blob("send")->set_dim0_valid_num(0, chunk_slices_.at(ring_id).at(step).size());
+    BnInOp2Blob(GenRepeatedBn("send", ring_id))
+        ->set_dim0_valid_num(0, chunk_slices_.at(ring_id).at(step).size());
   } else if (step < num_steps_) {
-    BnInOp2Blob("send")->set_dim0_valid_num(0, BnInOp2Blob("recv")->dim0_valid_num(0));
+    BnInOp2Blob(GenRepeatedBn("send", ring_id))
+        ->set_dim0_valid_num(0, BnInOp2Blob(GenRepeatedBn("recv", ring_id))->dim0_valid_num(0));
   } else {
     UNIMPLEMENTED();
   }
