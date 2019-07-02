@@ -92,27 +92,21 @@ void MultiRingAllReduceActor::Act() {
   });
 }
 
-void MultiRingAllReduceActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
+void MultiRingAllReduceActor::AsyncSendCustomizedProducedRegstMsgToConsumer() {
   const int64_t step = current_step_.at(current_ring_id_);
-  if (step == num_steps_ - 1) {
-    HandleProducedNaiveDataRegstToConsumer([this](Regst* regst) {
-      if (regst->regst_desc_id() == out_regst_desc_id_) {
-        regst->set_piece_id(consumed_rs_.Front(in_regst_desc_id_)->piece_id());
-        return true;
-      } else {
-        return false;
-      }
-    });
-  } else {
-    HandleProducedNaiveDataRegstToConsumer([this](Regst* regst) {
-      if (regst->regst_desc_id() == send_regst_desc_id_.at(current_ring_id_)) {
-        regst->set_piece_id(send_regst_piece_id_.at(current_ring_id_));
-        send_regst_piece_id_[current_ring_id_] += 1;
-        return true;
-      } else {
-        return false;
-      }
-    });
+  if (std::all_of(current_step_.cbegin(), current_step_.cend(),
+                  [&](const int64_t step) { return step == num_steps_ - 1; })) {
+    Regst* out_regst = produced_rs_.Front(out_regst_desc_id_);
+    out_regst->set_piece_id(consumed_rs_.Front(in_regst_desc_id_)->piece_id());
+    HandleRegstToConsumer(out_regst, [](int64_t) { return true; });
+    produced_rs_.PopFrontRegsts({out_regst_desc_id_});
+  } else if (step < num_steps_ - 1) {
+    const int64_t send_regst_desc_id = send_regst_desc_id_.at(current_ring_id_);
+    Regst* send_regst = produced_rs_.Front(send_regst_desc_id);
+    send_regst->set_piece_id(send_regst_piece_id_.at(current_ring_id_));
+    send_regst_piece_id_[current_ring_id_] += 1;
+    HandleRegstToConsumer(send_regst, [](int64_t) { return true; });
+    produced_rs_.PopFrontRegsts({send_regst_desc_id});
   }
 }
 

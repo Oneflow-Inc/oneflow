@@ -33,7 +33,7 @@ class MultiRingAllReduceActor : public CompActor {
       override {
     return std::make_pair(RegstNameType::kNaive, HashSet<std::string>{});
   }
-  void VirtualAsyncSendNaiveProducedRegstMsgToConsumer() override;
+  void AsyncSendCustomizedProducedRegstMsgToConsumer() override;
   void AsyncSendCustomizedConsumedRegstMsgToProducer() override;
   bool CheckOutputActId(int64_t regst_desc_id) const override;
   void SetKernelCtxOther(void** other);
