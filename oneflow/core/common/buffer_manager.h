@@ -28,9 +28,19 @@ class BufferMgr final {
 
 static const std::string kBufferNameGlobalWaitJobId = "GlobalWaitJobId";
 
-inline std::string GetJobCallbackNotifierBufferName(int64_t job_id) {
-  static const std::string prefix = "GlobalCallbackNotifier_";
-  return prefix + std::to_string(job_id);
+inline std::string GetCallbackNotifierBufferName(const std::string& job_name) {
+  static const std::string prefix = "CallbackNotifier-";
+  return prefix + job_name;
+}
+
+inline std::string GetForeignInputBufferName(const std::string& job_name) {
+  static const std::string prefix = "ForeignInput-";
+  return prefix + job_name;
+}
+
+inline std::string GetForeignOutputBufferName(const std::string& job_name) {
+  static const std::string prefix = "ForeignOutput-";
+  return prefix + job_name;
 }
 
 }  // namespace oneflow

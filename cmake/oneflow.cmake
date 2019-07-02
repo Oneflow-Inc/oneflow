@@ -26,7 +26,7 @@ else()
   list(APPEND oneflow_platform_excludes "windows")
 endif()
 
-file(GLOB_RECURSE oneflow_all_src "${PROJECT_SOURCE_DIR}/oneflow/core/*.*")
+file(GLOB_RECURSE oneflow_all_src "${PROJECT_SOURCE_DIR}/oneflow/core/*.*" "${PROJECT_SOURCE_DIR}/oneflow/python/*.*")
 foreach(oneflow_single_file ${oneflow_all_src})
   # Verify whether this file is for other platforms
   set(exclude_this OFF)
@@ -48,6 +48,11 @@ foreach(oneflow_single_file ${oneflow_all_src})
     set(group_this ON)
   endif()
 
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/python/.*\\.h$")
+    list(APPEND of_python_obj_cc ${oneflow_single_file})
+    set(group_this ON)
+  endif()
+
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.cuh$")
     if(BUILD_CUDA) 
       list(APPEND of_all_obj_cc ${oneflow_single_file})
@@ -65,6 +70,11 @@ foreach(oneflow_single_file ${oneflow_all_src})
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.proto$")
     list(APPEND of_all_proto ${oneflow_single_file})
     #list(APPEND of_all_obj_cc ${oneflow_single_file})   # include the proto file in the project
+    set(group_this ON)
+  endif()
+
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/python/.*\\.i$")
+    list(APPEND of_all_swig ${oneflow_single_file})
     set(group_this ON)
   endif()
 
@@ -92,7 +102,7 @@ endforeach()
 # clang format
 add_custom_target(of_format)
 
-foreach(source_file ${of_all_obj_cc} ${of_main_cc} ${of_all_test_cc})
+foreach(source_file ${of_all_obj_cc} ${of_main_cc} ${of_all_test_cc} ${of_python_obj_cc})
     add_custom_command(TARGET of_format PRE_BUILD
     COMMAND clang-format -i -style=file ${source_file})
 endforeach()
@@ -134,6 +144,23 @@ elseif(WIN32)
   set(of_libs of_ccobj of_protoobj)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:of_ccobj") 
 endif()
+
+# build swig
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/python)
+foreach(swig_name ${of_all_swig})
+  file(RELATIVE_PATH swig_rel_name ${PROJECT_SOURCE_DIR} ${swig_name})
+  list(APPEND of_all_rel_swigs ${swig_rel_name})
+endforeach()
+
+RELATIVE_SWIG_GENERATE_CPP(SWIG_SRCS SWIG_HDRS
+                              ${PROJECT_SOURCE_DIR}
+                              ${of_all_rel_swigs})
+find_package(PythonLibs)
+include_directories(${PYTHON_INCLUDE_DIRS})
+oneflow_add_library(oneflow_internal SHARED ${SWIG_SRCS} ${SWIG_HDRS} ${of_main_cc})
+SET_TARGET_PROPERTIES(oneflow_internal PROPERTIES PREFIX "_")
+set_target_properties(oneflow_internal PROPERTIES CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/python")
+target_link_libraries(oneflow_internal ${of_libs} ${oneflow_third_party_libs})
 
 # build main
 set(RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)

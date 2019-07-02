@@ -1,14 +1,17 @@
 #include "oneflow/core/job/thrd_id_generator.h"
+#include "oneflow/core/graph/task_node.h"
 
 namespace oneflow {
 
 ThrdIdGenerator::ThrdIdGenerator(std::vector<std::pair<int64_t, TaskType>>& machine_task_type_vec,
                                  int64_t base_thrd_id)
-    : base_thrd_id_(base_thrd_id) {
+    : tick_tock_thrd_id_(base_thrd_id), base_thrd_id_(base_thrd_id + 1) {
   HashMap<int64_t, std::set<TaskType>> machine2task_types;
   // machine_task_type = <machine_id, task_type>
-  for (const auto machine_task_type : machine_task_type_vec) {
-    if (EqualConf(machine_task_type.second, machine_task_type2thrd_num_[machine_task_type])) {
+  for (const auto& machine_task_type : machine_task_type_vec) {
+    if (IsClassRegistered<TickTockTaskType>(machine_task_type.second)) { continue; }
+    if (TaskTypeThrdNumEqMax(machine_task_type.second,
+                             machine_task_type2thrd_num_[machine_task_type])) {
       continue;
     }
     machine_task_type2thrd_num_[machine_task_type]++;
@@ -19,6 +22,7 @@ ThrdIdGenerator::ThrdIdGenerator(std::vector<std::pair<int64_t, TaskType>>& mach
 }
 
 int64_t ThrdIdGenerator::GenerateThrdId(int64_t machine_id, int64_t task_type) {
+  if (IsClassRegistered<TickTockTaskType>(task_type)) { return tick_tock_thrd_id_; }
   auto key = std::make_pair(machine_id, task_type);
   int64_t ret = machine_task_type2lowerbound_[key] + GetModThrdId(key);
   CHECK_GE(ret, 0);
@@ -32,11 +36,14 @@ int64_t ThrdIdGenerator::GetModThrdId(std::pair<int64_t, int64_t> machine_task_t
   return mod_thrd_id;
 }
 
-bool ThrdIdGenerator::EqualConf(int64_t task_type, int32_t thrd_num) {
-  if (task_type == TaskType::kMdSave) {
-    if (thrd_num == Global<ResourceDesc>::Get()->MaxMdSaveWorkerNum()) { return true; }
+bool ThrdIdGenerator::TaskTypeThrdNumEqMax(int64_t task_type, int32_t thrd_num) {
+  if (IsClassRegistered<IndependentThreadNum4TaskType>(task_type)) {
+    std::unique_ptr<IndependentThreadNum4TaskType> thread_num;
+    thread_num.reset(NewObj<IndependentThreadNum4TaskType>(task_type));
+    return (thrd_num == *thread_num);
+  } else {
+    return false;
   }
-  return false;
 }
 
 void ThrdIdGenerator::InitLowerboundOfTaskType(

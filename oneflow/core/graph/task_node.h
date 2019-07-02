@@ -5,6 +5,7 @@
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/common/auto_registration_factory.h"
 
 namespace oneflow {
 
@@ -163,6 +164,27 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
 };
 
 extern std::map<TaskType, std::string> task_type2color;
+
+struct IndependentThreadNum4TaskType final {
+  IndependentThreadNum4TaskType(size_t num) : has_func_(false), num_(num) {}
+  IndependentThreadNum4TaskType(std::function<size_t()> get_num)
+      : has_func_(true), get_num_(get_num) {}
+  operator size_t() { return has_func_ ? get_num_() : num_; }
+
+ private:
+  bool has_func_;
+  size_t num_;
+  std::function<size_t()> get_num_;
+};
+
+#define REGISTER_INDEPENDENT_THREAD_NUM(task_type, num)            \
+  REGISTER_CLASS_CREATOR(task_type, IndependentThreadNum4TaskType, \
+                         ([] { return new IndependentThreadNum4TaskType(num); }))
+
+struct TickTockTaskType final {};
+
+#define REGISTER_TICK_TOCK_TASK_TYPE(task_type) \
+  REGISTER_CLASS_CREATOR(task_type, TickTockTaskType, ([] { return new TickTockTaskType; }))
 
 }  // namespace oneflow
 

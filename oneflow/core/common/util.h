@@ -124,8 +124,6 @@ inline std::string NewUniqueId() {
   return std::to_string(id++);
 }
 
-std::string LogDir();
-
 template<typename K, typename V>
 void EraseIf(HashMap<K, V>* hash_map, std::function<bool(typename HashMap<K, V>::iterator)> cond) {
   for (auto it = hash_map->begin(); it != hash_map->end();) {

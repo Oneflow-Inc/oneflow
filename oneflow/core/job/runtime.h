@@ -11,7 +11,7 @@ class Runtime final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Runtime);
   Runtime() = delete;
-  ~Runtime() = default;
+  ~Runtime();
 
   Runtime(const Plan& plan, size_t total_piece_num, bool is_experiment_phase);
 

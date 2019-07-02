@@ -31,4 +31,6 @@ void SourceTickCompTaskNode::InferProducedDataRegstTimeShape() {
   });
 }
 
+REGISTER_TICK_TOCK_TASK_TYPE(TaskType::kSourceTick);
+
 }  // namespace oneflow
