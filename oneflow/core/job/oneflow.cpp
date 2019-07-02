@@ -23,6 +23,8 @@
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/job/oneflow.h"
 
+DECLARE_bool(grpc_use_no_signal);
+
 namespace oneflow {
 
 namespace {
@@ -969,6 +971,7 @@ int Main(const oneflow::JobSet& job_set, const char* binary_name) {
   FLAGS_log_dir = LogDir(job_set.cpp_flags_conf().log_dir());
   FLAGS_logtostderr = job_set.cpp_flags_conf().logtostderr();
   FLAGS_logbuflevel = job_set.cpp_flags_conf().logbuflevel();
+  FLAGS_grpc_use_no_signal = job_set.cpp_flags_conf().grpc_use_no_signal();
   google::InitGoogleLogging(binary_name);
   gflags::SetVersionString(BuildVersionString());
   LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir);
@@ -1000,6 +1003,9 @@ int main(int argc, char** argv) {
   }
   if (job_set.cpp_flags_conf().has_logbuflevel() == false) {
     job_set.mutable_cpp_flags_conf()->set_logbuflevel(FLAGS_logbuflevel);
+  }
+  if (job_set.cpp_flags_conf().has_grpc_use_no_signal() == false) {
+    job_set.mutable_cpp_flags_conf()->set_logbuflevel(FLAGS_grpc_use_no_signal);
   }
   return Main(job_set, argv[0]);
 }
