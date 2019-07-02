@@ -19,7 +19,6 @@ void MultiRingAllReduceActor::VirtualActorInit(const TaskProto& task_proto) {
   CHECK_GE(num_rings_, 1);
   num_steps_ = conf.rings(0).next_size() * 2 - 1;
   FOR_RANGE(int64_t, ring_id, 0, num_rings_) {
-    current_step_.push_back(0);
     const std::string send_name = "send_" + std::to_string(ring_id);
     const std::string recv_name = "recv_" + std::to_string(ring_id);
     const int64_t send_regst_desc_id =
@@ -40,6 +39,8 @@ void MultiRingAllReduceActor::VirtualActorInit(const TaskProto& task_proto) {
   }
   consumed_rs_.InitedDone();
   in_regst_eord_ = false;
+  current_ring_id_ = 0;
+  current_step_ = 0;
   OF_SET_MSG_HANDLER(&MultiRingAllReduceActor::HandlerNormal);
 }
 
@@ -64,25 +65,31 @@ void MultiRingAllReduceActor::NormalProcessCustomizedEordMsg(const ActorMsg& msg
 }
 
 bool MultiRingAllReduceActor::IsCustomizedReadAlwaysUnReadyFromNow() const {
-  return in_regst_eord_ && consumed_rs_.available_regst_desc_cnt() == 0
-         && std::all_of(current_step_.cbegin(), current_step_.cend(),
-                        [](const int64_t current_step) { return current_step == 0; });
+  return in_regst_eord_ && consumed_rs_.available_regst_desc_cnt() == 0 && current_step_ == 0
+         && current_ring_id_ == 0;
 }
 
-bool MultiRingAllReduceActor::IsCustomizedReadReady() const { return GetCurReadyRing() != -1; }
+bool MultiRingAllReduceActor::IsCustomizedReadReady() const {
+  if (current_step_ == 0) {
+    return consumed_rs_.Front(in_regst_desc_id_) != nullptr;
+  } else {
+    return consumed_rs_.Front(in_regst_desc_id_) != nullptr
+           && consumed_rs_.Front(recv_regst_desc_id_.at(current_ring_id_)) != nullptr;
+  }
+}
 
-bool MultiRingAllReduceActor::IsCustomizedWriteReady() const { return GetCurReadyRing() != -1; }
+bool MultiRingAllReduceActor::IsCustomizedWriteReady() const {
+  return produced_rs_.Front(out_regst_desc_id_) != nullptr
+         && produced_rs_.Front(send_regst_desc_id_.at(current_ring_id_)) != nullptr;
+}
 
 void MultiRingAllReduceActor::ForEachCurCustomizedReadableRegst(
     std::function<void(const Regst*)> handler) const {
-  const int64_t step = current_step_.at(current_ring_id_);
-  if (step != 0) { handler(consumed_rs_.Front(recv_regst_desc_id_.at(current_ring_id_))); }
+  if (current_step_ != 0) { handler(consumed_rs_.Front(recv_regst_desc_id_.at(current_ring_id_))); }
   handler(consumed_rs_.Front(in_regst_desc_id_));
 }
 
 void MultiRingAllReduceActor::Act() {
-  current_ring_id_ = GetCurReadyRing();
-  CHECK_NE(current_ring_id_, -1);
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
   SetKernelCtxOther(&(kernel_ctx.other));
   AsyncLaunchKernel(kernel_ctx, [&](int64_t regst_desc_id) -> Regst* {
@@ -97,14 +104,12 @@ void MultiRingAllReduceActor::Act() {
 }
 
 void MultiRingAllReduceActor::AsyncSendCustomizedProducedRegstMsgToConsumer() {
-  const int64_t step = current_step_.at(current_ring_id_);
-  if (std::all_of(current_step_.cbegin(), current_step_.cend(),
-                  [&](const int64_t step) { return step == num_steps_ - 1; })) {
+  if (current_step_ == num_steps_ - 1 && current_ring_id_ == num_rings_ - 1) {
     Regst* out_regst = produced_rs_.Front(out_regst_desc_id_);
     out_regst->set_piece_id(consumed_rs_.Front(in_regst_desc_id_)->piece_id());
     HandleRegstToConsumer(out_regst, [](int64_t) { return true; });
     produced_rs_.PopFrontRegsts({out_regst_desc_id_});
-  } else if (step < num_steps_ - 1) {
+  } else if (current_step_ < num_steps_ - 1) {
     const int64_t send_regst_desc_id = send_regst_desc_id_.at(current_ring_id_);
     Regst* send_regst = produced_rs_.Front(send_regst_desc_id);
     send_regst->set_piece_id(send_regst_piece_id_.at(current_ring_id_));
@@ -117,14 +122,12 @@ void MultiRingAllReduceActor::AsyncSendCustomizedProducedRegstMsgToConsumer() {
 }
 
 void MultiRingAllReduceActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
-  const int64_t step = current_step_.at(current_ring_id_);
-  if (std::all_of(current_step_.cbegin(), current_step_.cend(),
-                  [&](const int64_t step) { return step == num_steps_ - 1; })) {
+  if (current_step_ == num_steps_ - 1 && current_ring_id_ == num_rings_ - 1) {
     Regst* cur_regst = consumed_rs_.Front(in_regst_desc_id_);
     CHECK(cur_regst);
     AsyncSendRegstMsgToProducer(cur_regst);
     CHECK_EQ(0, consumed_rs_.TryPopFrontRegst(in_regst_desc_id_));
-  } else if (step < num_steps_ - 1) {
+  } else if (current_step_ < num_steps_ - 1) {
     Regst* cur_regst = consumed_rs_.Front(recv_regst_desc_id_.at(current_ring_id_));
     CHECK(cur_regst);
     AsyncSendRegstMsgToProducer(cur_regst);
@@ -132,7 +135,8 @@ void MultiRingAllReduceActor::AsyncSendCustomizedConsumedRegstMsgToProducer() {
   } else {
     UNIMPLEMENTED();
   }
-  current_step_[current_ring_id_] = (current_step_.at(current_ring_id_) + 1) % num_steps_;
+  current_ring_id_ = (current_ring_id_ + 1) % num_rings_;
+  if (current_ring_id_ == 0) { current_step_ = (current_step_ + 1) % num_steps_; }
 }
 
 bool MultiRingAllReduceActor::CheckOutputActId(int64_t regst_desc_id) const {
@@ -145,30 +149,8 @@ bool MultiRingAllReduceActor::CheckOutputActId(int64_t regst_desc_id) const {
 
 void MultiRingAllReduceActor::SetKernelCtxOther(void** other) {
   other_ctx_.first = current_ring_id_;
-  other_ctx_.second = current_step_.at(current_ring_id_);
+  other_ctx_.second = current_step_;
   *other = &other_ctx_;
-}
-
-int64_t MultiRingAllReduceActor::GetCurReadyRing() const {
-  FOR_RANGE(int64_t, ring_id, 0, num_rings_) {
-    if (IsRingReadReady(ring_id) && IsRingWriteReady(ring_id)) { return ring_id; }
-  }
-  return -1;
-}
-
-bool MultiRingAllReduceActor::IsRingReadReady(int64_t ring_id) const {
-  const int64_t step = current_step_.at(ring_id);
-  if (step == 0) {
-    return consumed_rs_.Front(in_regst_desc_id_) != nullptr;
-  } else {
-    return consumed_rs_.Front(in_regst_desc_id_) != nullptr
-           && consumed_rs_.Front(recv_regst_desc_id_.at(ring_id)) != nullptr;
-  }
-}
-
-bool MultiRingAllReduceActor::IsRingWriteReady(int64_t ring_id) const {
-  return produced_rs_.Front(out_regst_desc_id_) != nullptr
-         && produced_rs_.Front(send_regst_desc_id_.at(ring_id)) != nullptr;
 }
 
 void MultiRingAllReduceActor::AsyncReturnAllCustomizedReadableRegst() {

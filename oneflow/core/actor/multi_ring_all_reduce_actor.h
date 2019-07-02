@@ -38,14 +38,11 @@ class MultiRingAllReduceActor : public CompActor {
   void AsyncSendCustomizedConsumedRegstMsgToProducer() override;
   bool CheckOutputActId(int64_t regst_desc_id) const override;
   void SetKernelCtxOther(void** other);
-  int64_t GetCurReadyRing() const;
-  bool IsRingReadReady(int64_t ring_id) const;
-  bool IsRingWriteReady(int64_t ring_id) const;
 
   RegstSlot consumed_rs_;
   RegstSlot produced_rs_;
   int64_t num_steps_ = -1;
-  std::vector<int64_t> current_step_;
+  int64_t current_step_ = -1;
   int64_t in_regst_desc_id_ = -1;
   int64_t out_regst_desc_id_ = -1;
   std::vector<int64_t> recv_regst_desc_id_;
