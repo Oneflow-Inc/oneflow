@@ -26,7 +26,7 @@ function(RELATIVE_SWIG_GENERATE_CPP SRCS HDRS ROOT_DIR)
            -outdir "${CMAKE_CURRENT_BINARY_DIR}/python"
            -o ${GENERATED_FILE} 
            ${ABS_FIL}
-      DEPENDS ${ABS_FIL}
+      DEPENDS ${ABS_FIL} ${of_python_obj_cc} ${of_all_obj_cc}
       COMMENT "Running SWIG on ${FIL}"
       VERBATIM )
   endforeach()
