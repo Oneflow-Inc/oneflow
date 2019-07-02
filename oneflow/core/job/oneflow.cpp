@@ -392,28 +392,22 @@ HashMap<std::string, HashSet<int64_t>> GetInterfaceOpName2JobIds(const std::vect
   return interface_op_name2job_ids;
 }
 
-void GetInterfaceOpName2ParallelBlobConf(
-    std::vector<Job>* jobs,
-    HashMap<std::string, ParallelBlobConf>* interface_op_name2parallel_blob_conf) {
-  std::vector<std::unique_ptr<const JobBuilder>> job_builders;
-  for (Job& job : *jobs) { job_builders.emplace_back(std::make_unique<const JobBuilder>(&job)); }
-  for (const auto& pair : GetInterfaceOpName2JobIds(*jobs)) {
-    if (pair.second.size() <= 1) { continue; }
-    bool op_as_output_found = false;
-    for (int64_t job_id : pair.second) {
-      if (job_builders.at(job_id)->OpConf4OpName(pair.first).has_output_conf()) {
-        CHECK_EQ(op_as_output_found, false);
-        op_as_output_found = true;
+void FilterOpName2ParallelBlobConf(
+    const HashSet<OperatorConf::OpTypeCase>& match, std::vector<Job>* jobs,
+    HashMap<std::string, ParallelBlobConf>* op_name2parallel_blob_conf) {
+  FOR_RANGE(int64_t, job_id, 0, jobs->size()) {
+    JobBuilder job_builder(&jobs->at(job_id));
+    for (const OperatorConf& op_conf : jobs->at(job_id).net().op()) {
+      if (match.find(op_conf.op_type_case()) == match.end()) { continue; }
+      const auto& iter = op_name2parallel_blob_conf->find(op_conf.name());
+      if (iter == op_name2parallel_blob_conf->end()) {
+        auto* first_op_parallel_blob_conf = &(*op_name2parallel_blob_conf)[op_conf.name()];
+        GetInterfaceOpBlobInfo(job_builder, op_conf.name(), first_op_parallel_blob_conf);
+      } else {
+        ParallelBlobConf parallel_blob_conf;
+        GetInterfaceOpBlobInfo(job_builder, op_conf.name(), &parallel_blob_conf);
+        CHECK(parallel_blob_conf == iter->second);
       }
-    }
-    ParallelBlobConf* first_op_parallel_blob_conf =
-        &(*interface_op_name2parallel_blob_conf)[pair.first];
-    GetInterfaceOpBlobInfo(*job_builders.at(*pair.second.begin()), pair.first,
-                           first_op_parallel_blob_conf);
-    for (int64_t job_id : pair.second) {
-      ParallelBlobConf parallel_blob_conf;
-      GetInterfaceOpBlobInfo(*job_builders.at(job_id), pair.first, &parallel_blob_conf);
-      CHECK(parallel_blob_conf == *first_op_parallel_blob_conf);
     }
   }
 }
@@ -796,29 +790,39 @@ void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
     jobs.at(i) = ConvertJobConf2Job(job_confs.Get(i));
     WithGlobalJobId(i, [&]() { CompileCurJobOnMaster(&jobs.at(i), &sub_plans.at(i), true); });
   }
-  HashMap<std::string, ParallelBlobConf> interface_op_name2parallel_blob_conf;
-  GetInterfaceOpName2ParallelBlobConf(&jobs, &interface_op_name2parallel_blob_conf);
+
   int64_t job_id = -1;
+  auto CompileJob = [&](Job* job) {
+    jobs.at(job_id) = *job;
+    AddGlobalJobDesc(*job, job_id);
+    if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+      WithGlobalJobId(job_id, [&]() { CompileCurJobOnMaster(job, &sub_plans.at(job_id), false); });
+    }
+    ++job_id;
+  };
+  HashMap<std::string, ParallelBlobConf> push_op_name2parallel_blob_conf;
+  FilterOpName2ParallelBlobConf({OperatorConf::kInputConf, OperatorConf::kVariableConf}, &jobs,
+                                &push_op_name2parallel_blob_conf);
+  HashMap<std::string, ParallelBlobConf> pull_op_name2parallel_blob_conf;
+  FilterOpName2ParallelBlobConf({OperatorConf::kOutputConf, OperatorConf::kVariableConf}, &jobs,
+                                &pull_op_name2parallel_blob_conf);
   {
-    size_t pull_push_job_size = interface_op_name2parallel_blob_conf.size() * 2;
+    size_t pull_push_job_size =
+        push_op_name2parallel_blob_conf.size() + pull_op_name2parallel_blob_conf.size();
     size_t user_job_size = jobs.size();
     jobs.resize(user_job_size + pull_push_job_size);
     sub_plans.resize(user_job_size + pull_push_job_size);
     job_id = user_job_size;
   }
-  for (const auto& pair : interface_op_name2parallel_blob_conf) {
-    std::vector<Job> pull_push_job(2);
-    MakePullJob(std::string("Pull-") + pair.first, pair.first, pair.second, &pull_push_job.at(0));
-    MakePushJob(std::string("Push-") + pair.first, pair.first, pair.second, &pull_push_job.at(1));
-    for (auto& job : pull_push_job) {
-      jobs.at(job_id) = job;
-      AddGlobalJobDesc(job, job_id);
-      if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-        WithGlobalJobId(job_id,
-                        [&]() { CompileCurJobOnMaster(&job, &sub_plans.at(job_id), false); });
-      }
-      ++job_id;
-    }
+  for (const auto& pair : push_op_name2parallel_blob_conf) {
+    Job push_job;
+    MakePushJob(std::string("Push-") + pair.first, pair.first, pair.second, &push_job);
+    CompileJob(&push_job);
+  }
+  for (const auto& pair : pull_op_name2parallel_blob_conf) {
+    Job pull_job;
+    MakePullJob(std::string("Pull-") + pair.first, pair.first, pair.second, &pull_job);
+    CompileJob(&pull_job);
   }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     BindInterfaceMemBlockId(jobs, &sub_plans);
