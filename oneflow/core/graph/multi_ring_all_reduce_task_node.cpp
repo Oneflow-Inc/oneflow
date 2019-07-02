@@ -89,6 +89,7 @@ OperatorConf MultiRingAllReduceTaskNode::GenOpConf() const {
     for (const int64_t id : rings_.at(ring_id)) { ring_conf.mutable_next()->Add(id); }
     *all_reduce_conf->mutable_rings()->Add() = ring_conf;
   }
+  logical_blob_shape_.ToProto(all_reduce_conf->mutable_logical_blob_shape());
   return op_conf;
 }
 
