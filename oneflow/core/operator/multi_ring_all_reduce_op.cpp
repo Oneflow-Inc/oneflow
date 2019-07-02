@@ -28,6 +28,7 @@ void MultiRingAllReduceOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const MultiRingAllReduceOpConf& conf = op_conf().multi_ring_all_reduce_conf();
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
+  CHECK_EQ(in->shape(), conf.logical_blob_shape());
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   *out = *in;
   const BalancedSplitter range4ring(in->shape().elem_cnt(), conf.rings_size());

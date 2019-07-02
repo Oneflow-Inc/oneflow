@@ -1417,7 +1417,8 @@ message RingConf {
 
 message MultiRingAllReduceOpConf {
   required LogicalBlobId lbi = 1;
-  repeated RingConf rings = 2;
+  required ShapeProto logical_blob_shape = 2;
+  repeated RingConf rings = 3;
 }
 
 message OperatorConf {
