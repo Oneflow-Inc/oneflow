@@ -116,6 +116,7 @@ void MultiRingAllReduceActor::AsyncSendCustomizedProducedRegstMsgToConsumer() {
     send_regst_piece_id_[current_ring_id_] += 1;
     HandleRegstToConsumer(send_regst, [](int64_t) { return true; });
     produced_rs_.PopFrontRegsts({send_regst_desc_id});
+  } else if (current_step_ == num_steps_ - 1) {
   } else {
     UNIMPLEMENTED();
   }
