@@ -19,6 +19,7 @@ class MultiRingAllReduceActor : public CompActor {
  private:
   void Act() override;
   void NormalProcessCustomizedReadableRegstMsg(const ActorMsg&) override;
+  void UpdtStateAsCustomizedProducedRegst(Regst* regst) override;
   void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const override;
   bool IsCustomizedReadReady() const override;
   bool IsCustomizedWriteReady() const override;

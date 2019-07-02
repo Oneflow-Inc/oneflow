@@ -55,6 +55,10 @@ void MultiRingAllReduceActor::NormalProcessCustomizedReadableRegstMsg(const Acto
   CHECK_EQ(0, consumed_rs_.TryPushBackRegst(msg.regst()));
 }
 
+void MultiRingAllReduceActor::UpdtStateAsCustomizedProducedRegst(Regst* regst) {
+  CHECK_EQ(0, produced_rs_.TryPushBackRegst(regst));
+}
+
 void MultiRingAllReduceActor::NormalProcessCustomizedEordMsg(const ActorMsg& msg) {
   if (msg.eord_regst_desc_id() == in_regst_desc_id_) { in_regst_eord_ = true; }
 }
