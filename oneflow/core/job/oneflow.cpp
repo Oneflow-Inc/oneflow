@@ -692,11 +692,8 @@ std::vector<HashSet<int32_t>> GetMutualExclusionJobGroups() {
   std::vector<HashSet<int32_t>> job_groups;
   std::vector<std::unique_ptr<JobDesc>>* job_descs =
       Global<std::vector<std::unique_ptr<JobDesc>>>::Get();
-  int32_t mem_group_size = 0;
   int32_t job_size = job_descs->size();
   std::vector<HashSet<int32_t>> job_id2mutual_exclusion_ids;
-  std::vector<int32_t> job_id2mem_share_group_id(job_size, -1);
-  // std::vector<MemBlock> mem_blocks(Global<IDMgr>::Get()->NewMemSharedId());
   HashMap<std::string, HashSet<int32_t>> arg_op_name2job_ids;
   job_id2mutual_exclusion_ids.resize(job_size);
   for (const auto& job_desc_ptr : *(job_descs)) {
@@ -711,16 +708,67 @@ std::vector<HashSet<int32_t>> GetMutualExclusionJobGroups() {
       }
     }
   }
-  // TODO();
+
   const JobMemSharingStrategy& strategy = Global<JobSet>::Get()->job_mem_sharing_strategy();
   if (strategy.has_mem_sharing_priority()) {
-    // TODO();
+    job_groups.push_back(HashSet<int32_t>());
+    FOR_RANGE(int32_t, i, 0, job_size) { job_groups.front().emplace(i); }
+    return job_groups;
   } else if (strategy.has_palallelism_priority()) {
-    // TODO();
-  } else if (strategy.has_custom_parallelism()) {
-    // TODO();
-  } else {
     // do nothing
+  } else if (strategy.has_custom_parallelism()) {
+    auto* job_name2job_id = Global<JobName2JobId>::Get();
+    for (const auto& group : strategy.custom_parallelism().nonparallel_group()) {
+      for (const std::string& first_name : group.job_name()) {
+        for (const std::string& second_name : group.job_name()) {
+          if (first_name != second_name) {
+            CHECK(job_name2job_id->find(first_name) != job_name2job_id->end());
+            CHECK(job_name2job_id->find(second_name) != job_name2job_id->end());
+            int32_t first_id = (*job_name2job_id)[first_name];
+            int32_t second_id = (*job_name2job_id)[second_name];
+            job_id2mutual_exclusion_ids[first_id].emplace(second_id);
+          }
+        }
+      }
+    }
+  } else {
+    return job_groups;
+  }
+
+  std::vector<HashSet<int32_t>> job_id2enable_parallel_ids;
+  job_id2enable_parallel_ids.resize(job_size);
+  FOR_RANGE(int32_t, i, 0, job_size) {
+    FOR_RANGE(int32_t, j, 0, job_size) {
+      if (job_id2mutual_exclusion_ids[i].find(j) == job_id2mutual_exclusion_ids[i].end()) {
+        job_id2enable_parallel_ids[i].emplace(j);
+      }
+    }
+  }
+
+  int32_t mem_share_group_num = 0;
+  std::vector<int32_t> job_id2mem_share_group_id(job_size, -1);
+  FOR_RANGE(int32_t, this_job_id, 0, job_size) {
+    HashSet<int32_t> mem_share_group_id_used;
+    for (int32_t enable_parallel_job_id : job_id2enable_parallel_ids[this_job_id]) {
+      int32_t group_id = job_id2mem_share_group_id[enable_parallel_job_id];
+      if (group_id != -1) { mem_share_group_id_used.emplace(group_id); }
+    }
+    FOR_RANGE(int32_t, this_group_id, 0, mem_share_group_num) {
+      if (mem_share_group_id_used.find(this_group_id) == mem_share_group_id_used.end()) {
+        job_id2mem_share_group_id[this_job_id] = this_group_id;
+        break;
+      }
+    }
+    if (job_id2mem_share_group_id[this_job_id] == -1) {
+      job_id2mem_share_group_id[this_job_id] = mem_share_group_num;
+      ++mem_share_group_num;
+      CHECK_LE(mem_share_group_num, job_size);
+    }
+  }
+
+  job_groups.resize(mem_share_group_num);
+  FOR_RANGE(int32_t, this_job_id, 0, job_size) {
+    job_groups[job_id2mem_share_group_id[this_job_id]].emplace(this_job_id);
   }
   return job_groups;
 }
@@ -808,6 +856,7 @@ void MergeMemBlockBetweenSubPlans(std::vector<Plan>* sub_plans) {
   };
 
   for (auto& job_group : job_groups) {
+    if (job_group.size() <= 1) { continue; }
     int32_t max_mzui_num_job_id = *(job_group.begin());
     int32_t max_mzui_num = job_id2mzui2mem_block_ids[max_mzui_num_job_id].size();
     for (int32_t job_id : job_group) {
