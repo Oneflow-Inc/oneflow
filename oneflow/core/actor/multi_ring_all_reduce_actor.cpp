@@ -27,7 +27,7 @@ void MultiRingAllReduceActor::VirtualActorInit(const TaskProto& task_proto) {
     send_regst_desc_id_.push_back(send_regst_desc_id);
     send_regst_piece_id_.push_back(0);
     produced_rs_.InsertRegstDescId(send_regst_desc_id);
-    CHECK_EQ(task_proto.consumed_regst_desc_id().at(recv_name).regst_desc_id_size(), 0);
+    CHECK_EQ(task_proto.consumed_regst_desc_id().at(recv_name).regst_desc_id_size(), 1);
     const int64_t recv_regst_desc_id =
         task_proto.consumed_regst_desc_id().at(recv_name).regst_desc_id(0);
     recv_regst_desc_id_.push_back(recv_regst_desc_id);
