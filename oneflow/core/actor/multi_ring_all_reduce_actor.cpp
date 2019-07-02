@@ -46,7 +46,7 @@ void MultiRingAllReduceActor::VirtualActorInit(const TaskProto& task_proto) {
 
 int64_t MultiRingAllReduceActor::ActNumForEachOutput(int64_t regst_desc_id) const {
   if (regst_desc_id == out_regst_desc_id_) {
-    return num_steps_;
+    return num_steps_ * num_rings_;
   } else {
     return 1;
   }
