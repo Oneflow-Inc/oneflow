@@ -54,8 +54,9 @@ void MultiRingAllReduceKernel<device_type, T>::ForwardDim0ValidNum(
     BnInOp2Blob(GenRepeatedBn("send", ring_id))
         ->set_dim0_valid_num(0, chunk_slices_.at(ring_id).at(step).size());
   } else if (step < num_steps_) {
-    BnInOp2Blob(GenRepeatedBn("send", ring_id))
-        ->set_dim0_valid_num(0, BnInOp2Blob(GenRepeatedBn("recv", ring_id))->dim0_valid_num(0));
+    const int64_t dim0_valid_num = BnInOp2Blob(GenRepeatedBn("recv", ring_id))->dim0_valid_num(0);
+    CHECK_EQ(dim0_valid_num, chunk_slices_.at(ring_id).at(step).size());
+    BnInOp2Blob(GenRepeatedBn("send", ring_id))->set_dim0_valid_num(0, dim0_valid_num);
   } else {
     UNIMPLEMENTED();
   }
@@ -77,11 +78,11 @@ void MultiRingAllReduceKernel<device_type, T>::ForwardDataContent(
     Memcpy<device_type>(ctx.device_ctx, send->mut_dptr<T>(), in->dptr<T>() + range.begin(),
                         range.size() * sizeof(T));
   } else if (step < ring.next_size() - 1) {
-    Addition<device_type, T>(ctx.device_ctx, range.size(), send->mut_dptr<T>(), recv->dptr<T>(),
-                             in->dptr<T>() + range.begin());
+    KernelUtil<device_type, T>::Addition(ctx.device_ctx, range.size(), send->mut_dptr<T>(),
+                                         recv->dptr<T>(), in->dptr<T>() + range.begin());
   } else if (step == ring.next_size() - 1) {
-    Addition<device_type, T>(ctx.device_ctx, range.size(), send->mut_dptr<T>(), recv->dptr<T>(),
-                             in->dptr<T>() + range.begin());
+    KernelUtil<device_type, T>::Addition(ctx.device_ctx, range.size(), send->mut_dptr<T>(),
+                                         recv->dptr<T>(), in->dptr<T>() + range.begin());
     Memcpy<device_type>(ctx.device_ctx, out->mut_dptr<T>() + range.begin(), send->dptr<T>(),
                         range.size() * sizeof(T));
   } else if (step < num_steps_ - 1) {
@@ -98,6 +99,6 @@ void MultiRingAllReduceKernel<device_type, T>::ForwardDataContent(
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMultiRingAllReduceConf, MultiRingAllReduceKernel,
-                           ARITHMETIC_DATA_TYPE_SEQ)
+                           FLOATING_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
