@@ -31,7 +31,7 @@ void MultiRingAllReduceKernel<device_type, T>::VirtualKernelInit(const ParallelC
     } else {
       CHECK_EQ(num_steps_, num_steps);
     }
-    std::vector<int64_t> ring_prev(conf.rings_size());
+    std::vector<int64_t> ring_prev(ring.next_size());
     FOR_RANGE(int64_t, i, 0, ring.next_size()) { ring_prev[ring.next(i)] = i; }
     int64_t current_slice_id = ring_prev[ctx->parallel_id()];
     const BalancedSplitter slices(ring_range.size(), ring.next_size());
