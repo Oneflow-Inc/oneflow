@@ -143,7 +143,9 @@ void LogicalGraph::NaiveBuildFwStruct(
     cur_op_conf.set_device_type(parallel_desc_ptr->device_type());
     std::shared_ptr<Operator> cur_op = ConstructOp(cur_op_conf);
     LogicalNode* cur_node = cur_op->NewProperLogicalNode();
-    if (cur_node->TypeName() == "PackForward" || cur_node->TypeName() == "UnpackForward") {
+    const std::string type_name = cur_node->TypeName();
+    if (type_name == "PackForward" || type_name == "UnpackForward"
+        || type_name == "PieceSliceForward" || type_name == "InstanceStackForward") {
       CHECK_EQ(
           0, Global<JobDesc>::Get()->other_conf().piece_size() % parallel_desc_ptr->parallel_num());
     }

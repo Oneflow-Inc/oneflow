@@ -15,15 +15,26 @@ void PieceSliceOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   // FIX ME: slice_num should be inferred instead of setting by hand
   // we set it by hand in order to infer time_shape in op_graph
   CHECK_EQ(GetSliceNum(), in->shape().At(0));
+  CHECK(!in->has_dim0_valid_num_field());
 
   out->mut_shape() =
       Shape(std::vector<int64_t>(in->shape().dim_vec().begin() + 1, in->shape().dim_vec().end()));
-  if (in->has_instance_shape_field() || in->has_dim1_valid_num_field()) {
+  out->set_data_type(in->data_type());
+  const bool uncontiguous_varing_instance =
+      in->has_dim1_valid_num_field() || in->has_dim2_valid_num_field();
+  const bool contiguous_varing_instance = in->has_instance_shape_field();
+  if (uncontiguous_varing_instance) {
+    CHECK(!contiguous_varing_instance);
     out->set_has_dim0_valid_num_field(true);
     out->mut_dim0_inner_shape() = Shape({1, out->shape().At(0)});
+    out->set_has_dim1_valid_num_field(in->has_dim2_valid_num_field());
+    out->set_has_dim2_valid_num_field(false);
+  } else if (contiguous_varing_instance) {
+    CHECK(!uncontiguous_varing_instance);
+    out->set_has_dim0_valid_num_field(true);
+    out->mut_dim0_inner_shape() = Shape({1, out->shape().At(0)});
+    out->set_has_instance_shape_field(in->shape().NumAxes() > 2);
   }
-  out->set_has_instance_shape_field(in->has_instance_shape_field() && in->shape().NumAxes() > 2);
-  out->set_has_dim1_valid_num_field(in->has_dim2_valid_num_field());
 }
 
 void PieceSliceOp::InferOutputBlobTimeShape(

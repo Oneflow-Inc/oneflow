@@ -13,28 +13,23 @@ class InstanceStackKernel final : public KernelIf<device_type> {
   ~InstanceStackKernel() = default;
 
  private:
+  void VirtualKernelInit(const ParallelContext*) override;
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void BackwardDataContent(const KernelCtx& ctx,
-                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void ForwardDim0ValidNum(const KernelCtx& ctx,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void ForwardInstanceShape(const KernelCtx& ctx,
                             std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void ForwardDim1ValidNum(const KernelCtx& ctx,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void ForwardDim2ValidNum(const KernelCtx& ctx,
-                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    UNIMPLEMENTED();
-  }
-  void ForwardRecordIdInDevicePiece(
-      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    UNIMPLEMENTED();
-  }
+                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void BackwardInDiffLossInstanceNum(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     UNIMPLEMENTED();
   }
+
+  mutable bool is_first_instance_;
 };
 
 }  // namespace oneflow
