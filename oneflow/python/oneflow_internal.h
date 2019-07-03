@@ -17,6 +17,15 @@ void InitGlobalOneflowBySerializedJobSet(const oneflow::JobSet& job_set) {
   Global<Oneflow>::New(job_set);
 }
 
+std::string GetSerializedInterUserJobInfo() {
+  using namespace oneflow;
+  CHECK_NOTNULL(Global<Oneflow>::Get());
+  CHECK_NOTNULL(Global<InterUserJobInfo>::Get());
+  std::string ret;
+  Global<InterUserJobInfo>::Get()->SerializeToString(&ret);
+  return ret;
+}
+
 void LaunchJob(const std::string& job_name, const std::shared_ptr<oneflow::ForeignCallback>& cb) {
   using namespace oneflow;
   CHECK_NOTNULL(Global<Oneflow>::Get());
