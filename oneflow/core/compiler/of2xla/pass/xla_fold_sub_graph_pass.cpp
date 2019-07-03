@@ -29,6 +29,8 @@ class FoldSubGraphPass : public XlaOptimizePass {
   void RebuildSubgraphOutputs(
     XlaNode *node, XlaNode *n, XlaGraph *sub_graph,
     std::unordered_map<int64_t, XlaNode *> *sub_graph_nodes);
+
+  void DivideArgumentNodes(XlaGraph *sub_graph);
 };
 
 void FoldSubGraphPass::Run() {
@@ -97,13 +99,69 @@ void FoldSubGraphPass::Run() {
       // Rebuild outputs same as rebuilding the inputs
       RebuildSubgraphOutputs(node, n, sub_graph, &sub_graph_nodes);
     }
+    // Divide argument nodes if they have multiple inputs or outputs with
+    // different argument (or `LogicalBlobId`), and then fill their `op_name_`
+    DivideArgumentNodes(sub_graph);
+  }
+}
+
+void FoldSubGraphPass::DivideArgumentNodes(XlaGraph *sub_graph) {
+  // Find all argument nodes
+  std::vector<XlaNode *> argument_nodes;
+  for (XlaNode *node : sub_graph->Nodes()) {
+    if (node->op_type() == _XlaArgumentOpType) {
+      argument_nodes.push_back(node);
+    }
+  }
+  // Start to divide nodes
+  std::unordered_map<Argument, XlaNode *> divided_nodes;
+  int argument_id = 0;
+  for (XlaNode *node : argument_nodes) {
+    // Argument node should has either inputs or outputs
+    CHECK(node->in_edges().size() == 0 || node->out_edges().size() == 0);
+
+    bool first_edge = true;
+    for (XlaEdge *edge : node->in_edges()) {
+      const Argument &arg = edge->argument();
+      if (first_edge) {
+        first_edge = false;
+        node->set_op_name(absl::StrCat(_XlaOutArgumentPrefix, argument_id++));
+        divided_nodes.emplace(arg, node);
+      }
+      auto it = divided_nodes.find(arg);
+      if (it == divided_nodes.end()) {
+        XlaNode *argument = sub_graph->AddNode();
+        argument->set_op_name(absl::StrCat(_XlaOutArgumentPrefix,
+                                           argument_id++));
+        edge->UpdateEndNode(argument);
+        node->EraseInEdge(edge);
+        divided_nodes.emplace(arg, argument);
+      }
+    }
+
+    for (XlaEdge *edge : node->out_edges()) {
+      const Argument &arg = edge->argument();
+      if (first_edge) {
+        first_edge = false;
+        node->set_op_name(absl::StrCat(_XlaInArgumentPrefix, argument_id++));
+        divided_nodes.emplace(arg, node);
+      }
+      auto it = divided_nodes.find(arg);
+      if (it == divided_nodes.end()) {
+        XlaNode *argument = sub_graph->AddNode();
+        argument->set_op_name(absl::StrCat(_XlaInArgumentPrefix,
+                                           argument_id++));
+        edge->UpdateStartNode(argument);
+        node->EraseOutEdge(edge);
+        divided_nodes.emplace(arg, argument);
+      }
+    }
   }
 }
 
 void FoldSubGraphPass::RebuildSubgraphInputs(
     XlaNode *node, XlaNode *n, XlaGraph *sub_graph,
     std::unordered_map<int64_t, XlaNode *> *sub_graph_nodes) {
-  int argument_id = 0;
   for (XlaEdge *e : n->in_edges()) {
     int64_t start_id = e->start()->unique_id();
     if (e->end()->unique_id() != n->unique_id()) {
@@ -112,8 +170,6 @@ void FoldSubGraphPass::RebuildSubgraphInputs(
         argument = sub_graph->AddNode();
         argument->set_op_type(_XlaArgumentOpType);
         argument->set_backend(e->start()->backend());
-        argument->set_op_name(absl::StrCat(_XlaInArgumentPrefix,
-                                           argument_id++));
         sub_graph_nodes->emplace(start_id, argument);
       } else {
         argument = (*sub_graph_nodes)[start_id];
@@ -131,7 +187,6 @@ void FoldSubGraphPass::RebuildSubgraphInputs(
 void FoldSubGraphPass::RebuildSubgraphOutputs(
     XlaNode *node, XlaNode *n, XlaGraph *sub_graph,
     std::unordered_map<int64_t, XlaNode *> *sub_graph_nodes) {
-  int argument_id = 0;
   for (XlaEdge *e : n->out_edges()) {
     int64_t start_id = e->start()->unique_id();
     if (e->start()->unique_id() != node->unique_id()) {
@@ -140,8 +195,6 @@ void FoldSubGraphPass::RebuildSubgraphOutputs(
         argument = sub_graph->AddNode();
         argument->set_op_type(_XlaArgumentOpType);
         argument->set_backend(e->start()->backend());
-        argument->set_op_name(absl::StrCat(_XlaOutArgumentPrefix,
-                                           argument_id++));
         sub_graph_nodes->emplace(start_id, argument);
       } else {
         argument = (*sub_graph_nodes)[start_id];
@@ -150,7 +203,7 @@ void FoldSubGraphPass::RebuildSubgraphOutputs(
     } else {
       if (sub_graph_nodes->count(start_id) != 0) {
         XlaNode *end = (*sub_graph_nodes)[start_id];
-         sub_graph->Connect(node, end, e->argument());
+        sub_graph->Connect(node, end, e->argument());
       }
     }
   }

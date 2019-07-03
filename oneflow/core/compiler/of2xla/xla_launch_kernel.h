@@ -12,12 +12,8 @@ class XlaLaunchKernel : public KernelIf<device_type> {
   virtual ~XlaLaunchKernel() {}
 
  private:
-  void VirtualKernelInit(const ParallelContext* parallel_ctx) override;
-
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
-
-  const ParallelContext *parallel_ctx_;
 };
 
 }  // namespace oneflow

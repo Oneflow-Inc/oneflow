@@ -32,11 +32,11 @@ XlaNode::XlaNode(const OpNode *op_node) : node_(op_node), unique_id_(-1),
   // Setup input and output logical blob ids
   for (const std::string &bn : op_node->op().input_bns()) {
     const LogicalBlobId &lbi = op_node->op().BnInOp2Lbi(bn);
-    inputs_.push_back(lbi);
+    inputs_.emplace(bn, lbi);
   }
   for (const std::string &bn : op_node->op().output_bns()) {
     const LogicalBlobId &lbi = op_node->op().BnInOp2Lbi(bn);
-    outputs_.push_back(lbi);
+    outputs_.emplace(bn, lbi);
   }
 }
 
@@ -76,52 +76,73 @@ void XlaNode::InferBlobDescs(GetBlobDescFunc func,
 }
 
 bool XlaNode::IsSourceNode() const {
-  // TODO(hjchen2)
-  return false;
+  return in_edges_.size() == 0;
 }
 
 bool XlaNode::IsFinishNode() const {
-  // TODO(hjchen2)
-  return false;
+  return out_edges_.size() == 0;
 }
 
 bool XlaNode::IsArgumentNode() const {
   return op_type_ == _XlaArgumentOpType;
 }
 
+bool XlaNode::IsInArgumentNode() const {
+  return IsArgumentNode() && absl::StartsWith(op_name_, _XlaInArgumentPrefix);
+}
+
+bool XlaNode::IsOutArgumentNode() const {
+  return IsArgumentNode() && absl::StartsWith(op_name_, _XlaOutArgumentPrefix);
+}
+
+std::vector<std::string> XlaNode::input_bns() const {
+  std::vector<std::string> input_bns(inputs_.size());
+  std::transform(inputs_.begin(), inputs_.end(), input_bns.begin(),
+                 [](const std::pair<std::string, LogicalBlobId> &in) {
+                   return in.first;
+                 });
+  return input_bns;
+}
+
+std::vector<std::string> XlaNode::output_bns() const {
+  std::vector<std::string> output_bns(outputs_.size());
+  std::transform(outputs_.begin(), outputs_.end(), output_bns.begin(),
+                 [](const std::pair<std::string, LogicalBlobId> &out) {
+                   return out.first;
+                 });
+  return output_bns;
+}
+
 XlaArgumentNode::XlaArgumentNode(const XlaLaunchOpConf::Argument &arg_conf)
-    : XlaNode() {
+    : XlaNode(), arg_conf_(arg_conf) {
   this->op_type_ = _XlaArgumentOpType;
   this->op_name_ = arg_conf.name();
   this->compiled_ = true;
-  if (absl::StartsWith(arg_conf.name(), _XlaInArgumentPrefix)) {
-    for (const std::string &bn : arg_conf.out()) {
-      LogicalBlobId lbi = GenLogicalBlobId(bn);
-      this->outputs_.push_back(lbi);
-    }
-  } else {
-     for (const std::string &bn : arg_conf.in()) {
-      LogicalBlobId lbi = GenLogicalBlobId(bn);
-      this->inputs_.push_back(lbi);
-    }
-  }
+  this->inputs_.emplace("in", BlobId(arg_conf.in()));
+  this->outputs_.emplace("out", BlobId(arg_conf.out()));
 }
 
 void XlaArgumentNode::InferBlobDescs(
     GetBlobDescFunc func, const ParallelContext* parallel_ctx) const {
-  for (const LogicalBlobId &input : this->inputs_) {
-    func(input);
-  }
+  *(func(this->outputs_.at("out"))) = *func(this->inputs_.at("in"));
 }
 
 bool IsNodeInput(const XlaNode *node, const LogicalBlobId &lbi) {
-  const auto &inputs = node->Input();
-  return (std::find(inputs.begin(), inputs.end(), lbi) != inputs.end());
+  for (XlaEdge *edge : node->in_edges()) {
+    if (edge->argument().blob_id() == lbi) {
+      return true;
+    }
+  }
+  return false;
 }
 
 bool IsNodeOutput(const XlaNode *node, const LogicalBlobId &lbi) {
-  const auto &outputs = node->Output();
-  return (std::find(outputs.begin(), outputs.end(), lbi) != outputs.end());
+  for (XlaEdge *edge : node->out_edges()) {
+    if (edge->argument().blob_id() == lbi) {
+      return true;
+    }
+  }
+  return false;
 }
 
 }  // namespace mola

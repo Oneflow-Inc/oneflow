@@ -1,13 +1,16 @@
+#include "oneflow/core/compiler/of2xla/xla_utility.h"
 #include "oneflow/core/compiler/of2xla/xla_backend.h"
 #include "oneflow/core/compiler/of2xla/xla_graph_compiler.h"
 #include "oneflow/core/compiler/of2xla/xla_launch_kernel.h"
 
 namespace oneflow {
 
-template <DeviceType device_type, typename T>
-void XlaLaunchKernel<device_type, T>::VirtualKernelInit(
-                const ParallelContext* parallel_ctx) {
-  parallel_ctx_ = parallel_ctx;
+static ParallelContext LocalParallelContext() {
+  ParallelContext parallel_ctx;
+  parallel_ctx.set_parallel_id(0);
+  parallel_ctx.set_parallel_num(1);
+  parallel_ctx.set_policy(kDataParallel);
+  return parallel_ctx;
 }
 
 template <DeviceType device_type, typename T>
@@ -24,7 +27,6 @@ void XlaLaunchKernel<device_type, T>::ForwardDataContent(
   // Prepare setup blob descs
   std::unordered_map<std::string, BlobDesc> blob_descs;
 
-  const auto &arguments = graph.arguments();
   for (const auto& input_bn : this->op_attribute().input_bns()) {
     const Blob* in_blob = BnInOp2Blob(input_bn);
     const RtBlobDesc &rt_desc = in_blob->blob_desc();
@@ -35,16 +37,18 @@ void XlaLaunchKernel<device_type, T>::ForwardDataContent(
                        rt_desc.max_col_num());
 
     const LogicalBlobId& lbi = this->BnInOp2Lbi(input_bn);
-    std::string blob_name = GenLogicalBlobName(lbi);
-    const auto &it = arguments.find(blob_name);
-    CHECK(it != arguments.end());
-    blob_descs.emplace(it->second.bind_blob_name, blob_desc);
+    std::string blob_name = BlobName(lbi);
+    blob_descs.emplace(blob_name, blob_desc);
   }
 
-  graph.InferBlobDescs(&blob_descs, parallel_ctx_);
+  ParallelContext parallel_ctx = LocalParallelContext();
+  graph.InferBlobDescs(&blob_descs, &parallel_ctx);
 
-  mola::XlaGraphCompiler graph_compiler(&graph, &builder);
-  graph_compiler.Compile();
+  bool force_compile = true;
+  mola::CompileContext compile_ctx(&graph, &builder, blob_descs, force_compile);
+
+  mola::XlaGraphCompiler graph_compiler;
+  graph_compiler.Compile(&compile_ctx);
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kXlaLaunchConf, XlaLaunchKernel,

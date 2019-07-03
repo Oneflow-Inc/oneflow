@@ -47,8 +47,7 @@ class XlaOpContext {
     const PbMessage *op_conf;
     // XlaBuilder to compile the XlaComputation
     xla::XlaBuilder *builder;
-    // Function that convert argument name to Argument
-    std::function<Argument(const std::string &)> argument_from_string_fn;
+    std::unordered_map<std::string, Argument> arguments;
   };
 
   explicit XlaOpContext(const XlaOpContext::Param &param) : param_(param) {}

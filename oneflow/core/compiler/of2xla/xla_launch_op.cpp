@@ -1,4 +1,5 @@
 #include "absl/strings/str_split.h"
+#include "oneflow/core/compiler/of2xla/xla_utility.h"
 #include "oneflow/core/compiler/of2xla/xla_node.h"
 #include "oneflow/core/compiler/of2xla/xla_graph.h"
 #include "oneflow/core/compiler/of2xla/xla_launch_op.h"
@@ -22,32 +23,25 @@ const PbMessage &XlaLaunchOp::GetCustomizedConf() const {
 void XlaLaunchOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  const auto &arguments = subgraph_->arguments();
   // Prepare outer input blob descs
   std::unordered_map<std::string, BlobDesc> blob_descs;
   for (const std::string &bn : this->input_bns()) {
     const LogicalBlobId& lbi = this->BnInOp2Lbi(bn);
-    std::string blob_name = GenLogicalBlobName(lbi);
-    const auto &it = arguments.find(blob_name);
-    CHECK(it != arguments.end());
-    blob_descs[it->second.bind_blob_name] = *GetBlobDesc4BnInOp(bn);
+    std::string blob_name = BlobName(lbi);
+    blob_descs[blob_name] = *GetBlobDesc4BnInOp(bn);
   }
   // Inference blob descs in subgraph
   subgraph_->InferBlobDescs(&blob_descs, parallel_ctx);
 
   // Fetch output blob descs
   for (const std::string &bn : this->output_bns()) {
-    const auto &it = arguments.find(bn);
-    CHECK(it != arguments.end());
-    std::string blob_name = it->second.bind_blob_name;
-    CHECK_GT(blob_descs.count(blob_name), 0);
-    *GetBlobDesc4BnInOp(bn) = blob_descs[blob_name];
+    CHECK_GT(blob_descs.count(bn), 0);
+    *GetBlobDesc4BnInOp(bn) = blob_descs[bn];
   }
 }
 
 void XlaLaunchOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  const auto &arguments = subgraph_->arguments();
   const auto &xla_launch_conf = op_conf().xla_launch_conf();
   const auto &batch_dim_blobs = xla_launch_conf.attr().batch_dim_blob();
   auto has_batch_dim_fn = [&](const std::string &blob_name) {
@@ -55,9 +49,9 @@ void XlaLaunchOp::InferHasBatchDim(
                 != batch_dim_blobs.end());
   };
   for (const std::string &bn : this->output_bns()) {
-    const auto &it = arguments.find(bn);
-    CHECK(it != arguments.end());
-    *HasBatchDim4BnInOp(bn) = has_batch_dim_fn(it->second.bind_blob_name);
+    LogicalBlobId lbi = subgraph_->Output(bn);
+    std::string blob_name = BlobName(lbi);
+    *HasBatchDim4BnInOp(bn) = has_batch_dim_fn(blob_name);
   }
 }
 
@@ -72,7 +66,7 @@ void XlaLaunchOp::InferSbpSignature(
   // SbpSignature sbp_conf;
   // auto *bn2sbp_parallel = sbp_conf.mutable_bn_in_op2sbp_parallel();
   // for (const std::string &bn : this->input_bns()) {
-  //   std::string blob_name = GenLogicalBlobName(this->BnInOp2Lbi(bn));
+  //   std::string blob_name = BlobName(this->BnInOp2Lbi(bn));
   //   const auto &it = subgraph_inputs_.find(blob_name);
   //   CHECK(it != subgraph_inputs_.end());
   //   CHECK_GT(attr_sbp_conf.count(it->second), 0);

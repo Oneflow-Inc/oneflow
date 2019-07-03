@@ -17,12 +17,12 @@ static XlaOpCompiler *CreateXlaOpCompiler(
   return XlaOpCompilerRegistry::Build(backend)[op_type]();
 }
 
-void XlaGraphCompiler::Compile() {
-  CHECK_NOTNULL(graph_);
-  // Collect all operators outputs
+void XlaGraphCompiler::Compile(CompileContext *ctx) {
+  CHECK_NOTNULL(ctx->graph_);
+  // All operator's output oprands collector
   std::unordered_map<Argument, XlaOprand> all_outputs;
 
-  for (auto &node : graph_->Nodes()) {
+  for (const XlaNode *node : ctx->graph_->Nodes()) {
     const std::string &backend = node->backend();
     const std::string &op_type = node->op_type();
     // Create operator compiler
@@ -40,13 +40,9 @@ void XlaGraphCompiler::Compile() {
     XlaOpContext::Param param;
     param.inputs = std::move(input_oprands);
     param.op_conf = &node->proto_conf();
-    param.builder = builder_;
+    param.builder = ctx->builder_;
 
-    param.argument_from_string_fn = [&](const std::string &name) -> Argument {
-      const Operator *op = node->op();
-      const LogicalBlobId &lbi = op->BnInOp2Lbi(name);
-      return Argument(lbi, node->node()->LogicalBlobDesc4Lbi(lbi));
-    };
+    SetupParamArguments(node, ctx->arguments_, &param);
 
     // Do compile and lower the graph computation to HLO instructions
     XlaOpContext op_context(param);
@@ -55,6 +51,22 @@ void XlaGraphCompiler::Compile() {
     const auto &outputs = op_context.OutputOprands();
     all_outputs.insert(outputs.begin(), outputs.end());
   }
+}
+
+void XlaGraphCompiler::SetupParamArguments(
+                const XlaNode *node,
+                const std::unordered_map<LogicalBlobId, Argument> &arguments,
+                XlaOpContext::Param *param) {
+  std::unordered_map<std::string, Argument> op_arguments;
+  for (const std::string &in : node->input_bns()) {
+    LogicalBlobId lbi = node->Input(in);
+    op_arguments.emplace(in, arguments.at(lbi));
+  }
+  for (const std::string &out : node->output_bns()) {
+    LogicalBlobId lbi = node->Output(out);
+    op_arguments.emplace(out, arguments.at(lbi));
+  }
+  param->arguments = std::move(op_arguments);
 }
 
 }  // namespace mola

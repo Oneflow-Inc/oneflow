@@ -1355,9 +1355,9 @@ message IdentityOpConf {
 message XlaLaunchOpConf {
   message Argument {
     required string name = 1;
-    repeated string in = 2;
-    repeated string out = 3;
-    repeated ShapeProto shape = 4;
+    required string in = 2;
+    required string out = 3;
+    optional ShapeProto shape = 4;
   }
   message Attribute {
     repeated Argument argument = 1;

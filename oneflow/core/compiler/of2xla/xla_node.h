@@ -60,12 +60,20 @@ class XlaNode {
   const std::string &op_type() const { return op_type_; }
   const std::string &op_name() const { return op_name_; }
 
-  const std::vector<LogicalBlobId> Input() const { return inputs_; }
-  const std::vector<LogicalBlobId> Output() const { return outputs_; }
+  std::vector<std::string> input_bns() const;
+  std::vector<std::string> output_bns() const;
+  const LogicalBlobId &Input(const std::string &bn) const {
+    return inputs_.at(bn);
+  }
+  const LogicalBlobId &Output(const std::string &bn) const {
+    return outputs_.at(bn);
+  }
 
   XlaGraph *sub_graph() const { return sub_graph_; }
 
-  const PbMessage &proto_conf() const { return this->op()->GetCustomizedConf(); }
+  virtual const PbMessage &proto_conf() const {
+      return this->op()->GetCustomizedConf();
+  }
 
   void set_cluster_id(int64_t cluster_id) { cluster_id_ = cluster_id; }
   void set_backend(const std::string &backend) { backend_ = backend; }
@@ -76,6 +84,8 @@ class XlaNode {
   bool IsSourceNode() const;
   bool IsFinishNode() const;
   bool IsArgumentNode() const;
+  bool IsInArgumentNode() const;
+  bool IsOutArgumentNode() const;
 
   typedef std::function<BlobDesc*(const LogicalBlobId &)> GetBlobDescFunc;
   virtual void InferBlobDescs(GetBlobDescFunc func,
@@ -111,8 +121,8 @@ class XlaNode {
   // be built and managed by the graph, other than the node
   XlaGraph *sub_graph_;
   // Input and output logical blob id
-  std::vector<LogicalBlobId> inputs_;
-  std::vector<LogicalBlobId> outputs_; 
+  std::unordered_map<std::string, LogicalBlobId> inputs_;
+  std::unordered_map<std::string, LogicalBlobId> outputs_;
 };
 
 class XlaArgumentNode : public XlaNode {
@@ -120,12 +130,16 @@ class XlaArgumentNode : public XlaNode {
   void InferBlobDescs(XlaNode::GetBlobDescFunc func,
                       const ParallelContext* parallel_ctx) const override;
 
+  const PbMessage &proto_conf() const override { return arg_conf_; }
+
  private:
   friend class XlaGraph;
   XlaArgumentNode() = default;
   virtual ~XlaArgumentNode() = default;
 
   explicit XlaArgumentNode(const XlaLaunchOpConf::Argument &arg_conf);
+
+  XlaLaunchOpConf::Argument arg_conf_;
 };
 
 bool IsNodeInput(const XlaNode *node, const LogicalBlobId &lbi);

@@ -93,7 +93,7 @@ Shape XlaOpContext::OutputShape(const std::string &name) const {
 }
 
 Argument XlaOpContext::ArgumentFromString(const std::string &name) const {
-  return param_.argument_from_string_fn(name);
+  return param_.arguments.at(name);
 }
 
 }  // namespace mola

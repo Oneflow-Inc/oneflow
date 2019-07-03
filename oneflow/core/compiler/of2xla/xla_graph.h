@@ -52,11 +52,6 @@ class XlaGraph {
 
 class XlaLaunchGraph : public XlaGraph {
  public:
-  struct ArgumentContext {
-    std::string op_name;
-    std::string bind_blob_name;
-  };
-
   explicit XlaLaunchGraph(const XlaLaunchOpConf &launch_conf)
       : launch_conf_(launch_conf) {
     SetupArguments();
@@ -67,8 +62,17 @@ class XlaLaunchGraph : public XlaGraph {
       std::unordered_map<std::string, BlobDesc> *blob_descs,
       const ParallelContext* parallel_ctx);
  
-  typedef std::unordered_map<std::string, ArgumentContext> ArgContextMap; 
-  const ArgContextMap &arguments() const { return arguments_; }
+  LogicalBlobId Input(const std::string &name) const {
+    const auto &it = inputs_.find(name);
+    DCHECK(it != inputs_.end());
+    return it->second;
+  }
+
+  LogicalBlobId Output(const std::string &name) const {
+    const auto &it = outputs_.find(name);
+    DCHECK(it != outputs_.end());
+    return it->second;
+  }
 
  private:
   void SetupArguments();
@@ -76,7 +80,10 @@ class XlaLaunchGraph : public XlaGraph {
 
   const XlaLaunchOpConf &launch_conf_;
   std::vector<std::shared_ptr<OpNode> > allocated_opnodes_;
-  std::unordered_map<std::string, ArgumentContext> arguments_;
+  // "fc/out" --> "fc/out"
+  std::unordered_map<std::string, LogicalBlobId> inputs_;
+  // "out0" --> "fc/out"
+  std::unordered_map<std::string, LogicalBlobId> outputs_;
   std::vector<XlaLaunchOpConf::Argument> argument_proto_;
 };
 
@@ -112,7 +119,7 @@ void TopologyVisit(GraphType &graph, CallbackFunc func) {
   std::unordered_set<int64_t> visited;
   std::queue<pNodeType> visit_queue;
   for (pNodeType node : graph.Nodes()) {
-    if (node->in_edges().size() == 0) {
+    if (node->IsSourceNode()) {
       visit_queue.push(node);
     }
   }
@@ -130,11 +137,10 @@ void TopologyVisit(GraphType &graph, CallbackFunc func) {
   while (!visit_queue.empty()) {
     pNodeType node = visit_queue.front();
     visit_queue.pop();
-
+    // Run user function
     func(node);
 
     visited.insert(node->unique_id());
-
     for (pEdgeType edge : node->out_edges()) {
       pNodeType end = edge->end();
       if (IsAllInputsVisited(end)) {

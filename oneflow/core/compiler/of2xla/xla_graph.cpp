@@ -19,13 +19,14 @@ void XlaGraph::BuildEdges() {
   std::unordered_map<LogicalBlobId, XlaNode *> lbi2producer;
 
   for (XlaNode *node : Nodes()) {
-    for (const LogicalBlobId &lbi : node->Output()) {
-      lbi2producer.emplace(lbi, node);
+    for (const std::string &bn  : node->output_bns()) {
+      lbi2producer.emplace(node->Output(bn), node);
     }
   }
 
   for (XlaNode *node : Nodes()) {
-    for (const LogicalBlobId &lbi : node->Input()) {
+    for (const std::string &bn : node->input_bns()) {
+      const LogicalBlobId &lbi = node->Input(bn);
       const auto &it = lbi2producer.find(lbi);
       if (it != lbi2producer.end()) {
         Argument argument(lbi, node->node()->LogicalBlobDesc4Lbi(lbi));
@@ -117,15 +118,15 @@ XlaGraph *XlaGraph::AddSubGraph(int64_t node_id) {
 }
 
 void XlaLaunchGraph::SetupArguments() {
+  // Add argument nodes
   for (const auto &arg_conf : launch_conf_.attr().argument()) {
-    const auto &inputs = arg_conf.in();
-    const auto &outputs = arg_conf.out();
-    CHECK_EQ(inputs.size(), outputs.size());
-    for (int i = 0; i < inputs.size(); ++i) {
-      ArgumentContext argument_ctx;
-      argument_ctx.op_name = arg_conf.name();
-      argument_ctx.bind_blob_name = inputs[i];
-      arguments_.emplace(outputs[i], argument_ctx);
+    XlaNode *node = this->AddArgumentNode(arg_conf);
+    if (node->IsInArgumentNode()) {
+      std::string in = BlobName(node->Input("in"));
+      inputs_[in] = node->Output("out");
+    } else {
+      std::string out = BlobName(node->Output("out"));
+      outputs_[out] = node->Input("in");
     }
   }
 }
@@ -137,11 +138,9 @@ static ParallelDesc DefaultParallelDesc() {
 
 void XlaLaunchGraph::BuildLaunchGraph() {
   std::unordered_map<LogicalBlobId, XlaNode *> lbi2producer;
-  // Add argument nodes
-  for (const auto &arg_conf : launch_conf_.attr().argument()) {
-    XlaNode *node = this->AddArgumentNode(arg_conf);
-    for (const auto &lbi : node->Output()) {
-      lbi2producer.emplace(lbi, node);
+  for (XlaNode *node : this->Nodes()) {
+    for (const std::string &bn : node->output_bns()) {
+      lbi2producer.emplace(node->Output(bn), node);
     }
   }
   // Add normal nodes
@@ -150,16 +149,18 @@ void XlaLaunchGraph::BuildLaunchGraph() {
     auto op_node = std::make_shared<OpNode>(parallel_desc, node_conf);
     allocated_opnodes_.push_back(op_node);
     XlaNode *node = this->AddNode(op_node.get());
-    for (const auto &lbi : node->Output()) {
-      lbi2producer.emplace(lbi, node);
+    for (const std::string &bn : node->output_bns()) {
+      lbi2producer.emplace(node->Output(bn), node);
     }
   }
   // Add edges
   for (const auto &node : this->Nodes()) {
-    for (const LogicalBlobId &lbi : node->Input()) {
+    for (const std::string &bn : node->input_bns()) {
+      const LogicalBlobId &lbi = node->Input(bn);
       auto it = lbi2producer.find(lbi);
-      if (it != lbi2producer.end()) {
-        CHECK(node != it->second);
+      // Input argument node input lbi maybe equal to output lbi, so here we
+      // add edge only if `it->second != node` in order to avoid node-self ring
+      if (it != lbi2producer.end() && it->second != node) {
         Argument argument(lbi, BlobDesc());
         this->Connect(it->second, node, argument);
       }
@@ -172,7 +173,7 @@ void XlaLaunchGraph::InferBlobDescs(
       const ParallelContext* parallel_ctx) {
   TopologyVisit(*this, [&](XlaNode *node) {
     auto get_blob_desc_fn = [&](const LogicalBlobId &lbi) -> BlobDesc* {
-      std::string blob_name = GenLogicalBlobName(lbi);
+      std::string blob_name = BlobName(lbi);
       auto it = blob_descs->find(blob_name);
       // Check presentness for inputs
       if (IsNodeInput(node, lbi)) {
@@ -194,7 +195,6 @@ void XlaLaunchGraph::InferBlobDescs(
       Argument argument(edge->argument().blob_id(), it->second);
       edge->UpdateArgument(argument);
     }
-
   });
 }
 

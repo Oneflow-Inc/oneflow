@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/operator/operator.h"
 #include "oneflow/core/compiler/of2xla/xla_utility.h"
 
 namespace oneflow {
@@ -24,4 +25,23 @@ std::string ExtractOpTypeAsString(const OperatorConf &conf) {
 }
 
 }  // namespace mola
+
+std::string BlobName(const LogicalBlobId &lbi) {
+  CHECK_EQ(lbi.has_op_name(), true);
+  CHECK_EQ(lbi.has_blob_name(), true);
+  if (lbi.op_name() == "") {
+    return lbi.blob_name();
+  }
+  return GenLogicalBlobName(lbi);
+}
+
+LogicalBlobId BlobId(const std::string &blob_name) {
+  size_t pos = blob_name.find('/');
+  if (pos == std::string::npos) {
+    return GenLogicalBlobId("/" + blob_name);
+  } else {
+    return GenLogicalBlobId(blob_name);
+  }
+}
+
 }  // namespace oneflow
