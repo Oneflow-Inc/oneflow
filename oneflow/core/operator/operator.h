@@ -315,6 +315,8 @@ struct RuntimeMemBlockNum4OpSameOutputBlob final {
   size_t num_;
 };
 
+struct IsInterfaceOpConf4OpTypeCase final {};
+
 #define REGISTER_OP(op_type_case, OpType)                                       \
   REGISTER_CLASS_CREATOR(op_type_case, OnlyCpuSupportPredicator,                \
                          ([] { return new OnlyCpuSupportPredicator(false); })); \
@@ -334,6 +336,10 @@ struct RuntimeMemBlockNum4OpSameOutputBlob final {
 #define REGISTER_OP_SAME_OUTPUT_BLOB_MEM_BLOCK_NUM(op_type_case, num)       \
   REGISTER_CLASS_CREATOR(op_type_case, RuntimeMemBlockNum4OpSameOutputBlob, \
                          ([] { return new RuntimeMemBlockNum4OpSameOutputBlob(num); }))
+
+#define REGISTER_INTERFACE_OP(op_type_case)                          \
+  REGISTER_CLASS_CREATOR(op_type_case, IsInterfaceOpConf4OpTypeCase, \
+                         ([] { return new IsInterfaceOpConf4OpTypeCase(); }))
 
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf);
 

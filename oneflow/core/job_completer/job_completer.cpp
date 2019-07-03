@@ -191,55 +191,6 @@ void AddIdentityOpAndReconnect(
   }
 }
 
-void FixTickOpIfExists(Job* job) {
-  auto MutParallelConf4OpName = MakeGetterMutParallelConf4OpName(job->mutable_placement());
-  OperatorConf* tick_op_conf = nullptr;
-  FOR_RANGE(int, idx, 0, job->mutable_net()->op_size()) {
-    OperatorConf* op_conf = job->mutable_net()->mutable_op(idx);
-    if (op_conf->has_tick_conf()) {
-      CHECK(tick_op_conf == nullptr);
-      tick_op_conf = op_conf;
-    }
-  }
-  if (tick_op_conf == nullptr) { return; }
-  if (tick_op_conf->tick_conf().tick_size() > 0) { return; }
-  std::map<OperatorConf::OpTypeCase, std::vector<OperatorConf*>> op_type_case2source_op_confs;
-  FOR_RANGE(int, idx, 0, job->mutable_net()->op_size()) {
-    OperatorConf* op_conf = job->mutable_net()->mutable_op(idx);
-    if (op_conf == tick_op_conf) { continue; }
-    DeviceType device_type = ParallelDesc(*MutParallelConf4OpName(op_conf->name())).device_type();
-    if (ConstructOp(*op_conf, device_type)->input_bns().size() == 0) {
-      op_type_case2source_op_confs[op_conf->op_type_case()].push_back(op_conf);
-    }
-  }
-  if (op_type_case2source_op_confs.find(OperatorConf::kRecordLoadConf)
-      != op_type_case2source_op_confs.end()) {
-    CHECK_EQ(op_type_case2source_op_confs.size(), 1);
-  }
-  // set input of tick op
-  OperatorConf* source_op_conf = op_type_case2source_op_confs.cbegin()->second.at(0);
-  ParallelConf* source_parallel_conf = MutParallelConf4OpName(source_op_conf->name());
-  DeviceType device_type = ParallelDesc(*source_parallel_conf).device_type();
-  std::shared_ptr<Operator> source_op = ConstructOp(*source_op_conf, device_type);
-  CHECK_GE(source_op->output_bns().size(), 1);
-  LogicalBlobId src_first_output_lbi = source_op->BnInOp2Lbi(source_op->output_bns().Get(0));
-  std::string source_op_output_lbn = GenLogicalBlobName(src_first_output_lbi);
-  CHECK(tick_op_conf->tick_conf().tick().empty());
-  tick_op_conf->mutable_tick_conf()->add_tick(source_op_output_lbn);
-  // fix tick op placement
-  *MutParallelConf4OpName(tick_op_conf->name()) = *source_parallel_conf;
-  // add log_counter op connecting to tick op, making tick op always consumed
-  OperatorConf* tick_log_counter = job->mutable_net()->add_op();
-  tick_log_counter->set_name("tick_log_counter_" + NewUniqueId());
-  LogCounterOpConf* tick_log_counter_conf = tick_log_counter->mutable_log_counter_conf();
-  tick_log_counter_conf->set_in(tick_op_conf->name() + "/" + tick_op_conf->tick_conf().out());
-  tick_log_counter_conf->set_interval(MaxVal<int32_t>::value);
-  // add placement of tick_log_counter op
-  PlacementGroup* p_group = job->mutable_placement()->add_placement_group();
-  *(p_group->mutable_op_set()->add_op_name()) = tick_log_counter->name();
-  *(p_group->mutable_parallel_conf()) = *source_parallel_conf;
-}
-
 void ConvertPseudoChainToChain(Job* job) {
   auto GetSourceNodesAndEdges = [&](const HashSet<OpNode*>& chain_nodes,
                                     HashSet<OpNode*>* source_nodes,
@@ -319,44 +270,6 @@ void TieUpChainHeadersUnReachableFromAnyVariableOps(const OpGraph& op_graph, Job
   });
 }
 
-void AddIdentityOpForAllReduceOverlapingUntrainble(Job* job) {
-  auto MutOperatorConf4OpName = MakeMutableOperatorConf4OpName(job);
-  auto ParallelConf4OpName = MakeGetterParallelConf4OpName(job->placement());
-  OpGraph(*job).TopoForEachNode([&](OpNode* op_node) {
-    if (op_node->HasBackward()) { return; }
-    HashMap<bool, std::vector<OpEdge*>> has_bw2out_op_edges;
-    for (OpEdge* edge : op_node->out_edges()) {
-      has_bw2out_op_edges[edge->dst_node()->HasBackward()].push_back(edge);
-    }
-    if (has_bw2out_op_edges.size() <= 1) { return; }
-    // only handle op_nodes that:
-    // a) have no backward node;
-    // b) have trainable and untrainble consumers;
-
-    // group out_edge by trainable consumers' ParallelDesc
-    HashMap<ParallelDesc, std::vector<OpEdge*>> consumer_op_pr2edges;
-    for (OpEdge* edge : has_bw2out_op_edges.at(true)) {
-      ParallelDesc pr(*ParallelConf4OpName(edge->dst_node()->op().op_name()));
-      consumer_op_pr2edges[pr].push_back(edge);
-    }
-    for (const auto& pair : consumer_op_pr2edges) {
-      AddIdentityOpAndReconnect(
-          "all_reduce_overlapping_untrainable_", job, pair.second, MutOperatorConf4OpName,
-          *ParallelConf4OpName(pair.second.at(0)->dst_node()->op().op_name()));
-    }
-  });
-}
-
-void FixAndOptimizeDLNet(Job* job) {
-  const JobDesc& job_desc = GlobalJobDesc();
-  if (!(job_desc.IsPredict()
-        && job_desc.other_conf().predict_conf().has_tmp_split_fw_bw_train_conf())) {
-    FixTickOpIfExists(job);
-    // ConvertPseudoChainToChain(job);
-  }
-  // if (job_desc.IsTrain()) { AddIdentityOpForAllReduceOverlapingUntrainble(job); }
-}
-
 void SetOpTimeShape(const OpGraph& op_graph, Job* job) {
   op_graph.ForEachNode([&](OpNode* op_node) {
     auto* op_time_shape =
@@ -371,7 +284,7 @@ void SetOpTimeShape(const OpGraph& op_graph, Job* job) {
   });
 }
 
-void SetCtrlInOpName(const OpGraph& op_graph, Job* job) {
+void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, Job* job) {
   auto IsMutableConsumedLbi = [](const Operator& op, const LogicalBlobId& lbi) -> bool {
     for (const std::string& bn : op.input_bns()) {
       if (op.BnInOp2Lbi(bn) == lbi && op.InputBlobModifier4Ibn(bn).is_mutable()) { return true; }
@@ -427,9 +340,8 @@ void SetBatchDimLbis(const OpGraph& op_graph, Job* job) {
   });
 }
 
-void SetOpTimeShape7CtrlInOpName7ModelLbis(const OpGraph& op_graph, Job* job) {
+void SetOpTimeShape7ModelLbis(const OpGraph& op_graph, Job* job) {
   SetOpTimeShape(op_graph, job);
-  SetCtrlInOpName(op_graph, job);
   SetBatchDimLbis(op_graph, job);
 }
 
@@ -553,30 +465,29 @@ void JobCompleter::Complete(Job* job) const {
   SplitDecodeOps(job);
   AddRecordLoadOps(job);
   WithOpGraphAndMutJob(job, &ReplaceFacade);
+  // complete variable ops
+  WithOpGraphAndMutJob(job, &AutoVar);
   if (GlobalJobDesc().IsPredict()
       && GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
-    // complete variable ops
-    WithOpGraphAndMutJob(job, &AutoVar);
     WithOpGraphAndMutJob(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);
     // complete ops for trainning
     WithOpGraphAndMutJob(job, &GenerateOpConf4Trainning);
     WithOpGraphAndMutJob(job, &AddSaver);
-    // complete tick ops
-    WithOpGraphAndMutJob(job, &AutoSourceTick);
-    WithOpGraphAndMutJob(job, &AddTickForTimeShape);
-    WithOpGraphAndMutJob(job, &AutoSinkTick);
-    AddGlobalTotalJobCriticalSection(*job);
-    WithOpGraphAndMutJob(job, &AddGlobalInputOutputCriticalSections);
     WithOpGraphAndMutJob(job, &RewriteBoxingWithAllReduce);
-    WithOpGraphAndMutJob(job, &OpGraph::DumpLogicalBlobDescAndSbpSignature);
-    WithOpGraphAndMutJob(job, &GroupBoxingByDstParallel);
-    // add keep_header_only op
-    WithOpGraphAndMutJob(job, &AddKeepHeaderOnlyOp);
-    WithOpGraphAndMutJob(job, &SetOpTimeShape7CtrlInOpName7ModelLbis);
-    CheckOpGraph(OpGraph(*job));
   }
-  // TODO: refine
-  FixAndOptimizeDLNet(job);
+  WithOpGraphAndMutJob(job, &OpGraph::DumpLogicalBlobDescAndSbpSignature);
+  WithOpGraphAndMutJob(job, &GroupBoxingByDstParallel);
+  WithOpGraphAndMutJob(job, &AddKeepHeaderOnlyOp);
+  WithOpGraphAndMutJob(job, &SetCtrlInOpName4VariableOp);
+  // complete tick ops
+  WithOpGraphAndMutJob(job, &AutoSourceTick);
+  WithOpGraphAndMutJob(job, &AddTickForTimeShape);
+  WithOpGraphAndMutJob(job, &AutoSinkTick);
+  AddGlobalTotalJobCriticalSection(*job);
+  WithOpGraphAndMutJob(job, &AddGlobalInputOutputCriticalSections);
+  WithOpGraphAndMutJob(job, &OpGraph::DumpLogicalBlobDescAndSbpSignature);
+  WithOpGraphAndMutJob(job, &SetOpTimeShape7ModelLbis);
+  CheckOpGraph(OpGraph(*job));
 }
 
 }  // namespace oneflow
