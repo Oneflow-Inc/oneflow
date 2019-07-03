@@ -21,6 +21,7 @@
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/graph/plan_task_graph.h"
+#include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/job/oneflow.h"
 
 DECLARE_bool(grpc_use_no_signal);
@@ -287,21 +288,22 @@ void LinkTickTaskProto(TaskProto* identity_tick, TaskProto* src_tick, TaskProto*
 void LinkMainPlan(Plan* plan, const Plan& main_plan,
                   const std::vector<std::string>& identity_tick_op_names) {
   plan->mutable_task()->MergeFrom(main_plan.task());
-  HashMap<std::string, TaskProto*> sole_op_name2sole_task;
+  HashMap<std::string, TaskProto*> sole_tick_op_name2sole_task;
   FOR_RANGE(int64_t, i, 0, plan->task_size()) {
     TaskProto* task = plan->mutable_task(i);
+    if (IsClassRegistered<TickTockTaskType>(task->task_type()) == false) { continue; }
     if (task->exec_sequence().exec_node_size() == 1) {
       const auto& kernel_conf = task->exec_sequence().exec_node(0).kernel_conf();
       const auto& op_name = kernel_conf.op_attribute().op_conf().name();
-      CHECK(sole_op_name2sole_task.emplace(op_name, task).second);
+      CHECK(sole_tick_op_name2sole_task.emplace(op_name, task).second);
     }
   }
   FOR_RANGE(int32_t, i, 0, Global<CriticalSectionDesc>::Get()->CriticalSectionNum()) {
     const CriticalSection& critical_section =
         Global<CriticalSectionDesc>::Get()->GetCriticalSection(i);
-    LinkTickTaskProto(sole_op_name2sole_task.at(identity_tick_op_names.at(i)),
-                      sole_op_name2sole_task.at(critical_section.source_tick_op_name()),
-                      sole_op_name2sole_task.at(critical_section.sink_tick_op_name()));
+    LinkTickTaskProto(sole_tick_op_name2sole_task.at(identity_tick_op_names.at(i)),
+                      sole_tick_op_name2sole_task.at(critical_section.source_tick_op_name()),
+                      sole_tick_op_name2sole_task.at(critical_section.sink_tick_op_name()));
   }
   {
     // erase source_tick task_proto
@@ -801,7 +803,7 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
   JobBuilder job_builder(job);
   OperatorConf foreign_input_op_conf;
   {
-    foreign_input_op_conf.set_name(std::string("System-Push-ForeignOutput_") + NewUniqueId());
+    foreign_input_op_conf.set_name(std::string("System-Push-ForeignInput_") + NewUniqueId());
     auto* foreign_input_conf = foreign_input_op_conf.mutable_foreign_input_conf();
     foreign_input_conf->set_out("out");
     foreign_input_conf->set_ofblob_buffer_name(GetForeignInputBufferName(job_name));
@@ -838,7 +840,7 @@ void MakeArgPassingJob(const std::string& job_name, const ParallelBlobConf& para
   JobBuilder job_builder(job);
   OperatorConf foreign_input_op_conf;
   {
-    foreign_input_op_conf.set_name(std::string("System-ArgPassing-ForeignOutput_") + NewUniqueId());
+    foreign_input_op_conf.set_name(std::string("System-ArgPassing-ForeignInput_") + NewUniqueId());
     auto* foreign_input_conf = foreign_input_op_conf.mutable_foreign_input_conf();
     foreign_input_conf->set_out("out");
     foreign_input_conf->set_ofblob_buffer_name(GetForeignInputBufferName(job_name));
@@ -862,8 +864,8 @@ void MakeArgPassingJob(const std::string& job_name, const ParallelBlobConf& para
     input_conf->set_out("out");
     auto* blob_conf = input_conf->mutable_blob_conf();
     InitBlobConf(blob_conf, parallel_blob_conf);
-    job_builder.AddOps(parallel_blob_conf.parallel_conf(), input_op_confs);
   }
+  job_builder.AddOps(parallel_blob_conf.parallel_conf(), input_op_confs);
   OperatorConf switch_output_op_conf;
   {
     switch_output_op_conf.set_name(input_op_name);
@@ -916,7 +918,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
     jobs.at(job_id) = *job;
     AddGlobalJobDesc(*job, job_id);
     if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-      WithGlobalJobId(job_id, [&]() { CompileCurJobOnMaster(job, &sub_plans.at(job_id), false); });
+      WithGlobalJobId(job_id, [&]() { CompileCurJobOnMaster(job, &sub_plans.at(job_id), true); });
     }
     ++job_id;
   };
@@ -1124,7 +1126,7 @@ int main(int argc, char** argv) {
     job_set.mutable_cpp_flags_conf()->set_logbuflevel(FLAGS_logbuflevel);
   }
   if (job_set.cpp_flags_conf().has_grpc_use_no_signal() == false) {
-    job_set.mutable_cpp_flags_conf()->set_logbuflevel(FLAGS_grpc_use_no_signal);
+    job_set.mutable_cpp_flags_conf()->set_grpc_use_no_signal(FLAGS_grpc_use_no_signal);
   }
   return Main(job_set, argv[0]);
 }

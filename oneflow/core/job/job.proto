@@ -29,7 +29,7 @@ message JobHelperConf {
   map<string, OpTimeShape> op_name2op_time_shape = 3;
   map<string, BlobDescProto> lbn2logical_blob_desc = 4;
   repeated LogicalBlobId batch_dim_lbis = 6;
-  required OpBlobArgPairs identical_sbp_oba_pairs = 7;
+  optional OpBlobArgPairs identical_sbp_oba_pairs = 7;
 }
 
 message Job {

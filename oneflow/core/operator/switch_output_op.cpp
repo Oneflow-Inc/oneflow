@@ -50,5 +50,6 @@ void SwitchOutputOp::GetSbpSignatures(
 
 REGISTER_OP(OperatorConf::kSwitchOutputConf, SwitchOutputOp);
 REGISTER_OP_SAME_OUTPUT_BLOB_MEM_BLOCK_NUM(OperatorConf::kSwitchOutputConf, 1);
+REGISTER_INTERFACE_OP(OperatorConf::kSwitchOutputConf);
 
 }  // namespace oneflow
