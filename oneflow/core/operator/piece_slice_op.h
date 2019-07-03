@@ -21,8 +21,6 @@ class PieceSliceOp final : public Operator {
   void InferOutputBlobTimeShape(std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
                                 const ParallelContext* parallel_ctx,
                                 Shape* time_shape) const override;
-  bool NeedInBlobWhenBackward() const override { return false; }
-  bool NeedOutBlobWhenBackward() const override { return false; }
 
   const int32_t GetSliceNum() const;
 

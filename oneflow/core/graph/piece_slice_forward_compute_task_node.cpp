@@ -31,13 +31,11 @@ void PieceSliceForwardCompTaskNode::BuildExecGphAndRegst() {
 
 void PieceSliceForwardCompTaskNode::InferProducedDataRegstTimeShape() {
   std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in");
-  std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   std::vector<int64_t> dim_vec(in_regst->data_regst_time_shape()->dim_vec());
   const PieceSliceOp* op = dynamic_cast<PieceSliceOp*>(logical_node()->SoleOp().get());
   CHECK_NOTNULL(op);
-  int32_t slice_num = in_regst->GetBlobDesc(op->BnInOp2Lbi("in"))->shape().At(0);
-  dim_vec.push_back(slice_num);
-  *out_regst->mut_data_regst_time_shape() = std::make_shared<Shape>(dim_vec);
+  dim_vec.push_back(in_regst->GetBlobDesc(op->BnInOp2Lbi("in"))->shape().At(0));
+  *(GetProducedRegst("out")->mut_data_regst_time_shape()) = std::make_shared<Shape>(dim_vec);
 }
 
 }  // namespace oneflow

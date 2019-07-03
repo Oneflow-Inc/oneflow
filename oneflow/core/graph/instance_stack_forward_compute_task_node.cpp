@@ -22,11 +22,9 @@ void InstanceStackForwardCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<const Operator> op = logical_node()->SoleOp();
   ExecNode* exec_node = mut_exec_gph().NewNode();
   exec_node->mut_op() = op;
-  std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in");
-  exec_node->BindBnWithRegst(op->SoleIbn(), in_regst);
+  exec_node->BindBnWithRegst(op->SoleIbn(), GetSoleConsumedRegst("in"));
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
-  const LogicalBlobId out_lbi = op->BnInOp2Lbi(op->SoleObn());
-  out_regst->AddLbi(out_lbi);
+  out_regst->AddLbi(op->BnInOp2Lbi(op->SoleObn()));
   exec_node->BindBnWithRegst(op->SoleObn(), out_regst);
 
   CHECK_EQ(related_piece_slice_->consumed_regsts().size(), 1);
@@ -37,8 +35,7 @@ void InstanceStackForwardCompTaskNode::BuildExecGphAndRegst() {
 }
 
 void InstanceStackForwardCompTaskNode::InferProducedDataRegstTimeShape() {
-  std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in");
-  std::vector<int64_t> dim_vec(in_regst->data_regst_time_shape()->dim_vec());
+  std::vector<int64_t> dim_vec(GetSoleConsumedRegst("in")->data_regst_time_shape()->dim_vec());
   dim_vec.pop_back();
   CHECK_EQ(related_piece_slice_->consumed_regsts().size(), 1);
   CHECK_EQ(related_piece_slice_->consumed_regsts().begin()->second.size(), 1);

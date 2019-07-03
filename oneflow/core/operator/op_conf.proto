@@ -1590,7 +1590,7 @@ message LocalNonzeroOpConf {
 message PieceSliceOpConf {
   required string in = 1;
   required string out = 2;
-  // FIX ME: slice_num should be inferred instead setting by hand
+  // FIX ME: slice_num should be inferred instead of setting by hand
   // we set it by hand in order to infer time_shape in op_graph
   required int32 slice_num = 3;
 }
