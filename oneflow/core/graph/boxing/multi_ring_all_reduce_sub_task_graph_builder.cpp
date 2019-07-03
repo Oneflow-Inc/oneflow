@@ -43,9 +43,10 @@ SubTskGphBuilderStatus MultiRingAllReduceSubTskGphBuilder::Build(
     parallel_ctx.set_parallel_num(parallel_desc.parallel_num());
     parallel_ctx.set_parallel_id(i);
     parallel_ctx.set_policy(ParallelPolicy::kDataParallel);
-    ring_all_reduce_task_node->Init(parallel_desc.MachineIdForParallelId(i),
-                                    parallel_desc.DeviceIdForParallelId(i), lbi,
-                                    logical_blob_desc.shape(), parallel_ctx);
+    ring_all_reduce_task_node->Init(
+        parallel_desc.MachineIdForParallelId(i),
+        Global<IDMgr>::Get()->GetGpuBoxingH2DThrdId(parallel_desc.DeviceIdForParallelId(i)), lbi,
+        logical_blob_desc.shape(), parallel_ctx);
     boxing_nodes.push_back(ring_all_reduce_task_node);
   }
 
