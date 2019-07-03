@@ -161,7 +161,7 @@ void JobDesc::Init() {
 }
 
 bool IsInterfaceOpConf(const OperatorConf& op_conf) {
-  return op_conf.has_variable_conf() || op_conf.has_input_conf() || op_conf.has_output_conf();
+  return IsClassRegistered<IsInterfaceOpConf4OpTypeCase>(op_conf.op_type_case());
 }
 
 void WithGlobalJobId(int64_t job_id, const std::function<void()>& Handler) {

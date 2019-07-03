@@ -16,7 +16,7 @@ void CheckOpConf(const OperatorConf& op_conf) {
 
 void ForeignInputOp::InitFromOpConf() {
   CHECK(op_conf().has_foreign_input_conf());
-  if (op_conf().foreign_input_conf().has_tick()) { EnrollOutputBn("tick", false); }
+  if (op_conf().foreign_input_conf().has_tick()) { EnrollInputBn("tick", false); }
   EnrollOutputBn("out", false);
 }
 
