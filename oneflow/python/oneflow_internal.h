@@ -111,3 +111,20 @@ void CopyToNdarry(T* array, int size, uint64_t of_blob_ptr) {
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
   of_blob->AutoMemCopyTo<T>(array, size);
 }
+namespace {
+
+struct GlobalOneflowChecker final {
+  GlobalOneflowChecker() = default;
+  ~GlobalOneflowChecker() {
+    using namespace oneflow;
+    if (Global<Oneflow>::Get() == nullptr) {
+      LOG(INFO) << "oneflow exits successfully";
+    } else {
+      LOG(FATAL) << "Global<Oneflow> is not destroyed yet";
+    }
+  }
+};
+
+GlobalOneflowChecker checker;
+
+}  // namespace
