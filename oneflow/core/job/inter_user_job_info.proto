@@ -1,0 +1,15 @@
+syntax = "proto2";
+package oneflow;
+
+
+message ArgPassingJobInfo {
+  map<string, int64> output_or_var_op_name2in_index = 1;
+  required string intput_or_var_op_name = 2;
+  required string arg_passing_job_name = 3;
+}
+
+message InterUserJobInfo {
+  map<string, string> input_or_var_op_name2push_job_name = 1;
+  map<string, string> output_or_var_op_name2pull_job_name = 2;
+  map<string, ArgPassingJobInfo> input_or_var_op_name2arg_passing_job_info = 3;
+}

@@ -765,6 +765,9 @@ void InitBlobConf(InputBlobConf* blob_conf, const ParallelBlobConf& parallel_blo
 
 void MakePullJob(const std::string& job_name, const std::string& op_name,
                  const ParallelBlobConf& parallel_blob_conf, Job* job) {
+  auto* op_name2job_name =
+      Global<InterUserJobInfo>::Get()->mutable_output_or_var_op_name2pull_job_name();
+  (*op_name2job_name)[op_name] = job_name;
   DataType data_type;
   JobBuilder job_builder(job);
   OperatorConf input_op_conf;
@@ -799,6 +802,9 @@ void MakePullJob(const std::string& job_name, const std::string& op_name,
 
 void MakePushJob(const std::string& job_name, const std::string& op_name,
                  const ParallelBlobConf& parallel_blob_conf, Job* job) {
+  auto* op_name2job_name =
+      Global<InterUserJobInfo>::Get()->mutable_input_or_var_op_name2push_job_name();
+  (*op_name2job_name)[op_name] = job_name;
   DataType data_type;
   JobBuilder job_builder(job);
   OperatorConf foreign_input_op_conf;
@@ -837,6 +843,14 @@ void MakeArgPassingJob(const std::string& job_name, const ParallelBlobConf& para
                        const std::vector<std::string>& output_op_names, Job* job) {
   CHECK_EQ(output_op_names.empty(), false);
   for (const auto& output_op_name : output_op_names) { CHECK_NE(output_op_name, input_op_name); }
+  auto* op_name2arg_passing_job_info =
+      Global<InterUserJobInfo>::Get()->mutable_input_or_var_op_name2arg_passing_job_info();
+  CHECK(op_name2arg_passing_job_info->find(input_op_name) == op_name2arg_passing_job_info->end());
+  auto* arg_passing_job_info = &(*op_name2arg_passing_job_info)[input_op_name];
+  arg_passing_job_info->set_intput_or_var_op_name(input_op_name);
+  arg_passing_job_info->set_arg_passing_job_name(job_name);
+  auto* op_name2in_index = arg_passing_job_info->mutable_output_or_var_op_name2in_index();
+
   JobBuilder job_builder(job);
   OperatorConf foreign_input_op_conf;
   {
@@ -860,6 +874,7 @@ void MakeArgPassingJob(const std::string& job_name, const ParallelBlobConf& para
   std::vector<OperatorConf> input_op_confs(output_op_names.size());
   FOR_RANGE(int64_t, i, 0, output_op_names.size()) {
     input_op_confs.at(i).set_name(output_op_names.at(i));
+    (*op_name2in_index)[output_op_names.at(i)] = i;
     auto* input_conf = input_op_confs.at(i).mutable_input_conf();
     input_conf->set_out("out");
     auto* blob_conf = input_conf->mutable_blob_conf();
@@ -1002,11 +1017,13 @@ GlobalObjectsScope::GlobalObjectsScope(const JobSet& job_set) {
     Global<CriticalSectionDesc>::New();
     Global<BufferMgr<int64_t>>::New();
     Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::New();
+    Global<InterUserJobInfo>::New();
   }
 }
 
 GlobalObjectsScope::~GlobalObjectsScope() {
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    Global<InterUserJobInfo>::Delete();
     Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::Delete();
     Global<BufferMgr<int64_t>>::Delete();
     Global<CriticalSectionDesc>::Delete();
