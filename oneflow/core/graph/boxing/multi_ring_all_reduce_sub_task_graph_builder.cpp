@@ -59,6 +59,7 @@ SubTskGphBuilderStatus MultiRingAllReduceSubTskGphBuilder::Build(
         CopyHdTaskNode* copy_d2d_task_node = ctx->task_graph()->NewNode<CopyHdTaskNode>();
         copy_d2d_task_node->Init(CopyHdOpConf::D2D, parallel_desc.MachineIdForParallelId(next_id),
                                  parallel_desc.DeviceIdForParallelId(next_id));
+        copy_d2d_task_node->set_area_id(kMdUpdtArea);
         Connect<TaskNode>(boxing_nodes.at(i), ctx->task_graph()->NewEdge(), copy_d2d_task_node);
         send_to[i] = copy_d2d_task_node;
         recv_from[next_id] = copy_d2d_task_node;
