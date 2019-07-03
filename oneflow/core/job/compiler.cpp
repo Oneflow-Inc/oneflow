@@ -136,8 +136,8 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
     task_node->ToProto(plan->mutable_task()->Add());
   });
   plan->set_total_mbn_num(total_mbn_num);
-  GenNetTopo(plan);
-  ToDotFile(*plan, "/dot/plan.dot");
+  // GenNetTopo(plan);
+  // ToDotFile(*plan, "/dot/plan.dot");
   Global<OpGraph>::Delete();
 #ifdef WITH_CUDA
   Global<CudnnConvCtxCache>::Delete();

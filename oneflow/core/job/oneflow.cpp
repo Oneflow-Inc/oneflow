@@ -801,7 +801,7 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
   JobBuilder job_builder(job);
   OperatorConf foreign_input_op_conf;
   {
-    foreign_input_op_conf.set_name(std::string("System-Push-ForeignOutput_") + NewUniqueId());
+    foreign_input_op_conf.set_name(std::string("System-Push-ForeignInput_") + NewUniqueId());
     auto* foreign_input_conf = foreign_input_op_conf.mutable_foreign_input_conf();
     foreign_input_conf->set_out("out");
     foreign_input_conf->set_ofblob_buffer_name(GetForeignInputBufferName(job_name));
@@ -838,7 +838,7 @@ void MakeArgPassingJob(const std::string& job_name, const ParallelBlobConf& para
   JobBuilder job_builder(job);
   OperatorConf foreign_input_op_conf;
   {
-    foreign_input_op_conf.set_name(std::string("System-ArgPassing-ForeignOutput_") + NewUniqueId());
+    foreign_input_op_conf.set_name(std::string("System-ArgPassing-ForeignInput_") + NewUniqueId());
     auto* foreign_input_conf = foreign_input_op_conf.mutable_foreign_input_conf();
     foreign_input_conf->set_out("out");
     foreign_input_conf->set_ofblob_buffer_name(GetForeignInputBufferName(job_name));
@@ -1124,7 +1124,7 @@ int main(int argc, char** argv) {
     job_set.mutable_cpp_flags_conf()->set_logbuflevel(FLAGS_logbuflevel);
   }
   if (job_set.cpp_flags_conf().has_grpc_use_no_signal() == false) {
-    job_set.mutable_cpp_flags_conf()->set_logbuflevel(FLAGS_grpc_use_no_signal);
+    job_set.mutable_cpp_flags_conf()->set_grpc_use_no_signal(FLAGS_grpc_use_no_signal);
   }
   return Main(job_set, argv[0]);
 }

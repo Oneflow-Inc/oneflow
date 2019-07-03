@@ -17,6 +17,7 @@ class OfBlob final {
 
   int data_type() const { return blob_->data_type(); }
   size_t NumAxes() const { return blob_->shape().NumAxes(); }
+  int64_t elem_cnt() const { return blob_->shape().elem_cnt(); }
   void CopyShapeTo(int64_t* ptr, int64_t num_axis) const;
 
   template<typename T>

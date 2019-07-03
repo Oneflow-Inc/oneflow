@@ -91,3 +91,17 @@ std::string OfBlob_GetCopyFromBufferFuncName(uint64_t of_blob_ptr) {
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
   return data_type2func_name.at(of_blob->data_type());
 }
+
+template<typename T>
+void CopyFromNdarry(T* array, int size, uint64_t of_blob_ptr) {
+  using namespace oneflow;
+  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+  of_blob->AutoMemCopyFrom<T>(array, size);
+}
+
+template<typename T>
+void CopyToNdarry(T* array, int size, uint64_t of_blob_ptr) {
+  using namespace oneflow;
+  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+  of_blob->AutoMemCopyTo<T>(array, size);
+}
