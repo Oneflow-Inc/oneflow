@@ -29,12 +29,16 @@ class OfBlob(object):
         oneflow_internal.OfBlob_CopyShapeToNumpy(dst_ndarray, self.of_blob_ptr_)
         return dst_ndarray.tolist()
 
-    def numpy(self):
+    @property
+    def size(self):
         elem_cnt = 1
         for d in self.shape:
             elem_cnt *= d
+        return elem_cnt
+
+    def numpy(self):
         dtype_ = dtypeInNumpy(self.dtype)
-        dst_ndarray = np.ndarray(elem_cnt, dtype=dtype_)
+        dst_ndarray = np.ndarray(self.size, dtype=dtype_)
         if dtype_ is np.int32:
             oneflow_internal.CopyToInt32Ndarry(dst_ndarray, self.of_blob_ptr_)
         elif dtype_ is np.float32:
@@ -44,10 +48,7 @@ class OfBlob(object):
         return dst_ndarray
 
     def copyFromNumpy(self, src_ndarray):
-        elem_cnt = 1
-        for d in self.shape:
-            elem_cnt *= d
-        assert(elem_cnt == src_ndarray.size)
+        assert(self.size == src_ndarray.size)
         dtype_ = dtypeInNumpy(self.dtype)
         if dtype_ is np.int32:
             oneflow_internal.CopyFromInt32Ndarry(src_ndarray, self.of_blob_ptr_)
