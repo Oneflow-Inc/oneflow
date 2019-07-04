@@ -17,6 +17,7 @@
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/graph/boxing/naive_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/ring_sub_task_graph_builder.h"
+#include "oneflow/core/graph/boxing/multi_ring_all_reduce_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/dynamic_shape_supported_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/chain_sub_task_graph_builder.h"
 
@@ -741,6 +742,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV2) {
     const BlobDesc& blob_desc = Global<OpGraph>::Get()->GetLogicalBlobDesc(lbi);
     SubTskGphBuilderCtx ctx(this);
     std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
+    builders.emplace_back(new MultiRingAllReduceSubTskGphBuilder());
     builders.emplace_back(new RingSubTskGphBuilder());
     builders.emplace_back(new NaiveSubTskGphBuilder());
     builders.emplace_back(new DynamicShapeSupportedSubTskGphBuilder());
