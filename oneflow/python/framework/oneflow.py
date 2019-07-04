@@ -7,5 +7,8 @@ def run():
         job_set = compiler.Compile()
     main = compiler.GetMainFunc()
     with oneflow_mode.RuntimeMode():
-        with runtime.MachineRuntimeContext(job_set):
-            main()
+        try:
+            with runtime.GetMachineRuntimeEnv(job_set):
+                main()
+        except ThisIsNotAnError:
+            pass

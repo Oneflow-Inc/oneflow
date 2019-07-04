@@ -1,18 +1,8 @@
-
-def remote(func):
-    TODO()
-
-def remote_inline(func):
-    TODO()
-
-def static_assert(func):
-    TODO()
-
-def main(func):
-    TODO()
-
-def config(func):
-    TODO()
+import oneflow.python.framework.decorator_context as decorator_context
+import oneflow.python.framework.oneflow_mode as oneflow_mode
+import oneflow.python.framework.compile_context as compile_context
+import oneflow.core.job.job_conf_pb2 as job_conf_util
+import oneflow.core.job.job_set_pb2 as job_set_util
 
 def val():
     TODO()
@@ -24,7 +14,19 @@ def parse_job_as_func_body(job):
     TODO()
 
 def Compile():
-    TODO()
+    assert oneflow_mode.IsCurrentCompileMode(), "Compile() must be under compile mode"
+    assert decorator_context.main_func is not None, "no main function found"
+    assert len(decorator_context.job_name2func) == 0, "no job function found"
+    compile_context.cur_job_set = job_set_util.JobSet()
+    decorator_context.main_func()
+    job_set = compile_context.cur_job_set
+    for job_name in decorator_context.job_name2func:
+        func = decorator_context.job_name2func[job_name]
+        compile_context.cur_job = job_conf_util.JobConf()
+        func()
+        assert compile_context.cur_job is not None, "No job compiled"
+        job_set.add_job_conf(compile_context.cur_job)
+    return job_set
 
 def GetMainFunc():
     TODO
