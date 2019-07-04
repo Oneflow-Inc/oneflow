@@ -42,7 +42,7 @@ void InstanceStackForwardCompTaskNode::InferProducedDataRegstTimeShape() {
   std::shared_ptr<RegstDesc> related_piece_slice_consumed_regst =
       (*related_piece_slice_->consumed_regsts().begin()).second.front();
   std::shared_ptr<Shape> out_time_shape = std::make_shared<Shape>(dim_vec);
-  CHECK_EQ(out_time_shape, related_piece_slice_consumed_regst->data_regst_time_shape());
+  CHECK_EQ(*out_time_shape, *(related_piece_slice_consumed_regst->data_regst_time_shape()));
   *(GetProducedRegst("out")->mut_data_regst_time_shape()) = out_time_shape;
 }
 

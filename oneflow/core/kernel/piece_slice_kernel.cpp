@@ -1,5 +1,6 @@
 #include "oneflow/core/kernel/piece_slice_kernel.h"
 #include "oneflow/core/kernel/piece_slice_kernel_util.h"
+#include <iostream>
 
 namespace oneflow {
 
@@ -14,6 +15,7 @@ void PieceSliceKernel<device_type>::ForwardDataContent(
   CHECK_EQ(total_ins_num, in_blob->static_shape().At(0));
   PieceSliceKernelUtil<device_type>::PieceSlice(ctx.device_ctx, ins_idx, total_ins_num, in_blob,
                                                 BnInOp2Blob("out"));
+  std::cout << "piece slice forward kernel" << std::endl;
 }
 
 template<DeviceType device_type>
@@ -27,6 +29,7 @@ void PieceSliceKernel<device_type>::BackwardDataContent(
   CHECK_EQ(total_ins_num, in_diff_blob->static_shape().At(0));
   PieceSliceKernelUtil<device_type>::InstanceStack(ctx.device_ctx, out_diff_idx, total_ins_num,
                                                    BnInOp2Blob(GenDiffBn("out")), in_diff_blob);
+  std::cout << "piece slice backward kernel" << std::endl;
 }
 
 template<DeviceType device_type>
@@ -57,13 +60,15 @@ void PieceSliceKernel<device_type>::ForwardDim0ValidNum(
 template<DeviceType device_type>
 void PieceSliceKernel<device_type>::ForwardInstanceShape(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  Blob* out_blob = BnInOp2Blob("out");
+  if (out_blob->shape().NumAxes() < 2) { return; }
   const Blob* in_blob = BnInOp2Blob("in");
   const bool uncontiguous_varing_instance =
       in_blob->has_dim1_valid_num_field() || in_blob->has_dim2_valid_num_field();
   const bool contiguous_varing_instance = in_blob->has_instance_shape_field();
   if (contiguous_varing_instance) {
     CHECK(!uncontiguous_varing_instance);
-    BnInOp2Blob("out")->set_instance_shape(
+    out_blob->set_instance_shape(
         Shape(std::vector<int64_t>(in_blob->instance_shape().dim_vec().begin() + 1,
                                    in_blob->instance_shape().dim_vec().end())));
   } else {

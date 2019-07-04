@@ -1,4 +1,5 @@
 #include "oneflow/core/kernel/clip_by_value_kernel.h"
+#include <iostream>
 
 namespace oneflow {
 
@@ -16,6 +17,7 @@ void ClipByValueKernel<device_type, T>::ForwardDataContent(
   ClipByValueUtil<device_type, T>::Forward(
       ctx.device_ctx, shape.elem_cnt(), in_blob->dptr<T>(), static_cast<T>(conf.min_val()),
       static_cast<T>(conf.max_val()), clip_mask_blob->mut_dptr<int8_t>(), out_blob->mut_dptr<T>());
+  std::cout << "clip by value forward" << std::endl;
 }
 
 template<DeviceType device_type, typename T>
@@ -31,6 +33,7 @@ void ClipByValueKernel<device_type, T>::BackwardDataContent(
   ClipByValueUtil<device_type, T>::Backward(
       ctx.device_ctx, shape.elem_cnt(), out_diff_blob->dptr<T>(), clip_mask_blob->dptr<int8_t>(),
       in_diff_blob->mut_dptr<T>());
+  std::cout << "clip by value backward" << std::endl;
 }
 
 template<DeviceType device_type, typename T>

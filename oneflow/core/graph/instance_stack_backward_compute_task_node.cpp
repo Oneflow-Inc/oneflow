@@ -13,7 +13,7 @@ void InstanceStackBackwardCompTaskNode::ConsumeAllRegsts() {
     if (edge->src_node()->GetTaskType() == TaskType::kInstanceStackForward) {
       ConsumeRegst("in", edge->src_node()->GetSoleConsumedRegst("in"));
     } else {
-      ConsumeRegst("out_dif", edge->GetSoleRegst());
+      ConsumeRegst("out_diff", edge->GetSoleRegst());
     }
   }
 }

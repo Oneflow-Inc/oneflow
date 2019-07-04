@@ -33,7 +33,7 @@ void PieceSliceOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
     CHECK(!uncontiguous_varing_instance);
     out->set_has_dim0_valid_num_field(true);
     out->mut_dim0_inner_shape() = Shape({1, out->shape().At(0)});
-    out->set_has_instance_shape_field(in->shape().NumAxes() > 2);
+    out->set_has_instance_shape_field(true);
   }
 }
 

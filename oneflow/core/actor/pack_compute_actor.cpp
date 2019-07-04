@@ -1,4 +1,5 @@
 #include "oneflow/core/actor/pack_compute_actor.h"
+#include <iostream>
 
 namespace oneflow {
 
@@ -22,6 +23,11 @@ void PackCompActor::VirtualCompActorInit(const TaskProto& proto) {
 }
 
 void PackCompActor::Act() {
+  if (!handle_unpack_bw_) {
+    std::cout << "instance stack forward actor, act_num: " << act_num_cnt_ << std::endl;
+  } else {
+    std::cout << "piece slice backward actor, act_num: " << act_num_cnt_ << std::endl;
+  }
   KernelCtx ctx = GenDefaultKernelCtx();
   std::pair<size_t, size_t> other_val = std::make_pair(act_num_cnt_, total_pack_num_);
   ctx.other = static_cast<void*>(&other_val);

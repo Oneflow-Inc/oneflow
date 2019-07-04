@@ -1,13 +1,14 @@
 #include "oneflow/core/actor/unpack_compute_actor.h"
+#include <iostream>
 
 namespace oneflow {
 
 void UnpackCompActor::VirtualCompActorInit(const TaskProto& proto) {
-  int64_t in_diff_regst_desc_id = Name2SoleRegstDescId("in_diff");
-  handle_pack_bw_ = in_diff_regst_desc_id != -1;
+  int64_t out_diff_regst_desc_id = Name2SoleRegstDescId("out_diff");
+  handle_pack_bw_ = out_diff_regst_desc_id != -1;
   if (handle_pack_bw_) {
     const Shape& in_diff_time_shape = Global<RegstMgr>::Get()
-                                          ->RegstDesc4RegstDescId(in_diff_regst_desc_id)
+                                          ->RegstDesc4RegstDescId(Name2SoleRegstDescId("in_diff"))
                                           .data_regst_time_shape();
     total_unpack_num_ = in_diff_time_shape.At(in_diff_time_shape.NumAxes() - 1);
   } else {
@@ -22,6 +23,11 @@ void UnpackCompActor::VirtualCompActorInit(const TaskProto& proto) {
 }
 
 void UnpackCompActor::Act() {
+  if (!handle_pack_bw_) {
+    std::cout << "piece slice forward actor, act_num: " << act_num_cnt_ << std::endl;
+  } else {
+    std::cout << "instance stack backward actor, act_num: " << act_num_cnt_ << std::endl;
+  }
   KernelCtx ctx = GenDefaultKernelCtx();
   std::pair<size_t, size_t> other_val = std::make_pair(act_num_cnt_, total_unpack_num_);
   ctx.other = static_cast<void*>(&other_val);

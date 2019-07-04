@@ -1,5 +1,6 @@
 #include "oneflow/core/kernel/instance_stack_kernel.h"
 #include "oneflow/core/kernel/piece_slice_kernel_util.h"
+#include <iostream>
 
 namespace oneflow {
 
@@ -19,6 +20,7 @@ void InstanceStackKernel<device_type>::ForwardDataContent(
   CHECK_EQ(total_ins_num, out_blob->static_shape().At(0));
   PieceSliceKernelUtil<device_type>::InstanceStack(ctx.device_ctx, ins_idx, total_ins_num,
                                                    BnInOp2Blob("in"), out_blob);
+  std::cout << "instance stack forward kernel" << std::endl;
 }
 
 template<DeviceType device_type>
@@ -32,6 +34,7 @@ void InstanceStackKernel<device_type>::BackwardDataContent(
   CHECK_EQ(total_ins_num, out_diff_blob->static_shape().At(0));
   PieceSliceKernelUtil<device_type>::PieceSlice(ctx.device_ctx, in_diff_idx, total_ins_num,
                                                 out_diff_blob, BnInOp2Blob(GenDiffBn("in")));
+  std::cout << "instance stack backward kernel" << std::endl;
 }
 
 template<DeviceType device_type>
