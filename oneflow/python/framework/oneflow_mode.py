@@ -1,26 +1,31 @@
 
 def IsCurrentCompileMode:
-    TODO()
+    return current_mode == COMPILE_MODE
     
 def IsCurrentRuntimeMode:
-    TODO()
+    return current_mode == RUNTIME_MODE
+
+COMPILE_MODE = 'COMPILE_MODE';
+RUNTIME_MODE = 'RUNTIME_MODE';
+
+current_mode = None;
 
 class CompileMode:
     def __init__(self):
-        TODO()
+        assert current_mode == None, "no reentrant use of oneflow_mode"
 
     def __enter__(self):
-        TODO()
+        current_mode = COMPILE_MODE
 
     def __exit__(self, *args):
-        TODO()
+        current_mode = None
         
 class RuntimeMode:
     def __init__(self):
-        TODO()
+        assert current_mode == None, "no reentrant use of oneflow_mode"
 
     def __enter__(self):
-        TODO()
+        current_mode = RUNTIME_MODE
 
     def __exit__(self, *args):
-        TODO()
+        current_mode = None
