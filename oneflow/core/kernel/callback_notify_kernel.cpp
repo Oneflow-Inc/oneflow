@@ -13,7 +13,7 @@ void CallbackNotifyKernel<T>::ForwardDataContent(
                                    ->Get(buffer_name)
                                    ->TryReceive(&foreign_callback);
   CHECK_NE(buffer_status, kBufferStatusEmpty);
-  if (buffer_status == kBufferStatusSuccess) { foreign_callback->Callback(); }
+  if (buffer_status == kBufferStatusSuccess) { foreign_callback->Finish(); }
 }
 
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kCallbackNotifyConf, CallbackNotifyKernel,

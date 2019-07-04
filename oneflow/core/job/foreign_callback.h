@@ -13,7 +13,7 @@ class ForeignCallback {
 
   virtual void PushBlob(uint64_t ofblob_ptr) const { UNIMPLEMENTED(); }
   virtual void PullBlob(uint64_t ofblob_ptr) const { UNIMPLEMENTED(); }
-  virtual void Callback() const { UNIMPLEMENTED(); }
+  virtual void Finish() const { UNIMPLEMENTED(); }
 };
 
 }  // namespace oneflow
