@@ -4,6 +4,12 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
+void BiasAddKernel<device_type, T>::ForwardDim0ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  BnInOp2Blob("out")->set_dim0_valid_num(0, BnInOp2Blob("a")->dim0_valid_num(0));
+}
+
+template<DeviceType device_type, typename T>
 void BiasAddKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* a_blob = BnInOp2Blob("a");

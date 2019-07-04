@@ -111,6 +111,9 @@ message Config {
 
   optional DebugBlobDumpConf debug_blob_dump_conf = 151;
 
+  optional bool all_reduce_use_boxing = 152 [default = false];
+
+
   oneof JobType {
     TrainConf train_conf = 200;
     PredictConf predict_conf = 201;

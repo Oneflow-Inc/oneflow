@@ -128,7 +128,7 @@ Plan Compiler::DoCompile() {
   }
   task_gph->RemoveEmptyRegsts();
   task_gph->AddOrderingCtrlEdgeInSameChain();
-  // task_gph->EnableMemSharingInReduceStruct();
+  task_gph->EnableMemSharingInReduceStruct();
   // TODO: update method for fw bw split
   // if (job_desc->IsTrain() && job_desc->enable_mem_sharing()) {
   //   task_gph->EnableMemSharingAfterAllManualSetForMdUpdt();  // must last mem shared manual set
