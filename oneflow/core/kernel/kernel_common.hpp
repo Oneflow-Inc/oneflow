@@ -1,6 +1,8 @@
-
 #ifndef ONEFLOW_KERNEL_COMMON_HPP
 #define ONEFLOW_KERNEL_COMMON_HPP
+
+#include "oneflow/core/common/util.h"
+
 namespace oneflow{
     //function object for add/clone kernel
     template<DeviceType device_type, typename T, typename... Args>
@@ -16,7 +18,7 @@ namespace oneflow{
 
     template<DeviceType device_type, typename T, typename... Args>
     inline void Addition(...) {
-        static_assert(true, "just support float point here");
+        LOG(FATAL) << "just support float point here";
     }
 
     template<bool in, DeviceType device_type, typename T, typename U>
