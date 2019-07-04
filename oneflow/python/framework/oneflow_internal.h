@@ -62,10 +62,11 @@ size_t OfBlob_NumAxes(uint64_t of_blob_ptr) {
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
   return of_blob->NumAxes();
 }
-void OfBlob_CopyShapeTo(uint64_t of_blob_ptr, int64_t* ptr, int64_t num_axis) {
+
+void OfBlob_CopyShapeToNumpy(long* array, int size, uint64_t of_blob_ptr) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  return of_blob->CopyShapeTo(ptr, num_axis);
+  return of_blob->CopyShapeTo(array, size);
 };
 
 #define DEFINE_COPIER(T, type_proto)                                                \
