@@ -42,14 +42,18 @@ foreach(oneflow_single_file ${oneflow_all_src})
     continue()
   endif()
 
-
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.h$")
-    list(APPEND of_all_obj_cc ${oneflow_single_file})
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/python/.*\\.h$")
+    list(APPEND of_python_obj_cc ${oneflow_single_file})
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/python/.*\\.h$")
-    list(APPEND of_python_obj_cc ${oneflow_single_file})
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/python/.*\\.i$")
+    list(APPEND of_all_swig ${oneflow_single_file})
+    set(group_this ON)
+  endif()
+
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.h$")
+    list(APPEND of_all_obj_cc ${oneflow_single_file})
     set(group_this ON)
   endif()
 
@@ -72,12 +76,7 @@ foreach(oneflow_single_file ${oneflow_all_src})
     #list(APPEND of_all_obj_cc ${oneflow_single_file})   # include the proto file in the project
     set(group_this ON)
   endif()
-
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/python/.*\\.i$")
-    list(APPEND of_all_swig ${oneflow_single_file})
-    set(group_this ON)
-  endif()
-
+  
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.cpp$")
     if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*_test\\.cpp$")
       # test file
