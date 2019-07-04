@@ -10,7 +10,7 @@ class MockCallbackNotifier final : public ForeignCallback {
   OF_DISALLOW_COPY_AND_MOVE(MockCallbackNotifier);
   explicit MockCallbackNotifier(std::function<void()> callback) : callback_(callback) {}
 
-  void Callback() const override { callback_(); }
+  void Finish() const override { callback_(); }
 
  private:
   std::function<void()> callback_;
