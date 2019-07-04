@@ -51,12 +51,6 @@ int Ofblob_GetDataType(uint64_t of_blob_ptr) {
   return of_blob->data_type();
 }
 
-int Ofblob_GetElemCnt(uint64_t of_blob_ptr) {
-  using namespace oneflow;
-  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  return of_blob->elem_cnt();
-}
-
 size_t OfBlob_NumAxes(uint64_t of_blob_ptr) {
   using namespace oneflow;
   auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);

@@ -12,7 +12,7 @@ def InitGlobalOneflowByJobSet(job_set):
     oneflow_internal.InitGlobalOneflowBySerializedJobSet(job_set.SerializeToString())
 
 def GetInterUserJobInfo():
-    return oneflow_internal.GetSerializedInterUserJobInfo()
+    return text_format.Parse(oneflow_internal.GetSerializedInterUserJobInfo(), InterUserJobInfo())
 
 def LaunchJob(job_name, cb):
     oneflow_internal.LaunchJob(job_name, cb)
