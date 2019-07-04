@@ -4,6 +4,7 @@
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/common/buffer_manager.h"
+#include <google/protobuf/text_format.h>
 
 void NaiveSequentialRunSerializedJobSet(const oneflow::JobSet& job_set) {
   using namespace oneflow;
@@ -22,7 +23,7 @@ std::string GetSerializedInterUserJobInfo() {
   CHECK_NOTNULL(Global<Oneflow>::Get());
   CHECK_NOTNULL(Global<InterUserJobInfo>::Get());
   std::string ret;
-  Global<InterUserJobInfo>::Get()->SerializeToString(&ret);
+  google::protobuf::TextFormat::PrintToString(*Global<InterUserJobInfo>::Get(), &ret);
   return ret;
 }
 
