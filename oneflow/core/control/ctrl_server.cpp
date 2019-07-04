@@ -27,9 +27,7 @@ CtrlServer::~CtrlServer() {
 CtrlServer::CtrlServer() : is_first_connect_(true), this_machine_addr_("") {
   Init();
 
-  if (FLAGS_grpc_use_no_signal || Global<JobSet>::Get()->cpp_flags_conf().grpc_use_no_signal()) {
-    grpc_use_signal(-1);
-  }
+  if (FLAGS_grpc_use_no_signal) { grpc_use_signal(-1); }
   int port = Global<ResourceDesc>::Get()->ctrl_port();
   grpc::ServerBuilder server_builder;
   int bound_port = 0;
