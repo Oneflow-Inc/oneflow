@@ -18,14 +18,14 @@ class OfBlob(object):
         return tuple(dst_ndarray.tolist())
 
     def CopyToNdarray(self):
-        dst_ndarray = np.ndarray(self._Size, dtype=convert_of_dtype_to_numpy_dtype(self.dtype))
+        dst_ndarray = np.ndarray(self._size, dtype=convert_of_dtype_to_numpy_dtype(self.dtype))
         method_name = oneflow_internal.OfBlob_GetCopyToBufferFuncName(self.of_blob_ptr_)
         copy_method = getattr(oneflow_internal, method_name)
         copy_method(self.of_blob_ptr_, dst_ndarray)
         return dst_ndarray.reshape(self.shape)
 
     def CopyFromNdarray(self, src_ndarray):
-        assert(self._Size == src_ndarray.size)
+        assert(self._size == src_ndarray.size)
         assert(convert_of_dtype_to_numpy_dtype(self.dtype) == src_ndarray.dtype)
         method_name = oneflow_internal.OfBlob_GetCopyFromBufferFuncName(self.of_blob_ptr_)
         copy_method = getattr(oneflow_internal, method_name)
@@ -33,7 +33,7 @@ class OfBlob(object):
         return
 
     @property
-    def _Size(self):
+    def _size(self):
         elem_cnt = 1
         for d in self.shape:
             elem_cnt *= d
