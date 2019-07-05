@@ -2,15 +2,6 @@ import oneflow_internal
 import oneflow.core.common.data_type_pb2 as data_type_pb2
 import numpy as np
 
-OF_BLOB_DTYPE2NUMPY_DTYPE = {
-        data_type_pb2.kInt32: np.int32,
-        data_type_pb2.kFloat: np.float32
-    }
-
-def convert_of_dtype_to_numpy_dtype(dtype):
-    if dtype not in OF_BLOB_DTYPE2NUMPY_DTYPE: raise NotImplementedError
-    return OF_BLOB_DTYPE2NUMPY_DTYPE[dtype ]
-
 class OfBlob(object):
     def __init__(self, of_blob_ptr):
         self.of_blob_ptr_ = of_blob_ptr
@@ -47,3 +38,12 @@ class OfBlob(object):
         for d in self.shape:
             elem_cnt *= d
         return elem_cnt
+
+OF_BLOB_DTYPE2NUMPY_DTYPE = {
+        data_type_pb2.kInt32: np.int32,
+        data_type_pb2.kFloat: np.float32
+    }
+
+def convert_of_dtype_to_numpy_dtype(dtype):
+    if dtype not in OF_BLOB_DTYPE2NUMPY_DTYPE: raise NotImplementedError
+    return OF_BLOB_DTYPE2NUMPY_DTYPE[dtype ]
