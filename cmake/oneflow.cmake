@@ -29,10 +29,16 @@ endif()
 add_custom_target(of_expand_hdr)
 file(GLOB_RECURSE oneflow_all_hdr_to_be_expanded "${PROJECT_SOURCE_DIR}/oneflow/core/*.e.h" "${PROJECT_SOURCE_DIR}/oneflow/python/*.e.h")
 foreach(oneflow_hdr_to_be_expanded ${oneflow_all_hdr_to_be_expanded})
+  file(RELATIVE_PATH of_ehdr_rel_path ${PROJECT_SOURCE_DIR} ${oneflow_hdr_to_be_expanded})
+  set(of_e_h_expanded "${PROJECT_BINARY_DIR}/${of_ehdr_rel_path}.expanded.h")
+  if(WIN32)
+    error( "Expanding macro in WIN32 is not supported yet")
+  else()
     add_custom_command(TARGET of_expand_hdr PRE_BUILD
-        COMMAND ${CMAKE_C_COMPILER} -E -I"${PROJECT_SOURCE_DIR}" -I"${PROJECT_BINARY_DIR}"
-            -o "${oneflow_hdr_to_be_expanded}.expanded.h" "${oneflow_hdr_to_be_expanded}")
-    list(APPEND oneflow_all_hdr_expanded "${oneflow_hdr_to_be_expanded}.expanded.h")
+      COMMAND ${CMAKE_C_COMPILER} -E -I"${PROJECT_SOURCE_DIR}" -I"${PROJECT_BINARY_DIR}"
+      -o "${of_e_h_expanded}" "${oneflow_hdr_to_be_expanded}")
+  endif()
+  list(APPEND oneflow_all_hdr_expanded "${of_e_h_expanded}")
 endforeach()
 
 file(GLOB_RECURSE oneflow_all_src "${PROJECT_SOURCE_DIR}/oneflow/core/*.*" "${PROJECT_SOURCE_DIR}/oneflow/python/*.*")
@@ -115,8 +121,6 @@ foreach(source_file ${of_all_obj_cc} ${of_main_cc} ${of_all_test_cc} ${of_python
     COMMAND clang-format -i -style=file ${source_file})
 endforeach()
 
-add_dependencies(of_format of_expand_hdr)
-
 # proto obj lib
 add_custom_target(make_pyproto_dir ALL
   COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python/oneflow/core)
@@ -131,7 +135,7 @@ RELATIVE_PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
 
 oneflow_add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
 target_link_libraries(of_protoobj ${oneflow_third_party_libs})
-add_dependencies(of_protoobj make_pyproto_dir)
+add_dependencies(of_protoobj make_pyproto_dir of_expand_hdr)
 
 # cc obj lib
 include_directories(${PROJECT_SOURCE_DIR})  # TO FIND: third_party/eigen3/..
@@ -168,6 +172,7 @@ oneflow_add_library(oneflow_internal SHARED ${SWIG_SRCS} ${SWIG_HDRS} ${of_main_
 SET_TARGET_PROPERTIES(oneflow_internal PROPERTIES PREFIX "_")
 set_target_properties(oneflow_internal PROPERTIES CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/python")
 target_link_libraries(oneflow_internal ${of_libs} ${oneflow_third_party_libs})
+add_dependencies(oneflow_internal of_expand_hdr)
 
 # build main
 set(RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
