@@ -17,7 +17,7 @@ OF_PP_FOR_EACH_TUPLE(DEFINE_COPIER, POD_DATA_TYPE_SEQ);
 
 #undef DEFINE_COPIER
 
-std::string OfBlob_GetCopyToBufferFuncName(uint64_t of_blob_ptr) {
+std::string Dtype_GetOfBlobCopyToBufferFuncName(int64_t dtype) {
   using namespace oneflow;
   static const HashMap<int64_t, std::string> data_type2func_name{
 #define DATA_TYPE_FUNC_NAME_PAIR(type_cpp, type_proto) \
@@ -25,11 +25,10 @@ std::string OfBlob_GetCopyToBufferFuncName(uint64_t of_blob_ptr) {
       OF_PP_FOR_EACH_TUPLE(DATA_TYPE_FUNC_NAME_PAIR, POD_DATA_TYPE_SEQ)
 #undef DATA_TYPE_FUNC_NAME_PAIR
   };
-  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  return data_type2func_name.at(of_blob->data_type());
+  return data_type2func_name.at(dtype);
 }
 
-std::string OfBlob_GetCopyFromBufferFuncName(uint64_t of_blob_ptr) {
+std::string Dtype_GetOfBlobCopyFromBufferFuncName(int64_t dtype) {
   using namespace oneflow;
   static const HashMap<int64_t, std::string> data_type2func_name{
 #define DATA_TYPE_FUNC_NAME_PAIR(type_cpp, type_proto) \
@@ -37,6 +36,5 @@ std::string OfBlob_GetCopyFromBufferFuncName(uint64_t of_blob_ptr) {
       OF_PP_FOR_EACH_TUPLE(DATA_TYPE_FUNC_NAME_PAIR, POD_DATA_TYPE_SEQ)
 #undef DATA_TYPE_FUNC_NAME_PAIR
   };
-  auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-  return data_type2func_name.at(of_blob->data_type());
+  return data_type2func_name.at(dtype);
 }
