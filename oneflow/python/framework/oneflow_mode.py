@@ -1,4 +1,3 @@
-
 def IsCurrentCompileMode:
     return current_mode == COMPILE_MODE
     

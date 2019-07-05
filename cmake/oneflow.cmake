@@ -174,6 +174,16 @@ set_target_properties(oneflow_internal PROPERTIES CMAKE_LIBRARY_OUTPUT_DIRECTORY
 target_link_libraries(oneflow_internal ${of_libs} ${oneflow_third_party_libs})
 add_dependencies(oneflow_internal of_expand_hdr)
 
+file(GLOB_RECURSE oneflow_all_python_file "${PROJECT_SOURCE_DIR}/oneflow/python/*.py")
+foreach(oneflow_python_file ${oneflow_all_python_file})
+  file(RELATIVE_PATH oneflow_python_rel_file_path
+    "${PROJECT_SOURCE_DIR}/oneflow/python" ${oneflow_python_file})
+  add_custom_command(TARGET oneflow_internal POST_BUILD
+    COMMAND "${CMAKE_COMMAND}" -E copy
+    "${oneflow_python_file}"
+    "${PROJECT_BINARY_DIR}/python/${oneflow_python_rel_file_path}")
+endforeach()
+   
 # build main
 set(RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
 foreach(cc ${of_main_cc})
