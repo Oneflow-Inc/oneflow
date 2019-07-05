@@ -4,6 +4,7 @@ import oneflow.python.framework.compile_context as compile_context
 import oneflow.core.job.job_conf_pb2 as job_conf_util
 import oneflow.core.job.job_set_pb2 as job_set_util
 
+
 def val():
     TODO()
     
@@ -21,6 +22,9 @@ def Compile():
     decorator_context.main_func()
     job_set = compile_context.cur_job_set
     DefaultConfigJobSet(job_set)
+    from google.protobuf import text_format.MessageToString(job_set)
+    print job_set
+    exit(-1)
     for job_name in decorator_context.job_name2func:
         func = decorator_context.job_name2func[job_name]
         compile_context.cur_job = job_conf_util.JobConf()
