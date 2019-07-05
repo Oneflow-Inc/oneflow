@@ -26,7 +26,7 @@ class OfBlob(object):
     def shape(self):
         num_axes = oneflow_internal.OfBlob_NumAxes(self.of_blob_ptr_)
         dst_ndarray = np.ndarray(num_axes, dtype=np.int)
-        oneflow_internal.OfBlob_CopyShapeToNumpy(dst_ndarray, self.of_blob_ptr_)
+        oneflow_internal.OfBlob_CopyShapeToNumpy(self.of_blob_ptr_, dst_ndarray)
         return dst_ndarray.tolist()
 
     @property
