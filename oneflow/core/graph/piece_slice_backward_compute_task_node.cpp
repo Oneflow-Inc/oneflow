@@ -27,6 +27,7 @@ void PieceSliceBackwardCompTaskNode::BuildExecGphAndRegst() {
   in_diff_regst->AddLbi(op->BnInOp2Lbi(op->SoleIdbn()));
   exec_node->BindBnWithRegst(op->SoleIdbn(), in_diff_regst);
   in_diff_regst->CopyBlobDescWithoutAddLbi(GetSoleConsumedRegst("in").get());
+  exec_node->FixInDiffBlobDescs(parallel_ctx());
 }
 
 void PieceSliceBackwardCompTaskNode::InferProducedDataRegstTimeShape() {

@@ -28,6 +28,7 @@ void InstanceStackBackwardCompTaskNode::BuildExecGphAndRegst() {
   exec_node->BindBnWithRegst(op->SoleIdbn(), in_diff_regst);
   std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in");
   in_diff_regst->CopyBlobDescWithoutAddLbi(in_regst.get());
+  exec_node->FixInDiffBlobDescs(parallel_ctx());
 }
 
 void InstanceStackBackwardCompTaskNode::InferProducedDataRegstTimeShape() {
