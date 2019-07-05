@@ -17,3 +17,4 @@
   $1 = &temp;
 }
 %apply_numpy_typemaps(int32_t)
+%apply_numpy_typemaps(int64_t)
