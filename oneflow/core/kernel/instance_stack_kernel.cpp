@@ -37,18 +37,8 @@ void InstanceStackKernel<device_type>::BackwardDataContent(
 template<DeviceType device_type>
 void InstanceStackKernel<device_type>::ForwardInstanceShape(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* in_blob = BnInOp2Blob("in");
-  Blob* out_blob = BnInOp2Blob("out");
-  CHECK(in_blob->has_instance_shape_field());
-  CHECK(!(in_blob->has_dim1_valid_num_field() || in_blob->has_dim2_valid_num_field()));
-  CHECK(out_blob->has_instance_shape_field());
-  if (is_first_in_) {
-    BnInOp2Blob("out")->set_instance_shape(in_blob->shape());
-  } else {
-    CHECK_EQ(in_blob->shape(), Shape(std::vector<int64_t>(out_blob->shape().dim_vec().begin() + 1,
-                                                          out_blob->shape().dim_vec().end())));
-  }
-  is_first_in_ = false;
+  is_first_in_ = PieceSliceKernelUtil<device_type>::StackInstanceShape(
+      is_first_in_, BnInOp2Blob("in"), BnInOp2Blob("out"));
 }
 
 template<DeviceType device_type>
@@ -84,20 +74,8 @@ void InstanceStackKernel<device_type>::ForwardDim2ValidNum(
 template<DeviceType device_type>
 void InstanceStackKernel<device_type>::BackwardInstanceShape(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* in_diff_blob = BnInOp2Blob(GenDiffBn("in"));
-  if (in_diff_blob->shape().NumAxes() < 2) { return; }
-  const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
-  const bool uncontiguous_varing_instance =
-      out_diff_blob->has_dim1_valid_num_field() || out_diff_blob->has_dim2_valid_num_field();
-  const bool contiguous_varing_instance = out_diff_blob->has_instance_shape_field();
-  if (contiguous_varing_instance) {
-    CHECK(!uncontiguous_varing_instance);
-    in_diff_blob->set_instance_shape(
-        Shape(std::vector<int64_t>(out_diff_blob->instance_shape().dim_vec().begin() + 1,
-                                   out_diff_blob->instance_shape().dim_vec().end())));
-  } else {
-    UNIMPLEMENTED();
-  }
+  PieceSliceKernelUtil<device_type>::SliceInstanceShape(BnInOp2Blob(GenDiffBn("out")),
+                                                        BnInOp2Blob(GenDiffBn("in")));
 }
 
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kInstanceStackConf, InstanceStackKernel);

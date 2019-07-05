@@ -107,6 +107,7 @@ void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> Get
     if (it != output_bns().end()) { continue; }
     it = std::find(output_diff_bns().begin(), output_diff_bns().end(), pair.first);
     if (it != output_diff_bns().end()) { continue; }
+    if (it != data_tmp_bns().end()) { continue; }
     CHECK(!blob_desc->has_instance_shape_field());
   }
   /*

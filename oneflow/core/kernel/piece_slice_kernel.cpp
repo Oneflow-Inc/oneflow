@@ -53,7 +53,7 @@ void PieceSliceKernel<device_type>::ForwardDim0ValidNum(
     out_blob->set_dim0_valid_num(0, in_blob->dim1_valid_num(ins_idx));
   } else if (contiguous_varing_instance) {
     CHECK(!uncontiguous_varing_instance);
-    out_blob->set_dim0_valid_num(0, in_blob->shape().At(0));
+    out_blob->set_dim0_valid_num(0, in_blob->shape().At(1));
   } else {
     UNIMPLEMENTED();
   }
@@ -62,20 +62,7 @@ void PieceSliceKernel<device_type>::ForwardDim0ValidNum(
 template<DeviceType device_type>
 void PieceSliceKernel<device_type>::ForwardInstanceShape(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* out_blob = BnInOp2Blob("out");
-  if (out_blob->shape().NumAxes() < 2) { return; }
-  const Blob* in_blob = BnInOp2Blob("in");
-  const bool uncontiguous_varing_instance =
-      in_blob->has_dim1_valid_num_field() || in_blob->has_dim2_valid_num_field();
-  const bool contiguous_varing_instance = in_blob->has_instance_shape_field();
-  if (contiguous_varing_instance) {
-    CHECK(!uncontiguous_varing_instance);
-    out_blob->set_instance_shape(
-        Shape(std::vector<int64_t>(in_blob->instance_shape().dim_vec().begin() + 1,
-                                   in_blob->instance_shape().dim_vec().end())));
-  } else {
-    UNIMPLEMENTED();
-  }
+  PieceSliceKernelUtil<device_type>::SliceInstanceShape(BnInOp2Blob("in"), BnInOp2Blob("out"));
 }
 
 template<DeviceType device_type>
@@ -110,19 +97,8 @@ void PieceSliceKernel<device_type>::BackwardInDiffDim0ValidNum(
 template<DeviceType device_type>
 void PieceSliceKernel<device_type>::BackwardInstanceShape(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
-  Blob* in_diff_blob = BnInOp2Blob(GenDiffBn("in"));
-  CHECK(out_diff_blob->has_instance_shape_field());
-  CHECK(!(out_diff_blob->has_dim1_valid_num_field() || out_diff_blob->has_dim2_valid_num_field()));
-  CHECK(in_diff_blob->has_instance_shape_field());
-  if (is_first_out_diff_) {
-    BnInOp2Blob("out")->set_instance_shape(out_diff_blob->shape());
-  } else {
-    CHECK_EQ(out_diff_blob->shape(),
-             Shape(std::vector<int64_t>(in_diff_blob->shape().dim_vec().begin() + 1,
-                                        in_diff_blob->shape().dim_vec().end())));
-  }
-  is_first_out_diff_ = false;
+  is_first_out_diff_ = PieceSliceKernelUtil<device_type>::StackInstanceShape(
+      is_first_out_diff_, BnInOp2Blob(GenDiffBn("out")), BnInOp2Blob(GenDiffBn("in")));
 }
 
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kPieceSliceConf, PieceSliceKernel);

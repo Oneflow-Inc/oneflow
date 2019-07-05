@@ -445,8 +445,8 @@ std::map<TaskType, std::string> task_type2color = {{kInvalid, "0"},
                                                    {kRepeatForward, "2"},
                                                    {kRepeatBackward, "3"},
                                                    {kReduceIdentity, "2"},
-                                                   {kPieceSliceForward, "13"},
-                                                   {kInstanceStackForward, "13"},
-                                                   {kPieceSliceBackward, "14"},
-                                                   {kInstanceStackBackward, "14"}};
+                                                   {kPieceSliceForward, "11"},
+                                                   {kInstanceStackForward, "11"},
+                                                   {kPieceSliceBackward, "12"},
+                                                   {kInstanceStackBackward, "12"}};
 }  // namespace oneflow
