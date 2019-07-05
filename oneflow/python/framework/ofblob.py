@@ -15,7 +15,7 @@ class OfBlob(object):
         num_axes = oneflow_internal.OfBlob_NumAxes(self.of_blob_ptr_)
         dst_ndarray = np.ndarray(num_axes, dtype=np.int64)
         oneflow_internal.OfBlob_CopyShapeToNumpy(self.of_blob_ptr_, dst_ndarray)
-        return dst_ndarray.tolist()
+        return tuple(dst_ndarray.tolist())
 
     def CopyToNdarray(self):
         dst_ndarray = np.ndarray(self._Size, dtype=convert_of_dtype_to_numpy_dtype(self.dtype))
