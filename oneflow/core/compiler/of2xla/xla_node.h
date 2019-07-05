@@ -137,7 +137,8 @@ class XlaArgumentNode : public XlaNode {
   XlaArgumentNode() = default;
   virtual ~XlaArgumentNode() = default;
 
-  explicit XlaArgumentNode(const XlaLaunchOpConf::Argument &arg_conf);
+  explicit XlaArgumentNode(const XlaLaunchOpConf::Argument &arg_conf,
+                           DeviceType device_type);
 
   XlaLaunchOpConf::Argument arg_conf_;
 };

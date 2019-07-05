@@ -20,7 +20,8 @@ class XlaGraph {
 
   XlaNode *AddNode();
   XlaNode *AddNode(const OpNode *op_node);
-  XlaNode *AddArgumentNode(const XlaLaunchOpConf::Argument &arg_conf);
+  XlaNode *AddArgumentNode(const XlaLaunchOpConf::Argument &arg_conf,
+                           DeviceType device_type);
   XlaEdge *AddEdge(XlaNode *start, XlaNode *end);
 
   // Create a subgraph for node that unique id is `node_id`
@@ -32,6 +33,10 @@ class XlaGraph {
   XlaEdge *Connect(XlaNode *start, XlaNode *end);
   XlaEdge *Connect(XlaNode *start, XlaNode *end, const Argument &arg);
   void Disconnect(XlaEdge *edge);
+
+  virtual void InferBlobDescs(
+      std::unordered_map<std::string, BlobDesc> *blob_descs,
+      const ParallelContext* parallel_ctx);
 
  private:
   void BuildEdges();
@@ -52,16 +57,13 @@ class XlaGraph {
 
 class XlaLaunchGraph : public XlaGraph {
  public:
-  explicit XlaLaunchGraph(const XlaLaunchOpConf &launch_conf)
-      : launch_conf_(launch_conf) {
+  explicit XlaLaunchGraph(const XlaLaunchOpConf &launch_conf,
+                          DeviceType device_type)
+      : launch_conf_(launch_conf), device_type_(device_type) {
     SetupArguments();
     BuildLaunchGraph();
   }
 
-  void InferBlobDescs(
-      std::unordered_map<std::string, BlobDesc> *blob_descs,
-      const ParallelContext* parallel_ctx);
- 
   LogicalBlobId Input(const std::string &name) const {
     const auto &it = inputs_.find(name);
     DCHECK(it != inputs_.end());
@@ -79,6 +81,7 @@ class XlaLaunchGraph : public XlaGraph {
   void BuildLaunchGraph();
 
   const XlaLaunchOpConf &launch_conf_;
+  DeviceType device_type_;
   std::vector<std::shared_ptr<OpNode> > allocated_opnodes_;
   // "fc/out" --> "fc/out"
   std::unordered_map<std::string, LogicalBlobId> inputs_;
@@ -111,8 +114,8 @@ struct GraphTrait<XlaLaunchGraph> : public GraphTrait<XlaGraph> {};
 template <>
 struct GraphTrait<const XlaLaunchGraph> : public GraphTrait<const XlaGraph> {};
 
-template <typename GraphType, typename CallbackFunc>
-void TopologyVisit(GraphType &graph, CallbackFunc func) {
+template <typename GraphType, typename UserFunc>
+void TopologyVisit(GraphType &graph, UserFunc func) {
   typedef typename GraphTrait<GraphType>::pNodeType pNodeType;
   typedef typename GraphTrait<GraphType>::pEdgeType pEdgeType;
 

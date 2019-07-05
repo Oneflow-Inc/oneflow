@@ -90,8 +90,9 @@ XlaNode *XlaGraph::AddNode(const OpNode *op_node) {
   return node;
 }
 
-XlaNode *XlaGraph::AddArgumentNode(const XlaLaunchOpConf::Argument &arg_conf) {
-  XlaNode *node = new XlaArgumentNode(arg_conf);
+XlaNode *XlaGraph::AddArgumentNode(const XlaLaunchOpConf::Argument &arg_conf,
+                                   DeviceType device_type) {
+  XlaNode *node = new XlaArgumentNode(arg_conf, device_type);
   node->unique_id_ = nodes_.size();
   nodes_.push_back(node);
   return node;
@@ -117,58 +118,7 @@ XlaGraph *XlaGraph::AddSubGraph(int64_t node_id) {
   return it->second;
 }
 
-void XlaLaunchGraph::SetupArguments() {
-  // Add argument nodes
-  for (const auto &arg_conf : launch_conf_.attr().argument()) {
-    XlaNode *node = this->AddArgumentNode(arg_conf);
-    if (node->IsInArgumentNode()) {
-      std::string in = BlobName(node->Input("in"));
-      inputs_[in] = node->Output("out");
-    } else {
-      std::string out = BlobName(node->Output("out"));
-      outputs_[out] = node->Input("in");
-    }
-  }
-}
-
-static ParallelDesc DefaultParallelDesc() {
-  ParallelConf conf;
-  return ParallelDesc(conf);
-}
-
-void XlaLaunchGraph::BuildLaunchGraph() {
-  std::unordered_map<LogicalBlobId, XlaNode *> lbi2producer;
-  for (XlaNode *node : this->Nodes()) {
-    for (const std::string &bn : node->output_bns()) {
-      lbi2producer.emplace(node->Output(bn), node);
-    }
-  }
-  // Add normal nodes
-  ParallelDesc parallel_desc = DefaultParallelDesc();
-  for (const auto &node_conf : launch_conf_.attr().node()) {
-    auto op_node = std::make_shared<OpNode>(parallel_desc, node_conf);
-    allocated_opnodes_.push_back(op_node);
-    XlaNode *node = this->AddNode(op_node.get());
-    for (const std::string &bn : node->output_bns()) {
-      lbi2producer.emplace(node->Output(bn), node);
-    }
-  }
-  // Add edges
-  for (const auto &node : this->Nodes()) {
-    for (const std::string &bn : node->input_bns()) {
-      const LogicalBlobId &lbi = node->Input(bn);
-      auto it = lbi2producer.find(lbi);
-      // Input argument node input lbi maybe equal to output lbi, so here we
-      // add edge only if `it->second != node` in order to avoid node-self ring
-      if (it != lbi2producer.end() && it->second != node) {
-        Argument argument(lbi, BlobDesc());
-        this->Connect(it->second, node, argument);
-      }
-    }
-  }
-}
-
-void XlaLaunchGraph::InferBlobDescs(
+void XlaGraph::InferBlobDescs(
       std::unordered_map<std::string, BlobDesc> *blob_descs,
       const ParallelContext* parallel_ctx) {
   TopologyVisit(*this, [&](XlaNode *node) {
@@ -196,6 +146,68 @@ void XlaLaunchGraph::InferBlobDescs(
       edge->UpdateArgument(argument);
     }
   });
+}
+
+void XlaLaunchGraph::SetupArguments() {
+  // Add argument nodes
+  for (const auto &arg_conf : launch_conf_.attr().argument()) {
+    XlaNode *node = this->AddArgumentNode(arg_conf, device_type_);
+    if (node->IsInArgumentNode()) {
+      std::string in = BlobName(node->Input("in"));
+      inputs_[in] = node->Output("out");
+    } else {
+      std::string out = BlobName(node->Output("out"));
+      outputs_[out] = node->Input("in");
+    }
+  }
+}
+
+static ParallelDesc DefaultParallelDesc(DeviceType device_type_) {
+  ParallelConf conf;
+  conf.clear_device_name();
+  switch (device_type_) {
+    case DeviceType::kCPU:
+      conf.mutable_device_name()->Add()->assign("0:cpu:0");
+      break;
+    case DeviceType::kGPU:
+      conf.mutable_device_name()->Add()->assign("0:gpu:0");
+      break;
+    default:
+      UNIMPLEMENTED();
+  }
+  return ParallelDesc(conf);
+}
+
+void XlaLaunchGraph::BuildLaunchGraph() {
+  std::unordered_map<LogicalBlobId, XlaNode *> lbi2producer;
+  for (XlaNode *node : this->Nodes()) {
+    for (const std::string &bn : node->output_bns()) {
+      lbi2producer.emplace(node->Output(bn), node);
+    }
+  }
+  // Add normal nodes
+  ParallelDesc parallel_desc = DefaultParallelDesc(device_type_);
+  for (const auto &node_conf : launch_conf_.attr().node()) {
+    auto op_node = std::make_shared<OpNode>(parallel_desc, node_conf);
+    allocated_opnodes_.push_back(op_node);
+    XlaNode *node = this->AddNode(op_node.get());
+    for (const std::string &bn : node->output_bns()) {
+      lbi2producer.emplace(node->Output(bn), node);
+    }
+  }
+  // Add edges
+  for (const auto &node : this->Nodes()) {
+    for (const std::string &bn : node->input_bns()) {
+      const LogicalBlobId &lbi = node->Input(bn);
+      auto it = lbi2producer.find(lbi);
+      // Input argument node input lbi maybe equal to output lbi, so here we
+      // add edge only if `it->second != node` to avoid node-self ring
+      if (it != lbi2producer.end() && it->second != node) {
+        Argument argument(lbi, BlobDesc());
+        this->Connect(it->second, node, argument);
+      }
+    }
+  }
 }
 
 }  // namespace mola

@@ -11,21 +11,21 @@ extern const std::string _XlaArgumentOpType;
 extern const std::string _XlaInArgumentPrefix;
 extern const std::string _XlaOutArgumentPrefix;
 
+static std::string DeviceTypeToBackend(DeviceType device_type) {
+  switch (device_type) {
+    case DeviceType::kCPU:
+      return "CPU";
+    case DeviceType::kGPU:
+      return "CUDA";
+    default:
+      DLOG(WARNING) << "Invalid DeviceType (" << device_type << ")";
+      return NoneString;
+  }
+}
+
 XlaNode::XlaNode(const OpNode *op_node) : node_(op_node), unique_id_(-1),
                                           cluster_id_(-1), sub_graph_(nullptr) {
-  backend_ = [&]() -> std::string {
-      const DeviceType device_type = op_node->op().device_type();
-      switch (device_type) {
-        case DeviceType::kCPU:
-          return "CPU";
-        case DeviceType::kGPU:
-          return "CUDA";
-        default:
-          LOG(ERROR) << "Not supported DeviceType (" << device_type << ")";
-          return NoneString;
-      }
-    }();
-
+  backend_ = DeviceTypeToBackend(op_node->op().device_type());
   op_name_ = op_node->op().op_name();
   op_type_ = ExtractOpTypeAsString(op_node->op().op_conf());
   compiled_ = IsOpCompilerRegistered(backend_, op_type_);
@@ -113,11 +113,13 @@ std::vector<std::string> XlaNode::output_bns() const {
   return output_bns;
 }
 
-XlaArgumentNode::XlaArgumentNode(const XlaLaunchOpConf::Argument &arg_conf)
+XlaArgumentNode::XlaArgumentNode(const XlaLaunchOpConf::Argument &arg_conf,
+                                 DeviceType device_type)
     : XlaNode(), arg_conf_(arg_conf) {
   this->op_type_ = _XlaArgumentOpType;
   this->op_name_ = arg_conf.name();
   this->compiled_ = true;
+  this->backend_ = DeviceTypeToBackend(device_type);
   this->inputs_.emplace("in", BlobId(arg_conf.in()));
   this->outputs_.emplace("out", BlobId(arg_conf.out()));
 }

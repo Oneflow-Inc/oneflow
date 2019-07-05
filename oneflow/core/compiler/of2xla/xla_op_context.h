@@ -14,11 +14,11 @@ namespace mola {
 
 class XlaOprand {
  public:
-  XlaOprand() : dtype_(DataType::kInvalidDataType), initialized_(false) {}
+  XlaOprand() : initialized_(false) {}
   // Construct from Constant shape
-  static XlaOprand Constant(const Shape shape, const DataType dtype);
+  static XlaOprand Constant(const xla::Shape shape);
   // Construct from XlaOp handle
-  static XlaOprand XlaOp(const xla::XlaOp handle, const DataType dtype);
+  static XlaOprand XlaOp(const xla::XlaOp handle);
 
   // Return the XlaOp handle if the builder is matched with the handle
   xla::XlaOp AsXlaOp(xla::XlaBuilder *builder);
@@ -29,9 +29,7 @@ class XlaOprand {
   // from another XlaOp, otherwise uninitialized
   xla::XlaOp handle_;
   // Shape of the oprand
-  Shape shape_;
-  // Data type of the oprand
-  DataType dtype_;
+  xla::Shape shape_;
 
   bool initialized_;
 };
@@ -62,9 +60,9 @@ class XlaOpContext {
   xla::XlaOp Output(const Argument &arg);
 
   // Return inputs as Oprands
-  const XlaOprands &InputOprands() const { return param_.inputs; }
+  const XlaOprands &inputs() const { return param_.inputs; }
   // Return output as Oprands
-  const XlaOprands &OutputOprands() const { return outputs_; }
+  const XlaOprands &outputs() const { return outputs_; }
 
   // Setup the output `output_name` with XlaOp
   void SetOutput(const std::string &name, const xla::XlaOp &handle);

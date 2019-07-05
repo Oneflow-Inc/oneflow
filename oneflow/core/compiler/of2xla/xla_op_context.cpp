@@ -9,24 +9,22 @@
 namespace oneflow {
 namespace mola {
 
-Shape GetXlaOpShape(const xla::XlaOp &handle) {
-  CHECK(handle.IsUninitialized()) << "XlaOp has not been initialized.";
+xla::Shape GetXlaOpShape(const xla::XlaOp &handle) {
+  CHECK(!handle.IsUninitialized()) << "XlaOp has not been initialized.";
   xla::StatusOr<xla::Shape> shape = handle.builder()->GetShape(handle);
-  return ShapeFromXlaShape(shape.ValueOrDie());
+  return shape.ValueOrDie();
 }
 
-XlaOprand XlaOprand::Constant(Shape shape, DataType dtype) {
+XlaOprand XlaOprand::Constant(xla::Shape shape) {
   XlaOprand op;
   op.shape_ = shape;
-  op.dtype_ = dtype;
   op.initialized_ = true;
   return op;
 }
 
-XlaOprand XlaOprand::XlaOp(xla::XlaOp handle, DataType dtype) {
+XlaOprand XlaOprand::XlaOp(xla::XlaOp handle) {
   XlaOprand op;
   op.handle_ = handle;
-  op.dtype_ = dtype;
   op.shape_ = GetXlaOpShape(handle);
   op.initialized_ = true;
   return op;
@@ -67,12 +65,12 @@ xla::XlaOp XlaOpContext::Output(const Argument &arg) {
 void XlaOpContext::SetOutput(const std::string &name,
                              const xla::XlaOp &handle) {
   Argument arg = ArgumentFromString(name);
-  SetOutput(name, XlaOprand::XlaOp(handle, arg.data_type()));
+  SetOutput(name, XlaOprand::XlaOp(handle));
 }
 
 void XlaOpContext::SetOutput(const std::string &name, const XlaOprand &handle) {
   Argument arg = ArgumentFromString(name);
-  CHECK_EQ(arg.shape(), handle.shape_);
+  CHECK_EQ(OfShapeToXlaShape(arg.shape(), arg.data_type()), handle.shape_);
   outputs_[arg] = handle;
 }
 

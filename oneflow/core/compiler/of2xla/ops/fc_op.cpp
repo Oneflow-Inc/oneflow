@@ -10,12 +10,11 @@ class FullyConnectedOp : public XlaOpCompiler {
  public:
   void Compile(XlaOpContext *ctx) override {
     xla::XlaOp in = ctx->Input("in");
-    xla::XlaOp weight = ctx->Input("weight");
+    xla::XlaOp weight = xla::Transpose(ctx->Input("weight"), {1, 0});
     xla::XlaOp result = xla::Dot(in, weight);
 
     if (ctx->GetAttr<bool>("use_bias")) {
-      int feature_dim = 1;
-      result = xla::Add(result, ctx->Input("bias"), {feature_dim});
+      result = xla::Add(result, ctx->Input("bias"));
     }
     ctx->SetOutput("out", result);
   }
