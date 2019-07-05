@@ -20,7 +20,7 @@ function(RELATIVE_SWIG_GENERATE_CPP SRCS HDRS ROOT_DIR)
     set(GENERATED_CPP "${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}PYTHON_wrap.cpp")
     set(GENERATED_H "${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}PYTHON_wrap.h")
     file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}")
-    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/python")
+    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/python_scripts")
     list(APPEND ${SRCS} ${GENERATED_CPP})
     list(APPEND ${HDRS} ${GENERATED_H})
     add_custom_command(
@@ -30,7 +30,7 @@ function(RELATIVE_SWIG_GENERATE_CPP SRCS HDRS ROOT_DIR)
       ARGS -python -c++
            -module ${FIL_WE}
            -I${ROOT_DIR}
-           -outdir "${CMAKE_CURRENT_BINARY_DIR}/python"
+           -outdir "${CMAKE_CURRENT_BINARY_DIR}/python_scripts"
            -o ${GENERATED_CPP} 
            ${ABS_FIL}
       DEPENDS ${ABS_FIL} ${of_python_obj_cc} ${of_all_obj_cc} ${of_all_swig}
