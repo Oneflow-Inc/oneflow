@@ -1,6 +1,8 @@
 %module(directors="1") oneflow_internal
 %include <std_string.i>
 %include <std_shared_ptr.i>
+%include <stdint.i>
+%include "oneflow/python/lib/core/Flat.i"
 %include "oneflow/python/framework/oneflow_typemap.i"
 
 %{

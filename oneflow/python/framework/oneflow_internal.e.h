@@ -1,16 +1,16 @@
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/data_type_seq.h"
 
-#define DEFINE_COPIER(T, type_proto)                                                \
-  void OfBlob_CopyToBuffer_##T(uint64_t of_blob_ptr, T* ptr, int64_t len) {         \
-    using namespace oneflow;                                                        \
-    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);                         \
-    of_blob->AutoMemCopyTo<T>(ptr, len);                                            \
-  }                                                                                 \
-  void OfBlob_CopyFromBuffer_##T(uint64_t of_blob_ptr, const T* ptr, int64_t len) { \
-    using namespace oneflow;                                                        \
-    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);                         \
-    of_blob->AutoMemCopyFrom<T>(ptr, len);                                          \
+#define DEFINE_COPIER(T, type_proto)                                         \
+  void OfBlob_CopyToBuffer_##T(uint64_t of_blob_ptr, T* array, int size) {   \
+    using namespace oneflow;                                                 \
+    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);                  \
+    of_blob->AutoMemCopyTo<T>(array, size);                                  \
+  }                                                                          \
+  void OfBlob_CopyFromBuffer_##T(uint64_t of_blob_ptr, T* array, int size) { \
+    using namespace oneflow;                                                 \
+    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);                  \
+    of_blob->AutoMemCopyFrom<T>(array, size);                                \
   }
 
 OF_PP_FOR_EACH_TUPLE(DEFINE_COPIER, POD_DATA_TYPE_SEQ);
