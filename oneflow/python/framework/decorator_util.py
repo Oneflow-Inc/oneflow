@@ -6,7 +6,12 @@ def static_assert(func):
     TODO()
 
 def main(func):
-    TODO()
+    def Main(*arg):
+        if oneflow_mode.IsCurrentCompileMode():
+            TODO()
+        else:
+            func(*arg)
+    return main;
 
 def config(func):
     TODO()
