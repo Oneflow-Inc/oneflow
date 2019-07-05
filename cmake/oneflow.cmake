@@ -26,6 +26,15 @@ else()
   list(APPEND oneflow_platform_excludes "windows")
 endif()
 
+add_custom_target(of_expand_hdr)
+file(GLOB_RECURSE oneflow_all_hdr_to_be_expanded "${PROJECT_SOURCE_DIR}/oneflow/core/*.e.h" "${PROJECT_SOURCE_DIR}/oneflow/python/*.e.h")
+foreach(oneflow_hdr_to_be_expanded ${oneflow_all_hdr_to_be_expanded})
+    add_custom_command(TARGET of_expand_hdr PRE_BUILD
+        COMMAND ${CMAKE_C_COMPILER} -E -I"${PROJECT_SOURCE_DIR}" -I"${PROJECT_BINARY_DIR}"
+            -o "${oneflow_hdr_to_be_expanded}.expanded.h" "${oneflow_hdr_to_be_expanded}")
+    list(APPEND oneflow_all_hdr_expanded "${oneflow_hdr_to_be_expanded}.expanded.h")
+endforeach()
+
 file(GLOB_RECURSE oneflow_all_src "${PROJECT_SOURCE_DIR}/oneflow/core/*.*" "${PROJECT_SOURCE_DIR}/oneflow/python/*.*")
 foreach(oneflow_single_file ${oneflow_all_src})
   # Verify whether this file is for other platforms
@@ -101,17 +110,16 @@ endforeach()
 # clang format
 add_custom_target(of_format)
 
-foreach(source_file ${of_all_obj_cc} ${of_main_cc} ${of_all_test_cc} ${of_python_obj_cc})
+foreach(source_file ${of_all_obj_cc} ${of_main_cc} ${of_all_test_cc} ${of_python_obj_cc} ${oneflow_all_hdr_expanded})
     add_custom_command(TARGET of_format PRE_BUILD
     COMMAND clang-format -i -style=file ${source_file})
 endforeach()
 
+add_dependencies(of_format of_expand_hdr)
 
 # proto obj lib
 add_custom_target(make_pyproto_dir ALL
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/pyproto/oneflow/core
-  COMMAND ${CMAKE_COMMAND} -E touch ${PROJECT_BINARY_DIR}/pyproto/oneflow/__init__.py
-  COMMAND ${CMAKE_COMMAND} -E touch ${PROJECT_BINARY_DIR}/pyproto/oneflow/core/__init__.py)
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python/oneflow/core)
 foreach(proto_name ${of_all_proto})
   file(RELATIVE_PATH proto_rel_name ${PROJECT_SOURCE_DIR} ${proto_name})
   list(APPEND of_all_rel_protos ${proto_rel_name})

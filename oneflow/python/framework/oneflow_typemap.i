@@ -16,3 +16,4 @@
   }
   $1 = &temp;
 }
+%apply_numpy_typemaps(int32_t)
