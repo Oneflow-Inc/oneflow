@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-template<DeviceType device_type>
+template<DeviceType device_type, typename T>
 class InstanceStackKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(InstanceStackKernel);

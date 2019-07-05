@@ -3,13 +3,13 @@
 
 namespace oneflow {
 
-template<DeviceType device_type>
-void InstanceStackKernel<device_type>::VirtualKernelInit(const ParallelContext* parallel_ctx) {
+template<DeviceType device_type, typename T>
+void InstanceStackKernel<device_type, T>::VirtualKernelInit(const ParallelContext* parallel_ctx) {
   is_first_in_ = true;
 }
 
-template<DeviceType device_type>
-void InstanceStackKernel<device_type>::ForwardDataContent(
+template<DeviceType device_type, typename T>
+void InstanceStackKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* out_blob = BnInOp2Blob("out");
   auto* actor_stat = static_cast<std::pair<size_t, size_t>*>(ctx.other);
@@ -17,12 +17,12 @@ void InstanceStackKernel<device_type>::ForwardDataContent(
   const size_t total_ins_num = actor_stat->second;
   CHECK_LE(ins_idx, total_ins_num);
   CHECK_EQ(total_ins_num, out_blob->static_shape().At(0));
-  PieceSliceKernelUtil<device_type>::InstanceStack(ctx.device_ctx, ins_idx, total_ins_num,
-                                                   BnInOp2Blob("in"), out_blob);
+  PieceSliceKernelUtil<device_type, T>::InstanceStack(ctx.device_ctx, ins_idx, total_ins_num,
+                                                      BnInOp2Blob("in"), out_blob);
 }
 
-template<DeviceType device_type>
-void InstanceStackKernel<device_type>::BackwardDataContent(
+template<DeviceType device_type, typename T>
+void InstanceStackKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
   auto* actor_stat = static_cast<std::pair<size_t, size_t>*>(ctx.other);
@@ -30,19 +30,19 @@ void InstanceStackKernel<device_type>::BackwardDataContent(
   const size_t total_ins_num = actor_stat->second;
   CHECK_LE(in_diff_idx, total_ins_num);
   CHECK_EQ(total_ins_num, out_diff_blob->static_shape().At(0));
-  PieceSliceKernelUtil<device_type>::PieceSlice(ctx.device_ctx, in_diff_idx, total_ins_num,
-                                                out_diff_blob, BnInOp2Blob(GenDiffBn("in")));
+  PieceSliceKernelUtil<device_type, T>::PieceSlice(ctx.device_ctx, in_diff_idx, total_ins_num,
+                                                   out_diff_blob, BnInOp2Blob(GenDiffBn("in")));
 }
 
-template<DeviceType device_type>
-void InstanceStackKernel<device_type>::ForwardInstanceShape(
+template<DeviceType device_type, typename T>
+void InstanceStackKernel<device_type, T>::ForwardInstanceShape(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  is_first_in_ = PieceSliceKernelUtil<device_type>::StackInstanceShape(
+  is_first_in_ = PieceSliceKernelUtil<device_type, T>::StackInstanceShape(
       is_first_in_, BnInOp2Blob("in"), BnInOp2Blob("out"));
 }
 
-template<DeviceType device_type>
-void InstanceStackKernel<device_type>::ForwardDim1ValidNum(
+template<DeviceType device_type, typename T>
+void InstanceStackKernel<device_type, T>::ForwardDim1ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
@@ -55,8 +55,8 @@ void InstanceStackKernel<device_type>::ForwardDim1ValidNum(
   out_blob->set_dim1_valid_num(ins_idx, in_blob->shape().At(0));
 }
 
-template<DeviceType device_type>
-void InstanceStackKernel<device_type>::ForwardDim2ValidNum(
+template<DeviceType device_type, typename T>
+void InstanceStackKernel<device_type, T>::ForwardDim2ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
@@ -71,13 +71,14 @@ void InstanceStackKernel<device_type>::ForwardDim2ValidNum(
   }
 }
 
-template<DeviceType device_type>
-void InstanceStackKernel<device_type>::BackwardInstanceShape(
+template<DeviceType device_type, typename T>
+void InstanceStackKernel<device_type, T>::BackwardInstanceShape(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  PieceSliceKernelUtil<device_type>::SliceInstanceShape(BnInOp2Blob(GenDiffBn("out")),
-                                                        BnInOp2Blob(GenDiffBn("in")));
+  PieceSliceKernelUtil<device_type, T>::SliceInstanceShape(BnInOp2Blob(GenDiffBn("out")),
+                                                           BnInOp2Blob(GenDiffBn("in")));
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kInstanceStackConf, InstanceStackKernel);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kInstanceStackConf, InstanceStackKernel,
+                           ARITHMETIC_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

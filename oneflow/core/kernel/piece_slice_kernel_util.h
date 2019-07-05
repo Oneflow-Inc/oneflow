@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-template<DeviceType device_type>
+template<DeviceType device_type, typename T>
 class PieceSliceKernelUtil final {
  public:
   static void PieceSlice(DeviceCtx* ctx, const size_t ins_idx, const size_t valid_ins_num,
