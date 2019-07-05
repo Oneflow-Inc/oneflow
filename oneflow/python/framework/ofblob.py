@@ -1,5 +1,7 @@
+from __future__ import absolute_import
+
 import oneflow_internal
-import oneflow.core.common.data_type_pb2 as data_type_pb2
+import oneflow.oneflow.core.common.data_type_pb2 as data_type_pb2
 import numpy as np
 
 class OfBlob(object):

@@ -1,4 +1,6 @@
-import oneflow.python.frameword.c_api_util as c_api_util
+from __future__ import absolute_import
+
+import oneflow.python.framework.c_api_util as c_api_util
 
 def GetMachineRuntimeEnv(job_set):
     if job_set.resource.machine.size() == 1:

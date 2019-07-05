@@ -123,7 +123,7 @@ endforeach()
 
 # proto obj lib
 add_custom_target(make_pyproto_dir ALL
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python/oneflow/core)
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow/oneflow/core)
 foreach(proto_name ${of_all_proto})
   file(RELATIVE_PATH proto_rel_name ${PROJECT_SOURCE_DIR} ${proto_name})
   list(APPEND of_all_rel_protos ${proto_rel_name})
@@ -157,7 +157,7 @@ elseif(WIN32)
 endif()
 
 # build swig
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/python)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/python_scripts/oneflow)
 foreach(swig_name ${of_all_swig})
   file(RELATIVE_PATH swig_rel_name ${PROJECT_SOURCE_DIR} ${swig_name})
   list(APPEND of_all_rel_swigs ${swig_rel_name})
@@ -170,7 +170,7 @@ find_package(PythonLibs)
 include_directories(${PYTHON_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 oneflow_add_library(oneflow_internal SHARED ${SWIG_SRCS} ${SWIG_HDRS} ${of_main_cc})
 SET_TARGET_PROPERTIES(oneflow_internal PROPERTIES PREFIX "_")
-set_target_properties(oneflow_internal PROPERTIES CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/python")
+set_target_properties(oneflow_internal PROPERTIES CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/python_scripts/oneflow")
 target_link_libraries(oneflow_internal ${of_libs} ${oneflow_third_party_libs})
 add_dependencies(oneflow_internal of_expand_hdr)
 
@@ -181,7 +181,7 @@ foreach(oneflow_python_file ${oneflow_all_python_file})
   add_custom_command(TARGET oneflow_internal POST_BUILD
     COMMAND "${CMAKE_COMMAND}" -E copy
     "${oneflow_python_file}"
-    "${PROJECT_BINARY_DIR}/python/${oneflow_python_rel_file_path}")
+    "${PROJECT_BINARY_DIR}/python_scripts/oneflow/${oneflow_python_rel_file_path}")
 endforeach()
    
 # build main

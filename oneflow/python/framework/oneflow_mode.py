@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 def IsCurrentCompileMode:
     return current_mode == COMPILE_MODE
     

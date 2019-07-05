@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import oneflow.python.framework.ofblob as ofblob
 import oneflow.python.framework.oneflow_internal as oneflow_internal
 
