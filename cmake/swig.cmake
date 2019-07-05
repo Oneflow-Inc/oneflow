@@ -27,7 +27,7 @@ function(RELATIVE_SWIG_GENERATE_CPP SRCS HDRS ROOT_DIR)
       OUTPUT ${GENERATED_CPP} 
              ${GENERATED_H}
       COMMAND ${SWIG_EXECUTABLE}
-      ARGS -python -c++ -py3
+      ARGS -python -c++
            -module ${FIL_WE}
            -I${ROOT_DIR}
            -outdir "${CMAKE_CURRENT_BINARY_DIR}/python"
