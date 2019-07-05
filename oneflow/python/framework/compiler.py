@@ -1,8 +1,10 @@
+from __future__ import absolute_import
+
 import oneflow.python.framework.decorator_context as decorator_context
 import oneflow.python.framework.oneflow_mode as oneflow_mode
 import oneflow.python.framework.compile_context as compile_context
-import oneflow.core.job.job_conf_pb2 as job_conf_util
-import oneflow.core.job.job_set_pb2 as job_set_util
+import oneflow.oneflow.core.job.job_conf_pb2 as job_conf_util
+import oneflow.oneflow.core.job.job_set_pb2 as job_set_util
 
 
 def val():

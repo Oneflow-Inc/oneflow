@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import oneflow.python.framework.oneflow_mode as oneflow_mode
 import oneflow.python.framework.compiler as compiler
 import oneflow.python.framework.runtime as runtime

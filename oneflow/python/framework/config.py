@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.decorator_context as decorator_context
 import oneflow.python.framework.oneflow_mode as oneflow_mode

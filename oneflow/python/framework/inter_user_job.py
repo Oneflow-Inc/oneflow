@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 def AsyncPush(logical_blob, push_data_cb):
     TODO()
 
