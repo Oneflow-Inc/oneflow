@@ -7,12 +7,9 @@ OF_BLOB_DTYPE2NUMPY_DTYPE = {
         data_type_pb2.kFloat: np.float32
     }
 
-def dtypeInNumpy(dtype):
-    ret = OF_BLOB_DTYPE2NUMPY_DTYPE.get(dtype)
-    if ret is None:
-        raise NotImplementedError
-    else:
-        return ret
+def convert_of_dtype_to_numpy_dtype(dtype):
+    if dtype not in OF_BLOB_DTYPE2NUMPY_DTYPE: raise NotImplementedError
+    return OF_BLOB_DTYPE2NUMPY_DTYPE[dtype ]
 
 class OfBlob(object):
     def __init__(self, of_blob_ptr):
@@ -30,22 +27,22 @@ class OfBlob(object):
         return dst_ndarray.tolist()
 
     def numpy(self):
-        dst_ndarray = np.ndarray(self._size, dtype=dtypeInNumpy(self.dtype))
+        dst_ndarray = np.ndarray(self._Size, dtype=convert_of_dtype_to_numpy_dtype(self.dtype))
         method_name = oneflow_internal.OfBlob_GetCopyToBufferFuncName(self.of_blob_ptr_)
         copy_method = getattr(oneflow_internal, method_name)
         copy_method(self.of_blob_ptr_, dst_ndarray)
         return dst_ndarray.reshape(self.shape)
 
     def copyFromNumpy(self, src_ndarray):
-        assert(self._size == src_ndarray.size)
-        assert(dtypeInNumpy(self.dtype) == src_ndarray.dtype)
+        assert(self._Size == src_ndarray.size)
+        assert(convert_of_dtype_to_numpy_dtype(self.dtype) == src_ndarray.dtype)
         method_name = oneflow_internal.OfBlob_GetCopyFromBufferFuncName(self.of_blob_ptr_)
         copy_method = getattr(oneflow_internal, method_name)
         copy_method(self.of_blob_ptr_, src_ndarray)
         return
 
     @property
-    def _size(self):
+    def _Size(self):
         elem_cnt = 1
         for d in self.shape:
             elem_cnt *= d
