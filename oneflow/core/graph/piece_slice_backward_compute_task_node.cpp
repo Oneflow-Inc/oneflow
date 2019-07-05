@@ -30,8 +30,9 @@ void PieceSliceBackwardCompTaskNode::BuildExecGphAndRegst() {
 }
 
 void PieceSliceBackwardCompTaskNode::InferProducedDataRegstTimeShape() {
-  *GetProducedRegst("in_diff")->mut_data_regst_time_shape() =
-      GetSoleConsumedRegst("in")->data_regst_time_shape();
+  std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in");
+  *GetProducedRegst("in_diff")->mut_data_regst_time_shape() = in_regst->data_regst_time_shape();
+  UnConsumeRegst("in", in_regst);
 }
 
 }  // namespace oneflow

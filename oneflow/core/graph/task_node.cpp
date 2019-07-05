@@ -297,6 +297,12 @@ void TaskNode::ConsumeRegst(const std::string& name, std::shared_ptr<RegstDesc> 
   consumed_regsts_[name].push_back(regst);
 }
 
+void TaskNode::UnConsumeRegst(const std::string& name, std::shared_ptr<RegstDesc> regst) {
+  regst->DeleteConsumer(this);
+  consumed_regsts_[name].remove(regst);
+  if (consumed_regsts_[name].empty()) { CHECK_EQ(1, consumed_regsts_.erase(name)); }
+}
+
 bool TaskNode::IsAllConsumedRegstLocked() {
   for (const auto& pair : consumed_regsts_) {
     for (std::shared_ptr<RegstDesc> regst_desc : pair.second) {

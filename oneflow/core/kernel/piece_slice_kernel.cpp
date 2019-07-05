@@ -1,8 +1,12 @@
 #include "oneflow/core/kernel/piece_slice_kernel.h"
 #include "oneflow/core/kernel/piece_slice_kernel_util.h"
-#include <iostream>
 
 namespace oneflow {
+
+template<DeviceType device_type>
+void PieceSliceKernel<device_type>::VirtualKernelInit(const ParallelContext* parallel_ctx) {
+  is_first_out_diff_ = true;
+}
 
 template<DeviceType device_type>
 void PieceSliceKernel<device_type>::ForwardDataContent(
@@ -15,7 +19,6 @@ void PieceSliceKernel<device_type>::ForwardDataContent(
   CHECK_EQ(total_ins_num, in_blob->static_shape().At(0));
   PieceSliceKernelUtil<device_type>::PieceSlice(ctx.device_ctx, ins_idx, total_ins_num, in_blob,
                                                 BnInOp2Blob("out"));
-  std::cout << "piece slice forward kernel" << std::endl;
 }
 
 template<DeviceType device_type>
@@ -29,7 +32,6 @@ void PieceSliceKernel<device_type>::BackwardDataContent(
   CHECK_EQ(total_ins_num, in_diff_blob->static_shape().At(0));
   PieceSliceKernelUtil<device_type>::InstanceStack(ctx.device_ctx, out_diff_idx, total_ins_num,
                                                    BnInOp2Blob(GenDiffBn("out")), in_diff_blob);
-  std::cout << "piece slice backward kernel" << std::endl;
 }
 
 template<DeviceType device_type>
@@ -103,6 +105,24 @@ template<DeviceType device_type>
 void PieceSliceKernel<device_type>::BackwardInDiffDim0ValidNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // do nothing
+}
+
+template<DeviceType device_type>
+void PieceSliceKernel<device_type>::BackwardInstanceShape(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
+  Blob* in_diff_blob = BnInOp2Blob(GenDiffBn("in"));
+  CHECK(out_diff_blob->has_instance_shape_field());
+  CHECK(!(out_diff_blob->has_dim1_valid_num_field() || out_diff_blob->has_dim2_valid_num_field()));
+  CHECK(in_diff_blob->has_instance_shape_field());
+  if (is_first_out_diff_) {
+    BnInOp2Blob("out")->set_instance_shape(out_diff_blob->shape());
+  } else {
+    CHECK_EQ(out_diff_blob->shape(),
+             Shape(std::vector<int64_t>(in_diff_blob->shape().dim_vec().begin() + 1,
+                                        in_diff_blob->shape().dim_vec().end())));
+  }
+  is_first_out_diff_ = false;
 }
 
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kPieceSliceConf, PieceSliceKernel);

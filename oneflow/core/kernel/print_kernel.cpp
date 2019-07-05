@@ -1,7 +1,6 @@
 #include "oneflow/core/kernel/print_kernel.h"
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/record/ofrecord_encoder.h"
-#include <iostream>
 
 namespace oneflow {
 
@@ -19,7 +18,6 @@ void PrintKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
 
 void PrintKernel::Forward(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  std::cout << "print kernel forward" << std::endl;
   CHECK(!this->op_attribute().input_bns().empty());
   auto GetBlob = [&](int32_t blob_id) -> Blob* {
     return BnInOp2Blob(this->op_attribute().input_bns(blob_id));

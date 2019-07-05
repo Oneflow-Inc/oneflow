@@ -13,6 +13,7 @@ class PieceSliceKernel final : public KernelIf<device_type> {
   ~PieceSliceKernel() = default;
 
  private:
+  void VirtualKernelInit(const ParallelContext*) override;
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void BackwardDataContent(const KernelCtx& ctx,
@@ -25,6 +26,10 @@ class PieceSliceKernel final : public KernelIf<device_type> {
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void BackwardInDiffDim0ValidNum(
       const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void BackwardInstanceShape(const KernelCtx& ctx,
+                             std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+
+  mutable bool is_first_out_diff_;
 };
 
 }  // namespace oneflow

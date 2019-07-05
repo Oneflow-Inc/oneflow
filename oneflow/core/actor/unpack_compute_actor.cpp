@@ -1,5 +1,4 @@
 #include "oneflow/core/actor/unpack_compute_actor.h"
-#include <iostream>
 
 namespace oneflow {
 
@@ -23,11 +22,6 @@ void UnpackCompActor::VirtualCompActorInit(const TaskProto& proto) {
 }
 
 void UnpackCompActor::Act() {
-  if (!handle_pack_bw_) {
-    std::cout << "piece slice forward actor, act_num: " << act_num_cnt_ << std::endl;
-  } else {
-    std::cout << "instance stack backward actor, act_num: " << act_num_cnt_ << std::endl;
-  }
   KernelCtx ctx = GenDefaultKernelCtx();
   std::pair<size_t, size_t> other_val = std::make_pair(act_num_cnt_, total_unpack_num_);
   ctx.other = static_cast<void*>(&other_val);
@@ -61,7 +55,5 @@ void UnpackCompActor::VirtualAsyncSendNaiveConsumedRegstMsgToProducer() {
 }
 
 REGISTER_ACTOR(TaskType::kUnpackForward, UnpackCompActor);
-REGISTER_ACTOR(TaskType::kPieceSliceForward, UnpackCompActor);
-REGISTER_ACTOR(TaskType::kInstanceStackBackward, UnpackCompActor);
 
 }  // namespace oneflow

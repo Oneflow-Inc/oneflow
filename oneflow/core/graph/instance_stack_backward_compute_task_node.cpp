@@ -26,12 +26,14 @@ void InstanceStackBackwardCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> in_diff_regst = GetProducedRegst("in_diff");
   in_diff_regst->AddLbi(op->BnInOp2Lbi(op->SoleIdbn()));
   exec_node->BindBnWithRegst(op->SoleIdbn(), in_diff_regst);
-  in_diff_regst->CopyBlobDescWithoutAddLbi(GetSoleConsumedRegst("in").get());
+  std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in");
+  in_diff_regst->CopyBlobDescWithoutAddLbi(in_regst.get());
 }
 
 void InstanceStackBackwardCompTaskNode::InferProducedDataRegstTimeShape() {
-  *GetProducedRegst("in_diff")->mut_data_regst_time_shape() =
-      GetSoleConsumedRegst("in")->data_regst_time_shape();
+  std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in");
+  *GetProducedRegst("in_diff")->mut_data_regst_time_shape() = in_regst->data_regst_time_shape();
+  UnConsumeRegst("in", in_regst);
 }
 
 }  // namespace oneflow
