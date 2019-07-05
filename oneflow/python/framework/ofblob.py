@@ -40,8 +40,14 @@ class OfBlob(object):
         return elem_cnt
 
 OF_BLOB_DTYPE2NUMPY_DTYPE = {
+        data_type_pb2.kInt8: np.int8,
         data_type_pb2.kInt32: np.int32,
-        data_type_pb2.kFloat: np.float32
+        data_type_pb2.kInt64: np.int64,
+        data_type_pb2.kUInt8: np.uint8,
+        data_type_pb2.kFloat: np.float32,
+        data_type_pb2.kDouble: np.float64,
+        # could be np.ubyte on some platform
+        data_type_pb2.kChar: np.byte, 
     }
 
 def convert_of_dtype_to_numpy_dtype(dtype):
