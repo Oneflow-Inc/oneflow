@@ -24,6 +24,7 @@ void XlaLaunchKernel<device_type, T>::ForwardDataContent(
     node->set_backend(mola::Backend<device_type>::to_string());
   }
 
+  std::vector<std::string> input_arg_names;
   // Prepare setup blob descs
   std::unordered_map<std::string, BlobDesc> blob_descs;
 
@@ -39,13 +40,15 @@ void XlaLaunchKernel<device_type, T>::ForwardDataContent(
     const LogicalBlobId& lbi = this->BnInOp2Lbi(input_bn);
     std::string blob_name = BlobName(lbi);
     blob_descs.emplace(blob_name, blob_desc);
+    input_arg_names.push_back(blob_name);
   }
 
   ParallelContext parallel_ctx = LocalParallelContext();
   graph.InferBlobDescs(&blob_descs, &parallel_ctx);
 
   bool force_compile = true;
-  mola::CompileContext compile_ctx(&graph, &builder, blob_descs, force_compile);
+  mola::CompileContext compile_ctx(&graph, &builder, input_arg_names,
+                                   blob_descs, force_compile);
 
   mola::XlaGraphCompiler graph_compiler;
   graph_compiler.Compile(&compile_ctx);

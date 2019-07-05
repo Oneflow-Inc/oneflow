@@ -1,7 +1,9 @@
 #include "glog/logging.h"
+#include "absl/strings/str_cat.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "oneflow/core/job/resource.pb.h"  // DataType
+#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/compiler/of2xla/xla_utility.h"
+#include "oneflow/core/compiler/of2xla/xla_shape.h"
 #include "oneflow/core/compiler/of2xla/xla_op_compiler_registry.h"
 #include "oneflow/core/compiler/of2xla/xla_argument.h"
 #include "oneflow/core/compiler/of2xla/xla_op_context.h"
@@ -17,12 +19,39 @@ static XlaOpCompiler *CreateXlaOpCompiler(
   return XlaOpCompilerRegistry::Build(backend)[op_type]();
 }
 
+CompileContext::CompileContext(
+    const XlaGraph *graph, xla::XlaBuilder *builder,
+    const std::vector<std::string> &input_arg_names,
+    const std::unordered_map<std::string, BlobDesc> &infered_blob_descs,
+    bool force_compile) : graph_(graph), builder_(builder),
+                          force_compile_(force_compile) {
+  for (const auto &pair : infered_blob_descs) {
+    LogicalBlobId lbi = BlobId(pair.first);
+    arguments_.emplace(lbi, Argument(lbi, pair.second));
+  }
+  // Build input XlaOprands
+  BuildArgumentOprands(input_arg_names);
+}
+
+void CompileContext::BuildArgumentOprands(
+    const std::vector<std::string> &input_arg_names) {
+  for (int i = 0; i < input_arg_names.size(); ++i) {
+    LogicalBlobId lbi = BlobId(input_arg_names[i]);
+    Argument argument = arguments_.at(lbi);
+    xla::Shape shape = OfShapeToXlaShape(argument.shape(),
+                                         argument.data_type());
+    xla::XlaOp handle = xla::Parameter(builder_, i, shape,
+                                       absl::StrCat("arg", i));
+    input_oprands_.emplace(argument, XlaOprand::XlaOp(handle));
+  }
+}
+
 void XlaGraphCompiler::Compile(CompileContext *ctx) {
   CHECK_NOTNULL(ctx->graph_);
   // All operator's output oprands collector
-  std::unordered_map<Argument, XlaOprand> all_outputs;
+  std::unordered_map<Argument, XlaOprand> all_outputs(ctx->input_oprands_);
 
-  for (const XlaNode *node : ctx->graph_->Nodes()) {
+  TopologyVisit(*ctx->graph_, [&](const XlaNode *node) {
     const std::string &backend = node->backend();
     const std::string &op_type = node->op_type();
     // Create operator compiler
@@ -44,13 +73,13 @@ void XlaGraphCompiler::Compile(CompileContext *ctx) {
 
     SetupParamArguments(node, ctx->arguments_, &param);
 
-    // Do compile and lower the graph computation to HLO instructions
+    // Do compile and lower the operator computation to HLO instructions
     XlaOpContext op_context(param);
     compiler->Compile(&op_context);
 
-    const auto &outputs = op_context.OutputOprands();
+    const auto &outputs = op_context.outputs();
     all_outputs.insert(outputs.begin(), outputs.end());
-  }
+  });
 }
 
 void XlaGraphCompiler::SetupParamArguments(

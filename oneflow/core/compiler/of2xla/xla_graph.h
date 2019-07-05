@@ -111,8 +111,8 @@ struct GraphTrait<XlaLaunchGraph> : public GraphTrait<XlaGraph> {};
 template <>
 struct GraphTrait<const XlaLaunchGraph> : public GraphTrait<const XlaGraph> {};
 
-template <typename GraphType, typename CallbackFunc>
-void TopologyVisit(GraphType &graph, CallbackFunc func) {
+template <typename GraphType, typename UserFunc>
+void TopologyVisit(GraphType &graph, UserFunc func) {
   typedef typename GraphTrait<GraphType>::pNodeType pNodeType;
   typedef typename GraphTrait<GraphType>::pEdgeType pEdgeType;
 

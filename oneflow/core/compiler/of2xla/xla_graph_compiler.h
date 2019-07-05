@@ -14,22 +14,20 @@ class CompileContext {
   typedef std::unordered_map<std::string, BlobDesc> BlobDescMap;
 
   CompileContext(const XlaGraph *graph, xla::XlaBuilder *builder,
-                 const BlobDescMap &infered_blob_descs, bool force_compile)
-      : graph_(graph), builder_(builder), force_compile_(force_compile) {
-    for (const auto &pair : infered_blob_descs) {
-      LogicalBlobId lbi = BlobId(pair.first);
-      arguments_.emplace(lbi, Argument(lbi, pair.second));
-    }
-  }
-   
+                 const std::vector<std::string> &input_arg_names,
+                 const BlobDescMap &infered_blob_descs, bool force_compile);
+
  private:
   friend class XlaGraphCompiler;
+
+  void BuildArgumentOprands(const std::vector<std::string> &input_arg_names);
 
   const XlaGraph *graph_;
 
   xla::XlaBuilder *builder_;
 
   bool force_compile_;
+  std::unordered_map<Argument, XlaOprand> input_oprands_;
   std::unordered_map<LogicalBlobId, Argument> arguments_;
 };
 
@@ -40,9 +38,9 @@ class XlaGraphCompiler {
   void Compile(CompileContext *ctx);
 
   void SetupParamArguments(
-                const XlaNode *node,
-                const std::unordered_map<LogicalBlobId, Argument> &arguments,
-                XlaOpContext::Param *param);
+      const XlaNode *node,
+      const std::unordered_map<LogicalBlobId, Argument> &arguments,
+      XlaOpContext::Param *param);
 };
 
 }  // namespace mola

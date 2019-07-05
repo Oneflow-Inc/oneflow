@@ -159,7 +159,7 @@ void XlaLaunchGraph::BuildLaunchGraph() {
       const LogicalBlobId &lbi = node->Input(bn);
       auto it = lbi2producer.find(lbi);
       // Input argument node input lbi maybe equal to output lbi, so here we
-      // add edge only if `it->second != node` in order to avoid node-self ring
+      // add edge only if `it->second != node` to avoid node-self ring
       if (it != lbi2producer.end() && it->second != node) {
         Argument argument(lbi, BlobDesc());
         this->Connect(it->second, node, argument);
