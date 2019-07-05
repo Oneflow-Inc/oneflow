@@ -68,11 +68,7 @@ struct GlobalOneflowChecker final {
   GlobalOneflowChecker() = default;
   ~GlobalOneflowChecker() {
     using namespace oneflow;
-    if (Global<Oneflow>::Get() == nullptr) {
-      LOG(INFO) << "oneflow exits successfully";
-    } else {
-      LOG(FATAL) << "Global<Oneflow> is not destroyed yet";
-    }
+    if (Global<Oneflow>::Get() != nullptr) { LOG(FATAL) << "global oneflow is not destroyed yet"; }
   }
 };
 
