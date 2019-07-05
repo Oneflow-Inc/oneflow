@@ -5,7 +5,8 @@ import oneflow.python.framework.runtime as runtime
 def run():
     with oneflow_mode.CompileMode():
         job_set = compiler.Compile()
-    main = compiler.GetMainFunc()
+    with oneflow_context.CompilingMain():
+        main = compiler.GetMainFunc()
     with oneflow_mode.RuntimeMode():
         try:
             with runtime.GetMachineRuntimeEnv(job_set):

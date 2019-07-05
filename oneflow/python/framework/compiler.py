@@ -20,6 +20,7 @@ def Compile():
     compile_context.cur_job_set = job_set_util.JobSet()
     decorator_context.main_func()
     job_set = compile_context.cur_job_set
+    DefaultConfigJobSet(job_set)
     for job_name in decorator_context.job_name2func:
         func = decorator_context.job_name2func[job_name]
         compile_context.cur_job = job_conf_util.JobConf()

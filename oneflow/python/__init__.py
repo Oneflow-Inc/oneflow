@@ -3,7 +3,10 @@ from oneflow.python.framework.oneflow import run
 from oneflow.python.framework.decorator_util import remote
 from oneflow.python.framework.decorator_util import static_assert
 from oneflow.python.framework.decorator_util import main
-from oneflow.python.framework.decorator_util import config
+from oneflow.python.framework.config import config_resource
+from oneflow.python.framework.config import config_io
+from oneflow.python.framework.config import config_cpp_flags
+from oneflow.python.framework.config import config_profiler
 from oneflow.python.framework.compiler import val
 from oneflow.python.framework.compiler import var
 from oneflow.python.framework.compiler import parse_job_as_func_body
