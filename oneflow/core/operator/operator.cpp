@@ -94,7 +94,7 @@ void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> Get
   if (op_attribute_.model_bns().size() > 0) {
     InferTotalInstanceNumDesc(GetBlobDesc4BnInOp, parallel_ctx, EnrollOpCtx);
   }
-  // check only in/out/bw_activation blob has instance shape
+  // check only in/out/bw_activation/data_tmp blob has instance shape
   for (const auto& pair : op_attribute_.bn_in_op2lbi()) {
     BlobDesc* blob_desc = GetBlobDesc4BnInOp(pair.first);
     if (!blob_desc) { continue; }

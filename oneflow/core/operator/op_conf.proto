@@ -1598,10 +1598,10 @@ message PieceSliceOpConf {
 message InstanceStackOpConf {
   required string in = 1;
   required string out = 2;
+  required string related_piece_slice = 3;
   // FIX ME: stack_num should be inferred instead of setting by hand
   // we set it by hand in order to infer blob_shape in op_graph
-  required int32 stack_num = 3;
-  required string related_piece_slice = 4;
+  required int32 stack_num = 4;
 }
 
 message OperatorConf {

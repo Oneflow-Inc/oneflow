@@ -22,8 +22,6 @@ class PieceSliceOp final : public Operator {
                                 const ParallelContext* parallel_ctx,
                                 Shape* time_shape) const override;
 
-  const int32_t GetSliceNum() const;
-
  private:
   bool IsInputBlobAllowedModelSplit(const std::string& ibn) const override { return false; }
 };

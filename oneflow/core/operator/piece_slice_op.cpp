@@ -14,7 +14,7 @@ void PieceSliceOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   BlobDesc* out = GetBlobDesc4BnInOp(SoleObn());
   // FIX ME: slice_num should be inferred instead of setting by hand
   // we set it by hand in order to infer time_shape in op_graph
-  CHECK_EQ(GetSliceNum(), in->shape().At(0));
+  CHECK_EQ(op_conf().piece_slice_conf().slice_num(), in->shape().At(0));
   CHECK(!in->has_dim0_valid_num_field());
 
   out->mut_shape() =
@@ -41,13 +41,8 @@ void PieceSliceOp::InferOutputBlobTimeShape(
     std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp,
     const ParallelContext* parallel_ctx, Shape* time_shape) const {
   std::vector<int64_t> dim_vec(GetTimeShape4BnInOp("in")->dim_vec());
-  dim_vec.push_back(GetSliceNum());
+  dim_vec.push_back(op_conf().piece_slice_conf().slice_num());
   *time_shape = Shape(dim_vec);
-}
-
-const int32_t PieceSliceOp::GetSliceNum() const {
-  CHECK(op_conf().has_piece_slice_conf());
-  return op_conf().piece_slice_conf().slice_num();
 }
 
 REGISTER_OP(OperatorConf::kPieceSliceConf, PieceSliceOp);
