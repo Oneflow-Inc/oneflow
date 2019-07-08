@@ -16,8 +16,8 @@ def InitGlobalOneflowByJobSet(job_set):
 def GetInterUserJobInfo():
     return text_format.Parse(oneflow_internal.GetSerializedInterUserJobInfo(), InterUserJobInfo())
 
-def LaunchJob(job_name, cb):
-    oneflow_internal.LaunchJob(job_name, cb)
+def LaunchJob(cb):
+    oneflow_internal.LaunchJob(cb)
 
 def DestroyGlobalOneflow():
     oneflow_internal.DestroyGlobalOneflow()
