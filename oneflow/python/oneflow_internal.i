@@ -12,8 +12,8 @@
 
 %}
 
-%shared_ptr(oneflow::JobInstance);
-%feature("director") oneflow::JobInstance;
-%include "oneflow/core/job/job_instance.h"
+%shared_ptr(oneflow::ForeignJobInstance);
+%feature("director") oneflow::ForeignJobInstance;
+%include "oneflow/core/job/foreign_job_instance.h"
 %include "oneflow/python/oneflow_internal.h"
 %include "oneflow/python/oneflow_internal.e.h.expanded.h"
