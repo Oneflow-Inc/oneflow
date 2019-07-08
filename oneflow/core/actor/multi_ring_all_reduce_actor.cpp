@@ -2,6 +2,8 @@
 
 namespace oneflow {
 
+int MultiRingAllReduceActor::HandlerAllReduce(const ActorMsg& msg) {}
+
 void MultiRingAllReduceActor::VirtualActorInit(const TaskProto& task_proto) {
   CHECK_EQ(1, exec_kernel_vec().size());
   out_regst_desc_id_ = task_proto.produced_regst_desc().at("out").regst_desc_id();

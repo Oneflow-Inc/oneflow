@@ -15,6 +15,7 @@ class MultiRingAllReduceActor : public CompActor {
   void VirtualActorInit(const TaskProto&) override;
   int64_t ActNumForEachOutput(int64_t regst_desc_id) const override;
   bool ProducedCtrlRegstValid(int64_t regst_desc_id) const override;
+  int HandlerAllReduce(const ActorMsg& msg);
 
  private:
   void Act() override;
