@@ -16,9 +16,11 @@ class CompileMode:
         assert current_mode == None, "no reentrant use of oneflow_mode"
 
     def __enter__(self):
+        global current_mode
         current_mode = COMPILE_MODE
 
     def __exit__(self, *args):
+        global current_mode
         current_mode = None
         
 class RuntimeMode:
@@ -26,7 +28,9 @@ class RuntimeMode:
         assert current_mode == None, "no reentrant use of oneflow_mode"
 
     def __enter__(self):
+        global current_mode
         current_mode = RUNTIME_MODE
 
     def __exit__(self, *args):
+        global current_mode
         current_mode = None

@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import oneflow.python.framework.c_api_util as c_api_util
 
 def GetMachineRuntimeEnv(job_set):
-    if job_set.resource.machine.size() == 1:
+    if len(job_set.resource.machine) == 1:
         return MasterRuntimeEnv(job_set)
     else:
         TODO()
@@ -13,6 +13,7 @@ class MasterRuntimeEnv:
         self.job_set_ = job_set
 
     def __enter__(self):
+        assert len(self.job_set_.job_conf) > 0, "no job in job_set found"
         c_api_util.InitGlobalOneflowByJobSet(self.job_set_)
         
     def __exit__(self, *args):
