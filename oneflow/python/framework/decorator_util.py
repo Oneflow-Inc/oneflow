@@ -11,10 +11,10 @@ def remote(func):
         if oneflow_mode.IsCurrentCompileMode():
             return compiler.CompileJob(func)
         elif oneflow_mode.IsCurrentRuntimeMode():
-            return runtime.LaunchJob(func, *arg)
+            return runtime.LaunchJob(func.__name__, *arg)
         else:
             raise NotImplementedError
-
+    Func.__name__ = __name__
     return Func
 
 def static_assert(func):
