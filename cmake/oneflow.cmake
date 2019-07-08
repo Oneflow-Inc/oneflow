@@ -26,7 +26,6 @@ else()
   list(APPEND oneflow_platform_excludes "windows")
 endif()
 
-add_custom_target(of_expand_hdr)
 file(GLOB_RECURSE oneflow_all_hdr_to_be_expanded "${PROJECT_SOURCE_DIR}/oneflow/core/*.e.h" "${PROJECT_SOURCE_DIR}/oneflow/python/*.e.h")
 foreach(oneflow_hdr_to_be_expanded ${oneflow_all_hdr_to_be_expanded})
   file(RELATIVE_PATH of_ehdr_rel_path ${PROJECT_SOURCE_DIR} ${oneflow_hdr_to_be_expanded})
@@ -34,11 +33,15 @@ foreach(oneflow_hdr_to_be_expanded ${oneflow_all_hdr_to_be_expanded})
   if(WIN32)
     error( "Expanding macro in WIN32 is not supported yet")
   else()
-    add_custom_command(TARGET of_expand_hdr PRE_BUILD
-      COMMAND ${CMAKE_C_COMPILER} -E -I"${PROJECT_SOURCE_DIR}" -I"${PROJECT_BINARY_DIR}"
-      -o "${of_e_h_expanded}" "${oneflow_hdr_to_be_expanded}")
+    add_custom_command(OUTPUT ${of_e_h_expanded}
+      COMMAND ${CMAKE_C_COMPILER} 
+      ARGS -E -I"${PROJECT_SOURCE_DIR}" -I"${PROJECT_BINARY_DIR}"
+      -o "${of_e_h_expanded}" "${oneflow_hdr_to_be_expanded}"
+      DEPENDS ${oneflow_hdr_to_be_expanded}
+      COMMENT "Expanding macros in ${oneflow_hdr_to_be_expanded}")
+    list(APPEND oneflow_all_hdr_expanded "${of_e_h_expanded}")
   endif()
-  list(APPEND oneflow_all_hdr_expanded "${of_e_h_expanded}")
+  set_source_files_properties(${oneflow_all_hdr_expanded} PROPERTIES GENERATED TRUE)
 endforeach()
 
 file(GLOB_RECURSE oneflow_all_src "${PROJECT_SOURCE_DIR}/oneflow/core/*.*" "${PROJECT_SOURCE_DIR}/oneflow/python/*.*")
@@ -116,7 +119,7 @@ endforeach()
 # clang format
 add_custom_target(of_format)
 
-foreach(source_file ${of_all_obj_cc} ${of_main_cc} ${of_all_test_cc} ${of_python_obj_cc} ${oneflow_all_hdr_expanded})
+foreach(source_file ${of_all_obj_cc} ${of_main_cc} ${of_all_test_cc} ${of_python_obj_cc})
     add_custom_command(TARGET of_format PRE_BUILD
     COMMAND clang-format -i -style=file ${source_file})
 endforeach()
@@ -135,7 +138,7 @@ RELATIVE_PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
 
 oneflow_add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
 target_link_libraries(of_protoobj ${oneflow_third_party_libs})
-add_dependencies(of_protoobj make_pyproto_dir of_expand_hdr)
+add_dependencies(of_protoobj make_pyproto_dir)
 
 # cc obj lib
 include_directories(${PROJECT_SOURCE_DIR})  # TO FIND: third_party/eigen3/..
@@ -172,7 +175,6 @@ oneflow_add_library(oneflow_internal SHARED ${SWIG_SRCS} ${SWIG_HDRS} ${of_main_
 SET_TARGET_PROPERTIES(oneflow_internal PROPERTIES PREFIX "_")
 set_target_properties(oneflow_internal PROPERTIES CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/python_scripts")
 target_link_libraries(oneflow_internal ${of_libs} ${oneflow_third_party_libs})
-add_dependencies(oneflow_internal of_expand_hdr)
 
 set(of_pyscript_dir "${PROJECT_BINARY_DIR}/python_scripts")
 add_custom_command(TARGET oneflow_internal POST_BUILD
