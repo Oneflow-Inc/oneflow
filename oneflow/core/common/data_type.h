@@ -178,7 +178,7 @@ const T* GetZeroPtr() {
 
 template<typename T>
 const T* GetOnePtr() {
-  static const T ret = GetZeroVal<T>();
+  static const T ret = GetOneVal<T>();
   return &ret;
 }
 
