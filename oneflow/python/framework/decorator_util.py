@@ -3,13 +3,15 @@ from __future__ import absolute_import
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.decorator_context as decorator_context
 import oneflow.python.framework.oneflow_mode as oneflow_mode
+import oneflow.python.framework.compiler as compiler
+import oneflow.python.framework.runtime as runtime
 
 def remote(func):
     def Func(*arg):
         if oneflow_mode.IsCurrentCompileMode():
-            func(*arg)
+            return compiler.CompileJob(func)
         elif oneflow_mode.IsCurrentRuntimeMode():
-            raise NotImplementedError
+            return runtime.LaunchJob(func, *arg)
         else:
             raise NotImplementedError
 

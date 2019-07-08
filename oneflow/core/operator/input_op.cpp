@@ -19,7 +19,7 @@ void CheckShape(const Shape& shape) {
   FOR_RANGE(int, i, 1, shape.NumAxes()) { CHECK_GT(shape.At(i), 0); }
 }
 
-bool GetSplitAxis(const InputBlobConf& input_blob_conf, size_t* split_axis) {
+bool GetSplitAxis(const InterfaceBlobConf& input_blob_conf, size_t* split_axis) {
   if (input_blob_conf.has_split_axis()) {
     int64_t axis = input_blob_conf.split_axis();
     if (axis < 0) { axis += input_blob_conf.shape().dim_size(); }
