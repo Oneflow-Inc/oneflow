@@ -9,3 +9,6 @@ int8 = data_type_pb2.kInt8
 int32 = data_type_pb2.kInt32
 int64 = data_type_pb2.kInt64
 uint8 = data_type_pb2.kUInt8
+
+del absolute_import
+del data_type_pb2
