@@ -753,7 +753,7 @@ void FinishGlobalCriticalSectionDesc(const std::vector<Plan>& plans) {
   critical_section_desc->Done();
 }
 
-void InitBlobConf(InputBlobConf* blob_conf, const ParallelBlobConf& parallel_blob_conf) {
+void InitBlobConf(InterfaceBlobConf* blob_conf, const ParallelBlobConf& parallel_blob_conf) {
   BlobDesc blob_desc(parallel_blob_conf.logical_blob_desc_conf());
   blob_desc.shape().ToProto(blob_conf->mutable_shape());
   blob_conf->set_data_type(blob_desc.data_type());

@@ -36,3 +36,6 @@ def Compile():
 
 def GetMainFunc():
     return decorator_context.main_func
+
+def CompileJob(func):
+    func(*arg)

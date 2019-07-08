@@ -32,3 +32,6 @@ class WorkerRuntimeEnv():
 
 class ThisIsNotAnError(Exception):
     pass
+
+class LaunchJob(func, *arg):
+    raise NotImplementedError
