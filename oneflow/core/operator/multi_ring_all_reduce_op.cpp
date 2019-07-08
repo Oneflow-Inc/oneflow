@@ -73,7 +73,6 @@ void MultiRingAllReduceOp::VirtualGenKernelConf(
                                                  + ring_range.begin());
       step_conf->mutable_data_range()->set_end(slices.At(current_slice_id).end()
                                                + ring_range.begin());
-      current_slice_id = ring_prev[current_slice_id];
       if (i == 0) {
         step_conf->set_send(true);
         step_conf->set_recv(false);
@@ -102,6 +101,7 @@ void MultiRingAllReduceOp::VirtualGenKernelConf(
       } else {
         UNIMPLEMENTED();
       }
+      current_slice_id = ring_prev[current_slice_id];
     }
   }
 }

@@ -17,8 +17,6 @@ class MultiRingAllReduceKernel final : public KernelIf<device_type> {
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
 
-  int64_t num_steps_ = -1;
-  std::vector<std::vector<Range>> chunk_slices_;
   std::vector<std::string> send_bn_;
   std::vector<std::string> recv_bn_;
 };
