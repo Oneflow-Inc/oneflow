@@ -1,9 +1,9 @@
 from __future__ import absolute_import
 
-def IsCurrentCompileMode:
+def IsCurrentCompileMode():
     return current_mode == COMPILE_MODE
     
-def IsCurrentRuntimeMode:
+def IsCurrentRuntimeMode():
     return current_mode == RUNTIME_MODE
 
 COMPILE_MODE = 'COMPILE_MODE';
