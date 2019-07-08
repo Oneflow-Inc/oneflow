@@ -19,7 +19,7 @@ static std::string DeviceTypeToBackend(DeviceType device_type) {
       return "CUDA";
     default:
       DLOG(WARNING) << "Invalid DeviceType (" << device_type << ")";
-      return NoneString;
+      return "";
   }
 }
 

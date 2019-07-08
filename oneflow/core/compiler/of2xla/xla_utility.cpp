@@ -3,7 +3,6 @@
 #include "oneflow/core/compiler/of2xla/xla_utility.h"
 
 namespace oneflow {
-namespace mola {
 
 #define OP_TYPE_CASE(op)  OperatorConf::k##op##Conf
 
@@ -20,11 +19,9 @@ std::string ExtractOpTypeAsString(const OperatorConf &conf) {
     return it->second;
   } else {
     // Return empty if the operator is not in the translation map
-    return NoneString;
+    return "";
   }
 }
-
-}  // namespace mola
 
 std::string BlobName(const LogicalBlobId &lbi) {
   CHECK_EQ(lbi.has_op_name(), true);

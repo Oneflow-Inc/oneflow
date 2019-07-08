@@ -1,5 +1,7 @@
 #include "glog/logging.h"
 #include "absl/strings/str_cat.h"
+#include "tensorflow/compiler/xla/service/service.h"
+#include "tensorflow/compiler/xla/client/local_client.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/compiler/of2xla/xla_utility.h"
@@ -45,7 +47,8 @@ XlaCompiler::XlaCompiler(
 }
 
 void XlaCompiler::BuildComputation(
-    const std::unordered_map<Argument, XlaOprand> &entry_oprands) {
+    const std::unordered_map<Argument, XlaOprand> &entry_oprands,
+    xla::Shape *output_shape, xla::XlaComputation *computation) {
   // All operator's output oprands collector
   std::unordered_map<Argument, XlaOprand> all_outputs;
 
@@ -78,33 +81,63 @@ void XlaCompiler::BuildComputation(
     const auto &outputs = op_context.outputs();
     all_outputs.insert(outputs.begin(), outputs.end());
   });
+
+  xla::StatusOr<xla::XlaComputation> computation_status = builder_->Build();
+  CHECK(computation_status.ok());
+  *computation = computation_status.ConsumeValueOrDie();
+  // TODO(hjchen2) Remove debug logging
+  DLOG(INFO) << computation->proto().DebugString();
+
+  OF_CHECK_AND_ASSIGN(const auto& program_shape,
+                      computation->GetProgramShape());
+  *output_shape = program_shape.result();
 }
 
-void XlaCompiler::BuildExecutable() {
-  // Build xla computation (just for debug)
-  xla::StatusOr<xla::XlaComputation> computation_status = builder_->Build();
-  xla::XlaComputation computation = computation_status.ConsumeValueOrDie();
-  xla::StatusOr<xla::ProgramShape> program_shape_status = computation.GetProgramShape();
-  xla::ProgramShape program_shape = program_shape_status.ConsumeValueOrDie();
-  DLOG(INFO) << computation.proto().DebugString();
+void XlaCompiler::BuildExecutable(const CompilationResult &result) {
+  // Create local service and client
+  // GetOrCreateLocalClient(platform, device_set);
+  xla::ServiceOptions service_options;
+  OF_CHECK_AND_ASSIGN(auto service,
+                      xla::LocalService::NewService(service_options));
+  xla::LocalClient client(service.get());
+
+  std::vector<const xla::Shape*> argument_layouts(
+      result.xla_input_shapes.size());
+  for (int i = 0; i < result.xla_input_shapes.size(); ++i) {
+    argument_layouts[i] = &result.xla_input_shapes[i];
+  }
+
+  xla::ExecutableBuildOptions build_options;
+  build_options.set_device_ordinal(client.default_device_ordinal());
+  build_options.set_result_layout(result.xla_output_shape);
+
+  OF_CHECK_AND_ASSIGN(
+      auto executable,
+      client.Compile(result.computation, argument_layouts, build_options));
 }
 
 void XlaCompiler::Compile() {
   CHECK_NOTNULL(graph_);
-
+  
+  CompilationResult result;
   std::unordered_map<Argument, XlaOprand> entry_oprands;
-  SetupEntryOprands(&entry_oprands);
+  SetupEntryOprands(&entry_oprands, &result.xla_input_shapes);
 
-  BuildComputation(entry_oprands);
+  BuildComputation(entry_oprands, &result.xla_output_shape,
+                   &result.computation);
 
-  BuildExecutable();
+  BuildExecutable(result);
 }
 
 void XlaCompiler::SetupEntryOprands(
-    std::unordered_map<Argument, XlaOprand> *entry_oprands) {
+    std::unordered_map<Argument, XlaOprand> *entry_oprands,
+    std::vector<xla::Shape> *input_shapes) {
   for (int i = 0; i < entry_names_.size(); ++i) {
     Argument arg = arguments_.at(entry_names_[i]);
     xla::Shape shape = OfShapeToXlaShape(arg.shape(), arg.data_type());
+    input_shapes->push_back(shape);
+
+    // Treat all inputs as xla Parameters
     xla::XlaOp handle = xla::Parameter(builder_.get(), i, shape,
                                        absl::StrCat("arg", i));
     entry_oprands->emplace(arg, XlaOprand::XlaOp(handle));

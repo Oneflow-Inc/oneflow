@@ -1,6 +1,8 @@
 #ifndef ONEFLOW_CORE_COMPILER_OF2XLA_XLA_GRAPH_COMPILER_H_
 #define ONEFLOW_CORE_COMPILER_OF2XLA_XLA_GRAPH_COMPILER_H_
 
+#include "tensorflow/compiler/xla/service/service.h"
+#include "tensorflow/compiler/xla/client/local_client.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "oneflow/core/compiler/of2xla/xla_utility.h"
 #include "oneflow/core/compiler/of2xla/xla_op_context.h"
@@ -11,6 +13,14 @@ namespace mola {
 
 class XlaCompiler {
  public:
+  struct CompilationResult {
+    std::vector<xla::Shape> xla_input_shapes;
+    // The output shape is always a tuple
+    xla::Shape xla_output_shape;
+
+    xla::XlaComputation computation;
+  };
+
   XlaCompiler(const OperatorConf &op_conf, DeviceType device_type,
               ParallelContext parallel_ctx,
               const std::unordered_map<std::string, BlobDesc> &setup_blob_descs,
@@ -19,13 +29,15 @@ class XlaCompiler {
   void Compile();
 
   void BuildComputation(
-      const std::unordered_map<Argument, XlaOprand> &entry_oprands);
+      const std::unordered_map<Argument, XlaOprand> &entry_oprands,
+      xla::Shape *output_shape, xla::XlaComputation *computation);
 
-  void BuildExecutable();
+  void BuildExecutable(const CompilationResult &result);
 
  private:
   void SetupEntryOprands(
-      std::unordered_map<Argument, XlaOprand> *entry_oprands);
+      std::unordered_map<Argument, XlaOprand> *entry_oprands,
+      std::vector<xla::Shape> *input_shapes);
 
   void SetupParamArguments(
       const XlaNode *node,
