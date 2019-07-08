@@ -43,16 +43,29 @@ class MultiRingAllReduceActor : public CompActor {
   RegstSlot consumed_rs_;
   RegstSlot produced_rs_;
   int64_t num_steps_ = -1;
-  int64_t current_step_ = -1;
-  int64_t in_regst_desc_id_ = -1;
-  int64_t out_regst_desc_id_ = -1;
+
   std::vector<int64_t> recv_regst_desc_id_;
   std::vector<int64_t> send_regst_desc_id_;
   std::vector<int64_t> send_regst_piece_id_;
-  bool in_regst_eord_ = false;
+
   int64_t current_ring_id_ = -1;
   int64_t num_rings_ = -1;
   std::pair<int64_t, int64_t> other_ctx_;
+
+  bool in_regst_eord_ = false;
+  int64_t in_regst_desc_id_ = -1;
+  int64_t out_regst_desc_id_ = -1;
+  int64_t out_regst_desc_reading_cnt_ = 0;
+  std::deque<Regst*> in_regst_deque_;
+  Regst* out_regst_;
+  std::vector<bool> send_regst_ready_;
+  std::vector<bool> recv_regst_ready_;
+  std::vector<Regst*> send_regst_;
+  std::vector<Regst*> recv_regst_;
+  HashMap<int64_t, std::pair<bool, int64_t>> regst_desc_id2send_or_recv7ring_id_;
+  int64_t current_step_id_ = -1;
+  MultiRingAllReduceKernelConf multi_ring_all_reduce_kernel_conf_;
+  KernelConf kernel_conf_;
 };
 
 }  // namespace oneflow
