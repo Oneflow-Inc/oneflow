@@ -15,8 +15,7 @@
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/critical_section_desc.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
-#include "oneflow/core/job/foreign_callback.h"
-#include "oneflow/core/job/mock_callback_notifier.h"
+#include "oneflow/core/job/job_instance.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/actor/act_event_logger.h"
@@ -47,6 +46,17 @@ bool operator==(const ParallelBlobConf& lhs, const ParallelBlobConf& rhs) {
 }
 
 namespace {
+
+class MockJobInstance final : public JobInstance {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(MockJobInstance);
+  explicit MockJobInstance(std::function<void()> callback) : callback_(callback) {}
+
+  void Finish() const override { callback_(); }
+
+ private:
+  std::function<void()> callback_;
+};
 
 #define OF_VERSION_MAJOR "0"
 #define OF_VERSION_MINOR "1"
@@ -1016,7 +1026,7 @@ GlobalObjectsScope::GlobalObjectsScope(const JobSet& job_set) {
     *Global<AvailableMemDesc>::Get() = PullAvailableMemDesc();
     Global<CriticalSectionDesc>::New();
     Global<BufferMgr<int64_t>>::New();
-    Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::New();
+    Global<BufferMgr<std::shared_ptr<JobInstance>>>::New();
     Global<InterUserJobInfo>::New();
   }
 }
@@ -1024,7 +1034,7 @@ GlobalObjectsScope::GlobalObjectsScope(const JobSet& job_set) {
 GlobalObjectsScope::~GlobalObjectsScope() {
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     Global<InterUserJobInfo>::Delete();
-    Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::Delete();
+    Global<BufferMgr<std::shared_ptr<JobInstance>>>::Delete();
     Global<BufferMgr<int64_t>>::Delete();
     Global<CriticalSectionDesc>::Delete();
     Global<AvailableMemDesc>::Delete();
@@ -1044,7 +1054,7 @@ GlobalObjectsScope::~GlobalObjectsScope() {
 RuntimeBuffersScope::RuntimeBuffersScope() {
   const auto& job_descs = *Global<std::vector<std::unique_ptr<JobDesc>>>::Get();
   Global<BufferMgr<int64_t>>::Get()->NewBuffer(kBufferNameGlobalWaitJobId, job_descs.size());
-  auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::Get();
+  auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
   FOR_RANGE(int64_t, job_id, 0, job_descs.size()) {
     const auto& job_name = GlobalJobDesc(job_id).job_name();
     buffer_mgr->NewBuffer(GetForeignInputBufferName(job_name), 2);
@@ -1055,7 +1065,7 @@ RuntimeBuffersScope::RuntimeBuffersScope() {
 }
 
 RuntimeBuffersScope::~RuntimeBuffersScope() {
-  auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::Get();
+  auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
   const auto& job_descs = *Global<std::vector<std::unique_ptr<JobDesc>>>::Get();
   FOR_RANGE(int64_t, job_id, 0, job_descs.size()) {
     const auto& job_name = GlobalJobDesc(job_id).job_name();
@@ -1071,9 +1081,8 @@ void Oneflow::NaiveSequentialRun() const {
     FOR_RANGE(int64_t, i, 0,
               Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->at(0)->TotalBatchNum()) {
       const auto& job_name = GetCallbackNotifierBufferName(GlobalJobDesc(0).job_name());
-      auto* buffer = Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::Get()->Get(job_name);
-      buffer->Send(
-          std::make_shared<MockCallbackNotifier>([]() { LOG(INFO) << "callback_notifier"; }));
+      auto* buffer = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get()->Get(job_name);
+      buffer->Send(std::make_shared<MockJobInstance>([]() { LOG(INFO) << "callback_notifier"; }));
       Global<BufferMgr<int64_t>>::Get()->Get(kBufferNameGlobalWaitJobId)->Send(0);
     }
   }

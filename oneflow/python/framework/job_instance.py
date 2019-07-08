@@ -28,14 +28,14 @@ def MakeArgPassJobInstance(job_name, src_op_name, dst_op_name, finish_cb = None)
                        sole_input_op_name_in_user_job = dst_op_name,
                        finish_cb = finish_cb);
 
-class JobInstance(oneflow_internal.ForeignCallback):
+class JobInstance(oneflow_internal.JobInstance):
     def __init__(self, job_name,
                  sole_input_op_name_in_user_job = None,
                  sole_output_op_name_in_user_job = None,
                  push_cb = None,
                  pull_cb = None,
                  finish_cb = None):
-        oneflow_internal.ForeignCallback.__init__(self)
+        oneflow_internal.JobInstance.__init__(self)
         self.job_name_ = job_name
         self.sole_input_op_name_in_user_job_ = sole_input_op_name_in_user_job
         self.sole_output_op_name_in_user_job_ = sole_output_op_name_in_user_job

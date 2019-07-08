@@ -2,7 +2,7 @@
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/register/ofblob.h"
-#include "oneflow/core/job/foreign_callback.h"
+#include "oneflow/core/job/job_instance.h"
 #include "oneflow/core/common/buffer_manager.h"
 
 void NaiveSequentialRunSerializedJobSet(const oneflow::JobSet& job_set) {
@@ -26,11 +26,11 @@ std::string GetSerializedInterUserJobInfo() {
   return ret;
 }
 
-void LaunchJob(const std::shared_ptr<oneflow::ForeignCallback>& cb) {
+void LaunchJob(const std::shared_ptr<oneflow::JobInstance>& cb) {
   using namespace oneflow;
   CHECK_NOTNULL(Global<Oneflow>::Get());
   const auto& job_name = cb->job_name();
-  auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::Get();
+  auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
   int64_t job_id = Global<JobName2JobId>::Get()->at(job_name);
   const JobDesc& job_desc = GlobalJobDesc(job_id);
   if (job_desc.is_pull_job()) { buffer_mgr->Get(GetForeignOutputBufferName(job_name))->Send(cb); }
