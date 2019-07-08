@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "oneflow/core/job_completer/auto_mixed_precision.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_desc.h"
@@ -96,6 +97,11 @@ bool TryUpdtBnVal4SepcialOpConf(const OperatorConf::OpTypeCase& op_type, PbMessa
   return false;
 }
 
+std::string ReplaceSlashToDash4Lbn(std::string lbn) {
+  std::replace(lbn.begin(), lbn.end(), '/', '-');
+  return lbn;
+}
+
 void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>& white_set,
                       Job* job) {
   JobBuilder job_builder(job);
@@ -122,32 +128,42 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
             << Container2Str<HashSet<OpEdge*>, OpEdge*>(white_set_edges, EdgeName4Edge);
   }
 
-  HashMap<std::string, OperatorConf> dst_op_name2dst_op_confs;
-  for (OpEdge* edge : white_set_edges) {
-    CHECK_EQ(1, edge->lbis().size());
-    LogicalBlobId cur_lbi = edge->lbis().front();
-    std::string cur_lbn = GenLogicalBlobName(cur_lbi);
-    CHECK_EQ(1, edge->lbi2ibns().at(cur_lbi).size());
-    const std::string& dst_ibn = edge->lbi2ibns().at(cur_lbi).front();
-    OpNode* src_node = edge->src_node();
-    OpNode* dst_node = edge->dst_node();
+  HashMap<std::string, std::vector<OpEdge*>> edges_group_by_lbn;
+  {
+    for (OpEdge* edge : white_set_edges) {
+      CHECK_EQ(1, edge->lbis().size());
+      std::string lbn = GenLogicalBlobName(edge->lbis().front());
+      edges_group_by_lbn[lbn].push_back(edge);
+    }
+  }
 
+  HashMap<std::string, OperatorConf> dst_op_name2dst_op_confs;
+  for (auto& pair : edges_group_by_lbn) {
+    const std::string& lbn = pair.first;
+    OpNode* src_node = pair.second.front()->src_node();
     OperatorConf cast_op_conf;
     {
       std::string cast_suffix = f2h ? "-cast_f2h" : "-cast_h2f";
       DataType cast_data_type = f2h ? DataType::kFloat16 : DataType::kFloat;
-      cast_op_conf.set_name(src_node->op().op_name() + "-" + dst_node->op().op_name()
-                            + cast_suffix);
+      cast_op_conf.set_name(ReplaceSlashToDash4Lbn(lbn) + cast_suffix);
       CastOpConf* cast_conf = cast_op_conf.mutable_cast_conf();
-      cast_conf->set_in(cur_lbn);
+      cast_conf->set_in(lbn);
       cast_conf->set_out("out");
       cast_conf->set_data_type(cast_data_type);
       job_builder.AddOps(src_node->parallel_desc().parallel_conf(),
                          std::vector<OperatorConf>{cast_op_conf});
-      LOG(INFO) << "Insert CastOp: " << cast_op_conf.name() << " between " << cur_lbn;
+      LOG(INFO) << "Insert CastOp: " << cast_op_conf.name() << " between " << lbn;
     }
 
-    {
+    std::string new_lbn = cast_op_conf.name() + "/out";
+    for (OpEdge* edge : pair.second) {
+      CHECK(src_node == edge->src_node());
+      OpNode* dst_node = edge->dst_node();
+      LogicalBlobId cur_lbi = edge->lbis().front();
+      CHECK_EQ(lbn, GenLogicalBlobName(cur_lbi));
+      CHECK_EQ(1, edge->lbi2ibns().at(cur_lbi).size());
+      const std::string& dst_ibn = edge->lbi2ibns().at(cur_lbi).front();
+
       const std::string& dst_op_name = dst_node->op().op_name();
       if (!IsKeyFound(dst_op_name2dst_op_confs, dst_op_name)) {
         INSERT_CHECK(
@@ -156,13 +172,14 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
       OperatorConf& dst_op_conf = dst_op_name2dst_op_confs.at(dst_op_name);
       PbMessage* dst_op_type_conf =
           MutableMessageInPbMessage(&dst_op_conf, dst_op_conf.op_type_case());
-      std::string lbn = cast_op_conf.name() + "/out";
-      if (!TryUpdtBnVal4SepcialOpConf(dst_op_conf.op_type_case(), dst_op_type_conf, cur_lbn, lbn,
+      std::string new_lbn = cast_op_conf.name() + "/out";
+      if (!TryUpdtBnVal4SepcialOpConf(dst_op_conf.op_type_case(), dst_op_type_conf, lbn, new_lbn,
                                       dst_ibn)) {
-        SetBnValInOpTypeConf(dst_op_type_conf, dst_ibn, cur_lbn, lbn);
+        SetBnValInOpTypeConf(dst_op_type_conf, dst_ibn, lbn, new_lbn);
       }
     }
   }
+
   std::vector<OperatorConf> dst_op_confs;
   for (const auto& pair : dst_op_name2dst_op_confs) { dst_op_confs.push_back(pair.second); }
   // make sure an op_conf can only be udpated once, cuz later update will override before
