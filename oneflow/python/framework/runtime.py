@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.runtime_context as runtime_ctx
 import oneflow.python.framework.job_instance as job_instance
+import oneflow.python.framework.inter_user_job as inter_user_job
 import numpy as np
 
 def GetMachineRuntimeEnv(job_set):
@@ -43,12 +44,6 @@ class LaunchJob(job_name, *arg):
     assert len(arg) == len(input_op_names)
     for i in range(len(arg)):
         assert isinstance(arg[i], np.ndarray)
-        op_name = input_op_names[i]
-        push_job_name = runtime_ctx.inter_user_job_info.input_or_var_op_name2push_job_name[op_name]
-        push_cb = MakePushCallback(arg[i])
-        c_api_util.LaunchJob(job_instance.MakePushJobInstance(push_job_name, op_name, push_cb))
+        inter_user_job.AsyncPush(input_op_names[i], inter_user_job.MakePushCallback(arg[i]);
     c_api_util.LaunchJob(job_instance.MakeUserJobInstance(job_name))
     return runtime_ctx.job_name2output_op_names[job_name]
-
-def MakePushCallback(ndarray):
-    return lambda ofblob: ofblob.CopyFromNdarray(ndarray)
