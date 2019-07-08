@@ -33,10 +33,11 @@ void XlaLaunchKernel<device_type, T>::ForwardDataContent(
   }
 
   bool force_compile = true;
-  ParallelContext parallel_ctx = LocalParallelContext();
-  mola::XlaCompiler compiler(this->op_conf(), device_type, parallel_ctx,
-                             setup_blob_descs, force_compile);
-  compiler.Compile();
+  mola::CompileContext compile_ctx(&graph, &builder, input_arg_names,
+                                   blob_descs, force_compile);
+
+  mola::XlaGraphCompiler graph_compiler;
+  graph_compiler.Compile(&compile_ctx);
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kXlaLaunchConf, XlaLaunchKernel,

@@ -14,7 +14,7 @@ load(
     "tf_proto_library_py",
 )
 load("//tensorflow/compiler/xla:xla.bzl", "xla_proto_library")
-
+load("@local_config_cuda//cuda:build_defs.bzl", "if_cuda")
 
 tf_cc_shared_object(
     name = "libxla_computation_client.so",
@@ -34,11 +34,11 @@ tf_cc_shared_object(
         "//tensorflow/compiler/xla/client:local_client",
         "//tensorflow/compiler/xla/service",
         "//tensorflow/compiler/xla/service:cpu_plugin",
-        "//tensorflow/compiler/xla/service:gpu_plugin",
-        "//tensorflow/compiler/xla/service:interpreter_plugin",
 #        "//tensorflow/compiler/jit:xla_cpu_jit",
-#        "//tensorflow/compiler/jit:xla_gpu_jit",
         "//tensorflow/core:lib",
         "@com_google_absl//absl/strings",
-    ],
+    ] + if_cuda([
+        "//tensorflow/compiler/xla/service:gpu_plugin",
+#        "//tensorflow/compiler/jit:xla_gpu_jit",
+    ]),
 )
