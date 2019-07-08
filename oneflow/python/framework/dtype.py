@@ -27,3 +27,4 @@ def convert_of_dtype_to_numpy_dtype(dtype):
 
 del absolute_import
 del data_type_pb2
+del np
