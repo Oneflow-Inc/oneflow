@@ -5,11 +5,11 @@
 
 namespace oneflow {
 
-class JobInstance {
+class ForeignJobInstance {
  public:
-  JobInstance() = default;
+  ForeignJobInstance() = default;
 
-  virtual ~JobInstance() = default;
+  virtual ~ForeignJobInstance() = default;
 
   virtual std::string job_name() const { UNIMPLEMENTED(); }
   virtual std::string sole_input_op_name_in_user_job() const { UNIMPLEMENTED(); }
