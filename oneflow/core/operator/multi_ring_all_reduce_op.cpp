@@ -39,10 +39,6 @@ void MultiRingAllReduceOp::InferBlobDescs(
     BlobDesc* send_i = GetBlobDesc4BnInOp(GenRepeatedBn("send", i));
     send_i->set_data_type(in->data_type());
     send_i->mut_shape() = Shape({buffer_size});
-    if (ring_elem_cnt % buffer_size != 0) {
-      send_i->set_has_dim0_valid_num_field(true);
-      send_i->mut_dim0_inner_shape() = Shape({1, buffer_size});
-    }
   }
 }
 
