@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 import oneflow.core.common.data_type_pb2 as data_type_pb2
 
-invalid = data_type_pb2.kInvalidDataType
 char = data_type_pb2.kChar
 float = data_type_pb2.kFloat
 double = data_type_pb2.kDouble

@@ -24,7 +24,7 @@ def Compile():
     compile_context.cur_job_set = job_set_util.JobSet()
     with compile_context.CompilingMain():
         job_set = compile_context.cur_job_set
-        decorator_context.main_func.__config__func__(job_set)
+        decorator_context.main_func.__config_func__(job_set)
         config.DefaultConfigJobSet(job_set)
     for job_name in decorator_context.job_name2func:
         func = decorator_context.job_name2func[job_name]
