@@ -14,9 +14,6 @@ def val():
 def var():
     TODO()
 
-def parse_job_as_func_body(job):
-    TODO()
-
 def Compile():
     assert oneflow_mode.IsCurrentCompileMode(), "Compile() must be under compile mode"
     assert decorator_context.main_func is not None, "no main function found"
