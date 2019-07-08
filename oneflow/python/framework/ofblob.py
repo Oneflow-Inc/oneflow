@@ -54,4 +54,4 @@ OF_BLOB_DTYPE2NUMPY_DTYPE = {
 
 def convert_of_dtype_to_numpy_dtype(dtype):
     if dtype not in OF_BLOB_DTYPE2NUMPY_DTYPE: raise NotImplementedError
-    return OF_BLOB_DTYPE2NUMPY_DTYPE[dtype ]
+    return OF_BLOB_DTYPE2NUMPY_DTYPE[dtype]
