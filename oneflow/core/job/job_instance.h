@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_JOB_FOREIGN_CALLBACK_H_
-#define ONEFLOW_CORE_JOB_FOREIGN_CALLBACK_H_
+#ifndef ONEFLOW_CORE_JOB_JOB_INSTANCE_H_
+#define ONEFLOW_CORE_JOB_JOB_INSTANCE_H_
 
 #include "oneflow/core/register/ofblob.h"
 
 namespace oneflow {
 
-class ForeignCallback {
+class JobInstance {
  public:
-  ForeignCallback() = default;
+  JobInstance() = default;
 
-  virtual ~ForeignCallback() = default;
+  virtual ~JobInstance() = default;
 
   virtual std::string job_name() const { UNIMPLEMENTED(); }
   virtual std::string sole_input_op_name_in_user_job() const { UNIMPLEMENTED(); }
@@ -21,4 +21,4 @@ class ForeignCallback {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_FOREIGN_CALLBACK_H_
+#endif  // ONEFLOW_CORE_JOB_JOB_INSTANCE_H_
