@@ -21,6 +21,7 @@ class MasterRuntimeEnv:
         c_api_util.InitGlobalOneflowByJobSet(self.job_set_)
         
     def __exit__(self, *args):
+        runtime_ctx.Destroy()
         c_api_util.DestroyGlobalOneflow()
 
 class WorkerRuntimeEnv():
@@ -39,11 +40,11 @@ class ThisIsNotAnError(Exception):
 
 class LaunchJob(job_name, *arg):
     input_op_names = runtime_ctx.job_name2input_op_names[job_name]
-    assert len(arg) == len(input_op_names)     
+    assert len(arg) == len(input_op_names)
     for i in range(len(arg)):
         assert isinstance(arg[i], np.ndarray)
-        push_job_name = TODO()
         op_name = input_op_names[i]
+        push_job_name = runtime_ctx.inter_user_job_info.input_or_var_op_name2push_job_name[op_name]
         push_cb = MakePushCallback(arg[i])
         c_api_util.LaunchJob(job_instance.MakePushJobInstance(push_job_name, op_name, push_cb))
     c_api_util.LaunchJob(job_instance.MakeUserJobInstance(job_name))
