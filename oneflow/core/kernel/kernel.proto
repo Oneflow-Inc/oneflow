@@ -2,6 +2,7 @@ syntax = "proto2";
 package oneflow;
 
 import "oneflow/core/common/shape.proto";
+import "oneflow/core/common/range.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/operator/op_attribute.proto";
 import "oneflow/core/operator/op_conf.proto";
@@ -157,6 +158,23 @@ message ShapeElemCntKernelConf {
   repeated int32 axis = 1;
 }
 
+message MultiRingAllReduceKernelStepConf {
+  required bool send = 1;
+  required bool recv = 2;
+  required bool reduce = 3;
+  required bool copy = 4;
+  required RangeProto data_range = 5;
+}
+
+message MultiRingAllReduceKernelRingConf {
+  repeated MultiRingAllReduceKernelStepConf step_conf = 2;
+}
+
+message MultiRingAllReduceKernelConf {
+  required int64 num_rank = 1;
+  repeated MultiRingAllReduceKernelRingConf ring_conf = 2;
+}
+
 message KernelConf {
   required OpAttribute op_attribute = 1;
   required bool is_forward = 2;
@@ -202,5 +220,6 @@ message KernelConf {
     ConvFilterGradKernelConf conv_filter_grad_conf = 410;
     ConvDataGradKernelConf conv_data_grad_conf = 411;
     ShapeElemCntKernelConf shape_elem_cnt_conf = 412;
+    MultiRingAllReduceKernelConf multi_ring_all_reduce_conf = 413;
   }
 }
