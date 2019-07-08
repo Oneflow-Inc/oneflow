@@ -11,6 +11,9 @@ class ForeignCallback {
 
   virtual ~ForeignCallback() = default;
 
+  virtual std::string job_name() const { UNIMPLEMENTED(); }
+  virtual std::string sole_input_op_name() const { UNIMPLEMENTED(); }
+  virtual std::string sole_output_op_name() const { UNIMPLEMENTED(); }
   virtual void PushBlob(uint64_t ofblob_ptr) const { UNIMPLEMENTED(); }
   virtual void PullBlob(uint64_t ofblob_ptr) const { UNIMPLEMENTED(); }
   virtual void Finish() const { UNIMPLEMENTED(); }

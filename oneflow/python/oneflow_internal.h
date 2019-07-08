@@ -26,9 +26,10 @@ std::string GetSerializedInterUserJobInfo() {
   return ret;
 }
 
-void LaunchJob(const std::string& job_name, const std::shared_ptr<oneflow::ForeignCallback>& cb) {
+void LaunchJob(const std::shared_ptr<oneflow::ForeignCallback>& cb) {
   using namespace oneflow;
   CHECK_NOTNULL(Global<Oneflow>::Get());
+  const auto& job_name = cb->job_name();
   auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<ForeignCallback>>>::Get();
   int64_t job_id = Global<JobName2JobId>::Get()->at(job_name);
   const JobDesc& job_desc = GlobalJobDesc(job_id);
