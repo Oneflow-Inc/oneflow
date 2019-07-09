@@ -30,12 +30,12 @@ int MultiRingAllReduceActor::HandlerAllReduce(const ActorMsg& msg) {
   } else {
     UNIMPLEMENTED();
   }
-  std::vector<ActorMsg> actor_msgs_;
   const MultiRingAllReduceKernelStepConf& step_conf =
       multi_ring_all_reduce_kernel_conf_.ring_conf(current_ring_id_).step_conf(current_step_id_);
   if (!in_regst_deque_.empty() && out_regst_desc_reading_cnt_ == 0
       && (!step_conf.send() || send_regst_ready_.at(current_ring_id_))
       && (!step_conf.recv() || recv_regst_ready_.at(current_ring_id_))) {
+    std::vector<ActorMsg> actor_msgs_;
     Regst* current_in_regst = in_regst_deque_.front();
     if (step_conf.send()) {
       Regst* send = send_regst_.at(current_ring_id_);
@@ -60,19 +60,25 @@ int MultiRingAllReduceActor::HandlerAllReduce(const ActorMsg& msg) {
           actor_id(), current_in_regst->producer_actor_id(), current_in_regst));
       in_regst_deque_.pop_front();
     }
-    current_ring_id_ = (current_ring_id_ + 1) % num_rings_;
-    if (current_ring_id_ == 0) { current_step_id_ = (current_step_id_ + 1) % num_steps_; }
-  }
-  if (in_regst_eord_ && in_regst_deque_.empty() && current_ring_id_ == 0 && current_step_id_ == 0) {
-    for (const int64_t consumer : out_regst_->consumers_actor_id()) {
-      actor_msgs_.push_back(ActorMsg::BuildEordMsg(consumer, out_regst_->regst_desc_id()));
-    }
-  }
-  if (!actor_msgs_.empty()) {
     AsyncDo([actor_msgs_]() {
       for (const auto& msg : actor_msgs_) { Global<ActorMsgBus>::Get()->SendMsg(msg); }
     });
+    current_ring_id_ = (current_ring_id_ + 1) % num_rings_;
+    if (current_ring_id_ == 0) { current_step_id_ = (current_step_id_ + 1) % num_steps_; }
   }
+  if (in_regst_eord_ && in_regst_deque_.empty() && current_ring_id_ == 0 && current_step_id_ == 0
+      && out_regst_desc_reading_cnt_ == 0) {
+    for (const int64_t consumer : out_regst_->consumers_actor_id()) {
+      std::vector<ActorMsg> actor_msgs_;
+      actor_msgs_.push_back(ActorMsg::BuildEordMsg(consumer, out_regst_->regst_desc_id()));
+      AsyncDo([actor_msgs_]() {
+        for (const auto& msg : actor_msgs_) { Global<ActorMsgBus>::Get()->SendMsg(msg); }
+      });
+    }
+    OF_SET_MSG_HANDLER(nullptr);
+    return 1;
+  }
+  return 0;
 }
 
 void MultiRingAllReduceActor::VirtualActorInit(const TaskProto& task_proto) {
