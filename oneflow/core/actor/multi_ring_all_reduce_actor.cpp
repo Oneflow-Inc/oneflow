@@ -50,7 +50,7 @@ int MultiRingAllReduceActor::HandlerAllReduce(const ActorMsg& msg) {
         step_conf.send() ? send_regst_.at(current_ring_id_)->GetBlobByLbi(lbi_) : nullptr;
     const std::string send_blob_name = "send_" + std::to_string(current_ring_id_);
     Blob* recv_blob =
-        step_conf.send() ? recv_regst_.at(current_ring_id_)->GetBlobByLbi(lbi_) : nullptr;
+        step_conf.recv() ? recv_regst_.at(current_ring_id_)->GetBlobByLbi(lbi_) : nullptr;
     const std::string recv_blob_name = "recv_" + std::to_string(current_ring_id_);
     other_ctx_.first = current_ring_id_;
     other_ctx_.second = current_step_id_;
