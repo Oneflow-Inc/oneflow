@@ -1,11 +1,11 @@
 #ifndef ONEFLOW_CORE_ACTOR_MULTI_RING_ALL_REDUCE_ACTOR_H_
 #define ONEFLOW_CORE_ACTOR_MULTI_RING_ALL_REDUCE_ACTOR_H_
 
-#include "oneflow/core/actor/compute_actor.h"
+#include "oneflow/core/actor/actor.h"
 
 namespace oneflow {
 
-class MultiRingAllReduceActor : public CompActor {
+class MultiRingAllReduceActor : public Actor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MultiRingAllReduceActor);
   MultiRingAllReduceActor() = default;
@@ -13,59 +13,28 @@ class MultiRingAllReduceActor : public CompActor {
 
  protected:
   void VirtualActorInit(const TaskProto&) override;
-  int64_t ActNumForEachOutput(int64_t regst_desc_id) const override;
-  bool ProducedCtrlRegstValid(int64_t regst_desc_id) const override;
   int HandlerAllReduce(const ActorMsg& msg);
 
- private:
-  void Act() override;
-  void NormalProcessCustomizedReadableRegstMsg(const ActorMsg&) override;
-  void UpdtStateAsCustomizedProducedRegst(Regst* regst) override;
-  void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const override;
-  bool IsCustomizedReadReady() const override;
-  bool IsCustomizedWriteReady() const override;
-  void NormalProcessCustomizedEordMsg(const ActorMsg&) override;
-  bool IsCustomizedReadAlwaysUnReadyFromNow() const override;
-  void AsyncReturnAllCustomizedReadableRegst() override;
-  std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedConsumedRegstDescName()
-      override {
-    return std::make_pair(RegstNameType::kNaive, HashSet<std::string>{});
-  }
-  std::pair<RegstNameType, HashSet<std::string>> GetNaiveOrCustomizedProducedRegstDescName()
-      override {
-    return std::make_pair(RegstNameType::kNaive, HashSet<std::string>{});
-  }
-  void AsyncSendCustomizedProducedRegstMsgToConsumer() override;
-  void AsyncSendCustomizedConsumedRegstMsgToProducer() override;
-  bool CheckOutputActId(int64_t regst_desc_id) const override;
-  void SetKernelCtxOther(void** other);
-
-  RegstSlot consumed_rs_;
-  RegstSlot produced_rs_;
-  int64_t num_steps_ = -1;
-
-  std::vector<int64_t> recv_regst_desc_id_;
-  std::vector<int64_t> send_regst_desc_id_;
-  std::vector<int64_t> send_regst_piece_id_;
-
-  int64_t current_ring_id_ = -1;
   int64_t num_rings_ = -1;
-  std::pair<int64_t, int64_t> other_ctx_;
+  int64_t num_steps_ = -1;
+  int64_t current_ring_id_ = -1;
+  int64_t current_step_id_ = -1;
 
   bool in_regst_eord_ = false;
   int64_t in_regst_desc_id_ = -1;
   int64_t out_regst_desc_id_ = -1;
-  int64_t out_regst_desc_reading_cnt_ = 0;
+  int64_t out_regst_desc_reading_cnt_ = -1;
   std::deque<Regst*> in_regst_deque_;
-  Regst* out_regst_;
+  Regst* out_regst_ = nullptr;
   std::vector<bool> send_regst_ready_;
   std::vector<bool> recv_regst_ready_;
   std::vector<Regst*> send_regst_;
   std::vector<Regst*> recv_regst_;
   HashMap<int64_t, std::pair<bool, int64_t>> regst_desc_id2send_or_recv7ring_id_;
-  int64_t current_step_id_ = -1;
+
   MultiRingAllReduceKernelConf multi_ring_all_reduce_kernel_conf_;
   KernelConf kernel_conf_;
+  std::vector<int64_t> send_regst_piece_id_;
 };
 
 }  // namespace oneflow
