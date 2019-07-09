@@ -5,7 +5,7 @@ namespace oneflow {
 
 int MultiRingAllReduceActor::HandlerAllReduce(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
-    CHECK_EQ(msg.regst_desc_id(), in_regst_desc_id_);
+    CHECK_EQ(msg.eord_regst_desc_id(), in_regst_desc_id_);
     in_regst_eord_ = true;
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     const int64_t regst_desc_id = msg.regst_desc_id();
