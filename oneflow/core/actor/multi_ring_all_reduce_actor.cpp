@@ -5,8 +5,14 @@ namespace oneflow {
 
 int MultiRingAllReduceActor::HandlerAllReduce(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
-    CHECK_EQ(msg.eord_regst_desc_id(), in_regst_desc_id_);
-    in_regst_eord_ = true;
+    if (msg.eord_regst_desc_id() == in_regst_desc_id_) {
+      in_regst_eord_ = true;
+    } else {
+      auto it = regst_desc_id2send_or_recv7ring_id_.find(msg.eord_regst_desc_id());
+      CHECK(it != regst_desc_id2send_or_recv7ring_id_.cend());
+      CHECK(!it->second.first);
+      recv_regst_eord_cnt_ += 1;
+    }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     const int64_t regst_desc_id = msg.regst_desc_id();
     if (regst_desc_id == in_regst_desc_id_) {
@@ -72,22 +78,26 @@ int MultiRingAllReduceActor::HandlerAllReduce(const ActorMsg& msg) {
     current_ring_id_ = (current_ring_id_ + 1) % num_rings_;
     if (current_ring_id_ == 0) { current_step_id_ = (current_step_id_ + 1) % num_steps_; }
   }
-  if (in_regst_eord_ && in_regst_deque_.empty() && current_ring_id_ == 0 && current_step_id_ == 0
-      && out_regst_reading_cnt_ == 0) {
-    std::vector<ActorMsg> actor_msgs_;
-    for (const int64_t consumer : out_regst_->consumers_actor_id()) {
-      actor_msgs_.push_back(ActorMsg::BuildEordMsg(consumer, out_regst_->regst_desc_id()));
-    }
-    for (Regst* send_regst : send_regst_) {
-      for (const int64_t consumer : send_regst->consumers_actor_id()) {
-        actor_msgs_.push_back(ActorMsg::BuildEordMsg(consumer, send_regst->regst_desc_id()));
+  if (in_regst_eord_ && in_regst_deque_.empty() && current_ring_id_ == 0 && current_step_id_ == 0) {
+    if (!eord_sent_) {
+      std::vector<ActorMsg> actor_msgs_;
+      for (const int64_t consumer : out_regst_->consumers_actor_id()) {
+        actor_msgs_.push_back(ActorMsg::BuildEordMsg(consumer, out_regst_->regst_desc_id()));
       }
+      for (Regst* send_regst : send_regst_) {
+        for (const int64_t consumer : send_regst->consumers_actor_id()) {
+          actor_msgs_.push_back(ActorMsg::BuildEordMsg(consumer, send_regst->regst_desc_id()));
+        }
+      }
+      AsyncDo([actor_msgs_]() {
+        for (const auto& msg : actor_msgs_) { Global<ActorMsgBus>::Get()->SendMsg(msg); }
+      });
+      eord_sent_ = true;
     }
-    AsyncDo([actor_msgs_]() {
-      for (const auto& msg : actor_msgs_) { Global<ActorMsgBus>::Get()->SendMsg(msg); }
-    });
-    OF_SET_MSG_HANDLER(nullptr);
-    return 1;
+    if (eord_sent_ && out_regst_reading_cnt_ == 0 && recv_regst_eord_cnt_ == num_rings_) {
+      OF_SET_MSG_HANDLER(nullptr);
+      return 1;
+    }
   }
   return 0;
 }
@@ -128,8 +138,10 @@ void MultiRingAllReduceActor::VirtualActorInit(const TaskProto& task_proto) {
               .second);
   }
   in_regst_eord_ = false;
+  recv_regst_eord_cnt_ = 0;
   current_ring_id_ = 0;
   current_step_id_ = 0;
+  eord_sent_ = false;
   OF_SET_MSG_HANDLER(&MultiRingAllReduceActor::HandlerAllReduce);
 }
 

@@ -28,8 +28,10 @@ class MultiRingAllReduceActor : public Actor {
   std::vector<bool> send_regst_ready_;
   std::vector<Regst*> send_regst_;
   std::vector<int64_t> send_regst_piece_id_;
+  bool eord_sent_ = false;
   std::vector<Regst*> recv_regst_;
   std::vector<bool> recv_regst_ready_;
+  int64_t recv_regst_eord_cnt_ = -1;
   HashMap<int64_t, std::pair<bool, int64_t>> regst_desc_id2send_or_recv7ring_id_;
 
   MultiRingAllReduceKernelConf multi_ring_all_reduce_kernel_conf_;
