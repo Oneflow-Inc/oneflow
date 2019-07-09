@@ -2,6 +2,7 @@
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/graph/multi_ring_all_reduce_task_node.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
+#include "oneflow/core/graph/cuda_copy_peer_task_node.h"
 
 namespace oneflow {
 
@@ -57,8 +58,9 @@ SubTskGphBuilderStatus MultiRingAllReduceSubTskGphBuilder::Build(
       int64_t next_id = RingNextParallelId(i);
       if (parallel_desc.MachineIdForParallelId(i)
           == parallel_desc.MachineIdForParallelId(next_id)) {
-        CopyHdTaskNode* copy_d2d_task_node = ctx->task_graph()->NewNode<CopyHdTaskNode>();
-        copy_d2d_task_node->Init(CopyHdOpConf::D2D, parallel_desc.MachineIdForParallelId(next_id),
+        CudaCopyPeerTaskNode* copy_d2d_task_node =
+            ctx->task_graph()->NewNode<CudaCopyPeerTaskNode>();
+        copy_d2d_task_node->Init(parallel_desc.MachineIdForParallelId(next_id),
                                  parallel_desc.DeviceIdForParallelId(next_id));
         copy_d2d_task_node->set_area_id(kMdUpdtArea);
         Connect<TaskNode>(boxing_nodes.at(i), ctx->task_graph()->NewEdge(), copy_d2d_task_node);
