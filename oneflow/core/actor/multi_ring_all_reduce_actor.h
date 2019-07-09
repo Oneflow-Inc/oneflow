@@ -24,7 +24,7 @@ class MultiRingAllReduceActor : public Actor {
   bool in_regst_eord_ = false;
   int64_t out_regst_desc_id_ = -1;
   Regst* out_regst_ = nullptr;
-  int64_t out_regst_desc_reading_cnt_ = -1;
+  int64_t out_regst_reading_cnt_ = -1;
   std::vector<bool> send_regst_ready_;
   std::vector<Regst*> send_regst_;
   std::vector<int64_t> send_regst_piece_id_;

@@ -12,8 +12,8 @@ int MultiRingAllReduceActor::HandlerAllReduce(const ActorMsg& msg) {
     if (regst_desc_id == in_regst_desc_id_) {
       in_regst_deque_.push_back(msg.regst());
     } else if (regst_desc_id == out_regst_desc_id_) {
-      CHECK_GT(out_regst_desc_reading_cnt_, 0);
-      out_regst_desc_reading_cnt_ -= 1;
+      CHECK_GT(out_regst_reading_cnt_, 0);
+      out_regst_reading_cnt_ -= 1;
     } else {
       const auto it = regst_desc_id2send_or_recv7ring_id_.find(regst_desc_id);
       CHECK(it != regst_desc_id2send_or_recv7ring_id_.cend());
@@ -33,9 +33,9 @@ int MultiRingAllReduceActor::HandlerAllReduce(const ActorMsg& msg) {
   }
   const MultiRingAllReduceKernelStepConf& step_conf =
       multi_ring_all_reduce_kernel_conf_.ring_conf(current_ring_id_).step_conf(current_step_id_);
-  while (!in_regst_deque_.empty() && out_regst_desc_reading_cnt_ == 0
-      && (!step_conf.send() || send_regst_ready_.at(current_ring_id_))
-      && (!step_conf.recv() || recv_regst_ready_.at(current_ring_id_))) {
+  while (!in_regst_deque_.empty() && out_regst_reading_cnt_ == 0
+         && (!step_conf.send() || send_regst_ready_.at(current_ring_id_))
+         && (!step_conf.recv() || recv_regst_ready_.at(current_ring_id_))) {
     std::vector<ActorMsg> actor_msgs_;
     Regst* current_in_regst = in_regst_deque_.front();
     if (step_conf.send()) {
@@ -61,7 +61,7 @@ int MultiRingAllReduceActor::HandlerAllReduce(const ActorMsg& msg) {
       for (const int64_t consumer : out_regst_->consumers_actor_id()) {
         actor_msgs_.push_back(ActorMsg::BuildRegstMsgToConsumer(actor_id(), consumer, out_regst_));
       }
-      out_regst_desc_reading_cnt_ = out_regst_->consumers_actor_id().size();
+      out_regst_reading_cnt_ = out_regst_->consumers_actor_id().size();
       actor_msgs_.push_back(ActorMsg::BuildRegstMsgToProducer(
           actor_id(), current_in_regst->producer_actor_id(), current_in_regst));
       in_regst_deque_.pop_front();
@@ -73,14 +73,19 @@ int MultiRingAllReduceActor::HandlerAllReduce(const ActorMsg& msg) {
     if (current_ring_id_ == 0) { current_step_id_ = (current_step_id_ + 1) % num_steps_; }
   }
   if (in_regst_eord_ && in_regst_deque_.empty() && current_ring_id_ == 0 && current_step_id_ == 0
-      && out_regst_desc_reading_cnt_ == 0) {
+      && out_regst_reading_cnt_ == 0) {
+    std::vector<ActorMsg> actor_msgs_;
     for (const int64_t consumer : out_regst_->consumers_actor_id()) {
-      std::vector<ActorMsg> actor_msgs_;
       actor_msgs_.push_back(ActorMsg::BuildEordMsg(consumer, out_regst_->regst_desc_id()));
-      AsyncDo([actor_msgs_]() {
-        for (const auto& msg : actor_msgs_) { Global<ActorMsgBus>::Get()->SendMsg(msg); }
-      });
     }
+    for (Regst* send_regst : send_regst_) {
+      for (const int64_t consumer : send_regst->consumers_actor_id()) {
+        actor_msgs_.push_back(ActorMsg::BuildEordMsg(consumer, send_regst->regst_desc_id()));
+      }
+    }
+    AsyncDo([actor_msgs_]() {
+      for (const auto& msg : actor_msgs_) { Global<ActorMsgBus>::Get()->SendMsg(msg); }
+    });
     OF_SET_MSG_HANDLER(nullptr);
     return 1;
   }
@@ -91,7 +96,7 @@ void MultiRingAllReduceActor::VirtualActorInit(const TaskProto& task_proto) {
   CHECK_EQ(1, exec_kernel_vec().size());
   out_regst_desc_id_ = task_proto.produced_regst_desc().at("out").regst_desc_id();
   out_regst_ = GetSoleProducedRegst4RegstDescId(out_regst_desc_id_);
-  out_regst_desc_reading_cnt_ = 0;
+  out_regst_reading_cnt_ = 0;
   CHECK_EQ(task_proto.consumed_regst_desc_id().at("in").regst_desc_id_size(), 1);
   in_regst_desc_id_ = task_proto.consumed_regst_desc_id().at("in").regst_desc_id(0);
   multi_ring_all_reduce_kernel_conf_ =
