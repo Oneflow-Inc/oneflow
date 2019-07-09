@@ -33,7 +33,7 @@ int MultiRingAllReduceActor::HandlerAllReduce(const ActorMsg& msg) {
   }
   const MultiRingAllReduceKernelStepConf& step_conf =
       multi_ring_all_reduce_kernel_conf_.ring_conf(current_ring_id_).step_conf(current_step_id_);
-  if (!in_regst_deque_.empty() && out_regst_desc_reading_cnt_ == 0
+  while (!in_regst_deque_.empty() && out_regst_desc_reading_cnt_ == 0
       && (!step_conf.send() || send_regst_ready_.at(current_ring_id_))
       && (!step_conf.recv() || recv_regst_ready_.at(current_ring_id_))) {
     std::vector<ActorMsg> actor_msgs_;
