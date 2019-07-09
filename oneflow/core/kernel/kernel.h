@@ -30,7 +30,7 @@ class Kernel {
   const OperatorConf& op_conf() const { return op_attribute().op_conf(); }
   const OpAttribute& op_attribute() const { return kernel_conf().op_attribute(); }
 
- protected:
+ public:
   Kernel() = default;
   virtual void VirtualKernelInit(const ParallelContext* parallel_ctx, DeviceCtx* device_ctx) {
     VirtualKernelInit(parallel_ctx);

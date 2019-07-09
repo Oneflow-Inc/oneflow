@@ -35,6 +35,9 @@ class MultiRingAllReduceActor : public Actor {
   HashMap<int64_t, std::pair<bool, int64_t>> regst_desc_id2send_or_recv7ring_id_;
 
   MultiRingAllReduceKernelConf multi_ring_all_reduce_kernel_conf_;
+  LogicalBlobId lbi_;
+  KernelCtx kernel_ctx_;
+  std::pair<int64_t, int64_t> other_ctx_;
 };
 
 }  // namespace oneflow

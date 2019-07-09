@@ -44,6 +44,30 @@ int MultiRingAllReduceActor::HandlerAllReduce(const ActorMsg& msg) {
          && (!step_conf.recv() || recv_regst_ready_.at(current_ring_id_))) {
     std::vector<ActorMsg> actor_msgs_;
     Regst* current_in_regst = in_regst_deque_.front();
+    Blob* in_blob = current_in_regst->GetBlobByLbi(lbi_);
+    Blob* out_blob = out_regst_->GetBlobByLbi(lbi_);
+    Blob* send_blob =
+        step_conf.send() ? send_regst_.at(current_ring_id_)->GetBlobByLbi(lbi_) : nullptr;
+    const std::string send_blob_name = "send_" + std::to_string(current_ring_id_);
+    Blob* recv_blob =
+        step_conf.send() ? recv_regst_.at(current_ring_id_)->GetBlobByLbi(lbi_) : nullptr;
+    const std::string recv_blob_name = "recv_" + std::to_string(current_ring_id_);
+    other_ctx_.first = current_ring_id_;
+    other_ctx_.second = current_step_id_;
+    exec_kernel_vec().front().kernel->ForwardDataContent(kernel_ctx_,
+                                                         [&](const std::string& bn) -> Blob* {
+                                                           if (bn == "in") {
+                                                             return in_blob;
+                                                           } else if (bn == "out") {
+                                                             return out_blob;
+                                                           } else if (bn == send_blob_name) {
+                                                             return send_blob;
+                                                           } else if (bn == recv_blob_name) {
+                                                             return recv_blob;
+                                                           } else {
+                                                             return nullptr;
+                                                           }
+                                                         });
     if (step_conf.send()) {
       Regst* send = send_regst_.at(current_ring_id_);
       send->set_piece_id(send_regst_piece_id_.at(current_ring_id_));
@@ -142,6 +166,15 @@ void MultiRingAllReduceActor::VirtualActorInit(const TaskProto& task_proto) {
   current_ring_id_ = 0;
   current_step_id_ = 0;
   eord_sent_ = false;
+  lbi_ = task_proto.exec_sequence()
+             .exec_node(0)
+             .kernel_conf()
+             .op_attribute()
+             .op_conf()
+             .multi_ring_all_reduce_conf()
+             .lbi();
+  kernel_ctx_ = GenDefaultKernelCtx();
+  kernel_ctx_.other = &other_ctx_;
   OF_SET_MSG_HANDLER(&MultiRingAllReduceActor::HandlerAllReduce);
 }
 
