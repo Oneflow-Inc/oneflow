@@ -755,7 +755,7 @@ message CastOpConf {
   required DataType data_type = 3;
 }
 
-message InputBlobConf {
+message InterfaceBlobConf {
   required ShapeProto shape = 1;
   optional DataType data_type = 2;
   optional ShapeProto dim0_inner_shape = 3;
@@ -772,19 +772,25 @@ message InputBlobConf {
 message InputOpConf {
   optional string tick = 1;
   required string out = 2;
-  required InputBlobConf blob_conf = 3;
+  required InterfaceBlobConf blob_conf = 3;
 }
 
 message ForeignInputOpConf {
   optional string tick = 1;
   required string out = 2;
-  required InputBlobConf blob_conf = 3;
+  required InterfaceBlobConf blob_conf = 3;
   required string ofblob_buffer_name = 4;
 }
 
 message OutputOpConf {
   required string in = 1;
   required string out = 2;
+}
+
+message SwitchOutputOpConf {
+  repeated string in = 1;
+  required string in_index = 2;
+  required string out = 3;
 }
 
 message ForeignOutputOpConf {
@@ -1496,6 +1502,7 @@ message OperatorConf {
     ForeignInputOpConf foreign_input_conf = 142;
     ForeignOutputOpConf foreign_output_conf = 143;
     AccTickOpConf acc_tick_conf = 144;
+    SwitchOutputOpConf switch_output_conf = 145;
 
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;

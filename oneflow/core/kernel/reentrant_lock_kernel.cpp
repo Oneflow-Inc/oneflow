@@ -53,6 +53,7 @@ int64_t ReentrantLockStatus::ReleaseLock(int64_t lock_id) {
     int64_t min_lock_id = -1;
     for (int64_t intersect_lock_id : lock_id2intersecting_lock_ids_.at(lock_id)) {
       CHECK_EQ(lock_id2acquired_num_.at(intersect_lock_id), 0);
+      if (lock_id2queued_request_act_id_.at(intersect_lock_id).empty()) { continue; }
       int64_t act_id = lock_id2queued_request_act_id_.at(intersect_lock_id).front();
       if (act_id < min_act_id) {
         min_act_id = act_id;

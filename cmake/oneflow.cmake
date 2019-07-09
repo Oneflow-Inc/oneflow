@@ -26,6 +26,24 @@ else()
   list(APPEND oneflow_platform_excludes "windows")
 endif()
 
+file(GLOB_RECURSE oneflow_all_hdr_to_be_expanded "${PROJECT_SOURCE_DIR}/oneflow/core/*.e.h" "${PROJECT_SOURCE_DIR}/oneflow/python/*.e.h")
+foreach(oneflow_hdr_to_be_expanded ${oneflow_all_hdr_to_be_expanded})
+  file(RELATIVE_PATH of_ehdr_rel_path ${PROJECT_SOURCE_DIR} ${oneflow_hdr_to_be_expanded})
+  set(of_e_h_expanded "${PROJECT_BINARY_DIR}/${of_ehdr_rel_path}.expanded.h")
+  if(WIN32)
+    error( "Expanding macro in WIN32 is not supported yet")
+  else()
+    add_custom_command(OUTPUT ${of_e_h_expanded}
+      COMMAND ${CMAKE_C_COMPILER} 
+      ARGS -E -I"${PROJECT_SOURCE_DIR}" -I"${PROJECT_BINARY_DIR}"
+      -o "${of_e_h_expanded}" "${oneflow_hdr_to_be_expanded}"
+      DEPENDS ${oneflow_hdr_to_be_expanded}
+      COMMENT "Expanding macros in ${oneflow_hdr_to_be_expanded}")
+    list(APPEND oneflow_all_hdr_expanded "${of_e_h_expanded}")
+  endif()
+  set_source_files_properties(${oneflow_all_hdr_expanded} PROPERTIES GENERATED TRUE)
+endforeach()
+
 file(GLOB_RECURSE oneflow_all_src "${PROJECT_SOURCE_DIR}/oneflow/core/*.*" "${PROJECT_SOURCE_DIR}/oneflow/python/*.*")
 foreach(oneflow_single_file ${oneflow_all_src})
   # Verify whether this file is for other platforms
@@ -42,14 +60,18 @@ foreach(oneflow_single_file ${oneflow_all_src})
     continue()
   endif()
 
-
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.h$")
-    list(APPEND of_all_obj_cc ${oneflow_single_file})
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/python/.*\\.h$")
+    list(APPEND of_python_obj_cc ${oneflow_single_file})
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/python/.*\\.h$")
-    list(APPEND of_python_obj_cc ${oneflow_single_file})
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/python/.*\\.i$")
+    list(APPEND of_all_swig ${oneflow_single_file})
+    set(group_this ON)
+  endif()
+
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.h$")
+    list(APPEND of_all_obj_cc ${oneflow_single_file})
     set(group_this ON)
   endif()
 
@@ -72,12 +94,7 @@ foreach(oneflow_single_file ${oneflow_all_src})
     #list(APPEND of_all_obj_cc ${oneflow_single_file})   # include the proto file in the project
     set(group_this ON)
   endif()
-
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/python/.*\\.i$")
-    list(APPEND of_all_swig ${oneflow_single_file})
-    set(group_this ON)
-  endif()
-
+  
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.cpp$")
     if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*_test\\.cpp$")
       # test file
@@ -107,12 +124,9 @@ foreach(source_file ${of_all_obj_cc} ${of_main_cc} ${of_all_test_cc} ${of_python
     COMMAND clang-format -i -style=file ${source_file})
 endforeach()
 
-
 # proto obj lib
 add_custom_target(make_pyproto_dir ALL
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/pyproto/oneflow/core
-  COMMAND ${CMAKE_COMMAND} -E touch ${PROJECT_BINARY_DIR}/pyproto/oneflow/__init__.py
-  COMMAND ${CMAKE_COMMAND} -E touch ${PROJECT_BINARY_DIR}/pyproto/oneflow/core/__init__.py)
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow/core)
 foreach(proto_name ${of_all_proto})
   file(RELATIVE_PATH proto_rel_name ${PROJECT_SOURCE_DIR} ${proto_name})
   list(APPEND of_all_rel_protos ${proto_rel_name})
@@ -146,7 +160,7 @@ elseif(WIN32)
 endif()
 
 # build swig
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/python)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/python_scripts)
 foreach(swig_name ${of_all_swig})
   file(RELATIVE_PATH swig_rel_name ${PROJECT_SOURCE_DIR} ${swig_name})
   list(APPEND of_all_rel_swigs ${swig_rel_name})
@@ -156,12 +170,26 @@ RELATIVE_SWIG_GENERATE_CPP(SWIG_SRCS SWIG_HDRS
                               ${PROJECT_SOURCE_DIR}
                               ${of_all_rel_swigs})
 find_package(PythonLibs)
-include_directories(${PYTHON_INCLUDE_DIRS})
+include_directories(${PYTHON_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 oneflow_add_library(oneflow_internal SHARED ${SWIG_SRCS} ${SWIG_HDRS} ${of_main_cc})
 SET_TARGET_PROPERTIES(oneflow_internal PROPERTIES PREFIX "_")
-set_target_properties(oneflow_internal PROPERTIES CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/python")
+set_target_properties(oneflow_internal PROPERTIES CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/python_scripts")
 target_link_libraries(oneflow_internal ${of_libs} ${oneflow_third_party_libs})
 
+set(of_pyscript_dir "${PROJECT_BINARY_DIR}/python_scripts")
+add_custom_command(TARGET oneflow_internal POST_BUILD
+    COMMAND "${CMAKE_COMMAND}" -E copy
+        "${PROJECT_SOURCE_DIR}/oneflow/__init__.py" "${of_pyscript_dir}/oneflow/__init__.py"
+    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/core/__init__.py")
+file(GLOB_RECURSE oneflow_all_python_file "${PROJECT_SOURCE_DIR}/oneflow/python/*.py")
+foreach(oneflow_python_file ${oneflow_all_python_file})
+  file(RELATIVE_PATH oneflow_python_rel_file_path "${PROJECT_SOURCE_DIR}" ${oneflow_python_file})
+  add_custom_command(TARGET oneflow_internal POST_BUILD
+    COMMAND "${CMAKE_COMMAND}" -E copy
+    "${oneflow_python_file}"
+    "${of_pyscript_dir}/${oneflow_python_rel_file_path}")
+endforeach()
+   
 # build main
 set(RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
 foreach(cc ${of_main_cc})
