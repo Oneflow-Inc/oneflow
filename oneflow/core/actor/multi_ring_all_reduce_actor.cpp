@@ -114,6 +114,7 @@ void MultiRingAllReduceActor::VirtualActorInit(const TaskProto& task_proto) {
     CHECK_EQ(task_proto.consumed_regst_desc_id().at(recv_name).regst_desc_id_size(), 1);
     const int64_t recv_regst_desc_id =
         task_proto.consumed_regst_desc_id().at(recv_name).regst_desc_id(0);
+    recv_regst_.push_back(GetSoleProducedRegst4RegstDescId(recv_regst_desc_id));
     recv_regst_ready_.push_back(false);
     CHECK(regst_desc_id2send_or_recv7ring_id_
               .emplace(recv_regst_desc_id, std::make_pair(false, ring_id))
