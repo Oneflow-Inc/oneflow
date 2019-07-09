@@ -100,7 +100,8 @@ void LayerNormOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   const Shape bn_param_shape(bn_param_shape_dim_vec);
   BlobDesc* cudnn_bn_mean = GetBlobDesc4BnInOp("mean");
   cudnn_bn_mean->mut_shape() = bn_param_shape;
-  cudnn_bn_mean->set_data_type(in->data_type());
+  DataType data_type = in->data_type() == DataType::kFloat16 ? DataType::kFloat : in->data_type();
+  cudnn_bn_mean->set_data_type(data_type);
   *GetBlobDesc4BnInOp("inv_variance") = *cudnn_bn_mean;
   *GetBlobDesc4BnInOp("cudnn_bn_scale_ones") = *cudnn_bn_mean;
   *GetBlobDesc4BnInOp("cudnn_bn_bias_zeros") = *cudnn_bn_mean;
