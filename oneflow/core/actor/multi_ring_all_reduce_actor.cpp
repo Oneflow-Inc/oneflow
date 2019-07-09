@@ -44,11 +44,15 @@ int MultiRingAllReduceActor::HandlerAllReduce(const ActorMsg& msg) {
       for (const int64_t consumer : send_regst_.at(current_ring_id_)->consumers_actor_id()) {
         actor_msgs_.push_back(ActorMsg::BuildRegstMsgToConsumer(actor_id(), consumer, send));
       }
+      CHECK(send_regst_ready_.at(current_ring_id_));
+      send_regst_ready_[current_ring_id_] = false;
     }
     if (step_conf.recv()) {
       Regst* recv = recv_regst_.at(current_ring_id_);
       actor_msgs_.push_back(
           ActorMsg::BuildRegstMsgToProducer(actor_id(), recv->producer_actor_id(), recv));
+      CHECK(recv_regst_ready_.at(current_ring_id_));
+      recv_regst_ready_[current_ring_id_] = false;
     }
     if (current_step_id_ == num_steps_ - 1 && current_ring_id_ == num_rings_ - 1) {
       out_regst_->set_piece_id(current_in_regst->piece_id());
