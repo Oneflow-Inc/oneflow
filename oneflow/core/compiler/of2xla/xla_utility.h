@@ -29,7 +29,8 @@ LogicalBlobId BlobId(const std::string &blob_name);
     delete [] x; x = nullptr; \
   } while (NOTNULL(x))
 
-#define OF_STATUS_MACROS_CONCAT_NAME(x, y) x##y
+#define OF_STATUS_MACROS_CONCAT_NAME(x, y) OF_STATUS_MACROS_CONCAT_NAME_IMPL(x, y)
+#define OF_STATUS_MACROS_CONCAT_NAME_IMPL(x, y) x##y
 
 #define OF_CHECK_AND_ASSIGN(lhs, rexpr) \
   OF_CHECK_AND_ASSIGN_IMPL(             \

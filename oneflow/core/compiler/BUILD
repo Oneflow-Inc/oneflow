@@ -32,6 +32,7 @@ tf_cc_shared_object(
         "//tensorflow/compiler/xla/client:xla_computation",
         "//tensorflow/compiler/xla/client:executable_build_options",
         "//tensorflow/compiler/xla/client:local_client",
+        "//tensorflow/compiler/xla/client:client_library",
         "//tensorflow/compiler/xla/service",
         "//tensorflow/compiler/xla/service:cpu_plugin",
 #        "//tensorflow/compiler/jit:xla_cpu_jit",

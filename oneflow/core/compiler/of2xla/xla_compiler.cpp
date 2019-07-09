@@ -4,6 +4,7 @@
 #include "tensorflow/compiler/xla/client/local_client.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/register/blob.h"
 #include "oneflow/core/compiler/of2xla/xla_utility.h"
 #include "oneflow/core/compiler/of2xla/xla_shape.h"
 #include "oneflow/core/compiler/of2xla/xla_op_compiler_registry.h"
@@ -13,6 +14,9 @@
 #include "oneflow/core/compiler/of2xla/xla_graph.h"
 #include "oneflow/core/compiler/of2xla/xla_compiler.h"
 
+#include "tensorflow/core/platform/stream_executor_no_cuda.h"
+#include "tensorflow/core/util/stream_executor_util.h"
+
 namespace oneflow {
 namespace mola {
 
@@ -21,20 +25,27 @@ static XlaOpCompiler *CreateXlaOpCompiler(
   return XlaOpCompilerRegistry::Build(backend)[op_type]();
 }
 
-XlaCompiler::XlaCompiler(
-    const OperatorConf &op_conf, DeviceType device_type,
-    ParallelContext parallel_ctx,
-    const std::unordered_map<std::string, BlobDesc> &entry_blob_descs,
-    bool force_compile) : force_compile_(force_compile) {
-  entry_names_.resize(entry_blob_descs.size()); 
-  std::transform(entry_blob_descs.begin(), entry_blob_descs.end(),
-                 entry_names_.begin(),
-                 [](const std::pair<const std::string, BlobDesc> &p) {
-                   return p.first;
-                 });
+XlaCompiler::XlaCompiler(xla::LocalClient *client, const OperatorConf &op_conf,
+                         DeviceType device_type, ParallelContext parallel_ctx,
+                         const std::vector<Blob *> &entry_blobs,
+                         const std::vector<std::string> &entry_blob_names,
+                         bool force_compile)
+    : client_(client), entry_names_(entry_blob_names),
+      force_compile_(force_compile) {
+  CHECK(op_conf.has_xla_launch_conf()) << "`XlaCompiler` need a `XlaLaunchOpConf`";
+  CHECK_EQ(entry_blobs.size(), entry_blob_names.size());
+  builder_.reset(new xla::XlaBuilder(op_conf.name()));
 
-  std::unordered_map<std::string, BlobDesc> blob_descs(entry_blob_descs);
-  CHECK(op_conf.has_xla_launch_conf());
+  std::unordered_map<std::string, BlobDesc> blob_descs;
+  for (int i = 0; i < entry_blobs.size(); ++i) {
+    const RtBlobDesc &rt_desc = entry_blobs[i]->blob_desc();
+    BlobDesc blob_desc(rt_desc.shape(),
+                       rt_desc.data_type(),
+                       rt_desc.has_data_id_field(),
+                       rt_desc.has_col_num_field(),
+                       rt_desc.max_col_num());
+    blob_descs.emplace(entry_blob_names[i], blob_desc);
+  }
   graph_.reset(new XlaLaunchGraph(op_conf.xla_launch_conf(), device_type));
   graph_->InferBlobDescs(&blob_descs, &parallel_ctx);
 
@@ -42,8 +53,6 @@ XlaCompiler::XlaCompiler(
     LogicalBlobId lbi = BlobId(pair.first);
     arguments_.emplace(pair.first, Argument(lbi, pair.second));
   }
-
-  builder_.reset(new xla::XlaBuilder(op_conf.name()));
 }
 
 void XlaCompiler::BuildComputation(
@@ -93,14 +102,9 @@ void XlaCompiler::BuildComputation(
   *output_shape = program_shape.result();
 }
 
-void XlaCompiler::BuildExecutable(const CompilationResult &result) {
-  // Create local service and client
-  // GetOrCreateLocalClient(platform, device_set);
-  xla::ServiceOptions service_options;
-  OF_CHECK_AND_ASSIGN(auto service,
-                      xla::LocalService::NewService(service_options));
-  xla::LocalClient client(service.get());
-
+void XlaCompiler::BuildExecutable(
+    const CompilationResult &result,
+    std::unique_ptr<xla::LocalExecutable> *executable) {
   std::vector<const xla::Shape*> argument_layouts(
       result.xla_input_shapes.size());
   for (int i = 0; i < result.xla_input_shapes.size(); ++i) {
@@ -108,15 +112,16 @@ void XlaCompiler::BuildExecutable(const CompilationResult &result) {
   }
 
   xla::ExecutableBuildOptions build_options;
-  build_options.set_device_ordinal(client.default_device_ordinal());
+  build_options.set_device_ordinal(client_->default_device_ordinal());
   build_options.set_result_layout(result.xla_output_shape);
 
   OF_CHECK_AND_ASSIGN(
-      auto executable,
-      client.Compile(result.computation, argument_layouts, build_options));
+      *executable,
+      client_->Compile(result.computation, argument_layouts, build_options));
+  DLOG(INFO) << "BuildExecutable done";
 }
 
-void XlaCompiler::Compile() {
+CompilationResult XlaCompiler::Compile() {
   CHECK_NOTNULL(graph_);
   
   CompilationResult result;
@@ -126,7 +131,9 @@ void XlaCompiler::Compile() {
   BuildComputation(entry_oprands, &result.xla_output_shape,
                    &result.computation);
 
-  BuildExecutable(result);
+  BuildExecutable(result, &result.executable);
+
+  return std::move(result);
 }
 
 void XlaCompiler::SetupEntryOprands(
