@@ -48,7 +48,7 @@ void LayerNormParamGradKernel<device_type, T>::ForwardDataContent(
   }
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kLayerNormParamGradConf, LayerNormParamGradKernel,
-                           FLOATING_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR_WITH_GPU_HALF(OperatorConf::kLayerNormParamGradConf,
+                                         LayerNormParamGradKernel, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

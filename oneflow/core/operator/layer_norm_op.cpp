@@ -124,8 +124,7 @@ void LayerNormOp::InferBwBufBlobDescs(
 
 void LayerNormOp::InferHasBatchDim(
     std::function<bool*(const std::string&)> HasBatchDim4BnInOp) const {
-  for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = false; }
-  *HasBatchDim4BnInOp("out") = *HasBatchDim4BnInOp("in");
+  for (const auto& obn : output_bns()) { *HasBatchDim4BnInOp(obn) = true; }
 }
 
 void LayerNormOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
