@@ -21,7 +21,7 @@ set(THIRD_SNAPPY_DIR ${TENSORFLOW_EXTERNAL_DIR}/snappy)
 
 
 list(APPEND TENSORFLOW_XLA_LIBRARIES libtensorflow_framework.so.1)
-list(APPEND TENSORFLOW_XLA_LIBRARIES libxla_computation_client.so)
+list(APPEND TENSORFLOW_XLA_LIBRARIES libxla_core.so)
 link_directories(
   ${TENSORFLOW_SRCS_DIR}/bazel-bin/tensorflow
   ${TENSORFLOW_SRCS_DIR}/bazel-bin/tensorflow/compiler/lib
@@ -43,8 +43,9 @@ ExternalProject_Add(
   GIT_REPOSITORY ${TENSORFLOW_GIT_URL}
   GIT_TAG ${TENSORFLOW_GIT_TAG}
   CONFIGURE_COMMAND mkdir -p ${TENSORFLOW_DEST_DIR} && cp ${XLA_BUILD_PATH} ${TENSORFLOW_DEST_DIR}
-  BUILD_COMMAND cd ${TENSORFLOW_SRCS_DIR} && 
-                bazel build -c opt --define with_xla_support=true --action_env TF_NEED_CUDA=1 --config=cuda -j 10 //tensorflow/compiler/lib:libxla_computation_client.so
+  BUILD_COMMAND cd ${TENSORFLOW_SRCS_DIR} &&
+                bazel build -c opt --define with_xla_support=true --action_env TF_NEED_CUDA=1
+                    --config=cuda -j 10 //tensorflow/compiler/lib:libxla_core.so
   INSTALL_COMMAND ""
 )
 endif(THIRD_PARTY)

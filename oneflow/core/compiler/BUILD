@@ -17,11 +17,11 @@ load("//tensorflow/compiler/xla:xla.bzl", "xla_proto_library")
 load("@local_config_cuda//cuda:build_defs.bzl", "if_cuda")
 
 tf_cc_shared_object(
-    name = "libxla_computation_client.so",
+    name = "libxla_core.so",
     linkopts = select({
         "//tensorflow:windows": [],
         "//conditions:default": [
-            "-z defs",
+            "-z muldefs",
             "-s",
         ],
     }),
