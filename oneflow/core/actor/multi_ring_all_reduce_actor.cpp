@@ -24,6 +24,7 @@ int MultiRingAllReduceActor::HandlerAllReduce(const ActorMsg& msg) {
         send_regst_ready_[ring_id] = true;
       } else {
         CHECK(!recv_regst_ready_.at(ring_id));
+        recv_regst_[ring_id] = msg.regst();
         recv_regst_ready_[ring_id] = true;
       }
     }
@@ -53,6 +54,7 @@ int MultiRingAllReduceActor::HandlerAllReduce(const ActorMsg& msg) {
           ActorMsg::BuildRegstMsgToProducer(actor_id(), recv->producer_actor_id(), recv));
       CHECK(recv_regst_ready_.at(current_ring_id_));
       recv_regst_ready_[current_ring_id_] = false;
+      recv_regst_[current_ring_id_] = nullptr;
     }
     if (current_step_id_ == num_steps_ - 1 && current_ring_id_ == num_rings_ - 1) {
       out_regst_->set_piece_id(current_in_regst->piece_id());
@@ -114,7 +116,7 @@ void MultiRingAllReduceActor::VirtualActorInit(const TaskProto& task_proto) {
     CHECK_EQ(task_proto.consumed_regst_desc_id().at(recv_name).regst_desc_id_size(), 1);
     const int64_t recv_regst_desc_id =
         task_proto.consumed_regst_desc_id().at(recv_name).regst_desc_id(0);
-    recv_regst_.push_back(GetSoleProducedRegst4RegstDescId(recv_regst_desc_id));
+    recv_regst_.push_back(nullptr);
     recv_regst_ready_.push_back(false);
     CHECK(regst_desc_id2send_or_recv7ring_id_
               .emplace(recv_regst_desc_id, std::make_pair(false, ring_id))
