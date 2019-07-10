@@ -74,9 +74,11 @@ void PieceSliceV2KernelUtil<device_type, T>::SliceInstanceShape(const Blob* in_b
   if (contiguous_varing_in) {
     CHECK(!uncontiguous_varing_in);
     const std::vector<int64_t>& dim_vec = in_blob->instance_shape().dim_vec();
+    const Shape shape = Shape(std::vector<int64_t>(dim_vec.begin() + 1, dim_vec.end()));
     FOR_RANGE(size_t, i, 0, out_blobs.size()) {
-      out_blobs.at(i)->set_instance_shape(
-          Shape(std::vector<int64_t>(dim_vec.begin() + 1, dim_vec.end())));
+      Blob* out_i_blob = out_blobs.at(i);
+      CHECK(out_i_blob->has_instance_shape_field());
+      out_i_blob->set_instance_shape(shape);
     }
   } else {
     UNIMPLEMENTED();
@@ -91,10 +93,9 @@ void PieceSliceV2KernelUtil<device_type, T>::StackInstanceShape(
     CHECK(!(in_blobs.at(i)->has_dim1_valid_num_field()
             || in_blobs.at(i)->has_dim2_valid_num_field()));
   }
-  const Shape shape = in_blobs.at(0)->shape();
-  FOR_RANGE(size_t, i, 1, in_blobs.size()) { CHECK_EQ(shape, in_blobs.at(i)->shape()); }
+  CheckSameDynamicShape(in_blobs);
   CHECK(out_blob->has_instance_shape_field());
-  out_blob->set_instance_shape(shape);
+  out_blob->set_instance_shape(in_blobs.at(0)->shape());
 }
 
 #define INSTANTIATE_PIECE_SLICE_V2_KERNEL_CPU_UTIL(type_cpp, type_proto) \

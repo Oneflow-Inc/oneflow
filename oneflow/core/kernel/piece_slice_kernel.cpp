@@ -80,7 +80,7 @@ void PieceSliceKernel<device_type, T>::ForwardDim1ValidNum(
   const bool contiguous_varing_instance = in_blob->has_instance_shape_field();
   if (uncontiguous_varing_instance) {
     CHECK(!contiguous_varing_instance);
-    FOR_RANGE(size_t, i, 0, out_blob->shape().At(0)) {
+    FOR_RANGE(size_t, i, 0, in_blob->dim1_valid_num(ins_idx)) {
       out_blob->set_dim1_valid_num(i, in_blob->dim2_valid_num(ins_idx, i));
     }
   } else {

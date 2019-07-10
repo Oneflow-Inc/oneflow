@@ -26,6 +26,12 @@ void ContiguousInstanceStackKernel<device_type, T>::BackwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
+void ContiguousInstanceStackKernel<device_type, T>::ForwardDim0ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  // do nothing
+}
+
+template<DeviceType device_type, typename T>
 void ContiguousInstanceStackKernel<device_type, T>::ForwardInstanceShape(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   std::vector<const Blob*> in_blobs;
@@ -34,6 +40,18 @@ void ContiguousInstanceStackKernel<device_type, T>::ForwardInstanceShape(
   }
   Blob* out_blob = BnInOp2Blob("out");
   PieceSliceV2KernelUtil<device_type, T>::StackInstanceShape(in_blobs, out_blob);
+}
+
+template<DeviceType device_type, typename T>
+void ContiguousInstanceStackKernel<device_type, T>::BackwardInDiffDim0ValidNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
+  CHECK(!out_diff_blob->has_dim1_valid_num_field());
+  FOR_RANGE(size_t, i, 0, this->op_conf().contiguous_instance_stack_conf().in_size()) {
+    Blob* in_i_diff_blob = BnInOp2Blob(GenDiffBn("in_" + std::to_string(i)));
+    CHECK(in_i_diff_blob->has_dim0_valid_num_field());
+    in_i_diff_blob->set_dim0_valid_num(0, out_diff_blob->shape().At(1));
+  }
 }
 
 template<DeviceType device_type, typename T>

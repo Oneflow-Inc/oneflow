@@ -70,8 +70,8 @@ void PieceSliceV2Kernel<device_type, T>::ForwardDim1ValidNum(
     Blob* out_i_blob = BnInOp2Blob("out_" + std::to_string(i));
     if (uncontiguous_varing_in) {
       CHECK(!contiguous_varing_in);
-      FOR_RANGE(size_t, j, 0, out_i_blob->shape().At(0)) {
-        out_i_blob->set_dim1_valid_num(i, in_blob->dim2_valid_num(i, j));
+      FOR_RANGE(size_t, j, 0, in_blob->dim1_valid_num(i)) {
+        out_i_blob->set_dim1_valid_num(j, in_blob->dim2_valid_num(i, j));
       }
     } else {
       UNIMPLEMENTED();
