@@ -24,7 +24,7 @@ void DebugBlobDump(const OpGraph& op_graph, Job* job) {
   const std::string& base_dir =
       Global<JobDesc>::Get()->job_conf().other().debug_blob_dump_conf().base_dir();
   SnapshotFS()->RecursivelyCreateDirIfNotExist(base_dir);
-  HashSet<OperatorConf::OpTypeCase> black_list = {OperatorConf::kReduceSplitConf};
+  std::set<OperatorConf::OpTypeCase> black_list = {OperatorConf::kReduceSplitConf};
   op_graph.ForEachNode([&](const OpNode* node) {
     if (black_list.count(node->op().op_conf().op_type_case()) != 0) { return; }
     for (const std::string& bn : node->op().output_bns()) {
