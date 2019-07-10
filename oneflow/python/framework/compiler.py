@@ -11,18 +11,19 @@ import oneflow.python.framework.config_util as config_util
 def Compile():
     assert oneflow_mode.IsCurrentCompileMode(), "Compile() must be under compile mode"
     assert decorator_context.main_func is not None, "no main function found"
-    assert len(decorator_context.job_name2func) == 0, "no job function found"
+    assert len(decorator_context.job_name2func) > 0, "no job function found"
     compile_context.cur_job_set = job_set_util.JobSet()
     with compile_context.CompilingMain():
         job_set = compile_context.cur_job_set
         decorator_context.main_func.__oneflow_config_func__(job_set)
         config_util.DefaultConfigJobSet(job_set)
-    for job_name in decorator_context.job_name2func:
-        func = decorator_context.job_name2func[job_name]
+    for job_name, func in decorator_context.job_name2func.items():
         compile_context.cur_job = job_conf_util.JobConf()
-        func()
-        assert compile_context.cur_job is not None, "No job compiled"
-        job_set.add_job_conf(compile_context.cur_job)
+        func.__oneflow_config_func__(compile_context.cur_job)
+        job_set.job_conf.add().CopyFrom(compile_context.cur_job)
+    from google.protobuf import text_format
+    print (text_format.MessageToString(job_set))
+    exit(-1)
     return job_set
 
 def GetMainFunc():

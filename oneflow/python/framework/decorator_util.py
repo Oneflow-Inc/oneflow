@@ -24,12 +24,8 @@ def remote(func):
     if hasattr(Func, '__oneflow_arg_default__') == False:
         Func.__oneflow_arg_default__ = _AssertAndGetArgDefaults(func)
     decorator_context.job_name2func[Func.__name__] = Func
-    if hasattr(func, '__oneflow_config_func__'):
-        Func.__oneflow_config_func__ = func.__oneflow_config_func__
-    else:
-        def EmptyConfig(job_conf):
-            pass
-        Func.__oneflow_config_func__ = EmptyConfig
+    if hasattr(Func, '__oneflow_config_func__') == False:
+        Func.__oneflow_config_func__ = lambda x: None
     return Func
 
 def static_assert(func):
