@@ -48,10 +48,10 @@ def _ComposeConfigFunc(config_func, other_config_func):
     return ComposedConfigFunc
 
 def _UpdateDecorateFuncAndContext(decorated_func, config_func, func):
-    if hasattr(func, '__config_func__'):
-        decorated_func.__config_func__ = _ComposeConfigFunc(config_func, func.__config_func__)
+    if hasattr(func, '__oneflow_config_func__'):
+        decorated_func.__oneflow_config_func__ = _ComposeConfigFunc(config_func, func.__oneflow_config_func__)
     else:
-        decorated_func.__config_func__ = config_func
+        decorated_func.__oneflow_config_func__ = config_func
     if decorator_context.main_func == func:
         decorator_context.main_func = decorated_func
     else:
