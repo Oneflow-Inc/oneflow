@@ -14,7 +14,14 @@ def remote(func):
             return runtime.LaunchJob(func.__name__, *arg)
         else:
             raise NotImplementedError
-    Func.__name__ = __name__
+    Func.__name__ = func.__name__
+    decorator_context.job_name2func[Func.__name__] = Func
+    if hasattr(func, '__config_func__'):
+        Main.__config_func__ = func.__config_func__
+    else:
+        def EmptyConfig(job_conf):
+            pass
+        Main.__config_func__ = EmptyConfig
     return Func
 
 def static_assert(func):

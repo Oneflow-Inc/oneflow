@@ -4,15 +4,22 @@ import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.decorator_context as decorator_context
 import oneflow.python.framework.oneflow_mode as oneflow_mode
 
-
 def MakeResourceConfigDecorator(field, field_type):
-    return _MakeConfigDecorator(lambda job_set: job_set.resource, field, field_type)
+    return _MakeConfigDecorator(_AssertIsCompilingMain, lambda job_set: job_set.resource,
+                                field, field_type)
 def MakeIOConfigDecorator(field, field_type):
-    return _MakeConfigDecorator(lambda job_set: job_set.io_conf, field, field_type)
+    return _MakeConfigDecorator(_AssertIsCompilingMain, lambda job_set: job_set.io_conf,
+                                field, field_type)
 def MakeCppFlagsConfigDecorator(field, field_type):
-    return _MakeConfigDecorator(lambda job_set: job_set.cpp_flags_conf, field, field_type)
+    return _MakeConfigDecorator(_AssertIsCompilingMain, lambda job_set: job_set.cpp_flags_conf,
+                                field, field_type)
 def MakeProfilerConfigDecorator(field, field_type):
-    return _MakeConfigDecorator(lambda job_set: job_set.profile_conf, field, field_type)
+    return _MakeConfigDecorator(_AssertIsCompilingMain, lambda job_set: job_set.profile_conf,
+                                field, field_type)
+
+def MakeJobOtherConfigDecorator(field, field_type):
+    return _MakeConfigDecorator(_AssertIsCompilingRemote, lambda job_conf: job_conf.other,
+                                field, field_type)
 
 def DefaultConfigJobSet(job_set):
     assert compile_context.IsCompilingMain()
@@ -20,18 +27,29 @@ def DefaultConfigJobSet(job_set):
     _DefaultConfigIO(job_set)
     _DefaultConfigCppFlags(job_set)
 
-def _GenConfigFunc(config_func, other_config_func):
-    def composed_config_func(job_set_or_job_conf):
-        assert oneflow_mode.IsCurrentCompileMode(), \
-            "config decorators are merely allowed to use when compile"
-        assert compile_context.IsCompilingMain()
+def DefaultConfigJobConf(job_conf):
+    assert oneflow_mode.IsCurrentCompileMode()
+    assert compile_context.IsCompilingMain() == False
+
+def _AssertIsCompilingMain():
+    assert oneflow_mode.IsCurrentCompileMode(), \
+        "config decorators are merely allowed to use when compile"
+    assert compile_context.IsCompilingMain()
+    
+def _AssertIsCompilingRemote():
+    assert oneflow_mode.IsCurrentCompileMode(), \
+        "config decorators are merely allowed to use when compile"
+    assert compile_context.IsCompilingMain() == False
+    
+def _ComposeConfigFunc(config_func, other_config_func):
+    def ComposedConfigFunc(job_set_or_job_conf):
         config_func(job_set_or_job_conf)
         other_config_func(job_set_or_job_conf)
-    return composed_config_func
+    return ComposedConfigFunc
 
 def _UpdateDecorateFuncAndContext(decorated_func, config_func, func):
     if hasattr(func, '__config_func__'):
-        decorated_func.__config_func__ = _GenConfigFunc(config_func, func.__config_func__)
+        decorated_func.__config_func__ = _ComposeConfigFunc(config_func, func.__config_func__)
     else:
         decorated_func.__config_func__ = config_func
     if decorator_context.main_func == func:
@@ -50,11 +68,12 @@ def _GenConfigDecorator(config_func):
     
     return decorator
 
-def _MakeConfigDecorator(get_attr_container, field, field_type):
+def _MakeConfigDecorator(ctx_asserter, get_attr_container, field, field_type):
     def Func(val):
         assert isinstance(val, field_type), \
             "config field '%s' should be instance of %s, %s given"%(field, field_type, type(val))
         def ConfigFunc(pb_msg):
+            ctx_asserter()
             setattr(get_attr_container(pb_msg), field, val)
         return _GenConfigDecorator(ConfigFunc)
     return Func
