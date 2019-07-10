@@ -1,9 +1,9 @@
 from __future__ import absolute_import
 
 import oneflow.python.framework.blob_desc as blob_desc
-import oneflow.python.framework.inter_user_job as inter_user_job
+import oneflow.core.common.data_type_pb2 as data_type_util
 
-def LogicalBlob(blob_desc.BlobDesc):
+class val(blob_desc.BlobDesc):
     def __init__(self, shape,
                  dtype = data_type_util.kFloat,
                  has_batch_dim = True,
@@ -12,13 +12,3 @@ def LogicalBlob(blob_desc.BlobDesc):
                  broadcast = None):
         blob_desc.BlobDesc.__init__(
             self, shape, dtype, has_batch_dim, is_dynamic, split_axis, broadcast)
-    
-    @property
-    def op_name(self):
-        return self.op_name_
-
-    def set_op_name(self, op_name):
-        self.op_name_ = op_name
-
-    def pull(self):
-        return inter_user_job.pull(self)
