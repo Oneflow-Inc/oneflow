@@ -30,3 +30,22 @@ v = config_util.MakeCppFlagsConfigDecorator("v", int)
 grpc_use_no_signal = config_util.MakeCppFlagsConfigDecorator("grpc_use_no_signal", int)
 ## profiler_conf
 collect_act_event = config_util.MakeProfilerConfigDecorator("collect_act_event", bool)
+
+## for the 'remote' function
+default_data_type = config_util.MakeJobOtherConfigDecorator("default_data_type", int)
+data_part_num = config_util.MakeJobOtherConfigDecorator("data_part_num", int)
+enable_cudnn = config_util.MakeJobOtherConfigDecorator("enable_cudnn", bool)
+cudnn_buf_limit_mbyte = config_util.MakeJobOtherConfigDecorator("cudnn_buf_limit_mbyte", int)
+enable_mem_sharing = config_util.MakeJobOtherConfigDecorator("enable_mem_sharing", bool)
+enable_inplace = config_util.MakeJobOtherConfigDecorator("enable_inplace", bool)
+enable_nccl = config_util.MakeJobOtherConfigDecorator("enable_nccl", bool)
+use_nccl_inter_node_communication = \
+    config_util.MakeJobOtherConfigDecorator("use_nccl_inter_node_communication", bool)
+all_reduce_group_num = config_util.MakeJobOtherConfigDecorator("all_reduce_group_num", int)
+all_reduce_lazy_ratio = config_util.MakeJobOtherConfigDecorator("all_reduce_lazy_ratio", float)
+all_reduce_group_min_mbyte = \
+    config_util.MakeJobOtherConfigDecorator("all_reduce_group_min_mbyte", int)
+all_reduce_group_size_warmup = \
+    config_util.MakeJobOtherConfigDecorator("all_reduce_group_size_warmup", float)
+all_reduce_fp16 = config_util.MakeJobOtherConfigDecorator("all_reduce_fp16", bool)
+concurrency_width = config_util.MakeJobOtherConfigDecorator("concurrency_width", int)

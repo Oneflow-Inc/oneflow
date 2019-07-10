@@ -42,9 +42,9 @@ message Config {
     TrainConf train_conf = 1;
     PredictConf predict_conf = 2;
   }
-  required int64 piece_size = 3;
+  optional int64 piece_size = 3 [default = 1];
   required int32 data_part_num = 4; // piece_size % data_part_num = 0
-  required int64 total_batch_num = 5;
+  optional int64 total_batch_num = 5 [default = 1];
   optional DataType default_data_type = 6 [default = kFloat]; // kFloat or kDouble
   optional int32 max_data_id_length = 7 [default = 0];
 
