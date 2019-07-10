@@ -177,7 +177,7 @@ set_target_properties(oneflow_internal PROPERTIES CMAKE_LIBRARY_OUTPUT_DIRECTORY
 target_link_libraries(oneflow_internal ${of_libs} ${oneflow_third_party_libs})
 
 set(of_pyscript_dir "${PROJECT_BINARY_DIR}/python_scripts")
-add_custom_command(TARGET oneflow_internal POST_BUILD
+add_custom_target(of_pyscript_copy ALL
     COMMAND "${CMAKE_COMMAND}" -E copy
         "${PROJECT_SOURCE_DIR}/oneflow/__init__.py" "${of_pyscript_dir}/oneflow/__init__.py"
     COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/core/__init__.py")
