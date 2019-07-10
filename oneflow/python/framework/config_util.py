@@ -39,7 +39,7 @@ def _AssertIsCompilingMain():
 def _AssertIsCompilingRemote():
     assert oneflow_mode.IsCurrentCompileMode(), \
         "config decorators are merely allowed to use when compile"
-    assert compile_context.IsCompilingMain() == False
+    assert compile_context.IsCompilingRemote()
     
 def _ComposeConfigFunc(config_func, other_config_func):
     def ComposedConfigFunc(job_set_or_job_conf):

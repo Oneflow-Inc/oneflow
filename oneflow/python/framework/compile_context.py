@@ -24,3 +24,20 @@ class CompilingMain(object):
     def __exit__(self, *args):
         global is_compiling_main
         is_compiling_main = False
+
+is_compiling_remote = False
+
+def IsCompilingRemote():
+    return is_compiling_remote == True
+
+class CompilingRemote(object):
+    def __init__(self):
+        assert is_compiling_remote == False, "no reentrant use of remote func"
+
+    def __enter__(self):
+        global is_compiling_remote
+        is_compiling_remote = True
+
+    def __exit__(self, *args):
+        global is_compiling_remote
+        is_compiling_remote = False
