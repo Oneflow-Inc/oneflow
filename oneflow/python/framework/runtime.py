@@ -17,6 +17,8 @@ class MasterRuntimeEnv(object):
         self.job_set_ = job_set
 
     def __enter__(self):
+        from google.protobuf import text_format
+        print (text_format.MessageToString(self.job_set_))
         assert len(self.job_set_.job_conf) > 0, "no job in job_set found"
         c_api_util.InitGlobalOneflowByJobSet(self.job_set_)
         runtime_ctx.Init()

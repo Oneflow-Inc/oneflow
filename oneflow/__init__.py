@@ -4,10 +4,7 @@ from oneflow.python.framework.oneflow import run
 from oneflow.python.framework.decorator_util import remote
 from oneflow.python.framework.decorator_util import static_assert
 from oneflow.python.framework.decorator_util import main
-from oneflow.python.framework.config import config_resource
-from oneflow.python.framework.config import config_io
-from oneflow.python.framework.config import config_cpp_flags
-from oneflow.python.framework.config import config_profiler
+from oneflow.python.framework import config
 from oneflow.python.framework.val import val
 from oneflow.python.framework.var import var
 from oneflow.python.framework.inter_user_job import pull
