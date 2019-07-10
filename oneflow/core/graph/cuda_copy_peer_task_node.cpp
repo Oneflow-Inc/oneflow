@@ -29,7 +29,11 @@ void CudaCopyPeerTaskNode::InferProducedDataRegstTimeShape() {
 
 void CudaCopyPeerTaskNode::Init(int64_t machine_id, int64_t dev_phy_id) {
   set_machine_id(machine_id);
-  set_thrd_id(Global<IDMgr>::Get()->GetGpuD2DThrdId(dev_phy_id));
+  if (dev_phy_id % 2 == 0) {
+    set_thrd_id(Global<IDMgr>::Get()->GetGpuD2DThrdId(dev_phy_id));
+  } else {
+    set_thrd_id(Global<IDMgr>::Get()->GetGpuNcclScatterThrdId(dev_phy_id));
+  }
 }
 
 OperatorConf CudaCopyPeerTaskNode::NewCopyOpConf() {
