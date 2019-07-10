@@ -8,9 +8,12 @@ namespace oneflow {
 
 #ifdef WITH_CUDA
 
+class CudaStreamHandle;
+
 struct CudaCBEvent {
   std::function<void()> callback;
   cudaEvent_t event;
+  CudaStreamHandle* cuda_stream_handle;
 };
 
 class CudaStreamHandle final {
@@ -18,6 +21,7 @@ class CudaStreamHandle final {
   OF_DISALLOW_COPY_AND_MOVE(CudaStreamHandle);
   CudaStreamHandle() = delete;
   CudaStreamHandle(Channel<CudaCBEvent>* cb_event_chan) : cb_event_chan_(cb_event_chan) {}
+  ~CudaStreamHandle();
 
   const cudaStream_t* cuda_stream();
   const cublasHandle_t* cublas_pmh_handle();
@@ -25,8 +29,8 @@ class CudaStreamHandle final {
   const cudnnHandle_t* cudnn_handle();
 
   void AddCallBack(std::function<void()> callback);
-
-  ~CudaStreamHandle();
+  cudaEvent_t GetCudaEvent();
+  void PutCudaEvent(cudaEvent_t event);
 
  private:
   Channel<CudaCBEvent>* cb_event_chan_;
@@ -34,6 +38,8 @@ class CudaStreamHandle final {
   std::unique_ptr<cublasHandle_t> cublas_pmh_handle_;
   std::unique_ptr<cublasHandle_t> cublas_pmd_handle_;
   std::unique_ptr<cudnnHandle_t> cudnn_handle_;
+  std::deque<cudaEvent_t> cuda_event_pool_;
+  std::atomic_flag cuda_event_pool_mutex_ = ATOMIC_FLAG_INIT;
 };
 
 #endif  // WITH_CUDA
