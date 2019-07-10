@@ -27,6 +27,7 @@ tf_cc_shared_object(
     }),
     visibility = ["//visibility:public"],
     deps = [
+        "//tensorflow/compiler/jit:xla_tensor",
         "//tensorflow/compiler/xla/client",
         "//tensorflow/compiler/xla/client:xla_builder",
         "//tensorflow/compiler/xla/client:xla_computation",
@@ -36,6 +37,7 @@ tf_cc_shared_object(
         "//tensorflow/compiler/xla/service",
         "//tensorflow/compiler/xla/service:cpu_plugin",
 #        "//tensorflow/compiler/jit:xla_cpu_jit",
+        "//tensorflow/compiler/tf2xla:tf2xla_util",
         "//tensorflow/core:lib",
         "@com_google_absl//absl/strings",
     ] + if_cuda([

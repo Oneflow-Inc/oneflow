@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class CompilationResourceStore;
+class CompilationContext;
 
 template <DeviceType device_type, typename T>
 class XlaLaunchKernel : public KernelIf<device_type> {
@@ -17,17 +17,17 @@ class XlaLaunchKernel : public KernelIf<device_type> {
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
 
-  void BuildLocalExecutable(const CompilationResourceStore &resource,
+  void BuildLocalExecutable(const CompilationContext &resource,
                             const std::vector<Blob *> &entry_blobs,
                             const std::vector<std::string> &entry_blob_names,
                             mola::CompilationResult *compile_result) const;
 
-  void AsyncRunExecutable(const CompilationResourceStore &resource,
-                          xla::LocalExecutable *executable,
-                          const std::vector<Blob *> &entry_blobs,
-                          const std::vector<xla::Shape> &input_shapes,
-                          std::vector<Blob *> &output_blobs,
-                          const xla::Shape &output_shape) const;
+  void SyncRunExecutable(const CompilationContext &resource,
+                         xla::LocalExecutable *executable,
+                         const std::vector<Blob *> &entry_blobs,
+                         const std::vector<xla::Shape> &input_shapes,
+                         std::vector<Blob *> &output_blobs,
+                         const xla::Shape &output_shape) const;
 };
 
 }  // namespace oneflow
