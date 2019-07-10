@@ -4,18 +4,37 @@ import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.decorator_context as decorator_context
 import oneflow.python.framework.oneflow_mode as oneflow_mode
 
-def config_resource(machine = None,
-                    ctrl_port = None,
-                    data_port = None,
-                    gpu_device_num = None,
-                    cpu_device_num = None,
-                    comm_net_worker_num = None,
-                    max_mdsave_worker_num = None,
-                    use_rdma = None,
-                    rdma_mem_block_mbyte = None,
-                    rdma_recv_msg_buf_mbyte = None,
-                    reserved_host_mem_mbyte = None,
-                    reserved_device_mem_mbyte = None):
+def config(
+        ## resource_conf
+        machine = None,
+        ctrl_port = None,
+        data_port = None,
+        gpu_device_num = None,
+        cpu_device_num = None,
+        comm_net_worker_num = None,
+        max_mdsave_worker_num = None,
+        use_rdma = None,
+        rdma_mem_block_mbyte = None,
+        rdma_recv_msg_buf_mbyte = None,
+        reserved_host_mem_mbyte = None,
+        reserved_device_mem_mbyte = None,
+        ## io_conf
+        data_fs_conf = None,
+        snapshot_fs_conf = None,
+        model_load_snapshot_path = None,
+        model_save_snapshots_path = None,
+        enable_write_snapshot = None,
+        save_downloaded_file_to_local_fs = None,
+        persistence_buf_byte = None,
+        ## cpp_flags_conf
+        log_dir = None,
+        logtostderr = None,
+        logbuflevel = None,
+        v = None,
+        grpc_use_no_signal = None,
+        ## profiler_conf
+        collect_act_event = None):
+    
     def config_func(job_set):
         resource = job_set.resource
         if machine is not None:
@@ -42,17 +61,7 @@ def config_resource(machine = None,
             resource.reserved_host_mem_mbyte = reserved_host_mem_mbyte
         if reserved_device_mem_mbyte is not None:
             resource.reserved_device_mem_mbyte = reserved_device_mem_mbyte
-        
-    return _GenJobSetConfigDecorator(config_func)
-
-def config_io(data_fs_conf = None,
-              snapshot_fs_conf = None,
-              model_load_snapshot_path = None,
-              model_save_snapshots_path = None,
-              enable_write_snapshot = None,
-              save_downloaded_file_to_local_fs = None,
-              persistence_buf_byte = None):
-    def config_func(job_set):
+                    
         io_conf = job_set.io_conf
         if data_fs_conf is not None:
             io_conf.data_fs_conf = data_fs_conf
@@ -68,15 +77,7 @@ def config_io(data_fs_conf = None,
             io_conf.save_downloaded_file_to_local_fs = save_downloaded_file_to_local_fs
         if persistence_buf_byte is not None:
             io_conf.persistence_buf_byte = persistence_buf_byte
-        
-    return _GenJobSetConfigDecorator(config_func)
-    
-def config_cpp_flags(log_dir = None,
-                     logtostderr = None,
-                     logbuflevel = None,
-                     v = None,
-                     grpc_use_no_signal = None):
-    def config_func(job_set):
+
         cpp_flags_conf = job_set.cpp_flags_conf
         if log_dir is not None:
             cpp_flags_conf.log_dir = log_dir
@@ -88,15 +89,11 @@ def config_cpp_flags(log_dir = None,
             cpp_flags_conf.v = v
         if grpc_use_no_signal is not None:
             cpp_flags_conf.grpc_use_no_signal = grpc_use_no_signal
-        
-    return _GenJobSetConfigDecorator(config_func)
- 
-def config_profiler(collect_act_event = None):
-    def config_func(job_set):
+            
         profile_conf = job_set.profile_conf
         if collect_act_event is not None:
             profile_conf.collect_act_event = collect_act_event
-        
+            
     return _GenJobSetConfigDecorator(config_func)
 
 def DefaultConfigJobSet(job_set):

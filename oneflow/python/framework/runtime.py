@@ -15,11 +15,11 @@ def GetMachineRuntimeEnv(job_set):
 class MasterRuntimeEnv(object):
     def __init__(self, job_set):
         self.job_set_ = job_set
-        runtime_ctx.Init()
 
     def __enter__(self):
         assert len(self.job_set_.job_conf) > 0, "no job in job_set found"
         c_api_util.InitGlobalOneflowByJobSet(self.job_set_)
+        runtime_ctx.Init()
         
     def __exit__(self, *args):
         runtime_ctx.Destroy()
