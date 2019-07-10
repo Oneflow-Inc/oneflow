@@ -13,7 +13,7 @@ job_name2output_logical_blobs = {}
 def IsCompilingMain():
     return is_compiling_main == True
 
-class CompilingMain:
+class CompilingMain(object):
     def __init__(self):
         assert is_compiling_main == False, "no reentrant use of main func"
 

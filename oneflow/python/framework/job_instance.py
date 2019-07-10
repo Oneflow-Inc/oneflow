@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 import oneflow.python.framework.ofblob as ofblob
-import oneflow.python.framework.oneflow_internal as oneflow_internal
+import oneflow_internal
 
 def MakeUserJobInstance(job_name, finish_cb = None):
     if finish_cb is None: finish_cb = _DoNothing

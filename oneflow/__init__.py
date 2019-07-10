@@ -8,8 +8,8 @@ from oneflow.python.framework.config import config_resource
 from oneflow.python.framework.config import config_io
 from oneflow.python.framework.config import config_cpp_flags
 from oneflow.python.framework.config import config_profiler
-from oneflow.python.framework.compiler import val
-from oneflow.python.framework.compiler import var
+from oneflow.python.framework.val import val
+from oneflow.python.framework.var import var
 from oneflow.python.framework.inter_user_job import pull
 
 import oneflow.python.framework.dtype as dtype

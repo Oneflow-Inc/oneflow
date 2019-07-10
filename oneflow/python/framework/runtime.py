@@ -12,7 +12,7 @@ def GetMachineRuntimeEnv(job_set):
     else:
         TODO()
 
-class MasterRuntimeEnv:
+class MasterRuntimeEnv(object):
     def __init__(self, job_set):
         self.job_set_ = job_set
         runtime_ctx.Init()
@@ -25,7 +25,7 @@ class MasterRuntimeEnv:
         runtime_ctx.Destroy()
         c_api_util.DestroyGlobalOneflow()
 
-class WorkerRuntimeEnv():
+class WorkerRuntimeEnv(object):
     def __init__(self, job_set):
         pass
 
@@ -39,11 +39,11 @@ class WorkerRuntimeEnv():
 class ThisIsNotAnError(Exception):
     pass
 
-class LaunchJob(job_name, *arg):
+def LaunchJob(job_name, *arg):
     input_op_names = runtime_ctx.job_name2input_op_names[job_name]
     assert len(arg) == len(input_op_names)
     for i in range(len(arg)):
         assert isinstance(arg[i], np.ndarray)
-        inter_user_job.AsyncPush(input_op_names[i], inter_user_job.MakePushCallback(arg[i]);
+        inter_user_job.AsyncPush(input_op_names[i], inter_user_job.MakePushCallback(arg[i]))
     c_api_util.LaunchJob(job_instance.MakeUserJobInstance(job_name))
     return runtime_ctx.job_name2output_op_names[job_name]

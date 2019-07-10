@@ -8,12 +8,6 @@ import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.config as config
 
 
-def val():
-    TODO()
-    
-def var():
-    TODO()
-
 def Compile():
     assert oneflow_mode.IsCurrentCompileMode(), "Compile() must be under compile mode"
     assert decorator_context.main_func is not None, "no main function found"

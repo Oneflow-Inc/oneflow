@@ -11,7 +11,7 @@ RUNTIME_MODE = 'RUNTIME_MODE';
 
 current_mode = None;
 
-class CompileMode:
+class CompileMode(object):
     def __init__(self):
         assert current_mode == None, "no reentrant use of oneflow_mode"
 
@@ -23,7 +23,7 @@ class CompileMode:
         global current_mode
         current_mode = None
         
-class RuntimeMode:
+class RuntimeMode(object):
     def __init__(self):
         assert current_mode == None, "no reentrant use of oneflow_mode"
 
