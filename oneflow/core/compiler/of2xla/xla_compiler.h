@@ -24,7 +24,8 @@ struct CompilationResult {
 
 class XlaCompiler {
  public:
-  XlaCompiler(xla::LocalClient * client, const OperatorConf &op_conf,
+  XlaCompiler(xla::LocalClient * client, xla::XlaBuilder *builder,
+              const XlaLaunchOpConf &launch_conf,
               DeviceType device_type, ParallelContext parallel_ctx,
               const std::vector<Blob *> &entry_blobs,
               const std::vector<std::string> &entry_blob_names,
@@ -51,9 +52,9 @@ class XlaCompiler {
 
   std::shared_ptr<XlaGraph> graph_;
 
-  std::shared_ptr<xla::XlaBuilder> builder_;
-
   xla::LocalClient *client_;
+
+  xla::XlaBuilder *builder_;
 
   std::vector<std::string> entry_names_;
   std::unordered_map<std::string, Argument> arguments_;

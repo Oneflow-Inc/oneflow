@@ -25,16 +25,15 @@ static XlaOpCompiler *CreateXlaOpCompiler(
   return XlaOpCompilerRegistry::Build(backend)[op_type]();
 }
 
-XlaCompiler::XlaCompiler(xla::LocalClient *client, const OperatorConf &op_conf,
+XlaCompiler::XlaCompiler(xla::LocalClient *client, xla::XlaBuilder *builder,
+                         const XlaLaunchOpConf &launch_conf,
                          DeviceType device_type, ParallelContext parallel_ctx,
                          const std::vector<Blob *> &entry_blobs,
                          const std::vector<std::string> &entry_blob_names,
                          bool force_compile)
-    : client_(client), entry_names_(entry_blob_names),
+    : client_(client), builder_(builder), entry_names_(entry_blob_names),
       force_compile_(force_compile) {
-  CHECK(op_conf.has_xla_launch_conf()) << "`XlaCompiler` need a `XlaLaunchOpConf`";
   CHECK_EQ(entry_blobs.size(), entry_blob_names.size());
-  builder_.reset(new xla::XlaBuilder(op_conf.name()));
 
   std::unordered_map<std::string, BlobDesc> blob_descs;
   for (int i = 0; i < entry_blobs.size(); ++i) {
@@ -46,7 +45,7 @@ XlaCompiler::XlaCompiler(xla::LocalClient *client, const OperatorConf &op_conf,
                        rt_desc.max_col_num());
     blob_descs.emplace(entry_blob_names[i], blob_desc);
   }
-  graph_.reset(new XlaLaunchGraph(op_conf.xla_launch_conf(), device_type));
+  graph_.reset(new XlaLaunchGraph(launch_conf, device_type));
   graph_->InferBlobDescs(&blob_descs, &parallel_ctx);
 
   for (const auto &pair : blob_descs) {
@@ -79,7 +78,7 @@ void XlaCompiler::BuildComputation(
     XlaOpContext::Param param;
     param.inputs = std::move(input_oprands);
     param.op_conf = &node->proto_conf();
-    param.builder = builder_.get();
+    param.builder = builder_;
 
     SetupParamArguments(node, arguments_, &param);
 
@@ -95,7 +94,7 @@ void XlaCompiler::BuildComputation(
   CHECK(computation_status.ok());
   *computation = computation_status.ConsumeValueOrDie();
   // TODO(hjchen2) Remove debug logging
-  DLOG(INFO) << computation->proto().DebugString();
+  VLOG(4) << computation->proto().DebugString();
 
   OF_CHECK_AND_ASSIGN(const auto& program_shape,
                       computation->GetProgramShape());
@@ -145,7 +144,7 @@ void XlaCompiler::SetupEntryOprands(
     input_shapes->push_back(shape);
 
     // Treat all inputs as xla Parameters
-    xla::XlaOp handle = xla::Parameter(builder_.get(), i, shape,
+    xla::XlaOp handle = xla::Parameter(builder_, i, shape,
                                        absl::StrCat("arg", i));
     entry_oprands->emplace(arg, XlaOprand::XlaOp(handle));
   }
