@@ -29,10 +29,9 @@ int CudaCopyPeerActor::HandlerCopy(const ActorMsg& msg) {
     Blob* out_blob = out_regst_->GetBlobByLbi(lbi_);
     current_in_regst->regst_desc()->mem_case().device_cuda_mem().device_id();
     DeviceCtx* device_ctx = mut_device_ctx().get();
-    CudaCheck(cudaMemcpyPeerAsync(
-        out_blob->mut_dptr(), out_regst_->regst_desc()->mem_case().device_cuda_mem().device_id(),
-        in_blob->dptr(), current_in_regst->regst_desc()->mem_case().device_cuda_mem().device_id(),
-        in_blob->ByteSizeOfDataContentField(), device_ctx->cuda_stream()));
+    CudaCheck(cudaMemcpyAsync(out_blob->mut_dptr(), in_blob->dptr(),
+                              in_blob->ByteSizeOfDataContentField(), cudaMemcpyDeviceToDevice,
+                              device_ctx->cuda_stream()));
     std::vector<ActorMsg> actor_msgs_;
     out_regst_->set_piece_id(current_in_regst->piece_id());
     for (const int64_t consumer : out_regst_->consumers_actor_id()) {
