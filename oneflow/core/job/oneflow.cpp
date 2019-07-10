@@ -186,7 +186,7 @@ Oneflow::Oneflow(const std::string& job_conf_filepath) {
   Global<CtrlClient>::New();
   OF_BARRIER();
 #ifdef WITH_CUDA
-  InitialCudaDevices();
+  // InitialCudaDevices();
 #endif
   int64_t this_mchn_id = Global<JobDesc>::Get()->GetMachineId(ctrl_server_->this_machine_addr());
   Global<MachineCtx>::New(this_mchn_id);
