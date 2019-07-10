@@ -49,7 +49,8 @@ def _ComposeConfigFunc(config_func, other_config_func):
 
 def _UpdateDecorateFuncAndContext(decorated_func, config_func, func):
     if hasattr(func, '__oneflow_config_func__'):
-        decorated_func.__oneflow_config_func__ = _ComposeConfigFunc(config_func, func.__oneflow_config_func__)
+        decorated_func.__oneflow_config_func__ = \
+            _ComposeConfigFunc(config_func, func.__oneflow_config_func__)
     else:
         decorated_func.__oneflow_config_func__ = config_func
     if decorator_context.main_func == func:
@@ -64,6 +65,9 @@ def _GenConfigDecorator(config_func):
 
         _UpdateDecorateFuncAndContext(decorated_func, config_func, func)
         decorated_func.__name__ = func.__name__
+        for x in dir(func):
+            if x.startswith('__oneflow_'):
+                setattr(decorated_func, x, getattr(func, x))
         return decorated_func
     
     return decorator
