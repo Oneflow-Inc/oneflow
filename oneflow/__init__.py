@@ -9,9 +9,10 @@ from oneflow.python.framework.val import val
 from oneflow.python.framework.var import var
 from oneflow.python.framework.inter_user_job import pull
 
-from oneflow.python.framework.config_util import compose_config
 from oneflow.python.framework import config
+from oneflow.python.framework.config import compose_config
 ## frequently used config api
+from oneflow.python.framework.config import machine
 from oneflow.python.framework.config import ctrl_port
 from oneflow.python.framework.config import data_port
 from oneflow.python.framework.config import gpu_device_num
