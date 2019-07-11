@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import re
 import oneflow.core.job.placement_pb2 as placement_proto
 import oneflow.python.framework.placement_context as placement_context
+import oneflow.python.framework.compile_context as compile_context
 
 def MakeParallelConf(device_names):
     if isinstance(device_names, str): device_names = [device_names]
@@ -47,7 +48,13 @@ class PlacementScope(object):
         self.parallel_conf_ = parallel_conf
 
     def __enter__(self):
+        placement_context.cur_placement_scope_op_names = []
         placement_context.ParallelConfStackPush(self.parallel_conf_)
         
     def __exit__(self, *args):
         placement_context.ParallelConfStackPop()
+        placement_group = placement_proto.PlacementGroup()
+        placement_group.op_set.op_name.extend(placement_context.cur_placement_scope_op_names)
+        placement_group.parallel_conf.CopyFrom(self.parallel_conf_)
+        compile_context.cur_job.placement.placement_group.add().CopyFrom(placement_group)
+        placement_context.cur_placement_scope_op_names = None
