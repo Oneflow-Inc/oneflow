@@ -2,6 +2,8 @@ from __future__ import absolute_import
 
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.decorator_context as decorator_context
+import oneflow.python.framework.placement_context as placement_context
+import oneflow.python.framework.placement_util as placement_util
 import oneflow.python.framework.oneflow_mode as oneflow_mode
 import oneflow.core.job.resource_pb2 as resource_util
 
@@ -40,6 +42,19 @@ def config_train_by_func(cb):
         job_conf.other.predict_conf.tmp_split_fw_bw_train_conf.SetInParent()
         cb(job_conf.other.predict_conf.tmp_split_fw_bw_train_conf)
     return _GenConfigDecorator(ConfigFunc, _UpdateRemoteDecoratorContext)
+
+def placement(device_names):
+    def ConfigFunc(job_conf):
+        _AssertIsCompilingRemote()
+        job_conf.other.predict_conf.tmp_split_fw_bw_train_conf.SetInParent()
+        cb(job_conf.other.predict_conf.tmp_split_fw_bw_train_conf)
+    parallel_conf = placement_util.MakeParallelConf(device_names)
+    def UpdateContext(decorated_func, func):
+        _UpdateRemoteDecoratorContext(decorated_func, func)
+        placement_context.job_name2default_parallel_conf[func.__name__] = parallel_conf
+    placement_scope = placement_util.PlacementScope(parallel_conf)
+    placement_scope.__call__ = _GenConfigDecorator(ConfigFunc, UpdateContext)
+    return placement_scope
 
 def DefaultConfigJobSet(job_set):
     assert compile_context.IsCompilingMain()
@@ -153,10 +168,6 @@ def _DefaultConfigResource(job_set):
         machine.addr = "127.0.0.1"
     if resource.HasField("ctrl_port") == False:
         resource.ctrl_port = 2017
-    if resource.HasField("gpu_device_num") == False:
-        resource.gpu_device_num = 1
-    if resource.HasField("cpu_device_num") == False:
-        resource.cpu_device_num = 1
 
 def _DefaultConfigIO(job_set):
     io_conf = job_set.io_conf
