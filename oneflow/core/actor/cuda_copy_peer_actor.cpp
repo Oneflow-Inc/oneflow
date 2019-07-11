@@ -3,17 +3,6 @@
 
 namespace oneflow {
 
-namespace {
-
-void CUDART_CB Callback(cudaStream_t stream, cudaError_t status, void* data) {
-  CudaCheck(status);
-  std::vector<ActorMsg>* actor_msgs_ptr_ = static_cast<std::vector<ActorMsg>*>(data);
-  for (const auto& msg : *actor_msgs_ptr_) { Global<ActorMsgBus>::Get()->SendMsg(msg); }
-  delete actor_msgs_ptr_;
-}
-
-}  // namespace
-
 int CudaCopyPeerActor::HandlerCopy(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
     if (msg.eord_regst_desc_id() == in_regst_desc_id_) {
@@ -52,13 +41,9 @@ int CudaCopyPeerActor::HandlerCopy(const ActorMsg& msg) {
     actor_msgs_.push_back(ActorMsg::BuildRegstMsgToProducer(
         actor_id(), current_in_regst->producer_actor_id(), current_in_regst));
     in_regst_deque_.pop_front();
-    std::vector<ActorMsg>* actor_msgs_ptr_ = new std::vector<ActorMsg>();
-    *actor_msgs_ptr_ = actor_msgs_;
-    CudaCheck(
-        cudaStreamAddCallback(device_ctx->cuda_stream(), Callback, (void*)(actor_msgs_ptr_), 0));
-    //    AsyncDo([actor_msgs_]() {
-    //      for (const auto& msg : actor_msgs_) { Global<ActorMsgBus>::Get()->SendMsg(msg); }
-    //    });
+    AsyncDo([actor_msgs_]() {
+      for (const auto& msg : actor_msgs_) { Global<ActorMsgBus>::Get()->SendMsg(msg); }
+    });
   }
   if (in_regst_eord_ && in_regst_deque_.empty()) {
     if (!eord_sent_) {
