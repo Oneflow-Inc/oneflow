@@ -7,6 +7,7 @@ option(USE_CLANG_FORMAT "" OFF)
 option(BUILD_RDMA "" OFF)
 option(BUILD_CUDA "" ON)
 option(RELEASE_VERSION "" ON)
+option(PY3 "" OFF)
 
 # Project
 if (THIRD_PARTY)
@@ -71,4 +72,3 @@ if (THIRD_PARTY)
 else()
   include(oneflow)
 endif()
-

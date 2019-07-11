@@ -23,11 +23,14 @@ function(RELATIVE_SWIG_GENERATE_CPP SRCS HDRS ROOT_DIR)
     file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/python_scripts")
     list(APPEND ${SRCS} ${GENERATED_CPP})
     list(APPEND ${HDRS} ${GENERATED_H})
+    if (PY3)
+      set(PY3_ARG "-py3")
+    endif()
     add_custom_command(
       OUTPUT ${GENERATED_CPP} 
              ${GENERATED_H}
       COMMAND ${SWIG_EXECUTABLE}
-      ARGS -python -c++
+      ARGS -python -c++ ${PY3_ARG}
            -module ${FIL_WE}
            -I${ROOT_DIR}
            -outdir "${CMAKE_CURRENT_BINARY_DIR}/python_scripts"
