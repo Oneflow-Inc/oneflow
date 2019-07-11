@@ -4,6 +4,14 @@ import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.decorator_context as decorator_context
 import oneflow.python.framework.oneflow_mode as oneflow_mode
 
+def compose_config(*decorators):
+    assert len(decorators) > 0
+    ret_decorator = decorators[-1]
+    decorators = decorators[0:-1][::-1]
+    for decorator in decorators:
+        ret_decorator = _ComposeConfig(decorator, ret_decorator)
+    return ret_decorator
+
 def MakeResourceConfigDecorator(field, field_type):
     return _MakeConfigDecorator(_AssertIsCompilingMain, _UpdateMainDecoratorContext,
                                 lambda job_set: job_set.resource, field, field_type)
@@ -30,6 +38,11 @@ def DefaultConfigJobSet(job_set):
 def DefaultConfigJobConf(job_conf):
     assert oneflow_mode.IsCurrentCompileMode()
     assert compile_context.IsCompilingMain() == False
+
+def _ComposeConfig(first_decorator, second_decorator):
+    def Decorator(func):
+        return first_decorator(second_decorator(func))
+    return Decorator
 
 def _AssertIsCompilingMain():
     assert oneflow_mode.IsCurrentCompileMode(), \
@@ -69,19 +82,19 @@ def _UpdateRemoteDecoratorContext(decorated_func, func):
             "no mutltiply 'remote' decorator supported"
 
 def _GenConfigDecorator(config_func, decorator_ctx_handler):
-    def decorator(func):
-        def decorated_func(*argv):
+    def Decorator(func):
+        def DecoratedFunc(*argv):
             func(*argv)
             
-        decorated_func.__name__ = func.__name__
-        decorator_ctx_handler(decorated_func, func)
+        DecoratedFunc.__name__ = func.__name__
+        decorator_ctx_handler(DecoratedFunc, func)
         for x in dir(func):
             if x.startswith('__oneflow_'):
-                setattr(decorated_func, x, getattr(func, x))
-        _UpdateDecorateConfigFunc(decorated_func, config_func, func)
-        return decorated_func
+                setattr(DecoratedFunc, x, getattr(func, x))
+        _UpdateDecorateConfigFunc(DecoratedFunc, config_func, func)
+        return DecoratedFunc
     
-    return decorator
+    return Decorator
 
 def _MakeConfigDecorator(ctx_asserter,
                          decorator_ctx_handler,

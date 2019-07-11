@@ -8,6 +8,9 @@ from oneflow.python.framework.val import val
 from oneflow.python.framework.var import var
 from oneflow.python.framework.inter_user_job import pull
 
+from oneflow.python.framework.config_util import compose_config
+from oneflow.python.framework import config
+## frequently used config api
 from oneflow.python.framework.config import ctrl_port
 from oneflow.python.framework.config import data_port
 from oneflow.python.framework.config import gpu_device_num
@@ -17,19 +20,8 @@ from oneflow.python.framework.config import max_mdsave_worker_num
 from oneflow.python.framework.config import use_rdma
 from oneflow.python.framework.config import rdma_mem_block_mbyte
 from oneflow.python.framework.config import rdma_recv_msg_buf_mbyte
-from oneflow.python.framework.config import reserved_host_mem_mbyte
-from oneflow.python.framework.config import reserved_device_mem_mbyte
 from oneflow.python.framework.config import model_load_snapshot_path
 from oneflow.python.framework.config import model_save_snapshots_path
-from oneflow.python.framework.config import enable_write_snapshot
-from oneflow.python.framework.config import save_downloaded_file_to_local_fs
-from oneflow.python.framework.config import persistence_buf_byte
-from oneflow.python.framework.config import log_dir
-from oneflow.python.framework.config import logtostderr
-from oneflow.python.framework.config import logbuflevel
-from oneflow.python.framework.config import v
-from oneflow.python.framework.config import grpc_use_no_signal
-from oneflow.python.framework.config import collect_act_event
 from oneflow.python.framework.config import default_data_type
 from oneflow.python.framework.config import data_part_num
 from oneflow.python.framework.config import enable_cudnn
