@@ -30,4 +30,6 @@ def GetMainFunc():
     return decorator_context.main_func
 
 def CompileJob(func):
-    func(*arg)
+    parallel_conf = GetJobPlacementParallelConf(func.__name__, compile_context.cur_job_set.resource)
+    with placement_util.PlacementScope(parallel_conf):
+        func(*arg)

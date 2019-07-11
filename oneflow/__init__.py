@@ -26,6 +26,7 @@ from oneflow.python.framework.config import model_load_snapshot_path
 from oneflow.python.framework.config import model_save_snapshots_path
 from oneflow.python.framework.config import config_train_by_func
 from oneflow.python.framework.config import batch_size
+from oneflow.python.framework.config import placement
 from oneflow.python.framework.config import default_data_type
 from oneflow.python.framework.config import data_part_num
 from oneflow.python.framework.config import enable_cudnn
