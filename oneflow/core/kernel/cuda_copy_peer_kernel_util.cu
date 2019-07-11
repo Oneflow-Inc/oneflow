@@ -8,6 +8,8 @@ namespace oneflow {
 
 namespace {
 
+inline int32_t DivUp(int32_t n, int32_t val) { return (n + val - 1) / val; }
+
 inline __device__ void Fetch(ulong2& v, const ulong2* p) {
   // clang-format off
   asm volatile("ld.volatile.global.v2.u64 {%0,%1}, [%2];" : "=l"(v.x), "=l"(v.y) : "l"(p) : "memory");
@@ -21,7 +23,7 @@ inline __device__ void Store(ulong2* p, ulong2& v) {
 
 __global__ void ReadKernel(void* buf, const void* src, int32_t* step_mutex, size_t size) {
   const int32_t step_size = N_THREAD * N_LOOP * sizeof(ulong2);
-  const int32_t n_step = RoundUp(size, step_size) / step_size;
+  const int32_t n_step = DivUp(size, step_size);
   const int32_t thread_id = threadIdx.x;
   if (thread_id == 0) {
     int32_t old = 0;
@@ -46,7 +48,7 @@ __global__ void ReadKernel(void* buf, const void* src, int32_t* step_mutex, size
 
 __global__ void WriteKernel(void* dst, const void* buf, int32_t* step_mutex, size_t size) {
   const int32_t step_size = N_THREAD * N_LOOP * sizeof(ulong2);
-  const size_t n_step = RoundUp(size, step_size) / step_size;
+  const size_t n_step = DivUp(size, step_size);
   const int32_t thread_id = threadIdx.x;
   if (thread_id == 0) {
     do { } while (atomicCAS(step_mutex, 0, 0) != 0); }
