@@ -13,7 +13,7 @@ class CudaCopyPeerTaskNode : public TaskNode {
 
   TaskType GetTaskType() const override { return TaskType::kCudaCopyPeer; }
 
-  void Init(int64_t machine_id, int64_t thrd_id);
+  void Init(int64_t machine_id, int64_t dev_phy_id);
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
