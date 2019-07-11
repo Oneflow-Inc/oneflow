@@ -134,6 +134,23 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
     }
   });
 
+  logical_gph_->ForEachNode([&](LogicalNode* logical) {
+    InstanceStackForwardLogicalNode* instance_stack_fw =
+        dynamic_cast<InstanceStackForwardLogicalNode*>(logical);
+    if (instance_stack_fw == nullptr) { return; }
+    const PieceSliceForwardLogicalNode* piece_slice_fw = instance_stack_fw->related_piece_slice();
+    const std::vector<CompTaskNode*>& instance_stack_fw_tasks =
+        logical2sorted_comp_tasks.at(instance_stack_fw);
+    const std::vector<CompTaskNode*>& piece_slice_fw_tasks =
+        logical2sorted_comp_tasks.at(piece_slice_fw);
+    CHECK_EQ(instance_stack_fw_tasks.size(), piece_slice_fw_tasks.size());
+    for (size_t i = 0; i < instance_stack_fw_tasks.size(); ++i) {
+      dynamic_cast<InstanceStackForwardCompTaskNode*>(instance_stack_fw_tasks.at(i))
+          ->set_related_piece_slice(
+              dynamic_cast<PieceSliceForwardCompTaskNode*>(piece_slice_fw_tasks.at(i)));
+    }
+  });
+
   GeneratePersistenceThrdId(machine_persistence_task_vec);
   logical_gph_->ForEachEdge([&](const LogicalEdge* logical_edge) {
     BldSubTskGphMthd method =

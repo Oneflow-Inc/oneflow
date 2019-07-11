@@ -5,13 +5,15 @@ namespace oneflow {
 bool IsForwardTaskType(TaskType tt) {
   return tt == TaskType::kNormalForward || tt == TaskType::kRecurrentForward
          || tt == TaskType::kPackForward || tt == TaskType::kUnpackForward
-         || tt == TaskType::kRepeatForward;
+         || tt == TaskType::kRepeatForward || tt == TaskType::kPieceSliceForward
+         || tt == TaskType::kInstanceStackForward;
 }
 
 bool IsBackwardTaskType(TaskType tt) {
   return tt == TaskType::kNormalBackward || tt == TaskType::kRecurrentBackward
          || tt == TaskType::kPackBackward || tt == TaskType::kUnpackBackward
-         || tt == TaskType::kRepeatBackward;
+         || tt == TaskType::kRepeatBackward || tt == TaskType::kPieceSliceBackward
+         || tt == TaskType::kInstanceStackBackward;
 }
 
 bool IsMdUpdtTaskType(TaskType tt) { return tt == TaskType::kNormalMdUpdt; }
@@ -297,6 +299,12 @@ void TaskNode::ConsumeRegst(const std::string& name, std::shared_ptr<RegstDesc> 
   consumed_regsts_[name].push_back(regst);
 }
 
+void TaskNode::UnConsumeRegst(const std::string& name, std::shared_ptr<RegstDesc> regst) {
+  regst->DeleteConsumer(this);
+  consumed_regsts_[name].remove(regst);
+  if (consumed_regsts_[name].empty()) { CHECK_EQ(1, consumed_regsts_.erase(name)); }
+}
+
 bool TaskNode::IsAllConsumedRegstLocked() {
   for (const auto& pair : consumed_regsts_) {
     for (std::shared_ptr<RegstDesc> regst_desc : pair.second) {
@@ -405,22 +413,42 @@ RegstDescIdSet* FindOrCreateConsumedCtrlRegstDescIdSet(TaskProto* task_proto,
   return &consumed_regst_desc_id_sets->at(regst_desc_name);
 }
 
-std::map<TaskType, std::string> task_type2color = {
-    {kInvalid, "0"},         {kNormalForward, "2"},
-    {kNormalBackward, "3"},  {kRecordLoad, "1"},
-    {kDecode, "1"},          {kLoss, "4"},
-    {kLossAcc, "5"},         {kLossPrint, "1"},
-    {kNormalMdUpdt, "6"},    {kMdSave, "1"},
-    {kMdDiffAcc, "7"},       {kCopyHd, "8"},
-    {kCopyCommNet, "9"},     {kBoxing, "10"},
-    {kPrint, "1"},           {kReduceConcat, "2"},
-    {kReduceScatter, "2"},   {kReduceAdd, "2"},
-    {kReduceGather, "2"},    {kReduceSplit, "2"},
-    {kNcclAllReduce, "2"},   {kNcclReduceScatter, "2"},
-    {kNcclAllGather, "2"},   {kAccuracy, "4"},
-    {kAccuracyPrint, "1"},   {kAccuracyAcc, "5"},
-    {kDecodeRandom, "1"},    {kPackForward, "11"},
-    {kPackBackward, "12"},   {kUnpackForward, "11"},
-    {kUnpackBackward, "12"}, {kRepeatForward, "2"},
-    {kRepeatBackward, "3"},  {kReduceIdentity, "2"}};
+std::map<TaskType, std::string> task_type2color = {{kInvalid, "0"},
+                                                   {kNormalForward, "2"},
+                                                   {kNormalBackward, "3"},
+                                                   {kRecordLoad, "1"},
+                                                   {kDecode, "1"},
+                                                   {kLoss, "4"},
+                                                   {kLossAcc, "5"},
+                                                   {kLossPrint, "1"},
+                                                   {kNormalMdUpdt, "6"},
+                                                   {kMdSave, "1"},
+                                                   {kMdDiffAcc, "7"},
+                                                   {kCopyHd, "8"},
+                                                   {kCopyCommNet, "9"},
+                                                   {kBoxing, "10"},
+                                                   {kPrint, "1"},
+                                                   {kReduceConcat, "2"},
+                                                   {kReduceScatter, "2"},
+                                                   {kReduceAdd, "2"},
+                                                   {kReduceGather, "2"},
+                                                   {kReduceSplit, "2"},
+                                                   {kNcclAllReduce, "2"},
+                                                   {kNcclReduceScatter, "2"},
+                                                   {kNcclAllGather, "2"},
+                                                   {kAccuracy, "4"},
+                                                   {kAccuracyPrint, "1"},
+                                                   {kAccuracyAcc, "5"},
+                                                   {kDecodeRandom, "1"},
+                                                   {kPackForward, "11"},
+                                                   {kPackBackward, "12"},
+                                                   {kUnpackForward, "11"},
+                                                   {kUnpackBackward, "12"},
+                                                   {kRepeatForward, "2"},
+                                                   {kRepeatBackward, "3"},
+                                                   {kReduceIdentity, "2"},
+                                                   {kPieceSliceForward, "11"},
+                                                   {kInstanceStackForward, "11"},
+                                                   {kPieceSliceBackward, "12"},
+                                                   {kInstanceStackBackward, "12"}};
 }  // namespace oneflow

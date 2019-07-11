@@ -42,6 +42,8 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   void NaiveBuildFwStruct(HashMap<std::string, std::vector<LogicalNode*>>* op_name2nodes);
   void FixSharedModelNodes(const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes);
   void LinkUnpackFw2PackFw(const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes);
+  void LinkInstanceStackFw2PieceSliceFw(
+      const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes);
   void ReConnectToFwClone(LogicalNode* clone_node, const LogicalBlobId& lbi,
                           const std::vector<LogicalEdge*>& edges, const std::string& obn);
   void BuildBwStruct();
