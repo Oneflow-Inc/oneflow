@@ -58,14 +58,18 @@ SubTskGphBuilderStatus MultiRingAllReduceSubTskGphBuilder::Build(
       int64_t next_id = RingNextParallelId(i);
       if (parallel_desc.MachineIdForParallelId(i)
           == parallel_desc.MachineIdForParallelId(next_id)) {
-        CudaCopyPeerTaskNode* copy_d2d_task_node =
-            ctx->task_graph()->NewNode<CudaCopyPeerTaskNode>();
-        copy_d2d_task_node->Init(parallel_desc.MachineIdForParallelId(next_id),
+        CopyHdTaskNode* copy_d2h_task_node = ctx->task_graph()->NewNode<CopyHdTaskNode>();
+        copy_d2h_task_node->set_area_id(kMdUpdtArea);
+        copy_d2h_task_node->Init(CopyHdOpConf::D2H, parallel_desc.MachineIdForParallelId(i),
+                                 parallel_desc.DeviceIdForParallelId(i));
+        Connect<TaskNode>(boxing_nodes.at(i), ctx->task_graph()->NewEdge(), copy_d2h_task_node);
+        CopyHdTaskNode* copy_h2d_task_node = ctx->task_graph()->NewNode<CopyHdTaskNode>();
+        copy_h2d_task_node->set_area_id(kMdUpdtArea);
+        copy_h2d_task_node->Init(CopyHdOpConf::H2D, parallel_desc.MachineIdForParallelId(next_id),
                                  parallel_desc.DeviceIdForParallelId(next_id));
-        copy_d2d_task_node->set_area_id(kMdUpdtArea);
-        Connect<TaskNode>(boxing_nodes.at(i), ctx->task_graph()->NewEdge(), copy_d2d_task_node);
-        send_to[i] = copy_d2d_task_node;
-        recv_from[next_id] = copy_d2d_task_node;
+        Connect<TaskNode>(copy_d2h_task_node, ctx->task_graph()->NewEdge(), copy_h2d_task_node);
+        send_to[i] = copy_d2h_task_node;
+        recv_from[next_id] = copy_h2d_task_node;
       } else {
         CopyHdTaskNode* copy_d2h_task_node = ctx->task_graph()->NewNode<CopyHdTaskNode>();
         copy_d2h_task_node->Init(CopyHdOpConf::D2H, parallel_desc.MachineIdForParallelId(i),
