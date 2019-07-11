@@ -25,7 +25,7 @@ __global__ void ReadKernel(void* buf, const void* src, volatile int32_t* step_mu
   const int32_t thread_id = threadIdx.x;
   if (thread_id == 0) {
     int32_t old = 0;
-    do { old = atomicCAS(step_mutex, old, 0) } while (old != 0);
+    do { old = atomicCAS(step_mutex, old, 0); } while (old != 0);
   }
   __syncthreads();
   for (int32_t step = 0; step < n_step; ++step) {
@@ -54,7 +54,7 @@ __global__ void WriteKernel(void* dst, const void* buf, int32_t* step_mutex, siz
   for (int32_t step = 0; step < n_step; ++step) {
     if (thread_id == 0) {
       const int32_t next_step = step + 1;
-      do { } while (atomicCAS(step_mutex, next_step, next_step) != next_step) }
+      do { } while (atomicCAS(step_mutex, next_step, next_step) != next_step); }
     __syncthreads();
     int32_t step_offset = step * step_size;
     ulong2 v;
