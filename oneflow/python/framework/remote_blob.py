@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import oneflow.python.framework.blob_desc as blob_desc
 import oneflow.python.framework.inter_user_job as inter_user_job
 
-def LogicalBlob(blob_desc.BlobDesc):
+def RemoteBlob(blob_desc.BlobDesc):
     def __init__(self, shape,
                  dtype = data_type_util.kFloat,
                  has_batch_dim = True,

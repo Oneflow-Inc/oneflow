@@ -6,9 +6,9 @@ cur_job_set = None
 
 is_compiling_main = False
 
-job_name2input_logical_blobs = {}
+job_name2input_remote_blobs = {}
 
-job_name2output_logical_blobs = {}
+job_name2output_remote_blobs = {}
 
 def IsCompilingMain():
     return is_compiling_main == True

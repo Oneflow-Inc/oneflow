@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.decorator_context as decorator_context
 import oneflow.python.framework.oneflow_mode as oneflow_mode
+import oneflow.core.job.resource_pb2 as resource_util
 
 def compose_config(*decorators):
     assert len(decorators) > 0
@@ -11,13 +12,6 @@ def compose_config(*decorators):
     for decorator in decorators:
         ret_decorator = _ComposeConfig(decorator, ret_decorator)
     return ret_decorator
-
-def config_train_by_func(cb):
-    def ConfigFunc(job_conf):
-        _AssertIsCompilingRemote()
-        job_conf.other.predict_conf.tmp_split_fw_bw_train_conf.SetInParent()
-        cb(job_conf.other.predict_conf.tmp_split_fw_bw_train_conf)
-    return _GenConfigDecorator(ConfigFunc, _UpdateRemoteDecoratorContext)
 
 def MakeResourceConfigDecorator(field, field_type):
     return _MakeConfigDecorator(_AssertIsCompilingMain, _UpdateMainDecoratorContext,
@@ -31,10 +25,21 @@ def MakeCppFlagsConfigDecorator(field, field_type):
 def MakeProfilerConfigDecorator(field, field_type):
     return _MakeConfigDecorator(_AssertIsCompilingMain, _UpdateMainDecoratorContext,
                                 lambda job_set: job_set.profile_conf, field, field_type)
+def machine(machines):
+    def ConfigFunc(job_conf):
+        _AssertIsCompilingMain()
+        job_conf.resource.machine.extend(_MakeMachine(machines))
+    return _GenConfigDecorator(ConfigFunc, _UpdateMainDecoratorContext)
 
 def MakeJobOtherConfigDecorator(field, field_type):
     return _MakeConfigDecorator(_AssertIsCompilingRemote, _UpdateRemoteDecoratorContext,
                                 lambda job_conf: job_conf.other, field, field_type)
+def config_train_by_func(cb):
+    def ConfigFunc(job_conf):
+        _AssertIsCompilingRemote()
+        job_conf.other.predict_conf.tmp_split_fw_bw_train_conf.SetInParent()
+        cb(job_conf.other.predict_conf.tmp_split_fw_bw_train_conf)
+    return _GenConfigDecorator(ConfigFunc, _UpdateRemoteDecoratorContext)
 
 def DefaultConfigJobSet(job_set):
     assert compile_context.IsCompilingMain()
@@ -47,6 +52,29 @@ def DefaultConfigJobConf(job_conf):
     assert compile_context.IsCompilingMain() == False
     _DefaultConfigJobConf(job_conf)
 
+def _MakeMachine(machines):
+    if isinstance(machines, str): machines = [machines]
+    resource = resource_util.Resource()
+    rp_machine = resource.machine
+    for m_data in machines:
+        m = rp_machine.add()
+        if isinstance(m_data, str):
+            m.addr = m_data
+        elif isinstance(m_data, dict):
+            if 'addr' in m_data: m.addr = m_data['addr']
+            if 'ctrl_port_agent' in m_data: m.ctrl_port_agent = m_data['ctrl_port_agent']
+            if 'data_port_agent' in m_data: m.data_port_agent = m_data['data_port_agent']
+        else:
+            raise NotImplementedError
+    id = 0
+    addrs_for_check = set()
+    for m in rp_machine:
+        m.id = id
+        id += 1
+        assert m.addr not in addrs_for_check
+        addrs_for_check.add(m.addr)
+    return rp_machine
+    
 def _ComposeConfig(first_decorator, second_decorator):
     def Decorator(func):
         return first_decorator(second_decorator(func))

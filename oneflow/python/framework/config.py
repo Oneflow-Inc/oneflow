@@ -2,8 +2,11 @@ from __future__ import absolute_import
 
 import oneflow.python.framework.config_util as config_util
 
+compose_config = config_util.compose_config
+
 ## for the 'main' function
 ## resource_conf
+machine = config_util.machine
 ctrl_port = config_util.MakeResourceConfigDecorator("ctrl_port", int)
 data_port = config_util.MakeResourceConfigDecorator("data_port", int)
 gpu_device_num = config_util.MakeResourceConfigDecorator("gpu_device_num", int)
