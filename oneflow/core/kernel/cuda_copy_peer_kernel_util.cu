@@ -19,7 +19,7 @@ inline __device__ void Store(ulong2* p, ulong2& v) {
   // clang-format on
 }
 
-__global__ void ReadKernel(void* buf, const void* src, volatile int32_t* step_mutex, size_t size) {
+__global__ void ReadKernel(void* buf, const void* src, int32_t* step_mutex, size_t size) {
   const int32_t step_size = N_THREAD * N_LOOP * sizeof(ulong2);
   const int32_t n_step = RoundUp(size, step_size) / step_size;
   const int32_t thread_id = threadIdx.x;
@@ -74,7 +74,7 @@ __global__ void WriteKernel(void* dst, const void* buf, int32_t* step_mutex, siz
 void CudaCopyPeerKernelUtil::CopyAsync(void* dst, void* buf, const void* src, int32_t* step_mutex,
                                        size_t size, cudaStream_t read, cudaStream_t write) {
   ReadKernel<<<1, N_THREAD, 0, read>>>(buf, src, step_mutex, size);
-  WriteKernel<<<1, N_THREAD, 0, write>>>(dst, buf, step_mutex, size)
+  WriteKernel<<<1, N_THREAD, 0, write>>>(dst, buf, step_mutex, size);
 }
 
 }  // namespace oneflow
