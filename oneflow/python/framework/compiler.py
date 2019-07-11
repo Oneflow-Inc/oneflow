@@ -21,6 +21,7 @@ def Compile():
         for job_name, func in decorator_context.job_name2func.items():
             compile_context.cur_job = job_conf_util.JobConf()
             func.__oneflow_config_func__(compile_context.cur_job)
+            config_util.DefaultConfigJobConf(compile_context.cur_job)
             job_set.job_conf.add().CopyFrom(compile_context.cur_job)
     from google.protobuf import text_format
     print (text_format.MessageToString(job_set))

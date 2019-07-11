@@ -12,6 +12,13 @@ def compose_config(*decorators):
         ret_decorator = _ComposeConfig(decorator, ret_decorator)
     return ret_decorator
 
+def config_train_by_func(cb):
+    def ConfigFunc(job_conf):
+        _AssertIsCompilingRemote()
+        job_conf.other.predict_conf.tmp_split_fw_bw_train_conf.SetInParent()
+        cb(job_conf.other.predict_conf.tmp_split_fw_bw_train_conf)
+    return _GenConfigDecorator(ConfigFunc, _UpdateRemoteDecoratorContext)
+
 def MakeResourceConfigDecorator(field, field_type):
     return _MakeConfigDecorator(_AssertIsCompilingMain, _UpdateMainDecoratorContext,
                                 lambda job_set: job_set.resource, field, field_type)
@@ -38,6 +45,7 @@ def DefaultConfigJobSet(job_set):
 def DefaultConfigJobConf(job_conf):
     assert oneflow_mode.IsCurrentCompileMode()
     assert compile_context.IsCompilingMain() == False
+    _DefaultConfigJobConf(job_conf)
 
 def _ComposeConfig(first_decorator, second_decorator):
     def Decorator(func):
@@ -131,3 +139,14 @@ def _DefaultConfigIO(job_set):
         
 def  _DefaultConfigCppFlags(job_set):
     job_set.cpp_flags_conf.SetInParent()
+
+    
+def _DefaultConfigJobConf(job_conf):
+    assert job_conf.other.HasField('piece_size'), "batch_size unset"
+    other = job_conf.other
+    if other.WhichOneof("job_type") is None:
+        other.predict_conf.SetInParent()
+    if other.HasField('train_conf'):
+        other.train_conf.batch_size = other.piece_size
+    if other.predict_conf.HasField('tmp_split_fw_bw_train_conf'):
+        other.predict_conf.tmp_split_fw_bw_train_conf.batch_size = other.piece_size

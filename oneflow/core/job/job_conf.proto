@@ -38,7 +38,7 @@ message ExperimentalRunConf {
 }
 
 message Config {
-  oneof JobType {
+  oneof job_type {
     TrainConf train_conf = 1;
     PredictConf predict_conf = 2;
   }

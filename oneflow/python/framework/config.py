@@ -32,6 +32,7 @@ grpc_use_no_signal = config_util.MakeCppFlagsConfigDecorator("grpc_use_no_signal
 collect_act_event = config_util.MakeProfilerConfigDecorator("collect_act_event", bool)
 
 ## for the 'remote' function
+batch_size = config_util.MakeJobOtherConfigDecorator("piece_size", int) # it's not a typo
 default_data_type = config_util.MakeJobOtherConfigDecorator("default_data_type", int)
 data_part_num = config_util.MakeJobOtherConfigDecorator("data_part_num", int)
 enable_cudnn = config_util.MakeJobOtherConfigDecorator("enable_cudnn", bool)
@@ -49,3 +50,4 @@ all_reduce_group_size_warmup = \
     config_util.MakeJobOtherConfigDecorator("all_reduce_group_size_warmup", float)
 all_reduce_fp16 = config_util.MakeJobOtherConfigDecorator("all_reduce_fp16", bool)
 concurrency_width = config_util.MakeJobOtherConfigDecorator("concurrency_width", int)
+config_train_by_func = config_util.config_train_by_func
