@@ -4,13 +4,6 @@ namespace oneflow {
 
 namespace {
 
-// Type Trait: IsHalf
-template<typename T>
-struct IsHalf : std::integral_constant<bool, false> {};
-
-template<>
-struct IsHalf<half> : std::integral_constant<bool, true> {};
-
 #define HALF_CHECK_FAILED                                             \
   printf("half operations are only supported when CUDA_ARCH >= 530"); \
   assert(false)

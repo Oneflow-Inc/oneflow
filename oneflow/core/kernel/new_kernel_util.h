@@ -19,9 +19,9 @@
 namespace oneflow {
 
 template<DeviceType deivce_type>
-class RealKernelUtil : public DnnIf<deivce_type>,
-                       public BlasIf<deivce_type>,
-                       public ArithemeticIf<deivce_type> {};
+struct RealKernelUtil : public DnnIf<deivce_type>,
+                        public BlasIf<deivce_type>,
+                        public ArithemeticIf<deivce_type> {};
 
 template<DeviceType>
 class NewKernelUtil;

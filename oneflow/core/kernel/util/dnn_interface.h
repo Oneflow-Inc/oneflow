@@ -8,7 +8,7 @@
 namespace oneflow {
 
 template<DeviceType>
-class DnnIf;
+struct DnnIf;
 
 }  // namespace oneflow
 

@@ -6,7 +6,7 @@
 namespace oneflow {
 
 template<>
-class DnnIf<DeviceType::kGPU> {
+struct DnnIf<DeviceType::kGPU> {
   static void Relu(DeviceCtx* ctx, const int64_t n, const float* x, float* y);
   static void Relu(DeviceCtx* ctx, const int64_t n, const double* x, double* y);
   static void Relu(DeviceCtx* ctx, const int64_t n, const float16* x, float16* y);
