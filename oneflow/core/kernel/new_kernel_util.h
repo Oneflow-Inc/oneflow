@@ -12,8 +12,16 @@
 #include "oneflow/core/persistence/snapshot.h"
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/common/switch_func.h"
+#include "oneflow/core/kernel/util/dnn_interface.h"
+#include "oneflow/core/kernel/util/blas_interface.h"
+#include "oneflow/core/kernel/util/arithemetic_interface.h"
 
 namespace oneflow {
+
+template<DeviceType deivce_type>
+class RealKernelUtil : public DnnIf<deivce_type>,
+                       public BlasIf<deivce_type>,
+                       public ArithemeticIf<deivce_type> {};
 
 template<DeviceType>
 class NewKernelUtil;
