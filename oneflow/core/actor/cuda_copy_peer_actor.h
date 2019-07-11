@@ -9,7 +9,7 @@ class CudaCopyPeerActor : public Actor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaCopyPeerActor);
   CudaCopyPeerActor() = default;
-  ~CudaCopyPeerActor() override = default;
+  ~CudaCopyPeerActor() override;
 
  protected:
   void VirtualActorInit(const TaskProto&) override;
@@ -23,6 +23,9 @@ class CudaCopyPeerActor : public Actor {
   int64_t out_regst_reading_cnt_ = -1;
   bool eord_sent_ = false;
   LogicalBlobId lbi_;
+  int32_t dst_dev_id_ = -1;
+  int32_t src_dev_id_ = -1;
+  cudaStream_t stream_for_src_;
 };
 
 }  // namespace oneflow

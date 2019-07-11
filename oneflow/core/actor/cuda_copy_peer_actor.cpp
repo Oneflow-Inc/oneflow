@@ -3,6 +3,14 @@
 
 namespace oneflow {
 
+CudaCopyPeerActor::~CudaCopyPeerActor() {
+  int32_t saved_dev_id;
+  CudaCheck(cudaGetDevice(&saved_dev_id));
+  CudaCheck(cudaStreamSynchronize(stream_for_src_));
+  CudaCheck(cudaStreamDestroy(stream_for_src_));
+  CudaCheck(cudaSetDevice(saved_dev_id));
+}
+
 int CudaCopyPeerActor::HandlerCopy(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
     if (msg.eord_regst_desc_id() == in_regst_desc_id_) {
@@ -29,9 +37,11 @@ int CudaCopyPeerActor::HandlerCopy(const ActorMsg& msg) {
     Blob* out_blob = out_regst_->GetBlobByLbi(lbi_);
     current_in_regst->regst_desc()->mem_case().device_cuda_mem().device_id();
     DeviceCtx* device_ctx = mut_device_ctx().get();
+
     CudaCheck(cudaMemcpyAsync(out_blob->mut_dptr(), in_blob->dptr(),
                               in_blob->ByteSizeOfDataContentField(), cudaMemcpyDeviceToDevice,
                               device_ctx->cuda_stream()));
+
     std::vector<ActorMsg> actor_msgs_;
     out_regst_->set_piece_id(current_in_regst->piece_id());
     for (const int64_t consumer : out_regst_->consumers_actor_id()) {
@@ -65,7 +75,8 @@ int CudaCopyPeerActor::HandlerCopy(const ActorMsg& msg) {
 }
 
 void CudaCopyPeerActor::VirtualActorInit(const TaskProto& task_proto) {
-  out_regst_desc_id_ = task_proto.produced_regst_desc().at("copy_out").regst_desc_id();
+  const RegstDescProto& out_regst_desc_proto = task_proto.produced_regst_desc().at("copy_out");
+  out_regst_desc_id_ = out_regst_desc_proto.regst_desc_id();
   out_regst_ = GetSoleProducedRegst4RegstDescId(out_regst_desc_id_);
   out_regst_reading_cnt_ = 0;
   CHECK_EQ(task_proto.consumed_regst_desc_id().at("copy_in").regst_desc_id_size(), 1);
@@ -73,6 +84,17 @@ void CudaCopyPeerActor::VirtualActorInit(const TaskProto& task_proto) {
   in_regst_eord_ = false;
   eord_sent_ = false;
   lbi_ = GenPackedLbi();
+  dst_dev_id_ = out_regst_desc_proto.mem_case().device_cuda_mem().device_id();
+  src_dev_id_ = Global<RegstMgr>::Get()
+                    ->RegstDesc4RegstDescId(in_regst_desc_id_)
+                    .mem_case()
+                    .device_cuda_mem()
+                    .device_id();
+  int32_t saved_dev_id;
+  CudaCheck(cudaGetDevice(&saved_dev_id));
+  CudaCheck(cudaSetDevice(src_dev_id_));
+  CudaCheck(cudaStreamCreate(&stream_for_src_));
+  CudaCheck(cudaSetDevice(saved_dev_id));
   OF_SET_MSG_HANDLER(&CudaCopyPeerActor::HandlerCopy);
 }
 
