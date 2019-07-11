@@ -1090,6 +1090,12 @@ void Oneflow::NaiveSequentialRun() const {
 
 Oneflow::Oneflow(const oneflow::JobSet& job_set) {
   global_objects_scope_.reset(new GlobalObjectsScope(job_set));
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    Global<CtrlClient>::Get()->PushKV("compiled_job_set", job_set);
+  } else {
+    Global<CtrlClient>::Get()->PullKV("compiled_job_set", &job_set_);
+    Global<JobSet>::SetAllocated(&job_set_);
+  }
   // Runtime
   CompileAndMergePlanOnMaster(job_set.job_conf(), &plan_);
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {

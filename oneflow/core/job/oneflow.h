@@ -37,6 +37,7 @@ class Oneflow final {
  private:
   std::unique_ptr<GlobalObjectsScope> global_objects_scope_;
   Plan plan_;
+  oneflow::JobSet job_set_;
   std::unique_ptr<Runtime> runtime_;
   std::unique_ptr<RuntimeBuffersScope> runtime_buffers_scope_;
 };
