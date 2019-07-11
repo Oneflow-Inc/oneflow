@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.decorator_context as decorator_context
+import oneflow.python.framework.decorator_util as decorator_util
 import oneflow.python.framework.placement_context as placement_context
 import oneflow.python.framework.placement_util as placement_util
 import oneflow.python.framework.oneflow_mode as oneflow_mode
@@ -53,7 +54,8 @@ def placement(device_names):
         _UpdateRemoteDecoratorContext(decorated_func, func)
         placement_context.job_name2default_parallel_conf[func.__name__] = parallel_conf
     placement_scope = placement_util.PlacementScope(parallel_conf)
-    placement_scope.__call__ = _GenConfigDecorator(ConfigFunc, UpdateContext)
+    decorator = _GenConfigDecorator(ConfigFunc, UpdateContext)
+    placement_scope.__call__ = lambda self, func: decorator(func)
     return placement_scope
 
 def DefaultConfigJobSet(job_set):
@@ -117,6 +119,9 @@ def _UpdateDecorateConfigFunc(decorated_func, config_func, func):
             _ComposeConfigFunc(config_func, func.__oneflow_config_func__)
     else:
         decorated_func.__oneflow_config_func__ = config_func
+    if hasattr(func, '__oneflow_arg_default__') == False:
+        func.__oneflow_arg_default__ = decorator_util.AssertAndGetArgDefaults(func)
+    decorated_func.__oneflow_arg_default__ = func.__oneflow_arg_default__
 
 def _UpdateMainDecoratorContext(decorated_func, func):
     if decorator_context.main_func == func:
@@ -126,8 +131,9 @@ def _UpdateMainDecoratorContext(decorated_func, func):
 
 def _UpdateRemoteDecoratorContext(decorated_func, func):
     job_name = func.__name__
-    if decorator_context.job_name2func.get(job_name) == func:
-        decorator_context.job_name2func = decorated_func
+    if job_name in decorator_context.job_name2func and \
+            decorator_context.job_name2func[job_name] == func:
+        decorator_context.job_name2func[job_name] = decorated_func
     else:
         assert job_name not in decorator_context.job_name2func, \
             "no mutltiply 'remote' decorator supported"
@@ -135,7 +141,7 @@ def _UpdateRemoteDecoratorContext(decorated_func, func):
 def _GenConfigDecorator(config_func, decorator_ctx_handler):
     def Decorator(func):
         def DecoratedFunc(*argv):
-            func(*argv)
+            return func(*argv)
             
         DecoratedFunc.__name__ = func.__name__
         decorator_ctx_handler(DecoratedFunc, func)
