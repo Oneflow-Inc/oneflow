@@ -7,7 +7,8 @@ namespace oneflow {
 
 struct CudaCopyPeerKernelUtil {
   static void CopyAsync(void* dst, void* buf, const void* src, int32_t* step_mutex, size_t size,
-                        cudaStream_t read, cudaStream_t write);
+                        int32_t dst_dev_id, int32_t src_dev_id, cudaStream_t read,
+                        cudaStream_t write);
 };
 
 }  // namespace oneflow

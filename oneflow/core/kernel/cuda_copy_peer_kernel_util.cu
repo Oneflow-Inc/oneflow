@@ -27,8 +27,7 @@ __global__ void ReadKernel(void* buf, const void* src, int32_t* step_mutex, size
   const int32_t n_step = DivUp(size, step_size);
   const int32_t thread_id = threadIdx.x;
   if (thread_id == 0) {
-    int32_t old = 0;
-    do { old = atomicCAS(step_mutex, old, 0); } while (old != 0);
+    while (atomicCAS(step_mutex, 0, 0) != 0) {}
   }
   __syncthreads();
   for (int32_t step = 0; step < n_step; ++step) {
@@ -43,16 +42,19 @@ __global__ void ReadKernel(void* buf, const void* src, int32_t* step_mutex, size
       }
     }
     __threadfence_system();
-    assert(atomicCAS(step_mutex, step, step + 1) == step);
+    __syncthreads();
+    if (thread_id == 0) { assert(atomicCAS(step_mutex, step, step + 1) == step); }
   }
 }
 
 __global__ void WriteKernel(void* dst, const void* buf, int32_t* step_mutex, size_t size) {
   const int32_t step_size = N_THREAD * N_LOOP * sizeof(ulong2);
-  const size_t n_step = DivUp(size, step_size);
+  const int32_t n_step = DivUp(size, step_size);
   const int32_t thread_id = threadIdx.x;
   if (thread_id == 0) {
-    do { } while (atomicCAS(step_mutex, 0, 0) != 0); }
+    int32_t old = 0;
+    do { old = atomicCAS(step_mutex, old, 0); } while (old != 0);
+  }
   __syncthreads();
   for (int32_t step = 0; step < n_step; ++step) {
     if (thread_id == 0) {
@@ -75,9 +77,15 @@ __global__ void WriteKernel(void* dst, const void* buf, int32_t* step_mutex, siz
 }  // namespace
 
 void CudaCopyPeerKernelUtil::CopyAsync(void* dst, void* buf, const void* src, int32_t* step_mutex,
-                                       size_t size, cudaStream_t read, cudaStream_t write) {
+                                       size_t size, int32_t dst_dev_id, int32_t src_dev_id,
+                                       cudaStream_t read, cudaStream_t write) {
+  int32_t saved_dev_id;
+  CudaCheck(cudaGetDevice(&saved_dev_id));
+  CudaCheck(cudaSetDevice(src_dev_id));
   ReadKernel<<<1, N_THREAD, 0, read>>>(buf, src, step_mutex, size);
+  CudaCheck(cudaSetDevice(dst_dev_id));
   WriteKernel<<<1, N_THREAD, 0, write>>>(dst, buf, step_mutex, size);
+  CudaCheck(cudaSetDevice(saved_dev_id));
 }
 
 }  // namespace oneflow
