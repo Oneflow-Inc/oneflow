@@ -8,14 +8,15 @@ namespace oneflow {
 
 namespace {
 
-inline int32_t DivUp(int32_t n, int32_t val) { return (n + val - 1) / val; }
+__forceinline__ __device__ int32_t DivUp(int32_t n, int32_t val) { return (n + val - 1) / val; }
 
-inline __device__ void Fetch(ulong2& v, const ulong2* p) {
+__forceinline__ __device__ void Fetch(ulong2& v, const ulong2* p) {
   // clang-format off
   asm volatile("ld.volatile.global.v2.u64 {%0,%1}, [%2];" : "=l"(v.x), "=l"(v.y) : "l"(p) : "memory");
   // clang-format on
 }
-inline __device__ void Store(ulong2* p, ulong2& v) {
+
+__forceinline__ __device__ void Store(ulong2* p, ulong2& v) {
   // clang-format off
   asm volatile("st.volatile.global.v2.u64 [%0], {%1,%2};" :: "l"(p), "l"(v.x), "l"(v.y) : "memory");
   // clang-format on
