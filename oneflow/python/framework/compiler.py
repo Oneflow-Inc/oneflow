@@ -22,10 +22,8 @@ def Compile():
             compile_context.cur_job = job_conf_util.JobConf()
             func.__oneflow_config_func__(compile_context.cur_job)
             config_util.DefaultConfigJobConf(compile_context.cur_job)
+            compile_context.cur_job.job_name = func.__name__
             job_set.job_conf.add().CopyFrom(compile_context.cur_job)
-    from google.protobuf import text_format
-    print (text_format.MessageToString(job_set))
-    exit(-1)
     return job_set
 
 def GetMainFunc():

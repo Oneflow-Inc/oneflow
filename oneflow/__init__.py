@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+from oneflow.python.framework.oneflow import compile_only
 from oneflow.python.framework.oneflow import run
 from oneflow.python.framework.decorator_util import remote
 from oneflow.python.framework.decorator_util import static_assert
