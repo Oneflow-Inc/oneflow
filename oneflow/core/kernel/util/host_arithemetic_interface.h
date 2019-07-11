@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_KERNEL_UTIL_CPU_ARITHEMETIC_INTERFACE_H_
 
 #include "oneflow/core/kernel/util/arithemetic_interface.h"
+#include "oneflow/core/register/blob.h"
 
 namespace oneflow {
 

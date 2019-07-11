@@ -1,4 +1,5 @@
 #include "oneflow/core/kernel/util/cuda_arithemetic_interface.h"
+#include "oneflow/core/common/switch_func.h"
 
 namespace oneflow {
 
@@ -66,33 +67,37 @@ struct TransposeUtil final {
                             MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
 };
 
-} // namespace
-
+}  // namespace
 
 #define TRANSPOSE_CHECK                               \
   CHECK_LE(y_shape.elem_cnt(), GetMaxVal<int32_t>()); \
   CHECK_EQ(num_axis, y_shape.NumAxes());              \
   CHECK_EQ(num_axis, x_shape.NumAxes())
 
-void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
-                        const Shape& y_shape, const PbRf<int32_t>& permutation,
-                        const int64_t elem_cnt, const float* x, float* y) {
+void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
+                                                const Shape& x_shape, const Shape& y_shape,
+                                                const PbRf<int32_t>& permutation,
+                                                const int64_t elem_cnt, const float* x, float* y) {
   TRANSPOSE_CHECK;
   TransposeUtil<float>::SwitchTransposeImpl(SwitchCase(num_axis), ctx, x_shape, y_shape,
                                             permutation, elem_cnt, x, y);
 }
 
-void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
-                        const Shape& y_shape, const PbRf<int32_t>& permutation,
-                        const int64_t elem_cnt, const double* x, double* y) {
+void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
+                                                const Shape& x_shape, const Shape& y_shape,
+                                                const PbRf<int32_t>& permutation,
+                                                const int64_t elem_cnt, const double* x,
+                                                double* y) {
   TRANSPOSE_CHECK;
   TransposeUtil<double>::SwitchTransposeImpl(SwitchCase(num_axis), ctx, x_shape, y_shape,
                                              permutation, elem_cnt, x, y);
 }
 
-void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
-                        const Shape& y_shape, const PbRf<int32_t>& permutation,
-                        const int64_t elem_cnt, const float16* x, float16* y) {
+void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
+                                                const Shape& x_shape, const Shape& y_shape,
+                                                const PbRf<int32_t>& permutation,
+                                                const int64_t elem_cnt, const float16* x,
+                                                float16* y) {
   TRANSPOSE_CHECK;
   TransposeUtil<half>::SwitchTransposeImpl(SwitchCase(num_axis), ctx, x_shape, y_shape, permutation,
                                            elem_cnt, reinterpret_cast<const half*>(x),
@@ -101,4 +106,4 @@ void ArithemeticIf<DeviceType::kGPU>::Transpose(DeviceCtx* ctx, const int32_t nu
 
 #undef TRANSPOSE_CHECK
 
-} // namespace oneflow
+}  // namespace oneflow

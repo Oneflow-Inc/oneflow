@@ -58,18 +58,21 @@ void TransposeImpl(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
   }
 }
 
-} // namespace
+}  // namespace
 
-void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
-                        const Shape& y_shape, const PbRf<int32_t>& permutation,
-                        const int64_t elem_cnt, const float* x, float* y) {
+void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
+                                                const Shape& x_shape, const Shape& y_shape,
+                                                const PbRf<int32_t>& permutation,
+                                                const int64_t elem_cnt, const float* x, float* y) {
   TransposeImpl<float>(ctx, num_axis, x_shape, y_shape, permutation, elem_cnt, x, y);
 }
 
-void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
-                        const Shape& y_shape, const PbRf<int32_t>& permutation,
-                        const int64_t elem_cnt, const double* x, double* y) {
+void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
+                                                const Shape& x_shape, const Shape& y_shape,
+                                                const PbRf<int32_t>& permutation,
+                                                const int64_t elem_cnt, const double* x,
+                                                double* y) {
   TransposeImpl<double>(ctx, num_axis, x_shape, y_shape, permutation, elem_cnt, x, y);
 }
 
-} // namespace oneflow
+}  // namespace oneflow
