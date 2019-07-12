@@ -87,12 +87,12 @@ void CudaCopyPeerKernelUtil::CopyAsync(void* dst, void* buf, const void* src, in
   params[0].args = read_kernel_args;
   params[0].stream = read;
 
-  params[0].func = (void*)WriteKernel;
-  params[0].gridDim = dim_grid;
-  params[0].blockDim = dim_block;
-  params[0].sharedMem = 0;
-  params[0].args = write_kernel_args;
-  params[0].stream = write;
+  params[1].func = (void*)WriteKernel;
+  params[1].gridDim = dim_grid;
+  params[1].blockDim = dim_block;
+  params[1].sharedMem = 0;
+  params[1].args = write_kernel_args;
+  params[1].stream = write;
 
   CudaCheck(cudaLaunchCooperativeKernelMultiDevice(
       params, 2,
