@@ -121,9 +121,6 @@ void Operator::InferOutputBlobTimeShapeIf(
 void Operator::InferOutputBlobTimeShape(
     std::function<const Shape*(const std::string&)> GetTimeShape4BnInOp, const ParallelContext*,
     Shape* time_shape) const {
-  for (const std::string& bn : input_bns()) {
-    CHECK_EQ(*GetTimeShape4BnInOp(input_bns().Get(0)), *GetTimeShape4BnInOp(bn));
-  }
   if (input_bns().empty() == false) {
     *time_shape = *GetTimeShape4BnInOp(input_bns().Get(0));
   } else {
@@ -213,7 +210,10 @@ void Operator::FixInDiffBlobDescs(std::function<BlobDesc*(const std::string&)> G
   }
 }
 
-void Operator::FixParallelDesc(ParallelDesc* pr_desc) const { VirtualFixParallelDesc(pr_desc); }
+void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
+  // TODO(): outdated, delete
+  VirtualFixParallelDesc(pr_desc);
+}
 
 void Operator::FixLbiWhenShareModel(const std::string& shared_op_name) {
   for (const std::string& model_bn : model_bns()) {

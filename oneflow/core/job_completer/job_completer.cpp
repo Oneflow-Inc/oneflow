@@ -438,7 +438,6 @@ void JobCompleter::Complete(Job* job) const {
     WithOpGraphAndMutJob(job, &AutoVar);
     WithOpGraphAndMutJob(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);
     // complete ops for trainning
-    HashMap<std::string, HashMap<std::string, LogicalBlobId>> op_name2ibn2in_diff_lbi;
     WithOpGraphAndMutJob(job, &GenerateOpConf4Trainning);
     WithOpGraphAndMutJob(job, &AddSaver);
     // complete tick ops
