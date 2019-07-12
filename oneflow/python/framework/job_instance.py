@@ -1,5 +1,7 @@
 from __future__ import absolute_import
 
+import traceback
+import sys
 import oneflow.python.framework.ofblob as ofblob
 import oneflow_internal
 
@@ -53,13 +55,25 @@ class JobInstance(oneflow_internal.ForeignJobInstance):
     def sole_output_op_name_in_user_job(self): return self.sole_output_op_name_in_user_job_
 
     def PushBlob(self, of_blob_ptr):
-        self.push_cb_(ofblob.OfBlob(of_blob_ptr))
+        try:
+            self.push_cb_(ofblob.OfBlob(of_blob_ptr))
+        except Exception as e:
+            print (traceback.format_exc())
+            raise e
 
     def PullBlob(self, of_blob_ptr):
-        self.pull_cb_(ofblob.OfBlob(of_blob_ptr))
+        try:
+            self.pull_cb_(ofblob.OfBlob(of_blob_ptr))
+        except Exception as e:
+            print (traceback.format_exc())
+            raise e
 
     def Finish(self):
-        self.finish_cb_()
+        try:
+            self.finish_cb_()
+        except Exception as e:
+            print (traceback.format_exc())
+            raise e
 
 def _DoNothing():
     pass
