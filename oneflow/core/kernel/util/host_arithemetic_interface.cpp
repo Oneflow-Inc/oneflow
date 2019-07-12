@@ -1,4 +1,4 @@
-#include "oneflow/core/kernel/util/cuda_arithemetic_interface.h"
+#include "oneflow/core/kernel/util/host_arithemetic_interface.h"
 
 namespace oneflow {
 
