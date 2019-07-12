@@ -6,6 +6,7 @@
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/job/runtime.h"
 #include "oneflow/core/job/inter_user_job_info.pb.h"
+#include "oneflow/core/job/flags_and_log_scope.h"
 
 namespace oneflow {
 
