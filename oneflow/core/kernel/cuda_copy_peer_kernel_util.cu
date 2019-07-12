@@ -53,7 +53,7 @@ __global__ void WriteKernel(void* dst, const void* buf, volatile int32_t* step_m
   for (int32_t step = 0; step < n_step; ++step) {
     if (thread_id == 0) {
       const int32_t next_step = step + 1;
-      while (*step_mutex <= next_step) {}
+      while (*step_mutex < next_step) {}
     }
     __syncthreads();
     __threadfence_system();
