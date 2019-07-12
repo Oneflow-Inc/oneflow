@@ -5,7 +5,7 @@ import oneflow.python.framework.runtime_context as runtime_ctx
 import oneflow.python.framework.job_instance as job_instance
 import threading
 
-def pull(logical_blob):
+def pull(remote_blob):
     cond = threading.Condition()
     pulled_ndarray = None
     pulled = False
@@ -16,7 +16,7 @@ def pull(logical_blob):
         cond.notify()
         cond.release()
     
-    AsyncPull(logical_blob.op_name, PullCallback)
+    AsyncPull(remote_blob.op_name, PullCallback)
     
     cond.acquire()
     while pulled == False:

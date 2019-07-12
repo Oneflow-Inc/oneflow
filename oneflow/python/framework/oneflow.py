@@ -4,9 +4,12 @@ import oneflow.python.framework.oneflow_mode as oneflow_mode
 import oneflow.python.framework.compiler as compiler
 import oneflow.python.framework.runtime as runtime
 
-def run():
+def compile_only():
     with oneflow_mode.CompileMode():
-        job_set = compiler.Compile()
+         return compiler.Compile()
+
+def run():
+    job_set = compile_only()
     main = compiler.GetMainFunc()
     with oneflow_mode.RuntimeMode():
         try:

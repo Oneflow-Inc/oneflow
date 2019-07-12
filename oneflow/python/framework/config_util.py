@@ -2,7 +2,11 @@ from __future__ import absolute_import
 
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.decorator_context as decorator_context
+import oneflow.python.framework.decorator_util as decorator_util
+import oneflow.python.framework.placement_context as placement_context
+import oneflow.python.framework.placement_util as placement_util
 import oneflow.python.framework.oneflow_mode as oneflow_mode
+import oneflow.core.job.resource_pb2 as resource_util
 
 def compose_config(*decorators):
     assert len(decorators) > 0
@@ -11,13 +15,6 @@ def compose_config(*decorators):
     for decorator in decorators:
         ret_decorator = _ComposeConfig(decorator, ret_decorator)
     return ret_decorator
-
-def config_train_by_func(cb):
-    def ConfigFunc(job_conf):
-        _AssertIsCompilingRemote()
-        job_conf.other.predict_conf.tmp_split_fw_bw_train_conf.SetInParent()
-        cb(job_conf.other.predict_conf.tmp_split_fw_bw_train_conf)
-    return _GenConfigDecorator(ConfigFunc, _UpdateRemoteDecoratorContext)
 
 def MakeResourceConfigDecorator(field, field_type):
     return _MakeConfigDecorator(_AssertIsCompilingMain, _UpdateMainDecoratorContext,
@@ -31,10 +28,35 @@ def MakeCppFlagsConfigDecorator(field, field_type):
 def MakeProfilerConfigDecorator(field, field_type):
     return _MakeConfigDecorator(_AssertIsCompilingMain, _UpdateMainDecoratorContext,
                                 lambda job_set: job_set.profile_conf, field, field_type)
+def machine(machines):
+    def ConfigFunc(job_conf):
+        _AssertIsCompilingMain()
+        job_conf.resource.machine.extend(_MakeMachine(machines))
+    return _GenConfigDecorator(ConfigFunc, _UpdateMainDecoratorContext)
 
 def MakeJobOtherConfigDecorator(field, field_type):
     return _MakeConfigDecorator(_AssertIsCompilingRemote, _UpdateRemoteDecoratorContext,
                                 lambda job_conf: job_conf.other, field, field_type)
+def config_train_by_func(cb):
+    def ConfigFunc(job_conf):
+        _AssertIsCompilingRemote()
+        job_conf.other.predict_conf.tmp_split_fw_bw_train_conf.SetInParent()
+        cb(job_conf.other.predict_conf.tmp_split_fw_bw_train_conf)
+    return _GenConfigDecorator(ConfigFunc, _UpdateRemoteDecoratorContext)
+
+def placement(device_names):
+    def ConfigFunc(job_conf):
+        _AssertIsCompilingRemote()
+        job_conf.other.predict_conf.tmp_split_fw_bw_train_conf.SetInParent()
+        cb(job_conf.other.predict_conf.tmp_split_fw_bw_train_conf)
+    parallel_conf = placement_util.MakeParallelConf(device_names)
+    def UpdateContext(decorated_func, func):
+        _UpdateRemoteDecoratorContext(decorated_func, func)
+        placement_context.job_name2default_parallel_conf[func.__name__] = parallel_conf
+    placement_scope = placement_util.PlacementScope(parallel_conf)
+    decorator = _GenConfigDecorator(ConfigFunc, UpdateContext)
+    placement_scope.__call__ = lambda self, func: decorator(func)
+    return placement_scope
 
 def DefaultConfigJobSet(job_set):
     assert compile_context.IsCompilingMain()
@@ -47,6 +69,29 @@ def DefaultConfigJobConf(job_conf):
     assert compile_context.IsCompilingMain() == False
     _DefaultConfigJobConf(job_conf)
 
+def _MakeMachine(machines):
+    if isinstance(machines, str): machines = [machines]
+    resource = resource_util.Resource()
+    rp_machine = resource.machine
+    for m_data in machines:
+        m = rp_machine.add()
+        if isinstance(m_data, str):
+            m.addr = m_data
+        elif isinstance(m_data, dict):
+            if 'addr' in m_data: m.addr = m_data['addr']
+            if 'ctrl_port_agent' in m_data: m.ctrl_port_agent = m_data['ctrl_port_agent']
+            if 'data_port_agent' in m_data: m.data_port_agent = m_data['data_port_agent']
+        else:
+            raise NotImplementedError
+    id = 0
+    addrs_for_check = set()
+    for m in rp_machine:
+        m.id = id
+        id += 1
+        assert m.addr not in addrs_for_check
+        addrs_for_check.add(m.addr)
+    return rp_machine
+    
 def _ComposeConfig(first_decorator, second_decorator):
     def Decorator(func):
         return first_decorator(second_decorator(func))
@@ -74,6 +119,9 @@ def _UpdateDecorateConfigFunc(decorated_func, config_func, func):
             _ComposeConfigFunc(config_func, func.__oneflow_config_func__)
     else:
         decorated_func.__oneflow_config_func__ = config_func
+    if hasattr(func, '__oneflow_arg_default__') == False:
+        func.__oneflow_arg_default__ = decorator_util.AssertAndGetArgDefaults(func)
+    decorated_func.__oneflow_arg_default__ = func.__oneflow_arg_default__
 
 def _UpdateMainDecoratorContext(decorated_func, func):
     if decorator_context.main_func == func:
@@ -83,8 +131,9 @@ def _UpdateMainDecoratorContext(decorated_func, func):
 
 def _UpdateRemoteDecoratorContext(decorated_func, func):
     job_name = func.__name__
-    if decorator_context.job_name2func.get(job_name) == func:
-        decorator_context.job_name2func = decorated_func
+    if job_name in decorator_context.job_name2func and \
+            decorator_context.job_name2func[job_name] == func:
+        decorator_context.job_name2func[job_name] = decorated_func
     else:
         assert job_name not in decorator_context.job_name2func, \
             "no mutltiply 'remote' decorator supported"
@@ -92,7 +141,7 @@ def _UpdateRemoteDecoratorContext(decorated_func, func):
 def _GenConfigDecorator(config_func, decorator_ctx_handler):
     def Decorator(func):
         def DecoratedFunc(*argv):
-            func(*argv)
+            return func(*argv)
             
         DecoratedFunc.__name__ = func.__name__
         decorator_ctx_handler(DecoratedFunc, func)
@@ -125,10 +174,6 @@ def _DefaultConfigResource(job_set):
         machine.addr = "127.0.0.1"
     if resource.HasField("ctrl_port") == False:
         resource.ctrl_port = 2017
-    if resource.HasField("gpu_device_num") == False:
-        resource.gpu_device_num = 1
-    if resource.HasField("cpu_device_num") == False:
-        resource.cpu_device_num = 1
 
 def _DefaultConfigIO(job_set):
     io_conf = job_set.io_conf

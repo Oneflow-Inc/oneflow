@@ -3,7 +3,6 @@ from __future__ import absolute_import
 import oneflow.python.framework.compile_context as compile_context
 import oneflow.python.framework.decorator_context as decorator_context
 import oneflow.python.framework.oneflow_mode as oneflow_mode
-import oneflow.python.framework.compiler as compiler
 import oneflow.python.framework.runtime as runtime
 import oneflow.python.framework.val as val
 import oneflow.python.framework.var as var
@@ -12,7 +11,7 @@ import oneflow.python.lib.core.func_inspect_util as func_inspect_util
 def remote(func):
     def Func(*arg):
         if oneflow_mode.IsCurrentCompileMode():
-            return compiler.CompileJob(func)
+            return func(*arg)
         elif oneflow_mode.IsCurrentRuntimeMode():
             return runtime.LaunchJob(func.__name__, *arg)
         else:
@@ -22,7 +21,7 @@ def remote(func):
         if x.startswith('__oneflow_'):
             setattr(Func, x, getattr(func, x))
     if hasattr(Func, '__oneflow_arg_default__') == False:
-        Func.__oneflow_arg_default__ = _AssertAndGetArgDefaults(func)
+        Func.__oneflow_arg_default__ = AssertAndGetArgDefaults(func)
     decorator_context.job_name2func[Func.__name__] = Func
     if hasattr(Func, '__oneflow_config_func__') == False:
         Func.__oneflow_config_func__ = lambda x: None
@@ -43,7 +42,7 @@ def main(func):
         Main.__oneflow_config_func__ = EmptyConfig
     return Main;
 
-def _AssertAndGetArgDefaults(func):
+def AssertAndGetArgDefaults(func):
     for arg_name, arg_default_val in func_inspect_util.GetArgNameAndDefaultTuple(func):
         assert isinstance(arg_default_val, val.val) or isinstance(arg_default_val, var.var)
     return func_inspect_util.GetArgDefaults(func)
