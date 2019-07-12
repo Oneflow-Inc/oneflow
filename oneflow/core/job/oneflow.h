@@ -14,6 +14,7 @@ class GlobalObjectsScope final {
   OF_DISALLOW_COPY_AND_MOVE(GlobalObjectsScope);
   GlobalObjectsScope() = default;
   ~GlobalObjectsScope();
+  
   void GlobalObjectsScope4JobSet(const JobSet& job_set);
   void GlobalObjectsScope4JobConf(const JobSet& job_set);
 
