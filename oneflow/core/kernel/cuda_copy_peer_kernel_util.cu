@@ -22,13 +22,11 @@ __forceinline__ __device__ void Store(ulong2* p, ulong2& v) {
   // clang-format on
 }
 
-__global__ void ReadKernel(void* buf, const void* src, int32_t* step_mutex, size_t size) {
+__global__ void ReadKernel(void* buf, const void* src, volatile int32_t* step_mutex, size_t size) {
   const int32_t step_size = N_THREAD * N_LOOP * sizeof(ulong2);
   const int32_t n_step = DivUp(size, step_size);
   const int32_t thread_id = threadIdx.x;
-  if (thread_id == 0) {
-    while (atomicCAS(step_mutex, 0, 0) != 0) {}
-  }
+  if (thread_id == 0) { assert(*step_mutex == 0); }
   __syncthreads();
   for (int32_t step = 0; step < n_step; ++step) {
     int32_t step_offset = step * step_size;
@@ -41,26 +39,24 @@ __global__ void ReadKernel(void* buf, const void* src, int32_t* step_mutex, size
         Store(reinterpret_cast<ulong2*>(static_cast<uint8_t*>(buf) + offset), v);
       }
     }
-    __threadfence_system();
     __syncthreads();
-    if (thread_id == 0) { assert(atomicCAS(step_mutex, step, step + 1) == step); }
+    __threadfence_system();
+    if (thread_id == 0) { *step_mutex = step + 1; }
   }
 }
 
-__global__ void WriteKernel(void* dst, const void* buf, int32_t* step_mutex, size_t size) {
+__global__ void WriteKernel(void* dst, const void* buf, volatile int32_t* step_mutex, size_t size) {
   const int32_t step_size = N_THREAD * N_LOOP * sizeof(ulong2);
   const int32_t n_step = DivUp(size, step_size);
   const int32_t thread_id = threadIdx.x;
-  if (thread_id == 0) {
-    int32_t old = 0;
-    do { old = atomicCAS(step_mutex, old, 0); } while (old != 0);
-  }
   __syncthreads();
   for (int32_t step = 0; step < n_step; ++step) {
     if (thread_id == 0) {
       const int32_t next_step = step + 1;
-      do { } while (atomicCAS(step_mutex, next_step, next_step) != next_step); }
+      while (*step_mutex <= next_step) {}
+    }
     __syncthreads();
+    __threadfence_system();
     int32_t step_offset = step * step_size;
     ulong2 v;
 #pragma unroll
