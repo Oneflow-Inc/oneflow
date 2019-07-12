@@ -42,6 +42,7 @@ def CompileJob(func):
     compile_context.job_name2input_remote_blobs[job_name] = []
     input_remote_blobs = compile_context.job_name2input_remote_blobs[job_name]
     ret_remote_blobs = None
+    interface_op_names = []
     with placement_util.PlacementScope(parallel_conf):
         for blob_desc in func.__oneflow_arg_default__:
             if isinstance(blob_desc, val.val):
@@ -51,6 +52,7 @@ def CompileJob(func):
             else:
                 raise NotImplementedError
             input_remote_blobs.append(remote_input_blob)
+            interface_op_names.append(remote_input_blob.op_name)
         ret_remote_blobs = func(*input_remote_blobs)
         if ret_remote_blobs is None: ret_remote_blobs = ()
         if isinstance(ret_remote_blobs, remote_blob_util.RemoteBlob):
@@ -60,4 +62,7 @@ def CompileJob(func):
         output_remote_blobs = compile_context.job_name2output_remote_blobs[job_name]
         for remote_blob in ret_remote_blobs:
             assert isinstance(remote_blob, remote_blob_util.RemoteBlob)
-            output_remote_blobs.append(ops.OutputOpByRemoteBlob(remote_blob))
+            output_remote_blob = ops.OutputOpByRemoteBlob(remote_blob)
+            output_remote_blobs.append(output_remote_blob)
+            interface_op_names.append(output_remote_blob.op_name)
+    compile_context.cur_job.arg_op_name.extend(interface_op_names)
