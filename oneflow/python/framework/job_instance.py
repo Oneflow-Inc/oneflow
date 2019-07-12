@@ -36,6 +36,9 @@ class JobInstance(oneflow_internal.ForeignJobInstance):
                  pull_cb = None,
                  finish_cb = None):
         oneflow_internal.ForeignJobInstance.__init__(self)
+        job_name = str(job_name)
+        sole_input_op_name_in_user_job = str(sole_input_op_name_in_user_job)
+        sole_output_op_name_in_user_job = str(sole_output_op_name_in_user_job)
         self.job_name_ = job_name
         self.sole_input_op_name_in_user_job_ = sole_input_op_name_in_user_job
         self.sole_output_op_name_in_user_job_ = sole_output_op_name_in_user_job
@@ -45,9 +48,9 @@ class JobInstance(oneflow_internal.ForeignJobInstance):
 
     def job_name(self): return self.job_name_
 
-    def sole_input_op_name_in_user_job(): return self.sole_input_op_name_in_user_job_
+    def sole_input_op_name_in_user_job(self): return self.sole_input_op_name_in_user_job_
     
-    def sole_output_op_name_in_user_job(): return self.sole_output_op_name_in_user_job_
+    def sole_output_op_name_in_user_job(self): return self.sole_output_op_name_in_user_job_
 
     def PushBlob(self, of_blob_ptr):
         self.push_cb_(ofblob.OfBlob(of_blob_ptr))

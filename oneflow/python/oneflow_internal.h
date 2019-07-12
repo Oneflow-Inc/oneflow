@@ -14,6 +14,7 @@ void NaiveSequentialRunSerializedJobSet(const oneflow::JobSet& job_set) {
 void InitGlobalOneflowBySerializedJobSet(const oneflow::JobSet& job_set) {
   using namespace oneflow;
   CHECK_ISNULL(Global<Oneflow>::Get());
+  Global<FlagsAndLogScope>::New(job_set, "oneflow");
   Global<Oneflow>::New(job_set);
 }
 
@@ -43,6 +44,7 @@ void DestroyGlobalOneflow() {
   using namespace oneflow;
   CHECK_NOTNULL(Global<Oneflow>::Get());
   Global<Oneflow>::Delete();
+  Global<FlagsAndLogScope>::Delete();
 }
 
 int Ofblob_GetDataType(uint64_t of_blob_ptr) {
