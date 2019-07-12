@@ -13,9 +13,9 @@ class GlobalObjectsScope final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GlobalObjectsScope);
   GlobalObjectsScope() = default;
+  ~GlobalObjectsScope();
   void GlobalObjectsScope4JobSet(const JobSet& job_set);
   void GlobalObjectsScope4JobConf(const JobSet& job_set);
-  ~GlobalObjectsScope();
 
  private:
   std::unique_ptr<CtrlServer> ctrl_server_;
