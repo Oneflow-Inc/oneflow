@@ -996,7 +996,7 @@ std::string LogDir(const std::string& log_dir) {
 
 }  // namespace
 
-GlobalObjectsScope::GlobalObjectsScope(const JobSet& job_set) {
+void GlobalObjectsScope::GlobalObjectsScope4JobSet(const JobSet& job_set) {
   Global<JobSet>::New(job_set);
   Global<ResourceDesc>::New(job_set.resource());
   Global<const IOConf>::New(job_set.io_conf());
@@ -1016,11 +1016,6 @@ GlobalObjectsScope::GlobalObjectsScope(const JobSet& job_set) {
   PushAvailableMemDescOfThisMachine();
   Global<JobName2JobId>::New();
   Global<std::vector<std::unique_ptr<JobDesc>>>::New();
-  FOR_RANGE(int32_t, i, 0, job_set.job_conf_size()) {
-    auto* job_desc = new JobDesc(job_set.job_conf(i), i);
-    Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->emplace_back(job_desc);
-    CHECK(Global<JobName2JobId>::Get()->emplace(job_desc->job_name(), job_desc->job_id()).second);
-  }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     Global<AvailableMemDesc>::New();
     *Global<AvailableMemDesc>::Get() = PullAvailableMemDesc();
@@ -1028,6 +1023,14 @@ GlobalObjectsScope::GlobalObjectsScope(const JobSet& job_set) {
     Global<BufferMgr<int64_t>>::New();
     Global<BufferMgr<std::shared_ptr<ForeignJobInstance>>>::New();
     Global<InterUserJobInfo>::New();
+  }
+}
+
+void GlobalObjectsScope::GlobalObjectsScope4JobConf(const JobSet& job_set) {
+  FOR_RANGE(int32_t, i, 0, job_set.job_conf_size()) {
+    auto* job_desc = new JobDesc(job_set.job_conf(i), i);
+    Global<std::vector<std::unique_ptr<JobDesc>>>::Get()->emplace_back(job_desc);
+    CHECK(Global<JobName2JobId>::Get()->emplace(job_desc->job_name(), job_desc->job_id()).second);
   }
 }
 
@@ -1088,15 +1091,20 @@ void Oneflow::NaiveSequentialRun() const {
   }
 }
 
-Oneflow::Oneflow(const oneflow::JobSet& master_job_set) {
-  JobSet job_set(master_job_set);
-  global_objects_scope_.reset(new GlobalObjectsScope(job_set));
+Oneflow::Oneflow(const oneflow::JobSet& original_job_set) {
+  JobSet job_set(original_job_set);
+  global_objects_scope_.reset(new GlobalObjectsScope());
+  global_objects_scope_->GlobalObjectsScope4JobSet(job_set);
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
     Global<CtrlClient>::Get()->PushKV("compiled_job_set", job_set);
   } else {
     Global<CtrlClient>::Get()->PullKV("compiled_job_set", &job_set);
-    Global<JobSet>::SetAllocated(&job_set);
+    CHECK(PbMd().Equals(original_job_set.resource(), job_set.resource()));
+    CHECK(PbMd().Equals(original_job_set.io_conf(), job_set.io_conf()));
+    CHECK(PbMd().Equals(original_job_set.cpp_flags_conf(), job_set.cpp_flags_conf()));
+    CHECK(PbMd().Equals(original_job_set.profile_conf(), job_set.profile_conf()));
   }
+  global_objects_scope_->GlobalObjectsScope4JobConf(job_set);
   // Runtime
   CompileAndMergePlanOnMaster(job_set.job_conf(), &plan_);
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {

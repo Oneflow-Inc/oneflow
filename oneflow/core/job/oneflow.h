@@ -12,7 +12,9 @@ namespace oneflow {
 class GlobalObjectsScope final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GlobalObjectsScope);
-  GlobalObjectsScope(const JobSet& job_set);
+  GlobalObjectsScope() = default;
+  void GlobalObjectsScope4JobSet(const JobSet& job_set);
+  void GlobalObjectsScope4JobConf(const JobSet& job_set);
   ~GlobalObjectsScope();
 
  private:
