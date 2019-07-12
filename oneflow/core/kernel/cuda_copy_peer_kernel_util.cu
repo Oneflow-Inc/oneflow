@@ -1,7 +1,7 @@
 #include "oneflow/core/kernel/cuda_copy_peer_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.cuh"
 
-#define N_THREAD 256
+#define N_THREAD 1024
 #define N_LOOP 16
 
 namespace oneflow {
@@ -75,13 +75,28 @@ __global__ void WriteKernel(void* dst, const void* buf, volatile int32_t* step_m
 void CudaCopyPeerKernelUtil::CopyAsync(void* dst, void* buf, const void* src, int32_t* step_mutex,
                                        size_t size, int32_t dst_dev_id, int32_t src_dev_id,
                                        cudaStream_t read, cudaStream_t write) {
-  int32_t saved_dev_id;
-  CudaCheck(cudaGetDevice(&saved_dev_id));
-  CudaCheck(cudaSetDevice(src_dev_id));
-  ReadKernel<<<1, N_THREAD, 0, read>>>(buf, src, step_mutex, size);
-  CudaCheck(cudaSetDevice(dst_dev_id));
-  WriteKernel<<<1, N_THREAD, 0, write>>>(dst, buf, step_mutex, size);
-  CudaCheck(cudaSetDevice(saved_dev_id));
+  dim3 dim_grid(1, 1, 1);
+  dim3 dim_block(N_THREAD, 1, 1);
+  struct cudaLaunchParams params[2];
+  void* read_kernel_args[] = {(void*)(&buf), (void*)(&src), (void*)(&step_mutex), (void*)(&size)};
+  void* write_kernel_args[] = {(void*)(&dst), (void*)(&buf), (void*)(&step_mutex), (void*)(&size)};
+  params[0].func = (void*)ReadKernel;
+  params[0].gridDim = dim_grid;
+  params[0].blockDim = dim_block;
+  params[0].sharedMem = 0;
+  params[0].args = read_kernel_args;
+  params[0].stream = read;
+
+  params[0].func = (void*)WriteKernel;
+  params[0].gridDim = dim_grid;
+  params[0].blockDim = dim_block;
+  params[0].sharedMem = 0;
+  params[0].args = write_kernel_args;
+  params[0].stream = write;
+
+  CudaCheck(cudaLaunchCooperativeKernelMultiDevice(
+      params, 2,
+      cudaCooperativeLaunchMultiDeviceNoPreSync | cudaCooperativeLaunchMultiDeviceNoPostSync));
 }
 
 }  // namespace oneflow
