@@ -18,6 +18,7 @@ inline ncclDataType_t GetNcclDataType(const DataType& dt) {
     NCCL_DATA_TYPE_CASE(Double);
     NCCL_DATA_TYPE_CASE(Int8);
     NCCL_DATA_TYPE_CASE(Int32);
+    NCCL_DATA_TYPE_CASE(Float16);
     default: UNIMPLEMENTED();
   }
 }

@@ -4,7 +4,7 @@ namespace oneflow {
 
 template<typename T>
 T AveragePoolingKernel<DeviceType::kCPU, T>::ForwardInitialize() const {
-  return ZeroVal<T>::value;
+  return GetZeroVal<T>();
 }
 
 template<typename T>
@@ -48,12 +48,12 @@ void AveragePoolingKernel<DeviceType::kCPU, T>::NDHWCProcessGrad(
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAveragePooling1DConf, AveragePoolingKernel,
-                           ARITHMETIC_DATA_TYPE_SEQ);
+                           FLOATING_DATA_TYPE_SEQ);
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAveragePooling2DConf, AveragePoolingKernel,
-                           ARITHMETIC_DATA_TYPE_SEQ);
+                           FLOATING_DATA_TYPE_SEQ);
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAveragePooling3DConf, AveragePoolingKernel,
-                           ARITHMETIC_DATA_TYPE_SEQ);
+                           FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

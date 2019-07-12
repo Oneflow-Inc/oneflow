@@ -206,16 +206,6 @@ void Erase(T& container, const std::function<bool(const typename T::value_type&)
   Erase<T>(container, NeedErase, [](const typename T::value_type&) {});
 }
 
-template<typename T>
-inline T GetMinVal() {
-  return std::numeric_limits<T>::lowest();
-}
-
-template<typename T>
-inline T GetMaxVal() {
-  return std::numeric_limits<T>::max();
-}
-
 //  encode case
 #define ENCODE_CASE_DATA_TYPE_SEQ_PRODUCT                                            \
   OF_PP_SEQ_PRODUCT((EncodeCase::kJpeg), ARITHMETIC_DATA_TYPE_SEQ)                   \
