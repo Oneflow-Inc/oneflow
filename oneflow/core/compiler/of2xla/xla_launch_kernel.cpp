@@ -34,6 +34,7 @@ void XlaLaunchKernel<device_type, T>::SyncRunExecutable(
   namespace se = tensorflow::se;
   CHECK_EQ(entry_blobs.size(), input_shapes.size())
       << "Mismatch between entry blobs size and input shapes size.";
+
   xla::LocalClient *client = compile_ctx.client();
 
   // Translate input blobs to xla ShapedBuffer suitable running the executable
@@ -105,13 +106,13 @@ void XlaLaunchKernel<device_type, T>::ForwardDataContent(
   }
 
   mola::CompilationContext compile_ctx(this->op_conf().name(), device_type,
-                                      1 /*intra_op_num_threads*/);
+                                       1 /*intra_op_num_threads*/);
   mola::CompilationResult compile_result;
   BuildLocalExecutable(compile_ctx, entry_blobs, entry_blob_names,
                        &compile_result);
 
   xla::LocalExecutable *executable = compile_result.executable.get();
-  CHECK(executable) << "Build executable failed.";
+  CHECK(executable) << "Executable built failed.";
   SyncRunExecutable(compile_ctx, executable, entry_blobs,
                     compile_result.xla_input_shapes, output_blobs,
                     compile_result.xla_output_shape);

@@ -13,13 +13,14 @@ extern const std::string _XlaOutArgumentPrefix;
 
 static std::string DeviceTypeToBackend(DeviceType device_type) {
   switch (device_type) {
-    case DeviceType::kCPU:
-      return "CPU";
     case DeviceType::kGPU:
       return "CUDA";
+    case DeviceType::kCPU:
+      return "CPU";
     default:
-      DLOG(WARNING) << "Invalid DeviceType (" << device_type << ")";
-      return "";
+      DLOG(WARNING) << "Meet invalid DeviceType (" << device_type
+                    << "), use default CPU backend.";
+      return "CPU";
   }
 }
 

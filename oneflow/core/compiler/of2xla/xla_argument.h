@@ -65,14 +65,12 @@ inline bool operator==(const Argument &lhs, const Argument &rhs) {
 }  // namespace oneflow
 
 namespace std {
-
 template<>
 struct hash<oneflow::mola::Argument> {
   size_t operator()(const oneflow::mola::Argument& arg) const {
     return std::hash<oneflow::LogicalBlobId>()(arg.blob_id_);
   }
 };
-
 }  // namespace std
 
 #endif  // ONEFLOW_CORE_COMPILER_OF2XLA_XLA_ARGUMENT_H_

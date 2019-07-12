@@ -22,7 +22,6 @@ tf_cc_shared_object(
         "//tensorflow:windows": [],
         "//conditions:default": [
             "-z muldefs",
-            "-s",
         ],
     }),
     visibility = ["//visibility:public"],

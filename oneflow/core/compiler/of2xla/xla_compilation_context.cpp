@@ -23,14 +23,14 @@ namespace mola {
 
 xla::LocalClient* CompilationResourceMgr::GetOrCreateLocalClient(
     const se::Platform *platform, int intra_op_num_threads) {
-  static xla::LocalClient *client = nullptr;
   xla::LocalClientOptions client_options;
   client_options.set_platform(const_cast<se::Platform *>(platform));
   client_options.set_intra_op_parallelism_threads(intra_op_num_threads);
-
+  // Get a local client if the client of `client_options` has been created,
+  // otherwise create a new local client by `ClientLibrary` and return it
   OF_CHECK_AND_ASSIGN(
-      client, xla::ClientLibrary::GetOrCreateLocalClient(client_options));
-   return client;
+      auto client, xla::ClientLibrary::GetOrCreateLocalClient(client_options));
+  return client;
 }
 
 mola::XlaAllocator* CompilationResourceMgr::GetOrCreateAllocator(
