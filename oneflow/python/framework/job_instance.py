@@ -38,87 +38,58 @@ class JobInstance(oneflow_internal.ForeignJobInstance):
                  pull_cb = None,
                  finish_cb = None):
         oneflow_internal.ForeignJobInstance.__init__(self)
-        global _job_name
-        global _sole_input_op_name_in_user_job
-        global _sole_output_op_name_in_user_job
-        global _push_cb
-        global _pull_cb
-        global _finish_cb
-        if job_name: _job_name[id(self)] = str(job_name)
-        if sole_input_op_name_in_user_job:
-           _sole_input_op_name_in_user_job[id(self)] = str(sole_input_op_name_in_user_job)
-        if sole_output_op_name_in_user_job:
-           _sole_output_op_name_in_user_job[id(self)] = str(sole_output_op_name_in_user_job)
-        if push_cb: _push_cb[id(self)] = push_cb
-        if pull_cb: _pull_cb[id(self)] = pull_cb
-        if finish_cb: _finish_cb[id(self)] = finish_cb
+        self.thisown = 0
+        self.job_name_ = str(job_name)
+        self.sole_input_op_name_in_user_job_ = str(sole_input_op_name_in_user_job)
+        self.sole_output_op_name_in_user_job_ = str(sole_output_op_name_in_user_job)
+        self.push_cb_ = push_cb
+        self.pull_cb_ = pull_cb
+        self.finish_cb_ = finish_cb
+        global _flying_job_instance
+        _flying_job_instance[id(self)] = self
 
     def job_name(self): 
-        try:
-            global _job_name
-            ret = _job_name[id(self)]
-            del _job_name[id(self)]
-            return ret
+        try: return self.job_name_
         except Exception as e:
             print (traceback.format_exc())
             raise e
 
     def sole_input_op_name_in_user_job(self): 
-        try:
-            global _sole_input_op_name_in_user_job
-            ret = _sole_input_op_name_in_user_job[id(self)]
-            del _sole_input_op_name_in_user_job[id(self)]
-            return ret
+        try: return self.sole_input_op_name_in_user_job_
         except Exception as e:
             print (traceback.format_exc())
             raise e
     
     def sole_output_op_name_in_user_job(self): 
-        try:
-            global _sole_output_op_name_in_user_job
-            ret = _sole_output_op_name_in_user_job[id(self)]
-            del _sole_output_op_name_in_user_job[id(self)]
-            return ret
+        try: return ret.sole_output_op_name_in_user_job_
         except Exception as e:
             print (traceback.format_exc())
             raise e
 
     def PushBlob(self, of_blob_ptr):
-        try:
-            global _push_cb
-            push_cb = _push_cb[id(self)]
-            del _push_cb[id(self)]
-            push_cb(ofblob.OfBlob(of_blob_ptr))
+        try: self.push_cb_(ofblob.OfBlob(of_blob_ptr))
         except Exception as e:
             print (traceback.format_exc())
             raise e
 
     def PullBlob(self, of_blob_ptr):
-        try:
-            global _pull_cb
-            pull_cb = _pull_cb[id(self)]
-            del _pull_cb[id(self)]
-            pull_cb(ofblob.OfBlob(of_blob_ptr))
+        try: self.pull_cb_(ofblob.OfBlob(of_blob_ptr))
         except Exception as e:
             print (traceback.format_exc())
             raise e
 
     def Finish(self):
-        try:
-            global _finish_cb
-            finish_cb = _finish_cb[id(self)]
-            del _finish_cb[id(self)]
-            finish_cb()
+        try: self.finish_cb_()
         except Exception as e:
             print (traceback.format_exc())
             raise e
+        finally:
+            global _flying_job_instance
+            del _flying_job_instance[id(self)]
 
-_job_name = {}
-_sole_input_op_name_in_user_job = {}
-_sole_output_op_name_in_user_job = {}
-_push_cb = {}
-_pull_cb = {}
-_finish_cb = {}
+# python object lifetime is a headache
+# _flying_job_instance prevents job_instance earlier destructation
+_flying_job_instance = {}
 
 def _DoNothing():
     pass
