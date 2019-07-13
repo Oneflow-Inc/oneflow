@@ -19,7 +19,7 @@ static std::string DeviceTypeToBackend(DeviceType device_type) {
       return "CPU";
     default:
       DLOG(WARNING) << "Meet invalid DeviceType (" << device_type
-                    << "), use default CPU backend.";
+                    << "). Use the default CPU backend instead.";
       return "CPU";
   }
 }

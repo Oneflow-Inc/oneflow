@@ -27,9 +27,10 @@ XlaCompiler::XlaCompiler(xla::LocalClient *client, xla::XlaBuilder *builder,
                          DeviceType device_type, ParallelContext parallel_ctx,
                          const std::vector<Blob *> &entry_blobs,
                          const std::vector<std::string> &entry_blob_names,
+                         const std::vector<std::string> &return_blob_names,
                          bool force_compile)
     : client_(client), builder_(builder), entry_names_(entry_blob_names),
-      force_compile_(force_compile) {
+      return_names_(return_blob_names), force_compile_(force_compile) {
   CHECK_EQ(entry_blobs.size(), entry_blob_names.size());
 
   std::unordered_map<std::string, BlobDesc> blob_descs;
@@ -53,6 +54,7 @@ XlaCompiler::XlaCompiler(xla::LocalClient *client, xla::XlaBuilder *builder,
 
 void XlaCompiler::BuildComputation(
     const std::unordered_map<Argument, XlaOprand> &entry_oprands,
+    const std::vector<Argument> &return_arguments,
     xla::Shape *output_shape, xla::XlaComputation *computation) {
   // All operator's output oprands collector
   std::unordered_map<Argument, XlaOprand> all_outputs;
@@ -86,6 +88,16 @@ void XlaCompiler::BuildComputation(
     const auto &outputs = op_context.outputs();
     all_outputs.insert(outputs.begin(), outputs.end());
   });
+
+  // Always insert a final tuple XlaOp to ensure the computation ends with
+  // all the return values. This also make sure that it returns a tuple shape
+  // after runing the executable
+  std::vector<xla::XlaOp> return_vals(return_arguments.size());
+  for (int i = 0; i < return_vals.size(); ++i) {
+    const Argument &arg = return_arguments[i];
+    return_vals[i] = all_outputs.at(arg).AsXlaOp(builder_);
+  }
+  xla::Tuple(builder_, return_vals);
 
   xla::StatusOr<xla::XlaComputation> computation_status = builder_->Build();
   CHECK(computation_status.ok());
@@ -124,9 +136,14 @@ CompilationResult XlaCompiler::Compile() {
   std::unordered_map<Argument, XlaOprand> entry_oprands;
   SetupEntryOprands(&entry_oprands, &result.xla_input_shapes);
 
-  BuildComputation(entry_oprands, &result.xla_output_shape,
-                   &result.computation);
+  int return_size = return_names_.size();
+  std::vector<Argument> return_arguments(return_size);
+  for (int i = 0; i < return_size; ++i) {
+    return_arguments[i] = arguments_.at(return_names_[i]);
+  }
 
+  BuildComputation(entry_oprands, return_arguments, &result.xla_output_shape,
+                   &result.computation);
   BuildExecutable(result, &result.executable);
 
   return std::move(result);
@@ -140,7 +157,7 @@ void XlaCompiler::SetupEntryOprands(
     xla::Shape shape = OfShapeToXlaShape(arg.shape(), arg.data_type());
     input_shapes->push_back(shape);
 
-    // Treat all inputs as xla Parameters
+    // Treat any input as xla Parameter
     xla::XlaOp handle = xla::Parameter(builder_, i, shape,
                                        absl::StrCat("arg", i));
     entry_oprands->emplace(arg, XlaOprand::XlaOp(handle));

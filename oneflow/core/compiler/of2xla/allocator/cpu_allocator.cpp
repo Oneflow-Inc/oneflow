@@ -5,7 +5,7 @@
 namespace oneflow {
 namespace mola {
 
-// CPUAllocator directly borrows AlignedMalloc and AlignedFree of tensorflow
+// CPUAllocator directly borrows AlignedMalloc and AlignedFree from tensorflow
 class CPUAllocator : public XlaAllocator {
  public:
   explicit CPUAllocator(const se::Platform* platform, int device_ordinal)

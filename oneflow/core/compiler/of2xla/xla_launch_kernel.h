@@ -19,6 +19,7 @@ class XlaLaunchKernel : public KernelIf<device_type> {
   void BuildLocalExecutable(const mola::CompilationContext &launch_ctx,
                             const std::vector<Blob *> &entry_blobs,
                             const std::vector<std::string> &entry_blob_names,
+                            const std::vector<std::string> &return_blob_names,
                             mola::CompilationResult *compile_result) const;
 
   void SyncRunExecutable(const mola::CompilationContext &launch_ctx,

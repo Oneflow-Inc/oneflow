@@ -12,15 +12,19 @@ void XlaLaunchKernel<device_type, T>::BuildLocalExecutable(
     const mola::CompilationContext &compile_ctx,
     const std::vector<Blob *> &entry_blobs,
     const std::vector<std::string> &entry_blob_names,
+    const std::vector<std::string> &return_blob_names,
     mola::CompilationResult *compile_result) const {
   CHECK(this->op_conf().has_xla_launch_conf())
       << "BuildLocalExecutable need a `XlaLaunchOpConf`.";
+  const auto &launch_conf = this->op_conf().xla_launch_conf();
+  const auto &parallel_ctx = compile_ctx.parallel_ctx();
+
   // Pass a fake local `ParallelContext` to the compiler in order to get
   // the shape of arguments by `InferBlobDescs`
   mola::XlaCompiler compiler(compile_ctx.client(), compile_ctx.builder(),
-                             this->op_conf().xla_launch_conf(), device_type,
-                             compile_ctx.parallel_ctx(), entry_blobs,
-                             entry_blob_names, true /*force_compile*/);
+                             launch_conf, device_type, parallel_ctx, entry_blobs,
+                             entry_blob_names, return_blob_names,
+                             true /*force_compile*/);
   *compile_result = compiler.Compile();
 }
 
@@ -33,7 +37,7 @@ void XlaLaunchKernel<device_type, T>::SyncRunExecutable(
     std::vector<Blob *> &output_blobs, const xla::Shape &output_shape) const {
   namespace se = tensorflow::se;
   CHECK_EQ(entry_blobs.size(), input_shapes.size())
-      << "Mismatch between entry blobs size and input shapes size.";
+      << "Size mismatch between entry blobs and input shapes.";
 
   xla::LocalClient *client = compile_ctx.client();
 
@@ -65,54 +69,51 @@ void XlaLaunchKernel<device_type, T>::SyncRunExecutable(
   run_options.set_rng_seed(tensorflow::GetXLARandomSeed());
   OF_CHECK_AND_ASSIGN(auto run_result, executable->Run(arguments, run_options));
   
-  // Translate result to output blobs
-  if (!run_result.on_host_shape().IsTuple()) {
-    xla::ShapedBuffer nontuple_buffer = run_result.release();
-    xla::ShapedBuffer buffer(
-        xla::ShapeUtil::MakeTupleShape({nontuple_buffer.on_host_shape()}),
-        xla::ShapeUtil::MakeTupleShape({nontuple_buffer.on_device_shape()}),
-        run_result.platform(), run_result.device_ordinal());
-    buffer.buffers().CopySubtreeFrom(nontuple_buffer.buffers(),
-                                     /*source_base_index=*/{},
-                                     /*target_base_index=*/{0});
-    run_result = xla::ScopedShapedBuffer(std::move(buffer),
-                                         run_result.memory_allocator());
-  }
+  // Result shape should be tuple
+  CHECK(run_result.on_host_shape().IsTuple());
 
-//  for (int i = 0; i < output_blobs.size(); ++i) {
-//    se::DeviceMemoryBase buffer = run_result.buffer({i});
-//  }
+  // TODO(hjchen2) Reuse the allocated output blobs while runing the executable
+  // Translate result to output blobs
+  for (int i = 0; i < output_blobs.size(); ++i) {
+    Blob *output = output_blobs[i];
+    se::DeviceMemoryBase buffer = run_result.buffer({i});
+    Memcpy<device_type>(compile_ctx.device_ctx(), output->mut_dptr(),
+                        buffer.opaque(), output->ByteSizeOfDataContentField(),
+                        cudaMemcpyKind::cudaMemcpyDefault);
+    // Maybe release result buffer
+    // run_result.set_buffer(se::OwningDeviceMemory(), {i});
+  }
 }
 
 template <DeviceType device_type, typename T>
 void XlaLaunchKernel<device_type, T>::ForwardDataContent(
                 const KernelCtx &ctx,
                 std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  // Prepare input and output blobs
+  // Prepare input and output blobs and names
   std::vector<Blob *> entry_blobs, output_blobs;
-  std::vector<std::string> entry_blob_names;
+  std::vector<std::string> entry_blob_names, return_blob_names;
+
   for (const auto& input_bn : this->op_attribute().input_bns()) {
     Blob* in_blob = BnInOp2Blob(input_bn);
     entry_blobs.push_back(in_blob);
-
     const LogicalBlobId& lbi = this->BnInOp2Lbi(input_bn);
-    std::string blob_name = BlobName(lbi);
-    entry_blob_names.push_back(blob_name);
+    entry_blob_names.push_back(BlobName(lbi));
   }
-
   for (const auto& output_bn : this->op_attribute().output_bns()) {
-    Blob* in_blob = BnInOp2Blob(output_bn);
-    output_blobs.push_back(in_blob);
+    Blob* out_blob = BnInOp2Blob(output_bn);
+    output_blobs.push_back(out_blob);
+    return_blob_names.push_back(output_bn);
   }
-
-  mola::CompilationContext compile_ctx(this->op_conf().name(), device_type,
-                                       1 /*intra_op_num_threads*/);
+  
+  mola::CompilationContext compile_ctx(this->op_conf().name(), ctx.device_ctx,
+                                       device_type, 1 /*intra_op_num_threads*/);
   mola::CompilationResult compile_result;
   BuildLocalExecutable(compile_ctx, entry_blobs, entry_blob_names,
-                       &compile_result);
+                       return_blob_names, &compile_result);
 
   xla::LocalExecutable *executable = compile_result.executable.get();
   CHECK(executable) << "Executable built failed.";
+
   SyncRunExecutable(compile_ctx, executable, entry_blobs,
                     compile_result.xla_input_shapes, output_blobs,
                     compile_result.xla_output_shape);

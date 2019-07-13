@@ -24,17 +24,19 @@ struct CompilationResult {
 
 class XlaCompiler {
  public:
-  XlaCompiler(xla::LocalClient * client, xla::XlaBuilder *builder,
+  XlaCompiler(xla::LocalClient *client, xla::XlaBuilder *builder,
               const XlaLaunchOpConf &launch_conf,
               DeviceType device_type, ParallelContext parallel_ctx,
               const std::vector<Blob *> &entry_blobs,
               const std::vector<std::string> &entry_blob_names,
+              const std::vector<std::string> &return_blob_names,
               bool force_compile);
 
   CompilationResult Compile();
 
   void BuildComputation(
       const std::unordered_map<Argument, XlaOprand> &entry_oprands,
+      const std::vector<Argument> &return_arguments,
       xla::Shape *output_shape, xla::XlaComputation *computation);
 
   void BuildExecutable(const CompilationResult &result,
@@ -57,6 +59,7 @@ class XlaCompiler {
   xla::XlaBuilder *builder_;
 
   std::vector<std::string> entry_names_;
+  std::vector<std::string> return_names_;
   std::unordered_map<std::string, Argument> arguments_;
   bool force_compile_;
 };

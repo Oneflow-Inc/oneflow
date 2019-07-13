@@ -54,8 +54,10 @@ Eigen::ThreadPoolDevice* CompilationResourceMgr::GetOrCreateEigenHostDevice() {
 }
 
 CompilationContext::CompilationContext(const std::string &builder_name,
+                                       DeviceCtx *device_ctx,
                                        DeviceType device_type,
-                                       int intra_op_num_threads) {
+                                       int intra_op_num_threads)
+    : device_ctx_(device_ctx) {
   typedef CompilationResourceMgr ResourceMgr;
   se::Platform::Id platform_id = nullptr;
 

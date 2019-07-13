@@ -10,6 +10,7 @@
 #include "tensorflow/compiler/xla/client/local_client.h"
 #include "oneflow/core/job/resource.pb.h"  // DeviceType
 #include "oneflow/core/job/placement.pb.h"  // ParallelContext
+#include "oneflow/core/device/device_context.h"
 #include "oneflow/core/compiler/of2xla/xla_allocator.h"
 
 namespace oneflow {
@@ -29,6 +30,7 @@ class CompilationResourceMgr {
 class CompilationContext {
  public:
   explicit CompilationContext(const std::string &builder_name,
+                              DeviceCtx *device_ctx, 
                               DeviceType device_type,
                               int intra_op_num_threads);
 
@@ -37,6 +39,8 @@ class CompilationContext {
   mola::XlaAllocator *allocator() const { return allocator_; }
 
   Eigen::ThreadPoolDevice *host_device() const { return host_device_; }
+
+  DeviceCtx *device_ctx() const { return device_ctx_; }
 
   const ParallelContext &parallel_ctx() const { return parallel_ctx_; }
 
@@ -47,6 +51,8 @@ class CompilationContext {
   mola::XlaAllocator *allocator_;
 
   Eigen::ThreadPoolDevice *host_device_;
+
+  DeviceCtx *device_ctx_;
   ParallelContext parallel_ctx_;
 };
 
