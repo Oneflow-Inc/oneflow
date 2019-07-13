@@ -135,6 +135,7 @@ struct CudaCopyPeerCtx {
   int32_t* send_cnt_ptr;
   void* buf_ptr;
   int32_t buf_cap;
+  bool p2p_enabled;
 };
 
 void CudaCopyPeerKernelUtil::CtxCreate(CudaCopyPeerCtx** ctx, int32_t dst_dev_id,
@@ -143,60 +144,80 @@ void CudaCopyPeerKernelUtil::CtxCreate(CudaCopyPeerCtx** ctx, int32_t dst_dev_id
   (*ctx)->dst_dev_id = dst_dev_id;
   (*ctx)->src_dev_id = src_dev_id;
   (*ctx)->recv_stream = recv_stream;
-  WithCudaDevice(src_dev_id, [ctx]() { CudaCheck(cudaStreamCreate(&((*ctx)->send_stream))); });
-  CudaCheck(cudaMallocHost(&((*ctx)->recv_cnt_ptr), sizeof(int32_t)));
-  CudaCheck(cudaMallocHost(&((*ctx)->send_cnt_ptr), sizeof(int32_t)));
-  *((*ctx)->recv_cnt_ptr) = 0;
-  *((*ctx)->send_cnt_ptr) = 0;
-  (*ctx)->buf_cap = DEFAULT_CHUNK_BUF_CAP;
-  CudaCheck(cudaMallocHost(&((*ctx)->buf_ptr), CHUNK_SIZE * (*ctx)->buf_cap));
-  CHECK_EQ(reinterpret_cast<std::uintptr_t>((*ctx)->buf_ptr) % PACK_ALIGN, 0);
+
+  WithCudaDevice(dst_dev_id, [ctx]() {
+    int32_t can_access;
+    CudaCheck(cudaDeviceCanAccessPeer(&can_access, (*ctx)->dst_dev_id, (*ctx)->src_dev_id));
+    if (can_access) {
+      cudaError_t error = cudaDeviceEnablePeerAccess((*ctx)->src_dev_id, 0);
+      if (error != cudaErrorPeerAccessAlreadyEnabled) { CudaCheck(error); }
+      (*ctx)->p2p_enabled = true;
+    } else {
+      (*ctx)->p2p_enabled = false;
+    }
+  });
+  if (!(*ctx)->p2p_enabled) {
+    WithCudaDevice(src_dev_id, [ctx]() { CudaCheck(cudaStreamCreate(&((*ctx)->send_stream))); });
+    CudaCheck(cudaMallocHost(&((*ctx)->recv_cnt_ptr), sizeof(int32_t)));
+    CudaCheck(cudaMallocHost(&((*ctx)->send_cnt_ptr), sizeof(int32_t)));
+    *((*ctx)->recv_cnt_ptr) = 0;
+    *((*ctx)->send_cnt_ptr) = 0;
+    (*ctx)->buf_cap = DEFAULT_CHUNK_BUF_CAP;
+    CudaCheck(cudaMallocHost(&((*ctx)->buf_ptr), CHUNK_SIZE * (*ctx)->buf_cap));
+    CHECK_EQ(reinterpret_cast<std::uintptr_t>((*ctx)->buf_ptr) % PACK_ALIGN, 0);
+  }
 }
 
 void CudaCopyPeerKernelUtil::CtxDestroy(CudaCopyPeerCtx* ctx) {
-  WithCudaDevice(ctx->src_dev_id, [ctx]() {
-    CudaCheck(cudaStreamSynchronize(ctx->send_stream));
-    CudaCheck(cudaStreamDestroy(ctx->send_stream));
-  });
-  CudaCheck(cudaFreeHost(ctx->recv_cnt_ptr));
-  CudaCheck(cudaFreeHost(ctx->send_cnt_ptr));
-  CudaCheck(cudaFreeHost(ctx->buf_ptr));
+  if (!ctx->p2p_enabled) {
+    WithCudaDevice(ctx->src_dev_id, [ctx]() {
+      CudaCheck(cudaStreamSynchronize(ctx->send_stream));
+      CudaCheck(cudaStreamDestroy(ctx->send_stream));
+    });
+    CudaCheck(cudaFreeHost(ctx->recv_cnt_ptr));
+    CudaCheck(cudaFreeHost(ctx->send_cnt_ptr));
+    CudaCheck(cudaFreeHost(ctx->buf_ptr));
+  }
   delete ctx;
 }
 
 void CudaCopyPeerKernelUtil::CopyAsync(CudaCopyPeerCtx* ctx, void* dst, const void* src,
                                        int32_t size) {
-  CHECK_EQ(size % PACK_SIZE, 0);
-  CHECK_EQ(reinterpret_cast<std::uintptr_t>(dst) % PACK_ALIGN, 0);
-  CHECK_EQ(reinterpret_cast<std::uintptr_t>(src) % PACK_ALIGN, 0);
-  const bool launch_flag_send = true;
-  const bool launch_flag_recv = false;
-  cudaLaunchParams params[2];
-  params[0].func = params[1].func = (void*)Copy;
-  params[0].gridDim = params[1].gridDim = {1, 1, 1};
-  params[0].blockDim = params[1].blockDim = {NUM_THREAD, 1, 1};
-  params[0].sharedMem = params[1].sharedMem = 0;
-  void* send_args[] = {(void*)(&dst),
-                       (void*)(&src),
-                       (void*)(&size),
-                       (void*)(&(ctx->buf_ptr)),
-                       (void*)(&(ctx->buf_cap)),
-                       (void*)(&(ctx->send_cnt_ptr)),
-                       (void*)(&(ctx->recv_cnt_ptr)),
-                       (void*)(&launch_flag_send)};
-  void* recv_args[] = {(void*)(&dst),
-                       (void*)(&src),
-                       (void*)(&size),
-                       (void*)(&(ctx->buf_ptr)),
-                       (void*)(&(ctx->buf_cap)),
-                       (void*)(&(ctx->send_cnt_ptr)),
-                       (void*)(&(ctx->recv_cnt_ptr)),
-                       (void*)(&launch_flag_recv)};
-  params[0].args = send_args;
-  params[1].args = recv_args;
-  params[0].stream = ctx->send_stream;
-  params[1].stream = ctx->recv_stream;
-  CudaCheck(cudaLaunchCooperativeKernelMultiDevice(params, 2));
+  if (ctx->p2p_enabled) {
+    CudaCheck(cudaMemcpyAsync(dst, src, size, cudaMemcpyDefault, ctx->recv_stream));
+  } else {
+    CHECK_EQ(size % PACK_SIZE, 0);
+    CHECK_EQ(reinterpret_cast<std::uintptr_t>(dst) % PACK_ALIGN, 0);
+    CHECK_EQ(reinterpret_cast<std::uintptr_t>(src) % PACK_ALIGN, 0);
+    const bool launch_flag_send = true;
+    const bool launch_flag_recv = false;
+    cudaLaunchParams params[2];
+    params[0].func = params[1].func = (void*)Copy;
+    params[0].gridDim = params[1].gridDim = {1, 1, 1};
+    params[0].blockDim = params[1].blockDim = {NUM_THREAD, 1, 1};
+    params[0].sharedMem = params[1].sharedMem = 0;
+    void* send_args[] = {(void*)(&dst),
+                         (void*)(&src),
+                         (void*)(&size),
+                         (void*)(&(ctx->buf_ptr)),
+                         (void*)(&(ctx->buf_cap)),
+                         (void*)(&(ctx->send_cnt_ptr)),
+                         (void*)(&(ctx->recv_cnt_ptr)),
+                         (void*)(&launch_flag_send)};
+    void* recv_args[] = {(void*)(&dst),
+                         (void*)(&src),
+                         (void*)(&size),
+                         (void*)(&(ctx->buf_ptr)),
+                         (void*)(&(ctx->buf_cap)),
+                         (void*)(&(ctx->send_cnt_ptr)),
+                         (void*)(&(ctx->recv_cnt_ptr)),
+                         (void*)(&launch_flag_recv)};
+    params[0].args = send_args;
+    params[1].args = recv_args;
+    params[0].stream = ctx->send_stream;
+    params[1].stream = ctx->recv_stream;
+    CudaCheck(cudaLaunchCooperativeKernelMultiDevice(params, 2));
+  }
 }
 
 }  // namespace oneflow
