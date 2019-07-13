@@ -34,7 +34,8 @@ void GroupTickByParallelDesc(const OpGraph& op_graph, Job* job) {
 
     for (const auto* op_node : pair.second) {
       auto mut_tick_input_helper = NewMutOpConTickInputHelper(op_node->op().op_conf());
-      job_builder.MutOps({mut_tick_input_helper->NewTickInputBoundOpConf(tick_op.name() + "/out")});
+      job_builder.MutOpsOnlyOnce(
+          {mut_tick_input_helper->NewTickInputBoundOpConf(tick_op.name() + "/out")});
     }
   }
 }
@@ -67,7 +68,7 @@ void ConnectSourceTickAndOtherTick(Job* job) {
     auto mut_helper = NewMutOpConTickInputHelper(op.op_conf());
     if (!mut_helper) { return; }
     if (mut_helper->IsTickInputBound() == true) { return; }
-    job_builder.MutOps({mut_helper->NewTickInputBoundOpConf(
+    job_builder.MutOpsOnlyOnce({mut_helper->NewTickInputBoundOpConf(
         src_tick_op.name() + "/" + src_tick_op.source_tick_conf().out())});
   });
 }
@@ -130,7 +131,7 @@ OperatorConf PrependTick(const std::list<const OpNode*>& op_nodes, JobBuilder* j
     op_conf.add_ctrl_in_op_name(tick_op_conf.name());
     op_confs.push_back(op_conf);
   }
-  job_builder->MutOps({op_confs});
+  job_builder->MutOpsOnlyOnce({op_confs});
   job_builder->AddOps(op_nodes.front()->parallel_desc().parallel_conf(), {tick_op_conf});
   return tick_op_conf;
 }
@@ -274,7 +275,7 @@ void AddGlobalInputOutputCriticalSection(const HashSet<const OpNode*>& op_nodes,
       op_conf.mutable_tick_conf()->add_tick(src_tick_op_conf.name() + "/"
                                             + src_tick_op_conf.source_tick_conf().out());
     }
-    job_builder.MutOps(source_ticks);
+    job_builder.MutOpsOnlyOnce(source_ticks);
   }
   OperatorConf sink_tick_op_conf;
   {
@@ -283,7 +284,7 @@ void AddGlobalInputOutputCriticalSection(const HashSet<const OpNode*>& op_nodes,
       sink_tick_op_conf.mutable_sink_tick_conf()->add_tick(op_conf.name() + "/"
                                                            + op_conf.tick_conf().out());
     }
-    job_builder.MutOps({sink_tick_op_conf});
+    job_builder.MutOpsOnlyOnce({sink_tick_op_conf});
   }
   auto* io_cs = AddGlobalCriticalSection(src_tick_op_conf.name(), sink_tick_op_conf.name())
                     ->mutable_input_output_critical_section();
@@ -330,7 +331,7 @@ void AutoSinkTick(const OpGraph& op_graph, Job* job) {
   for (const LogicalBlobId& tick_lbi : tick_lbis) {
     sink_tick_op_conf.mutable_sink_tick_conf()->add_tick(GenLogicalBlobName(tick_lbi));
   }
-  job_builder.MutOps({sink_tick_op_conf});
+  job_builder.MutOpsOnlyOnce({sink_tick_op_conf});
 }
 
 void AddGlobalTotalJobCriticalSection(const Job& job) {

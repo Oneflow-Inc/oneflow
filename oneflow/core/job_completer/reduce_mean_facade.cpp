@@ -15,7 +15,7 @@ void UpdateConsumerOpConf(const std::string& new_lbn, const OpNode& op_node,
     for (const std::string& ibn : edge->lbi2ibns().at(old_lbi)) {
       SetBnValInOpTypeConf(mut_conf, ibn, old_lbn, new_lbn);
     }
-    job_builder->MutOps({mut_op_conf});
+    job_builder->MutOpsOnlyOnce({mut_op_conf});
   }
 }
 
@@ -27,7 +27,7 @@ void GenerateFacadeImplOpConf(const OpNode& op_node, JobBuilder* job_builder) {
   reduce_sum_conf->set_in(reduce_mean_conf.in());
   *reduce_sum_conf->mutable_axis() = reduce_mean_conf.axis();
   reduce_sum_conf->set_out("out");
-  job_builder->MutOps({reduce_sum_op_conf});
+  job_builder->MutOpsOnlyOnce({reduce_sum_op_conf});
 
   const auto& in_blob = op_node.LogicalBlobDesc4Lbi(GenLogicalBlobId(reduce_mean_conf.in()));
   CHECK_EQ(in_blob.has_dim1_valid_num_field(), false);

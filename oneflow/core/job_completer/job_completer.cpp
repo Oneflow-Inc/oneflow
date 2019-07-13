@@ -320,11 +320,11 @@ void SetCtrlInOpName4VariableOp(const OpGraph& op_graph, Job* job) {
     for (const auto* fw_bw_op : naive_consumers) {
       mut_mutable_consumer_op_conf.add_ctrl_in_op_name(fw_bw_op->name());
     }
-    job_builder.MutOps({mut_mutable_consumer_op_conf});
+    job_builder.MutOpsOnlyOnce({mut_mutable_consumer_op_conf});
     if (model_save_every_nth_op_conf != nullptr) {
       OperatorConf mut_model_save_every_nth_op_conf(*model_save_every_nth_op_conf);
       mut_model_save_every_nth_op_conf.add_ctrl_in_op_name(mutable_consumer->name());
-      job_builder.MutOps({mut_model_save_every_nth_op_conf});
+      job_builder.MutOpsOnlyOnce({mut_model_save_every_nth_op_conf});
     }
   });
 }

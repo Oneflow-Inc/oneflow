@@ -34,7 +34,9 @@ void AutoVar(const OpGraph& op_graph, Job* job) {
       return BlobDesc4ModelLbi(op_node->op().BnInOp2Lbi(bn));
     };
     GenerateInputVarOpConfIf(op_node->op(), &ops, BlobDesc4ModelBn);
-    if (!ops.empty()) { job_builder.AddOrMutOps(op_node->parallel_desc().parallel_conf(), ops); }
+    if (!ops.empty()) {
+      job_builder.AddOrMutOpsOnlyOnce(op_node->parallel_desc().parallel_conf(), ops);
+    }
   });
 }
 
