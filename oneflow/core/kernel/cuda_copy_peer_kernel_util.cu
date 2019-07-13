@@ -3,7 +3,7 @@
 
 constexpr int32_t PACK_SIZE = sizeof(ulong2);
 constexpr int32_t PACK_ALIGN = alignof(ulong2);
-constexpr int32_t NUM_THREAD = 256;
+constexpr int32_t NUM_THREAD = 1024;
 constexpr int32_t NUM_BLOCK_PER_CHUNK = 16;
 constexpr int32_t BLOCK_SIZE = NUM_THREAD * PACK_SIZE;
 constexpr int32_t CHUNK_SIZE = BLOCK_SIZE * NUM_BLOCK_PER_CHUNK;
@@ -37,7 +37,9 @@ __forceinline__ __device__ void FetchStore(void* dst, const void* src) {
   FetchStore(reinterpret_cast<ulong2*>(dst), reinterpret_cast<const ulong2*>(src));
 }
 
-__forceinline__ __device__ void CopyChunk(void* dst, const void* src) {
+__forceinline__ __device__ void CopyChunk(void* dst, const void* src, const int32_t thread_id) {
+  dst = (unsigned char*)(dst) + thread_id * PACK_SIZE;
+  src = (unsigned char*)(src) + thread_id * PACK_SIZE;
 #pragma unroll
   for (int32_t i = 0; i < NUM_BLOCK_PER_CHUNK; ++i) {
     FetchStore(dst, src);
@@ -46,8 +48,9 @@ __forceinline__ __device__ void CopyChunk(void* dst, const void* src) {
   }
 }
 
-__forceinline__ __device__ void CopyPartialChunk(void* dst, const void* src, int32_t size) {
-  int32_t offset = 0;
+__forceinline__ __device__ void CopyPartialChunk(void* dst, const void* src, const int32_t size,
+                                                 const int32_t thread_id) {
+  int32_t offset = thread_id * PACK_SIZE;
   for (int32_t i = 0; i < NUM_BLOCK_PER_CHUNK; ++i) {
     if (offset < size) {
       FetchStore((unsigned char*)(dst) + offset, (const unsigned char*)(src) + offset);
@@ -64,14 +67,14 @@ __forceinline__ __device__ void Send(const void* src, const int32_t size, const 
   int32_t remaining = size;
   for (int32_t step = 0; step < num_step; ++step) {
     if (thread_id == 0) {
-      while (step - *recv_cnt_ptr < buf_cap) {}
+      while (step - *recv_cnt_ptr >= buf_cap) {}
     }
     __syncthreads();
     void* cur_buf_ptr = (unsigned char*)buf_ptr + (step % buf_cap) * CHUNK_SIZE;
     if (remaining >= CHUNK_SIZE) {
-      CopyChunk(cur_buf_ptr, src);
+      CopyChunk(cur_buf_ptr, src, thread_id);
     } else {
-      CopyPartialChunk(cur_buf_ptr, src, remaining);
+      CopyPartialChunk(cur_buf_ptr, src, remaining, thread_id);
     }
     remaining -= CHUNK_SIZE;
     src = (const unsigned char*)(src) + CHUNK_SIZE;
@@ -95,9 +98,9 @@ __forceinline__ __device__ void Recv(void* dst, const int32_t size, const int32_
     __threadfence_system();
     void* cur_buf_ptr = (unsigned char*)buf_ptr + (step % buf_cap) * CHUNK_SIZE;
     if (remaining >= CHUNK_SIZE) {
-      CopyChunk(dst, cur_buf_ptr);
+      CopyChunk(dst, cur_buf_ptr, thread_id);
     } else {
-      CopyPartialChunk(dst, cur_buf_ptr, remaining);
+      CopyPartialChunk(dst, cur_buf_ptr, remaining, thread_id);
     }
     remaining -= CHUNK_SIZE;
     dst = (unsigned char*)(dst) + CHUNK_SIZE;
