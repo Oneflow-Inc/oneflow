@@ -484,7 +484,8 @@ void JobCompleter::Complete(Job* job) const {
   WithOpGraphAndMutJob(job, &AddTickForTimeShape);
   WithOpGraphAndMutJob(job, &AutoSinkTick);
   AddGlobalTotalJobCriticalSection(*job);
-  WithOpGraphAndMutJob(job, &AddGlobalInputOutputCriticalSections);
+  WithOpGraphAndMutJob(job, &AddGlobalInputCriticalSections);
+  WithOpGraphAndMutJob(job, &AddGlobalOutputCriticalSections);
   WithOpGraphAndMutJob(job, &OpGraph::DumpLogicalBlobDescAndSbpSignature);
   WithOpGraphAndMutJob(job, &SetOpTimeShape7ModelLbis);
   CheckOpGraph(OpGraph(*job));
