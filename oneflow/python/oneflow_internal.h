@@ -5,6 +5,30 @@
 #include "oneflow/core/job/foreign_job_instance.h"
 #include "oneflow/core/common/buffer_manager.h"
 
+namespace {
+
+class GlobalFlagsAndLogScope final {
+ public:
+  static void New(const oneflow::JobSet& job_set) {
+    *GetPPtr() = new oneflow::FlagsAndLogScope(job_set, "oneflow");
+  }
+  static void Delete() {
+    if (Get() != nullptr) {
+      delete Get();
+      *GetPPtr() = nullptr;
+    }
+  }
+
+ private:
+  static oneflow::FlagsAndLogScope* Get() { return *GetPPtr(); }
+  static oneflow::FlagsAndLogScope** GetPPtr() {
+    static oneflow::FlagsAndLogScope* ptr = nullptr;
+    return &ptr;
+  }
+};
+
+}  // namespace
+
 void NaiveSequentialRunSerializedJobSet(const oneflow::JobSet& job_set) {
   using namespace oneflow;
   CHECK_ISNULL(Global<Oneflow>::Get());
@@ -14,7 +38,7 @@ void NaiveSequentialRunSerializedJobSet(const oneflow::JobSet& job_set) {
 void InitGlobalOneflowBySerializedJobSet(const oneflow::JobSet& job_set) {
   using namespace oneflow;
   CHECK_ISNULL(Global<Oneflow>::Get());
-  Global<FlagsAndLogScope>::New(job_set, "oneflow");
+  GlobalFlagsAndLogScope::New(job_set);
   Global<Oneflow>::New(job_set);
 }
 
@@ -44,7 +68,7 @@ void DestroyGlobalOneflow() {
   using namespace oneflow;
   CHECK_NOTNULL(Global<Oneflow>::Get());
   Global<Oneflow>::Delete();
-  Global<FlagsAndLogScope>::Delete();
+  GlobalFlagsAndLogScope::Delete();
 }
 
 int Ofblob_GetDataType(uint64_t of_blob_ptr) {
