@@ -90,6 +90,14 @@ cudaDataType_t GetCudaDataType(DataType val) {
   UNIMPLEMENTED();
 }
 
+void WithCudaDevice(int32_t dev_id, const std::function<void()>& func) {
+  int32_t saved_dev_id;
+  CudaCheck(cudaGetDevice(&saved_dev_id));
+  CudaCheck(cudaSetDevice(dev_id));
+  func();
+  CudaCheck(cudaSetDevice(saved_dev_id));
+}
+
 #endif  // WITH_CUDA
 
 }  // namespace oneflow

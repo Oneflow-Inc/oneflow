@@ -79,6 +79,8 @@ struct CudaDataType;
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_CUDA_DATA_TYPE, CUDA_DATA_TYPE_SEQ);
 #undef SPECIALIZE_CUDA_DATA_TYPE
 
+void WithCudaDevice(int32_t dev_id, const std::function<void()>& func);
+
 }  // namespace oneflow
 
 #endif  // WITH_CUDA

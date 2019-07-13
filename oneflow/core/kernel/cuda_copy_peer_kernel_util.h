@@ -5,10 +5,13 @@
 
 namespace oneflow {
 
+struct CudaCopyPeerCtx;
+
 struct CudaCopyPeerKernelUtil {
-  static void CopyAsync(void* dst, void* buf, const void* src, int32_t* step_mutex, size_t size,
-                        int32_t dst_dev_id, int32_t src_dev_id, cudaStream_t read,
-                        cudaStream_t write);
+  static void CopyAsync(CudaCopyPeerCtx* ctx, void* dst, const void* src, int32_t size);
+  static void CtxCreate(CudaCopyPeerCtx** ctx, int32_t dst_dev_id, int32_t src_dev_id,
+                        cudaStream_t recv_stream);
+  static void CtxDestroy(CudaCopyPeerCtx* ctx);
 };
 
 }  // namespace oneflow
