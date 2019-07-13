@@ -5,6 +5,8 @@
 
 namespace oneflow {
 
+struct CudaCopyPeerCtx;
+
 class CudaCopyPeerActor : public Actor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaCopyPeerActor);
@@ -26,6 +28,7 @@ class CudaCopyPeerActor : public Actor {
   int32_t dst_dev_id_ = -1;
   int32_t src_dev_id_ = -1;
   cudaStream_t stream_for_src_;
+  CudaCopyPeerCtx* cuda_copy_peer_ctx_;
 };
 
 }  // namespace oneflow

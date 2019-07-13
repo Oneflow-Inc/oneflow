@@ -1,5 +1,5 @@
 #include "oneflow/core/actor/cuda_copy_peer_actor.h"
-#include "oneflow/core/kernel/multi_ring_all_reduce_kernel_util.h"
+#include "oneflow/core/kernel/cuda_copy_peer_kernel_util.h"
 
 namespace oneflow {
 
@@ -36,12 +36,8 @@ int CudaCopyPeerActor::HandlerCopy(const ActorMsg& msg) {
     const Blob* in_blob = current_in_regst->GetBlobByLbi(lbi_);
     Blob* out_blob = out_regst_->GetBlobByLbi(lbi_);
     current_in_regst->regst_desc()->mem_case().device_cuda_mem().device_id();
-    DeviceCtx* device_ctx = mut_device_ctx().get();
-
-    CudaCheck(cudaMemcpyAsync(out_blob->mut_dptr(), in_blob->dptr(),
-                              in_blob->ByteSizeOfDataContentField(), cudaMemcpyDeviceToDevice,
-                              device_ctx->cuda_stream()));
-
+    CudaCopyPeerKernelUtil::CopyAsync(cuda_copy_peer_ctx_, out_blob->mut_dptr(), in_blob->dptr(),
+                                      in_blob->blob_desc().ByteSizeOfBlobBody());
     std::vector<ActorMsg> actor_msgs_;
     out_regst_->set_piece_id(current_in_regst->piece_id());
     for (const int64_t consumer : out_regst_->consumers_actor_id()) {
@@ -90,11 +86,9 @@ void CudaCopyPeerActor::VirtualActorInit(const TaskProto& task_proto) {
                     .mem_case()
                     .device_cuda_mem()
                     .device_id();
-  int32_t saved_dev_id;
-  CudaCheck(cudaGetDevice(&saved_dev_id));
-  CudaCheck(cudaSetDevice(src_dev_id_));
-  CudaCheck(cudaStreamCreate(&stream_for_src_));
-  CudaCheck(cudaSetDevice(saved_dev_id));
+
+  CudaCopyPeerKernelUtil::CtxCreate(&cuda_copy_peer_ctx_, dst_dev_id_, src_dev_id_,
+                                    mut_device_ctx()->cuda_stream());
   OF_SET_MSG_HANDLER(&CudaCopyPeerActor::HandlerCopy);
 }
 
