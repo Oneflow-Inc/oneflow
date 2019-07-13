@@ -29,8 +29,9 @@ class JobBuilder final {
   const OperatorConf& OpConf4OpName(const std::string& op_name) const;
   const ParallelConf& ParallelConf4OpName(const std::string& op_name) const;
   void AddOps(const ParallelConf& parallel_conf, const std::vector<OperatorConf>& op_confs);
-  void MutOps(const std::vector<OperatorConf>& op_confs) const;
-  void AddOrMutOps(const ParallelConf& parallel_conf, const std::vector<OperatorConf>& op_confs);
+  void MutOpsOnlyOnce(const std::vector<OperatorConf>& op_confs);
+  void AddOrMutOpsOnlyOnce(const ParallelConf& parallel_conf,
+                           const std::vector<OperatorConf>& op_confs);
   SbpParallel* MutSbpParallel4Oba(const OpBlobArg& oba) const;
   void BindIdenticalSbpOpBlobArgPair(const OpBlobArg& first, const OpBlobArg& second);
 
@@ -40,6 +41,7 @@ class JobBuilder final {
   Job* job_;
   HashMap<std::string, OperatorConf*> op_name2op_conf_;
   HashMap<std::string, ParallelConf*> op_name2parallel_conf_;
+  HashSet<std::string> modified_op_names_;
 };
 
 }  // namespace oneflow

@@ -71,7 +71,7 @@ void AddKeepHeaderOnlyOp(const OpGraph& op_graph, Job* job) {
                          std::vector<OperatorConf>{op_conf});
     }
     // make sure an op_conf can only be udpated once
-    job_builder.MutOps(std::vector<OperatorConf>{dst_op_conf});
+    job_builder.MutOpsOnlyOnce(std::vector<OperatorConf>{dst_op_conf});
   });
 }
 

@@ -209,7 +209,7 @@ void AddReduceSplitOpConf(
     PbMessage* md_updt_conf =
         MutableMessageInPbMessage(&md_updt_op_conf, md_updt_op_conf.op_type_case());
     SetBnValInOpTypeConf(md_updt_conf, ibn, GenLogicalBlobName(lbi), GenLogicalBlobName(new_lbi));
-    job_builder->MutOps({md_updt_op_conf});
+    job_builder->MutOpsOnlyOnce({md_updt_op_conf});
   };
 
   OperatorConf reduce_split_op_conf;
