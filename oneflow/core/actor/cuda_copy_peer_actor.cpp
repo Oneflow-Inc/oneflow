@@ -3,13 +3,7 @@
 
 namespace oneflow {
 
-CudaCopyPeerActor::~CudaCopyPeerActor() {
-  int32_t saved_dev_id;
-  CudaCheck(cudaGetDevice(&saved_dev_id));
-  CudaCheck(cudaStreamSynchronize(stream_for_src_));
-  CudaCheck(cudaStreamDestroy(stream_for_src_));
-  CudaCheck(cudaSetDevice(saved_dev_id));
-}
+CudaCopyPeerActor::~CudaCopyPeerActor() { CudaCopyPeerKernelUtil::CtxDestroy(cuda_copy_peer_ctx_); }
 
 int CudaCopyPeerActor::HandlerCopy(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kEordMsg) {

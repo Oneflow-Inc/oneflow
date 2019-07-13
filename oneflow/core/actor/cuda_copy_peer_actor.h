@@ -27,7 +27,6 @@ class CudaCopyPeerActor : public Actor {
   LogicalBlobId lbi_;
   int32_t dst_dev_id_ = -1;
   int32_t src_dev_id_ = -1;
-  cudaStream_t stream_for_src_;
   CudaCopyPeerCtx* cuda_copy_peer_ctx_;
 };
 
