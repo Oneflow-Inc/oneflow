@@ -41,9 +41,8 @@ FlagsAndLogScope::FlagsAndLogScope(const JobSet& job_set, const char* binary_nam
   google::InitGoogleLogging(binary_name);
   gflags::SetVersionString(BuildVersionString());
   LocalFS()->RecursivelyCreateDirIfNotExist(FLAGS_log_dir);
-  RedirectStdoutAndStderrToGlogDir();
 }
 
-FlagsAndLogScope::~FlagsAndLogScope() { CloseStdoutAndStderr(); }
+FlagsAndLogScope::~FlagsAndLogScope() {}
 
 }  // namespace oneflow
