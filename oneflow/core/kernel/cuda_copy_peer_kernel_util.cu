@@ -129,7 +129,7 @@ __global__ void Copy(void* dst, const void* src, const int32_t size, void* buf_p
   void* this_block_dst = reinterpret_cast<unsigned char*>(dst) + block_size * block_id;
   const void* this_block_src = reinterpret_cast<const unsigned char*>(src) + block_size * block_id;
   const int32_t this_block_size =
-      (block_id + 1) * block_size <= size ? block_size : std::max(0, size - block_id * block_size);
+      (block_id + 1) * block_size <= size ? block_size : max(0, size - block_id * block_size);
   void* this_buf_ptr = reinterpret_cast<unsigned char*>(buf_ptr) + CHUNK_SIZE * buf_cap * block_id;
   int32_t* this_send_cnt_ptr = send_cnt_ptr + block_id;
   int32_t* this_recv_cnt_ptr = recv_cnt_ptr + block_id;
