@@ -129,6 +129,22 @@ __global__ void Copy(void* dst, const void* src, const int32_t size, void* buf_p
   }
 }
 
+__global__ void DirectCopy(void* dst, const void* src, const int32_t size) {
+  const int32_t thread_id = threadIdx.x;
+  const int32_t num_step = DivUp(size, CHUNK_SIZE);
+  int32_t remaining = size;
+  for (int32_t step = 0; step < num_step; ++step) {
+    if (remaining >= CHUNK_SIZE) {
+      CopyChunk(dst, src, thread_id);
+    } else {
+      CopyPartialChunk(dst, src, remaining, thread_id);
+    }
+    remaining -= CHUNK_SIZE;
+    dst = (unsigned char*)(dst) + CHUNK_SIZE;
+    src = (const unsigned char*)(src) + CHUNK_SIZE;
+  }
+}
+
 }  // namespace
 
 struct CudaCopyPeerCtx {
@@ -189,12 +205,15 @@ void CudaCopyPeerKernelUtil::CtxDestroy(CudaCopyPeerCtx* ctx) {
 void CudaCopyPeerKernelUtil::CopyAsync(CudaCopyPeerCtx* ctx, void* dst, const void* src,
                                        int32_t size) {
   if (ctx->p2p_enabled) {
-    CudaCheck(cudaMemcpyAsync(dst, src, size, cudaMemcpyDefault, ctx->recv_stream));
+    CHECK_EQ(size % PACK_SIZE, 0);
+    CHECK_EQ(reinterpret_cast<std::uintptr_t>(dst) % PACK_ALIGN, 0);
+    CHECK_EQ(reinterpret_cast<std::uintptr_t>(src) % PACK_ALIGN, 0);
+    WithCudaDevice(ctx->dst_dev_id,
+                   [&]() { DirectCopy<<<1, NUM_THREAD, 0, ctx->recv_stream>>>(dst, src, size); });
   } else {
     CHECK_EQ(size % PACK_SIZE, 0);
     CHECK_EQ(reinterpret_cast<std::uintptr_t>(dst) % PACK_ALIGN, 0);
     CHECK_EQ(reinterpret_cast<std::uintptr_t>(src) % PACK_ALIGN, 0);
-
     WithCudaDevice(ctx->src_dev_id, [&]() {
       Copy<<<1, NUM_THREAD, 0, ctx->send_stream>>>(dst, src, size, ctx->buf_ptr, ctx->buf_cap,
                                                    ctx->send_cnt_ptr, ctx->recv_cnt_ptr, true);
