@@ -4,7 +4,7 @@
 constexpr int32_t PACK_SIZE = sizeof(ulong2);
 constexpr int32_t PACK_ALIGN = alignof(ulong2);
 constexpr int32_t NUM_THREAD = 1024;
-constexpr int32_t NUM_STEP_PER_CHUNK = 32;
+constexpr int32_t NUM_STEP_PER_CHUNK = 16;
 constexpr int32_t STEP_SIZE = NUM_THREAD * PACK_SIZE;
 constexpr int32_t CHUNK_SIZE = STEP_SIZE * NUM_STEP_PER_CHUNK;
 constexpr int32_t DEFAULT_CHUNK_BUF_CAP = 2;
@@ -119,9 +119,9 @@ __forceinline__ __device__ void Recv(void* dst, const int32_t size, const int32_
   }
 }
 
-__global__ void Copy(void* dst, const void* src, const int32_t size, void* buf_ptr,
-                     const int32_t buf_cap, int32_t* send_cnt_ptr, int32_t* recv_cnt_ptr,
-                     bool send_or_recv) {
+__launch_bounds__(NUM_THREAD) __global__
+    void Copy(void* dst, const void* src, const int32_t size, void* buf_ptr, const int32_t buf_cap,
+              int32_t* send_cnt_ptr, int32_t* recv_cnt_ptr, bool send_or_recv) {
   const int32_t block_id = blockIdx.x;
   const int32_t num_block = gridDim.x;
   const int32_t thread_id = threadIdx.x;
@@ -141,6 +141,8 @@ __global__ void Copy(void* dst, const void* src, const int32_t size, void* buf_p
          this_recv_cnt_ptr);
   }
 }
+
+__global__ void Null() {}
 
 }  // namespace
 
@@ -215,43 +217,23 @@ void CudaCopyPeerKernelUtil::CopyAsync(CudaCopyPeerCtx* ctx, void* dst, const vo
     CHECK_EQ(reinterpret_cast<std::uintptr_t>(dst) % PACK_ALIGN, 0);
     CHECK_EQ(reinterpret_cast<std::uintptr_t>(src) % PACK_ALIGN, 0);
     WithCudaDevice(ctx->src_dev_id, [&]() {
-      Copy<<<1, NUM_THREAD, 0, ctx->send_stream>>>(dst, src, size, ctx->buf_ptr, ctx->buf_cap,
-                                                   ctx->send_cnt_ptr, ctx->recv_cnt_ptr, true);
+      Copy<<<ctx->num_block, NUM_THREAD, 0, ctx->send_stream>>>(
+          dst, src, size, ctx->buf_ptr, ctx->buf_cap, ctx->send_cnt_ptr, ctx->recv_cnt_ptr, true);
     });
     WithCudaDevice(ctx->dst_dev_id, [&]() {
-      Copy<<<1, NUM_THREAD, 0, ctx->recv_stream>>>(dst, src, size, ctx->buf_ptr, ctx->buf_cap,
-                                                   ctx->send_cnt_ptr, ctx->recv_cnt_ptr, false);
+      Copy<<<ctx->num_block, NUM_THREAD, 0, ctx->recv_stream>>>(
+          dst, src, size, ctx->buf_ptr, ctx->buf_cap, ctx->send_cnt_ptr, ctx->recv_cnt_ptr, false);
     });
-    /*
-    const bool launch_flag_send = true;
-    const bool launch_flag_recv = false;
     cudaLaunchParams params[2];
-    params[0].func = params[1].func = (void*)Copy;
+    params[0].func = params[1].func = (void*)Null;
     params[0].gridDim = params[1].gridDim = {1, 1, 1};
-    params[0].blockDim = params[1].blockDim = {NUM_THREAD, 1, 1};
+    params[0].blockDim = params[1].blockDim = {1, 1, 1};
     params[0].sharedMem = params[1].sharedMem = 0;
-    void* send_args[] = {(void*)(&dst),
-                         (void*)(&src),
-                         (void*)(&size),
-                         (void*)(&(ctx->buf_ptr)),
-                         (void*)(&(ctx->buf_cap)),
-                         (void*)(&(ctx->send_cnt_ptr)),
-                         (void*)(&(ctx->recv_cnt_ptr)),
-                         (void*)(&launch_flag_send)};
-    void* recv_args[] = {(void*)(&dst),
-                         (void*)(&src),
-                         (void*)(&size),
-                         (void*)(&(ctx->buf_ptr)),
-                         (void*)(&(ctx->buf_cap)),
-                         (void*)(&(ctx->send_cnt_ptr)),
-                         (void*)(&(ctx->recv_cnt_ptr)),
-                         (void*)(&launch_flag_recv)};
-    params[0].args = send_args;
-    params[1].args = recv_args;
+    void* args[] = {};
+    params[0].args = params[1].args = args;
     params[0].stream = ctx->send_stream;
     params[1].stream = ctx->recv_stream;
     CudaCheck(cudaLaunchCooperativeKernelMultiDevice(params, 2));
-     */
   }
 }
 
