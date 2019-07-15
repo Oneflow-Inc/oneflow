@@ -65,6 +65,11 @@ __forceinline__ __device__ void Send(const void* src, const int32_t size, const 
                                      volatile int32_t* recv_cnt_ptr) {
   const int32_t num_step = DivUp(size, CHUNK_SIZE);
   int32_t remaining = size;
+  if (thread_id == 0) {
+    while (*recv_cnt_ptr != 0) {}
+    while (*send_cnt_ptr != 0) {}
+  }
+  __syncthreads();
   for (int32_t step = 0; step < num_step; ++step) {
     if (thread_id == 0) {
       while (step - *recv_cnt_ptr >= buf_cap) {}
@@ -189,6 +194,16 @@ void CudaCopyPeerKernelUtil::CopyAsync(CudaCopyPeerCtx* ctx, void* dst, const vo
     CHECK_EQ(size % PACK_SIZE, 0);
     CHECK_EQ(reinterpret_cast<std::uintptr_t>(dst) % PACK_ALIGN, 0);
     CHECK_EQ(reinterpret_cast<std::uintptr_t>(src) % PACK_ALIGN, 0);
+
+    WithCudaDevice(ctx->src_dev_id, [&]() {
+      Copy<<<1, NUM_THREAD, 0, ctx->send_stream>>>(dst, src, size, ctx->buf_ptr, ctx->buf_cap,
+                                                   ctx->send_cnt_ptr, ctx->recv_cnt_ptr, true);
+    });
+    WithCudaDevice(ctx->dst_dev_id, [&]() {
+      Copy<<<1, NUM_THREAD, 0, ctx->recv_stream>>>(dst, src, size, ctx->buf_ptr, ctx->buf_cap,
+                                                   ctx->send_cnt_ptr, ctx->recv_cnt_ptr, false);
+    });
+    /*
     const bool launch_flag_send = true;
     const bool launch_flag_recv = false;
     cudaLaunchParams params[2];
@@ -217,6 +232,7 @@ void CudaCopyPeerKernelUtil::CopyAsync(CudaCopyPeerCtx* ctx, void* dst, const vo
     params[0].stream = ctx->send_stream;
     params[1].stream = ctx->recv_stream;
     CudaCheck(cudaLaunchCooperativeKernelMultiDevice(params, 2));
+     */
   }
 }
 
