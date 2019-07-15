@@ -233,7 +233,8 @@ void CudaCopyPeerKernelUtil::CopyAsync(CudaCopyPeerCtx* ctx, void* dst, const vo
     params[0].args = params[1].args = args;
     params[0].stream = ctx->send_stream;
     params[1].stream = ctx->recv_stream;
-    CudaCheck(cudaLaunchCooperativeKernelMultiDevice(params, 2));
+    CudaCheck(cudaLaunchCooperativeKernelMultiDevice(params, 2,
+                                                     cudaCooperativeLaunchMultiDeviceNoPreSync));
   }
 }
 
