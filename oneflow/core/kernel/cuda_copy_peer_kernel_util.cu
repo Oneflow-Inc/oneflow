@@ -9,6 +9,7 @@ constexpr int32_t STEP_SIZE = NUM_THREAD * PACK_SIZE;
 constexpr int32_t CHUNK_SIZE = STEP_SIZE * NUM_STEP_PER_CHUNK;
 constexpr int32_t DEFAULT_CHUNK_BUF_CAP = 2;
 constexpr int32_t WARP_SIZE = 32;
+constexpr int32_t MAX_NUM_BLOCK = 2;
 
 namespace oneflow {
 
@@ -119,13 +120,25 @@ __forceinline__ __device__ void Recv(void* dst, const int32_t size, const int32_
 }
 
 __global__ void Copy(void* dst, const void* src, const int32_t size, void* buf_ptr,
-                     const int32_t buf_cap, volatile int32_t* send_cnt_ptr,
-                     volatile int32_t* recv_cnt_ptr, bool send_or_recv) {
+                     const int32_t buf_cap, int32_t* send_cnt_ptr, int32_t* recv_cnt_ptr,
+                     bool send_or_recv) {
+  const int32_t block_id = blockIdx.x;
+  const int32_t num_block = gridDim.x;
   const int32_t thread_id = threadIdx.x;
+  const int32_t block_size = DivUp(size / PACK_SIZE, num_block) * PACK_SIZE;
+  void* this_block_dst = reinterpret_cast<unsigned char*>(dst) + block_size * block_id;
+  const void* this_block_src = reinterpret_cast<const unsigned char*>(src) + block_size * block_id;
+  const int32_t this_block_size =
+      (block_id + 1) * block_size <= size ? block_size : std::max(0, size - block_id * block_size);
+  void* this_buf_ptr = reinterpret_cast<unsigned char*>(buf_ptr) + CHUNK_SIZE * buf_cap * block_id;
+  int32_t* this_send_cnt_ptr = send_cnt_ptr + block_id;
+  int32_t* this_recv_cnt_ptr = recv_cnt_ptr + block_id;
   if (send_or_recv) {
-    Send(src, size, thread_id, buf_ptr, buf_cap, send_cnt_ptr, recv_cnt_ptr);
+    Send(this_block_src, this_block_size, thread_id, this_buf_ptr, buf_cap, this_send_cnt_ptr,
+         this_recv_cnt_ptr);
   } else {
-    Recv(dst, size, thread_id, buf_ptr, buf_cap, send_cnt_ptr, recv_cnt_ptr);
+    Recv(this_block_dst, this_block_size, thread_id, this_buf_ptr, buf_cap, this_send_cnt_ptr,
+         this_recv_cnt_ptr);
   }
 }
 
@@ -136,6 +149,7 @@ struct CudaCopyPeerCtx {
   int32_t src_dev_id;
   cudaStream_t recv_stream;
   cudaStream_t send_stream;
+  int32_t num_block;
   int32_t* recv_cnt_ptr;
   int32_t* send_cnt_ptr;
   void* buf_ptr;
@@ -163,17 +177,16 @@ void CudaCopyPeerKernelUtil::CtxCreate(CudaCopyPeerCtx** ctx, int32_t dst_dev_id
   });
   if (!(*ctx)->p2p_enabled) {
     WithCudaDevice(src_dev_id, [ctx]() { CudaCheck(cudaStreamCreate(&((*ctx)->send_stream))); });
+    (*ctx)->num_block = MAX_NUM_BLOCK;
     NumaAwareCudaMallocHost((*ctx)->dst_dev_id, reinterpret_cast<void**>(&((*ctx)->recv_cnt_ptr)),
-                            sizeof(int32_t));
+                            sizeof(int32_t) * (*ctx)->num_block);
     NumaAwareCudaMallocHost((*ctx)->dst_dev_id, reinterpret_cast<void**>(&((*ctx)->send_cnt_ptr)),
-                            sizeof(int32_t));
-    CudaCheck(cudaMallocHost(&((*ctx)->recv_cnt_ptr), sizeof(int32_t)));
-    CudaCheck(cudaMallocHost(&((*ctx)->send_cnt_ptr), sizeof(int32_t)));
+                            sizeof(int32_t) * (*ctx)->num_block);
     *((*ctx)->recv_cnt_ptr) = 0;
     *((*ctx)->send_cnt_ptr) = 0;
     (*ctx)->buf_cap = DEFAULT_CHUNK_BUF_CAP;
     NumaAwareCudaMallocHost((*ctx)->dst_dev_id, reinterpret_cast<void**>(&((*ctx)->buf_ptr)),
-                            CHUNK_SIZE * (*ctx)->buf_cap);
+                            CHUNK_SIZE * (*ctx)->buf_cap * (*ctx)->num_block);
     CHECK_EQ(reinterpret_cast<std::uintptr_t>((*ctx)->buf_ptr) % PACK_ALIGN, 0);
   }
 }
