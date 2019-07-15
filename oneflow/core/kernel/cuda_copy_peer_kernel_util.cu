@@ -4,10 +4,11 @@
 constexpr int32_t PACK_SIZE = sizeof(ulong2);
 constexpr int32_t PACK_ALIGN = alignof(ulong2);
 constexpr int32_t NUM_THREAD = 1024;
-constexpr int32_t NUM_BLOCK_PER_CHUNK = 16;
+constexpr int32_t NUM_BLOCK_PER_CHUNK = 32;
 constexpr int32_t BLOCK_SIZE = NUM_THREAD * PACK_SIZE;
 constexpr int32_t CHUNK_SIZE = BLOCK_SIZE * NUM_BLOCK_PER_CHUNK;
 constexpr int32_t DEFAULT_CHUNK_BUF_CAP = 2;
+constexpr int32_t WARP_SIZE = 32;
 
 namespace oneflow {
 
@@ -71,7 +72,7 @@ __forceinline__ __device__ void Send(const void* src, const int32_t size, const 
   }
   __syncthreads();
   for (int32_t step = 0; step < num_step; ++step) {
-    if (thread_id == 0) {
+    if (thread_id == WARP_SIZE) {
       while (step - *recv_cnt_ptr >= buf_cap) {}
     }
     __syncthreads();
@@ -96,11 +97,10 @@ __forceinline__ __device__ void Recv(void* dst, const int32_t size, const int32_
   const int32_t num_step = DivUp(size, CHUNK_SIZE);
   int32_t remaining = size;
   for (int32_t step = 0; step < num_step; ++step) {
-    if (thread_id == 0) {
+    if (thread_id == WARP_SIZE) {
       while (*send_cnt_ptr <= step) {}
     }
     __syncthreads();
-    __threadfence_system();
     void* cur_buf_ptr = (unsigned char*)buf_ptr + (step % buf_cap) * CHUNK_SIZE;
     if (remaining >= CHUNK_SIZE) {
       CopyChunk(dst, cur_buf_ptr, thread_id);
@@ -126,22 +126,6 @@ __global__ void Copy(void* dst, const void* src, const int32_t size, void* buf_p
     Send(src, size, thread_id, buf_ptr, buf_cap, send_cnt_ptr, recv_cnt_ptr);
   } else {
     Recv(dst, size, thread_id, buf_ptr, buf_cap, send_cnt_ptr, recv_cnt_ptr);
-  }
-}
-
-__global__ void DirectCopy(void* dst, const void* src, const int32_t size) {
-  const int32_t thread_id = threadIdx.x;
-  const int32_t num_step = DivUp(size, CHUNK_SIZE);
-  int32_t remaining = size;
-  for (int32_t step = 0; step < num_step; ++step) {
-    if (remaining >= CHUNK_SIZE) {
-      CopyChunk(dst, src, thread_id);
-    } else {
-      CopyPartialChunk(dst, src, remaining, thread_id);
-    }
-    remaining -= CHUNK_SIZE;
-    dst = (unsigned char*)(dst) + CHUNK_SIZE;
-    src = (const unsigned char*)(src) + CHUNK_SIZE;
   }
 }
 
@@ -179,12 +163,17 @@ void CudaCopyPeerKernelUtil::CtxCreate(CudaCopyPeerCtx** ctx, int32_t dst_dev_id
   });
   if (!(*ctx)->p2p_enabled) {
     WithCudaDevice(src_dev_id, [ctx]() { CudaCheck(cudaStreamCreate(&((*ctx)->send_stream))); });
+    NumaAwareCudaMallocHost((*ctx)->dst_dev_id, reinterpret_cast<void**>(&((*ctx)->recv_cnt_ptr)),
+                            sizeof(int32_t));
+    NumaAwareCudaMallocHost((*ctx)->dst_dev_id, reinterpret_cast<void**>(&((*ctx)->send_cnt_ptr)),
+                            sizeof(int32_t));
     CudaCheck(cudaMallocHost(&((*ctx)->recv_cnt_ptr), sizeof(int32_t)));
     CudaCheck(cudaMallocHost(&((*ctx)->send_cnt_ptr), sizeof(int32_t)));
     *((*ctx)->recv_cnt_ptr) = 0;
     *((*ctx)->send_cnt_ptr) = 0;
     (*ctx)->buf_cap = DEFAULT_CHUNK_BUF_CAP;
-    CudaCheck(cudaMallocHost(&((*ctx)->buf_ptr), CHUNK_SIZE * (*ctx)->buf_cap));
+    NumaAwareCudaMallocHost((*ctx)->dst_dev_id, reinterpret_cast<void**>(&((*ctx)->buf_ptr)),
+                            CHUNK_SIZE * (*ctx)->buf_cap);
     CHECK_EQ(reinterpret_cast<std::uintptr_t>((*ctx)->buf_ptr) % PACK_ALIGN, 0);
   }
 }
@@ -208,8 +197,6 @@ void CudaCopyPeerKernelUtil::CopyAsync(CudaCopyPeerCtx* ctx, void* dst, const vo
     CHECK_EQ(size % PACK_SIZE, 0);
     CHECK_EQ(reinterpret_cast<std::uintptr_t>(dst) % PACK_ALIGN, 0);
     CHECK_EQ(reinterpret_cast<std::uintptr_t>(src) % PACK_ALIGN, 0);
-    WithCudaDevice(ctx->dst_dev_id,
-                   [&]() { DirectCopy<<<1, NUM_THREAD, 0, ctx->recv_stream>>>(dst, src, size); });
   } else {
     CHECK_EQ(size % PACK_SIZE, 0);
     CHECK_EQ(reinterpret_cast<std::uintptr_t>(dst) % PACK_ALIGN, 0);
