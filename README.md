@@ -34,11 +34,11 @@ or you can just clone source code and submodules step by step
 #### build third party from source
 
 ```
-  cmake -DTHIRD_PARTY=ON .. && make -j48
+  cmake -DTHIRD_PARTY=ON .. && make -j
 ```
 
 #### build oneflow
 
 ```
-    cmake -DTHIRD_PARTY=OFF .. && make -j48
+    cmake -DTHIRD_PARTY=OFF .. && make -j
 ```
