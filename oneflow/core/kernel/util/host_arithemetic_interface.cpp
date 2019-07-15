@@ -58,6 +58,14 @@ void TransposeImpl(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
   }
 }
 
+template<typename T>
+void ConstantInitializer(const T& value, Blob* blob) {
+  T* dptr = blob->mut_dptr<T>();
+  const int64_t elem_cnt = blob->shape().elem_cnt();
+  CHECK(elem_cnt);
+  for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = value; }
+}
+
 }  // namespace
 
 void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t num_axis,
@@ -73,6 +81,21 @@ void ArithemeticIf<DeviceType::kCPU>::Transpose(DeviceCtx* ctx, const int32_t nu
                                                 const int64_t elem_cnt, const double* x,
                                                 double* y) {
   TransposeImpl<double>(ctx, num_axis, x_shape, y_shape, permutation, elem_cnt, x, y);
+}
+
+void ArithemeticIf<DeviceType::kCPU>::InitializeWithConstConf(
+    DeviceCtx* ctx, const ConstantInitializerConf& initializer_conf, uint32_t random_seed,
+    Blob* blob) {
+  DataType dtype = blob->data_type();
+  if (dtype == DataType::kFloat) {
+    ConstantInitializer<float>(initializer_conf.value(), blob);
+  } else if (dtype == DataType::kDouble) {
+    ConstantInitializer<double>(static_cast<double>(initializer_conf.value()), blob);
+  } else if (dtype == DataType::kFloat16) {
+    ConstantInitializer<float16>(static_cast<float16>(initializer_conf.value()), blob);
+  } else {
+    UNIMPLEMENTED();
+  }
 }
 
 }  // namespace oneflow

@@ -26,8 +26,8 @@ void BiasAddKernel<device_type, T>::InitConstBufBlobs(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   InitializerConf bias_multiplier_initializer_conf;
   bias_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
-  KernelUtil<device_type, T>::InitializeWithConf(ctx, bias_multiplier_initializer_conf, 0,
-                                                 BnInOp2Blob("bias_multiplier"));
+  NewKernelUtil<device_type>::InitializeWithConstConf(
+      ctx, bias_multiplier_initializer_conf.constant_conf(), 0, BnInOp2Blob("bias_multiplier"));
 }
 
 template<DeviceType device_type, typename T>
