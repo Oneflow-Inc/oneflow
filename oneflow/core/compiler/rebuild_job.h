@@ -6,10 +6,10 @@
 
 namespace oneflow {
 
-// Rebuild Job according to the nodes folded xla graph.
-// In order to rebuild the job, We will add new xla launch nodes in the job,
-// and move that folded nodes into their xla launch nodes. Beyond that we
-// also create the argument nodes for all xla launch nodes
+// Rebuild job according to the nodes folded xla graph. In order to rebuild
+// the job, We will add several xla launch operators in the job, and remove the
+// folded nodes. In xla launch operator, we wll reconstruct the subgraph and
+// insert argument nodes if necessary.
 void RebuildXlaCompiledJob(const mola::XlaGraph &graph, Job *job);
 
 }  // namespace oneflow

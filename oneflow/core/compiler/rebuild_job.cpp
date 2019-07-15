@@ -101,7 +101,7 @@ void FixSubgraphOutArgumentsBlobNames(
   }
 }
 
-void FixControlInOpNames(const mola::XlaGraph &graph, JobBuilder *builder) {
+void FixupControlInOpNames(const mola::XlaGraph &graph, JobBuilder *builder) {
   // Map folded node names to cluster node
   std::unordered_map<std::string, std::string> folded_op_names;
 
@@ -147,7 +147,7 @@ void FixControlInOpNames(const mola::XlaGraph &graph, JobBuilder *builder) {
   }
 }
 
-void FixInOutBlobNames(const mola::XlaGraph &graph, JobBuilder *builder) {
+void FixupInOutBlobNames(const mola::XlaGraph &graph, JobBuilder *builder) {
   for (const XlaNode *node : graph.Nodes()) {
     if (node->sub_graph() == nullptr) {
       continue;
@@ -209,7 +209,7 @@ void FixInOutBlobNames(const mola::XlaGraph &graph, JobBuilder *builder) {
   }
 }
 
-void RemoveFoldedOperators(const mola::XlaGraph &graph,
+void RemoveFoldedOps(const mola::XlaGraph &graph,
                            JobBuilder *builder) {
   for (const XlaNode *node : graph.Nodes()) {
     if (node->sub_graph() != nullptr) {
@@ -222,7 +222,7 @@ void RemoveFoldedOperators(const mola::XlaGraph &graph,
   }
 }
 
-void FixSbpSignatures(const mola::XlaGraph &graph,
+void FixupSbpSignatures(const mola::XlaGraph &graph,
                       JobBuilder *builder) {
   auto get_sbp_signature_fn = MakeGetSbpSignatureFunc(builder);
   for (const XlaNode *node : graph.Nodes()) {
@@ -280,6 +280,7 @@ void buildXlaLaunchAttribute(const mola::XlaGraph *graph,
         argument_proto.set_in(argument.blob_name());
         argument_proto.set_out(argument.blob_name());
       }
+
       // Restore the blob names that have batch dimension, so that it's no need
       // to infer `HasBatchDim` for `XlaLaunch` operators. In practice it's hard
       // to infer `HasBatchDim` since the operators to be infered have been
@@ -297,7 +298,7 @@ void buildXlaLaunchAttribute(const mola::XlaGraph *graph,
   }
 }
 
-void AddXlaLaunchOps(const mola::XlaGraph &graph, JobBuilder *builder) {
+void BuildXlaLaunchOps(const mola::XlaGraph &graph, JobBuilder *builder) {
   for (const XlaNode *node : graph.Nodes()) {
     if (node->op_type() != mola::_XlaLaunchOpType) {
       continue;
@@ -333,15 +334,15 @@ void AddXlaLaunchOps(const mola::XlaGraph &graph, JobBuilder *builder) {
 
 void RebuildXlaCompiledJob(const mola::XlaGraph &graph, Job *job) {
   JobBuilder builder(job);
-  AddXlaLaunchOps(graph, &builder);
+  BuildXlaLaunchOps(graph, &builder);
   // Fix ctrl_in_op_name
-  FixControlInOpNames(graph, &builder);
+  FixupControlInOpNames(graph, &builder);
   // Fix blob names
-  FixInOutBlobNames(graph, &builder);
+  FixupInOutBlobNames(graph, &builder);
   // Fix Sbp signatures
-  FixSbpSignatures(graph, &builder);
-  // Remove folded operator conf from the job
-  RemoveFoldedOperators(graph, &builder);
+  FixupSbpSignatures(graph, &builder);
+  // Remove the folded operators from the job
+  RemoveFoldedOps(graph, &builder);
 }
 
 }  // namespace oneflow

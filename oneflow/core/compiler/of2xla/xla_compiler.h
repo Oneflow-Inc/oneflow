@@ -25,12 +25,10 @@ struct CompilationResult {
 class XlaCompiler {
  public:
   XlaCompiler(xla::LocalClient *client, xla::XlaBuilder *builder,
-              const XlaLaunchOpConf &launch_conf,
-              DeviceType device_type, ParallelContext parallel_ctx,
+              XlaGraph *graph, ParallelContext parallel_ctx,
               const std::vector<Blob *> &entry_blobs,
               const std::vector<std::string> &entry_blob_names,
-              const std::vector<std::string> &return_blob_names,
-              bool force_compile);
+              const std::vector<std::string> &return_blob_names);
 
   CompilationResult Compile();
 
@@ -52,7 +50,7 @@ class XlaCompiler {
       const std::unordered_map<std::string, Argument> &arguments,
       XlaOpContext::Param *param);
 
-  std::shared_ptr<XlaGraph> graph_;
+  XlaGraph *graph_;
 
   xla::LocalClient *client_;
 
@@ -61,7 +59,6 @@ class XlaCompiler {
   std::vector<std::string> entry_names_;
   std::vector<std::string> return_names_;
   std::unordered_map<std::string, Argument> arguments_;
-  bool force_compile_;
 };
 
 }  // namespace mola

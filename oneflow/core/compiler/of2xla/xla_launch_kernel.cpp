@@ -1,9 +1,11 @@
+#include "oneflow/core/compiler/of2xla/xla_launch_kernel.h"
+
 #include "tensorflow/compiler/xla/client/local_client.h"
 #include "tensorflow/compiler/tf2xla/tf2xla_util.h"  // GetXLARandomSeed
 #include "oneflow/core/compiler/of2xla/xla_utility.h"
 #include "oneflow/core/compiler/of2xla/xla_compiler.h"
+#include "oneflow/core/compiler/of2xla/xla_compilation_cache.h"
 #include "oneflow/core/compiler/of2xla/xla_compilation_context.h"
-#include "oneflow/core/compiler/of2xla/xla_launch_kernel.h"
 
 namespace oneflow {
 
@@ -13,19 +15,40 @@ void XlaLaunchKernel<device_type, T>::BuildLocalExecutable(
     const std::vector<Blob *> &entry_blobs,
     const std::vector<std::string> &entry_blob_names,
     const std::vector<std::string> &return_blob_names,
-    mola::CompilationResult *compile_result) const {
+    mola::CompilationResult **compile_result) const {
   CHECK(this->op_conf().has_xla_launch_conf())
       << "BuildLocalExecutable need a `XlaLaunchOpConf`.";
   const auto &launch_conf = this->op_conf().xla_launch_conf();
   const auto &parallel_ctx = compile_ctx.parallel_ctx();
 
-  // Pass a fake local `ParallelContext` to the compiler in order to get
-  // the shape of arguments by `InferBlobDescs`
-  mola::XlaCompiler compiler(compile_ctx.client(), compile_ctx.builder(),
-                             launch_conf, device_type, parallel_ctx, entry_blobs,
-                             entry_blob_names, return_blob_names,
-                             true /*force_compile*/);
-  *compile_result = compiler.Compile();
+  if (!compilation_cache_) {
+    compilation_cache_.reset(new mola::XlaCompilationCache);
+  }
+
+  const int device_ordinal = compile_ctx.client()->default_device_ordinal();
+  const mola::Signature signature = mola::ComputeSignature(
+      compile_ctx.builder()->name(), device_ordinal, entry_blobs);
+  bool force_compile = false;
+  if (!force_compile) {
+    *compile_result = compilation_cache_->GetRecord(signature);
+  }
+
+  if (!(*compile_result)) {
+    mola::XlaLaunchGraph graph(launch_conf, device_type);
+
+    // Pass a fake local `ParallelContext` to the compiler in order to get
+    // the shape of arguments by `InferBlobDescs`
+    mola::XlaCompiler compiler(compile_ctx.client(), compile_ctx.builder(),
+                               &graph, parallel_ctx, entry_blobs,
+                               entry_blob_names, return_blob_names);
+
+    auto result = std::make_shared<mola::CompilationResult>();
+    *result = compiler.Compile();
+    // Record new compilation result
+    compilation_cache_->Record(signature, result);
+    // Get compilation result from cache
+    *compile_result = compilation_cache_->GetRecord(signature);
+  }
 }
 
 template <DeviceType device_type, typename T>
@@ -89,7 +112,7 @@ template <DeviceType device_type, typename T>
 void XlaLaunchKernel<device_type, T>::ForwardDataContent(
                 const KernelCtx &ctx,
                 std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  // Prepare input and output blobs and names
+  // Prepare input and output buffers and their names
   std::vector<Blob *> entry_blobs, output_blobs;
   std::vector<std::string> entry_blob_names, return_blob_names;
 
@@ -107,16 +130,18 @@ void XlaLaunchKernel<device_type, T>::ForwardDataContent(
   
   mola::CompilationContext compile_ctx(this->op_conf().name(), ctx.device_ctx,
                                        device_type, 1 /*intra_op_num_threads*/);
-  mola::CompilationResult compile_result;
+  mola::CompilationResult *compile_result = nullptr;
   BuildLocalExecutable(compile_ctx, entry_blobs, entry_blob_names,
                        return_blob_names, &compile_result);
 
-  xla::LocalExecutable *executable = compile_result.executable.get();
-  CHECK(executable) << "Executable built failed.";
+  CHECK(compile_result) << "Executable built failed.";
 
+  auto *executable = compile_result->executable.get();
   SyncRunExecutable(compile_ctx, executable, entry_blobs,
-                    compile_result.xla_input_shapes, output_blobs,
-                    compile_result.xla_output_shape);
+                    compile_result->xla_input_shapes, output_blobs,
+                    compile_result->xla_output_shape);
+
+  // mola::XlaCompilationCache::Release();
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kXlaLaunchConf, XlaLaunchKernel,

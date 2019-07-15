@@ -23,14 +23,12 @@ static XlaOpCompiler *CreateXlaOpCompiler(
 }
 
 XlaCompiler::XlaCompiler(xla::LocalClient *client, xla::XlaBuilder *builder,
-                         const XlaLaunchOpConf &launch_conf,
-                         DeviceType device_type, ParallelContext parallel_ctx,
+                         XlaGraph *graph, ParallelContext parallel_ctx,
                          const std::vector<Blob *> &entry_blobs,
                          const std::vector<std::string> &entry_blob_names,
-                         const std::vector<std::string> &return_blob_names,
-                         bool force_compile)
-    : client_(client), builder_(builder), entry_names_(entry_blob_names),
-      return_names_(return_blob_names), force_compile_(force_compile) {
+                         const std::vector<std::string> &return_blob_names)
+    : client_(client), builder_(builder), graph_(graph),
+      entry_names_(entry_blob_names), return_names_(return_blob_names) {
   CHECK_EQ(entry_blobs.size(), entry_blob_names.size());
 
   std::unordered_map<std::string, BlobDesc> blob_descs;
@@ -43,7 +41,6 @@ XlaCompiler::XlaCompiler(xla::LocalClient *client, xla::XlaBuilder *builder,
                        rt_desc.max_col_num());
     blob_descs.emplace(entry_blob_names[i], blob_desc);
   }
-  graph_.reset(new XlaLaunchGraph(launch_conf, device_type));
   graph_->InferBlobDescs(&blob_descs, &parallel_ctx);
 
   for (const auto &pair : blob_descs) {
@@ -131,7 +128,7 @@ void XlaCompiler::BuildExecutable(
 
 CompilationResult XlaCompiler::Compile() {
   CHECK_NOTNULL(graph_);
-  
+
   CompilationResult result;
   std::unordered_map<Argument, XlaOprand> entry_oprands;
   SetupEntryOprands(&entry_oprands, &result.xla_input_shapes);

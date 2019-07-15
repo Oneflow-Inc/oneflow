@@ -16,7 +16,7 @@ void XlaLaunchOp::InitFromOpConf() {
   DeviceType device_type = (this->device_type() == DeviceType::kInvalidDevice) ?
                            DeviceType::kCPU : this->device_type();
   subgraph_.reset(new mola::XlaLaunchGraph(op_conf().xla_launch_conf(),
-                  device_type));
+                                           device_type));
 }
 
 const PbMessage &XlaLaunchOp::GetCustomizedConf() const {
