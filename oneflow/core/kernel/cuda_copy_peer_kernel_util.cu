@@ -4,9 +4,9 @@
 constexpr int32_t PACK_SIZE = sizeof(ulong2);
 constexpr int32_t PACK_ALIGN = alignof(ulong2);
 constexpr int32_t NUM_THREAD = 1024;
-constexpr int32_t NUM_BLOCK_PER_CHUNK = 32;
-constexpr int32_t BLOCK_SIZE = NUM_THREAD * PACK_SIZE;
-constexpr int32_t CHUNK_SIZE = BLOCK_SIZE * NUM_BLOCK_PER_CHUNK;
+constexpr int32_t NUM_STEP_PER_CHUNK = 32;
+constexpr int32_t STEP_SIZE = NUM_THREAD * PACK_SIZE;
+constexpr int32_t CHUNK_SIZE = STEP_SIZE * NUM_STEP_PER_CHUNK;
 constexpr int32_t DEFAULT_CHUNK_BUF_CAP = 2;
 constexpr int32_t WARP_SIZE = 32;
 
@@ -42,21 +42,21 @@ __forceinline__ __device__ void CopyChunk(void* dst, const void* src, const int3
   dst = (unsigned char*)(dst) + thread_id * PACK_SIZE;
   src = (unsigned char*)(src) + thread_id * PACK_SIZE;
 #pragma unroll
-  for (int32_t i = 0; i < NUM_BLOCK_PER_CHUNK; ++i) {
+  for (int32_t i = 0; i < NUM_STEP_PER_CHUNK; ++i) {
     FetchStore(dst, src);
-    dst = (unsigned char*)(dst) + BLOCK_SIZE;
-    src = (const unsigned char*)(src) + BLOCK_SIZE;
+    dst = (unsigned char*)(dst) + STEP_SIZE;
+    src = (const unsigned char*)(src) + STEP_SIZE;
   }
 }
 
 __forceinline__ __device__ void CopyPartialChunk(void* dst, const void* src, const int32_t size,
                                                  const int32_t thread_id) {
   int32_t offset = thread_id * PACK_SIZE;
-  for (int32_t i = 0; i < NUM_BLOCK_PER_CHUNK; ++i) {
+  for (int32_t i = 0; i < NUM_STEP_PER_CHUNK; ++i) {
     if (offset < size) {
       FetchStore((unsigned char*)(dst) + offset, (const unsigned char*)(src) + offset);
     }
-    offset += BLOCK_SIZE;
+    offset += STEP_SIZE;
   }
 }
 
@@ -64,19 +64,19 @@ __forceinline__ __device__ void Send(const void* src, const int32_t size, const 
                                      void* buf_ptr, const int32_t buf_cap,
                                      volatile int32_t* send_cnt_ptr,
                                      volatile int32_t* recv_cnt_ptr) {
-  const int32_t num_step = DivUp(size, CHUNK_SIZE);
+  const int32_t num_chunk = DivUp(size, CHUNK_SIZE);
   int32_t remaining = size;
   if (thread_id == 0) {
     while (*recv_cnt_ptr != 0) {}
     while (*send_cnt_ptr != 0) {}
   }
   __syncthreads();
-  for (int32_t step = 0; step < num_step; ++step) {
+  for (int32_t chunk = 0; chunk < num_chunk; ++chunk) {
     if (thread_id == WARP_SIZE) {
-      while (step - *recv_cnt_ptr >= buf_cap) {}
+      while (chunk - *recv_cnt_ptr >= buf_cap) {}
     }
     __syncthreads();
-    void* cur_buf_ptr = (unsigned char*)buf_ptr + (step % buf_cap) * CHUNK_SIZE;
+    void* cur_buf_ptr = (unsigned char*)buf_ptr + (chunk % buf_cap) * CHUNK_SIZE;
     if (remaining >= CHUNK_SIZE) {
       CopyChunk(cur_buf_ptr, src, thread_id);
     } else {
@@ -86,7 +86,7 @@ __forceinline__ __device__ void Send(const void* src, const int32_t size, const 
     src = (const unsigned char*)(src) + CHUNK_SIZE;
     __threadfence_system();
     __syncthreads();
-    if (thread_id == 0) { *send_cnt_ptr = step + 1; }
+    if (thread_id == 0) { *send_cnt_ptr = chunk + 1; }
   }
 }
 
@@ -94,14 +94,14 @@ __forceinline__ __device__ void Recv(void* dst, const int32_t size, const int32_
                                      const void* buf_ptr, const int32_t buf_cap,
                                      volatile int32_t* send_cnt_ptr,
                                      volatile int32_t* recv_cnt_ptr) {
-  const int32_t num_step = DivUp(size, CHUNK_SIZE);
+  const int32_t num_chunk = DivUp(size, CHUNK_SIZE);
   int32_t remaining = size;
-  for (int32_t step = 0; step < num_step; ++step) {
+  for (int32_t chunk = 0; chunk < num_chunk; ++chunk) {
     if (thread_id == WARP_SIZE) {
-      while (*send_cnt_ptr <= step) {}
+      while (*send_cnt_ptr <= chunk) {}
     }
     __syncthreads();
-    void* cur_buf_ptr = (unsigned char*)buf_ptr + (step % buf_cap) * CHUNK_SIZE;
+    void* cur_buf_ptr = (unsigned char*)buf_ptr + (chunk % buf_cap) * CHUNK_SIZE;
     if (remaining >= CHUNK_SIZE) {
       CopyChunk(dst, cur_buf_ptr, thread_id);
     } else {
@@ -110,7 +110,7 @@ __forceinline__ __device__ void Recv(void* dst, const int32_t size, const int32_
     remaining -= CHUNK_SIZE;
     dst = (unsigned char*)(dst) + CHUNK_SIZE;
     __syncthreads();
-    if (thread_id == 0) { *recv_cnt_ptr = step + 1; }
+    if (thread_id == 0) { *recv_cnt_ptr = chunk + 1; }
   }
   if (thread_id == 0) {
     *recv_cnt_ptr = 0;
