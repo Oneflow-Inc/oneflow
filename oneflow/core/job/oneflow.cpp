@@ -349,9 +349,7 @@ void GetInterfaceOpBlobInfo(const JobBuilder& job_builder, const std::string& op
   std::string lbn;
   {
     const auto& op_conf = job_builder.OpConf4OpName(op_name);
-    if (op_conf.has_variable_conf()) {
-      lbn = op_name + "/" + op_conf.variable_conf().out();
-    } else if (op_conf.has_input_conf()) {
+    if (op_conf.has_input_conf()) {
       lbn = op_name + "/" + op_conf.input_conf().out();
     } else if (op_conf.has_output_conf()) {
       lbn = op_name + "/" + op_conf.output_conf().out();
@@ -370,34 +368,22 @@ void GetInterfaceOpBlobInfo(const JobBuilder& job_builder, const std::string& op
   blob_conf->set_has_batch_dim(std::find(lbis.begin(), lbis.end(), lbi) != lbis.end());
 }
 
-HashSet<std::string> GetArgOpNames(const std::vector<Job>& jobs) {
-  HashSet<std::string> arg_op_names;
-  for (const Job& job : jobs) {
-    for (const auto& arg_op_name : job.arg_op_name()) { arg_op_names.insert(arg_op_name); }
-    for (const OperatorConf& op_conf : job.net().op()) {
-      if (op_conf.has_variable_conf()) { arg_op_names.insert(op_conf.name()); }
-    }
-  }
-  return arg_op_names;
-}
-
-HashMap<std::string, HashSet<int64_t>> GetInterfaceOpName2JobIds(const std::vector<Job>& jobs) {
-  HashSet<std::string> arg_op_names = GetArgOpNames(jobs);
-  HashMap<std::string, HashSet<int64_t>> interface_op_name2job_ids;
+HashMap<std::string, HashSet<int64_t>> GetOutBlobMemSharableOpName2JobIds(
+    const std::vector<Job>& jobs) {
+  // obms op = output blob memory sharable operator
+  HashMap<std::string, HashSet<int64_t>> obms_op_name2job_ids;
   HashSet<std::string> unique_op_name_check;
   FOR_RANGE(int32_t, i, 0, jobs.size()) {
-    const auto& job = jobs.at(i);
-    for (const auto& op : job.net().op()) {
-      if (IsInterfaceOpConf(op)) {
-        CHECK(arg_op_names.find(op.name()) != arg_op_names.end());
-        CHECK(interface_op_name2job_ids[op.name()].emplace(i).second);
+    for (const auto& op : jobs.at(i).net().op()) {
+      if (IsOutBlobMemSharableOpConf(op)) {
+        CHECK(obms_op_name2job_ids[op.name()].emplace(i).second);
       } else {
         CHECK(unique_op_name_check.find(op.name()) == unique_op_name_check.end());
       }
       unique_op_name_check.emplace(op.name());
     }
   }
-  return interface_op_name2job_ids;
+  return obms_op_name2job_ids;
 }
 
 void FilterOpName2ParallelBlobConf(
@@ -432,11 +418,12 @@ void FilterArgPassingJobGroupInfo(
       if (IsInterfaceOpConf(op_conf) == false) { continue; }
       ParallelBlobConf parallel_blob_conf;
       GetInterfaceOpBlobInfo(job_builder, op_conf.name(), &parallel_blob_conf);
-      if (op_conf.has_input_conf() || op_conf.has_variable_conf()) {
+      if (op_conf.has_input_conf()) {
         parallel_blob_conf2input_op_names[parallel_blob_conf].insert(op_conf.name());
-      }
-      if (op_conf.has_output_conf() || op_conf.has_variable_conf()) {
+      } else if (op_conf.has_output_conf()) {
         parallel_blob_conf2output_op_names[parallel_blob_conf].insert(op_conf.name());
+      } else {
+        UNIMPLEMENTED();
       }
     }
   }
@@ -486,8 +473,9 @@ RegstDescProto* GetSoleProducedDataRegst(TaskProto* task_proto) {
   return ret;
 }
 
-void BindInterfaceMemBlockId(const std::vector<Job>& jobs, std::vector<Plan>* sub_plans) {
-  for (const auto& pair : GetInterfaceOpName2JobIds(jobs)) {
+void BindMemBlockId4OutBlobMemSharableOps(const std::vector<Job>& jobs,
+                                          std::vector<Plan>* sub_plans) {
+  for (const auto& pair : GetOutBlobMemSharableOpName2JobIds(jobs)) {
     std::vector<std::vector<TaskProto*>> same_op_name_sorted_task_protos;
     for (int64_t job_id : pair.second) {
       same_op_name_sorted_task_protos.push_back(
@@ -950,7 +938,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<JobConf>& job_confs, Plan* plan) {
     }
   }
   if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-    BindInterfaceMemBlockId(jobs, &sub_plans);
+    BindMemBlockId4OutBlobMemSharableOps(jobs, &sub_plans);
     FinishGlobalCriticalSectionDesc(sub_plans);
     MergePlan(plan, sub_plans);
     Plan main_plan;
