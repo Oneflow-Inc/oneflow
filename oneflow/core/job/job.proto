@@ -111,6 +111,6 @@ message Job {
   required DLNetConf net = 1;
   required Placement placement = 2;
   required JobConfigProto job_conf = 3;
-  required SbpConf sbp_conf = 4;
-  required JobHelperConf helper = 5;
+  optional SbpConf sbp_conf = 4;
+  optional JobHelperConf helper = 5;
 }
