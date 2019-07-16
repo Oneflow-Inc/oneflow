@@ -21,7 +21,7 @@ int32_t GetDataRegstDescCnt(
 void ReduceSplitCompTaskNode::ProduceAllRegstsAndBindEdges() {
   std::vector<EdgeInfo> edge_infos;
   if (GlobalJobDesc().IsPredict()
-      && GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+      && GlobalJobDesc().job_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     std::shared_ptr<Operator> reduce_split_op = this->logical_node()->SoleOp();
     HashMap<LogicalBlobId, int32_t> lbi2order;
     FOR_RANGE(int32_t, idx, 0, reduce_split_op->output_bns().size()) {
@@ -86,7 +86,7 @@ void ReduceSplitCompTaskNode::BuildExecGphAndRegst() {
 
   TaskNode* reduce_concat_node = nullptr;
   if (!(GlobalJobDesc().IsPredict()
-        && GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf())) {
+        && GlobalJobDesc().job_conf().predict_conf().has_tmp_split_fw_bw_train_conf())) {
     reduce_concat_node = GetPrevReduceTaskNode(TaskType::kReduceConcat);
     CHECK_EQ(reduce_concat_node->consumed_regsts().size(), GetDataRegstDescCnt(produced_regsts()));
   }
@@ -95,7 +95,7 @@ void ReduceSplitCompTaskNode::BuildExecGphAndRegst() {
     std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out_" + std::to_string(i));
     CHECK(out_regst.get() != nullptr);
     if (GlobalJobDesc().IsPredict()
-        && GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+        && GlobalJobDesc().job_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
       out_regst->AddLbi(reduce_split_op->BnInOp2Lbi(reduce_split_op->output_bns().Get(i)));
     } else {
       out_regst->CopyBlobDescFrom(

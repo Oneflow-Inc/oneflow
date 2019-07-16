@@ -14,7 +14,7 @@ void RMSPropModelUpdateOp::MdUpdtVirtualInferBlobDescs(
 }
 
 const PbMessage& RMSPropModelUpdateOp::GetCustomizedConf() const {
-  if (GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+  if (GlobalJobDesc().job_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     return op_conf().rmsprop_model_update_conf();
   } else {
     UNIMPLEMENTED();

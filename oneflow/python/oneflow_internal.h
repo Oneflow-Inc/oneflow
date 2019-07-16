@@ -10,7 +10,7 @@ namespace {
 class GlobalFlagsAndLogScope final {
  public:
   static void New(const oneflow::JobSet& job_set) {
-    *GetPPtr() = new oneflow::FlagsAndLogScope(job_set, "oneflow");
+    *GetPPtr() = new oneflow::FlagsAndLogScope(job_set.config(), "oneflow");
   }
   static void Delete() {
     if (Get() != nullptr) {
