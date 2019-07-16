@@ -140,10 +140,7 @@ Plan Compiler::DoCompile() {
   // TODO: update method for fw bw split
   // if (job_desc->IsTrain()) { task_gph->AddOrderCtrlEdgeBetweenCopyAndMdUpdt(); }
   task_gph->MdUpdtDelayedTopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
-  // TODO: update method for fw bw split
-  // if (job_desc->IsTrain() && job_desc->enable_mem_sharing()) {
-  //   task_gph->EnableMemSharingInVariableOp();
-  // }
+  if (job_desc->enable_mem_sharing()) { task_gph->EnableMemSharingInVariableOp(); }
   // TODO: update method for fw bw split
   // if (job_desc->IsTrain()) { task_gph->AddReduceNoBwForwardNodeOverlapingCtrlEdges(); }
 

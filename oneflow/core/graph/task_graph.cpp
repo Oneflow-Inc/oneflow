@@ -530,7 +530,7 @@ void TaskGraph::EnableMemSharingInVariableOp() {
     auto* fw_task_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
     if (fw_task_node != nullptr) {
       const LogicalBlobId& lbi = variable_op->BnInOp2Lbi(model_bn);
-      RegstDesc* model_regst = fw_task_node->GetSoleConsumedRegst("model").get();
+      RegstDesc* model_regst = fw_task_node->GetSoleConsumedRegst("const_model").get();
       CHECK_EQ(model_regst->min_register_num(), 1);
       CHECK_EQ(model_regst->max_register_num(), 1);
       model_regst->set_enable_mem_sharing(true);
