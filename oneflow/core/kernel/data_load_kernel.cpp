@@ -1,10 +1,11 @@
 #include "oneflow/core/kernel/data_load_kernel.h"
-#include "oneflow/core/dataset/dataset_manager.h"
+#include "oneflow/core/data/dataset_manager.h"
 #include "oneflow/core/record/record.pb.h"
 
 namespace oneflow {
 
 void DataLoadKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
+  using namespace data;
   const DataLoadOpConf& data_load_op_conf = op_conf().data_load_conf();
   int64_t piece_size = Global<JobDesc>::Get()->RecordPieceSize();
   int64_t parallele_num = parallel_ctx->parallel_num();

@@ -443,7 +443,7 @@ void KernelIf<device_type>::CopyField(DeviceCtx* ctx,
 
 std::unique_ptr<Kernel> ConstructKernel(const ParallelContext* parallel_ctx, const KernelConf& conf,
                                         DeviceCtx* device_ctx) {
-  Kernel* rptr = NewObj<Kernel>(conf.op_attribute().op_conf().op_type_case(), conf);
+  Kernel* rptr = NewObj<Kernel>(conf.op_attribute().op_conf().op_type_case());
   rptr->Init(parallel_ctx, conf, device_ctx);
   return std::unique_ptr<Kernel>(rptr);
 }

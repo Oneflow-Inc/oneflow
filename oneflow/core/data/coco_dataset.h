@@ -1,18 +1,18 @@
 #ifndef ONEFLOW_CORE_DATASET_COCO_DATASET_H_
 #define ONEFLOW_CORE_DATASET_COCO_DATASET_H_
 
-#include "oneflow/core/dataset/dataset.h"
+#include "oneflow/core/data/dataset.h"
 #include "json.hpp"
 
 namespace oneflow {
+namespace data {
 
 class COCODataset final : public Dataset {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(COCODataset);
-  COCODataset() = default;
+  explicit COCODataset(const DatasetProto& proto) : Dataset(proto) {}
   virtual ~COCODataset() = default;
 
-  void VirtualInit() override;
+  void Init() override;
   size_t Size() const override { return image_ids_.size(); }
   std::unique_ptr<OFRecord> EncodeOneRecord(int64_t idx) const override;
 
@@ -29,6 +29,7 @@ class COCODataset final : public Dataset {
   HashMap<int32_t, int32_t> category_id2contiguous_id_;
 };
 
+}  // namespace data
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_DATASET_COCO_DATASET_H_

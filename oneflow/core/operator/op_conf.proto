@@ -8,6 +8,7 @@ import "oneflow/core/record/record.proto";
 import "oneflow/core/job/resource.proto";
 import "oneflow/core/job/sbp_parallel.proto";
 import "oneflow/core/register/logical_blob_id.proto";
+import "oneflow/core/data/data.proto";
 
 enum ActivationType {
   kNone = 0;
@@ -781,6 +782,8 @@ message BlobConf {
   repeated PreprocessConf preprocess = 6;
   optional bool use_dynamic_shape = 7 [default = false];
   optional int32 dynamic_shape_align = 8 [default = 32];
+  optional string field = 9;
+  optional DataCase data_case = 10;
 }
 
 message DecodeOFRecordOpConf {
@@ -791,6 +794,7 @@ message DecodeOFRecordOpConf {
   repeated BlobConf blob = 5;
   optional RandomShuffleConf random_shuffle_conf = 6;
   optional string dataset = 7;
+  repeated DataTransformProto transforms = 8;
 }
 
 message DecodeRandomOpConf {

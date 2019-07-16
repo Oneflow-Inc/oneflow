@@ -1,4 +1,4 @@
-#include "oneflow/core/dataset/coco_dataset.h"
+#include "oneflow/core/data/coco_dataset.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
@@ -10,8 +10,9 @@ extern "C" {
 }
 
 namespace oneflow {
+namespace data {
 
-void COCODataset::VirtualInit() {
+void COCODataset::Init() {
   CHECK_EQ(dataset_proto().dataset_catalog_case(), DatasetProto::kCoco);
   const COCODatasetCatalog& coco_dataset = dataset_proto().coco();
   PersistentInStream in_stream(
@@ -120,4 +121,5 @@ void COCODataset::EncodeSegmentation(int64_t image_id, Feature& feature) const {
 
 REGISTER_DATASET(DatasetProto::kCoco, COCODataset);
 
+}  // namespace data
 }  // namespace oneflow

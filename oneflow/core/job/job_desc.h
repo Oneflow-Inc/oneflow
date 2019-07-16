@@ -8,7 +8,7 @@
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/register/logical_blob_id.pb.h"
-#include "oneflow/core/dataset/dataset.h"
+#include "oneflow/core/data/dataset.h"
 
 namespace oneflow {
 

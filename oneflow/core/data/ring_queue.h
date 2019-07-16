@@ -4,6 +4,7 @@
 #include <thread>
 
 namespace oneflow {
+namespace util {
 
 template<typename T>
 class RingQueue final {
@@ -72,6 +73,7 @@ std::unique_ptr<T> RingQueue<T>::SyncDequeue(std::function<bool(const T*)> pred)
   return Dequeue();
 }
 
+}  // namespace util
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_DATASET_RING_QUEUE_H_

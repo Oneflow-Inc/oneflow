@@ -3,6 +3,8 @@
 
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/register/register.h"
+#include "oneflow/core/data/data_instance.h"
+// #include "oneflow/core/data/data_transform.h"
 
 namespace oneflow {
 
@@ -24,6 +26,9 @@ class DecodeOFRecordKernel final : public KernelIf<DeviceType::kCPU> {
                             std::function<Blob*(const std::string&)> BnInOp2Blob) const override {}
   void VirtualKernelInit(const ParallelContext*) override;
   int32_t NextRandomInt() const;
+  std::vector<data::DataInstance> ParseRecordAndTransformData(DeviceCtx* ctx, Blob* in_blob) const;
+  void WriteDataToOutBlob(DeviceCtx* ctx, const std::vector<data::DataInstance>& data_inst_vec,
+                          const BlobConf& blob_conf, Blob* out_blob) const;
 
   std::unique_ptr<std::mt19937> random_seed_gen_;
   std::unique_ptr<std::uniform_int_distribution<int32_t>> distribution_;

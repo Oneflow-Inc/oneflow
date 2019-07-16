@@ -5,6 +5,7 @@ import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/register/logical_blob_id.proto";
 import "oneflow/core/operator/op_conf.proto";
+import "oneflow/core/data/data.proto";
 
 message ConvKernelConf {
   required ShapeProto in = 1;
@@ -126,6 +127,7 @@ message DecodeRandomKernelConf {
 
 message DecodeOFRecordKernelConf {
   required uint32 random_seed = 1;
+  optional DataInstanceProto data_instance_conf = 2;
 }
 
 message ReduceGatherKernelConf {

@@ -11,9 +11,11 @@ struct AutoRegistrationFactory {
   template<typename Derived>
   struct RawRegisterType {
     RawRegisterType(int32_t k) {
-      CHECK((AutoRegistrationFactory<Base, Args...>::Get()
-                 .creators_.emplace(k, [](Args&&...) { return new Derived; })
-                 .second))
+      CHECK(
+          (AutoRegistrationFactory<Base, Args...>::Get()
+               .creators_
+               .emplace(k, [](Args&&... args) { return new Derived(std::forward<Args>(args)...); })
+               .second))
           << k;
     }
   };
@@ -44,7 +46,7 @@ struct AutoRegistrationFactory {
 #define REGISTER_CLASS(k, Base, Derived) \
   static AutoRegistrationFactory<Base>::RawRegisterType<Derived> REGISTER_VAR_NAME(k)
 #define REGISTER_CLASS_WITH_ARGS(k, Base, Derived, ...) \
-  static AutoRegistrationFactory<Base, __VA_ARGS__>::RawRegisterType<Derived> REGISTER_VAR_NAME(k)
+  static AutoRegistrationFactory<Base, ##__VA_ARGS__>::RawRegisterType<Derived> REGISTER_VAR_NAME(k)
 #define REGISTER_CLASS_CREATOR(k, Base, f, ...) \
   static AutoRegistrationFactory<Base, ##__VA_ARGS__>::CreatorRegisterType REGISTER_VAR_NAME(k, f)
 

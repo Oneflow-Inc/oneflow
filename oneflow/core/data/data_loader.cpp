@@ -1,8 +1,9 @@
-#include "oneflow/core/dataset/data_loader.h"
-#include "oneflow/core/dataset/dataset.h"
+#include "oneflow/core/data/data_loader.h"
+#include "oneflow/core/data/dataset.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
+namespace data {
 
 size_t BatchSampler::GetEmptySlot() {
   CHECK_LE(cur_slot_, batch_size_);
@@ -72,4 +73,5 @@ BatchSampler* DataLoader::GetBatchSampler() {
   return sampler;
 }
 
+}  // namespace data
 }  // namespace oneflow

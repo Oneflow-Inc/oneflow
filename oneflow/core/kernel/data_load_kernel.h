@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_KERNEL_RECORD_LOAD_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/dataset/data_loader.h"
+#include "oneflow/core/data/data_loader.h"
 
 namespace oneflow {
 
@@ -22,7 +22,7 @@ class DataLoadKernel final : public KernelIf<DeviceType::kCPU> {
                std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
  private:
-  std::unique_ptr<DataLoader> data_loader_;
+  std::unique_ptr<data::DataLoader> data_loader_;
 };
 
 }  // namespace oneflow

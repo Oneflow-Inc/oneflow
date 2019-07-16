@@ -1,13 +1,14 @@
-#include "oneflow/core/dataset/dataset.h"
+#include "oneflow/core/data/dataset.h"
 #include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
+namespace data {
 
-void Dataset::Init(const DatasetProto& dataset_proto) {
+Dataset::Dataset(const DatasetProto& dataset_proto) {
   dataset_proto_ = &dataset_proto;
   data_seq_.clear();
   // status_.reset(new DatasetStatus);
-  VirtualInit();
+  Init();
 }
 
 void Dataset::GenDataSequence(int64_t total_data_num) {
@@ -48,4 +49,5 @@ std::vector<int64_t> Dataset::GetPartDataSequence(int64_t part_id, int64_t part_
 
 // }
 
+}  // namespace data
 }  // namespace oneflow

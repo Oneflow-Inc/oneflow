@@ -244,8 +244,7 @@ class KernelIfWithActivation : virtual public KernelIf<device_type> {
                           Blob* bw_activation_blob) const override;
 };
 
-#define REGISTER_KERNEL(k, KernelType) \
-  REGISTER_CLASS_WITH_ARGS(k, Kernel, KernelType, const KernelConf&)
+#define REGISTER_KERNEL(k, KernelType) REGISTER_CLASS(k, Kernel, KernelType)
 #define REGISTER_KERNEL_CREATOR(k, f) REGISTER_CLASS_CREATOR(k, Kernel, f, const KernelConf&)
 
 std::unique_ptr<Kernel> ConstructKernel(const ParallelContext*, const KernelConf&, DeviceCtx*);

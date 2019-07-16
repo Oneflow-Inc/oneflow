@@ -2,11 +2,12 @@
 #define ONEFLOW_CORE_DATASET_DATASET_MANAGER_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/dataset/dataset.h"
+#include "oneflow/core/data/dataset.h"
 #include "oneflow/core/job/job_desc.h"
 #include <memory>
 
 namespace oneflow {
+namespace data {
 
 class DatasetManager final {
  public:
@@ -20,6 +21,7 @@ class DatasetManager final {
   HashMap<std::string, std::shared_ptr<Dataset>> dataset_map_;
 };
 
+}  // namespace data
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_DATASET_DATASET_MANAGER_H_

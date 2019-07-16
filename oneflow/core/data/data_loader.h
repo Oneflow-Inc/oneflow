@@ -1,12 +1,13 @@
 #ifndef ONEFLOW_CORE_DATASET_DATA_LOADER_H_
 #define ONEFLOW_CORE_DATASET_DATA_LOADER_H_
 
-#include "oneflow/core/dataset/dataset.h"
+#include "oneflow/core/data/dataset.h"
 #include "oneflow/core/thread/thread_pool.h"
-#include "oneflow/core/dataset/ring_queue.h"
+#include "oneflow/core/data/ring_queue.h"
 #include <thread>
 
 namespace oneflow {
+namespace data {
 
 class BatchSampler final {
  public:
@@ -50,9 +51,10 @@ class DataLoader final {
 
   std::thread dispatcher_;
   ThreadPool worker_pool_;
-  RingQueue<BatchSampler> batch_queue_;
+  util::RingQueue<BatchSampler> batch_queue_;
 };
 
+}  // namespace data
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_DATASET_DATA_LOADER_H_

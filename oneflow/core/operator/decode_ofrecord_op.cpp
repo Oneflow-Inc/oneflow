@@ -20,6 +20,27 @@ void DecodeOFRecordOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   kernel_conf->mutable_decode_ofrecord_conf()->set_random_seed(NewRandomSeed());
+  DataInstanceProto* data_inst_proto =
+      kernel_conf->mutable_decode_ofrecord_conf()->mutable_data_instance_conf();
+  const auto& decode_op_conf = op_conf().decode_ofrecord_conf();
+  for (const auto& blob_conf : decode_op_conf.blob()) {
+    DataFieldProto data_field_proto;
+    data_field_proto.set_data_type(blob_conf.data_type());
+    data_field_proto.set_data_case(blob_conf.data_case());
+    DataCodec* data_codec = data_field_proto.mutable_data_codec();
+    if (blob_conf.encode_case().has_raw()) {
+      data_codec->mutable_raw()->set_variable_length(
+          blob_conf.encode_case().raw().dim1_varying_length());
+    } else if (blob_conf.encode_case().has_jpeg()) {
+      *data_codec->mutable_image()->mutable_preprocess() =
+          blob_conf.encode_case().jpeg().preprocess();
+    } else if (blob_conf.encode_case().has_bytes_list()) {
+      data_codec->mutable_bytes_list();
+    } else {
+      UNIMPLEMENTED();
+    }
+    CHECK(data_inst_proto->mutable_fields()->insert({blob_conf.field(), data_field_proto}).second);
+  }
 }
 
 const PbMessage& DecodeOFRecordOp::GetCustomizedConf() const {
@@ -42,11 +63,21 @@ void DecodeOFRecordOp::InferBlobDescs(
     out_blob_desc->set_has_col_num_field(blob_conf.max_sequence_size() > 1);
     out_blob_desc->set_max_col_num(blob_conf.max_sequence_size());
     const auto& encode = blob_conf.encode_case();
-    const auto* decoder_if = GetOFRecordDecoder(encode.encode_case(), blob_conf.data_type());
-    out_blob_desc->set_has_dim1_valid_num_field(decoder_if->HasDim1ValidNumField(encode));
-    out_blob_desc->set_has_dim2_valid_num_field(decoder_if->HasDim2ValidNumField(encode));
-    if (blob_conf.use_dynamic_shape()) { CHECK(blob_conf.encode_case().has_jpeg()); }
-    out_blob_desc->set_has_instance_shape_field(blob_conf.use_dynamic_shape());
+    if (encode.has_jpeg()) {
+      out_blob_desc->set_has_instance_shape_field(blob_conf.use_dynamic_shape());
+    } else if (encode.has_raw()) {
+      out_blob_desc->set_has_dim1_valid_num_field(encode.raw().dim1_varying_length());
+    } else if (encode.has_bytes_list()) {
+      out_blob_desc->set_has_dim1_valid_num_field(true);
+      out_blob_desc->set_has_dim2_valid_num_field(true);
+    } else {
+      UNIMPLEMENTED();
+    }
+    // const auto* decoder_if = GetOFRecordDecoder(encode.encode_case(), blob_conf.data_type());
+    // out_blob_desc->set_has_dim1_valid_num_field(decoder_if->HasDim1ValidNumField(encode));
+    // out_blob_desc->set_has_dim2_valid_num_field(decoder_if->HasDim2ValidNumField(encode));
+    // if (blob_conf.use_dynamic_shape()) { CHECK(blob_conf.encode_case().has_jpeg()); }
+    // out_blob_desc->set_has_instance_shape_field(blob_conf.use_dynamic_shape());
   }
 }
 
