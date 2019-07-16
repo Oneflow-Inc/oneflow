@@ -10,8 +10,6 @@
 
 namespace oneflow {
 
-bool IsInterfaceOpConf(const OperatorConf& op_conf);
-
 class JobDesc final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(JobDesc);

@@ -86,5 +86,6 @@ void InputOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
 REGISTER_OP(OperatorConf::kInputConf, InputOp);
 REGISTER_OP_SAME_OUTPUT_BLOB_MEM_BLOCK_NUM(OperatorConf::kInputConf, 1);
 REGISTER_INTERFACE_OP(OperatorConf::kInputConf);
+REGISTER_OUTPUT_BLOB_MEMORY_SHARABLE_OP(OperatorConf::kInputConf);
 
 }  // namespace oneflow

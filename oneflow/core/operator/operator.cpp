@@ -575,6 +575,14 @@ bool IsOpOnlyCpuSupported(OperatorConf::OpTypeCase op_type_case) {
   return *std::unique_ptr<OnlyCpuSupportPredicator>(NewObj<OnlyCpuSupportPredicator>(op_type_case));
 }
 
+bool IsInterfaceOpConf(const OperatorConf& op_conf) {
+  return IsClassRegistered<IsInterfaceOpConf4OpTypeCase>(op_conf.op_type_case());
+}
+
+bool IsOutBlobMemSharableOpConf(const OperatorConf& op_conf) {
+  return IsClassRegistered<IsOutBlobMemSharableOpConf4OpTypeCase>(op_conf.op_type_case());
+}
+
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf) {
   Operator* rptr = NewObj<Operator>(op_conf.op_type_case(), op_conf);
   if (IsOpOnlyCpuSupported(op_conf.op_type_case())) {
