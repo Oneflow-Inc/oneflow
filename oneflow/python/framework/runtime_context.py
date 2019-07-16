@@ -14,7 +14,7 @@ def Init():
     job_name2input_op_names = {
         k : [x.op_name for x in v] for k, v in compile_ctx.job_name2input_remote_blobs.items()
     }
-    
+
     global job_name2output_op_names
     job_name2output_op_names = {
         k : [x.op_name for x in v] for k, v in compile_ctx.job_name2output_remote_blobs.items()
