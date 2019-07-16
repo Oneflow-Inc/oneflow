@@ -20,6 +20,7 @@
 #include "oneflow/core/graph/boxing/multi_ring_all_reduce_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/dynamic_shape_supported_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/chain_sub_task_graph_builder.h"
+#include "oneflow/core/graph/multi_ring_all_reduce_task_node.h"
 
 namespace oneflow {
 
@@ -330,6 +331,25 @@ void TaskGraph::BuildCtrlRegstDescInSameChain() {
   }
 }
 
+namespace {
+
+TaskNode* FindPredReduceIdentityTaskNode(TaskNode* succ) {
+  TaskNode* current = succ;
+  while (current) {
+    auto reduce_task_node_edge_it =
+        std::find_if(current->in_edges().begin(), current->in_edges().end(), [](TaskEdge* edge) {
+          return dynamic_cast<ReduceCompTaskNodeIf*>(edge->src_node()) != nullptr
+                 || dynamic_cast<MultiRingAllReduceTaskNode*>(edge->src_node()) != nullptr;
+        });
+    if (reduce_task_node_edge_it == current->in_edges().end()) { return nullptr; }
+    current = (*reduce_task_node_edge_it)->src_node();
+    if (current->GetTaskType() == TaskType::kReduceIdentity) { return current; }
+  }
+  return nullptr;
+}
+
+}  // namespace
+
 void TaskGraph::AddReduceSequenceCtrlEdges() {
   HashMap<int64_t, std::vector<ReduceSplitCompTaskNode*>> global_thrd_id2split_nodes;
   for (auto* node : ordered_task_nodes_) {
@@ -348,10 +368,12 @@ void TaskGraph::AddReduceSequenceCtrlEdges() {
     ReduceSplitCompTaskNode* prev_split_node = split_nodes.at(0);
     for (auto* split_node : split_nodes) {
       if (prev_split_node != split_node) {
-        auto* to_node = split_node->GetPrevReduceTaskNode(TaskType::kReduceIdentity);
+        auto* to_node = FindPredReduceIdentityTaskNode(split_node);
         TaskNode* from_node = prev_split_node;
+        CHECK_NOTNULL(from_node);
         if (GetCtrlOrder(split_node->logical_node()) < 0) {
-          from_node = prev_split_node->GetPrevReduceTaskNode(TaskType::kReduceIdentity);
+          from_node = FindPredReduceIdentityTaskNode(prev_split_node);
+          CHECK_NOTNULL(from_node);
         }
         from_node->BuildCtrlRegstDescIfNeed(to_node);
       }
