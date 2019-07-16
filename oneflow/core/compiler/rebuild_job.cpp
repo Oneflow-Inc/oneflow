@@ -212,11 +212,12 @@ void FixupInOutBlobNames(const mola::XlaGraph &graph, JobBuilder *builder) {
 void RemoveFoldedOps(const mola::XlaGraph &graph,
                            JobBuilder *builder) {
   for (const XlaNode *node : graph.Nodes()) {
-    if (node->sub_graph() != nullptr) {
-      for (const XlaNode *sub_node : node->sub_graph()->Nodes()) {
-        if (sub_node->op_type() != mola::_XlaArgumentOpType) {
-          builder->RemoveOp(sub_node->op_name());
-        }
+    if (node->sub_graph() == nullptr) {
+      continue;
+    }
+    for (const XlaNode *sub_node : node->sub_graph()->Nodes()) {
+      if (sub_node->op_type() != mola::_XlaArgumentOpType) {
+        builder->RemoveOp(sub_node->op_name());
       }
     }
   }
@@ -237,23 +238,21 @@ void FixupSbpSignatures(const mola::XlaGraph &graph,
       blob_names.emplace(blob_name, bn);
     }
 
-    SbpSignature sbp_conf;
-    auto *bn2sbp_parallel = sbp_conf.mutable_bn_in_op2sbp_parallel();
-    const auto &attr_proto = op_conf->xla_launch_conf().attr();
-    for (const auto &argument : attr_proto.argument()) {
+    // Append sbp signatures to xla launch operator
+    auto *attr_proto = op_conf->mutable_xla_launch_conf()->mutable_attr();
+    auto *sbp_signatures = attr_proto->mutable_sbp_signature();
+    for (const auto &argument : attr_proto->argument()) {
       // Input argument
       if (absl::StartsWith(argument.name(), mola::_XlaInArgumentPrefix)) {
         std::string bn = blob_names.at(argument.in());
-        (*bn2sbp_parallel)[bn] = get_sbp_signature_fn(argument.out());
+        (*sbp_signatures)[bn] = get_sbp_signature_fn(argument.out());
       }
       // Output argument
       if (absl::StartsWith(argument.name(), mola::_XlaOutArgumentPrefix)) {
         std::string bn = argument.out();
-        (*bn2sbp_parallel)[bn] = get_sbp_signature_fn(argument.in());
+        (*sbp_signatures)[bn] = get_sbp_signature_fn(argument.in());
       }
     }
-    // Add the Sbp Signature to the job
-    builder->AddOpSbpSignature(node->op_name(), sbp_conf);
   }
 }
 
@@ -327,7 +326,7 @@ void BuildXlaLaunchOps(const mola::XlaGraph &graph, JobBuilder *builder) {
     // TODO(hjchen2) Assign parallel conf 
     ParallelConf parallel_conf;
     parallel_conf.set_policy(kDataParallel);
-    parallel_conf.mutable_device_name()->Add()->assign("0:gpu:0");
+    parallel_conf.mutable_device_name()->Add()->assign("0:gpu:0-1");
     builder->AddOps(parallel_conf, {op_conf});
   }
 }

@@ -10,6 +10,8 @@
 #include "oneflow/core/compiler/rebuild_job.h"
 #include <fstream>
 
+DEFINE_bool(use_xla_jit, true, "Option to use xla jit");
+
 namespace oneflow {
 
 namespace {
@@ -119,8 +121,16 @@ Plan Compiler::DoCompile() {
   TeePersistentLogStream::Create("optimized_job")->Write(job);
   Global<OpGraph>::New(job);
   Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_op_graph.dot");
+
   // TODO(hjchen2): For debug
-  {
+  std::string job_string = job.DebugString();
+  std::ofstream ost("./job_string_without_xla.prototxt");
+  ost << job_string;
+  ost.close();
+
+  if (FLAGS_use_xla_jit) {
+    LOG(INFO) << "Compile the job with XLA JIT support.";
+
     mola::XlaGraph graph(Global<OpGraph>::Get());
     mola::OptimizeOptions options;
     options.graph = &graph;
@@ -132,7 +142,7 @@ Plan Compiler::DoCompile() {
     RebuildXlaCompiledJob(graph, &job);
 
     std::string job_string = job.DebugString();
-    std::ofstream ost("./job_string.prototxt");
+    std::ofstream ost("./job_string_with_xla.prototxt");
     ost << job_string;
     ost.close();
 

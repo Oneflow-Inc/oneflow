@@ -64,6 +64,12 @@ void XlaLaunchKernel<device_type, T>::SyncRunExecutable(
 
   xla::LocalClient *client = compile_ctx.client();
 
+  // TODO(hjchdn2) Implicit device ordinal from our own GpuExecutor
+  int device_ordinal = client->default_device_ordinal();
+#ifdef WITH_CUDA
+  cudaGetDevice(&device_ordinal);
+#endif
+
   // Translate input blobs to xla ShapedBuffer suitable running the executable
   int argument_size = input_shapes.size();
   std::vector<std::shared_ptr<xla::ShapedBuffer>> shaped_buffers(argument_size);
@@ -80,13 +86,14 @@ void XlaLaunchKernel<device_type, T>::SyncRunExecutable(
         se::DeviceMemoryBase(const_cast<char *>(data_ptr), data_size);
     shaped_buffers[i] = std::make_shared<xla::ShapedBuffer>(
         /*on_host_shape=*/shape, /*on_device_shape=*/shape,
-        client->platform(), client->default_device_ordinal());
+        client->platform(), device_ordinal);
     shaped_buffers[i]->set_buffer(memory_base, /*index=*/{});
     arguments[i] = shaped_buffers[i].get();
   }
 
   xla::ExecutableRunOptions run_options;
   run_options.set_stream(nullptr);
+  run_options.set_device_ordinal(device_ordinal);
   run_options.set_allocator(compile_ctx.allocator());
   run_options.set_intra_op_thread_pool(compile_ctx.host_device());
   run_options.set_rng_seed(tensorflow::GetXLARandomSeed());
@@ -101,8 +108,7 @@ void XlaLaunchKernel<device_type, T>::SyncRunExecutable(
     Blob *output = output_blobs[i];
     se::DeviceMemoryBase buffer = run_result.buffer({i});
     Memcpy<device_type>(compile_ctx.device_ctx(), output->mut_dptr(),
-                        buffer.opaque(), output->ByteSizeOfDataContentField(),
-                        cudaMemcpyKind::cudaMemcpyDefault);
+                        buffer.opaque(), output->ByteSizeOfDataContentField());
     // Maybe release result buffer
     // run_result.set_buffer(se::OwningDeviceMemory(), {i});
   }
@@ -140,8 +146,6 @@ void XlaLaunchKernel<device_type, T>::ForwardDataContent(
   SyncRunExecutable(compile_ctx, executable, entry_blobs,
                     compile_result->xla_input_shapes, output_blobs,
                     compile_result->xla_output_shape);
-
-  // mola::XlaCompilationCache::Release();
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kXlaLaunchConf, XlaLaunchKernel,

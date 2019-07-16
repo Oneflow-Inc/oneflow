@@ -63,26 +63,17 @@ void XlaLaunchOp::InferSbpSignature(
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<const SbpInferHint&(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
-  UNIMPLEMENTED();
-  // const auto &xla_launch_conf = op_conf().xla_launch_conf();
-  // const auto &attr_sbp_conf = xla_launch_conf.attr().sbp_signature();
-  // SbpSignature sbp_conf;
-  // auto *bn2sbp_parallel = sbp_conf.mutable_bn_in_op2sbp_parallel();
-  // for (const std::string &bn : this->input_bns()) {
-  //   std::string blob_name = BlobName(this->BnInOp2Lbi(bn));
-  //   const auto &it = subgraph_inputs_.find(blob_name);
-  //   CHECK(it != subgraph_inputs_.end());
-  //   CHECK_GT(attr_sbp_conf.count(it->second), 0);
-  //   (*bn2sbp_parallel)[bn] = attr_sbp_conf.at(it->second);
-  // }
-  // for (const std::string &bn : this->input_bns()) {
-  //   const auto &it = subgraph_outputs_.find(bn);
-  //   CHECK(it != subgraph_outputs_.end());
-  //   CHECK_GT(attr_sbp_conf.count(it->second), 0);
-  //   (*bn2sbp_parallel)[bn] = attr_sbp_conf.at(it->second);
-  // }
-  // this->InferSbpSignature(sbp_signature, sbp_conf, CalcOrderValue4SbpSig,
-  //                         SbpInferHint4Ibn, parallel_desc);
+  const auto &xla_launch_conf = op_conf().xla_launch_conf();
+  const auto &attr_sbp_conf = xla_launch_conf.attr().sbp_signature();
+  for (const std::string &bn : this->input_bns()) {
+    CHECK_GT(attr_sbp_conf.count(bn), 0);
+  }
+  for (const std::string &bn : this->input_bns()) {
+    CHECK_GT(attr_sbp_conf.count(bn), 0);
+  }
+
+  auto *bn2sbp_parallel = sbp_signature->mutable_bn_in_op2sbp_parallel();
+  *bn2sbp_parallel = attr_sbp_conf;
 }
 
 REGISTER_OP(OperatorConf::kXlaLaunchConf, XlaLaunchOp);

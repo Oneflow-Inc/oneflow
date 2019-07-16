@@ -48,7 +48,7 @@ class XlaCompilationCache {
  public:
   CompilationResult *GetRecord(const Signature &signature) const;
   
-  void Record(const Signature signature,
+  void Record(const Signature &signature,
               const std::shared_ptr<CompilationResult> &result);
 
   void Release();

@@ -36,7 +36,7 @@ CompilationResult *XlaCompilationCache::GetRecord(
 }
 
 void XlaCompilationCache::Record(
-    const Signature signature,
+    const Signature &signature,
     const std::shared_ptr<CompilationResult> &result) {
   // std::unique_lock<std::shared_mutex> lock(mutex_);
   std::lock_guard<std::mutex> lock(mutex_);
