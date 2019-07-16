@@ -21,6 +21,7 @@
 #include "oneflow/core/graph/boxing/dynamic_shape_supported_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/chain_sub_task_graph_builder.h"
 #include "oneflow/core/graph/multi_ring_all_reduce_task_node.h"
+#include "oneflow/core/graph/nccl_all_reduce_compute_task_node.h"
 
 namespace oneflow {
 
@@ -49,7 +50,7 @@ MakeGetterReduceTaskNodeCtrlOrder(const LogicalGraph& logical_graph) {
   });
   std::sort(logical_nodes.begin(), logical_nodes.end(),
             [](const ReduceType* lhs, const ReduceType* rhs) {
-              return lhs->order_in_logical_graph() < rhs->order_in_logical_graph();
+              return lhs->order_in_logical_graph() > rhs->order_in_logical_graph();
             });
   auto logical_node2ctrl_order = std::make_shared<HashMap<const LogicalNode*, int32_t>>();
   int32_t lazy_count = Global<JobDesc>::Get()->all_reduce_lazy_ratio() * logical_nodes.size();
@@ -339,7 +340,8 @@ TaskNode* FindPredReduceIdentityTaskNode(TaskNode* succ) {
     auto reduce_task_node_edge_it =
         std::find_if(current->in_edges().begin(), current->in_edges().end(), [](TaskEdge* edge) {
           return dynamic_cast<ReduceCompTaskNodeIf*>(edge->src_node()) != nullptr
-                 || dynamic_cast<MultiRingAllReduceTaskNode*>(edge->src_node()) != nullptr;
+                 || dynamic_cast<MultiRingAllReduceTaskNode*>(edge->src_node()) != nullptr
+                 || dynamic_cast<NcclAllReduceCompTaskNode*>(edge->src_node()) != nullptr;
         });
     if (reduce_task_node_edge_it == current->in_edges().end()) { return nullptr; }
     current = (*reduce_task_node_edge_it)->src_node();
