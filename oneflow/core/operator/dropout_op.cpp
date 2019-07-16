@@ -11,7 +11,7 @@ void DropoutOp::InitFromOpConf() {
   EnrollInputBn("in");
   EnrollOutputBn("out");
   if (GlobalJobDesc().IsPredict()
-      && GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+      && GlobalJobDesc().job_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     EnrollOutputBn("random_mask");
   }
 }
@@ -24,7 +24,7 @@ void DropoutOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
   //          GetBlobDesc4BnInOp("in")->shape().NumAxes());
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
   if (GlobalJobDesc().IsPredict()
-      && GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+      && GlobalJobDesc().job_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     *GetBlobDesc4BnInOp("random_mask") = *GetBlobDesc4BnInOp("in");
     GetBlobDesc4BnInOp("random_mask")->set_data_type(DataType::kFloat);
   }

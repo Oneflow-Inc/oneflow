@@ -9,7 +9,7 @@ namespace oneflow {
 class FlagsAndLogScope final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(FlagsAndLogScope)
-  FlagsAndLogScope(const JobSet& job_set, const char* binary_name);
+  FlagsAndLogScope(const ConfigProto& config, const char* binary_name);
   ~FlagsAndLogScope();
 };
 
