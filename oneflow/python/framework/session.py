@@ -21,7 +21,7 @@ class Session(object):
     def run(self, job_func, *arg):
         assert self.is_running_
         assert job_func.__name__ in self.job_name2job_func_
-        return runtime.LaunchJob(job_func.__name__, *arg)
+        return runtime.LaunchJob(job_func, *arg)
         
     def map(self, job_func, feed_dicts):
         assert self.is_running_

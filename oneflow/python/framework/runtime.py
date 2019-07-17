@@ -3,7 +3,8 @@ from __future__ import absolute_import
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.runtime_context as runtime_ctx
 import oneflow.python.framework.job_instance as job_instance
-import oneflow.python.framework.inter_user_job as inter_user_job
+import oneflow.python.framework.inter_user_job_util as inter_user_job_util
+import oneflow.python.framework.out_remote_blobs_result as out_remote_blobs_result
 import numpy as np
 
 def GetMachineRuntimeEnv(job_set):
@@ -39,11 +40,12 @@ class WorkerRuntimeEnv(object):
 class ThisIsNotAnError(Exception):
     pass
 
-def LaunchJob(job_name, *arg):
-    input_op_names = runtime_ctx.job_name2input_op_names[job_name]
-    assert len(arg) == len(input_op_names)
+def LaunchJob(job_func, *arg):
+    job_name = job_func.__name__
+    assert len(arg) == len(job_func.__oneflow_input_remote_blobs__)
     for i in range(len(arg)):
         assert isinstance(arg[i], np.ndarray)
-        inter_user_job.AsyncPush(input_op_names[i], inter_user_job.MakePushCallback(arg[i]))
+        input_op_name = job_func.__oneflow_input_remote_blobs__[i].op_name
+        inter_user_job_util.AsyncPush(input_op_name, inter_user_job_util.MakePushCallback(arg[i]))
     c_api_util.LaunchJob(job_instance.MakeUserJobInstance(job_name))
-    return runtime_ctx.job_name2output_op_names[job_name]
+    return out_remote_blobs_result.OutRemoteBlobsResult(job_func.__oneflow_output_remote_blobs__)
