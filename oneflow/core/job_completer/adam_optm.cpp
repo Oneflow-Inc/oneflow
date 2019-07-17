@@ -33,7 +33,7 @@ void GenerateOptimizerOpConf(
   mdupdt_op.set_name(op.op_name() + "_optimizer");
   auto* mdupdt_op_conf = mdupdt_op.mutable_adam_model_update_conf();
   *(mdupdt_op_conf->mutable_user_conf()) =
-      GlobalJobDesc().other_conf().predict_conf().tmp_split_fw_bw_train_conf().model_update_conf();
+      GlobalJobDesc().job_conf().predict_conf().tmp_split_fw_bw_train_conf().model_update_conf();
   OperatorConf beta1_t_var;
   OperatorConf beta2_t_var;
   if (mdupdt_op_conf->user_conf().adam_conf().do_bias_correction()) {

@@ -468,7 +468,7 @@ void JobCompleter::Complete(Job* job) const {
   // complete variable ops
   WithOpGraphAndMutJob(job, &AutoVar);
   if (GlobalJobDesc().IsPredict()
-      && GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
+      && GlobalJobDesc().job_conf().predict_conf().has_tmp_split_fw_bw_train_conf()) {
     WithOpGraphAndMutJob(job, &TieUpChainHeadersUnReachableFromAnyVariableOps);
     // complete ops for trainning
     WithOpGraphAndMutJob(job, &GenerateOpConf4Trainning);

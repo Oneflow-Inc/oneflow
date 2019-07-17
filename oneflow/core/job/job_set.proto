@@ -1,7 +1,7 @@
 syntax = "proto2";
 package oneflow;
 
-import "oneflow/core/job/job_conf.proto";
+import "oneflow/core/job/job.proto";
 import "oneflow/core/job/resource.proto";
 
 message LocalFsConf {
@@ -32,7 +32,7 @@ message IOConf {
   optional uint64 persistence_buf_byte = 7 [default = 67108864]; // 64M
 }
 
-message ProfileConf {
+message ProfilerConf {
   optional bool collect_act_event = 1 [default = false];
 }
 
@@ -47,10 +47,14 @@ message CppFlagsConf {
   optional bool grpc_use_no_signal = 5 [default = false];
 }
 
-message JobSet {
+message ConfigProto {
   required Resource resource = 1;
-  repeated JobConf job_conf = 2;
-  required IOConf io_conf = 3;
-  required CppFlagsConf cpp_flags_conf = 4;
-  optional ProfileConf profile_conf = 5;
+  required IOConf io_conf = 2;
+  required CppFlagsConf cpp_flags_conf = 3;
+  optional ProfilerConf profiler_conf = 4;
+}
+
+message JobSet {
+  required ConfigProto config = 1;
+  repeated Job job = 2;
 }
