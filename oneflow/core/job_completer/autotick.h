@@ -11,7 +11,8 @@ void AutoSourceTick(const OpGraph& op_graph, Job* job);
 void AddTickForTimeShape(const OpGraph& op_graph, Job* job);
 void AutoSinkTick(const OpGraph& op_graph, Job* job);
 void AddGlobalTotalJobCriticalSection(const Job& job);
-void AddGlobalInputOutputCriticalSections(const OpGraph& op_graph, Job* job);
+void AddGlobalInputCriticalSections(const OpGraph& op_graph, Job* job);
+void AddGlobalOutputCriticalSections(const OpGraph& op_graph, Job* job);
 
 class MutOpConTickInputHelper {
  public:

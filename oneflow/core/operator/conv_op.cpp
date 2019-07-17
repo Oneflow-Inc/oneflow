@@ -9,7 +9,7 @@ namespace oneflow {
 namespace {
 
 bool IsFwBwSplit() {
-  return GlobalJobDesc().other_conf().predict_conf().has_tmp_split_fw_bw_train_conf();
+  return GlobalJobDesc().job_conf().predict_conf().has_tmp_split_fw_bw_train_conf();
 }
 
 void GetOutAndPad(const Shape& in_blob_shape, const PbMessage& conv_conf, std::vector<int64_t>* out,

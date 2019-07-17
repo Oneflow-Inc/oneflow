@@ -1,7 +1,7 @@
 syntax = "proto2";
 package oneflow;
 
-import "oneflow/core/job/job_conf.proto";
+import "oneflow/core/job/job.proto";
 import "oneflow/core/job/resource.proto";
 
 message LocalFsConf {
@@ -26,13 +26,13 @@ message IOConf {
   required FileSystemConf data_fs_conf = 1;
   required FileSystemConf snapshot_fs_conf = 2;
   optional string model_load_snapshot_path = 3 [default = ""];
-  optional string model_save_snapshots_path = 4 [default = ""];
+  optional string model_save_snapshots_path = 4 [default = "./model_save"];
   optional bool enable_write_snapshot = 5 [default = true];
   optional bool save_downloaded_file_to_local_fs = 6 [default = false];
   optional uint64 persistence_buf_byte = 7 [default = 67108864]; // 64M
 }
 
-message ProfileConf {
+message ProfilerConf {
   optional bool collect_act_event = 1 [default = false];
 }
 
@@ -69,11 +69,15 @@ message CppFlagsConf {
   optional bool grpc_use_no_signal = 5 [default = false];
 }
 
-message JobSet {
+message ConfigProto {
   required Resource resource = 1;
-  repeated JobConf job_conf = 2;
-  required IOConf io_conf = 3;
-  required CppFlagsConf cpp_flags_conf = 4;
-  optional ProfileConf profile_conf = 5;
-  optional JobMemSharingStrategy job_mem_sharing_strategy = 6;
+  required IOConf io_conf = 2;
+  required CppFlagsConf cpp_flags_conf = 3;
+  optional ProfilerConf profiler_conf = 4;
+  optional JobMemSharingStrategy job_mem_sharing_strategy = 5;
+}
+
+message JobSet {
+  required ConfigProto config = 1;
+  repeated Job job = 2;
 }

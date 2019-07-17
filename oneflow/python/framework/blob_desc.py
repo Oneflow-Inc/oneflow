@@ -1,9 +1,10 @@
 from __future__ import absolute_import
 
-import oneflow.python.framework.inter_user_job as inter_user_job
+import oneflow.core.common.data_type_pb2 as data_type_util
 
-def LogicalBlob:
-    def __init__(self, shape, dtype,
+class BlobDesc(object):
+    def __init__(self, shape,
+                 dtype = data_type_util.kFloat,
                  has_batch_dim = True,
                  is_dynamic = False,
                  split_axis = None,
@@ -15,13 +16,6 @@ def LogicalBlob:
         self.split_axis_ = split_axis
         self.broadcast_ = broadcast
     
-    @property
-    def op_name(self):
-        return self.op_name_
-
-    def set_op_name(self, op_name):
-        self.op_name_ = op_name
-
     @property
     def shape(self):
         return self.shape_
@@ -45,6 +39,3 @@ def LogicalBlob:
     @property
     def broadcast(self):
         return self.broadcast_
-
-    def pull(self):
-        return inter_user_job.pull(self)

@@ -70,12 +70,15 @@ void JobBuilder::AddOps(const ParallelConf& parallel_conf,
   }
 }
 
-void JobBuilder::MutOps(const std::vector<OperatorConf>& op_confs) const {
-  for (const auto& op_conf : op_confs) { op_name2op_conf_.at(op_conf.name())->CopyFrom(op_conf); }
+void JobBuilder::MutOpsOnlyOnce(const std::vector<OperatorConf>& op_confs) {
+  for (const auto& op_conf : op_confs) {
+    CHECK(modified_op_names_.emplace(op_conf.name()).second);
+    op_name2op_conf_.at(op_conf.name())->CopyFrom(op_conf);
+  }
 }
 
-void JobBuilder::AddOrMutOps(const ParallelConf& parallel_conf,
-                             const std::vector<OperatorConf>& op_confs) {
+void JobBuilder::AddOrMutOpsOnlyOnce(const ParallelConf& parallel_conf,
+                                     const std::vector<OperatorConf>& op_confs) {
   std::vector<OperatorConf> add_ops;
   std::vector<OperatorConf> mut_ops;
   for (const auto& op_conf : op_confs) {
@@ -86,7 +89,7 @@ void JobBuilder::AddOrMutOps(const ParallelConf& parallel_conf,
     }
   }
   AddOps(parallel_conf, add_ops);
-  MutOps(mut_ops);
+  MutOpsOnlyOnce(mut_ops);
 }
 
 void JobBuilder::ForEachOperator(const std::function<void(const Operator&)>& Handler) const {

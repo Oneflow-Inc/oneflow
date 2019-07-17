@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 import oneflow_internal
 from oneflow.python.framework.dtype import convert_of_dtype_to_numpy_dtype
+import oneflow.core.common.data_type_pb2 as dtype_util
 import numpy as np
 
 class OfBlob(object):
@@ -28,7 +29,9 @@ class OfBlob(object):
 
     def CopyFromNdarray(self, src_ndarray):
         assert(self._size == src_ndarray.size)
-        assert(convert_of_dtype_to_numpy_dtype(self.dtype) == src_ndarray.dtype)
+        of_dtype = convert_of_dtype_to_numpy_dtype(self.dtype)
+        assert(of_dtype == src_ndarray.dtype), \
+            "of_dtype: %s, numpy.dtype: %s" % (of_dtype, src_ndarray.dtype)
         method_name = oneflow_internal.Dtype_GetOfBlobCopyFromBufferFuncName(self.dtype)
         copy_method = getattr(oneflow_internal, method_name)
         copy_method(self.of_blob_ptr_, src_ndarray)

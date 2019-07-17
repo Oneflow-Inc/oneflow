@@ -58,7 +58,7 @@ void GroupBoxingByDstParallel(const OpGraph& op_graph, Job* job) {
     }
   }
   for (const auto& op_node7op_conf : op_node2op_conf) {
-    job_builder.MutOps({op_node7op_conf.second});
+    job_builder.MutOpsOnlyOnce({op_node7op_conf.second});
   }
 }
 
