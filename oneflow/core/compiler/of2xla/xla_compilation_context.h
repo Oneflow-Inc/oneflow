@@ -44,6 +44,10 @@ class CompilationContext {
 
   const ParallelContext &parallel_ctx() const { return parallel_ctx_; }
 
+  void **stream() const { return stream_; }
+
+  int device_ordinal() const { return device_ordinal_; }
+
  private:
   xla::LocalClient *client_;
   std::shared_ptr<xla::XlaBuilder> builder_;
@@ -54,6 +58,9 @@ class CompilationContext {
 
   DeviceCtx *device_ctx_;
   ParallelContext parallel_ctx_;
+
+  int device_ordinal_ = -1;
+  void **stream_ = nullptr;
 };
 
 }  // namespace mola

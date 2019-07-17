@@ -5,15 +5,9 @@
 
 namespace oneflow {
 
-static ParallelContext LocalParallelContext(DeviceType device_type) {
-  int device_id = 0;
-  if (device_type == DeviceType::kGPU) {
-#ifdef WITH_CUDA
-    CudaCheck(cudaGetDevice(&device_id));
-#endif
-  }
+static ParallelContext LocalParallelContext(int device_ordinal) {
   ParallelContext parallel_ctx;
-  parallel_ctx.set_parallel_id(device_id);
+  parallel_ctx.set_parallel_id(device_ordinal);
   parallel_ctx.set_parallel_num(1);
   parallel_ctx.set_policy(kDataParallel);
   return parallel_ctx;
@@ -64,8 +58,14 @@ CompilationContext::CompilationContext(const std::string &builder_name,
 
   if (device_type == DeviceType::kCPU) {
     platform_id = se::host::kHostPlatformId;
+    device_ordinal_ = 0;
   } else if (device_type == DeviceType::kGPU) {
     platform_id = se::cuda::kCudaPlatformId;
+#ifdef WITH_CUDA
+    CudaCheck(cudaGetDevice(&device_ordinal_));
+    stream_ = const_cast<void **>(
+        reinterpret_cast<void * const*>(&(device_ctx->cuda_stream())));
+#endif
   }
   CHECK(platform_id) << "Platform Id should not be nullptr. Please check "
                         "your device type.";
@@ -77,7 +77,7 @@ CompilationContext::CompilationContext(const std::string &builder_name,
                                                builder_name));
   allocator_ = ResourceMgr::GetOrCreateAllocator(platform);
   host_device_ = ResourceMgr::GetOrCreateEigenHostDevice();
-  parallel_ctx_ = LocalParallelContext(device_type);
+  parallel_ctx_ = LocalParallelContext(device_ordinal_);
 }
 
 }  // namespace mola

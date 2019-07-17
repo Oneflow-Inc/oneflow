@@ -3,6 +3,7 @@
 #include "tensorflow/compiler/xla/client/local_client.h"
 #include "tensorflow/compiler/tf2xla/tf2xla_util.h"  // GetXLARandomSeed
 #include "oneflow/core/compiler/of2xla/xla_utility.h"
+#include "oneflow/core/compiler/of2xla/xla_stream.h"
 #include "oneflow/core/compiler/of2xla/xla_compiler.h"
 #include "oneflow/core/compiler/of2xla/xla_compilation_cache.h"
 #include "oneflow/core/compiler/of2xla/xla_compilation_context.h"
@@ -25,7 +26,7 @@ void XlaLaunchKernel<device_type, T>::BuildLocalExecutable(
     compilation_cache_.reset(new mola::XlaCompilationCache);
   }
 
-  const int device_ordinal = compile_ctx.client()->default_device_ordinal();
+  const int device_ordinal = compile_ctx.device_ordinal();
   const mola::Signature signature = mola::ComputeSignature(
       compile_ctx.builder()->name(), device_ordinal, entry_blobs);
   bool force_compile = false;
@@ -61,14 +62,13 @@ void XlaLaunchKernel<device_type, T>::SyncRunExecutable(
   namespace se = tensorflow::se;
   CHECK_EQ(entry_blobs.size(), input_shapes.size())
       << "Size mismatch between entry blobs and input shapes.";
+  const int device_ordinal = compile_ctx.device_ordinal();
 
   xla::LocalClient *client = compile_ctx.client();
-
-  // TODO(hjchdn2) Implicit device ordinal from our own GpuExecutor
-  int device_ordinal = client->default_device_ordinal();
-#ifdef WITH_CUDA
-  cudaGetDevice(&device_ordinal);
-#endif
+  // Reset backend's cuda stream
+  OF_CHECK_AND_ASSIGN(auto stream,
+                      client->mutable_backend()->BorrowStream(device_ordinal));
+  mola::SwapStreamHandle<device_type>(stream.get(), compile_ctx.stream());
 
   // Translate input blobs to xla ShapedBuffer suitable running the executable
   int argument_size = input_shapes.size();
@@ -92,13 +92,13 @@ void XlaLaunchKernel<device_type, T>::SyncRunExecutable(
   }
 
   xla::ExecutableRunOptions run_options;
-  run_options.set_stream(nullptr);
-  run_options.set_device_ordinal(device_ordinal);
+  run_options.set_stream(stream.get());
   run_options.set_allocator(compile_ctx.allocator());
   run_options.set_intra_op_thread_pool(compile_ctx.host_device());
   run_options.set_rng_seed(tensorflow::GetXLARandomSeed());
   OF_CHECK_AND_ASSIGN(auto run_result, executable->Run(arguments, run_options));
-  
+
+  mola::SwapStreamHandle<device_type>(stream.get(), compile_ctx.stream());
   // Result shape should be tuple
   CHECK(run_result.on_host_shape().IsTuple());
 
