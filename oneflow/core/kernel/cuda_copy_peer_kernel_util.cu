@@ -184,8 +184,8 @@ void CudaCopyPeerKernelUtil::CtxCreate(CudaCopyPeerCtx** ctx, int32_t dst_dev_id
                             sizeof(int32_t) * (*ctx)->num_block);
     NumaAwareCudaMallocHost((*ctx)->dst_dev_id, reinterpret_cast<void**>(&((*ctx)->send_cnt_ptr)),
                             sizeof(int32_t) * (*ctx)->num_block);
-    *((*ctx)->recv_cnt_ptr) = 0;
-    *((*ctx)->send_cnt_ptr) = 0;
+    memset((*ctx)->recv_cnt_ptr, 0, sizeof(int32_t) * (*ctx)->num_block);
+    memset((*ctx)->send_cnt_ptr, 0, sizeof(int32_t) * (*ctx)->num_block);
     (*ctx)->buf_cap = DEFAULT_CHUNK_BUF_CAP;
     NumaAwareCudaMallocHost((*ctx)->dst_dev_id, reinterpret_cast<void**>(&((*ctx)->buf_ptr)),
                             CHUNK_SIZE * (*ctx)->buf_cap * (*ctx)->num_block);
