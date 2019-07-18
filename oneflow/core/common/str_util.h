@@ -7,6 +7,10 @@
 
 namespace oneflow {
 
+inline std::string StrCat(const std::string& prefix, int64_t id) {
+  return prefix + std::to_string(id);
+}
+
 inline void StringReplace(std::string* str, char old_ch, char new_ch) {
   for (size_t i = 0; i < str->size(); ++i) {
     if (str->at(i) == old_ch) { str->at(i) = new_ch; }
