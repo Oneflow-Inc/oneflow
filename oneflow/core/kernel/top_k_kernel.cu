@@ -4,24 +4,29 @@
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.cuh"
+#include "oneflow/core/kernel/top_k_heap_selection.cuh"
 
 namespace oneflow {
 
 template<typename T>
-__global__ void ForwardGpuTopOne(const T* in, const int32_t instance_num,
-                                 const int32_t instance_size, int32_t* out) {
-  CUDA_1D_KERNEL_LOOP(i, instance_num) {
-    const T* values = in + i * instance_size;
-    T max_val = values[0];
-    int32_t max_idx = 0;
-    FOR_RANGE(int32_t, j, 1, instance_size) {
-      if (values[j] > max_val) {
-        max_val = values[j];
-        max_idx = j;
-      }
-    }
-    out[i] = max_idx;
+__global__ void HeapTopKKernel(const T* in, const int32_t instance_num, const int32_t instance_size,
+                               const int32_t k, const int32_t init_index, const T init_value,
+                               const int32_t* out) {
+  extern __shared__ char smem[];
+  auto* shared_entries = reinterpret_cast<Entry<T>*>(smem);
+
+  const T* input = in + blockIdx.x * instance_size;
+  auto heap = Heap<T>(shared_entries + threadIdx.x * k, k, init_index, init_value);
+
+  // Divide elements to be sorted into disjoint sets (# of sets == # of heaps).
+  // Each heap selects top_k entries from corresponding set
+  for (int32_t i = threadIdx.x; i < instance_size; i += blockDim.x) {
+    auto entry = Entry<T>(i, input[i]);
+    if (entry > heap[0]) { heap.ReplaceRoot(entry); }
   }
+
+  // Merge all heaps to a unified, sorted array
+  // TODO
 }
 
 template<typename T>
@@ -29,12 +34,25 @@ struct TopKKernelUtil<DeviceType::kGPU, T> {
   static void Forward(DeviceCtx* ctx, const T* in, const int32_t instance_num,
                       const int32_t instance_size, const int32_t k, const bool sorted,
                       int32_t* fw_buf, int32_t* out) {
-    // GPU version top_k op only support "k == 1" for now
-    if (k == 1) {
-      ForwardGpuTopOne<<<BlocksNum4ThreadsNum(instance_num), kCudaThreadsNumPerBlock, 0,
-                         ctx->cuda_stream()>>>(in, instance_num, instance_size, out);
+    CHECK(fw_buf == nullptr);
+    if (instance_size <= 1000 || k == instance_size || k >= 100) {
+      TODO();
     } else {
-      UNIMPLEMENTED();
+      // Use as many heaps as possible (# of heaps == # of threads in thread block).
+      // Limitation 1, max shared memory: 48KB
+      const int32_t heap_byte_size = k * sizeof(Entry<T>);
+      int32_t num_heap = kCudaMaxSharedMemoryByteSize / heap_byte_size;
+      CHECK_GT(num_heap, 0);
+      // Limitation 2: # of threads in a thread block
+      if (num_heap > kCudaThreadsNumPerBlock) { num_heap = kCudaThreadsNumPerBlock; }
+
+      // Calculate shared memory size in thread block
+      const int64_t smem_size = num_heap * heap_byte_size;
+      CHECK_LE(smem_size, kCudaMaxSharedMemoryByteSize);
+
+      HeapTopKKernel<T><<<instance_num, num_heap, smem_size, ctx->cuda_stream()>>>(
+          in, instance_num, instance_size, k, std::numeric_limits<int32_t>::max(),
+          std::numeric_limits<T>::lowest(), out);
     }
   }
 };
