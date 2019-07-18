@@ -73,8 +73,9 @@ CompilationContext::CompilationContext(const std::string &builder_name,
                       se::MultiPlatformManager::PlatformWithId(platform_id));
 
   client_ = ResourceMgr::GetOrCreateLocalClient(platform, intra_op_num_threads);
-  builder_ = std::make_shared<xla::XlaBuilder>(absl::StrCat("XlaBuilder_",
-                                               builder_name));
+  builder_ = std::make_shared<xla::XlaBuilder>(
+      absl::StrCat("XlaBuilder_", builder_name));
+
   allocator_ = ResourceMgr::GetOrCreateAllocator(platform);
   host_device_ = ResourceMgr::GetOrCreateEigenHostDevice();
   parallel_ctx_ = LocalParallelContext(device_ordinal_);

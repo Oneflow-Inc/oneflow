@@ -1,9 +1,9 @@
 #ifndef ONEFLOW_CORE_COMPILER_OF2XLA_XLA_ARGUMENT_H_
 #define ONEFLOW_CORE_COMPILER_OF2XLA_XLA_ARGUMENT_H_
 
-#include "absl/strings/str_cat.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/register/logical_blob_id.pb.h"
+#include "oneflow/core/compiler/of2xla/xla_utility.h"
 
 namespace oneflow {
 namespace mola {
@@ -32,34 +32,23 @@ class Argument {
   Shape shape() const { return blob_desc_.shape(); }
 
   std::string blob_name() const {
-    return absl::StrCat(blob_id_.op_name(), "/", blob_id_.blob_name());
+    return BlobName(blob_id_);
   }
 
   const LogicalBlobId &blob_id() const { return blob_id_; }
 
   const BlobDesc &blob_desc() const { return blob_desc_; }
 
- private:
-  friend inline bool operator<(const Argument &lhs, const Argument &rhs);
-  friend inline bool operator!=(const Argument &lhs, const Argument &rhs);
-  friend inline bool operator==(const Argument &lhs, const Argument &rhs);
+  bool operator==(const Argument &rhs) const {
+    return blob_id_ == rhs.blob_id_;
+  }
+
   friend struct std::hash<oneflow::mola::Argument>;
 
+ private:
   LogicalBlobId blob_id_;
   BlobDesc blob_desc_;
 };
-
-inline bool operator<(const Argument &lhs, const Argument &rhs) {
-  return lhs.blob_id_ < rhs.blob_id_;
-}
-
-inline bool operator!=(const Argument &lhs, const Argument &rhs) {
-  return lhs.blob_id_ != rhs.blob_id_;
-}
-
-inline bool operator==(const Argument &lhs, const Argument &rhs) {
-  return lhs.blob_id_ == rhs.blob_id_;
-}
 
 }  // namespace mola
 }  // namespace oneflow

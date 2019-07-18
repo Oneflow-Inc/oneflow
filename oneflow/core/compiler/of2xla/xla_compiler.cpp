@@ -17,11 +17,6 @@
 namespace oneflow {
 namespace mola {
 
-static XlaOpCompiler *CreateXlaOpCompiler(
-    const std::string &backend, const std::string &op_type) {
-  return XlaOpCompilerRegistry::Build(backend)[op_type]();
-}
-
 XlaCompiler::XlaCompiler(xla::LocalClient *client, xla::XlaBuilder *builder,
                          XlaGraph *graph, ParallelContext parallel_ctx,
                          const std::vector<Blob *> &entry_blobs,
@@ -60,7 +55,7 @@ void XlaCompiler::BuildComputation(
     const std::string &backend = node->backend();
     const std::string &op_type = node->op_type();
     // Create operator compiler
-    XlaOpCompiler *compiler = CreateXlaOpCompiler(backend, op_type);
+    auto compiler = CreateXlaOpCompiler(backend, op_type);
 
     // Setup input oprands from outputs of previous nodes
     auto input_oprands = entry_oprands;
@@ -72,6 +67,7 @@ void XlaCompiler::BuildComputation(
 
     // Setup XlaOpContext Param to build a XlaOpContext
     XlaOpContext::Param param;
+    param.backend = backend;
     param.inputs = std::move(input_oprands);
     param.op_conf = &node->proto_conf();
     param.builder = builder_;

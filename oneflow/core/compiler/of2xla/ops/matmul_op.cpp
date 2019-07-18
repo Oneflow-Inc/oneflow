@@ -9,6 +9,19 @@ namespace mola {
 class MatMulOp : public XlaOpCompiler {
  public:
   void Compile(XlaOpContext *ctx) override {
+    Shape a_shape = ctx->InputShape("a");
+    Shape b_shape = ctx->InputShape("b");
+    CHECK_GE(a_shape.NumAxes(), 2);
+    CHECK_EQ(a_shape.NumAxes(), b_shape.NumAxes());
+
+    if (a_shape.NumAxes() > 2) {
+      auto batch_matmul_compiler =
+          CreateXlaOpCompiler(ctx->backend(), "BatchMatMul");
+
+      batch_matmul_compiler->Compile(ctx);
+      return;
+    }
+
     bool transpose_a = ctx->GetAttr<bool>("transpose_a");
     bool transpose_b = ctx->GetAttr<bool>("transpose_b");
 

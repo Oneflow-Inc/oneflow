@@ -35,10 +35,14 @@ class JobBuilder final {
   OperatorConf *MutableOpConf(const std::string &op_name);
   const OperatorConf &OpConf(const std::string &op_name);
 
-  SbpSignature* MutableOpSbpSignature(const std::string &op_name);
+  SbpSignature *MutableOpSbpSignature(const std::string &op_name);
   const SbpSignature& OpSbpSignature(const std::string &op_name) const;
   void AddOpSbpSignature(const std::string &op_name,
                          const SbpSignature &sbp_signature);
+
+  const ParallelConf &OpParallelConf(const std::string &op_name) const;
+  ParallelConf *MutableOpParallelConf(const std::string &op_name);
+  void AddOpParallelConf(const std::string &op_name, const ParallelConf &parallel_conf);
 
   const HashSet<LogicalBlobId> &batch_dim_lbis() const { return batch_dim_lbis_; }
 

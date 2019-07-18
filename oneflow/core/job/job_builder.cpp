@@ -161,7 +161,7 @@ SbpSignature* JobBuilder::MutableOpSbpSignature(const std::string &op_name) {
 }
 
 const SbpSignature& JobBuilder::OpSbpSignature(
-                                    const std::string &op_name) const {
+    const std::string &op_name) const {
   const auto &it = op_name2sbp_signature_conf_.find(op_name);
   CHECK(it != op_name2sbp_signature_conf_.end());
   return *(it->second);
@@ -169,11 +169,45 @@ const SbpSignature& JobBuilder::OpSbpSignature(
 
 void JobBuilder::AddOpSbpSignature(const std::string &op_name,
                                    const SbpSignature &sbp_signature) {
+  const auto &it = op_name2sbp_signature_conf_.find(op_name);
+  if (it != op_name2sbp_signature_conf_.end()) {
+    *(it->second) = sbp_signature;
+    return;
+  }
+
   auto *op_name2sbp_signature_conf =
       job_->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf();
   (*op_name2sbp_signature_conf)[op_name] = sbp_signature;
   op_name2sbp_signature_conf_.emplace(op_name,
                                       &(*op_name2sbp_signature_conf)[op_name]);
+}
+
+const ParallelConf &JobBuilder::OpParallelConf(
+    const std::string &op_name) const {
+  const auto &it = op_name2parallel_conf_.find(op_name);
+  CHECK(it != op_name2parallel_conf_.end());
+  return *(it->second);
+}
+
+ParallelConf *JobBuilder::MutableOpParallelConf(const std::string &op_name) {
+  const auto &it = op_name2parallel_conf_.find(op_name);
+  CHECK(it != op_name2parallel_conf_.end());
+  return it->second;
+}
+
+void JobBuilder::AddOpParallelConf(const std::string &op_name,
+                                   const ParallelConf &parallel_conf) {
+  const auto &it = op_name2parallel_conf_.find(op_name);
+  if (it != op_name2parallel_conf_.end()) {
+    *(it->second) = parallel_conf;
+    return;
+  }
+
+  PlacementGroup *group = job_->mutable_placement()->add_placement_group();
+  group->mutable_op_set()->add_op_name(op_name);
+  *(group->mutable_parallel_conf()) = parallel_conf;
+  // update `op_name2parallel_conf_`
+  op_name2parallel_conf_.emplace(op_name, group->mutable_parallel_conf());
 }
 
 }  // namespace oneflow

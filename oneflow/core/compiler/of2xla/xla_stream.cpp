@@ -1,3 +1,4 @@
+#include "tensorflow/compiler/jit/xla_lib/swap_gpu_stream.h"
 #include "oneflow/core/compiler/of2xla/xla_stream.h"
 
 namespace oneflow {
@@ -19,9 +20,6 @@ void SwapStreamHandle<DeviceType::kGPU>(se::Stream *stream,
                                         void **cuda_stream) {
   xla::SwapGpuStreamHandle(stream, cuda_stream);
 }
-
-//template void SwapStreamHandle<DeviceType::kCPU>;
-//template void SwapStreamHandle<DeviceType::kGPU>;
 
 }  // namespace mola
 }  // namespace oneflow

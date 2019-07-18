@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_COMPILER_OF2XLA_XLA_STREAM_H_
 
 #include "oneflow/core/job/resource.pb.h"  // DeviceType
-#include "tensorflow/compiler/jit/xla_lib/swap_gpu_stream.h"
+#include "tensorflow/stream_executor/stream.h"
 
 namespace oneflow {
 namespace mola {

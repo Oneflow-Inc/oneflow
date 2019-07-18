@@ -53,7 +53,7 @@ void XlaLaunchKernel<device_type, T>::BuildLocalExecutable(
 }
 
 template <DeviceType device_type, typename T>
-void XlaLaunchKernel<device_type, T>::SyncRunExecutable(
+void XlaLaunchKernel<device_type, T>::RunExecutable(
     const mola::CompilationContext &compile_ctx,
     xla::LocalExecutable *executable,
     const std::vector<Blob *> &entry_blobs,
@@ -65,7 +65,10 @@ void XlaLaunchKernel<device_type, T>::SyncRunExecutable(
   const int device_ordinal = compile_ctx.device_ordinal();
 
   xla::LocalClient *client = compile_ctx.client();
-  // Reset backend's cuda stream
+
+  // Swap cuda stream between the backend stream and device context, so XLA
+  // could launch kernel on the specified cuda stream of device context. Note
+  // that it should do nothing for CPU mode in `SwapStreamHandle`
   OF_CHECK_AND_ASSIGN(auto stream,
                       client->mutable_backend()->BorrowStream(device_ordinal));
   mola::SwapStreamHandle<device_type>(stream.get(), compile_ctx.stream());
@@ -79,7 +82,7 @@ void XlaLaunchKernel<device_type, T>::SyncRunExecutable(
     const xla::Shape on_device_shape =
         client->backend().transfer_manager()->HostShapeToDeviceShape(shape);
     CHECK(!on_device_shape.IsTuple()) << "Tuple shape is not allowed for input "
-                                         "arguments in SyncRunExecutable.";
+                                         "arguments in RunExecutable.";
     size_t data_size = entry_blobs[i]->ByteSizeOfDataContentField();
     const char *data_ptr = entry_blobs[i]->dptr<char>();
     se::DeviceMemoryBase memory_base =
@@ -98,6 +101,7 @@ void XlaLaunchKernel<device_type, T>::SyncRunExecutable(
   run_options.set_rng_seed(tensorflow::GetXLARandomSeed());
   OF_CHECK_AND_ASSIGN(auto run_result, executable->Run(arguments, run_options));
 
+  // Swap again to let the subsequent cuda kernels use the original stream
   mola::SwapStreamHandle<device_type>(stream.get(), compile_ctx.stream());
   // Result shape should be tuple
   CHECK(run_result.on_host_shape().IsTuple());
@@ -141,11 +145,12 @@ void XlaLaunchKernel<device_type, T>::ForwardDataContent(
                        return_blob_names, &compile_result);
 
   CHECK(compile_result) << "Executable built failed.";
-
   auto *executable = compile_result->executable.get();
-  SyncRunExecutable(compile_ctx, executable, entry_blobs,
-                    compile_result->xla_input_shapes, output_blobs,
-                    compile_result->xla_output_shape);
+
+  // Run executable in synchronous mode for CPU, or asynchronous for GPU.
+  RunExecutable(compile_ctx, executable, entry_blobs,
+                compile_result->xla_input_shapes, output_blobs,
+                compile_result->xla_output_shape);
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kXlaLaunchConf, XlaLaunchKernel,

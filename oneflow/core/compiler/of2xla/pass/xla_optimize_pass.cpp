@@ -31,8 +31,8 @@ XlaOptimizePass *XlaOptimizePass::Create(const std::string &pass_type,
 }
 
 void RunOptimizePass(const std::string &pass, OptimizeOptions &options) {
-  mola::XlaOptimizePass *optimize_pass =
-          mola::XlaOptimizePass::Create(pass, options);
+  auto optimize_pass = std::shared_ptr<mola::XlaOptimizePass>(
+      mola::XlaOptimizePass::Create(pass, options));
   optimize_pass->Run();
 }
 

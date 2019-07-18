@@ -4,12 +4,13 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <memory>
 #include "glog/logging.h"
+
+#include "oneflow/core/compiler/of2xla/xla_op_compiler.h"
 
 namespace oneflow {
 namespace mola {
-
-class XlaOpCompiler;
 
 class XlaOpCompilerRegistry {
  public:
@@ -73,6 +74,11 @@ class XlaOpCompilerRegistry {
     return (*factory)[backend];
   }
 
+  static XlaOpCompiler *Build(const std::string &backend,
+                              const std::string &type) {
+    return Build(backend)[type]();
+  }
+
   static bool IsRegistered(const std::string &backend, const std::string &type) {
     bool registered = false;
     XlaBackendFactory *factory = XlaOpCompilerRegistry::Factory();
@@ -117,6 +123,12 @@ class XlaOpCompilerRegistrar {
 inline bool IsOpCompilerRegistered(const std::string &backend,
                                    const std::string &op_type) {
   return XlaOpCompilerRegistry::IsRegistered(backend, op_type);
+}
+
+inline std::shared_ptr<XlaOpCompiler> CreateXlaOpCompiler(
+    const std::string &backend, const std::string &op_type) {
+  return std::shared_ptr<XlaOpCompiler>(
+      XlaOpCompilerRegistry::Build(backend, op_type));
 }
 
 }  // namespace mola

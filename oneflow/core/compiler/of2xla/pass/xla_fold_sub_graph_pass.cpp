@@ -1,5 +1,6 @@
 #include <unordered_map>
 #include <unordered_set>
+#include "absl/strings/str_cat.h"
 #include "oneflow/core/compiler/of2xla/xla_node.h"
 #include "oneflow/core/compiler/of2xla/xla_graph.h"
 #include "oneflow/core/compiler/of2xla/xla_utility.h"

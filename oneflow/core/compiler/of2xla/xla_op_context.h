@@ -39,6 +39,7 @@ class XlaOpContext {
   typedef std::unordered_map<Argument, XlaOprand> XlaOprands;
 
   struct Param {
+    std::string backend;
     // Input oprands
     XlaOprands inputs;
     // Config proto related to the operator
@@ -51,6 +52,8 @@ class XlaOpContext {
   explicit XlaOpContext(const XlaOpContext::Param &param) : param_(param) {}
 
   ~XlaOpContext() = default;
+
+  const std::string &backend() const { return param_.backend; }
 
   // Return input named `name` as XlaOp
   xla::XlaOp Input(const std::string &name);
