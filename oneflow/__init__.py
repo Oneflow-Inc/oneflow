@@ -16,5 +16,5 @@ del x
 
 del absolute_import
 del python
-del core
+#del core
 del dtype

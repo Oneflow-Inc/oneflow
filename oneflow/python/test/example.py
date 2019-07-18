@@ -13,9 +13,7 @@ config.gpu_device_num(1)
 config.grpc_use_no_signal()
 
 with flow.Session(jobs, config) as sess:
-  sess.run(DemoJob, np.ones((10,), dtype=np.float32))
-  print "good"
-
-#job_set = flow.Session(jobs, config).job_set_
-#from google.protobuf import text_format
-#print text_format.MessageToString(job_set)
+  ndarray = sess.run(DemoJob, np.ones((10,), dtype=np.float32) * 10).get()
+  print ndarray
+  ndarray = sess.run(DemoJob, np.zeros((10,), dtype=np.float32)).get()
+  print ndarray

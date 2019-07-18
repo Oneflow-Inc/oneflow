@@ -94,7 +94,7 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
 #endif
   const JobDesc& job_desc = GlobalJobDesc();
   if (need_job_complete) { JobCompleter().Complete(job); }
-  TeePersistentLogStream::Create("optimized_job")->Write(*job);
+  TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))->Write(*job);
   Global<OpGraph>::New(*job);
   Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_op_graph.dot");
   auto logical_gph = std::make_unique<LogicalGraph>(*job);
