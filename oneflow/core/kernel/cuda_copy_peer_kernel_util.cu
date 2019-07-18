@@ -142,8 +142,6 @@ __launch_bounds__(NUM_THREAD) __global__
   }
 }
 
-__global__ void Null() {}
-
 }  // namespace
 
 struct CudaCopyPeerCtx {
@@ -151,6 +149,7 @@ struct CudaCopyPeerCtx {
   int32_t src_dev_id;
   cudaStream_t recv_stream;
   cudaStream_t send_stream;
+  cudaEvent_t sync_event;
   int32_t num_block;
   int32_t* recv_cnt_ptr;
   int32_t* send_cnt_ptr;
@@ -179,6 +178,10 @@ void CudaCopyPeerKernelUtil::CtxCreate(CudaCopyPeerCtx** ctx, int32_t dst_dev_id
   });
   if (!(*ctx)->p2p_enabled) {
     WithCudaDevice(src_dev_id, [ctx]() { CudaCheck(cudaStreamCreate(&((*ctx)->send_stream))); });
+    WithCudaDevice(dst_dev_id, [ctx]() {
+      CudaCheck(cudaEventCreateWithFlags(&((*ctx)->sync_event),
+                                         cudaEventBlockingSync | cudaEventDisableTiming));
+    });
     (*ctx)->num_block = MAX_NUM_BLOCK;
     NumaAwareCudaMallocHost((*ctx)->dst_dev_id, reinterpret_cast<void**>(&((*ctx)->recv_cnt_ptr)),
                             sizeof(int32_t) * (*ctx)->num_block);
@@ -199,6 +202,7 @@ void CudaCopyPeerKernelUtil::CtxDestroy(CudaCopyPeerCtx* ctx) {
       CudaCheck(cudaStreamSynchronize(ctx->send_stream));
       CudaCheck(cudaStreamDestroy(ctx->send_stream));
     });
+    WithCudaDevice(ctx->dst_dev_id, [ctx]() { CudaCheck(cudaEventDestroy(ctx->sync_event)); });
     CudaCheck(cudaFreeHost(ctx->recv_cnt_ptr));
     CudaCheck(cudaFreeHost(ctx->send_cnt_ptr));
     CudaCheck(cudaFreeHost(ctx->buf_ptr));
@@ -214,13 +218,15 @@ void CudaCopyPeerKernelUtil::CopyAsync(CudaCopyPeerCtx* ctx, void* dst, const vo
     CHECK_EQ(size % PACK_SIZE, 0);
     CHECK_EQ(reinterpret_cast<std::uintptr_t>(dst) % PACK_ALIGN, 0);
     CHECK_EQ(reinterpret_cast<std::uintptr_t>(src) % PACK_ALIGN, 0);
-    WithCudaDevice(ctx->src_dev_id, [&]() {
-      Copy<<<ctx->num_block, NUM_THREAD, 0, ctx->send_stream>>>(
-          dst, src, size, ctx->buf_ptr, ctx->buf_cap, ctx->send_cnt_ptr, ctx->recv_cnt_ptr, true);
-    });
     WithCudaDevice(ctx->dst_dev_id, [&]() {
+      CudaCheck(cudaEventRecord(ctx->sync_event, ctx->recv_stream));
       Copy<<<ctx->num_block, NUM_THREAD, 0, ctx->recv_stream>>>(
           dst, src, size, ctx->buf_ptr, ctx->buf_cap, ctx->send_cnt_ptr, ctx->recv_cnt_ptr, false);
+    });
+    WithCudaDevice(ctx->src_dev_id, [&]() {
+      CudaCheck(cudaStreamWaitEvent(ctx->send_stream, ctx->sync_event, 0));
+      Copy<<<ctx->num_block, NUM_THREAD, 0, ctx->send_stream>>>(
+          dst, src, size, ctx->buf_ptr, ctx->buf_cap, ctx->send_cnt_ptr, ctx->recv_cnt_ptr, true);
     });
   }
 }
