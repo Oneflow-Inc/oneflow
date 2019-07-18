@@ -34,6 +34,8 @@ def MakeJobInstance(*arg, **kw):
         pass
     if 'finish_cb' not in kw or kw['finish_cb'] is None: kw['finish_cb'] = _DoNothing
     job_instance = JobInstance(*arg, **kw)
+    # python object lifetime is a headache
+    # _flying_job_instance prevents job_instance earlier destructation
     global _flying_job_instance
     _flying_job_instance[id(job_instance)] = job_instance
     return job_instance
@@ -93,7 +95,6 @@ class JobInstance(oneflow_internal.ForeignJobInstance):
             global _flying_job_instance
             del _flying_job_instance[id(self)]
 
-# python object lifetime is a headache
-# _flying_job_instance prevents job_instance earlier destructation
+# span python object lifetime
 _flying_job_instance = {}
 
