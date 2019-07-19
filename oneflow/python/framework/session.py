@@ -28,7 +28,7 @@ class Session(object):
         self.running_job_cnt_ += 1
         self.cond_var_.notify()
         self.cond_var_.release()
-        def RunCallback(of_blob):
+        def RunCallback():
             self.cond_var_.acquire()
             self.running_job_cnt_ -= 1
             self.cond_var_.notify()
