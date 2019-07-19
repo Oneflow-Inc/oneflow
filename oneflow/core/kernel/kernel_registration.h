@@ -25,7 +25,7 @@ HashMap<KeyT, CreateFn>& KernelRegistry() {
 }
 
 template<OperatorConf::OpTypeCase op_type, typename KeyT>
-class KernelRegistrar {
+class KernelRegistrar final {
  public:
   KernelRegistrar(const KeyT& key, CreateFn fn) {
     HashMap<KeyT, CreateFn>& creator_fns = KernelRegistry<op_type, KeyT>();
@@ -33,15 +33,45 @@ class KernelRegistrar {
   }
 };
 
+namespace builder {
+
+class RegKeyBuilder {
+ public:
+  RegKeyBuilder() = default;
+  virtual ~RegKeyBuilder() = default;
+
+  std::string Build() const;
+
+  RegKeyBuilder& Device(DeviceType device_type);
+
+  template<typename DType>
+  RegKeyBuilder& Type() {
+    return Type(GetDataType<DType>::value);
+  }
+
+  RegKeyBuilder& Type(DataType dtype);
+
+ private:
+  std::unique_ptr<DeviceType> device_;
+  std::unique_ptr<DataType> dtype_;
+};
+
+class Key final : public RegKeyBuilder {
+ public:
+  explicit Key() = default;
+};
+
+}  // namespace builder
+
 namespace helper {
 
 template<typename HelperClass, typename... Args>
-struct Assurer4RunOnlyOnce {
+struct Assurer4RunOnlyOnce final {
   Assurer4RunOnlyOnce(Args&&... args) { static HelperClass x(std::forward<Args>(args)...); }
 };
 
 template<OperatorConf::OpTypeCase op_type>
-class RegisterHelper4DeviceAndDType {
+class RegisterHelper4DeviceAndDType final {
  public:
   static Kernel* CreateKernel(const KernelConf& kernel_conf) {
     const auto& registry = KernelRegistry<op_type, std::string>();
@@ -58,20 +88,20 @@ class RegisterHelper4DeviceAndDType {
 
 }  // namespace kernel_registration
 
-#define REGISTER_KERNEL_BASE(op_type_case, KeyT, RegisterHelperT, key, ...)                       \
-  namespace {                                                                                     \
-  static kernel_registration::helper::Assurer4RunOnlyOnce<RegisterHelperT<op_type_case>>          \
-      OF_PP_CAT(g_assurer, __LINE__);                                                             \
-  static kernel_registration::KernelRegistrar<op_type_case, KeyT> OF_PP_CAT(g_registrar,          \
-                                                                            __LINE__)(key, []() { \
-    return new __VA_ARGS__();                                                                     \
-  });                                                                                             \
+#define REGISTER_KERNEL_BASE(op_type, KeyT, RegisterHelperT, key, ...)                         \
+  namespace {                                                                                  \
+  static kernel_registration::helper::Assurer4RunOnlyOnce<RegisterHelperT<op_type>> OF_PP_CAT( \
+      g_assurer, __LINE__);                                                                    \
+  static kernel_registration::KernelRegistrar<op_type, KeyT> OF_PP_CAT(g_registrar,            \
+                                                                       __LINE__)(key, []() {   \
+    return new __VA_ARGS__();                                                                  \
+  });                                                                                          \
   }  // namespace
 
-#define REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type_case, device_type, dtype, ...) \
-  REGISTER_KERNEL_BASE(op_type_case, std::string,                                    \
-                       kernel_registration::helper::RegisterHelper4DeviceAndDType,   \
-                       GetHashKey(device_type, GetDataType<dtype>::value), __VA_ARGS__)
+#define REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, reg_key_builder, ...)       \
+  REGISTER_KERNEL_BASE(op_type, std::string,                                       \
+                       kernel_registration::helper::RegisterHelper4DeviceAndDType, \
+                       kernel_registration::builder::reg_key_builder.Build(), __VA_ARGS__)
 
 }  // namespace oneflow
 
