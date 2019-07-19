@@ -5,7 +5,7 @@ namespace oneflow {
 void AssignOp::InitFromOpConf() {
   CHECK(op_conf().has_assign_conf());
   EnrollInputBn("x");
-  EnrollOutputBn("y")->set_mutable_inplace_ibn("x");
+  EnrollInputBn("y", false)->set_is_mutable(true);
 }
 
 void AssignOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
