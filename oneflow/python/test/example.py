@@ -10,7 +10,6 @@ def DemoJob(x = flow.val((10,))):
 
 config = flow.ConfigProtoBuilder()
 config.gpu_device_num(1)
-config.grpc_use_no_signal()
 
 with flow.Session(jobs, config) as sess:
   ndarray = sess.run(DemoJob, np.ones((10,), dtype=np.float32) * 10).get()
