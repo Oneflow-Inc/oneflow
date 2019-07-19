@@ -43,12 +43,6 @@ __forceinline__ __device__ void FetchStore(void* dst, const void* src) {
   FetchStore(reinterpret_cast<ulong2*>(dst), reinterpret_cast<const ulong2*>(src));
 }
 
-__forceinline__ __device__ void NamedBarrierSync(int name, int n) {
-  // clang-format off
-  asm volatile("bar.sync %0, %1;" : : "r"(name), "r"(n) : "memory");
-  // clang-format on
-}
-
 __forceinline__ __device__ void CopyChunk(void* dst, const void* src, const int32_t thread_id) {
   const int32_t warp_id = thread_id / NUM_THREAD_PER_WARP;
   const int32_t lane_id = thread_id % NUM_THREAD_PER_WARP;
@@ -95,7 +89,7 @@ __forceinline__ __device__ void Send(const void* src, const int32_t size, const 
       if (thread_id == 0) {
         while (chunk - *recv_cnt_ptr >= buf_cap) {}
       }
-      NamedBarrierSync(1, NUM_COPY_THREAD);
+      __syncthreads();
       void* cur_buf_ptr = (unsigned char*)buf_ptr + (chunk % buf_cap) * CHUNK_SIZE;
       if (remaining >= CHUNK_SIZE) {
         CopyChunk(cur_buf_ptr, src, thread_id);
@@ -104,9 +98,10 @@ __forceinline__ __device__ void Send(const void* src, const int32_t size, const 
       }
       remaining -= CHUNK_SIZE;
       src = (const unsigned char*)(src) + CHUNK_SIZE;
-      NamedBarrierSync(2, NUM_THREAD);
+      __syncthreads();
     } else {
-      NamedBarrierSync(2, NUM_THREAD);
+      __syncthreads();
+      __syncthreads();
       __threadfence_system();
       *send_cnt_ptr = chunk + 1;
     }
@@ -124,7 +119,7 @@ __forceinline__ __device__ void Recv(void* dst, const int32_t size, const int32_
       if (thread_id == 0) {
         while (*send_cnt_ptr <= chunk) {}
       }
-      NamedBarrierSync(1, NUM_COPY_THREAD);
+      __syncthreads();
       void* cur_buf_ptr = (unsigned char*)buf_ptr + (chunk % buf_cap) * CHUNK_SIZE;
       if (remaining >= CHUNK_SIZE) {
         CopyChunk(dst, cur_buf_ptr, thread_id);
@@ -133,10 +128,11 @@ __forceinline__ __device__ void Recv(void* dst, const int32_t size, const int32_
       }
       remaining -= CHUNK_SIZE;
       dst = (unsigned char*)(dst) + CHUNK_SIZE;
-      NamedBarrierSync(2, NUM_THREAD);
+      __syncthreads();
     } else {
-      NamedBarrierSync(2, NUM_THREAD);
-      if (thread_id == 0) { *recv_cnt_ptr = chunk + 1; }
+      __syncthreads();
+      __syncthreads();
+      *recv_cnt_ptr = chunk + 1;
     }
   }
   __syncthreads();
