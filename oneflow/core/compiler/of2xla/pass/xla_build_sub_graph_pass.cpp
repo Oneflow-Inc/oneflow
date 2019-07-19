@@ -15,9 +15,9 @@ extern const std::string _XlaLaunchPrefix = "_xla_launch_";
 extern const std::string _XlaInArgumentPrefix = "_input_argument_";
 extern const std::string _XlaOutArgumentPrefix = "_output_argument_";
 
-class FoldSubGraphPass : public XlaOptimizePass {
+class BuildSubGraphPass : public XlaOptimizePass {
  public:
-  FoldSubGraphPass(const OptimizeOptions &options)
+  BuildSubGraphPass(const OptimizeOptions &options)
       : XlaOptimizePass(options) {}
 
   void Run() override;
@@ -31,36 +31,25 @@ class FoldSubGraphPass : public XlaOptimizePass {
     XlaNode *node, XlaNode *n, XlaGraph *sub_graph,
     std::unordered_map<int64_t, XlaNode *> *sub_graph_nodes);
 
+  void CreateLaunchNodes(XlaGraph *graph,
+                         std::unordered_map<int64_t, XlaNode *> *launch_nodes);
+
   void DivideArgumentNodes(XlaGraph *sub_graph);
 };
 
-void FoldSubGraphPass::Run() {
+void BuildSubGraphPass::Run() {
   XlaGraph *graph = this->optimize_options_.graph;
-
+  // Create xla launch nodes
   std::unordered_map<int64_t, XlaNode *> launch_nodes;
-  std::unordered_map<int64_t, std::unordered_set<XlaNode *>> folded_nodes;
+  CreateLaunchNodes(graph, &launch_nodes);
 
-  // Create xla launch nodes, and redirect all outer inputs and outputs of
-  // the launch node
+  // Redirect all outer edges of the launch nodes
+  std::unordered_map<int64_t, std::unordered_set<XlaNode *>> folded_nodes;
   for (XlaNode *node : graph->Nodes()) {
     int64_t cluster_id = node->cluster_id();
-    if (cluster_id != -1) {
-      XlaNode *launch_node = nullptr;
-      if (launch_nodes.count(cluster_id) == 0) {
-        launch_node = graph->AddNode();
-        launch_nodes.emplace(cluster_id, launch_node);
-      } else {
-        launch_node = launch_nodes[cluster_id];
-      }
-
-      launch_node->set_cluster_id(cluster_id);
-      launch_node->set_op_type(_XlaLaunchOpType);
-      launch_node->set_backend(node->backend());
-      // Assign the `op_name_` of the node, and it will be used to find the
-      // `XlaLaunchConf` when fixing launch blob name
-      launch_node->set_op_name(absl::StrCat(_XlaLaunchPrefix, cluster_id));
-
-      // Redirect inputs and outputs of the launch node
+    if (cluster_id != -1 && node->op_type() != _XlaLaunchOpType) {
+      XlaNode *launch_node = launch_nodes[cluster_id];
+      // Redirect input edges
       for (XlaEdge *e : node->in_edges()) {
         XlaNode *start = e->start();
         if (start->cluster_id() != cluster_id) {
@@ -68,6 +57,7 @@ void FoldSubGraphPass::Run() {
           launch_node->AddInEdge(e);
         }
       }
+      // Redirect output edges
       for (XlaEdge *e : node->out_edges()) {
         XlaNode *end = e->end();
         if (end->cluster_id() != cluster_id) {
@@ -106,7 +96,32 @@ void FoldSubGraphPass::Run() {
   }
 }
 
-void FoldSubGraphPass::DivideArgumentNodes(XlaGraph *sub_graph) {
+void BuildSubGraphPass::CreateLaunchNodes(
+    XlaGraph *graph, std::unordered_map<int64_t, XlaNode *> *launch_nodes) {
+  std::unordered_map<int64_t, std::string> cluster_ids;
+  for (XlaNode *node : graph->Nodes()) {
+    int64_t cluster_id = node->cluster_id();
+    if (cluster_id != -1) {
+      cluster_ids.emplace(cluster_id, node->backend());
+    }
+  }
+  
+  for (const auto &pair : cluster_ids) {
+    int64_t cluster_id = pair.first;
+    XlaNode *launch_node = graph->AddNode();
+    launch_node->set_cluster_id(cluster_id);
+    launch_node->set_backend(pair.second);
+    launch_node->set_op_type(_XlaLaunchOpType);
+
+    // Assign the `op_name_` of the node, and it will be used to find the
+    // `XlaLaunchConf` when fixing launch blob name
+    launch_node->set_op_name(absl::StrCat(_XlaLaunchPrefix, cluster_id));
+
+    launch_nodes->emplace(cluster_id, launch_node);
+  }
+}
+
+void BuildSubGraphPass::DivideArgumentNodes(XlaGraph *sub_graph) {
   // Find all argument nodes
   std::vector<XlaNode *> argument_nodes;
   for (XlaNode *node : sub_graph->Nodes()) {
@@ -160,7 +175,7 @@ void FoldSubGraphPass::DivideArgumentNodes(XlaGraph *sub_graph) {
   }
 }
 
-void FoldSubGraphPass::RebuildSubgraphInputs(
+void BuildSubGraphPass::RebuildSubgraphInputs(
     XlaNode *node, XlaNode *n, XlaGraph *sub_graph,
     std::unordered_map<int64_t, XlaNode *> *sub_graph_nodes) {
   for (XlaEdge *e : n->in_edges()) {
@@ -185,7 +200,7 @@ void FoldSubGraphPass::RebuildSubgraphInputs(
   }
 }
 
-void FoldSubGraphPass::RebuildSubgraphOutputs(
+void BuildSubGraphPass::RebuildSubgraphOutputs(
     XlaNode *node, XlaNode *n, XlaGraph *sub_graph,
     std::unordered_map<int64_t, XlaNode *> *sub_graph_nodes) {
   for (XlaEdge *e : n->out_edges()) {
@@ -210,7 +225,7 @@ void FoldSubGraphPass::RebuildSubgraphOutputs(
   }
 }
 
-REGISTER_OPTIMIZE_PASS(FoldSubGraph, FoldSubGraphPass);
+REGISTER_OPTIMIZE_PASS(BuildSubGraph, BuildSubGraphPass);
 
 }  // namespace mola
 }  // namespace oneflow

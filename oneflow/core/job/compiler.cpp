@@ -137,7 +137,7 @@ Plan Compiler::DoCompile() {
     options.minimum_nodes_in_cluster = 1;
 
     mola::RunOptimizePass("MarkClusterId", options);
-    mola::RunOptimizePass("FoldSubGraph", options);
+    mola::RunOptimizePass("BuildSubGraph", options);
     // Rebuild Job
     RebuildXlaCompiledJob(graph, &job);
 

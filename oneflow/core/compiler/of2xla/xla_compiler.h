@@ -50,11 +50,12 @@ class XlaCompiler {
       const std::unordered_map<std::string, Argument> &arguments,
       XlaOpContext::Param *param);
 
-  XlaGraph *graph_;
-
+ private:
   xla::LocalClient *client_;
 
   xla::XlaBuilder *builder_;
+
+  XlaGraph *graph_;
 
   std::vector<std::string> entry_names_;
   std::vector<std::string> return_names_;

@@ -31,11 +31,16 @@ JobBuilder::JobBuilder(Job* job) : job_(job) {
           op_name2parallel_conf_.emplace(op_name, placemnt_group->mutable_parallel_conf()).second);
     }
   }
-  for (auto &pair : *(job->mutable_sbp_conf()->mutable_op_name2sbp_signature_conf())) {
+  auto *sbp_conf = job->mutable_sbp_conf();
+  for (auto &pair : *(sbp_conf->mutable_op_name2sbp_signature_conf())) {
     op_name2sbp_signature_conf_.emplace(pair.first, &pair.second);
   }
   for (const auto &lbi : job->helper().batch_dim_lbis()) {
     batch_dim_lbis_.insert(lbi);
+  }
+  auto *helper_conf = job->mutable_helper();
+  for (auto &pair : *(helper_conf->mutable_op_name2op_time_shape())) {
+    op_name2time_shapes_.emplace(pair.first, &pair.second);
   }
 }
 
@@ -81,6 +86,7 @@ void JobBuilder::RemoveOp(const std::string &op_name) {
       *(job_->mutable_net()->add_op()) = op_conf;
     }
   }
+  // Update shared model group
   for (const OpNameSet &op_set : net.shared_model_group()) {
     OpNameSet s;
     for (const std::string &name : op_set.op_name()) {
@@ -97,6 +103,12 @@ void JobBuilder::RemoveOp(const std::string &op_name) {
                        ->mutable_op_name2sbp_signature_conf();
   if (sbp_conf->count(op_name) > 0) {
     sbp_conf->erase(op_name);
+  }
+  // Update time shape
+  auto *time_shape_conf = job_->mutable_helper()
+                              ->mutable_op_name2op_time_shape();
+  if (time_shape_conf->count(op_name) > 0) {
+    time_shape_conf->erase(op_name);
   }
   // Update builder
   JobBuilder builder(job_);
@@ -150,25 +162,25 @@ OperatorConf *JobBuilder::MutableOpConf(const std::string &op_name) {
   return it->second;
 }
 
-const OperatorConf &JobBuilder::OpConf(const std::string &op_name) {
+const OperatorConf &JobBuilder::GetOpConf(const std::string &op_name) {
   return *const_cast<const OperatorConf *>(MutableOpConf(op_name));
 }
 
-SbpSignature* JobBuilder::MutableOpSbpSignature(const std::string &op_name) {
+SbpSignature* JobBuilder::MutableSbpSignature(const std::string &op_name) {
   const auto &it = op_name2sbp_signature_conf_.find(op_name);
   CHECK(it != op_name2sbp_signature_conf_.end());
   return it->second; 
 }
 
-const SbpSignature& JobBuilder::OpSbpSignature(
+const SbpSignature& JobBuilder::GetSbpSignature(
     const std::string &op_name) const {
   const auto &it = op_name2sbp_signature_conf_.find(op_name);
   CHECK(it != op_name2sbp_signature_conf_.end());
   return *(it->second);
 }
 
-void JobBuilder::AddOpSbpSignature(const std::string &op_name,
-                                   const SbpSignature &sbp_signature) {
+void JobBuilder::AddSbpSignature(const std::string &op_name,
+                                 const SbpSignature &sbp_signature) {
   const auto &it = op_name2sbp_signature_conf_.find(op_name);
   if (it != op_name2sbp_signature_conf_.end()) {
     *(it->second) = sbp_signature;
@@ -182,21 +194,21 @@ void JobBuilder::AddOpSbpSignature(const std::string &op_name,
                                       &(*op_name2sbp_signature_conf)[op_name]);
 }
 
-const ParallelConf &JobBuilder::OpParallelConf(
+const ParallelConf &JobBuilder::GetParallelConf(
     const std::string &op_name) const {
   const auto &it = op_name2parallel_conf_.find(op_name);
   CHECK(it != op_name2parallel_conf_.end());
   return *(it->second);
 }
 
-ParallelConf *JobBuilder::MutableOpParallelConf(const std::string &op_name) {
+ParallelConf *JobBuilder::MutableParallelConf(const std::string &op_name) {
   const auto &it = op_name2parallel_conf_.find(op_name);
   CHECK(it != op_name2parallel_conf_.end());
   return it->second;
 }
 
-void JobBuilder::AddOpParallelConf(const std::string &op_name,
-                                   const ParallelConf &parallel_conf) {
+void JobBuilder::AddParallelConf(const std::string &op_name,
+                                 const ParallelConf &parallel_conf) {
   const auto &it = op_name2parallel_conf_.find(op_name);
   if (it != op_name2parallel_conf_.end()) {
     *(it->second) = parallel_conf;
@@ -208,6 +220,32 @@ void JobBuilder::AddOpParallelConf(const std::string &op_name,
   *(group->mutable_parallel_conf()) = parallel_conf;
   // update `op_name2parallel_conf_`
   op_name2parallel_conf_.emplace(op_name, group->mutable_parallel_conf());
+}
+
+OpTimeShape *JobBuilder::MutableTimeShape(const std::string &op_name) {
+  const auto &it = op_name2time_shapes_.find(op_name);
+  CHECK(it != op_name2time_shapes_.end());
+  return it->second;
+}
+
+const OpTimeShape &JobBuilder::GetTimeShape(const std::string &op_name) const {
+  const auto &it = op_name2time_shapes_.find(op_name);
+  CHECK(it != op_name2time_shapes_.end());
+  return *(it->second);
+}
+
+void JobBuilder::AddTimeShape(const std::string &op_name,
+                              const OpTimeShape &time_shape) {
+  const auto &it = op_name2time_shapes_.find(op_name);
+  if (it != op_name2time_shapes_.end()) {
+    *(it->second) = time_shape;
+    return;
+  }
+
+  auto *time_shape_conf = job_->mutable_helper()
+                              ->mutable_op_name2op_time_shape();
+  (*time_shape_conf)[op_name] = time_shape;
+  op_name2time_shapes_.emplace(op_name, &((*time_shape_conf)[op_name]));
 }
 
 }  // namespace oneflow
