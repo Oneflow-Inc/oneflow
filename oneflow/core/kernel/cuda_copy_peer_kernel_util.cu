@@ -12,7 +12,8 @@ constexpr int32_t NUM_THREAD = NUM_COPY_THREAD + 1;
 constexpr int32_t NUM_LINE_PER_CHUNK = 32;
 constexpr int32_t NUM_PACK_PER_LINE_PER_THREAD = 8;
 constexpr int32_t NUM_PACK_PER_LINE_PER_WARP = NUM_PACK_PER_LINE_PER_THREAD * NUM_THREAD_PER_WARP;
-constexpr int32_t LINE_SIZE = NUM_COPY_THREAD * NUM_PACK_PER_LINE_PER_THREAD * PACK_SIZE;
+constexpr int32_t NUM_PACK_PER_LINE = NUM_PACK_PER_LINE_PER_WARP * NUM_COPY_WARP;
+constexpr int32_t LINE_SIZE = NUM_PACK_PER_LINE * PACK_SIZE;
 constexpr int32_t CHUNK_SIZE = LINE_SIZE * NUM_LINE_PER_CHUNK;
 constexpr int32_t DEFAULT_CHUNK_BUF_CAP = 2;
 constexpr int32_t MAX_NUM_BLOCK = 1;
@@ -59,6 +60,8 @@ __forceinline__ __device__ void CopyChunk(void* dst, const void* src, const int3
     for (int32_t p = 0; p < NUM_PACK_PER_LINE_PER_THREAD; ++p) {
       Store(dst_pack_ptr + p * NUM_THREAD_PER_WARP, line[p]);
     }
+    dst_pack_ptr += NUM_PACK_PER_LINE;
+    src_pack_ptr += NUM_PACK_PER_LINE;
   }
 }
 
@@ -98,6 +101,7 @@ __forceinline__ __device__ void Send(const void* src, const int32_t size, const 
       }
       remaining -= CHUNK_SIZE;
       src = (const unsigned char*)(src) + CHUNK_SIZE;
+      __threadfence_system();
       __syncthreads();
     } else {
       __syncthreads();
@@ -191,7 +195,7 @@ void CudaCopyPeerKernelUtil::CtxCreate(CudaCopyPeerCtx** ctx, int32_t dst_dev_id
   WithCudaDevice(dst_dev_id, [ctx]() {
     int32_t can_access;
     CudaCheck(cudaDeviceCanAccessPeer(&can_access, (*ctx)->dst_dev_id, (*ctx)->src_dev_id));
-    if (can_access) {
+    if (can_access && false) {
       cudaError_t error = cudaDeviceEnablePeerAccess((*ctx)->src_dev_id, 0);
       if (error != cudaErrorPeerAccessAlreadyEnabled) { CudaCheck(error); }
       (*ctx)->p2p_enabled = true;
