@@ -37,6 +37,10 @@ void CastKernel<device_type>::ForwardDataContent(
                                         ctx.device_ctx, in_blob, out_blob);
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kCastConf, CastKernel);
+// ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kCastConf, CastKernel);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kCastConf, Key().Device(DeviceType::kCPU),
+                            CastKernel<DeviceType::kCPU>);
+REGISTER_KERNEL_WITH_DEVICE(OperatorConf::kCastConf, Key().Device(DeviceType::kGPU),
+                            CastKernel<DeviceType::kGPU>);
 
 }  // namespace oneflow

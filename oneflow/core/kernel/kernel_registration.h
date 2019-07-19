@@ -71,8 +71,7 @@ struct Assurer4RunOnlyOnce final {
 };
 
 template<OperatorConf::OpTypeCase op_type>
-class RegisterHelper4DeviceAndDType final {
- public:
+struct RegisterHelper4DeviceAndDType final {
   static Kernel* CreateKernel(const KernelConf& kernel_conf) {
     const auto& registry = KernelRegistry<op_type, std::string>();
     return registry.at(
@@ -81,6 +80,17 @@ class RegisterHelper4DeviceAndDType final {
   RegisterHelper4DeviceAndDType() {
     REGISTER_CLASS_CREATOR(op_type, Kernel, RegisterHelper4DeviceAndDType::CreateKernel,
                            const KernelConf&);
+  }
+};
+
+template<OperatorConf::OpTypeCase op_type>
+struct RegisterHelper4Device final {
+  static Kernel* CreateKernel(const KernelConf& kernel_conf) {
+    const auto& registry = KernelRegistry<op_type, std::string>();
+    return registry.at(GetHashKey(kernel_conf.op_attribute().op_conf().device_type()))();
+  }
+  RegisterHelper4Device() {
+    REGISTER_CLASS_CREATOR(op_type, Kernel, RegisterHelper4Device::CreateKernel, const KernelConf&);
   }
 };
 
@@ -101,6 +111,10 @@ class RegisterHelper4DeviceAndDType final {
 #define REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, reg_key_builder, ...)       \
   REGISTER_KERNEL_BASE(op_type, std::string,                                       \
                        kernel_registration::helper::RegisterHelper4DeviceAndDType, \
+                       kernel_registration::builder::reg_key_builder.Build(), __VA_ARGS__)
+
+#define REGISTER_KERNEL_WITH_DEVICE(op_type, reg_key_builder, ...)                               \
+  REGISTER_KERNEL_BASE(op_type, std::string, kernel_registration::helper::RegisterHelper4Device, \
                        kernel_registration::builder::reg_key_builder.Build(), __VA_ARGS__)
 
 }  // namespace oneflow
