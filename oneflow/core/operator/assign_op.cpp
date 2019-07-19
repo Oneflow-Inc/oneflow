@@ -9,7 +9,7 @@ void AssignOp::InitFromOpConf() {
 }
 
 void AssignOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                            const ParallelContext* parallel_ctx) const {
+                              const ParallelContext* parallel_ctx) const {
   CHECK(*GetBlobDesc4BnInOp("x") == *GetBlobDesc4BnInOp("y"));
 }
 

@@ -8,7 +8,7 @@ namespace oneflow {
 class MdInitCompActor : public CompActor {
  private:
   void VirtualCompActorInit(const TaskProto&) override;
-  void Act() override; 
+  void Act() override;
 };
 
 }  // namespace oneflow

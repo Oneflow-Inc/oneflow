@@ -15,14 +15,14 @@ void ModelInitKernel<device_type, T>::Forward(
   Blob* out_blob = BnInOp2Blob("out");
 
   // Extract snapshot path for loadding from job IOConf
-  const std::string &snapshot_path = Global<const IOConf>::Get()->model_load_snapshot_path();
+  const std::string& snapshot_path = Global<const IOConf>::Get()->model_load_snapshot_path();
   if (snapshot_path == "") {
     // Randomly initialize parameter
     std::mt19937* random_seed_gen = static_cast<std::mt19937*>(ctx.other);
     KernelUtil<device_type, T>::InitializeWithProperConf(
         ctx.device_ctx,
         this->GetInitializerFromPbMessage(this->op_conf().model_init_conf(), "initializer"),
-        (*random_seed_gen)(), out_blob); 
+        (*random_seed_gen)(), out_blob);
   } else {
     // Deserialize LogicalBlobId from string to get op_name and blob_name
     const LogicalBlobId lbi = GenLogicalBlobId(this->op_conf().model_init_conf().lbn());
