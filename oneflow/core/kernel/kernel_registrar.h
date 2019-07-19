@@ -18,53 +18,60 @@ namespace kernel_registration {
 
 using CreateFn = std::function<Kernel*()>;
 
-template<typename KeyType, OperatorConf::OpTypeCase op_type>
-HashMap<KeyType, CreateFn>& KernelRegistry() {
-  static HashMap<KeyType, CreateFn> creator_fns;
+template<OperatorConf::OpTypeCase op_type, typename KeyT>
+HashMap<KeyT, CreateFn>& KernelRegistry() {
+  static HashMap<KeyT, CreateFn> creator_fns;
+  return creator_fns;
 }
 
-template<typename KeyType, typename DerivedKernel>
+template<OperatorConf::OpTypeCase op_type, typename KeyT>
 class KernelRegistrar {
  public:
-  KernelRegistrar(const OperatorConf::OpTypeCase& op_type_case, const KeyType& key, CreateFn fn) {
-    HashMap<KeyType, CreateFn>& creator_fns = KernelRegistry<KeyType, op_type_case>();
-    creator_fns.insert(std::make_pair(key, []() { return new DerivedKernel; }));
+  KernelRegistrar(const KeyT& key, CreateFn fn) {
+    HashMap<KeyT, CreateFn>& creator_fns = KernelRegistry<op_type, KeyT>();
+    creator_fns.insert(std::make_pair(key, fn));
   }
 };
 
-template<typename HelperClass>
+namespace helper {
+
+template<typename HelperClass, typename... Args>
 struct Assurer4RunOnlyOnce {
-  Assurer4RunOnlyOnce() { static HelperClass x; }
+  Assurer4RunOnlyOnce(Args&&... args) { static HelperClass x(std::forward<Args>(args)...); }
 };
 
-template<typename DerivedKernelT>
+template<OperatorConf::OpTypeCase op_type>
 class RegisterHelper4DeviceAndDType {
  public:
   static Kernel* CreateKernel(const KernelConf& kernel_conf) {
-    const auto& registry = KernelRegistrar<std::string, DerivedKernelT>();
+    const auto& registry = KernelRegistry<op_type, std::string>();
     return registry.at(
         GetHashKey(kernel_conf.op_attribute().op_conf().device_type(), kernel_conf.data_type()))();
   }
-  RegisterHelper4DeviceAndDType(const OperatorConf::OpTypeCase& op_type_case) {
-    REGISTER_CLASS_CREATOR(op_type_case, Kernel, RegisterHelper4DeviceAndDType::CreateKernel,
+  RegisterHelper4DeviceAndDType() {
+    REGISTER_CLASS_CREATOR(op_type, Kernel, RegisterHelper4DeviceAndDType::CreateKernel,
                            const KernelConf&);
   }
 };
 
-#define REGISTER_KERNEL_BASE(op_type_case, DerivedKernelT, KeyT, RegisterHelperT, key)            \
+}  // namespace helper
+
+}  // namespace kernel_registration
+
+#define REGISTER_KERNEL_BASE(op_type_case, KeyT, RegisterHelperT, key, ...)                       \
   namespace {                                                                                     \
-  static Assurer4RunOnlyOnce<RegisterHelperT> g_assurer##__COUNTER__;                             \
-  static KernelRegistrar<KeyT, DerivedKernelT> g_registrar##__COUNTER__(op_type_case, key, []() { \
-    return DerivedKernelT;                                                                        \
+  static kernel_registration::helper::Assurer4RunOnlyOnce<RegisterHelperT<op_type_case>>          \
+      OF_PP_CAT(g_assurer, __LINE__);                                                             \
+  static kernel_registration::KernelRegistrar<op_type_case, KeyT> OF_PP_CAT(g_registrar,          \
+                                                                            __LINE__)(key, []() { \
+    return new __VA_ARGS__();                                                                     \
   });                                                                                             \
   }  // namespace
 
-#define REGISTER_KERNEL_WITH_DEVICE_AND_DType(op_type_case, DerivedKernelT, device_type, dtype) \
-  REGISTER_KERNEL_BASE(op_type_case, DerivedKernelT, std::string,                               \
-                       RegisterHelper4DeviceAndDType<DerivedKernelT>,                           \
-                       GetHashKey(device_type, dtype))
-
-}  // namespace kernel_registration
+#define REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type_case, device_type, dtype, ...) \
+  REGISTER_KERNEL_BASE(op_type_case, std::string,                                    \
+                       kernel_registration::helper::RegisterHelper4DeviceAndDType,   \
+                       GetHashKey(device_type, GetDataType<dtype>::value), __VA_ARGS__)
 
 }  // namespace oneflow
 
