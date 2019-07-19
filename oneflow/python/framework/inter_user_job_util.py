@@ -12,7 +12,7 @@ def AsyncPush(op_name, push_data_cb):
 def AsyncPull(op_name, pull_data_cb):
     pull_job_name = runtime_ctx.inter_user_job_info.output_or_var_op_name2pull_job_name[op_name]
     c_api_util.LaunchJob(job_instance.MakePullJobInstance(pull_job_name, op_name, pull_data_cb))
-    
+
 def MakePushCallback(ndarray):
     return lambda ofblob: ofblob.CopyFromNdarray(ndarray)
 

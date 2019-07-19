@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+import threading
 import oneflow.core.job.job_set_pb2 as job_set_util
 import oneflow.core.job.job_pb2 as job_util
 import oneflow.python.framework.compiler as compiler
@@ -17,12 +18,24 @@ class Session(object):
         self.job_name2job_func_ = {}
         for job_func in job_funcs: self.job_name2job_func_[job_func.__name__] = job_func
         self.is_running_ = False
+        self.cond_var_ = threading.Condition()
+        self.running_job_cnt_ = 0
 
     def run(self, job_func, *arg):
         assert self.is_running_
         assert job_func.__name__ in self.job_name2job_func_
-        return runtime.LaunchJob(job_func, *arg)
-        
+        self.cond_var_.acquire()
+        self.running_job_cnt_ += 1
+        self.cond_var_.notify()
+        self.cond_var_.release()
+        def RunCallback(of_blob):
+            self.cond_var_.acquire()
+            self.running_job_cnt_ -= 1
+            self.cond_var_.notify()
+            self.cond_var_.release()
+
+        return runtime.LaunchJob(job_func, RunCallback, *arg)
+
     def map(self, job_func, feed_dicts):
         assert self.is_running_
         assert job_func.__name__ in self.job_name2job_func_
@@ -30,8 +43,11 @@ class Session(object):
 
     def sync(self):
         assert self.is_running_
-        TODO()
-    
+        self.cond_var_.acquire()
+        while self.running_job_cnt_ > 0:
+            self.cond_var_.wait()
+        self.cond_var_.release()
+
     def __enter__(self):
         assert self.is_running_ == False
         self.is_running_ = True

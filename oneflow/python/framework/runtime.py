@@ -21,7 +21,7 @@ class MasterRuntimeEnv(object):
         assert len(self.job_set_.job) > 0, "no job in job_set found"
         c_api_util.InitGlobalOneflowByJobSet(self.job_set_)
         runtime_ctx.Init()
-        
+
     def __exit__(self, *args):
         runtime_ctx.Destroy()
         c_api_util.DestroyGlobalOneflow()
@@ -40,12 +40,12 @@ class WorkerRuntimeEnv(object):
 class ThisIsNotAnError(Exception):
     pass
 
-def LaunchJob(job_func, *arg):
+def LaunchJob(job_func, RunCallback, *arg):
     job_name = job_func.__name__
     assert len(arg) == len(job_func.__oneflow_input_remote_blobs__)
     for i in range(len(arg)):
         assert isinstance(arg[i], np.ndarray)
         input_op_name = job_func.__oneflow_input_remote_blobs__[i].op_name
         inter_user_job_util.AsyncPush(input_op_name, inter_user_job_util.MakePushCallback(arg[i]))
-    c_api_util.LaunchJob(job_instance.MakeUserJobInstance(job_name))
+    c_api_util.LaunchJob(job_instance.MakeUserJobInstance(job_name, RunCallback))
     return out_remote_blobs_result.OutRemoteBlobsResult(job_func.__oneflow_output_remote_blobs__)
