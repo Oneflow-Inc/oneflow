@@ -40,6 +40,22 @@ class Entry {
 };
 
 template<typename T>
+struct EntryLTComp {
+  __device__ bool operator()(const T& x, const T& y) {
+    return x.GetValue() < y.GetValue()
+           || (x.GetValue() == y.GetValue() && (x.GetIndex() > y.GetIndex()));
+  }
+};
+
+template<typename T>
+struct EntryGTComp {
+  __device__ bool operator()(const T& x, const T& y) {
+    return x.GetValue() > y.GetValue()
+           || (x.GetValue() == y.GetValue() && (x.GetIndex() < y.GetIndex()));
+  }
+};
+
+template<typename T>
 class Heap {
  public:
   __device__ Heap(Entry<T>* data, const int32_t heap_size, const int32_t init_index,
