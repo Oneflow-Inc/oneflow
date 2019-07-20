@@ -10,12 +10,34 @@ class OutRemoteBlobsResultBox(object):
         self.out_remote_blob_pullers_ = []
         self.inited_ = False
         self.finished_cnt_ = 0
+        self.data_delivered_ = False
+        self.async_get_callback_ = lambda : None
 
     # user api
     def get(self):
         assert self.inited_
+        assert self.data_delivered_ == False
         self._Wait()
+        self.data_delivered_ = True
         return self._GetResultNdarray(self.out_remote_blob_pullers_)
+
+    # user api
+    def async_get(self, callback):
+        assert self.inited_
+        assert self.data_delivered_ == False
+        pullers_cnt = self._GetPullersCnt()
+        def Callback():
+            assert self.finished_cnt_ <= pullers_cnt
+            if self.finished_cnt_ == pullers_cnt:
+                callback(self._GetResultNdarray(self.out_remote_blob_pullers_))
+        try: 
+            self.cond_var_.acquire()
+            if self.finished_cnt_ == pullers_cnt:
+                Callback()
+            else:
+                self.async_get_callback_ = Callback
+        finally: self.cond_var_.release()
+        self.data_delivered_ = True
 
     def AddResult(self, out_remote_blobs):
         assert self.inited_ == False
@@ -44,6 +66,7 @@ class OutRemoteBlobsResultBox(object):
         self.cond_var_.acquire()
         self.finished_cnt_ += 1
         self.cond_var_.notify()
+        self.async_get_callback_() 
         self.cond_var_.release()
 
     def _Wait(self):
@@ -105,6 +128,10 @@ class _RemoteBlobPuller(object):
     def result_ndarray(self):
         assert self.result_ndarray_ is not None
         return self.result_ndarray_
+
+    @property
+    def is_finished(self):
+        return self.result_ndarray_ is not None
 
     def AsyncPull(self, pull_cb):
         def PullCallback(of_blob):
