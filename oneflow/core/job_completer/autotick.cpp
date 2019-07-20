@@ -202,7 +202,11 @@ void ForEachInputCriticalSectionOpNodes(
   for (OperatorConf::OpTypeCase op_type_case :
        {OperatorConf::kVariableConf, OperatorConf::kInputConf}) {
     if (op_type_case2op_nodes[op_type_case].empty()) { continue; }
-    Handler(op_type_case2op_nodes[op_type_case], GetOpNames(op_type_case2op_nodes[op_type_case]));
+    HashSet<const OpNode*> op_nodes = op_type_case2op_nodes[op_type_case];
+    for (const OpNode* op_node : op_type_case2op_nodes[op_type_case]) {
+      op_node->ForEachNodeOnOutEdge([&](OpNode* out_node) { op_nodes.insert(out_node); });
+    }
+    Handler(op_nodes, GetOpNames(op_type_case2op_nodes[op_type_case]));
   }
 }
 
