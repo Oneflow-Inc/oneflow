@@ -4,7 +4,7 @@
 #include <assert.h>
 
 template<typename T>
-__device__ const bool IsIntegerPowerOf2(T v) {
+__device__ const bool IsIntegerPowerOf2(const T v) {
   return (v > 0 && !(v & (v - 1)));
 }
 
