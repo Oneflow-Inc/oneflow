@@ -8,26 +8,36 @@ class OutRemoteBlobsResultBox(object):
     def __init__(self):
         self.cond_var_ = threading.Condition()
         self.out_remote_blob_pullers_ = []
+        self.inited_ = False
 
     # user api
     def get(self):
+        assert self.inited_
         return self._WaitAndGetResultNdarray(self.out_remote_blob_pullers_)
 
     def AddResult(self, out_remote_blobs):
+        assert self.inited_ == False
         pullers = self._MakeRemoteBlobPullers(out_remote_blobs)
         self.out_remote_blob_pullers_.append(pullers)
         for puller in self._FlatRemoteBlobPullers(pullers): puller.AsyncPull()
         return self
 
     def SetResult(self, out_remote_blobs):
+        assert self.inited_ == False
         assert isinstance(self.out_remote_blob_pullers_, list) 
         assert len(self.out_remote_blob_pullers_) == 0 
         pullers = self._MakeRemoteBlobPullers(out_remote_blobs)
         self.out_remote_blob_pullers_ = pullers
         for puller in self._FlatRemoteBlobPullers(pullers): puller.AsyncPull()
         return self
+    
+    def Inited(self):
+        assert self.inited_ == False
+        self.inited_ = True
+        return self
 
     def _WaitAndGetResultNdarray(self, pullers):
+        assert self.inited_
         if isinstance(pullers, _RemoteBlobPuller):
             return pullers.WaitAndGetResultNdarray()
         if isinstance(pullers, list) or isinstance(pullers, tuple):
