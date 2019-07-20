@@ -36,8 +36,9 @@ def _CompileJob(job, func, config):
             func.__oneflow_input_remote_blobs__.append(remote_input_blob)
             interface_op_names.append(remote_input_blob.op_name)
         ret_remote_blobs = func(*func.__oneflow_input_remote_blobs__)
-        if ret_remote_blobs is None: return
-        if isinstance(ret_remote_blobs, remote_blob_util.RemoteBlob):
+        if ret_remote_blobs is None:
+            func.__oneflow_output_remote_blobs__ = None 
+        elif isinstance(ret_remote_blobs, remote_blob_util.RemoteBlob):
             func.__oneflow_output_remote_blobs__ = ops.OutputOpByRemoteBlob(ret_remote_blobs)
             interface_op_names.append(func.__oneflow_output_remote_blobs__.op_name)
         elif isinstance(ret_remote_blobs, tuple) or isinstance(ret_remote_blobs, list):
