@@ -22,13 +22,19 @@ class Session(object):
     def run(self, job_func, *arg):
         assert self.is_running_
         assert job_func.__name__ in self.job_name2job_func_
-        return OutRemoteBlobsResultBox().SetResult(runtime.LaunchJob(job_func, *arg)).Inited()
+        remote_blobs = runtime.LaunchJob(job_func, *arg)
+        if remote_blobs is None: return
+        return OutRemoteBlobsResultBox().SetResult(remote_blobs).Inited()
         
     def map(self, job_func, feed_data):
         assert self.is_running_
         assert job_func.__name__ in self.job_name2job_func_
         result_box = OutRemoteBlobsResultBox()
-        for x in feed_data: result_box.AddResult(runtime.LaunchJob(job_func, x))
+        for x in feed_data:
+            if not (isinstance(x, list) or isinstance(x, tuple)): x = [x]
+            remote_blobs = runtime.LaunchJob(job_func, *x)
+            assert remote_blobs is not None
+            result_box.AddResult(remote_blobs)
         result_box.Inited()
         return result_box
 
