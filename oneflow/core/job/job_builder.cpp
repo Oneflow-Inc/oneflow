@@ -110,6 +110,7 @@ void JobBuilder::RemoveOp(const std::string &op_name) {
   if (time_shape_conf->count(op_name) > 0) {
     time_shape_conf->erase(op_name);
   }
+  // Update batch dim lbis
   // Update builder
   JobBuilder builder(job_);
   op_name2op_conf_.swap(builder.op_name2op_conf_);
@@ -246,6 +247,15 @@ void JobBuilder::AddTimeShape(const std::string &op_name,
                               ->mutable_op_name2op_time_shape();
   (*time_shape_conf)[op_name] = time_shape;
   op_name2time_shapes_.emplace(op_name, &((*time_shape_conf)[op_name]));
+}
+
+void JobBuilder::AddBatchDimLbi(const LogicalBlobId &lbi) {
+  if (batch_dim_lbis_.count(lbi) == 0) {
+    batch_dim_lbis_.insert(lbi);
+
+    auto *helper_conf = job_->mutable_helper();
+    *(helper_conf->mutable_batch_dim_lbis()->Add()) = lbi;
+  }
 }
 
 }  // namespace oneflow

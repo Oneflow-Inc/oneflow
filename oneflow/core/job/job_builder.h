@@ -48,6 +48,7 @@ class JobBuilder final {
   const OpTimeShape &GetTimeShape(const std::string &op_name) const;
   void AddTimeShape(const std::string &op_name, const OpTimeShape &time_shape);
 
+  void AddBatchDimLbi(const LogicalBlobId &lbi);
   const HashSet<LogicalBlobId> &batch_dim_lbis() const { return batch_dim_lbis_; }
 
  private:

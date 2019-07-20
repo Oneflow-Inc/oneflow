@@ -315,11 +315,17 @@ void FoldSubgraphBuilder::FixupInOutBlobNames() {
     // Fix output blob names
     for (int i = 0; i < launch_conf->out().size(); ++i) {
       std::string blob_name = launch_conf->out()[i];
-      std::vector<std::string> name_split = absl::StrSplit(blob_name, "/");
-      CHECK_EQ(name_split.size(), 2);
-      std::string fixed_blob_name = absl::StrCat(name_split[1], "_", i);
-      launch_conf->mutable_out()->Mutable(i)->assign(fixed_blob_name);
+      std::string fixed_blob_name = absl::StrCat("out_", i);
       fixed_blob_names.emplace(blob_name, fixed_blob_name);
+
+      launch_conf->mutable_out()->Mutable(i)->assign(fixed_blob_name);
+      // Append to `batch_dim_lbis`
+      if (HasBatchDim(blob_name)) {
+        LogicalBlobId lbi;
+        lbi.set_op_name(launch_op_name);
+        lbi.set_blob_name(fixed_blob_name);
+        builder_->AddBatchDimLbi(lbi);
+      }
     }
     // Infect changes to the next operators
     for (const XlaEdge *edge : node->out_edges()) {
