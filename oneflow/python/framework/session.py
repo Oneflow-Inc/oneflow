@@ -5,6 +5,7 @@ import oneflow.core.job.job_pb2 as job_util
 import oneflow.python.framework.compiler as compiler
 import oneflow.python.framework.runtime as runtime
 import oneflow.python.framework.config_util as config_util
+from oneflow.python.framework.out_remote_blobs_result_box import OutRemoteBlobsResultBox
 
 class Session(object):
     def __init__(self, job_funcs, config_proto):
@@ -21,13 +22,20 @@ class Session(object):
     def run(self, job_func, *arg):
         assert self.is_running_
         assert job_func.__name__ in self.job_name2job_func_
-        return runtime.LaunchJob(job_func, *arg)
+        return OutRemoteBlobsResultBox().SetResult(runtime.LaunchJob(job_func, *arg))
         
-    def map(self, job_func, feed_dicts):
+    def map(self, job_func, feed_data):
         assert self.is_running_
         assert job_func.__name__ in self.job_name2job_func_
-        TODO()
+        result_box = OutRemoteBlobsResultBox()
+        for x in feed_data: result_box.AddResult(runtime.LaunchJob(job_func, x))
+        return result_box
 
+    def no_return_run(self, job_func, *arg):
+        assert self.is_running_
+        assert job_func.__name__ in self.job_name2job_func_
+        runtime.LaunchJob(job_func, *arg)
+        
     def sync(self):
         assert self.is_running_
         TODO()

@@ -4,32 +4,43 @@ import threading
 import oneflow.python.framework.inter_user_job_util as inter_user_job_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 
-class OutRemoteBlobsResult(object):
-    def __init__(self, out_remote_blobs):
+class OutRemoteBlobsResultBox(object):
+    def __init__(self):
         self.cond_var_ = threading.Condition()
-        self.out_remote_blob_pullers_ = self._MakeRemoteBlobPullers(out_remote_blobs)
+        self.out_remote_blob_pullers_ = []
 
     # user api
     def get(self):
-        for puller in self._FlatRemoteBlobPullers(): puller.AsyncPull()
-        return self._WaitAndGetResultNdarray()
+        return self._WaitAndGetResultNdarray(self.out_remote_blob_pullers_)
 
-    def _WaitAndGetResultNdarray(self):
-        pullers = self.out_remote_blob_pullers_
+    def AddResult(self, out_remote_blobs):
+        pullers = self._MakeRemoteBlobPullers(out_remote_blobs)
+        self.out_remote_blob_pullers_.append(pullers)
+        for puller in self._FlatRemoteBlobPullers(pullers): puller.AsyncPull()
+        return self
+
+    def SetResult(self, out_remote_blobs):
+        assert isinstance(self.out_remote_blob_pullers_, list) 
+        assert len(self.out_remote_blob_pullers_) == 0 
+        pullers = self._MakeRemoteBlobPullers(out_remote_blobs)
+        self.out_remote_blob_pullers_ = pullers
+        for puller in self._FlatRemoteBlobPullers(pullers): puller.AsyncPull()
+        return self
+
+    def _WaitAndGetResultNdarray(self, pullers):
         if isinstance(pullers, _RemoteBlobPuller):
             return pullers.WaitAndGetResultNdarray()
         if isinstance(pullers, list) or isinstance(pullers, tuple):
-            ret = [self._WaitAndGetResultNdarray(x, self.cond_var_) for x in pullers]
+            ret = [self._WaitAndGetResultNdarray(x) for x in pullers]
             if isinstance(pullers, tuple): ret = tuple(ret)
             return ret
         if isinstance(pullers, dict):
             return {
-                k : self._WaitAndGetResultNdarray(v, self.cond_var_) for k, v in pullers.items()
+                k : self._WaitAndGetResultNdarray(v) for k, v in pullers.items()
             }
         raise NotImplementedError
 
-    def _FlatRemoteBlobPullers(self):
-        pullers = self.out_remote_blob_pullers_
+    def _FlatRemoteBlobPullers(self, pullers):
         if isinstance(pullers, _RemoteBlobPuller):
             yield pullers
         elif isinstance(pullers, list) or isinstance(pullers, tuple):
@@ -80,3 +91,5 @@ class _RemoteBlobPuller(object):
         while self.finished_ == False:
             self.cond_var_.wait()
         self.cond_var_.release()
+
+
