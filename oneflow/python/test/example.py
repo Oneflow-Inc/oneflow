@@ -28,3 +28,9 @@ with flow.Session(jobs, config) as sess:
     def PrintMapAsyncResult(ndarrays):
         for x in ndarrays: print x
     sess.map(DemoJob, data).async_get(PrintMapAsyncResult)
+
+    # box = flow.Box()
+    # sess.map(DemoJob, data).async_get(box.value_setter)
+    # import time
+    # time.sleep(3)
+    # for x in box.value: print x

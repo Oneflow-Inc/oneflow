@@ -6,6 +6,7 @@ from oneflow.python.framework.config_util import placement
 from oneflow.python.framework.config_util import ConfigProtoBuilder
 from oneflow.python.framework.compiler import get_cur_job_conf_builder
 from oneflow.python.lib.core.decorator_util import append_func_to_list
+from oneflow.python.lib.core.box import Box
 from oneflow.core.job.job_set_pb2 import ConfigProto
 from oneflow.core.job.job_pb2 import JobConfigProto
 
