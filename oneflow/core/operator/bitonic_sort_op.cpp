@@ -5,7 +5,7 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-const bool IsIntegerPowerOf2(const T v) {
+bool IsIntegerPowerOf2(const T v) {
   return (v > 0 && !(v & (v - 1)));
 }
 
@@ -26,7 +26,7 @@ void BitonicSortOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   // input
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
   CHECK_EQ(in->shape().NumAxes(), 2);
-  CHECK(IsIntegerPowerOf2(in->shape().elem_cnt()));
+  CHECK(IsIntegerPowerOf2(in->shape().At(1)));
   // output
   *GetBlobDesc4BnInOp("out") = *in;
 }

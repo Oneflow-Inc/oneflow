@@ -26,7 +26,10 @@ template<typename T>
 struct BitonicSortUtil<DeviceType::kGPU, T> {
   static void Forward(DeviceCtx* ctx, const int32_t instance_num, const int32_t instance_size,
                       T* out) {
-    GpuForward<<<instance_num, 1, 0, ctx->cuda_stream()>>>(instance_size, out);
+    const int32_t num_thread_per_block = (instance_size / 2) <= kCudaThreadsNumPerBlock
+                                             ? (instance_size / 2)
+                                             : kCudaThreadsNumPerBlock;
+    GpuForward<<<instance_num, num_thread_per_block, 0, ctx->cuda_stream()>>>(instance_size, out);
   }
 };
 
