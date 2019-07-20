@@ -22,13 +22,14 @@ class Session(object):
     def run(self, job_func, *arg):
         assert self.is_running_
         assert job_func.__name__ in self.job_name2job_func_
-        return OutRemoteBlobsResultBox().SetResult(runtime.LaunchJob(job_func, *arg))
+        return OutRemoteBlobsResultBox().SetResult(runtime.LaunchJob(job_func, *arg)).Inited()
         
     def map(self, job_func, feed_data):
         assert self.is_running_
         assert job_func.__name__ in self.job_name2job_func_
         result_box = OutRemoteBlobsResultBox()
         for x in feed_data: result_box.AddResult(runtime.LaunchJob(job_func, x))
+        result_box.Inited()
         return result_box
 
     def no_return_run(self, job_func, *arg):
