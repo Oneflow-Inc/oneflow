@@ -1,13 +1,23 @@
 from __future__ import absolute_import
 
-import oneflow.python.framework.c_api_util as c_api_util
-
 inter_user_job_info = None
 
-def Init():
+def InitInterUserJobInfo(info):
     global inter_user_job_info
-    inter_user_job_info = c_api_util.GetInterUserJobInfo()
+    inter_user_job_info = info
     
-def Destroy():
+def DestroyInterUserJobInfo():
     global inter_user_job_info
     inter_user_job_info = None
+
+job_instance_pre_launch_callbacks = []
+
+def AddJobInstancePreLaunchCallbacks(cb):
+    global job_instance_pre_launch_callbacks
+    job_instance_pre_launch_callbacks.append(cb)
+
+job_instance_post_finish_callbacks = []
+
+def AddJobInstancePostFinishCallbacks(cb):
+    global job_instance_post_finish_callbacks
+    job_instance_post_finish_callbacks.append(cb)
