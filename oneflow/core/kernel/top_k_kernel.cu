@@ -7,8 +7,6 @@
 #include "oneflow/core/kernel/top_k_heap_selection.cuh"
 #include "oneflow/core/kernel/gpu_bitonic_sort.cuh"
 
-#include <iostream>
-
 namespace oneflow {
 
 #define MAX_POWER 16
@@ -51,9 +49,15 @@ __global__ void HeapTopKKernel(const T* in, const int32_t instance_num, const in
     auto entry = Entry<T>(i, input[i]);
     if (entry > heap[0]) { heap.ReplaceRoot(entry); }
   }
+
+  __syncthreads();
+
   // Merge all heaps to a unified, sorted array
   bitonicSort(shared_entries, blockDim.x * heap_size,
               [](const Entry<T>& x, const Entry<T>& y) { return x > y; });
+
+  __syncthreads();
+
   // Write top_k elements in sorted array to output
   int32_t* output = out + blockIdx.x * k;
   for (int32_t i = 0; i < k; ++i) { output[i] = shared_entries[i].GetIndex(); }
