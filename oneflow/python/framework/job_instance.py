@@ -38,6 +38,10 @@ def MakeJobInstance(*arg, **kw):
     # _flying_job_instance prevents job_instance earlier destructation
     global _flying_job_instance
     _flying_job_instance[id(job_instance)] = job_instance
+    def DereferenceJobInstance(job_instance):
+        global _flying_job_instance
+        del _flying_job_instance[id(job_instance)]
+    job_instance.AddPostFinishCallback(DereferenceJobInstance)
     return job_instance
 
 class JobInstance(oneflow_internal.ForeignJobInstance):
@@ -55,6 +59,7 @@ class JobInstance(oneflow_internal.ForeignJobInstance):
         self.push_cb_ = push_cb
         self.pull_cb_ = pull_cb
         self.finish_cb_ = finish_cb
+        self.post_finish_cbs_ = []
 
     def job_name(self): 
         try: return self.job_name_
@@ -92,8 +97,10 @@ class JobInstance(oneflow_internal.ForeignJobInstance):
             print (traceback.format_exc())
             raise e
         finally:
-            global _flying_job_instance
-            del _flying_job_instance[id(self)]
+            for post_finish_cb in self.post_finish_cbs_: post_finish_cb(self)
+
+    def AddPostFinishCallback(self, cb):
+        self.post_finish_cbs_.append(cb)
 
 # span python object lifetime
 _flying_job_instance = {}
