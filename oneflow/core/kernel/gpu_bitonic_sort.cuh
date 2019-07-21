@@ -9,12 +9,12 @@ __device__ const bool IsIntegerPowerOf2(const T v) {
 }
 
 template<typename T, typename Comparator>
-__device__ void bitonicSwap(T& x, T& y, const bool dir) {
+__device__ void bitonicSwap(T* x, T* y, const bool dir) {
   Comparator comp = Comparator();
-  if (comp(x, y) == dir) {
-    T tmp = x;
-    x = y;
-    y = tmp;
+  if (comp(*x, *y) == dir) {
+    T tmp = *x;
+    *x = *y;
+    *y = tmp;
   }
 }
 
@@ -33,7 +33,7 @@ __device__ void bitonicSort(T* data, const int32_t elem_cnt) {
         // Locate the pair {pos, pos + stride} which is going te be swaped if needed
         const int pos = 2 * swap_id - (swap_id & (stride - 1));
 
-        bitonicSwap<T, Comparator>(data[pos], data[pos + stride], dir);
+        bitonicSwap<T, Comparator>(data + pos, data + pos + stride, dir);
 
         __syncthreads();
       }
@@ -46,7 +46,7 @@ __device__ void bitonicSort(T* data, const int32_t elem_cnt) {
       // Locate the pair {pos, pos + stride} which is going te be swaped if needed
       const int pos = 2 * swap_id - (swap_id & (stride - 1));
 
-      bitonicSwap<T, Comparator>(data[pos], data[pos + stride], false);
+      bitonicSwap<T, Comparator>(data + pos, data + pos + stride, false);
 
       __syncthreads();
     }

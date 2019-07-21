@@ -13,29 +13,22 @@ void TopKOp::InitFromOpConf() {
 
 void TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx) const {
+  // in
   const BlobDesc* in = GetBlobDesc4BnInOp("in");
   CHECK_LE(in->shape().elem_cnt(), GetMaxVal<int32_t>());
   const TopKOpConf& conf = op_conf().top_k_conf();
-  if (device_type() == DeviceType::kGPU) {
-    // GPU version top_k op only support "k == 1" for now
-    CHECK_EQ(conf.k(), 1);
-  } else if (device_type() == DeviceType::kCPU) {
-    CHECK_GE(conf.k(), 1);
-    CHECK_LE(conf.k(), in->shape().dim_vec().back());
-    if (conf.k() > 1) {
-      // fw_buf
-      BlobDesc* fw_buf = GetBlobDesc4BnInOp("fw_buf");
-      fw_buf->mut_shape() = Shape({in->shape()});
-      fw_buf->set_data_type(DataType::kInt32);
-    }
-  } else {
-    UNIMPLEMENTED();
+  CHECK_GE(conf.k(), 1);
+  CHECK_LE(conf.k(), in->shape().dim_vec().back());
+  if (device_type() == DeviceType::kCPU && conf.k() > 1) {
+    BlobDesc* fw_buf = GetBlobDesc4BnInOp("fw_buf");
+    fw_buf->mut_shape() = Shape({in->shape()});
+    fw_buf->set_data_type(DataType::kInt32);
   }
   // out
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   *out = *in;
-  out->mut_shape().Set(in->shape().NumAxes() - 1, conf.k());
-  out->set_data_type(DataType::kInt32);
+  out->mut_shape().Set(in->shape().NumAxes() - 1, 512 * 8);
+  // out->set_data_type(DataType::kInt32);
 }
 
 void TopKOp::VirtualGenKernelConf(
