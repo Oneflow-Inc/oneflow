@@ -8,18 +8,18 @@ __device__ const bool IsIntegerPowerOf2(const T v) {
   return (v > 0 && !(v & (v - 1)));
 }
 
-template<typename T, typename Comparator>
-__device__ void bitonicSwap(T* x, T* y, const bool dir) {
-  Comparator comp = Comparator();
-  if (comp(*x, *y) == dir) {
-    T tmp = *x;
-    *x = *y;
-    *y = tmp;
+template<typename T, typename Compare>
+__device__ void bitonicSwap(T* data, const int32_t i, const int32_t j, const bool dir,
+                            const Compare& comp) {
+  if (comp(data[i], data[j]) == dir) {
+    T tmp = data[i];
+    data[i] = data[j];
+    data[j] = tmp;
   }
 }
 
-template<typename T, typename Comparator>
-__device__ void bitonicSort(T* data, const int32_t elem_cnt) {
+template<typename T, typename Compare>
+__device__ void bitonicSort(T* data, const int32_t elem_cnt, const Compare& comp) {
   assert(IsIntegerPowerOf2(elem_cnt));
   assert(IsIntegerPowerOf2(blockDim.x));
 
@@ -33,7 +33,7 @@ __device__ void bitonicSort(T* data, const int32_t elem_cnt) {
         // Locate the pair {pos, pos + stride} which is going te be swaped if needed
         const int pos = 2 * swap_id - (swap_id & (stride - 1));
 
-        bitonicSwap<T, Comparator>(data + pos, data + pos + stride, dir);
+        bitonicSwap(data, pos, pos + stride, dir, comp);
 
         __syncthreads();
       }
@@ -46,7 +46,7 @@ __device__ void bitonicSort(T* data, const int32_t elem_cnt) {
       // Locate the pair {pos, pos + stride} which is going te be swaped if needed
       const int pos = 2 * swap_id - (swap_id & (stride - 1));
 
-      bitonicSwap<T, Comparator>(data + pos, data + pos + stride, false);
+      bitonicSwap(data, pos, pos + stride, false, comp);
 
       __syncthreads();
     }

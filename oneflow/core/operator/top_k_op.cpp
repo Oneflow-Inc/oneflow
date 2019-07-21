@@ -27,8 +27,8 @@ void TopKOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlob
   // out
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   *out = *in;
-  out->mut_shape().Set(in->shape().NumAxes() - 1, 512 * 8);
-  // out->set_data_type(DataType::kInt32);
+  out->mut_shape().Set(in->shape().NumAxes() - 1, conf.k());
+  out->set_data_type(DataType::kInt32);
 }
 
 void TopKOp::VirtualGenKernelConf(

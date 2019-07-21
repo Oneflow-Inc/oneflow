@@ -7,48 +7,24 @@ template<typename T>
 class Entry {
  public:
   __device__ Entry(int32_t index, T value) : index_(index), value_(value) {}
+
   __device__ const int32_t GetIndex() const { return index_; }
   __device__ const T GetValue() const { return value_; }
   __device__ void SetIndex(int32_t index) { index_ = index; }
   __device__ void SetValue(T value) { value_ = value; }
-  __device__ Entry<T>& operator=(const Entry<T>& entry) {
-    this->index_ = entry.GetIndex();
-    this->value_ = entry.GetValue();
+
+  __device__ bool operator<(const Entry& entry) const {
+    return (this->GetValue() < entry.GetValue())
+           || (this->GetValue() == entry.GetValue() && this->GetIndex() > entry.GetIndex());
   }
-  __device__ bool operator==(const Entry& entry) {
-    return this->GetValue() == entry.GetValue() && this->GetIndex() == entry.GetIndex();
-  }
-  __device__ bool operator!=(const Entry& entry) {
-    return this->GetValue() != entry.GetValue() || this->GetIndex() != entry.GetIndex();
-  }
-  __device__ bool operator<(const Entry& entry) {
-    if (this->GetValue() == entry.GetValue()) { return this->GetIndex() > entry.GetIndex(); }
-    return this->GetValue() < entry.GetValue();
-  }
-  __device__ bool operator<=(const Entry& entry) {
-    if (this->GetValue() == entry.GetValue()) { return this->GetIndex() >= entry.GetIndex(); }
-    return this->GetValue() <= entry.GetValue();
-  }
-  __device__ bool operator>(const Entry& entry) {
-    if (this->GetValue() == entry.GetValue()) { return this->GetIndex() < entry.GetIndex(); }
-    return this->GetValue() > entry.GetValue();
-  }
-  __device__ bool operator>=(const Entry& entry) {
-    if (this->GetValue() == entry.GetValue()) { return this->GetIndex() <= entry.GetIndex(); }
-    return this->GetValue() >= entry.GetValue();
+  __device__ bool operator>(const Entry& entry) const {
+    return (this->GetValue() > entry.GetValue())
+           || (this->GetValue() == entry.GetValue() && this->GetIndex() < entry.GetIndex());
   }
 
  private:
   int32_t index_;
   T value_;
-};
-
-template<typename T>
-struct EntryGTComp {
-  __device__ bool operator()(const T& x, const T& y) {
-    return x.GetValue() > y.GetValue()
-           || (x.GetValue() == y.GetValue() && (x.GetIndex() < y.GetIndex()));
-  }
 };
 
 template<typename T>

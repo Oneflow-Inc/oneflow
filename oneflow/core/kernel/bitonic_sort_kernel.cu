@@ -6,18 +6,9 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-struct LTComp {
-  __device__ bool operator()(const T& x, const T& y) { return x < y; }
-};
-
-template<typename T>
-struct GTComp {
-  __device__ bool operator()(const T& x, const T& y) { return x > y; }
-};
-
-template<typename T>
 __global__ void GpuForward(const int32_t instance_size, T* out) {
-  bitonicSort<T, LTComp<T>>(out + blockIdx.x * instance_size, instance_size);
+  bitonicSort(out + blockIdx.x * instance_size, instance_size,
+              [](const T& x, const T& y) { return x < y; });
 }
 
 }  // namespace
