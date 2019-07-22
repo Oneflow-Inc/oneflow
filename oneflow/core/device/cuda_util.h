@@ -3,6 +3,7 @@
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/preprocessor.h"
+#include "oneflow/core/common/platform.h"
 
 #ifdef WITH_CUDA
 
@@ -64,6 +65,10 @@ enum class CudaWorkType {
 
 inline size_t GetCudaWorkTypeSize() { return OF_PP_SEQ_SIZE(CUDA_WORK_TYPE_SEQ); }
 
+#ifdef PLATFORM_POSIX
+void NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size);
+#endif
+
 #define CUDA_DATA_TYPE_SEQ                \
   OF_PP_MAKE_TUPLE_SEQ(float, CUDA_R_32F) \
   OF_PP_MAKE_TUPLE_SEQ(double, CUDA_R_64F)
@@ -78,6 +83,8 @@ struct CudaDataType;
   struct CudaDataType<type_cpp> : std::integral_constant<cudaDataType_t, type_cuda> {};
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_CUDA_DATA_TYPE, CUDA_DATA_TYPE_SEQ);
 #undef SPECIALIZE_CUDA_DATA_TYPE
+
+void WithCudaDevice(int32_t dev_id, const std::function<void()>& func);
 
 }  // namespace oneflow
 

@@ -17,8 +17,11 @@
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/graph/boxing/naive_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/ring_sub_task_graph_builder.h"
+#include "oneflow/core/graph/boxing/multi_ring_all_reduce_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/dynamic_shape_supported_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/chain_sub_task_graph_builder.h"
+#include "oneflow/core/graph/multi_ring_all_reduce_task_node.h"
+#include "oneflow/core/graph/nccl_all_reduce_compute_task_node.h"
 
 namespace oneflow {
 
@@ -47,7 +50,7 @@ MakeGetterReduceTaskNodeCtrlOrder(const LogicalGraph& logical_graph) {
   });
   std::sort(logical_nodes.begin(), logical_nodes.end(),
             [](const ReduceType* lhs, const ReduceType* rhs) {
-              return lhs->order_in_logical_graph() < rhs->order_in_logical_graph();
+              return lhs->order_in_logical_graph() > rhs->order_in_logical_graph();
             });
   auto logical_node2ctrl_order = std::make_shared<HashMap<const LogicalNode*, int32_t>>();
   int32_t lazy_count = Global<JobDesc>::Get()->all_reduce_lazy_ratio() * logical_nodes.size();
@@ -329,6 +332,26 @@ void TaskGraph::BuildCtrlRegstDescInSameChain() {
   }
 }
 
+namespace {
+
+TaskNode* FindPredReduceIdentityTaskNode(TaskNode* succ) {
+  TaskNode* current = succ;
+  while (current) {
+    auto reduce_task_node_edge_it =
+        std::find_if(current->in_edges().begin(), current->in_edges().end(), [](TaskEdge* edge) {
+          return dynamic_cast<ReduceCompTaskNodeIf*>(edge->src_node()) != nullptr
+                 || dynamic_cast<MultiRingAllReduceTaskNode*>(edge->src_node()) != nullptr
+                 || dynamic_cast<NcclAllReduceCompTaskNode*>(edge->src_node()) != nullptr;
+        });
+    if (reduce_task_node_edge_it == current->in_edges().end()) { return nullptr; }
+    current = (*reduce_task_node_edge_it)->src_node();
+    if (current->GetTaskType() == TaskType::kReduceIdentity) { return current; }
+  }
+  return nullptr;
+}
+
+}  // namespace
+
 void TaskGraph::AddReduceSequenceCtrlEdges() {
   HashMap<int64_t, std::vector<ReduceSplitCompTaskNode*>> global_thrd_id2split_nodes;
   for (auto* node : ordered_task_nodes_) {
@@ -347,10 +370,12 @@ void TaskGraph::AddReduceSequenceCtrlEdges() {
     ReduceSplitCompTaskNode* prev_split_node = split_nodes.at(0);
     for (auto* split_node : split_nodes) {
       if (prev_split_node != split_node) {
-        auto* to_node = split_node->GetPrevReduceTaskNode(TaskType::kReduceIdentity);
+        auto* to_node = FindPredReduceIdentityTaskNode(split_node);
         TaskNode* from_node = prev_split_node;
+        CHECK_NOTNULL(from_node);
         if (GetCtrlOrder(split_node->logical_node()) < 0) {
-          from_node = prev_split_node->GetPrevReduceTaskNode(TaskType::kReduceIdentity);
+          from_node = FindPredReduceIdentityTaskNode(prev_split_node);
+          CHECK_NOTNULL(from_node);
         }
         from_node->BuildCtrlRegstDescIfNeed(to_node);
       }
@@ -505,7 +530,7 @@ void TaskGraph::EnableMemSharingInVariableOp() {
     auto* fw_task_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
     if (fw_task_node != nullptr) {
       const LogicalBlobId& lbi = variable_op->BnInOp2Lbi(model_bn);
-      RegstDesc* model_regst = fw_task_node->GetSoleConsumedRegst("model").get();
+      RegstDesc* model_regst = fw_task_node->GetSoleConsumedRegst("const_model").get();
       CHECK_EQ(model_regst->min_register_num(), 1);
       CHECK_EQ(model_regst->max_register_num(), 1);
       model_regst->set_enable_mem_sharing(true);
@@ -741,6 +766,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV2) {
     const BlobDesc& blob_desc = Global<OpGraph>::Get()->GetLogicalBlobDesc(lbi);
     SubTskGphBuilderCtx ctx(this);
     std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
+    builders.emplace_back(new MultiRingAllReduceSubTskGphBuilder());
     builders.emplace_back(new RingSubTskGphBuilder());
     builders.emplace_back(new NaiveSubTskGphBuilder());
     builders.emplace_back(new DynamicShapeSupportedSubTskGphBuilder());

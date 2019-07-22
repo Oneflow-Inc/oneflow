@@ -46,13 +46,36 @@ const cudnnHandle_t* CudaStreamHandle::cudnn_handle() {
 void CudaStreamHandle::AddCallBack(std::function<void()> callback) {
   CudaCBEvent cb_event;
   cb_event.callback = callback;
-  CudaCheck(
-      cudaEventCreateWithFlags(&(cb_event.event), cudaEventBlockingSync | cudaEventDisableTiming));
+  cb_event.event = GetCudaEvent();
+  cb_event.cuda_stream_handle = this;
   CudaCheck(cudaEventRecord(cb_event.event, *cuda_stream()));
   cb_event_chan_->Send(cb_event);
 }
 
+cudaEvent_t CudaStreamHandle::GetCudaEvent() {
+  cudaEvent_t ret;
+  bool from_cache = false;
+  while (cuda_event_pool_mutex_.test_and_set(std::memory_order_acquire)) {}
+  if (!cuda_event_pool_.empty()) {
+    ret = cuda_event_pool_.front();
+    cuda_event_pool_.pop_front();
+    from_cache = true;
+  }
+  cuda_event_pool_mutex_.clear(std::memory_order_release);
+  if (!from_cache) {
+    CudaCheck(cudaEventCreateWithFlags(&ret, cudaEventBlockingSync | cudaEventDisableTiming));
+  }
+  return ret;
+}
+
+void CudaStreamHandle::PutCudaEvent(cudaEvent_t event) {
+  while (cuda_event_pool_mutex_.test_and_set(std::memory_order_acquire)) {}
+  cuda_event_pool_.emplace_back(event);
+  cuda_event_pool_mutex_.clear(std::memory_order_release);
+}
+
 CudaStreamHandle::~CudaStreamHandle() {
+  for (cudaEvent_t event : cuda_event_pool_) { CudaCheck(cudaEventDestroy(event)); }
   if (cudnn_handle_) { CudaCheck(cudnnDestroy(*cudnn_handle_)); }
   if (cublas_pmh_handle_) { CudaCheck(cublasDestroy(*cublas_pmh_handle_)); }
   if (cublas_pmd_handle_) { CudaCheck(cublasDestroy(*cublas_pmd_handle_)); }

@@ -493,7 +493,6 @@ void AddTotalLossInstanceNumOpConf(
     if (blob_desc != nullptr) { CHECK(*blob_desc == *cur_blob_desc); }
     blob_desc = cur_blob_desc;
   }
-  CHECK_EQ(blob_desc->shape().NumAxes(), 1);
   HashMap<ParallelDesc, int32_t> parallel_desc2optimizer_node_cnt;
   CalcParallelDesc2OptimizerNodeCnt(op_graph, lbi2diff_lbi, &parallel_desc2optimizer_node_cnt);
   if (blob_desc->has_dim0_valid_num_field()) {

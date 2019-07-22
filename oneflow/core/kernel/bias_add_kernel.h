@@ -13,6 +13,8 @@ class BiasAddKernel final : public KernelIf<device_type> {
   ~BiasAddKernel() = default;
 
  private:
+  void ForwardDim0ValidNum(const KernelCtx& ctx,
+                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
   void InitConstBufBlobs(DeviceCtx*,
