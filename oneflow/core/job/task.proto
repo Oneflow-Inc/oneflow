@@ -50,6 +50,7 @@ enum TaskType {
   kBoxingConcat = 42;
   kMultiRingAllReduce = 43;
   kCudaCopyPeer = 44;
+  kCudaRingAllReduce = 45;
 };
 
 enum AreaType {

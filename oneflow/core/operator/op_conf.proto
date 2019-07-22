@@ -1424,6 +1424,12 @@ message MultiRingAllReduceOpConf {
 message CudaCopyPeerOpConf {
 }
 
+message CudaRingAllReduceOpConf {
+  required LogicalBlobId lbi = 1;
+  required ShapeProto logical_blob_shape = 2;
+  repeated RingConf rings = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -1476,6 +1482,7 @@ message OperatorConf {
     BoxingConcatOpConf boxing_concat_conf = 140;
     MultiRingAllReduceOpConf multi_ring_all_reduce_conf = 141;
     CudaCopyPeerOpConf cuda_copy_peer_conf = 142;
+    CudaRingAllReduceOpConf cuda_ring_all_reduce_conf = 143;
     // domain op
     TupleIdentityOpConf tuple_identity_conf = 200;
     TransposeOpConf transpose_conf = 201;

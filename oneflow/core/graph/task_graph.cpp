@@ -18,9 +18,11 @@
 #include "oneflow/core/graph/boxing/naive_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/ring_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/multi_ring_all_reduce_sub_task_graph_builder.h"
+#include "oneflow/core/graph/boxing/cuda_ring_all_reduce_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/dynamic_shape_supported_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/chain_sub_task_graph_builder.h"
 #include "oneflow/core/graph/multi_ring_all_reduce_task_node.h"
+#include "oneflow/core/graph/cuda_ring_all_reduce_task_node.h"
 #include "oneflow/core/graph/nccl_all_reduce_compute_task_node.h"
 
 namespace oneflow {
@@ -341,6 +343,7 @@ TaskNode* FindPredReduceIdentityTaskNode(TaskNode* succ) {
         std::find_if(current->in_edges().begin(), current->in_edges().end(), [](TaskEdge* edge) {
           return dynamic_cast<ReduceCompTaskNodeIf*>(edge->src_node()) != nullptr
                  || dynamic_cast<MultiRingAllReduceTaskNode*>(edge->src_node()) != nullptr
+                 || dynamic_cast<CudaRingAllReduceTaskNode*>(edge->src_node()) != nullptr
                  || dynamic_cast<NcclAllReduceCompTaskNode*>(edge->src_node()) != nullptr;
         });
     if (reduce_task_node_edge_it == current->in_edges().end()) { return nullptr; }
@@ -766,6 +769,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxingV2) {
     const BlobDesc& blob_desc = Global<OpGraph>::Get()->GetLogicalBlobDesc(lbi);
     SubTskGphBuilderCtx ctx(this);
     std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
+    builders.emplace_back(new CudaRingAllReduceSubTskGphBuilder());
     builders.emplace_back(new MultiRingAllReduceSubTskGphBuilder());
     builders.emplace_back(new RingSubTskGphBuilder());
     builders.emplace_back(new NaiveSubTskGphBuilder());
