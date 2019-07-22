@@ -55,12 +55,11 @@ __global__ void HeapTopKKernel(const T* in, const int32_t instance_num, const in
   // Merge all heaps to a unified, sorted array
   bitonicSort(shared_entries, blockDim.x * heap_size,
               [](const Entry<T>& x, const Entry<T>& y) { return x > y; });
-
-  __syncthreads();
-
   // Write top_k elements in sorted array to output
   int32_t* output = out + blockIdx.x * k;
-  for (int32_t i = 0; i < k; ++i) { output[i] = shared_entries[i].GetIndex(); }
+  for (int32_t i = threadIdx.x; i < k; i += blockDim.x) {
+    output[i] = shared_entries[i].GetIndex();
+  }
 }
 
 template<typename T>
