@@ -22,8 +22,8 @@ class Session(object):
         self.is_running_ = False
         self.cond_var_ = threading.Condition()
         self.running_job_cnt_ = 0
-        runtime_ctx.AddJobInstancePreLaunchCallbacks(self.pre_launch_callback)
-        runtime_ctx.AddJobInstancePostFinishCallbacks(self.post_finish_callback)
+        runtime_ctx.AddJobInstancePreLaunchCallbacks(self._PreLaunchCallback)
+        runtime_ctx.AddJobInstancePostFinishCallbacks(self._PostFinishCallback)
 
     def run(self, job_func, *arg):
         assert self.is_running_
@@ -57,12 +57,12 @@ class Session(object):
         assert self.running_job_cnt_ == 0
         self.cond_var_.release()
 
-    def pre_launch_callback(self, job_instance):
+    def _PreLaunchCallback(self, job_instance):
         self.cond_var_.acquire()
         self.running_job_cnt_ += 1
         self.cond_var_.release()
 
-    def post_finish_callback(self, job_instance):
+    def _PostFinishCallback(self, job_instance):
         self.cond_var_.acquire()
         self.running_job_cnt_ -= 1
         self.cond_var_.notify()
