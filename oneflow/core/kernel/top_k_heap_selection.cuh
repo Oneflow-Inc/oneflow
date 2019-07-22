@@ -51,7 +51,7 @@ class Heap {
       const int32_t left = Left(index);
       const int32_t right = Right(index);
       int32_t min = index;
-      if (left < heap_size_ && data_[left] < data_[index]) { min = left; }
+      if (left < heap_size_ && data_[left] < data_[min]) { min = left; }
       if (right < heap_size_ && data_[right] < data_[min]) { min = right; }
       if (min == index) { return; }
       Swap(min, index);
