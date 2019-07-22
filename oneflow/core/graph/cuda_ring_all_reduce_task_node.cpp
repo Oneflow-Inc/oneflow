@@ -17,19 +17,19 @@ bool CudaRingAllReduceTaskNode::IsReadyForBuild() { return GetSoleConsumedRegst(
 
 void CudaRingAllReduceTaskNode::ProduceAllRegstsAndBindEdges() {
   std::shared_ptr<RegstDesc> out_regst_desc = ProduceRegst("out", false, 1, 1);
-  HashMap<TaskNode*, std::shared_ptr<RegstDesc>> send_to_node2regst;
+  HashSet<TaskNode*> send_to_nodes;
   FOR_RANGE(int64_t, i, 0, send_to_.size()) {
     std::shared_ptr<RegstDesc> send_regst_desc =
         ProduceRegst("send_" + std::to_string(i), false, 1, 1);
     send_regst_desc->mut_mem_case()->mutable_host_mem()->set_used_by_device(true);
-    CHECK(send_to_node2regst.emplace(send_to_.at(i), send_regst_desc).second);
+    send_to_nodes.emplace(send_to_.at(i));
   }
   this->ForEachOutDataEdge([&](TaskEdge* edge) {
-    auto it = send_to_node2regst.find(edge->dst_node());
-    if (it == send_to_node2regst.cend()) {
+    auto it = send_to_nodes.find(edge->dst_node());
+    if (it == send_to_nodes.cend()) {
       edge->AddRegst("out", out_regst_desc);
     } else {
-      edge->AddRegst("send", it->second);
+      UNIMPLEMENTED();
     }
   });
 }
