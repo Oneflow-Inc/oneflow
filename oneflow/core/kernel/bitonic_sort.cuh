@@ -1,10 +1,10 @@
-#ifndef GPU_BITONIC_SORT_CUH
-#define GPU_BITONIC_SORT_CUH
+#ifndef BITONIC_SORT_CUH_
+#define BITONIC_SORT_CUH_
 
 #include <assert.h>
 
 template<typename T>
-__device__ const bool IsIntegerPowerOf2(const T v) {
+__device__ bool IsIntegerPowerOf2(const T v) {
   return (v > 0 && !(v & (v - 1)));
 }
 
@@ -20,8 +20,8 @@ __device__ void bitonicSwap(T* data, const int32_t i, const int32_t j, const boo
 
 template<typename T, typename Compare>
 __device__ void bitonicSort(T* data, const int32_t elem_cnt, const Compare& comp) {
+  // The element count of instance to be sorted must be pow-of-2
   assert(IsIntegerPowerOf2(elem_cnt));
-  assert(IsIntegerPowerOf2(blockDim.x));
 
   // Generate a bitonic sequence from input
   for (int32_t size = 2; size <= elem_cnt / 2; size *= 2) {
@@ -40,7 +40,7 @@ __device__ void bitonicSort(T* data, const int32_t elem_cnt, const Compare& comp
     }
   }
 
-  // Sort based on the bitonic sequence
+  // Sort the bitonic sequence
   for (int32_t stride = elem_cnt / 2; stride > 0; stride /= 2) {
     for (int32_t swap_id = threadIdx.x; swap_id < elem_cnt / 2; swap_id += blockDim.x) {
       // Locate the pair {pos, pos + stride} which is going te be swaped if needed

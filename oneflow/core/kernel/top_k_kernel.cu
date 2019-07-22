@@ -4,8 +4,8 @@
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.cuh"
-#include "oneflow/core/kernel/top_k_heap_selection.cuh"
-#include "oneflow/core/kernel/gpu_bitonic_sort.cuh"
+#include "oneflow/core/kernel/top_k_kernel.cuh"
+#include "oneflow/core/kernel/bitonic_sort.cuh"
 
 namespace oneflow {
 

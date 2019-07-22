@@ -1,5 +1,5 @@
 #include "oneflow/core/kernel/bitonic_sort_kernel.h"
-#include "oneflow/core/kernel/gpu_bitonic_sort.cuh"
+#include "oneflow/core/kernel/bitonic_sort.cuh"
 
 namespace oneflow {
 
