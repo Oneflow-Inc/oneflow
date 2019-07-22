@@ -27,28 +27,31 @@ def Compile(job_set, job_funcs):
 def _CompileJob(job, func, config):
     job_name = func.__name__
     parallel_conf = placement_util.GetJobPlacementParallelConf(job_name, config.resource)
-    compile_context.job_name2input_remote_blobs[job_name] = []
-    input_remote_blobs = compile_context.job_name2input_remote_blobs[job_name]
-    ret_remote_blobs = None
+    func.__oneflow_input_remote_blobs__ = []
     interface_op_names = []
     with placement_util.PlacementScope(parallel_conf):
         for blob_desc in _GetArgDefault(func):
             assert isinstance(blob_desc, val.val)
             remote_input_blob = ops.InputOpByBlobDesc(blob_desc)
-            input_remote_blobs.append(remote_input_blob)
+            func.__oneflow_input_remote_blobs__.append(remote_input_blob)
             interface_op_names.append(remote_input_blob.op_name)
-        ret_remote_blobs = func(*input_remote_blobs)
-        if ret_remote_blobs is None: ret_remote_blobs = ()
-        if isinstance(ret_remote_blobs, remote_blob_util.RemoteBlob):
-            ret_remote_blobs = (ret_remote_blobs,)
-        assert isinstance(ret_remote_blobs, tuple) or isinstance(ret_remote_blobs, list)
-        compile_context.job_name2output_remote_blobs[job_name] = []
-        output_remote_blobs = compile_context.job_name2output_remote_blobs[job_name]
-        for remote_blob in ret_remote_blobs:
-            assert isinstance(remote_blob, remote_blob_util.RemoteBlob)
-            output_remote_blob = ops.OutputOpByRemoteBlob(remote_blob)
-            output_remote_blobs.append(output_remote_blob)
-            interface_op_names.append(output_remote_blob.op_name)
+        ret_remote_blobs = func(*func.__oneflow_input_remote_blobs__)
+        if ret_remote_blobs is None:
+            func.__oneflow_output_remote_blobs__ = None 
+        elif isinstance(ret_remote_blobs, remote_blob_util.RemoteBlob):
+            func.__oneflow_output_remote_blobs__ = ops.OutputOpByRemoteBlob(ret_remote_blobs)
+            interface_op_names.append(func.__oneflow_output_remote_blobs__.op_name)
+        elif isinstance(ret_remote_blobs, tuple) or isinstance(ret_remote_blobs, list):
+            func.__oneflow_output_remote_blobs__ = []
+            for remote_blob in ret_remote_blobs:
+                assert isinstance(remote_blob, remote_blob_util.RemoteBlob)
+                output_remote_blob = ops.OutputOpByRemoteBlob(remote_blob)
+                func.__oneflow_output_remote_blobs__.append(output_remote_blob)
+                interface_op_names.append(output_remote_blob.op_name)
+            if isinstance(ret_remote_blobs, tuple):
+                func.__oneflow_output_remote_blobs__ = tuple(func.__oneflow_output_remote_blobs__)
+        else:
+            raise NotImplementedError
     job.job_conf.job_name = job_name
     job.job_conf.arg_op_name.extend(interface_op_names)
 

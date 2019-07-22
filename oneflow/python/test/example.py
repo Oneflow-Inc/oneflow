@@ -4,18 +4,33 @@ import numpy as np
 jobs = []
 @flow.append_func_to_list(jobs)
 def DemoJob(x = flow.val((10,))):
-  job_conf = flow.get_cur_job_conf_builder()
-  job_conf.batch_size(10).data_part_num(1).default_data_type(flow.float)
-  return x
+    job_conf = flow.get_cur_job_conf_builder()
+    job_conf.batch_size(10).data_part_num(1).default_data_type(flow.float)
+    return x
 
 config = flow.ConfigProtoBuilder()
 config.gpu_device_num(1)
-config.grpc_use_no_signal()
+#config.grpc_use_no_signal()
 
 with flow.Session(jobs, config) as sess:
-  sess.run(DemoJob, np.ones((10,), dtype=np.float32))
-  print "good"
+    data = []
+    for i in range(5): data.append(np.ones((10,), dtype=np.float32) * i)
+    print "sess.run(...).get()"
+    for x in data: print sess.run(DemoJob, x).get()
+    print "sess.map(...).get()"
+    for x in sess.map(DemoJob, data).get(): print x
+    print "sess.run(...).async_get(...)"
+    def PrintRunAsyncResult(x):
+        print x
+    for x in data: sess.run(DemoJob, x).async_get(PrintRunAsyncResult)
+    # TODO add sess.sync() here 
+    print "sess.map(...).async_get(...)"
+    def PrintMapAsyncResult(ndarrays):
+        for x in ndarrays: print x
+    sess.map(DemoJob, data).async_get(PrintMapAsyncResult)
 
-#job_set = flow.Session(jobs, config).job_set_
-#from google.protobuf import text_format
-#print text_format.MessageToString(job_set)
+    # box = flow.Box()
+    # sess.map(DemoJob, data).async_get(box.value_setter)
+    # import time
+    # time.sleep(3)
+    # for x in box.value: print x

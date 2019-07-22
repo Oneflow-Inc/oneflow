@@ -49,15 +49,21 @@ int64_t ReentrantLockStatus::ReleaseLock(int64_t lock_id) {
   --lock_id2acquired_num_.at(lock_id);
   --total_acquired_lock_num_;
   if (lock_id2acquired_num_.at(lock_id) == 0) {
-    int64_t min_act_id = cur_act_id();
     int64_t min_lock_id = -1;
-    for (int64_t intersect_lock_id : lock_id2intersecting_lock_ids_.at(lock_id)) {
-      CHECK_EQ(lock_id2acquired_num_.at(intersect_lock_id), 0);
-      if (lock_id2queued_request_act_id_.at(intersect_lock_id).empty()) { continue; }
-      int64_t act_id = lock_id2queued_request_act_id_.at(intersect_lock_id).front();
-      if (act_id < min_act_id) {
-        min_act_id = act_id;
-        min_lock_id = intersect_lock_id;
+    {
+      int64_t min_act_id = cur_act_id();
+      auto UpdateMinLockId = [&](int64_t related_lock_id) {
+        if (lock_id2queued_request_act_id_.at(related_lock_id).empty()) { return; }
+        int64_t act_id = lock_id2queued_request_act_id_.at(related_lock_id).front();
+        if (act_id < min_act_id) {
+          min_act_id = act_id;
+          min_lock_id = related_lock_id;
+        }
+      };
+      UpdateMinLockId(lock_id);
+      for (int64_t intersect_lock_id : lock_id2intersecting_lock_ids_.at(lock_id)) {
+        CHECK_EQ(lock_id2acquired_num_.at(intersect_lock_id), 0);
+        UpdateMinLockId(intersect_lock_id);
       }
     }
     if (min_lock_id != -1 && TryAcquireLock(min_lock_id)) { return min_lock_id; }
