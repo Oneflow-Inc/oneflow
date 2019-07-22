@@ -23,7 +23,7 @@ with flow.Session(jobs, config) as sess:
     def PrintRunAsyncResult(x):
         print x
     for x in data: sess.run(DemoJob, x).async_get(PrintRunAsyncResult)
-    # TODO add sess.sync() here 
+    sess.sync()
     print "sess.map(...).async_get(...)"
     def PrintMapAsyncResult(ndarrays):
         for x in ndarrays: print x

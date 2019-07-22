@@ -61,19 +61,19 @@ class JobInstance(oneflow_internal.ForeignJobInstance):
         self.finish_cb_ = finish_cb
         self.post_finish_cbs_ = []
 
-    def job_name(self): 
+    def job_name(self):
         try: return self.job_name_
         except Exception as e:
             print (traceback.format_exc())
             raise e
 
-    def sole_input_op_name_in_user_job(self): 
+    def sole_input_op_name_in_user_job(self):
         try: return self.sole_input_op_name_in_user_job_
         except Exception as e:
             print (traceback.format_exc())
             raise e
-    
-    def sole_output_op_name_in_user_job(self): 
+
+    def sole_output_op_name_in_user_job(self):
         try: return ret.sole_output_op_name_in_user_job_
         except Exception as e:
             print (traceback.format_exc())
@@ -97,7 +97,11 @@ class JobInstance(oneflow_internal.ForeignJobInstance):
             print (traceback.format_exc())
             raise e
         finally:
-            for post_finish_cb in self.post_finish_cbs_: post_finish_cb(self)
+            try:
+                for post_finish_cb in self.post_finish_cbs_: post_finish_cb(self)
+            except Exception as e:
+                print (traceback.format_exc())
+                raise e
 
     def AddPostFinishCallback(self, cb):
         self.post_finish_cbs_.append(cb)
