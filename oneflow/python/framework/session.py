@@ -60,7 +60,6 @@ class Session(object):
     def pre_launch_callback(self, job_instance):
         self.cond_var_.acquire()
         self.running_job_cnt_ += 1
-        # self.cond_var_.notify()
         self.cond_var_.release()
 
     def post_finish_callback(self, job_instance):
