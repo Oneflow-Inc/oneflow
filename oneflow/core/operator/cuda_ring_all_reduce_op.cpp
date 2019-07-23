@@ -42,12 +42,10 @@ void CudaRingAllReduceOp::InferBlobDescs(
   }
 }
 
-/*
-
-void MultiRingAllReduceOp::VirtualGenKernelConf(
+void CudaRingAllReduceOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx) const {
-  const MultiRingAllReduceOpConf& conf = this->op_conf().multi_ring_all_reduce_conf();
+  const CudaRingAllReduceOpConf& conf = this->op_conf().cuda_ring_all_reduce_conf();
   MultiRingAllReduceKernelConf* multi_ring_all_reduce_kernel_conf =
       kernel_conf->mutable_multi_ring_all_reduce_conf();
   multi_ring_all_reduce_kernel_conf->set_num_rank(conf.rings(0).next_size());
@@ -103,7 +101,6 @@ void MultiRingAllReduceOp::VirtualGenKernelConf(
     }
   }
 }
- */
 
 REGISTER_OP(OperatorConf::kCudaRingAllReduceConf, CudaRingAllReduceOp);
 
