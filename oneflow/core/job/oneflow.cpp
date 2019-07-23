@@ -628,7 +628,7 @@ void ConnectCriticalSectionEndToReentrantLockEnd(Plan* main_plan,
 void CompileMainJob(Job* main_job, const LogicalBlobId& critical_section_sink_lbi, int32_t job_id,
                     Plan* main_plan) {
   CHECK(Global<MachineCtx>::Get()->IsThisMachineMaster());
-  WithGlobalJobId(job_id, [&]() { CompileCurJobOnMaster(main_job, main_plan, false); });
+  WithJobIdGlobal(job_id, [&]() { CompileCurJobOnMaster(main_job, main_plan, false); });
   ConnectCriticalSectionEndToReentrantLockEnd(main_plan, critical_section_sink_lbi);
 }
 
@@ -882,7 +882,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
   std::vector<Plan> sub_plans(conf_jobs.size());
   FOR_RANGE(int32_t, i, 0, sub_plans.size()) {
     jobs.at(i) = conf_jobs.Get(i);
-    WithGlobalJobId(i, [&]() { CompileCurJobOnMaster(&jobs.at(i), &sub_plans.at(i), true); });
+    WithJobIdGlobal(i, [&]() { CompileCurJobOnMaster(&jobs.at(i), &sub_plans.at(i), true); });
   }
   HashMap<std::string, ParallelBlobConf> push_op_name2parallel_blob_conf;
   FilterOpName2ParallelBlobConf({OperatorConf::kInputConf, OperatorConf::kVariableConf}, &jobs,
@@ -909,7 +909,7 @@ void CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
     jobs.at(job_id) = *job;
     AddGlobalJobDesc(*job, job_id);
     if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-      WithGlobalJobId(job_id, [&]() { CompileCurJobOnMaster(job, &sub_plans.at(job_id), true); });
+      WithJobIdGlobal(job_id, [&]() { CompileCurJobOnMaster(job, &sub_plans.at(job_id), true); });
     }
     ++job_id;
   };
