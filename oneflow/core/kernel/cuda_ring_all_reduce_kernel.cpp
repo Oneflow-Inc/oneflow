@@ -14,8 +14,10 @@ void CudaRingAllReduceKernel<T>::ForwardDataContent(
   arg.num_rings = conf.rings_size();
   CHECK_LE(arg.num_rings, CUDA_RING_ALL_REDUCE_MAX_NUM_RINGS);
   FOR_RANGE(int32_t, i, 0, arg.num_rings) {
-    arg.send[i] = BnInOp2Blob(GenRepeatedBn("send", i))->mut_dptr<T>();
-    arg.recv[i] = BnInOp2Blob(GenRepeatedBn("recv", i))->mut_dptr<T>();
+    Blob* send = BnInOp2Blob(GenRepeatedBn("send", i));
+    arg.send[i] = send != nullptr ? send->mut_dptr<T>() : nullptr;
+    Blob* recv = BnInOp2Blob(GenRepeatedBn("recv", i));
+    arg.recv[i] = recv != nullptr ? recv->mut_dptr<T>() : nullptr;
   }
   CudaRingAllReduceKernelUtil<T>::AllReduce(ctx.device_ctx, arg);
 }
